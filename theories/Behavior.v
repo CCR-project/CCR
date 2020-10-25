@@ -12,7 +12,9 @@ Module Beh.
   CoInductive t: Type :=
   | done
   | spin
-  | cons (hd: event) (tl: t)
+  | ub
+  | nb
+  | cons (hd: syscall) (tl: t)
   .
   Infix "##" := cons (at level 60, right associativity).
   (*** past -------------> future ***)
@@ -23,14 +25,17 @@ Module Beh.
   | le_done
     :
       _le le (done) (done)
+  | le_spin
+    :
+      _le le spin spin 
   | le_ub
-      tl beh
+      beh
     :
-      _le le (event_ub ## tl) beh
+      _le le ub beh
   | le_nb
-      tl beh
+      beh
     :
-      _le le beh (event_nb ## tl)
+      _le le beh nb 
   | le_step
       ev tl0 tl1
       (TL: le tl0 tl1)
@@ -49,8 +54,8 @@ Module Beh.
   Hint Unfold le.
   Hint Resolve le_mon: paco.
 
-  Remark ub_test ev: le (event_ub ## done) (ev ## done). pfold. econs; eauto. Qed.
-  Remark ub_prefix s0: ~ le ((event_sys s0) ## event_ub ## done) done. ii. punfold H. inv H. Qed.
+  Remark ub_test s0: le (ub) (s0 ## done). pfold. econs; eauto. Qed.
+  Remark ub_prefix s0: ~ le (s0 ## ub) done. ii. punfold H. inv H. Qed.
 
 End Beh.
 
@@ -71,16 +76,18 @@ Inductive _state_behaves (state_behaves: L.(state) -> Beh.t -> Prop)
     (FINAL: L.(state_sort) st0 = final)
   :
     _state_behaves state_behaves st0 (Beh.done)
-| sb_angelic
+| sb_angelic_sys
     ev evs
     (ANG: L.(state_sort) st0 = angelic)
-    (STEP: inter st0 (fun e st1 => <<TL: state_behaves st1 evs>> /\ <<HD: e = Some ev>>))
+    (STEP: inter st0 (fun e st1 => (<<TL: state_behaves st1 evs>>) /\
+                                   (<<HD: e = Some (event_sys ev) \/ e = Some event_ub>>)))
   :
     _state_behaves state_behaves st0 (Beh.cons ev evs)
-| sb_demonic
+| sb_demonic_sys
     ev evs
     (DEM: L.(state_sort) st0 = demonic)
-    (STEP: union st0 (fun e st1 => <<TL: state_behaves st1 evs>> /\ <<HD: e = Some ev>>))
+    (STEP: union st0 (fun e st1 => (<<TL: state_behaves st1 evs>>) /\
+                                   (<<HD: e = Some (event_sys ev) \/ e = Some event_nb>>)))
   :
     _state_behaves state_behaves st0 (Beh.cons ev evs)
 | sb_angelic_spin
@@ -94,6 +101,7 @@ Inductive _state_behaves (state_behaves: L.(state) -> Beh.t -> Prop)
   :
     _state_behaves state_behaves st0 Beh.spin 
 .
+(*** TODO: ub / nb / spin ***)
 
 Definition state_behaves: _ -> _ -> Prop := paco2 _state_behaves bot2.
 
