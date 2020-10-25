@@ -1,17 +1,16 @@
 Require Import sflib.
+Require Import Universe.
 
-Class Universe := {
-  event: Type;
-  val: Type;
-}
+Inductive sort: Type :=
+| angelic
+| demonic
+| final
 .
-
-Context `{Universe}.
 
 Record semantics : Type := Semantics_gen {
   state: Type;
-  step : state -> event -> state -> Prop;
-  initial_state: state -> Prop;
-  final_state: state -> val -> Prop;
-  is_angelic: state -> bool;
+  step : state -> option event -> state -> Prop;
+  initial_state: state;
+  (* final_state: state -> Prop; *)
+  state_sort: state -> sort;
 }.
