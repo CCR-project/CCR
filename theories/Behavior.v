@@ -20,23 +20,40 @@ Module Beh.
   (*** past -------------> future ***)
   (*** a ## b ## c ## spin / done ***)
 
-  Inductive fin: Type :=
-  | fdone
-  | fspin
-  | fub
-  | fnb
-  | fcons (hd: syscall) (tl: fin)
-  .
-
-  Fixpoint embed (bh: fin): t :=
-    match bh with
-    | fdone => done
-    | fspin => spin
-    | fub => ub
-    | fnb => nb
-    | fcons hd tl => cons hd (embed tl)
+  Fixpoint app (pre: list syscall) (bh: t): t :=
+    match pre with
+    | [] => bh
+    | hd :: tl => cons hd (app tl bh)
     end
   .
+  Lemma fold_app
+        s pre tl
+    :
+      (Beh.cons s (Beh.app pre tl)) = Beh.app (s :: pre) tl
+  .
+  Proof. reflexivity. Qed.
+
+  Definition prefix (pre: list syscall) (bh: t): Prop :=
+    exists tl, <<APP: app pre tl = bh>>
+  .
+
+  (* Inductive fin: Type := *)
+  (* | fdone *)
+  (* | fspin *)
+  (* | fub *)
+  (* | fnb *)
+  (* | fcons (hd: syscall) (tl: fin) *)
+  (* . *)
+
+  (* Fixpoint embed (bh: fin): t := *)
+  (*   match bh with *)
+  (*   | fdone => done *)
+  (*   | fspin => spin *)
+  (*   | fub => ub *)
+  (*   | fnb => nb *)
+  (*   | fcons hd tl => cons hd (embed tl) *)
+  (*   end *)
+  (* . *)
 
   (*** le src tgt ***)
   Inductive _le (le: t -> t -> Prop): t -> t -> Prop :=
@@ -65,6 +82,9 @@ Module Beh.
   Hint Resolve le_mon: paco.
 
 End Beh.
+Hint Constructors Beh._le.
+Hint Unfold Beh.le.
+Hint Resolve Beh.le_mon: paco.
 
 
 
@@ -203,13 +223,110 @@ Hint Resolve state_behaves_mon: paco.
 Definition program_behaves: Beh.t -> Prop := state_behaves L.(initial_state).
 
 End BEHAVES.
+Hint Constructors _state_spin.
+Hint Unfold state_spin.
+Hint Resolve state_spin_mon: paco.
+Hint Constructors _state_behaves.
+Hint Unfold state_behaves.
+Hint Resolve state_behaves_mon: paco.
+
+Lemma prefix_closed_ind
+      L r st0 pre bh
+      (BEH: _state_behaves L r st0 bh)
+      (PRE: Beh.prefix pre bh)
+      (COIND: forall st0 pre bh, r st0 bh -> Beh.prefix pre bh -> r st0 (Beh.app pre Beh.nb))
+  :
+    <<BEH: _state_behaves L r st0 (Beh.app pre Beh.nb)>>
+.
+Proof.
+  revert_until r. fix IH 4. ii.
+  rr in PRE. des. subst.
+  inv BEH; destruct pre; ss.
+  - econs 5; et. ii. exploit STEP; et. i; des. clarify. esplits; et.
+    rewrite Beh.fold_app in *. eapply IH; et. rr. ss. esplits; et.
+  - econs 6; et. rr in STEP. des. clarify. rr. esplits; eauto.
+    rewrite Beh.fold_app in *. eapply IH; et. rr. ss. esplits; et.
+  - econs 7; et. ii. exploit STEP; et. i; des. clarify. esplits; et.
+    eapply COIND; et. rr. et.
+  - econs 8; et. rr in STEP. des. clarify. rr. esplits; eauto.
+    eapply COIND; et. rr. et.
+Qed.
+
+Lemma prefix_closed_coind
+      L
+      st0 pre bh
+      (BEH: state_behaves L st0 bh)
+      (PRE: Beh.prefix pre bh)
+  :
+    <<NB: state_behaves L st0 (Beh.app pre Beh.nb)>>
+.
+Proof.
+  (* move IHpre at top. *)
+  revert_until L. pcofix CIH. i. pfold.
+  punfold BEH. rr in PRE. des.
+  inv BEH; try (by destruct pre; ss).
+  - econs 5; et. ii. exploit STEP; et. i; des. clarify. esplits; et.
+    {
+      (* clear STEP. *)
+      revert_until CIH. fix IH 8. i.
+      inv TL; destruct pre; ss.
+      - econs 5; et. ii. exploit STEP1; et. i; des. clarify. esplits; et.
+        rewrite Beh.fold_app in *. eapply IH; et.
+      - econs 6; et. rr in STEP1. des. clarify. rr. esplits; eauto.
+        rewrite Beh.fold_app in *. eapply IH; et. rr. ss. esplits; et.
+      - econs 7; et. ii. exploit STEP; et. i; des. clarify. esplits; et.
+        eapply COIND; et. rr. et.
+      - econs 8; et. rr in STEP. des. clarify. rr. esplits; eauto.
+        eapply COIND; et. rr. et.
+    }
+    
+    eapply prefix_closed_ind with (pre:=pre) (bh:=(Beh.app pre tl)); et.
+    { eapply state_behaves_mon; eauto. i. eapply upaco2_mon; eauto. ii; ss. }
+    { rr. et. }
+    { ii. right.
+      TTTTTTTTTTTTTTTTTTTTTTT
+    }
+    assert(_state_behaves L (upaco2 (_state_behaves L) bot2) st1 (Beh.app pre Beh.nb)).
+    {
+      eapply prefix_closed_ind; et.
+      { rr. et. }
+      ii. pclearbot. right.
+      clear - TL.
+      remember (Beh.app pre tl) as tmp.
+      ginduction TL; ii; ss; destruct pre; ss; clarify.
+      - econs; et. ii. exploit STEP; et. i; des. clarify. esplits; et.
+    }
+    eapply state_behaves_mon; eauto. i. eapply upaco2_mon; eauto. ii; ss.
+  - admit.
+  - destruct pre; ss. clarify. econs 7; et. ii. exploit STEP; et. i; des. clarify. pclearbot.
+    esplits; eauto. right. eapply CIH; et. rr; eauto.
+  - destruct pre; ss. clarify. econs 8; et. rr in STEP. des. clarify. pclearbot.
+    rr. esplits; et. right. eapply CIH; et. rr; eauto.
+Qed.
 
 Lemma prefix_closed
       L
+      pre bh
+      (BEH: program_behaves L bh)
+      (PRE: Beh.prefix pre bh)
   :
-    <<NB: program_behaves L Beh.nb>>
+    <<NB: program_behaves L (Beh.app pre Beh.nb)>>
 .
-Proof. pfold. econs; et. Qed.
+Proof.
+  (* ginduction pre; ss. *)
+  (* { i. pfold. econs; et. } *)
+  (* i. *)
+
+
+  revert_until L. pcofix CIH. i. pfold.
+  punfold BEH. rr in PRE. des.
+  inv BEH; try (by destruct pre; ss).
+  - econs 5; et. ii. exploit STEP; et. i; des. clarify.
+    esplits; et.
+  - destruct pre; ss.
+  econs; et.
+  pfold. econs; et.
+Qed.
 
 Lemma nb_bottom
       L
