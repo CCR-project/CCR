@@ -12,8 +12,6 @@ Module Beh.
   CoInductive t: Type :=
   | done
   | spin
-  | ub
-  | nb
   | cons (hd: syscall) (tl: t)
   .
   Infix "##" := cons (at level 60, right associativity).
@@ -28,14 +26,6 @@ Module Beh.
   | le_spin
     :
       _le le spin spin 
-  | le_ub
-      beh
-    :
-      _le le ub beh
-  | le_nb
-      beh
-    :
-      _le le beh nb 
   | le_step
       ev tl0 tl1
       (TL: le tl0 tl1)
@@ -54,9 +44,6 @@ Module Beh.
   Hint Unfold le.
   Hint Resolve le_mon: paco.
 
-  Remark ub_test s0: le (ub) (s0 ## done). pfold. econs; eauto. Qed.
-  Remark ub_prefix s0: ~ le (s0 ## ub) done. ii. punfold H. inv H. Qed.
-
 End Beh.
 
 
@@ -70,55 +57,120 @@ Definition union (st0: L.(state)) (P: (option event) -> L.(state) -> Prop) :=
 Definition inter (st0: L.(state)) (P: (option event) -> L.(state) -> Prop) :=
   forall ev st1 (STEP: L.(step) st0 ev st1), <<INTER: P ev st1>>.
 
+Inductive _state_spin (state_spin: L.(state) -> Prop)
+  (st0: L.(state)): Prop :=
+| state_spin_angelic
+    (ANG: L.(state_sort) st0 = angelic)
+    (STEP: forall ev st1 (STEP: L.(step) st0 ev st1), <<HD: ev = None>> /\ <<TL: state_spin st1>>)
+| state_spin_demonic
+    (DEM: L.(state_sort) st0 = demonic)
+    (STEP: exists ev st1, <<STEP: L.(step) st0 ev st1>> /\ <<HD: ev = None>> /\ <<TL: state_spin st1>>)
+.
+
+Definition state_spin: _ -> Prop := paco1 _state_spin bot1.
+
+Lemma state_spin_mon: monotone1 _state_spin.
+Proof.
+  ii. inv IN; try (by econs; eauto).
+  - econs 1; et. ii. exploit STEP; et. i; des. et.
+  - des. econs 2; et. esplits; et.
+Qed.
+
+Hint Constructors _state_spin.
+Hint Unfold state_spin.
+Hint Resolve state_spin_mon: paco.
+
+
+
 Inductive _state_behaves (state_behaves: L.(state) -> Beh.t -> Prop)
           (st0: L.(state)): Beh.t -> Prop :=
 | sb_final
     (FINAL: L.(state_sort) st0 = final)
   :
     _state_behaves state_behaves st0 (Beh.done)
+| sb_spin
+    (SPIN: state_spin st0)
+  :
+    _state_behaves state_behaves st0 (Beh.spin)
+| sb_angelic_tau
+    evs
+    (ANG: L.(state_sort) st0 = angelic)
+    (STEP: inter st0 (fun e st1 => (<<TL: _state_behaves state_behaves st1 evs>>) /\ (<<HD: e = None>>)))
+  :
+    _state_behaves state_behaves st0 evs 
+| sb_demonic_tau
+    evs
+    (DEM: L.(state_sort) st0 = demonic)
+    (STEP: union st0 (fun e st1 => (<<TL: _state_behaves state_behaves st1 evs>>) /\ (<<HD: e = None>>)))
+  :
+    _state_behaves state_behaves st0 evs
 | sb_angelic_sys
     ev evs
     (ANG: L.(state_sort) st0 = angelic)
-    (STEP: inter st0 (fun e st1 => (<<TL: state_behaves st1 evs>>) /\
-                                   (<<HD: e = Some (event_sys ev) \/ e = Some event_ub>>)))
+    (STEP: inter st0 (fun e st1 => (<<TL: state_behaves st1 evs>>) /\ (<<HD: e = Some (event_sys ev)>>)))
   :
     _state_behaves state_behaves st0 (Beh.cons ev evs)
 | sb_demonic_sys
     ev evs
     (DEM: L.(state_sort) st0 = demonic)
-    (STEP: union st0 (fun e st1 => (<<TL: state_behaves st1 evs>>) /\
-                                   (<<HD: e = Some (event_sys ev) \/ e = Some event_nb>>)))
+    (STEP: union st0 (fun e st1 => (<<TL: state_behaves st1 evs>>) /\ (<<HD: e = Some (event_sys ev)>>)))
   :
     _state_behaves state_behaves st0 (Beh.cons ev evs)
-| sb_angelic_spin
-    (ANG: L.(state_sort) st0 = angelic)
-    (STEP: inter st0 (fun e st1 => <<TL: state_behaves st1 Beh.spin>> /\ <<HD: e = None>>))
-  :
-    _state_behaves state_behaves st0 Beh.spin 
-| sb_demonic_spin
-    (ANG: L.(state_sort) st0 = demonic)
-    (STEP: union st0 (fun e st1 => <<TL: state_behaves st1 Beh.spin>> /\ <<HD: e = None>>))
-  :
-    _state_behaves state_behaves st0 Beh.spin 
 .
 (*** TODO: ub / nb / spin ***)
+
+Theorem state_behaves_ind:
+forall (state_behaves : state L -> Beh.t -> Prop) (st0 : state L) (P : Beh.t -> Prop),
+(state_sort L st0 = final -> P Beh.done) ->
+(state_spin st0 -> P Beh.spin) ->
+(forall (evs: Beh.t) (IH: True),
+ state_sort L st0 = angelic ->
+ inter st0
+   (fun (e : option event) (st1 : state L) =>
+    <<TL: _state_behaves state_behaves st1 evs >> /\ <<HD: e = None >>) -> P evs) ->
+(forall (evs: Beh.t) (IH: True),
+ state_sort L st0 = demonic ->
+ union st0
+   (fun (e : option event) (st1 : state L) =>
+    <<TL: _state_behaves state_behaves st1 evs >> /\ <<HD: e = None >>) -> P evs) ->
+(forall (ev : syscall) (evs : Beh.t) (IHH: True),
+ state_sort L st0 = angelic ->
+ inter st0
+   (fun (e : option event) (st1 : state L) =>
+    <<TL: state_behaves st1 evs >> /\ <<HD: e = Some (event_sys ev) >>) -> P (Beh.cons ev evs)) ->
+(forall (ev : syscall) (evs : Beh.t) (IHH: True),
+ state_sort L st0 = demonic ->
+ union st0
+   (fun (e : option event) (st1 : state L) =>
+    <<TL: state_behaves st1 evs >> /\ <<HD: e = Some (event_sys ev) >>) -> P (Beh.cons ev evs)) ->
+forall t : Beh.t, _state_behaves state_behaves st0 t -> P t
+.
+Proof.
+  (* { i. inv H5; eauto. } *)
+  i. generalize dependent t. fix IH 2.
+  i. inv H5; eauto.
+Admitted.
 
 Definition state_behaves: _ -> _ -> Prop := paco2 _state_behaves bot2.
 
 Lemma state_behaves_mon: monotone2 _state_behaves.
 Proof.
-  ii. inv IN.
-  - econs; eauto.
-  - econs 2; eauto. ii. exploit STEP; et. i; des. eauto.
-  - econs 3; eauto. rr in STEP. des. rr. esplits; eauto.
-  - econs 4; eauto. ii. exploit STEP; et. i; des. eauto.
-  - econs 5; eauto. rr in STEP. des. rr. esplits; eauto.
+  {
+    rr. fix IH 5. i.
+    inv IN.
+    - econs; et.
+    - econs 2; et.
+    - econs 3; et. ii. exploit STEP; et. i; des. clarify. esplits; et.
+    - rr in STEP. des. econs 4; et. rr. esplits; et.
+    - econs 5; et. ii. exploit STEP; et. i; des. clarify. esplits; et.
+    - rr in STEP. des. econs 6; et. rr. esplits; et.
+  }
 Qed.
 
 Hint Constructors _state_behaves.
 Hint Unfold state_behaves.
 Hint Resolve state_behaves_mon: paco.
 
-Definition program_behaves: behavior -> Prop := state_behaves L.(initial_state).
+Definition program_behaves: Beh.t -> Prop := state_behaves L.(initial_state).
 
 End BEHAVES.
