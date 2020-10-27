@@ -220,6 +220,188 @@ Hint Constructors _state_behaves.
 Hint Unfold state_behaves.
 Hint Resolve state_behaves_mon: paco.
 
+Inductive _state_behaves' (state_behaves': nat -> L.(state) -> Beh.t -> Prop):
+          nat -> L.(state) -> Beh.t -> Prop :=
+| sbi_final
+    st0 fuel
+    (FINAL: L.(state_sort) st0 = final)
+  :
+    _state_behaves' state_behaves' fuel st0 (Beh.done)
+| sbi_spin
+    st0 fuel
+    (SPIN: state_spin st0)
+  :
+    _state_behaves' state_behaves' fuel st0 (Beh.spin)
+| sbi_ub
+    st0 fuel
+    (UB: ~exists ev st1, L.(step) st0 ev st1)
+  :
+    _state_behaves' state_behaves' fuel st0 (Beh.ub)
+| sbi_nb
+    st0 fuel
+  :
+    _state_behaves' state_behaves' fuel st0 (Beh.nb)
+| sbi_angelic_tau
+    st0 fuel
+    evs
+    (ANG: L.(state_sort) st0 = angelic)
+    (STEP: inter st0 (fun e st1 => (<<TL: state_behaves' fuel st1 evs>>) /\ (<<HD: e = None>>)))
+  :
+    _state_behaves' state_behaves' (S fuel) st0 evs 
+| sbi_demonic_tau
+    st0 fuel
+    evs
+    (DEM: L.(state_sort) st0 = demonic)
+    (STEP: union st0 (fun e st1 => (<<TL: state_behaves' fuel st1 evs>>) /\ (<<HD: e = None>>)))
+  :
+    _state_behaves' state_behaves' (S fuel) st0 evs
+| sbi_angelic_sys
+    st0 fuel
+    ev evs
+    (ANG: L.(state_sort) st0 = angelic)
+    (STEP: inter st0 (fun e st1 => (<<TL: state_behaves' fuel st1 evs>>) /\ (<<HD: e = Some (event_sys ev)>>)))
+  :
+    _state_behaves' state_behaves' fuel st0 (Beh.cons ev evs)
+| sbi_demonic_sys
+    st0 fuel
+    ev evs
+    (DEM: L.(state_sort) st0 = demonic)
+    (STEP: union st0 (fun e st1 => (<<TL: state_behaves' fuel st1 evs>>) /\ (<<HD: e = Some (event_sys ev)>>)))
+  :
+    _state_behaves' state_behaves' fuel st0 (Beh.cons ev evs)
+.
+
+Definition state_behaves': _ -> _ -> _ -> Prop := paco3 _state_behaves' bot3.
+
+Lemma state_behaves'_mon: monotone3 _state_behaves'.
+Proof.
+  ii. inv IN.
+  - econs 1; et.
+  - econs 2; et.
+  - econs 3; et.
+  - econs 4; et.
+  - econs 5; et. ii. exploit STEP; et. i; des. clarify. esplits; et.
+  - rr in STEP. des. econs 6; et. rr. esplits; et.
+  - econs 7; et. ii. exploit STEP; et. i; des. clarify. esplits; et.
+  - rr in STEP. des. econs 8; et. rr. esplits; et.
+Qed.
+
+Hint Constructors _state_behaves'.
+Hint Unfold state_behaves'.
+Hint Resolve state_behaves'_mon: paco.
+
+(* Inductive max_silent (st0: L.(state)): nat -> Prop := *)
+(* | max_silent_base *)
+(*     e st1 *)
+(*     (SOME: L.(step) st0 (Some e) st1) *)
+(*   : *)
+(*     max_silent st0 0 *)
+(* | max_silent_step *)
+(*     st1 n *)
+(*     (STEP: L.(step) st0 None st1) *)
+(*     (TL: max_silent st1 n) *)
+(*   : *)
+(*     max_silent st0 (S n) *)
+(* . *)
+
+(* Require Import Lia. *)
+(* Lemma max_silent_downward_closed *)
+(*       n m st0 *)
+(*       (MON: n <= m) *)
+(*   : *)
+(*     max_silent st0 m -> max_silent st0 n *)
+(* . *)
+(* Proof. *)
+(*   i. ginduction H; ii; ss. *)
+(*   - destruct n; ss; try lia; econs; et. *)
+(*   - destruct n0; ss; try lia; econs; et. *)
+(*     eapply IHmax_silent. lia. *)
+(* Qed. *)
+
+(* Theorem classical *)
+(*         st0 *)
+(*   : *)
+(*     <<FIN: exists n, max_silent st0 n>> \/ <<INF: state_spin st0>> *)
+(* . *)
+(* Proof. *)
+(*   destruct (classic (exists n, max_silent st0 n)); et. *)
+(*   right. *)
+(*   eapply diverge_spin. *)
+(*   ii. *)
+(*   eapply Classical_Pred_Type.not_ex_all_not with (n:=m) in H. Psimpl. *)
+(*   des; et. *)
+
+(* Qed. *)
+
+(**********************
+can we derive "max_silent" mechanically?
+e.g. the index drops whenever an inductive call happens
+***********************)
+Variable max_silent: L.(state) -> nat -> Prop.
+Theorem equiv_aux
+        st0 beh fuel
+        (MAXSL: max_silent st0 fuel)
+  :
+    state_behaves st0 beh <-> state_behaves' fuel st0 beh
+.
+Proof.
+  (*** TODO: well-founded induction ??? ***)
+  split; intro B.
+  - revert_until st0. revert st0. pcofix CIH. i. pfold. punfold B.
+    destruct fuel.
+    { admit. (*** max silent 0 ---> it should stuck or end here ***) }
+    inv B; et.
+    + econs 5; et. ii. exploit STEP; et. i; des. clarify. esplits; et. right. eapply CIH; et.
+      admit. (*** max silent step ***)
+    + econs 6; et. rr in STEP; des; clarify. rr; esplits; et. right. eapply CIH; et.
+      admit. (*** max silent step ***)
+    + econs 7; et. ii. exploit STEP; et. i; des. clarify. pclearbot.
+      esplits; et. right. eapply CIH; et.
+      { admit. (*** max silent step ?????????????????? ***) }
+    + econs 8; et. rr in STEP; des; clarify. pclearbot.
+      rr; esplits; et. right. eapply CIH; et.
+      { admit. (*** max silent step ?????????????????? ***) }
+  - revert_until st0. revert st0. pcofix CIH. i. pfold. punfold B.
+    revert_until CIH. fix IH 5. i.
+    inv B; try (by econs; et).
+    + econs 5; et. ii. exploit STEP; et. i; des. clarify. esplits; et.
+      eapply IH; et.
+      { admit. (*** max silent step ***) }
+      { pclearbot. }
+
+
+    destruct fuel.
+    { admit. (*** max silent 0 ---> it should stuck or end here ***) }
+    inv B; et.
+    + econs 5; et. ii. exploit STEP; et. i; des. clarify. esplits; et. right. eapply CIH; et.
+      admit. (*** max silent step ***)
+    + econs 6; et. rr in STEP; des; clarify. rr; esplits; et. right. eapply CIH; et.
+      admit. (*** max silent step ***)
+    + econs 7; et. ii. exploit STEP; et. i; des. clarify. pclearbot.
+      esplits; et. right. eapply CIH; et.
+      { admit. (*** max silent step ?????????????????? ***) }
+    + econs 8; et. rr in STEP; des; clarify. pclearbot.
+      rr; esplits; et. right. eapply CIH; et.
+      { admit. (*** max silent step ?????????????????? ***) }
+Qed.
+
+Theorem equiv
+        st0 beh
+  :
+    state_behaves st0 beh <-> exists fuel, state_behaves' fuel st0 beh
+.
+Proof.
+  split; i.
+  - admit.
+  - des. revert_until L. pcofix CIH. i. pfold.
+    punfold H0. inv H0; et.
+    + econs 5; et. ii. exploit STEP; et. i; des. clarify. esplits; et. pclearbot.
+Qed.
+
+
+
+
+
 Definition program_behaves: Beh.t -> Prop := state_behaves L.(initial_state).
 
 End BEHAVES.
