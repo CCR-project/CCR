@@ -12,11 +12,31 @@ Module Beh.
   CoInductive t: Type :=
   | done
   | spin
+  | ub
+  | nb
   | cons (hd: syscall) (tl: t)
   .
   Infix "##" := cons (at level 60, right associativity).
   (*** past -------------> future ***)
   (*** a ## b ## c ## spin / done ***)
+
+  Inductive fin: Type :=
+  | fdone
+  | fspin
+  | fub
+  | fnb
+  | fcons (hd: syscall) (tl: fin)
+  .
+
+  Fixpoint embed (bh: fin): t :=
+    match bh with
+    | fdone => done
+    | fspin => spin
+    | fub => ub
+    | fnb => nb
+    | fcons hd tl => cons hd (embed tl)
+    end
+  .
 
   (*** le src tgt ***)
   Inductive _le (le: t -> t -> Prop): t -> t -> Prop :=
@@ -92,6 +112,13 @@ Inductive _state_behaves (state_behaves: L.(state) -> Beh.t -> Prop)
     (SPIN: state_spin st0)
   :
     _state_behaves state_behaves st0 (Beh.spin)
+| sb_ub
+    (UB: ~exists ev st1, L.(step) st0 ev st1)
+  :
+    _state_behaves state_behaves st0 (Beh.ub)
+| sb_nb
+  :
+    _state_behaves state_behaves st0 (Beh.nb)
 | sb_angelic_tau
     evs
     (ANG: L.(state_sort) st0 = angelic)
@@ -158,12 +185,14 @@ Proof.
   {
     rr. fix IH 5. i.
     inv IN.
-    - econs; et.
+    - econs 1; et.
     - econs 2; et.
-    - econs 3; et. ii. exploit STEP; et. i; des. clarify. esplits; et.
-    - rr in STEP. des. econs 4; et. rr. esplits; et.
+    - econs 3; et.
+    - econs 4; et.
     - econs 5; et. ii. exploit STEP; et. i; des. clarify. esplits; et.
     - rr in STEP. des. econs 6; et. rr. esplits; et.
+    - econs 7; et. ii. exploit STEP; et. i; des. clarify. esplits; et.
+    - rr in STEP. des. econs 8; et. rr. esplits; et.
   }
 Qed.
 
@@ -174,3 +203,17 @@ Hint Resolve state_behaves_mon: paco.
 Definition program_behaves: Beh.t -> Prop := state_behaves L.(initial_state).
 
 End BEHAVES.
+
+Lemma prefix_closed
+      L
+  :
+    <<NB: program_behaves L Beh.nb>>
+.
+Proof. pfold. econs; et. Qed.
+
+Lemma nb_bottom
+      L
+  :
+    <<NB: program_behaves L Beh.nb>>
+.
+Proof. pfold. econs; et. Qed.
