@@ -337,6 +337,9 @@ Hint Resolve state_behaves'_mon: paco.
 can we derive "max_silent" mechanically?
 e.g. the index drops whenever an inductive call happens
 ***********************)
+(**********************
+TODO: CompCert랑 비교하고 이해: induction (star step)이 거기선 쉽고 왜 여기선 어려운가?
+***********************)
 Variable max_silent: L.(state) -> nat -> Prop.
 Theorem equiv_aux
         st0 beh fuel
