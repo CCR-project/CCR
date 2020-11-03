@@ -37,36 +37,10 @@ Module Beh.
     exists tl, <<APP: app pre tl = bh>>
   .
 
-  (*** le src tgt ***)
-  Inductive _le (le: t -> t -> Prop): t -> t -> Prop :=
-  | le_done
-    :
-      _le le (done) (done)
-  | le_spin
-    :
-      _le le spin spin 
-  | le_step
-      ev tl0 tl1
-      (TL: le tl0 tl1)
-    :
-      _le le (ev ## tl0) (ev ## tl1)
-  .
-
-  Definition le: _ -> _ -> Prop := paco2 _le bot2.
-
-  Lemma le_mon: monotone2 _le.
-  Proof.
-    ii. inv IN; econs; eauto.
-  Qed.
-
-  Hint Constructors _le.
-  Hint Unfold le.
-  Hint Resolve le_mon: paco.
+  Definition improves (src tgt: t -> Prop): Prop := tgt <1= src.
 
 End Beh.
-Hint Constructors Beh._le.
-Hint Unfold Beh.le.
-Hint Resolve Beh.le_mon: paco.
+Hint Unfold Beh.improves.
 
 
 
@@ -117,7 +91,8 @@ Inductive _state_behaves (state_behaves: L.(state) -> Beh.t -> Prop): L.(state) 
     _state_behaves state_behaves st0 (Beh.spin)
 | sb_ub
     st0
-    (ERROR: L.(state_sort) st0 = error)
+    (ANG: L.(state_sort) st0 = angelic)
+    (STUCK: ~exists ev st1, L.(step) st0 ev st1)
   :
     _state_behaves state_behaves st0 (Beh.ub)
 | sb_nb
@@ -170,7 +145,7 @@ Theorem state_behaves_ind :
 forall (r P: _ -> _ -> Prop),
 (forall st0, state_sort L st0 = final -> P st0 Beh.done) ->
 (forall st0, state_spin st0 -> P st0 Beh.spin) ->
-(forall st0, L.(state_sort) st0 = error -> P st0 Beh.ub) ->
+(forall st0, L.(state_sort) st0 = angelic -> ~(exists ev st1, L.(step) st0 ev st1) -> P st0 Beh.ub) ->
 (forall st0, P st0 Beh.nb) ->
 (* (forall st0 evs (IH: exists st1 (STEP: L.(step) st0 None st1), P st1 evs) *)
 (* (forall st0 evs (IH: exists st1, (<<STEP: L.(step) st0 None st1>>) /\ P st1 evs) *)
@@ -322,8 +297,39 @@ Proof.
 Qed.
 
 Lemma nb_bottom
-      L
+      L st0
   :
-    <<NB: program_behaves L Beh.nb>>
+    <<NB: state_behaves L st0 Beh.nb>>
 .
 Proof. pfold. econs; et. Qed.
+
+Lemma ub_top
+      L st0
+      (UB: state_behaves L st0 Beh.ub)
+  :
+    forall beh, state_behaves L st0 beh
+.
+Proof.
+  revert_until L. pfold. i. punfold UB. inv UB; ss; cycle 1.
+  { rr in STEP. des. clarify.
+    econs; eauto. rr. esplits; eauto.
+    clear DEM STEP0 st0. revert beh.
+    remember Beh.ub as tmp in TL. revert Heqtmp.
+    induction TL using state_behaves_ind; ii; ss; clarify.
+    - econs 7; eauto. ii. exfalso. eauto.
+    - rr in STEP. des. clarify. econs; eauto. rr. esplits; eauto.
+    - econs 7; eauto. ii. exploit STEP; eauto. i; des; clarify.
+      + esplits; eauto.
+  }
+  { econs 7; eauto. ii. exploit STEP; eauto. i; des; clarify.
+    esplits; eauto. left. esplits; eauto.
+    clear ANG STEP STEP0 st0. revert beh.
+    remember Beh.ub as tmp in TL. revert Heqtmp.
+    induction TL using state_behaves_ind; ii; ss; clarify.
+    - econs 7; eauto. ii. exfalso. eauto.
+    - rr in STEP. des. clarify. econs; eauto. rr. esplits; eauto.
+    - econs 7; eauto. ii. exploit STEP; eauto. i; des; clarify.
+      + esplits; eauto.
+  }
+  - econs 7; et; eauto. ii. exfalso. eauto.
+Qed.

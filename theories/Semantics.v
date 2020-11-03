@@ -5,7 +5,6 @@ Inductive sort: Type :=
 | angelic
 | demonic
 | final
-| error
 .
 
 Record semantics : Type := Semantics_gen {
