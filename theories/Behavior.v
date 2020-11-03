@@ -122,126 +122,93 @@ Hint Resolve state_spin_mon: paco.
 
 
 
-Inductive _state_behaves (state_behaves: L.(state) -> Beh.t -> Prop)
-          (st0: L.(state)): Beh.t -> Prop :=
+Inductive _state_behaves (state_behaves: L.(state) -> Beh.t -> Prop): L.(state) -> Beh.t -> Prop :=
 | sb_final
+    st0
     (FINAL: L.(state_sort) st0 = final)
   :
     _state_behaves state_behaves st0 (Beh.done)
 | sb_spin
+    st0
     (SPIN: state_spin st0)
   :
     _state_behaves state_behaves st0 (Beh.spin)
 | sb_ub
+    st0
     (UB: ~exists ev st1, L.(step) st0 ev st1)
   :
     _state_behaves state_behaves st0 (Beh.ub)
 | sb_nb
+    st0
   :
     _state_behaves state_behaves st0 (Beh.nb)
-| sb_angelic_tau
-    evs
-    (ANG: L.(state_sort) st0 = angelic)
-    (STEP: inter st0 (fun e st1 => (<<TL: _state_behaves state_behaves st1 evs>>) /\ (<<HD: e = None>>)))
-  :
-    _state_behaves state_behaves st0 evs 
-| sb_demonic_tau
+| sb_demonic
+    st0
     evs
     (DEM: L.(state_sort) st0 = demonic)
-    (STEP: union st0 (fun e st1 => (<<TL: _state_behaves state_behaves st1 evs>>) /\ (<<HD: e = None>>)))
+    (STEP: union st0 (fun e st1 =>
+                        (<<TAU: (<<HD: e = None>>) /\ (<<TL: _state_behaves state_behaves st1 evs>>)>>)
+                        \/
+                        (<<SYS: exists hd tl, (<<HD: e = Some (event_sys hd)>>) /\
+                                              (<<TL: state_behaves st1 tl>>) /\
+                                              (<<CONS: evs = Beh.cons hd tl>>)>>)))
   :
     _state_behaves state_behaves st0 evs
-| sb_angelic_sys
-    ev evs
+| sb_angelic
+    st0
+    evs
     (ANG: L.(state_sort) st0 = angelic)
-    (STEP: inter st0 (fun e st1 => (<<TL: state_behaves st1 evs>>) /\ (<<HD: e = Some (event_sys ev)>>)))
+    (STEP: inter st0 (fun e st1 =>
+                        (<<TAU: (<<HD: e = None>>) /\ (<<TL: _state_behaves state_behaves st1 evs>>)>>)
+                        \/
+                        (<<SYS: exists hd tl, (<<HD: e = Some (event_sys hd)>>) /\
+                                              (<<TL: state_behaves st1 tl>>) /\
+                                              (<<CONS: evs = Beh.cons hd tl>>)>>)))
   :
-    _state_behaves state_behaves st0 (Beh.cons ev evs)
-| sb_demonic_sys
-    ev evs
-    (DEM: L.(state_sort) st0 = demonic)
-    (STEP: union st0 (fun e st1 => (<<TL: state_behaves st1 evs>>) /\ (<<HD: e = Some (event_sys ev)>>)))
-  :
-    _state_behaves state_behaves st0 (Beh.cons ev evs)
+    _state_behaves state_behaves st0 evs
 .
-(*** TODO: ub / nb / spin ***)
-
-Theorem _state_behaves_ind_max
-        state_behaves
-        (P: forall st0 beh (Q: _state_behaves state_behaves st0 beh), Prop)
-        (FINAL: forall st0 (FINAL: L.(state_sort) st0 = final)
-                       (Q: _state_behaves state_behaves st0 Beh.done), <<IND: P st0 Beh.done Q>>)
-        (SPIN: forall st0 (SPIN: state_spin st0)
-                      (Q: _state_behaves state_behaves st0 Beh.spin), <<IND: P st0 Beh.spin Q>>)
-        (UB: forall st0 (UB: ~exists ev st1, L.(step) st0 ev st1)
-                    (Q: _state_behaves state_behaves st0 Beh.ub), <<IND: P st0 Beh.ub Q>>)
-        (NB: forall st0
-                    (Q: _state_behaves state_behaves st0 Beh.nb), <<IND: P st0 Beh.nb Q>>)
-        (ATAU: forall st0 beh (ANG: L.(state_sort) st0 = angelic)
-                      (STEP: inter st0 (fun e st1 => (<<TL: _state_behaves state_behaves st1 beh>>)
-                                                     /\ (<<HD: e = None>>)))
-                      (Q: _state_behaves state_behaves st0 beh), <<IND: P st0 beh Q>>)
-        (DTAU: forall st0 beh (DEM: L.(state_sort) st0 = demonic)
-                      (STEP: union st0 (fun e st1 => (<<TL: _state_behaves state_behaves st1 beh>>)
-                                                     /\ (<<HD: e = None>>)))
-                      (Q: _state_behaves state_behaves st0 beh), <<IND: P st0 beh Q>>)
-        (ASYS: forall st0 ev evs (ANG: L.(state_sort) st0 = angelic)
-                      (STEP: inter st0 (fun e st1 => (<<TL: state_behaves st1 evs>>)
-                                                     /\ (<<HD: e = Some (event_sys ev)>>)))
-                      (Q: _state_behaves state_behaves st0 (Beh.cons ev evs)), <<IND: P st0 (Beh.cons ev evs) Q>>)
-        (DSYS: forall st0 ev evs (DEM: L.(state_sort) st0 = demonic)
-                      (STEP: union st0 (fun e st1 => (<<TL: state_behaves st1 evs>>)
-                                                     /\ (<<HD: e = Some (event_sys ev)>>)))
-                      (Q: _state_behaves state_behaves st0 (Beh.cons ev evs)), <<IND: P st0 (Beh.cons ev evs) Q>>)
-  :
-    <<IND: forall st0 beh (Q: _state_behaves state_behaves st0 beh), P st0 beh Q>>
-.
-Proof.
-  red. fix IH 3.
-  ii. destruct Q.
-  - eapply FINAL; eauto.
-  - eapply SPIN; eauto.
-  - eapply UB; eauto.
-  - eapply NB; eauto.
-  - eapply ATAU; eauto.
-  - eapply DTAU; eauto.
-  - eapply ASYS; eauto.
-  - eapply DSYS; eauto.
-Qed.
-
-Theorem state_behaves_ind:
-forall (state_behaves : state L -> Beh.t -> Prop) (st0 : state L) (P : Beh.t -> Prop),
-(state_sort L st0 = final -> P Beh.done) ->
-(state_spin st0 -> P Beh.spin) ->
-(forall (evs: Beh.t) (IH: True),
- state_sort L st0 = angelic ->
- inter st0
-   (fun (e : option event) (st1 : state L) =>
-    <<TL: _state_behaves state_behaves st1 evs >> /\ <<HD: e = None >>) -> P evs) ->
-(forall (evs: Beh.t) (IH: True),
- state_sort L st0 = demonic ->
- union st0
-   (fun (e : option event) (st1 : state L) =>
-    <<TL: _state_behaves state_behaves st1 evs >> /\ <<HD: e = None >>) -> P evs) ->
-(forall (ev : syscall) (evs : Beh.t) (IHH: True),
- state_sort L st0 = angelic ->
- inter st0
-   (fun (e : option event) (st1 : state L) =>
-    <<TL: state_behaves st1 evs >> /\ <<HD: e = Some (event_sys ev) >>) -> P (Beh.cons ev evs)) ->
-(forall (ev : syscall) (evs : Beh.t) (IHH: True),
- state_sort L st0 = demonic ->
- union st0
-   (fun (e : option event) (st1 : state L) =>
-    <<TL: state_behaves st1 evs >> /\ <<HD: e = Some (event_sys ev) >>) -> P (Beh.cons ev evs)) ->
-forall t : Beh.t, _state_behaves state_behaves st0 t -> P t
-.
-Proof.
-  (* { i. inv H5; eauto. } *)
-  i. generalize dependent t. fix IH 2.
-  i. inv H5; eauto.
-Abort.
 
 Definition state_behaves: _ -> _ -> Prop := paco2 _state_behaves bot2.
+
+Theorem state_behaves_ind :
+forall (r P: _ -> _ -> Prop),
+(forall st0, state_sort L st0 = final -> P st0 Beh.done) ->
+(forall st0, state_spin st0 -> P st0 Beh.spin) ->
+(forall st0, ~ (exists ev st1, step L st0 ev st1) -> P st0 Beh.ub) ->
+(forall st0, P st0 Beh.nb) ->
+(* (forall st0 evs (IH: exists st1 (STEP: L.(step) st0 None st1), P st1 evs) *)
+(* (forall st0 evs (IH: exists st1, (<<STEP: L.(step) st0 None st1>>) /\ P st1 evs) *)
+(* (forall st0 evs (IH: forall st1 (STEP: L.(step) st0 None st1), P st1 evs) *)
+(forall st0 evs (IH: forall _st1 (SAFE: L.(step) st0 None _st1),
+                    exists st1, <<STEP: L.(step) st0 None st1>> /\ P st1 evs)
+ (DEM: state_sort L st0 = demonic)
+ (STEP: union st0
+   (fun e st1 =>
+    <<TAU: <<HD: e = None >> /\ <<TL: _state_behaves r st1 evs >> >> \/
+    <<SYS: exists hd tl,
+      <<HD: e = Some (event_sys hd) >> /\ <<TL: r st1 tl >> /\
+      <<CONS: evs = Beh.cons hd tl >> >>)),
+    P st0 evs) ->
+(forall st0 evs (IH: forall st1 (STEP: L.(step) st0 None st1), P st1 evs)
+ (ANG: state_sort L st0 = angelic)
+ (STEP: inter st0
+   (fun e st1 =>
+    <<TAU: <<HD: e = None >> /\ <<TL: _state_behaves r st1 evs >> >> \/
+    <<SYS:
+    exists hd tl, <<HD: e = Some (event_sys hd) >> /\ <<TL: r st1 tl >> /\
+                  <<CONS: evs = Beh.cons hd tl >> >>)),
+ P st0 evs) ->
+forall (s : state L) (t : Beh.t), _state_behaves r s t -> P s t.
+Proof.
+  fix IH 11. i.
+  inv H5; eauto.
+  - eapply H3; eauto.
+    rr in STEP. des; clarify.
+    + ii. esplits; try apply STEP0; eauto. eapply IH; eauto.
+    + ii. esplits; eauto. eapply IH; eauto. admit.
+  - eapply H4; eauto. ii. eapply IH; eauto.
+    exploit STEP; eauto. i; des; clarify.
+Qed.
 
 Lemma state_behaves_mon: monotone2 _state_behaves.
 Proof.
