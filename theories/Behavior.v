@@ -142,18 +142,32 @@ Inductive _state_behaves (state_behaves: L.(state) -> Beh.t -> Prop): L.(state) 
     st0
   :
     _state_behaves state_behaves st0 (Beh.nb)
-| sb_demonic
+(* | sb_demonic *)
+(*     st0 *)
+(*     evs *)
+(*     (DEM: L.(state_sort) st0 = demonic) *)
+(*     (STEP: union st0 (fun e st1 => *)
+(*                         (<<TAU: (<<HD: e = None>>) /\ (<<TL: _state_behaves state_behaves st1 evs>>)>>) *)
+(*                         \/ *)
+(*                         (<<SYS: exists hd tl, (<<HD: e = Some (event_sys hd)>>) /\ *)
+(*                                               (<<TL: state_behaves st1 tl>>) /\ *)
+(*                                               (<<CONS: evs = Beh.cons hd tl>>)>>))) *)
+(*   : *)
+(*     _state_behaves state_behaves st0 evs *)
+| sb_demonic_tau
     st0
     evs
     (DEM: L.(state_sort) st0 = demonic)
-    (STEP: union st0 (fun e st1 =>
-                        (<<TAU: (<<HD: e = None>>) /\ (<<TL: _state_behaves state_behaves st1 evs>>)>>)
-                        \/
-                        (<<SYS: exists hd tl, (<<HD: e = Some (event_sys hd)>>) /\
-                                              (<<TL: state_behaves st1 tl>>) /\
-                                              (<<CONS: evs = Beh.cons hd tl>>)>>)))
+    (STEP: union st0 (fun e st1 => (<<HD: e = None>>) /\ (<<TL: _state_behaves state_behaves st1 evs>>)))
   :
     _state_behaves state_behaves st0 evs
+| sb_demonic_sys
+    st0
+    ev evs
+    (DEM: L.(state_sort) st0 = demonic)
+    (STEP: union st0 (fun e st1 => (<<HD: e = Some (event_sys ev)>>) /\ (<<TL: state_behaves st1 evs>>)))
+  :
+    _state_behaves state_behaves st0 (Beh.cons ev evs)
 | sb_angelic
     st0
     evs
@@ -179,39 +193,64 @@ forall (r P: _ -> _ -> Prop),
 (* (forall st0 evs (IH: exists st1 (STEP: L.(step) st0 None st1), P st1 evs) *)
 (* (forall st0 evs (IH: exists st1, (<<STEP: L.(step) st0 None st1>>) /\ P st1 evs) *)
 (* (forall st0 evs (IH: forall st1 (STEP: L.(step) st0 None st1), P st1 evs) *)
-(forall st0 evs (IH: forall _st1 (SAFE: L.(step) st0 None _st1),
-                    exists st1, <<STEP: L.(step) st0 None st1>> /\ P st1 evs)
+
+(* (forall st0 evs (IH: forall _st1 (SAFE: L.(step) st0 None _st1), *)
+(*                     exists st1, <<STEP: L.(step) st0 None st1>> /\ P st1 evs) *)
+(*  (DEM: state_sort L st0 = demonic) *)
+(*  (STEP: union st0 *)
+(*    (fun e st1 => *)
+(*     <<TAU: <<HD: e = None >> /\ <<TL: _state_behaves r st1 evs >> >> \/ *)
+(*     <<SYS: exists hd tl, *)
+(*       <<HD: e = Some (event_sys hd) >> /\ <<TL: r st1 tl >> /\ *)
+(*       <<CONS: evs = Beh.cons hd tl >> >>)), *)
+(*     P st0 evs) -> *)
+
+(forall st0 evs
+        (* (IH: forall st1 (STEP: L.(step) st0 None st1), P st1 evs) *)
+        (* (IH: exists st1 (STEP: L.(step) st0 None st1), P st1 evs) *)
  (DEM: state_sort L st0 = demonic)
  (STEP: union st0
    (fun e st1 =>
-    <<TAU: <<HD: e = None >> /\ <<TL: _state_behaves r st1 evs >> >> \/
-    <<SYS: exists hd tl,
-      <<HD: e = Some (event_sys hd) >> /\ <<TL: r st1 tl >> /\
-      <<CONS: evs = Beh.cons hd tl >> >>)),
-    P st0 evs) ->
-(forall st0 evs (IH: forall st1 (STEP: L.(step) st0 None st1), P st1 evs)
+    <<HD: e = None >> /\ <<TL: _state_behaves r st1 evs >> /\ <<IH: P st1 evs>>)), P st0 evs) ->
+(forall st0 ev evs
+ (DEM: state_sort L st0 = demonic)
+ (STEP: union st0
+   (fun e st1 =>
+      <<HD: e = Some (event_sys ev) >> /\ <<TL: r st1 evs >>)), P st0 (Beh.cons ev evs)) ->
+(forall st0 evs
+        (* (IH: forall st1 (STEP: L.(step) st0 None st1), P st1 evs) *)
  (ANG: state_sort L st0 = angelic)
  (STEP: inter st0
    (fun e st1 =>
-    <<TAU: <<HD: e = None >> /\ <<TL: _state_behaves r st1 evs >> >> \/
+    <<TAU: <<HD: e = None >> /\ <<TL: _state_behaves r st1 evs >> /\ <<IH: P st1 evs>> >> \/
     <<SYS:
     exists hd tl, <<HD: e = Some (event_sys hd) >> /\ <<TL: r st1 tl >> /\
                   <<CONS: evs = Beh.cons hd tl >> >>)),
  P st0 evs) ->
-forall (s : state L) (t : Beh.t), _state_behaves r s t -> P s t.
+forall s t, _state_behaves r s t -> P s t.
 Proof.
-  fix IH 11. i.
-  inv H5; eauto.
-  - eapply H3; eauto.
-    rr in STEP. des; clarify.
-    + ii. esplits; try apply STEP0; eauto. eapply IH; eauto.
-    + ii. esplits; eauto. eapply IH; eauto. admit.
-  - eapply H4; eauto. ii. eapply IH; eauto.
-    exploit STEP; eauto. i; des; clarify.
+  fix IH 12. i.
+  inv H6; eauto.
+  - eapply H3; eauto. rr in STEP. des; clarify. esplits; eauto.
+    rr. esplits; eauto. eapply IH; eauto. Guarded.
+  - eapply H5; eauto. ii. exploit STEP; eauto. i; des; clarify.
+    + esplits; eauto. left. esplits; eauto. eapply IH; eauto.
+    + esplits; eauto. right. esplits; eauto.
 Qed.
 
 Lemma state_behaves_mon: monotone2 _state_behaves.
 Proof.
+  ii. induction IN using state_behaves_ind; eauto.
+  - econs 1; et.
+  - econs 2; et.
+  - econs 3; et.
+  - econs 4; et.
+  - econs 5; et. rr in STEP. des. clarify. rr. esplits; et.
+  - econs 6; et. rr in STEP. des. clarify. rr. esplits; et.
+  - econs 7; et. ii. exploit STEP; eauto. i; des; clarify.
+    + esplits; et.
+    + esplits; et. right. esplits; et.
+  - econs 1; et.
   assert(TRIAL1: monotone2 _state_behaves).
   {
     ii. revert IN. revert x1. revert x0. (* pattern x0. pattern x1. *)
