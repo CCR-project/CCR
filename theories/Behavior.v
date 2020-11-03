@@ -8,7 +8,7 @@ Require Import ClassicalChoice PropExtensionality FunctionalExtensionality.
 
 Ltac et := eauto.
 
-Module Beh.
+Module Tr.
   CoInductive t: Type :=
   | done
   | spin
@@ -29,7 +29,7 @@ Module Beh.
   Lemma fold_app
         s pre tl
     :
-      (Beh.cons s (Beh.app pre tl)) = Beh.app (s :: pre) tl
+      (Tr.cons s (Tr.app pre tl)) = Tr.app (s :: pre) tl
   .
   Proof. reflexivity. Qed.
 
@@ -37,12 +37,22 @@ Module Beh.
     exists tl, <<APP: app pre tl = bh>>
   .
 
-  Definition improves (src tgt: t -> Prop): Prop := tgt <1= src.
-
-End Beh.
-Hint Unfold Beh.improves.
+End Tr.
 
 
+
+
+
+
+
+
+
+
+
+Module Beh.
+
+Definition t: Type := Tr.t -> Prop.
+Definition improves (src tgt: t): Prop := tgt <1= src.
 
 Section BEHAVES.
 
@@ -78,75 +88,75 @@ Hint Resolve state_spin_mon: paco.
 
 
 
-Inductive _state_behaves (state_behaves: L.(state) -> Beh.t -> Prop): L.(state) -> Beh.t -> Prop :=
+Inductive _of_state (of_state: L.(state) -> Tr.t -> Prop): L.(state) -> Tr.t -> Prop :=
 | sb_final
     st0
     (FINAL: L.(state_sort) st0 = final)
   :
-    _state_behaves state_behaves st0 (Beh.done)
+    _of_state of_state st0 (Tr.done)
 | sb_spin
     st0
     (SPIN: state_spin st0)
   :
-    _state_behaves state_behaves st0 (Beh.spin)
+    _of_state of_state st0 (Tr.spin)
 | sb_ub
     st0
     (ANG: L.(state_sort) st0 = angelic)
     (STUCK: ~exists ev st1, L.(step) st0 ev st1)
   :
-    _state_behaves state_behaves st0 (Beh.ub)
+    _of_state of_state st0 (Tr.ub)
 | sb_nb
     st0
   :
-    _state_behaves state_behaves st0 (Beh.nb)
+    _of_state of_state st0 (Tr.nb)
 (* | sb_demonic *)
 (*     st0 *)
 (*     evs *)
 (*     (DEM: L.(state_sort) st0 = demonic) *)
 (*     (STEP: union st0 (fun e st1 => *)
-(*                         (<<TAU: (<<HD: e = None>>) /\ (<<TL: _state_behaves state_behaves st1 evs>>)>>) *)
+(*                         (<<TAU: (<<HD: e = None>>) /\ (<<TL: _of_state of_state st1 evs>>)>>) *)
 (*                         \/ *)
 (*                         (<<SYS: exists hd tl, (<<HD: e = Some (event_sys hd)>>) /\ *)
-(*                                               (<<TL: state_behaves st1 tl>>) /\ *)
-(*                                               (<<CONS: evs = Beh.cons hd tl>>)>>))) *)
+(*                                               (<<TL: of_state st1 tl>>) /\ *)
+(*                                               (<<CONS: evs = Tr.cons hd tl>>)>>))) *)
 (*   : *)
-(*     _state_behaves state_behaves st0 evs *)
+(*     _of_state of_state st0 evs *)
 | sb_demonic_tau
     st0
     evs
     (DEM: L.(state_sort) st0 = demonic)
-    (STEP: union st0 (fun e st1 => (<<HD: e = None>>) /\ (<<TL: _state_behaves state_behaves st1 evs>>)))
+    (STEP: union st0 (fun e st1 => (<<HD: e = None>>) /\ (<<TL: _of_state of_state st1 evs>>)))
   :
-    _state_behaves state_behaves st0 evs
+    _of_state of_state st0 evs
 | sb_demonic_sys
     st0
     ev evs
     (DEM: L.(state_sort) st0 = demonic)
-    (STEP: union st0 (fun e st1 => (<<HD: e = Some (event_sys ev)>>) /\ (<<TL: state_behaves st1 evs>>)))
+    (STEP: union st0 (fun e st1 => (<<HD: e = Some (event_sys ev)>>) /\ (<<TL: of_state st1 evs>>)))
   :
-    _state_behaves state_behaves st0 (Beh.cons ev evs)
+    _of_state of_state st0 (Tr.cons ev evs)
 | sb_angelic
     st0
     evs
     (ANG: L.(state_sort) st0 = angelic)
     (STEP: inter st0 (fun e st1 =>
-                        (<<TAU: (<<HD: e = None>>) /\ (<<TL: _state_behaves state_behaves st1 evs>>)>>)
+                        (<<TAU: (<<HD: e = None>>) /\ (<<TL: _of_state of_state st1 evs>>)>>)
                         \/
                         (<<SYS: exists hd tl, (<<HD: e = Some (event_sys hd)>>) /\
-                                              (<<TL: state_behaves st1 tl>>) /\
-                                              (<<CONS: evs = Beh.cons hd tl>>)>>)))
+                                              (<<TL: of_state st1 tl>>) /\
+                                              (<<CONS: evs = Tr.cons hd tl>>)>>)))
   :
-    _state_behaves state_behaves st0 evs
+    _of_state of_state st0 evs
 .
 
-Definition state_behaves: _ -> _ -> Prop := paco2 _state_behaves bot2.
+Definition of_state: _ -> _ -> Prop := paco2 _of_state bot2.
 
-Theorem state_behaves_ind :
+Theorem of_state_ind :
 forall (r P: _ -> _ -> Prop),
-(forall st0, state_sort L st0 = final -> P st0 Beh.done) ->
-(forall st0, state_spin st0 -> P st0 Beh.spin) ->
-(forall st0, L.(state_sort) st0 = angelic -> ~(exists ev st1, L.(step) st0 ev st1) -> P st0 Beh.ub) ->
-(forall st0, P st0 Beh.nb) ->
+(forall st0, state_sort L st0 = final -> P st0 Tr.done) ->
+(forall st0, state_spin st0 -> P st0 Tr.spin) ->
+(forall st0, L.(state_sort) st0 = angelic -> ~(exists ev st1, L.(step) st0 ev st1) -> P st0 Tr.ub) ->
+(forall st0, P st0 Tr.nb) ->
 (* (forall st0 evs (IH: exists st1 (STEP: L.(step) st0 None st1), P st1 evs) *)
 (* (forall st0 evs (IH: exists st1, (<<STEP: L.(step) st0 None st1>>) /\ P st1 evs) *)
 (* (forall st0 evs (IH: forall st1 (STEP: L.(step) st0 None st1), P st1 evs) *)
@@ -155,10 +165,10 @@ forall (r P: _ -> _ -> Prop),
 (*  (DEM: state_sort L st0 = demonic) *)
 (*  (STEP: union st0 *)
 (*    (fun e st1 => *)
-(*     <<TAU: <<HD: e = None >> /\ <<TL: _state_behaves r st1 evs >> /\ <<IH: P st1 evs>> >> \/ *)
+(*     <<TAU: <<HD: e = None >> /\ <<TL: _of_state r st1 evs >> /\ <<IH: P st1 evs>> >> \/ *)
 (*     <<SYS: exists hd tl, *)
 (*       <<HD: e = Some (event_sys hd) >> /\ <<TL: r st1 tl >> /\ *)
-(*       <<CONS: evs = Beh.cons hd tl >> >>)), *)
+(*       <<CONS: evs = Tr.cons hd tl >> >>)), *)
 (*     P st0 evs) -> *)
 
 (forall st0 evs
@@ -167,23 +177,23 @@ forall (r P: _ -> _ -> Prop),
  (DEM: state_sort L st0 = demonic)
  (STEP: union st0
    (fun e st1 =>
-    <<HD: e = None >> /\ <<TL: _state_behaves r st1 evs >> /\ <<IH: P st1 evs>>)), P st0 evs) ->
+    <<HD: e = None >> /\ <<TL: _of_state r st1 evs >> /\ <<IH: P st1 evs>>)), P st0 evs) ->
 (forall st0 ev evs
  (DEM: state_sort L st0 = demonic)
  (STEP: union st0
    (fun e st1 =>
-      <<HD: e = Some (event_sys ev) >> /\ <<TL: r st1 evs >>)), P st0 (Beh.cons ev evs)) ->
+      <<HD: e = Some (event_sys ev) >> /\ <<TL: r st1 evs >>)), P st0 (Tr.cons ev evs)) ->
 (forall st0 evs
         (* (IH: forall st1 (STEP: L.(step) st0 None st1), P st1 evs) *)
  (ANG: state_sort L st0 = angelic)
  (STEP: inter st0
    (fun e st1 =>
-    <<TAU: <<HD: e = None >> /\ <<TL: _state_behaves r st1 evs >> /\ <<IH: P st1 evs>> >> \/
+    <<TAU: <<HD: e = None >> /\ <<TL: _of_state r st1 evs >> /\ <<IH: P st1 evs>> >> \/
     <<SYS:
     exists hd tl, <<HD: e = Some (event_sys hd) >> /\ <<TL: r st1 tl >> /\
-                  <<CONS: evs = Beh.cons hd tl >> >>)),
+                  <<CONS: evs = Tr.cons hd tl >> >>)),
  P st0 evs) ->
-forall s t, _state_behaves r s t -> P s t.
+forall s t, _of_state r s t -> P s t.
 Proof.
   (* fix IH 11. i. *)
   (* inv H5; eauto. *)
@@ -201,9 +211,9 @@ Proof.
     + esplits; eauto. right. esplits; eauto.
 Qed.
 
-Lemma state_behaves_mon: monotone2 _state_behaves.
+Lemma of_state_mon: monotone2 _of_state.
 Proof.
-  ii. induction IN using state_behaves_ind; eauto.
+  ii. induction IN using of_state_ind; eauto.
   - econs 1; et.
   - econs 2; et.
   - econs 3; et.
@@ -221,35 +231,25 @@ Proof.
     + esplits; et. right. esplits; et.
 Qed.
 
-Hint Constructors _state_behaves.
-Hint Unfold state_behaves.
-Hint Resolve state_behaves_mon: paco.
+Hint Constructors _of_state.
+Hint Unfold of_state.
+Hint Resolve of_state_mon: paco.
 
-(**********************
-TODO: CompCert랑 비교하고 이해: induction (star step)이 거기선 쉽고 왜 여기선 어려운가?
-***********************)
+Definition of_program: Tr.t -> Prop := of_state L.(initial_state).
 
 
 
 
-
-Definition program_behaves: Beh.t -> Prop := state_behaves L.(initial_state).
-
-End BEHAVES.
-Hint Constructors _state_spin.
-Hint Unfold state_spin.
-Hint Resolve state_spin_mon: paco.
-Hint Constructors _state_behaves.
-Hint Unfold state_behaves.
-Hint Resolve state_behaves_mon: paco.
+(**********************************************************)
+(*********************** properties ***********************)
+(**********************************************************)
 
 Lemma prefix_closed_state
-      L
       st0 pre bh
-      (BEH: state_behaves L st0 bh)
-      (PRE: Beh.prefix pre bh)
+      (BEH: of_state st0 bh)
+      (PRE: Tr.prefix pre bh)
   :
-    <<NB: state_behaves L st0 (Beh.app pre Beh.nb)>>
+    <<NB: of_state st0 (Tr.app pre Tr.nb)>>
 .
 Proof.
   revert_until L. pcofix CIH. i. punfold BEH. rr in PRE. des; subst.
@@ -257,9 +257,9 @@ Proof.
   { pfold. econs; eauto. }
   inv BEH; ss; clarify.
   - pfold. econs 5; eauto. rr in STEP. des; clarify. rr. esplits; eauto.
-    remember (Beh.cons s (Beh.app pre tl)) as tmp. revert Heqtmp.
+    remember (Tr.cons s (Tr.app pre tl)) as tmp. revert Heqtmp.
     clear DEM STEP0 st0. revert pre s tl.
-    induction TL using state_behaves_ind; ii; ss; clarify.
+    induction TL using of_state_ind; ii; ss; clarify.
     + rr in STEP. des; clarify. econs; eauto. rr. esplits; eauto.
     + rr in STEP. des; clarify. pclearbot. econs 6; eauto. rr. esplits; eauto. right.
       eapply CIH; eauto. rr. eauto.
@@ -271,9 +271,9 @@ Proof.
     eapply CIH; try apply TL. rr. eauto.
   - pfold. econs 7; eauto. ii. exploit STEP; eauto. clear STEP. i; des; clarify.
     + esplits; eauto. left. esplits; eauto.
-      remember (Beh.cons s (Beh.app pre tl)) as tmp. revert Heqtmp.
+      remember (Tr.cons s (Tr.app pre tl)) as tmp. revert Heqtmp.
       clear ANG STEP0 st0. revert pre s tl.
-      induction TL using state_behaves_ind; ii; ss; clarify.
+      induction TL using of_state_ind; ii; ss; clarify.
       * rr in STEP. des; clarify. econs; eauto. rr. esplits; eauto.
       * rr in STEP. des; clarify. pclearbot. econs 6; eauto. rr. esplits; eauto. right.
         eapply CIH; eauto. rr. eauto.
@@ -285,37 +285,36 @@ Proof.
 Qed.
 
 Theorem prefix_closed
-      L
       pre bh
-      (BEH: program_behaves L bh)
-      (PRE: Beh.prefix pre bh)
+      (BEH: of_program bh)
+      (PRE: Tr.prefix pre bh)
   :
-    <<NB: program_behaves L (Beh.app pre Beh.nb)>>
+    <<NB: of_program (Tr.app pre Tr.nb)>>
 .
 Proof.
   eapply prefix_closed_state; eauto.
 Qed.
 
 Lemma nb_bottom
-      L st0
+      st0
   :
-    <<NB: state_behaves L st0 Beh.nb>>
+    <<NB: of_state st0 Tr.nb>>
 .
 Proof. pfold. econs; et. Qed.
 
 Lemma ub_top
-      L st0
-      (UB: state_behaves L st0 Beh.ub)
+      st0
+      (UB: of_state st0 Tr.ub)
   :
-    forall beh, state_behaves L st0 beh
+    forall beh, of_state st0 beh
 .
 Proof.
   revert_until L. pfold. i. punfold UB. inv UB; ss; cycle 1.
   { rr in STEP. des. clarify.
     econs; eauto. rr. esplits; eauto.
     clear DEM STEP0 st0. revert beh.
-    remember Beh.ub as tmp in TL. revert Heqtmp.
-    induction TL using state_behaves_ind; ii; ss; clarify.
+    remember Tr.ub as tmp in TL. revert Heqtmp.
+    induction TL using of_state_ind; ii; ss; clarify.
     - econs 7; eauto. ii. exfalso. eauto.
     - rr in STEP. des. clarify. econs; eauto. rr. esplits; eauto.
     - econs 7; eauto. ii. exploit STEP; eauto. i; des; clarify.
@@ -324,8 +323,8 @@ Proof.
   { econs 7; eauto. ii. exploit STEP; eauto. i; des; clarify.
     esplits; eauto. left. esplits; eauto.
     clear ANG STEP STEP0 st0. revert beh.
-    remember Beh.ub as tmp in TL. revert Heqtmp.
-    induction TL using state_behaves_ind; ii; ss; clarify.
+    remember Tr.ub as tmp in TL. revert Heqtmp.
+    induction TL using of_state_ind; ii; ss; clarify.
     - econs 7; eauto. ii. exfalso. eauto.
     - rr in STEP. des. clarify. econs; eauto. rr. esplits; eauto.
     - econs 7; eauto. ii. exploit STEP; eauto. i; des; clarify.
@@ -333,3 +332,14 @@ Proof.
   }
   - econs 7; et; eauto. ii. exfalso. eauto.
 Qed.
+
+End BEHAVES.
+
+End Beh.
+Hint Unfold Beh.improves.
+Hint Constructors Beh._state_spin.
+Hint Unfold Beh.state_spin.
+Hint Resolve Beh.state_spin_mon: paco.
+Hint Constructors Beh._of_state.
+Hint Unfold Beh.of_state.
+Hint Resolve Beh.of_state_mon: paco.
