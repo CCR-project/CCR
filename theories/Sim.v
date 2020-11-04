@@ -6,136 +6,244 @@ From Paco Require Import paco.
 Require Import RelationClasses List.
 Require Import ClassicalChoice PropExtensionality FunctionalExtensionality.
 
+Set Implicit Arguments.
+
+Definition single X (x: X): X -> Prop := fun x0 => x = x0.
 
 
 
-Module Sim.
+(* Section SSET. *)
+(*   Context `{L: semantics}. *)
+(*   Record elem: Type := mk_elem { elem_st:> L.(state) ; guarded:> bool ; accum:> list syscall }. *)
+(*   Definition sset: Type := ((elem -> Prop) -> Prop). *)
+(* End SSET. *)
+
+(* Section SIM. *)
+
+(* Variable L0 L1: semantics. *)
+
+(* Inductive _sim (sim: @sset L0 -> @sset L1 -> Prop): _ -> _ -> Prop := *)
+(* (* | sim_expand *) *)
+(* | sim_pointwise *)
+(*     sss_src0 sss_tgt0 *)
+(*     (SIM: sim sss_src0 sss_tgt0) *)
+(*     (POINT: forall ss_tgt0 (IN: sss_tgt0 ss_tgt0), *)
+(*         exists ss_src0, (<<IN: sss_src0 ss_src0>>) /\ *)
+(*                         (<<SIM: forall s_src0 (IN: ss_src0 s_src0), *)
+(*                             exists s_tgt0, (<<IN: ss_tgt0 s_tgt0>>) /\ *)
+(*                                            (<<SIM: sim (single (single s_src0)) (single (single s_tgt0))>>) *)
+(*                                              >>)) *)
+(*   : *)
+(*     _sim sim sss_src0 sss_tgt0 *)
+(* . *)
+
+Lemma spin_nofinal
+      L st0
+      (SPIN: Beh.state_spin L st0)
+  :
+    <<NOFIN: L.(state_sort) st0 <> final>>
+.
+Proof.
+  punfold SPIN. inv SPIN; ii; rewrite H in *; ss.
+Qed.
+
 Section SIM.
+
   Variable L0 L1: semantics.
-  Definition t: Type := forall (sim: L0.(state) -> L1.(state) -> Prop), L0.(state) -> L1.(state) -> Prop.
+  Variable idx: Type.
+  Variable ord: idx -> idx -> Prop.
 
-  Variable _sim: t.
-  Variant _lift (lift: L0.(state) -> Beh.t): L0.(state) -> Beh.t :=
-  | _lift_intro
-      st_src0 st_tgt0 tr
-      (SIM: _sim (fun st_src1 st_tgt1 => Beh.of_state L1 st_tgt1 <1= lift st_src1) st_src0 st_tgt0)
-      (GIVEN: Beh.of_state L1 st_tgt0 tr)
+  Variant _sim sim (i0: idx) (st_src0: L0.(state)) (st_tgt0: L1.(state)): Prop :=
+  | sim_final
+      (FINTGT: L1.(state_sort) st_tgt0 = final)
+      (FINSRC: L0.(state_sort) st_src0 = final)
     :
-      _lift lift st_src0 tr
+      _sim sim i0 st_src0 st_tgt0
+  | sim_demonic_tgt
+      (DEM: L1.(state_sort) st_tgt0 = demonic)
+      (DEMTGT: forall
+          st_tgt1
+          (STEPTGT: L1.(step) st_tgt0 None st_tgt1)
+        ,
+          exists i1, <<ORD: ord i1 i0>> /\ <<SIM: sim i1 st_src0 st_tgt1>>)
+    :
+      _sim sim i0 st_src0 st_tgt0
+  | sim_demonic_src
+      (DEM: L0.(state_sort) st_src0 = demonic)
+      (DEMSRC: exists
+          st_src1
+          (STEPSRC: L0.(step) st_src0 None st_src1)
+        ,
+          exists i1, <<ORD: ord i1 i0>> /\ <<SIM: sim i1 st_src1 st_tgt0>>)
+    :
+      _sim sim i0 st_src0 st_tgt0
+  | sim_demonic_both
+      (DEM: L0.(state_sort) st_src0 = demonic)
+      (DEM: L1.(state_sort) st_tgt0 = demonic)
+      (DEMTGT: forall
+          ev st_tgt1
+          (STEPTGT: L1.(step) st_tgt0 ev st_tgt1)
+        ,
+          exists i1 st_src1, <<ORD: ord i1 i0>> /\ <<STEP: L0.(step) st_src0 ev st_src1>> /\
+                                                           <<SIM: sim i1 st_src0 st_tgt0>>)
+    :
+      _sim sim i0 st_src0 st_tgt0
+  | sim_angelic_src
+      (ANG: L0.(state_sort) st_src0 = angelic)
+      (ANGSRC: forall
+          st_src1
+          (STEPSRC: L0.(step) st_src0 None st_src1)
+        ,
+          exists i1, <<ORD: ord i1 i0>> /\ <<SIM: sim i1 st_src1 st_tgt0>>)
+    :
+      _sim sim i0 st_src0 st_tgt0
+  | sim_angelic_tgt
+      (ANG: L1.(state_sort) st_tgt0 = angelic)
+      (ANGTGT: exists
+          st_tgt1
+          (STEPTGT: L1.(step) st_tgt0 None st_tgt1)
+        ,
+          exists i1, <<ORD: ord i1 i0>> /\ <<SIM: sim i1 st_src0 st_tgt1>>)
+    :
+      _sim sim i0 st_src0 st_tgt0
+  | sim_angelic_both
+      (ANG: L0.(state_sort) st_src0 = angelic)
+      (ANG: L1.(state_sort) st_tgt0 = angelic)
+      (ANGSRC: forall
+          ev st_src1
+          (STEPSRC: L0.(step) st_src0 ev st_src1)
+        ,
+          exists i1 st_tgt1, <<ORD: ord i1 i0>> /\ <<STEP: L1.(step) st_tgt0 ev st_tgt1>> /\
+                                                           <<SIM: sim i1 st_src0 st_tgt0>>)
+    :
+      _sim sim i0 st_src0 st_tgt0
   .
-  Hint Constructors _lift.
 
-  Lemma lift_mon (MON: monotone2 _sim): monotone2 _lift.
+  Definition sim: _ -> _ -> _ -> Prop := paco3 _sim bot3.
+
+  Lemma sim_mon: monotone3 _sim.
   Proof.
-    ii. inv IN. econs; eauto.
+    ii. inv IN; try (by econs; eauto).
+
+    - econs 2; et. ii. exploit DEMTGT; et. i; des; et.
+    - econs 3; et. des. esplits; eauto.
+    - econs 4; et. ii. exploit DEMTGT; et. i; des; et. esplits; et.
+
+    - econs 5; et. ii. exploit ANGSRC; et. i; des; et.
+    - econs 6; et. des. esplits; eauto.
+    - econs 7; et. ii. exploit ANGSRC; et. i; des; et. esplits; et.
   Qed.
 
-  Definition lift := paco2 _lift bot2.
+  Hint Constructors _sim.
+  Hint Unfold sim.
+  Hint Resolve sim_mon: paco.
+
+  Record simulation: Prop := mk_simulation {
+    sim_wf_ord: <<WF: well_founded ord>>;
+    sim_init: exists i0, <<SIM: sim i0 L0.(initial_state) L1.(initial_state)>>;
+  }
+  .
+
+  Lemma adequacy_aux
+        (WF: well_founded ord)
+        i0 st_src0 st_tgt0
+        (SIM: sim i0 st_src0 st_tgt0)
+    :
+      <<IMPR: Beh.improves (Beh.of_state L0 st_src0) (Beh.of_state L1 st_tgt0)>>
+  .
+  Proof.
+    revert_until WF.
+    ginit.
+    { i. eapply cpn2_wcompat; eauto. eapply Beh.of_state_mon. }
+    gcofix CIH. i.
+    revert_until i0. pattern i0. eapply well_founded_ind; eauto. clear i0. i.
+    rename x into i0. rename H into IH. rename x2 into tr.
+
+    punfold SIM. inv SIM.
+    - gstep. punfold PR. inv PR; ss; try rewrite FINTGT in *; clarify.
+      + (** fin **) econs; ss; et.
+      + (** spin **) eapply spin_nofinal in SPIN; ss.
+    - punfold PR.
+      Require Import Program.
+
+      inv PR; ss; try rewrite DEM in *; clarify.
+      + (** spin **)
+        punfold SPIN. inv SPIN; try rewrite DEM in *; ss. des. clarify. pclearbot.
+        rename st1 into st_tgt1.
+        exploit DEMTGT; eauto. i; des. r in SIM; des; ss.
+        exploit IH; eauto.
+      + (** nb **) gstep; econs; eauto.
+      + (** dem tau **)
+        rr in STEP. des. clarify.
+        exploit DEMTGT; et. i; des. r in SIM; des; ss. eapply IH; eauto.
+      + (** dem sys **)
+        rr in STEP. des. clarify. r in TL; des; ss.
+        exploit DEMTGT; et. i; des. r in SIM; des; ss.
+        rename st1 into st_tgt1.
+
+        gstep.
+        pfold.
+        (*** st_tgt0 --ev--> st_tgt1 ---> evs
+             st_src0
+         ***)
+        eapply IH; eauto. pfold. econs; eauto.
+        pfold. econs 6; eauto. eapply IH; eauto.
+
+
+      clear DEM.
+      dependent induction PR using Beh.of_state_ind; ss; try rewrite DEM in *; clarify;
+        rename st0 into st_tgt0.
+      + (** spin **)
+        rename H into SPIN.
+        punfold SPIN. inv SPIN; try rewrite DEM in *; ss. des. clarify. pclearbot.
+        rename st1 into st_tgt1.
+        exploit DEMTGT; eauto. i; des. revert TL. pclearbot. i.
+        exploit IH; eauto.
+      + (** nb **) pfold; econs; eauto.
+      + (** dem tau **)
+        rr in STEP. des. clarify. exploit DEMTGT; eauto. i; des. Fail progress pclearbot.
+        r in SIM; des; ss.
+        rename st1 into st_tgt1.
+        eapply IH0.
+      + (** **)
+
+
+
+
+      dependent induction PR using Beh.of_state_ind; ss; try rewrite DEM in *; clarify;
+        rename st0 into st_tgt0.
+      + (** spin **)
+        rename H into SPIN.
+        punfold SPIN. inv SPIN; try rewrite DEM in *; ss. des. clarify. pclearbot.
+        rename st1 into st_tgt1.
+        exploit DEMTGT; eauto. i; des. revert TL. pclearbot. i.
+        exploit IH; eauto.
+      + (** nb **) pfold; econs; eauto.
+      + (** dem tau **)
+        rr in STEP. des. clarify. exploit DEMTGT; eauto. i; des. Fail progress pclearbot.
+        r in SIM; des; ss.
+        rename st1 into st_tgt1.
+        eapply IH0.
+      + (** **)
+  Qed.
+
+  Theorem adequacy
+          (SIM: simulation)
+    :
+      <<IMPR: Beh.improves (Beh.of_program L0) (Beh.of_program L1)>>
+  .
+  Proof.
+    pcofix CIH. i.
+  Qed.
 
 End SIM.
-End Sim.
-Hint Constructors Sim._lift.
-Hint Unfold Sim.lift.
-Hint Resolve Sim.lift_mon: paco.
+Hint Constructors _sim.
+Hint Unfold sim.
+Hint Resolve sim_mon: paco.
 
-
-
-Module Simple.
-  Section SIM.
-    Variable L0 L1: semantics.
-    Definition bsim (sim: L0.(state) -> L1.(state) -> Prop): L0.(state) -> L1.(state) -> Prop :=
-      fun st_src0 st_tgt0 =>
-        match L0.(state_sort) st_src0, L1.(state_sort) st_tgt0 with
-        | angelic, angelic =>
-          forall st_src1 ev (STEPSRC: L0.(step) st_src0 ev st_src1),
-          exists st_tgt1, (<<STEPTGT: L1.(step) st_tgt0 ev st_tgt1>>) /\ (<<SIM: sim st_src1 st_tgt1>>)
-        | demonic, demonic =>
-          forall st_tgt1 ev (STEPTGT: L1.(step) st_tgt0 ev st_tgt1),
-          exists st_src1, (<<STEPSRC: L0.(step) st_src0 ev st_src1>>) /\ (<<SIM: sim st_src1 st_tgt1>>)
-        | final, final => False
-        | _, _ => False
-        end
-    .
-
-    Theorem bsim_mon: monotone2 bsim.
-    Proof.
-      ii. r. r in IN. des_ifs; ss; et.
-      - ii. exploit IN; eauto. i; des. eauto.
-      - ii. exploit IN; eauto. i; des. eauto.
-    Qed.
-
-    (* Theorem bsim_compat: compatible2 (Beh._of_state L0) (Sim._lift L0 L1 bsim). *)
-    (* Proof. *)
-    (*   econs. *)
-    (*   { eapply Sim.lift_mon; eauto. eapply bsim_mon; eauto. } *)
-    (* Admitted. *)
-
-    Theorem bsim_spec:
-      (Sim._lift L0 L1 bsim) <3= gupaco2 (Beh._of_state L0) (cpn2 (Beh._of_state L0)).
-    Proof.
-      gcofix CIH. intros. destruct PR.
-      r in SIM. des_ifs.
-      - gstep. econs 7; et. rr. ii.
-        esplits; eauto. exploit SIM; eauto. i; des.
-        exploit SIM0; eauto. intro A.
-        destruct ev; ss.
-        + destruct e; ss. right.
-          esplits; eauto.
-          { gfinal; eauto. }
-          admit.
-        + left. esplits; eauto. admit.
-      - admit.
-    Admitted.
-
-  End SIM.
-
-  (* Inductive bindC (r: itr_src -> itr_tgt -> Prop) : itr_src -> itr_tgt -> Prop := *)
-  (* | bindC_intro *)
-  (*     i_src i_tgt *)
-  (*     (SIM: match_itr i_src i_tgt) *)
-  (*     k_src k_tgt *)
-  (*     (SIMK: HProper (SALL !-> r) k_src k_tgt) *)
-  (*   : *)
-  (*     bindC r (ITree.bind i_src k_src) (ITree.bind i_tgt k_tgt) *)
-  (* . *)
-
-  (* Hint Constructors bindC: core. *)
-
-  (* Lemma bindC_spec *)
-  (*       simC *)
-  (*   : *)
-  (*     bindC <3= gupaco2 (_match_itr) (simC) *)
-  (* . *)
-  (* Proof. *)
-  (*   gcofix CIH. intros. destruct PR. *)
-  (*   punfold SIM. inv SIM. *)
-  (*   - rewrite ! bind_ret_l. gbase. eapply SIMK; et. rr; et. *)
-  (*   - rewrite ! bind_tau. gstep. econs; eauto. pclearbot. *)
-  (*     (* gfinal. left. eapply CIH. econstructor; eauto. *) *)
-  (*     debug eauto with paco. *)
-  (*   - rewrite ! bind_vis. gstep. econs; eauto. u. ii. repeat spc MATCH. pclearbot. eauto with paco. *)
-  (*   - rewrite ! bind_vis. gstep. econs; eauto. u. ii. repeat spc MATCH. pclearbot. *)
-  (*     eauto with paco. *)
-  (*   - rewrite ! bind_vis. gstep. econs; eauto. *)
-  (*   - rewrite ! bind_vis. gstep. econs; eauto. *)
-  (*   - rewrite ! bind_vis. *)
-  (*     gstep. econs; eauto. ii. exploit SIM0; et. intro T; des_safe. pclearbot. eauto with paco. *)
-  (*   - rewrite ! bind_vis. rewrite ! bind_tau. *)
-  (*     gstep. econs; eauto. des. pclearbot. eauto with paco. *)
-  (*   - rewrite ! bind_vis. rewrite ! bind_tau. *)
-  (*     gstep. econs; eauto. ii. pclearbot. eauto with paco. *)
-  (* Qed. *)
-
-  (* gpaco2 _match_itr (cpn2 _match_itr) bot2 bot2 (` x : _ <- a2;; a0 x) (` x : _ <- a3;; a1 x) *)
-
-  (* gpaco2 (Beh._of_state L0) (cpn2 (Beh._of_state L0)) bot2 r (initial_state L0) tr *)
-
-End Simple.
-
-
-
-Theorem compsim_compat
+Theorem adequacy
         L0 L1
+Theorem compsim_compat
   :
     Beh.improves (Beh.of_program L0) (Beh.of_program L1)
 .
@@ -155,3 +263,5 @@ Proof.
 
     guclo Simple.bsim_compat. gclo. Set Printing All. Compute (fun _ : state L0 => Tr.t).
 Qed.
+
+End SIM.
