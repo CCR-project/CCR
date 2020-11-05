@@ -327,6 +327,50 @@ forall (sim P: bool -> bool -> state L0 -> state L1 -> Prop),
   Hint Unfold sim.
   Hint Resolve sim_mon: paco.
 
+  Lemma adequacy_spin_aux
+        st_src0 st_tgt0
+        (SIM: sim true true st_src0 st_tgt0)
+        (SPIN: Beh.state_spin L1 st_tgt0)
+    :
+      <<SPIN: Beh.state_spin L0 st_src0>>
+  .
+  Proof.
+    revert_until L1.
+    ginit.
+    { i. eapply cpn1_wcompat; eauto. eapply Beh.state_spin_mon. }
+    gcofix CIH. i.
+    punfold SIM.
+    dependent induction SIM using sim_ind.
+    - exploit spin_nofinal; eauto. i; ss.
+    - punfold SPIN. inv SPIN; rewrite DEM in *; ss. des. clarify.
+      rename st1 into st_tgt1.
+      exploit STEP; eauto. pclearbot. i; des. rr in x. des.
+      + ss.
+      + eapply IND0; eauto.
+  Abort.
+
+  Lemma adequacy_spin_aux
+        b_src b_tgt st_src0 st_tgt0
+        (GUARD: ~(b_src = false /\ b_tgt = false))
+        (SIM: sim b_src b_tgt st_src0 st_tgt0)
+        (SPIN: Beh.state_spin L1 st_tgt0)
+    :
+      <<SPIN: Beh.state_spin L0 st_src0>>
+  .
+  Proof.
+    revert_until L1.
+    ginit.
+    { i. eapply cpn1_wcompat; eauto. eapply Beh.state_spin_mon. }
+    gcofix CIH. i.
+    punfold SIM.
+    induction SIM using sim_ind.
+    - exploit spin_nofinal; eauto. i; ss.
+    - punfold SPIN. inv SPIN; rewrite DEM in *; ss. des. clarify.
+      rename st1 into st_tgt1.
+      exploit STEP; eauto. pclearbot. i; des. rr in x. des.
+      + des_ifs. rr in COIND; des; ss.
+  Abort.
+
   Lemma adequacy_spin
         b_src b_tgt st_src0 st_tgt0
         (SIM: sim b_src b_tgt st_src0 st_tgt0)
@@ -340,10 +384,43 @@ forall (sim P: bool -> bool -> state L0 -> state L1 -> Prop),
     { i. eapply cpn1_wcompat; eauto. eapply Beh.state_spin_mon. }
     gcofix CIH. i.
 
-    destruct (classic (b_src = false /\ b_tgt = false)).
-    { des; clarify.
-      punfold SIM. inv SIM.
-    }
+
+    (* destruct (classic (b_src = false /\ b_tgt = false)). *)
+    (* { des; clarify. *)
+    (*   punfold SPIN; inv SPIN. *)
+    (*   - punfold SIM. induction SIM using sim_ind; try rewrite ANG in *; ss. *)
+    (*     des. rr in SIM. des; des_ifs. *)
+    (*     + gstep. econs 2; eauto. esplits; eauto. gbase. *)
+    (*       rr in COIND; des; ss. eauto. *)
+    (*     + gstep. econs 2; eauto. esplits; eauto. *)
+    (*       eapply gpaco1_mon. *)
+    (*       { eapply IND0; eauto. } *)
+    (*       { ii; ss. } *)
+    (*       { ii; ss. } *)
+    (*   - punfold SIM. des. clarify. rr in TL; des; ss. *)
+    (*     dependent induction SIM using sim_ind; try rewrite DEM in *; ss. *)
+    (*     + exploit STEP; eauto. i; des. rr in x. des; des_ifs. *)
+    (*       * gstep. econs 2; eauto. esplits; eauto. gbase. *)
+    (*         rr in COIND; des; ss. eauto. *)
+    (*   - rewrite ANG in *; ss. *)
+    (*     + gstep. econs; eauto. *)
+    (* } *)
+
+    (* { *)
+    (*   punfold SIM. *)
+    (*   revert_until CIH. fix IH 5. i. *)
+    (*   inv SIM. *)
+    (*   - exfalso. eapply spin_nofinal; eauto. Guarded. *)
+    (*   - _punfold SPIN; [|eauto with paco]. inv SPIN; rewrite DEM in *; ss. des. clarify. *)
+    (*     rename st1 into st_tgt1. *)
+    (*     exploit STEP; eauto. pclearbot. i; des. rr in x. des. *)
+    (*     + des_ifs. des. rr in COIND; des; ss. *)
+    (*       punfold COIND. *)
+    (*       eapply IH. *)
+    (*       Guarded. *)
+    (*       admit. *)
+    (*     + eapply IND0; eauto. *)
+    (* } *)
 
     punfold SIM.
     induction SIM using sim_ind.
@@ -352,6 +429,18 @@ forall (sim P: bool -> bool -> state L0 -> state L1 -> Prop),
       rename st1 into st_tgt1.
       exploit STEP; eauto. pclearbot. i; des. rr in x. des.
       + des_ifs. des. rr in COIND; des; ss.
+
+
+        clear DEM STEP st_tgt0 STEP1 DEM0.
+        rename COIND into SIM. rename TL into SPIN.
+        punfold SIM.
+        dependent induction SIM using sim_ind.
+        { exploit spin_nofinal; eauto. i; ss. }
+        { punfold SPIN. inv SPIN; rewrite DEM in *; ss. des. clarify.
+          rename st1 into st_tgt1.
+          exploit STEP; eauto. pclearbot. i; des. rr in x. des; ss.
+          eapply IND0; eauto.
+        }
         admit.
       + eapply IND0; eauto.
     -
