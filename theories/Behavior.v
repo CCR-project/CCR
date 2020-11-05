@@ -66,11 +66,11 @@ Definition inter (st0: L.(state)) (P: (option event) -> L.(state) -> Prop) :=
 Inductive _state_spin (state_spin: L.(state) -> Prop)
   (st0: L.(state)): Prop :=
 | state_spin_angelic
-    (ANG: L.(state_sort) st0 = angelic)
-    (STEP: forall ev st1 (STEP: L.(step) st0 ev st1), <<HD: ev = None>> /\ <<TL: state_spin st1>>)
+    (SRT: L.(state_sort) st0 = angelic)
+    (STEP: forall ev st1 (STEP: L.(step) st0 ev st1), <<TL: state_spin st1>>)
 | state_spin_demonic
-    (DEM: L.(state_sort) st0 = demonic)
-    (STEP: exists ev st1, <<STEP: L.(step) st0 ev st1>> /\ <<HD: ev = None>> /\ <<TL: state_spin st1>>)
+    (SRT: L.(state_sort) st0 = demonic)
+    (STEP: exists ev st1 (STEP: L.(step) st0 ev st1), <<TL: state_spin st1>>)
 .
 
 Definition state_spin: _ -> Prop := paco1 _state_spin bot1.
@@ -78,7 +78,7 @@ Definition state_spin: _ -> Prop := paco1 _state_spin bot1.
 Lemma state_spin_mon: monotone1 _state_spin.
 Proof.
   ii. inv IN; try (by econs; eauto).
-  - econs 1; et. ii. exploit STEP; et. i; des. et.
+  - econs 1; et. ii. exploit STEP; et.
   - des. econs 2; et. esplits; et.
 Qed.
 
@@ -121,30 +121,25 @@ Inductive _of_state (of_state: L.(state) -> Tr.t -> Prop): L.(state) -> Tr.t -> 
 (*                                               (<<CONS: evs = Tr.cons hd tl>>)>>))) *)
 (*   : *)
 (*     _of_state of_state st0 evs *)
-| sb_demonic_tau
+| sb_vis
+    st0 st1 ev evs
+    (SRT: L.(state_sort) st0 = vis)
+    (STEP: _.(step) st0 (Some (event_sys ev)) st1)
+    (TL: of_state st1 evs)
+  :
+    _of_state of_state st0 (Tr.cons ev evs)
+| sb_demonic
     st0
     evs
-    (DEM: L.(state_sort) st0 = demonic)
+    (SRT: L.(state_sort) st0 = demonic)
     (STEP: union st0 (fun e st1 => (<<HD: e = None>>) /\ (<<TL: _of_state of_state st1 evs>>)))
   :
     _of_state of_state st0 evs
-| sb_demonic_sys
-    st0
-    ev evs
-    (DEM: L.(state_sort) st0 = demonic)
-    (STEP: union st0 (fun e st1 => (<<HD: e = Some (event_sys ev)>>) /\ (<<TL: of_state st1 evs>>)))
-  :
-    _of_state of_state st0 (Tr.cons ev evs)
 | sb_angelic
     st0
     evs
-    (ANG: L.(state_sort) st0 = angelic)
-    (STEP: inter st0 (fun e st1 =>
-                        (<<TAU: (<<HD: e = None>>) /\ (<<TL: _of_state of_state st1 evs>>)>>)
-                        \/
-                        (<<SYS: exists hd tl, (<<HD: e = Some (event_sys hd)>>) /\
-                                              (<<TL: of_state st1 tl>>) /\
-                                              (<<CONS: evs = Tr.cons hd tl>>)>>)))
+    (SRT: L.(state_sort) st0 = angelic)
+    (STEP: inter st0 (fun e st1 => (<<HD: e = None>>) /\ (<<TL: _of_state of_state st1 evs>>)))
   :
     _of_state of_state st0 evs
 .
@@ -157,41 +152,23 @@ forall (r P: _ -> _ -> Prop),
 (forall st0, state_spin st0 -> P st0 Tr.spin) ->
 (forall st0, L.(state_sort) st0 = angelic -> ~(exists ev st1, L.(step) st0 ev st1) -> P st0 Tr.ub) ->
 (forall st0, P st0 Tr.nb) ->
-(* (forall st0 evs (IH: exists st1 (STEP: L.(step) st0 None st1), P st1 evs) *)
-(* (forall st0 evs (IH: exists st1, (<<STEP: L.(step) st0 None st1>>) /\ P st1 evs) *)
-(* (forall st0 evs (IH: forall st1 (STEP: L.(step) st0 None st1), P st1 evs) *)
 
-(* (forall st0 evs *)
-(*  (DEM: state_sort L st0 = demonic) *)
-(*  (STEP: union st0 *)
-(*    (fun e st1 => *)
-(*     <<TAU: <<HD: e = None >> /\ <<TL: _of_state r st1 evs >> /\ <<IH: P st1 evs>> >> \/ *)
-(*     <<SYS: exists hd tl, *)
-(*       <<HD: e = Some (event_sys hd) >> /\ <<TL: r st1 tl >> /\ *)
-(*       <<CONS: evs = Tr.cons hd tl >> >>)), *)
-(*     P st0 evs) -> *)
-
+(forall st0 st1 ev evs
+ (DEM: state_sort L st0 = vis)
+ (STEP: _.(step) st0 (Some (event_sys ev)) st1)
+ (TL: r st1 evs)
+  ,
+    P st0 (Tr.cons ev evs)) ->
 (forall st0 evs
-        (* (IH: forall st1 (STEP: L.(step) st0 None st1), P st1 evs) *)
-        (* (IH: exists st1 (STEP: L.(step) st0 None st1), P st1 evs) *)
  (DEM: state_sort L st0 = demonic)
  (STEP: union st0
    (fun e st1 =>
     <<HD: e = None >> /\ <<TL: _of_state r st1 evs >> /\ <<IH: P st1 evs>>)), P st0 evs) ->
-(forall st0 ev evs
- (DEM: state_sort L st0 = demonic)
- (STEP: union st0
-   (fun e st1 =>
-      <<HD: e = Some (event_sys ev) >> /\ <<TL: r st1 evs >>)), P st0 (Tr.cons ev evs)) ->
 (forall st0 evs
         (* (IH: forall st1 (STEP: L.(step) st0 None st1), P st1 evs) *)
  (ANG: state_sort L st0 = angelic)
  (STEP: inter st0
-   (fun e st1 =>
-    <<TAU: <<HD: e = None >> /\ <<TL: _of_state r st1 evs >> /\ <<IH: P st1 evs>> >> \/
-    <<SYS:
-    exists hd tl, <<HD: e = Some (event_sys hd) >> /\ <<TL: r st1 tl >> /\
-                  <<CONS: evs = Tr.cons hd tl >> >>)),
+   (fun e st1 => <<HD: e = None >> /\ <<TL: _of_state r st1 evs >> /\ <<IH: P st1 evs>>)),
  P st0 evs) ->
 forall s t, _of_state r s t -> P s t.
 Proof.
@@ -205,10 +182,8 @@ Proof.
   (*   + esplits; eauto. right. esplits; eauto. *)
   fix IH 12. i.
   inv H6; eauto.
-  - eapply H3; eauto. rr in STEP. des; clarify. esplits; eauto. rr. esplits; eauto. eapply IH; eauto.
-  - eapply H5; eauto. ii. exploit STEP; eauto. i; des; clarify.
-    + esplits; eauto. left. esplits; eauto. eapply IH; eauto.
-    + esplits; eauto. right. esplits; eauto.
+  - eapply H4; eauto. rr in STEP. des; clarify. esplits; eauto. rr. esplits; eauto. eapply IH; eauto.
+  - eapply H5; eauto. ii. exploit STEP; eauto. i; des; clarify. esplits; eauto. eapply IH; eauto.
 Qed.
 
 Lemma of_state_mon: monotone2 _of_state.
@@ -218,17 +193,9 @@ Proof.
   - econs 2; et.
   - econs 3; et.
   - econs 4; et.
-  (* - econs 5; et. rr in STEP. des; clarify. *)
-  (*   + rr. esplits; et. *)
-  (*   + rr. esplits; et. right. esplits; et. *)
-  (* - econs 6; et. ii. exploit STEP; eauto. i; des; clarify. *)
-  (*   + esplits; et. *)
-  (*   + esplits; et. right. esplits; et. *)
-  - econs 5; et. rr in STEP. des; clarify. rr. esplits; et.
+  - econs 5; et.
   - econs 6; et. rr in STEP. des; clarify. rr. esplits; et.
   - econs 7; et. ii. exploit STEP; eauto. i; des; clarify.
-    + esplits; et.
-    + esplits; et. right. esplits; et.
 Qed.
 
 Hint Constructors _of_state.
@@ -255,33 +222,14 @@ Proof.
   revert_until L. pcofix CIH. i. punfold BEH. rr in PRE. des; subst.
   destruct pre; ss; clarify.
   { pfold. econs; eauto. }
-  inv BEH; ss; clarify.
-  - pfold. econs 5; eauto. rr in STEP. des; clarify. rr. esplits; eauto.
-    remember (Tr.cons s (Tr.app pre tl)) as tmp. revert Heqtmp.
-    clear DEM STEP0 st0. revert pre s tl.
-    induction TL using of_state_ind; ii; ss; clarify.
-    + rr in STEP. des; clarify. econs; eauto. rr. esplits; eauto.
-    + rr in STEP. des; clarify. pclearbot. econs 6; eauto. rr. esplits; eauto. right.
-      eapply CIH; eauto. rr. eauto.
-    + econs 7; eauto. ii. exploit STEP; eauto. i; des.
-      * clarify. esplits; eauto.
-      * clarify. esplits; eauto. right. esplits; swap 2 3; eauto. pclearbot. right. eapply CIH; eauto.
-        rr; et.
-  - pfold. econs 6; eauto. rr in STEP. des; clarify. rr. esplits; eauto. pclearbot. right.
-    eapply CIH; try apply TL. rr. eauto.
-  - pfold. econs 7; eauto. ii. exploit STEP; eauto. clear STEP. i; des; clarify.
-    + esplits; eauto. left. esplits; eauto.
-      remember (Tr.cons s (Tr.app pre tl)) as tmp. revert Heqtmp.
-      clear ANG STEP0 st0. revert pre s tl.
-      induction TL using of_state_ind; ii; ss; clarify.
-      * rr in STEP. des; clarify. econs; eauto. rr. esplits; eauto.
-      * rr in STEP. des; clarify. pclearbot. econs 6; eauto. rr. esplits; eauto. right.
-        eapply CIH; eauto. rr. eauto.
-      * econs 7; eauto. ii. exploit STEP; eauto. i; des.
-        -- clarify. esplits; eauto.
-        -- clarify. esplits; eauto. right. esplits; swap 2 3; eauto. pclearbot. right. eapply CIH; eauto.
-           rr; et.
-    + esplits; eauto. right. esplits; swap 2 3; eauto. pclearbot. right. eapply CIH; eauto. rr; et.
+
+  remember (Tr.cons s (Tr.app pre tl)) as tmp. revert Heqtmp.
+  induction BEH using of_state_ind; ii; ss; clarify.
+  - pclearbot. pfold. econs; eauto. right. eapply CIH; et. rr; et.
+  - pfold. econs 6; eauto. rr in STEP. des; clarify. rr. esplits; eauto.
+    exploit IH; et. intro A. punfold A.
+  - pfold. econs 7; eauto. ii. exploit STEP; eauto. clear STEP. i; des; clarify. esplits; eauto.
+    exploit IH; et. intro A. punfold A.
 Qed.
 
 Theorem prefix_closed
@@ -309,28 +257,49 @@ Lemma ub_top
     forall beh, of_state st0 beh
 .
 Proof.
-  revert_until L. pfold. i. punfold UB. inv UB; ss; cycle 1.
-  { rr in STEP. des. clarify.
-    econs; eauto. rr. esplits; eauto.
-    clear DEM STEP0 st0. revert beh.
-    remember Tr.ub as tmp in TL. revert Heqtmp.
-    induction TL using of_state_ind; ii; ss; clarify.
-    - econs 7; eauto. ii. exfalso. eauto.
-    - rr in STEP. des. clarify. econs; eauto. rr. esplits; eauto.
-    - econs 7; eauto. ii. exploit STEP; eauto. i; des; clarify.
-      + esplits; eauto.
+  revert_until L. pfold. i. punfold UB.
+  remember Tr.ub as tmp. revert Heqtmp.
+  induction UB using of_state_ind; ii; ss; clarify.
+  - econs 7; eauto. ii. exfalso. eauto.
+  - rr in STEP. des. clarify. econs; eauto. rr. esplits; eauto.
+  - econs 7; eauto. ii. exploit STEP; eauto. i; des; clarify. esplits; eauto.
+Qed.
+
+Lemma beh_astep
+      tr st0 ev st1
+      (SRT: L.(state_sort) st0 = angelic)
+      (STEP: _.(step) st0 ev st1)
+      (BEH: of_state st0 tr)
+  :
+    <<BEH: of_state st1 tr>>
+.
+Proof.
+  exploit wf_angelic; et. i; clarify.
+  revert_until L.
+  pcofix CIH; i.
+  punfold BEH.
+  {
+    generalize dependent st1.
+    induction BEH using of_state_ind; et; try rewrite SRT in *; ii; ss.
+    - punfold H. inv H; rewrite SRT in *; ss.
+      exploit STEP0; et. i; des. pclearbot. et.
+    - contradict H0; et.
+    - rr in STEP. exploit STEP; et. i; des.
+      pfold. eapply of_state_mon; et. ii; ss. eapply upaco2_mon; et. ii; ss.
   }
-  { econs 7; eauto. ii. exploit STEP; eauto. i; des; clarify.
-    esplits; eauto. left. esplits; eauto.
-    clear ANG STEP STEP0 st0. revert beh.
-    remember Tr.ub as tmp in TL. revert Heqtmp.
-    induction TL using of_state_ind; ii; ss; clarify.
-    - econs 7; eauto. ii. exfalso. eauto.
-    - rr in STEP. des. clarify. econs; eauto. rr. esplits; eauto.
-    - econs 7; eauto. ii. exploit STEP; eauto. i; des; clarify.
-      + esplits; eauto.
-  }
-  - econs 7; et; eauto. ii. exfalso. eauto.
+Qed.
+
+Lemma beh_dstep
+      tr st0 ev st1
+      (SRT: L.(state_sort) st0 = demonic)
+      (STEP: _.(step) st0 ev st1)
+      (BEH: of_state st1 tr)
+  :
+    <<BEH: of_state st0 tr>>
+.
+Proof.
+  exploit wf_demonic; et. i; clarify.
+  pfold. econs 6; et. rr. esplits; et. punfold BEH.
 Qed.
 
 End BEHAVES.
