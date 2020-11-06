@@ -6,6 +6,10 @@ Require Import RelationClasses List.
 Require Import ClassicalChoice PropExtensionality FunctionalExtensionality.
 (* Require Import Streams. *)
 
+Set Implicit Arguments.
+
+Definition single X (x: X): X -> Prop := fun x0 => x = x0.
+
 Ltac et := eauto.
 
 Module Tr.
@@ -300,6 +304,51 @@ Lemma beh_dstep
 Proof.
   exploit wf_demonic; et. i; clarify.
   pfold. econs 6; et. rr. esplits; et. punfold BEH.
+Qed.
+
+(* Inductive tstar (st0: L.(state)): (L.(state) -> Prop) -> Prop := *)
+(* | tstar_refl *)
+(*   : *)
+(*     tstar st0 (single st0) *)
+(* | tstar_demonic *)
+(*     lfs *)
+(*     (SRT: L.(state_sort) st0 = demonic) *)
+(*     (STEP: exists st1 (STEP: L.(step) st0 None st1), <<TL: tstar st1 lfs>>) *)
+(*   : *)
+(*     tstar st0 lfs *)
+(* | tstar_angelic *)
+(*     lfs *)
+(*     (SRT: L.(state_sort) st0 = angelic) *)
+(*     (STEP: forall st1 (STEP: L.(step) st0 None st1), <<TL: tstar st1 lfs>>) *)
+(*   : *)
+(*     tstar st0 lfs *)
+(* . *)
+
+Lemma beh_tstar
+      tr st0
+      (BEH: of_state st0 tr)
+      (* (NOSPIN: ~state_spin st0) *)
+      (NOSPIN: tr <> Tr.spin)
+      (NONB: tr <> Tr.nb)
+  :
+    (<<TSTAR: tstar _ st0 (is_leaf _ /1\ (flip of_state) tr)>>)
+.
+Proof.
+  punfold BEH.
+  move BEH at top. revert_until BEH.
+  unfold flip, is_leaf.
+  induction BEH using of_state_ind; ii; ss.
+  - econs; eauto. esplits; eauto. des_ifs.
+  - econs 3; eauto. ii; ss. contradict H0. esplits; eauto.
+  - econs; eauto. esplits; eauto. des_ifs.
+  - rr in STEP. des; clarify.
+    exploit IH; et.
+    (* { ii. contradict NOSPIN. pfold. econs 2; eauto. esplits; eauto. } *)
+    intro A.
+    econs 2; eauto.
+  - econs 3; eauto. ii. rr in STEP. hexploit STEP; et. i; des.
+    exploit IH; et.
+    (* { ii. contradict NOSPIN. pfold. econs 1; eauto. ii. exploit STEP; et. i; des. esplits; eauto. } *)
 Qed.
 
 End BEHAVES.

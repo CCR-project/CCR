@@ -6,10 +6,24 @@ From Paco Require Import paco.
 Require Import RelationClasses List.
 Require Import ClassicalChoice PropExtensionality FunctionalExtensionality.
 Require Import Program.
+Require Import String.
 
 Set Implicit Arguments.
 
 Definition single X (x: X): X -> Prop := fun x0 => x = x0.
+
+Ltac determ_tac LEMMA :=
+  let tac := eauto in
+  let x := rev_all ltac:(fun f => apply f) in
+  let y := all ltac:(fun f => apply f) in
+  first[
+      exploit LEMMA; [x|y|]
+    | exploit LEMMA; [tac|x|y|]
+    | exploit LEMMA; [tac|tac|x|y|]
+    | exploit LEMMA; [tac|tac|tac|x|y|]
+    | exploit LEMMA; [tac|tac|tac|tac|x|y|]
+    ];
+  i; des; clarify.
 
 
 
@@ -94,6 +108,16 @@ Proof.
   punfold SPIN. inv SPIN; ii; rewrite H in *; ss.
 Qed.
 
+Lemma spin_novis
+      L st0
+      (SPIN: Beh.state_spin L st0)
+  :
+    <<NOFIN: L.(state_sort) st0 <> vis>>
+.
+Proof.
+  punfold SPIN. inv SPIN; ii; rewrite H in *; ss.
+Qed.
+
 Lemma spin_noevent
       L st0 e st1
       (STAR: PStar L (fun st => _.(state_sort) st = angelic) st0 [e] st1)
@@ -155,9 +179,10 @@ Section SIM.
   | sim_vis
       (SRT: _.(state_sort) st_src0 = vis)
       (SRT: _.(state_sort) st_tgt0 = vis)
-      ev st_src1 st_tgt1
+      i1 ev st_src1 st_tgt1
       (STEP: _.(step) st_src0 ev st_src1)
       (STEP: _.(step) st_tgt0 ev st_tgt1)
+      (SIM: (sim i1 st_src1 st_tgt1): Prop)
       (* (SIM: forall ev st_tgt1 *)
       (*     (STEP: _.(step) st_tgt0 ev st_tgt1) *)
       (*   , *)
@@ -361,6 +386,193 @@ Section SIM.
     gcofix CIH. i.
     revert_until i0. pattern i0. eapply well_founded_ind; eauto. clear i0. i.
     rename x into i0. rename H into IH.
+
+    punfold SIM. inv SIM.
+    - (** final **)
+      des. exfalso. punfold SPIN. inv SPIN; rewrite SRT1 in *; ss.
+    - (** vis **)
+      des. exfalso. punfold SPIN. inv SPIN; rewrite SRT1 in *; ss.
+    - (** dsrc **)
+      des. pc SIM. gstep. econs 2; et. esplits; et. gbase. et.
+    - (** dtgt **)
+      punfold SPIN. inv SPIN; try rewrite SRT in *; ss. des; clarify.
+      pc TL. exploit wf_demonic; et; i; clarify.
+      exploit SIM0; et. i; des. pc SIM. eapply IH; et.
+    - (** asrc **)
+      punfold SPIN. inv SPIN; ss.
+      + gstep. econs 1; et. ii.
+        exploit L0.(wf_angelic); et. i; clarify. esplits; et.
+        exploit SIM0; et. i; des. pc SIM.
+        gbase. eapply CIH; eauto.
+      + des; clarify. rename st1 into st_tgt1.
+        exploit wf_demonic; et; i; clarify.
+        gstep. econs; et. ii. exploit wf_angelic; et; i; clarify.
+        pc TL. exploit SIM0; et. i; des. pc SIM.
+        (* gbase. eapply CIH; et. pfold; econs 2; et. esplits; et. *)
+        eapply gpaco1_mon. { eapply IH; et. pfold; econs 2; et. esplits; et. } { ss. } { ss. }
+    - (** atgt **)
+      des. pc SIM. eapply IH; eauto. eapply spin_astep; et.
+    - (** dd **)
+      punfold SPIN. inv SPIN; rewrite SRT0 in *; ss. des.
+      exploit wf_demonic; et; i; clarify. pc TL.
+      exploit SIM0; et. i; des. pc SIM.
+      gstep. econs 2; et. esplits; et. gbase. eapply CIH; et.
+    - (** aa **)
+      punfold SPIN. inv SPIN; rewrite SRT0 in *; ss. des.
+      gstep. econs; et. ii.
+      exploit L0.(wf_angelic); et; i; clarify.
+      exploit SIM0; et. i; des. pc SIM.
+      gbase. eapply CIH; et. eapply spin_astep; et.
+    - (** da **)
+      des. pc SIM. gstep. econs 2; et. esplits; et. gbase. eapply CIH; et. eapply spin_astep; et.
+    - (** ad **)
+      gstep. econs 1; et. ii.
+      exploit L0.(wf_angelic); et; i; clarify.
+      punfold SPIN. inv SPIN; rewrite SRT0 in *; ss. des; clarify. pc TL.
+      exploit (wf_demonic); et; i; clarify.
+      exploit SIM0; et. i; des. pc x.
+      gbase. eapply CIH; et.
+  Qed.
+
+  Lemma adequacy_tstar
+        i0 st_src0 st_tgt0 tr
+        (SIM: sim i0 st_src0 st_tgt0)
+        (TSTAR: tstar _ st_tgt0 (is_leaf _ /1\ (flip (Beh.of_state _)) tr))
+    :
+      <<TSTAR: tstar _ st_src0 (is_leaf _ /1\ (flip (Beh.of_state _)) tr)>>
+  .
+  Proof.
+    revert_until i0. pattern i0. eapply well_founded_ind; eauto. clear i0. i.
+    rename x into i0. rename H into IH.
+
+    punfold SIM. inv SIM.
+    - (** final **)
+      inv TSTAR; des; ss; eq_closure_tac.
+      econs; eauto. unfold is_leaf, flip in *. des_ifs. esplits; et.
+      punfold PROP0. inv PROP0; eq_closure_tac.
+      { pfold; econs; eauto. }
+      { exploit spin_nofinal; et. i; ss. }
+      { pfold; econs; eauto. }
+    - (** vis **)
+      inv TSTAR; des; ss; eq_closure_tac.
+      econs; eauto. unfold is_leaf, flip in *. des_ifs. esplits; et.
+      punfold PROP0. inv PROP0; eq_closure_tac.
+      { exploit spin_novis; et. i; ss. }
+      { pfold; econs; eauto. }
+      { determ_tac wf_vis. clear_tac. pfold; econs; eauto.
+        rename st1 into st_tgt1. pclearbot. left.
+  Abort.
+
+  Lemma adequacy_tstar
+        i0 st_src0 st_tgt0 lfs_tgt
+        (TSTAR: tstar _ st_tgt0 lfs_tgt)
+        (LEAF: lfs_tgt <1= is_leaf _)
+        (SIM: sim i0 st_src0 st_tgt0)
+    :
+      exists lfs_src,
+        (<<TSTAR: tstar _ st_src0 lfs_src>>) /\
+        (<<LEAF: lfs_src <1= is_leaf _>>) /\
+        (<<SIM: forall st_src1 (PR: lfs_src st_src1),
+            exists i1 st_tgt1 (PR: lfs_tgt st_tgt1), <<SIM: sim i1 st_src1 st_tgt1>>>>)
+  .
+  Proof.
+    revert_until i0. pattern i0. eapply well_founded_ind; eauto. clear i0. i.
+    rename x into i0. rename H into IH.
+
+    punfold SIM. inv SIM.
+    - (** final **)
+      inv TSTAR; des; ss; eq_closure_tac.
+      exists (single st_src0).
+      esplits; eauto.
+      { econs; eauto. r; ss. }
+      { ii. rr in PR; subst. unfold is_leaf. des_ifs. }
+      { ii. rr in PR; subst. esplits; eauto. }
+    - (** vis **)
+      inv TSTAR; des; ss; eq_closure_tac.
+      exists (single st_src0).
+      esplits; eauto.
+      { econs 1; eauto. r; ss. }
+      { ii. rr in PR; subst. unfold is_leaf. des_ifs. }
+      { ii. rr in PR; subst. esplits; eauto. }
+    - (** dsrc **)
+      des. pclearbot.
+      exploit IH; eauto. i; des.
+      esplits; eauto.
+      econs 2; eauto.
+    - (** dtgt **)
+      inv TSTAR; des; ss; eq_closure_tac.
+      { apply LEAF in PROP. unfold is_leaf in PROP. des_ifs. }
+      exploit SIM0; et. i; des. pclearbot.
+      exploit IH; et.
+    - (** asrc **)
+      (* exists (fun st_src1 => exists ev, _.(step) st_src0 ev st_src1). *)
+      exists (fun st_src1 => exists i1 st_tgt1 (PR: lfs_tgt st_tgt1),
+                  <<SIM: sim i1 st_src1 st_tgt1>>).
+      esplits; eauto.
+      + econs 3; eauto. ii. hexploit SIM0; eauto. i; des. pclearbot.
+        exploit IH; eauto. i; des.
+  Abort.
+
+  Lemma adequacy_tstar
+        i0 st_src0 st_tgt0 lfs_tgt
+        (TSTAR: tstar _ st_tgt0 lfs_tgt)
+        (LEAF: lfs_tgt <1= is_leaf _)
+        (SIM: sim i0 st_src0 st_tgt0)
+    :
+      (<<TSTAR: tstar _ st_src0
+                      (fun st_src1 => (<<LEAF: is_leaf _ st_src1>>) /\
+                                      (exists i1 st_tgt1 (PR: lfs_tgt st_tgt1),
+                                          <<SIM: sim i1 st_src1 st_tgt1>>))>>)
+  .
+  Proof.
+    revert_until i0. pattern i0. eapply well_founded_ind; eauto. clear i0. i.
+    rename x into i0. rename H into IH.
+
+    punfold SIM. inv SIM.
+    - (** final **)
+      inv TSTAR; des; ss; eq_closure_tac.
+      econs; eauto. esplits; eauto. unfold is_leaf. des_ifs.
+    - (** vis **)
+      inv TSTAR; des; ss; eq_closure_tac.
+      econs; eauto. esplits; eauto. unfold is_leaf. des_ifs.
+    - (** dsrc **)
+      des. pclearbot.
+      exploit IH; eauto. i; des.
+      esplits; eauto.
+      econs 2; eauto.
+    - (** dtgt **)
+      inv TSTAR; des; ss; eq_closure_tac.
+      { apply LEAF in PROP. unfold is_leaf in PROP. des_ifs. }
+      exploit SIM0; et. i; des. pclearbot.
+      exploit IH; et.
+    - (** asrc **)
+      econs 3; eauto. ii. rename st1 into st_src1. exploit SIM0; eauto. i; des.
+      pclearbot. exploit IH; eauto.
+    - (** atgt **)
+      des. pclearbot.
+      exploit IH; try apply SIM; eauto.
+      inv TSTAR; des; ss; eq_closure_tac.
+      { apply LEAF in PROP. unfold is_leaf in PROP. des_ifs. }
+      eapply STEP0; eauto.
+    - (** dd **)
+      clear IH.
+      generalize dependent st_src0. revert_until TSTAR.
+      induction TSTAR using tstar_ind2; ii; ss; eauto; eq_closure_tac.
+      { apply LEAF in H. unfold is_leaf in H. des_ifs. }
+      des.
+      exploit SIM0; et. i; des. pclearbot.
+      econs 2; eauto. esplits; eauto.
+      eapply IH; eauto.
+
+
+
+      inv TSTAR; des; ss; eq_closure_tac.
+      { apply LEAF in PROP. unfold is_leaf in PROP. des_ifs. }
+      exploit SIM0; et. i; des. pclearbot.
+      econs 2; eauto. esplits; eauto.
+    - (** aa **)
+    - (** da **)
+    - (** ad **)
 
     punfold SIM. inv SIM.
     - (** final **)
