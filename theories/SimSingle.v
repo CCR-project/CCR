@@ -180,8 +180,8 @@ Section SIM.
       (SRT: _.(state_sort) st_src0 = vis)
       (SRT: _.(state_sort) st_tgt0 = vis)
       i1 ev st_src1 st_tgt1
-      (STEP: _.(step) st_src0 ev st_src1)
-      (STEP: _.(step) st_tgt0 ev st_tgt1)
+      (STEP: _.(step) st_src0 (Some (event_sys ev)) st_src1)
+      (STEP: _.(step) st_tgt0 (Some (event_sys ev)) st_tgt1)
       (SIM: (sim i1 st_src1 st_tgt1): Prop)
       (* (SIM: forall ev st_tgt1 *)
       (*     (STEP: _.(step) st_tgt0 ev st_tgt1) *)
@@ -512,6 +512,381 @@ Section SIM.
       + econs 3; eauto. ii. hexploit SIM0; eauto. i; des. pclearbot.
         exploit IH; eauto. i; des.
   Abort.
+
+  Lemma adequacy_aux
+        i0 st_src0 st_tgt0
+        (SIM: sim i0 st_src0 st_tgt0)
+    :
+      <<IMPR: Beh.improves (Beh.of_state L0 st_src0) (Beh.of_state L1 st_tgt0)>>
+  .
+  Proof.
+    revert_until WF.
+    (* ginit. *)
+    (* { i. eapply cpn2_wcompat; eauto. eapply Beh.of_state_mon. } *)
+    (* gcofix CIH. i. *)
+    pcofix CIH. i.
+    revert_until i0. pattern i0. eapply well_founded_ind; eauto. clear i0. i.
+    rename x into i0. rename H into IH. rename x2 into tr.
+
+    {
+      punfold PR. generalize dependent st_src0.
+      pattern st_tgt0. pattern tr.
+      induction PR using Beh.of_state_ind; ii; ss; rename st0 into st_tgt0.
+      - (** done **)
+        punfold SIM. inv SIM; try rewrite H in *; ss.
+        + (** ff **)
+          pfold. econs; eauto.
+        + (** d_ **)
+          des. pc SIM.
+          pfold. econs 6; eauto. rr. esplits; eauto.
+          exploit IH. { eauto. } { eauto. } { pfold. econs; eauto. } intro A; des. punfold A.
+        + (** a_ **)
+          pfold. econs 7; eauto. ii.
+          exploit wf_angelic; et. i; clarify.
+          esplits; eauto.
+          exploit SIM0; eauto. i; des. pc SIM.
+          exploit IH. { eauto. } { eauto. } { pfold. econs; eauto. } intro A. punfold A.
+      - (** spin **)
+        exploit adequacy_spin; eauto.
+      - (** ub **)
+        punfold SIM. inv SIM; try rewrite H in *; ss.
+        + (** d_ **)
+          des. pc SIM. pfold. econs 6; eauto. rr. esplits; eauto.
+          exploit IH. { eauto. } { eauto. } { pfold. econs 3; eauto. } intro A. punfold A.
+        + (** a_ **)
+          pfold. econs 7; eauto. ii. exploit wf_angelic; et. i; clarify. esplits; eauto.
+          exploit SIM0; eauto. i; des. pc SIM.
+          exploit IH. { eauto. } { eauto. } { pfold. econs 3; eauto. } intro A. punfold A.
+        + (** _a **)
+          des. contradict H0. et.
+        + (** aa **)
+          pfold. econs 7; eauto. ii. exploit wf_angelic; et. i; clarify. esplits; eauto.
+          exploit SIM0; eauto. i; des. pc SIM.
+          des. contradict H0. et.
+        + (** da **)
+          des. contradict H0; et.
+      - (** nb **)
+        pfold. econs; eauto.
+      - (** cons **)
+        pc TL.
+        punfold SIM. inv SIM; try rewrite SRT in *; ss.
+        + (** vv **)
+          exploit wf_vis. { eapply SRT. } { eauto. } { eapply STEP. } i; des; clarify.
+          pfold. econs 5; eauto. pc SIM0. right. eapply CIH; eauto.
+        + (** d_ **)
+          des. pc SIM.
+          pfold. econs 6; eauto. rr. esplits; eauto.
+          exploit IH. { eauto. } { eauto. } { pfold. econs 5; eauto. } intro A. punfold A.
+        + (** a_ **)
+          pfold. econs 7; eauto. ii.
+          exploit wf_angelic; et. i; clarify.
+          exploit SIM0; eauto. i; des. pc SIM.
+          esplits; eauto.
+          exploit IH. { eauto. } { eauto. } { pfold. econs 5; eauto. } intro A. punfold A.
+      - (** demonic **)
+        rr in STEP. des; clarify. rename st1 into st_tgt1.
+        punfold SIM. inv SIM; try rewrite SRT in *; ss.
+        + (** d_ **)
+          des. pc SIM.
+          pfold. econs 6; eauto. rr. esplits; eauto.
+          exploit IH. { et. } { et. } { pfold. econs 6; et. rr. esplits; et. } intro A. punfold A.
+        + (** _d **)
+          exploit SIM0; eauto. i; des. pc SIM. exploit IH; et.
+        + (** a_ **)
+          pfold. econs 7; eauto. ii.
+          exploit wf_angelic; et. i; clarify.
+          exploit SIM0; eauto. i; des. pc SIM.
+          esplits; eauto.
+          exploit IH. { et. } { et. } { pfold. econs 6; et. rr. esplits; et. } intro A. punfold A.
+        + (** dd **)
+          exploit SIM0; et. i; des. pc SIM.
+          exploit IH0. { replace i0 with i1 by admit "TTTTTTTTTTTTTTTT". eauto. } intro A.
+          eapply Beh._beh_dstep; et.
+        + (** ad **)
+          pfold. econs 7; eauto. ii.
+          exploit wf_angelic; et. i; clarify.
+          exploit SIM0; et. i; des. pc x.
+          esplits; eauto.
+          exploit IH0. { replace i0 with i1 by admit "TTTTTTTTTTTTTTTT". eauto. } intro A.
+          punfold A.
+      - (** angelic **)
+        admit "TTTTTTTTTTTTTTTT".
+  Abort.
+
+  Lemma adequacy_aux
+        i0 st_src0 st_tgt0
+        (SIM: sim i0 st_src0 st_tgt0)
+    :
+      <<IMPR: Beh.improves (Beh.of_state L0 st_src0) (Beh.of_state L1 st_tgt0)>>
+  .
+  Proof.
+    revert_until WF.
+    (* ginit. *)
+    (* { i. eapply cpn2_wcompat; eauto. eapply Beh.of_state_mon. } *)
+    (* gcofix CIH. i. *)
+    pcofix CIH. i.
+    rename x2 into tr.
+    punfold PR. generalize dependent st_src0. generalize dependent i0.
+    induction PR using Beh.of_state_ind; ii; ss; rename st0 into st_tgt0.
+    - (** done **)
+      move i0 before CIH. revert_until i0. pattern i0.
+      eapply well_founded_ind; eauto. clear i0. i.
+      rename x into i0. rename H into IH.
+
+      punfold SIM. inv SIM; try rewrite H0 in *; ss.
+      + (** ff **)
+        pfold. econs; eauto.
+      + (** d_ **)
+        des. pc SIM.
+        pfold. econs 6; eauto. rr. esplits; eauto.
+        exploit IH; eauto. intro A. punfold A.
+      + (** a_ **)
+        pfold. econs 7; eauto. ii.
+        exploit wf_angelic; et. i; clarify.
+        esplits; eauto.
+        exploit SIM0; eauto. i; des. pc SIM.
+        exploit IH; eauto. intro A. punfold A.
+    - (** spin **)
+      exploit adequacy_spin; eauto.
+    - (** ub **)
+      move i0 before CIH. revert_until i0. pattern i0.
+      eapply well_founded_ind; eauto. clear i0. i.
+      rename x into i0. rename H into IH.
+
+      punfold SIM. inv SIM; try rewrite H0 in *; ss.
+      + (** d_ **)
+        des. pc SIM. pfold. econs 6; eauto. rr. esplits; eauto.
+        exploit IH; et. intro A. punfold A.
+      + (** a_ **)
+        pfold. econs 7; eauto. ii. exploit wf_angelic; et. i; clarify. esplits; eauto.
+        exploit SIM0; eauto. i; des. pc SIM.
+        exploit IH; et. intro A. punfold A.
+      + (** _a **)
+        des. contradict H0. et.
+      + (** aa **)
+        pfold. econs 7; eauto. ii. exploit wf_angelic; et. i; clarify. esplits; eauto.
+        exploit SIM0; eauto. i; des. pc SIM.
+        des. contradict H0. et.
+      + (** da **)
+        des. contradict H0; et.
+    - (** nb **)
+      pfold. econs; eauto.
+    - (** cons **)
+      move i0 before CIH. revert_until i0. pattern i0.
+      eapply well_founded_ind; eauto. clear i0. i.
+      rename x into i0. rename H into IH.
+
+      pc TL.
+      punfold SIM. inv SIM; try rewrite SRT in *; ss.
+      + (** vv **)
+        exploit wf_vis. { eapply SRT. } { eauto. } { eapply STEP. } i; des; clarify.
+        pfold. econs 5; eauto. pc SIM0. right. eapply CIH; eauto.
+      + (** d_ **)
+        des. pc SIM.
+        pfold. econs 6; eauto. rr. esplits; eauto.
+        exploit IH; et. intro A. punfold A.
+      + (** a_ **)
+        pfold. econs 7; eauto. ii.
+        exploit wf_angelic; et. i; clarify.
+        exploit SIM0; eauto. i; des. pc SIM.
+        esplits; eauto.
+        exploit IH; et. intro A. punfold A.
+    - (** demonic **)
+      rr in STEP. des. clarify. rename st1 into st_tgt1.
+    (* move i0 before CIH. revert_until i0. pattern i0. *)
+    (* eapply well_founded_ind; eauto. clear i0. i. *)
+    (* rename x into i0. rename H into IHi. *)
+(* IHi : forall y : idx, *)
+(*       ord y i0 -> *)
+(*       forall (st_tgt0 : state L1) (evs : Tr.t), *)
+(*       state_sort L1 st_tgt0 = demonic -> *)
+(*       forall st_tgt1 : state L1, *)
+(*       step L1 st_tgt0 None st_tgt1 -> *)
+(*       Beh._of_state L1 (upaco2 (Beh._of_state L1) bot2) st_tgt1 evs -> *)
+(*       (forall (i0 : idx) (st_src0 : state L0), *)
+(*        sim i0 st_src0 st_tgt1 -> paco2 (Beh._of_state L0) r st_src0 evs) -> *)
+(*       forall st_src0 : state L0, sim y st_src0 st_tgt0 -> paco2 (Beh._of_state L0) r st_src0 evs *)
+      
+
+      move i0 before CIH. move IH before i0. move SRT before i0. revert_until TL.
+      pattern i0.
+      eapply well_founded_ind; eauto. clear i0. i.
+      rename x into i0. rename H into IHi.
+      punfold SIM. inv SIM; try rewrite SRT in *; ss.
+      + (** d_ **)
+        des. pc SIM.
+        pfold. econs 6; eauto. rr. esplits; eauto.
+        exploit IHi; et. intro A. punfold A.
+      + (** _d **)
+        exploit SIM0; eauto. i; des. pc SIM. exploit IH; et.
+      + (** a_ **)
+        pfold. econs 7; eauto. ii.
+        exploit wf_angelic; et. i; clarify.
+        exploit SIM0; eauto. i; des. pc SIM.
+        esplits; eauto.
+        exploit IHi. { et. } { et. } intro A. punfold A.
+      + (** dd **)
+        exploit SIM0; et. i; des. pc SIM.
+        exploit IH; et. intro A.
+        eapply Beh._beh_dstep; et.
+      + (** ad **)
+        pfold. econs 7; eauto. ii.
+        exploit wf_angelic; et. i; clarify.
+        exploit SIM0; et. i; des. pc x.
+        esplits; eauto.
+        exploit IH; et. intro A.
+        punfold A.
+
+    - (** angelic **)
+      move i0 before CIH. move STEP before i0. move SRT before i0. revert_until STEP.
+      pattern i0.
+      eapply well_founded_ind; eauto. clear i0. i.
+      rename x into i0. rename H into IHi.
+      punfold SIM. inv SIM; try rewrite SRT in *; ss.
+      + (** d_ **)
+        des. pc SIM.
+        pfold. econs 6; eauto. rr. esplits; eauto.
+        exploit IHi; et. intro A. punfold A.
+      + (** a_ **)
+        pfold. econs 7; eauto. ii.
+        exploit wf_angelic; et. i; clarify.
+        exploit SIM0; eauto. i; des. pc SIM.
+        esplits; eauto.
+        exploit IHi; et. intro A. punfold A.
+      + (** _a **)
+        des. pc SIM. exploit STEP; et. i; des.
+        exploit IH; et.
+      + (** aa **)
+        pfold. econs 7; eauto. ii.
+        exploit wf_angelic; et. i; clarify.
+        exploit SIM0; eauto. i; des. pc SIM.
+        esplits; eauto.
+        exploit STEP; et. i; des.
+        exploit IH; et. intro A. punfold A.
+      + (** da **)
+        des. pc SIM.
+        exploit STEP; et. i; des.
+        exploit IH. { et. } intro A.
+        eapply Beh._beh_dstep; et.
+  Qed.
+        exploit IHi; et. intro A. punfold A.
+        exploit IHi. { et. } { r. et.
+        pfold. econs 7; eauto. rr. esplits; eauto.
+        exploit IHi; et. intro A. punfold A.
+        pfold. econs 7; eauto. ii.
+        exploit wf_angelic; et. i; clarify.
+        exploit SIM0; eauto. i; des. pc SIM.
+        esplits; eauto.
+        exploit IHi. { et. } { et. } intro A. punfold A.
+      + (** dd **)
+        exploit SIM0; et. i; des. pc SIM.
+        exploit IH; et. intro A.
+        eapply Beh._beh_dstep; et.
+      + (** ad **)
+        pfold. econs 7; eauto. ii.
+        exploit wf_angelic; et. i; clarify.
+        exploit SIM0; et. i; des. pc x.
+        esplits; eauto.
+        exploit IH; et. intro A.
+        punfold A.
+
+
+
+
+
+
+      + (** a_ **)
+        pfold. econs 7; eauto. ii.
+        exploit wf_angelic; et. i; clarify.
+        exploit SIM0; eauto. i; des. pc SIM.
+        esplits; eauto.
+        exploit IH. { et. } { et. } { pfold. econs 6; et. rr. esplits; et. } intro A. punfold A.
+      + (** dd **)
+        exploit SIM0; et. i; des. pc SIM.
+        exploit IH0; et. r.
+        admit "ABORTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT".
+    {
+      punfold PR. generalize dependent st_src0.
+      induction PR using Beh.of_state_ind; ii; ss; rename st0 into st_tgt0.
+      - (** demonic **)
+        rr in STEP. des; clarify. rename st1 into st_tgt1.
+        punfold SIM. inv SIM; try rewrite SRT in *; ss.
+        + (** d_ **)
+          des. pc SIM.
+          pfold. econs 6; eauto. rr. esplits; eauto.
+          exploit IH. { et. } { et. } { pfold. econs 6; et. rr. esplits; et. } intro A. punfold A.
+        + (** _d **)
+          exploit SIM0; eauto. i; des. pc SIM. exploit IH; et.
+        + (** a_ **)
+          pfold. econs 7; eauto. ii.
+          exploit wf_angelic; et. i; clarify.
+          exploit SIM0; eauto. i; des. pc SIM.
+          esplits; eauto.
+          exploit IH. { et. } { et. } { pfold. econs 6; et. rr. esplits; et. } intro A. punfold A.
+        + (** dd **)
+          exploit SIM0; et. i; des. pc SIM.
+          exploit IH0; et. r.
+          admit "ABORTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT".
+  Abort.
+
+
+
+
+
+
+
+
+
+  }
+          
+        + (** ad **)
+        + (** a_ **)
+          pfold. econs 7; eauto. ii.
+          exploit wf_angelic; et. i; clarify.
+          exploit SIM0; eauto. i; des. pc SIM.
+          esplits; eauto.
+          exploit IH. { eauto. } { eauto. } { pfold. econs 5; eauto. } intro A. punfold A.
+      - (** angelic **)
+        pc TL.
+        punfold SIM. inv SIM; try rewrite SRT in *; ss.
+        + (** vv **)
+          exploit wf_vis. { eapply SRT. } { eauto. } { eapply STEP. } i; des; clarify.
+          pfold. econs 5; eauto. pc SIM0. right. eapply CIH; eauto.
+        + (** d_ **)
+          des. pc SIM.
+          pfold. econs 6; eauto. rr. esplits; eauto.
+          exploit IH. { eauto. } { eauto. } { pfold. econs 5; eauto. } intro A. punfold A.
+        + (** a_ **)
+          pfold. econs 7; eauto. ii.
+          exploit wf_angelic; et. i; clarify.
+          exploit SIM0; eauto. i; des. pc SIM.
+          esplits; eauto.
+          exploit IH. { eauto. } { eauto. } { pfold. econs 5; eauto. } intro A. punfold A.
+      -
+          exploit IH; eauto.
+          pfold. econs 7; eauto. ii. exploit wf_angelic; et. i; clarify. esplits; eauto.
+          exploit SIM0; eauto. i; des. pc SIM.
+          exploit IH. { eauto. } { eauto. } { pfold. econs 3; eauto. } intro A. punfold A.
+        + (** _a **)
+          des. contradict H0. et.
+        + (** aa **)
+          pfold. econs 7; eauto. ii. exploit wf_angelic; et. i; clarify. esplits; eauto.
+          exploit SIM0; eauto. i; des. pc SIM.
+          des. contradict H0. et.
+        + (** da **)
+          des. contradict H0; et.
+        pfold.
+        admit "".
+      - (** demonic **)
+        admit "".
+      - (** angelic **)
+        admit "".
+    }
+          gstep. econs 7; eauto. rr. ii. rename st1 into st_src1.
+          exploit STEPSIM; eauto. i; des.
+          * destruct ev; ss.
+            -- (** some event **) destruct e; ss. right. esplits; eauto.
+    }
 
   Lemma adequacy_tstar
         i0 st_src0 st_tgt0 lfs_tgt

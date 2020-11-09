@@ -158,19 +158,19 @@ forall (r P: _ -> _ -> Prop),
 (forall st0, P st0 Tr.nb) ->
 
 (forall st0 st1 ev evs
- (DEM: state_sort L st0 = vis)
+ (SRT: state_sort L st0 = vis)
  (STEP: _.(step) st0 (Some (event_sys ev)) st1)
  (TL: r st1 evs)
   ,
     P st0 (Tr.cons ev evs)) ->
 (forall st0 evs
- (DEM: state_sort L st0 = demonic)
+ (SRT: state_sort L st0 = demonic)
  (STEP: union st0
    (fun e st1 =>
     <<HD: e = None >> /\ <<TL: _of_state r st1 evs >> /\ <<IH: P st1 evs>>)), P st0 evs) ->
 (forall st0 evs
         (* (IH: forall st1 (STEP: L.(step) st0 None st1), P st1 evs) *)
- (ANG: state_sort L st0 = angelic)
+ (SRT: state_sort L st0 = angelic)
  (STEP: inter st0
    (fun e st1 => <<HD: e = None >> /\ <<TL: _of_state r st1 evs >> /\ <<IH: P st1 evs>>)),
  P st0 evs) ->
@@ -269,13 +269,13 @@ Proof.
   - econs 7; eauto. ii. exploit STEP; eauto. i; des; clarify. esplits; eauto.
 Qed.
 
-Lemma beh_astep
-      tr st0 ev st1
+Lemma _beh_astep
+      r tr st0 ev st1
       (SRT: L.(state_sort) st0 = angelic)
       (STEP: _.(step) st0 ev st1)
-      (BEH: of_state st0 tr)
+      (BEH: paco2 _of_state r st0 tr)
   :
-    <<BEH: of_state st1 tr>>
+    <<BEH: paco2 _of_state r st1 tr>>
 .
 Proof.
   exploit wf_angelic; et. i; clarify.
@@ -289,8 +289,33 @@ Proof.
       exploit STEP0; et. i; des. pclearbot. et.
     - contradict H0; et.
     - rr in STEP. exploit STEP; et. i; des.
-      pfold. eapply of_state_mon; et. ii; ss. eapply upaco2_mon; et. ii; ss.
+      pfold. eapply of_state_mon; et. ii; ss. eapply upaco2_mon; et.
   }
+Qed.
+
+Lemma beh_astep
+      tr st0 ev st1
+      (SRT: L.(state_sort) st0 = angelic)
+      (STEP: _.(step) st0 ev st1)
+      (BEH: of_state st0 tr)
+  :
+    <<BEH: of_state st1 tr>>
+.
+Proof.
+  eapply _beh_astep; et.
+Qed.
+
+Lemma _beh_dstep
+      r tr st0 ev st1
+      (SRT: L.(state_sort) st0 = demonic)
+      (STEP: _.(step) st0 ev st1)
+      (BEH: paco2 _of_state r st1 tr)
+  :
+    <<BEH: paco2 _of_state r st0 tr>>
+.
+Proof.
+  exploit wf_demonic; et. i; clarify.
+  pfold. econs 6; et. rr. esplits; et. punfold BEH.
 Qed.
 
 Lemma beh_dstep
@@ -302,8 +327,7 @@ Lemma beh_dstep
     <<BEH: of_state st0 tr>>
 .
 Proof.
-  exploit wf_demonic; et. i; clarify.
-  pfold. econs 6; et. rr. esplits; et. punfold BEH.
+  eapply _beh_dstep; et.
 Qed.
 
 (* Inductive tstar (st0: L.(state)): (L.(state) -> Prop) -> Prop := *)
