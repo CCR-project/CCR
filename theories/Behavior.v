@@ -1,6 +1,6 @@
 Require Import sflib.
 Require Import Universe.
-Require Import Semantics.
+Require Import Sem.
 From Paco Require Import paco.
 Require Import RelationClasses List.
 Require Import ClassicalChoice PropExtensionality FunctionalExtensionality.
@@ -18,13 +18,13 @@ Module Tr.
   | spin
   | ub
   | nb
-  | cons (hd: syscall) (tl: t)
+  | cons (hd: event) (tl: t)
   .
   Infix "##" := cons (at level 60, right associativity).
   (*** past -------------> future ***)
   (*** a ## b ## c ## spin / done ***)
 
-  Fixpoint app (pre: list syscall) (bh: t): t :=
+  Fixpoint app (pre: list event) (bh: t): t :=
     match pre with
     | [] => bh
     | hd :: tl => cons hd (app tl bh)
@@ -37,7 +37,7 @@ Module Tr.
   .
   Proof. reflexivity. Qed.
 
-  Definition prefix (pre: list syscall) (bh: t): Prop :=
+  Definition prefix (pre: list event) (bh: t): Prop :=
     exists tl, <<APP: app pre tl = bh>>
   .
 
@@ -128,7 +128,7 @@ Inductive _of_state (of_state: L.(state) -> Tr.t -> Prop): L.(state) -> Tr.t -> 
 | sb_vis
     st0 st1 ev evs
     (SRT: L.(state_sort) st0 = vis)
-    (STEP: _.(step) st0 (Some (event_sys ev)) st1)
+    (STEP: _.(step) st0 (Some ev) st1)
     (TL: of_state st1 evs)
   :
     _of_state of_state st0 (Tr.cons ev evs)
@@ -159,7 +159,7 @@ forall (r P: _ -> _ -> Prop),
 
 (forall st0 st1 ev evs
  (SRT: state_sort L st0 = vis)
- (STEP: _.(step) st0 (Some (event_sys ev)) st1)
+ (STEP: _.(step) st0 (Some ev) st1)
  (TL: r st1 evs)
   ,
     P st0 (Tr.cons ev evs)) ->
@@ -227,7 +227,7 @@ Proof.
   destruct pre; ss; clarify.
   { pfold. econs; eauto. }
 
-  remember (Tr.cons s (Tr.app pre tl)) as tmp. revert Heqtmp.
+  remember (Tr.cons e (Tr.app pre tl)) as tmp. revert Heqtmp.
   induction BEH using of_state_ind; ii; ss; clarify.
   - pclearbot. pfold. econs; eauto. right. eapply CIH; et. rr; et.
   - pfold. econs 6; eauto. rr in STEP. des; clarify. rr. esplits; eauto.

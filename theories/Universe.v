@@ -1,15 +1,15 @@
-Class Universe := {
-  syscall: Type;
-  val: Type;
-}
-.
+Require Import ZArith.
+Require Import String.
 
-Context `{Universe}.
+Notation block := nat.
+
+Inductive val: Type :=
+| Vint (n: Z): val
+| Vptr (blk: block): val 
+.
 
 Inductive event: Type :=
 | event_sys
-    (sys: syscall)
-(* | event_tau *)
+    (name: string)
+    (args: list val)
 .
-
-(* Coercion event_sys: syscall >-> event. *)

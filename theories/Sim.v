@@ -1,6 +1,6 @@
 Require Import sflib.
 Require Import Universe.
-Require Import Semantics.
+Require Import Sem.
 Require Import Behavior.
 From Paco Require Import paco.
 Require Import RelationClasses List.
@@ -155,8 +155,8 @@ Section SIM.
       (SRT: _.(state_sort) st_src0 = vis)
       (SRT: _.(state_sort) st_tgt0 = vis)
       i1 ev st_src1 st_tgt1
-      (STEP: _.(step) st_src0 (Some (event_sys ev)) st_src1)
-      (STEP: _.(step) st_tgt0 (Some (event_sys ev)) st_tgt1)
+      (STEP: _.(step) st_src0 (Some ev) st_src1)
+      (STEP: _.(step) st_tgt0 (Some ev) st_tgt1)
       (SIM: (sim i1 st_src1 st_tgt1): Prop)
       (* (SIM: forall ev st_tgt1 *)
       (*     (STEP: _.(step) st_tgt0 ev st_tgt1) *)
