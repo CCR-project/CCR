@@ -1,14 +1,14 @@
+From Paco Require Import paco.
+Require Import Program.
 Require Import sflib.
 Require Import Universe.
-Require Import Sem.
+Require Import STS.
 Require Import Behavior.
-From Paco Require Import paco.
-Require Import RelationClasses List.
-Require Import ClassicalChoice PropExtensionality FunctionalExtensionality.
-Require Import Program.
-Require Import String.
+Require Import Skeleton.
 
 Set Implicit Arguments.
+
+
 
 Module ModSem.
 
@@ -23,8 +23,11 @@ Module ModSem.
   Record t: Type := mk {
     state: Type;
     local_data: Type;
-    step (st0: state) (ev: option event) (st1: state): Prop;
+    step (skenv: SkEnv.t) (st0: state) (ev: option event) (st1: state): Prop;
     state_sort: state -> sort;
+    initial_local_data: local_data;
+    sk: Sk.t;
+    name: string;
   }
   .
 
