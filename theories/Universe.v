@@ -1,5 +1,5 @@
-Require Import ZArith.
-Require Import String.
+Require Export ZArith.
+Require Export String.
 
 Notation block := nat.
 

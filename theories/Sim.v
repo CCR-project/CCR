@@ -77,7 +77,7 @@ Lemma spin_nofinal
       L st0
       (SPIN: Beh.state_spin L st0)
   :
-    <<NOFIN: L.(state_sort) st0 <> final>>
+    forall retv, <<NOFIN: L.(state_sort) st0 <> final retv>>
 .
 Proof.
   punfold SPIN. inv SPIN; ii; rewrite H in *; ss.
@@ -146,8 +146,9 @@ Section SIM.
 
   Variant _sim sim (i0: idx) (st_src0: L0.(state)) (st_tgt0: L1.(state)): Prop :=
   | sim_fin
-      (SRT: _.(state_sort) st_src0 = final)
-      (SRT: _.(state_sort) st_tgt0 = final)
+      retv
+      (SRT: _.(state_sort) st_src0 = final retv)
+      (SRT: _.(state_sort) st_tgt0 = final retv)
     :
       _sim sim i0 st_src0 st_tgt0
 
@@ -158,12 +159,6 @@ Section SIM.
       (STEP: _.(step) st_src0 (Some ev) st_src1)
       (STEP: _.(step) st_tgt0 (Some ev) st_tgt1)
       (SIM: (sim i1 st_src1 st_tgt1): Prop)
-      (* (SIM: forall ev st_tgt1 *)
-      (*     (STEP: _.(step) st_tgt0 ev st_tgt1) *)
-      (*   , *)
-      (*     exists i1 st_src1, <<EVENT: is_some ev>> /\ *)
-      (*                        <<STEP: _.(step) st_src0 ev st_src1>> /\ *)
-      (*                        <<SIM: sim i1 st_src1 st_tgt1>>) *)
     :
       _sim sim i0 st_src0 st_tgt0
 
@@ -363,7 +358,7 @@ Section SIM.
 
       punfold SIM. inv SIM; try rewrite H0 in *; ss.
       + (** ff **)
-        pfold. econs; eauto.
+        pfold. econs; eauto. clarify.
       + (** d_ **)
         des. pc SIM.
         pfold. econs 6; eauto. rr. esplits; eauto.

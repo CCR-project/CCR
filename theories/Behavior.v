@@ -14,7 +14,7 @@ Ltac et := eauto.
 
 Module Tr.
   CoInductive t: Type :=
-  | done
+  | done (retv: Z)
   | spin
   | ub
   | nb
@@ -94,10 +94,10 @@ Hint Resolve state_spin_mon: paco.
 
 Inductive _of_state (of_state: L.(state) -> Tr.t -> Prop): L.(state) -> Tr.t -> Prop :=
 | sb_final
-    st0
-    (FINAL: L.(state_sort) st0 = final)
+    st0 retv
+    (FINAL: L.(state_sort) st0 = final (Vint retv))
   :
-    _of_state of_state st0 (Tr.done)
+    _of_state of_state st0 (Tr.done retv)
 | sb_spin
     st0
     (SPIN: state_spin st0)
@@ -113,18 +113,6 @@ Inductive _of_state (of_state: L.(state) -> Tr.t -> Prop): L.(state) -> Tr.t -> 
     st0
   :
     _of_state of_state st0 (Tr.nb)
-(* | sb_demonic *)
-(*     st0 *)
-(*     evs *)
-(*     (DEM: L.(state_sort) st0 = demonic) *)
-(*     (STEP: union st0 (fun e st1 => *)
-(*                         (<<TAU: (<<HD: e = None>>) /\ (<<TL: _of_state of_state st1 evs>>)>>) *)
-(*                         \/ *)
-(*                         (<<SYS: exists hd tl, (<<HD: e = Some (event_sys hd)>>) /\ *)
-(*                                               (<<TL: of_state st1 tl>>) /\ *)
-(*                                               (<<CONS: evs = Tr.cons hd tl>>)>>))) *)
-(*   : *)
-(*     _of_state of_state st0 evs *)
 | sb_vis
     st0 st1 ev evs
     (SRT: L.(state_sort) st0 = vis)
@@ -152,7 +140,7 @@ Definition of_state: _ -> _ -> Prop := paco2 _of_state bot2.
 
 Theorem of_state_ind :
 forall (r P: _ -> _ -> Prop),
-(forall st0, state_sort L st0 = final -> P st0 Tr.done) ->
+(forall st0 retv, state_sort L st0 = final (Vint retv) -> P st0 (Tr.done retv)) ->
 (forall st0, state_spin st0 -> P st0 Tr.spin) ->
 (forall st0, L.(state_sort) st0 = angelic -> ~(exists ev st1, L.(step) st0 ev st1) -> P st0 Tr.ub) ->
 (forall st0, P st0 Tr.nb) ->
@@ -328,51 +316,6 @@ Lemma beh_dstep
 .
 Proof.
   eapply _beh_dstep; et.
-Qed.
-
-(* Inductive tstar (st0: L.(state)): (L.(state) -> Prop) -> Prop := *)
-(* | tstar_refl *)
-(*   : *)
-(*     tstar st0 (single st0) *)
-(* | tstar_demonic *)
-(*     lfs *)
-(*     (SRT: L.(state_sort) st0 = demonic) *)
-(*     (STEP: exists st1 (STEP: L.(step) st0 None st1), <<TL: tstar st1 lfs>>) *)
-(*   : *)
-(*     tstar st0 lfs *)
-(* | tstar_angelic *)
-(*     lfs *)
-(*     (SRT: L.(state_sort) st0 = angelic) *)
-(*     (STEP: forall st1 (STEP: L.(step) st0 None st1), <<TL: tstar st1 lfs>>) *)
-(*   : *)
-(*     tstar st0 lfs *)
-(* . *)
-
-Lemma beh_tstar
-      tr st0
-      (BEH: of_state st0 tr)
-      (* (NOSPIN: ~state_spin st0) *)
-      (NOSPIN: tr <> Tr.spin)
-      (NONB: tr <> Tr.nb)
-  :
-    (<<TSTAR: tstar _ st0 (is_leaf _ /1\ (flip of_state) tr)>>)
-.
-Proof.
-  punfold BEH.
-  move BEH at top. revert_until BEH.
-  unfold flip, is_leaf.
-  induction BEH using of_state_ind; ii; ss.
-  - econs; eauto. esplits; eauto. des_ifs.
-  - econs 3; eauto. ii; ss. contradict H0. esplits; eauto.
-  - econs; eauto. esplits; eauto. des_ifs.
-  - rr in STEP. des; clarify.
-    exploit IH; et.
-    (* { ii. contradict NOSPIN. pfold. econs 2; eauto. esplits; eauto. } *)
-    intro A.
-    econs 2; eauto.
-  - econs 3; eauto. ii. rr in STEP. hexploit STEP; et. i; des.
-    exploit IH; et.
-    (* { ii. contradict NOSPIN. pfold. econs 1; eauto. ii. exploit STEP; et. i; des. esplits; eauto. } *)
 Qed.
 
 End BEHAVES.
