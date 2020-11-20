@@ -503,22 +503,51 @@ Qed.
 Module GRA.
   Definition t: Type := nat -> URA.t.
   Class inG (RA: URA.t) (GRA: t) := InG {
-    inG_id: nat; inG_prf: GRA inG_id = RA;
+    inG_id: nat;
+    inG_prf: GRA inG_id = RA;
   }
   .
 
+  Definition of_list (RAs: list URA.t): t := fun n => List.nth n RAs RA.empty.
+
+  Definition construction (GRA: t): URA.t := URA.pointwise_dep GRA.
+
+  Section GETSET.
+    Variable RA: URA.t.
+    Variable GRA: t.
+    Context `{@inG RA GRA}.
+    Variable get: RA.car.
+    Variable set: RA.car -> unit.
+
+    (* own & update can be lifted *)
+    (* can we write spec in terms of own & update, not get & set? *)
+    (* how about add / sub? *)
+  End GETSET.
+
   Section CONSTRUCTION.
-    Variable URAs: list URA.t.
-    Let GRA: t := (fun n => List.nth n URAs RA.empty).
-    Theorem construction_adequate: forall n URA (IN: List.nth_error URAs n = Some URA),
-        inG URA GRA.
+    Variable RAs: list URA.t.
+    Let GRA: t := (fun n => List.nth n RAs RA.empty).
+    Theorem construction_adequate: forall n RA (IN: List.nth_error RAs n = Some RA),
+        inG RA GRA.
     Proof.
       i. unshelve econs; eauto. unfold GRA. eapply nth_error_nth; et.
     Qed.
 
-    Let GRA2: RA.t := URA.pointwise_dep (fun n => List.nth n URAs RA.empty).
+    Let GRA2: RA.t := URA.pointwise_dep GRA.
     Goal @RA.car GRA2 = forall k, (@RA.car (GRA k)). ss. Qed.
   End CONSTRUCTION.
+
+  Definition extends (RA0 RA1: URA.t): Prop :=
+    exists c, RA.prod RA0 c = RA1
+  .
+
+  Class inG2 (RA GRA: URA.t): Prop := {
+    GRA_data: t;
+    (* GRA_prf:  *)
+    inG2_id: nat;
+    inG2_prf: GRA_data inG2_id = RA;
+  }
+  .
 
 End GRA.
 
