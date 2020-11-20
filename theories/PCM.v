@@ -4,22 +4,38 @@ Require Import ClassicalDescription.
 Require Import RelationClasses.
 Require Import BinPos.
 Require Import Lia.
+Require Import List.
+From ITree Require Import ITree Subevent.
+Require Import Program.
 (* Require Import Qcanon. *)
 (* (*** from stdpp ***) *)
 (* Record Qp : Set := mk_Qp { Qp_car : Qc;  Qp_prf : 0 < Qp_car }. *)
+
+Set Implicit Arguments.
+
+
 
 
 
 Ltac et := eauto.
 Ltac func_ext := apply FunctionalExtensionality.functional_extensionality.
+Ltac func_ext_dep := apply @FunctionalExtensionality.functional_extensionality_dep.
 Ltac des_u := match goal with | [ a: unit |- _ ] => destruct a end.
 Ltac etrans := etransitivity.
+Axiom proof_irr: ClassicalFacts.proof_irrelevance.
+
+Arguments proof_irr [A].
+
+
+
+
+
 
 Module RA.
-  Class class: Type := {
-    t: Type;
-    add: t -> t -> t;
-    wf: t -> Prop;
+  Class t: Type := mk {
+    car: Type;
+    add: car -> car -> car;
+    wf: car -> Prop;
     add_comm: forall a b, add a b = add b a;
     add_assoc: forall a b c, add a (add b c) = add (add a b) c;
     wf_mon: forall a b, wf (add a b) -> wf a;
@@ -31,22 +47,22 @@ Module RA.
   }
   .
 
-  Definition sub {M: class}: t -> t -> t -> Prop :=
+  Definition sub {M: t}: car -> car -> car -> Prop :=
     fun ab a b => ab = add a b
   .
 
-  Definition refines {M: class}: t -> t -> Prop :=
+  Definition refines {M: t}: car -> car -> Prop :=
     fun r_tgt r_src =>
       forall ctx, wf (add r_src ctx) -> wf (add r_tgt ctx)
   .
 
-  Goal forall (M: class), extends <2= refines.
+  Goal forall (M: t), extends <2= refines.
   Proof.
     ii. r in PR. des; clarify. rewrite add_comm in H. rewrite add_assoc in H.
     apply wf_mon in H. rewrite add_comm. ss.
   Qed.
 
-  Goal forall (M: class), refines <2= extends.
+  Goal forall (M: t), refines <2= extends.
   Proof.
     intros ? r_tgt r_src ?. r in PR; r.
     destruct (classic (exists diff, sub r_src r_tgt diff)).
@@ -54,7 +70,7 @@ Module RA.
     - Abort.
 
   Theorem update_horizontal
-          (M: class)
+          (M: t)
           a0 a1
           b0 b1
           (UPDA: updatable a0 a1)
@@ -70,7 +86,7 @@ Module RA.
   Qed.
 
   Theorem update_vertical_stupid
-          (M: class)
+          (M: t)
           a0 a1 a2
           (UPDA: forall ctx, (wf (add a0 ctx) -> wf (add a1 ctx)) /\ (wf (add a1 ctx) -> wf (add a2 ctx)))
     :
@@ -81,7 +97,7 @@ Module RA.
   Qed.
 
   Theorem update_stupid
-          (M: class)
+          (M: t)
           a0 a1 a2
           b0 b1
           (UPDA: forall ctx, (wf (add a0 ctx) -> wf (add a1 ctx)) /\ (wf (add a1 ctx) -> wf (add a2 ctx)))
@@ -98,13 +114,13 @@ Module RA.
     rewrite add_comm with (a:=a2). eauto.
   Qed.
 
-  Program Instance extends_Transitive `{M: class}: Transitive extends.
+  Program Instance extends_Transitive `{M: t}: Transitive extends.
   Next Obligation.
     rr. ii. rr in H. rr in H0. des. rewrite <- H0. rewrite <- H. esplits; et. rewrite add_assoc. et.
   Qed.
 
-  Program Instance prod (M0 M1: class): class := {
-    t := t (class:=M0) * t (class:=M1);
+  Program Instance prod (M0 M1: t): t := {
+    car := car (t:=M0) * car (t:=M1);
     add := fun '(a0, a1) '(b0, b1) => ((add a0 b0), (add a1 b1));
     wf := fun '(a0, a1) => wf a0 /\ wf a1;
   }
@@ -115,8 +131,8 @@ Module RA.
 
   Theorem prod_updatable
           M0 M1
-          (a0: @t M0) (a1: @t M1)
-          (b0: @t M0) (b1: @t M1)
+          (a0: @car M0) (a1: @car M1)
+          (b0: @car M0) (b1: @car M1)
           (UPD0: updatable a0 b0)
           (UPD1: updatable a1 b1)
     :
@@ -126,8 +142,8 @@ Module RA.
     ii. ss. des_ifs. des. esplits; et.
   Qed.
 
-  Program Instance frac (denom: positive): class := {
-    t := positive;
+  Program Instance frac (denom: positive): t := {
+    car := positive;
     add := fun a b => (a + b)%positive;
     wf := fun a => (a <= denom)%positive;
   }
@@ -146,8 +162,8 @@ Module RA.
     ii. ss. des_ifs. des. lia.
   Qed.
 
-  Program Instance agree (A: Type): class := {
-    t := option A;
+  Program Instance agree (A: Type): t := {
+    car := option A;
     add := fun a0 a1 => if excluded_middle_informative (a0 = a1) then a0 else None;
     wf := fun a => a <> None;
   }
@@ -167,8 +183,8 @@ Module RA.
     apply NNPP. ii. apply H; ss.
   Qed.
 
-  Program Instance excl (A: Type): class := {
-    t := option A;
+  Program Instance excl (A: Type): t := {
+    car := option A;
     add := fun _ _ => None;
     wf := fun a => a <> None;
   }
@@ -191,8 +207,8 @@ Module RA.
   (* Instance exclC_Functor: Functor (fun A => @PCM.t (@RA.excl A)) := Build_Functor _ exclC_map. *)
 
   (*** exclusive <---> embracive ***)
-  Program Instance embr (A: Type): class := {
-    t := option A;
+  Program Instance embr (A: Type): t := {
+    car := option A;
     add := fun _ _ => None;
     wf := fun _ => True;
   }
@@ -206,20 +222,20 @@ Module RA.
 
   (*** program instance act weirdly, so I put the definition out... ***)
   (*** TODO: fix it properly ***)
-  Let sum_add {M0 M1} := (fun (a b: t (class:=M0) + t (class:=M1) + unit) =>
+  Let sum_add {M0 M1} := (fun (a b: car (t:=M0) + car (t:=M1) + unit) =>
                             match a, b with
                             | inl (inl a0), inl (inl b0) => inl (inl (add a0 b0))
                             | inl (inr a1), inl (inr b1) => inl (inr (add a1 b1))
                             | _, _ => inr tt
                             end).
-  Let sum_wf {M0 M1} := (fun (a: t (class:=M0) + t (class:=M1) + unit) =>
+  Let sum_wf {M0 M1} := (fun (a: car (t:=M0) + car (t:=M1) + unit) =>
                            match a with
                            | inl (inl a0) => wf a0
                            | inl (inr a1) => wf a1
                            | _ => False
                            end).
-  Program Instance sum (M0 M1: class): class := {
-    t := t (class:=M0) + t (class:=M1) + unit (* boom *);
+  Program Instance sum (M0 M1: t): t := {
+    car := car (t:=M0) + car (t:=M1) + unit (* boom *);
     add := sum_add;
     wf := sum_wf;
   }
@@ -228,8 +244,8 @@ Module RA.
   Next Obligation. unfold sum_add. esplits; ii; ss; des; des_ifs; do 2 f_equal; apply add_assoc. Qed.
   Next Obligation. unfold sum_wf in *. des_ifs; ss; des_ifs; eapply wf_mon; et. Qed.
 
-  Program Instance pointwise K (M: class): class := {
-    t := K -> t;
+  Program Instance pointwise K (M: t): t := {
+    car := K -> car;
     add := fun f0 f1 => (fun k => add (f0 k) (f1 k));
     wf := fun f => forall k, wf (f k);
   }
@@ -237,6 +253,14 @@ Module RA.
   Next Obligation. func_ext. ii. rewrite add_comm. ss. Qed.
   Next Obligation. func_ext. ii. rewrite add_assoc. ss. Qed.
   Next Obligation. eapply wf_mon; ss. Qed.
+
+  Local Program Instance empty: t := {
+    car := void;
+    add := fun a _ => a;
+    wf := bot1;
+  }
+  .
+  Next Obligation. ss. Qed.
 
 End RA.
 
@@ -248,17 +272,17 @@ End RA.
 
 
 (*** PCM == Unital RA ***)
-(*** Whence URA, not RA? (1) Auth algebra (2) global RA construction ***)
-Module PCM.
-  Class class: Type := {
-    t: Type;
-    unit: t;
-    add: t -> t -> t;
-    wf: t -> Prop;
+(*** When URA, not RA? (1) Auth algebra (2) global RA construction ***)
+Module URA.
+  Class t: Type := mk {
+    car: Type;
+    unit: car;
+    add: car -> car -> car;
+    wf: car -> Prop;
     add_comm: forall a b, add a b = add b a;
     add_assoc: forall a b c, add a (add b c) = add (add a b) c;
-    unit_wf: wf unit;
     unit_id: forall a, add a unit = a;
+    wf_unit: wf unit;
     wf_mon: forall a b, wf (add a b) -> wf a;
 
     (* extends := fun a b => exists ctx, add a ctx = b; *)
@@ -266,8 +290,21 @@ Module PCM.
   }
   .
 
-  Program Instance RA_of_PCM (M: class): RA.class := {
-    RA.t := t;
+  Program Instance prod (M0 M1: t): t := {
+    car := car (t:=M0) * car (t:=M1);
+    unit := (unit, unit);
+    add := fun '(a0, a1) '(b0, b1) => ((add a0 b0), (add a1 b1));
+    wf := fun '(a0, a1) => wf a0 /\ wf a1;
+  }
+  .
+  Next Obligation. f_equal; rewrite add_comm; ss. Qed.
+  Next Obligation. f_equal; rewrite add_assoc; ss. Qed.
+  Next Obligation. f_equal; rewrite unit_id; ss. Qed.
+  Next Obligation. split; eapply wf_unit. Qed.
+  Next Obligation. split; eapply wf_mon; et. Qed.
+
+  Program Instance to_RA (M: t): RA.t := {
+    RA.car := car;
     RA.add := add;
     RA.wf := wf;
   }
@@ -276,15 +313,13 @@ Module PCM.
   Next Obligation. apply add_assoc. Qed.
   Next Obligation. eapply wf_mon; et. Qed.
 
-  Coercion RA_of_PCM: class >-> RA.class.
+  Lemma unit_idl `{M: t}: forall a, add unit a = a. i. rewrite add_comm. rewrite unit_id; ss. Qed.
 
-  Lemma unit_idl `{M: class}: forall a, add unit a = a. i. rewrite add_comm. rewrite unit_id; ss. Qed.
-
-  Global Program Instance extends_PreOrder `{M: class}: PreOrder RA.extends.
+  Global Program Instance extends_PreOrder `{M: t}: PreOrder RA.extends.
   Next Obligation. rr. eexists unit. ss. rewrite unit_id. ss. Qed.
 
-  Program Instance canonical_construction (RA: RA.class): class := {
-    t := RA.t + Datatypes.unit;
+  Program Instance of_RA (RA: RA.t): t := {
+    car := RA.car + Datatypes.unit;
     unit := inr tt;
     wf := fun a => match a with
                    | inl a => RA.wf a
@@ -302,14 +337,50 @@ Module PCM.
   Next Obligation. des_ifs. { repeat des_u; ss. } Qed.
   Next Obligation. des_ifs. eapply RA.wf_mon; eauto. Qed.
 
-  Inductive auth_t `{M: class}: Type :=
-  | frag (f: t)
-  | excl (e: t) (f: t)
+  Coercion to_RA: t >-> RA.t.
+  Coercion of_RA: RA.t >-> t.
+
+  (* Lemma eta *)
+  (*       RA0 RA1 *)
+  (*       (CAR: car (t:=RA0) = car (t:=RA1)) *)
+  (*       (UNIT: unit (t:=RA0) ~= unit (t:=RA1)) *)
+  (*       (ADD: add (t:=RA0) ~= add (t:=RA1)) *)
+  (*       (WF: wf (t:=RA0) ~= wf (t:=RA1)) *)
+  (*   : *)
+  (*     <<EQ: RA0 = RA1>> *)
+  (* . *)
+  (* Proof. *)
+  (*   destruct RA0, RA1; ss. subst. clarify. *)
+  (*   assert(add_comm0 = add_comm1) by apply proof_irr. *)
+  (*   assert(add_assoc0 = add_assoc1) by apply proof_irr. *)
+  (*   assert(unit_id0 = unit_id1) by apply proof_irr. *)
+  (*   assert(wf_unit0 = wf_unit1) by apply proof_irr. *)
+  (*   assert(wf_mon0 = wf_mon1) by apply proof_irr. *)
+  (*   subst. reflexivity. *)
+  (* Qed. *)
+
+  (* Inductive iso (RA0 RA1: t): Prop := *)
+  (* | iso_intro *)
+      
+  (* . *)
+
+  (* Lemma isomorphic *)
+  (*       URA *)
+  (*   : *)
+  (*     <<EQ: of_RA (to_RA URA) = URA>> *)
+  (* . *)
+  (* Proof. *)
+  (*   r. eapply eta; ss. *)
+  (* Qed. *)
+
+  Inductive auth_t `{M: t}: Type :=
+  | frag (f: car)
+  | excl (e: car) (f: car)
   | boom
   .
 
-  Program Instance auth (M: class): class := {
-    t := auth_t;
+  Program Instance auth (M: t): t := {
+    car := auth_t;
     unit := frag unit;
     add := fun a0 a1 => match a0, a1 with
                         | frag f0, frag f1 => frag (add f0 f1)
@@ -332,10 +403,10 @@ Module PCM.
   Next Obligation. des_ifs; f_equal; eauto using add_comm. Qed.
   Next Obligation. des_ifs; f_equal; eauto using add_assoc. Qed.
   Next Obligation.
-    eauto using unit_wf.
+    des_ifs; f_equal; eauto using unit_id.
   Qed.
   Next Obligation.
-    des_ifs; f_equal; eauto using unit_id.
+    eauto using wf_unit.
   Qed.
   Next Obligation.
     des_ifs; des; eauto using wf_mon.
@@ -343,15 +414,15 @@ Module PCM.
     - esplits; eauto. etrans; et. rr. ss. esplits; et.
   Qed.
 
-  Definition black `{M: class} (a: t): t (class:=auth M) := excl a unit.
-  Definition white `{M: class} (a: t): t (class:=auth M) := frag a.
+  Definition black `{M: t} (a: car): car (t:=auth M) := excl a unit.
+  Definition white `{M: t} (a: car): car (t:=auth M) := frag a.
 
   Theorem auth_dup_black
-          `{M: class}
+          `{M: t}
           a ca
           (CORE: a = add a ca)
     :
-      <<DUP: RA.updatable (class:=auth M) (black a) (add (black a) (white ca))>>
+      <<DUP: RA.updatable (t:=auth M) (black a) (add (black a) (white ca))>>
   .
   Proof.
     rr. ii. des_ifs. rr in H. des. rewrite unit_idl in *. esplits; et.
@@ -359,11 +430,11 @@ Module PCM.
   Qed.
 
   Theorem auth_dup_white
-          `{M: class}
+          `{M: t}
           a ca
           (CORE: a = add a ca)
     :
-      <<DUP: RA.updatable (class:=auth M) (white a) (add (white a) (white ca))>>
+      <<DUP: RA.updatable (t:=auth M) (white a) (add (white a) (white ca))>>
   .
   Proof.
     rr. ii. des_ifs.
@@ -372,7 +443,7 @@ Module PCM.
   Qed.
 
   Theorem auth_spec
-          `{M: class}
+          `{M: t}
           a b
           (WF: wf (add (black a) (white b)))
     :
@@ -383,9 +454,73 @@ Module PCM.
     esplits; et.
   Qed.
 
-End PCM.
+  Program Instance pointwise K (M: t): t := {
+    car := K -> car;
+    unit := fun _ => unit;
+    add := fun f0 f1 => (fun k => add (f0 k) (f1 k));
+    wf := fun f => forall k, wf (f k);
+  }
+  .
+  Next Obligation. func_ext. ii. rewrite add_comm. ss. Qed.
+  Next Obligation. func_ext. ii. rewrite add_assoc. ss. Qed.
+  Next Obligation. func_ext. ii. rewrite unit_id. ss. Qed.
+  Next Obligation. eapply wf_unit; ss. Qed.
+  Next Obligation. eapply wf_mon; ss. Qed.
+
+  Program Instance pointwise_dep K (M: K -> t): t := {
+    car := forall (k: K), car (t:=M k);
+    unit := fun _ => unit;
+    add := fun f0 f1 => (fun k => add (f0 k) (f1 k));
+    wf := fun f => forall k, wf (f k);
+  }
+  .
+  Next Obligation. func_ext_dep. ii. rewrite add_comm. ss. Qed.
+  Next Obligation. func_ext_dep. ii. rewrite add_assoc. ss. Qed.
+  Next Obligation. func_ext_dep. ii. rewrite unit_id. ss. Qed.
+  Next Obligation. eapply wf_unit; ss. Qed.
+  Next Obligation. eapply wf_mon; ss. Qed.
+
+End URA.
+
+Coercion URA.to_RA: URA.t >-> RA.t.
+Coercion URA.of_RA: RA.t >-> URA.t.
 
 
+
+
+
+
+Lemma nth_error_nth
+      A (l: list A) n a d
+      (NTH: nth_error l n = Some a)
+  :
+    <<NTH: nth n l d = a>>
+.
+Proof.
+  ginduction n; ii; ss; des_ifs. ss. eapply IHn; et.
+Qed.
+
+Module GRA.
+  Definition t: Type := nat -> URA.t.
+  Class inG (RA: URA.t) (GRA: t) := InG {
+    inG_id: nat; inG_prf: GRA inG_id = RA;
+  }
+  .
+
+  Section CONSTRUCTION.
+    Variable URAs: list URA.t.
+    Let GRA: t := (fun n => List.nth n URAs RA.empty).
+    Theorem construction_adequate: forall n URA (IN: List.nth_error URAs n = Some URA),
+        inG URA GRA.
+    Proof.
+      i. unshelve econs; eauto. unfold GRA. eapply nth_error_nth; et.
+    Qed.
+
+    Let GRA2: RA.t := URA.pointwise_dep (fun n => List.nth n URAs RA.empty).
+    Goal @RA.car GRA2 = forall k, (@RA.car (GRA k)). ss. Qed.
+  End CONSTRUCTION.
+
+End GRA.
 
 (***
 Choose: non-det
