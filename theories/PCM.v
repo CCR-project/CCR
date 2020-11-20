@@ -10,6 +10,7 @@ Require Import Program.
 (* Require Import Qcanon. *)
 (* (*** from stdpp ***) *)
 (* Record Qp : Set := mk_Qp { Qp_car : Qc;  Qp_prf : 0 < Qp_car }. *)
+Require Import PeanoNat.
 
 Set Implicit Arguments.
 
@@ -22,6 +23,7 @@ Ltac func_ext := apply FunctionalExtensionality.functional_extensionality.
 Ltac func_ext_dep := apply @FunctionalExtensionality.functional_extensionality_dep.
 Ltac des_u := match goal with | [ a: unit |- _ ] => destruct a end.
 Ltac etrans := etransitivity.
+Ltac refl := reflexivity.
 Axiom proof_irr: ClassicalFacts.proof_irrelevance.
 
 Arguments proof_irr [A].
@@ -33,7 +35,7 @@ Arguments proof_irr [A].
 
 Module RA.
   Class t: Type := mk {
-    car: Type;
+    car:> Type;
     add: car -> car -> car;
     wf: car -> Prop;
     add_comm: forall a b, add a b = add b a;
@@ -275,7 +277,7 @@ End RA.
 (*** When URA, not RA? (1) Auth algebra (2) global RA construction ***)
 Module URA.
   Class t: Type := mk {
-    car: Type;
+    car:> Type;
     unit: car;
     add: car -> car -> car;
     wf: car -> Prop;
@@ -482,9 +484,10 @@ Module URA.
 
 End URA.
 
-Coercion URA.to_RA: URA.t >-> RA.t.
-Coercion URA.of_RA: RA.t >-> URA.t.
-
+(* Coercion URA.to_RA: URA.t >-> RA.t. *)
+(* Coercion URA.of_RA: RA.t >-> URA.t. *)
+Coercion RA.car: RA.t >-> Sortclass.
+Coercion URA.car: URA.t >-> Sortclass.
 
 
 
@@ -500,28 +503,96 @@ Proof.
   ginduction n; ii; ss; des_ifs. ss. eapply IHn; et.
 Qed.
 
+Class LeibEq (A B: Type) := { leibeq: A = B }.
+Arguments LeibEq: clear implicits.
+Program Definition LeibEq_rev (A B: Type) (LEQ: LeibEq A B): LeibEq B A.
+Proof. rewrite leibeq. econstructor. refl. Defined.
+Definition cast (A B: Type) `{LeibEq A B} (a: A): B. rewrite <- leibeq. apply a. Defined.
+Global Program Instance LeibEq_refl (A: Type): LeibEq A A.
+
+Lemma cast_elim
+      A LEQ (a: A)
+  :
+    <<EQ: (@cast A A LEQ a) = a>>
+.
+Proof.
+  r. destruct LEQ.
+  unfold cast. ss.
+  unfold eq_rect. dependent destruction leibeq0. ss.
+Qed.
+
+Lemma unit_JMeq
+      X (x: X)
+      (TY: X = unit)
+  :
+    <<EQ: x ~= tt>>
+.
+Proof.
+  revert x. rewrite TY.
+  ii. clarify. des_u; ss.
+Qed.
+
+Lemma sigT_eta
+      (a: { A: Type & A})
+      (b: { B: Type & B})
+      (EQTY: projT1 a = projT1 b)
+      (EQVAL: projT2 a ~= projT2 b)
+  :
+    a = b
+.
+Proof.
+  destruct a, b; ss. clarify. apply JMeq_eq in EQVAL. clarify.
+Qed.
+
+Class Eq {A: Type} (a0 a1: A) := { eq: a0 = a1 }.
+
+Program Instance LeibEq_URA ra0 ra1 (EQ: Eq ra0 ra1): LeibEq (@URA.car ra0) (@URA.car ra1).
+Next Obligation. inv EQ. ss. Qed.
+
+
+
+
 Module GRA.
   Definition t: Type := nat -> URA.t.
   Class inG (RA: URA.t) (GRA: t) := InG {
     inG_id: nat;
-    inG_prf: GRA inG_id = RA;
+    (* inG_prf: Eq (GRA inG_id) RA; *)
+    inG_prf: RA = GRA inG_id;
   }
   .
 
-  Definition of_list (RAs: list URA.t): t := fun n => List.nth n RAs RA.empty.
+  Definition of_list (RAs: list URA.t): t := fun n => List.nth n RAs (URA.of_RA RA.empty).
 
   Definition construction (GRA: t): URA.t := URA.pointwise_dep GRA.
 
   Section GETSET.
-    Variable RA: URA.t.
-    Variable GRA: t.
-    Context `{@inG RA GRA}.
-    Variable get: RA.car.
-    Variable set: RA.car -> unit.
+    Variable ra: URA.t.
+    Variable gra: t.
+    Context `{@inG ra gra}.
+    Variable get: URA.car (t:=ra).
+    Variable set: URA.car (t:=ra) -> unit.
 
     (* own & update can be lifted *)
     (* can we write spec in terms of own & update, not get & set? *)
     (* how about add / sub? *)
+
+    Definition ra_transport {A B : URA.t} (H : A = B) (x : A) : B :=
+      eq_rect A id x _ H.
+
+    Check (ra_transport inG_prf get).
+
+    Program Definition get_lifted: URA.car (t:=construction gra) :=
+      fun n => if Nat.eq_dec n inG_id then _ else URA.unit.
+    Next Obligation.
+      apply (ra_transport inG_prf get).
+    Defined.
+
+    (* Program Definition set_lifted: URA.car (t:=construction gra) -> unit := *)
+    (*   fun n => if Nat.eq_dec n inG_id then _ else URA.unit. *)
+    (* Next Obligation. *)
+    (*   apply (ra_transport inG_prf get). *)
+    (* Defined. *)
+
   End GETSET.
 
   Section CONSTRUCTION.
