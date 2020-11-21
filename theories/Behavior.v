@@ -6,6 +6,8 @@ Require Import RelationClasses List.
 Require Import ClassicalChoice PropExtensionality FunctionalExtensionality.
 (* Require Import Streams. *)
 
+Set Universe Polymorphism.
+
 Set Implicit Arguments.
 
 Definition single X (x: X): X -> Prop := fun x0 => x = x0.
@@ -60,7 +62,8 @@ Definition improves (src tgt: t): Prop := tgt <1= src.
 
 Section BEHAVES.
 
-Variable L: semantics.
+Universe i.
+Variable L: semantics@{i}.
 
 Definition union (st0: L.(state)) (P: (option event) -> L.(state) -> Prop) :=
   exists ev st1, <<STEP: L.(step) st0 ev st1>> /\ <<UNION: P ev st1>>.
