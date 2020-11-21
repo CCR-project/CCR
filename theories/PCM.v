@@ -24,6 +24,7 @@ Ltac func_ext_dep := apply @FunctionalExtensionality.functional_extensionality_d
 Ltac des_u := match goal with | [ a: unit |- _ ] => destruct a end.
 Ltac etrans := etransitivity.
 Ltac refl := reflexivity.
+Ltac sym := symmetry.
 Axiom proof_irr: ClassicalFacts.proof_irrelevance.
 
 Arguments proof_irr [A].
@@ -484,8 +485,8 @@ Module URA.
 
 End URA.
 
-(* Coercion URA.to_RA: URA.t >-> RA.t. *)
-(* Coercion URA.of_RA: RA.t >-> URA.t. *)
+Coercion URA.to_RA: URA.t >-> RA.t.
+Coercion URA.of_RA: RA.t >-> URA.t.
 Coercion RA.car: RA.t >-> Sortclass.
 Coercion URA.car: URA.t >-> Sortclass.
 
@@ -569,6 +570,10 @@ Module GRA.
     Variable ra: URA.t.
     Variable gra: t.
     Context `{@inG ra gra}.
+    Definition ra_transport {A B : URA.t} (H : A = B) (x : A) : B :=
+      eq_rect A id x _ H.
+
+    Section GETSET.
     Variable get: URA.car (t:=ra).
     Variable set: URA.car (t:=ra) -> unit.
 
@@ -576,8 +581,6 @@ Module GRA.
     (* can we write spec in terms of own & update, not get & set? *)
     (* how about add / sub? *)
 
-    Definition ra_transport {A B : URA.t} (H : A = B) (x : A) : B :=
-      eq_rect A id x _ H.
 
     Check (ra_transport inG_prf get).
 
@@ -592,6 +595,20 @@ Module GRA.
     (* Next Obligation. *)
     (*   apply (ra_transport inG_prf get). *)
     (* Defined. *)
+    End GETSET.
+
+    Section HANDLER.
+    Variable handler: URA.car (t:=ra) -> URA.car (t:=ra).
+    Local Obligation Tactic := idtac.
+    Program Definition handler_lifted: URA.car (t:=construction gra) -> URA.car (t:=construction gra) :=
+      fun st0 => fun n => if Nat.eq_dec n inG_id then _ else st0 n
+    .
+    Next Obligation.
+      i. subst. simpl in st0. specialize (st0 inG_id).
+      rewrite <- inG_prf in st0. specialize (handler st0). rewrite <- inG_prf. apply handler.
+    Defined.
+
+    End HANDLER.
 
   End GETSET.
 
@@ -601,7 +618,7 @@ Module GRA.
     Theorem construction_adequate: forall n RA (IN: List.nth_error RAs n = Some RA),
         inG RA GRA.
     Proof.
-      i. unshelve econs; eauto. unfold GRA. eapply nth_error_nth; et.
+      i. unshelve econs; eauto. unfold GRA. sym. eapply nth_error_nth; et.
     Qed.
 
     Let GRA2: RA.t := URA.pointwise_dep GRA.
