@@ -1,36 +1,10 @@
-Require Import sflib.
-From Paco Require Import paco.
-Require Import ClassicalDescription.
-Require Import RelationClasses.
-Require Import BinPos.
-Require Import Lia.
-Require Import List.
-From ITree Require Import ITree Subevent.
-Require Import Program.
+Require Import Coqlib.
+Require Import ITreelib.
 (* Require Import Qcanon. *)
 (* (*** from stdpp ***) *)
 (* Record Qp : Set := mk_Qp { Qp_car : Qc;  Qp_prf : 0 < Qp_car }. *)
-Require Import PeanoNat.
 
 Set Implicit Arguments.
-
-
-
-
-
-Ltac et := eauto.
-Ltac func_ext := apply FunctionalExtensionality.functional_extensionality.
-Ltac func_ext_dep := apply @FunctionalExtensionality.functional_extensionality_dep.
-Ltac des_u := match goal with | [ a: unit |- _ ] => destruct a end.
-Ltac etrans := etransitivity.
-Ltac refl := reflexivity.
-Ltac sym := symmetry.
-Axiom proof_irr: ClassicalFacts.proof_irrelevance.
-
-Arguments proof_irr [A].
-
-
-
 
 
 
@@ -253,8 +227,8 @@ Module RA.
     wf := fun f => forall k, wf (f k);
   }
   .
-  Next Obligation. func_ext. ii. rewrite add_comm. ss. Qed.
-  Next Obligation. func_ext. ii. rewrite add_assoc. ss. Qed.
+  Next Obligation. apply func_ext. ii. rewrite add_comm. ss. Qed.
+  Next Obligation. apply func_ext. ii. rewrite add_assoc. ss. Qed.
   Next Obligation. eapply wf_mon; ss. Qed.
 
   Local Program Instance empty: t := {
@@ -464,9 +438,9 @@ Module URA.
     wf := fun f => forall k, wf (f k);
   }
   .
-  Next Obligation. func_ext. ii. rewrite add_comm. ss. Qed.
-  Next Obligation. func_ext. ii. rewrite add_assoc. ss. Qed.
-  Next Obligation. func_ext. ii. rewrite unit_id. ss. Qed.
+  Next Obligation. apply func_ext. ii. rewrite add_comm. ss. Qed.
+  Next Obligation. apply func_ext. ii. rewrite add_assoc. ss. Qed.
+  Next Obligation. apply func_ext. ii. rewrite unit_id. ss. Qed.
   Next Obligation. eapply wf_unit; ss. Qed.
   Next Obligation. eapply wf_mon; ss. Qed.
 
@@ -477,9 +451,9 @@ Module URA.
     wf := fun f => forall k, wf (f k);
   }
   .
-  Next Obligation. func_ext_dep. ii. rewrite add_comm. ss. Qed.
-  Next Obligation. func_ext_dep. ii. rewrite add_assoc. ss. Qed.
-  Next Obligation. func_ext_dep. ii. rewrite unit_id. ss. Qed.
+  Next Obligation. apply func_ext_dep. ii. rewrite add_comm. ss. Qed.
+  Next Obligation. apply func_ext_dep. ii. rewrite add_assoc. ss. Qed.
+  Next Obligation. apply func_ext_dep. ii. rewrite unit_id. ss. Qed.
   Next Obligation. eapply wf_unit; ss. Qed.
   Next Obligation. eapply wf_mon; ss. Qed.
 
