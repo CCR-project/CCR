@@ -1,78 +1,53 @@
-Require Import sflib.
+Require Import Coqlib.
 Require Import Universe.
-Require Import Sem.
-Require Import Behavior.
-From Paco Require Import paco.
-Require Import RelationClasses List.
-Require Import ClassicalChoice PropExtensionality FunctionalExtensionality.
-Require Import Program.
-Require Import String.
 Require Import STS.
+Require Import Behavior.
 
 Set Implicit Arguments.
 
-Definition single X (x: X): X -> Prop := fun x0 => x = x0.
+(* Definition option_to_list X (ox: option X): list X := match ox with | Some x => [x] | _ => [] end. *)
+(* Coercion option_to_list_coercion := option_to_list. *)
 
-Ltac determ_tac LEMMA :=
-  let tac := eauto in
-  let x := rev_all ltac:(fun f => apply f) in
-  let y := all ltac:(fun f => apply f) in
-  first[
-      exploit LEMMA; [x|y|]
-    | exploit LEMMA; [tac|x|y|]
-    | exploit LEMMA; [tac|tac|x|y|]
-    | exploit LEMMA; [tac|tac|tac|x|y|]
-    | exploit LEMMA; [tac|tac|tac|tac|x|y|]
-    ];
-  i; des; clarify.
+(* Definition PStep L (P: L.(state) -> Prop) (st0: L.(state)) (ev: option event) (st1: (L.(state))): Prop := *)
+(*   (<<PROP: P st0>>) /\ (<<STEP: L.(step) st0 ev st1>>) *)
+(* . *)
 
+(* Inductive PStar L (P: L.(state) -> Prop) (st0: L.(state)): (list event) -> (L.(state)) -> Prop := *)
+(* | star_refl *)
+(*     (PROP: P st0) *)
+(*     (* ev_sum *) *)
+(*     (* (EV: ev_sum = []) *) *)
+(*   : *)
+(*     PStar L P st0 [] st0 *)
+(* | star_step *)
+(*     ev evs st1 st2 *)
+(*     (STEP: PStep L P st0 ev st1) *)
+(*     (STAR: PStar L P st1 evs st2) *)
+(*     (* ev_sum *) *)
+(*     (* (EV: ev_sum = ev ++ evs) *) *)
+(*   : *)
+(*     PStar L P st0 (ev ++ evs) st2 *)
+(* . *)
 
+(* Inductive PPlus L (P: L.(state) -> Prop) (st0: L.(state)): (list event) -> (L.(state)) -> Prop := *)
+(* | plus_intro *)
+(*     ev evs st1 st2 *)
+(*     (STEP: PStep L P st0 ev st1) *)
+(*     (STAR: PStar L P st1 evs st2) *)
+(*   : *)
+(*     PPlus L P st0 (ev ++ evs) st2 *)
+(* . *)
 
-Definition is_some X (ox: option X): bool := match ox with | Some x => true | _ => false end.
-
-Definition option_to_list X (ox: option X): list X := match ox with | Some x => [x] | _ => [] end.
-Coercion option_to_list_coercion := option_to_list.
-
-Definition PStep L (P: L.(state) -> Prop) (st0: L.(state)) (ev: option event) (st1: (L.(state))): Prop :=
-  (<<PROP: P st0>>) /\ (<<STEP: L.(step) st0 ev st1>>)
-.
-
-Inductive PStar L (P: L.(state) -> Prop) (st0: L.(state)): (list event) -> (L.(state)) -> Prop :=
-| star_refl
-    (PROP: P st0)
-    (* ev_sum *)
-    (* (EV: ev_sum = []) *)
-  :
-    PStar L P st0 [] st0
-| star_step
-    ev evs st1 st2
-    (STEP: PStep L P st0 ev st1)
-    (STAR: PStar L P st1 evs st2)
-    (* ev_sum *)
-    (* (EV: ev_sum = ev ++ evs) *)
-  :
-    PStar L P st0 (ev ++ evs) st2
-.
-
-Inductive PPlus L (P: L.(state) -> Prop) (st0: L.(state)): (list event) -> (L.(state)) -> Prop :=
-| plus_intro
-    ev evs st1 st2
-    (STEP: PStep L P st0 ev st1)
-    (STAR: PStar L P st1 evs st2)
-  :
-    PPlus L P st0 (ev ++ evs) st2
-.
-
-Definition DStep L (st0: (L.(state))) (ev: option event) (st1: L.(state)) :=
-  PStep L (fun st => L.(state_sort) st = demonic) st0 ev st1.
-Definition AStep L (st0: (L.(state))) (ev: option event) (st1: L.(state)) :=
-  PStep L (fun st => L.(state_sort) st = angelic) st0 ev st1.
-Definition DPlus L (st0: (L.(state))) (evs: list event) (st1: L.(state)) :=
-  PPlus L (fun st => L.(state_sort) st = demonic) st0 evs st1.
-Definition APlus L (st0: (L.(state))) (evs: list event) (st1: L.(state)) :=
-  PPlus L (fun st => L.(state_sort) st = angelic) st0 evs st1.
-Hint Unfold DStep AStep.
-Hint Unfold DPlus APlus.
+(* Definition DStep L (st0: (L.(state))) (ev: option event) (st1: L.(state)) := *)
+(*   PStep L (fun st => L.(state_sort) st = demonic) st0 ev st1. *)
+(* Definition AStep L (st0: (L.(state))) (ev: option event) (st1: L.(state)) := *)
+(*   PStep L (fun st => L.(state_sort) st = angelic) st0 ev st1. *)
+(* Definition DPlus L (st0: (L.(state))) (evs: list event) (st1: L.(state)) := *)
+(*   PPlus L (fun st => L.(state_sort) st = demonic) st0 evs st1. *)
+(* Definition APlus L (st0: (L.(state))) (evs: list event) (st1: L.(state)) := *)
+(*   PPlus L (fun st => L.(state_sort) st = angelic) st0 evs st1. *)
+(* Hint Unfold DStep AStep. *)
+(* Hint Unfold DPlus APlus. *)
 
 Lemma spin_nofinal
       L st0
@@ -94,34 +69,34 @@ Proof.
   punfold SPIN. inv SPIN; ii; rewrite H in *; ss.
 Qed.
 
-Lemma spin_noevent
-      L st0 e st1
-      (STAR: PStar L (fun st => _.(state_sort) st = angelic) st0 [e] st1)
-      (SPIN: Beh.state_spin _ st0)
-  :
-    False
-.
-Proof.
-  remember [e] as tmp in STAR. revert Heqtmp.
-  induction STAR; ii; ss. punfold SPIN. rr in STEP; des. inv SPIN; ii; rewrite PROP in *; ss.
-  destruct ev, evs; ss; clarify.
-  - exploit wf_angelic; et. i; ss.
-  - exploit STEP; eauto. i; des; ss. pclearbot. eapply IHSTAR; eauto.
-Qed.
+(* Lemma spin_noevent *)
+(*       L st0 e st1 *)
+(*       (STAR: PStar L (fun st => _.(state_sort) st = angelic) st0 [e] st1) *)
+(*       (SPIN: Beh.state_spin _ st0) *)
+(*   : *)
+(*     False *)
+(* . *)
+(* Proof. *)
+(*   remember [e] as tmp in STAR. revert Heqtmp. *)
+(*   induction STAR; ii; ss. punfold SPIN. rr in STEP; des. inv SPIN; ii; rewrite PROP in *; ss. *)
+(*   destruct ev, evs; ss; clarify. *)
+(*   - exploit wf_angelic; et. i; ss. *)
+(*   - exploit STEP; eauto. i; des; ss. pclearbot. eapply IHSTAR; eauto. *)
+(* Qed. *)
 
-Lemma spin_astar
-      L st0 st1
-      (STAR: PStar L (fun st => _.(state_sort) st = angelic) st0 [] st1)
-      (SPIN: Beh.state_spin _ st0)
-  :
-    <<SPIN: Beh.state_spin _ st1>>
-.
-Proof.
-  remember [] as tmp in STAR. revert Heqtmp.
-  revert SPIN. induction STAR; ii; ss.
-  { destruct ev, evs; ss. dup SPIN. rr in STEP; des. punfold SPIN. inv SPIN; rewrite PROP in *; ss.
-    exploit STEP; eauto. i; des. pclearbot. eapply IHSTAR; ss. }
-Qed.
+(* Lemma spin_astar *)
+(*       L st0 st1 *)
+(*       (STAR: PStar L (fun st => _.(state_sort) st = angelic) st0 [] st1) *)
+(*       (SPIN: Beh.state_spin _ st0) *)
+(*   : *)
+(*     <<SPIN: Beh.state_spin _ st1>> *)
+(* . *)
+(* Proof. *)
+(*   remember [] as tmp in STAR. revert Heqtmp. *)
+(*   revert SPIN. induction STAR; ii; ss. *)
+(*   { destruct ev, evs; ss. dup SPIN. rr in STEP; des. punfold SPIN. inv SPIN; rewrite PROP in *; ss. *)
+(*     exploit STEP; eauto. i; des. pclearbot. eapply IHSTAR; ss. } *)
+(* Qed. *)
 
 Lemma spin_astep
       L st0 ev st1
