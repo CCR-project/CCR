@@ -6,110 +6,26 @@ Require Import ITreelib.
 
 Set Implicit Arguments.
 
-Require Import Relation_Definitions.
-
-Class Equiv A := equiv: relation A.
-Infix "≡" := equiv (at level 70, no associativity).
-Notation "(≡)" := equiv (only parsing).
-
-Definition leib_Equiv {A}: Equiv A := eq.
-
-Instance equiv_unit: Equiv unit := eq.
-
-Instance prod_equiv A B `{Equiv A} `{Equiv B}: Equiv (A * B) :=
-  fun '(a0, b0) '(a1, b1) => a0 ≡ a1 /\ b0 ≡ b1
-.
-
-Instance sum_equiv A B `{Equiv A} `{Equiv B}: Equiv (A + B) :=
-  fun ab0 ab1 =>
-    match ab0, ab1 with
-    | inl a0, inl a1 => a0 ≡ a1
-    | inr b0, inr b1 => b0 ≡ b1
-    | _, _ => False
-    end
-.
-
-Instance pointwise_equiv A B `{Equiv B}: Equiv (A -> B) :=
-  fun f0 f1 => forall a, f0 a ≡ f1 a
-.
-
-Program Instance prod_equiv_Equivalence A B `{Equiv A} `{Equiv B}
-        `{Equivalence A equiv} `{Equivalence B equiv}: @Equivalence (A * B)%type equiv.
-Next Obligation.
-  inv H1. inv H2. ii. rr. des_ifs.
-Qed.
-Next Obligation.
-  inv H1. inv H2. ii. rr. des_ifs. rr in H1. des. esplits; et.
-Qed.
-Next Obligation.
-  inv H1. inv H2. ii. rr. des_ifs. rr in H1. rr in H2. des_ifs. des; ss. esplits; et.
-Qed.
-
-Program Instance sum_equiv_Equivalence A B `{Equiv A} `{Equiv B}
-        `{Equivalence A equiv} `{Equivalence B equiv}: @Equivalence (A + B)%type equiv.
-Next Obligation.
-  inv H1. inv H2. ii. rr. des_ifs.
-Qed.
-Next Obligation.
-  inv H1. inv H2. ii. rr. rr in H1. des_ifs. { sym; ss. } { sym; ss. }
-Qed.
-Next Obligation.
-  inv H1. inv H2. ii. rr. rr in H1. rr in H2. des_ifs. { etrans; et. } { etrans; et. }
-Qed.
-
-Program Instance pointiwise_equiv_Equivalence A B `{Equiv B}
-        `{Equivalence B equiv}: @Equivalence (A -> B)%type equiv.
-Next Obligation.
-  inv H0. ii. rr. refl.
-Qed.
-Next Obligation.
-  inv H0. ii. rr. rr in H0. sym. et.
-Qed.
-Next Obligation.
-  inv H0. ii. rr. rr in H0. rr in H1. etrans; et.
-Qed.
-
-Program Instance pair_proper A B `{Equiv A, Equiv B}: Proper ((≡) ==> (≡) ==> (≡)) (@pair A B).
-Next Obligation.
-  ii. rr. esplits; eauto.
-Qed.
-
-Program Instance inl_proper A B `{Equiv A, Equiv B}: Proper ((≡) ==> (≡)) (@inl A B).
-Next Obligation.
-  ii. rr. esplits; eauto.
-Qed.
-
-Program Instance inr_proper A B `{Equiv A, Equiv B}: Proper ((≡) ==> (≡)) (@inr A B).
-Next Obligation.
-  ii. rr. esplits; eauto.
-Qed.
-
-
-
 
 
 Module RA.
   Class t: Type := mk {
     car:> Type;
-    Eqv:> Equiv car;
     add: car -> car -> car;
     wf: car -> Prop;
-    add_comm: forall a b, add a b ≡ add b a;
-    add_assoc: forall a b c, add a (add b c) ≡ add (add a b) c;
+    add_comm: forall a b, add a b = add b a;
+    add_assoc: forall a b c, add a (add b c) = add (add a b) c;
     wf_mon: forall a b, wf (add a b) -> wf a;
 
-    extends := fun a b => exists ctx, add a ctx ≡ b;
+    extends := fun a b => exists ctx, add a ctx = b;
     updatable := fun a b => forall ctx, wf (add a ctx) -> wf (add b ctx);
     updatable_set := fun a B => forall ctx (WF: wf (add a ctx)),
                          exists b, <<IN: B b>> /\ <<WF: wf (add b ctx)>>;
-    wf_Equiv:> Proper ((≡) ==> impl) wf;
-    add_Equiv:> Proper ((≡) ==> (≡) ==> (≡)) add;
-    Equiv_equiv:> Equivalence (≡);
   }
   .
 
   Definition sub {M: t}: car -> car -> car -> Prop :=
-    fun ab a b => ab ≡ add a b
+    fun ab a b => ab = add a b
   .
 
   Definition refines {M: t}: car -> car -> Prop :=
@@ -119,7 +35,7 @@ Module RA.
 
   Goal forall (M: t), extends <2= refines.
   Proof.
-    ii. r in PR. des; clarify. rewrite add_comm in H. rewrite <- PR in H. rewrite add_assoc in H.
+    ii. r in PR. des; clarify. rewrite add_comm in H. rewrite add_assoc in H.
     apply wf_mon in H. rewrite add_comm. ss.
   Qed.
 
@@ -127,7 +43,7 @@ Module RA.
   Proof.
     intros ? r_tgt r_src ?. r in PR; r.
     destruct (classic (exists diff, sub r_src r_tgt diff)).
-    - des. r in H. eexists. rewrite H. reflexivity.
+    - des. r in H. subst. eauto.
     - Abort.
 
   Theorem update_horizontal
@@ -177,8 +93,7 @@ Module RA.
 
   Program Instance extends_Transitive `{M: t}: Transitive extends.
   Next Obligation.
-    rr. ii. rr in H. rr in H0. des. eexists. rewrite <- H0. rewrite <- H. rewrite add_assoc; et.
-    refl.
+    rr. ii. rr in H. rr in H0. des. rewrite <- H0. rewrite <- H. esplits; et. rewrite add_assoc. et.
   Qed.
 
   Program Instance prod (M0 M1: t): t := {
@@ -187,17 +102,9 @@ Module RA.
     wf := fun '(a0, a1) => wf a0 /\ wf a1;
   }
   .
-  Next Obligation. f_equiv; rewrite add_comm; refl. Qed.
-  Next Obligation. f_equiv; rewrite add_assoc; refl. Qed.
+  Next Obligation. f_equal; rewrite add_comm; ss. Qed.
+  Next Obligation. f_equal; rewrite add_assoc; ss. Qed.
   Next Obligation. split; eapply wf_mon; et. Qed.
-  Next Obligation.
-    ii. des_ifs. des. rr in H. des; ss. esplits.
-    { rewrite <- H; ss. } { rewrite <- H2; ss. }
-  Qed.
-  Next Obligation.
-    ii. des_ifs. rr in H. rr in H0. des; ss. rr. esplits; ss.
-    { rewrite <- H. rewrite <- H0. refl. } { rewrite <- H2. rewrite <- H1. refl. }
-  Qed.
 
   Theorem prod_updatable
           M0 M1
@@ -214,13 +121,12 @@ Module RA.
 
   Program Instance frac (denom: positive): t := {
     car := positive;
-    Eqv := leib_Equiv;
     add := fun a b => (a + b)%positive;
     wf := fun a => (a <= denom)%positive;
   }
   .
-  Next Obligation. rr. lia. Qed.
-  Next Obligation. rr. lia. Qed.
+  Next Obligation. lia. Qed.
+  Next Obligation. lia. Qed.
   Next Obligation. lia. Qed.
 
   Theorem frac_updatable
@@ -256,13 +162,10 @@ Module RA.
 
   Program Instance excl (A: Type): t := {
     car := option A;
-    Eqv := leib_Equiv;
     add := fun _ _ => None;
     wf := fun a => a <> None;
   }
   .
-  Next Obligation. rr. ss. Qed.
-  Next Obligation. rr. ss. Qed.
 
   Theorem excl_updatable
           A
@@ -308,8 +211,6 @@ Module RA.
                            | inl (inr a1) => wf a1
                            | _ => False
                            end).
-
-  Print Instances Equiv.
   Program Instance sum (M0 M1: t): t := {
     car := car (t:=M0) + car (t:=M1) + unit (* boom *);
     add := sum_add;
@@ -318,40 +219,17 @@ Module RA.
   .
   Next Obligation. unfold sum_add. esplits; ii; ss; des; des_ifs; do 2 f_equal; apply add_comm. Qed.
   Next Obligation. unfold sum_add. esplits; ii; ss; des; des_ifs; do 2 f_equal; apply add_assoc. Qed.
-  Next Obligation.
-    rr. unfold sum_add. des_ifs; ss; clarify; ss.
-    - f_equiv. rewrite add_comm. refl.
-    - f_equiv. rewrite add_comm. refl.
-  Qed.
-  Next Obligation.
-    rr. unfold sum_add. des_ifs; ss; clarify; ss.
-    - f_equiv. rewrite add_assoc. refl.
-    - f_equiv. rewrite add_assoc. refl.
-  Qed.
   Next Obligation. unfold sum_wf in *. des_ifs; ss; des_ifs; eapply wf_mon; et. Qed.
-  Next Obligation.
-    ii. rr in H. des_ifs. rr in H. des_ifs; ss.
-    - rewrite <- H; ss.
-    - rewrite <- H; ss.
-  Qed.
-  Next Obligation.
-    ii. rr in H. des_ifs. rr in H. des_ifs; ss; des_ifs.
-    - r in H0. ss. r in H0. ss. repeat f_equiv; ss.
-    - r in H0. ss. r in H0. ss. repeat f_equiv; ss.
-  Qed.
 
   Program Instance pointwise K (M: t): t := {
     car := K -> car;
-    Eqv := (@pointwise_equiv K car _);
     add := fun f0 f1 => (fun k => add (f0 k) (f1 k));
     wf := fun f => forall k, wf (f k);
   }
   .
-  Next Obligation. ii. rewrite add_comm. refl. Qed.
-  Next Obligation. ii. rewrite add_assoc. refl. Qed.
+  Next Obligation. apply func_ext. ii. rewrite add_comm. ss. Qed.
+  Next Obligation. apply func_ext. ii. rewrite add_assoc. ss. Qed.
   Next Obligation. eapply wf_mon; ss. Qed.
-  Next Obligation. ii. do 2 r in H. rewrite <- H. et. Qed.
-  Next Obligation. ii. do 2 r in H. do 2 r in H0. rewrite H. rewrite H0. refl. Qed.
 
   Local Program Instance empty: t := {
     car := void;
@@ -359,7 +237,6 @@ Module RA.
     wf := bot1;
   }
   .
-  Next Obligation. ss. Qed.
   Next Obligation. ss. Qed.
 
 End RA.
