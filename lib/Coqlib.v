@@ -18,6 +18,7 @@ Require Import Relation_Operators.
 Require Export List.
 Require Export ClassicalDescription.
 Require Export Program.
+Require Export Morphisms.
 
 Set Implicit Arguments.
 
