@@ -103,12 +103,6 @@ Inductive _of_state (of_state: L.(state) -> Tr.t -> Prop): L.(state) -> Tr.t -> 
     (SPIN: state_spin st0)
   :
     _of_state of_state st0 (Tr.spin)
-| sb_ub
-    st0
-    (ANG: L.(state_sort) st0 = angelic)
-    (STUCK: ~exists ev st1, L.(step) st0 ev st1)
-  :
-    _of_state of_state st0 (Tr.ub)
 | sb_nb
     st0
   :
@@ -142,7 +136,6 @@ Theorem of_state_ind :
 forall (r P: _ -> _ -> Prop),
 (forall st0 retv, state_sort L st0 = final (Vint retv) -> P st0 (Tr.done retv)) ->
 (forall st0, state_spin st0 -> P st0 Tr.spin) ->
-(forall st0, L.(state_sort) st0 = angelic -> ~(exists ev st1, L.(step) st0 ev st1) -> P st0 Tr.ub) ->
 (forall st0, P st0 Tr.nb) ->
 
 (forall st0 st1 ev evs
@@ -172,10 +165,10 @@ Proof.
   (* - eapply H4; eauto. ii. exploit STEP; eauto. i; des; clarify. *)
   (*   + esplits; eauto. left. esplits; eauto. eapply IH; eauto. *)
   (*   + esplits; eauto. right. esplits; eauto. *)
-  fix IH 12. i.
-  inv H6; eauto.
-  - eapply H4; eauto. rr in STEP. des; clarify. esplits; eauto. rr. esplits; eauto. eapply IH; eauto.
-  - eapply H5; eauto. ii. exploit STEP; eauto. i; des; clarify. esplits; eauto. eapply IH; eauto.
+  fix IH 11. i.
+  inv H5; eauto.
+  - eapply H3; eauto. rr in STEP. des; clarify. esplits; eauto. rr. esplits; eauto. eapply IH; eauto.
+  - eapply H4; eauto. ii. exploit STEP; eauto. i; des; clarify. esplits; eauto. eapply IH; eauto.
 Qed.
 
 Lemma of_state_mon: monotone2 _of_state.
@@ -185,9 +178,8 @@ Proof.
   - econs 2; et.
   - econs 3; et.
   - econs 4; et.
-  - econs 5; et.
-  - econs 6; et. rr in STEP. des; clarify. rr. esplits; et.
-  - econs 7; et. ii. exploit STEP; eauto. i; des; clarify.
+  - econs 5; et. rr in STEP. des; clarify. rr. esplits; et.
+  - econs 6; et. ii. exploit STEP; eauto. i; des; clarify.
 Qed.
 
 Hint Constructors _of_state.
@@ -218,9 +210,9 @@ Proof.
   remember (Tr.cons e (Tr.app pre tl)) as tmp. revert Heqtmp.
   induction BEH using of_state_ind; ii; ss; clarify.
   - pclearbot. pfold. econs; eauto. right. eapply CIH; et. rr; et.
-  - pfold. econs 6; eauto. rr in STEP. des; clarify. rr. esplits; eauto.
+  - pfold. econs 5; eauto. rr in STEP. des; clarify. rr. esplits; eauto.
     exploit IH; et. intro A. punfold A.
-  - pfold. econs 7; eauto. ii. exploit STEP; eauto. clear STEP. i; des; clarify. esplits; eauto.
+  - pfold. econs 6; eauto. ii. exploit STEP; eauto. clear STEP. i; des; clarify. esplits; eauto.
     exploit IH; et. intro A. punfold A.
 Qed.
 
@@ -252,9 +244,8 @@ Proof.
   revert_until L. pfold. i. punfold UB.
   remember Tr.ub as tmp. revert Heqtmp.
   induction UB using of_state_ind; ii; ss; clarify.
-  - econs 7; eauto. ii. exfalso. eauto.
   - rr in STEP. des. clarify. econs; eauto. rr. esplits; eauto.
-  - econs 7; eauto. ii. exploit STEP; eauto. i; des; clarify. esplits; eauto.
+  - econs 6; eauto. ii. exploit STEP; eauto. i; des; clarify. esplits; eauto.
 Qed.
 
 Lemma _beh_astep
@@ -275,7 +266,6 @@ Proof.
     induction BEH using of_state_ind; et; try rewrite SRT in *; ii; ss.
     - punfold H. inv H; rewrite SRT in *; ss.
       exploit STEP0; et. i; des. pclearbot. et.
-    - contradict H0; et.
     - rr in STEP. exploit STEP; et. i; des.
       pfold. eapply of_state_mon; et. ii; ss. eapply upaco2_mon; et.
   }
@@ -303,7 +293,7 @@ Lemma _beh_dstep
 .
 Proof.
   exploit wf_demonic; et. i; clarify.
-  pfold. econs 6; et. rr. esplits; et. punfold BEH.
+  pfold. econs 5; et. rr. esplits; et. punfold BEH.
 Qed.
 
 Lemma beh_dstep

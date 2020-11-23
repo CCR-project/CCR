@@ -7,6 +7,7 @@ Require Import RelationClasses List.
 Require Import ClassicalChoice PropExtensionality FunctionalExtensionality.
 Require Import Program.
 Require Import String.
+Require Import STS.
 
 Set Implicit Arguments.
 
@@ -361,37 +362,16 @@ Section SIM.
         pfold. econs; eauto. clarify.
       + (** d_ **)
         des. pc SIM.
-        pfold. econs 6; eauto. rr. esplits; eauto.
+        pfold. econs 5; eauto. rr. esplits; eauto.
         exploit IH; eauto. intro A. punfold A.
       + (** a_ **)
-        pfold. econs 7; eauto. ii.
+        pfold. econs 6; eauto. ii.
         exploit wf_angelic; et. i; clarify.
         esplits; eauto.
         exploit SIM0; eauto. i; des. pc SIM.
         exploit IH; eauto. intro A. punfold A.
     - (** spin **)
       exploit adequacy_spin; eauto.
-    - (** ub **)
-      move i0 before CIH. revert_until i0. pattern i0.
-      eapply well_founded_ind; eauto. clear i0. i.
-      rename x into i0. rename H into IH.
-
-      punfold SIM. inv SIM; try rewrite H0 in *; ss.
-      + (** d_ **)
-        des. pc SIM. pfold. econs 6; eauto. rr. esplits; eauto.
-        exploit IH; et. intro A. punfold A.
-      + (** a_ **)
-        pfold. econs 7; eauto. ii. exploit wf_angelic; et. i; clarify. esplits; eauto.
-        exploit SIM0; eauto. i; des. pc SIM.
-        exploit IH; et. intro A. punfold A.
-      + (** _a **)
-        des. contradict H0. et.
-      + (** aa **)
-        pfold. econs 7; eauto. ii. exploit wf_angelic; et. i; clarify. esplits; eauto.
-        exploit SIM0; eauto. i; des. pc SIM.
-        des. contradict H0. et.
-      + (** da **)
-        des. contradict H0; et.
     - (** nb **)
       pfold. econs; eauto.
     - (** cons **)
@@ -403,13 +383,13 @@ Section SIM.
       punfold SIM. inv SIM; try rewrite SRT in *; ss.
       + (** vv **)
         exploit wf_vis. { eapply SRT. } { eauto. } { eapply STEP. } i; des; clarify.
-        pfold. econs 5; eauto. pc SIM0. right. eapply CIH; eauto.
+        pfold. econs 4; eauto. pc SIM0. right. eapply CIH; eauto.
       + (** d_ **)
         des. pc SIM.
-        pfold. econs 6; eauto. rr. esplits; eauto.
+        pfold. econs 5; eauto. rr. esplits; eauto.
         exploit IH; et. intro A. punfold A.
       + (** a_ **)
-        pfold. econs 7; eauto. ii.
+        pfold. econs 6; eauto. ii.
         exploit wf_angelic; et. i; clarify.
         exploit SIM0; eauto. i; des. pc SIM.
         esplits; eauto.
@@ -423,12 +403,12 @@ Section SIM.
       punfold SIM. inv SIM; try rewrite SRT in *; ss.
       + (** d_ **)
         des. pc SIM.
-        pfold. econs 6; eauto. rr. esplits; eauto.
+        pfold. econs 5; eauto. rr. esplits; eauto.
         exploit IHi; et. intro A. punfold A.
       + (** _d **)
         exploit SIM0; eauto. i; des. pc SIM. exploit IH; et.
       + (** a_ **)
-        pfold. econs 7; eauto. ii.
+        pfold. econs 6; eauto. ii.
         exploit wf_angelic; et. i; clarify.
         exploit SIM0; eauto. i; des. pc SIM.
         esplits; eauto.
@@ -438,7 +418,7 @@ Section SIM.
         exploit IH; et. intro A.
         eapply Beh._beh_dstep; et.
       + (** ad **)
-        pfold. econs 7; eauto. ii.
+        pfold. econs 6; eauto. ii.
         exploit wf_angelic; et. i; clarify.
         exploit SIM0; et. i; des. pc x.
         esplits; eauto.
@@ -453,10 +433,10 @@ Section SIM.
       punfold SIM. inv SIM; try rewrite SRT in *; ss.
       + (** d_ **)
         des. pc SIM.
-        pfold. econs 6; eauto. rr. esplits; eauto.
+        pfold. econs 5; eauto. rr. esplits; eauto.
         exploit IHi; et. intro A. punfold A.
       + (** a_ **)
-        pfold. econs 7; eauto. ii.
+        pfold. econs 6; eauto. ii.
         exploit wf_angelic; et. i; clarify.
         exploit SIM0; eauto. i; des. pc SIM.
         esplits; eauto.
@@ -465,7 +445,7 @@ Section SIM.
         des. pc SIM. exploit STEP; et. i; des.
         exploit IH; et.
       + (** aa **)
-        pfold. econs 7; eauto. ii.
+        pfold. econs 6; eauto. ii.
         exploit wf_angelic; et. i; clarify.
         exploit SIM0; eauto. i; des. pc SIM.
         esplits; eauto.
