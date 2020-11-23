@@ -1,16 +1,10 @@
-Require Import sflib.
+Require Import Coqlib.
 Require Import Universe.
 Require Import STS.
-From Paco Require Import paco.
-Require Import RelationClasses List.
-Require Import ClassicalChoice PropExtensionality FunctionalExtensionality.
-(* Require Import Streams. *)
 
 Set Implicit Arguments.
 
-Definition single X (x: X): X -> Prop := fun x0 => x = x0.
 
-Ltac et := eauto.
 
 Module Tr.
   CoInductive t: Type :=
