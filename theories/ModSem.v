@@ -12,6 +12,11 @@ Section EVENTS.
   Inductive eventE: Type -> Type :=
   | Choose X: eventE X
   | Take X: eventE X
+  | Syscall (fn: fname) (m: Mem.t) (args: list val): eventE (Mem.t * val)
+  (*** Syscall should be able to look at current memory (full information).
+       Normal modules will call Memory (Language) module in order to call system call,
+       because Memory (Language) module is the only one with access to Mem.t.
+   ***)
   .
 
   Inductive callE: Type -> Type :=
@@ -54,13 +59,15 @@ Section EVENTS.
   Context `{GRA: GRA.t}.
 
   Inductive mdE: Type -> Type :=
-  | MPut (r: GRA): mdE unit
-  | MGet: mdE GRA
+  | MPut (mn: mname) (r: GRA): mdE unit
+  | MGet (mn: mname): mdE GRA
   .
 
   Inductive fnE: Type -> Type :=
   | FPut (r: GRA): fnE unit
   | FGet: fnE GRA
+  | FPush: fnE unit
+  | FPop: fnE unit
   .
 
 End EVENTS.

@@ -6,18 +6,6 @@ Set Implicit Arguments.
 
 
 
-
-
-Module Mem.
-
-  Definition t: Type := block -> option (Z -> val).
-
-End Mem.
-
-
-
-
-
 Module SkEnv.
 
   Record t: Type := mk {

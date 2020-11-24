@@ -12,8 +12,18 @@ Inductive val: Type :=
 Notation fname := string (only parsing).
 Notation mname := string (only parsing).
 
+
+
 Inductive event: Type :=
 | event_sys
     (fn: fname)
     (args: list val)
 .
+
+Module Mem.
+
+  Definition t: Type := block -> option (Z -> val).
+
+End Mem.
+
+Axiom syscall_sem: fname -> Mem.t -> list val -> (event * Mem.t * val).
