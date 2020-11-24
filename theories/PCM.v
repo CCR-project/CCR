@@ -528,7 +528,7 @@ Next Obligation. inv EQ. ss. Qed.
 
 
 Module GRA.
-  Definition t: Type := nat -> URA.t.
+  Class t: Type := ras: (nat -> URA.t).
   Class inG (RA: URA.t) (GRA: t) := InG {
     inG_id: nat;
     (* inG_prf: Eq (GRA inG_id) RA; *)
@@ -538,7 +538,9 @@ Module GRA.
 
   Definition of_list (RAs: list URA.t): t := fun n => List.nth n RAs (URA.of_RA RA.empty).
 
-  Definition construction (GRA: t): URA.t := URA.pointwise_dep GRA.
+  Definition to_URA (GRA: t): URA.t := URA.pointwise_dep GRA.
+
+  Coercion to_URA: t >-> URA.t.
 
   Section GETSET.
     Variable ra: URA.t.
@@ -558,7 +560,7 @@ Module GRA.
 
     Check (ra_transport inG_prf get).
 
-    Program Definition get_lifted: URA.car (t:=construction gra) :=
+    Program Definition get_lifted: URA.car (t:=gra) :=
       fun n => if Nat.eq_dec n inG_id then _ else URA.unit.
     Next Obligation.
       apply (ra_transport inG_prf get).
@@ -574,7 +576,7 @@ Module GRA.
     Section HANDLER.
     Variable handler: URA.car (t:=ra) -> URA.car (t:=ra).
     Local Obligation Tactic := idtac.
-    Program Definition handler_lifted: URA.car (t:=construction gra) -> URA.car (t:=construction gra) :=
+    Program Definition handler_lifted: URA.car (t:=gra) -> URA.car (t:=gra) :=
       fun st0 => fun n => if Nat.eq_dec n inG_id then _ else st0 n
     .
     Next Obligation.
@@ -612,6 +614,7 @@ Module GRA.
   .
 
 End GRA.
+Coercion GRA.to_URA: GRA.t >-> URA.t.
 
 (***
 Choose: non-det

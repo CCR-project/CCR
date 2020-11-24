@@ -7,6 +7,65 @@ Require Import PCM.
 Set Implicit Arguments.
 
 
+Section EVENTS.
+
+  Inductive eventE: Type -> Type :=
+  | Choose X: eventE X
+  | Take X: eventE X
+  .
+
+  Inductive callE: Type -> Type :=
+  | Call (fn: ident) (args: list val): callE val
+  .
+
+  (* Notation "'Choose' X" := (trigger (Choose X)) (at level 50, only parsing). *)
+  (* Notation "'Take' X" := (trigger (Take X)) (at level 50, only parsing). *)
+
+  Definition triggerUB {E A} `{eventE -< E}: itree E A :=
+    v <- trigger (Take void);; match v: void with end
+  .
+
+  Definition triggerNB {E A} `{eventE -< E}: itree E A :=
+    v <- trigger (Choose void);; match v: void with end
+  .
+
+  Definition unwrapN {E X} `{eventE -< E} (x: option X): itree E X :=
+    match x with
+    | Some x => ret x
+    | None => triggerNB
+    end.
+
+  Definition unwrapU {E X} `{eventE -< E} (x: option X): itree E X :=
+    match x with
+    | Some x => ret x
+    | None => triggerUB
+    end.
+
+  Definition assume {E} `{eventE -< E} (P: Prop): itree E unit := trigger (Take P) ;; Ret tt.
+  Definition guarantee {E} `{eventE -< E} (P: Prop): itree E unit := trigger (Choose P) ;; Ret tt.
+
+  Notation "f '?'" := (unwrapU f) (at level 60, only parsing).
+  Notation "f '﹗'" := (unwrapN f) (at level 60, only parsing).
+  (* Notation "'unint?'" := (unwrapA <*> unint) (at level 57, only parsing). *)
+  (* Notation "'unint﹗'" := (unwrapG <*> unint) (at level 57, only parsing). *)
+  (* Notation "'Ret!' f" := (RetG f) (at level 57, only parsing). *)
+  (* Notation "'Ret?' f" := (RetA f) (at level 57, only parsing). *)
+
+  Context `{GRA: GRA.t}.
+
+  Inductive mdE: Type -> Type :=
+  | MPut (r: GRA): mdE unit
+  | MGet: mdE GRA 
+  .
+
+  Inductive fnE: Type -> Type :=
+  | FPut (r: GRA): fnE unit
+  | FGet: fnE GRA
+  .
+
+End EVENTS.
+
+
 
 Module ModSem.
 Section MODSEM.
@@ -22,26 +81,12 @@ Section MODSEM.
   (* } *)
   (* . *)
 
-  Inductive eventE: Type -> Type :=
-  | Choose X: eventE X
-  | Take X: eventE X
-  .
-
   Context `{GRA: GRA.t}.
-
-  Inductive callE: Type -> Type :=
-  | Call (fptr: val) (args: list val): callE val
-  .
-
-  Inductive ldE: Type -> Type :=
-  | LPut (r: (GRA.construction GRA)): ldE unit
-  | LGet: ldE (GRA.construction GRA)
-  .
 
   Record t: Type := mk {
     sk: Sk.t;
-    initial_ld: GRA.construction GRA;
-    sem: callE ~> itree (callE +' ldE);
+    initial_ld: GRA;
+    sem: callE ~> itree (callE +' mdE +' fnE +' eventE);
   }
   .
 
@@ -51,26 +96,10 @@ Section MODSEM.
   Definition merge (md0 md1: t): t := {|
     sk := Sk.add md0.(sk) md1.(sk);
     initial_ld := URA.add md0.(initial_ld) md1.(initial_ld);
-    (* sem := fun _ c => match c with *)
-    (*                   | call fptr args => md0.(sem) (call fptr args) *)
-    (*                   end *)
-    sem := fun _ '(Call fptr args) =>
-             if md0.(sk) md0.(sem) (Call fptr args);
+    sem := fun _ '(Call fn args) =>
+             (if List.in_dec string_dec fn md0.(sk) then md0.(sem) else md1.(sem)) _ (Call fn args)
   |}
   .
 
 End MODSEM.
 End ModSem.
-
-Inductive ModSem: Type :=
-  mk_ModSem { fnames: string -> bool ;
-              owned_heap: Type;
-              initial_owned_heap: owned_heap;
-              customE: Type -> Type ;
-              handler: customE ~> stateT owned_heap (itree (GlobalE +' Event));
-
-              (* handler: forall E, AnyState ~> stateT Any (itree E); *)
-              (* sem: CallExternalE ~> itree (CallExternalE +' Event); *)
-
-              sem: CallExternalE ~> itree (CallExternalE +' customE +' GlobalE +' Event);
-            }.
