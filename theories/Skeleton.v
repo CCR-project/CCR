@@ -6,9 +6,11 @@ Set Implicit Arguments.
 
 
 
+
+
 Module Mem.
 
-  Definition t: Type := block -> Z -> option val.
+  Definition t: Type := block -> option (Z -> val).
 
 End Mem.
 
@@ -21,9 +23,11 @@ Module SkEnv.
   Record t: Type := mk {
     ptr2id: val -> option ident;
     id2ptr: ident -> option val;
-    wf: forall id ptr, id2ptr id = Some ptr <-> ptr2id ptr = Some id;
   }
   .
+
+  Definition wf (ske: t): Prop :=
+    forall id ptr, ske.(id2ptr) id = Some ptr <-> ske.(ptr2id) ptr = Some id.
 
   (* Definition project: t -> Sk.t -> t := admit "". *)
     (* t: Type := Genv.t (fundef signature) unit; *)
@@ -87,54 +91,50 @@ Module Sk.
 
   Definition t: Type := list ident.
 
-  Global Program Instance RA: RA.t := {|
-    RA.car := t;
-    RA.add := @List.app _;
-    RA.wf := @List.NoDup _;
-  |}
+  Definition add: t -> t -> t := @List.app _.
+
+  Definition wf: t -> Prop := @List.NoDup _.
+
+  Definition load_mem (sk: t): Mem.t :=
+    let n := List.length sk in
+    (fun blk => if (blk <=? n)%nat then (Some (fun _ => Vundef)) else None)
   .
-  Next Obligation.
-    admit "".
-  Qed.
-  Next Obligation.
-    admit "".
-  Qed.
-  Next Obligation.
-    admit "".
-  Qed.
 
-  Definition link: t -> t -> t := admit "".
+  Fixpoint _find_idx {A} (f: A -> bool) (l: list A) (acc: nat): option (nat * A) :=
+    match l with
+    | [] => None
+    | hd :: tl => if (f hd) then Some (acc, hd) else _find_idx f tl (S acc)
+    end
+  .
 
-  Definition load (sk: t): (mem * ).
-    (* t: Type; *)
-    (* wf: t -> Prop; *)
-    (* Linker:> Linker t; *)
-    (* load_skenv: t -> Genv.t (fundef signature) unit; *)
-    (* load_mem: t -> option mem; *)
-    (* link_preserves_wf_sk: forall *)
-    (*     sk0 sk1 sk_link *)
-    (*     (WFSK0: wf sk0) *)
-    (*     (WFSK1: wf sk1) *)
-    (*     (LINK: link sk0 sk1 = Some sk_link) *)
-    (*   , *)
-    (*     (<<WF: wf sk_link>>) *)
-    (* ; *)
-    (* disj: t -> t -> Prop; *)
-    (* link_disj: forall  *)
-    (*     sk0 sk1 sk_link *)
-    (*     (LINK: link sk0 sk1 = Some sk_link) *)
-    (*   , *)
-    (*     (<<DISJ: disj sk0 sk1>>) *)
-    (* ; *)
-    (* disj_linkorder: forall *)
-    (*     sk0 sk1 sk_link *)
-    (*     (DISJ: disj sk0 sk_link) *)
-    (*     (LINK: linkorder sk1 sk_link) *)
-    (*   , *)
-    (*     (<<DISJ: disj sk0 sk1>>) *)
-    (* ; *)
+  Definition find_idx {A} (f: A -> bool) (l: list A): option (nat * A) := _find_idx f l 0.
+
+  Definition load_skenv (sk: t): (SkEnv.t) :=
+    let n := List.length sk in
+    {|
+      SkEnv.ptr2id := fun v => match v with
+                               | Vptr blk ofs => if (ofs =? 0)%Z
+                                                 then List.nth_error sk blk
+                                                 else None
+                               | _ => None
+                               end;
+      SkEnv.id2ptr := fun id => do blkofs <- find_idx (string_dec id) sk; Some (Vptr (fst blkofs) 0)
+    |}
+  .
+
+  Lemma load_skenv_wf
+        sk
+        (WF: wf sk)
+    :
+      <<WF: SkEnv.wf (load_skenv sk)>>
+  .
+  Proof.
+    r in WF.
+    rr. split; i; ss.
+    - uo; des_ifs. admit "ez".
+    - uo; des_ifs_safe. apply Z.eqb_eq in Heq. subst. des_ifs.
+      + destruct p; ss. repeat f_equal. admit "ez".
+      + admit "ez".
+  Qed.
 
 End Sk.
-
-
-
