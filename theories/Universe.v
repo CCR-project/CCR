@@ -9,10 +9,11 @@ Inductive val: Type :=
 | Vundef
 .
 
-Notation ident := string (only parsing).
+Notation fname := string (only parsing).
+Notation mname := string (only parsing).
 
 Inductive event: Type :=
 | event_sys
-    (name: ident)
+    (fn: fname)
     (args: list val)
 .

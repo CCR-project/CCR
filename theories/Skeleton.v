@@ -21,8 +21,8 @@ End Mem.
 Module SkEnv.
 
   Record t: Type := mk {
-    ptr2id: val -> option ident;
-    id2ptr: ident -> option val;
+    ptr2id: val -> option fname;
+    id2ptr: fname -> option val;
   }
   .
 
@@ -89,7 +89,7 @@ End SkEnv.
 
 Module Sk.
 
-  Definition t: Type := list ident.
+  Definition t: Type := list fname.
 
   Definition add: t -> t -> t := @List.app _.
 

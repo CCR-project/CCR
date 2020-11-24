@@ -15,7 +15,7 @@ Section EVENTS.
   .
 
   Inductive callE: Type -> Type :=
-  | Call (fn: ident) (args: list val): callE val
+  | Call (fn: fname) (args: list val): callE val
   .
 
   (* Notation "'Choose' X" := (trigger (Choose X)) (at level 50, only parsing). *)
@@ -55,7 +55,7 @@ Section EVENTS.
 
   Inductive mdE: Type -> Type :=
   | MPut (r: GRA): mdE unit
-  | MGet: mdE GRA 
+  | MGet: mdE GRA
   .
 
   Inductive fnE: Type -> Type :=
@@ -85,7 +85,7 @@ Section MODSEM.
 
   Record t: Type := mk {
     sk: Sk.t;
-    initial_ld: GRA;
+    initial_ld: mname -> GRA;
     sem: callE ~> itree (callE +' mdE +' fnE +' eventE);
   }
   .
@@ -95,7 +95,7 @@ Section MODSEM.
   (*** using "Program Definition" makes the definition uncompilable; why?? ***)
   Definition merge (md0 md1: t): t := {|
     sk := Sk.add md0.(sk) md1.(sk);
-    initial_ld := URA.add md0.(initial_ld) md1.(initial_ld);
+    initial_ld := URA.add (t:=URA.pointwise _ _) md0.(initial_ld) md1.(initial_ld);
     sem := fun _ '(Call fn args) =>
              (if List.in_dec string_dec fn md0.(sk) then md0.(sem) else md1.(sem)) _ (Call fn args)
   |}
