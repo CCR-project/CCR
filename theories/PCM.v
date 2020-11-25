@@ -8,6 +8,69 @@ Set Implicit Arguments.
 
 
 
+Class Dec (A: Type) := dec: forall (a0 a1: A), { a0 = a1 } + { a0 <> a1 }.
+
+Global Program Instance positive_Dec: Dec positive. Next Obligation. decide equality. Defined.
+Global Program Instance string_Dec: Dec String.string. Next Obligation. apply String.string_dec. Defined.
+Global Program Instance nat_Dec: Dec nat. Next Obligation. apply Nat.eq_dec. Defined.
+
+Definition update K `{Dec K} V (f: K -> V) (k: K) (v: V): K -> V :=
+  fun _k => if dec k _k then v else f _k.
+
+Definition cast A B (LeibEq: A = B) (a: A): B := eq_rect A _ a _ LeibEq.
+
+(* Class LeibEq (A B: Type) := { leibeq: A = B }. *)
+(* Arguments LeibEq: clear implicits. *)
+(* Program Definition LeibEq_rev (A B: Type) (LEQ: LeibEq A B): LeibEq B A. *)
+(* Proof. rewrite leibeq. econstructor. refl. Defined. *)
+(* Definition cast (A B: Type) `{LeibEq A B} (a: A): B. rewrite <- leibeq. apply a. Defined. *)
+(* Global Program Instance LeibEq_refl (A: Type): LeibEq A A. *)
+
+(* Lemma cast_elim *)
+(*       A LEQ (a: A) *)
+(*   : *)
+(*     <<EQ: (@cast A A LEQ a) = a>> *)
+(* . *)
+(* Proof. *)
+(*   r. destruct LEQ. *)
+(*   unfold cast. ss. *)
+(*   unfold eq_rect. dependent destruction leibeq0. ss. *)
+(* Qed. *)
+
+(* Lemma unit_JMeq *)
+(*       X (x: X) *)
+(*       (TY: X = unit) *)
+(*   : *)
+(*     <<EQ: x ~= tt>> *)
+(* . *)
+(* Proof. *)
+(*   revert x. rewrite TY. *)
+(*   ii. clarify. des_u; ss. *)
+(* Qed. *)
+
+(* Lemma sigT_eta *)
+(*       (a: { A: Type & A}) *)
+(*       (b: { B: Type & B}) *)
+(*       (EQTY: projT1 a = projT1 b) *)
+(*       (EQVAL: projT2 a ~= projT2 b) *)
+(*   : *)
+(*     a = b *)
+(* . *)
+(* Proof. *)
+(*   destruct a, b; ss. clarify. apply JMeq_eq in EQVAL. clarify. *)
+(* Qed. *)
+
+(* Class Eq {A: Type} (a0 a1: A) := { eq: a0 = a1 }. *)
+
+(* Program Instance LeibEq_URA ra0 ra1 (EQ: Eq ra0 ra1): LeibEq (@URA.car ra0) (@URA.car ra1). *)
+(* Next Obligation. inv EQ. ss. Qed. *)
+
+
+
+
+
+
+
 Module RA.
   Class t: Type := mk {
     car:> Type;
@@ -264,6 +327,10 @@ Module URA.
 
     (* extends := fun a b => exists ctx, add a ctx = b; *)
     (* updatable := fun a b => forall ctx, wf (add a ctx) -> wf (add b ctx); *)
+    extends := fun a b => exists ctx, add a ctx = b;
+    updatable := fun a b => forall ctx, wf (add a ctx) -> wf (add b ctx);
+    updatable_set := fun a B => forall ctx (WF: wf (add a ctx)),
+                         exists b, <<IN: B b>> /\ <<WF: wf (add b ctx)>>;
   }
   .
 
@@ -478,57 +545,12 @@ Proof.
   ginduction n; ii; ss; des_ifs. ss. eapply IHn; et.
 Qed.
 
-Class LeibEq (A B: Type) := { leibeq: A = B }.
-Arguments LeibEq: clear implicits.
-Program Definition LeibEq_rev (A B: Type) (LEQ: LeibEq A B): LeibEq B A.
-Proof. rewrite leibeq. econstructor. refl. Defined.
-Definition cast (A B: Type) `{LeibEq A B} (a: A): B. rewrite <- leibeq. apply a. Defined.
-Global Program Instance LeibEq_refl (A: Type): LeibEq A A.
-
-Lemma cast_elim
-      A LEQ (a: A)
-  :
-    <<EQ: (@cast A A LEQ a) = a>>
-.
-Proof.
-  r. destruct LEQ.
-  unfold cast. ss.
-  unfold eq_rect. dependent destruction leibeq0. ss.
-Qed.
-
-Lemma unit_JMeq
-      X (x: X)
-      (TY: X = unit)
-  :
-    <<EQ: x ~= tt>>
-.
-Proof.
-  revert x. rewrite TY.
-  ii. clarify. des_u; ss.
-Qed.
-
-Lemma sigT_eta
-      (a: { A: Type & A})
-      (b: { B: Type & B})
-      (EQTY: projT1 a = projT1 b)
-      (EQVAL: projT2 a ~= projT2 b)
-  :
-    a = b
-.
-Proof.
-  destruct a, b; ss. clarify. apply JMeq_eq in EQVAL. clarify.
-Qed.
-
-Class Eq {A: Type} (a0 a1: A) := { eq: a0 = a1 }.
-
-Program Instance LeibEq_URA ra0 ra1 (EQ: Eq ra0 ra1): LeibEq (@URA.car ra0) (@URA.car ra1).
-Next Obligation. inv EQ. ss. Qed.
 
 
 
 
 Module GRA.
-  Class t: Type := ras: (nat -> URA.t).
+  Class t: Type := __GRA__INTERNAL__: (nat -> URA.t).
   Class inG (RA: URA.t) (GRA: t) := InG {
     inG_id: nat;
     (* inG_prf: Eq (GRA inG_id) RA; *)
@@ -542,12 +564,22 @@ Module GRA.
 
   Coercion to_URA: t >-> URA.t.
 
+
+  Let cast_ra {A B: URA.t} (LeibEq: A = B) (a: URA.car (t:=A)): URA.car (t:=B) :=
+    eq_rect A (@URA.car) a _ LeibEq.
+
+  (* a: URA.car =ty= RAs inG_id =ty= RAs n *)
+  Definition padding {A GRA} `{@GRA.inG A GRA} (a: URA.car (t:=A)): URA.car (t:=GRA) :=
+    fun n => match Nat.eq_dec inG_id n with
+             | left H => ((@eq_rect nat inG_id GRA ((cast_ra inG_prf a): GRA inG_id) n H): GRA n)
+             | right _ => URA.unit
+             end
+  .
+
   Section GETSET.
     Variable ra: URA.t.
     Variable gra: t.
     Context `{@inG ra gra}.
-    Definition ra_transport {A B : URA.t} (H : A = B) (x : A) : B :=
-      eq_rect A id x _ H.
 
     Section GETSET.
     Variable get: URA.car (t:=ra).
@@ -556,14 +588,10 @@ Module GRA.
     (* own & update can be lifted *)
     (* can we write spec in terms of own & update, not get & set? *)
     (* how about add / sub? *)
-
-
-    Check (ra_transport inG_prf get).
-
     Program Definition get_lifted: URA.car (t:=gra) :=
       fun n => if Nat.eq_dec n inG_id then _ else URA.unit.
     Next Obligation.
-      apply (ra_transport inG_prf get).
+      apply (cast_ra inG_prf get).
     Defined.
 
     (* Program Definition set_lifted: URA.car (t:=construction gra) -> unit := *)

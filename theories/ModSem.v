@@ -49,8 +49,6 @@ Section EVENTS.
   Definition assume {E} `{eventE -< E} (P: Prop): itree E unit := trigger (Take P) ;; Ret tt.
   Definition guarantee {E} `{eventE -< E} (P: Prop): itree E unit := trigger (Choose P) ;; Ret tt.
 
-  Notation "f '?'" := (unwrapU f) (at level 60, only parsing).
-  Notation "f '﹗'" := (unwrapN f) (at level 60, only parsing).
   (* Notation "'unint?'" := (unwrapA <*> unint) (at level 57, only parsing). *)
   (* Notation "'unint﹗'" := (unwrapG <*> unint) (at level 57, only parsing). *)
   (* Notation "'Ret!' f" := (RetG f) (at level 57, only parsing). *)
@@ -71,6 +69,11 @@ Section EVENTS.
   .
 
 End EVENTS.
+
+Notation "f '?'" := (unwrapU f) (at level 60, only parsing).
+Notation "f '﹗'" := (unwrapN f) (at level 60, only parsing).
+
+
 
 
 

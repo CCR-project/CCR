@@ -13,16 +13,6 @@ Set Implicit Arguments.
 
 
 
-Class Dec (A: Type) := dec: forall (a0 a1: A), { a0 = a1 } + { a0 <> a1 }.
-
-Global Program Instance positive_Dec: Dec positive. Next Obligation. decide equality. Defined.
-Global Program Instance string_Dec: Dec string. Next Obligation. apply string_dec. Defined.
-
-Definition update K `{Dec K} V (f: K -> V) (k: K) (v: V): K -> V :=
-  fun _k => if dec k _k then v else f _k.
-
-Notation "f '?'" := (unwrapU f) (at level 60, only parsing).
-Notation "f '﹗'" := (unwrapN f) (at level 60, only parsing).
 
 
 
