@@ -70,12 +70,20 @@ Definition cast A B (LeibEq: A = B) (a: A): B := eq_rect A _ a _ LeibEq.
 
 
 
+Class Add (A: Type) := add: A -> A -> A.
+Infix "+" := add (at level 50, left associativity).
+Notation "(+)" := add (only parsing).
+Class Wf (A: Type) := wf: A -> Prop.
+
+
+
+
 
 Module RA.
   Class t: Type := mk {
     car:> Type;
-    add: car -> car -> car;
-    wf: car -> Prop;
+    Add:> Add car;
+    Wf:> Wf car;
     add_comm: forall a b, add a b = add b a;
     add_assoc: forall a b c, add a (add b c) = add (add a b) c;
     wf_mon: forall a b, wf (add a b) -> wf a;
@@ -159,15 +167,19 @@ Module RA.
     rr. ii. rr in H. rr in H0. des. rewrite <- H0. rewrite <- H. esplits; et. rewrite add_assoc. et.
   Qed.
 
+  Instance prod_Add (M0 M1: t): PCM.Add (car (t:=M0) * car (t:=M1))%type :=
+    fun '(a0, a1) '(b0, b1) => ((add a0 b0), (add a1 b1)).
+  Instance prod_Wf (M0 M1: t): PCM.Wf (car (t:=M0) * car (t:=M1))%type :=
+    fun '(a0, a1) => wf a0 /\ wf a1.
   Program Instance prod (M0 M1: t): t := {
     car := car (t:=M0) * car (t:=M1);
-    add := fun '(a0, a1) '(b0, b1) => ((add a0 b0), (add a1 b1));
-    wf := fun '(a0, a1) => wf a0 /\ wf a1;
   }
   .
-  Next Obligation. f_equal; rewrite add_comm; ss. Qed.
-  Next Obligation. f_equal; rewrite add_assoc; ss. Qed.
-  Next Obligation. split; eapply wf_mon; et. Qed.
+  Hint Unfold prod_Add.
+  Hint Unfold prod_Wf.
+  Next Obligation. cbn in *. f_equal; rewrite add_comm; ss. Qed.
+  Next Obligation. cbn in *. f_equal; rewrite add_assoc; ss. Qed.
+  Next Obligation. cbn in *. des. split; eapply wf_mon; et. Qed.
 
   Theorem prod_updatable
           M0 M1
@@ -179,18 +191,23 @@ Module RA.
       <<UPD: @updatable (prod M0 M1) (a0, a1) (b0, b1)>>
   .
   Proof.
-    ii. ss. des_ifs. des. esplits; et.
+    ii. ss.
+    cbn in *. des_ifs. cbn in *. des.
+    esplits; et.
   Qed.
 
+  Instance frac_Add: PCM.Add positive :=
+    fun a b => (a + b)%positive.
+  Instance frac_Wf (denom: positive): PCM.Wf positive :=
+    fun a => (a <= denom)%positive.
   Program Instance frac (denom: positive): t := {
     car := positive;
-    add := fun a b => (a + b)%positive;
-    wf := fun a => (a <= denom)%positive;
+    Wf := frac_Wf denom;
   }
   .
-  Next Obligation. lia. Qed.
-  Next Obligation. lia. Qed.
-  Next Obligation. lia. Qed.
+  Next Obligation. unfold add, frac_Add, frac_Wf in *. lia. Qed.
+  Next Obligation. unfold add, frac_Add, frac_Wf in *. lia. Qed.
+  Next Obligation. unfold add, frac_Add, frac_Wf, wf in *. lia. Qed.
 
   Theorem frac_updatable
           denom M
