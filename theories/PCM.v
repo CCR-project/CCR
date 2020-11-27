@@ -557,6 +557,8 @@ Module GRA.
     inG_prf: RA = GRA inG_id;
   }
   .
+  Class subG (GRA0 GRA1: t) := SubG i : { j | GRA0 i = GRA1 j }.
+  Class subG (GRA0 GRA1: t) := SubG { subG_prf: forall i, { j | GRA0 i = GRA1 j } }.
 
   Definition of_list (RAs: list URA.t): t := fun n => List.nth n RAs (URA.of_RA RA.empty).
 

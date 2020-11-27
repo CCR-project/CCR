@@ -95,8 +95,9 @@ Section MODSEM.
 
   Record t: Type := mk {
     sk: Sk.t;
-    initial_ld: mname -> GRA;
+    (* initial_ld: mname -> GRA; *)
     sem: callE ~> itree (callE +' mdE +' fnE +' eventE);
+    initial_ld: list (mname * GRA);
   }
   .
 
@@ -105,9 +106,10 @@ Section MODSEM.
   (*** using "Program Definition" makes the definition uncompilable; why?? ***)
   Definition merge (md0 md1: t): t := {|
     sk := Sk.add md0.(sk) md1.(sk);
-    initial_ld := URA.add (t:=URA.pointwise _ _) md0.(initial_ld) md1.(initial_ld);
+    (* initial_ld := URA.add (t:=URA.pointwise _ _) md0.(initial_ld) md1.(initial_ld); *)
     sem := fun _ '(Call fn args) =>
-             (if List.in_dec string_dec fn md0.(sk) then md0.(sem) else md1.(sem)) _ (Call fn args)
+             (if List.in_dec string_dec fn md0.(sk) then md0.(sem) else md1.(sem)) _ (Call fn args);
+    initial_ld := app md0.(initial_ld) md0.(initial_ld);
   |}
   .
 

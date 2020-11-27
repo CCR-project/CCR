@@ -7,7 +7,7 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 
-Generalizable Variables E R A B C X Y Z.
+Generalizable Variables E R A B C X Y.
 
 Set Implicit Arguments.
 
@@ -43,7 +43,12 @@ Section INTERP.
       end.
   Definition interp_mdE `{eventE -< E}: itree (mdE +' E) ~> stateT md_state (itree E) :=
     State.interp_state (case_ handle_mdE State.pure_state).
-  Let itr2: itree (fnE +' eventE) val := snd <$> (interp_mdE itr1) (fun _ => URA.unit).
+  Definition initial_md_state: md_state :=
+    fun mn => match List.find (fun mnr => dec mn (fst mnr)) ms.(ModSem.initial_ld) with
+              | Some r => snd r
+              | None => URA.unit
+              end.
+  Let itr2: itree (fnE +' eventE) val := snd <$> (interp_mdE itr1) initial_md_state.
 
 
 

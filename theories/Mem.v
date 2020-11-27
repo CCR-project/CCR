@@ -7,17 +7,31 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 
-Generalizable Variables E R A B C X Y Z GRA.
+Generalizable Variables E R A B C X Y Σ.
 
 Set Implicit Arguments.
 
+Global Program Instance Z_Dec: Dec Z. Next Obligation. apply Z.eq_dec. Defined.
 
 
-Instance points_to: RA.t := RA.pointwise block (RA.pointwise Z (RA.agree (unit + val))).
-Compute (RA.car).
+
+
+
+
+
+
+Let _memRA: URA.t := (RA.pointwise block (RA.pointwise Z (RA.excl val))).
+Instance memRA: URA.t := URA.auth _memRA.
+Compute (URA.car).
+
+Definition points_to (loc: block * Z) (v: val): URA.car :=
+  let (b, ofs) := loc in
+  URA.white (M:=_memRA)
+            (inl (fun _b _ofs => if (dec _b b) && (dec _ofs ofs) then Some v else None)).
 
 Definition own {GRA: GRA.t} (whole a: URA.car (t:=GRA)): Prop := URA.extends a whole.
 
+Notation "loc |-> v" := (points_to loc v) (at level 20).
 
 (***
 r <- Take;;
@@ -75,11 +89,9 @@ NB: this "discarded" resource is *actually* discarded; the user can't access it 
 
 (***
 Where does the `Function Locality` appear in our scenario?
-1. Write it with assume/guarantee.
-2. Use Rely/Guarantee in simulation technique.
+Use Rely/Guarantee in simulation technique.
 
-<<<<<<<<<<<<<< Maybe it is better to give function call stack for each mname,
-               for better modularity & less cognitive overhead >>>>>>>>>>>>>>>>>
+
 
 FPush
   r <- Take;
@@ -102,14 +114,94 @@ FPush
 FPop
 
 ***)
+Section PROOF.
+  (* Context {myRA} `{@GRA.inG myRA Σ}. *)
+  Context {Σ: GRA.t}.
+  Let GURA: URA.t := GRA.to_URA Σ.
+  Local Existing Instance GURA.
+  Variable mn: mname.
 
+  Definition FAdd `{fnE -< E} (r: URA.car): itree E unit :=
+    rcur <- trigger (FGet);; trigger (FPut (URA.add rcur r))
+  .
 
+  Definition FSub `{fnE -< E} `{eventE -< E} (r: URA.car): itree E unit :=
+    rcur <- trigger (FGet);;
+    rnext <- trigger (Choose _);;
+    guarantee(rcur = URA.add rnext r);;
+    trigger (FPut rnext)
+  .
 
-Local Notation "blk#ofs |-> v" := blk 
-  (at level 20, q at level 50, format "l  ↦{ q }  v") : bi_scope.
+  (*** think of Box, UnionFind, etc. ***)
+  (* Definition transfer `{fnE -< E} `{eventE -< E} (r: URA.car): itree E unit := *)
+  (*   rcur ... *)
+  (* . *)
+
+  Definition HoareFun
+             (P: URA.car -> URA.car -> list val -> Prop)
+             (Q: URA.car -> URA.car -> list val -> URA.car -> URA.car -> val -> Prop)
+             (f: list val -> itree (callE +' mdE +' fnE +' eventE) val):
+    list val -> itree (callE +' mdE +' fnE +' eventE) val :=
+    fun vs0 =>
+      ld0 <- trigger (MGet mn);;
+      r <- trigger (Take URA.car);;
+      assume(P ld0 r vs0);;
+      FAdd r;;
+
+      assume(<<WTY: URA.wf (URA.add ld0 r)>>);;
+      vr <- (f vs0);;
+
+      ld1 <- trigger (MGet mn);;
+      rr <- trigger (Choose URA.car);;
+      guarantee(Q ld0 r vs0 ld1 rr vr);;
+      FSub rr;;
+      Ret vr
+  .
+
+  Definition HoareCall
+             (P: URA.car -> URA.car -> list val -> Prop)
+             (Q: URA.car -> URA.car -> list val -> URA.car -> URA.car -> val -> Prop):
+    fname -> list val -> itree (callE +' mdE +' fnE +' eventE) val :=
+    fun fn vs0 =>
+      ld0 <- trigger (MGet mn);;
+      r <- trigger (Choose URA.car);;
+      FSub r;;
+      guarantee(P ld0 r vs0);;
+
+      vr <- trigger (Call fn vs0);;
+
+      Ret vr
+  .
+
+End PROOF.
 
 Section PROOF.
-  Variable points_to: URA.t.
-  Context `{@GRA.inG points_to GRA}.
-Definition mem: ModSem.t
+  Context `{@GRA.inG memRA Σ}.
+  Let GURA: URA.t := GRA.to_URA Σ.
+  Local Existing Instance GURA.
+
+  Definition allocF_parg (args: list val): option Z :=
+    match args with
+    | [Vint sz] => Some sz
+    | _ => None
+    end
+  .
+
+  Definition allocF (args: list val): itree (callE +' mdE +' fnE +' eventE) val :=
+    sz <- (allocF_parg args)?;;
+    r <- trigger (Take URA.car);;
+    assume(URA.extends URA.unit r);;
+    triggerUB
+  .
+
+  Definition mem: ModSem.t := {|
+    ModSem.sk := ["alloc" ; "store" ; "load" ; "free"];
+    ModSem.sem :=
+      fun _ '(Call fname args) =>
+        if dec fname "alloc"
+        then allocF args
+        else triggerUB;
+    ModSem.initial_ld := [("mem", GRA.padding (URA.black (M:=_memRA) (inr tt)))];
+  |}
+  .
 End PROOF.
