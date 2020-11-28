@@ -121,27 +121,12 @@ Section PROOF.
   Local Existing Instance GURA.
   Variable mn: mname.
 
-  Definition FAdd `{fnE -< E} (r: URA.car): itree E unit :=
-    rcur <- trigger (FGet);; trigger (FPut (URA.add rcur r))
-  .
-
-  Definition FSub `{fnE -< E} `{eventE -< E} (r: URA.car): itree E unit :=
-    rcur <- trigger (FGet);;
-    rnext <- trigger (Choose _);;
-    guarantee(rcur = URA.add rnext r);;
-    trigger (FPut rnext)
-  .
-
-  (*** think of Box, UnionFind, etc. ***)
-  (* Definition transfer `{fnE -< E} `{eventE -< E} (r: URA.car): itree E unit := *)
-  (*   rcur ... *)
-  (* . *)
-
   Definition HoareFun
-             (P: URA.car -> URA.car -> list val -> Prop)
-             (Q: URA.car -> URA.car -> list val -> URA.car -> URA.car -> val -> Prop)
-             (f: list val -> itree (callE +' mdE +' fnE +' eventE) val):
-    list val -> itree (callE +' mdE +' fnE +' eventE) val :=
+             (INV: URA.car -> Prop)
+             (P: URA.car -> list val -> Prop)
+             (Q: URA.car -> list val -> URA.car -> val -> Prop)
+             (f: list val -> itree Es val):
+    list val -> itree Es val :=
     fun vs0 =>
       ld0 <- trigger (MGet mn);;
       r <- trigger (Take URA.car);;

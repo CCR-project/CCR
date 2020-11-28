@@ -461,14 +461,37 @@ Module URA.
   Definition black `{M: t} (a: car): car (t:=auth M) := excl a unit.
   Definition white `{M: t} (a: car): car (t:=auth M) := frag a.
 
+  Definition local_update `{M: t} a0 b0 a1 b1: Prop :=
+    forall ctx, (<<WF: wf a0>> /\ <<FRAME: a0 = add b0 ctx>>) ->
+                (<<WF: wf a1>> /\ <<FRAME: a1 = add b1 ctx>>)
+  .
+
+  Theorem auth_update
+          `{M: t}
+          a b a' b'
+          (UPD: local_update a b a' b')
+    :
+      <<UPD: updatable (add (black a) (white b)) (add (black a') (white b'))>>
+  .
+  Proof.
+    r in UPD. rr. ii. des_ifs. ss. des. r in H. des; clarify.
+    rewrite unit_idl in *. ss.
+    exploit (UPD (add f ctx)); et.
+    { esplits; et.  rewrite add_assoc. ss. }
+    i; des. clarify. esplits; et. rr. exists ctx. rewrite add_assoc. ss.
+  Qed.
+
   Theorem auth_dup_black
           `{M: t}
           a ca
           (CORE: a = add a ca)
     :
-      <<DUP: RA.updatable (t:=auth M) (black a) (add (black a) (white ca))>>
+      <<DUP: updatable (t:=auth M) (black a) (add (black a) (white ca))>>
   .
   Proof.
+    (* r. rewrite <- unit_id at 1. *)
+    (* eapply auth_update. rr. ii. des. rewrite unit_idl in FRAME. subst. *)
+    (* esplits; et. rewrite add_comm; ss. *)
     rr. ii. des_ifs. rr in H. des. rewrite unit_idl in *. esplits; et.
     - rr. rr in H. des. esplits; et. ss. rewrite <- add_assoc. rewrite H. rewrite add_comm. eauto.
   Qed.
@@ -486,7 +509,29 @@ Module URA.
     - ss. des. esplits; et. rewrite <- CORE. ss.
   Qed.
 
-  Theorem auth_spec
+  Theorem auth_alloc
+          `{M: t}
+          a0 a1 b1
+          (UPD: local_update a0 unit a1 b1)
+    :
+      <<UPD: updatable (t:=auth M) (black a0) (add (black a1) (white b1))>>
+  .
+  Proof.
+    r. rewrite <- unit_id at 1. eapply auth_update. ss.
+  Qed.
+
+  Theorem auth_dealloc
+          `{M: t}
+          a0 a1 b0
+          (UPD: local_update a0 b0 a1 unit)
+    :
+      <<UPD: updatable (t:=auth M) (add (black a0) (white b0)) (black a1)>>
+  .
+  Proof.
+    r. rewrite <- unit_id. eapply auth_update. ss.
+  Qed.
+
+  Theorem auth_included
           `{M: t}
           a b
           (WF: wf (add (black a) (white b)))
@@ -497,6 +542,15 @@ Module URA.
     rr in WF. des. rr in WF. rr. des. rewrite add_comm in WF. ss. rewrite unit_id in WF. subst.
     esplits; et.
   Qed.
+
+  Theorem auth_exclusive
+          `{M: t}
+          a b
+          (WF: wf (add (black a) (black b)))
+    :
+      False
+  .
+  Proof. ss. Qed.
 
   Program Instance pointwise K (M: t): t := {
     car := K -> car;
@@ -558,7 +612,7 @@ Module GRA.
   }
   .
   Class subG (GRA0 GRA1: t) := SubG i : { j | GRA0 i = GRA1 j }.
-  Class subG (GRA0 GRA1: t) := SubG { subG_prf: forall i, { j | GRA0 i = GRA1 j } }.
+  (* Class subG (GRA0 GRA1: t) := SubG { subG_prf: forall i, { j | GRA0 i = GRA1 j } }. *)
 
   Definition of_list (RAs: list URA.t): t := fun n => List.nth n RAs (URA.of_RA RA.empty).
 

@@ -56,17 +56,40 @@ Section EVENTS.
 
   Context `{GRA: GRA.t}.
 
-  Inductive mdE: Type -> Type :=
-  | MPut (mn: mname) (r: GRA): mdE unit
-  | MGet (mn: mname): mdE GRA
+  Inductive rE: Type -> Type :=
+  (* | MPut (mn: mname) (r: GRA): rE unit *)
+  (* | MGet (mn: mname): rE GRA *)
+  (* | FPut (r: GRA): rE unit *)
+  (* | FGet: rE GRA *)
+  | Put (mn: mname) (fr: GRA) (mr: GRA): rE unit
+  | Get (mn: mname): rE (GRA * GRA)
+
+  (*** NOTE: These methods can be implemented using Put/Get,
+       but making it explicit will be helpful for meta-theory.
+       E.g., In top-level, if all modules are well-typed,
+       we can make "CheckWf" to Nop by adjusting handler.
+   ***)
+  | Forge (fr: GRA): rE unit
+  | Discard (fr: GRA): rE unit
+  | CheckWf: rE unit
+
+  | PushFrame: rE unit
+  | PopFrame: rE unit
   .
 
-  Inductive fnE: Type -> Type :=
-  | FPut (r: GRA): fnE unit
-  | FGet: fnE GRA
-  | FPush: fnE unit
-  | FPop: fnE unit
-  .
+  Definition Es: Type -> Type := (callE +' rE +' eventE).
+
+  (* Inductive mdE: Type -> Type := *)
+  (* | MPut (mn: mname) (r: GRA): mdE unit *)
+  (* | MGet (mn: mname): mdE GRA *)
+  (* . *)
+
+  (* Inductive fnE: Type -> Type := *)
+  (* | FPut (r: GRA): fnE unit *)
+  (* | FGet: fnE GRA *)
+  (* | FPush: fnE unit *)
+  (* | FPop: fnE unit *)
+  (* . *)
 
 End EVENTS.
 
@@ -96,7 +119,7 @@ Section MODSEM.
   Record t: Type := mk {
     sk: Sk.t;
     (* initial_ld: mname -> GRA; *)
-    sem: callE ~> itree (callE +' mdE +' fnE +' eventE);
+    sem: callE ~> itree Es;
     initial_ld: list (mname * GRA);
   }
   .
