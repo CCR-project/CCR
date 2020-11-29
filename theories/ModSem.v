@@ -62,7 +62,9 @@ Section EVENTS.
   (* | FPut (r: GRA): rE unit *)
   (* | FGet: rE GRA *)
   | Put (mn: mname) (fr: GRA) (mr: GRA): rE unit
-  | Get (mn: mname): rE (GRA * GRA)
+  | MGet (mn: mname): rE GRA
+  | FGet: rE GRA
+  (* | Get (mn: mname): rE (GRA * GRA) *)
 
   (*** NOTE: These methods can be implemented using Put/Get,
        but making it explicit will be helpful for meta-theory.
@@ -76,6 +78,15 @@ Section EVENTS.
   | PushFrame: rE unit
   | PopFrame: rE unit
   .
+
+  Definition MPut E `{rE -< E} (mn: mname) (mr: GRA): itree E unit :=
+    fr <- trigger FGet;;
+    trigger (Put mn fr mr)
+  .
+
+  (*** TODO: we don't want to require "mname" here ***)
+  (*** use dummy mname? ***)
+  (* Definition FPut E `{rE -< E} (mn: mname) (fr: GRA): itree E unit := *)
 
   Definition Es: Type -> Type := (callE +' rE +' eventE).
 
@@ -138,3 +149,81 @@ Section MODSEM.
 
 End MODSEM.
 End ModSem.
+
+
+
+Inductive pred: Type :=
+| true
+| false
+| meta (P: Prop)
+
+| disj: pred -> pred -> pred
+| conj: pred -> pred -> pred
+| neg: pred -> pred
+| impl: pred -> pred -> pred
+
+| univ (X: Type): (X -> pred) -> pred
+| exst (X: Type): (X -> pred) -> pred
+.
+
+(*** https://en.wikipedia.org/wiki/Negation_normal_form ***)
+Fixpoint embed (p: pred): itree eventE unit :=
+  match p with
+  | true => triggerUB
+  | false => triggerNB
+  | meta P => guarantee P
+
+  | disj p0 p1 => b <- trigger (Choose _);; if (b: bool) then embed p0 else embed p1
+  | conj p0 p1 => b <- trigger (Take _);; if (b: bool) then embed p0 else embed p1
+  | neg p =>
+    match p with
+    | meta P => assume P
+    | _ => triggerNB (*** we are assuming negation normal form ***)
+    end
+  | impl _ _ => triggerNB (*** we are assuming negation normal form ***)
+
+  | @univ X k => x <- trigger (Take X);; embed (k x)
+  | @exst X k => x <- trigger (Choose X);; embed (k x)
+  end
+.
+
+(*** TODO: implication --> function call? ***)
+(***
+P -> Q
+~=
+pname :=
+  embed P
+
+pqname :=
+  (call pname) (finite times);;
+  embed Q
+
+
+
+
+(P -> Q) -> R
+~=
+pname :=
+  embed P
+
+pqname :=
+  (call pname) (finite times);;
+  embed Q
+
+pqrname :=
+  (call pqname) (finite times);;
+  embed R
+***)
+
+(* Fixpoint embed (p: pred) (is_pos: bool): itree eventE unit := *)
+(*   match p with *)
+(*   | true => triggerUB *)
+(*   | false => triggerNB *)
+(*   | meta P => guarantee P *)
+(*   | disj p0 p1 => b <- trigger (Choose _);; if (b: bool) then embed p0 is_pos else embed p1 is_pos *)
+(*   | conj p0 p1 => b <- trigger (Take _);; if (b: bool) then embed p0 is_pos else embed p1 is_pos *)
+(*   | @univ X k => x <- trigger (Take X);; embed (k x) is_pos *)
+(*   | @exst X k => x <- trigger (Choose X);; embed (k x) is_pos *)
+(*   | _ => triggerNB *)
+(*   end *)
+(* . *)
