@@ -75,6 +75,33 @@ End SkEnv.
 
 
 
+
+(* Require Import Logic.FinFun. *)
+(* Definition finfun A B: Type := *)
+(*   { f: A -> option B | *)
+(*     exists (card: nat) (inj: A -> nat), *)
+(*     Injective inj /\ forall a (IN: is_some (f a)), ((inj a) < card)%nat }. *)
+(* Program Definition add_finfun A B (add: B -> B -> B) (f g: finfun A B): finfun A B := *)
+(*   exist _ (fun a => match `f a, `g a with *)
+(*                     | Some x, None => Some x *)
+(*                     | None, Some y => Some y *)
+(*                     | Some x, Some y => Some (add x y) *)
+(*                     | None, None => None *)
+(*                     end) _. *)
+(* Next Obligation. *)
+(*   destruct f, g; ss. des. *)
+(*   exists (card + card0)%nat. eexists (fun a => if (is_some (x a)) && (inj a <? card)%nat *)
+(*                                                then inj a *)
+(*                                                else (card + (inj0 a))%nat). *)
+(*   esplits; eauto. *)
+(*   - rr. ii. des_ifs; bsimpl; des; apply_all_once Nat.leb_le; apply_all_once Nat.leb_gt; *)
+(*               apply_all_once e; apply_all_once e0; clarify; *)
+(*               apply_all_once e1; apply_all_once e2; clarify. *)
+(* Qed. *)
+
+
+
+
 Module Sk.
 
   Definition t: Type := list fname.
@@ -82,6 +109,9 @@ Module Sk.
   Definition add: t -> t -> t := @List.app _.
 
   Definition wf: t -> Prop := @List.NoDup _.
+
+  (*** TODO: It might be nice if Sk.t also constitutes a resource algebra ***)
+  (*** At the moment, List.app is not assoc/commutative. We need to equip RA with custom equiv. ***)
 
   Definition load_mem (sk: t): Mem.t :=
     let n := List.length sk in

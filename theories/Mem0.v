@@ -11,6 +11,7 @@ Require Import Hoare.
 Generalizable Variables E R A B C X Y Σ.
 
 Set Implicit Arguments.
+Set Typeclasses Depth 4.
 
 
 
@@ -48,8 +49,6 @@ Section PROOF.
     | _ => None
     end
   .
-
-  Set Typeclasses Depth 4.
 
   Definition unleftU {E X Y} `{eventE -< E} (xy: X + Y): itree E X :=
     match xy with
