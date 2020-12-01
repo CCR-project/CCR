@@ -85,7 +85,17 @@ Module Sk.
 
   Definition load_mem (sk: t): Mem.t :=
     let n := List.length sk in
-    (fun blk => if (blk <=? n)%nat then (Some (fun _ => Vundef)) else None)
+    Mem.mk
+      (* (fun blk => if (blk <? n)%nat then (fun _ => None) else (fun _ => None)) *)
+      (fun _ _ => None)
+      (*** TODO: This simplified model doesn't allow function pointer comparsion.
+           To be more faithful, we need to migrate the notion of "permission" from CompCert.
+           CompCert expresses it with "nonempty" permission.
+       ***)
+      (*** TODO: When doing so, I would like to extend val with "Vfid (id: fname)" case.
+           That way, I might be able to support more higher-order features (overriding, newly allocating function)
+       ***)
+      n
   .
 
   Fixpoint _find_idx {A} (f: A -> bool) (l: list A) (acc: nat): option (nat * A) :=

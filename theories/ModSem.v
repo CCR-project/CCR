@@ -61,7 +61,7 @@ Section EVENTS.
   (* | MGet (mn: mname): rE GRA *)
   (* | FPut (r: GRA): rE unit *)
   (* | FGet: rE GRA *)
-  | Put (mn: mname) (fr: GRA) (mr: GRA): rE unit
+  | Put (mn: mname) (mr: GRA) (fr: GRA): rE unit
   | MGet (mn: mname): rE GRA
   | FGet: rE GRA
   (* | Get (mn: mname): rE (GRA * GRA) *)
@@ -73,7 +73,7 @@ Section EVENTS.
    ***)
   | Forge (fr: GRA): rE unit
   | Discard (fr: GRA): rE unit
-  | CheckWf: rE unit
+  | CheckWf (mn: mname): rE unit
 
   | PushFrame: rE unit
   | PopFrame: rE unit
@@ -81,7 +81,7 @@ Section EVENTS.
 
   Definition MPut E `{rE -< E} (mn: mname) (mr: GRA): itree E unit :=
     fr <- trigger FGet;;
-    trigger (Put mn fr mr)
+    trigger (Put mn mr fr)
   .
 
   (*** TODO: we don't want to require "mname" here ***)

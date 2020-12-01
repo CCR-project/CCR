@@ -8,15 +8,6 @@ Set Implicit Arguments.
 
 
 
-Class Dec (A: Type) := dec: forall (a0 a1: A), { a0 = a1 } + { a0 <> a1 }.
-
-Global Program Instance positive_Dec: Dec positive. Next Obligation. decide equality. Defined.
-Global Program Instance string_Dec: Dec String.string. Next Obligation. apply String.string_dec. Defined.
-Global Program Instance nat_Dec: Dec nat. Next Obligation. apply Nat.eq_dec. Defined.
-
-Definition update K `{Dec K} V (f: K -> V) (k: K) (v: V): K -> V :=
-  fun _k => if dec k _k then v else f _k.
-
 Definition cast A B (LeibEq: A = B) (a: A): B := eq_rect A _ a _ LeibEq.
 
 (* Class LeibEq (A B: Type) := { leibeq: A = B }. *)

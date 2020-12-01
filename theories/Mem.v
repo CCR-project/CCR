@@ -11,7 +11,6 @@ Generalizable Variables E R A B C X Y Σ.
 
 Set Implicit Arguments.
 
-Global Program Instance Z_Dec: Dec Z. Next Obligation. apply Z.eq_dec. Defined.
 
 
 

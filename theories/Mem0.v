@@ -75,14 +75,13 @@ Section PROOF.
     | inr y => Ret y
     end.
 
-  Definition allocF (args: list val): itree Es val :=
+  Definition allocF (varg: list val): itree Es val :=
     gr0 <- trigger (MGet "mem");;
     `m0: Mem.t <- (unpadding memRA gr0) >>= unleftU >>= unwrapU;;
-    b <- trigger (Choose _);;
-    guarantee(m0 b = None);;
-    let m1: Mem.t := update m0 b (Some (fun _ => Vint 0)) in
+    `sz: Z <- (allocF_parg varg)?;;
+    let (blk, m1) := Mem.alloc m0 sz in
     MPut "mem" (GRA.padding ((inl (Some m1)): URA.car (t:=memRA)));;
-    Ret (Vptr b 0)
+    Ret (Vptr blk 0)
   .
 
   Definition mem: ModSem.t :=
@@ -93,7 +92,7 @@ Section PROOF.
           if dec fname "alloc"
           then allocF args
           else triggerUB;
-      ModSem.initial_ld := [("mem", GRA.padding (URA.black (M:=_memRA) (inr tt)))];
+      ModSem.initial_ld := [("mem", GRA.padding ((inl (Some Mem.empty)): URA.car (t:=memRA)))];
     |}
   .
 
