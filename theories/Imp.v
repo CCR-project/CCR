@@ -23,39 +23,6 @@ Set Implicit Arguments.
 (*** Disclaimer: Below is a copy-paste from https://github.com/DeepSpec/InteractionTrees (slightly adjusted) ***)
 
 
-Definition vadd (x y: val): option val :=
-  match x, y with
-  | Vint n, Vint m => Some (Vint (Z.add n m))
-  | Vptr blk ofs, Vint n => Some (Vptr blk (Z.add ofs n))
-  | Vint n, Vptr blk ofs => Some (Vptr blk (Z.add ofs n))
-  | Vptr _ _, Vptr _ _ => None
-  end
-.
-
-Definition vsub (x y: val): option val :=
-  match x, y with
-  | Vint n, Vint m => Some (Vint (Z.sub n m))
-  | Vptr blk ofs, Vint n => Some (Vptr blk (Z.sub ofs n))
-  | Vint n, Vptr blk ofs => Some (Vptr blk (Z.sub ofs n))
-  | Vptr _ _, Vptr _ _ => None
-  end
-.
-
-Definition vmul (x y: val): option val :=
-  match x, y with
-  | Vint n, Vint m => Some (Vint (Z.mul n m))
-  | Vptr blk ofs, Vint n => Some (Vptr blk (Z.mul ofs n))
-  | Vint n, Vptr blk ofs => Some (Vptr blk (Z.mul ofs n))
-  | Vptr _ _, Vptr _ _ => None
-  end
-.
-
-
-
-
-
-
-
 
 Definition var: Set := string.
 

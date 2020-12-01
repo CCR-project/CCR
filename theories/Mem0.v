@@ -15,6 +15,30 @@ Set Typeclasses Depth 4.
 
 
 
+Definition unleftU {E X Y} `{eventE -< E} (xy: X + Y): itree E X :=
+  match xy with
+  | inl x => Ret x
+  | inr y => triggerUB
+  end.
+
+Definition unleftN {E X Y} `{eventE -< E} (xy: X + Y): itree E X :=
+  match xy with
+  | inl x => Ret x
+  | inr y => triggerNB
+  end.
+
+Definition unrightU {E X Y} `{eventE -< E} (xy: X + Y): itree E Y :=
+  match xy with
+  | inl x => triggerUB
+  | inr y => Ret y
+  end.
+
+Definition unrightN {E X Y} `{eventE -< E} (xy: X + Y): itree E Y :=
+  match xy with
+  | inl x => triggerNB
+  | inr y => Ret y
+  end.
+
 Section UNPADDING.
   
   Definition unpadding A {GRA} `{@GRA.inG A GRA} (a: URA.car (t:=GRA)): itree Es (URA.car (t:=A)) :=
@@ -35,6 +59,8 @@ Arguments unpadding _ {GRA H}.
 
 
 
+
+
 Section PROOF.
   Let memRA: URA.t := (RA.excl Mem.t).
   Context `{@GRA.inG memRA Σ}.
@@ -49,30 +75,6 @@ Section PROOF.
     | _ => None
     end
   .
-
-  Definition unleftU {E X Y} `{eventE -< E} (xy: X + Y): itree E X :=
-    match xy with
-    | inl x => Ret x
-    | inr y => triggerUB
-    end.
-
-  Definition unleftN {E X Y} `{eventE -< E} (xy: X + Y): itree E X :=
-    match xy with
-    | inl x => Ret x
-    | inr y => triggerNB
-    end.
-
-  Definition unrightU {E X Y} `{eventE -< E} (xy: X + Y): itree E Y :=
-    match xy with
-    | inl x => triggerUB
-    | inr y => Ret y
-    end.
-
-  Definition unrightN {E X Y} `{eventE -< E} (xy: X + Y): itree E Y :=
-    match xy with
-    | inl x => triggerNB
-    | inr y => Ret y
-    end.
 
   Definition allocF (varg: list val): itree Es val :=
     gr0 <- trigger (MGet "mem");;

@@ -25,11 +25,41 @@ Definition update K `{Dec K} V (f: K -> V) (k: K) (v: V): K -> V :=
 
 
 Notation block := nat (only parsing).
+Notation ptrofs := Z (only parsing).
 
 Inductive val: Type :=
 | Vint (n: Z): val
-| Vptr (blk: block) (ofs: Z): val
+| Vptr (blk: block) (ofs: ptrofs): val
 (* | Vundef *)
+.
+
+Notation ofs0 := 0%Z.
+
+Definition vadd (x y: val): option val :=
+  match x, y with
+  | Vint n, Vint m => Some (Vint (Z.add n m))
+  | Vptr blk ofs, Vint n => Some (Vptr blk (Z.add ofs n))
+  | Vint n, Vptr blk ofs => Some (Vptr blk (Z.add ofs n))
+  | Vptr _ _, Vptr _ _ => None
+  end
+.
+
+Definition vsub (x y: val): option val :=
+  match x, y with
+  | Vint n, Vint m => Some (Vint (Z.sub n m))
+  | Vptr blk ofs, Vint n => Some (Vptr blk (Z.sub ofs n))
+  | Vint n, Vptr blk ofs => Some (Vptr blk (Z.sub ofs n))
+  | Vptr _ _, Vptr _ _ => None
+  end
+.
+
+Definition vmul (x y: val): option val :=
+  match x, y with
+  | Vint n, Vint m => Some (Vint (Z.mul n m))
+  | Vptr blk ofs, Vint n => Some (Vptr blk (Z.mul ofs n))
+  | Vint n, Vptr blk ofs => Some (Vptr blk (Z.mul ofs n))
+  | Vptr _ _, Vptr _ _ => None
+  end
 .
 
 Notation fname := string (only parsing).
@@ -47,20 +77,43 @@ Module Mem.
 
   (* Definition t: Type := block -> option (Z -> val). *)
   Record t: Type := mk {
-    contents: block -> Z -> option val;
-    nextblock: block;
-    (*** nextblock_noaccess ? ***)
+    cnts: block -> Z -> option val;
+    nb: block;
+    (*** Q: wf conditions like nextblock_noaccess ? ***)
+    (*** A: Unlike in CompCert, the memory object will not float in various places in the program.
+            It suffices to state wf only inside Mem module. (probably by utilizing URA.wf)
+     ***)
   }
   .
+
+  Definition wf (m0: t): Prop := forall blk ofs (LT: (blk < m0.(nb))%nat), m0.(cnts) blk ofs = None.
 
   Definition empty: t := mk (fun _ _ => None) 0.
 
   Definition alloc (m0: Mem.t) (sz: Z): (block * Mem.t) :=
-    ((m0.(nextblock)),
-     Mem.mk (update (m0.(contents)) (m0.(nextblock))
+    ((m0.(nb)),
+     Mem.mk (update (m0.(cnts)) (m0.(nb))
                     (fun ofs => if (0 <=? ofs) && (ofs <? sz) then Some (Vint 0) else None))
-            (S m0.(nextblock))
+            (S m0.(nb))
     )
+  .
+
+  Definition free (m0: Mem.t) (b: block): option (Mem.t) :=
+    match m0.(cnts) b ofs0 with
+    | Some _ => Some (Mem.mk (update m0.(cnts) b (fun _ => None)) m0.(nb))
+    | _ => None
+    end
+  .
+
+  Definition load (m0: Mem.t) (b: block) (ofs: Z): option val := m0.(cnts) b ofs.
+
+  Definition store (m0: Mem.t) (b: block) (ofs: Z) (v: val): option Mem.t :=
+    match m0.(cnts) b ofs0 with
+    | Some _ => Some (Mem.mk (fun _b _ofs => if (dec b _b) && (dec ofs _ofs)
+                                             then Some v
+                                             else m0.(cnts) _b _ofs) m0.(nb))
+    | _ => None
+    end
   .
 
 End Mem.
