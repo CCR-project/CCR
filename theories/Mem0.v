@@ -85,13 +85,8 @@ Section PROOF.
 
   Definition mem: ModSem.t :=
     {|
-      ModSem.sk := ["alloc" ; "store" ; "load" ; "free"];
-      ModSem.sem :=
-        fun _ '(Call fname args) =>
-          if dec fname "alloc"
-          then allocF args
-          else triggerUB;
-      ModSem.initial_ld := [("mem", GRA.padding ((inl (Some Mem.empty)): URA.car (t:=memRA)))];
+      ModSem.fnsems := [("alloc", allocF)];
+      ModSem.initial_mrs := [("mem", GRA.padding ((inl (Some Mem.empty)): URA.car (t:=memRA)))];
     |}
   .
 

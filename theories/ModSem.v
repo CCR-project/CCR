@@ -131,22 +131,30 @@ Section MODSEM.
   Context `{GRA: GRA.t}.
 
   Record t: Type := mk {
-    sk: Sk.t;
     (* initial_ld: mname -> GRA; *)
-    sem: callE ~> itree Es;
-    initial_ld: list (mname * GRA);
+    fnsems: list (fname * (list val -> itree Es val));
+    initial_mrs: list (mname * GRA);
+    sem: callE ~> itree Es :=
+      fun _ '(Call fn args) =>
+        '(_, sem) <- (List.find (fun fnsem => dec fn (fst fnsem)) fnsems)?;;
+        sem args
   }
   .
 
-  Definition wf (md: t): Prop := Sk.wf md.(sk).
+  Record wf (ms: t): Prop := mk_wf {
+    wf_fnsems: NoDup (List.map fst ms.(fnsems));
+    wf_initial_mrs: NoDup (List.map fst ms.(initial_mrs));
+  }
+  .
 
   (*** using "Program Definition" makes the definition uncompilable; why?? ***)
-  Definition add (md0 md1: t): t := {|
-    sk := Sk.add md0.(sk) md1.(sk);
+  Definition add (ms0 ms1: t): t := {|
+    (* sk := Sk.add md0.(sk) md1.(sk); *)
     (* initial_ld := URA.add (t:=URA.pointwise _ _) md0.(initial_ld) md1.(initial_ld); *)
-    sem := fun _ '(Call fn args) =>
-             (if List.in_dec string_dec fn md0.(sk) then md0.(sem) else md1.(sem)) _ (Call fn args);
-    initial_ld := app md0.(initial_ld) md0.(initial_ld);
+    (* sem := fun _ '(Call fn args) => *)
+    (*          (if List.in_dec string_dec fn md0.(sk) then md0.(sem) else md1.(sem)) _ (Call fn args); *)
+    fnsems := app ms0.(fnsems) ms1.(fnsems);
+    initial_mrs := app ms0.(initial_mrs) ms1.(initial_mrs);
   |}
   .
 
@@ -196,11 +204,11 @@ Section MODSEM.
   Definition interp_rE `{eventE -< E}: itree (rE +' E) ~> stateT r_state (itree E) :=
     State.interp_state (case_ handle_rE State.pure_state).
   Definition initial_r_state: r_state :=
-    (fun mn => match List.find (fun mnr => dec mn (fst mnr)) ms.(initial_ld) with
+    (fun mn => match List.find (fun mnr => dec mn (fst mnr)) ms.(initial_mrs) with
                | Some r => snd r
                | None => URA.unit
                end, []).
-  Let itr2: itree (eventE) val := snd <$> (interp_rE itr1) initial_r_state.
+  Let itr2: itree (eventE) val := assume(<<WF: wf ms>>);; snd <$> (interp_rE itr1) initial_r_state.
 
 
 
@@ -253,19 +261,19 @@ Section MODSEM.
   (*** However, I am not sure what would be the gain; and there might be universe problem. ***)
 
   Let add_comm_aux
-      md0 md1 stl0 str0
+      ms0 ms1 stl0 str0
       (SIM: stl0 = str0)
     :
-      <<COMM: Beh.of_state (interp (add md0 md1)) stl0 <1= Beh.of_state (interp (add md1 md0)) str0>>
+      <<COMM: Beh.of_state (interp (add ms0 ms1)) stl0 <1= Beh.of_state (interp (add ms1 ms0)) str0>>
   .
   Proof.
-    revert_until md1.
+    revert_until ms1.
     pcofix CIH. i. pfold.
     clarify.
     punfold PR. induction PR using Beh.of_state_ind; ss.
     - econs 1; et.
     - econs 2; et.
-      clear CIH. clear_tac. revert_until md1.
+      clear CIH. clear_tac. revert_until ms1.
       pcofix CIH. i. punfold H0. pfold.
       inv H0.
       + econs 1; eauto. ii. ss. exploit STEP; et. i; des. right. eapply CIH; et. pclearbot. ss.
@@ -275,43 +283,62 @@ Section MODSEM.
     - econs 6; et. ii. exploit STEP; et. i; des. clarify.
   Qed.
 
-  Theorem add_comm
-          md0 md1
-          (WF: wf (add md0 md1))
+  Lemma wf_comm
+        ms0 ms1
     :
-      <<COMM: Beh.of_program (interp (add md0 md1)) <1= Beh.of_program (interp (add md1 md0))>>
+      <<EQ: wf (add ms0 ms1) = wf (add ms1 ms0)>>
   .
   Proof.
+    r. eapply prop_ext. split; i.
+    - admit "ez".
+    - admit "ez".
+  Qed.
+
+  Theorem add_comm
+          ms0 ms1
+          (* (WF: wf (add ms0 ms1)) *)
+    :
+      <<COMM: Beh.of_program (interp (add ms0 ms1)) <1= Beh.of_program (interp (add ms1 ms0))>>
+  .
+  Proof.
+    destruct (classic (wf (add ms1 ms0))); cycle 1.
+    { ii. clear PR. eapply Beh.ub_top. pfold. econsr; ss; et. rr. ii; ss. unfold assume in *.
+      inv STEP; ss; irw in H1; (* clarify <- TODO: BUG, runs infloop. *) inv H1; simpl_depind; subst.
+      clarify.
+    }
+    rename H into WF.
     ii. ss. r in PR. r. eapply add_comm_aux; et.
-    rp; et. clear PR. cbn. do 1 f_equal.
+    rp; et. clear PR. cbn. do 1 f_equal; cycle 1.
+    { unfold assume. rewrite wf_comm. ss. }
+    apply func_ext; ii.
+    f_equiv.
     f_equal; cycle 1.
     - unfold initial_r_state. f_equal. apply func_ext. intros fn. ss. des_ifs.
       + admit "ez: wf".
       + admit "ez: wf".
       + admit "ez: wf".
     - repeat f_equal. apply func_ext_dep. intro T. apply func_ext. intro c. destruct c.
-      repeat f_equal. apply func_ext. i. f_equal. des_ifs.
-      + admit "ez: wf".
-      + admit "ez: wf".
+      repeat f_equal. apply func_ext. i. f_equal. ss. do 2 f_equal.
+      admit "ez: wf".
   Qed.
 
   Theorem add_assoc
-          md0 md1 md2
-          (WF: wf (add md0 (add md1 md2)))
+          ms0 ms1 ms2
+          (WF: wf (add ms0 (add ms1 ms2)))
     :
-      <<COMM: Beh.of_program (interp (add md0 (add md1 md2))) <1=
-              Beh.of_program (interp (add (add md0 md1) md2))>>
+      <<COMM: Beh.of_program (interp (add ms0 (add ms1 ms2))) <1=
+              Beh.of_program (interp (add (add ms0 ms1) ms2))>>
   .
   Proof.
     admit "TODO".
   Qed.
 
   Theorem add_assoc_rev
-          md0 md1 md2
-          (WF: wf (add md0 (add md1 md2)))
+          ms0 ms1 ms2
+          (WF: wf (add ms0 (add ms1 ms2)))
     :
-      <<COMM: Beh.of_program (interp (add md0 (add md1 md2))) <1=
-              Beh.of_program (interp (add (add md0 md1) md2))>>
+      <<COMM: Beh.of_program (interp (add ms0 (add ms1 ms2))) <1=
+              Beh.of_program (interp (add (add ms0 ms1) ms2))>>
   .
   Proof.
     admit "TODO".
@@ -322,6 +349,58 @@ End ModSem.
 
 
 
+Module Mod.
+Section MOD.
+
+  Context `{GRA: GRA.t}.
+
+  Record t: Type := mk {
+    get_modsem: SkEnv.t -> ModSem.t;
+    sk: Sk.t;
+    interp: semantics := ModSem.interp (get_modsem (Sk.load_skenv sk));
+  }
+  .
+
+  (* Record wf (md: t): Prop := mk_wf { *)
+  (*   wf_sk: Sk.wf md.(sk); *)
+  (* } *)
+  (* . *)
+  Definition wf (md: t): Prop := <<WF: Sk.wf md.(sk)>>.
+  (*** wf about modsem is enforced in the semantics ***)
+
+  Definition add (md0 md1: t): t := {|
+    get_modsem := fun skenv_link =>
+                    ModSem.add (md0.(get_modsem) skenv_link) (md1.(get_modsem) skenv_link);
+    sk := Sk.add md0.(sk) md1.(sk);
+  |}
+  .
+
+  Theorem add_comm
+          md0 md1
+    :
+      <<COMM: Beh.of_program (interp (add md0 md1)) <1= Beh.of_program (interp (add md1 md0))>>
+  .
+  Proof.
+    ii.
+    unfold interp in *. ss.
+    eapply ModSem.add_comm; et.
+    rp; et. do 4 f_equal.
+    - admit "TODO: maybe the easy way is to 'canonicalize' the list by sorting.".
+    - admit "TODO: maybe the easy way is to 'canonicalize' the list by sorting.".
+  Qed.
+
+  Theorem add_assoc
+          md0 md1 md2
+    :
+      <<COMM: Beh.of_program (interp (add md0 (add md1 md2))) =
+              Beh.of_program (interp (add (add md0 md1) md2))>>
+  .
+  Proof.
+    admit "ez".
+  Qed.
+
+End MOD.
+End Mod.
 
 
 Module Equisatisfiability.

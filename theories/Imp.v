@@ -412,13 +412,8 @@ Section MODSEM.
 
   Set Typeclasses Depth 4.
   Definition modsem: ModSem.t := {|
-    ModSem.sk := sk;
-    ModSem.sem := fun _ '(Call fn args) =>
-                    match List.find (fun fns => string_dec fn (fst fns)) program with
-                    | Some fns => eval_imp (snd fns);; Ret (Vint 0)
-                    | _ => triggerUB
-                    end;
-    ModSem.initial_ld := [(mn, URA.unit)];
+    ModSem.fnsems := List.map (fun '(fn, st) => (fn, fun _ => eval_imp st;; Ret (Vint 0))) program;
+    ModSem.initial_mrs := [(mn, URA.unit)];
   |}
   .
 End MODSEM.
