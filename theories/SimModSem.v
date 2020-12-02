@@ -25,12 +25,24 @@ Section SIMMODSEM.
   Hypothesis le_PreOrder: PreOrder le.
   (*** Q: lepriv??? ***)
 
+
+
+  Variable R: GRA -> GRA -> Prop.
+
   (*** desiderata: (1) state-aware simulation relation !!!! ***)
   (*** (2) not whole function frame, just my function frame !!!! ***)
   (*** (3) would be great if induction tactic works !!!! (study itree case study more) ***)
-  Inductive _sim_itr sim_itr (itr_src itr_tgt: itree Es val): Prop :=
-  | sim_itr_...
+  Inductive _sim_itr sim_itr: idx -> itree Es val -> GRA -> itree Es val -> GRA -> Prop :=
+  | sim_ret
+      v r_src r_tgt
+      (SIM: R r_src r_tgt)
+    :
+      _sim_itr sim_itr (Ret v) r_src (Ret v) r_tgt
+  | sim_
   .
+  callE
+    rE
+    ModSem.interp
 
   Definition sim_fn (fn_src fn_tgt: list val -> itree Es val): Prop.
 
