@@ -24,11 +24,23 @@ Section SIMMODSEM.
   Variable tgt: world -> GRA.
 
   Variable wf: world -> Prop.
-  (*** Q: do we need le??? ***)
   Variable le: world -> world -> Prop.
   Hypothesis le_PreOrder: PreOrder le.
-  (*** Q: lepriv??? ***)
 
+
+  (*** Q: do we need SimMemOh.le (and lepriv) ??? ***)
+
+    (*** Let's say that le/lepriv can be encoded using RA and CheckWf... ***)
+    (*** Q: Is "Source CheckWf >= Target CheckWf" trivial? or can be derived automatically? ***)
+    (*** A: I think no. It looks like a real user obligation. ***)
+    (*** N.B.: In the course of verifying "Source CheckWf >= Target CheckWf", one may need "le".
+         For an instance, if target RA is in some sense monotonic, while source RA is unit,
+         we have to prove that "Target CheckWf" holds from the ground. To do so, we need "le".
+         I am not entirely sure that we don't need "lepriv",
+         but (1) lepriv alone won't scale with concurrency,
+         so we need separation (putting into/out of function local resource), then
+         (2) it seems function-local resource (without lepriv) is sufficient for the cases
+         that I can think of ***)
 
 
   (* Variable idx: Type. *)

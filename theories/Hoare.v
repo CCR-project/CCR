@@ -158,8 +158,8 @@ Section PROOF.
       vret <- trigger (Choose _);;
 
       mclose <- trigger (MGet mn);; guarantee(I mclose);; (*** closing the invariant ***)
-      rret <- trigger (Choose URA.car);; guarantee(Q rarg vret rret);; (*** postcondition ***)
-      trigger (Discard rret);; (*** virtual resource passing ***)
+      rret <- trigger (Choose URA.car);; trigger (Discard rret);; (*** virtual resource passing ***)
+      guarantee(Q rarg vret rret);; (*** postcondition ***)
 
       Ret vret (*** return ***)
     .

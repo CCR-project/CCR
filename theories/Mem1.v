@@ -74,7 +74,7 @@ Section PROOF.
   .
 
   Definition mem: ModSem.t := {|
-    ModSem.fnsems := [("alloc", allocF)];
+    ModSem.fnsems := [("alloc", allocF) ; ("free", freeF)];
     ModSem.initial_mrs := [("mem", GRA.padding (URA.black (M:=_memRA) (inr tt)))];
   |}
   .
