@@ -205,8 +205,8 @@ Section PROOF.
     fname -> list val -> itree Es val :=
     fun fn varg =>
       mclose <- trigger (MGet mn);; guarantee(I mclose);; (*** closing the invariant ***)
-      rarg <- trigger (Choose URA.car);; guarantee(P rarg);; (*** precondition ***)
-      trigger (Discard rarg);; (*** virtual resource passing ***)
+      rarg <- trigger (Choose URA.car);; trigger (Discard rarg);; (*** virtual resource passing ***)
+      guarantee(P rarg);; (*** precondition ***)
 
       vret <- trigger (Call fn varg);; (*** call ***)
 
