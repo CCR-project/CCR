@@ -6,6 +6,7 @@ Require Import Behavior.
 Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
+Require Import Hoare.
 
 Generalizable Variables E R A B C X Y Σ.
 
@@ -47,11 +48,72 @@ Section PROOF.
     end
   .
 
-  Definition allocF (args: list val): itree Es val :=
-    sz <- (allocF_parg args)?;;
-    r <- trigger (Take URA.car);;
-    assume(URA.extends URA.unit r);;
-    triggerUB
+  Definition mem_inv: Σ -> Prop := admit "".
+
+  Definition HoareFun
+             (mn: mname)
+             (I: URA.car -> Prop)
+             (P: URA.car -> Prop)
+             (Q: val -> URA.car -> Prop)
+             (f: itree Es unit): itree Es val :=
+    rarg <- trigger (Take URA.car);; trigger (Forge rarg);; (*** virtual resource passing ***)
+    assume(P rarg);; (*** precondition ***)
+    mopen <- trigger (MGet mn);; assume(I mopen);; (*** opening the invariant ***)
+
+    f;; (*** it is a "rudiment": we don't remove extcalls because of termination-sensitivity ***)
+    vret <- trigger (Choose _);;
+
+    mclose <- trigger (MGet mn);; guarantee(I mclose);; (*** closing the invariant ***)
+    rret <- trigger (Choose URA.car);; guarantee(Q vret rret);; (*** postcondition ***)
+    trigger (Discard rret);; (*** virtual resource passing ***)
+
+    Ret vret (*** return ***)
+  .
+
+
+  Section PLAYGROUND.
+
+    (*** Q can mention the resource in the P ***)
+    Definition HoareFun_sophis
+               (mn: mname)
+               (I: URA.car -> Prop)
+               (P: URA.car -> Prop)
+               (Q: URA.car -> val -> URA.car -> Prop)
+               (f: itree Es unit): itree Es val :=
+      rarg <- trigger (Take URA.car);; trigger (Forge rarg);; (*** virtual resource passing ***)
+      assume(P rarg);; (*** precondition ***)
+      mopen <- trigger (MGet mn);; assume(I mopen);; (*** opening the invariant ***)
+
+      f;; (*** it is a "rudiment": we don't remove extcalls because of termination-sensitivity ***)
+      vret <- trigger (Choose _);;
+
+      mclose <- trigger (MGet mn);; guarantee(I mclose);; (*** closing the invariant ***)
+      rret <- trigger (Choose URA.car);; guarantee(Q rarg vret rret);; (*** postcondition ***)
+      trigger (Discard rret);; (*** virtual resource passing ***)
+
+      Ret vret (*** return ***)
+    .
+
+    Definition HoareFun_sophis2
+               (mn: mname)
+               (I: URA.car -> Prop)
+               (P: URA.car -> Prop)
+               (Q: URA.car -> val -> URA.car -> Prop)
+               (f: itree Es unit): itree Es val :=
+      _rarg_ <- trigger (Take _);;
+      HoareFun mn I (P /1\ (eq _rarg_)) (Q _rarg_) f
+    .
+
+  End PLAYGROUND.
+
+  Definition allocF: list val -> itree Es val :=
+    fun varg =>
+    sz <- (allocF_parg varg)?;;
+    HoareFun "mem" mem_inv (top1)
+    (fun _ rret => exists b, forall ofs (RNG: 0 <= ofs < sz),
+           GRA.padding (points_to (b, 0) (Vint 0))
+    )
+    (Ret tt)
   .
 
   Definition mem: ModSem.t := {|
