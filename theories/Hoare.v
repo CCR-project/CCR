@@ -101,44 +101,123 @@ Section PROOF.
   Local Existing Instance GURA.
   Variable mn: mname.
 
+  (* Definition HoareFun *)
+  (*            (I: URA.car -> Prop) *)
+  (*            (P: URA.car -> list val -> Prop) *)
+  (*            (Q: URA.car -> list val -> URA.car -> val -> Prop) *)
+  (*            (f: list val -> itree Es val): *)
+  (*   list val -> itree Es val := *)
+  (*   fun varg => *)
+  (*     rarg <- trigger (Take URA.car);; trigger (Forge rarg);; (*** virtual resource passing ***) *)
+  (*     assume(P rarg varg);; (*** precondition ***) *)
+  (*     mopen <- trigger (MGet mn);; assume(I mopen);; (*** opening the invariant ***) *)
+
+  (*     vret <- f varg;; (*** body ***) *)
+
+  (*     mclose <- trigger (MGet mn);; guarantee(I mclose);; (*** closing the invariant ***) *)
+  (*     rret <- trigger (Choose URA.car);; guarantee(Q rarg varg rret vret);; (*** postcondition ***) *)
+  (*     trigger (Discard rret);; (*** virtual resource passing ***) *)
+
+  (*     Ret vret (*** return ***) *)
+  (* . *)
+
   Definition HoareFun
+             (mn: mname)
              (I: URA.car -> Prop)
-             (P: URA.car -> list val -> Prop)
-             (Q: URA.car -> list val -> URA.car -> val -> Prop)
-             (f: list val -> itree Es val):
-    list val -> itree Es val :=
-    fun varg =>
+             (P: URA.car -> Prop)
+             (Q: val -> URA.car -> Prop)
+             (f: itree Es unit): itree Es val :=
+    rarg <- trigger (Take URA.car);; trigger (Forge rarg);; (*** virtual resource passing ***)
+    assume(P rarg);; (*** precondition ***)
+    mopen <- trigger (MGet mn);; assume(I mopen);; (*** opening the invariant ***)
+
+    f;; (*** it is a "rudiment": we don't remove extcalls because of termination-sensitivity ***)
+    vret <- trigger (Choose _);;
+
+    mclose <- trigger (MGet mn);; guarantee(I mclose);; (*** closing the invariant ***)
+    rret <- trigger (Choose URA.car);; guarantee(Q vret rret);; (*** postcondition ***)
+    trigger (Discard rret);; (*** virtual resource passing ***)
+
+    Ret vret (*** return ***)
+  .
+
+  Section PLAYGROUND.
+
+    (*** Q can mention the resource in the P ***)
+    Let HoareFun_sophis
+               (mn: mname)
+               (I: URA.car -> Prop)
+               (P: URA.car -> Prop)
+               (Q: URA.car -> val -> URA.car -> Prop)
+               (f: itree Es unit): itree Es val :=
       rarg <- trigger (Take URA.car);; trigger (Forge rarg);; (*** virtual resource passing ***)
-      assume(P rarg varg);; (*** precondition ***)
+      assume(P rarg);; (*** precondition ***)
       mopen <- trigger (MGet mn);; assume(I mopen);; (*** opening the invariant ***)
 
-      vret <- f varg;; (*** body ***)
+      f;; (*** it is a "rudiment": we don't remove extcalls because of termination-sensitivity ***)
+      vret <- trigger (Choose _);;
 
       mclose <- trigger (MGet mn);; guarantee(I mclose);; (*** closing the invariant ***)
-      rret <- trigger (Choose URA.car);; guarantee(Q rarg varg rret vret);; (*** postcondition ***)
+      rret <- trigger (Choose URA.car);; guarantee(Q rarg vret rret);; (*** postcondition ***)
       trigger (Discard rret);; (*** virtual resource passing ***)
 
       Ret vret (*** return ***)
-  .
+    .
+
+    Let HoareFun_sophis2
+               (mn: mname)
+               (I: URA.car -> Prop)
+               (P: URA.car -> Prop)
+               (Q: URA.car -> val -> URA.car -> Prop)
+               (f: itree Es unit): itree Es val :=
+      _rarg_ <- trigger (Take _);;
+      HoareFun mn I (P /1\ (eq _rarg_)) (Q _rarg_) f
+    .
+
+  End PLAYGROUND.
+
+
+
+
+  (* Definition HoareCall *)
+  (*            (I: URA.car -> Prop) *)
+  (*            (P: URA.car -> list val -> Prop) *)
+  (*            (Q: URA.car -> list val -> URA.car -> val -> Prop): *)
+  (*   fname -> list val -> itree Es val := *)
+  (*   fun fn varg => *)
+  (*     mclose <- trigger (MGet mn);; guarantee(I mclose);; (*** closing the invariant ***) *)
+  (*     rarg <- trigger (Choose URA.car);; guarantee(P rarg varg);; (*** precondition ***) *)
+  (*     trigger (Discard rarg);; (*** virtual resource passing ***) *)
+
+  (*     vret <- trigger (Call fn varg);; (*** call ***) *)
+
+  (*     rret <- trigger (Take URA.car);; trigger (Forge rret);; (*** virtual resource passing ***) *)
+  (*     assume(Q rarg varg rret vret);; (*** postcondition ***) *)
+  (*     mopen <- trigger (MGet mn);; assume(I mopen);; (*** opening the invariant ***) *)
+
+  (*     Ret vret (*** return to body ***) *)
+  (* . *)
 
   Definition HoareCall
              (I: URA.car -> Prop)
-             (P: URA.car -> list val -> Prop)
-             (Q: URA.car -> list val -> URA.car -> val -> Prop):
+             (P: URA.car -> Prop)
+             (Q: val -> URA.car -> Prop):
     fname -> list val -> itree Es val :=
     fun fn varg =>
       mclose <- trigger (MGet mn);; guarantee(I mclose);; (*** closing the invariant ***)
-      rarg <- trigger (Choose URA.car);; guarantee(P rarg varg);; (*** precondition ***)
+      rarg <- trigger (Choose URA.car);; guarantee(P rarg);; (*** precondition ***)
       trigger (Discard rarg);; (*** virtual resource passing ***)
 
       vret <- trigger (Call fn varg);; (*** call ***)
 
       rret <- trigger (Take URA.car);; trigger (Forge rret);; (*** virtual resource passing ***)
-      assume(Q rarg varg rret vret);; (*** postcondition ***)
+      assume(Q vret rret);; (*** postcondition ***)
       mopen <- trigger (MGet mn);; assume(I mopen);; (*** opening the invariant ***)
 
       Ret vret (*** return to body ***)
   .
+
+
 
   (* Definition HoareFun *)
   (*            (INV: URA.car -> Prop) *)

@@ -51,62 +51,6 @@ Section PROOF.
   Definition mem_inv: Σ -> Prop :=
     fun mr0 => exists mem0, mr0 = GRA.padding (URA.black (M:=_memRA) (inl mem0)).
 
-  Definition HoareFun
-             (mn: mname)
-             (I: URA.car -> Prop)
-             (P: URA.car -> Prop)
-             (Q: val -> URA.car -> Prop)
-             (f: itree Es unit): itree Es val :=
-    rarg <- trigger (Take URA.car);; trigger (Forge rarg);; (*** virtual resource passing ***)
-    assume(P rarg);; (*** precondition ***)
-    mopen <- trigger (MGet mn);; assume(I mopen);; (*** opening the invariant ***)
-
-    f;; (*** it is a "rudiment": we don't remove extcalls because of termination-sensitivity ***)
-    vret <- trigger (Choose _);;
-
-    mclose <- trigger (MGet mn);; guarantee(I mclose);; (*** closing the invariant ***)
-    rret <- trigger (Choose URA.car);; guarantee(Q vret rret);; (*** postcondition ***)
-    trigger (Discard rret);; (*** virtual resource passing ***)
-
-    Ret vret (*** return ***)
-  .
-
-
-  Section PLAYGROUND.
-
-    (*** Q can mention the resource in the P ***)
-    Definition HoareFun_sophis
-               (mn: mname)
-               (I: URA.car -> Prop)
-               (P: URA.car -> Prop)
-               (Q: URA.car -> val -> URA.car -> Prop)
-               (f: itree Es unit): itree Es val :=
-      rarg <- trigger (Take URA.car);; trigger (Forge rarg);; (*** virtual resource passing ***)
-      assume(P rarg);; (*** precondition ***)
-      mopen <- trigger (MGet mn);; assume(I mopen);; (*** opening the invariant ***)
-
-      f;; (*** it is a "rudiment": we don't remove extcalls because of termination-sensitivity ***)
-      vret <- trigger (Choose _);;
-
-      mclose <- trigger (MGet mn);; guarantee(I mclose);; (*** closing the invariant ***)
-      rret <- trigger (Choose URA.car);; guarantee(Q rarg vret rret);; (*** postcondition ***)
-      trigger (Discard rret);; (*** virtual resource passing ***)
-
-      Ret vret (*** return ***)
-    .
-
-    Definition HoareFun_sophis2
-               (mn: mname)
-               (I: URA.car -> Prop)
-               (P: URA.car -> Prop)
-               (Q: URA.car -> val -> URA.car -> Prop)
-               (f: itree Es unit): itree Es val :=
-      _rarg_ <- trigger (Take _);;
-      HoareFun mn I (P /1\ (eq _rarg_)) (Q _rarg_) f
-    .
-
-  End PLAYGROUND.
-
   Definition allocF: list val -> itree Es val :=
     fun varg =>
       sz <- trigger (Take nat);;
