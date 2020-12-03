@@ -111,15 +111,22 @@ Section PROOF.
     fun varg =>
       sz <- trigger (Take nat);;
       assume(varg = [Vint (Z.of_nat sz)]);;
-      HoareFun "mem" mem_inv (top1)
-      (fun _ rret =>
-         exists b,
-           rret = GRA.padding
-                    (fold_left URA.add
-                               (mapi (fun n _ => (b, Z.of_nat n) |-> (Vint 0)) (List.repeat tt sz))
-                               URA.unit)
-      )
-      (Ret tt)
+      (HoareFun "mem" mem_inv
+                (top1)
+                (fun _ rret => exists b,
+                     rret = GRA.padding (fold_left URA.add (mapi (fun n _ => (b, Z.of_nat n) |-> (Vint 0))
+                                                                 (List.repeat tt sz)) URA.unit))
+                (Ret tt))
+  .
+
+  Definition freeF: list val -> itree Es val :=
+    fun varg =>
+      '(b, ofs) <- trigger (Take _);;
+      assume(varg = [Vptr b ofs]);;
+      (HoareFun "mem" mem_inv
+                (fun rarg => exists v, rarg = (GRA.padding ((b, ofs) |-> v)))
+                (top2)
+                (Ret tt))
   .
 
   Definition mem: ModSem.t := {|

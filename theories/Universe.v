@@ -98,9 +98,19 @@ Module Mem.
     )
   .
 
-  Definition free (m0: Mem.t) (b: block): option (Mem.t) :=
-    match m0.(cnts) b ofs0 with
-    | Some _ => Some (Mem.mk (update m0.(cnts) b (fun _ => None)) m0.(nb))
+  (*** TODO: Unlike CompCert, this "free" function does not take offset.
+       In order to support this, we need more sophisticated RA. it would be interesting.
+   ***)
+  (* Definition free (m0: Mem.t) (b: block): option (Mem.t) := *)
+  (*   match m0.(cnts) b ofs0 with *)
+  (*   | Some _ => Some (Mem.mk (update m0.(cnts) b (fun _ => None)) m0.(nb)) *)
+  (*   | _ => None *)
+  (*   end *)
+  (* . *)
+
+  Definition free (m0: Mem.t) (b: block) (ofs: Z): option (Mem.t) :=
+    match m0.(cnts) b ofs with
+    | Some _ => Some (Mem.mk (update m0.(cnts) b (update (m0.(cnts) b) ofs None)) m0.(nb))
     | _ => None
     end
   .
