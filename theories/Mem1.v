@@ -15,12 +15,19 @@ Set Implicit Arguments.
 
 
 
+(* Definition until (n: nat): list nat := mapi (fun n _ => n) (List.repeat tt n). *)
 
 
 
+(** TODO: move to PCM.v **)
+Declare Scope ra_scope.
+Delimit Scope ra_scope with ra.
+Notation " K ==> V' " := (RA.pointwise K V'): ra_scope.
 
 
-Let _memRA: URA.t := (RA.pointwise block (RA.pointwise Z (RA.excl val))).
+
+Let _memRA: URA.t := (block ==> Z ==> (RA.excl val))%ra.
+Compute (URA.car (t:=_memRA)).
 Instance memRA: URA.t := URA.auth _memRA.
 Compute (URA.car).
 
@@ -29,7 +36,7 @@ Definition points_to (loc: block * Z) (v: val): URA.car :=
   URA.white (M:=_memRA)
             (inl (fun _b _ofs => if (dec _b b) && (dec _ofs ofs) then Some v else None)).
 
-Definition own {GRA: GRA.t} (whole a: URA.car (t:=GRA)): Prop := URA.extends a whole.
+(* Definition own {GRA: GRA.t} (whole a: URA.car (t:=GRA)): Prop := URA.extends a whole. *)
 
 Notation "loc |-> v" := (points_to loc v) (at level 20).
 
@@ -41,14 +48,8 @@ Section PROOF.
   Let GURA: URA.t := GRA.to_URA Σ.
   Local Existing Instance GURA.
 
-  Definition allocF_parg (args: list val): option Z :=
-    match args with
-    | [Vint sz] => Some sz
-    | _ => None
-    end
-  .
-
-  Definition mem_inv: Σ -> Prop := admit "".
+  Definition mem_inv: Σ -> Prop :=
+    fun mr0 => exists mem0, mr0 = GRA.padding (URA.black (M:=_memRA) (inl mem0)).
 
   Definition HoareFun
              (mn: mname)
@@ -108,21 +109,20 @@ Section PROOF.
 
   Definition allocF: list val -> itree Es val :=
     fun varg =>
-    sz <- (allocF_parg varg)?;;
-    HoareFun "mem" mem_inv (top1)
-    (fun _ rret => exists b, forall ofs (RNG: 0 <= ofs < sz),
-           GRA.padding (points_to (b, 0) (Vint 0))
-    )
-    (Ret tt)
+      sz <- trigger (Take nat);;
+      assume(varg = [Vint (Z.of_nat sz)]);;
+      HoareFun "mem" mem_inv (top1)
+      (fun _ rret =>
+         exists b,
+           rret = GRA.padding
+                    (fold_left URA.add
+                               (mapi (fun n _ => (b, Z.of_nat n) |-> (Vint 0)) (List.repeat tt sz))
+                               URA.unit)
+      )
+      (Ret tt)
   .
 
   Definition mem: ModSem.t := {|
-    (* ModSem.sk := ["alloc" ; "store" ; "load" ; "free"]; *)
-    (* ModSem.sem := *)
-    (*   fun _ '(Call fname args) => *)
-    (*     if dec fname "alloc" *)
-    (*     then allocF args *)
-    (*     else triggerUB; *)
     ModSem.fnsems := [("alloc", allocF)];
     ModSem.initial_mrs := [("mem", GRA.padding (URA.black (M:=_memRA) (inr tt)))];
   |}

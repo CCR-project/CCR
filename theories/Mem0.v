@@ -41,12 +41,12 @@ Definition unrightN {E X Y} `{eventE -< E} (xy: X + Y): itree E Y :=
 
 Section UNPADDING.
   
-  Definition unpadding A {GRA} `{@GRA.inG A GRA} (a: URA.car (t:=GRA)): itree Es (URA.car (t:=A)) :=
+  Definition unpadding A {Σ} `{@GRA.inG A Σ} (a: URA.car (t:=Σ)): itree Es (URA.car (t:=A)) :=
     assume(forall n (NEQ: n <> GRA.inG_id), a n = URA.unit);;
     Ret (eq_rect_r (@URA.car) (a GRA.inG_id) GRA.inG_prf)
   .
 
-  Definition unpadding2 {A GRA} `{@GRA.inG A GRA} (a: URA.car (t:=GRA)): itree Es (URA.car (t:=A)) :=
+  Definition unpadding2 {A Σ} `{@GRA.inG A Σ} (a: URA.car (t:=Σ)): itree Es (URA.car (t:=A)) :=
     n <- trigger (Choose _);;
     (if Nat.eq_dec GRA.inG_id n
      then Ret tt
@@ -55,7 +55,7 @@ Section UNPADDING.
   .
 
 End UNPADDING.
-Arguments unpadding _ {GRA H}.
+Arguments unpadding _ {Σ H}.
 
 
 
