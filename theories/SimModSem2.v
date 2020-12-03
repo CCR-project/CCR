@@ -10,7 +10,15 @@ Require Import Relation_Definitions.
 Require Import Relation_Operators.
 Require Import RelationPairs.
 
-Generalizable Variables E R A B C X Y.
+From ITree Require Import
+     Events.MapDefault.
+
+From ExtLib Require Import
+     Core.RelDec
+     Structures.Maps
+     Data.Map.FMapAList.
+
+Generalizable Variables E R A B C X Y K V.
 
 Set Implicit Arguments.
 
@@ -18,22 +26,51 @@ Local Open Scope nat_scope.
 
 
 
+Section RelList.
+  Variable A: Type.
+  Variable R: relation A.
+  Definition RelList: relation (list A) := Forall2 R.
+End RelList.
+
+Print Map_alist.
+Print function_Map. (*** TODO: use Dec. Move to proper place ***)
+
+Global Instance Dec_RelDec K `{Dec K}: @RelDec K eq :=
+  { rel_dec := dec }.
+
+Global Instance Dec_RelDec_Correct K `{Dec K}: RelDec_Correct Dec_RelDec.
+Proof.
+  unfold Dec_RelDec. ss.
+  econs. ii. ss. unfold Dec_RelDec. split; ii.
+  - unfold rel_dec in *. unfold sumbool_to_bool in *. des_ifs.
+  - unfold rel_dec in *. unfold sumbool_to_bool in *. des_ifs.
+Qed.
+
+
+
 Section SIM.
 
   Context `{GRA: GRA.t}.
 
-  Let st_local: Type := ((string -> GRA) * GRA).
+  (* Let st_local: Type := (list (string * GRA) * GRA). *)
+  Let st_local: Type := ((alist string GRA) * GRA).
 
-  Variable SR: relation st_local.
+  Variable R: relation (alist string GRA).
 
   Set Typeclasses Depth 5.
+  (**** It does not correctly handle module-resource.
+        It should permit interference, but it doesn't.
+   ****)
   Definition handle_rE_local `{eventE -< E}: rE ~> stateT st_local (itree E) :=
     fun _ e '(mrs, fr0) =>
     match e with
-    | Put mn mr fr1 =>
-      guarantee(URA.updatable (URA.add (mrs mn) fr0) (URA.add mr fr1));;
-      Ret (((update mrs mn mr), fr1), tt)
-    | MGet mn => Ret ((mrs, fr0), mrs mn)
+    | Put mn mr1 fr1 =>
+      mr0 <- (Maps.lookup mn mrs)?;;
+      guarantee(URA.updatable (URA.add mr0 fr0) (URA.add mr1 fr1));;
+      Ret (((Maps.add mn mr1 mrs), fr1), tt)
+    | MGet mn =>
+      mr0 <- (Maps.lookup mn mrs)?;;
+      Ret ((mrs, fr0), mr0)
     | FGet => Ret ((mrs, fr0), fr0)
     | Forge rarg => Ret ((mrs, URA.add fr0 rarg), tt)
     | Discard rret =>
@@ -41,7 +78,8 @@ Section SIM.
       guarantee(fr0 = URA.add fr1 rret);;
       Ret ((mrs, fr1), tt)
     | CheckWf mn =>
-      assume(URA.wf (URA.add (mrs mn) fr0));;
+      mr0 <- (Maps.lookup mn mrs)?;;
+      assume(URA.wf (URA.add mr0 fr0));;
       Ret ((mrs, fr0), tt)
     (* | PushFrame => triggerUB *)
     (* | PopFrame => triggerUB *)
