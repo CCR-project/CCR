@@ -4,10 +4,14 @@ Require Import Universe.
 Require Import Skeleton.
 Require Import PCM.
 Require Import ModSem.
+Require Import Relation_Definitions.
 
 Generalizable Variables E R A B C X Y.
 
 Set Implicit Arguments.
+
+Local Open Scope nat_scope.
+
 
 
 Section SIMMODSEM.
@@ -27,18 +31,141 @@ Section SIMMODSEM.
 
 
 
-  Variable R: GRA -> GRA -> Prop.
+  (* Variable idx: Type. *)
+  (* Variable ord: idx -> idx -> Prop. *)
+  (* Variable wf_ord: well_founded ord. *)
+
+  (* Variable R: GRA -> GRA -> Prop. *)
+  (* Variable R: list (string * (GRA -> GRA -> Prop)). *)
+  (* Variable R: string -> option (GRA -> GRA -> Prop). *)
 
   (*** desiderata: (1) state-aware simulation relation !!!! ***)
   (*** (2) not whole function frame, just my function frame !!!! ***)
   (*** (3) would be great if induction tactic works !!!! (study itree case study more) ***)
-  Inductive _sim_itr sim_itr: idx -> itree Es val -> GRA -> itree Es val -> GRA -> Prop :=
-  | sim_ret
-      v r_src r_tgt
-      (SIM: R r_src r_tgt)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  (* Let r_state := ModSem.r_state. *)
+  (* Let handle_r := ModSem.handle_rE. *)
+  (* Let interp_r := ModSem.interp_rE. *)
+
+  (* Inductive _sim_fn sim_fn: nat -> (itree Es val * r_state) -> (itree Es val * r_state) -> Prop := *)
+  (* | sim_fn_ret *)
+  (*     i0 m_src0 m_tgt0 f_src0 f_tgt0 *)
+  (*     (SIMM: R m_src0 m_tgt0) *)
+  (*     v *)
+  (*   : *)
+  (*     _sim_fn sim_fn i0 ((Ret v), (m_src0, f_src0)) ((Ret v), (m_tgt0, f_tgt0)) *)
+  (* | sim_fn_call *)
+  (*     i0 m_src0 m_tgt0 f_src0 f_tgt0 *)
+  (*     (SIMM: R m_src0 m_tgt0) *)
+  (*     fn varg (i1: nat) k_src k_tgt *)
+  (*     (K: forall rv m_src1 m_tgt1 (SIMM: R m_src1 m_tgt1), *)
+  (*         sim_fn i1 (mk (k_src rv) f_src0 m_src1) (mk (k_src rv) f_tgt0 m_tgt1)) *)
+  (*   : *)
+  (*     _sim_fn sim_fn i0 (mk (trigger (Call fn varg) >>= k_src) f_src0 m_src0) *)
+  (*             (mk (trigger (Call fn varg) >>= k_tgt) f_tgt0 m_tgt0) *)
+  (* . *)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  (* Variable R: string -> option (GRA -> GRA -> Prop). *)
+  (* Hypothesis SIMMN: List.map fst ms0.(ModSem.initial_mrs) = List.map fst ms1.(ModSem.initial_mrs). *)
+  (* Hypothesis RWF: forall mn, *)
+  (*     is_some (R mn) -> is_some (List.find (dec mn) (List.map fst ms0.(ModSem.initial_mrs))). *)
+  (* Definition RAll (m_src0 m_tgt0: list (string * GRA)): Prop := *)
+  (*   Forall2 () m_src0 m_tgt0 *)
+  (* . *)
+
+  Variable R: relation (list (string * GRA)).
+
+  Record sim_state: Type := mk {
+    code: itree Es val;
+    fr: GRA;
+    (* mr: GRA; *)
+    mr: list (string * GRA);
+  }
+  .
+
+  Definition handle_rE (e: rE GRA) (st0: sim_state): itree eventE sim_state :=
+    match e with
+    | Put mn mr fr =>
+      guarantee(URA.updatable (URA.add (mrs mn) hd) (URA.add mr fr));;
+      Ret (((update mrs mn mr), fr :: tl), tt)
+    | MGet mn => Ret ((mrs, frs), mrs mn)
+    | FGet => Ret ((mrs, frs), hd)
+    | Forge fr => Ret ((mrs, (URA.add hd fr) :: tl), tt)
+    | Discard fr =>
+      rest <- trigger (Choose _);;
+      guarantee(hd = URA.add fr rest);;
+      Ret ((mrs, rest :: tl), tt)
+    | CheckWf mn =>
+      assume(URA.wf (URA.add (mrs mn) hd));;
+      Ret ((mrs, frs), tt)
+    | PushFrame => triggerUB
+    | PopFrame => triggerUB
+    end
+  .
+
+  Inductive _sim_fn sim_fn: nat -> sim_state -> sim_state -> Prop :=
+  | sim_fn_ret
+      i0 m_src0 m_tgt0 f_src0 f_tgt0
+      (SIMM: R m_src0 m_tgt0)
+      v
     :
-      _sim_itr sim_itr (Ret v) r_src (Ret v) r_tgt
-  | sim_
+      _sim_fn sim_fn i0 (mk (Ret v) f_src0 m_src0) (mk (Ret v) f_tgt0 m_tgt0)
+  | sim_fn_call
+      i0 m_src0 m_tgt0 f_src0 f_tgt0
+      (SIMM: R m_src0 m_tgt0)
+      fn varg (i1: nat) k_src k_tgt
+      (K: forall rv m_src1 m_tgt1 (SIMM: R m_src1 m_tgt1),
+          sim_fn i1 (mk (k_src rv) f_src0 m_src1) (mk (k_src rv) f_tgt0 m_tgt1))
+    :
+      _sim_fn sim_fn i0 (mk (trigger (Call fn varg) >>= k_src) f_src0 m_src0)
+              (mk (trigger (Call fn varg) >>= k_tgt) f_tgt0 m_tgt0)
+  | sim_fn_put_src
+      i0 m_src0 m_tgt0 f_src0 f_tgt0
+      (SIMM: R m_src0 m_tgt0)
+      mn k_src c_tgt m_src1 f_src1
+      i1
+      (ORD: i1 < i0)
+      (K: sim_fn i1 (nat 
+    :
+      _sim_fn sim_fn i0 (mk (trigger (Put mn m_src1 f_src1) >>= k_src) f_src0 m_src0)
+              (mk (c_tgt) f_tgt0 m_tgt0)
   .
   callE
     rE
