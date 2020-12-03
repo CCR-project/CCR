@@ -6,6 +6,16 @@ Require Import PCM.
 Require Import ModSem.
 Require Import Relation_Definitions.
 
+(*** TODO: export these in Coqlib or Universe ***)
+Require Import Relation_Operators.
+Require Import RelationPairs.
+From ITree Require Import
+     Events.MapDefault.
+From ExtLib Require Import
+     Core.RelDec
+     Structures.Maps
+     Data.Map.FMapAList.
+
 Generalizable Variables E R A B C X Y.
 
 Set Implicit Arguments.
@@ -14,10 +24,101 @@ Local Open Scope nat_scope.
 
 
 
+Section SIM.
+
+  Context `{Σ: GRA.t}.
+
+  (* Let st_local: Type := (list (string * GRA) * GRA). *)
+  Let st_local: Type := ((alist string Σ) * Σ).
+
+  Variable R: relation (alist string Σ).
+
+  Inductive _sim_itree (sim_itree: nat -> relation (st_local * (itree Es val)))
+    : nat -> relation (st_local * (itree Es val)) :=
+  .
+
+  Definition sim_itree: _ -> relation _ := paco3 _sim_itree bot3.
+
+  Lemma sim_itree_mon: monotone3 _sim_itree.
+  Proof.
+    admit "ez: TODO".
+  Qed.
+
+  Hint Constructors _sim_itree.
+  Hint Unfold sim_itree.
+  Hint Resolve sim_itree: paco.
+
+  Definition sim_fsem: relation (list val -> itree Es val) :=
+    (eq ==> (fun it_src it_tgt => forall mrs_src mrs_tgt (SIMMRS: R mrs_src mrs_tgt),
+                 exists n, sim_itree n ((mrs_src, URA.unit), it_src)
+                                     ((mrs_tgt, URA.unit), it_tgt)))%signature
+  .
+
+  Definition sim_fnsem: relation (string * (list val -> itree Es val)) := RelProd eq sim_fsem.
+
+End SIM.
+
+
+
+
+
 Section SIMMODSEM.
 
-  Context `{GRA: GRA.t}.
+  Context `{Σ: GRA.t}.
   Variable (ms0 ms1: ModSem.t).
+
+  Inductive sim: Prop := mk {
+    R: relation (alist string Σ);
+    sim_fnsems: Forall2 (sim_fnsem R) ms0.(ModSem.fnsems) ms1.(ModSem.fnsems);
+    sim_initial_mrs: R ms0.(ModSem.initial_mrs) ms1.(ModSem.initial_mrs);
+  }.
+
+End SIMMODSEM.
+
+(*** TODO: SimMod, Mod for Mem0/Mem1 ***)
+
+
+
+
+
+Require Import Mem0 Mem1.
+
+Section SIMMODSEM.
+
+  Context `{Σ: GRA.t}.
+  Context `{@GRA.inG Mem1.memRA Σ} `{@GRA.inG (RA.excl Mem.t) Σ}.
+
+  Theorem correct: sim Mem1.mem Mem0.mem.
+  Proof.
+    unshelve econs.
+    { ii.
+  Qed.
+
+End SIMMODSEM.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Section SIMMODSEM.
 
   Variable world: Type.
   Variable src: world -> GRA.
