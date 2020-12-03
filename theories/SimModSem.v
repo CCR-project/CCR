@@ -112,33 +112,14 @@ Section SIMMODSEM.
 
   Variable R: relation (list (string * GRA)).
 
-  Record sim_state: Type := mk {
-    code: itree Es val;
-    fr: GRA;
-    (* mr: GRA; *)
-    mr: list (string * GRA);
-  }
-  .
-
-  Definition handle_rE (e: rE GRA) (st0: sim_state): itree eventE sim_state :=
-    match e with
-    | Put mn mr fr =>
-      guarantee(URA.updatable (URA.add (mrs mn) hd) (URA.add mr fr));;
-      Ret (((update mrs mn mr), fr :: tl), tt)
-    | MGet mn => Ret ((mrs, frs), mrs mn)
-    | FGet => Ret ((mrs, frs), hd)
-    | Forge fr => Ret ((mrs, (URA.add hd fr) :: tl), tt)
-    | Discard fr =>
-      rest <- trigger (Choose _);;
-      guarantee(hd = URA.add fr rest);;
-      Ret ((mrs, rest :: tl), tt)
-    | CheckWf mn =>
-      assume(URA.wf (URA.add (mrs mn) hd));;
-      Ret ((mrs, frs), tt)
-    | PushFrame => triggerUB
-    | PopFrame => triggerUB
-    end
-  .
+  (* Record st_local: Type := mk { *)
+  (*   code: itree Es val; *)
+  (*   fr: GRA; *)
+  (*   (* mr: GRA; *) *)
+  (*   mr: list (string * GRA); *)
+  (* } *)
+  (* . *)
+  (* Let st_local: Type := (list (string * GRA) * GRA). *)
 
   Inductive _sim_fn sim_fn: nat -> sim_state -> sim_state -> Prop :=
   | sim_fn_ret
