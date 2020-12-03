@@ -6,6 +6,10 @@ Require Import PCM.
 Require Import ModSem.
 Require Import Relation_Definitions.
 
+(*** TODO: export these in Coqlib or Universe ***)
+Require Import Relation_Operators.
+Require Import RelationPairs.
+
 Generalizable Variables E R A B C X Y.
 
 Set Implicit Arguments.
@@ -14,12 +18,13 @@ Local Open Scope nat_scope.
 
 
 
-Section SIMMODSEM.
+Section SIM.
 
   Context `{GRA: GRA.t}.
-  Variable (ms0 ms1: ModSem.t).
 
   Let st_local: Type := ((string -> GRA) * GRA).
+
+  Variable SR: relation st_local.
 
   Set Typeclasses Depth 5.
   Definition handle_rE_local `{eventE -< E}: rE ~> stateT st_local (itree E) :=
@@ -30,14 +35,14 @@ Section SIMMODSEM.
       Ret (((update mrs mn mr), fr1), tt)
     | MGet mn => Ret ((mrs, fr0), mrs mn)
     | FGet => Ret ((mrs, fr0), fr0)
-    (* | Forge fr => Ret ((mrs, (URA.add hd fr) :: tl), tt) *)
-    (* | Discard fr => *)
-    (*   rest <- trigger (Choose _);; *)
-    (*   guarantee(hd = URA.add fr rest);; *)
-    (*   Ret ((mrs, rest :: tl), tt) *)
-    (* | CheckWf mn => *)
-    (*   assume(URA.wf (URA.add (mrs mn) hd));; *)
-    (*   Ret ((mrs, frs), tt) *)
+    | Forge rarg => Ret ((mrs, URA.add fr0 rarg), tt)
+    | Discard rret =>
+      fr1 <- trigger (Choose _);;
+      guarantee(fr0 = URA.add fr1 rret);;
+      Ret ((mrs, fr1), tt)
+    | CheckWf mn =>
+      assume(URA.wf (URA.add (mrs mn) fr0));;
+      Ret ((mrs, fr0), tt)
     (* | PushFrame => triggerUB *)
     (* | PopFrame => triggerUB *)
     | _ => triggerUB
@@ -55,67 +60,103 @@ Section SIMMODSEM.
     { eapply State.pure_state. apply (inr1 e). }
   Defined.
 
-  Variable SR: relation st_local.
+  (* Q: nat -> forall T or forall T, nat -> ???? *)
+  Section PLAYGROUND.
+    Variable A B: Type.
+    Variable k: B -> Type.
+    Let obj0: Type := A -> forall (b: B), k b.
+    Let obj1: Type := forall (b: B), A -> k b.
+    Let bij: obj0 -> obj1.
+      ii. eapply X; eauto.
+    Defined.
+    Require Import FinFun.
+    Theorem bijective: Bijective bij.
+    Proof.
+      rr. unshelve eexists.
+      { ii. eapply X; et. }
+      esplits; eauto.
+    Qed.
+  End PLAYGROUND.
 
-  (* Variable sim_itree: nat -> forall T, relation (itree (callE +' eventE) T). *)
-  Variable sim_itree: forall T, nat -> relation (itree (callE +' eventE) T).
-  Eval red in (stateT st_local (itree (callE +' eventE)) val).
-  Let sim_ktree: nat -> relation (stateT st_local (itree (callE +' eventE)) val).
-  Proof.
-    intro n. r. intros k_src k_tgt.
-    r in k_src. r in k_tgt.
-    eapply respectful; cycle 2.
-    { apply k_src. }
-    { apply k_tgt. }
-    { apply SR. }
-    apply sim_itree. apply n.
-  Defined.
 
-  Let sim_fn: relation (list val -> itree Es val).
-    eapply respectful.
-    - r. eapply eq.
-    - r. intros it_src it_tgt.
-      apply interp_rE_local in it_src; cycle 1.
-      { ss. }
-      apply interp_rE_local in it_tgt; cycle 1.
-      { ss. }
-      apply (exists n, sim_ktree n it_src it_tgt).
-  Defined.
 
-  TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTt
-  Check (SR ==> @sim_itree val)%signature.
-  Inductive _sim_ktree sim_ktree:
-    nat -> relation (stateT st_local (itree (callE +' eventE)) val) :=
-  | sim_ktree_ret
-      i0
-    :
-      _sim_ktree sim_ktree 
-  .
+  Section SIMITREE.
+    Variable T: Type.
+    Inductive _sim_itree sim_itree: nat -> relation (itree (callE +' eventE) T) :=
+    | sim_itree_ret
+        i0 t
+      :
+        _sim_itree sim_itree i0 (Ret t) (Ret t)
+    | sim_itree_call
+        i0
+        fn varg k_src k_tgt
+        (K: forall vret, exists (i1: nat), sim_itree i1 (k_src vret) (k_src vret))
+      :
+        _sim_itree sim_itree i0 (Vis (subevent _ (Call fn varg)) k_src)
+                  (Vis (subevent _ (Call fn varg)) k_tgt)
+    (* | sim_itree_choose_src *)
+    (* | sim_itree_choose_tgt *)
+    (* | sim_itree_take_src *)
+    (* | sim_itree_take_tgt *)
+    (* | sim_itree_syscall_src *)
+    (* | sim_itree_syscall_tgt *)
+    (* | sim_itree_tau_src *)
+    (* | sim_itree_tau_tgt *)
+    .
 
-  Let sim_bobo: nat -> relation (stateT st_local (itree (callE +' eventE)) val).
-    i. r. intros k_src k_tgt. r in k_src. r in k_tgt.
-  Defined.
-  Variable sim_bobo: nat -> relation (stateT st_local (itree (callE +' eventE)) val).
+    (*** prove nice properties, (transitivity, etc) ***)
 
-  Let sim_fn: relation (list val -> itree Es val).
-    eapply respectful.
-    - r. eapply eq.
-    - r. intros it_src it_tgt.
-      apply bobo in it_src; cycle 1.
-      { ss. }
-      apply bobo in it_tgt; cycle 1.
-      { ss. }
-      apply (exists n, sim_bobo n it_src it_tgt).
-  Defined.
+    Definition sim_itree: _ -> relation _ := paco3 _sim_itree bot3.
+  End SIMITREE.
 
-  (*** can we give simulation relation for stateT st_local (itree (D +' E))?? ***)
 
-  Check (State.interp_state (case_ (case_ State.pure_state handle_rE_local) State.pure_state) fn).
-  Let anyhow_rE_erased (fn: (list val -> itree Es val))
-    (* : (list val -> itree (callE +' eventE) val) *)
-    :=
-    fun varg => State.interp_state (case_ State.pure_state
-                                          (case_ handle_rE_local State.pure_state)) (fn varg)
-  .
-  Definition interp_rE `{eventE -< E}: itree (rE +' E) ~> stateT r_state (itree E) :=
-    State.interp_state (case_ handle_rE State.pure_state).
+
+  (* Eval red in (stateT st_local (itree (callE +' eventE)) val). *)
+  (* Let sim_ktree: nat -> relation (stateT st_local (itree (callE +' eventE)) val). *)
+  (* Proof. *)
+  (*   intro n. r. intros k_src k_tgt. *)
+  (*   r in k_src. r in k_tgt. *)
+  (*   eapply respectful; cycle 2. *)
+  (*   { apply k_src. } *)
+  (*   { apply k_tgt. } *)
+  (*   { apply SR. } *)
+  (*   apply sim_itree. apply n. *)
+  (* Defined. *)
+
+  (* Let sim_fn: relation (list val -> itree Es val). *)
+  (*   eapply respectful. *)
+  (*   - r. eapply eq. *)
+  (*   - r. intros it_src it_tgt. *)
+  (*     apply interp_rE_local in it_src; cycle 1. *)
+  (*     { ss. } *)
+  (*     apply interp_rE_local in it_tgt; cycle 1. *)
+  (*     { ss. } *)
+  (*     apply (exists n, sim_ktree n it_src it_tgt). *)
+  (* Defined. *)
+
+  Definition sim_ktree: nat -> relation (stateT st_local (itree (callE +' eventE)) val) :=
+    fun n k_src k_tgt => (SR ==> sim_itree n)%signature k_src k_tgt.
+
+  Definition sim_fsem: relation (list val -> itree Es val) :=
+    (eq ==> (fun it_src it_tgt => exists n, sim_ktree n (interp_rE_local it_src)
+                                                      (interp_rE_local it_tgt)))%signature.
+
+  Definition sim_fnsem: relation (string * (list val -> itree Es val)) := RelProd eq sim_fsem.
+
+End SIM.
+
+
+
+Section SIMMODSEM.
+
+  Context `{GRA: GRA.t}.
+  Variable (ms0 ms1: ModSem.t).
+
+  Inductive sim: Prop := mk {
+    SR: relation ((string -> GRA) * GRA);
+    sim_fnsems: Forall2 (sim_fnsem SR) ms0.(ModSem.fnsems) ms1.(ModSem.fnsems);
+    (* sim_initial_mrs: Forall2  *)
+  }.
+
+End SIMMODSEM.
+
