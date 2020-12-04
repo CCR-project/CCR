@@ -55,7 +55,7 @@ Section PROOF.
     fun varg =>
       sz <- trigger (Take nat);;
       assume(varg = [Vint (Z.of_nat sz)]);;
-      (HoareFun "mem" mem_inv
+      (HoareFun "mem"
                 (top1)
                 (fun _ rret => exists b,
                      rret = GRA.padding (fold_left URA.add (mapi (fun n _ => (b, Z.of_nat n) |-> (Vint 0))
@@ -67,9 +67,21 @@ Section PROOF.
     fun varg =>
       '(b, ofs) <- trigger (Take _);;
       assume(varg = [Vptr b ofs]);;
-      (HoareFun "mem" mem_inv
+      (HoareFun "mem"
                 (fun rarg => exists v, rarg = (GRA.padding ((b, ofs) |-> v)))
                 (top2)
+                (Ret tt))
+  .
+
+  Definition loadF: list val -> itree Es val :=
+    fun varg =>
+      '(b, ofs) <- trigger (Take _);;
+      v <- trigger (Take _);;
+      assume(varg = [Vptr b ofs]);;
+      trigger (CheckWf "mem");;
+      (HoareFun "mem"
+                (fun rarg => rarg = (GRA.padding ((b, ofs) |-> v)))
+                (fun rval rret => rret = (GRA.padding ((b, ofs) |-> v)) /\ rval = v)
                 (Ret tt))
   .
 

@@ -105,9 +105,26 @@ Section PROOF.
     Ret (Vint 0)
   .
 
+  Definition loadF_parg (args: list val): option (block * Z) :=
+    match args with
+    | [Vptr b ofs] => Some (b, ofs)
+    | _ => None
+    end
+  .
+
+  Definition loadF (varg: list val): itree Es val :=
+    mr0 <- trigger (MGet "mem");;
+    `m0: Mem.t <- (unpadding memRA mr0) >>= unleftU >>= unwrapU;;
+    (* `m0: Mem.t <- trigger (Take _);; *)
+    (* assume(mr0 = GRA.padding ((inl (Some m0)): URA.car (t:=memRA)));; *)
+    '(b, ofs) <- (loadF_parg varg)?;;
+    v <- (Mem.load m0 b ofs)?;;
+    Ret v
+  .
+
   Definition mem: ModSem.t :=
     {|
-      ModSem.fnsems := [("alloc", allocF) ; ("free", freeF)];
+      ModSem.fnsems := [("alloc", allocF) ; ("free", freeF) ; ("load", loadF)];
       ModSem.initial_mrs := [("mem", GRA.padding ((inl (Some Mem.empty)): URA.car (t:=memRA)))];
     |}
   .
