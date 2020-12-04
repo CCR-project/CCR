@@ -126,15 +126,16 @@ Section PROOF.
              (I: URA.car -> Prop)
              (P: URA.car -> Prop)
              (Q: val -> URA.car -> Prop)
-             (f: itree Es unit): itree Es val :=
+             (body: itree Es unit): itree Es val :=
     rarg <- trigger (Take URA.car);; trigger (Forge rarg);; (*** virtual resource passing ***)
     assume(P rarg);; (*** precondition ***)
     mopen <- trigger (MGet mn);; assume(I mopen);; (*** opening the invariant ***)
 
-    f;; (*** it is a "rudiment": we don't remove extcalls because of termination-sensitivity ***)
+    body;; (*** it is a "rudiment": we don't remove extcalls because of termination-sensitivity ***)
     vret <- trigger (Choose _);;
 
-    mclose <- trigger (MGet mn);; guarantee(I mclose);; (*** closing the invariant ***)
+    mclose <- trigger (Choose _);; _f_arg <- trigger (Choose _);; trigger (Put mn mclose _f_arg);; (*** updating resources in an abstract way ***)
+    guarantee(I mclose);; (*** closing the invariant ***)
     rret <- trigger (Choose URA.car);; guarantee(Q vret rret);; (*** postcondition ***)
     trigger (Discard rret);; (*** virtual resource passing ***)
 
@@ -204,7 +205,8 @@ Section PROOF.
              (Q: val -> URA.car -> Prop):
     fname -> list val -> itree Es val :=
     fun fn varg =>
-      mclose <- trigger (MGet mn);; guarantee(I mclose);; (*** closing the invariant ***)
+      mclose <- trigger (Choose _);; _f_arg <- trigger (Choose _);; trigger (Put mn mclose _f_arg);; (*** updating resources in an abstract way ***)
+      guarantee(I mclose);; (*** closing the invariant ***)
       rarg <- trigger (Choose URA.car);; trigger (Discard rarg);; (*** virtual resource passing ***)
       guarantee(P rarg);; (*** precondition ***)
 

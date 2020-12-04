@@ -24,6 +24,11 @@ Local Open Scope nat_scope.
 
 
 
+Module World.
+
+End World.
+
+
 Section SIM.
 
   Context `{Σ: GRA.t}.
@@ -60,6 +65,24 @@ End SIM.
 
 
 
+(*** Q: do we need SimMemOh.le (and lepriv) ??? ***)
+
+(*** Let's say that le/lepriv can be encoded using RA and CheckWf... ***)
+(*** Q: Is "Source CheckWf >= Target CheckWf" trivial? or can be derived automatically? ***)
+(*** A: I think no. It looks like a real user obligation. ***)
+(*** N.B.: In the course of verifying "Source CheckWf >= Target CheckWf", one may need "le".
+         For an instance, if target RA is in some sense monotonic, while source RA is unit,
+         we have to prove that "Target CheckWf" holds from the ground. To do so, we need "le".
+         I am not entirely sure that we don't need "lepriv",
+         but (1) lepriv alone won't scale with concurrency,
+         so we need separation (putting into/out of function local resource), then
+         (2) it seems function-local resource (without lepriv) is sufficient for the cases
+         that I can think of ***)
+
+(*** desiderata: (1) state-aware simulation relation !!!! ***)
+(*** (2) not whole function frame, just my function frame !!!! ***)
+(*** (3) would be great if induction tactic works !!!! (study itree case study more) ***)
+
 
 
 Section SIMMODSEM.
@@ -87,6 +110,8 @@ Section SIMMODSEM.
 
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG Mem1.memRA Σ} `{@GRA.inG (RA.excl Mem.t) Σ}.
+
+  Let R :=
 
   Theorem correct: sim Mem1.mem Mem0.mem.
   Proof.
@@ -129,21 +154,6 @@ Section SIMMODSEM.
   Hypothesis le_PreOrder: PreOrder le.
 
 
-  (*** Q: do we need SimMemOh.le (and lepriv) ??? ***)
-
-    (*** Let's say that le/lepriv can be encoded using RA and CheckWf... ***)
-    (*** Q: Is "Source CheckWf >= Target CheckWf" trivial? or can be derived automatically? ***)
-    (*** A: I think no. It looks like a real user obligation. ***)
-    (*** N.B.: In the course of verifying "Source CheckWf >= Target CheckWf", one may need "le".
-         For an instance, if target RA is in some sense monotonic, while source RA is unit,
-         we have to prove that "Target CheckWf" holds from the ground. To do so, we need "le".
-         I am not entirely sure that we don't need "lepriv",
-         but (1) lepriv alone won't scale with concurrency,
-         so we need separation (putting into/out of function local resource), then
-         (2) it seems function-local resource (without lepriv) is sufficient for the cases
-         that I can think of ***)
-
-
   (* Variable idx: Type. *)
   (* Variable ord: idx -> idx -> Prop. *)
   (* Variable wf_ord: well_founded ord. *)
@@ -152,9 +162,6 @@ Section SIMMODSEM.
   (* Variable R: list (string * (GRA -> GRA -> Prop)). *)
   (* Variable R: string -> option (GRA -> GRA -> Prop). *)
 
-  (*** desiderata: (1) state-aware simulation relation !!!! ***)
-  (*** (2) not whole function frame, just my function frame !!!! ***)
-  (*** (3) would be great if induction tactic works !!!! (study itree case study more) ***)
 
 
 
