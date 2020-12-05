@@ -69,6 +69,108 @@ End W.
 
 
 
+
+
+
+Section PLAYGROUND.
+  Variable A B: Type.
+  Variable left: A -> A -> Prop.
+  Variable right: B -> B -> Prop.
+  Inductive _sim (sim: nat -> A -> B -> Prop): nat -> A -> B -> Prop :=
+  | go_left
+      i0 a0 b0 a1
+      i1
+      (*** can't choose i1 depending on a1 ***)
+      (ORD: i1 < i0)
+      (GO: left a0 a1)
+      (K: sim i1 a1 b0)
+    :
+      _sim sim i0 a0 b0
+  | go_right
+      i0 a0 b0 b1
+      i1
+      (ORD: i1 < i0)
+      (GO: right b0 b1)
+      (K: sim i1 a0 b1)
+    :
+      _sim sim i0 a0 b0
+  | go_both
+      i0 a0 b0 i1 a1 b1
+      (GO: left a0 a1)
+      (GO: right b0 b1)
+      (K: sim i1 a1 b1)
+    :
+      _sim sim i0 a1 b1
+  .
+End PLAYGROUND.
+Reset PLAYGROUND.
+(*** i1 can't depend on a1, or the internal choices inside "left" ***)
+
+
+Section PLAYGROUND.
+  Variable A B: Type.
+  Variable left: nat -> A -> nat -> A -> Prop.
+  Variable right: nat -> B -> nat -> B -> Prop.
+  Variable both: (nat -> A -> B -> Prop) -> (nat -> A -> B -> Prop).
+  Inductive _sim (sim: nat -> A -> B -> Prop): nat -> A -> B -> Prop :=
+  | go_left
+      i0 a0 b0 a1
+      i1
+      (* (ORD: i1 < i0) *)
+      (GO: left i0 a0 i1 a1)
+      (K: sim i1 a1 b0)
+    :
+      _sim sim i0 a0 b0
+  | go_right
+      i0 a0 b0 b1
+      i1
+      (* (ORD: i1 < i0) *)
+      (GO: right i0 b0 i1 b1)
+      (K: sim i1 a0 b1)
+    :
+      _sim sim i0 a0 b0
+  | go_left_right
+      i0 a0 b0 _unused0_ _unused1_ i1 a1 b1
+      (GO: left i0 a0 _unused0_ a1)
+      (GO: right i0 b0 _unused1_ b1)
+      (K: sim i1 a1 b1)
+    :
+      _sim sim i0 a1 b1
+  | go_both
+      i0 a0 b0
+      (GO: both sim i0 a0 b0)
+    :
+      _sim sim i0 a0 b0
+  .
+
+  Definition sim: _ -> _ -> _ -> Prop := paco3 _sim bot3.
+
+  Lemma sim_mon (MON: monotone3 both): monotone3 _sim.
+  Proof.
+    ii. inv IN.
+    - econs 1; eauto.
+    - econs 2; eauto.
+    - econs 3; eauto.
+    - econs 4; eauto.
+  Qed.
+
+End PLAYGROUND.
+
+Hint Constructors _sim.
+Hint Unfold sim.
+Hint Resolve sim_mon: paco.
+
+
+
+
+
+
+
+
+
+
+
+
 Section SIM.
 
   Context `{Σ: GRA.t}.
@@ -76,17 +178,19 @@ Section SIM.
   (* Let st_local: Type := (list (string * GRA) * GRA). *)
   Let st_local: Type := ((alist mname Σ) * Σ).
 
-  Variable MR: ((alist mname Σ) * (alist mname Σ)) -> Prop.
-  Variable MLE: ((alist mname Σ) * (alist mname Σ)) -> ((alist mname Σ) * (alist mname Σ)) -> Prop.
-  Let SR: relation st_local := Eval cbv beta in RelProd MR top2.
+  Let W: Type := (alist mname Σ) * (alist mname Σ).
+  Variable wf: W -> Prop.
+  Variable le: relation W.
+  Hypothesis le_PreOrder: PreOrder le.
 
   Inductive _sim_itree (sim_itree: nat -> relation (st_local * (itree Es val)))
     : nat -> relation (st_local * (itree Es val)) :=
   | sim_itree_ret
-      i0 st_src0 st_tgt0
+      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      (WF: wf (mrs_src0, mrs_tgt0))
       v
     :
-      _sim_itree sim_itree i0 (st_src0, (Ret v)) (st_tgt0, (Ret v))
+      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), (Ret v)) ((mrs_tgt0, fr_tgt0), (Ret v))
   | sim_itree_tau
       i0 st_src0 st_tgt0
       i1 i_src i_tgt
@@ -94,12 +198,14 @@ Section SIM.
     :
       _sim_itree sim_itree i0 (st_src0, tau;; i_src) (st_tgt0, tau;; i_tgt)
   | sim_itree_call
-      i0 st_src0 st_tgt0
-      i1 fn varg k_src k_tgt
-      (K: forall vret st_src1 st_tgt1, sim_itree i1 (st_src1, k_src vret) (st_tgt1, k_tgt vret))
+      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      fn varg k_src k_tgt
+      (WF: wf (mrs_src0, mrs_tgt0))
+      (K: forall vret mrs_src1 mrs_tgt1 (WF: wf (mrs_src1, mrs_tgt1)),
+          exists i1, sim_itree i1 ((mrs_src1, fr_src0), k_src vret) ((mrs_tgt1, fr_tgt0), k_tgt vret))
     :
-      _sim_itree sim_itree i0 (st_src0, trigger (Call fn varg) >>= k_src)
-                 (st_tgt0, trigger (Call fn varg) >>= k_tgt)
+      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (Call fn varg) >>= k_src)
+                 ((mrs_tgt0, fr_tgt0), trigger (Call fn varg) >>= k_tgt)
 
 
   | sim_itree_tau_src
@@ -109,16 +215,16 @@ Section SIM.
       (K: sim_itree i1 (st_src0, i_src) (st_tgt0, i_tgt))
     :
       _sim_itree sim_itree i0 (st_src0, tau;; i_src) (st_tgt0, i_tgt)
-  (* | sim_itree_put_src *)
-  (*     i0 w0 fr_src0 fr_tgt0 *)
-  (*     (WF: W.wf w0) *)
-  (*     i1 mn mr0 mr1 fr_src1 k_src i_tgt *)
-  (*     (ORD: i1 < i0) *)
-  (*     (MR0: Maps.lookup mn w0.(W.src) = Some mr0) *)
-  (*     (UPD: URA.updatable (URA.add mr0 fr_src0) (URA.add mr1 fr_src1)) *)
-  (*     (K: sim_itree i1 (fr_src1, k_src) (fr_tgt0, i_tgt)) *)
-  (*   : *)
-  (*     _sim_itree sim_itree i0 w0 (fr_src0, trigger (Put mn mr0 fr_src1) >>= k_src) (fr_tgt0, i_tgt) *)
+  | sim_itree_put_src
+      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i1 mn mr0 mr1 fr_src1 k_src i_tgt
+      (ORD: i1 < i0)
+      (MR0: Maps.lookup mn mrs_src0 = Some mr0)
+      (UPD: URA.updatable (URA.add mr0 fr_src0) (URA.add mr1 fr_src1))
+      (K: sim_itree i1 ((mrs_src0, fr_src1), k_src) ((mrs_tgt0, fr_tgt1), i_tgt))
+    :
+      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (Put mn mr0 fr_src1) >>= k_src)
+                 ((mrs_tgt0, fr_tgt0), i_tgt)
   .
 
   Definition sim_itree: _ -> relation _ := paco3 _sim_itree bot3.
