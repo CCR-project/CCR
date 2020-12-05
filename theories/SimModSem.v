@@ -72,56 +72,53 @@ End W.
 Section SIM.
 
   Context `{Σ: GRA.t}.
-  Context `{@W.t Σ}.
 
   (* Let st_local: Type := (list (string * GRA) * GRA). *)
   Let st_local: Type := ((alist mname Σ) * Σ).
 
-  Variable R: relation (alist mname Σ).
+  Variable MR: ((alist mname Σ) * (alist mname Σ)) -> Prop.
+  Variable MLE: ((alist mname Σ) * (alist mname Σ)) -> ((alist mname Σ) * (alist mname Σ)) -> Prop.
+  Let SR: relation st_local := Eval cbv beta in RelProd MR top2.
 
-  Inductive _sim_itree (sim_itree: nat -> W.car -> relation (Σ * (itree Es val)))
-    : nat -> W.car -> relation (Σ * (itree Es val)) :=
+  Inductive _sim_itree (sim_itree: nat -> relation (st_local * (itree Es val)))
+    : nat -> relation (st_local * (itree Es val)) :=
   | sim_itree_ret
-      i0 w0 fr_src0 fr_tgt0
-      (WF: W.wf w0)
+      i0 st_src0 st_tgt0
       v
     :
-      _sim_itree sim_itree i0 w0 (fr_src0, (Ret v)) (fr_tgt0, (Ret v))
-  | sim_itree_tau_src
-      i0 w0 fr_src0 fr_tgt0
-      (WF: W.wf w0)
+      _sim_itree sim_itree i0 (st_src0, (Ret v)) (st_tgt0, (Ret v))
+  | sim_itree_tau
+      i0 st_src0 st_tgt0
       i1 i_src i_tgt
-      (ORD: i1 < i0)
-      (K: sim_itree i1 w0 (fr_src0, i_src) (fr_tgt0, i_tgt))
+      (K: sim_itree i1 (st_src0, i_src) (st_tgt0, i_tgt))
     :
-      _sim_itree sim_itree i0 w0 (fr_src0, tau;; i_src) (fr_tgt0, i_tgt)
-  | sim_itree_tau_tgt
-      i0 w0 fr_src0 fr_tgt0
-      (WF: W.wf w0)
-      i1 i_src i_tgt
-      (ORD: i1 < i0)
-      (K: sim_itree i1 w0 (fr_src0, i_src) (fr_tgt0, i_tgt))
-    :
-      _sim_itree sim_itree i0 w0 (fr_src0, i_src) (fr_tgt0, tau;; i_tgt)
+      _sim_itree sim_itree i0 (st_src0, tau;; i_src) (st_tgt0, tau;; i_tgt)
   | sim_itree_call
-      i0 w0 fr_src0 fr_tgt0
-      (WF: W.wf w0)
+      i0 st_src0 st_tgt0
       i1 fn varg k_src k_tgt
-      (K: forall vret w1 (WWF: W.wf w1) (WLE: W.le w0 w1),
-          sim_itree i1 w1 (fr_src0, k_src vret) (fr_tgt0, k_tgt vret))
+      (K: forall vret st_src1 st_tgt1, sim_itree i1 (st_src1, k_src vret) (st_tgt1, k_tgt vret))
     :
-      _sim_itree sim_itree i0 w0 (fr_src0, trigger (Call fn varg) >>= k_src)
-                 (fr_tgt0, trigger (Call fn varg) >>= k_tgt)
-  | sim_itree_put_src
-      i0 w0 fr_src0 fr_tgt0
-      (WF: W.wf w0)
-      i1 mn mr0 mr1 fr_src1 k_src i_tgt
+      _sim_itree sim_itree i0 (st_src0, trigger (Call fn varg) >>= k_src)
+                 (st_tgt0, trigger (Call fn varg) >>= k_tgt)
+
+
+  | sim_itree_tau_src
+      i0 st_src0 st_tgt0
+      i1 i_src i_tgt
       (ORD: i1 < i0)
-      (MR0: Maps.lookup mn w0.(W.src) = Some mr0)
-      (UPD: URA.updatable (URA.add mr0 fr_src0) (URA.add mr1 fr_src1))
-      (K: sim_itree i1 w1 (fr_src1, k_src) (fr_tgt0, i_tgt))
+      (K: sim_itree i1 (st_src0, i_src) (st_tgt0, i_tgt))
     :
-      _sim_itree sim_itree i0 w0 (fr_src0, trigger (Put mn mr0 fr_src1) >>= k_src) (fr_tgt0, i_tgt)
+      _sim_itree sim_itree i0 (st_src0, tau;; i_src) (st_tgt0, i_tgt)
+  (* | sim_itree_put_src *)
+  (*     i0 w0 fr_src0 fr_tgt0 *)
+  (*     (WF: W.wf w0) *)
+  (*     i1 mn mr0 mr1 fr_src1 k_src i_tgt *)
+  (*     (ORD: i1 < i0) *)
+  (*     (MR0: Maps.lookup mn w0.(W.src) = Some mr0) *)
+  (*     (UPD: URA.updatable (URA.add mr0 fr_src0) (URA.add mr1 fr_src1)) *)
+  (*     (K: sim_itree i1 (fr_src1, k_src) (fr_tgt0, i_tgt)) *)
+  (*   : *)
+  (*     _sim_itree sim_itree i0 w0 (fr_src0, trigger (Put mn mr0 fr_src1) >>= k_src) (fr_tgt0, i_tgt) *)
   .
 
   Definition sim_itree: _ -> relation _ := paco3 _sim_itree bot3.
