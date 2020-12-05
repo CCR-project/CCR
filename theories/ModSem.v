@@ -12,8 +12,8 @@ Set Implicit Arguments.
 
 Section EVENTS.
 
-  Inductive eventE: Type -> Type :=
-  | Choose X: eventE X
+  Variant eventE: Type -> Type :=
+  | Choose (X: Type): eventE X
   | Take X: eventE X
   | Syscall (fn: fname) (m: Mem.t) (args: list val): eventE (Mem.t * val)
   (*** Syscall should be able to look at current memory (full information).

@@ -72,93 +72,93 @@ End W.
 
 
 
-Section PLAYGROUND.
-  Variable A B: Type.
-  Variable left: A -> A -> Prop.
-  Variable right: B -> B -> Prop.
-  Inductive _sim (sim: nat -> A -> B -> Prop): nat -> A -> B -> Prop :=
-  | go_left
-      i0 a0 b0 a1
-      i1
-      (*** can't choose i1 depending on a1 ***)
-      (ORD: i1 < i0)
-      (GO: left a0 a1)
-      (K: sim i1 a1 b0)
-    :
-      _sim sim i0 a0 b0
-  | go_right
-      i0 a0 b0 b1
-      i1
-      (ORD: i1 < i0)
-      (GO: right b0 b1)
-      (K: sim i1 a0 b1)
-    :
-      _sim sim i0 a0 b0
-  | go_both
-      i0 a0 b0 i1 a1 b1
-      (GO: left a0 a1)
-      (GO: right b0 b1)
-      (K: sim i1 a1 b1)
-    :
-      _sim sim i0 a1 b1
-  .
-End PLAYGROUND.
-Reset PLAYGROUND.
-(*** i1 can't depend on a1, or the internal choices inside "left" ***)
+(* Section PLAYGROUND. *)
+(*   Variable A B: Type. *)
+(*   Variable left: A -> A -> Prop. *)
+(*   Variable right: B -> B -> Prop. *)
+(*   Inductive _sim (sim: nat -> A -> B -> Prop): nat -> A -> B -> Prop := *)
+(*   | go_left *)
+(*       i0 a0 b0 a1 *)
+(*       i1 *)
+(*       (*** can't choose i1 depending on a1 ***) *)
+(*       (ORD: i1 < i0) *)
+(*       (GO: left a0 a1) *)
+(*       (K: sim i1 a1 b0) *)
+(*     : *)
+(*       _sim sim i0 a0 b0 *)
+(*   | go_right *)
+(*       i0 a0 b0 b1 *)
+(*       i1 *)
+(*       (ORD: i1 < i0) *)
+(*       (GO: right b0 b1) *)
+(*       (K: sim i1 a0 b1) *)
+(*     : *)
+(*       _sim sim i0 a0 b0 *)
+(*   | go_both *)
+(*       i0 a0 b0 i1 a1 b1 *)
+(*       (GO: left a0 a1) *)
+(*       (GO: right b0 b1) *)
+(*       (K: sim i1 a1 b1) *)
+(*     : *)
+(*       _sim sim i0 a1 b1 *)
+(*   . *)
+(* End PLAYGROUND. *)
+(* Reset PLAYGROUND. *)
+(* (*** i1 can't depend on a1, or the internal choices inside "left" ***) *)
 
 
-Section PLAYGROUND.
-  Variable A B: Type.
-  Variable left: nat -> A -> nat -> A -> Prop.
-  Variable right: nat -> B -> nat -> B -> Prop.
-  Variable both: (nat -> A -> B -> Prop) -> (nat -> A -> B -> Prop).
-  Inductive _sim (sim: nat -> A -> B -> Prop): nat -> A -> B -> Prop :=
-  | go_left
-      i0 a0 b0 a1
-      i1
-      (* (ORD: i1 < i0) *)
-      (GO: left i0 a0 i1 a1)
-      (K: sim i1 a1 b0)
-    :
-      _sim sim i0 a0 b0
-  | go_right
-      i0 a0 b0 b1
-      i1
-      (* (ORD: i1 < i0) *)
-      (GO: right i0 b0 i1 b1)
-      (K: sim i1 a0 b1)
-    :
-      _sim sim i0 a0 b0
-  | go_left_right
-      i0 a0 b0 _unused0_ _unused1_ i1 a1 b1
-      (GO: left i0 a0 _unused0_ a1)
-      (GO: right i0 b0 _unused1_ b1)
-      (K: sim i1 a1 b1)
-    :
-      _sim sim i0 a1 b1
-  | go_both
-      i0 a0 b0
-      (GO: both sim i0 a0 b0)
-    :
-      _sim sim i0 a0 b0
-  .
+(* Section PLAYGROUND. *)
+(*   Variable A B: Type. *)
+(*   Variable left: nat -> A -> nat -> A -> Prop. *)
+(*   Variable right: nat -> B -> nat -> B -> Prop. *)
+(*   Variable both: (nat -> A -> B -> Prop) -> (nat -> A -> B -> Prop). *)
+(*   Inductive _sim (sim: nat -> A -> B -> Prop): nat -> A -> B -> Prop := *)
+(*   | go_left *)
+(*       i0 a0 b0 a1 *)
+(*       i1 *)
+(*       (* (ORD: i1 < i0) *) *)
+(*       (GO: left i0 a0 i1 a1) *)
+(*       (K: sim i1 a1 b0) *)
+(*     : *)
+(*       _sim sim i0 a0 b0 *)
+(*   | go_right *)
+(*       i0 a0 b0 b1 *)
+(*       i1 *)
+(*       (* (ORD: i1 < i0) *) *)
+(*       (GO: right i0 b0 i1 b1) *)
+(*       (K: sim i1 a0 b1) *)
+(*     : *)
+(*       _sim sim i0 a0 b0 *)
+(*   | go_left_right *)
+(*       i0 a0 b0 _unused0_ _unused1_ i1 a1 b1 *)
+(*       (GO: left i0 a0 _unused0_ a1) *)
+(*       (GO: right i0 b0 _unused1_ b1) *)
+(*       (K: sim i1 a1 b1) *)
+(*     : *)
+(*       _sim sim i0 a1 b1 *)
+(*   | go_both *)
+(*       i0 a0 b0 *)
+(*       (GO: both sim i0 a0 b0) *)
+(*     : *)
+(*       _sim sim i0 a0 b0 *)
+(*   . *)
 
-  Definition sim: _ -> _ -> _ -> Prop := paco3 _sim bot3.
+(*   Definition sim: _ -> _ -> _ -> Prop := paco3 _sim bot3. *)
 
-  Lemma sim_mon (MON: monotone3 both): monotone3 _sim.
-  Proof.
-    ii. inv IN.
-    - econs 1; eauto.
-    - econs 2; eauto.
-    - econs 3; eauto.
-    - econs 4; eauto.
-  Qed.
+(*   Lemma sim_mon (MON: monotone3 both): monotone3 _sim. *)
+(*   Proof. *)
+(*     ii. inv IN. *)
+(*     - econs 1; eauto. *)
+(*     - econs 2; eauto. *)
+(*     - econs 3; eauto. *)
+(*     - econs 4; eauto. *)
+(*   Qed. *)
 
-End PLAYGROUND.
+(* End PLAYGROUND. *)
 
-Hint Constructors _sim.
-Hint Unfold sim.
-Hint Resolve sim_mon: paco.
+(* Hint Constructors _sim. *)
+(* Hint Unfold sim. *)
+(* Hint Resolve sim_mon: paco. *)
 
 
 
@@ -183,7 +183,7 @@ Section SIM.
   Variable le: relation W.
   Hypothesis le_PreOrder: PreOrder le.
 
-  Inductive _sim_itree (sim_itree: nat -> relation (st_local * (itree Es val)))
+  Variant _sim_itree (sim_itree: nat -> relation (st_local * (itree Es val)))
     : nat -> relation (st_local * (itree Es val)) :=
   | sim_itree_ret
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
@@ -206,6 +206,8 @@ Section SIM.
     :
       _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (Call fn varg) >>= k_src)
                  ((mrs_tgt0, fr_tgt0), trigger (Call fn varg) >>= k_tgt)
+  (*** TODO: sim_syscall is nontrivial; it should accept "injected" memory... ***)
+  (*** TODO: simplify the model: Syscall: list val -> val ***)
 
 
   | sim_itree_tau_src
@@ -217,13 +219,80 @@ Section SIM.
       _sim_itree sim_itree i0 (st_src0, tau;; i_src) (st_tgt0, i_tgt)
   | sim_itree_put_src
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
-      i1 mn mr0 mr1 fr_src1 k_src i_tgt
+      i1 k_src i_tgt
       (ORD: i1 < i0)
+      mn mr0 mr1 fr_src1
       (MR0: Maps.lookup mn mrs_src0 = Some mr0)
       (UPD: URA.updatable (URA.add mr0 fr_src0) (URA.add mr1 fr_src1))
-      (K: sim_itree i1 ((mrs_src0, fr_src1), k_src) ((mrs_tgt0, fr_tgt1), i_tgt))
+      mrs_src1
+      (EQ: mrs_src1 = Maps.add mn mr1 mrs_src0)
+      (K: sim_itree i1 ((mrs_src1, fr_src1), k_src tt) ((mrs_tgt0, fr_tgt0), i_tgt))
     :
-      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (Put mn mr0 fr_src1) >>= k_src)
+      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (Put mn mr1 fr_src1) >>= k_src)
+                 ((mrs_tgt0, fr_tgt0), i_tgt)
+  | sim_itree_mget_src
+      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i1 k_src i_tgt
+      (ORD: i1 < i0)
+      mn mr0
+      (MR0: Maps.lookup mn mrs_src0 = Some mr0)
+      (K: sim_itree i1 ((mrs_src0, fr_src0), k_src mr0) ((mrs_tgt0, fr_tgt0), i_tgt))
+    :
+      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (MGet mn) >>= k_src)
+                 ((mrs_tgt0, fr_tgt0), i_tgt)
+  | sim_itree_fget_src
+      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i1 k_src i_tgt
+      (ORD: i1 < i0)
+      (K: sim_itree i1 ((mrs_src0, fr_src0), k_src fr_src0) ((mrs_tgt0, fr_tgt0), i_tgt))
+    :
+      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (FGet) >>= k_src)
+                 ((mrs_tgt0, fr_tgt0), i_tgt)
+  | sim_itree_forge_src
+      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i1 k_src i_tgt
+      (ORD: i1 < i0)
+      delta
+      (K: sim_itree i1 ((mrs_src0, URA.add fr_src0 delta), k_src tt) ((mrs_tgt0, fr_tgt0), i_tgt))
+    :
+      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (Forge delta) >>= k_src)
+                 ((mrs_tgt0, fr_tgt0), i_tgt)
+  | sim_itree_discard_src
+      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i1 k_src i_tgt
+      (ORD: i1 < i0)
+      delta fr_src1
+      (SPLIT: fr_src0 = URA.add fr_src1 delta)
+      (K: sim_itree i1 ((mrs_src0, fr_src1), k_src tt) ((mrs_tgt0, fr_tgt0), i_tgt))
+    :
+      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (Discard delta) >>= k_src)
+                 ((mrs_tgt0, fr_tgt0), i_tgt)
+  | sim_itree_check_src
+      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i1 k_src i_tgt
+      (ORD: i1 < i0)
+      mn mr0
+      (MR0: Maps.lookup mn mrs_src0 = Some mr0)
+      (K: forall (WF: (URA.wf (URA.add mr0 fr_src0))),
+          sim_itree i1 ((mrs_src0, fr_src0), k_src tt) ((mrs_tgt0, fr_tgt0), i_tgt))
+    :
+      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (CheckWf mn) >>= k_src)
+                 ((mrs_tgt0, fr_tgt0), i_tgt)
+  | sim_itree_choose_src
+      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i1 X k_src i_tgt
+      (ORD: i1 < i0)
+      (K: exists (x: X), sim_itree i1 ((mrs_src0, fr_src0), k_src x) ((mrs_tgt0, fr_tgt0), i_tgt))
+    :
+      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (Choose X) >>= k_src)
+                 ((mrs_tgt0, fr_tgt0), i_tgt)
+  | sim_itree_take_src
+      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i1 X k_src i_tgt
+      (ORD: i1 < i0)
+      (K: forall (x: X), sim_itree i1 ((mrs_src0, fr_src0), k_src x) ((mrs_tgt0, fr_tgt0), i_tgt))
+    :
+      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (Take X) >>= k_src)
                  ((mrs_tgt0, fr_tgt0), i_tgt)
   .
 
@@ -231,7 +300,8 @@ Section SIM.
 
   Lemma sim_itree_mon: monotone3 _sim_itree.
   Proof.
-    admit "ez: TODO".
+    ii. inv IN; try (by des; econs; ss; et).
+    - econs; ss; et. ii. exploit K; et. i; des. esplits; et.
   Qed.
 
   Hint Constructors _sim_itree.
@@ -239,7 +309,7 @@ Section SIM.
   Hint Resolve sim_itree: paco.
 
   Definition sim_fsem: relation (list val -> itree Es val) :=
-    (eq ==> (fun it_src it_tgt => forall mrs_src mrs_tgt (SIMMRS: R mrs_src mrs_tgt),
+    (eq ==> (fun it_src it_tgt => forall mrs_src mrs_tgt (SIMMRS: wf (mrs_src, mrs_tgt)),
                  exists n, sim_itree n ((mrs_src, URA.unit), it_src)
                                      ((mrs_tgt, URA.unit), it_tgt)))%signature
   .
@@ -275,10 +345,13 @@ Section SIMMODSEM.
   Context `{Σ: GRA.t}.
   Variable (ms0 ms1: ModSem.t).
 
+  Let W: Type := (alist mname Σ) * (alist mname Σ).
   Inductive sim: Prop := mk {
-    R: relation (alist string Σ);
-    sim_fnsems: Forall2 (sim_fnsem R) ms0.(ModSem.fnsems) ms1.(ModSem.fnsems);
-    sim_initial_mrs: R ms0.(ModSem.initial_mrs) ms1.(ModSem.initial_mrs);
+    wf: W -> Prop;
+    le: W -> W -> Prop;
+    le_PreOrder: PreOrder le;
+    sim_fnsems: Forall2 (sim_fnsem wf) ms0.(ModSem.fnsems) ms1.(ModSem.fnsems);
+    sim_initial_mrs: wf (ms0.(ModSem.initial_mrs), ms1.(ModSem.initial_mrs));
   }.
 
 End SIMMODSEM.
@@ -296,10 +369,23 @@ Section SIMMODSEM.
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG Mem1.memRA Σ} `{@GRA.inG (RA.excl Mem.t) Σ}.
 
-  Let R :=
+  Let W: Type := (alist mname Σ) * (alist mname Σ).
+  (* Eval compute in (@RA.car (RA.excl Mem.t)). *)
+  Eval compute in (@RA.car Mem1._memRA).
+  Let wf: W -> Prop :=
+    fun '(mrs_src0, mrs_tgt0) =>
+      exists mem0 (mem1: Mem.t),
+        (<<SRC: mrs_src0 = Maps.add "mem" (GRA.padding (URA.black mem0)) Maps.empty>>) /\
+        (<<TGT: mrs_tgt0 = Maps.add "mem" (GRA.padding ((inl (Some mem1)): URA.car (t:=RA.excl Mem.t)))
+                                    Maps.empty>>) /\
+        (<<SIM: inl (mem1.(Mem.cnts)) = mem0>>)
+  .
 
   Theorem correct: sim Mem1.mem Mem0.mem.
   Proof.
+    econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
+    { typeclasses eauto. }
+    { ss. esplits; ss; et. admit "".}
     unshelve econs.
     { ii.
   Qed.
@@ -307,6 +393,10 @@ Section SIMMODSEM.
 End SIMMODSEM.
 
 
+TODO: prove sim
+TODO: write client
+TODO: show cancellation
+TODO: meta-level (no forge -> checkwf always succeeds)
 
 
 
