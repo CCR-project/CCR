@@ -184,6 +184,10 @@ Module RA.
     rr. ii. rr in H. rr in H0. des. rewrite <- H0. rewrite <- H. esplits; et. rewrite add_assoc. et.
   Qed.
 
+  Program Instance updatable_PreOrder `{M: t}: PreOrder updatable.
+  Next Obligation. ii. ss. Qed.
+  Next Obligation. ii. r in H. r in H0. eauto. Qed.
+
   Program Instance prod (M0 M1: t): t := {
     car := car (t:=M0) * car (t:=M1);
     add := fun '(a0, a1) '(b0, b1) => ((add a0 b0), (add a1 b1));
@@ -427,6 +431,10 @@ Module URA.
 
   Global Program Instance extends_PreOrder `{M: t}: PreOrder RA.extends.
   Next Obligation. rr. eexists unit. ss. rewrite unit_id. ss. Qed.
+
+  Program Instance updatable_PreOrder `{M: t}: PreOrder updatable.
+  Next Obligation. ii. ss. Qed.
+  Next Obligation. ii. r in H. r in H0. eauto. Qed.
 
   Program Instance of_RA (RA: RA.t): t := {
     car := RA.car + Datatypes.unit;

@@ -22,7 +22,7 @@ Set Implicit Arguments.
 (** TODO: move to PCM.v **)
 Declare Scope ra_scope.
 Delimit Scope ra_scope with ra.
-Notation " K ==> V' " := (RA.pointwise K V'): ra_scope.
+Notation " K ==> V' " := (URA.pointwise K V'): ra_scope.
 
 
 
@@ -34,7 +34,7 @@ Compute (URA.car).
 Definition points_to (loc: block * Z) (v: val): URA.car :=
   let (b, ofs) := loc in
   URA.white (M:=_memRA)
-            (inl (fun _b _ofs => if (dec _b b) && (dec _ofs ofs) then Some v else None)).
+            (fun _b _ofs => if (dec _b b) && (dec _ofs ofs) then inl (Some v) else inr tt).
 
 (* Definition own {GRA: GRA.t} (whole a: URA.car (t:=GRA)): Prop := URA.extends a whole. *)
 
@@ -48,8 +48,8 @@ Section PROOF.
   Let GURA: URA.t := GRA.to_URA Σ.
   Local Existing Instance GURA.
 
-  Definition mem_inv: Σ -> Prop :=
-    fun mr0 => exists mem0, mr0 = GRA.padding (URA.black (M:=_memRA) (inl mem0)).
+  (* Definition mem_inv: Σ -> Prop := *)
+  (*   fun mr0 => exists mem0, mr0 = GRA.padding (URA.black (M:=_memRA) (inl mem0)). *)
 
   Definition allocF: list val -> itree Es val :=
     fun varg =>
@@ -86,8 +86,8 @@ Section PROOF.
   .
 
   Definition mem: ModSem.t := {|
-    ModSem.fnsems := [("alloc", allocF) ; ("free", freeF)];
-    ModSem.initial_mrs := [("mem", GRA.padding (URA.black (M:=_memRA) (inl (fun _ _ => None))))];
+    ModSem.fnsems := [("alloc", allocF) ; ("free", freeF) ; ("load", loadF)];
+    ModSem.initial_mrs := [("mem", GRA.padding (URA.black (M:=_memRA) (fun _ _ => inr tt)))];
   |}
   .
 End PROOF.
