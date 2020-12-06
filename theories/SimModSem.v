@@ -294,6 +294,96 @@ Section SIM.
     :
       _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (Take X) >>= k_src)
                  ((mrs_tgt0, fr_tgt0), i_tgt)
+
+
+
+
+
+
+  | sim_itree_tau_tgt
+      i0 st_src0 st_tgt0
+      i1 i_src i_tgt
+      (ORD: i1 < i0)
+      (K: sim_itree i1 (st_src0, i_src) (st_tgt0, i_tgt))
+    :
+      _sim_itree sim_itree i0 (st_src0, i_src) (st_tgt0, tau;; i_tgt)
+  | sim_itree_put_tgt
+      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i1 i_src k_tgt
+      (ORD: i1 < i0)
+      mn mr0 mr1 fr_tgt1
+      (MR0: Maps.lookup mn mrs_tgt0 = Some mr0)
+      (UPD: URA.updatable (URA.add mr0 fr_tgt0) (URA.add mr1 fr_tgt1))
+      mrs_tgt1
+      (EQ: mrs_tgt1 = Maps.add mn mr1 mrs_tgt0)
+      (K: sim_itree i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt1, fr_tgt1), k_tgt tt))
+    :
+      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), i_src)
+                 ((mrs_tgt0, fr_tgt0), trigger (Put mn mr1 fr_tgt1) >>= k_tgt)
+  | sim_itree_mget_tgt
+      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i1 i_src k_tgt
+      (ORD: i1 < i0)
+      mn mr0
+      (MR0: Maps.lookup mn mrs_tgt0 = Some mr0)
+      (K: sim_itree i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt0), k_tgt mr0))
+    :
+      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), i_src)
+                 ((mrs_tgt0, fr_tgt0), trigger (MGet mn) >>= k_tgt)
+  | sim_itree_fget_tgt
+      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i1 i_src k_tgt
+      (ORD: i1 < i0)
+      (K: sim_itree i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt0), k_tgt  fr_tgt0))
+    :
+      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), i_src)
+                 ((mrs_tgt0, fr_tgt0), trigger (FGet) >>= k_tgt)
+  (* | sim_itree_forge_src *)
+  (*     i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0 *)
+  (*     i1 k_src i_tgt *)
+  (*     (ORD: i1 < i0) *)
+  (*     delta *)
+  (*     (K: sim_itree i1 ((mrs_src0, URA.add fr_src0 delta), k_src tt) ((mrs_tgt0, fr_tgt0), i_tgt)) *)
+  (*   : *)
+  (*     _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (Forge delta) >>= k_src) *)
+  (*                ((mrs_tgt0, fr_tgt0), i_tgt) *)
+  (* | sim_itree_discard_src *)
+  (*     i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0 *)
+  (*     i1 k_src i_tgt *)
+  (*     (ORD: i1 < i0) *)
+  (*     delta fr_src1 *)
+  (*     (SPLIT: fr_src0 = URA.add fr_src1 delta) *)
+  (*     (K: sim_itree i1 ((mrs_src0, fr_src1), k_src tt) ((mrs_tgt0, fr_tgt0), i_tgt)) *)
+  (*   : *)
+  (*     _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (Discard delta) >>= k_src) *)
+  (*                ((mrs_tgt0, fr_tgt0), i_tgt) *)
+  (* | sim_itree_check_src *)
+  (*     i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0 *)
+  (*     i1 k_src i_tgt *)
+  (*     (ORD: i1 < i0) *)
+  (*     mn mr0 *)
+  (*     (MR0: Maps.lookup mn mrs_src0 = Some mr0) *)
+  (*     (K: forall (WF: (URA.wf (URA.add mr0 fr_src0))), *)
+  (*         sim_itree i1 ((mrs_src0, fr_src0), k_src tt) ((mrs_tgt0, fr_tgt0), i_tgt)) *)
+  (*   : *)
+  (*     _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (CheckWf mn) >>= k_src) *)
+  (*                ((mrs_tgt0, fr_tgt0), i_tgt) *)
+  | sim_itree_choose_tgt
+      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i1 X i_src k_tgt
+      (ORD: i1 < i0)
+      (K: forall (x: X), sim_itree i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt0), k_tgt x))
+    :
+      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), i_src)
+                 ((mrs_tgt0, fr_tgt0), trigger (Choose X) >>= k_tgt)
+  | sim_itree_take_tgt
+      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i1 X i_src k_tgt
+      (ORD: i1 < i0)
+      (K: exists (x: X), sim_itree i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt0), k_tgt x))
+    :
+      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), i_src)
+                 ((mrs_tgt0, fr_tgt0), trigger (Take X) >>= k_tgt)
   .
 
   Definition sim_itree: _ -> relation _ := paco3 _sim_itree bot3.
@@ -362,7 +452,7 @@ End SIMMODSEM.
 
 
 
-Require Import Mem0 Mem1.
+Require Import Mem0 Mem1 Hoare.
 
 Section SIMMODSEM.
 
@@ -374,20 +464,157 @@ Section SIMMODSEM.
   Eval compute in (@RA.car Mem1._memRA).
   Let wf: W -> Prop :=
     fun '(mrs_src0, mrs_tgt0) =>
-      exists mem0 (mem1: Mem.t),
-        (<<SRC: mrs_src0 = Maps.add "mem" (GRA.padding (URA.black mem0)) Maps.empty>>) /\
-        (<<TGT: mrs_tgt0 = Maps.add "mem" (GRA.padding ((inl (Some mem1)): URA.car (t:=RA.excl Mem.t)))
+      exists mem_src (mem_tgt: Mem.t),
+        (<<SRC: mrs_src0 = Maps.add "mem" (GRA.padding (URA.black mem_src)) Maps.empty>>) /\
+        (<<TGT: mrs_tgt0 = Maps.add "mem" (GRA.padding ((inl (Some mem_tgt)): URA.car (t:=RA.excl Mem.t)))
                                     Maps.empty>>) /\
-        (<<SIM: inl (mem1.(Mem.cnts)) = mem0>>)
+        (<<SIM: inl (mem_tgt.(Mem.cnts)) = mem_src>>)
   .
+
+  Infix "⋅" := URA.add (at level 50, left associativity).
+  Notation "(⋅)" := URA.add (only parsing).
 
   Theorem correct: sim Mem1.mem Mem0.mem.
   Proof.
     econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
     { typeclasses eauto. }
-    { ss. esplits; ss; et. admit "".}
-    unshelve econs.
-    { ii.
+    { ss. esplits; ss; et. }
+    econs; ss.
+    - split; ss. ii; clarify. rename y into varg. eexists 100%nat. ss. des; clarify.
+      unfold alist_add, alist_remove; ss.
+      unfold Mem1.allocF, Mem0.allocF.
+      Ltac go := try first[pfold; econs; [..|M]; (Mskip ss); et; check_safe; ii; left|
+                           pfold; econsr; [..|M]; (Mskip ss); et; check_safe; ii; left].
+      go. rename x into sz.
+      unfold assume.
+      Ltac igo := repeat (try rewrite bind_bind; try rewrite bind_ret_l; try rewrite bind_ret_r).
+      igo.
+      go. clarify. unfold HoareFun. go. rename x into rarg_src.
+      unfold assume.
+      igo.
+      repeat go. clear_tac.
+      Opaque URA.add.
+      unfold unpadding, assume.
+      igo.
+      pfold. econsr; et. esplits; et.
+      { ii. unfold GRA.padding. des_ifs. (*** TODO: should be trivial ***) }
+      left.
+      unfold unleftU. des_ifs; cycle 1.
+      { exfalso. ss. unfold GRA.padding in Heq. des_ifs.
+        admit "dependent type... use cast? lemma?".
+        (* unfold PCM.GRA.cast_ra in *. *)
+        (* unfold eq_rect_r, eq_rect, eq_sym in *. *)
+        (* destruct (GRA.inG_prf). *)
+        (* unfold eq_rect_r in *. ss. *)
+        (* Set Printing All. *)
+        (* erewrite rew_opp_l in Heq. *)
+        (* unfold eq_rect_r in *. unfold eq_rect in *. unfold eq_sym in *. csc. *)
+      }
+      igo.
+      assert(c = (Some mem_tgt)).
+      { admit "dependent type". }
+      clarify.
+      unfold unwrapU. des_ifs. igo. des_ifs. unfold MPut. igo. repeat go.
+      rename n into blk. rename z into ofs. rename mem_tgt into mem0. rename t into mem1.
+
+      Ltac force_l := pfold; econs; [..|M]; Mskip ss; et.
+      Ltac force_r := pfold; econsr; [..|M]; Mskip ss; et.
+
+      force_l. exists (Vptr blk ofs). left.
+      force_l.
+      (* Eval compute in URA.car (t:=Mem1._memRA). *)
+      (*** mret, fret ***)
+      eexists (GRA.padding (URA.black ((inl (Mem.cnts mem1)): URA.car (t:=Mem1._memRA))),
+               GRA.padding
+                 (fold_left URA.add
+                            (mapi (fun n _ => (blk, Z.of_nat n) |-> Vint 0)
+                                  (repeat () sz)) URA.unit)). left.
+      igo. force_l.
+      {
+        replace (fun k => URA.unit) with (URA.unit (t:=Σ)) by ss.
+        rewrite URA.unit_idl.
+        rewrite GRA.padding_add.
+        rewrite <- URA.unit_id.
+        apply URA.updatable_add; cycle 1.
+        { apply URA.updatable_unit. }
+        eapply GRA.padding_updatable.
+        assert(sz = 1) by admit "let's consider only sz 1 case at the moment". subst.
+        ss. clarify.
+        clear - Heq1.
+        replace (@URA.frag Mem1._memRA (@inr (forall _ _, option val) unit tt)) with
+            (URA.unit (t:=Mem1.memRA)) by ss.
+        rewrite URA.unit_idl.
+        assert(ADD: (inl (Mem.cnts mem1)) =
+                    URA.add (t:=Mem1._memRA) (inl (Mem.cnts mem0))
+                            (inl (fun _b _ofs => if dec _b blk && dec _ofs 0%Z
+                                                 then Some (Vint 0) else None))).
+        { Local Transparent URA.add.
+
+          Local Opaque RA.excl.
+          ss.
+          Local Transparent RA.excl.
+          cbn.
+
+          Set Printing All.
+
+
+          Set Printing All.
+          unfold Mem1._memRA. unfold URA.of_RA.
+          ss. f_equal.
+        }
+        eapply URA.auth_alloc2.
+        ss.
+        replace (URA.frag (@inr (forall (_ : nat) (_ : Z), option val) unit tt)) with
+            (URA.unit (t:=Mem1._memRA)).
+        (inr ())
+        fun k : nat => URA.unit) with (URA.unit (t:=Σ)) by ss.
+        rewrite URA.unit_id.
+        ii. ss. des_ifs.
+        (* rewrite <- URA.unit_id with (a:=(URA.black ((inl (Mem.cnts mem0)): *)
+        (*                                               URA.car (t:=Mem1._memRA)))). *)
+        (* eapply URA.auth_update. *)
+        ii. des.
+        eapply URA.auth_alloc. ii. des. esplits; et.
+        - ss. intros blk0 ofs0. admit "".
+        -
+        }
+        eapply URA.auth_update.
+        admit "use induction..".
+      }
+      left.
+      ss.
+      force_l. exists 
+
+      go.
+      ss.
+      unfold unwrapU. des_ifs; cycle 1.
+      { exfalso. ss. clarify. }
+      repeat go.
+      repeat go.
+      pfold; econsr; [..|M]; Mskip ss; et. ss; et; ii; left.
+      pfold. econs; ss; et; ii; left.
+      repeat go.
+      irw.
+      repeat go.
+      rewrite bind_bind.
+      repeat go.
+
+      pfold; econsr; et; ss.
+      go.
+      clarify.
+
+      repeat (try rewrite bind_bind; try rewrite bind_ret_l; try rewrite bind_ret_r).
+      rewrite bind_trigger.
+      rewrite bind_bind.
+      ITree.bind'
+      repeat (try rewrite bind_bind; try rewrite bind_ret_l; try rewrite bind_ret_r).
+    -
+      go.
+      des_ifs.
+      go. go.
+      clarify.
+      
+      pfold. econs; et.
   Qed.
 
 End SIMMODSEM.

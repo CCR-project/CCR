@@ -39,13 +39,13 @@ Section EVENTS.
 
   Definition unwrapN {E X} `{eventE -< E} (x: option X): itree E X :=
     match x with
-    | Some x => ret x
+    | Some x => Ret x
     | None => triggerNB
     end.
 
   Definition unwrapU {E X} `{eventE -< E} (x: option X): itree E X :=
     match x with
-    | Some x => ret x
+    | Some x => Ret x
     | None => triggerUB
     end.
 
@@ -57,16 +57,16 @@ Section EVENTS.
   (* Notation "'Ret!' f" := (RetG f) (at level 57, only parsing). *)
   (* Notation "'Ret?' f" := (RetA f) (at level 57, only parsing). *)
 
-  Context `{GRA: GRA.t}.
+  Context `{Σ: GRA.t}.
 
   Inductive rE: Type -> Type :=
   (* | MPut (mn: mname) (r: GRA): rE unit *)
   (* | MGet (mn: mname): rE GRA *)
   (* | FPut (r: GRA): rE unit *)
   (* | FGet: rE GRA *)
-  | Put (mn: mname) (mr: GRA) (fr: GRA): rE unit
-  | MGet (mn: mname): rE GRA
-  | FGet: rE GRA
+  | Put (mn: mname) (mr: Σ) (fr: Σ): rE unit
+  | MGet (mn: mname): rE Σ
+  | FGet: rE Σ
   (* | Get (mn: mname): rE (GRA * GRA) *)
 
   (*** NOTE: These methods can be implemented using Put/Get,
@@ -74,15 +74,15 @@ Section EVENTS.
        E.g., In top-level, if all modules are well-typed,
        we can make "CheckWf" to Nop by adjusting handler.
    ***)
-  | Forge (fr: GRA): rE unit
-  | Discard (fr: GRA): rE unit
+  | Forge (fr: Σ): rE unit
+  | Discard (fr: Σ): rE unit
   | CheckWf (mn: mname): rE unit
 
   | PushFrame: rE unit
   | PopFrame: rE unit
   .
 
-  Definition MPut E `{rE -< E} (mn: mname) (mr: GRA): itree E unit :=
+  Definition MPut E `{rE -< E} (mn: mname) (mr: Σ): itree E unit :=
     fr <- trigger FGet;;
     trigger (Put mn mr fr)
   .
@@ -128,12 +128,12 @@ Section MODSEM.
   (* } *)
   (* . *)
 
-  Context `{GRA: GRA.t}.
+  Context `{Σ: GRA.t}.
 
   Record t: Type := mk {
     (* initial_ld: mname -> GRA; *)
     fnsems: list (fname * (list val -> itree Es val));
-    initial_mrs: list (mname * GRA);
+    initial_mrs: list (mname * Σ);
     sem: callE ~> itree Es :=
       fun _ '(Call fn args) =>
         '(_, sem) <- (List.find (fun fnsem => dec fn (fst fnsem)) fnsems)?;;
@@ -175,8 +175,8 @@ Section MODSEM.
 
 
 
-  Definition r_state: Type := ((mname -> GRA) * list GRA).
-  Definition handle_rE `{eventE -< E}: rE ~> stateT r_state (itree E) :=
+  Definition r_state: Type := ((mname -> Σ) * list Σ).
+  Definition handle_rE `{eventE -< E} (no_forge: bool): rE ~> stateT r_state (itree E) :=
     fun _ e '(mrs, frs) =>
       match frs with
       | hd :: tl =>
@@ -186,13 +186,14 @@ Section MODSEM.
           Ret (((update mrs mn mr), fr :: tl), tt)
         | MGet mn => Ret ((mrs, frs), mrs mn)
         | FGet => Ret ((mrs, frs), hd)
-        | Forge fr => Ret ((mrs, (URA.add hd fr) :: tl), tt)
+        | Forge fr =>
+          if no_forge then triggerUB else Ret ((mrs, (URA.add hd fr) :: tl), tt)
         | Discard fr =>
           rest <- trigger (Choose _);;
           guarantee(hd = URA.add fr rest);;
           Ret ((mrs, rest :: tl), tt)
         | CheckWf mn =>
-          assume(URA.wf (URA.add (mrs mn) hd));;
+          (if no_forge then Ret tt else assume(URA.wf (URA.add (mrs mn) hd)));;
           Ret ((mrs, frs), tt)
         | PushFrame =>
           Ret ((mrs, URA.unit :: frs), tt)
@@ -201,14 +202,15 @@ Section MODSEM.
         end
       | _ => triggerNB
       end.
-  Definition interp_rE `{eventE -< E}: itree (rE +' E) ~> stateT r_state (itree E) :=
-    State.interp_state (case_ handle_rE State.pure_state).
+  Definition interp_rE `{eventE -< E} (no_forge: bool): itree (rE +' E) ~> stateT r_state (itree E) :=
+    State.interp_state (case_ (handle_rE no_forge) State.pure_state).
   Definition initial_r_state: r_state :=
     (fun mn => match List.find (fun mnr => dec mn (fst mnr)) ms.(initial_mrs) with
                | Some r => snd r
                | None => URA.unit
                end, []).
-  Let itr2: itree (eventE) val := assume(<<WF: wf ms>>);; snd <$> (interp_rE itr1) initial_r_state.
+  Let itr2: itree (eventE) val := assume(<<WF: wf ms>>);; snd <$> (interp_rE false itr1) initial_r_state.
+  Let itr2': itree (eventE) val := assume(<<WF: wf ms>>);; snd <$> (interp_rE true itr1) initial_r_state.
 
 
 
@@ -248,6 +250,17 @@ Section MODSEM.
     STS.state := state;
     STS.step := step;
     STS.initial_state := itr2;
+    STS.state_sort := state_sort;
+  |}
+  .
+  Next Obligation. inv STEP; inv STEP0; ss. csc. rewrite SYSCALL in *. csc. Qed.
+  Next Obligation. inv STEP; ss. Qed.
+  Next Obligation. inv STEP; ss. Qed.
+
+  Program Definition interp_no_forge: semantics := {|
+    STS.state := state;
+    STS.step := step;
+    STS.initial_state := itr2';
     STS.state_sort := state_sort;
   |}
   .
@@ -352,7 +365,7 @@ End ModSem.
 Module Mod.
 Section MOD.
 
-  Context `{GRA: GRA.t}.
+  Context `{Σ: GRA.t}.
 
   Record t: Type := mk {
     get_modsem: SkEnv.t -> ModSem.t;
