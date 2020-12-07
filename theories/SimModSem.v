@@ -359,17 +359,17 @@ Section SIM.
     :
       _sim_itree sim_itree i0 ((mrs_src0, fr_src0), i_src)
                  ((mrs_tgt0, fr_tgt0), trigger (Discard delta) >>= k_tgt)
-  (* | sim_itree_check_src *)
-  (*     i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0 *)
-  (*     i1 k_src i_tgt *)
-  (*     (ORD: i1 < i0) *)
-  (*     mn mr0 *)
-  (*     (MR0: Maps.lookup mn mrs_src0 = Some mr0) *)
-  (*     (K: forall (WF: (URA.wf (URA.add mr0 fr_src0))), *)
-  (*         sim_itree i1 ((mrs_src0, fr_src0), k_src tt) ((mrs_tgt0, fr_tgt0), i_tgt)) *)
-  (*   : *)
-  (*     _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (CheckWf mn) >>= k_src) *)
-  (*                ((mrs_tgt0, fr_tgt0), i_tgt) *)
+  | sim_itree_check_tgt
+      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i1 i_src k_tgt
+      (ORD: i1 < i0)
+      mn mr0
+      (MR0: Maps.lookup mn mrs_tgt0 = Some mr0)
+      (K: exists (WF: (URA.wf (URA.add mr0 fr_tgt0))),
+          sim_itree i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt0), k_tgt tt))
+    :
+      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), i_src)
+                 ((mrs_tgt0, fr_tgt0), trigger (CheckWf mn) >>= k_tgt)
   | sim_itree_choose_tgt
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       i1 X i_src k_tgt
