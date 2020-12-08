@@ -157,6 +157,21 @@ Section MODSEM.
   }
   .
 
+  Let GURA: URA.t := GRA.to_URA Σ.
+  Local Existing Instance GURA.
+  Definition hktree
+             X Y
+             (P: X -> list val -> URA.car -> Prop)
+             (Q: X -> Y -> val -> URA.car -> Prop)
+             (body: itree Es unit): X -> itree Es Y.
+
+
+
+
+
+
+
+
   (*** using "Program Definition" makes the definition uncompilable; why?? ***)
   Definition add (ms0 ms1: t): t := {|
     (* sk := Sk.add md0.(sk) md1.(sk); *)
