@@ -55,9 +55,10 @@ Section PROOF.
     fun varg =>
       sz <- trigger (Take nat);;
       assume(varg = [Vint (Z.of_nat sz)]);;
+      (* b <- trigger (Choose _);; *)
       (HoareFun "mem"
                 (top1)
-                (fun _ rret => exists b,
+                (fun vret rret => exists b, vret = Vptr b 0 /\
                      rret = GRA.padding (fold_left URA.add (mapi (fun n _ => (b, Z.of_nat n) |-> (Vint 0))
                                                                  (List.repeat tt sz)) URA.unit))
                 (Ret tt))

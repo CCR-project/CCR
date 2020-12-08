@@ -564,13 +564,13 @@ I think (1) is better; in (2), it seems like we are doing the same reasoning aga
       force_l.
       exists (GRA.padding (URA.white (delta: URA.car(t:=Mem1._memRA)))). left.
       unfold guarantee. igo.
-      force_l. esplits.
-      { ss. f_equal.
-        replace (@URA.frag Mem1._memRA (fun (_ : nat) (_ : Z) => @inr (option val) unit tt)) with
-            (URA.unit: URA.car (t:=Mem1.memRA)) by ss.
-        rewrite URA.unit_idl.
-        unfold delta. eauto.
-      }
+      force_l. esplits; ss.
+      (* { ss. f_equal. *)
+      (*   replace (@URA.frag Mem1._memRA (fun (_ : nat) (_ : Z) => @inr (option val) unit tt)) with *)
+      (*       (URA.unit: URA.car (t:=Mem1.memRA)) by ss. *)
+      (*   rewrite URA.unit_idl. *)
+      (*   unfold delta. eauto. *)
+      (* } *)
       left.
       force_l.
       { instantiate (1:= GRA.padding _). rewrite GRA.padding_add. f_equal. }
