@@ -10,10 +10,15 @@ Generalizable Variables E R A B C X Y.
 Set Implicit Arguments.
 
 
+Class TyTable: Type := mk {
+  tb: fname -> (Type * Type);
+}
+.
+
 Section EVENTS.
 
   (* Variable tb: fname -> option (Type * Type). *)
-  Variable tb: fname -> (Type * Type).
+  Context `{TyTable}.
 
   Variant eventE: Type -> Type :=
   | Choose (X: Type): eventE X
@@ -95,7 +100,7 @@ Section EVENTS.
   (*** use dummy mname? ***)
   (* Definition FPut E `{rE -< E} (mn: mname) (fr: GRA): itree E unit := *)
 
-  Definition Es: Type -> Type := (callE +' rE +' eventE).
+  (* Definition Es: Type -> Type := (callE +' rE +' eventE). *)
 
   (* Inductive mdE: Type -> Type := *)
   (* | MPut (mn: mname) (r: GRA): mdE unit *)
@@ -113,6 +118,7 @@ End EVENTS.
 
 Notation "f '?'" := (unwrapU f) (at level 60, only parsing).
 Notation "f '﹗'" := (unwrapN f) (at level 60, only parsing).
+Notation Es := (callE +' rE +' eventE).
 
 
 
@@ -133,13 +139,12 @@ Section MODSEM.
   (* . *)
 
   Context `{Σ: GRA.t}.
-
-  Variable tb: fname -> (Type * Type).
+  Context `{TyTable}.
 
   Record t: Type := mk {
     (* initial_ld: mname -> GRA; *)
     (* fnsems: list { fn: fname & (fst (tb fn)) -> itree (Es tb) (snd (tb fn)) }; *)
-    fnsems: forall (fn: fname), (fst (tb fn)) -> itree (callE tb +' (@rE Σ) +' eventE) (snd (tb fn));
+    fnsems: forall (fn: fname), (fst (tb fn)) -> itree Es (snd (tb fn));
     initial_mrs: list (mname * Σ);
     (* wf_tytable: forall fn, tytable fn = option_map (fun '(_, fx) => fx.(XY)) *)
     (*                                                (List.find (fun '(_fn, _) => dec fn _fn) fnsems) *)
@@ -164,7 +169,7 @@ Section MODSEM.
 
   Variable ms: t.
 
-  Let sem: callE tb ~> itree (callE tb +' rE +' eventE) :=
+  Let sem: callE ~> itree Es :=
     fun _ '(@Call _ fn args) =>
       (* fnsem <- (List.find (fun fnsem => dec fn (projT1 fnsem)) ms.(fnsems))?;; *)
       (* let fsem: (fst (tb (projT1 fnsem)) -> itree (Es tb) (snd (tb (projT1 fnsem)))) := projT2 fnsem in *)
@@ -172,14 +177,21 @@ Section MODSEM.
       (ms.(fnsems) fn) args
   .
 
-  Let itr0: callE tb ~> itree (callE tb +' (@rE Σ) +' eventE) :=
+  Let itr0: callE ~> itree Es :=
     fun _ ce =>
       trigger PushFrame;;
       rv <- ((sem) ce);;
       trigger PopFrame;;
       Ret rv
   .
-  Let itr1: itree (rE +' eventE) val := (mrec itr0) _ (Call "main" nil).
+
+  (* Hypothesis MAINTY: (tb "main" = (unit: Type, val: Type)). *)
+  Hypothesis MAINARG: fst (tb "main") = unit: Type.
+  Hypothesis MAINRET: snd (tb "main") = val: Type.
+  Let itr1: itree (rE +' eventE) val :=
+    rv <- (mrec itr0) _ (Call "main" (eq_rect_r (fun T => T) tt MAINARG));;
+    Ret (eq_rect (snd (tb "main")) (fun T => T) rv val MAINRET)
+  .
 
 
 
@@ -217,8 +229,8 @@ Section MODSEM.
                | Some r => snd r
                | None => URA.unit
                end, []).
-  Let itr2: itree (eventE) val := assume(<<WF: wf ms>>);; snd <$> (interp_rE false itr1) initial_r_state.
-  Let itr2': itree (eventE) val := assume(<<WF: wf ms>>);; snd <$> (interp_rE true itr1) initial_r_state.
+  Let itr2: itree (eventE) val := snd <$> (interp_rE false itr1) initial_r_state.
+  Let itr2': itree (eventE) val := snd <$> (interp_rE true itr1) initial_r_state.
 
 
 
@@ -280,90 +292,6 @@ Section MODSEM.
 
   (*** TODO: probably we can make ModSem.t as an RA too. (together with Sk.t) ***)
   (*** However, I am not sure what would be the gain; and there might be universe problem. ***)
-
-  Let add_comm_aux
-      ms0 ms1 stl0 str0
-      (SIM: stl0 = str0)
-    :
-      <<COMM: Beh.of_state (interp (add ms0 ms1)) stl0 <1= Beh.of_state (interp (add ms1 ms0)) str0>>
-  .
-  Proof.
-    revert_until ms1.
-    pcofix CIH. i. pfold.
-    clarify.
-    punfold PR. induction PR using Beh.of_state_ind; ss.
-    - econs 1; et.
-    - econs 2; et.
-      clear CIH. clear_tac. revert_until ms1.
-      pcofix CIH. i. punfold H0. pfold.
-      inv H0.
-      + econs 1; eauto. ii. ss. exploit STEP; et. i; des. right. eapply CIH; et. pclearbot. ss.
-      + econs 2; eauto. des. esplits; eauto. right. eapply CIH; et. pclearbot. ss.
-    - econs 4; et. pclearbot. right. eapply CIH; et.
-    - econs 5; et. rr in STEP. des. rr. esplits; et.
-    - econs 6; et. ii. exploit STEP; et. i; des. clarify.
-  Qed.
-
-  Lemma wf_comm
-        ms0 ms1
-    :
-      <<EQ: wf (add ms0 ms1) = wf (add ms1 ms0)>>
-  .
-  Proof.
-    r. eapply prop_ext. split; i.
-    - admit "ez".
-    - admit "ez".
-  Qed.
-
-  Theorem add_comm
-          ms0 ms1
-          (* (WF: wf (add ms0 ms1)) *)
-    :
-      <<COMM: Beh.of_program (interp (add ms0 ms1)) <1= Beh.of_program (interp (add ms1 ms0))>>
-  .
-  Proof.
-    destruct (classic (wf (add ms1 ms0))); cycle 1.
-    { ii. clear PR. eapply Beh.ub_top. pfold. econsr; ss; et. rr. ii; ss. unfold assume in *.
-      inv STEP; ss; irw in H1; (* clarify <- TODO: BUG, runs infloop. *) inv H1; simpl_depind; subst.
-      clarify.
-    }
-    rename H into WF.
-    ii. ss. r in PR. r. eapply add_comm_aux; et.
-    rp; et. clear PR. cbn. do 1 f_equal; cycle 1.
-    { unfold assume. rewrite wf_comm. ss. }
-    apply func_ext; ii.
-    f_equiv.
-    f_equal; cycle 1.
-    - unfold initial_r_state. f_equal. apply func_ext. intros fn. ss. des_ifs.
-      + admit "ez: wf".
-      + admit "ez: wf".
-      + admit "ez: wf".
-    - repeat f_equal. apply func_ext_dep. intro T. apply func_ext. intro c. destruct c.
-      repeat f_equal. apply func_ext. i. f_equal. ss. do 2 f_equal.
-      admit "ez: wf".
-  Qed.
-
-  Theorem add_assoc
-          ms0 ms1 ms2
-          (WF: wf (add ms0 (add ms1 ms2)))
-    :
-      <<COMM: Beh.of_program (interp (add ms0 (add ms1 ms2))) <1=
-              Beh.of_program (interp (add (add ms0 ms1) ms2))>>
-  .
-  Proof.
-    admit "TODO".
-  Qed.
-
-  Theorem add_assoc_rev
-          ms0 ms1 ms2
-          (WF: wf (add ms0 (add ms1 ms2)))
-    :
-      <<COMM: Beh.of_program (interp (add ms0 (add ms1 ms2))) <1=
-              Beh.of_program (interp (add (add ms0 ms1) ms2))>>
-  .
-  Proof.
-    admit "TODO".
-  Qed.
 
 End MODSEM.
 End ModSem.
