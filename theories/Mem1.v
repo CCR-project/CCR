@@ -51,43 +51,56 @@ Section PROOF.
   (* Definition mem_inv: Σ -> Prop := *)
   (*   fun mr0 => exists mem0, mr0 = GRA.padding (URA.black (M:=_memRA) (inl mem0)). *)
 
-  Definition allocF: list val -> itree Es val :=
-    fun varg =>
+
+  (*** TODO: morally, we want:
+```
       sz <- trigger (Take nat);;
       assume(varg = [Vint (Z.of_nat sz)]);;
-      (* b <- trigger (Choose _);; *)
-      (HoareFun "mem"
-                (top1)
-                (fun vret rret => exists b, vret = Vptr b 0 /\
-                     rret = GRA.padding (fold_left URA.add (mapi (fun n _ => (b, Z.of_nat n) |-> (Vint 0))
-                                                                 (List.repeat tt sz)) URA.unit))
-                (Ret tt))
+```
+  ***)
+  Definition allocF: list val -> itree Es val :=
+    HoareFun "mem"
+             (fun varg _ => exists sz, varg = [Vint (Z.of_nat sz)])
+             (fun varg _ vret rret =>
+                exists sz, varg = [Vint (Z.of_nat sz)] /\
+                exists b, vret = Vptr b 0 /\
+                rret = GRA.padding (fold_left URA.add (mapi (fun n _ => (b, Z.of_nat n) |-> (Vint 0))
+                                                            (List.repeat tt sz)) URA.unit))
+             (Ret tt)
   .
 
   Definition freeF: list val -> itree Es val :=
-    fun varg =>
-      '(b, ofs) <- trigger (Take _);;
-      assume(varg = [Vptr b ofs]);;
-      (HoareFun "mem"
-                (fun rarg => exists v, rarg = (GRA.padding ((b, ofs) |-> v)))
-                (top2)
-                (Ret tt))
+    HoareFun "mem"
+             (fun varg rarg => exists b ofs, varg = [Vptr b ofs] /\
+                                             exists v, rarg = (GRA.padding ((b, ofs) |-> v)))
+             (top4)
+             (Ret tt)
   .
 
   Definition loadF: list val -> itree Es val :=
-    fun varg =>
-      '(b, ofs) <- trigger (Take _);;
-      v <- trigger (Take _);;
-      assume(varg = [Vptr b ofs]);;
-      trigger (CheckWf "mem");;
-      (HoareFun "mem"
-                (fun rarg => rarg = (GRA.padding ((b, ofs) |-> v)))
-                (fun rval rret => rret = (GRA.padding ((b, ofs) |-> v)) /\ rval = v)
-                (Ret tt))
+    HoareFun "mem"
+             (fun varg rarg => exists b ofs, varg = [Vptr b ofs] /\
+                               exists v, rarg = (GRA.padding ((b, ofs) |-> v)))
+             (fun varg rarg vret rret =>
+                exists b ofs, varg = [Vptr b ofs] /\
+                exists v, rarg = (GRA.padding ((b, ofs) |-> v)) /\
+                rret = (GRA.padding ((b, ofs) |-> v)) /\ vret = v)
+             (Ret tt)
+  .
+
+  Definition storeF: list val -> itree Es val :=
+    HoareFun "mem"
+             (fun varg rarg => exists b ofs v_new, varg = [Vptr b ofs ; v_new] /\
+                               exists v_old, rarg = (GRA.padding ((b, ofs) |-> v_old)))
+             (fun varg rarg _ rret =>
+                exists b ofs v_new, varg = [Vptr b ofs ; v_new] /\
+                exists v_old, rarg = (GRA.padding ((b, ofs) |-> v_old)) /\
+                rret = (GRA.padding ((b, ofs) |-> v_new)))
+             (Ret tt)
   .
 
   Definition mem: ModSem.t := {|
-    ModSem.fnsems := [("alloc", allocF) ; ("free", freeF) ; ("load", loadF)];
+    ModSem.fnsems := [("alloc", allocF) ; ("free", freeF) ; ("load", loadF) ; ("store", storeF)];
     ModSem.initial_mrs := [("mem", GRA.padding (URA.black (M:=_memRA) (fun _ _ => inr tt)))];
   |}
   .

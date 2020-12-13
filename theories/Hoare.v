@@ -122,72 +122,86 @@ Section PROOF.
   (* . *)
 
   Definition HoareFun
-             (mn: mname)
-             (P: URA.car -> Prop)
-             (Q: val -> URA.car -> Prop)
-             (body: itree Es unit): itree Es val :=
-    rarg <- trigger (Take URA.car);; trigger (Forge rarg);; (*** virtual resource passing ***)
-    assume(P rarg);; (*** precondition ***)
+             (P: list val -> Σ -> Prop)
+             (Q: list val -> Σ -> val -> Σ -> Prop)
+             (body: itree Es unit): list val -> itree Es val := fun varg =>
+    rarg <- trigger (Take Σ);; trigger (Forge rarg);; (*** virtual resource passing ***)
+    assume(P varg rarg);; (*** precondition ***)
+
 
     body;; (*** "rudiment": we don't remove extcalls because of termination-sensitivity ***)
     vret <- trigger (Choose _);;
 
     '(mret, fret) <- trigger (Choose _);; trigger (Put mn mret fret);; (*** updating resources in an abstract way ***)
-    rret <- trigger (Choose URA.car);; guarantee(Q vret rret);; (*** postcondition ***)
+    rret <- trigger (Choose Σ);; guarantee(Q varg rarg vret rret);; (*** postcondition ***)
     trigger (Discard rret);; (*** virtual resource passing ***)
 
     Ret vret (*** return ***)
   .
 
   Definition HoareCall
-             (P: URA.car -> Prop)
-             (Q: val -> URA.car -> Prop):
+             (P: list val -> Σ -> Prop)
+             (Q: list val -> Σ -> val -> Σ -> Prop):
     fname -> list val -> itree Es val :=
     fun fn varg =>
       '(marg, farg) <- trigger (Choose _);; trigger (Put mn marg farg);; (*** updating resources in an abstract way ***)
-      rarg <- trigger (Choose URA.car);; trigger (Discard rarg);; (*** virtual resource passing ***)
-      guarantee(P rarg);; (*** precondition ***)
+      rarg <- trigger (Choose Σ);; trigger (Discard rarg);; (*** virtual resource passing ***)
+      guarantee(P varg rarg);; (*** precondition ***)
 
       vret <- trigger (Call fn varg);; (*** call ***)
 
-      rret <- trigger (Take URA.car);; trigger (Forge rret);; (*** virtual resource passing ***)
-      assume(Q vret rret);; (*** postcondition ***)
+      rret <- trigger (Take Σ);; trigger (Forge rret);; (*** virtual resource passing ***)
+      assume(Q varg rarg vret rret);; (*** postcondition ***)
 
       Ret vret (*** return to body ***)
   .
 
-  Section PLAYGROUND.
+  Definition HoareFunCanceled
+             (body: itree Es unit): list val -> itree Es val := fun varg =>
+    body;; (*** "rudiment": we don't remove extcalls because of termination-sensitivity ***)
+    vret <- trigger (Choose _);;
+    Ret vret (*** return ***)
+  .
 
-    (*** Q can mention the resource in the P ***)
-    Let HoareFun_sophis
-               (mn: mname)
-               (P: URA.car -> Prop)
-               (Q: URA.car -> val -> URA.car -> Prop)
-               (f: itree Es unit): itree Es val :=
-      rarg <- trigger (Take URA.car);; trigger (Forge rarg);; (*** virtual resource passing ***)
-      assume(P rarg);; (*** precondition ***)
-      mopen <- trigger (MGet mn);;
+  Definition HoareCallCanceled:
+    fname -> list val -> itree Es val :=
+    fun fn varg =>
+      vret <- trigger (Call fn varg);; (*** call ***)
+      Ret vret (*** return to body ***)
+  .
 
-      f;; (*** it is a "rudiment": we don't remove extcalls because of termination-sensitivity ***)
-      vret <- trigger (Choose _);;
+  (* Section PLAYGROUND. *)
 
-      mclose <- trigger (MGet mn);;
-      rret <- trigger (Choose URA.car);; trigger (Discard rret);; (*** virtual resource passing ***)
-      guarantee(Q rarg vret rret);; (*** postcondition ***)
+  (*   (*** Q can mention the resource in the P ***) *)
+  (*   Let HoareFun_sophis *)
+  (*              (mn: mname) *)
+  (*              (P: URA.car -> Prop) *)
+  (*              (Q: URA.car -> val -> URA.car -> Prop) *)
+  (*              (f: itree Es unit): itree Es val := *)
+  (*     rarg <- trigger (Take URA.car);; trigger (Forge rarg);; (*** virtual resource passing ***) *)
+  (*     assume(P rarg);; (*** precondition ***) *)
+  (*     mopen <- trigger (MGet mn);; *)
 
-      Ret vret (*** return ***)
-    .
+  (*     f;; (*** it is a "rudiment": we don't remove extcalls because of termination-sensitivity ***) *)
+  (*     vret <- trigger (Choose _);; *)
 
-    Let HoareFun_sophis2
-               (mn: mname)
-               (P: URA.car -> Prop)
-               (Q: URA.car -> val -> URA.car -> Prop)
-               (f: itree Es unit): itree Es val :=
-      _rarg_ <- trigger (Take _);;
-      HoareFun mn (P /1\ (eq _rarg_)) (Q _rarg_) f
-    .
+  (*     mclose <- trigger (MGet mn);; *)
+  (*     rret <- trigger (Choose URA.car);; trigger (Discard rret);; (*** virtual resource passing ***) *)
+  (*     guarantee(Q rarg vret rret);; (*** postcondition ***) *)
 
-  End PLAYGROUND.
+  (*     Ret vret (*** return ***) *)
+  (*   . *)
+
+  (*   Let HoareFun_sophis2 *)
+  (*              (mn: mname) *)
+  (*              (P: URA.car -> Prop) *)
+  (*              (Q: URA.car -> val -> URA.car -> Prop) *)
+  (*              (f: itree Es unit): itree Es val := *)
+  (*     _rarg_ <- trigger (Take _);; *)
+  (*     HoareFun mn (P /1\ (eq _rarg_)) (Q _rarg_) f *)
+  (*   . *)
+
+  (* End PLAYGROUND. *)
 
 
 

@@ -122,9 +122,27 @@ Section PROOF.
     Ret v
   .
 
+  Definition storeF_parg (args: list val): option (block * Z * val) :=
+    match args with
+    | [Vptr b ofs; v] => Some (b, ofs, v)
+    | _ => None
+    end
+  .
+
+  Definition storeF (varg: list val): itree Es val :=
+    mr0 <- trigger (MGet "mem");;
+    `m0: Mem.t <- (unpadding memRA mr0) >>= unleftU >>= unwrapU;;
+    (* `m0: Mem.t <- trigger (Take _);; *)
+    (* assume(mr0 = GRA.padding ((inl (Some m0)): URA.car (t:=memRA)));; *)
+    '(b, ofs, v) <- (storeF_parg varg)?;;
+    m1 <- (Mem.store m0 b ofs v)?;;
+    MPut "mem" (GRA.padding ((inl (Some m1)): URA.car (t:=memRA)));;
+    Ret (Vint 0)
+  .
+
   Definition mem: ModSem.t :=
     {|
-      ModSem.fnsems := [("alloc", allocF) ; ("free", freeF) ; ("load", loadF)];
+      ModSem.fnsems := [("alloc", allocF) ; ("free", freeF) ; ("load", loadF) ; ("store", storeF)];
       ModSem.initial_mrs := [("mem", GRA.padding ((inl (Some Mem.empty)): URA.car (t:=memRA)))];
     |}
   .

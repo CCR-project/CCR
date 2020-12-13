@@ -4,6 +4,7 @@ Require Import Universe.
 Require Import Skeleton.
 Require Import PCM.
 Require Import ModSem.
+Require Import Behavior.
 Require Import Relation_Definitions.
 
 (*** TODO: export these in Coqlib or Universe ***)
@@ -431,295 +432,52 @@ End SIM.
 (*** (3) would be great if induction tactic works !!!! (study itree case study more) ***)
 
 
-
+Module ModSemPair.
 Section SIMMODSEM.
 
   Context `{Σ: GRA.t}.
-  Variable (ms0 ms1: ModSem.t).
+  Variable (ms_src ms_tgt: ModSem.t).
 
   Let W: Type := (alist mname Σ) * (alist mname Σ).
   Inductive sim: Prop := mk {
     wf: W -> Prop;
     le: W -> W -> Prop;
     le_PreOrder: PreOrder le;
-    sim_fnsems: Forall2 (sim_fnsem wf) ms0.(ModSem.fnsems) ms1.(ModSem.fnsems);
-    sim_initial_mrs: wf (ms0.(ModSem.initial_mrs), ms1.(ModSem.initial_mrs));
+    (*** TODO: incorporate le properly ***)
+    sim_fnsems: Forall2 (sim_fnsem wf) ms_src.(ModSem.fnsems) ms_tgt.(ModSem.fnsems);
+    sim_initial_mrs: wf (ms_src.(ModSem.initial_mrs), ms_tgt.(ModSem.initial_mrs));
   }.
 
 End SIMMODSEM.
-
-(*** TODO: SimMod, Mod for Mem0/Mem1 ***)
-
+End ModSemPair.
 
 
 
 
-Require Import Mem0 Mem1 Hoare.
+Module ModPair.
+Section SIMMOD.
+   Context `{Σ: GRA.t}.
+   Variable (md_src md_tgt: Mod.t).
+   Inductive sim: Prop := mk {
+     sim_modsem:
+       forall skenv, <<SIM: ModSemPair.sim (md_src.(Mod.get_modsem) skenv) (md_tgt.(Mod.get_modsem) skenv)>>;
+     sim_sk: <<SIM: md_src.(Mod.sk) = md_tgt.(Mod.sk)>>;
+   }
+   .
 
-Ltac go := try first[pfold; econs; [..|M]; (Mskip ss); et; check_safe; ii; left|
-                     pfold; econsr; [..|M]; (Mskip ss); et; check_safe; ii; left].
-Ltac igo := repeat (try rewrite bind_bind; try rewrite bind_ret_l; try rewrite bind_ret_r).
-Ltac force_l := pfold; econs; [..|M]; Mskip ss; et.
-Ltac force_r := pfold; econsr; [..|M]; Mskip ss; et.
-Section SIMMODSEM.
+   Theorem adequacy_local
+           (SIM: sim)
+           (*** You will need some wf conditions for ctx ***)
+     :
+       <<CR: forall ctx, Beh.of_program (Mod.interp (Mod.add ctx md_tgt)) <1=
+                         Beh.of_program (Mod.interp (Mod.add ctx md_tgt))>>
+   .
+   Proof.
+     admit "TODO".
+   Qed.
 
-  Context `{Σ: GRA.t}.
-  Context `{@GRA.inG Mem1.memRA Σ} `{@GRA.inG (RA.excl Mem.t) Σ}.
-
-  Let W: Type := (alist mname Σ) * (alist mname Σ).
-  (* Eval compute in (@RA.car (RA.excl Mem.t)). *)
-  Eval compute in (@RA.car Mem1._memRA).
-  Inductive sim_loc: option val -> (option val + unit) -> Prop :=
-  | sim_loc_present v: sim_loc (Some v) (inl (Some v))
-  | sim_loc_absent: sim_loc None (inr tt)
-  .
-
-  Let wf: W -> Prop :=
-    fun '(mrs_src0, mrs_tgt0) =>
-      exists mem_src (mem_tgt: Mem.t),
-        (<<SRC: mrs_src0 = Maps.add "mem" (GRA.padding (URA.black mem_src)) Maps.empty>>) /\
-        (<<TGT: mrs_tgt0 = Maps.add "mem" (GRA.padding ((inl (Some mem_tgt)): URA.car (t:=RA.excl Mem.t)))
-                                    Maps.empty>>) /\
-        (<<SIM: forall b ofs, sim_loc ((mem_tgt.(Mem.cnts)) b ofs) (mem_src b ofs)>>)
-  .
-
-  Infix "⋅" := URA.add (at level 50, left associativity).
-  Notation "(⋅)" := URA.add (only parsing).
-
-  Theorem correct: sim Mem1.mem Mem0.mem.
-  Proof.
-    econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
-    { typeclasses eauto. }
-    { ss. esplits; ss; et. ii. econs 2. }
-    econs; ss.
-    { split; ss. ii; clarify. rename y into varg. eexists 100%nat. ss. des; clarify.
-      unfold alist_add, alist_remove; ss.
-      unfold Mem1.allocF, Mem0.allocF.
-      go. rename x into sz.
-      unfold assume.
-      igo.
-      go. clarify. unfold HoareFun. go. rename x into rarg_src.
-      unfold assume.
-      igo.
-      repeat go. clear_tac.
-      Opaque URA.add.
-      unfold unpadding, assume.
-      igo.
-      pfold. econsr; et. esplits; et.
-      { ii. unfold GRA.padding. des_ifs. (*** TODO: should be trivial ***) }
-      left.
-      unfold unleftU. des_ifs; cycle 1.
-      { exfalso. ss. unfold GRA.padding in Heq. des_ifs.
-        admit "dependent type... use cast? lemma?".
-        (* unfold PCM.GRA.cast_ra in *. *)
-        (* unfold eq_rect_r, eq_rect, eq_sym in *. *)
-        (* destruct (GRA.inG_prf). *)
-        (* unfold eq_rect_r in *. ss. *)
-        (* Set Printing All. *)
-        (* erewrite rew_opp_l in Heq. *)
-        (* unfold eq_rect_r in *. unfold eq_rect in *. unfold eq_sym in *. csc. *)
-      }
-      igo.
-      assert(c = (Some mem_tgt)).
-      { admit "dependent type". }
-      clarify.
-      unfold unwrapU. des_ifs. igo. des_ifs. unfold MPut. igo. repeat go.
-      rename n into blk. rename z into ofs. rename mem_tgt into mem0. rename t into mem1.
-
-
-      force_l. exists (Vptr blk 0). left.
-      force_l.
-      (* Eval compute in URA.car (t:=Mem1._memRA). *)
-      (*** mret, fret ***)
-      Check (mem_src: URA.car (t:=Mem1._memRA)).
-      assert(sz = 1) by admit "let's consider only sz 1 case at the moment"; subst.
-      set (fun _b _ofs => if (dec _b blk) && (dec _ofs 0%Z) then inl (Some (Vint 0)) else inr tt)
-        as delta.
-      eexists (GRA.padding (URA.black (URA.add (mem_src: URA.car (t:=Mem1._memRA)) delta)),
-               GRA.padding
-                 (fold_left URA.add
-                            (mapi (fun n _ => (blk, Z.of_nat n) |-> Vint 0)
-                                  (repeat () 1)) URA.unit)). left.
-      igo. force_l.
-      {
-        replace (fun k => URA.unit) with (URA.unit (t:=Σ)) by ss.
-        rewrite URA.unit_idl.
-        rewrite GRA.padding_add.
-        rewrite <- URA.unit_id.
-        apply URA.updatable_add; cycle 1.
-        { apply URA.updatable_unit. }
-        eapply GRA.padding_updatable.
-        ss. clarify.
-        clear - Heq1.
-        replace (@URA.frag Mem1._memRA (fun _ _ => @inr (option val) unit tt)) with
-            (URA.unit (t:=Mem1.memRA)) by ss.
-        rewrite URA.unit_idl.
-        fold delta.
-        eapply URA.auth_alloc2.
-        admit "wf -- Need to know mem_src is wf. (1) Add checkwf, or (2) add wf in W.wf.
-I think (1) is better; in (2), it seems like we are doing the same reasoning again
-   ".
-      }
-      left. ss. fold delta. clarify.
-      force_l.
-      exists (GRA.padding (URA.white (delta: URA.car(t:=Mem1._memRA)))). left.
-      unfold guarantee. igo.
-      force_l. esplits; ss.
-      (* { ss. f_equal. *)
-      (*   replace (@URA.frag Mem1._memRA (fun (_ : nat) (_ : Z) => @inr (option val) unit tt)) with *)
-      (*       (URA.unit: URA.car (t:=Mem1.memRA)) by ss. *)
-      (*   rewrite URA.unit_idl. *)
-      (*   unfold delta. eauto. *)
-      (* } *)
-      left.
-      force_l.
-      { instantiate (1:= GRA.padding _). rewrite GRA.padding_add. f_equal. }
-      left.
-      force_r.
-      (* { eapply URA.updatable_add. *)
-      (*   - eapply GRA.padding_updatable. clear - H. *)
-      (*     (** TODO: this should be a lemma **) *)
-      (*     hexploit RA.excl_updatable; et. intro A. des. *)
-      (*     (*** TODO: RA.updatable --> URA.updatable ***) *)
-      (*     admit "ez". *)
-      (*   - refl. *)
-      (* } *)
-      (* left. *)
-      (* pfold. econs; et. *)
-      rr. esplits; ss; et. ii.
-      hexploit (SIM b ofs); et. intro A. inv A.
-      {
-        assert(T: Mem.cnts mem1 b ofs = Some v).
-        { admit "ez: memory model". }
-        rewrite T.
-        Local Transparent URA.add.
-        ss. des_ifs.
-        Local Opaque URA.add.
-        + unfold delta in *. des_ifs. bsimpl. des. des_sumbool. clarify.
-          admit "ez: memory model".
-        + econs.
-      }
-      destruct (classic (b = blk /\ ofs = 0%Z)).
-      { des. clarify.
-        assert(T: Mem.cnts mem1 blk 0 = Some (Vint 0)).
-        { admit "ez: memory model". }
-        rewrite T.
-        Local Transparent URA.add.
-        ss. des_ifs.
-        Local Opaque URA.add.
-        unfold delta. ss. des_ifs; bsimpl; des; des_sumbool; ss; econs.
-      }
-      Psimpl. des; clarify.
-      {
-        assert(T: Mem.cnts mem1 b 0 = None).
-        { admit "ez: memory model". }
-        rewrite T.
-        Local Transparent URA.add.
-        ss. des_ifs.
-        Local Opaque URA.add.
-        unfold delta. ss. des_ifs; bsimpl; des; des_sumbool; ss; econs.
-      }
-      {
-        assert(T: Mem.cnts mem1 b ofs = None).
-        { admit "ez: memory model". }
-        rewrite T.
-        Local Transparent URA.add.
-        ss. des_ifs.
-        Local Opaque URA.add.
-        unfold delta. ss. des_ifs; bsimpl; des; des_sumbool; ss; econs.
-      }
-    }
-    econs; ss.
-    { admit "free". }
-    econs; ss.
-    { admit "load". }
-  Unshelve.
-    all: ss.
-    all: try (by repeat econs; et).
-  Unshelve.
-    all: try (by repeat econs; et).
-  Qed.
-
-End SIMMODSEM.
-
-
-
-
-
-Section CANCEL.
-
-  Context `{Σ: GRA.t}.
-  Variable mn_caller mn_callee: mname.
-  Variable P: Σ -> Prop.
-  (*** TODO: Maybe P should be able to depend on list val ***)
-  (*** TODO: name it... htree (hoare tree), hktree (hoare ktree)? ***)
-  Variable Q: val -> Σ -> Prop.
-  Variable fn: fname.
-
-  Let W: Type := (alist mname Σ) * (alist mname Σ).
-  Let wf: W -> Prop :=
-    fun '(mrs_src0, mrs_tgt0) =>
-      exists _mr_caller_src _mr_caller_tgt _mr_callee_src _mr_callee_tgt,
-        (<<SRC: mrs_src0 = Maps.add mn_callee _mr_callee_src
-                                    (Maps.add mn_caller _mr_caller_src Maps.empty)
-                                    >>) /\
-        (<<TGT: mrs_tgt0 = Maps.add mn_callee _mr_callee_tgt
-                                    (Maps.add mn_caller _mr_caller_tgt Maps.empty)
-                                    >>)
-  .
-  Hypothesis DIF: mn_caller <> mn_callee.
-
-  Goal sim_fsem wf (fun _ => Ret (Vint 0)) (fun _ => (HoareCall mn_caller P Q fn [])).
-  Proof.
-    ii. clarify. exists 100.
-    ss. des. clarify.
-    force_r. ii. des_ifs. left. rename c into marg_caller. rename c0 into farg_caller.
-    force_r.
-    { unfold rel_dec. ss. instantiate (1:=_mr_caller_tgt).
-      des_ifs; bsimpl; des; des_sumbool; ss; clarify.
-      - unfold rel_dec. ss. des_ifs; bsimpl; des; des_sumbool; ss; clarify.
-    }
-    ii. left.
-    go. rename x into rarg.
-    repeat go.
-    unfold guarantee. igo.
-    go.
-
-
-
-
-
-    assert(trigger (Call fn []) = HoareFun mn_callee P Q (Ret tt)).
-    { admit "call inline". }
-    rewrite H. unfold HoareFun. igo.
-    replace fr_tgt1 with (URA.unit (t:=Σ)) by admit "push frame".
-    force_r.
-    exists rarg. left.
-    igo.
-    force_r. left.
-    unfold assume. igo.
-    force_r. esplits; et. left.
-    force_r. intro vret. left.
-    igo.
-    force_r. intro tmp. destruct tmp as [mret_callee fret_callee]. left.
-    igo. force_r.
-    { unfold rel_dec. ss. instantiate (1:=_mr_callee_tgt).
-      repeat (unfold rel_dec in *; ss; des_ifs; bsimpl; des; des_sumbool; ss; clarify).
-    }
-    i. rewrite URA.unit_idl in UPD0.
-    left. force_r. intro rret. left.
-    igo. unfold guarantee. igo. force_r. i. left.
-    force_r. intro fret_garbage; i.
-    left.
-
-
-    replace fret_garbage with fr_tgt1 by admit "pop frame".
-    force_r. exists rret. left. force_r. left. igo. force_r.
-    esplits; et. left.
-  Abort.
-
-End CANCEL.
-
+End SIMMOD.
+End ModPair.
 
 (* TODO: prove sim *)
 (* TODO: write client *)

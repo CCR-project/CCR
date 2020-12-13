@@ -12,6 +12,8 @@ Set Implicit Arguments.
 
 Section EVENTS.
 
+  Context `{Σ: GRA.t}.
+
   Variant eventE: Type -> Type :=
   | Choose (X: Type): eventE X
   | Take X: eventE X
@@ -23,7 +25,7 @@ Section EVENTS.
   .
 
   Inductive callE: Type -> Type :=
-  | Call (fn: fname) (args: list val): callE val
+  | Call (fn: fname) (varg: list val) (rarg: Σ): callE val
   .
 
   (* Notation "'Choose' X" := (trigger (Choose X)) (at level 50, only parsing). *)
@@ -57,8 +59,6 @@ Section EVENTS.
   (* Notation "'Ret!' f" := (RetG f) (at level 57, only parsing). *)
   (* Notation "'Ret?' f" := (RetA f) (at level 57, only parsing). *)
 
-  Context `{Σ: GRA.t}.
-
   Inductive rE: Type -> Type :=
   (* | MPut (mn: mname) (r: GRA): rE unit *)
   (* | MGet (mn: mname): rE GRA *)
@@ -74,11 +74,9 @@ Section EVENTS.
        E.g., In top-level, if all modules are well-typed,
        we can make "CheckWf" to Nop by adjusting handler.
    ***)
-  | Forge (fr: Σ): rE unit
   | Discard (fr: Σ): rE unit
-  | CheckWf (mn: mname): rE unit
 
-  | PushFrame: rE unit
+  | PushFrame (fr: Σ): rE unit
   | PopFrame: rE unit
   .
 
@@ -139,10 +137,6 @@ Section MODSEM.
     (* initial_ld: mname -> GRA; *)
     fnsems: list (fname * (list val -> itree Es val));
     initial_mrs: list (mname * Σ);
-    sem: callE ~> itree Es :=
-      fun _ '(Call fn args) =>
-        '(_, sem) <- (List.find (fun fnsem => dec fn (fst fnsem)) fnsems)?;;
-        sem args
   }
   .
 
@@ -152,36 +146,27 @@ Section MODSEM.
   }
   .
 
-  (*** using "Program Definition" makes the definition uncompilable; why?? ***)
-  Definition add (ms0 ms1: t): t := {|
-    (* sk := Sk.add md0.(sk) md1.(sk); *)
-    (* initial_ld := URA.add (t:=URA.pointwise _ _) md0.(initial_ld) md1.(initial_ld); *)
-    (* sem := fun _ '(Call fn args) => *)
-    (*          (if List.in_dec string_dec fn md0.(sk) then md0.(sem) else md1.(sem)) _ (Call fn args); *)
-    fnsems := app ms0.(fnsems) ms1.(fnsems);
-    initial_mrs := app ms0.(initial_mrs) ms1.(initial_mrs);
-  |}
-  .
-
-
-
   Section INTERP.
 
   Variable ms: t.
 
   Let itr0: callE ~> itree Es :=
-    fun _ ce =>
-      trigger PushFrame;;
-      rv <- (ms.(sem) ce);;
+    fun _ '(Call fn varg rarg) =>
+      '(_, sem) <- (List.find (fun fnsem => dec fn (fst fnsem)) ms.(fnsems))?;;
+      trigger (Discard rarg);;
+      trigger (PushFrame rarg);;
+      rv <- (sem varg);;
+      rest <- trigger (Choose _);;
+      trigger (Discard rest);;
       trigger PopFrame;;
       Ret rv
   .
-  Let itr1: itree (rE +' eventE) val := (mrec itr0) _ (Call "main" nil).
+  Let itr1: itree (rE +' eventE) val := (mrec itr0) _ (Call "main" nil ε).
 
 
 
   Definition r_state: Type := ((mname -> Σ) * list Σ).
-  Definition handle_rE `{eventE -< E} (no_forge: bool): rE ~> stateT r_state (itree E) :=
+  Definition handle_rE `{eventE -< E}: rE ~> stateT r_state (itree E) :=
     fun _ e '(mrs, frs) =>
       match frs with
       | hd :: tl =>
@@ -191,24 +176,22 @@ Section MODSEM.
           Ret (((update mrs mn mr), fr :: tl), tt)
         | MGet mn => Ret ((mrs, frs), mrs mn)
         | FGet => Ret ((mrs, frs), hd)
-        | Forge fr =>
-          if no_forge then triggerUB else Ret ((mrs, (URA.add hd fr) :: tl), tt)
         | Discard fr =>
           rest <- trigger (Choose _);;
           guarantee(hd = URA.add fr rest);;
           Ret ((mrs, rest :: tl), tt)
-        | CheckWf mn =>
-          (if no_forge then Ret tt else assume(URA.wf (URA.add (mrs mn) hd)));;
-          Ret ((mrs, frs), tt)
-        | PushFrame =>
-          Ret ((mrs, ε :: frs), tt)
+        | PushFrame fr =>
+          Ret ((mrs, fr :: frs), tt)
         | PopFrame =>
-          Ret ((mrs, tl), tt)
+          match tl with
+          | nil => Ret ((mrs, nil), tt)
+          | hd_caller :: tl => Ret ((mrs, (URA.add hd hd_caller) :: tl), tt)
+          end
         end
       | _ => triggerNB
       end.
   Definition interp_rE `{eventE -< E} (no_forge: bool): itree (rE +' E) ~> stateT r_state (itree E) :=
-    State.interp_state (case_ (handle_rE no_forge) State.pure_state).
+    State.interp_state (case_ (handle_rE) State.pure_state).
   Definition initial_r_state: r_state :=
     (fun mn => match List.find (fun mnr => dec mn (fst mnr)) ms.(initial_mrs) with
                | Some r => snd r
@@ -275,93 +258,6 @@ Section MODSEM.
 
   End INTERP.
 
-  (*** TODO: probably we can make ModSem.t as an RA too. (together with Sk.t) ***)
-  (*** However, I am not sure what would be the gain; and there might be universe problem. ***)
-
-  Let add_comm_aux
-      ms0 ms1 stl0 str0
-      (SIM: stl0 = str0)
-    :
-      <<COMM: Beh.of_state (interp (add ms0 ms1)) stl0 <1= Beh.of_state (interp (add ms1 ms0)) str0>>
-  .
-  Proof.
-    revert_until ms1.
-    pcofix CIH. i. pfold.
-    clarify.
-    punfold PR. induction PR using Beh.of_state_ind; ss.
-    - econs 1; et.
-    - econs 2; et.
-      clear CIH. clear_tac. revert_until ms1.
-      pcofix CIH. i. punfold H0. pfold.
-      inv H0.
-      + econs 1; eauto. ii. ss. exploit STEP; et. i; des. right. eapply CIH; et. pclearbot. ss.
-      + econs 2; eauto. des. esplits; eauto. right. eapply CIH; et. pclearbot. ss.
-    - econs 4; et. pclearbot. right. eapply CIH; et.
-    - econs 5; et. rr in STEP. des. rr. esplits; et.
-    - econs 6; et. ii. exploit STEP; et. i; des. clarify.
-  Qed.
-
-  Lemma wf_comm
-        ms0 ms1
-    :
-      <<EQ: wf (add ms0 ms1) = wf (add ms1 ms0)>>
-  .
-  Proof.
-    r. eapply prop_ext. split; i.
-    - admit "ez".
-    - admit "ez".
-  Qed.
-
-  Theorem add_comm
-          ms0 ms1
-          (* (WF: wf (add ms0 ms1)) *)
-    :
-      <<COMM: Beh.of_program (interp (add ms0 ms1)) <1= Beh.of_program (interp (add ms1 ms0))>>
-  .
-  Proof.
-    destruct (classic (wf (add ms1 ms0))); cycle 1.
-    { ii. clear PR. eapply Beh.ub_top. pfold. econsr; ss; et. rr. ii; ss. unfold assume in *.
-      inv STEP; ss; irw in H1; (* clarify <- TODO: BUG, runs infloop. *) inv H1; simpl_depind; subst.
-      clarify.
-    }
-    rename H into WF.
-    ii. ss. r in PR. r. eapply add_comm_aux; et.
-    rp; et. clear PR. cbn. do 1 f_equal; cycle 1.
-    { unfold assume. rewrite wf_comm. ss. }
-    apply func_ext; ii.
-    f_equiv.
-    f_equal; cycle 1.
-    - unfold initial_r_state. f_equal. apply func_ext. intros fn. ss. des_ifs.
-      + admit "ez: wf".
-      + admit "ez: wf".
-      + admit "ez: wf".
-    - repeat f_equal. apply func_ext_dep. intro T. apply func_ext. intro c. destruct c.
-      repeat f_equal. apply func_ext. i. f_equal. ss. do 2 f_equal.
-      admit "ez: wf".
-  Qed.
-
-  Theorem add_assoc
-          ms0 ms1 ms2
-          (WF: wf (add ms0 (add ms1 ms2)))
-    :
-      <<COMM: Beh.of_program (interp (add ms0 (add ms1 ms2))) <1=
-              Beh.of_program (interp (add (add ms0 ms1) ms2))>>
-  .
-  Proof.
-    admit "TODO".
-  Qed.
-
-  Theorem add_assoc_rev
-          ms0 ms1 ms2
-          (WF: wf (add ms0 (add ms1 ms2)))
-    :
-      <<COMM: Beh.of_program (interp (add ms0 (add ms1 ms2))) <1=
-              Beh.of_program (interp (add (add ms0 ms1) ms2))>>
-  .
-  Proof.
-    admit "TODO".
-  Qed.
-
 End MODSEM.
 End ModSem.
 
@@ -386,115 +282,6 @@ Section MOD.
   Definition wf (md: t): Prop := <<WF: Sk.wf md.(sk)>>.
   (*** wf about modsem is enforced in the semantics ***)
 
-  Definition add (md0 md1: t): t := {|
-    get_modsem := fun skenv_link =>
-                    ModSem.add (md0.(get_modsem) skenv_link) (md1.(get_modsem) skenv_link);
-    sk := Sk.add md0.(sk) md1.(sk);
-  |}
-  .
-
-  Theorem add_comm
-          md0 md1
-    :
-      <<COMM: Beh.of_program (interp (add md0 md1)) <1= Beh.of_program (interp (add md1 md0))>>
-  .
-  Proof.
-    ii.
-    unfold interp in *. ss.
-    eapply ModSem.add_comm; et.
-    rp; et. do 4 f_equal.
-    - admit "TODO: maybe the easy way is to 'canonicalize' the list by sorting.".
-    - admit "TODO: maybe the easy way is to 'canonicalize' the list by sorting.".
-  Qed.
-
-  Theorem add_assoc
-          md0 md1 md2
-    :
-      <<COMM: Beh.of_program (interp (add md0 (add md1 md2))) =
-              Beh.of_program (interp (add (add md0 md1) md2))>>
-  .
-  Proof.
-    admit "ez".
-  Qed.
-
 End MOD.
 End Mod.
 
-
-Module Equisatisfiability.
-  Inductive pred: Type :=
-  | true
-  | false
-  | meta (P: Prop)
-
-  | disj: pred -> pred -> pred
-  | conj: pred -> pred -> pred
-  | neg: pred -> pred
-  | impl: pred -> pred -> pred
-
-  | univ (X: Type): (X -> pred) -> pred
-  | exst (X: Type): (X -> pred) -> pred
-  .
-
-  (*** https://en.wikipedia.org/wiki/Negation_normal_form ***)
-  Fixpoint embed (p: pred): itree eventE unit :=
-    match p with
-    | true => triggerUB
-    | false => triggerNB
-    | meta P => guarantee P
-
-    | disj p0 p1 => b <- trigger (Choose _);; if (b: bool) then embed p0 else embed p1
-    | conj p0 p1 => b <- trigger (Take _);; if (b: bool) then embed p0 else embed p1
-    | neg p =>
-      match p with
-      | meta P => assume P
-      | _ => triggerNB (*** we are assuming negation normal form ***)
-      end
-    | impl _ _ => triggerNB (*** we are assuming negation normal form ***)
-
-    | @univ X k => x <- trigger (Take X);; embed (k x)
-    | @exst X k => x <- trigger (Choose X);; embed (k x)
-    end
-  .
-
-  (*** TODO: implication --> function call? ***)
-  (***
-P -> Q
-~=
-pname :=
-  embed P
-
-pqname :=
-  (call pname) (finite times);;
-  embed Q
-
-
-
-
-(P -> Q) -> R
-~=
-pname :=
-  embed P
-
-pqname :=
-  (call pname) (finite times);;
-  embed Q
-
-pqrname :=
-  (call pqname) (finite times);;
-  embed R
-   ***)
-
-  (* Fixpoint embed (p: pred) (is_pos: bool): itree eventE unit := *)
-  (*   match p with *)
-  (*   | true => triggerUB *)
-  (*   | false => triggerNB *)
-  (*   | meta P => guarantee P *)
-  (*   | disj p0 p1 => b <- trigger (Choose _);; if (b: bool) then embed p0 is_pos else embed p1 is_pos *)
-  (*   | conj p0 p1 => b <- trigger (Take _);; if (b: bool) then embed p0 is_pos else embed p1 is_pos *)
-  (*   | @univ X k => x <- trigger (Take X);; embed (k x) is_pos *)
-  (*   | @exst X k => x <- trigger (Choose X);; embed (k x) is_pos *)
-  (*   | _ => triggerNB *)
-  (*   end *)
-  (* . *)
-End Equisatisfiability.
