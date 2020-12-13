@@ -62,8 +62,8 @@ Definition vmul (x y: val): option val :=
   end
 .
 
-Notation fname := string (only parsing).
-Notation mname := string (only parsing).
+Notation fname := string (only parsing). (*** convention: not capitalized ***)
+Notation mname := string (only parsing). (*** convention: capitalized ***)
 
 
 

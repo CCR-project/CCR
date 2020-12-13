@@ -19,23 +19,23 @@ Require Import Mem1.
 
 
 Section PROOF.
+
   Context `{@GRA.inG memRA Σ}.
 
+  (***
+        void* x = malloc(1);
+        *x = 42;
+        unknown_call(x);
+        y = *x;
+        return y;
+   ***)
   Definition mainF: list val -> itree Es val :=
     fun _ =>
-      (* sz <- trigger (Choose _);; *)
-      let sz: nat := 1%nat in
-      varg <- trigger (Choose _);;
-      guarantee(varg = [Vint (Z.of_nat sz)]);;
-      (HoareCall "main" top1
-                 (fun vret rret => exists b, vret = Vptr b 0 /\
-                      rret = GRA.padding
-                               (fold_left URA.add (mapi (fun n _ => (b, Z.of_nat n) |-> (Vint 0))
-                                                        (List.repeat tt sz)) URA.unit))
-                 "alloc" varg);;
-      triggerUB
-      (* trigger (Call "alloc" [Vint (Z.of_nat 1)]);; *)
-      (* trigger (Call "load"  *)
+      x <- trigger (Call "alloc" [Vint 1]);;
+      trigger (Call "store" [x ; Vint 42]);;
+      trigger (Call "unknown_call" [x]);;
+      y <- trigger (Call "load" [x]);;
+      Ret y
   .
 
 End PROOF.

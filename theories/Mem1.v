@@ -59,7 +59,7 @@ Section PROOF.
 ```
   ***)
   Definition allocF: list val -> itree Es val :=
-    HoareFun "mem"
+    HoareFun "Mem"
              (fun varg _ => exists sz, varg = [Vint (Z.of_nat sz)])
              (fun varg _ vret rret =>
                 exists sz, varg = [Vint (Z.of_nat sz)] /\
@@ -70,7 +70,7 @@ Section PROOF.
   .
 
   Definition freeF: list val -> itree Es val :=
-    HoareFun "mem"
+    HoareFun "Mem"
              (fun varg rarg => exists b ofs, varg = [Vptr b ofs] /\
                                              exists v, rarg = (GRA.padding ((b, ofs) |-> v)))
              (top4)
@@ -78,7 +78,7 @@ Section PROOF.
   .
 
   Definition loadF: list val -> itree Es val :=
-    HoareFun "mem"
+    HoareFun "Mem"
              (fun varg rarg => exists b ofs, varg = [Vptr b ofs] /\
                                exists v, rarg = (GRA.padding ((b, ofs) |-> v)))
              (fun varg rarg vret rret =>
@@ -89,7 +89,7 @@ Section PROOF.
   .
 
   Definition storeF: list val -> itree Es val :=
-    HoareFun "mem"
+    HoareFun "Mem"
              (fun varg rarg => exists b ofs v_new, varg = [Vptr b ofs ; v_new] /\
                                exists v_old, rarg = (GRA.padding ((b, ofs) |-> v_old)))
              (fun varg rarg _ rret =>
@@ -101,7 +101,7 @@ Section PROOF.
 
   Definition mem: ModSem.t := {|
     ModSem.fnsems := [("alloc", allocF) ; ("free", freeF) ; ("load", loadF) ; ("store", storeF)];
-    ModSem.initial_mrs := [("mem", GRA.padding (URA.black (M:=_memRA) (fun _ _ => inr tt)))];
+    ModSem.initial_mrs := [("Mem", GRA.padding (URA.black (M:=_memRA) (fun _ _ => inr tt)))];
   |}
   .
 End PROOF.
