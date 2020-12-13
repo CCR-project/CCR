@@ -106,6 +106,8 @@ Module Sk.
 
   Definition t: Type := list fname.
 
+  Definition unit: t := nil.
+
   Definition add: t -> t -> t := @List.app _.
 
   Definition wf: t -> Prop := @List.NoDup _.
