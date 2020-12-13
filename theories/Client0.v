@@ -14,13 +14,10 @@ Set Implicit Arguments.
 
 
 
-Require Import Mem1.
-
-
-
 Section PROOF.
 
-  Context `{@GRA.inG memRA Σ}.
+  Context `{Σ: GRA.t}.
+  (* Context `{@GRA.inG memRA Σ}. *)
 
   (***
         void* x = malloc(1);

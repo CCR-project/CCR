@@ -300,13 +300,12 @@ Section CANCEL.
     fun _ '(hCall mn P Q fn varg) => (HoareCall mn P Q fn varg)
   .
 
-  Definition interp_hCallE_tgt: itree (hCallE +' callE +' eventE) ~> itree Es :=
+  Definition interp_hCallE_tgt: itree (hCallE +' eventE) ~> itree Es :=
     interp (case_ (bif:=sum1) handle_hCallE_tgt
-                  (case_ (bif:=sum1) ((fun T X => trigger X): callE ~> itree Es)
-                         ((fun T X => trigger X): eventE ~> itree Es)))
+                  ((fun T X => trigger X): eventE ~> itree Es))
   .
 
-  Let body_to_tgt (body: itree (hCallE +' callE +' eventE) unit): itree Es unit :=
+  Let body_to_tgt (body: itree (hCallE +' eventE) unit): itree Es unit :=
     interp_hCallE_tgt body
   .
 
@@ -316,13 +315,12 @@ Section CANCEL.
     fun _ '(hCall _ _ _ fn varg) => (HoareCallCanceled fn varg)
   .
 
-  Definition interp_hCallE_src: itree (hCallE +' callE +' eventE) ~> itree Es :=
+  Definition interp_hCallE_src: itree (hCallE +' eventE) ~> itree Es :=
     interp (case_ (bif:=sum1) handle_hCallE_tgt
-                  (case_ (bif:=sum1) ((fun T X => trigger X): callE ~> itree Es)
-                         ((fun T X => trigger X): eventE ~> itree Es)))
+                  ((fun T X => trigger X): eventE ~> itree Es))
   .
 
-  Let body_to_src (body: itree (hCallE +' callE +' eventE) unit): itree Es unit :=
+  Let body_to_src (body: itree (hCallE +' eventE) unit): itree Es unit :=
     interp_hCallE_src body
   .
 
@@ -331,17 +329,19 @@ Section CANCEL.
     mn: mname;
     precond: list val -> Σ -> Prop;
     postcond: list val -> Σ -> val -> Σ -> Prop;
-    body: itree (hCallE +' callE +' eventE) unit;
+    body: itree (hCallE +' eventE) unit;
     fun_to_tgt: (list val -> itree Es val) := HoareFun mn precond postcond (body_to_tgt body);
     fun_to_src: (list val -> itree Es val) := HoareFunCanceled (body_to_src body);
   }
   .
 (*** NOTE:
-body can execute callE and eventE events.
-Notably, this implies (1) body can actually call a function not through HoareCall, but directly, and
-(2) it can also execute UB.
+body can execute eventE events.
+Notably, this implies it can also execute UB.
 With this flexibility, the client code can naturally be included in our "type-checking" framework.
 Also, note that body cannot execute "rE" on its own. This is intended.
+
+NOTE: we can allow normal "callE" in the body too, but we need to ensure that it does not call "HoareFun".
+If this feature is needed; we can extend it then. At the moment, I will only allow hCallE.
 ***)
 
   (* Variable stb: fname -> option funspec. *)
@@ -378,7 +378,12 @@ Also, note that body cannot execute "rE" on its own. This is intended.
 
   Theorem adequacy_type: Beh.of_program (Mod.interp md_tgt) <1= Beh.of_program (Mod.interp md_src).
   Proof.
-    admit "TODO".
+    admit "In the proof, we will need to show
+(1) Choose/Take cancel
+(2) assume/guarantee cancel
+(3) src is resource unaware
+(4) tgt is always wf (so CheckWf always succeeds)
+".
   Qed.
 
 End CANCEL.
