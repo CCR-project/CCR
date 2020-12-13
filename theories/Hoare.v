@@ -291,13 +291,39 @@ Section CANCEL.
   Context `{Σ: GRA.t}.
 
   Variant hCallE: Type -> Type :=
-  | hCall (mn: mname) (P: list val -> Σ -> Prop) (Q: list val -> Σ -> val -> Σ -> Prop)
-          (fn: fname) (varg: list val): hCallE val
+  | hCall
+      (* (mn: mname) *)
+      (* (P: list val -> Σ -> Prop) (Q: list val -> Σ -> val -> Σ -> Prop) *)
+      (fn: fname) (varg: list val): hCallE val
   .
 
-  (* Definition handle_hCallE E `{callE -< E} `{rE -< E} `{eventE -< E}: hCallE ~> itree E := *)
+  (*** spec table ***)
+  Record funspec: Type := mk {
+    mn: mname;
+    precond: list val -> Σ -> Prop;
+    postcond: list val -> Σ -> val -> Σ -> Prop;
+    body: itree (hCallE +' eventE) unit;
+  }
+  .
+
+  (* Variable stb: fname -> option funspec. *)
+  (*** TODO: I wanted to use above definiton, but doing so makes defining ms_src hard ***)
+  (*** We can fix this by making ModSem.fnsems to a function, but doing so will change the type of
+       ModSem.add to predicate (t -> t -> t -> Prop), not function.
+       - Maybe not. I thought one needed to check uniqueness of fname at the "add",
+         but that might not be the case.
+         We may define fnsems: string -> option (list val -> itree Es val).
+         When adding two ms, it is pointwise addition, and addition of (option A) will yield None when both are Some.
+ ***)
+  (*** TODO: try above idea; if it fails, document it; and refactor below with alist ***)
+  Variable stb: list (fname * funspec).
+
   Definition handle_hCallE_tgt: hCallE ~> itree Es :=
-    fun _ '(hCall mn P Q fn varg) => (HoareCall mn P Q fn varg)
+    fun _ '(hCall fn varg) =>
+      match List.find (fun '(_fn, _) => dec fn _fn) stb with
+      | Some (_, f) => (HoareCall f.(mn) f.(precond) f.(postcond) fn varg)
+      | None => triggerNB
+      end
   .
 
   Definition interp_hCallE_tgt: itree (hCallE +' eventE) ~> itree Es :=
@@ -312,7 +338,7 @@ Section CANCEL.
 
 
   Definition handle_hCallE_src: hCallE ~> itree Es :=
-    fun _ '(hCall _ _ _ fn varg) => (HoareCallCanceled fn varg)
+    fun _ '(hCall fn varg) => (HoareCallCanceled fn varg)
   .
 
   Definition interp_hCallE_src: itree (hCallE +' eventE) ~> itree Es :=
@@ -323,17 +349,11 @@ Section CANCEL.
   Let body_to_src (body: itree (hCallE +' eventE) unit): itree Es unit :=
     interp_hCallE_src body
   .
+  Let fun_to_tgt (f: funspec): (list val -> itree Es val) :=
+    HoareFun f.(mn) f.(precond) f.(postcond) (body_to_tgt f.(body)).
+  Let fun_to_src (f: funspec): (list val -> itree Es val) :=
+    HoareFunCanceled (body_to_src f.(body)).
 
-  (*** spec table ***)
-  Record funspec: Type := mk {
-    mn: mname;
-    precond: list val -> Σ -> Prop;
-    postcond: list val -> Σ -> val -> Σ -> Prop;
-    body: itree (hCallE +' eventE) unit;
-    fun_to_tgt: (list val -> itree Es val) := HoareFun mn precond postcond (body_to_tgt body);
-    fun_to_src: (list val -> itree Es val) := HoareFunCanceled (body_to_src body);
-  }
-  .
 (*** NOTE:
 body can execute eventE events.
 Notably, this implies it can also execute UB.
@@ -343,18 +363,6 @@ Also, note that body cannot execute "rE" on its own. This is intended.
 NOTE: we can allow normal "callE" in the body too, but we need to ensure that it does not call "HoareFun".
 If this feature is needed; we can extend it then. At the moment, I will only allow hCallE.
 ***)
-
-  (* Variable stb: fname -> option funspec. *)
-  (*** TODO: I wanted to use above definiton, but doing so makes defining ms_src hard ***)
-  (*** We can fix this by making ModSem.fnsems to a function, but doing so will change the type of
-       ModSem.add to predicate (t -> t -> t -> Prop), not function.
-       - Maybe not. I thought one needed to check uniqueness of fname at the "add",
-         but that might not be the case.
-         We may define fnsems: string -> option (list val -> itree Es val).
-         When adding two ms, it is pointwise addition, and addition of (option A) will yield None when both are Some.
- ***)
-  (*** TODO: try above idea; if it fails, document it; and refactor below with alist ***)
-  Variable stb: list (fname * funspec).
 
   Variable md_tgt: Mod.t.
   Let ms_tgt: ModSem.t := (Mod.get_modsem md_tgt (Sk.load_skenv md_tgt.(Mod.sk))).
