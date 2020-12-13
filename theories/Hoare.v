@@ -268,3 +268,117 @@ Section PROOF.
 
 End PROOF.
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Definition map_fst A0 A1 B (f: A0 -> A1): (A0 * B) -> (A1 * B) := fun '(a, b) => (f a, b).
+Definition map_snd A B0 B1 (f: B0 -> B1): (A * B0) -> (A * B1) := fun '(a, b) => (a, f b).
+(*** TODO: Move to Coqlib. TODO: Somehow use case_ ??? ***)
+
+Section CANCEL.
+
+  Context `{Σ: GRA.t}.
+
+  Variant hCallE: Type -> Type :=
+  | hCall (mn: mname) (P: list val -> Σ -> Prop) (Q: list val -> Σ -> val -> Σ -> Prop)
+          (fn: fname) (varg: list val): hCallE val
+  .
+
+  (* Definition handle_hCallE E `{callE -< E} `{rE -< E} `{eventE -< E}: hCallE ~> itree E := *)
+  Definition handle_hCallE_tgt: hCallE ~> itree Es :=
+    fun _ '(hCall mn P Q fn varg) => (HoareCall mn P Q fn varg)
+  .
+
+  Definition interp_hCallE_tgt: itree (hCallE +' callE +' eventE) ~> itree Es :=
+    interp (case_ (bif:=sum1) handle_hCallE_tgt
+                  (case_ (bif:=sum1) ((fun T X => trigger X): callE ~> itree Es)
+                         ((fun T X => trigger X): eventE ~> itree Es)))
+  .
+
+  Let body_to_tgt (body: itree (hCallE +' callE +' eventE) unit): itree Es unit :=
+    interp_hCallE_tgt body
+  .
+
+
+
+  Definition handle_hCallE_src: hCallE ~> itree Es :=
+    fun _ '(hCall _ _ _ fn varg) => (HoareCallCanceled fn varg)
+  .
+
+  Definition interp_hCallE_src: itree (hCallE +' callE +' eventE) ~> itree Es :=
+    interp (case_ (bif:=sum1) handle_hCallE_tgt
+                  (case_ (bif:=sum1) ((fun T X => trigger X): callE ~> itree Es)
+                         ((fun T X => trigger X): eventE ~> itree Es)))
+  .
+
+  Let body_to_src (body: itree (hCallE +' callE +' eventE) unit): itree Es unit :=
+    interp_hCallE_src body
+  .
+
+  (*** spec table ***)
+  Record funspec: Type := mk {
+    mn: mname;
+    precond: list val -> Σ -> Prop;
+    postcond: list val -> Σ -> val -> Σ -> Prop;
+    body: itree (hCallE +' callE +' eventE) unit;
+    fun_to_tgt: (list val -> itree Es val) := HoareFun mn precond postcond (body_to_tgt body);
+    fun_to_src: (list val -> itree Es val) := HoareFunCanceled (body_to_src body);
+  }
+  .
+(*** NOTE:
+body can execute callE and eventE events.
+Notably, this implies (1) body can actually call a function not through HoareCall, but directly, and
+(2) it can also execute UB.
+With this flexibility, the client code can naturally be included in our "type-checking" framework.
+Also, note that body cannot execute "rE" on its own. This is intended.
+***)
+
+  (* Variable stb: fname -> option funspec. *)
+  (*** TODO: I wanted to use above definiton, but doing so makes defining ms_src hard ***)
+  (*** We can fix this by making ModSem.fnsems to a function, but doing so will change the type of
+       ModSem.add to predicate (t -> t -> t -> Prop), not function.
+       - Maybe not. I thought one needed to check uniqueness of fname at the "add",
+         but that might not be the case.
+         We may define fnsems: string -> option (list val -> itree Es val).
+         When adding two ms, it is pointwise addition, and addition of (option A) will yield None when both are Some.
+ ***)
+  (*** TODO: try above idea; if it fails, document it; and refactor below with alist ***)
+  Variable stb: list (fname * funspec).
+
+  Variable md_tgt: Mod.t.
+  Let ms_tgt: ModSem.t := (Mod.get_modsem md_tgt (Sk.load_skenv md_tgt.(Mod.sk))).
+
+  Hypothesis WTY: ms_tgt.(ModSem.fnsems) = List.map (map_snd fun_to_tgt) stb.
+
+  Definition ms_src: ModSem.t := {|
+    ModSem.fnsems := List.map (map_snd fun_to_src) stb;
+    ModSem.initial_mrs := List.map (map_snd (fun _ => ε)) ms_tgt.(ModSem.initial_mrs);
+    (*** note: we don't use resources, so making everything as a unit ***)
+  |}
+  .
+
+  Definition md_src: Mod.t := {|
+    Mod.get_modsem := fun _ => ms_src;
+    Mod.sk := Sk.unit;
+    (*** It is already a whole-program, so we don't need Sk.t anymore. ***)
+    (*** Note: Actually, md_tgt's sk could also have been unit, which looks a bit more uniform. ***)
+  |}
+  .
+
+  Theorem adequacy_type: Beh.of_program (Mod.interp md_tgt) <1= Beh.of_program (Mod.interp md_src).
+  Proof.
+    admit "TODO".
+  Qed.
+
+End CANCEL.
