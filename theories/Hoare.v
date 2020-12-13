@@ -126,6 +126,7 @@ Section PROOF.
              (Q: list val -> Σ -> val -> Σ -> Prop)
              (body: itree Es unit): list val -> itree Es val := fun varg =>
     rarg <- trigger (Take Σ);; trigger (Forge rarg);; (*** virtual resource passing ***)
+    trigger (CheckWf mn);;
     assume(P varg rarg);; (*** precondition ***)
 
 
@@ -149,6 +150,7 @@ Section PROOF.
       guarantee(P varg rarg);; (*** precondition ***)
 
       vret <- trigger (Call fn varg);; (*** call ***)
+      trigger (CheckWf mn);;
 
       rret <- trigger (Take Σ);; trigger (Forge rret);; (*** virtual resource passing ***)
       assume(Q varg rarg vret rret);; (*** postcondition ***)

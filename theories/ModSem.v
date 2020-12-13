@@ -181,7 +181,7 @@ Section MODSEM.
 
 
   Definition r_state: Type := ((mname -> Σ) * list Σ).
-  Definition handle_rE `{eventE -< E} (no_forge: bool): rE ~> stateT r_state (itree E) :=
+  Definition handle_rE `{eventE -< E}: rE ~> stateT r_state (itree E) :=
     fun _ e '(mrs, frs) =>
       match frs with
       | hd :: tl =>
@@ -191,15 +191,12 @@ Section MODSEM.
           Ret (((update mrs mn mr), fr :: tl), tt)
         | MGet mn => Ret ((mrs, frs), mrs mn)
         | FGet => Ret ((mrs, frs), hd)
-        | Forge fr =>
-          if no_forge then triggerUB else Ret ((mrs, (URA.add hd fr) :: tl), tt)
+        | Forge fr => Ret ((mrs, (URA.add hd fr) :: tl), tt)
         | Discard fr =>
           rest <- trigger (Choose _);;
           guarantee(hd = URA.add fr rest);;
           Ret ((mrs, rest :: tl), tt)
-        | CheckWf mn =>
-          (if no_forge then Ret tt else assume(URA.wf (URA.add (mrs mn) hd)));;
-          Ret ((mrs, frs), tt)
+        | CheckWf mn => assume(URA.wf (URA.add (mrs mn) hd));; Ret ((mrs, frs), tt)
         | PushFrame =>
           Ret ((mrs, ε :: frs), tt)
         | PopFrame =>
@@ -207,15 +204,14 @@ Section MODSEM.
         end
       | _ => triggerNB
       end.
-  Definition interp_rE `{eventE -< E} (no_forge: bool): itree (rE +' E) ~> stateT r_state (itree E) :=
-    State.interp_state (case_ (handle_rE no_forge) State.pure_state).
+  Definition interp_rE `{eventE -< E}: itree (rE +' E) ~> stateT r_state (itree E) :=
+    State.interp_state (case_ (handle_rE) State.pure_state).
   Definition initial_r_state: r_state :=
     (fun mn => match List.find (fun mnr => dec mn (fst mnr)) ms.(initial_mrs) with
                | Some r => snd r
                | None => ε
                end, []).
-  Let itr2: itree (eventE) val := assume(<<WF: wf ms>>);; snd <$> (interp_rE false itr1) initial_r_state.
-  Let itr2': itree (eventE) val := assume(<<WF: wf ms>>);; snd <$> (interp_rE true itr1) initial_r_state.
+  Let itr2: itree (eventE) val := assume(<<WF: wf ms>>);; snd <$> (interp_rE itr1) initial_r_state.
 
 
 
@@ -262,16 +258,16 @@ Section MODSEM.
   Next Obligation. inv STEP; ss. Qed.
   Next Obligation. inv STEP; ss. Qed.
 
-  Program Definition interp_no_forge: semantics := {|
-    STS.state := state;
-    STS.step := step;
-    STS.initial_state := itr2';
-    STS.state_sort := state_sort;
-  |}
-  .
-  Next Obligation. inv STEP; inv STEP0; ss. csc. rewrite SYSCALL in *. csc. Qed.
-  Next Obligation. inv STEP; ss. Qed.
-  Next Obligation. inv STEP; ss. Qed.
+  (* Program Definition interp_no_forge: semantics := {| *)
+  (*   STS.state := state; *)
+  (*   STS.step := step; *)
+  (*   STS.initial_state := itr2'; *)
+  (*   STS.state_sort := state_sort; *)
+  (* |} *)
+  (* . *)
+  (* Next Obligation. inv STEP; inv STEP0; ss. csc. rewrite SYSCALL in *. csc. Qed. *)
+  (* Next Obligation. inv STEP; ss. Qed. *)
+  (* Next Obligation. inv STEP; ss. Qed. *)
 
   End INTERP.
 
