@@ -5,6 +5,7 @@ Require Import Skeleton.
 Require Import PCM.
 Require Import ModSem.
 Require Import Behavior.
+Require Import Events.
 Require Import Relation_Definitions.
 
 (*** TODO: export these in Coqlib or Universe ***)

@@ -1,16 +1,21 @@
 Require Import Coqlib.
 Require Import Universe.
 Require Import PCM.
+Require Import Hoare.
 
 Set Implicit Arguments.
 
 
 
 Module SkEnv.
+Section SKENV.
+
+  Context {Σ: GRA.t}.
 
   Record t: Type := mk {
     ptr2id: val -> option fname;
     id2ptr: fname -> option val;
+    sk: list (fname * funspec);
   }
   .
 
@@ -69,6 +74,7 @@ Module SkEnv.
     (*     False *)
     (* ; *)
 
+End SKENV.
 End SkEnv.
 
 
@@ -103,8 +109,10 @@ End SkEnv.
 
 
 Module Sk.
+Section SK.
+  Context {Σ: GRA.t}.
 
-  Definition t: Type := list fname.
+  Definition t: Type := list (fname * funspec).
 
   Definition unit: t := nil.
 
@@ -144,11 +152,13 @@ Module Sk.
     {|
       SkEnv.ptr2id := fun v => match v with
                                | Vptr blk ofs => if (ofs =? 0)%Z
-                                                 then List.nth_error sk blk
+                                                 then (List.nth_error (List.map fst sk) blk)
                                                  else None
                                | _ => None
                                end;
-      SkEnv.id2ptr := fun id => do blkofs <- find_idx (string_dec id) sk; Some (Vptr (fst blkofs) 0)
+      SkEnv.id2ptr := fun id => do blkofs <- find_idx (string_dec id) (List.map fst sk);
+                                   Some (Vptr (fst blkofs) 0);
+      SkEnv.sk := sk;
     |}
   .
 
@@ -167,4 +177,5 @@ Module Sk.
       + admit "ez".
   Qed.
 
+End SK.
 End Sk.

@@ -7,6 +7,7 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import Hoare.
+Require Import Events.
 
 Generalizable Variables E R A B C X Y Σ.
 

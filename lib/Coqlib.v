@@ -1387,3 +1387,7 @@ Proof.
   sii T.
   clear t. clear T. clear u. clear T0.
 Abort.
+
+Definition map_fst A0 A1 B (f: A0 -> A1): (A0 * B) -> (A1 * B) := fun '(a, b) => (f a, b).
+Definition map_snd A B0 B1 (f: B0 -> B1): (A * B0) -> (A * B1) := fun '(a, b) => (a, f b).
+(*** TODO: Somehow use case_ ??? ***)
