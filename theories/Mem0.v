@@ -140,11 +140,16 @@ Section PROOF.
     Ret (Vint 0)
   .
 
-  Definition mem: ModSem.t :=
+  Definition MemSem: ModSem.t :=
     {|
       ModSem.fnsems := [("alloc", allocF) ; ("free", freeF) ; ("load", loadF) ; ("store", storeF)];
       ModSem.initial_mrs := [("Mem", GRA.padding ((inl (Some Mem.empty)): URA.car (t:=memRA)))];
     |}
   .
 
+  Definition Mem: Mod.t := {|
+    Mod.get_modsem := fun _ => MemSem; (*** TODO: we need proper handling of function pointers ***)
+    Mod.sk := Sk.unit;
+  |}
+  .
 End PROOF.

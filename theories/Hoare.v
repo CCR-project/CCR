@@ -335,7 +335,7 @@ Section CANCEL.
                   ((fun T X => trigger X): eventE ~> itree Es))
   .
 
-  Let body_to_tgt (body: list val -> itree (hCallE +' eventE) val): list val -> itree Es val :=
+  Definition body_to_tgt (body: list val -> itree (hCallE +' eventE) val): list val -> itree Es val :=
     fun varg => interp_hCallE_tgt (body varg)
   .
 
@@ -350,12 +350,12 @@ Section CANCEL.
                   ((fun T X => trigger X): eventE ~> itree Es))
   .
 
-  Let body_to_src (body: list val -> itree (hCallE +' eventE) val): list val -> itree Es val :=
+  Definition body_to_src (body: list val -> itree (hCallE +' eventE) val): list val -> itree Es val :=
     fun varg => interp_hCallE_src (body varg)
   .
-  Let fun_to_tgt (f: funspec): (list val -> itree Es val) :=
+  Definition fun_to_tgt (f: funspec): (list val -> itree Es val) :=
     HoareFun f.(mn) (f.(precond)) (f.(postcond)) (body_to_tgt f.(body)).
-  Let fun_to_src (f: funspec): (list val -> itree Es val) := body_to_src f.(body).
+  Definition fun_to_src (f: funspec): (list val -> itree Es val) := body_to_src f.(body).
 
 (*** NOTE:
 body can execute eventE events.

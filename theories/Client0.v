@@ -35,4 +35,15 @@ Section PROOF.
       Ret y
   .
 
+  Definition MainSem: ModSem.t := {|
+    ModSem.fnsems := [("main", mainF)];
+    ModSem.initial_mrs := [("Main", ε)];
+  |}
+  .
+
+  Definition Main: Mod.t := {|
+    Mod.get_modsem := fun _ => MainSem;
+    Mod.sk := Sk.unit;
+  |}
+  .
 End PROOF.
