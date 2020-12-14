@@ -124,14 +124,13 @@ Section PROOF.
   Definition HoareFun
              (P: list val -> Σ -> Prop)
              (Q: list val -> Σ -> val -> Σ -> Prop)
-             (body: itree Es unit): list val -> itree Es val := fun varg =>
+             (body: list val -> itree Es val): list val -> itree Es val := fun varg =>
     rarg <- trigger (Take Σ);; trigger (Forge rarg);; (*** virtual resource passing ***)
     trigger (CheckWf mn);;
     assume(P varg rarg);; (*** precondition ***)
 
 
-    body;; (*** "rudiment": we don't remove extcalls because of termination-sensitivity ***)
-    vret <- trigger (Choose _);;
+    vret <- body varg;; (*** "rudiment": we don't remove extcalls because of termination-sensitivity ***)
 
     '(mret, fret) <- trigger (Choose _);; trigger (Put mn mret fret);; (*** updating resources in an abstract way ***)
     rret <- trigger (Choose Σ);; guarantee(Q varg rarg vret rret);; (*** postcondition ***)
@@ -158,19 +157,19 @@ Section PROOF.
       Ret vret (*** return to body ***)
   .
 
-  Definition HoareFunCanceled
-             (body: itree Es unit): list val -> itree Es val := fun varg =>
-    body;; (*** "rudiment": we don't remove extcalls because of termination-sensitivity ***)
-    vret <- trigger (Choose _);;
-    Ret vret (*** return ***)
-  .
+  (* Definition HoareFunCanceled *)
+  (*            (body: itree Es unit): list val -> itree Es val := fun varg => *)
+  (*   body;; (*** "rudiment": we don't remove extcalls because of termination-sensitivity ***) *)
+  (*   vret <- trigger (Choose _);; *)
+  (*   Ret vret (*** return ***) *)
+  (* . *)
 
-  Definition HoareCallCanceled:
-    fname -> list val -> itree Es val :=
-    fun fn varg =>
-      vret <- trigger (Call fn varg);; (*** call ***)
-      Ret vret (*** return to body ***)
-  .
+  (* Definition HoareCallCanceled: *)
+  (*   fname -> list val -> itree Es val := *)
+  (*   fun fn varg => *)
+  (*     vret <- trigger (Call fn varg);; (*** call ***) *)
+  (*     Ret vret (*** return to body ***) *)
+  (* . *)
 
   (* Section PLAYGROUND. *)
 
@@ -302,7 +301,7 @@ Section CANCEL.
     mn: mname;
     precond: list val -> Σ -> Prop;
     postcond: list val -> Σ -> val -> Σ -> Prop;
-    body: itree (hCallE +' eventE) unit;
+    body: list val -> itree (hCallE +' eventE) val;
   }
   .
 
@@ -331,14 +330,14 @@ Section CANCEL.
                   ((fun T X => trigger X): eventE ~> itree Es))
   .
 
-  Let body_to_tgt (body: itree (hCallE +' eventE) unit): itree Es unit :=
-    interp_hCallE_tgt body
+  Let body_to_tgt (body: list val -> itree (hCallE +' eventE) val): list val -> itree Es val :=
+    fun varg => interp_hCallE_tgt (body varg)
   .
 
 
 
   Definition handle_hCallE_src: hCallE ~> itree Es :=
-    fun _ '(hCall fn varg) => (HoareCallCanceled fn varg)
+    fun _ '(hCall fn varg) => trigger (Call fn varg)
   .
 
   Definition interp_hCallE_src: itree (hCallE +' eventE) ~> itree Es :=
@@ -346,13 +345,12 @@ Section CANCEL.
                   ((fun T X => trigger X): eventE ~> itree Es))
   .
 
-  Let body_to_src (body: itree (hCallE +' eventE) unit): itree Es unit :=
-    interp_hCallE_src body
+  Let body_to_src (body: list val -> itree (hCallE +' eventE) val): list val -> itree Es val :=
+    fun varg => interp_hCallE_src (body varg)
   .
   Let fun_to_tgt (f: funspec): (list val -> itree Es val) :=
     HoareFun f.(mn) f.(precond) f.(postcond) (body_to_tgt f.(body)).
-  Let fun_to_src (f: funspec): (list val -> itree Es val) :=
-    HoareFunCanceled (body_to_src f.(body)).
+  Let fun_to_src (f: funspec): (list val -> itree Es val) := body_to_src f.(body).
 
 (*** NOTE:
 body can execute eventE events.

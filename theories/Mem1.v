@@ -66,7 +66,7 @@ Section PROOF.
                 exists b, vret = Vptr b 0 /\
                 rret = GRA.padding (fold_left URA.add (mapi (fun n _ => (b, Z.of_nat n) |-> (Vint 0))
                                                             (List.repeat tt sz)) URA.unit))
-             (Ret tt)
+             (fun _ => trigger (Choose _))
   .
 
   Definition freeF: list val -> itree Es val :=
@@ -74,7 +74,7 @@ Section PROOF.
              (fun varg rarg => exists b ofs, varg = [Vptr b ofs] /\
                                              exists v, rarg = (GRA.padding ((b, ofs) |-> v)))
              (top4)
-             (Ret tt)
+             (fun _ => trigger (Choose _))
   .
 
   Definition loadF: list val -> itree Es val :=
@@ -85,7 +85,7 @@ Section PROOF.
                 exists b ofs, varg = [Vptr b ofs] /\
                 exists v, rarg = (GRA.padding ((b, ofs) |-> v)) /\
                 rret = (GRA.padding ((b, ofs) |-> v)) /\ vret = v)
-             (Ret tt)
+             (fun _ => trigger (Choose _))
   .
 
   Definition storeF: list val -> itree Es val :=
@@ -96,7 +96,7 @@ Section PROOF.
                 exists b ofs v_new, varg = [Vptr b ofs ; v_new] /\
                 exists v_old, rarg = (GRA.padding ((b, ofs) |-> v_old)) /\
                 rret = (GRA.padding ((b, ofs) |-> v_new)))
-             (Ret tt)
+             (fun _ => trigger (Choose _))
   .
 
   Definition mem: ModSem.t := {|
