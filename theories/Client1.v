@@ -3,10 +3,10 @@ Require Import ITreelib.
 Require Import Universe.
 Require Import STS.
 Require Import Behavior.
-Require Import Events ModSem.
+Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
-Require Import Hoare HoareCancel.
+Require Import Hoare.
 
 Generalizable Variables E R A B C X Y Σ.
 
@@ -30,7 +30,6 @@ Section PROOF.
         y = *x;
         return y; ~~~> return 42;
    ***)
-
   Definition mainBody: list val -> itree (hCallE +' eventE) val :=
     fun _ =>
       x <- trigger (hCall "alloc" [Vint 1]);;
@@ -40,11 +39,9 @@ Section PROOF.
       Ret (Vint 42)
   .
 
-  (* Definition mainF: list val -> itree Es val := *)
-  (*   HoareFun "Main" (X:=unit) top3 top3 (body_to_tgt mem_stb mainBody) *)
-  (* . *)
-
-  Definition MainStb := [("main", mk "Main" (X:=unit) top3 top3 mainBody)].
+  Definition mainF: list val -> itree Es val :=
+    HoareFun "Main" (X:=unit) top3 top3 (body_to_tgt mem_stb mainBody)
+  .
 
   (***
 Possible improvements:
@@ -55,16 +52,18 @@ Possible improvements:
           In other words, the "Choose" in the code is choosing "x", but we want to choose "x" when writing the spec.
    ***)
 
-  Definition MainSem (ske: SkEnv.t): ModSem.t := {|
-    ModSem.fnsems := List.map (map_snd (fun_to_tgt ske.(SkEnv.sk))) MainStb;
+  Definition MainSem: ModSem.t := {|
+    ModSem.fnsems := [("main", mainF)];
     ModSem.initial_mrs := [("Main", ε)];
   |}
   .
 
   Definition Main: Mod.t := {|
-    Mod.get_modsem := MainSem;
-    Mod.sk := MainStb;
+    Mod.get_modsem := fun _ => MainSem;
+    Mod.sk := Sk.unit;
   |}
   .
+
+  Definition MainStb := [("main", mk "Main" (X:=unit) top3 top3 mainBody)].
 
 End PROOF.

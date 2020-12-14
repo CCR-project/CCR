@@ -3,10 +3,10 @@ Require Import ITreelib.
 Require Import Universe.
 Require Import STS.
 Require Import Behavior.
-Require Import Events ModSem.
+Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
-Require Import Hoare HoareCancel.
+Require Import Hoare.
 
 Generalizable Variables E R A B C X Y Σ.
 
@@ -121,19 +121,15 @@ Section PROOF.
 
   Definition GlobalStb: list (fname * funspec) := MemStb.
 
-  (*** TODO: Just as in CompCertM,
-       (1) generalize Sk.t so that it can have internal/external declarations.
-       (2) in the simulation, one should be able to expect skenv_link "includes" my sk
-   ***)
-  Definition MemSem (ske: SkEnv.t): ModSem.t := {|
-    ModSem.fnsems := List.map (map_snd (fun_to_tgt ske.(SkEnv.sk))) MemStb;
+  Definition MemSem: ModSem.t := {|
+    ModSem.fnsems := List.map (map_snd (fun_to_tgt GlobalStb)) MemStb;
       (* [("alloc", allocF) ; ("free", freeF) ; ("load", loadF) ; ("store", storeF)]; *)
     ModSem.initial_mrs := [("Mem", GRA.padding (URA.black (M:=_memRA) (fun _ _ => inr tt)))];
   |}
   .
 
   Definition Mem: Mod.t := {|
-    Mod.get_modsem := MemSem; (*** TODO: we need proper handling of function pointers ***)
+    Mod.get_modsem := fun _ => MemSem; (*** TODO: we need proper handling of function pointers ***)
     Mod.sk := Sk.unit;
   |}
   .
