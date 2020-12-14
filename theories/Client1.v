@@ -46,12 +46,12 @@ Section PROOF.
                  (fun '(b, ofs, v_old, v_new) _ rret => rret = (GRA.padding ((b, ofs) |-> v_new)))
                  "store" [x ; Vint 42]);;
       trigger (Call "unknown_call" [x]);;
-      y <- (HoareCall "Main"
-                      (fun '(b, ofs, v) varg rarg => varg = [Vptr b ofs] /\
-                                                     rarg = (GRA.padding ((b, ofs) |-> v)))
-                      (fun '(b, ofs, v) vret rret =>
-                         rret = (GRA.padding ((b, ofs) |-> v)) /\ vret = v)
-                      "load" [x]);;
+      (HoareCall "Main"
+                 (fun '(b, ofs, v) varg rarg => varg = [Vptr b ofs] /\
+                                                rarg = (GRA.padding ((b, ofs) |-> v)))
+                 (fun '(b, ofs, v) vret rret =>
+                    rret = (GRA.padding ((b, ofs) |-> v)) /\ vret = v)
+                 "load" [x]);;
       Ret (Vint 42)
   .
   (***
