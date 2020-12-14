@@ -100,6 +100,7 @@ Section PROOF.
   Let GURA: URA.t := GRA.to_URA Σ.
   Local Existing Instance GURA.
   Variable mn: mname.
+  Context `{X: Type}. (*** a meta-variable ***)
 
   (* Definition HoareFun *)
   (*            (I: URA.car -> Prop) *)
@@ -122,37 +123,39 @@ Section PROOF.
   (* . *)
 
   Definition HoareFun
-             (P: list val -> Σ -> Prop)
-             (Q: list val -> Σ -> val -> Σ -> Prop)
+             (P: X -> list val -> Σ -> Prop)
+             (Q: X -> val -> Σ -> Prop)
              (body: list val -> itree Es val): list val -> itree Es val := fun varg =>
+    x <- trigger (Take X);;
     rarg <- trigger (Take Σ);; trigger (Forge rarg);; (*** virtual resource passing ***)
     trigger (CheckWf mn);;
-    assume(P varg rarg);; (*** precondition ***)
+    assume(P x varg rarg);; (*** precondition ***)
 
 
     vret <- body varg;; (*** "rudiment": we don't remove extcalls because of termination-sensitivity ***)
 
     '(mret, fret) <- trigger (Choose _);; trigger (Put mn mret fret);; (*** updating resources in an abstract way ***)
-    rret <- trigger (Choose Σ);; guarantee(Q varg rarg vret rret);; (*** postcondition ***)
+    rret <- trigger (Choose Σ);; guarantee(Q x vret rret);; (*** postcondition ***)
     trigger (Discard rret);; (*** virtual resource passing ***)
 
     Ret vret (*** return ***)
   .
 
   Definition HoareCall
-             (P: list val -> Σ -> Prop)
-             (Q: list val -> Σ -> val -> Σ -> Prop):
+             (P: X -> list val -> Σ -> Prop)
+             (Q: X -> val -> Σ -> Prop):
     fname -> list val -> itree Es val :=
     fun fn varg =>
       '(marg, farg) <- trigger (Choose _);; trigger (Put mn marg farg);; (*** updating resources in an abstract way ***)
       rarg <- trigger (Choose Σ);; trigger (Discard rarg);; (*** virtual resource passing ***)
-      guarantee(P varg rarg);; (*** precondition ***)
+      x <- trigger (Choose X);;
+      guarantee(P x varg rarg);; (*** precondition ***)
 
       vret <- trigger (Call fn varg);; (*** call ***)
       trigger (CheckWf mn);;
 
       rret <- trigger (Take Σ);; trigger (Forge rret);; (*** virtual resource passing ***)
-      assume(Q varg rarg vret rret);; (*** postcondition ***)
+      assume(Q x vret rret);; (*** postcondition ***)
 
       Ret vret (*** return to body ***)
   .
@@ -299,8 +302,9 @@ Section CANCEL.
   (*** spec table ***)
   Record funspec: Type := mk {
     mn: mname;
-    precond: list val -> Σ -> Prop;
-    postcond: list val -> Σ -> val -> Σ -> Prop;
+    X: Type; (*** a meta-variable ***)
+    precond: X -> list val -> Σ -> Prop;
+    postcond: X -> val -> Σ -> Prop;
     body: list val -> itree (hCallE +' eventE) val;
   }
   .
@@ -320,7 +324,9 @@ Section CANCEL.
   Definition handle_hCallE_tgt: hCallE ~> itree Es :=
     fun _ '(hCall fn varg) =>
       match List.find (fun '(_fn, _) => dec fn _fn) stb with
-      | Some (_, f) => (HoareCall f.(mn) f.(precond) f.(postcond) fn varg)
+      | Some (_, f) =>
+        x <- trigger (Take f.(X));;
+        (HoareCall f.(mn) (f.(precond)) (f.(postcond)) fn varg)
       | None => triggerNB
       end
   .
@@ -349,7 +355,7 @@ Section CANCEL.
     fun varg => interp_hCallE_src (body varg)
   .
   Let fun_to_tgt (f: funspec): (list val -> itree Es val) :=
-    HoareFun f.(mn) f.(precond) f.(postcond) (body_to_tgt f.(body)).
+    HoareFun f.(mn) (f.(precond)) (f.(postcond)) (body_to_tgt f.(body)).
   Let fun_to_src (f: funspec): (list val -> itree Es val) := body_to_src f.(body).
 
 (*** NOTE:

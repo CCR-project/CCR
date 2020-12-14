@@ -33,28 +33,23 @@ Section PROOF.
   Definition mainF: list val -> itree Es val :=
     fun _ =>
       x <- (HoareCall "Main"
-                      (fun varg _ => exists sz, varg = [Vint (Z.of_nat sz)])
-                      (fun varg _ vret rret =>
-                         exists sz, varg = [Vint (Z.of_nat sz)] /\
+                      (fun sz varg _ => varg = [Vint (Z.of_nat sz)])
+                      (fun sz vret rret =>
                          exists b, vret = Vptr b 0 /\
-                                   rret = GRA.padding (fold_left URA.add (mapi (fun n _ => (b, Z.of_nat n) |-> (Vint 0))
-                                                                               (List.repeat tt sz)) URA.unit))
+                         rret = GRA.padding (fold_left URA.add (mapi
+                                  (fun n _ => (b, Z.of_nat n) |-> (Vint 0)) (List.repeat tt sz))
+                                                       URA.unit))
                  "alloc" [Vint 1]);;
       (HoareCall "Main"
-                 (fun varg rarg => exists b ofs v_new, varg = [Vptr b ofs ; v_new] /\
-                    exists v_old, rarg = (GRA.padding ((b, ofs) |-> v_old)))
-                 (fun varg rarg _ rret =>
-                    exists b ofs v_new, varg = [Vptr b ofs ; v_new] /\
-                    exists v_old, rarg = (GRA.padding ((b, ofs) |-> v_old)) /\
-                    rret = (GRA.padding ((b, ofs) |-> v_new)))
+                 (fun '(b, ofs, v_old, v_new) varg rarg =>
+                    varg = [Vptr b ofs ; v_new] /\ rarg = (GRA.padding ((b, ofs) |-> v_old)))
+                 (fun '(b, ofs, v_old, v_new) _ rret => rret = (GRA.padding ((b, ofs) |-> v_new)))
                  "store" [x ; Vint 42]);;
       trigger (Call "unknown_call" [x]);;
       y <- (HoareCall "Main"
-                      (fun varg rarg => exists b ofs, varg = [Vptr b ofs] /\
-                         exists v, rarg = (GRA.padding ((b, ofs) |-> v)))
-                      (fun varg rarg vret rret =>
-                         exists b ofs, varg = [Vptr b ofs] /\
-                         exists v, rarg = (GRA.padding ((b, ofs) |-> v)) /\
+                      (fun '(b, ofs, v) varg rarg => varg = [Vptr b ofs] /\
+                                                     rarg = (GRA.padding ((b, ofs) |-> v)))
+                      (fun '(b, ofs, v) vret rret =>
                          rret = (GRA.padding ((b, ofs) |-> v)) /\ vret = v)
                       "load" [x]);;
       Ret (Vint 42)
