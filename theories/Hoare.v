@@ -325,7 +325,6 @@ Section CANCEL.
     fun _ '(hCall fn varg) =>
       match List.find (fun '(_fn, _) => dec fn _fn) stb with
       | Some (_, f) =>
-        x <- trigger (Take f.(X));;
         (HoareCall f.(mn) (f.(precond)) (f.(postcond)) fn varg)
       | None => triggerNB
       end

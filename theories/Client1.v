@@ -54,5 +54,13 @@ Section PROOF.
                       "load" [x]);;
       Ret (Vint 42)
   .
+  (***
+Possible improvements:
+(1) "exists b" in "alloc"
+      --> it would be better if we can just use "b" in the remaning of the code.
+(2) (fun x varg rarg => k x)
+      --> We know what "x" will be, so why not just write "(fun varg rarg => k x)"?.
+          In other words, the "Choose" in the code is choosing "x", but we want to choose "x" when writing the spec.
+   ***)
 
 End PROOF.
