@@ -14,7 +14,7 @@ Set Implicit Arguments.
 
 
 
-Require Import Mem1 Client1.
+Require Import Mem1 Main1.
 
 Section PROOF.
 
