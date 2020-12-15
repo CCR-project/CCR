@@ -97,11 +97,7 @@ Section PROOF.
     unfold mrec. rewrite unfold_interp_mrec. ss.
     ss. irw. rewrite tau_eutt.
     unfold fun_to_src, body_to_src, interp_hCallE_src.
-    unfold mainBody. cbn. rewrite unfold_interp. cbn.
-    rewrite mrec_as_interp. ss. irw.
-    unfold mrecursive.
-    irw.
-    rewrite interp_mrecursive.
-  Qed.
+    unfold mainBody. cbn.
+  Abort.
 
 End PROOF.
