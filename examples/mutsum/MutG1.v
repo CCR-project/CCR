@@ -19,26 +19,25 @@ Section PROOF.
 
   Context `{Σ: GRA.t}.
 
-  Definition mainBody: list val -> itree (hCallE +' eventE) val := fun _ => trigger (hCall "f" [Vint 10]);; Ret (Vint 55).
-  Definition fBody: list val -> itree (hCallE +' eventE) val :=
-    fun varg => varg' <- trigger (Choose _);; guarantee (ord varg' varg);; trigger (hCall "g" varg');; trigger (Choose _)
+  Definition gBody: list val -> itree (hCallE +' eventE) val :=
+    fun varg => varg' <- trigger (Choose _);; guarantee (ord varg' varg);; trigger (hCall "f" varg');; trigger (Choose _)
   .
   (*** TODO: it would be better if the body can depend on "X", but doing so will mandate generalization of Call.
        related issue: https://github.com/snu-sf/rusc-program-verif/issues/48
    ***)
 
-  Definition FFtb := [("main", mainBody) ; ("f", fBody)].
+  Definition GFtb := [("g", gBody)].
 
-  Definition FSem: ModSem.t := {|
-    ModSem.fnsems := List.map (fun '(fn, body) => (fn, fun_to_tgt GlobalStb fn body)) FFtb;
+  Definition GSem: ModSem.t := {|
+    ModSem.fnsems := List.map (fun '(fn, body) => (fn, fun_to_tgt GlobalStb fn body)) GFtb;
       (* [("main", mainF) ; ("f", fF)]; *)
-    ModSem.initial_mrs := [("F", ε)];
+    ModSem.initial_mrs := [("G", ε)];
   |}
   .
 
-  Definition F: Mod.t := {|
-    Mod.get_modsem := fun _ => FSem;
-    Mod.sk := [("f")];
+  Definition G: Mod.t := {|
+    Mod.get_modsem := fun _ => GSem;
+    Mod.sk := [("g")];
   |}
   .
 End PROOF.

@@ -64,7 +64,7 @@ Section PROOF.
   ]
   .
 
-  Definition MainFtb := zip pair MemStb [mainBody].
+  Definition MainFtb := zip pair [("main")] [mainBody].
 
   (***
 Possible improvements:
@@ -78,7 +78,7 @@ Possible improvements:
   Definition MainSem: ModSem.t := {|
     (* ModSem.fnsems := [("main", mainF)]; *)
     (* ModSem.fnsems := List.map (map_snd (fun_to_tgt (MainStb ++ MemStb))) MainStb; *)
-    ModSem.fnsems := List.map (fun '(fn, fs, body) => (fn, fun_to_tgt (MainStb ++ MemStb) fs body)) MainFtb;
+    ModSem.fnsems := List.map (fun '(fn, body) => (fn, fun_to_tgt (MainStb ++ MemStb) fn body)) MainFtb;
     ModSem.initial_mrs := [("Main", ε)];
   |}
   .

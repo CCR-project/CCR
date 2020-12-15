@@ -32,3 +32,19 @@ Section PROOF.
   ].
 
 End PROOF.
+
+
+Definition ord: list val -> list val -> Prop := fun vs0 vs1 => exists n, vs0 = [Vint (Z.of_nat n)] /\ vs1 = [Vint (Z.of_nat (S n))].
+
+Theorem ord_well_founded: well_founded ord.
+Proof.
+  ii. destruct a.
+  { econs; ii. inv H; ss. des; clarify. }
+  destruct a; cycle 1.
+  { econs; ii. inv H; ss. des; clarify. }
+  destruct v; ss; cycle 1.
+  { econs; ii. inv H; ss. des; clarify. }
+  pattern n. eapply well_founded_ind.
+  { eapply Z.lt_wf with (z:=0%Z). }
+  i. ss. econs. ii. inv H0; ss. des; clarify. eapply H. lia.
+Qed.

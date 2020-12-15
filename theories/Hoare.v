@@ -355,8 +355,11 @@ Section CANCEL.
   Definition body_to_src (body: list val -> itree (hCallE +' eventE) val): list val -> itree Es val :=
     fun varg => interp_hCallE_src (body varg)
   .
-  Definition fun_to_tgt (fs: fspec) (body: list val -> itree (hCallE +' eventE) val): (list val -> itree Es val) :=
-    HoareFun fs.(mn) (fs.(precond)) (fs.(postcond)) (body_to_tgt body).
+  Definition fun_to_tgt (fn: fname) (body: list val -> itree (hCallE +' eventE) val): (list val -> itree Es val) :=
+    match List.find (fun '(_fn, _) => dec fn _fn) stb with
+    | Some (_, fs) => HoareFun fs.(mn) (fs.(precond)) (fs.(postcond)) (body_to_tgt body)
+    | _ => fun _ => triggerNB
+    end.
   Definition fun_to_src (body: list val -> itree (hCallE +' eventE) val): (list val -> itree Es val) :=
     body_to_src body.
 
@@ -377,12 +380,12 @@ If this feature is needed; we can extend it then. At the moment, I will only all
   Variable md_tgt: Mod.t.
   Let ms_tgt: ModSem.t := (Mod.get_modsem md_tgt (Sk.load_skenv md_tgt.(Mod.sk))).
 
-  Variable ftb: list (fname * fspec * (list val -> itree (hCallE +' eventE) val)).
-  Let stb: list (fname * fspec) := List.map fst ftb.
-  Hypothesis WTY: ms_tgt.(ModSem.fnsems) = List.map (fun '(fn, fs, body) => (fn, fun_to_tgt stb fs body)) ftb.
+  Variable stb: list (fname * fspec).
+  Variable ftb: list (fname * (list val -> itree (hCallE +' eventE) val)).
+  Hypothesis WTY: ms_tgt.(ModSem.fnsems) = List.map (fun '(fn, body) => (fn, fun_to_tgt stb fn body)) ftb.
 
   Definition ms_src: ModSem.t := {|
-    ModSem.fnsems := List.map (fun '(fn, _, body) => (fn, fun_to_src body)) ftb;
+    ModSem.fnsems := List.map (fun '(fn, body) => (fn, fun_to_src body)) ftb;
     (* ModSem.initial_mrs := List.map (map_snd (fun _ => ε)) ms_tgt.(ModSem.initial_mrs); *)
     ModSem.initial_mrs := [];
     (*** note: we don't use resources, so making everything as a unit ***)

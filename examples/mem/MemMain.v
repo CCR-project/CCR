@@ -51,7 +51,7 @@ Section PROOF.
 
   Definition MemMain2: Mod.t := {|
     Mod.get_modsem := fun _ => {|
-        ModSem.fnsems := List.map (fun '(fn, _, body) => (fn, fun_to_src body)) (MemFtb ++ MainFtb);
+        ModSem.fnsems := List.map (fun '(fn, body) => (fn, fun_to_src body)) (MemFtb ++ MainFtb);
         (* ModSem.initial_mrs := [("Mem", ε) ; ("Main", ε)]; *)
         ModSem.initial_mrs := [];
       |};

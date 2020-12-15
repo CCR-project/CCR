@@ -115,8 +115,8 @@ Section PROOF.
   ]
   .
 
-  Definition MemFtb: list (fname * fspec * (list val -> itree (hCallE +' eventE) val)) :=
-    zip pair MemStb (List.repeat (fun _ => trigger (Choose _)) 4)
+  Definition MemFtb: list (fname * (list val -> itree (hCallE +' eventE) val)) :=
+    zip pair ["alloc"; "free"; "load"; "store"] (List.repeat (fun _ => trigger (Choose _)) 4)
   .
 
   (* Definition MemFtb2: list (fname * fspec * (list val -> itree (hCallE +' eventE) val)) := *)
@@ -144,7 +144,7 @@ Section PROOF.
   (* Goal MemFtb = MemFtb2. refl. Qed. *)
 
   Definition MemSem: ModSem.t := {|
-    ModSem.fnsems := List.map (fun '(fn, fs, body) => (fn, fun_to_tgt MemStb fs body)) MemFtb;
+    ModSem.fnsems := List.map (fun '(fn, body) => (fn, fun_to_tgt MemStb fn body)) MemFtb;
       (* [("alloc", allocF) ; ("free", freeF) ; ("load", loadF) ; ("store", storeF)]; *)
     ModSem.initial_mrs := [("Mem", GRA.padding (URA.black (M:=_memRA) (fun _ _ => inr tt)))];
   |}
