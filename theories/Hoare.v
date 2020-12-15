@@ -374,7 +374,8 @@ If this feature is needed; we can extend it then. At the moment, I will only all
 
   Definition ms_src: ModSem.t := {|
     ModSem.fnsems := List.map (map_snd fun_to_src) stb;
-    ModSem.initial_mrs := List.map (map_snd (fun _ => ε)) ms_tgt.(ModSem.initial_mrs);
+    (* ModSem.initial_mrs := List.map (map_snd (fun _ => ε)) ms_tgt.(ModSem.initial_mrs); *)
+    ModSem.initial_mrs := [];
     (*** note: we don't use resources, so making everything as a unit ***)
   |}
   .
