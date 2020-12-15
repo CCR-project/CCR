@@ -16,6 +16,34 @@ Set Implicit Arguments.
 
 
 
+
+
+
+
+
+
+
+
+Hint Rewrite unfold_interp_mrec : itree_axiom2.
+Hint Rewrite bind_ret_l : itree_axiom2.
+Hint Rewrite bind_ret_r : itree_axiom2.
+Hint Rewrite bind_tau : itree_axiom2.
+Hint Rewrite bind_vis : itree_axiom2.
+(* Hint Rewrite bind_trigger : itree_axiom. *)
+Hint Rewrite bind_bind : itree_axiom2.
+Tactic Notation "irw" "in" ident(H) := repeat (autorewrite with itree_axiom2 in H; cbn in H).
+Tactic Notation "irw" := repeat (autorewrite with itree_axiom2; cbn).
+
+
+
+
+
+
+
+
+
+
+
 Section PROOF.
 
   Context `{Σ: GRA.t}.
@@ -38,6 +66,42 @@ Section PROOF.
     rp; try apply PR; cycle 1.
     { refl. }
     clear PR. f_equal.
+  Qed.
+
+
+
+
+
+
+
+
+
+  Let ms: ModSem.t := {|
+        ModSem.fnsems := List.map (fun '(fn, body) => (fn, fun_to_src body)) (FFtb ++ GFtb);
+        ModSem.initial_mrs := [];
+  |}.
+
+  (* Let itr0: callE ~> itree Es := fun _ ce => trigger PushFrame;; rv <- ModSem.sem ms ce;; trigger PopFrame;; Ret rv. *)
+  (* Let itr1: itree (rE +' eventE) val := mrec itr0 (Call "main" []). *)
+  (* Let itr2: itree eventE val := *)
+  (*   assume (<<WF: ModSem.wf ms >>);; *)
+  (*   snd <$> ModSem.interp_rE itr1 (ModSem.initial_r_state ms). *)
+
+  Let itr0_nor: callE ~> itree Es := fun (T: Type) ce => (ModSem.sem ms ce): itree Es T.
+  Let itr1_nor: itree (rE +' eventE) val := mrec itr0_nor (Call "main" []).
+
+  Goal itr1_nor ≈ Ret (Vint (Z.of_nat 55)).
+  Proof.
+    subst itr1_nor itr0_nor. ss.
+    (* rewrite mrec_as_interp. *)
+    unfold mrec. rewrite unfold_interp_mrec. ss.
+    ss. irw. rewrite tau_eutt.
+    unfold fun_to_src, body_to_src, interp_hCallE_src.
+    unfold mainBody. cbn. rewrite unfold_interp. cbn.
+    rewrite mrec_as_interp. ss. irw.
+    unfold mrecursive.
+    irw.
+    rewrite interp_mrecursive.
   Qed.
 
 End PROOF.
