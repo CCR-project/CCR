@@ -23,9 +23,65 @@ Set Implicit Arguments.
 
 Local Open Scope nat_scope.
 
+
+
+
+
+
+
+
+
+Definition tauK {E R}: R -> itree E R := fun r => tau;; Ret r.
+
+
+
+
+Lemma interp_vis:
+  forall (E F : Type -> Type) (R : Type) (f : forall T : Type, E T -> itree F T) (U : Type) (e : E U) (k : U -> itree E R),
+  interp f (Vis e k) = ` x : U <- f U e;; (tau;; interp f (k x))
+.
+Proof. i. f. eapply interp_vis. Qed.
+
+Lemma interp_ret: forall (E F : Type -> Type) (R : Type) (f : forall T : Type, E T -> itree F T) (x : R),
+    interp f (Ret x) = Ret x.
+Proof. i. f. eapply interp_ret. Qed.
+
+Lemma interp_tau: forall (E F : Type -> Type) (R : Type) (f : forall T : Type, E T -> itree F T) (t : itree E R),
+  interp f (tau;; t) = (tau;; interp f t).
+Proof. i. f. eapply interp_tau. Qed.
+
+Lemma interp_trigger:
+  forall (E F : Type -> Type) (R : Type) (f : forall T : Type, E T -> itree F T) (e : E R),
+  interp f (ITree.trigger e) = x <- (f R e);; tau;; Ret x
+  (* (f R e) >>= tauK *)
+.
+Proof.
+  i. unfold ITree.trigger.
+  rewrite interp_vis. f_equiv. apply func_ext. i. unfold tauK. repeat f_equiv. rewrite interp_ret. ss.
+Qed.
+
+Hint Unfold tauK.
+
+
+
+(*** black + delta --> new_black ***)
+Definition add_delta_to_black `{M: URA.t} (b: URA.auth_t) (w: URA.auth_t): URA.auth_t :=
+  match b, w with
+  | URA.excl e _, URA.frag f1 => URA.excl (URA.add e f1) URA.unit
+  | _, _ => URA.boom
+  end
+.
+
+
+
 Ltac go := try first[pfold; econs; [..|M]; (Mskip ss); et; check_safe; ii; left|
                      pfold; econsr; [..|M]; (Mskip ss); et; check_safe; ii; left].
-Ltac igo := repeat (try rewrite bind_bind; try rewrite bind_ret_l; try rewrite bind_ret_r).
+Ltac igo := repeat (try rewrite bind_bind; try rewrite bind_ret_l; try rewrite bind_ret_r; try rewrite bind_tau;
+                    try rewrite interp_vis;
+                    try rewrite interp_ret;
+                    try rewrite interp_tau;
+                    try rewrite interp_trigger
+                   ).
 Ltac force_l := pfold; econs; [..|M]; Mskip ss; et.
 Ltac force_r := pfold; econsr; [..|M]; Mskip ss; et.
 Section SIMMODSEM.
@@ -44,8 +100,10 @@ Section SIMMODSEM.
   Let wf: W -> Prop :=
     fun '(mrs_src0, mrs_tgt0) =>
       exists mem_src (mem_tgt: Mem.t),
-        (<<SRC: mrs_src0 = Maps.add "mem" (GRA.padding (URA.black mem_src)) Maps.empty>>) /\
-        (<<TGT: mrs_tgt0 = Maps.add "mem" (GRA.padding ((inl (Some mem_tgt)): URA.car (t:=RA.excl Mem.t)))
+        (* (<<SRC: exists frag, mrs_src0 = Maps.add "Mem" *)
+        (*                                          (GRA.padding ((URA.excl mem_src frag): URA.car (t:=Mem1.memRA))) Maps.empty>>) /\ *)
+        (<<SRC: mrs_src0 = Maps.add "Mem" (GRA.padding ((URA.black mem_src): URA.car (t:=Mem1.memRA))) Maps.empty>>) /\
+        (<<TGT: mrs_tgt0 = Maps.add "Mem" (GRA.padding ((inl (Some mem_tgt)): URA.car (t:=RA.excl Mem.t)))
                                     Maps.empty>>) /\
         (<<SIM: forall b ofs, sim_loc ((mem_tgt.(Mem.cnts)) b ofs) (mem_src b ofs)>>)
   .
@@ -53,159 +111,141 @@ Section SIMMODSEM.
   Infix "⋅" := URA.add (at level 50, left associativity).
   Notation "(⋅)" := URA.add (only parsing).
 
+  Local Opaque points_tos.
   Theorem correct: ModSemPair.sim Mem1.MemSem Mem0.MemSem.
   Proof.
-(*     econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3. *)
-(*     { typeclasses eauto. } *)
-(*     { ss. esplits; ss; et. ii. econs 2. } *)
-(*     econs; ss. *)
-(*     { split; ss. ii; clarify. rename y into varg. eexists 100%nat. ss. des; clarify. *)
-(*       unfold alist_add, alist_remove; ss. *)
-(*       unfold Mem1.allocF, Mem0.allocF. *)
-(*       go. rename x into sz. *)
-(*       unfold assume. *)
-(*       igo. *)
-(*       go. clarify. unfold HoareFun. go. rename x into rarg_src. *)
-(*       unfold assume. *)
-(*       igo. *)
-(*       repeat go. clear_tac. *)
-(*       Opaque URA.add. *)
-(*       unfold unpadding, assume. *)
-(*       igo. *)
-(*       pfold. econsr; et. esplits; et. *)
-(*       { ii. unfold GRA.padding. des_ifs. (*** TODO: should be trivial ***) } *)
-(*       left. *)
-(*       unfold unleftU. des_ifs; cycle 1. *)
-(*       { exfalso. ss. unfold GRA.padding in Heq. des_ifs. *)
-(*         admit "dependent type... use cast? lemma?". *)
-(*         (* unfold PCM.GRA.cast_ra in *. *) *)
-(*         (* unfold eq_rect_r, eq_rect, eq_sym in *. *) *)
-(*         (* destruct (GRA.inG_prf). *) *)
-(*         (* unfold eq_rect_r in *. ss. *) *)
-(*         (* Set Printing All. *) *)
-(*         (* erewrite rew_opp_l in Heq. *) *)
-(*         (* unfold eq_rect_r in *. unfold eq_rect in *. unfold eq_sym in *. csc. *) *)
-(*       } *)
-(*       igo. *)
-(*       assert(c = (Some mem_tgt)). *)
-(*       { admit "dependent type". } *)
-(*       clarify. *)
-(*       unfold unwrapU. des_ifs. igo. des_ifs. unfold MPut. igo. repeat go. *)
-(*       rename n into blk. rename z into ofs. rename mem_tgt into mem0. rename t into mem1. *)
+    econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
+    { typeclasses eauto. }
+    { ss. esplits; ss; et. ii. econs 2. }
+    econs; ss.
+    { split; ss. ii; clarify. rename y into varg. eexists 100%nat. ss. des; clarify.
+      unfold alist_add, alist_remove; ss.
+      unfold Mem0.allocF.
+      (* Opaque MemStb. *)
+      (* Opaque mapi. *)
+      Local Opaque URA.add.
+      go. ss. rename x into sz.
+      unfold assume.
+      igo.
+      go. clarify. unfold HoareFun. go. rename x into rarg_src.
+      unfold assume.
+      igo.
+      repeat go. clear_tac.
+      Opaque URA.add.
+      unfold unpadding, assume.
+      igo.
+      pfold. econsr; et. esplits; et. left.
+      igo. des_ifs.
+      unfold unwrapU. des_ifs. igo. des_ifs. unfold MPut. igo. repeat go.
+      ss. clarify.
+      force_r. esplits; ss. left.
+      go. igo.
+      go. igo.
+      Hint Unfold alist_add.
+      u.
+      Hint Unfold body_to_tgt interp_hCallE_tgt.
+      u. igo.
+      Local Opaque MemStb.
+      cbn.
+      set (blk := (Mem.nb mem_tgt)) in *.
+      force_l. exists (Vptr (Mem.nb mem_tgt) 0). left.
+      igo. go.
+      force_l.
+      set (mem_src_new := add_delta_to_black
+                            (* (URA.excl (mem_src: URA.car (t:=Mem1._memRA)) frag) *)
+                            (URA.black (mem_src: URA.car (t:=Mem1._memRA)))
+                            (points_tos (blk, 0%Z) (repeat (Vint 0) sz))).
+      eexists (GRA.padding (mem_src_new: URA.car (t:=Mem1.memRA)),
+               GRA.padding (points_tos (blk, 0%Z) (repeat (Vint 0) sz))). left.
+      igo. force_l.
+      {
+        replace (fun k => URA.unit) with (URA.unit (t:=Σ)) by ss.
+        rewrite URA.unit_idl.
+        rewrite GRA.padding_add.
+        rewrite <- URA.unit_id.
+        apply URA.updatable_add; cycle 1.
+        { apply URA.updatable_unit. }
+        eapply GRA.padding_updatable.
+        subst mem_src_new. des_ifs.
+        ss. clarify.
+        rewrite <- Heq.
+        Local Transparent points_tos.
+        replace ((fun _ _ => @inr (option val) unit tt)) with (URA.unit (t:=Mem1._memRA)) by ss.
+        replace (URA.excl ((mem_src: URA.car (t:=Mem1._memRA)) ⋅ f) URA.unit) with
+            (URA.black ((mem_src: URA.car (t:=Mem1._memRA)) ⋅ f)) by ss.
+        rewrite Heq.
+        eapply URA.auth_alloc2.
 
+        clear - WF Heq SIM.
+        { ss. intros b ofs. des_ifs. ss.
 
-(*       force_l. exists (Vptr blk 0). left. *)
-(*       force_l. *)
-(*       (* Eval compute in URA.car (t:=Mem1._memRA). *) *)
-(*       (*** mret, fret ***) *)
-(*       Check (mem_src: URA.car (t:=Mem1._memRA)). *)
-(*       assert(sz = 1) by admit "let's consider only sz 1 case at the moment"; subst. *)
-(*       set (fun _b _ofs => if (dec _b blk) && (dec _ofs 0%Z) then inl (Some (Vint 0)) else inr tt) *)
-(*         as delta. *)
-(*       eexists (GRA.padding (URA.black (URA.add (mem_src: URA.car (t:=Mem1._memRA)) delta)), *)
-(*                GRA.padding *)
-(*                  (fold_left URA.add *)
-(*                             (mapi (fun n _ => (blk, Z.of_nat n) |-> Vint 0) *)
-(*                                   (repeat () 1)) URA.unit)). left. *)
-(*       igo. force_l. *)
-(*       { *)
-(*         replace (fun k => URA.unit) with (URA.unit (t:=Σ)) by ss. *)
-(*         rewrite URA.unit_idl. *)
-(*         rewrite GRA.padding_add. *)
-(*         rewrite <- URA.unit_id. *)
-(*         apply URA.updatable_add; cycle 1. *)
-(*         { apply URA.updatable_unit. } *)
-(*         eapply GRA.padding_updatable. *)
-(*         ss. clarify. *)
-(*         clear - Heq1. *)
-(*         replace (@URA.frag Mem1._memRA (fun _ _ => @inr (option val) unit tt)) with *)
-(*             (URA.unit (t:=Mem1.memRA)) by ss. *)
-(*         rewrite URA.unit_idl. *)
-(*         fold delta. *)
-(*         eapply URA.auth_alloc2. *)
-(*         admit "wf -- Need to know mem_src is wf. (1) Add checkwf, or (2) add wf in W.wf. *)
-(* I think (1) is better; in (2), it seems like we are doing the same reasoning again *)
-(*    ". *)
-(*       } *)
-(*       left. ss. fold delta. clarify. *)
-(*       force_l. *)
-(*       exists (GRA.padding (URA.white (delta: URA.car(t:=Mem1._memRA)))). left. *)
-(*       unfold guarantee. igo. *)
-(*       force_l. esplits; ss. *)
-(*       (* { ss. f_equal. *) *)
-(*       (*   replace (@URA.frag Mem1._memRA (fun (_ : nat) (_ : Z) => @inr (option val) unit tt)) with *) *)
-(*       (*       (URA.unit: URA.car (t:=Mem1.memRA)) by ss. *) *)
-(*       (*   rewrite URA.unit_idl. *) *)
-(*       (*   unfold delta. eauto. *) *)
-(*       (* } *) *)
-(*       left. *)
-(*       force_l. *)
-(*       { instantiate (1:= GRA.padding _). rewrite GRA.padding_add. f_equal. } *)
-(*       left. *)
-(*       force_r. *)
-(*       (* { eapply URA.updatable_add. *) *)
-(*       (*   - eapply GRA.padding_updatable. clear - H. *) *)
-(*       (*     (** TODO: this should be a lemma **) *) *)
-(*       (*     hexploit RA.excl_updatable; et. intro A. des. *) *)
-(*       (*     (*** TODO: RA.updatable --> URA.updatable ***) *) *)
-(*       (*     admit "ez". *) *)
-(*       (*   - refl. *) *)
-(*       (* } *) *)
-(*       (* left. *) *)
-(*       (* pfold. econs; et. *) *)
-(*       rr. esplits; ss; et. ii. *)
-(*       hexploit (SIM b ofs); et. intro A. inv A. *)
-(*       { *)
-(*         assert(T: Mem.cnts mem1 b ofs = Some v). *)
-(*         { admit "ez: memory model". } *)
-(*         rewrite T. *)
-(*         Local Transparent URA.add. *)
-(*         ss. des_ifs. *)
-(*         Local Opaque URA.add. *)
-(*         + unfold delta in *. des_ifs. bsimpl. des. des_sumbool. clarify. *)
-(*           admit "ez: memory model". *)
-(*         + econs. *)
-(*       } *)
-(*       destruct (classic (b = blk /\ ofs = 0%Z)). *)
-(*       { des. clarify. *)
-(*         assert(T: Mem.cnts mem1 blk 0 = Some (Vint 0)). *)
-(*         { admit "ez: memory model". } *)
-(*         rewrite T. *)
-(*         Local Transparent URA.add. *)
-(*         ss. des_ifs. *)
-(*         Local Opaque URA.add. *)
-(*         unfold delta. ss. des_ifs; bsimpl; des; des_sumbool; ss; econs. *)
-(*       } *)
-(*       Psimpl. des; clarify. *)
-(*       { *)
-(*         assert(T: Mem.cnts mem1 b 0 = None). *)
-(*         { admit "ez: memory model". } *)
-(*         rewrite T. *)
-(*         Local Transparent URA.add. *)
-(*         ss. des_ifs. *)
-(*         Local Opaque URA.add. *)
-(*         unfold delta. ss. des_ifs; bsimpl; des; des_sumbool; ss; econs. *)
-(*       } *)
-(*       { *)
-(*         assert(T: Mem.cnts mem1 b ofs = None). *)
-(*         { admit "ez: memory model". } *)
-(*         rewrite T. *)
-(*         Local Transparent URA.add. *)
-(*         ss. des_ifs. *)
-(*         Local Opaque URA.add. *)
-(*         unfold delta. ss. des_ifs; bsimpl; des; des_sumbool; ss; econs. *)
-(*       } *)
-(*     } *)
-(*     econs; ss. *)
-(*     { admit "free". } *)
-(*     econs; ss. *)
-(*     { admit "load". } *)
-(*   Unshelve. *)
-(*     all: ss. *)
-(*     all: try (by repeat econs; et). *)
-(*   Unshelve. *)
-(*     all: try (by repeat econs; et). *)
-    admit "".
+          assert(WF0: URA.wf ((GRA.padding (URA.black (mem_src: URA.car (t:=Mem1._memRA))))
+                                ⋅ (URA.unit ⋅ (rarg_src: URA.car (t:=GRA.to_URA Σ))))).
+          { ss. }
+          eapply URA.wf_mon in WF0.
+          eapply GRA.padding_wf in WF0.
+
+          unfold URA.white in *. clarify.
+          subst blk.
+          Local Transparent URA.add.
+          ss. des_ifs.
+          - bsimpl; des; des_sumbool; clarify.
+            admit "ez: Heq is wrong. Add mem tgt is wf (nb is actually nb); use sim_loc.".
+          - des. specialize (WF1 b ofs). bsimpl; des; des_sumbool; clarify; des_ifs.
+          - des. specialize (WF1 b ofs). bsimpl; des; des_sumbool; clarify; des_ifs.
+            apply_all_once Z.leb_le. apply_all_once Z.ltb_lt.
+            intro A. apply nth_error_None in A. rewrite repeat_length in *.
+            apply inj_le in A. rewrite Z2Nat.id in A; cycle 1.
+            { lia. }
+            lia.
+        }
+      }
+      left.
+      force_l. eexists. left.
+      unfold guarantee. igo.
+      force_l. esplits; et. left.
+      Local Opaque add_delta_to_black.
+      pfold; econs; try (by ss).
+      { instantiate (1:= GRA.padding _). rewrite GRA.padding_add. rewrite URA.unit_idl. f_equal. }
+      left.
+      pfold; econs; ss; et.
+      {
+        rr. unfold alist_add. ss. esplits; ss; et.
+        { unfold mem_src_new.
+          Local Transparent add_delta_to_black.
+          ss.
+        }
+        ii. ss.
+        subst mem_src_new.
+        assert(b <> blk).
+        {admit "should be ez". }
+        hexploit (SIM b ofs); et. intro A. inv A.
+        {
+          des_ifs; bsimpl; des; des_sumbool; clarify.
+          - unfold update. des_ifs. rewrite <- H3. econs.
+          - unfold update. des_ifs. rewrite <- H3. econs.
+          - unfold update. des_ifs. rewrite <- H3. econs.
+        }
+        {
+          des_ifs; bsimpl; des; des_sumbool; clarify.
+          - unfold update. des_ifs. rewrite <- H3. econs.
+          - unfold update. des_ifs. rewrite <- H3. econs.
+          - unfold update. des_ifs. rewrite <- H3. econs.
+        }
+      }
+    }
+    econs.
+    { admit "free". }
+    econs.
+    { admit "load". }
+    econs.
+    { admit "store". }
+    et.
+  Unshelve.
+    all: ss.
+    all: try (by repeat econs; et).
+  Unshelve.
+    all: try (by repeat econs; et).
   Qed.
 
 End SIMMODSEM.

@@ -78,9 +78,9 @@ Section PROOF.
 
   Definition allocF (varg: list val): itree Es val :=
     mr0 <- trigger (MGet "Mem");;
-    `m0: Mem.t <- (unpadding memRA mr0) >>= unleftU >>= unwrapU;;
-    (* `m0: Mem.t <- trigger (Take _);; *)
-    (* assume(mr0 = GRA.padding ((inl (Some m0)): URA.car (t:=memRA)));; *)
+    (* `m0: Mem.t <- (unpadding memRA mr0) >>= unleftU >>= unwrapU;; *)
+    `m0: Mem.t <- trigger (Take _);;
+    assume(mr0 = GRA.padding ((inl (Some m0)): URA.car (t:=memRA)));;
     `sz: Z <- (allocF_parg varg)?;;
     let (blk, m1) := Mem.alloc m0 sz in
     MPut "Mem" (GRA.padding ((inl (Some m1)): URA.car (t:=memRA)));;
@@ -96,9 +96,9 @@ Section PROOF.
 
   Definition freeF (varg: list val): itree Es val :=
     mr0 <- trigger (MGet "Mem");;
-    `m0: Mem.t <- (unpadding memRA mr0) >>= unleftU >>= unwrapU;;
-    (* `m0: Mem.t <- trigger (Take _);; *)
-    (* assume(mr0 = GRA.padding ((inl (Some m0)): URA.car (t:=memRA)));; *)
+    (* `m0: Mem.t <- (unpadding memRA mr0) >>= unleftU >>= unwrapU;; *)
+    `m0: Mem.t <- trigger (Take _);;
+    assume(mr0 = GRA.padding ((inl (Some m0)): URA.car (t:=memRA)));;
     '(b, ofs) <- (freeF_parg varg)?;;
     m1 <- (Mem.free m0 b ofs)?;;
     MPut "Mem" (GRA.padding ((inl (Some m1)): URA.car (t:=memRA)));;
@@ -114,9 +114,9 @@ Section PROOF.
 
   Definition loadF (varg: list val): itree Es val :=
     mr0 <- trigger (MGet "Mem");;
-    `m0: Mem.t <- (unpadding memRA mr0) >>= unleftU >>= unwrapU;;
-    (* `m0: Mem.t <- trigger (Take _);; *)
-    (* assume(mr0 = GRA.padding ((inl (Some m0)): URA.car (t:=memRA)));; *)
+    (* `m0: Mem.t <- (unpadding memRA mr0) >>= unleftU >>= unwrapU;; *)
+    `m0: Mem.t <- trigger (Take _);;
+    assume(mr0 = GRA.padding ((inl (Some m0)): URA.car (t:=memRA)));;
     '(b, ofs) <- (loadF_parg varg)?;;
     v <- (Mem.load m0 b ofs)?;;
     Ret v
@@ -131,9 +131,9 @@ Section PROOF.
 
   Definition storeF (varg: list val): itree Es val :=
     mr0 <- trigger (MGet "Mem");;
-    `m0: Mem.t <- (unpadding memRA mr0) >>= unleftU >>= unwrapU;;
-    (* `m0: Mem.t <- trigger (Take _);; *)
-    (* assume(mr0 = GRA.padding ((inl (Some m0)): URA.car (t:=memRA)));; *)
+    (* `m0: Mem.t <- (unpadding memRA mr0) >>= unleftU >>= unwrapU;; *)
+    `m0: Mem.t <- trigger (Take _);;
+    assume(mr0 = GRA.padding ((inl (Some m0)): URA.car (t:=memRA)));;
     '(b, ofs, v) <- (storeF_parg varg)?;;
     m1 <- (Mem.store m0 b ofs v)?;;
     MPut "Mem" (GRA.padding ((inl (Some m1)): URA.car (t:=memRA)));;

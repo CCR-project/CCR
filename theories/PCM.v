@@ -78,6 +78,19 @@ Module RA.
   }
   .
 
+  Lemma extends_updatable
+        `{M: t}
+        a b
+        (EXT: extends a b)
+    :
+      <<UPD: updatable b a>>
+  .
+  Proof.
+    ii. rr in EXT. des. clarify. eapply wf_mon; et.
+    rewrite <- add_assoc in H.
+    rewrite <- add_assoc. rewrite (add_comm ctx). et.
+  Qed.
+
   Lemma updatable_add
         `{M: t}
         a0 a1
@@ -362,6 +375,19 @@ Module URA.
                          exists b, <<IN: B b>> /\ <<WF: wf (add b ctx)>>;
   }
   .
+
+  Lemma extends_updatable
+        `{M: t}
+        a b
+        (EXT: extends a b)
+    :
+      <<UPD: updatable b a>>
+  .
+  Proof.
+    ii. rr in EXT. des. clarify. eapply wf_mon; et.
+    rewrite <- add_assoc in H.
+    rewrite <- add_assoc. rewrite (add_comm ctx). et.
+  Qed.
 
   Lemma unit_idl `{M: t}: forall a, add unit a = a. i. rewrite add_comm. rewrite unit_id; ss. Qed.
 
@@ -721,6 +747,19 @@ Module GRA.
              | right _ => URA.unit
              end
   .
+
+  Lemma padding_wf
+        A Σ
+        `{@GRA.inG A Σ}
+        (a: A)
+        (WF: URA.wf (padding a))
+    :
+      <<WF: URA.wf a>>
+  .
+  Proof.
+    r. specialize (WF inG_id). ss. unfold padding in *. des_ifs.
+    unfold cast_ra in *. unfold eq_rect, eq_sym in *. dependent destruction e. destruct inG_prf. ss.
+  Qed.
 
   Lemma padding_add
         A Σ

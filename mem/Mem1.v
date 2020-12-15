@@ -36,6 +36,15 @@ Definition points_to (loc: block * Z) (v: val): URA.car :=
   URA.white (M:=_memRA)
             (fun _b _ofs => if (dec _b b) && (dec _ofs ofs) then inl (Some v) else inr tt).
 
+Definition points_tos (loc: block * Z) (vs: list val): URA.car :=
+  let (b, ofs) := loc in
+  URA.white (M:=_memRA)
+            (fun _b _ofs => if (dec _b b) && ((ofs <=? _ofs) && (_ofs <? (ofs + Z.of_nat (List.length vs))))%Z
+                            then inl (List.nth_error vs (Z.to_nat (_ofs - ofs))) else inr tt).
+
+
+
+
 (* Definition own {GRA: GRA.t} (whole a: URA.car (t:=GRA)): Prop := URA.extends a whole. *)
 
 Notation "loc |-> v" := (points_to loc v) (at level 20).
@@ -99,9 +108,7 @@ Section PROOF.
                (fun sz varg _ => varg = [Vint (Z.of_nat sz)])
                (fun sz vret rret =>
                   exists b, vret = Vptr b 0 /\
-                            rret = GRA.padding (fold_left URA.add
-                                                          (mapi (fun n _ => (b, Z.of_nat n) |-> (Vint 0))
-                                                                (List.repeat tt sz)) URA.unit))) ;
+                            rret = GRA.padding (points_tos (b, 0) (List.repeat (Vint 0) sz)))) ;
   ("free", mk "Mem"
               (fun '(b, ofs) varg rarg => exists v, varg = [Vptr b ofs] /\
                                                     rarg = (GRA.padding ((b, ofs) |-> v)))
