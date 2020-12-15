@@ -125,14 +125,14 @@ Section PROOF.
   Definition HoareFun
              (P: X -> list val -> Σ -> Prop)
              (Q: X -> val -> Σ -> Prop)
-             (body: list val -> itree Es val): list val -> itree Es val := fun varg =>
+             (body: X -> list val -> itree Es val): list val -> itree Es val := fun varg =>
     x <- trigger (Take X);;
     rarg <- trigger (Take Σ);; trigger (Forge rarg);; (*** virtual resource passing ***)
     trigger (CheckWf mn);;
     assume(P x varg rarg);; (*** precondition ***)
 
 
-    vret <- body varg;; (*** "rudiment": we don't remove extcalls because of termination-sensitivity ***)
+    vret <- body x varg;; (*** "rudiment": we don't remove extcalls because of termination-sensitivity ***)
 
     '(mret, fret) <- trigger (Choose _);; trigger (Put mn mret fret);; (*** updating resources in an abstract way ***)
     rret <- trigger (Choose Σ);; guarantee(Q x vret rret);; (*** postcondition ***)
@@ -305,7 +305,7 @@ Section CANCEL.
     X: Type; (*** a meta-variable ***)
     precond: X -> list val -> Σ -> Prop;
     postcond: X -> val -> Σ -> Prop;
-    body: list val -> itree (hCallE +' eventE) val;
+    body: X -> list val -> itree (hCallE +' eventE) val;
   }
   .
 
@@ -335,8 +335,8 @@ Section CANCEL.
                   ((fun T X => trigger X): eventE ~> itree Es))
   .
 
-  Definition body_to_tgt (body: list val -> itree (hCallE +' eventE) val): list val -> itree Es val :=
-    fun varg => interp_hCallE_tgt (body varg)
+  Definition body_to_tgt {X} (body: X -> list val -> itree (hCallE +' eventE) val): X -> list val -> itree Es val :=
+    fun x varg => interp_hCallE_tgt (body x varg)
   .
 
 
@@ -350,8 +350,8 @@ Section CANCEL.
                   ((fun T X => trigger X): eventE ~> itree Es))
   .
 
-  Definition body_to_src (body: list val -> itree (hCallE +' eventE) val): list val -> itree Es val :=
-    fun varg => interp_hCallE_src (body varg)
+  Definition body_to_src {X} (body: X -> list val -> itree (hCallE +' eventE) val): X -> list val -> itree Es val :=
+    fun x varg => interp_hCallE_src (body x varg)
   .
   Definition fun_to_tgt (f: funspec): (list val -> itree Es val) :=
     HoareFun f.(mn) (f.(precond)) (f.(postcond)) (body_to_tgt f.(body)).
