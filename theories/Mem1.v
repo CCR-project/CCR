@@ -119,10 +119,8 @@ Section PROOF.
   ]
   .
 
-  Definition GlobalStb: list (fname * funspec) := MemStb.
-
   Definition MemSem: ModSem.t := {|
-    ModSem.fnsems := List.map (map_snd (fun_to_tgt GlobalStb)) MemStb;
+    ModSem.fnsems := List.map (map_snd (fun_to_tgt MemStb)) MemStb;
       (* [("alloc", allocF) ; ("free", freeF) ; ("load", loadF) ; ("store", storeF)]; *)
     ModSem.initial_mrs := [("Mem", GRA.padding (URA.black (M:=_memRA) (fun _ _ => inr tt)))];
   |}
@@ -130,7 +128,7 @@ Section PROOF.
 
   Definition Mem: Mod.t := {|
     Mod.get_modsem := fun _ => MemSem; (*** TODO: we need proper handling of function pointers ***)
-    Mod.sk := Sk.unit;
+    Mod.sk := List.map fst MemStb;
   |}
   .
 

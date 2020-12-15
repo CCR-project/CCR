@@ -346,7 +346,7 @@ Section CANCEL.
   .
 
   Definition interp_hCallE_src: itree (hCallE +' eventE) ~> itree Es :=
-    interp (case_ (bif:=sum1) handle_hCallE_tgt
+    interp (case_ (bif:=sum1) handle_hCallE_src
                   ((fun T X => trigger X): eventE ~> itree Es))
   .
 
