@@ -51,7 +51,7 @@ Section PROOF.
 
   Definition MemMain2: Mod.t := {|
     Mod.get_modsem := fun _ => {|
-        ModSem.fnsems := List.map (map_snd fun_to_src) (MemStb ++ MainStb);
+        ModSem.fnsems := List.map (fun '(fn, _, body) => (fn, fun_to_src body)) (MemFtb ++ MainFtb);
         (* ModSem.initial_mrs := [("Mem", ε) ; ("Main", ε)]; *)
         ModSem.initial_mrs := [];
       |};
@@ -62,12 +62,12 @@ Section PROOF.
   Theorem correct: Beh.of_program (Mod.interp MemMain1) <1= Beh.of_program (Mod.interp MemMain2).
   Proof.
     ii.
-    set (global_stb:=MemStb++MainStb).
+    set (global_ftb:=MemFtb++MainFtb).
     (* clearbody global_stb. *)
     Local Opaque MemStb.
     Local Opaque Mem1.MemStb.
     Local Opaque MainStb.
-    eapply adequacy_type with (stb:=global_stb) in PR. cbn in *.
+    eapply adequacy_type with (ftb:=global_ftb) in PR. cbn in *.
     rp; try apply PR; cycle 1.
     { refl. }
     clear PR. f_equal.

@@ -125,14 +125,14 @@ Section PROOF.
   Definition HoareFun
              (P: X -> list val -> Σ -> Prop)
              (Q: X -> val -> Σ -> Prop)
-             (body: X -> list val -> itree Es val): list val -> itree Es val := fun varg =>
+             (body: list val -> itree Es val): list val -> itree Es val := fun varg =>
     x <- trigger (Take X);;
     rarg <- trigger (Take Σ);; trigger (Forge rarg);; (*** virtual resource passing ***)
     trigger (CheckWf mn);;
     assume(P x varg rarg);; (*** precondition ***)
 
 
-    vret <- body x varg;; (*** "rudiment": we don't remove extcalls because of termination-sensitivity ***)
+    vret <- body varg;; (*** "rudiment": we don't remove extcalls because of termination-sensitivity ***)
 
     '(mret, fret) <- trigger (Choose _);; trigger (Put mn mret fret);; (*** updating resources in an abstract way ***)
     rret <- trigger (Choose Σ);; guarantee(Q x vret rret);; (*** postcondition ***)
@@ -300,16 +300,18 @@ Section CANCEL.
   .
 
   (*** spec table ***)
-  Record funspec: Type := mk {
+  Record fspec: Type := mk {
     mn: mname;
     X: Type; (*** a meta-variable ***)
     precond: X -> list val -> Σ -> Prop;
     postcond: X -> val -> Σ -> Prop;
-    body: X -> list val -> itree (hCallE +' eventE) val;
   }
   .
 
-  (* Variable stb: fname -> option funspec. *)
+
+
+  Section INTERP.
+  (* Variable stb: fname -> option fspec. *)
   (*** TODO: I wanted to use above definiton, but doing so makes defining ms_src hard ***)
   (*** We can fix this by making ModSem.fnsems to a function, but doing so will change the type of
        ModSem.add to predicate (t -> t -> t -> Prop), not function.
@@ -319,7 +321,7 @@ Section CANCEL.
          When adding two ms, it is pointwise addition, and addition of (option A) will yield None when both are Some.
  ***)
   (*** TODO: try above idea; if it fails, document it; and refactor below with alist ***)
-  Variable stb: list (fname * funspec).
+  Variable stb: list (fname * fspec).
 
   Definition handle_hCallE_tgt: hCallE ~> itree Es :=
     fun _ '(hCall fn varg) =>
@@ -335,8 +337,8 @@ Section CANCEL.
                   ((fun T X => trigger X): eventE ~> itree Es))
   .
 
-  Definition body_to_tgt {X} (body: X -> list val -> itree (hCallE +' eventE) val): X -> list val -> itree Es val :=
-    fun x varg => interp_hCallE_tgt (body x varg)
+  Definition body_to_tgt (body: list val -> itree (hCallE +' eventE) val): list val -> itree Es val :=
+    fun varg => interp_hCallE_tgt (body varg)
   .
 
 
@@ -350,12 +352,13 @@ Section CANCEL.
                   ((fun T X => trigger X): eventE ~> itree Es))
   .
 
-  Definition body_to_src {X} (body: X -> list val -> itree (hCallE +' eventE) val): X -> list val -> itree Es val :=
-    fun x varg => interp_hCallE_src (body x varg)
+  Definition body_to_src (body: list val -> itree (hCallE +' eventE) val): list val -> itree Es val :=
+    fun varg => interp_hCallE_src (body varg)
   .
-  Definition fun_to_tgt (f: funspec): (list val -> itree Es val) :=
-    HoareFun f.(mn) (f.(precond)) (f.(postcond)) (body_to_tgt f.(body)).
-  Definition fun_to_src (f: funspec): (list val -> itree Es val) := body_to_src f.(body).
+  Definition fun_to_tgt (fs: fspec) (body: list val -> itree (hCallE +' eventE) val): (list val -> itree Es val) :=
+    HoareFun fs.(mn) (fs.(precond)) (fs.(postcond)) (body_to_tgt body).
+  Definition fun_to_src (body: list val -> itree (hCallE +' eventE) val): (list val -> itree Es val) :=
+    body_to_src body.
 
 (*** NOTE:
 body can execute eventE events.
@@ -367,13 +370,19 @@ NOTE: we can allow normal "callE" in the body too, but we need to ensure that it
 If this feature is needed; we can extend it then. At the moment, I will only allow hCallE.
 ***)
 
+  End INTERP.
+
+
+
   Variable md_tgt: Mod.t.
   Let ms_tgt: ModSem.t := (Mod.get_modsem md_tgt (Sk.load_skenv md_tgt.(Mod.sk))).
 
-  Hypothesis WTY: ms_tgt.(ModSem.fnsems) = List.map (map_snd fun_to_tgt) stb.
+  Variable ftb: list (fname * fspec * (list val -> itree (hCallE +' eventE) val)).
+  Let stb: list (fname * fspec) := List.map fst ftb.
+  Hypothesis WTY: ms_tgt.(ModSem.fnsems) = List.map (fun '(fn, fs, body) => (fn, fun_to_tgt stb fs body)) ftb.
 
   Definition ms_src: ModSem.t := {|
-    ModSem.fnsems := List.map (map_snd fun_to_src) stb;
+    ModSem.fnsems := List.map (fun '(fn, _, body) => (fn, fun_to_src body)) ftb;
     (* ModSem.initial_mrs := List.map (map_snd (fun _ => ε)) ms_tgt.(ModSem.initial_mrs); *)
     ModSem.initial_mrs := [];
     (*** note: we don't use resources, so making everything as a unit ***)

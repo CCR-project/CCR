@@ -40,37 +40,31 @@ Section PROOF.
   .
 
   (*** main's view on stb ***)
-  Definition MainStb: list (fname * funspec) := [("main", mk "Main" (X:=unit) top3 top3 mainBody)].
-  Definition MemStb: list (fname * funspec) :=
+  Definition MainStb: list (fname * fspec) := [("main", mk "Main" (X:=unit) top3 top3)].
+  Definition MemStb: list (fname * fspec) :=
   [("alloc", mk "Mem"
                (fun sz varg _ => varg = [Vint (Z.of_nat sz)])
                (fun sz vret rret =>
                   exists b, vret = Vptr b 0 /\
                             rret = GRA.padding (fold_left URA.add
                                                           (mapi (fun n _ => (b, Z.of_nat n) |-> (Vint 0))
-                                                                (List.repeat tt sz)) URA.unit))
-               (fun _ => trigger (Choose _))) ;
+                                                                (List.repeat tt sz)) URA.unit))) ;
   ("free", mk "Mem"
               (fun '(b, ofs, v) varg rarg => varg = [Vptr b ofs] /\
                                              rarg = (GRA.padding ((b, ofs) |-> v)))
-              (top3)
-              (fun _ => trigger (Choose _))) ;
+              (top3)) ;
   ("load", mk "Mem"
               (fun '(b, ofs, v) varg rarg => varg = [Vptr b ofs] /\
                                              rarg = (GRA.padding ((b, ofs) |-> v)))
-              (fun '(b, ofs, v) vret rret => rret = (GRA.padding ((b, ofs) |-> v)) /\ vret = v)
-              (fun _ => trigger (Choose _))) ;
+              (fun '(b, ofs, v) vret rret => rret = (GRA.padding ((b, ofs) |-> v)) /\ vret = v)) ;
   ("store", mk "Mem"
                (fun '(b, ofs, v_old, v_new) varg rarg =>
                   varg = [Vptr b ofs ; v_new] /\ rarg = (GRA.padding ((b, ofs) |-> v_old)))
-               (fun '(b, ofs, v_old, v_new) _ rret => rret = (GRA.padding ((b, ofs) |-> v_new)))
-               (fun _ => trigger (Choose _)))
+               (fun '(b, ofs, v_old, v_new) _ rret => rret = (GRA.padding ((b, ofs) |-> v_new))))
   ]
   .
 
-  Definition mainF: list val -> itree Es val :=
-    HoareFun "Main" (X:=unit) top3 top3 (body_to_tgt MainStb mainBody)
-  .
+  Definition MainFtb := zip pair MemStb [mainBody].
 
   (***
 Possible improvements:
@@ -83,7 +77,8 @@ Possible improvements:
 
   Definition MainSem: ModSem.t := {|
     (* ModSem.fnsems := [("main", mainF)]; *)
-    ModSem.fnsems := List.map (map_snd (fun_to_tgt (MainStb ++ MemStb))) MainStb;
+    (* ModSem.fnsems := List.map (map_snd (fun_to_tgt (MainStb ++ MemStb))) MainStb; *)
+    ModSem.fnsems := List.map (fun '(fn, fs, body) => (fn, fun_to_tgt (MainStb ++ MemStb) fs body)) MainFtb;
     ModSem.initial_mrs := [("Main", ε)];
   |}
   .
