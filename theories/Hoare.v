@@ -400,8 +400,130 @@ If this feature is needed; we can extend it then. At the moment, I will only all
   |}
   .
 
+
+
+  Require Import SimSTS.
+
+  (* Variable match_states: state (Mod.interp md_tgt) -> state (Mod.interp md_tgt) -> Prop. *)
+
+  (* Let adequacy_type_aux *)
+  (*     st_src0 st_tgt0 *)
+  (*     (SIM: match_states st_src0 st_tgt0) *)
+  (*   : *)
+  (*     Beh.of_state (Mod.interp md_tgt) st_tgt0 <1= Beh.of_state (Mod.interp md_tgt) st_src0 *)
+  (* . *)
+  (* Proof. *)
+  (*   revert_until match_states. pcofix CIH. i. punfold PR. *)
+  (*   inv PR. *)
+  (*   - ss. *)
+  (* Qed. *)
+  Lemma interp_state_bind:
+  forall (E F : Type -> Type) (A B S : Type) (f : forall T : Type, E T -> S -> itree F (S * T)) (t : itree E A)
+    (k : A -> itree E B) (s : S),
+  interp_state f (` x : _ <- t;; k x) s = ` st : S * A <- interp_state f t s;; interp_state f (k (snd st)) (fst st)
+  .
+  Proof. i. f. apply interp_state_bind. Qed.
+
+  Definition my_interp (prog: callE ~> itree Es) (itr0: itree Es val) (st0: ModSem.r_state) :=
+    ModSem.interp_rE (interp_mrec prog itr0) st0
+  .
+
+  Ltac grind := repeat (f_equiv; try apply func_ext; ii; try (des_ifs; check_safe)).
+  Lemma my_bind
+        (prog: callE ~> itree Es)
+        (itr: itree Es val) (ktr: val -> itree Es val)
+        st0
+    :
+      my_interp prog (v <- itr ;; ktr v) st0 =
+      '(st1, v) <- my_interp prog (itr) st0 ;; my_interp prog (ktr v) st1
+  .
+  Proof.
+    unfold my_interp.
+    unfold ModSem.interp_rE.
+    rewrite interp_mrec_bind.
+    rewrite interp_state_bind.
+    grind.
+  Qed.
+   (* : forall H : Type, callE H -> itree Es H *)
+   (*  (` x : ModSem.r_state * val <- ModSem.interp_rE (mrec itr0_src ce) st_src0;; Ret (snd x)) *)
+
+  Ltac igo := repeat (try rewrite bind_bind; try rewrite bind_ret_l; try rewrite bind_ret_r; try rewrite bind_tau;
+                      try rewrite interp_vis;
+                      try rewrite interp_ret;
+                      try rewrite interp_tau;
+                      try rewrite interp_trigger
+                     ).
+
+  Let W: Type := ((string -> Σ) * list Σ).
+  Let wf: W -> W -> Prop :=
+    fun '(mrs_src, frs_src) '(mrs_tgt, frs_tgt) =>
+      (<<LEN: List.length frs_src = List.length frs_tgt>>) /\
+      (<<WFTGT: URA.wf (URA.add (fold_left URA.add (List.map (mrs_tgt <*> fst) ms_tgt.(ModSem.initial_mrs)) ε)
+                                (fold_left URA.add frs_tgt ε))>>)
+  .
+
   Theorem adequacy_type: Beh.of_program (Mod.interp md_tgt) <1= Beh.of_program (Mod.interp md_src).
   Proof.
+    eapply adequacy.
+    { apply lt_wf. }
+    econs.
+    { apply lt_wf. }
+    eexists 102%nat.
+    ss.
+    set (fun _ ce => trigger PushFrame;; rv <- ModSem.sem ms_src ce;; trigger PopFrame;; Ret rv) as itr0_src.
+    set (fun _ ce  =>
+              trigger PushFrame;;
+              rv <- ModSem.sem (Mod.get_modsem md_tgt (Sk.load_skenv (Mod.sk md_tgt))) ce;;
+              trigger PopFrame;; Ret rv) as itr0_tgt.
+    unfold ITree.map.
+    unfold assume.
+    igo.
+    pfold. eapply sim_angelic_src; ss. ii. inv STEP; ss; irw in H0; csc. clear_tac. esplits; et. left.
+    pfold. eapply sim_angelic_tgt; ss. esplits; et. { irw. econs. } left.
+    set (st_src0 := (ModSem.initial_r_state ms_src)).
+    set (st_tgt0 := (ModSem.initial_r_state (Mod.get_modsem md_tgt (Sk.load_skenv (Mod.sk md_tgt))))).
+    assert(SIM: wf st_src0 st_tgt0).
+    { r. ss. esplits; et. admit "initial wf: mandate this to the user". }
+    clearbody st_src0 st_tgt0.
+    clear x.
+    abstr (Call "main" []) ce.
+    unfold mrec.
+    replace (ModSem.interp_rE (interp_mrec itr0_src (itr0_src val ce)) st_src0) with
+        (my_interp itr0_src (itr0_src val ce) st_src0) by ss.
+    replace (ModSem.interp_rE (interp_mrec itr0_tgt (itr0_tgt val ce)) st_tgt0) with
+        (my_interp itr0_src (itr0_src val ce) st_src0) by ss.
+    fold my_interp.
+    (* unfold ModSem.interp_rE. *)
+    (* unfold mrec. *)
+    revert_until itr0_tgt.
+    pcofix CIH. i. pfold.
+    dependent destruction ce.
+    unfold itr0_src, itr0_tgt. ss. igo.
+    rewrite ! interp_mrec_bind.
+    rewrite ! interp_state-bind.
+    ss.
+
+
+    destruct ce.
+    
+
+
+
+
+    pfold.
+    pfold.
+    clear x.
+    assert(SIMST: (ModSem.initial_r_state ms_src) = 
+    revert_until itr0_tgt.
+    pcofix CIH.
+    pfold.
+    set (fun _ ce => trigger PushFrame;; rv <- ModSem.sem ms_tgt ce;; trigger PopFrame;; Ret rv) as itr0_tgt.
+    set (mrec
+             (fun (T : Type) (ce : callE T) =>
+              trigger PushFrame;;
+              ` rv : T <- ModSem.sem (Mod.get_modsem md_tgt (Sk.load_skenv (Mod.sk md_tgt))) ce;; trigger PopFrame;; Ret rv)
+             (Call "main" []))
+    ss.
     admit "In the proof, we will need to show
 (1) Choose/Take cancel
 (2) assume/guarantee cancel
