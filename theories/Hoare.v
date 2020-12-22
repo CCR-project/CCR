@@ -424,14 +424,51 @@ If this feature is needed; we can extend it then. At the moment, I will only all
   .
   Proof. i. f. apply interp_state_bind. Qed.
 
-  Definition my_interp (prog: callE ~> itree Es) (itr0: itree Es val) (st0: ModSem.r_state) :=
+  Lemma interp_state_vis:
+  forall (E F : Type -> Type) (S T U : Type) (e : E T) (k : T -> itree E U) (h : forall T0 : Type, E T0 -> stateT S (itree F) T0)
+    (s : S), interp_state h (Vis e k) s = ` sx : S * T <- h T e s;; (tau;; interp_state h (k (snd sx)) (fst sx))
+  .
+  Proof.
+    i. f. apply interp_state_vis.
+  Qed.
+
+  Lemma interp_state_tau :
+    forall (E F : Type -> Type) (S T : Type) (t : itree E T) (h : forall T0 : Type, E T0 -> stateT S (itree F) T0) (s : S),
+      interp_state h (tau;; t) s = (tau;; interp_state h t s)
+  .
+  Proof.
+    i. f. apply interp_state_tau.
+  Qed.
+
+  Lemma interp_state_ret:
+  forall (E F : Type -> Type) (R S : Type) (f : forall T : Type, E T -> S -> itree F (S * T)) (s : S) (r : R),
+  interp_state f (Ret r) s = Ret (s, r)
+  .
+  Proof.
+    i. f. apply interp_state_ret.
+  Qed.
+
+  Lemma unfold_interp:
+    forall (E F : Type -> Type) (R : Type) (f : forall T : Type, E T -> itree F T) (t : itree E R),
+      interp f t = _interp f (observe t)
+  .
+  Proof.
+    i. f. apply unfold_interp.
+  Qed.
+  Lemma interp_ret:
+    forall (E F : Type -> Type) (R : Type) (f : forall T : Type, E T -> itree F T) (x : R), interp f (Ret x) = Ret x.
+  Proof. i. f. apply interp_ret. Qed.
+
+  Definition my_interp A (prog: callE ~> itree Es) (itr0: itree Es A) (st0: ModSem.r_state) :=
     ModSem.interp_rE (interp_mrec prog itr0) st0
   .
 
   Ltac grind := repeat (f_equiv; try apply func_ext; ii; try (des_ifs; check_safe)).
-  Lemma my_bind
+
+  Lemma my_interp_bind
         (prog: callE ~> itree Es)
-        (itr: itree Es val) (ktr: val -> itree Es val)
+        A B
+        (itr: itree Es A) (ktr: A -> itree Es B)
         st0
     :
       my_interp prog (v <- itr ;; ktr v) st0 =
@@ -444,8 +481,131 @@ If this feature is needed; we can extend it then. At the moment, I will only all
     rewrite interp_state_bind.
     grind.
   Qed.
-   (* : forall H : Type, callE H -> itree Es H *)
-   (*  (` x : ModSem.r_state * val <- ModSem.interp_rE (mrec itr0_src ce) st_src0;; Ret (snd x)) *)
+
+  Lemma my_interp_ret
+        T
+        prog st0 (v: T)
+    :
+      my_interp prog (Ret v) st0 = Ret (st0, v)
+  .
+  Proof.
+    unfold my_interp. unfold ModSem.interp_rE.
+    rewrite unfold_interp_mrec. ss.
+    rewrite interp_state_ret. ss.
+  Qed.
+
+  Lemma interp_mrec_hit:
+    forall (D E : Type -> Type) (ctx : forall T : Type, D T -> itree (D +' E) T) (U : Type) (a : D U),
+      interp_mrec ctx (trigger a) = (tau;; interp_mrec ctx (ctx _ a))
+  .
+  Proof.
+    i. rewrite unfold_interp_mrec. ss.
+    unfold resum, ReSum_id, id_, Id_IFun. rewrite bind_ret_r. ss.
+  Qed.
+
+
+  Definition tauK {E R}: R -> itree E R := fun r => tau;; Ret r.
+  Hint Unfold tauK.
+
+  (*** TODO: I don't want "F" here, but it is technically needed. Report it to itree people? ***)
+  Lemma interp_mrec_miss:
+    (* forall (D E F: Type -> Type) `{F -< E} (ctx : forall T : Type, D T -> itree (D +' E) T) (U : Type) (a : F U), *)
+    forall (D E F: Type -> Type) `{F -< E} (ctx : forall T : Type, D T -> itree (D +' E) T) (U : Type) (a : F U),
+      interp_mrec ctx (trigger a) = x <- (trigger a);; tau;; Ret x
+      (* (trigger a) >>= tauK *)
+  .
+  Proof.
+    i. rewrite unfold_interp_mrec. cbn.
+    unfold trigger. irw.
+    grind. irw. ss.
+  Qed.
+
+  (*** TODO: interp_trigger_eqit does not exist. report to itree people? ***)
+  Lemma interp_state_trigger:
+  forall (E F : Type -> Type) (R S : Type) (e : E R) (f : forall T : Type, E T -> stateT S (itree F) T) (s : S),
+  interp_state f (ITree.trigger e) s = ` x : S * R <- f R e s;; (tau;; Ret x)
+  .
+  Proof. i. f. apply interp_state_trigger_eqit. Qed.
+
+  Lemma my_interp_callE
+        p st0
+        (* (e: Es Σ) *)
+        (e: callE val)
+    :
+      my_interp p (trigger e) st0 = tau;; (my_interp p (p val e) st0)
+  .
+  Proof.
+    unfold my_interp. unfold ModSem.interp_rE. rewrite interp_mrec_hit. cbn.
+    rewrite interp_state_tau. grind.
+  Qed.
+
+  Lemma my_interp_rE
+        p st0
+        (* (e: Es Σ) *)
+        T
+        (e: rE T)
+    :
+      my_interp p (trigger e) st0 =
+      '(st1, r) <- ModSem.handle_rE e st0;;
+      tau;; tau;;
+      Ret (st1, r)
+      (* interp_state (case_ ModSem.handle_rE pure_state) (tau;; Ret r) st1 *)
+  .
+  Proof.
+    unfold my_interp. unfold ModSem.interp_rE.
+    (* rewrite unfold_interp_mrec. cbn. *)
+    unfold Es.
+    rewrite interp_mrec_miss with (D:=callE) (E:=rE +' eventE) (F:=rE) (a:=e).
+    rewrite interp_state_bind.
+    rewrite interp_state_trigger. irw. grind. irw. grind.
+    rewrite interp_state_tau. grind.
+    rewrite interp_state_ret. ss.
+  Qed.
+
+  Lemma my_interp_eventE
+        p st0
+        (* (e: Es Σ) *)
+        T
+        (e: eventE T)
+    :
+      my_interp p (trigger e) st0 = r <- trigger e;; tau;; tau;; Ret (st0, r)
+  .
+  Proof.
+    unfold my_interp. unfold ModSem.interp_rE.
+    (* rewrite unfold_interp_mrec. cbn. *)
+    unfold Es.
+    rewrite interp_mrec_miss with (D:=callE) (E:=rE +' eventE) (F:=eventE) (a:=e).
+    rewrite interp_state_bind.
+    rewrite interp_state_trigger. irw. unfold pure_state.
+    unfold resum, ReSum_id, id_, Id_IFun.
+    irw. grind. irw. grind.
+    rewrite interp_state_tau. grind.
+    rewrite interp_state_ret. ss.
+  Qed.
+
+  Lemma my_interp_triggerUB
+        (prog: callE ~> itree Es)
+        st0
+        A
+    :
+      (my_interp prog (triggerUB) st0: itree eventE (_ * A)) = triggerUB
+  .
+  Proof.
+    unfold triggerUB. rewrite my_interp_bind. rewrite my_interp_eventE.
+    irw. grind.
+  Qed.
+
+  Lemma my_interp_triggerNB
+        (prog: callE ~> itree Es)
+        st0
+        A
+    :
+      (my_interp prog (triggerNB) st0: itree eventE (_ * A)) = triggerNB
+  .
+  Proof.
+    unfold triggerNB. rewrite my_interp_bind. rewrite my_interp_eventE.
+    irw. grind.
+  Qed.
 
   Ltac igo := repeat (try rewrite bind_bind; try rewrite bind_ret_l; try rewrite bind_ret_r; try rewrite bind_tau;
                       try rewrite interp_vis;
@@ -462,6 +622,83 @@ If this feature is needed; we can extend it then. At the moment, I will only all
                                 (fold_left URA.add frs_tgt ε))>>)
   .
 
+  Hypothesis WTB: List.map fst ftb = List.map fst stb.
+
+  Let adequacy_type_aux:
+    let p_src: callE ~> itree Es := fun _ ce => trigger PushFrame;; rv <- ModSem.sem ms_src ce;; trigger PopFrame;; Ret rv in
+    let p_tgt: callE ~> itree Es := fun _ ce => trigger PushFrame;; rv <- ModSem.sem ms_tgt ce;; trigger PopFrame;; Ret rv in
+    forall st_src0 st_tgt0 (SIM: wf st_src0 st_tgt0) (ce: hCallE val),
+    sim (Mod.interp md_src) (Mod.interp md_tgt) lt 100%nat
+        (* ('(st_src1, r) <- (my_interp p_src (interp_hCallE_src (trigger ce)) st_src0);; Ret r) *)
+        (* ('(st_tgt1, r) <- (my_interp p_tgt (interp_hCallE_tgt stb (trigger ce)) st_tgt0);; Ret r) *)
+        (x <- (my_interp p_src (interp_hCallE_src (trigger ce)) st_src0);; Ret (snd x))
+        (x <- (my_interp p_tgt (interp_hCallE_tgt stb (trigger ce)) st_tgt0);; Ret (snd x))
+  .
+  Proof.
+    intros ? ?.
+    pcofix CIH. i. pfold.
+    dependent destruction ce.
+    Local Opaque GRA.to_URA.
+    ss.
+    unfold interp_hCallE_src.
+    unfold interp_hCallE_tgt.
+    rewrite ! unfold_interp. ss.
+    rewrite ! my_interp_bind. igo. cbn.
+    unfold handle_hCallE_src at 2. unfold handle_hCallE_tgt at 2. des_ifs. igo.
+    rewrite ! interp_ret.
+    unfold p_src at 2. unfold p_tgt at 2. ss. igo.
+    rewrite ! my_interp_bind. igo.
+    rewrite ! my_interp_rE.
+    unfold ModSem.handle_rE.
+    r in SIM. des_ifs_safe. des.
+    des_ifs.
+    { (*** tgt NB ***) irw. unfold triggerNB. irw. eapply sim_demonic_tgt; ss. ii. inv STEP; ss. }
+    irw.
+    Ltac tauLR := eapply sim_demonic_both; ss; intros ? STEP; inv STEP; esplits; et; [econs; ss; et|].
+    tauLR. left; pfold.
+    tauLR. left; pfold.
+    unfold unwrapU.
+    destruct (find _ (List.map (fun '(fn0, body) => (fn0, fun_to_src body)) ftb)) eqn:FIND; cycle 1.
+    { rewrite my_interp_bind. rewrite my_interp_triggerUB. irw.
+      (*** src UB ***) unfold triggerUB. irw. eapply sim_angelic_src; ss. ii. inv STEP; ss.
+    }
+    fold ms_tgt. rewrite WTY.
+    rewrite find_map in FIND. uo. des_ifs_safe.
+    rename Heq into FS.
+    unfold Basics.compose in *.
+    rewrite find_map. uo. des_ifs; cycle 1; rename Heq0 into FT.
+    { exfalso.
+      unfold Basics.compose in *.
+      eapply find_some in FS. des; ss.
+      eapply find_none in FT; et. des_ifs. ss.
+      clarify.
+    }
+    igo.
+    rewrite ! my_interp_bind.
+    igo.
+    unfold fun_to_src, body_to_src.
+    unfold fun_to_tgt, body_to_tgt.
+    des_ifs; cycle 1.
+    { irw. ss. admit "ez - use FT, WTB. We should refactor -- e.g., to use alist, and then use find as a map. this is too low lv".
+    }
+    unfold HoareFun.
+
+  Qed.
+      (p_src:
+  p_src := fun (H : Type) (ce : callE H) => trigger PushFrame;; ` rv : H <- ModSem.sem ms_src ce;; trigger PopFrame;; Ret rv
+   : forall H : Type, callE H -> itree Es H
+  p_tgt := fun (H : Type) (ce : callE H) =>
+           trigger PushFrame;;
+           ` rv : H <- ModSem.sem (Mod.get_modsem md_tgt (Sk.load_skenv (Mod.sk md_tgt))) ce;; trigger PopFrame;; Ret rv
+   : forall H : Type, callE H -> itree Es H
+  st_src0, st_tgt0 : ModSem.r_state
+  SIM : wf st_src0 st_tgt0
+  ce : callE val
+  ============================
+  paco3 (_sim (Mod.interp md_src) (Mod.interp md_tgt) lt) bot3 100%nat
+    (` x : ModSem.r_state * val <- ModSem.interp_rE (mrec p_src ce) st_src0;; Ret (snd x))
+    (` x : ModSem.r_state * val <- ModSem.interp_rE (mrec p_tgt ce) st_tgt0;; Ret (snd x))
+
   Theorem adequacy_type: Beh.of_program (Mod.interp md_tgt) <1= Beh.of_program (Mod.interp md_src).
   Proof.
     eapply adequacy.
@@ -470,11 +707,11 @@ If this feature is needed; we can extend it then. At the moment, I will only all
     { apply lt_wf. }
     eexists 102%nat.
     ss.
-    set (fun _ ce => trigger PushFrame;; rv <- ModSem.sem ms_src ce;; trigger PopFrame;; Ret rv) as itr0_src.
+    set (fun _ ce => trigger PushFrame;; rv <- ModSem.sem ms_src ce;; trigger PopFrame;; Ret rv) as p_src.
     set (fun _ ce  =>
               trigger PushFrame;;
               rv <- ModSem.sem (Mod.get_modsem md_tgt (Sk.load_skenv (Mod.sk md_tgt))) ce;;
-              trigger PopFrame;; Ret rv) as itr0_tgt.
+              trigger PopFrame;; Ret rv) as p_tgt.
     unfold ITree.map.
     unfold assume.
     igo.
@@ -488,17 +725,59 @@ If this feature is needed; we can extend it then. At the moment, I will only all
     clear x.
     abstr (Call "main" []) ce.
     unfold mrec.
-    replace (ModSem.interp_rE (interp_mrec itr0_src (itr0_src val ce)) st_src0) with
-        (my_interp itr0_src (itr0_src val ce) st_src0) by ss.
-    replace (ModSem.interp_rE (interp_mrec itr0_tgt (itr0_tgt val ce)) st_tgt0) with
-        (my_interp itr0_src (itr0_src val ce) st_src0) by ss.
-    fold my_interp.
+    replace (ModSem.interp_rE (interp_mrec p_src (p_src val ce)) st_src0) with
+        (my_interp p_src (p_src val ce) st_src0) by ss.
+    replace (ModSem.interp_rE (interp_mrec p_tgt (p_tgt val ce)) st_tgt0) with
+        (my_interp p_tgt (p_tgt val ce) st_tgt0) by ss.
     (* unfold ModSem.interp_rE. *)
     (* unfold mrec. *)
-    revert_until itr0_tgt.
+    revert_until p_tgt.
     pcofix CIH. i. pfold.
     dependent destruction ce.
-    unfold itr0_src, itr0_tgt. ss. igo.
+    unfold p_src at 2. unfold p_tgt at 2. ss. igo.
+    rewrite ! my_interp_bind. igo.
+    rewrite ! my_interp_rE.
+    unfold ModSem.handle_rE.
+    r in SIM. des_ifs_safe. des.
+    des_ifs.
+    { (*** tgt NB ***) irw. unfold triggerNB. irw. eapply sim_demonic_tgt; ss. ii. inv STEP; ss. }
+    irw.
+    Ltac tauLR := eapply sim_demonic_both; ss; intros ? STEP; inv STEP; esplits; et; [econs; ss; et|].
+    tauLR. left; pfold.
+    tauLR. left; pfold.
+    unfold unwrapU.
+    destruct (find _ (List.map (fun '(fn0, body) => (fn0, fun_to_src body)) ftb)) eqn:FIND; cycle 1.
+    { rewrite my_interp_bind. rewrite my_interp_triggerUB. irw.
+      (*** src UB ***) unfold triggerUB. irw. eapply sim_angelic_src; ss. ii. inv STEP; ss.
+    }
+    fold ms_tgt. rewrite WTY.
+    rewrite find_map in FIND. uo. des_ifs_safe.
+    rename Heq into FS.
+    unfold Basics.compose in *.
+    rewrite find_map. uo. des_ifs; cycle 1; rename Heq0 into FT.
+    { exfalso.
+      unfold Basics.compose in *.
+      eapply find_some in FS. des; ss.
+      eapply find_none in FT; et. des_ifs. ss.
+      clarify.
+    }
+    igo.
+    rewrite ! my_interp_bind.
+    igo.
+    unfold fun_to_src, body_to_src.
+    unfold fun_to_tgt, body_to_tgt.
+    des_ifs; cycle 1.
+    { irw. ss. admit "ez - use FT, WTB. We should refactor -- e.g., to use alist, and then use find as a map. this is too low lv".
+    }
+    unfold HoareFun.
+
+    TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
+
+    rewrite my_interp_ret.
+    des_ifs.
+    irw.
+    econs; et.
+    ss.
     rewrite ! interp_mrec_bind.
     rewrite ! interp_state-bind.
     ss.

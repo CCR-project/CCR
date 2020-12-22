@@ -371,7 +371,8 @@ Section MOD.
   Record t: Type := mk {
     get_modsem: SkEnv.t -> ModSem.t;
     sk: Sk.t;
-    interp: semantics := ModSem.interp (get_modsem (Sk.load_skenv sk));
+    enclose: ModSem.t := (get_modsem (Sk.load_skenv sk));
+    interp: semantics := ModSem.interp enclose;
   }
   .
 
