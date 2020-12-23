@@ -6,6 +6,7 @@ Require Import Behavior.
 Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
+Require Import Ordinal ClassicalOrdinal.
 
 Generalizable Variables E R A B C X Y Σ.
 
@@ -482,6 +483,22 @@ If this feature is needed; we can extend it then. At the moment, I will only all
     grind.
   Qed.
 
+  Lemma my_interp_tau
+        (prog: callE ~> itree Es)
+        A
+        (itr: itree Es A)
+        st0
+    :
+      my_interp prog (tau;; itr) st0 = tau;; my_interp prog itr st0
+  .
+  Proof.
+    unfold my_interp.
+    unfold ModSem.interp_rE.
+    rewrite unfold_interp_mrec. ss.
+    rewrite interp_state_tau.
+    grind.
+  Qed.
+
   Lemma my_interp_ret
         T
         prog st0 (v: T)
@@ -615,6 +632,7 @@ If this feature is needed; we can extend it then. At the moment, I will only all
                      ).
 
   Let W: Type := ((string -> Σ) * list Σ).
+  Opaque GRA.to_URA.
   Let wf: W -> W -> Prop :=
     fun '(mrs_src, frs_src) '(mrs_tgt, frs_tgt) =>
       (<<LEN: List.length frs_src = List.length frs_tgt>>) /\
@@ -627,6 +645,8 @@ If this feature is needed; we can extend it then. At the moment, I will only all
 
   Require Import SimGlobal.
 
+  Opaque Ordinal.from_nat.
+  Opaque string_dec.
   Let adequacy_type_aux:
     let p_src: callE ~> itree Es := fun _ ce => trigger PushFrame;; rv <- ModSem.sem ms_src ce;; trigger PopFrame;; Ret rv in
     let p_tgt: callE ~> itree Es := fun _ ce => trigger PushFrame;; rv <- ModSem.sem ms_tgt ce;; trigger PopFrame;; Ret rv in
@@ -634,11 +654,147 @@ If this feature is needed; we can extend it then. At the moment, I will only all
     (* sim (Mod.interp md_src) (Mod.interp md_tgt) lt 100%nat *)
     (*     (x <- (my_interp p_src (interp_hCallE_src (trigger ce)) st_src0);; Ret (snd x)) *)
     (*     (x <- (my_interp p_tgt (interp_hCallE_tgt stb (trigger ce)) st_tgt0);; Ret (snd x)) *)
-    simg lt 100%nat
+    simg (Ordinal.from_nat 100%nat)
          (x <- (my_interp p_src (interp_hCallE_src (trigger ce)) st_src0);; Ret (snd x))
          (x <- (my_interp p_tgt (interp_hCallE_tgt stb (trigger ce)) st_tgt0);; Ret (snd x))
   .
   Proof.
+    admit "".
+  Admitted.
+
+  Theorem adequacy_type: Beh.of_program (Mod.interp md_tgt) <1= Beh.of_program (Mod.interp md_src).
+  Proof.
+    eapply adequacy_global.
+    exists (Ordinal.from_nat 100%nat).
+    ss. unfold ModSem.initial_itr. ss.
+    set (fun _ ce => trigger PushFrame;; rv <- ModSem.sem ms_src ce;; trigger PopFrame;; Ret rv) as p_src.
+    set (fun _ ce  => trigger PushFrame;; rv <- ModSem.sem (Mod.enclose md_tgt) ce;; trigger PopFrame;; Ret rv) as p_tgt.
+    unfold ITree.map.
+    unfold assume.
+    igo.
+    pfold. eapply simg_takeL; ss.
+    { instantiate (1:= (Ordinal.from_nat 99)). admit "ez". }
+    i. left.
+    pfold. eapply simg_takeR; ss.
+    { instantiate (1:= (Ordinal.from_nat 98)). admit "ez". }
+    esplits; et. { admit "ez - wf". } left.
+    set (st_src0 := (ModSem.initial_r_state ms_src)).
+    set (st_tgt0 := (ModSem.initial_r_state (Mod.get_modsem md_tgt (Sk.load_skenv (Mod.sk md_tgt))))).
+    (* Local Opaque URA.add. *)
+    assert(SIM: wf st_src0 st_tgt0).
+    { r. ss. esplits; et. admit "initial wf: mandate this to the user". }
+    unfold mrec.
+    replace (ModSem.interp_rE (interp_mrec p_src (p_src val (Call "main" []))) st_src0) with
+        (my_interp p_src (p_src val (Call "main" [])) st_src0) by ss.
+    replace (ModSem.interp_rE (interp_mrec p_tgt (p_tgt val (Call "main" []))) st_tgt0) with
+        (my_interp p_tgt (p_tgt val (Call "main" [])) st_tgt0) by ss.
+    assert(TRANSL: simg (Ordinal.from_nat 100)
+                        (x0 <- my_interp p_src (p_src val (Call "main" [])) st_src0;; Ret (snd x0))
+                        (x0 <- my_interp p_src (interp_hCallE_src (trigger (hCall "main" []))) st_src0;; Ret (snd x0))).
+    { clear SIM. unfold interp_hCallE_src. rewrite unfold_interp. ss. cbn. rewrite my_interp_bind. rewrite my_interp_callE.
+      igo.
+      pfold. econs; eauto.
+      { instantiate (1:= Ordinal.from_nat 99). admit "ez". }
+      left.
+      replace (Ordinal.from_nat 99) with (Ordinal.add (Ordinal.from_nat 50) (Ordinal.from_nat 49)) by admit "ez".
+      eapply simg_bind.
+      - admit "".
+      - ii. des_ifs. ss. rewrite my_interp_tau. igo.
+        pfold. econs; eauto.
+        { instantiate (1:= Ordinal.from_nat 49). admit "ez". }
+        left. rewrite my_interp_ret. igo. ss. eapply simg_paco_refl.
+    }
+    assert(TRANSR: simg (Ordinal.from_nat 100)
+                        (x0 <- my_interp p_tgt (interp_hCallE_tgt stb (trigger (hCall "main" []))) st_tgt0;; Ret (snd x0))
+                        (x0 <- my_interp p_tgt (p_tgt val (Call "main" [])) st_tgt0;; Ret (snd x0))).
+    { clear SIM. unfold interp_hCallE_tgt. rewrite unfold_interp. ss.
+      cbn. rewrite my_interp_bind. igo. destruct MAIN. des_ifs. ss.
+      unfold HoareCall. rewrite ! my_interp_bind. igo.
+      rewrite ! my_interp_eventE. igo.
+      pfold. econs; eauto.
+      { instantiate (1:= Ordinal.from_nat 99). admit "ez". }
+      eexists (ε, ε). igo. left.
+      pfold. econs; eauto.
+      { instantiate (1:= Ordinal.from_nat 98). admit "ez". }
+      left.
+      pfold. econs; eauto.
+      { instantiate (1:= Ordinal.from_nat 97). admit "ez". }
+      left.
+      rewrite ! my_interp_bind. igo. rewrite ! my_interp_rE. igo.
+      ss.
+
+
+      {
+      rewrite my_interp_callE.
+      igo.
+      pfold. econs; eauto.
+      { instantiate (1:= Ordinal.from_nat 99). admit "ez". }
+      left.
+      replace (Ordinal.from_nat 99) with (Ordinal.add (Ordinal.from_nat 50) (Ordinal.from_nat 49)) by admit "ez".
+      eapply simg_bind.
+      - admit "".
+      - ii. des_ifs. ss. rewrite my_interp_tau. igo.
+        pfold. econs; eauto.
+        { instantiate (1:= Ordinal.from_nat 49). admit "ez". }
+        left. rewrite my_interp_ret. igo. ss. eapply simg_paco_refl.
+    }
+
+    replace (x0 <- my_interp p_src (p_src val (Call "main" [])) st_src0;; Ret (snd x0)) with
+        (x0 <- my_interp p_src (interp_hCallE_src (trigger (hCall "main" []))) st_src0;; Ret (snd x0)); cycle 1.
+    { admit "by transitivity". }
+
+    { }
+    replace (my_interp p_src (p_src val (Call "main" [])) st_src0) with
+        (my_interp p_src (interp_hCallE_src (trigger (hCall "main" []))) st_src0); cycle 1.
+    { clear SIM. unfold interp_hCallE_src. rewrite unfold_interp. ss. cbn. rewrite my_interp_bind. rewrite my_interp_callE.
+      igo.
+      ss.
+      rewrite interp_bind. rewrite interp_ret.
+        (p_src val (Call "main" []))
+    eapply adequacy_type_aux.
+
+    clearbody st_src0 st_tgt0.
+    clear x.
+    abstr (Call "main" []) ce.
+    unfold mrec.
+    replace (ModSem.interp_rE (interp_mrec p_src (p_src val ce)) st_src0) with
+        (my_interp p_src (p_src val ce) st_src0) by ss.
+    replace (ModSem.interp_rE (interp_mrec p_tgt (p_tgt val ce)) st_tgt0) with
+        (my_interp p_tgt (p_tgt val ce) st_tgt0) by ss.
+
+
+
+    eapply adequacy_type_aux.
+    { apply lt_wf. }
+    econs.
+    { apply lt_wf. }
+    eexists 102%nat.
+    ss.
+    set (fun _ ce => trigger PushFrame;; rv <- ModSem.sem ms_src ce;; trigger PopFrame;; Ret rv) as p_src.
+    set (fun _ ce  =>
+              trigger PushFrame;;
+              rv <- ModSem.sem (Mod.get_modsem md_tgt (Sk.load_skenv (Mod.sk md_tgt))) ce;;
+              trigger PopFrame;; Ret rv) as p_tgt.
+    unfold ITree.map.
+    unfold assume.
+    igo.
+    pfold. eapply sim_angelic_src; ss. ii. inv STEP; ss; irw in H0; csc. clear_tac. esplits; et. left.
+    pfold. eapply sim_angelic_tgt; ss. esplits; et. { irw. econs. } left.
+    set (st_src0 := (ModSem.initial_r_state ms_src)).
+    set (st_tgt0 := (ModSem.initial_r_state (Mod.get_modsem md_tgt (Sk.load_skenv (Mod.sk md_tgt))))).
+    assert(SIM: wf st_src0 st_tgt0).
+    { r. ss. esplits; et. admit "initial wf: mandate this to the user". }
+    clearbody st_src0 st_tgt0.
+    clear x.
+    abstr (Call "main" []) ce.
+    unfold mrec.
+    replace (ModSem.interp_rE (interp_mrec p_src (p_src val ce)) st_src0) with
+        (my_interp p_src (p_src val ce) st_src0) by ss.
+    replace (ModSem.interp_rE (interp_mrec p_tgt (p_tgt val ce)) st_tgt0) with
+        (my_interp p_tgt (p_tgt val ce) st_tgt0) by ss.
+  Qed.
+
+
     intros ? ?.
     pcofix CIH. i. pfold.
     dependent destruction ce.
@@ -688,20 +844,6 @@ If this feature is needed; we can extend it then. At the moment, I will only all
     unfold HoareFun.
 
   Qed.
-      (p_src:
-  p_src := fun (H : Type) (ce : callE H) => trigger PushFrame;; ` rv : H <- ModSem.sem ms_src ce;; trigger PopFrame;; Ret rv
-   : forall H : Type, callE H -> itree Es H
-  p_tgt := fun (H : Type) (ce : callE H) =>
-           trigger PushFrame;;
-           ` rv : H <- ModSem.sem (Mod.get_modsem md_tgt (Sk.load_skenv (Mod.sk md_tgt))) ce;; trigger PopFrame;; Ret rv
-   : forall H : Type, callE H -> itree Es H
-  st_src0, st_tgt0 : ModSem.r_state
-  SIM : wf st_src0 st_tgt0
-  ce : callE val
-  ============================
-  paco3 (_sim (Mod.interp md_src) (Mod.interp md_tgt) lt) bot3 100%nat
-    (` x : ModSem.r_state * val <- ModSem.interp_rE (mrec p_src ce) st_src0;; Ret (snd x))
-    (` x : ModSem.r_state * val <- ModSem.interp_rE (mrec p_tgt ce) st_tgt0;; Ret (snd x))
 
   Theorem adequacy_type: Beh.of_program (Mod.interp md_tgt) <1= Beh.of_program (Mod.interp md_src).
   Proof.

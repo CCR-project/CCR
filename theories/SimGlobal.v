@@ -231,6 +231,40 @@ Qed.
 
 
 
+Global Program Instance _simg_refl R r (REFL: forall R o0, Reflexive (r R o0)) o0: Reflexive (@_simg r R o0).
+Next Obligation.
+  ides x.
+  - econs; eauto. refl.
+  - destruct e.
+    + rewrite <- ! bind_trigger. econs; et. ii. esplits; et. refl.
+    + rewrite <- ! bind_trigger. econs; et. ii. esplits; et. refl.
+    + rewrite <- ! bind_trigger. econs; et. ii. clarify. refl.
+Unshelve.
+  all: ss.
+Qed.
+
+Global Program Instance simg_paco_refl R r o0: Reflexive (paco4 _simg r R o0).
+Next Obligation.
+  revert_until Σ.
+  pcofix CIH.
+  i. pfold. eapply _simg_refl. ii. right. eapply CIH.
+Qed.
+
+Global Program Instance simg_gpaco_refl R r rg o0: Reflexive (gpaco4 _simg (cpn4 _simg) r rg R o0).
+Next Obligation.
+  revert_until Σ.
+  gcofix CIH.
+  i. gstep. eapply _simg_refl. ii. gbase. eapply CIH.
+Qed.
+
+Global Program Instance simg_refl R o0: Reflexive (@simg R o0).
+Next Obligation.
+  eapply simg_paco_refl.
+Qed.
+
+
+
+
 
 
 
@@ -308,6 +342,7 @@ Hypothesis (SIM: exists o0, simg o0 (ModSem.initial_itr ms_src) (ModSem.initial_
 
 Theorem adequacy_global: Beh.of_program (Mod.interp md_tgt) <1= Beh.of_program (Mod.interp md_src).
 Proof.
+  revert SIM. i.
   admit "TODO".
 Qed.
 
