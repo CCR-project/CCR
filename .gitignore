@@ -3,6 +3,7 @@
 _CoqProject
 Makefile.coq
 Makefile.coq.conf
+.Makefile.coq.d
 .build
 
 *.vo
