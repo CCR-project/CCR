@@ -210,7 +210,7 @@ Section MODSEM.
     (fun mn => match List.find (fun mnr => dec mn (fst mnr)) ms.(initial_mrs) with
                | Some r => snd r
                | None => ε
-               end, []).
+               end, [ε]). (*** we have a dummy-stack here ***)
   Definition initial_itr: itree (eventE) val := assume(<<WF: wf ms>>);; snd <$> (interp_rE itr1) initial_r_state.
 
 

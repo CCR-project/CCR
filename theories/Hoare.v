@@ -640,8 +640,9 @@ If this feature is needed; we can extend it then. At the moment, I will only all
                                 (fold_left URA.add frs_tgt ε))>>)
   .
 
-  Hypothesis WTB: List.map fst ftb = List.map fst stb.
-  Hypothesis MAIN: exists mn, List.find (fun '(_fn, _) => dec "main" _fn) stb = Some ("main", (@mk mn unit top3 top3)).
+  Hypothesis WF0: List.map fst ftb = List.map fst stb.
+  Hypothesis MAIN: List.find (fun '(_fn, _) => dec "main" _fn) stb = Some ("main", (@mk "Main" unit top3 top3)).
+  Hypothesis WF1: Forall (fun '(_, sp) => In sp.(mn) (List.map fst ms_tgt.(ModSem.initial_mrs))) stb.
 
   Require Import SimGlobal.
 
@@ -708,7 +709,7 @@ If this feature is needed; we can extend it then. At the moment, I will only all
                         (x0 <- my_interp p_tgt (interp_hCallE_tgt stb (trigger (hCall "main" []))) st_tgt0;; Ret (snd x0))
                         (x0 <- my_interp p_tgt (p_tgt val (Call "main" [])) st_tgt0;; Ret (snd x0))).
     { clear SIM. unfold interp_hCallE_tgt. rewrite unfold_interp. ss.
-      cbn. rewrite my_interp_bind. igo. destruct MAIN. des_ifs. ss.
+      cbn. rewrite my_interp_bind. igo. des_ifs. ss.
       unfold HoareCall. rewrite ! my_interp_bind. igo.
       rewrite ! my_interp_eventE. igo.
       pfold. econs; eauto.
@@ -721,7 +722,64 @@ If this feature is needed; we can extend it then. At the moment, I will only all
       { instantiate (1:= Ordinal.from_nat 97). admit "ez". }
       left.
       rewrite ! my_interp_bind. igo. rewrite ! my_interp_rE. igo.
-      ss.
+      ss. fold ms_tgt.
+      des_ifs; cycle 1.
+      { admit "ez - use WF1". }
+      destruct p.
+      assert(s = "Main") by admit "ez". clarify. ss.
+      unfold guarantee. igo. pfold. econs; et.
+      { instantiate (1:= Ordinal.from_nat 96). admit "ez". }
+      esplits; eauto.
+      { unfold ε. rewrite ! URA.unit_id. eapply URA.extends_updatable. rr. esplits; eauto. rewrite ! URA.unit_idl. ss. }
+      left.
+      pfold. econs; eauto.
+      { instantiate (1:= Ordinal.from_nat 95). admit "ez". }
+      left.
+      pfold. econs; eauto.
+      { instantiate (1:= Ordinal.from_nat 94). admit "ez". }
+      left.
+      rewrite ! my_interp_bind. igo. rewrite my_interp_eventE. igo.
+      pfold. econs; eauto.
+      { instantiate (1:= Ordinal.from_nat 93). admit "ez". }
+      eexists ε. left. igo. pfold. econs; et.
+      { instantiate (1:= Ordinal.from_nat 92). admit "ez". }
+      left. pfold. econs; et.
+      { instantiate (1:= Ordinal.from_nat 91). admit "ez". }
+      left.
+      rewrite my_interp_bind. igo. rewrite my_interp_rE. ss. igo.
+      pfold. econs; et.
+      { instantiate (1:= Ordinal.from_nat 90). admit "ez". }
+      eexists ε. left. igo. pfold. unfold guarantee. igo. econs; eauto.
+      { instantiate (1:= Ordinal.from_nat 89). admit "ez". }
+      esplits; eauto.
+      { unfold ε. rewrite ! URA.unit_id. ss. }
+      left. pfold. econs; et.
+      { instantiate (1:= Ordinal.from_nat 88). admit "ez". }
+      left. pfold. econs; et.
+      { instantiate (1:= Ordinal.from_nat 87). admit "ez". }
+      rewrite my_interp_bind. igo. rewrite my_interp_eventE. igo.
+      left. pfold. econs; et.
+      { instantiate (1:= Ordinal.from_nat 86). admit "ez". }
+      eexists tt; eauto.
+      igo.
+      left. pfold. econs; et.
+      { instantiate (1:= Ordinal.from_nat 85). admit "ez". }
+      left. pfold. econs; et.
+      { instantiate (1:= Ordinal.from_nat 84). admit "ez". }
+      rewrite my_interp_bind. igo. rewrite my_interp_eventE. igo.
+      left. pfold. econs; et.
+      { instantiate (1:= Ordinal.from_nat 83). admit "ez". }
+      exists I; eauto. igo. left. pfold. econs; et.
+      { instantiate (1:= Ordinal.from_nat 82). admit "ez". }
+      left. pfold. econs; et.
+      { instantiate (1:= Ordinal.from_nat 81). admit "ez". }
+      rewrite my_interp_bind. igo.
+      left. pfold. econs; et.
+      { instantiate (1:= Ordinal.from_nat 81). admit "ez". }
+      
+      igo.
+
+      des_ifs.
 
 
       {
