@@ -211,7 +211,7 @@ Section MODSEM.
                | Some r => snd r
                | None => ε
                end, []).
-  Let itr2: itree (eventE) val := assume(<<WF: wf ms>>);; snd <$> (interp_rE itr1) initial_r_state.
+  Definition initial_itr: itree (eventE) val := assume(<<WF: wf ms>>);; snd <$> (interp_rE itr1) initial_r_state.
 
 
 
@@ -250,7 +250,7 @@ Section MODSEM.
   Program Definition interp: semantics := {|
     STS.state := state;
     STS.step := step;
-    STS.initial_state := itr2;
+    STS.initial_state := initial_itr;
     STS.state_sort := state_sort;
   |}
   .
@@ -316,24 +316,25 @@ Section MODSEM.
   .
   Proof.
     destruct (classic (wf (add ms1 ms0))); cycle 1.
-    { ii. clear PR. eapply Beh.ub_top. pfold. econsr; ss; et. rr. ii; ss. unfold assume in *.
+    { ii. clear PR. eapply Beh.ub_top. pfold. econsr; ss; et. rr. ii; ss. unfold initial_itr, assume in *.
       inv STEP; ss; irw in H1; (* clarify <- TODO: BUG, runs infloop. *) inv H1; simpl_depind; subst.
       clarify.
     }
     rename H into WF.
-    ii. ss. r in PR. r. eapply add_comm_aux; et.
-    rp; et. clear PR. cbn. do 1 f_equal; cycle 1.
-    { unfold assume. rewrite wf_comm. ss. }
-    apply func_ext; ii.
-    f_equiv.
-    f_equal; cycle 1.
-    - unfold initial_r_state. f_equal. apply func_ext. intros fn. ss. des_ifs.
-      + admit "ez: wf".
-      + admit "ez: wf".
-      + admit "ez: wf".
-    - repeat f_equal. apply func_ext_dep. intro T. apply func_ext. intro c. destruct c.
-      repeat f_equal. apply func_ext. i. f_equal. ss. do 2 f_equal.
-      admit "ez: wf".
+    (* ii. ss. r in PR. r. eapply add_comm_aux; et. *)
+    (* rp; et. clear PR. cbn. do 1 f_equal; cycle 1. *)
+    (* { unfold assume. rewrite wf_comm. ss. } *)
+    (* apply func_ext; ii. *)
+    (* f_equiv. *)
+    (* f_equal; cycle 1. *)
+    (* - unfold initial_r_state. f_equal. apply func_ext. intros fn. ss. des_ifs. *)
+    (*   + admit "ez: wf". *)
+    (*   + admit "ez: wf". *)
+    (*   + admit "ez: wf". *)
+    (* - repeat f_equal. apply func_ext_dep. intro T. apply func_ext. intro c. destruct c. *)
+    (*   repeat f_equal. apply func_ext. i. f_equal. ss. do 2 f_equal. *)
+    (*   admit "ez: wf". *)
+    admit "TODO".
   Qed.
 
   Theorem add_assoc

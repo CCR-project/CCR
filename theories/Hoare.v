@@ -623,16 +623,20 @@ If this feature is needed; we can extend it then. At the moment, I will only all
   .
 
   Hypothesis WTB: List.map fst ftb = List.map fst stb.
+  Hypothesis MAIN: exists mn, List.find (fun '(_fn, _) => dec "main" _fn) stb = Some ("main", (@mk mn unit top3 top3)).
+
+  Require Import SimGlobal.
 
   Let adequacy_type_aux:
     let p_src: callE ~> itree Es := fun _ ce => trigger PushFrame;; rv <- ModSem.sem ms_src ce;; trigger PopFrame;; Ret rv in
     let p_tgt: callE ~> itree Es := fun _ ce => trigger PushFrame;; rv <- ModSem.sem ms_tgt ce;; trigger PopFrame;; Ret rv in
     forall st_src0 st_tgt0 (SIM: wf st_src0 st_tgt0) (ce: hCallE val),
-    sim (Mod.interp md_src) (Mod.interp md_tgt) lt 100%nat
-        (* ('(st_src1, r) <- (my_interp p_src (interp_hCallE_src (trigger ce)) st_src0);; Ret r) *)
-        (* ('(st_tgt1, r) <- (my_interp p_tgt (interp_hCallE_tgt stb (trigger ce)) st_tgt0);; Ret r) *)
-        (x <- (my_interp p_src (interp_hCallE_src (trigger ce)) st_src0);; Ret (snd x))
-        (x <- (my_interp p_tgt (interp_hCallE_tgt stb (trigger ce)) st_tgt0);; Ret (snd x))
+    (* sim (Mod.interp md_src) (Mod.interp md_tgt) lt 100%nat *)
+    (*     (x <- (my_interp p_src (interp_hCallE_src (trigger ce)) st_src0);; Ret (snd x)) *)
+    (*     (x <- (my_interp p_tgt (interp_hCallE_tgt stb (trigger ce)) st_tgt0);; Ret (snd x)) *)
+    simg lt 100%nat
+         (x <- (my_interp p_src (interp_hCallE_src (trigger ce)) st_src0);; Ret (snd x))
+         (x <- (my_interp p_tgt (interp_hCallE_tgt stb (trigger ce)) st_tgt0);; Ret (snd x))
   .
   Proof.
     intros ? ?.
