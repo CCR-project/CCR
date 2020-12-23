@@ -10,6 +10,8 @@ Makefile.coq.conf
 *.v.d
 *.glob
 .*.aux
+*.vok
+*.vos
 
 graph.png
 graph.dot

@@ -358,3 +358,5 @@ Proof.
   econs; eauto.
   gbase. eapply CIH. rewrite tau_eutt in SIM. ss.
 Qed.
+
+Definition resum_itr E F `{E -< F}: itree E ~> itree F := fun _ itr => interp (fun _ e => trigger e) itr.
