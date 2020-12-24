@@ -651,69 +651,63 @@ If this feature is needed; we can extend it then. At the moment, I will only all
   Let adequacy_type_aux:
     let p_src: callE ~> itree Es := fun _ ce => trigger PushFrame;; rv <- ModSem.sem ms_src ce;; trigger PopFrame;; Ret rv in
     let p_tgt: callE ~> itree Es := fun _ ce => trigger PushFrame;; rv <- ModSem.sem ms_tgt ce;; trigger PopFrame;; Ret rv in
-    forall st_src0 st_tgt0 (SIM: wf st_src0 st_tgt0) (ce: hCallE val),
+    forall R RR `{Reflexive _ RR} st_src0 st_tgt0 (SIM: wf st_src0 st_tgt0) (ce: hCallE R),
     (* sim (Mod.interp md_src) (Mod.interp md_tgt) lt 100%nat *)
     (*     (x <- (my_interp p_src (interp_hCallE_src (trigger ce)) st_src0);; Ret (snd x)) *)
     (*     (x <- (my_interp p_tgt (interp_hCallE_tgt stb (trigger ce)) st_tgt0);; Ret (snd x)) *)
-    simg eq (Ordinal.from_nat 100%nat)
+    simg RR (Ordinal.from_nat 100%nat)
          (x <- (my_interp p_src (interp_hCallE_src (trigger ce)) st_src0);; Ret (snd x))
          (x <- (my_interp p_tgt (interp_hCallE_tgt stb (trigger ce)) st_tgt0);; Ret (snd x))
   .
   Proof.
     intros ? ?.
-    i. ginit.
-    { eapply simg_mon. }
-    { eapply cpn5_wcompat. eapply simg_mon. }
-    revert_until p_tgt.
-  (*   pcofix CIH. i. pfold. *)
-  (*   dependent destruction ce. *)
-  (*   Local Opaque GRA.to_URA. *)
-  (*   ss. *)
-  (*   unfold interp_hCallE_src. *)
-  (*   unfold interp_hCallE_tgt. *)
-  (*   rewrite ! unfold_interp. ss. *)
-  (*   rewrite ! my_interp_bind. igo. cbn. *)
-  (*   unfold handle_hCallE_src at 2. unfold handle_hCallE_tgt at 2. des_ifs. igo. *)
-  (*   rewrite ! interp_ret. *)
-  (*   unfold p_src at 2. unfold p_tgt at 2. ss. igo. *)
-  (*   rewrite ! my_interp_bind. igo. *)
-  (*   rewrite ! my_interp_rE. *)
-  (*   unfold ModSem.handle_rE. *)
-  (*   r in SIM. des_ifs_safe. des. *)
-  (*   des_ifs. *)
-  (*   { (*** tgt NB ***) irw. unfold triggerNB. irw. eapply sim_demonic_tgt; ss. ii. inv STEP; ss. } *)
-  (*   irw. *)
-  (*   Ltac tauLR := eapply sim_demonic_both; ss; intros ? STEP; inv STEP; esplits; et; [econs; ss; et|]. *)
-  (*   tauLR. left; pfold. *)
-  (*   tauLR. left; pfold. *)
-  (*   unfold unwrapU. *)
-  (*   destruct (find _ (List.map (fun '(fn0, body) => (fn0, fun_to_src body)) ftb)) eqn:FIND; cycle 1. *)
-  (*   { rewrite my_interp_bind. rewrite my_interp_triggerUB. irw. *)
-  (*     (*** src UB ***) unfold triggerUB. irw. eapply sim_angelic_src; ss. ii. inv STEP; ss. *)
-  (*   } *)
-  (*   fold ms_tgt. rewrite WTY. *)
-  (*   rewrite find_map in FIND. uo. des_ifs_safe. *)
-  (*   rename Heq into FS. *)
-  (*   unfold Basics.compose in *. *)
-  (*   rewrite find_map. uo. des_ifs; cycle 1; rename Heq0 into FT. *)
-  (*   { exfalso. *)
-  (*     unfold Basics.compose in *. *)
-  (*     eapply find_some in FS. des; ss. *)
-  (*     eapply find_none in FT; et. des_ifs. ss. *)
-  (*     clarify. *)
-  (*   } *)
-  (*   igo. *)
-  (*   rewrite ! my_interp_bind. *)
-  (*   igo. *)
-  (*   unfold fun_to_src, body_to_src. *)
-  (*   unfold fun_to_tgt, body_to_tgt. *)
-  (*   des_ifs; cycle 1. *)
-  (*   { irw. ss. admit "ez - use FT, WTB. We should refactor -- e.g., to use alist, and then use find as a map. this is too low lv". *)
-  (*   } *)
-  (*   unfold HoareFun. *)
+    pcofix CIH. i. pfold.
+    dependent destruction ce.
+    Local Opaque GRA.to_URA.
+    ss.
+    unfold interp_hCallE_src.
+    unfold interp_hCallE_tgt.
+    rewrite ! unfold_interp. ss.
+    rewrite ! my_interp_bind. igo. cbn.
+    unfold handle_hCallE_src at 2. unfold handle_hCallE_tgt at 2. des_ifs. igo.
+    rewrite ! interp_ret.
+    unfold p_src at 2. unfold p_tgt at 2. ss. igo.
+    rewrite ! my_interp_bind. igo.
+    rewrite ! my_interp_rE.
+    unfold ModSem.handle_rE.
+    r in SIM. des_ifs_safe. des.
+    des_ifs.
+    { (*** tgt NB ***) irw. unfold triggerNB. irw. eapply sim_demonic_tgt; ss. ii. inv STEP; ss. }
+    irw.
+    Ltac tauLR := eapply sim_demonic_both; ss; intros ? STEP; inv STEP; esplits; et; [econs; ss; et|].
+    tauLR. left; pfold.
+    tauLR. left; pfold.
+    unfold unwrapU.
+    destruct (find _ (List.map (fun '(fn0, body) => (fn0, fun_to_src body)) ftb)) eqn:FIND; cycle 1.
+    { rewrite my_interp_bind. rewrite my_interp_triggerUB. irw.
+      (*** src UB ***) unfold triggerUB. irw. eapply sim_angelic_src; ss. ii. inv STEP; ss.
+    }
+    fold ms_tgt. rewrite WTY.
+    rewrite find_map in FIND. uo. des_ifs_safe.
+    rename Heq into FS.
+    unfold Basics.compose in *.
+    rewrite find_map. uo. des_ifs; cycle 1; rename Heq0 into FT.
+    { exfalso.
+      unfold Basics.compose in *.
+      eapply find_some in FS. des; ss.
+      eapply find_none in FT; et. des_ifs. ss.
+      clarify.
+    }
+    igo.
+    rewrite ! my_interp_bind.
+    igo.
+    unfold fun_to_src, body_to_src.
+    unfold fun_to_tgt, body_to_tgt.
+    des_ifs; cycle 1.
+    { irw. ss. admit "ez - use FT, WTB. We should refactor -- e.g., to use alist, and then use find as a map. this is too low lv".
+    }
+    unfold HoareFun.
 
-  (* Qed. *)
-    admit "".
   Qed.
 
   Theorem adequacy_type: Beh.of_program (Mod.interp md_tgt) <1= Beh.of_program (Mod.interp md_src).
@@ -899,8 +893,7 @@ If this feature is needed; we can extend it then. At the moment, I will only all
     { admit "hard -- by transitivity". }
     replace (Ordinal.from_nat 98) with (Ordinal.from_nat 100); cycle 1.
     { admit "ez". }
-    eapply adequacy_type_aux.
-    ss.
+    eapply adequacy_type_aux; ss.
   Qed.
 
 (*   Theorem adequacy_type: Beh.of_program (Mod.interp md_tgt) <1= Beh.of_program (Mod.interp md_src). *)

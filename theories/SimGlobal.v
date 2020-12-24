@@ -39,6 +39,7 @@ Inductive _simg (simg: forall R (RR: relation R), Ordinal.t -> relation (itree e
 
 | simg_tau
     i1 itr_src0 itr_tgt0
+    (ORD: Ordinal.le i1 i0)
     (SIM: simg _ RR i1 itr_src0 itr_tgt0)
   :
     _simg simg RR i0 (tau;; itr_src0) (tau;; itr_tgt0)
@@ -59,6 +60,7 @@ Inductive _simg (simg: forall R (RR: relation R), Ordinal.t -> relation (itree e
 
 | simg_choose
     i1 X_src X_tgt ktr_src0 ktr_tgt0
+    (ORD: Ordinal.le i1 i0)
     (SIM: forall x_tgt, exists x_src, simg _ RR i1 (ktr_src0 x_src) (ktr_tgt0 x_tgt))
   :
     _simg simg RR i0 (trigger (Choose X_src) >>= ktr_src0) (trigger (Choose X_tgt) >>= ktr_tgt0)
@@ -79,6 +81,7 @@ Inductive _simg (simg: forall R (RR: relation R), Ordinal.t -> relation (itree e
 
 | simg_take
     i1 X_src X_tgt ktr_src0 ktr_tgt0
+    (ORD: Ordinal.le i1 i0)
     (SIM: forall x_src, exists x_tgt, simg _ RR i1 (ktr_src0 x_src) (ktr_tgt0 x_tgt))
   :
     _simg simg RR i0 (trigger (Take X_src) >>= ktr_src0) (trigger (Take X_tgt) >>= ktr_tgt0)
@@ -94,6 +97,15 @@ Inductive _simg (simg: forall R (RR: relation R), Ordinal.t -> relation (itree e
     (SIM: exists x, simg _ RR i1 itr_src0 (ktr_tgt0 x))
   :
     _simg simg RR i0 (itr_src0) (trigger (Take X) >>= ktr_tgt0)
+
+
+
+(* | simg_stutter *)
+(*     i1 itr_src itr_tgt *)
+(*     (ORD: Ordinal.lt i1 i0) *)
+(*     (SIM: simg _ RR i1 itr_src itr_tgt) *)
+(*   : *)
+(*     _simg simg RR i0 itr_src itr_tgt *)
 .
 
 Definition simg: forall R (RR: relation R), Ordinal.t -> relation (itree eventE R) := paco5 _simg bot5.
@@ -107,22 +119,216 @@ Proof.
   - econs; et. ii. hexploit SIM; et. i; des. esplits; et.
   - des. econs; et.
 Qed.
+
+(* Lemma simg_mon_ord r R RR o0 o1 (ORD: Ordinal.le o0 o1) (itr_src itr_tgt: itree eventE R): *)
+(*   paco5 _simg r R RR o0 <2= paco5 _simg r R RR o1. *)
+(* Proof. *)
+(*   i. *)
+(*   destruct (classic (Ordinal.lt o0 o1)). *)
+(*   - pfold. econs; eauto. *)
+(*   - *)
+(* Qed. *)
+
+Lemma simg_mon_ord r S SS i0 i1 (ORD: Ordinal.le i0 i1): @_simg r S SS i0 <2= @_simg r S SS i1.
+Proof.
+  ii. inv PR; try (by econs; et).
+  - econs; try apply SIM. etrans; et.
+  - econs; try apply SIM. eapply Ordinal.lt_le_lt; et.
+  - econs; try apply SIM. eapply Ordinal.lt_le_lt; et.
+  - econs; try apply SIM. etrans; et.
+  - econs; try apply SIM. eapply Ordinal.lt_le_lt; et.
+  - econs; try apply SIM. eapply Ordinal.lt_le_lt; et.
+  - econs; try apply SIM. etrans; et.
+  - econs; try apply SIM. eapply Ordinal.lt_le_lt; et.
+  - econs; try apply SIM. eapply Ordinal.lt_le_lt; et.
+  (* - econs; try apply SIM. eapply Ordinal.lt_le_lt; et. *)
+Qed.
+
+(* Lemma simg_mon_rel r S SS SS' (LE: SS <2= SS') i0: @_simg r S SS i0 <2= @_simg r S SS' i0. *)
+(* Proof. *)
+(*   ii. inv PR; try (by econs; et). *)
+(*   - econs; et. ii. hexploit (SIM _ _ H); et. i. eapply LE. ii. econs; try apply SIM. etrans; et. *)
+(*   - econs; try apply SIM. eapply Ordinal.lt_le_lt; et. *)
+(*   - econs; try apply SIM. eapply Ordinal.lt_le_lt; et. *)
+(*   - econs; try apply SIM. etrans; et. *)
+(*   - econs; try apply SIM. eapply Ordinal.lt_le_lt; et. *)
+(*   - econs; try apply SIM. eapply Ordinal.lt_le_lt; et. *)
+(*   - econs; try apply SIM. etrans; et. *)
+(*   - econs; try apply SIM. eapply Ordinal.lt_le_lt; et. *)
+(*   - econs; try apply SIM. eapply Ordinal.lt_le_lt; et. *)
+(*   - econs; try apply SIM. eapply Ordinal.lt_le_lt; et. *)
+(* Qed. *)
+
+(* Lemma simg_mon_all r r' S SS SS' o o' (LEr: r <5= r') (LEss: SS <2= SS') (LEo: Ordinal.le o o'): *)
+(*   @_simg r S SS o <2= @_simg r' S SS' o'. *)
+(* Proof. *)
+(*   ii. eapply simg_mon; et. eapply simg_mon_ord; et. *)
+
 End TY.
 
 Hint Constructors _simg.
 Hint Unfold simg.
 Hint Resolve simg_mon: paco.
 
-Lemma simg_mon_ord r S SS i0 i1 (ORD: Ordinal.le i0 i1): @_simg r S SS i0 <2= @_simg r S SS i1.
-Proof.
-  ii. inv PR; try (by econs; et).
-  - econs; ss; et. eapply Ordinal.lt_le_lt; et.
-  - econs; ss; et. eapply Ordinal.lt_le_lt; et.
-  - econs; ss; et. eapply Ordinal.lt_le_lt; et.
-  - econs; ss; et. eapply Ordinal.lt_le_lt; et.
-  - econs; ss; et. eapply Ordinal.lt_le_lt; et.
-  - econs; ss; et. eapply Ordinal.lt_le_lt; et.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Global Program Instance _simg_refl r R RR `{Reflexive _ RR} (REFL: forall R RR `{Reflexive _ RR} o0, Reflexive (r R RR o0)) o0:
+  Reflexive (@_simg r R RR o0).
+Next Obligation.
+  ides x.
+  - econs; et.
+  - econs; eauto; try refl.
+  - destruct e.
+    + rewrite <- ! bind_trigger. econs; et; try refl. ii. esplits; et. refl.
+    + rewrite <- ! bind_trigger. econs; et; try refl. ii. esplits; et. refl.
+    + rewrite <- ! bind_trigger. econs; et. ii. clarify. refl.
+Unshelve.
+  all: ss.
 Qed.
+
+Global Program Instance simg_paco_refl r R RR `{Reflexive _ RR} o0: Reflexive (paco5 _simg r R RR o0).
+Next Obligation.
+  revert_until Σ.
+  pcofix CIH.
+  i. pfold. eapply _simg_refl; et.
+Qed.
+
+Global Program Instance simg_gpaco_refl r R RR `{Reflexive _ RR} rg o0: Reflexive (gpaco5 _simg (cpn5 _simg) r rg R RR o0).
+Next Obligation.
+  gfinal. right. eapply simg_paco_refl; et.
+Qed.
+
+Global Program Instance simg_refl R RR `{Reflexive _ RR} o0: Reflexive (@simg R RR o0).
+Next Obligation.
+  eapply simg_paco_refl. ss.
+Qed.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Variant ordC (r: forall S (SS: relation S), Ordinal.t -> relation (itree eventE S)):
+  forall S (SS: relation S), Ordinal.t -> relation (itree eventE S) :=
+| ordC_intro
+    o0 o1 R (RR: relation R) itr_src itr_tgt
+    (ORD: Ordinal.le o0 o1)
+    (SIM: r _ RR o0 itr_src itr_tgt)
+  :
+    ordC r RR o1 itr_src itr_tgt
+.
+
+Hint Constructors ordC: core.
+
+Lemma ordC_mon
+      r1 r2
+      (LE: r1 <5= r2)
+  :
+    ordC r1 <5= ordC r2
+.
+Proof. ii. destruct PR; econs; et. Qed.
+
+Hint Resolve ordC_mon: paco.
+
+(* Lemma ordC_prespectful: prespectful5 (_simg) ordC. *)
+  (* wcompatible5 *)
+(* Lemma ordC_compatible': compatible'5 (_simg) ordC. *)
+(* Proof. *)
+(*   econs; eauto with paco. *)
+(*   ii. inv PR. csc. r in SIM. r. des. unfold id in *. esplits; et. *)
+(*   rename x2 into o1. inv SIM0. *)
+(*   - econs; eauto. *)
+(*   - econs; eauto. ii. econs; try apply SIM1; et. refl. *)
+(*   - econs; eauto. *)
+(*   - econs; eauto. { eapply Ordinal.lt_le_lt; et. } econs; et. refl. *)
+(*   - econs; eauto. { eapply Ordinal.lt_le_lt; et. } econs; et. refl. *)
+(*   - econs; eauto. ii. spc SIM1. des. esplits; et. *)
+(*   - econs; eauto. { eapply Ordinal.lt_le_lt; et. } des. esplits; et. econs; et. refl. *)
+(*   - econs; eauto. { eapply Ordinal.lt_le_lt; et. } econs; et. refl. *)
+(*   - econs; eauto. ii. spc SIM1. des. esplits; et. *)
+(*   - econs; eauto. { eapply Ordinal.lt_le_lt; et. } econs; et. refl. *)
+(*   - econs; eauto. { eapply Ordinal.lt_le_lt; et. } des. esplits; et. econs; et. refl. *)
+(*   - econs. { eapply Ordinal.lt_le_lt; et. } econs; et. refl. *)
+(* Qed. *)
+
+Lemma ordC_compatible: compatible5 (_simg) ordC.
+Proof.
+  econs; eauto with paco.
+  ii. inv PR. csc.
+  rename x2 into o1. inv SIM.
+  - econs; eauto.
+  - econs; eauto. ii. econs; try apply SIM0; et. refl.
+  - econs; eauto.
+  - econs; eauto. { eapply Ordinal.lt_le_lt; et. } econs; et. refl.
+  - econs; eauto. { eapply Ordinal.lt_le_lt; et. } econs; et. refl.
+  - econs; eauto. ii. spc SIM0. des. esplits; et.
+  - econs; eauto. { eapply Ordinal.lt_le_lt; et. } des. esplits; et. econs; et. refl.
+  - econs; eauto. { eapply Ordinal.lt_le_lt; et. } econs; et. refl.
+  - econs; eauto. ii. spc SIM0. des. esplits; et.
+  - econs; eauto. { eapply Ordinal.lt_le_lt; et. } econs; et. refl.
+  - econs; eauto. { eapply Ordinal.lt_le_lt; et. } des. esplits; et. econs; et. refl.
+  (* - econs. { eapply Ordinal.lt_le_lt; et. } econs; et. refl. *)
+Qed.
+
+Lemma ordC_prespectful: prespectful5 (_simg) ordC.
+Proof.
+  econs; eauto with paco.
+  ii. inv PR. csc.
+  rename x2 into o1. apply GF in SIM. pfold. inv SIM.
+  - econs; eauto.
+  - econs; eauto. ii. right. left. eapply SIM0; et.
+  - econs; eauto.
+  - econs; eauto. { eapply Ordinal.lt_le_lt; et. }
+  - econs; eauto. { eapply Ordinal.lt_le_lt; et. }
+  - econs; eauto. ii. spc SIM0. des. esplits; et.
+  - econs; eauto. { eapply Ordinal.lt_le_lt; et. } des. esplits; et.
+  - econs; eauto. { eapply Ordinal.lt_le_lt; et. }
+  - econs; eauto. ii. spc SIM0. des. esplits; et.
+  - econs; eauto. { eapply Ordinal.lt_le_lt; et. }
+  - econs; eauto. { eapply Ordinal.lt_le_lt; et. } des. esplits; et.
+  (* - econs. { eapply Ordinal.lt_le_lt; et. } right. left. et. *)
+Qed.
+
+Lemma ordC_spec: ordC <6= gupaco5 (_simg) (cpn5 _simg).
+Proof. intros. eapply prespect5_uclo; eauto with paco. eapply ordC_prespectful. Qed.
+Lemma ordC_spec2: ordC <6= gupaco5 (_simg) (cpn5 _simg).
+Proof. intros. gclo. econs. { apply ordC_compatible. } eapply ordC_mon; try apply PR. ii. gbase. ss. Qed.
+
+
+
+
+
+
 
 
 
@@ -163,6 +369,7 @@ Hint Unfold bindC: core.
 (* Hint Resolve Ordinal.lt_le_lt: ord. *)
 (* Hint Resolve Ordinal.le_lt_lt: ord. *)
 
+(* Lemma bindC_wrespectful: prespectful5 (_simg) bindC. *)
 Lemma bindC_wrespectful: wrespectful5 (_simg) bindC.
 Proof.
   econstructor; repeat intro.
@@ -182,6 +389,7 @@ Proof.
 
 
   + irw. econs; eauto.
+    { eapply Ordinal.add_le_r; et. }
     { econs 2; eauto with paco. econs; eauto with paco. }
   + rewrite ! bind_tau. econs; eauto.
     { instantiate (1:= Ordinal.add o1 i1). eapply Ordinal.add_lt_r; et. }
@@ -192,6 +400,7 @@ Proof.
 
 
   + rewrite ! bind_bind. econs; eauto.
+    { eapply Ordinal.add_le_r; et. }
     { ii. spc SIM0. des. esplits; et. econs 2; eauto with paco. econs; eauto with paco. }
   + rewrite ! bind_bind. econs; eauto.
     { instantiate (1:= Ordinal.add o1 i1). eapply Ordinal.add_lt_r; et. }
@@ -201,6 +410,7 @@ Proof.
     des. esplits; et. econs 2; eauto with paco. econs; eauto with paco.
 
   + rewrite ! bind_bind. econs; eauto.
+    { eapply Ordinal.add_le_r; et. }
     { ii. spc SIM0. des. esplits; et. econs 2; eauto with paco. econs; eauto with paco. }
   + rewrite ! bind_bind. econs; eauto.
     { instantiate (1:= Ordinal.add o1 i1). eapply Ordinal.add_lt_r; et. }
@@ -235,36 +445,6 @@ Qed.
 
 
 
-Global Program Instance _simg_refl r R RR `{Reflexive _ RR} (REFL: forall R RR `{Reflexive _ RR} o0, Reflexive (r R RR o0)) o0:
-  Reflexive (@_simg r R RR o0).
-Next Obligation.
-  ides x.
-  - econs; et.
-  - econs; eauto. refl.
-  - destruct e.
-    + rewrite <- ! bind_trigger. econs; et. ii. esplits; et. refl.
-    + rewrite <- ! bind_trigger. econs; et. ii. esplits; et. refl.
-    + rewrite <- ! bind_trigger. econs; et. ii. clarify. refl.
-Unshelve.
-  all: ss.
-Qed.
-
-Global Program Instance simg_paco_refl r R RR `{Reflexive _ RR} o0: Reflexive (paco5 _simg r R RR o0).
-Next Obligation.
-  revert_until Σ.
-  pcofix CIH.
-  i. pfold. eapply _simg_refl; et.
-Qed.
-
-Global Program Instance simg_gpaco_refl r R RR `{Reflexive _ RR} rg o0: Reflexive (gpaco5 _simg (cpn5 _simg) r rg R RR o0).
-Next Obligation.
-  gfinal. right. eapply simg_paco_refl; et.
-Qed.
-
-Global Program Instance simg_refl R RR `{Reflexive _ RR} o0: Reflexive (@simg R RR o0).
-Next Obligation.
-  eapply simg_paco_refl. ss.
-Qed.
 
 
 
