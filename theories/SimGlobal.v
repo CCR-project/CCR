@@ -16,6 +16,30 @@ Generalizable Variables E R A B C X Y Σ.
 Set Implicit Arguments.
 
 
+
+
+Lemma ind2
+      (P: Ordinal.t -> Prop)
+      (SUCC: forall o s (SUCC: Ordinal.is_S o s) (IH: P o)
+                    (HELPER: forall o' (LT: Ordinal.lt o' s), P o'), P s)
+      (LIMIT: forall A (os: A -> Ordinal.t) o (JOIN: Ordinal.is_join os o)
+                     (OPEN: Ordinal.open os)
+                     (IH: forall a, P (os a))
+                     (HELPER: forall o' (LT: Ordinal.lt o' o), P o'), P o)
+  :
+    forall o, P o.
+Proof.
+  eapply well_founded_induction.
+  { eapply Ordinal.lt_well_founded. }
+  i. destruct (ClassicalOrdinal.limit_or_S x).
+  - des. eapply SUCC; eauto. eapply H. eapply H0.
+  - des. eapply LIMIT; eauto. i. eapply H.
+    specialize (H1 a). des. eapply Ordinal.lt_le_lt; eauto. eapply H0.
+Qed.
+
+
+
+
 Section SIM.
 
 Context `{Σ: GRA.t}.
@@ -39,18 +63,21 @@ Inductive _simg (simg: forall R (RR: relation R), Ordinal.t -> relation (itree e
 
 | simg_tau
     i1 itr_src0 itr_tgt0
+    (TAUBOTH: True)
     (ORD: Ordinal.le i1 i0)
     (SIM: simg _ RR i1 itr_src0 itr_tgt0)
   :
     _simg simg RR i0 (tau;; itr_src0) (tau;; itr_tgt0)
 | simg_tauL
     i1 itr_src0 itr_tgt0
+    (TAUL: True)
     (ORD: Ordinal.lt i1 i0)
     (SIM: simg _ RR i1 itr_src0 itr_tgt0)
   :
     _simg simg RR i0 (tau;; itr_src0) (itr_tgt0)
 | simg_tauR
     i1 itr_src0 itr_tgt0
+    (TAUR: True)
     (ORD: Ordinal.lt i1 i0)
     (SIM: simg _ RR i1 itr_src0 itr_tgt0)
   :
@@ -60,18 +87,21 @@ Inductive _simg (simg: forall R (RR: relation R), Ordinal.t -> relation (itree e
 
 | simg_choose
     i1 X_src X_tgt ktr_src0 ktr_tgt0
+    (CHOOSEBOTH: True)
     (ORD: Ordinal.le i1 i0)
     (SIM: forall x_tgt, exists x_src, simg _ RR i1 (ktr_src0 x_src) (ktr_tgt0 x_tgt))
   :
     _simg simg RR i0 (trigger (Choose X_src) >>= ktr_src0) (trigger (Choose X_tgt) >>= ktr_tgt0)
 | simg_chooseL
     i1 X ktr_src0 itr_tgt0
+    (CHOOSEL: True)
     (ORD: Ordinal.lt i1 i0)
     (SIM: exists x, simg _ RR i1 (ktr_src0 x) itr_tgt0)
   :
     _simg simg RR i0 (trigger (Choose X) >>= ktr_src0) (itr_tgt0)
 | simg_chooseR
     i1 X itr_src0 ktr_tgt0
+    (CHOOSER: True)
     (ORD: Ordinal.lt i1 i0)
     (SIM: forall x, simg _ RR i1 itr_src0 (ktr_tgt0 x))
   :
@@ -81,18 +111,21 @@ Inductive _simg (simg: forall R (RR: relation R), Ordinal.t -> relation (itree e
 
 | simg_take
     i1 X_src X_tgt ktr_src0 ktr_tgt0
+    (TAKEBOTH: True)
     (ORD: Ordinal.le i1 i0)
     (SIM: forall x_src, exists x_tgt, simg _ RR i1 (ktr_src0 x_src) (ktr_tgt0 x_tgt))
   :
     _simg simg RR i0 (trigger (Take X_src) >>= ktr_src0) (trigger (Take X_tgt) >>= ktr_tgt0)
 | simg_takeL
     i1 X ktr_src0 itr_tgt0
+    (TAKEL: True)
     (ORD: Ordinal.lt i1 i0)
     (SIM: forall x, simg _ RR i1 (ktr_src0 x) itr_tgt0)
   :
     _simg simg RR i0 (trigger (Take X) >>= ktr_src0) (itr_tgt0)
 | simg_takeR
     i1 X itr_src0 ktr_tgt0
+    (TAKER: True)
     (ORD: Ordinal.lt i1 i0)
     (SIM: exists x, simg _ RR i1 itr_src0 (ktr_tgt0 x))
   :
@@ -132,15 +165,15 @@ Qed.
 Lemma simg_mon_ord r S SS i0 i1 (ORD: Ordinal.le i0 i1): @_simg r S SS i0 <2= @_simg r S SS i1.
 Proof.
   ii. inv PR; try (by econs; et).
-  - econs; try apply SIM. etrans; et.
-  - econs; try apply SIM. eapply Ordinal.lt_le_lt; et.
-  - econs; try apply SIM. eapply Ordinal.lt_le_lt; et.
-  - econs; try apply SIM. etrans; et.
-  - econs; try apply SIM. eapply Ordinal.lt_le_lt; et.
-  - econs; try apply SIM. eapply Ordinal.lt_le_lt; et.
-  - econs; try apply SIM. etrans; et.
-  - econs; try apply SIM. eapply Ordinal.lt_le_lt; et.
-  - econs; try apply SIM. eapply Ordinal.lt_le_lt; et.
+  - econs; try apply SIM; et. etrans; et.
+  - econs; try apply SIM; et. eapply Ordinal.lt_le_lt; et.
+  - econs; try apply SIM; et. eapply Ordinal.lt_le_lt; et.
+  - econs; try apply SIM; et. etrans; et.
+  - econs; try apply SIM; et. eapply Ordinal.lt_le_lt; et.
+  - econs; try apply SIM; et. eapply Ordinal.lt_le_lt; et.
+  - econs; try apply SIM; et. etrans; et.
+  - econs; try apply SIM; et. eapply Ordinal.lt_le_lt; et.
+  - econs; try apply SIM; et. eapply Ordinal.lt_le_lt; et.
   (* - econs; try apply SIM. eapply Ordinal.lt_le_lt; et. *)
 Qed.
 
@@ -455,43 +488,101 @@ Qed.
 
 
 
-(* Variant transR (r s: forall S, Ordinal.t -> relation (itree eventE S)): forall S, Ordinal.t -> relation (itree eventE S) := *)
-(* | transR_intro *)
-(*     o0 o1 *)
+Variant transR (r s: forall S (SS: relation S), Ordinal.t -> relation (itree eventE S)):
+  forall S (SS: relation S), Ordinal.t -> relation (itree eventE S) :=
+| transR_intro
+    o0 o1
 
-(*     R *)
-(*     (itr0 itr1 itr2: itree eventE R) *)
-(*     (SIM0: r _ o0 itr0 itr1) *)
-(*     (SIM1: s _ o1 itr1 itr2) *)
-(*   : *)
-(*     transR r s (Ordinal.add o1 o0) itr0 itr2 *)
-(* . *)
+    S (SS: relation S)
+    itr0 itr1 itr2
+    (TRANS: Transitive SS)
+    (SIM0: r _ SS o0 itr0 itr1)
+    (SIM1: s _ SS o1 itr1 itr2)
+  :
+    transR r s SS (Ordinal.add o1 o0) itr0 itr2
+.
 
-(* Hint Constructors transR: core. *)
+Hint Constructors transR: core.
 
-(* Lemma transR_mon *)
-(*       r1 r2 s1 s2 *)
-(*       (LEr: r1 <4= r2) (LEs: s1 <4= s2) *)
-(*   : *)
-(*     transR r1 s1 <4= transR r2 s2 *)
-(* . *)
-(* Proof. ii. destruct PR; econs; et. Qed. *)
+Lemma transR_mon
+      r1 r2 s1 s2
+      (LEr: r1 <5= r2) (LEs: s1 <5= s2)
+  :
+    transR r1 s1 <5= transR r2 s2
+.
+Proof. ii. destruct PR; econs; et. Qed.
 
-(* Definition transC r := transR r r. *)
-(* Hint Unfold transC: core. *)
+Definition transC r := transR r r.
+Hint Unfold transC: core.
 
 
-(* Lemma transC_wrespectful: wrespectful4 (_simg) transC. *)
-(* Proof. *)
-(*   econstructor; repeat intro. *)
-(*   { eapply transR_mon; eauto. } *)
-(*   rename l into llll. *)
-(*   eapply transR_mon in PR; cycle 1. *)
-(*   { eapply GF. } *)
-(*   { i. eapply PR0. } *)
-(*   inv PR. csc. inv SIM0. *)
-(*   + exploit GF; et. intro A. *)
+Lemma transC_wrespectful: wrespectful5 (_simg) transC.
+Proof.
+  econstructor; repeat intro.
+  { eapply transR_mon; eauto. }
+  rename l into llll.
+  eapply transR_mon in PR; cycle 1.
+  { eapply GF. }
+  { i. eapply PR0. }
+  inv PR. csc. rename x3 into itr_src. rename x4 into itr_tgt. rename itr1 into itr_mid.
+  rename x0 into S. rename x1 into SS.
+  apply GF in SIM1.
+  inv SIM0; try rename itr_tgt into r_mid.
+  - move o0 at top. revert_until SS. pattern o0. eapply ind2; i; clear o0.
+    + exploit IH; et. intro M. eapply simg_mon_ord; et. eapply Ordinal.add_le_r. eapply Ordinal.lt_le; try apply SUCC.
+    + exploit IH; et. intro M. eapply simg_mon_ord; et. eapply Ordinal.add_le_r. apply JOIN.
+  - move o0 at top. revert_until SS. pattern o0. eapply ind2; i; clear o0.
+    + exploit IH; et. intro M. eapply simg_mon_ord; et. eapply Ordinal.add_le_r. eapply Ordinal.lt_le; try apply SUCC.
+    + exploit IH; et. intro M. eapply simg_mon_ord; et. eapply Ordinal.add_le_r. apply JOIN.
+  - move o0 at top. revert_until SS. pattern o0. eapply ind2; i; clear o0.
+    + rename o1 into ox. rename o into o0. rename s into o1. rename i1 into o1'.
+      econs; eauto.
+      { eapply Ordinal.add_lt_r. eapply SUCC. }
+      econs.
+Abort.
 
+Lemma transC_prespectful: prespectful5 (_simg) transC.
+Proof.
+  econstructor; repeat intro.
+  { eapply transR_mon; eauto. }
+  rename l into llll.
+  eapply transR_mon in PR; cycle 1.
+  { eapply GF. }
+  { i. eapply PR0. }
+  inv PR. csc.
+  rename x3 into itr_src. rename x4 into itr_tgt. rename itr1 into itr_mid. rename x0 into S. rename x1 into SS.
+  revert_until SS. pcofix CIH. rename r0 into uu. i. pfold.
+  apply GF in SIM1.
+  ides itr_src.
+  - ides itr_tgt.
+    + econs; eauto. admit "ez".
+    + dependent destruction SIM1; ss; try (by irw in x; csc).
+      * econs; eauto.
+  (* apply GF in SIM1. *)
+  move o0 at top. revert_until SS. pattern o0. eapply ind2; i; clear o0.
+  - inv SIM0.
+    + rename r_tgt into r_mid.
+      exploit IH; et. intro M. eapply simg_mon_ord; et. eapply Ordinal.add_le_r. eapply Ordinal.lt_le; try apply SUCC.
+    + exploit IH; et. intro M. eapply simg_mon_ord; et. eapply Ordinal.add_le_r. eapply Ordinal.lt_le; try apply SUCC.
+    + exploit IH; et. intro M. eapply simg_mon_ord; et. eapply Ordinal.add_le_r. eapply Ordinal.lt_le; try apply SUCC.
+  -
+      pfold. econs; eauto.
+    exploit IH; et. intro M. eapply simg_mon_ord; et. eapply Ordinal.add_le_r. eapply Ordinal.lt_le; try apply SUCC.
+
+
+  inv SIM0; try rename itr_tgt into r_mid.
+  - move o0 at top. revert_until SS. pattern o0. eapply ind2; i; clear o0.
+    + exploit IH; et. intro M. eapply simg_mon_ord; et. eapply Ordinal.add_le_r. eapply Ordinal.lt_le; try apply SUCC.
+    + exploit IH; et. intro M. eapply simg_mon_ord; et. eapply Ordinal.add_le_r. apply JOIN.
+  - move o0 at top. revert_until SS. pattern o0. eapply ind2; i; clear o0.
+    + exploit IH; et. intro M. eapply simg_mon_ord; et. eapply Ordinal.add_le_r. eapply Ordinal.lt_le; try apply SUCC.
+    + exploit IH; et. intro M. eapply simg_mon_ord; et. eapply Ordinal.add_le_r. apply JOIN.
+  - move o0 at top. revert_until SS. pattern o0. eapply ind2; i; clear o0.
+    + rename o1 into ox. rename o into o0. rename s into o1. rename i1 into o1'.
+      econs; eauto.
+      { eapply Ordinal.add_lt_r. eapply SUCC. }
+      econs.
+Abort.
 (* Theorem simg_trans *)
 (*         R *)
 (*         o0 o1 (itr0 itr1 itr2: itree eventE R) *)
