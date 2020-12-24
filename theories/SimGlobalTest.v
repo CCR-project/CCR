@@ -397,6 +397,64 @@ Qed.
 
 
 
+Definition myadd (o0 o1: Ordinal.t): Ordinal.t := Ordinal.mult (Ordinal.S o0) (Ordinal.S o1).
+
+Lemma myadd_proj1 o0 o1: Ordinal.le o0 (myadd o0 o1).
+Proof.
+  unfold myadd. etransitivity.
+  2: { eapply Ordinal.mult_S. }
+  transitivity (Ordinal.S o0).
+  { eapply Ordinal.lt_le. eapply Ordinal.S_lt. }
+  { eapply Ordinal.add_base_r. }
+Qed.
+
+Lemma myadd_proj2 o0 o1: Ordinal.le o1 (myadd o0 o1).
+Proof.
+  unfold myadd. etransitivity.
+  { eapply Ordinal.mult_1_l. }
+  transitivity (Ordinal.mult (Ordinal.from_nat 1) (Ordinal.S o1)).
+  { apply Ordinal.mult_le_r. apply Ordinal.lt_le. apply Ordinal.S_lt. }
+  { apply Ordinal.mult_le_l. ss. erewrite <- Ordinal.S_le_mon. eapply Ordinal.O_bot. }
+Qed.
+
+Lemma myadd_le_l o0 o1 o2 (LE: Ordinal.le o0 o1): Ordinal.le (myadd o0 o2) (myadd o1 o2).
+Proof.
+  eapply Ordinal.mult_le_l. erewrite <- Ordinal.S_le_mon. auto.
+Qed.
+
+Lemma myadd_le_r o0 o1 o2 (LE: Ordinal.le o1 o2): Ordinal.le (myadd o0 o1) (myadd o0 o2).
+Proof.
+  eapply Ordinal.mult_le_r. erewrite <- Ordinal.S_le_mon. auto.
+Qed.
+
+Lemma myadd_lt_r o0 o1 o2 (LT: Ordinal.lt o1 o2): Ordinal.lt (myadd o0 o1) (myadd o0 o2).
+Proof.
+  eapply (@Ordinal.lt_le_lt (myadd o0 (Ordinal.S o1))).
+  { unfold myadd. eapply Ordinal.lt_eq_lt.
+    { eapply Ordinal.mult_S. }
+    eapply Ordinal.lt_eq_lt.
+    { eapply Ordinal.add_S. }
+    eapply Ordinal.le_lt_lt.
+    2: { eapply Ordinal.S_lt. }
+    eapply Ordinal.add_base_l.
+  }
+  { eapply myadd_le_r. eapply Ordinal.S_spec in LT. auto. }
+Qed.
+
+Lemma myadd_lt_l o0 o1 o2 (LT: Ordinal.lt o0 o1): Ordinal.lt (myadd o0 o2) (myadd o1 o2).
+Proof.
+  unfold myadd. eapply Ordinal.lt_eq_lt.
+  { eapply Ordinal.mult_S. }
+  eapply Ordinal.eq_lt_lt.
+  { eapply Ordinal.mult_S. }
+  eapply Ordinal.le_lt_lt.
+  2: { eapply Ordinal.add_lt_r. erewrite <- Ordinal.S_lt_mon. eapply LT. }
+  eapply Ordinal.add_le_l.
+  eapply Ordinal.mult_le_l.
+  erewrite <- Ordinal.S_le_mon. eapply Ordinal.lt_le. auto.
+Qed.
+
+Hint Resolve myadd_proj1 myadd_proj2 myadd_le_l myadd_le_r myadd_lt_l myadd_lt_r: ord_proj.
 
 
 Variant transR (r s: forall S (SS: relation S), Ordinal.t -> relation (itree eventE S)):
@@ -410,7 +468,7 @@ Variant transR (r s: forall S (SS: relation S), Ordinal.t -> relation (itree eve
     (SIM0: r _ SS o0 itr0 itr1)
     (SIM1: s _ SS o1 itr1 itr2)
   :
-    transR r s SS (Ordinal.add o1 o0) itr0 itr2
+    transR r s SS (myadd o1 o0) itr0 itr2
 .
 
 Hint Constructors transR: core.
@@ -504,38 +562,104 @@ Proof.
   - pclearbot. eapply simg_mon_ord; try apply SIM0; eauto with ord.
 Qed.
 
+
 Theorem simg_trans_gil
         R (RR: relation R) `{Transitive _ RR}
         o0 o1 o2 (i0 i1 i2: itree eventE R)
         (SIM0: simg RR o0 i0 i1)
         (SIM1: simg RR o1 i1 i2)
-        (LE: Ordinal.le (Ordinal.add o0 o1) o2)
+        (LE: Ordinal.le (myadd o0 o1) o2)
   :
     <<SIM: simg RR o2 i0 i2>>
 .
 Proof.
-  revert_until H. pcofix CIH. i.
-  punfold SIM1. inv SIM1.
-  - punfold SIM0. inv SIM0.
+  revert_until H. pcofix CIH.
+  eapply (ind3 (fun o0 => forall o1 o2 i0 i1 i2 (SIM0: simg RR o0 i0 i1) (SIM1: simg RR o1 i1 i2) (LE: Ordinal.le (myadd o0 o1) o2), paco5 _simg r R RR o2 i0 i2)).
+  i. punfold SIM1. inv SIM1.
+  - clear IH. punfold SIM0. inv SIM0.
     { pfold. econs; eauto. }
     pclearbot. pfold. econs; eauto.
-    { instantiate (1:=i1). eauto with ord ord_proj. }
+    { instantiate (1:=i1). eapply (@Ordinal.lt_le_lt o0); auto.
+      transitivity (myadd o0 o1); auto. eapply myadd_proj1. }
     punfold SIM1. left.
     revert SIM1. revert itr_src0. pattern i1. eapply ind3. clears i1. i. inv SIM1.
     + pfold. econs; eauto.
     + pclearbot. punfold SIM0. pfold. econs; eauto.
   - punfold SIM0. inv SIM0.
-    { pfold. econs; eauto. right. pclearbot. eapply CIH; et. eauto with ord ord_trans. }
+    { pfold. econs; eauto. right. pclearbot. eapply CIH; et.
+      transitivity (myadd i1 o1).
+      { eapply myadd_le_r. auto. }
+      { eapply myadd_le_l. auto. }
+    }
     { pclearbot. eapply simg_inv_tauR in SIM1. des.
-      pfold. econs; eauto. right. eapply CIH; eauto with ord ord_trans.
+      pfold. econs; eauto. right. eapply CIH; eauto.
+      transitivity (myadd (Ordinal.S i1) o1).
+      { eapply myadd_le_r. auto. }
+      { eapply myadd_le_l. eapply Ordinal.S_spec. auto. }
     }
     { pclearbot. pfold. econs; eauto; cycle 1.
       { right. eapply CIH; et. refl. }
-      eapply Ordinal.lt_le_lt; et. eapply Ordinal.le_lt_lt. 
-      { instantiate (1:= Ordinal.add o0 i3). eauto with ord ord_proj. }
-      { eauto with ord ord_proj. }
+      eapply Ordinal.lt_le_lt; et. eapply Ordinal.le_lt_lt.
+      { instantiate (1:= myadd i1 o1). eapply myadd_le_r. auto. }
+      { apply myadd_lt_l. auto. }
     }
-  move o2 at top. revert_until CIH. pattern o2. eapply ind3; i; clear o2.
+  - punfold SIM0. inv SIM0.
+    { pfold. econs; eauto.
+      { instantiate (1:=myadd i1 i3).
+        eapply (@Ordinal.lt_le_lt (myadd o0 o1)); auto.
+        eapply (@Ordinal.lt_le_lt (myadd i1 o1)).
+        { eapply myadd_lt_r. auto. }
+        { eapply myadd_le_l. auto. }
+      }
+      pclearbot. right. eapply CIH; et. reflexivity.
+    }
+    { pclearbot. eapply simg_inv_tauR in SIM1. des.
+      pfold. econs; eauto.
+      { instantiate (1:=myadd (Ordinal.S i1) i3).
+        eapply (@Ordinal.lt_le_lt (myadd o0 o1)); auto.
+        eapply (@Ordinal.lt_le_lt (myadd (Ordinal.S i1) o1)); auto.
+        { eapply myadd_lt_r. auto. }
+        { eapply myadd_le_l. apply Ordinal.S_spec. auto. }
+      }
+      right. eapply CIH; eauto. reflexivity.
+    }
+    { pclearbot. eapply IH; eauto.
+      transitivity (myadd o0 o1); auto. transitivity (myadd i1 o1).
+      { eapply myadd_le_r. apply Ordinal.lt_le. auto. }
+      { eapply myadd_le_l. apply Ordinal.lt_le. auto. }
+    }
+  - punfold SIM0. inv SIM0.
+    { pclearbot. pfold. econs; eauto.
+      { instantiate (1:=myadd Ordinal.O i3).
+        eapply (@Ordinal.lt_le_lt (myadd o0 o1)); auto.
+        eapply (@Ordinal.lt_le_lt (myadd Ordinal.O o1)).
+        { eapply myadd_lt_r. auto. }
+        { eapply myadd_le_l. apply Ordinal.O_bot. }
+      }
+      { right. eapply CIH; eauto. reflexivity. }
+    }
+    { pclearbot. eapply simg_inv_tauL in SIM. des.
+      pfold. econs; et. right. eapply CIH; et.
+      transitivity (myadd i2 o1).
+      { eapply myadd_le_r. apply Ordinal.S_spec. auto. }
+      { eapply myadd_le_l. auto. }
+    }
+    { pfold. econs; eauto.
+      pclearbot. right. eapply CIH; et.
+      transitivity (myadd i2 o1).
+      { eapply myadd_le_r. apply Ordinal.lt_le. auto. }
+      { eapply myadd_le_l. apply Ordinal.lt_le. auto. }
+    }
+    { pclearbot. eapply simg_inv_tauL in SIM. des.
+      pfold. econs; eauto.
+      { instantiate (1:=myadd i2 (Ordinal.S i3)).
+        eapply (@Ordinal.lt_le_lt (myadd o0 o1)); auto.
+        eapply (@Ordinal.lt_le_lt (myadd o0 (Ordinal.S i3))); auto.
+        { eapply myadd_lt_l. auto. }
+        { eapply myadd_le_r. apply Ordinal.S_spec. auto. }
+      }
+      right. eapply CIH; eauto. reflexivity.
+    }
 Qed.
 
 Theorem simg_trans
