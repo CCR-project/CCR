@@ -110,13 +110,23 @@ Qed.
 (*   - *)
 (* Qed. *)
 
-Lemma simg_mon_ord r S SS i0 i1 (ORD: Ordinal.le i0 i1): @_simg r S SS i0 <2= @_simg r S SS i1.
+Lemma _simg_mon_ord r S SS i0 i1 (ORD: Ordinal.le i0 i1): @_simg r S SS i0 <2= @_simg r S SS i1.
 Proof.
   ii. inv PR; try (by econs; et).
   - econs; try apply SIM; et. etrans; et.
   - econs; try apply SIM; et. eapply Ordinal.lt_le_lt; et.
   - econs; try apply SIM; et. eapply Ordinal.lt_le_lt; et.
   (* - econs; try apply SIM. eapply Ordinal.lt_le_lt; et. *)
+Qed.
+
+Lemma simg_mon_ord S SS i0 i1 (ORD: Ordinal.le i0 i1): @simg S SS i0 <2= @simg S SS i1.
+Proof.
+  revert_until SS. pcofix CIH.
+  ii. punfold PR; try apply simg_mon. inv PR; try (by econs; et).
+  - pfold. econs; eauto.
+  - pfold. econs; eauto. pclearbot. right. eapply CIH; et.
+  - pclearbot. pfold. econs; eauto. { eapply Ordinal.lt_le_lt; et. } right. eapply CIH; et. refl.
+  - pclearbot. pfold. econs; eauto. { eapply Ordinal.lt_le_lt; et. } right. eapply CIH; et. refl.
 Qed.
 
 (* Lemma simg_mon_rel r S SS SS' (LE: SS <2= SS') i0: @_simg r S SS i0 <2= @_simg r S SS' i0. *)
@@ -338,7 +348,7 @@ Proof.
   inv PR. csc. inv SIM.
   + irw.
     exploit SIMK; eauto. i.
-    eapply simg_mon_ord.
+    eapply _simg_mon_ord.
     { instantiate (1:=o1). eapply Ordinal.add_base_l. }
     eapply simg_mon; eauto with paco.
 
@@ -449,7 +459,84 @@ Qed.
 (*   admit "TODO". *)
 (* Qed. *)
 
+Lemma le_trans: Transitive Ordinal.le. typeclasses eauto. Qed.
+Lemma lt_trans: Transitive Ordinal.le. typeclasses eauto. Qed.
 
+Hint Resolve Ordinal.lt_le_lt Ordinal.le_lt_lt Ordinal.add_lt_r Ordinal.add_le_l
+     Ordinal.add_le_r Ordinal.lt_le
+     (* Ordinal.S_le *)
+     Ordinal.S_lt
+     Ordinal.S_spec
+  : ord.
+Hint Resolve le_trans lt_trans: ord_trans.
+Hint Resolve Ordinal.add_base_l Ordinal.add_base_r: ord_proj.
+
+
+Lemma simg_inv_tauL
+      R (RR: relation R)
+      o0 i0 i1
+      (SIM: simg RR o0 (tau;; i0) i1)
+  :
+    <<SIM: simg RR (Ordinal.S o0) i0 i1>>
+.
+Proof.
+  move o0 at top. revert_until RR. pattern o0. eapply ind3. clear o0.
+  ii. punfold SIM. inv SIM.
+  - pfold. econs; eauto. eauto with ord.
+  - pclearbot. eapply simg_mon_ord; try apply SIM0; eauto with ord.
+  - pclearbot. exploit IH; et. intro A. pfold. econs; eauto with ord. left.
+    eapply simg_mon_ord; eauto with ord.
+Qed.
+
+Lemma simg_inv_tauR
+      R (RR: relation R)
+      o0 i0 i1
+      (SIM: simg RR o0 i0 (tau;; i1))
+  :
+    <<SIM: simg RR (Ordinal.S o0) i0 i1>>
+.
+Proof.
+  move o0 at top. revert_until RR. pattern o0. eapply ind3. clear o0.
+  ii. punfold SIM. inv SIM.
+  - pfold. econs; eauto. eauto with ord.
+  - pclearbot. exploit IH; et. intro A. pfold. econs; eauto with ord. left.
+    eapply simg_mon_ord; eauto with ord.
+  - pclearbot. eapply simg_mon_ord; try apply SIM0; eauto with ord.
+Qed.
+
+Theorem simg_trans_gil
+        R (RR: relation R) `{Transitive _ RR}
+        o0 o1 o2 (i0 i1 i2: itree eventE R)
+        (SIM0: simg RR o0 i0 i1)
+        (SIM1: simg RR o1 i1 i2)
+        (LE: Ordinal.le (Ordinal.add o0 o1) o2)
+  :
+    <<SIM: simg RR o2 i0 i2>>
+.
+Proof.
+  revert_until H. pcofix CIH. i.
+  punfold SIM1. inv SIM1.
+  - punfold SIM0. inv SIM0.
+    { pfold. econs; eauto. }
+    pclearbot. pfold. econs; eauto.
+    { instantiate (1:=i1). eauto with ord ord_proj. }
+    punfold SIM1. left.
+    revert SIM1. revert itr_src0. pattern i1. eapply ind3. clears i1. i. inv SIM1.
+    + pfold. econs; eauto.
+    + pclearbot. punfold SIM0. pfold. econs; eauto.
+  - punfold SIM0. inv SIM0.
+    { pfold. econs; eauto. right. pclearbot. eapply CIH; et. eauto with ord ord_trans. }
+    { pclearbot. eapply simg_inv_tauR in SIM1. des.
+      pfold. econs; eauto. right. eapply CIH; eauto with ord ord_trans.
+    }
+    { pclearbot. pfold. econs; eauto; cycle 1.
+      { right. eapply CIH; et. refl. }
+      eapply Ordinal.lt_le_lt; et. eapply Ordinal.le_lt_lt. 
+      { instantiate (1:= Ordinal.add o0 i3). eauto with ord ord_proj. }
+      { eauto with ord ord_proj. }
+    }
+  move o2 at top. revert_until CIH. pattern o2. eapply ind3; i; clear o2.
+Qed.
 
 Theorem simg_trans
         R (RR: relation R) `{Transitive _ RR}
