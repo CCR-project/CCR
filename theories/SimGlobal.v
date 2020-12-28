@@ -46,8 +46,8 @@ Context `{Σ: GRA.t}.
 
 Section TY.
 (* Context `{R: Type}. *)
-Inductive _simg (simg: forall R (RR: relation R), Ordinal.t -> relation (itree eventE R))
-          {R} (RR: relation R) (i0: Ordinal.t): relation (itree eventE R) :=
+Inductive _simg (simg: forall R (RR: R -> R -> Prop), Ordinal.t -> (itree eventE R) -> (itree eventE R) -> Prop)
+          {R} (RR: R -> R -> Prop) (i0: Ordinal.t): (itree eventE R) -> (itree eventE R) -> Prop :=
 | simg_ret
     r_src r_tgt
     (SIM: RR r_src r_tgt)
@@ -141,7 +141,7 @@ Inductive _simg (simg: forall R (RR: relation R), Ordinal.t -> relation (itree e
 (*     _simg simg RR i0 itr_src itr_tgt *)
 .
 
-Definition simg: forall R (RR: relation R), Ordinal.t -> relation (itree eventE R) := paco5 _simg bot5.
+Definition simg: forall R (RR: R -> R -> Prop), Ordinal.t -> (itree eventE R) -> (itree eventE R) -> Prop := paco5 _simg bot5.
 
 Lemma simg_mon: monotone5 _simg.
 Proof.
@@ -270,10 +270,10 @@ Qed.
 
 
 
-Variant ordC (r: forall S (SS: relation S), Ordinal.t -> relation (itree eventE S)):
-  forall S (SS: relation S), Ordinal.t -> relation (itree eventE S) :=
+Variant ordC (r: forall S (SS: S -> S -> Prop), Ordinal.t -> (itree eventE S) -> (itree eventE S) -> Prop):
+  forall S (SS: S -> S -> Prop), Ordinal.t -> (itree eventE S) -> (itree eventE S) -> Prop :=
 | ordC_intro
-    o0 o1 R (RR: relation R) itr_src itr_tgt
+    o0 o1 R (RR: R -> R -> Prop) itr_src itr_tgt
     (ORD: Ordinal.le o0 o1)
     (SIM: r _ RR o0 itr_src itr_tgt)
   :
@@ -365,8 +365,8 @@ Proof. intros. eapply prespect5_uclo; eauto with paco. eapply ordC_prespectful. 
 
 
 
-Variant bindR (r s: forall S (SS: relation S), Ordinal.t -> relation (itree eventE S)):
-  forall S (SS: relation S), Ordinal.t -> relation (itree eventE S) :=
+Variant bindR (r s: forall S (SS: S -> S -> Prop), Ordinal.t -> (itree eventE S) -> (itree eventE S) -> Prop):
+  forall S (SS: S -> S -> Prop), Ordinal.t -> (itree eventE S) -> (itree eventE S) -> Prop :=
 | bindR_intro
     o0 o1
 
