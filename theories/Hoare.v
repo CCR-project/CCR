@@ -460,6 +460,12 @@ If this feature is needed; we can extend it then. At the moment, I will only all
     forall (E F : Type -> Type) (R : Type) (f : forall T : Type, E T -> itree F T) (x : R), interp f (Ret x) = Ret x.
   Proof. i. f. apply interp_ret. Qed.
 
+  Lemma interp_tau:
+forall {E F : Type -> Type} {R : Type} {f : forall T : Type, E T -> itree F T} (t : itree E R),
+interp f (tau;; t) = (tau;; interp f t)
+  .
+  Proof. i. f. apply interp_tau. Qed.
+
   Definition my_interp A (prog: callE ~> itree Es) (itr0: itree Es A) (st0: ModSem.r_state) :=
     ModSem.interp_rE (interp_mrec prog itr0) st0
   .
@@ -698,14 +704,17 @@ If this feature is needed; we can extend it then. At the moment, I will only all
   Let adequacy_type_aux:
     let p_src: callE ~> itree Es := fun _ ce => trigger PushFrame;; rv <- ModSem.sem ms_src ce;; trigger PopFrame;; Ret rv in
     let p_tgt: callE ~> itree Es := fun _ ce => trigger PushFrame;; rv <- ModSem.sem ms_tgt ce;; trigger PopFrame;; Ret rv in
-    forall (R: Type) RR `{Reflexive _ RR} (TY: R = val) (REL: RR = eq)
-           st_src0 st_tgt0 (SIM: wf st_src0 st_tgt0) (i0: itree (hCallE +' eventE) R),
+    forall (R: Type) (RR: R -> R -> Prop) (TY: R = (ModSem.r_state * val)%type)
+           (REL: RR ~= (fun '(rs_src, v_src) '(rs_tgt, v_tgt) => wf rs_src rs_tgt /\ (v_src: val) = v_tgt))
+           st_src0 st_tgt0 (SIM: wf st_src0 st_tgt0) (i0: itree (hCallE +' eventE) val)
+           i_src i_tgt
+           (SRC: i_src ~= (my_interp p_src (interp_hCallE_src i0) st_src0))
+           (TGT: i_tgt ~= (my_interp p_tgt (interp_hCallE_tgt stb i0) st_tgt0))
+    ,
     (* sim (Mod.interp md_src) (Mod.interp md_tgt) lt 100%nat *)
     (*     (x <- (my_interp p_src (interp_hCallE_src (trigger ce)) st_src0);; Ret (snd x)) *)
     (*     (x <- (my_interp p_tgt (interp_hCallE_tgt stb (trigger ce)) st_tgt0);; Ret (snd x)) *)
-    simg RR (Ordinal.from_nat 100%nat)
-         (x <- (my_interp p_src (interp_hCallE_src i0) st_src0);; Ret (snd x))
-         (x <- (my_interp p_tgt (interp_hCallE_tgt stb i0) st_tgt0);; Ret (snd x))
+    simg RR (Ordinal.from_nat 100%nat) i_src i_tgt
   .
   Proof.
     i. ginit.
@@ -727,12 +736,12 @@ If this feature is needed; we can extend it then. At the moment, I will only all
         mgo. gstep. econs; eauto.
         mgo. gstep. econs; eauto.
         mgo. gstep. econs; eauto.
-        gbase. eapply CIH; et.
+        gbase. eapply CIH; et. refl.
       - cbn. mgo. gstep. econs; eauto. i. esplits; eauto.
         mgo. gstep. econs; eauto.
         mgo. gstep. econs; eauto.
         mgo. gstep. econs; eauto.
-        gbase. eapply CIH; et.
+        gbase. eapply CIH; et. refl.
       - cbn. mgo. gstep. econs; eauto. ii; clarify.
         mgo. gstep. econs; eauto.
         mgo. gstep. econs; eauto.
