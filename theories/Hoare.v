@@ -627,8 +627,8 @@ If this feature is needed; we can extend it then. At the moment, I will only all
   Ltac igo := repeat (try rewrite bind_bind; try rewrite bind_ret_l; try rewrite bind_ret_r; try rewrite bind_tau;
                       try rewrite interp_vis;
                       try rewrite interp_ret;
-                      try rewrite interp_tau;
-                      try rewrite interp_trigger
+                      try rewrite interp_tau
+                      (* try rewrite interp_trigger *)
                      ).
 
   Let W: Type := ((string -> Σ) * list Σ).
@@ -636,6 +636,7 @@ If this feature is needed; we can extend it then. At the moment, I will only all
   Let wf: W -> W -> Prop :=
     fun '(mrs_src, frs_src) '(mrs_tgt, frs_tgt) =>
       (<<LEN: List.length frs_src = List.length frs_tgt>>) /\
+      (<<NNIL: frs_src <> []>>) /\
       (<<WFTGT: URA.wf (URA.add (fold_left URA.add (List.map (mrs_tgt <*> fst) ms_tgt.(ModSem.initial_mrs)) ε)
                                 (fold_left URA.add frs_tgt ε))>>)
   .
@@ -646,8 +647,44 @@ If this feature is needed; we can extend it then. At the moment, I will only all
 
   Require Import SimGlobal.
 
+  Lemma S_lt_O
+        o
+    :
+      <<LT: Ordinal.lt Ordinal.O (Ordinal.S o)>>
+  .
+  Proof.
+    r. econs. unfold Ordinal.O. unfold unit_rect. des_ifs. destruct o. econs. ii; ss.
+    Unshelve.
+    all: ss.
+  Qed.
+
+  Lemma le_trans: Transitive Ordinal.le. typeclasses eauto. Qed.
+  Lemma lt_trans: Transitive Ordinal.le. typeclasses eauto. Qed.
+  Hint Resolve Ordinal.lt_le_lt Ordinal.le_lt_lt Ordinal.add_lt_r Ordinal.add_le_l
+       Ordinal.add_le_r Ordinal.lt_le
+       Ordinal.S_lt_mon
+       Ordinal.S_lt
+       Ordinal.S_spec
+       S_lt_O
+    : ord.
+  Hint Resolve le_trans lt_trans: ord_trans.
+  Hint Resolve Ordinal.add_base_l Ordinal.add_base_r: ord_proj.
+
+  Lemma from_nat_lt
+        n m
+        (LT: Nat.lt n m)
+    :
+      <<LT: Ordinal.lt (Ordinal.from_nat n) (Ordinal.from_nat m)>>
+  .
+  Proof.
+    generalize dependent m. induction n; ii; ss.
+    - destruct m; try lia. r; ss. eapply S_lt_O.
+    - destruct m; ss; try lia. r. rewrite <- Ordinal.S_lt_mon. eapply IHn; try lia.
+  Qed.
+
   Opaque Ordinal.from_nat.
   Opaque string_dec.
+
   Let adequacy_type_aux:
     let p_src: callE ~> itree Es := fun _ ce => trigger PushFrame;; rv <- ModSem.sem ms_src ce;; trigger PopFrame;; Ret rv in
     let p_tgt: callE ~> itree Es := fun _ ce => trigger PushFrame;; rv <- ModSem.sem ms_tgt ce;; trigger PopFrame;; Ret rv in
@@ -660,55 +697,242 @@ If this feature is needed; we can extend it then. At the moment, I will only all
          (x <- (my_interp p_tgt (interp_hCallE_tgt stb (trigger ce)) st_tgt0);; Ret (snd x))
   .
   Proof.
-    intros ? ?.
-    pcofix CIH. i. pfold.
+    i. ginit.
+    { eapply cpn5_wcompat; eauto with paco. }
+    remember (` x : ModSem.r_state * R <- my_interp p_src (interp_hCallE_src (trigger ce)) st_src0;; Ret (snd x)) as tmp.
+    revert_until p_tgt.
+    unfold Relation_Definitions.relation.
+    gcofix CIH. i; subst.
+    (* intros ? ?. *)
+    (* pcofix CIH. i. *)
     dependent destruction ce.
     Local Opaque GRA.to_URA.
     ss.
     unfold interp_hCallE_src.
     unfold interp_hCallE_tgt.
+    Ltac mgo := repeat (try rewrite ! my_interp_bind; try rewrite ! my_interp_ret; try rewrite ! my_interp_tau;
+                        try rewrite ! my_interp_rE; try rewrite ! my_interp_eventE; try rewrite ! my_interp_callE;
+                        try rewrite ! my_interp_triggerNB; try rewrite ! my_interp_triggerUB; igo).
     rewrite ! unfold_interp. ss.
-    rewrite ! my_interp_bind. igo. cbn.
-    unfold handle_hCallE_src at 2. unfold handle_hCallE_tgt at 2. des_ifs. igo.
-    rewrite ! interp_ret.
-    unfold p_src at 2. unfold p_tgt at 2. ss. igo.
-    rewrite ! my_interp_bind. igo.
-    rewrite ! my_interp_rE.
-    unfold ModSem.handle_rE.
-    r in SIM. des_ifs_safe. des.
-    des_ifs.
-    { (*** tgt NB ***) irw. unfold triggerNB. irw. eapply sim_demonic_tgt; ss. ii. inv STEP; ss. }
-    irw.
-    Ltac tauLR := eapply sim_demonic_both; ss; intros ? STEP; inv STEP; esplits; et; [econs; ss; et|].
-    tauLR. left; pfold.
-    tauLR. left; pfold.
-    unfold unwrapU.
-    destruct (find _ (List.map (fun '(fn0, body) => (fn0, fun_to_src body)) ftb)) eqn:FIND; cycle 1.
-    { rewrite my_interp_bind. rewrite my_interp_triggerUB. irw.
-      (*** src UB ***) unfold triggerUB. irw. eapply sim_angelic_src; ss. ii. inv STEP; ss.
-    }
-    fold ms_tgt. rewrite WTY.
-    rewrite find_map in FIND. uo. des_ifs_safe.
-    rename Heq into FS.
-    unfold Basics.compose in *.
-    rewrite find_map. uo. des_ifs; cycle 1; rename Heq0 into FT.
-    { exfalso.
-      unfold Basics.compose in *.
-      eapply find_some in FS. des; ss.
-      eapply find_none in FT; et. des_ifs. ss.
-      clarify.
-    }
-    igo.
-    rewrite ! my_interp_bind.
-    igo.
-    unfold fun_to_src, body_to_src.
-    unfold fun_to_tgt, body_to_tgt.
-    des_ifs; cycle 1.
-    { irw. ss. admit "ez - use FT, WTB. We should refactor -- e.g., to use alist, and then use find as a map. this is too low lv".
-    }
-    unfold HoareFun.
+    mgo. cbn. mgo.
+    Ltac mstep := gstep; econs; eauto; [eapply from_nat_lt; ss|].
+    mstep.
 
+    (* gstep. econs; eauto. { eapply from_nat_lt; ss. } left. *)
+    (* gstep. econs; eauto. { eapply from_nat_lt; ss. } left. *)
+    des_ifs; cycle 1.
+    { gstep. mgo. unfold triggerNB. mgo. econs; ss; eauto. { eapply from_nat_lt; ss. } }
+    rename Heq into FINDFT.
+    unfold p_src at 3. mgo.
+    unfold ModSem.handle_rE. des_ifs.
+    { rr in SIM. des_ifs. des; ss. }
+    mgo.
+    gstep. econs; eauto. { eapply from_nat_lt; ss. }
+    gstep. econs; eauto. { eapply from_nat_lt; ss. }
+    unfold ms_src. ss. unfold unwrapU. des_ifs; cycle 1.
+    { gstep. mgo. unfold triggerUB. mgo. econs; ss; eauto. { eapply from_nat_lt; ss. } }
+    mgo. des_ifs. rename Heq into FINDFS. rename i into i_src.
+    unfold HoareCall. mgo.
+    gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
+    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. }
+    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. }
+    des_ifs. mgo. cbn. des_ifs.
+    { gstep. mgo. unfold triggerNB. mgo. econs; ss; eauto. { eapply from_nat_lt; ss. } }
+    mgo. unfold guarantee.
+    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. }
+    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. }
+    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. }
+    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
+    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. }
+    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. }
+    cbn.
+    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
+    mgo. unfold guarantee.
+    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
+    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
+    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
+    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
+    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
+    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
+    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
+    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
+    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
+    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
+    unfold p_tgt at 4. mgo. cbn.
+    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
+    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
+    unfold unwrapU. des_ifs; cycle 1.
+    { exfalso. rewrite WTY in *. ss. clear - FINDFS Heq.
+      rewrite find_map in *. uo. des_ifs.
+      Fail apply_all_once find_some. (*** TODO: FIXME ****)
+      apply find_some in Heq1. des.
+      eapply find_none in Heq0; eauto.
+      unfold compose in *. ss. clarify. }
+    rename Heq into FINDFT0.
+    mgo. des_ifs. rename i into i_tgt.
+    guclo bindC_spec.
+    replace (Ordinal.from_nat 75) with (Ordinal.add (Ordinal.from_nat 45) (Ordinal.from_nat 30)); cycle 1.
+    { admit "ez - ordinal nat add". }
+    rename f into fs.
+    econs.
+    - instantiate (1:= fun '((mrs_src, frs_src), vret_src) '((mrs_tgt, frs_tgt), vret_tgt) =>
+                         exists (rret: Σ),
+                           (<<ST: wf (mrs_src, frs_src) (mrs_tgt, rret :: frs_tgt)>>) /\
+                           (<<VAL: RR vret_src vret_tgt>>) /\
+                           (<<POST: fs.(postcond) x3 vret_tgt rret>>)).
+      apply find_some in FINDFT0. des.
+      apply find_some in FINDFS. des. ss. des_sumbool. clarify.
+      rewrite WTY in *. rewrite in_map_iff in *. des. des_ifs.
+      unfold fun_to_src, fun_to_tgt. des_ifs. unfold HoareFun.
+      (* unfold body_to_src. *)
+      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i. exists x3.
+      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
+      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
+      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i. exists x0.
+      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
+      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i. cbn.
+      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
+      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i. cbn. unfold assume.
+      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i. esplits; eauto.
+Infix "⋅" := URA.add (at level 50, left associativity).
+Notation "(⋅)" := URA.add (only parsing).
+      { clear - WFTGT x. admit "<<WFTGT: wf (Σ c1 + Σ l1 + c4)>>
+--(apply x)-->
+wf (Σ c1 [mn := c2] + Σ l1 + (x0 + x1))
+".
+      }
+      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
+      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
+      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i. esplits; eauto.
+      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
+      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
+      unfold body_to_src, body_to_tgt.
+      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
+      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
+      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
+      gstep. econs; eauto.
+      admit "".
+      (* eapply find_none in Heq0; eauto. *)
+      (* mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i. *)
+    - ii. ss. des_ifs. des. (* rr in SIM0. des; ss. unfold RelationPairs.RelCompFun in *. ss. *)
+      (* r in SIM0. des_ifs. des; ss. *)
+      mgo. unfold ModSem.handle_rE. des_ifs.
+      { unfold triggerNB. mgo. gstep. eapply simg_chooseR; eauto. { eapply from_nat_lt; ss. } ss. }
+      mgo. gstep. econs; eauto. i.
+      mgo. gstep. econs; eauto. i.
+      instantiate (1:= Ordinal.from_nat 100).
+      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
+      cbn. des_ifs; ss.
+      { unfold triggerNB. mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } ss. }
+      unfold assume.
+      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
+      esplits; eauto.
+      { admit "???????????". }
+      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
+      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
+      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } eexists rret.
+      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. }
+      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. }
+      cbn.
+      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. }
+      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. }
+      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } esplits; eauto.
+      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. }
+      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. }
+      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. }
+      ss.
+      gstep. econs; eauto.
+  Unshelve.
+    all: ss.
+    all: try (by apply Ordinal.O).
   Qed.
+                                esplits; eauto.
+      mgo.
+      mgo. gstep. econs; eauto. i.
+
+
+    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
+    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
+    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
+    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
+    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
+    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
+    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
+    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. }
+    mgo. pfold. econs; eauto. { eapply from_nat_lt; ss. } left.
+    mgo. pfold. econs; eauto. { eapply from_nat_lt; ss. } left.
+    mgo. pfold. econs; eauto. { eapply from_nat_lt; ss. } left.
+    mgo. pfold. econs; eauto. { eapply from_nat_lt; ss. } left.
+    mgo. pfold. econs; eauto. { eapply from_nat_lt; ss. } left.
+    mgo. pfold. econs; eauto. { eapply from_nat_lt; ss. } left.
+    mgo. pfold. econs; eauto. { eapply from_nat_lt; ss. } left.
+    mgo. pfold. econs; eauto. { eapply from_nat_lt; ss. } left.
+    mgo. pfold. econs; eauto. { eapply from_nat_lt; ss. } left.
+    mgo. pfold. econs; eauto. { eapply from_nat_lt; ss. } left.
+    unfold p_tgt at 4. mgo. cbn.
+    mgo. pfold. econs; eauto. { eapply from_nat_lt; ss. } left.
+    mgo. pfold. econs; eauto. { eapply from_nat_lt; ss. } left.
+    unfold unwrapU. des_ifs; cycle 1.
+    { exfalso. rewrite WTY in *. ss. clear - FINDFS Heq. admit "ez -- need list library -- find_map". }
+    rename Heq into FINDFT0.
+    mgo. des_ifs. rename i into i_tgt.
+  Admitted.
+  (*   ------------------------ *)
+  (*   mgo. pfold. econs; eauto. { eapply from_nat_lt; ss. } left. *)
+  (*   mgo. pfold. econs; eauto. { eapply from_nat_lt; ss. } left. *)
+
+  (*   des_ifs. *)
+  (*   mgo. pfold. econs; eauto. { eapply from_nat_lt; ss. } left. *)
+  (*   pfold. econs; eauto. *)
+
+  (*   pfold. econs; eauto. { eapply from_nat_lt; ss. } left. *)
+  (*   mgo. *)
+  (*   mgo. *)
+  (*   mgo. *)
+  (*   mgo. *)
+  (*   rewrite my_interp_callE. *)
+  (*   ss. *)
+  (*   pfold. *)
+  (*   unfold handle_hCallE_src at 2. unfold handle_hCallE_tgt at 2. des_ifs. igo. *)
+  (*   rewrite ! interp_ret. *)
+  (*   unfold p_src at 2. unfold p_tgt at 2. ss. igo. *)
+  (*   rewrite ! my_interp_bind. igo. *)
+  (*   rewrite ! my_interp_rE. *)
+  (*   unfold ModSem.handle_rE. *)
+  (*   r in SIM. des_ifs_safe. des. *)
+  (*   des_ifs. *)
+  (*   { (*** tgt NB ***) irw. unfold triggerNB. irw. eapply sim_demonic_tgt; ss. ii. inv STEP; ss. } *)
+  (*   irw. *)
+  (*   Ltac tauLR := eapply sim_demonic_both; ss; intros ? STEP; inv STEP; esplits; et; [econs; ss; et|]. *)
+  (*   tauLR. left; pfold. *)
+  (*   tauLR. left; pfold. *)
+  (*   unfold unwrapU. *)
+  (*   destruct (find _ (List.map (fun '(fn0, body) => (fn0, fun_to_src body)) ftb)) eqn:FIND; cycle 1. *)
+  (*   { rewrite my_interp_bind. rewrite my_interp_triggerUB. irw. *)
+  (*     (*** src UB ***) unfold triggerUB. irw. eapply sim_angelic_src; ss. ii. inv STEP; ss. *)
+  (*   } *)
+  (*   fold ms_tgt. rewrite WTY. *)
+  (*   rewrite find_map in FIND. uo. des_ifs_safe. *)
+  (*   rename Heq into FS. *)
+  (*   unfold Basics.compose in *. *)
+  (*   rewrite find_map. uo. des_ifs; cycle 1; rename Heq0 into FT. *)
+  (*   { exfalso. *)
+  (*     unfold Basics.compose in *. *)
+  (*     eapply find_some in FS. des; ss. *)
+  (*     eapply find_none in FT; et. des_ifs. ss. *)
+  (*     clarify. *)
+  (*   } *)
+  (*   igo. *)
+  (*   rewrite ! my_interp_bind. *)
+  (*   igo. *)
+  (*   unfold fun_to_src, body_to_src. *)
+  (*   unfold fun_to_tgt, body_to_tgt. *)
+  (*   des_ifs; cycle 1. *)
+  (*   { irw. ss. admit "ez - use FT, WTB. We should refactor -- e.g., to use alist, and then use find as a map. this is too low lv". *)
+  (*   } *)
+  (*   unfold HoareFun. *)
+
+  (* Qed. *)
 
   Theorem adequacy_type: Beh.of_program (Mod.interp md_tgt) <1= Beh.of_program (Mod.interp md_src).
   Proof.
@@ -730,7 +954,7 @@ If this feature is needed; we can extend it then. At the moment, I will only all
     set (st_tgt0 := (ModSem.initial_r_state (Mod.get_modsem md_tgt (Sk.load_skenv (Mod.sk md_tgt))))).
     (* Local Opaque URA.add. *)
     assert(SIM: wf st_src0 st_tgt0).
-    { r. ss. esplits; et. admit "initial wf: mandate this to the user". }
+    { r. ss. esplits; ss; et. admit "initial wf: mandate this to the user". }
     unfold mrec.
     replace (ModSem.interp_rE (interp_mrec p_src (p_src val (Call "main" []))) st_src0) with
         (my_interp p_src (p_src val (Call "main" [])) st_src0) by ss.

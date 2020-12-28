@@ -64,7 +64,7 @@ Inductive _simg (simg: forall R (RR: relation R), Ordinal.t -> relation (itree e
 | simg_tau
     i1 itr_src0 itr_tgt0
     (TAUBOTH: True)
-    (ORD: Ordinal.le i1 i0)
+    (* (ORD: Ordinal.le i1 i0) *)
     (SIM: simg _ RR i1 itr_src0 itr_tgt0)
   :
     _simg simg RR i0 (tau;; itr_src0) (tau;; itr_tgt0)
@@ -88,7 +88,7 @@ Inductive _simg (simg: forall R (RR: relation R), Ordinal.t -> relation (itree e
 | simg_choose
     i1 X_src X_tgt ktr_src0 ktr_tgt0
     (CHOOSEBOTH: True)
-    (ORD: Ordinal.le i1 i0)
+    (* (ORD: Ordinal.le i1 i0) *)
     (SIM: forall x_tgt, exists x_src, simg _ RR i1 (ktr_src0 x_src) (ktr_tgt0 x_tgt))
   :
     _simg simg RR i0 (trigger (Choose X_src) >>= ktr_src0) (trigger (Choose X_tgt) >>= ktr_tgt0)
@@ -112,7 +112,7 @@ Inductive _simg (simg: forall R (RR: relation R), Ordinal.t -> relation (itree e
 | simg_take
     i1 X_src X_tgt ktr_src0 ktr_tgt0
     (TAKEBOTH: True)
-    (ORD: Ordinal.le i1 i0)
+    (* (ORD: Ordinal.le i1 i0) *)
     (SIM: forall x_src, exists x_tgt, simg _ RR i1 (ktr_src0 x_src) (ktr_tgt0 x_tgt))
   :
     _simg simg RR i0 (trigger (Take X_src) >>= ktr_src0) (trigger (Take X_tgt) >>= ktr_tgt0)
@@ -165,16 +165,15 @@ Qed.
 Lemma simg_mon_ord r S SS i0 i1 (ORD: Ordinal.le i0 i1): @_simg r S SS i0 <2= @_simg r S SS i1.
 Proof.
   ii. inv PR; try (by econs; et).
-  - econs; try apply SIM; et. etrans; et.
+  (* - econs; try apply SIM; et. etrans; et. *)
   - econs; try apply SIM; et. eapply Ordinal.lt_le_lt; et.
   - econs; try apply SIM; et. eapply Ordinal.lt_le_lt; et.
-  - econs; try apply SIM; et. etrans; et.
+  (* - econs; try apply SIM; et. etrans; et. *)
   - econs; try apply SIM; et. eapply Ordinal.lt_le_lt; et.
   - econs; try apply SIM; et. eapply Ordinal.lt_le_lt; et.
-  - econs; try apply SIM; et. etrans; et.
+  (* - econs; try apply SIM; et. etrans; et. *)
   - econs; try apply SIM; et. eapply Ordinal.lt_le_lt; et.
   - econs; try apply SIM; et. eapply Ordinal.lt_le_lt; et.
-  (* - econs; try apply SIM. eapply Ordinal.lt_le_lt; et. *)
 Qed.
 
 (* Lemma simg_mon_rel r S SS SS' (LE: SS <2= SS') i0: @_simg r S SS i0 <2= @_simg r S SS' i0. *)
@@ -314,24 +313,23 @@ Hint Resolve ordC_mon: paco.
 (*   - econs. { eapply Ordinal.lt_le_lt; et. } econs; et. refl. *)
 (* Qed. *)
 
-Lemma ordC_compatible: compatible5 (_simg) ordC.
-Proof.
-  econs; eauto with paco.
-  ii. inv PR. csc.
-  rename x2 into o1. inv SIM.
-  - econs; eauto.
-  - econs; eauto. ii. econs; try apply SIM0; et. refl.
-  - econs; eauto.
-  - econs; eauto. { eapply Ordinal.lt_le_lt; et. } econs; et. refl.
-  - econs; eauto. { eapply Ordinal.lt_le_lt; et. } econs; et. refl.
-  - econs; eauto. ii. spc SIM0. des. esplits; et.
-  - econs; eauto. { eapply Ordinal.lt_le_lt; et. } des. esplits; et. econs; et. refl.
-  - econs; eauto. { eapply Ordinal.lt_le_lt; et. } econs; et. refl.
-  - econs; eauto. ii. spc SIM0. des. esplits; et.
-  - econs; eauto. { eapply Ordinal.lt_le_lt; et. } econs; et. refl.
-  - econs; eauto. { eapply Ordinal.lt_le_lt; et. } des. esplits; et. econs; et. refl.
-  (* - econs. { eapply Ordinal.lt_le_lt; et. } econs; et. refl. *)
-Qed.
+(* Lemma ordC_compatible: compatible5 (_simg) ordC. *)
+(* Proof. *)
+(*   econs; eauto with paco. *)
+(*   ii. inv PR. csc. *)
+(*   rename x2 into o1. inv SIM. *)
+(*   - econs; eauto. *)
+(*   - econs; eauto. ii. econs; try apply SIM0; et. refl. *)
+(*   - econs; eauto. econs; eauto with paco. *)
+(*   - econs; eauto. { eapply Ordinal.lt_le_lt; et. } econs; et. refl. *)
+(*   - econs; eauto. { eapply Ordinal.lt_le_lt; et. } econs; et. refl. *)
+(*   - econs; eauto. ii. spc SIM0. des. esplits; et. *)
+(*   - econs; eauto. { eapply Ordinal.lt_le_lt; et. } des. esplits; et. econs; et. refl. *)
+(*   - econs; eauto. { eapply Ordinal.lt_le_lt; et. } econs; et. refl. *)
+(*   - econs; eauto. ii. spc SIM0. des. esplits; et. *)
+(*   - econs; eauto. { eapply Ordinal.lt_le_lt; et. } econs; et. refl. *)
+(*   - econs; eauto. { eapply Ordinal.lt_le_lt; et. } des. esplits; et. econs; et. refl. *)
+(* Qed. *)
 
 Lemma ordC_prespectful: prespectful5 (_simg) ordC.
 Proof.
@@ -354,8 +352,8 @@ Qed.
 
 Lemma ordC_spec: ordC <6= gupaco5 (_simg) (cpn5 _simg).
 Proof. intros. eapply prespect5_uclo; eauto with paco. eapply ordC_prespectful. Qed.
-Lemma ordC_spec2: ordC <6= gupaco5 (_simg) (cpn5 _simg).
-Proof. intros. gclo. econs. { apply ordC_compatible. } eapply ordC_mon; try apply PR. ii. gbase. ss. Qed.
+(* Lemma ordC_spec2: ordC <6= gupaco5 (_simg) (cpn5 _simg). *)
+(* Proof. intros. gclo. econs. { apply ordC_compatible. } eapply ordC_mon; try apply PR. ii. gbase. ss. Qed. *)
 
 
 
@@ -422,7 +420,7 @@ Proof.
 
 
   + irw. econs; eauto.
-    { eapply Ordinal.add_le_r; et. }
+    (* { eapply Ordinal.add_le_r; et. } *)
     { econs 2; eauto with paco. econs; eauto with paco. }
   + rewrite ! bind_tau. econs; eauto.
     { instantiate (1:= Ordinal.add o1 i1). eapply Ordinal.add_lt_r; et. }
@@ -433,7 +431,7 @@ Proof.
 
 
   + rewrite ! bind_bind. econs; eauto.
-    { eapply Ordinal.add_le_r; et. }
+    (* { eapply Ordinal.add_le_r; et. } *)
     { ii. spc SIM0. des. esplits; et. econs 2; eauto with paco. econs; eauto with paco. }
   + rewrite ! bind_bind. econs; eauto.
     { instantiate (1:= Ordinal.add o1 i1). eapply Ordinal.add_lt_r; et. }
@@ -443,7 +441,7 @@ Proof.
     des. esplits; et. econs 2; eauto with paco. econs; eauto with paco.
 
   + rewrite ! bind_bind. econs; eauto.
-    { eapply Ordinal.add_le_r; et. }
+    (* { eapply Ordinal.add_le_r; et. } *)
     { ii. spc SIM0. des. esplits; et. econs 2; eauto with paco. econs; eauto with paco. }
   + rewrite ! bind_bind. econs; eauto.
     { instantiate (1:= Ordinal.add o1 i1). eapply Ordinal.add_lt_r; et. }
@@ -501,3 +499,11 @@ Proof.
 Qed.
 
 End SIM.
+
+Hint Constructors _simg.
+Hint Unfold simg.
+Hint Resolve simg_mon: paco.
+Hint Constructors ordC: core.
+Hint Resolve ordC_mon: paco.
+Hint Constructors bindR: core.
+Hint Unfold bindC: core.
