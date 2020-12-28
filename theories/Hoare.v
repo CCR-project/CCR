@@ -524,6 +524,11 @@ If this feature is needed; we can extend it then. At the moment, I will only all
   Definition tauK {E R}: R -> itree E R := fun r => tau;; Ret r.
   Hint Unfold tauK.
 
+  Definition idK {E R}: R -> itree E R := fun r => Ret r.
+  Hint Unfold idK.
+
+  Lemma idK_spec E R (i0: itree E R): i0 = i0 >>= idK. Proof. unfold idK. irw. refl. Qed.
+
   (*** TODO: I don't want "F" here, but it is technically needed. Report it to itree people? ***)
   Lemma interp_mrec_miss:
     (* forall (D E F: Type -> Type) `{F -< E} (ctx : forall T : Type, D T -> itree (D +' E) T) (U : Type) (a : F U), *)
@@ -685,37 +690,59 @@ If this feature is needed; we can extend it then. At the moment, I will only all
   Opaque Ordinal.from_nat.
   Opaque string_dec.
 
+  Ltac mgo := repeat (try rewrite ! my_interp_bind; try rewrite ! my_interp_ret; try rewrite ! my_interp_tau;
+                      try rewrite ! my_interp_rE; try rewrite ! my_interp_eventE; try rewrite ! my_interp_callE;
+                      try rewrite ! my_interp_triggerNB; try rewrite ! my_interp_triggerUB; igo).
+  Ltac mstep := gstep; econs; eauto; [eapply from_nat_lt; ss|].
+
   Let adequacy_type_aux:
     let p_src: callE ~> itree Es := fun _ ce => trigger PushFrame;; rv <- ModSem.sem ms_src ce;; trigger PopFrame;; Ret rv in
     let p_tgt: callE ~> itree Es := fun _ ce => trigger PushFrame;; rv <- ModSem.sem ms_tgt ce;; trigger PopFrame;; Ret rv in
-    forall R RR `{Reflexive _ RR} st_src0 st_tgt0 (SIM: wf st_src0 st_tgt0) (ce: hCallE R),
+    forall (R: Type) RR `{Reflexive _ RR} (TY: R = val) (REL: RR = eq)
+           st_src0 st_tgt0 (SIM: wf st_src0 st_tgt0) (i0: itree (hCallE +' eventE) R),
     (* sim (Mod.interp md_src) (Mod.interp md_tgt) lt 100%nat *)
     (*     (x <- (my_interp p_src (interp_hCallE_src (trigger ce)) st_src0);; Ret (snd x)) *)
     (*     (x <- (my_interp p_tgt (interp_hCallE_tgt stb (trigger ce)) st_tgt0);; Ret (snd x)) *)
     simg RR (Ordinal.from_nat 100%nat)
-         (x <- (my_interp p_src (interp_hCallE_src (trigger ce)) st_src0);; Ret (snd x))
-         (x <- (my_interp p_tgt (interp_hCallE_tgt stb (trigger ce)) st_tgt0);; Ret (snd x))
+         (x <- (my_interp p_src (interp_hCallE_src i0) st_src0);; Ret (snd x))
+         (x <- (my_interp p_tgt (interp_hCallE_tgt stb i0) st_tgt0);; Ret (snd x))
   .
   Proof.
     i. ginit.
     { eapply cpn5_wcompat; eauto with paco. }
-    remember (` x : ModSem.r_state * R <- my_interp p_src (interp_hCallE_src (trigger ce)) st_src0;; Ret (snd x)) as tmp.
+    (* remember (` x : ModSem.r_state * R <- my_interp p_src (interp_hCallE_src (trigger ce)) st_src0;; Ret (snd x)) as tmp. *)
     revert_until p_tgt.
     unfold Relation_Definitions.relation.
     gcofix CIH. i; subst.
     (* intros ? ?. *)
     (* pcofix CIH. i. *)
-    dependent destruction ce.
-    Local Opaque GRA.to_URA.
-    ss.
     unfold interp_hCallE_src.
     unfold interp_hCallE_tgt.
-    Ltac mgo := repeat (try rewrite ! my_interp_bind; try rewrite ! my_interp_ret; try rewrite ! my_interp_tau;
-                        try rewrite ! my_interp_rE; try rewrite ! my_interp_eventE; try rewrite ! my_interp_callE;
-                        try rewrite ! my_interp_triggerNB; try rewrite ! my_interp_triggerUB; igo).
-    rewrite ! unfold_interp. ss.
+    ides i0; try rewrite ! unfold_interp; cbn; mgo.
+    { ss. gstep. econs; eauto. }
+    { ss. gstep. econs; eauto. gbase. eapply CIH; et. }
+    destruct e; cycle 1.
+    { dependent destruction e.
+      - cbn. mgo. gstep. econs; eauto. i. esplits; eauto.
+        mgo. gstep. econs; eauto.
+        mgo. gstep. econs; eauto.
+        mgo. gstep. econs; eauto.
+        gbase. eapply CIH; et.
+      - cbn. mgo. gstep. econs; eauto. i. esplits; eauto.
+        mgo. gstep. econs; eauto.
+        mgo. gstep. econs; eauto.
+        mgo. gstep. econs; eauto.
+        gbase. eapply CIH; et.
+      - cbn. mgo. gstep. econs; eauto. ii; clarify.
+        mgo. gstep. econs; eauto.
+        mgo. gstep. econs; eauto.
+        mgo. gstep. econs; eauto.
+        gbase. eapply CIH; et.
+    }
+    dependent destruction h.
+    Local Opaque GRA.to_URA.
+    ss.
     mgo. cbn. mgo.
-    Ltac mstep := gstep; econs; eauto; [eapply from_nat_lt; ss|].
     mstep.
 
     (* gstep. econs; eauto. { eapply from_nat_lt; ss. } left. *)
@@ -778,7 +805,7 @@ If this feature is needed; we can extend it then. At the moment, I will only all
     - instantiate (1:= fun '((mrs_src, frs_src), vret_src) '((mrs_tgt, frs_tgt), vret_tgt) =>
                          exists (rret: Σ),
                            (<<ST: wf (mrs_src, frs_src) (mrs_tgt, rret :: frs_tgt)>>) /\
-                           (<<VAL: RR vret_src vret_tgt>>) /\
+                           (<<VAL: vret_src = vret_tgt>>) /\
                            (<<POST: fs.(postcond) x3 vret_tgt rret>>)).
       apply find_some in FINDFT0. des.
       apply find_some in FINDFS. des. ss. des_sumbool. clarify.
@@ -806,7 +833,14 @@ wf (Σ c1 [mn := c2] + Σ l1 + (x0 + x1))
       mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i. esplits; eauto.
       mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
       mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
-      unfold body_to_src, body_to_tgt.
+      unfold body_to_src, body_to_tgt. des_ifs.
+      guclo bindC_spec.
+      replace (Ordinal.from_nat 16) with (Ordinal.add (Ordinal.from_nat 8) (Ordinal.from_nat 8)); cycle 1.
+      { admit "ez - ordinal nat add". }
+      rewrite idK_spec at 1.
+      assert(i0 = i) by admit "ez - uniqueness of idx. Add this as an hypothesis". subst.
+      econs.
+      + gbase. eapply CIH.
       mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
       mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
       mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
