@@ -364,7 +364,6 @@ Proof. intros. eapply prespect5_uclo; eauto with paco. eapply ordC_prespectful. 
 
 
 
-
 Variant bindR (r s: forall S (SS: S -> S -> Prop), Ordinal.t -> (itree eventE S) -> (itree eventE S) -> Prop):
   forall S (SS: S -> S -> Prop), Ordinal.t -> (itree eventE S) -> (itree eventE S) -> Prop :=
 | bindR_intro
@@ -474,6 +473,39 @@ Proof.
   - ii. exploit SIMK; eauto with paco.
 Qed.
 
+
+
+
+Definition eutt R (RR: R -> R -> Prop) (i0 i1: itree eventE R): Prop := exists o0, simg RR o0 i0 i1.
+
+Require Import Coq.Logic.IndefiniteDescription.
+Require Import ClassicalChoice ChoiceFacts.
+
+Theorem eutt_bind
+        R S (RR: R -> R -> Prop) (SS: S -> S -> Prop)
+        i0 i1 k0 k1
+        (LEFT: eutt RR i0 i1)
+        (RIGHT: forall r0 r1 (SIM: RR r0 r1), eutt SS (k0 r0) (k1 r1))
+  :
+    eutt SS (i0 >>= k0) (i1 >>= k1)
+.
+Proof.
+  r in LEFT. des.
+  exploit (@choice { r0r1 : (R * R) | RR (fst r0r1) (snd r0r1) } Ordinal.t
+                   (fun r0r1 o0 => simg SS o0 (k0 (fst (r0r1 $))) (k1 (snd (r0r1 $))))).
+  { ii. destruct x. ss. destruct x; ss. exploit RIGHT; et. }
+  i; des. clear RIGHT. rename x0 into RIGHT.
+  r. unshelve eexists (Ordinal.add (Ordinal.join f) o0).
+  eapply simg_bind; eauto. ii.
+  unshelve exploit RIGHT; eauto. { eexists (_, _). ss. eauto. } intro A; ss.
+  ginit.
+  { eapply cpn5_wcompat. pmonauto. }
+  guclo ordC_spec. econs.
+  {
+    unshelve eapply Ordinal.join_upperbound. eexists (_, _). ss. eauto.
+  }
+  gfinal. right.  ss.
+Qed.
 
 
 
