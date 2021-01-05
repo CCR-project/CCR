@@ -108,7 +108,7 @@ Section PROOF.
                (fun sz varg _ => varg = [Vint (Z.of_nat sz)])
                (fun sz vret rret =>
                   exists b, vret = Vptr b 0 /\
-                            rret = GRA.padding (points_tos (b, 0) (List.repeat (Vint 0) sz)))) ;
+                            rret = GRA.padding (points_tos (b, 0%Z) (List.repeat (Vint 0) sz)))) ;
   ("free", mk "Mem"
               (fun '(b, ofs) varg rarg => exists v, varg = [Vptr b ofs] /\
                                                     rarg = (GRA.padding ((b, ofs) |-> v)))
