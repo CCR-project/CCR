@@ -690,28 +690,25 @@ Proof.
     rewrite <- Ordinal.S_lt_mon; et.
 Qed.
 
-Lemma le_S_lt o0 o1 (LE: Ordinal.le (Ordinal.S o0) o1): Ordinal.lt o0 o1.
-Proof. eapply Ordinal.lt_le_lt; et. eapply Ordinal.S_lt. Qed.
-
 Theorem simg_trans_gil
         R (RR: relation R) `{Transitive _ RR}
         o0 o1 o2 (i0 i1 i2: itree eventE R)
         (SIM0: simg RR o0 i0 i1)
         (SIM1: simg RR o1 i1 i2)
-        (LE: Ordinal.le (Ordinal.S (Ordinal.S (myadd o0 o1))) o2)
+        (LE: Ordinal.le (myadd o0 o1) o2)
   :
     <<SIM: simg RR o2 i0 i2>>
 .
 Proof.
   revert_until H. pcofix CIH.
-  eapply (ordinal_ind2 (fun o0 => forall o1 o2 i0 i1 i2 (SIM0: simg RR o0 i0 i1) (SIM1: simg RR o1 i1 i2) (LE: Ordinal.le (Ordinal.S (Ordinal.S (myadd o0 o1))) o2), paco5 _simg r R RR o2 i0 i2)).
+  eapply (ordinal_ind2 (fun o0 => forall o1 o2 i0 i1 i2 (SIM0: simg RR o0 i0 i1) (SIM1: simg RR o1 i1 i2) (LE: Ordinal.le (myadd o0 o1) o2), paco5 _simg r R RR o2 i0 i2)).
   i. punfold SIM1. inv SIM1.
   - (** ret **)
     clear IH. punfold SIM0. inv SIM0; try (by irw in H2; csc).
     { pfold. econs; eauto. }
     + pclearbot. pfold. econs; eauto.
       { instantiate (1:=i1). eapply (@Ordinal.lt_le_lt o0); auto.
-        etrans; eauto. do 2 (etrans; [|eapply Ordinal.S_le]). eapply myadd_proj1. }
+        transitivity (myadd o0 o1); auto. eapply myadd_proj1. }
       punfold SIM1. left.
       revert SIM1. revert itr_src0. pattern i1. eapply ordinal_ind2. clears i1. i.
       inv SIM1; try (by irw in H2; csc).
@@ -722,21 +719,22 @@ Proof.
         left. eapply IH; et. punfold SIM0.
       * pfold. econs; eauto. i. spc SIM0. pclearbot.
         left. eapply IH; et. punfold SIM0.
-    + des. pfold. econs; eauto; cycle 1.
-      { pclearbot. esplits; et.
-        right. eapply CIH; et. refl.
-      }
-      { eapply Ordinal.lt_le_lt; et.
+    + des. pfold. econs; eauto.
+      { instantiate (1:=(myadd i1 Ordinal.O)).
+        eapply Ordinal.lt_le_lt; et.
         eapply Ordinal.lt_le_lt.
-        - rewrite <- ! Ordinal.S_lt_mon. eapply myadd_lt_l; et.
-        - rewrite <- ! Ordinal.S_le_mon. eapply myadd_le_r. eapply Ordinal.O_is_O. }
-    + pfold. econs; eauto; cycle 1.
-      { pclearbot. esplits; et.
-        right. eapply CIH; et. refl. }
-      { eapply Ordinal.lt_le_lt; et.
+        - eapply myadd_lt_l; et.
+        - eapply myadd_le_r. eapply Ordinal.O_is_O. }
+      pclearbot. esplits; et.
+      right. eapply CIH; et. refl.
+    + pfold. econs; eauto.
+      { instantiate (1:=(myadd i1 Ordinal.O)).
+        eapply Ordinal.lt_le_lt; et.
         eapply Ordinal.lt_le_lt.
-        - rewrite <- ! Ordinal.S_lt_mon. eapply myadd_lt_l; et.
-        - rewrite <- ! Ordinal.S_le_mon. eapply myadd_le_r. eapply Ordinal.O_is_O. }
+        - eapply myadd_lt_l; et.
+        - eapply myadd_le_r. eapply Ordinal.O_is_O. }
+      pclearbot. esplits; et.
+      right. eapply CIH; et. refl.
 
 
   - (** syscall **)
@@ -744,24 +742,27 @@ Proof.
     + irw in H2; csc. assert(ktr_src0 = ktr_tgt1) by eauto; clarify. clear_tac.
       pfold. econs; eauto. ii. specialize (SIM x y H0). specialize (SIM1 x y H0). pclearbot. subst.
       right. eapply CIH; et. refl.
-    + pclearbot. pfold. econs; eauto; cycle 1.
-      { left. eapply IH; et. refl. }
-      {eapply Ordinal.lt_le_lt; et.
+    + pclearbot. pfold. econs; eauto.
+      { instantiate (1:=(myadd i1 Ordinal.O)).
+        eapply Ordinal.lt_le_lt; et.
         eapply Ordinal.lt_le_lt.
-        - rewrite <- ! Ordinal.S_lt_mon. eapply myadd_lt_l; et.
-        - rewrite <- ! Ordinal.S_le_mon. eapply myadd_le_r. eapply Ordinal.O_is_O. }
-    + des. pclearbot. pfold. econs; eauto; cycle 1.
-      { esplits; et. left. eapply IH; et. refl. }
-      { eapply Ordinal.lt_le_lt; et.
+        - eapply myadd_lt_l; et.
+        - eapply myadd_le_r. eapply Ordinal.O_is_O. }
+      left. eapply IH; et. refl.
+    + des. pclearbot. pfold. econs; eauto.
+      { instantiate (1:=(myadd i1 Ordinal.O)).
+        eapply Ordinal.lt_le_lt; et.
         eapply Ordinal.lt_le_lt.
-        - rewrite <- ! Ordinal.S_lt_mon. eapply myadd_lt_l; et.
-        - rewrite <- ! Ordinal.S_le_mon. eapply myadd_le_r. eapply Ordinal.O_is_O. }
-    + des. pclearbot. pfold. econs; eauto; cycle 1.
-      { esplits; et. left. eapply IH; et. refl. }
-      { eapply Ordinal.lt_le_lt; et.
+        - eapply myadd_lt_l; et.
+        - eapply myadd_le_r. eapply Ordinal.O_is_O. }
+      esplits; et. left. eapply IH; et. refl.
+    + des. pclearbot. pfold. econs; eauto.
+      { instantiate (1:=(myadd i1 Ordinal.O)).
+        eapply Ordinal.lt_le_lt; et.
         eapply Ordinal.lt_le_lt.
-        - rewrite <- ! Ordinal.S_lt_mon. eapply myadd_lt_l; et.
-        - rewrite <- ! Ordinal.S_le_mon. eapply myadd_le_r. eapply Ordinal.O_is_O. }
+        - eapply myadd_lt_l; et.
+        - eapply myadd_le_r. eapply Ordinal.O_is_O. }
+      esplits; et. left. eapply IH; et. refl.
 
 
 
@@ -769,32 +770,29 @@ Proof.
     punfold SIM0. inv SIM0; try by (irw in H2; csc).
     { pfold. econs; ss; cycle 1.
       { pclearbot. right. eapply CIH; et. reflexivity. }
-      etrans; et.
-      rewrite <- ! Ordinal.S_le_mon.
-      etrans. { eapply myadd_le_l; et. } { eapply myadd_le_r; et. }
+      etrans; et. etrans. { eapply myadd_le_l; et. } { eapply myadd_le_r; et. }
     }
     { pclearbot. eapply simg_inv_tauR in SIM1. des.
       pfold. econs; eauto. right. eapply CIH; eauto.
-      rewrite <- ! Ordinal.S_le_mon.
       transitivity (myadd (Ordinal.S i1) o1).
       { eapply myadd_le_r. auto. }
       { eapply myadd_le_l. eapply Ordinal.S_spec. auto. }
     }
     { pclearbot. pfold. econs; eauto; cycle 1.
       { right. eapply CIH; et. refl. }
-      eapply Ordinal.lt_le_lt; et. rewrite <- ! Ordinal.S_lt_mon. eapply Ordinal.le_lt_lt.
+      eapply Ordinal.lt_le_lt; et. eapply Ordinal.le_lt_lt.
       { instantiate (1:= myadd i1 o1). eapply myadd_le_r. auto. }
       { apply myadd_lt_l. auto. }
     }
     { des.  pclearbot. pfold. eapply simg_chooseL; ss; cycle 1.
       { esplits. right. eapply CIH; et. { pfold. econs; eauto. } refl. }
-      eapply Ordinal.lt_le_lt; et. rewrite <- ! Ordinal.S_lt_mon. eapply Ordinal.le_lt_lt.
+      eapply Ordinal.lt_le_lt; et. eapply Ordinal.le_lt_lt.
       { eapply myadd_le_r; eauto. refl. }
       { apply myadd_lt_l. auto. }
     }
     { pfold. eapply simg_takeL; ss; cycle 1.
       { esplits. spc SIM1. pclearbot. right. eapply CIH; et. { pfold. econs; eauto. } refl. }
-      eapply Ordinal.lt_le_lt; et. rewrite <- ! Ordinal.S_lt_mon. eapply Ordinal.le_lt_lt.
+      eapply Ordinal.lt_le_lt; et. eapply Ordinal.le_lt_lt.
       { eapply myadd_le_r; eauto. refl. }
       { apply myadd_lt_l. auto. }
     }
@@ -803,82 +801,76 @@ Proof.
 
   - (** tauL **)
     punfold SIM0. inv SIM0; try by (irw in H2; csc).
-    { pfold. econs; eauto; cycle 1.
-      { pclearbot. right. eapply CIH; et. reflexivity. }
-      { eapply (@Ordinal.lt_le_lt); eauto.
-        rewrite <- ! Ordinal.S_lt_mon.
+    { pfold. econs; eauto.
+      { instantiate (1:=myadd i1 i3).
+        eapply (@Ordinal.lt_le_lt (myadd o0 o1)); auto.
         eapply (@Ordinal.lt_le_lt (myadd i1 o1)).
         { eapply myadd_lt_r. auto. }
         { eapply myadd_le_l. auto. }
       }
+      pclearbot. right. eapply CIH; et. reflexivity.
     }
     { pclearbot. eapply simg_inv_tauR in SIM1. des.
-      pfold. econs; eauto; cycle 1.
-      { right. eapply CIH; eauto. reflexivity. }
-      { eapply (@Ordinal.lt_le_lt); eauto.
-        rewrite <- ! Ordinal.S_lt_mon.
+      pfold. econs; eauto.
+      { instantiate (1:=myadd (Ordinal.S i1) i3).
+        eapply (@Ordinal.lt_le_lt (myadd o0 o1)); auto.
         eapply (@Ordinal.lt_le_lt (myadd (Ordinal.S i1) o1)); auto.
         { eapply myadd_lt_r. auto. }
         { eapply myadd_le_l. apply Ordinal.S_spec. auto. }
       }
+      right. eapply CIH; eauto. reflexivity.
     }
     { pclearbot. eapply IH; eauto.
-      etrans; et.
-      rewrite <- ! Ordinal.S_le_mon.
-      etrans; et.
-      { eapply myadd_le_r. apply Ordinal.lt_le. eauto. }
-      { eapply myadd_le_l. apply Ordinal.lt_le. eauto. }
+      transitivity (myadd o0 o1); auto. transitivity (myadd i1 o1).
+      { eapply myadd_le_r. apply Ordinal.lt_le. auto. }
+      { eapply myadd_le_l. apply Ordinal.lt_le. auto. }
     }
     { des. pclearbot. eapply simg_inv_tauR in SIM1. des.
-      pfold. econs; eauto; cycle 1.
-      { esplits. right. eapply CIH; eauto. reflexivity. }
-      { eapply (@Ordinal.lt_le_lt); eauto.
-        rewrite <- ! Ordinal.S_lt_mon.
+      pfold. econs; eauto.
+      { instantiate (1:=myadd (Ordinal.S i1) i3).
+        eapply (@Ordinal.lt_le_lt (myadd o0 o1)); auto.
         eapply (@Ordinal.lt_le_lt (myadd (Ordinal.S i1) o1)); auto.
         { eapply myadd_lt_r. auto. }
         { eapply myadd_le_l. apply Ordinal.S_spec. auto. }
       }
+      esplits. right. eapply CIH; eauto. reflexivity.
     }
     { pclearbot.
-      pfold. econs; eauto; cycle 1.
-      { i. eapply simg_inv_tauR in SIM1. des.
-        right. eapply CIH; eauto. reflexivity. }
-      { eapply (@Ordinal.lt_le_lt); eauto.
-        rewrite <- ! Ordinal.S_lt_mon.
+      pfold. econs; eauto.
+      { instantiate (1:=myadd (Ordinal.S i1) i3).
+        eapply (@Ordinal.lt_le_lt (myadd o0 o1)); auto.
         eapply (@Ordinal.lt_le_lt (myadd (Ordinal.S i1) o1)); auto.
         { eapply myadd_lt_r. auto. }
         { eapply myadd_le_l. apply Ordinal.S_spec. auto. }
       }
+      i. eapply simg_inv_tauR in SIM1. des.
+      right. eapply CIH; eauto. reflexivity.
     }
 
 
   - (** tauR **)
     pclearbot.
-    pfold. econs; eauto; cycle 1.
-    { right. eapply CIH; et. refl. }
-    { eapply (Ordinal.lt_le_lt); et. rewrite <- ! Ordinal.S_lt_mon. eapply myadd_lt_r; et. }
+    pfold. econs; eauto.
+    { instantiate (1:= myadd o0 i3). eapply (Ordinal.lt_le_lt); et. eapply myadd_lt_r; et. }
+    right. eapply CIH; et. refl.
 
 
   - (** choose both **)
     punfold SIM0. inv SIM0; try by (irw in H2; csc).
     { pfold. econs; ss; cycle 1.
       { pclearbot. right. eapply CIH; et. reflexivity. }
-      eapply Ordinal.lt_le_lt; et.
-      rewrite <- ! Ordinal.S_lt_mon.
-      eapply myadd_lt_l; et.
+      eapply Ordinal.lt_le_lt; et. eapply myadd_lt_l; et.
     }
     { irw in H2. csc. assert(ktr_src0 = ktr_tgt1) by ss; subst. clear_tac.
       pfold. econs; eauto. i. spc SIM. des. spc SIM1. des. pclearbot.
       esplits; et.
       right. eapply CIH; eauto.
-      { rewrite <- ! Ordinal.S_le_mon.
-        etrans; et. { eapply myadd_le_l; et. } { eapply myadd_le_r; et. } }
+      { etrans; et. { eapply myadd_le_l; et. } { eapply myadd_le_r; et. } }
     }
     { des. pclearbot. pfold. econs; eauto. i. spc SIM; des. pclearbot.
       eapply simg_inv_chooseR in SIM1.
       esplits; eauto.
       right. eapply CIH; et.
-      rewrite <- ! Ordinal.S_le_mon.
       etrans.
       { eapply myadd_le_l; et. eapply Ordinal.is_S_spec; et. apply Ordinal.S_is_S. }
       { eapply myadd_le_r; et. }
@@ -887,19 +879,17 @@ Proof.
       pfold. econs; eauto; cycle 1.
       { i. spc SIM. des. spc SIM1. pclearbot. left. eapply IH; et. refl. }
       eapply Ordinal.lt_le_lt; et.
-      rewrite <- ! Ordinal.S_lt_mon.
       eapply Ordinal.lt_le_lt; et.
       { eapply myadd_lt_l; et. }
       { eapply myadd_le_r; et. }
     }
     { pfold. eapply simg_takeL; et.
-      { eapply le_S_lt; et. }
+      { instantiate (1:=myadd i1 o1). admit "ez". }
       i. spc SIM1; des. pclearbot.
       left. pfold. econs; ss; cycle 1.
       { i. spc SIM. des. pclearbot. eapply simg_inv_chooseR in SIM1. des.
         (* left. eapply IH; try apply SIM1; et. admit "". refl. } *)
         right. eapply CIH; et. refl. }
-      rewrite <- Ordinal.S_lt_mon.
       admit "".
     }
 
