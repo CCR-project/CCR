@@ -847,6 +847,7 @@ Proof.
       right. eapply CIH; eauto. reflexivity.
     }
 
+
   - (** tauR **)
     pclearbot.
     pfold. econs; eauto.
@@ -882,14 +883,19 @@ Proof.
       { eapply myadd_lt_l; et. }
       { eapply myadd_le_r; et. }
     }
-    { pfold. econs; eauto; cycle 1.
-      { i. spc SIM; des. pclearbot. left. pfold. econs; ss; cycle 1.
-        { i. spc SIM1. eapply simg_inv_chooseR in SIM1. des.
-          (* left. eapply IH; et. *)
-          right. eapply CIH; et. refl. }
-      }
-      (myadd o0 o1)-1
+    { pfold. eapply simg_takeL; et.
+      { instantiate (1:=myadd i1 o1). admit "ez". }
+      i. spc SIM1; des. pclearbot.
+      left. pfold. econs; ss; cycle 1.
+      { i. spc SIM. des. pclearbot. eapply simg_inv_chooseR in SIM1. des.
+        (* left. eapply IH; try apply SIM1; et. admit "". refl. } *)
+        right. eapply CIH; et. refl. }
+      admit "".
     }
+
+    Take ~ Choose ~ Choose
+
+  -
   Ordinal.lt (myadd (Ordinal.S i1) i3) ?i1
         left. eapply IH; et.
       esplits; eauto.
