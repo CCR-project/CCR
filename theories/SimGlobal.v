@@ -692,72 +692,72 @@ Qed.
 
 
 
-Lemma exists_forall_commute A (B: A -> Type) (P: forall (a: A) (b: B a), Prop)
-  :
-    (exists (a: A), forall (b: B a), P a b) ->
-    (forall (f: forall (a: A), B a), exists (a: A), P a (f a)).
-Proof.
-  i. des. esplits; eauto.
-Qed.
+(* Lemma exists_forall_commute A (B: A -> Type) (P: forall (a: A) (b: B a), Prop) *)
+(*   : *)
+(*     (exists (a: A), forall (b: B a), P a b) -> *)
+(*     (forall (f: forall (a: A), B a), exists (a: A), P a (f a)). *)
+(* Proof. *)
+(*   i. des. esplits; eauto. *)
+(* Qed. *)
 
-Lemma exists_forall_commute_rev A (B: A -> Type) (P: forall (a: A) (b: B a), Prop)
-  :
-    (forall (f: forall (a: A), B a), exists (a: A), P a (f a)) ->
-    (exists (a: A), forall (b: B a), P a b).
-Proof.
-  i. eapply NNPP. ii. generalize (not_ex_all_not _ _ H0). i. clear H0.
-  exploit non_dep_dep_functional_choice.
-  { ii. eapply choice. auto. }
-  { instantiate (1:=(fun a b => ~ P a b)).
-    i. specialize (H1 x). eapply not_all_ex_not in H1; eauto. }
-  i. des. specialize (H f). des. eapply x0; eauto.
-Qed.
+(* Lemma exists_forall_commute_rev A (B: A -> Type) (P: forall (a: A) (b: B a), Prop) *)
+(*   : *)
+(*     (forall (f: forall (a: A), B a), exists (a: A), P a (f a)) -> *)
+(*     (exists (a: A), forall (b: B a), P a b). *)
+(* Proof. *)
+(*   i. eapply NNPP. ii. generalize (not_ex_all_not _ _ H0). i. clear H0. *)
+(*   exploit non_dep_dep_functional_choice. *)
+(*   { ii. eapply choice. auto. } *)
+(*   { instantiate (1:=(fun a b => ~ P a b)). *)
+(*     i. specialize (H1 x). eapply not_all_ex_not in H1; eauto. } *)
+(*   i. des. specialize (H f). des. eapply x0; eauto. *)
+(* Qed. *)
 
-Lemma forall_exists_commute A (B: A -> Type) (P: forall (a: A) (b: B a), Prop)
-  :
-    (forall (a: A), exists (b: B a), P a b)
-    ->
-    (exists (f: forall (a: A), B a), forall (a: A), P a (f a)).
-Proof.
-  i. eapply non_dep_dep_functional_choice; auto.
-  ii. eapply choice. auto.
-Qed.
+(* Lemma forall_exists_commute A (B: A -> Type) (P: forall (a: A) (b: B a), Prop) *)
+(*   : *)
+(*     (forall (a: A), exists (b: B a), P a b) *)
+(*     -> *)
+(*     (exists (f: forall (a: A), B a), forall (a: A), P a (f a)). *)
+(* Proof. *)
+(*   i. eapply non_dep_dep_functional_choice; auto. *)
+(*   ii. eapply choice. auto. *)
+(* Qed. *)
 
-Lemma forall_exists_commute_rev A (B: A -> Type) (P: forall (a: A) (b: B a), Prop)
-  :
-    (exists (f: forall (a: A), B a), forall (a: A), P a (f a)) ->
-    (forall (a: A), exists (b: B a), P a b).
-Proof.
-  i. des. eauto.
-Qed.
+(* Lemma forall_exists_commute_rev A (B: A -> Type) (P: forall (a: A) (b: B a), Prop) *)
+(*   : *)
+(*     (exists (f: forall (a: A), B a), forall (a: A), P a (f a)) -> *)
+(*     (forall (a: A), exists (b: B a), P a b). *)
+(* Proof. *)
+(*   i. des. eauto. *)
+(* Qed. *)
 
 
 
-Lemma simg_inv_takeR
-      R (RR: relation R)
-      X o0 i0 k1
-      (SIM: simg RR o0 i0 (trigger (Take X) >>= k1))
-  :
-    exists x, <<SIM: simg RR (Ordinal.S o0) i0 (k1 x)>>
-.
-Proof.
-  move o0 at top. revert_until RR. pattern o0. eapply ordinal_ind2. clear o0.
-  ii. punfold SIM. inv SIM; try by (irw in H1; csc).
-  - pclearbot. exploit IH; et. intro A; des.
-    esplits. pfold. econs; eauto. rewrite <- Ordinal.S_lt_mon; et.
-  - des. pclearbot. exploit IH; et. i; des. esplits; et. pfold. econs; eauto; cycle 1.
-    rewrite <- Ordinal.S_lt_mon; et.
-  - irw in H1. csc. assert(ktr_tgt0  = k1) by ss. subst; clear_tac.
-    admit "????????".
-  - admit "????????".
-  - irw in H1. csc. assert(ktr_tgt0  = k1) by ss. subst; clear_tac.
-    des. pclearbot.
-    esplits; et.
-    ginit. { eapply cpn5_wcompat; pmonauto. } guclo ordC_spec. econs; eauto with paco.
-    etrans; et.
-    { apply Ordinal.lt_le; et. }
-    { eapply Ordinal.S_le. }
-Qed.
+(* Lemma simg_inv_takeR *)
+(*       R (RR: relation R) *)
+(*       X o0 i0 k1 *)
+(*       (SIM: simg RR o0 i0 (trigger (Take X) >>= k1)) *)
+(*   : *)
+(*     exists x, <<SIM: simg RR (Ordinal.S o0) i0 (k1 x)>> *)
+(* . *)
+(* Proof. *)
+(*   move o0 at top. revert_until RR. pattern o0. eapply ordinal_ind2. clear o0. *)
+(*   ii. punfold SIM. inv SIM; try by (irw in H1; csc). *)
+(*   - pclearbot. exploit IH; et. intro A; des. *)
+(*     esplits. pfold. econs; eauto. rewrite <- Ordinal.S_lt_mon; et. *)
+(*   - des. pclearbot. exploit IH; et. i; des. esplits; et. pfold. econs; eauto; cycle 1. *)
+(*     rewrite <- Ordinal.S_lt_mon; et. *)
+(*   - irw in H1. csc. assert(ktr_tgt0  = k1) by ss. subst; clear_tac. *)
+(*     admit "????????". *)
+(*   - admit "????????". *)
+(*   - irw in H1. csc. assert(ktr_tgt0  = k1) by ss. subst; clear_tac. *)
+(*     des. pclearbot. *)
+(*     esplits; et. *)
+(*     ginit. { eapply cpn5_wcompat; pmonauto. } guclo ordC_spec. econs; eauto with paco. *)
+(*     etrans; et. *)
+(*     { apply Ordinal.lt_le; et. } *)
+(*     { eapply Ordinal.S_le. } *)
+(* Qed. *)
 
 (* Lemma simg_inv_chooseR2 *)
 (*       R (RR: relation R) *)
@@ -1268,7 +1268,82 @@ Proof.
 Qed.
 
 
+Fixpoint ntaus (n: nat): itree eventE unit :=
+  match n with
+  | O => Ret tt
+  | S n => tau;; (ntaus n)
+  end
+.
 
+Goal eutt eq (Ret 1) (n <- trigger (Choose _);; ntaus n;; Ret 1).
+Proof.
+  replace (Ret 1) with ((Ret 1: itree eventE _) >>= (fun x => Ret x)); cycle 1.
+  { irw. ss. }
+  rewrite <- ! bind_bind.
+  apply eutt_bind with (RR:=eq).
+  { r. exists (Ordinal.S Ordinal.omega). rewrite ! bind_bind.
+    pfold. econs; et.
+    { apply Ordinal.S_lt. }
+    i. left.
+    ginit. { eapply cpn5_wcompat. pmonauto. } guclo ordC_spec. econs.
+    { instantiate (1:=Ordinal.from_nat x). apply Ordinal.join_upperbound. }
+    induction x; ii; ss.
+    { irw. gstep. econs; et. }
+    { irw. gstep. econs; et. apply Ordinal.S_lt. }
+  }
+  i. clarify. refl.
+Qed.
+
+Goal eutt eq (Ret 1) (n <- trigger (Choose _);; ntaus n;; m <- trigger (Choose _);; ntaus m;; Ret 1).
+Proof.
+  replace (Ret 1) with ((Ret 1: itree eventE _) >>= (fun x => Ret x)); cycle 1.
+  { irw. ss. }
+  apply eutt_bind with (RR:=fun n _ => n = 1).
+  { r. exists (Ordinal.S Ordinal.O).
+    replace (trigger (Choose nat)) with ((trigger (Choose nat)) >>= (fun n => Ret n)); cycle 1.
+    { irw; ss. }
+    pfold. econs; et. apply Ordinal.S_lt.
+  }
+  i. subst.
+  replace (Ret 1) with ((Ret 1: itree eventE _) >>= (fun x => Ret x)); cycle 1.
+  { irw. ss. }
+  rewrite <- bind_bind.
+  apply eutt_bind with (RR:=fun n _ => n = 1).
+  {
+    replace (Ret 1) with ((Ret tt: itree eventE _) >>= (fun _ => Ret 1)); cycle 1.
+    { irw. ss. }
+    eapply eutt_bind with (RR:=top2).
+    { r. exists (Ordinal.from_nat r1).
+      induction r1; ii; ss.
+      - pfold. econs; et.
+      - pfold. econs; et. apply Ordinal.S_lt.
+    }
+    i. r.
+    exists (Ordinal.S Ordinal.O).
+    replace (trigger (Choose nat)) with ((trigger (Choose nat)) >>= (fun n => Ret n)); cycle 1.
+    { irw; ss. }
+    pfold. econs; et. apply Ordinal.S_lt.
+  }
+  i. subst.
+  replace (Ret 1) with ((Ret 1: itree eventE _) >>= (fun x => Ret x)); cycle 1.
+  { irw. ss. }
+  rewrite <- bind_bind.
+  apply eutt_bind with (RR:=fun n m => n = 1 /\ m = 1).
+  {
+    replace (Ret 1) with ((Ret tt: itree eventE _) >>= (fun _ => Ret 1)); cycle 1.
+    { irw. ss. }
+    eapply eutt_bind with (RR:=top2).
+    { r. exists (Ordinal.from_nat r2).
+      induction r2; ii; ss.
+      - pfold. econs; et.
+      - pfold. econs; et. apply Ordinal.S_lt.
+    }
+    i. r.
+    exists (Ordinal.S Ordinal.O). irw. pfold. econs; et.
+  }
+  i. des; subst.
+  r. exists (Ordinal.S Ordinal.O). pfold. econs; et.
+Qed.
 
 
 
