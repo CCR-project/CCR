@@ -1227,6 +1227,23 @@ Proof.
     esplits; et. right. eapply CIH; et. refl.
 Qed.
 
+Theorem eutt_trans
+        R (RR: relation R) `{Transitive _ RR}
+        (i0 i1 i2: itree eventE R)
+        (SIM0: eutt RR i0 i1)
+        (SIM1: eutt RR i1 i2)
+  :
+    <<SIM: eutt RR i0 i2>>
+.
+Proof. r in SIM0. r in SIM1. des. rr. esplits; et. eapply simg_trans_gil; et. refl. Qed.
+
+Global Program Instance eutt_PreOrder R: PreOrder (eutt (@eq R)).
+Next Obligation.
+  admit "reflexive should be easy".
+Qed.
+Next Obligation.
+  ii. eapply eutt_trans; et. typeclasses eauto.
+Qed.
 
 
 
