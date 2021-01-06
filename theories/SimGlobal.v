@@ -1245,6 +1245,27 @@ Next Obligation.
   ii. eapply eutt_trans; et. typeclasses eauto.
 Qed.
 
+Theorem tau_euttR
+        R (RR: relation R) `{Reflexive _ RR}
+        (i0: itree eventE R)
+  :
+    <<SIM: eutt RR i0 (tau;; i0)>>
+.
+Proof.
+  rr. exists (Ordinal.S Ordinal.O). pfold. econs; et. { apply Ordinal.S_lt. } left.
+  eapply simg_paco_refl; et.
+Qed.
+
+Theorem tau_euttL
+        R (RR: relation R) `{Reflexive _ RR}
+        (i0: itree eventE R)
+  :
+    <<SIM: eutt RR (tau;; i0) i0>>
+.
+Proof.
+  rr. exists (Ordinal.S Ordinal.O). pfold. econs; et. { apply Ordinal.S_lt. } left.
+  eapply simg_paco_refl; et.
+Qed.
 
 
 
