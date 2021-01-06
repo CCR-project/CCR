@@ -1239,7 +1239,7 @@ Proof. r in SIM0. r in SIM1. des. rr. esplits; et. eapply simg_trans_gil; et. re
 
 Global Program Instance eutt_PreOrder R: PreOrder (eutt (@eq R)).
 Next Obligation.
-  admit "reflexive should be easy".
+  ii. rr. eexists Ordinal.O. refl.
 Qed.
 Next Obligation.
   ii. eapply eutt_trans; et. typeclasses eauto.
