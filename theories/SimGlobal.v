@@ -691,6 +691,74 @@ Proof.
 Qed.
 
 
+
+Lemma exists_forall_commute A (B: A -> Type) (P: forall (a: A) (b: B a), Prop)
+  :
+    (exists (a: A), forall (b: B a), P a b) ->
+    (forall (f: forall (a: A), B a), exists (a: A), P a (f a)).
+Proof.
+  i. des. esplits; eauto.
+Qed.
+
+Lemma exists_forall_commute_rev A (B: A -> Type) (P: forall (a: A) (b: B a), Prop)
+  :
+    (forall (f: forall (a: A), B a), exists (a: A), P a (f a)) ->
+    (exists (a: A), forall (b: B a), P a b).
+Proof.
+  i. eapply NNPP. ii. generalize (not_ex_all_not _ _ H0). i. clear H0.
+  exploit non_dep_dep_functional_choice.
+  { ii. eapply choice. auto. }
+  { instantiate (1:=(fun a b => ~ P a b)).
+    i. specialize (H1 x). eapply not_all_ex_not in H1; eauto. }
+  i. des. specialize (H f). des. eapply x0; eauto.
+Qed.
+
+Lemma forall_exists_commute A (B: A -> Type) (P: forall (a: A) (b: B a), Prop)
+  :
+    (forall (a: A), exists (b: B a), P a b)
+    ->
+    (exists (f: forall (a: A), B a), forall (a: A), P a (f a)).
+Proof.
+  i. eapply non_dep_dep_functional_choice; auto.
+  ii. eapply choice. auto.
+Qed.
+
+Lemma forall_exists_commute_rev A (B: A -> Type) (P: forall (a: A) (b: B a), Prop)
+  :
+    (exists (f: forall (a: A), B a), forall (a: A), P a (f a)) ->
+    (forall (a: A), exists (b: B a), P a b).
+Proof.
+  i. des. eauto.
+Qed.
+
+
+
+Lemma simg_inv_takeR
+      R (RR: relation R)
+      X o0 i0 k1
+      (SIM: simg RR o0 i0 (trigger (Take X) >>= k1))
+  :
+    exists x, <<SIM: simg RR (Ordinal.S o0) i0 (k1 x)>>
+.
+Proof.
+  move o0 at top. revert_until RR. pattern o0. eapply ordinal_ind2. clear o0.
+  ii. punfold SIM. inv SIM; try by (irw in H1; csc).
+  - pclearbot. exploit IH; et. intro A; des.
+    esplits. pfold. econs; eauto. rewrite <- Ordinal.S_lt_mon; et.
+  - des. pclearbot. exploit IH; et. i; des. esplits; et. pfold. econs; eauto; cycle 1.
+    rewrite <- Ordinal.S_lt_mon; et.
+  - irw in H1. csc. assert(ktr_tgt0  = k1) by ss. subst; clear_tac.
+    admit "????????".
+  - admit "????????".
+  - irw in H1. csc. assert(ktr_tgt0  = k1) by ss. subst; clear_tac.
+    des. pclearbot.
+    esplits; et.
+    ginit. { eapply cpn5_wcompat; pmonauto. } guclo ordC_spec. econs; eauto with paco.
+    etrans; et.
+    { apply Ordinal.lt_le; et. }
+    { eapply Ordinal.S_le. }
+Qed.
+
 (* Lemma simg_inv_chooseR2 *)
 (*       R (RR: relation R) *)
 (*       X0 X1 o0 k0 k1 *)
@@ -1067,6 +1135,96 @@ Proof.
     pfold. econs; eauto.
     { instantiate (1:= myadd o0 i3). eapply (Ordinal.lt_le_lt); et. eapply myadd_lt_r; et. }
     right. eapply CIH; et. refl.
+
+
+  - (** take both **)
+    punfold SIM0. inv SIM0; try by (irw in H2; csc).
+    { pfold. econs; ss; cycle 1.
+      { pclearbot. right. eapply CIH; et. reflexivity. }
+      eapply Ordinal.lt_le_lt; et. eapply myadd_lt_l; et.
+    }
+    { des. pclearbot. pfold. econs; eauto.
+      { instantiate (1:=myadd i1 o1).
+        eapply Ordinal.lt_le_lt; et.
+        eapply myadd_lt_l; et.
+      }
+      { esplits; et. right. eapply CIH; et. refl. }
+    }
+    { irw in H2. csc. assert(ktr_src0 = ktr_tgt1) by ss; subst. clear_tac.
+      pfold. econs; eauto. i. spc SIM1. des. spc SIM. des. pclearbot.
+      esplits; et.
+      right. eapply CIH; eauto.
+      { etrans; et. { eapply myadd_le_l; et. } { eapply myadd_le_r; et. } }
+    }
+    { rename o0 into ox. rename i1 into _ox. rename i3 into oy. rename o1 into oy'.
+      pfold. eapply simg_takeL; et.
+      { instantiate (1:=myadd _ox oy'). eapply Ordinal.lt_le_lt; et. apply myadd_lt_l; ss. }
+      i. spc SIM1; des. pclearbot.
+      { right. eapply CIH; et. refl. }
+    }
+    { irw in H2. csc. assert(ktr_src0 = ktr_tgt1) by ss; subst. clear_tac.
+      des. pclearbot. spc SIM. des. pclearbot.
+      pfold. econs; eauto; cycle 1.
+      { esplits; et. left. eapply IH; et. refl. }
+      eapply Ordinal.lt_le_lt; et.
+      eapply Ordinal.lt_le_lt; et.
+      { eapply myadd_lt_l; et. }
+      { eapply myadd_le_r; et. }
+    }
+
+
+
+  - (** takeL **)
+    des. pclearbot.
+    punfold SIM0. inv SIM0; try by (irw in H2; csc).
+    { pclearbot.
+      pfold. econs; et; cycle 1.
+      { right. eapply CIH; eauto. { pfold. econs; ss; [|eauto with paco]. et. } refl. }
+      { eapply Ordinal.lt_le_lt; et.
+        eapply myadd_lt_l; et.
+      }
+    }
+    { des. pclearbot.
+      pfold. econs; et; cycle 1.
+      { esplits; et. right. eapply CIH; eauto.
+        { pfold. econs; ss; [|eauto with paco]. et. }
+        reflexivity. }
+      { eapply Ordinal.lt_le_lt; et. eapply myadd_lt_l; et. }
+    }
+    { irw in H2. csc. assert(ktr_tgt0 = ktr_src0) by ss; subst; clear_tac.
+      pfold. econs; et; cycle 1.
+      { i. spc SIM1. des. spc SIM. pclearbot. right. eapply CIH; et. refl. }
+      { eapply Ordinal.lt_le_lt; et.
+        eapply Ordinal.le_lt_lt; et; cycle 1.
+        { eapply myadd_lt_r; et. }
+        { eapply myadd_le_l; et. }
+      }
+    }
+    { pclearbot.
+      pfold. econs; eauto; cycle 1.
+      { i. right. eapply CIH; et.
+        { pfold. econs; ss; [|eauto with paco]. et. }
+        refl.
+      }
+      { eapply Ordinal.lt_le_lt; et.
+        eapply myadd_lt_l; et.
+      }
+    }
+    { irw in H2. csc. assert(ktr_tgt0 = ktr_src0) by ss; subst; clear_tac.
+      des. spc SIM. pclearbot.
+      eapply IH; et.
+      { etrans; et.
+        etrans.
+        { eapply myadd_le_r; et. eapply Ordinal.lt_le; et. }
+        { eapply myadd_le_l; et. eapply Ordinal.lt_le; et. }
+      }
+    }
+
+  - (** takeR **)
+    des. pclearbot.
+    pfold. econs; eauto.
+    { instantiate (1:= myadd o0 i3). eapply (Ordinal.lt_le_lt); et. eapply myadd_lt_r; et. }
+    esplits; et. right. eapply CIH; et. refl.
 Qed.
 
 
