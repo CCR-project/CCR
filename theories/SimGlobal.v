@@ -875,31 +875,32 @@ Qed.
 (*     rewrite <- Ordinal.S_lt_mon; et. *)
 (* Qed. *)
 
-
+Definition rel_compose R (RR0 RR1: R -> R -> Prop): R -> R -> Prop :=
+  fun r0 r2 => exists r1, <<REL: RR0 r0 r1>> /\ <<REL: RR1 r1 r2>>.
 
 Theorem simg_trans_gil
-        R (RR: relation R) `{Transitive _ RR}
+        R (RR0 RR1: R -> R -> Prop)
         o0 o1 o2 (i0 i1 i2: itree eventE R)
-        (SIM0: simg RR o0 i0 i1)
-        (SIM1: simg RR o1 i1 i2)
+        (SIM0: simg RR0 o0 i0 i1)
+        (SIM1: simg RR1 o1 i1 i2)
         (LE: Ordinal.le (myadd o0 o1) o2)
   :
-    <<SIM: simg RR o2 i0 i2>>
+    <<SIM: simg (rel_compose RR0 RR1) o2 i0 i2>>
 .
 Proof.
-  revert_until H. pcofix CIH.
-  eapply (ordinal_ind2 (fun o0 => forall o1 o2 i0 i1 i2 (SIM0: simg RR o0 i0 i1) (SIM1: simg RR o1 i1 i2) (LE: Ordinal.le (myadd o0 o1) o2), paco5 _simg r R RR o2 i0 i2)).
+  revert_until RR1. pcofix CIH.
+  eapply (ordinal_ind2 (fun o0 => forall o1 o2 i0 i1 i2 (SIM0: simg RR0 o0 i0 i1) (SIM1: simg RR1 o1 i1 i2) (LE: Ordinal.le (myadd o0 o1) o2), paco5 _simg r R (rel_compose RR0 RR1) o2 i0 i2)).
   i. punfold SIM1. inv SIM1.
   - (** ret **)
-    clear IH. punfold SIM0. inv SIM0; try (by irw in H2; csc).
-    { pfold. econs; eauto. }
+    clear IH. punfold SIM0. inv SIM0; try (by irw in H1; csc).
+    { pfold. econs; eauto. r. esplits; et. }
     + pclearbot. pfold. econs; eauto.
       { instantiate (1:=i1). eapply (@Ordinal.lt_le_lt o0); auto.
         transitivity (myadd o0 o1); auto. eapply myadd_proj1. }
       punfold SIM1. left.
       revert SIM1. revert itr_src0. pattern i1. eapply ordinal_ind2. clears i1. clear i1. i.
-      inv SIM1; try (by irw in H2; csc).
-      * pfold. econs; eauto.
+      inv SIM1; try (by irw in H1; csc).
+      * pfold. econs; eauto. r. esplits; et.
       * pclearbot. punfold SIM0. pfold. econs; eauto.
       * des. pfold. econs; eauto. pclearbot. esplits; eauto with paco.
         (* right. eapply CIH; et. instantiate (1:=Ordinal.O). admit "". *)
@@ -925,9 +926,9 @@ Proof.
 
 
   - (** syscall **)
-    punfold SIM0. inv SIM0; try by (irw in H2; csc).
-    + irw in H2; csc. assert(ktr_src0 = ktr_tgt1) by eauto; clarify. clear_tac.
-      pfold. econs; eauto. ii. specialize (SIM x y H0). specialize (SIM1 x y H0). pclearbot. subst.
+    punfold SIM0. inv SIM0; try by (irw in H1; csc).
+    + irw in H1; csc. assert(ktr_src0 = ktr_tgt1) by eauto; clarify. clear_tac.
+      pfold. econs; eauto. ii. specialize (SIM x y H). specialize (SIM1 x y H). pclearbot. subst.
       right. eapply CIH; et. refl.
     + pclearbot. pfold. econs; eauto.
       { instantiate (1:=(myadd i1 Ordinal.O)).
@@ -954,7 +955,7 @@ Proof.
 
 
   - (*** tau both ***)
-    punfold SIM0. inv SIM0; try by (irw in H2; csc).
+    punfold SIM0. inv SIM0; try by (irw in H1; csc).
     { pfold. econs; ss; cycle 1.
       { pclearbot. right. eapply CIH; et. reflexivity. }
       etrans; et. etrans. { eapply myadd_le_l; et. } { eapply myadd_le_r; et. }
@@ -987,7 +988,7 @@ Proof.
 
 
   - (** tauL **)
-    punfold SIM0. inv SIM0; try by (irw in H2; csc).
+    punfold SIM0. inv SIM0; try by (irw in H1; csc).
     { pfold. econs; eauto.
       { instantiate (1:=myadd i1 i3).
         eapply (@Ordinal.lt_le_lt (myadd o0 o1)); auto.
@@ -1043,12 +1044,12 @@ Proof.
 
 
   - (** choose both **)
-    punfold SIM0. inv SIM0; try by (irw in H2; csc).
+    punfold SIM0. inv SIM0; try by (irw in H1; csc).
     { pfold. econs; ss; cycle 1.
       { pclearbot. right. eapply CIH; et. reflexivity. }
       eapply Ordinal.lt_le_lt; et. eapply myadd_lt_l; et.
     }
-    { irw in H2. csc. assert(ktr_src0 = ktr_tgt1) by ss; subst. clear_tac.
+    { irw in H1. csc. assert(ktr_src0 = ktr_tgt1) by ss; subst. clear_tac.
       pfold. econs; eauto. i. spc SIM. des. spc SIM1. des. pclearbot.
       esplits; et.
       right. eapply CIH; eauto.
@@ -1062,7 +1063,7 @@ Proof.
       { eapply myadd_le_l; et. eapply Ordinal.is_S_spec; et. apply Ordinal.S_is_S. }
       { eapply myadd_le_r; et. }
     }
-    { irw in H2. csc. assert(ktr_src0 = ktr_tgt1) by ss; subst. clear_tac.
+    { irw in H1. csc. assert(ktr_src0 = ktr_tgt1) by ss; subst. clear_tac.
       pfold. econs; eauto; cycle 1.
       { i. spc SIM. des. spc SIM1. pclearbot. left. eapply IH; et. refl. }
       eapply Ordinal.lt_le_lt; et.
@@ -1080,7 +1081,7 @@ Proof.
 
   - (** chooseL **)
     des. pclearbot.
-    punfold SIM0. inv SIM0; try by (irw in H2; csc).
+    punfold SIM0. inv SIM0; try by (irw in H1; csc).
     { pclearbot. eapply simg_inv_chooseR in SIM1. des.
       pfold. econs; et; cycle 1.
       { right. eapply CIH; eauto. reflexivity. }
@@ -1090,7 +1091,7 @@ Proof.
         { eapply myadd_le_l; et. eapply Ordinal.S_is_S; et. }
       }
     }
-    { irw in H2. csc. assert(ktr_tgt0 = ktr_src0) by ss; subst; clear_tac.
+    { irw in H1. csc. assert(ktr_tgt0 = ktr_src0) by ss; subst; clear_tac.
       spc SIM1. des. pclearbot.
       pfold. econs; eauto; cycle 1.
       { esplits; et. right. eapply CIH; et. refl. }
@@ -1109,7 +1110,7 @@ Proof.
         { eapply myadd_le_l; et. eapply Ordinal.S_is_S; et. }
       }
     }
-    { irw in H2. csc. assert(ktr_tgt0 = ktr_src0) by ss; subst; clear_tac.
+    { irw in H1. csc. assert(ktr_tgt0 = ktr_src0) by ss; subst; clear_tac.
       spc SIM1. des. pclearbot.
       eapply IH; et.
       { etrans; et.
@@ -1138,7 +1139,7 @@ Proof.
 
 
   - (** take both **)
-    punfold SIM0. inv SIM0; try by (irw in H2; csc).
+    punfold SIM0. inv SIM0; try by (irw in H1; csc).
     { pfold. econs; ss; cycle 1.
       { pclearbot. right. eapply CIH; et. reflexivity. }
       eapply Ordinal.lt_le_lt; et. eapply myadd_lt_l; et.
@@ -1150,7 +1151,7 @@ Proof.
       }
       { esplits; et. right. eapply CIH; et. refl. }
     }
-    { irw in H2. csc. assert(ktr_src0 = ktr_tgt1) by ss; subst. clear_tac.
+    { irw in H1. csc. assert(ktr_src0 = ktr_tgt1) by ss; subst. clear_tac.
       pfold. econs; eauto. i. spc SIM1. des. spc SIM. des. pclearbot.
       esplits; et.
       right. eapply CIH; eauto.
@@ -1162,7 +1163,7 @@ Proof.
       i. spc SIM1; des. pclearbot.
       { right. eapply CIH; et. refl. }
     }
-    { irw in H2. csc. assert(ktr_src0 = ktr_tgt1) by ss; subst. clear_tac.
+    { irw in H1. csc. assert(ktr_src0 = ktr_tgt1) by ss; subst. clear_tac.
       des. pclearbot. spc SIM. des. pclearbot.
       pfold. econs; eauto; cycle 1.
       { esplits; et. left. eapply IH; et. refl. }
@@ -1176,7 +1177,7 @@ Proof.
 
   - (** takeL **)
     des. pclearbot.
-    punfold SIM0. inv SIM0; try by (irw in H2; csc).
+    punfold SIM0. inv SIM0; try by (irw in H1; csc).
     { pclearbot.
       pfold. econs; et; cycle 1.
       { right. eapply CIH; eauto. { pfold. econs; ss; [|eauto with paco]. et. } refl. }
@@ -1191,7 +1192,7 @@ Proof.
         reflexivity. }
       { eapply Ordinal.lt_le_lt; et. eapply myadd_lt_l; et. }
     }
-    { irw in H2. csc. assert(ktr_tgt0 = ktr_src0) by ss; subst; clear_tac.
+    { irw in H1. csc. assert(ktr_tgt0 = ktr_src0) by ss; subst; clear_tac.
       pfold. econs; et; cycle 1.
       { i. spc SIM1. des. spc SIM. pclearbot. right. eapply CIH; et. refl. }
       { eapply Ordinal.lt_le_lt; et.
@@ -1210,7 +1211,7 @@ Proof.
         eapply myadd_lt_l; et.
       }
     }
-    { irw in H2. csc. assert(ktr_tgt0 = ktr_src0) by ss; subst; clear_tac.
+    { irw in H1. csc. assert(ktr_tgt0 = ktr_src0) by ss; subst; clear_tac.
       des. spc SIM. pclearbot.
       eapply IH; et.
       { etrans; et.
@@ -1228,12 +1229,12 @@ Proof.
 Qed.
 
 Theorem eutt_trans
-        R (RR: relation R) `{Transitive _ RR}
+        R (RR0: relation R) (RR1: relation R)
         (i0 i1 i2: itree eventE R)
-        (SIM0: eutt RR i0 i1)
-        (SIM1: eutt RR i1 i2)
+        (SIM0: eutt RR0 i0 i1)
+        (SIM1: eutt RR1 i1 i2)
   :
-    <<SIM: eutt RR i0 i2>>
+    <<SIM: eutt (rel_compose RR0 RR1) i0 i2>>
 .
 Proof. r in SIM0. r in SIM1. des. rr. esplits; et. eapply simg_trans_gil; et. refl. Qed.
 
@@ -1242,7 +1243,9 @@ Next Obligation.
   ii. rr. eexists Ordinal.O. refl.
 Qed.
 Next Obligation.
-  ii. eapply eutt_trans; et. typeclasses eauto.
+  ii. replace eq with (@rel_compose R eq eq); cycle 1.
+  { unfold rel_compose. do 2 (apply func_ext; i). apply prop_ext. split; i; des; subst; et. }
+  eapply eutt_trans; et.
 Qed.
 
 Theorem tau_euttR
