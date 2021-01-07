@@ -960,7 +960,7 @@ Proof.
 Qed.
 
 
-Fixpoint ntaus (n: nat): itree eventE unit :=
+Fixpoint ntaus {E} (n: nat): itree E unit :=
   match n with
   | O => Ret tt
   | S n => tau;; (ntaus n)
