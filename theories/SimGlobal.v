@@ -1345,6 +1345,31 @@ Proof.
   r. exists (Ordinal.S Ordinal.O). pfold. econs; et.
 Qed.
 
+Theorem cancel
+      X R (RR: R -> R -> Prop) `{Reflexive _ RR}
+      (code: X -> X -> itree eventE R)
+  :
+    eutt RR (n <- trigger (Choose X);; code n n)
+         (n <- trigger (Choose X);; m <- trigger (Take X);; code n m).
+Proof.
+  r. exists (Ordinal.from_nat 5). pfold. econs; et.
+  { refl. }
+  i. esplits; et. left. pfold. econs; et. { ss. apply Ordinal.S_lt. } esplits; et. left.
+  eapply simg_paco_refl; et.
+Qed.
+
+Theorem cancel_assume_guarantee
+      (P: Prop) R (RR: R -> R -> Prop) `{Reflexive _ RR}
+      (code: itree eventE R)
+  :
+    eutt RR code (guarantee P;; assume P;; code).
+Proof.
+  r. exists (Ordinal.from_nat 5). unfold assume, guarantee.
+  repeat (try rewrite bind_bind; try rewrite bind_ret_l; try rewrite bind_ret_r).
+  pfold. econs; eauto. { ss. apply Ordinal.S_lt. }
+  i. left. pfold. econs; eauto. { ss. apply Ordinal.S_lt. }
+  esplits; et. left. eapply simg_paco_refl; et.
+Qed.
 
 
 
