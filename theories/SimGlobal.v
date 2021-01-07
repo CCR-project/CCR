@@ -921,15 +921,21 @@ Theorem eutt_trans
 .
 Proof. r in SIM0. r in SIM1. des. rr. esplits; et. eapply simg_trans_gil; et. refl. Qed.
 
-Global Program Instance eutt_PreOrder R: PreOrder (eutt (@eq R)).
+Global Program Instance eutt_PreOrder R RR `{PreOrder R RR}: PreOrder (eutt RR).
 Next Obligation.
   ii. rr. eexists Ordinal.O. refl.
 Qed.
 Next Obligation.
-  ii. replace eq with (@rel_compose R eq eq); cycle 1.
-  { unfold rel_compose. do 2 (apply func_ext; i). apply prop_ext. split; i; des; subst; et. }
+  ii.
+  replace RR with (@rel_compose R RR RR); cycle 1.
+  { unfold rel_compose. do 2 (apply func_ext; i). apply prop_ext. split; i; des; subst; et.
+    { etrans; et. }
+    esplits; et. refl.
+  }
   eapply eutt_trans; et.
 Qed.
+
+(* Global Program Instance eutt_eq_PreOrder R: PreOrder (eutt (@eq R)). *)
 
 Theorem tau_euttR
         R (RR: relation R) `{Reflexive _ RR}
@@ -961,23 +967,25 @@ Fixpoint ntaus (n: nat): itree eventE unit :=
   end
 .
 
+Require Import RelationClasses.
+
 Goal eutt eq (Ret 1) (n <- trigger (Choose _);; ntaus n;; Ret 1).
 Proof.
-  replace (Ret 1) with ((Ret 1: itree eventE _) >>= (fun x => Ret x)); cycle 1.
-  { irw. ss. }
+  replace (Ret 1) with ((Ret tt: itree eventE _) >>= (fun _ => Ret 1)) at 1; cycle 1.
+  { irw; ss. }
   rewrite <- ! bind_bind.
-  apply eutt_bind with (RR:=eq).
-  { r. exists (Ordinal.S Ordinal.omega). rewrite ! bind_bind.
-    pfold. econs; et.
-    { apply Ordinal.S_lt. }
-    i. left.
-    ginit. { eapply cpn5_wcompat. pmonauto. } guclo ordC_spec. econs.
-    { instantiate (1:=Ordinal.from_nat x). apply Ordinal.join_upperbound. }
-    induction x; ii; ss.
-    { irw. gstep. econs; et. }
-    { irw. gstep. econs; et. apply Ordinal.S_lt. }
-  }
-  i. clarify. refl.
+  apply eutt_bind with (RR:=top2); cycle 1.
+  { i. r. exists Ordinal.O. esplits; et. }
+  replace (Ret tt) with ((Ret 42%nat: itree eventE _) >>= (fun _ => Ret tt)) at 1; cycle 1.
+  { irw; ss. }
+  apply eutt_bind with (RR:=top2).
+  { replace (trigger (Choose nat)) with ((trigger (Choose nat)) >>= (fun n => Ret n)); cycle 1.
+    { irw; ss. }
+    r. exists (Ordinal.S Ordinal.O). pfold. econs; et. apply Ordinal.S_lt. }
+  i. induction r1; ii; ss.
+  { r. exists (Ordinal.S Ordinal.O). pfold. econs; et. }
+  { etrans; et. r. exists (Ordinal.S Ordinal.O). pfold. econs; et. { apply Ordinal.S_lt. } left.
+    eapply simg_paco_refl; ss. }
 Qed.
 
 Goal eutt eq (Ret 1) (n <- trigger (Choose _);; ntaus n;; m <- trigger (Choose _);; ntaus m;; Ret 1).
