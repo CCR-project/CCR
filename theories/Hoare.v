@@ -657,7 +657,6 @@ interp f (tau;; t) = (tau;; interp f t)
   Local Opaque rsum.
 
   Hypothesis WF0: List.map fst ftb = List.map fst stb.
-  Hypothesis MAIN: List.find (fun '(_fn, _) => dec "main" _fn) stb = Some ("main", (@mk "Main" unit top3 top3)).
   Hypothesis WF1: Forall (fun '(_, sp) => In sp.(mn) (List.map fst ms_tgt.(ModSem.initial_mrs))) stb.
 
   Require Import SimGlobal.
@@ -949,7 +948,13 @@ wf (Σ c1 [mn := c2] + Σ l1 + (x0 + x1))
     all: try (by apply Ordinal.O).
   Qed.
 
-  Hypothesis WFR: URA.wf (rsum (ModSem.initial_r_state ms_tgt)).
+  Variable bootr: Σ.
+  Hypothesis mainpre: Σ -> Prop.
+  Hypothesis mainpost: val -> Prop.
+  Let mainspec: fspec := (@mk "Main" unit (fun _ _ => mainpre) (fun _ vret _ => mainpost vret)).
+  Hypothesis MAIN: List.find (fun '(_fn, _) => dec "main" _fn) stb = Some ("main", mainspec).
+  Hypothesis WFR: URA.wf (bootr ⋅ (rsum (ModSem.initial_r_state ms_tgt))).
+  Hypothesis BOOTABLE: mainpre bootr.
 
   Theorem adequacy_type: Beh.of_program (Mod.interp md_tgt) <1= Beh.of_program (Mod.interp md_src).
   Proof.
@@ -971,7 +976,7 @@ wf (Σ c1 [mn := c2] + Σ l1 + (x0 + x1))
     set (st_tgt0 := (ModSem.initial_r_state (Mod.get_modsem md_tgt (Sk.load_skenv (Mod.sk md_tgt))))).
     (* Local Opaque URA.add. *)
     assert(SIM: wf st_src0 st_tgt0).
-    { r. ss. }
+    { rewrite URA.add_comm in WFR. apply URA.wf_mon in WFR. r. ss. }
     unfold mrec.
     replace (ModSem.interp_rE (interp_mrec p_src (p_src val (Call "main" []))) st_src0) with
         (my_interp p_src (p_src val (Call "main" [])) st_src0) by ss.
@@ -1002,7 +1007,7 @@ wf (Σ c1 [mn := c2] + Σ l1 + (x0 + x1))
       rewrite ! my_interp_eventE. igo.
       pfold. econs; eauto.
       { instantiate (1:= Ordinal.from_nat 99). admit "ez". }
-      eexists ((fst st_tgt0) "Main", ε). igo. left.
+      eexists ((fst st_tgt0) "Main", bootr). igo. left.
       pfold. econs; eauto.
       { instantiate (1:= Ordinal.from_nat 98). admit "ez". }
       left.
@@ -1020,9 +1025,10 @@ wf (Σ c1 [mn := c2] + Σ l1 + (x0 + x1))
                        match find (fun mnr : string * Σ => dec mn0 (fst mnr)) (ModSem.initial_mrs ms_tgt) with
                        | Some r => snd r
                        | None => ε
-                       end) "Main" c, [ε]) with st_tgt0; cycle 1.
+                       end) "Main" c) with (fst st_tgt0); cycle 1.
       { unfold st_tgt0. fold ms_tgt.
-        unfold ModSem.initial_r_state. f_equal. apply func_ext. i. unfold update. des_ifs; ss; clarify. }
+        unfold ModSem.initial_r_state. f_equal. apply func_ext. i. unfold update. ss.
+        des_ifs; ss; clarify. }
       unfold guarantee. igo. pfold. econs; et.
       { instantiate (1:= Ordinal.from_nat 96). admit "ez". }
       esplits; eauto.
@@ -1037,7 +1043,7 @@ wf (Σ c1 [mn := c2] + Σ l1 + (x0 + x1))
       rewrite ! my_interp_bind. igo. rewrite my_interp_eventE. igo.
       pfold. econs; eauto.
       { instantiate (1:= Ordinal.from_nat 93). admit "ez". }
-      eexists ε. left. igo. pfold. econs; et.
+      eexists bootr. left. igo. pfold. econs; et.
       { instantiate (1:= Ordinal.from_nat 92). admit "ez". }
       left. pfold. econs; et.
       { instantiate (1:= Ordinal.from_nat 91). admit "ez". }
