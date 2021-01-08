@@ -36,7 +36,14 @@ Section PROOF.
     ]
   .
 
-  Definition MainStb: list (fname * fspec) := [("main", mk "Main" (X:=unit) top3 top3)].
+  Definition MainStb: list (fname * fspec) :=
+    [("main", mk "Main" (X:=unit) top3 top3)].
+
+  Definition AddStb: list (fname * fspec) :=
+    [("add", mk "Add"
+                (fun x varg rarg => varg = [] /\ rarg = client x)
+                (fun x vret rret => rret = client (Z.add x 1)))
+    ].
 
 End PROOF.
 

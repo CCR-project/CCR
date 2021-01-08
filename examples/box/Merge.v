@@ -7,7 +7,7 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import Hoare.
-Require Import BoxHeader Box1 BoxMain1.
+Require Import BoxHeader Box1 Add1 BoxMain1.
 
 Generalizable Variables E R A B C X Y Σ.
 
@@ -20,11 +20,12 @@ Section PROOF.
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG boxRA Σ}.
 
-  Definition BoxMain1: Mod.t := Mod.add Box Main.
+  Definition Merge1: Mod.t := Mod.add Add (Mod.add Box Main).
 
-  Definition BoxMain2: Mod.t := {|
+  (*** cancelled ***)
+  Definition Merge2: Mod.t := {|
     Mod.get_modsem := fun _ => {|
-        ModSem.fnsems := List.map (fun '(fn, body) => (fn, fun_to_src body)) (BoxFtb ++ MainFtb);
+        ModSem.fnsems := List.map (fun '(fn, body) => (fn, fun_to_src body)) (AddFtb ++ BoxFtb ++ MainFtb);
         ModSem.initial_mrs := [];
       |};
     Mod.sk := Sk.unit;
@@ -50,29 +51,28 @@ Section PROOF.
   Notation "(⋅)" := URA.add (only parsing).
   (* Local Opaque URA.add. *)
 
-  Theorem correct: Beh.of_program (Mod.interp BoxMain1) <1= Beh.of_program (Mod.interp BoxMain2).
+  Theorem correct: Beh.of_program (Mod.interp Merge1) <1= Beh.of_program (Mod.interp Merge2).
   Proof.
     ii.
-    set (global_ftb:=BoxFtb++MainFtb).
-    set (global_stb:=BoxStb++MainStb).
+    set (global_ftb:=AddFtb++BoxFtb++MainFtb).
+    set (global_stb:=AddStb++BoxStb++MainStb).
     (* clearbody global_stb. *)
     Local Opaque BoxStb.
     Local Opaque MainStb.
-    eapply adequacy_type with (stb:=global_stb) (ftb:=global_ftb) in PR. cbn in *.
-    rp; try apply PR; cycle 1.
-    { refl. }
-    { clear PR. f_equal. }
+    eapply adequacy_type with (stb:=global_stb) (ftb:=global_ftb) in PR; et.
     { ss. f_equal.
       { admit "ez". }
       f_equal.
       { admit "ez". }
       f_equal.
       { admit "ez". }
+      f_equal.
+      { admit "ez". }
     }
-    { ss. }
     { ss. Hint Unfold ε. try rewrite URA.unit_id.
       unfold ε. rewrite ! URA.unit_id. rewrite ! URA.unit_idl.
       unfold compose. des_ifs. des_sumbool. ss. clear_tac.
+      rewrite URA.unit_idl.
       unfold library, client.
       rewrite GRA.padding_add.
       ss.

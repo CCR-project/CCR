@@ -17,12 +17,7 @@ Set Typeclasses Depth 4.
 
 
 Section PROOF.
-  Let memRA: URA.t := (RA.excl Z).
-  Context `{@GRA.inG memRA Σ}.
-  Let GURA: URA.t := GRA.to_URA Σ.
-  Local Existing Instance GURA.
-
-  Compute (URA.car (t:=memRA)).
+  Context `{@GRA.inG (RA.excl Z) Σ}.
 
   Definition getF_parg (varg: list val): option unit :=
     match varg with
