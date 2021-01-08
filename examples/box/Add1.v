@@ -24,9 +24,9 @@ Section PROOF.
   (* Local Existing Instance GURA. *)
 
   Definition addBody (varg: list val): itree (hCallE +' eventE) val :=
-    x <- trigger (hCall "get" []);;
-    x_plus_one <- vadd x (Vint 1%Z)?;;
-    trigger (hCall "set" [x_plus_one])
+    trigger (hCall "get" []);;
+    varg <- trigger (Choose _);;
+    trigger (hCall "set" [varg])
   .
 
   Definition AddFtb: list (fname * (list val -> itree (hCallE +' eventE) val)) :=

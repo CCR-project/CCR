@@ -389,6 +389,8 @@ Section SIMMODSEM.
       (* unfold unwrapU. des_ifs. igo. *)
       unfold addBody.
       unfold body_to_tgt. unfold interp_hCallE_tgt. igo. rewrite interp_trigger. cbn. des_ifs.
+      repeat (go; igo; try rewrite interp_trigger; ss). cbn.
+      des_ifs.
       Local Transparent BoxStb AddStb.
       cbn in Heq.
       Local Opaque BoxStb AddStb.
@@ -415,6 +417,8 @@ Section SIMMODSEM.
       ii. exists 100%nat. left.
       repeat (go; igo; ss). des.
       repeat (go; igo; ss). des. clarify.
+      repeat (go; igo; ss).
+      force_l. eexists (Vint (x+1)). left.
       repeat (go; igo; ss).
       rewrite interp_trigger.
       repeat (go; igo; ss). cbn. des_ifs.
