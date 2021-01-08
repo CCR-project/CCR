@@ -413,77 +413,47 @@ Section SIMMODSEM.
       repeat (go; igo; ss).
       force_l. unshelve eexists; esplits; et. left.
       pfold. econs; ss; et.
-      { esplits; et. ss.
-      exists (client x). left.
+      { esplits; et. admit "UNSOUND -- TODO". }
+      i; des. esplits; et. left.
 
-      igo.
-      force_l. { ss.
-      unfold mainBody.
-      (* unfold unwrapU. des_ifs. igo. *)
-      unfold body_to_tgt. unfold interp_hCallE_tgt. cbn. rewrite interp_trigger. cbn. igo.
 
-      assert(x = x0).
-      { unfold library, client in *.
-        rewrite URA.unit_idl in WF.
-        rewrite GRA.padding_add in WF.
-        eapply GRA.padding_wf in WF. ss. des. r in WF. des. ss. des_ifs. }
-      clarify. clear WF.
-      rename x0 into x.
 
-      force_l. exists (Vint x). left.
-      force_r. exists x. left.
+
+      repeat (go; igo; ss). clarify.
+      rewrite URA.unit_idl in *. rewrite URA.unit_id in WF0.
+      instantiate (1:=100%nat).
+      unfold HoareCall.
       repeat (go; igo; ss).
-      force_l. exists (library x, client x). left.
+      force_l. eexists (URA.unit, client 10%Z). left.
       repeat (go; igo; ss).
-      force_l. exists (client x). left.
+      force_l. { rewrite URA.unit_idl. rewrite URA.add_comm. eapply URA.extends_updatable. rr. et. } left.
+
+
+
+      force_l. eexists (client 10%Z). left.
       repeat (go; igo; ss).
-      force_l. unshelve esplits; ss. left.
-      force_r. unshelve esplits; ss. left.
-      force_l. { instantiate (1:=URA.unit). rewrite URA.unit_idl. ss. } left.
-      pfold. econs; et. ss. esplits; ss; et.
-    }
-    econs; et.
-    { split; ss. ii; clarify. rename y into varg. eexists 100%nat. ss. des; clarify.
-      unfold alist_add, alist_remove; ss.
-      unfold setF.
-      repeat (go; igo; ss).
+      force_l. { rewrite URA.unit_idl; ss. } left.
+      force_l. exists 10%Z. left.
       unfold assume, guarantee.
       repeat (go; igo; ss).
-      des; clarify.
-      rewrite ! URA.unit_idl.
-      (* unfold unwrapU. des_ifs. igo. *)
-      unfold body_to_tgt. unfold interp_hCallE_tgt. rewrite interp_trigger. cbn. igo.
-
-      (* assert(x = x0). *)
-      (* { unfold library, client in *. *)
-      (*   rewrite URA.unit_idl in WF. *)
-      (*   rewrite GRA.padding_add in WF. *)
-      (*   eapply GRA.padding_wf in WF. ss. des. r in WF. des. ss. des_ifs. } *)
-      (* clarify. clear WF. *)
-      (* rename x0 into x. *)
-
-      rename x0 into x_new.
-      force_l. exists (Vint 0). left.
+      force_l. unshelve eexists; et. left.
+      rewrite idK_spec with (i0:=trigger (Call "get" [])). unfold idK at 1. rewrite bind_bind.
+      pfold. econs; et.
+      { esplits; et. admit "UNSOUND -- TODO". }
+      i. ss. des. eexists 100%nat. left.
       repeat (go; igo; ss).
-      force_l. exists (library x_new, client x_new). left.
-      force_l.
-      { unfold library, client.
-        rewrite ! GRA.padding_add. eapply GRA.padding_updatable. ss.
-        rr. ii. des_ifs. ss. des_ifs; des; ss.
-        - rr in H1. des; clarify. ss. des_ifs.
-        - rr in H1. des; clarify. ss. des_ifs.
-          esplits; ss; et. rr. exists (inr tt). ss.
-      }
-      left.
+      des. clarify.
+      pfold. econs; ss; et. eexists (client x3, URA.unit). left.
+      pfold. econs; ss; et.
+      { rewrite URA.unit_id. rewrite URA.unit_idl. admit "ez - UNSOUND". } left.
+      force_l. exists URA.unit. left.
       repeat (go; igo; ss).
-      force_l. exists (client x_new). left.
-      repeat (go; igo; ss).
-      force_l. unshelve esplits; ss. left.
-      force_l. { instantiate (1:=URA.unit). rewrite URA.unit_idl. ss. } left.
-      unfold MPut.
-      repeat (go; igo; ss).
-      pfold. econs; ss; et. esplits; ss; et.
+      force_l. unshelve eexists; et. left.
+      force_l. { rewrite URA.unit_idl; ss. } left.
+      unfold idK. pfold. econs; ss; et.
     }
+  Unshelve.
+    all: ss.
   Qed.
 
 End SIMMODSEM.
