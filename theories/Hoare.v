@@ -942,6 +942,8 @@ wf (Σ c1 [mn := c2] + Σ l1 + (x0 + x1))
     all: try (by apply Ordinal.O).
   Qed.
 
+  Hypothesis WFR: URA.wf (rsum (ModSem.initial_r_state ms_tgt)).
+
   Theorem adequacy_type: Beh.of_program (Mod.interp md_tgt) <1= Beh.of_program (Mod.interp md_src).
   Proof.
     eapply adequacy_global.
@@ -962,7 +964,7 @@ wf (Σ c1 [mn := c2] + Σ l1 + (x0 + x1))
     set (st_tgt0 := (ModSem.initial_r_state (Mod.get_modsem md_tgt (Sk.load_skenv (Mod.sk md_tgt))))).
     (* Local Opaque URA.add. *)
     assert(SIM: wf st_src0 st_tgt0).
-    { r. ss. esplits; ss; et. admit "initial wf: mandate this to the user". }
+    { r. ss. }
     unfold mrec.
     replace (ModSem.interp_rE (interp_mrec p_src (p_src val (Call "main" []))) st_src0) with
         (my_interp p_src (p_src val (Call "main" [])) st_src0) by ss.
