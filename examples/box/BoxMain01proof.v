@@ -386,6 +386,8 @@ Section SIMMODSEM.
       unfold alist_add, alist_remove; ss.
       unfold mainF.
       repeat (go; igo; ss).
+      rewrite URA.unit_idl in WF.
+      rename x1 into nothing. apply URA.wf_mon in WF.
       unfold assume, guarantee.
       repeat (go; igo; ss).
       rewrite ! URA.unit_idl.
@@ -398,7 +400,22 @@ Section SIMMODSEM.
       ss. des_ifs. ss.
       unfold HoareCall at 2.
       repeat (go; igo; ss).
+      force_l. eexists (URA.unit, client x). left.
+      repeat (go; igo; ss).
       force_l.
+      { rewrite URA.unit_idl. eapply URA.extends_updatable. r. esplits; et. }
+      left.
+      force_l. exists (client x). left.
+      repeat (go; igo; ss).
+      force_l. { rewrite URA.unit_idl; ss. } left.
+      force_l. exists 10%Z. left.
+      unfold assume, guarantee.
+      repeat (go; igo; ss).
+      force_l. unshelve eexists; esplits; et. left.
+      pfold. econs; ss; et.
+      { esplits; et. ss.
+      exists (client x). left.
+
       igo.
       force_l. { ss.
       unfold mainBody.

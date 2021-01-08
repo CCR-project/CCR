@@ -324,22 +324,23 @@ Section CANCEL.
   (*** TODO: try above idea; if it fails, document it; and refactor below with alist ***)
   Variable stb: list (fname * fspec).
 
-  Definition handle_hCallE_tgt: hCallE ~> itree Es :=
+  Definition handle_hCallE_tgt (mn: mname): hCallE ~> itree Es :=
     fun _ '(hCall fn varg) =>
       match List.find (fun '(_fn, _) => dec fn _fn) stb with
       | Some (_, f) =>
-        (HoareCall f.(mn) (f.(precond)) (f.(postcond)) fn varg)
+        (HoareCall (mn) (f.(precond)) (f.(postcond)) fn varg)
       | None => triggerNB
       end
   .
 
-  Definition interp_hCallE_tgt: itree (hCallE +' eventE) ~> itree Es :=
-    interp (case_ (bif:=sum1) handle_hCallE_tgt
+  Definition interp_hCallE_tgt (mn: mname): itree (hCallE +' eventE) ~> itree Es :=
+    interp (case_ (bif:=sum1) (handle_hCallE_tgt mn)
                   ((fun T X => trigger X): eventE ~> itree Es))
   .
 
-  Definition body_to_tgt (body: list val -> itree (hCallE +' eventE) val): list val -> itree Es val :=
-    fun varg => interp_hCallE_tgt (body varg)
+  Definition body_to_tgt (mn: mname)
+             (body: list val -> itree (hCallE +' eventE) val): list val -> itree Es val :=
+    fun varg => interp_hCallE_tgt mn (body varg)
   .
 
 
@@ -358,7 +359,7 @@ Section CANCEL.
   .
   Definition fun_to_tgt (fn: fname) (body: list val -> itree (hCallE +' eventE) val): (list val -> itree Es val) :=
     match List.find (fun '(_fn, _) => dec fn _fn) stb with
-    | Some (_, fs) => HoareFun fs.(mn) (fs.(precond)) (fs.(postcond)) (body_to_tgt body)
+    | Some (_, fs) => HoareFun fs.(mn) (fs.(precond)) (fs.(postcond)) (body_to_tgt fs.(mn) body)
     | _ => fun _ => triggerNB
     end.
   Definition fun_to_src (body: list val -> itree (hCallE +' eventE) val): (list val -> itree Es val) :=
@@ -734,9 +735,9 @@ interp f (tau;; t) = (tau;; interp f t)
     forall (R: Type) (RR: R -> R -> Prop) (TY: R = (ModSem.r_state * val)%type)
            (REL: RR ~= (fun '(rs_src, v_src) '(rs_tgt, v_tgt) => wf rs_src rs_tgt /\ (v_src: val) = v_tgt))
            st_src0 st_tgt0 (SIM: wf st_src0 st_tgt0) (i0: itree (hCallE +' eventE) val)
-           i_src i_tgt
+           i_src i_tgt mn
            (SRC: i_src ~= (my_interp p_src (interp_hCallE_src i0) st_src0))
-           (TGT: i_tgt ~= (my_interp p_tgt (interp_hCallE_tgt stb i0) st_tgt0))
+           (TGT: i_tgt ~= (my_interp p_tgt (interp_hCallE_tgt stb mn i0) st_tgt0))
     ,
     (* sim (Mod.interp md_src) (Mod.interp md_tgt) lt 100%nat *)
     (*     (x <- (my_interp p_src (interp_hCallE_src (trigger ce)) st_src0);; Ret (snd x)) *)
@@ -756,24 +757,29 @@ interp f (tau;; t) = (tau;; interp f t)
     unfold interp_hCallE_tgt.
     ides i0; try rewrite ! unfold_interp; cbn; mgo.
     { ss. gstep. econs; eauto. }
-    { ss. gstep. econs; eauto. gbase. eapply CIH; et. }
+    { ss. gstep. econs; eauto. gbase. eapply CIH; [..|M]; Mskip et.
+      { instantiate (1:=mn0). fold (interp_hCallE_tgt stb mn0). ss. }
+    }
     destruct e; cycle 1.
     { dependent destruction e.
       - cbn. mgo. gstep. econs; eauto. i. esplits; eauto.
         mgo. gstep. econs; eauto.
         mgo. gstep. econs; eauto.
         mgo. gstep. econs; eauto.
-        gbase. eapply CIH; et. refl.
+        gbase. eapply CIH; [..|M]; Mskip et.
+        { instantiate (2:=mn0). fold (interp_hCallE_tgt stb mn0). ss. }
       - cbn. mgo. gstep. econs; eauto. i. esplits; eauto.
         mgo. gstep. econs; eauto.
         mgo. gstep. econs; eauto.
         mgo. gstep. econs; eauto.
-        gbase. eapply CIH; et. refl.
+        gbase. eapply CIH; [..|M]; Mskip et.
+        { instantiate (1:=mn0). fold (interp_hCallE_tgt stb mn0). ss. }
       - cbn. mgo. gstep. econs; eauto. ii; clarify.
         mgo. gstep. econs; eauto.
         mgo. gstep. econs; eauto.
         mgo. gstep. econs; eauto.
-        gbase. eapply CIH; et.
+        gbase. eapply CIH; [..|M]; Mskip et.
+        { instantiate (1:=mn0). fold (interp_hCallE_tgt stb mn0). ss. }
     }
     dependent destruction h.
     Local Opaque GRA.to_URA.
@@ -935,7 +941,8 @@ wf (Σ c1 [mn := c2] + Σ l1 + (x0 + x1))
       mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. }
       mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. }
       fold interp_hCallE_src. fold (interp_hCallE_tgt stb).
-      gbase. eapply CIH; et.
+      gbase. eapply CIH; [..|M]; Mskip et. all: cycle 1.
+      { instantiate (2:=mn0). fold (interp_hCallE_tgt stb mn0). ss. }
       rr. esplits; et. { destruct l3; ss. } clear - ST1. admit "ez".
   Unshelve.
     all: ss.
@@ -987,7 +994,7 @@ wf (Σ c1 [mn := c2] + Σ l1 + (x0 + x1))
         left. rewrite my_interp_ret. igo. ss. eapply simg_refl; et.
     }
     assert(TRANSR: simg eq (Ordinal.from_nat 100)
-                        (x0 <- my_interp p_tgt (interp_hCallE_tgt stb (trigger (hCall "main" []))) st_tgt0;; Ret (snd x0))
+                        (x0 <- my_interp p_tgt (interp_hCallE_tgt stb "Main" (trigger (hCall "main" []))) st_tgt0;; Ret (snd x0))
                         (x0 <- my_interp p_tgt (p_tgt val (Call "main" [])) st_tgt0;; Ret (snd x0))).
     { clear SIM. unfold interp_hCallE_tgt. rewrite unfold_interp. ss.
       cbn. rewrite my_interp_bind. igo. des_ifs. ss.
@@ -1123,7 +1130,7 @@ wf (Σ c1 [mn := c2] + Σ l1 + (x0 + x1))
         (x0 <- my_interp p_src (interp_hCallE_src (trigger (hCall "main" []))) st_src0;; Ret (snd x0)); cycle 1.
     { admit "hard -- by transitivity". }
     replace (x0 <- my_interp p_tgt (p_tgt val (Call "main" [])) st_tgt0;; Ret (snd x0)) with
-        (x0 <- my_interp p_tgt (interp_hCallE_tgt stb (trigger (hCall "main" []))) st_tgt0;; Ret (snd x0)); cycle 1.
+        (x0 <- my_interp p_tgt (interp_hCallE_tgt stb "Main" (trigger (hCall "main" []))) st_tgt0;; Ret (snd x0)); cycle 1.
     { admit "hard -- by transitivity". }
     replace (Ordinal.from_nat 98) with (Ordinal.add (Ordinal.from_nat 100) (Ordinal.from_nat 100)); cycle 1.
     { admit "ez". }
