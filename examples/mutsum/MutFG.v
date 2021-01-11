@@ -91,17 +91,17 @@ Section PROOF.
   (*   assume (<<WF: ModSem.wf ms >>);; *)
   (*   snd <$> ModSem.interp_rE itr1 (ModSem.initial_r_state ms). *)
 
-  Let itr0_nor: callE ~> itree Es := fun (T: Type) ce => (ModSem.sem ms ce): itree Es T.
-  Let itr1_nor: itree (rE +' eventE) val := mrec itr0_nor (Call "main" []).
+  (* Let itr0_nor: callE ~> itree Es := fun (T: Type) ce => (ModSem.sem ms ce): itree Es T. *)
+  (* Let itr1_nor: itree (rE +' eventE) val := mrec itr0_nor (Call "main" []). *)
 
-  Goal itr1_nor ≈ Ret (Vint (Z.of_nat 55)).
-  Proof.
-    subst itr1_nor itr0_nor. ss.
-    (* rewrite mrec_as_interp. *)
-    unfold mrec. rewrite unfold_interp_mrec. ss.
-    ss. irw. rewrite tau_eutt.
-    unfold fun_to_src, body_to_src, interp_hCallE_src.
-    unfold mainBody. cbn.
-  Abort.
+  (* Goal itr1_nor ≈ Ret (Vint (Z.of_nat 55)). *)
+  (* Proof. *)
+  (*   subst itr1_nor itr0_nor. ss. *)
+  (*   (* rewrite mrec_as_interp. *) *)
+  (*   unfold mrec. rewrite unfold_interp_mrec. ss. *)
+  (*   ss. irw. rewrite tau_eutt. *)
+  (*   unfold fun_to_src, body_to_src, interp_hCallE_src. *)
+  (*   unfold mainBody. cbn. *)
+  (* Abort. *)
 
 End PROOF.

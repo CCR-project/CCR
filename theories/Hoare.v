@@ -196,136 +196,7 @@ If this feature is needed; we can extend it then. At the moment, I will only all
 
   Require Import SimSTS.
 
-  Definition my_interp A (prog: callE ~> itree Es) (itr0: itree Es A) (st0: ModSem.r_state) :=
-    ModSem.interp_rE (interp_mrec prog itr0) st0
-  .
-
   Ltac grind := repeat (f_equiv; try apply func_ext; ii; try (des_ifs; check_safe)).
-
-  Lemma my_interp_bind
-        (prog: callE ~> itree Es)
-        A B
-        (itr: itree Es A) (ktr: A -> itree Es B)
-        st0
-    :
-      my_interp prog (v <- itr ;; ktr v) st0 =
-      '(st1, v) <- my_interp prog (itr) st0 ;; my_interp prog (ktr v) st1
-  .
-  Proof.
-    unfold my_interp.
-    unfold ModSem.interp_rE.
-    rewrite interp_mrec_bind.
-    rewrite interp_state_bind.
-    grind.
-  Qed.
-
-  Lemma my_interp_tau
-        (prog: callE ~> itree Es)
-        A
-        (itr: itree Es A)
-        st0
-    :
-      my_interp prog (tau;; itr) st0 = tau;; my_interp prog itr st0
-  .
-  Proof.
-    unfold my_interp.
-    unfold ModSem.interp_rE.
-    rewrite unfold_interp_mrec. ss.
-    rewrite interp_state_tau.
-    grind.
-  Qed.
-
-  Lemma my_interp_ret
-        T
-        prog st0 (v: T)
-    :
-      my_interp prog (Ret v) st0 = Ret (st0, v)
-  .
-  Proof.
-    unfold my_interp. unfold ModSem.interp_rE.
-    rewrite unfold_interp_mrec. ss.
-    rewrite interp_state_ret. ss.
-  Qed.
-
-  Lemma my_interp_callE
-        p st0
-        (* (e: Es Σ) *)
-        (e: callE val)
-    :
-      my_interp p (trigger e) st0 = tau;; (my_interp p (p val e) st0)
-  .
-  Proof.
-    unfold my_interp. unfold ModSem.interp_rE. rewrite interp_mrec_hit. cbn.
-    rewrite interp_state_tau. grind.
-  Qed.
-
-  Lemma my_interp_rE
-        p st0
-        (* (e: Es Σ) *)
-        T
-        (e: rE T)
-    :
-      my_interp p (trigger e) st0 =
-      '(st1, r) <- ModSem.handle_rE e st0;;
-      tau;; tau;;
-      Ret (st1, r)
-      (* interp_state (case_ ModSem.handle_rE pure_state) (tau;; Ret r) st1 *)
-  .
-  Proof.
-    unfold my_interp. unfold ModSem.interp_rE.
-    (* rewrite unfold_interp_mrec. cbn. *)
-    unfold Es.
-    rewrite interp_mrec_miss with (D:=callE) (E:=rE +' eventE) (F:=rE) (a:=e).
-    rewrite interp_state_bind.
-    rewrite interp_state_trigger. irw. grind. irw. grind.
-    rewrite interp_state_tau. grind.
-    rewrite interp_state_ret. ss.
-  Qed.
-
-  Lemma my_interp_eventE
-        p st0
-        (* (e: Es Σ) *)
-        T
-        (e: eventE T)
-    :
-      my_interp p (trigger e) st0 = r <- trigger e;; tau;; tau;; Ret (st0, r)
-  .
-  Proof.
-    unfold my_interp. unfold ModSem.interp_rE.
-    (* rewrite unfold_interp_mrec. cbn. *)
-    unfold Es.
-    rewrite interp_mrec_miss with (D:=callE) (E:=rE +' eventE) (F:=eventE) (a:=e).
-    rewrite interp_state_bind.
-    rewrite interp_state_trigger. irw. unfold pure_state.
-    unfold resum, ReSum_id, id_, Id_IFun.
-    irw. grind. irw. grind.
-    rewrite interp_state_tau. grind.
-    rewrite interp_state_ret. ss.
-  Qed.
-
-  Lemma my_interp_triggerUB
-        (prog: callE ~> itree Es)
-        st0
-        A
-    :
-      (my_interp prog (triggerUB) st0: itree eventE (_ * A)) = triggerUB
-  .
-  Proof.
-    unfold triggerUB. rewrite my_interp_bind. rewrite my_interp_eventE.
-    irw. grind.
-  Qed.
-
-  Lemma my_interp_triggerNB
-        (prog: callE ~> itree Es)
-        st0
-        A
-    :
-      (my_interp prog (triggerNB) st0: itree eventE (_ * A)) = triggerNB
-  .
-  Proof.
-    unfold triggerNB. rewrite my_interp_bind. rewrite my_interp_eventE.
-    irw. grind.
-  Qed.
 
   Ltac igo := repeat (try rewrite bind_bind; try rewrite bind_ret_l; try rewrite bind_ret_r; try rewrite bind_tau;
                       try rewrite interp_vis;
@@ -415,31 +286,29 @@ If this feature is needed; we can extend it then. At the moment, I will only all
   Opaque Ordinal.from_nat.
   Opaque string_dec.
 
-  Ltac mgo := repeat (try rewrite ! my_interp_bind; try rewrite ! my_interp_ret; try rewrite ! my_interp_tau;
-                      try rewrite ! my_interp_rE; try rewrite ! my_interp_eventE; try rewrite ! my_interp_callE;
-                      try rewrite ! my_interp_triggerNB; try rewrite ! my_interp_triggerUB; igo).
+  Ltac mgo := repeat (try rewrite ! interp_Es_bind; try rewrite ! interp_Es_ret; try rewrite ! interp_Es_tau;
+                      try rewrite ! interp_Es_rE; try rewrite ! interp_Es_eventE; try rewrite ! interp_Es_callE;
+                      try rewrite ! interp_Es_triggerNB; try rewrite ! interp_Es_triggerUB; igo).
   Ltac mstep := gstep; econs; eauto; [eapply from_nat_lt; ss|].
 
   Let adequacy_type_aux:
-    let p_src: callE ~> itree Es := fun _ ce => trigger PushFrame;; rv <- ModSem.sem ms_src ce;; trigger PopFrame;; Ret rv in
-    let p_tgt: callE ~> itree Es := fun _ ce => trigger PushFrame;; rv <- ModSem.sem ms_tgt ce;; trigger PopFrame;; Ret rv in
     forall (R: Type) (RR: R -> R -> Prop) (TY: R = (ModSem.r_state * val)%type)
            (REL: RR ~= (fun '(rs_src, v_src) '(rs_tgt, v_tgt) => wf rs_src rs_tgt /\ (v_src: val) = v_tgt))
            st_src0 st_tgt0 (SIM: wf st_src0 st_tgt0) (i0: itree (hCallE +' eventE) val)
            i_src i_tgt mn
-           (SRC: i_src ~= (my_interp p_src (interp_hCallE_src i0) st_src0))
-           (TGT: i_tgt ~= (my_interp p_tgt (interp_hCallE_tgt stb mn i0) st_tgt0))
+           (SRC: i_src ~= (interp_Es (ModSem.prog ms_src) (interp_hCallE_src i0) st_src0))
+           (TGT: i_tgt ~= (interp_Es (ModSem.prog ms_tgt) (interp_hCallE_tgt stb mn i0) st_tgt0))
     ,
     (* sim (Mod.interp md_src) (Mod.interp md_tgt) lt 100%nat *)
-    (*     (x <- (my_interp p_src (interp_hCallE_src (trigger ce)) st_src0);; Ret (snd x)) *)
-    (*     (x <- (my_interp p_tgt (interp_hCallE_tgt stb (trigger ce)) st_tgt0);; Ret (snd x)) *)
+    (*     (x <- (interp_Es p_src (interp_hCallE_src (trigger ce)) st_src0);; Ret (snd x)) *)
+    (*     (x <- (interp_Es p_tgt (interp_hCallE_tgt stb (trigger ce)) st_tgt0);; Ret (snd x)) *)
     simg RR (Ordinal.from_nat 100%nat) i_src i_tgt
   .
   Proof.
     i. ginit.
     { eapply cpn5_wcompat; eauto with paco. }
-    (* remember (` x : ModSem.r_state * R <- my_interp p_src (interp_hCallE_src (trigger ce)) st_src0;; Ret (snd x)) as tmp. *)
-    revert_until p_tgt.
+    (* remember (` x : ModSem.r_state * R <- interp_Es p_src (interp_hCallE_src (trigger ce)) st_src0;; Ret (snd x)) as tmp. *)
+    revert_until R. revert R.
     unfold Relation_Definitions.relation.
     gcofix CIH. i; subst.
     (* intros ? ?. *)
@@ -483,7 +352,10 @@ If this feature is needed; we can extend it then. At the moment, I will only all
     des_ifs; cycle 1.
     { gstep. mgo. unfold triggerNB. mgo. econs; ss; eauto. { eapply from_nat_lt; ss. } }
     rename Heq into FINDFT.
-    unfold p_src at 3. mgo.
+    unfold ModSem.prog at 3. mgo.
+    unfold unwrapU. des_ifs; cycle 1.
+    { gstep. mgo. unfold triggerUB. mgo. econs; ss; eauto. { eapply from_nat_lt; ss. } }
+    mgo. des_ifs. mgo.
     unfold ModSem.handle_rE. des_ifs.
     { rr in SIM. des_ifs. des; ss. }
     mgo.
@@ -491,10 +363,8 @@ If this feature is needed; we can extend it then. At the moment, I will only all
     gstep. econsr; eauto. { eapply from_nat_lt; ss. } i.
     mgo. gstep. econs; eauto.
     mgo. gstep. econs; eauto. instantiate (1:=Ordinal.from_nat 300).
-    unfold ms_src. ss. unfold unwrapU. des_ifs; cycle 1.
-    { gstep. mgo. unfold triggerUB. mgo. econs; ss; eauto. { eapply from_nat_lt; ss. } }
     mgo. des_ifs. rename Heq into FINDFS. rename i into i_src.
-    cbn. des_ifs.
+    mgo. unfold handle_rE. des_ifs.
     { gstep. mgo. unfold triggerNB. mgo. econs; ss; eauto. { eapply from_nat_lt; ss. } }
     mgo. unfold guarantee.
     mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. }
@@ -516,9 +386,7 @@ If this feature is needed; we can extend it then. At the moment, I will only all
     mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
     mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
     mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
-    unfold p_tgt at 4. mgo. cbn.
-    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
-    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
+    unfold ModSem.prog at 7. mgo. cbn.
     unfold unwrapU. des_ifs; cycle 1.
     { exfalso. rewrite WTY in *. ss. clear - FINDFS Heq.
       rewrite find_map in *. uo. des_ifs.
@@ -528,6 +396,9 @@ If this feature is needed; we can extend it then. At the moment, I will only all
       unfold compose in *. ss. clarify. }
     rename Heq into FINDFT0.
     mgo. des_ifs. rename i into i_tgt.
+    mgo. cbn.
+    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
+    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
     guclo bindC_spec.
     replace (Ordinal.from_nat 281) with (Ordinal.add (Ordinal.from_nat 141) (Ordinal.from_nat 140)); cycle 1.
     { admit "ez - ordinal nat add". }
@@ -646,9 +517,7 @@ wf (Σ c1 [mn := c2] + Σ l1 + (x0 + x1))
   Proof.
     eapply adequacy_global.
     exists (Ordinal.from_nat 100%nat).
-    ss. unfold ModSem.initial_itr. ss.
-    set (fun _ ce => trigger PushFrame;; rv <- ModSem.sem ms_src ce;; trigger PopFrame;; Ret rv) as p_src.
-    set (fun _ ce  => trigger PushFrame;; rv <- ModSem.sem (Mod.enclose md_tgt) ce;; trigger PopFrame;; Ret rv) as p_tgt.
+    ss. unfold ModSem.initial_itr. Local Opaque ModSem.prog. ss.
     unfold ITree.map.
     unfold assume.
     igo.
@@ -659,19 +528,18 @@ wf (Σ c1 [mn := c2] + Σ l1 + (x0 + x1))
     { instantiate (1:= (Ordinal.from_nat 98)). admit "ez". }
     esplits; et. { admit "ez - wf". } left.
     set (st_src0 := (ModSem.initial_r_state ms_src)).
-    set (st_tgt0 := (ModSem.initial_r_state (Mod.get_modsem md_tgt (Sk.load_skenv (Mod.sk md_tgt))))).
+    replace (Mod.enclose md_tgt) with ms_tgt by ss.
+    set (st_tgt0 := (ModSem.initial_r_state ms_tgt)).
     (* Local Opaque URA.add. *)
     assert(SIM: wf st_src0 st_tgt0).
     { r. ss. }
     unfold mrec.
-    replace (ModSem.interp_rE (interp_mrec p_src (p_src val (Call "main" []))) st_src0) with
-        (my_interp p_src (p_src val (Call "main" [])) st_src0) by ss.
-    replace (ModSem.interp_rE (interp_mrec p_tgt (p_tgt val (Call "main" []))) st_tgt0) with
-        (my_interp p_tgt (p_tgt val (Call "main" [])) st_tgt0) by ss.
     assert(TRANSL: simg eq (Ordinal.from_nat 100)
-                        (x0 <- my_interp p_src (p_src val (Call "main" [])) st_src0;; Ret (snd x0))
-                        (x0 <- my_interp p_src (interp_hCallE_src (trigger (hCall "main" []))) st_src0;; Ret (snd x0))).
-    { clear SIM. unfold interp_hCallE_src. rewrite unfold_interp. ss. cbn. rewrite my_interp_bind. rewrite my_interp_callE.
+                        (x0 <- interp_Es (ModSem.prog ms_src)
+                                         ((ModSem.prog ms_src) _ (Call "main" [])) st_src0;; Ret (snd x0))
+                        (x0 <- interp_Es (ModSem.prog ms_src)
+                                         (interp_hCallE_src (trigger (hCall "main" []))) st_src0;; Ret (snd x0))).
+    { clear SIM. unfold interp_hCallE_src. rewrite unfold_interp. ss. cbn. rewrite interp_Es_bind. rewrite interp_Es_callE.
       igo.
       pfold. econs; eauto.
       { instantiate (1:= Ordinal.from_nat 99). admit "ez". }
@@ -679,18 +547,20 @@ wf (Σ c1 [mn := c2] + Σ l1 + (x0 + x1))
       replace (Ordinal.from_nat 99) with (Ordinal.add (Ordinal.from_nat 50) (Ordinal.from_nat 49)) by admit "ez".
       eapply simg_bind with (RR:=eq).
       - eapply simg_refl; et.
-      - ii. des_ifs. ss. rewrite my_interp_tau. igo.
+      - ii. des_ifs. ss. rewrite interp_Es_tau. igo.
         pfold. econs; eauto.
         { instantiate (1:= Ordinal.from_nat 49). admit "ez". }
-        left. rewrite my_interp_ret. igo. ss. eapply simg_refl; et.
+        left. rewrite interp_Es_ret. igo. ss. eapply simg_refl; et.
     }
     assert(TRANSR: simg eq (Ordinal.from_nat 100)
-                        (x0 <- my_interp p_tgt (interp_hCallE_tgt stb "Main" (trigger (hCall "main" []))) st_tgt0;; Ret (snd x0))
-                        (x0 <- my_interp p_tgt (p_tgt val (Call "main" [])) st_tgt0;; Ret (snd x0))).
+                        (x0 <- interp_Es (ModSem.prog ms_tgt)
+                                         (interp_hCallE_tgt stb "Main" (trigger (hCall "main" []))) st_tgt0;; Ret (snd x0))
+                        (x0 <- interp_Es (ModSem.prog ms_tgt)
+                                         ((ModSem.prog ms_tgt) val (Call "main" [])) st_tgt0;; Ret (snd x0))).
     { clear SIM. unfold interp_hCallE_tgt. rewrite unfold_interp. ss.
-      cbn. rewrite my_interp_bind. igo. des_ifs. ss.
-      unfold HoareCall. rewrite ! my_interp_bind. igo.
-      rewrite ! my_interp_eventE. igo.
+      cbn. rewrite interp_Es_bind. igo. des_ifs. ss.
+      unfold HoareCall. rewrite ! interp_Es_bind. igo.
+      rewrite ! interp_Es_eventE. igo.
       pfold. econs; eauto.
       { instantiate (1:= Ordinal.from_nat 99). admit "ez". }
       eexists ((fst st_tgt0) "Main", ε). igo. left.
@@ -700,7 +570,7 @@ wf (Σ c1 [mn := c2] + Σ l1 + (x0 + x1))
       pfold. econs; eauto.
       { instantiate (1:= Ordinal.from_nat 97). admit "ez". }
       left.
-      rewrite ! my_interp_bind. igo. rewrite ! my_interp_rE. igo.
+      rewrite ! interp_Es_bind. igo. rewrite ! interp_Es_rE. igo.
       ss. fold ms_tgt.
       des_ifs; cycle 1.
       { admit "ez - use WF1". }
@@ -725,7 +595,7 @@ wf (Σ c1 [mn := c2] + Σ l1 + (x0 + x1))
       pfold. econs; eauto.
       { instantiate (1:= Ordinal.from_nat 94). admit "ez". }
       left.
-      rewrite ! my_interp_bind. igo. rewrite my_interp_eventE. igo.
+      rewrite ! interp_Es_bind. igo. rewrite interp_Es_eventE. igo.
       pfold. econs; eauto.
       { instantiate (1:= Ordinal.from_nat 93). admit "ez". }
       eexists ε. left. igo. pfold. econs; et.
@@ -733,7 +603,7 @@ wf (Σ c1 [mn := c2] + Σ l1 + (x0 + x1))
       left. pfold. econs; et.
       { instantiate (1:= Ordinal.from_nat 91). admit "ez". }
       left.
-      rewrite my_interp_bind. igo. rewrite my_interp_rE. ss. igo.
+      rewrite interp_Es_bind. igo. rewrite interp_Es_rE. ss. igo.
       fold ms_tgt.
       replace (fun mn0 => match find (fun mnr => dec mn0 (fst mnr)) (ModSem.initial_mrs ms_tgt)
                           with
@@ -751,7 +621,7 @@ wf (Σ c1 [mn := c2] + Σ l1 + (x0 + x1))
       { instantiate (1:= Ordinal.from_nat 88). admit "ez". }
       left. pfold. econs; et.
       { instantiate (1:= Ordinal.from_nat 87). admit "ez". }
-      rewrite my_interp_bind. igo. rewrite my_interp_eventE. igo.
+      rewrite interp_Es_bind. igo. rewrite interp_Es_eventE. igo.
       left. pfold. econs; et.
       { instantiate (1:= Ordinal.from_nat 86). admit "ez". }
       eexists tt; eauto.
@@ -760,26 +630,26 @@ wf (Σ c1 [mn := c2] + Σ l1 + (x0 + x1))
       { instantiate (1:= Ordinal.from_nat 85). admit "ez". }
       left. pfold. econs; et.
       { instantiate (1:= Ordinal.from_nat 84). admit "ez". }
-      rewrite my_interp_bind. igo. rewrite my_interp_eventE. igo.
+      rewrite interp_Es_bind. igo. rewrite interp_Es_eventE. igo.
       left. pfold. econs; et.
       { instantiate (1:= Ordinal.from_nat 83). admit "ez". }
       exists I; eauto. igo. left. pfold. econs; et.
       { instantiate (1:= Ordinal.from_nat 82). admit "ez". }
       left. pfold. econs; et.
       { instantiate (1:= Ordinal.from_nat 81). admit "ez". }
-      rewrite my_interp_bind. igo.
+      rewrite interp_Es_bind. igo.
       left.
       replace (Ordinal.from_nat 81) with (Ordinal.add (Ordinal.from_nat 41) (Ordinal.from_nat 40)) by admit "ez".
       eapply simg_bind with (RR:=eq).
-      - rewrite my_interp_callE.
+      - rewrite interp_Es_callE.
         pfold. econs; et.
         { instantiate (1:= Ordinal.from_nat 39). admit "ez". }
         left.
         replace st_tgt0 with (fst st_tgt0, [ε]); cycle 1.
         { ss. }
         eapply simg_refl; ss.
-      - ii. des_ifs. ss. rewrite my_interp_bind. igo.
-        rewrite my_interp_rE. igo. unfold ModSem.handle_rE. des_ifs.
+      - ii. des_ifs. ss. rewrite interp_Es_bind. igo.
+        rewrite interp_Es_rE. igo. unfold ModSem.handle_rE. des_ifs.
         { admit "we should use stronger RR, not eq; we should know that stackframe is not popped (unary property)". }
         unfold assume. igo.
         pfold. econs; eauto.
@@ -788,7 +658,7 @@ wf (Σ c1 [mn := c2] + Σ l1 + (x0 + x1))
         { instantiate (1:= Ordinal.from_nat 39). admit "ez". }
         left. pfold. econs; eauto.
         { instantiate (1:= Ordinal.from_nat 38). admit "ez". }
-        rewrite my_interp_bind. igo. rewrite my_interp_eventE. igo.
+        rewrite interp_Es_bind. igo. rewrite interp_Es_eventE. igo.
         left. pfold. econs; eauto.
         { instantiate (1:= Ordinal.from_nat 37). admit "ez". }
         ii. igo.
@@ -796,12 +666,12 @@ wf (Σ c1 [mn := c2] + Σ l1 + (x0 + x1))
         { instantiate (1:= Ordinal.from_nat 36). admit "ez". }
         left. pfold. econs; eauto.
         { instantiate (1:= Ordinal.from_nat 35). admit "ez". }
-        rewrite my_interp_bind. igo. rewrite my_interp_rE. igo. ss. igo.
+        rewrite interp_Es_bind. igo. rewrite interp_Es_rE. igo. ss. igo.
         left. pfold. econs; eauto.
         { instantiate (1:= Ordinal.from_nat 34). admit "ez". }
         left. pfold. econs; eauto.
         { instantiate (1:= Ordinal.from_nat 33). admit "ez". }
-        rewrite my_interp_bind. igo. rewrite my_interp_eventE. igo.
+        rewrite interp_Es_bind. igo. rewrite interp_Es_eventE. igo.
         left. pfold. econs; eauto.
         { instantiate (1:= Ordinal.from_nat 32). admit "ez". }
         ii.
@@ -810,18 +680,18 @@ wf (Σ c1 [mn := c2] + Σ l1 + (x0 + x1))
         { instantiate (1:= Ordinal.from_nat 31). admit "ez". }
         left. pfold. econs; eauto.
         { instantiate (1:= Ordinal.from_nat 30). admit "ez". }
-        rewrite my_interp_ret. igo. rewrite my_interp_tau. igo.
+        rewrite interp_Es_ret. igo. rewrite interp_Es_tau. igo.
         left. pfold. econs; eauto.
         { instantiate (1:= Ordinal.from_nat 29). admit "ez". }
-        rewrite my_interp_ret. igo. ss.
+        rewrite interp_Es_ret. igo. ss.
         left. eapply simg_refl; ss.
     }
 
-    replace (x0 <- my_interp p_src (p_src val (Call "main" [])) st_src0;; Ret (snd x0)) with
-        (x0 <- my_interp p_src (interp_hCallE_src (trigger (hCall "main" []))) st_src0;; Ret (snd x0)); cycle 1.
+    replace (x0 <- interp_Es (ModSem.prog ms_src) ((ModSem.prog ms_src) val (Call "main" [])) st_src0;; Ret (snd x0)) with
+        (x0 <- interp_Es (ModSem.prog ms_src) (interp_hCallE_src (trigger (hCall "main" []))) st_src0;; Ret (snd x0)); cycle 1.
     { admit "hard -- by transitivity". }
-    replace (x0 <- my_interp p_tgt (p_tgt val (Call "main" [])) st_tgt0;; Ret (snd x0)) with
-        (x0 <- my_interp p_tgt (interp_hCallE_tgt stb "Main" (trigger (hCall "main" []))) st_tgt0;; Ret (snd x0)); cycle 1.
+    replace (x0 <- interp_Es (ModSem.prog ms_tgt) ((ModSem.prog ms_tgt) val (Call "main" [])) st_tgt0;; Ret (snd x0)) with
+        (x0 <- interp_Es (ModSem.prog ms_tgt) (interp_hCallE_tgt stb "Main" (trigger (hCall "main" []))) st_tgt0;; Ret (snd x0)); cycle 1.
     { admit "hard -- by transitivity". }
     replace (Ordinal.from_nat 98) with (Ordinal.add (Ordinal.from_nat 100) (Ordinal.from_nat 100)); cycle 1.
     { admit "ez". }

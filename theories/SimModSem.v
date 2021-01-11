@@ -454,6 +454,148 @@ End ModSemPair.
 
 
 
+Require Import SimGlobal.
+Require Import Ordinal ClassicalOrdinal.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  Lemma S_lt_O
+        o
+    :
+      <<LT: Ordinal.lt Ordinal.O (Ordinal.S o)>>
+  .
+  Proof.
+    r. econs. unfold Ordinal.O. unfold unit_rect. des_ifs. destruct o. econs. ii; ss.
+    Unshelve.
+    all: ss.
+  Qed.
+
+  Lemma le_trans: Transitive Ordinal.le. typeclasses eauto. Qed.
+  Lemma lt_trans: Transitive Ordinal.le. typeclasses eauto. Qed.
+  Hint Resolve Ordinal.lt_le_lt Ordinal.le_lt_lt Ordinal.add_lt_r Ordinal.add_le_l
+       Ordinal.add_le_r Ordinal.lt_le
+       Ordinal.S_lt_mon
+       Ordinal.S_lt
+       Ordinal.S_spec
+       S_lt_O
+    : ord.
+  Hint Resolve le_trans lt_trans: ord_trans.
+  Hint Resolve Ordinal.add_base_l Ordinal.add_base_r: ord_proj.
+
+  Lemma from_nat_lt
+        n m
+        (LT: Nat.lt n m)
+    :
+      <<LT: Ordinal.lt (Ordinal.from_nat n) (Ordinal.from_nat m)>>
+  .
+  Proof.
+    generalize dependent m. induction n; ii; ss.
+    - destruct m; try lia. r; ss. eapply S_lt_O.
+    - destruct m; ss; try lia. r. rewrite <- Ordinal.S_lt_mon. eapply IHn; try lia.
+  Qed.
+
+  Lemma from_nat_le
+        n m
+        (LT: Nat.le n m)
+    :
+      <<LT: Ordinal.le (Ordinal.from_nat n) (Ordinal.from_nat m)>>
+  .
+  Proof.
+    generalize dependent m. induction n; ii; ss.
+    - destruct m; try lia; ss.
+    - destruct m; ss; try lia; ss. r. rewrite <- Ordinal.S_le_mon. eapply IHn; try lia.
+  Qed.
+
+  Lemma from_nat_eq
+        n m
+        (LT: Nat.eq n m)
+    :
+      <<LT: Ordinal.eq (Ordinal.from_nat n) (Ordinal.from_nat m)>>
+  .
+  Proof.
+    generalize dependent m. induction n; ii; ss.
+    - destruct m; try lia; ss.
+    - destruct m; ss; try lia; ss. r. rewrite <- Ordinal.S_eq_mon. eapply IHn; try lia.
+  Qed.
+
+  Opaque Ordinal.from_nat.
+  Opaque string_dec.
+
+   Ltac igo := repeat (try rewrite bind_bind; try rewrite bind_ret_l; try rewrite bind_ret_r; try rewrite bind_tau;
+                       try rewrite interp_vis;
+                       try rewrite interp_ret;
+                       try rewrite interp_tau
+                      (* try rewrite interp_trigger *)
+                      ).
+
+  Ltac mgo := repeat (try rewrite ! interp_Es_bind; try rewrite ! interp_Es_ret; try rewrite ! interp_Es_tau;
+                      try rewrite ! interp_Es_rE; try rewrite ! interp_Es_eventE; try rewrite ! interp_Es_callE;
+                      try rewrite ! interp_Es_triggerNB; try rewrite ! interp_Es_triggerUB; igo).
+  Ltac mstep := gstep; econs; eauto; [eapply from_nat_lt; ss|].
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 Module ModPair.
 Section SIMMOD.
    Context `{Σ: GRA.t}.
@@ -465,14 +607,57 @@ Section SIMMOD.
    }
    .
 
+   (* Hypothesis SIM: sim. *)
+   (* Variable ske: SkEnv.t. *)
+   (* Variable (md_ctx: Mod.t). *)
+   (* Let ms_src: ModSem.t := md_src.(Mod.get_modsem) ske. *)
+   (* Let ms_tgt: ModSem.t := md_tgt.(Mod.get_modsem) ske. *)
+   (* Let ms_ctx: ModSem.t := md_ctx.(Mod.get_modsem) ske. *)
+
+   (* Let adequacy_local_aux: *)
+   (*   forall (R: Type) (RR: R -> R -> Prop) (TY: R = val) (REL: RR = (@eq R)) *)
+   (*          i_src i_tgt *)
+   (*          (SRC: i_src ~= (ModSem.initial_itr (ModSem.add ms_ctx *)
+   (*                                                         ms_src))) *)
+   (*          (TGT: i_tgt ~= (ModSem.initial_itr (ModSem.add ms_ctx *)
+   (*                                                         ms_tgt))) *)
+   (*   , *)
+   (*     simg RR Ordinal.O i_src i_tgt *)
+   (* . *)
+   (* Proof. *)
+   (*   inv SIM. spc sim_modsem0. rename sim_modsem0 into SIMMS. rename sim_sk0 into SIMSK. des. *)
+   (*   i. ginit. *)
+   (*   { eapply cpn5_wcompat; eapply simg_mon. } *)
+   (*   revert_until ske. do 4 intro. gcofix CIH. i. clarify. *)
+   (*   unfold ModSem.initial_itr. ss. unfold ITree.map. mgo. folder. *)
+   (*   unfold assume. mgo. *)
+   (*   Ltac mstep := try (gstep; econs; eauto; try (by eapply from_nat_lt;ss); check_safe; i). *)
+   (*   mstep. unshelve esplits; et. *)
+   (*   { clear - SIMMS. inv SIMMS. ss. *)
+   (*     admit "ez -- probably need to add some trivial condition on initial_mrs". *)
+   (*   } *)
+   (*   unfold unwrapU at 1. des_ifs; cycle 1. *)
+   (*   { mgo. unfold triggerUB. mgo. mstep; ss. } *)
+   (*   unfold unwrapU. des_ifs; cycle 1. *)
+   (*   { ss. admit "ez". } *)
+   (*   mgo. *)
+   (*   TTTT *)
+   (*   irw. *)
+   (*   ss. *)
+   (*   ss. inv SIM. rewrite <- ! sim_sk0 in *. *)
+   (*   set (Sk.load_skenv (Sk.add (Mod.sk ctx) (Mod.sk md_src))) as skenv_link in *. *)
+   (*   gstep. *)
+   (* Qed. *)
+
    Theorem adequacy_local
            (SIM: sim)
            (*** You will need some wf conditions for ctx ***)
      :
        <<CR: forall ctx, Beh.of_program (Mod.interp (Mod.add ctx md_tgt)) <1=
-                         Beh.of_program (Mod.interp (Mod.add ctx md_tgt))>>
+                         Beh.of_program (Mod.interp (Mod.add ctx md_src))>>
    .
    Proof.
+     ii. eapply adequacy_global; et. exists Ordinal.O.
      admit "TODO".
    Qed.
 

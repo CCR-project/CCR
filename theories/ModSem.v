@@ -10,6 +10,25 @@ Generalizable Variables E R A B C X Y.
 Set Implicit Arguments.
 
 
+Section AUX.
+  Context {Σ: GRA.t}.
+  Definition ε: Σ := URA.unit. (*** TODO: move to PCM.v ***)
+End AUX.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 Section EVENTS.
 
   Variant eventE: Type -> Type :=
@@ -101,81 +120,14 @@ Section EVENTS.
   (* | FPop: fnE unit *)
   (* . *)
 
-End EVENTS.
-
-Notation "f '?'" := (unwrapU f) (at level 60, only parsing).
-Notation "f '﹗'" := (unwrapN f) (at level 60, only parsing).
 
 
 
-Section AUX.
-  Context {Σ: GRA.t}.
-  Definition ε: Σ := URA.unit. (*** TODO: move to PCM.v ***)
-End AUX.
 
 
-
-Module ModSem.
-Section MODSEM.
-
-  (* Record t: Type := mk { *)
-  (*   state: Type; *)
-  (*   local_data: Type; *)
-  (*   step (skenv: SkEnv.t) (st0: state) (ev: option event) (st1: state): Prop; *)
-  (*   state_sort: state -> sort; *)
-  (*   initial_local_data: local_data; *)
-  (*   sk: Sk.t; *)
-  (*   name: string; *)
-  (* } *)
-  (* . *)
-
-  Context `{Σ: GRA.t}.
-
-  Record t: Type := mk {
-    (* initial_ld: mname -> GRA; *)
-    fnsems: list (fname * (list val -> itree Es val));
-    initial_mrs: list (mname * Σ);
-    sem: callE ~> itree Es :=
-      fun _ '(Call fn args) =>
-        '(_, sem) <- (List.find (fun fnsem => dec fn (fst fnsem)) fnsems)?;;
-        sem args
-  }
-  .
-
-  Record wf (ms: t): Prop := mk_wf {
-    wf_fnsems: NoDup (List.map fst ms.(fnsems));
-    wf_initial_mrs: NoDup (List.map fst ms.(initial_mrs));
-  }
-  .
-
-  (*** using "Program Definition" makes the definition uncompilable; why?? ***)
-  Definition add (ms0 ms1: t): t := {|
-    (* sk := Sk.add md0.(sk) md1.(sk); *)
-    (* initial_ld := URA.add (t:=URA.pointwise _ _) md0.(initial_ld) md1.(initial_ld); *)
-    (* sem := fun _ '(Call fn args) => *)
-    (*          (if List.in_dec string_dec fn md0.(sk) then md0.(sem) else md1.(sem)) _ (Call fn args); *)
-    fnsems := app ms0.(fnsems) ms1.(fnsems);
-    initial_mrs := app ms0.(initial_mrs) ms1.(initial_mrs);
-  |}
-  .
-
-
-
-  Section INTERP.
-
-  Variable ms: t.
-
-  Let itr0: callE ~> itree Es :=
-    fun _ ce =>
-      trigger PushFrame;;
-      rv <- (ms.(sem) ce);;
-      trigger PopFrame;;
-      Ret rv
-  .
-  Let itr1: itree (rE +' eventE) val := (mrec itr0) _ (Call "main" nil).
-
-
-
+  (********************************************************************)
+  (*************************** Interpretation *************************)
+  (********************************************************************)
   Definition r_state: Type := ((mname -> Σ) * list Σ).
   Definition handle_rE `{eventE -< E}: rE ~> stateT r_state (itree E) :=
     fun _ e '(mrs, frs) =>
@@ -202,12 +154,211 @@ Section MODSEM.
       end.
   Definition interp_rE `{eventE -< E}: itree (rE +' E) ~> stateT r_state (itree E) :=
     State.interp_state (case_ (handle_rE) State.pure_state).
+
+  Definition interp_Es A (prog: callE ~> itree Es) (itr0: itree Es A) (st0: r_state) :=
+    interp_rE (interp_mrec prog itr0) st0
+  .
+
+  Lemma interp_Es_bind
+        (prog: callE ~> itree Es)
+        A B
+        (itr: itree Es A) (ktr: A -> itree Es B)
+        st0
+    :
+      interp_Es prog (v <- itr ;; ktr v) st0 =
+      '(st1, v) <- interp_Es prog (itr) st0 ;; interp_Es prog (ktr v) st1
+  .
+  Proof.
+    unfold interp_Es.
+    unfold interp_rE.
+    rewrite interp_mrec_bind.
+    rewrite interp_state_bind.
+    grind.
+  Qed.
+
+  Lemma interp_Es_tau
+        (prog: callE ~> itree Es)
+        A
+        (itr: itree Es A)
+        st0
+    :
+      interp_Es prog (tau;; itr) st0 = tau;; interp_Es prog itr st0
+  .
+  Proof.
+    unfold interp_Es.
+    unfold interp_rE.
+    rewrite unfold_interp_mrec. ss.
+    rewrite interp_state_tau.
+    grind.
+  Qed.
+
+  Lemma interp_Es_ret
+        T
+        prog st0 (v: T)
+    :
+      interp_Es prog (Ret v) st0 = Ret (st0, v)
+  .
+  Proof.
+    unfold interp_Es. unfold interp_rE.
+    rewrite unfold_interp_mrec. ss.
+    rewrite interp_state_ret. ss.
+  Qed.
+
+  Lemma interp_Es_callE
+        p st0
+        (* (e: Es Σ) *)
+        (e: callE val)
+    :
+      interp_Es p (trigger e) st0 = tau;; (interp_Es p (p val e) st0)
+  .
+  Proof.
+    unfold interp_Es. unfold interp_rE. rewrite interp_mrec_hit. cbn.
+    rewrite interp_state_tau. grind.
+  Qed.
+
+  Lemma interp_Es_rE
+        p st0
+        (* (e: Es Σ) *)
+        T
+        (e: rE T)
+    :
+      interp_Es p (trigger e) st0 =
+      '(st1, r) <- handle_rE e st0;;
+      tau;; tau;;
+      Ret (st1, r)
+      (* interp_state (case_ handle_rE pure_state) (tau;; Ret r) st1 *)
+  .
+  Proof.
+    unfold interp_Es. unfold interp_rE.
+    (* rewrite unfold_interp_mrec. cbn. *)
+    unfold Es.
+    rewrite interp_mrec_miss with (D:=callE) (E:=rE +' eventE) (F:=rE) (a:=e).
+    rewrite interp_state_bind.
+    rewrite interp_state_trigger. irw. grind. irw. grind.
+    rewrite interp_state_tau. grind.
+    rewrite interp_state_ret. ss.
+  Qed.
+
+  Lemma interp_Es_eventE
+        p st0
+        (* (e: Es Σ) *)
+        T
+        (e: eventE T)
+    :
+      interp_Es p (trigger e) st0 = r <- trigger e;; tau;; tau;; Ret (st0, r)
+  .
+  Proof.
+    unfold interp_Es. unfold interp_rE.
+    (* rewrite unfold_interp_mrec. cbn. *)
+    unfold Es.
+    rewrite interp_mrec_miss with (D:=callE) (E:=rE +' eventE) (F:=eventE) (a:=e).
+    rewrite interp_state_bind.
+    rewrite interp_state_trigger. irw. unfold pure_state.
+    unfold resum, ReSum_id, id_, Id_IFun.
+    irw. grind. irw. grind.
+    rewrite interp_state_tau. grind.
+    rewrite interp_state_ret. ss.
+  Qed.
+
+  Lemma interp_Es_triggerUB
+        (prog: callE ~> itree Es)
+        st0
+        A
+    :
+      (interp_Es prog (triggerUB) st0: itree eventE (_ * A)) = triggerUB
+  .
+  Proof.
+    unfold triggerUB. rewrite interp_Es_bind. rewrite interp_Es_eventE.
+    irw. grind.
+  Qed.
+
+  Lemma interp_Es_triggerNB
+        (prog: callE ~> itree Es)
+        st0
+        A
+    :
+      (interp_Es prog (triggerNB) st0: itree eventE (_ * A)) = triggerNB
+  .
+  Proof.
+    unfold triggerNB. rewrite interp_Es_bind. rewrite interp_Es_eventE.
+    irw. grind.
+  Qed.
+
+End EVENTS.
+
+Notation "f '?'" := (unwrapU f) (at level 60, only parsing).
+Notation "f '﹗'" := (unwrapN f) (at level 60, only parsing).
+
+
+
+
+
+
+Module ModSem.
+Section MODSEM.
+
+  (* Record t: Type := mk { *)
+  (*   state: Type; *)
+  (*   local_data: Type; *)
+  (*   step (skenv: SkEnv.t) (st0: state) (ev: option event) (st1: state): Prop; *)
+  (*   state_sort: state -> sort; *)
+  (*   initial_local_data: local_data; *)
+  (*   sk: Sk.t; *)
+  (*   name: string; *)
+  (* } *)
+  (* . *)
+
+  Context `{Σ: GRA.t}.
+
+  Record t: Type := mk {
+    (* initial_ld: mname -> GRA; *)
+    fnsems: list (fname * (list val -> itree Es val));
+    initial_mrs: list (mname * Σ);
+  }
+  .
+
+  Record wf (ms: t): Prop := mk_wf {
+    wf_fnsems: NoDup (List.map fst ms.(fnsems));
+    wf_initial_mrs: NoDup (List.map fst ms.(initial_mrs));
+  }
+  .
+
+  (*** using "Program Definition" makes the definition uncompilable; why?? ***)
+  Definition add (ms0 ms1: t): t := {|
+    (* sk := Sk.add md0.(sk) md1.(sk); *)
+    (* initial_ld := URA.add (t:=URA.pointwise _ _) md0.(initial_ld) md1.(initial_ld); *)
+    (* sem := fun _ '(Call fn args) => *)
+    (*          (if List.in_dec string_dec fn md0.(sk) then md0.(sem) else md1.(sem)) _ (Call fn args); *)
+    fnsems := app ms0.(fnsems) ms1.(fnsems);
+    initial_mrs := app ms0.(initial_mrs) ms1.(initial_mrs);
+  |}
+  .
+
+
+
+  Section INTERP.
+
+  Variable ms: t.
+
+  Definition prog: callE ~> itree Es :=
+    fun _ '(Call fn args) =>
+      '(_, sem) <- (List.find (fun fnsem => dec fn (fst fnsem)) ms.(fnsems))?;;
+      trigger PushFrame;;
+      rv <- (sem args);;
+      trigger PopFrame;;
+      Ret rv
+  .
+
+
+
   Definition initial_r_state: r_state :=
     (fun mn => match List.find (fun mnr => dec mn (fst mnr)) ms.(initial_mrs) with
                | Some r => snd r
                | None => ε
                end, [ε]). (*** we have a dummy-stack here ***)
-  Definition initial_itr: itree (eventE) val := assume(<<WF: wf ms>>);; snd <$> (interp_rE itr1) initial_r_state.
+  Definition initial_itr: itree (eventE) val :=
+    assume(<<WF: wf ms>>);;
+    snd <$> interp_Es prog (prog (Call "main" nil)) initial_r_state.
 
 
 
