@@ -26,7 +26,7 @@ Section PROOF.
     fun varg =>
       match varg with
       | [Vint n] =>
-        if dec n 0
+        if dec n 0%Z
         then Ret (Vint 0)
         else m <- trigger (Call "f" [Vint (n - 1)]);; r <- (vadd (Vint n) m)?;; Ret r
       | _ => triggerUB

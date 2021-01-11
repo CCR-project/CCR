@@ -59,13 +59,17 @@ Section PROOF.
   |}
   .
 
+  Local Opaque GRA.to_URA.
+  Infix "⋅" := URA.add (at level 50, left associativity).
+  Notation "(⋅)" := URA.add (only parsing).
   Theorem correct: Beh.of_program (Mod.interp FG1) <1= Beh.of_program (Mod.interp FG2).
   Proof.
     ii.
-    eapply adequacy_type with (ftb:=FFtb++GFtb) in PR. cbn in *.
-    rp; try apply PR; cycle 1.
-    { refl. }
-    clear PR. f_equal.
+    eapply adequacy_type with (ftb:=FFtb++GFtb) in PR.
+    { ss. }
+    { ss. }
+    { ss. admit "Fix me". }
+    cbn in *. unfold ε. rewrite ! URA.unit_id. apply URA.wf_unit.
   Qed.
 
 

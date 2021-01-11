@@ -59,18 +59,39 @@ Section PROOF.
   |}
   .
 
+  Theorem padding_wf
+          A
+          `{@GRA.inG A Σ}
+          (a: A)
+          (WF: URA.wf a)
+    :
+      URA.wf (GRA.padding a)
+  .
+  Proof.
+    ss. ii. unfold GRA.padding.  des_ifs; cycle 1.
+    { apply URA.wf_unit. }
+    ss. unfold PCM.GRA.cast_ra, eq_rect, eq_sym. destruct GRA.inG_prf. ss.
+  Qed.
+
+  Local Opaque GRA.to_URA.
+  Infix "⋅" := URA.add (at level 50, left associativity).
+  Notation "(⋅)" := URA.add (only parsing).
   Theorem correct: Beh.of_program (Mod.interp MemMain1) <1= Beh.of_program (Mod.interp MemMain2).
   Proof.
     ii.
+    set (global_stb:=MemStb++MainStb).
     set (global_ftb:=MemFtb++MainFtb).
     (* clearbody global_stb. *)
     Local Opaque MemStb.
     Local Opaque Mem1.MemStb.
     Local Opaque MainStb.
-    eapply adequacy_type with (ftb:=global_ftb) in PR. cbn in *.
-    rp; try apply PR; cycle 1.
-    { refl. }
-    clear PR. f_equal.
+    eapply adequacy_type with (ftb:=global_ftb) in PR.
+    { ss. }
+    { ss. instantiate (1:=global_stb). admit "ez". }
+    { ss. }
+    ss. unfold compose. ss. unfold ε. rewrite ! URA.unit_id. rewrite ! URA.unit_idl.
+    eapply padding_wf; et. ss. esplits; et.
+    rr. esplits; et. ss.
   Qed.
 
 End PROOF.
