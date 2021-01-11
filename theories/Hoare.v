@@ -14,114 +14,13 @@ Set Implicit Arguments.
 
 
 
-(***
-r <- Take;;
-FAdd(r);; <-------------------------- illegal in some sense
-assume((blk |-> R) <= r \/ (blk |-> G) <= r \/ (blk |-> B) <= r);;  (iProp???)
-meta-assume(list mname(for modular reasoning), current stackframe);;
-
-r <- Choose;;
-FSub(r);; := Get;; Choose;; guarantee;; Set;;
-guarantee(blk |-> v <= r);;
-(call f);;
-r <- Take;;
-FAdd(r);; <-------------------------- illegal in some sense
-assume(some_other_resource <= r);;
-meta-assume(list mname(for modular reasoning), current stackframe);;
-
-r <- Choose;;
-FSub(r);;
-guarantee(blk |-> v <= r);;
-***)
-
-(***
-HoareFun := FPush;; [[boilerplate]] real_code [[boilerplate]] FPop;;
-real_code := itree, using HoareCall, not benign call
-             calling meta-assume is allowed. "list mname" is hard-coded in the module.
-HoareCall := [[boilerplate]] call [[boilerplate]]
-
-the illegal update (FAdd(r)) is only allowed in boilerplate code.
-FPush/FPop is only allowed in boilerplate code.
-***)
-
-(***
-FPush
-  r <- Take;
-  assume(P /\ IP r);
-  cur <- FGet; FPut (cur * r);
-
-
-
-    r <- Choose;
-    guarantee(P /\ IP r);
-    cur <- FGet; cur' <- Choose; guarantee(cur' * r = cur); FPut cur';
-      call;
-    ...
-    ...
-    ...
-
-  ...
-  ...
-  ...
-FPop
-
-NB: this "discarded" resource is *actually* discarded; the user can't access it in the real_code
-***)
-
-(***
-Where does the `Function Locality` appear in our scenario?
-Use Rely/Guarantee in simulation technique.
-
-
-
-FPush
-  r <- Take;
-  assume(P /\ IP r);
-  cur <- FGet; FPut (cur * r);
-
-
-
-    r <- Choose;
-    guarantee(P /\ IP r);
-    cur <- FGet; cur' <- Choose; guarantee(cur' * r = cur); FPut cur';
-      call;
-    ...
-    ...
-    ...
-
-  ...
-  ...
-  ...
-FPop
-
-***)
 Section PROOF.
   (* Context {myRA} `{@GRA.inG myRA Σ}. *)
   Context {Σ: GRA.t}.
   Let GURA: URA.t := GRA.to_URA Σ.
   Local Existing Instance GURA.
   Variable mn: mname.
-  Context `{X: Type}. (*** a meta-variable ***)
-
-  (* Definition HoareFun *)
-  (*            (I: URA.car -> Prop) *)
-  (*            (P: URA.car -> list val -> Prop) *)
-  (*            (Q: URA.car -> list val -> URA.car -> val -> Prop) *)
-  (*            (f: list val -> itree Es val): *)
-  (*   list val -> itree Es val := *)
-  (*   fun varg => *)
-  (*     rarg <- trigger (Take URA.car);; trigger (Forge rarg);; (*** virtual resource passing ***) *)
-  (*     assume(P rarg varg);; (*** precondition ***) *)
-  (*     mopen <- trigger (MGet mn);; assume(I mopen);; (*** opening the invariant ***) *)
-
-  (*     vret <- f varg;; (*** body ***) *)
-
-  (*     mclose <- trigger (MGet mn);; guarantee(I mclose);; (*** closing the invariant ***) *)
-  (*     rret <- trigger (Choose URA.car);; guarantee(Q rarg varg rret vret);; (*** postcondition ***) *)
-  (*     trigger (Discard rret);; (*** virtual resource passing ***) *)
-
-  (*     Ret vret (*** return ***) *)
-  (* . *)
+  Context `{X: Type}.
 
   Definition HoareFun
              (P: X -> list val -> Σ -> Prop)
@@ -161,114 +60,6 @@ Section PROOF.
       Ret vret (*** return to body ***)
   .
 
-  (* Definition HoareFunCanceled *)
-  (*            (body: itree Es unit): list val -> itree Es val := fun varg => *)
-  (*   body;; (*** "rudiment": we don't remove extcalls because of termination-sensitivity ***) *)
-  (*   vret <- trigger (Choose _);; *)
-  (*   Ret vret (*** return ***) *)
-  (* . *)
-
-  (* Definition HoareCallCanceled: *)
-  (*   fname -> list val -> itree Es val := *)
-  (*   fun fn varg => *)
-  (*     vret <- trigger (Call fn varg);; (*** call ***) *)
-  (*     Ret vret (*** return to body ***) *)
-  (* . *)
-
-  (* Section PLAYGROUND. *)
-
-  (*   (*** Q can mention the resource in the P ***) *)
-  (*   Let HoareFun_sophis *)
-  (*              (mn: mname) *)
-  (*              (P: URA.car -> Prop) *)
-  (*              (Q: URA.car -> val -> URA.car -> Prop) *)
-  (*              (f: itree Es unit): itree Es val := *)
-  (*     rarg <- trigger (Take URA.car);; trigger (Forge rarg);; (*** virtual resource passing ***) *)
-  (*     assume(P rarg);; (*** precondition ***) *)
-  (*     mopen <- trigger (MGet mn);; *)
-
-  (*     f;; (*** it is a "rudiment": we don't remove extcalls because of termination-sensitivity ***) *)
-  (*     vret <- trigger (Choose _);; *)
-
-  (*     mclose <- trigger (MGet mn);; *)
-  (*     rret <- trigger (Choose URA.car);; trigger (Discard rret);; (*** virtual resource passing ***) *)
-  (*     guarantee(Q rarg vret rret);; (*** postcondition ***) *)
-
-  (*     Ret vret (*** return ***) *)
-  (*   . *)
-
-  (*   Let HoareFun_sophis2 *)
-  (*              (mn: mname) *)
-  (*              (P: URA.car -> Prop) *)
-  (*              (Q: URA.car -> val -> URA.car -> Prop) *)
-  (*              (f: itree Es unit): itree Es val := *)
-  (*     _rarg_ <- trigger (Take _);; *)
-  (*     HoareFun mn (P /1\ (eq _rarg_)) (Q _rarg_) f *)
-  (*   . *)
-
-  (* End PLAYGROUND. *)
-
-
-
-
-  (* Definition HoareCall *)
-  (*            (I: URA.car -> Prop) *)
-  (*            (P: URA.car -> list val -> Prop) *)
-  (*            (Q: URA.car -> list val -> URA.car -> val -> Prop): *)
-  (*   fname -> list val -> itree Es val := *)
-  (*   fun fn varg => *)
-  (*     mclose <- trigger (MGet mn);; guarantee(I mclose);; (*** closing the invariant ***) *)
-  (*     rarg <- trigger (Choose URA.car);; guarantee(P rarg varg);; (*** precondition ***) *)
-  (*     trigger (Discard rarg);; (*** virtual resource passing ***) *)
-
-  (*     vret <- trigger (Call fn varg);; (*** call ***) *)
-
-  (*     rret <- trigger (Take URA.car);; trigger (Forge rret);; (*** virtual resource passing ***) *)
-  (*     assume(Q rarg varg rret vret);; (*** postcondition ***) *)
-  (*     mopen <- trigger (MGet mn);; assume(I mopen);; (*** opening the invariant ***) *)
-
-  (*     Ret vret (*** return to body ***) *)
-  (* . *)
-
-
-
-  (* Definition HoareFun *)
-  (*            (INV: URA.car -> Prop) *)
-  (*            (P: URA.car -> list val -> Prop) *)
-  (*            (Q: URA.car -> list val -> URA.car -> val -> Prop) *)
-  (*            (f: list val -> itree Es val): *)
-  (*   list val -> itree Es val := *)
-  (*   fun vs0 => *)
-  (*     ld0 <- trigger (MGet mn);; *)
-  (*     r <- trigger (Take URA.car);; *)
-  (*     assume(P ld0 r vs0);; *)
-  (*     FAdd r;; *)
-
-  (*     assume(<<WTY: URA.wf (URA.add ld0 r)>>);; *)
-  (*     vr <- (f vs0);; *)
-
-  (*     ld1 <- trigger (MGet mn);; *)
-  (*     rr <- trigger (Choose URA.car);; *)
-  (*     guarantee(Q ld0 r vs0 ld1 rr vr);; *)
-  (*     FSub rr;; *)
-  (*     Ret vr *)
-  (* . *)
-
-  (* Definition HoareCall *)
-  (*            (P: URA.car -> URA.car -> list val -> Prop) *)
-  (*            (Q: URA.car -> URA.car -> list val -> URA.car -> URA.car -> val -> Prop): *)
-  (*   fname -> list val -> itree (callE +' mdE +' fnE +' eventE) val := *)
-  (*   fun fn vs0 => *)
-  (*     ld0 <- trigger (MGet mn);; *)
-  (*     r <- trigger (Choose URA.car);; *)
-  (*     FSub r;; *)
-  (*     guarantee(P ld0 r vs0);; *)
-
-  (*     vr <- trigger (Call fn vs0);; *)
-
-  (*     Ret vr *)
-  (* . *)
-
 End PROOF.
 
 
@@ -285,9 +76,9 @@ End PROOF.
 
 
 
-Definition map_fst A0 A1 B (f: A0 -> A1): (A0 * B) -> (A1 * B) := fun '(a, b) => (f a, b).
-Definition map_snd A B0 B1 (f: B0 -> B1): (A * B0) -> (A * B1) := fun '(a, b) => (a, f b).
 (*** TODO: Move to Coqlib. TODO: Somehow use case_ ??? ***)
+(* Definition map_fst A0 A1 B (f: A0 -> A1): (A0 * B) -> (A1 * B) := fun '(a, b) => (f a, b). *)
+(* Definition map_snd A B0 B1 (f: B0 -> B1): (A * B0) -> (A * B1) := fun '(a, b) => (a, f b). *)
 
 Section CANCEL.
 
@@ -388,9 +179,8 @@ If this feature is needed; we can extend it then. At the moment, I will only all
 
   Definition ms_src: ModSem.t := {|
     ModSem.fnsems := List.map (fun '(fn, body) => (fn, fun_to_src body)) ftb;
-    (* ModSem.initial_mrs := List.map (map_snd (fun _ => ε)) ms_tgt.(ModSem.initial_mrs); *)
     ModSem.initial_mrs := [];
-    (*** note: we don't use resources, so making everything as a unit ***)
+    (*** Note: we don't use resources, so making everything as a unit ***)
   |}
   .
 
@@ -405,67 +195,6 @@ If this feature is needed; we can extend it then. At the moment, I will only all
 
 
   Require Import SimSTS.
-
-  (* Variable match_states: state (Mod.interp md_tgt) -> state (Mod.interp md_tgt) -> Prop. *)
-
-  (* Let adequacy_type_aux *)
-  (*     st_src0 st_tgt0 *)
-  (*     (SIM: match_states st_src0 st_tgt0) *)
-  (*   : *)
-  (*     Beh.of_state (Mod.interp md_tgt) st_tgt0 <1= Beh.of_state (Mod.interp md_tgt) st_src0 *)
-  (* . *)
-  (* Proof. *)
-  (*   revert_until match_states. pcofix CIH. i. punfold PR. *)
-  (*   inv PR. *)
-  (*   - ss. *)
-  (* Qed. *)
-  Lemma interp_state_bind:
-  forall (E F : Type -> Type) (A B S : Type) (f : forall T : Type, E T -> S -> itree F (S * T)) (t : itree E A)
-    (k : A -> itree E B) (s : S),
-  interp_state f (` x : _ <- t;; k x) s = ` st : S * A <- interp_state f t s;; interp_state f (k (snd st)) (fst st)
-  .
-  Proof. i. f. apply interp_state_bind. Qed.
-
-  Lemma interp_state_vis:
-  forall (E F : Type -> Type) (S T U : Type) (e : E T) (k : T -> itree E U) (h : forall T0 : Type, E T0 -> stateT S (itree F) T0)
-    (s : S), interp_state h (Vis e k) s = ` sx : S * T <- h T e s;; (tau;; interp_state h (k (snd sx)) (fst sx))
-  .
-  Proof.
-    i. f. apply interp_state_vis.
-  Qed.
-
-  Lemma interp_state_tau :
-    forall (E F : Type -> Type) (S T : Type) (t : itree E T) (h : forall T0 : Type, E T0 -> stateT S (itree F) T0) (s : S),
-      interp_state h (tau;; t) s = (tau;; interp_state h t s)
-  .
-  Proof.
-    i. f. apply interp_state_tau.
-  Qed.
-
-  Lemma interp_state_ret:
-  forall (E F : Type -> Type) (R S : Type) (f : forall T : Type, E T -> S -> itree F (S * T)) (s : S) (r : R),
-  interp_state f (Ret r) s = Ret (s, r)
-  .
-  Proof.
-    i. f. apply interp_state_ret.
-  Qed.
-
-  Lemma unfold_interp:
-    forall (E F : Type -> Type) (R : Type) (f : forall T : Type, E T -> itree F T) (t : itree E R),
-      interp f t = _interp f (observe t)
-  .
-  Proof.
-    i. f. apply unfold_interp.
-  Qed.
-  Lemma interp_ret:
-    forall (E F : Type -> Type) (R : Type) (f : forall T : Type, E T -> itree F T) (x : R), interp f (Ret x) = Ret x.
-  Proof. i. f. apply interp_ret. Qed.
-
-  Lemma interp_tau:
-forall {E F : Type -> Type} {R : Type} {f : forall T : Type, E T -> itree F T} (t : itree E R),
-interp f (tau;; t) = (tau;; interp f t)
-  .
-  Proof. i. f. apply interp_tau. Qed.
 
   Definition my_interp A (prog: callE ~> itree Es) (itr0: itree Es A) (st0: ModSem.r_state) :=
     ModSem.interp_rE (interp_mrec prog itr0) st0
@@ -517,44 +246,6 @@ interp f (tau;; t) = (tau;; interp f t)
     rewrite unfold_interp_mrec. ss.
     rewrite interp_state_ret. ss.
   Qed.
-
-  Lemma interp_mrec_hit:
-    forall (D E : Type -> Type) (ctx : forall T : Type, D T -> itree (D +' E) T) (U : Type) (a : D U),
-      interp_mrec ctx (trigger a) = (tau;; interp_mrec ctx (ctx _ a))
-  .
-  Proof.
-    i. rewrite unfold_interp_mrec. ss.
-    unfold resum, ReSum_id, id_, Id_IFun. rewrite bind_ret_r. ss.
-  Qed.
-
-
-  Definition tauK {E R}: R -> itree E R := fun r => tau;; Ret r.
-  Hint Unfold tauK.
-
-  Definition idK {E R}: R -> itree E R := fun r => Ret r.
-  Hint Unfold idK.
-
-  Lemma idK_spec E R (i0: itree E R): i0 = i0 >>= idK. Proof. unfold idK. irw. refl. Qed.
-
-  (*** TODO: I don't want "F" here, but it is technically needed. Report it to itree people? ***)
-  Lemma interp_mrec_miss:
-    (* forall (D E F: Type -> Type) `{F -< E} (ctx : forall T : Type, D T -> itree (D +' E) T) (U : Type) (a : F U), *)
-    forall (D E F: Type -> Type) `{F -< E} (ctx : forall T : Type, D T -> itree (D +' E) T) (U : Type) (a : F U),
-      interp_mrec ctx (trigger a) = x <- (trigger a);; tau;; Ret x
-      (* (trigger a) >>= tauK *)
-  .
-  Proof.
-    i. rewrite unfold_interp_mrec. cbn.
-    unfold trigger. irw.
-    grind. irw. ss.
-  Qed.
-
-  (*** TODO: interp_trigger_eqit does not exist. report to itree people? ***)
-  Lemma interp_state_trigger:
-  forall (E F : Type -> Type) (R S : Type) (e : E R) (f : forall T : Type, E T -> stateT S (itree F) T) (s : S),
-  interp_state f (ITree.trigger e) s = ` x : S * R <- f R e s;; (tau;; Ret x)
-  .
-  Proof. i. f. apply interp_state_trigger_eqit. Qed.
 
   Lemma my_interp_callE
         p st0

@@ -25,45 +25,6 @@ Local Open Scope nat_scope.
 
 
 
-
-
-
-
-
-
-Definition tauK {E R}: R -> itree E R := fun r => tau;; Ret r.
-
-
-
-
-Lemma interp_vis:
-  forall (E F : Type -> Type) (R : Type) (f : forall T : Type, E T -> itree F T) (U : Type) (e : E U) (k : U -> itree E R),
-  interp f (Vis e k) = ` x : U <- f U e;; (tau;; interp f (k x))
-.
-Proof. i. f. eapply interp_vis. Qed.
-
-Lemma interp_ret: forall (E F : Type -> Type) (R : Type) (f : forall T : Type, E T -> itree F T) (x : R),
-    interp f (Ret x) = Ret x.
-Proof. i. f. eapply interp_ret. Qed.
-
-Lemma interp_tau: forall (E F : Type -> Type) (R : Type) (f : forall T : Type, E T -> itree F T) (t : itree E R),
-  interp f (tau;; t) = (tau;; interp f t).
-Proof. i. f. eapply interp_tau. Qed.
-
-Lemma interp_trigger:
-  forall (E F : Type -> Type) (R : Type) (f : forall T : Type, E T -> itree F T) (e : E R),
-  interp f (ITree.trigger e) = x <- (f R e);; tau;; Ret x
-  (* (f R e) >>= tauK *)
-.
-Proof.
-  i. unfold ITree.trigger.
-  rewrite interp_vis. f_equiv. apply func_ext. i. unfold tauK. repeat f_equiv. rewrite interp_ret. ss.
-Qed.
-
-Hint Unfold tauK.
-
-
-
 (*** black + delta --> new_black ***)
 Definition add_delta_to_black `{M: URA.t} (b: URA.auth_t) (w: URA.auth_t): URA.auth_t :=
   match b, w with
