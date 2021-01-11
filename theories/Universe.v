@@ -128,4 +128,4 @@ Module Mem.
 
 End Mem.
 
-Axiom syscall_sem: fname -> Mem.t -> list val -> (event * Mem.t * val).
+Axiom syscall_sem: fname -> list val -> (event * val).

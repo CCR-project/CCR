@@ -8,7 +8,7 @@ Set Implicit Arguments.
 Inductive sort: Type :=
 | angelic
 | demonic
-| final (retv: val)
+| final (retv: Z)
 | vis
 .
 

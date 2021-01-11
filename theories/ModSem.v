@@ -15,11 +15,7 @@ Section EVENTS.
   Variant eventE: Type -> Type :=
   | Choose (X: Type): eventE X
   | Take X: eventE X
-  | Syscall (fn: fname) (m: Mem.t) (args: list val): eventE (Mem.t * val)
-  (*** Syscall should be able to look at current memory (full information).
-       Normal modules will call Memory (Language) module in order to call system call,
-       because Memory (Language) module is the only one with access to Mem.t.
-   ***)
+  | Syscall (fn: fname) (args: list val): eventE val
   .
 
   Inductive callE: Type -> Type :=
@@ -220,10 +216,14 @@ Section MODSEM.
   Definition state_sort (st0: state): sort :=
     match (observe st0) with
     | TauF _ => demonic
-    | RetF rv => final rv
+    | RetF rv =>
+      match rv with
+      | Vint rv => final rv
+      | _ => angelic
+      end
     | VisF (Choose X) k => demonic
     | VisF (Take X) k => angelic
-    | VisF (Syscall fn args m0) k => vis
+    | VisF (Syscall fn args) k => vis
     end
   .
 
@@ -241,10 +241,10 @@ Section MODSEM.
     :
       step (Vis (subevent _ (Take X)) k) None (k x)
   | step_syscall
-      fn args m0 k ev m1 rv
-      (SYSCALL: syscall_sem fn args m0 = (ev, m1, rv))
+      fn args k ev rv
+      (SYSCALL: syscall_sem fn args = (ev, rv))
     :
-      step (Vis (subevent _ (Syscall fn args m0)) k) (Some ev) (k (m1, rv))
+      step (Vis (subevent _ (Syscall fn args)) k) (Some ev) (k rv)
   .
 
   Program Definition interp: semantics := {|
