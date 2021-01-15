@@ -20,14 +20,6 @@ Section PROOF.
   (* Context `{@GRA.inG memRA Σ}. *)
 
   (***
-        return f(10);
-   ***)
-  Definition mainF: list val -> itree Es val :=
-    fun _ =>
-      trigger (Call "f" [Vint 10])
-  .
-
-  (***
     f(n) := if (n == 0) then 0 else (n + g(n-1))
   ***)
   Definition fF: list val -> itree Es val :=
@@ -42,7 +34,7 @@ Section PROOF.
   .
 
   Definition FSem: ModSem.t := {|
-    ModSem.fnsems := [("main", mainF) ; ("f", fF)];
+    ModSem.fnsems := [("f", fF)];
     ModSem.initial_mrs := [("F", ε)];
   |}
   .
