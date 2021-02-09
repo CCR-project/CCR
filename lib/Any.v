@@ -6,15 +6,22 @@ Set Implicit Arguments.
 Module Type AnyType.
 
   Parameter t: Type.
+  Parameter ty: t -> Type.
+  Parameter val: forall (a: t), (ty a).
   Parameter upcast: forall {T: Type}, T -> t.
   Parameter downcast: forall {T: Type}, t -> option T.
 
   Parameter upcast_inj: forall A B (a: A) (b: B) (EQ: upcast a = upcast b),
       <<EQ: A = B>> /\ <<EQ: a ~= b>>.
-  Parameter upcast_surj: forall A B a b (EQ: A = B) (EQ: a ~= b),
-      <<EQ: @upcast A a = @upcast B b>>.
+  (* Parameter upcast_surj: forall A B a b (EQ: A = B) (EQ: a ~= b), *) (*** <-- this is trivial ***)
+  (*     <<EQ: @upcast A a = @upcast B b>>. *)
 
   Parameter upcast_downcast: forall T (a: T), downcast (upcast a) = Some a.
+  (* Parameter downcast_intro: forall (a: t), @downcast (ty a) a = Some (val a). *)
+  Parameter downcast_intro: forall (a: t) T (v: T) (TY: (ty a) = T) (VAL: (val a) ~= v), downcast a = Some v.
+  Parameter downcast_elim: forall (a: t) T (v: T) (CAST: downcast a = Some v), (<<TY: (ty a) = T>>) /\ (<<VAL: (val a) ~= v>>).
+  Parameter upcast_eta: forall (a: t), <<CAST: a = upcast (val a)>>.
+  (* Parameter downcast_ty: forall (a: t), exists x, @downcast (ty a) a = Some x. *)
 
   (* Parameter patmat: forall R (body: forall (T: Type), T -> R), t -> R. *)
   (* Parameter patmat_spec: forall R (body: forall (T: Type), T -> R) *)
@@ -39,16 +46,16 @@ Module Any: AnyType.
     - apply None.
   Defined.
 
-  (* Lemma downcast_elim *)
-  (*       a T (v: T) *)
-  (*       (CAST: downcast a = Some v) *)
-  (*   : *)
-  (*     <<TY: a.(ty) = T>> /\ <<VAL: a.(val) ~= v>> *)
-  (* . *)
-  (* Proof. *)
-  (*   unfold downcast in *. des_ifs. ss. *)
-  (*   simpl_depind. eauto. *)
-  (* Qed. *)
+  Lemma downcast_elim
+        a T (v: T)
+        (CAST: downcast a = Some v)
+    :
+      <<TY: a.(ty) = T>> /\ <<VAL: a.(val) ~= v>>
+  .
+  Proof.
+    unfold downcast in *. des_ifs. ss.
+    simpl_depind. eauto.
+  Qed.
 
   Lemma downcast_intro
         a T (v: T)
@@ -61,6 +68,8 @@ Module Any: AnyType.
     unfold downcast in *. des_ifs. ss.
     dependent destruction e. ss.
   Qed.
+  (* Lemma downcast_intro: forall (a: t), @downcast (ty a) a = Some (val a). *)
+  (* Proof. i. unfold downcast in *. des_ifs. ss. dependent destruction e; ss. Qed. *)
 
   Lemma upcast_downcast
         T (a: T)
@@ -151,6 +160,14 @@ Module Any: AnyType.
   (*                           T (t: T), (patmat body (upcast t): R) = body _ t. *)
   (* Proof. ss. Qed. *)
 
+  Lemma downcast_ty: forall (a: t), exists x, @downcast (ty a) a = Some x.
+  Proof.
+    i. exists a.(val). rewrite <- upcast_downcast. f_equal.
+    destruct a. refl.
+  Qed.
+
 End Any.
+
+Definition pair (a b: Any.t): Any.t := Any.upcast (Any.val a, Any.val b).
 
 Goal Any.upcast 0 = Any.upcast () -> False. i. Fail injection H. Abort.
