@@ -7,6 +7,7 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import Ordinal ClassicalOrdinal.
+Require Import Any.
 
 Generalizable Variables E R A B C X Y Σ.
 
@@ -23,9 +24,9 @@ Section PROOF.
   Context `{X: Type}.
 
   Definition HoareFun
-             (P: X -> list val -> Σ -> Prop)
-             (Q: X -> val -> Σ -> Prop)
-             (body: list val -> itree Es val): list val -> itree Es val := fun varg =>
+             (P: X -> Any.t -> Σ -> Prop)
+             (Q: X -> Any.t -> Σ -> Prop)
+             (body: Any.t -> itree Es Any.t): Any.t -> itree Es Any.t := fun varg =>
     x <- trigger (Take X);;
     rarg <- trigger (Take Σ);; trigger (Forge rarg);; (*** virtual resource passing ***)
     trigger (CheckWf mn);;
@@ -42,9 +43,9 @@ Section PROOF.
   .
 
   Definition HoareCall
-             (P: X -> list val -> Σ -> Prop)
-             (Q: X -> val -> Σ -> Prop):
-    fname -> list val -> itree Es val :=
+             (P: X -> Any.t -> Σ -> Prop)
+             (Q: X -> Any.t -> Σ -> Prop):
+    fname -> Any.t -> itree Es Any.t :=
     fun fn varg =>
       '(marg, farg) <- trigger (Choose _);; trigger (Put mn marg farg);; (*** updating resources in an abstract way ***)
       rarg <- trigger (Choose Σ);; trigger (Discard rarg);; (*** virtual resource passing ***)
@@ -88,15 +89,15 @@ Section CANCEL.
   | hCall
       (* (mn: mname) *)
       (* (P: list val -> Σ -> Prop) (Q: list val -> Σ -> val -> Σ -> Prop) *)
-      (fn: fname) (varg: list val): hCallE val
+      (fn: fname) (varg: Any.t): hCallE Any.t
   .
 
   (*** spec table ***)
   Record fspec: Type := mk {
     mn: mname;
     X: Type; (*** a meta-variable ***)
-    precond: X -> list val -> Σ -> Prop;
-    postcond: X -> val -> Σ -> Prop;
+    precond: X -> Any.t -> Σ -> Prop;
+    postcond: X -> Any.t -> Σ -> Prop;
   }
   .
 
@@ -130,7 +131,7 @@ Section CANCEL.
   .
 
   Definition body_to_tgt (mn: mname)
-             (body: list val -> itree (hCallE +' eventE) val): list val -> itree Es val :=
+             (body: Any.t -> itree (hCallE +' eventE) Any.t): Any.t -> itree Es Any.t :=
     fun varg => interp_hCallE_tgt mn (body varg)
   .
 
@@ -145,15 +146,15 @@ Section CANCEL.
                   ((fun T X => trigger X): eventE ~> itree Es))
   .
 
-  Definition body_to_src (body: list val -> itree (hCallE +' eventE) val): list val -> itree Es val :=
+  Definition body_to_src (body: Any.t -> itree (hCallE +' eventE) Any.t): Any.t -> itree Es Any.t :=
     fun varg => interp_hCallE_src (body varg)
   .
-  Definition fun_to_tgt (fn: fname) (body: list val -> itree (hCallE +' eventE) val): (list val -> itree Es val) :=
+  Definition fun_to_tgt (fn: fname) (body: Any.t -> itree (hCallE +' eventE) Any.t): (Any.t -> itree Es Any.t) :=
     match List.find (fun '(_fn, _) => dec fn _fn) stb with
     | Some (_, fs) => HoareFun fs.(mn) (fs.(precond)) (fs.(postcond)) (body_to_tgt fs.(mn) body)
     | _ => fun _ => triggerNB
     end.
-  Definition fun_to_src (body: list val -> itree (hCallE +' eventE) val): (list val -> itree Es val) :=
+  Definition fun_to_src (body: Any.t -> itree (hCallE +' eventE) Any.t): (Any.t -> itree Es Any.t) :=
     body_to_src body.
 
 (*** NOTE:
@@ -174,7 +175,7 @@ If this feature is needed; we can extend it then. At the moment, I will only all
   Let ms_tgt: ModSem.t := (Mod.get_modsem md_tgt (Sk.load_skenv md_tgt.(Mod.sk))).
 
   Variable stb: list (fname * fspec).
-  Variable ftb: list (fname * (list val -> itree (hCallE +' eventE) val)).
+  Variable ftb: list (fname * (Any.t -> itree (hCallE +' eventE) Any.t)).
   Hypothesis WTY: ms_tgt.(ModSem.fnsems) = List.map (fun '(fn, body) => (fn, fun_to_tgt stb fn body)) ftb.
 
   Definition ms_src: ModSem.t := {|
@@ -292,9 +293,9 @@ If this feature is needed; we can extend it then. At the moment, I will only all
   Ltac mstep := gstep; econs; eauto; [eapply from_nat_lt; ss|].
 
   Let adequacy_type_aux:
-    forall (R: Type) (RR: R -> R -> Prop) (TY: R = (ModSem.r_state * val)%type)
-           (REL: RR ~= (fun '(rs_src, v_src) '(rs_tgt, v_tgt) => wf rs_src rs_tgt /\ (v_src: val) = v_tgt))
-           st_src0 st_tgt0 (SIM: wf st_src0 st_tgt0) (i0: itree (hCallE +' eventE) val)
+    forall (R: Type) (RR: R -> R -> Prop) (TY: R = (ModSem.r_state * Any.t)%type)
+           (REL: RR ~= (fun '(rs_src, v_src) '(rs_tgt, v_tgt) => wf rs_src rs_tgt /\ (v_src: Any.t) = v_tgt))
+           st_src0 st_tgt0 (SIM: wf st_src0 st_tgt0) (i0: itree (hCallE +' eventE) Any.t)
            i_src i_tgt mn
            (SRC: i_src ~= (interp_Es (ModSem.prog ms_src) (interp_hCallE_src i0) st_src0))
            (TGT: i_tgt ~= (interp_Es (ModSem.prog ms_tgt) (interp_hCallE_tgt stb mn i0) st_tgt0))
@@ -536,9 +537,9 @@ wf (Σ c1 [mn := c2] + Σ l1 + (x0 + x1))
     unfold mrec.
     assert(TRANSL: simg eq (Ordinal.from_nat 100)
                         (x0 <- interp_Es (ModSem.prog ms_src)
-                                         ((ModSem.prog ms_src) _ (Call "main" [])) st_src0;; Ret (snd x0))
+                                         ((ModSem.prog ms_src) _ (Call "main" (Any.upcast tt))) st_src0;; Ret (snd x0))
                         (x0 <- interp_Es (ModSem.prog ms_src)
-                                         (interp_hCallE_src (trigger (hCall "main" []))) st_src0;; Ret (snd x0))).
+                                         (interp_hCallE_src (trigger (hCall "main" (Any.upcast tt)))) st_src0;; Ret (snd x0))).
     { clear SIM. unfold interp_hCallE_src. rewrite unfold_interp. ss. cbn. rewrite interp_Es_bind. rewrite interp_Es_callE.
       igo.
       pfold. econs; eauto.
@@ -554,9 +555,9 @@ wf (Σ c1 [mn := c2] + Σ l1 + (x0 + x1))
     }
     assert(TRANSR: simg eq (Ordinal.from_nat 100)
                         (x0 <- interp_Es (ModSem.prog ms_tgt)
-                                         (interp_hCallE_tgt stb "Main" (trigger (hCall "main" []))) st_tgt0;; Ret (snd x0))
+                                         (interp_hCallE_tgt stb "Main" (trigger (hCall "main" (Any.upcast tt)))) st_tgt0;; Ret (snd x0))
                         (x0 <- interp_Es (ModSem.prog ms_tgt)
-                                         ((ModSem.prog ms_tgt) val (Call "main" [])) st_tgt0;; Ret (snd x0))).
+                                         ((ModSem.prog ms_tgt) _ (Call "main" (Any.upcast tt))) st_tgt0;; Ret (snd x0))).
     { clear SIM. unfold interp_hCallE_tgt. rewrite unfold_interp. ss.
       cbn. rewrite interp_Es_bind. igo. des_ifs. ss.
       unfold HoareCall. rewrite ! interp_Es_bind. igo.
@@ -687,11 +688,11 @@ wf (Σ c1 [mn := c2] + Σ l1 + (x0 + x1))
         left. eapply simg_refl; ss.
     }
 
-    replace (x0 <- interp_Es (ModSem.prog ms_src) ((ModSem.prog ms_src) val (Call "main" [])) st_src0;; Ret (snd x0)) with
-        (x0 <- interp_Es (ModSem.prog ms_src) (interp_hCallE_src (trigger (hCall "main" []))) st_src0;; Ret (snd x0)); cycle 1.
+    replace (x0 <- interp_Es (ModSem.prog ms_src) ((ModSem.prog ms_src) _ (Call "main" (Any.upcast tt))) st_src0;; Ret (snd x0)) with
+        (x0 <- interp_Es (ModSem.prog ms_src) (interp_hCallE_src (trigger (hCall "main" (Any.upcast tt)))) st_src0;; Ret (snd x0)); cycle 1.
     { admit "hard -- by transitivity". }
-    replace (x0 <- interp_Es (ModSem.prog ms_tgt) ((ModSem.prog ms_tgt) val (Call "main" [])) st_tgt0;; Ret (snd x0)) with
-        (x0 <- interp_Es (ModSem.prog ms_tgt) (interp_hCallE_tgt stb "Main" (trigger (hCall "main" []))) st_tgt0;; Ret (snd x0)); cycle 1.
+    replace (x0 <- interp_Es (ModSem.prog ms_tgt) ((ModSem.prog ms_tgt) _ (Call "main" (Any.upcast tt))) st_tgt0;; Ret (snd x0)) with
+        (x0 <- interp_Es (ModSem.prog ms_tgt) (interp_hCallE_tgt stb "Main" (trigger (hCall "main" (Any.upcast tt)))) st_tgt0;; Ret (snd x0)); cycle 1.
     { admit "hard -- by transitivity". }
     replace (Ordinal.from_nat 98) with (Ordinal.add (Ordinal.from_nat 100) (Ordinal.from_nat 100)); cycle 1.
     { admit "ez". }

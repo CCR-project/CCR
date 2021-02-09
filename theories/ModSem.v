@@ -4,6 +4,7 @@ Require Import Universe.
 Require Import Skeleton.
 Require Import PCM.
 Require Import STS Behavior.
+Require Import Any.
 
 Generalizable Variables E R A B C X Y.
 
@@ -20,7 +21,8 @@ End AUX.
 
 
 
-
+(*** TODO: move to proper place ***)
+Opaque string_dec.
 
 
 
@@ -38,7 +40,7 @@ Section EVENTS.
   .
 
   Inductive callE: Type -> Type :=
-  | Call (fn: fname) (args: list val): callE val
+  | Call (fn: fname) (args: Any.t): callE Any.t
   .
 
   (* Notation "'Choose' X" := (trigger (Choose X)) (at level 50, only parsing). *)
@@ -207,9 +209,9 @@ Section EVENTS.
   Lemma interp_Es_callE
         p st0
         (* (e: Es Σ) *)
-        (e: callE val)
+        (e: callE Any.t)
     :
-      interp_Es p (trigger e) st0 = tau;; (interp_Es p (p val e) st0)
+      interp_Es p (trigger e) st0 = tau;; (interp_Es p (p _ e) st0)
   .
   Proof.
     unfold interp_Es. unfold interp_rE. rewrite interp_mrec_hit. cbn.
@@ -312,7 +314,7 @@ Section MODSEM.
 
   Record t: Type := mk {
     (* initial_ld: mname -> GRA; *)
-    fnsems: list (fname * (list val -> itree Es val));
+    fnsems: list (fname * (Any.t -> itree Es Any.t));
     initial_mrs: list (mname * Σ);
   }
   .
@@ -356,20 +358,20 @@ Section MODSEM.
                | Some r => snd r
                | None => ε
                end, [ε]). (*** we have a dummy-stack here ***)
-  Definition initial_itr: itree (eventE) val :=
+  Definition initial_itr: itree (eventE) Any.t :=
     assume(<<WF: wf ms>>);;
-    snd <$> interp_Es prog (prog (Call "main" nil)) initial_r_state.
+    snd <$> interp_Es prog (prog (Call "main" (Any.upcast tt))) initial_r_state.
 
 
 
-  Let state: Type := itree eventE val.
+  Let state: Type := itree eventE Any.t.
 
   Definition state_sort (st0: state): sort :=
     match (observe st0) with
     | TauF _ => demonic
     | RetF rv =>
-      match rv with
-      | Vint rv => final rv
+      match Any.downcast rv with
+      | Some (Vint rv) => final rv
       | _ => angelic
       end
     | VisF (Choose X) k => demonic

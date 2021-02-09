@@ -16,6 +16,7 @@ From ExtLib Require Import
      Core.RelDec
      Structures.Maps
      Data.Map.FMapAList.
+Require Import Any.
 
 Generalizable Variables E R A B C X Y.
 
@@ -184,8 +185,8 @@ Section SIM.
   Variable le: relation W.
   Hypothesis le_PreOrder: PreOrder le.
 
-  Variant _sim_itree (sim_itree: nat -> relation (st_local * (itree Es val)))
-    : nat -> relation (st_local * (itree Es val)) :=
+  Variant _sim_itree (sim_itree: nat -> relation (st_local * (itree Es Any.t)))
+    : nat -> relation (st_local * (itree Es Any.t)) :=
   | sim_itree_ret
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       (WF: wf (mrs_src0, mrs_tgt0))
@@ -401,13 +402,13 @@ Section SIM.
   Hint Unfold sim_itree.
   Hint Resolve sim_itree: paco.
 
-  Definition sim_fsem: relation (list val -> itree Es val) :=
+  Definition sim_fsem: relation (Any.t -> itree Es Any.t) :=
     (eq ==> (fun it_src it_tgt => forall mrs_src mrs_tgt (SIMMRS: wf (mrs_src, mrs_tgt)),
                  exists n, sim_itree n ((mrs_src, URA.unit), it_src)
                                      ((mrs_tgt, URA.unit), it_tgt)))%signature
   .
 
-  Definition sim_fnsem: relation (string * (list val -> itree Es val)) := RelProd eq sim_fsem.
+  Definition sim_fnsem: relation (string * (Any.t -> itree Es Any.t)) := RelProd eq sim_fsem.
 
 End SIM.
 

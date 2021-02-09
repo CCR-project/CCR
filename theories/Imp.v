@@ -63,6 +63,8 @@ Import Monads.
 Import MonadNotation.
 Local Open Scope monad_scope.
 Local Open Scope string_scope.
+
+Require Import Any.
 (* end hide *)
 
 (* ========================================================================== *)
@@ -426,7 +428,7 @@ Section MODSEM.
 
   Set Typeclasses Depth 4.
   Definition modsem: ModSem.t := {|
-    ModSem.fnsems := List.map (fun '(fn, st) => (fn, fun _ => resum_itr (eval_imp st;; Ret (Vint 0)))) program;
+    ModSem.fnsems := List.map (fun '(fn, st) => (fn, fun _ => resum_itr (eval_imp st;; Ret (Any.upcast (Vint 0))))) program;
     ModSem.initial_mrs := [(mn, URA.unit)];
   |}
   .
