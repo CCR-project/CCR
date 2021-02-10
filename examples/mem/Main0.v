@@ -26,13 +26,17 @@ Section PROOF.
         y = *x;
         return y;
    ***)
-  Definition mainF: list val -> itree Es val :=
+  Definition mainF: Any.t -> itree Es Any.t :=
     fun _ =>
-      x <- trigger (Call "alloc" [Vint 1]);;
-      trigger (Call "store" [x ; Vint 42]);;
+      (* x <- ((↓) <$> trigger (Call "alloc" [Vint 1]↑)) >>= (ǃ);; *)
+      x <- trigger (Call "alloc" [Vint 1]↑);;
+      `x: val <- x↓ǃ;;
+      trigger (Call "store" [x ; Vint 42]↑);;
       (* trigger (Call "unknown_call" [x]);; *)
-      y <- trigger (Call "load" [x]);;
-      Ret y
+      (* `y: val <- ((↓) <$> trigger (Call "load" [x]↑)) >>= (ǃ);; *)
+      y <- trigger (Call "load" [x]↑);;
+      `y: val <- y↓ǃ;;
+      Ret y↑
   .
 
   Definition MainSem: ModSem.t := {|

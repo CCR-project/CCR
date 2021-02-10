@@ -290,6 +290,8 @@ End EVENTS.
 
 Notation "f '?'" := (unwrapU f) (at level 9, only parsing).
 Notation "f 'ǃ'" := (unwrapN f) (at level 9, only parsing).
+Notation "(?)" := (unwrapU) (only parsing).
+Notation "(ǃ)" := (unwrapN) (only parsing).
 Goal (tt ↑↓?) = Ret tt. rewrite Any.upcast_downcast. ss. Qed.
 Goal (tt ↑↓ǃ) = Ret tt. rewrite Any.upcast_downcast. ss. Qed.
 

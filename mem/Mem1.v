@@ -105,26 +105,26 @@ Section PROOF.
 
   Definition MemStb: list (fname * fspec) :=
   [("alloc", mk "Mem"
-               (fun sz varg _ => varg = [Vint (Z.of_nat sz)])
+               (fun sz varg _ => varg = [Vint (Z.of_nat sz)]↑)
                (fun sz vret rret =>
-                  exists b, vret = Vptr b 0 /\
+                  exists b, vret = (Vptr b 0)↑ /\
                             rret = GRA.padding (points_tos (b, 0%Z) (List.repeat (Vint 0) sz)))) ;
   ("free", mk "Mem"
-              (fun '(b, ofs) varg rarg => exists v, varg = [Vptr b ofs] /\
+              (fun '(b, ofs) varg rarg => exists v, varg = ([Vptr b ofs])↑ /\
                                                     rarg = (GRA.padding ((b, ofs) |-> v)))
               (top3)) ;
   ("load", mk "Mem"
-              (fun '(b, ofs, v) varg rarg => varg = [Vptr b ofs] /\
+              (fun '(b, ofs, v) varg rarg => varg = ([Vptr b ofs])↑ /\
                                              rarg = (GRA.padding ((b, ofs) |-> v)))
-              (fun '(b, ofs, v) vret rret => rret = (GRA.padding ((b, ofs) |-> v)) /\ vret = v)) ;
+              (fun '(b, ofs, v) vret rret => rret = (GRA.padding ((b, ofs) |-> v)) /\ vret = v↑)) ;
   ("store", mk "Mem"
                (fun '(b, ofs, v_new) varg rarg => exists v_old,
-                    varg = [Vptr b ofs ; v_new] /\ rarg = (GRA.padding ((b, ofs) |-> v_old)))
+                    varg = ([Vptr b ofs ; v_new])↑ /\ rarg = (GRA.padding ((b, ofs) |-> v_old)))
                (fun '(b, ofs, v_new) _ rret => rret = (GRA.padding ((b, ofs) |-> v_new))))
   ]
   .
 
-  Definition MemFtb: list (fname * (list val -> itree (hCallE +' eventE) val)) :=
+  Definition MemFtb: list (fname * (Any.t -> itree (hCallE +' eventE) Any.t)) :=
     zip pair ["alloc"; "free"; "load"; "store"] (List.repeat (fun _ => trigger (Choose _)) 4)
   .
 
