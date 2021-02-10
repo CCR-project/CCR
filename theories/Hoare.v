@@ -122,7 +122,7 @@ Section CANCEL.
     fun _ '(hCall fn marg varg) =>
       match List.find (fun '(_fn, _) => dec fn _fn) stb with
       | Some (_, f) =>
-        marg <- (Any.downcast marg)﹗;;
+        marg <- (Any.downcast marg)ǃ;;
         (HoareCall (mn) (f.(precond) marg) (f.(postcond) marg) fn varg)
       | None => triggerNB
       end

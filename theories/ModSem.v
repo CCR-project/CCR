@@ -288,9 +288,10 @@ Section EVENTS.
 
 End EVENTS.
 
-Notation "f '?'" := (unwrapU f) (at level 60, only parsing).
-Notation "f '﹗'" := (unwrapN f) (at level 60, only parsing).
-
+Notation "f '?'" := (unwrapU f) (at level 9, only parsing).
+Notation "f 'ǃ'" := (unwrapN f) (at level 9, only parsing).
+Goal (tt ↑↓?) = Ret tt. rewrite Any.upcast_downcast. ss. Qed.
+Goal (tt ↑↓ǃ) = Ret tt. rewrite Any.upcast_downcast. ss. Qed.
 
 
 
@@ -360,7 +361,7 @@ Section MODSEM.
                end, [ε]). (*** we have a dummy-stack here ***)
   Definition initial_itr: itree (eventE) Any.t :=
     assume(<<WF: wf ms>>);;
-    snd <$> interp_Es prog (prog (Call "main" (Any.upcast tt))) initial_r_state.
+    snd <$> interp_Es prog (prog (Call "main" (tt↑))) initial_r_state.
 
 
 
@@ -370,7 +371,7 @@ Section MODSEM.
     match (observe st0) with
     | TauF _ => demonic
     | RetF rv =>
-      match Any.downcast rv with
+      match rv↓ with
       | Some (Vint rv) => final rv
       | _ => angelic
       end
