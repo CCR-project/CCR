@@ -3,7 +3,7 @@ Require Import Coqlib.
 Set Implicit Arguments.
 
 
-Module Type AnyType.
+Module Type ANY.
 
   Parameter t: Type.
   Parameter ty: t -> Type.
@@ -27,10 +27,10 @@ Module Type AnyType.
   (* Parameter patmat_spec: forall R (body: forall (T: Type), T -> R) *)
   (*                               T (t: T), (patmat body (upcast t): R) = body _ t. *)
 
-End AnyType.
+End ANY.
 
 
-Module Any: AnyType.
+Module _Any: ANY.
 
   Record _t := _upcast { ty: Type; val: ty }.
   Definition t := _t.
@@ -166,8 +166,12 @@ Module Any: AnyType.
     destruct a. refl.
   Qed.
 
+End _Any.
+Goal _Any.upcast 0 = _Any.upcast () -> False. i. Fail injection H. Abort.
+
+
+
+Module Any.
+  Include _Any.
+  Definition pair (a b: Any.t): Any.t := Any.upcast (Any.val a, Any.val b).
 End Any.
-
-Definition pair (a b: Any.t): Any.t := Any.upcast (Any.val a, Any.val b).
-
-Goal Any.upcast 0 = Any.upcast () -> False. i. Fail injection H. Abort.
