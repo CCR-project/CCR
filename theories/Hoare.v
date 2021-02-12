@@ -1,5 +1,4 @@
 Require Import Coqlib.
-Require Import ITreelib.
 Require Import Universe.
 Require Import STS.
 Require Import Behavior.
@@ -12,6 +11,67 @@ Require Import Any.
 Generalizable Variables E R A B C X Y Σ.
 
 Set Implicit Arguments.
+
+(* Section sealing. *)
+(*   (* Local Set Primitive Projections. *) *)
+(*   Record sealing X (x: X) := (* mk_sealing *) { contents_of: X; sealing_prf: contents_of = x }. *)
+(* End sealing. *)
+(* Ltac hide_with NAME term := *)
+(*   eassert(NAME: sealing term) by (econs; eauto); *)
+(*   rewrite <- sealing_prf with (s:=NAME) in * *)
+(* . *)
+(* Ltac hide term := *)
+(*   let NAME := fresh "_SEAL" in *)
+(*   hide_with NAME term *)
+(* . *)
+(* Ltac unhide_term term := rewrite sealing_prf with (x:=term) in *; *)
+(*                     match goal with *)
+(*                     | [ H: sealing term |- _ ] => clear H *)
+(*                     end. *)
+(* Ltac unhide_name NAME := rewrite sealing_prf with (s:=NAME) in *; clear NAME. *)
+(* Ltac unhide x := *)
+(*   match (type of x) with *)
+(*   | sealing _ => unhide_name x *)
+(*   | _ => unhide_term x *)
+(*   end. *)
+(* Notation "☃ y" := (@contents_of _ y _) (at level 60, only printing). (** ☁☞ **) *)
+(* Goal forall x, 5 + 5 = x. i. hide 5. cbn. hide_with MYNAME x. unhide x. unhide _SEAL. cbn. Abort. *)
+
+
+Module Type SEAL.
+  Parameter unit: Type.
+  Parameter tt: unit.
+  Parameter sealing: unit -> forall X: Type, X -> X.
+  Parameter sealing_eq: forall key X (x: X), sealing key x = x.
+End SEAL.
+Module Seal: SEAL.
+  Definition unit := unit.
+  Definition tt := tt.
+  Definition sealing (_: unit) X (x: X) := x.
+  Lemma sealing_eq key X (x: X): sealing key x = x.
+  Proof. refl. Qed.
+End Seal.
+
+Ltac seal_with key x :=
+  replace x with (Seal.sealing key x); [|eapply Seal.sealing_eq].
+Ltac seal x :=
+  let key := fresh "key" in
+  assert (key:= Seal.tt);
+  seal_with key x.
+Ltac unseal x :=
+  match (type of x) with
+  | Seal.unit => repeat rewrite (@Seal.sealing_eq x) in *; try clear x
+  | _ => repeat rewrite (@Seal.sealing_eq _ _ x) in *;
+         repeat match goal with
+                | [ H: Seal.unit |- _ ] => try clear H
+                end
+  end
+.
+Notation "☃ y" := (Seal.sealing _ y) (at level 60, only printing).
+Goal forall x, 5 + 5 = x. i. seal 5. seal x. unseal key0. unseal 5. cbn. Abort.
+
+
+
 
 
 
@@ -33,7 +93,7 @@ Section PROOF.
     assume(P x varg rarg);; (*** precondition ***)
 
 
-    vret <- body (Any.pair (Any.upcast x) varg);; (*** "rudiment": we don't remove extcalls because of termination-sensitivity ***)
+    vret <- body (Any.pair x↑ varg);; (*** "rudiment": we don't remove extcalls because of termination-sensitivity ***)
 
     '(mret, fret) <- trigger (Choose _);; trigger (Put mn mret fret);; (*** updating resources in an abstract way ***)
     rret <- trigger (Choose Σ);; guarantee(Q x vret rret);; (*** postcondition ***)
@@ -43,19 +103,20 @@ Section PROOF.
   .
 
   Definition HoareCall
-             (P: Any.t -> Σ -> Prop)
-             (Q: Any.t -> Σ -> Prop):
+             (P: X -> Any.t -> Σ -> Prop)
+             (Q: X -> Any.t -> Σ -> Prop):
     fname -> Any.t -> itree Es Any.t :=
     fun fn varg =>
       '(marg, farg) <- trigger (Choose _);; trigger (Put mn marg farg);; (*** updating resources in an abstract way ***)
       rarg <- trigger (Choose Σ);; trigger (Discard rarg);; (*** virtual resource passing ***)
-      guarantee(P varg rarg);; (*** precondition ***)
+      x <- trigger (Choose X);;
+      guarantee(P x varg rarg);; (*** precondition ***)
 
       vret <- trigger (Call fn varg);; (*** call ***)
       trigger (CheckWf mn);;
 
       rret <- trigger (Take Σ);; trigger (Forge rret);; (*** virtual resource passing ***)
-      assume(Q vret rret);; (*** postcondition ***)
+      assume(Q x vret rret);; (*** postcondition ***)
 
       Ret vret (*** return to body ***)
   .
@@ -88,7 +149,7 @@ Section CANCEL.
   | hCall
       (* (mn: mname) *)
       (* (P: list val -> Σ -> Prop) (Q: list val -> Σ -> val -> Σ -> Prop) *)
-      (fn: fname) (marg: Any.t) (varg: Any.t): hCallE Any.t
+      (fn: fname) (varg: Any.t): hCallE Any.t
   .
 
   (*** spec table ***)
@@ -119,11 +180,10 @@ Section CANCEL.
   (****************** TODO: REMOVE ALL MATCH AND REPLACE IT WITH UNWRAPU  *****************)
   (****************** TODO: REMOVE ALL MATCH AND REPLACE IT WITH UNWRAPU  *****************)
   Definition handle_hCallE_tgt (mn: mname): hCallE ~> itree Es :=
-    fun _ '(hCall fn marg varg) =>
+    fun _ '(hCall fn varg) =>
       match List.find (fun '(_fn, _) => dec fn _fn) stb with
       | Some (_, f) =>
-        marg <- (Any.downcast marg)ǃ;;
-        (HoareCall (mn) (f.(precond) marg) (f.(postcond) marg) fn varg)
+        (HoareCall (mn) (f.(precond)) (f.(postcond)) fn varg)
       | None => triggerNB
       end
   .
@@ -141,7 +201,7 @@ Section CANCEL.
 
 
   Definition handle_hCallE_src: hCallE ~> itree Es :=
-    fun _ '(hCall fn marg varg) => trigger (Call fn (Any.pair marg varg))
+    fun _ '(hCall fn varg) => marg <- trigger (Choose _);; trigger (Call fn (Any.pair marg varg))
   .
 
   Definition interp_hCallE_src: itree (hCallE +' eventE) ~> itree Es :=
@@ -290,10 +350,75 @@ If this feature is needed; we can extend it then. At the moment, I will only all
   Opaque Ordinal.from_nat.
   Opaque string_dec.
 
-  Ltac mgo := repeat (try rewrite ! interp_Es_bind; try rewrite ! interp_Es_ret; try rewrite ! interp_Es_tau;
-                      try rewrite ! interp_Es_rE; try rewrite ! interp_Es_eventE; try rewrite ! interp_Es_callE;
-                      try rewrite ! interp_Es_triggerNB; try rewrite ! interp_Es_triggerUB; igo).
-  Ltac mstep := gstep; econs; eauto; [eapply from_nat_lt; ss|].
+  Ltac mred :=
+    repeat (cbn;
+            try rewrite ! interp_Es_bind; try rewrite ! interp_Es_ret; try rewrite ! interp_Es_tau;
+            try rewrite ! interp_Es_rE; try rewrite ! interp_Es_eventE; try rewrite ! interp_Es_callE;
+            try rewrite ! interp_Es_triggerNB; try rewrite ! interp_Es_triggerUB; igo).
+  (*** step and some post-processing ***)
+  Ltac _step :=
+    match goal with
+    (*** terminal cases ***)
+    | [ |- gpaco5 _ _ _ _ _ _ _ (triggerUB >>= _) _ ] =>
+      unfold triggerUB; mred; _step; ss; fail
+    | [ |- gpaco5 _ _ _ _ _ _ _ (triggerNB >>= _) _ ] =>
+      exfalso
+    | [ |- gpaco5 _ _ _ _ _ _ _ _ (triggerUB >>= _) ] =>
+      exfalso
+    | [ |- gpaco5 _ _ _ _ _ _ _ _ (triggerNB >>= _) ] =>
+      unfold triggerNB; mred; _step; ss; fail
+
+    (*** assume/guarantee ***)
+    | [ |- gpaco5 _ _ _ _ _ _ _ (assume ?P ;; _) _ ] =>
+      let tvar := fresh "tmp" in
+      let thyp := fresh "TMP" in
+      remember (assume P) as tvar eqn:thyp; unfold assume in thyp; subst tvar
+    | [ |- gpaco5 _ _ _ _ _ _ _ (guarantee ?P ;; _) _ ] =>
+      let tvar := fresh "tmp" in
+      let thyp := fresh "TMP" in
+      remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar
+    | [ |- gpaco5 _ _ _ _ _ _ _ _ (assume ?P ;; _) ] =>
+      let tvar := fresh "tmp" in
+      let thyp := fresh "TMP" in
+      remember (assume P) as tvar eqn:thyp; unfold assume in thyp; subst tvar
+    | [ |- gpaco5 _ _ _ _ _ _ _ _ (guarantee ?P ;; _) ] =>
+      let tvar := fresh "tmp" in
+      let thyp := fresh "TMP" in
+      remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar
+
+    (*** default cases ***)
+    | _ =>
+      (gstep; econs; eauto; try (by eapply from_nat_lt; ss);
+       (*** some post-processing ***)
+       i;
+       try match goal with
+           | [ |- (eq ==> _)%signature _ _ ] =>
+             let v_src := fresh "v_src" in
+             let v_tgt := fresh "v_tgt" in
+             intros v_src v_tgt ?; subst v_tgt
+           end)
+    end
+  .
+  Ltac steps := repeat (mred; try _step; des_ifs_safe).
+  Ltac seal_left :=
+    match goal with
+    | [ |- gpaco5 _ _ _ _ _ _ _ ?i_src ?i_tgt ] => seal i_src
+    end.
+  Ltac seal_right :=
+    match goal with
+    | [ |- gpaco5 _ _ _ _ _ _ _ ?i_src ?i_tgt ] => seal i_tgt
+    end.
+  Ltac unseal_left :=
+    match goal with 
+    | [ |- gpaco5 _ _ _ _ _ _ _ (@Seal.sealing _ _ ?i_src) ?i_tgt ] => unseal i_src
+    end.
+  Ltac unseal_right :=
+    match goal with 
+    | [ |- gpaco5 _ _ _ _ _ _ _ ?i_src (@Seal.sealing _ _ ?i_tgt) ] => unseal i_tgt
+    end.
+  Ltac force_l := seal_right; _step; unseal_right.
+  Ltac force_r := seal_left; _step; unseal_left.
+  (* Ltac mstep := gstep; econs; eauto; [eapply from_nat_lt; ss|]. *)
 
   Let adequacy_type_aux:
     forall (R: Type) (RR: R -> R -> Prop) (TY: R = (ModSem.r_state * Any.t)%type)
@@ -319,95 +444,60 @@ If this feature is needed; we can extend it then. At the moment, I will only all
     (* pcofix CIH. i. *)
     unfold interp_hCallE_src.
     unfold interp_hCallE_tgt.
-    ides i0; try rewrite ! unfold_interp; cbn; mgo.
-    { ss. gstep. econs; eauto. }
-    { ss. gstep. econs; eauto. gbase. eapply CIH; [..|M]; Mskip et.
+    ides i0; try rewrite ! unfold_interp; cbn; mred.
+    { steps. }
+    { steps. gbase. eapply CIH; [..|M]; Mskip et.
       { instantiate (1:=mn0). fold (interp_hCallE_tgt stb mn0). ss. }
     }
     destruct e; cycle 1.
     { dependent destruction e.
-      - cbn. mgo. gstep. econs; eauto. i. esplits; eauto.
-        mgo. gstep. econs; eauto.
-        mgo. gstep. econs; eauto.
-        mgo. gstep. econs; eauto.
+      - steps. esplits; eauto. steps.
         gbase. eapply CIH; [..|M]; Mskip et.
         { instantiate (2:=mn0). fold (interp_hCallE_tgt stb mn0). ss. }
-      - cbn. mgo. gstep. econs; eauto. i. esplits; eauto.
-        mgo. gstep. econs; eauto.
-        mgo. gstep. econs; eauto.
-        mgo. gstep. econs; eauto.
+      - steps. esplits; eauto. steps.
         gbase. eapply CIH; [..|M]; Mskip et.
         { instantiate (1:=mn0). fold (interp_hCallE_tgt stb mn0). ss. }
-      - cbn. mgo. gstep. econs; eauto. ii; clarify.
-        mgo. gstep. econs; eauto.
-        mgo. gstep. econs; eauto.
-        mgo. gstep. econs; eauto.
+      - steps.
         gbase. eapply CIH; [..|M]; Mskip et.
         { instantiate (1:=mn0). fold (interp_hCallE_tgt stb mn0). ss. }
     }
     dependent destruction h.
     Local Opaque GRA.to_URA.
     ss.
-    mgo. cbn. mgo.
-    mstep.
-
-    (* gstep. econs; eauto. { eapply from_nat_lt; ss. } left. *)
-    (* gstep. econs; eauto. { eapply from_nat_lt; ss. } left. *)
+    seal_left.
+    steps.
     des_ifs; cycle 1.
-    { gstep. mgo. unfold triggerNB. mgo. econs; ss; eauto. { eapply from_nat_lt; ss. } }
+    { steps. }
     rename Heq into FINDFT.
-    unfold ModSem.prog at 3. mgo.
+    (* unfold ModSem.prog at 2. steps. *)
+    unfold HoareCall.
+    steps. unfold handle_rE. des_ifs.
+    { rr in SIM. des_ifs. des; ss. destruct l; ss. }
+    steps. unfold guarantee. steps. (*** TODO: remove: unfold guarantee ***)
+    unseal_left.
+    steps. exists (x2↑). steps.
+    unfold unwrapU at 1. des_ifs; cycle 1.
+    { steps. }
+    rename Heq into FINDFS.
     unfold unwrapU. des_ifs; cycle 1.
-    { gstep. mgo. unfold triggerUB. mgo. econs; ss; eauto. { eapply from_nat_lt; ss. } }
-    unfold unwrapN. des_ifs; cycle 1.
-    { gstep. mgo. unfold triggerNB. mgo. econs; ss; eauto. { eapply from_nat_lt; ss. } }
-    mgo. des_ifs. mgo.
-    unfold ModSem.handle_rE. des_ifs.
-    { rr in SIM. des_ifs. des; ss. }
-    mgo.
-    unfold HoareCall. mgo.
-    gstep. econsr; eauto. { eapply from_nat_lt; ss. } i.
-    mgo. gstep. econs; eauto.
-    mgo. gstep. econs; eauto. instantiate (1:=Ordinal.from_nat 300).
-    mgo. des_ifs. rename Heq into FINDFS. rename i into i_src.
-    mgo. unfold handle_rE. des_ifs.
-    { gstep. mgo. unfold triggerNB. mgo. econs; ss; eauto. { eapply from_nat_lt; ss. } }
-    mgo. unfold guarantee.
-    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. }
-    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. }
-    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. }
-    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
-    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. }
-    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. }
-    cbn.
-    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
-    mgo. unfold guarantee.
-    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
-    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
-    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
-    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
-    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
-    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
-    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
-    (* mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i. *)
-    (* mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i. *)
-    (* mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i. *)
-    unfold ModSem.prog at 7. mgo. cbn.
-    unfold unwrapU. des_ifs; cycle 1.
-    { exfalso. rewrite WTY in *. ss. clear - FINDFS Heq.
+    { steps.
+      rewrite WTY in *. ss. clear - FINDFS Heq.
       rewrite find_map in *. uo. des_ifs.
       Fail apply_all_once find_some. (*** TODO: FIXME ****)
       apply find_some in Heq1. des.
       eapply find_none in Heq0; eauto.
-      unfold compose in *. ss. clarify. }
+      unfold compose in *. des_ifs. ss. clarify.
+    }
     rename Heq into FINDFT0.
-    mgo. des_ifs. rename i into i_tgt.
-    mgo. cbn.
-    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
-    mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
+    steps.
+    unfold handle_rE. des_ifs.
+    { steps. rr in SIM. des; ss. }
+    steps.
+    rename i into i_src.
+    rename i0 into i_tgt.
     guclo bindC_spec.
-    replace (Ordinal.from_nat 284) with (Ordinal.add (Ordinal.from_nat 144) (Ordinal.from_nat 140)); cycle 1.
-    { admit "ez - ordinal nat add". }
+    replace (Ordinal.from_nat 72) with (Ordinal.add (Ordinal.from_nat 144) (Ordinal.from_nat 140)); cycle 1.
+    { admit "FIX ME LATER". }
     rename f into fs.
     econs.
     - instantiate (1:= fun '((mrs_src, frs_src), vret_src) '((mrs_tgt, frs_tgt), vret_tgt) =>
@@ -416,34 +506,26 @@ If this feature is needed; we can extend it then. At the moment, I will only all
                                   frs_src <> [] /\
                                   URA.wf (rsum (mrs_tgt, rret :: frs_tgt))>>) /\
                            (<<VAL: vret_src = vret_tgt>>) /\
-                           (<<POST: fs.(postcond) x vret_tgt rret>>)).
+                           (<<POST: fs.(postcond) x2 vret_tgt rret>>)).
       apply find_some in FINDFT0. des.
       apply find_some in FINDFS. des. ss. des_sumbool. clarify.
       rewrite WTY in *. rewrite in_map_iff in *. des. des_ifs.
       unfold fun_to_src, fun_to_tgt. des_ifs. unfold HoareFun.
-      (* unfold body_to_src. *)
-      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i. exists x.
-      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
-      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
-      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i. exists x1.
-      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
-      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i. cbn.
-      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
-      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i. cbn. unfold assume.
-      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i. esplits; eauto.
+      steps. exists x2.
+      steps. exists x0.
+      steps.
 Infix "⋅" := URA.add (at level 50, left associativity).
 Notation "(⋅)" := URA.add (only parsing).
-      { clear - WFTGT x. admit "<<WFTGT: wf (Σ c1 + Σ l1 + c4)>>
---(apply x)-->
-wf (Σ c1 [mn := c2] + Σ l1 + (x0 + x1))
-".
+      esplits; eauto.
+      { clear - WFTGT x. unfold ε. rewrite URA.unit_idl. rewrite URA.add_assoc in x.
+        r in x. specialize (x URA.unit). rewrite ! URA.unit_id in x.
+        unfold update. des_ifs.
+        - eapply URA.wf_mon. eapply x. admit "ez - WFTGT".
+        - admit "ez - c1 contains both (c1 mn0) and (c1 (mn fs)).".
       }
-      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
-      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
-      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i. esplits; eauto.
-      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
-      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
-      unfold body_to_src, body_to_tgt. des_ifs.
+      steps. unfold assume. steps.
+      esplits; eauto. steps.
+      unfold body_to_src, body_to_tgt.
       guclo bindC_spec.
       replace (Ordinal.from_nat 126) with (Ordinal.add (Ordinal.from_nat 18) (Ordinal.from_nat 108)); cycle 1.
       { admit "ez - ordinal nat add". }
@@ -451,7 +533,7 @@ wf (Σ c1 [mn := c2] + Σ l1 + (x0 + x1))
       assert(i0 = i) by admit "ez - uniqueness of idx. Add this as an hypothesis". subst.
       econs.
       + guclo ordC_spec. econs; eauto. { instantiate (1:=Ordinal.from_nat 100). eapply from_nat_le; ss. lia. }
-        gbase. replace (Any.upcast x) with marg; cycle 1. { clear - Heq0. rewrite <- Any.upcast_downcast in Heq0. admit "ez; add this in Any.v". }
+        gbase.
         eapply CIH; et.
         { refl. }
         ss. esplits; ss; et.
@@ -459,57 +541,23 @@ wf (Σ c1 [mn := c2] + Σ l1 + (x0 + x1))
         admit "ez -- updatable".
       + ii. des_ifs. des; subst.
         unfold idK.
-        mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
-        mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
-        mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
-        des_ifs. r in SIM. des_ifs; ss. des; ss.
-        mgo. unfold ModSem.handle_rE. des_ifs; ss. { destruct l; ss. }
-        unfold guarantee.
-        mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
-        mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
-        mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
-        mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
-        mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
-        mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
-        mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
-        mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
-        mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
-        cbn.
-        mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
-        unfold guarantee.
-        mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
-        mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
-        mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
-        mgo. gstep. econs; eauto. esplits; eauto.
-        clear - WFTGT0 x8 x2.
-        admit "ez".
+        steps. unfold handle_rE.
+        r in SIM. des_ifs; ss. des; ss. destruct l; ss. des; ss.
+        steps. unfold guarantee. steps.
+        esplits; et.
+        clear - WFTGT0 x4.
+        admit "ez -- updtaable".
     - ii. ss. des_ifs. des. (* rr in SIM0. des; ss. unfold RelationPairs.RelCompFun in *. ss. *)
       (* r in SIM0. des_ifs. des; ss. *)
-      mgo. unfold ModSem.handle_rE. des_ifs.
-      (* { unfold triggerNB. mgo. gstep. eapply simg_chooseR; eauto. { eapply from_nat_lt; ss. } ss. } *)
-      mgo. gstep. econs; eauto. i.
-      mgo. gstep. econs; eauto. i.
-      instantiate (1:= Ordinal.from_nat 113).
-      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
-      cbn. des_ifs; ss.
-      { unfold triggerNB. mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } ss. }
-      unfold assume.
-      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
+      steps. clear_tac. instantiate (1:=112). des_ifs; ss.
+      { steps. }
+      steps.
       esplits; eauto.
       { clear - ST1. admit "ez". }
-      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
-      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } i.
-      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } eexists rret.
-      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. }
-      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. }
-      cbn.
-      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. }
-      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. }
-      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. } esplits; eauto.
-      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. }
-      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. }
-      mgo. gstep. econs; eauto. { eapply from_nat_lt; ss. }
-      fold interp_hCallE_src. fold (interp_hCallE_tgt stb).
+      steps. esplits; eauto. steps.
+      unfold assume. steps. unshelve esplits; eauto.
+      steps.
+      fold interp_hCallE_src. fold (interp_hCallE_tgt stb mn0).
       gbase. eapply CIH; [..|M]; Mskip et. all: cycle 1.
       { instantiate (2:=mn0). fold (interp_hCallE_tgt stb mn0). ss. }
       rr. esplits; et. { destruct l3; ss. } clear - ST1. admit "ez".
@@ -523,17 +571,14 @@ wf (Σ c1 [mn := c2] + Σ l1 + (x0 + x1))
   Theorem adequacy_type: Beh.of_program (Mod.interp md_tgt) <1= Beh.of_program (Mod.interp md_src).
   Proof.
     eapply adequacy_global.
-    exists (Ordinal.from_nat 100%nat).
-    ss. unfold ModSem.initial_itr. Local Opaque ModSem.prog. ss.
+    exists (Ordinal.from_nat 100%nat). ss.
+    ginit.
+    { eapply cpn5_wcompat; eauto with paco. }
+    unfold ModSem.initial_itr. Local Opaque ModSem.prog. ss.
     unfold ITree.map.
     unfold assume.
-    igo.
-    pfold. eapply simg_takeL; ss.
-    { instantiate (1:= (Ordinal.from_nat 99)). admit "ez". }
-    i. left.
-    pfold. eapply simg_takeR; ss.
-    { instantiate (1:= (Ordinal.from_nat 98)). admit "ez". }
-    esplits; et. { admit "ez - wf". } left.
+    steps.
+    esplits; et. { admit "ez - wf". }
     set (st_src0 := (ModSem.initial_r_state ms_src)).
     replace (Mod.enclose md_tgt) with ms_tgt by ss.
     set (st_tgt0 := (ModSem.initial_r_state ms_tgt)).
@@ -545,158 +590,72 @@ wf (Σ c1 [mn := c2] + Σ l1 + (x0 + x1))
                         (x0 <- interp_Es (ModSem.prog ms_src)
                                          ((ModSem.prog ms_src) _ (Call "main" (Any.pair (Any.upcast tt) (Any.upcast tt)))) st_src0;; Ret (snd x0))
                         (x0 <- interp_Es (ModSem.prog ms_src)
-                                         (interp_hCallE_src (trigger (hCall "main" (Any.upcast tt) (Any.upcast tt)))) st_src0;; Ret (snd x0))).
-    { clear SIM. unfold interp_hCallE_src. rewrite unfold_interp. ss. cbn. rewrite interp_Es_bind. rewrite interp_Es_callE.
-      igo.
-      pfold. econs; eauto.
-      { instantiate (1:= Ordinal.from_nat 99). admit "ez". }
-      left.
-      replace (Ordinal.from_nat 99) with (Ordinal.add (Ordinal.from_nat 50) (Ordinal.from_nat 49)) by admit "ez".
-      eapply simg_bind with (RR:=eq).
-      - eapply simg_refl; et.
-      - ii. des_ifs. ss. rewrite interp_Es_tau. igo.
-        pfold. econs; eauto.
-        { instantiate (1:= Ordinal.from_nat 49). admit "ez". }
-        left. rewrite interp_Es_ret. igo. ss. eapply simg_refl; et.
+                                         (interp_hCallE_src (trigger (hCall "main" (Any.upcast tt)))) st_src0;; Ret (snd x0))).
+    { clear SIM. ginit. { eapply cpn5_wcompat; eauto with paco. }
+      unfold interp_hCallE_src. rewrite unfold_interp. ss. cbn. steps.
+      replace (Ordinal.from_nat 96) with (Ordinal.add (Ordinal.from_nat 50) (Ordinal.from_nat 46))
+        by admit "ez".
+      guclo bindC_spec.
+      econs.
+      - instantiate (1:=eq). assert(x = Any.upcast tt) by admit "???". subst.
+        eapply simg_gpaco_refl. typeclasses eauto.
+      - ii. des_ifs. ss. steps.
     }
     assert(TRANSR: simg eq (Ordinal.from_nat 100)
-                        (x0 <- interp_Es (ModSem.prog ms_tgt)
-                                         (interp_hCallE_tgt stb "Main" (trigger (hCall "main" (Any.upcast tt) (Any.upcast tt)))) st_tgt0;; Ret (snd x0))
-                        (x0 <- interp_Es (ModSem.prog ms_tgt)
-                                         ((ModSem.prog ms_tgt) _ (Call "main"  (Any.upcast tt))) st_tgt0;; Ret (snd x0))).
-    { clear SIM. unfold interp_hCallE_tgt. rewrite unfold_interp. ss.
-      cbn. rewrite interp_Es_bind. igo. des_ifs. ss.
-      rewrite Any.upcast_downcast. cbn.
-      unfold HoareCall. rewrite ! interp_Es_bind. igo. mgo.
-      pfold. econs; eauto.
-      { instantiate (1:= Ordinal.from_nat 99). admit "ez". }
-      eexists ((fst st_tgt0) "Main", ε). igo. left.
-      pfold. econs; eauto.
-      { instantiate (1:= Ordinal.from_nat 98). admit "ez". }
-      left.
-      pfold. econs; eauto.
-      { instantiate (1:= Ordinal.from_nat 97). admit "ez". }
-      left.
-      rewrite ! interp_Es_bind. igo. rewrite ! interp_Es_rE. igo.
-      ss. fold ms_tgt.
-      des_ifs; cycle 1.
-      { admit "ez - use WF1". }
-      destruct p.
-      assert(s = "Main") by admit "ez". clarify. ss.
+(x0 <- interp_Es (ModSem.prog ms_tgt)
+                 (interp_hCallE_tgt stb "Main" (trigger (hCall "main" tt↑))) st_tgt0;; Ret (snd x0))
+(x0 <- interp_Es (ModSem.prog ms_tgt)
+                 ((ModSem.prog ms_tgt) _ (Call "main" tt↑)) st_tgt0;; Ret (snd x0))).
+    { clear SIM. ginit. { eapply cpn5_wcompat; eauto with paco. }
+      unfold interp_hCallE_tgt. rewrite unfold_interp. steps.
+      unfold HoareCall.
+      destruct (find (fun mnr => dec "Main" (fst mnr)) (ModSem.initial_mrs ms_tgt)) eqn:MAINR; cycle 1.
+      { exfalso. clear - WF1 Heq MAINR. admit "ez - use WF1". }
+      destruct p; ss.
+      assert(s = "Main") by admit "ez". clarify.
+      steps. eexists ((fst st_tgt0) "Main", ε). steps.
+      unshelve esplits; eauto.
+      { refl. }
+      steps. esplits; et. steps. esplits; et. steps. esplits; et.
+      { instantiate (1:=ε). unfold ε. rewrite URA.unit_id. ss. }
+      steps. exists tt; et. steps. unfold guarantee. steps. esplits; et. steps.
       replace (update
-                      (fun mn0 : string =>
-                       match find (fun mnr : string * Σ => dec mn0 (fst mnr)) (ModSem.initial_mrs ms_tgt) with
-                       | Some r => snd r
-                       | None => ε
-                       end) "Main" c, [ε]) with st_tgt0; cycle 1.
-      { unfold st_tgt0. fold ms_tgt.
+                 (fun mn0 : string =>
+                    match find (fun mnr : string * Σ => dec mn0 (fst mnr)) (ModSem.initial_mrs ms_tgt) with
+                    | Some r => snd r
+                    | None => ε
+                    end) "Main" c, [ε]) with st_tgt0; cycle 1.
+      { unfold st_tgt0.
         unfold ModSem.initial_r_state. f_equal. apply func_ext. i. unfold update. des_ifs; ss; clarify. }
-      unfold guarantee. igo. pfold. econs; et.
-      { instantiate (1:= Ordinal.from_nat 96). admit "ez". }
-      esplits; eauto.
-      { unfold ε. rewrite ! URA.unit_id. eapply URA.extends_updatable. rr. esplits; eauto. rewrite ! URA.unit_id. ss. }
-      left.
-      pfold. econs; eauto.
-      { instantiate (1:= Ordinal.from_nat 95). admit "ez". }
-      left.
-      pfold. econs; eauto.
-      { instantiate (1:= Ordinal.from_nat 94). admit "ez". }
-      left.
-      rewrite ! interp_Es_bind. igo. rewrite interp_Es_eventE. igo.
-      pfold. econs; eauto.
-      { instantiate (1:= Ordinal.from_nat 93). admit "ez". }
-      eexists ε. left. igo. pfold. econs; et.
-      { instantiate (1:= Ordinal.from_nat 92). admit "ez". }
-      left. pfold. econs; et.
-      { instantiate (1:= Ordinal.from_nat 91). admit "ez". }
-      left.
-      rewrite interp_Es_bind. igo. rewrite interp_Es_rE. ss. igo.
-      fold ms_tgt.
-      replace (fun mn0 => match find (fun mnr => dec mn0 (fst mnr)) (ModSem.initial_mrs ms_tgt)
-                          with
-                          | Some r0 => snd r0
-                          | None => ε
-                          end) with (fst st_tgt0); cycle 1.
-      { unfold st_tgt0. ss. }
-      pfold. econs; et.
-      { instantiate (1:= Ordinal.from_nat 90). admit "ez". }
-      eexists ε. left. igo. pfold. unfold guarantee. igo. econs; eauto.
-      { instantiate (1:= Ordinal.from_nat 89). admit "ez". }
-      esplits; eauto.
-      { unfold ε. rewrite ! URA.unit_id. ss. }
-      left. pfold. econs; et.
-      { instantiate (1:= Ordinal.from_nat 88). admit "ez". }
-      left. pfold. econs; et.
-      { instantiate (1:= Ordinal.from_nat 87). admit "ez". }
-      rewrite interp_Es_bind. igo. rewrite interp_Es_eventE. igo.
-      left. pfold. econs; et.
-      { instantiate (1:= Ordinal.from_nat 86). admit "ez". }
-      exists I; eauto. igo. left. pfold. econs; et.
-      { instantiate (1:= Ordinal.from_nat 82). admit "ez". }
-      left. pfold. econs; et.
-      { instantiate (1:= Ordinal.from_nat 81). admit "ez". }
-      rewrite interp_Es_bind. igo.
-      left.
-      replace (Ordinal.from_nat 81) with (Ordinal.add (Ordinal.from_nat 41) (Ordinal.from_nat 40)) by admit "ez".
-      eapply simg_bind with (RR:=eq).
-      - rewrite interp_Es_callE.
-        pfold. econs; et.
-        { instantiate (1:= Ordinal.from_nat 39). admit "ez". }
-        left.
-        replace st_tgt0 with (fst st_tgt0, [ε]); cycle 1.
-        { ss. }
-        eapply simg_refl; ss.
-      - ii. des_ifs. ss. rewrite interp_Es_bind. igo.
-        rewrite interp_Es_rE. igo. unfold ModSem.handle_rE. des_ifs.
-        { admit "we should use stronger RR, not eq; we should know that stackframe is not popped (unary property)". }
-        unfold assume. igo.
-        pfold. econs; eauto.
-        { instantiate (1:= Ordinal.from_nat 40). admit "ez". }
-        ii. left. pfold. econs; eauto.
-        { instantiate (1:= Ordinal.from_nat 39). admit "ez". }
-        left. pfold. econs; eauto.
-        { instantiate (1:= Ordinal.from_nat 38). admit "ez". }
-        rewrite interp_Es_bind. igo. rewrite interp_Es_eventE. igo.
-        left. pfold. econs; eauto.
-        { instantiate (1:= Ordinal.from_nat 37). admit "ez". }
-        ii. igo.
-        left. pfold. econs; eauto.
-        { instantiate (1:= Ordinal.from_nat 36). admit "ez". }
-        left. pfold. econs; eauto.
-        { instantiate (1:= Ordinal.from_nat 35). admit "ez". }
-        rewrite interp_Es_bind. igo. rewrite interp_Es_rE. igo. ss. igo.
-        left. pfold. econs; eauto.
-        { instantiate (1:= Ordinal.from_nat 34). admit "ez". }
-        left. pfold. econs; eauto.
-        { instantiate (1:= Ordinal.from_nat 33). admit "ez". }
-        rewrite interp_Es_bind. igo. rewrite interp_Es_eventE. igo.
-        left. pfold. econs; eauto.
-        { instantiate (1:= Ordinal.from_nat 32). admit "ez". }
-        ii.
-        igo.
-        left. pfold. econs; eauto.
-        { instantiate (1:= Ordinal.from_nat 31). admit "ez". }
-        left. pfold. econs; eauto.
-        { instantiate (1:= Ordinal.from_nat 30). admit "ez". }
-        rewrite interp_Es_ret. igo. rewrite interp_Es_tau. igo.
-        left. pfold. econs; eauto.
-        { instantiate (1:= Ordinal.from_nat 29). admit "ez". }
-        rewrite interp_Es_ret. igo. ss.
-        left. eapply simg_refl; ss.
+      replace (Ordinal.from_nat 80) with (Ordinal.add (Ordinal.from_nat 40) (Ordinal.from_nat 40)) by admit "ez".
+      guclo bindC_spec.
+      eapply bindR_intro with (RR:=eq).
+      - eapply simg_gpaco_refl. typeclasses eauto.
+      - ii. des_ifs. ss. steps.
+        unfold ModSem.handle_rE. des_ifs.
+        { admit "we should use stronger RR, not eq;
+we should know that stackframe is not popped (unary property)". }
+        unfold assume. steps.
     }
 
-    replace (x0 <- interp_Es (ModSem.prog ms_src) ((ModSem.prog ms_src) _ (Call "main" (Any.upcast tt))) st_src0;; Ret (snd x0)) with
-        (x0 <- interp_Es (ModSem.prog ms_src) (interp_hCallE_src (trigger (hCall "main" (Any.upcast tt) (Any.upcast tt)))) st_src0;; Ret (snd x0)); cycle 1.
+
+    replace (x0 <- interp_Es (ModSem.prog ms_src) ((ModSem.prog ms_src) _ (Call "main" tt↑)) st_src0;;
+             Ret (snd x0)) with
+        (x0 <- interp_Es (ModSem.prog ms_src) (interp_hCallE_src (trigger (hCall "main" tt↑))) st_src0;;
+         Ret (snd x0)); cycle 1.
     { admit "hard -- by transitivity". }
-    replace (x0 <- interp_Es (ModSem.prog ms_tgt) ((ModSem.prog ms_tgt) _ (Call "main" (Any.upcast tt))) st_tgt0;; Ret (snd x0)) with
-        (x0 <- interp_Es (ModSem.prog ms_tgt) (interp_hCallE_tgt stb "Main" (trigger (hCall "main" (Any.upcast tt) (Any.upcast tt)))) st_tgt0;; Ret (snd x0)); cycle 1.
+    replace (x0 <- interp_Es (ModSem.prog ms_tgt) ((ModSem.prog ms_tgt) _ (Call "main" tt↑)) st_tgt0;;
+             Ret (snd x0)) with
+        (x0 <- interp_Es (ModSem.prog ms_tgt) (interp_hCallE_tgt stb "Main" (trigger (hCall "main" tt↑)))
+                         st_tgt0;; Ret (snd x0)); cycle 1.
     { admit "hard -- by transitivity". }
-    replace (Ordinal.from_nat 98) with (Ordinal.add (Ordinal.from_nat 100) (Ordinal.from_nat 100)); cycle 1.
-    { admit "ez". }
-    fold simg.
-    eapply simg_bind.
-    - eapply adequacy_type_aux; ss. subst st_src0 st_tgt0. ss.
-    - ii. ss. des_ifs. des; ss. clarify. pfold. econs; eauto.
+    guclo bindC_spec.
+    eapply bindR_intro.
+    - gfinal. right. fold simg. eapply adequacy_type_aux; ss. subst st_src0 st_tgt0. ss.
+    - ii. ss. des_ifs. des; ss. clarify. steps.
+  Unshelve.
+    all: ss.
+    all: try (by apply Ordinal.O).
   Qed.
 
 End CANCEL.
