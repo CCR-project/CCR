@@ -473,7 +473,11 @@ If this feature is needed; we can extend it then. At the moment, I will only all
     unfold HoareCall.
     steps. unfold handle_rE. des_ifs.
     { rr in SIM. des_ifs. des; ss. destruct l; ss. }
-    steps. unfold guarantee. steps. (*** TODO: remove: unfold guarantee ***)
+    steps. unfold guarantee. (*** TODO: remove: unfold guarantee ***)
+    (* do 2 (mred; try _step; des_ifs_safe). *)
+    (* unseal_left. *)
+    (* seal_right. _step. exists (x2↑). mred. unseal_right. *)
+    (* _step. instantiate (1:=Ordinal.from_nat 300). *)
     unseal_left.
     steps. exists (x2↑). steps.
     unfold unwrapU at 1. des_ifs; cycle 1.
@@ -496,8 +500,10 @@ If this feature is needed; we can extend it then. At the moment, I will only all
     rename i into i_src.
     rename i0 into i_tgt.
     guclo bindC_spec.
-    replace (Ordinal.from_nat 72) with (Ordinal.add (Ordinal.from_nat 144) (Ordinal.from_nat 140)); cycle 1.
-    { admit "FIX ME LATER". }
+    instantiate (1:=300).
+    replace (Ordinal.from_nat 300) with
+        (Ordinal.add (Ordinal.from_nat 160) (Ordinal.from_nat 140)); cycle 1.
+    { admit "ez". }
     rename f into fs.
     econs.
     - instantiate (1:= fun '((mrs_src, frs_src), vret_src) '((mrs_tgt, frs_tgt), vret_tgt) =>
@@ -567,6 +573,9 @@ Notation "(⋅)" := URA.add (only parsing).
   Qed.
 
   Hypothesis WFR: URA.wf (rsum (ModSem.initial_r_state ms_tgt)).
+  Variable mainbody: itree (hCallE +' eventE) Any.t.
+  Hypothesis MAINBODY:
+    <<MAINBODY: find (fun '(_fn, _) => dec "main" _fn) ftb = Some ("main", fun _ => mainbody)>>.
 
   Theorem adequacy_type: Beh.of_program (Mod.interp md_tgt) <1= Beh.of_program (Mod.interp md_src).
   Proof.
@@ -586,18 +595,57 @@ Notation "(⋅)" := URA.add (only parsing).
     assert(SIM: wf st_src0 st_tgt0).
     { r. ss. }
     unfold mrec.
+    (* { *)
+    (*   unfold ModSem.prog at 4. *)
+    (*   unfold ModSem.prog at 2. *)
+    (*   unfold unwrapU at 1. des_ifs; cycle 1. { steps. } steps. *)
+    (*   rename Heq into MAINSRC. rename i into i_src. *)
+    (*   assert(T: exists i_ftb i_tgt, *)
+    (*             (<<MAINTGT:find (fun fnsem => dec "main" (fst fnsem)) (ModSem.fnsems ms_tgt) = *)
+    (*                        Some ("main", i_tgt)>>) *)
+    (*             /\ (<<FTB: In ("main", i_ftb) ftb>>) *)
+    (*             /\ (<<SIM: i_tgt = fun_to_tgt stb "main" i_ftb>>) *)
+    (*             /\ (<<SIM: i_src = fun_to_src i_ftb>>) *)
+    (*         ). *)
+    (*   { apply find_some in MAINSRC. des; ss. des_sumbool. clarify. *)
+    (*     apply in_map_iff in MAINSRC. des. des_ifs. *)
+    (*     destruct (find (fun fnsem => dec "main" (fst fnsem)) (ModSem.fnsems ms_tgt)) eqn:T; *)
+    (*       rewrite WTY in *; ss; cycle 1. *)
+    (*     - eapply find_none in T; ss; et. *)
+    (*       { des_sumbool. instantiate (1:= (_, _)) in T. ss. } *)
+    (*       rewrite in_map_iff. eexists (_, _). esplits; et. *)
+    (*     - apply find_some in T. des; ss. des_sumbool. destruct p; ss. clarify. *)
+    (*       rewrite in_map_iff in T. des; ss. des_ifs. *)
+    (*       esplits; et. assert(i = i1) by admit "ez - add nodup". clarify. *)
+    (*   } *)
+    (*   des. clarify. *)
+    (*   unfold unwrapU. des_ifs; cycle 1. steps. *)
+    (*   unfold fun_to_tgt. des_ifs. ss. unfold fun_to_src. unfold HoareFun. *)
+    (*   steps. esplits; et. steps. esplits; et. steps. *)
+    (* } *)
     assert(TRANSL: simg eq (Ordinal.from_nat 100)
-                        (x0 <- interp_Es (ModSem.prog ms_src)
-                                         ((ModSem.prog ms_src) _ (Call "main" (Any.pair (Any.upcast tt) (Any.upcast tt)))) st_src0;; Ret (snd x0))
-                        (x0 <- interp_Es (ModSem.prog ms_src)
-                                         (interp_hCallE_src (trigger (hCall "main" (Any.upcast tt)))) st_src0;; Ret (snd x0))).
+(x0 <- interp_Es (ModSem.prog ms_src)
+                 ((ModSem.prog ms_src) _ (Call "main" tt↑)) st_src0;; Ret (snd x0))
+(x0 <- interp_Es (ModSem.prog ms_src)
+                 (interp_hCallE_src (trigger (hCall "main" tt↑))) st_src0;; Ret (snd x0))).
     { clear SIM. ginit. { eapply cpn5_wcompat; eauto with paco. }
       unfold interp_hCallE_src. rewrite unfold_interp. ss. cbn. steps.
       replace (Ordinal.from_nat 96) with (Ordinal.add (Ordinal.from_nat 50) (Ordinal.from_nat 46))
         by admit "ez".
       guclo bindC_spec.
-      econs.
-      - instantiate (1:=eq). assert(x = Any.upcast tt) by admit "???". subst.
+      eapply bindR_intro with (RR:=eq).
+      - unfold ModSem.prog at 2 4. steps.
+        assert(MAINSRC:
+                 find (fun fnsem => dec "main" (fst fnsem))
+                      (List.map (fun '(fn, body) => (fn, fun_to_src body)) ftb) =
+                 Some ("main", fun_to_src (fun _ => mainbody))).
+        { exploit find_some; et. i; des. ss. rewrite find_map. uo. des_ifs.
+          - eapply find_some in Heq. des. unfold compose in *. ss. des_sumbool. subst.
+            repeat f_equal. 
+            admit "ez - add uniqueness condition".
+          - eapply find_none in Heq; et. unfold compose in *. ss.
+        }
+        unfold unwrapU. des_ifs; cycle 1. steps. unfold fun_to_src, body_to_src. steps.
         eapply simg_gpaco_refl. typeclasses eauto.
       - ii. des_ifs. ss. steps.
     }
@@ -637,6 +685,7 @@ Notation "(⋅)" := URA.add (only parsing).
 we should know that stackframe is not popped (unary property)". }
         unfold assume. steps.
     }
+
 
 
     replace (x0 <- interp_Es (ModSem.prog ms_src) ((ModSem.prog ms_src) _ (Call "main" tt↑)) st_src0;;
