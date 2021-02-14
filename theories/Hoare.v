@@ -576,9 +576,6 @@ Notation "(⋅)" := URA.add (only parsing).
   Qed.
 
   Hypothesis WFR: URA.wf (rsum (ModSem.initial_r_state ms_tgt)).
-  Variable mainbody: itree (hCallE +' eventE) Any.t.
-  Hypothesis MAINBODY:
-    <<MAINBODY: find (fun '(_fn, _) => dec "main" _fn) ftb = Some ("main", fun _ => mainbody)>>.
 
   Theorem adequacy_type: Beh.of_program (Mod.interp md_tgt) <1= Beh.of_program (Mod.interp md_src).
   Proof.
@@ -637,19 +634,7 @@ Notation "(⋅)" := URA.add (only parsing).
         by admit "ez".
       guclo bindC_spec.
       eapply bindR_intro with (RR:=eq).
-      - unfold ModSem.prog at 2 4. steps.
-        assert(MAINSRC:
-                 find (fun fnsem => dec "main" (fst fnsem))
-                      (List.map (fun '(fn, body) => (fn, fun_to_src body)) ftb) =
-                 Some ("main", fun_to_src (fun _ => mainbody))).
-        { exploit find_some; et. i; des. ss. rewrite find_map. uo. des_ifs.
-          - eapply find_some in Heq. des. unfold compose in *. ss. des_sumbool. subst.
-            repeat f_equal. 
-            admit "ez - add uniqueness condition".
-          - eapply find_none in Heq; et. unfold compose in *. ss.
-        }
-        unfold unwrapU. des_ifs; cycle 1. steps. unfold fun_to_src, body_to_src. steps.
-        eapply simg_gpaco_refl. typeclasses eauto.
+      - eapply simg_gpaco_refl. typeclasses eauto.
       - ii. des_ifs. ss. steps.
     }
     assert(TRANSR: simg eq (Ordinal.from_nat 100)
