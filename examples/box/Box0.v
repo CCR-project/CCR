@@ -26,12 +26,13 @@ Section PROOF.
     end
   .
 
-  Definition getF (varg: list val): itree Es val :=
+  Definition getF (varg: Any.t): itree Es Any.t :=
+    varg <- varg↓ǃ;;
     mr0 <- trigger (MGet "Box");;
     `x: Z <- trigger (Take _);;
     assume(mr0 = GRA.padding ((inl (Some x)): URA.car (t:=RA.excl Z)));;
     (getF_parg varg)?;;
-    Ret (Vint x)
+    Ret (Vint x)↑
   .
 
   Definition setF_parg (varg: list val): option Z :=
@@ -41,10 +42,11 @@ Section PROOF.
     end
   .
 
-  Definition setF (varg: list val): itree Es val :=
+  Definition setF (varg: Any.t): itree Es Any.t :=
+    varg <- varg↓ǃ;;
     x <- (setF_parg varg)?;;
     MPut "Box" (GRA.padding ((inl (Some x)): URA.car (t:=RA.excl Z)));;
-    Ret (Vint 0)
+    Ret (Vint 0)↑
   .
 
   Definition BoxSem: ModSem.t :=

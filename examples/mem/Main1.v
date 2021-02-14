@@ -17,6 +17,16 @@ Set Implicit Arguments.
 Require Import Mem1.
 
 
+(* Notation "'hCall2' fn varg" := *)
+(*   (marg <- trigger (Choose _);; vret <- trigger (hCall fn marg varg);; vret <- vret↓?;; Ret vret) *)
+(*     (at level 60). *)
+(* Definition hCall' {X} (fn: string) (varg: Any.t): itree (hCallE +' eventE) X := *)
+(*   marg <- trigger (Choose _);; vret <- trigger (hCall fn marg varg);; vret <- vret↓?;; Ret vret *)
+(* . *)
+  (* marg <- trigger (Choose _);; trigger (hCall fn marg varg) >>= ((?) <*> (↓)) *)
+Definition hCall' (fn: string) (varg: Any.t): itree (hCallE +' eventE) Any.t :=
+  marg <- trigger (Choose _);; trigger (hCall fn marg varg)
+.
 
 Section PROOF.
 
@@ -30,36 +40,37 @@ Section PROOF.
         y = *x;
         return y; ~~~> return 42;
    ***)
-  Definition mainBody: list val -> itree (hCallE +' eventE) val :=
+
+  Definition mainBody: Any.t -> itree (hCallE +' eventE) Any.t :=
     fun _ =>
-      x <- trigger (hCall "alloc" [Vint 1]);;
-      trigger (hCall "store" [x ; Vint 42]);;
+      x <- (hCall' "alloc" [Vint 1]↑);; x <- x↓?;;
+      (hCall' "store" [x ; Vint 42]↑);;
       (* trigger (Call "unknown_call" [x]);; *)
-      trigger (hCall "load" [x]);;
-      Ret (Vint 42)
+      (hCall' "load" [x]↑);;
+      Ret (Vint 42)↑
   .
 
   (*** main's view on stb ***)
   Definition MainStb: list (fname * fspec) := [("main", mk "Main" (X:=unit) top3 top3)].
   Definition MemStb: list (fname * fspec) :=
   [("alloc", mk "Mem"
-               (fun sz varg _ => varg = [Vint (Z.of_nat sz)])
+               (fun sz varg _ => varg = [Vint (Z.of_nat sz)]↑)
                (fun sz vret rret =>
-                  exists b, vret = Vptr b 0 /\
+                  exists b, vret = (Vptr b 0)↑ /\
                             rret = GRA.padding (fold_left URA.add
                                                           (mapi (fun n _ => (b, Z.of_nat n) |-> (Vint 0))
                                                                 (List.repeat tt sz)) URA.unit))) ;
   ("free", mk "Mem"
-              (fun '(b, ofs, v) varg rarg => varg = [Vptr b ofs] /\
+              (fun '(b, ofs, v) varg rarg => varg = [Vptr b ofs]↑ /\
                                              rarg = (GRA.padding ((b, ofs) |-> v)))
               (top3)) ;
   ("load", mk "Mem"
-              (fun '(b, ofs, v) varg rarg => varg = [Vptr b ofs] /\
+              (fun '(b, ofs, v) varg rarg => varg = [Vptr b ofs]↑ /\
                                              rarg = (GRA.padding ((b, ofs) |-> v)))
-              (fun '(b, ofs, v) vret rret => rret = (GRA.padding ((b, ofs) |-> v)) /\ vret = v)) ;
+              (fun '(b, ofs, v) vret rret => rret = (GRA.padding ((b, ofs) |-> v)) /\ vret = v↑)) ;
   ("store", mk "Mem"
                (fun '(b, ofs, v_old, v_new) varg rarg =>
-                  varg = [Vptr b ofs ; v_new] /\ rarg = (GRA.padding ((b, ofs) |-> v_old)))
+                  varg = [Vptr b ofs ; v_new]↑ /\ rarg = (GRA.padding ((b, ofs) |-> v_old)))
                (fun '(b, ofs, v_old, v_new) _ rret => rret = (GRA.padding ((b, ofs) |-> v_new))))
   ]
   .
