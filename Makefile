@@ -1,5 +1,5 @@
 COQMODULE    := SimComp
-COQTHEORIES  := $(shell find .    ./examples/box -prune -false -o     -iname '*.v')
+COQTHEORIES  := $(shell find .    -path ./examples/box -prune -o     -iname '*.v')
 
 .PHONY: all proof proof-quick graph
 
