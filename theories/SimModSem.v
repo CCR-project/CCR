@@ -544,7 +544,6 @@ Require Import Ordinal ClassicalOrdinal.
   Qed.
 
   Opaque Ordinal.from_nat.
-  Opaque string_dec.
 
    Ltac igo := repeat (try rewrite bind_bind; try rewrite bind_ret_l; try rewrite bind_ret_r; try rewrite bind_tau;
                        try rewrite interp_vis;

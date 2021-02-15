@@ -736,7 +736,6 @@ Module GRA.
 
   Coercion to_URA: t >-> URA.t.
 
-
   Let cast_ra {A B: URA.t} (LeibEq: A = B) (a: URA.car (t:=A)): URA.car (t:=B) :=
     eq_rect A (@URA.car) a _ LeibEq.
 
@@ -860,6 +859,8 @@ Module GRA.
 
 End GRA.
 Coercion GRA.to_URA: GRA.t >-> URA.t.
+
+Definition ε `{Σ: GRA.t}: Σ := URA.unit.
 
 (***
 Choose: non-det

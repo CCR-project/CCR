@@ -62,7 +62,6 @@ Section SIMMODSEM.
   Notation "(⋅)" := URA.add (only parsing).
 
   Local Opaque AddStb BoxStb.
-  Local Opaque string_dec.
   Theorem correct: ModSemPair.sim Add1.AddSem Add0.AddSem.
   Proof.
     econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.

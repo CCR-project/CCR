@@ -11,20 +11,6 @@ Generalizable Variables E R A B C X Y.
 Set Implicit Arguments.
 
 
-Section AUX.
-  Context {Σ: GRA.t}.
-  Definition ε: Σ := URA.unit. (*** TODO: move to PCM.v ***)
-End AUX.
-
-
-
-
-
-
-(*** TODO: move to proper place ***)
-Opaque string_dec.
-
-
 
 
 

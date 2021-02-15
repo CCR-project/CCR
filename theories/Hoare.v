@@ -348,7 +348,6 @@ If this feature is needed; we can extend it then. At the moment, I will only all
   Qed.
 
   Opaque Ordinal.from_nat.
-  Opaque string_dec.
 
   Ltac mred :=
     repeat (cbn;

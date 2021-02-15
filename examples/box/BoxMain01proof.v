@@ -83,7 +83,7 @@ Section SIMMODSEM.
       repeat (go; igo; ss).
       rewrite ! URA.unit_idl.
       unfold body_to_tgt. unfold interp_hCallE_tgt. unfold mainBody.
-      igo. rewrite interp_trigger. Opaque string_dec. cbn. igo. des_ifs.
+      igo. rewrite interp_trigger. cbn. igo. des_ifs.
       rewrite interp_trigger. igo. cbn. des_ifs.
       Local Transparent MainStb BoxStb.
       unfold MainStb, BoxStb in Heq, Heq0.
