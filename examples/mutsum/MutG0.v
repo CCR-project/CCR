@@ -22,13 +22,14 @@ Section PROOF.
   (***
     g(n) := if (n == 0) then 0 else (n + f(n-1))
   ***)
-  Definition gF: list val -> itree Es val :=
+  Definition gF: Any.t -> itree Es Any.t :=
     fun varg =>
+      varg <- varg↓ǃ;;
       match varg with
       | [Vint n] =>
         if dec n 0%Z
-        then Ret (Vint 0)
-        else m <- trigger (Call "f" [Vint (n - 1)]);; r <- (vadd (Vint n) m)?;; Ret r
+        then Ret (Vint 0)↑
+        else m <- trigger (Call "f" [Vint (n - 1)]↑);; m <- m↓ǃ;; r <- (vadd (Vint n) m)?;; Ret r↑
       | _ => triggerUB
       end
   .

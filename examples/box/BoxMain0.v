@@ -19,11 +19,12 @@ Section PROOF.
   Context `{Σ: GRA.t}.
   (* Context `{@GRA.inG memRA Σ}. *)
 
-  Definition mainF: list val -> itree Es val :=
+  Definition mainF: Any.t -> itree Es Any.t :=
     fun _ =>
-      trigger (Call "set" [Vint 10]);;
-      r <- trigger (Call "get" []);;
-      Ret r
+      trigger (Call "set" [Vint 10]↑);;
+      r <- trigger (Call "get" ([]: list val)↑);;
+      `r: val <- r↓?;;
+      Ret r↑
   .
 
   Definition MainSem: ModSem.t := {|
