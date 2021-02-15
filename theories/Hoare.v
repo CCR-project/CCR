@@ -525,7 +525,7 @@ If this feature is needed; we can extend it then. At the moment, I will only all
 Infix "⋅" := URA.add (at level 50, left associativity).
 Notation "(⋅)" := URA.add (only parsing).
       esplits; eauto.
-      { clear - WFTGT x0. unfold ε. rewrite URA.unit_idl. rewrite URA.add_assoc in x0.
+      { clear - WFTGT x0. rewrite URA.unit_idl. rewrite URA.add_assoc in x0.
         r in x0. specialize (x0 URA.unit). rewrite ! URA.unit_id in x0.
         unfold update. des_ifs.
         - eapply URA.wf_mon. eapply x0. admit "ez - WFTGT".
@@ -653,7 +653,7 @@ Notation "(⋅)" := URA.add (only parsing).
       unshelve esplits; eauto.
       { refl. }
       steps. esplits; et. steps. esplits; et. steps. esplits; et.
-      { instantiate (1:=ε). unfold ε. rewrite URA.unit_id. ss. }
+      { instantiate (1:=ε). rewrite URA.unit_id. ss. }
       steps. unfold guarantee. steps. esplits; et. steps.
       replace (update
                  (fun mn0 : string =>

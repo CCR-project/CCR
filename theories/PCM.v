@@ -860,7 +860,8 @@ Module GRA.
 End GRA.
 Coercion GRA.to_URA: GRA.t >-> URA.t.
 
-Definition ε `{Σ: GRA.t}: Σ := URA.unit.
+Notation "'ε'" := URA.unit.
+(* Definition ε `{Σ: GRA.t}: Σ := URA.unit. *)
 
 (***
 Choose: non-det

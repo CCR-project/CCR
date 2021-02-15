@@ -69,7 +69,7 @@ Section PROOF.
     { ss. }
     { ss. }
     { ss. admit "main - Fix me". }
-    cbn in *. unfold compose. ss. unfold ε. rewrite ! URA.unit_id. apply URA.wf_unit.
+    cbn in *. unfold compose. ss. rewrite ! URA.unit_id. apply URA.wf_unit.
   Qed.
 
 

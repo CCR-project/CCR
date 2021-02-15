@@ -89,7 +89,7 @@ Section PROOF.
     { ss. }
     { ss. instantiate (1:=global_stb). admit "ez". }
     { ss. }
-    ss. unfold compose. ss. unfold ε. rewrite ! URA.unit_id. rewrite ! URA.unit_idl.
+    ss. unfold compose. ss. rewrite ! URA.unit_id. rewrite ! URA.unit_idl.
     eapply padding_wf; et. ss. esplits; et.
     rr. esplits; et. ss.
   Qed.
