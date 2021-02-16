@@ -219,18 +219,38 @@ Section SIM.
       (K: sim_itree i1 (st_src0, i_src) (st_tgt0, i_tgt))
     :
       _sim_itree sim_itree i0 (st_src0, tau;; i_src) (st_tgt0, i_tgt)
-  | sim_itree_put_src
+  (* | sim_itree_put_src *)
+  (*     i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0 *)
+  (*     i1 k_src i_tgt *)
+  (*     (ORD: i1 < i0) *)
+  (*     mn mr0 mr1 fr_src1 *)
+  (*     (MR0: Maps.lookup mn mrs_src0 = Some mr0) *)
+  (*     (UPD: URA.updatable (URA.add mr0 fr_src0) (URA.add mr1 fr_src1)) *)
+  (*     mrs_src1 *)
+  (*     (EQ: mrs_src1 = Maps.add mn mr1 mrs_src0) *)
+  (*     (K: sim_itree i1 ((mrs_src1, fr_src1), k_src tt) ((mrs_tgt0, fr_tgt0), i_tgt)) *)
+  (*   : *)
+  (*     _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (Put mn mr1 fr_src1) >>= k_src) *)
+  (*                ((mrs_tgt0, fr_tgt0), i_tgt) *)
+  | sim_itree_mput_src
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       i1 k_src i_tgt
       (ORD: i1 < i0)
-      mn mr0 mr1 fr_src1
+      mn mr0 mr1 mrs_src1
       (MR0: Maps.lookup mn mrs_src0 = Some mr0)
-      (UPD: URA.updatable (URA.add mr0 fr_src0) (URA.add mr1 fr_src1))
-      mrs_src1
       (EQ: mrs_src1 = Maps.add mn mr1 mrs_src0)
-      (K: sim_itree i1 ((mrs_src1, fr_src1), k_src tt) ((mrs_tgt0, fr_tgt0), i_tgt))
+      (K: sim_itree i1 ((mrs_src1, fr_src0), k_src tt) ((mrs_tgt0, fr_tgt0), i_tgt))
     :
-      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (Put mn mr1 fr_src1) >>= k_src)
+      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (MPut mn mr1) >>= k_src)
+                 ((mrs_tgt0, fr_tgt0), i_tgt)
+  | sim_itree_fput_src
+      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i1 k_src i_tgt
+      (ORD: i1 < i0)
+      fr_src1
+      (K: sim_itree i1 ((mrs_src0, fr_src1), k_src tt) ((mrs_tgt0, fr_tgt0), i_tgt))
+    :
+      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (FPut fr_src1) >>= k_src)
                  ((mrs_tgt0, fr_tgt0), i_tgt)
   | sim_itree_mget_src
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
@@ -249,36 +269,6 @@ Section SIM.
       (K: sim_itree i1 ((mrs_src0, fr_src0), k_src fr_src0) ((mrs_tgt0, fr_tgt0), i_tgt))
     :
       _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (FGet) >>= k_src)
-                 ((mrs_tgt0, fr_tgt0), i_tgt)
-  | sim_itree_forge_src
-      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
-      i1 k_src i_tgt
-      (ORD: i1 < i0)
-      delta
-      (K: sim_itree i1 ((mrs_src0, URA.add fr_src0 delta), k_src tt) ((mrs_tgt0, fr_tgt0), i_tgt))
-    :
-      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (Forge delta) >>= k_src)
-                 ((mrs_tgt0, fr_tgt0), i_tgt)
-  | sim_itree_discard_src
-      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
-      i1 k_src i_tgt
-      (ORD: i1 < i0)
-      delta fr_src1
-      (SPLIT: fr_src0 = URA.add fr_src1 delta)
-      (K: sim_itree i1 ((mrs_src0, fr_src1), k_src tt) ((mrs_tgt0, fr_tgt0), i_tgt))
-    :
-      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (Discard delta) >>= k_src)
-                 ((mrs_tgt0, fr_tgt0), i_tgt)
-  | sim_itree_check_src
-      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
-      i1 k_src i_tgt
-      (ORD: i1 < i0)
-      mn mr0
-      (MR0: Maps.lookup mn mrs_src0 = Some mr0)
-      (K: forall (WF: (URA.wf (URA.add mr0 fr_src0))),
-          sim_itree i1 ((mrs_src0, fr_src0), k_src tt) ((mrs_tgt0, fr_tgt0), i_tgt))
-    :
-      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (CheckWf mn) >>= k_src)
                  ((mrs_tgt0, fr_tgt0), i_tgt)
   | sim_itree_choose_src
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
@@ -309,21 +299,41 @@ Section SIM.
       (K: sim_itree i1 (st_src0, i_src) (st_tgt0, i_tgt))
     :
       _sim_itree sim_itree i0 (st_src0, i_src) (st_tgt0, tau;; i_tgt)
-  | sim_itree_put_tgt
+  (* | sim_itree_put_tgt *)
+  (*     i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0 *)
+  (*     i1 i_src k_tgt *)
+  (*     (ORD: i1 < i0) *)
+  (*     mn mr0 mr1 fr_tgt1 *)
+  (*     (MR0: Maps.lookup mn mrs_tgt0 = Some mr0) *)
+  (*     (* (UPD: URA.updatable (URA.add mr0 fr_tgt0) (URA.add mr1 fr_tgt1)) *) *)
+  (*     mrs_tgt1 *)
+  (*     (EQ: mrs_tgt1 = Maps.add mn mr1 mrs_tgt0) *)
+  (*     (* (K: sim_itree i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt1, fr_tgt1), k_tgt tt)) *) *)
+  (*     (K: forall (UPD: URA.updatable (URA.add mr0 fr_tgt0) (URA.add mr1 fr_tgt1)), *)
+  (*         sim_itree i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt1, fr_tgt1), k_tgt tt)) *)
+  (*   : *)
+  (*     _sim_itree sim_itree i0 ((mrs_src0, fr_src0), i_src) *)
+  (*                ((mrs_tgt0, fr_tgt0), trigger (Put mn mr1 fr_tgt1) >>= k_tgt) *)
+  | sim_itree_mput_tgt
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       i1 i_src k_tgt
       (ORD: i1 < i0)
-      mn mr0 mr1 fr_tgt1
+      mn mr0 mr1 mrs_tgt1
       (MR0: Maps.lookup mn mrs_tgt0 = Some mr0)
-      (* (UPD: URA.updatable (URA.add mr0 fr_tgt0) (URA.add mr1 fr_tgt1)) *)
-      mrs_tgt1
       (EQ: mrs_tgt1 = Maps.add mn mr1 mrs_tgt0)
-      (* (K: sim_itree i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt1, fr_tgt1), k_tgt tt)) *)
-      (K: forall (UPD: URA.updatable (URA.add mr0 fr_tgt0) (URA.add mr1 fr_tgt1)),
-          sim_itree i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt1, fr_tgt1), k_tgt tt))
+      (K: sim_itree i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt1, fr_tgt0), k_tgt tt))
     :
       _sim_itree sim_itree i0 ((mrs_src0, fr_src0), i_src)
-                 ((mrs_tgt0, fr_tgt0), trigger (Put mn mr1 fr_tgt1) >>= k_tgt)
+                 ((mrs_tgt0, fr_tgt0), trigger (MPut mn mr1) >>= k_tgt)
+  | sim_itree_fput_tgt
+      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i1 i_src k_tgt
+      (ORD: i1 < i0)
+      fr_tgt1
+      (K: sim_itree i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt1), k_tgt tt))
+    :
+      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), i_src)
+                 ((mrs_tgt0, fr_tgt0), trigger (FPut fr_tgt1) >>= k_tgt)
   | sim_itree_mget_tgt
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       i1 i_src k_tgt
@@ -342,36 +352,6 @@ Section SIM.
     :
       _sim_itree sim_itree i0 ((mrs_src0, fr_src0), i_src)
                  ((mrs_tgt0, fr_tgt0), trigger (FGet) >>= k_tgt)
-  | sim_itree_forge_tgt
-      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
-      i1 i_src k_tgt
-      (ORD: i1 < i0)
-      delta
-      (K: sim_itree i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, URA.add fr_tgt0 delta), k_tgt tt))
-    :
-      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), i_src)
-                 ((mrs_tgt0, fr_tgt0), trigger (Forge delta) >>= k_tgt)
-  | sim_itree_discard_tgt
-      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
-      i1 i_src k_tgt
-      (ORD: i1 < i0)
-      delta
-      (K: forall fr_tgt1 (SPLIT: fr_tgt0 = URA.add fr_tgt1 delta),
-          sim_itree i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt1), k_tgt tt))
-    :
-      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), i_src)
-                 ((mrs_tgt0, fr_tgt0), trigger (Discard delta) >>= k_tgt)
-  | sim_itree_check_tgt
-      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
-      i1 i_src k_tgt
-      (ORD: i1 < i0)
-      mn mr0
-      (MR0: Maps.lookup mn mrs_tgt0 = Some mr0)
-      (K: exists (WF: (URA.wf (URA.add mr0 fr_tgt0))),
-          sim_itree i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt0), k_tgt tt))
-    :
-      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), i_src)
-                 ((mrs_tgt0, fr_tgt0), trigger (CheckWf mn) >>= k_tgt)
   | sim_itree_choose_tgt
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       i1 X i_src k_tgt

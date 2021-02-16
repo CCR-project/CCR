@@ -84,7 +84,7 @@ Section PROOF.
     assume(mr0 = GRA.padding ((inl (Some m0)): URA.car (t:=memRA)));;
     `sz: Z <- (allocF_parg varg)?;;
     let (blk, m1) := Mem.alloc m0 sz in
-    MPut "Mem" (GRA.padding ((inl (Some m1)): URA.car (t:=memRA)));;
+    trigger (MPut "Mem" (GRA.padding ((inl (Some m1)): URA.car (t:=memRA))));;
     Ret (Vptr blk 0)↑
   .
 
@@ -103,7 +103,7 @@ Section PROOF.
     assume(mr0 = GRA.padding ((inl (Some m0)): URA.car (t:=memRA)));;
     '(b, ofs) <- (freeF_parg varg)?;;
     m1 <- (Mem.free m0 b ofs)?;;
-    MPut "Mem" (GRA.padding ((inl (Some m1)): URA.car (t:=memRA)));;
+    trigger (MPut "Mem" (GRA.padding ((inl (Some m1)): URA.car (t:=memRA))));;
     Ret (Vint 0)↑
   .
 
@@ -140,7 +140,7 @@ Section PROOF.
     assume(mr0 = GRA.padding ((inl (Some m0)): URA.car (t:=memRA)));;
     '(b, ofs, v) <- (storeF_parg varg)?;;
     m1 <- (Mem.store m0 b ofs v)?;;
-    MPut "Mem" (GRA.padding ((inl (Some m1)): URA.car (t:=memRA)));;
+    trigger (MPut "Mem" (GRA.padding ((inl (Some m1)): URA.car (t:=memRA))));;
     Ret (Vint 0)↑
   .
 
