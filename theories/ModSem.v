@@ -142,7 +142,7 @@ Section EVENTS.
   (*************************** Interpretation *************************)
   (********************************************************************)
   Definition r_state: Type := ((mname -> Σ) * list Σ).
-  Definition handle_rE: rE ~> stateT r_state (itree eventE) :=
+  Definition handle_rE `{eventE -< E}: rE ~> stateT r_state (itree E) :=
     fun _ e '(mrs, frs) =>
       match frs with
       | hd :: tl =>
@@ -166,14 +166,7 @@ Section EVENTS.
       | _ => triggerNB
       end.
   Definition interp_rE `{eventE -< E}: itree (rE +' E) ~> stateT r_state (itree E) :=
-    State.interp_state (case_
-                          ((fun T e s0 => resum_itr (handle_rE e s0)): rE ~> stateT r_state (itree E))
-                          (* ((fun T (e: rE T) (s0: r_state) => resum_itr (F:=E) ('(s1, r) <- (@handle_rE T e s0);; Ret (s1, r))): rE ~> stateT r_state (itree E)) *)
-                          (* (@pure_state r_state E: E ~> stateT r_state (itree E)) *)
-                          pure_state
-                       ).
-
-
+    State.interp_state (case_ (handle_rE) State.pure_state).
 
   Definition p_state: Type := (mname -> Any.t).
   Definition handle_pE `{eventE -< E}: pE ~> stateT p_state (itree E) :=
@@ -278,41 +271,16 @@ Section EVENTS.
       interp_state h t s = _interp_state h (observe t) s.
   Proof. i. f. apply unfold_interp_state. Qed.
 
-  Lemma interp_state_resum_l
-        (E0 E1 F : Type -> Type) (A S: Type)
-        (f0: forall T, E0 T -> S -> itree F (S * T))
-        (f1: forall T, E1 T -> S -> itree F (S * T))
+  Lemma interp_state_pure_r
+        (E0 E1 F : Type -> Type) (A B S: Type)
+        (f: forall T, E0 T -> S -> itree F (S * T))
         (t: itree E0 A)
         (s: S)
     :
-      interp_state (case_ f0 f1) (resum_itr t) s = interp_state (fun T e s0 => '(s1, t) <- f0 T e s0;; tau;; Ret (s1, t)) t s
+      interp_state (case_ f pure_state) (resum_itr t) s = interp_state (fun T e s0 => '(s1, t) <- f T e s0;; tau;; Ret (s1, t)) t s
   .
   Proof.
-    f. revert t s. ginit. gcofix CIH. i.
-    unfold resum_itr.
-    rewrite 2 unfold_interp_state.
-    ides t.
-    - cbn. ired. gstep. econs; et.
-    - cbn. ired. gstep. econs; eauto with paco.
-    - cbn. ired.
-      unfold resum, ReSum_id, id_, Id_IFun.
-      guclo eqit_clo_bind.
-      apply pbc_intro_h with (RU := eq).
-      + refl.
-      + intros ? _ []. ired. des_ifs. ss. clarify.
-        ired. cbn. gstep. econs; eauto with paco. gstep. econs; eauto with paco.
-  Qed.
-
-  Lemma interp_state_resum_r
-        (E0 E1 F : Type -> Type) (A S: Type)
-        (f0: forall T, E0 T -> S -> itree F (S * T))
-        (f1: forall T, E1 T -> S -> itree F (S * T))
-        (t: itree E1 A)
-        (s: S)
-    :
-      interp_state (case_ f0 f1) (resum_itr t) s = interp_state (fun T e s0 => '(s1, t) <- f1 T e s0;; tau;; Ret (s1, t)) t s
-  .
-  Proof.
+    (* unfold interp_state. *)
     f. revert t s. ginit. gcofix CIH. i.
     unfold resum_itr.
     rewrite 2 unfold_interp_state.
@@ -352,89 +320,8 @@ Section EVENTS.
       Ret ((rst1, pst0), r)
       (* interp_state (case_ handle_rE pure_state) (tau;; Ret r) st1 *)
   .
-  Proof.
-    unfold interp_Es, interp_rE, interp_pE. des_ifs. grind. cbn.
-    rewrite interp_state_resum_r.
-    unfold resum, ReSum_id, id_, Id_IFun. unfold pure_state at 4.
-    replace (fun (T0 : Type) (e0 : eventE T0) (s0 : p_state) => ` x_ : p_state * T0 <- Vis e0 (fun x : T0 => Ret (s0, x));; (let (s1, t) := x_ in tau;; Ret (s1, t)))
-      with
-        (fun (T0 : Type) (e0 : eventE T0) (s0 : p_state) => r <- trigger e0;; tau;; Ret (s0, r)); cycle 1.
-    { repeat (apply func_ext_dep; i). rewrite <- bind_trigger. grind. }
-    ired.
-  Abort.
-
-  Lemma interp_state_resum_r_eutt
-        (E0 E1 F : Type -> Type) (A S: Type)
-        (f0: forall T, E0 T -> S -> itree F (S * T))
-        (f1: forall T, E1 T -> S -> itree F (S * T))
-        (t: itree E1 A)
-        (s: S)
-    :
-      interp_state (case_ f0 f1) (resum_itr t) s ≈ interp_state f1 t s
-  .
-  Proof.
-    revert t s. ginit. gcofix CIH. i.
-    unfold resum_itr.
-    rewrite 2 unfold_interp_state.
-    ides t.
-    - cbn. ired. gstep. econs; et.
-    - cbn. ired. gstep. econs; eauto with paco.
-    - cbn. ired.
-      unfold resum, ReSum_id, id_, Id_IFun.
-      guclo eqit_clo_bind.
-      apply pbc_intro_h with (RU := eq).
-      + refl.
-      + intros ? _ []. ired. des_ifs. ss. clarify.
-        ired. cbn. gstep. eapply EqTauL; eauto. econs; eauto with paco.
-  Qed.
-
-  Lemma interp_state_pure
-        E R S
-        (s: S)
-        (itr: itree E R)
-    :
-      interp_state pure_state itr s ≈ r <- itr;; Ret (s, r)
-  .
-  Proof.
-    revert itr s. ginit. gcofix CIH. i.
-    ides itr.
-    - cbn. ired. gstep. econs; et.
-    - cbn. ired. gstep. econs; eauto with paco.
-    - cbn. ired. rewrite <- bind_trigger. ired. unfold pure_state at 2. rewrite <- bind_trigger. ired.
-      { irw. gstep. econs; eauto. i. r. ired. ss. guclo eqit_clo_trans. econs.
-        { rewrite tau_euttge. refl. }
-        { refl. }
-        { eauto with paco. }
-        { etrans; et. }
-        { etrans; et. }
-      }
-  Qed.
-
-  Lemma interp_Es_rE
-        p rst0 pst0
-        (* (e: Es Σ) *)
-        T
-        (e: rE T)
-    :
-      interp_Es p (trigger e) (rst0, pst0) ≈
-      '(rst1, r) <- handle_rE e rst0;;
-      tau;; tau;;
-      Ret ((rst1, pst0), r)
-      (* interp_state (case_ handle_rE pure_state) (tau;; Ret r) st1 *)
-  .
-  Proof.
-    unfold interp_Es, interp_rE, interp_pE. des_ifs. ired. grind. cbn.
-    rewrite interp_state_resum_r_eutt.
-    setoid_rewrite tau_eutt.
-    unfold resum, ReSum_id, id_, Id_IFun. rewrite interp_state_pure. ired.
-    f_equiv.
-    { refl. }
-    ii. destruct u; ss. ired. ss. rewrite ! tau_eutt. refl.
-  Qed.
-
-
-  unfold interp_state at 4. rewrite interp_state_bind.
-         unfold pure_state at 4. rewrite <- bind_trigger.
+  Proof. unfold interp_Es, interp_rE, interp_pE. des_ifs. grind. cbn.
+         unfold resum, ReSum_id, id_, Id_IFun.
          set (case_ handle_pE pure_state) as f in *.
          set (handle_rE e rst0) as itr in *.
          TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
