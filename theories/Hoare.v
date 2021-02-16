@@ -88,16 +88,16 @@ Section PROOF.
              (Q: X -> Any.t -> Σ -> Prop)
              (body: Any.t -> itree Es Any.t): Any.t -> itree Es Any.t := fun varg =>
     x <- trigger (Take X);;
-    rarg <- trigger (Take Σ);; trigger (Forge rarg);; (*** virtual resource passing ***)
-    trigger (CheckWf mn);;
+    rarg <- trigger (Take Σ);; forge rarg;; (*** virtual resource passing ***)
+    (checkWf mn);;
     assume(P x varg rarg);; (*** precondition ***)
 
 
     vret <- body varg;; (*** "rudiment": we don't remove extcalls because of termination-sensitivity ***)
 
-    '(mret, fret) <- trigger (Choose _);; trigger (Put mn mret fret);; (*** updating resources in an abstract way ***)
+    '(mret, fret) <- trigger (Choose _);; put mn mret fret;; (*** updating resources in an abstract way ***)
     rret <- trigger (Choose Σ);; guarantee(Q x vret rret);; (*** postcondition ***)
-    trigger (Discard rret);; (*** virtual resource passing ***)
+    (discard rret);; (*** virtual resource passing ***)
 
     Ret vret (*** return ***)
   .
@@ -107,14 +107,14 @@ Section PROOF.
              (Q: Any.t -> Σ -> Prop):
     fname -> Any.t -> itree Es Any.t :=
     fun fn varg =>
-      '(marg, farg) <- trigger (Choose _);; trigger (Put mn marg farg);; (*** updating resources in an abstract way ***)
-      rarg <- trigger (Choose Σ);; trigger (Discard rarg);; (*** virtual resource passing ***)
+      '(marg, farg) <- trigger (Choose _);; put mn marg farg;; (*** updating resources in an abstract way ***)
+      rarg <- trigger (Choose Σ);; discard rarg;; (*** virtual resource passing ***)
       guarantee(P varg rarg);; (*** precondition ***)
 
       vret <- trigger (Call fn varg);; (*** call ***)
-      trigger (CheckWf mn);;
+      checkWf mn;;
 
-      rret <- trigger (Take Σ);; trigger (Forge rret);; (*** virtual resource passing ***)
+      rret <- trigger (Take Σ);; forge rret;; (*** virtual resource passing ***)
       assume(Q vret rret);; (*** postcondition ***)
 
       Ret vret (*** return to body ***)
@@ -472,7 +472,7 @@ If this feature is needed; we can extend it then. At the moment, I will only all
     steps. unfold unwrapN. des_ifs; cycle 1. { steps. } steps.
     rename Heq into CAST.
     unfold HoareCall.
-    steps. unfold handle_rE. des_ifs.
+    steps. unfold put, guarantee. steps. unfold handle_rE. des_ifs.
     { rr in SIM. des_ifs. des; ss. destruct l; ss. }
     steps. unfold guarantee. (*** TODO: remove: unfold guarantee ***)
     (* do 2 (mred; try _step; des_ifs_safe). *)
@@ -484,6 +484,10 @@ If this feature is needed; we can extend it then. At the moment, I will only all
     unfold unwrapU at 1. des_ifs; cycle 1.
     { steps. }
     rename Heq into FINDFS.
+    unfold discard.
+    steps.
+    unfold guarantee.
+    steps.
     unfold unwrapU. des_ifs; cycle 1.
     { steps.
       rewrite WTY in *. ss. clear - FINDFS Heq.
@@ -494,16 +498,15 @@ If this feature is needed; we can extend it then. At the moment, I will only all
       unfold compose in *. des_ifs. ss. clarify.
     }
     rename Heq into FINDFT0.
-    steps.
     unfold handle_rE. des_ifs.
     { steps. rr in SIM. des; ss. }
     steps.
     rename i into i_src.
     rename i0 into i_tgt.
     guclo bindC_spec.
-    replace (Ordinal.from_nat 78) with (Ordinal.from_nat 300) by admit "lockstep tau thing".
-    replace (Ordinal.from_nat 300) with
-        (Ordinal.add (Ordinal.from_nat 160) (Ordinal.from_nat 140)); cycle 1.
+    instantiate (1:=400).
+    replace (Ordinal.from_nat 400) with
+        (Ordinal.add (Ordinal.from_nat 200) (Ordinal.from_nat 200)); cycle 1.
     { admit "ez". }
     rename f into fs.
     econs.
@@ -518,24 +521,32 @@ If this feature is needed; we can extend it then. At the moment, I will only all
       apply find_some in FINDFS. des. ss. des_sumbool. clarify.
       rewrite WTY in *. rewrite in_map_iff in *. des. des_ifs.
       unfold fun_to_src, fun_to_tgt. des_ifs. unfold HoareFun.
-      rename x3 into PRECOND. rename x1 into rarg. rename x2 into mr.
+      rename x3 into PRECOND. rename x1 into rarg.
       steps. exists x.
       steps. exists rarg.
-      steps.
-Infix "⋅" := URA.add (at level 50, left associativity).
-Notation "(⋅)" := URA.add (only parsing).
-      esplits; eauto.
+      steps. unfold forge, checkWf. steps. unfold assume, guarantee.
+      steps. unshelve esplits; eauto.
       { clear - WFTGT x0. rewrite URA.unit_idl. rewrite URA.add_assoc in x0.
         r in x0. specialize (x0 URA.unit). rewrite ! URA.unit_id in x0.
         unfold update. des_ifs.
         - eapply URA.wf_mon. eapply x0. admit "ez - WFTGT".
         - admit "ez - c1 contains both (c1 mn0) and (c1 (mn fs)).".
       }
-      steps. unfold assume. steps.
-      esplits; eauto. steps.
+      steps. esplits; eauto. steps.
+Infix "⋅" := URA.add (at level 50, left associativity).
+Notation "(⋅)" := URA.add (only parsing).
+      (* esplits; eauto. *)
+      (* { clear - WFTGT x0. rewrite URA.unit_idl. rewrite URA.add_assoc in x0. *)
+      (*   r in x0. specialize (x0 URA.unit). rewrite ! URA.unit_id in x0. *)
+      (*   unfold update. des_ifs. *)
+      (*   - eapply URA.wf_mon. eapply x0. admit "ez - WFTGT". *)
+      (*   - admit "ez - c1 contains both (c1 mn0) and (c1 (mn fs)).". *)
+      (* } *)
+      (* steps. unfold assume. steps. *)
+      (* esplits; eauto. steps. *)
       unfold body_to_src, body_to_tgt.
       guclo bindC_spec.
-      replace (Ordinal.from_nat 126) with (Ordinal.add (Ordinal.from_nat 18) (Ordinal.from_nat 108)); cycle 1.
+      replace (Ordinal.from_nat 180) with (Ordinal.add (Ordinal.from_nat 50) (Ordinal.from_nat 130)); cycle 1.
       { admit "ez - ordinal nat add". }
       rewrite idK_spec at 1.
       assert(i0 = i) by admit "ez - uniqueness of idx. Add this as an hypothesis". subst.
@@ -545,25 +556,28 @@ Notation "(⋅)" := URA.add (only parsing).
         eapply CIH; et.
         { refl. }
         ss. esplits; ss; et.
-        clear - WFTGT x.
+        clear - WFTGT x0.
         admit "ez -- updatable".
       + ii. des_ifs. des; subst.
         unfold idK.
         steps. unfold handle_rE.
         r in SIM. des_ifs; ss. des; ss. destruct l; ss. des; ss.
-        steps. unfold guarantee. steps.
+        steps. unfold put. unfold guarantee. steps.
+        unfold discard. unfold guarantee. steps.
         esplits; et.
-        clear - WFTGT0 x4.
+        clear - WFTGT0 x1.
         admit "ez -- updtaable".
     - ii. ss. des_ifs. des. (* rr in SIM0. des; ss. unfold RelationPairs.RelCompFun in *. ss. *)
       (* r in SIM0. des_ifs. des; ss. *)
-      steps. clear_tac. instantiate (1:=112). des_ifs; ss.
+      steps. clear_tac. instantiate (1:=118).
+      unfold checkWf, assume; steps.
+      des_ifs; ss.
       { steps. }
       steps.
-      esplits; eauto.
+      unshelve esplits; eauto.
       { clear - ST1. admit "ez". }
       steps. esplits; eauto. steps.
-      unfold assume. steps. unshelve esplits; eauto.
+      unfold forge; steps. unshelve esplits; eauto.
       steps.
       fold interp_hCallE_src. fold (interp_hCallE_tgt stb mn0).
       gbase. eapply CIH; [..|M]; Mskip et. all: cycle 1.
@@ -650,9 +664,10 @@ Notation "(⋅)" := URA.add (only parsing).
       assert(s = "Main") by admit "ez". clarify.
       rewrite Any.upcast_downcast.
       steps. eexists ((fst st_tgt0) "Main", ε). steps.
+      unfold put, guarantee. steps.
       unshelve esplits; eauto.
       { refl. }
-      steps. esplits; et. steps. esplits; et. steps. esplits; et.
+      steps. esplits; et. steps. unfold discard, guarantee. steps. esplits; et. steps. unshelve esplits; et.
       { instantiate (1:=ε). rewrite URA.unit_id. ss. }
       steps. unfold guarantee. steps. esplits; et. steps.
       replace (update
@@ -663,15 +678,16 @@ Notation "(⋅)" := URA.add (only parsing).
                     end) "Main" c, [ε]) with st_tgt0; cycle 1.
       { unfold st_tgt0.
         unfold ModSem.initial_r_state. f_equal. apply func_ext. i. unfold update. des_ifs; ss; clarify. }
-      replace (Ordinal.from_nat 83) with (Ordinal.add (Ordinal.from_nat 43) (Ordinal.from_nat 40)) by admit "ez".
+      replace (Ordinal.from_nat 69) with (Ordinal.add (Ordinal.from_nat 39) (Ordinal.from_nat 30)) by admit "ez".
       guclo bindC_spec.
       eapply bindR_intro with (RR:=eq).
       - eapply simg_gpaco_refl. typeclasses eauto.
       - ii. des_ifs. ss. steps.
+        unfold checkWf, assume. steps.
         unfold ModSem.handle_rE. des_ifs.
         { admit "we should use stronger RR, not eq;
 we should know that stackframe is not popped (unary property)". }
-        unfold assume. steps.
+        steps. unfold forge; steps.
     }
 
 

@@ -92,27 +92,37 @@ Section EVENTS.
   (* | MGet (mn: mname): rE GRA *)
   (* | FPut (r: GRA): rE unit *)
   (* | FGet: rE GRA *)
-  | Put (mn: mname) (mr: Σ) (fr: Σ): rE unit
+  | MPut (mn: mname) (mr: Σ): rE unit
+  | FPut (fr: Σ): rE unit
   | MGet (mn: mname): rE Σ
   | FGet: rE Σ
   (* | Get (mn: mname): rE (GRA * GRA) *)
-
-  (*** NOTE: These methods can be implemented using Put/Get,
-       but making it explicit will be helpful for meta-theory.
-       E.g., In top-level, if all modules are well-typed,
-       we can make "CheckWf" to Nop by adjusting handler.
-   ***)
-  | Forge (fr: Σ): rE unit
-  | Discard (fr: Σ): rE unit
-  | CheckWf (mn: mname): rE unit
 
   | PushFrame: rE unit
   | PopFrame: rE unit
   .
 
-  Definition MPut E `{rE -< E} (mn: mname) (mr: Σ): itree E unit :=
-    fr <- trigger FGet;;
-    trigger (Put mn mr fr)
+  Definition put E `{rE -< E} `{eventE -< E} (mn: mname) (mr1: Σ) (fr1: Σ): itree E unit :=
+    mr0 <- trigger (MGet mn);; fr0 <- trigger FGet;;
+    guarantee(URA.updatable (URA.add mr0 fr0) (URA.add mr1 fr1));;
+    trigger (FPut fr1);; trigger (MPut mn mr1)
+  .
+
+  Definition forge E `{rE -< E} `{eventE -< E} (delta: Σ): itree E unit :=
+    fr0 <- trigger FGet;;
+    trigger (FPut (URA.add fr0 delta))
+  .
+
+  Definition discard E `{rE -< E} `{eventE -< E} (fr1: Σ): itree E unit :=
+    fr0 <- trigger FGet;;
+    rest <- trigger (Choose _);;
+    guarantee(fr0 = URA.add fr1 rest);;
+    trigger (FPut rest)
+  .
+
+  Definition checkWf E `{rE -< E} `{eventE -< E} (mn: mname): itree E unit :=
+    mr0 <- trigger (MGet mn);; fr0 <- trigger FGet;;
+    assume(URA.wf (URA.add mr0 fr0))
   .
 
   (*** TODO: we don't want to require "mname" here ***)
@@ -147,17 +157,11 @@ Section EVENTS.
       match frs with
       | hd :: tl =>
         match e with
-        | Put mn mr fr =>
-          guarantee(URA.updatable (URA.add (mrs mn) hd) (URA.add mr fr));;
-          Ret (((update mrs mn mr), fr :: tl), tt)
+        (* | Put mn mr fr => Ret (((update mrs mn mr), fr :: tl), tt) *)
+        | MPut mn mr => Ret (((update mrs mn mr), hd :: tl), tt)
+        | FPut fr => Ret ((mrs, fr :: tl), tt)
         | MGet mn => Ret ((mrs, frs), mrs mn)
         | FGet => Ret ((mrs, frs), hd)
-        | Forge fr => Ret ((mrs, (URA.add hd fr) :: tl), tt)
-        | Discard fr =>
-          rest <- trigger (Choose _);;
-          guarantee(hd = URA.add fr rest);;
-          Ret ((mrs, rest :: tl), tt)
-        | CheckWf mn => assume(URA.wf (URA.add (mrs mn) hd));; Ret ((mrs, frs), tt)
         | PushFrame =>
           Ret ((mrs, ε :: frs), tt)
         | PopFrame =>
