@@ -44,6 +44,7 @@ Proof.
   { econs; ii. inv H; ss. des; clarify. }
   destruct v; ss; cycle 1.
   { econs; ii. inv H; ss. des; clarify. }
+  { econs; ii. inv H; ss. des; clarify. }
   pattern n. eapply well_founded_ind.
   { eapply Z.lt_wf with (z:=0%Z). }
   i. ss. econs. ii. inv H0; ss. des; clarify. eapply H. lia.
