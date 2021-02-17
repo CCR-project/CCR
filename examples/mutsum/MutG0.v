@@ -36,7 +36,7 @@ Section PROOF.
 
   Definition GSem: ModSem.t := {|
     ModSem.fnsems := [("g", gF)];
-    ModSem.initial_mrs := [("G", ε)];
+    ModSem.initial_mrs := [("G", (ε, unit↑))];
   |}
   .
 

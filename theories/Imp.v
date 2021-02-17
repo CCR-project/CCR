@@ -426,10 +426,10 @@ Section MODSEM.
   Variable program: list (fname * stmt).
   Variable mn: mname.
 
-  Set Typeclasses Depth 4.
+  Set Typeclasses Depth 5.
   Definition modsem: ModSem.t := {|
     ModSem.fnsems := List.map (fun '(fn, st) => (fn, fun _ => resum_itr (eval_imp st;; Ret (Any.upcast (Vint 0))))) program;
-    ModSem.initial_mrs := [(mn, URA.unit)];
+    ModSem.initial_mrs := [(mn, (URA.unit, unit↑))];
   |}
   .
 End MODSEM.

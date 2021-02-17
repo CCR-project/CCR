@@ -33,7 +33,7 @@ Section PROOF.
   Definition FSem: ModSem.t := {|
     ModSem.fnsems := List.map (fun '(fn, body) => (fn, fun_to_tgt GlobalStb fn body)) FFtb;
       (* [("main", mainF) ; ("f", fF)]; *)
-    ModSem.initial_mrs := [("F", ε)];
+    ModSem.initial_mrs := [("F", (ε, unit↑))];
   |}
   .
 

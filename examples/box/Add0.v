@@ -11,7 +11,7 @@ Require Import Hoare.
 Generalizable Variables E R A B C X Y Σ.
 
 Set Implicit Arguments.
-Set Typeclasses Depth 4.
+Set Typeclasses Depth 5.
 
 
 

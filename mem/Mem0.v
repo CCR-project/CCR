@@ -11,7 +11,7 @@ Require Import Hoare.
 Generalizable Variables E R A B C X Y Σ.
 
 Set Implicit Arguments.
-Set Typeclasses Depth 4.
+Set Typeclasses Depth 5.
 
 
 
@@ -147,7 +147,7 @@ Section PROOF.
   Definition MemSem: ModSem.t :=
     {|
       ModSem.fnsems := [("alloc", allocF) ; ("free", freeF) ; ("load", loadF) ; ("store", storeF)];
-      ModSem.initial_mrs := [("Mem", GRA.padding ((inl (Some Mem.empty)): URA.car (t:=memRA)))];
+      ModSem.initial_mrs := [("Mem", (GRA.padding ((inl (Some Mem.empty)): URA.car (t:=memRA)), unit↑))];
     |}
   .
 

@@ -155,7 +155,7 @@ Section PROOF.
   Definition MemSem: ModSem.t := {|
     ModSem.fnsems := List.map (fun '(fn, body) => (fn, fun_to_tgt MemStb fn body)) MemFtb;
       (* [("alloc", allocF) ; ("free", freeF) ; ("load", loadF) ; ("store", storeF)]; *)
-    ModSem.initial_mrs := [("Mem", GRA.padding (URA.black (M:=_memRA) (fun _ _ => inr tt)))];
+    ModSem.initial_mrs := [("Mem", (GRA.padding (URA.black (M:=_memRA) (fun _ _ => inr tt)), unit↑))];
   |}
   .
 

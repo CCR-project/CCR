@@ -53,7 +53,7 @@ Section PROOF.
   Definition FG2: Mod.t := {|
     Mod.get_modsem := fun _ => {|
         ModSem.fnsems := List.map (fun '(fn, body) => (fn, fun_to_src body)) (FFtb ++ GFtb);
-        ModSem.initial_mrs := [];
+        ModSem.initial_mrs := [("F", (ε, unit↑)) ; ("G", (ε, unit↑))];
       |};
     Mod.sk := Sk.unit;
   |}
