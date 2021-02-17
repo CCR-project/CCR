@@ -19,7 +19,7 @@ Section PROOF.
 
   Context `{Σ: GRA.t}.
 
-  Definition gBody: Any.t -> itree (hCallE +' eventE) Any.t :=
+  Definition gBody: Any.t -> itree (hCallE +' pE +' eventE) Any.t :=
     fun varg => varg' <- trigger (Choose _);; guarantee (ord varg' varg);;
                 marg <- trigger (Choose _);; trigger (hCall "f" marg varg');; trigger (Choose _)
   .

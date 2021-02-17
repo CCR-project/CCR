@@ -24,7 +24,7 @@ Require Import Mem1.
 (*   marg <- trigger (Choose _);; vret <- trigger (hCall fn marg varg);; vret <- vret↓?;; Ret vret *)
 (* . *)
   (* marg <- trigger (Choose _);; trigger (hCall fn marg varg) >>= ((?) <*> (↓)) *)
-Definition hCall' (fn: string) (varg: Any.t): itree (hCallE +' eventE) Any.t :=
+Definition hCall' (fn: string) (varg: Any.t): itree (hCallE +' pE +' eventE) Any.t :=
   marg <- trigger (Choose _);; trigger (hCall fn marg varg)
 .
 
@@ -41,7 +41,7 @@ Section PROOF.
         return y; ~~~> return 42;
    ***)
 
-  Definition mainBody: Any.t -> itree (hCallE +' eventE) Any.t :=
+  Definition mainBody: Any.t -> itree (hCallE +' pE +' eventE) Any.t :=
     fun _ =>
       x <- (hCall' "alloc" [Vint 1]↑);; x <- x↓?;;
       (hCall' "store" [x ; Vint 42]↑);;

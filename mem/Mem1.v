@@ -124,7 +124,7 @@ Section PROOF.
   ]
   .
 
-  Definition MemFtb: list (fname * (Any.t -> itree (hCallE +' eventE) Any.t)) :=
+  Definition MemFtb: list (fname * (Any.t -> itree (hCallE +' pE +' eventE) Any.t)) :=
     zip pair ["alloc"; "free"; "load"; "store"] (List.repeat (fun _ => trigger (Choose _)) 4)
   .
 

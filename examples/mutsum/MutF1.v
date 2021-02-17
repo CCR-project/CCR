@@ -19,8 +19,8 @@ Section PROOF.
 
   Context `{Σ: GRA.t}.
 
-  Definition mainBody: Any.t -> itree (hCallE +' eventE) Any.t := fun _ => marg <- trigger (Choose _);; trigger (hCall "f" marg [Vint 10]↑);; Ret (Vint 55)↑.
-  Definition fBody: Any.t -> itree (hCallE +' eventE) Any.t :=
+  Definition mainBody: Any.t -> itree (hCallE +' pE +' eventE) Any.t := fun _ => marg <- trigger (Choose _);; trigger (hCall "f" marg [Vint 10]↑);; Ret (Vint 55)↑.
+  Definition fBody: Any.t -> itree (hCallE +' pE +' eventE) Any.t :=
     fun varg => varg' <- trigger (Choose _);; guarantee (ord varg' varg);;
                 marg <- trigger (Choose _);; trigger (hCall "g" marg varg');; trigger (Choose _)
   .
