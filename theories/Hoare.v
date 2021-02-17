@@ -243,7 +243,8 @@ If this feature is needed; we can extend it then. At the moment, I will only all
 
   Definition ms_src: ModSem.t := {|
     ModSem.fnsems := List.map (fun '(fn, body) => (fn, fun_to_src body)) ftb;
-    ModSem.initial_mrs := [];
+    (* ModSem.initial_mrs := []; *)
+    ModSem.initial_mrs := List.map (fun '(mn, (mr, mp)) => (mn, (ε, mp))) ms_tgt.(ModSem.initial_mrs);
     (*** Note: we don't use resources, so making everything as a unit ***)
   |}
   .
@@ -269,16 +270,17 @@ If this feature is needed; we can extend it then. At the moment, I will only all
                       (* try rewrite interp_trigger *)
                      ).
 
-  Let W: Type := ((string -> Σ) * list Σ).
+  Let W: Type := (r_state * p_state).
   Opaque GRA.to_URA.
-  Let rsum: W -> Σ :=
+  Let rsum: r_state -> Σ :=
     fun '(mrs_tgt, frs_tgt) => (URA.add (fold_left URA.add (List.map (mrs_tgt <*> fst) ms_tgt.(ModSem.initial_mrs)) ε)
                                         (fold_left URA.add frs_tgt ε)).
   Let wf: W -> W -> Prop :=
-    fun '(mrs_src, frs_src) '(mrs_tgt, frs_tgt) =>
+    fun '((mrs_src, frs_src), mps_src) '((mrs_tgt, frs_tgt), mps_tgt) =>
       (<<LEN: List.length frs_src = List.length frs_tgt>>) /\
       (<<NNIL: frs_src <> []>>) /\
-      (<<WFTGT: URA.wf (rsum (mrs_tgt, frs_tgt))>>)
+      (<<WFTGT: URA.wf (rsum (mrs_tgt, frs_tgt))>>) /\
+      (<<PHYS: mps_src = mps_tgt>>)
   .
   Local Opaque rsum.
 
@@ -352,7 +354,9 @@ If this feature is needed; we can extend it then. At the moment, I will only all
   Ltac mred :=
     repeat (cbn;
             try rewrite ! interp_Es_bind; try rewrite ! interp_Es_ret; try rewrite ! interp_Es_tau;
-            try rewrite ! interp_Es_rE; try rewrite ! interp_Es_eventE; try rewrite ! interp_Es_callE;
+            try rewrite ! interp_Es_rE;
+            try rewrite ! interp_Es_pE;
+            try rewrite ! interp_Es_eventE; try rewrite ! interp_Es_callE;
             try rewrite ! interp_Es_triggerNB; try rewrite ! interp_Es_triggerUB; igo).
   (*** step and some post-processing ***)
   Ltac _step :=
@@ -420,7 +424,7 @@ If this feature is needed; we can extend it then. At the moment, I will only all
   (* Ltac mstep := gstep; econs; eauto; [eapply from_nat_lt; ss|]. *)
 
   Let adequacy_type_aux:
-    forall (R: Type) (RR: R -> R -> Prop) (TY: R = (ModSem.r_state * Any.t)%type)
+    forall (R: Type) (RR: R -> R -> Prop) (TY: R = (r_state * p_state * Any.t)%type)
            (REL: RR ~= (fun '(rs_src, v_src) '(rs_tgt, v_tgt) => wf rs_src rs_tgt /\ (v_src: Any.t) = v_tgt))
            st_src0 st_tgt0 (SIM: wf st_src0 st_tgt0) (i0: itree (hCallE +' eventE) Any.t)
            i_src i_tgt mn
@@ -472,7 +476,10 @@ If this feature is needed; we can extend it then. At the moment, I will only all
     steps. unfold unwrapN. des_ifs; cycle 1. { steps. } steps.
     rename Heq into CAST.
     unfold HoareCall.
-    steps. unfold put, guarantee. steps. unfold handle_rE. des_ifs.
+    steps. unfold put, guarantee. steps.
+    destruct st_tgt0 as [rst_tgt0 pst_tgt0]. destruct st_src0 as [rst_src0 pst_src0].
+    Opaque interp_Es. (*** TODO: move to ModSem ***)
+    steps. unfold handle_rE. des_ifs.
     { rr in SIM. des_ifs. des; ss. destruct l; ss. }
     steps. unfold guarantee. (*** TODO: remove: unfold guarantee ***)
     (* do 2 (mred; try _step; des_ifs_safe). *)
@@ -510,13 +517,15 @@ If this feature is needed; we can extend it then. At the moment, I will only all
     { admit "ez". }
     rename f into fs.
     econs.
-    - instantiate (1:= fun '((mrs_src, frs_src), vret_src) '((mrs_tgt, frs_tgt), vret_tgt) =>
+    - instantiate (1:= fun '(((mrs_src, frs_src), mps_src), vret_src) '(((mrs_tgt, frs_tgt), mps_tgt), vret_tgt) =>
                          exists (rret: Σ),
                            (<<ST: (List.length frs_src) = (List.length frs_tgt) /\
                                   frs_src <> [] /\
                                   URA.wf (rsum (mrs_tgt, rret :: frs_tgt))>>) /\
                            (<<VAL: vret_src = vret_tgt>>) /\
-                           (<<POST: fs.(postcond) x vret_tgt rret>>)).
+                           (<<POST: fs.(postcond) x vret_tgt rret>>) /\
+                           (<<PHYS: mps_src = mps_tgt>>)
+                  ).
       apply find_some in FINDFT0. des.
       apply find_some in FINDFS. des. ss. des_sumbool. clarify.
       rewrite WTY in *. rewrite in_map_iff in *. des. des_ifs.
@@ -546,7 +555,7 @@ Notation "(⋅)" := URA.add (only parsing).
       (* esplits; eauto. steps. *)
       unfold body_to_src, body_to_tgt.
       guclo bindC_spec.
-      replace (Ordinal.from_nat 180) with (Ordinal.add (Ordinal.from_nat 50) (Ordinal.from_nat 130)); cycle 1.
+      replace (Ordinal.from_nat 176) with (Ordinal.add (Ordinal.from_nat 46) (Ordinal.from_nat 130)); cycle 1.
       { admit "ez - ordinal nat add". }
       rewrite idK_spec at 1.
       assert(i0 = i) by admit "ez - uniqueness of idx. Add this as an hypothesis". subst.
@@ -569,7 +578,7 @@ Notation "(⋅)" := URA.add (only parsing).
         admit "ez -- updtaable".
     - ii. ss. des_ifs. des. (* rr in SIM0. des; ss. unfold RelationPairs.RelCompFun in *. ss. *)
       (* r in SIM0. des_ifs. des; ss. *)
-      steps. clear_tac. instantiate (1:=118).
+      steps. clear_tac. instantiate (1:=121).
       unfold checkWf, assume; steps.
       des_ifs; ss.
       { steps. }
@@ -601,12 +610,18 @@ Notation "(⋅)" := URA.add (only parsing).
     unfold assume.
     steps.
     esplits; et. { admit "ez - wf". }
-    set (st_src0 := (ModSem.initial_r_state ms_src)).
+    set (st_src0 := ((ModSem.initial_r_state ms_src), (ModSem.initial_p_state ms_src))).
     replace (Mod.enclose md_tgt) with ms_tgt by ss.
-    set (st_tgt0 := (ModSem.initial_r_state ms_tgt)).
+    set (st_tgt0 := ((ModSem.initial_r_state ms_tgt), (ModSem.initial_p_state ms_tgt))).
     (* Local Opaque URA.add. *)
     assert(SIM: wf st_src0 st_tgt0).
-    { r. ss. }
+    { r. ss. esplits; ss; et. unfold ms_src. unfold ModSem.initial_p_state. ss.
+      apply func_ext. clear - Σ. i. rewrite find_map; ss. unfold compose. uo.
+      replace (fun x0 : string * (Σ * Any.t) => (dec x (fst (let '(mn0, (_, mp)) := x0 in (mn0, (ε, mp))))): bool) with
+          (fun mnr : string * (Σ * Any.t) => (dec x (fst mnr)): bool); cycle 1.
+      { apply func_ext. i. des_ifs. }
+      des_ifs; eq_closure_tac.
+    }
     unfold mrec.
     (* { *)
     (*   unfold ModSem.prog at 4. *)
@@ -663,8 +678,9 @@ Notation "(⋅)" := URA.add (only parsing).
       destruct p; ss.
       assert(s = "Main") by admit "ez". clarify.
       rewrite Any.upcast_downcast.
-      steps. eexists ((fst st_tgt0) "Main", ε). steps.
-      unfold put, guarantee. steps.
+      steps. eexists ((fst (fst st_tgt0)) "Main", ε). steps.
+      unfold put, guarantee. steps. unfold st_tgt0. steps.
+      ss.
       unshelve esplits; eauto.
       { refl. }
       steps. esplits; et. steps. unfold discard, guarantee. steps. esplits; et. steps. unshelve esplits; et.
@@ -672,18 +688,18 @@ Notation "(⋅)" := URA.add (only parsing).
       steps. unfold guarantee. steps. esplits; et. steps.
       replace (update
                  (fun mn0 : string =>
-                    match find (fun mnr : string * Σ => dec mn0 (fst mnr)) (ModSem.initial_mrs ms_tgt) with
-                    | Some r => snd r
+                    match find (fun mnr => dec mn0 (fst mnr)) (ModSem.initial_mrs ms_tgt) with
+                    | Some r => fst (snd r)
                     | None => ε
-                    end) "Main" c, [ε]) with st_tgt0; cycle 1.
+                    end) "Main" (fst p), [ε], ModSem.initial_p_state ms_tgt) with st_tgt0; cycle 1.
       { unfold st_tgt0.
-        unfold ModSem.initial_r_state. f_equal. apply func_ext. i. unfold update. des_ifs; ss; clarify. }
-      replace (Ordinal.from_nat 69) with (Ordinal.add (Ordinal.from_nat 39) (Ordinal.from_nat 30)) by admit "ez".
+        unfold ModSem.initial_r_state. f_equal. f_equal. apply func_ext. i. unfold update. des_ifs; ss; clarify. }
+      replace (Ordinal.from_nat 63) with (Ordinal.add (Ordinal.from_nat 33) (Ordinal.from_nat 30)) by admit "ez".
       guclo bindC_spec.
       eapply bindR_intro with (RR:=eq).
-      - eapply simg_gpaco_refl. typeclasses eauto.
+      - fold st_tgt0. eapply simg_gpaco_refl. typeclasses eauto.
       - ii. des_ifs. ss. steps.
-        unfold checkWf, assume. steps.
+        unfold checkWf, assume. steps. destruct p0. steps.
         unfold ModSem.handle_rE. des_ifs.
         { admit "we should use stronger RR, not eq;
 we should know that stackframe is not popped (unary property)". }

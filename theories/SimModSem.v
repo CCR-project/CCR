@@ -178,9 +178,9 @@ Section SIM.
   Context `{Σ: GRA.t}.
 
   (* Let st_local: Type := (list (string * GRA) * GRA). *)
-  Let st_local: Type := ((alist mname Σ) * Σ).
+  Let st_local: Type := ((alist mname (Σ * Any.t)) * Σ).
 
-  Let W: Type := (alist mname Σ) * (alist mname Σ).
+  Let W: Type := (alist mname (Σ * Any.t)) * (alist mname (Σ * Any.t)).
   Variable wf: W -> Prop.
   Variable le: relation W.
   Hypothesis le_PreOrder: PreOrder le.
@@ -219,57 +219,6 @@ Section SIM.
       (K: sim_itree i1 (st_src0, i_src) (st_tgt0, i_tgt))
     :
       _sim_itree sim_itree i0 (st_src0, tau;; i_src) (st_tgt0, i_tgt)
-  (* | sim_itree_put_src *)
-  (*     i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0 *)
-  (*     i1 k_src i_tgt *)
-  (*     (ORD: i1 < i0) *)
-  (*     mn mr0 mr1 fr_src1 *)
-  (*     (MR0: Maps.lookup mn mrs_src0 = Some mr0) *)
-  (*     (UPD: URA.updatable (URA.add mr0 fr_src0) (URA.add mr1 fr_src1)) *)
-  (*     mrs_src1 *)
-  (*     (EQ: mrs_src1 = Maps.add mn mr1 mrs_src0) *)
-  (*     (K: sim_itree i1 ((mrs_src1, fr_src1), k_src tt) ((mrs_tgt0, fr_tgt0), i_tgt)) *)
-  (*   : *)
-  (*     _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (Put mn mr1 fr_src1) >>= k_src) *)
-  (*                ((mrs_tgt0, fr_tgt0), i_tgt) *)
-  | sim_itree_mput_src
-      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
-      i1 k_src i_tgt
-      (ORD: i1 < i0)
-      mn mr0 mr1 mrs_src1
-      (MR0: Maps.lookup mn mrs_src0 = Some mr0)
-      (EQ: mrs_src1 = Maps.add mn mr1 mrs_src0)
-      (K: sim_itree i1 ((mrs_src1, fr_src0), k_src tt) ((mrs_tgt0, fr_tgt0), i_tgt))
-    :
-      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (MPut mn mr1) >>= k_src)
-                 ((mrs_tgt0, fr_tgt0), i_tgt)
-  | sim_itree_fput_src
-      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
-      i1 k_src i_tgt
-      (ORD: i1 < i0)
-      fr_src1
-      (K: sim_itree i1 ((mrs_src0, fr_src1), k_src tt) ((mrs_tgt0, fr_tgt0), i_tgt))
-    :
-      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (FPut fr_src1) >>= k_src)
-                 ((mrs_tgt0, fr_tgt0), i_tgt)
-  | sim_itree_mget_src
-      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
-      i1 k_src i_tgt
-      (ORD: i1 < i0)
-      mn mr0
-      (MR0: Maps.lookup mn mrs_src0 = Some mr0)
-      (K: sim_itree i1 ((mrs_src0, fr_src0), k_src mr0) ((mrs_tgt0, fr_tgt0), i_tgt))
-    :
-      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (MGet mn) >>= k_src)
-                 ((mrs_tgt0, fr_tgt0), i_tgt)
-  | sim_itree_fget_src
-      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
-      i1 k_src i_tgt
-      (ORD: i1 < i0)
-      (K: sim_itree i1 ((mrs_src0, fr_src0), k_src fr_src0) ((mrs_tgt0, fr_tgt0), i_tgt))
-    :
-      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (FGet) >>= k_src)
-                 ((mrs_tgt0, fr_tgt0), i_tgt)
   | sim_itree_choose_src
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       i1 X k_src i_tgt
@@ -287,6 +236,67 @@ Section SIM.
       _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (Take X) >>= k_src)
                  ((mrs_tgt0, fr_tgt0), i_tgt)
 
+  | sim_itree_pput_src
+      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i1 k_src i_tgt
+      (ORD: i1 < i0)
+      mn mr0 mp1 mrs_src1 mp0
+      (MR0: Maps.lookup mn mrs_src0 = Some (mr0, mp0))
+      (EQ: mrs_src1 = Maps.add mn (mr0, mp1) mrs_src0)
+      (K: sim_itree i1 ((mrs_src1, fr_src0), k_src tt) ((mrs_tgt0, fr_tgt0), i_tgt))
+    :
+      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (PPut mn mp1) >>= k_src)
+                 ((mrs_tgt0, fr_tgt0), i_tgt)
+  | sim_itree_mput_src
+      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i1 k_src i_tgt
+      (ORD: i1 < i0)
+      mn mr0 mr1 mrs_src1 mp0
+      (MR0: Maps.lookup mn mrs_src0 = Some (mr0, mp0))
+      (EQ: mrs_src1 = Maps.add mn (mr1, mp0) mrs_src0)
+      (K: sim_itree i1 ((mrs_src1, fr_src0), k_src tt) ((mrs_tgt0, fr_tgt0), i_tgt))
+    :
+      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (MPut mn mr1) >>= k_src)
+                 ((mrs_tgt0, fr_tgt0), i_tgt)
+  | sim_itree_fput_src
+      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i1 k_src i_tgt
+      (ORD: i1 < i0)
+      fr_src1
+      (K: sim_itree i1 ((mrs_src0, fr_src1), k_src tt) ((mrs_tgt0, fr_tgt0), i_tgt))
+    :
+      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (FPut fr_src1) >>= k_src)
+                 ((mrs_tgt0, fr_tgt0), i_tgt)
+
+  | sim_itree_pget_src
+      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i1 k_src i_tgt
+      (ORD: i1 < i0)
+      mn mr0 mp0
+      (MR0: Maps.lookup mn mrs_src0 = Some (mr0, mp0))
+      (K: sim_itree i1 ((mrs_src0, fr_src0), k_src mp0) ((mrs_tgt0, fr_tgt0), i_tgt))
+    :
+      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (PGet mn) >>= k_src)
+                 ((mrs_tgt0, fr_tgt0), i_tgt)
+  | sim_itree_mget_src
+      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i1 k_src i_tgt
+      (ORD: i1 < i0)
+      mn mr0 mp0
+      (MR0: Maps.lookup mn mrs_src0 = Some (mr0, mp0))
+      (K: sim_itree i1 ((mrs_src0, fr_src0), k_src mr0) ((mrs_tgt0, fr_tgt0), i_tgt))
+    :
+      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (MGet mn) >>= k_src)
+                 ((mrs_tgt0, fr_tgt0), i_tgt)
+  | sim_itree_fget_src
+      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i1 k_src i_tgt
+      (ORD: i1 < i0)
+      (K: sim_itree i1 ((mrs_src0, fr_src0), k_src fr_src0) ((mrs_tgt0, fr_tgt0), i_tgt))
+    :
+      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (FGet) >>= k_src)
+                 ((mrs_tgt0, fr_tgt0), i_tgt)
+
 
 
 
@@ -299,59 +309,6 @@ Section SIM.
       (K: sim_itree i1 (st_src0, i_src) (st_tgt0, i_tgt))
     :
       _sim_itree sim_itree i0 (st_src0, i_src) (st_tgt0, tau;; i_tgt)
-  (* | sim_itree_put_tgt *)
-  (*     i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0 *)
-  (*     i1 i_src k_tgt *)
-  (*     (ORD: i1 < i0) *)
-  (*     mn mr0 mr1 fr_tgt1 *)
-  (*     (MR0: Maps.lookup mn mrs_tgt0 = Some mr0) *)
-  (*     (* (UPD: URA.updatable (URA.add mr0 fr_tgt0) (URA.add mr1 fr_tgt1)) *) *)
-  (*     mrs_tgt1 *)
-  (*     (EQ: mrs_tgt1 = Maps.add mn mr1 mrs_tgt0) *)
-  (*     (* (K: sim_itree i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt1, fr_tgt1), k_tgt tt)) *) *)
-  (*     (K: forall (UPD: URA.updatable (URA.add mr0 fr_tgt0) (URA.add mr1 fr_tgt1)), *)
-  (*         sim_itree i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt1, fr_tgt1), k_tgt tt)) *)
-  (*   : *)
-  (*     _sim_itree sim_itree i0 ((mrs_src0, fr_src0), i_src) *)
-  (*                ((mrs_tgt0, fr_tgt0), trigger (Put mn mr1 fr_tgt1) >>= k_tgt) *)
-  | sim_itree_mput_tgt
-      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
-      i1 i_src k_tgt
-      (ORD: i1 < i0)
-      mn mr0 mr1 mrs_tgt1
-      (MR0: Maps.lookup mn mrs_tgt0 = Some mr0)
-      (EQ: mrs_tgt1 = Maps.add mn mr1 mrs_tgt0)
-      (K: sim_itree i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt1, fr_tgt0), k_tgt tt))
-    :
-      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), i_src)
-                 ((mrs_tgt0, fr_tgt0), trigger (MPut mn mr1) >>= k_tgt)
-  | sim_itree_fput_tgt
-      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
-      i1 i_src k_tgt
-      (ORD: i1 < i0)
-      fr_tgt1
-      (K: sim_itree i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt1), k_tgt tt))
-    :
-      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), i_src)
-                 ((mrs_tgt0, fr_tgt0), trigger (FPut fr_tgt1) >>= k_tgt)
-  | sim_itree_mget_tgt
-      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
-      i1 i_src k_tgt
-      (ORD: i1 < i0)
-      mn mr0
-      (MR0: Maps.lookup mn mrs_tgt0 = Some mr0)
-      (K: sim_itree i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt0), k_tgt mr0))
-    :
-      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), i_src)
-                 ((mrs_tgt0, fr_tgt0), trigger (MGet mn) >>= k_tgt)
-  | sim_itree_fget_tgt
-      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
-      i1 i_src k_tgt
-      (ORD: i1 < i0)
-      (K: sim_itree i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt0), k_tgt  fr_tgt0))
-    :
-      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), i_src)
-                 ((mrs_tgt0, fr_tgt0), trigger (FGet) >>= k_tgt)
   | sim_itree_choose_tgt
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       i1 X i_src k_tgt
@@ -368,6 +325,67 @@ Section SIM.
     :
       _sim_itree sim_itree i0 ((mrs_src0, fr_src0), i_src)
                  ((mrs_tgt0, fr_tgt0), trigger (Take X) >>= k_tgt)
+
+  | sim_itree_pput_tgt
+      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i1 i_src k_tgt
+      (ORD: i1 < i0)
+      mn mr0 mp1 mrs_tgt1 mp0
+      (MR0: Maps.lookup mn mrs_tgt0 = Some (mr0, mp0))
+      (EQ: mrs_tgt1 = Maps.add mn (mr0, mp1) mrs_tgt0)
+      (K: sim_itree i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt1, fr_tgt0), k_tgt tt))
+    :
+      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), i_src)
+                 ((mrs_tgt0, fr_tgt0), trigger (PPut mn mp1) >>= k_tgt)
+  | sim_itree_mput_tgt
+      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i1 i_src k_tgt
+      (ORD: i1 < i0)
+      mn mr0 mr1 mrs_tgt1 mp0
+      (MR0: Maps.lookup mn mrs_tgt0 = Some (mr0, mp0))
+      (EQ: mrs_tgt1 = Maps.add mn (mr1, mp0) mrs_tgt0)
+      (K: sim_itree i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt1, fr_tgt0), k_tgt tt))
+    :
+      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), i_src)
+                 ((mrs_tgt0, fr_tgt0), trigger (MPut mn mr1) >>= k_tgt)
+  | sim_itree_fput_tgt
+      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i1 i_src k_tgt
+      (ORD: i1 < i0)
+      fr_tgt1
+      (K: sim_itree i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt1), k_tgt tt))
+    :
+      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), i_src)
+                 ((mrs_tgt0, fr_tgt0), trigger (FPut fr_tgt1) >>= k_tgt)
+
+  | sim_itree_pget_tgt
+      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i1 i_src k_tgt
+      (ORD: i1 < i0)
+      mn mr0 mp0
+      (MR0: Maps.lookup mn mrs_tgt0 = Some (mr0, mp0))
+      (K: sim_itree i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt0), k_tgt mp0))
+    :
+      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), i_src)
+                 ((mrs_tgt0, fr_tgt0), trigger (PGet mn) >>= k_tgt)
+  | sim_itree_mget_tgt
+      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i1 i_src k_tgt
+      (ORD: i1 < i0)
+      mn mr0 mp0
+      (MR0: Maps.lookup mn mrs_tgt0 = Some (mr0, mp0))
+      (K: sim_itree i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt0), k_tgt mr0))
+    :
+      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), i_src)
+                 ((mrs_tgt0, fr_tgt0), trigger (MGet mn) >>= k_tgt)
+  | sim_itree_fget_tgt
+      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i1 i_src k_tgt
+      (ORD: i1 < i0)
+      (K: sim_itree i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt0), k_tgt  fr_tgt0))
+    :
+      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), i_src)
+                 ((mrs_tgt0, fr_tgt0), trigger (FGet) >>= k_tgt)
   .
 
   Definition sim_itree: _ -> relation _ := paco3 _sim_itree bot3.
@@ -419,7 +437,7 @@ Section SIMMODSEM.
   Context `{Σ: GRA.t}.
   Variable (ms_src ms_tgt: ModSem.t).
 
-  Let W: Type := (alist mname Σ) * (alist mname Σ).
+  Let W: Type := (alist mname (Σ * Any.t)) * (alist mname (Σ * Any.t)).
   Inductive sim: Prop := mk {
     wf: W -> Prop;
     le: W -> W -> Prop;

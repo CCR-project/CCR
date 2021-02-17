@@ -33,6 +33,95 @@ Lemma interp_mrec_ret
 .
 Proof. rewrite unfold_interp_mrec at 1. cbn. refl. Qed.
 
+Lemma interp_interp:
+  forall {E F G : Type -> Type} {R : Type} (f : forall T : Type, E T -> itree F T) (g : forall T : Type, F T -> itree G T) (t : itree E R),
+    interp g (interp f t) = interp (fun (T : Type) (e : (fun H : Type => E H) T) => interp g (f T e)) t.
+Proof. i. f. apply interp_interp. Qed.
+
+Ltac ired := repeat (try rewrite bind_bind; try rewrite bind_ret_l; try rewrite bind_ret_r; try rewrite bind_tau;
+                     (* try rewrite interp_vis; *)
+                     try rewrite interp_ret;
+                     try rewrite interp_tau;
+                     (* try rewrite interp_trigger *)
+                     try rewrite interp_bind;
+
+                     try rewrite interp_mrec_hit;
+                     try rewrite interp_mrec_miss;
+                     try rewrite interp_mrec_bind;
+                     try rewrite interp_mrec_tau;
+                     try rewrite interp_mrec_ret;
+
+                     try rewrite interp_state_trigger;
+                     try rewrite interp_state_bind;
+                     try rewrite interp_state_tau;
+                     try rewrite interp_state_ret;
+                     cbn
+                    ).
+(* first [eapply eqit_VisF|f_equiv] *)
+(* Ltac grind := repeat (ired; f; repeat (f_equiv; match goal with [ |- context[going] ] => fail | _ => idtac end; ii; des_ifs_safe); f). *)
+(* Ltac grind := repeat (ired; f; repeat (Morphisms.f_equiv; ii; des_ifs_safe); f). *)
+Ltac grind := repeat (ired; match goal with
+                            (* | [ |- tau;; ?a = tau;; ?b ] => do 2 f_equal *)
+                            | [ |- (go (TauF ?a)) = (go (TauF ?b)) ] => do 2 f_equal
+                            | [ |- (_ <- _ ;; _) = (_ <- _ ;; _) ] => Morphisms.f_equiv; apply func_ext_dep; i
+                            | _ => idtac
+                            end; ii; des_ifs_safe).
+(*** simple regression tests ***)
+Goal forall E R (itr: itree E R), (tau;; tau;; tau;; itr) = (tau;; tau;; itr). i. grind. Abort.
+Goal forall E X Y (itr: itree E X) (ktr: X -> itree E Y), ((x <- itr;; tau;; tau;; Ret x) >>= ktr) = ((x <- itr;; tau;; Ret x) >>= ktr).
+  i. progress grind. (*** it should progress ***)
+Abort.
+
+Lemma interp_state_resum_l
+      (E0 E1 F : Type -> Type) (A S: Type)
+      (f0: forall T, E0 T -> S -> itree F (S * T))
+      (f1: forall T, E1 T -> S -> itree F (S * T))
+      (t: itree E0 A)
+      (s: S)
+  :
+    interp_state (case_ f0 f1) (resum_itr t) s = interp_state (fun T e s0 => '(s1, t) <- f0 T e s0;; tau;; Ret (s1, t)) t s
+.
+Proof.
+  f. revert t s. ginit. gcofix CIH. i.
+  unfold resum_itr.
+  rewrite 2 unfold_interp_state.
+  ides t.
+  - cbn. gstep. econs; et.
+  - cbn. gstep. econs; eauto with paco.
+  - cbn. ired.
+    unfold resum, ReSum_id, id_, Id_IFun.
+    guclo eqit_clo_bind.
+    apply pbc_intro_h with (RU := eq).
+    + refl.
+    + intros ? _ []. ired. des_ifs. ss. clarify.
+      ired. cbn. gstep. econs; eauto with paco. gstep. econs; eauto with paco.
+Qed.
+
+Lemma interp_state_resum_r
+      (E0 E1 F : Type -> Type) (A S: Type)
+      (f0: forall T, E0 T -> S -> itree F (S * T))
+      (f1: forall T, E1 T -> S -> itree F (S * T))
+      (t: itree E1 A)
+      (s: S)
+  :
+    interp_state (case_ f0 f1) (resum_itr t) s = interp_state (fun T e s0 => '(s1, t) <- f1 T e s0;; tau;; Ret (s1, t)) t s
+.
+Proof.
+  f. revert t s. ginit. gcofix CIH. i.
+  unfold resum_itr.
+  rewrite 2 unfold_interp_state.
+  ides t.
+  - cbn. gstep. econs; et.
+  - cbn. gstep. econs; eauto with paco.
+  - cbn. ired.
+    unfold resum, ReSum_id, id_, Id_IFun.
+    guclo eqit_clo_bind.
+    apply pbc_intro_h with (RU := eq).
+    + refl.
+    + intros ? _ []. ired. des_ifs. ss. clarify.
+      ired. cbn. gstep. econs; eauto with paco. gstep. econs; eauto with paco.
+Qed.
+
 
 
 
@@ -169,18 +258,26 @@ Section EVENTS.
         end
       | _ => triggerNB
       end.
+
+  (*** Same as State.pure_state, but does not use "Vis" directly ***)
+  Definition pure_state {S E}: E ~> stateT S (itree E) := fun _ e s => x <- trigger e;; Ret (s, x).
+
+  (* Definition compose2 A B C R: (C -> R) -> (A -> B -> C) -> A -> B -> R := fun f g a b => f (g a b). *)
   Definition interp_rE `{eventE -< E}: itree (rE +' E) ~> stateT r_state (itree E) :=
-    State.interp_state (case_ (handle_rE) State.pure_state).
+    State.interp_state (case_ handle_rE pure_state).
+    (* State.interp_state (case_ ((fun _ e s0 => resum_itr (handle_rE e s0)): _ ~> stateT _ _) State.pure_state). *)
+    (* State.interp_state (case_ ((fun _ => compose2 (@resum_itr _ _ _ _) (@handle_rE _)): rE ~> stateT r_state (itree E)) State.pure_state). *)
 
   Definition p_state: Type := (mname -> Any.t).
-  Definition handle_pE `{eventE -< E}: pE ~> stateT p_state (itree E) :=
+  Definition handle_pE {E}: pE ~> stateT p_state (itree E) :=
     fun _ e mps =>
       match e with
       | PPut mn p => Ret (update mps mn p, tt)
       | PGet mn => Ret (mps, mps mn)
       end.
-  Definition interp_pE `{eventE -< E}: itree (pE +' E) ~> stateT p_state (itree E) :=
-    State.interp_state (case_ (handle_pE) State.pure_state).
+  Definition interp_pE {E}: itree (pE +' E) ~> stateT p_state (itree E) :=
+    (* State.interp_state (case_ ((fun _ e s0 => resum_itr (handle_pE e s0)): _ ~> stateT _ _) State.pure_state). *)
+    State.interp_state (case_ handle_pE pure_state).
 
   (* Definition interp_Es A (prog: callE ~> itree Es) (itr0: itree Es A) (rst0: r_state) (pst0: p_state): itree eventE _ := *)
   (*   interp_pE (interp_rE (interp_mrec prog itr0) rst0) pst0 *)
@@ -191,26 +288,7 @@ Section EVENTS.
     Ret ((rst1, pst1), v)
   .
 
-  Ltac ired := repeat (try rewrite bind_bind; try rewrite bind_ret_l; try rewrite bind_ret_r; try rewrite bind_tau;
-                      (* try rewrite interp_vis; *)
-                      try rewrite interp_ret;
-                      try rewrite interp_tau;
-                      (* try rewrite interp_trigger *)
-                      try rewrite interp_bind;
 
-                      try rewrite interp_mrec_hit;
-                      try rewrite interp_mrec_miss;
-                      try rewrite interp_mrec_bind;
-                      try rewrite interp_mrec_tau;
-                      try rewrite interp_mrec_ret;
-
-                      try rewrite interp_state_trigger;
-                      try rewrite interp_state_bind;
-                      try rewrite interp_state_tau;
-                      try rewrite interp_state_ret;
-                      idtac
-                     ).
-  Ltac grind := repeat (ired; f; repeat (f_equiv; ii; des_ifs_safe); f).
 
   Lemma interp_Es_bind
         (prog: callE ~> itree Es)
@@ -250,67 +328,9 @@ Section EVENTS.
   .
   Proof. unfold interp_Es, interp_rE, interp_pE. des_ifs. grind. Qed.
 
-  (* Lemma interp_interp: *)
-  (* forall {E F G : Type -> Type} {R : Type} (f : forall T : Type, E T -> itree F T) (g : forall T : Type, F T -> itree G T) (t : itree E R), *)
-  (* interp g (interp f t) = interp (fun (T : Type) (e : (fun H : Type => E H) T) => interp g (f T e)) t. *)
-  (* Proof. i. f. apply interp_interp. Qed. *)
-
-  Lemma interp_pure_r
-        (E0 E1 M: Type -> Type) (R: Type)
-        `{Functor M}
-        `{Monad M}
-        `{MonadIter M}
-        (t: itree E0 R)
-        (f0: E0 ~> M) (f1: E1 ~> M)
-    :
-      (* interp (case_ (Case:=Case_sum1) f0 f1) (resum_itr t) = interp f0 t *) (***** <-------- universe inconsistency *****)
-      interp (fun T (e01: (E0 +' E1) T) =>
-                match e01 with | inl1 e0 => @f0 T e0 | inr1 e1 => @f1 T e1 end) (resum_itr t) = interp f0 t
-  .
-  Proof.
-    Fail f.
-  Abort. (*** can't prove this. at this level, we don't even know that MonadIter is defined with cofix ***)
-
   Lemma unfold_interp_state: forall {E F} {S R} (h: E ~> stateT S (itree F)) (t: itree E R) (s: S),
       interp_state h t s = _interp_state h (observe t) s.
   Proof. i. f. apply unfold_interp_state. Qed.
-
-  Lemma interp_state_pure_r
-        (E0 E1 F : Type -> Type) (A B S: Type)
-        (f: forall T, E0 T -> S -> itree F (S * T))
-        (t: itree E0 A)
-        (s: S)
-    :
-      interp_state (case_ f pure_state) (resum_itr t) s = interp_state (fun T e s0 => '(s1, t) <- f T e s0;; tau;; Ret (s1, t)) t s
-  .
-  Proof.
-    (* unfold interp_state. *)
-    f. revert t s. ginit. gcofix CIH. i.
-    unfold resum_itr.
-    rewrite 2 unfold_interp_state.
-    ides t.
-    - cbn. ired. gstep. econs; et.
-    - cbn. ired. gstep. econs; eauto with paco.
-    - cbn. ired.
-      unfold resum, ReSum_id, id_, Id_IFun.
-      guclo eqit_clo_bind.
-      apply pbc_intro_h with (RU := eq).
-      + refl.
-      + intros ? _ []. ired. des_ifs. ss. clarify.
-        ired. cbn. gstep. econs; eauto with paco. gstep. econs; eauto with paco.
-  Qed.
-
-  (* Lemma interp_state_case *)
-  (*       (E0 E1 F : Type -> Type) (A B S: Type) *)
-  (*       (f0: forall T, E0 T -> S -> itree F (S * T)) *)
-  (*       (f1: forall T, E1 T -> S -> itree F (S * T)) *)
-  (*       (t: itree E0 A) *)
-  (*       (s: S) *)
-  (*   : *)
-  (*     interp_state (case_ f0 f1) (resum_itr t) s = interp_state f0 t s *)
-  (* . *)
-  (* Proof. apply interp_state_bind. Qed. *)
-  (* interp_state (case_ handle_pE pure_state) (handle_rE e rst0) pst0;; *)
 
   Lemma interp_Es_rE
         p rst0 pst0
@@ -322,33 +342,27 @@ Section EVENTS.
       '(rst1, r) <- handle_rE e rst0;;
       tau;; tau;;
       Ret ((rst1, pst0), r)
-      (* interp_state (case_ handle_rE pure_state) (tau;; Ret r) st1 *)
   .
-  Proof. unfold interp_Es, interp_rE, interp_pE. des_ifs. grind. cbn.
-         unfold resum, ReSum_id, id_, Id_IFun.
-         set (case_ handle_pE pure_state) as f in *.
-         set (handle_rE e rst0) as itr in *.
-         TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
-         rewrite <- interp_state_bind.
-         replace (handle_rE e rst0) with (resum_itr (handle_rE e rst0)); cycle 1.
-         { unfold resum_itr. unfold trigger. admit "TODO". }
-         rewrite interp_state_pure_r.
-         sssssssssssssssss.
-         f. rewrite unfold_interp_state. f.
-         irw.
-         grind.
-         grind.
-    rewrite interp_state_trigger. irw. grind. irw. grind.
-  Qed.
   Proof.
-    unfold interp_Es. unfold interp_rE.
-    (* rewrite unfold_interp_mrec. cbn. *)
-    unfold Es.
-    rewrite interp_mrec_miss with (D:=callE) (E:=rE +' eventE) (F:=rE) (a:=e).
-    rewrite interp_state_bind.
-    rewrite interp_state_trigger. irw. grind. irw. grind.
-    rewrite interp_state_tau. grind.
-    rewrite interp_state_ret. ss.
+    unfold interp_Es, interp_rE, interp_pE. grind.
+    destruct rst0; ss. unfold triggerNB, pure_state. destruct e; ss; des_ifs; grind.
+  Qed.
+
+  Lemma interp_Es_pE
+        p rst0 pst0
+        (* (e: Es Σ) *)
+        T
+        (e: pE T)
+    :
+      interp_Es p (trigger e) (rst0, pst0) =
+      '(pst1, r) <- handle_pE e pst0;;
+      tau;; tau;; tau;;
+      Ret ((rst0, pst1), r)
+  .
+  Proof.
+    unfold interp_Es, interp_rE, interp_pE. grind.
+    (* Ltac grind := repeat (ired; f; repeat (f_equiv; ii; des_ifs_safe); f). *)
+    destruct rst0; ss. unfold triggerNB, pure_state. destruct e; ss; des_ifs; grind.
   Qed.
 
   Lemma interp_Es_eventE
@@ -357,19 +371,11 @@ Section EVENTS.
         T
         (e: eventE T)
     :
-      interp_Es p (trigger e) st0 = r <- trigger e;; tau;; tau;; Ret (st0, r)
+      interp_Es p (trigger e) st0 = r <- trigger e;; tau;; tau;; tau;; Ret (st0, r)
   .
   Proof.
-    unfold interp_Es. unfold interp_rE.
-    (* rewrite unfold_interp_mrec. cbn. *)
-    unfold Es.
-    rewrite interp_mrec_miss with (D:=callE) (E:=rE +' eventE) (F:=eventE) (a:=e).
-    rewrite interp_state_bind.
-    rewrite interp_state_trigger. irw. unfold pure_state.
-    unfold resum, ReSum_id, id_, Id_IFun.
-    irw. grind. irw. grind.
-    rewrite interp_state_tau. grind.
-    rewrite interp_state_ret. ss.
+    unfold interp_Es, interp_rE, interp_pE. grind.
+    unfold pure_state. grind.
   Qed.
 
   Lemma interp_Es_triggerUB
@@ -380,8 +386,7 @@ Section EVENTS.
       (interp_Es prog (triggerUB) st0: itree eventE (_ * A)) = triggerUB
   .
   Proof.
-    unfold triggerUB. rewrite interp_Es_bind. rewrite interp_Es_eventE.
-    irw. grind.
+    unfold interp_Es, interp_rE, interp_pE, pure_state, triggerUB. grind.
   Qed.
 
   Lemma interp_Es_triggerNB
@@ -392,8 +397,7 @@ Section EVENTS.
       (interp_Es prog (triggerNB) st0: itree eventE (_ * A)) = triggerNB
   .
   Proof.
-    unfold triggerNB. rewrite interp_Es_bind. rewrite interp_Es_eventE.
-    irw. grind.
+    unfold interp_Es, interp_rE, interp_pE, pure_state, triggerNB. grind.
   Qed.
 
 End EVENTS.
@@ -428,7 +432,7 @@ Section MODSEM.
   Record t: Type := mk {
     (* initial_ld: mname -> GRA; *)
     fnsems: list (fname * (Any.t -> itree Es Any.t));
-    initial_mrs: list (mname * Σ);
+    initial_mrs: list (mname * (Σ * Any.t));
   }
   .
 
@@ -468,12 +472,17 @@ Section MODSEM.
 
   Definition initial_r_state: r_state :=
     (fun mn => match List.find (fun mnr => dec mn (fst mnr)) ms.(initial_mrs) with
-               | Some r => snd r
+               | Some r => fst (snd r)
                | None => ε
                end, [ε]). (*** we have a dummy-stack here ***)
+  Definition initial_p_state: p_state :=
+    (fun mn => match List.find (fun mnr => dec mn (fst mnr)) ms.(initial_mrs) with
+               | Some r => (snd (snd r))
+               | None => tt↑
+               end).
   Definition initial_itr: itree (eventE) Any.t :=
     assume(<<WF: wf ms>>);;
-    snd <$> interp_Es prog (prog (Call "main" (tt↑))) initial_r_state.
+    snd <$> interp_Es prog (prog (Call "main" (tt↑))) (initial_r_state, initial_p_state).
 
 
 
