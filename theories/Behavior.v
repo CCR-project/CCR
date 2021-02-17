@@ -89,7 +89,7 @@ Hint Resolve state_spin_mon: paco.
 Inductive _of_state (of_state: L.(state) -> Tr.t -> Prop): L.(state) -> Tr.t -> Prop :=
 | sb_final
     st0 retv
-    (FINAL: L.(state_sort) st0 = final (Vint retv))
+    (FINAL: L.(state_sort) st0 = final retv)
   :
     _of_state of_state st0 (Tr.done retv)
 | sb_spin
@@ -128,7 +128,7 @@ Definition of_state: _ -> _ -> Prop := paco2 _of_state bot2.
 
 Theorem of_state_ind :
 forall (r P: _ -> _ -> Prop),
-(forall st0 retv, state_sort L st0 = final (Vint retv) -> P st0 (Tr.done retv)) ->
+(forall st0 retv, state_sort L st0 = final retv -> P st0 (Tr.done retv)) ->
 (forall st0, state_spin st0 -> P st0 Tr.spin) ->
 (forall st0, P st0 Tr.nb) ->
 

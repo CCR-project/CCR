@@ -1,5 +1,5 @@
 COQMODULE    := SimComp
-COQTHEORIES  := $(shell find . -iname '*.v')
+COQTHEORIES  := $(shell find .    -path ./examples/box -prune -o     -iname '*.v')
 
 .PHONY: all proof proof-quick graph
 
@@ -31,6 +31,8 @@ clean:
 	find . -name "*.vio" -type f -delete
 	find . -name "*.v.d" -type f -delete
 	find . -name "*.vo" -type f -delete
+	find . -name "*.vok" -type f -delete
+	find . -name "*.vos" -type f -delete
 	find . -name "*.glob" -type f -delete
 	git clean -Xf .
 	rm -f _CoqProject Makefile.coq Makefile.coq.conf #Makefile.coq-rsync Makefile.coq-rsync.conf

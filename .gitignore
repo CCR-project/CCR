@@ -3,6 +3,7 @@
 _CoqProject
 Makefile.coq
 Makefile.coq.conf
+.Makefile.coq.d
 .build
 
 *.vo
@@ -10,6 +11,8 @@ Makefile.coq.conf
 *.v.d
 *.glob
 .*.aux
+*.vok
+*.vos
 
 graph.png
 graph.dot

@@ -1,59 +1,110 @@
-Require Import Coqlib.
-Require Import ITreelib.
-Require Import Universe.
-Require Import Skeleton.
-Require Import PCM.
-Require Import ModSem.
+(** * The Imp language  *)
+
+(** We now demonstrate how to use ITrees in the context of verified compilation.
+    To this end, we will consider a simple compiler from an imperative language
+    to a control-flow-graph language.  The meaning of both languages will be
+    given in terms of ITrees, so that the proof of correctness is expressed by
+    proving a bisimulation between ITrees.
+
+    We shall emphasize two main satisfying aspects of the resulting
+    formalization.
+
+    - Despite the correctness being termination-sensitive, we do not write any
+      cofixpoints. All reasoning is purely equational, and the underlying
+      coinductive reasoning is hidden on the library side.
+
+    - We split the correctness in two steps. First, a linking theory of the CFG
+      language is proved correct. Then, this theory is leveraged to prove the
+      functional correctness of the compiler. The first piece is fairly generic,
+      and hence reusable.
+ *)
+
+(** This tutorial is composed of the following files:
+    - Utils_tutorial.v     : Utilities
+    - Fin.v                : Finite types as a categorical embedding
+    - KTreeFin.v           : Subcategory of ktrees over finite types
+    - Imp.v                : Imp language, syntax and semantics
+    - Asm.v                : Asm language, syntax and semantics
+    - AsmCombinators.v     : Linking theory for Asm
+    - Imp2Asm.v            : Compiler from Imp to Asm
+    - Imp2AsmCorrectness.v : Proof of correctness of the compiler
+    - AsmOptimizations.v   : (Optional) optimization passes for the Asm language
+    The intended entry point for reading is Imp.v.
+ *)
+
+(** We start by introducing a simplified variant of Software
+    Foundations' [Imp] language.  The language's semantics is first expressed in
+    terms of [itree]s.  The semantics of the program can then be obtained by
+    interpreting the events contained in the trees.
+*)
+
+(* begin hide *)
+From Coq Require Import
+     Arith.PeanoNat
+     Lists.List
+     Strings.String
+     Morphisms
+     Setoid
+     RelationClasses.
 
 From ExtLib Require Import
      Data.String
-     Data.Option
      Structures.Monad
      Structures.Traversable
-     Structures.Foldable
-     Structures.Reducible
-     Structures.Maps
      Data.List.
 
-Set Implicit Arguments.
+From ITree Require Import
+     ITree
+     ITreeFacts
+     Events.MapDefault
+     Events.StateFacts.
 
-(*** This example shows how each ModSem can use its own state/event. ***)
-(*** The Imp language uses ImpState event for function-local state,
-     but it is not exposed in the ModSem.t, satisfying the ModSem.t interface. ***)
-(*** Disclaimer: Below is a copy-paste from https://github.com/DeepSpec/InteractionTrees (slightly adjusted) ***)
+Import Monads.
+Import MonadNotation.
+Local Open Scope monad_scope.
+Local Open Scope string_scope.
 
+Require Import Any.
+(* end hide *)
 
+(* ========================================================================== *)
+(** ** Syntax *)
 
-Definition var: Set := string.
+(** Imp manipulates a countable set of variables represented as [string]s: *)
+Definition var : Set := string.
+
+(** For simplicity, the language manipulates [nat]s as values. *)
+Definition value : Type := nat.
 
 (** Expressions are made of variables, constant literals, and arithmetic operations. *)
 Inductive expr : Type :=
 | Var (_ : var)
-| Lit (_ : val)
+| Lit (_ : value)
 | Plus  (_ _ : expr)
 | Minus (_ _ : expr)
-| Mult  (_ _ : expr)
-| FnCall (fn: fname) (args: list expr)
-.
+| Mult  (_ _ : expr).
 
 (** The statements are straightforward. The [While] statement is the only
  potentially diverging one. *)
 
 Inductive stmt : Type :=
-| Assign (x: var) (e: expr)    (* x = e *)
-| Seq    (a b: stmt)            (* a ; b *)
-| If     (i: expr) (t e: stmt) (* if (i) then { t } else { e } *)
-| While  (t: expr) (b: stmt)   (* while (t) { b } *)
+| Assign (x : var) (e : expr)    (* x = e *)
+| Seq    (a b : stmt)            (* a ; b *)
+| If     (i : expr) (t e : stmt) (* if (i) then { t } else { e } *)
+| While  (t : expr) (b : stmt)   (* while (t) { b } *)
 | Skip                           (* ; *)
 .
+
+(* ========================================================================== *)
+(** ** Notations *)
 
 Module ImpNotations.
 
   (** A few notations for convenience.  *)
   Definition Var_coerce: string -> expr := Var.
-  Definition Lit_coerce: val -> expr := Lit.
+  Definition Lit_coerce: nat -> expr := Lit.
   Coercion Var_coerce: string >-> expr.
-  Coercion Lit_coerce: val >-> expr.
+  Coercion Lit_coerce: nat >-> expr.
 
   Bind Scope expr_scope with expr.
 
@@ -106,8 +157,8 @@ Import ImpNotations.
     value to be written, and defines an event of type [ImpState unit], no
     informative answer being expected from the environment.  *)
 Variant ImpState : Type -> Type :=
-| GetVar (x : var) : ImpState val
-| SetVar (x : var) (v : val) : ImpState unit.
+| GetVar (x : var) : ImpState value
+| SetVar (x : var) (v : value) : ImpState unit.
 
 Section Denote.
 
@@ -121,8 +172,6 @@ Section Denote.
 
   Context {eff : Type -> Type}.
   Context {HasImpState : ImpState -< eff}.
-  Context {HasCall: callE -< eff}.
-  Context {HasEvent: eventE -< eff}.
 
   (** _Imp_ expressions are denoted as [itree eff value], where the returned
       value in the tree is the value computed by the expression.
@@ -133,14 +182,13 @@ Section Denote.
       Usual monadic notations are used in the other cases: we can [bind]
       recursive computations in the case of operators as one would expect. *)
 
-  Fixpoint denote_expr (e : expr) : itree eff val :=
+  Fixpoint denote_expr (e : expr) : itree eff value :=
     match e with
     | Var v     => trigger (GetVar v)
     | Lit n     => ret n
-    | Plus a b  => l <- denote_expr a ;; r <- denote_expr b ;; rv <- (vadd l r)?;; ret rv
-    | Minus a b => l <- denote_expr a ;; r <- denote_expr b ;; rv <- (vsub l r)?;; ret rv
-    | Mult a b  => l <- denote_expr a ;; r <- denote_expr b ;; rv <- (vmul l r)?;; ret rv
-    | FnCall fn args => vargs <- mapT denote_expr args;; trigger (Call fn vargs)
+    | Plus a b  => l <- denote_expr a ;; r <- denote_expr b ;; ret (l + r)
+    | Minus a b => l <- denote_expr a ;; r <- denote_expr b ;; ret (l - r)
+    | Mult a b  => l <- denote_expr a ;; r <- denote_expr b ;; ret (l * r)
     end.
 
   (** We turn to the denotation of statements. As opposed to expressions,
@@ -177,12 +225,7 @@ Section Denote.
 
   (** Casting values into [bool]:  [0] corresponds to [false] and any nonzero
       value corresponds to [true].  *)
-  Definition is_true (v : val) : bool :=
-    match v with
-    | Vint v => if (v =? 0)%Z then Datatypes.false else Datatypes.true
-    | Vptr blk ofs => Datatypes.true
-    end
-  .
+  Definition is_true (v : value) : bool := if (v =? 0)%nat then false else true.
 
   (** The meaning of Imp statements is now easy to define.  They are all
       straightforward, except for [While], which uses our new [while] combinator
@@ -220,12 +263,12 @@ Section Example_Fact.
   Variable input: var.
   Variable output: var.
 
-  Definition fact (n:Z): stmt :=
-    input ← (Vint n);;;
-    output ← (Vint 1);;;
+  Definition fact (n:nat): stmt :=
+    input ← n;;;
+    output ← 1;;;
     WHILE input
     DO output ← output * input;;;
-       input  ← input - (Vint 1).
+       input  ← input - 1.
 
   (** We have given _a_ notion of denotation to [fact 6] via [denote_imp].
       However, this is naturally not actually runnable yet, since it contains
@@ -249,7 +292,7 @@ From ExtLib Require Import
 
 (** These enable typeclass instances for Maps keyed by strings and values *)
 Instance RelDec_string : RelDec (@eq string) :=
-  { rel_dec := fun s1 s2 => if string_dec s1 s2 then Datatypes.true else Datatypes.false}.
+  { rel_dec := fun s1 s2 => if string_dec s1 s2 then true else false}.
 
 Instance RelDec_string_Correct: RelDec_Correct RelDec_string.
 Proof.
@@ -269,7 +312,7 @@ Qed.
     [M = itree E] for some universe of events [E] required to contain the
     environment events [mapE] provided by the library. It comes with an event
     interpreter [interp_map] that yields a computation in the state monad.  *)
-Definition handle_ImpState {E: Type -> Type} `{mapE var (Vint 0) -< E}: ImpState ~> itree E :=
+Definition handle_ImpState {E: Type -> Type} `{mapE var 0 -< E}: ImpState ~> itree E :=
   fun _ e =>
     match e with
     | GetVar x => lookup_def x
@@ -277,7 +320,7 @@ Definition handle_ImpState {E: Type -> Type} `{mapE var (Vint 0) -< E}: ImpState
     end.
 
 (** We now concretely implement this environment using ExtLib's finite maps. *)
-Definition env := alist var val.
+Definition env := alist var value.
 
 (** Finally, we can define an evaluator for our statements.
    To do so, we first denote them, leading to an [itree ImpState unit].
@@ -299,7 +342,7 @@ Definition interp_imp  {E A} (t : itree (ImpState +' E) A) : stateT env (itree E
   interp_map t'.
 
 
-Definition eval_imp {E} `{callE -< E} `{eventE -< E} (s: stmt) : itree E (env * unit) :=
+Definition eval_imp (s: stmt) : itree void1 (env * unit) :=
   interp_imp (denote_imp s) empty.
 
 (** Equipped with this evaluator, we can now compute.
@@ -361,14 +404,20 @@ End InterpImpProperties.
 
 (** We now turn to our target language, in file [Asm].v *)
 
+(****************** copy-paste end **********************)
+(****************** copy-paste end **********************)
+(****************** copy-paste end **********************)
+(****************** copy-paste end **********************)
+(****************** copy-paste end **********************)
 
+Require Import Coqlib.
+Require Import ITreelib.
+Require Import Universe.
+Require Import Skeleton.
+Require Import PCM.
+Require Import ModSem.
 
-
-
-
-
-
-
+Set Implicit Arguments.
 
 (**** ModSem ****)
 Section MODSEM.
@@ -377,10 +426,10 @@ Section MODSEM.
   Variable program: list (fname * stmt).
   Variable mn: mname.
 
-  Set Typeclasses Depth 4.
+  Set Typeclasses Depth 5.
   Definition modsem: ModSem.t := {|
-    ModSem.fnsems := List.map (fun '(fn, st) => (fn, fun _ => eval_imp st;; Ret (Vint 0))) program;
-    ModSem.initial_mrs := [(mn, URA.unit)];
+    ModSem.fnsems := List.map (fun '(fn, st) => (fn, fun _ => resum_itr (eval_imp st;; Ret (Any.upcast (Vint 0))))) program;
+    ModSem.initial_mrs := [(mn, (URA.unit, unit↑))];
   |}
   .
 End MODSEM.

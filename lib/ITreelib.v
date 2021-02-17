@@ -181,6 +181,74 @@ Hint Rewrite bind_bind : itree_axiom.
 Tactic Notation "irw" "in" ident(H) := repeat (autorewrite with itree_axiom in H; cbn in H).
 Tactic Notation "irw" := repeat (autorewrite with itree_axiom; cbn).
 
+Lemma interp_state_bind:
+  forall (E F : Type -> Type) (A B S : Type) (f : forall T : Type, E T -> S -> itree F (S * T)) (t : itree E A)
+         (k : A -> itree E B) (s : S),
+    interp_state f (` x : _ <- t;; k x) s = ` st : S * A <- interp_state f t s;; interp_state f (k (snd st)) (fst st)
+.
+Proof. i. f. apply interp_state_bind. Qed.
+
+Lemma interp_state_vis:
+  forall (E F : Type -> Type) (S T U : Type) (e : E T) (k : T -> itree E U) (h : forall T0 : Type, E T0 -> stateT S (itree F) T0)
+         (s : S), interp_state h (Vis e k) s = ` sx : S * T <- h T e s;; (tau;; interp_state h (k (snd sx)) (fst sx))
+.
+Proof.
+  i. f. apply interp_state_vis.
+Qed.
+
+Lemma interp_state_tau :
+  forall (E F : Type -> Type) (S T : Type) (t : itree E T) (h : forall T0 : Type, E T0 -> stateT S (itree F) T0) (s : S),
+    interp_state h (tau;; t) s = (tau;; interp_state h t s)
+.
+Proof.
+  i. f. apply interp_state_tau.
+Qed.
+
+Lemma interp_state_ret:
+  forall (E F : Type -> Type) (R S : Type) (f : forall T : Type, E T -> S -> itree F (S * T)) (s : S) (r : R),
+    interp_state f (Ret r) s = Ret (s, r)
+.
+Proof.
+  i. f. apply interp_state_ret.
+Qed.
+
+Lemma unfold_interp:
+  forall (E F : Type -> Type) (R : Type) (f : forall T : Type, E T -> itree F T) (t : itree E R),
+    interp f t = _interp f (observe t)
+.
+Proof.
+  i. f. apply unfold_interp.
+Qed.
+Lemma interp_ret:
+  forall (E F : Type -> Type) (R : Type) (f : forall T : Type, E T -> itree F T) (x : R), interp f (Ret x) = Ret x.
+Proof. i. f. apply interp_ret. Qed.
+
+Lemma interp_tau:
+  forall {E F : Type -> Type} {R : Type} {f : forall T : Type, E T -> itree F T} (t : itree E R),
+    interp f (tau;; t) = (tau;; interp f t)
+.
+Proof. i. f. apply interp_tau. Qed.
+
+(*** Original name: interp_state_trigger_eqit ***)
+Lemma interp_state_trigger:
+  forall (E F : Type -> Type) (R S : Type) (e : E R) (f : forall T : Type, E T -> stateT S (itree F) T) (s : S),
+    interp_state f (ITree.trigger e) s = ` x : S * R <- f R e s;; (tau;; Ret x)
+.
+Proof. i. f. apply interp_state_trigger_eqit. Qed.
+
+(*** TODO: interp_trigger_eqit does not exist. report to itree people? ***)
+Lemma interp_trigger:
+  forall (E F : Type -> Type) (R : Type) (e : E R) (f : E ~> itree F),
+    interp f (ITree.trigger e) = x <- f R e;; tau;; Ret x
+.
+Proof. i. f. rewrite unfold_interp. ss. f_equiv; ii. rewrite interp_ret. refl. Qed.
+
+Lemma interp_bind :
+forall {E F : Type -> Type} {R S : Type} (f : forall T : Type, E T -> itree F T) 
+  (t : itree E R) (k : R -> itree E S),
+interp f (` x : _ <- t;; k x) = ` r : R <- interp f t;; interp f (k r).
+Proof. i. f. apply interp_bind. Qed.
+
 Ltac iby3 TAC :=
   first [
       instantiate (1:= fun _ _ _ => _); TAC|
@@ -358,3 +426,35 @@ Proof.
   econs; eauto.
   gbase. eapply CIH. rewrite tau_eutt in SIM. ss.
 Qed.
+
+Definition resum_itr E F `{E -< F}: itree E ~> itree F := fun _ itr => interp (fun _ e => trigger e) itr.
+
+Lemma interp_mrec_hit:
+  forall (D E : Type -> Type) (ctx : forall T : Type, D T -> itree (D +' E) T) (U : Type) (a : D U),
+    interp_mrec ctx (trigger a) = (tau;; interp_mrec ctx (ctx _ a))
+.
+Proof.
+  i. rewrite unfold_interp_mrec. ss.
+  unfold resum, ReSum_id, id_, Id_IFun. rewrite bind_ret_r. ss.
+Qed.
+
+(*** TODO: I don't want "F" here, but it is technically needed. Report it to itree people? ***)
+Lemma interp_mrec_miss:
+  (* forall (D E F: Type -> Type) `{F -< E} (ctx : forall T : Type, D T -> itree (D +' E) T) (U : Type) (a : F U), *)
+  forall (D E F: Type -> Type) `{F -< E} (ctx : forall T : Type, D T -> itree (D +' E) T) (U : Type) (a : F U),
+    interp_mrec ctx (trigger a) = x <- (trigger a);; tau;; Ret x
+(* (trigger a) >>= tauK *)
+.
+Proof.
+  i. rewrite unfold_interp_mrec. cbn.
+  unfold trigger. irw.
+  grind. irw. ss.
+Qed.
+
+Definition tauK {E R}: R -> itree E R := fun r => tau;; Ret r.
+Hint Unfold tauK.
+
+Definition idK {E R}: R -> itree E R := fun r => Ret r.
+Hint Unfold idK.
+
+Lemma idK_spec E R (i0: itree E R): i0 = i0 >>= idK. Proof. unfold idK. irw. refl. Qed.

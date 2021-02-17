@@ -78,6 +78,51 @@ Module RA.
   }
   .
 
+  Lemma extends_updatable
+        `{M: t}
+        a b
+        (EXT: extends a b)
+    :
+      <<UPD: updatable b a>>
+  .
+  Proof.
+    ii. rr in EXT. des. clarify. eapply wf_mon; et.
+    rewrite <- add_assoc in H.
+    rewrite <- add_assoc. rewrite (add_comm ctx). et.
+  Qed.
+
+  Lemma updatable_add
+        `{M: t}
+        a0 a1
+        b0 b1
+        (UPD0: updatable a0 a1)
+        (UPD1: updatable b0 b1)
+    :
+      <<UPD: updatable (add a0 b0) (add a1 b1)>>
+  .
+  Proof.
+    ii. r in UPD0. r in UPD1.
+    specialize (UPD0 (add b0 ctx)). exploit UPD0; et. { rewrite add_assoc. ss. } intro A.
+    specialize (UPD1 (add a1 ctx)). exploit UPD1; et.
+    { rewrite add_assoc. rewrite (add_comm b0). rewrite <- add_assoc. ss. }
+    intro B.
+    rewrite (add_comm a1). rewrite <- add_assoc. ss.
+  Qed.
+
+  Lemma extends_add
+        `{M: t}
+        a b delta
+        (EXT: extends a b)
+    :
+      <<EXT: extends (add a delta) (add b delta)>>
+  .
+  Proof.
+    rr in EXT. rr. des. exists ctx. subst. rewrite <- add_assoc. rewrite (add_comm a).
+    sym. rewrite <- add_assoc. rewrite add_comm. f_equal. rewrite add_comm. ss.
+  Qed.
+
+  Section PLAYGROUND.
+
   Definition sub {M: t}: car -> car -> car -> Prop :=
     fun ab a b => ab = add a b
   .
@@ -100,7 +145,7 @@ Module RA.
     - des. r in H. subst. eauto.
     - Abort.
 
-  Theorem update_horizontal
+  Let update_horizontal
           (M: t)
           a0 a1
           b0 b1
@@ -116,7 +161,7 @@ Module RA.
     rewrite add_comm with (a:=a1). eauto.
   Qed.
 
-  Theorem update_vertical_stupid
+  Let update_vertical_stupid
           (M: t)
           a0 a1 a2
           (UPDA: forall ctx, (wf (add a0 ctx) -> wf (add a1 ctx)) /\ (wf (add a1 ctx) -> wf (add a2 ctx)))
@@ -127,7 +172,7 @@ Module RA.
     ii. specialize (UPDA ctx). des. eauto.
   Qed.
 
-  Theorem update_stupid
+  Let update_stupid
           (M: t)
           a0 a1 a2
           b0 b1
@@ -145,10 +190,16 @@ Module RA.
     rewrite add_comm with (a:=a2). eauto.
   Qed.
 
+  End PLAYGROUND.
+
   Program Instance extends_Transitive `{M: t}: Transitive extends.
   Next Obligation.
     rr. ii. rr in H. rr in H0. des. rewrite <- H0. rewrite <- H. esplits; et. rewrite add_assoc. et.
   Qed.
+
+  Program Instance updatable_PreOrder `{M: t}: PreOrder updatable.
+  Next Obligation. ii. ss. Qed.
+  Next Obligation. ii. r in H. r in H0. eauto. Qed.
 
   Program Instance prod (M0 M1: t): t := {
     car := car (t:=M0) * car (t:=M1);
@@ -325,6 +376,62 @@ Module URA.
   }
   .
 
+  Lemma extends_updatable
+        `{M: t}
+        a b
+        (EXT: extends a b)
+    :
+      <<UPD: updatable b a>>
+  .
+  Proof.
+    ii. rr in EXT. des. clarify. eapply wf_mon; et.
+    rewrite <- add_assoc in H.
+    rewrite <- add_assoc. rewrite (add_comm ctx). et.
+  Qed.
+
+  Lemma unit_idl `{M: t}: forall a, add unit a = a. i. rewrite add_comm. rewrite unit_id; ss. Qed.
+
+  (*** TODO: remove redundancy with "updatable_horizontal" above ***)
+  Lemma updatable_add
+        `{M: t}
+        a0 a1
+        b0 b1
+        (UPD0: updatable a0 a1)
+        (UPD1: updatable b0 b1)
+    :
+      <<UPD: updatable (add a0 b0) (add a1 b1)>>
+  .
+  Proof.
+    ii. r in UPD0. r in UPD1.
+    specialize (UPD0 (add b0 ctx)). exploit UPD0; et. { rewrite add_assoc. ss. } intro A.
+    specialize (UPD1 (add a1 ctx)). exploit UPD1; et.
+    { rewrite add_assoc. rewrite (add_comm b0). rewrite <- add_assoc. ss. }
+    intro B.
+    rewrite (add_comm a1). rewrite <- add_assoc. ss.
+  Qed.
+
+  Lemma updatable_unit
+        `{M: t}
+        a
+    :
+      <<UPD: updatable a unit>>
+  .
+  Proof.
+    ii. rewrite unit_idl. rewrite add_comm in H. eapply wf_mon; et.
+  Qed.
+
+  Lemma extends_add
+        `{M: t}
+        a b delta
+        (EXT: extends a b)
+    :
+      <<EXT: extends (add a delta) (add b delta)>>
+  .
+  Proof.
+    rr in EXT. rr. des. exists ctx. subst. rewrite <- add_assoc. rewrite (add_comm a).
+    sym. rewrite <- add_assoc. rewrite add_comm. f_equal. rewrite add_comm. ss.
+  Qed.
+
   Program Instance prod (M0 M1: t): t := {
     car := car (t:=M0) * car (t:=M1);
     unit := (unit, unit);
@@ -348,10 +455,12 @@ Module URA.
   Next Obligation. apply add_assoc. Qed.
   Next Obligation. eapply wf_mon; et. Qed.
 
-  Lemma unit_idl `{M: t}: forall a, add unit a = a. i. rewrite add_comm. rewrite unit_id; ss. Qed.
-
   Global Program Instance extends_PreOrder `{M: t}: PreOrder RA.extends.
   Next Obligation. rr. eexists unit. ss. rewrite unit_id. ss. Qed.
+
+  Program Instance updatable_PreOrder `{M: t}: PreOrder updatable.
+  Next Obligation. ii. ss. Qed.
+  Next Obligation. ii. r in H. r in H0. eauto. Qed.
 
   Program Instance of_RA (RA: RA.t): t := {
     car := RA.car + Datatypes.unit;
@@ -511,6 +620,22 @@ Module URA.
     r. rewrite <- unit_id at 1. eapply auth_update. ss.
   Qed.
 
+  Theorem auth_alloc2
+          `{M: t}
+          a0 delta
+          (WF: wf (add a0 delta))
+    :
+      <<UPD: updatable (t:=auth M) (black a0) (add (black (add a0 delta)) (white delta))>>
+  .
+  Proof.
+    ii. ss. des_ifs. des.
+    esplits; et.
+    rewrite unit_idl in *.
+    rr in H. des. rr. exists ctx; et. ss. clarify.
+    rewrite add_comm. rewrite (add_comm f0). rewrite <- add_assoc. f_equal.
+    rewrite add_comm. ss.
+  Qed.
+
   Theorem auth_dealloc
           `{M: t}
           a0 a1 b0
@@ -596,32 +721,76 @@ Qed.
 
 Module GRA.
   Class t: Type := __GRA__INTERNAL__: (nat -> URA.t).
-  Class inG (RA: URA.t) (GRA: t) := InG {
+  Class inG (RA: URA.t) (Σ: t) := InG {
     inG_id: nat;
     (* inG_prf: Eq (GRA inG_id) RA; *)
-    inG_prf: RA = GRA inG_id;
+    inG_prf: RA = Σ inG_id;
   }
   .
-  Class subG (GRA0 GRA1: t) := SubG i : { j | GRA0 i = GRA1 j }.
+  Class subG (Σ0 Σ1: t) := SubG i : { j | Σ0 i = Σ1 j }.
   (* Class subG (GRA0 GRA1: t) := SubG { subG_prf: forall i, { j | GRA0 i = GRA1 j } }. *)
 
   Definition of_list (RAs: list URA.t): t := fun n => List.nth n RAs (URA.of_RA RA.empty).
 
-  Definition to_URA (GRA: t): URA.t := URA.pointwise_dep GRA.
+  Definition to_URA (Σ: t): URA.t := URA.pointwise_dep Σ.
 
   Coercion to_URA: t >-> URA.t.
-
 
   Let cast_ra {A B: URA.t} (LeibEq: A = B) (a: URA.car (t:=A)): URA.car (t:=B) :=
     eq_rect A (@URA.car) a _ LeibEq.
 
   (* a: URA.car =ty= RAs inG_id =ty= RAs n *)
-  Definition padding {A GRA} `{@GRA.inG A GRA} (a: URA.car (t:=A)): URA.car (t:=GRA) :=
+  Definition padding {A Σ} `{@GRA.inG A Σ} (a: URA.car (t:=A)): URA.car (t:=Σ) :=
     fun n => match Nat.eq_dec inG_id n with
-             | left H => ((@eq_rect nat inG_id GRA ((cast_ra inG_prf a): GRA inG_id) n H): GRA n)
+             | left H => ((@eq_rect nat inG_id Σ ((cast_ra inG_prf a): Σ inG_id) n H): Σ n)
              | right _ => URA.unit
              end
   .
+
+  Lemma padding_wf
+        A Σ
+        `{@GRA.inG A Σ}
+        (a: A)
+        (WF: URA.wf (padding a))
+    :
+      <<WF: URA.wf a>>
+  .
+  Proof.
+    r. specialize (WF inG_id). ss. unfold padding in *. des_ifs.
+    unfold cast_ra in *. unfold eq_rect, eq_sym in *. dependent destruction e. destruct inG_prf. ss.
+  Qed.
+
+  Lemma padding_add
+        A Σ
+        `{@GRA.inG A Σ}
+        (a0 a1: A)
+    :
+      <<EQ: URA.add (padding a0) (padding a1) = padding (URA.add a0 a1)>>
+  .
+  Proof.
+    r. ss. unfold padding. apply func_ext_dep. i. des_ifs.
+    - ss. unfold cast_ra. unfold eq_rect, eq_sym. destruct inG_prf. reflexivity.
+    - rewrite URA.unit_id. ss.
+  Qed.
+
+  Lemma padding_updatable
+        A Σ
+        `{@GRA.inG A Σ}
+        (a0 a1: A)
+        (UPD: URA.updatable a0 a1)
+    :
+      <<UPD: URA.updatable (GRA.padding a0) (GRA.padding a1)>>
+  .
+  Proof.
+    r in UPD. ii. ss.
+    rename H0 into WF.
+    specialize (WF k).
+    unfold padding in *. des_ifs. ss.
+    unfold cast_ra in *. unfold eq_rect, eq_sym in *.
+    destruct H. ss.
+    dependent destruction inG_prf0.
+    eapply UPD. ss.
+  Qed.
 
   Section GETSET.
     Variable ra: URA.t.
@@ -690,6 +859,9 @@ Module GRA.
 
 End GRA.
 Coercion GRA.to_URA: GRA.t >-> URA.t.
+
+Notation "'ε'" := URA.unit.
+(* Definition ε `{Σ: GRA.t}: Σ := URA.unit. *)
 
 (***
 Choose: non-det

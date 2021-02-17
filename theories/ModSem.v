@@ -1,29 +1,141 @@
 Require Import Coqlib.
-Require Import ITreelib.
 Require Import Universe.
 Require Import Skeleton.
 Require Import PCM.
 Require Import STS Behavior.
+Require Import Any.
 
 Generalizable Variables E R A B C X Y.
 
 Set Implicit Arguments.
 
 
+
+
+
+Lemma interp_mrec_tau
+      D E
+      (ctx : forall T : Type, D T -> itree (D +' E) T)
+      U
+      (itr: itree (D +' E) U)
+  :
+    interp_mrec ctx (tau;; itr) = (tau;; interp_mrec ctx itr)
+.
+Proof. rewrite unfold_interp_mrec at 1. cbn. refl. Qed.
+
+Lemma interp_mrec_ret
+      D E
+      (ctx : forall T : Type, D T -> itree (D +' E) T)
+      U
+      (u: U)
+  :
+    interp_mrec ctx (Ret u) = Ret u
+.
+Proof. rewrite unfold_interp_mrec at 1. cbn. refl. Qed.
+
+Lemma interp_interp:
+  forall {E F G : Type -> Type} {R : Type} (f : forall T : Type, E T -> itree F T) (g : forall T : Type, F T -> itree G T) (t : itree E R),
+    interp g (interp f t) = interp (fun (T : Type) (e : (fun H : Type => E H) T) => interp g (f T e)) t.
+Proof. i. f. apply interp_interp. Qed.
+
+Ltac ired := repeat (try rewrite bind_bind; try rewrite bind_ret_l; try rewrite bind_ret_r; try rewrite bind_tau;
+                     (* try rewrite interp_vis; *)
+                     try rewrite interp_ret;
+                     try rewrite interp_tau;
+                     (* try rewrite interp_trigger *)
+                     try rewrite interp_bind;
+
+                     try rewrite interp_mrec_hit;
+                     try rewrite interp_mrec_miss;
+                     try rewrite interp_mrec_bind;
+                     try rewrite interp_mrec_tau;
+                     try rewrite interp_mrec_ret;
+
+                     try rewrite interp_state_trigger;
+                     try rewrite interp_state_bind;
+                     try rewrite interp_state_tau;
+                     try rewrite interp_state_ret;
+                     cbn
+                    ).
+(* first [eapply eqit_VisF|f_equiv] *)
+(* Ltac grind := repeat (ired; f; repeat (f_equiv; match goal with [ |- context[going] ] => fail | _ => idtac end; ii; des_ifs_safe); f). *)
+(* Ltac grind := repeat (ired; f; repeat (Morphisms.f_equiv; ii; des_ifs_safe); f). *)
+Ltac grind := repeat (ired; match goal with
+                            (* | [ |- tau;; ?a = tau;; ?b ] => do 2 f_equal *)
+                            | [ |- (go (TauF ?a)) = (go (TauF ?b)) ] => do 2 f_equal
+                            | [ |- (_ <- _ ;; _) = (_ <- _ ;; _) ] => Morphisms.f_equiv; apply func_ext_dep; i
+                            | _ => idtac
+                            end; ii; des_ifs_safe).
+(*** simple regression tests ***)
+Goal forall E R (itr: itree E R), (tau;; tau;; tau;; itr) = (tau;; tau;; itr). i. grind. Abort.
+Goal forall E X Y (itr: itree E X) (ktr: X -> itree E Y), ((x <- itr;; tau;; tau;; Ret x) >>= ktr) = ((x <- itr;; tau;; Ret x) >>= ktr).
+  i. progress grind. (*** it should progress ***)
+Abort.
+
+Lemma interp_state_resum_l
+      (E0 E1 F : Type -> Type) (A S: Type)
+      (f0: forall T, E0 T -> S -> itree F (S * T))
+      (f1: forall T, E1 T -> S -> itree F (S * T))
+      (t: itree E0 A)
+      (s: S)
+  :
+    interp_state (case_ f0 f1) (resum_itr t) s = interp_state (fun T e s0 => '(s1, t) <- f0 T e s0;; tau;; Ret (s1, t)) t s
+.
+Proof.
+  f. revert t s. ginit. gcofix CIH. i.
+  unfold resum_itr.
+  rewrite 2 unfold_interp_state.
+  ides t.
+  - cbn. gstep. econs; et.
+  - cbn. gstep. econs; eauto with paco.
+  - cbn. ired.
+    unfold resum, ReSum_id, id_, Id_IFun.
+    guclo eqit_clo_bind.
+    apply pbc_intro_h with (RU := eq).
+    + refl.
+    + intros ? _ []. ired. des_ifs. ss. clarify.
+      ired. cbn. gstep. econs; eauto with paco. gstep. econs; eauto with paco.
+Qed.
+
+Lemma interp_state_resum_r
+      (E0 E1 F : Type -> Type) (A S: Type)
+      (f0: forall T, E0 T -> S -> itree F (S * T))
+      (f1: forall T, E1 T -> S -> itree F (S * T))
+      (t: itree E1 A)
+      (s: S)
+  :
+    interp_state (case_ f0 f1) (resum_itr t) s = interp_state (fun T e s0 => '(s1, t) <- f1 T e s0;; tau;; Ret (s1, t)) t s
+.
+Proof.
+  f. revert t s. ginit. gcofix CIH. i.
+  unfold resum_itr.
+  rewrite 2 unfold_interp_state.
+  ides t.
+  - cbn. gstep. econs; et.
+  - cbn. gstep. econs; eauto with paco.
+  - cbn. ired.
+    unfold resum, ReSum_id, id_, Id_IFun.
+    guclo eqit_clo_bind.
+    apply pbc_intro_h with (RU := eq).
+    + refl.
+    + intros ? _ []. ired. des_ifs. ss. clarify.
+      ired. cbn. gstep. econs; eauto with paco. gstep. econs; eauto with paco.
+Qed.
+
+
+
+
+
 Section EVENTS.
 
-  Inductive eventE: Type -> Type :=
-  | Choose X: eventE X
+  Variant eventE: Type -> Type :=
+  | Choose (X: Type): eventE X
   | Take X: eventE X
-  | Syscall (fn: fname) (m: Mem.t) (args: list val): eventE (Mem.t * val)
-  (*** Syscall should be able to look at current memory (full information).
-       Normal modules will call Memory (Language) module in order to call system call,
-       because Memory (Language) module is the only one with access to Mem.t.
-   ***)
+  | Syscall (fn: fname) (args: list val): eventE val
   .
 
   Inductive callE: Type -> Type :=
-  | Call (fn: fname) (args: list val): callE val
+  | Call (fn: fname) (args: Any.t): callE Any.t
   .
 
   (* Notation "'Choose' X" := (trigger (Choose X)) (at level 50, only parsing). *)
@@ -39,13 +151,13 @@ Section EVENTS.
 
   Definition unwrapN {E X} `{eventE -< E} (x: option X): itree E X :=
     match x with
-    | Some x => ret x
+    | Some x => Ret x
     | None => triggerNB
     end.
 
   Definition unwrapU {E X} `{eventE -< E} (x: option X): itree E X :=
     match x with
-    | Some x => ret x
+    | Some x => Ret x
     | None => triggerUB
     end.
 
@@ -57,41 +169,56 @@ Section EVENTS.
   (* Notation "'Ret!' f" := (RetG f) (at level 57, only parsing). *)
   (* Notation "'Ret?' f" := (RetA f) (at level 57, only parsing). *)
 
-  Context `{GRA: GRA.t}.
+  Context `{Σ: GRA.t}.
+
+  Inductive pE: Type -> Type :=
+  | PPut (mn: mname) (p: Any.t): pE unit
+  | PGet (mn: mname): pE Any.t
+  .
 
   Inductive rE: Type -> Type :=
   (* | MPut (mn: mname) (r: GRA): rE unit *)
   (* | MGet (mn: mname): rE GRA *)
   (* | FPut (r: GRA): rE unit *)
   (* | FGet: rE GRA *)
-  | Put (mn: mname) (mr: GRA) (fr: GRA): rE unit
-  | MGet (mn: mname): rE GRA
-  | FGet: rE GRA
+  | MPut (mn: mname) (mr: Σ): rE unit
+  | FPut (fr: Σ): rE unit
+  | MGet (mn: mname): rE Σ
+  | FGet: rE Σ
   (* | Get (mn: mname): rE (GRA * GRA) *)
-
-  (*** NOTE: These methods can be implemented using Put/Get,
-       but making it explicit will be helpful for meta-theory.
-       E.g., In top-level, if all modules are well-typed,
-       we can make "CheckWf" to Nop by adjusting handler.
-   ***)
-  | Forge (fr: GRA): rE unit
-  | Discard (fr: GRA): rE unit
-  | CheckWf (mn: mname): rE unit
 
   | PushFrame: rE unit
   | PopFrame: rE unit
   .
 
-  Definition MPut E `{rE -< E} (mn: mname) (mr: GRA): itree E unit :=
-    fr <- trigger FGet;;
-    trigger (Put mn mr fr)
+  Definition put E `{rE -< E} `{eventE -< E} (mn: mname) (mr1: Σ) (fr1: Σ): itree E unit :=
+    mr0 <- trigger (MGet mn);; fr0 <- trigger FGet;;
+    guarantee(URA.updatable (URA.add mr0 fr0) (URA.add mr1 fr1));;
+    trigger (FPut fr1);; trigger (MPut mn mr1)
+  .
+
+  Definition forge E `{rE -< E} `{eventE -< E} (delta: Σ): itree E unit :=
+    fr0 <- trigger FGet;;
+    trigger (FPut (URA.add fr0 delta))
+  .
+
+  Definition discard E `{rE -< E} `{eventE -< E} (fr1: Σ): itree E unit :=
+    fr0 <- trigger FGet;;
+    rest <- trigger (Choose _);;
+    guarantee(fr0 = URA.add fr1 rest);;
+    trigger (FPut rest)
+  .
+
+  Definition checkWf E `{rE -< E} `{eventE -< E} (mn: mname): itree E unit :=
+    mr0 <- trigger (MGet mn);; fr0 <- trigger FGet;;
+    assume(URA.wf (URA.add mr0 fr0))
   .
 
   (*** TODO: we don't want to require "mname" here ***)
   (*** use dummy mname? ***)
   (* Definition FPut E `{rE -< E} (mn: mname) (fr: GRA): itree E unit := *)
 
-  Definition Es: Type -> Type := (callE +' rE +' eventE).
+  Definition Es: Type -> Type := (callE +' rE +' pE+' eventE).
 
   (* Inductive mdE: Type -> Type := *)
   (* | MPut (mn: mname) (r: GRA): mdE unit *)
@@ -105,10 +232,182 @@ Section EVENTS.
   (* | FPop: fnE unit *)
   (* . *)
 
+
+
+
+
+
+  (********************************************************************)
+  (*************************** Interpretation *************************)
+  (********************************************************************)
+  Definition r_state: Type := ((mname -> Σ) * list Σ).
+  Definition handle_rE `{eventE -< E}: rE ~> stateT r_state (itree E) :=
+    fun _ e '(mrs, frs) =>
+      match frs with
+      | hd :: tl =>
+        match e with
+        (* | Put mn mr fr => Ret (((update mrs mn mr), fr :: tl), tt) *)
+        | MPut mn mr => Ret (((update mrs mn mr), hd :: tl), tt)
+        | FPut fr => Ret ((mrs, fr :: tl), tt)
+        | MGet mn => Ret ((mrs, frs), mrs mn)
+        | FGet => Ret ((mrs, frs), hd)
+        | PushFrame =>
+          Ret ((mrs, ε :: frs), tt)
+        | PopFrame =>
+          Ret ((mrs, tl), tt)
+        end
+      | _ => triggerNB
+      end.
+
+  (*** Same as State.pure_state, but does not use "Vis" directly ***)
+  Definition pure_state {S E}: E ~> stateT S (itree E) := fun _ e s => x <- trigger e;; Ret (s, x).
+
+  (* Definition compose2 A B C R: (C -> R) -> (A -> B -> C) -> A -> B -> R := fun f g a b => f (g a b). *)
+  Definition interp_rE `{eventE -< E}: itree (rE +' E) ~> stateT r_state (itree E) :=
+    State.interp_state (case_ handle_rE pure_state).
+    (* State.interp_state (case_ ((fun _ e s0 => resum_itr (handle_rE e s0)): _ ~> stateT _ _) State.pure_state). *)
+    (* State.interp_state (case_ ((fun _ => compose2 (@resum_itr _ _ _ _) (@handle_rE _)): rE ~> stateT r_state (itree E)) State.pure_state). *)
+
+  Definition p_state: Type := (mname -> Any.t).
+  Definition handle_pE {E}: pE ~> stateT p_state (itree E) :=
+    fun _ e mps =>
+      match e with
+      | PPut mn p => Ret (update mps mn p, tt)
+      | PGet mn => Ret (mps, mps mn)
+      end.
+  Definition interp_pE {E}: itree (pE +' E) ~> stateT p_state (itree E) :=
+    (* State.interp_state (case_ ((fun _ e s0 => resum_itr (handle_pE e s0)): _ ~> stateT _ _) State.pure_state). *)
+    State.interp_state (case_ handle_pE pure_state).
+
+  (* Definition interp_Es A (prog: callE ~> itree Es) (itr0: itree Es A) (rst0: r_state) (pst0: p_state): itree eventE _ := *)
+  (*   interp_pE (interp_rE (interp_mrec prog itr0) rst0) pst0 *)
+  (* . *)
+  Definition interp_Es A (prog: callE ~> itree Es) (itr0: itree Es A) (st0: r_state * p_state): itree eventE ((r_state * p_state) * _)%type :=
+    let (rst0, pst0) := st0 in
+    '(pst1, (rst1, v)) <- interp_pE (interp_rE (interp_mrec prog itr0) rst0) pst0;;
+    Ret ((rst1, pst1), v)
+  .
+
+
+
+  Lemma interp_Es_bind
+        (prog: callE ~> itree Es)
+        A B
+        (itr: itree Es A) (ktr: A -> itree Es B)
+        st0
+    :
+      interp_Es prog (v <- itr ;; ktr v) st0 =
+      '(st1, v) <- interp_Es prog (itr) st0 ;; interp_Es prog (ktr v) st1
+  .
+  Proof. unfold interp_Es, interp_rE, interp_pE. des_ifs. grind. Qed.
+
+  Lemma interp_Es_tau
+        (prog: callE ~> itree Es)
+        A
+        (itr: itree Es A)
+        st0
+    :
+      interp_Es prog (tau;; itr) st0 = tau;; interp_Es prog itr st0
+  .
+  Proof. unfold interp_Es, interp_rE, interp_pE. des_ifs. grind. Qed.
+
+  Lemma interp_Es_ret
+        T
+        prog st0 (v: T)
+    :
+      interp_Es prog (Ret v) st0 = Ret (st0, v)
+  .
+  Proof. unfold interp_Es, interp_rE, interp_pE. des_ifs. grind. Qed.
+
+  Lemma interp_Es_callE
+        p st0
+        (* (e: Es Σ) *)
+        (e: callE Any.t)
+    :
+      interp_Es p (trigger e) st0 = tau;; (interp_Es p (p _ e) st0)
+  .
+  Proof. unfold interp_Es, interp_rE, interp_pE. des_ifs. grind. Qed.
+
+  Lemma unfold_interp_state: forall {E F} {S R} (h: E ~> stateT S (itree F)) (t: itree E R) (s: S),
+      interp_state h t s = _interp_state h (observe t) s.
+  Proof. i. f. apply unfold_interp_state. Qed.
+
+  Lemma interp_Es_rE
+        p rst0 pst0
+        (* (e: Es Σ) *)
+        T
+        (e: rE T)
+    :
+      interp_Es p (trigger e) (rst0, pst0) =
+      '(rst1, r) <- handle_rE e rst0;;
+      tau;; tau;;
+      Ret ((rst1, pst0), r)
+  .
+  Proof.
+    unfold interp_Es, interp_rE, interp_pE. grind.
+    destruct rst0; ss. unfold triggerNB, pure_state. destruct e; ss; des_ifs; grind.
+  Qed.
+
+  Lemma interp_Es_pE
+        p rst0 pst0
+        (* (e: Es Σ) *)
+        T
+        (e: pE T)
+    :
+      interp_Es p (trigger e) (rst0, pst0) =
+      '(pst1, r) <- handle_pE e pst0;;
+      tau;; tau;; tau;;
+      Ret ((rst0, pst1), r)
+  .
+  Proof.
+    unfold interp_Es, interp_rE, interp_pE. grind.
+    (* Ltac grind := repeat (ired; f; repeat (f_equiv; ii; des_ifs_safe); f). *)
+    destruct rst0; ss. unfold triggerNB, pure_state. destruct e; ss; des_ifs; grind.
+  Qed.
+
+  Lemma interp_Es_eventE
+        p st0
+        (* (e: Es Σ) *)
+        T
+        (e: eventE T)
+    :
+      interp_Es p (trigger e) st0 = r <- trigger e;; tau;; tau;; tau;; Ret (st0, r)
+  .
+  Proof.
+    unfold interp_Es, interp_rE, interp_pE. grind.
+    unfold pure_state. grind.
+  Qed.
+
+  Lemma interp_Es_triggerUB
+        (prog: callE ~> itree Es)
+        st0
+        A
+    :
+      (interp_Es prog (triggerUB) st0: itree eventE (_ * A)) = triggerUB
+  .
+  Proof.
+    unfold interp_Es, interp_rE, interp_pE, pure_state, triggerUB. grind.
+  Qed.
+
+  Lemma interp_Es_triggerNB
+        (prog: callE ~> itree Es)
+        st0
+        A
+    :
+      (interp_Es prog (triggerNB) st0: itree eventE (_ * A)) = triggerNB
+  .
+  Proof.
+    unfold interp_Es, interp_rE, interp_pE, pure_state, triggerNB. grind.
+  Qed.
+
 End EVENTS.
 
-Notation "f '?'" := (unwrapU f) (at level 60, only parsing).
-Notation "f '﹗'" := (unwrapN f) (at level 60, only parsing).
+Notation "f '?'" := (unwrapU f) (at level 9, only parsing).
+Notation "f 'ǃ'" := (unwrapN f) (at level 9, only parsing).
+Notation "(?)" := (unwrapU) (only parsing).
+Notation "(ǃ)" := (unwrapN) (only parsing).
+Goal (tt ↑↓?) = Ret tt. rewrite Any.upcast_downcast. ss. Qed.
+Goal (tt ↑↓ǃ) = Ret tt. rewrite Any.upcast_downcast. ss. Qed.
 
 
 
@@ -128,16 +427,12 @@ Section MODSEM.
   (* } *)
   (* . *)
 
-  Context `{GRA: GRA.t}.
+  Context `{Σ: GRA.t}.
 
   Record t: Type := mk {
     (* initial_ld: mname -> GRA; *)
-    fnsems: list (fname * (list val -> itree Es val));
-    initial_mrs: list (mname * GRA);
-    sem: callE ~> itree Es :=
-      fun _ '(Call fn args) =>
-        '(_, sem) <- (List.find (fun fnsem => dec fn (fst fnsem)) fnsems)?;;
-        sem args
+    fnsems: list (fname * (Any.t -> itree Es Any.t));
+    initial_mrs: list (mname * (Σ * Any.t));
   }
   .
 
@@ -164,63 +459,46 @@ Section MODSEM.
 
   Variable ms: t.
 
-  Let itr0: callE ~> itree Es :=
-    fun _ ce =>
+  Definition prog: callE ~> itree Es :=
+    fun _ '(Call fn args) =>
+      '(_, sem) <- (List.find (fun fnsem => dec fn (fst fnsem)) ms.(fnsems))?;;
       trigger PushFrame;;
-      rv <- (ms.(sem) ce);;
+      rv <- (sem args);;
       trigger PopFrame;;
       Ret rv
   .
-  Let itr1: itree (rE +' eventE) val := (mrec itr0) _ (Call "main" nil).
 
 
 
-  Definition r_state: Type := ((mname -> GRA) * list GRA).
-  Definition handle_rE `{eventE -< E}: rE ~> stateT r_state (itree E) :=
-    fun _ e '(mrs, frs) =>
-      match frs with
-      | hd :: tl =>
-        match e with
-        | Put mn mr fr =>
-          guarantee(URA.updatable (URA.add (mrs mn) hd) (URA.add mr fr));;
-          Ret (((update mrs mn mr), fr :: tl), tt)
-        | MGet mn => Ret ((mrs, frs), mrs mn)
-        | FGet => Ret ((mrs, frs), hd)
-        | Forge fr => Ret ((mrs, (URA.add hd fr) :: tl), tt)
-        | Discard fr =>
-          rest <- trigger (Choose _);;
-          guarantee(hd = URA.add fr rest);;
-          Ret ((mrs, rest :: tl), tt)
-        | CheckWf mn =>
-          assume(URA.wf (URA.add (mrs mn) hd));;
-          Ret ((mrs, frs), tt)
-        | PushFrame =>
-          Ret ((mrs, URA.unit :: frs), tt)
-        | PopFrame =>
-          Ret ((mrs, tl), tt)
-        end
-      | _ => triggerNB
-      end.
-  Definition interp_rE `{eventE -< E}: itree (rE +' E) ~> stateT r_state (itree E) :=
-    State.interp_state (case_ handle_rE State.pure_state).
   Definition initial_r_state: r_state :=
     (fun mn => match List.find (fun mnr => dec mn (fst mnr)) ms.(initial_mrs) with
-               | Some r => snd r
-               | None => URA.unit
-               end, []).
-  Let itr2: itree (eventE) val := assume(<<WF: wf ms>>);; snd <$> (interp_rE itr1) initial_r_state.
+               | Some r => fst (snd r)
+               | None => ε
+               end, [ε]). (*** we have a dummy-stack here ***)
+  Definition initial_p_state: p_state :=
+    (fun mn => match List.find (fun mnr => dec mn (fst mnr)) ms.(initial_mrs) with
+               | Some r => (snd (snd r))
+               | None => tt↑
+               end).
+  Definition initial_itr: itree (eventE) Any.t :=
+    assume(<<WF: wf ms>>);;
+    snd <$> interp_Es prog (prog (Call "main" (tt↑))) (initial_r_state, initial_p_state).
 
 
 
-  Let state: Type := itree eventE val.
+  Let state: Type := itree eventE Any.t.
 
   Definition state_sort (st0: state): sort :=
     match (observe st0) with
     | TauF _ => demonic
-    | RetF rv => final rv
+    | RetF rv =>
+      match rv↓ with
+      | Some (Vint rv) => final rv
+      | _ => angelic
+      end
     | VisF (Choose X) k => demonic
     | VisF (Take X) k => angelic
-    | VisF (Syscall fn args m0) k => vis
+    | VisF (Syscall fn args) k => vis
     end
   .
 
@@ -238,22 +516,33 @@ Section MODSEM.
     :
       step (Vis (subevent _ (Take X)) k) None (k x)
   | step_syscall
-      fn args m0 k ev m1 rv
-      (SYSCALL: syscall_sem fn args m0 = (ev, m1, rv))
+      fn args k ev rv
+      (SYSCALL: syscall_sem fn args = (ev, rv))
     :
-      step (Vis (subevent _ (Syscall fn args m0)) k) (Some ev) (k (m1, rv))
+      step (Vis (subevent _ (Syscall fn args)) k) (Some ev) (k rv)
   .
 
   Program Definition interp: semantics := {|
     STS.state := state;
     STS.step := step;
-    STS.initial_state := itr2;
+    STS.initial_state := initial_itr;
     STS.state_sort := state_sort;
   |}
   .
   Next Obligation. inv STEP; inv STEP0; ss. csc. rewrite SYSCALL in *. csc. Qed.
   Next Obligation. inv STEP; ss. Qed.
   Next Obligation. inv STEP; ss. Qed.
+
+  (* Program Definition interp_no_forge: semantics := {| *)
+  (*   STS.state := state; *)
+  (*   STS.step := step; *)
+  (*   STS.initial_state := itr2'; *)
+  (*   STS.state_sort := state_sort; *)
+  (* |} *)
+  (* . *)
+  (* Next Obligation. inv STEP; inv STEP0; ss. csc. rewrite SYSCALL in *. csc. Qed. *)
+  (* Next Obligation. inv STEP; ss. Qed. *)
+  (* Next Obligation. inv STEP; ss. Qed. *)
 
   End INTERP.
 
@@ -302,24 +591,25 @@ Section MODSEM.
   .
   Proof.
     destruct (classic (wf (add ms1 ms0))); cycle 1.
-    { ii. clear PR. eapply Beh.ub_top. pfold. econsr; ss; et. rr. ii; ss. unfold assume in *.
+    { ii. clear PR. eapply Beh.ub_top. pfold. econsr; ss; et. rr. ii; ss. unfold initial_itr, assume in *.
       inv STEP; ss; irw in H1; (* clarify <- TODO: BUG, runs infloop. *) inv H1; simpl_depind; subst.
       clarify.
     }
     rename H into WF.
-    ii. ss. r in PR. r. eapply add_comm_aux; et.
-    rp; et. clear PR. cbn. do 1 f_equal; cycle 1.
-    { unfold assume. rewrite wf_comm. ss. }
-    apply func_ext; ii.
-    f_equiv.
-    f_equal; cycle 1.
-    - unfold initial_r_state. f_equal. apply func_ext. intros fn. ss. des_ifs.
-      + admit "ez: wf".
-      + admit "ez: wf".
-      + admit "ez: wf".
-    - repeat f_equal. apply func_ext_dep. intro T. apply func_ext. intro c. destruct c.
-      repeat f_equal. apply func_ext. i. f_equal. ss. do 2 f_equal.
-      admit "ez: wf".
+    (* ii. ss. r in PR. r. eapply add_comm_aux; et. *)
+    (* rp; et. clear PR. cbn. do 1 f_equal; cycle 1. *)
+    (* { unfold assume. rewrite wf_comm. ss. } *)
+    (* apply func_ext; ii. *)
+    (* f_equiv. *)
+    (* f_equal; cycle 1. *)
+    (* - unfold initial_r_state. f_equal. apply func_ext. intros fn. ss. des_ifs. *)
+    (*   + admit "ez: wf". *)
+    (*   + admit "ez: wf". *)
+    (*   + admit "ez: wf". *)
+    (* - repeat f_equal. apply func_ext_dep. intro T. apply func_ext. intro c. destruct c. *)
+    (*   repeat f_equal. apply func_ext. i. f_equal. ss. do 2 f_equal. *)
+    (*   admit "ez: wf". *)
+    admit "TODO".
   Qed.
 
   Theorem add_assoc
@@ -352,12 +642,13 @@ End ModSem.
 Module Mod.
 Section MOD.
 
-  Context `{GRA: GRA.t}.
+  Context `{Σ: GRA.t}.
 
   Record t: Type := mk {
     get_modsem: SkEnv.t -> ModSem.t;
     sk: Sk.t;
-    interp: semantics := ModSem.interp (get_modsem (Sk.load_skenv sk));
+    enclose: ModSem.t := (get_modsem (Sk.load_skenv sk));
+    interp: semantics := ModSem.interp enclose;
   }
   .
 

@@ -1,8 +1,15 @@
 Require Import Coqlib.
 Require Export ZArith.
 Require Export String.
+Require Export Any.
+Require Export Axioms.
+Require Export Ordinal ClassicalOrdinal.
+Require Export sflib.
+Require Export ITreelib.
 
 Set Implicit Arguments.
+
+Global Opaque string_dec.
 
 (************ temporary buffer before putting it in Coqlib ***********)
 (************ temporary buffer before putting it in Coqlib ***********)
@@ -62,8 +69,8 @@ Definition vmul (x y: val): option val :=
   end
 .
 
-Notation fname := string (only parsing).
-Notation mname := string (only parsing).
+Notation fname := string (only parsing). (*** convention: not capitalized ***)
+Notation mname := string (only parsing). (*** convention: capitalized ***)
 
 
 
@@ -93,7 +100,7 @@ Module Mem.
   Definition alloc (m0: Mem.t) (sz: Z): (block * Mem.t) :=
     ((m0.(nb)),
      Mem.mk (update (m0.(cnts)) (m0.(nb))
-                    (fun ofs => if (0 <=? ofs) && (ofs <? sz) then Some (Vint 0) else None))
+                    (fun ofs => if (0 <=? ofs)%Z && (ofs <? sz)%Z then Some (Vint 0) else None))
             (S m0.(nb))
     )
   .
@@ -128,4 +135,4 @@ Module Mem.
 
 End Mem.
 
-Axiom syscall_sem: fname -> Mem.t -> list val -> (event * Mem.t * val).
+Axiom syscall_sem: fname -> list val -> (event * val).
