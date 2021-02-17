@@ -69,14 +69,14 @@ Definition vmul (x y: val): option val :=
   end
 .
 
-Notation fname := string (only parsing). (*** convention: not capitalized ***)
+Notation gname := string (only parsing). (*** convention: not capitalized ***)
 Notation mname := string (only parsing). (*** convention: capitalized ***)
 
 
 
 Inductive event: Type :=
 | event_sys
-    (fn: fname)
+    (fn: gname)
     (args: list val)
 .
 
@@ -135,4 +135,4 @@ Module Mem.
 
 End Mem.
 
-Axiom syscall_sem: fname -> list val -> (event * val).
+Axiom syscall_sem: gname -> list val -> (event * val).

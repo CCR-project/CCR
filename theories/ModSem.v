@@ -131,11 +131,11 @@ Section EVENTS.
   Variant eventE: Type -> Type :=
   | Choose (X: Type): eventE X
   | Take X: eventE X
-  | Syscall (fn: fname) (args: list val): eventE val
+  | Syscall (fn: gname) (args: list val): eventE val
   .
 
   Inductive callE: Type -> Type :=
-  | Call (fn: fname) (args: Any.t): callE Any.t
+  | Call (fn: gname) (args: Any.t): callE Any.t
   .
 
   (* Notation "'Choose' X" := (trigger (Choose X)) (at level 50, only parsing). *)
@@ -431,7 +431,7 @@ Section MODSEM.
 
   Record t: Type := mk {
     (* initial_ld: mname -> GRA; *)
-    fnsems: list (fname * (Any.t -> itree Es Any.t));
+    fnsems: list (gname * (Any.t -> itree Es Any.t));
     initial_mrs: list (mname * (Σ * Any.t));
   }
   .

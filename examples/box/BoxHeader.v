@@ -26,7 +26,7 @@ Section PROOF.
   Definition client (x: Z): Σ := (GRA.padding (URA.white (M:=_boxRA) (inl (Some x)))).
   Definition library (x: Z): Σ := (GRA.padding (URA.black (M:=_boxRA) (inl (Some x)))).
 
-  Definition BoxStb: list (fname * fspec) :=
+  Definition BoxStb: list (gname * fspec) :=
     [("get", mk "Box"
                 (fun x varg rarg => varg = [] /\ rarg = client x)
                 (fun x vret rret => vret = Vint x /\ rret = client x)) ;
@@ -36,10 +36,10 @@ Section PROOF.
     ]
   .
 
-  Definition MainStb: list (fname * fspec) :=
+  Definition MainStb: list (gname * fspec) :=
     [("main", mk "Main" (X:=unit) top3 top3)].
 
-  Definition AddStb: list (fname * fspec) :=
+  Definition AddStb: list (gname * fspec) :=
     [("add", mk "Add"
                 (fun x varg rarg => varg = [] /\ rarg = client x)
                 (fun x vret rret => rret = client (Z.add x 1)))

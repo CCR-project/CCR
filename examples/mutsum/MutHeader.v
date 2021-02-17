@@ -25,7 +25,7 @@ Section PROOF.
 
   Context `{Σ: GRA.t}.
 
-  Definition GlobalStb: list (fname * fspec) := [
+  Definition GlobalStb: list (gname * fspec) := [
     ("main", mk "F" (X:=unit) top3 top3) ;
     ("f", mk "F" (X:=nat) (fun n varg _ => varg = [Vint (Z.of_nat n)]↑) (fun n vret _ => vret = (Vint (Z.of_nat (sum n)))↑)) ;
     ("g", mk "F" (X:=nat) (fun n varg _ => varg = [Vint (Z.of_nat n)]↑) (fun n vret _ => vret = (Vint (Z.of_nat (sum n)))↑))

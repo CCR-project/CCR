@@ -6,16 +6,30 @@ Set Implicit Arguments.
 
 
 
+Fixpoint _find_idx {A} (f: A -> bool) (l: list A) (acc: nat): option (nat * A) :=
+  match l with
+  | [] => None
+  | hd :: tl => if (f hd) then Some (acc, hd) else _find_idx f tl (S acc)
+  end
+.
+
+Definition find_idx {A} (f: A -> bool) (l: list A): option (nat * A) := _find_idx f l 0.
+
+Notation "'do' ' X <- A ; B" := (o_bind A (fun _x => match _x with | X => B end))
+                                  (at level 200, X pattern, A at level 100, B at level 200)
+                                : o_monad_scope.
+
+
 Module SkEnv.
 
   Record t: Type := mk {
-    ptr2id: val -> option fname;
-    id2ptr: fname -> option val;
+    blk2id: block -> option gname;
+    id2blk: gname -> option block;
   }
   .
 
   Definition wf (ske: t): Prop :=
-    forall id ptr, ske.(id2ptr) id = Some ptr <-> ske.(ptr2id) ptr = Some id.
+    forall id blk, ske.(id2blk) id = Some blk <-> ske.(blk2id) blk = Some id.
 
   (* Definition project: t -> Sk.t -> t := admit "". *)
     (* t: Type := Genv.t (fundef signature) unit; *)
@@ -104,7 +118,9 @@ End SkEnv.
 
 Module Sk.
 
-  Definition t: Type := list fname.
+  Inductive gdef: Type := Gfun | Gvar (gv: val).
+
+  Definition t: Type := list (gname * gdef).
 
   Definition unit: t := nil.
 
@@ -124,31 +140,17 @@ Module Sk.
            To be more faithful, we need to migrate the notion of "permission" from CompCert.
            CompCert expresses it with "nonempty" permission.
        ***)
-      (*** TODO: When doing so, I would like to extend val with "Vfid (id: fname)" case.
+      (*** TODO: When doing so, I would like to extend val with "Vfid (id: gname)" case.
            That way, I might be able to support more higher-order features (overriding, newly allocating function)
        ***)
       n
   .
 
-  Fixpoint _find_idx {A} (f: A -> bool) (l: list A) (acc: nat): option (nat * A) :=
-    match l with
-    | [] => None
-    | hd :: tl => if (f hd) then Some (acc, hd) else _find_idx f tl (S acc)
-    end
-  .
-
-  Definition find_idx {A} (f: A -> bool) (l: list A): option (nat * A) := _find_idx f l 0.
-
   Definition load_skenv (sk: t): (SkEnv.t) :=
     let n := List.length sk in
     {|
-      SkEnv.ptr2id := fun v => match v with
-                               | Vptr blk ofs => if (ofs =? 0)%Z
-                                                 then List.nth_error sk blk
-                                                 else None
-                               | _ => None
-                               end;
-      SkEnv.id2ptr := fun id => do blkofs <- find_idx (string_dec id) sk; Some (Vptr (fst blkofs) 0)
+      SkEnv.blk2id := fun blk => do '(ofs, _) <- (List.nth_error sk blk); Some ofs;
+      SkEnv.id2blk := fun id => do '(blk, _) <- find_idx (fun '(id', _) => string_dec id id') sk; Some blk
     |}
   .
 
@@ -161,9 +163,11 @@ Module Sk.
   Proof.
     r in WF.
     rr. split; i; ss.
-    - uo; des_ifs. admit "ez".
-    - uo; des_ifs_safe. apply Z.eqb_eq in Heq. subst. des_ifs.
-      + destruct p; ss. repeat f_equal. admit "ez".
+    - uo; des_ifs.
+      + admit "ez".
+      + admit "ez".
+    - uo; des_ifs_safe. des_ifs.
+      + destruct p0; ss. repeat f_equal. admit "ez".
       + admit "ez".
   Qed.
 
