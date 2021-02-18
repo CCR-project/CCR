@@ -23,7 +23,7 @@ Section PROOF.
   (* Let GURA: URA.t := GRA.to_URA Σ. *)
   (* Local Existing Instance GURA. *)
 
-  Definition BoxFtb: list (fname * (list val -> itree (hCallE +' eventE) val)) :=
+  Definition BoxFtb: list (gname * (list val -> itree (hCallE +' eventE) val)) :=
     zip pair ["get"; "set"] (List.repeat (fun _ => trigger (Choose _)) 2)
   .
 

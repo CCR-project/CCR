@@ -105,7 +105,7 @@ Section PROOF.
   Definition HoareCall
              (P: Any.t -> Σ -> Prop)
              (Q: Any.t -> Σ -> Prop):
-    fname -> Any.t -> itree Es Any.t :=
+    gname -> Any.t -> itree Es Any.t :=
     fun fn varg =>
       '(marg, farg) <- trigger (Choose _);; put mn marg farg;; (*** updating resources in an abstract way ***)
       rarg <- trigger (Choose Σ);; discard rarg;; (*** virtual resource passing ***)
@@ -148,7 +148,7 @@ Section CANCEL.
   | hCall
       (* (mn: mname) *)
       (* (P: list val -> Σ -> Prop) (Q: list val -> Σ -> val -> Σ -> Prop) *)
-      (fn: fname) (marg: Any.t) (varg: Any.t): hCallE Any.t
+      (fn: gname) (marg: Any.t) (varg: Any.t): hCallE Any.t
   .
 
   (*** spec table ***)
@@ -163,17 +163,17 @@ Section CANCEL.
 
 
   Section INTERP.
-  (* Variable stb: fname -> option fspec. *)
+  (* Variable stb: gname -> option fspec. *)
   (*** TODO: I wanted to use above definiton, but doing so makes defining ms_src hard ***)
   (*** We can fix this by making ModSem.fnsems to a function, but doing so will change the type of
        ModSem.add to predicate (t -> t -> t -> Prop), not function.
-       - Maybe not. I thought one needed to check uniqueness of fname at the "add",
+       - Maybe not. I thought one needed to check uniqueness of gname at the "add",
          but that might not be the case.
          We may define fnsems: string -> option (list val -> itree Es val).
          When adding two ms, it is pointwise addition, and addition of (option A) will yield None when both are Some.
  ***)
   (*** TODO: try above idea; if it fails, document it; and refactor below with alist ***)
-  Variable stb: list (fname * fspec).
+  Variable stb: list (gname * fspec).
 
   (****************** TODO: REMOVE ALL MATCH AND REPLACE IT WITH UNWRAPU  *****************)
   (****************** TODO: REMOVE ALL MATCH AND REPLACE IT WITH UNWRAPU  *****************)
@@ -212,7 +212,7 @@ Section CANCEL.
   Definition body_to_src (body: Any.t -> itree (hCallE +' pE +' eventE) Any.t): Any.t -> itree Es Any.t :=
     fun varg => interp_hCallE_src (body varg)
   .
-  Definition fun_to_tgt (fn: fname) (body: Any.t -> itree (hCallE +' pE +' eventE) Any.t): (Any.t -> itree Es Any.t) :=
+  Definition fun_to_tgt (fn: gname) (body: Any.t -> itree (hCallE +' pE +' eventE) Any.t): (Any.t -> itree Es Any.t) :=
     match List.find (fun '(_fn, _) => dec fn _fn) stb with
     | Some (_, fs) => HoareFun fs.(mn) (fs.(precond)) (fs.(postcond)) (body_to_tgt fs.(mn) body)
     | _ => fun _ => triggerNB
@@ -237,8 +237,8 @@ If this feature is needed; we can extend it then. At the moment, I will only all
   Variable md_tgt: Mod.t.
   Let ms_tgt: ModSem.t := (Mod.get_modsem md_tgt (Sk.load_skenv md_tgt.(Mod.sk))).
 
-  Variable stb: list (fname * fspec).
-  Variable ftb: list (fname * (Any.t -> itree (hCallE +' pE +' eventE) Any.t)).
+  Variable stb: list (gname * fspec).
+  Variable ftb: list (gname * (Any.t -> itree (hCallE +' pE +' eventE) Any.t)).
   Hypothesis WTY: ms_tgt.(ModSem.fnsems) = List.map (fun '(fn, body) => (fn, fun_to_tgt stb fn body)) ftb.
 
   Definition ms_src: ModSem.t := {|

@@ -51,8 +51,8 @@ Section PROOF.
   .
 
   (*** main's view on stb ***)
-  Definition MainStb: list (fname * fspec) := [("main", mk "Main" (X:=unit) top3 top3)].
-  Definition MemStb: list (fname * fspec) :=
+  Definition MainStb: list (gname * fspec) := [("main", mk "Main" (X:=unit) top3 top3)].
+  Definition MemStb: list (gname * fspec) :=
   [("alloc", mk "Mem"
                (fun sz varg _ => varg = [Vint (Z.of_nat sz)]↑)
                (fun sz vret rret =>
@@ -96,7 +96,7 @@ Possible improvements:
 
   Definition Main: Mod.t := {|
     Mod.get_modsem := fun _ => MainSem;
-    Mod.sk := List.map fst MainStb;
+    Mod.sk := List.map (fun '(n, _) => (n, Sk.Gfun)) MainStb;
   |}
   .
 

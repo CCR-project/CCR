@@ -423,7 +423,7 @@ Set Implicit Arguments.
 Section MODSEM.
   Context `{GRA: GRA.t}.
   Variable sk: Sk.t.
-  Variable program: list (fname * stmt).
+  Variable program: list (gname * stmt).
   Variable mn: mname.
 
   Set Typeclasses Depth 5.

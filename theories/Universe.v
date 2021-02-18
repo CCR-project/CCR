@@ -37,17 +37,20 @@ Notation ptrofs := Z (only parsing).
 Inductive val: Type :=
 | Vint (n: Z): val
 | Vptr (blk: block) (ofs: ptrofs): val
-(* | Vundef *)
+| Vundef
 .
 
 Notation ofs0 := 0%Z.
+
+Definition Vnullptr := Vptr 0 0.
 
 Definition vadd (x y: val): option val :=
   match x, y with
   | Vint n, Vint m => Some (Vint (Z.add n m))
   | Vptr blk ofs, Vint n => Some (Vptr blk (Z.add ofs n))
   | Vint n, Vptr blk ofs => Some (Vptr blk (Z.add ofs n))
-  | Vptr _ _, Vptr _ _ => None
+  (* | Vptr _ _, Vptr _ _ => None *)
+  | _, _ => None
   end
 .
 
@@ -56,7 +59,8 @@ Definition vsub (x y: val): option val :=
   | Vint n, Vint m => Some (Vint (Z.sub n m))
   | Vptr blk ofs, Vint n => Some (Vptr blk (Z.sub ofs n))
   | Vint n, Vptr blk ofs => Some (Vptr blk (Z.sub ofs n))
-  | Vptr _ _, Vptr _ _ => None
+  (* | Vptr _ _, Vptr _ _ => None *)
+  | _, _ => None
   end
 .
 
@@ -65,18 +69,19 @@ Definition vmul (x y: val): option val :=
   | Vint n, Vint m => Some (Vint (Z.mul n m))
   | Vptr blk ofs, Vint n => Some (Vptr blk (Z.mul ofs n))
   | Vint n, Vptr blk ofs => Some (Vptr blk (Z.mul ofs n))
-  | Vptr _ _, Vptr _ _ => None
+  (* | Vptr _ _, Vptr _ _ => None *)
+  | _, _ => None
   end
 .
 
-Notation fname := string (only parsing). (*** convention: not capitalized ***)
+Notation gname := string (only parsing). (*** convention: not capitalized ***)
 Notation mname := string (only parsing). (*** convention: capitalized ***)
 
 
 
 Inductive event: Type :=
 | event_sys
-    (fn: fname)
+    (fn: gname)
     (args: list val)
 .
 
@@ -95,8 +100,6 @@ Module Mem.
 
   Definition wf (m0: t): Prop := forall blk ofs (LT: (blk < m0.(nb))%nat), m0.(cnts) blk ofs = None.
 
-  Definition empty: t := mk (fun _ _ => None) 0.
-
   Definition alloc (m0: Mem.t) (sz: Z): (block * Mem.t) :=
     ((m0.(nb)),
      Mem.mk (update (m0.(cnts)) (m0.(nb))
@@ -104,6 +107,16 @@ Module Mem.
             (S m0.(nb))
     )
   .
+
+  Opaque Z.ltb Z.leb Z.mul Z.eq_dec Nat.eq_dec.
+  Definition empty: t := mk (update (fun _ _ => None) 0 (fun ofs => if dec ofs 0%Z then Some Vundef else None)) 1.
+  (* Let empty2: t := Eval compute in *)
+  (*   let m0 := mk (fun _ _ => None) 0 in *)
+  (*   let (_, m1) := alloc m0 1%Z in *)
+  (*   m1 *)
+  (* . *)
+  (*** shoul allocated with Vundef, not 0 ***)
+
 
   (*** TODO: Unlike CompCert, this "free" function does not take offset.
        In order to support this, we need more sophisticated RA. it would be interesting.
@@ -133,6 +146,35 @@ Module Mem.
     end
   .
 
+  Definition valid_ptr (m0: Mem.t) (b: block) (ofs: ptrofs): bool := is_some (m0.(cnts) b ofs).
+
 End Mem.
 
-Axiom syscall_sem: fname -> list val -> (event * val).
+Definition vcmp (m0: Mem.t) (x y: val): option bool :=
+  match x, y with
+  | Vint x, Vint y => Some (dec x y: bool)
+  | Vptr x xofs, Vptr y yofs =>
+    if Mem.valid_ptr m0 x xofs && Mem.valid_ptr m0 y yofs
+    then Some (dec x y && dec xofs yofs)
+    else None
+  | _, _ => None
+  (* | Vundef, _ => None *)
+  (* | _, Vundef => None *)
+  end.
+
+Definition unptr (v: val): option (block * ptrofs) :=
+  match v with
+  | Vptr b ofs => Some (b, ofs)
+  | _ => None
+  end.
+
+Definition unint (v: val): option Z :=
+  match v with
+  | Vint x => Some x
+  | _ => None
+  end.
+
+(*** NOTE: Probably we can support comparison between nullptr and 0 ***)
+(*** NOTE: Unlike CompCert, we don't support comparison with weak_valid_ptr (for simplicity) ***)
+
+Axiom syscall_sem: gname -> list val -> (event * val).

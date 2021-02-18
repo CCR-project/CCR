@@ -29,7 +29,7 @@ Section PROOF.
     trigger (hCall "set" [varg])
   .
 
-  Definition AddFtb: list (fname * (list val -> itree (hCallE +' eventE) val)) :=
+  Definition AddFtb: list (gname * (list val -> itree (hCallE +' eventE) val)) :=
     zip pair ["add"] [addBody]
   .
 

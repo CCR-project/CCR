@@ -103,7 +103,7 @@ Section PROOF.
   (*            (fun _ => trigger (Choose _)) *)
   (* . *)
 
-  Definition MemStb: list (fname * fspec) :=
+  Definition MemStb: list (gname * fspec) :=
   [("alloc", mk "Mem"
                (fun sz varg _ => varg = [Vint (Z.of_nat sz)]↑)
                (fun sz vret rret =>
@@ -124,11 +124,11 @@ Section PROOF.
   ]
   .
 
-  Definition MemFtb: list (fname * (Any.t -> itree (hCallE +' pE +' eventE) Any.t)) :=
+  Definition MemFtb: list (gname * (Any.t -> itree (hCallE +' pE +' eventE) Any.t)) :=
     zip pair ["alloc"; "free"; "load"; "store"] (List.repeat (fun _ => trigger (Choose _)) 4)
   .
 
-  (* Definition MemFtb2: list (fname * fspec * (list val -> itree (hCallE +' eventE) val)) := *)
+  (* Definition MemFtb2: list (gname * fspec * (list val -> itree (hCallE +' eventE) val)) := *)
   (* [("alloc", mk "Mem" *)
   (*              (fun sz varg _ => varg = [Vint (Z.of_nat sz)]) *)
   (*              (fun sz vret rret => *)
@@ -161,7 +161,7 @@ Section PROOF.
 
   Definition Mem: Mod.t := {|
     Mod.get_modsem := fun _ => MemSem; (*** TODO: we need proper handling of function pointers ***)
-    Mod.sk := List.map fst MemStb;
+    Mod.sk := List.map (fun '(n, _) => (n, Sk.Gfun)) MemStb;
   |}
   .
 
