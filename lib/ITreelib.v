@@ -249,6 +249,54 @@ forall {E F : Type -> Type} {R S : Type} (f : forall T : Type, E T -> itree F T)
 interp f (` x : _ <- t;; k x) = ` r : R <- interp f t;; interp f (k r).
 Proof. i. f. apply interp_bind. Qed.
 
+Lemma interp_mrec_hit:
+  forall (D E : Type -> Type) (ctx : forall T : Type, D T -> itree (D +' E) T) (U : Type) (a : D U),
+    interp_mrec ctx (trigger a) = (tau;; interp_mrec ctx (ctx _ a))
+.
+Proof.
+  i. rewrite unfold_interp_mrec. ss.
+  unfold resum, ReSum_id, id_, Id_IFun. rewrite bind_ret_r. ss.
+Qed.
+
+(*** TODO: I don't want "F" here, but it is technically needed. Report it to itree people? ***)
+Lemma interp_mrec_miss:
+  (* forall (D E F: Type -> Type) `{F -< E} (ctx : forall T : Type, D T -> itree (D +' E) T) (U : Type) (a : F U), *)
+  forall (D E F: Type -> Type) `{F -< E} (ctx : forall T : Type, D T -> itree (D +' E) T) (U : Type) (a : F U),
+    interp_mrec ctx (trigger a) = x <- (trigger a);; tau;; Ret x
+(* (trigger a) >>= tauK *)
+.
+Proof.
+  i. rewrite unfold_interp_mrec. cbn.
+  unfold trigger. irw.
+  f; repeat (f_equiv; ii; des_ifs_safe); f.
+  irw. ss.
+Qed.
+
+Lemma interp_mrec_tau
+      D E
+      (ctx : forall T : Type, D T -> itree (D +' E) T)
+      U
+      (itr: itree (D +' E) U)
+  :
+    interp_mrec ctx (tau;; itr) = (tau;; interp_mrec ctx itr)
+.
+Proof. rewrite unfold_interp_mrec at 1. cbn. refl. Qed.
+
+Lemma interp_mrec_ret
+      D E
+      (ctx : forall T : Type, D T -> itree (D +' E) T)
+      U
+      (u: U)
+  :
+    interp_mrec ctx (Ret u) = Ret u
+.
+Proof. rewrite unfold_interp_mrec at 1. cbn. refl. Qed.
+
+Lemma interp_interp:
+  forall {E F G : Type -> Type} {R : Type} (f : forall T : Type, E T -> itree F T) (g : forall T : Type, F T -> itree G T) (t : itree E R),
+    interp g (interp f t) = interp (fun (T : Type) (e : (fun H : Type => E H) T) => interp g (f T e)) t.
+Proof. i. f. apply interp_interp. Qed.
+
 Ltac iby3 TAC :=
   first [
       instantiate (1:= fun _ _ _ => _); TAC|
@@ -273,7 +321,47 @@ Ltac iby1 TAC :=
     ]
 .
 
-Ltac grind :=  f; repeat (f_equiv; ii; des_ifs_safe); f.
+(* Ltac grind :=  f; repeat (f_equiv; ii; des_ifs_safe); f. *)
+
+Ltac ired := repeat (try rewrite bind_bind; try rewrite bind_ret_l; try rewrite bind_ret_r; try rewrite bind_tau;
+                     (* try rewrite interp_vis; *)
+                     try rewrite interp_ret;
+                     try rewrite interp_tau;
+                     (* try rewrite interp_trigger *)
+                     try rewrite interp_bind;
+
+                     try rewrite interp_mrec_hit;
+                     try rewrite interp_mrec_miss;
+                     try rewrite interp_mrec_bind;
+                     try rewrite interp_mrec_tau;
+                     try rewrite interp_mrec_ret;
+
+                     try rewrite interp_state_trigger;
+                     try rewrite interp_state_bind;
+                     try rewrite interp_state_tau;
+                     try rewrite interp_state_ret;
+                     cbn
+                    ).
+(* first [eapply eqit_VisF|f_equiv] *)
+(* Ltac grind := repeat (ired; f; repeat (f_equiv; match goal with [ |- context[going] ] => fail | _ => idtac end; ii; des_ifs_safe); f). *)
+(* Ltac grind := repeat (ired; f; repeat (Morphisms.f_equiv; ii; des_ifs_safe); f). *)
+Ltac grind := repeat (ired; match goal with
+                            (* | [ |- tau;; ?a = tau;; ?b ] => do 2 f_equal *)
+                            | [ |- (go (TauF ?a)) = (go (TauF ?b)) ] => do 2 f_equal
+                            | [ |- (_ <- _ ;; _) = (_ <- _ ;; _) ] => Morphisms.f_equiv; apply func_ext_dep; i
+                            | _ => idtac
+                            end; ii; des_ifs_safe).
+(*** simple regression tests ***)
+Goal forall E R (itr: itree E R), (tau;; tau;; tau;; itr) = (tau;; tau;; itr). i. grind. Abort.
+Goal forall E X Y (itr: itree E X) (ktr: X -> itree E Y), ((x <- itr;; tau;; tau;; Ret x) >>= ktr) = ((x <- itr;; tau;; Ret x) >>= ktr).
+  i. progress grind. (*** it should progress ***)
+Abort.
+
+
+
+
+
+
 
 Definition update K V map `{Map K V map}: K -> (V -> V) -> map -> option map :=
   fun k f m => do v <- Maps.lookup k m ; Some (Maps.add k (f v) m)
@@ -429,28 +517,6 @@ Qed.
 
 Definition resum_itr E F `{E -< F}: itree E ~> itree F := fun _ itr => interp (fun _ e => trigger e) itr.
 
-Lemma interp_mrec_hit:
-  forall (D E : Type -> Type) (ctx : forall T : Type, D T -> itree (D +' E) T) (U : Type) (a : D U),
-    interp_mrec ctx (trigger a) = (tau;; interp_mrec ctx (ctx _ a))
-.
-Proof.
-  i. rewrite unfold_interp_mrec. ss.
-  unfold resum, ReSum_id, id_, Id_IFun. rewrite bind_ret_r. ss.
-Qed.
-
-(*** TODO: I don't want "F" here, but it is technically needed. Report it to itree people? ***)
-Lemma interp_mrec_miss:
-  (* forall (D E F: Type -> Type) `{F -< E} (ctx : forall T : Type, D T -> itree (D +' E) T) (U : Type) (a : F U), *)
-  forall (D E F: Type -> Type) `{F -< E} (ctx : forall T : Type, D T -> itree (D +' E) T) (U : Type) (a : F U),
-    interp_mrec ctx (trigger a) = x <- (trigger a);; tau;; Ret x
-(* (trigger a) >>= tauK *)
-.
-Proof.
-  i. rewrite unfold_interp_mrec. cbn.
-  unfold trigger. irw.
-  grind. irw. ss.
-Qed.
-
 Definition tauK {E R}: R -> itree E R := fun r => tau;; Ret r.
 Hint Unfold tauK.
 
@@ -458,3 +524,56 @@ Definition idK {E R}: R -> itree E R := fun r => Ret r.
 Hint Unfold idK.
 
 Lemma idK_spec E R (i0: itree E R): i0 = i0 >>= idK. Proof. unfold idK. irw. refl. Qed.
+
+
+
+
+Lemma interp_state_resum_l
+      (E0 E1 F : Type -> Type) (A S: Type)
+      (f0: forall T, E0 T -> S -> itree F (S * T))
+      (f1: forall T, E1 T -> S -> itree F (S * T))
+      (t: itree E0 A)
+      (s: S)
+  :
+    interp_state (case_ f0 f1) (resum_itr t) s = interp_state (fun T e s0 => '(s1, t) <- f0 T e s0;; tau;; Ret (s1, t)) t s
+.
+Proof.
+  f. revert t s. ginit. gcofix CIH. i.
+  unfold resum_itr.
+  rewrite 2 unfold_interp_state.
+  ides t.
+  - cbn. gstep. econs; et.
+  - cbn. gstep. econs; eauto with paco.
+  - cbn. ired.
+    unfold resum, ReSum_id, id_, Id_IFun.
+    guclo eqit_clo_bind.
+    apply pbc_intro_h with (RU := eq).
+    + refl.
+    + intros ? _ []. ired. des_ifs. ss. clarify.
+      ired. cbn. gstep. econs; eauto with paco. gstep. econs; eauto with paco.
+Qed.
+
+Lemma interp_state_resum_r
+      (E0 E1 F : Type -> Type) (A S: Type)
+      (f0: forall T, E0 T -> S -> itree F (S * T))
+      (f1: forall T, E1 T -> S -> itree F (S * T))
+      (t: itree E1 A)
+      (s: S)
+  :
+    interp_state (case_ f0 f1) (resum_itr t) s = interp_state (fun T e s0 => '(s1, t) <- f1 T e s0;; tau;; Ret (s1, t)) t s
+.
+Proof.
+  f. revert t s. ginit. gcofix CIH. i.
+  unfold resum_itr.
+  rewrite 2 unfold_interp_state.
+  ides t.
+  - cbn. gstep. econs; et.
+  - cbn. gstep. econs; eauto with paco.
+  - cbn. ired.
+    unfold resum, ReSum_id, id_, Id_IFun.
+    guclo eqit_clo_bind.
+    apply pbc_intro_h with (RU := eq).
+    + refl.
+    + intros ? _ []. ired. des_ifs. ss. clarify.
+      ired. cbn. gstep. econs; eauto with paco. gstep. econs; eauto with paco.
+Qed.

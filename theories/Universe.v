@@ -162,6 +162,18 @@ Definition vcmp (m0: Mem.t) (x y: val): option bool :=
   (* | _, Vundef => None *)
   end.
 
+Definition unptr (v: val): option (block * ptrofs) :=
+  match v with
+  | Vptr b ofs => Some (b, ofs)
+  | _ => None
+  end.
+
+Definition unint (v: val): option Z :=
+  match v with
+  | Vint x => Some x
+  | _ => None
+  end.
+
 (*** NOTE: Probably we can support comparison between nullptr and 0 ***)
 (*** NOTE: Unlike CompCert, we don't support comparison with weak_valid_ptr (for simplicity) ***)
 
