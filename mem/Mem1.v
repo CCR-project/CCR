@@ -105,22 +105,26 @@ Section PROOF.
 
   Definition MemStb: list (gname * fspec) :=
   [("alloc", mk "Mem"
-               (fun sz varg _ => varg = [Vint (Z.of_nat sz)]↑)
-               (fun sz vret rret =>
+               (fun sz _ varg _ => varg = [Vint (Z.of_nat sz)]↑)
+               (fun sz _ vret rret =>
                   exists b, vret = (Vptr b 0)↑ /\
-                            rret = GRA.padding (points_tos (b, 0%Z) (List.repeat (Vint 0) sz)))) ;
+                            rret = GRA.padding (points_tos (b, 0%Z) (List.repeat (Vint 0) sz)))
+               (fun _ => None)) ;
   ("free", mk "Mem"
-              (fun '(b, ofs) varg rarg => exists v, varg = ([Vptr b ofs])↑ /\
+              (fun '(b, ofs) _ varg rarg => exists v, varg = ([Vptr b ofs])↑ /\
                                                     rarg = (GRA.padding ((b, ofs) |-> v)))
-              (top3)) ;
+              (top4)
+              (fun _ => None)) ;
   ("load", mk "Mem"
-              (fun '(b, ofs, v) varg rarg => varg = ([Vptr b ofs])↑ /\
+              (fun '(b, ofs, v) _ varg rarg => varg = ([Vptr b ofs])↑ /\
                                              rarg = (GRA.padding ((b, ofs) |-> v)))
-              (fun '(b, ofs, v) vret rret => rret = (GRA.padding ((b, ofs) |-> v)) /\ vret = v↑)) ;
+              (fun '(b, ofs, v) _ vret rret => rret = (GRA.padding ((b, ofs) |-> v)) /\ vret = v↑)
+              (fun _ => None)) ;
   ("store", mk "Mem"
-               (fun '(b, ofs, v_new) varg rarg => exists v_old,
+               (fun '(b, ofs, v_new) _ varg rarg => exists v_old,
                     varg = ([Vptr b ofs ; v_new])↑ /\ rarg = (GRA.padding ((b, ofs) |-> v_old)))
-               (fun '(b, ofs, v_new) _ rret => rret = (GRA.padding ((b, ofs) |-> v_new))))
+               (fun '(b, ofs, v_new) _ _ rret => rret = (GRA.padding ((b, ofs) |-> v_new)))
+               (fun _ => None))
   ]
   .
 

@@ -67,9 +67,10 @@ Section PROOF.
     ii.
     eapply adequacy_type with (ftb:=FFtb++GFtb) in PR.
     { ss. }
-    { ss. }
     { ss. admit "main - Fix me". }
     cbn in *. unfold compose. ss. rewrite ! URA.unit_id. apply URA.wf_unit.
+  Unshelve.
+    all: try (by econs; ss).
   Qed.
 
 

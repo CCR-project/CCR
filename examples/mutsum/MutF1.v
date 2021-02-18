@@ -19,10 +19,10 @@ Section PROOF.
 
   Context `{Σ: GRA.t}.
 
-  Definition mainBody: Any.t -> itree (hCallE +' pE +' eventE) Any.t := fun _ => marg <- trigger (Choose _);; trigger (hCall "f" marg [Vint 10]↑);; Ret (Vint 55)↑.
+  Definition mainBody: Any.t -> itree (hCallE +' pE +' eventE) Any.t := fun _ => trigger (hCall "f" [Vint 10]↑);; Ret (Vint 55)↑.
   Definition fBody: Any.t -> itree (hCallE +' pE +' eventE) Any.t :=
     fun varg => varg' <- trigger (Choose _);; guarantee (ord varg' varg);;
-                marg <- trigger (Choose _);; trigger (hCall "g" marg varg');; trigger (Choose _)
+                trigger (hCall "g" varg');; trigger (Choose _)
   .
   (*** TODO: it would be better if the body can depend on "X", but doing so will mandate generalization of Call.
        related issue: https://github.com/snu-sf/rusc-program-verif/issues/48

@@ -88,7 +88,6 @@ Section PROOF.
     eapply adequacy_type with (ftb:=global_ftb) in PR.
     { ss. }
     { ss. instantiate (1:=global_stb). admit "ez". }
-    { ss. }
     ss. unfold compose. ss. rewrite ! URA.unit_id. rewrite ! URA.unit_idl.
     eapply padding_wf; et. ss. esplits; et.
     rr. esplits; et. ss.
