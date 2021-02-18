@@ -74,6 +74,12 @@ Goal forall x, 5 + 5 = x. i. seal 5. seal x. unseal key0. unseal 5. cbn. Abort.
 
 
 
+Section PSEUDOTYPING.
+
+(*** execute following commands in emacs (by C-x C-e)
+     (progn (highlight-phrase "Any" 'hi-red-b) (highlight-phrase "Any_src" 'hi-green-b) (highlight-phrase "Any_tgt" 'hi-blue-b)) ***)
+Let Any_src := Any.t. (*** src argument (e.g., List nat) ***)
+Let Any_tgt := Any.t. (*** tgt argument (i.e., list val) ***)
 
 Section PROOF.
   (* Context {myRA} `{@GRA.inG myRA Σ}. *)
@@ -83,41 +89,46 @@ Section PROOF.
   Variable mn: mname.
   Context `{X: Type}.
 
+
   Definition HoareFun
-             (P: X -> Any.t -> Σ -> Prop)
-             (Q: X -> Any.t -> Σ -> Prop)
-             (body: Any.t -> itree Es Any.t): Any.t -> itree Es Any.t := fun varg =>
+             (P: X -> Any_src -> Any_tgt -> Σ -> Prop)
+             (Q: X -> Any_src -> Any_tgt -> Σ -> Prop)
+             (body: Any_src -> itree Es Any_src): Any_tgt -> itree Es Any_tgt := fun varg_tgt =>
+    varg_src <- trigger (Take Any_src);;
     x <- trigger (Take X);;
     rarg <- trigger (Take Σ);; forge rarg;; (*** virtual resource passing ***)
     (checkWf mn);;
-    assume(P x varg rarg);; (*** precondition ***)
+    assume(P x varg_tgt varg_src rarg);; (*** precondition ***)
 
 
-    vret <- body varg;; (*** "rudiment": we don't remove extcalls because of termination-sensitivity ***)
+    vret_src <- body varg_src;; (*** "rudiment": we don't remove extcalls because of termination-sensitivity ***)
 
+    vret_tgt <- trigger (Choose _);;
     '(mret, fret) <- trigger (Choose _);; put mn mret fret;; (*** updating resources in an abstract way ***)
-    rret <- trigger (Choose Σ);; guarantee(Q x vret rret);; (*** postcondition ***)
+    rret <- trigger (Choose Σ);; guarantee(Q x vret_src vret_tgt rret);; (*** postcondition ***)
     (discard rret);; (*** virtual resource passing ***)
 
-    Ret vret (*** return ***)
+    Ret vret_tgt (*** return ***)
   .
 
   Definition HoareCall
-             (P: Any.t -> Σ -> Prop)
-             (Q: Any.t -> Σ -> Prop):
-    gname -> Any.t -> itree Es Any.t :=
-    fun fn varg =>
+             (P: X -> Any_src -> Any_tgt -> Σ -> Prop)
+             (Q: X -> Any_src -> Any_tgt -> Σ -> Prop):
+    gname -> Any_src -> itree Es Any_src :=
+    fun fn varg_src =>
       '(marg, farg) <- trigger (Choose _);; put mn marg farg;; (*** updating resources in an abstract way ***)
       rarg <- trigger (Choose Σ);; discard rarg;; (*** virtual resource passing ***)
-      guarantee(P varg rarg);; (*** precondition ***)
+      x <- trigger (Choose X);; varg_tgt <- trigger (Choose _);;
+      guarantee(P x varg_src varg_tgt rarg);; (*** precondition ***)
 
-      vret <- trigger (Call fn varg);; (*** call ***)
+      vret_tgt <- trigger (Call fn varg_tgt);; (*** call ***)
       checkWf mn;;
 
       rret <- trigger (Take Σ);; forge rret;; (*** virtual resource passing ***)
-      assume(Q vret rret);; (*** postcondition ***)
+      vret_src <- trigger (Take _);;
+      assume(Q x vret_src vret_tgt rret);; (*** postcondition ***)
 
-      Ret vret (*** return to body ***)
+      Ret vret_src (*** return to body ***)
   .
 
 End PROOF.
@@ -148,15 +159,16 @@ Section CANCEL.
   | hCall
       (* (mn: mname) *)
       (* (P: list val -> Σ -> Prop) (Q: list val -> Σ -> val -> Σ -> Prop) *)
-      (fn: gname) (marg: Any.t) (varg: Any.t): hCallE Any.t
+      (fn: gname) (varg_src: Any_src): hCallE Any_src
   .
 
   (*** spec table ***)
   Record fspec: Type := mk {
     mn: mname;
     X: Type; (*** a meta-variable ***)
-    precond: X -> Any.t -> Σ -> Prop;
-    postcond: X -> Any.t -> Σ -> Prop;
+    precond: X -> Any_src -> Any_tgt -> Σ -> Prop; (*** meta-variable -> new logical arg -> current logical arg -> resource arg -> Prop ***)
+    postcond: X -> Any_src -> Any_tgt -> Σ -> Prop; (*** meta-variable -> new logical ret -> current logical ret -> resource ret -> Prop ***)
+    measure: X -> option nat;
   }
   .
 
@@ -178,12 +190,32 @@ Section CANCEL.
   (****************** TODO: REMOVE ALL MATCH AND REPLACE IT WITH UNWRAPU  *****************)
   (****************** TODO: REMOVE ALL MATCH AND REPLACE IT WITH UNWRAPU  *****************)
   (****************** TODO: REMOVE ALL MATCH AND REPLACE IT WITH UNWRAPU  *****************)
+  Definition handle_hCallE_src: hCallE ~> itree Es :=
+    fun _ '(hCall fn varg_src) => trigger (Call fn varg_src)
+  .
+
+  Definition interp_hCallE_src `{E -< Es}: itree (hCallE +' E) ~> itree Es :=
+    interp (case_ (bif:=sum1) (handle_hCallE_src)
+                  ((fun T X => trigger X): E ~> itree Es))
+  .
+
+  Definition body_to_src (body: Any_src -> itree (hCallE +' pE +' eventE) Any_src): Any_src -> itree Es Any_src :=
+    fun varg_src => interp_hCallE_src (body varg_src)
+  .
+
+  Definition fun_to_src (body: Any_src -> itree (hCallE +' pE +' eventE) Any_src): (Any_src -> itree Es Any_src) :=
+    body_to_src body
+  .
+
+
+
+
+
   Definition handle_hCallE_tgt (mn: mname): hCallE ~> itree Es :=
-    fun _ '(hCall fn marg varg) =>
+    fun _ '(hCall fn varg_src) =>
       match List.find (fun '(_fn, _) => dec fn _fn) stb with
       | Some (_, f) =>
-        marg <- marg↓ǃ;;
-        (HoareCall (mn) (f.(precond) marg) (f.(postcond) marg) fn varg)
+        (HoareCall (mn) (f.(precond)) (f.(postcond)) fn varg_src)
       | None => triggerNB
       end
   .
@@ -194,31 +226,15 @@ Section CANCEL.
   .
 
   Definition body_to_tgt (mn: mname)
-             (body: Any.t -> itree (hCallE +' pE +' eventE) Any.t): Any.t -> itree Es Any.t :=
-    fun varg => interp_hCallE_tgt mn (body varg)
+             (body: Any_src -> itree (hCallE +' pE +' eventE) Any_src): Any_src -> itree Es Any_src :=
+    fun varg_tgt => interp_hCallE_tgt mn (body varg_tgt)
   .
 
-
-
-  Definition handle_hCallE_src: hCallE ~> itree Es :=
-    fun _ '(hCall fn marg varg) => trigger (Call fn varg)
-  .
-
-  Definition interp_hCallE_src `{E -< Es}: itree (hCallE +' E) ~> itree Es :=
-    interp (case_ (bif:=sum1) (handle_hCallE_src)
-                  ((fun T X => trigger X): E ~> itree Es))
-  .
-
-  Definition body_to_src (body: Any.t -> itree (hCallE +' pE +' eventE) Any.t): Any.t -> itree Es Any.t :=
-    fun varg => interp_hCallE_src (body varg)
-  .
-  Definition fun_to_tgt (fn: gname) (body: Any.t -> itree (hCallE +' pE +' eventE) Any.t): (Any.t -> itree Es Any.t) :=
+  Definition fun_to_tgt (fn: gname) (body: Any_src -> itree (hCallE +' pE +' eventE) Any_src): (Any_tgt -> itree Es Any_tgt) :=
     match List.find (fun '(_fn, _) => dec fn _fn) stb with
     | Some (_, fs) => HoareFun fs.(mn) (fs.(precond)) (fs.(postcond)) (body_to_tgt fs.(mn) body)
     | _ => fun _ => triggerNB
     end.
-  Definition fun_to_src (body: Any.t -> itree (hCallE +' pE +' eventE) Any.t): (Any.t -> itree Es Any.t) :=
-    body_to_src body.
 
 (*** NOTE:
 body can execute eventE events.
@@ -261,15 +277,6 @@ If this feature is needed; we can extend it then. At the moment, I will only all
 
   Require Import SimSTS.
 
-  Ltac grind := repeat (f_equiv; try apply func_ext; ii; try (des_ifs; check_safe)).
-
-  Ltac igo := repeat (try rewrite bind_bind; try rewrite bind_ret_l; try rewrite bind_ret_r; try rewrite bind_tau;
-                      try rewrite interp_vis;
-                      try rewrite interp_ret;
-                      try rewrite interp_tau
-                      (* try rewrite interp_trigger *)
-                     ).
-
   Let W: Type := (r_state * p_state).
   Opaque GRA.to_URA.
   Let rsum: r_state -> Σ :=
@@ -285,7 +292,7 @@ If this feature is needed; we can extend it then. At the moment, I will only all
   Local Opaque rsum.
 
   Hypothesis WF0: List.map fst ftb = List.map fst stb.
-  Hypothesis MAIN: List.find (fun '(_fn, _) => dec "main" _fn) stb = Some ("main", (@mk "Main" unit top3 top3)).
+  Hypothesis MAIN: List.find (fun '(_fn, _) => dec "main" _fn) stb = Some ("main", (@mk "Main" unit top4 top4 (fun _ => None))).
   Hypothesis WF1: Forall (fun '(_, sp) => In sp.(mn) (List.map fst ms_tgt.(ModSem.initial_mrs))) stb.
 
   Require Import SimGlobal.
@@ -351,13 +358,22 @@ If this feature is needed; we can extend it then. At the moment, I will only all
 
   Opaque Ordinal.from_nat.
 
+  (* Ltac grind := repeat (f_equiv; try apply func_ext; ii; try (des_ifs; check_safe)). *)
+
+  (* Ltac igo := repeat (try rewrite bind_bind; try rewrite bind_ret_l; try rewrite bind_ret_r; try rewrite bind_tau; *)
+  (*                     try rewrite interp_vis; *)
+  (*                     try rewrite interp_ret; *)
+  (*                     try rewrite interp_tau *)
+  (*                     (* try rewrite interp_trigger *) *)
+  (*                    ). *)
+
   Ltac mred :=
     repeat (cbn;
             try rewrite ! interp_Es_bind; try rewrite ! interp_Es_ret; try rewrite ! interp_Es_tau;
             try rewrite ! interp_Es_rE;
             try rewrite ! interp_Es_pE;
             try rewrite ! interp_Es_eventE; try rewrite ! interp_Es_callE;
-            try rewrite ! interp_Es_triggerNB; try rewrite ! interp_Es_triggerUB; igo).
+            try rewrite ! interp_Es_triggerNB; try rewrite ! interp_Es_triggerUB; (*** igo ***) ired).
   (*** step and some post-processing ***)
   Ltac _step :=
     match goal with
@@ -425,8 +441,8 @@ If this feature is needed; we can extend it then. At the moment, I will only all
 
   Let adequacy_type_aux:
     forall (R: Type) (RR: R -> R -> Prop) (TY: R = (r_state * p_state * Any.t)%type)
-           (REL: RR ~= (fun '(rs_src, v_src) '(rs_tgt, v_tgt) => wf rs_src rs_tgt /\ (v_src: Any.t) = v_tgt))
-           st_src0 st_tgt0 (SIM: wf st_src0 st_tgt0) (i0: itree (hCallE +' pE +' eventE) Any.t)
+           (REL: RR ~= (fun '((rs_src, v_src): (r_state * p_state * Any_src)) '((rs_tgt, v_tgt): (r_state * p_state * Any_tgt)) => wf rs_src rs_tgt))
+           st_src0 st_tgt0 (SIM: wf st_src0 st_tgt0) (i0: itree (hCallE +' pE +' eventE) Any_src)
            i_src i_tgt mn
            (SRC: i_src ~= (interp_Es (ModSem.prog ms_src) (interp_hCallE_src (E:=pE +' eventE) i0) st_src0))
            (TGT: i_tgt ~= (interp_Es (ModSem.prog ms_tgt) (interp_hCallE_tgt (E:=pE +' eventE) stb mn i0) st_tgt0))
@@ -493,8 +509,6 @@ If this feature is needed; we can extend it then. At the moment, I will only all
     { steps. }
     rename Heq into FINDFT.
     (* unfold ModSem.prog at 2. steps. *)
-    steps. unfold unwrapN. des_ifs; cycle 1. { steps. } steps.
-    rename Heq into CAST.
     unfold HoareCall.
     steps. unfold put, guarantee. steps.
     destruct st_tgt0 as [rst_tgt0 pst_tgt0]. destruct st_src0 as [rst_src0 pst_src0].
@@ -537,33 +551,35 @@ If this feature is needed; we can extend it then. At the moment, I will only all
     { admit "ez". }
     rename f into fs.
     econs.
-    - instantiate (1:= fun '(((mrs_src, frs_src), mps_src), vret_src) '(((mrs_tgt, frs_tgt), mps_tgt), vret_tgt) =>
+    - instantiate (1:= fun '((((mrs_src, frs_src), mps_src), vret_src): (r_state * p_state * Any_src))
+                           '((((mrs_tgt, frs_tgt), mps_tgt), vret_tgt): (r_state * p_state * Any_tgt)) =>
                          exists (rret: Σ),
                            (<<ST: (List.length frs_src) = (List.length frs_tgt) /\
                                   frs_src <> [] /\
                                   URA.wf (rsum (mrs_tgt, rret :: frs_tgt))>>) /\
-                           (<<VAL: vret_src = vret_tgt>>) /\
-                           (<<POST: fs.(postcond) x vret_tgt rret>>) /\
+                           (* (<<VAL: vret_src = vret_tgt>>) /\ *)
+                           (<<POST: fs.(postcond) x2 vret_src vret_tgt rret>>) /\
                            (<<PHYS: mps_src = mps_tgt>>)
                   ).
       apply find_some in FINDFT0. des.
       apply find_some in FINDFS. des. ss. des_sumbool. clarify.
-      rewrite WTY in *. rewrite in_map_iff in *. des. des_ifs.
+      rewrite WTY in *. fold Any_src in FINDFS. fold Any_tgt in FINDFT0. rewrite in_map_iff in *. des. des_ifs.
+      fold Any_tgt in x3.
       unfold fun_to_src, fun_to_tgt. des_ifs. unfold HoareFun.
-      rename x3 into PRECOND. rename x1 into rarg.
-      steps. exists x.
-      steps. exists rarg.
+      rename x3 into PRECOND. rename x0 into rarg.
+      steps. exists varg_src.
+      steps. esplits; et. steps. exists rarg.
       steps. unfold forge, checkWf. steps. unfold assume, guarantee.
+Infix "⋅" := URA.add (at level 50, left associativity).
+Notation "(⋅)" := URA.add (only parsing).
       steps. unshelve esplits; eauto.
-      { clear - WFTGT x0. rewrite URA.unit_idl. rewrite URA.add_assoc in x0.
-        r in x0. specialize (x0 URA.unit). rewrite ! URA.unit_id in x0.
+      { clear - WFTGT x. rewrite URA.unit_idl. rewrite URA.add_assoc in x.
+        r in x. specialize (x URA.unit). rewrite ! URA.unit_id in x.
         unfold update. des_ifs.
-        - eapply URA.wf_mon. eapply x0. admit "ez - WFTGT".
+        - eapply URA.wf_mon. eapply x. admit "ez - WFTGT".
         - admit "ez - c1 contains both (c1 mn0) and (c1 (mn fs)).".
       }
       steps. esplits; eauto. steps.
-Infix "⋅" := URA.add (at level 50, left associativity).
-Notation "(⋅)" := URA.add (only parsing).
       (* esplits; eauto. *)
       (* { clear - WFTGT x0. rewrite URA.unit_idl. rewrite URA.add_assoc in x0. *)
       (*   r in x0. specialize (x0 URA.unit). rewrite ! URA.unit_id in x0. *)
@@ -575,7 +591,7 @@ Notation "(⋅)" := URA.add (only parsing).
       (* esplits; eauto. steps. *)
       unfold body_to_src, body_to_tgt.
       guclo bindC_spec.
-      replace (Ordinal.from_nat 176) with (Ordinal.add (Ordinal.from_nat 46) (Ordinal.from_nat 130)); cycle 1.
+      replace (Ordinal.from_nat 172) with (Ordinal.add (Ordinal.from_nat 42) (Ordinal.from_nat 130)); cycle 1.
       { admit "ez - ordinal nat add". }
       rewrite idK_spec at 1.
       assert(i0 = i) by admit "ez - uniqueness of idx. Add this as an hypothesis". subst.
@@ -585,9 +601,11 @@ Notation "(⋅)" := URA.add (only parsing).
         eapply CIH; et.
         { refl. }
         ss. esplits; ss; et.
-        clear - WFTGT x0.
+        clear - WFTGT x.
+        rewrite URA.unit_idl.
         admit "ez -- updatable".
-      + ii. des_ifs. des; subst.
+      + bar. ii. des_ifs. rename a into a_src. rename a0 into a_src0.
+        des; subst.
         unfold idK.
         steps. unfold handle_rE.
         r in SIM. des_ifs; ss. des; ss. destruct l; ss. des; ss.
@@ -749,3 +767,5 @@ we should know that stackframe is not popped (unary property)". }
   Qed.
 
 End CANCEL.
+
+End PSEUDOTYPING.
