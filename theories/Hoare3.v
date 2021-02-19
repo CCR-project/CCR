@@ -89,8 +89,10 @@ Definition ord_lt (next cur: ord): Prop :=
 Section PSEUDOTYPING.
 
 (*** execute following commands in emacs (by C-x C-e)
-     (progn (highlight-phrase "Any" 'hi-red-b) (highlight-phrase "Any_src" 'hi-green-b) (highlight-phrase "Any_tgt" 'hi-blue-b)) ***)
+     (progn (highlight-phrase "Any" 'hi-red-b) (highlight-phrase "Any_src" 'hi-green-b) (highlight-phrase "Any_mid" 'hi-pink)
+       (highlight-phrase "Any_tgt" 'hi-blue-b)) ***)
 Let Any_src := Any.t. (*** src argument (e.g., List nat) ***)
+Let Any_mid := Any.t. (*** src argument (e.g., List nat) ***)
 Let Any_tgt := Any.t. (*** tgt argument (i.e., list val) ***)
 
 Section PROOF.
@@ -99,15 +101,15 @@ Section PROOF.
   Let GURA: URA.t := GRA.to_URA Σ.
   Local Existing Instance GURA.
   Variable mn: mname.
-  Context `{X: Type, Y: Type, Z: Type}.
+  Context `{X: Type}.
 
 
   Definition HoareFun
-             (P: X -> Y -> Any_tgt -> Σ -> Prop)
-             (Q: X -> Z -> Any_tgt -> Σ -> Prop)
+             (P: X -> Any_src -> Any_tgt -> Σ -> Prop)
+             (Q: X -> Any_src -> Any_tgt -> Σ -> Prop)
              (measure: X -> ord)
-             (body: ord -> Y -> itree Es Z): Any_tgt -> itree Es Any_tgt := fun varg_tgt =>
-    varg_src <- trigger (Take Y);;
+             (body: ord -> Any_src -> itree Es Any_src): Any_tgt -> itree Es Any_tgt := fun varg_tgt =>
+    varg_src <- trigger (Take Any_src);;
     x <- trigger (Take X);;
     rarg <- trigger (Take Σ);; forge rarg;; (*** virtual resource passing ***)
     (checkWf mn);;
@@ -126,10 +128,10 @@ Section PROOF.
 
   Definition HoareCall
              (cur: ord)
-             (P: X -> Y -> Any_tgt -> Σ -> Prop)
-             (Q: X -> Z -> Any_tgt -> Σ -> Prop)
+             (P: X -> Any_src -> Any_tgt -> Σ -> Prop)
+             (Q: X -> Any_src -> Any_tgt -> Σ -> Prop)
              (measure: X -> ord):
-    gname -> Y -> itree Es Z :=
+    gname -> Any_src -> itree Es Any_src :=
     fun fn varg_src =>
       '(marg, farg) <- trigger (Choose _);; put mn marg farg;; (*** updating resources in an abstract way ***)
       rarg <- trigger (Choose Σ);; discard rarg;; (*** virtual resource passing ***)
@@ -141,7 +143,7 @@ Section PROOF.
       checkWf mn;;
 
       rret <- trigger (Take Σ);; forge rret;; (*** virtual resource passing ***)
-      vret_src <- trigger (Take Z);;
+      vret_src <- trigger (Take Any_src);;
       assume(Q x vret_src vret_tgt rret);; (*** postcondition ***)
 
       Ret vret_src (*** return to body ***)
@@ -171,30 +173,19 @@ Section CANCEL.
 
   Context `{Σ: GRA.t}.
 
-  (************* TODO: remove redundancy with ModSem **********************)
-  (************* TODO: remove redundancy with ModSem **********************)
-  (************* TODO: remove redundancy with ModSem **********************)
-  (************* TODO: remove redundancy with ModSem **********************)
-  (************* TODO: remove redundancy with ModSem **********************)
-  Definition ccall `{eventE -< E} `{callE -< E} {X Y} (fn: gname) (varg: X): itree E Y := vret <- trigger (Call fn varg↑);; vret <- vret↓ǃ;; Ret vret.
-  Definition cfun `{eventE -< E} `{callE -< E} {X Y} (body: X -> itree E Y): Any.t -> itree E Any.t :=
-    fun varg => varg <- varg↓ǃ;; vret <- body varg;; Ret vret↑.
-
   Variant hCallE: Type -> Type :=
   | hCall
       (* (mn: mname) *)
       (* (P: list val -> Σ -> Prop) (Q: list val -> Σ -> val -> Σ -> Prop) *)
-      (fn: gname) (varg_src: Any_src): hCallE Any_src
+      (fn: gname) (next: ord) (varg_src: Any_src): hCallE Any_src
   .
 
   (*** spec table ***)
   Record fspec: Type := mk {
     mn: mname;
     X: Type; (*** a meta-variable ***)
-    Y: Type;
-    Z: Type;
-    precond: X -> Y -> Any_tgt -> Σ -> Prop; (*** meta-variable -> new logical arg -> current logical arg -> resource arg -> Prop ***)
-    postcond: X -> Z -> Any_tgt -> Σ -> Prop; (*** meta-variable -> new logical ret -> current logical ret -> resource ret -> Prop ***)
+    precond: X -> Any_src -> Any_tgt -> Σ -> Prop; (*** meta-variable -> new logical arg -> current logical arg -> resource arg -> Prop ***)
+    postcond: X -> Any_src -> Any_tgt -> Σ -> Prop; (*** meta-variable -> new logical ret -> current logical ret -> resource ret -> Prop ***)
     measure: X -> ord;
   }
   .
@@ -218,7 +209,7 @@ Section CANCEL.
   (****************** TODO: REMOVE ALL MATCH AND REPLACE IT WITH UNWRAPU  *****************)
   (****************** TODO: REMOVE ALL MATCH AND REPLACE IT WITH UNWRAPU  *****************)
   Definition handle_hCallE_src: hCallE ~> itree Es :=
-    fun _ '(hCall fn varg_src) => trigger (Call fn varg_src)
+    fun _ '(hCall fn next varg_src) => trigger (Call fn varg_src)
   .
 
   Definition interp_hCallE_src `{E -< Es}: itree (hCallE +' E) ~> itree Es :=
@@ -226,19 +217,33 @@ Section CANCEL.
                   ((fun T X => trigger X): E ~> itree Es))
   .
 
-  Definition body_to_src {Y Z} (body: Y -> itree (hCallE +' pE +' eventE) Z): Y -> itree Es Z :=
+  Definition body_to_src (body: Any_src -> itree (hCallE +' pE +' eventE) Any_src): Any_src -> itree Es Any_src :=
     fun varg_src => interp_hCallE_src (body varg_src)
   .
 
-  Definition fun_to_src (fn: gname) (body: Y -> itree (hCallE +' pE +' eventE) Z): (Any_src -> itree Es Any_src) :=
-    match List.find (fun '(_fn, _) => dec fn _fn) stb with
-    | Some (_, fs) => cfun (body_to_src body)
-    | _ => fun _ => triggerNB
-    end
+  Definition fun_to_src (body: Any_src -> itree (hCallE +' pE +' eventE) Any_src): (Any_src -> itree Es Any_src) :=
+    body_to_src body
   .
 
-  Definition fun_to_src {Y Z} (body: Y -> itree (hCallE +' pE +' eventE) Z): (Any_src -> itree Es Any_src) :=
-    cfun (body_to_src body)
+
+
+
+
+  Definition handle_hCallE_mid: hCallE ~> itree Es :=
+    fun _ '(hCall fn next varg_src) => trigger (Call fn (Any.pair next↑ varg_src))
+  .
+
+  Definition interp_hCallE_mid `{E -< Es}: itree (hCallE +' E) ~> itree Es :=
+    interp (case_ (bif:=sum1) (handle_hCallE_src)
+                  ((fun T X => trigger X): E ~> itree Es))
+  .
+
+  Definition body_to_mid (body: Any_src -> itree (hCallE +' pE +' eventE) Any_src): Any_mid -> itree Es Any_mid :=
+    fun varg_mid => interp_hCallE_src (body varg_src)
+  .
+
+  Definition fun_to_mid (body: Any_src -> itree (hCallE +' pE +' eventE) Any_src): (Any_mid -> itree Es Any_mid) :=
+    body_to_src body
   .
 
 
@@ -249,9 +254,7 @@ Section CANCEL.
     fun _ '(hCall fn varg_src) =>
       match List.find (fun '(_fn, _) => dec fn _fn) stb with
       | Some (_, f) =>
-        varg_src <- varg_src↓ǃ;;
-        vret_src <- (HoareCall (mn) cur (f.(precond)) (f.(postcond)) (f.(measure)) fn varg_src);;
-        Ret vret_src↑
+        (HoareCall (mn) cur (f.(precond)) (f.(postcond)) (f.(measure)) fn varg_src)
       | None => triggerNB
       end
   .
@@ -261,14 +264,14 @@ Section CANCEL.
                   ((fun T X => trigger X): E ~> itree Es))
   .
 
-  Definition body_to_tgt {Y Z} (mn: mname) (cur: ord)
-             (body: Y -> itree (hCallE +' pE +' eventE) Z): Y -> itree Es Z :=
+  Definition body_to_tgt (mn: mname) (cur: ord)
+             (body: Any_src -> itree (hCallE +' pE +' eventE) Any_src): Any_src -> itree Es Any_src :=
     fun varg_tgt => interp_hCallE_tgt mn cur (body varg_tgt)
   .
 
-  Definition fun_to_tgt {Y Z} (fn: gname) (body: Y -> itree (hCallE +' pE +' eventE) Z): (Any_tgt -> itree Es Any_tgt) :=
+  Definition fun_to_tgt (fn: gname) (body: Any_src -> itree (hCallE +' pE +' eventE) Any_src): (Any_tgt -> itree Es Any_tgt) :=
     match List.find (fun '(_fn, _) => dec fn _fn) stb with
-    | Some (_, fs) => cfun (HoareFun fs.(mn) (fs.(precond)) (fs.(postcond)) (fs.(measure)) (fun cur => body_to_tgt fs.(mn) cur body))
+    | Some (_, fs) => HoareFun fs.(mn) (fs.(precond)) (fs.(postcond)) (fs.(measure)) (fun cur => body_to_tgt fs.(mn) cur body)
     | _ => fun _ => triggerNB
     end.
 
@@ -545,8 +548,6 @@ If this feature is needed; we can extend it then. At the moment, I will only all
     rename Heq into FINDFT.
     (* unfold ModSem.prog at 2. steps. *)
     unfold HoareCall.
-    steps. unfold unwrapN at 1. des_ifs; cycle 1.
-    { steps. }
     steps. unfold put, guarantee. steps.
     destruct st_tgt0 as [rst_tgt0 pst_tgt0]. destruct st_src0 as [rst_src0 pst_src0].
     Opaque interp_Es. (*** TODO: move to ModSem ***)
