@@ -93,7 +93,8 @@ Section PROOF.
   Definition HoareFun
              (P: X -> Any_src -> Any_tgt -> Σ -> Prop)
              (Q: X -> Any_src -> Any_tgt -> Σ -> Prop)
-             (body: Any_src -> itree Es Any_src): Any_tgt -> itree Es Any_tgt := fun varg_tgt =>
+             (measure: X -> option nat)
+             (body: option nat -> Any_src -> itree Es Any_src): Any_tgt -> itree Es Any_tgt := fun varg_tgt =>
     varg_src <- trigger (Take Any_src);;
     x <- trigger (Take X);;
     rarg <- trigger (Take Σ);; forge rarg;; (*** virtual resource passing ***)
@@ -101,7 +102,7 @@ Section PROOF.
     assume(P x varg_src varg_tgt rarg);; (*** precondition ***)
 
 
-    vret_src <- body varg_src;; (*** "rudiment": we don't remove extcalls because of termination-sensitivity ***)
+    vret_src <- body (measure x) varg_src;; (*** "rudiment": we don't remove extcalls because of termination-sensitivity ***)
 
     vret_tgt <- trigger (Choose Any_tgt);;
     '(mret, fret) <- trigger (Choose _);; put mn mret fret;; (*** updating resources in an abstract way ***)
@@ -111,9 +112,18 @@ Section PROOF.
     Ret vret_tgt (*** return ***)
   .
 
+  Definition ord_lt (next cur: option nat): Prop :=
+    match next, cur with
+    | Some next, Some cur => (next < cur)%nat
+    | _, _ => True
+    end
+  .
+
   Definition HoareCall
+             (cur: option nat)
              (P: X -> Any_src -> Any_tgt -> Σ -> Prop)
-             (Q: X -> Any_src -> Any_tgt -> Σ -> Prop):
+             (Q: X -> Any_src -> Any_tgt -> Σ -> Prop)
+             (measure: X -> option nat):
     gname -> Any_src -> itree Es Any_src :=
     fun fn varg_src =>
       '(marg, farg) <- trigger (Choose _);; put mn marg farg;; (*** updating resources in an abstract way ***)
@@ -121,6 +131,7 @@ Section PROOF.
       x <- trigger (Choose X);; varg_tgt <- trigger (Choose Any_tgt);;
       guarantee(P x varg_src varg_tgt rarg);; (*** precondition ***)
 
+      guarantee(ord_lt (measure x) cur);;
       vret_tgt <- trigger (Call fn varg_tgt);; (*** call ***)
       checkWf mn;;
 
@@ -211,28 +222,28 @@ Section CANCEL.
 
 
 
-  Definition handle_hCallE_tgt (mn: mname): hCallE ~> itree Es :=
+  Definition handle_hCallE_tgt (mn: mname) (cur: option nat): hCallE ~> itree Es :=
     fun _ '(hCall fn varg_src) =>
       match List.find (fun '(_fn, _) => dec fn _fn) stb with
       | Some (_, f) =>
-        (HoareCall (mn) (f.(precond)) (f.(postcond)) fn varg_src)
+        (HoareCall (mn) cur (f.(precond)) (f.(postcond)) (f.(measure)) fn varg_src)
       | None => triggerNB
       end
   .
 
-  Definition interp_hCallE_tgt `{E -< Es} (mn: mname): itree (hCallE +' E) ~> itree Es :=
-    interp (case_ (bif:=sum1) (handle_hCallE_tgt mn)
+  Definition interp_hCallE_tgt `{E -< Es} (mn: mname) (cur: option nat): itree (hCallE +' E) ~> itree Es :=
+    interp (case_ (bif:=sum1) (handle_hCallE_tgt mn cur)
                   ((fun T X => trigger X): E ~> itree Es))
   .
 
-  Definition body_to_tgt (mn: mname)
+  Definition body_to_tgt (mn: mname) (cur: option nat)
              (body: Any_src -> itree (hCallE +' pE +' eventE) Any_src): Any_src -> itree Es Any_src :=
-    fun varg_tgt => interp_hCallE_tgt mn (body varg_tgt)
+    fun varg_tgt => interp_hCallE_tgt mn cur (body varg_tgt)
   .
 
   Definition fun_to_tgt (fn: gname) (body: Any_src -> itree (hCallE +' pE +' eventE) Any_src): (Any_tgt -> itree Es Any_tgt) :=
     match List.find (fun '(_fn, _) => dec fn _fn) stb with
-    | Some (_, fs) => HoareFun fs.(mn) (fs.(precond)) (fs.(postcond)) (body_to_tgt fs.(mn) body)
+    | Some (_, fs) => HoareFun fs.(mn) (fs.(precond)) (fs.(postcond)) (fs.(measure)) (fun cur => body_to_tgt fs.(mn) cur body)
     | _ => fun _ => triggerNB
     end.
 
@@ -442,9 +453,9 @@ If this feature is needed; we can extend it then. At the moment, I will only all
     forall (R: Type) (RR: R -> R -> Prop) (TY: R = (r_state * p_state * Any_src)%type)
            (REL: RR ~= (fun '((rs_src, v_src)) '((rs_tgt, v_tgt)) => wf rs_src rs_tgt /\ (v_src: Any_src) = v_tgt))
            st_src0 st_tgt0 (SIM: wf st_src0 st_tgt0) (i0: itree (hCallE +' pE +' eventE) Any_src)
-           i_src i_tgt mn
+           i_src i_tgt mn cur
            (SRC: i_src ~= (interp_Es (ModSem.prog ms_src) (interp_hCallE_src (E:=pE +' eventE) i0) st_src0))
-           (TGT: i_tgt ~= (interp_Es (ModSem.prog ms_tgt) (interp_hCallE_tgt (E:=pE +' eventE) stb mn i0) st_tgt0))
+           (TGT: i_tgt ~= (interp_Es (ModSem.prog ms_tgt) (interp_hCallE_tgt (E:=pE +' eventE) stb mn cur i0) st_tgt0))
     ,
     (* sim (Mod.interp md_src) (Mod.interp md_tgt) lt 100%nat *)
     (*     (x <- (interp_Es p_src (interp_hCallE_src (trigger ce)) st_src0);; Ret (snd x)) *)
@@ -466,7 +477,7 @@ If this feature is needed; we can extend it then. At the moment, I will only all
     { steps. }
     { steps. gbase. eapply CIH; [..|M]; Mskip et.
       { refl. }
-      { instantiate (1:=mn0). fold (interp_hCallE_tgt stb mn0). ss. }
+      { instantiate (2:=mn0). fold (interp_hCallE_tgt stb mn0). instantiate (1:=cur). refl. }
     }
     destruct e; cycle 1.
     {
@@ -488,15 +499,15 @@ If this feature is needed; we can extend it then. At the moment, I will only all
         - steps. esplits; eauto. steps.
           gbase. eapply CIH; [..|M]; Mskip et.
           { refl. }
-          { instantiate (2:=mn0). fold (interp_hCallE_tgt stb mn0). ss. }
+          { instantiate (3:=mn0). fold (interp_hCallE_tgt stb mn0). instantiate (2:=cur). refl. }
         - steps. esplits; eauto. steps.
           gbase. eapply CIH; [..|M]; Mskip et.
           { refl. }
-          { instantiate (1:=mn0). fold (interp_hCallE_tgt stb mn0). ss. }
+          { instantiate (2:=mn0). fold (interp_hCallE_tgt stb mn0). instantiate (1:=cur). refl. }
         - steps.
           gbase. eapply CIH; [..|M]; Mskip et.
           { refl. }
-          { instantiate (1:=mn0). fold (interp_hCallE_tgt stb mn0). ss. }
+          { instantiate (2:=mn0). fold (interp_hCallE_tgt stb mn0). instantiate (1:=cur). refl. }
       }
     }
     dependent destruction h.
@@ -708,7 +719,7 @@ Notation "(⋅)" := URA.add (only parsing).
     }
     assert(TRANSR: simg eq (Ordinal.from_nat 100)
 (x0 <- interp_Es (ModSem.prog ms_tgt)
-                 (interp_hCallE_tgt (E:=pE +' eventE) stb "Main" (trigger (hCall "main" tt↑))) st_tgt0;; Ret (snd x0))
+                 (interp_hCallE_tgt (E:=pE +' eventE) stb "Main" None (trigger (hCall "main" tt↑))) st_tgt0;; Ret (snd x0))
 (x0 <- interp_Es (ModSem.prog ms_tgt)
                  ((ModSem.prog ms_tgt) _ (Call "main" tt↑)) st_tgt0;; Ret (snd x0))).
     { clear SIM. ginit. { eapply cpn5_wcompat; eauto with paco. }
@@ -735,8 +746,8 @@ Notation "(⋅)" := URA.add (only parsing).
                     end) "Main" (fst p), [ε], ModSem.initial_p_state ms_tgt) with st_tgt0; cycle 1.
       { unfold st_tgt0.
         unfold ModSem.initial_r_state. f_equal. f_equal. apply func_ext. i. unfold update. des_ifs; ss; clarify. }
-      steps. esplits; et. steps.
-      replace (Ordinal.from_nat 55) with (Ordinal.add (Ordinal.from_nat 25) (Ordinal.from_nat 30)) by admit "ez".
+      steps. esplits; et. steps. esplits; et. steps.
+      replace (Ordinal.from_nat 51) with (Ordinal.add (Ordinal.from_nat 41) (Ordinal.from_nat 10)) by admit "ez".
       guclo bindC_spec.
       eapply bindR_intro with (RR:=eq).
       - fold st_tgt0. eapply simg_gpaco_refl. typeclasses eauto.
@@ -757,7 +768,7 @@ we should know that stackframe is not popped (unary property)". }
     { admit "hard -- by transitivity". }
     replace (x0 <- interp_Es (ModSem.prog ms_tgt) ((ModSem.prog ms_tgt) _ (Call "main" tt↑)) st_tgt0;;
              Ret (snd x0)) with
-        (x0 <- interp_Es (ModSem.prog ms_tgt) (interp_hCallE_tgt (E:=pE +' eventE) stb "Main" (trigger (hCall "main" tt↑)))
+        (x0 <- interp_Es (ModSem.prog ms_tgt) (interp_hCallE_tgt (E:=pE +' eventE) stb "Main" None (trigger (hCall "main" tt↑)))
                          st_tgt0;; Ret (snd x0)); cycle 1.
     { admit "hard -- by transitivity". }
     guclo bindC_spec.
