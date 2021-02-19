@@ -71,6 +71,18 @@ Notation "☃ y" := (Seal.sealing _ y) (at level 60, only printing).
 Goal forall x, 5 + 5 = x. i. seal 5. seal x. unseal key0. unseal 5. cbn. Abort.
 
 
+Inductive ord: Type :=
+| pure (n: nat)
+| top
+.
+
+Definition ord_lt (next cur: ord): Prop :=
+  match next, cur with
+  | pure next, pure cur => (next < cur)%nat
+  | _, _ => True
+  end
+.
+
 
 
 
@@ -93,8 +105,8 @@ Section PROOF.
   Definition HoareFun
              (P: X -> Any_src -> Any_tgt -> Σ -> Prop)
              (Q: X -> Any_src -> Any_tgt -> Σ -> Prop)
-             (measure: X -> option nat)
-             (body: option nat -> Any_src -> itree Es Any_src): Any_tgt -> itree Es Any_tgt := fun varg_tgt =>
+             (measure: X -> ord)
+             (body: ord -> Any_src -> itree Es Any_src): Any_tgt -> itree Es Any_tgt := fun varg_tgt =>
     varg_src <- trigger (Take Any_src);;
     x <- trigger (Take X);;
     rarg <- trigger (Take Σ);; forge rarg;; (*** virtual resource passing ***)
@@ -112,18 +124,11 @@ Section PROOF.
     Ret vret_tgt (*** return ***)
   .
 
-  Definition ord_lt (next cur: option nat): Prop :=
-    match next, cur with
-    | Some next, Some cur => (next < cur)%nat
-    | _, _ => True
-    end
-  .
-
   Definition HoareCall
-             (cur: option nat)
+             (cur: ord)
              (P: X -> Any_src -> Any_tgt -> Σ -> Prop)
              (Q: X -> Any_src -> Any_tgt -> Σ -> Prop)
-             (measure: X -> option nat):
+             (measure: X -> ord):
     gname -> Any_src -> itree Es Any_src :=
     fun fn varg_src =>
       '(marg, farg) <- trigger (Choose _);; put mn marg farg;; (*** updating resources in an abstract way ***)
@@ -179,7 +184,7 @@ Section CANCEL.
     X: Type; (*** a meta-variable ***)
     precond: X -> Any_src -> Any_tgt -> Σ -> Prop; (*** meta-variable -> new logical arg -> current logical arg -> resource arg -> Prop ***)
     postcond: X -> Any_src -> Any_tgt -> Σ -> Prop; (*** meta-variable -> new logical ret -> current logical ret -> resource ret -> Prop ***)
-    measure: X -> option nat;
+    measure: X -> ord;
   }
   .
 
@@ -222,7 +227,7 @@ Section CANCEL.
 
 
 
-  Definition handle_hCallE_tgt (mn: mname) (cur: option nat): hCallE ~> itree Es :=
+  Definition handle_hCallE_tgt (mn: mname) (cur: ord): hCallE ~> itree Es :=
     fun _ '(hCall fn varg_src) =>
       match List.find (fun '(_fn, _) => dec fn _fn) stb with
       | Some (_, f) =>
@@ -231,12 +236,12 @@ Section CANCEL.
       end
   .
 
-  Definition interp_hCallE_tgt `{E -< Es} (mn: mname) (cur: option nat): itree (hCallE +' E) ~> itree Es :=
+  Definition interp_hCallE_tgt `{E -< Es} (mn: mname) (cur: ord): itree (hCallE +' E) ~> itree Es :=
     interp (case_ (bif:=sum1) (handle_hCallE_tgt mn cur)
                   ((fun T X => trigger X): E ~> itree Es))
   .
 
-  Definition body_to_tgt (mn: mname) (cur: option nat)
+  Definition body_to_tgt (mn: mname) (cur: ord)
              (body: Any_src -> itree (hCallE +' pE +' eventE) Any_src): Any_src -> itree Es Any_src :=
     fun varg_tgt => interp_hCallE_tgt mn cur (body varg_tgt)
   .
