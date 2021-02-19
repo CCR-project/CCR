@@ -47,6 +47,7 @@ Actually, our framework is slightly more complicated because of the following fe
 - We have "measure" for termination proof.
 - We support "high-level logical arg/ret". (not used in this example, so ignore this at the moment)
 
+Actual "fspec" directly copied from Coq code:
 ```
 Record fspec: Type := mk {
   X: Type; (*** a meta-variable ***)
