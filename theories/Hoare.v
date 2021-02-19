@@ -188,6 +188,12 @@ Section CANCEL.
   }
   .
 
+  Record fspecbody: Type := mk_specbody {
+    fsb_fspec:> fspec;
+    fsb_body: Any_src -> itree (hCallE +' pE +' eventE) Any_src;
+  }
+  .
+
 
 
   Section INTERP.
@@ -269,12 +275,12 @@ If this feature is needed; we can extend it then. At the moment, I will only all
   Variable md_tgt: Mod.t.
   Let ms_tgt: ModSem.t := (Mod.get_modsem md_tgt (Sk.load_skenv md_tgt.(Mod.sk))).
 
-  Variable stb: list (gname * fspec).
-  Variable ftb: list (gname * (Any.t -> itree (hCallE +' pE +' eventE) Any.t)).
-  Hypothesis WTY: ms_tgt.(ModSem.fnsems) = List.map (fun '(fn, body) => (fn, fun_to_tgt stb fn body)) ftb.
+  Variable sbtb: list (gname * fspecbody).
+  Let stb: list (gname * fspec) := List.map (fun '(gn, fsb) => (gn, fsb_fspec fsb)) sbtb.
+  Hypothesis WTY: ms_tgt.(ModSem.fnsems) = List.map (fun '(fn, sb) => (fn, fun_to_tgt stb fn (fsb_body sb))) sbtb.
 
   Definition ms_src: ModSem.t := {|
-    ModSem.fnsems := List.map (fun '(fn, body) => (fn, fun_to_src body)) ftb;
+    ModSem.fnsems := List.map (fun '(fn, sb) => (fn, fun_to_src (fsb_body sb))) sbtb;
     (* ModSem.initial_mrs := []; *)
     ModSem.initial_mrs := List.map (fun '(mn, (mr, mp)) => (mn, (ε, mp))) ms_tgt.(ModSem.initial_mrs);
     (*** Note: we don't use resources, so making everything as a unit ***)
@@ -307,7 +313,8 @@ If this feature is needed; we can extend it then. At the moment, I will only all
   .
   Local Opaque rsum.
 
-  Hypothesis WF0: List.map fst ftb = List.map fst stb.
+  Let WF0: List.map fst sbtb = List.map fst stb.
+  Proof. unfold stb. rewrite List.map_map. apply List.map_ext. i. des_ifs. Qed.
   Hypothesis WF1: Forall (fun '(_, sp) => In sp.(mn) (List.map fst ms_tgt.(ModSem.initial_mrs))) stb.
 
   Require Import SimGlobal.
@@ -609,7 +616,7 @@ Notation "(⋅)" := URA.add (only parsing).
       replace (Ordinal.from_nat 172) with (Ordinal.add (Ordinal.from_nat 42) (Ordinal.from_nat 130)); cycle 1.
       { admit "ez - ordinal nat add". }
       rewrite idK_spec at 1.
-      assert(i0 = i) by admit "ez - uniqueness of idx. Add this as an hypothesis". subst.
+      assert(f0 = f) by admit "ez - uniqueness of idx. Add this as an hypothesis". subst.
       econs.
       + guclo ordC_spec. econs; eauto. { instantiate (1:=Ordinal.from_nat 100). eapply from_nat_le; ss. lia. }
         gbase.
@@ -652,7 +659,7 @@ Notation "(⋅)" := URA.add (only parsing).
 
   Hypothesis MAIN: List.find (fun '(_fn, _) => dec "main" _fn) stb = Some ("main",
     (* (@mk "Main" unit (fun _ varg_high _ _ => varg_high = tt↑) (fun _ vret_high _ _ => vret_high = tt↑) (fun _ => None))). *)
-    (@mk "Main" unit (fun _ varg_high varg_low _ => varg_high = varg_low) (fun _ vret_high vret_low _ => vret_high = vret_low) (fun _ => None))).
+    (@mk "Main" unit (fun _ varg_high varg_low _ => varg_high = varg_low) (fun _ vret_high vret_low _ => vret_high = vret_low) (fun _ => top))).
   Hypothesis WFR: URA.wf (rsum (ModSem.initial_r_state ms_tgt)).
 
   Opaque interp_Es.
@@ -724,7 +731,7 @@ Notation "(⋅)" := URA.add (only parsing).
     }
     assert(TRANSR: simg eq (Ordinal.from_nat 100)
 (x0 <- interp_Es (ModSem.prog ms_tgt)
-                 (interp_hCallE_tgt (E:=pE +' eventE) stb "Main" None (trigger (hCall "main" tt↑))) st_tgt0;; Ret (snd x0))
+                 (interp_hCallE_tgt (E:=pE +' eventE) stb "Main" top (trigger (hCall "main" tt↑))) st_tgt0;; Ret (snd x0))
 (x0 <- interp_Es (ModSem.prog ms_tgt)
                  ((ModSem.prog ms_tgt) _ (Call "main" tt↑)) st_tgt0;; Ret (snd x0))).
     { clear SIM. ginit. { eapply cpn5_wcompat; eauto with paco. }
@@ -773,7 +780,7 @@ we should know that stackframe is not popped (unary property)". }
     { admit "hard -- by transitivity". }
     replace (x0 <- interp_Es (ModSem.prog ms_tgt) ((ModSem.prog ms_tgt) _ (Call "main" tt↑)) st_tgt0;;
              Ret (snd x0)) with
-        (x0 <- interp_Es (ModSem.prog ms_tgt) (interp_hCallE_tgt (E:=pE +' eventE) stb "Main" None (trigger (hCall "main" tt↑)))
+        (x0 <- interp_Es (ModSem.prog ms_tgt) (interp_hCallE_tgt (E:=pE +' eventE) stb "Main" top (trigger (hCall "main" tt↑)))
                          st_tgt0;; Ret (snd x0)); cycle 1.
     { admit "hard -- by transitivity". }
     guclo bindC_spec.
