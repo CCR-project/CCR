@@ -45,7 +45,7 @@ Record fspec: Type := mk {
 
 Actually, our framework is slightly more complicated because of the following features.
 - We have "measure" for termination proof.
-- We support "high-level logical arg/ret".
+- We support "high-level logical arg/ret". (not used in this example, so ignore this at the moment)
 
 ```
 Record fspec: Type := mk {
