@@ -30,7 +30,7 @@ In order to define the "is_list" predicate conveniently, we define the following
 /*
 (Type of the pre/post conditions)
 Consider the following standard Hoare triple.
-```forall (arg: Any.t) (x: X), {{ precond }} ret := f(arg) {{ postcond }}```
+```forall (x: X), {{ precond }} ret := f(arg) {{ postcond }}```
 
 ------>
 
