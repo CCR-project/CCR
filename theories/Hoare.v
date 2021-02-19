@@ -452,187 +452,186 @@ If this feature is needed; we can extend it then. At the moment, I will only all
     simg RR (Ordinal.from_nat 100%nat) i_src i_tgt
   .
   Proof.
-(*     i. ginit. *)
-(*     { eapply cpn5_wcompat; eauto with paco. } *)
-(*     (* remember (` x : ModSem.r_state * R <- interp_Es p_src (interp_hCallE_src (trigger ce)) st_src0;; Ret (snd x)) as tmp. *) *)
-(*     revert_until R. revert R. *)
-(*     unfold Relation_Definitions.relation. *)
-(*     gcofix CIH. i; subst. *)
-(*     (* intros ? ?. *) *)
-(*     (* pcofix CIH. i. *) *)
-(*     unfold interp_hCallE_src. *)
-(*     unfold interp_hCallE_tgt. *)
-(*     ides i0; try rewrite ! unfold_interp; cbn; mred. *)
-(*     { steps. } *)
-(*     { steps. gbase. eapply CIH; [..|M]; Mskip et. *)
-(*       { refl. } *)
-(*       { instantiate (1:=mn0). fold (interp_hCallE_tgt stb mn0). ss. } *)
-(*     } *)
-(*     destruct e; cycle 1. *)
-(*     { *)
-(*       Opaque interp_Es. *)
-(*       destruct s; ss. *)
-(*       { *)
-(*         destruct st_src0 as [rst_src0 pst_src0], st_tgt0 as [rst_tgt0 pst_tgt0]; ss. des_ifs. des; clarify. *)
-(*         destruct p; ss. *)
-(*         - steps. gbase. eapply CIH; [refl|ss|..]; cycle 1. *)
-(*           { unfold interp_hCallE_src. refl. } *)
-(*           { unfold interp_hCallE_tgt. refl. } *)
-(*           ss. *)
-(*         - steps. gbase. eapply CIH; [refl|ss|..]; cycle 1. *)
-(*           { unfold interp_hCallE_src. refl. } *)
-(*           { unfold interp_hCallE_tgt. refl. } *)
-(*           ss. *)
-(*       } *)
-(*       { dependent destruction e. *)
-(*         - steps. esplits; eauto. steps. *)
-(*           gbase. eapply CIH; [..|M]; Mskip et. *)
-(*           { refl. } *)
-(*           { instantiate (2:=mn0). fold (interp_hCallE_tgt stb mn0). ss. } *)
-(*         - steps. esplits; eauto. steps. *)
-(*           gbase. eapply CIH; [..|M]; Mskip et. *)
-(*           { refl. } *)
-(*           { instantiate (1:=mn0). fold (interp_hCallE_tgt stb mn0). ss. } *)
-(*         - steps. *)
-(*           gbase. eapply CIH; [..|M]; Mskip et. *)
-(*           { refl. } *)
-(*           { instantiate (1:=mn0). fold (interp_hCallE_tgt stb mn0). ss. } *)
-(*       } *)
-(*     } *)
-(*     dependent destruction h. *)
-(*     Local Opaque GRA.to_URA. *)
-(*     ss. *)
-(*     seal_left. *)
-(*     steps. *)
-(*     des_ifs; cycle 1. *)
-(*     { steps. } *)
-(*     rename Heq into FINDFT. *)
-(*     (* unfold ModSem.prog at 2. steps. *) *)
-(*     unfold HoareCall. *)
-(*     steps. unfold put, guarantee. steps. *)
-(*     destruct st_tgt0 as [rst_tgt0 pst_tgt0]. destruct st_src0 as [rst_src0 pst_src0]. *)
-(*     Opaque interp_Es. (*** TODO: move to ModSem ***) *)
-(*     steps. unfold handle_rE. des_ifs. *)
-(*     { rr in SIM. des_ifs. des; ss. destruct l; ss. } *)
-(*     steps. unfold guarantee. (*** TODO: remove: unfold guarantee ***) *)
-(*     (* do 2 (mred; try _step; des_ifs_safe). *) *)
-(*     (* unseal_left. *) *)
-(*     (* seal_right. _step. exists (x2↑). mred. unseal_right. *) *)
-(*     (* _step. instantiate (1:=Ordinal.from_nat 300). *) *)
-(*     unseal_left. *)
-(*     steps. *)
-(*     unfold unwrapU at 1. des_ifs; cycle 1. *)
-(*     { steps. } *)
-(*     rename Heq into FINDFS. *)
-(*     unfold discard. *)
-(*     steps. *)
-(*     unfold guarantee. *)
-(*     steps. *)
-(*     unfold unwrapU. des_ifs; cycle 1. *)
-(*     { steps. *)
-(*       rewrite WTY in *. ss. clear - FINDFS Heq. *)
-(*       rewrite find_map in *. uo. des_ifs. *)
-(*       Fail apply_all_once find_some. (*** TODO: FIXME ****) *)
-(*       apply find_some in Heq1. des. *)
-(*       eapply find_none in Heq0; eauto. *)
-(*       unfold compose in *. des_ifs. ss. clarify. *)
-(*     } *)
-(*     rename Heq into FINDFT0. *)
-(*     unfold handle_rE. des_ifs. *)
-(*     { steps. rr in SIM. des; ss. } *)
-(*     steps. *)
-(*     rename i into i_src. *)
-(*     rename i0 into i_tgt. *)
-(*     guclo bindC_spec. *)
-(*     instantiate (1:=400). *)
-(*     replace (Ordinal.from_nat 400) with *)
-(*         (Ordinal.add (Ordinal.from_nat 200) (Ordinal.from_nat 200)); cycle 1. *)
-(*     { admit "ez". } *)
-(*     rename f into fs. *)
-(*     econs. *)
-(*     - instantiate (1:= fun '((((mrs_src, frs_src), mps_src), vret_src): (r_state * p_state * Any_src)) *)
-(*                            '((((mrs_tgt, frs_tgt), mps_tgt), vret_tgt): (r_state * p_state * Any_tgt)) => *)
-(*                          exists (rret: Σ), *)
-(*                            (<<ST: (List.length frs_src) = (List.length frs_tgt) /\ *)
-(*                                   frs_src <> [] /\ *)
-(*                                   URA.wf (rsum (mrs_tgt, rret :: frs_tgt))>>) /\ *)
-(*                            (* (<<VAL: vret_src = vret_tgt>>) /\ *) *)
-(*                            (<<POST: fs.(postcond) x2 vret_src vret_tgt rret>>) /\ *)
-(*                            (<<PHYS: mps_src = mps_tgt>>) *)
-(*                   ). *)
-(*       apply find_some in FINDFT0. des. *)
-(*       apply find_some in FINDFS. des. ss. des_sumbool. clarify. *)
-(*       rewrite WTY in *. fold Any_src in FINDFS. fold Any_tgt in FINDFT0. rewrite in_map_iff in *. des. des_ifs. *)
-(*       fold Any_tgt in x3. *)
-(*       unfold fun_to_src, fun_to_tgt. des_ifs. unfold HoareFun. *)
-(*       rename x3 into PRECOND. rename x0 into rarg. *)
-(*       steps. exists varg_src. *)
-(*       steps. esplits; et. steps. exists rarg. *)
-(*       steps. unfold forge, checkWf. steps. unfold assume, guarantee. *)
-(* Infix "⋅" := URA.add (at level 50, left associativity). *)
-(* Notation "(⋅)" := URA.add (only parsing). *)
-(*       steps. unshelve esplits; eauto. *)
-(*       { clear - WFTGT x. rewrite URA.unit_idl. rewrite URA.add_assoc in x. *)
-(*         r in x. specialize (x URA.unit). rewrite ! URA.unit_id in x. *)
-(*         unfold update. des_ifs. *)
-(*         - eapply URA.wf_mon. eapply x. admit "ez - WFTGT". *)
-(*         - admit "ez - c1 contains both (c1 mn0) and (c1 (mn fs)).". *)
-(*       } *)
-(*       steps. esplits; eauto. steps. *)
-(*       (* esplits; eauto. *) *)
-(*       (* { clear - WFTGT x0. rewrite URA.unit_idl. rewrite URA.add_assoc in x0. *) *)
-(*       (*   r in x0. specialize (x0 URA.unit). rewrite ! URA.unit_id in x0. *) *)
-(*       (*   unfold update. des_ifs. *) *)
-(*       (*   - eapply URA.wf_mon. eapply x0. admit "ez - WFTGT". *) *)
-(*       (*   - admit "ez - c1 contains both (c1 mn0) and (c1 (mn fs)).". *) *)
-(*       (* } *) *)
-(*       (* steps. unfold assume. steps. *) *)
-(*       (* esplits; eauto. steps. *) *)
-(*       unfold body_to_src, body_to_tgt. *)
-(*       guclo bindC_spec. *)
-(*       replace (Ordinal.from_nat 172) with (Ordinal.add (Ordinal.from_nat 42) (Ordinal.from_nat 130)); cycle 1. *)
-(*       { admit "ez - ordinal nat add". } *)
-(*       rewrite idK_spec at 1. *)
-(*       assert(i0 = i) by admit "ez - uniqueness of idx. Add this as an hypothesis". subst. *)
-(*       econs. *)
-(*       + guclo ordC_spec. econs; eauto. { instantiate (1:=Ordinal.from_nat 100). eapply from_nat_le; ss. lia. } *)
-(*         gbase. *)
-(*         eapply CIH; et. *)
-(*         { refl. } *)
-(*         ss. esplits; ss; et. *)
-(*         clear - WFTGT x. *)
-(*         rewrite URA.unit_idl. *)
-(*         admit "ez -- updatable". *)
-(*       + bar. ii. des_ifs. des; subst. rename a into a_src. *)
-(*         unfold idK. *)
-(*         steps. unfold handle_rE. *)
-(*         r in SIM. des_ifs; ss. des; ss. destruct l; ss. des; ss. *)
-(*         steps. unfold put. unfold guarantee. steps. *)
-(*         unfold discard. unfold guarantee. steps. *)
-(*         esplits; et. *)
-(*         clear - WFTGT0 x3. *)
-(*         admit "ez -- updtaable". *)
-(*     - ii. ss. des_ifs. des. (* rr in SIM0. des; ss. unfold RelationPairs.RelCompFun in *. ss. *) *)
-(*       (* r in SIM0. des_ifs. des; ss. *) *)
-(*       steps. clear_tac. instantiate (1:=125). *)
-(*       unfold checkWf, assume; steps. *)
-(*       des_ifs; ss. *)
-(*       { steps. } *)
-(*       steps. *)
-(*       unshelve esplits; eauto. *)
-(*       { clear - ST1. admit "ez". } *)
-(*       steps. esplits; eauto. *)
-(*       unfold forge; steps. exists t. *)
-(*       steps. unshelve esplits; eauto. steps. *)
-(*       fold interp_hCallE_src. fold (interp_hCallE_tgt stb mn0). *)
-(*       gbase. eapply CIH; [refl|ss|..]; cycle 1. *)
-(*       { refl. } *)
-(*       { unfold interp_hCallE_tgt. refl. } *)
-(*       rr. esplits; et. { destruct l3; ss. } clear - ST1. admit "ez". *)
-(*   Unshelve. *)
-(*     all: ss. *)
-(*     all: try (by apply Ordinal.O). *)
-    admit "tmp".
+    i. ginit.
+    { eapply cpn5_wcompat; eauto with paco. }
+    (* remember (` x : ModSem.r_state * R <- interp_Es p_src (interp_hCallE_src (trigger ce)) st_src0;; Ret (snd x)) as tmp. *)
+    revert_until R. revert R.
+    unfold Relation_Definitions.relation.
+    gcofix CIH. i; subst.
+    (* intros ? ?. *)
+    (* pcofix CIH. i. *)
+    unfold interp_hCallE_src.
+    unfold interp_hCallE_tgt.
+    ides i0; try rewrite ! unfold_interp; cbn; mred.
+    { steps. }
+    { steps. gbase. eapply CIH; [..|M]; Mskip et.
+      { refl. }
+      { instantiate (1:=mn0). fold (interp_hCallE_tgt stb mn0). ss. }
+    }
+    destruct e; cycle 1.
+    {
+      Opaque interp_Es.
+      destruct s; ss.
+      {
+        destruct st_src0 as [rst_src0 pst_src0], st_tgt0 as [rst_tgt0 pst_tgt0]; ss. des_ifs. des; clarify.
+        destruct p; ss.
+        - steps. gbase. eapply CIH; [refl|ss|..]; cycle 1.
+          { unfold interp_hCallE_src. refl. }
+          { unfold interp_hCallE_tgt. refl. }
+          ss.
+        - steps. gbase. eapply CIH; [refl|ss|..]; cycle 1.
+          { unfold interp_hCallE_src. refl. }
+          { unfold interp_hCallE_tgt. refl. }
+          ss.
+      }
+      { dependent destruction e.
+        - steps. esplits; eauto. steps.
+          gbase. eapply CIH; [..|M]; Mskip et.
+          { refl. }
+          { instantiate (2:=mn0). fold (interp_hCallE_tgt stb mn0). ss. }
+        - steps. esplits; eauto. steps.
+          gbase. eapply CIH; [..|M]; Mskip et.
+          { refl. }
+          { instantiate (1:=mn0). fold (interp_hCallE_tgt stb mn0). ss. }
+        - steps.
+          gbase. eapply CIH; [..|M]; Mskip et.
+          { refl. }
+          { instantiate (1:=mn0). fold (interp_hCallE_tgt stb mn0). ss. }
+      }
+    }
+    dependent destruction h.
+    Local Opaque GRA.to_URA.
+    ss.
+    seal_left.
+    steps.
+    des_ifs; cycle 1.
+    { steps. }
+    rename Heq into FINDFT.
+    (* unfold ModSem.prog at 2. steps. *)
+    unfold HoareCall.
+    steps. unfold put, guarantee. steps.
+    destruct st_tgt0 as [rst_tgt0 pst_tgt0]. destruct st_src0 as [rst_src0 pst_src0].
+    Opaque interp_Es. (*** TODO: move to ModSem ***)
+    steps. unfold handle_rE. des_ifs.
+    { rr in SIM. des_ifs. des; ss. destruct l; ss. }
+    steps. unfold guarantee. (*** TODO: remove: unfold guarantee ***)
+    (* do 2 (mred; try _step; des_ifs_safe). *)
+    (* unseal_left. *)
+    (* seal_right. _step. exists (x2↑). mred. unseal_right. *)
+    (* _step. instantiate (1:=Ordinal.from_nat 300). *)
+    unseal_left.
+    steps.
+    unfold unwrapU at 1. des_ifs; cycle 1.
+    { steps. }
+    rename Heq into FINDFS.
+    unfold discard.
+    steps.
+    unfold guarantee.
+    steps.
+    unfold unwrapU. des_ifs; cycle 1.
+    { steps.
+      rewrite WTY in *. ss. clear - FINDFS Heq.
+      rewrite find_map in *. uo. des_ifs.
+      Fail apply_all_once find_some. (*** TODO: FIXME ****)
+      apply find_some in Heq1. des.
+      eapply find_none in Heq0; eauto.
+      unfold compose in *. des_ifs. ss. clarify.
+    }
+    rename Heq into FINDFT0.
+    unfold handle_rE. des_ifs.
+    { steps. rr in SIM. des; ss. }
+    steps.
+    rename i into i_src.
+    rename i0 into i_tgt.
+    guclo bindC_spec.
+    instantiate (1:=400).
+    replace (Ordinal.from_nat 400) with
+        (Ordinal.add (Ordinal.from_nat 200) (Ordinal.from_nat 200)); cycle 1.
+    { admit "ez". }
+    rename f into fs.
+    econs.
+    - instantiate (1:= fun '((((mrs_src, frs_src), mps_src), vret_src): (r_state * p_state * Any_src))
+                           '((((mrs_tgt, frs_tgt), mps_tgt), vret_tgt): (r_state * p_state * Any_tgt)) =>
+                         exists (rret: Σ),
+                           (<<ST: (List.length frs_src) = (List.length frs_tgt) /\
+                                  frs_src <> [] /\
+                                  URA.wf (rsum (mrs_tgt, rret :: frs_tgt))>>) /\
+                           (* (<<VAL: vret_src = vret_tgt>>) /\ *)
+                           (<<POST: fs.(postcond) x2 vret_src vret_tgt rret>>) /\
+                           (<<PHYS: mps_src = mps_tgt>>)
+                  ).
+      apply find_some in FINDFT0. des.
+      apply find_some in FINDFS. des. ss. des_sumbool. clarify.
+      rewrite WTY in *. fold Any_src in FINDFS. fold Any_tgt in FINDFT0. rewrite in_map_iff in *. des. des_ifs.
+      fold Any_tgt in x3.
+      unfold fun_to_src, fun_to_tgt. des_ifs. unfold HoareFun.
+      rename x3 into PRECOND. rename x0 into rarg.
+      steps. exists varg_src.
+      steps. esplits; et. steps. exists rarg.
+      steps. unfold forge, checkWf. steps. unfold assume, guarantee.
+Infix "⋅" := URA.add (at level 50, left associativity).
+Notation "(⋅)" := URA.add (only parsing).
+      steps. unshelve esplits; eauto.
+      { clear - WFTGT x. rewrite URA.unit_idl. rewrite URA.add_assoc in x.
+        r in x. specialize (x URA.unit). rewrite ! URA.unit_id in x.
+        unfold update. des_ifs.
+        - eapply URA.wf_mon. eapply x. admit "ez - WFTGT".
+        - admit "ez - c1 contains both (c1 mn0) and (c1 (mn fs)).".
+      }
+      steps. esplits; eauto. steps.
+      (* esplits; eauto. *)
+      (* { clear - WFTGT x0. rewrite URA.unit_idl. rewrite URA.add_assoc in x0. *)
+      (*   r in x0. specialize (x0 URA.unit). rewrite ! URA.unit_id in x0. *)
+      (*   unfold update. des_ifs. *)
+      (*   - eapply URA.wf_mon. eapply x0. admit "ez - WFTGT". *)
+      (*   - admit "ez - c1 contains both (c1 mn0) and (c1 (mn fs)).". *)
+      (* } *)
+      (* steps. unfold assume. steps. *)
+      (* esplits; eauto. steps. *)
+      unfold body_to_src, body_to_tgt.
+      guclo bindC_spec.
+      replace (Ordinal.from_nat 172) with (Ordinal.add (Ordinal.from_nat 42) (Ordinal.from_nat 130)); cycle 1.
+      { admit "ez - ordinal nat add". }
+      rewrite idK_spec at 1.
+      assert(i0 = i) by admit "ez - uniqueness of idx. Add this as an hypothesis". subst.
+      econs.
+      + guclo ordC_spec. econs; eauto. { instantiate (1:=Ordinal.from_nat 100). eapply from_nat_le; ss. lia. }
+        gbase.
+        eapply CIH; et.
+        { refl. }
+        ss. esplits; ss; et.
+        clear - WFTGT x.
+        rewrite URA.unit_idl.
+        admit "ez -- updatable".
+      + bar. ii. des_ifs. des; subst. rename a into a_src.
+        unfold idK.
+        steps. unfold handle_rE.
+        r in SIM. des_ifs; ss. des; ss. destruct l; ss. des; ss.
+        steps. unfold put. unfold guarantee. steps.
+        unfold discard. unfold guarantee. steps.
+        esplits; et.
+        clear - WFTGT0 x3.
+        admit "ez -- updtaable".
+    - ii. ss. des_ifs. des. (* rr in SIM0. des; ss. unfold RelationPairs.RelCompFun in *. ss. *)
+      (* r in SIM0. des_ifs. des; ss. *)
+      steps. clear_tac. instantiate (1:=125).
+      unfold checkWf, assume; steps.
+      des_ifs; ss.
+      { steps. }
+      steps.
+      unshelve esplits; eauto.
+      { clear - ST1. admit "ez". }
+      steps. esplits; eauto.
+      unfold forge; steps. exists t.
+      steps. unshelve esplits; eauto. steps.
+      fold interp_hCallE_src. fold (interp_hCallE_tgt stb mn0).
+      gbase. eapply CIH; [refl|ss|..]; cycle 1.
+      { refl. }
+      { unfold interp_hCallE_tgt. refl. }
+      rr. esplits; et. { destruct l3; ss. } clear - ST1. admit "ez".
+  Unshelve.
+    all: ss.
+    all: try (by apply Ordinal.O).
   Qed.
 
   Hypothesis MAIN: List.find (fun '(_fn, _) => dec "main" _fn) stb = Some ("main",
