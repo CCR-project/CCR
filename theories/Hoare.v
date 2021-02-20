@@ -72,13 +72,13 @@ Goal forall x, 5 + 5 = x. i. seal 5. seal x. unseal key0. unseal 5. cbn. Abort.
 
 
 Inductive ord: Type :=
-| pure (n: nat)
-| top
+| ord_pure (n: nat)
+| ord_top
 .
 
 Definition ord_lt (next cur: ord): Prop :=
   match next, cur with
-  | pure next, pure cur => (next < cur)%nat
+  | ord_pure next, ord_pure cur => (next < cur)%nat
   | _, _ => True
   end
 .
@@ -183,17 +183,17 @@ Section CANCEL.
   Record fspec: Type := mk {
     mn: mname;
     X: Type; (*** a meta-variable ***)
-    Y: Type;
-    Z: Type;
-    precond: X -> Y -> Any_tgt -> Σ -> Prop; (*** meta-variable -> new logical arg -> current logical arg -> resource arg -> Prop ***)
-    postcond: X -> Z -> Any_tgt -> Σ -> Prop; (*** meta-variable -> new logical ret -> current logical ret -> resource ret -> Prop ***)
+    AA: Type;
+    AR: Type;
+    precond: X -> AA -> Any_tgt -> Σ -> Prop; (*** meta-variable -> new logical arg -> current logical arg -> resource arg -> Prop ***)
+    postcond: X -> AR -> Any_tgt -> Σ -> Prop; (*** meta-variable -> new logical ret -> current logical ret -> resource ret -> Prop ***)
     measure: X -> ord;
   }
   .
 
   Record fspecbody: Type := mk_specbody {
     fsb_fspec:> fspec;
-    fsb_body: fsb_fspec.(Y) -> itree (hCallE +' pE +' eventE) fsb_fspec.(Z);
+    fsb_body: fsb_fspec.(AA) -> itree (hCallE +' pE +' eventE) fsb_fspec.(AR);
   }
   .
 
@@ -224,11 +224,11 @@ Section CANCEL.
                   ((fun T X => trigger X): E ~> itree Es))
   .
 
-  Definition body_to_src {Y Z} (body: Y -> itree (hCallE +' pE +' eventE) Z): Y -> itree Es Z :=
+  Definition body_to_src {AA AR} (body: AA -> itree (hCallE +' pE +' eventE) AR): AA -> itree Es AR :=
     fun varg_src => interp_hCallE_src (body varg_src)
   .
 
-  Definition fun_to_src {Y Z} (body: Y -> itree (hCallE +' pE +' eventE) Z): (Any_src -> itree Es Any_src) :=
+  Definition fun_to_src {AA AR} (body: AA -> itree (hCallE +' pE +' eventE) AR): (Any_src -> itree Es Any_src) :=
     cfun (body_to_src body)
   .
 
@@ -252,8 +252,8 @@ Section CANCEL.
                   ((fun T X => trigger X): E ~> itree Es))
   .
 
-  Definition body_to_tgt {Y Z} (mn: mname) (cur: ord)
-             (body: Y -> itree (hCallE +' pE +' eventE) Z): Y -> itree Es Z :=
+  Definition body_to_tgt {AA AR} (mn: mname) (cur: ord)
+             (body: AA -> itree (hCallE +' pE +' eventE) AR): AA -> itree Es AR :=
     fun varg_tgt => interp_hCallE_tgt mn cur (body varg_tgt)
   .
 
@@ -601,7 +601,7 @@ If this feature is needed; we can extend it then. At the moment, I will only all
     econs.
     - instantiate (1:= fun '((((mrs_src, frs_src), mps_src), vret_src): (r_state * p_state * Any_src))
                            '((((mrs_tgt, frs_tgt), mps_tgt), vret_tgt): (r_state * p_state * Any_tgt)) =>
-                         exists (rret: Σ) (vret_src': fs.(Z)),
+                         exists (rret: Σ) (vret_src': fs.(AR)),
                            (<<ST: (List.length frs_src) = (List.length frs_tgt) /\
                                   frs_src <> [] /\
                                   URA.wf (rsum (mrs_tgt, rret :: frs_tgt))>>) /\
@@ -623,7 +623,7 @@ If this feature is needed; we can extend it then. At the moment, I will only all
       fold Any_tgt in x3.
       unfold fun_to_src, fun_to_tgt. des_ifs. unfold HoareFun.
       rename x3 into PRECOND. rename x0 into rarg.
-      steps. exists y.
+      steps. exists a.
       steps. esplits; et. steps. exists rarg.
       steps. unfold forge, checkWf. steps. unfold assume, guarantee.
 Infix "⋅" := URA.add (at level 50, left associativity).
@@ -665,13 +665,13 @@ Notation "(⋅)" := URA.add (only parsing).
         ii. steps. Morphisms.f_equiv; apply func_ext_dep; i. grind. rewrite Any.upcast_downcast. ss. grind.
       }
       instantiate (1:= x2).
-      erewrite insert_updown2 with (i:=interp_Es p_tgt (interp_hCallE_tgt stb (mn f) (measure f x2) (fsb_body f y)) (update c1 mn0 c, ε ⋅ rarg :: x1 :: l0, pst_tgt0)).
+      erewrite insert_updown2 with (i:=interp_Es p_tgt (interp_hCallE_tgt stb (mn f) (measure f x2) (fsb_body f a)) (update c1 mn0 c, ε ⋅ rarg :: x1 :: l0, pst_tgt0)).
       econs.
       + guclo ordC_spec. econs; eauto. { instantiate (1:=Ordinal.from_nat 100). eapply from_nat_le; ss. lia. }
         gbase.
-        (* instantiate (1:=(fun '((rs_src, v_src): W * Any_src) '((rs_tgt, v_tgt): W * Any_tgt) => wf rs_src rs_tgt /\ v_src = v_tgt /\ exists (z: Z f), v_src↓ = Some z)). *)
+        (* instantiate (1:=(fun '((rs_src, v_src): W * Any_src) '((rs_tgt, v_tgt): W * Any_tgt) => wf rs_src rs_tgt /\ v_src = v_tgt /\ exists (z: AR f), v_src↓ = Some z)). *)
         eapply CIH; et; try refl; revgoals.
-        { instantiate (2:=(fsb_body f y) >>= (fun r => Ret r↑)).
+        { instantiate (2:=(fsb_body f a) >>= (fun r => Ret r↑)).
           rewrite interp_hCallE_tgt_bind. mred.
           assert(eq_JMeq: forall X (x0 x1: X), x0 = x1 -> x0 ~= x1).
           { i. subst. refl. }
@@ -721,7 +721,7 @@ Notation "(⋅)" := URA.add (only parsing).
 
   Hypothesis MAIN: List.find (fun '(_fn, _) => dec "main" _fn) stb = Some ("main",
     (* (@mk "Main" unit (fun _ varg_high _ _ => varg_high = tt↑) (fun _ vret_high _ _ => vret_high = tt↑) (fun _ => None))). *)
-    (@mk_simple "Main" unit top3 top3 (fun _ => top))).
+    (@mk_simple "Main" unit top3 top3 (fun _ => ord_top))).
   Hypothesis WFR: URA.wf (rsum (ModSem.initial_r_state ms_tgt)).
 
   Opaque interp_Es.
@@ -793,7 +793,7 @@ Notation "(⋅)" := URA.add (only parsing).
     }
     assert(TRANSR: simg eq (Ordinal.from_nat 100)
 (x0 <- interp_Es (ModSem.prog ms_tgt)
-                 (interp_hCallE_tgt (E:=pE +' eventE) stb "Main" top (trigger (hCall "main" ([]: list val)↑))) st_tgt0;; Ret (snd x0))
+                 (interp_hCallE_tgt (E:=pE +' eventE) stb "Main" ord_top (trigger (hCall "main" ([]: list val)↑))) st_tgt0;; Ret (snd x0))
 (x0 <- interp_Es (ModSem.prog ms_tgt)
                  ((ModSem.prog ms_tgt) _ (Call "main" ([]: list val)↑)) st_tgt0;; Ret (snd x0))).
     { clear SIM. ginit. { eapply cpn5_wcompat; eauto with paco. }
@@ -842,7 +842,7 @@ we should know that stackframe is not popped (unary property)". }
     { admit "hard -- by transitivity". }
     replace (x0 <- interp_Es (ModSem.prog ms_tgt) ((ModSem.prog ms_tgt) _ (Call "main" ([]: list val)↑)) st_tgt0;;
              Ret (snd x0)) with
-        (x0 <- interp_Es (ModSem.prog ms_tgt) (interp_hCallE_tgt (E:=pE +' eventE) stb "Main" top (trigger (hCall "main" ([]: list val)↑)))
+        (x0 <- interp_Es (ModSem.prog ms_tgt) (interp_hCallE_tgt (E:=pE +' eventE) stb "Main" ord_top (trigger (hCall "main" ([]: list val)↑)))
                          st_tgt0;; Ret (snd x0)); cycle 1.
     { admit "hard -- by transitivity". }
     guclo bindC_spec.

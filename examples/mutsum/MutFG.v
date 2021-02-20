@@ -52,7 +52,7 @@ Section PROOF.
 
   Definition FG2: Mod.t := {|
     Mod.get_modsem := fun _ => {|
-        ModSem.fnsems := List.map (fun '(fn, body) => (fn, fun_to_src body)) (FFtb ++ GFtb);
+        ModSem.fnsems := List.map (fun '(fn, sb) => (fn, fun_to_src sb.(fsb_body))) (Fsbtb ++ Gsbtb);
         ModSem.initial_mrs := [("F", (ε, unit↑)) ; ("G", (ε, unit↑))];
       |};
     Mod.sk := Sk.unit;
@@ -65,7 +65,7 @@ Section PROOF.
   Theorem correct: Beh.of_program (Mod.interp FG1) <1= Beh.of_program (Mod.interp FG2).
   Proof.
     ii.
-    eapply adequacy_type with (ftb:=FFtb++GFtb) in PR.
+    eapply adequacy_type with (sbtb:=Fsbtb++Gsbtb) in PR.
     { ss. }
     { ss. }
     { ss. admit "main - Fix me". }
@@ -83,7 +83,7 @@ Section PROOF.
 
 
   Let ms: ModSem.t := {|
-        ModSem.fnsems := List.map (fun '(fn, body) => (fn, fun_to_src body)) (FFtb ++ GFtb);
+        ModSem.fnsems := List.map (fun '(fn, sb) => (fn, fun_to_src sb.(fsb_body))) (Fsbtb ++ Gsbtb);
         ModSem.initial_mrs := [];
   |}.
 

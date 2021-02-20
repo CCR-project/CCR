@@ -51,7 +51,7 @@ Section PROOF.
 
   Definition MemMain2: Mod.t := {|
     Mod.get_modsem := fun _ => {|
-        ModSem.fnsems := List.map (fun '(fn, body) => (fn, fun_to_src body)) (MemFtb ++ MainFtb);
+        ModSem.fnsems := List.map (fun '(fn, sb) => (fn, fun_to_src sb.(fsb_body))) (MemSbtb ++ MainSbtb);
         (* ModSem.initial_mrs := [("Mem", ε) ; ("Main", ε)]; *)
         ModSem.initial_mrs := [("Mem", (ε, unit↑)) ; ("Main", (ε, unit↑))];
       |};
@@ -76,18 +76,130 @@ Section PROOF.
   Local Opaque GRA.to_URA.
   Infix "⋅" := URA.add (at level 50, left associativity).
   Notation "(⋅)" := URA.add (only parsing).
+
+  (* Definition incl (sbtb0 sbtb1: list (string * fspec)): Prop := List.incl  *)
+  (* Lemma handle_hCallE_tgt_ext *)
+  (*       sbtb0 sbtb1 mn cur *)
+  (*   : *)
+  (*     (handle_hCallE_tgt sbtb0 mn cur) = (handle_hCallE_tgt sbtb1 mn cur) *)
+  (* . *)
+  (* Proof. *)
+  (*   unfold handle_hCallE_tgt. repeat (apply func_ext_dep; i). des_ifs. *)
+  (*   - *)
+  (* Qed. *)
+
+  (* Let body_to_tgt_aux: forall E R1 R2 RR *)
+  (*     AR sbtb0 sbtb1 mn cur *)
+  (*     (bd: itree (hCallE +' pE +' eventE) AR) *)
+  (*     i_src i_tgt *)
+  (*     (SRC: i_src ~= (interp_hCallE_tgt sbtb0 mn cur bd)) *)
+  (*     (TGT: i_tgt ~= (interp_hCallE_tgt sbtb1 mn cur bd)) *)
+  (*   , *)
+  (*     @eq_itree E R1 R2 RR i_src i_tgt *)
+  (* (* ≅  *) *)
+  (* . *)
+  (* Proof. *)
+  (*   ginit. *)
+  (*   ecofix CIH. *)
+  (* Qed. *)
+  (* Unset Universe Checking. *)
+
+
+
+  (*********** TODO: finish the theory and move to proper place ***********)
+  Definition contains R (stb: list (string * fspec)) (body: itree (hCallE +' pE +' eventE) R): Prop :=
+    admit "fspecbody's body calls only the functions that are inside stb"
+  .
+
+  Definition extends (stb0 stb1: list (string * fspec)): Prop :=
+    (* admit "stb1 has more entries" *)
+    List.incl stb0 stb1
+  .
+
+  Lemma body_to_tgt_ext
+        AA AR
+        stb0 stb1 mn cur (body: (AA -> itree (hCallE +' pE +' eventE) AR)) varg
+        (A: contains stb0 (body varg))
+        (B: extends stb0 stb1)
+    :
+      body_to_tgt stb0 mn cur body varg = body_to_tgt stb1 mn cur body varg
+  .
+  Proof.
+    unfold body_to_tgt. abstr (body varg) bd.
+    f. ginit. revert_until Σ. gcofix CIH. i.
+    unfold interp_hCallE_tgt.
+    ides bd;  rewrite ! unfold_interp; ired; ss.
+    - gstep. econs; et.
+    - gstep. econs; et. gbase. eapply CIH; ss.
+    - guclo eqit_clo_bind. econs.
+      + instantiate (1:=eq). destruct e.
+        { (**** main part ****)
+          ired. unfold handle_hCallE_tgt.
+          des_ifs.
+          - assert(T: s = s0 /\ f = f0) by admit "ez - uniqueness". destruct T. subst. refl.
+          - exfalso. admit "ez - extends".
+          - exfalso. admit "ez - contains".
+          - exfalso. admit "ez - contains".
+        }
+        destruct s; ss.
+        { destruct p; ss; ired; refl. }
+        { destruct e; ss; ired; refl. }
+      + ii. clarify. gstep. econs; eauto. gbase. eapply CIH; et.
+  Unshelve.
+    all: try (by econs).
+  Qed.
+
+  Lemma fun_to_tgt_ext
+        stb0 stb1 fn sb
+        (A: forall varg, contains stb0 (sb.(fsb_body) varg))
+        (B: extends stb0 stb1)
+    :
+      fun_to_tgt stb0 fn sb = fun_to_tgt stb1 fn sb
+  .
+  Proof.
+    unfold fun_to_tgt. unfold HoareFun. apply func_ext. i. grind.
+    erewrite body_to_tgt_ext; et.
+  Qed.
+
+  (* Lemma map_ext *)
+  (*       A B *)
+  (*       l (f g : A -> B) *)
+  (*       (EXT: forall a, In a l -> f a = g a) *)
+  (*   : *)
+  (*     List.map f l = List.map g l *)
+  (* . *)
+  (* Proof. *)
+  (*   clear Σ H. *)
+  (*   ginduction l; ii; ss. f_equal. *)
+  (*   - eapply EXT; et. *)
+  (*   - eapply IHl; et. *)
+  (* Qed. *)
+
   Theorem correct: Beh.of_program (Mod.interp MemMain1) <1= Beh.of_program (Mod.interp MemMain2).
   Proof.
     ii.
-    set (global_stb:=MemStb++MainStb).
-    set (global_ftb:=MemFtb++MainFtb).
+    set (global_sbtb:=MemSbtb++MainSbtb).
     (* clearbody global_stb. *)
     Local Opaque MemStb.
-    Local Opaque Mem1.MemStb.
-    Local Opaque MainStb.
-    eapply adequacy_type with (ftb:=global_ftb) in PR.
+    Local Opaque MemSbtb.
+    Local Opaque MainSbtb.
+    eapply adequacy_type with (sbtb:=global_sbtb) in PR.
     { ss. }
-    { ss. instantiate (1:=global_stb). admit "ez". }
+    { cbn. unfold global_sbtb. rewrite List.map_app.
+      Set Printing Coercions.
+      seal fun_to_tgt. (*** without this, other tactics (des_ifs; refl; ss; f_equal; etc) will take infinite time. Opaque does help here at all. ***)
+      f_equal.
+      apply map_ext. (*** better than just "f_equal" ***)
+      i. des_ifs. r; f_equal. unseal fun_to_tgt. eapply fun_to_tgt_ext.
+      - ii. ss.
+        Local Transparent MemSbtb. cbn in IN. Local Opaque MemSbtb. des; ss; clarify; ss.
+        + admit "ez".
+        + admit "ez".
+        + admit "ez".
+        + admit "ez".
+      - admit "ez".
+    }
+    { Local Transparent MemSbtb. cbn. Local Opaque MemSbtb. des_ifs; ss. }
     ss. unfold compose. ss. rewrite ! URA.unit_id. rewrite ! URA.unit_idl.
     eapply padding_wf; et. ss. esplits; et.
     rr. esplits; et. ss.
