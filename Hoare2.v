@@ -465,6 +465,23 @@ If this feature is needed; we can extend it then. At the moment, I will only all
   Ltac force_r := seal_left; _step; unseal_left.
   (* Ltac mstep := gstep; econs; eauto; [eapply from_nat_lt; ss|]. *)
 
+  Lemma interp_hCallE_src_bind
+        `{E -< Es} A B
+        (itr: itree (hCallE +' E) A) (ktr: A -> itree (hCallE +' E) B)
+    :
+      interp_hCallE_src (v <- itr ;; ktr v) = v <- interp_hCallE_src (itr);; interp_hCallE_src (ktr v)
+  .
+  Proof. unfold interp_hCallE_src. ired. grind. Qed.
+
+  Lemma interp_hCallE_tgt_bind
+        `{E -< Es} A B
+        (itr: itree (hCallE +' E) A) (ktr: A -> itree (hCallE +' E) B)
+        stb0 fn cur
+    :
+      interp_hCallE_tgt stb0 fn cur (v <- itr ;; ktr v) = v <- interp_hCallE_tgt stb0 fn cur (itr);; interp_hCallE_tgt stb0 fn cur (ktr v)
+  .
+  Proof. unfold interp_hCallE_tgt. ired. grind. Qed.
+
   Let adequacy_type_aux:
     forall (R: Type) (RR: R -> R -> Prop) (TY: R = (r_state * p_state * Any_src)%type)
            (REL: RR ~= (fun '((rs_src, v_src)) '((rs_tgt, v_tgt)) => wf rs_src rs_tgt /\ (v_src: Any_src) = v_tgt))
@@ -654,14 +671,16 @@ Notation "(⋅)" := URA.add (only parsing).
         gbase.
         (* instantiate (1:=(fun '((rs_src, v_src): W * Any_src) '((rs_tgt, v_tgt): W * Any_tgt) => wf rs_src rs_tgt /\ v_src = v_tgt /\ exists (z: Z f), v_src↓ = Some z)). *)
         eapply CIH; et; try refl; revgoals.
-        { instantiate (1:=(update c1 mn0 c, ε ⋅ rarg :: x1 :: l0, pst_tgt0)).
-          instantiate (3:=(mn f)).
-          instantiate (2:=(measure f x2)).
-          instantiate (1:=(fsb_body f y) >>= (fun r => Ret r↑)).
-          admit "---------------------------------------------bind rule".
+        { instantiate (2:=(fsb_body f y) >>= (fun r => Ret r↑)).
+          rewrite interp_hCallE_tgt_bind. mred.
+          assert(eq_JMeq: forall X (x0 x1: X), x0 = x1 -> x0 ~= x1).
+          { i. subst. refl. }
+          eapply eq_JMeq. grind. unfold interp_hCallE_tgt. mred. refl.
         }
-        { instantiate (1:=(c0, ε :: c3 :: l1, pst_tgt0)).
-          admit "---------------------------------------------bind rule".
+        { rewrite interp_hCallE_src_bind. mred.
+          assert(eq_JMeq: forall X (x0 x1: X), x0 = x1 -> x0 ~= x1).
+          { i. subst. refl. }
+          eapply eq_JMeq. grind. unfold interp_hCallE_src. mred. refl.
         }
         ss. esplits; ss; et.
         clear - WFTGT x.

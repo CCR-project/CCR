@@ -16,11 +16,12 @@ Module Type ANY.
   (* Parameter upcast_surj: forall A B a b (EQ: A = B) (EQ: a ~= b), *) (*** <-- this is trivial ***)
   (*     <<EQ: @upcast A a = @upcast B b>>. *)
 
-  Parameter upcast_downcast: forall T (a: T), downcast (upcast a) = Some a.
+  Parameter upcast_downcast: forall T (v: T), downcast (upcast v) = Some v.
   (* Parameter downcast_intro: forall (a: t), @downcast (ty a) a = Some (val a). *)
   Parameter downcast_intro: forall (a: t) T (v: T) (TY: (ty a) = T) (VAL: (val a) ~= v), downcast a = Some v.
   Parameter downcast_elim: forall (a: t) T (v: T) (CAST: downcast a = Some v), (<<TY: (ty a) = T>>) /\ (<<VAL: (val a) ~= v>>).
   Parameter upcast_eta: forall (a: t), <<CAST: a = upcast (val a)>>.
+  Parameter downcast_upcast: forall T (v: T) (a: t), downcast a = Some v -> <<CAST: upcast v = a>>.
   (* Parameter downcast_ty: forall (a: t), exists x, @downcast (ty a) a = Some x. *)
 
   (* Parameter patmat: forall R (body: forall (T: Type), T -> R), t -> R. *)
@@ -165,6 +166,9 @@ Module _Any: ANY.
     i. exists a.(val). rewrite <- upcast_downcast. f_equal.
     destruct a. refl.
   Qed.
+
+  Lemma downcast_upcast: forall T (v: T) (a: t), downcast a = Some v -> <<CAST: upcast v = a>>.
+  Proof. i. destruct a; ss. des_ifs. dependent destruction H. ss. Qed.
 
 End _Any.
 Goal _Any.upcast 0 = _Any.upcast () -> False. i. Fail injection H. Abort.
