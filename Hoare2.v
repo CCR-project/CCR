@@ -647,6 +647,36 @@ Notation "(⋅)" := URA.add (only parsing).
       { clear - Any_src. clear Any_src.
         ii. steps. Morphisms.f_equiv; apply func_ext_dep; i. grind. rewrite Any.upcast_downcast. ss. grind.
       }
+      instantiate (1:= x2).
+      erewrite insert_updown2 with (i:=interp_Es p_tgt (interp_hCallE_tgt stb (mn f) (measure f x2) (fsb_body f y)) (update c1 mn0 c, ε ⋅ rarg :: x1 :: l0, pst_tgt0)).
+      econs.
+      + guclo ordC_spec. econs; eauto. { instantiate (1:=Ordinal.from_nat 100). eapply from_nat_le; ss. lia. }
+        gbase.
+        instantiate (1:=(fun '((rs_src, v_src): W * Any_src) '((rs_tgt, v_tgt): W * Any_tgt) => wf rs_src rs_tgt /\ v_src = v_tgt /\ exists (z: Z f), v_src↓ = Some z)).
+        TTTTTTTTTTTTTTTTTTTTTTTTTTTt
+        eapply CIH; et; try refl; revgoals.
+        { instantiate (1:=(update c1 mn0 c, ε ⋅ rarg :: x1 :: l0, pst_tgt0)).
+          instantiate (3:=(mn f)).
+          instantiate (2:=(measure f x2)).
+          instantiate (1:=(fsb_body f y) >>= (fun r => Ret r↑)).
+          admit "---------------------------------------------bind rule".
+        }
+        { instantiate (1:=(c0, ε :: c3 :: l1, pst_tgt0)).
+          admit "---------------------------------------------bind rule".
+        }
+        ss. esplits; ss; et.
+        clear - WFTGT x.
+        rewrite URA.unit_idl.
+        admit "ez -- updatable".
+      + bar. ii. des_ifs. des; subst. Set Printing Implicit. TTTTTTTTTTTTTTTTTTTTTTTTTt
+        unfold idK.
+        steps. unfold handle_rE.
+        r in SIM. des_ifs; ss. des; ss. destruct l; ss. des; ss.
+        steps. unfold put. unfold guarantee. steps.
+        unfold discard. unfold guarantee. steps.
+        esplits; et.
+        clear - WFTGT0 x3.
+        admit "ez -- updtaable".
       erewrite insert_updown2 with (C:=Z f). with (i:=interp_hCallE_tgt stb (mn f) (measure f _) (fsb_body f y)).
       Fail erewrite insert_updown with (i:=interp_Es p_tgt (interp_hCallE_tgt stb (mn f) (measure f _) (fsb_body f y)) (update c1 mn0 c, ε ⋅ rarg :: x1 :: l0, pst_tgt0)).
       Unset Universe Checking.

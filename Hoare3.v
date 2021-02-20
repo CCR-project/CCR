@@ -763,9 +763,9 @@ Notation "(⋅)" := URA.add (only parsing).
     (* } *)
     assert(TRANSL: simg eq (Ordinal.from_nat 100)
 (x0 <- interp_Es (ModSem.prog ms_src)
-                 ((ModSem.prog ms_src) _ (Call "main" tt↑)) st_src0;; Ret (snd x0))
+                 ((ModSem.prog ms_src) _ (Call "main" ([]: list val)↑)) st_src0;; Ret (snd x0))
 (x0 <- interp_Es (ModSem.prog ms_src)
-                 (interp_hCallE_src (E:=pE +' eventE) (trigger (hCall "main" tt↑))) st_src0;; Ret (snd x0))).
+                 (interp_hCallE_src (E:=pE +' eventE) (trigger (hCall "main" ([]: list val)↑))) st_src0;; Ret (snd x0))).
     { clear SIM. ginit. { eapply cpn5_wcompat; eauto with paco. }
       unfold interp_hCallE_src. rewrite unfold_interp. ss. cbn. steps.
       replace (Ordinal.from_nat 99) with (Ordinal.add (Ordinal.from_nat 50) (Ordinal.from_nat 49))
@@ -777,9 +777,9 @@ Notation "(⋅)" := URA.add (only parsing).
     }
     assert(TRANSR: simg eq (Ordinal.from_nat 100)
 (x0 <- interp_Es (ModSem.prog ms_tgt)
-                 (interp_hCallE_tgt (E:=pE +' eventE) stb "Main" top (trigger (hCall "main" tt↑))) st_tgt0;; Ret (snd x0))
+                 (interp_hCallE_tgt (E:=pE +' eventE) stb "Main" top (trigger (hCall "main" ([]: list val)↑))) st_tgt0;; Ret (snd x0))
 (x0 <- interp_Es (ModSem.prog ms_tgt)
-                 ((ModSem.prog ms_tgt) _ (Call "main" tt↑)) st_tgt0;; Ret (snd x0))).
+                 ((ModSem.prog ms_tgt) _ (Call "main" ([]: list val)↑)) st_tgt0;; Ret (snd x0))).
     { clear SIM. ginit. { eapply cpn5_wcompat; eauto with paco. }
       unfold interp_hCallE_tgt. rewrite unfold_interp. steps.
       unfold HoareCall.
@@ -787,7 +787,7 @@ Notation "(⋅)" := URA.add (only parsing).
       { exfalso. clear - WF1 Heq MAINR. admit "ez - use WF1". }
       destruct p; ss.
       assert(s = "Main") by admit "ez". clarify.
-      (* rewrite Any.upcast_downcast. *)
+      rewrite Any.upcast_downcast.
       steps. eexists ((fst (fst st_tgt0)) "Main", ε). steps.
       unfold put, guarantee. steps. unfold st_tgt0. steps.
       ss.
@@ -795,7 +795,7 @@ Notation "(⋅)" := URA.add (only parsing).
       { refl. }
       steps. esplits; et. steps. unfold discard, guarantee. steps. esplits; et. steps. unshelve esplits; et.
       { instantiate (1:=ε). rewrite URA.unit_id. ss. }
-      steps. unfold guarantee. steps. esplits; et. steps. exists (tt↑).
+      steps. unfold guarantee. steps. esplits; et. steps. exists (([]: list val)↑).
       replace (update
                  (fun mn0 : string =>
                     match find (fun mnr => dec mn0 (fst mnr)) (ModSem.initial_mrs ms_tgt) with
@@ -814,19 +814,19 @@ Notation "(⋅)" := URA.add (only parsing).
         unfold ModSem.handle_rE. des_ifs.
         { admit "we should use stronger RR, not eq;
 we should know that stackframe is not popped (unary property)". }
-        steps. unfold forge; steps.
+        steps. unfold forge; steps. des; et.
     }
 
 
 
-    replace (x0 <- interp_Es (ModSem.prog ms_src) ((ModSem.prog ms_src) _ (Call "main" tt↑)) st_src0;;
+    replace (x0 <- interp_Es (ModSem.prog ms_src) ((ModSem.prog ms_src) _ (Call "main" ([]: list val)↑)) st_src0;;
              Ret (snd x0)) with
-        (x0 <- interp_Es (ModSem.prog ms_src) (interp_hCallE_src (E:=pE +' eventE) (trigger (hCall "main" tt↑))) st_src0;;
+        (x0 <- interp_Es (ModSem.prog ms_src) (interp_hCallE_src (E:=pE +' eventE) (trigger (hCall "main" ([]: list val)↑))) st_src0;;
          Ret (snd x0)); cycle 1.
     { admit "hard -- by transitivity". }
-    replace (x0 <- interp_Es (ModSem.prog ms_tgt) ((ModSem.prog ms_tgt) _ (Call "main" tt↑)) st_tgt0;;
+    replace (x0 <- interp_Es (ModSem.prog ms_tgt) ((ModSem.prog ms_tgt) _ (Call "main" ([]: list val)↑)) st_tgt0;;
              Ret (snd x0)) with
-        (x0 <- interp_Es (ModSem.prog ms_tgt) (interp_hCallE_tgt (E:=pE +' eventE) stb "Main" top (trigger (hCall "main" tt↑)))
+        (x0 <- interp_Es (ModSem.prog ms_tgt) (interp_hCallE_tgt (E:=pE +' eventE) stb "Main" top (trigger (hCall "main" ([]: list val)↑)))
                          st_tgt0;; Ret (snd x0)); cycle 1.
     { admit "hard -- by transitivity". }
     guclo bindC_spec.
