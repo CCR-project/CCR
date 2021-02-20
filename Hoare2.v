@@ -652,8 +652,7 @@ Notation "(⋅)" := URA.add (only parsing).
       econs.
       + guclo ordC_spec. econs; eauto. { instantiate (1:=Ordinal.from_nat 100). eapply from_nat_le; ss. lia. }
         gbase.
-        instantiate (1:=(fun '((rs_src, v_src): W * Any_src) '((rs_tgt, v_tgt): W * Any_tgt) => wf rs_src rs_tgt /\ v_src = v_tgt /\ exists (z: Z f), v_src↓ = Some z)).
-        TTTTTTTTTTTTTTTTTTTTTTTTTTTt
+        (* instantiate (1:=(fun '((rs_src, v_src): W * Any_src) '((rs_tgt, v_tgt): W * Any_tgt) => wf rs_src rs_tgt /\ v_src = v_tgt /\ exists (z: Z f), v_src↓ = Some z)). *)
         eapply CIH; et; try refl; revgoals.
         { instantiate (1:=(update c1 mn0 c, ε ⋅ rarg :: x1 :: l0, pst_tgt0)).
           instantiate (3:=(mn f)).
@@ -668,38 +667,11 @@ Notation "(⋅)" := URA.add (only parsing).
         clear - WFTGT x.
         rewrite URA.unit_idl.
         admit "ez -- updatable".
-      + bar. ii. des_ifs. des; subst. Set Printing Implicit. TTTTTTTTTTTTTTTTTTTTTTTTTt
-        unfold idK.
-        steps. unfold handle_rE.
-        r in SIM. des_ifs; ss. des; ss. destruct l; ss. des; ss.
-        steps. unfold put. unfold guarantee. steps.
-        unfold discard. unfold guarantee. steps.
-        esplits; et.
-        clear - WFTGT0 x3.
-        admit "ez -- updtaable".
-      erewrite insert_updown2 with (C:=Z f). with (i:=interp_hCallE_tgt stb (mn f) (measure f _) (fsb_body f y)).
-      Fail erewrite insert_updown with (i:=interp_Es p_tgt (interp_hCallE_tgt stb (mn f) (measure f _) (fsb_body f y)) (update c1 mn0 c, ε ⋅ rarg :: x1 :: l0, pst_tgt0)).
-      Unset Universe Checking.
-      erewrite insert_updown with (i:=interp_hCallE_tgt stb (mn f) (measure f _) (fsb_body f y)).
-      erewrite insert_updown with (i:=interp_Es p_tgt (interp_hCallE_tgt stb (mn f) (measure f _) (fsb_body f y)) (update c1 mn0 c, ε ⋅ rarg :: x1 :: l0, pst_tgt0)).
-      eapply bindR_intro with (R:=(r_state * p_state * Any_src)%type).
-      econs.
-      TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
-      + guclo ordC_spec. econs; eauto. { instantiate (1:=Ordinal.from_nat 100). eapply from_nat_le; ss. lia. }
-        gbase.
-        eapply CIH; et.
-        { refl. }
-        ss. esplits; ss; et.
-        clear - WFTGT x.
-        rewrite URA.unit_idl.
-        admit "ez -- updatable".
-      + bar. ii. des_ifs. des; subst. rename a into a_src.
-        unfold idK.
-        steps. unfold handle_rE.
-        r in SIM. des_ifs; ss. des; ss. destruct l; ss. des; ss.
-        steps. unfold put. unfold guarantee. steps.
-        unfold discard. unfold guarantee. steps.
-        esplits; et.
+      + bar. ii. des_ifs. des; subst. unfold unwrapN. des_ifs; cycle 1.
+        { steps. }
+        steps. unfold put. steps. unfold handle_rE. des_ifs. { steps. } steps.
+        unfold guarantee. steps. unfold discard. steps. unfold guarantee. steps.
+        ss. des. esplits; ss; et.
         clear - WFTGT0 x3.
         admit "ez -- updtaable".
     - ii. ss. des_ifs. des. (* rr in SIM0. des; ss. unfold RelationPairs.RelCompFun in *. ss. *)
@@ -712,21 +684,25 @@ Notation "(⋅)" := URA.add (only parsing).
       unshelve esplits; eauto.
       { clear - ST1. admit "ez". }
       steps. esplits; eauto.
-      unfold forge; steps. exists t.
+      unfold forge; steps. esplits; et.
       steps. unshelve esplits; eauto. steps.
       fold interp_hCallE_src. fold (interp_hCallE_tgt stb mn0).
       gbase. eapply CIH; [refl|ss|..]; cycle 1.
       { refl. }
-      { unfold interp_hCallE_tgt. refl. }
+      { unfold interp_hCallE_tgt.
+        assert(TMP: Any.upcast vret_src' = t). { clear - CAST0. admit "ADDDDDDDDDDDDDDDDDDDTO ANY.V". } rewrite TMP. refl. }
       rr. esplits; et. { destruct l3; ss. } clear - ST1. admit "ez".
   Unshelve.
     all: ss.
     all: try (by apply Ordinal.O).
   Qed.
 
+  Definition mk_simple (mn: string) {X: Type} (P: X -> Any_tgt -> Σ -> Prop) (Q: X -> Any_tgt -> Σ -> Prop) (measure: X -> ord): fspec :=
+    @mk mn X (list val) (val) (fun x y a r => P x a r /\ y↑ = a) (fun x z a r => Q x a r /\ z↑ = a) measure.
+
   Hypothesis MAIN: List.find (fun '(_fn, _) => dec "main" _fn) stb = Some ("main",
     (* (@mk "Main" unit (fun _ varg_high _ _ => varg_high = tt↑) (fun _ vret_high _ _ => vret_high = tt↑) (fun _ => None))). *)
-    (@mk "Main" unit (fun _ varg_high varg_low _ => varg_high = varg_low) (fun _ vret_high vret_low _ => vret_high = vret_low) (fun _ => top))).
+    (@mk_simple "Main" unit top3 top3 (fun _ => top))).
   Hypothesis WFR: URA.wf (rsum (ModSem.initial_r_state ms_tgt)).
 
   Opaque interp_Es.
@@ -784,9 +760,9 @@ Notation "(⋅)" := URA.add (only parsing).
     (* } *)
     assert(TRANSL: simg eq (Ordinal.from_nat 100)
 (x0 <- interp_Es (ModSem.prog ms_src)
-                 ((ModSem.prog ms_src) _ (Call "main" tt↑)) st_src0;; Ret (snd x0))
+                 ((ModSem.prog ms_src) _ (Call "main" ([]: list val)↑)) st_src0;; Ret (snd x0))
 (x0 <- interp_Es (ModSem.prog ms_src)
-                 (interp_hCallE_src (E:=pE +' eventE) (trigger (hCall "main" tt↑))) st_src0;; Ret (snd x0))).
+                 (interp_hCallE_src (E:=pE +' eventE) (trigger (hCall "main" ([]: list val)↑))) st_src0;; Ret (snd x0))).
     { clear SIM. ginit. { eapply cpn5_wcompat; eauto with paco. }
       unfold interp_hCallE_src. rewrite unfold_interp. ss. cbn. steps.
       replace (Ordinal.from_nat 99) with (Ordinal.add (Ordinal.from_nat 50) (Ordinal.from_nat 49))
@@ -798,9 +774,9 @@ Notation "(⋅)" := URA.add (only parsing).
     }
     assert(TRANSR: simg eq (Ordinal.from_nat 100)
 (x0 <- interp_Es (ModSem.prog ms_tgt)
-                 (interp_hCallE_tgt (E:=pE +' eventE) stb "Main" top (trigger (hCall "main" tt↑))) st_tgt0;; Ret (snd x0))
+                 (interp_hCallE_tgt (E:=pE +' eventE) stb "Main" top (trigger (hCall "main" ([]: list val)↑))) st_tgt0;; Ret (snd x0))
 (x0 <- interp_Es (ModSem.prog ms_tgt)
-                 ((ModSem.prog ms_tgt) _ (Call "main" tt↑)) st_tgt0;; Ret (snd x0))).
+                 ((ModSem.prog ms_tgt) _ (Call "main" ([]: list val)↑)) st_tgt0;; Ret (snd x0))).
     { clear SIM. ginit. { eapply cpn5_wcompat; eauto with paco. }
       unfold interp_hCallE_tgt. rewrite unfold_interp. steps.
       unfold HoareCall.
@@ -808,7 +784,7 @@ Notation "(⋅)" := URA.add (only parsing).
       { exfalso. clear - WF1 Heq MAINR. admit "ez - use WF1". }
       destruct p; ss.
       assert(s = "Main") by admit "ez". clarify.
-      (* rewrite Any.upcast_downcast. *)
+      rewrite Any.upcast_downcast.
       steps. eexists ((fst (fst st_tgt0)) "Main", ε). steps.
       unfold put, guarantee. steps. unfold st_tgt0. steps.
       ss.
@@ -816,7 +792,7 @@ Notation "(⋅)" := URA.add (only parsing).
       { refl. }
       steps. esplits; et. steps. unfold discard, guarantee. steps. esplits; et. steps. unshelve esplits; et.
       { instantiate (1:=ε). rewrite URA.unit_id. ss. }
-      steps. unfold guarantee. steps. esplits; et. steps. exists (tt↑).
+      steps. unfold guarantee. steps. esplits; et. steps. exists (([]: list val)↑).
       replace (update
                  (fun mn0 : string =>
                     match find (fun mnr => dec mn0 (fst mnr)) (ModSem.initial_mrs ms_tgt) with
@@ -835,19 +811,19 @@ Notation "(⋅)" := URA.add (only parsing).
         unfold ModSem.handle_rE. des_ifs.
         { admit "we should use stronger RR, not eq;
 we should know that stackframe is not popped (unary property)". }
-        steps. unfold forge; steps.
+        steps. unfold forge; steps. des; ss.
     }
 
 
 
-    replace (x0 <- interp_Es (ModSem.prog ms_src) ((ModSem.prog ms_src) _ (Call "main" tt↑)) st_src0;;
+    replace (x0 <- interp_Es (ModSem.prog ms_src) ((ModSem.prog ms_src) _ (Call "main" ([]: list val)↑)) st_src0;;
              Ret (snd x0)) with
-        (x0 <- interp_Es (ModSem.prog ms_src) (interp_hCallE_src (E:=pE +' eventE) (trigger (hCall "main" tt↑))) st_src0;;
+        (x0 <- interp_Es (ModSem.prog ms_src) (interp_hCallE_src (E:=pE +' eventE) (trigger (hCall "main" ([]: list val)↑))) st_src0;;
          Ret (snd x0)); cycle 1.
     { admit "hard -- by transitivity". }
-    replace (x0 <- interp_Es (ModSem.prog ms_tgt) ((ModSem.prog ms_tgt) _ (Call "main" tt↑)) st_tgt0;;
+    replace (x0 <- interp_Es (ModSem.prog ms_tgt) ((ModSem.prog ms_tgt) _ (Call "main" ([]: list val)↑)) st_tgt0;;
              Ret (snd x0)) with
-        (x0 <- interp_Es (ModSem.prog ms_tgt) (interp_hCallE_tgt (E:=pE +' eventE) stb "Main" top (trigger (hCall "main" tt↑)))
+        (x0 <- interp_Es (ModSem.prog ms_tgt) (interp_hCallE_tgt (E:=pE +' eventE) stb "Main" top (trigger (hCall "main" ([]: list val)↑)))
                          st_tgt0;; Ret (snd x0)); cycle 1.
     { admit "hard -- by transitivity". }
     guclo bindC_spec.
