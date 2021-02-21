@@ -219,6 +219,81 @@ Section SIM.
   (*** TODO: sim_syscall is nontrivial; it should accept "injected" memory... ***)
   (*** TODO: simplify the model: Syscall: list val -> val ***)
 
+  | sim_itree_choose_both
+      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      X_src X_tgt k_src k_tgt
+      (K: forall (x_tgt: X_tgt), exists (x_src: X_src) i1, sim_itree i1 ((mrs_src0, fr_src0), k_src x_src) ((mrs_tgt0, fr_tgt0), k_tgt x_tgt))
+    :
+      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (Choose X_src) >>= k_src)
+                 ((mrs_tgt0, fr_tgt0), trigger (Choose X_tgt) >>= k_tgt)
+  | sim_itree_take_both
+      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      X_src X_tgt k_src k_tgt
+      (K: forall (x_src: X_src), exists (x_tgt: X_tgt) i1, sim_itree i1 ((mrs_src0, fr_src0), k_src x_src) ((mrs_tgt0, fr_tgt0), k_tgt x_tgt))
+    :
+      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (Take X_src) >>= k_src)
+                 ((mrs_tgt0, fr_tgt0), trigger (Take X_tgt) >>= k_tgt)
+  | sim_itree_pput_both
+      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i1 k_src k_tgt
+      mn mr_src0 mr_tgt0 mp_src1 mp_tgt1 mrs_src1 mrs_tgt1 mp_src0 mp_tgt0
+      (MRSRC: Maps.lookup mn mrs_src0 = Some (mr_src0, mp_src0))
+      (MRTGT: Maps.lookup mn mrs_tgt0 = Some (mr_tgt0, mp_tgt0))
+      (EQSRC: mrs_src1 = Maps.add mn (mr_src0, mp_src1) mrs_src0)
+      (EQTGT: mrs_tgt1 = Maps.add mn (mr_tgt0, mp_tgt1) mrs_tgt0)
+      (K: sim_itree i1 ((mrs_src1, fr_src0), k_src tt) ((mrs_tgt1, fr_tgt0), k_tgt tt))
+    :
+      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (PPut mn mp_src1) >>= k_src)
+                 ((mrs_tgt0, fr_tgt0), trigger (PPut mn mp_tgt1) >>= k_tgt)
+  | sim_itree_mput_both
+      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i1 k_src k_tgt
+      mn mr_src0 mr_tgt0 mr_src1 mr_tgt1 mrs_src1 mrs_tgt1 mp_src0 mp_tgt0
+      (MRSRC: Maps.lookup mn mrs_src0 = Some (mr_src0, mp_src0))
+      (MRTGT: Maps.lookup mn mrs_tgt0 = Some (mr_tgt0, mp_tgt0))
+      (EQSRC: mrs_src1 = Maps.add mn (mr_src1, mp_src0) mrs_src0)
+      (EQSRC: mrs_tgt1 = Maps.add mn (mr_tgt1, mp_tgt0) mrs_tgt0)
+      (K: sim_itree i1 ((mrs_src1, fr_src0), k_src tt) ((mrs_tgt1, fr_tgt0), k_tgt tt))
+    :
+      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (MPut mn mr_src1) >>= k_src)
+                 ((mrs_tgt0, fr_tgt0), trigger (MPut mn mr_tgt1) >>= k_tgt)
+  | sim_itree_fput_both
+      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i1 k_src k_tgt
+      fr_src1 fr_tgt1
+      (K: sim_itree i1 ((mrs_src0, fr_src1), k_src tt) ((mrs_tgt0, fr_tgt1), k_tgt tt))
+    :
+      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (FPut fr_src1) >>= k_src)
+                 ((mrs_tgt0, fr_tgt0), trigger (FPut fr_tgt1) >>= k_tgt)
+  | sim_itree_pget_both
+      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i1 k_src k_tgt
+      mn mr_src0 mp_src0 mr_tgt0 mp_tgt0
+      (MRSRC: Maps.lookup mn mrs_src0 = Some (mr_src0, mp_src0))
+      (MRTGT: Maps.lookup mn mrs_tgt0 = Some (mr_tgt0, mp_tgt0))
+      (K: sim_itree i1 ((mrs_src0, fr_src0), k_src mp_src0) ((mrs_tgt0, fr_tgt0), k_tgt mp_tgt0))
+    :
+      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (PGet mn) >>= k_src)
+                 ((mrs_tgt0, fr_tgt0), trigger (PGet mn) >>= k_tgt)
+  | sim_itree_mget_both
+      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i1 k_src k_tgt
+      mn mr_src0 mp_src0 mr_tgt0 mp_tgt0
+      (MRSRC: Maps.lookup mn mrs_src0 = Some (mr_src0, mp_src0))
+      (MRTGT: Maps.lookup mn mrs_tgt0 = Some (mr_tgt0, mp_tgt0))
+      (K: sim_itree i1 ((mrs_src0, fr_src0), k_src mr_src0) ((mrs_tgt0, fr_tgt0), k_tgt mr_tgt0))
+    :
+      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (MGet mn) >>= k_src)
+                 ((mrs_tgt0, fr_tgt0), trigger (MGet mn) >>= k_tgt)
+  | sim_itree_fget_both
+      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i1 k_src k_tgt
+      (K: sim_itree i1 ((mrs_src0, fr_src0), k_src fr_src0) ((mrs_tgt0, fr_tgt0), k_tgt fr_tgt0))
+    :
+      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (FGet) >>= k_src)
+                 ((mrs_tgt0, fr_tgt0), trigger (FGet) >>= k_tgt)
+
+
 
   | sim_itree_tau_src
       i0 st_src0 st_tgt0
@@ -403,6 +478,7 @@ Section SIM.
     ii. inv IN; try (by des; econs; ss; et).
     - econs; ss; et. ii. exploit K; et. i; des. esplits; et.
     - econs; ss; et. ii. exploit K; et. i; des. esplits; et.
+    - econs; ss; et. ii. exploit K; et. i; des. esplits; et.
   Qed.
 
   Hint Constructors _sim_itree.
@@ -418,6 +494,138 @@ Section SIM.
   Definition sim_fnsem: relation (string * (Any.t -> itree Es Any.t)) := RelProd eq sim_fsem.
 
 End SIM.
+Hint Resolve sim_itree_mon: paco.
+
+Variant _wf_function `{Σ: GRA.t} (ms: list mname)
+        (wf_function: itree Es Any.t -> Prop) (st0: itree Es Any.t): Prop :=
+| wf_function_ret
+    v
+    (RET: st0 = Ret v)
+| wf_function_tau
+    st1
+    (TAU: st0 = Tau st1)
+    (WF: wf_function st1)
+| wf_function_choose
+    X k
+    (VIS: st0 = trigger (Choose X) >>= k)
+    (WF: forall x, wf_function (k x))
+| wf_function_take
+    X k
+    (VIS: st0 = trigger (Take X) >>= k)
+    (WF: forall x, wf_function (k x))
+| wf_function_pput
+    mn mp k
+    (VIS: st0 = trigger (PPut mn mp) >>= k)
+    (MN: List.In mn ms)
+    (WF: forall x, wf_function (k x))
+| wf_function_mput
+    mn mr k
+    (VIS: st0 = trigger (MPut mn mr) >>= k)
+    (MN: List.In mn ms)
+    (WF: forall x, wf_function (k x))
+| wf_function_fput
+    fr k
+    (VIS: st0 = trigger (FPut fr) >>= k)
+    (WF: forall x, wf_function (k x))
+| wf_function_pget
+    mn k
+    (VIS: st0 = trigger (PGet mn) >>= k)
+    (MN: List.In mn ms)
+    (WF: forall x, wf_function (k x))
+| wf_function_mget
+    mn k
+    (VIS: st0 = trigger (MGet mn) >>= k)
+    (MN: List.In mn ms)
+    (WF: forall x, wf_function (k x))
+| wf_function_fget
+    k
+    (VIS: st0 = trigger (FGet) >>= k)
+    (WF: forall x, wf_function (k x))
+.
+
+Lemma wf_function_gen_mon `{Σ: GRA.t} (ms: list mname):
+  monotone1 (_wf_function ms).
+Proof.
+  ii. inv IN.
+  - econs 1; eauto.
+  - econs 2; eauto.
+  - econs 3; eauto.
+  - econs 4; eauto.
+  - econs 5; eauto.
+  - econs 6; eauto.
+  - econs 7; eauto.
+  - econs 8; eauto.
+  - econs 9; eauto.
+  - econs 10; eauto.
+Qed.
+Hint Resolve wf_function_gen_mon: paco.
+
+Definition wf_function `{Σ: GRA.t} (ms: list mname) := paco1 (_wf_function ms) bot1.
+
+Lemma wf_function_mon `{Σ: GRA.t} (ms0 ms1: list mname)
+      (LE: forall mn (IN: List.In mn ms0), List.In mn ms1):
+  wf_function ms0 <1= wf_function ms1.
+Proof.
+  pcofix CIH. i. pfold.
+  punfold PR. inv PR; pclearbot.
+  - econs 1; eauto.
+  - econs 2; eauto.
+  - econs 3; eauto. i. right. eapply CIH. eapply WF.
+  - econs 4; eauto. i. right. eapply CIH. eapply WF.
+  - econs 5; eauto. i. right. eapply CIH. eapply WF.
+  - econs 6; eauto. i. right. eapply CIH. eapply WF.
+  - econs 7; eauto. i. right. eapply CIH. eapply WF.
+  - econs 8; eauto. i. right. eapply CIH. eapply WF.
+  - econs 9; eauto. i. right. eapply CIH. eapply WF.
+  - econs 10; eauto. i. right. eapply CIH. eapply WF.
+Qed.
+
+Definition wf_mrs `{Σ: GRA.t} (ms: list mname) (mrs: alist mname (Σ * Any.t)): Prop :=
+  forall mn (IN: List.In mn ms),
+  exists mr mp, <<FIND: Maps.lookup mn mrs = Some (mr, mp)>>.
+
+Lemma wf_mrs_add `{Σ: GRA.t} (ms: list mname) (mrs: alist mname (Σ * Any.t))
+      (WF: wf_mrs ms mrs)
+      mn mr:
+  wf_mrs ms (Maps.add mn mr mrs).
+Proof.
+  ii. destruct (string_Dec mn mn0).
+  - subst. destruct mr as [mr mp]. exists mr, mp. eapply mapsto_lookup.
+    eapply mapsto_add_eq.
+  - hexploit (WF mn0); auto. i. des.
+    exists mr0, mp. eapply mapsto_lookup.
+    erewrite <- mapsto_add_neq; eauto.
+Qed.
+
+Lemma self_sim_itree `{Σ: GRA.t} (ms: list mname):
+  forall n mrs fr st
+         (WF: wf_function ms st)
+         (MRS: wf_mrs ms mrs),
+    @sim_itree _ (fun p => fst p = snd p /\ wf_mrs ms (fst p))
+               n ((mrs, fr), st) ((mrs, fr), st).
+Proof.
+  pcofix CIH. i. pfold. punfold WF. inv WF; pclearbot.
+  - eapply sim_itree_ret. ss.
+  - eapply sim_itree_tau. right. eapply CIH; ss.
+  - eapply sim_itree_choose_both. i. exists x_tgt.
+    eexists. right. eapply CIH; ss.
+  - eapply sim_itree_take_both. i. exists x_src.
+    eexists. right. eapply CIH; ss.
+  - hexploit (MRS mn); eauto. i. des.
+    eapply sim_itree_pput_both; eauto.
+    right. eapply CIH; ss. apply wf_mrs_add. auto.
+  - hexploit (MRS mn); eauto. i. des.
+    eapply sim_itree_mput_both; eauto. right. eapply CIH; ss.
+    eapply wf_mrs_add; eauto.
+  - eapply sim_itree_fput_both; eauto. right. eapply CIH; ss.
+  - hexploit (MRS mn); eauto. i. des.
+    eapply sim_itree_pget_both; eauto.
+    right. eapply CIH; ss.
+  - hexploit (MRS mn); eauto. i. des.
+    eapply sim_itree_mget_both; eauto. right. eapply CIH; ss.
+  - eapply sim_itree_fget_both; eauto. right. eapply CIH; ss.
+    Unshelve. all: exact 0.
+Qed.
 
 
 
@@ -457,6 +665,425 @@ Section SIMMODSEM.
   }.
 
 End SIMMODSEM.
+
+Section ADD.
+  Context `{Σ: GRA.t}.
+
+  Let W: Type := (alist mname (Σ * Any.t)) * (alist mname (Σ * Any.t)).
+
+  Variant add_wf
+          (ms_src0 ms_src1 ms_tgt0 ms_tgt1: list mname)
+          (wf0 wf1: W -> Prop):
+    W -> Prop :=
+  | add_wf_intro
+      mrs_src mrs_tgt
+      (WF0: wf0 (filter _ (fun mn _ => in_dec string_Dec mn ms_src0) mrs_src,
+                 filter _ (fun mn _ => in_dec string_Dec mn ms_tgt0) mrs_tgt))
+      (WF1: wf1 (filter _ (fun mn _ => in_dec string_Dec mn ms_src1) mrs_src,
+                 filter _ (fun mn _ => in_dec string_Dec mn ms_tgt1) mrs_tgt))
+      (NDSRC: NoDup (List.map fst mrs_src))
+      (NDTGT: NoDup (List.map fst mrs_tgt))
+    :
+      add_wf ms_src0 ms_src1 ms_tgt0 ms_tgt1 wf0 wf1 (mrs_src, mrs_tgt)
+  .
+
+  Lemma add_wf_sym ms_src0 ms_src1 ms_tgt0 ms_tgt1 wf0 wf1 mrs_src mrs_tgt
+        (WF: add_wf ms_src0 ms_src1 ms_tgt0 ms_tgt1 wf0 wf1 (mrs_src, mrs_tgt))
+    :
+      add_wf ms_src1 ms_src0 ms_tgt1 ms_tgt0 wf1 wf0 (mrs_src, mrs_tgt).
+  Proof.
+    inv WF. econs; eauto.
+  Qed.
+
+  Lemma sim_itree_sym wf0 wf1 (EQV: forall w, wf0 w <-> wf1 w)
+        n ms_src ms_tgt
+        (SIM: sim_itree wf0 n ms_src ms_tgt)
+    :
+      sim_itree wf1 n ms_src ms_tgt.
+  Proof.
+    assert (EQV0: forall w, wf0 w -> wf1 w).
+    { i. apply EQV. auto. }
+    assert (EQV1: forall w, wf1 w -> wf0 w).
+    { i. apply EQV. auto. } clear EQV.
+    revert n ms_src ms_tgt SIM. pcofix CIH. i. pfold.
+    punfold SIM. inv SIM; pclearbot.
+    - econs 1; eauto.
+    - econs 2; eauto.
+    - econs 3; eauto. i.
+      clear WF. hexploit K; eauto. i. des. pclearbot. eauto.
+    - econs 4; eauto. i.
+      hexploit K; eauto. i. des. pclearbot. esplits; eauto.
+    - econs 5; eauto. i.
+      hexploit K; eauto. i. des. pclearbot. esplits; eauto.
+    - econs 6; eauto.
+    - econs 7; eauto.
+    - econs 8; eauto.
+    - econs 9; eauto.
+    - econs 10; eauto.
+    - econs 11; eauto.
+    - econs 12; eauto.
+    - econs 13; eauto. des. pclearbot. esplits; eauto.
+    - econs 14; eauto. i. hexploit K; eauto.
+    - econs 15; eauto.
+    - econs 16; eauto.
+    - econs 17; eauto.
+    - econs 18; eauto.
+    - econs 19; eauto.
+    - econs 20; eauto.
+    - econs 21; eauto.
+    - econs 22; eauto. i. hexploit K; eauto.
+    - econs 23; eauto. des. pclearbot. esplits; eauto.
+    - econs 24; eauto.
+    - econs 25; eauto.
+    - econs 26; eauto.
+    - econs 27; eauto.
+    - econs 28; eauto.
+    - econs 29; eauto.
+  Qed.
+
+  Lemma lookup_filter ms (mrs: alist mname (Σ * Any.t)) mn mr
+        (LOOK: lookup mn (filter _ (fun mn _ => in_dec string_Dec mn ms) mrs) = Some mr)
+        (ND: NoDup (List.map fst mrs))
+    :
+      lookup mn mrs = Some mr.
+  Proof.
+  Admitted.
+
+  Lemma add_filter ms (mrs: alist mname (Σ * Any.t)) mn mr0 mr
+        (LOOK: lookup mn (filter _ (fun mn _ => in_dec string_Dec mn ms) mrs) = Some mr0)
+        (ND: NoDup (List.map fst mrs))
+    :
+      filter _ (fun mn _ => in_dec string_Dec mn ms) (add mn mr mrs) =
+      add mn mr (filter _ (fun mn _ => in_dec string_Dec mn ms) mrs).
+  Proof.
+  Admitted.
+
+  Lemma add_other_filter ms0 ms1 (mrs: alist mname (Σ * Any.t)) mn mr mr0
+        (LOOK: lookup mn (filter _ (fun mn _ => in_dec string_Dec mn ms0) mrs) = Some mr0)
+        (ND: forall mn' mr0' mr1'
+                    (IN0: lookup mn' (filter _ (fun mn _ => in_dec string_Dec mn ms0) mrs) = Some mr0')
+                    (IN1: lookup mn' (filter _ (fun mn _ => in_dec string_Dec mn ms1) mrs) = Some mr1'),
+            False)
+    :
+      filter _ (fun mn _ => in_dec string_Dec mn ms1) (add mn mr mrs) =
+      filter _ (fun mn _ => in_dec string_Dec mn ms1) mrs.
+  Proof.
+  Admitted.
+
+  Lemma nodup_add (mrs: alist mname (Σ * Any.t)) mn mr0 mr1
+        (ND: NoDup (List.map fst mrs))
+        (FIND: lookup mn mrs = Some mr0)
+    :
+      NoDup (List.map fst (add mn mr1 mrs)).
+  Proof.
+  Admitted.
+
+  Lemma nodup_disjoint ms0 ms1 (mrs: alist mname (Σ * Any.t))
+        (DISJOINT: forall mn (IN0: List.In mn ms0) (IN1: List.In mn ms1), False)
+    :
+      forall mn mr0 mr1
+             (IN0: lookup mn (filter _ (fun mn _ => in_dec string_Dec mn ms0) mrs) = Some mr0)
+             (IN1: lookup mn (filter _ (fun mn _ => in_dec string_Dec mn ms1) mrs) = Some mr1),
+        False.
+  Proof.
+  Admitted.
+
+  Lemma app_nodup A (l0 l1: list A) (ND: NoDup (l0 ++ l1))
+    :
+      forall a
+             (IN0: In a l0)
+             (IN1: In a l1),
+        False.
+  Proof.
+    revert l0 ND. induction l0; ss. i. inv ND. des; subst.
+    { eapply H1. eapply in_or_app. auto. }
+    { eapply IHl0; eauto. }
+  Qed.
+
+  Lemma disjoint_filter_l (mrs0 mrs1: alist mname (Σ * Any.t))
+        (DISJSRC: forall mn
+                         (IN0: In mn (List.map fst mrs0))
+                         (IN1: In mn (List.map fst mrs1)),
+            False)
+    :
+      filter _ (fun mn _ => in_dec string_Dec mn (List.map fst mrs0)) (mrs0 ++ mrs1) = mrs0.
+  Proof.
+  Admitted.
+
+  Lemma disjoint_filter_r (mrs0 mrs1: alist mname (Σ * Any.t))
+        (DISJSRC: forall mn
+                         (IN0: In mn (List.map fst mrs0))
+                         (IN1: In mn (List.map fst mrs1)),
+            False)
+    :
+      filter _ (fun mn _ => in_dec string_Dec mn (List.map fst mrs1)) (mrs0 ++ mrs1) = mrs1.
+  Proof.
+  Admitted.
+
+  Lemma add_sim_itree ms_src0 ms_src1 ms_tgt0 ms_tgt1 (wf0 wf1: W -> Prop)
+        (DISJSRC: forall mn
+                         (IN0: In mn ms_src1)
+                         (IN1: In mn ms_src0),
+            False)
+        (DISJTGT: forall mn
+                         (IN0: In mn ms_tgt1)
+                         (IN1: In mn ms_tgt0),
+            False)
+    : forall st_src st_tgt fr_src fr_tgt mrs_src mrs_tgt n
+             (SIM: sim_itree wf1 n
+                             (filter _ (fun mn _ => in_dec string_Dec mn ms_src1)
+                                     mrs_src, fr_src, st_src)
+                             (filter _ (fun mn _ => in_dec string_Dec mn ms_tgt1)
+                                     mrs_tgt, fr_tgt, st_tgt))
+             (WF: wf0 (filter _ (fun mn _ => in_dec string_Dec mn ms_src0)
+                              mrs_src,
+                       filter _ (fun mn _ => in_dec string_Dec mn ms_tgt0)
+                              mrs_tgt))
+             (NDSRC: NoDup (List.map fst mrs_src))
+             (NDTGT: NoDup (List.map fst mrs_tgt)),
+      sim_itree
+        (add_wf ms_src0 ms_src1 ms_tgt0 ms_tgt1 wf0 wf1) n
+        (mrs_src, fr_src, st_src) (mrs_tgt, fr_tgt, st_tgt).
+  Proof.
+    pcofix CIH. i.
+    pfold. punfold SIM. inv SIM; pclearbot.
+    * econs 1. econs; eauto.
+    * econs 2. right. eapply CIH; eauto.
+    * econs 3; eauto.
+      { econs; eauto. }
+      { i. inv WF1. exploit K; eauto. i. des. pclearbot.
+        exists i1. right. eapply CIH; eauto. }
+    * econs 4; eauto.
+      i. hexploit K; eauto. i. des. pclearbot. esplits; eauto.
+    * econs 5; eauto.
+      i. hexploit K; eauto. i. des. pclearbot. esplits; eauto.
+    * econs 6; eauto.
+      { eapply lookup_filter; eauto. }
+      { eapply lookup_filter; eauto. }
+      { right. eapply CIH; eauto.
+        { repeat erewrite add_filter; eauto. }
+        { repeat erewrite add_other_filter; eauto.
+          { eapply nodup_disjoint; eauto. }
+          { eapply nodup_disjoint; eauto. }
+        }
+        { eapply nodup_add; eauto. eapply lookup_filter; eauto. }
+        { eapply nodup_add; eauto. eapply lookup_filter; eauto. }
+      }
+
+        { eapply nodup_disjoint; eauto. }
+
+          disjoint_filter_l.
+        { repeat erewrite add_filter; eauto. }
+        {
+          repeat erewrite add_filter; eauto.
+
+        }
+        {
+
+
+          in *; eauto.
+        eapply K.
+
+      i. he
+
+      exists i1. splits; auto. right. eapply CIH; eauto.
+      { erewrite add_filter; eauto.
+        erewrite add_filter; eauto. }
+      { erewrite add_other_filter; eauto.
+        2: { eapply nodup_disjoint; eauto. }
+        erewrite add_other_filter; eauto.
+        eapply nodup_disjoint; eauto. }
+      { eapply nodup_add; eauto. eapply lookup_filter; eauto. }
+      { eapply nodup_add; eauto. eapply lookup_filter; eauto. }
+    * econs 5; eauto.
+      { eapply lookup_filter; eauto. }
+      { eapply lookup_filter; eauto. }
+    * econs 6; eauto.
+    * econs 7; eauto.
+    * econs 8; eauto. i. hexploit K; eauto. i. des. pclearbot.
+      esplits; eauto.
+    * econs 9; eauto.
+      { eapply lookup_filter; eauto. }
+      { eapply lookup_filter; eauto. }
+      i. hexploit K; auto. i. des. pclearbot.
+      splits; auto. right. eapply CIH; eauto.
+    * econs 10; eauto. i. hexploit K; eauto. i. des. pclearbot.
+      esplits; eauto.
+    * econs 11; eauto. i. hexploit K; eauto. i. des. pclearbot.
+      esplits; eauto.
+    * econs 12; eauto. i. hexploit K; eauto.
+    * econs 13; eauto.
+    * econs 14; eauto.
+      { eapply lookup_filter; eauto. }
+      right. eapply CIH; eauto.
+      { erewrite add_filter; eauto. }
+      { erewrite add_other_filter; eauto.
+        eapply nodup_disjoint; eauto. }
+      { eapply nodup_add; eauto. eapply lookup_filter; eauto. }
+    * econs 15; eauto. eapply lookup_filter; eauto.
+    * econs 16; eauto.
+    * econs 17; eauto.
+    * econs 18; eauto.
+    * econs 19; eauto.
+      { eapply lookup_filter; eauto. }
+      i. hexploit K; eauto. i. pclearbot.
+      right. eapply CIH; eauto.
+    * econs 20; eauto. des. pclearbot.
+      eexists. right. eapply CIH; eauto.
+    * econs 21; eauto. i. hexploit K; auto. i.
+      right. eapply CIH; eauto.
+    * econs 22; eauto.
+    * econs 23; eauto.
+      { eapply lookup_filter; eauto. }
+      i. hexploit K; eauto. i. pclearbot.
+      right. eapply CIH; eauto.
+      { erewrite add_filter; eauto. }
+      { erewrite add_other_filter; eauto.
+        eapply nodup_disjoint; eauto. }
+      { eapply nodup_add; eauto. eapply lookup_filter; eauto. }
+    * econs 24; eauto.
+      { eapply lookup_filter; eauto. }
+    * econs 25; eauto.
+    * econs 26; eauto.
+    * econs 27; eauto. i. hexploit K; eauto. i. pclearbot.
+      right. eapply CIH; eauto.
+    * econs 28; eauto.
+      { eapply lookup_filter; eauto. }
+      des. pclearbot. esplits; eauto.
+    * econs 29; eauto.
+      i. hexploit K; eauto.
+    * econs 30; eauto. des. pclearbot.
+      esplits; eauto.
+
+
+    * econs 4; eauto.
+      { eapply lookup_filter; eauto. }
+      { eapply lookup_filter; eauto. }
+      i. hexploit K; eauto. i. des. pclearbot.
+      exists i1. splits; auto. right. eapply CIH; eauto.
+      { erewrite add_filter; eauto.
+        erewrite add_filter; eauto. }
+      { erewrite add_other_filter; eauto.
+        2: { eapply nodup_disjoint; eauto. }
+        erewrite add_other_filter; eauto.
+        eapply nodup_disjoint; eauto. }
+      { eapply nodup_add; eauto. eapply lookup_filter; eauto. }
+      { eapply nodup_add; eauto. eapply lookup_filter; eauto. }
+    * econs 5; eauto.
+      { eapply lookup_filter; eauto. }
+      { eapply lookup_filter; eauto. }
+    * econs 6; eauto.
+    * econs 7; eauto.
+    * econs 8; eauto. i. hexploit K; eauto. i. des. pclearbot.
+      esplits; eauto.
+    * econs 9; eauto.
+      { eapply lookup_filter; eauto. }
+      { eapply lookup_filter; eauto. }
+      i. hexploit K; auto. i. des. pclearbot.
+      splits; auto. right. eapply CIH; eauto.
+    * econs 10; eauto. i. hexploit K; eauto. i. des. pclearbot.
+      esplits; eauto.
+    * econs 11; eauto. i. hexploit K; eauto. i. des. pclearbot.
+      esplits; eauto.
+    * econs 12; eauto. i. hexploit K; eauto.
+    * econs 13; eauto.
+    * econs 14; eauto.
+      { eapply lookup_filter; eauto. }
+      right. eapply CIH; eauto.
+      { erewrite add_filter; eauto. }
+      { erewrite add_other_filter; eauto.
+        eapply nodup_disjoint; eauto. }
+      { eapply nodup_add; eauto. eapply lookup_filter; eauto. }
+    * econs 15; eauto. eapply lookup_filter; eauto.
+    * econs 16; eauto.
+    * econs 17; eauto.
+    * econs 18; eauto.
+    * econs 19; eauto.
+      { eapply lookup_filter; eauto. }
+      i. hexploit K; eauto. i. pclearbot.
+      right. eapply CIH; eauto.
+    * econs 20; eauto. des. pclearbot.
+      eexists. right. eapply CIH; eauto.
+    * econs 21; eauto. i. hexploit K; auto. i.
+      right. eapply CIH; eauto.
+    * econs 22; eauto.
+    * econs 23; eauto.
+      { eapply lookup_filter; eauto. }
+      i. hexploit K; eauto. i. pclearbot.
+      right. eapply CIH; eauto.
+      { erewrite add_filter; eauto. }
+      { erewrite add_other_filter; eauto.
+        eapply nodup_disjoint; eauto. }
+      { eapply nodup_add; eauto. eapply lookup_filter; eauto. }
+    * econs 24; eauto.
+      { eapply lookup_filter; eauto. }
+    * econs 25; eauto.
+    * econs 26; eauto.
+    * econs 27; eauto. i. hexploit K; eauto. i. pclearbot.
+      right. eapply CIH; eauto.
+    * econs 28; eauto.
+      { eapply lookup_filter; eauto. }
+      des. pclearbot. esplits; eauto.
+    * econs 29; eauto.
+      i. hexploit K; eauto.
+    * econs 30; eauto. des. pclearbot.
+      esplits; eauto.
+  Qed.
+
+  Lemma add_modsempair (ms_src0 ms_src1 ms_tgt0 ms_tgt1: ModSem.t)
+        (WFSRC: ModSem.wf (ModSem.add ms_src0 ms_src1))
+        (WFTGT: ModSem.wf (ModSem.add ms_tgt0 ms_tgt1))
+        (SIM0: sim ms_src0 ms_tgt0)
+        (SIM1: sim ms_src1 ms_tgt1)
+    :
+      sim (ModSem.add ms_src0 ms_src1) (ModSem.add ms_tgt0 ms_tgt1).
+  Proof.
+    assert (DISJSRC: forall mn
+                            (IN0: In mn (List.map fst (ModSem.initial_mrs ms_src1)))
+                            (IN1: In mn (List.map fst (ModSem.initial_mrs ms_src0))),
+               False).
+    { inv WFSRC. ss. rewrite map_app in *.
+      i. eapply app_nodup in wf_initial_mrs; eauto. }
+    assert (DISJTGT: forall mn
+                            (IN0: In mn (List.map fst (ModSem.initial_mrs ms_tgt1)))
+                            (IN1: In mn (List.map fst (ModSem.initial_mrs ms_tgt0))),
+               False).
+    { inv WFTGT. ss. rewrite map_app in *.
+      i. eapply app_nodup in wf_initial_mrs; eauto. }
+    destruct SIM0 as [wf0 le0 le_PreOrder0 sim_fnsems0 sim_initial_mrs0].
+    destruct SIM1 as [wf1 le1 le_PreOrder1 sim_fnsems1 sim_initial_mrs1].
+    eapply mk with (wf:=add_wf (List.map fst ms_src0.(ModSem.initial_mrs))
+                               (List.map fst ms_src1.(ModSem.initial_mrs))
+                               (List.map fst ms_tgt0.(ModSem.initial_mrs))
+                               (List.map fst ms_tgt1.(ModSem.initial_mrs))
+                               wf0 wf1) (le:=top2); ss.
+    - eapply Forall2_app.
+      + eapply Forall2_impl; [|eauto].
+        i. destruct x0 as [fn0 f0]. destruct x1 as [fn1 f1].
+        inv PR. split; auto. ii. subst.
+        exploit (H0 y); [eauto|..].
+        { inv SIMMRS. eapply WF0. } i. des. exists n.
+        inv SIMMRS. hexploit add_sim_itree; [| |eauto|..]; eauto.
+        i. eapply sim_itree_sym; [..|eauto]. i. destruct w. split.
+        * i. eapply add_wf_sym. auto.
+        * i. eapply add_wf_sym. auto.
+      + eapply Forall2_impl; [|eauto ].
+        i. destruct x0 as [fn0 f0]. destruct x1 as [fn1 f1].
+        inv PR. split; auto. ii. subst.
+        exploit (H0 y); [eauto|..].
+        { inv SIMMRS. eapply WF1. } i. des. exists n.
+        inv SIMMRS. eapply add_sim_itree; eauto.
+    - inv WFSRC. inv WFTGT. econs; eauto.
+      + rewrite disjoint_filter_l; eauto.
+        rewrite disjoint_filter_l; eauto.
+      + rewrite disjoint_filter_r; eauto.
+        rewrite disjoint_filter_r; eauto.
+  Qed.
+
+End ADD.
+
+    apply wf_mrs_add. auto.
+
 End ModSemPair.
 
 
