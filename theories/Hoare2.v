@@ -176,7 +176,7 @@ Section CANCEL.
   | hCall
       (* (mn: mname) *)
       (* (P: list val -> Σ -> Prop) (Q: list val -> Σ -> val -> Σ -> Prop) *)
-      (fn: gname) (next: ord) (varg_src: Any_src): hCallE Any_src
+      (fn: gname) (varg_src: Any_src): hCallE Any_src
   .
 
   (*** spec table ***)
@@ -216,7 +216,7 @@ Section CANCEL.
   (****************** TODO: REMOVE ALL MATCH AND REPLACE IT WITH UNWRAPU  *****************)
   (****************** TODO: REMOVE ALL MATCH AND REPLACE IT WITH UNWRAPU  *****************)
   Definition handle_hCallE_src: hCallE ~> itree Es :=
-    fun _ '(hCall fn next varg_src) => if next then trigger (Choose _) else trigger (Call fn varg_src)
+    fun _ '(hCall fn varg_src) => trigger (Call fn varg_src)
   .
 
   Definition interp_hCallE_src `{E -< Es}: itree (hCallE +' E) ~> itree Es :=
@@ -230,65 +230,6 @@ Section CANCEL.
 
   Definition fun_to_src {AA AR} (body: AA -> itree (hCallE +' pE +' eventE) AR): (Any_src -> itree Es Any_src) :=
     cfun (body_to_src body)
-  .
-
-
-
-
-
-  Fixpoint _APC (cur: ord) (n: nat): itree (hCallE +' pE +' eventE) unit :=
-    match n with
-    | 0 => Ret tt
-    | S n =>
-      '(fn, next, varg) <- trigger (Choose _);;
-      trigger (hCall fn (ord_pure next) varg);;
-      _APC cur n
-    end.
-
-  Definition APC (cur: ord): itree (hCallE +' pE +' eventE) unit :=
-    n <- trigger (Choose _);; _APC cur n
-  .
-
-  Definition is_pure Y Z (body: ord -> Y -> itree Es Z): Prop :=
-    exists body',
-      body = fun cur y =>
-               match cur with
-               | ord_pure _ => interp_hCallE_src (APC cur);; trigger (Choose _)
-               | ord_top => body' cur y
-               end
-  .
-
-
-
-
-
-
-  Definition handle_hCallE_mid: hCallE ~> itree Es :=
-    fun _ '(hCall fn next varg_src) => trigger (Call fn (Any.pair next↑ varg_src))
-  .
-
-  Definition interp_hCallE_mid `{E -< Es}: itree (hCallE +' E) ~> itree Es :=
-    interp (case_ (bif:=sum1) (handle_hCallE_src)
-                  ((fun T X => trigger X): E ~> itree Es))
-  .
-
-  Definition body_to_mid {AA AR} (body: AA -> itree (hCallE +' pE +' eventE) AR): AA -> itree Es AR :=
-    fun varg_src => interp_hCallE_src (body varg_src)
-  .
-
-
-
-  (**
-unpure function --> cur can't be ord_pure.
-  pure function --> cur can both be ord_pure / ord_top (recall the boom/refresh/turnoff example)
-   **)
-  Definition fun_to_mid {AA AR} (body: AA -> itree (hCallE +' pE +' eventE) AR): (Any_src -> itree Es Any_src) :=
-    fun varg_src =>
-      '(cur, varg_src) <- varg_src↓ǃ;;
-      match cur with
-      | ord_pure _ => interp_hCallE_src (APC cur);; trigger (Choose _)
-      | ord_top => varg_ret <- ((body_to_mid body) varg_src);; Ret (varg_ret)↑
-      end
   .
 
 
