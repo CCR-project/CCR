@@ -104,18 +104,18 @@ Section PROOF.
 
 
   Definition HoareFun
-             (P: X -> Y -> Any_tgt -> Σ -> Prop)
+             (P: X -> Y -> Any_tgt -> Σ -> ord -> Prop)
              (Q: X -> Z -> Any_tgt -> Σ -> Prop)
-             (measure: X -> ord)
              (body: ord -> Y -> itree Es Z): Any_tgt -> itree Es Any_tgt := fun varg_tgt =>
     varg_src <- trigger (Take Y);;
     x <- trigger (Take X);;
     rarg <- trigger (Take Σ);; forge rarg;; (*** virtual resource passing ***)
     (checkWf mn);;
-    assume(P x varg_src varg_tgt rarg);; (*** precondition ***)
+    ord_cur <- trigger (Take _);;
+    assume(P x varg_src varg_tgt rarg ord_cur);; (*** precondition ***)
 
 
-    vret_src <- body (measure x) varg_src;; (*** "rudiment": we don't remove extcalls because of termination-sensitivity ***)
+    vret_src <- body ord_cur varg_src;; (*** "rudiment": we don't remove extcalls because of termination-sensitivity ***)
 
     vret_tgt <- trigger (Choose Any_tgt);;
     '(mret, fret) <- trigger (Choose _);; put mn mret fret;; (*** updating resources in an abstract way ***)
@@ -126,18 +126,18 @@ Section PROOF.
   .
 
   Definition HoareCall
-             (cur: ord)
-             (P: X -> Y -> Any_tgt -> Σ -> Prop)
-             (Q: X -> Z -> Any_tgt -> Σ -> Prop)
-             (measure: X -> ord):
+             (ord_cur: ord)
+             (P: X -> Y -> Any_tgt -> Σ -> ord -> Prop)
+             (Q: X -> Z -> Any_tgt -> Σ -> Prop):
     gname -> Y -> itree Es Z :=
     fun fn varg_src =>
       '(marg, farg) <- trigger (Choose _);; put mn marg farg;; (*** updating resources in an abstract way ***)
       rarg <- trigger (Choose Σ);; discard rarg;; (*** virtual resource passing ***)
       x <- trigger (Choose X);; varg_tgt <- trigger (Choose Any_tgt);;
-      guarantee(P x varg_src varg_tgt rarg);; (*** precondition ***)
+      ord_next <- trigger (Choose _);;
+      guarantee(P x varg_src varg_tgt rarg ord_next);; (*** precondition ***)
 
-      guarantee(ord_lt (measure x) cur);;
+      guarantee(ord_lt ord_next ord_cur);;
       vret_tgt <- trigger (Call fn varg_tgt);; (*** call ***)
       checkWf mn;;
 
@@ -185,9 +185,8 @@ Section CANCEL.
     X: Type; (*** a meta-variable ***)
     AA: Type;
     AR: Type;
-    precond: X -> AA -> Any_tgt -> Σ -> Prop; (*** meta-variable -> new logical arg -> current logical arg -> resource arg -> Prop ***)
+    precond: X -> AA -> Any_tgt -> Σ -> ord -> Prop; (*** meta-variable -> new logical arg -> current logical arg -> resource arg -> Prop ***)
     postcond: X -> AR -> Any_tgt -> Σ -> Prop; (*** meta-variable -> new logical ret -> current logical ret -> resource ret -> Prop ***)
-    measure: X -> ord;
   }
   .
 
@@ -241,7 +240,7 @@ Section CANCEL.
       match List.find (fun '(_fn, _) => dec fn _fn) stb with
       | Some (_, f) =>
         varg_src <- varg_src↓ǃ;;
-        vret_src <- (HoareCall (mn) cur (f.(precond)) (f.(postcond)) (f.(measure)) fn varg_src);;
+        vret_src <- (HoareCall (mn) cur (f.(precond)) (f.(postcond)) fn varg_src);;
         Ret vret_src↑
       | None => triggerNB
       end
@@ -259,7 +258,7 @@ Section CANCEL.
 
   Definition fun_to_tgt (fn: gname) (sb: fspecbody): (Any_tgt -> itree Es Any_tgt) :=
     let fs: fspec := sb.(fsb_fspec) in
-    HoareFun fs.(mn) (fs.(precond)) (fs.(postcond)) (fs.(measure)) (fun cur => body_to_tgt fs.(mn) cur sb.(fsb_body))
+    HoareFun fs.(mn) (fs.(precond)) (fs.(postcond)) (fun cur => body_to_tgt fs.(mn) cur sb.(fsb_body))
   .
 
 (*** NOTE:
@@ -645,9 +644,10 @@ Notation "(⋅)" := URA.add (only parsing).
       (* } *)
       (* steps. unfold assume. steps. *)
       (* esplits; eauto. steps. *)
+      unshelve esplits; eauto. steps.
       unfold body_to_src, body_to_tgt.
       guclo bindC_spec.
-      replace (Ordinal.from_nat 172) with (Ordinal.add (Ordinal.from_nat 42) (Ordinal.from_nat 130)); cycle 1.
+      replace (Ordinal.from_nat 168) with (Ordinal.add (Ordinal.from_nat 68) (Ordinal.from_nat 100)); cycle 1.
       { admit "ez - ordinal nat add". }
       (* match goal with *)
       (* | [ |- bindC _ ?d ?c ?a ?b ] => abstr a; abstr b; abstr c; abstr d *)
@@ -664,10 +664,9 @@ Notation "(⋅)" := URA.add (only parsing).
       { clear - Any_src. clear Any_src.
         ii. steps. Morphisms.f_equiv; apply func_ext_dep; i. grind. rewrite Any.upcast_downcast. ss. grind.
       }
-      instantiate (1:= x2).
-      erewrite insert_updown2 with (i:=interp_Es p_tgt (interp_hCallE_tgt stb (mn f) (measure f x2) (fsb_body f a)) (update c1 mn0 c, ε ⋅ rarg :: x1 :: l0, pst_tgt0)).
+      erewrite insert_updown2 with (i:=interp_Es p_tgt (interp_hCallE_tgt stb (mn f) x4 (fsb_body f a)) (update c1 mn0 c, ε ⋅ rarg :: x1 :: l0, pst_tgt0)).
       econs.
-      + guclo ordC_spec. econs; eauto. { instantiate (1:=Ordinal.from_nat 100). eapply from_nat_le; ss. lia. }
+      + guclo ordC_spec. econs; eauto. { instantiate (1:=Ordinal.from_nat 100). eapply from_nat_le; ss; try lia. }
         gbase.
         (* instantiate (1:=(fun '((rs_src, v_src): W * Any_src) '((rs_tgt, v_tgt): W * Any_tgt) => wf rs_src rs_tgt /\ v_src = v_tgt /\ exists (z: AR f), v_src↓ = Some z)). *)
         eapply CIH; et; try refl; revgoals.
@@ -716,12 +715,13 @@ Notation "(⋅)" := URA.add (only parsing).
     all: try (by apply Ordinal.O).
   Qed.
 
-  Definition mk_simple (mn: string) {X: Type} (P: X -> Any_tgt -> Σ -> Prop) (Q: X -> Any_tgt -> Σ -> Prop) (measure: X -> ord): fspec :=
-    @mk mn X (list val) (val) (fun x y a r => P x a r /\ y↑ = a) (fun x z a r => Q x a r /\ z↑ = a) measure.
+  (*** argument remains the same ***)
+  Definition mk_simple (mn: string) {X: Type} (P: X -> Any_tgt -> Σ -> ord -> Prop) (Q: X -> Any_tgt -> Σ -> Prop): fspec :=
+    @mk mn X (list val) (val) (fun x y a r o => P x a r o /\ y↑ = a) (fun x z a r => Q x a r /\ z↑ = a).
 
   Hypothesis MAIN: List.find (fun '(_fn, _) => dec "main" _fn) stb = Some ("main",
     (* (@mk "Main" unit (fun _ varg_high _ _ => varg_high = tt↑) (fun _ vret_high _ _ => vret_high = tt↑) (fun _ => None))). *)
-    (@mk_simple "Main" unit top3 top3 (fun _ => ord_top))).
+    (@mk_simple "Main" unit (fun _ _ _ o => o = ord_top) top3)).
   Hypothesis WFR: URA.wf (rsum (ModSem.initial_r_state ms_tgt)).
 
   Opaque interp_Es.
@@ -820,8 +820,10 @@ Notation "(⋅)" := URA.add (only parsing).
                     end) "Main" (fst p), [ε], ModSem.initial_p_state ms_tgt) with st_tgt0; cycle 1.
       { unfold st_tgt0.
         unfold ModSem.initial_r_state. f_equal. f_equal. apply func_ext. i. unfold update. des_ifs; ss; clarify. }
-      steps. esplits; et. steps. esplits; et. steps.
-      replace (Ordinal.from_nat 51) with (Ordinal.add (Ordinal.from_nat 41) (Ordinal.from_nat 10)) by admit "ez".
+      steps. esplits; et. steps. esplits; et. steps. unshelve esplits; eauto.
+      { r. des_ifs. }
+      steps.
+      replace (Ordinal.from_nat 47) with (Ordinal.add (Ordinal.from_nat 37) (Ordinal.from_nat 10)) by admit "ez".
       guclo bindC_spec.
       eapply bindR_intro with (RR:=eq).
       - fold st_tgt0. eapply simg_gpaco_refl. typeclasses eauto.
