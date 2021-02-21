@@ -76,6 +76,8 @@ Inductive ord: Type :=
 | ord_top
 .
 
+Definition is_pure (o: ord): bool := match o with | ord_pure _ => true | _ => false end.
+
 Definition ord_lt (next cur: ord): Prop :=
   match next, cur with
   | ord_pure next, ord_pure cur => (next < cur)%nat
@@ -126,6 +128,7 @@ Section PROOF.
   .
 
   Definition HoareCall
+             (tbr: bool)
              (ord_cur: ord)
              (P: X -> Y -> Any_tgt -> Σ -> ord -> Prop)
              (Q: X -> Z -> Any_tgt -> Σ -> Prop):
@@ -137,7 +140,7 @@ Section PROOF.
       ord_next <- trigger (Choose _);;
       guarantee(P x varg_src varg_tgt rarg ord_next);; (*** precondition ***)
 
-      guarantee(ord_lt ord_next ord_cur);;
+      guarantee(ord_lt ord_next ord_cur /\ (tbr = true -> is_pure ord_next));;
       vret_tgt <- trigger (Call fn varg_tgt);; (*** call ***)
       checkWf mn;;
 
@@ -173,10 +176,8 @@ Section CANCEL.
   Context `{Σ: GRA.t}.
 
   Variant hCallE: Type -> Type :=
-  | hCall
-      (* (mn: mname) *)
-      (* (P: list val -> Σ -> Prop) (Q: list val -> Σ -> val -> Σ -> Prop) *)
-      (fn: gname) (varg_src: Any_src): hCallE Any_src
+  | hCall (tbr: bool) (fn: gname) (varg_src: Any_src): hCallE Any_src
+  (*** tbr == to be removed ***)
   .
 
   (*** spec table ***)
@@ -215,7 +216,11 @@ Section CANCEL.
   (****************** TODO: REMOVE ALL MATCH AND REPLACE IT WITH UNWRAPU  *****************)
   (****************** TODO: REMOVE ALL MATCH AND REPLACE IT WITH UNWRAPU  *****************)
   Definition handle_hCallE_src: hCallE ~> itree Es :=
-    fun _ '(hCall fn varg_src) => trigger (Call fn varg_src)
+    fun _ '(hCall tbr fn varg_src) =>
+      match tbr with
+      | true => trigger (Choose _)
+      | false => trigger (Call fn varg_src)
+      end
   .
 
   Definition interp_hCallE_src `{E -< Es}: itree (hCallE +' E) ~> itree Es :=
@@ -236,11 +241,11 @@ Section CANCEL.
 
 
   Definition handle_hCallE_tgt (mn: mname) (cur: ord): hCallE ~> itree Es :=
-    fun _ '(hCall fn varg_src) =>
+    fun _ '(hCall tbr fn varg_src) =>
       match List.find (fun '(_fn, _) => dec fn _fn) stb with
       | Some (_, f) =>
         varg_src <- varg_src↓ǃ;;
-        vret_src <- (HoareCall (mn) cur (f.(precond)) (f.(postcond)) fn varg_src);;
+        vret_src <- (HoareCall (mn) tbr cur (f.(precond)) (f.(postcond)) fn varg_src);;
         Ret vret_src↑
       | None => triggerNB
       end
