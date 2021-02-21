@@ -178,7 +178,8 @@ Section CANCEL.
   Context `{Σ: GRA.t}.
 
   Variant hCallE: Type -> Type :=
-  | hCall (fn: gname) (next: ord) (varg_src: Any_src): hCallE Any_src
+  | hCall (fn: gname) (varg_src: Any_src): hCallE Any_src
+  | hCallPure: hCallE unit
   .
 
   (*** spec table ***)
@@ -218,7 +219,11 @@ Section CANCEL.
   (****************** TODO: REMOVE ALL MATCH AND REPLACE IT WITH UNWRAPU  *****************)
   (****************** TODO: REMOVE ALL MATCH AND REPLACE IT WITH UNWRAPU  *****************)
   Definition handle_hCallE_src: hCallE ~> itree Es :=
-    fun _ '(hCall fn next varg_src) => if next then trigger (Choose _) else trigger (Call fn varg_src)
+    fun _ he =>
+      match he with
+      | (hCall fn varg_src) => trigger (Call fn varg_src)
+      | _ => Ret tt
+      end
   .
 
   Definition interp_hCallE_src `{E -< Es}: itree (hCallE +' E) ~> itree Es :=
@@ -238,71 +243,117 @@ Section CANCEL.
 
 
 
-  Fixpoint _APC (cur: ord) (n: nat): itree (hCallE +' pE +' eventE) unit :=
+  Fixpoint _APC (n: nat): itree (hCallE +' pE +' eventE) unit :=
     match n with
     | 0 => Ret tt
     | S n =>
-      '(fn, next, varg) <- trigger (Choose _);;
-      trigger (hCall fn (ord_pure next) varg);;
-      _APC cur n
+      trigger (hCallPure);;
+      _APC n
     end.
 
-  Definition APC (cur: ord): itree (hCallE +' pE +' eventE) unit :=
-    n <- trigger (Choose _);; _APC cur n
+  Definition APC: itree (hCallE +' pE +' eventE) unit :=
+    n <- trigger (Choose _);; _APC n
   .
 
-  Definition is_pure Y Z (body: ord -> Y -> itree Es Z): Prop :=
-    exists body',
-      body = fun cur y =>
-               match cur with
-               | ord_pure _ => interp_hCallE_src (APC cur);; trigger (Choose _)
-               | ord_top => body' cur y
-               end
-  .
+  (* Definition is_pure Y Z (body: ord -> Y -> itree Es Z): Prop := *)
+  (*   exists body', *)
+  (*     body = fun cur y => *)
+  (*              match cur with *)
+  (*              | ord_pure _ => interp_hCallE_src (APC cur);; trigger (Choose _) *)
+  (*              | ord_top => body' cur y *)
+  (*              end *)
+  (* . *)
 
 
 
 
 
 
-  Definition handle_hCallE_mid: hCallE ~> itree Es :=
-    fun _ '(hCall fn next varg_src) => trigger (Call fn (Any.pair next↑ varg_src))
-  .
+(*   Definition handle_hCallE_mid: hCallE ~> itree Es := *)
+(*     fun _ '(hCall fn next varg_src) => trigger (Call fn (Any.pair next↑ varg_src)) *)
+(*   . *)
 
-  Definition interp_hCallE_mid `{E -< Es}: itree (hCallE +' E) ~> itree Es :=
-    interp (case_ (bif:=sum1) (handle_hCallE_src)
-                  ((fun T X => trigger X): E ~> itree Es))
-  .
+(*   Definition interp_hCallE_mid `{E -< Es}: itree (hCallE +' E) ~> itree Es := *)
+(*     interp (case_ (bif:=sum1) (handle_hCallE_src) *)
+(*                   ((fun T X => trigger X): E ~> itree Es)) *)
+(*   . *)
 
-  Definition body_to_mid {AA AR} (body: AA -> itree (hCallE +' pE +' eventE) AR): AA -> itree Es AR :=
-    fun varg_src => interp_hCallE_src (body varg_src)
-  .
+(*   Definition body_to_mid {AA AR} (body: AA -> itree (hCallE +' pE +' eventE) AR): AA -> itree Es AR := *)
+(*     fun varg_src => interp_hCallE_src (body varg_src) *)
+(*   . *)
 
-  (**
-unpure function --> cur can't be ord_pure.
-  pure function --> cur can both be ord_pure / ord_top (recall the boom/refresh/turnoff example)
-   **)
-  Definition fun_to_mid {AA AR} (body: AA -> itree (hCallE +' pE +' eventE) AR): (Any_src -> itree Es Any_src) :=
-    fun varg_src =>
-      '(cur, varg_src) <- varg_src↓ǃ;;
-      match cur with
-      | ord_pure _ => interp_hCallE_src (APC cur);; trigger (Choose _)
-      | ord_top => varg_ret <- ((body_to_mid body) varg_src);; Ret (varg_ret)↑
-      end
-  .
-
-
+(*   (** *)
+(* unpure function --> cur can't be ord_pure. *)
+(*   pure function --> cur can both be ord_pure / ord_top (recall the boom/refresh/turnoff example) *)
+(*    **) *)
+(*   Definition fun_to_mid {AA AR} (body: AA -> itree (hCallE +' pE +' eventE) AR): (Any_src -> itree Es Any_src) := *)
+(*     fun varg_src => *)
+(*       '(cur, varg_src) <- varg_src↓ǃ;; *)
+(*       match cur with *)
+(*       | ord_pure _ => interp_hCallE_src (APC cur);; trigger (Choose _) *)
+(*       | ord_top => varg_ret <- ((body_to_mid body) varg_src);; Ret (varg_ret)↑ *)
+(*       end *)
+(*   . *)
 
 
 
-  Definition handle_hCallE_tgt (mn: mname) (cur: ord): hCallE ~> itree Es :=
-    fun _ '(hCall fn _ varg_src) =>
-      match List.find (fun '(_fn, _) => dec fn _fn) stb with
-      | Some (_, f) =>
-        varg_src <- varg_src↓ǃ;;
-        vret_src <- (HoareCall (mn) cur (f.(precond)) (f.(postcond)) (f.(measure)) fn varg_src);;
-        Ret vret_src↑
-      | None => triggerNB
+
+
+  (* Definition HoareCallPure *)
+  (*            (ord_cur: ord) *)
+  (*            (P: X -> Y -> Any_tgt -> Σ -> Prop) *)
+  (*            (Q: X -> Z -> Any_tgt -> Σ -> Prop) *)
+  (*            (measure: X -> ord): *)
+  (*   gname -> Y -> itree Es Z := *)
+  (*   fun fn varg_src => *)
+  (*     '(marg, farg) <- trigger (Choose _);; put mn marg farg;; (*** updating resources in an abstract way ***) *)
+  (*     rarg <- trigger (Choose Σ);; discard rarg;; (*** virtual resource passing ***) *)
+  (*     x <- trigger (Choose X);; varg_tgt <- trigger (Choose Any_tgt);; *)
+  (*     guarantee(P x varg_src varg_tgt rarg);; (*** precondition ***) *)
+
+  (*     let ord_next := measure x in *)
+  (*     guarantee(ord_lt ord_next ord_cur);; *)
+  (*     vret_tgt <- trigger (Call fn varg_tgt);; (*** call ***) *)
+  (*     checkWf mn;; *)
+
+  (*     rret <- trigger (Take Σ);; forge rret;; (*** virtual resource passing ***) *)
+  (*     vret_src <- trigger (Take Z);; *)
+  (*     assume(Q x vret_src vret_tgt rret);; (*** postcondition ***) *)
+
+  (*     Ret vret_src (*** return to body ***) *)
+  (* . *)
+
+  Variable manifesto: string -> Any.t -> ord.
+
+  (* Definition HoareCallPure {X Y Z: Type} (mn: mname) *)
+  (*            (P: X -> Y -> Any_tgt -> Σ -> Prop) *)
+  (*            (Q: X -> Z -> Any_tgt -> Σ -> Prop) (ord_cur: ord): Y -> itree Es unit := fun varg_src => *)
+  (*   '(fn, x, marg, farg, rarg, varg_tgt, n) <- trigger (Choose _);; *)
+  (*   put mn marg farg;; *)
+  (*   discard rarg;; *)
+  (*   guarantee(P x varg_src varg_tgt rarg);; *)
+  (*   guarantee(manifesto fn x↑ = ord_pure n);; *)
+  (*   trigger (Call fn varg_tgt);; *)
+  (*   checkWf mn;; *)
+  (*   '(rret, vret_src) <- trigger (Take _);; *)
+  (*   forge rret;; *)
+  (*   (* assume(True);; *) *)
+  (*   Ret tt *)
+  (* . *)
+
+  Definition handle_hCallE_tgt (mn: mname) (ord_cur: ord): hCallE ~> itree Es :=
+    fun _ he =>
+      match he with
+      | (hCall fn varg_src) =>
+        match List.find (fun '(_fn, _) => dec fn _fn) stb with
+        | Some (_, f) =>
+          varg_src <- varg_src↓ǃ;;
+          vret_src <- (HoareCall (mn) ord_cur (f.(precond)) (f.(postcond)) (f.(measure)) fn varg_src);;
+          Ret vret_src↑
+        | None => triggerNB
+        end
+      | _ => triggerNB
+               (* HoareCallPure ord_cur *)
       end
   .
 

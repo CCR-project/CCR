@@ -94,71 +94,6 @@ Section PSEUDOTYPING.
 Let Any_src := Any.t. (*** src argument (e.g., List nat) ***)
 Let Any_tgt := Any.t. (*** tgt argument (i.e., list val) ***)
 
-Section PROOF.
-  (* Context {myRA} `{@GRA.inG myRA Σ}. *)
-  Context {Σ: GRA.t}.
-  Let GURA: URA.t := GRA.to_URA Σ.
-  Local Existing Instance GURA.
-  Variable mn: mname.
-  Context {X Y Z: Type}.
-
-
-  Definition HoareFun
-             (P: X -> Y -> Any_tgt -> Σ -> Prop)
-             (Q: X -> Z -> Any_tgt -> Σ -> Prop)
-             (measure: X -> ord)
-             (body: ord -> Y -> itree Es Z): Any_tgt -> itree Es Any_tgt := fun varg_tgt =>
-    varg_src <- trigger (Take Y);;
-    x <- trigger (Take X);;
-    rarg <- trigger (Take Σ);; forge rarg;; (*** virtual resource passing ***)
-    (checkWf mn);;
-    assume(P x varg_src varg_tgt rarg);; (*** precondition ***)
-
-
-    vret_src <- body (measure x) varg_src;; (*** "rudiment": we don't remove extcalls because of termination-sensitivity ***)
-
-    vret_tgt <- trigger (Choose Any_tgt);;
-    '(mret, fret) <- trigger (Choose _);; put mn mret fret;; (*** updating resources in an abstract way ***)
-    rret <- trigger (Choose Σ);; guarantee(Q x vret_src vret_tgt rret);; (*** postcondition ***)
-    (discard rret);; (*** virtual resource passing ***)
-
-    Ret vret_tgt (*** return ***)
-  .
-
-  Definition HoareCall
-             (cur: ord)
-             (P: X -> Y -> Any_tgt -> Σ -> Prop)
-             (Q: X -> Z -> Any_tgt -> Σ -> Prop)
-             (measure: X -> ord):
-    gname -> Y -> itree Es Z :=
-    fun fn varg_src =>
-      '(marg, farg) <- trigger (Choose _);; put mn marg farg;; (*** updating resources in an abstract way ***)
-      rarg <- trigger (Choose Σ);; discard rarg;; (*** virtual resource passing ***)
-      x <- trigger (Choose X);; varg_tgt <- trigger (Choose Any_tgt);;
-      guarantee(P x varg_src varg_tgt rarg);; (*** precondition ***)
-
-      guarantee(ord_lt (measure x) cur);;
-      vret_tgt <- trigger (Call fn varg_tgt);; (*** call ***)
-      checkWf mn;;
-
-      rret <- trigger (Take Σ);; forge rret;; (*** virtual resource passing ***)
-      vret_src <- trigger (Take Z);;
-      assume(Q x vret_src vret_tgt rret);; (*** postcondition ***)
-
-      Ret vret_src (*** return to body ***)
-  .
-
-End PROOF.
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -233,6 +168,34 @@ Section CANCEL.
   .
 
 
+  Section PROOF.
+  (* Context {myRA} `{@GRA.inG myRA Σ}. *)
+  Variable mn: mname.
+  Context {X Y Z: Type}.
+  Definition HoareCall
+             (cur: ord)
+             (P: X -> Y -> Any_tgt -> Σ -> Prop)
+             (Q: X -> Z -> Any_tgt -> Σ -> Prop)
+             (measure: X -> ord):
+    gname -> Y -> itree Es Z :=
+    fun fn varg_src =>
+      '(marg, farg) <- trigger (Choose _);; put mn marg farg;; (*** updating resources in an abstract way ***)
+      rarg <- trigger (Choose Σ);; discard rarg;; (*** virtual resource passing ***)
+      x <- trigger (Choose X);; varg_tgt <- trigger (Choose Any_tgt);;
+      guarantee(P x varg_src varg_tgt rarg);; (*** precondition ***)
+
+      guarantee(ord_lt (measure x) cur);;
+      vret_tgt <- trigger (Call fn varg_tgt);; (*** call ***)
+      checkWf mn;;
+
+      rret <- trigger (Take Σ);; forge rret;; (*** virtual resource passing ***)
+      vret_src <- trigger (Take Z);;
+      assume(Q x vret_src vret_tgt rret);; (*** postcondition ***)
+
+      Ret vret_src (*** return to body ***)
+  .
+
+  End PROOF.
 
 
 
@@ -256,6 +219,34 @@ Section CANCEL.
              (body: AA -> itree (hCallE +' pE +' eventE) AR): AA -> itree Es AR :=
     fun varg_tgt => interp_hCallE_tgt mn cur (body varg_tgt)
   .
+
+  Definition Es' := (hCallE +' pE +' eventE).
+  Section PROOF.
+  (* Context {myRA} `{@GRA.inG myRA Σ}. *)
+  Variable mn: mname.
+  Context {X Y Z: Type}.
+  Definition HoareFun
+             (P: X -> Y -> Any_tgt -> Σ -> Prop)
+             (Q: X -> Z -> Any_tgt -> Σ -> Prop)
+             (measure: X -> ord)
+             (body: ord -> Y -> itree Es' Z): Any_tgt -> itree Es' Any_tgt := fun varg_tgt =>
+    varg_src <- trigger (Take Y);;
+    x <- trigger (Take X);;
+    rarg <- trigger (Take Σ);; forge rarg;; (*** virtual resource passing ***)
+    (checkWf mn);;
+    assume(P x varg_src varg_tgt rarg);; (*** precondition ***)
+
+
+    vret_src <- body (measure x) varg_src;; (*** "rudiment": we don't remove extcalls because of termination-sensitivity ***)
+
+    vret_tgt <- trigger (Choose Any_tgt);;
+    '(mret, fret) <- trigger (Choose _);; put mn mret fret;; (*** updating resources in an abstract way ***)
+    rret <- trigger (Choose Σ);; guarantee(Q x vret_src vret_tgt rret);; (*** postcondition ***)
+    (discard rret);; (*** virtual resource passing ***)
+
+    Ret vret_tgt (*** return ***)
+  .
+  End PROOF.
 
   Definition fun_to_tgt (fn: gname) (sb: fspecbody): (Any_tgt -> itree Es Any_tgt) :=
     let fs: fspec := sb.(fsb_fspec) in
