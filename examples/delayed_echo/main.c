@@ -98,6 +98,7 @@ int pop(struct Node** llref) {
   if(*llref) {
     int v = (*llref)->val;
     struct Node* next = (*llref)->next;
+    free(*llref);
     (*llref) = next;
     return v;
   }
