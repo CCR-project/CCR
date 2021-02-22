@@ -116,19 +116,18 @@ Section PROOF.
     List.incl stb0 stb1
   .
 
-  Lemma body_to_tgt_ext
-        AA AR
-        stb0 stb1 mn cur (body: (AA -> itree (hCallE +' pE +' eventE) AR)) varg
-        (A: contains stb0 (body varg))
+  Lemma interp_hCallE_tgt_ext
+        AR
+        stb0 stb1 mn cur (body: itree (hCallE +' pE +' eventE) AR)
+        (A: contains stb0 body)
         (B: extends stb0 stb1)
     :
-      body_to_tgt stb0 mn cur body varg = body_to_tgt stb1 mn cur body varg
+      interp_hCallE_tgt stb0 mn cur body = interp_hCallE_tgt stb1 mn cur body
   .
   Proof.
-    unfold body_to_tgt. abstr (body varg) bd.
     f. ginit. revert_until Σ. gcofix CIH. i.
     unfold interp_hCallE_tgt.
-    ides bd;  rewrite ! unfold_interp; ired; ss.
+    ides body;  rewrite ! unfold_interp; ired; ss.
     - gstep. econs; et.
     - gstep. econs; et. gbase. eapply CIH; ss.
     - guclo eqit_clo_bind. econs.
@@ -149,6 +148,16 @@ Section PROOF.
     all: try (by econs).
   Qed.
 
+  Lemma body_to_tgt_ext
+        AA AR
+        stb0 stb1 mn cur (body: (AA -> itree (hCallE +' pE +' eventE) AR)) varg
+        (A: contains stb0 (body varg))
+        (B: extends stb0 stb1)
+    :
+      body_to_tgt stb0 mn cur body varg = body_to_tgt stb1 mn cur body varg
+  .
+  Proof. eapply interp_hCallE_tgt_ext; et. Qed.
+
   Lemma fun_to_tgt_ext
         stb0 stb1 fn sb
         (A: forall varg, contains stb0 (sb.(fsb_body) varg))
@@ -158,7 +167,10 @@ Section PROOF.
   .
   Proof.
     unfold fun_to_tgt. unfold HoareFun. apply func_ext. i. grind.
-    erewrite body_to_tgt_ext; et.
+    erewrite body_to_tgt_ext; et. grind.
+    erewrite interp_hCallE_tgt_ext; et. eapply A; et.
+  Unshelve.
+    all: ss.
   Qed.
 
   (* Lemma map_ext *)

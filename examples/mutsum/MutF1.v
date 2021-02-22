@@ -19,10 +19,10 @@ Section PROOF.
 
   Context `{Σ: GRA.t}.
 
-  Definition mainBody: list val -> itree (hCallE +' pE +' eventE) val := fun _ => trigger (hCall "f" [Vint 10]↑);; Ret (Vint 55).
+  Definition mainBody: list val -> itree (hCallE +' pE +' eventE) val := fun _ => trigger (hCall true "f" [Vint 10]↑);; Ret (Vint 55).
   Definition fBody: list val -> itree (hCallE +' pE +' eventE) val :=
     fun varg => varg' <- trigger (Choose _);; guarantee (_ord varg' varg);;
-                trigger (hCall "g" varg'↑);; trigger (Choose _)
+                trigger (hCall true "g" varg'↑);; trigger (Choose _)
   .
   (*** TODO: it would be better if the body can depend on "X", but doing so will mandate generalization of Call.
        related issue: https://github.com/snu-sf/rusc-program-verif/issues/48
