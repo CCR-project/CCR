@@ -7,51 +7,11 @@ Require Import Skeleton.
 Require Import PCM.
 Require Import Hoare.
 Require Import Mem1.
+Require Import TODOYJ.
 
 Generalizable Variables E R A B C X Y Σ.
 
 Set Implicit Arguments.
-
-
-
-
-
-Section PROOF.
-  Context {Σ: GRA.t}.
-  (*** TODO: move to proper place, together with "mk_simple" ***)
-  (*** TODO: rename sb into spb ***)
-  (*** TODO: remove redundancy with Hoareproof0.v ***)
-  Definition mk_simple (mn: string) {X: Type} (P: X -> Any.t -> ord -> Σ -> Prop) (Q: X -> Any.t -> Σ -> Prop): fspec :=
-    @mk _ mn X (list val) (val) (fun x y a r o => P x a o r /\ y↑ = a) (fun x z a r => Q x a r /\ z↑ = a)
-  .
-  Definition mk_sb_simple (mn: string) {X: Type} (P: X -> Any.t -> ord -> Σ -> Prop) (Q: X -> Any.t -> Σ -> Prop)
-             (body: list val -> itree (hCallE +' pE +' eventE) val): fspecbody := mk_specbody (mk_simple mn P Q) body.
-
-End PROOF.
-
-
-
-
-
-
-Section IRIS.
-  Context {Σ: GRA.t}.
-  Definition iProp := Σ -> Prop.
-  Definition Sepconj (P Q: iProp): iProp :=
-    fun r => exists a b, r = URA.add a b /\ P a /\ Q b
-  .
-  Definition Pure (P: Prop): iProp := fun _ => P.
-  Definition Ex {X: Type} (P: X -> iProp): iProp := fun r => exists x, P x r.
-  Definition Own (r0: Σ): iProp := fun r1 => URA.extends r0 r1.
-
-End IRIS.
-
-Infix "**" := Sepconj (at level 60).
-Notation "'⌜' P '⌝'" := (Pure P).
-Notation "'Exists' x .. y , p" := (Ex (fun x => .. (Ex (fun y => p)) ..))
-                                    (at level 200, x binder, right associativity,
-                                     format "'[' 'Exists'  '/  ' x  ..  y ,  '/  ' p ']'").
-
 
 
 
