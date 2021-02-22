@@ -7,8 +7,10 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import Hoare.
-Require Import MutHeader.
-Require Import MutF1 MutG1.
+Require Import MutHeader SimModSem.
+Require Import MutF0 MutG0 MutMain0 MutF1 MutG1 MutMain1 MutF01proof MutG01proof MutMain01proof.
+
+Require Import TODO.
 
 Generalizable Variables E R A B C X Y Σ.
 
@@ -43,67 +45,74 @@ Tactic Notation "irw" := repeat (autorewrite with itree_axiom2; cbn).
 
 
 
-
 Section PROOF.
 
   Context `{Σ: GRA.t}.
+  Local Opaque GRA.to_URA.
+  Infix "⋅" := URA.add (at level 50, left associativity).
+  Notation "(⋅)" := URA.add (only parsing).
 
-  Definition FG1: Mod.t := Mod.add F G.
+  Definition FG0: Mod.t := add_list [MutMain0.main ; MutF0.F ; MutG0.G].
+
+  Definition FG1: Mod.t := add_list [MutMain1.main ; MutF1.F ; MutG1.G].
 
   Definition FG2: Mod.t := {|
     Mod.get_modsem := fun _ => {|
-        ModSem.fnsems := List.map (fun '(fn, sb) => (fn, fun_to_src sb.(fsb_body))) (Fsbtb ++ Gsbtb);
-        ModSem.initial_mrs := [("F", (ε, unit↑)) ; ("G", (ε, unit↑))];
+        ModSem.fnsems := List.map (fun '(fn, sb) => (fn, fun_to_src sb.(fsb_body))) (mainsbtb ++ (Fsbtb ++ Gsbtb));
+        ModSem.initial_mrs := [("Main", (ε, unit↑)) ; ("F", (ε, unit↑)) ; ("G", (ε, unit↑))];
       |};
     Mod.sk := Sk.unit;
   |}
   .
 
-  Local Opaque GRA.to_URA.
-  Infix "⋅" := URA.add (at level 50, left associativity).
-  Notation "(⋅)" := URA.add (only parsing).
-  Theorem correct: Beh.of_program (Mod.interp FG1) <1= Beh.of_program (Mod.interp FG2).
+  Definition FG3: Mod.t := {|
+    Mod.get_modsem := fun _ => {|
+        ModSem.fnsems := [("main", fun _ => Ret (Vint 55)↑) ; ("f", fun _ => triggerUB) ; ("g", fun _ => triggerUB)];
+        ModSem.initial_mrs := [("Main", (ε, unit↑)) ; ("F", (ε, unit↑)) ; ("G", (ε, unit↑))];
+      |};
+    Mod.sk := Sk.unit;
+  |}
+  .
+
+  Lemma FG01_correct: Beh.of_program (Mod.interp FG0) <1= Beh.of_program (Mod.interp FG1).
+  Proof.
+    eapply sim_list_adequacy_closed. econs; [|econs; [|econs; ss]].
+    - split; auto. ii. ss. eapply MutMain01proof.correct.
+    - split; auto. ii. ss. eapply MutF01proof.correct.
+    - split; auto. ii. ss. eapply MutG01proof.correct.
+  Qed.
+
+  Lemma FG12_correct: Beh.of_program (Mod.interp FG1) <1= Beh.of_program (Mod.interp FG2).
   Proof.
     ii.
-    eapply adequacy_type with (sbtb:=Fsbtb++Gsbtb) in PR.
-    { ss. }
-    { ss. }
-    { ss. admit "main - Fix me". }
+    eapply adequacy_type with (sbtb:=mainsbtb++(Fsbtb++Gsbtb)) in PR; ss.
     cbn in *. unfold compose. ss. rewrite ! URA.unit_id. apply URA.wf_unit.
-  Unshelve.
+    Unshelve.
     all: try (by econs; ss).
   Qed.
 
+  Lemma FG23_correct: Beh.of_program (Mod.interp FG2) <1= Beh.of_program (Mod.interp FG3).
+  Proof.
+    eapply adequacy_local_closed. econs; auto. ii.
+    eapply ModSemPair.mk with (wf:=top1) (le:=top2); ss.
+    econs; [|econs; [|econs;ss]].
+    - econs; ss. ii. subst. exists 100.
+      unfold fun_to_src, cfun, body_to_src, mainBody, interp_hCallE_src, unwrapN, triggerNB.
+      ired. des_ifs.
+      + ired. repeat rewrite interp_trigger. ired.
+        pfold. econs; eauto. i. left.
+        pfold. ired. econs; eauto. left.
+        pfold. econs; eauto.
+      + ired. pfold. econs; eauto. ss.
+    - econs; ss. ii. subst. exists 100.
+      ss. pfold. econs; ss.
+    - econs; ss. ii. subst. exists 100.
+      ss. pfold. econs; ss.
+  Qed.
 
-
-
-
-
-
-
-
-  Let ms: ModSem.t := {|
-        ModSem.fnsems := List.map (fun '(fn, sb) => (fn, fun_to_src sb.(fsb_body))) (Fsbtb ++ Gsbtb);
-        ModSem.initial_mrs := [];
-  |}.
-
-  (* Let itr0: callE ~> itree Es := fun _ ce => trigger PushFrame;; rv <- ModSem.sem ms ce;; trigger PopFrame;; Ret rv. *)
-  (* Let itr1: itree (rE +' eventE) val := mrec itr0 (Call "main" []). *)
-  (* Let itr2: itree eventE val := *)
-  (*   assume (<<WF: ModSem.wf ms >>);; *)
-  (*   snd <$> ModSem.interp_rE itr1 (ModSem.initial_r_state ms). *)
-
-  (* Let itr0_nor: callE ~> itree Es := fun (T: Type) ce => (ModSem.sem ms ce): itree Es T. *)
-  (* Let itr1_nor: itree (rE +' eventE) val := mrec itr0_nor (Call "main" []). *)
-
-  (* Goal itr1_nor ≈ Ret (Vint (Z.of_nat 55)). *)
-  (* Proof. *)
-  (*   subst itr1_nor itr0_nor. ss. *)
-  (*   (* rewrite mrec_as_interp. *) *)
-  (*   unfold mrec. rewrite unfold_interp_mrec. ss. *)
-  (*   ss. irw. rewrite tau_eutt. *)
-  (*   unfold fun_to_src, body_to_src, interp_hCallE_src. *)
-  (*   unfold mainBody. cbn. *)
-  (* Abort. *)
+  Theorem FG_correct: Beh.of_program (Mod.interp FG0) <1= Beh.of_program (Mod.interp FG3).
+  Proof.
+    i. eapply FG23_correct, FG12_correct, FG01_correct, PR.
+  Qed.
 
 End PROOF.
