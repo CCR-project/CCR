@@ -147,7 +147,9 @@ Section PROOF.
 
   Definition MemSem: ModSem.t := {|
     ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt MemStb fn fsb)) MemSbtb;
-    ModSem.initial_mrs := [("Mem", (GRA.padding (URA.black (M:=_memRA) (fun _ _ => inr tt)), unit↑))];
+    ModSem.initial_mrs :=
+      [("Mem", (GRA.padding (URA.black (M:=_memRA)
+                            (fun b ofs => if (b =? 0)%nat && (ofs =? 0)%Z then inl (Some Vundef) else inr tt)), tt↑))];
   |}
   .
 

@@ -15,6 +15,7 @@ From ExtLib Require Import
      Core.RelDec
      Structures.Maps
      Data.Map.FMapAList.
+Require Import TODOYJ.
 
 Generalizable Variables E R A B C X Y.
 
@@ -55,6 +56,26 @@ Definition add_delta_to_black `{M: URA.t} (b: URA.auth_t) (w: URA.auth_t): URA.a
 (* "). *)
 (******** TODO: it works in emacs but fails in coqc -- try coq 8.13 and uncomment it ***********)
 
+Notation "wf n
+'------------------------------------------------------------------'
+src0 tgt0
+'------------------------------------------------------------------'
+src1 tgt1
+'------------------------------------------------------------------'
+src2 tgt2" :=
+  (gpaco3 (_sim_itree wf) _ _ _ n (([(_, src0)], src1), src2) (([(_, tgt0)], tgt1), tgt2))
+    (at level 60,
+     format "wf  n '//'
+'------------------------------------------------------------------' '//'
+src0 '//'
+tgt0 '//'
+'------------------------------------------------------------------' '//'
+src1 '//'
+tgt1 '//'
+'------------------------------------------------------------------' '//'
+src2 '//' '//' '//'
+tgt2 '//'
+").
 
 
 
@@ -87,36 +108,54 @@ Section SIMMODSEM.
         (<<SRC: mrps_src0 = Maps.add "Mem" ((GRA.padding ((URA.black mem_src): URA.car (t:=Mem1.memRA))), tt↑) Maps.empty>>) /\
         (<<TGT: mrps_tgt0 = Maps.add "Mem" (ε, mem_tgt↑) Maps.empty>>) /\
         (<<SIM: forall b ofs, sim_loc ((mem_tgt.(Mem.cnts)) b ofs) (mem_src b ofs)>>) /\
-        (<<NULLPTR: >>)
+        (<<NULLPTR: mem_src 0%nat 0%Z = inl (Some Vundef)>>)
   .
-
-  Let wf: W -> Prop :=
-    fun '(mrs_src0, mrs_tgt0) =>
-      exists mem_src (mem_tgt: Mem.t),
-        (* (<<SRC: exists frag, mrs_src0 = Maps.add "Mem" *)
-        (*                                          (GRA.padding ((URA.excl mem_src frag): URA.car (t:=Mem1.memRA))) Maps.empty>>) /\ *)
-        (<<SRC: mrs_src0 = Maps.add "Mem" (GRA.padding ((URA.black mem_src): URA.car (t:=Mem1.memRA))) Maps.empty>>) /\
-        (<<TGT: mrs_tgt0 = Maps.add "Mem" (GRA.padding ((inl (Some mem_tgt)): URA.car (t:=RA.excl Mem.t)))
-                                    Maps.empty>>) /\
-        (<<SIM: forall b ofs, sim_loc ((mem_tgt.(Mem.cnts)) b ofs) (mem_src b ofs)>>)
-  .
-
-  Infix "⋅" := URA.add (at level 50, left associativity).
-  Notation "(⋅)" := URA.add (only parsing).
 
   Local Opaque points_to.
+  
+  Hint Resolve sim_itree_mon: paco.
+
   Theorem correct: ModSemPair.sim Mem1.MemSem Mem0.MemSem.
   Proof.
     econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
     { typeclasses eauto. }
-    { ss. esplits; ss; et. ii. econs 2. }
+    { ss. esplits; ss; et. ii.
+      destruct (classic (b = 0%nat /\ ofs = 0%Z)).
+      - des. subst. ss. unfold update. des_ifs. econs.
+      - des_ifs; bsimpl; des; des_sumbool; ss; try rewrite Nat.eqb_neq in *; try rewrite Z.eqb_neq in *;
+          apply_all_once Nat.eqb_eq; apply_all_once Z.eqb_eq; subst; try lia.
+        + unfold update. des_ifs; econs; et.
+        + unfold update. des_ifs; econs; et.
+    }
     econs; ss.
     { split; ss. ii; clarify. rename y into varg. eexists 100%nat. ss. des; clarify.
-      unfold alist_add, alist_remove; ss.
+      ginit. { eapply cpn3_wcompat; eauto with paco. } unfold alist_add, alist_remove; ss.
       unfold Mem0.allocF.
+      unfold fun_to_tgt, cfun, HoareFun. ss.
+      Set Printing All.
+      TTTTTTTTTTTTTTTTTTTTTTTTTTTT
+      gstep.
+      Ltac _step :=
+        gstep; econs.
+      gstep. eapply sim_itree_mon. econs; eauto. i.
+      gstep.
+      _step.
+      match goal with
+      | [ |- (gpaco3 (_sim_itree wf) _ _ _ _ (_, ?itr_src) (_, ?itr_tgt))] =>
+        idtac
+      end.
       (* Opaque MemStb. *)
       (* Opaque mapi. *)
       Local Opaque URA.add.
+      pfold. econs; eauto. ii. ss. left.
+      match goal with
+      | [ |- paco3 (_sim_itree ?wf) bot3 _ _ _ ] =>
+        replace (paco3 (_sim_itree wf) bot3) with (sim_itree wf) by ss
+      end
+   .
+      fold.
+      replace (paco3 (_sim_itree wf) bot3) with (sim_itree wf) by ss.
+
       go. ss. rename x into sz.
       unfold assume.
       igo.
