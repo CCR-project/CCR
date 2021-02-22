@@ -869,165 +869,80 @@ Section ADD.
         { eapply nodup_add; eauto. eapply lookup_filter; eauto. }
         { eapply nodup_add; eauto. eapply lookup_filter; eauto. }
       }
-
-        { eapply nodup_disjoint; eauto. }
-
-          disjoint_filter_l.
+    * econs 7; eauto.
+      { eapply lookup_filter; eauto. }
+      { eapply lookup_filter; eauto. }
+      { right. eapply CIH; eauto.
         { repeat erewrite add_filter; eauto. }
-        {
-          repeat erewrite add_filter; eauto.
-
+        { repeat erewrite add_other_filter; eauto.
+          { eapply nodup_disjoint; eauto. }
+          { eapply nodup_disjoint; eauto. }
         }
-        {
-
-
-          in *; eauto.
-        eapply K.
-
-      i. he
-
-      exists i1. splits; auto. right. eapply CIH; eauto.
-      { erewrite add_filter; eauto.
-        erewrite add_filter; eauto. }
-      { erewrite add_other_filter; eauto.
-        2: { eapply nodup_disjoint; eauto. }
-        erewrite add_other_filter; eauto.
-        eapply nodup_disjoint; eauto. }
-      { eapply nodup_add; eauto. eapply lookup_filter; eauto. }
-      { eapply nodup_add; eauto. eapply lookup_filter; eauto. }
-    * econs 5; eauto.
-      { eapply lookup_filter; eauto. }
-      { eapply lookup_filter; eauto. }
-    * econs 6; eauto.
-    * econs 7; eauto.
-    * econs 8; eauto. i. hexploit K; eauto. i. des. pclearbot.
-      esplits; eauto.
+        { eapply nodup_add; eauto. eapply lookup_filter; eauto. }
+        { eapply nodup_add; eauto. eapply lookup_filter; eauto. }
+      }
+    * econs 8; eauto.
     * econs 9; eauto.
       { eapply lookup_filter; eauto. }
       { eapply lookup_filter; eauto. }
-      i. hexploit K; auto. i. des. pclearbot.
-      splits; auto. right. eapply CIH; eauto.
-    * econs 10; eauto. i. hexploit K; eauto. i. des. pclearbot.
-      esplits; eauto.
-    * econs 11; eauto. i. hexploit K; eauto. i. des. pclearbot.
-      esplits; eauto.
-    * econs 12; eauto. i. hexploit K; eauto.
+    * econs 10; eauto.
+      { eapply lookup_filter; eauto. }
+      { eapply lookup_filter; eauto. }
+    * econs 11; eauto.
+    * econs 12; eauto.
     * econs 13; eauto.
+      i. hexploit K; eauto. i. des. pclearbot. esplits; eauto.
     * econs 14; eauto.
+      i. hexploit K; eauto.
+    * econs 15; eauto.
       { eapply lookup_filter; eauto. }
       right. eapply CIH; eauto.
-      { erewrite add_filter; eauto. }
-      { erewrite add_other_filter; eauto.
-        eapply nodup_disjoint; eauto. }
+      { repeat erewrite add_filter; eauto. }
+      { repeat erewrite add_other_filter; eauto.
+        { eapply nodup_disjoint; eauto. }
+      }
       { eapply nodup_add; eauto. eapply lookup_filter; eauto. }
-    * econs 15; eauto. eapply lookup_filter; eauto.
     * econs 16; eauto.
+      { eapply lookup_filter; eauto. }
+      right. eapply CIH; eauto.
+      { repeat erewrite add_filter; eauto. }
+      { repeat erewrite add_other_filter; eauto.
+        { eapply nodup_disjoint; eauto. }
+      }
+      { eapply nodup_add; eauto. eapply lookup_filter; eauto. }
     * econs 17; eauto.
     * econs 18; eauto.
+      { eapply lookup_filter; eauto. }
     * econs 19; eauto.
       { eapply lookup_filter; eauto. }
-      i. hexploit K; eauto. i. pclearbot.
-      right. eapply CIH; eauto.
-    * econs 20; eauto. des. pclearbot.
-      eexists. right. eapply CIH; eauto.
-    * econs 21; eauto. i. hexploit K; auto. i.
-      right. eapply CIH; eauto.
+    * econs 20; eauto.
+    * econs 21; eauto.
     * econs 22; eauto.
+      i. hexploit K; eauto.
     * econs 23; eauto.
-      { eapply lookup_filter; eauto. }
-      i. hexploit K; eauto. i. pclearbot.
-      right. eapply CIH; eauto.
-      { erewrite add_filter; eauto. }
-      { erewrite add_other_filter; eauto.
-        eapply nodup_disjoint; eauto. }
-      { eapply nodup_add; eauto. eapply lookup_filter; eauto. }
+      i. hexploit K; eauto. i. des. pclearbot. esplits; eauto.
     * econs 24; eauto.
       { eapply lookup_filter; eauto. }
-    * econs 25; eauto.
-    * econs 26; eauto.
-    * econs 27; eauto. i. hexploit K; eauto. i. pclearbot.
       right. eapply CIH; eauto.
+      { repeat erewrite add_filter; eauto. }
+      { repeat erewrite add_other_filter; eauto.
+        { eapply nodup_disjoint; eauto. }
+      }
+      { eapply nodup_add; eauto. eapply lookup_filter; eauto. }
+    * econs 25; eauto.
+      { eapply lookup_filter; eauto. }
+      right. eapply CIH; eauto.
+      { repeat erewrite add_filter; eauto. }
+      { repeat erewrite add_other_filter; eauto.
+        { eapply nodup_disjoint; eauto. }
+      }
+      { eapply nodup_add; eauto. eapply lookup_filter; eauto. }
+    * econs 26; eauto.
+    * econs 27; eauto.
+      { eapply lookup_filter; eauto. }
     * econs 28; eauto.
       { eapply lookup_filter; eauto. }
-      des. pclearbot. esplits; eauto.
     * econs 29; eauto.
-      i. hexploit K; eauto.
-    * econs 30; eauto. des. pclearbot.
-      esplits; eauto.
-
-
-    * econs 4; eauto.
-      { eapply lookup_filter; eauto. }
-      { eapply lookup_filter; eauto. }
-      i. hexploit K; eauto. i. des. pclearbot.
-      exists i1. splits; auto. right. eapply CIH; eauto.
-      { erewrite add_filter; eauto.
-        erewrite add_filter; eauto. }
-      { erewrite add_other_filter; eauto.
-        2: { eapply nodup_disjoint; eauto. }
-        erewrite add_other_filter; eauto.
-        eapply nodup_disjoint; eauto. }
-      { eapply nodup_add; eauto. eapply lookup_filter; eauto. }
-      { eapply nodup_add; eauto. eapply lookup_filter; eauto. }
-    * econs 5; eauto.
-      { eapply lookup_filter; eauto. }
-      { eapply lookup_filter; eauto. }
-    * econs 6; eauto.
-    * econs 7; eauto.
-    * econs 8; eauto. i. hexploit K; eauto. i. des. pclearbot.
-      esplits; eauto.
-    * econs 9; eauto.
-      { eapply lookup_filter; eauto. }
-      { eapply lookup_filter; eauto. }
-      i. hexploit K; auto. i. des. pclearbot.
-      splits; auto. right. eapply CIH; eauto.
-    * econs 10; eauto. i. hexploit K; eauto. i. des. pclearbot.
-      esplits; eauto.
-    * econs 11; eauto. i. hexploit K; eauto. i. des. pclearbot.
-      esplits; eauto.
-    * econs 12; eauto. i. hexploit K; eauto.
-    * econs 13; eauto.
-    * econs 14; eauto.
-      { eapply lookup_filter; eauto. }
-      right. eapply CIH; eauto.
-      { erewrite add_filter; eauto. }
-      { erewrite add_other_filter; eauto.
-        eapply nodup_disjoint; eauto. }
-      { eapply nodup_add; eauto. eapply lookup_filter; eauto. }
-    * econs 15; eauto. eapply lookup_filter; eauto.
-    * econs 16; eauto.
-    * econs 17; eauto.
-    * econs 18; eauto.
-    * econs 19; eauto.
-      { eapply lookup_filter; eauto. }
-      i. hexploit K; eauto. i. pclearbot.
-      right. eapply CIH; eauto.
-    * econs 20; eauto. des. pclearbot.
-      eexists. right. eapply CIH; eauto.
-    * econs 21; eauto. i. hexploit K; auto. i.
-      right. eapply CIH; eauto.
-    * econs 22; eauto.
-    * econs 23; eauto.
-      { eapply lookup_filter; eauto. }
-      i. hexploit K; eauto. i. pclearbot.
-      right. eapply CIH; eauto.
-      { erewrite add_filter; eauto. }
-      { erewrite add_other_filter; eauto.
-        eapply nodup_disjoint; eauto. }
-      { eapply nodup_add; eauto. eapply lookup_filter; eauto. }
-    * econs 24; eauto.
-      { eapply lookup_filter; eauto. }
-    * econs 25; eauto.
-    * econs 26; eauto.
-    * econs 27; eauto. i. hexploit K; eauto. i. pclearbot.
-      right. eapply CIH; eauto.
-    * econs 28; eauto.
-      { eapply lookup_filter; eauto. }
-      des. pclearbot. esplits; eauto.
-    * econs 29; eauto.
-      i. hexploit K; eauto.
-    * econs 30; eauto. des. pclearbot.
-      esplits; eauto.
   Qed.
 
   Lemma add_modsempair (ms_src0 ms_src1 ms_tgt0 ms_tgt1: ModSem.t)
@@ -1081,9 +996,6 @@ Section ADD.
   Qed.
 
 End ADD.
-
-    apply wf_mrs_add. auto.
-
 End ModSemPair.
 
 
@@ -1229,6 +1141,17 @@ Require Import Ordinal ClassicalOrdinal.
 
 
 
+  Variant option_rel A B (P: A -> B -> Prop): option A -> option B -> Prop :=
+  | option_rel_some
+      a b (IN: P a b)
+    :
+      option_rel P (Some a) (Some b)
+  | option_rel_none
+    :
+      option_rel P None None
+  .
+  Hint Constructors option_rel: core.
+
 
 Module ModPair.
 Section SIMMOD.
@@ -1238,8 +1161,593 @@ Section SIMMOD.
      sim_modsem:
        forall skenv, <<SIM: ModSemPair.sim (md_src.(Mod.get_modsem) skenv) (md_tgt.(Mod.get_modsem) skenv)>>;
      sim_sk: <<SIM: md_src.(Mod.sk) = md_tgt.(Mod.sk)>>;
-   }
+     sim_wf:
+       forall skenv (WF: ModSem.wf (md_src.(Mod.get_modsem) skenv)), <<WF: ModSem.wf (md_tgt.(Mod.get_modsem) skenv)>>;
+   }.
+
+   Hint Resolve cpn5_wcompat: paco.
+
+   Definition eqv (mrsl: alist string (Σ * Any.t)) (mrs: string -> (Σ * Any.t)): Prop :=
+     forall mn mnr (FIND: find (fun mnr : string * (Σ * Any.t) => dec mn (fst mnr)) mrsl = Some mnr),
+       mrs mn = snd mnr.
+
+   Lemma lookup_find (mrsl: alist string (Σ * Any.t)) mn mr
+         (LOOKUP: Maps.lookup mn mrsl = Some mr)
+     :
+       find (fun mnr : string * (Σ * Any.t) => dec mn (fst mnr)) mrsl = Some (mn, mr).
+   Proof.
+     induction mrsl; ss. unfold sumbool_to_bool. des_ifs; ss; eauto.
+     { eapply neg_rel_dec_correct in Heq0. ss. }
+     { rewrite rel_dec_correct in Heq0. ss. }
+   Qed.
+
+   Lemma find_lookup (mrsl: alist string (Σ * Any.t)) mn0 mn1 mr
+         (FIND: find (fun mnr : string * (Σ * Any.t) => dec mn0 (fst mnr)) mrsl = Some (mn1, mr))
+     :
+       mn0 = mn1 /\ Maps.lookup mn0 mrsl = Some mr.
+   Proof.
+     induction mrsl; ss.
+     unfold sumbool_to_bool in *. des_ifs; auto.
+     { rewrite rel_dec_correct in Heq. ss. }
+     { eapply neg_rel_dec_correct in Heq. ss. }
+   Qed.
+
+   Lemma eqv_lookup mrsl mrs (EQV: eqv mrsl mrs)
+         mn mr
+         (LOOKUP: Maps.lookup mn mrsl = Some mr)
+     :
+       mrs mn = mr.
+   Proof.
+     eapply lookup_find in LOOKUP.
+     eapply EQV in LOOKUP. auto.
+   Qed.
+
+   Lemma eqv_add mrsl mrs (EQV: eqv mrsl mrs)
+         mn mr0 mr1
+         (LOOKUP: Maps.lookup mn mrsl = Some mr0)
+     :
+       eqv (Maps.add mn mr1 mrsl) (update mrs mn mr1).
+   Proof.
+     ii. destruct mnr as [mn1 r]. eapply find_lookup in FIND. des; subst.
+     simpl. unfold update. des_ifs.
+     { assert (lookup mn1 (add mn1 mr1 mrsl) = Some mr1).
+       { eapply mapsto_lookup. eapply mapsto_add_eq. }
+       clarify.
+     }
+     { eapply eqv_lookup; eauto. eapply mapsto_lookup in FIND0.
+       eapply mapsto_lookup. eapply mapsto_add_neq; eauto. }
+   Qed.
+
+   Variant lift_wf (wf: alist string (Σ * Any.t) * alist string (Σ * Any.t) -> Prop)
+           (mrs_src mrs_tgt: string -> (Σ * Any.t)): Prop :=
+   | lift_wf_intro
+       mrsl_src mrsl_tgt
+       (EQVSRC: eqv mrsl_src mrs_src)
+       (EQVTGT: eqv mrsl_tgt mrs_tgt)
+       (WF: wf (mrsl_src, mrsl_tgt))
    .
+
+   Definition arith (o: Ordinal.t) (n0: nat) (n1: nat): Ordinal.t :=
+     Ordinal.add (Ordinal.mult (Ordinal.from_nat n0) o) (Ordinal.from_nat n1).
+
+   Lemma from_nat_add n0 n1
+     :
+       Ordinal.eq (Ordinal.from_nat (n0 + n1)) (Ordinal.add (Ordinal.from_nat n0) (Ordinal.from_nat n1)).
+   Proof.
+     Local Transparent Ordinal.from_nat.
+     induction n1; auto.
+     - rewrite Nat.add_0_r. symmetry. eapply Ordinal.add_O_r.
+     - erewrite Nat.add_succ_r. etransitivity.
+       2: { symmetry. eapply Ordinal.add_S. }
+       ss. eapply Ordinal.S_eq. auto.
+   Qed.
+
+   Lemma arith_lt_1 o0 o1 n0 n1 n2
+         (OLT: Ordinal.lt o0 o1)
+         (LT: n1 < n0 + n2)
+     :
+       Ordinal.lt (arith o0 n0 n1) (arith o1 n0 n2).
+   Proof.
+     unfold arith. eapply Ordinal.lt_le_lt.
+     2: {
+       eapply Ordinal.add_le_l.
+       eapply Ordinal.mult_le_r.
+       eapply Ordinal.S_spec. eauto.
+     }
+     eapply Ordinal.lt_eq_lt.
+     { eapply Ordinal.add_eq_l.
+       eapply Ordinal.mult_S.
+     }
+     eapply Ordinal.lt_eq_lt.
+     { eapply Ordinal.add_assoc. }
+     eapply Ordinal.add_lt_r.
+     eapply Ordinal.lt_eq_lt.
+     { symmetry. eapply from_nat_add. }
+     eapply from_nat_lt. eauto.
+   Qed.
+
+   Lemma arith_lt_2 o n0 n1 n2
+         (LT: n1 < n2)
+     :
+       Ordinal.lt (arith o n0 n1) (arith o n0 n2).
+   Proof.
+     eapply Ordinal.add_lt_r. eapply from_nat_lt. eauto.
+   Qed.
+
+   Local Opaque Ordinal.add.
+
+  Theorem adequacy_global
+           (SIM: sim)
+     :
+       Beh.of_program (Mod.interp md_tgt) <1=
+       Beh.of_program (Mod.interp md_src)
+   .
+   Proof.
+     inv SIM. specialize (sim_modsem0 (Sk.load_skenv (Mod.sk md_src))).
+     inv sim_modsem0. red in sim_sk0.
+
+     eapply adequacy_global; et. exists (Ordinal.add Ordinal.O Ordinal.O).
+     unfold ModSem.initial_itr, Mod.enclose.
+
+     ginit. gclo. eapply wrespect5_companion; auto with paco.
+     { eapply bindC_wrespectful. }
+     econs.
+     { instantiate (1:=eq). unfold assume. gstep.
+       econs; auto. instantiate (1:=Ordinal.O).
+       i. esplits; eauto.
+       { eapply sim_wf0; eauto. rewrite sim_sk0 in *. ss. }
+       gstep. econs. auto.
+     }
+     i. subst. unfold ITree.map.
+
+     guclo ordC_spec. econs.
+     { eapply Ordinal.add_O_l. }
+     guclo bindC_spec. econs.
+     2: {
+       instantiate (1:=fun vret_src vret_tgt => snd vret_src = snd vret_tgt). ss.
+       i. gstep. econs; eauto.
+     }
+     ss. guclo ordC_spec. econs.
+     { eapply Ordinal.add_O_l. }
+     guclo bindC_spec. econs.
+     2: {
+       instantiate (1:=fun vret_src vret_tgt => snd (snd vret_src) = snd (snd vret_tgt)). ss.
+       i. destruct vret_src, vret_tgt0. destruct p0, p2. ss.
+       gstep. econs; eauto.
+     }
+
+     assert (FNS: forall fn : string,
+                option_rel (sim_fnsem wf)
+                           (find (fun fnsem : string * (Any.t -> itree Es Any.t) => dec fn (fst fnsem))
+                                 (ModSem.fnsems (Mod.get_modsem md_src (Sk.load_skenv (Mod.sk md_src)))))
+                           (find (fun fnsem : string * (Any.t -> itree Es Any.t) => dec fn (fst fnsem))
+                                 (ModSem.fnsems (Mod.get_modsem md_tgt (Sk.load_skenv (Mod.sk md_tgt)))))).
+     { rewrite <- sim_sk0 in *.
+       remember (ModSem.fnsems (Mod.get_modsem md_src (Sk.load_skenv (Mod.sk md_src)))).
+       remember (ModSem.fnsems (Mod.get_modsem md_tgt (Sk.load_skenv (Mod.sk md_src)))).
+       clear - sim_fnsems. induction sim_fnsems; ss.
+       i. unfold sumbool_to_bool. des_ifs; eauto.
+       - inv H. ss.
+       - inv H. exfalso. eapply n. ss.
+     }
+
+     unfold interp_pE, interp_rE.
+     repeat rewrite interp_mrec_bind.
+     repeat rewrite interp_state_bind.
+     guclo ordC_spec. econs.
+     { eapply Ordinal.add_O_l. }
+     guclo bindC_spec. econs.
+     { unfold unwrapU.
+       generalize (FNS "main"). i. inv H; cycle 1.
+       { clear H1 H2. unfold triggerUB.
+         repeat rewrite interp_mrec_bind.
+         repeat rewrite interp_state_bind.
+
+         repeat rewrite interp_mrec_miss.
+         repeat rewrite interp_state_bind.
+         repeat rewrite interp_state_trigger.
+         repeat rewrite interp_state_bind.
+         repeat rewrite interp_mrec_tau.
+
+         guclo ordC_spec. econs.
+         { eapply Ordinal.add_O_l. }
+         guclo bindC_spec. econs.
+
+         guclo ordC_spec. econs.
+         { eapply Ordinal.add_O_l. }
+         guclo bindC_spec. econs.
+
+         guclo ordC_spec. econs.
+         { eapply Ordinal.add_O_l. }
+         guclo bindC_spec. econs.
+
+
+         repeat setoid_rewrite interp_state_tau.
+
+         mgo.
+         guclo ordC_spec. econs.
+         { eapply Ordinal.add_O_l. }
+         guclo bindC_spec. econs.
+         2: {
+
+
+         mgo. ITree.bind' igo. gstep. mgo. econs; ss. }
+       clear H1 H2. mgo.
+       destruct a as [fn_src f_src]. destruct b as [fn_tgt f_tgt].
+       inv IN. inv H. simpl in H1. clarify.
+       exploit H0; eauto. instantiate (2:=[]). i. des.
+       gstep. mgo. ss. mgo. econs; auto.
+       gstep. econs; auto. guclo bindC_spec. econs.
+       { gfinal. right. eapply lift_sim_aux; eauto; ss.
+         { ii. ss. rewrite FIND. auto. }
+         { ii. ss. rewrite sim_sk0 in *. rewrite FIND. auto. }
+       }
+       i. ss. des.
+       destruct vret_src, vret_tgt0. ss. subst.
+       destruct r, r0. ss. subst.
+       mgo. ss. mgo.
+       gstep. econs; eauto.
+       gstep. econs; eauto.
+       gstep. econs; eauto.
+       instantiate (1:=fun vret_src vret_tgt => snd vret_src = snd vret_tgt). ss.
+     }
+
+     2: {
+       instantiate (1:=fun vret_src vret_tgt => snd (snd vret_src) = snd (snd vret_tgt)). ss.
+       i. destruct vret_src, vret_tgt0. destruct p0, p2. ss.
+       gstep. econs; eauto.
+     }
+
+
+     { ss. unfold unwrapU.
+       generalize (FNS "main"). i. inv H; cycle 1.
+       { clear H1 H2. unfold triggerUB. mgo. ITree.bind' igo. gstep. mgo. econs; ss. }
+       clear H1 H2. mgo.
+       destruct a as [fn_src f_src]. destruct b as [fn_tgt f_tgt].
+       inv IN. inv H. simpl in H1. clarify.
+       exploit H0; eauto. instantiate (2:=[]). i. des.
+       gstep. mgo. ss. mgo. econs; auto.
+       gstep. econs; auto. guclo bindC_spec. econs.
+       { gfinal. right. eapply lift_sim_aux; eauto; ss.
+         { ii. ss. rewrite FIND. auto. }
+         { ii. ss. rewrite sim_sk0 in *. rewrite FIND. auto. }
+       }
+       i. ss. des.
+       destruct vret_src, vret_tgt0. ss. subst.
+       destruct r, r0. ss. subst.
+       mgo. ss. mgo.
+       gstep. econs; eauto.
+       gstep. econs; eauto.
+       gstep. econs; eauto.
+       instantiate (1:=fun vret_src vret_tgt => snd vret_src = snd vret_tgt). ss.
+     }
+     { i. ss. des. gstep. econs. auto. }
+     Unshelve. all: exact Ord.O.
+
+
+     guclo ordC_spec. econs.
+     { eapply Ordinal.add_O_l. }
+     guclo bindC_spec. econs.
+
+       i. gstep.
+     ss.
+
+
+
+     assert (FNS: forall fn : string,
+                option_rel (sim_fnsem wf)
+                           (find (fun fnsem : string * (Any.t -> itree Es Any.t) => dec fn (fst fnsem))
+                                 (ModSem.fnsems (Mod.get_modsem md_src (Sk.load_skenv (Mod.sk md_src)))))
+                           (find (fun fnsem : string * (Any.t -> itree Es Any.t) => dec fn (fst fnsem))
+                                 (ModSem.fnsems (Mod.get_modsem md_tgt (Sk.load_skenv (Mod.sk md_tgt)))))).
+     { rewrite <- sim_sk0 in *.
+       remember (ModSem.fnsems (Mod.get_modsem md_src (Sk.load_skenv (Mod.sk md_src)))).
+       remember (ModSem.fnsems (Mod.get_modsem md_tgt (Sk.load_skenv (Mod.sk md_src)))).
+       clear - sim_fnsems. induction sim_fnsems; ss.
+       i. unfold sumbool_to_bool. des_ifs; eauto.
+       - inv H. ss.
+       - inv H. exfalso. eapply n. ss.
+     }
+     econs.
+     { ss. unfold unwrapU.
+       generalize (FNS "main"). i. inv H; cycle 1.
+       { clear H1 H2. unfold triggerUB. gstep. mgo. econs; ss. }
+       clear H1 H2. mgo.
+       destruct a as [fn_src f_src]. destruct b as [fn_tgt f_tgt].
+       inv IN. inv H. simpl in H1. clarify.
+       exploit H0; eauto. instantiate (2:=[]). i. des.
+       gstep. mgo. ss. mgo. econs; auto.
+       gstep. econs; auto. guclo bindC_spec. econs.
+       { gfinal. right. eapply lift_sim_aux; eauto; ss.
+         { ii. ss. rewrite FIND. auto. }
+         { ii. ss. rewrite sim_sk0 in *. rewrite FIND. auto. }
+       }
+       i. ss. des.
+       destruct vret_src, vret_tgt0. ss. subst.
+       destruct r, r0. ss. subst.
+       mgo. ss. mgo.
+       gstep. econs; eauto.
+       gstep. econs; eauto.
+       gstep. econs; eauto.
+       instantiate (1:=fun vret_src vret_tgt => snd vret_src = snd vret_tgt). ss.
+     }
+     { i. ss. des. gstep. econs. auto. }
+     Unshelve. all: exact Ord.O.
+   Qed.
+
+ Lemma lift_sim_aux ms_src ms_tgt
+         (wf: alist string (Σ * Any.t) * alist string (Σ * Any.t) -> Prop)
+         (FNS: forall fn : string,
+             option_rel (sim_fnsem wf)
+                        (find (fun fnsem : string * (Any.t -> itree Es Any.t) => dec fn (fst fnsem))
+                              (ModSem.fnsems ms_src))
+                        (find (fun fnsem : string * (Any.t -> itree Es Any.t) => dec fn (fst fnsem))
+                              (ModSem.fnsems ms_tgt)))
+     :
+       forall n mrsl_src fr_src f_src mrsl_tgt fr_tgt f_tgt
+              (* (WF: wf (mrsl_src, mrsl_tgt)) *)
+              (SIM: sim_itree wf n (mrsl_src, fr_src, f_src) (mrsl_tgt, fr_tgt, f_tgt))
+              mrs_src mrs_tgt
+              (EQVSRC: eqv mrsl_src mrs_src)
+              (EQVTGT: eqv mrsl_tgt mrs_tgt)
+              frs_src frs_tgt,
+       forall (R: Type) (RR: R -> R -> Prop)
+              (TY: R = (ModSem.r_state * Any.t)%type)
+              (REL: RR ~= fun (vret_src vret_tgt: r_state * Any.t) =>
+                            exists fr_src' fr_tgt',
+                              (<<WF: lift_wf wf (fst (fst vret_src)) (fst (fst vret_tgt))>>) /\
+                              (<<FRSRC: snd (fst vret_src) = fr_src'::frs_src>>) /\
+                              (<<FRTGT: snd (fst vret_tgt) = fr_tgt'::frs_tgt>>) /\
+                              (<<VAL: snd vret_src = snd vret_tgt>>))
+              i_src i_tgt
+              (SRC: i_src ~= (interp_Es
+                                (ModSem.prog ms_src)
+                                f_src
+                                (mrs_src, fr_src::frs_src)))
+              (TGT: i_tgt ~= (interp_Es
+                                (ModSem.prog ms_tgt)
+                                f_tgt
+                                (mrs_tgt, fr_tgt::frs_tgt))),
+         simg RR (arith (Ordinal.from_nat n) 4 4) i_src i_tgt.
+   Proof.
+     ginit. gcofix CIH. i. subst.
+     punfold SIM. gstep. inv SIM; pclearbot; ss; mgo; ss; mgo.
+     - econs. esplits; ss. econs; eauto.
+     - econs; ss. gbase.
+       eapply CIH; eauto.
+     - econs; ss. unfold unwrapU.
+       generalize (FNS fn). i. inv H; cycle 1.
+       { clear H1 H2. unfold triggerUB. mgo.
+         gstep. econs; ss.
+       }
+       clear H1 H2. mgo.
+       destruct a as [fn_src f_src]. destruct b as [fn_tgt f_tgt].
+       inv IN. inv H. simpl in H1. clarify.
+       exploit H0; eauto. instantiate (2:=varg). i. des.
+       mgo. ss. mgo.
+       gstep. econs; auto.
+       gstep. econs; auto.
+       gclo. eapply wrespect5_companion; auto with paco.
+       { eapply bindC_wrespectful. }
+       econs.
+       + gbase. eapply CIH; eauto. ss.
+       + i. ss. des.
+         destruct vret_src as [[mrs_src' frs_src'] val_src].
+         destruct vret_tgt as [[mrs_tgt' frs_tgt'] val_tgt].
+         ss. subst. mgo. ss. mgo.
+         gstep. econs; ss.
+         inv WF0. hexploit K; eauto. i. des. pclearbot.
+         eapply CIH in H; eauto; ss.
+         gstep. econs; ss.
+         gbase. eauto.
+     - unfold guarantee. mgo. econs; ss. i. hexploit K.
+       { eapply eqv_lookup in MR1; eauto. subst. eauto. }
+       i. des. pclearbot. esplits.
+       { eapply eqv_lookup in MR0; eauto. subst. eauto. }
+       gstep. econs; auto.
+       gstep. econs; auto.
+       gbase. eapply CIH; ss; eauto.
+       { eapply eqv_add; eauto. }
+       { eapply eqv_add; eauto. }
+     - econs; ss. gstep. econs; ss.
+       eapply eqv_lookup in MR0; eauto. eapply eqv_lookup in MR1; eauto. subst.
+       gbase. eapply CIH; eauto.
+     - econs; ss.
+       gstep. econs; ss.
+       gbase. eapply CIH; eauto.
+     - econs; ss.
+       gstep. econs; ss.
+       gbase. eapply CIH; eauto.
+     - unfold guarantee.
+       eapply simg_chooseR; ss.
+       { eapply arith_lt_2 with (n1:=3); auto. }
+       i. mgo. gstep. eapply simg_chooseR; ss.
+       { eapply arith_lt_2 with (n1:=2); auto. }
+       i. hexploit (K x).
+       { subst. extensionality k. eapply URA.add_comm. }
+       i. des. pclearbot.
+       gstep. eapply simg_chooseL; ss.
+       { eapply arith_lt_2 with (n1:=1); auto. }
+       eexists. gstep. mgo. eapply simg_chooseL; ss.
+       { eapply arith_lt_2 with (n1:=0); auto. }
+       eexists.
+       { instantiate (1:=fr_src1). subst.
+         extensionality k. eapply URA.add_comm. }
+       gstep. econs; ss. gstep. econs; ss. pclearbot.
+       gbase. eapply CIH; eauto.
+     - unfold assume. mgo. econs; ss.
+       i. hexploit K.
+       { i. eapply eqv_lookup in MR0; eauto. subst. eapply x_src. }
+       i. des. pclearbot. esplits.
+       { i. eapply eqv_lookup in MR1; eauto. subst. eapply WF. }
+       gstep. econs; ss. gstep. econs; ss.
+       gbase. eapply CIH; eauto. ss.
+     - econs; ss. i.
+       hexploit (K x_tgt). i. des. pclearbot.
+       eexists. mgo. gstep. econs; ss. gstep. econs; ss.
+       gbase. eapply CIH; eauto.
+     - econs; ss. i.
+       hexploit (K x_src). i. des. pclearbot.
+       eexists. mgo. gstep. econs; ss. gstep. econs; ss.
+       gbase. eapply CIH; eauto.
+     - econs; ss. ii. specialize (K x). subst. mgo.
+       gstep. econs; ss. gstep. econs; ss.
+       gbase. eapply CIH; eauto.
+     - econs; ss.
+       { eapply arith_lt_1 with (n1:=4); auto.
+         - eapply OrdArith.lt_from_nat; eauto.
+         - clear. lia. }
+       gbase. eapply CIH; eauto.
+     - unfold guarantee. mgo. econs; ss.
+       { eapply arith_lt_1 with (n1:=7); auto.
+         eapply OrdArith.lt_from_nat; eauto. }
+       esplits.
+       { eapply eqv_lookup in MR0; eauto. subst. auto. }
+       gstep. econs; ss.
+       { eapply arith_lt_2 with (n1:=6); auto. }
+       gstep. econs; ss.
+       { eapply arith_lt_2 with (n1:=4); auto. }
+       gbase. eapply CIH; eauto; ss.
+       eapply eqv_add; eauto.
+     - econs; ss.
+       { eapply arith_lt_1 with (n1:=7); auto.
+         eapply OrdArith.lt_from_nat; eauto. }
+       gstep. econs; ss.
+       { eapply arith_lt_2 with (n1:=4); auto. }
+       eapply eqv_lookup in MR0; eauto. subst.
+       gbase. eapply CIH; eauto; ss.
+     - econs; ss.
+       { eapply arith_lt_1 with (n1:=7); auto.
+         eapply OrdArith.lt_from_nat; eauto. }
+       gstep. econs; ss.
+       { eapply arith_lt_2 with (n1:=4); auto. }
+       gbase. eapply CIH; eauto; ss.
+     - econs; ss.
+       { eapply arith_lt_1 with (n1:=7); auto.
+         eapply OrdArith.lt_from_nat; eauto. }
+       gstep. econs; ss.
+       { eapply arith_lt_2 with (n1:=4); auto. }
+       gbase. eapply CIH; eauto; ss.
+     - unfold guarantee. econs; ss.
+       { eapply arith_lt_1 with (n1:=7); auto.
+         eapply OrdArith.lt_from_nat; eauto. }
+       eexists. gstep. mgo. econs; ss.
+       { eapply arith_lt_2 with (n1:=6); auto. }
+       eexists.
+       { extensionality k. eapply URA.add_comm. }
+       gstep. econs; ss.
+       { eapply arith_lt_2 with (n1:=5); auto. }
+       gstep. econs; ss.
+       { eapply arith_lt_2 with (n1:=4); auto. }
+       gbase. eapply CIH; eauto; ss.
+     - unfold assume. mgo. econs; ss.
+       { eapply arith_lt_1 with (n1:=7); auto.
+         eapply OrdArith.lt_from_nat; eauto. }
+       i. hexploit K.
+       { eapply eqv_lookup in MR0; eauto. subst. auto. }
+       i. pclearbot.
+       gstep. econs; ss.
+       { eapply arith_lt_2 with (n1:=6); auto. }
+       gstep. econs; ss.
+       { eapply arith_lt_2 with (n1:=4); auto. }
+       gbase. eapply CIH; eauto; ss.
+     - econs; ss.
+       { eapply arith_lt_1 with (n1:=7); auto.
+         eapply OrdArith.lt_from_nat; eauto. }
+       des. pclearbot. eexists. mgo.
+       gstep. econs; ss.
+       { eapply arith_lt_2 with (n1:=6); auto. }
+       gstep. econs; ss.
+       { eapply arith_lt_2 with (n1:=4); auto. }
+       gbase. eapply CIH; eauto.
+     - econs; ss.
+       { eapply arith_lt_1 with (n1:=7); auto.
+         eapply OrdArith.lt_from_nat; eauto. }
+       i. specialize (K x). mgo.
+       gstep. econs; ss.
+       { eapply arith_lt_2 with (n1:=6); auto. }
+       gstep. econs; ss.
+       { eapply arith_lt_2 with (n1:=4); auto. }
+       gbase. eapply CIH; eauto.
+     - econs; ss.
+       { eapply arith_lt_1 with (n1:=4); [|lia].
+         eapply OrdArith.lt_from_nat; eauto. }
+       gbase. eapply CIH; eauto.
+     - unfold guarantee. mgo. econs; ss.
+       { eapply arith_lt_1 with (n1:=7); auto.
+         eapply OrdArith.lt_from_nat; eauto. }
+       i. hexploit K.
+       { eapply eqv_lookup in MR0; eauto. subst. auto. }
+       i. pclearbot.
+       gstep. econs; ss.
+       { eapply arith_lt_2 with (n1:=6); auto. }
+       gstep. econs; ss.
+       { eapply arith_lt_2 with (n1:=4); auto. }
+       gbase. eapply CIH; eauto; ss.
+       eapply eqv_add; eauto.
+     - eapply eqv_lookup in MR0; eauto. subst.
+       econs; ss.
+       { eapply arith_lt_1 with (n1:=7); auto.
+         eapply OrdArith.lt_from_nat; eauto. }
+       gstep. econs; ss.
+       { eapply arith_lt_2 with (n1:=4); auto. }
+       gbase. eapply CIH; eauto; ss.
+     - econs; ss.
+       { eapply arith_lt_1 with (n1:=7); auto.
+         eapply OrdArith.lt_from_nat; eauto. }
+       gstep. econs; ss.
+       { eapply arith_lt_2 with (n1:=4); auto. }
+       gbase. eapply CIH; eauto; ss.
+     - econs; ss.
+       { eapply arith_lt_1 with (n1:=7); auto.
+         eapply OrdArith.lt_from_nat; eauto. }
+       gstep. econs; ss.
+       { eapply arith_lt_2 with (n1:=4); auto. }
+       gbase. eapply CIH; eauto; ss.
+     - unfold guarantee. mgo. econs; ss.
+       { eapply arith_lt_1 with (n1:=7); auto.
+         eapply OrdArith.lt_from_nat; eauto. }
+       i. mgo. gstep. econs; ss.
+       { eapply arith_lt_2 with (n1:=6); auto. }
+       i. hexploit K.
+       { instantiate (1:=x). subst.
+         extensionality k. eapply URA.add_comm. }
+       i. pclearbot.
+       gstep. econs; ss.
+       { eapply arith_lt_2 with (n1:=5); auto. }
+       gstep. econs; ss.
+       { eapply arith_lt_2 with (n1:=4); auto. }
+       gbase. eapply CIH; eauto.
+     - unfold assume. mgo. econs; ss.
+       { eapply arith_lt_1 with (n1:=7); auto.
+         eapply OrdArith.lt_from_nat; eauto. }
+       des. pclearbot. esplits.
+       { eapply eqv_lookup in MR0; eauto. subst. eauto. }
+       gstep. econs; ss.
+       { eapply arith_lt_2 with (n1:=6); auto. }
+       gstep. econs; ss.
+       { eapply arith_lt_2 with (n1:=4); auto. }
+       gbase. eapply CIH; eauto; ss.
+     - econs; ss.
+       { eapply arith_lt_1 with (n1:=7); auto.
+         eapply OrdArith.lt_from_nat; eauto. }
+       i. mgo. specialize (K x).
+       gstep. econs; ss.
+       { eapply arith_lt_2 with (n1:=6); auto. }
+       gstep. econs; ss.
+       { eapply arith_lt_2 with (n1:=4); auto. }
+       gbase. eapply CIH; eauto; ss.
+     - des. pclearbot. econs; ss.
+       { eapply arith_lt_1 with (n1:=7); auto.
+         eapply OrdArith.lt_from_nat; eauto. }
+       eexists. mgo. gstep. econs; ss.
+       { eapply arith_lt_2 with (n1:=6); auto. }
+       gstep. econs; ss.
+       { eapply arith_lt_2 with (n1:=4); auto. }
+       gbase. eapply CIH; eauto.
+       Unshelve. all: exact Ord.O.
+   Qed.
+
 
    (* Hypothesis SIM: sim. *)
    (* Variable ske: SkEnv.t. *)
