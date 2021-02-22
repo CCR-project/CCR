@@ -61,8 +61,12 @@ Section PROOF.
   Context {Σ: GRA.t}.
   (*** TODO: move to proper place, together with "mk_simple" ***)
   (*** TODO: rename sb into spb ***)
-  Definition mk_sb_simple (mn: string) {X: Type} (P: X -> Any.t -> Σ -> Prop) (Q: X -> Any.t -> Σ -> Prop) (measure: X -> ord)
-             (body: list val -> itree (hCallE +' pE +' eventE) val): fspecbody := mk_specbody (mk_simple mn P Q measure) body.
+  (*** TODO: remove redundancy with Hoareproof0.v ***)
+  Definition mk_simple (mn: string) {X: Type} (P: X -> Any.t -> Σ -> ord -> Prop) (Q: X -> Any.t -> Σ -> Prop): fspec :=
+    @mk _ mn X (list val) (val) (fun x y a r o => P x a r o /\ y↑ = a) (fun x z a r => Q x a r /\ z↑ = a)
+  .
+  Definition mk_sb_simple (mn: string) {X: Type} (P: X -> Any.t -> Σ -> ord -> Prop) (Q: X -> Any.t -> Σ -> Prop)
+             (body: list val -> itree (hCallE +' pE +' eventE) val): fspecbody := mk_specbody (mk_simple mn P Q) body.
 
 End PROOF.
 
@@ -120,30 +124,28 @@ Section PROOF.
   (* . *)
 
   Let alloc_spec: fspec := (mk_simple "Mem"
-                                      (fun sz varg _ => varg = [Vint (Z.of_nat sz)]↑)
+                                      (fun sz varg _ o => varg = [Vint (Z.of_nat sz)]↑ /\ o = ord_pure 1)
                                       (fun sz vret rret =>
                                          exists b, vret = (Vptr b 0)↑ /\
-                                                   rret = GRA.padding (points_tos (b, 0%Z) (List.repeat (Vint 0) sz)))
-                                      (fun _ => (ord_pure 1))).
+                                                   rret = GRA.padding (points_tos (b, 0%Z) (List.repeat (Vint 0) sz)))).
 
   Let free_spec: fspec := (mk_simple "Mem"
-                                     (fun '(b, ofs) varg rarg => exists v, varg = ([Vptr b ofs])↑ /\
-                                                                           rarg = (GRA.padding ((b, ofs) |-> v)))
-                                     (top3)
-                                     (fun _ => (ord_pure 1))).
+                                     (fun '(b, ofs) varg rarg o => exists v, varg = ([Vptr b ofs])↑ /\
+                                                                             rarg = (GRA.padding ((b, ofs) |-> v)) /\
+                                                                             o = ord_pure 1)
+                                     (top3)).
 
   Let load_spec: fspec := (mk_simple "Mem"
-                                     (fun '(b, ofs, v) varg rarg => varg = ([Vptr b ofs])↑ /\
-                                                                    rarg = (GRA.padding ((b, ofs) |-> v)))
-                                     (fun '(b, ofs, v) vret rret => rret = (GRA.padding ((b, ofs) |-> v)) /\ vret = v↑)
-                                     (fun _ => (ord_pure 1))).
+                                     (fun '(b, ofs, v) varg rarg o => varg = ([Vptr b ofs])↑ /\
+                                                                      rarg = (GRA.padding ((b, ofs) |-> v)) /\
+                                                                      o = ord_pure 1)
+                                     (fun '(b, ofs, v) vret rret => rret = (GRA.padding ((b, ofs) |-> v)) /\ vret = v↑)).
 
   Let store_spec: fspec := (mk_simple
                               "Mem"
-                              (fun '(b, ofs, v_new) varg rarg => exists v_old,
-                                   varg = ([Vptr b ofs ; v_new])↑ /\ rarg = (GRA.padding ((b, ofs) |-> v_old)))
-                              (fun '(b, ofs, v_new) _ rret => rret = (GRA.padding ((b, ofs) |-> v_new)))
-                              (fun _ => (ord_pure 1))).
+                              (fun '(b, ofs, v_new) varg rarg o => exists v_old,
+                                   varg = ([Vptr b ofs ; v_new])↑ /\ rarg = (GRA.padding ((b, ofs) |-> v_old)) /\ o = ord_pure 1)
+                              (fun '(b, ofs, v_new) _ rret => rret = (GRA.padding ((b, ofs) |-> v_new)))).
 
   Definition MemStb: list (gname * fspec) :=
     [("alloc", alloc_spec) ; ("free", free_spec) ; ("load", load_spec) ; ("store", store_spec)]

@@ -40,15 +40,15 @@ Section PROOF.
 
   Definition mainBody: list val -> itree (hCallE +' pE +' eventE) val :=
     fun _ =>
-      x <- trigger (hCall "alloc" [Vint 1]↑);; x <- x↓?;;
-      trigger (hCall "store" [x ; Vint 42]↑);;
+      x <- trigger (hCall true "alloc" [Vint 1]↑);; x <- x↓?;;
+      trigger (hCall true "store" [x ; Vint 42]↑);;
       (* trigger (Call "unknown_call" [x]);; *)
-      trigger (hCall "load" [x]↑);;
+      trigger (hCall true "load" [x]↑);;
       Ret (Vint 42)
   .
 
   (*** main's view on stb ***)
-  Definition main_spec: fspec := mk_simple "Main" (X:=unit) top3 top3 (fun _ => ord_top).
+  Definition main_spec: fspec := mk_simple "Main" (X:=unit) (fun _ _ _ o => o = ord_top) top3.
 
   Definition MainStb: list (gname * fspec) := [("main", main_spec)].
   Definition MainSbtb: list (gname * fspecbody) := [("main", mk_specbody main_spec mainBody)].
