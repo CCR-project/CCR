@@ -127,7 +127,7 @@ Section PROOF.
       ord_next <- trigger (Choose _);;
       guarantee(P x varg_src varg_tgt rarg ord_next);; (*** precondition ***)
 
-      guarantee(ord_lt ord_next ord_cur /\ (tbr = true -> is_pure ord_next));;
+      guarantee(ord_lt ord_next ord_cur /\ (tbr = true -> is_pure ord_next) /\ (tbr = false -> ord_next = ord_top));;
       vret_tgt <- trigger (Call fn varg_tgt);; (*** call ***)
       checkWf mn;;
 
@@ -379,7 +379,7 @@ If this feature is needed; we can extend it then. At the moment, I will only all
   .
 
   Definition md_mid: Mod.t := {|
-    Mod.get_modsem := fun _ => ms_src;
+    Mod.get_modsem := fun _ => ms_mid;
     Mod.sk := Sk.unit;
     (*** It is already a whole-program, so we don't need Sk.t anymore. ***)
     (*** Note: Actually, md_tgt's sk could also have been unit, which looks a bit more uniform. ***)
