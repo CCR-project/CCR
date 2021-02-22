@@ -427,6 +427,7 @@ Section MODSEM.
   Variable mn: mname.
 
   Set Typeclasses Depth 5.
+  Instance Initial_void1 : @Initial (Type -> Type) IFun void1 := @elim_void1. (*** TODO: move to ITreelib ***)
   Definition modsem: ModSem.t := {|
     ModSem.fnsems := List.map (fun '(fn, st) => (fn, fun _ => resum_itr (eval_imp st;; Ret (Any.upcast (Vint 0))))) program;
     ModSem.initial_mrs := [(mn, (URA.unit, unit↑))];

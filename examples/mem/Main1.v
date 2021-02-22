@@ -38,46 +38,20 @@ Section PROOF.
         return y; ~~~> return 42;
    ***)
 
-  Definition mainBody: Any.t -> itree (hCallE +' pE +' eventE) Any.t :=
+  Definition mainBody: list val -> itree (hCallE +' pE +' eventE) val :=
     fun _ =>
-      x <- trigger (hCall "alloc" [Vint 1]↑);; x <- x↓?;;
-      trigger (hCall "store" [x ; Vint 42]↑);;
+      x <- trigger (hCall true "alloc" [Vint 1]↑);; x <- x↓?;;
+      trigger (hCall true "store" [x ; Vint 42]↑);;
       (* trigger (Call "unknown_call" [x]);; *)
-      trigger (hCall "load" [x]↑);;
-      Ret (Vint 42)↑
+      trigger (hCall true "load" [x]↑);;
+      Ret (Vint 42)
   .
 
   (*** main's view on stb ***)
-  Definition MainStb: list (gname * fspec) :=
-    [("main", mk "Main" (X:=unit) (fun _ varg_high varg_low _ => varg_high = varg_low) (fun _ vret_high vret_low _ => vret_high = vret_low) (fun _ => None))].
-  Definition MemStb: list (gname * fspec) :=
-  [("alloc", mk "Mem"
-               (fun sz _ varg _ => varg = [Vint (Z.of_nat sz)]↑)
-               (fun sz _ vret rret =>
-                  exists b, vret = (Vptr b 0)↑ /\
-                            rret = GRA.padding (fold_left URA.add
-                                                          (mapi (fun n _ => (b, Z.of_nat n) |-> (Vint 0))
-                                                                (List.repeat tt sz)) URA.unit))
-               (fun _ => None)) ;
-  ("free", mk "Mem"
-              (fun '(b, ofs, v) _ varg rarg => varg = [Vptr b ofs]↑ /\
-                                             rarg = (GRA.padding ((b, ofs) |-> v)))
-              (top4)
-              (fun _ => None)) ;
-  ("load", mk "Mem"
-              (fun '(b, ofs, v) _ varg rarg => varg = [Vptr b ofs]↑ /\
-                                             rarg = (GRA.padding ((b, ofs) |-> v)))
-              (fun '(b, ofs, v) _ vret rret => rret = (GRA.padding ((b, ofs) |-> v)) /\ vret = v↑)
-              (fun _ => None)) ;
-  ("store", mk "Mem"
-               (fun '(b, ofs, v_old, v_new) _ varg rarg =>
-                  varg = [Vptr b ofs ; v_new]↑ /\ rarg = (GRA.padding ((b, ofs) |-> v_old)))
-               (fun '(b, ofs, v_old, v_new) _ _ rret => rret = (GRA.padding ((b, ofs) |-> v_new)))
-               (fun _ => None))
-  ]
-  .
+  Definition main_spec: fspec := mk_simple "Main" (X:=unit) (fun _ _ _ o => o = ord_top) top3.
 
-  Definition MainFtb := zip pair [("main")] [mainBody].
+  Definition MainStb: list (gname * fspec) := [("main", main_spec)].
+  Definition MainSbtb: list (gname * fspecbody) := [("main", mk_specbody main_spec mainBody)].
 
   (***
 Possible improvements:
@@ -91,14 +65,14 @@ Possible improvements:
   Definition MainSem: ModSem.t := {|
     (* ModSem.fnsems := [("main", mainF)]; *)
     (* ModSem.fnsems := List.map (map_snd (fun_to_tgt (MainStb ++ MemStb))) MainStb; *)
-    ModSem.fnsems := List.map (fun '(fn, body) => (fn, fun_to_tgt (MainStb ++ MemStb) fn body)) MainFtb;
+    ModSem.fnsems := List.map (fun '(fn, body) => (fn, fun_to_tgt (MemStb ++ MainStb) fn body)) MainSbtb;
     ModSem.initial_mrs := [("Main", (ε, unit↑))];
   |}
   .
 
   Definition Main: Mod.t := {|
     Mod.get_modsem := fun _ => MainSem;
-    Mod.sk := List.map (fun '(n, _) => (n, Sk.Gfun)) MainStb;
+    Mod.sk := List.map (fun '(n, _) => (n, Sk.Gfun)) MainSbtb;
   |}
   .
 

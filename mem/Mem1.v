@@ -18,6 +18,10 @@ Set Implicit Arguments.
 (* Definition until (n: nat): list nat := mapi (fun n _ => n) (List.repeat tt n). *)
 
 
+(*** TODO: move to Coqlib ***)
+Definition map_fst A B C (f: A -> C): A * B -> C * B := fun '(a, b) => (f a, b).
+Definition map_snd A B C (f: B -> C): A * B -> A * C := fun '(a, b) => (a, f b).
+
 
 (** TODO: move to PCM.v **)
 Declare Scope ra_scope.
@@ -49,6 +53,22 @@ Definition points_tos (loc: block * Z) (vs: list val): URA.car :=
 
 Notation "loc |-> v" := (points_to loc v) (at level 20).
 
+
+
+
+
+Section PROOF.
+  Context {Σ: GRA.t}.
+  (*** TODO: move to proper place, together with "mk_simple" ***)
+  (*** TODO: rename sb into spb ***)
+  (*** TODO: remove redundancy with Hoareproof0.v ***)
+  Definition mk_simple (mn: string) {X: Type} (P: X -> Any.t -> Σ -> ord -> Prop) (Q: X -> Any.t -> Σ -> Prop): fspec :=
+    @mk _ mn X (list val) (val) (fun x y a r o => P x a r o /\ y↑ = a) (fun x z a r => Q x a r /\ z↑ = a)
+  .
+  Definition mk_sb_simple (mn: string) {X: Type} (P: X -> Any.t -> Σ -> ord -> Prop) (Q: X -> Any.t -> Σ -> Prop)
+             (body: list val -> itree (hCallE +' pE +' eventE) val): fspecbody := mk_specbody (mk_simple mn P Q) body.
+
+End PROOF.
 
 
 
@@ -103,34 +123,78 @@ Section PROOF.
   (*            (fun _ => trigger (Choose _)) *)
   (* . *)
 
+  Let alloc_spec: fspec := (mk_simple "Mem"
+                                      (fun sz varg _ o => varg = [Vint (Z.of_nat sz)]↑ /\ o = ord_pure 1)
+                                      (fun sz vret rret =>
+                                         exists b, vret = (Vptr b 0)↑ /\
+                                                   rret = GRA.padding (points_tos (b, 0%Z) (List.repeat (Vint 0) sz)))).
+
+  Let free_spec: fspec := (mk_simple "Mem"
+                                     (fun '(b, ofs) varg rarg o => exists v, varg = ([Vptr b ofs])↑ /\
+                                                                             rarg = (GRA.padding ((b, ofs) |-> v)) /\
+                                                                             o = ord_pure 1)
+                                     (top3)).
+
+  Let load_spec: fspec := (mk_simple "Mem"
+                                     (fun '(b, ofs, v) varg rarg o => varg = ([Vptr b ofs])↑ /\
+                                                                      rarg = (GRA.padding ((b, ofs) |-> v)) /\
+                                                                      o = ord_pure 1)
+                                     (fun '(b, ofs, v) vret rret => rret = (GRA.padding ((b, ofs) |-> v)) /\ vret = v↑)).
+
+  Let store_spec: fspec := (mk_simple
+                              "Mem"
+                              (fun '(b, ofs, v_new) varg rarg o => exists v_old,
+                                   varg = ([Vptr b ofs ; v_new])↑ /\ rarg = (GRA.padding ((b, ofs) |-> v_old)) /\ o = ord_pure 1)
+                              (fun '(b, ofs, v_new) _ rret => rret = (GRA.padding ((b, ofs) |-> v_new)))).
+
   Definition MemStb: list (gname * fspec) :=
-  [("alloc", mk "Mem"
-               (fun sz _ varg _ => varg = [Vint (Z.of_nat sz)]↑)
-               (fun sz _ vret rret =>
-                  exists b, vret = (Vptr b 0)↑ /\
-                            rret = GRA.padding (points_tos (b, 0%Z) (List.repeat (Vint 0) sz)))
-               (fun _ => None)) ;
-  ("free", mk "Mem"
-              (fun '(b, ofs) _ varg rarg => exists v, varg = ([Vptr b ofs])↑ /\
-                                                    rarg = (GRA.padding ((b, ofs) |-> v)))
-              (top4)
-              (fun _ => None)) ;
-  ("load", mk "Mem"
-              (fun '(b, ofs, v) _ varg rarg => varg = ([Vptr b ofs])↑ /\
-                                             rarg = (GRA.padding ((b, ofs) |-> v)))
-              (fun '(b, ofs, v) _ vret rret => rret = (GRA.padding ((b, ofs) |-> v)) /\ vret = v↑)
-              (fun _ => None)) ;
-  ("store", mk "Mem"
-               (fun '(b, ofs, v_new) _ varg rarg => exists v_old,
-                    varg = ([Vptr b ofs ; v_new])↑ /\ rarg = (GRA.padding ((b, ofs) |-> v_old)))
-               (fun '(b, ofs, v_new) _ _ rret => rret = (GRA.padding ((b, ofs) |-> v_new)))
-               (fun _ => None))
-  ]
+    [("alloc", alloc_spec) ; ("free", free_spec) ; ("load", load_spec) ; ("store", store_spec)]
   .
 
-  Definition MemFtb: list (gname * (Any.t -> itree (hCallE +' pE +' eventE) Any.t)) :=
-    zip pair ["alloc"; "free"; "load"; "store"] (List.repeat (fun _ => trigger (Choose _)) 4)
+  Definition MemSbtb: list (gname * fspecbody) :=
+    [("alloc", mk_specbody alloc_spec (fun _ => trigger (Choose _)));
+    ("free",   mk_specbody free_spec (fun _ => trigger (Choose _)));
+    ("load",   mk_specbody load_spec (fun _ => trigger (Choose _)));
+    ("store",   mk_specbody store_spec (fun _ => trigger (Choose _)))
+    ]
   .
+
+
+
+
+
+
+  (* Definition MemSbtb: list (gname * fspecbody) := *)
+  (* [("alloc", mk_sb_simple "Mem" *)
+  (*              (fun sz varg _ => varg = [Vint (Z.of_nat sz)]↑) *)
+  (*              (fun sz vret rret => *)
+  (*                 exists b, vret = (Vptr b 0)↑ /\ *)
+  (*                           rret = GRA.padding (points_tos (b, 0%Z) (List.repeat (Vint 0) sz))) *)
+  (*              (fun _ => (ord_pure 1)) *)
+  (*              (fun _ => trigger (Choose _))) ; *)
+  (* ("free", mk_sb_simple "Mem" *)
+  (*             (fun '(b, ofs) varg rarg => exists v, varg = ([Vptr b ofs])↑ /\ *)
+  (*                                                   rarg = (GRA.padding ((b, ofs) |-> v))) *)
+  (*             (top3) *)
+  (*             (fun _ => (ord_pure 1)) *)
+  (*             (fun _ => trigger (Choose _))) ; *)
+  (* ("load", mk_sb_simple "Mem" *)
+  (*             (fun '(b, ofs, v) varg rarg => varg = ([Vptr b ofs])↑ /\ *)
+  (*                                          rarg = (GRA.padding ((b, ofs) |-> v))) *)
+  (*             (fun '(b, ofs, v) vret rret => rret = (GRA.padding ((b, ofs) |-> v)) /\ vret = v↑) *)
+  (*             (fun _ => (ord_pure 1)) *)
+  (*             (fun _ => trigger (Choose _))) ; *)
+  (* ("store", mk_sb_simple *)
+  (*             "Mem" *)
+  (*              (fun '(b, ofs, v_new) varg rarg => exists v_old, *)
+  (*                   varg = ([Vptr b ofs ; v_new])↑ /\ rarg = (GRA.padding ((b, ofs) |-> v_old))) *)
+  (*              (fun '(b, ofs, v_new) _ rret => rret = (GRA.padding ((b, ofs) |-> v_new))) *)
+  (*              (fun _ => (ord_pure 1)) *)
+  (*              (fun _ => trigger (Choose _))) *)
+  (* ] *)
+  (* . *)
+
+  (* Definition MemStb: list (gname * fspec) := List.map (map_snd fsb_fspec) MemSbtb. *)
 
   (* Definition MemFtb2: list (gname * fspec * (list val -> itree (hCallE +' eventE) val)) := *)
   (* [("alloc", mk "Mem" *)
@@ -157,7 +221,7 @@ Section PROOF.
   (* Goal MemFtb = MemFtb2. refl. Qed. *)
 
   Definition MemSem: ModSem.t := {|
-    ModSem.fnsems := List.map (fun '(fn, body) => (fn, fun_to_tgt MemStb fn body)) MemFtb;
+    ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt MemStb fn fsb)) MemSbtb;
       (* [("alloc", allocF) ; ("free", freeF) ; ("load", loadF) ; ("store", storeF)]; *)
     ModSem.initial_mrs := [("Mem", (GRA.padding (URA.black (M:=_memRA) (fun _ _ => inr tt)), unit↑))];
   |}

@@ -388,7 +388,7 @@ Section MODSEM.
                end).
   Definition initial_itr: itree (eventE) Any.t :=
     assume(<<WF: wf ms>>);;
-    snd <$> interp_Es prog (prog (Call "main" (tt↑))) (initial_r_state, initial_p_state).
+    snd <$> interp_Es prog (prog (Call "main" (([]: list val)↑))) (initial_r_state, initial_p_state).
 
 
 
