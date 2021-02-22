@@ -7,7 +7,7 @@ Require Import Skeleton.
 Require Import PCM.
 Require Import Ordinal ClassicalOrdinal.
 Require Import Any.
-Require Export Hoare2.
+Require Export HoareDef.
 Require Import Hoareproof0 Hoareproof1.
 
 Generalizable Variables E R A B C X Y Σ.

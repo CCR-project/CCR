@@ -1,4 +1,4 @@
-Require Import Mem0 Mem1 SimModSem Hoare.
+Require Import Mem0 Mem1 SimModSem HoareDef.
 Require Import Coqlib.
 Require Import Universe.
 Require Import Skeleton.
