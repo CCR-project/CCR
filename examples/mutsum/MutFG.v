@@ -47,7 +47,9 @@ Tactic Notation "irw" := repeat (autorewrite with itree_axiom2; cbn).
 
 Section PROOF.
 
-  Context `{Σ: GRA.t}.
+  Definition Σ: GRA.t := fun _ => URA.of_RA RA.empty.
+  Local Existing Instance Σ.
+
   Local Opaque GRA.to_URA.
   Infix "⋅" := URA.add (at level 50, left associativity).
   Notation "(⋅)" := URA.add (only parsing).
@@ -116,3 +118,7 @@ Section PROOF.
   Qed.
 
 End PROOF.
+
+Definition main := initial_state (ModSem.interp (Mod.enclose FG3)).
+
+Extraction "main" main.
