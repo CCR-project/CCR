@@ -149,12 +149,11 @@ Section SIMMODSEM.
       exists mem_src (mem_tgt: Mem.t),
         (<<SRC: mrps_src0 = Maps.add "Mem" ((GRA.padding ((URA.black mem_src): URA.car (t:=Mem1.memRA))), tt↑) Maps.empty>>) /\
         (<<TGT: mrps_tgt0 = Maps.add "Mem" (ε, mem_tgt↑) Maps.empty>>) /\
-        (<<SIM: forall b ofs, sim_loc ((mem_tgt.(Mem.cnts)) b ofs) (mem_src b ofs)>>) /\
-        (<<NULLPTR: mem_src 0%nat 0%Z = inl (Some Vundef)>>)
+        (<<SIM: forall b ofs, sim_loc ((mem_tgt.(Mem.cnts)) b ofs) (mem_src b ofs)>>)
   .
 
   Local Opaque points_to.
-  
+
   Hint Resolve sim_itree_mon: paco.
 
   Opaque URA.unit.
@@ -256,7 +255,7 @@ Section SIMMODSEM.
         eapply URA.auth_alloc2.
         eapply URA.wf_mon in WF.
         eapply GRA.padding_wf in WF. des.
-        clear - WF WFA Heq NULLPTR SIM.
+        clear - WF WFA Heq SIM.
         Local Transparent URA.add points_to.
         ss. des. unfold URA.white in Heq. clarify.
         ii. des_ifs; ss.
@@ -286,11 +285,6 @@ Section SIMMODSEM.
       eapply URA.wf_mon in WF. eapply GRA.padding_wf in WF. des. ss. des. clear_tac. clear WF.
       clear mem_src_new.
       steps. esplits; ss; cycle 1.
-      - Local Transparent URA.add.
-        ss. des_ifs. bsimpl; des; des_sumbool; ss.
-        subst blk. clear - Heq1.
-        admit "ez: add tgt wf".
-        Local Opaque URA.add.
       - ss. ii.
         destruct (dec b blk).
         + subst. unfold blk. unfold update. des_ifs_safe.
@@ -430,7 +424,6 @@ Section SIMMODSEM.
       { rewrite URA.unit_idl. ss. }
       steps.
       esplits; eauto.
-      admit "ez - add a condition in wf, so that points-to predicate containing Vnullptr is never published".
     }
     Local Opaque points_to URA.add URA.wf URA.unit.
     econs.
@@ -515,15 +508,104 @@ Section SIMMODSEM.
         - bsimpl; des; des_sumbool; ss; subst. unfold mem_src'. des_ifs; bsimpl; des; des_sumbool; ss. econs; et.
         - unfold mem_src'. des_ifs. bsimpl; des; des_sumbool; subst; ss.
       }
-      admit "ez - add a condition in wf, so that points-to predicate containing Vnullptr is never published".
     }
     econs; et.
-    { admit "MINKI!!!". }
-  Unshelve.
+    { init.
+      unfold checkWf, forge, discard, put. steps.
+      unfold cmpF. steps. rewrite Any.upcast_downcast. steps.
+
+      assert (VALID: forall b ofs v (WF: URA.wf ((URA.black (mem_src: URA.car (t:=Mem1._memRA))) ⋅ ((b, ofs) |-> [v]))),
+                 Mem.valid_ptr mem_tgt b ofs = true).
+      { clear - SIM. i. cut (mem_src b ofs = inl (Some v)).
+        - i. unfold Mem.valid_ptr.
+          specialize (SIM b ofs). rewrite H in *. inv SIM. ss.
+        - Local Transparent points_to URA.add URA.wf URA.unit.
+          ss. des. specialize (WF0 b ofs). r in WF. des; clarify. ss.
+          des_ifs; bsimpl; des; des_sumbool; ss; subst;
+            try rewrite Z.leb_le in *; try rewrite Z.leb_gt in *; try rewrite Z.ltb_lt in *; try rewrite Z.ltb_ge in *;
+              try rewrite Z.sub_diag in *; try lia; ss.
+          Local Opaque URA.add GRA.to_URA points_to URA.wf URA.unit.
+      }
+
+      clear x3. des; clarify.
+      - (* ptr / null *)
+        clear_tac. rewrite Any.upcast_downcast in *. clarify.
+        apply_all_once Any.upcast_inj. des. clarify. clear_tac.
+        rewrite URA.unit_idl in *. rewrite GRA.padding_add in *. apply_all_once GRA.padding_wf. des.
+        ss.
+        unfold interp_hCallE_tgt. steps. force_l. exists 0. steps. force_l. esplit. force_l. esplit.
+        force_l. eexists (GRA.padding (URA.black (mem_src: URA.car (t:=Mem1._memRA))),
+                          GRA.padding ((b0, ofs) |-> [v])).
+        steps.
+        force_l. { refl. } steps. force_l. esplit. force_l. { esplits; eauto. } steps.
+        force_l. esplit. steps. force_l. { rewrite URA.unit_id. refl. } steps.
+        erewrite VALID; cycle 1.
+        { instantiate (1:=v). eapply _ASSUME. }
+        ss. steps. esplits; eauto.
+      - (* null / ptr *)
+        clear_tac. rewrite Any.upcast_downcast in *. clarify.
+        apply_all_once Any.upcast_inj. des. clarify. clear_tac.
+        rewrite URA.unit_idl in *. rewrite GRA.padding_add in *. apply_all_once GRA.padding_wf. des.
+        ss.
+        unfold interp_hCallE_tgt. steps. force_l. exists 0. steps. force_l. esplit. force_l. esplit.
+        force_l. eexists (GRA.padding (URA.black (mem_src: URA.car (t:=Mem1._memRA))),
+                          GRA.padding ((b0, ofs) |-> [v])).
+        steps.
+        force_l. { refl. } steps. force_l. esplit. force_l. { esplits; eauto. } steps.
+        force_l. esplit. steps. force_l. { rewrite URA.unit_id. refl. } steps.
+        erewrite VALID; cycle 1.
+        { instantiate (1:=v). eapply _ASSUME. }
+        ss. steps. esplits; eauto.
+      - (* ptr / ptr different *)
+        clear_tac. rewrite Any.upcast_downcast in *. clarify.
+        apply_all_once Any.upcast_inj. des. clarify. clear_tac.
+        rewrite URA.unit_idl in *. repeat rewrite GRA.padding_add in *. apply_all_once GRA.padding_wf. des.
+        ss.
+        unfold interp_hCallE_tgt. steps. force_l. exists 0. steps. force_l. esplit. force_l. esplit.
+        force_l. eexists (GRA.padding (URA.black (mem_src: URA.car (t:=Mem1._memRA))),
+                          GRA.padding (((b0, ofs0) |-> [v0]) ⋅ ((b1, ofs1) |-> [v1]))).
+        steps.
+        force_l. { refl. } steps. force_l. esplit. force_l. { esplits; eauto. } steps.
+        force_l. esplit. steps. force_l. { rewrite URA.unit_id. refl. } steps.
+        erewrite VALID; cycle 1.
+        { instantiate (1:=v0). clear - _ASSUME.
+          eapply URA.wf_mon. erewrite <- URA.add_assoc. eapply _ASSUME. }
+        erewrite VALID; cycle 1.
+        { instantiate (1:=v1). clear - _ASSUME.
+          eapply URA.wf_mon. erewrite <- URA.add_assoc.
+          erewrite URA.add_comm with (a:=(b1, ofs1) |-> [v1]). eapply _ASSUME. }
+        ss. steps.
+        destruct (dec b0 b1); cycle 1.
+        { ss. steps. esplits; eauto. }
+        destruct (dec ofs0 ofs1); cycle 1.
+        { ss. steps. esplits; eauto. }
+        subst. clear - _ASSUME. exfalso.
+        erewrite URA.add_comm in _ASSUME. eapply URA.wf_mon in _ASSUME.
+        Local Transparent points_to URA.add URA.wf URA.unit.
+        ss. specialize (_ASSUME b1 ofs1).
+        destruct (dec b1 b1); ss. erewrite Z.leb_refl in *. ss.
+        replace (ofs1 <? ofs1 + 1)%Z with true in *; ss.
+        clear. symmetry. eapply Z.ltb_lt. lia.
+        Local Opaque URA.add GRA.to_URA points_to URA.wf URA.unit.
+      - (* ptr / ptr same *)
+        clear_tac. rewrite Any.upcast_downcast in *. clarify.
+        apply_all_once Any.upcast_inj. des. clarify. clear_tac.
+        rewrite URA.unit_idl in *. rewrite GRA.padding_add in *. apply_all_once GRA.padding_wf. des.
+        ss.
+        unfold interp_hCallE_tgt. steps. force_l. exists 0. steps. force_l. esplit. force_l. esplit.
+        force_l. eexists (GRA.padding (URA.black (mem_src: URA.car (t:=Mem1._memRA))),
+                          GRA.padding ((b0, ofs) |-> [v])).
+        steps.
+        force_l. { refl. } steps. force_l. esplit. force_l. { esplits; eauto. } steps.
+        force_l. esplit. steps. force_l. { rewrite URA.unit_id. refl. } steps.
+        erewrite VALID; cycle 1.
+        { instantiate (1:=v). eapply _ASSUME. }
+        ss. steps. esplits; eauto. destruct (dec b0 b0); ss. destruct (dec ofs ofs); ss.
+        steps. esplits; eauto.
+    }
+    Unshelve.
     all: ss.
     all: try (by repeat econs; et).
   Qed.
 
 End SIMMODSEM.
-
-
