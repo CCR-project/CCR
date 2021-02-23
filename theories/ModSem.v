@@ -524,71 +524,71 @@ Section MODSEM.
       try rewrite <- app_assoc in *; et.
   Qed.
 
-  Lemma find_NoDup_comm: forall {A} (a b: list (string * A)) fn
-               (ND: NoDup (List.map fst (a ++ b))),
-               find (fun fnsem: (string * A) => dec fn (fst fnsem)) (a ++ b) =
-               find (fun fnsem: (string * A) => dec fn (fst fnsem)) (b ++ a).
-      induction a; ii.
-      { rewrite app_nil_r; ss. }
-      ss.
-      destruct (NoDup_cons_iff (fst a) (List.map fst (a0 ++ b))) as [Hr _].
-      destruct (Hr ND); clear Hr.
-      rewrite map_app in *.
-      destruct (sumbool_to_bool (dec fn (fst a))) eqn: Ha; et.
-      - destruct (dec fn (fst a)); inv Ha.
-        induction b; ii; ss.
-        { destruct (sumbool_to_bool (dec (fst a) (fst a))) eqn: Haa; et.
-          destruct (dec (fst a) (fst a)); inv Haa. by destruct n. }
+  Lemma find_NoDup_comm: forall {A X} `{Dec X} (a b: list A) (y: X) (f: A -> X)
+                                (ND: NoDup (List.map f (a ++ b))),
+      find (fun a0: A => dec y (f a0)) (a ++ b) =
+      find (fun a0: A => dec y (f a0)) (b ++ a).
+    induction a; ii.
+    { rewrite app_nil_r; ss. }
+    ss.
+    destruct (NoDup_cons_iff (f a) (List.map f (a0 ++ b))) as [Hr _].
+    destruct (Hr ND); clear Hr.
+    rewrite map_app in *.
+    destruct (sumbool_to_bool (dec y (f a))) eqn: Ha; et.
+    - destruct (dec y (f a)); inv Ha.
+      induction b; ii; ss.
+      { destruct (sumbool_to_bool (dec (f a) (f a))) eqn: Haa; et.
+        destruct (dec (f a) (f a)); inv Haa. by destruct n. }
 
-        destruct (sumbool_to_bool (dec (fst a) (fst a1))) eqn: Ha1.
-        {
-          exfalso.
-          rewrite app_comm_cons in ND.
-          destruct (NoDup_remove _ _ (fst a1) ND).
-          rewrite <- app_comm_cons in H2.
-          apply H2.
-          destruct (dec (fst a) (fst a1)); inv Ha1.
-          rewrite e. by econs.
-        }
-        apply IHb.
-        apply NoDup_Add with (a:=(fst a)) (l:=(List.map fst a0 ++ List.map fst b)).
+      destruct (sumbool_to_bool (dec (f a) (f a1))) eqn: Ha1.
+      {
+        exfalso.
+        rewrite app_comm_cons in ND.
+        destruct (NoDup_remove _ _ (f a1) ND).
+        destruct (dec (f a) (f a1)); inv Ha1.
+        rewrite <- app_comm_cons in H2.
+        apply H3.
+        rewrite e. by econs.
+      }
+      apply IHb.
+      apply NoDup_Add with (a:=(f a)) (l:=(List.map f a0 ++ List.map f b)).
+      econs.
+      split.
+      eapply NoDup_remove_1 with (f a1); et.
+      + ii. apply H0. apply in_or_app.
+        apply in_app_iff in H2.
+        destruct H2; et; right; by econsr.
+      + ii. apply H0. apply in_or_app.
+        apply in_app_iff in H2.
+        destruct H2; et; right; by econsr.
+      + by eapply NoDup_remove_1 with (f a1).
+    - rewrite IHa; cycle 1.
+      { by rewrite map_app. }
+      induction b; ii; ss.
+      { by rewrite Ha. }
+      destruct (sumbool_to_bool (dec y (f a1))) eqn: Haa; et.
+      apply IHb; et.
+      + apply NoDup_Add with (a:=(f a)) (l:=(List.map f a0 ++ List.map f b)).
         econs.
         split.
-        eapply NoDup_remove_1 with (fst a1); et.
-        + ii. apply H. apply in_or_app.
-          apply in_app_iff in H1.
-          destruct H1; et; right; by econsr.
-        + ii. apply H. apply in_or_app.
-          apply in_app_iff in H1.
-          destruct H1; et; right; by econsr.
-        + by eapply NoDup_remove_1 with (fst a1).
-      - rewrite IHa; cycle 1.
-        { by rewrite map_app. }
-        induction b; ii; ss.
-        { by rewrite Ha. }
-        destruct (sumbool_to_bool (dec fn (fst a1))) eqn: Haa; et.
-        apply IHb; et.
-        + apply NoDup_Add with (a:=(fst a)) (l:=(List.map fst a0 ++ List.map fst b)).
-          econs.
-          split.
-          eapply NoDup_remove_1 with (fst a1); et.
-          ii. apply H. apply in_or_app.
-          apply in_app_iff in H1.
-          destruct H1; et; right. by econsr.
-        + ii; apply H. apply in_or_app.
-          apply in_app_iff in H1.
-          destruct H1; et; right; by econsr.
-        + by eapply NoDup_remove_1 with (fst a1).
+        eapply NoDup_remove_1 with (f a1); et.
+        ii. apply H0. apply in_or_app.
+        apply in_app_iff in H2.
+        destruct H2; et; right. by econsr.
+      + ii; apply H0. apply in_or_app.
+        apply in_app_iff in H2.
+        destruct H2; et; right; by econsr.
+      + by eapply NoDup_remove_1 with (f a1).
   Qed.
 
-  Lemma find_NoDup_assoc: forall A (a b c: list (string * A)) fn
-               (ND: NoDup (List.map fst (a ++ b ++ c))),
-               find (fun fnsem: (string * A) => dec fn (fst fnsem)) (a ++ (b ++ c)) =
-               find (fun fnsem: (string * A) => dec fn (fst fnsem)) ((a ++ b) ++ c).
+  Lemma find_NoDup_assoc: forall {A X} `{Dec X} (a b c: list A) (y: X) (f: A -> X)
+                                 (ND: NoDup (List.map f (a ++ b ++ c))),
+      find (fun a0: A => dec y (f a0)) (a ++ (b ++ c)) =
+      find (fun a0: A => dec y (f a0)) ((a ++ b) ++ c).
   Proof.
     induction a; ii; ss.
     rewrite IHa; et.
-    by eapply NoDup_cons_iff with (a:=(fst a)).
+      by eapply NoDup_cons_iff with (a:=(f a)).
   Qed.
 
   Theorem add_comm
