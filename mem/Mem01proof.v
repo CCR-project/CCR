@@ -87,7 +87,11 @@ Ltac igo := repeat (try rewrite bind_bind; try rewrite bind_ret_l; try rewrite b
                     try rewrite interp_tau;
                     try rewrite interp_trigger
                    ).
+
+Ltac prep := ired; try rewrite ! unfold_interp.
+
 Ltac force_l :=
+  prep;
   match goal with
   | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, unwrapN ?ox >>= _) (_, _)) ] =>
     let tvar := fresh "tmp" in
@@ -107,6 +111,7 @@ Ltac force_l :=
   end
 .
 Ltac force_r :=
+  prep;
   match goal with
   | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, _) (_, unwrapU ?ox >>= _)) ] =>
     let tvar := fresh "tmp" in
@@ -217,10 +222,7 @@ Section SIMMODSEM.
         | _ => idtac
         end
       .
-      Ltac steps := repeat (ired; try rewrite ! unfold_interp;
-                            try _step;
-                            unfold alist_add; simpl; des_ifs_safe)
-      .
+      Ltac steps := repeat ((*** pre processing ***) prep; try _step; (*** post processing ***) unfold alist_add; simpl; des_ifs_safe).
       unfold checkWf, forge, discard. steps.
       unfold allocF. steps. rewrite Any.upcast_downcast. steps.
       des. clarify. rewrite Any.upcast_downcast in *. clarify. apply_all_once Any.upcast_inj. des. clarify. clear_tac.
@@ -275,7 +277,7 @@ Section SIMMODSEM.
       { esplits; eauto. }
       steps.
       force_l. esplits; eauto.
-      ired. force_l.
+      force_l.
       { instantiate (1:= GRA.padding _). rewrite GRA.padding_add. rewrite URA.unit_id. f_equal. ss. }
       clear _GUARANTEE0 _GUARANTEE1.
       Local Opaque URA.add points_to.
@@ -334,18 +336,102 @@ Section SIMMODSEM.
     }
     econs; ss.
     { init.
-      TTTTTTTTTTTTTTTTTTTTTTTTT
-      unfold Mem0.allocF.
-      unfold fun_to_tgt, cfun, HoareFun. ss.
-      split; ss. ii; clarify. rename y into varg. eexists 100%nat. ss. des; clarify.
-      ginit. { eapply cpn3_wcompat; eauto with paco. } unfold alist_add, alist_remove; ss.
-      unfold Mem0.allocF.
-      unfold fun_to_tgt, cfun, HoareFun. ss.
-      TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
+      Local Opaque URA.add URA.wf.
+      unfold checkWf, forge, discard. steps.
+      unfold freeF. steps. rewrite Any.upcast_downcast. steps.
+      (************** TODO: rename x3 into ASSUME *********************)
+      des. clarify. clear_tac. rewrite Any.upcast_downcast in *. clarify.
+      clear v x5. (************ TODO: WHY? *******************)
       steps.
-      unfold forge.
-      steps. unfold checkWf. steps.
-      unfold assume. steps.
+      unfold interp_hCallE_tgt. steps. force_l. exists 0. steps.
+      apply_all_once Any.upcast_inj. des; clarify. clear_tac.
+      rewrite URA.unit_idl in *. rewrite GRA.padding_add in *. eapply GRA.padding_wf in x1. des.
+      rename x1 into WF.
+      rename n into b. rename z into ofs. rename v0 into v.
+
+      assert(A: mem_src b ofs = inl (Some v)).
+      { Local Transparent URA.wf.
+        ss. des_ifs. des. specialize (WF0 b ofs).
+        Local Transparent URA.add.
+        clear SIM.
+        Local Transparent URA.unit.
+        ss. clarify. rr in WF. des. clarify. ss.
+        des_ifs;
+          bsimpl; des; des_sumbool; ss;
+          repeat des_u;
+          clear_tac;
+          try rewrite Z.leb_le in *; try rewrite Z.leb_gt in *; try rewrite Z.ltb_lt in *; try rewrite Z.ltb_ge in *;
+          try rewrite Z.sub_diag in *;
+          try lia; ss.
+        Local Opaque URA.wf URA.add URA.unit.
+      }
+
+      set (mem_src' := fun _b _ofs => if dec _b b && dec _ofs ofs then inr () else mem_src _b _ofs).
+
+      assert(WF': URA.wf (mem_src': URA.car (t:=Mem1._memRA))).
+      { Local Transparent URA.add URA.wf.
+        ss. ii. des_ifs.
+        ss. clarify.
+        subst mem_src'. ss. des_ifs. des. specialize (WF0 k k0). bsimpl. des; des_sumbool; des_ifs.
+        Local Opaque URA.wf URA.add.
+      }
+      hexploit (SIM b ofs); et. intro B. rewrite A in *. inv B.
+      force_r.
+      { exfalso. unfold Mem.free in *. des_ifs. }
+      rename t into mem_tgt'.
+      assert(SIM': forall b ofs, sim_loc (Mem.cnts mem_tgt' b ofs) (mem_src' b ofs)).
+      { i.
+        unfold Mem.free in _UNWRAPU. des_ifs. ss.
+        subst mem_src'. ss.
+        destruct (classic (b = b0 /\ ofs = ofs0)); des; clarify.
+        - destruct H0; clarify. (**** TODO: FIX ****) unfold update. des_ifs. econs.
+        - des_ifs.
+          { Psimpl. bsimpl; des; des_sumbool; ss; clarify. destruct H0; ss. destruct H1; ss. (**** TODO: FIX ****)}
+          replace (update (Mem.cnts mem_tgt) b (update (Mem.cnts mem_tgt b) ofs None) b0 ofs0) with
+              (Mem.cnts mem_tgt b0 ofs0); cycle 1.
+          { unfold update. des_ifs. Psimpl. des_ifs; bsimpl; des; des_sumbool; ss; clarify. }
+          et.
+      }
+      force_l. esplits.
+      force_l. esplits. force_l.
+      eexists ((GRA.padding (URA.black (mem_src': URA.car (t:=Mem1._memRA)))), URA.unit: URA.car (t:=Σ)).
+      steps.
+      unfold put. (**** TODO: FIX ****)
+      steps. force_l.
+      { rewrite URA.unit_id.
+        rewrite ! GRA.padding_add. apply GRA.padding_updatable.
+        apply URA.auth_dealloc.
+        clear - WF' WF.
+        r. i. rewrite URA.unit_idl.
+        ss. destruct H; clear H. (*** coq bug; des infloops ***) des. clarify.
+        esplits; et.
+        apply func_ext. intro _b. apply func_ext. intro _ofs.
+        destruct (classic (b = _b /\ ofs = _ofs)).
+        - destruct H; clear H. clarify.
+          subst mem_src'. ss. des_ifs; bsimpl; des; des_sumbool; clarify.
+          clear - H0.
+          Local Transparent URA.wf.
+          Local Transparent URA.add.
+          specialize (H0 _b _ofs). ss.
+          des_ifs; bsimpl; des; des_sumbool;
+            try rewrite Z.leb_le in *; try rewrite Z.leb_gt in *; try rewrite Z.ltb_lt in *; try rewrite Z.ltb_ge in *;
+              try rewrite Z.sub_diag in *;
+              try lia; ss.
+          des_u. ss.
+        - Psimpl.
+          subst mem_src'. s.
+          des_ifs; bsimpl; des; des_sumbool;
+            try rewrite Z.leb_le in *; try rewrite Z.leb_gt in *; try rewrite Z.ltb_lt in *; try rewrite Z.ltb_ge in *;
+              try rewrite Z.sub_diag in *;
+              try lia; ss.
+          Local Opaque URA.wf.
+          Local Opaque URA.add.
+      }
+      steps. force_l. esplits. force_l. { esplits; eauto. } steps. force_l. esplits. force_l.
+      { rewrite URA.unit_idl. ss. }
+      steps.
+      esplits; eauto.
+      admit "ez - add a condition in wf, so that points-to predicate containing Vnullptr is never published".
     }
     econs.
     { split; ss. ii; clarify. rename y into varg. eexists 100%nat. ss. des; clarify.
