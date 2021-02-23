@@ -26,18 +26,18 @@ Section PROOF.
     match xs with
     | [] => ⌜ll = Vnullptr⌝
     | xhd :: xtl =>
-      Exists lhd ltl, ⌜ll = Vptr lhd 0⌝ ** (Own (GRA.padding ((lhd,0%Z) |-> Vint (Z.of_nat xhd))))
-                                 ** (Own (GRA.padding ((lhd,1%Z) |-> ltl))) ** is_list ltl xtl
+      Exists lhd ltl, ⌜ll = Vptr lhd 0⌝ ** (Own (GRA.padding ((lhd,0%Z) |-> [Vint (Z.of_nat xhd); ltl])))
+                                 ** is_list ltl xtl
     end
   .
 
   Let pop_spec: fspec := (mk_simple "LinkedList"
                                     (fun '(llref, xs) varg o =>
-                                       Exists ll, ⌜varg = [llref]↑⌝ ** Own (GRA.padding ((llref,0%Z) |-> ll)) ** (is_list ll xs) ** ⌜o = ord_pure 42⌝)
+                                       Exists ll, ⌜varg = [llref]↑⌝ ** Own (GRA.padding ((llref,0%Z) |-> [ll])) ** (is_list ll xs) ** ⌜o = ord_pure 42⌝)
                                     (fun '(llref, xs) vret =>
                                        match xs with
                                        | [] => ⌜vret = (Vint (- 1))↑⌝
-                                       | xhd :: xtl => ⌜vret = (Vint (Z.of_nat xhd))↑⌝ ** (Exists ll', Own (GRA.padding ((llref,0%Z) |-> ll')) ** is_list ll' xtl)
+                                       | xhd :: xtl => ⌜vret = (Vint (Z.of_nat xhd))↑⌝ ** (Exists ll', Own (GRA.padding ((llref,0%Z) |-> [ll'])) ** is_list ll' xtl)
                                        end)
                          ).
 
@@ -56,8 +56,8 @@ Section PROOF.
   .
 
   Definition LinkedListSem: ModSem.t := {|
-    ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt MemStb fn fsb)) MemSbtb;
-    ModSem.initial_mrs := [("LinkedList", (ε, unit↑))];
+    ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt LinkedListStb fn fsb)) LinkedListSbtb;
+    ModSem.initial_mrs := [("LinkedList", (ε, tt↑))];
   |}
   .
 

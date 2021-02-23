@@ -87,8 +87,8 @@ int pop(struct Node## llref) {
   .
 
   Definition LinkedListSem: ModSem.t := {|
-    ModSem.fnsems := [("popF", cfun popF); ("pushF", cfun pushF)];
-    ModSem.initial_mrs := [("LinkedList", (ε, unit↑))];
+    ModSem.fnsems := [("pop", cfun popF); ("push", cfun pushF)];
+    ModSem.initial_mrs := [("LinkedList", (ε, tt↑))];
   |}
   .
 
