@@ -119,6 +119,4 @@ Section PROOF.
 
 End PROOF.
 
-Definition main := initial_state (ModSem.interp (Mod.enclose FG3)).
-
-Extraction "main" main.
+Definition mutsum := ModSem.initial_itr (Mod.enclose FG3).
