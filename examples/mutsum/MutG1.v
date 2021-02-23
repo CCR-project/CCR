@@ -19,19 +19,10 @@ Section PROOF.
 
   Context `{Σ: GRA.t}.
 
-  Definition gBody: list val -> itree (hCallE +' pE +' eventE) val :=
-    fun varg => varg' <- trigger (Choose _);; guarantee (_ord varg' varg);;
-                trigger (hCall true "f" varg'↑);; trigger (Choose _)
-  .
-  (*** TODO: it would be better if the body can depend on "X", but doing so will mandate generalization of Call.
-       related issue: https://github.com/snu-sf/rusc-program-verif/issues/48
-   ***)
-
-  Definition Gsbtb := [("g", mk_specbody g_spec gBody)].
+  Definition Gsbtb: list (string * fspecbody) := [("g", mk_specbody g_spec (fun _ => triggerUB))].
 
   Definition GSem: ModSem.t := {|
     ModSem.fnsems := List.map (fun '(fn, body) => (fn, fun_to_tgt GlobalStb fn body)) Gsbtb;
-      (* [("main", mainF) ; ("f", fF)]; *)
     ModSem.initial_mrs := [("G", (ε, unit↑))];
   |}
   .
