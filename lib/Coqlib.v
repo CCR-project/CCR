@@ -1115,6 +1115,23 @@ Proof.
   }
 Qed.
 
+Lemma in_app_comm: forall A (a: A) (l m: list A), In a (l ++ m) <-> In a (m ++ l).
+Proof.
+  ii; split; ii.
+  - induction m; ss. by rewrite app_nil_r in H.
+    hexploit (in_app_or _ _ _ H); ii.
+    destruct H0.
+    + right; apply in_or_app; et.
+    + destruct H0; et.
+      right; apply in_or_app; et.
+  - induction l; ss. by rewrite app_nil_r in H.
+    hexploit (in_app_or _ _ _ H); ii.
+    destruct H0.
+    + right; apply in_or_app; et.
+    + destruct H0; et.
+      right; apply in_or_app; et.
+Qed.
+
 Lemma NoDup_snoc
       X (x: X) xs
       (NIN: ~In x xs)
@@ -1143,6 +1160,22 @@ Proof.
   ginduction xs; ii; ss.
   inv UNIQ. eapply IHxs in H2.
   eapply NoDup_snoc; et. rewrite <- in_rev. ss.
+Qed.
+
+Lemma NoDup_app
+      X (xs ys: list X)
+      (UNIQ: NoDup (xs ++ ys))
+  :
+    <<UNIQ: NoDup (ys ++ xs)>>
+.
+Proof.
+  ginduction xs; ii; ss; inv UNIQ; ss.
+  - econs.
+  - rewrite app_nil_r. econs; et.
+  - rewrite <- (app_nil_l xs).
+    rewrite app_comm_cons, app_assoc.
+    apply IHxs. rewrite app_assoc.
+    apply NoDup_snoc; et.
 Qed.
 
 Lemma map_ext

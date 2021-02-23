@@ -478,15 +478,117 @@ Section MODSEM.
     - econs 6; et. ii. exploit STEP; et. i; des. clarify.
   Qed.
 
+  Let add_assoc_aux
+      ms0 ms1 ms2 stl0 str0
+      (SIM: stl0 = str0)
+    :
+      <<COMM: Beh.of_state (interp (add ms0 (add ms1 ms2))) stl0 <1= Beh.of_state (interp (add (add ms0 ms1) ms2)) str0>>
+  .
+  Proof.
+    revert_until ms2.
+    pcofix CIH. i. pfold.
+    clarify.
+    punfold PR. induction PR using Beh.of_state_ind; ss.
+    - econs 1; et.
+    - econs 2; et.
+      clear CIH. clear_tac. revert_until ms2.
+      pcofix CIH. i. punfold H0. pfold.
+      inv H0.
+      + econs 1; eauto. ii. ss. exploit STEP; et. i; des. right. eapply CIH; et. pclearbot. ss.
+      + econs 2; eauto. des. esplits; eauto. right. eapply CIH; et. pclearbot. ss.
+    - econs 4; et. pclearbot. right. eapply CIH; et.
+    - econs 5; et. rr in STEP. des. rr. esplits; et.
+    - econs 6; et. ii. exploit STEP; et. i; des. clarify.
+  Qed.
+
   Lemma wf_comm
         ms0 ms1
     :
       <<EQ: wf (add ms0 ms1) = wf (add ms1 ms0)>>
   .
   Proof.
-    r. eapply prop_ext. split; i.
-    - admit "ez".
-    - admit "ez".
+    r. eapply prop_ext. split; i;
+    inv H; econs; ss; rewrite map_app in *;
+    apply NoDup_app; et.
+  Qed.
+
+  Lemma wf_assoc
+        ms0 ms1 ms2
+    :
+      <<EQ: wf (add ms0 (add ms1 ms2)) = wf (add (add ms0 ms1) ms2)>>
+  .
+  Proof.
+    r. eapply prop_ext. split; i;
+    inv H; econs; ss;
+      repeat rewrite map_app in *; et;
+      try rewrite <- app_assoc in *; et.
+  Qed.
+
+  Lemma find_NoDup_comm: forall {A} (a b: list (string * A)) fn
+               (ND: NoDup (List.map fst (a ++ b))),
+               find (fun fnsem: (string * A) => dec fn (fst fnsem)) (a ++ b) =
+               find (fun fnsem: (string * A) => dec fn (fst fnsem)) (b ++ a).
+      induction a; ii.
+      { rewrite app_nil_r; ss. }
+      ss.
+      destruct (NoDup_cons_iff (fst a) (List.map fst (a0 ++ b))) as [Hr _].
+      destruct (Hr ND); clear Hr.
+      rewrite map_app in *.
+      destruct (sumbool_to_bool (dec fn (fst a))) eqn: Ha; et.
+      - destruct (dec fn (fst a)); inv Ha.
+        induction b; ii; ss.
+        { destruct (sumbool_to_bool (dec (fst a) (fst a))) eqn: Haa; et.
+          destruct (dec (fst a) (fst a)); inv Haa. by destruct n. }
+
+        destruct (sumbool_to_bool (dec (fst a) (fst a1))) eqn: Ha1.
+        {
+          exfalso.
+          rewrite app_comm_cons in ND.
+          destruct (NoDup_remove _ _ (fst a1) ND).
+          rewrite <- app_comm_cons in H2.
+          apply H2.
+          destruct (dec (fst a) (fst a1)); inv Ha1.
+          rewrite e. by econs.
+        }
+        apply IHb.
+        apply NoDup_Add with (a:=(fst a)) (l:=(List.map fst a0 ++ List.map fst b)).
+        econs.
+        split.
+        eapply NoDup_remove_1 with (fst a1); et.
+        + ii. apply H. apply in_or_app.
+          apply in_app_iff in H1.
+          destruct H1; et; right; by econsr.
+        + ii. apply H. apply in_or_app.
+          apply in_app_iff in H1.
+          destruct H1; et; right; by econsr.
+        + by eapply NoDup_remove_1 with (fst a1).
+      - rewrite IHa; cycle 1.
+        { by rewrite map_app. }
+        induction b; ii; ss.
+        { by rewrite Ha. }
+        destruct (sumbool_to_bool (dec fn (fst a1))) eqn: Haa; et.
+        apply IHb; et.
+        + apply NoDup_Add with (a:=(fst a)) (l:=(List.map fst a0 ++ List.map fst b)).
+          econs.
+          split.
+          eapply NoDup_remove_1 with (fst a1); et.
+          ii. apply H. apply in_or_app.
+          apply in_app_iff in H1.
+          destruct H1; et; right. by econsr.
+        + ii; apply H. apply in_or_app.
+          apply in_app_iff in H1.
+          destruct H1; et; right; by econsr.
+        + by eapply NoDup_remove_1 with (fst a1).
+  Qed.
+
+  Lemma find_NoDup_assoc: forall A (a b c: list (string * A)) fn
+               (ND: NoDup (List.map fst (a ++ b ++ c))),
+               find (fun fnsem: (string * A) => dec fn (fst fnsem)) (a ++ (b ++ c)) =
+               find (fun fnsem: (string * A) => dec fn (fst fnsem)) ((a ++ b) ++ c).
+  Proof.
+    induction a; ii; ss.
+    rewrite IHa; et.
+    by eapply NoDup_cons_iff with (a:=(fst a)).
   Qed.
 
   Theorem add_comm
@@ -497,25 +599,46 @@ Section MODSEM.
   .
   Proof.
     destruct (classic (wf (add ms1 ms0))); cycle 1.
-    { ii. clear PR. eapply Beh.ub_top. pfold. econsr; ss; et. rr. ii; ss. unfold initial_itr, assume in *.
-      inv STEP; ss; irw in H1; (* clarify <- TODO: BUG, runs infloop. *) inv H1; simpl_depind; subst.
+    { ii. clear PR.
+      eapply Beh.ub_top.
+      pfold.
+      econsr; ss; et.
+      rr. ii; ss.
+      unfold initial_itr, assume in *.
+      inv STEP; ss; irw in H1; (* clarify <- TODO: BUG, runs infloop. *) inv H1.
+      simpl_depind; subst.
       clarify.
     }
-    rename H into WF.
-    (* ii. ss. r in PR. r. eapply add_comm_aux; et. *)
-    (* rp; et. clear PR. cbn. do 1 f_equal; cycle 1. *)
-    (* { unfold assume. rewrite wf_comm. ss. } *)
-    (* apply func_ext; ii. *)
-    (* f_equiv. *)
-    (* f_equal; cycle 1. *)
-    (* - unfold initial_r_state. f_equal. apply func_ext. intros fn. ss. des_ifs. *)
-    (*   + admit "ez: wf". *)
-    (*   + admit "ez: wf". *)
-    (*   + admit "ez: wf". *)
-    (* - repeat f_equal. apply func_ext_dep. intro T. apply func_ext. intro c. destruct c. *)
-    (*   repeat f_equal. apply func_ext. i. f_equal. ss. do 2 f_equal. *)
-    (*   admit "ez: wf". *)
-    admit "TODO".
+    ii. ss. r in PR. r. eapply add_comm_aux; et.
+    rp; et. clear PR. cbn.
+
+    unfold add in H.
+    inv H; ss.
+
+    unfold initial_itr, assume.
+    rewrite wf_comm. irw.
+    repeat f_equal. apply func_ext; intros _.
+    rewrite find_NoDup_comm; et.
+    do 3 f_equal.
+    - f_equal.
+      + unfold prog, add; ss.
+        rewrite find_NoDup_comm; cycle 1.
+        {
+          rewrite map_app in *.
+          by apply NoDup_app.
+        }
+        repeat f_equal.
+        des_ifs.
+        apply func_ext_dep; ii.
+        apply func_ext; ii.
+        des_ifs.
+        by rewrite find_NoDup_comm.
+      + unfold initial_r_state, initial_mrs; ss.
+        f_equal. apply func_ext; ii.
+        by rewrite find_NoDup_comm.
+    - unfold initial_p_state. apply func_ext; ii.
+      unfold initial_mrs; ss.
+      by rewrite find_NoDup_comm.
   Qed.
 
   Theorem add_assoc
@@ -526,7 +649,36 @@ Section MODSEM.
               Beh.of_program (interp (add (add ms0 ms1) ms2))>>
   .
   Proof.
-    admit "TODO".
+    ii. ss. r in PR. r. eapply add_assoc_aux; et.
+    rp; et. clear PR. cbn.
+
+    unfold add in WF.
+    inv WF; ss.
+    unfold initial_itr, assume.
+    rewrite wf_assoc. irw.
+    repeat f_equal. apply func_ext; intros _.
+    do 3 f_equal.
+    - f_equal.
+      + unfold prog, add; ss.
+        rewrite find_NoDup_assoc; cycle 1.
+        {
+          repeat rewrite map_app in *.
+          apply NoDup_app.
+          by apply NoDup_app.
+        }
+        f_equal.
+        {
+          f_equal.
+          apply func_ext_dep; ii.
+          apply func_ext; ii.
+          des_ifs; by rewrite find_NoDup_assoc.
+        }
+      + unfold initial_r_state, initial_mrs; ss.
+        f_equal. apply func_ext; ii.
+        by rewrite find_NoDup_assoc.
+    - unfold initial_p_state. apply func_ext; ii.
+      unfold initial_mrs; ss.
+      by rewrite find_NoDup_assoc.
   Qed.
 
   Theorem add_assoc_rev
@@ -537,7 +689,7 @@ Section MODSEM.
               Beh.of_program (interp (add (add ms0 ms1) ms2))>>
   .
   Proof.
-    admit "TODO".
+    by eapply add_assoc.
   Qed.
 
 End MODSEM.
@@ -582,7 +734,8 @@ Section MOD.
     unfold interp in *. ss.
     eapply ModSem.add_comm; et.
     rp; et. do 4 f_equal.
-    - admit "TODO: maybe the easy way is to 'canonicalize' the list by sorting.".
+    - unfold Sk.add, Sk.load_skenv; ss.
+      admit "TODO: maybe the easy way is to 'canonicalize' the list by sorting.".
     - admit "TODO: maybe the easy way is to 'canonicalize' the list by sorting.".
   Qed.
 
