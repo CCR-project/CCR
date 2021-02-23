@@ -165,17 +165,21 @@ Variant hCallE: Type -> Type :=
 
 Notation Es' := (hCallE +' pE +' eventE).
 
-Fixpoint _APC (n: nat): itree Es' unit :=
-  match n with
+Fixpoint _APC (at_most: nat): itree Es' unit :=
+  match at_most with
   | 0 => Ret tt
   | S n =>
-    '(fn, varg) <- trigger (Choose _);;
-    trigger (hCall true fn varg);;
-    _APC n
+    break <- trigger (Choose _);;
+    if break: bool
+    then Ret tt
+    else
+      '(fn, varg) <- trigger (Choose _);;
+      trigger (hCall true fn varg);;
+      _APC n
   end.
 
 Definition APC: itree Es' unit :=
-  n <- trigger (Choose _);; _APC n
+  at_most <- trigger (Choose _);; _APC at_most
 .
 
 

@@ -166,6 +166,7 @@ Section SIMMODSEM.
     { typeclasses eauto. }
     { ss. }
 
+    Opaque MemStb LinkedListStb.
     econs; ss.
     { init.
       unfold checkWf, forge, discard, put. steps.
@@ -211,8 +212,105 @@ Section SIMMODSEM.
       iRefresh. iRefresh. Fail progress iRefresh. (*** test ***)
       Ltac iPure H := rr in H; destruct H as [H _]; red in H; to_bar ltac:(fun BAR => move H after BAR). (* ; iRefresh. *)
       iPure _ASSUME1. iPure _ASSUME2. subst.
-      rewrite Any.upcast_downcast in *. clarify. apply Any.upcast_inj in _ASSUME1. des. apply JMeq_eq in EQ0. clear EQ. clarify. seal bar_True. clear_tac.
+      rewrite Any.upcast_downcast in *. clarify.
+      apply Any.upcast_inj in _ASSUME1. des. clarify. clear EQ.
+      steps. unfold ccall. steps.
+      unfold interp_hCallE_tgt, APC. steps. (********** TODO: never unfold it, make a lemma ******************)
+      force_l. exists 7.
+      assert(unfold_APC: forall n, _APC n =
+                         match n with
+                         | 0 => Ret tt
+                         | S n =>
+                           break <- trigger (Choose _);;
+                           if break: bool
+                           then Ret tt
+                           else
+                             '(fn, varg) <- trigger (Choose _);;
+                             trigger (hCall true fn varg);;
+                             _APC n
+                         end).
+      { i. destruct n0; ss. }
+      Opaque _APC.
+      steps. rewrite unfold_APC. steps. force_l. exists false. steps.
+      force_l. eexists ("load", [Vptr n 0]↑). steps.
+      Transparent MemStb. cbn in Heq. Opaque MemStb.
+      ss. clarify. rewrite Any.upcast_downcast. steps.
+      unfold HoareCall, checkWf, forge, discard, put. steps.
+      force_l. eexists (ε, _). steps. force_l. { refl. } steps. force_l.
+      Ltac iApply H :=
+        match (type of H) with
+        | iApp ?P ?r => apply r
+        end.
+      Ltac iExists H :=
+        match (type of H) with
+        | iApp ?P ?r => exists r
+        end.
+      iExists _ASSUME4. steps. force_l. eexists. steps. force_l.
+      { instantiate (1:= a ⋅ b0 ⋅ b).
+        (**************************************** we need some PCM solver, proof by reflection or something ******************************)
+        (**************************************** we need some PCM solver, proof by reflection or something ******************************)
+        (**************************************** we need some PCM solver, proof by reflection or something ******************************)
+        admit "ez --- make PCM solver tactic".
+      }
       steps.
+      force_l. eexists (_, _, _). force_l. esplits. force_l. esplits. force_l.
+      { esplits; eauto. instantiate (1:= x2).
+        admit "change equality to extends; or we can choose precise one".
+      }
+      force_l.
+      { esplits; ss; try lia. }
+      des. clear _GUARANTEE6. clarify. clear_tac.
+      (***************************TODO: make call case ***********************)
+      gstep; econs; try apply Nat.lt_succ_diag_r; i; ss.
+      exists 400. des. clarify. clear_tac.
+      steps. des.
+      assert(EXT: URA.extends (GRA.padding ((n, 0%Z) |-> [x2])) x).
+      { subst; refl. }
+      clear _ASSUME0.
+      clarify. apply Any.upcast_inj in _ASSUME1. des; clarify. rewrite Any.upcast_downcast in *. clarify.
+
+      replace (URA.extends (GRA.padding ((n, 0%Z) |-> [v])) x) with (((Own (GRA.padding ((n, 0%Z) |-> [v]))): iProp) x) in EXT by reflexivity.
+      try bar;
+      iSimplWf;
+        repeat multimatch goal with
+               | [H: URA.extends ?a ?b |- _ ] => replace (URA.extends a b) with ((Own a) b) in H by reflexivity
+               | [H: iApp _ _ |- _ ] => revert H
+               | [H: ?ip ?r |- _ ] =>
+                 match type of ip with
+                 | iProp =>
+                   match goal with
+                   | [G: URA.wf r |- _ ] =>
+                     rewrite intro_iApp in H; [|exact G]; clear G; move r at top; move H at bottom
+                   end
+                 | _ => idtac
+                 end
+               end;
+        i.
+      TTTTTTTTTTTTt
+      iRefresh.
+      steps.
+      { unfold alist_find.
+      _step.
+      (prep; try _step; unfold alist_add; simpl; des_ifs_safe).
+      steps.
+      idtac.
+      unshelve eexists.
+      {
+        iApply _ASSUME4.
+      }
+          eapply b1.
+      eexists. steps. force_l. eexists.
+      force_l.
+      { apply _ASSUME4.
+      }
+      idtac.
+      {
+      unshelve eexists.
+      {
+      instantiate (1:=).  repeat rewrite URA.unit_id. refl. }
+      steps.
+
+      iRefresh.
       des. clarify. rewrite Any.upcast_downcast in *. clarify. apply_all_once Any.upcast_inj. des. clarify. clear_tac.
       steps.
       unfold APC. unfold interp_hCallE_tgt. steps. force_l. exists 0. steps. force_l. esplits; eauto.

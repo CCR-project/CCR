@@ -33,7 +33,7 @@ Section PROOF.
 
   Let pop_spec: fspec := (mk_simple "LinkedList"
                                     (fun '(llref, xs) varg o =>
-                                       Exists ll, ⌜varg = [llref]↑⌝ ** Own (GRA.padding ((llref,0%Z) |-> [ll])) ** (is_list ll xs) ** ⌜o = ord_pure 42⌝)
+                                       Exists ll, ⌜varg = [Vptr llref 0%Z]↑⌝ ** Own (GRA.padding ((llref,0%Z) |-> [ll])) ** (is_list ll xs) ** ⌜o = ord_pure 42⌝)
                                     (fun '(llref, xs) vret =>
                                        match xs with
                                        | [] => ⌜vret = (Vint (- 1))↑⌝
@@ -56,7 +56,7 @@ Section PROOF.
   .
 
   Definition LinkedListSem: ModSem.t := {|
-    ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt LinkedListStb fn fsb)) LinkedListSbtb;
+    ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt (MemStb ++ LinkedListStb) fn fsb)) LinkedListSbtb;
     ModSem.initial_mrs := [("LinkedList", (ε, tt↑))];
   |}
   .
