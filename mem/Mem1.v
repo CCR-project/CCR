@@ -28,12 +28,11 @@ Compute (URA.car).
 Section PROOF.
   Context `{@GRA.inG memRA Σ}.
   
-  Definition points_to (loc: block * Z) (vs: list val): Σ :=
+  Definition points_to (loc: block * Z) (vs: list val): memRA :=
     let (b, ofs) := loc in
-    let memr: memRA := URA.white (M:=_memRA)
-                                 (fun _b _ofs => if (dec _b b) && ((ofs <=? _ofs) && (_ofs <? (ofs + Z.of_nat (List.length vs))))%Z
-                                                 then inl (List.nth_error vs (Z.to_nat (_ofs - ofs))) else inr tt) in
-    (GRA.padding memr)
+    URA.white (M:=_memRA)
+              (fun _b _ofs => if (dec _b b) && ((ofs <=? _ofs) && (_ofs <? (ofs + Z.of_nat (List.length vs))))%Z
+                              then inl (List.nth_error vs (Z.to_nat (_ofs - ofs))) else inr tt)
   .
 
   Lemma points_to_split
@@ -42,7 +41,6 @@ Section PROOF.
       (points_to (blk, ofs) (hd :: tl)) = (points_to (blk, ofs) [hd]) ⋅ (points_to (blk, (ofs + 1)%Z) tl)
   .
   Proof.
-    ss. rewrite GRA.padding_add. repeat f_equal.
     ss. unfold URA.white. f_equal.
     repeat (apply func_ext; i).
     des_ifs; bsimpl; des; des_sumbool; ss; try rewrite Z.leb_gt in *; try rewrite Z.leb_le in *;
@@ -99,34 +97,35 @@ Section PROOF.
                                       (fun sz varg o _ => varg = [Vint (Z.of_nat sz)]↑ /\ o = ord_pure 1)
                                       (fun sz vret rret =>
                                          exists b, vret = (Vptr b 0)↑ /\
-                                                   rret = (points_to (b, 0%Z) (List.repeat (Vint 0) sz)))).
+                                                   rret = GRA.padding ((b, 0%Z) |-> (List.repeat (Vint 0) sz)))).
 
   Let free_spec: fspec := (mk_simple "Mem"
                                      (fun '(b, ofs) varg o rarg => exists v, varg = ([Vptr b ofs])↑ /\
-                                                                             rarg = ((b, ofs) |-> [v]) /\
+                                                                             rarg = GRA.padding ((b, ofs) |-> [v]) /\
                                                                              o = ord_pure 1)
                                      (top3)).
 
   Let load_spec: fspec := (mk_simple "Mem"
                                      (fun '(b, ofs, v) varg o rarg => varg = ([Vptr b ofs])↑ /\
-                                                                      rarg = ((b, ofs) |-> [v]) /\
+                                                                      rarg = GRA.padding ((b, ofs) |-> [v]) /\
                                                                       o = ord_pure 1)
-                                     (fun '(b, ofs, v) vret rret => rret = ((b, ofs) |-> [v]) /\ vret = v↑)).
+                                     (fun '(b, ofs, v) vret rret => rret = GRA.padding ((b, ofs) |-> [v]) /\ vret = v↑)).
 
   Let store_spec: fspec := (mk_simple
                               "Mem"
                               (fun '(b, ofs, v_new) varg o rarg => exists v_old,
-                                   varg = ([Vptr b ofs ; v_new])↑ /\ rarg = ((b, ofs) |-> [v_old]) /\ o = ord_pure 1)
-                              (fun '(b, ofs, v_new) _ rret => rret = ((b, ofs) |-> [v_new]))).
+                                   varg = ([Vptr b ofs ; v_new])↑ /\ rarg = GRA.padding ((b, ofs) |-> [v_old]) /\ o = ord_pure 1)
+                              (fun '(b, ofs, v_new) _ rret => rret = GRA.padding ((b, ofs) |-> [v_new]))).
 
   Let cmp_spec: fspec :=
     (mk_simple
        "Mem"
        (fun '(result, resource) varg o rarg =>
           rarg = resource /\
-          ((exists b ofs v, varg = [Vptr b ofs; Vnullptr]↑ /\ rarg = ((b, ofs) |-> v) /\ result = false) \/
-           (exists b0 ofs0 v0 b1 ofs1 v1, varg = [Vptr b0 ofs0; Vptr b1 ofs1]↑ /\ rarg = ((b0, ofs0) |-> v0) ⋅ ((b1, ofs1) |-> v1) /\ result = false) \/
-           (exists b ofs v, varg = [Vptr b ofs; Vptr b ofs]↑ /\ rarg = ((b, ofs) |-> v) /\ result = true)
+          ((exists b ofs v, varg = [Vptr b ofs; Vnullptr]↑ /\ rarg = GRA.padding ((b, ofs) |-> v) /\ result = false) \/
+           (exists b0 ofs0 v0 b1 ofs1 v1, varg = [Vptr b0 ofs0; Vptr b1 ofs1]↑ /\
+                                          rarg = GRA.padding ((b0, ofs0) |-> v0) ⋅ GRA.padding ((b1, ofs1) |-> v1) /\ result = false) \/
+           (exists b ofs v, varg = [Vptr b ofs; Vptr b ofs]↑ /\ rarg = GRA.padding ((b, ofs) |-> v) /\ result = true)
           )
        )
        (fun '(result, resource) varg rret => varg = result↑ /\ rret = resource)

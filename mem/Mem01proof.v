@@ -87,8 +87,45 @@ Ltac igo := repeat (try rewrite bind_bind; try rewrite bind_ret_l; try rewrite b
                     try rewrite interp_tau;
                     try rewrite interp_trigger
                    ).
-Ltac force_l := pfold; econs; [..|M]; Mskip ss; et.
-Ltac force_r := pfold; econsr; [..|M]; Mskip ss; et.
+Ltac force_l :=
+  match goal with
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, unwrapN ?ox >>= _) (_, _)) ] =>
+    let tvar := fresh "tmp" in
+    let thyp := fresh "TMP" in
+    remember (unwrapN ox) as tvar eqn:thyp; unfold unwrapN in thyp; subst tvar;
+    let name := fresh "_UNWRAPN" in
+    destruct (ox) eqn:name; [|exfalso]; cycle 1
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, guarantee ?P >>= _) (_, _)) ] =>
+    let tvar := fresh "tmp" in
+    let thyp := fresh "TMP" in
+    remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar;
+    let name := fresh "_GUARANTEE" in
+    destruct (classic P) as [name|name]; [gstep; ired; eapply sim_itree_choose_src; [eauto|exists name]|contradict name]; cycle 1
+
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, ?i_src) (_, ?i_tgt)) ] =>
+    seal i_tgt; gstep; econs; eauto; unseal i_tgt
+  end
+.
+Ltac force_r :=
+  match goal with
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, _) (_, unwrapU ?ox >>= _)) ] =>
+    let tvar := fresh "tmp" in
+    let thyp := fresh "TMP" in
+    remember (unwrapU ox) as tvar eqn:thyp; unfold unwrapU in thyp; subst tvar;
+    let name := fresh "_UNWRAPU" in
+    destruct (ox) eqn:name; [|exfalso]; cycle 1
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, _) (_, assume ?P >>= _)) ] =>
+    let tvar := fresh "tmp" in
+    let thyp := fresh "TMP" in
+    remember (assume P) as tvar eqn:thyp; unfold assume in thyp; subst tvar;
+    let name := fresh "_ASSUME" in
+    destruct (classic P) as [name|name]; [gstep; ired; eapply sim_itree_take_tgt; [eauto|exists name]|contradict name]; cycle 1
+
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, ?i_src) (_, ?i_tgt)) ] =>
+    seal i_src; gstep; econs; eauto; unseal i_src
+  end
+.
+
 Section SIMMODSEM.
 
   Context `{Σ: GRA.t}.
@@ -96,7 +133,7 @@ Section SIMMODSEM.
 
   Let W: Type := (alist mname (Σ * Any.t)) * (alist mname (Σ * Any.t)).
   (* Eval compute in (@RA.car (RA.excl Mem.t)). *)
-  Eval compute in (@RA.car Mem1._memRA).
+  Eval compute in (@URA.car Mem1._memRA).
   Inductive sim_loc: option val -> (option val + unit) -> Prop :=
   | sim_loc_present v: sim_loc (Some v) (inl (Some v))
   | sim_loc_absent: sim_loc None (inr tt)
@@ -115,6 +152,8 @@ Section SIMMODSEM.
   
   Hint Resolve sim_itree_mon: paco.
 
+  Opaque URA.unit.
+
   Theorem correct: ModSemPair.sim Mem1.MemSem Mem0.MemSem.
   Proof.
     econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
@@ -127,144 +166,186 @@ Section SIMMODSEM.
         + unfold update. des_ifs; econs; et.
         + unfold update. des_ifs; econs; et.
     }
+
+    Ltac init :=
+      split; ss; ii; clarify; rename y into varg; eexists 100%nat; ss; des; clarify;
+      ginit; [eapply cpn3_wcompat; eauto with paco|]; unfold alist_add, alist_remove; ss;
+      unfold fun_to_tgt, cfun, HoareFun; ss.
+
     econs; ss.
-    { split; ss. ii; clarify. rename y into varg. eexists 100%nat. ss. des; clarify.
+    { init.
+      Ltac _step :=
+        match goal with
+        (*** blacklisting ***)
+        (* | [ |- (gpaco3 (_sim_itree wf) _ _ _ _ (_, trigger (Choose _) >>= _) (_, ?i_tgt)) ] => idtac *)
+        | [ |- (gpaco3 (_sim_itree wf) _ _ _ _ (_, unwrapU ?ox >>= _) (_, _)) ] =>
+          let tvar := fresh "tmp" in
+          let thyp := fresh "TMP" in
+          remember (unwrapU ox) as tvar eqn:thyp; unfold unwrapU in thyp; subst tvar;
+          let name := fresh "_UNWRAPU" in
+          destruct (ox) eqn:name; [|unfold triggerUB; ired; _step; ss; fail]
+        | [ |- (gpaco3 (_sim_itree wf) _ _ _ _ (_, assume ?P >>= _) (_, _)) ] =>
+          let tvar := fresh "tmp" in
+          let thyp := fresh "TMP" in
+          remember (assume P) as tvar eqn:thyp; unfold assume in thyp; subst tvar;
+          let name := fresh "_ASSUME" in
+          destruct (classic P) as [name|name]; [|unfold triggerUB; ired; gstep; eapply sim_itree_take_src; ss; fail]
+
+        (*** blacklisting ***)
+        (* | [ |- (gpaco3 (_sim_itree wf) _ _ _ _ (_, _) (_, trigger (Take _) >>= _)) ] => idtac *)
+        | [ |- (gpaco3 (_sim_itree wf) _ _ _ _ (_, _) (_, unwrapN ?ox >>= _)) ] =>
+          let tvar := fresh "tmp" in
+          let thyp := fresh "TMP" in
+          remember (unwrapN ox) as tvar eqn:thyp; unfold unwrapN in thyp; subst tvar;
+          let name := fresh "_UNWRAPN" in
+          destruct (ox) eqn:name; [|unfold triggerNB; ired; _step; ss; fail]
+        | [ |- (gpaco3 (_sim_itree wf) _ _ _ _ (_, _) (_, guarantee ?P >>= _)) ] =>
+          let tvar := fresh "tmp" in
+          let thyp := fresh "TMP" in
+          remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar;
+          let name := fresh "_GUARANTEE" in
+          destruct (classic P) as [name|name]; [|unfold triggerNB; ired; gstep; eapply sim_itree_choose_tgt; ss; fail]
+
+
+
+        | _ => (*** default ***)
+          gstep; econs; try apply Nat.lt_succ_diag_r; i
+        end;
+        (* idtac *)
+        match goal with
+        | [ |- exists _, _ ] => fail 1
+        | _ => idtac
+        end
+      .
+      Ltac steps := repeat (ired; try rewrite ! unfold_interp;
+                            try _step;
+                            unfold alist_add; simpl; des_ifs_safe)
+      .
+      unfold checkWf, forge, discard. steps.
+      unfold allocF. steps. rewrite Any.upcast_downcast. steps.
+      des. clarify. rewrite Any.upcast_downcast in *. clarify. apply_all_once Any.upcast_inj. des. clarify. clear_tac.
+      steps.
+      unfold APC. unfold interp_hCallE_tgt. steps. force_l. exists 0. steps. force_l. esplits; eauto.
+      force_l. esplits; eauto. force_l.
+      set (blk := (Mem.nb mem_tgt)) in *.
+      rename x0 into sz. rename _ASSUME into WF.
+      set (mem_src_new := add_delta_to_black
+                            (URA.black (mem_src: URA.car (t:=Mem1._memRA)))
+                            (points_to (blk, 0%Z) (repeat (Vint 0) sz))).
+      eexists (GRA.padding (mem_src_new: URA.car (t:=Mem1.memRA)),
+               GRA.padding ((blk, 0%Z) |-> (repeat (Vint 0) sz))).
+      unfold put. Local Opaque URA.add. steps.
+      assert(WFA: forall ofs, mem_src (Mem.nb mem_tgt) ofs = inr tt).
+      { i.
+        destruct (mem_src (Mem.nb mem_tgt) ofs) eqn:A; cycle 1.
+        { des_u; ss. }
+        destruct o.
+        - admit "ez - add tgt wf".
+        - admit "ez - inl None is boom in RA.excl".
+      }
+      rewrite URA.unit_idl in *. rewrite ! GRA.padding_add.
+      force_l.
+      { etrans.
+        { eapply URA.extends_updatable. eexists; et. }
+        eapply GRA.padding_updatable.
+        ss.
+        replace (URA.excl ((mem_src: URA.car (t:=Mem1._memRA)) ⋅ f) ε) with
+            (URA.black ((mem_src: URA.car (t:=Mem1._memRA)) ⋅ f)) by ss.
+        eapply URA.auth_alloc2.
+        eapply URA.wf_mon in WF.
+        eapply GRA.padding_wf in WF. des.
+        clear - WF WFA Heq NULLPTR SIM.
+        Local Transparent URA.add points_to.
+        ss. des. unfold URA.white in Heq. clarify.
+        ii. des_ifs; ss.
+        - bsimpl; des; des_sumbool; clarify.
+          exploit WFA; et. intro A. rewrite A in *; ss.
+        - specialize (WF0 k k0). bsimpl; des; des_sumbool; clarify; des_ifs.
+        - specialize (WF0 k k0). bsimpl; des; des_sumbool; clarify; des_ifs.
+          apply_all_once Z.leb_le. apply_all_once Z.ltb_lt.
+          intro A. apply nth_error_None in A. rewrite repeat_length in *.
+          apply inj_le in A. rewrite Z2Nat.id in A; cycle 1.
+          { lia. }
+          lia.
+        Local Opaque URA.add points_to.
+      }
+      Local Opaque URA.wf.
+      ss.
+      steps. force_l. esplits; eauto. force_l.
+      { esplits; eauto. }
+      steps.
+      force_l. esplits; eauto.
+      ired. force_l.
+      { instantiate (1:= GRA.padding _). rewrite GRA.padding_add. rewrite URA.unit_id. f_equal. ss. }
+      clear _GUARANTEE0 _GUARANTEE1.
+      Local Opaque URA.add points_to.
+      Local Transparent points_to.
+      unfold points_to, URA.white in Heq. clarify. ss.
+      eapply URA.wf_mon in WF. eapply GRA.padding_wf in WF. des. ss. des. clear_tac. clear WF.
+      clear mem_src_new.
+      steps. esplits; ss; cycle 1.
+      - Local Transparent URA.add.
+        ss. des_ifs. bsimpl; des; des_sumbool; ss.
+        subst blk. clear - Heq1.
+        admit "ez: add tgt wf".
+        Local Opaque URA.add.
+      - ss. ii.
+        destruct (dec b blk).
+        + subst. unfold blk. unfold update. des_ifs_safe.
+          des_ifs.
+          * bsimpl; des; try rewrite Z.leb_le in *; try rewrite Z.ltb_lt in *.
+            Local Transparent URA.add.
+            s.
+            Local Opaque URA.add.
+            des_ifs; bsimpl; des; des_sumbool; ss; clarify; try rewrite Z.leb_le in *; try rewrite Z.ltb_lt in *;
+              try rewrite Z.leb_gt in *; try rewrite Z.ltb_ge in *; try lia; et.
+            { exploit WFA; et. intro A. rewrite A in *; ss. }
+            { exploit WFA; et. intro A. rewrite A in *; ss. }
+            { rewrite Z.sub_0_r.
+              destruct (nth_error (repeat (Vint 0) sz) (Z.to_nat ofs)) eqn:U.
+              - eapply nth_error_In in U. eapply repeat_spec in U. subst. econs; et.
+              - eapply nth_error_None in U. lia.
+            }
+            { rewrite repeat_length in *. lia. }
+          * Local Transparent URA.add.
+            s.
+            Local Opaque URA.add.
+            des_ifs; bsimpl; des; des_sumbool; ss; clarify; try rewrite Z.leb_le in *; try rewrite Z.ltb_lt in *;
+              try rewrite Z.leb_gt in *; try rewrite Z.ltb_ge in *; try lia; et;
+                try (by exploit WFA; et; intro A; rewrite A in *; ss).
+            { rewrite Z.sub_0_r. rewrite repeat_length in *. lia. }
+            { econs; eauto. }
+            { econs; eauto. }
+        + Local Transparent URA.add.
+          ss.
+          hexploit (SIM b ofs); et. intro A. inv A.
+          {
+            des_ifs; bsimpl; des; des_sumbool; clarify.
+            - unfold update. des_ifs. rewrite <- H1. econs.
+            - unfold update. des_ifs. rewrite <- H1. econs.
+            - unfold update. des_ifs. rewrite <- H1. econs.
+          }
+          {
+            des_ifs; bsimpl; des; des_sumbool; clarify.
+            - unfold update. des_ifs. rewrite <- H1. econs.
+            - unfold update. des_ifs. rewrite <- H1. econs.
+            - unfold update. des_ifs. rewrite <- H1. econs.
+          }
+    }
+    econs; ss.
+    { init.
+      TTTTTTTTTTTTTTTTTTTTTTTTT
+      unfold Mem0.allocF.
+      unfold fun_to_tgt, cfun, HoareFun. ss.
+      split; ss. ii; clarify. rename y into varg. eexists 100%nat. ss. des; clarify.
       ginit. { eapply cpn3_wcompat; eauto with paco. } unfold alist_add, alist_remove; ss.
       unfold Mem0.allocF.
       unfold fun_to_tgt, cfun, HoareFun. ss.
-      Set Printing All.
-      TTTTTTTTTTTTTTTTTTTTTTTTTTTT
-      gstep.
-      Ltac _step :=
-        gstep; econs.
-      gstep. eapply sim_itree_mon. econs; eauto. i.
-      gstep.
-      _step.
-      match goal with
-      | [ |- (gpaco3 (_sim_itree wf) _ _ _ _ (_, ?itr_src) (_, ?itr_tgt))] =>
-        idtac
-      end.
-      (* Opaque MemStb. *)
-      (* Opaque mapi. *)
-      Local Opaque URA.add.
-      pfold. econs; eauto. ii. ss. left.
-      match goal with
-      | [ |- paco3 (_sim_itree ?wf) bot3 _ _ _ ] =>
-        replace (paco3 (_sim_itree wf) bot3) with (sim_itree wf) by ss
-      end
-   .
-      fold.
-      replace (paco3 (_sim_itree wf) bot3) with (sim_itree wf) by ss.
-
-      go. ss. rename x into sz.
-      unfold assume.
-      igo.
-      go. clarify. unfold HoareFun. go. rename x into rarg_src.
-      unfold assume.
-      igo.
-      repeat go. clear_tac.
-      Opaque URA.add.
-      unfold unpadding, assume.
-      igo.
-      pfold. econsr; et. esplits; et. left.
-      igo. des_ifs.
-      unfold unwrapU. des_ifs. igo. des_ifs. unfold MPut. igo. repeat go.
-      ss. clarify.
-      force_r. esplits; ss. left.
-      go. igo.
-      go. igo.
-      Hint Unfold alist_add.
-      u.
-      Hint Unfold body_to_tgt interp_hCallE_tgt.
-      u. igo.
-      Local Opaque MemStb.
-      cbn.
-      set (blk := (Mem.nb mem_tgt)) in *.
-      force_l. exists (Vptr (Mem.nb mem_tgt) 0). left.
-      igo. go.
-      force_l.
-      set (mem_src_new := add_delta_to_black
-                            (* (URA.excl (mem_src: URA.car (t:=Mem1._memRA)) frag) *)
-                            (URA.black (mem_src: URA.car (t:=Mem1._memRA)))
-                            (points_tos (blk, 0%Z) (repeat (Vint 0) sz))).
-      eexists (GRA.padding (mem_src_new: URA.car (t:=Mem1.memRA)),
-               GRA.padding (points_tos (blk, 0%Z) (repeat (Vint 0) sz))). left.
-      igo. force_l.
-      {
-        replace (fun k => URA.unit) with (URA.unit (t:=Σ)) by ss.
-        rewrite URA.unit_idl.
-        rewrite GRA.padding_add.
-        rewrite <- URA.unit_id.
-        apply URA.updatable_add; cycle 1.
-        { apply URA.updatable_unit. }
-        eapply GRA.padding_updatable.
-        subst mem_src_new. des_ifs.
-        ss. clarify.
-        rewrite <- Heq.
-        Local Transparent points_tos.
-        replace ((fun _ _ => @inr (option val) unit tt)) with (URA.unit (t:=Mem1._memRA)) by ss.
-        replace (URA.excl ((mem_src: URA.car (t:=Mem1._memRA)) ⋅ f) URA.unit) with
-            (URA.black ((mem_src: URA.car (t:=Mem1._memRA)) ⋅ f)) by ss.
-        rewrite Heq.
-        eapply URA.auth_alloc2.
-
-        clear - WF Heq SIM.
-        { ss. intros b ofs. des_ifs. ss.
-
-          assert(WF0: URA.wf ((GRA.padding (URA.black (mem_src: URA.car (t:=Mem1._memRA))))
-                                ⋅ (URA.unit ⋅ (rarg_src: URA.car (t:=GRA.to_URA Σ))))).
-          { ss. }
-          eapply URA.wf_mon in WF0.
-          eapply GRA.padding_wf in WF0.
-
-          unfold URA.white in *. clarify.
-          subst blk.
-          Local Transparent URA.add.
-          ss. des_ifs.
-          - bsimpl; des; des_sumbool; clarify.
-            admit "ez: Heq is wrong. Add mem tgt is wf (nb is actually nb); use sim_loc.".
-          - des. specialize (WF1 b ofs). bsimpl; des; des_sumbool; clarify; des_ifs.
-          - des. specialize (WF1 b ofs). bsimpl; des; des_sumbool; clarify; des_ifs.
-            apply_all_once Z.leb_le. apply_all_once Z.ltb_lt.
-            intro A. apply nth_error_None in A. rewrite repeat_length in *.
-            apply inj_le in A. rewrite Z2Nat.id in A; cycle 1.
-            { lia. }
-            lia.
-        }
-      }
-      left.
-      force_l. eexists. left.
-      unfold guarantee. igo.
-      force_l. esplits; et. left.
-      Local Opaque add_delta_to_black.
-      pfold; econs; try (by ss).
-      { instantiate (1:= GRA.padding _). rewrite GRA.padding_add. rewrite URA.unit_idl. f_equal. }
-      left.
-      pfold; econs; ss; et.
-      {
-        rr. unfold alist_add. ss. esplits; ss; et.
-        { unfold mem_src_new.
-          Local Transparent add_delta_to_black.
-          ss.
-        }
-        ii. ss.
-        subst mem_src_new.
-        assert(b <> blk).
-        {admit "should be ez". }
-        hexploit (SIM b ofs); et. intro A. inv A.
-        {
-          des_ifs; bsimpl; des; des_sumbool; clarify.
-          - unfold update. des_ifs. rewrite <- H3. econs.
-          - unfold update. des_ifs. rewrite <- H3. econs.
-          - unfold update. des_ifs. rewrite <- H3. econs.
-        }
-        {
-          des_ifs; bsimpl; des; des_sumbool; clarify.
-          - unfold update. des_ifs. rewrite <- H3. econs.
-          - unfold update. des_ifs. rewrite <- H3. econs.
-          - unfold update. des_ifs. rewrite <- H3. econs.
-        }
-      }
+      TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
+      steps.
+      unfold forge.
+      steps. unfold checkWf. steps.
+      unfold assume. steps.
     }
     econs.
     { split; ss. ii; clarify. rename y into varg. eexists 100%nat. ss. des; clarify.

@@ -445,18 +445,21 @@ Module URA.
   Next Obligation. split; eapply wf_unit. Qed.
   Next Obligation. split; eapply wf_mon; et. Qed.
 
-  Program Instance to_RA (M: t): RA.t := {
+  Program Definition to_RA (M: t): RA.t := {|
     RA.car := car;
     RA.add := add;
     RA.wf := wf;
-  }
+  |}
   .
   Next Obligation. apply add_comm. Qed.
   Next Obligation. apply add_assoc. Qed.
   Next Obligation. eapply wf_mon; et. Qed.
 
-  Global Program Instance extends_PreOrder `{M: t}: PreOrder RA.extends.
+  Global Program Instance extends_PreOrder `{M: t}: PreOrder extends.
   Next Obligation. rr. eexists unit. ss. rewrite unit_id. ss. Qed.
+  Next Obligation.
+    rr. ii. rr in H. rr in H0. des. rewrite <- H0. rewrite <- H. esplits; et. rewrite add_assoc. et.
+  Qed.
 
   Program Instance updatable_PreOrder `{M: t}: PreOrder updatable.
   Next Obligation. ii. ss. Qed.
@@ -481,7 +484,7 @@ Module URA.
   Next Obligation. des_ifs. { repeat des_u; ss. } Qed.
   Next Obligation. des_ifs. eapply RA.wf_mon; eauto. Qed.
 
-  Coercion to_RA: t >-> RA.t.
+  (* Coercion to_RA: t >-> RA.t. *)
   Coercion of_RA: RA.t >-> t.
 
   (* Lemma eta *)
@@ -535,7 +538,7 @@ Module URA.
     wf := fun a =>
             match a with
             | frag f => wf f
-            | excl e f => RA.extends f e /\ wf e
+            | excl e f => extends f e /\ wf e
             | boom => False
             end;
   }
@@ -601,7 +604,7 @@ Module URA.
           a ca
           (CORE: a = add a ca)
     :
-      <<DUP: RA.updatable (t:=auth M) (white a) (add (white a) (white ca))>>
+      <<DUP: updatable (t:=auth M) (white a) (add (white a) (white ca))>>
   .
   Proof.
     rr. ii. des_ifs.
@@ -652,11 +655,10 @@ Module URA.
           a b
           (WF: wf (add (black a) (white b)))
     :
-      <<EXT: RA.extends b a>>
+      <<EXT: extends b a>>
   .
   Proof.
-    rr in WF. des. rr in WF. rr. des. rewrite add_comm in WF. ss. rewrite unit_id in WF. subst.
-    esplits; et.
+    rr in WF. des. rr in WF. rr. des. rewrite unit_idl in WF. subst. esplits; et.
   Qed.
 
   Theorem auth_exclusive
@@ -696,7 +698,7 @@ Module URA.
 
 End URA.
 
-Coercion URA.to_RA: URA.t >-> RA.t.
+(* Coercion URA.to_RA: URA.t >-> RA.t. *)
 Coercion URA.of_RA: RA.t >-> URA.t.
 Coercion RA.car: RA.t >-> Sortclass.
 Coercion URA.car: URA.t >-> Sortclass.
@@ -841,13 +843,13 @@ Module GRA.
       i. unshelve econs; eauto. unfold GRA. sym. eapply nth_error_nth; et.
     Qed.
 
-    Let GRA2: RA.t := URA.pointwise_dep GRA.
-    Goal @RA.car GRA2 = forall k, (@RA.car (GRA k)). ss. Qed.
+    (* Let GRA2: RA.t := URA.pointwise_dep GRA. *)
+    (* Goal @RA.car GRA2 = forall k, (@RA.car (GRA k)). ss. Qed. *)
   End CONSTRUCTION.
 
-  Definition extends (RA0 RA1: URA.t): Prop :=
-    exists c, RA.prod RA0 c = RA1
-  .
+  (* Definition extends (RA0 RA1: URA.t): Prop := *)
+  (*   exists c, URA.prod RA0 c = RA1 *)
+  (* . *)
 
   Class inG2 (RA GRA: URA.t): Prop := {
     GRA_data: t;

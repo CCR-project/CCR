@@ -7,6 +7,7 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
+Require Import TODOYJ.
 
 Generalizable Variables E R A B C X Y Σ.
 
@@ -48,7 +49,7 @@ Section PROOF.
   .
 
   (*** main's view on stb ***)
-  Definition main_spec: fspec := mk_simple "Main" (X:=unit) (fun _ _ _ o => o = ord_top) top3.
+  Definition main_spec: fspec := mk_simple "Main" (X:=unit) (fun _ _ o _ => o = ord_top) top3.
 
   Definition MainStb: list (gname * fspec) := [("main", main_spec)].
   Definition MainSbtb: list (gname * fspecbody) := [("main", mk_specbody main_spec mainBody)].
