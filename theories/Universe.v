@@ -40,7 +40,7 @@ Inductive val: Type :=
 | Vundef
 .
 
-Notation ofs0 := 0%Z.
+(* Notation ofs0 := 0%Z. *)
 
 Definition Vnullptr := Vptr 0 0.
 
@@ -138,7 +138,7 @@ Module Mem.
   Definition load (m0: Mem.t) (b: block) (ofs: Z): option val := m0.(cnts) b ofs.
 
   Definition store (m0: Mem.t) (b: block) (ofs: Z) (v: val): option Mem.t :=
-    match m0.(cnts) b ofs0 with
+    match m0.(cnts) b ofs with
     | Some _ => Some (Mem.mk (fun _b _ofs => if (dec b _b) && (dec ofs _ofs)
                                              then Some v
                                              else m0.(cnts) _b _ofs) m0.(nb))
