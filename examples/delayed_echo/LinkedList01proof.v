@@ -360,6 +360,10 @@ Section SIMMODSEM.
     admit "okay".
   Abort.
 
+  Lemma sepconj_split: (forall (ab : Σ) (Pa Pb : iProp), iHyp (Pa ** Pb) (ab) -> exists a b, iHyp Pa a /\ iHyp Pb b /\ ab = a ⋅ b).
+    { clear - Σ. ii. unfold iHyp in *. r in H. destruct H; clear H. des. esplits; et. }
+  Qed.
+
 
 
 
@@ -458,36 +462,120 @@ Section SIMMODSEM.
         unfold HoareCall, checkWf, forge, discard, put. steps. iRefresh.
         force_l. eexists (ε, _). steps. force_l. { refl. } steps. force_l. clear_bar; iRefresh.
         exists ε. steps. force_l. esplits. force_l. { rewrite URA.unit_idl. refl. } steps.
-        force_l. eexists (_, _). esplits. steps. force_l. esplits. steps. force_l. esplits. steps. force_l.
-        { esplits; swap 2 3.
-          { refl. }
-          { refl. }
-          instantiate (1:=true).
-          admit "FIX MEM1.v -- Add nullptr-nullptr case".
-        }
+        force_l. eexists (true, _). esplits. steps. force_l. esplits. steps. force_l. esplits. steps. force_l.
+        { esplits; try refl. repeat right. esplits; et. }
         force_l.
-        { instantiate (1:=ord_pure 1). esplits; ss; try lia. }
+        { esplits; ss; try lia. }
         clear _GUARANTEE2.
         des; ss. clear_tac.
         gstep; econs; try apply Nat.lt_succ_diag_r; i; ss. exists 400. des. clarify. unfold alist_add; cbn. steps.
         des. clarify. rewrite Any.upcast_downcast in *. clarify. apply Any.upcast_inj in _ASSUME2. des; clarify.
 
 
-        rewrite unfold_APC. steps. force_l. exists false. steps. force_l. eexists ("cmp", [Vnullptr; Vnullptr]↑). steps.
+        rewrite unfold_APC. steps. force_l. exists true. steps. force_l. esplits. force_l. esplits.
+        force_l. eexists (ε, _). steps. force_l. { refl. } steps. force_l. esplits. steps. force_l.
+        { esplits; et. rr. refl. }
+        steps. force_l. esplit. steps. force_l. { refl. } steps.
+      - Ltac iDestruct H :=
+          match type of H with
+          | iHyp (Exists _, _) _ => destruct H as [? H]; clear_bar; iRefresh
+          | iHyp (_ ** _) _ =>
+            let name0 := fresh "A" in
+            apply sepconj_split in H as [? [? [H [name0 ?]]]]; clear_bar; iRefresh
+            (* apply sepconj_split in H as [? [? ?]]; clear_bar; iRefresh *)
+          end.
+        repeat iDestruct _ASSUME3. iPure _ASSUME3. subst.
+
+
+
+        rewrite unfold_APC. steps. force_l. exists false. steps. force_l. eexists ("cmp", [Vptr x 0; Vnullptr]↑). steps.
+        Transparent MemStb. cbn in Heq. Opaque MemStb. ss. clarify. rewrite Any.upcast_downcast. steps.
+        unfold HoareCall, checkWf, forge, discard, put. steps. iRefresh.
+        Ltac iExists' H :=
+          match (type of H) with
+          | iHyp ?P ?r => first [exists r|apply r|fail]
+          end.
+        force_l. eexists (ε, _). steps. force_l. { refl. } steps. force_l. iExists A0. steps. force_l. esplit.
+        steps. force_l.
+        { instantiate (1:= a ⋅ (x3 ⋅ x2) ⋅ b ⋅ GRA.padding ((n, 0%Z) |-> [Vptr x 0])). admit "ez - pcm solver". } steps.
+        force_l. eexists (false, _). esplits. steps. force_l. esplits. steps. force_l. esplits. steps. force_l.
+        { esplits; try refl. left. esplits; eauto. rr in A0. admit "ez - use extends instead of equality". }
+        force_l. { esplits; ss; try lia. } clear _GUARANTEE2. des; ss. clear_tac.
+        gstep; econs; try apply Nat.lt_succ_diag_r; i; ss. exists 400. des. clarify. unfold alist_add; cbn. steps.
+        des. clarify. rewrite Any.upcast_downcast in *. clarify. apply Any.upcast_inj in _ASSUME2. des; clarify.
+
+
+        rewrite unfold_APC. steps. force_l. exists false. steps. force_l. eexists ("load", [Vptr x 0]↑). steps.
+        Transparent MemStb. cbn in Heq. Opaque MemStb. ss. clarify. rewrite Any.upcast_downcast. steps.
+        unfold HoareCall, checkWf, forge, discard, put. steps. iRefresh.
+        force_l. eexists (ε, _). steps. force_l. { refl. } steps. force_l. iExists A0. steps. force_l. esplit.
+        steps. force_l.
+        { rewrite URA.add_comm with (a0:=x4). refl. } steps.
+        force_l. eexists (x, 0%Z, Vint (Z.of_nat n0)). esplits. steps. force_l. esplits. steps. force_l. esplits. steps. force_l.
+        { esplits; try refl. rr in A0. admit "ez - use extends instead of equality". }
+        force_l. { esplits; ss; try lia. } clear _GUARANTEE2 _GUARANTEE3 _GUARANTEE4. clear_tac.
+        gstep; econs; try apply Nat.lt_succ_diag_r; i; ss. exists 400. des. clarify. unfold alist_add; cbn. steps.
+        des. clarify. rewrite Any.upcast_downcast in *. clarify. apply Any.upcast_inj in _ASSUME3. des; clarify.
+
+
+        rewrite unfold_APC. steps. force_l. exists false. steps. force_l. eexists ("load", [Vptr x 1]↑). steps.
+        Transparent MemStb. cbn in Heq. Opaque MemStb. ss. clarify. rewrite Any.upcast_downcast. steps.
+        unfold HoareCall, checkWf, forge, discard, put. steps. iRefresh.
+        force_l. eexists (ε, _). steps. force_l. { refl. } steps. force_l. iExists A0. steps. force_l. esplit.
+        steps. force_l.
+        TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
+        { rewrite URA.add_comm with (a0:=x4). refl. } steps.
+        force_l. eexists (x, 0%Z, Vint (Z.of_nat n0)). esplits. steps. force_l. esplits. steps. force_l. esplits. steps. force_l.
+        { esplits; try refl. rr in A0. admit "ez - use extends instead of equality". }
+        force_l. { esplits; ss; try lia. } clear _GUARANTEE2 _GUARANTEE3 _GUARANTEE4. clear_tac.
+        gstep; econs; try apply Nat.lt_succ_diag_r; i; ss. exists 400. des. clarify. unfold alist_add; cbn. steps.
+        des. clarify. rewrite Any.upcast_downcast in *. clarify. apply Any.upcast_inj in _ASSUME3. des; clarify.
+
+
+
+
+
+
+
+
+        apply sepconj_split in _ASSUME3; clear_bar; iRefresh.
+        iDestruct _ASSUME3.
+        apply sepconj_split in _ASSUME3. des.
+
+        iDestruct _ASSUME3. iDestruct _ASSUME3.
+        iDestruct _ASSUME3.
+        rr in _ASSUME3. des.
+        iDestruct _ASSUME3. rewrite unfold_APC. steps. force_l. exists false. steps. force_l. eexists ("cmp", [Vnullptr; Vnullptr]↑). steps.
         Transparent MemStb. cbn in Heq. Opaque MemStb. ss. clarify. rewrite Any.upcast_downcast. steps.
         unfold HoareCall, checkWf, forge, discard, put. steps. iRefresh.
         force_l. eexists (ε, _). steps. force_l. { refl. } steps. force_l. clear_bar; iRefresh.
         exists ε. steps. force_l. esplits. force_l. { rewrite URA.unit_idl. refl. } steps.
-        force_l. eexists (_, _). esplits. steps. force_l. esplits. steps. force_l. esplits. steps. force_l.
-        { esplits; swap 2 3.
-          { refl. }
-          { refl. }
-          instantiate (1:=true).
-          admit "FIX MEM1.v -- Add nullptr-nullptr case".
-        }
+        force_l. eexists (true, _). esplits. steps. force_l. esplits. steps. force_l. esplits. steps. force_l.
+        { esplits; try refl. repeat right. esplits; et. }
         force_l.
-        { instantiate (1:=ord_pure 1). esplits; ss; try lia. }
+        { esplits; ss; try lia. }
         clear _GUARANTEE2.
+        des; ss. clear_tac.
+        gstep; econs; try apply Nat.lt_succ_diag_r; i; ss. exists 400. des. clarify. unfold alist_add; cbn. steps.
+        des. clarify. rewrite Any.upcast_downcast in *. clarify. apply Any.upcast_inj in _ASSUME2. des; clarify.
+
+
+
+
+
+
+
+
+        Transparent MemStb. cbn in Heq. Opaque MemStb. ss. clarify. rewrite Any.upcast_downcast. steps.
+        unfold HoareCall, checkWf, forge, discard, put. steps. iRefresh.
+        force_l. eexists (ε, _). steps. force_l. { refl. } steps. force_l. clear_bar; iRefresh.
+        exists ε. steps. force_l. esplits. force_l. { rewrite URA.unit_idl. refl. } steps.
+        force_l. eexists (true, _). esplits. steps. force_l. esplits. steps. force_l. esplits. steps. force_l.
+        { esplits; try refl. repeat right. esplits; et. }
+        force_l.
+        { esplits; ss; try lia. }
+        clear _GUARANTEE3 _GUARANTEE4.
+        steps.
         des; ss. clear_tac.
         gstep; econs; try apply Nat.lt_succ_diag_r; i; ss. exists 400. des. clarify. unfold alist_add; cbn. steps.
 

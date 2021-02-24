@@ -274,17 +274,10 @@ Section CANCEL.
           admit "ez".
       - ii. ss. des_ifs. des. (* rr in SIM0. des; ss. unfold RelationPairs.RelCompFun in *. ss. *)
         (* r in SIM0. des_ifs. des; ss. *)
-        steps. clear_tac. instantiate (1:=125).
-        unfold checkWf, assume; steps.
-        des_ifs; ss.
-        { steps. }
-        steps.
-        unshelve esplits; eauto.
-        { clear - ST1. admit "ez". }
-        steps. esplits; eauto.
-        unfold forge; steps. esplits; et.
-        steps. unshelve esplits; eauto. steps.
-        fold interp_hCallE_src. fold (interp_hCallE_tgt stb mn).
+        unfold checkWf, assume; steps. clear_tac. esplits. steps.
+        unfold forge; steps. des_ifs; ss. { steps. } steps. exists vret_src'. instantiate (1:=rret). esplits; et.
+        steps. unshelve esplits; eauto. { clear - ST1. admit "ez". } steps. unshelve esplits; eauto. steps.
+        fold (interp_hCallE_mid). fold (interp_hCallE_tgt stb mn).
         gbase. eapply CIH; [refl|ss|..]; cycle 1.
         { refl. }
         { unfold interp_hCallE_tgt. erewrite Any.downcast_upcast; et. }
@@ -376,16 +369,15 @@ Section CANCEL.
           admit "ez".
       - ii. ss. des_ifs. des. (* rr in SIM0. des; ss. unfold RelationPairs.RelCompFun in *. ss. *)
         (* r in SIM0. des_ifs. des; ss. *)
-        steps. clear_tac. instantiate (1:=125).
-        unfold checkWf, assume; steps.
+        steps. clear_tac. esplits. steps.
+        unfold forge, checkWf, assume; steps.
         des_ifs; ss.
         { steps. }
-        steps.
+        steps. esplits. steps. instantiate (1:= rret). instantiate (1:=vret_src').
         unshelve esplits; eauto.
         { clear - ST1. admit "ez". }
-        steps. esplits; eauto.
-        unfold forge; steps. esplits; et.
-        steps. unshelve esplits; eauto. steps.
+        steps. unshelve esplits; eauto.
+        steps.
         fold interp_hCallE_src. fold (interp_hCallE_tgt stb mn).
         gbase. eapply CIH; [refl|ss|..]; cycle 1.
         { refl. }
@@ -400,7 +392,7 @@ Section CANCEL.
 
   Hypothesis MAIN: List.find (fun '(_fn, _) => dec "main" _fn) stb = Some ("main",
     (* (@mk "Main" unit (fun _ varg_high _ _ => varg_high = tt↑) (fun _ vret_high _ _ => vret_high = tt↑) (fun _ => None))). *)
-    (@mk_simple "Main" unit (fun _ _ _ o => o = ord_top) top3)).
+    (@mk_simple _ "Main" unit (fun _ _ _ o => o = ord_top) top3)).
   Hypothesis WFR: URA.wf (rsum (ModSem.initial_r_state ms_tgt)).
 
   Opaque interp_Es.
@@ -509,11 +501,11 @@ Section CANCEL.
       eapply bindR_intro with (RR:=eq).
       - fold st_tgt0. eapply simg_gpaco_refl. typeclasses eauto.
       - ii. des_ifs. ss. steps.
-        unfold checkWf, assume. steps. destruct p0. steps.
+        unfold forge, checkWf, assume. steps. destruct p0. steps.
         unfold ModSem.handle_rE. des_ifs.
         { admit "we should use stronger RR, not eq;
 we should know that stackframe is not popped (unary property)". }
-        steps. unfold forge; steps. des; ss.
+        steps. des; ss.
     }
 
 

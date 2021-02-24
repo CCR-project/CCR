@@ -38,13 +38,19 @@ int pop(struct Node## llref) {
   return -1;
 }
 ***)
+  Definition is_zero (v: val): bool := match v with
+                                       | Vint x => dec x 0%Z
+                                       | Vptr 0 0%Z => true
+                                       | _ => false
+                                       end.
+
   Definition popF_parg: list val -> option val := (@hd_error _).
   Definition popF: list val -> itree Es val :=
     fun varg =>
       `llref: val <- (popF_parg varg)?;;
       `ll: val    <- (ccall "load" [llref]);;
-      `b: bool    <- (ccall "cmp"  [ll; Vnullptr]);;
-      if b
+      `b: val     <- (ccall "cmp"  [ll; Vnullptr]);;
+      if is_zero b
       then (
           '(blk, ofs) <- (unptr ll)?;;
           let addr_val  := Vptr blk ofs in
