@@ -518,6 +518,14 @@ Section MODSEM.
     admit "TODO".
   Qed.
 
+  Lemma add_assoc' ms0 ms1 ms2:
+    add ms0 (add ms1 ms2) = add (add ms0 ms1) ms2.
+  Proof.
+    induction ms2; ss. unfold add. f_equal; ss.
+    { eapply app_assoc. }
+    { eapply app_assoc. }
+  Qed.
+
   Theorem add_assoc
           ms0 ms1 ms2
           (WF: wf (add ms0 (add ms1 ms2)))
@@ -586,6 +594,14 @@ Section MOD.
     - admit "TODO: maybe the easy way is to 'canonicalize' the list by sorting.".
   Qed.
 
+  Lemma add_assoc' ms0 ms1 ms2:
+    add ms0 (add ms1 ms2) = add (add ms0 ms1) ms2.
+  Proof.
+    unfold add. f_equal.
+    { extensionality skenv_link. ss. apply ModSem.add_assoc'. }
+    { eapply app_assoc. }
+  Qed.
+
   Theorem add_assoc
           md0 md1 md2
     :
@@ -595,6 +611,34 @@ Section MOD.
   Proof.
     admit "ez".
   Qed.
+
+  Definition empty: t := {|
+    get_modsem := fun _ => ModSem.mk [] [];
+    sk := Sk.unit;
+  |}
+  .
+
+  Lemma add_empty_r md: add md empty = md.
+  Proof.
+    destruct md; ss.
+    unfold add, ModSem.add. f_equal; ss.
+    - extensionality skenv. destruct (get_modsem0 skenv); ss.
+      repeat rewrite app_nil_r. auto.
+    - unfold Sk.add. rewrite app_nil_r. auto.
+  Qed.
+
+  Lemma add_empty_l md: add empty md = md.
+  Proof.
+    destruct md; ss.
+    unfold add, ModSem.add. f_equal; ss.
+    extensionality skenv. destruct (get_modsem0 skenv); ss.
+  Qed.
+
+  Fixpoint add_list (mds: list t): t :=
+    match mds with
+    | hd::tl => add hd (add_list tl)
+    | [] => empty
+    end.
 
 End MOD.
 End Mod.

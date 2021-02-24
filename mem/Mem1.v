@@ -27,7 +27,7 @@ Compute (URA.car).
 
 Section PROOF.
   Context `{@GRA.inG memRA Σ}.
-  
+
   Definition points_to (loc: block * Z) (vs: list val): memRA :=
     let (b, ofs) := loc in
     URA.white (M:=_memRA)
@@ -122,13 +122,17 @@ Section PROOF.
        "Mem"
        (fun '(result, resource) varg o rarg =>
           rarg = resource /\
-          ((exists b ofs v, varg = [Vptr b ofs; Vnullptr]↑ /\ rarg = GRA.padding ((b, ofs) |-> v) /\ result = false) \/
+          ((exists b ofs v, varg = [Vptr b ofs; Vnullptr]↑ /\ rarg = GRA.padding ((b, ofs) |-> [v]) /\ result = false) \/
+           (exists b ofs v, varg = [Vnullptr; Vptr b ofs]↑ /\ rarg = GRA.padding ((b, ofs) |-> [v]) /\ result = false) \/
            (exists b0 ofs0 v0 b1 ofs1 v1, varg = [Vptr b0 ofs0; Vptr b1 ofs1]↑ /\
-                                          rarg = GRA.padding ((b0, ofs0) |-> v0) ⋅ GRA.padding ((b1, ofs1) |-> v1) /\ result = false) \/
-           (exists b ofs v, varg = [Vptr b ofs; Vptr b ofs]↑ /\ rarg = GRA.padding ((b, ofs) |-> v) /\ result = true)
-          )
+                                          rarg = GRA.padding ((b0, ofs0) |-> [v0]) ⋅ GRA.padding ((b1, ofs1) |-> [v1]) /\ result = false) \/
+           (exists b ofs v, varg = [Vptr b ofs; Vptr b  ofs]↑ /\ rarg = GRA.padding ((b, ofs) |-> [v]) /\ result = true) \/
+           (varg = [Vnullptr; Vnullptr]↑ /\ result = true)
+          ) /\
+          o = ord_pure 1
        )
-       (fun '(result, resource) varg rret => varg = result↑ /\ rret = resource)
+       (fun '(result, resource) vret rret =>
+          vret = (if result then Vint 1 else Vint 0)↑ /\ rret = resource)
     ).
 
   Definition MemStb: list (gname * fspec) :=
