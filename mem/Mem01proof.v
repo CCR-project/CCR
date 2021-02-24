@@ -64,15 +64,6 @@ Notation "wf n '----------------------------------------------------------------
 
 
 
-Ltac go := try first[pfold; econs; [..|M]; (Mskip ss); et; check_safe; ii; left|
-                     pfold; econsr; [..|M]; (Mskip ss); et; check_safe; ii; left].
-Ltac igo := repeat (try rewrite bind_bind; try rewrite bind_ret_l; try rewrite bind_ret_r; try rewrite bind_tau;
-                    try rewrite interp_vis;
-                    try rewrite interp_ret;
-                    try rewrite interp_tau;
-                    try rewrite interp_trigger
-                   ).
-
 Ltac prep := ired; try rewrite ! unfold_interp.
 
 Ltac force_l :=
@@ -115,7 +106,6 @@ Ltac force_r :=
     seal i_src; gstep; econs; eauto; unseal i_src
   end
 .
-
 Ltac init :=
   split; ss; ii; clarify; rename y into varg; eexists 100%nat; ss; des; clarify;
   ginit; [eapply cpn3_wcompat; eauto with paco|]; unfold alist_add, alist_remove; ss;
@@ -125,33 +115,35 @@ Ltac _step :=
   match goal with
   (*** blacklisting ***)
   (* | [ |- (gpaco3 (_sim_itree wf) _ _ _ _ (_, trigger (Choose _) >>= _) (_, ?i_tgt)) ] => idtac *)
-  | [ |- (gpaco3 (_sim_itree ?wf) _ _ _ _ (_, unwrapU ?ox >>= _) (_, _)) ] =>
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, unwrapU ?ox >>= _) (_, _)) ] =>
     let tvar := fresh "tmp" in
     let thyp := fresh "TMP" in
     remember (unwrapU ox) as tvar eqn:thyp; unfold unwrapU in thyp; subst tvar;
     let name := fresh "_UNWRAPU" in
     destruct (ox) eqn:name; [|unfold triggerUB; ired; _step; ss; fail]
-  | [ |- (gpaco3 (_sim_itree ?wf) _ _ _ _ (_, assume ?P >>= _) (_, _)) ] =>
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, assume ?P >>= _) (_, _)) ] =>
     let tvar := fresh "tmp" in
     let thyp := fresh "TMP" in
     remember (assume P) as tvar eqn:thyp; unfold assume in thyp; subst tvar;
     let name := fresh "_ASSUME" in
-    destruct (classic P) as [name|name]; [|unfold triggerUB; ired; gstep; eapply sim_itree_take_src; ss; fail]
+    ired; gstep; eapply sim_itree_take_src; [apply Nat.lt_succ_diag_r|]; intro name
 
   (*** blacklisting ***)
   (* | [ |- (gpaco3 (_sim_itree wf) _ _ _ _ (_, _) (_, trigger (Take _) >>= _)) ] => idtac *)
-  | [ |- (gpaco3 (_sim_itree ?wf) _ _ _ _ (_, _) (_, unwrapN ?ox >>= _)) ] =>
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, _) (_, unwrapN ?ox >>= _)) ] =>
     let tvar := fresh "tmp" in
     let thyp := fresh "TMP" in
     remember (unwrapN ox) as tvar eqn:thyp; unfold unwrapN in thyp; subst tvar;
     let name := fresh "_UNWRAPN" in
     destruct (ox) eqn:name; [|unfold triggerNB; ired; _step; ss; fail]
-  | [ |- (gpaco3 (_sim_itree ?wf) _ _ _ _ (_, _) (_, guarantee ?P >>= _)) ] =>
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, _) (_, guarantee ?P >>= _)) ] =>
     let tvar := fresh "tmp" in
     let thyp := fresh "TMP" in
     remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar;
     let name := fresh "_GUARANTEE" in
-    destruct (classic P) as [name|name]; [|unfold triggerNB; ired; gstep; eapply sim_itree_choose_tgt; ss; fail]
+    ired; gstep; eapply sim_itree_choose_tgt; [apply Nat.lt_succ_diag_r|]; intro name
+
+
 
   | _ => (*** default ***)
     gstep; econs; try apply Nat.lt_succ_diag_r; i
@@ -319,13 +311,12 @@ Section SIMMODSEM.
       unfold freeF. steps. rewrite Any.upcast_downcast. steps.
       (************** TODO: rename x3 into ASSUME *********************)
       des. clarify. clear_tac. rewrite Any.upcast_downcast in *. clarify.
-      clear v x5. (************ TODO: WHY? *******************)
       steps.
       unfold interp_hCallE_tgt. steps. force_l. exists 0. steps.
       apply_all_once Any.upcast_inj. des; clarify. clear_tac.
-      rewrite URA.unit_idl in *. rewrite GRA.padding_add in *. eapply GRA.padding_wf in x1. des.
-      rename x1 into WF.
-      rename n into b. rename z into ofs. rename v0 into v.
+      rewrite URA.unit_idl in *. rewrite GRA.padding_add in *. eapply GRA.padding_wf in _ASSUME. des.
+      rename _ASSUME into WF.
+      rename n into b. rename z into ofs.
 
       assert(A: mem_src b ofs = inl (Some v)).
       { Local Transparent URA.wf.
@@ -428,8 +419,8 @@ Section SIMMODSEM.
       force_l. esplit. steps. force_l. { rewrite URA.unit_id. refl. } steps.
       assert(T: mem_src b ofs = inl (Some v)).
       { Local Transparent points_to URA.add URA.wf URA.unit.
-        clear - x1.
-        ss. des. do 2 spc x0. rr in x1. des. ss.
+        clear - _ASSUME.
+        ss. des. do 2 spc _ASSUME0. rr in _ASSUME. des. ss.
         des_ifs; bsimpl; des; des_sumbool; ss;
           try rewrite Z.leb_le in *; try rewrite Z.leb_gt in *; try rewrite Z.ltb_lt in *; try rewrite Z.ltb_ge in *;
             try rewrite Z.sub_diag in *; try lia; ss.
@@ -452,7 +443,7 @@ Section SIMMODSEM.
       set (mem_src' := fun _b _ofs => if dec _b b && dec _ofs ofs then inl (Some v) else mem_src _b _ofs).
       force_l. eexists (GRA.padding (URA.black (mem_src': URA.car (t:=Mem1._memRA))),
                         GRA.padding ((b, ofs) |-> [v])).
-      rename x1 into WF.
+      rename _ASSUME into WF.
       assert(WF0: URA.wf (mem_src': URA.car (t:=Mem1._memRA))).
       { Local Transparent URA.wf.
         clear - WF. apply URA.wf_mon in WF. ss. des.
@@ -475,9 +466,6 @@ Section SIMMODSEM.
       }
       steps. force_l. esplit. force_l. { esplits; eauto. } steps.
       force_l. esplit. steps. force_l. { rewrite URA.unit_id. refl. } steps.
-      assert(v_old0 = v_old).
-      { admit "TODO----------FIXTHIS". }
-      subst.
       assert(U: mem_src b ofs = inl (Some v_old)).
       { Local Transparent URA.add GRA.to_URA points_to URA.wf URA.unit.
         clear - WF. ss. des. specialize (WF0 b ofs). r in WF. des; clarify. ss.
@@ -511,7 +499,7 @@ Section SIMMODSEM.
           Local Opaque URA.add GRA.to_URA points_to URA.wf URA.unit.
       }
 
-      clear x3. des; clarify.
+      des; clarify.
       - (* ptr / null *)
         clear_tac. rewrite Any.upcast_downcast in *. clarify.
         apply_all_once Any.upcast_inj. des. clarify. clear_tac.
