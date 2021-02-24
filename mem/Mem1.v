@@ -126,7 +126,8 @@ Section PROOF.
            (exists b ofs v, varg = [Vnullptr; Vptr b ofs]↑ /\ rarg = GRA.padding ((b, ofs) |-> [v]) /\ result = false) \/
            (exists b0 ofs0 v0 b1 ofs1 v1, varg = [Vptr b0 ofs0; Vptr b1 ofs1]↑ /\
                                           rarg = GRA.padding ((b0, ofs0) |-> [v0]) ⋅ GRA.padding ((b1, ofs1) |-> [v1]) /\ result = false) \/
-           (exists b ofs v, varg = [Vptr b ofs; Vptr b  ofs]↑ /\ rarg = GRA.padding ((b, ofs) |-> [v]) /\ result = true)
+           (exists b ofs v, varg = [Vptr b ofs; Vptr b  ofs]↑ /\ rarg = GRA.padding ((b, ofs) |-> [v]) /\ result = true) \/
+           (varg = [Vnullptr; Vnullptr]↑ /\ result = true)
           ) /\
           o = ord_pure 1
        )

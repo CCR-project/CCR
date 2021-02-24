@@ -116,6 +116,54 @@ Ltac force_r :=
   end
 .
 
+Ltac init :=
+  split; ss; ii; clarify; rename y into varg; eexists 100%nat; ss; des; clarify;
+  ginit; [eapply cpn3_wcompat; eauto with paco|]; unfold alist_add, alist_remove; ss;
+  unfold fun_to_tgt, cfun, HoareFun; ss.
+
+Ltac _step :=
+  match goal with
+  (*** blacklisting ***)
+  (* | [ |- (gpaco3 (_sim_itree wf) _ _ _ _ (_, trigger (Choose _) >>= _) (_, ?i_tgt)) ] => idtac *)
+  | [ |- (gpaco3 (_sim_itree ?wf) _ _ _ _ (_, unwrapU ?ox >>= _) (_, _)) ] =>
+    let tvar := fresh "tmp" in
+    let thyp := fresh "TMP" in
+    remember (unwrapU ox) as tvar eqn:thyp; unfold unwrapU in thyp; subst tvar;
+    let name := fresh "_UNWRAPU" in
+    destruct (ox) eqn:name; [|unfold triggerUB; ired; _step; ss; fail]
+  | [ |- (gpaco3 (_sim_itree ?wf) _ _ _ _ (_, assume ?P >>= _) (_, _)) ] =>
+    let tvar := fresh "tmp" in
+    let thyp := fresh "TMP" in
+    remember (assume P) as tvar eqn:thyp; unfold assume in thyp; subst tvar;
+    let name := fresh "_ASSUME" in
+    destruct (classic P) as [name|name]; [|unfold triggerUB; ired; gstep; eapply sim_itree_take_src; ss; fail]
+
+  (*** blacklisting ***)
+  (* | [ |- (gpaco3 (_sim_itree wf) _ _ _ _ (_, _) (_, trigger (Take _) >>= _)) ] => idtac *)
+  | [ |- (gpaco3 (_sim_itree ?wf) _ _ _ _ (_, _) (_, unwrapN ?ox >>= _)) ] =>
+    let tvar := fresh "tmp" in
+    let thyp := fresh "TMP" in
+    remember (unwrapN ox) as tvar eqn:thyp; unfold unwrapN in thyp; subst tvar;
+    let name := fresh "_UNWRAPN" in
+    destruct (ox) eqn:name; [|unfold triggerNB; ired; _step; ss; fail]
+  | [ |- (gpaco3 (_sim_itree ?wf) _ _ _ _ (_, _) (_, guarantee ?P >>= _)) ] =>
+    let tvar := fresh "tmp" in
+    let thyp := fresh "TMP" in
+    remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar;
+    let name := fresh "_GUARANTEE" in
+    destruct (classic P) as [name|name]; [|unfold triggerNB; ired; gstep; eapply sim_itree_choose_tgt; ss; fail]
+
+  | _ => (*** default ***)
+    gstep; econs; try apply Nat.lt_succ_diag_r; i
+  end;
+  (* idtac *)
+  match goal with
+  | [ |- exists _, _ ] => fail 1
+  | _ => idtac
+  end
+.
+Ltac steps := repeat ((*** pre processing ***) prep; try _step; (*** post processing ***) unfold alist_add; simpl; des_ifs_safe).
+
 Section SIMMODSEM.
 
   Context `{Σ: GRA.t}.
@@ -156,57 +204,8 @@ Section SIMMODSEM.
         + unfold update. des_ifs; econs; et.
     }
 
-    Ltac init :=
-      split; ss; ii; clarify; rename y into varg; eexists 100%nat; ss; des; clarify;
-      ginit; [eapply cpn3_wcompat; eauto with paco|]; unfold alist_add, alist_remove; ss;
-      unfold fun_to_tgt, cfun, HoareFun; ss.
-
     econs; ss.
     { init.
-      Ltac _step :=
-        match goal with
-        (*** blacklisting ***)
-        (* | [ |- (gpaco3 (_sim_itree wf) _ _ _ _ (_, trigger (Choose _) >>= _) (_, ?i_tgt)) ] => idtac *)
-        | [ |- (gpaco3 (_sim_itree wf) _ _ _ _ (_, unwrapU ?ox >>= _) (_, _)) ] =>
-          let tvar := fresh "tmp" in
-          let thyp := fresh "TMP" in
-          remember (unwrapU ox) as tvar eqn:thyp; unfold unwrapU in thyp; subst tvar;
-          let name := fresh "_UNWRAPU" in
-          destruct (ox) eqn:name; [|unfold triggerUB; ired; _step; ss; fail]
-        | [ |- (gpaco3 (_sim_itree wf) _ _ _ _ (_, assume ?P >>= _) (_, _)) ] =>
-          let tvar := fresh "tmp" in
-          let thyp := fresh "TMP" in
-          remember (assume P) as tvar eqn:thyp; unfold assume in thyp; subst tvar;
-          let name := fresh "_ASSUME" in
-          destruct (classic P) as [name|name]; [|unfold triggerUB; ired; gstep; eapply sim_itree_take_src; ss; fail]
-
-        (*** blacklisting ***)
-        (* | [ |- (gpaco3 (_sim_itree wf) _ _ _ _ (_, _) (_, trigger (Take _) >>= _)) ] => idtac *)
-        | [ |- (gpaco3 (_sim_itree wf) _ _ _ _ (_, _) (_, unwrapN ?ox >>= _)) ] =>
-          let tvar := fresh "tmp" in
-          let thyp := fresh "TMP" in
-          remember (unwrapN ox) as tvar eqn:thyp; unfold unwrapN in thyp; subst tvar;
-          let name := fresh "_UNWRAPN" in
-          destruct (ox) eqn:name; [|unfold triggerNB; ired; _step; ss; fail]
-        | [ |- (gpaco3 (_sim_itree wf) _ _ _ _ (_, _) (_, guarantee ?P >>= _)) ] =>
-          let tvar := fresh "tmp" in
-          let thyp := fresh "TMP" in
-          remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar;
-          let name := fresh "_GUARANTEE" in
-          destruct (classic P) as [name|name]; [|unfold triggerNB; ired; gstep; eapply sim_itree_choose_tgt; ss; fail]
-
-
-
-        | _ => (*** default ***)
-          gstep; econs; try apply Nat.lt_succ_diag_r; i
-        end;
-        (* idtac *)
-        match goal with
-        | [ |- exists _, _ ] => fail 1
-        | _ => idtac
-        end
-      .
-      Ltac steps := repeat ((*** pre processing ***) prep; try _step; (*** post processing ***) unfold alist_add; simpl; des_ifs_safe).
       unfold checkWf, forge, discard, put. steps.
       unfold allocF. steps. rewrite Any.upcast_downcast. steps.
       des. clarify. rewrite Any.upcast_downcast in *. clarify. apply_all_once Any.upcast_inj. des. clarify. clear_tac.
@@ -587,6 +586,15 @@ Section SIMMODSEM.
         { instantiate (1:=v). eapply _ASSUME. }
         ss. steps. esplits; eauto. destruct (dec b0 b0); ss. destruct (dec ofs ofs); ss.
         steps. esplits; eauto.
+      - (* null / null *)
+        clear_tac. rewrite Any.upcast_downcast in *. clarify.
+        apply_all_once Any.upcast_inj. des. clarify. clear_tac.
+        ss.
+        unfold interp_hCallE_tgt. steps. force_l. exists 0. steps. force_l. esplit. force_l. esplit.
+        force_l. eexists (GRA.padding (URA.black (mem_src: URA.car (t:=Mem1._memRA))), (ε ⋅ c)).
+        steps.
+        force_l. { refl. } steps. force_l. esplit. force_l. { esplits; eauto. } steps.
+        force_l. esplit. steps. force_l. { rewrite URA.add_comm. refl. } steps. esplits; eauto.
     }
     Unshelve.
     all: ss.
