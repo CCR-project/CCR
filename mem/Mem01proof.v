@@ -1,4 +1,4 @@
-Require Import Mem0 Mem1 SimModSem HoareDef.
+Require Import Mem0 Mem1 HoareDef SimModSem.
 Require Import Coqlib.
 Require Import Universe.
 Require Import Skeleton.
@@ -56,246 +56,7 @@ Definition add_delta_to_black `{M: URA.t} (b: URA.auth_t) (w: URA.auth_t): URA.a
 (* "). *)
 (******** TODO: it works in emacs but fails in coqc -- try coq 8.13 and uncomment it ***********)
 
-Notation "wf n '------------------------------------------------------------------' src0 tgt0 '------------------------------------------------------------------' src1 tgt1 '------------------------------------------------------------------' src2 tgt2"
-  :=
-    (gpaco3 (_sim_itree wf) _ _ _ n (([(_, src0)], src1), src2) (([(_, tgt0)], tgt1), tgt2))
-      (at level 60,
-       format "wf  n '//' '------------------------------------------------------------------' '//' src0 '//' tgt0 '//' '------------------------------------------------------------------' '//' src1 '//' tgt1 '//' '------------------------------------------------------------------' '//' src2 '//' '//' '//' tgt2 '//' ").
 
-
-
-
-(* TODO: copied from Linkedlist01proof *)
-
-
-(* Ltac ired := repeat (try rewrite bind_bind; try rewrite bind_ret_l; try rewrite bind_ret_r; try rewrite bind_tau; *)
-(*                      (* try rewrite interp_vis; *) *)
-(*                      (* try rewrite interp_ret; *) *)
-(*                      (* try rewrite interp_tau; *) *)
-(*                      (* (* try rewrite interp_trigger *) *) *)
-(*                      (* try rewrite interp_bind; *) *)
-
-(*                      (* try rewrite interp_mrec_hit; *) *)
-(*                      (* try rewrite interp_mrec_miss; *) *)
-(*                      (* try rewrite interp_mrec_bind; *) *)
-(*                      (* try rewrite interp_mrec_tau; *) *)
-(*                      (* try rewrite interp_mrec_ret; *) *)
-
-(*                      (* try rewrite interp_state_trigger; *) *)
-(*                      (* try rewrite interp_state_bind; *) *)
-(*                      (* try rewrite interp_state_tau; *) *)
-(*                      (* try rewrite interp_state_ret; *) *)
-(*                      cbn *)
-(*                     ). *)
-
-Lemma sim_l_bind_bind `{Σ: GRA.t} a b c d e f g
-      (R S : Type) (s : itree _ R) (k : R -> itree _ S) (h : S -> itree _ _)
-      (SIM: gpaco3 (_sim_itree c) d e f g (b, ` r : R <- s;; ` x : _ <- k r;; h x) a)
-  :
-    gpaco3 (_sim_itree c) d e f g (b, ` x : _ <- (` x : _ <- s;; k x);; h x) a.
-Proof.
-  rewrite bind_bind. auto.
-Qed.
-
-Lemma sim_l_bind_tau `{Σ: GRA.t} a b c d e f g
-      (U : Type) (t : itree _ _) (k : U -> itree _ _)
-      (SIM: gpaco3 (_sim_itree c) d e f g (b, Tau (` x : _ <- t;; k x)) a)
-  :
-    gpaco3 (_sim_itree c) d e f g (b, ` x : _ <- Tau t;; k x) a.
-Proof.
-  rewrite bind_tau. auto.
-Qed.
-
-Lemma sim_l_bind_ret_l `{Σ: GRA.t} a b c d e f g
-      (R : Type) (r : R) (k : R -> itree _ _)
-      (SIM: gpaco3 (_sim_itree c) d e f g (b, k r) a)
-  :
-    gpaco3 (_sim_itree c) d e f g (b, ` x : _ <- Ret r;; k x) a.
-Proof.
-  rewrite bind_ret_l. auto.
-Qed.
-
-Lemma sim_r_bind_bind `{Σ: GRA.t} a b c d e f g
-      (R S : Type) (s : itree _ R) (k : R -> itree _ S) (h : S -> itree _ _)
-      (SIM: gpaco3 (_sim_itree c) d e f g a (b, ` r : R <- s;; ` x : _ <- k r;; h x))
-  :
-    gpaco3 (_sim_itree c) d e f g a (b, ` x : _ <- (` x : _ <- s;; k x);; h x).
-Proof.
-  rewrite bind_bind. auto.
-Qed.
-
-Lemma sim_r_bind_tau `{Σ: GRA.t} a b c d e f g
-      (U : Type) (t : itree _ _) (k : U -> itree _ _)
-      (SIM: gpaco3 (_sim_itree c) d e f g a (b, Tau (` x : _ <- t;; k x)))
-  :
-    gpaco3 (_sim_itree c) d e f g a (b, ` x : _ <- Tau t;; k x).
-Proof.
-  rewrite bind_tau. auto.
-Qed.
-
-Lemma sim_r_bind_ret_l `{Σ: GRA.t} a b c d e f g
-      (R : Type) (r : R) (k : R -> itree _ _)
-      (SIM: gpaco3 (_sim_itree c) d e f g a (b, k r))
-  :
-    gpaco3 (_sim_itree c) d e f g a (b, ` x : _ <- Ret r;; k x).
-Proof.
-  rewrite bind_ret_l. auto.
-Qed.
-
-Ltac interp_red := rewrite interp_vis ||
-                           rewrite interp_ret ||
-                           rewrite interp_tau ||
-                           rewrite interp_trigger ||
-                           rewrite interp_bind.
-
-Ltac interp_mrec_red := rewrite interp_mrec_hit ||
-                                rewrite interp_mrec_miss ||
-                                rewrite interp_mrec_bind ||
-                                rewrite interp_mrec_tau ||
-                                rewrite interp_mrec_ret.
-
-Ltac interp_state_red := rewrite interp_state_trigger ||
-                                 rewrite interp_state_bind ||
-                                 rewrite interp_state_tau ||
-                                 rewrite interp_state_ret.
-
-Ltac ired_l :=
-  cbn;
-  match goal with
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, ITree.bind' _ (ITree.bind' _ _)) _) ] =>
-    idtac "case l bind bind";
-    apply sim_l_bind_bind; idtac "l bind_bind"; ired_l
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, ITree.bind' _ (Tau _)) _) ] =>
-    idtac "case l bind tau";
-    apply sim_l_bind_tau; idtac "l bind_tau"
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, ITree.bind' _ (Ret _)) _) ] =>
-    idtac "case l bind ret";
-    apply sim_l_bind_ret_l; idtac "l bind_ret"; ired_l
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, interp _ _) _) ] =>
-    idtac "case l interp";
-    ((interp_red; ired_l) || idtac)
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, ITree.bind' _ (interp _ _)) _) ] =>
-    idtac "case l interp bind";
-    ((interp_red; ired_l) || idtac)
-  | _ => idtac
-  end.
-
-Ltac ired_r :=
-  cbn;
-  match goal with
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (ITree.bind' _ _))) ] =>
-    idtac "case r bind bind";
-    apply sim_r_bind_bind; idtac "r bind_bind"; ired_r
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (Tau _))) ] =>
-    idtac "case r bind tau";
-    apply sim_r_bind_tau; idtac "r bind_tau"
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (Ret _))) ] =>
-    idtac "case r bind ret";
-    apply sim_r_bind_ret_l; idtac "r bind_ret"; ired_r
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, interp _ _)) ] =>
-    idtac "case r interp";
-    ((interp_red; ired_r) || idtac)
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp _ _))) ] =>
-    idtac "case r interp bind";
-    ((interp_red; ired_l) || idtac)
-  | _ => idtac
-  end.
-
-Ltac ired := ired_l; ired_r.
-
-Ltac prep := ired.
-(* Ltac prep := ired; try rewrite ! unfold_interp. *)
-
-Ltac force_l :=
-  prep;
-  match goal with
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, unwrapN ?ox >>= _) (_, _)) ] =>
-    let tvar := fresh "tmp" in
-    let thyp := fresh "TMP" in
-    remember (unwrapN ox) as tvar eqn:thyp; unfold unwrapN in thyp; subst tvar;
-    let name := fresh "_UNWRAPN" in
-    destruct (ox) eqn:name; [|exfalso]; cycle 1
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, guarantee ?P >>= _) (_, _)) ] =>
-    let tvar := fresh "tmp" in
-    let thyp := fresh "TMP" in
-    remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar;
-    let name := fresh "_GUARANTEE" in
-    destruct (classic P) as [name|name]; [ired; gstep; eapply sim_itree_choose_src; [eauto|exists name]|contradict name]; cycle 1
-
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, ?i_src) (_, ?i_tgt)) ] =>
-    seal i_tgt; gstep; econs; eauto; unseal i_tgt
-  end
-.
-Ltac force_r :=
-  prep;
-  match goal with
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, _) (_, unwrapU ?ox >>= _)) ] =>
-    let tvar := fresh "tmp" in
-    let thyp := fresh "TMP" in
-    remember (unwrapU ox) as tvar eqn:thyp; unfold unwrapU in thyp; subst tvar;
-    let name := fresh "_UNWRAPU" in
-    destruct (ox) eqn:name; [|exfalso]; cycle 1
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, _) (_, assume ?P >>= _)) ] =>
-    let tvar := fresh "tmp" in
-    let thyp := fresh "TMP" in
-    remember (assume P) as tvar eqn:thyp; unfold assume in thyp; subst tvar;
-    let name := fresh "_ASSUME" in
-    destruct (classic P) as [name|name]; [ired; gstep; eapply sim_itree_take_tgt; [eauto|exists name]|contradict name]; cycle 1
-
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, ?i_src) (_, ?i_tgt)) ] =>
-    seal i_src; gstep; econs; eauto; unseal i_src
-  end
-.
-
-Ltac init :=
-  split; ss; ii; clarify; rename y into varg; eexists 100%nat; ss; des; clarify;
-  ginit; [eapply cpn3_wcompat; eauto with paco|]; unfold alist_add, alist_remove; ss;
-  unfold fun_to_tgt, cfun, HoareFun; ss.
-
-Ltac _step :=
-  match goal with
-  (*** blacklisting ***)
-  (* | [ |- (gpaco3 (_sim_itree wf) _ _ _ _ (_, trigger (Choose _) >>= _) (_, ?i_tgt)) ] => idtac *)
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, unwrapU ?ox >>= _) (_, _)) ] =>
-    let tvar := fresh "tmp" in
-    let thyp := fresh "TMP" in
-    remember (unwrapU ox) as tvar eqn:thyp; unfold unwrapU in thyp; subst tvar;
-    let name := fresh "_UNWRAPU" in
-    destruct (ox) eqn:name; [|unfold triggerUB; ired; _step; ss; fail]
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, assume ?P >>= _) (_, _)) ] =>
-    let tvar := fresh "tmp" in
-    let thyp := fresh "TMP" in
-    remember (assume P) as tvar eqn:thyp; unfold assume in thyp; subst tvar;
-    let name := fresh "_ASSUME" in
-    ired; gstep; eapply sim_itree_take_src; [apply Nat.lt_succ_diag_r|]; intro name
-
-  (*** blacklisting ***)
-  (* | [ |- (gpaco3 (_sim_itree wf) _ _ _ _ (_, _) (_, trigger (Take _) >>= _)) ] => idtac *)
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, _) (_, unwrapN ?ox >>= _)) ] =>
-    let tvar := fresh "tmp" in
-    let thyp := fresh "TMP" in
-    remember (unwrapN ox) as tvar eqn:thyp; unfold unwrapN in thyp; subst tvar;
-    let name := fresh "_UNWRAPN" in
-    destruct (ox) eqn:name; [|unfold triggerNB; ired; _step; ss; fail]
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, _) (_, guarantee ?P >>= _)) ] =>
-    let tvar := fresh "tmp" in
-    let thyp := fresh "TMP" in
-    remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar;
-    let name := fresh "_GUARANTEE" in
-    ired; gstep; eapply sim_itree_choose_tgt; [apply Nat.lt_succ_diag_r|]; intro name
-
-
-
-  | _ => (*** default ***)
-    gstep; econs; try apply Nat.lt_succ_diag_r; i
-  end;
-  (* idtac *)
-  match goal with
-  | [ |- exists _, _ ] => fail 1
-  | _ => idtac
-  end
-.
-Ltac steps := repeat ((*** pre processing ***) prep; try _step; (*** post processing ***) unfold alist_add; simpl; des_ifs_safe).
 
 Section SIMMODSEM.
 
@@ -326,7 +87,6 @@ Section SIMMODSEM.
 
   Theorem correct: ModSemPair.sim Mem1.MemSem Mem0.MemSem.
   Proof.
-    Set Ltac Profiling.
     econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
     { typeclasses eauto. }
     { ss. esplits; ss; et. ii.
@@ -338,6 +98,7 @@ Section SIMMODSEM.
         + unfold update. des_ifs; econs; et.
     }
 
+    Set Ltac Profiling.
     econs; ss.
     { init.
       unfold checkWf, forge, discard, put. steps.
@@ -389,6 +150,7 @@ Section SIMMODSEM.
         Local Opaque URA.add points_to.
       }
       Local Opaque URA.wf.
+      Show Ltac Profile.
       ss.
       steps. force_l. esplits; eauto. force_l.
       { esplits; eauto. }
@@ -647,9 +409,6 @@ Section SIMMODSEM.
         apply_all_once Any.upcast_inj. des. clarify. clear_tac.
         rewrite URA.unit_idl in *. rewrite GRA.padding_add in *. apply_all_once GRA.padding_wf. des.
         ss.
-
-        Show Ltac Profile.
-
         unfold interp_hCallE_tgt. unfold APC. steps. force_l. exists 0. steps. force_l. esplit. force_l. esplit.
         force_l. eexists (GRA.padding (URA.black (mem_src: URA.car (t:=Mem1._memRA))),
                           GRA.padding ((b0, ofs) |-> [v])).
@@ -732,7 +491,6 @@ Section SIMMODSEM.
     Unshelve.
     all: ss.
     all: try (by repeat econs; et).
-    Show Ltac Profile.
   Qed.
 
 End SIMMODSEM.

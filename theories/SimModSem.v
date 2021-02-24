@@ -713,3 +713,204 @@ End ModPair.
 (* TODO: write client *)
 (* TODO: show cancellation *)
 (* TODO: meta-level (no forge -> checkwf always succeeds) *)
+
+
+
+Lemma sim_l_bind_bind `{Σ: GRA.t} a b c d e f g
+      (R S : Type) (s : itree _ R) (k : R -> itree _ S) (h : S -> itree _ _)
+      (SIM: gpaco3 (_sim_itree c) d e f g (b, ` r : R <- s;; ` x : _ <- k r;; h x) a)
+  :
+    gpaco3 (_sim_itree c) d e f g (b, ` x : _ <- (` x : _ <- s;; k x);; h x) a.
+Proof.
+  rewrite bind_bind. auto.
+Qed.
+
+Lemma sim_l_bind_tau `{Σ: GRA.t} a b c d e f g
+      (U : Type) (t : itree _ _) (k : U -> itree _ _)
+      (SIM: gpaco3 (_sim_itree c) d e f g (b, Tau (` x : _ <- t;; k x)) a)
+  :
+    gpaco3 (_sim_itree c) d e f g (b, ` x : _ <- Tau t;; k x) a.
+Proof.
+  rewrite bind_tau. auto.
+Qed.
+
+Lemma sim_l_bind_ret_l `{Σ: GRA.t} a b c d e f g
+      (R : Type) (r : R) (k : R -> itree _ _)
+      (SIM: gpaco3 (_sim_itree c) d e f g (b, k r) a)
+  :
+    gpaco3 (_sim_itree c) d e f g (b, ` x : _ <- Ret r;; k x) a.
+Proof.
+  rewrite bind_ret_l. auto.
+Qed.
+
+Lemma sim_r_bind_bind `{Σ: GRA.t} a b c d e f g
+      (R S : Type) (s : itree _ R) (k : R -> itree _ S) (h : S -> itree _ _)
+      (SIM: gpaco3 (_sim_itree c) d e f g a (b, ` r : R <- s;; ` x : _ <- k r;; h x))
+  :
+    gpaco3 (_sim_itree c) d e f g a (b, ` x : _ <- (` x : _ <- s;; k x);; h x).
+Proof.
+  rewrite bind_bind. auto.
+Qed.
+
+Lemma sim_r_bind_tau `{Σ: GRA.t} a b c d e f g
+      (U : Type) (t : itree _ _) (k : U -> itree _ _)
+      (SIM: gpaco3 (_sim_itree c) d e f g a (b, Tau (` x : _ <- t;; k x)))
+  :
+    gpaco3 (_sim_itree c) d e f g a (b, ` x : _ <- Tau t;; k x).
+Proof.
+  rewrite bind_tau. auto.
+Qed.
+
+Lemma sim_r_bind_ret_l `{Σ: GRA.t} a b c d e f g
+      (R : Type) (r : R) (k : R -> itree _ _)
+      (SIM: gpaco3 (_sim_itree c) d e f g a (b, k r))
+  :
+    gpaco3 (_sim_itree c) d e f g a (b, ` x : _ <- Ret r;; k x).
+Proof.
+  rewrite bind_ret_l. auto.
+Qed.
+
+Ltac interp_red := rewrite interp_vis ||
+                           rewrite interp_ret ||
+                           rewrite interp_tau ||
+                           rewrite interp_trigger ||
+                           rewrite interp_bind.
+
+Ltac interp_mrec_red := rewrite interp_mrec_hit ||
+                                rewrite interp_mrec_miss ||
+                                rewrite interp_mrec_bind ||
+                                rewrite interp_mrec_tau ||
+                                rewrite interp_mrec_ret.
+
+Ltac interp_state_red := rewrite interp_state_trigger ||
+                                 rewrite interp_state_bind ||
+                                 rewrite interp_state_tau ||
+                                 rewrite interp_state_ret.
+
+Ltac ired_l :=
+  cbn;
+  match goal with
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, ITree.bind' _ (ITree.bind' _ _)) _) ] =>
+    apply sim_l_bind_bind; ired_l
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, ITree.bind' _ (Tau _)) _) ] =>
+    apply sim_l_bind_tau
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, ITree.bind' _ (Ret _)) _) ] =>
+    apply sim_l_bind_ret_l; ired_l
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, interp _ _) _) ] =>
+    ((interp_red; ired_l) || idtac)
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, ITree.bind' _ (interp _ _)) _) ] =>
+    ((interp_red; ired_l) || idtac)
+  | _ => idtac
+  end.
+
+Ltac ired_r :=
+  cbn;
+  match goal with
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (ITree.bind' _ _))) ] =>
+    apply sim_r_bind_bind; ired_r
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (Tau _))) ] =>
+    apply sim_r_bind_tau
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (Ret _))) ] =>
+    apply sim_r_bind_ret_l
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, interp _ _)) ] =>
+    ((interp_red; ired_r) || idtac)
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp _ _))) ] =>
+    ((interp_red; ired_l) || idtac)
+  | _ => idtac
+  end.
+
+Ltac ired_all := ired_l; ired_r.
+
+Ltac prep := ired_all.
+
+Ltac force_l :=
+  prep;
+  match goal with
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, unwrapN ?ox >>= _) (_, _)) ] =>
+    let tvar := fresh "tmp" in
+    let thyp := fresh "TMP" in
+    remember (unwrapN ox) as tvar eqn:thyp; unfold unwrapN in thyp; subst tvar;
+    let name := fresh "_UNWRAPN" in
+    destruct (ox) eqn:name; [|exfalso]; cycle 1
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, guarantee ?P >>= _) (_, _)) ] =>
+    let tvar := fresh "tmp" in
+    let thyp := fresh "TMP" in
+    remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar;
+    let name := fresh "_GUARANTEE" in
+    destruct (classic P) as [name|name]; [ired_all; gstep; eapply sim_itree_choose_src; [eauto|exists name]|contradict name]; cycle 1
+
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, ?i_src) (_, ?i_tgt)) ] =>
+    seal i_tgt; gstep; econs; eauto; unseal i_tgt
+  end
+.
+Ltac force_r :=
+  prep;
+  match goal with
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, _) (_, unwrapU ?ox >>= _)) ] =>
+    let tvar := fresh "tmp" in
+    let thyp := fresh "TMP" in
+    remember (unwrapU ox) as tvar eqn:thyp; unfold unwrapU in thyp; subst tvar;
+    let name := fresh "_UNWRAPU" in
+    destruct (ox) eqn:name; [|exfalso]; cycle 1
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, _) (_, assume ?P >>= _)) ] =>
+    let tvar := fresh "tmp" in
+    let thyp := fresh "TMP" in
+    remember (assume P) as tvar eqn:thyp; unfold assume in thyp; subst tvar;
+    let name := fresh "_ASSUME" in
+    destruct (classic P) as [name|name]; [ired_all; gstep; eapply sim_itree_take_tgt; [eauto|exists name]|contradict name]; cycle 1
+
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, ?i_src) (_, ?i_tgt)) ] =>
+    seal i_src; gstep; econs; eauto; unseal i_src
+  end
+.
+
+Ltac _step :=
+  match goal with
+  (*** blacklisting ***)
+  (* | [ |- (gpaco3 (_sim_itree wf) _ _ _ _ (_, trigger (Choose _) >>= _) (_, ?i_tgt)) ] => idtac *)
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, unwrapU ?ox >>= _) (_, _)) ] =>
+    let tvar := fresh "tmp" in
+    let thyp := fresh "TMP" in
+    remember (unwrapU ox) as tvar eqn:thyp; unfold unwrapU in thyp; subst tvar;
+    let name := fresh "_UNWRAPU" in
+    destruct (ox) eqn:name; [|unfold triggerUB; ired_all; _step; ss; fail]
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, assume ?P >>= _) (_, _)) ] =>
+    let tvar := fresh "tmp" in
+    let thyp := fresh "TMP" in
+    remember (assume P) as tvar eqn:thyp; unfold assume in thyp; subst tvar;
+    let name := fresh "_ASSUME" in
+    ired_all; gstep; eapply sim_itree_take_src; [apply Nat.lt_succ_diag_r|]; intro name
+
+  (*** blacklisting ***)
+  (* | [ |- (gpaco3 (_sim_itree wf) _ _ _ _ (_, _) (_, trigger (Take _) >>= _)) ] => idtac *)
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, _) (_, unwrapN ?ox >>= _)) ] =>
+    let tvar := fresh "tmp" in
+    let thyp := fresh "TMP" in
+    remember (unwrapN ox) as tvar eqn:thyp; unfold unwrapN in thyp; subst tvar;
+    let name := fresh "_UNWRAPN" in
+    destruct (ox) eqn:name; [|unfold triggerNB; ired_all; _step; ss; fail]
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, _) (_, guarantee ?P >>= _)) ] =>
+    let tvar := fresh "tmp" in
+    let thyp := fresh "TMP" in
+    remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar;
+    let name := fresh "_GUARANTEE" in
+    ired_all; gstep; eapply sim_itree_choose_tgt; [apply Nat.lt_succ_diag_r|]; intro name
+
+
+
+  | _ => (*** default ***)
+    gstep; econs; try apply Nat.lt_succ_diag_r; i
+  end;
+  (* idtac *)
+  match goal with
+  | [ |- exists _, _ ] => fail 1
+  | _ => idtac
+  end
+.
+Ltac steps := repeat ((*** pre processing ***) prep; try _step; (*** post processing ***) unfold alist_add; simpl; des_ifs_safe).
+
+Notation "wf n '------------------------------------------------------------------' src0 tgt0 '------------------------------------------------------------------' src1 tgt1 '------------------------------------------------------------------' src2 tgt2"
+  :=
+    (gpaco3 (_sim_itree wf) _ _ _ n (([(_, src0)], src1), src2) (([(_, tgt0)], tgt1), tgt2))
+      (at level 60,
+       format "wf  n '//' '------------------------------------------------------------------' '//' src0 '//' tgt0 '//' '------------------------------------------------------------------' '//' src1 '//' tgt1 '//' '------------------------------------------------------------------' '//' src2 '//' '//' '//' tgt2 '//' ").

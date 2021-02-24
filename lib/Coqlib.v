@@ -1387,3 +1387,35 @@ Proof.
   sii T.
   clear t. clear T. clear u. clear T0.
 Abort.
+
+Module Type SEAL.
+  Parameter unit: Type.
+  Parameter tt: unit.
+  Parameter sealing: unit -> forall X: Type, X -> X.
+  Parameter sealing_eq: forall key X (x: X), sealing key x = x.
+End SEAL.
+Module Seal: SEAL.
+  Definition unit := unit.
+  Definition tt := tt.
+  Definition sealing (_: unit) X (x: X) := x.
+  Lemma sealing_eq key X (x: X): sealing key x = x.
+  Proof. refl. Qed.
+End Seal.
+
+Ltac seal_with key x :=
+  replace x with (Seal.sealing key x); [|eapply Seal.sealing_eq].
+Ltac seal x :=
+  let key := fresh "key" in
+  assert (key:= Seal.tt);
+  seal_with key x.
+Ltac unseal x :=
+  match (type of x) with
+  | Seal.unit => repeat rewrite (@Seal.sealing_eq x) in *; try clear x
+  | _ => repeat rewrite (@Seal.sealing_eq _ _ x) in *;
+         repeat match goal with
+                | [ H: Seal.unit |- _ ] => try clear H
+                end
+  end
+.
+Notation "☃ y" := (Seal.sealing _ y) (at level 60, only printing).
+Goal forall x, 5 + 5 = x. i. seal 5. seal x. unseal key0. unseal 5. cbn. Abort.
