@@ -1,4 +1,4 @@
-Require Import Mem0 Mem1 SimModSem HoareDef.
+Require Import Mem0 Mem1 HoareDef SimModSem.
 Require Import Coqlib.
 Require Import Universe.
 Require Import Skeleton.
@@ -56,106 +56,7 @@ Definition add_delta_to_black `{M: URA.t} (b: URA.auth_t) (w: URA.auth_t): URA.a
 (* "). *)
 (******** TODO: it works in emacs but fails in coqc -- try coq 8.13 and uncomment it ***********)
 
-Notation "wf n '------------------------------------------------------------------' src0 tgt0 '------------------------------------------------------------------' src1 tgt1 '------------------------------------------------------------------' src2 tgt2"
-  :=
-    (gpaco3 (_sim_itree wf) _ _ _ n (([(_, src0)], src1), src2) (([(_, tgt0)], tgt1), tgt2))
-      (at level 60,
-       format "wf  n '//' '------------------------------------------------------------------' '//' src0 '//' tgt0 '//' '------------------------------------------------------------------' '//' src1 '//' tgt1 '//' '------------------------------------------------------------------' '//' src2 '//' '//' '//' tgt2 '//' ").
 
-
-
-(* TODO: copied from Linkedlist01proof *)
-Ltac prep := ired; try rewrite ! unfold_interp.
-
-Ltac force_l :=
-  prep;
-  match goal with
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, unwrapN ?ox >>= _) (_, _)) ] =>
-    let tvar := fresh "tmp" in
-    let thyp := fresh "TMP" in
-    remember (unwrapN ox) as tvar eqn:thyp; unfold unwrapN in thyp; subst tvar;
-    let name := fresh "_UNWRAPN" in
-    destruct (ox) eqn:name; [|exfalso]; cycle 1
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, guarantee ?P >>= _) (_, _)) ] =>
-    let tvar := fresh "tmp" in
-    let thyp := fresh "TMP" in
-    remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar;
-    let name := fresh "_GUARANTEE" in
-    destruct (classic P) as [name|name]; [gstep; ired; eapply sim_itree_choose_src; [eauto|exists name]|contradict name]; cycle 1
-
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, ?i_src) (_, ?i_tgt)) ] =>
-    seal i_tgt; gstep; econs; eauto; unseal i_tgt
-  end
-.
-Ltac force_r :=
-  prep;
-  match goal with
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, _) (_, unwrapU ?ox >>= _)) ] =>
-    let tvar := fresh "tmp" in
-    let thyp := fresh "TMP" in
-    remember (unwrapU ox) as tvar eqn:thyp; unfold unwrapU in thyp; subst tvar;
-    let name := fresh "_UNWRAPU" in
-    destruct (ox) eqn:name; [|exfalso]; cycle 1
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, _) (_, assume ?P >>= _)) ] =>
-    let tvar := fresh "tmp" in
-    let thyp := fresh "TMP" in
-    remember (assume P) as tvar eqn:thyp; unfold assume in thyp; subst tvar;
-    let name := fresh "_ASSUME" in
-    destruct (classic P) as [name|name]; [gstep; ired; eapply sim_itree_take_tgt; [eauto|exists name]|contradict name]; cycle 1
-
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, ?i_src) (_, ?i_tgt)) ] =>
-    seal i_src; gstep; econs; eauto; unseal i_src
-  end
-.
-Ltac init :=
-  split; ss; ii; clarify; rename y into varg; eexists 100%nat; ss; des; clarify;
-  ginit; [eapply cpn3_wcompat; eauto with paco|]; unfold alist_add, alist_remove; ss;
-  unfold fun_to_tgt, cfun, HoareFun; ss.
-
-Ltac _step :=
-  match goal with
-  (*** blacklisting ***)
-  (* | [ |- (gpaco3 (_sim_itree wf) _ _ _ _ (_, trigger (Choose _) >>= _) (_, ?i_tgt)) ] => idtac *)
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, unwrapU ?ox >>= _) (_, _)) ] =>
-    let tvar := fresh "tmp" in
-    let thyp := fresh "TMP" in
-    remember (unwrapU ox) as tvar eqn:thyp; unfold unwrapU in thyp; subst tvar;
-    let name := fresh "_UNWRAPU" in
-    destruct (ox) eqn:name; [|unfold triggerUB; ired; _step; ss; fail]
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, assume ?P >>= _) (_, _)) ] =>
-    let tvar := fresh "tmp" in
-    let thyp := fresh "TMP" in
-    remember (assume P) as tvar eqn:thyp; unfold assume in thyp; subst tvar;
-    let name := fresh "_ASSUME" in
-    ired; gstep; eapply sim_itree_take_src; [apply Nat.lt_succ_diag_r|]; intro name
-
-  (*** blacklisting ***)
-  (* | [ |- (gpaco3 (_sim_itree wf) _ _ _ _ (_, _) (_, trigger (Take _) >>= _)) ] => idtac *)
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, _) (_, unwrapN ?ox >>= _)) ] =>
-    let tvar := fresh "tmp" in
-    let thyp := fresh "TMP" in
-    remember (unwrapN ox) as tvar eqn:thyp; unfold unwrapN in thyp; subst tvar;
-    let name := fresh "_UNWRAPN" in
-    destruct (ox) eqn:name; [|unfold triggerNB; ired; _step; ss; fail]
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, _) (_, guarantee ?P >>= _)) ] =>
-    let tvar := fresh "tmp" in
-    let thyp := fresh "TMP" in
-    remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar;
-    let name := fresh "_GUARANTEE" in
-    ired; gstep; eapply sim_itree_choose_tgt; [apply Nat.lt_succ_diag_r|]; intro name
-
-
-
-  | _ => (*** default ***)
-    gstep; econs; try apply Nat.lt_succ_diag_r; i
-  end;
-  (* idtac *)
-  match goal with
-  | [ |- exists _, _ ] => fail 1
-  | _ => idtac
-  end
-.
-Ltac steps := repeat ((*** pre processing ***) prep; try _step; (*** post processing ***) unfold alist_add; simpl; des_ifs_safe).
 
 Section SIMMODSEM.
 
@@ -197,6 +98,7 @@ Section SIMMODSEM.
         + unfold update. des_ifs; econs; et.
     }
 
+    Set Ltac Profiling.
     econs; ss.
     { init.
       unfold checkWf, forge, discard, put. steps.
@@ -248,6 +150,7 @@ Section SIMMODSEM.
         Local Opaque URA.add points_to.
       }
       Local Opaque URA.wf.
+      Show Ltac Profile.
       ss.
       steps. force_l. esplits; eauto. force_l.
       { esplits; eauto. }
@@ -313,7 +216,7 @@ Section SIMMODSEM.
       (************** TODO: rename x3 into ASSUME *********************)
       des. clarify. clear_tac. rewrite Any.upcast_downcast in *. clarify.
       steps.
-      unfold interp_hCallE_tgt. steps. force_l. exists 0. steps.
+      unfold interp_hCallE_tgt. unfold APC. steps. force_l. exists 0. steps.
       apply_all_once Any.upcast_inj. des; clarify. clear_tac.
       rewrite URA.unit_idl in *. rewrite GRA.padding_add in *. eapply GRA.padding_wf in _ASSUME. des.
       rename _ASSUME into WF.
@@ -411,7 +314,7 @@ Section SIMMODSEM.
       apply_all_once Any.upcast_inj. des. clarify. clear_tac.
       rewrite URA.unit_idl in *. rewrite GRA.padding_add in *. apply_all_once GRA.padding_wf. des.
       ss.
-      unfold interp_hCallE_tgt. steps. force_l. exists 0. steps. force_l. esplit. force_l. esplit.
+      unfold interp_hCallE_tgt. unfold APC. steps. force_l. exists 0. steps. force_l. esplit. force_l. esplit.
       rename n into b. rename z into ofs.
       force_l. eexists (GRA.padding (URA.black (mem_src: URA.car (t:=Mem1._memRA))),
                         GRA.padding ((b, ofs) |-> [v])).
@@ -439,7 +342,7 @@ Section SIMMODSEM.
       apply_all_once Any.upcast_inj. des. clarify. clear_tac.
       rewrite URA.unit_idl in *. rewrite GRA.padding_add in *. apply_all_once GRA.padding_wf. des.
       ss.
-      unfold interp_hCallE_tgt. steps. force_l. exists 0. steps. force_l. esplit. force_l. esplit.
+      unfold interp_hCallE_tgt. unfold APC. steps. force_l. exists 0. steps. force_l. esplit. force_l. esplit.
       rename n into b. rename z into ofs.
       set (mem_src' := fun _b _ofs => if dec _b b && dec _ofs ofs then inl (Some v) else mem_src _b _ofs).
       force_l. eexists (GRA.padding (URA.black (mem_src': URA.car (t:=Mem1._memRA))),
@@ -506,7 +409,7 @@ Section SIMMODSEM.
         apply_all_once Any.upcast_inj. des. clarify. clear_tac.
         rewrite URA.unit_idl in *. rewrite GRA.padding_add in *. apply_all_once GRA.padding_wf. des.
         ss.
-        unfold interp_hCallE_tgt. steps. force_l. exists 0. steps. force_l. esplit. force_l. esplit.
+        unfold interp_hCallE_tgt. unfold APC. steps. force_l. exists 0. steps. force_l. esplit. force_l. esplit.
         force_l. eexists (GRA.padding (URA.black (mem_src: URA.car (t:=Mem1._memRA))),
                           GRA.padding ((b0, ofs) |-> [v])).
         steps.
@@ -520,7 +423,7 @@ Section SIMMODSEM.
         apply_all_once Any.upcast_inj. des. clarify. clear_tac.
         rewrite URA.unit_idl in *. rewrite GRA.padding_add in *. apply_all_once GRA.padding_wf. des.
         ss.
-        unfold interp_hCallE_tgt. steps. force_l. exists 0. steps. force_l. esplit. force_l. esplit.
+        unfold interp_hCallE_tgt. unfold APC. steps. force_l. exists 0. steps. force_l. esplit. force_l. esplit.
         force_l. eexists (GRA.padding (URA.black (mem_src: URA.car (t:=Mem1._memRA))),
                           GRA.padding ((b0, ofs) |-> [v])).
         steps.
@@ -534,7 +437,7 @@ Section SIMMODSEM.
         apply_all_once Any.upcast_inj. des. clarify. clear_tac.
         rewrite URA.unit_idl in *. repeat rewrite GRA.padding_add in *. apply_all_once GRA.padding_wf. des.
         ss.
-        unfold interp_hCallE_tgt. steps. force_l. exists 0. steps. force_l. esplit. force_l. esplit.
+        unfold interp_hCallE_tgt. unfold APC. steps. force_l. exists 0. steps. force_l. esplit. force_l. esplit.
         force_l. eexists (GRA.padding (URA.black (mem_src: URA.car (t:=Mem1._memRA))),
                           GRA.padding (((b0, ofs0) |-> [v0]) ⋅ ((b1, ofs1) |-> [v1]))).
         steps.
@@ -565,7 +468,7 @@ Section SIMMODSEM.
         apply_all_once Any.upcast_inj. des. clarify. clear_tac.
         rewrite URA.unit_idl in *. rewrite GRA.padding_add in *. apply_all_once GRA.padding_wf. des.
         ss.
-        unfold interp_hCallE_tgt. steps. force_l. exists 0. steps. force_l. esplit. force_l. esplit.
+        unfold interp_hCallE_tgt. unfold APC. steps. force_l. exists 0. steps. force_l. esplit. force_l. esplit.
         force_l. eexists (GRA.padding (URA.black (mem_src: URA.car (t:=Mem1._memRA))),
                           GRA.padding ((b0, ofs) |-> [v])).
         steps.
@@ -579,7 +482,7 @@ Section SIMMODSEM.
         clear_tac. rewrite Any.upcast_downcast in *. clarify.
         apply_all_once Any.upcast_inj. des. clarify. clear_tac.
         ss.
-        unfold interp_hCallE_tgt. steps. force_l. exists 0. steps. force_l. esplit. force_l. esplit.
+        unfold interp_hCallE_tgt. unfold APC. steps. force_l. exists 0. steps. force_l. esplit. force_l. esplit.
         force_l. eexists (GRA.padding (URA.black (mem_src: URA.car (t:=Mem1._memRA))), (ε ⋅ c)).
         steps.
         force_l. { refl. } steps. force_l. esplit. force_l. { esplits; eauto. } steps.
