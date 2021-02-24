@@ -33,7 +33,7 @@ Section PROOF.
 
   Let pop_spec: fspec := (mk_simple "LinkedList"
                                     (fun '(llref, xs) varg o =>
-                                       Exists ll, ⌜varg = [Vptr llref 0%Z]↑⌝ ** Own (GRA.padding ((llref,0%Z) |-> [ll])) ** (is_list ll xs) ** ⌜o = ord_pure 42⌝)
+                                       Exists ll, ⌜varg = [Vptr llref 0%Z]↑⌝ ** Own (GRA.padding ((llref,0%Z) |-> [ll])) ** (is_list ll xs) ** ⌜o = ord_pure 2⌝)
                                     (fun '(llref, xs) vret =>
                                        match xs with
                                        | [] => ⌜vret = (Vint (- 1))↑⌝
@@ -42,7 +42,7 @@ Section PROOF.
                          ).
 
   Let push_spec: fspec := (mk_simple "LinkedList"
-                                     (fun '(x, xs) varg o => Exists ll, ⌜varg = [ll; Vint (Z.of_nat x)]↑⌝ ** is_list ll xs ** ⌜o = ord_pure 42⌝)
+                                     (fun '(x, xs) varg o => Exists ll, ⌜varg = [ll; Vint (Z.of_nat x)]↑⌝ ** is_list ll xs ** ⌜o = ord_pure 2⌝)
                                      (fun '(x, xs) vret => Exists ll', is_list ll' (x :: xs) ** ⌜vret = ll'↑⌝)).
 
   Definition LinkedListStb: list (gname * fspec) :=

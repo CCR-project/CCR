@@ -147,18 +147,222 @@ Section SIMMODSEM.
   Hint Resolve sim_itree_mon: paco.
 
   Opaque URA.unit.
-  Definition iApp (P: Σ -> Prop) (r: Σ): Prop := P r /\ URA.wf r.
-  (* Notation "'ᐸ ' P ' ᐳ'" := (iApp P _) (at level 60). (* (format "'ᐸ'  P  'ᐳ'") *) *)
-  Notation "'ᐸ' P 'ᐳ'" := (iApp P _) (at level 60). (* (format "'ᐸ'  P  'ᐳ'") *)
-  Goal forall a, (iApp (fun _ => True) a). Abort.
 
-  Lemma intro_iApp: forall P r, URA.wf r -> P r = iApp P r.
-    { i. unfold iApp. apply prop_ext. split; i; des; et. }
+
+
+
+
+
+
+
+
+
+  (* Definition iApp (P: Σ -> Prop) (r: Σ): Prop := P r /\ URA.wf r. *)
+  Definition iHyp (P: Σ -> Prop) (r: Σ): Prop := P r.
+  (* Notation "'ᐸ ' P ' ᐳ'" := (iApp P _) (at level 60). (* (format "'ᐸ'  P  'ᐳ'") *) *)
+  Notation "'ᐸ' P 'ᐳ'" := (iHyp P _) (at level 60). (* (format "'ᐸ'  P  'ᐳ'") *)
+  Goal forall a, (iHyp  (fun _ => True) a). Abort.
+
+  Lemma intro_iHyp: forall P r, P r = iHyp P r.
+    { i. unfold iHyp. apply prop_ext. split; i; des; et. }
   Qed.
 
   Lemma wf_split: forall (a b: Σ), URA.wf (a ⋅ b) -> URA.wf a /\ URA.wf b.
     { i. split; eapply URA.wf_mon; et. rewrite URA.add_comm; et. }
   Qed.
+
+  Ltac iSimplWf :=
+    repeat match goal with
+           | [H: URA.wf (?a ⋅ ?b) |- _ ] =>
+             repeat (try rewrite URA.unit_id in H; try rewrite URA.unit_idl in H);
+             apply wf_split in H; destruct H
+           end.
+
+  (* Definition iEnv: Type := list (iProp * Σ). *)
+  (* Definition iEnvWf: iEnv -> Prop := fun ie => URA.wf (List.fold_left (⋅) (List.map snd ie) ε). *)
+
+  Ltac on_first_hyp tac :=
+    match reverse goal with [ H : _ |- _ ] => first [ tac H | fail 1 ] end.
+
+  Definition IPROPS: Prop := forall x, x - x = 0.
+  Lemma IPROPS_intro: IPROPS. r. i. rewrite Nat.sub_diag. ss. Qed.
+
+  Ltac to_bar TAC :=
+    match goal with
+    | [H: IPROPS |- _ ] => TAC H
+    | _ => idtac
+    end.
+
+  Ltac bar :=
+    to_bar ltac:(fun _ => fail 1);
+    let NAME := fresh "ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ" in
+    assert (NAME : IPROPS) by (exact IPROPS_intro)
+  .
+
+  Goal False.
+    bar. clear_tac. Fail bar.
+  Abort.
+
+  Goal forall (a b c: Σ), False.
+    i.
+    Ltac r_length ls :=
+      match ls with
+      | (?x ⋅ ?y) =>
+        let xl := r_length x in
+        let yl := r_length y in
+        constr:(xl + yl)
+      | _ => constr:(1)
+      end.
+    let n := r_length (a ⋅ b ⋅ c) in pose n.
+
+    Ltac r_in r rs :=
+      match rs with
+      | r => idtac
+      | (r ⋅ ?y) => idtac
+      | (?x ⋅ r) => idtac
+      | (?x ⋅ ?y) => r_in r x + r_in r y
+      | _ => fail
+      end.
+    (r_in a (a ⋅ b ⋅ c)).
+    (r_in b (a ⋅ b ⋅ c)).
+    (r_in c (a ⋅ b ⋅ c)).
+    (r_in a (a ⋅ b)).
+    (r_in b (a ⋅ b)).
+    Fail (r_in c (a ⋅ b)).
+    Fail (r_in a (b)).
+    (r_in b (b)).
+    Fail (r_in c (b)).
+
+    Ltac r_contains xs ys :=
+      match xs with
+      | (?x0 ⋅ ?x1) => r_contains x0 ys; r_contains x1 ys
+      | _ => r_in xs ys
+      end.
+    (r_contains a (a ⋅ b ⋅ c)).
+    (r_contains b (a ⋅ b ⋅ c)).
+    (r_contains c (a ⋅ b ⋅ c)).
+    (r_contains a (a ⋅ b)).
+    (r_contains b (a ⋅ b)).
+    Fail (r_contains c (a ⋅ b)).
+    Fail (r_contains a (b)).
+    (r_contains b (b)).
+    Fail (r_contains c (b)).
+
+    (r_contains (a ⋅ b) (a ⋅ b ⋅ c)).
+    (r_contains (b ⋅ a) (a ⋅ b ⋅ c)).
+    (r_contains (b ⋅ c) (a ⋅ b ⋅ c)).
+    (r_contains (c ⋅ a ⋅ b) (a ⋅ b ⋅ c)).
+    Fail (r_contains (c ⋅ a ⋅ b) (a ⋅ b)).
+    Fail (r_contains (a ⋅ c) (a ⋅ b)).
+  Abort.
+
+  Ltac iClears := match goal with
+                  | [ |- iHyp _ ?rgoal ] =>
+                    repeat multimatch goal with
+                           | [ H: iHyp _ ?r |- _ ] =>
+                             tryif r_contains r rgoal
+                             then idtac
+                             else clear H
+                           end
+                  end.
+
+  Ltac iRefresh :=
+    try bar;
+    repeat multimatch goal with
+           | [H: URA.extends ?a ?b |- _ ] => replace (URA.extends a b) with ((Own a) b) in H by reflexivity
+           | [H: iHyp _ _ |- _ ] => revert H
+           (*** TODO: move existing resources to top ***)
+           (*** TODO: remove redundant URA.wf ***)
+           | [H: ?ip ?r |- _ ] =>
+             match type of ip with
+             | iProp => rewrite intro_iHyp in H; move r at top; move H at bottom
+             | _ => idtac
+             end
+           end;
+    i;
+    try (match goal with
+         | [ |- ?ip ?r ] =>
+           match type of ip with
+           | iProp => rewrite intro_iHyp
+           | _ => idtac
+           end
+         end;
+         iClears)
+  .
+
+  Lemma sepconj_merge: forall (a b: Σ) (Pa Pb: iProp), iHyp Pa a -> iHyp Pb b -> iHyp (Pa ** Pb) (a ⋅ b).
+  Proof. i. rr. esplits; eauto. Qed.
+
+  Ltac pcm_solver := idtac.
+
+  Ltac iMerge H0 G0 :=
+    match goal with
+    | [H: iHyp ?ph ?rh |- _ ] =>
+      check_equal H H0;
+      match goal with
+      | [G: iHyp ?pg ?rg |- _ ] =>
+        check_equal G G0;
+        let name := fresh "tmp" in
+        rename H into name;
+        assert(H: iHyp (ph ** pg) (rh ⋅ rg)) by (apply sepconj_merge; try assumption);
+        clear name; clear G
+      end
+    end
+  .
+
+  Ltac iApply H := erewrite f_equal; [apply H|pcm_solver].
+
+  Goal forall (a b: Σ) (Pa Pb: iProp), Pa a -> Pb b -> URA.wf (a ⋅ b) -> (Pa ** Pb) (b ⋅ a).
+    i. iRefresh.
+    iMerge H0 H1.
+    iApply H0.
+    rewrite URA.add_comm. ss.
+  Qed.
+
+  Ltac idtacs Hs :=
+    match Hs with
+    | (?H0, ?H1) => idtacs H0; idtacs H1
+    | ?H => idtac H
+    end
+  .
+
+  Ltac r_gather Hs :=
+    match Hs with
+    | (?H0, ?H1) =>
+      let rs0 := r_gather H0 in
+      let rs1 := r_gather H1 in
+      constr:(rs0 ⋅ rs1)
+    | ?H =>
+      match (type of H) with
+      | iHyp _ ?rh => constr:(rh)
+      end
+        (* match goal with *)
+        (* | [G: iHyp ?ph ?rh |- _ ] => *)
+        (*   check_equal H G; *)
+        (*   constr:(rh) *)
+        (* end *)
+    end.
+
+  Ltac iSplit Hs0 Hs1 :=
+    match goal with
+    | [ |- iHyp (?ph ** ?pg) _ ] =>
+      let tmp0 := (r_gather Hs0) in
+      let tmp1 := (r_gather Hs1) in
+      erewrite f_equal; cycle 1; [instantiate (1:= tmp0 ⋅ tmp1)|eapply sepconj_merge; iClears]
+    end
+  .
+
+  Goal forall (a b c: Σ) (Pa Pb Pc: iProp), Pa a -> Pb b -> Pc c -> URA.wf (a ⋅ b ⋅ c) -> (Pa ** Pc ** Pb) (c ⋅ b ⋅ a).
+    i. iRefresh.
+    iSplit (H0, H2) H1.
+    { admit "pcm solver". }
+    admit "okay".
+    admit "okay".
+  Abort.
+
+
+
+
 
   Theorem correct: ModSemPair.sim LinkedList1.LinkedListSem LinkedList0.LinkedListSem.
   Proof.
@@ -174,62 +378,8 @@ Section SIMMODSEM.
       des. clarify.
       r in _ASSUME0. des. r in _ASSUME0. des; subst. r in _ASSUME1. des; subst. r in _ASSUME0. des; subst.
 
-      Ltac on_first_hyp tac :=
-        match reverse goal with [ H : _ |- _ ] => first [ tac H | fail 1 ] end.
-
-      Ltac to_bar TAC :=
-        match goal with
-        | [H: bar_True |- _ ] => TAC H
-        | _ => idtac
-        end.
-      Ltac bar :=
-        to_bar ltac:(fun _ => fail 1);
-        let NAME := fresh "ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ" in
-        assert (NAME : bar_True) by ss
-      .
-
-      Ltac iSimplWf :=
-        repeat match goal with
-               | [H: URA.wf (?a ⋅ ?b) |- _ ] =>
-                 repeat (try rewrite URA.unit_id in H; try rewrite URA.unit_idl in H);
-                 apply wf_split in H; destruct H
-               end.
-
-      Ltac iRefresh :=
-        try bar;
-        iSimplWf;
-        repeat multimatch goal with
-               | [H: URA.extends ?a ?b |- _ ] => replace (URA.extends a b) with ((Own a) b) in H by reflexivity
-               | [H: iApp _ _ |- _ ] => revert H
-               (*** TODO: move existing resources to top ***)
-               (*** TODO: remove redundant URA.wf ***)
-               | [H: ?ip ?r |- _ ] =>
-                 match type of ip with
-                 | iProp =>
-                   match goal with
-                   | [G: URA.wf r |- _ ] =>
-                     rewrite intro_iApp in H; [|exact G]; clear G; move r at top; move H at bottom
-                   end
-                 | _ => idtac
-                 end
-               end;
-        i.
-      (* Ltac iRefresh := *)
-      (*   try bar; *)
-      (*   iSimplWf; *)
-      (*   repeat multimatch goal with *)
-      (*          | [H: ?ip ?r |- _ ] => *)
-      (*            match type of ip with *)
-      (*            | iProp => *)
-      (*              match goal with *)
-      (*              | [G: URA.wf r |- _ ] => *)
-      (*                rewrite intro_iApp in H; [|exact G]; clear G; move r at top; move H at bottom *)
-      (*              end *)
-      (*            | _ => idtac *)
-      (*            end *)
-      (*          end. *)
-      iRefresh. (* iRefresh. Fail progress iRefresh. (*** test ***) *)
-      Ltac iPure H := rr in H; destruct H as [H _]; red in H; to_bar ltac:(fun BAR => move H after BAR). (* ; iRefresh. *)
+      iRefresh.
+      Ltac iPure H := rr in H; to_bar ltac:(fun BAR => move H after BAR). (* ; iRefresh. *)
       iPure _ASSUME1. iPure _ASSUME2. subst.
       rewrite Any.upcast_downcast in *. clarify.
       apply Any.upcast_inj in _ASSUME1. des. clarify. clear EQ.
@@ -256,13 +406,13 @@ Section SIMMODSEM.
       ss. clarify. rewrite Any.upcast_downcast. steps.
       unfold HoareCall, checkWf, forge, discard, put. steps.
       force_l. eexists (ε, _). steps. force_l. { refl. } steps. force_l.
-      Ltac iApply H :=
-        match (type of H) with
-        | iApp ?P ?r => apply r
-        end.
+      (* Ltac iHyply H := *)
+      (*   match (type of H) with *)
+      (*   | iHyp ?P ?r => apply r *)
+      (*   end. *)
       Ltac iExists H :=
         match (type of H) with
-        | iApp ?P ?r => exists r
+        | iHyp ?P ?r => exists r
         end.
       iExists _ASSUME4. steps. force_l. eexists. steps. force_l.
       { instantiate (1:= a ⋅ b0 ⋅ b).
@@ -286,12 +436,15 @@ Section SIMMODSEM.
       assert(EXT: URA.extends (GRA.padding ((n, 0%Z) |-> [x2])) x).
       { subst; refl. }
       clear _ASSUME0.
-      clarify. apply Any.upcast_inj in _ASSUME1. des; clarify. rewrite Any.upcast_downcast in *. clarify.
+      clarify. apply Any.upcast_inj in _ASSUME2. des; clarify. rewrite Any.upcast_downcast in *. clarify. clear_tac.
 
-      assert(WF: URA.wf x).
-      { admit "FIX BUG IN HOARECALL". }
-      replace (URA.extends (GRA.padding ((n, 0%Z) |-> [v])) x) with (((Own (GRA.padding ((n, 0%Z) |-> [v]))): iProp) x) in EXT by reflexivity.
-      clear _ASSUME4. (***************** TODO: automatic clear when calling a function **************)
+      Ltac clear_bar := to_bar ltac:(fun H => clear H).
+      clear_bar; iRefresh.
+
+      (* assert(WF: URA.wf x). *)
+      (* { admit "FIX BUG IN HOARECALL". } *)
+      (* replace (URA.extends (GRA.padding ((n, 0%Z) |-> [v])) x) with (((Own (GRA.padding ((n, 0%Z) |-> [v]))): iProp) x) in EXT by reflexivity. *)
+      (* clear _ASSUME4. (***************** TODO: automatic clear when calling a function **************) *)
       steps.
 
 
@@ -303,11 +456,9 @@ Section SIMMODSEM.
         rewrite unfold_APC. steps. force_l. exists false. steps. force_l. eexists ("cmp", [Vnullptr; Vnullptr]↑). steps.
         Transparent MemStb. cbn in Heq. Opaque MemStb. ss. clarify. rewrite Any.upcast_downcast. steps.
         unfold HoareCall, checkWf, forge, discard, put. steps. iRefresh.
-        force_l. eexists (ε, _). steps. force_l. { refl. } steps. force_l. iRefresh.
-        iExists EXT. steps. force_l. eexists. steps. force_l.
-        { rewrite URA.add_comm. refl.}
-        steps.
-        force_l. eexists (_, _). steps. force_l. esplits. force_l. esplits. force_l.
+        force_l. eexists (ε, _). steps. force_l. { refl. } steps. force_l. clear_bar; iRefresh.
+        exists ε. steps. force_l. esplits. force_l. { rewrite URA.unit_idl. refl. } steps.
+        force_l. eexists (_, _). esplits. steps. force_l. esplits. steps. force_l. esplits. steps. force_l.
         { esplits; swap 2 3.
           { refl. }
           { refl. }
@@ -315,9 +466,35 @@ Section SIMMODSEM.
           admit "FIX MEM1.v -- Add nullptr-nullptr case".
         }
         force_l.
-        { instantiate (1:=ord_pure 41). esplits; ss; try lia. }
-        (********* TODO : 42 is too big ***********)
-        des. clear _GUARANTEE6. clarify. clear_tac.
+        { instantiate (1:=ord_pure 1). esplits; ss; try lia. }
+        clear _GUARANTEE2.
+        des; ss. clear_tac.
+        gstep; econs; try apply Nat.lt_succ_diag_r; i; ss. exists 400. des. clarify. unfold alist_add; cbn. steps.
+        des. clarify. rewrite Any.upcast_downcast in *. clarify. apply Any.upcast_inj in _ASSUME2. des; clarify.
+
+
+        rewrite unfold_APC. steps. force_l. exists false. steps. force_l. eexists ("cmp", [Vnullptr; Vnullptr]↑). steps.
+        Transparent MemStb. cbn in Heq. Opaque MemStb. ss. clarify. rewrite Any.upcast_downcast. steps.
+        unfold HoareCall, checkWf, forge, discard, put. steps. iRefresh.
+        force_l. eexists (ε, _). steps. force_l. { refl. } steps. force_l. clear_bar; iRefresh.
+        exists ε. steps. force_l. esplits. force_l. { rewrite URA.unit_idl. refl. } steps.
+        force_l. eexists (_, _). esplits. steps. force_l. esplits. steps. force_l. esplits. steps. force_l.
+        { esplits; swap 2 3.
+          { refl. }
+          { refl. }
+          instantiate (1:=true).
+          admit "FIX MEM1.v -- Add nullptr-nullptr case".
+        }
+        force_l.
+        { instantiate (1:=ord_pure 1). esplits; ss; try lia. }
+        clear _GUARANTEE2.
+        des; ss. clear_tac.
+        gstep; econs; try apply Nat.lt_succ_diag_r; i; ss. exists 400. des. clarify. unfold alist_add; cbn. steps.
+
+
+        TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
+
+        iRefresh. clear _GUARANTEE6. clarify. clear_tac.
         (***************************TODO: make call case ***********************)
         gstep; econs; try apply Nat.lt_succ_diag_r; i; ss.
         exists 400. des. clarify. clear_tac.
@@ -373,7 +550,7 @@ Section SIMMODSEM.
       idtac.
       unshelve eexists.
       {
-        iApply _ASSUME4.
+        iHyply _ASSUME4.
       }
           eapply b1.
       eexists. steps. force_l. eexists.

@@ -129,10 +129,10 @@ Section PROOF.
 
       guarantee(ord_lt ord_next ord_cur /\ (tbr = true -> is_pure ord_next) /\ (tbr = false -> ord_next = ord_top));;
       vret_tgt <- trigger (Call fn varg_tgt);; (*** call ***)
-      checkWf mn;;
 
       rret <- trigger (Take Σ);; forge rret;; (*** virtual resource passing ***)
       vret_src <- trigger (Take Z);;
+      checkWf mn;;
       assume(Q x vret_src vret_tgt rret);; (*** postcondition ***)
 
       Ret vret_src (*** return to body ***)
