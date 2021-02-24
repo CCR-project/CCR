@@ -390,6 +390,8 @@ Section MODSEM.
     assume(<<WF: wf ms>>);;
     snd <$> interp_Es prog (prog (Call "main" (([]: list val)↑))) (initial_r_state, initial_p_state).
 
+  Definition initial_itr_no_check: itree (eventE) Any.t :=
+    snd <$> interp_Es prog (prog (Call "main" (([]: list val)↑))) (initial_r_state, initial_p_state).
 
 
   Let state: Type := itree eventE Any.t.
