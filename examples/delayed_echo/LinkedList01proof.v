@@ -199,6 +199,10 @@ Section SIMMODSEM.
         try bar;
         iSimplWf;
         repeat multimatch goal with
+               | [H: URA.extends ?a ?b |- _ ] => replace (URA.extends a b) with ((Own a) b) in H by reflexivity
+               | [H: iApp _ _ |- _ ] => revert H
+               (*** TODO: move existing resources to top ***)
+               (*** TODO: remove redundant URA.wf ***)
                | [H: ?ip ?r |- _ ] =>
                  match type of ip with
                  | iProp =>
@@ -208,8 +212,23 @@ Section SIMMODSEM.
                    end
                  | _ => idtac
                  end
-               end.
-      iRefresh. iRefresh. Fail progress iRefresh. (*** test ***)
+               end;
+        i.
+      (* Ltac iRefresh := *)
+      (*   try bar; *)
+      (*   iSimplWf; *)
+      (*   repeat multimatch goal with *)
+      (*          | [H: ?ip ?r |- _ ] => *)
+      (*            match type of ip with *)
+      (*            | iProp => *)
+      (*              match goal with *)
+      (*              | [G: URA.wf r |- _ ] => *)
+      (*                rewrite intro_iApp in H; [|exact G]; clear G; move r at top; move H at bottom *)
+      (*              end *)
+      (*            | _ => idtac *)
+      (*            end *)
+      (*          end. *)
+      iRefresh. (* iRefresh. Fail progress iRefresh. (*** test ***) *)
       Ltac iPure H := rr in H; destruct H as [H _]; red in H; to_bar ltac:(fun BAR => move H after BAR). (* ; iRefresh. *)
       iPure _ASSUME1. iPure _ASSUME2. subst.
       rewrite Any.upcast_downcast in *. clarify.
@@ -269,23 +288,81 @@ Section SIMMODSEM.
       clear _ASSUME0.
       clarify. apply Any.upcast_inj in _ASSUME1. des; clarify. rewrite Any.upcast_downcast in *. clarify.
 
+      assert(WF: URA.wf x).
+      { admit "FIX BUG IN HOARECALL". }
       replace (URA.extends (GRA.padding ((n, 0%Z) |-> [v])) x) with (((Own (GRA.padding ((n, 0%Z) |-> [v]))): iProp) x) in EXT by reflexivity.
-      try bar;
-      iSimplWf;
-        repeat multimatch goal with
-               | [H: URA.extends ?a ?b |- _ ] => replace (URA.extends a b) with ((Own a) b) in H by reflexivity
-               | [H: iApp _ _ |- _ ] => revert H
-               | [H: ?ip ?r |- _ ] =>
-                 match type of ip with
-                 | iProp =>
-                   match goal with
-                   | [G: URA.wf r |- _ ] =>
-                     rewrite intro_iApp in H; [|exact G]; clear G; move r at top; move H at bottom
-                   end
-                 | _ => idtac
-                 end
-               end;
-        i.
+      clear _ASSUME4. (***************** TODO: automatic clear when calling a function **************)
+      steps.
+
+
+
+
+      destruct l; ss.
+      - (*********** cmp ***********)
+        iPure _ASSUME3. clarify.
+        rewrite unfold_APC. steps. force_l. exists false. steps. force_l. eexists ("cmp", [Vnullptr; Vnullptr]↑). steps.
+        Transparent MemStb. cbn in Heq. Opaque MemStb. ss. clarify. rewrite Any.upcast_downcast. steps.
+        unfold HoareCall, checkWf, forge, discard, put. steps. iRefresh.
+        force_l. eexists (ε, _). steps. force_l. { refl. } steps. force_l. iRefresh.
+        iExists EXT. steps. force_l. eexists. steps. force_l.
+        { rewrite URA.add_comm. refl.}
+        steps.
+        force_l. eexists (_, _). steps. force_l. esplits. force_l. esplits. force_l.
+        { esplits; swap 2 3.
+          { refl. }
+          { refl. }
+          instantiate (1:=true).
+          admit "FIX MEM1.v -- Add nullptr-nullptr case".
+        }
+        force_l.
+        { instantiate (1:=ord_pure 41). esplits; ss; try lia. }
+        (********* TODO : 42 is too big ***********)
+        des. clear _GUARANTEE6. clarify. clear_tac.
+        (***************************TODO: make call case ***********************)
+        gstep; econs; try apply Nat.lt_succ_diag_r; i; ss.
+        exists 400. des. clarify. clear_tac.
+        steps. des.
+        assert(EXT: URA.extends (GRA.padding ((n, 0%Z) |-> [x2])) x).
+        { subst; refl. }
+        clear _ASSUME0.
+        clarify. apply Any.upcast_inj in _ASSUME1. des; clarify. rewrite Any.upcast_downcast in *. clarify.
+
+        assert(WF: URA.wf x).
+        { admit "FIX BUG IN HOARECALL". }
+        replace (URA.extends (GRA.padding ((n, 0%Z) |-> [v])) x) with (((Own (GRA.padding ((n, 0%Z) |-> [v]))): iProp) x) in EXT by reflexivity.
+        clear _ASSUME4. (***************** TODO: automatic clear when calling a function **************)
+        steps.
+      -
+      }
+      force_l.
+      { esplits; ss; try lia. }
+      des. clear _GUARANTEE6. clarify. clear_tac.
+      (***************************TODO: make call case ***********************)
+      gstep; econs; try apply Nat.lt_succ_diag_r; i; ss.
+      exists 400. des. clarify. clear_tac.
+      steps. des.
+      assert(EXT: URA.extends (GRA.padding ((n, 0%Z) |-> [x2])) x).
+      { subst; refl. }
+      clear _ASSUME0.
+      clarify. apply Any.upcast_inj in _ASSUME1. des; clarify. rewrite Any.upcast_downcast in *. clarify.
+
+      assert(WF: URA.wf x).
+      { admit "FIX BUG IN HOARECALL". }
+      replace (URA.extends (GRA.padding ((n, 0%Z) |-> [v])) x) with (((Own (GRA.padding ((n, 0%Z) |-> [v]))): iProp) x) in EXT by reflexivity.
+      clear _ASSUME4. (***************** TODO: automatic clear when calling a function **************)
+      steps.
+
+
+
+
+
+
+
+
+
+
+
+      (********************************************************************************************)
       TTTTTTTTTTTTt
       iRefresh.
       steps.
