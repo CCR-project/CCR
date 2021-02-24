@@ -38,38 +38,6 @@ Set Implicit Arguments.
 (* Goal forall x, 5 + 5 = x. i. hide 5. cbn. hide_with MYNAME x. unhide x. unhide _SEAL. cbn. Abort. *)
 
 
-Module Type SEAL.
-  Parameter unit: Type.
-  Parameter tt: unit.
-  Parameter sealing: unit -> forall X: Type, X -> X.
-  Parameter sealing_eq: forall key X (x: X), sealing key x = x.
-End SEAL.
-Module Seal: SEAL.
-  Definition unit := unit.
-  Definition tt := tt.
-  Definition sealing (_: unit) X (x: X) := x.
-  Lemma sealing_eq key X (x: X): sealing key x = x.
-  Proof. refl. Qed.
-End Seal.
-
-Ltac seal_with key x :=
-  replace x with (Seal.sealing key x); [|eapply Seal.sealing_eq].
-Ltac seal x :=
-  let key := fresh "key" in
-  assert (key:= Seal.tt);
-  seal_with key x.
-Ltac unseal x :=
-  match (type of x) with
-  | Seal.unit => repeat rewrite (@Seal.sealing_eq x) in *; try clear x
-  | _ => repeat rewrite (@Seal.sealing_eq _ _ x) in *;
-         repeat match goal with
-                | [ H: Seal.unit |- _ ] => try clear H
-                end
-  end
-.
-Notation "☃ y" := (Seal.sealing _ y) (at level 60, only printing).
-Goal forall x, 5 + 5 = x. i. seal 5. seal x. unseal key0. unseal 5. cbn. Abort.
-
 
 Inductive ord: Type :=
 | ord_pure (n: nat)
@@ -585,3 +553,11 @@ End PSEUDOTYPING.
   Ltac force_l := seal_right; _step; unseal_right.
   Ltac force_r := seal_left; _step; unseal_left.
   (* Ltac mstep := gstep; econs; eauto; [eapply from_nat_lt; ss|]. *)
+
+  From ExtLib Require Import
+       Data.Map.FMapAList.
+
+  Ltac init :=
+    split; ss; ii; clarify; rename y into varg; eexists 100%nat; ss; des; clarify;
+    ginit; [eapply cpn3_wcompat; eauto with paco|]; unfold alist_add, alist_remove; ss;
+    unfold fun_to_tgt, cfun, HoareFun; ss.

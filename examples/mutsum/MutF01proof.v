@@ -72,7 +72,7 @@ Section SIMMODSEM.
       { splits; ss. }
       replace (Z.succ (Z.of_nat x0) - 1)%Z with (Z.of_nat x0).
       2: { lia. }
-      gstep. econs; ss. i. des; clarify. unfold alist_add. ss. exists 100.
+      ired. gstep. econs; ss. i. des; clarify. unfold alist_add. ss. exists 100.
       steps. des; clarify. rewrite Any.upcast_downcast in *. clarify. apply_all_once Any.upcast_inj. des. clarify. clear_tac.
       steps. force_l. eexists. force_l. eexists. force_l. eexists (_, _).
       steps. force_l.

@@ -46,7 +46,7 @@ Section SIMMODSEM.
     econstructor 1 with (wf:=wf) (le:=top2); et; ss.
     econs; ss. init.
     unfold mainF, checkWf, forge, discard, put. steps. des; subst.
-    unfold APC. unfold body_to_tgt, interp_hCallE_tgt. steps.
+    unfold APC. unfold body_to_tgt, mainBody, interp_hCallE_tgt. steps.
     rewrite Any.upcast_downcast in *. ss. steps.
     unfold HoareCall, checkWf, forge, discard, put. steps.
     force_l. eexists (_, _). steps. force_l.
@@ -56,7 +56,7 @@ Section SIMMODSEM.
     steps. force_l. exists 10. force_l. eexists. force_l. eexists. force_l.
     { esplits; et. }
     force_l.
-    { splits; ss. }
+    { splits; ss. } ired.
     match goal with
     | [ |- gpaco3 _ _ _ _ _ ?i_src ?i_tgt ] => remember i_src
     end.

@@ -53,7 +53,7 @@ Section PROOF.
     Mod.get_modsem := fun _ => {|
         ModSem.fnsems := List.map (fun '(fn, sb) => (fn, fun_to_src sb.(fsb_body))) (MemSbtb ++ MainSbtb);
         (* ModSem.initial_mrs := [("Mem", ε) ; ("Main", ε)]; *)
-        ModSem.initial_mrs := [("Mem", (ε, unit↑)) ; ("Main", (ε, unit↑))];
+        ModSem.initial_mrs := [("Mem", (ε, tt↑)) ; ("Main", (ε, tt↑))];
       |};
     Mod.sk := Sk.unit;
   |}
@@ -68,12 +68,13 @@ Section PROOF.
       URA.wf (GRA.padding a)
   .
   Proof.
-    ss. ii. unfold GRA.padding.  des_ifs; cycle 1.
+    ss. ii. unfold GRA.padding.
+    Local Transparent GRA.to_URA. ss. i. des_ifs; cycle 1.
     { apply URA.wf_unit. }
     ss. unfold PCM.GRA.cast_ra, eq_rect, eq_sym. destruct GRA.inG_prf. ss.
+    Local Opaque GRA.to_URA.
   Qed.
 
-  Local Opaque GRA.to_URA.
   Infix "⋅" := URA.add (at level 50, left associativity).
   Notation "(⋅)" := URA.add (only parsing).
 
@@ -209,12 +210,14 @@ Section PROOF.
         + admit "ez".
         + admit "ez".
         + admit "ez".
+        + admit "ez".
       - admit "ez".
     }
     { Local Transparent MemSbtb. cbn. Local Opaque MemSbtb. des_ifs; ss. }
     ss. unfold compose. ss. rewrite ! URA.unit_id. rewrite ! URA.unit_idl.
     eapply padding_wf; et. ss. esplits; et.
-    rr. esplits; et. ss.
+    { rr. esplits; et. ss. }
+    { i. des_ifs. }
   Qed.
 
 End PROOF.

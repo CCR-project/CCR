@@ -67,7 +67,7 @@ Possible improvements:
     (* ModSem.fnsems := [("main", mainF)]; *)
     (* ModSem.fnsems := List.map (map_snd (fun_to_tgt (MainStb ++ MemStb))) MainStb; *)
     ModSem.fnsems := List.map (fun '(fn, body) => (fn, fun_to_tgt (MemStb ++ MainStb) fn body)) MainSbtb;
-    ModSem.initial_mrs := [("Main", (ε, unit↑))];
+    ModSem.initial_mrs := [("Main", (ε, tt↑))];
   |}
   .
 
