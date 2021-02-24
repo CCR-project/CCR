@@ -5,8 +5,8 @@ Require Import ClassicalDescription.
 Require Coq.extraction.Extraction.
 Require Import ExtrOcamlBasic.
 Require Import ExtrOcamlString.
-Require Import Coq.extraction.ExtrOcamlZInt.
-Require Import ExtrOcamlNatInt.
+(* Require Import Coq.extraction.ExtrOcamlZInt. *)
+(* Require Import ExtrOcamlNatInt. *)
 
 Extraction Blacklist List String Int.
 
@@ -16,6 +16,6 @@ Require Import MutFG Example0.
 
 Cd "extract".
 
-Separate Extraction mutsum ex0.
+Separate Extraction Z.to_nat Z.opp mutsum ex0.
 
 Cd "..".
