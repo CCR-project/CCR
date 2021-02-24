@@ -207,6 +207,19 @@ Section CANCEL.
   }
   .
 
+  (*** argument remains the same ***)
+  (* Definition mk_simple (mn: string) {X: Type} (P: X -> Any_tgt -> Σ -> ord -> Prop) (Q: X -> Any_tgt -> Σ -> Prop): fspec. *)
+  (*   econs. *)
+  (*   { apply mn. } *)
+  (*   { i. apply (P X0 X2 X3 H /\ X1↑ = X2). } *)
+  (*   { i. apply (Q X0 X2 X3 /\ X1↑ = X2). } *)
+  (* Unshelve. *)
+  (*   apply (list val). *)
+  (*   apply (val). *)
+  (* Defined. *)
+  Definition mk_simple (mn: string) {X: Type} (P: X -> Any_tgt -> Σ -> ord -> Prop) (Q: X -> Any_tgt -> Σ -> Prop): fspec :=
+    @mk mn X (list val) (val) (fun x y a r o => P x a r o /\ y↑ = a) (fun x z a r => Q x a r /\ z↑ = a)
+  .
 
 
 
@@ -562,11 +575,11 @@ End PSEUDOTYPING.
     | [ |- gpaco5 _ _ _ _ _ _ _ ?i_src ?i_tgt ] => seal i_tgt
     end.
   Ltac unseal_left :=
-    match goal with 
+    match goal with
     | [ |- gpaco5 _ _ _ _ _ _ _ (@Seal.sealing _ _ ?i_src) ?i_tgt ] => unseal i_src
     end.
   Ltac unseal_right :=
-    match goal with 
+    match goal with
     | [ |- gpaco5 _ _ _ _ _ _ _ ?i_src (@Seal.sealing _ _ ?i_tgt) ] => unseal i_tgt
     end.
   Ltac force_l := seal_right; _step; unseal_right.

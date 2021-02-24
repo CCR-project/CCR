@@ -23,7 +23,7 @@ Section PROOF.
 
   Definition GSem: ModSem.t := {|
     ModSem.fnsems := List.map (fun '(fn, body) => (fn, fun_to_tgt GlobalStb fn body)) Gsbtb;
-    ModSem.initial_mrs := [("G", (ε, unit↑))];
+    ModSem.initial_mrs := [("G", (ε, tt↑))];
   |}
   .
 

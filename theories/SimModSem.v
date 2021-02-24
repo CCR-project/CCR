@@ -659,7 +659,54 @@ Section SIMMOD.
      admit "TODO".
    Qed.
 
+   Theorem adequacy_local_closed
+           (SIM: sim)
+     :
+       Beh.of_program (Mod.interp md_tgt) <1=
+       Beh.of_program (Mod.interp md_src).
+   Proof.
+     hexploit adequacy_local.
+     { eauto. }
+     i. specialize (H Mod.empty). repeat rewrite Mod.add_empty_l in H. auto.
+   Qed.
+
 End SIMMOD.
+
+Section SIMMODS.
+  Context `{Σ: GRA.t}.
+
+  Lemma sim_list_adequacy (mds_src mds_tgt: list Mod.t)
+        (FORALL: List.Forall2 sim mds_src mds_tgt)
+    :
+      <<CR: forall ctx, Beh.of_program (Mod.interp (Mod.add ctx (Mod.add_list mds_tgt))) <1=
+                        Beh.of_program (Mod.interp (Mod.add ctx (Mod.add_list mds_src)))>>.
+  Proof.
+    induction FORALL; ss.
+    cut (forall ctx,
+            Beh.of_program (Mod.interp (Mod.add ctx (Mod.add y (Mod.add_list l')))) <1=
+            Beh.of_program (Mod.interp (Mod.add ctx (Mod.add y (Mod.add_list l))))).
+    { ii. eapply H0 in PR.
+      apply Mod.add_comm in PR. apply Mod.add_comm.
+      erewrite <- Mod.add_assoc in *.
+      apply Mod.add_comm in PR. apply Mod.add_comm.
+      eapply adequacy_local.
+      { eauto. }
+      { eapply PR. }
+    }
+    { i. erewrite Mod.add_assoc in *. eapply IHFORALL. auto. }
+  Qed.
+
+  Lemma sim_list_adequacy_closed (mds_src mds_tgt: list Mod.t)
+        (FORALL: List.Forall2 sim mds_src mds_tgt)
+    :
+      Beh.of_program (Mod.interp (Mod.add_list mds_tgt)) <1=
+      Beh.of_program (Mod.interp (Mod.add_list mds_src)).
+  Proof.
+    hexploit sim_list_adequacy.
+    { eauto. }
+    i. specialize (H Mod.empty). repeat rewrite Mod.add_empty_l in H. auto.
+  Qed.
+End SIMMODS.
 End ModPair.
 
 (* TODO: prove sim *)

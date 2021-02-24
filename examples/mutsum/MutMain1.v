@@ -6,7 +6,7 @@ Require Import Behavior.
 Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
-Require Import Hoare.
+Require Import HoareDef.
 Require Import MutHeader.
 
 Generalizable Variables E R A B C X Y Σ.
@@ -29,7 +29,7 @@ Section PROOF.
 
   Definition mainSem: ModSem.t := {|
     ModSem.fnsems := List.map (fun '(fn, body) => (fn, fun_to_tgt GlobalStb fn body)) mainsbtb;
-    ModSem.initial_mrs := [("Main", (ε, unit↑))];
+    ModSem.initial_mrs := [("Main", (ε, tt↑))];
   |}
   .
 

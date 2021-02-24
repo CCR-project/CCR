@@ -64,6 +64,7 @@ Notation "wf n '----------------------------------------------------------------
 
 
 
+(* TODO: copied from Linkedlist01proof *)
 Ltac prep := ired; try rewrite ! unfold_interp.
 
 Ltac force_l :=

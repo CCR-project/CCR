@@ -146,7 +146,7 @@ Section CANCEL.
     Local Opaque GRA.to_URA.
     ss.
     seal_left.
-    
+
     (* Ltac hide_left := *)
     (*   match goal with *)
     (*   | [ |- gpaco5 _ _ _ _ _ _ _ ?i_src ?i_tgt ] => let name := fresh "HIDDEN" in remember i_src as HIDDEN *)
@@ -398,20 +398,6 @@ Section CANCEL.
     { apply x6. }
   Qed.
 
-  (*** argument remains the same ***)
-  (* Definition mk_simple (mn: string) {X: Type} (P: X -> Any_tgt -> Σ -> ord -> Prop) (Q: X -> Any_tgt -> Σ -> Prop): fspec. *)
-  (*   econs. *)
-  (*   { apply mn. } *)
-  (*   { i. apply (P X0 X2 X3 H /\ X1↑ = X2). } *)
-  (*   { i. apply (Q X0 X2 X3 /\ X1↑ = X2). } *)
-  (* Unshelve. *)
-  (*   apply (list val). *)
-  (*   apply (val). *)
-  (* Defined. *)
-  Definition mk_simple (mn: string) {X: Type} (P: X -> Any_tgt -> Σ -> ord -> Prop) (Q: X -> Any_tgt -> Σ -> Prop): fspec :=
-    @mk _ mn X (list val) (val) (fun x y a r o => P x a r o /\ y↑ = a) (fun x z a r => Q x a r /\ z↑ = a)
-  .
-
   Hypothesis MAIN: List.find (fun '(_fn, _) => dec "main" _fn) stb = Some ("main",
     (* (@mk "Main" unit (fun _ varg_high _ _ => varg_high = tt↑) (fun _ vret_high _ _ => vret_high = tt↑) (fun _ => None))). *)
     (@mk_simple "Main" unit (fun _ _ _ o => o = ord_top) top3)).
@@ -553,4 +539,3 @@ we should know that stackframe is not popped (unary property)". }
   Qed.
 
 End CANCEL.
-
