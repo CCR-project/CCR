@@ -46,7 +46,7 @@ Section SIMMODSEM.
   Theorem correct: ModSemPair.sim MutF1.FSem MutF0.FSem.
   Proof.
     econstructor 1 with (wf:=wf) (le:=top2); et; ss.
-    econs; ss. init. unfold ccall, interp_hCallE_tgt.
+    econs; ss. init. unfold interp_hCallE_tgt.
     harg_tac. des; clarify. unfold fF, ccall. anytac. ss. unfold APC. steps.
     destruct (dec (Z.of_nat x) 0%Z).
     - destruct x; ss. force_l. exists 0. steps.
