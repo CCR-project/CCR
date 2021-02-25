@@ -485,3 +485,8 @@ Section PROOF.
              (body: list val -> itree (hCallE +' pE +' eventE) val): fspecbody := mk_specbody (mk_simple mn P Q) body.
 
 End PROOF.
+
+Definition is_zero (v: val): bool := match v with | Vint x => dec x 0%Z | _ => false end.
+
+
+

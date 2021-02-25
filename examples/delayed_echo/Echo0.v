@@ -6,7 +6,7 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
-Require Import Mem1.
+Require Import LinkedList1.
 Require Import TODOYJ.
 
 Generalizable Variables E R A B C X Y Σ.
@@ -17,24 +17,81 @@ Set Implicit Arguments.
 
 
 
+
 Section PROOF.
 
   Context `{Σ: GRA.t}.
-  Context `{@GRA.inG memRA Σ}.
+  Context `{@GRA.inG Mem1.memRA Σ}.
+
+  (*** struct Node* my_list = NULL; ***)
 
 (***
-(Replaced asterisk with # because of coq-mode's parsing)
-int pop(struct Node## llref) {
-  if(#llref) {
-    int v = (#llref)->val;
-    struct Node* next = (#llref)->next;
-    free(#llref);
-    (#llref) = next;
-    return v;
+void echo() {
+  int n = in();
+  if(n == 0) {
+    echo_finish();
+    return;
   }
-  return -1;
+  my_list = push(my_list, n);
+  echo();
 }
 ***)
+
+  Definition echoF: list val -> itree Es val :=
+    fun _ =>
+      `n: val    <- (ccall "in" ([]: list val));;
+      if is_zero n
+      then `_: val <- (ccall "echo_finish"  ([]: list val));; Ret Vundef
+      else
+        my_list0 <- trigger (PGet "Echo");;
+        `my_list0: val <- my_list0↓?;;
+        `my_list1: val <- (ccall "push" [my_list0; n]);;
+        trigger(PPut "Echo" my_list1↑);;
+        `_: val <- ccall "echo" ([]: list val);;
+        Ret Vundef
+  .
+
+(***
+void echo_finish() {
+  int n = pop(&my_list);
+  if(n == -1) return;
+  else {
+    out(n);
+    echo_finish();
+  }
+}
+***)
+
+  Definition echo_finishF: list val -> itree Es val :=
+    fun _ =>
+      `n: val    <- (ccall "in" ([]: list val));;
+      if is_zero n
+      then `_: val <- (ccall "echo_finish"  ([]: list val));; Ret Vundef
+      else
+        my_list0 <- trigger (PGet "Echo");;
+        `my_list0: val <- my_list0↓?;;
+        `my_list1: val <- (ccall "push" [my_list0; n]);;
+        trigger(PPut "Echo" my_list1↑);;
+        `_: val <- ccall "echo" ([]: list val);;
+        Ret Vundef
+  .
+
+
+
+
+
+
+
+
+
+
+
+
+  Definition is_zero (v: val): bool := match v with
+                                       | Vint x => dec x 0%Z
+                                       | Vptr 0 0%Z => true
+                                       | _ => false
+                                       end.
 
   Definition popF_parg: list val -> option val := (@hd_error _).
   Definition popF: list val -> itree Es val :=
@@ -55,43 +112,6 @@ int pop(struct Node## llref) {
           Ret v
         )
       else Ret (Vint (- 1))
-  .
-
-(* struct Node* pop2(struct Node* ll, int *n) { *)
-(*   if(ll) { *)
-(*     int v = (ll)->val; *)
-(*     struct Node* next = (ll)->next; *)
-(*     free(ll); *)
-(*     *n = v; *)
-(*     return next; *)
-(*   } *)
-(*   return NULL; *)
-(* } *)
-
-  Definition pop2F_parg: list val -> option (val * val) := fun varg =>
-    match varg with
-    | [v0; v1] => Some (v0, v1)
-    | _ => None
-    end
-  .
-
-  Definition pop2F: list val -> itree Es val :=
-    fun varg =>
-      '(ll, nref) <- (pop2F_parg varg)?;;
-      `b: val <- (ccall "cmp"  [ll; Vnullptr]);;
-      if (is_zero b)
-      then (
-          '(blk, ofs) <- (unptr ll)?;;
-          let addr_val  := Vptr blk ofs in
-          let addr_next := Vptr blk (ofs + 1) in
-          `v: val    <- (ccall "load"  [addr_val]);;
-          `next: val <- (ccall "load"  [addr_next]);;
-          `_: val    <- (ccall "free"  [addr_val]);;
-          `_: val    <- (ccall "free"  [addr_next]);; (*** change "free"s specification ***)
-          `_: val    <- (ccall "store" [nref; v]);;
-          Ret next
-        )
-      else Ret Vnullptr
   .
 
 (* struct Node* push(struct Node* ll, int x) { *)
@@ -122,7 +142,7 @@ int pop(struct Node## llref) {
   .
 
   Definition LinkedListSem: ModSem.t := {|
-    ModSem.fnsems := [("pop", cfun popF); ("pop2", cfun pop2F); ("push", cfun pushF)];
+    ModSem.fnsems := [("pop", cfun popF); ("push", cfun pushF)];
     ModSem.initial_mrs := [("LinkedList", (ε, tt↑))];
   |}
   .
