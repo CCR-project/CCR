@@ -46,7 +46,7 @@ Definition unrightN {E X Y} `{eventE -< E} (xy: X + Y): itree E Y :=
   end.
 
 Section UNPADDING.
-  
+
   Definition unpadding A {Σ} `{@GRA.inG A Σ} (a: URA.car (t:=Σ)): itree Es (URA.car (t:=A)) :=
     assume(forall n (NEQ: n <> GRA.inG_id), a n = URA.unit);;
     Ret (eq_rect_r (@URA.car) (a GRA.inG_id) GRA.inG_prf)
@@ -489,4 +489,53 @@ End PROOF.
 Definition is_zero (v: val): bool := match v with | Vint x => dec x 0%Z | _ => false end.
 
 
+Require Import SimModSem.
 
+Section EXTEND.
+
+  Context `{Σ: GRA.t}.
+
+  Definition extends (stb0 stb1: list (string * fspec)): Prop :=
+    forall fn fnf (FIND: List.find (fun '(_fn, _) => dec fn _fn) stb0 = Some fnf),
+      List.find (fun '(_fn, _) => dec fn _fn) stb1 = Some fnf.
+
+  Global Program Instance extends_PreOrder: PreOrder extends.
+  Next Obligation.
+  Proof.
+    ii. auto.
+  Qed.
+  Next Obligation.
+  Proof.
+    ii. eapply H in FIND. eapply H0 in FIND. auto.
+  Qed.
+
+  Lemma nodup_incl_extends stb0 stb1
+        (INCL: List.incl stb0 stb1)
+        (NODUP: NoDup (List.map fst stb1))
+    :
+      extends stb0 stb1.
+  Proof.
+  Admitted.
+
+  Lemma modsempair_extends (md_tgt md_src0 md_src1: ModSem.t)
+          sbtb stb0 stb1 initial_mrs
+          (SIM: ModSemPair.sim (ModSem.mk (List.map (fun '(fn, fsb) => (fn, fun_to_tgt stb1 fn fsb)) sbtb) initial_mrs) md_tgt)
+          (EXTENDS: extends stb0 stb1)
+    :
+      ModSemPair.sim (ModSem.mk (List.map (fun '(fn, fsb) => (fn, fun_to_tgt stb0 fn fsb)) sbtb) initial_mrs) md_tgt.
+  Proof.
+    inv SIM. econs.
+    { eapply le_PreOrder. }
+    { instantiate (1:=wf). simpl in *. revert sim_fnsems.
+      generalize (ModSem.fnsems md_tgt). induction sbtb.
+      { i. inv sim_fnsems. econs. }
+      i. destruct a as [fn fb]. inv sim_fnsems. simpl in *. econs.
+      2: { eapply IHsbtb. auto. }
+      destruct y as [fn' tr]. inv H1. econs.
+      { unfold RelationPairs.RelCompFun in *. simpl in *. subst. auto. }
+      { unfold RelationPairs.RelCompFun in *. simpl in *. subst. ii.
+        exploit H0; [apply H|apply SIMMRS|]. i. des. exists n.
+        clear - EXTENDS x0. revert x0.
+  Admitted.
+
+End EXTEND.
