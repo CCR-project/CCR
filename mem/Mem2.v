@@ -48,12 +48,13 @@ Section PROOF.
     (mk_simple
        "Mem"
        (fun '(result, resource) varg o =>
-          ((Exists b ofs v, ⌜varg = [Vptr b ofs; Vnullptr]↑⌝ ** Own(GRA.padding ((b, ofs) |-> [v])) ** ⌜result = false⌝) ∨
-           (Exists b ofs v, ⌜varg = [Vnullptr; Vptr b ofs]↑⌝ ** Own(GRA.padding ((b, ofs) |-> [v])) ** ⌜result = false⌝) ∨
+          ((Exists b ofs v, ⌜varg = [Vptr b ofs; Vnullptr]↑⌝ ** ⌜resource = (GRA.padding ((b, ofs) |-> [v]))⌝ ** ⌜result = false⌝) ∨
+           (Exists b ofs v, ⌜varg = [Vnullptr; Vptr b ofs]↑⌝ ** ⌜resource = (GRA.padding ((b, ofs) |-> [v]))⌝ ** ⌜result = false⌝) ∨
            (Exists b0 ofs0 v0 b1 ofs1 v1, ⌜varg = [Vptr b0 ofs0; Vptr b1 ofs1]↑⌝ **
-                                          Own(GRA.padding ((b0, ofs0) |-> [v0])) ** Own(GRA.padding ((b1, ofs1) |-> [v1])) ** ⌜result = false⌝) ∨
-           (Exists b ofs v, ⌜varg = [Vptr b ofs; Vptr b  ofs]↑⌝ ** Own(GRA.padding ((b, ofs) |-> [v])) ** ⌜result = true⌝) ∨
+                     ⌜resource = (GRA.padding ((b0, ofs0) |-> [v0])) ⋅ (GRA.padding ((b1, ofs1) |-> [v1]))⌝ ** ⌜result = false⌝) ∨
+           (Exists b ofs v, ⌜varg = [Vptr b ofs; Vptr b  ofs]↑⌝ ** ⌜resource = (GRA.padding ((b, ofs) |-> [v]))⌝ ** ⌜result = true⌝) ∨
            (⌜varg = [Vnullptr; Vnullptr]↑ /\ result = true⌝))
+            ** Own(resource)
             ** ⌜o = ord_pure 1⌝
        )
        (fun '(result, resource) vret => Own(resource) ** ⌜vret = (if result then Vint 1 else Vint 0)↑⌝)

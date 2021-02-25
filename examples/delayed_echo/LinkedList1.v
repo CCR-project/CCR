@@ -6,7 +6,7 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
-Require Import Mem1.
+Require Import Mem1 Mem2.
 Require Import TODOYJ.
 
 Generalizable Variables E R A B C X Y Σ.

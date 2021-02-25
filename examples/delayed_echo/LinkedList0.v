@@ -88,8 +88,8 @@ int pop(struct Node## llref) {
       addr_next      <- (vadd new_node (Vint 1))?;;
       `_: val        <- (ccall "store" [addr_v;    v]);;
       `vret: val     <- (ccall "store" [addr_next; node]);;
-      `_: val        <- (ccall "print_all" [new_node]);;
-      Ret vret
+      (* `_: val        <- (ccall "print_all" [new_node]);; *)
+      Ret addr_v
   .
 
   Definition LinkedListSem: ModSem.t := {|

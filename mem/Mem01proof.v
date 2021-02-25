@@ -98,7 +98,6 @@ Section SIMMODSEM.
         + unfold update. des_ifs; econs; et.
     }
 
-    Set Ltac Profiling.
     econs; ss.
     { init.
       unfold checkWf, forge, discard, put. steps.
@@ -150,7 +149,6 @@ Section SIMMODSEM.
         Local Opaque URA.add points_to.
       }
       Local Opaque URA.wf.
-      Show Ltac Profile.
       ss.
       steps. force_l. esplits; eauto. force_l.
       { esplits; eauto. }

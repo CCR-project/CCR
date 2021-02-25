@@ -85,7 +85,7 @@ Section PROOF.
   Definition HoareCall
              (tbr: bool)
              (ord_cur: ord)
-             (P: X -> Y -> Any_tgt -> Σ -> ord -> Prop)
+             (P: X -> Y -> Any_tgt -> ord -> Σ -> Prop)
              (Q: X -> Z -> Any_tgt -> Σ -> Prop):
     gname -> Y -> itree Es Z :=
     fun fn varg_src =>
@@ -93,7 +93,7 @@ Section PROOF.
       rarg <- trigger (Choose Σ);; discard rarg;; (*** virtual resource passing ***)
       x <- trigger (Choose X);; varg_tgt <- trigger (Choose Any_tgt);;
       ord_next <- trigger (Choose _);;
-      guarantee(P x varg_src varg_tgt rarg ord_next);; (*** precondition ***)
+      guarantee(P x varg_src varg_tgt  ord_next rarg);; (*** precondition ***)
 
       guarantee(ord_lt ord_next ord_cur /\ (tbr = true -> is_pure ord_next) /\ (tbr = false -> ord_next = ord_top));;
       vret_tgt <- trigger (Call fn varg_tgt);; (*** call ***)
@@ -164,7 +164,7 @@ Section CANCEL.
     X: Type; (*** a meta-variable ***)
     AA: Type;
     AR: Type;
-    precond: X -> AA -> Any_tgt -> Σ -> ord -> Prop; (*** meta-variable -> new logical arg -> current logical arg -> resource arg -> Prop ***)
+    precond: X -> AA -> Any_tgt -> ord -> Σ -> Prop; (*** meta-variable -> new logical arg -> current logical arg -> resource arg -> Prop ***)
     postcond: X -> AR -> Any_tgt -> Σ -> Prop; (*** meta-variable -> new logical ret -> current logical ret -> resource ret -> Prop ***)
   }
   .
@@ -185,8 +185,8 @@ Section CANCEL.
   (*   apply (list val). *)
   (*   apply (val). *)
   (* Defined. *)
-  Definition mk_simple (mn: string) {X: Type} (P: X -> Any_tgt -> Σ -> ord -> Prop) (Q: X -> Any_tgt -> Σ -> Prop): fspec :=
-    @mk mn X (list val) (val) (fun x y a r o => P x a r o /\ y↑ = a) (fun x z a r => Q x a r /\ z↑ = a)
+  Definition mk_simple (mn: string) {X: Type} (P: X -> Any_tgt -> ord -> Σ -> Prop) (Q: X -> Any_tgt -> Σ -> Prop): fspec :=
+    @mk mn X (list val) (val) (fun x y a o r => P x a o r /\ y↑ = a) (fun x z a r => Q x a r /\ z↑ = a)
   .
 
 
@@ -288,7 +288,7 @@ Section CANCEL.
   Definition HoareFun
              (mn: mname)
              {X Y Z: Type}
-             (P: X -> Y -> Any_tgt -> Σ -> ord -> Prop)
+             (P: X -> Y -> Any_tgt -> ord -> Σ -> Prop)
              (Q: X -> Z -> Any_tgt -> Σ -> Prop)
              (body: Y -> itree Es' Z): Any_tgt -> itree Es Any_tgt := fun varg_tgt =>
     varg_src <- trigger (Take Y);;
@@ -296,7 +296,7 @@ Section CANCEL.
     rarg <- trigger (Take Σ);; forge rarg;; (*** virtual resource passing ***)
     (checkWf mn);;
     ord_cur <- trigger (Take _);;
-    assume(P x varg_src varg_tgt rarg ord_cur);; (*** precondition ***)
+    assume(P x varg_src varg_tgt  ord_cur rarg);; (*** precondition ***)
 
 
     vret_src <- match ord_cur with

@@ -392,7 +392,7 @@ Section CANCEL.
 
   Hypothesis MAIN: List.find (fun '(_fn, _) => dec "main" _fn) stb = Some ("main",
     (* (@mk "Main" unit (fun _ varg_high _ _ => varg_high = tt↑) (fun _ vret_high _ _ => vret_high = tt↑) (fun _ => None))). *)
-    (@mk_simple _ "Main" unit (fun _ _ _ o => o = ord_top) top3)).
+    (@mk_simple _ "Main" unit (fun _ _ o _ => o = ord_top) top3)).
   Hypothesis WFR: URA.wf (rsum (ModSem.initial_r_state ms_tgt)).
 
   Opaque interp_Es.
