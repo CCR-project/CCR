@@ -82,8 +82,8 @@ Section PROOF.
   (*     end *)
   (* . *)
 
-  Let echo_spec:        fspec := (@mk _ "Echo" unit (list Z) unit (top5) (top4)).
-  Let echo_finish_spec: fspec := (@mk _ "Echo" unit (list Z) unit (top5) (top4)).
+  Let echo_spec:        fspec := (@mk _ "Echo" unit (list Z) unit (fun _ _ _ o _ => o = ord_top) (top4)).
+  Let echo_finish_spec: fspec := (@mk _ "Echo" unit (list Z) unit (fun _ _ _ o _ => o = ord_top) (top4)).
 
   Definition EchoStb: list (gname * fspec) :=
     [("echo", echo_spec) ; ("echo_finish", echo_finish_spec)]

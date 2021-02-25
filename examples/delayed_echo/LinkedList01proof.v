@@ -341,7 +341,7 @@ Section SIMMODSEM.
         force_l. eexists (ε, _). steps. force_l. { refl. } steps. force_l. iExists _ASSUME3. steps. force_l. esplit.
         steps. force_l.
         { instantiate (1:=a ⋅ (x5 ⋅ x7 ⋅ x4) ⋅ b ⋅ (x2 ⋅ x3) ⋅ (x9)). admit "ez - pcm solver". } steps.
-        force_l. eexists (x0, 0%Z, Vint (Z.of_nat n0)). esplits. steps. force_l. esplits. steps. force_l. esplits. steps. force_l.
+        force_l. eexists (x0, 0%Z, v0). esplits. steps. force_l. esplits. steps. force_l. esplits. steps. force_l.
         { esplits; try refl. iRefresh. iSplitP; ss. iSplitP; ss. }
         steps. force_l. { esplits; ss; try lia. } steps.
         gstep; econs; try apply Nat.lt_succ_diag_r; i; ss. exists 400. des. clarify. unfold alist_add; cbn. steps.
@@ -509,7 +509,7 @@ Section SIMMODSEM.
         force_l. eexists (ε, _). steps. force_l. { refl. } steps. force_l. iExists _ASSUME1. steps. force_l. esplit.
         steps. force_l.
         { instantiate (1:=(x8 ⋅ (x3 ⋅ x9 ⋅ x2) ⋅ x6 ⋅ x4 ⋅ (x11))). admit "ez - pcm solver". } steps.
-        force_l. eexists (x, 0%Z, Vint (Z.of_nat n0)). esplits. steps. force_l. esplits. steps. force_l. esplits. steps. force_l.
+        force_l. eexists (x, 0%Z, v). esplits. steps. force_l. esplits. steps. force_l. esplits. steps. force_l.
         { esplits; try refl. iRefresh. iSplitP; ss. iSplitP; ss. }
         clear_until A0. steps. force_l. { esplits; ss; try lia. } steps.
         gstep; econs; try apply Nat.lt_succ_diag_r; i; ss. exists 400. des. clarify. unfold alist_add; cbn. steps.
@@ -573,13 +573,13 @@ Section SIMMODSEM.
 
 
 
-        rewrite unfold_APC. steps. force_l. exists false. steps. force_l. eexists ("store", [Vptr n 0; Vint (Z.of_nat n0)]↑). steps.
+        rewrite unfold_APC. steps. force_l. exists false. steps. force_l. eexists ("store", [Vptr n 0; v]↑). steps.
         Transparent MemStb. cbn in Heq. Opaque MemStb. ss. clarify. rewrite Any.upcast_downcast. steps.
         unfold HoareCall, checkWf, forge, discard, put. steps. iRefresh.
         force_l. eexists (ε, _). steps. force_l. { refl. } steps. force_l. iExists A0. steps. force_l. esplit.
         steps. force_l.
         { instantiate (1:=(x8 ⋅ (x3 ⋅ x2) ⋅ x4 ⋅ x11 ⋅ x13 ⋅ x15 ⋅ x5 ⋅ x16)). admit "ez - pcm solver". } steps.
-        force_l. eexists (n, 0%Z, Vint (Z.of_nat n0)). esplits. steps. force_l. esplits. steps. force_l. esplits. steps. force_l.
+        force_l. eexists (n, 0%Z, v). esplits. steps. force_l. esplits. steps. force_l. esplits. steps. force_l.
         { esplits; try refl. iRefresh. eexists; iRefresh. iSplitP; ss. iSplitP; ss. iApply A0; ss. }
         clear_until A0. steps. force_l. { esplits; ss; try lia. } steps.
         gstep; econs; try apply Nat.lt_succ_diag_r; i; ss. exists 400. des. clarify. unfold alist_add; cbn. steps.
@@ -635,13 +635,13 @@ Section SIMMODSEM.
 
 
 
-      rewrite unfold_APC. steps. force_l. exists false. steps. force_l. eexists ("store", [Vptr x0 0; Vint (Z.of_nat n)]↑). steps.
+      rewrite unfold_APC. steps. force_l. exists false. steps. force_l. eexists ("store", [Vptr x0 0; v]↑). steps.
       Transparent MemStb. cbn in Heq. Opaque MemStb. ss. clarify. rewrite Any.upcast_downcast. steps.
       unfold HoareCall, checkWf, forge, discard, put. steps. iRefresh.
       force_l. eexists (ε, _). steps. force_l. { refl. } steps. force_l. iExists A. steps. force_l. esplit.
       steps. force_l.
       { instantiate (1:=x5 ⋅ x6 ⋅ x4 ⋅ (x1 ⋅ (x7))). admit "ez - pcm solver". } steps.
-      force_l. eexists (x0, 0%Z, Vint (Z.of_nat n)). esplits. steps. force_l. esplits. steps. force_l. esplits. steps. force_l.
+      force_l. eexists (x0, 0%Z, v). esplits. steps. force_l. esplits. steps. force_l. esplits. steps. force_l.
       { esplits; try refl. iRefresh. eexists; iRefresh. iSplitP; ss. iSplitP; ss. iApply A; ss. }
       steps. force_l. { esplits; ss; try lia. } steps.
       gstep; econs; try apply Nat.lt_succ_diag_r; i; ss. exists 400. des. clarify. unfold alist_add; cbn. steps.

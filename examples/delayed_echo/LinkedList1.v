@@ -22,11 +22,11 @@ Section PROOF.
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG memRA Σ}.
 
-  Fixpoint is_list (ll: val) (xs: list nat): iProp :=
+  Fixpoint is_list (ll: val) (xs: list val): iProp :=
     match xs with
     | [] => ⌜ll = Vnullptr⌝
     | xhd :: xtl =>
-      Exists lhd ltl, ⌜ll = Vptr lhd 0⌝ ** (Own (GRA.padding ((lhd,0%Z) |-> [Vint (Z.of_nat xhd); ltl])))
+      Exists lhd ltl, ⌜ll = Vptr lhd 0⌝ ** (Own (GRA.padding ((lhd,0%Z) |-> [xhd; ltl])))
                                  ** is_list ltl xtl
     end
   .
@@ -37,7 +37,7 @@ Section PROOF.
                                     (fun '(llref, xs) vret =>
                                        match xs with
                                        | [] => ⌜vret = (Vint (- 1))↑⌝
-                                       | xhd :: xtl => ⌜vret = (Vint (Z.of_nat xhd))↑⌝ ** (Exists ll', Own (GRA.padding ((llref,0%Z) |-> [ll'])) ** is_list ll' xtl)
+                                       | xhd :: xtl => ⌜vret = xhd↑⌝ ** (Exists ll', Own (GRA.padding ((llref,0%Z) |-> [ll'])) ** is_list ll' xtl)
                                        end)
                          ).
 
@@ -47,7 +47,7 @@ Section PROOF.
                                      (fun '(xs, nref) vret =>
                                         match xs with
                                         | [] => ⌜vret = Vnullptr↑⌝
-                                        | xhd :: xtl => Exists ll', ⌜vret = ll'↑⌝ ** is_list ll' xtl ** Own (GRA.padding ((nref, 0%Z) |-> [Vint (Z.of_nat xhd)]))
+                                        | xhd :: xtl => Exists ll', ⌜vret = ll'↑⌝ ** is_list ll' xtl ** Own (GRA.padding ((nref, 0%Z) |-> [xhd]))
                                         end)
                           ).
 
@@ -63,7 +63,7 @@ Section PROOF.
 (* } *)
 
   Let push_spec: fspec := (mk_simple "LinkedList"
-                                     (fun '(x, xs) varg o => Exists ll, ⌜varg = [ll; Vint (Z.of_nat x)]↑⌝ ** is_list ll xs ** ⌜o = ord_pure 2⌝)
+                                     (fun '(x, xs) varg o => Exists ll, ⌜varg = [ll; x]↑⌝ ** is_list ll xs ** ⌜o = ord_pure 2⌝)
                                      (fun '(x, xs) vret => Exists ll', is_list ll' (x :: xs) ** ⌜vret = ll'↑⌝)).
 
   Definition LinkedListStb: list (gname * fspec) :=
