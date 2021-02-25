@@ -6,7 +6,7 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
-Require Import LinkedList1.
+Require Import LinkedList1 Client1.
 Require Import TODOYJ.
 
 Generalizable Variables E R A B C X Y Σ.
@@ -20,6 +20,7 @@ Set Implicit Arguments.
 (*** TODO: move this to TODOYJ ***)
 Definition hcall {X Y} (fn: gname) (varg: X): itree (hCallE +' pE +' eventE) Y :=
   vret <- trigger (hCall false fn varg↑);; vret <- vret↓ǃ;; Ret vret.
+
 
 
 
@@ -104,7 +105,7 @@ Section PROOF.
   .
 
   Definition EchoSem: ModSem.t := {|
-    ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt (LinkedListStb ++ EchoStb) fn fsb)) EchoSbtb;
+    ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt (LinkedListStb ++ ClientStb ++ EchoStb) fn fsb)) EchoSbtb;
     ModSem.initial_mrs := [("Echo", (ε, ([]: list Z)↑))];
   |}
   .
