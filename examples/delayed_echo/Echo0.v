@@ -28,7 +28,7 @@ Section PROOF.
 (***
 void echo() {
   int n = in();
-  if(n == 0) {
+  if(n == -1) {
     echo_finish();
     return;
   }
@@ -37,10 +37,17 @@ void echo() {
 }
 ***)
 
+  Definition is_minus_one (v: val): bool :=
+    match v with
+    | Vint i => dec i (- 1)%Z
+    | _ => false
+    end
+  .
+
   Definition echoF: list val -> itree Es val :=
     fun _ =>
       `n: val    <- (ccall "in" ([]: list val));;
-      if is_zero n
+      if is_minus_one n
       then `_: val <- (ccall "echo_finish"  ([]: list val));; Ret Vundef
       else
         my_list0 <- trigger (PGet "Echo");;
@@ -53,10 +60,10 @@ void echo() {
 
 (***
 void echo_finish() {
-  int n = pop(&my_list);
-  if(n == -1) return;
-  else {
-    out(n);
+  if(my_list) {
+    int #n = malloc(sizeof(int));
+    my_list = pop2(my_list, n);
+    out(#n);
     echo_finish();
   }
 }
@@ -64,91 +71,28 @@ void echo_finish() {
 
   Definition echo_finishF: list val -> itree Es val :=
     fun _ =>
-      `n: val    <- (ccall "in" ([]: list val));;
-      if is_zero n
-      then `_: val <- (ccall "echo_finish"  ([]: list val));; Ret Vundef
-      else
-        my_list0 <- trigger (PGet "Echo");;
-        `my_list0: val <- my_list0↓?;;
-        `my_list1: val <- (ccall "push" [my_list0; n]);;
-        trigger(PPut "Echo" my_list1↑);;
-        `_: val <- ccall "echo" ([]: list val);;
-        Ret Vundef
-  .
-
-
-
-
-
-
-
-
-
-
-
-
-  Definition is_zero (v: val): bool := match v with
-                                       | Vint x => dec x 0%Z
-                                       | Vptr 0 0%Z => true
-                                       | _ => false
-                                       end.
-
-  Definition popF_parg: list val -> option val := (@hd_error _).
-  Definition popF: list val -> itree Es val :=
-    fun varg =>
-      `llref: val <- (popF_parg varg)?;;
-      `ll: val    <- (ccall "load" [llref]);;
-      `b: val     <- (ccall "cmp"  [ll; Vnullptr]);;
-      if is_zero b
-      then (
-          '(blk, ofs) <- (unptr ll)?;;
-          let addr_val  := Vptr blk ofs in
-          let addr_next := Vptr blk (ofs + 1) in
-          `v: val    <- (ccall "load"  [addr_val]);;
-          `next: val <- (ccall "load"  [addr_next]);;
-          `_: val    <- (ccall "free"  [addr_val]);;
-          `_: val    <- (ccall "free"  [addr_next]);; (*** change "free"s specification ***)
-          `_: val    <- (ccall "store" [llref; next]);;
-          Ret v
+      my_list0 <- trigger (PGet "Echo");; `my_list0: val <- my_list0↓?;;
+      if is_zero my_list0
+      then Ret Vundef
+      else (
+          `nref: val     <- (ccall "alloc" ([Vint 1%Z]));;
+          `my_list1: val <- (ccall "pop2" ([my_list0; nref]));;
+          trigger (PPut "Echo" my_list1↑);;
+          `n: val        <- (ccall "load" ([nref]));;
+          `_: val        <- (ccall "out" ([n]));;
+          `_: val        <- (ccall "echo_finish" ([]: list val));;
+          Ret Vundef
         )
-      else Ret (Vint (- 1))
   .
 
-(* struct Node* push(struct Node* ll, int x) { *)
-(*   struct Node* new_node = malloc(sizeof(struct Node)); *)
-(*   new_node->val = x; *)
-(*   new_node->next = ll; *)
-(*   printf("[DEBUG]: "); *)
-(*   print_all(new_node); *)
-(*   return new_node; *)
-(* } *)
-
-  Definition pushF_parg (varg: list val): option (val * val) :=
-    match varg with
-    | [node; v] => Some (node, v)
-    | _ => None
-    end.
-
-  Definition pushF: list val -> itree Es val :=
-    fun varg =>
-      '(node, v)     <- (pushF_parg varg)?;;
-      `new_node: val <- (ccall "alloc" [Vint 2]);;
-      addr_v         <- (vadd new_node (Vint 0))?;;
-      addr_next      <- (vadd new_node (Vint 1))?;;
-      `_: val        <- (ccall "store" [addr_v;    v]);;
-      `vret: val     <- (ccall "store" [addr_next; node]);;
-      (* `_: val        <- (ccall "print_all" [new_node]);; *)
-      Ret addr_v
-  .
-
-  Definition LinkedListSem: ModSem.t := {|
-    ModSem.fnsems := [("pop", cfun popF); ("push", cfun pushF)];
-    ModSem.initial_mrs := [("LinkedList", (ε, tt↑))];
+  Definition EchoSem: ModSem.t := {|
+    ModSem.fnsems := [("echo", cfun echoF); ("echo_finish", cfun echo_finishF)];
+    ModSem.initial_mrs := [("Echo", (ε, Vnullptr↑))];
   |}
   .
 
-  Definition LinkedList: Mod.t := {|
-    Mod.get_modsem := fun _ => LinkedListSem;
+  Definition Echo: Mod.t := {|
+    Mod.get_modsem := fun _ => EchoSem;
     Mod.sk := Sk.unit;
   |}
   .
