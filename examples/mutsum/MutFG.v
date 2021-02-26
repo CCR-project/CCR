@@ -83,4 +83,4 @@ Section PROOF.
 
 End PROOF.
 
-Definition mutsum := ModSem.initial_itr (Mod.enclose FG3).
+Definition mutsum := ModSem.initial_itr_no_check (Mod.enclose FG3).

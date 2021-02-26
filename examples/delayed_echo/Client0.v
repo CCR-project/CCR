@@ -19,21 +19,36 @@ Definition resum_ktr A E F `{E -< F}: ktree E A ~> ktree F A := fun _ ktr a => i
 
 
 
-Parameter inF: list val -> itree eventE val.
-Parameter outF: list val -> itree eventE val.
+Definition out_parg: list val -> option val :=
+  fun varg =>
+    match varg with
+    | [v] => Some v
+    | _ => None
+    end
+.
 
-Extract Constant inF => "___MINKI_DOTHIS___?????????".
-Extract Constant outF => "___MINKI_DOTHIS___?????????".
+
+(* Parameter inF: list val -> itree eventE val. *)
+(* Parameter outF: list val -> itree eventE val. *)
+
+(* Extract Constant inF => "___MINKI_DOTHIS___?????????". *)
+(* Extract Constant outF => "___MINKI_DOTHIS___?????????". *)
 
 
+Definition inF:  list val -> itree eventE val :=
+  fun _ => trigger (Syscall "scanf" []).
+
+Definition outF: list val -> itree eventE val :=
+  fun varg =>
+    `v: val <- (out_parg varg)?;;
+    trigger (Syscall "printf" varg);;
+    Ret Vundef
+.
 
 
 Section PROOF.
 
   Context `{Σ: GRA.t}.
-
-  (* Definition inF:  list val -> itree Es val := fun _ => trigger (Syscall "scanf" []). *)
-  (* Definition outF: list val -> itree Es val := fun varg => trigger (Syscall "printf" varg). *)
 
   Definition ClientSem: ModSem.t := {|
     ModSem.fnsems := [("in", cfun (resum_ktr inF)); ("out", cfun (resum_ktr outF))];
@@ -46,5 +61,5 @@ Section PROOF.
     Mod.sk := Sk.unit;
   |}
   .
-End PROOF.
 
+End PROOF.
