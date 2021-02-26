@@ -28,8 +28,9 @@ Section PROOF.
     [("in", in_spec) ; ("out", out_spec)]
   .
 
+
   Definition in_body:  list val -> itree (hCallE +' pE +' eventE) val := resum_ktr inF.
-  Definition out_body: list val -> itree (hCallE +' pE +' eventE) val := resum_ktr inF.
+  Definition out_body: list val -> itree (hCallE +' pE +' eventE) val := resum_ktr outF.
 
   Definition ClientSbtb: list (gname * fspecbody) :=
     [("in", mk_specbody in_spec in_body); ("out", mk_specbody out_spec out_body)]

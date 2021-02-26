@@ -87,5 +87,3 @@ let main =
   print_endline "- Delayed Echo"; run (echo_prog);
   print_endline "-----------------------------------";
   print_endline "- Mutual Sum"; run (mutsum);
-  print_endline "-----------------------------------";
-  print_endline "- Example0"; run (ex0);

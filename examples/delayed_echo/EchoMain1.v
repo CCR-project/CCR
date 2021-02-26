@@ -6,6 +6,7 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
+Require Import Echo1.
 Require Import TODOYJ.
 
 Generalizable Variables E R A B C X Y Σ.
@@ -14,15 +15,12 @@ Set Implicit Arguments.
 
 
 
-(*** TODO: rename ccall into call; ***)
-(*** TODO: move this to TODOYJ ***)
-Definition hcall {X Y} (fn: gname) (varg: X): itree (hCallE +' pE +' eventE) Y :=
-  vret <- trigger (hCall false fn varg↑);; vret <- vret↓ǃ;; Ret vret.
-
 
 Section PROOF.
 
   Context `{Σ: GRA.t}.
+  Context `{@GRA.inG Mem1.memRA Σ}.
+  Context `{@GRA.inG (URA.auth (RA.excl (list Z))) Σ}.
 
   Definition main_body: list val -> itree (hCallE +' pE +' eventE) val :=
     fun _ =>
@@ -41,7 +39,7 @@ Section PROOF.
   .
 
   Definition MainSem: ModSem.t := {|
-    ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt MainStb fn fsb)) MainSbtb;
+    ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt (EchoStb ++ MainStb) fn fsb)) MainSbtb;
     ModSem.initial_mrs := [("Main", (ε, ([]: list val)↑))];
   |}
   .
@@ -51,4 +49,5 @@ Section PROOF.
     Mod.sk := Sk.unit;
   |}
   .
+
 End PROOF.
