@@ -62,17 +62,27 @@ Section SIMMODSEM.
 
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG Mem1.memRA Σ}.
+  Context `{@GRA.inG Echo1.echoRA Σ}.
 
   Let W: Type := (alist mname (Σ * Any.t)) * (alist mname (Σ * Any.t)).
   Eval compute in (@URA.car Mem1._memRA).
 
   Let wf: W -> Prop :=
     fun '(mrps_src0, mrps_tgt0) =>
-      exists (mr: Σ) (ll: val) (ns: list Z),
-        (<<SRC: mrps_src0 = Maps.add "Echo" (mr, ns↑) Maps.empty>>) /\
+      exists (mr: Σ) (ll: val),
+        (<<SRC: mrps_src0 = Maps.add "Echo" (ε, tt↑) Maps.empty>>) /\
         (<<TGT: mrps_tgt0 = Maps.add "Echo" (ε, ll↑) Maps.empty>>) /\
-        (<<SIM: iHyp (is_list ll (List.map (Vint) ns)) mr>>)
+        (<<SIM: (iHyp (⌜ll = Vnullptr⌝ ∨ (Exists ns, (Own(GRA.padding(echo_r ns))) ** is_list ll (List.map Vint ns))) mr)>>)
   .
+
+  (***
+echo starts with LHS ---> okay
+echo starts with RHS ---> ????; echo cannot start with RHS
+Half/Half
+
+main calling echo ---> only LHS (RHS -> exfalso). okay
+echo calling echo ---> 
+   ***)
 
   Local Opaque is_list.
 
@@ -106,9 +116,8 @@ Section SIMMODSEM.
     { init.
       unfold checkWf, forge, discard, put. steps.
       unfold echoF, echo_body. steps.
-      des. clarify.
-      iRefresh.
-      rewrite Any.upcast_downcast in *. clarify.
+      iRefresh. do 2 iDestruct _ASSUME0. iPure A. iPure A0.
+      clarify.
 
 
 
