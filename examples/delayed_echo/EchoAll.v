@@ -6,7 +6,7 @@ Require Import Behavior.
 Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
-Require Import Hoare.
+Require Import HoareDef.
 Require Import MutHeader SimModSem.
 Require Import Mem2 LinkedList1 Echo2 EchoMain1 Client1.
 
