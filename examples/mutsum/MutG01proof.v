@@ -45,7 +45,7 @@ Section SIMMODSEM.
   Proof.
     econstructor 1 with (wf:=wf) (le:=top2); et; ss.
     econs; ss. init.
-    unfold gF, checkWf, forge, discard, put. steps.
+    unfold gF, ccall, checkWf, forge, discard, put. steps.
     des; clarify. rewrite Any.upcast_downcast in *. clarify. apply_all_once Any.upcast_inj. des. clarify. clear_tac.
     unfold APC. unfold interp_hCallE_tgt. steps. rewrite URA.unit_idl in *.
     destruct (dec (Z.of_nat x0) 0%Z).
