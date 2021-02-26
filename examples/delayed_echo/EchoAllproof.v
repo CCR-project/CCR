@@ -8,7 +8,7 @@ Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
 Require Import MutHeader SimModSem.
-Require Import Mem2 LinkedList1 Echo2 EchoMain1 Client1.
+Require Import Mem0 LinkedList0 Echo0 EchoMain0 Client0 EchoAll.
 
 Require Import TODOYJ.
 
@@ -34,15 +34,19 @@ Section ECHO.
   Qed.
   Local Existing Instance echoRA_inG.
 
-  Definition echo_spec: Mod.t :=
+  Definition echo_impl: Mod.t :=
     Mod.add_list [
-        md_src Mem MemSbtb ; (* Mem *)
-        md_src Main MainSbtb ; (* Main *)
-        md_src LinkedList LinkedListSbtb ; (* LinkedList *)
-        md_src Echo EchoSbtb ; (* Echo *)
-        md_src Client ClientSbtb (* Client *)
+        Mem ; (* Mem *)
+        Main ; (* Main *)
+        LinkedList ; (* LinkedList *)
+        Echo ; (* Echo *)
+        Client (* Client *)
       ].
 
-End ECHO.
+  Theorem echo_correct:
+    Beh.of_program (Mod.interp echo_impl) <1= Beh.of_program (Mod.interp echo_spec).
+  Proof.
+    (* TODO: use Mem12proof LinkedList01proof Echo01proof EchoMain01proof Client01proof *)
+  Admitted.
 
-Definition echo_prog := ModSem.initial_itr_no_check (Mod.enclose echo_spec).
+End ECHO.

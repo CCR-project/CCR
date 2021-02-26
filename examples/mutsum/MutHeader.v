@@ -28,8 +28,6 @@ Compute (sum 10). (* 55 *)
 
 
 
-
-
 Section PROOF.
 
   Context `{Σ: GRA.t}.

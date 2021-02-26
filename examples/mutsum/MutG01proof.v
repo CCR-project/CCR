@@ -16,6 +16,8 @@ From ExtLib Require Import
      Structures.Maps
      Data.Map.FMapAList.
 
+Require Import HTactics.
+
 Generalizable Variables E R A B C X Y.
 
 Set Implicit Arguments.
@@ -31,7 +33,7 @@ Hint Resolve sim_itree_mon: paco.
 Section SIMMODSEM.
 
   Context `{Σ: GRA.t}.
-  Local Opaque GRA.to_URA sum.
+  Local Opaque GRA.to_URA.
 
   Let W: Type := (alist mname (Σ * Any.t)) * (alist mname (Σ * Any.t)).
 
@@ -44,42 +46,32 @@ Section SIMMODSEM.
   Theorem correct: ModSemPair.sim MutG1.GSem MutG0.GSem.
   Proof.
     econstructor 1 with (wf:=wf) (le:=top2); et; ss.
-    econs; ss. init.
-    unfold gF, checkWf, forge, discard, put. steps.
-    des; clarify. rewrite Any.upcast_downcast in *. clarify. apply_all_once Any.upcast_inj. des. clarify. clear_tac.
-    unfold APC. unfold interp_hCallE_tgt. steps. rewrite URA.unit_idl in *.
-    destruct (dec (Z.of_nat x0) 0%Z).
-    - destruct x0; ss. force_l. exists 0. steps.
-      force_l. eexists. force_l. eexists. force_l.
-      exists (ε, x1). steps. force_l.
-      { refl. }
-      steps. force_l. exists ε. force_l. esplits; eauto.
-      steps. force_l. exists x1. rewrite URA.unit_idl.
-      force_l; auto. steps.
-
-    - destruct x0; [ss|]. rewrite Nat2Z.inj_succ.
-      force_l. exists 1. steps.
-      force_l. exists false. steps. force_l. eexists ("f", [Vint (Z.of_nat x0)]↑).
-      steps. rewrite Any.upcast_downcast. ss.
-      unfold HoareCall, checkWf, forge, discard, put. steps.
-      force_l. eexists (_, _). steps. force_l.
-      { refl. }
-      steps. force_l. eexists. steps. force_l. eexists. force_l.
-      { rewrite URA.unit_idl. refl. }
-      steps. force_l. eexists. force_l. eexists. force_l. eexists. force_l.
-      { esplits; et. }
-      force_l.
+    econs; ss. init. unfold ccall, interp_hCallE_tgt.
+    harg_tac. des; clarify. unfold gF, ccall. anytac. ss. unfold APC. steps.
+    destruct (dec (Z.of_nat x) 0%Z).
+    - destruct x; ss. force_l. exists 0. steps.
+      force_l. eexists. hret_tac (@URA.unit Σ) (@URA.unit Σ).
+      { eapply URA.extends_updatable. exists rarg_src.
+        rewrite ! URA.unit_idl. auto. }
+      { esplits; eauto. }
+      { split; auto. }
+    - destruct x; [ss|]. rewrite Nat2Z.inj_succ.
+      force_l. exists 1. steps. force_l. exists false.
+      steps. force_l. eexists ("f", [Vint (Z.of_nat x)]↑).
+      steps. anytac.
+      hcall_tac x (ord_pure x) (@URA.unit Σ) (@URA.unit Σ) (@URA.unit Σ).
+      { eapply URA.extends_updatable. exists rarg_src.
+        rewrite ! URA.unit_idl. auto. }
+      { replace (Z.succ (Z.of_nat x) - 1)%Z with (Z.of_nat x) by lia.
+        splits; auto. }
       { splits; ss. }
-      replace (Z.succ (Z.of_nat x0) - 1)%Z with (Z.of_nat x0).
-      2: { lia. }
-      ired. gstep. econs; ss. i. des; clarify. unfold alist_add. ss. exists 100.
-      steps. des; clarify. rewrite Any.upcast_downcast in *. clarify. apply_all_once Any.upcast_inj. des. clarify. clear_tac.
-      steps. force_l. eexists. force_l. eexists. force_l. eexists (_, _).
-      steps. force_l.
-      { refl. }
-      steps. force_l. eexists. force_l.
-      { esplits; eauto. f_equal. f_equal. Local Transparent sum. ss. lia. }
-      steps. force_l. eexists. force_l; eauto. steps.
+      { split; auto. }
+      i. inv WF; des; clarify. esplits; ss. i. des; clarify. anytac. asimpl.
+      steps. force_l. eexists. hret_tac (@URA.unit Σ) (@URA.unit Σ).
+      { eapply URA.extends_updatable. exists rret.
+        rewrite ! URA.unit_idl. auto. }
+      { splits; auto. unfold sum. splits; auto. ss. repeat f_equal. lia. }
+      { split; ss. }
   Qed.
 
 End SIMMODSEM.

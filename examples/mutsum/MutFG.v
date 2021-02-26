@@ -10,7 +10,7 @@ Require Import Hoare.
 Require Import MutHeader SimModSem.
 Require Import MutF0 MutG0 MutMain0 MutF1 MutG1 MutMain1 MutF01proof MutG01proof MutMain01proof.
 
-Require Import TODO.
+Require Import HTactics.
 
 Generalizable Variables E R A B C X Y Σ.
 
@@ -31,25 +31,27 @@ Section PROOF.
 
   Definition FG1: Mod.t := Mod.add_list [MutMain1.main ; MutF1.F ; MutG1.G].
 
-  Definition FG2: Mod.t := {|
-    Mod.get_modsem := fun _ => {|
-        ModSem.fnsems := List.map (fun '(fn, sb) => (fn, fun_to_src sb.(fsb_body))) (mainsbtb ++ (Fsbtb ++ Gsbtb));
-        ModSem.initial_mrs := [("Main", (ε, tt↑)) ; ("F", (ε, tt↑)) ; ("G", (ε, tt↑))];
-      |};
-    Mod.sk := Sk.unit;
-  |}
-  .
+  Definition FG2: Mod.t :=
+    Mod.add_list [
+        md_src MutMain1.main mainsbtb ; (* Main *)
+        md_src MutF1.F Fsbtb ;  (* F *)
+        md_src MutG1.G Gsbtb  (* G *)
+      ].
 
   Definition FG3: Mod.t := {|
     Mod.get_modsem := fun _ => {|
-        ModSem.fnsems := [("main", fun _ => Ret (Vint 55)↑) ; ("f", fun _ => triggerUB) ; ("g", fun _ => triggerUB)];
+        ModSem.fnsems :=
+          [("main", fun _ => Ret (Vint 55)↑) ;
+          ("f", fun _ => triggerUB) ;
+          ("g", fun _ => triggerUB)];
         ModSem.initial_mrs := [("Main", (ε, tt↑)) ; ("F", (ε, tt↑)) ; ("G", (ε, tt↑))];
       |};
     Mod.sk := Sk.unit;
   |}
   .
 
-  Lemma FG01_correct: Beh.of_program (Mod.interp FG0) <1= Beh.of_program (Mod.interp FG1).
+  Lemma FG01_correct:
+    Beh.of_program (Mod.interp FG0) <1= Beh.of_program (Mod.interp FG1).
   Proof.
     eapply ModPair.sim_list_adequacy_closed. econs; [|econs; [|econs; ss]].
     - split; auto. ii. ss. eapply MutMain01proof.correct.
@@ -57,7 +59,8 @@ Section PROOF.
     - split; auto. ii. ss. eapply MutG01proof.correct.
   Qed.
 
-  Lemma FG12_correct: Beh.of_program (Mod.interp FG1) <1= Beh.of_program (Mod.interp FG2).
+  Lemma FG12_correct:
+    Beh.of_program (Mod.interp FG1) <1= Beh.of_program (Mod.interp FG2).
   Proof.
     ii.
     eapply adequacy_type with (sbtb:=mainsbtb++(Fsbtb++Gsbtb)) in PR; ss.
@@ -72,11 +75,12 @@ Section PROOF.
     eapply ModSemPair.mk with (wf:=top1) (le:=top2); ss.
     econs; [|econs; [|econs;ss]].
     - init. unfold fun_to_src, cfun, body_to_src, mainBody, interp_hCallE_src. steps.
-    - init. unfold fun_to_src, cfun, body_to_src, mainBody, interp_hCallE_src. steps.
-    - init. unfold fun_to_src, cfun, body_to_src, mainBody, interp_hCallE_src. steps.
+    - init. unfold fun_to_src, cfun, body_to_src, interp_hCallE_src. steps.
+    - init. unfold fun_to_src, cfun, body_to_src, interp_hCallE_src. steps.
   Qed.
 
-  Theorem FG_correct: Beh.of_program (Mod.interp FG0) <1= Beh.of_program (Mod.interp FG3).
+  Theorem FG_correct:
+    Beh.of_program (Mod.interp FG0) <1= Beh.of_program (Mod.interp FG3).
   Proof.
     i. eapply FG23_correct, FG12_correct, FG01_correct, PR.
   Qed.

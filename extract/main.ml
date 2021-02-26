@@ -71,19 +71,21 @@ let handle_Event = fun e k ->
   | Syscall (str, args) ->
      print_string (cl2s str ^ "(" ^ string_of_vals args ^ " ): ");
      let n =
-       (try int_of_string (read_line())
-        with Failure _ -> 0) in
+       if (String.equal (cl2s str) ("printf"))
+       then (print_endline ""; 0)
+       else (try int_of_string (read_line())
+             with Failure _ -> 0) in
      k (Obj.repr (Vint (Z.of_int n)))
 
 let rec run t =
   match observe t with
   | RetF r ->
-     print_endline (string_of_any r)
+     print_endline ("Return: " ^ (string_of_any r))
   | TauF t -> run t
   | VisF (e, k) -> handle_Event e (fun x -> run (k x))
 
 let main =
   print_endline "-----------------------------------";
-  print_endline "- Delayed Echo"; run (echo_prog);
-  print_endline "-----------------------------------";
   print_endline "- Mutual Sum"; run (mutsum);
+  print_endline "-----------------------------------";
+  print_endline "- Delayed Echo"; run (echo_prog);
