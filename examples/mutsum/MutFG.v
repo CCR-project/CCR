@@ -50,7 +50,8 @@ Section PROOF.
   |}
   .
 
-  Lemma FG01_correct: Beh.of_program (Mod.interp FG0) <1= Beh.of_program (Mod.interp FG1).
+  Lemma FG01_correct:
+    Beh.of_program (Mod.interp FG0) <1= Beh.of_program (Mod.interp FG1).
   Proof.
     eapply ModPair.sim_list_adequacy_closed. econs; [|econs; [|econs; ss]].
     - split; auto. ii. ss. eapply MutMain01proof.correct.
@@ -58,7 +59,8 @@ Section PROOF.
     - split; auto. ii. ss. eapply MutG01proof.correct.
   Qed.
 
-  Lemma FG12_correct: Beh.of_program (Mod.interp FG1) <1= Beh.of_program (Mod.interp FG2).
+  Lemma FG12_correct:
+    Beh.of_program (Mod.interp FG1) <1= Beh.of_program (Mod.interp FG2).
   Proof.
     ii.
     eapply adequacy_type with (sbtb:=mainsbtb++(Fsbtb++Gsbtb)) in PR; ss.
@@ -77,7 +79,8 @@ Section PROOF.
     - init. unfold fun_to_src, cfun, body_to_src, interp_hCallE_src. steps.
   Qed.
 
-  Theorem FG_correct: Beh.of_program (Mod.interp FG0) <1= Beh.of_program (Mod.interp FG3).
+  Theorem FG_correct:
+    Beh.of_program (Mod.interp FG0) <1= Beh.of_program (Mod.interp FG3).
   Proof.
     i. eapply FG23_correct, FG12_correct, FG01_correct, PR.
   Qed.
