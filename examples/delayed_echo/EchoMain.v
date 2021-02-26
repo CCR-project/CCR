@@ -6,7 +6,6 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
-Require Import Echo1.
 Require Import TODOYJ.
 
 Generalizable Variables E R A B C X Y Σ.
@@ -15,48 +14,41 @@ Set Implicit Arguments.
 
 
 
+(*** TODO: rename ccall into call; ***)
+(*** TODO: move this to TODOYJ ***)
+Definition hcall {X Y} (fn: gname) (varg: X): itree (hCallE +' pE +' eventE) Y :=
+  vret <- trigger (hCall false fn varg↑);; vret <- vret↓ǃ;; Ret vret.
+
+
 Section PROOF.
 
   Context `{Σ: GRA.t}.
 
-  Definition mainF: Any.t -> itree Es val :=
-    fun varg =>
-      ccall "echo" [Vnullptr];;
-
-
-      call
-      '(ll, nref) <- (pop2F_parg varg)?;;
-      `b: val <- (ccall "cmp"  [ll; Vnullptr]);;
-      if (is_zero b)
-      then (
-          '(blk, ofs) <- (unptr ll)?;;
-          let addr_val  := Vptr blk ofs in
-          let addr_next := Vptr blk (ofs + 1) in
-          `v: val    <- (ccall "load"  [addr_val]);;
-          `next: val <- (ccall "load"  [addr_next]);;
-          `_: val    <- (ccall "free"  [addr_val]);;
-          `_: val    <- (ccall "free"  [addr_next]);; (*** change "free"s specification ***)
-          `_: val    <- (ccall "store" [nref; v]);;
-          Ret next
-        )
-      else Ret Vnullptr
+  Definition main_body: list val -> itree (hCallE +' pE +' eventE) val :=
+    fun _ =>
+      `n: val <- (hcall "echo" ([]: list val));;
+      Ret Vundef
   .
 
+  Let main_spec:        fspec := (mk_simple "Main" (X:=unit) (fun _ _ o _ => o = ord_top) (top3)).
 
-  Definition mainF: Any.t -> itree Es Any.t :=
-    fun varg =>
-      r <- trigger (Call "f" [Vint 10]↑);;
-      Ret r.
+  Definition MainStb: list (gname * fspec) :=
+    [("main", main_spec)]
+  .
 
-  Definition mainSem: ModSem.t := {|
-    ModSem.fnsems := [("main", mainF)];
-    ModSem.initial_mrs := [("Main", (ε, tt↑))];
+  Definition MainSbtb: list (gname * fspecbody) :=
+    [("main", mk_specbody main_spec main_body)]
+  .
+
+  Definition MainSem: ModSem.t := {|
+    ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt MainStb fn fsb)) MainSbtb;
+    ModSem.initial_mrs := [("Main", (ε, ([]: list val)↑))];
   |}
   .
 
-  Definition main: Mod.t := {|
-    Mod.get_modsem := fun _ => mainSem;
-    Mod.sk := [("Main", Sk.Gfun)];
+  Definition Main: Mod.t := {|
+    Mod.get_modsem := fun _ => MainSem;
+    Mod.sk := Sk.unit;
   |}
   .
 End PROOF.

@@ -13,6 +13,7 @@ open ModSem
 
 open MutFG
 open Example0
+open EchoAll
 
 let cl2s = fun cl -> String.concat "" (List.map (String.make 1) cl)
 
@@ -82,6 +83,8 @@ let rec run t =
   | VisF (e, k) -> handle_Event e (fun x -> run (k x))
 
 let main =
+  print_endline "-----------------------------------";
+  print_endline "- Delayed Echo"; run (echo_prog);
   print_endline "-----------------------------------";
   print_endline "- Mutual Sum"; run (mutsum);
   print_endline "-----------------------------------";
