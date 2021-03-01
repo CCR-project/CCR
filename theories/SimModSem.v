@@ -208,6 +208,14 @@ Section SIM.
     :
       _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (Call fn varg) >>= k_src)
                  ((mrs_tgt0, fr_tgt0), trigger (Call fn varg) >>= k_tgt)
+  | sim_itree_syscall
+      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      fn varg k_src k_tgt
+      (K: forall vret,
+          exists i1, sim_itree i1 ((mrs_src0, fr_src0), k_src vret) ((mrs_tgt0, fr_tgt0), k_tgt vret))
+    :
+      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (Syscall fn varg) >>= k_src)
+                 ((mrs_tgt0, fr_tgt0), trigger (Syscall fn varg) >>= k_tgt)
   (*** TODO: sim_syscall is nontrivial; it should accept "injected" memory... ***)
   (*** TODO: simplify the model: Syscall: list val -> val ***)
 
@@ -393,6 +401,7 @@ Section SIM.
   Lemma sim_itree_mon: monotone3 _sim_itree.
   Proof.
     ii. inv IN; try (by des; econs; ss; et).
+    - econs; ss; et. ii. exploit K; et. i; des. esplits; et.
     - econs; ss; et. ii. exploit K; et. i; des. esplits; et.
   Qed.
 

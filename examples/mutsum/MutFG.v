@@ -42,8 +42,8 @@ Section PROOF.
     Mod.get_modsem := fun _ => {|
         ModSem.fnsems :=
           [("main", fun _ => Ret (Vint 55)↑) ;
-          ("f", fun _ => triggerUB) ;
-          ("g", fun _ => triggerUB)];
+          ("f", fun _ => trigger (Choose _)) ;
+          ("g", fun _ => trigger (Choose _))];
         ModSem.initial_mrs := [("Main", (ε, tt↑)) ; ("F", (ε, tt↑)) ; ("G", (ε, tt↑))];
       |};
     Mod.sk := Sk.unit;
@@ -75,8 +75,10 @@ Section PROOF.
     eapply ModSemPair.mk with (wf:=top1) (le:=top2); ss.
     econs; [|econs; [|econs;ss]].
     - init. unfold fun_to_src, cfun, body_to_src, mainBody, interp_hCallE_src. steps.
-    - init. unfold fun_to_src, cfun, body_to_src, interp_hCallE_src. steps.
-    - init. unfold fun_to_src, cfun, body_to_src, interp_hCallE_src. steps.
+    - init. unfold fun_to_src, cfun, body_to_src, mainBody, interp_hCallE_src.
+      steps. force_l. eexists. steps.
+    - init. unfold fun_to_src, cfun, body_to_src, mainBody, interp_hCallE_src.
+      steps. force_l. eexists. steps.
   Qed.
 
   Theorem FG_correct:

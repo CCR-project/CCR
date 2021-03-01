@@ -19,7 +19,7 @@ Section PROOF.
 
   Context `{Σ: GRA.t}.
 
-  Definition Fsbtb: list (string * fspecbody) := [("f", mk_specbody f_spec (fun _ => triggerUB))].
+  Definition Fsbtb: list (string * fspecbody) := [("f", mk_specbody f_spec (fun _ => trigger (Choose _)))].
 
   Definition FSem: ModSem.t := {|
     ModSem.fnsems := List.map (fun '(fn, body) => (fn, fun_to_tgt GlobalStb fn body)) Fsbtb;
