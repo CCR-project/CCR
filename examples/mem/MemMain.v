@@ -135,8 +135,8 @@ Section PROOF.
       + instantiate (1:=eq). destruct e.
         { (**** main part ****)
           ired. unfold handle_hCallE_tgt.
-          des_ifs.
-          - assert(T: s = s0 /\ f = f0) by admit "ez - uniqueness". destruct T. subst. refl.
+          unfold unwrapN. des_ifs.
+          - assert(T: p = p0) by admit "ez - uniqueness". subst. refl.
           - exfalso. admit "ez - extends".
           - exfalso. admit "ez - contains".
           - exfalso. admit "ez - contains".

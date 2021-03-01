@@ -205,9 +205,6 @@ Section CANCEL.
   (*** TODO: try above idea; if it fails, document it; and refactor below with alist ***)
   Variable stb: list (gname * fspec).
 
-  (****************** TODO: REMOVE ALL MATCH AND REPLACE IT WITH UNWRAPU  *****************)
-  (****************** TODO: REMOVE ALL MATCH AND REPLACE IT WITH UNWRAPU  *****************)
-  (****************** TODO: REMOVE ALL MATCH AND REPLACE IT WITH UNWRAPU  *****************)
   Definition handle_hCallE_src: hCallE ~> itree Es :=
     fun _ '(hCall tbr fn varg_src) =>
       match tbr with
@@ -266,13 +263,10 @@ Section CANCEL.
 
   Definition handle_hCallE_tgt (mn: mname) (ord_cur: ord): hCallE ~> itree Es :=
     fun _ '(hCall tbr fn varg_src) =>
-      match List.find (fun '(_fn, _) => dec fn _fn) stb with
-      | Some (_, f) =>
-        varg_src <- varg_src↓ǃ;;
-        vret_src <- (HoareCall (mn) tbr ord_cur (f.(precond)) (f.(postcond)) fn varg_src);;
-        Ret vret_src↑
-      | None => triggerNB
-      end
+      '(_, f) <- (List.find (fun '(_fn, _) => dec fn _fn) stb)ǃ;;
+      varg_src <- varg_src↓ǃ;;
+      vret_src <- (HoareCall (mn) tbr ord_cur (f.(precond)) (f.(postcond)) fn varg_src);;
+      Ret vret_src↑
   .
 
   Definition interp_hCallE_tgt `{E -< Es} (mn: mname) (ord_cur: ord): itree (hCallE +' E) ~> itree Es :=
@@ -557,7 +551,8 @@ End PSEUDOTYPING.
   From ExtLib Require Import
        Data.Map.FMapAList.
 
+  Hint Resolve cpn3_wcompat: paco.
   Ltac init :=
     split; ss; ii; clarify; rename y into varg; eexists 100%nat; ss; des; clarify;
-    ginit; [eapply cpn3_wcompat; eauto with paco|]; unfold alist_add, alist_remove; ss;
+    ginit; []; unfold alist_add, alist_remove; ss;
     unfold fun_to_tgt, cfun, HoareFun; ss.

@@ -544,3 +544,12 @@ End EXTEND.
 
 Create HintDb stb.
 Hint Rewrite (Seal.sealing_eq "stb"): stb.
+
+Ltac stb_tac :=
+  match goal with
+  | [H: find _ ?xs = _ |- _ ] =>
+    match type of xs with
+    | (list (string * fspec)) =>
+      autounfold with stb in H; autorewrite with stb in H; simpl in H
+    end
+  end.

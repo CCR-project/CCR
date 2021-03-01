@@ -472,10 +472,10 @@ Section CANCEL.
 (x0 <- interp_Es (ModSem.prog ms_tgt)
                  ((ModSem.prog ms_tgt) _ (Call "main" ([]: list val)↑)) st_tgt0;; Ret (snd x0))).
     { clear SIM. ginit. { eapply cpn5_wcompat; eauto with paco. }
-      unfold interp_hCallE_tgt. rewrite unfold_interp. steps.
+      unfold interp_hCallE_tgt. rewrite unfold_interp. steps. rewrite MAIN. steps.
       unfold HoareCall.
       destruct (find (fun mnr => dec "Main" (fst mnr)) (ModSem.initial_mrs ms_tgt)) eqn:MAINR; cycle 1.
-      { exfalso. clear - WF1 Heq MAINR. admit "ez - use WF1". }
+      { exfalso. clear - WF1 MAIN MAINR. admit "ez - use WF1". }
       destruct p; ss.
       assert(s = "Main") by admit "ez". clarify.
       rewrite Any.upcast_downcast.

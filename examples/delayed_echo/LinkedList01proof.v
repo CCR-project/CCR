@@ -169,7 +169,6 @@ Section SIMMODSEM.
     { typeclasses eauto. }
     { ss. }
 
-    Opaque MemStb LinkedListStb.
     econs; ss.
     { init.
       unfold checkWf, forge, discard, put. steps.
@@ -186,8 +185,7 @@ Section SIMMODSEM.
       force_l. exists 7.
       steps. rewrite unfold_APC. steps. force_l. exists false. steps.
       force_l. eexists ("load", [Vptr n 0]↑). steps.
-      Transparent MemStb. cbn in Heq. Opaque MemStb.
-      ss. clarify. rewrite Any.upcast_downcast. steps.
+      force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
       unfold HoareCall, checkWf, forge, discard, put. steps.
       force_l. eexists (ε, _). steps. force_l. { refl. } steps. force_l.
       (* Ltac iHyply H := *)
@@ -233,7 +231,7 @@ Section SIMMODSEM.
       - (*********** cmp ***********)
         iPure _ASSUME3. clarify.
         rewrite unfold_APC. steps. force_l. exists false. steps. force_l. eexists ("cmp", [Vnullptr; Vnullptr]↑). steps.
-        Transparent MemStb. cbn in Heq. Opaque MemStb. ss. clarify. rewrite Any.upcast_downcast. steps.
+        force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
         unfold HoareCall, checkWf, forge, discard, put. steps. iRefresh.
         force_l. eexists (ε, _). steps. force_l. { refl. } steps. force_l. iRefresh.
         exists ε. steps. force_l. esplits. force_l. { rewrite URA.unit_idl. refl. } steps.
@@ -281,7 +279,7 @@ Section SIMMODSEM.
 
 
         rewrite unfold_APC. steps. force_l. exists false. steps. force_l. eexists ("cmp", [Vptr x0 0; Vnullptr]↑). steps.
-        Transparent MemStb. cbn in Heq. Opaque MemStb. ss. clarify. rewrite Any.upcast_downcast. steps.
+        force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
         unfold HoareCall, checkWf, forge, discard, put. steps. iRefresh.
         (* Ltac iExists' H := *)
         (*   match (type of H) with *)
@@ -336,7 +334,7 @@ Section SIMMODSEM.
 
 
         rewrite unfold_APC. steps. force_l. exists false. steps. force_l. eexists ("load", [Vptr x0 0]↑). steps.
-        Transparent MemStb. cbn in Heq. Opaque MemStb. ss. clarify. rewrite Any.upcast_downcast. steps.
+        force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
         unfold HoareCall, checkWf, forge, discard, put. steps. iRefresh.
         force_l. eexists (ε, _). steps. force_l. { refl. } steps. force_l. iExists _ASSUME3. steps. force_l. esplit.
         steps. force_l.
@@ -354,7 +352,7 @@ Section SIMMODSEM.
 
 
         rewrite unfold_APC. steps. force_l. exists false. steps. force_l. eexists ("load", [Vptr x0 1]↑). steps.
-        Transparent MemStb. cbn in Heq. Opaque MemStb. ss. clarify. rewrite Any.upcast_downcast. steps.
+        force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
         unfold HoareCall, checkWf, forge, discard, put. steps. iRefresh.
         force_l. eexists (ε, _). steps. force_l. { refl. } steps. force_l. iExists A1. steps. force_l. esplit.
         steps. force_l.
@@ -373,7 +371,7 @@ Section SIMMODSEM.
 
 
         rewrite unfold_APC. steps. force_l. exists false. steps. force_l. eexists ("free", [Vptr x0 0]↑). steps.
-        Transparent MemStb. cbn in Heq. Opaque MemStb. ss. clarify. rewrite Any.upcast_downcast. steps.
+        force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
         unfold HoareCall, checkWf, forge, discard, put. steps. iRefresh.
         force_l. eexists (ε, _). steps. force_l. { refl. } steps. force_l. iExists _ASSUME5. steps. force_l. esplit.
         steps. force_l.
@@ -391,7 +389,7 @@ Section SIMMODSEM.
 
 
         rewrite unfold_APC. steps. force_l. exists false. steps. force_l. eexists ("free", [Vptr x0 1]↑). steps.
-        Transparent MemStb. cbn in Heq. Opaque MemStb. ss. clarify. rewrite Any.upcast_downcast. steps.
+        force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
         unfold HoareCall, checkWf, forge, discard, put. steps. iRefresh.
         force_l. eexists (ε, _). steps. force_l. { refl. } steps. force_l. iExists _ASSUME6. steps. force_l. esplit.
         steps. force_l.
@@ -410,7 +408,7 @@ Section SIMMODSEM.
 
 
         rewrite unfold_APC. steps. force_l. exists false. steps. force_l. eexists ("store", [Vptr n 0; x1]↑). steps.
-        Transparent MemStb. cbn in Heq. Opaque MemStb. ss. clarify. rewrite Any.upcast_downcast. steps.
+        force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
         unfold HoareCall, checkWf, forge, discard, put. steps. iRefresh.
         force_l. eexists (ε, _). steps. force_l. { refl. } steps. force_l. iExists _ASSUME1. steps. force_l. esplit.
         steps. force_l.
@@ -458,7 +456,7 @@ Section SIMMODSEM.
 
 
         rewrite unfold_APC. steps. force_l. exists false. steps. force_l. eexists ("cmp", [Vnullptr; Vnullptr]↑). steps.
-        Transparent MemStb. cbn in Heq. Opaque MemStb. ss. clarify. rewrite Any.upcast_downcast. steps.
+        force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
         unfold HoareCall, checkWf, forge, discard, put. steps. iRefresh.
         force_l. eexists (ε, _). steps. force_l. { refl. } steps. force_l. eexists ε. steps. force_l. esplit.
         steps. force_l.
@@ -485,7 +483,7 @@ Section SIMMODSEM.
 
 
         rewrite unfold_APC. steps. force_l. exists false. steps. force_l. eexists ("cmp", [Vptr x 0; Vnullptr]↑). steps.
-        Transparent MemStb. cbn in Heq. Opaque MemStb. ss. clarify. rewrite Any.upcast_downcast. steps.
+        force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
         unfold HoareCall, checkWf, forge, discard, put. steps. iRefresh.
         force_l. eexists (ε, _). steps. force_l. { refl. } steps. force_l. iExists A2. steps. force_l. esplit.
         steps. force_l.
@@ -504,7 +502,7 @@ Section SIMMODSEM.
 
 
         rewrite unfold_APC. steps. force_l. exists false. steps. force_l. eexists ("load", [Vptr x 0]↑). steps.
-        Transparent MemStb. cbn in Heq. Opaque MemStb. ss. clarify. rewrite Any.upcast_downcast. steps.
+        force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
         unfold HoareCall, checkWf, forge, discard, put. steps. iRefresh.
         force_l. eexists (ε, _). steps. force_l. { refl. } steps. force_l. iExists _ASSUME1. steps. force_l. esplit.
         steps. force_l.
@@ -519,7 +517,7 @@ Section SIMMODSEM.
 
 
         rewrite unfold_APC. steps. force_l. exists false. steps. force_l. eexists ("load", [Vptr x 1]↑). steps.
-        Transparent MemStb. cbn in Heq. Opaque MemStb. ss. clarify. rewrite Any.upcast_downcast. steps.
+        force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
         unfold HoareCall, checkWf, forge, discard, put. steps. iRefresh.
         force_l. eexists (ε, _). steps. force_l. { refl. } steps. force_l. iExists A1. steps. force_l. esplit.
         steps. force_l.
@@ -544,7 +542,7 @@ Section SIMMODSEM.
 
 
         rewrite unfold_APC. steps. force_l. exists false. steps. force_l. eexists ("free", [Vptr x 0]↑). steps.
-        Transparent MemStb. cbn in Heq. Opaque MemStb. ss. clarify. rewrite Any.upcast_downcast. steps.
+        force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
         unfold HoareCall, checkWf, forge, discard, put. steps. iRefresh.
         force_l. eexists (ε, _). steps. force_l. { refl. } steps. force_l. iExists _ASSUME3. steps. force_l. esplit.
         steps. force_l.
@@ -559,7 +557,7 @@ Section SIMMODSEM.
 
 
         rewrite unfold_APC. steps. force_l. exists false. steps. force_l. eexists ("free", [Vptr x 1]↑). steps.
-        Transparent MemStb. cbn in Heq. Opaque MemStb. ss. clarify. rewrite Any.upcast_downcast. steps.
+        force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
         unfold HoareCall, checkWf, forge, discard, put. steps. iRefresh.
         force_l. eexists (ε, _). steps. force_l. { refl. } steps. force_l. iExists _ASSUME4. steps. force_l. esplit.
         steps. force_l.
@@ -574,7 +572,7 @@ Section SIMMODSEM.
 
 
         rewrite unfold_APC. steps. force_l. exists false. steps. force_l. eexists ("store", [Vptr n 0; v]↑). steps.
-        Transparent MemStb. cbn in Heq. Opaque MemStb. ss. clarify. rewrite Any.upcast_downcast. steps.
+        force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
         unfold HoareCall, checkWf, forge, discard, put. steps. iRefresh.
         force_l. eexists (ε, _). steps. force_l. { refl. } steps. force_l. iExists A0. steps. force_l. esplit.
         steps. force_l.
@@ -618,7 +616,7 @@ Section SIMMODSEM.
 
 
       rewrite unfold_APC. steps. force_l. exists false. steps. force_l. eexists ("alloc", [Vint 2]↑). steps.
-      Transparent MemStb. cbn in Heq. Opaque MemStb. ss. clarify. rewrite Any.upcast_downcast. steps.
+      force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
       unfold HoareCall, checkWf, forge, discard, put. steps. iRefresh.
       force_l. eexists (ε, _). steps. force_l. { refl. } steps. force_l. eexists ε. steps. force_l. esplit.
       steps. force_l.
@@ -636,7 +634,7 @@ Section SIMMODSEM.
 
 
       rewrite unfold_APC. steps. force_l. exists false. steps. force_l. eexists ("store", [Vptr x0 0; v]↑). steps.
-      Transparent MemStb. cbn in Heq. Opaque MemStb. ss. clarify. rewrite Any.upcast_downcast. steps.
+      force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
       unfold HoareCall, checkWf, forge, discard, put. steps. iRefresh.
       force_l. eexists (ε, _). steps. force_l. { refl. } steps. force_l. iExists A. steps. force_l. esplit.
       steps. force_l.
@@ -653,7 +651,7 @@ Section SIMMODSEM.
 
 
       rewrite unfold_APC. steps. force_l. exists false. steps. force_l. eexists ("store", [Vptr x0 1; x2]↑). steps.
-      Transparent MemStb. cbn in Heq. Opaque MemStb. ss. clarify. rewrite Any.upcast_downcast. steps.
+      force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
       unfold HoareCall, checkWf, forge, discard, put. steps. iRefresh.
       force_l. eexists (ε, _). steps. force_l. { refl. } steps. force_l. iExists A1. steps. force_l. esplit.
       steps. force_l.

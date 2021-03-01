@@ -349,7 +349,6 @@ Section SIMMODSEM.
     }
 
     Opaque URA.add.
-    Opaque LinkedListStb EchoStb MemStb.
     econs; ss.
     { unfold echoF, echo_body. init. harg_tac.
       iRefresh. do 2 iDestruct PRE. iPure A. iPure A0. clarify.
@@ -380,9 +379,7 @@ Section SIMMODSEM.
 
       steps. unfold hcall, ccall. steps.
       unfold body_to_tgt. unfold interp_hCallE_tgt, APC. steps. (********** TODO: never unfold it, make a lemma ******************)
-
-
-      Transparent LinkedListStb ClientStb EchoStb MemStb. cbn in Heq. Opaque LinkedListStb ClientStb EchoStb MemStb. ss. clarify. rewrite Any.upcast_downcast. steps.
+      force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
       unfold HoareCall, checkWf, forge, discard, put. steps. iRefresh.
       force_l. eexists (x4 ⋅ x5, _). steps. force_l.
       { erewrite f_equal; try refl; r_equalize; r_solve. }
@@ -429,7 +426,7 @@ Section SIMMODSEM.
 
       destruct (dec z (- 1)%Z).
       - subst. ss. steps.
-        Transparent LinkedListStb ClientStb EchoStb MemStb. cbn in Heq. Opaque LinkedListStb ClientStb EchoStb MemStb. ss. clarify. rewrite Any.upcast_downcast. steps.
+        force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
         unfold HoareCall, checkWf, forge, discard, put. steps. iRefresh.
         force_l. eexists (x6 ⋅ x7, x2). steps. force_l.
         { eapply URA.extends_updatable. r_equalize; r_solve. }
@@ -445,11 +442,10 @@ Section SIMMODSEM.
         { eapply URA.extends_updatable. esplit. r_equalize; r_solve. }
         { iRefresh. iDestruct SIM0. esplits; eauto. eexists; iRefresh. eauto. }
       - steps.
-        Transparent LinkedListStb ClientStb EchoStb MemStb. cbn in Heq. Opaque LinkedListStb ClientStb EchoStb MemStb. ss. clarify. rewrite Any.upcast_downcast. steps.
         force_l. eexists 1. steps. rewrite Any.upcast_downcast. ss. steps.
 
         rewrite unfold_APC. steps. force_l. exists false. steps. force_l. eexists ("push", [ll0; Vint z]↑). steps.
-        Transparent LinkedListStb ClientStb EchoStb MemStb. cbn in Heq. Opaque LinkedListStb ClientStb EchoStb MemStb. ss. clarify. rewrite Any.upcast_downcast. steps.
+        force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
         unfold HoareCall at 2, checkWf, forge, discard, put. steps. force_l.
         Ltac until_bar TAC :=
           (on_last_hyp ltac:(fun id' =>
@@ -517,6 +513,7 @@ Section SIMMODSEM.
 
 
         rewrite unfold_APC. steps.
+        force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
         unfold HoareCall, checkWf, forge, discard, put. steps. force_l. eexists (x0 ⋅ x9, x11). steps. force_l.
         { rr_until_bar. clear - A1. rewrite ! URA.add_assoc.
           replace (mr ⋅ x6 ⋅ x9 ⋅ x10) with (mr ⋅ x6 ⋅ (x9 ⋅ x10)) by (rewrite ! URA.add_assoc; refl).
@@ -538,9 +535,7 @@ Section SIMMODSEM.
         { esplits; eauto. }
     }
     econs; ss.
-    { Fail HoareDef.init. (***** TODO: FIXME or remove me *****)
-      split; ss; ii; clarify; rename y into varg; eexists 100; ss; des; clarify; ginit;
-        unfold alist_add, alist_remove; ss; unfold fun_to_tgt, cfun, HoareFun; ss.
+    { HoareDef.init.
       unfold checkWf, forge, discard, put. steps.
       unfold echo_finishF, echo_finish_body. steps.
       iRefresh. do 2 iDestruct _ASSUME0. iPure A. iPure A0. clarify.
@@ -583,8 +578,6 @@ Section SIMMODSEM.
       - steps. rewrite Any.upcast_downcast. ss. steps.
         force_l. eexists 3. steps.
 
-        Transparent LinkedListStb ClientStb EchoStb MemStb. cbn in Heq, Heq0. Opaque LinkedListStb ClientStb EchoStb MemStb. ss. clarify.
-        rewrite ! Any.upcast_downcast. steps.
 
         assert(T: is_zero ll = false).
         { rewrite unfold_is_list in *. do 4 iDestruct A0. iPure A0. subst. ss. }
@@ -596,7 +589,7 @@ Section SIMMODSEM.
         (*** x2 x1 x5 ***)
 
         rewrite unfold_APC. steps. force_l. exists false. steps. force_l. eexists ("alloc", [Vint 1]↑). steps.
-        Transparent LinkedListStb ClientStb EchoStb MemStb. cbn in Heq. Opaque LinkedListStb ClientStb EchoStb MemStb. ss. clarify. rewrite Any.upcast_downcast. steps.
+        force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
         unfold HoareCall at 3, checkWf, forge, discard, put. steps. force_l. eexists (x5, x2 ⋅ x1). steps. force_l.
         { rewrite URA.unit_idl. eapply URA.extends_updatable. r_equalize; r_solve. }
         steps. force_l. eexists ε. steps. force_l. eexists _. steps. force_l. { rewrite URA.unit_idl. refl. } steps.
@@ -639,7 +632,7 @@ Section SIMMODSEM.
 
 
         rewrite unfold_APC. steps. force_l. exists false. steps. force_l. eexists ("pop2", [ll; Vptr x0 0]↑). steps.
-        Transparent LinkedListStb ClientStb EchoStb MemStb. cbn in Heq. Opaque LinkedListStb ClientStb EchoStb MemStb. ss. clarify. rewrite Any.upcast_downcast. steps.
+        force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
         unfold HoareCall at 3, checkWf, forge, discard, put. steps. force_l. eexists (mr, x1 ⋅ x2 ⋅ x3 ⋅ x7). steps. force_l.
         { eapply URA.extends_updatable. r_equalize; r_solve. }
         steps. force_l. exists (x2 ⋅ x7). steps. force_l. eexists _. steps. force_l.
