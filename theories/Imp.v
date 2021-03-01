@@ -150,13 +150,13 @@ Section Denote.
       meaning to [itree]s stemmed from other entities. Therefore, we
       parameterize the denotation of _Imp_ by a larger universe of events [eff],
       of which [ImpState] is assumed to be a subevent. *)
-  
+
   Context `{Σ: GRA.t}.
   Context {eff : Type -> Type}.
   Context {HasImpState : ImpState -< eff}.
   Context {HasCall : callE -< eff}.
   Context {HasEvent : eventE -< eff}.
-  
+
   (** _Imp_ expressions are denoted as [itree eff value], where the returned
       value in the tree is the value computed by the expression.
       In the [Var] case, the [trigger] operator smoothly lifts a single event to
@@ -203,7 +203,7 @@ Section Denote.
       taken to be [unit].
       That is, the right tag [inr tt] says to exit the loop,
       while the [inl tt] says to continue. *)
-  
+
   Definition while (step : itree eff (unit + val)) : itree eff val :=
     ITree.iter (fun _ => step) tt.
 
@@ -221,7 +221,7 @@ Section Denote.
     | Ret b => if b then t else f
     | _ => triggerUB
     end.
-  
+
   (** The meaning of Imp statements is now easy to define. They are all
       straightforward, except for [While], which uses our new [while] combinator
       over the computation that evaluates the conditional, and then the body if
@@ -253,7 +253,7 @@ Section Denote.
         v <- trigger (Syscall f eval_args) ;;
         trigger (SetVar x v) ;; ret Vundef
       end
-        
+
     | Expr e => v <- denote_expr e ;; Ret v
     end.
 
@@ -379,7 +379,7 @@ Section InterpImpProperties.
 
 End InterpImpProperties.
 
-**)
+ **)
 
 (****************** copy-paste end **********************)
 (****************** copy-paste end **********************)
@@ -391,21 +391,20 @@ End InterpImpProperties.
 Module ImpMod.
 Section MODSEM.
   Context `{GRA: GRA.t}.
-  Variable sk: Sk.t.
   Variable mn: mname.
   Variable prog: program.
 
   Set Typeclasses Depth 5.
   Instance Initial_void1 : @Initial (Type -> Type) IFun void1 := @elim_void1. (*** TODO: move to ITreelib ***)
-  
+
   Definition modsem: ModSem.t := {|
     ModSem.fnsems := List.map (fun '(fn, st) => (fn, cfun (eval_function st))) prog;
-    ModSem.initial_mrs := [(mn, (URA.unit, unit↑))];
+    ModSem.initial_mrs := [(mn, (URA.unit, tt↑))];
   |}.
 
   Definition get_mod: Mod.t := {|
     Mod.get_modsem := fun _ => modsem;
-    Mod.sk := Sk.unit;
+    Mod.sk := List.map (fun '(fn, _) => (fn, Sk.Gfun)) prog;
   |}.
 
 End MODSEM.
@@ -416,7 +415,7 @@ Section Example_Extract.
 
   Let Σ: GRA.t := fun _ => URA.of_RA RA.empty.
   Local Existing Instance Σ.
-  
+
   Open Scope expr_scope.
   Open Scope stmt_scope.
 
@@ -429,11 +428,11 @@ Section Example_Extract.
 
   Definition factorial_fundef : function :=
     {| params := ["input"] ; body := factorial |}.
-  
+
   Definition main : stmt :=
     "result" :=# (Fun "factorial") [Lit (Vint 4)] ;;;
     Expr "result".
-  
+
   Definition main_fundef : function :=
     {| params := [] ; body := main |}.
 
@@ -443,5 +442,5 @@ Section Example_Extract.
   Definition ex_prog: Mod.t := ImpMod.get_mod "Main" ex_extract.
 
   Definition imp_ex := ModSem.initial_itr_no_check (Mod.enclose ex_prog).
-  
+
 End Example_Extract.

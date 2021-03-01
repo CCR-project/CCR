@@ -8,7 +8,8 @@ Require Import Skeleton.
 Require Import PCM.
 Require Import Hoare.
 Require Import MutHeader SimModSem.
-Require Import MutF0 MutG0 MutMain0 MutF1 MutG1 MutMain1 MutF01proof MutG01proof MutMain01proof.
+Require Import MutFImp MutGImp MutF0 MutG0 MutMain0 MutF1 MutG1 MutMain1.
+Require Import MutFImp0proof MutGImp0proof MutF01proof MutG01proof MutMain01proof.
 
 Require Import HTactics.
 
@@ -26,6 +27,8 @@ Section PROOF.
   Local Opaque GRA.to_URA.
   Infix "⋅" := URA.add (at level 50, left associativity).
   Notation "(⋅)" := URA.add (only parsing).
+
+  Definition FGImp: Mod.t := Mod.add_list [MutMain0.main ; MutFImp.F ; MutGImp.G].
 
   Definition FG0: Mod.t := Mod.add_list [MutMain0.main ; MutF0.F ; MutG0.G].
 
@@ -49,6 +52,14 @@ Section PROOF.
     Mod.sk := Sk.unit;
   |}
   .
+
+  Lemma FGImp0_correct:
+    Beh.of_program (Mod.interp FGImp) <1= Beh.of_program (Mod.interp FG0).
+  Proof.
+    eapply ModPair.sim_list_adequacy. econs; [|econs; [|econs; ss]].
+    - split; auto. ii. ss. eapply MutFImp0proof.correct.
+    - split; auto. ii. ss. eapply MutGImp0proof.correct.
+  Qed.
 
   Lemma FG01_correct:
     Beh.of_program (Mod.interp FG0) <1= Beh.of_program (Mod.interp FG1).
@@ -82,11 +93,12 @@ Section PROOF.
   Qed.
 
   Theorem FG_correct:
-    Beh.of_program (Mod.interp FG0) <1= Beh.of_program (Mod.interp FG3).
+    Beh.of_program (Mod.interp FGImp) <1= Beh.of_program (Mod.interp FG3).
   Proof.
-    i. eapply FG23_correct, FG12_correct, FG01_correct, PR.
+    i. eapply FG23_correct, FG12_correct, FG01_correct, FGImp0_correct, PR.
   Qed.
 
 End PROOF.
 
+Definition mutsum_imp := ModSem.initial_itr_no_check (Mod.enclose FGImp).
 Definition mutsum := ModSem.initial_itr_no_check (Mod.enclose FG3).
