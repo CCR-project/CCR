@@ -105,9 +105,10 @@ Section PROOF.
   (* Let echo_spec:        fspec := (mk_simple "Echo" (X:=unit) (fun _ _ o _ => o = ord_top) (top3)). *)
   (* Let echo_finish_spec: fspec := (mk_simple "Echo" (X:=unit) (fun _ _ o _ => o = ord_top) (top3)). *)
 
-  Definition EchoStb: list (gname * fspec) :=
-    [("echo", echo_spec) ; ("echo_finish", echo_finish_spec)]
-  .
+  Definition EchoStb: list (gname * fspec).
+    eapply (Seal.sealing "stb").
+    apply [("echo", echo_spec) ; ("echo_finish", echo_finish_spec)].
+  Defined.
 
   Definition EchoSbtb: list (gname * fspecbody) :=
     [("echo", mk_specbody echo_spec echo_body); ("echo_finish", mk_specbody echo_finish_spec echo_finish_body)]
@@ -125,3 +126,4 @@ Section PROOF.
   |}
   .
 End PROOF.
+Global Hint Unfold EchoStb: stb.

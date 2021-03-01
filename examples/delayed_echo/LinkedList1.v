@@ -66,9 +66,10 @@ Section PROOF.
                                      (fun '(x, xs) varg o => Exists ll, ⌜varg = [ll; x]↑⌝ ** is_list ll xs ** ⌜o = ord_pure 2⌝)
                                      (fun '(x, xs) vret => Exists ll', is_list ll' (x :: xs) ** ⌜vret = ll'↑⌝)).
 
-  Definition LinkedListStb: list (gname * fspec) :=
-    [("pop", pop_spec) ; ("pop2", pop2_spec) ; ("push", push_spec)]
-  .
+  Definition LinkedListStb: list (gname * fspec).
+    eapply (Seal.sealing "stb").
+    apply [("pop", pop_spec) ; ("pop2", pop2_spec) ; ("push", push_spec)].
+  Defined.
 
   Definition LinkedListSbtb: list (gname * fspecbody) :=
     [("pop", mk_specbody pop_spec (fun _ => APC;; trigger (Choose _)));
@@ -90,3 +91,4 @@ Section PROOF.
   .
 
 End PROOF.
+Global Hint Unfold LinkedListStb: stb.

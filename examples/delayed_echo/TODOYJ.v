@@ -539,3 +539,8 @@ Section EXTEND.
   Admitted.
 
 End EXTEND.
+
+
+
+Create HintDb stb.
+Hint Rewrite (Seal.sealing_eq "stb"): stb.

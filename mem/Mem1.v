@@ -135,9 +135,10 @@ Section PROOF.
           vret = (if result then Vint 1 else Vint 0)↑ /\ rret = resource)
     ).
 
-  Definition MemStb: list (gname * fspec) :=
-    [("alloc", alloc_spec) ; ("free", free_spec) ; ("load", load_spec) ; ("store", store_spec) ; ("cmp", cmp_spec)]
-  .
+  Definition MemStb: list (gname * fspec).
+    eapply (Seal.sealing "stb").
+    apply [("alloc", alloc_spec) ; ("free", free_spec) ; ("load", load_spec) ; ("store", store_spec) ; ("cmp", cmp_spec)].
+  Defined.
 
   Definition MemSbtb: list (gname * fspecbody) :=
     [("alloc", mk_specbody alloc_spec (fun _ => trigger (Choose _)));
@@ -163,3 +164,4 @@ Section PROOF.
   .
 
 End PROOF.
+Global Hint Unfold MemStb: stb.

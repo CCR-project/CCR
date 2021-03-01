@@ -193,7 +193,6 @@ Section PROOF.
     ii.
     set (global_sbtb:=MemSbtb++MainSbtb).
     (* clearbody global_stb. *)
-    Local Opaque MemStb.
     Local Opaque MemSbtb.
     Local Opaque MainSbtb.
     eapply adequacy_type with (sbtb:=global_sbtb) in PR.
@@ -201,7 +200,8 @@ Section PROOF.
     { cbn. unfold global_sbtb. rewrite List.map_app.
       Set Printing Coercions.
       seal fun_to_tgt. (*** without this, other tactics (des_ifs; refl; ss; f_equal; etc) will take infinite time. Opaque does help here at all. ***)
-      f_equal.
+      f_equal; cycle 1.
+      { autounfold with stb; autorewrite with stb; refl. }
       apply map_ext. (*** better than just "f_equal" ***)
       i. des_ifs. r; f_equal. unseal fun_to_tgt. eapply fun_to_tgt_ext.
       - ii. ss.

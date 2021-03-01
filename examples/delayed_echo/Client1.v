@@ -24,10 +24,10 @@ Section PROOF.
   Let in_spec:  fspec := (mk_simple "Client" (X:=unit) (fun _ _ o _ => o = ord_top) (top3)).
   Let out_spec: fspec := (mk_simple "Client" (X:=unit) (fun _ _ o _ => o = ord_top) (top3)).
 
-  Definition ClientStb: list (gname * fspec) :=
-    [("in", in_spec) ; ("out", out_spec)]
-  .
-
+  Definition ClientStb: list (gname * fspec).
+    eapply (Seal.sealing "stb").
+    apply [("in", in_spec) ; ("out", out_spec)].
+  Defined.
 
   Definition in_body:  list val -> itree (hCallE +' pE +' eventE) val := resum_ktr inF.
   Definition out_body: list val -> itree (hCallE +' pE +' eventE) val := resum_ktr outF.
@@ -48,3 +48,4 @@ Section PROOF.
   |}
   .
 End PROOF.
+Global Hint Unfold ClientStb: stb.
