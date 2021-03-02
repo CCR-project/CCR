@@ -395,21 +395,17 @@ Section SIMMODSEM.
       steps. unfold hcall, ccall. steps.
       unfold body_to_tgt. unfold interp_hCallE_tgt, APC. steps. (********** TODO: never unfold it, make a lemma ******************)
       force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
-      unfold HoareCall, checkWf, forge, discard, put. steps. iRefresh.
-      force_l. eexists (x4 ⋅ x5, _). steps. force_l.
-      { erewrite f_equal; try refl; r_equalize; r_solve. }
-      steps. force_l. eexists ε. steps. force_l. esplit.
-      steps. force_l. { rewrite ! URA.unit_idl. refl. } steps.
-      force_l. eexists tt. esplits. steps. force_l. esplits. steps. force_l. esplits. steps. force_l.
-      { esplits; try refl. }
-      steps. force_l. { esplits; ss; try lia. } steps. clear_until PRE.
-      gstep; econs; try apply Nat.lt_succ_diag_r; i; ss.
-      { unfold alist_add. esplits; ss; eauto. eexists; iRefresh. left; iRefresh. iSplitL A; ss.
+      eapply hcall_clo; try lia; ss; et.
+      { let tmp := r_gather PRE in instantiate (1:=tmp).
+        instantiate (1:=ε).
+        let tmp := r_gather (A, A0) in instantiate (1:=tmp).
+        eapply URA.extends_updatable. r_equalize; r_solve. }
+      { esplits; ss; et. eexists; iRefresh. left; iRefresh. iSplitL A; ss.
         - iApply A; ss.
         - iApply A0; ss.
       }
-      exists 400. des. clarify. unfold alist_add; cbn. steps.
-      des. clarify. rewrite Any.upcast_downcast in *. clarify. iRefresh. iClears'. steps.
+      i; des; subst. esplits; ss; eauto. i; des; subst. iRefresh. iClears'.
+      rewrite Any.upcast_downcast. steps. rewrite Any.upcast_downcast. steps.
 
 
 
@@ -418,7 +414,7 @@ Section SIMMODSEM.
         iOwnWf SIM. clear - WF. apply GRA.padding_wf in WF. des. ss.
       }
       iDestruct SIM. subst.
-      assert(x0 = ns0).
+      assert(x = ns0).
       { iMerge SIM PRE. rewrite <- own_sep in SIM. rewrite GRA.padding_add in SIM.
         iOwnWf SIM. eapply GRA.padding_wf in WF. des. eapply URA.auth_included in WF. des.
         clear - WF.
@@ -429,26 +425,30 @@ Section SIMMODSEM.
       subst.
 
 
+      Ltac until_bar TAC :=
+        (on_last_hyp ltac:(fun id' =>
+                             match type of id' with
+                             | IPROPS => intros
+                             | _ => TAC id'; revert id'; until_bar TAC
+                             end)).
+      Ltac rr_until_bar := until_bar ltac:(fun H => rr in H).
 
 
-      destruct (unint v) eqn:T; cycle 1.
+      destruct (unint vret_src) eqn:T; cycle 1.
       { steps. unfold triggerUB. steps. }
-      destruct v; ss. clarify. steps.
+      destruct vret_src; ss. clarify. steps.
 
       destruct (dec z (- 1)%Z).
       - subst. ss. steps.
         force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
-        unfold HoareCall, checkWf, forge, discard, put. steps. iRefresh.
-        force_l. eexists (x6 ⋅ x7, x2). steps. force_l.
-        { eapply URA.extends_updatable. r_equalize; r_solve. }
-        steps. force_l. eexists x2. steps. force_l. esplit. steps. force_l. { rewrite URA.unit_id. refl. } steps.
-        force_l. eexists ns0. esplits. steps. force_l. esplits. steps. force_l. esplits. steps. force_l.
+        eapply hcall_clo with (o:=ord_top); try lia; ss; et.
+        { instantiate (1:=ε).
+          let tmp := r_gather (PRE) in instantiate (1:=tmp).
+          let tmp := r_gather (A, SIM) in instantiate (1:=tmp).
+          eapply URA.extends_updatable. r_equalize; r_solve. }
         { esplits; try refl; iRefresh. iSplitP; ss. iSplitP; ss. }
-        steps. force_l. { esplits; ss; try lia. } steps. clear_until PRE.
-        gstep; econs; try apply Nat.lt_succ_diag_r; i; ss.
-        { exists (x6 ⋅ x7). unfold alist_add; ss. esplits; ss; eauto. exists ns0; iRefresh. left; iRefresh. iSplit SIM A; ss. }
-        exists 400. des. clarify. unfold alist_add; cbn. steps.
-
+        { esplits; ss; et. exists ns0; iRefresh. left; iRefresh. iSplit SIM A; ss. r_solve. }
+        i; des; subst. esplits; ss; eauto. i; des; subst. iRefresh. iClears'. steps.
         hret_tac mr (@URA.unit Σ); ss.
         { eapply URA.extends_updatable. esplit. r_equalize; r_solve. }
         { iRefresh. iDestruct SIM0. esplits; eauto. eexists; iRefresh. eauto. }
@@ -457,30 +457,16 @@ Section SIMMODSEM.
 
         rewrite unfold_APC. steps. force_l. exists false. steps. force_l. eexists ("push", [ll0; Vint z]↑). steps.
         force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
-        unfold HoareCall at 2, checkWf, forge, discard, put. steps. force_l.
-        Ltac until_bar TAC :=
-          (on_last_hyp ltac:(fun id' =>
-                               match type of id' with
-                               | IPROPS => intros
-                               | _ => TAC id'; revert id'; until_bar TAC
-                               end)).
-        Ltac rr_until_bar := until_bar ltac:(fun H => rr in H).
-        (* rr_until_bar. *)
-
-        eexists (_, x6 ⋅ x7). steps. force_l.
-        { rr in _ASSUME0. rr in SIM. instantiate (1:=(x2)). eapply URA.extends_updatable.
-          r_equalize; r_solve.
-        }
-        steps. force_l. eexists x7. steps. force_l. eexists x6. steps. force_l. { r_solve. } steps.
-        force_l. eexists (Vint z, List.map Vint ns0). steps. force_l. esplits. steps. force_l. esplits. steps. force_l.
-        { esplits; try refl; iRefresh. eexists; iRefresh. iSplitP; ss. iSplitP; ss. }
-        steps. force_l. { esplits; ss; try lia. } steps.
-        clear_until n.
-        gstep; econs; try apply Nat.lt_succ_diag_r; i; ss.
-        { exists (x2). unfold alist_add; ss. esplits; ss; eauto. exists ns0; iRefresh. right; iRefresh; ss. }
-        exists 400. des. clarify. unfold alist_add; cbn. steps.
-        des. clarify. rewrite Any.upcast_downcast in *. clarify. iRefresh. iClears'.
-        do 2 iDestruct _ASSUME2. iPure A. apply Any.upcast_inj in A. des; clarify.
+        eapply hcall_clo with (o:=ord_pure 2); try lia; ss; et.
+        { let tmp := r_gather (SIM) in instantiate (1:=tmp).
+          let tmp := r_gather (A) in instantiate (1:=tmp).
+          let tmp := r_gather (PRE) in instantiate (1:=tmp).
+          eapply URA.extends_updatable. r_equalize; r_solve. }
+        { instantiate (1:=(_, _)). esplits; try refl; iRefresh. eexists; iRefresh. iSplitP; ss. iSplitP; ss. iApply A; ss. }
+        { esplits; ss; et. exists ns0; iRefresh. right; iRefresh; ss. }
+        i; des; subst. esplits; ss; eauto. i; des; subst. iRefresh. iClears'. steps.
+        rewrite Any.upcast_downcast in *. clarify.
+        do 2 iDestruct POST0. iPure A. apply Any.upcast_inj in A. des; clarify.
         iDestruct SIM0. destruct SIM0; iRefresh.
         { exfalso. iDestruct H1; subst. iMerge H1 SIM. rewrite <- own_sep in H1. rewrite GRA.padding_add in H1.
           iOwnWf H1. clear - WF. apply GRA.padding_wf in WF. des. ss.
@@ -499,7 +485,7 @@ Section SIMMODSEM.
         }
 
 
-        assert(x0 = ns0).
+        assert(x9 = ns0).
         { iOwnWf A. eapply GRA.padding_wf in WF. des. eapply URA.auth_included in WF. des.
           clear - WF.
           Local Transparent URA.add.
@@ -512,7 +498,7 @@ Section SIMMODSEM.
         { eapply GRA.padding_updatable. instantiate (1:= echo_black (z :: ns0) ⋅ echo_white (z :: ns0)).
           eapply URA.auth_update. rr. ii. des; ss. destruct ctx; ss; clarify.
         }
-        { instantiate (1:= x9 ⋅ x10). eapply wf_downward; et. r_equalize; r_solve. }
+        { eapply wf_downward; et. erewrite f_equal; try refl. sym. r_equalize; r_solve. }
         des. iRefresh.
         rewrite <- GRA.padding_add in A. rewrite own_sep in A. iDestruct A. subst.
 
@@ -520,11 +506,10 @@ Section SIMMODSEM.
 
         rewrite unfold_APC. steps.
         force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
-        unfold HoareCall, checkWf, forge, discard, put. steps. force_l. eexists (x0 ⋅ x9, x11). steps. force_l.
+        unfold HoareCall, checkWf, forge, discard, put. steps. force_l. eexists (x7 ⋅ x9, x10). steps. force_l.
         { rr_until_bar. clear - A1. rewrite ! URA.add_assoc.
-          replace (mr ⋅ x6 ⋅ x9 ⋅ x10) with (mr ⋅ x6 ⋅ (x9 ⋅ x10)) by (rewrite ! URA.add_assoc; refl).
-          replace (x0 ⋅ x9 ⋅ x11) with (x0 ⋅ x11 ⋅ x9); cycle 1.
-          { rewrite <- ! URA.add_assoc. f_equal. rewrite URA.add_comm; ss. }
+          replace (mr ⋅ x0 ⋅ x7 ⋅ x8) with (mr ⋅ x0 ⋅ (x7 ⋅ x8)) by r_solve.
+          replace (x7 ⋅ x9 ⋅ x10) with ((x9 ⋅ x10) ⋅ x7) by r_solve.
           eapply URA.updatable_add; et.
           eapply URA.extends_updatable. r_equalize; r_solve. }
         steps. force_l. iExists A2. steps. force_l. esplit. steps. force_l. { rewrite URA.unit_id. refl. } steps.
@@ -533,8 +518,8 @@ Section SIMMODSEM.
         steps. force_l. { esplits; ss; try lia. } steps.
         clear_until A2. iClears'.
         gstep; econs; try apply Nat.lt_succ_diag_r; i; ss.
-        { eexists (x0 ⋅ x9). unfold alist_add; ss. esplits; ss; eauto. exists (z :: ns0); iRefresh. left; iRefresh.
-          iSplit A _ASSUME2; ss. }
+        { eexists (x7 ⋅ x9). unfold alist_add; ss. esplits; ss; eauto. exists (z :: ns0); iRefresh. left; iRefresh.
+          iSplit A POST0; ss; r_solve. }
         exists 400. des. clarify. unfold alist_add; cbn. steps.
         hret_tac mr0 (@URA.unit Σ); ss.
         { eapply URA.extends_updatable; et. r_equalize; r_solve. }
