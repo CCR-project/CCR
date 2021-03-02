@@ -355,6 +355,14 @@ Section SIMMODSEM.
       assert(name: URA.wf r); [eapply wf_downward; [eapply H|eapply wf_downward; et; r_equalize; r_solve]|]
     end.
 
+  Ltac until_bar TAC :=
+    (on_last_hyp ltac:(fun id' =>
+                         match type of id' with
+                         | IPROPS => intros
+                         | _ => TAC id'; revert id'; until_bar TAC
+                         end)).
+  Ltac rr_until_bar := until_bar ltac:(fun H => rr in H).
+
   Opaque points_to.
 
   Theorem correct: ModSemPair.sim Echo1.EchoSem Echo0.EchoSem.
@@ -425,13 +433,6 @@ Section SIMMODSEM.
       subst.
 
 
-      Ltac until_bar TAC :=
-        (on_last_hyp ltac:(fun id' =>
-                             match type of id' with
-                             | IPROPS => intros
-                             | _ => TAC id'; revert id'; until_bar TAC
-                             end)).
-      Ltac rr_until_bar := until_bar ltac:(fun H => rr in H).
 
 
       destruct (unint vret_src) eqn:T; cycle 1.
@@ -501,26 +502,25 @@ Section SIMMODSEM.
         { eapply wf_downward; et. erewrite f_equal; try refl. sym. r_equalize; r_solve. }
         des. iRefresh.
         rewrite <- GRA.padding_add in A. rewrite own_sep in A. iDestruct A. subst.
+        iClears'. (**********************FIXME**********************) Undo 1.
+        clear VALID.
 
 
 
         rewrite unfold_APC. steps.
         force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
-        unfold HoareCall, checkWf, forge, discard, put. steps. force_l. eexists (x7 ⋅ x9, x10). steps. force_l.
-        { rr_until_bar. clear - A1. rewrite ! URA.add_assoc.
+        eapply hcall_clo with (o:=ord_top); try lia; ss; et.
+        { instantiate (1:=ε).
+          let tmp := r_gather (A2) in instantiate (1:=tmp).
+          let tmp := r_gather (POST0, A) in instantiate (1:=tmp).
+          rewrite ! URA.add_assoc. rewrite URA.unit_id.
           replace (mr ⋅ x0 ⋅ x7 ⋅ x8) with (mr ⋅ x0 ⋅ (x7 ⋅ x8)) by r_solve.
           replace (x7 ⋅ x9 ⋅ x10) with ((x9 ⋅ x10) ⋅ x7) by r_solve.
           eapply URA.updatable_add; et.
           eapply URA.extends_updatable. r_equalize; r_solve. }
-        steps. force_l. iExists A2. steps. force_l. esplit. steps. force_l. { rewrite URA.unit_id. refl. } steps.
-        force_l. eexists (z :: ns0). steps. force_l. esplits. steps. force_l. esplits. steps. force_l.
         { esplits; try refl; iRefresh. iSplitP; ss. iSplitP; ss. }
-        steps. force_l. { esplits; ss; try lia. } steps.
-        clear_until A2. iClears'.
-        gstep; econs; try apply Nat.lt_succ_diag_r; i; ss.
-        { eexists (x7 ⋅ x9). unfold alist_add; ss. esplits; ss; eauto. exists (z :: ns0); iRefresh. left; iRefresh.
-          iSplit A POST0; ss; r_solve. }
-        exists 400. des. clarify. unfold alist_add; cbn. steps.
+        { esplits; ss; eauto. exists (z :: ns0); iRefresh. left; iRefresh. iSplit A POST0; ss; r_solve. }
+        i; des; subst. esplits; ss; eauto. i; des; subst. iRefresh. iClears'. steps.
         hret_tac mr0 (@URA.unit Σ); ss.
         { eapply URA.extends_updatable; et. r_equalize; r_solve. }
         { esplits; eauto. }
