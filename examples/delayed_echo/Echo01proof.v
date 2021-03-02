@@ -331,7 +331,10 @@ Section SIMMODSEM.
 
   Ltac iOwnWf G :=
     match goal with
-    | H:iHyp (Own ?r) ?rh |- _ => check_equal H G; let name := fresh "WF" in assert(name: URA.wf r); [eapply wf_downward; [eapply H|]|]
+    | H:iHyp (Own ?r) ?rh |- _ =>
+      check_equal H G;
+      let name := fresh "WF" in
+      assert(name: URA.wf r); [eapply wf_downward; [eapply H|eapply wf_downward; et; r_equalize; r_solve]|]
     end.
 
   Opaque points_to.
@@ -355,18 +358,14 @@ Section SIMMODSEM.
       iDestruct SIM.
       destruct SIM as [A|A]; iRefresh; cycle 1.
       { exfalso. iMerge A PRE. rewrite <- own_sep in A. rewrite GRA.padding_add in A.
-        iOwnWf A.
-        { clear - VALID. eapply wf_downward; et. r_equalize. r_solve. }
-        clear - WF. apply GRA.padding_wf in WF. des. ss.
+        iOwnWf A. clear - WF. apply GRA.padding_wf in WF. des. ss.
       }
 
       iDestruct A. subst.
       rename x into ns. rename x0 into ns0.
       assert(ns = ns0).
       { iMerge A PRE. rewrite <- own_sep in A. rewrite GRA.padding_add in A.
-        iOwnWf A.
-        { clear - VALID. eapply wf_downward; et. r_equalize. r_solve. }
-        eapply GRA.padding_wf in WF. des. eapply URA.auth_included in WF. des.
+        iOwnWf A. eapply GRA.padding_wf in WF. des. eapply URA.auth_included in WF. des.
         clear - WF.
         Local Transparent URA.add.
         rr in WF. des. ss. des_ifs.
@@ -400,16 +399,12 @@ Section SIMMODSEM.
 
       iDestruct SIM. destruct SIM as [SIM|SIM]; iRefresh; cycle 1.
       { exfalso. iMerge SIM PRE. rewrite <- own_sep in SIM. rewrite GRA.padding_add in SIM.
-        iOwnWf SIM.
-        { clear - _ASSUME. eapply wf_downward; et; r_equalize; r_solve. }
-        clear - WF. apply GRA.padding_wf in WF. des. ss.
+        iOwnWf SIM. clear - WF. apply GRA.padding_wf in WF. des. ss.
       }
       iDestruct SIM. subst.
       assert(x0 = ns0).
       { iMerge SIM PRE. rewrite <- own_sep in SIM. rewrite GRA.padding_add in SIM.
-        iOwnWf SIM.
-        { clear - _ASSUME. eapply wf_downward; et; r_equalize; r_solve. }
-        eapply GRA.padding_wf in WF. des. eapply URA.auth_included in WF. des.
+        iOwnWf SIM. eapply GRA.padding_wf in WF. des. eapply URA.auth_included in WF. des.
         clear - WF.
         Local Transparent URA.add.
         rr in WF. des. ss. des_ifs.
@@ -472,9 +467,7 @@ Section SIMMODSEM.
         do 2 iDestruct _ASSUME2. iPure A. apply Any.upcast_inj in A. des; clarify.
         iDestruct SIM0. destruct SIM0; iRefresh.
         { exfalso. iDestruct H1; subst. iMerge H1 SIM. rewrite <- own_sep in H1. rewrite GRA.padding_add in H1.
-          iOwnWf H1.
-          { clear - _ASSUME1. eapply wf_downward; et. r_equalize; r_solve. }
-          clear - WF. apply GRA.padding_wf in WF. des. ss.
+          iOwnWf H1. clear - WF. apply GRA.padding_wf in WF. des. ss.
         }
 
 
@@ -491,9 +484,7 @@ Section SIMMODSEM.
 
 
         assert(x0 = ns0).
-        { iOwnWf A.
-          { clear - _ASSUME1. eapply wf_downward; et. r_equalize; r_solve. }
-          eapply GRA.padding_wf in WF. des. eapply URA.auth_included in WF. des.
+        { iOwnWf A. eapply GRA.padding_wf in WF. des. eapply URA.auth_included in WF. des.
           clear - WF.
           Local Transparent URA.add.
           rr in WF. des. ss. des_ifs.
@@ -542,9 +533,7 @@ Section SIMMODSEM.
       iDestruct SIM.
       destruct SIM as [A|A]; iRefresh; cycle 1.
       { exfalso. iMerge A _ASSUME0. rewrite <- own_sep in A. rewrite GRA.padding_add in A.
-        iOwnWf A.
-        { clear - _ASSUME. eapply wf_downward; et. r_equalize; r_solve. }
-        clear - WF. apply GRA.padding_wf in WF. des. ss.
+        iOwnWf A. clear - WF. apply GRA.padding_wf in WF. des. ss.
       }
 
 
@@ -553,9 +542,7 @@ Section SIMMODSEM.
       rename x into ns. rename x0 into ns0.
       assert(ns = ns0).
       { iMerge A _ASSUME0. rewrite <- own_sep in A. rewrite GRA.padding_add in A.
-        iOwnWf A.
-        { clear - _ASSUME. eapply wf_downward; et. r_equalize; r_solve. }
-        eapply GRA.padding_wf in WF. des. eapply URA.auth_included in WF. des.
+        iOwnWf A. eapply GRA.padding_wf in WF. des. eapply URA.auth_included in WF. des.
         clear - WF.
         Local Transparent URA.add.
         rr in WF. des. ss. des_ifs.
@@ -605,15 +592,11 @@ Section SIMMODSEM.
         do 2 iDestruct _ASSUME2. iPure _ASSUME2. subst. apply Any.upcast_inj in _ASSUME2. des; clarify.
         iDestruct SIM. destruct SIM as [B|B]; iRefresh.
         { exfalso. iDestruct B; subst. iMerge B A. rewrite <- own_sep in B. rewrite GRA.padding_add in B.
-          iOwnWf B.
-          { clear - _ASSUME1. eapply wf_downward; et. r_equalize; r_solve. }
-          clear - WF. apply GRA.padding_wf in WF. des. ss.
+          iOwnWf B. clear - WF. apply GRA.padding_wf in WF. des. ss.
         }
         assert(x = z :: ns0).
         { iMerge A B. rewrite <- own_sep in A. rewrite GRA.padding_add in A.
-          iOwnWf A.
-          { clear - _ASSUME1. eapply wf_downward; et. r_equalize; r_solve. }
-          eapply GRA.padding_wf in WF. des. eapply URA.auth_included in WF. des.
+          iOwnWf A. eapply GRA.padding_wf in WF. des. eapply URA.auth_included in WF. des.
           clear - WF.
           Local Transparent URA.add.
           rr in WF. des. ss. des_ifs.
