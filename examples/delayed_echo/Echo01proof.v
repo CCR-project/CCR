@@ -204,6 +204,10 @@ End SOLVER.
 
 
 (******** TODO : remove redundancy with LL01proof ***********)
+Ltac iCheckWf :=
+  tryif (match goal with | [WF0: URA.wf _, WF1: URA.wf _ |- _ ] => idtac end) then fail 1 else idtac
+.
+
 Ltac iClears' :=
   match goal with
   | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (([(_, (?src0, _))], ?src1), ?src2) (([(_, (?tgt0, _))], ?tgt1), ?tgt2)) ] =>
@@ -211,6 +215,7 @@ Ltac iClears' :=
     let all := constr:(src0 ⋅ src1 ⋅ tgt0 ⋅ tgt1) in
     pose all as name;
     repeat multimatch goal with
+           | [WF: URA.wf ?rh |- _ ] => tryif r_contains rh all then idtac else clear WF
            | [H: iHyp ?ph ?rh |- _ ] =>
              tryif r_contains rh all then idtac else clear H
                                                            (* idtac H; *)
@@ -218,7 +223,9 @@ Ltac iClears' :=
                                                            (*   tryif r_contains rh all then idtac "CONTAINS" else idtac "DROP" *)
            end;
     clear name
-  end.
+  end;
+  iCheckWf
+.
 
 Ltac iSplitP :=
   match goal with
@@ -256,7 +263,18 @@ Ltac iExists' Hs := let rs := r_gather Hs in exists rs.
 
 
 
+Require Import HTactics.
 
+(* Definition __gwf_mark__ (P: Prop): Prop := P. *)
+(* Lemma gwf_mark_spec: forall P, P <-> __gwf_mark__ P. refl. Qed. *)
+(* Opaque __gwf_mark__. *)
+(* Notation "'☀'" := (__gwf_mark__ _) (at level 60). *)
+
+(* Ltac harg_tac := *)
+(*   HTactics.harg_tac; *)
+(*   match goal with *)
+(*   | [H: URA.wf _ |- _] => apply gwf_mark_spec in H *)
+(*   end. *)
 
 
 
@@ -338,8 +356,6 @@ Section SIMMODSEM.
     end.
 
   Opaque points_to.
-
-  Require Import HTactics.
 
   Theorem correct: ModSemPair.sim Echo1.EchoSem Echo0.EchoSem.
   Proof.
@@ -498,7 +514,6 @@ Section SIMMODSEM.
         }
         { instantiate (1:= x9 ⋅ x10). eapply wf_downward; et. r_equalize; r_solve. }
         des. iRefresh.
-        clear VALID _ASSUME.
         rewrite <- GRA.padding_add in A. rewrite own_sep in A. iDestruct A. subst.
 
 
