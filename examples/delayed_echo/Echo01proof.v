@@ -365,6 +365,20 @@ Section SIMMODSEM.
 
   Opaque points_to.
 
+  Lemma own_update: forall (x y: Σ) rx ctx, URA.updatable x y -> iHyp (Own x) rx -> URA.wf (rx ⋅ ctx) ->
+                                                   exists ry, iHyp (Own y) ry /\ URA.wf (ry ⋅ ctx) /\ URA.updatable rx ry.
+  Proof.
+    { clear_until Σ. i. dup H. rr in H0. destruct H0; clear H0. subst. r in H.
+      specialize (H (x0 ⋅ ctx)). rewrite ! URA.add_assoc in H. spc H.
+      exists (y ⋅ x0). esplits; et.
+      - rr. esplits; et.
+      - eapply URA.updatable_add; try refl. et.
+    }
+  Qed.
+
+
+
+
   Theorem correct: ModSemPair.sim Echo1.EchoSem Echo0.EchoSem.
   Proof.
     econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
@@ -476,14 +490,6 @@ Section SIMMODSEM.
 
 
         rename H1 into A. iMerge A SIM. rewrite <- own_sep in A. rewrite GRA.padding_add in A. rewrite URA.add_comm in A.
-        assert(own_update: forall (x y: Σ) rx ctx, URA.updatable x y -> iHyp (Own x) rx -> URA.wf (rx ⋅ ctx) ->
-                                                   exists ry, iHyp (Own y) ry /\ URA.wf (ry ⋅ ctx) /\ URA.updatable rx ry).
-        { clear_until Σ. i. dup H. rr in H0. destruct H0; clear H0. subst. r in H.
-          specialize (H (x0 ⋅ ctx)). rewrite ! URA.add_assoc in H. spc H.
-          exists (y ⋅ x0). esplits; et.
-          - rr. esplits; et.
-          - eapply URA.updatable_add; try refl. et.
-        }
 
 
         assert(x9 = ns0).
