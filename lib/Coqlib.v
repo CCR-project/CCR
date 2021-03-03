@@ -1387,3 +1387,35 @@ Proof.
   sii T.
   clear t. clear T. clear u. clear T0.
 Abort.
+
+Require Import String.
+Module Type SEAL.
+  Parameter sealing: string -> forall X: Type, X -> X.
+  Parameter sealing_eq: forall key X (x: X), sealing key x = x.
+End SEAL.
+Module Seal: SEAL.
+  Definition sealing (_: string) X (x: X) := x.
+  Lemma sealing_eq key X (x: X): sealing key x = x.
+  Proof. refl. Qed.
+End Seal.
+
+Ltac seal_with key x :=
+  replace x with (Seal.sealing key x); [|eapply Seal.sealing_eq].
+Ltac seal x :=
+  let key := fresh "key" in
+  assert (key:= "_deafult_");
+  seal_with key x.
+Ltac unseal x :=
+  match (type of x) with
+  | string => repeat rewrite (@Seal.sealing_eq x) in *; try clear x
+  | _ => repeat rewrite (@Seal.sealing_eq _ _ x) in *;
+         repeat match goal with
+                | [ H: string |- _ ] => try clear H
+                end
+  end
+.
+
+Notation "☃ y" := (Seal.sealing _ y) (at level 60, only printing).
+Goal forall x, 5 + 5 = x. i. seal 5. seal x. Fail progress cbn. unseal key0. unseal 5. progress cbn. Abort.
+Goal forall x y z, x + y = z. i. seal x. seal y. unseal y. unseal key. Abort.
+Goal forall x y z, x + y = z. i. seal_with "a" x. seal_with "b" y. unseal "a". unseal "b". Abort.

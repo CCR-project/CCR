@@ -208,6 +208,14 @@ Section SIM.
     :
       _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (Call fn varg) >>= k_src)
                  ((mrs_tgt0, fr_tgt0), trigger (Call fn varg) >>= k_tgt)
+  | sim_itree_syscall
+      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      fn varg k_src k_tgt
+      (K: forall vret,
+          exists i1, sim_itree i1 ((mrs_src0, fr_src0), k_src vret) ((mrs_tgt0, fr_tgt0), k_tgt vret))
+    :
+      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (Syscall fn varg) >>= k_src)
+                 ((mrs_tgt0, fr_tgt0), trigger (Syscall fn varg) >>= k_tgt)
   (*** TODO: sim_syscall is nontrivial; it should accept "injected" memory... ***)
   (*** TODO: simplify the model: Syscall: list val -> val ***)
 
@@ -393,6 +401,7 @@ Section SIM.
   Lemma sim_itree_mon: monotone3 _sim_itree.
   Proof.
     ii. inv IN; try (by des; econs; ss; et).
+    - econs; ss; et. ii. exploit K; et. i; des. esplits; et.
     - econs; ss; et. ii. exploit K; et. i; des. esplits; et.
   Qed.
 
@@ -659,10 +668,258 @@ Section SIMMOD.
      admit "TODO".
    Qed.
 
+   Theorem adequacy_local_closed
+           (SIM: sim)
+     :
+       Beh.of_program (Mod.interp md_tgt) <1=
+       Beh.of_program (Mod.interp md_src).
+   Proof.
+     hexploit adequacy_local.
+     { eauto. }
+     i. specialize (H Mod.empty). repeat rewrite Mod.add_empty_l in H. auto.
+   Qed.
+
 End SIMMOD.
+
+Section SIMMODS.
+  Context `{Σ: GRA.t}.
+
+  Lemma sim_list_adequacy (mds_src mds_tgt: list Mod.t)
+        (FORALL: List.Forall2 sim mds_src mds_tgt)
+    :
+      <<CR: forall ctx, Beh.of_program (Mod.interp (Mod.add ctx (Mod.add_list mds_tgt))) <1=
+                        Beh.of_program (Mod.interp (Mod.add ctx (Mod.add_list mds_src)))>>.
+  Proof.
+    induction FORALL; ss.
+    cut (forall ctx,
+            Beh.of_program (Mod.interp (Mod.add ctx (Mod.add y (Mod.add_list l')))) <1=
+            Beh.of_program (Mod.interp (Mod.add ctx (Mod.add y (Mod.add_list l))))).
+    { ii. eapply H0 in PR.
+      apply Mod.add_comm in PR. apply Mod.add_comm.
+      erewrite <- Mod.add_assoc in *.
+      apply Mod.add_comm in PR. apply Mod.add_comm.
+      eapply adequacy_local.
+      { eauto. }
+      { eapply PR. }
+    }
+    { i. erewrite Mod.add_assoc in *. eapply IHFORALL. auto. }
+  Qed.
+
+  Lemma sim_list_adequacy_closed (mds_src mds_tgt: list Mod.t)
+        (FORALL: List.Forall2 sim mds_src mds_tgt)
+    :
+      Beh.of_program (Mod.interp (Mod.add_list mds_tgt)) <1=
+      Beh.of_program (Mod.interp (Mod.add_list mds_src)).
+  Proof.
+    hexploit sim_list_adequacy.
+    { eauto. }
+    i. specialize (H Mod.empty). repeat rewrite Mod.add_empty_l in H. auto.
+  Qed.
+End SIMMODS.
 End ModPair.
 
 (* TODO: prove sim *)
 (* TODO: write client *)
 (* TODO: show cancellation *)
 (* TODO: meta-level (no forge -> checkwf always succeeds) *)
+
+
+
+Lemma sim_l_bind_bind `{Σ: GRA.t} a b c d e f g
+      (R S : Type) (s : itree _ R) (k : R -> itree _ S) (h : S -> itree _ _)
+      (SIM: gpaco3 (_sim_itree c) d e f g (b, ` r : R <- s;; ` x : _ <- k r;; h x) a)
+  :
+    gpaco3 (_sim_itree c) d e f g (b, ` x : _ <- (` x : _ <- s;; k x);; h x) a.
+Proof.
+  rewrite bind_bind. auto.
+Qed.
+
+Lemma sim_l_bind_tau `{Σ: GRA.t} a b c d e f g
+      (U : Type) (t : itree _ _) (k : U -> itree _ _)
+      (SIM: gpaco3 (_sim_itree c) d e f g (b, Tau (` x : _ <- t;; k x)) a)
+  :
+    gpaco3 (_sim_itree c) d e f g (b, ` x : _ <- Tau t;; k x) a.
+Proof.
+  rewrite bind_tau. auto.
+Qed.
+
+Lemma sim_l_bind_ret_l `{Σ: GRA.t} a b c d e f g
+      (R : Type) (r : R) (k : R -> itree _ _)
+      (SIM: gpaco3 (_sim_itree c) d e f g (b, k r) a)
+  :
+    gpaco3 (_sim_itree c) d e f g (b, ` x : _ <- Ret r;; k x) a.
+Proof.
+  rewrite bind_ret_l. auto.
+Qed.
+
+Lemma sim_r_bind_bind `{Σ: GRA.t} a b c d e f g
+      (R S : Type) (s : itree _ R) (k : R -> itree _ S) (h : S -> itree _ _)
+      (SIM: gpaco3 (_sim_itree c) d e f g a (b, ` r : R <- s;; ` x : _ <- k r;; h x))
+  :
+    gpaco3 (_sim_itree c) d e f g a (b, ` x : _ <- (` x : _ <- s;; k x);; h x).
+Proof.
+  rewrite bind_bind. auto.
+Qed.
+
+Lemma sim_r_bind_tau `{Σ: GRA.t} a b c d e f g
+      (U : Type) (t : itree _ _) (k : U -> itree _ _)
+      (SIM: gpaco3 (_sim_itree c) d e f g a (b, Tau (` x : _ <- t;; k x)))
+  :
+    gpaco3 (_sim_itree c) d e f g a (b, ` x : _ <- Tau t;; k x).
+Proof.
+  rewrite bind_tau. auto.
+Qed.
+
+Lemma sim_r_bind_ret_l `{Σ: GRA.t} a b c d e f g
+      (R : Type) (r : R) (k : R -> itree _ _)
+      (SIM: gpaco3 (_sim_itree c) d e f g a (b, k r))
+  :
+    gpaco3 (_sim_itree c) d e f g a (b, ` x : _ <- Ret r;; k x).
+Proof.
+  rewrite bind_ret_l. auto.
+Qed.
+
+Ltac interp_red := rewrite interp_vis ||
+                           rewrite interp_ret ||
+                           rewrite interp_tau ||
+                           rewrite interp_trigger ||
+                           rewrite interp_bind.
+
+Ltac interp_mrec_red := rewrite interp_mrec_hit ||
+                                rewrite interp_mrec_miss ||
+                                rewrite interp_mrec_bind ||
+                                rewrite interp_mrec_tau ||
+                                rewrite interp_mrec_ret.
+
+Ltac interp_state_red := rewrite interp_state_trigger ||
+                                 rewrite interp_state_bind ||
+                                 rewrite interp_state_tau ||
+                                 rewrite interp_state_ret.
+
+Ltac ired_l :=
+  cbn;
+  match goal with
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, ITree.bind' _ (ITree.bind' _ _)) _) ] =>
+    apply sim_l_bind_bind; ired_l
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, ITree.bind' _ (Tau _)) _) ] =>
+    apply sim_l_bind_tau
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, ITree.bind' _ (Ret _)) _) ] =>
+    apply sim_l_bind_ret_l; ired_l
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, interp _ _) _) ] =>
+    ((interp_red; ired_l) || idtac)
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, ITree.bind' _ (interp _ _)) _) ] =>
+    ((interp_red; ired_l) || idtac)
+  | _ => idtac
+  end.
+
+Ltac ired_r :=
+  cbn;
+  match goal with
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (ITree.bind' _ _))) ] =>
+    apply sim_r_bind_bind; ired_r
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (Tau _))) ] =>
+    apply sim_r_bind_tau
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (Ret _))) ] =>
+    apply sim_r_bind_ret_l
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, interp _ _)) ] =>
+    ((interp_red; ired_r) || idtac)
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp _ _))) ] =>
+    ((interp_red; ired_l) || idtac)
+  | _ => idtac
+  end.
+
+Ltac ired_all := ired_l; ired_r.
+
+Ltac prep := ired_all.
+
+Ltac force_l :=
+  prep;
+  match goal with
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, unwrapN ?ox >>= _) (_, _)) ] =>
+    let tvar := fresh "tmp" in
+    let thyp := fresh "TMP" in
+    remember (unwrapN ox) as tvar eqn:thyp; unfold unwrapN in thyp; subst tvar;
+    let name := fresh "_UNWRAPN" in
+    destruct (ox) eqn:name; [|exfalso]; cycle 1
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, guarantee ?P >>= _) (_, _)) ] =>
+    let tvar := fresh "tmp" in
+    let thyp := fresh "TMP" in
+    remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar;
+    let name := fresh "_GUARANTEE" in
+    destruct (classic P) as [name|name]; [ired_all; gstep; eapply sim_itree_choose_src; [eauto|exists name]|contradict name]; cycle 1
+
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, ?i_src) (_, ?i_tgt)) ] =>
+    seal i_tgt; gstep; econs; eauto; unseal i_tgt
+  end
+.
+Ltac force_r :=
+  prep;
+  match goal with
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, _) (_, unwrapU ?ox >>= _)) ] =>
+    let tvar := fresh "tmp" in
+    let thyp := fresh "TMP" in
+    remember (unwrapU ox) as tvar eqn:thyp; unfold unwrapU in thyp; subst tvar;
+    let name := fresh "_UNWRAPU" in
+    destruct (ox) eqn:name; [|exfalso]; cycle 1
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, _) (_, assume ?P >>= _)) ] =>
+    let tvar := fresh "tmp" in
+    let thyp := fresh "TMP" in
+    remember (assume P) as tvar eqn:thyp; unfold assume in thyp; subst tvar;
+    let name := fresh "_ASSUME" in
+    destruct (classic P) as [name|name]; [ired_all; gstep; eapply sim_itree_take_tgt; [eauto|exists name]|contradict name]; cycle 1
+
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, ?i_src) (_, ?i_tgt)) ] =>
+    seal i_src; gstep; econs; eauto; unseal i_src
+  end
+.
+
+Ltac _step :=
+  match goal with
+  (*** blacklisting ***)
+  (* | [ |- (gpaco3 (_sim_itree wf) _ _ _ _ (_, trigger (Choose _) >>= _) (_, ?i_tgt)) ] => idtac *)
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, unwrapU ?ox >>= _) (_, _)) ] =>
+    let tvar := fresh "tmp" in
+    let thyp := fresh "TMP" in
+    remember (unwrapU ox) as tvar eqn:thyp; unfold unwrapU in thyp; subst tvar;
+    let name := fresh "_UNWRAPU" in
+    destruct (ox) eqn:name; [|unfold triggerUB; ired_all; _step; ss; fail]
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, assume ?P >>= _) (_, _)) ] =>
+    let tvar := fresh "tmp" in
+    let thyp := fresh "TMP" in
+    remember (assume P) as tvar eqn:thyp; unfold assume in thyp; subst tvar;
+    let name := fresh "_ASSUME" in
+    ired_all; gstep; eapply sim_itree_take_src; [apply Nat.lt_succ_diag_r|]; intro name
+
+  (*** blacklisting ***)
+  (* | [ |- (gpaco3 (_sim_itree wf) _ _ _ _ (_, _) (_, trigger (Take _) >>= _)) ] => idtac *)
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, _) (_, unwrapN ?ox >>= _)) ] =>
+    let tvar := fresh "tmp" in
+    let thyp := fresh "TMP" in
+    remember (unwrapN ox) as tvar eqn:thyp; unfold unwrapN in thyp; subst tvar;
+    let name := fresh "_UNWRAPN" in
+    destruct (ox) eqn:name; [|unfold triggerNB; ired_all; _step; ss; fail]
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, _) (_, guarantee ?P >>= _)) ] =>
+    let tvar := fresh "tmp" in
+    let thyp := fresh "TMP" in
+    remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar;
+    let name := fresh "_GUARANTEE" in
+    ired_all; gstep; eapply sim_itree_choose_tgt; [apply Nat.lt_succ_diag_r|]; intro name
+
+
+
+  | _ => (*** default ***)
+    gstep; econs; try apply Nat.lt_succ_diag_r; i
+  end;
+  (* idtac *)
+  match goal with
+  | [ |- exists _, _ ] => fail 1
+  | _ => idtac
+  end
+.
+Ltac steps := repeat ((*** pre processing ***) prep; try _step; (*** post processing ***) unfold alist_add; simpl; des_ifs_safe).
+
+Notation "wf n '------------------------------------------------------------------' src0 tgt0 '------------------------------------------------------------------' src1 tgt1 '------------------------------------------------------------------' src2 tgt2"
+  :=
+    (gpaco3 (_sim_itree wf) _ _ _ n (([(_, src0)], src1), src2) (([(_, tgt0)], tgt1), tgt2))
+      (at level 60,
+       format "wf  n '//' '------------------------------------------------------------------' '//' src0 '//' tgt0 '//' '------------------------------------------------------------------' '//' src1 '//' tgt1 '//' '------------------------------------------------------------------' '//' src2 '//' '//' '//' tgt2 '//' ").

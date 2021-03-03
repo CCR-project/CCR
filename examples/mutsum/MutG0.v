@@ -6,7 +6,6 @@ Require Import Behavior.
 Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
-Require Import Hoare.
 
 Generalizable Variables E R A B C X Y Σ.
 
@@ -14,29 +13,28 @@ Set Implicit Arguments.
 
 
 
+Definition parg: list val -> option val := (@hd_error _).
+
 Section PROOF.
 
   Context `{Σ: GRA.t}.
-  (* Context `{@GRA.inG memRA Σ}. *)
 
   (***
     g(n) := if (n == 0) then 0 else (n + f(n-1))
   ***)
-  Definition gF: Any.t -> itree Es Any.t :=
+  Definition gF: list val -> itree Es val :=
     fun varg =>
-      varg <- varg↓ǃ;;
-      match varg with
-      | [Vint n] =>
-        if dec n 0%Z
-        then Ret (Vint 0)↑
-        else m <- trigger (Call "f" [Vint (n - 1)]↑);; m <- m↓ǃ;; r <- (vadd (Vint n) m)?;; Ret r↑
-      | _ => triggerUB
-      end
-  .
+      `n: val <- (parg varg)?;; `n: Z <- (unint n)?;;
+      if dec n 0%Z
+      then Ret (Vint 0)
+      else
+        (m <- ccall "f" [Vint (n - 1)];;
+        r <- (vadd (Vint n) m)?;;
+        Ret r).
 
   Definition GSem: ModSem.t := {|
-    ModSem.fnsems := [("g", gF)];
-    ModSem.initial_mrs := [("G", (ε, unit↑))];
+    ModSem.fnsems := [("g", cfun gF)];
+    ModSem.initial_mrs := [("G", (ε, tt↑))];
   |}
   .
 

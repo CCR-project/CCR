@@ -38,38 +38,6 @@ Set Implicit Arguments.
 (* Goal forall x, 5 + 5 = x. i. hide 5. cbn. hide_with MYNAME x. unhide x. unhide _SEAL. cbn. Abort. *)
 
 
-Module Type SEAL.
-  Parameter unit: Type.
-  Parameter tt: unit.
-  Parameter sealing: unit -> forall X: Type, X -> X.
-  Parameter sealing_eq: forall key X (x: X), sealing key x = x.
-End SEAL.
-Module Seal: SEAL.
-  Definition unit := unit.
-  Definition tt := tt.
-  Definition sealing (_: unit) X (x: X) := x.
-  Lemma sealing_eq key X (x: X): sealing key x = x.
-  Proof. refl. Qed.
-End Seal.
-
-Ltac seal_with key x :=
-  replace x with (Seal.sealing key x); [|eapply Seal.sealing_eq].
-Ltac seal x :=
-  let key := fresh "key" in
-  assert (key:= Seal.tt);
-  seal_with key x.
-Ltac unseal x :=
-  match (type of x) with
-  | Seal.unit => repeat rewrite (@Seal.sealing_eq x) in *; try clear x
-  | _ => repeat rewrite (@Seal.sealing_eq _ _ x) in *;
-         repeat match goal with
-                | [ H: Seal.unit |- _ ] => try clear H
-                end
-  end
-.
-Notation "☃ y" := (Seal.sealing _ y) (at level 60, only printing).
-Goal forall x, 5 + 5 = x. i. seal 5. seal x. unseal key0. unseal 5. cbn. Abort.
-
 
 Inductive ord: Type :=
 | ord_pure (n: nat)
@@ -117,7 +85,7 @@ Section PROOF.
   Definition HoareCall
              (tbr: bool)
              (ord_cur: ord)
-             (P: X -> Y -> Any_tgt -> Σ -> ord -> Prop)
+             (P: X -> Y -> Any_tgt -> ord -> Σ -> Prop)
              (Q: X -> Z -> Any_tgt -> Σ -> Prop):
     gname -> Y -> itree Es Z :=
     fun fn varg_src =>
@@ -125,14 +93,14 @@ Section PROOF.
       rarg <- trigger (Choose Σ);; discard rarg;; (*** virtual resource passing ***)
       x <- trigger (Choose X);; varg_tgt <- trigger (Choose Any_tgt);;
       ord_next <- trigger (Choose _);;
-      guarantee(P x varg_src varg_tgt rarg ord_next);; (*** precondition ***)
+      guarantee(P x varg_src varg_tgt  ord_next rarg);; (*** precondition ***)
 
       guarantee(ord_lt ord_next ord_cur /\ (tbr = true -> is_pure ord_next) /\ (tbr = false -> ord_next = ord_top));;
       vret_tgt <- trigger (Call fn varg_tgt);; (*** call ***)
-      checkWf mn;;
 
       rret <- trigger (Take Σ);; forge rret;; (*** virtual resource passing ***)
       vret_src <- trigger (Take Z);;
+      checkWf mn;;
       assume(Q x vret_src vret_tgt rret);; (*** postcondition ***)
 
       Ret vret_src (*** return to body ***)
@@ -165,17 +133,21 @@ Variant hCallE: Type -> Type :=
 
 Notation Es' := (hCallE +' pE +' eventE).
 
-Fixpoint _APC (n: nat): itree Es' unit :=
-  match n with
+Fixpoint _APC (at_most: nat): itree Es' unit :=
+  match at_most with
   | 0 => Ret tt
   | S n =>
-    '(fn, varg) <- trigger (Choose _);;
-    trigger (hCall true fn varg);;
-    _APC n
+    break <- trigger (Choose _);;
+    if break: bool
+    then Ret tt
+    else
+      '(fn, varg) <- trigger (Choose _);;
+      trigger (hCall true fn varg);;
+      _APC n
   end.
 
 Definition APC: itree Es' unit :=
-  n <- trigger (Choose _);; _APC n
+  at_most <- trigger (Choose _);; _APC at_most
 .
 
 
@@ -192,7 +164,7 @@ Section CANCEL.
     X: Type; (*** a meta-variable ***)
     AA: Type;
     AR: Type;
-    precond: X -> AA -> Any_tgt -> Σ -> ord -> Prop; (*** meta-variable -> new logical arg -> current logical arg -> resource arg -> Prop ***)
+    precond: X -> AA -> Any_tgt -> ord -> Σ -> Prop; (*** meta-variable -> new logical arg -> current logical arg -> resource arg -> Prop ***)
     postcond: X -> AR -> Any_tgt -> Σ -> Prop; (*** meta-variable -> new logical ret -> current logical ret -> resource ret -> Prop ***)
   }
   .
@@ -203,6 +175,19 @@ Section CANCEL.
   }
   .
 
+  (*** argument remains the same ***)
+  (* Definition mk_simple (mn: string) {X: Type} (P: X -> Any_tgt -> Σ -> ord -> Prop) (Q: X -> Any_tgt -> Σ -> Prop): fspec. *)
+  (*   econs. *)
+  (*   { apply mn. } *)
+  (*   { i. apply (P X0 X2 X3 H /\ X1↑ = X2). } *)
+  (*   { i. apply (Q X0 X2 X3 /\ X1↑ = X2). } *)
+  (* Unshelve. *)
+  (*   apply (list val). *)
+  (*   apply (val). *)
+  (* Defined. *)
+  Definition mk_simple (mn: string) {X: Type} (P: X -> Any_tgt -> ord -> Σ -> Prop) (Q: X -> Any_tgt -> Σ -> Prop): fspec :=
+    @mk mn X (list val) (val) (fun x y a o r => P x a o r /\ y↑ = a) (fun x z a r => Q x a r /\ z↑ = a)
+  .
 
 
 
@@ -220,9 +205,6 @@ Section CANCEL.
   (*** TODO: try above idea; if it fails, document it; and refactor below with alist ***)
   Variable stb: list (gname * fspec).
 
-  (****************** TODO: REMOVE ALL MATCH AND REPLACE IT WITH UNWRAPU  *****************)
-  (****************** TODO: REMOVE ALL MATCH AND REPLACE IT WITH UNWRAPU  *****************)
-  (****************** TODO: REMOVE ALL MATCH AND REPLACE IT WITH UNWRAPU  *****************)
   Definition handle_hCallE_src: hCallE ~> itree Es :=
     fun _ '(hCall tbr fn varg_src) =>
       match tbr with
@@ -281,13 +263,10 @@ Section CANCEL.
 
   Definition handle_hCallE_tgt (mn: mname) (ord_cur: ord): hCallE ~> itree Es :=
     fun _ '(hCall tbr fn varg_src) =>
-      match List.find (fun '(_fn, _) => dec fn _fn) stb with
-      | Some (_, f) =>
-        varg_src <- varg_src↓ǃ;;
-        vret_src <- (HoareCall (mn) tbr ord_cur (f.(precond)) (f.(postcond)) fn varg_src);;
-        Ret vret_src↑
-      | None => triggerNB
-      end
+      '(_, f) <- (List.find (fun '(_fn, _) => dec fn _fn) stb)ǃ;;
+      varg_src <- varg_src↓ǃ;;
+      vret_src <- (HoareCall (mn) tbr ord_cur (f.(precond)) (f.(postcond)) fn varg_src);;
+      Ret vret_src↑
   .
 
   Definition interp_hCallE_tgt `{E -< Es} (mn: mname) (ord_cur: ord): itree (hCallE +' E) ~> itree Es :=
@@ -303,7 +282,7 @@ Section CANCEL.
   Definition HoareFun
              (mn: mname)
              {X Y Z: Type}
-             (P: X -> Y -> Any_tgt -> Σ -> ord -> Prop)
+             (P: X -> Y -> Any_tgt -> ord -> Σ -> Prop)
              (Q: X -> Z -> Any_tgt -> Σ -> Prop)
              (body: Y -> itree Es' Z): Any_tgt -> itree Es Any_tgt := fun varg_tgt =>
     varg_src <- trigger (Take Y);;
@@ -311,7 +290,7 @@ Section CANCEL.
     rarg <- trigger (Take Σ);; forge rarg;; (*** virtual resource passing ***)
     (checkWf mn);;
     ord_cur <- trigger (Take _);;
-    assume(P x varg_src varg_tgt rarg ord_cur);; (*** precondition ***)
+    assume(P x varg_src varg_tgt  ord_cur rarg);; (*** precondition ***)
 
 
     vret_src <- match ord_cur with
@@ -558,13 +537,22 @@ End PSEUDOTYPING.
     | [ |- gpaco5 _ _ _ _ _ _ _ ?i_src ?i_tgt ] => seal i_tgt
     end.
   Ltac unseal_left :=
-    match goal with 
+    match goal with
     | [ |- gpaco5 _ _ _ _ _ _ _ (@Seal.sealing _ _ ?i_src) ?i_tgt ] => unseal i_src
     end.
   Ltac unseal_right :=
-    match goal with 
+    match goal with
     | [ |- gpaco5 _ _ _ _ _ _ _ ?i_src (@Seal.sealing _ _ ?i_tgt) ] => unseal i_tgt
     end.
   Ltac force_l := seal_right; _step; unseal_right.
   Ltac force_r := seal_left; _step; unseal_left.
   (* Ltac mstep := gstep; econs; eauto; [eapply from_nat_lt; ss|]. *)
+
+  From ExtLib Require Import
+       Data.Map.FMapAList.
+
+  Hint Resolve cpn3_wcompat: paco.
+  Ltac init :=
+    split; ss; ii; clarify; rename y into varg; eexists 100%nat; ss; des; clarify;
+    ginit; []; unfold alist_add, alist_remove; ss;
+    unfold fun_to_tgt, cfun, HoareFun; ss.

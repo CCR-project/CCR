@@ -40,9 +40,9 @@ Inductive val: Type :=
 | Vundef
 .
 
-Notation ofs0 := 0%Z.
+(* Notation ofs0 := 0%Z. *)
 
-Definition Vnullptr := Vptr 0 0.
+Definition Vnullptr := Vint 0.
 
 Definition vadd (x y: val): option val :=
   match x, y with
@@ -109,7 +109,7 @@ Module Mem.
   .
 
   Opaque Z.ltb Z.leb Z.mul Z.eq_dec Nat.eq_dec.
-  Definition empty: t := mk (update (fun _ _ => None) 0 (fun ofs => if dec ofs 0%Z then Some Vundef else None)) 1.
+  Definition empty: t := mk (update (fun _ _ => None) 0 (fun ofs => if dec ofs 0%Z then Some Vundef else None)) 0.
   (* Let empty2: t := Eval compute in *)
   (*   let m0 := mk (fun _ _ => None) 0 in *)
   (*   let (_, m1) := alloc m0 1%Z in *)
@@ -138,7 +138,7 @@ Module Mem.
   Definition load (m0: Mem.t) (b: block) (ofs: Z): option val := m0.(cnts) b ofs.
 
   Definition store (m0: Mem.t) (b: block) (ofs: Z) (v: val): option Mem.t :=
-    match m0.(cnts) b ofs0 with
+    match m0.(cnts) b ofs with
     | Some _ => Some (Mem.mk (fun _b _ofs => if (dec b _b) && (dec ofs _ofs)
                                              then Some v
                                              else m0.(cnts) _b _ofs) m0.(nb))
@@ -156,6 +156,14 @@ Definition vcmp (m0: Mem.t) (x y: val): option bool :=
   | Vptr x xofs, Vptr y yofs =>
     if Mem.valid_ptr m0 x xofs && Mem.valid_ptr m0 y yofs
     then Some (dec x y && dec xofs yofs)
+    else None
+  | Vptr x xofs, Vint y =>
+    if Mem.valid_ptr m0 x xofs && dec y 0%Z
+    then Some false
+    else None
+  | Vint x, Vptr y yofs =>
+    if Mem.valid_ptr m0 y yofs && dec x 0%Z
+    then Some false
     else None
   | _, _ => None
   (* | Vundef, _ => None *)

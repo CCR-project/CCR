@@ -7,7 +7,7 @@ Require Import Skeleton.
 Require Import PCM.
 Require Import Ordinal ClassicalOrdinal.
 Require Import Any.
-Require Import Hoare2.
+Require Import HoareDef.
 Require Import SimSTS.
 
 Generalizable Variables E R A B C X Y Σ.

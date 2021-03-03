@@ -7,7 +7,7 @@ Require Import Skeleton.
 Require Import PCM.
 Require Import Ordinal ClassicalOrdinal.
 Require Import Any.
-Require Import Hoare2.
+Require Import HoareDef.
 Require Import SimSTS.
 
 Generalizable Variables E R A B C X Y Σ.
@@ -146,7 +146,7 @@ Section CANCEL.
     Local Opaque GRA.to_URA.
     ss.
     seal_left.
-    
+
     (* Ltac hide_left := *)
     (*   match goal with *)
     (*   | [ |- gpaco5 _ _ _ _ _ _ _ ?i_src ?i_tgt ] => let name := fresh "HIDDEN" in remember i_src as HIDDEN *)
@@ -274,17 +274,10 @@ Section CANCEL.
           admit "ez".
       - ii. ss. des_ifs. des. (* rr in SIM0. des; ss. unfold RelationPairs.RelCompFun in *. ss. *)
         (* r in SIM0. des_ifs. des; ss. *)
-        steps. clear_tac. instantiate (1:=125).
-        unfold checkWf, assume; steps.
-        des_ifs; ss.
-        { steps. }
-        steps.
-        unshelve esplits; eauto.
-        { clear - ST1. admit "ez". }
-        steps. esplits; eauto.
-        unfold forge; steps. esplits; et.
-        steps. unshelve esplits; eauto. steps.
-        fold interp_hCallE_src. fold (interp_hCallE_tgt stb mn).
+        unfold checkWf, assume; steps. clear_tac. esplits. steps.
+        unfold forge; steps. des_ifs; ss. { steps. } steps. exists vret_src'. instantiate (1:=rret). esplits; et.
+        steps. unshelve esplits; eauto. { clear - ST1. admit "ez". } steps. unshelve esplits; eauto. steps.
+        fold (interp_hCallE_mid). fold (interp_hCallE_tgt stb mn).
         gbase. eapply CIH; [refl|ss|..]; cycle 1.
         { refl. }
         { unfold interp_hCallE_tgt. erewrite Any.downcast_upcast; et. }
@@ -376,16 +369,15 @@ Section CANCEL.
           admit "ez".
       - ii. ss. des_ifs. des. (* rr in SIM0. des; ss. unfold RelationPairs.RelCompFun in *. ss. *)
         (* r in SIM0. des_ifs. des; ss. *)
-        steps. clear_tac. instantiate (1:=125).
-        unfold checkWf, assume; steps.
+        steps. clear_tac. esplits. steps.
+        unfold forge, checkWf, assume; steps.
         des_ifs; ss.
         { steps. }
-        steps.
+        steps. esplits. steps. instantiate (1:= rret). instantiate (1:=vret_src').
         unshelve esplits; eauto.
         { clear - ST1. admit "ez". }
-        steps. esplits; eauto.
-        unfold forge; steps. esplits; et.
-        steps. unshelve esplits; eauto. steps.
+        steps. unshelve esplits; eauto.
+        steps.
         fold interp_hCallE_src. fold (interp_hCallE_tgt stb mn).
         gbase. eapply CIH; [refl|ss|..]; cycle 1.
         { refl. }
@@ -398,23 +390,9 @@ Section CANCEL.
     { apply x6. }
   Qed.
 
-  (*** argument remains the same ***)
-  (* Definition mk_simple (mn: string) {X: Type} (P: X -> Any_tgt -> Σ -> ord -> Prop) (Q: X -> Any_tgt -> Σ -> Prop): fspec. *)
-  (*   econs. *)
-  (*   { apply mn. } *)
-  (*   { i. apply (P X0 X2 X3 H /\ X1↑ = X2). } *)
-  (*   { i. apply (Q X0 X2 X3 /\ X1↑ = X2). } *)
-  (* Unshelve. *)
-  (*   apply (list val). *)
-  (*   apply (val). *)
-  (* Defined. *)
-  Definition mk_simple (mn: string) {X: Type} (P: X -> Any_tgt -> Σ -> ord -> Prop) (Q: X -> Any_tgt -> Σ -> Prop): fspec :=
-    @mk _ mn X (list val) (val) (fun x y a r o => P x a r o /\ y↑ = a) (fun x z a r => Q x a r /\ z↑ = a)
-  .
-
   Hypothesis MAIN: List.find (fun '(_fn, _) => dec "main" _fn) stb = Some ("main",
     (* (@mk "Main" unit (fun _ varg_high _ _ => varg_high = tt↑) (fun _ vret_high _ _ => vret_high = tt↑) (fun _ => None))). *)
-    (@mk_simple "Main" unit (fun _ _ _ o => o = ord_top) top3)).
+    (@mk_simple _ "Main" unit (fun _ _ o _ => o = ord_top) top3)).
   Hypothesis WFR: URA.wf (rsum (ModSem.initial_r_state ms_tgt)).
 
   Opaque interp_Es.
@@ -494,10 +472,10 @@ Section CANCEL.
 (x0 <- interp_Es (ModSem.prog ms_tgt)
                  ((ModSem.prog ms_tgt) _ (Call "main" ([]: list val)↑)) st_tgt0;; Ret (snd x0))).
     { clear SIM. ginit. { eapply cpn5_wcompat; eauto with paco. }
-      unfold interp_hCallE_tgt. rewrite unfold_interp. steps.
+      unfold interp_hCallE_tgt. rewrite unfold_interp. steps. rewrite MAIN. steps.
       unfold HoareCall.
       destruct (find (fun mnr => dec "Main" (fst mnr)) (ModSem.initial_mrs ms_tgt)) eqn:MAINR; cycle 1.
-      { exfalso. clear - WF1 Heq MAINR. admit "ez - use WF1". }
+      { exfalso. clear - WF1 MAIN MAINR. admit "ez - use WF1". }
       destruct p; ss.
       assert(s = "Main") by admit "ez". clarify.
       rewrite Any.upcast_downcast.
@@ -523,11 +501,11 @@ Section CANCEL.
       eapply bindR_intro with (RR:=eq).
       - fold st_tgt0. eapply simg_gpaco_refl. typeclasses eauto.
       - ii. des_ifs. ss. steps.
-        unfold checkWf, assume. steps. destruct p0. steps.
+        unfold forge, checkWf, assume. steps. destruct p0. steps.
         unfold ModSem.handle_rE. des_ifs.
         { admit "we should use stronger RR, not eq;
 we should know that stackframe is not popped (unary property)". }
-        steps. unfold forge; steps. des; ss.
+        steps. des; ss.
     }
 
 
@@ -553,4 +531,3 @@ we should know that stackframe is not popped (unary property)". }
   Qed.
 
 End CANCEL.
-

@@ -98,10 +98,22 @@ int pop(struct Node** llref) {
   if(*llref) {
     int v = (*llref)->val;
     struct Node* next = (*llref)->next;
+    free(*llref);
     (*llref) = next;
     return v;
   }
   return -1;
+}
+
+struct Node* pop2(struct Node* ll, int *n) {
+  if(ll) {
+    int v = (ll)->val;
+    struct Node* next = (ll)->next;
+    free(ll);
+    *n = v;
+    return next;
+  }
+  return NULL;
 }
 
 
@@ -177,10 +189,10 @@ body := xs <- LGet;;
         end
  */
 void echo_finish() {
-  int n = pop(&my_list);
-  if(n == -1) return;
-  else {
-    out(n);
+  if(my_list) {
+    int *n = malloc(sizeof(int));
+    my_list = pop2(my_list, n);
+    out(*n);
     echo_finish();
   }
 }

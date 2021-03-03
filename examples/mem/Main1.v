@@ -6,7 +6,8 @@ Require Import Behavior.
 Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
-Require Import Hoare.
+Require Import HoareDef.
+Require Import TODOYJ.
 
 Generalizable Variables E R A B C X Y Σ.
 
@@ -48,9 +49,13 @@ Section PROOF.
   .
 
   (*** main's view on stb ***)
-  Definition main_spec: fspec := mk_simple "Main" (X:=unit) (fun _ _ _ o => o = ord_top) top3.
+  Definition main_spec: fspec := mk_simple "Main" (X:=unit) (fun _ _ o _ => o = ord_top) top3.
 
-  Definition MainStb: list (gname * fspec) := [("main", main_spec)].
+  Definition MainStb: list (gname * fspec).
+    eapply (Seal.sealing "stb").
+    apply [("main", main_spec)].
+  Defined.
+
   Definition MainSbtb: list (gname * fspecbody) := [("main", mk_specbody main_spec mainBody)].
 
   (***
@@ -66,7 +71,7 @@ Possible improvements:
     (* ModSem.fnsems := [("main", mainF)]; *)
     (* ModSem.fnsems := List.map (map_snd (fun_to_tgt (MainStb ++ MemStb))) MainStb; *)
     ModSem.fnsems := List.map (fun '(fn, body) => (fn, fun_to_tgt (MemStb ++ MainStb) fn body)) MainSbtb;
-    ModSem.initial_mrs := [("Main", (ε, unit↑))];
+    ModSem.initial_mrs := [("Main", (ε, tt↑))];
   |}
   .
 
@@ -77,3 +82,4 @@ Possible improvements:
   .
 
 End PROOF.
+Global Hint Unfold MainStb: stb.

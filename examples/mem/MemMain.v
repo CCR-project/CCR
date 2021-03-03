@@ -53,7 +53,7 @@ Section PROOF.
     Mod.get_modsem := fun _ => {|
         ModSem.fnsems := List.map (fun '(fn, sb) => (fn, fun_to_src sb.(fsb_body))) (MemSbtb ++ MainSbtb);
         (* ModSem.initial_mrs := [("Mem", ε) ; ("Main", ε)]; *)
-        ModSem.initial_mrs := [("Mem", (ε, unit↑)) ; ("Main", (ε, unit↑))];
+        ModSem.initial_mrs := [("Mem", (ε, tt↑)) ; ("Main", (ε, tt↑))];
       |};
     Mod.sk := Sk.unit;
   |}
@@ -68,12 +68,13 @@ Section PROOF.
       URA.wf (GRA.padding a)
   .
   Proof.
-    ss. ii. unfold GRA.padding.  des_ifs; cycle 1.
+    ss. ii. unfold GRA.padding.
+    Local Transparent GRA.to_URA. ss. i. des_ifs; cycle 1.
     { apply URA.wf_unit. }
     ss. unfold PCM.GRA.cast_ra, eq_rect, eq_sym. destruct GRA.inG_prf. ss.
+    Local Opaque GRA.to_URA.
   Qed.
 
-  Local Opaque GRA.to_URA.
   Infix "⋅" := URA.add (at level 50, left associativity).
   Notation "(⋅)" := URA.add (only parsing).
 
@@ -134,8 +135,8 @@ Section PROOF.
       + instantiate (1:=eq). destruct e.
         { (**** main part ****)
           ired. unfold handle_hCallE_tgt.
-          des_ifs.
-          - assert(T: s = s0 /\ f = f0) by admit "ez - uniqueness". destruct T. subst. refl.
+          unfold unwrapN. des_ifs.
+          - assert(T: p = p0) by admit "ez - uniqueness". subst. refl.
           - exfalso. admit "ez - extends".
           - exfalso. admit "ez - contains".
           - exfalso. admit "ez - contains".
@@ -192,7 +193,6 @@ Section PROOF.
     ii.
     set (global_sbtb:=MemSbtb++MainSbtb).
     (* clearbody global_stb. *)
-    Local Opaque MemStb.
     Local Opaque MemSbtb.
     Local Opaque MainSbtb.
     eapply adequacy_type with (sbtb:=global_sbtb) in PR.
@@ -200,11 +200,13 @@ Section PROOF.
     { cbn. unfold global_sbtb. rewrite List.map_app.
       Set Printing Coercions.
       seal fun_to_tgt. (*** without this, other tactics (des_ifs; refl; ss; f_equal; etc) will take infinite time. Opaque does help here at all. ***)
-      f_equal.
+      f_equal; cycle 1.
+      { autounfold with stb; autorewrite with stb; refl. }
       apply map_ext. (*** better than just "f_equal" ***)
       i. des_ifs. r; f_equal. unseal fun_to_tgt. eapply fun_to_tgt_ext.
       - ii. ss.
         Local Transparent MemSbtb. cbn in IN. Local Opaque MemSbtb. des; ss; clarify; ss.
+        + admit "ez".
         + admit "ez".
         + admit "ez".
         + admit "ez".
@@ -214,7 +216,8 @@ Section PROOF.
     { Local Transparent MemSbtb. cbn. Local Opaque MemSbtb. des_ifs; ss. }
     ss. unfold compose. ss. rewrite ! URA.unit_id. rewrite ! URA.unit_idl.
     eapply padding_wf; et. ss. esplits; et.
-    rr. esplits; et. ss.
+    { rr. esplits; et. ss. }
+    { i. des_ifs. }
   Qed.
 
 End PROOF.

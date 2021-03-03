@@ -6,7 +6,7 @@ Require Import Behavior.
 Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
-Require Import Hoare.
+Require Import HoareDef.
 Require Import MutHeader.
 
 Generalizable Variables E R A B C X Y Σ.
@@ -19,11 +19,11 @@ Section PROOF.
 
   Context `{Σ: GRA.t}.
 
-  Definition Fsbtb: list (string * fspecbody) := [("f", mk_specbody f_spec (fun _ => triggerUB))].
+  Definition Fsbtb: list (string * fspecbody) := [("f", mk_specbody f_spec (fun _ => trigger (Choose _)))].
 
   Definition FSem: ModSem.t := {|
     ModSem.fnsems := List.map (fun '(fn, body) => (fn, fun_to_tgt GlobalStb fn body)) Fsbtb;
-    ModSem.initial_mrs := [("F", (ε, unit↑))];
+    ModSem.initial_mrs := [("F", (ε, tt↑))];
   |}
   .
 
