@@ -386,6 +386,52 @@ Ltac hcall_tac x o MR_SRC1 FR_SRC1 RARG_SRC :=
   end
 .
 
+Section AUX.
+  Context `{Σ: GRA.t}.
+  Lemma own_update: forall (x y: Σ) rx ctx, URA.updatable x y -> iHyp (Own x) rx -> URA.wf (rx ⋅ ctx) ->
+                                            (* exists ry, iHyp (Own y) ry /\ URA.wf (ry ⋅ ctx) /\ URA.updatable rx ry. *)
+                                            exists ry, iHyp (Own y) ry /\ URA.wf (ry ⋅ ctx) /\ URA.updatable (rx ⋅ ctx) (ry ⋅ ctx).
+  Proof.
+    { clear_until Σ. i. dup H. rr in H0. des; subst. r in H.
+      specialize (H (ctx0 ⋅ ctx)). rewrite ! URA.add_assoc in H. spc H.
+      exists (y ⋅ ctx0). esplits; et.
+      - rr. esplits; et.
+      - eapply URA.updatable_add; try refl. eapply URA.updatable_add; try refl. et.
+    }
+  Qed.
+  Lemma Own_downward: forall r a0 a1, iHyp (Own r) a0 -> URA.extends a0 a1 -> iHyp (Own r) a1.
+  Proof. i. eapply Own_extends; et. Qed.
+
+  (* Lemma is_list_downward: forall ll xs a0 a1, iHyp (is_list ll xs) a0 -> URA.extends a0 a1 -> iHyp (is_list ll xs) a1. *)
+  (* Proof. *)
+  (*   admit "ez". *)
+  (* Qed. *)
+
+  Lemma wf_downward: forall (r0 r1: Σ) (EXT: URA.extends r0 r1), URA.wf r1 -> URA.wf r0.
+  Proof.
+    i. rr in EXT. des; subst. eapply URA.wf_mon; et.
+  Qed.
+End AUX.
+
+Ltac iUpdate H :=
+  eapply own_update in H; revgoals; [on_gwf ltac:(fun H => eapply wf_downward; [|eapply H]); eexists ε; r_equalize; r_solve; fail| |];
+  [|let GWF := fresh "GWF" in
+    let wf := fresh "WF" in
+    let upd := fresh "UPD" in
+    destruct H as [? [H [wf upd]]];
+    (* idtac *)
+    (* on_gwf ltac:(fun _GWF => eassert(GWF: ☀) by *)
+    (*                  (split; [etrans; [apply _GWF|etrans; [|apply upd]]; eapply URA.extends_updatable; r_equalize; r_solve; fail|exact wf]); *)
+    (*                          clear wf upd; iRefresh; clear _GWF *)
+    (*             ) *)
+    on_gwf ltac:(fun _GWF => eassert(GWF: ☀) by
+                     (split; [etrans; [apply _GWF|etrans; [|apply upd]]; eapply URA.extends_updatable; r_equalize; r_solve; fail|exact wf]);
+                             clear wf upd; iRefresh; clear _GWF)]
+.
+
+
+
+
 
 
 
@@ -441,19 +487,6 @@ Section SIMMODSEM.
     { i. destruct xs; ss. }
   Qed.
 
-  Lemma Own_downward: forall r a0 a1, iHyp (Own r) a0 -> URA.extends a0 a1 -> iHyp (Own r) a1.
-  Proof. i. eapply Own_extends; et. Qed.
-
-  (* Lemma is_list_downward: forall ll xs a0 a1, iHyp (is_list ll xs) a0 -> URA.extends a0 a1 -> iHyp (is_list ll xs) a1. *)
-  (* Proof. *)
-  (*   admit "ez". *)
-  (* Qed. *)
-
-  Lemma wf_downward: forall (r0 r1: Σ) (EXT: URA.extends r0 r1), URA.wf r1 -> URA.wf r0.
-  Proof.
-    i. rr in EXT. des; subst. eapply URA.wf_mon; et.
-  Qed.
-
 
 
 
@@ -476,34 +509,6 @@ Section SIMMODSEM.
   Ltac rr_until_bar := until_bar ltac:(fun H => rr in H).
 
   Opaque points_to.
-
-  Lemma own_update: forall (x y: Σ) rx ctx, URA.updatable x y -> iHyp (Own x) rx -> URA.wf (rx ⋅ ctx) ->
-                                                   (* exists ry, iHyp (Own y) ry /\ URA.wf (ry ⋅ ctx) /\ URA.updatable rx ry. *)
-                                                   exists ry, iHyp (Own y) ry /\ URA.wf (ry ⋅ ctx) /\ URA.updatable (rx ⋅ ctx) (ry ⋅ ctx).
-  Proof.
-    { clear_until Σ. i. dup H. rr in H0. destruct H0; clear H0. subst. r in H.
-      specialize (H (x0 ⋅ ctx)). rewrite ! URA.add_assoc in H. spc H.
-      exists (y ⋅ x0). esplits; et.
-      - rr. esplits; et.
-      - eapply URA.updatable_add; try refl. eapply URA.updatable_add; try refl. et.
-    }
-  Qed.
-
-  Ltac iUpdate H :=
-    eapply own_update in H; revgoals; [on_gwf ltac:(fun H => eapply wf_downward; [|eapply H]); eexists ε; r_equalize; r_solve; fail| |];
-    [|let GWF := fresh "GWF" in
-      let wf := fresh "WF" in
-      let upd := fresh "UPD" in
-      destruct H as [? [H [wf upd]]];
-      (* idtac *)
-      (* on_gwf ltac:(fun _GWF => eassert(GWF: ☀) by *)
-      (*                  (split; [etrans; [apply _GWF|etrans; [|apply upd]]; eapply URA.extends_updatable; r_equalize; r_solve; fail|exact wf]); *)
-      (*                          clear wf upd; iRefresh; clear _GWF *)
-      (*             ) *)
-      on_gwf ltac:(fun _GWF => eassert(GWF: ☀) by
-                       (split; [etrans; [apply _GWF|etrans; [|apply upd]]; eapply URA.extends_updatable; r_equalize; r_solve; fail|exact wf]);
-                               clear wf upd; iRefresh; clear _GWF)]
-  .
 
   Definition updatable_iprop (P Q: iProp): Prop :=
     forall pr, URA.wf pr -> P pr -> exists qr, Q qr /\ URA.updatable pr qr
@@ -694,7 +699,8 @@ Section SIMMODSEM.
         apply_all_once Any.upcast_inj. des; clarify. steps. rewrite Any.upcast_downcast in *. clarify.
         iDestruct SIM. destruct SIM as [SIM|SIM]; iRefresh.
         { exfalso. iDestruct SIM; subst. iMerge SIM A. rewrite <- own_sep in SIM. rewrite GRA.padding_add in SIM.
-          iOwnWf SIM. clear - WF. apply GRA.padding_wf in WF. des. ss.
+          iOwnWf SIM.
+          clear - WF. apply GRA.padding_wf in WF. des. ss.
         }
         assert(ll = (Vptr x 0) /\ x10 = z :: ns); des; subst.
         { iMerge SIM A. rewrite <- own_sep in SIM. rewrite GRA.padding_add in SIM. rewrite URA.add_comm in SIM.
