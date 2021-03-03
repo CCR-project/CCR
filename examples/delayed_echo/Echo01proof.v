@@ -411,7 +411,46 @@ Section AUX.
   Proof.
     i. rr in EXT. des; subst. eapply URA.wf_mon; et.
   Qed.
+
+  Definition updatable_iprop (P Q: iProp): Prop :=
+    forall pr, URA.wf pr -> P pr -> exists qr, Q qr /\ URA.updatable pr qr
+  .
+
+  Lemma impl_updatable: forall P Q, Impl P Q -> updatable_iprop P Q.
+  Proof. { ii. esplits; eauto. refl. } Qed.
+
+  Lemma iprop_update: forall (P Q: iProp) rx ctx, updatable_iprop P Q -> iHyp P rx -> URA.wf (rx ⋅ ctx) ->
+                                                  exists ry, iHyp Q ry /\ URA.wf (ry ⋅ ctx) /\ URA.updatable (rx ⋅ ctx) (ry ⋅ ctx).
+  Proof. { clear_until Σ. i. r in H0. exploit H; try apply H0; et. { eapply URA.wf_mon; et. } i; des. esplits; eauto.
+           eapply URA.updatable_add; et. refl. } Qed.
+
+  Lemma unfold_APC: forall n, _APC n =
+    match n with
+    | 0 => Ret tt
+    | S n => break <- trigger (Choose _);;
+             if break: bool
+             then Ret tt
+             else '(fn, varg) <- trigger (Choose _);;
+                  trigger (hCall true fn varg);; _APC n
+    end.
+    { i. destruct n; ss. }
+  Qed.
+
+  Context `{@GRA.inG Mem1.memRA Σ}.
+  Lemma unfold_is_list: forall ll xs, is_list ll xs = 
+    match xs with
+    | [] => ⌜ll = Vnullptr⌝
+    | xhd :: xtl =>
+      Exists lhd ltl, ⌜ll = Vptr lhd 0⌝ ** (Own (GRA.padding ((lhd,0%Z) |-> [xhd; ltl])))
+                                 ** is_list ltl xtl
+    end
+  .
+    { i. destruct xs; ss. }
+  Qed.
 End AUX.
+Global Opaque _APC.
+
+
 
 Ltac iUpdate H :=
   eapply own_update in H; revgoals; [on_gwf ltac:(fun H => eapply wf_downward; [|eapply H]); eexists ε; r_equalize; r_solve; fail| |];
@@ -463,29 +502,6 @@ Section SIMMODSEM.
   Opaque URA.unit.
 
 
-  Lemma unfold_APC: forall n, _APC n =
-    match n with
-    | 0 => Ret tt
-    | S n => break <- trigger (Choose _);;
-             if break: bool
-             then Ret tt
-             else '(fn, varg) <- trigger (Choose _);;
-                  trigger (hCall true fn varg);; _APC n
-    end.
-    { i. destruct n; ss. }
-  Qed.
-  Opaque _APC.
-
-  Lemma unfold_is_list: forall ll xs, is_list ll xs = 
-    match xs with
-    | [] => ⌜ll = Vnullptr⌝
-    | xhd :: xtl =>
-      Exists lhd ltl, ⌜ll = Vptr lhd 0⌝ ** (Own (GRA.padding ((lhd,0%Z) |-> [xhd; ltl])))
-                                 ** is_list ltl xtl
-    end
-  .
-    { i. destruct xs; ss. }
-  Qed.
 
 
 
@@ -510,9 +526,6 @@ Section SIMMODSEM.
 
   Opaque points_to.
 
-  Definition updatable_iprop (P Q: iProp): Prop :=
-    forall pr, URA.wf pr -> P pr -> exists qr, Q qr /\ URA.updatable pr qr
-  .
 
 
 
@@ -529,134 +542,7 @@ Section SIMMODSEM.
 
     Opaque URA.add.
     econs; ss.
-    { unfold echoF, echo_body. init.
-      harg_tac. des_ifs_safe.
-      iRefresh. do 2 iDestruct PRE. iPure A. iPure A0. clarify.
-      iDestruct SIM.
-      destruct SIM as [A|A]; iRefresh; cycle 1.
-      { exfalso. iMerge A PRE. rewrite <- own_sep in A. rewrite GRA.padding_add in A.
-        iOwnWf A. clear - WF. apply GRA.padding_wf in WF. des. ss.
-      }
-
-      iDestruct A. subst.
-      rename x into ns. rename x0 into ns0.
-      assert(l = ns /\ v = ll); des; subst.
-      { iMerge A PRE. rewrite <- own_sep in A. rewrite GRA.padding_add in A.
-        iOwnWf A. eapply GRA.padding_wf in WF. des. eapply URA.auth_included in WF. des.
-        clear - WF.
-        Local Transparent URA.add.
-        rr in WF. des. ss. des_ifs.
-        Local Opaque URA.add.
-      }
-
-
-
-
-      steps. unfold hcall, ccall. steps.
-      unfold body_to_tgt. unfold interp_hCallE_tgt, APC. steps. (********** TODO: never unfold it, make a lemma ******************)
-      force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
-
-      hcall_tac __ __ (A, A0) PRE (@URA.unit Σ); ss; et.
-      { esplits; ss; et. eexists; iRefresh. left; iRefresh. iSplitL A; ss.
-        - iApply A; ss.
-        - iApply A0; ss.
-      }
-      des; subst. rewrite Any.upcast_downcast. steps. rewrite Any.upcast_downcast. steps.
-
-
-
-      iDestruct SIM. destruct SIM as [SIM|SIM]; iRefresh; cycle 1.
-      { exfalso. iMerge SIM PRE. rewrite <- own_sep in SIM. rewrite GRA.padding_add in SIM.
-        iOwnWf SIM. clear - WF. apply GRA.padding_wf in WF. des. ss.
-      }
-      iDestruct SIM. subst.
-      assert(ll0 = ll /\ x = ns); des; subst.
-      { iMerge SIM PRE. rewrite <- own_sep in SIM. rewrite GRA.padding_add in SIM.
-        iOwnWf SIM. eapply GRA.padding_wf in WF. des. eapply URA.auth_included in WF. des.
-        clear - WF.
-        Local Transparent URA.add.
-        rr in WF. des. ss. des_ifs.
-        Local Opaque URA.add.
-      }
-      subst.
-
-
-
-
-      destruct (unint vret_src) eqn:T; cycle 1.
-      { steps. unfold triggerUB. steps. }
-      destruct vret_src; ss. clarify. steps.
-
-      destruct (dec z (- 1)%Z).
-      - subst. ss. steps.
-        force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
-        hcall_tac __ __ (A, SIM) (@URA.unit Σ) PRE; ss; et.
-        { instantiate (2:= (_, _)). esplits; try refl; iRefresh. iSplitP; ss. iSplitP; ss; et. }
-        { esplits; ss; et. }
-        { esplits; ss; et. exists ns; iRefresh. left; iRefresh. iSplit SIM A; ss. r_solve. }
-        steps.
-        hret_tac mr (@URA.unit Σ); ss.
-        { eapply URA.extends_updatable. esplit. r_equalize; r_solve. }
-        { iRefresh. iDestruct SIM0. esplits; eauto. eexists; iRefresh. eauto. }
-      - steps.
-        force_l. eexists 1. steps. rewrite Any.upcast_downcast. ss. steps.
-
-        rewrite unfold_APC. steps. force_l. exists false. steps. force_l. eexists ("push", [ll; Vint z]↑). steps.
-        force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
-        hcall_tac __ (ord_pure 2) PRE SIM A; ss; et.
-        { instantiate (1:=(_, _)). esplits; try refl; iRefresh. eexists; iRefresh. iSplitP; ss. iSplitP; ss. iApply A; ss. }
-        { esplits; ss; et. exists ns; iRefresh. right; iRefresh; ss. }
-        des; iRefresh. do 2 iDestruct POST0. iPure A. subst. apply Any.upcast_inj in A. des; clarify.
-        iDestruct SIM0. destruct SIM0; iRefresh.
-        { exfalso. iDestruct H1; subst. iMerge H1 SIM. rewrite <- own_sep in H1. rewrite GRA.padding_add in H1.
-          iOwnWf H1. clear - WF. apply GRA.padding_wf in WF. des. ss.
-        }
-
-
-        rename H1 into A. iMerge A SIM. rewrite <- own_sep in A. rewrite GRA.padding_add in A. rewrite URA.add_comm in A.
-
-
-        assert(ll0 = ll /\ x8 = ns); des; subst.
-        { iOwnWf A. eapply GRA.padding_wf in WF. des. eapply URA.auth_included in WF. des.
-          clear - WF.
-          Local Transparent URA.add.
-          rr in WF. des. ss. des_ifs.
-          Local Opaque URA.add.
-        }
-
-
-
-        (*** testing purpose ***)
-        iUpdate A.
-        { eapply GRA.padding_updatable. instantiate (1:= echo_black ll (ns) ⋅ echo_white ll (ns)).
-          eapply URA.auth_update. rr. ii. des; ss.
-        }
-
-        (*** testing purpose ***)
-        iUpdate A.
-        { eapply GRA.padding_updatable. instantiate (1:= echo_black Vnullptr ([]) ⋅ echo_white Vnullptr ([])).
-          eapply URA.auth_update. rr. ii. des; ss. destruct ctx; ss; clarify. }
-
-        iUpdate A.
-        { eapply GRA.padding_updatable. instantiate (1:= echo_black x (z :: ns) ⋅ echo_white x (z :: ns)).
-          eapply URA.auth_update. rr. ii. des; ss. destruct ctx; ss; clarify.
-        }
-
-        rewrite <- GRA.padding_add in A. rewrite own_sep in A. iDestruct A. subst.
-
-
-
-        rewrite unfold_APC. steps.
-        force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast in *. steps.
-
-        hcall_tac __ ord_top (POST0, A) (@URA.unit Σ) A0; ss; et.
-        { instantiate (1:=(_, _)). esplits; try refl; iRefresh. iSplitP; ss. iSplitP; ss; et. }
-        { esplits; ss; eauto. exists (z :: ns); iRefresh. left; iRefresh. iSplit A POST0; ss; r_solve. }
-        steps.
-        hret_tac mr0 (@URA.unit Σ); ss.
-        { eapply URA.extends_updatable; et. r_equalize; r_solve. }
-        { esplits; eauto. }
-    }
+    { admit "". }
     econs; ss.
     { unfold echo_finishF, echo_finish_body. init. harg_tac; des_ifs_safe; iRefresh.
       do 2 iDestruct PRE. iPure A. iPure A0. clarify.
@@ -711,13 +597,6 @@ Section SIMMODSEM.
           Local Opaque URA.add.
         }
 
-        assert(test: forall P Q, Impl P Q -> updatable_iprop P Q).
-        { ii. esplits; eauto. refl. }
-
-        assert(iprop_update: forall (P Q: iProp) rx ctx, updatable_iprop P Q -> iHyp P rx -> URA.wf (rx ⋅ ctx) ->
-                                                       exists ry, iHyp Q ry /\ URA.wf (ry ⋅ ctx) /\ URA.updatable (rx ⋅ ctx) (ry ⋅ ctx)).
-        { clear_until Σ. i. r in H0. exploit H; try apply H0; et. { eapply URA.wf_mon; et. } i; des. esplits; eauto.
-          eapply URA.updatable_add; et. refl. }
 
 
 
@@ -725,7 +604,9 @@ Section SIMMODSEM.
         iMerge A1 A2. eapply iprop_update in A1; revgoals; swap 1 2.
         { instantiate (1:=is_list (Vptr hd 0) (List.map Vint (z :: ns))).
           ii. eassert(GWF0: ☀). { split; [refl|apply H1]. } clear GWF. iRefresh. iClears'.
-          esplits; eauto; try refl. iRefresh. rewrite unfold_is_list. cbn.
+          esplits; eauto; try refl.
+        admit "". } admit "". admit "". } Unshelve. all: ss. Qed.
+          iRefresh. rewrite unfold_is_list. cbn.
           do 2 eexists; iRefresh.
           iDestruct H2; subst. Undo 1.
           let name0 := fresh "A" in apply sepconj_split in H2 as [? [? [H2 [name0 ?]]]]; subst; iRefresh. (********** TODO 0000****************)
