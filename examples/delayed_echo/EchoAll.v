@@ -19,7 +19,7 @@ Set Implicit Arguments.
 
 Section ECHO.
 
-  Definition Σ: GRA.t := GRA.of_list [Mem1.memRA; URA.auth (RA.excl (list Z))].
+  Definition Σ: GRA.t := GRA.of_list [Mem1.memRA; Echo1.echoRA].
   Local Existing Instance Σ.
 
   Let memRA_inG: @GRA.inG Mem1.memRA Σ.
@@ -28,7 +28,7 @@ Section ECHO.
   Qed.
   Local Existing Instance memRA_inG.
 
-  Let echoRA_inG: @GRA.inG (URA.auth (RA.excl (list Z))) Σ.
+  Let echoRA_inG: @GRA.inG Echo1.echoRA Σ.
   Proof.
     exists 1. ss.
   Qed.
