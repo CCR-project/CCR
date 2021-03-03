@@ -26,6 +26,11 @@ Local Open Scope nat_scope.
 
 
 
+Inductive ltac_Wild : Set :=
+| ltac_wild : ltac_Wild.
+Notation "'__'" := ltac_wild : ltac_scope.
+Open Scope ltac_scope.
+
 Ltac r_inb r rs :=
   match rs with
   | r => constr:(true)
@@ -38,6 +43,17 @@ Ltac r_inb r rs :=
         (* let tmp := (tmp0 || tmp1) in *)
         constr:(tmp)
   | _ => constr:(false)
+  end.
+
+Ltac r_gather Hs :=
+  match Hs with
+  | (?H0, ?H1) => let rs0 := r_gather H0 in
+                  let rs1 := r_gather H1 in
+                  constr:((rs0 ⋅ rs1))
+  | ?H => match type of H with
+          | iHyp _ ?rh => constr:(rh)
+          | _ => H
+          end
   end.
 
 Ltac r_subtract xs ys :=
@@ -231,6 +247,7 @@ Section MARK.
 End MARK.
 Notation "'☀'" := (__gwf_mark__ _ _) (at level 60).
 
+Ltac on_gwf TAC := match goal with | GWF:☀ |- _ => TAC GWF end.
 
 
 (* Ltac iCheckWf := *)
@@ -345,6 +362,29 @@ Ltac harg_tac :=
     assert(name: __gwf_mark__ cur cur) by (split; [refl|exact H]); clear H
   end.
 
+Ltac hcall_tac x o MR_SRC1 FR_SRC1 RARG_SRC :=
+  let mr_src1 := r_gather MR_SRC1 in
+  let fr_src1 := r_gather FR_SRC1 in
+  let rarg_src := r_gather RARG_SRC in
+  (* let tac0 := etrans; [on_gwf ltac:(fun GWF => apply GWF)|eapply URA.extends_updatable; r_equalize; r_solve] in *)
+  (* let tac0 := idtac in *)
+  let tac0 := etrans; [etrans; [|on_gwf ltac:(fun GWF => apply GWF)]|]; eapply URA.extends_updatable; r_equalize; r_solve; fail in
+  let tac1 := (on_gwf ltac:(fun H => clear H);
+               let WF := fresh "WF" in
+               let tmp := fresh "_tmp_" in
+               let GWF := fresh "GWF" in
+               intros ? ? ? ? ? WF; cbn in WF; desH WF; subst;
+               esplits; ss; et; intros tmp ?; assert(GWF: ☀) by (split; [refl|exact tmp]); clear tmp; iRefresh; iClears') in
+  prep;
+  match x with
+  | ltac_wild =>
+    match o with
+    | ltac_wild => eapply (hcall_clo _ (mr_src1:=mr_src1) (fr_src1:=fr_src1) (rarg_src:=rarg_src)); [tac0|lia|..|tac1]
+    | _ => eapply (hcall_clo _ (o:=o) (mr_src1:=mr_src1) (fr_src1:=fr_src1) (rarg_src:=rarg_src)); [tac0|lia|..|tac1]
+    end
+  | _ => eapply (hcall_clo x (o:=o) (mr_src1:=mr_src1) (fr_src1:=fr_src1) (rarg_src:=rarg_src)); [tac0|lia|..|tac1]
+  end
+.
 
 
 
@@ -417,7 +457,6 @@ Section SIMMODSEM.
 
 
 
-  Ltac on_gwf TAC := match goal with | GWF:☀ |- _ => TAC GWF end.
 
   Ltac iOwnWf G :=
     match goal with
@@ -450,6 +489,21 @@ Section SIMMODSEM.
     }
   Qed.
 
+  Ltac iUpdate H :=
+    eapply own_update in H; revgoals; [on_gwf ltac:(fun H => eapply wf_downward; [|eapply H]); eexists ε; r_equalize; r_solve; fail| |];
+    [|let GWF := fresh "GWF" in
+      let wf := fresh "WF" in
+      let upd := fresh "UPD" in
+      destruct H as [? [H [wf upd]]];
+      (* idtac *)
+      (* on_gwf ltac:(fun _GWF => eassert(GWF: ☀) by *)
+      (*                  (split; [etrans; [apply _GWF|etrans; [|apply upd]]; eapply URA.extends_updatable; r_equalize; r_solve; fail|exact wf]); *)
+      (*                          clear wf upd; iRefresh; clear _GWF *)
+      (*             ) *)
+      on_gwf ltac:(fun _GWF => eassert(GWF: ☀) by
+                       (split; [etrans; [apply _GWF|etrans; [|apply upd]]; eapply URA.extends_updatable; r_equalize; r_solve; fail|exact wf]);
+                               clear wf upd; iRefresh; clear _GWF)]
+  .
 
 
 
@@ -494,44 +548,7 @@ Section SIMMODSEM.
       steps. unfold hcall, ccall. steps.
       unfold body_to_tgt. unfold interp_hCallE_tgt, APC. steps. (********** TODO: never unfold it, make a lemma ******************)
       force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
-      Inductive ltac_Wild : Set :=
-      | ltac_wild : ltac_Wild.
-      Notation "'__'" := ltac_wild : ltac_scope.
-      Open Scope ltac_scope.
-      
-      Ltac r_gather Hs :=
-        match Hs with
-        | (?H0, ?H1) => let rs0 := r_gather H0 in
-                        let rs1 := r_gather H1 in
-                        constr:((rs0 ⋅ rs1))
-        | ?H => match type of H with
-                | iHyp _ ?rh => constr:(rh)
-                | _ => H
-                end
-        end.
-      Ltac hcall_tac x o MR_SRC1 FR_SRC1 RARG_SRC :=
-        let mr_src1 := r_gather MR_SRC1 in
-        let fr_src1 := r_gather FR_SRC1 in
-        let rarg_src := r_gather RARG_SRC in
-        (* let tac0 := etrans; [on_gwf ltac:(fun GWF => apply GWF)|eapply URA.extends_updatable; r_equalize; r_solve] in *)
-        (* let tac0 := idtac in *)
-        let tac0 := etrans; [etrans; [|on_gwf ltac:(fun GWF => apply GWF)]|]; eapply URA.extends_updatable; r_equalize; r_solve; fail in
-        let tac1 := (on_gwf ltac:(fun H => clear H);
-                     let WF := fresh "WF" in
-                     let tmp := fresh "_tmp_" in
-                     let GWF := fresh "GWF" in
-                     intros ? ? ? ? ? WF; cbn in WF; desH WF; subst;
-                     esplits; ss; et; intros tmp ?; assert(GWF: ☀) by (split; [refl|exact tmp]); clear tmp; iRefresh; iClears') in
-        prep;
-        match x with
-        | ltac_wild =>
-          match o with
-          | ltac_wild => eapply (hcall_clo _ (mr_src1:=mr_src1) (fr_src1:=fr_src1) (rarg_src:=rarg_src)); [tac0|lia|..|tac1]
-          | _ => eapply (hcall_clo _ (o:=o) (mr_src1:=mr_src1) (fr_src1:=fr_src1) (rarg_src:=rarg_src)); [tac0|lia|..|tac1]
-          end
-        | _ => eapply (hcall_clo x (o:=o) (mr_src1:=mr_src1) (fr_src1:=fr_src1) (rarg_src:=rarg_src)); [tac0|lia|..|tac1]
-        end
-      .
+
       hcall_tac __ __ (A, A0) PRE (@URA.unit Σ); ss; et.
       { esplits; ss; et. eexists; iRefresh. left; iRefresh. iSplitL A; ss.
         - iApply A; ss.
@@ -600,23 +617,6 @@ Section SIMMODSEM.
           Local Opaque URA.add.
         }
         subst.
-
-        Ltac iUpdate H :=
-          eapply own_update in H; revgoals; [on_gwf ltac:(fun H => eapply wf_downward; [|eapply H]); eexists ε; r_equalize; r_solve; fail| |];
-          [|let GWF := fresh "GWF" in
-           let wf := fresh "WF" in
-           let upd := fresh "UPD" in
-           destruct H as [? [H [wf upd]]];
-           (* idtac *)
-           (* on_gwf ltac:(fun _GWF => eassert(GWF: ☀) by *)
-           (*                  (split; [etrans; [apply _GWF|etrans; [|apply upd]]; eapply URA.extends_updatable; r_equalize; r_solve; fail|exact wf]); *)
-           (*                          clear wf upd; iRefresh; clear _GWF *)
-           (*             ) *)
-           on_gwf ltac:(fun _GWF => eassert(GWF: ☀) by
-                            (split; [etrans; [apply _GWF|etrans; [|apply upd]]; eapply URA.extends_updatable; r_equalize; r_solve; fail|exact wf]);
-                                    clear wf upd; iRefresh; clear _GWF)]
-        .
-
 
 
 
