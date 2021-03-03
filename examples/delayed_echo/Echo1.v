@@ -26,9 +26,9 @@ Definition hcall {X Y} (fn: gname) (varg: X): itree (hCallE +' pE +' eventE) Y :
 (* Let echoRA: URA.t := (RA.excl (list Z)). *)
 (* Compute (@URA.car echoRA). *)
 (* Definition echo_r (ns: list Z): (@URA.car echoRA) := inl (Some ns). *)
-Let echoRA: URA.t := URA.auth (RA.excl (list Z)).
-Definition echo_black (ns: list Z): (@URA.car echoRA) := URA.black (M:=(RA.excl (list Z))) (inl (Some ns)).
-Definition echo_white (ns: list Z): (@URA.car echoRA) := URA.white (M:=(RA.excl (list Z))) (inl (Some ns)).
+Let echoRA: URA.t := URA.auth (RA.excl (val * list Z)).
+Definition echo_black (hd: val) (ns: list Z): (@URA.car echoRA) := URA.black (M:=(RA.excl _)) (inl (Some (hd, ns))).
+Definition echo_white (hd: val) (ns: list Z): (@URA.car echoRA) := URA.white (M:=(RA.excl _)) (inl (Some (hd, ns))).
 
 
 
@@ -98,10 +98,10 @@ Section PROOF.
   (*     end *)
   (* . *)
 
-  Let echo_spec:        fspec := (@mk _ "Echo" (list Z) (list Z) unit
-                                      (fun ns varg_high _ o => Own(GRA.padding(echo_white(ns))) ** ⌜o = ord_top⌝ ** ⌜varg_high = ns⌝) (top4)).
-  Let echo_finish_spec: fspec := (@mk _ "Echo" (list Z) (list Z) unit
-                                      (fun ns varg_high _ o => Own(GRA.padding(echo_white(ns))) ** ⌜o = ord_top⌝ ** ⌜varg_high = ns⌝) (top4)).
+  Let echo_spec:        fspec := (@mk _ "Echo" (val * list Z) (list Z) unit
+                                      (fun '(hd, ns) varg_high _ o => Own(GRA.padding(echo_white hd ns)) ** ⌜o = ord_top⌝ ** ⌜varg_high = ns⌝) (top4)).
+  Let echo_finish_spec: fspec := (@mk _ "Echo" (val * list Z) (list Z) unit
+                                      (fun '(hd, ns) varg_high _ o => Own(GRA.padding(echo_white hd ns)) ** ⌜o = ord_top⌝ ** ⌜varg_high = ns⌝) (top4)).
   (* Let echo_spec:        fspec := (mk_simple "Echo" (X:=unit) (fun _ _ o _ => o = ord_top) (top3)). *)
   (* Let echo_finish_spec: fspec := (mk_simple "Echo" (X:=unit) (fun _ _ o _ => o = ord_top) (top3)). *)
 
@@ -116,7 +116,7 @@ Section PROOF.
 
   Definition EchoSem: ModSem.t := {|
     ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt (LinkedListStb ++ ClientStb ++ MemStb ++ EchoStb) fn fsb)) EchoSbtb;
-    ModSem.initial_mrs := [("Echo", (GRA.padding(echo_black([])), tt↑))];
+    ModSem.initial_mrs := [("Echo", (GRA.padding(echo_black Vnullptr []), tt↑))];
   |}
   .
 

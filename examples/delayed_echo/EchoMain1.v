@@ -20,7 +20,7 @@ Section PROOF.
 
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG Mem1.memRA Σ}.
-  Context `{@GRA.inG (URA.auth (RA.excl (list Z))) Σ}.
+  Context `{@GRA.inG Echo1.echoRA Σ}.
 
   Definition main_body: list val -> itree (hCallE +' pE +' eventE) val :=
     fun _ =>
