@@ -349,6 +349,48 @@ Ltac iExists' Hs := let rs := r_gather Hs in exists rs.
 
 
 
+Section AUX.
+  Context {Σ: GRA.t}.
+  Lemma wf_downward: forall (r0 r1: Σ) (EXT: URA.extends r0 r1), URA.wf r1 -> URA.wf r0.
+  Proof.
+    i. rr in EXT. des; subst. eapply URA.wf_mon; et.
+  Qed.
+End AUX.
+
+
+
+Ltac iIntro :=
+  try on_gwf ltac:(fun GWF => clear GWF); (*** if GWF exists, remove it. otherwise don't ***)
+  let A := fresh "A" in
+  let wf := fresh "wf" in
+  let GWF := fresh "GWF" in
+  intros ? wf A; eassert(GWF: ☀) by (split; [refl|exact wf]); iRefresh.
+Ltac iSpecialize H G :=
+  let rp := r_gather G in
+  specialize (H rp); eapply hexploit_mp in H; [|on_gwf ltac:(fun GWF => eapply wf_downward; cycle 1; [by apply GWF|r_equalize; r_solve])];
+  specialize (H G); rewrite intro_iHyp in H; clear G; iRefresh
+.
+Ltac iAssert H Abody :=
+  let A := fresh "A" in
+  match type of H with
+  | iHyp ?Hbody ?rH =>
+    match Abody with
+    | ltac_wild => eassert(A: iHyp (Hbody -* _) ε)
+    | _ => assert(A: iHyp (Hbody -* Abody) ε)
+    end;
+    [|iSpecialize A H; rewrite URA.unit_idl in A]
+  end
+.
+
+Ltac iOwnWf G :=
+  match goal with
+  | H:iHyp (Own ?r) ?rh |- _ =>
+    check_equal H G;
+    let name := fresh "WF" in
+    (* assert(name: URA.wf r); [eapply wf_downward; [eapply H|eapply wf_downward; et; r_equalize; r_solve]|] *)
+    assert(name: URA.wf r); [eapply wf_downward; [eapply H|eapply wf_downward; [|on_gwf ltac:(fun GWF => apply GWF)]; r_equalize; r_solve]|]
+  end.
+
 
 
 
@@ -407,11 +449,6 @@ Section AUX.
   (*   admit "ez". *)
   (* Qed. *)
 
-  Lemma wf_downward: forall (r0 r1: Σ) (EXT: URA.extends r0 r1), URA.wf r1 -> URA.wf r0.
-  Proof.
-    i. rr in EXT. des; subst. eapply URA.wf_mon; et.
-  Qed.
-
   (* Definition updatable_iprop (P Q: iProp): Prop := *)
   (*   forall pr, URA.wf pr -> P pr -> exists qr, Q qr /\ URA.updatable pr qr *)
   (* . *)
@@ -460,6 +497,65 @@ Section AUX.
   .
     { i. destruct xs; ss. }
   Qed.
+
+  Context `{@GRA.inG Echo1.echoRA Σ}.
+
+  Ltac bring_front r0 :=
+    repeat rewrite URA.add_assoc in *; rewrite (URA.add_comm _ r0) in *; repeat rewrite URA.add_assoc in *
+  .
+  Goal forall (a b c d e: Σ), a ⋅ (b ⋅ c) ⋅ (d ⋅ e) = ε.
+    i. bring_front d. bring_front c.
+    match goal with | |- ?G => match G with | c ⋅ d ⋅ a ⋅ b ⋅ e = ε => idtac | _ => fail end end.
+  Abort.
+
+  Goal forall (a b c d e f: Σ), a ⋅ (b ⋅ c) ⋅ (d ⋅ e) = ε -> a ⋅ (b ⋅ c) ⋅ (d ⋅ e) = f.
+    i. bring_front d. bring_front c.
+    match goal with | |- ?G => match G with | c ⋅ d ⋅ a ⋅ b ⋅ e = f => idtac | _ => fail end end.
+    match goal with | [H: ?rs = _ |- _ ] => match rs with | (c ⋅ d ⋅ a ⋅ b ⋅ e) => idtac | _ => fail end end.
+  Abort.
+
+  Ltac iMerge A0 A1 :=
+    match type of A0 with
+    | iHyp ?p0 ?r0 =>
+      match type of A1 with
+      | iHyp ?p1 ?r1 =>
+        bring_front r1; bring_front r0;
+
+        let ttmp := fresh "ttmp" in
+        rename A0 into ttmp;
+        assert(A0: iHyp (p0 ** p1) (r0 ⋅ r1)) by (apply sepconj_merge; try assumption);
+        clear ttmp; clear A1;
+
+        let tmp := fresh "tmp" in
+        let tmpH := fresh "tmpH" in
+        remember (r0 ⋅ r1) as tmp eqn:tmpH in *;
+        on_gwf ltac:(fun GWF => rewrite tmpH in GWF at 1);
+        clear tmpH
+      end
+    end.
+
+  Lemma echo_ra_merge
+        ll0 ns0 ll1 ns1
+    :
+      iHyp (Own (GRA.padding (echo_black ll0 ns0)) -* Own (GRA.padding (echo_white ll1 ns1))
+                -* (⌜ll1 = ll0 /\ ns1 = ns0⌝ ** Own (GRA.padding (echo_black ll0 ns0)) ** Own (GRA.padding (echo_white ll1 ns1)))) ε
+  .
+  Proof.
+    iIntro. iIntro.
+    {
+      iMerge A A0. rewrite <- own_sep in A. rewrite GRA.padding_add in A.
+      iOwnWf A. eapply GRA.padding_wf in WF. des. eapply URA.auth_included in WF. des.
+      Local Transparent URA.add.
+      rr in WF. des. cbn in WF.
+      Local Opaque URA.add.
+      des_ifs.
+      rewrite <- GRA.padding_add in A. rewrite own_sep in A. iDestruct' A.
+      iSplitL A; ss.
+      { sym. r_equalize. r_solve. }
+      - iSplitP; ss.
+      - ss.
+    }
+  Qed.
 End AUX.
 Global Opaque _APC.
 
@@ -480,15 +576,6 @@ Ltac iUpdate H :=
                      (split; [etrans; [apply _GWF|etrans; [|apply upd]]; eapply URA.extends_updatable; r_equalize; r_solve; fail|exact wf]);
                              clear wf upd; iRefresh; clear _GWF)]
 .
-
-Ltac iOwnWf G :=
-  match goal with
-  | H:iHyp (Own ?r) ?rh |- _ =>
-    check_equal H G;
-    let name := fresh "WF" in
-    (* assert(name: URA.wf r); [eapply wf_downward; [eapply H|eapply wf_downward; et; r_equalize; r_solve]|] *)
-    assert(name: URA.wf r); [eapply wf_downward; [eapply H|eapply wf_downward; [|on_gwf ltac:(fun GWF => apply GWF)]; r_equalize; r_solve]|]
-  end.
 
 Ltac until_bar TAC :=
   (on_last_hyp ltac:(fun id' =>
@@ -745,28 +832,6 @@ Section SIMMODSEM.
 
 
         rename x into hd. rename x4 into tmp.
-        Ltac iIntro :=
-          on_gwf ltac:(fun GWF => clear GWF);
-          let A := fresh "A" in
-          let wf := fresh "wf" in
-          let GWF := fresh "GWF" in
-          intros ? wf A; eassert(GWF: ☀) by (split; [refl|exact wf]); iRefresh.
-        Ltac iSpecialize H G :=
-          let rp := r_gather G in
-          specialize (H rp); eapply hexploit_mp in H; [|on_gwf ltac:(fun GWF => eapply wf_downward; cycle 1; [by apply GWF|r_equalize; r_solve])];
-            specialize (H G); rewrite intro_iHyp in H; clear G; iRefresh
-        .
-        Ltac iAssert H Abody :=
-          let A := fresh "A" in
-          match type of H with
-          | iHyp ?Hbody ?rH =>
-            match Abody with
-            | ltac_wild => eassert(A: iHyp (Hbody -* _) ε)
-            | _ => assert(A: iHyp (Hbody -* Abody) ε)
-            end;
-            [|iSpecialize A H; rewrite URA.unit_idl in A]
-          end
-        .
         iMerge A1 A2. iAssert A1 (is_list (Vptr hd 0) (List.map Vint (z :: ns))).
         { iIntro. rewrite unfold_is_list. cbn.
           iDestruct' A2. do 2 eexists; iRefresh.
