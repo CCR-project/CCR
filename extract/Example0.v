@@ -10,7 +10,7 @@ Require Import Hoare.
 
 Generalizable Variables E R A B C X Y Σ.
 
-Set Implicit rguments.
+Set Implicit Arguments.
 
 
 Let Σ: GRA.t := fun _ => URA.of_RA RA.empty.
