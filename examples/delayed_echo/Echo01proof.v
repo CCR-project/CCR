@@ -534,7 +534,7 @@ Section AUX.
       end
     end.
 
-  Lemma echo_ra_merge
+  Lemma echo_ra_merge2
         ll0 ns0 ll1 ns1
     :
       iHyp (Own (GRA.padding (echo_black ll0 ns0)) -* Own (GRA.padding (echo_white ll1 ns1))
@@ -554,6 +554,23 @@ Section AUX.
       { sym. r_equalize. r_solve. }
       - iSplitP; ss.
       - ss.
+    }
+  Qed.
+
+  Lemma echo_ra_merge
+        ll0 ns0 ll1 ns1
+    :
+      iHyp (Own (GRA.padding (echo_black ll0 ns0)) -* Own (GRA.padding (echo_white ll1 ns1)) -* (⌜ll1 = ll0 /\ ns1 = ns0⌝)) ε
+  .
+  Proof.
+    iIntro. iIntro.
+    {
+      iMerge A A0. rewrite <- own_sep in A. rewrite GRA.padding_add in A.
+      iOwnWf A. eapply GRA.padding_wf in WF. des. eapply URA.auth_included in WF. des.
+      Local Transparent URA.add.
+      rr in WF. des. cbn in WF.
+      Local Opaque URA.add.
+      des_ifs.
     }
   Qed.
 End AUX.
@@ -644,13 +661,7 @@ Section SIMMODSEM.
       iDestruct A. subst.
       rename x into ns. rename x0 into ns0.
       assert(l = ns /\ v = ll); des; subst.
-      { iMerge A PRE. rewrite <- own_sep in A. rewrite GRA.padding_add in A.
-        iOwnWf A. eapply GRA.padding_wf in WF. des. eapply URA.auth_included in WF. des.
-        clear - WF.
-        Local Transparent URA.add.
-        rr in WF. des. ss. des_ifs.
-        Local Opaque URA.add.
-      }
+      { eassert(T:=@echo_ra_merge _ _ _ _ _ _). iSpecialize T A. iSpecialize T PRE. iPure T; des; ss. }
 
 
 
@@ -674,13 +685,7 @@ Section SIMMODSEM.
       }
       iDestruct SIM. subst.
       assert(ll0 = ll /\ x = ns); des; subst.
-      { iMerge SIM PRE. rewrite <- own_sep in SIM. rewrite GRA.padding_add in SIM.
-        iOwnWf SIM. eapply GRA.padding_wf in WF. des. eapply URA.auth_included in WF. des.
-        clear - WF.
-        Local Transparent URA.add.
-        rr in WF. des. ss. des_ifs.
-        Local Opaque URA.add.
-      }
+      { eassert(T:=@echo_ra_merge _ _ _ _ _ _). iSpecialize T SIM. iSpecialize T PRE. iPure T; des; ss. }
       subst.
 
 
@@ -715,17 +720,9 @@ Section SIMMODSEM.
           iOwnWf H1. clear - WF. apply GRA.padding_wf in WF. des. ss.
         }
 
-
-        rename H1 into A. iMerge A SIM. rewrite <- own_sep in A. rewrite GRA.padding_add in A. rewrite URA.add_comm in A.
-
-
+        rename H1 into A.
         assert(ll0 = ll /\ x8 = ns); des; subst.
-        { iOwnWf A. eapply GRA.padding_wf in WF. des. eapply URA.auth_included in WF. des.
-          clear - WF.
-          Local Transparent URA.add.
-          rr in WF. des. ss. des_ifs.
-          Local Opaque URA.add.
-        }
+        { eassert(T:=@echo_ra_merge _ _ _ _ _ _). iSpecialize T SIM. iSpecialize T A. iPure T; des; ss. }
 
 
 
@@ -742,6 +739,7 @@ Section SIMMODSEM.
 
 
         (*** testing purpose ***)
+        iMerge A SIM. rewrite <- own_sep in A. rewrite GRA.padding_add in A. rewrite URA.add_comm in A.
         eapply own_upd in A; cycle 1; [|rewrite intro_iHyp in A;iUpdate2 A].
         { eapply GRA.padding_updatable. instantiate (1:= echo_black ll (ns) ⋅ echo_white ll (ns)).
           eapply URA.auth_update. rr. ii. des; ss.
@@ -786,13 +784,7 @@ Section SIMMODSEM.
       iDestruct A. subst.
       rename x into ns. rename x0 into ns0.
       assert(v = ll /\ l = ns).
-      { iMerge A PRE. rewrite <- own_sep in A. rewrite GRA.padding_add in A.
-        iOwnWf A. eapply GRA.padding_wf in WF. des. eapply URA.auth_included in WF. des.
-        clear - WF.
-        Local Transparent URA.add.
-        rr in WF. des. ss. des_ifs.
-        Local Opaque URA.add.
-      }
+      { eassert(T:=@echo_ra_merge _ _ _ _ _ _). iSpecialize T A. iSpecialize T PRE. iPure T; des; ss. }
       des; subst.
 
 
@@ -820,13 +812,7 @@ Section SIMMODSEM.
           clear - WF. apply GRA.padding_wf in WF. des. ss.
         }
         assert(ll = (Vptr x 0) /\ x10 = z :: ns); des; subst.
-        { iMerge SIM A. rewrite <- own_sep in SIM. rewrite GRA.padding_add in SIM. rewrite URA.add_comm in SIM.
-          iOwnWf SIM. eapply GRA.padding_wf in WF. des. eapply URA.auth_included in WF. des.
-          clear - WF.
-          Local Transparent URA.add.
-          rr in WF. des. ss. des_ifs.
-          Local Opaque URA.add.
-        }
+        { eassert(T:=@echo_ra_merge _ _ _ _ _ _). iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
 
 
 
@@ -861,13 +847,7 @@ Section SIMMODSEM.
           iOwnWf SIM. clear - WF. apply GRA.padding_wf in WF. des. ss.
         }
         assert(ll = Vptr hd 0 /\ x = z :: ns); des; subst.
-        { iMerge SIM A. rewrite <- own_sep in SIM. rewrite GRA.padding_add in SIM. rewrite URA.add_comm in SIM.
-          iOwnWf SIM. eapply GRA.padding_wf in WF. des. eapply URA.auth_included in WF. des.
-          clear - WF.
-          Local Transparent URA.add.
-          rr in WF. des. ss. des_ifs.
-          Local Opaque URA.add.
-        }
+        { eassert(T:=@echo_ra_merge _ _ _ _ _ _). iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
 
 
 
@@ -893,13 +873,7 @@ Section SIMMODSEM.
           iOwnWf SIM. clear - WF. apply GRA.padding_wf in WF. des. ss.
         }
         assert(v = ll /\ x = ns); des; subst.
-        { iMerge SIM A. rewrite <- own_sep in SIM. rewrite GRA.padding_add in SIM. rewrite URA.add_comm in SIM.
-          iOwnWf SIM. eapply GRA.padding_wf in WF. des. eapply URA.auth_included in WF. des.
-          clear - WF.
-          Local Transparent URA.add.
-          rr in WF. des. ss. des_ifs.
-          Local Opaque URA.add.
-        }
+        { eassert(T:=@echo_ra_merge _ _ _ _ _ _). iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
 
 
 
@@ -915,13 +889,7 @@ Section SIMMODSEM.
           iOwnWf SIM. clear - WF. apply GRA.padding_wf in WF. des. ss.
         }
         assert(ll0 = ll /\ x = ns); des; subst.
-        { iMerge SIM A. rewrite <- own_sep in SIM. rewrite GRA.padding_add in SIM. rewrite URA.add_comm in SIM.
-          iOwnWf SIM. eapply GRA.padding_wf in WF. des. eapply URA.auth_included in WF. des.
-          clear - WF.
-          Local Transparent URA.add.
-          rr in WF. des. ss. des_ifs.
-          Local Opaque URA.add.
-        }
+        { eassert(T:=@echo_ra_merge _ _ _ _ _ _). iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
 
 
 
