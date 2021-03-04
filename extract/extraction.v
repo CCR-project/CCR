@@ -12,10 +12,10 @@ Extraction Blacklist List String Int.
 
 Extract Constant excluded_middle_informative => "true".
 
-Require Import MutFG Example0 EchoAll.
+Require Import MutFG Example0 EchoAll Imp MutFGImp.
 
 Cd "extract".
 
-Separate Extraction Z.to_nat Z.opp mutsum ex0 echo_prog.
+Separate Extraction Z.to_nat Z.opp mutsum ex0 echo_prog imp_ex mutsum_imp.
 
 Cd "..".
