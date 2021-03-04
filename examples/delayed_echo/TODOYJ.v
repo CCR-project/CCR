@@ -95,28 +95,48 @@ Section IRIS.
   Definition Own (r0: Σ): iProp := fun r1 => URA.extends r0 r1.
   Definition And (P Q: iProp): iProp := fun r => P r /\ Q r.
   Definition Or (P Q: iProp): iProp := fun r => P r \/ Q r.
+  Definition Wand (P Q: iProp): iProp := fun r => forall rp, URA.wf (r ⋅ rp) -> P rp -> Q (r ⋅ rp).
+  Definition Upd (P: iProp): iProp := fun r0 => exists r1, forall ctx, URA.wf (r0 ⋅ ctx) -> URA.wf (r1 ⋅ ctx) /\ P r1.
+  Definition Upd2 (P: iProp): iProp := fun r0 => forall ctx, URA.wf (r0 ⋅ ctx) -> exists r1, URA.wf (r1 ⋅ ctx) /\ P r1. (**** Iris version ****)
   (* Definition Own (r0: Σ): iProp := fun r1 => r0 = r1. *)
 
   Definition Impl (P Q: iProp): Prop := P <1= Q.
-  Infix "i->" := Impl (at level 60).
-  Notation "P 'i<->' Q" := ((Impl P Q) /\ (Impl Q P)) (at level 60).
+  Definition Iff (P Q: iProp): Prop := Impl P Q /\ Impl Q P.
+
+End IRIS.
+
+Infix "⊢" := Impl (at level 60).
+(* Notation "P '-|-' Q" := (Iff P Q) (at level 60). *)
+Infix "⊣⊢" := Iff (at level 60).
+Infix "**" := Sepconj (at level 60).
+Infix "∧" := And (at level 60).
+Infix "∨" := Or (at level 60).
+Infix "-*" := Wand (at level 60, right associativity).
+Notation "'⌜' P '⌝'" := (Pure P).
+Notation "'Exists' x .. y , p" := (Ex (fun x => .. (Ex (fun y => p)) ..))
+                                    (at level 200, x binder, right associativity,
+                                     format "'[' 'Exists'  '/  ' x  ..  y ,  '/  ' p ']'").
+Notation "|=> P" := (Upd P) (at level 60).
+
+Section IRIS.
+  Context {Σ: GRA.t}.
 
   Lemma Own_extends
         (a b: Σ)
         (EXT: URA.extends a b)
     :
-      (Own b) i-> (Own a)
+      (Own b) ⊢ (Own a)
   .
   Proof. ii. ss. r in PR. r. etrans; et. Qed.
 
   Lemma Iff_eq
         P Q
-        (IFF: P i<-> Q)
+        (IFF: P ⊣⊢ Q)
     :
       P = Q
   .
   Proof.
-    apply func_ext. i. apply prop_ext. des. split; i; et.
+    apply func_ext. i. apply prop_ext. r in IFF. des. split; i; et.
   Qed.
 
   Lemma own_sep'
@@ -147,15 +167,58 @@ Section IRIS.
     erewrite <- own_sep'; et.
   Qed.
 
-End IRIS.
+  Lemma own_upd2
+        (r1 r2: Σ)
+        (UPD: URA.updatable r1 r2)
+    :
+      (Own r1) ⊢ (Upd2 (Own r2))
+  .
+  Proof.
+    ii. r in UPD. rr in PR. des. subst. esplits; cycle 1.
+    - rr. exists ε. rewrite URA.unit_id. refl.
+    - specialize (UPD ctx). eapply UPD. eapply URA.wf_mon; et.
+      rewrite <- URA.add_assoc in H. rewrite (URA.add_comm ctx0) in H. rewrite URA.add_assoc in H. et.
+  Qed.
 
-Infix "**" := Sepconj (at level 60).
-Infix "∧" := And (at level 60).
-Infix "∨" := Or (at level 60).
-Notation "'⌜' P '⌝'" := (Pure P).
-Notation "'Exists' x .. y , p" := (Ex (fun x => .. (Ex (fun y => p)) ..))
-                                    (at level 200, x binder, right associativity,
-                                     format "'[' 'Exists'  '/  ' x  ..  y ,  '/  ' p ']'").
+  Lemma own_upd2_set
+        (r1: Σ) B
+        (UPD: URA.updatable_set r1 B)
+    :
+      (Own r1) ⊢ (Upd2 (Exists b, ⌜B b⌝ ∧ (Own b)))
+  .
+  Proof.
+    ii. r in UPD. rr in PR. des. subst. exploit UPD; et.
+    { instantiate (1:=_ ⋅ _). rewrite URA.add_assoc. et. }
+    i; des. rewrite URA.add_assoc in WF.
+    eexists (b ⋅ ctx0).
+    split; ss.
+    rr. esplits; et. split; et. rr. esplits; et.
+  Qed.
+
+  Lemma own_upd
+        (r1 r2: Σ)
+        (UPD: URA.updatable r1 r2)
+    :
+      (Own r1) ⊢ (Upd (Own r2))
+  .
+  Proof.
+    ii. r in UPD. rr in PR. des. subst. exists r2. i. esplits; cycle 1.
+    - refl.
+    - specialize (UPD ctx0). eapply UPD. eapply URA.wf_mon; et.
+      rewrite <- URA.add_assoc in H. rewrite (URA.add_comm ctx) in H. rewrite URA.add_assoc in H. et.
+  Qed.
+
+  Lemma own_upd_set
+        (r1: Σ) B
+        (UPD: URA.updatable_set r1 B)
+    :
+      (Own r1) ⊢ (Upd (Exists b, ⌜B b⌝ ∧ (Own b)))
+  .
+  Proof.
+    ii. r in UPD. rr in PR. des. subst. r. specialize (UPD ctx).
+  Abort.
+
+End IRIS.
 
 
 
@@ -275,13 +338,17 @@ Ltac r_length ls :=
   | _ => constr:(1)
   end.
 
-Ltac r_in r rs :=
-  match rs with
-  | r => idtac
-  | (r ⋅ ?y) => idtac
-  | (?x ⋅ r) => idtac
-  | (?x ⋅ ?y) => r_in r x + r_in r y
-  | _ => fail
+Ltac r_in r0 rs :=
+  match r0 with
+  | (@URA.unit _) => idtac
+  | _ =>
+    match rs with
+    | r0 => idtac
+    | (r0 ⋅ ?y) => idtac
+    | (?x ⋅ r0) => idtac
+    | (?x ⋅ ?y) => r_in r0 x + r_in r0 y
+    | _ => fail
+    end
   end.
 
 Ltac r_contains xs ys :=
@@ -420,6 +487,10 @@ Section IPMTEST.
     Fail (r_in a (b)).
     (r_in b (b)).
     Fail (r_in c (b)).
+    r_in (ε: Σ) (ε: Σ).
+    r_in (ε: Σ) a.
+    r_in (ε: Σ) (a ⋅ ε).
+    r_in (ε: Σ) (ε ⋅ a).
 
     (r_contains a (a ⋅ b ⋅ c)).
     (r_contains b (a ⋅ b ⋅ c)).
@@ -437,6 +508,8 @@ Section IPMTEST.
     (r_contains (c ⋅ a ⋅ b) (a ⋅ b ⋅ c)).
     Fail (r_contains (c ⋅ a ⋅ b) (a ⋅ b)).
     Fail (r_contains (a ⋅ c) (a ⋅ b)).
+
+    r_contains (ε ⋅ (a ⋅ b)) (c ⋅ a ⋅ b).
   Abort.
 
   Goal forall (a b: Σ) (Pa Pb: iProp), Pa a -> Pb b -> URA.wf (a ⋅ b) -> (Pa ** Pb) (b ⋅ a).
