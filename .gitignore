@@ -30,5 +30,4 @@ extract/_build/
 main.native
 main.byte
 *.out
-
 *~

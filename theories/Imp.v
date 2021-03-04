@@ -1,43 +1,5 @@
 (** * The Imp language  *)
 
-(** We now demonstrate how to use ITrees in the context of verified compilation.
-    To this end, we will consider a simple compiler from an imperative language
-    to a control-flow-graph language.  The meaning of both languages will be
-    given in terms of ITrees, so that the proof of correctness is expressed by
-    proving a bisimulation between ITrees.
-
-    We shall emphasize two main satisfying aspects of the resulting
-    formalization.
-
-    - Despite the correctness being termination-sensitive, we do not write any
-      cofixpoints. All reasoning is purely equational, and the underlying
-      coinductive reasoning is hidden on the library side.
-
-    - We split the correctness in two steps. First, a linking theory of the CFG
-      language is proved correct. Then, this theory is leveraged to prove the
-      functional correctness of the compiler. The first piece is fairly generic,
-      and hence reusable.
- *)
-
-(** This tutorial is composed of the following files:
-    - Utils_tutorial.v     : Utilities
-    - Fin.v                : Finite types as a categorical embedding
-    - KTreeFin.v           : Subcategory of ktrees over finite types
-    - Imp.v                : Imp language, syntax and semantics
-    - Asm.v                : Asm language, syntax and semantics
-    - AsmCombinators.v     : Linking theory for Asm
-    - Imp2Asm.v            : Compiler from Imp to Asm
-    - Imp2AsmCorrectness.v : Proof of correctness of the compiler
-    - AsmOptimizations.v   : (Optional) optimization passes for the Asm language
-    The intended entry point for reading is Imp.v.
- *)
-
-(** We start by introducing a simplified variant of Software
-    Foundations' [Imp] language.  The language's semantics is first expressed in
-    terms of [itree]s.  The semantics of the program can then be obtained by
-    interpreting the events contained in the trees.
-*)
-
 (* begin hide *)
 From Coq Require Import
      Arith.PeanoNat
@@ -81,11 +43,9 @@ Set Implicit Arguments.
 (** Imp manipulates a countable set of variables represented as [string]s: *)
 Definition var : Set := string.
 
-(** LDJ: function identifier *)
-Definition fid : Set := string.
-
-(** For simplicity, the language manipulates [nat]s as values. *)
-(* Definition value : Type := nat. *)
+Inductive fun_type : Type :=
+| Fun (_ : gname)
+| Sys (_ : gname).
 
 (** Expressions are made of variables, constant literals, and arithmetic operations. *)
 Inductive expr : Type :=
@@ -95,22 +55,22 @@ Inductive expr : Type :=
 | Minus (_ _ : expr)
 | Mult  (_ _ : expr).
 
-(** The statements are straightforward. The [While] statement is the only
- potentially diverging one. *)
-(** LDJ: only function call statement, no expr *)
+(** LDJ: function call exists only as a statement *)
 Inductive stmt : Type :=
 | Assign (x : var) (e : expr)    (* x = e *)
 | Seq    (a b : stmt)            (* a ; b *)
 | If     (i : expr) (t e : stmt) (* if (i) then { t } else { e } *)
 | While  (t : expr) (b : stmt)   (* while (t) { b } *)
 | Skip                           (* ; *)
-| CallFun (x : var) (f : fid) (args : list expr)  (* x = f(args) *)
+| CallFun (x : var) (f : fun_type) (args : list expr)  (* x = f(args) *)
 | Expr (e : expr)    (* evaluates expression, will be returned if the last stmt *)
 .
 
+(** LDJ: information of a function, maybe add return type? *)
 Record function : Type :=
   mk_function { params : list var ; body : stmt }.
 
+(** LDJ: a program is a list of (function name, body) *)
 Definition program : Type := list (gname * function).
 
 (* ========================================================================== *)
@@ -142,19 +102,22 @@ Module ImpNotations.
          "'[v' a  ';;;' '/' '[' b ']' ']'"
       ): stmt_scope.
 
-  Notation "'IF' i 'THEN' t 'ELSE' e 'FI'" :=
+  Notation "'if#' i 'then#' t 'else#' e 'fi#'" :=
     (If i t e)
       (at level 100,
        right associativity,
        format
-         "'[v ' 'IF'  i '/' '[' 'THEN'  t  ']' '/' '[' 'ELSE'  e ']' 'FI' ']'").
+         "'[v ' 'if#'  i '/' '[' 'then#'  t  ']' '/' '[' 'else#'  e ']' 'fi#' ']'").
 
-  Notation "'WHILE' t 'DO' b 'END'" :=
+  Notation "'while#' t 'do#' b 'end#'" :=
     (While t b)
       (at level 100,
        right associativity,
        format
-         "'[v  ' 'WHILE'  t  'DO' '/' '[v' b  ']' ']' 'END'").
+         "'[v  ' 'while#'  t  'do#' '/' '[v' b  ']' ']' 'end#'").
+
+  Notation "x '<<-' '(' f ')' args" :=
+    (CallFun x f args) (at level 60): stmt_scope.
 
 End ImpNotations.
 
@@ -243,32 +206,28 @@ Section Denote.
   
   Definition while (step : itree eff (unit + val)) : itree eff val :=
     ITree.iter (fun _ => step) tt.
-    (** iter (C := Kleisli _) (fun _ => step) tt. *)
 
   (** Casting values into [bool]:  [0] corresponds to [false] and any nonzero
       value corresponds to [true].  *)
-  (* Definition is_true (v : val) : bool := if (v =? 0)%nat then false else true. *)
-  
   Definition is_true (v : val) : option bool :=
     match v with
     | Vint n => if (n =? 0)%Z then Some false else Some true
     | _ => None
     end.
 
-
-  (* can use vcmp instead if we include Mem.t features *)
+  (* LDJ: can use vcmp instead if we include Mem.t features *)
   Definition if_itree {B} (c : itree eff bool) (t f : itree eff B) : itree eff B :=
     match c with
     | Ret b => if b then t else f
     | _ => triggerUB
     end.
   
-  (** The meaning of Imp statements is now easy to define.  They are all
+  (** The meaning of Imp statements is now easy to define. They are all
       straightforward, except for [While], which uses our new [while] combinator
       over the computation that evaluates the conditional, and then the body if
       the former was true.  *)
 
-  (* returning 0 is temporary *)
+  (* change to "v <- ccall f eval_args ;;" ? *)
   Fixpoint denote_stmt (s : stmt) : itree eff val :=
     match s with
     | Assign x e =>  v <- denote_expr e ;; trigger (SetVar x v) ;; ret Vundef
@@ -277,59 +236,28 @@ Section Denote.
     | If i t e   =>
       v <- denote_expr i ;;
       if_itree (is_true v)? (denote_stmt t) (denote_stmt e)
-      (* if is_true v then denote_stmt t else denote_stmt e *)
 
     | While t b =>
       while (v <- denote_expr t ;;
              if_itree (is_true v)? (denote_stmt b ;; ret (inl tt)) (ret (inr Vundef)))
-      (* while (v <- denote_expr t ;; *)
-      (*              if is_true v *)
-      (*              then denote_stmt b ;; ret (inl tt) *)
-      (*              else ret (inr 0)) *)
 
     | Skip => ret Vundef
-    | CallFun x f args =>
-      eval_args <- (mapT denote_expr args) ;;
-      v <- trigger (Call f (eval_args↑)) ;; v <- unwrapN (v↓);;
-      (* v <- @ccall Σ (list value) value f eval_args ;; *)
-      (* v <- ccall f eval_args ;; *)
-      trigger (SetVar x v) ;; ret Vundef
+    | CallFun x ft args =>
+      match ft with
+      | Fun f =>
+        eval_args <- (mapT denote_expr args) ;;
+        v <- trigger (Call f (eval_args↑)) ;; v <- unwrapN (v↓);;
+        trigger (SetVar x v) ;; ret Vundef
+      | Sys f =>
+        eval_args <- (mapT denote_expr args) ;;
+        v <- trigger (Syscall f eval_args) ;;
+        trigger (SetVar x v) ;; ret Vundef
+      end
+        
     | Expr e => v <- denote_expr e ;; Ret v
     end.
 
 End Denote.
-
-(* ========================================================================== *)
-(** ** EXAMPLE: Factorial *)
-
-Section Example_Fact.
-
-  (** We briefly illustrate the language by writing the traditional factorial.
-      example.  *)
-
-  Open Scope expr_scope.
-  Open Scope stmt_scope.
-  (* Variable input: var. *)
-  (* Variable output: var. *)
-
-  Definition fact : stmt :=
-    "output" ← Lit (Vint 1);;;
-    WHILE "input"
-    DO "output" ← "output" * "input";;;
-       "input"  ← "input" - (Vint 1) END;;;
-    CallFun "input" "g" [Lit (Vint 0)];;;
-    Expr "output".
-
-  Definition factorial_fun : function :=
-    {| params := ["input"] ; body := fact |}.
-  
-  (** We have given _a_ notion of denotation to [fact 6] via [denote_imp].
-      However, this is naturally not actually runnable yet, since it contains
-      uninterpreted [ImpState] events.  We therefore now need to _handle_ the
-      events contained in the trees, i.e. give a concrete interpretation of the
-      environment.  *)
-
-End Example_Fact.
 
 (* ========================================================================== *)
 (** ** Interpretation *)
@@ -400,23 +328,6 @@ Definition eval_function `{Σ: GRA.t} (f: function) (args: list val) : itree Es 
   if (List.length f.(params) =? List.length args)%nat
   then '(_, retv) <- (interp_function (denote_stmt f.(body)) (List.combine f.(params) args));; Ret retv
   else triggerUB.
-  (* if (List.length f.(params) =? List.length args)%nat *)
-  (* then trigger (Syscall "debug" []);; '(_, retv) <- (interp_function (denote_stmt f.(body)) (List.combine f.(params) args));; *)
-  (*      trigger (Syscall "debug2" []);; *)
-  (*      Ret retv *)
-  (* else trigger (Syscall "debug" []);; triggerUB. *)
-
-(** Equipped with this evaluator, we can now compute.
-    Naturally since Coq is total, we cannot do it directly inside of it.
-    We can either rely on extraction, or use some fuel.
- *)
-(* Definition Σ: GRA.t := fun _ => URA.of_RA RA.empty. *)
-(* Local Existing Instance Σ. *)
-
-(* Context `{Σ: GRA.t}. *)
-
-(* Definition foo := (burn 200 (eval_function factorial_fun [Vint 6])). *)
-(* Compute foo. *)
 
 (* ========================================================================== *)
 (**
@@ -470,14 +381,11 @@ End InterpImpProperties.
 
 **)
 
-(** We now turn to our target language, in file [Asm].v *)
-
 (****************** copy-paste end **********************)
 (****************** copy-paste end **********************)
 (****************** copy-paste end **********************)
 (****************** copy-paste end **********************)
 (****************** copy-paste end **********************)
-
 
 (**** ModSem ****)
 Module ImpMod.
@@ -491,7 +399,6 @@ Section MODSEM.
   Instance Initial_void1 : @Initial (Type -> Type) IFun void1 := @elim_void1. (*** TODO: move to ITreelib ***)
   
   Definition modsem: ModSem.t := {|
-    (* ModSem.fnsems := List.map (fun '(fn, st) => (fn, fun _ => resum_itr (eval_imp st;; Ret (Any.upcast (Vint 0))))) program; *)
     ModSem.fnsems := List.map (fun '(fn, st) => (fn, cfun (eval_function st))) prog;
     ModSem.initial_mrs := [(mn, (URA.unit, unit↑))];
   |}.
@@ -499,8 +406,8 @@ Section MODSEM.
   Definition get_mod: Mod.t := {|
     Mod.get_modsem := fun _ => modsem;
     Mod.sk := Sk.unit;
-                          |}.
-  
+  |}.
+
 End MODSEM.
 End ImpMod.
 
@@ -515,16 +422,16 @@ Section Example_Extract.
 
   Definition factorial : stmt :=
     "output" ← (Vint 1);;;
-    WHILE "input"
-    DO "output" ← "output" * "input";;;
-       "input"  ← "input" - (Vint 1) END;;;
+    while# "input"
+    do# "output" ← "output" * "input";;;
+       "input"  ← "input" - (Vint 1) end#;;;
     Expr "output".
 
   Definition factorial_fundef : function :=
     {| params := ["input"] ; body := factorial |}.
   
   Definition main : stmt :=
-    CallFun "result" "factorial" [Lit (Vint 4)];;;
+    "result" <<- (Fun "factorial") [Lit (Vint 4)] ;;;
     Expr "result".
   
   Definition main_fundef : function :=

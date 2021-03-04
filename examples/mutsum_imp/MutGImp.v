@@ -18,12 +18,10 @@ Section IMP.
   Local Existing Instance Σ.
 
   Definition g_stmt : stmt :=
-    If (Var "n")
-       ((CallFun "f_ret" "f" [(Var "n") - (Vint 1)]);;;(Expr ((Var "n") + "f_ret")))
-       (Expr (Lit (Vint 0))).
-    (* IF (Var "n") *)
-    (* THEN (CallFun "g_ret" "g" [(Var "n") - (Vint 1)]);;; ((Var "n") + "g_ret") *)
-    (* ELSE (Lit (Vint 0)) FI. *)
+    if# (Var "n")
+    then# ("f_ret" <<- (Fun "f") [(Var "n") - (Vint 1)] ;;;
+           Expr ((Var "n") + "f_ret"))
+    else# (Expr (Vint 0)) fi#.
   
   Definition g_fun : function :=
     {| params := ["n"] ; body := g_stmt |}.
@@ -32,11 +30,5 @@ Section IMP.
     [("g", g_fun)].
 
   Definition g : Mod.t := ImpMod.get_mod "g" g_prog.
-  (* Definition ex_extract : program := *)
-  (*   [("factorial", factorial_fundef); ("main", main_fundef)]. *)
-
-  (* Definition ex_prog: Mod.t := ImpMod.get_mod "Main" ex_extract. *)
-
-  (* Definition imp_ex := ModSem.initial_itr_no_check (Mod.enclose ex_prog). *)
   
 End IMP.
