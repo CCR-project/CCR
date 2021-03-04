@@ -111,9 +111,17 @@ Ltac r_clearε rs :=
 Ltac r_equalize :=
   match goal with
   | [ |- ?lhs = ?rhs ] =>
-    let tmp0 := (r_subtract rhs lhs) in
-    let tmp1 := r_clearε tmp0 in
-    instantiate (1:=tmp1)
+    tryif has_evar lhs
+    then
+      ((tryif has_evar rhs then fail 1 else idtac);
+       let tmp0 := (r_subtract rhs lhs) in
+       let tmp1 := r_clearε tmp0 in
+       instantiate (1:=tmp1))
+    else
+      ((tryif has_evar rhs then idtac else fail 1);
+       let tmp0 := (r_subtract lhs rhs) in
+       let tmp1 := r_clearε tmp0 in
+       instantiate (1:=tmp1))
   | [ |- URA.extends ?lhs ?rhs ] =>
     let tmp0 := (r_subtract rhs lhs) in
     let tmp1 := r_clearε tmp0 in
@@ -183,11 +191,11 @@ Section SOLVER.
     assert(c3 = ε) by reflexivity.
   Abort.
 
-  Goal exists x, a ⋅ b = a ⋅ x. eexists. Fail r_equalize. symmetry. r_equalize; r_solve. Qed.
-  Goal exists x, b ⋅ a = a ⋅ x. eexists. Fail r_equalize. symmetry. r_equalize; r_solve. Qed.
-  Goal exists x, a ⋅ b = x ⋅ a. eexists. Fail r_equalize. symmetry. r_equalize; r_solve. Qed.
-  Goal exists x, b ⋅ a = x ⋅ a. eexists. Fail r_equalize. symmetry. r_equalize; r_solve. Qed.
-  Goal exists x, a = x. eexists. Fail r_equalize. symmetry. r_equalize; r_solve. Qed.
+  Goal exists x, a ⋅ b = a ⋅ x. eexists. r_equalize; r_solve. Undo 1. symmetry. r_equalize; r_solve. Qed.
+  Goal exists x, b ⋅ a = a ⋅ x. eexists. r_equalize; r_solve. Undo 1. symmetry. r_equalize; r_solve. Qed.
+  Goal exists x, a ⋅ b = x ⋅ a. eexists. r_equalize; r_solve. Undo 1. symmetry. r_equalize; r_solve. Qed.
+  Goal exists x, b ⋅ a = x ⋅ a. eexists. r_equalize; r_solve. Undo 1. symmetry. r_equalize; r_solve. Qed.
+  Goal exists x, a = x. eexists. r_equalize; r_solve. Undo 1. symmetry. r_equalize; r_solve. Qed.
 
   Goal URA.extends (d) (c ⋅ b ⋅ a ⋅ d ⋅ e).
   Proof. r_equalize. r_solve. Qed.
@@ -206,6 +214,12 @@ Section SOLVER.
 
   Goal URA.extends a a.
   Proof. r_equalize. r_solve. Qed.
+
+  Goal exists delta, (delta ⋅ d) = (c ⋅ b ⋅ a ⋅ d ⋅ e).
+  Proof. eexists. r_equalize. r_solve. Qed.
+
+  Goal exists delta, (c ⋅ b ⋅ a ⋅ d ⋅ e) = (delta ⋅ d).
+  Proof. eexists. r_equalize. r_solve. Qed.
 
   Goal forall (x1 x2 x3 x4 x5: Σ), URA.extends (x4 ⋅ x5 ⋅ (ε ⋅ (x2 ⋅ x3 ⋅ x1))) (x4 ⋅ x5 ⋅ (ε ⋅ (x2 ⋅ x3 ⋅ x1))).
   Proof. i. r_equalize. r_solve. Qed.
