@@ -348,15 +348,13 @@ Ltac iSplitL Hs0 :=
   match goal with
   | |- ᐸ ?ph ** ?pg ᐳ =>
     let tmp := (r_gather Hs0) in
-    erewrite f_equal; cycle 1; [instantiate (1 := tmp ⋅ _)|eapply sepconj_merge; [iClears|(*** TODO: We don't use iClears here because there are unresolved existentials.
-                                                             use pcm solver and put iClears ***)]]
+    erewrite f_equal; cycle 1; [instantiate (1 := tmp ⋅ _); r_equalize; r_solve|eapply sepconj_merge; iRefresh]
   end.
 Ltac iSplitR Hs0 :=
   match goal with
   | |- ᐸ ?ph ** ?pg ᐳ =>
     let tmp := (r_gather Hs0) in
-    erewrite f_equal; cycle 1; [instantiate (1 := _ ⋅ tmp)|eapply sepconj_merge; [(*** TODO: We don't use iClears here because there are unresolved existentials.
-                                                             use pcm solver and put iClears ***)|iClears]]
+    erewrite f_equal; cycle 1; [instantiate (1 := _ ⋅ tmp); r_equalize; r_solve|eapply sepconj_merge; iRefresh]
   end.
 
 Ltac iExists' Hs := let rs := r_gather Hs in exists rs.
@@ -643,9 +641,7 @@ I needed to write this because "ss" does not work. create iApply that understand
       des_ifs.
       rewrite <- GRA.padding_add in A. rewrite own_sep in A. iDestruct' A.
       iSplitL A; ss.
-      { sym. r_equalize. r_solve. }
       - iSplitP; ss.
-      - ss.
     }
   Qed.
 
@@ -876,7 +872,7 @@ Section SIMMODSEM.
         rewrite Any.upcast_downcast. steps. iPure A0. subst.
         hret_tac x3 (@URA.unit Σ); ss. (********************* TODO **************************************)
         { eapply URA.extends_updatable. esplit. r_equalize; r_solve. }
-        { iRefresh. esplits; ss; eauto. exists nil; iRefresh. left; iRefresh. iSplitL A; ss. { sym. r_equalize. r_solve. } } (************ TODO ************)
+        { iRefresh. esplits; ss; eauto. exists nil; iRefresh. left; iRefresh. iSplitL A; ss. } (************ TODO ************)
       - rewrite Any.upcast_downcast. steps. do 4 iDestruct A0. iPure A0. subst. ss.
         unfold interp_hCallE_tgt, APC. steps. force_l. exists 3. steps.
 
@@ -900,7 +896,6 @@ Section SIMMODSEM.
         { iIntro. rewrite unfold_is_list. cbn.
           iDestruct' A2. do 2 eexists; iRefresh.
           iSplitL A.
-          { sym. r_equalize. r_solve. }
           { iSplitP; ss; et. }
           { iRefresh; ss. }
         }
@@ -912,7 +907,7 @@ Section SIMMODSEM.
         force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
         hcall_tac __ (ord_pure 2) SIM A (A0, A2); ss; et.
         { instantiate (1:=(_, _)). esplits; try refl; iRefresh. eexists; iRefresh. iSplitP; ss.
-          iSplitR (A0); [sym; r_equalize; r_solve| |]; ss; et; iRefresh.
+          iSplitR (A0); ss; et.
           - iSplitP; ss. eauto.
           - eexists; iRefresh. eauto.
         }
