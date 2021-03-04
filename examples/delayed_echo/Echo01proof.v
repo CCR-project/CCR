@@ -501,17 +501,34 @@ Section AUX.
   Context `{@GRA.inG Echo1.echoRA Σ}.
 
   Ltac bring_front r0 :=
-    repeat rewrite URA.add_assoc in *; rewrite (URA.add_comm _ r0) in *; repeat rewrite URA.add_assoc in *
+    repeat rewrite URA.add_assoc in *;
+    (*** corner case: goal is pure \/ probably already sorted ***)
+    try rewrite (URA.add_comm _ r0) in *;
+    repeat rewrite URA.add_assoc in *;
+
+    (*** somehow, * does not work well in GWF. WHY??? TODO: FIXME ***)
+    on_gwf ltac:(fun GWF =>
+                   repeat rewrite URA.add_assoc in GWF;
+                   try rewrite (URA.add_comm _ r0) in GWF;
+                   repeat rewrite URA.add_assoc in GWF) (*** probably already sorted; so "try" ***)
   .
-  Goal forall (a b c d e: Σ), a ⋅ (b ⋅ c) ⋅ (d ⋅ e) = ε.
+  Goal forall (a b c d e: Σ), __gwf_mark__ ε (d ⋅ c) -> a ⋅ (b ⋅ c) ⋅ (d ⋅ e) = ε.
     i. bring_front d. bring_front c.
     match goal with | |- ?G => match G with | c ⋅ d ⋅ a ⋅ b ⋅ e = ε => idtac | _ => fail end end.
   Abort.
 
-  Goal forall (a b c d e f: Σ), a ⋅ (b ⋅ c) ⋅ (d ⋅ e) = ε -> a ⋅ (b ⋅ c) ⋅ (d ⋅ e) = f.
+  Goal forall (a b c d e f: Σ), __gwf_mark__ (a ⋅ (b ⋅ c) ⋅ (d ⋅ e)) (a ⋅ (b ⋅ c) ⋅ (d ⋅ e)) -> a ⋅ (b ⋅ c) ⋅ (d ⋅ e) = f.
     i. bring_front d. bring_front c.
     match goal with | |- ?G => match G with | c ⋅ d ⋅ a ⋅ b ⋅ e = f => idtac | _ => fail end end.
-    match goal with | [H: ?rs = _ |- _ ] => match rs with | (c ⋅ d ⋅ a ⋅ b ⋅ e) => idtac | _ => fail end end.
+    match goal with | [H: __gwf_mark__ ?rs0 ?rs1 |- _ ] => match rs0 with | (c ⋅ d ⋅ a ⋅ b ⋅ e) => idtac | _ => fail end end.
+    match goal with | [H: __gwf_mark__ ?rs0 ?rs1 |- _ ] => match rs1 with | (c ⋅ d ⋅ a ⋅ b ⋅ e) => idtac | _ => fail end end.
+  Abort.
+
+  Goal forall (a b c d e f: Σ), __gwf_mark__ ε (a ⋅ (b ⋅ c) ⋅ (d ⋅ e)) -> a ⋅ (b ⋅ c) ⋅ (d ⋅ e) = f.
+    i. bring_front d. bring_front c.
+    match goal with | |- ?G => match G with | c ⋅ d ⋅ a ⋅ b ⋅ e = f => idtac | _ => fail end end.
+    match goal with | [H: __gwf_mark__ ?rs0 ?rs1 |- _ ] => match rs0 with | ε => idtac | _ => fail end end.
+    match goal with | [H: __gwf_mark__ ?rs0 ?rs1 |- _ ] => match rs1 with | (c ⋅ d ⋅ a ⋅ b ⋅ e) => idtac | _ => fail end end.
   Abort.
 
   Ltac iMerge A0 A1 :=
@@ -528,11 +545,72 @@ Section AUX.
 
         let tmp := fresh "tmp" in
         let tmpH := fresh "tmpH" in
-        remember (r0 ⋅ r1) as tmp eqn:tmpH in *;
-        on_gwf ltac:(fun GWF => rewrite tmpH in GWF at 1);
-        clear tmpH
+        (* remember (r0 ⋅ r1) as tmp eqn:tmpH in *; *)
+        set (tmp:= r0 ⋅ r1) in *;
+        (* remember (r0 ⋅ r1) as tmp eqn:tmpH; *)
+        match goal with
+        | [GWF: (__gwf_mark__ ?past ?cur) |- _] =>
+          match past with
+          | cur => unfold tmp in GWF at 1
+          | _ =>
+            (* idtac past; idtac cur; idtac tmp; idtac r0; idtac r1 ; *)
+            (*** corner case: past may or may not contain r0 ⋅ r1 ***)
+            remember cur as ttttmp in GWF;
+            try unfold tmp in GWF at 1;
+            subst ttttmp
+            (* remember past as ttttmp in GWF; *)
+            (* unfold tmp in GWF at 1; *)
+            (* subst ttttmp *)
+          end
+          (* let ttttmp := fresh "ttttmp" in *)
+          (* (* idtac r0; idtac r1; idtac past; idtac cur; idtac tmpH; *) *)
+          (* (* let ty := (type of tmpH) in idtac ty; *) *)
+          (* remember cur as ttttmp; *)
+          (* unfold tmp in GWF; *)
+          (* (* rewrite tmpH in GWF; *) *)
+          (* subst ttttmp *)
+        end;
+        clearbody tmp
+        (* clear tmpH *)
+
+
+        (* on_gwf ltac:(fun GWF => rewrite tmpH in GWF at 1); *)
       end
     end.
+
+  Goal forall P Q, iHyp (P -* Q -* P ** Q) ε.
+    i. do 2 iIntro. rewrite URA.unit_idl. (*** TODO: How can we remove this?
+I needed to write this because "ss" does not work. create iApply that understands r_clearε? ***)
+    iMerge A0 A.
+    iDestruct' A0.
+    (* r in GWF. r in A0. r in A. r. *)
+    iMerge A A0.
+    ss.
+  Qed.
+
+  Goal forall P Q, iHyp (P -* Q -* P ** Q) ε.
+    i. do 2 iIntro. rewrite URA.unit_idl.
+    iMerge A A0.
+    (* r in A. r. r in GWF. *)
+    iDestruct' A.
+    (* r in A. r in A0. r. r in GWF. *)
+    (*** 
+  GWF : URA.updatable (rp ⋅ rp0 ⋅ ε) (x ⋅ x0 ⋅ ε) /\ URA.wf (x ⋅ x0 ⋅ ε)
+  ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ : IPROPS
+  A : P x
+  A0 : Q x0
+  ============================
+  (P ** Q) (x ⋅ x0) ***)
+    iMerge A0 A.
+    (* r in A0. r. r in GWF. *)
+  (* GWF : URA.updatable (rp ⋅ rp0 ⋅ ε) (x0 ⋅ x ⋅ ε) /\ URA.wf (x0 ⋅ x ⋅ ε) *)
+  (* ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ : IPROPS *)
+  (* A0 : (Q ** P) tmp *)
+  (* ============================ *)
+  (* (P ** Q) tmp *)
+    iDestruct' A0.
+    iSplit A A0; ss; try r_solve.
+  Qed.
 
   Lemma echo_ra_merge2
         ll0 ns0 ll1 ns1
@@ -571,6 +649,34 @@ Section AUX.
       rr in WF. des. cbn in WF.
       Local Opaque URA.add.
       des_ifs.
+    }
+  Qed.
+
+  Lemma echo_ra_white
+        ll0 ns0 ll1 ns1
+    :
+      iHyp (Own (GRA.padding (echo_white ll0 ns0)) -* Own (GRA.padding (echo_white ll1 ns1)) -* ⌜False⌝) ε
+  .
+  Proof.
+    iIntro. iIntro.
+    {
+      exfalso. iMerge A A0.
+      rewrite <- own_sep in A. rewrite GRA.padding_add in A.
+      iOwnWf A. clear - WF. apply GRA.padding_wf in WF. des. ss.
+    }
+  Qed.
+
+  Lemma echo_ra_black
+        ll0 ns0 ll1 ns1
+    :
+      iHyp (Own (GRA.padding (echo_black ll0 ns0)) -* Own (GRA.padding (echo_black ll1 ns1)) -* ⌜False⌝) ε
+  .
+  Proof.
+    iIntro. iIntro.
+    {
+      exfalso. iMerge A A0.
+      rewrite <- own_sep in A. rewrite GRA.padding_add in A.
+      iOwnWf A. clear - WF. apply GRA.padding_wf in WF. des. ss.
     }
   Qed.
 End AUX.
@@ -654,14 +760,12 @@ Section SIMMODSEM.
       iRefresh. do 2 iDestruct PRE. iPure A. iPure A0. clarify.
       iDestruct SIM.
       destruct SIM as [A|A]; iRefresh; cycle 1.
-      { exfalso. iMerge A PRE. rewrite <- own_sep in A. rewrite GRA.padding_add in A.
-        iOwnWf A. clear - WF. apply GRA.padding_wf in WF. des. ss.
-      }
+      { hexploit echo_ra_white; et. intro T. iSpecialize T A. iSpecialize T PRE. iPure T; des; ss. }
 
       iDestruct A. subst.
       rename x into ns. rename x0 into ns0.
       assert(l = ns /\ v = ll); des; subst.
-      { eassert(T:=@echo_ra_merge _ _ _ _ _ _). iSpecialize T A. iSpecialize T PRE. iPure T; des; ss. }
+      { hexploit echo_ra_merge; et. intro T. iSpecialize T A. iSpecialize T PRE. iPure T; des; ss. }
 
 
 
@@ -680,12 +784,10 @@ Section SIMMODSEM.
 
 
       iDestruct SIM. destruct SIM as [SIM|SIM]; iRefresh; cycle 1.
-      { exfalso. iMerge SIM PRE. rewrite <- own_sep in SIM. rewrite GRA.padding_add in SIM.
-        iOwnWf SIM. clear - WF. apply GRA.padding_wf in WF. des. ss.
-      }
+      { hexploit echo_ra_white; et. intro T. iSpecialize T SIM. iSpecialize T PRE. iPure T; des; ss. }
       iDestruct SIM. subst.
       assert(ll0 = ll /\ x = ns); des; subst.
-      { eassert(T:=@echo_ra_merge _ _ _ _ _ _). iSpecialize T SIM. iSpecialize T PRE. iPure T; des; ss. }
+      { hexploit echo_ra_merge; et. intro T. iSpecialize T SIM. iSpecialize T PRE. iPure T; des; ss. }
       subst.
 
 
@@ -716,13 +818,11 @@ Section SIMMODSEM.
         { esplits; ss; et. exists ns; iRefresh. right; iRefresh; ss. }
         des; iRefresh. do 2 iDestruct POST0. iPure A. subst. apply Any.upcast_inj in A. des; clarify.
         iDestruct SIM0. destruct SIM0; iRefresh.
-        { exfalso. iDestruct H1; subst. iMerge H1 SIM. rewrite <- own_sep in H1. rewrite GRA.padding_add in H1.
-          iOwnWf H1. clear - WF. apply GRA.padding_wf in WF. des. ss.
-        }
+        { iDestruct' H1. hexploit echo_ra_black; et. intro T. iSpecialize T SIM. iSpecialize T H1. iPure T; des; ss. }
 
         rename H1 into A.
         assert(ll0 = ll /\ x8 = ns); des; subst.
-        { eassert(T:=@echo_ra_merge _ _ _ _ _ _). iSpecialize T SIM. iSpecialize T A. iPure T; des; ss. }
+        { hexploit echo_ra_merge; et. intro T. iSpecialize T SIM. iSpecialize T A. iPure T; des; ss. }
 
 
 
@@ -777,14 +877,12 @@ Section SIMMODSEM.
       do 2 iDestruct PRE. iPure A. iPure A0. clarify.
       iDestruct SIM.
       destruct SIM as [A|A]; iRefresh; cycle 1.
-      { exfalso. iMerge A PRE. rewrite <- own_sep in A. rewrite GRA.padding_add in A.
-        iOwnWf A. clear - WF. apply GRA.padding_wf in WF. des. ss.
-      }
+      { hexploit echo_ra_white; et. intro T. iSpecialize T A. iSpecialize T PRE. iPure T; des; ss. }
 
       iDestruct A. subst.
       rename x into ns. rename x0 into ns0.
       assert(v = ll /\ l = ns).
-      { eassert(T:=@echo_ra_merge _ _ _ _ _ _). iSpecialize T A. iSpecialize T PRE. iPure T; des; ss. }
+      { hexploit echo_ra_merge; et. intro T. iSpecialize T A. iSpecialize T PRE. iPure T; des; ss. }
       des; subst.
 
 
@@ -807,12 +905,9 @@ Section SIMMODSEM.
         des; iRefresh. do 2 iDestruct POST. iPure POST. subst.
         apply_all_once Any.upcast_inj. des; clarify. steps. rewrite Any.upcast_downcast in *. clarify.
         iDestruct SIM. destruct SIM as [SIM|SIM]; iRefresh.
-        { exfalso. iDestruct SIM; subst. iMerge SIM A. rewrite <- own_sep in SIM. rewrite GRA.padding_add in SIM.
-          iOwnWf SIM.
-          clear - WF. apply GRA.padding_wf in WF. des. ss.
-        }
+        { iDestruct' SIM. hexploit echo_ra_black; et. intro T. iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
         assert(ll = (Vptr x 0) /\ x10 = z :: ns); des; subst.
-        { eassert(T:=@echo_ra_merge _ _ _ _ _ _). iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
+        { hexploit echo_ra_merge; et. intro T. iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
 
 
 
@@ -843,11 +938,9 @@ Section SIMMODSEM.
         apply_all_once Any.upcast_inj. des; clarify. steps.
         rewrite Any.upcast_downcast in *. clarify.
         rename SIM0 into SIM. destruct SIM as [SIM|SIM]; iRefresh.
-        { exfalso. iDestruct SIM; subst. iMerge SIM A. rewrite <- own_sep in SIM. rewrite GRA.padding_add in SIM.
-          iOwnWf SIM. clear - WF. apply GRA.padding_wf in WF. des. ss.
-        }
+        { iDestruct' SIM. hexploit echo_ra_black; et. intro T. iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
         assert(ll = Vptr hd 0 /\ x = z :: ns); des; subst.
-        { eassert(T:=@echo_ra_merge _ _ _ _ _ _). iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
+        { hexploit echo_ra_merge; et. intro T. iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
 
 
 
@@ -869,11 +962,9 @@ Section SIMMODSEM.
         apply_all_once Any.upcast_inj. des; clarify. steps.
         rewrite Any.upcast_downcast in *. clarify.
         destruct SIM as [SIM|SIM]; iRefresh.
-        { exfalso. iDestruct SIM; subst. iMerge SIM A. rewrite <- own_sep in SIM. rewrite GRA.padding_add in SIM.
-          iOwnWf SIM. clear - WF. apply GRA.padding_wf in WF. des. ss.
-        }
+        { iDestruct' SIM. hexploit echo_ra_black; et. intro T. iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
         assert(v = ll /\ x = ns); des; subst.
-        { eassert(T:=@echo_ra_merge _ _ _ _ _ _). iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
+        { hexploit echo_ra_merge; et. intro T. iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
 
 
 
@@ -885,11 +976,9 @@ Section SIMMODSEM.
         { esplits; ss; et. eexists; iRefresh. right; iRefresh; ss; et. }
         des; iRefresh. subst. iDestruct SIM0.
         rename SIM0 into SIM. destruct SIM as [SIM|SIM]; iRefresh.
-        { exfalso. iDestruct SIM; subst. iMerge SIM A. rewrite <- own_sep in SIM. rewrite GRA.padding_add in SIM.
-          iOwnWf SIM. clear - WF. apply GRA.padding_wf in WF. des. ss.
-        }
+        { iDestruct' SIM. hexploit echo_ra_black; et. intro T. iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
         assert(ll0 = ll /\ x = ns); des; subst.
-        { eassert(T:=@echo_ra_merge _ _ _ _ _ _). iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
+        { hexploit echo_ra_merge; et. intro T. iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
 
 
 
