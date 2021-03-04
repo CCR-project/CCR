@@ -19,7 +19,7 @@ Section IMP.
 
   Definition g_stmt : stmt :=
     if# (Var "n")
-    then# ("f_ret" <<- (Fun "f") [(Var "n") - (Vint 1)] ;;;
+    then# ("f_ret" :=# (Fun "f") [(Var "n") - (Vint 1)] ;;;
            Expr ((Var "n") + "f_ret"))
     else# (Expr (Vint 0)) fi#.
   
