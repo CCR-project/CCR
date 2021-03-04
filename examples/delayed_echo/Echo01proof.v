@@ -412,17 +412,30 @@ Section AUX.
     i. rr in EXT. des; subst. eapply URA.wf_mon; et.
   Qed.
 
-  Definition updatable_iprop (P Q: iProp): Prop :=
-    forall pr, URA.wf pr -> P pr -> exists qr, Q qr /\ URA.updatable pr qr
-  .
+  (* Definition updatable_iprop (P Q: iProp): Prop := *)
+  (*   forall pr, URA.wf pr -> P pr -> exists qr, Q qr /\ URA.updatable pr qr *)
+  (* . *)
 
-  Lemma impl_updatable: forall P Q, Impl P Q -> updatable_iprop P Q.
-  Proof. { ii. esplits; eauto. refl. } Qed.
+  (* Lemma impl_updatable: forall P Q, Impl P Q -> updatable_iprop P Q. *)
+  (* Proof. { ii. esplits; eauto. refl. } Qed. *)
 
-  Lemma iprop_update: forall (P Q: iProp) rx ctx, updatable_iprop P Q -> iHyp P rx -> URA.wf (rx ⋅ ctx) ->
-                                                  exists ry, iHyp Q ry /\ URA.wf (ry ⋅ ctx) /\ URA.updatable (rx ⋅ ctx) (ry ⋅ ctx).
-  Proof. { clear_until Σ. i. r in H0. exploit H; try apply H0; et. { eapply URA.wf_mon; et. } i; des. esplits; eauto.
-           eapply URA.updatable_add; et. refl. } Qed.
+  (* Lemma iprop_update: forall (P Q: iProp) rx ctx, updatable_iprop P Q -> iHyp P rx -> URA.wf (rx ⋅ ctx) -> *)
+  (*                                                 exists ry, iHyp Q ry /\ URA.wf (ry ⋅ ctx) /\ URA.updatable (rx ⋅ ctx) (ry ⋅ ctx). *)
+  (* Proof. { clear_until Σ. i. r in H0. exploit H; try apply H0; et. { eapply URA.wf_mon; et. } i; des. esplits; eauto. *)
+  (*          eapply URA.updatable_add; et. refl. } Qed. *)
+
+
+
+
+  (* Lemma upd_update: forall (ctx: Σ) (P: iProp) r0, *)
+  (*     iHyp ( |=> P) r0 -> URA.wf (r0 ⋅ ctx) -> *)
+  (*     exists r1, iHyp P r1 /\ URA.wf (r1 ⋅ ctx) /\ URA.updatable (r0 ⋅ ctx) (r1 ⋅ ctx). *)
+  (* Proof. ii. rr in H. exploit H; et. i; des. esplits; et. eapply URA.updatable_add; try refl. clear - H. r. i. exploit H; et. i; des. esplits; et. Qed. *)
+
+  Lemma upd_update: forall (ctx: Σ) (P: iProp) r0,
+      iHyp (Upd P) r0 -> URA.wf (r0 ⋅ ctx) ->
+      exists r1, iHyp P r1 /\ URA.wf (r1 ⋅ ctx) /\ URA.updatable (r0 ⋅ ctx) (r1 ⋅ ctx).
+  Proof. ii. rr in H. des. eexists r1. exploit H; et. i; des. esplits; et. eapply URA.updatable_add; try refl. clear - H. r. i. exploit H; et. i; des. esplits; et. Qed.
 
   Lemma unfold_APC: forall n, _APC n =
     match n with
@@ -468,6 +481,24 @@ Ltac iUpdate H :=
                              clear wf upd; iRefresh; clear _GWF)]
 .
 
+Ltac iOwnWf G :=
+  match goal with
+  | H:iHyp (Own ?r) ?rh |- _ =>
+    check_equal H G;
+    let name := fresh "WF" in
+    (* assert(name: URA.wf r); [eapply wf_downward; [eapply H|eapply wf_downward; et; r_equalize; r_solve]|] *)
+    assert(name: URA.wf r); [eapply wf_downward; [eapply H|eapply wf_downward; [|on_gwf ltac:(fun GWF => apply GWF)]; r_equalize; r_solve]|]
+  end.
+
+Ltac until_bar TAC :=
+  (on_last_hyp ltac:(fun id' =>
+                       match type of id' with
+                       | IPROPS => intros
+                       | _ => TAC id'; revert id'; until_bar TAC
+                       end)).
+
+Ltac rr_until_bar := until_bar ltac:(fun H => rr in H).
+
 
 
 
@@ -500,35 +531,7 @@ Section SIMMODSEM.
   Hint Resolve sim_itree_mon: paco.
 
   Opaque URA.unit.
-
-
-
-
-
-
-
-  Ltac iOwnWf G :=
-    match goal with
-    | H:iHyp (Own ?r) ?rh |- _ =>
-      check_equal H G;
-      let name := fresh "WF" in
-      (* assert(name: URA.wf r); [eapply wf_downward; [eapply H|eapply wf_downward; et; r_equalize; r_solve]|] *)
-      assert(name: URA.wf r); [eapply wf_downward; [eapply H|eapply wf_downward; [|on_gwf ltac:(fun GWF => apply GWF)]; r_equalize; r_solve]|]
-    end.
-
-  Ltac until_bar TAC :=
-    (on_last_hyp ltac:(fun id' =>
-                         match type of id' with
-                         | IPROPS => intros
-                         | _ => TAC id'; revert id'; until_bar TAC
-                         end)).
-  Ltac rr_until_bar := until_bar ltac:(fun H => rr in H).
-
   Opaque points_to.
-
-
-
-
 
   Theorem correct: ModSemPair.sim Echo1.EchoSem Echo0.EchoSem.
   Proof.
@@ -639,18 +642,32 @@ Section SIMMODSEM.
 
 
 
+        Ltac iUpdate2 H :=
+          eapply upd_update in H; [|on_gwf ltac:(fun GWF => eapply wf_downward; [|eapply GWF]); eexists ε; r_equalize; r_solve; fail];
+          let GWF := fresh "GWF" in
+          let wf := fresh "WF" in
+          let upd := fresh "UPD" in
+          destruct H as [? [H [wf upd]]];
+          on_gwf ltac:(fun _GWF => eassert(GWF: ☀) by
+                           (split; [etrans; [apply _GWF|etrans; [|apply upd]]; eapply URA.extends_updatable; r_equalize; r_solve; fail|exact wf]);
+                                   clear wf upd; iRefresh; clear _GWF).
+
+
+
         (*** testing purpose ***)
-        iUpdate A.
+        eapply own_upd in A; cycle 1; [|rewrite intro_iHyp in A;iUpdate2 A].
         { eapply GRA.padding_updatable. instantiate (1:= echo_black ll (ns) ⋅ echo_white ll (ns)).
           eapply URA.auth_update. rr. ii. des; ss.
         }
 
+
+
         (*** testing purpose ***)
-        iUpdate A.
+        eapply own_upd in A; cycle 1; [|rewrite intro_iHyp in A;iUpdate2 A].
         { eapply GRA.padding_updatable. instantiate (1:= echo_black Vnullptr ([]) ⋅ echo_white Vnullptr ([])).
           eapply URA.auth_update. rr. ii. des; ss. destruct ctx; ss; clarify. }
 
-        iUpdate A.
+        eapply own_upd in A; cycle 1; [|rewrite intro_iHyp in A;iUpdate2 A].
         { eapply GRA.padding_updatable. instantiate (1:= echo_black x (z :: ns) ⋅ echo_white x (z :: ns)).
           eapply URA.auth_update. rr. ii. des; ss. destruct ctx; ss; clarify.
         }
@@ -728,26 +745,31 @@ Section SIMMODSEM.
 
 
         rename x into hd. rename x4 into tmp.
-        iMerge A1 A2. eapply iprop_update in A1; revgoals; swap 1 2.
-        { instantiate (1:=is_list (Vptr hd 0) (List.map Vint (z :: ns))).
-          ii. eassert(GWF0: ☀). { split; [refl|apply H1]. } clear GWF. iRefresh. iClears'.
-          esplits; eauto; try refl.
-          iRefresh. rewrite unfold_is_list. cbn.
-          do 2 eexists; iRefresh.
-          iDestruct H2; subst. Undo 1.
-          let name0 := fresh "A" in apply sepconj_split in H2 as [? [? [H2 [name0 ?]]]]; subst; iRefresh. (********** TODO 0000****************)
-          iSplitL A.
-          (* iSplit A H2; iRefresh. *)
-          { sym. try r_equalize. r_solve. }
-          - iSplitP; ss. eauto.
-          - iRefresh. eauto.
+        iMerge A1 A2.
+        eassert(T: iHyp (is_list x0 (List.map Vint ns) ** Own (GRA.padding ((hd, 0%Z) |-> [Vint z; x0])) -* _) ε).
+        { instantiate (1:=is_list (Vptr hd 0) (List.map Vint (z :: ns))). iRefresh.
+          Ltac iIntro :=
+            on_gwf ltac:(fun GWF => clear GWF);
+            let A := fresh "A" in
+            let wf := fresh "wf" in
+            let GWF := fresh "GWF" in
+            intros ? wf A; eassert(GWF: ☀) by (split; [refl|exact wf]); iRefresh.
+          iIntro.
+          rewrite unfold_is_list. cbn.
+          iDestruct' A. do 2 eexists; iRefresh.
+          iSplitL A0.
+          { sym. r_equalize. r_solve. }
+          { iSplitP; ss; et. }
+          { iRefresh; ss. }
         }
-        { on_gwf ltac:(fun H => eapply wf_downward; [  | eapply H ]); eexists ε; r_equalize; r_solve; fail. }
-        des. iRefresh.
-        eassert(GWF0: ☀).
-        { r. split; [|apply A2]. etrans; [apply GWF|]. etrans; [|apply A3]. eapply URA.extends_updatable. r_equalize. r_solve. }
-        clear GWF A2 A3.
-        iRefresh.
+        Ltac iSpecialize H G :=
+          let rp := r_gather G in
+          specialize (H rp); eapply hexploit_mp in H; [|on_gwf ltac:(fun GWF => eapply wf_downward; cycle 1; [by apply GWF|r_equalize; r_solve])];
+            specialize (H G); rewrite intro_iHyp in H; clear G; iRefresh
+        .
+        iSpecialize T A1. rewrite URA.unit_idl in T.
+        rename T into A1.
+
 
 
 
