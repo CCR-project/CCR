@@ -685,20 +685,14 @@ Global Opaque _APC.
 
 
 Ltac iUpdate H :=
-  eapply own_update in H; revgoals; [on_gwf ltac:(fun H => eapply wf_downward; [|eapply H]); eexists ε; r_equalize; r_solve; fail| |];
-  [|let GWF := fresh "GWF" in
-    let wf := fresh "WF" in
-    let upd := fresh "UPD" in
-    destruct H as [? [H [wf upd]]];
-    (* idtac *)
-    (* on_gwf ltac:(fun _GWF => eassert(GWF: ☀) by *)
-    (*                  (split; [etrans; [apply _GWF|etrans; [|apply upd]]; eapply URA.extends_updatable; r_equalize; r_solve; fail|exact wf]); *)
-    (*                          clear wf upd; iRefresh; clear _GWF *)
-    (*             ) *)
-    on_gwf ltac:(fun _GWF => eassert(GWF: ☀) by
-                     (split; [etrans; [apply _GWF|etrans; [|apply upd]]; eapply URA.extends_updatable; r_equalize; r_solve; fail|exact wf]);
-                             clear wf upd; iRefresh; clear _GWF)]
-.
+  eapply upd_update in H; [|on_gwf ltac:(fun GWF => eapply wf_downward; [|eapply GWF]); eexists ε; r_equalize; r_solve; fail];
+  let GWF := fresh "GWF" in
+  let wf := fresh "WF" in
+  let upd := fresh "UPD" in
+  destruct H as [? [H [wf upd]]];
+  on_gwf ltac:(fun _GWF => eassert(GWF: ☀) by
+                   (split; [etrans; [apply _GWF|etrans; [|apply upd]]; eapply URA.extends_updatable; r_equalize; r_solve; fail|exact wf]);
+                           clear wf upd; iRefresh; clear _GWF).
 
 Ltac until_bar TAC :=
   (on_last_hyp ltac:(fun id' =>
@@ -826,37 +820,12 @@ Section SIMMODSEM.
 
 
 
-        Ltac iUpdate2 H :=
-          eapply upd_update in H; [|on_gwf ltac:(fun GWF => eapply wf_downward; [|eapply GWF]); eexists ε; r_equalize; r_solve; fail];
-          let GWF := fresh "GWF" in
-          let wf := fresh "WF" in
-          let upd := fresh "UPD" in
-          destruct H as [? [H [wf upd]]];
-          on_gwf ltac:(fun _GWF => eassert(GWF: ☀) by
-                           (split; [etrans; [apply _GWF|etrans; [|apply upd]]; eapply URA.extends_updatable; r_equalize; r_solve; fail|exact wf]);
-                                   clear wf upd; iRefresh; clear _GWF).
 
-
-
-        (*** testing purpose ***)
         iMerge A SIM. rewrite <- own_sep in A. rewrite GRA.padding_add in A. rewrite URA.add_comm in A.
-        eapply own_upd in A; cycle 1; [|rewrite intro_iHyp in A;iUpdate2 A].
-        { eapply GRA.padding_updatable. instantiate (1:= echo_black ll (ns) ⋅ echo_white ll (ns)).
-          eapply URA.auth_update. rr. ii. des; ss.
-        }
-
-
-
-        (*** testing purpose ***)
-        eapply own_upd in A; cycle 1; [|rewrite intro_iHyp in A;iUpdate2 A].
-        { eapply GRA.padding_updatable. instantiate (1:= echo_black Vnullptr ([]) ⋅ echo_white Vnullptr ([])).
-          eapply URA.auth_update. rr. ii. des; ss. destruct ctx; ss; clarify. }
-
-        eapply own_upd in A; cycle 1; [|rewrite intro_iHyp in A;iUpdate2 A].
+        eapply own_upd in A; cycle 1; [|rewrite intro_iHyp in A;iUpdate A].
         { eapply GRA.padding_updatable. instantiate (1:= echo_black x (z :: ns) ⋅ echo_white x (z :: ns)).
           eapply URA.auth_update. rr. ii. des; ss. destruct ctx; ss; clarify.
         }
-
         rewrite <- GRA.padding_add in A. rewrite own_sep in A. iDestruct A. subst.
 
 
@@ -945,7 +914,7 @@ Section SIMMODSEM.
 
 
         iMerge A SIM. rewrite <- own_sep in A. rewrite GRA.padding_add in A.
-        iUpdate A.
+        eapply own_upd in A; cycle 1; [|rewrite intro_iHyp in A;iUpdate A].
         { eapply GRA.padding_updatable. instantiate (1:= echo_black v (ns) ⋅ echo_white v (ns)).
           eapply URA.auth_update. rr. ii. des; ss. destruct ctx; ss; clarify.
         }
