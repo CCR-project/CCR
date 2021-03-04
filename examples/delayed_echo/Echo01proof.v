@@ -745,37 +745,43 @@ Section SIMMODSEM.
 
 
         rename x into hd. rename x4 into tmp.
-        iMerge A1 A2.
-        eassert(T: iHyp (is_list x0 (List.map Vint ns) ** Own (GRA.padding ((hd, 0%Z) |-> [Vint z; x0])) -* _) ε).
-        { instantiate (1:=is_list (Vptr hd 0) (List.map Vint (z :: ns))). iRefresh.
-          Ltac iIntro :=
-            on_gwf ltac:(fun GWF => clear GWF);
-            let A := fresh "A" in
-            let wf := fresh "wf" in
-            let GWF := fresh "GWF" in
-            intros ? wf A; eassert(GWF: ☀) by (split; [refl|exact wf]); iRefresh.
-          iIntro.
-          rewrite unfold_is_list. cbn.
-          iDestruct' A. do 2 eexists; iRefresh.
-          iSplitL A0.
-          { sym. r_equalize. r_solve. }
-          { iSplitP; ss; et. }
-          { iRefresh; ss. }
-        }
+        Ltac iIntro :=
+          on_gwf ltac:(fun GWF => clear GWF);
+          let A := fresh "A" in
+          let wf := fresh "wf" in
+          let GWF := fresh "GWF" in
+          intros ? wf A; eassert(GWF: ☀) by (split; [refl|exact wf]); iRefresh.
         Ltac iSpecialize H G :=
           let rp := r_gather G in
           specialize (H rp); eapply hexploit_mp in H; [|on_gwf ltac:(fun GWF => eapply wf_downward; cycle 1; [by apply GWF|r_equalize; r_solve])];
             specialize (H G); rewrite intro_iHyp in H; clear G; iRefresh
         .
-        iSpecialize T A1. rewrite URA.unit_idl in T.
-        rename T into A1.
+        Ltac iAssert H Abody :=
+          let A := fresh "A" in
+          match type of H with
+          | iHyp ?Hbody ?rH =>
+            match Abody with
+            | ltac_wild => eassert(A: iHyp (Hbody -* _) ε)
+            | _ => assert(A: iHyp (Hbody -* Abody) ε)
+            end;
+            [|iSpecialize A H; rewrite URA.unit_idl in A]
+          end
+        .
+        iMerge A1 A2. iAssert A1 (is_list (Vptr hd 0) (List.map Vint (z :: ns))).
+        { iIntro. rewrite unfold_is_list. cbn.
+          iDestruct' A2. do 2 eexists; iRefresh.
+          iSplitL A.
+          { sym. r_equalize. r_solve. }
+          { iSplitP; ss; et. }
+          { iRefresh; ss. }
+        }
 
 
 
 
         rewrite unfold_APC. steps. force_l. exists false. steps. force_l. eexists ("pop2", [Vptr hd 0; Vptr tmp 0]↑). steps.
         force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
-        hcall_tac __ (ord_pure 2) SIM A (A0, A1); ss; et.
+        hcall_tac __ (ord_pure 2) SIM A (A0, A2); ss; et.
         { instantiate (1:=(_, _)). esplits; try refl; iRefresh. eexists; iRefresh. iSplitP; ss.
           iSplitR (A0); [sym; r_equalize; r_solve| |]; ss; et; iRefresh.
           - iSplitP; ss. eauto.
