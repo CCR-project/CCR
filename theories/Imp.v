@@ -92,7 +92,7 @@ Module ImpNotations.
 
   Bind Scope stmt_scope with stmt.
 
-  Notation "x '←' e" :=
+  Notation "x '=#' e" :=
     (Assign x e) (at level 60, e at level 50): stmt_scope.
 
   Notation "a ';;;' b" :=
@@ -116,7 +116,7 @@ Module ImpNotations.
        format
          "'[v  ' 'while#'  t  'do#' '/' '[v' b  ']' ']' 'end#'").
 
-  Notation "x '<<-' '(' f ')' args" :=
+  Notation "x ':=#' '(' f ')' args" :=
     (CallFun x f args) (at level 60): stmt_scope.
 
 End ImpNotations.
@@ -421,17 +421,17 @@ Section Example_Extract.
   Open Scope stmt_scope.
 
   Definition factorial : stmt :=
-    "output" ← (Vint 1);;;
+    "output" =# (Vint 1);;;
     while# "input"
-    do# "output" ← "output" * "input";;;
-       "input"  ← "input" - (Vint 1) end#;;;
+    do# "output" =# "output" * "input";;;
+       "input"  =# "input" - (Vint 1) end#;;;
     Expr "output".
 
   Definition factorial_fundef : function :=
     {| params := ["input"] ; body := factorial |}.
   
   Definition main : stmt :=
-    "result" <<- (Fun "factorial") [Lit (Vint 4)] ;;;
+    "result" :=# (Fun "factorial") [Lit (Vint 4)] ;;;
     Expr "result".
   
   Definition main_fundef : function :=

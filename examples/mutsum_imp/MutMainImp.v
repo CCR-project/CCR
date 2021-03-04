@@ -18,8 +18,8 @@ Section IMP.
   Local Existing Instance Σ.
 
   Definition main_stmt : stmt :=
-    "input" <<- (Sys "scanf") [] ;;;
-    "result" <<- (Fun "f") [Var "input"] ;;;
+    "input" :=# (Sys "scanf") [] ;;;
+    "result" :=# (Fun "f") [Var "input"] ;;;
     Expr "result".
   
   Definition main_fun : function :=
