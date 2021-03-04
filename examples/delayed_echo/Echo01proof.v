@@ -308,9 +308,9 @@ Ltac iRefresh :=
          | iProp => rewrite intro_iHyp
          | _ => idtac
          end
-       end;
-       iClears;
-       iClears')
+       end);
+  try iClears;
+  try iClears'
 .
 
 Ltac iSplitP :=
