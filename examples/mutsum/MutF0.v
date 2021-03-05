@@ -6,14 +6,13 @@ Require Import Behavior.
 Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
+Require Import TODO.
 
 Generalizable Variables E R A B C X Y Σ.
 
 Set Implicit Arguments.
 
 
-
-Definition parg: list val -> option val := (@hd_error _).
 
 Section PROOF.
 
@@ -24,7 +23,7 @@ Section PROOF.
   ***)
   Definition fF: list val -> itree Es val :=
     fun varg =>
-      `n: val <- (parg varg)?;; `n: Z <- (unint n)?;;
+      `n: Z <- (pargs [Tint] varg)?;;
       if dec n 0%Z
       then Ret (Vint 0)
       else
