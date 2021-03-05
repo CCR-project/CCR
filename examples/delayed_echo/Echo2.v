@@ -44,7 +44,7 @@ Section PROOF.
       match ns with
       | [] => Ret tt
       | hd :: tl =>
-        trigger (hCall false "out" [Vint hd]↑);;
+        trigger (hCall false "putint" [Vint hd]↑);;
         trigger (hCall false "echo_finish" tl↑);;
         Ret tt
       end
@@ -94,7 +94,7 @@ End PROOF.
 (*       match ns with *)
 (*       | [] => Ret tt *)
 (*       | hd :: tl => *)
-(*         `_: val <- ccall "out" [Vint hd];; *)
+(*         `_: val <- ccall "putint" [Vint hd];; *)
 (*         `_: unit <- ccall "echo_finish" tl;; *)
 (*         Ret tt *)
 (*       end. *)

@@ -113,13 +113,13 @@ struct Node* pop2(struct Node* ll, int *n) {
 
 
 //// client
-int in() {
+int getint() {
   int n;
   scanf("%d", &n);
   return n;
 }
 
-void out(int n) {
+void putint(int n) {
   printf("%d\t", n);
 }
 
@@ -138,7 +138,7 @@ struct Node* my_list = NULL;
 void echo_finish();
 
 void echo() {
-  int n = in();
+  int n = getint();
   if(n == -1) {
     echo_finish();
     return;
@@ -151,7 +151,7 @@ void echo_finish() {
   if(my_list) {
     int *n = malloc(sizeof(int));
     my_list = pop2(my_list, n);
-    out(*n);
+    putint(*n);
     echo_finish();
   }
 }

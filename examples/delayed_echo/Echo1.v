@@ -47,7 +47,7 @@ Section PROOF.
 
   Definition echo_body: list Z -> itree (hCallE +' pE +' eventE) unit :=
     fun ns =>
-      n <- trigger (hCall false "in" ([]: list val)↑);;
+      n <- trigger (hCall false "getint" ([]: list val)↑);;
       `n: val <- n↓?;; `n: Z <- (unint n)?;;
       if dec n (- 1)%Z
       then trigger (hCall false "echo_finish" ns↑);; Ret tt
@@ -63,7 +63,7 @@ Section PROOF.
       | [] => Ret tt
       | hd :: tl =>
         APC;;
-        trigger (hCall false "out" [Vint hd]↑);;
+        trigger (hCall false "putint" [Vint hd]↑);;
         trigger (hCall false "echo_finish" tl↑);;
         Ret tt
       end
@@ -91,7 +91,7 @@ Section PROOF.
   (*     match ll0 with *)
   (*     | [] => Ret Vundef *)
   (*     | hd :: tl => *)
-  (*       `_: val        <- (hcall "out" [hd]);; *)
+  (*       `_: val        <- (hcall "putint" [hd]);; *)
   (*       trigger (PPut "Echo" tl↑);; *)
   (*       `_: val        <- (hcall "echo_finish" ([]: list val));; *)
   (*       Ret Vundef *)

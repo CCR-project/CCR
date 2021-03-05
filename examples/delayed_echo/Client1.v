@@ -21,19 +21,19 @@ Section PROOF.
 
   Context `{Σ: GRA.t}.
 
-  Let in_spec:  fspec := (mk_simple "Client" (X:=unit) (fun _ _ o _ => o = ord_top) (top3)).
-  Let out_spec: fspec := (mk_simple "Client" (X:=unit) (fun _ _ o _ => o = ord_top) (top3)).
+  Let getint_spec:  fspec := (mk_simple "Client" (X:=unit) (fun _ _ o _ => o = ord_top) (top3)).
+  Let putint_spec: fspec := (mk_simple "Client" (X:=unit) (fun _ _ o _ => o = ord_top) (top3)).
 
   Definition ClientStb: list (gname * fspec).
     eapply (Seal.sealing "stb").
-    apply [("in", in_spec) ; ("out", out_spec)].
+    apply [("getint", getint_spec) ; ("putint", putint_spec)].
   Defined.
 
-  Definition in_body:  list val -> itree (hCallE +' pE +' eventE) val := resum_ktr inF.
-  Definition out_body: list val -> itree (hCallE +' pE +' eventE) val := resum_ktr outF.
+  Definition getint_body: list val -> itree (hCallE +' pE +' eventE) val := resum_ktr getintF.
+  Definition putint_body: list val -> itree (hCallE +' pE +' eventE) val := resum_ktr putintF.
 
   Definition ClientSbtb: list (gname * fspecbody) :=
-    [("in", mk_specbody in_spec in_body); ("out", mk_specbody out_spec out_body)]
+    [("in", mk_specbody getint_spec getint_body); ("putint", mk_specbody putint_spec putint_body)]
   .
 
   Definition ClientSem: ModSem.t := {|

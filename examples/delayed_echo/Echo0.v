@@ -46,7 +46,7 @@ void echo() {
 
   Definition echoF: list val -> itree Es val :=
     fun _ =>
-      `n: val    <- (ccall "in" ([]: list val));;
+      `n: val    <- (ccall "getint" ([]: list val));;
       if is_minus_one n
       then `_: val <- (ccall "echo_finish"  ([]: list val));; Ret Vundef
       else
@@ -63,7 +63,7 @@ void echo_finish() {
   if(my_list) {
     int #n = malloc(sizeof(int));
     my_list = pop2(my_list, n);
-    out(#n);
+    putint(#n);
     echo_finish();
   }
 }
@@ -79,7 +79,7 @@ void echo_finish() {
           `my_list1: val <- (ccall "pop2" ([my_list0; nref]));;
           trigger (PPut "Echo" my_list1↑);;
           `n: val        <- (ccall "load" ([nref]));;
-          `_: val        <- (ccall "out" ([n]));;
+          `_: val        <- (ccall "putint" ([n]));;
           `_: val        <- (ccall "echo_finish" ([]: list val));;
           Ret Vundef
         )
