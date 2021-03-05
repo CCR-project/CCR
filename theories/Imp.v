@@ -79,10 +79,14 @@ Definition program : Type := list (gname * function).
 Module ImpNotations.
 
   (** A few notations for convenience.  *)
+  Definition Expr_coerce: expr -> stmt := Expr.
   Definition Var_coerce: string -> expr := Var.
   Definition Lit_coerce: val -> expr := Lit.
+  Definition Vint_coerce: Z -> val := Vint.
+  Coercion Expr_coerce: expr >-> stmt.
   Coercion Var_coerce: string >-> expr.
   Coercion Lit_coerce: val >-> expr.
+  Coercion Vint_coerce: Z >-> val.
 
   Bind Scope expr_scope with expr.
 
@@ -95,11 +99,11 @@ Module ImpNotations.
   Notation "x '=#' e" :=
     (Assign x e) (at level 60, e at level 50): stmt_scope.
 
-  Notation "a ';;;' b" :=
+  Notation "a ';;#' b" :=
     (Seq a b)
       (at level 100, right associativity,
        format
-         "'[v' a  ';;;' '/' '[' b ']' ']'"
+         "'[v' a  ';;#' '/' '[' b ']' ']'"
       ): stmt_scope.
 
   Notation "'if#' i 'then#' t 'else#' e 'fi#'" :=
@@ -420,18 +424,18 @@ Section Example_Extract.
   Open Scope stmt_scope.
 
   Definition factorial : stmt :=
-    "output" =# (Vint 1);;;
+    "output" =# 1%Z ;;#
     while# "input"
-    do# "output" =# "output" * "input";;;
-       "input"  =# "input" - (Vint 1) end#;;;
-    Expr "output".
+    do# "output" =# "output" * "input";;#
+       "input"  =# "input" - 1%Z end#;;#
+    "output".
 
   Definition factorial_fundef : function :=
     {| params := ["input"] ; body := factorial |}.
 
   Definition main : stmt :=
-    "result" :=# (Fun "factorial") [Lit (Vint 4)] ;;;
-    Expr "result".
+    "result" :=# (Fun "factorial") [4%Z : expr] ;;#
+    "result".
 
   Definition main_fundef : function :=
     {| params := [] ; body := main |}.
