@@ -7,8 +7,16 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 
+
+Definition unbool (v: val): option bool :=
+  match v with
+  | Vint x => Some (if (dec x 0%Z) then false else true)
+  | _ => None
+  end.
+
 Variant val_type: Set :=
 | Tint
+| Tbool
 | Tptr
 | Tuntyped
 .
@@ -16,6 +24,7 @@ Variant val_type: Set :=
 Definition val_type_sem (t: val_type): Set :=
   match t with
   | Tint => Z
+  | Tbool => bool
   | Tptr => (block * ptrofs)
   | Tuptyped => val
   end.
@@ -30,10 +39,10 @@ Fixpoint val_types_sem (ts: list val_type): Set :=
 Definition parg (t: val_type) (v: val): option (val_type_sem t) :=
   match t with
   | Tint => unint v
+  | Tbool => unbool v
   | Tptr => unptr v
   | Tuntyped => Some v
   end.
-
 
 Definition pargs (ts: list val_type):
   forall (vs: list val), option (val_types_sem ts).
