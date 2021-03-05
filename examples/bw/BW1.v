@@ -25,15 +25,15 @@ Section BW.
 
   Let get_spec:  fspec := (mk_simple "BW"
                                      (fun b varg o =>
-                                        iHyp (Own (GRA.padding (bw_frag b)) ** ⌜o = ord_pure 1⌝))
+                                        iHyp (Own (GRA.embed (bw_frag b)) ** ⌜o = ord_pure 1⌝))
                                      (fun b vret =>
-                                        iHyp (Own (GRA.padding (bw_frag b)) ** ⌜vret = (Vint (if b then 0xffffff else 0))↑⌝))).
+                                        iHyp (Own (GRA.embed (bw_frag b)) ** ⌜vret = (Vint (if b then 0xffffff else 0))↑⌝))).
 
   Let flip_spec: fspec := (mk_simple "BW"
                                      (fun b varg o =>
-                                        iHyp (Own (GRA.padding (bw_frag b)) ** ⌜o = ord_pure 1⌝))
+                                        iHyp (Own (GRA.embed (bw_frag b)) ** ⌜o = ord_pure 1⌝))
                                      (fun b vret =>
-                                        iHyp (Own (GRA.padding (bw_frag (negb b)))))).
+                                        iHyp (Own (GRA.embed (bw_frag (negb b)))))).
 
   Definition BWStb: list (gname * fspec) :=
     Seal.sealing "stb" [("get", get_spec) ; ("flip", flip_spec)].
@@ -46,7 +46,7 @@ Section BW.
 
   Definition BWSem: ModSem.t := {|
     ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt BWStb fn fsb)) BWSbtb;
-    ModSem.initial_mrs := [("BW", (GRA.padding (bw_full false), tt↑))];
+    ModSem.initial_mrs := [("BW", (GRA.embed (bw_full false), tt↑))];
   |}
   .
 

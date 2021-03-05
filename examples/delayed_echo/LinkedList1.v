@@ -26,28 +26,28 @@ Section PROOF.
     match xs with
     | [] => ⌜ll = Vnullptr⌝
     | xhd :: xtl =>
-      Exists lhd ltl, ⌜ll = Vptr lhd 0⌝ ** (Own (GRA.padding ((lhd,0%Z) |-> [xhd; ltl])))
+      Exists lhd ltl, ⌜ll = Vptr lhd 0⌝ ** (Own (GRA.embed ((lhd,0%Z) |-> [xhd; ltl])))
                                  ** is_list ltl xtl
     end
   .
 
   Let pop_spec: fspec := (mk_simple "LinkedList"
                                     (fun '(llref, xs) varg o =>
-                                       Exists ll, ⌜varg = [Vptr llref 0%Z]↑⌝ ** Own (GRA.padding ((llref,0%Z) |-> [ll])) ** (is_list ll xs) ** ⌜o = ord_pure 2⌝)
+                                       Exists ll, ⌜varg = [Vptr llref 0%Z]↑⌝ ** Own (GRA.embed ((llref,0%Z) |-> [ll])) ** (is_list ll xs) ** ⌜o = ord_pure 2⌝)
                                     (fun '(llref, xs) vret =>
                                        match xs with
                                        | [] => ⌜vret = (Vint (- 1))↑⌝
-                                       | xhd :: xtl => ⌜vret = xhd↑⌝ ** (Exists ll', Own (GRA.padding ((llref,0%Z) |-> [ll'])) ** is_list ll' xtl)
+                                       | xhd :: xtl => ⌜vret = xhd↑⌝ ** (Exists ll', Own (GRA.embed ((llref,0%Z) |-> [ll'])) ** is_list ll' xtl)
                                        end)
                          ).
 
   Let pop2_spec: fspec := (mk_simple "LinkedList"
                                      (fun '(xs, nref) varg o => Exists ll, ⌜varg = [ll; Vptr nref 0%Z]↑⌝ ** (is_list ll xs) **
-                                                                           (Exists v, Own (GRA.padding ((nref, 0%Z) |-> [v]))) ** ⌜o = ord_pure 2⌝)
+                                                                           (Exists v, Own (GRA.embed ((nref, 0%Z) |-> [v]))) ** ⌜o = ord_pure 2⌝)
                                      (fun '(xs, nref) vret =>
                                         match xs with
                                         | [] => ⌜vret = Vnullptr↑⌝
-                                        | xhd :: xtl => Exists ll', ⌜vret = ll'↑⌝ ** is_list ll' xtl ** Own (GRA.padding ((nref, 0%Z) |-> [xhd]))
+                                        | xhd :: xtl => Exists ll', ⌜vret = ll'↑⌝ ** is_list ll' xtl ** Own (GRA.embed ((nref, 0%Z) |-> [xhd]))
                                         end)
                           ).
 

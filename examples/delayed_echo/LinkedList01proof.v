@@ -220,7 +220,7 @@ Section SIMMODSEM.
 
       (* assert(WF: URA.wf x). *)
       (* { admit "FIX BUG IN HOARECALL". } *)
-      (* replace (URA.extends (GRA.padding ((n, 0%Z) |-> [v])) x) with (((Own (GRA.padding ((n, 0%Z) |-> [v]))): iProp) x) in EXT by reflexivity. *)
+      (* replace (URA.extends (GRA.embed ((n, 0%Z) |-> [v])) x) with (((Own (GRA.embed ((n, 0%Z) |-> [v]))): iProp) x) in EXT by reflexivity. *)
       (* clear _ASSUME4. (***************** TODO: automatic clear when calling a function **************) *)
       steps.
 
@@ -271,7 +271,7 @@ Section SIMMODSEM.
           end.
         Lemma Own_downward: forall r a0 a1, iHyp (Own r) a0 -> URA.extends a0 a1 -> iHyp (Own r) a1.
         Proof. i. eapply Own_extends; et. Qed.
-        rewrite points_to_split in A0. rewrite <- GRA.padding_add in A0. rewrite own_sep in A0. ss.
+        rewrite points_to_split in A0. rewrite <- GRA.embed_add in A0. rewrite own_sep in A0. ss.
         iDestruct' A0.
 
 
@@ -477,7 +477,7 @@ Section SIMMODSEM.
         steps. force_l. esplit. force_l. { rewrite URA.unit_idl. refl. } steps.
 
       - do 4 iDestruct A1. iPure A1. subst. force_l. eexists 6. steps.
-        rewrite points_to_split in A2. rewrite <- GRA.padding_add in A2. rewrite own_sep in A2. ss.
+        rewrite points_to_split in A2. rewrite <- GRA.embed_add in A2. rewrite own_sep in A2. ss.
         iDestruct A2.
 
 
@@ -627,7 +627,7 @@ Section SIMMODSEM.
       gstep; econs; try apply Nat.lt_succ_diag_r; i; ss. exists 400. des. clarify. unfold alist_add; cbn. steps.
       des. clarify. rewrite Any.upcast_downcast in *. clarify. iRefresh. iClears'.
       do 2 iDestruct _ASSUME1. iPure _ASSUME1. apply Any.upcast_inj in _ASSUME1. des; clarify.
-      rewrite points_to_split in A. rewrite <- GRA.padding_add in A. rewrite own_sep in A. ss. iDestruct A.
+      rewrite points_to_split in A. rewrite <- GRA.embed_add in A. rewrite own_sep in A. ss. iDestruct A.
 
 
 
@@ -673,7 +673,7 @@ Section SIMMODSEM.
       { esplits; try refl. iRefresh. eexists; iRefresh. iSplitP; ss. eexists; iRefresh. eexists; iRefresh.
         iSplit (_ASSUME2, _ASSUME4) A0.
         { admit "ez - pcm solver". }
-        - iSplitP; ss. rewrite points_to_split. rewrite <- GRA.padding_add. rewrite own_sep. ss.
+        - iSplitP; ss. rewrite points_to_split. rewrite <- GRA.embed_add. rewrite own_sep. ss.
           iSplit _ASSUME2 _ASSUME4.
           { admit "ez - pcm solver". }
           + iApply _ASSUME2; ss.

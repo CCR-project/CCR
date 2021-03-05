@@ -58,7 +58,7 @@ Section SIMMODSEM.
   .
   (*     exists x, *)
   (*       (<<SRC: mrs_src0 = Maps.add "Box" (library x) Maps.empty>>) /\ *)
-  (*       (<<TGT: mrs_tgt0 = Maps.add "Box" (GRA.padding ((inl (Some x)): URA.car (t:=RA.excl Z))) *)
+  (*       (<<TGT: mrs_tgt0 = Maps.add "Box" (GRA.embed ((inl (Some x)): URA.car (t:=RA.excl Z))) *)
   (*                                   Maps.empty>>) *)
   (* . *)
 

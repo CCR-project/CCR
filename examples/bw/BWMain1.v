@@ -36,7 +36,7 @@ Section MAIN.
 
   Let main_spec:  fspec := (mk_simple "Main"
                                      (fun (_: unit) _ o =>
-                                        iHyp (Own (GRA.padding (bw_frag true)) ** ⌜o = ord_top⌝))
+                                        iHyp (Own (GRA.embed (bw_frag true)) ** ⌜o = ord_top⌝))
                                      (fun _ _ =>
                                         iHyp (⌜True⌝))).
 
