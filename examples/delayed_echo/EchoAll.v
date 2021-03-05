@@ -8,7 +8,7 @@ Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
 Require Import MutHeader SimModSem.
-Require Import Mem2 LinkedList1 Echo2 EchoMain1 Client1.
+Require Import Mem2 Stack1 Echo2 EchoMain1 Client1.
 
 Require Import TODOYJ.
 
@@ -38,7 +38,7 @@ Section ECHO.
     Mod.add_list [
         md_src Mem MemSbtb ; (* Mem *)
         md_src Main MainSbtb ; (* Main *)
-        md_src LinkedList LinkedListSbtb ; (* LinkedList *)
+        md_src Stack StackSbtb ; (* Stack *)
         md_src Echo EchoSbtb ; (* Echo *)
         md_src Client ClientSbtb (* Client *)
       ].

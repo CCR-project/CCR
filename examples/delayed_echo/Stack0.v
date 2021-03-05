@@ -121,14 +121,14 @@ int pop(struct Node## llref) {
       Ret addr_v
   .
 
-  Definition LinkedListSem: ModSem.t := {|
+  Definition StackSem: ModSem.t := {|
     ModSem.fnsems := [("pop", cfun popF); ("pop2", cfun pop2F); ("push", cfun pushF)];
-    ModSem.initial_mrs := [("LinkedList", (ε, tt↑))];
+    ModSem.initial_mrs := [("Stack", (ε, tt↑))];
   |}
   .
 
-  Definition LinkedList: Mod.t := {|
-    Mod.get_modsem := fun _ => LinkedListSem;
+  Definition Stack: Mod.t := {|
+    Mod.get_modsem := fun _ => StackSem;
     Mod.sk := Sk.unit;
   |}
   .

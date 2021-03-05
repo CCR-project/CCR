@@ -5,7 +5,7 @@ Require Import Skeleton.
 Require Import PCM.
 Require Import ModSem Behavior.
 Require Import Relation_Definitions.
-Require Import HoareDef LinkedList0 LinkedList1 SimModSem.
+Require Import HoareDef Stack0 Stack1 SimModSem.
 
 (*** TODO: export these in Coqlib or Universe ***)
 Require Import Relation_Operators.
@@ -138,8 +138,8 @@ Section SIMMODSEM.
 
   Let wf: W -> Prop :=
     fun '(mrps_src0, mrps_tgt0) =>
-        (<<SRC: mrps_src0 = Maps.add "LinkedList" (ε, tt↑) Maps.empty>>) /\
-        (<<TGT: mrps_tgt0 = Maps.add "LinkedList" (ε, tt↑) Maps.empty>>)
+        (<<SRC: mrps_src0 = Maps.add "Stack" (ε, tt↑) Maps.empty>>) /\
+        (<<TGT: mrps_tgt0 = Maps.add "Stack" (ε, tt↑) Maps.empty>>)
   .
 
   Local Opaque points_to.
@@ -163,7 +163,7 @@ Section SIMMODSEM.
 
 
 
-  Theorem correct: ModSemPair.sim LinkedList1.LinkedListSem LinkedList0.LinkedListSem.
+  Theorem correct: ModSemPair.sim Stack1.StackSem Stack0.StackSem.
   Proof.
     econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
     { typeclasses eauto. }

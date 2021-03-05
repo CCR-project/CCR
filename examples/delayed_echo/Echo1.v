@@ -6,7 +6,7 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
-Require Import LinkedList1 Client1 Mem2.
+Require Import Stack1 Client1 Mem2.
 Require Import TODOYJ.
 
 Generalizable Variables E R A B C X Y Σ.
@@ -115,7 +115,7 @@ Section PROOF.
   .
 
   Definition EchoSem: ModSem.t := {|
-    ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt (LinkedListStb ++ ClientStb ++ MemStb ++ EchoStb) fn fsb)) EchoSbtb;
+    ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt (StackStb ++ ClientStb ++ MemStb ++ EchoStb) fn fsb)) EchoSbtb;
     ModSem.initial_mrs := [("Echo", (GRA.embed(echo_black Vnullptr []), tt↑))];
   |}
   .

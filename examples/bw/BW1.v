@@ -6,7 +6,7 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
-Require Import LinkedList1 Client1.
+Require Import Stack1 Client1.
 Require Import TODOYJ.
 
 Generalizable Variables E R A B C X Y Σ.
