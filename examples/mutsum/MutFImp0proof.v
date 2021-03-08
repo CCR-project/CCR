@@ -19,12 +19,13 @@ From ExtLib Require Import
 Require Import HTactics.
 Require Import TODO.
 
+Require Import Imp.
+
 Generalizable Variables E R A B C X Y.
 
 Set Implicit Arguments.
 
 Local Open Scope nat_scope.
-
 
 
 
@@ -44,13 +45,22 @@ Section SIMMODSEM.
   Theorem correct: ModSemPair.sim MutF0.FSem MutFImp.FSem.
   Proof.
     econstructor 1 with (wf:=wf) (le:=top2); et; ss.
-    econs; ss. init. unfold cfun, fF.
-    unfold Imp.eval_function. ss. steps.
+    econs; ss. init. unfold cfun. unfold fF.
+    unfold Imp.eval_function.
+    ired_all. ss. steps.
     eapply Any.downcast_upcast in _UNWRAPN. des. clarify.
     unfold unint in *. ss. des_ifs.
-    - steps. admit "lemmas for imp...".
+    - ired_all.
+      (* unfold interp_function. grind. unfold ImpNotations.Vint_coerce. steps. *)
+      rewrite interp_function_bind.
+      rewrite interp_function_GetVar. steps.
+      rewrite interp_function_bind.
+      rewrite interp_function_ret. steps.
+      rewrite interp_function_ret. steps.
     - unfold ccall. steps.
       admit "lemmas for imp...".
   Qed.
 
+(** tau, trigger, assume, guarantee, unwrap *)
+  
 End SIMMODSEM.

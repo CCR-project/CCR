@@ -291,42 +291,34 @@ Proof.
 Qed.
 (* end hide *)
 
-(** We provide an _ITree event handler_ to interpret away [ImpState] events.  We
-    use an _environment event_ to do so, modeling the environment as a
-    0-initialized map from strings to values.  Recall from [Introduction.v] that
-    a _handler_ for the events [ImpState] is a function of type [forall R, ImpState R
-    -> M R] for some monad [M].  Here we take for our monad the special case of
-    [M = itree E] for some universe of events [E] required to contain the
-    environment events [mapE] provided by the library. It comes with an event
-    interpreter [interp_map] that yields a computation in the state monad.  *)
-Definition handle_ImpState {E: Type -> Type} `{mapE var (Vundef) -< E}: ImpState ~> itree E :=
-  fun _ e =>
+(* Definition handle_ImpState {E: Type -> Type} `{mapE var (Vundef) -< E}: ImpState ~> itree E := *)
+(*   fun _ e => *)
+(*     match e with *)
+(*     | GetVar x => lookup_def x *)
+(*     | SetVar x v => insert x v *)
+(*     end. *)
+(* (** We now concretely implement this environment using ExtLib's finite maps. *) *)
+(* Definition lenv := alist var val. *)
+
+Definition lenv := alist var val.
+Definition handle_ImpState {E: Type -> Type} `{Σ: GRA.t} `{eventE -< E}: ImpState ~> stateT lenv (itree E) :=
+  fun _ e old =>
     match e with
-    | GetVar x => lookup_def x
-    | SetVar x v => insert x v
+    | GetVar x => r <- unwrapU (alist_find _ x old) ;; Ret (old, r)
+    | SetVar x v => Ret (alist_add _ x v old, tt)
     end.
 
-(** We now concretely implement this environment using ExtLib's finite maps. *)
-Definition fun_loc_env := alist var val.
+(* Definition interp_function `{Σ: GRA.t} {A} (t : itree (ImpState +' Es) A) : stateT fun_loc_env (itree Es) A := *)
+(*   let t' := interp (bimap handle_ImpState (id_ Es)) t in *)
+(*   interp_map t'. *)
 
-(** Finally, we can define an evaluator for our statements.
-   To do so, we first denote them, leading to an [itree ImpState unit].
-   We then [interp]ret [ImpState] into [mapE] using [handle_ImpState], leading to
-   an [itree (mapE var value) unit].
-   Finally, [interp_map] interprets the latter [itree] into the state monad,
-   resulting in an [itree] free of any event, but returning the final
-   _Imp_ env.
- *)
-(* SAZ: would rather write something like the following:
- h : E ~> M A
- h' : F[void1] ~> M A
-forall eff, {pf:E -< eff == F[E]} (t : itree eff A)
-        interp pf h h' t : M A
-*)
+Definition interp_function `{Σ: GRA.t} : itree (ImpState +' Es) ~> stateT lenv (itree Es) :=
+  State.interp_state (case_ handle_ImpState ModSem.pure_state).
 
-Definition interp_function `{Σ: GRA.t} {A} (t : itree (ImpState +' Es) A) : stateT fun_loc_env (itree Es) A :=
-  let t' := interp (bimap handle_ImpState (id_ Es)) t in
-  interp_map t'.
+(* Definition eval_function `{Σ: GRA.t} (f: function) (args: list val) : itree Es val := *)
+(*   if (List.length f.(params) =? List.length args)%nat *)
+(*   then '(_, retv) <- (interp_function (denote_stmt f.(body)) (List.combine f.(params) args));; Ret retv *)
+(*   else triggerUB. *)
 
 Definition eval_function `{Σ: GRA.t} (f: function) (args: list val) : itree Es val :=
   if (List.length f.(params) =? List.length args)%nat
@@ -383,7 +375,7 @@ Section InterpImpProperties.
 
 End InterpImpProperties.
 
- **)
+**)
 
 (****************** copy-paste end **********************)
 (****************** copy-paste end **********************)
@@ -448,3 +440,62 @@ Section Example_Extract.
   Definition imp_ex := ModSem.initial_itr_no_check (Mod.enclose ex_prog).
 
 End Example_Extract.
+
+
+Section PROOFS.
+
+  Context `{Σ: GRA.t}.
+  
+  Lemma interp_function_bind
+        A B
+        (itr: itree (ImpState +' Es) A) (ktr: A -> itree (ImpState +' Es) B)
+        st0
+    :
+      interp_function (v <- itr ;; ktr v) st0 =
+      '(st1, v) <- interp_function (itr) st0 ;;
+      interp_function (ktr v) st1.
+  Proof. unfold interp_function. grind. des_ifs. Qed.
+
+  Lemma interp_function_tau
+        A
+        (itr: itree (ImpState +' Es) A)
+        st0
+    :
+      interp_function (tau;; itr) st0 =
+      tau;; interp_function itr st0.
+  Proof. unfold interp_function. grind. Qed.
+
+  Lemma interp_function_ret
+        T
+        st0 (v: T)
+    :
+      interp_function (Ret v) st0 = Ret (st0, v).
+  Proof. unfold interp_function. grind. Qed.
+
+  Lemma interp_function_triggerUB
+        st0 A
+    :
+      (interp_function (triggerUB) st0 : itree Es (_ * A)) = triggerUB.
+  Proof.
+    unfold interp_function, pure_state, triggerUB. grind.
+  Qed.
+  
+  Lemma interp_function_triggerNB
+        st0 A
+    :
+      (interp_function (triggerNB) st0 : itree Es (_ * A)) = triggerNB.
+  Proof.
+    unfold interp_function, pure_state, triggerNB. grind.
+  Qed.
+
+  Lemma interp_function_GetVar
+        st0 x
+    :
+      (interp_function (trigger (GetVar x)) st0) =
+      r <- unwrapU (alist_find _ x st0);; tau;; Ret (st0, r).
+  Proof.
+    unfold interp_function. grind.
+  Qed.
+  
+
+End PROOFS.
