@@ -51,12 +51,12 @@ Section SIMMODSEM.
     eapply Any.downcast_upcast in _UNWRAPN. des. clarify.
     unfold unint in *. ss. des_ifs.
     - ired_all.
-      (* unfold interp_function. grind. unfold ImpNotations.Vint_coerce. steps. *)
-      rewrite interp_function_bind.
-      rewrite interp_function_GetVar. steps.
-      rewrite interp_function_bind.
-      rewrite interp_function_ret. steps.
-      rewrite interp_function_ret. steps.
+      (* unfold interp_imp. grind. unfold ImpNotations.Vint_coerce. steps. *)
+      rewrite interp_imp_bind.
+      rewrite interp_imp_GetVar. steps.
+      rewrite interp_imp_bind.
+      rewrite interp_imp_ret. steps.
+      rewrite interp_imp_ret. steps.
     - unfold ccall. steps.
       admit "lemmas for imp...".
   Qed.
