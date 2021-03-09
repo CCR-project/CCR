@@ -742,52 +742,52 @@ Module GRA.
     eq_rect A (@URA.car) a _ LeibEq.
 
   (* a: URA.car =ty= RAs inG_id =ty= RAs n *)
-  Definition padding {A Σ} `{@GRA.inG A Σ} (a: URA.car (t:=A)): URA.car (t:=Σ) :=
+  Definition embed {A Σ} `{@GRA.inG A Σ} (a: URA.car (t:=A)): URA.car (t:=Σ) :=
     fun n => match Nat.eq_dec inG_id n with
              | left H => ((@eq_rect nat inG_id Σ ((cast_ra inG_prf a): Σ inG_id) n H): Σ n)
              | right _ => URA.unit
              end
   .
 
-  Lemma padding_wf
+  Lemma embed_wf
         A Σ
         `{@GRA.inG A Σ}
         (a: A)
-        (WF: URA.wf (padding a))
+        (WF: URA.wf (embed a))
     :
       <<WF: URA.wf a>>
   .
   Proof.
-    r. specialize (WF inG_id). ss. unfold padding in *. des_ifs.
+    r. specialize (WF inG_id). ss. unfold embed in *. des_ifs.
     unfold cast_ra in *. unfold eq_rect, eq_sym in *. dependent destruction e. destruct inG_prf. ss.
   Qed.
 
-  Lemma padding_add
+  Lemma embed_add
         A Σ
         `{@GRA.inG A Σ}
         (a0 a1: A)
     :
-      <<EQ: URA.add (padding a0) (padding a1) = padding (URA.add a0 a1)>>
+      <<EQ: URA.add (embed a0) (embed a1) = embed (URA.add a0 a1)>>
   .
   Proof.
-    r. ss. unfold padding. apply func_ext_dep. i. des_ifs.
+    r. ss. unfold embed. apply func_ext_dep. i. des_ifs.
     - ss. unfold cast_ra. unfold eq_rect, eq_sym. destruct inG_prf. reflexivity.
     - rewrite URA.unit_id. ss.
   Qed.
 
-  Lemma padding_updatable
+  Lemma embed_updatable
         A Σ
         `{@GRA.inG A Σ}
         (a0 a1: A)
         (UPD: URA.updatable a0 a1)
     :
-      <<UPD: URA.updatable (GRA.padding a0) (GRA.padding a1)>>
+      <<UPD: URA.updatable (GRA.embed a0) (GRA.embed a1)>>
   .
   Proof.
     r in UPD. ii. ss.
     rename H0 into WF.
     specialize (WF k).
-    unfold padding in *. des_ifs. ss.
+    unfold embed in *. des_ifs. ss.
     unfold cast_ra in *. unfold eq_rect, eq_sym in *.
     destruct H. ss.
     dependent destruction inG_prf0.

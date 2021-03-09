@@ -26,28 +26,28 @@ Section PROOF.
     match xs with
     | [] => ⌜ll = Vnullptr⌝
     | xhd :: xtl =>
-      Exists lhd ltl, ⌜ll = Vptr lhd 0⌝ ** (Own (GRA.padding ((lhd,0%Z) |-> [xhd; ltl])))
+      Exists lhd ltl, ⌜ll = Vptr lhd 0⌝ ** (Own (GRA.embed ((lhd,0%Z) |-> [xhd; ltl])))
                                  ** is_list ltl xtl
     end
   .
 
-  Let pop_spec: fspec := (mk_simple "LinkedList"
+  Let pop_spec: fspec := (mk_simple "Stack"
                                     (fun '(llref, xs) varg o =>
-                                       Exists ll, ⌜varg = [Vptr llref 0%Z]↑⌝ ** Own (GRA.padding ((llref,0%Z) |-> [ll])) ** (is_list ll xs) ** ⌜o = ord_pure 2⌝)
+                                       Exists ll, ⌜varg = [Vptr llref 0%Z]↑⌝ ** Own (GRA.embed ((llref,0%Z) |-> [ll])) ** (is_list ll xs) ** ⌜o = ord_pure 2⌝)
                                     (fun '(llref, xs) vret =>
                                        match xs with
                                        | [] => ⌜vret = (Vint (- 1))↑⌝
-                                       | xhd :: xtl => ⌜vret = xhd↑⌝ ** (Exists ll', Own (GRA.padding ((llref,0%Z) |-> [ll'])) ** is_list ll' xtl)
+                                       | xhd :: xtl => ⌜vret = xhd↑⌝ ** (Exists ll', Own (GRA.embed ((llref,0%Z) |-> [ll'])) ** is_list ll' xtl)
                                        end)
                          ).
 
-  Let pop2_spec: fspec := (mk_simple "LinkedList"
+  Let pop2_spec: fspec := (mk_simple "Stack"
                                      (fun '(xs, nref) varg o => Exists ll, ⌜varg = [ll; Vptr nref 0%Z]↑⌝ ** (is_list ll xs) **
-                                                                           (Exists v, Own (GRA.padding ((nref, 0%Z) |-> [v]))) ** ⌜o = ord_pure 2⌝)
+                                                                           (Exists v, Own (GRA.embed ((nref, 0%Z) |-> [v]))) ** ⌜o = ord_pure 2⌝)
                                      (fun '(xs, nref) vret =>
                                         match xs with
                                         | [] => ⌜vret = Vnullptr↑⌝
-                                        | xhd :: xtl => Exists ll', ⌜vret = ll'↑⌝ ** is_list ll' xtl ** Own (GRA.padding ((nref, 0%Z) |-> [xhd]))
+                                        | xhd :: xtl => Exists ll', ⌜vret = ll'↑⌝ ** is_list ll' xtl ** Own (GRA.embed ((nref, 0%Z) |-> [xhd]))
                                         end)
                           ).
 
@@ -62,33 +62,33 @@ Section PROOF.
 (*   return NULL; *)
 (* } *)
 
-  Let push_spec: fspec := (mk_simple "LinkedList"
+  Let push_spec: fspec := (mk_simple "Stack"
                                      (fun '(x, xs) varg o => Exists ll, ⌜varg = [ll; x]↑⌝ ** is_list ll xs ** ⌜o = ord_pure 2⌝)
                                      (fun '(x, xs) vret => Exists ll', is_list ll' (x :: xs) ** ⌜vret = ll'↑⌝)).
 
-  Definition LinkedListStb: list (gname * fspec).
+  Definition StackStb: list (gname * fspec).
     eapply (Seal.sealing "stb").
     apply [("pop", pop_spec) ; ("pop2", pop2_spec) ; ("push", push_spec)].
   Defined.
 
-  Definition LinkedListSbtb: list (gname * fspecbody) :=
+  Definition StackSbtb: list (gname * fspecbody) :=
     [("pop", mk_specbody pop_spec (fun _ => APC;; trigger (Choose _)));
     ("pop2", mk_specbody pop2_spec (fun _ => APC;; trigger (Choose _)));
     ("push",   mk_specbody push_spec (fun _ => APC;; trigger (Choose _)))
     ]
   .
 
-  Definition LinkedListSem: ModSem.t := {|
-    ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt (MemStb ++ LinkedListStb) fn fsb)) LinkedListSbtb;
-    ModSem.initial_mrs := [("LinkedList", (ε, tt↑))];
+  Definition StackSem: ModSem.t := {|
+    ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt (MemStb ++ StackStb) fn fsb)) StackSbtb;
+    ModSem.initial_mrs := [("Stack", (ε, tt↑))];
   |}
   .
 
-  Definition LinkedList: Mod.t := {|
-    Mod.get_modsem := fun _ => LinkedListSem;
+  Definition Stack: Mod.t := {|
+    Mod.get_modsem := fun _ => StackSem;
     Mod.sk := Sk.unit;
   |}
   .
 
 End PROOF.
-Global Hint Unfold LinkedListStb: stb.
+Global Hint Unfold StackStb: stb.

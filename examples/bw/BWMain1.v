@@ -6,7 +6,7 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
-Require Import LinkedList1 Client1 BW1.
+Require Import Stack1 Client1 BW1.
 Require Import TODO TODOYJ.
 
 Set Implicit Arguments.
@@ -36,7 +36,7 @@ Section MAIN.
 
   Let main_spec:  fspec := (mk_simple "Main"
                                      (fun (_: unit) _ o =>
-                                        iHyp (Own (GRA.padding (bw_frag true)) ** ⌜o = ord_top⌝))
+                                        iHyp (Own (GRA.embed (bw_frag true)) ** ⌜o = ord_top⌝))
                                      (fun _ _ =>
                                         iHyp (⌜True⌝))).
 

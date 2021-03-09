@@ -53,7 +53,7 @@ Section SIMMODSEM.
     fun '(mrs_src0, mrs_tgt0) =>
       exists x,
         (<<SRC: mrs_src0 = Maps.add "Box" (library x) Maps.empty>>) /\
-        (<<TGT: mrs_tgt0 = Maps.add "Box" (GRA.padding ((inl (Some x)): URA.car (t:=RA.excl Z)))
+        (<<TGT: mrs_tgt0 = Maps.add "Box" (GRA.embed ((inl (Some x)): URA.car (t:=RA.excl Z)))
                                     Maps.empty>>)
   .
 
@@ -81,8 +81,8 @@ Section SIMMODSEM.
       assert(x = x0).
       { unfold library, client in *.
         rewrite URA.unit_idl in WF.
-        rewrite GRA.padding_add in WF.
-        eapply GRA.padding_wf in WF. ss. des. r in WF. des. ss. des_ifs. }
+        rewrite GRA.embed_add in WF.
+        eapply GRA.embed_wf in WF. ss. des. r in WF. des. ss. des_ifs. }
       clarify. clear WF.
       rename x0 into x.
 
@@ -113,8 +113,8 @@ Section SIMMODSEM.
       (* assert(x = x0). *)
       (* { unfold library, client in *. *)
       (*   rewrite URA.unit_idl in WF. *)
-      (*   rewrite GRA.padding_add in WF. *)
-      (*   eapply GRA.padding_wf in WF. ss. des. r in WF. des. ss. des_ifs. } *)
+      (*   rewrite GRA.embed_add in WF. *)
+      (*   eapply GRA.embed_wf in WF. ss. des. r in WF. des. ss. des_ifs. } *)
       (* clarify. clear WF. *)
       (* rename x0 into x. *)
 
@@ -124,7 +124,7 @@ Section SIMMODSEM.
       force_l. exists (library x_new, client x_new). left.
       force_l.
       { unfold library, client.
-        rewrite ! GRA.padding_add. eapply GRA.padding_updatable. ss.
+        rewrite ! GRA.embed_add. eapply GRA.embed_updatable. ss.
         rr. ii. des_ifs. ss. des_ifs; des; ss.
         - rr in H1. des; clarify. ss. des_ifs.
         - rr in H1. des; clarify. ss. des_ifs.

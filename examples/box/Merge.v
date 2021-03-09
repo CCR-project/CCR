@@ -32,16 +32,16 @@ Section PROOF.
   |}
   .
 
-  Theorem padding_wf
+  Theorem embed_wf
           A
           `{@GRA.inG A Σ}
           (a: A)
           (WF: URA.wf a)
     :
-      URA.wf (GRA.padding a)
+      URA.wf (GRA.embed a)
   .
   Proof.
-    ss. ii. unfold GRA.padding.  des_ifs; cycle 1.
+    ss. ii. unfold GRA.embed.  des_ifs; cycle 1.
     { apply URA.wf_unit. }
     ss. unfold PCM.GRA.cast_ra, eq_rect, eq_sym. destruct GRA.inG_prf. ss.
   Qed.
@@ -74,13 +74,13 @@ Section PROOF.
       unfold compose. des_ifs. des_sumbool. ss. clear_tac.
       rewrite URA.unit_idl.
       unfold library, client.
-      rewrite GRA.padding_add.
+      rewrite GRA.embed_add.
       ss.
       assert(A: URA.wf (t:=boxRA) (URA.excl (M:=BoxHeader._boxRA) (inl (Some 0%Z)) (inl (Some 0%Z)))).
       { ss. esplits; ss; et. rr. exists URA.unit. ss. }
       abstr (URA.excl (M:=BoxHeader._boxRA) (inl (Some 0%Z)) (inl (Some 0%Z))) r.
       clear - A.
-      eapply padding_wf; et.
+      eapply embed_wf; et.
     }
   Qed.
 

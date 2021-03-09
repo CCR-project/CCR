@@ -6,7 +6,7 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
-Require Import LinkedList1 Client1 Mem2.
+Require Import Stack1 Client1 Mem2.
 Require Import TODOYJ.
 
 Generalizable Variables E R A B C X Y Σ.
@@ -47,7 +47,7 @@ Section PROOF.
 
   Definition echo_body: list Z -> itree (hCallE +' pE +' eventE) unit :=
     fun ns =>
-      n <- trigger (hCall false "in" ([]: list val)↑);;
+      n <- trigger (hCall false "getint" ([]: list val)↑);;
       `n: val <- n↓?;; `n: Z <- (unint n)?;;
       if dec n (- 1)%Z
       then trigger (hCall false "echo_finish" ns↑);; Ret tt
@@ -63,7 +63,7 @@ Section PROOF.
       | [] => Ret tt
       | hd :: tl =>
         APC;;
-        trigger (hCall false "out" [Vint hd]↑);;
+        trigger (hCall false "putint" [Vint hd]↑);;
         trigger (hCall false "echo_finish" tl↑);;
         Ret tt
       end
@@ -91,7 +91,7 @@ Section PROOF.
   (*     match ll0 with *)
   (*     | [] => Ret Vundef *)
   (*     | hd :: tl => *)
-  (*       `_: val        <- (hcall "out" [hd]);; *)
+  (*       `_: val        <- (hcall "putint" [hd]);; *)
   (*       trigger (PPut "Echo" tl↑);; *)
   (*       `_: val        <- (hcall "echo_finish" ([]: list val));; *)
   (*       Ret Vundef *)
@@ -99,9 +99,9 @@ Section PROOF.
   (* . *)
 
   Let echo_spec:        fspec := (@mk _ "Echo" (val * list Z) (list Z) unit
-                                      (fun '(hd, ns) varg_high _ o => Own(GRA.padding(echo_white hd ns)) ** ⌜o = ord_top⌝ ** ⌜varg_high = ns⌝) (top4)).
+                                      (fun '(hd, ns) varg_high _ o => Own(GRA.embed(echo_white hd ns)) ** ⌜o = ord_top⌝ ** ⌜varg_high = ns⌝) (top4)).
   Let echo_finish_spec: fspec := (@mk _ "Echo" (val * list Z) (list Z) unit
-                                      (fun '(hd, ns) varg_high _ o => Own(GRA.padding(echo_white hd ns)) ** ⌜o = ord_top⌝ ** ⌜varg_high = ns⌝) (top4)).
+                                      (fun '(hd, ns) varg_high _ o => Own(GRA.embed(echo_white hd ns)) ** ⌜o = ord_top⌝ ** ⌜varg_high = ns⌝) (top4)).
   (* Let echo_spec:        fspec := (mk_simple "Echo" (X:=unit) (fun _ _ o _ => o = ord_top) (top3)). *)
   (* Let echo_finish_spec: fspec := (mk_simple "Echo" (X:=unit) (fun _ _ o _ => o = ord_top) (top3)). *)
 
@@ -115,8 +115,8 @@ Section PROOF.
   .
 
   Definition EchoSem: ModSem.t := {|
-    ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt (LinkedListStb ++ ClientStb ++ MemStb ++ EchoStb) fn fsb)) EchoSbtb;
-    ModSem.initial_mrs := [("Echo", (GRA.padding(echo_black Vnullptr []), tt↑))];
+    ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt (StackStb ++ ClientStb ++ MemStb ++ EchoStb) fn fsb)) EchoSbtb;
+    ModSem.initial_mrs := [("Echo", (GRA.embed(echo_black Vnullptr []), tt↑))];
   |}
   .
 

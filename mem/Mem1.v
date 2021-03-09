@@ -97,36 +97,36 @@ Section PROOF.
                                       (fun sz varg o _ => varg = [Vint (Z.of_nat sz)]↑ /\ o = ord_pure 1)
                                       (fun sz vret rret =>
                                          exists b, vret = (Vptr b 0)↑ /\
-                                                   rret = GRA.padding ((b, 0%Z) |-> (List.repeat (Vint 0) sz)))).
+                                                   rret = GRA.embed ((b, 0%Z) |-> (List.repeat (Vint 0) sz)))).
 
   Let free_spec: fspec := (mk_simple "Mem"
                                      (fun '(b, ofs) varg o rarg => exists v, varg = ([Vptr b ofs])↑ /\
-                                                                             rarg = GRA.padding ((b, ofs) |-> [v]) /\
+                                                                             rarg = GRA.embed ((b, ofs) |-> [v]) /\
                                                                              o = ord_pure 1)
                                      (top3)).
 
   Let load_spec: fspec := (mk_simple "Mem"
                                      (fun '(b, ofs, v) varg o rarg => varg = ([Vptr b ofs])↑ /\
-                                                                      rarg = GRA.padding ((b, ofs) |-> [v]) /\
+                                                                      rarg = GRA.embed ((b, ofs) |-> [v]) /\
                                                                       o = ord_pure 1)
-                                     (fun '(b, ofs, v) vret rret => rret = GRA.padding ((b, ofs) |-> [v]) /\ vret = v↑)).
+                                     (fun '(b, ofs, v) vret rret => rret = GRA.embed ((b, ofs) |-> [v]) /\ vret = v↑)).
 
   Let store_spec: fspec := (mk_simple
                               "Mem"
                               (fun '(b, ofs, v_new) varg o rarg => exists v_old,
-                                   varg = ([Vptr b ofs ; v_new])↑ /\ rarg = GRA.padding ((b, ofs) |-> [v_old]) /\ o = ord_pure 1)
-                              (fun '(b, ofs, v_new) _ rret => rret = GRA.padding ((b, ofs) |-> [v_new]))).
+                                   varg = ([Vptr b ofs ; v_new])↑ /\ rarg = GRA.embed ((b, ofs) |-> [v_old]) /\ o = ord_pure 1)
+                              (fun '(b, ofs, v_new) _ rret => rret = GRA.embed ((b, ofs) |-> [v_new]))).
 
   Let cmp_spec: fspec :=
     (mk_simple
        "Mem"
        (fun '(result, resource) varg o rarg =>
           rarg = resource /\
-          ((exists b ofs v, varg = [Vptr b ofs; Vnullptr]↑ /\ rarg = GRA.padding ((b, ofs) |-> [v]) /\ result = false) \/
-           (exists b ofs v, varg = [Vnullptr; Vptr b ofs]↑ /\ rarg = GRA.padding ((b, ofs) |-> [v]) /\ result = false) \/
+          ((exists b ofs v, varg = [Vptr b ofs; Vnullptr]↑ /\ rarg = GRA.embed ((b, ofs) |-> [v]) /\ result = false) \/
+           (exists b ofs v, varg = [Vnullptr; Vptr b ofs]↑ /\ rarg = GRA.embed ((b, ofs) |-> [v]) /\ result = false) \/
            (exists b0 ofs0 v0 b1 ofs1 v1, varg = [Vptr b0 ofs0; Vptr b1 ofs1]↑ /\
-                                          rarg = GRA.padding ((b0, ofs0) |-> [v0]) ⋅ GRA.padding ((b1, ofs1) |-> [v1]) /\ result = false) \/
-           (exists b ofs v, varg = [Vptr b ofs; Vptr b  ofs]↑ /\ rarg = GRA.padding ((b, ofs) |-> [v]) /\ result = true) \/
+                                          rarg = GRA.embed ((b0, ofs0) |-> [v0]) ⋅ GRA.embed ((b1, ofs1) |-> [v1]) /\ result = false) \/
+           (exists b ofs v, varg = [Vptr b ofs; Vptr b  ofs]↑ /\ rarg = GRA.embed ((b, ofs) |-> [v]) /\ result = true) \/
            (varg = [Vnullptr; Vnullptr]↑ /\ result = true)
           ) /\
           o = ord_pure 1
@@ -152,7 +152,7 @@ Section PROOF.
   Definition MemSem: ModSem.t := {|
     ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt MemStb fn fsb)) MemSbtb;
     ModSem.initial_mrs :=
-      [("Mem", (GRA.padding (URA.black (M:=_memRA)
+      [("Mem", (GRA.embed (URA.black (M:=_memRA)
                             (fun b ofs => if (b =? 0)%nat && (ofs =? 0)%Z then inl (Some Vundef) else inr tt)), tt↑))];
   |}
   .

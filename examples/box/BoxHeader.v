@@ -23,8 +23,8 @@ Compute (URA.car).
 Section PROOF.
 
   Context `{@GRA.inG boxRA Σ}.
-  Definition client (x: Z): Σ := (GRA.padding (URA.white (M:=_boxRA) (inl (Some x)))).
-  Definition library (x: Z): Σ := (GRA.padding (URA.black (M:=_boxRA) (inl (Some x)))).
+  Definition client (x: Z): Σ := (GRA.embed (URA.white (M:=_boxRA) (inl (Some x)))).
+  Definition library (x: Z): Σ := (GRA.embed (URA.black (M:=_boxRA) (inl (Some x)))).
 
   Definition BoxStb: list (gname * fspec) :=
     [("get", mk "Box"

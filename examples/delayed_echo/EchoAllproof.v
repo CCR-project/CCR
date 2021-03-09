@@ -8,7 +8,7 @@ Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
 Require Import MutHeader SimModSem.
-Require Import Mem0 LinkedList0 Echo0 EchoMain0 Client0 EchoAll.
+Require Import Mem0 Stack0 Echo0 EchoMain0 Client0 EchoAll.
 
 Require Import TODOYJ.
 
@@ -38,7 +38,7 @@ Section ECHO.
     Mod.add_list [
         Mem ; (* Mem *)
         Main ; (* Main *)
-        LinkedList ; (* LinkedList *)
+        Stack ; (* Stack *)
         Echo ; (* Echo *)
         Client (* Client *)
       ].
@@ -46,7 +46,7 @@ Section ECHO.
   Theorem echo_correct:
     Beh.of_program (Mod.interp echo_impl) <1= Beh.of_program (Mod.interp echo_spec).
   Proof.
-    (* TODO: use Mem12proof LinkedList01proof Echo01proof EchoMain01proof Client01proof *)
+    (* TODO: use Mem12proof Stack01proof Echo01proof EchoMain01proof Client01proof *)
   Admitted.
 
 End ECHO.

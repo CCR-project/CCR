@@ -1,4 +1,4 @@
-Require Import LinkedList1 Client1 Mem1 Mem2.
+Require Import Stack1 Client1 Mem1 Mem2.
 Require Import Coqlib.
 Require Import Universe.
 Require Import Skeleton.
@@ -503,7 +503,7 @@ Section AUX.
     match xs with
     | [] => ⌜ll = Vnullptr⌝
     | xhd :: xtl =>
-      Exists lhd ltl, ⌜ll = Vptr lhd 0⌝ ** (Own (GRA.padding ((lhd,0%Z) |-> [xhd; ltl])))
+      Exists lhd ltl, ⌜ll = Vptr lhd 0⌝ ** (Own (GRA.embed ((lhd,0%Z) |-> [xhd; ltl])))
                                  ** is_list ltl xtl
     end
   .
@@ -627,19 +627,19 @@ I needed to write this because "ss" does not work. create iApply that understand
   Lemma echo_ra_merge2
         ll0 ns0 ll1 ns1
     :
-      iHyp (Own (GRA.padding (echo_black ll0 ns0)) -* Own (GRA.padding (echo_white ll1 ns1))
-                -* (⌜ll1 = ll0 /\ ns1 = ns0⌝ ** Own (GRA.padding (echo_black ll0 ns0)) ** Own (GRA.padding (echo_white ll1 ns1)))) ε
+      iHyp (Own (GRA.embed (echo_black ll0 ns0)) -* Own (GRA.embed (echo_white ll1 ns1))
+                -* (⌜ll1 = ll0 /\ ns1 = ns0⌝ ** Own (GRA.embed (echo_black ll0 ns0)) ** Own (GRA.embed (echo_white ll1 ns1)))) ε
   .
   Proof.
     iIntro. iIntro.
     {
-      iMerge A A0. rewrite <- own_sep in A. rewrite GRA.padding_add in A.
-      iOwnWf A. eapply GRA.padding_wf in WF. des. eapply URA.auth_included in WF. des.
+      iMerge A A0. rewrite <- own_sep in A. rewrite GRA.embed_add in A.
+      iOwnWf A. eapply GRA.embed_wf in WF. des. eapply URA.auth_included in WF. des.
       Local Transparent URA.add.
       rr in WF. des. cbn in WF.
       Local Opaque URA.add.
       des_ifs.
-      rewrite <- GRA.padding_add in A. rewrite own_sep in A. iDestruct' A.
+      rewrite <- GRA.embed_add in A. rewrite own_sep in A. iDestruct' A.
       iSplitL A; ss.
       - iSplitP; ss.
     }
@@ -648,13 +648,13 @@ I needed to write this because "ss" does not work. create iApply that understand
   Lemma echo_ra_merge
         ll0 ns0 ll1 ns1
     :
-      iHyp (Own (GRA.padding (echo_black ll0 ns0)) -* Own (GRA.padding (echo_white ll1 ns1)) -* (⌜ll1 = ll0 /\ ns1 = ns0⌝)) ε
+      iHyp (Own (GRA.embed (echo_black ll0 ns0)) -* Own (GRA.embed (echo_white ll1 ns1)) -* (⌜ll1 = ll0 /\ ns1 = ns0⌝)) ε
   .
   Proof.
     iIntro. iIntro.
     {
-      iMerge A A0. rewrite <- own_sep in A. rewrite GRA.padding_add in A.
-      iOwnWf A. eapply GRA.padding_wf in WF. des. eapply URA.auth_included in WF. des.
+      iMerge A A0. rewrite <- own_sep in A. rewrite GRA.embed_add in A.
+      iOwnWf A. eapply GRA.embed_wf in WF. des. eapply URA.auth_included in WF. des.
       Local Transparent URA.add.
       rr in WF. des. cbn in WF.
       Local Opaque URA.add.
@@ -665,28 +665,28 @@ I needed to write this because "ss" does not work. create iApply that understand
   Lemma echo_ra_white
         ll0 ns0 ll1 ns1
     :
-      iHyp (Own (GRA.padding (echo_white ll0 ns0)) -* Own (GRA.padding (echo_white ll1 ns1)) -* ⌜False⌝) ε
+      iHyp (Own (GRA.embed (echo_white ll0 ns0)) -* Own (GRA.embed (echo_white ll1 ns1)) -* ⌜False⌝) ε
   .
   Proof.
     iIntro. iIntro.
     {
       exfalso. iMerge A A0.
-      rewrite <- own_sep in A. rewrite GRA.padding_add in A.
-      iOwnWf A. clear - WF. apply GRA.padding_wf in WF. des. ss.
+      rewrite <- own_sep in A. rewrite GRA.embed_add in A.
+      iOwnWf A. clear - WF. apply GRA.embed_wf in WF. des. ss.
     }
   Qed.
 
   Lemma echo_ra_black
         ll0 ns0 ll1 ns1
     :
-      iHyp (Own (GRA.padding (echo_black ll0 ns0)) -* Own (GRA.padding (echo_black ll1 ns1)) -* ⌜False⌝) ε
+      iHyp (Own (GRA.embed (echo_black ll0 ns0)) -* Own (GRA.embed (echo_black ll1 ns1)) -* ⌜False⌝) ε
   .
   Proof.
     iIntro. iIntro.
     {
       exfalso. iMerge A A0.
-      rewrite <- own_sep in A. rewrite GRA.padding_add in A.
-      iOwnWf A. clear - WF. apply GRA.padding_wf in WF. des. ss.
+      rewrite <- own_sep in A. rewrite GRA.embed_add in A.
+      iOwnWf A. clear - WF. apply GRA.embed_wf in WF. des. ss.
     }
   Qed.
 End AUX.
@@ -734,10 +734,10 @@ Section SIMMODSEM.
       exists (mr: Σ) (ll: val),
         (<<SRC: mrps_src0 = Maps.add "Echo" (mr, tt↑) Maps.empty>>) /\
         (<<TGT: mrps_tgt0 = Maps.add "Echo" (ε, ll↑) Maps.empty>>) /\
-        (* (<<SIM: (iHyp (⌜ll = Vnullptr⌝ ∨ (Exists ns, (Own(GRA.padding(echo_black ns))) ** is_list ll (List.map Vint ns))) mr)>>) *)
-        (* (<<SIM: (iHyp (Exists ns, (Own(GRA.padding(echo_black ns))) *)
-        (*                             ** (is_list ll (List.map Vint ns) ∨ (Own(GRA.padding(echo_white ns))))) mr)>>) *)
-        (<<SIM: (iHyp (Exists ns, ((Own(GRA.padding(echo_black ll ns))) ** is_list ll (List.map Vint ns)) ∨ (Own(GRA.padding(echo_white ll ns)))) mr)>>)
+        (* (<<SIM: (iHyp (⌜ll = Vnullptr⌝ ∨ (Exists ns, (Own(GRA.embed(echo_black ns))) ** is_list ll (List.map Vint ns))) mr)>>) *)
+        (* (<<SIM: (iHyp (Exists ns, (Own(GRA.embed(echo_black ns))) *)
+        (*                             ** (is_list ll (List.map Vint ns) ∨ (Own(GRA.embed(echo_white ns))))) mr)>>) *)
+        (<<SIM: (iHyp (Exists ns, ((Own(GRA.embed(echo_black ll ns))) ** is_list ll (List.map Vint ns)) ∨ (Own(GRA.embed(echo_white ll ns)))) mr)>>)
   .
 
   Local Opaque is_list.
@@ -831,12 +831,12 @@ Section SIMMODSEM.
 
 
 
-        iMerge A SIM. rewrite <- own_sep in A. rewrite GRA.padding_add in A. rewrite URA.add_comm in A.
+        iMerge A SIM. rewrite <- own_sep in A. rewrite GRA.embed_add in A. rewrite URA.add_comm in A.
         eapply own_upd in A; cycle 1; [|rewrite intro_iHyp in A;iUpdate A].
-        { eapply GRA.padding_updatable. instantiate (1:= echo_black x (z :: ns) ⋅ echo_white x (z :: ns)).
+        { eapply GRA.embed_updatable. instantiate (1:= echo_black x (z :: ns) ⋅ echo_white x (z :: ns)).
           eapply URA.auth_update. rr. ii. des; ss. destruct ctx; ss; clarify.
         }
-        rewrite <- GRA.padding_add in A. rewrite own_sep in A. iDestruct A. subst.
+        rewrite <- GRA.embed_add in A. rewrite own_sep in A. iDestruct A. subst.
 
 
 
@@ -922,12 +922,12 @@ Section SIMMODSEM.
 
 
 
-        iMerge A SIM. rewrite <- own_sep in A. rewrite GRA.padding_add in A.
+        iMerge A SIM. rewrite <- own_sep in A. rewrite GRA.embed_add in A.
         eapply own_upd in A; cycle 1; [|rewrite intro_iHyp in A;iUpdate A].
-        { eapply GRA.padding_updatable. instantiate (1:= echo_black v (ns) ⋅ echo_white v (ns)).
+        { eapply GRA.embed_updatable. instantiate (1:= echo_black v (ns) ⋅ echo_white v (ns)).
           eapply URA.auth_update. rr. ii. des; ss. destruct ctx; ss; clarify.
         }
-        rewrite <- GRA.padding_add in A. rewrite own_sep in A. iDestruct A.
+        rewrite <- GRA.embed_add in A. rewrite own_sep in A. iDestruct A.
 
 
 

@@ -620,13 +620,13 @@ I needed to write this because "ss" does not work. create iApply that understand
   Lemma echo_ra_merge
         b0 b1
     :
-      iHyp (Own (GRA.padding (bw_full b0)) -* Own (GRA.padding (bw_frag b1)) -* (⌜b1 = b0⌝)) ε
+      iHyp (Own (GRA.embed (bw_full b0)) -* Own (GRA.embed (bw_frag b1)) -* (⌜b1 = b0⌝)) ε
   .
   Proof.
     iIntro. iIntro.
     {
-      iMerge A A0. rewrite <- own_sep in A. rewrite GRA.padding_add in A.
-      iOwnWf A. eapply GRA.padding_wf in WF. des. eapply URA.auth_included in WF. des.
+      iMerge A A0. rewrite <- own_sep in A. rewrite GRA.embed_add in A.
+      iOwnWf A. eapply GRA.embed_wf in WF. des. eapply URA.auth_included in WF. des.
       Local Transparent URA.add.
       rr in WF. des. cbn in WF.
       Local Opaque URA.add.
@@ -677,7 +677,7 @@ Section SIMMODSEM.
       exists (mr: Σ) (n: Z),
         (<<SRC: mrps_src0 = Maps.add "BW" (mr, tt↑) Maps.empty>>) /\
         (<<TGT: mrps_tgt0 = Maps.add "BW" (ε, n↑) Maps.empty>>) /\
-        (<<SIM: (iHyp (Own (GRA.padding (bw_full (Z.odd n)))) mr)>>)
+        (<<SIM: (iHyp (Own (GRA.embed (bw_full (Z.odd n)))) mr)>>)
   .
 
   Opaque URA.unit.
@@ -718,11 +718,11 @@ Section SIMMODSEM.
       rewrite Any.upcast_downcast. force_l. eexists. steps.
       iMerge SIM PRE. rewrite <- own_sep in SIM.
       eapply own_upd in SIM; cycle 1; [|rewrite intro_iHyp in SIM;iUpdate SIM].
-      { rewrite GRA.padding_add. eapply GRA.padding_updatable.
+      { rewrite GRA.embed_add. eapply GRA.embed_updatable.
         instantiate (1:= bw_full (Z.odd (n+1)) ⋅ bw_frag (Z.odd (n+1))).
         eapply URA.auth_update. rr. ii. des; ss. destruct ctx; ss; clarify.
       }
-      rewrite <- GRA.padding_add in SIM. rewrite own_sep in SIM. iDestruct SIM. clarify.
+      rewrite <- GRA.embed_add in SIM. rewrite own_sep in SIM. iDestruct SIM. clarify.
       hret_tac SIM A.
       { etransitivity; [apply GWF0|].
         eapply URA.extends_updatable. esplit. r_equalize; r_solve. }

@@ -6,7 +6,7 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
-Require Import LinkedList1 Client1 Echo1.
+Require Import Stack1 Client1 Echo1.
 Require Import TODOYJ.
 
 Generalizable Variables E R A B C X Y Σ.
@@ -44,7 +44,7 @@ Section PROOF.
       match ns with
       | [] => Ret tt
       | hd :: tl =>
-        trigger (hCall false "out" [Vint hd]↑);;
+        trigger (hCall false "putint" [Vint hd]↑);;
         trigger (hCall false "echo_finish" tl↑);;
         Ret tt
       end
@@ -64,7 +64,7 @@ Section PROOF.
   .
 
   Definition EchoSem: ModSem.t := {|
-    ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt (LinkedListStb ++ ClientStb ++ EchoStb) fn fsb)) EchoSbtb;
+    ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt (StackStb ++ ClientStb ++ EchoStb) fn fsb)) EchoSbtb;
     ModSem.initial_mrs := [("Echo", (ε, tt↑))];
   |}
   .
@@ -94,7 +94,7 @@ End PROOF.
 (*       match ns with *)
 (*       | [] => Ret tt *)
 (*       | hd :: tl => *)
-(*         `_: val <- ccall "out" [Vint hd];; *)
+(*         `_: val <- ccall "putint" [Vint hd];; *)
 (*         `_: unit <- ccall "echo_finish" tl;; *)
 (*         Ret tt *)
 (*       end. *)

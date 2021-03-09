@@ -68,16 +68,11 @@ Record fspec: Type := mk {
 
 
 //// linked list
-
 struct Node {
   int val;
   struct Node* next;
 };
 
-/*
-forall (xs: list nat) (x: nat), {{ is_list ll xs ** ⌜n = Vint (Z.of_nat x)⌝}} r := push(ll, n) {{ is_list r (x :: xs) }}
-body := (Choose _)
-*/
 struct Node* push(struct Node* ll, int n) {
   struct Node* new_node = malloc(sizeof(struct Node));
   new_node->val = n;
@@ -85,15 +80,6 @@ struct Node* push(struct Node* ll, int n) {
   return new_node;
 }
 
-/*
-forall ll xs, {{ (llref,0) |-> ll ** is_list ll xs}} r := pop(ll)
-              {{ match xs with
-                 | [] => ⌜r = Vint -1⌝
-                 | xhd :: xtl => ⌜r = Vint (Z.of_nat xhd)⌝ ** (Exists ll', (llref,0) |-> ll' ** is_list ll' xtl)
-                 end
-              }}
-body := (Choose _)
-*/
 int pop(struct Node** llref) {
   if(*llref) {
     int v = (*llref)->val;
@@ -127,13 +113,13 @@ struct Node* pop2(struct Node* ll, int *n) {
 
 
 //// client
-int in() {
+int getint() {
   int n;
   scanf("%d", &n);
   return n;
 }
 
-void out(int n) {
+void putint(int n) {
   printf("%d\t", n);
 }
 
@@ -147,28 +133,12 @@ void out(int n) {
 
 
 //// echo
-/*
-  module-local logical state ----> xs: list nat
-  module-local ghost   state ----> mr: Σ
-  echo <= echo_spec invariant ---> (is_list my_list xs) mr
- */
 struct Node* my_list = NULL;
 
 void echo_finish();
-/*
-{{ }} r := echo() {{ }}
-body := n <- (Call in []);;
-        if(n == -1)
-        then (Call echo_finish [])
-        else (
-          xs <- LGet;;
-          ARBITRARY_PURE_CALLS;; //(Call push [my_list; n]);;
-          LPut (x :: xs);;
-          (Call echo [])
-        )
- */
+
 void echo() {
-  int n = in();
+  int n = getint();
   if(n == -1) {
     echo_finish();
     return;
@@ -177,26 +147,21 @@ void echo() {
   echo();
 }
 
-/*
-{{ }} r := echo_finish() {{ }}
-body := xs <- LGet;;
-        ARBITRARY_PURE_CALLS;; //(Call pop [my_list]);;
-        match xs with
-        | []  => Ret tt
-        | xhd :: xtl =>
-          (Call out [Vint (Z.of_nat xhd)]);;
-          (Call echo_finish [])
-        end
- */
 void echo_finish() {
   if(my_list) {
     int *n = malloc(sizeof(int));
     my_list = pop2(my_list, n);
-    out(*n);
+    putint(*n);
     echo_finish();
   }
 }
 
+
+
+
+
+
+//// Main (Entry Point)
 int main() {
   echo();
 }

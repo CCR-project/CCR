@@ -35,8 +35,8 @@ Section SIMMODSEM.
   Let wf: W -> Prop :=
     fun '(mrps_src0, mrps_tgt0) =>
       exists (mem0: URA.car (t:=Mem1._memRA)),
-        (<<SRC: mrps_src0 = Maps.add "Mem" ((GRA.padding ((URA.black mem0))), tt↑) Maps.empty>>) /\
-        (<<TGT: mrps_tgt0 = Maps.add "Mem" ((GRA.padding ((URA.black mem0))), tt↑) Maps.empty>>)
+        (<<SRC: mrps_src0 = Maps.add "Mem" ((GRA.embed ((URA.black mem0))), tt↑) Maps.empty>>) /\
+        (<<TGT: mrps_tgt0 = Maps.add "Mem" ((GRA.embed ((URA.black mem0))), tt↑) Maps.empty>>)
   .
 
   Local Opaque points_to.

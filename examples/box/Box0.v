@@ -30,7 +30,7 @@ Section PROOF.
     varg <- varg↓ǃ;;
     mr0 <- trigger (MGet "Box");;
     `x: Z <- trigger (Take _);;
-    assume(mr0 = GRA.padding ((inl (Some x)): URA.car (t:=RA.excl Z)));;
+    assume(mr0 = GRA.embed ((inl (Some x)): URA.car (t:=RA.excl Z)));;
     (getF_parg varg)?;;
     Ret (Vint x)↑
   .
@@ -45,14 +45,14 @@ Section PROOF.
   Definition setF (varg: Any.t): itree Es Any.t :=
     varg <- varg↓ǃ;;
     x <- (setF_parg varg)?;;
-    MPut "Box" (GRA.padding ((inl (Some x)): URA.car (t:=RA.excl Z)));;
+    MPut "Box" (GRA.embed ((inl (Some x)): URA.car (t:=RA.excl Z)));;
     Ret (Vint 0)↑
   .
 
   Definition BoxSem: ModSem.t :=
     {|
       ModSem.fnsems := [("get", getF) ; ("set", setF) ];
-      ModSem.initial_mrs := [("Box", GRA.padding ((inl (Some 0%Z)): URA.car (t:=RA.excl Z)))];
+      ModSem.initial_mrs := [("Box", GRA.embed ((inl (Some 0%Z)): URA.car (t:=RA.excl Z)))];
     |}
   .
 

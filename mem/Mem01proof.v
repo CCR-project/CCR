@@ -75,7 +75,7 @@ Section SIMMODSEM.
   Let wf: W -> Prop :=
     fun '(mrps_src0, mrps_tgt0) =>
       exists mem_src (mem_tgt: Mem.t),
-        (<<SRC: mrps_src0 = Maps.add "Mem" ((GRA.padding ((URA.black mem_src): URA.car (t:=Mem1.memRA))), tt↑) Maps.empty>>) /\
+        (<<SRC: mrps_src0 = Maps.add "Mem" ((GRA.embed ((URA.black mem_src): URA.car (t:=Mem1.memRA))), tt↑) Maps.empty>>) /\
         (<<TGT: mrps_tgt0 = Maps.add "Mem" (ε, mem_tgt↑) Maps.empty>>) /\
         (<<SIM: forall b ofs, sim_loc ((mem_tgt.(Mem.cnts)) b ofs) (mem_src b ofs)>>)
   .
@@ -112,16 +112,16 @@ Section SIMMODSEM.
         - admit "ez - add tgt wf".
         - admit "ez - inl None is boom in RA.excl".
       }
-      hret_tac (GRA.padding (add_delta_to_black
+      hret_tac (GRA.embed (add_delta_to_black
                                (URA.black (mem_src: URA.car (t:=Mem1._memRA)))
                                (points_to (blk, 0%Z) (repeat (Vint 0) sz)): URA.car (t:=Mem1.memRA)))
-      (GRA.padding ((blk, 0%Z) |-> (List.repeat (Vint 0) sz))).
+      (GRA.embed ((blk, 0%Z) |-> (List.repeat (Vint 0) sz))).
       { Local Opaque URA.add. etrans.
         { eapply URA.extends_updatable. eexists; et. }
-        erewrite GRA.padding_add. eapply GRA.padding_updatable.
+        erewrite GRA.embed_add. eapply GRA.embed_updatable.
         ss. des_ifs. eapply URA.auth_alloc2.
         eapply URA.wf_mon in VALID.
-        eapply GRA.padding_wf in VALID. des.
+        eapply GRA.embed_wf in VALID. des.
         clear - VALID WFA Heq SIM.
         Local Transparent URA.add points_to.
         ss. des. unfold URA.white in Heq. clarify.
@@ -189,7 +189,7 @@ Section SIMMODSEM.
     { unfold freeF. init. harg_tac. des; clarify.
       unfold interp_hCallE_tgt, APC. steps. anytac. ss.
       steps. force_l. exists 0. steps. anytac. ss. steps.
-      rewrite URA.unit_idl in *. rewrite GRA.padding_add in *. eapply GRA.padding_wf in VALID. des.
+      rewrite URA.unit_idl in *. rewrite GRA.embed_add in *. eapply GRA.embed_wf in VALID. des.
       rename n into b. rename z into ofs.
       assert(A: mem_src b ofs = inl (Some v)).
       { Local Transparent URA.wf.
@@ -236,9 +236,9 @@ Section SIMMODSEM.
           et.
       }
       force_l. esplits. steps.
-      hret_tac (GRA.padding (URA.black (mem_src': URA.car (t:=Mem1._memRA)))) (@URA.unit Σ).
+      hret_tac (GRA.embed (URA.black (mem_src': URA.car (t:=Mem1._memRA)))) (@URA.unit Σ).
       { rewrite URA.unit_id.
-        rewrite ! GRA.padding_add. apply GRA.padding_updatable.
+        rewrite ! GRA.embed_add. apply GRA.embed_updatable.
         apply URA.auth_dealloc.
         clear - WF' VALID.
         r. i. rewrite URA.unit_idl.
@@ -273,7 +273,7 @@ Section SIMMODSEM.
     { unfold loadF. init. harg_tac. des; clarify.
       unfold interp_hCallE_tgt, APC. steps. anytac. ss.
       steps. force_l. exists 0. steps. anytac. ss. steps.
-      rewrite URA.unit_idl in *. rewrite GRA.padding_add in *. apply_all_once GRA.padding_wf. des.
+      rewrite URA.unit_idl in *. rewrite GRA.embed_add in *. apply_all_once GRA.embed_wf. des.
       rename n into b. rename z into ofs.
       assert(T: mem_src b ofs = inl (Some v)).
       { Local Transparent points_to URA.add URA.wf URA.unit.
@@ -286,14 +286,14 @@ Section SIMMODSEM.
       }
       exploit SIM; et. intro U. rewrite T in U. inv U; ss. unfold Mem.load.
       force_r; ss. clarify. steps. force_l. esplits.
-      hret_tac (GRA.padding (URA.black (mem_src: URA.car (t:=Mem1._memRA)))) (GRA.padding ((b, ofs) |-> [v0])); ss.
+      hret_tac (GRA.embed (URA.black (mem_src: URA.car (t:=Mem1._memRA)))) (GRA.embed ((b, ofs) |-> [v0])); ss.
       esplits; eauto.
     }
     econs; ss.
     { unfold storeF. init. harg_tac. des; clarify.
       unfold interp_hCallE_tgt, APC. steps. anytac. ss.
       steps. force_l. exists 0. steps. anytac. ss. steps.
-      rewrite URA.unit_idl in *. rewrite GRA.padding_add in *. apply_all_once GRA.padding_wf. des.
+      rewrite URA.unit_idl in *. rewrite GRA.embed_add in *. apply_all_once GRA.embed_wf. des.
       rename n into b. rename z into ofs.
       set (mem_src' := fun _b _ofs => if dec _b b && dec _ofs ofs then inl (Some v) else mem_src _b _ofs).
       assert(WF0: URA.wf (mem_src': URA.car (t:=Mem1._memRA))).
@@ -312,8 +312,8 @@ Section SIMMODSEM.
       }
       hexploit SIM; et. intro V. rewrite U in V. inv V; ss. unfold Mem.store. rewrite <- H1. steps.
       force_l. esplit.
-      hret_tac (GRA.padding (URA.black (mem_src': URA.car (t:=Mem1._memRA)))) (GRA.padding ((b, ofs) |-> [v])).
-      { rewrite ! GRA.padding_add. eapply GRA.padding_updatable.
+      hret_tac (GRA.embed (URA.black (mem_src': URA.car (t:=Mem1._memRA)))) (GRA.embed ((b, ofs) |-> [v])).
+      { rewrite ! GRA.embed_add. eapply GRA.embed_updatable.
         clear - VALID WF0. clear VALID.
         Local Transparent URA.add GRA.to_URA points_to URA.wf URA.unit.
         eapply URA.auth_update; et.
@@ -349,19 +349,19 @@ Section SIMMODSEM.
       }
       force_l. exists 0. steps. force_l. exists (if b then Vint 1 else Vint 0). des; clarify.
       - anytac. ss. steps.
-        rewrite URA.unit_idl in *. rewrite GRA.padding_add in *. apply_all_once GRA.padding_wf. des.
+        rewrite URA.unit_idl in *. rewrite GRA.embed_add in *. apply_all_once GRA.embed_wf. des.
         erewrite VALIDPTR; cycle 1.
         { instantiate (1:=v). eapply VALID. }
-        steps. hret_tac (GRA.padding (URA.black (mem_src: URA.car (t:=Mem1._memRA)))) resource; ss.
+        steps. hret_tac (GRA.embed (URA.black (mem_src: URA.car (t:=Mem1._memRA)))) resource; ss.
         esplits; eauto.
       - anytac. ss. steps.
-        rewrite URA.unit_idl in *. rewrite GRA.padding_add in *. apply_all_once GRA.padding_wf. des.
+        rewrite URA.unit_idl in *. rewrite GRA.embed_add in *. apply_all_once GRA.embed_wf. des.
         erewrite VALIDPTR; cycle 1.
         { instantiate (1:=v). eapply VALID. }
-        steps. hret_tac (GRA.padding (URA.black (mem_src: URA.car (t:=Mem1._memRA)))) resource; ss.
+        steps. hret_tac (GRA.embed (URA.black (mem_src: URA.car (t:=Mem1._memRA)))) resource; ss.
         esplits; eauto.
       - anytac. ss. steps.
-        rewrite URA.unit_idl in *. repeat rewrite GRA.padding_add in *. apply_all_once GRA.padding_wf. des.
+        rewrite URA.unit_idl in *. repeat rewrite GRA.embed_add in *. apply_all_once GRA.embed_wf. des.
         erewrite VALIDPTR; cycle 1.
         { instantiate (1:=v0). clear - VALID.
           eapply URA.wf_mon. erewrite <- URA.add_assoc. eapply VALID. }
@@ -370,10 +370,10 @@ Section SIMMODSEM.
           eapply URA.wf_mon. erewrite <- URA.add_assoc.
           erewrite URA.add_comm with (a:=(b1, ofs1) |-> [v1]). eapply VALID. }
         ss. destruct (dec b0 b1); cycle 1.
-        { ss. steps. hret_tac (GRA.padding (URA.black (mem_src: URA.car (t:=Mem1._memRA)))) resource; ss.
+        { ss. steps. hret_tac (GRA.embed (URA.black (mem_src: URA.car (t:=Mem1._memRA)))) resource; ss.
           esplits; eauto. }
         destruct (dec ofs0 ofs1); cycle 1.
-        { ss. steps. hret_tac (GRA.padding (URA.black (mem_src: URA.car (t:=Mem1._memRA)))) resource; ss.
+        { ss. steps. hret_tac (GRA.embed (URA.black (mem_src: URA.car (t:=Mem1._memRA)))) resource; ss.
           esplits; eauto. }
         subst. exfalso.
         erewrite URA.add_comm in VALID. eapply URA.wf_mon in VALID.
@@ -384,14 +384,14 @@ Section SIMMODSEM.
         clear. symmetry. eapply Z.ltb_lt. lia.
         Local Opaque URA.add GRA.to_URA points_to URA.wf URA.unit.
       - anytac. ss. steps.
-        rewrite URA.unit_idl in *. rewrite GRA.padding_add in *. apply_all_once GRA.padding_wf. des.
+        rewrite URA.unit_idl in *. rewrite GRA.embed_add in *. apply_all_once GRA.embed_wf. des.
         erewrite VALIDPTR; cycle 1.
         { instantiate (1:=v). eapply VALID. }
         ss. destruct (dec b0 b0); ss. destruct (dec ofs ofs); ss. steps.
-        hret_tac (GRA.padding (URA.black (mem_src: URA.car (t:=Mem1._memRA)))) resource; ss.
+        hret_tac (GRA.embed (URA.black (mem_src: URA.car (t:=Mem1._memRA)))) resource; ss.
         esplits; eauto.
       - anytac. ss. steps. rewrite URA.unit_idl in *.
-        hret_tac (GRA.padding (URA.black (mem_src: URA.car (t:=Mem1._memRA)))) resource; ss.
+        hret_tac (GRA.embed (URA.black (mem_src: URA.car (t:=Mem1._memRA)))) resource; ss.
         esplits; eauto.
     }
   Qed.

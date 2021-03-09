@@ -19,7 +19,7 @@ Definition resum_ktr A E F `{E -< F}: ktree E A ~> ktree F A := fun _ ktr a => i
 
 
 
-Definition out_parg: list val -> option val :=
+Definition putint_parg: list val -> option val :=
   fun varg =>
     match varg with
     | [v] => Some v
@@ -29,18 +29,18 @@ Definition out_parg: list val -> option val :=
 
 
 (* Parameter inF: list val -> itree eventE val. *)
-(* Parameter outF: list val -> itree eventE val. *)
+(* Parameter putintF: list val -> itree eventE val. *)
 
 (* Extract Constant inF => "___MINKI_DOTHIS___?????????". *)
-(* Extract Constant outF => "___MINKI_DOTHIS___?????????". *)
+(* Extract Constant putintF => "___MINKI_DOTHIS___?????????". *)
 
 
-Definition inF:  list val -> itree eventE val :=
+Definition getintF:  list val -> itree eventE val :=
   fun _ => trigger (Syscall "scanf" []).
 
-Definition outF: list val -> itree eventE val :=
+Definition putintF: list val -> itree eventE val :=
   fun varg =>
-    `v: val <- (out_parg varg)?;;
+    `v: val <- (putint_parg varg)?;;
     trigger (Syscall "printf" varg);;
     Ret Vundef
 .
@@ -51,7 +51,7 @@ Section PROOF.
   Context `{Σ: GRA.t}.
 
   Definition ClientSem: ModSem.t := {|
-    ModSem.fnsems := [("in", cfun (resum_ktr inF)); ("out", cfun (resum_ktr outF))];
+    ModSem.fnsems := [("getint", cfun (resum_ktr getintF)); ("putint", cfun (resum_ktr putintF))];
     ModSem.initial_mrs := [("Client", (ε, tt↑))];
   |}
   .
