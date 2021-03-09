@@ -20,14 +20,13 @@ Require Import HTactics.
 Require Import TODO.
 
 Require Import Imp.
+Import ImpNotations.
 
 Generalizable Variables E R A B C X Y.
 
 Set Implicit Arguments.
 
 Local Open Scope nat_scope.
-
-
 
 Section SIMMODSEM.
 
@@ -45,19 +44,40 @@ Section SIMMODSEM.
   Theorem correct: ModSemPair.sim MutF0.FSem MutFImp.FSem.
   Proof.
     econstructor 1 with (wf:=wf) (le:=top2); et; ss.
-    econs; ss. init. unfold cfun. unfold fF.
-    unfold Imp.eval_function.
-    ired_all. ss. steps.
+    econs; ss. init. unfold cfun.
+    unfold fF.
+    unfold MutFImp.fF. steps.
+    rewrite eval_imp_unfold.
+    ss. steps.
     eapply Any.downcast_upcast in _UNWRAPN. des. clarify.
-    unfold unint in *. ss. des_ifs.
+    unfold unint in *. ss.
+    rewrite denote_stmt_If. rewrite denote_expr_Var.
+    rewrite interp_imp_bind. rewrite interp_imp_GetVar.
+    steps.
+    des_ifs.
     - ired_all.
-      (* unfold interp_imp. grind. unfold ImpNotations.Vint_coerce. steps. *)
-      rewrite interp_imp_bind.
-      rewrite interp_imp_GetVar. steps.
-      rewrite interp_imp_bind.
-      rewrite interp_imp_ret. steps.
-      rewrite interp_imp_ret. steps.
+      rewrite interp_imp_bind. rewrite interp_imp_Ret. steps.
+      rewrite denote_stmt_Expr. rewrite interp_imp_bind.
+      rewrite denote_expr_Lit. rewrite interp_imp_Ret. steps.
+      rewrite interp_imp_Ret. steps.
+    - apply Z.eqb_eq in Heq0. apply n in Heq0. inversion Heq0.
     - unfold ccall. steps.
+      rewrite interp_imp_bind. rewrite interp_imp_Ret. steps.
+      rewrite denote_stmt_Seq. rewrite interp_imp_bind.
+      rewrite denote_stmt_CallFun.
+      rewrite interp_imp_bind. ss. rewrite interp_imp_bind.
+      rewrite interp_imp_bind. rewrite interp_imp_Ret. steps.
+      rewrite interp_imp_bind. rewrite denote_expr_Minus.
+      rewrite interp_imp_bind. rewrite denote_expr_Var.
+      rewrite interp_imp_GetVar. steps.
+      rewrite denote_expr_Lit. rewrite interp_imp_bind.
+      rewrite interp_imp_Ret. steps.
+      rewrite interp_imp_Ret. steps.
+      rewrite interp_imp_Ret. steps.
+      rewrite interp_imp_bind. rewrite interp_imp_Ret. steps.
+      rewrite interp_imp_Ret. steps.
+      rewrite interp_imp_bind. rewrite interp_imp_Call. steps.
+      
       admit "lemmas for imp...".
   Qed.
 

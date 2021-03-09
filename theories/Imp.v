@@ -111,14 +111,14 @@ Module ImpNotations.
       (at level 100,
        right associativity,
        format
-         "'[v ' 'if#'  i '/' '[' 'then#'  t  ']' '/' '[' 'else#'  e ']' 'fi#' ']'").
+         "'[v ' 'if#'  i '/' '[' 'then#'  t  ']' '/' '[' 'else#'  e ']' '/' 'fi#' ']'").
 
   Notation "'while#' t 'do#' b 'end#'" :=
     (While t b)
       (at level 100,
        right associativity,
        format
-         "'[v  ' 'while#'  t  'do#' '/' '[v' b  ']' ']' 'end#'").
+         "'[v  ' 'while#'  t  'do#' '/' '[v' b  ']' ']' '/' 'end#'").
 
   Notation "x ':=#' '(' f ')' args" :=
     (CallFun x f args) (at level 60): stmt_scope.
@@ -164,7 +164,7 @@ Section Denote.
   Fixpoint denote_expr (e : expr) : itree eff val :=
     match e with
     | Var v     => trigger (GetVar v)
-    | Lit n     => ret n
+    | Lit n     => Ret n
     | Plus a b  => l <- denote_expr a ;; r <- denote_expr b ;; (vadd l r)?
     | Minus a b => l <- denote_expr a ;; r <- denote_expr b ;; (vsub l r)?
     | Mult a b  => l <- denote_expr a ;; r <- denote_expr b ;; (vmul l r)?
@@ -179,7 +179,7 @@ Section Denote.
   Lemma denote_expr_Lit
         n
     :
-      denote_expr (Lit n) = ret n.
+      denote_expr (Lit n) = Ret n.
   Proof. reflexivity. Qed.
   
   Lemma denote_expr_Plus
@@ -203,8 +203,6 @@ Section Denote.
       l <- denote_expr a ;; r <- denote_expr b ;; (vmul l r)?.
   Proof. reflexivity. Qed.
 
-  Opaque denote_expr.
-  
   (** We turn to the denotation of statements. As opposed to expressions,
       statements do not return any value: their semantic domain is therefore
       [itree eff unit]. The most interesting construct is, naturally, [while].
@@ -253,7 +251,7 @@ Section Denote.
   (* change to "v <- ccall f eval_args ;;" ? *)
   Fixpoint denote_stmt (s : stmt) : itree eff val :=
     match s with
-    | Assign x e =>  v <- denote_expr e ;; trigger (SetVar x v) ;; ret Vundef
+    | Assign x e =>  v <- denote_expr e ;; trigger (SetVar x v) ;; Ret Vundef
     | Seq a b    =>
       denote_stmt a ;; denote_stmt b
     | If i t e   =>
@@ -262,19 +260,19 @@ Section Denote.
 
     | While t b =>
       while (v <- denote_expr t ;; `c: bool <- (is_true v)? ;;
-             if c then (denote_stmt b ;; ret (inl tt)) else (ret (inr Vundef)))
+             if c then (denote_stmt b ;; Ret (inl tt)) else (Ret (inr Vundef)))
 
-    | Skip => ret Vundef
+    | Skip => Ret Vundef
     | CallFun x ft args =>
       match ft with
       | Fun f =>
         eval_args <- (mapT denote_expr args) ;;
         v <- trigger (Call f (eval_args↑)) ;; v <- unwrapN (v↓);;
-        trigger (SetVar x v) ;; ret Vundef
+        trigger (SetVar x v) ;; Ret Vundef
       | Sys f =>
         eval_args <- (mapT denote_expr args) ;;
         v <- trigger (Syscall f eval_args) ;;
-        trigger (SetVar x v) ;; ret Vundef
+        trigger (SetVar x v) ;; Ret Vundef
       end
 
     | Expr e => v <- denote_expr e ;; Ret v
@@ -284,7 +282,7 @@ Section Denote.
         x e
     :
       denote_stmt (Assign x e) =
-      v <- denote_expr e ;; trigger (SetVar x v) ;; ret Vundef.
+      v <- denote_expr e ;; trigger (SetVar x v) ;; Ret Vundef.
   Proof. reflexivity. Qed.
 
   Lemma denote_stmt_Seq
@@ -307,12 +305,12 @@ Section Denote.
     :
       denote_stmt (While t b) =
       while (v <- denote_expr t ;; `c: bool <- (is_true v)? ;;
-      if c then (denote_stmt b ;; ret (inl tt)) else (ret (inr Vundef))).
+      if c then (denote_stmt b ;; Ret (inl tt)) else (Ret (inr Vundef))).
   Proof. reflexivity. Qed.
 
   Lemma denote_stmt_Skip
     :
-      denote_stmt (Skip) = ret Vundef.
+      denote_stmt (Skip) = Ret Vundef.
   Proof. reflexivity. Qed.
 
   Lemma denote_stmt_CallFun
@@ -323,11 +321,11 @@ Section Denote.
       | Fun f =>
         eval_args <- (mapT denote_expr args) ;;
         v <- trigger (Call f (eval_args↑)) ;; v <- unwrapN (v↓);;
-        trigger (SetVar x v) ;; ret Vundef
+        trigger (SetVar x v) ;; Ret Vundef
       | Sys f =>
         eval_args <- (mapT denote_expr args) ;;
         v <- trigger (Syscall f eval_args) ;;
-        trigger (SetVar x v) ;; ret Vundef
+        trigger (SetVar x v) ;; Ret Vundef
       end.
   Proof. reflexivity. Qed.
 
@@ -336,8 +334,6 @@ Section Denote.
     :
       denote_stmt (Expr e) = v <- denote_expr e ;; Ret v.
   Proof. reflexivity. Qed.
-
-  Opaque denote_stmt.
 
 End Denote.
 
@@ -393,15 +389,17 @@ Definition handle_ImpState {E: Type -> Type} `{Σ: GRA.t} `{eventE -< E}: ImpSta
 Definition interp_imp `{Σ: GRA.t} : itree (ImpState +' Es) ~> stateT lenv (itree Es) :=
   State.interp_state (case_ handle_ImpState ModSem.pure_state).
 
-(* Definition eval_function `{Σ: GRA.t} (f: function) (args: list val) : itree Es val := *)
+
+(* Definition eval_imp `{Σ: GRA.t} (f: function) (args: list val) : itree Es val := *)
 (*   if (List.length f.(params) =? List.length args)%nat *)
 (*   then '(_, retv) <- (interp_imp (denote_stmt f.(body)) (List.combine f.(params) args));; Ret retv *)
 (*   else triggerUB. *)
 
-Definition eval_function `{Σ: GRA.t} (f: function) (args: list val) : itree Es val :=
+Definition eval_imp `{Σ: GRA.t} (f: function) (args: list val) : itree Es val :=
   if (List.length f.(params) =? List.length args)%nat
   then '(_, retv) <- (interp_imp (denote_stmt f.(body)) (List.combine f.(params) args));; Ret retv
   else triggerUB.
+
 
 (* ========================================================================== *)
 (**
@@ -466,7 +464,7 @@ Section MODSEM.
   Instance Initial_void1 : @Initial (Type -> Type) IFun void1 := @elim_void1. (*** TODO: move to ITreelib ***)
 
   Definition modsem: ModSem.t := {|
-    ModSem.fnsems := List.map (fun '(fn, st) => (fn, cfun (eval_function st))) prog;
+    ModSem.fnsems := List.map (fun '(fn, st) => (fn, cfun (eval_imp st))) prog;
     ModSem.initial_mrs := [(mn, (URA.unit, tt↑))];
   |}.
 
@@ -537,7 +535,7 @@ Section PROOFS.
       tau;; interp_imp itr st0.
   Proof. unfold interp_imp. grind. Qed.
 
-  Lemma interp_imp_ret
+  Lemma interp_imp_Ret
         T
         st0 (v: T)
     :
@@ -563,11 +561,50 @@ Section PROOFS.
   Lemma interp_imp_GetVar
         st0 x
     :
-      (interp_imp (trigger (GetVar x)) st0) =
+      interp_imp (trigger (GetVar x)) st0 =
       r <- unwrapU (alist_find _ x st0);; tau;; Ret (st0, r).
   Proof.
     unfold interp_imp. grind.
   Qed.
+
+  Lemma interp_imp_SetVar
+        st0 x v
+    :
+      interp_imp (trigger (SetVar x v)) st0 =
+      tau;; Ret (alist_add _ x v st0, tt).
+  Proof.
+    unfold interp_imp. grind.
+  Qed.
   
+  Lemma interp_imp_Call
+        st0 f args
+    :
+      interp_imp (trigger (Call f args)) st0 =
+      r <- trigger (Call f args);; tau;; Ret (st0, r).
+  Proof.
+    unfold interp_imp, pure_state. grind.
+  Qed.
+
+  Lemma eval_imp_unfold
+        input params body
+    :
+       ` vret : val <- eval_imp {| params := params; body := body |} input ;;
+       Ret (vret↑)
+      =
+       ` vret : val <-
+       (if ((Datatypes.length params) =? (Datatypes.length input))%nat
+        then
+          ` x : lenv * val <-
+          interp_imp
+            (denote_stmt body)
+            (List.combine params input);;
+          (let (_, retv) := x in Ret retv)
+        else triggerUB);; Ret (vret↑).
+  Proof. reflexivity. Qed.
 
 End PROOFS.
+
+Global Opaque denote_expr.
+Global Opaque denote_stmt.
+Global Opaque interp_imp.
+Global Opaque eval_imp.
