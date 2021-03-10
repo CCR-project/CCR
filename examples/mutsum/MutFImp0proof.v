@@ -40,47 +40,29 @@ Section SIMMODSEM.
       (<<SRC: mrps_src0 = Maps.add "F" (ε, tt↑) Maps.empty>>) /\
       (<<TGT: mrps_tgt0 = Maps.add "F" (ε, tt↑) Maps.empty>>)
   .
-
+  
   Theorem correct: ModSemPair.sim MutF0.FSem MutFImp.FSem.
   Proof.
     econstructor 1 with (wf:=wf) (le:=top2); et; ss.
     econs; ss. init. unfold cfun.
     unfold fF.
-    unfold MutFImp.fF. steps.
+    unfold MutFImp.fF.
+    Local Opaque vadd.
+    steps.
     rewrite eval_imp_unfold.
     ss. steps.
     eapply Any.downcast_upcast in _UNWRAPN. des. clarify.
     unfold unint in *. ss.
-    rewrite denote_stmt_If. rewrite denote_expr_Var.
-    rewrite interp_imp_bind. rewrite interp_imp_GetVar.
-    steps.
+    imp_steps.
     des_ifs.
-    - ired_all.
-      rewrite interp_imp_bind. rewrite interp_imp_Ret. steps.
-      rewrite denote_stmt_Expr. rewrite interp_imp_bind.
-      rewrite denote_expr_Lit. rewrite interp_imp_Ret. steps.
-      rewrite interp_imp_Ret. steps.
+    - ired_all. imp_steps.
     - apply Z.eqb_eq in Heq0. apply n in Heq0. inversion Heq0.
-    - unfold ccall. steps.
-      rewrite interp_imp_bind. rewrite interp_imp_Ret. steps.
-      rewrite denote_stmt_Seq. rewrite interp_imp_bind.
-      rewrite denote_stmt_CallFun.
-      rewrite interp_imp_bind. ss. rewrite interp_imp_bind.
-      rewrite interp_imp_bind. rewrite interp_imp_Ret. steps.
-      rewrite interp_imp_bind. rewrite denote_expr_Minus.
-      rewrite interp_imp_bind. rewrite denote_expr_Var.
-      rewrite interp_imp_GetVar. steps.
-      rewrite denote_expr_Lit. rewrite interp_imp_bind.
-      rewrite interp_imp_Ret. steps.
-      rewrite interp_imp_Ret. steps.
-      rewrite interp_imp_Ret. steps.
-      rewrite interp_imp_bind. rewrite interp_imp_Ret. steps.
-      rewrite interp_imp_Ret. steps.
-      rewrite interp_imp_bind. rewrite interp_imp_Call. steps.
-      
-      admit "lemmas for imp...".
+    - unfold ccall.
+      steps. imp_steps.
+      gstep. econs; ss. i. des; subst. exists 100.
+      steps. imp_steps.
+      steps. imp_steps.
+      rewrite _UNWRAPU. imp_steps.
   Qed.
-
-(** tau, trigger, assume, guarantee, unwrap *)
   
 End SIMMODSEM.

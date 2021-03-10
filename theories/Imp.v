@@ -584,6 +584,39 @@ Section PROOFS.
   Proof.
     unfold interp_imp, pure_state. grind.
   Qed.
+  
+  Lemma interp_imp_Syscall
+        st0 f args
+    :
+      interp_imp (trigger (Syscall f args)) st0 =
+      r <- trigger (Syscall f args);; tau;; Ret (st0, r).
+  Proof.
+    unfold interp_imp, pure_state. grind.
+  Qed.
+  
+  Lemma interp_imp_unwrapU
+        X (x: option X) st0
+    :
+      interp_imp (unwrapU x) st0 =
+      x <- unwrapU x;; Ret (st0, x).
+  Proof.
+    unfold unwrapU. des_ifs.
+    - rewrite interp_imp_Ret. ired. ss.
+    - rewrite interp_imp_triggerUB.
+      unfold triggerUB. grind.
+  Qed.
+
+  Lemma interp_imp_unwrapN
+        X (x: option X) st0
+    :
+      interp_imp (unwrapN x) st0 =
+      x <- unwrapN x;; Ret (st0, x).
+  Proof.
+    unfold unwrapN. des_ifs.
+    - rewrite interp_imp_Ret. ired. ss.
+    - rewrite interp_imp_triggerNB.
+      unfold triggerNB. grind.
+  Qed.
 
   Lemma eval_imp_unfold
         input params body
@@ -608,3 +641,86 @@ Global Opaque denote_expr.
 Global Opaque denote_stmt.
 Global Opaque interp_imp.
 Global Opaque eval_imp.
+
+Require Import HTactics.
+Require Import SimModSem.
+
+(** tactic for imp-program reduction *)
+Ltac imp_red :=
+  cbn;
+  match goal with
+    (** original ired_r *)
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (ITree.bind' _ _))) ] =>
+    apply sim_r_bind_bind; ired_r
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (Tau _))) ] =>
+    apply sim_r_bind_tau
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (Ret _))) ] =>
+    apply sim_r_bind_ret_l
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, trigger _)) ] =>
+    apply sim_r_trigger_ret_rev
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, interp _ _)) ] =>
+    ((interp_red; ired_r) || idtac)
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp _ _))) ] =>
+    ((interp_red; ired_r) || idtac)
+      (** denote_stmt *)
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (denote_stmt (Assign _ _ )) _))) ] =>
+    rewrite denote_stmt_Assign
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (denote_stmt (Seq _ _)) _))) ] =>
+    rewrite denote_stmt_Seq
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (denote_stmt (If _ _ _)) _))) ] =>
+    rewrite denote_stmt_If
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (denote_stmt (While _ _)) _))) ] =>
+    rewrite denote_stmt_While
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (denote_stmt (Skip)) _))) ] =>
+    rewrite denote_stmt_Skip
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (denote_stmt (CallFun _ _ _)) _))) ] =>
+    rewrite denote_stmt_CallFun
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (denote_stmt (Expr _)) _))) ] =>
+    rewrite denote_stmt_Expr
+      (** denote_stmt coerce *)
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (denote_stmt (Expr_coerce _)) _))) ] =>
+    rewrite denote_stmt_Expr
+      (** denote_expr *)
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (denote_expr (Var _)) _))) ] =>
+    rewrite denote_expr_Var
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (denote_expr (Lit _)) _))) ] =>
+    rewrite denote_expr_Lit
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (denote_expr (Plus _ _)) _))) ] =>
+    rewrite denote_expr_Plus
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (denote_expr (Minus _ _)) _))) ] =>
+    rewrite denote_expr_Minus
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (denote_expr (Mult _ _)) _))) ] =>
+    rewrite denote_expr_Mult
+      (** denote_expr coerce *)
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (denote_expr (Var_coerce _)) _))) ] =>
+    rewrite denote_expr_Var
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (denote_expr (Lit_coerce _)) _))) ] =>
+    rewrite denote_expr_Lit
+       (** interp_imp *)
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (ITree.bind' _ _) _))) ] =>
+    rewrite interp_imp_bind
+  (* | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (Tau _) _))) ] => *)
+  (*   rewrite interp_imp_tau *)
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (Ret _) _))) ] =>
+    rewrite interp_imp_Ret
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (triggerUB) _))) ] =>
+    rewrite interp_imp_triggerUB
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (triggerNB) _))) ] =>
+    rewrite interp_imp_triggerNB
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (trigger (GetVar _)) _))) ] =>
+    rewrite interp_imp_GetVar
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (trigger (SetVar _ _)) _))) ] =>
+    rewrite interp_imp_SetVar
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (trigger (Call _ _)) _))) ] =>
+    rewrite interp_imp_Call
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (trigger (Syscall _ _)) _))) ] =>
+    rewrite interp_imp_Syscall
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (unwrapU _) _))) ] =>
+    rewrite interp_imp_unwrapU
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (unwrapN _) _))) ] =>
+    rewrite interp_imp_unwrapN
+       (** default *)
+  | _ => idtac
+  end.
+
+Ltac imp_steps := repeat (imp_red; try _step; unfold alist_add; simpl; des_ifs_safe).
