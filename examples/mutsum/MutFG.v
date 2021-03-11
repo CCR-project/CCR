@@ -53,17 +53,27 @@ Section PROOF.
     Beh.of_program (Mod.interp FGImp) <1= Beh.of_program (Mod.interp FG0).
   Proof.
     eapply ModPair.sim_list_adequacy. econs; [|econs; [|econs; ss]].
-    - split; auto. ii. ss. eapply MutFImp0proof.correct.
-    - split; auto. ii. ss. eapply MutGImp0proof.correct.
+    - split; auto.
+      + ii. ss. eapply MutFImp0proof.correct.
+      + i. ss. split; ss; repeat econs; eauto.
+    - split; auto.
+      + ii. ss. eapply MutGImp0proof.correct.
+      + i. ss. split; ss; repeat econs; eauto.
   Qed.
 
   Lemma FG01_correct:
     Beh.of_program (Mod.interp FG0) <1= Beh.of_program (Mod.interp FG1).
   Proof.
     eapply ModPair.sim_list_adequacy_closed. econs; [|econs; [|econs; ss]].
-    - split; auto. ii. ss. eapply MutMain01proof.correct.
-    - split; auto. ii. ss. eapply MutF01proof.correct.
-    - split; auto. ii. ss. eapply MutG01proof.correct.
+    - split; auto.
+      + ii. ss. eapply MutMain01proof.correct.
+      + i. ss. split; ss; repeat econs; eauto.
+    - split; auto.
+      + ii. ss. eapply MutF01proof.correct.
+      + i. ss. split; ss; repeat econs; eauto.
+    - split; auto.
+      + ii. ss. eapply MutG01proof.correct.
+      + i. ss. split; ss; repeat econs; eauto.
   Qed.
 
   Lemma FG12_correct:
@@ -78,7 +88,9 @@ Section PROOF.
 
   Lemma FG23_correct: Beh.of_program (Mod.interp FG2) <1= Beh.of_program (Mod.interp FG3).
   Proof.
-    eapply ModPair.adequacy_local_closed. econs; auto. ii.
+    eapply ModPair.adequacy_local_closed. econs; auto.
+    2: { i. ss. split; ss; repeat (econs; eauto; ii; ss; des; clarify). }
+    ii.
     eapply ModSemPair.mk with (wf:=top1) (le:=top2); ss.
     econs; [|econs; [|econs;ss]].
     - init. unfold fun_to_src, cfun, body_to_src, mainBody, interp_hCallE_src. steps.
