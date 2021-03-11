@@ -642,85 +642,60 @@ Global Opaque denote_stmt.
 Global Opaque interp_imp.
 Global Opaque eval_imp.
 
-Require Import HTactics.
 Require Import SimModSem.
+Require Import HTactics.
 
 (** tactic for imp-program reduction *)
 Ltac imp_red :=
   cbn;
   match goal with
-    (** original ired_r *)
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (ITree.bind' _ _))) ] =>
-    apply sim_r_bind_bind; ired_r
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (Tau _))) ] =>
-    apply sim_r_bind_tau
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (Ret _))) ] =>
-    apply sim_r_bind_ret_l
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, trigger _)) ] =>
-    apply sim_r_trigger_ret_rev
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, interp _ _)) ] =>
-    ((interp_red; ired_r) || idtac)
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp _ _))) ] =>
-    ((interp_red; ired_r) || idtac)
       (** denote_stmt *)
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (denote_stmt (Assign _ _ )) _))) ] =>
-    rewrite denote_stmt_Assign
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (denote_stmt (Seq _ _)) _))) ] =>
-    rewrite denote_stmt_Seq
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (denote_stmt (If _ _ _)) _))) ] =>
-    rewrite denote_stmt_If
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (denote_stmt (While _ _)) _))) ] =>
-    rewrite denote_stmt_While
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (denote_stmt (Skip)) _))) ] =>
-    rewrite denote_stmt_Skip
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (denote_stmt (CallFun _ _ _)) _))) ] =>
-    rewrite denote_stmt_CallFun
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (denote_stmt (Expr _)) _))) ] =>
-    rewrite denote_stmt_Expr
-      (** denote_stmt coerce *)
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (denote_stmt (Expr_coerce _)) _))) ] =>
-    rewrite denote_stmt_Expr
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (denote_stmt (?stmt)) _))) ] =>
+    match stmt with
+    | Assign _ _ => rewrite denote_stmt_Assign
+    | Seq _ _ => rewrite denote_stmt_Seq
+    | If _ _ _ => rewrite denote_stmt_If
+    | While _ _ => rewrite denote_stmt_While
+    | Skip => rewrite denote_stmt_Skip
+    | CallFun _ _ _ => rewrite denote_stmt_CallFun
+    | Expr _ => rewrite denote_stmt_Expr
+    | Expr_coerce _ => rewrite denote_stmt_Expr
+    | _ => fail
+    end
+      
       (** denote_expr *)
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (denote_expr (Var _)) _))) ] =>
-    rewrite denote_expr_Var
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (denote_expr (Lit _)) _))) ] =>
-    rewrite denote_expr_Lit
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (denote_expr (Plus _ _)) _))) ] =>
-    rewrite denote_expr_Plus
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (denote_expr (Minus _ _)) _))) ] =>
-    rewrite denote_expr_Minus
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (denote_expr (Mult _ _)) _))) ] =>
-    rewrite denote_expr_Mult
-      (** denote_expr coerce *)
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (denote_expr (Var_coerce _)) _))) ] =>
-    rewrite denote_expr_Var
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (denote_expr (Lit_coerce _)) _))) ] =>
-    rewrite denote_expr_Lit
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (denote_expr (?expr)) _))) ] =>
+    match expr with
+    | Var _ => rewrite denote_expr_Var
+    | Lit _ => rewrite denote_expr_Lit
+    | Plus _ _ => rewrite denote_expr_Plus
+    | Minus _ _ => rewrite denote_expr_Minus
+    | Mult _ _ => rewrite denote_expr_Mult
+    | Var_coerce _ => rewrite denote_expr_Var
+    | Lit_coerce _ => rewrite denote_expr_Lit
+    | _ => fail
+    end
+        
        (** interp_imp *)
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (ITree.bind' _ _) _))) ] =>
-    rewrite interp_imp_bind
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (?itr) _))) ] =>
+    match itr with
+    | ITree.bind' _ _ => rewrite interp_imp_bind
+    | Ret _ => rewrite interp_imp_Ret
+    | triggerUB => rewrite interp_imp_triggerUB
+    | triggerNB => rewrite interp_imp_triggerNB
+    | trigger (GetVar _) => rewrite interp_imp_GetVar
+    | trigger (SetVar _ _) => rewrite interp_imp_SetVar
+    | trigger (Call _ _) => rewrite interp_imp_Call
+    | trigger (Syscall _ _) => rewrite interp_imp_Syscall
+    | unwrapU _ => rewrite interp_imp_unwrapU
+    | unwrapN _ => rewrite interp_imp_unwrapN
+    | _ => fail
+    end
+      
   (* | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (Tau _) _))) ] => *)
   (*   rewrite interp_imp_tau *)
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (Ret _) _))) ] =>
-    rewrite interp_imp_Ret
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (triggerUB) _))) ] =>
-    rewrite interp_imp_triggerUB
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (triggerNB) _))) ] =>
-    rewrite interp_imp_triggerNB
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (trigger (GetVar _)) _))) ] =>
-    rewrite interp_imp_GetVar
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (trigger (SetVar _ _)) _))) ] =>
-    rewrite interp_imp_SetVar
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (trigger (Call _ _)) _))) ] =>
-    rewrite interp_imp_Call
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (trigger (Syscall _ _)) _))) ] =>
-    rewrite interp_imp_Syscall
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (unwrapU _) _))) ] =>
-    rewrite interp_imp_unwrapU
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (unwrapN _) _))) ] =>
-    rewrite interp_imp_unwrapN
        (** default *)
-  | _ => idtac
+  | _ => HTactics.steps
   end.
 
-Ltac imp_steps := repeat (imp_red; try _step; unfold alist_add; simpl; des_ifs_safe).
+Ltac imp_steps := repeat (imp_red).
