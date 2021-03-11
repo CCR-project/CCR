@@ -695,7 +695,7 @@ Ltac imp_red :=
   (* | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (Tau _) _))) ] => *)
   (*   rewrite interp_imp_tau *)
        (** default *)
-  | _ => HTactics.steps
+  | _ => idtac
   end.
 
-Ltac imp_steps := repeat (imp_red).
+Ltac imp_steps := repeat (repeat imp_red; steps).
