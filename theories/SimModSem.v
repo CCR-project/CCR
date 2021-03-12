@@ -185,36 +185,38 @@ Section SIM.
   Variable le: relation W.
   Hypothesis le_PreOrder: PreOrder le.
 
-  Variant _sim_itree (sim_itree: nat -> relation (st_local * (itree Es Any.t)))
-    : nat -> relation (st_local * (itree Es Any.t)) :=
+  Variant _sim_itree (sim_itree: forall (R: Type) (RR: Σ -> Σ -> R -> R -> Prop), nat -> relation (st_local * (itree Es R)))
+          {R} (RR: Σ -> Σ -> R -> R -> Prop)
+    : nat -> relation (st_local * (itree Es R)) :=
   | sim_itree_ret
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       (WF: wf (mrs_src0, mrs_tgt0))
-      v
+      v_src v_tgt
+      (RET: RR fr_src0 fr_tgt0 v_src v_tgt)
     :
-      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), (Ret v)) ((mrs_tgt0, fr_tgt0), (Ret v))
+      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), (Ret v_src)) ((mrs_tgt0, fr_tgt0), (Ret v_tgt))
   | sim_itree_tau
       i0 st_src0 st_tgt0
       i1 i_src i_tgt
-      (K: sim_itree i1 (st_src0, i_src) (st_tgt0, i_tgt))
+      (K: sim_itree _ RR i1 (st_src0, i_src) (st_tgt0, i_tgt))
     :
-      _sim_itree sim_itree i0 (st_src0, tau;; i_src) (st_tgt0, tau;; i_tgt)
+      _sim_itree sim_itree RR i0 (st_src0, tau;; i_src) (st_tgt0, tau;; i_tgt)
   | sim_itree_call
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       fn varg k_src k_tgt
       (WF: wf (mrs_src0, mrs_tgt0))
       (K: forall vret mrs_src1 mrs_tgt1 (WF: wf (mrs_src1, mrs_tgt1)),
-          exists i1, sim_itree i1 ((mrs_src1, fr_src0), k_src vret) ((mrs_tgt1, fr_tgt0), k_tgt vret))
+          exists i1, sim_itree _ RR i1 ((mrs_src1, fr_src0), k_src vret) ((mrs_tgt1, fr_tgt0), k_tgt vret))
     :
-      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (Call fn varg) >>= k_src)
+      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), trigger (Call fn varg) >>= k_src)
                  ((mrs_tgt0, fr_tgt0), trigger (Call fn varg) >>= k_tgt)
   | sim_itree_syscall
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       fn varg k_src k_tgt
       (K: forall vret,
-          exists i1, sim_itree i1 ((mrs_src0, fr_src0), k_src vret) ((mrs_tgt0, fr_tgt0), k_tgt vret))
+          exists i1, sim_itree _ RR i1 ((mrs_src0, fr_src0), k_src vret) ((mrs_tgt0, fr_tgt0), k_tgt vret))
     :
-      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (Syscall fn varg) >>= k_src)
+      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), trigger (Syscall fn varg) >>= k_src)
                  ((mrs_tgt0, fr_tgt0), trigger (Syscall fn varg) >>= k_tgt)
   (*** TODO: sim_syscall is nontrivial; it should accept "injected" memory... ***)
   (*** TODO: simplify the model: Syscall: list val -> val ***)
@@ -222,16 +224,16 @@ Section SIM.
   | sim_itree_choose_both
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       X_src X_tgt k_src k_tgt
-      (K: forall (x_tgt: X_tgt), exists (x_src: X_src) i1, sim_itree i1 ((mrs_src0, fr_src0), k_src x_src) ((mrs_tgt0, fr_tgt0), k_tgt x_tgt))
+      (K: forall (x_tgt: X_tgt), exists (x_src: X_src) i1, sim_itree _ RR i1 ((mrs_src0, fr_src0), k_src x_src) ((mrs_tgt0, fr_tgt0), k_tgt x_tgt))
     :
-      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (Choose X_src) >>= k_src)
+      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), trigger (Choose X_src) >>= k_src)
                  ((mrs_tgt0, fr_tgt0), trigger (Choose X_tgt) >>= k_tgt)
   | sim_itree_take_both
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       X_src X_tgt k_src k_tgt
-      (K: forall (x_src: X_src), exists (x_tgt: X_tgt) i1, sim_itree i1 ((mrs_src0, fr_src0), k_src x_src) ((mrs_tgt0, fr_tgt0), k_tgt x_tgt))
+      (K: forall (x_src: X_src), exists (x_tgt: X_tgt) i1, sim_itree _ RR i1 ((mrs_src0, fr_src0), k_src x_src) ((mrs_tgt0, fr_tgt0), k_tgt x_tgt))
     :
-      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (Take X_src) >>= k_src)
+      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), trigger (Take X_src) >>= k_src)
                  ((mrs_tgt0, fr_tgt0), trigger (Take X_tgt) >>= k_tgt)
   | sim_itree_pput_both
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
@@ -241,9 +243,9 @@ Section SIM.
       (MRTGT: Maps.lookup mn mrs_tgt0 = Some (mr_tgt0, mp_tgt0))
       (EQSRC: mrs_src1 = Maps.add mn (mr_src0, mp_src1) mrs_src0)
       (EQTGT: mrs_tgt1 = Maps.add mn (mr_tgt0, mp_tgt1) mrs_tgt0)
-      (K: sim_itree i1 ((mrs_src1, fr_src0), k_src tt) ((mrs_tgt1, fr_tgt0), k_tgt tt))
+      (K: sim_itree _ RR i1 ((mrs_src1, fr_src0), k_src tt) ((mrs_tgt1, fr_tgt0), k_tgt tt))
     :
-      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (PPut mn mp_src1) >>= k_src)
+      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), trigger (PPut mn mp_src1) >>= k_src)
                  ((mrs_tgt0, fr_tgt0), trigger (PPut mn mp_tgt1) >>= k_tgt)
   | sim_itree_mput_both
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
@@ -253,17 +255,17 @@ Section SIM.
       (MRTGT: Maps.lookup mn mrs_tgt0 = Some (mr_tgt0, mp_tgt0))
       (EQSRC: mrs_src1 = Maps.add mn (mr_src1, mp_src0) mrs_src0)
       (EQSRC: mrs_tgt1 = Maps.add mn (mr_tgt1, mp_tgt0) mrs_tgt0)
-      (K: sim_itree i1 ((mrs_src1, fr_src0), k_src tt) ((mrs_tgt1, fr_tgt0), k_tgt tt))
+      (K: sim_itree _ RR i1 ((mrs_src1, fr_src0), k_src tt) ((mrs_tgt1, fr_tgt0), k_tgt tt))
     :
-      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (MPut mn mr_src1) >>= k_src)
+      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), trigger (MPut mn mr_src1) >>= k_src)
                  ((mrs_tgt0, fr_tgt0), trigger (MPut mn mr_tgt1) >>= k_tgt)
   | sim_itree_fput_both
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       i1 k_src k_tgt
       fr_src1 fr_tgt1
-      (K: sim_itree i1 ((mrs_src0, fr_src1), k_src tt) ((mrs_tgt0, fr_tgt1), k_tgt tt))
+      (K: sim_itree _ RR i1 ((mrs_src0, fr_src1), k_src tt) ((mrs_tgt0, fr_tgt1), k_tgt tt))
     :
-      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (FPut fr_src1) >>= k_src)
+      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), trigger (FPut fr_src1) >>= k_src)
                  ((mrs_tgt0, fr_tgt0), trigger (FPut fr_tgt1) >>= k_tgt)
   | sim_itree_pget_both
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
@@ -271,9 +273,9 @@ Section SIM.
       mn mr_src0 mp_src0 mr_tgt0 mp_tgt0
       (MRSRC: Maps.lookup mn mrs_src0 = Some (mr_src0, mp_src0))
       (MRTGT: Maps.lookup mn mrs_tgt0 = Some (mr_tgt0, mp_tgt0))
-      (K: sim_itree i1 ((mrs_src0, fr_src0), k_src mp_src0) ((mrs_tgt0, fr_tgt0), k_tgt mp_tgt0))
+      (K: sim_itree _ RR i1 ((mrs_src0, fr_src0), k_src mp_src0) ((mrs_tgt0, fr_tgt0), k_tgt mp_tgt0))
     :
-      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (PGet mn) >>= k_src)
+      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), trigger (PGet mn) >>= k_src)
                  ((mrs_tgt0, fr_tgt0), trigger (PGet mn) >>= k_tgt)
   | sim_itree_mget_both
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
@@ -281,16 +283,16 @@ Section SIM.
       mn mr_src0 mp_src0 mr_tgt0 mp_tgt0
       (MRSRC: Maps.lookup mn mrs_src0 = Some (mr_src0, mp_src0))
       (MRTGT: Maps.lookup mn mrs_tgt0 = Some (mr_tgt0, mp_tgt0))
-      (K: sim_itree i1 ((mrs_src0, fr_src0), k_src mr_src0) ((mrs_tgt0, fr_tgt0), k_tgt mr_tgt0))
+      (K: sim_itree _ RR i1 ((mrs_src0, fr_src0), k_src mr_src0) ((mrs_tgt0, fr_tgt0), k_tgt mr_tgt0))
     :
-      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (MGet mn) >>= k_src)
+      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), trigger (MGet mn) >>= k_src)
                  ((mrs_tgt0, fr_tgt0), trigger (MGet mn) >>= k_tgt)
   | sim_itree_fget_both
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       i1 k_src k_tgt
-      (K: sim_itree i1 ((mrs_src0, fr_src0), k_src fr_src0) ((mrs_tgt0, fr_tgt0), k_tgt fr_tgt0))
+      (K: sim_itree _ RR i1 ((mrs_src0, fr_src0), k_src fr_src0) ((mrs_tgt0, fr_tgt0), k_tgt fr_tgt0))
     :
-      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (FGet) >>= k_src)
+      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), trigger (FGet) >>= k_src)
                  ((mrs_tgt0, fr_tgt0), trigger (FGet) >>= k_tgt)
 
 
@@ -299,24 +301,24 @@ Section SIM.
       i0 st_src0 st_tgt0
       i1 i_src i_tgt
       (ORD: i1 < i0)
-      (K: sim_itree i1 (st_src0, i_src) (st_tgt0, i_tgt))
+      (K: sim_itree _ RR i1 (st_src0, i_src) (st_tgt0, i_tgt))
     :
-      _sim_itree sim_itree i0 (st_src0, tau;; i_src) (st_tgt0, i_tgt)
+      _sim_itree sim_itree RR i0 (st_src0, tau;; i_src) (st_tgt0, i_tgt)
   | sim_itree_choose_src
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       i1 X k_src i_tgt
       (ORD: i1 < i0)
-      (K: exists (x: X), sim_itree i1 ((mrs_src0, fr_src0), k_src x) ((mrs_tgt0, fr_tgt0), i_tgt))
+      (K: exists (x: X), sim_itree _ RR i1 ((mrs_src0, fr_src0), k_src x) ((mrs_tgt0, fr_tgt0), i_tgt))
     :
-      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (Choose X) >>= k_src)
+      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), trigger (Choose X) >>= k_src)
                  ((mrs_tgt0, fr_tgt0), i_tgt)
   | sim_itree_take_src
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       i1 X k_src i_tgt
       (ORD: i1 < i0)
-      (K: forall (x: X), sim_itree i1 ((mrs_src0, fr_src0), k_src x) ((mrs_tgt0, fr_tgt0), i_tgt))
+      (K: forall (x: X), sim_itree _ RR i1 ((mrs_src0, fr_src0), k_src x) ((mrs_tgt0, fr_tgt0), i_tgt))
     :
-      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (Take X) >>= k_src)
+      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), trigger (Take X) >>= k_src)
                  ((mrs_tgt0, fr_tgt0), i_tgt)
 
   | sim_itree_pput_src
@@ -326,9 +328,9 @@ Section SIM.
       mn mr0 mp1 mrs_src1 mp0
       (MR0: Maps.lookup mn mrs_src0 = Some (mr0, mp0))
       (EQ: mrs_src1 = Maps.add mn (mr0, mp1) mrs_src0)
-      (K: sim_itree i1 ((mrs_src1, fr_src0), k_src tt) ((mrs_tgt0, fr_tgt0), i_tgt))
+      (K: sim_itree _ RR i1 ((mrs_src1, fr_src0), k_src tt) ((mrs_tgt0, fr_tgt0), i_tgt))
     :
-      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (PPut mn mp1) >>= k_src)
+      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), trigger (PPut mn mp1) >>= k_src)
                  ((mrs_tgt0, fr_tgt0), i_tgt)
   | sim_itree_mput_src
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
@@ -337,18 +339,18 @@ Section SIM.
       mn mr0 mr1 mrs_src1 mp0
       (MR0: Maps.lookup mn mrs_src0 = Some (mr0, mp0))
       (EQ: mrs_src1 = Maps.add mn (mr1, mp0) mrs_src0)
-      (K: sim_itree i1 ((mrs_src1, fr_src0), k_src tt) ((mrs_tgt0, fr_tgt0), i_tgt))
+      (K: sim_itree _ RR i1 ((mrs_src1, fr_src0), k_src tt) ((mrs_tgt0, fr_tgt0), i_tgt))
     :
-      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (MPut mn mr1) >>= k_src)
+      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), trigger (MPut mn mr1) >>= k_src)
                  ((mrs_tgt0, fr_tgt0), i_tgt)
   | sim_itree_fput_src
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       i1 k_src i_tgt
       (ORD: i1 < i0)
       fr_src1
-      (K: sim_itree i1 ((mrs_src0, fr_src1), k_src tt) ((mrs_tgt0, fr_tgt0), i_tgt))
+      (K: sim_itree _ RR i1 ((mrs_src0, fr_src1), k_src tt) ((mrs_tgt0, fr_tgt0), i_tgt))
     :
-      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (FPut fr_src1) >>= k_src)
+      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), trigger (FPut fr_src1) >>= k_src)
                  ((mrs_tgt0, fr_tgt0), i_tgt)
 
   | sim_itree_pget_src
@@ -357,9 +359,9 @@ Section SIM.
       (ORD: i1 < i0)
       mn mr0 mp0
       (MR0: Maps.lookup mn mrs_src0 = Some (mr0, mp0))
-      (K: sim_itree i1 ((mrs_src0, fr_src0), k_src mp0) ((mrs_tgt0, fr_tgt0), i_tgt))
+      (K: sim_itree _ RR i1 ((mrs_src0, fr_src0), k_src mp0) ((mrs_tgt0, fr_tgt0), i_tgt))
     :
-      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (PGet mn) >>= k_src)
+      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), trigger (PGet mn) >>= k_src)
                  ((mrs_tgt0, fr_tgt0), i_tgt)
   | sim_itree_mget_src
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
@@ -367,17 +369,17 @@ Section SIM.
       (ORD: i1 < i0)
       mn mr0 mp0
       (MR0: Maps.lookup mn mrs_src0 = Some (mr0, mp0))
-      (K: sim_itree i1 ((mrs_src0, fr_src0), k_src mr0) ((mrs_tgt0, fr_tgt0), i_tgt))
+      (K: sim_itree _ RR i1 ((mrs_src0, fr_src0), k_src mr0) ((mrs_tgt0, fr_tgt0), i_tgt))
     :
-      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (MGet mn) >>= k_src)
+      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), trigger (MGet mn) >>= k_src)
                  ((mrs_tgt0, fr_tgt0), i_tgt)
   | sim_itree_fget_src
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       i1 k_src i_tgt
       (ORD: i1 < i0)
-      (K: sim_itree i1 ((mrs_src0, fr_src0), k_src fr_src0) ((mrs_tgt0, fr_tgt0), i_tgt))
+      (K: sim_itree _ RR i1 ((mrs_src0, fr_src0), k_src fr_src0) ((mrs_tgt0, fr_tgt0), i_tgt))
     :
-      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), trigger (FGet) >>= k_src)
+      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), trigger (FGet) >>= k_src)
                  ((mrs_tgt0, fr_tgt0), i_tgt)
 
 
@@ -389,24 +391,24 @@ Section SIM.
       i0 st_src0 st_tgt0
       i1 i_src i_tgt
       (ORD: i1 < i0)
-      (K: sim_itree i1 (st_src0, i_src) (st_tgt0, i_tgt))
+      (K: sim_itree _ RR i1 (st_src0, i_src) (st_tgt0, i_tgt))
     :
-      _sim_itree sim_itree i0 (st_src0, i_src) (st_tgt0, tau;; i_tgt)
+      _sim_itree sim_itree RR i0 (st_src0, i_src) (st_tgt0, tau;; i_tgt)
   | sim_itree_choose_tgt
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       i1 X i_src k_tgt
       (ORD: i1 < i0)
-      (K: forall (x: X), sim_itree i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt0), k_tgt x))
+      (K: forall (x: X), sim_itree _ RR i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt0), k_tgt x))
     :
-      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), i_src)
+      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), i_src)
                  ((mrs_tgt0, fr_tgt0), trigger (Choose X) >>= k_tgt)
   | sim_itree_take_tgt
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       i1 X i_src k_tgt
       (ORD: i1 < i0)
-      (K: exists (x: X), sim_itree i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt0), k_tgt x))
+      (K: exists (x: X), sim_itree _ RR i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt0), k_tgt x))
     :
-      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), i_src)
+      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), i_src)
                  ((mrs_tgt0, fr_tgt0), trigger (Take X) >>= k_tgt)
 
   | sim_itree_pput_tgt
@@ -416,9 +418,9 @@ Section SIM.
       mn mr0 mp1 mrs_tgt1 mp0
       (MR0: Maps.lookup mn mrs_tgt0 = Some (mr0, mp0))
       (EQ: mrs_tgt1 = Maps.add mn (mr0, mp1) mrs_tgt0)
-      (K: sim_itree i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt1, fr_tgt0), k_tgt tt))
+      (K: sim_itree _ RR i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt1, fr_tgt0), k_tgt tt))
     :
-      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), i_src)
+      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), i_src)
                  ((mrs_tgt0, fr_tgt0), trigger (PPut mn mp1) >>= k_tgt)
   | sim_itree_mput_tgt
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
@@ -427,18 +429,18 @@ Section SIM.
       mn mr0 mr1 mrs_tgt1 mp0
       (MR0: Maps.lookup mn mrs_tgt0 = Some (mr0, mp0))
       (EQ: mrs_tgt1 = Maps.add mn (mr1, mp0) mrs_tgt0)
-      (K: sim_itree i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt1, fr_tgt0), k_tgt tt))
+      (K: sim_itree _ RR i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt1, fr_tgt0), k_tgt tt))
     :
-      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), i_src)
+      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), i_src)
                  ((mrs_tgt0, fr_tgt0), trigger (MPut mn mr1) >>= k_tgt)
   | sim_itree_fput_tgt
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       i1 i_src k_tgt
       (ORD: i1 < i0)
       fr_tgt1
-      (K: sim_itree i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt1), k_tgt tt))
+      (K: sim_itree _ RR i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt1), k_tgt tt))
     :
-      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), i_src)
+      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), i_src)
                  ((mrs_tgt0, fr_tgt0), trigger (FPut fr_tgt1) >>= k_tgt)
 
   | sim_itree_pget_tgt
@@ -447,9 +449,9 @@ Section SIM.
       (ORD: i1 < i0)
       mn mr0 mp0
       (MR0: Maps.lookup mn mrs_tgt0 = Some (mr0, mp0))
-      (K: sim_itree i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt0), k_tgt mp0))
+      (K: sim_itree _ RR i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt0), k_tgt mp0))
     :
-      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), i_src)
+      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), i_src)
                  ((mrs_tgt0, fr_tgt0), trigger (PGet mn) >>= k_tgt)
   | sim_itree_mget_tgt
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
@@ -457,23 +459,24 @@ Section SIM.
       (ORD: i1 < i0)
       mn mr0 mp0
       (MR0: Maps.lookup mn mrs_tgt0 = Some (mr0, mp0))
-      (K: sim_itree i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt0), k_tgt mr0))
+      (K: sim_itree _ RR i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt0), k_tgt mr0))
     :
-      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), i_src)
+      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), i_src)
                  ((mrs_tgt0, fr_tgt0), trigger (MGet mn) >>= k_tgt)
   | sim_itree_fget_tgt
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       i1 i_src k_tgt
       (ORD: i1 < i0)
-      (K: sim_itree i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt0), k_tgt  fr_tgt0))
+      (K: sim_itree _ RR i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt0), k_tgt  fr_tgt0))
     :
-      _sim_itree sim_itree i0 ((mrs_src0, fr_src0), i_src)
+      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), i_src)
                  ((mrs_tgt0, fr_tgt0), trigger (FGet) >>= k_tgt)
   .
 
-  Definition sim_itree: _ -> relation _ := paco3 _sim_itree bot3.
+  Program Definition sim_itree: _ -> relation _ :=
+    paco5 _sim_itree bot5 _ (fun _ _ => @eq Any.t).
 
-  Lemma sim_itree_mon: monotone3 _sim_itree.
+  Lemma sim_itree_mon: monotone5 _sim_itree.
   Proof.
     ii. inv IN; try (by des; econs; ss; et).
     - econs; ss; et. ii. exploit K; et. i; des. esplits; et.
@@ -493,6 +496,37 @@ Section SIM.
   .
 
   Definition sim_fnsem: relation (string * (Any.t -> itree Es Any.t)) := RelProd eq sim_fsem.
+
+  Variant bindR (r s: forall S (SS: S -> S -> Prop), Ordinal.t -> (itree eventE S) -> (itree eventE S) -> Prop):
+    forall S (SS: S -> S -> Prop), Ordinal.t -> (itree eventE S) -> (itree eventE S) -> Prop :=
+  | bindR_intro
+      o0 o1
+
+      R RR
+      (i_src i_tgt: itree eventE R)
+      (SIM: r _ RR o0 i_src i_tgt)
+
+      S SS
+      (k_src k_tgt: ktree eventE R S)
+      (SIMK: forall vret_src vret_tgt (SIM: RR vret_src vret_tgt), s _ SS o1 (k_src vret_src) (k_tgt vret_tgt))
+    :
+      (* bindR r s (Ordinal.add o0 o1) (ITree.bind i_src k_src) (ITree.bind i_tgt k_tgt) *)
+      bindR r s SS (Ordinal.add o1 o0) (ITree.bind i_src k_src) (ITree.bind i_tgt k_tgt)
+  .
+
+  Hint Constructors bindR: core.
+
+  Lemma bindR_mon
+        r1 r2 s1 s2
+        (LEr: r1 <5= r2) (LEs: s1 <5= s2)
+    :
+      bindR r1 s1 <5= bindR r2 s2
+  .
+  Proof. ii. destruct PR; econs; et. Qed.
+
+  Definition bindC r := bindR r r.
+  Hint Unfold bindC: core.
+
 
 End SIM.
 Hint Resolve sim_itree_mon: paco.
@@ -605,28 +639,30 @@ Lemma self_sim_itree `{Σ: GRA.t} (ms: list mname):
     @sim_itree _ (fun p => fst p = snd p /\ wf_mrs ms (fst p))
                n ((mrs, fr), st) ((mrs, fr), st).
 Proof.
-  pcofix CIH. i. pfold. punfold WF. inv WF; pclearbot.
-  - eapply sim_itree_ret. ss.
-  - eapply sim_itree_tau. right. eapply CIH; ss.
-  - eapply sim_itree_choose_both. i. exists x_tgt.
-    eexists. right. eapply CIH; ss.
-  - eapply sim_itree_take_both. i. exists x_src.
-    eexists. right. eapply CIH; ss.
-  - hexploit (MRS mn); eauto. i. des.
-    eapply sim_itree_pput_both; eauto.
-    right. eapply CIH; ss. apply wf_mrs_add. auto.
-  - hexploit (MRS mn); eauto. i. des.
-    eapply sim_itree_mput_both; eauto. right. eapply CIH; ss.
-    eapply wf_mrs_add; eauto.
-  - eapply sim_itree_fput_both; eauto. right. eapply CIH; ss.
-  - hexploit (MRS mn); eauto. i. des.
-    eapply sim_itree_pget_both; eauto.
-    right. eapply CIH; ss.
-  - hexploit (MRS mn); eauto. i. des.
-    eapply sim_itree_mget_both; eauto. right. eapply CIH; ss.
-  - eapply sim_itree_fget_both; eauto. right. eapply CIH; ss.
-    Unshelve. all: exact 0.
-Qed.
+Admitted.
+(*   Set Printing All. *)
+(*   pcofix CIH. i. pfold. punfold WF. inv WF; pclearbot. *)
+(*   - eapply sim_itree_ret. ss. *)
+(*   - eapply sim_itree_tau. right. eapply CIH; ss. *)
+(*   - eapply sim_itree_choose_both. i. exists x_tgt. *)
+(*     eexists. right. eapply CIH; ss. *)
+(*   - eapply sim_itree_take_both. i. exists x_src. *)
+(*     eexists. right. eapply CIH; ss. *)
+(*   - hexploit (MRS mn); eauto. i. des. *)
+(*     eapply sim_itree_pput_both; eauto. *)
+(*     right. eapply CIH; ss. apply wf_mrs_add. auto. *)
+(*   - hexploit (MRS mn); eauto. i. des. *)
+(*     eapply sim_itree_mput_both; eauto. right. eapply CIH; ss. *)
+(*     eapply wf_mrs_add; eauto. *)
+(*   - eapply sim_itree_fput_both; eauto. right. eapply CIH; ss. *)
+(*   - hexploit (MRS mn); eauto. i. des. *)
+(*     eapply sim_itree_pget_both; eauto. *)
+(*     right. eapply CIH; ss. *)
+(*   - hexploit (MRS mn); eauto. i. des. *)
+(*     eapply sim_itree_mget_both; eauto. right. eapply CIH; ss. *)
+(*   - eapply sim_itree_fget_both; eauto. right. eapply CIH; ss. *)
+(*     Unshelve. all: exact 0. *)
+(* Qed. *)
 
 
 
@@ -850,7 +886,7 @@ Section ADD.
   Proof.
     pcofix CIH. i.
     pfold. punfold SIM. inv SIM; pclearbot.
-    * econs 1. econs; eauto.
+    * econs 1; eauto. econs; eauto.
     * econs 2. right. eapply CIH; eauto.
     * econs 3; eauto.
       { econs; eauto. }
@@ -1765,54 +1801,54 @@ End ModPair.
 
 Lemma sim_l_bind_bind `{Σ: GRA.t} a b c d e f g
       (R S : Type) (s : itree _ R) (k : R -> itree _ S) (h : S -> itree _ _)
-      (SIM: gpaco3 (_sim_itree c) d e f g (b, ` r : R <- s;; ` x : _ <- k r;; h x) a)
+      (SIM: gpaco5 (_sim_itree c) d e f _ (fun _ _ => @eq Any.t) g (b, ` r : R <- s;; ` x : _ <- k r;; h x) a)
   :
-    gpaco3 (_sim_itree c) d e f g (b, ` x : _ <- (` x : _ <- s;; k x);; h x) a.
+    gpaco5 (_sim_itree c) d e f _ (fun _ _ => @eq Any.t) g (b, ` x : _ <- (` x : _ <- s;; k x);; h x) a.
 Proof.
   rewrite bind_bind. auto.
 Qed.
 
 Lemma sim_l_bind_tau `{Σ: GRA.t} a b c d e f g
       (U : Type) (t : itree _ _) (k : U -> itree _ _)
-      (SIM: gpaco3 (_sim_itree c) d e f g (b, Tau (` x : _ <- t;; k x)) a)
+      (SIM: gpaco5 (_sim_itree c) d e f _ (fun _ _ => @eq Any.t) g (b, Tau (` x : _ <- t;; k x)) a)
   :
-    gpaco3 (_sim_itree c) d e f g (b, ` x : _ <- Tau t;; k x) a.
+    gpaco5 (_sim_itree c) d e f _ (fun _ _ => @eq Any.t) g (b, ` x : _ <- Tau t;; k x) a.
 Proof.
   rewrite bind_tau. auto.
 Qed.
 
 Lemma sim_l_bind_ret_l `{Σ: GRA.t} a b c d e f g
       (R : Type) (r : R) (k : R -> itree _ _)
-      (SIM: gpaco3 (_sim_itree c) d e f g (b, k r) a)
+      (SIM: gpaco5 (_sim_itree c) d e f _ (fun _ _ => @eq Any.t) g (b, k r) a)
   :
-    gpaco3 (_sim_itree c) d e f g (b, ` x : _ <- Ret r;; k x) a.
+    gpaco5 (_sim_itree c) d e f _ (fun _ _ => @eq Any.t) g (b, ` x : _ <- Ret r;; k x) a.
 Proof.
   rewrite bind_ret_l. auto.
 Qed.
 
 Lemma sim_r_bind_bind `{Σ: GRA.t} a b c d e f g
       (R S : Type) (s : itree _ R) (k : R -> itree _ S) (h : S -> itree _ _)
-      (SIM: gpaco3 (_sim_itree c) d e f g a (b, ` r : R <- s;; ` x : _ <- k r;; h x))
+      (SIM: gpaco5 (_sim_itree c) d e f _ (fun _ _ => @eq Any.t) g a (b, ` r : R <- s;; ` x : _ <- k r;; h x))
   :
-    gpaco3 (_sim_itree c) d e f g a (b, ` x : _ <- (` x : _ <- s;; k x);; h x).
+    gpaco5 (_sim_itree c) d e f _ (fun _ _ => @eq Any.t) g a (b, ` x : _ <- (` x : _ <- s;; k x);; h x).
 Proof.
   rewrite bind_bind. auto.
 Qed.
 
 Lemma sim_r_bind_tau `{Σ: GRA.t} a b c d e f g
       (U : Type) (t : itree _ _) (k : U -> itree _ _)
-      (SIM: gpaco3 (_sim_itree c) d e f g a (b, Tau (` x : _ <- t;; k x)))
+      (SIM: gpaco5 (_sim_itree c) d e f _ (fun _ _ => @eq Any.t) g a (b, Tau (` x : _ <- t;; k x)))
   :
-    gpaco3 (_sim_itree c) d e f g a (b, ` x : _ <- Tau t;; k x).
+    gpaco5 (_sim_itree c) d e f _ (fun _ _ => @eq Any.t) g a (b, ` x : _ <- Tau t;; k x).
 Proof.
   rewrite bind_tau. auto.
 Qed.
 
 Lemma sim_r_bind_ret_l `{Σ: GRA.t} a b c d e f g
       (R : Type) (r : R) (k : R -> itree _ _)
-      (SIM: gpaco3 (_sim_itree c) d e f g a (b, k r))
+      (SIM: gpaco5 (_sim_itree c) d e f _ (fun _ _ => @eq Any.t) g a (b, k r))
   :
-    gpaco3 (_sim_itree c) d e f g a (b, ` x : _ <- Ret r;; k x).
+    gpaco5 (_sim_itree c) d e f _ (fun _ _ => @eq Any.t) g a (b, ` x : _ <- Ret r;; k x).
 Proof.
   rewrite bind_ret_l. auto.
 Qed.
@@ -1837,15 +1873,15 @@ Ltac interp_state_red := rewrite interp_state_trigger ||
 Ltac ired_l :=
   cbn;
   match goal with
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, ITree.bind' _ (ITree.bind' _ _)) _) ] =>
+  | [ |- (gpaco5 (_sim_itree _) _ _ _ _ _ _ (_, ITree.bind' _ (ITree.bind' _ _)) _) ] =>
     apply sim_l_bind_bind; ired_l
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, ITree.bind' _ (Tau _)) _) ] =>
+  | [ |- (gpaco5 (_sim_itree _) _ _ _ _ _ _ (_, ITree.bind' _ (Tau _)) _) ] =>
     apply sim_l_bind_tau
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, ITree.bind' _ (Ret _)) _) ] =>
+  | [ |- (gpaco5 (_sim_itree _) _ _ _ _ _ _ (_, ITree.bind' _ (Ret _)) _) ] =>
     apply sim_l_bind_ret_l; ired_l
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, interp _ _) _) ] =>
+  | [ |- (gpaco5 (_sim_itree _) _ _ _ _ _ _ (_, interp _ _) _) ] =>
     ((interp_red; ired_l) || idtac)
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, ITree.bind' _ (interp _ _)) _) ] =>
+  | [ |- (gpaco5 (_sim_itree _) _ _ _ _ _ _ (_, ITree.bind' _ (interp _ _)) _) ] =>
     ((interp_red; ired_l) || idtac)
   | _ => idtac
   end.
@@ -1853,15 +1889,15 @@ Ltac ired_l :=
 Ltac ired_r :=
   cbn;
   match goal with
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (ITree.bind' _ _))) ] =>
+  | [ |- (gpaco5 (_sim_itree _) _ _ _ _ _ _ _ (_, ITree.bind' _ (ITree.bind' _ _))) ] =>
     apply sim_r_bind_bind; ired_r
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (Tau _))) ] =>
+  | [ |- (gpaco5 (_sim_itree _) _ _ _ _ _ _ _ (_, ITree.bind' _ (Tau _))) ] =>
     apply sim_r_bind_tau
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (Ret _))) ] =>
+  | [ |- (gpaco5 (_sim_itree _) _ _ _ _ _ _ _ (_, ITree.bind' _ (Ret _))) ] =>
     apply sim_r_bind_ret_l
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, interp _ _)) ] =>
+  | [ |- (gpaco5 (_sim_itree _) _ _ _ _ _ _ _ (_, interp _ _)) ] =>
     ((interp_red; ired_r) || idtac)
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp _ _))) ] =>
+  | [ |- (gpaco5 (_sim_itree _) _ _ _ _ _ _ _ (_, ITree.bind' _ (interp _ _))) ] =>
     ((interp_red; ired_l) || idtac)
   | _ => idtac
   end.
@@ -1873,40 +1909,40 @@ Ltac prep := ired_all.
 Ltac force_l :=
   prep;
   match goal with
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, unwrapN ?ox >>= _) (_, _)) ] =>
+  | [ |- (gpaco5 (_sim_itree _) _ _ _ _ _ _ (_, unwrapN ?ox >>= _) (_, _)) ] =>
     let tvar := fresh "tmp" in
     let thyp := fresh "TMP" in
     remember (unwrapN ox) as tvar eqn:thyp; unfold unwrapN in thyp; subst tvar;
     let name := fresh "_UNWRAPN" in
     destruct (ox) eqn:name; [|exfalso]; cycle 1
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, guarantee ?P >>= _) (_, _)) ] =>
+  | [ |- (gpaco5 (_sim_itree _) _ _ _ _ _ _ (_, guarantee ?P >>= _) (_, _)) ] =>
     let tvar := fresh "tmp" in
     let thyp := fresh "TMP" in
     remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar;
     let name := fresh "_GUARANTEE" in
     destruct (classic P) as [name|name]; [ired_all; gstep; eapply sim_itree_choose_src; [eauto|exists name]|contradict name]; cycle 1
 
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, ?i_src) (_, ?i_tgt)) ] =>
+  | [ |- (gpaco5 (_sim_itree _) _ _ _ _ _ _  (_, ?i_src) (_, ?i_tgt)) ] =>
     seal i_tgt; gstep; econs; eauto; unseal i_tgt
   end
 .
 Ltac force_r :=
   prep;
   match goal with
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, _) (_, unwrapU ?ox >>= _)) ] =>
+  | [ |- (gpaco5 (_sim_itree _) _ _ _ _ _ _ (_, _) (_, unwrapU ?ox >>= _)) ] =>
     let tvar := fresh "tmp" in
     let thyp := fresh "TMP" in
     remember (unwrapU ox) as tvar eqn:thyp; unfold unwrapU in thyp; subst tvar;
     let name := fresh "_UNWRAPU" in
     destruct (ox) eqn:name; [|exfalso]; cycle 1
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, _) (_, assume ?P >>= _)) ] =>
+  | [ |- (gpaco5 (_sim_itree _) _ _ _ _ _ _ (_, _) (_, assume ?P >>= _)) ] =>
     let tvar := fresh "tmp" in
     let thyp := fresh "TMP" in
     remember (assume P) as tvar eqn:thyp; unfold assume in thyp; subst tvar;
     let name := fresh "_ASSUME" in
     destruct (classic P) as [name|name]; [ired_all; gstep; eapply sim_itree_take_tgt; [eauto|exists name]|contradict name]; cycle 1
 
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, ?i_src) (_, ?i_tgt)) ] =>
+  | [ |- (gpaco5 (_sim_itree _) _ _ _ _ _ _ (_, ?i_src) (_, ?i_tgt)) ] =>
     seal i_src; gstep; econs; eauto; unseal i_src
   end
 .
@@ -1914,14 +1950,14 @@ Ltac force_r :=
 Ltac _step :=
   match goal with
   (*** blacklisting ***)
-  (* | [ |- (gpaco3 (_sim_itree wf) _ _ _ _ (_, trigger (Choose _) >>= _) (_, ?i_tgt)) ] => idtac *)
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, unwrapU ?ox >>= _) (_, _)) ] =>
+  (* | [ |- (gpaco5 (_sim_itree wf) _ _ _ _ (_, trigger (Choose _) >>= _) (_, ?i_tgt)) ] => idtac *)
+  | [ |- (gpaco5 (_sim_itree _) _ _ _ _ _ _ (_, unwrapU ?ox >>= _) (_, _)) ] =>
     let tvar := fresh "tmp" in
     let thyp := fresh "TMP" in
     remember (unwrapU ox) as tvar eqn:thyp; unfold unwrapU in thyp; subst tvar;
     let name := fresh "_UNWRAPU" in
     destruct (ox) eqn:name; [|unfold triggerUB; ired_all; _step; ss; fail]
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, assume ?P >>= _) (_, _)) ] =>
+  | [ |- (gpaco5 (_sim_itree _) _ _ _ _ _ _ (_, assume ?P >>= _) (_, _)) ] =>
     let tvar := fresh "tmp" in
     let thyp := fresh "TMP" in
     remember (assume P) as tvar eqn:thyp; unfold assume in thyp; subst tvar;
@@ -1929,14 +1965,14 @@ Ltac _step :=
     ired_all; gstep; eapply sim_itree_take_src; [apply Nat.lt_succ_diag_r|]; intro name
 
   (*** blacklisting ***)
-  (* | [ |- (gpaco3 (_sim_itree wf) _ _ _ _ (_, _) (_, trigger (Take _) >>= _)) ] => idtac *)
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, _) (_, unwrapN ?ox >>= _)) ] =>
+  (* | [ |- (gpaco5 (_sim_itree wf) _ _ _ _ (_, _) (_, trigger (Take _) >>= _)) ] => idtac *)
+  | [ |- (gpaco5 (_sim_itree _) _ _ _ _ _ _ (_, _) (_, unwrapN ?ox >>= _)) ] =>
     let tvar := fresh "tmp" in
     let thyp := fresh "TMP" in
     remember (unwrapN ox) as tvar eqn:thyp; unfold unwrapN in thyp; subst tvar;
     let name := fresh "_UNWRAPN" in
     destruct (ox) eqn:name; [|unfold triggerNB; ired_all; _step; ss; fail]
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, _) (_, guarantee ?P >>= _)) ] =>
+  | [ |- (gpaco5 (_sim_itree _) _ _ _ _ _ _ (_, _) (_, guarantee ?P >>= _)) ] =>
     let tvar := fresh "tmp" in
     let thyp := fresh "TMP" in
     remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar;
@@ -1958,6 +1994,6 @@ Ltac steps := repeat ((*** pre processing ***) prep; try _step; (*** post proces
 
 Notation "wf n '------------------------------------------------------------------' src0 tgt0 '------------------------------------------------------------------' src1 tgt1 '------------------------------------------------------------------' src2 tgt2"
   :=
-    (gpaco3 (_sim_itree wf) _ _ _ n (([(_, src0)], src1), src2) (([(_, tgt0)], tgt1), tgt2))
+    (gpaco5 (_sim_itree wf) _ _ _ _ _ n (([(_, src0)], src1), src2) (([(_, tgt0)], tgt1), tgt2))
       (at level 60,
        format "wf  n '//' '------------------------------------------------------------------' '//' src0 '//' tgt0 '//' '------------------------------------------------------------------' '//' src1 '//' tgt1 '//' '------------------------------------------------------------------' '//' src2 '//' '//' '//' tgt2 '//' ").
