@@ -285,7 +285,7 @@ Section SIM.
                  ((mrs_tgt0, fr_tgt0), trigger (FGet) >>= k_tgt)
   .
 
-  Lemma safe_sim_sim (r: forall R (RR: Σ -> Σ -> R -> R -> Prop),
+  Lemma safe_sim_sim (r: forall R (RR: ((alist mname (Σ * Any.t)) * Σ) -> ((alist mname (Σ * Any.t)) * Σ) -> R -> R -> Prop),
                          nat -> relation (alist string (Σ * Any.t) * Σ * itree Es R)):
     _safe_sim_itree (r Any.t (fun _ _ => @eq Any.t))
     <3=

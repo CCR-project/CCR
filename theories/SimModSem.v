@@ -180,19 +180,20 @@ Section SIM.
   (* Let st_local: Type := (list (string * GRA) * GRA). *)
   Let st_local: Type := ((alist mname (Σ * Any.t)) * Σ).
 
+
   Let W: Type := (alist mname (Σ * Any.t)) * (alist mname (Σ * Any.t)).
   Variable wf: W -> Prop.
   Variable le: relation W.
   Hypothesis le_PreOrder: PreOrder le.
 
-  Variant _sim_itree (sim_itree: forall (R: Type) (RR: Σ -> Σ -> R -> R -> Prop), nat -> relation (st_local * (itree Es R)))
-          {R} (RR: Σ -> Σ -> R -> R -> Prop)
+  Variant _sim_itree (sim_itree: forall (R: Type) (RR: st_local -> st_local -> R -> R -> Prop), nat -> relation (st_local * (itree Es R)))
+          {R} (RR: st_local -> st_local -> R -> R -> Prop)
     : nat -> relation (st_local * (itree Es R)) :=
   | sim_itree_ret
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       (WF: wf (mrs_src0, mrs_tgt0))
       v_src v_tgt
-      (RET: RR fr_src0 fr_tgt0 v_src v_tgt)
+      (RET: RR (mrs_src0, fr_src0) (mrs_tgt0, fr_tgt0) v_src v_tgt)
     :
       _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), (Ret v_src)) ((mrs_tgt0, fr_tgt0), (Ret v_tgt))
   | sim_itree_tau
@@ -487,7 +488,31 @@ Section SIM.
 
   Hint Constructors _sim_itree.
   Hint Unfold sim_itree.
-  Hint Resolve sim_itree: paco.
+  Hint Resolve sim_itree_mon: paco.
+
+  Lemma sim_itree_mon_ord r S SS i0 i1 (ORD: (i0 <= i1)%nat): @_sim_itree r S SS i0 <2= @_sim_itree r S SS i1.
+  Proof.
+    ii. inv PR; try (by econs; et).
+    (* - econs; try apply SIM; et. etrans; et. *)
+    - econs; try apply SIM; et. eapply Nat.lt_le_trans; et.
+    - econs; try apply SIM; et. eapply Nat.lt_le_trans; et.
+    - econs; try apply SIM; et. eapply Nat.lt_le_trans; et.
+    - econs; try apply SIM; et. eapply Nat.lt_le_trans; et.
+    - econs; try apply SIM; et. eapply Nat.lt_le_trans; et.
+    - econs; try apply SIM; et. eapply Nat.lt_le_trans; et.
+    - econs; try apply SIM; et. eapply Nat.lt_le_trans; et.
+    - econs; try apply SIM; et. eapply Nat.lt_le_trans; et.
+    - econs; try apply SIM; et. eapply Nat.lt_le_trans; et.
+    - econs; try apply SIM; et. eapply Nat.lt_le_trans; et.
+    - econs; try apply SIM; et. eapply Nat.lt_le_trans; et.
+    - econs; try apply SIM; et. eapply Nat.lt_le_trans; et.
+    - econs; try apply SIM; et. eapply Nat.lt_le_trans; et.
+    - econs; try apply SIM; et. eapply Nat.lt_le_trans; et.
+    - econs; try apply SIM; et. eapply Nat.lt_le_trans; et.
+    - econs; try apply SIM; et. eapply Nat.lt_le_trans; et.
+    - econs; try apply SIM; et. eapply Nat.lt_le_trans; et.
+    - econs; try apply SIM; et. eapply Nat.lt_le_trans; et.
+  Qed.
 
   Definition sim_fsem: relation (Any.t -> itree Es Any.t) :=
     (eq ==> (fun it_src it_tgt => forall mrs_src mrs_tgt (SIMMRS: wf (mrs_src, mrs_tgt)),
@@ -497,39 +522,141 @@ Section SIM.
 
   Definition sim_fnsem: relation (string * (Any.t -> itree Es Any.t)) := RelProd eq sim_fsem.
 
-  Variant bindR (r s: forall S (SS: S -> S -> Prop), Ordinal.t -> (itree eventE S) -> (itree eventE S) -> Prop):
-    forall S (SS: S -> S -> Prop), Ordinal.t -> (itree eventE S) -> (itree eventE S) -> Prop :=
-  | bindR_intro
+  Variant lbindR (r s: forall S (SS: ((alist mname (Σ * Any.t)) * Σ) -> ((alist mname (Σ * Any.t)) * Σ) -> S -> S -> Prop), nat -> relation (((alist mname (Σ * Any.t)) * Σ) * (itree Es S))):
+    forall S (SS: ((alist mname (Σ * Any.t)) * Σ) -> ((alist mname (Σ * Any.t)) * Σ) -> S -> S -> Prop), nat -> relation (((alist mname (Σ * Any.t)) * Σ) * (itree Es S)) :=
+  | lbindR_intro
       o0 o1
 
       R RR
-      (i_src i_tgt: itree eventE R)
-      (SIM: r _ RR o0 i_src i_tgt)
+      (st_src0 st_tgt0: ((alist mname (Σ * Any.t)) * Σ))
+      (i_src i_tgt: itree Es R)
+      (SIM: r _ RR o0 (st_src0, i_src) (st_tgt0, i_tgt))
 
       S SS
-      (k_src k_tgt: ktree eventE R S)
-      (SIMK: forall vret_src vret_tgt (SIM: RR vret_src vret_tgt), s _ SS o1 (k_src vret_src) (k_tgt vret_tgt))
+      (k_src k_tgt: ktree Es R S)
+      (SIMK: forall st_src1 st_tgt1 vret_src vret_tgt (SIM: RR st_src1 st_tgt1 vret_src vret_tgt), s _ SS o1 (st_src1, k_src vret_src) (st_tgt1, k_tgt vret_tgt))
     :
-      (* bindR r s (Ordinal.add o0 o1) (ITree.bind i_src k_src) (ITree.bind i_tgt k_tgt) *)
-      bindR r s SS (Ordinal.add o1 o0) (ITree.bind i_src k_src) (ITree.bind i_tgt k_tgt)
+      lbindR r s SS (o1 + o0)%nat (st_src0, ITree.bind i_src k_src) (st_tgt0, ITree.bind i_tgt k_tgt)
   .
 
-  Hint Constructors bindR: core.
+  Hint Constructors lbindR: core.
 
-  Lemma bindR_mon
+  Lemma lbindR_mon
         r1 r2 s1 s2
         (LEr: r1 <5= r2) (LEs: s1 <5= s2)
     :
-      bindR r1 s1 <5= bindR r2 s2
+      lbindR r1 s1 <5= lbindR r2 s2
   .
   Proof. ii. destruct PR; econs; et. Qed.
 
-  Definition bindC r := bindR r r.
-  Hint Unfold bindC: core.
+  Definition lbindC r := lbindR r r.
+  Hint Unfold lbindC: core.
 
+  Lemma lbindC_wrespectful: wrespectful5 (_sim_itree) lbindC.
+  Proof.
+    econstructor; repeat intro.
+    { eapply lbindR_mon; eauto. }
+    rename l into llll.
+    eapply lbindR_mon in PR; cycle 1.
+    { eapply GF. }
+    { i. eapply PR0. }
+    inv PR. csc. inv SIM.
+    + rewrite ! bind_ret_l. exploit SIMK; eauto. i.
+      eapply sim_itree_mon_ord.
+      { instantiate (1:=o1). eapply Nat.le_add_r. }
+      eapply sim_itree_mon; eauto with paco.
+    + rewrite ! bind_tau. econs; eauto.
+      econs 2; eauto with paco. econs; eauto with paco.
+    + rewrite ! bind_bind. econs; eauto.
+      i. exploit K; eauto. i. des. eexists.
+      eapply rclo5_clo_base. econs; eauto.
+    + rewrite ! bind_bind. econs; eauto.
+      i. exploit K; eauto. i. des. eexists.
+      eapply rclo5_clo_base. econs; eauto.
+    + rewrite ! bind_bind. econs; eauto.
+      i. exploit K; eauto. i. des. esplits.
+      eapply rclo5_clo_base. econs; eauto.
+    + rewrite ! bind_bind. econs; eauto.
+      i. exploit K; eauto. i. des. esplits.
+      eapply rclo5_clo_base. econs; eauto.
+    + rewrite ! bind_bind. econs; eauto.
+      eapply rclo5_clo_base. econs; eauto.
+    + rewrite ! bind_bind. econs; eauto.
+      eapply rclo5_clo_base. econs; eauto.
+    + rewrite ! bind_bind. econs; eauto.
+      eapply rclo5_clo_base. econs; eauto.
+    + rewrite ! bind_bind. econs; eauto.
+      eapply rclo5_clo_base. econs; eauto.
+    + rewrite ! bind_bind. econs; eauto.
+      eapply rclo5_clo_base. econs; eauto.
+    + rewrite ! bind_bind. econs; eauto.
+      eapply rclo5_clo_base. econs; eauto.
+    + rewrite ! bind_tau. econs; eauto.
+      { eapply plus_lt_compat_l; eauto. }
+      econs 2; eauto with paco. econs; eauto with paco.
+    + rewrite ! bind_bind. des. econs; eauto.
+      { eapply plus_lt_compat_l; eauto. }
+      eexists. eapply rclo5_clo_base. econs; eauto.
+    + rewrite ! bind_bind. econs; eauto.
+      { eapply plus_lt_compat_l; eauto. }
+      i. hexploit K; eauto. i.
+      eapply rclo5_clo_base. econs; eauto.
+    + rewrite ! bind_bind. econs; eauto.
+      { eapply plus_lt_compat_l; eauto. }
+      eapply rclo5_clo_base. econs; eauto.
+    + rewrite ! bind_bind. econs; eauto.
+      { eapply plus_lt_compat_l; eauto. }
+      eapply rclo5_clo_base. econs; eauto.
+    + rewrite ! bind_bind. econs; eauto.
+      { eapply plus_lt_compat_l; eauto. }
+      eapply rclo5_clo_base. econs; eauto.
+    + rewrite ! bind_bind. econs; eauto.
+      { eapply plus_lt_compat_l; eauto. }
+      eapply rclo5_clo_base. econs; eauto.
+    + rewrite ! bind_bind. econs; eauto.
+      { eapply plus_lt_compat_l; eauto. }
+      eapply rclo5_clo_base. econs; eauto.
+    + rewrite ! bind_bind. econs; eauto.
+      { eapply plus_lt_compat_l; eauto. }
+      eapply rclo5_clo_base. econs; eauto.
+    + rewrite ! bind_tau. econs; eauto.
+      { eapply plus_lt_compat_l; eauto. }
+      econs 2; eauto with paco. econs; eauto with paco.
+    + rewrite ! bind_bind. econs; eauto.
+      { eapply plus_lt_compat_l; eauto. }
+      i. hexploit K; eauto. i.
+      eapply rclo5_clo_base. econs; eauto.
+    + rewrite ! bind_bind. des. econs; eauto.
+      { eapply plus_lt_compat_l; eauto. }
+      eexists. eapply rclo5_clo_base. econs; eauto.
+    + rewrite ! bind_bind. econs; eauto.
+      { eapply plus_lt_compat_l; eauto. }
+      eapply rclo5_clo_base. econs; eauto.
+    + rewrite ! bind_bind. econs; eauto.
+      { eapply plus_lt_compat_l; eauto. }
+      eapply rclo5_clo_base. econs; eauto.
+    + rewrite ! bind_bind. econs; eauto.
+      { eapply plus_lt_compat_l; eauto. }
+      eapply rclo5_clo_base. econs; eauto.
+    + rewrite ! bind_bind. econs; eauto.
+      { eapply plus_lt_compat_l; eauto. }
+      eapply rclo5_clo_base. econs; eauto.
+    + rewrite ! bind_bind. econs; eauto.
+      { eapply plus_lt_compat_l; eauto. }
+      eapply rclo5_clo_base. econs; eauto.
+    + rewrite ! bind_bind. econs; eauto.
+      { eapply plus_lt_compat_l; eauto. }
+      eapply rclo5_clo_base. econs; eauto.
+  Qed.
+
+  Lemma lbindC_spec: lbindC <6= gupaco5 (_sim_itree) (cpn5 (_sim_itree)).
+  Proof.
+    intros. eapply wrespect5_uclo; eauto with paco. eapply lbindC_wrespectful.
+  Qed.
 
 End SIM.
 Hint Resolve sim_itree_mon: paco.
+
 
 Variant _wf_function `{Σ: GRA.t} (ms: list mname)
         (wf_function: itree Es Any.t -> Prop) (st0: itree Es Any.t): Prop :=
@@ -639,30 +766,28 @@ Lemma self_sim_itree `{Σ: GRA.t} (ms: list mname):
     @sim_itree _ (fun p => fst p = snd p /\ wf_mrs ms (fst p))
                n ((mrs, fr), st) ((mrs, fr), st).
 Proof.
-Admitted.
-(*   Set Printing All. *)
-(*   pcofix CIH. i. pfold. punfold WF. inv WF; pclearbot. *)
-(*   - eapply sim_itree_ret. ss. *)
-(*   - eapply sim_itree_tau. right. eapply CIH; ss. *)
-(*   - eapply sim_itree_choose_both. i. exists x_tgt. *)
-(*     eexists. right. eapply CIH; ss. *)
-(*   - eapply sim_itree_take_both. i. exists x_src. *)
-(*     eexists. right. eapply CIH; ss. *)
-(*   - hexploit (MRS mn); eauto. i. des. *)
-(*     eapply sim_itree_pput_both; eauto. *)
-(*     right. eapply CIH; ss. apply wf_mrs_add. auto. *)
-(*   - hexploit (MRS mn); eauto. i. des. *)
-(*     eapply sim_itree_mput_both; eauto. right. eapply CIH; ss. *)
-(*     eapply wf_mrs_add; eauto. *)
-(*   - eapply sim_itree_fput_both; eauto. right. eapply CIH; ss. *)
-(*   - hexploit (MRS mn); eauto. i. des. *)
-(*     eapply sim_itree_pget_both; eauto. *)
-(*     right. eapply CIH; ss. *)
-(*   - hexploit (MRS mn); eauto. i. des. *)
-(*     eapply sim_itree_mget_both; eauto. right. eapply CIH; ss. *)
-(*   - eapply sim_itree_fget_both; eauto. right. eapply CIH; ss. *)
-(*     Unshelve. all: exact 0. *)
-(* Qed. *)
+  pcofix CIH. i. pfold. punfold WF. inv WF; pclearbot.
+  - eapply sim_itree_ret; ss.
+  - eapply sim_itree_tau. right. eapply CIH; ss.
+  - eapply sim_itree_choose_both. i. exists x_tgt.
+    eexists. right. eapply CIH; ss.
+  - eapply sim_itree_take_both. i. exists x_src.
+    eexists. right. eapply CIH; ss.
+  - hexploit (MRS mn); eauto. i. des.
+    eapply sim_itree_pput_both; eauto.
+    right. eapply CIH; ss. apply wf_mrs_add. auto.
+  - hexploit (MRS mn); eauto. i. des.
+    eapply sim_itree_mput_both; eauto. right. eapply CIH; ss.
+    eapply wf_mrs_add; eauto.
+  - eapply sim_itree_fput_both; eauto. right. eapply CIH; ss.
+  - hexploit (MRS mn); eauto. i. des.
+    eapply sim_itree_pget_both; eauto.
+    right. eapply CIH; ss.
+  - hexploit (MRS mn); eauto. i. des.
+    eapply sim_itree_mget_both; eauto. right. eapply CIH; ss.
+  - eapply sim_itree_fget_both; eauto. right. eapply CIH; ss.
+    Unshelve. all: exact 0.
+Qed.
 
 
 
