@@ -334,7 +334,7 @@ Proof.
 Qed.
 
 Lemma sim_l_trigger_ret_rev `{Σ: GRA.t}
-      (R R_src R_tgt: Type) (RR: _ -> _ -> R_src -> R_tgt -> Prop)
+      (R_src R_tgt: Type) (RR: _ -> _ -> R_src -> R_tgt -> Prop)
       a b c d e f g (h: Es R_src)
       (SIM: gpaco6 (_sim_itree c) d e f _ _ RR g (b, ` x: _ <- trigger h;; Ret x) a)
   :
