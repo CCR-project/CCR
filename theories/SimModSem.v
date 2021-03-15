@@ -1555,27 +1555,24 @@ Section SIMMOD.
               (EQVSRC: eqv mrsl_src mrs_src mps_src)
               (EQVTGT: eqv mrsl_tgt mrs_tgt mps_tgt)
               frs_src frs_tgt,
-       forall (R: Type) (RR: R -> R -> Prop)
-              (TY: R = (r_state * p_state * Any.t)%type)
-              (REL: RR ~= fun (vret_src vret_tgt: r_state * p_state * Any.t) =>
-                            exists fr_src' fr_tgt',
-                              (<<WF: lift_wf wf (fst (fst (fst vret_src))) (fst (fst (fst vret_tgt))) (snd (fst vret_src)) (snd (fst vret_tgt))>>) /\
-                              (<<FRSRC: snd (fst (fst vret_src)) = fr_src'::frs_src>>) /\
-                              (<<FRTGT: snd (fst (fst vret_tgt)) = fr_tgt'::frs_tgt>>) /\
-                              (<<VAL: snd vret_src = snd vret_tgt>>))
-              i_src i_tgt
-              (SRC: i_src ~= (interp_Es
-                                (ModSem.prog ms_src)
-                                f_src
-                                (mrs_src, fr_src::frs_src, mps_src)))
-              (TGT: i_tgt ~= (interp_Es
-                                (ModSem.prog ms_tgt)
-                                f_tgt
-                                (mrs_tgt, fr_tgt::frs_tgt, mps_tgt))),
-         simg RR (arith (Ordinal.from_nat n) 4 4) i_src i_tgt.
+         simg (fun (vret_src vret_tgt: r_state * p_state * Any.t) =>
+                 exists fr_src' fr_tgt',
+                   (<<WF: lift_wf wf (fst (fst (fst vret_src))) (fst (fst (fst vret_tgt))) (snd (fst vret_src)) (snd (fst vret_tgt))>>) /\
+                   (<<FRSRC: snd (fst (fst vret_src)) = fr_src'::frs_src>>) /\
+                   (<<FRTGT: snd (fst (fst vret_tgt)) = fr_tgt'::frs_tgt>>) /\
+                   (<<VAL: snd vret_src = snd vret_tgt>>)) (arith (Ordinal.from_nat n) 4 4)
+              (interp_Es
+                 (ModSem.prog ms_src)
+                 f_src
+                 (mrs_src, fr_src::frs_src, mps_src))
+              (interp_Es
+                 (ModSem.prog ms_tgt)
+                 f_tgt
+                 (mrs_tgt, fr_tgt::frs_tgt, mps_tgt)).
    Proof.
-     ginit. gcofix CIH. i. subst.
-     punfold SIM. gstep. inv SIM; pclearbot; ss; mgo; ss; mgo.
+     ginit. gcofix CIH. i.
+     punfold SIM. gstep.
+     (* inv SIM; pclearbot; ss; mgo; ss; mgo. *)
      (* - econs. esplits; ss. econs; eauto. *)
      (* - econs; ss. gbase. *)
      (*   eapply CIH; eauto. *)
