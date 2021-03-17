@@ -100,14 +100,15 @@ Section IRIS.
   Definition Upd2 (P: iProp): iProp := fun r0 => forall ctx, URA.wf (r0 ⋅ ctx) -> exists r1, URA.wf (r1 ⋅ ctx) /\ P r1. (**** Iris version ****)
   (* Definition Own (r0: Σ): iProp := fun r1 => r0 = r1. *)
 
-  Definition Impl (P Q: iProp): Prop := P <1= Q.
-  Definition Iff (P Q: iProp): Prop := Impl P Q /\ Impl Q P.
+  (* Definition Entails (P Q: iProp): Prop := forall r (WF: URA.wf r), P r -> Q r. *)
+  Definition Entails (P Q: iProp): Prop := P <1= Q.
+  Definition Equiv (P Q: iProp): Prop := Entails P Q /\ Entails Q P.
 
 End IRIS.
 
-Infix "⊢" := Impl (at level 60).
+Infix "⊢" := Entails (at level 61).
 (* Notation "P '-|-' Q" := (Iff P Q) (at level 60). *)
-Infix "⊣⊢" := Iff (at level 60).
+Infix "⊣⊢" := Equiv (at level 60).
 Infix "**" := Sepconj (at level 60).
 Infix "∧" := And (at level 60).
 Infix "∨" := Or (at level 60).
@@ -120,6 +121,24 @@ Notation "|=> P" := (Upd P) (at level 60).
 
 Section IRIS.
   Context {Σ: GRA.t}.
+  Goal (⌜True⌝ -* ⌜False⌝ -* ⌜False⌝) ε. ii; et. Qed.
+  Goal (⌜True⌝ ⊢ ⌜True⌝). ii; et. Qed.
+  Goal (⌜True⌝ ⊢ ⌜False⌝ -* ⌜False⌝). ii; et. Qed.
+  Goal (⌜True⌝ ⊢ ⌜False⌝ -* ⌜True⌝ -* ⌜False⌝). ii; et. Qed.
+
+  Local Declare Scope iprop_scope.
+  Local Declare Scope boo_scope.
+  Infix "-#" := Wand (at level 60, right associativity): iprop_scope.
+  Infix "-#" := Entails (at level 60, right associativity).
+  Bind Scope iprop_scope with iProp.
+  Bind Scope Pure with iProp.
+  Bind Scope iprop_scope with Σ.
+  (* Local Open Scope iprop_scope. *)
+  Fail Goal (⌜True⌝ -# ⌜False⌝ -# ⌜True⌝ -# ⌜False⌝).
+End IRIS.
+
+Section IRIS.
+  Context {Σ: GRA.t}.
 
   Lemma Own_extends
         (a b: Σ)
@@ -129,15 +148,15 @@ Section IRIS.
   .
   Proof. ii. ss. r in PR. r. etrans; et. Qed.
 
-  Lemma Iff_eq
-        P Q
-        (IFF: P ⊣⊢ Q)
-    :
-      P = Q
-  .
-  Proof.
-    apply func_ext. i. apply prop_ext. r in IFF. des. split; i; et.
-  Qed.
+  (* Lemma Iff_eq *)
+  (*       P Q *)
+  (*       (IFF: P ⊣⊢ Q) *)
+  (*   : *)
+  (*     P = Q *)
+  (* . *)
+  (* Proof. *)
+  (*   apply func_ext. i. apply prop_ext. r in IFF. des. split; i; et. *)
+  (* Qed. *)
 
   Lemma own_sep'
         (r0 r1 r2: Σ)
@@ -146,13 +165,13 @@ Section IRIS.
       Own r0 = Sepconj (Own r1) (Own r2)
   .
   Proof.
-    apply Iff_eq.
+    apply func_ext. i. apply prop_ext.
     split; ii.
-    - clarify. r in PR. r. r in PR. des. exists r1, (r2 ⋅ ctx). esplits; et.
+    - clarify. r in H. r. r in H. des. exists r1, (r2 ⋅ ctx). esplits; et.
       + rewrite URA.add_assoc. ss.
       + refl.
       + rr. esplits; et.
-    - r in PR. r. des. clarify. r in PR0. r in PR1. etrans.
+    - r in H. r. des. clarify. r in H0. r in H1. etrans.
       { eapply URA.extends_add; et. }
       rewrite ! (URA.add_comm a).
       eapply URA.extends_add; et.
@@ -187,7 +206,7 @@ Section IRIS.
       (Own r1) ⊢ (Upd2 (Exists b, ⌜B b⌝ ∧ (Own b)))
   .
   Proof.
-    ii. r in UPD. rr in PR. des. subst. exploit UPD; et.
+    ii. r in UPD. rr in PR. des. subst. exploit UPD.
     { instantiate (1:=_ ⋅ _). rewrite URA.add_assoc. et. }
     i; des. rewrite URA.add_assoc in WF.
     eexists (b ⋅ ctx0).
