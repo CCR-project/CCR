@@ -301,6 +301,23 @@ Ltac iClears' :=
   end;
   iCheckWf.
 
+Ltac iAlignResource :=
+  all_once_fast ltac:(fun H => let ty := (type of H) in
+                               match ty with
+                               | URA.car => move H at top
+                               | _ => idtac
+                               end).
+
+Ltac iGuard :=
+  match goal with
+  | GWF: (__gwf_mark__ ?past ?cur) |- _ =>
+    all_once_fast ltac:(fun H => match (type of H) with
+                                 | iHyp _ (_ ⋅ _) => fail 3
+                                 | iHyp _ ?r => tryif r_in r cur then idtac else fail 3
+                                 | _ => idtac
+                                 end)
+  end.
+
 Ltac iRefresh :=
   clear_bar;
   bar;
@@ -324,7 +341,9 @@ Ltac iRefresh :=
          end
        end);
   try iClears;
-  try iClears'
+  try iClears';
+  iAlignResource
+  (* iGuard *)
 .
 
 Ltac iSplitP :=
@@ -376,7 +395,7 @@ Ltac iIntro :=
   let A := fresh "A" in
   let wf := fresh "wf" in
   let GWF := fresh "GWF" in
-  intros ? wf A; eassert(GWF: ☀) by (split; [refl|exact wf]); iRefresh.
+  intros ? wf A; eassert(GWF: ☀) by (split; [refl|exact wf]); clear wf; iRefresh.
 Ltac iSpecialize H G :=
   let rp := r_gather G in
   specialize (H rp); eapply hexploit_mp in H; [|on_gwf ltac:(fun GWF => eapply wf_downward; cycle 1; [by apply GWF|r_equalize; r_solve])];
