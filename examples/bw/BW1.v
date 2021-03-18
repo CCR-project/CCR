@@ -26,15 +26,15 @@ Section BW.
 
   Let get_spec:  fspec := (mk_simple "BW"
                                      (fun b varg o =>
-                                        iHyp (Own (GRA.embed (bw_frag b)) ** ⌜o = ord_pure 1⌝))
+                                        (Own (GRA.embed (bw_frag b)) ** ⌜o = ord_pure 1⌝))
                                      (fun b vret =>
-                                        iHyp (Own (GRA.embed (bw_frag b)) ** ⌜vret = (Vint (if b then 0xffffff else 0))↑⌝))).
+                                        (Own (GRA.embed (bw_frag b)) ** ⌜vret = (Vint (if b then 0xffffff else 0))↑⌝))).
 
   Let flip_spec: fspec := (mk_simple "BW"
                                      (fun b varg o =>
-                                        iHyp (Own (GRA.embed (bw_frag b)) ** ⌜o = ord_pure 1⌝))
+                                        (Own (GRA.embed (bw_frag b)) ** ⌜o = ord_pure 1⌝))
                                      (fun b vret =>
-                                        iHyp (Own (GRA.embed (bw_frag (negb b)))))).
+                                        (Own (GRA.embed (bw_frag (negb b)))))).
 
   Definition BWStb: list (gname * fspec) :=
     Seal.sealing "stb" [("get", get_spec) ; ("flip", flip_spec)].

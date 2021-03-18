@@ -43,6 +43,8 @@ Section IPM.
   Definition __gwf_mark__ (past cur: Σ): Prop := URA.updatable past cur /\ URA.wf cur.
   Lemma gwf_mark_spec: forall past cur, URA.updatable past cur /\ URA.wf cur <-> __gwf_mark__ past cur. refl. Qed.
   (* Opaque __gwf_mark__. *)
+  Lemma gwf_update_cur: forall past cur0 cur1, cur0 = cur1 -> __gwf_mark__ past cur0 -> __gwf_mark__ past cur1. i. subst. eauto. Qed.
+  Lemma gwf_dummy: (__gwf_mark__ ε ε). Proof. split; try refl. apply URA.wf_unit. Qed.
 
 End IPM.
 
@@ -474,6 +476,16 @@ Ltac iRefresh :=
   iGuard; iGuard'
 .
 
+Ltac until_bar TAC :=
+  (on_last_hyp ltac:(fun id' =>
+                       match type of id' with
+                       | IPROPS => intros
+                       | _ => TAC id'; revert id'; until_bar TAC
+                       end)).
+
+Ltac rr_until_bar := until_bar ltac:(fun H => rr in H).
+Ltac r_until_bar := until_bar ltac:(fun H => r in H).
+
 (*********************************************************************************************************)
 (*********************************************************************************************************)
 (*********************************************************************************************************)
@@ -636,6 +648,27 @@ Ltac iAssert H Abody :=
     end;
     [|on_gwf ltac:(fun GWF => rewrite <- URA.unit_id in GWF; set (my_r:=ε) in GWF, A; clearbody my_r);
      iSpecialize A H]
+  end
+.
+Ltac iUpdate H :=
+  eapply upd_update in H; [|on_gwf ltac:(fun GWF => eapply wf_downward; [|eapply GWF]); eexists ε; r_equalize; r_solve; fail];
+  let GWF := fresh "GWF" in
+  let wf := fresh "WF" in
+  let upd := fresh "UPD" in
+  destruct H as [? [H [wf upd]]];
+  on_gwf ltac:(fun _GWF => eassert(GWF: ☀) by
+                   (split; [etrans; [apply _GWF|etrans; [|apply upd]]; eapply URA.extends_updatable; r_equalize; r_solve; fail|exact wf]);
+                           clear wf upd; iRefresh; clear _GWF).
+
+Ltac iImpure H := let name := fresh "my_r" in
+                  specialize (H ε URA.wf_unit I); rewrite intro_iHyp in H;
+                  on_gwf ltac:(fun GWF => rewrite <- URA.unit_id in GWF; set (name:=ε) in GWF, H; clearbody name).
+Ltac iMod H :=
+  match type of H with
+  | Impure _ => iImpure H
+  | iHyp (⌜ _ ⌝) _ => iPure H
+  | iHyp ( |=> _ ) _ => iUpdate H
+  | _ => fail
   end
 .
 
