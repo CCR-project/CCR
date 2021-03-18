@@ -301,6 +301,35 @@ Ltac iClears' :=
   end;
   iCheckWf.
 
+Ltac iAlignResource :=
+  all_once_fast ltac:(fun H => let ty := (type of H) in
+                               match ty with
+                               | URA.car => move H at top
+                               | _ => idtac
+                               end).
+
+Ltac iGuard :=
+  match goal with
+  | GWF: (__gwf_mark__ ?past ?cur) |- _ =>
+    all_once_fast ltac:(fun H => match (type of H) with
+                                 | iHyp _ (_ ⋅ _) => fail 3
+                                 | iHyp _ (@URA.unit _) => fail 3
+                                 | iHyp _ ?r => tryif r_in r cur then idtac else fail 3
+                                 | _ => idtac
+                                 end)
+  end.
+Ltac iGuard' :=
+  match goal with
+  | [GWF: (__gwf_mark__ ?past _) |- _ ] =>
+    match goal with
+    | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (([(_, (?mr, _))], ?fr), _)  _) ] =>
+      tryif r_contains past (mr ⋅ fr)
+      then idtac
+      else fail 2
+    | _ => idtac
+    end
+  end
+.
 Ltac iRefresh :=
   clear_bar;
   bar;
@@ -324,7 +353,9 @@ Ltac iRefresh :=
          end
        end);
   try iClears;
-  try iClears'
+  try iClears';
+  iAlignResource;
+  iGuard; iGuard'
 .
 
 Ltac iSplitP :=
@@ -376,23 +407,7 @@ Ltac iIntro :=
   let A := fresh "A" in
   let wf := fresh "wf" in
   let GWF := fresh "GWF" in
-  intros ? wf A; eassert(GWF: ☀) by (split; [refl|exact wf]); iRefresh.
-Ltac iSpecialize H G :=
-  let rp := r_gather G in
-  specialize (H rp); eapply hexploit_mp in H; [|on_gwf ltac:(fun GWF => eapply wf_downward; cycle 1; [by apply GWF|r_equalize; r_solve])];
-  specialize (H G); rewrite intro_iHyp in H; clear G; iRefresh
-.
-Ltac iAssert H Abody :=
-  let A := fresh "A" in
-  match type of H with
-  | iHyp ?Hbody ?rH =>
-    match Abody with
-    | ltac_wild => eassert(A: iHyp (Hbody -* _) ε)
-    | _ => assert(A: iHyp (Hbody -* Abody) ε)
-    end;
-    [|iSpecialize A H; rewrite URA.unit_idl in A]
-  end
-.
+  intros ? wf A; eassert(GWF: ☀) by (split; [refl|exact wf]); clear wf; iRefresh.
 
 Ltac iOwnWf G :=
   match goal with
@@ -440,6 +455,123 @@ Ltac hcall_tac x o MR_SRC1 FR_SRC1 RARG_SRC :=
   end
 .
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Ltac bring_front H r0 :=
+  repeat rewrite URA.add_assoc in H;
+  try rewrite (URA.add_comm _ r0) in H; (*** probably already sorted; so "try" ***)
+  repeat rewrite URA.add_assoc in H;
+
+  (*** the merged one should be in "cur" of GWF ***)
+  (* match goal with *)
+  (* | GWF: __gwf_mark__ ?past ?cur |- _ => *)
+
+  (* end. *)
+  on_gwf ltac:(fun GWF =>
+                 erewrite f_equal in GWF; [|repeat rewrite URA.add_assoc;
+                                            try rewrite (URA.add_comm _ r0); (*** probably already sorted; so "try" ***)
+                                            repeat rewrite URA.add_assoc; refl]; match goal with | bar: IPROPS |- _ => move GWF after bar end);
+
+  (***
+(1) Goal is iProp --> should merge in the goal too; otherwise merged one will be cleared later
+(2) Goal is sim ----> should not merge in the goal; (mr + fr) should match with "past" of GWF, but this property gets broken
+   ***)
+  match goal with
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _  _) ] => idtac
+  (* | [ |- iHyp _ _ ] => *)
+  (*   repeat rewrite URA.add_assoc; *)
+  (*   (*** corner case: goal is pure \/ probably already sorted ***) *)
+  (*   try rewrite (URA.add_comm _ r0); (*** probably already sorted; so "try" ***) *)
+  (*   repeat rewrite URA.add_assoc *)
+  | _ =>
+    repeat rewrite URA.add_assoc;
+    (*** corner case: goal is pure \/ probably already sorted ***)
+    try rewrite (URA.add_comm _ r0); (*** probably already sorted; so "try" ***)
+    repeat rewrite URA.add_assoc
+  end
+.
+Ltac r_merge H r0 r1 :=
+  bring_front H r1; bring_front H r0;
+
+  let tmp := fresh "tmp" in
+  let tmpH := fresh "tmpH" in
+  (* remember (r0 ⋅ r1) as tmp eqn:tmpH in *; *)
+  set (tmp:= r0 ⋅ r1) in *;
+  (* remember (r0 ⋅ r1) as tmp eqn:tmpH; *)
+  match goal with
+  | [GWF: (__gwf_mark__ ?past ?cur) |- _] =>
+    match past with
+    | cur => unfold tmp in GWF at 1
+    | _ =>
+      (* idtac past; idtac cur; idtac tmp; idtac r0; idtac r1 ; *)
+      (*** corner case: past may or may not contain r0 ⋅ r1 ***)
+      remember cur as ttttmp in GWF;
+      try unfold tmp in GWF at 1;
+      subst ttttmp
+            (* remember past as ttttmp in GWF; *)
+            (* unfold tmp in GWF at 1; *)
+            (* subst ttttmp *)
+    end
+      (* let ttttmp := fresh "ttttmp" in *)
+      (* (* idtac r0; idtac r1; idtac past; idtac cur; idtac tmpH; *) *)
+      (* (* let ty := (type of tmpH) in idtac ty; *) *)
+      (* remember cur as ttttmp; *)
+      (* unfold tmp in GWF; *)
+      (* (* rewrite tmpH in GWF; *) *)
+      (* subst ttttmp *)
+  end;
+  clearbody tmp
+(* clear tmpH *)
+
+
+(* on_gwf ltac:(fun GWF => rewrite tmpH in GWF at 1); *)
+.
+Ltac iMerge A0 A1 :=
+  match type of A0 with
+  | iHyp ?p0 ?r0 =>
+    match type of A1 with
+    | iHyp ?p1 ?r1 =>
+      let ttmp := fresh "ttmp" in
+      rename A0 into ttmp;
+      assert(A0: iHyp (p0 ** p1) (r0 ⋅ r1)) by (apply sepconj_merge; try assumption);
+      clear ttmp; clear A1;
+      r_merge A0 r0 r1
+    end
+  end.
+Ltac iSpecialize H G :=
+  let rh := r_gather H in
+  let rp := r_gather G in
+  specialize (H rp); eapply hexploit_mp in H; [|on_gwf ltac:(fun GWF => eapply wf_downward; cycle 1; [by apply GWF|r_equalize; r_solve])];
+  specialize (H G); rewrite intro_iHyp in H; clear G;
+  r_merge H rh rp; iRefresh
+.
+Ltac iAssert H Abody :=
+  let A := fresh "A" in
+  match type of H with
+  | iHyp ?Hbody ?rH =>
+    match Abody with
+    | ltac_wild => eassert(A: iHyp (Hbody -* _) ε)
+    | _ => assert(A: iHyp (Hbody -* Abody) ε)
+    end;
+    [|on_gwf ltac:(fun GWF => rewrite <- URA.unit_id in GWF; set (my_r:=ε) in GWF, A; clearbody my_r);
+     iSpecialize A H]
+  end
+.
+
+
+
 Section AUX.
   Context `{Σ: GRA.t}.
   Lemma own_update: forall (x y: Σ) rx ctx, URA.updatable x y -> iHyp (Own x) rx -> URA.wf (rx ⋅ ctx) ->
@@ -453,8 +585,8 @@ Section AUX.
       - eapply URA.updatable_add; try refl. eapply URA.updatable_add; try refl. et.
     }
   Qed.
-  Lemma Own_downward: forall r a0 a1, iHyp (Own r) a0 -> URA.extends a0 a1 -> iHyp (Own r) a1.
-  Proof. i. eapply Own_extends; et. Qed.
+  (* Lemma Own_downward: forall r a0 a1, iHyp (Own r) a0 -> URA.extends a0 a1 -> iHyp (Own r) a1. *)
+  (* Proof. i. eapply Own_extends; et. Qed. *)
 
   (* Lemma is_list_downward: forall ll xs a0 a1, iHyp (is_list ll xs) a0 -> URA.extends a0 a1 -> iHyp (is_list ll xs) a1. *)
   (* Proof. *)
@@ -512,83 +644,26 @@ Section AUX.
 
   Context `{@GRA.inG Echo1.echoRA Σ}.
 
-  Ltac bring_front r0 :=
-    repeat rewrite URA.add_assoc in *;
-    (*** corner case: goal is pure \/ probably already sorted ***)
-    try rewrite (URA.add_comm _ r0) in *;
-    repeat rewrite URA.add_assoc in *;
-
-    (*** somehow, * does not work well in GWF. WHY??? TODO: FIXME ***)
-    on_gwf ltac:(fun GWF =>
-                   repeat rewrite URA.add_assoc in GWF;
-                   try rewrite (URA.add_comm _ r0) in GWF;
-                   repeat rewrite URA.add_assoc in GWF) (*** probably already sorted; so "try" ***)
-  .
-  Goal forall (a b c d e: Σ), __gwf_mark__ ε (d ⋅ c) -> a ⋅ (b ⋅ c) ⋅ (d ⋅ e) = ε.
-    i. bring_front d. bring_front c.
-    match goal with | |- ?G => match G with | c ⋅ d ⋅ a ⋅ b ⋅ e = ε => idtac | _ => fail end end.
+  Goal forall (a b c d e: Σ) (GWF: __gwf_mark__ ε (d ⋅ c)), iHyp ⌜True⌝ (d ⋅ c) -> iHyp ⌜True⌝ (a ⋅ (b ⋅ c) ⋅ (d ⋅ e)).
+    i. bar. bring_front H1 d. bring_front H1 c.
+    match goal with | |- ?G => match G with | iHyp _ (c ⋅ d ⋅ a ⋅ b ⋅ e) => idtac | _ => fail end end.
   Abort.
 
-  Goal forall (a b c d e f: Σ), __gwf_mark__ (a ⋅ (b ⋅ c) ⋅ (d ⋅ e)) (a ⋅ (b ⋅ c) ⋅ (d ⋅ e)) -> a ⋅ (b ⋅ c) ⋅ (d ⋅ e) = f.
-    i. bring_front d. bring_front c.
-    match goal with | |- ?G => match G with | c ⋅ d ⋅ a ⋅ b ⋅ e = f => idtac | _ => fail end end.
-    match goal with | [H: __gwf_mark__ ?rs0 ?rs1 |- _ ] => match rs0 with | (c ⋅ d ⋅ a ⋅ b ⋅ e) => idtac | _ => fail end end.
+  Goal forall (a b c d e f: Σ) (GWF: __gwf_mark__ (a ⋅ (b ⋅ c) ⋅ (d ⋅ e)) (a ⋅ (b ⋅ c) ⋅ (d ⋅ e))), iHyp ⌜True⌝ ((a ⋅ d) ⋅ (c ⋅ b)) -> iHyp ⌜True⌝ (a ⋅ (b ⋅ c) ⋅ (d ⋅ e)).
+    i. bar. bring_front H1 d. bring_front H1 c.
+    match goal with | |- ?G => match G with | iHyp _ (c ⋅ d ⋅ a ⋅ b ⋅ e) => idtac | _ => fail end end.
+    match goal with | [H: __gwf_mark__ ?rs0 ?rs1 |- _ ] => match rs0 with | (a ⋅ (b ⋅ c) ⋅ (d ⋅ e)) => idtac | _ => fail end end.
     match goal with | [H: __gwf_mark__ ?rs0 ?rs1 |- _ ] => match rs1 with | (c ⋅ d ⋅ a ⋅ b ⋅ e) => idtac | _ => fail end end.
+    match type of H1 with | iHyp _ ?rs => match rs with | (c ⋅ d ⋅ a ⋅ b) => idtac | _ => fail end end.
   Abort.
 
-  Goal forall (a b c d e f: Σ), __gwf_mark__ ε (a ⋅ (b ⋅ c) ⋅ (d ⋅ e)) -> a ⋅ (b ⋅ c) ⋅ (d ⋅ e) = f.
-    i. bring_front d. bring_front c.
-    match goal with | |- ?G => match G with | c ⋅ d ⋅ a ⋅ b ⋅ e = f => idtac | _ => fail end end.
+  Goal forall (a b c d e f: Σ) (GWF: __gwf_mark__ ε (a ⋅ (b ⋅ c) ⋅ (d ⋅ e))), iHyp ⌜True⌝ ((a ⋅ d) ⋅ (c ⋅ b)) -> iHyp ⌜True⌝ (a ⋅ (b ⋅ c) ⋅ (d ⋅ e)).
+    i. bar. bring_front H1 d. bring_front H1 c.
+    match goal with | |- ?G => match G with | iHyp _ (c ⋅ d ⋅ a ⋅ b ⋅ e) => idtac | _ => fail end end.
     match goal with | [H: __gwf_mark__ ?rs0 ?rs1 |- _ ] => match rs0 with | ε => idtac | _ => fail end end.
     match goal with | [H: __gwf_mark__ ?rs0 ?rs1 |- _ ] => match rs1 with | (c ⋅ d ⋅ a ⋅ b ⋅ e) => idtac | _ => fail end end.
+    match type of H1 with | iHyp _ ?rs => match rs with | (c ⋅ d ⋅ a ⋅ b) => idtac | _ => fail end end.
   Abort.
-
-  Ltac iMerge A0 A1 :=
-    match type of A0 with
-    | iHyp ?p0 ?r0 =>
-      match type of A1 with
-      | iHyp ?p1 ?r1 =>
-        bring_front r1; bring_front r0;
-
-        let ttmp := fresh "ttmp" in
-        rename A0 into ttmp;
-        assert(A0: iHyp (p0 ** p1) (r0 ⋅ r1)) by (apply sepconj_merge; try assumption);
-        clear ttmp; clear A1;
-
-        let tmp := fresh "tmp" in
-        let tmpH := fresh "tmpH" in
-        (* remember (r0 ⋅ r1) as tmp eqn:tmpH in *; *)
-        set (tmp:= r0 ⋅ r1) in *;
-        (* remember (r0 ⋅ r1) as tmp eqn:tmpH; *)
-        match goal with
-        | [GWF: (__gwf_mark__ ?past ?cur) |- _] =>
-          match past with
-          | cur => unfold tmp in GWF at 1
-          | _ =>
-            (* idtac past; idtac cur; idtac tmp; idtac r0; idtac r1 ; *)
-            (*** corner case: past may or may not contain r0 ⋅ r1 ***)
-            remember cur as ttttmp in GWF;
-            try unfold tmp in GWF at 1;
-            subst ttttmp
-            (* remember past as ttttmp in GWF; *)
-            (* unfold tmp in GWF at 1; *)
-            (* subst ttttmp *)
-          end
-          (* let ttttmp := fresh "ttttmp" in *)
-          (* (* idtac r0; idtac r1; idtac past; idtac cur; idtac tmpH; *) *)
-          (* (* let ty := (type of tmpH) in idtac ty; *) *)
-          (* remember cur as ttttmp; *)
-          (* unfold tmp in GWF; *)
-          (* (* rewrite tmpH in GWF; *) *)
-          (* subst ttttmp *)
-        end;
-        clearbody tmp
-        (* clear tmpH *)
-
-
-        (* on_gwf ltac:(fun GWF => rewrite tmpH in GWF at 1); *)
-      end
-    end.
 
   Goal forall P Q, iHyp (P -* Q -* P ** Q) ε.
     i. do 2 iIntro. rewrite URA.unit_idl. (*** TODO: How can we remove this?
@@ -624,34 +699,41 @@ I needed to write this because "ss" does not work. create iApply that understand
     iSplit A A0; ss; try r_solve.
   Qed.
 
-  Lemma echo_ra_merge2
-        ll0 ns0 ll1 ns1
-    :
-      iHyp (Own (GRA.embed (echo_black ll0 ns0)) -* Own (GRA.embed (echo_white ll1 ns1))
-                -* (⌜ll1 = ll0 /\ ns1 = ns0⌝ ** Own (GRA.embed (echo_black ll0 ns0)) ** Own (GRA.embed (echo_white ll1 ns1)))) ε
-  .
-  Proof.
-    iIntro. iIntro.
-    {
-      iMerge A A0. rewrite <- own_sep in A. rewrite GRA.embed_add in A.
-      iOwnWf A. eapply GRA.embed_wf in WF. des. eapply URA.auth_included in WF. des.
-      Local Transparent URA.add.
-      rr in WF. des. cbn in WF.
-      Local Opaque URA.add.
-      des_ifs.
-      rewrite <- GRA.embed_add in A. rewrite own_sep in A. iDestruct' A.
-      iSplitL A; ss.
-      - iSplitP; ss.
-    }
-  Qed.
+  (* Lemma echo_ra_merge2 *)
+  (*       ll0 ns0 ll1 ns1 *)
+  (*   : *)
+  (*     iHyp (Own (GRA.embed (echo_black ll0 ns0)) -* Own (GRA.embed (echo_white ll1 ns1)) *)
+  (*               -* (⌜ll1 = ll0 /\ ns1 = ns0⌝ ** Own (GRA.embed (echo_black ll0 ns0)) ** Own (GRA.embed (echo_white ll1 ns1)))) ε *)
+  (* . *)
+  (* Proof. *)
+  (*   iIntro. iIntro. *)
+  (*   { *)
+  (*     iMerge A A0. rewrite <- own_sep in A. rewrite GRA.embed_add in A. *)
+  (*     iOwnWf A. eapply GRA.embed_wf in WF. des. eapply URA.auth_included in WF. des. *)
+  (*     Local Transparent URA.add. *)
+  (*     rr in WF. des. cbn in WF. *)
+  (*     Local Opaque URA.add. *)
+  (*     des_ifs. *)
+  (*     rewrite <- GRA.embed_add in A. rewrite own_sep in A. iDestruct' A. *)
+  (*     iSplitL A; ss. *)
+  (*     - iSplitP; ss. *)
+  (*   } *)
+  (* Qed. *)
+  Definition purify (P: iProp): Prop := ⌜True⌝ ⊢ P.
+  (* Definition purify (P: iProp): Prop := P ε. *)
+  (* Definition purify (P: iProp): Prop := forall r, P r. *)
+  (* Coercion unpure_coercion (P: iProp): Prop := unpure P. *)
+  (* Coercion unpure_coercion := unpure. *)
 
   Lemma echo_ra_merge
         ll0 ns0 ll1 ns1
     :
-      iHyp (Own (GRA.embed (echo_black ll0 ns0)) -* Own (GRA.embed (echo_white ll1 ns1)) -* (⌜ll1 = ll0 /\ ns1 = ns0⌝)) ε
+      (* iHyp (Own (GRA.embed (echo_black ll0 ns0)) -* Own (GRA.embed (echo_white ll1 ns1)) -* (⌜ll1 = ll0 /\ ns1 = ns0⌝)) ε *)
+      purify (Own (GRA.embed (echo_black ll0 ns0)) -* Own (GRA.embed (echo_white ll1 ns1)) -* (⌜ll1 = ll0 /\ ns1 = ns0⌝))
   .
   Proof.
-    iIntro. iIntro.
+    iIntro; clear A.
+    do 2 iIntro.
     {
       iMerge A A0. rewrite <- own_sep in A. rewrite GRA.embed_add in A.
       iOwnWf A. eapply GRA.embed_wf in WF. des. eapply URA.auth_included in WF. des.
@@ -665,10 +747,12 @@ I needed to write this because "ss" does not work. create iApply that understand
   Lemma echo_ra_white
         ll0 ns0 ll1 ns1
     :
-      iHyp (Own (GRA.embed (echo_white ll0 ns0)) -* Own (GRA.embed (echo_white ll1 ns1)) -* ⌜False⌝) ε
+      (* iHyp (Own (GRA.embed (echo_white ll0 ns0)) -* Own (GRA.embed (echo_white ll1 ns1)) -* ⌜False⌝) ε *)
+      purify (Own (GRA.embed (echo_white ll0 ns0)) -* Own (GRA.embed (echo_white ll1 ns1)) -* ⌜False⌝)
   .
   Proof.
-    iIntro. iIntro.
+    iIntro; clear A.
+    do 2 iIntro.
     {
       exfalso. iMerge A A0.
       rewrite <- own_sep in A. rewrite GRA.embed_add in A.
@@ -679,10 +763,12 @@ I needed to write this because "ss" does not work. create iApply that understand
   Lemma echo_ra_black
         ll0 ns0 ll1 ns1
     :
-      iHyp (Own (GRA.embed (echo_black ll0 ns0)) -* Own (GRA.embed (echo_black ll1 ns1)) -* ⌜False⌝) ε
+      (* iHyp (Own (GRA.embed (echo_black ll0 ns0)) -* Own (GRA.embed (echo_black ll1 ns1)) -* ⌜False⌝) ε *)
+      purify (Own (GRA.embed (echo_black ll0 ns0)) -* Own (GRA.embed (echo_black ll1 ns1)) -* ⌜False⌝)
   .
   Proof.
-    iIntro. iIntro.
+    iIntro; clear A.
+    do 2 iIntro.
     {
       exfalso. iMerge A A0.
       rewrite <- own_sep in A. rewrite GRA.embed_add in A.
@@ -712,11 +798,20 @@ Ltac until_bar TAC :=
                        end)).
 
 Ltac rr_until_bar := until_bar ltac:(fun H => rr in H).
+Ltac r_until_bar := until_bar ltac:(fun H => r in H).
 
-
-
-
-
+Notation "'⌞' P '⌟'" := (purify P).
+Ltac iPurify H := let name := fresh "my_r" in
+                  specialize (H ε URA.wf_unit I); rewrite intro_iHyp in H;
+                  on_gwf ltac:(fun GWF => rewrite <- URA.unit_id in GWF; set (name:=ε) in GWF, H; clearbody name).
+Ltac iMod H :=
+  match type of H with
+  | purify _ => iPurify H
+  | iHyp (⌜ _ ⌝) _ => iPure H
+  | iHyp ( |=> _ ) _ => iUpdate H
+  | _ => fail
+  end
+.
 
 
 
@@ -747,29 +842,30 @@ Section SIMMODSEM.
   Opaque URA.unit.
   Opaque points_to.
 
+  Lemma gwf_update_cur: forall past cur0 cur1, cur0 = cur1 -> __gwf_mark__ past cur0 -> __gwf_mark__ past cur1. i. subst. eauto. Qed.
+  Lemma gwf_dummy: (__gwf_mark__ ε ε). Proof. split; try refl. apply URA.wf_unit. Qed.
+
   Theorem correct: ModSemPair.sim Echo1.EchoSem Echo0.EchoSem.
   Proof.
     econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
     { typeclasses eauto. }
-    { ss. unfold alist_add; cbn. esplits; ss; eauto. eexists nil; ss; iRefresh.
-      rewrite unfold_is_list. left. eexists _, ε. split; ss.
-      { rewrite URA.unit_id; ss. }
-      split; ss. refl.
+    { ss. unfold alist_add; cbn. esplits; ss; eauto. hexploit gwf_dummy; i. eexists nil; ss; iRefresh.
+      rewrite unfold_is_list. left; iRefresh. iSplitP; ss. eexists ε. rewrite URA.unit_id; ss.
     }
 
     Opaque URA.add.
     econs; ss.
     { unfold echoF, echo_body. init.
-      harg_tac. des_ifs_safe.
-      iRefresh. do 2 iDestruct PRE. iPure A. iPure A0. clarify.
+      harg_tac. des_ifs_safe. repeat rewrite URA.unit_idl in *. repeat rewrite URA.unit_id in *.
+      iRefresh. do 2 iDestruct PRE. iMod A. iMod A0. clarify.
       iDestruct SIM.
       destruct SIM as [A|A]; iRefresh; cycle 1.
-      { hexploit echo_ra_white; et. intro T. iSpecialize T A. iSpecialize T PRE. iPure T; des; ss. }
+      { hexploit echo_ra_white; et. intro T. iMod T. iSpecialize T A. iSpecialize T PRE. iMod T; des; ss. }
 
       iDestruct A. subst.
       rename x into ns. rename x0 into ns0.
       assert(l = ns /\ v = ll); des; subst.
-      { hexploit echo_ra_merge; et. intro T. iSpecialize T A. iSpecialize T PRE. iPure T; des; ss. }
+      { hexploit echo_ra_merge; et. intro T. iPurify T. iSpecialize T A. iSpecialize T PRE. iMod T; des; ss. }
 
 
 
@@ -788,10 +884,10 @@ Section SIMMODSEM.
 
 
       iDestruct SIM. destruct SIM as [SIM|SIM]; iRefresh; cycle 1.
-      { hexploit echo_ra_white; et. intro T. iSpecialize T SIM. iSpecialize T PRE. iPure T; des; ss. }
+      { hexploit echo_ra_white; et. intro T. iMod T. iSpecialize T SIM. iSpecialize T PRE. iMod T; des; ss. }
       iDestruct SIM. subst.
       assert(ll0 = ll /\ x = ns); des; subst.
-      { hexploit echo_ra_merge; et. intro T. iSpecialize T SIM. iSpecialize T PRE. iPure T; des; ss. }
+      { hexploit echo_ra_merge; et. intro T. iMod T. iSpecialize T SIM. iSpecialize T PRE. iMod T; des; ss. }
       subst.
 
 
@@ -820,19 +916,19 @@ Section SIMMODSEM.
         hcall_tac __ (ord_pure 2) PRE SIM A; ss; et.
         { instantiate (1:=(_, _)). esplits; try refl; iRefresh. eexists; iRefresh. iSplitP; ss. iSplitP; ss. iApply A; ss. }
         { esplits; ss; et. exists ns; iRefresh. right; iRefresh; ss. }
-        des; iRefresh. do 2 iDestruct POST0. iPure A. subst. apply Any.upcast_inj in A. des; clarify.
+        des; iRefresh. do 2 iDestruct POST0. iMod A. subst. apply Any.upcast_inj in A. des; clarify.
         iDestruct SIM0. destruct SIM0; iRefresh.
-        { iDestruct' H1. hexploit echo_ra_black; et. intro T. iSpecialize T SIM. iSpecialize T H1. iPure T; des; ss. }
+        { iDestruct' H1. hexploit echo_ra_black; et. intro T. iMod T. iSpecialize T SIM. iSpecialize T H1. iMod T; des; ss. }
 
         rename H1 into A.
         assert(ll0 = ll /\ x8 = ns); des; subst.
-        { hexploit echo_ra_merge; et. intro T. iSpecialize T SIM. iSpecialize T A. iPure T; des; ss. }
+        { hexploit echo_ra_merge; et. intro T. iMod T. iSpecialize T SIM. iSpecialize T A. iMod T; des; ss. }
 
 
 
 
         iMerge A SIM. rewrite <- own_sep in A. rewrite GRA.embed_add in A. rewrite URA.add_comm in A.
-        eapply own_upd in A; cycle 1; [|rewrite intro_iHyp in A;iUpdate A].
+        eapply own_upd in A; cycle 1; [|rewrite intro_iHyp in A;iMod A].
         { eapply GRA.embed_updatable. instantiate (1:= echo_black x (z :: ns) ⋅ echo_white x (z :: ns)).
           eapply URA.auth_update. rr. ii. des; ss. destruct ctx; ss; clarify.
         }
@@ -852,16 +948,16 @@ Section SIMMODSEM.
         { esplits; eauto. }
     }
     econs; ss.
-    { unfold echo_finishF, echo_finish_body. init. harg_tac; des_ifs_safe; iRefresh.
-      do 2 iDestruct PRE. iPure A. iPure A0. clarify.
+    { unfold echo_finishF, echo_finish_body. init. harg_tac; des_ifs_safe; iRefresh. repeat rewrite URA.unit_idl in *. repeat rewrite URA.unit_id in *.
+      do 2 iDestruct PRE. iMod A. iMod A0. clarify.
       iDestruct SIM.
       destruct SIM as [A|A]; iRefresh; cycle 1.
-      { hexploit echo_ra_white; et. intro T. iSpecialize T A. iSpecialize T PRE. iPure T; des; ss. }
+      { hexploit echo_ra_white; et. intro T. iMod T. iSpecialize T A. iSpecialize T PRE. iMod T; des; ss. }
 
       iDestruct A. subst.
       rename x into ns. rename x0 into ns0.
       assert(v = ll /\ l = ns).
-      { hexploit echo_ra_merge; et. intro T. iSpecialize T A. iSpecialize T PRE. iPure T; des; ss. }
+      { hexploit echo_ra_merge; et. intro T. iMod T. iSpecialize T A. iSpecialize T PRE. iMod T; des; ss. }
       des; subst.
 
 
@@ -869,11 +965,11 @@ Section SIMMODSEM.
 
       steps. unfold hcall, ccall. rewrite unfold_is_list in A0. destruct ns; ss; steps.
       - unfold interp_hCallE_tgt, APC. steps. (********** TODO: never unfold it, make a lemma ******************)
-        rewrite Any.upcast_downcast. steps. iPure A0. subst.
+        rewrite Any.upcast_downcast. steps. iMod A0. subst.
         hret_tac x3 (@URA.unit Σ); ss. (********************* TODO **************************************)
         { eapply URA.extends_updatable. esplit. r_equalize; r_solve. }
         { iRefresh. esplits; ss; eauto. exists nil; iRefresh. left; iRefresh. iSplitL A; ss. } (************ TODO ************)
-      - rewrite Any.upcast_downcast. steps. do 4 iDestruct A0. iPure A0. subst. ss.
+      - rewrite Any.upcast_downcast. steps. do 4 iDestruct A0. iMod A0. subst. ss.
         unfold interp_hCallE_tgt, APC. steps. force_l. exists 3. steps.
 
         rewrite unfold_APC. steps. force_l. exists false. steps. force_l. eexists ("alloc", [Vint 1]↑). steps.
@@ -881,18 +977,19 @@ Section SIMMODSEM.
         hcall_tac __ (ord_pure 1) PRE (A, A1, A2) (@URA.unit Σ); ss; et.
         { esplits; try refl; iRefresh. instantiate (1:=1). esplits; ss; et. }
         { esplits; ss; et. eexists; iRefresh. right; iRefresh; ss; et. }
-        des; iRefresh. do 2 iDestruct POST. iPure POST. subst.
+        des; iRefresh. do 2 iDestruct POST. iMod POST. subst.
         apply_all_once Any.upcast_inj. des; clarify. steps. rewrite Any.upcast_downcast in *. clarify.
         iDestruct SIM. destruct SIM as [SIM|SIM]; iRefresh.
-        { iDestruct' SIM. hexploit echo_ra_black; et. intro T. iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
+        { iDestruct' SIM. hexploit echo_ra_black; et. intro T. iMod T. iSpecialize T A. iSpecialize T SIM. iMod T; des; ss. }
         assert(ll = (Vptr x 0) /\ x10 = z :: ns); des; subst.
-        { hexploit echo_ra_merge; et. intro T. iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
+        { hexploit echo_ra_merge; et. intro T. iMod T. iSpecialize T A. iSpecialize T SIM. iMod T; des; ss. }
 
 
 
 
         rename x into hd. rename x4 into tmp.
-        iMerge A1 A2. iAssert A1 (is_list (Vptr hd 0) (List.map Vint (z :: ns))).
+        iMerge A1 A2.
+        iAssert A1 (is_list (Vptr hd 0) (List.map Vint (z :: ns))).
         { iIntro. rewrite unfold_is_list. cbn.
           iDestruct' A2. do 2 eexists; iRefresh.
           iSplitL A.
@@ -912,18 +1009,18 @@ Section SIMMODSEM.
           - eexists; iRefresh. eauto.
         }
         { esplits; ss; et. eexists; iRefresh. right; iRefresh; ss; et. }
-        des; iRefresh. iDestruct SIM0. do 3 iDestruct POST. iPure POST. subst.
+        des; iRefresh. iDestruct SIM0. do 3 iDestruct POST. iMod POST. subst.
         apply_all_once Any.upcast_inj. des; clarify. steps.
         rewrite Any.upcast_downcast in *. clarify.
         rename SIM0 into SIM. destruct SIM as [SIM|SIM]; iRefresh.
-        { iDestruct' SIM. hexploit echo_ra_black; et. intro T. iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
+        { iDestruct' SIM. hexploit echo_ra_black; et. intro T. iMod T. iSpecialize T A. iSpecialize T SIM. iMod T; des; ss. }
         assert(ll = Vptr hd 0 /\ x = z :: ns); des; subst.
-        { hexploit echo_ra_merge; et. intro T. iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
+        { hexploit echo_ra_merge; et. intro T. iMod T. iSpecialize T A. iSpecialize T SIM. iMod T; des; ss. }
 
 
 
         iMerge A SIM. rewrite <- own_sep in A. rewrite GRA.embed_add in A.
-        eapply own_upd in A; cycle 1; [|rewrite intro_iHyp in A;iUpdate A].
+        eapply own_upd in A; cycle 1; [|rewrite intro_iHyp in A;iMod A].
         { eapply GRA.embed_updatable. instantiate (1:= echo_black v (ns) ⋅ echo_white v (ns)).
           eapply URA.auth_update. rr. ii. des; ss. destruct ctx; ss; clarify.
         }
@@ -936,13 +1033,13 @@ Section SIMMODSEM.
         hcall_tac __ (ord_pure 1) A2 (A, A1) A0; ss; et.
         { instantiate (1:=(_, _, _)). esplits; try refl; iRefresh. iSplitP; ss. iSplitP; ss. eauto. }
         { esplits; ss; et. eexists; iRefresh. right; iRefresh; ss; et. }
-        des; iRefresh. iDestruct SIM. iDestruct POST. iPure A0. subst.
+        des; iRefresh. iDestruct SIM. iDestruct POST. iMod A0. subst.
         apply_all_once Any.upcast_inj. des; clarify. steps.
         rewrite Any.upcast_downcast in *. clarify.
         destruct SIM as [SIM|SIM]; iRefresh.
-        { iDestruct' SIM. hexploit echo_ra_black; et. intro T. iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
+        { iDestruct' SIM. hexploit echo_ra_black; et. intro T. iMod T. iSpecialize T A. iSpecialize T SIM. iMod T; des; ss. }
         assert(v = ll /\ x = ns); des; subst.
-        { hexploit echo_ra_merge; et. intro T. iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
+        { hexploit echo_ra_merge; et. intro T. iMod T. iSpecialize T A. iSpecialize T SIM. iMod T; des; ss. }
 
 
 
@@ -954,9 +1051,9 @@ Section SIMMODSEM.
         { esplits; ss; et. eexists; iRefresh. right; iRefresh; ss; et. }
         des; iRefresh. subst. iDestruct SIM0.
         rename SIM0 into SIM. destruct SIM as [SIM|SIM]; iRefresh.
-        { iDestruct' SIM. hexploit echo_ra_black; et. intro T. iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
+        { iDestruct' SIM. hexploit echo_ra_black; et. intro T. iMod T. iSpecialize T A. iSpecialize T SIM. iMod T; des; ss. }
         assert(ll0 = ll /\ x = ns); des; subst.
-        { hexploit echo_ra_merge; et. intro T. iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
+        { hexploit echo_ra_merge; et. intro T. iMod T. iSpecialize T A. iSpecialize T SIM. iMod T; des; ss. }
 
 
 
