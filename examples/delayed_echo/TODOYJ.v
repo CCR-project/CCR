@@ -100,8 +100,8 @@ Section IRIS.
   Definition Upd2 (P: iProp): iProp := fun r0 => forall ctx, URA.wf (r0 ⋅ ctx) -> exists r1, URA.wf (r1 ⋅ ctx) /\ P r1. (**** Iris version ****)
   (* Definition Own (r0: Σ): iProp := fun r1 => r0 = r1. *)
 
-  (* Definition Entails (P Q: iProp): Prop := forall r (WF: URA.wf r), P r -> Q r. *)
-  Definition Entails (P Q: iProp): Prop := P <1= Q.
+  Definition Entails (P Q: iProp): Prop := forall r (WF: URA.wf r), P r -> Q r.
+  (* Definition Entails (P Q: iProp): Prop := P <1= Q. *)
   Definition Equiv (P Q: iProp): Prop := Entails P Q /\ Entails Q P.
 
 End IRIS.
@@ -131,7 +131,7 @@ Section IRIS.
   Infix "-#" := Wand (at level 60, right associativity): iprop_scope.
   Infix "-#" := Entails (at level 60, right associativity).
   Bind Scope iprop_scope with iProp.
-  Bind Scope Pure with iProp.
+  Bind Scope iprop_scope with iProp.
   Bind Scope iprop_scope with Σ.
   (* Local Open Scope iprop_scope. *)
   Fail Goal (⌜True⌝ -# ⌜False⌝ -# ⌜True⌝ -# ⌜False⌝).
@@ -144,7 +144,7 @@ Section IRIS.
         (a b: Σ)
         (EXT: URA.extends a b)
     :
-      (Own b) ⊢ (Own a)
+      (Own b) <1= (Own a)
   .
   Proof. ii. ss. r in PR. r. etrans; et. Qed.
 
@@ -190,7 +190,7 @@ Section IRIS.
         (r1 r2: Σ)
         (UPD: URA.updatable r1 r2)
     :
-      (Own r1) ⊢ (Upd2 (Own r2))
+      (Own r1) <1= (Upd2 (Own r2))
   .
   Proof.
     ii. r in UPD. rr in PR. des. subst. esplits; cycle 1.
@@ -203,7 +203,7 @@ Section IRIS.
         (r1: Σ) B
         (UPD: URA.updatable_set r1 B)
     :
-      (Own r1) ⊢ (Upd2 (Exists b, ⌜B b⌝ ∧ (Own b)))
+      (Own r1) <1= (Upd2 (Exists b, ⌜B b⌝ ∧ (Own b)))
   .
   Proof.
     ii. r in UPD. rr in PR. des. subst. exploit UPD.
@@ -218,7 +218,7 @@ Section IRIS.
         (r1 r2: Σ)
         (UPD: URA.updatable r1 r2)
     :
-      (Own r1) ⊢ (Upd (Own r2))
+      (Own r1) <1= (Upd (Own r2))
   .
   Proof.
     ii. r in UPD. rr in PR. des. subst. exists r2. i. esplits; cycle 1.
@@ -231,7 +231,7 @@ Section IRIS.
         (r1: Σ) B
         (UPD: URA.updatable_set r1 B)
     :
-      (Own r1) ⊢ (Upd (Exists b, ⌜B b⌝ ∧ (Own b)))
+      (Own r1) <1= (Upd (Exists b, ⌜B b⌝ ∧ (Own b)))
   .
   Proof.
     ii. r in UPD. rr in PR. des. subst. r. specialize (UPD ctx).

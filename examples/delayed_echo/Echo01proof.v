@@ -697,6 +697,7 @@ I needed to write this because "ss" does not work. create iApply that understand
       purify (Own (GRA.embed (echo_black ll0 ns0)) -* Own (GRA.embed (echo_white ll1 ns1)) -* (⌜ll1 = ll0 /\ ns1 = ns0⌝))
   .
   Proof.
+    iIntro; clear A.
     do 2 iIntro.
     {
       iMerge A A0. rewrite <- own_sep in A. rewrite GRA.embed_add in A.
@@ -715,6 +716,7 @@ I needed to write this because "ss" does not work. create iApply that understand
       purify (Own (GRA.embed (echo_white ll0 ns0)) -* Own (GRA.embed (echo_white ll1 ns1)) -* ⌜False⌝)
   .
   Proof.
+    iIntro; clear A.
     do 2 iIntro.
     {
       exfalso. iMerge A A0.
@@ -730,6 +732,7 @@ I needed to write this because "ss" does not work. create iApply that understand
       purify (Own (GRA.embed (echo_black ll0 ns0)) -* Own (GRA.embed (echo_black ll1 ns1)) -* ⌜False⌝)
   .
   Proof.
+    iIntro; clear A.
     do 2 iIntro.
     {
       exfalso. iMerge A A0.
@@ -809,7 +812,7 @@ Section SIMMODSEM.
     Opaque URA.add.
     econs; ss.
     { unfold echoF, echo_body. init.
-      harg_tac. des_ifs_safe. repeat rewrite URA.unit_idl in *. repeat rewrite URA.unit_id in *. 
+      harg_tac. des_ifs_safe. repeat rewrite URA.unit_idl in *. repeat rewrite URA.unit_id in *.
       iRefresh. do 2 iDestruct PRE. iPure A. iPure A0. clarify.
       iDestruct SIM.
       destruct SIM as [A|A]; iRefresh; cycle 1.
@@ -901,16 +904,16 @@ Section SIMMODSEM.
         { esplits; eauto. }
     }
     econs; ss.
-    { unfold echo_finishF, echo_finish_body. init. harg_tac; des_ifs_safe; iRefresh.
+    { unfold echo_finishF, echo_finish_body. init. harg_tac; des_ifs_safe; iRefresh. repeat rewrite URA.unit_idl in *. repeat rewrite URA.unit_id in *.
       do 2 iDestruct PRE. iPure A. iPure A0. clarify.
       iDestruct SIM.
       destruct SIM as [A|A]; iRefresh; cycle 1.
-      { hexploit echo_ra_white; et. intro T. iSpecialize T A. iSpecialize T PRE. iPure T; des; ss. }
+      { hexploit echo_ra_white; et. intro T. iPurify T. iSpecialize T A. iSpecialize T PRE. iPure T; des; ss. }
 
       iDestruct A. subst.
       rename x into ns. rename x0 into ns0.
       assert(v = ll /\ l = ns).
-      { hexploit echo_ra_merge; et. intro T. iSpecialize T A. iSpecialize T PRE. iPure T; des; ss. }
+      { hexploit echo_ra_merge; et. intro T. iPurify T. iSpecialize T A. iSpecialize T PRE. iPure T; des; ss. }
       des; subst.
 
 
@@ -933,21 +936,46 @@ Section SIMMODSEM.
         des; iRefresh. do 2 iDestruct POST. iPure POST. subst.
         apply_all_once Any.upcast_inj. des; clarify. steps. rewrite Any.upcast_downcast in *. clarify.
         iDestruct SIM. destruct SIM as [SIM|SIM]; iRefresh.
-        { iDestruct' SIM. hexploit echo_ra_black; et. intro T. iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
+        { iDestruct' SIM. hexploit echo_ra_black; et. intro T. iPurify T. iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
         assert(ll = (Vptr x 0) /\ x10 = z :: ns); des; subst.
-        { hexploit echo_ra_merge; et. intro T. iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
+        { hexploit echo_ra_merge; et. intro T. iPurify T. iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
 
 
 
+Ltac iAssert2 H Abody :=
+  let A := fresh "A" in
+  match type of H with
+  | iHyp ?Hbody ?rH =>
+    match Abody with
+    | ltac_wild => eassert(A: iHyp (Hbody -* _) ε)
+    | _ => assert(A: iHyp (Hbody -* Abody) ε)
+    end;
+    [|on_gwf ltac:(fun GWF => rewrite <- URA.unit_id in GWF; set (my_r:=ε) in GWF, A; clearbody my_r);
+     iSpecialize A H]
+  end
+.
+        Ltac iGuard' :=
+          match goal with
+          | [GWF: (__gwf_mark__ ?past _) |- _ ] =>
+            match goal with
+            | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (([(_, (?mr, _))], ?fr), _)  _) ] =>
+              tryif r_contains past (mr ⋅ fr)
+              then idtac
+              else fail 2
+            end
+          end
+        .
 
         rename x into hd. rename x4 into tmp.
-        iMerge A1 A2. iAssert A1 (is_list (Vptr hd 0) (List.map Vint (z :: ns))).
+        iMerge A1 A2.
+        iAssert2 A1 (is_list (Vptr hd 0) (List.map Vint (z :: ns))).
         { iIntro. rewrite unfold_is_list. cbn.
           iDestruct' A2. do 2 eexists; iRefresh.
           iSplitL A.
           { iSplitP; ss; et. }
           { iRefresh; ss. }
         }
+        iGuard'.
 
 
 
