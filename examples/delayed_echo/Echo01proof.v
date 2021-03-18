@@ -318,7 +318,18 @@ Ltac iGuard :=
                                  | _ => idtac
                                  end)
   end.
-
+Ltac iGuard' :=
+  match goal with
+  | [GWF: (__gwf_mark__ ?past _) |- _ ] =>
+    match goal with
+    | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (([(_, (?mr, _))], ?fr), _)  _) ] =>
+      tryif r_contains past (mr ⋅ fr)
+      then idtac
+      else fail 2
+    | _ => idtac
+    end
+  end
+.
 Ltac iRefresh :=
   clear_bar;
   bar;
@@ -344,7 +355,7 @@ Ltac iRefresh :=
   try iClears;
   try iClears';
   iAlignResource;
-  iGuard
+  iGuard; iGuard'
 .
 
 Ltac iSplitP :=
@@ -458,20 +469,41 @@ Ltac hcall_tac x o MR_SRC1 FR_SRC1 RARG_SRC :=
 
 
 
-Ltac bring_front r0 :=
-  repeat rewrite URA.add_assoc in *;
-  (*** corner case: goal is pure \/ probably already sorted ***)
-  try rewrite (URA.add_comm _ r0) in *;
-  repeat rewrite URA.add_assoc in *;
+Ltac bring_front H r0 :=
+  repeat rewrite URA.add_assoc in H;
+  try rewrite (URA.add_comm _ r0) in H; (*** probably already sorted; so "try" ***)
+  repeat rewrite URA.add_assoc in H;
 
-  (*** somehow, * does not work well in GWF. WHY??? TODO: FIXME ***)
+  (*** the merged one should be in "cur" of GWF ***)
+  (* match goal with *)
+  (* | GWF: __gwf_mark__ ?past ?cur |- _ => *)
+
+  (* end. *)
   on_gwf ltac:(fun GWF =>
-                 repeat rewrite URA.add_assoc in GWF;
-                 repeat rewrite (URA.add_comm _ r0) in GWF;
-                 repeat rewrite URA.add_assoc in GWF) (*** probably already sorted; so "try" ***)
+                 erewrite f_equal in GWF; [|repeat rewrite URA.add_assoc;
+                                            try rewrite (URA.add_comm _ r0); (*** probably already sorted; so "try" ***)
+                                            repeat rewrite URA.add_assoc; refl]; match goal with | bar: IPROPS |- _ => move GWF after bar end);
+
+  (***
+(1) Goal is iProp --> should merge in the goal too; otherwise merged one will be cleared later
+(2) Goal is sim ----> should not merge in the goal; (mr + fr) should match with "past" of GWF, but this property gets broken
+   ***)
+  match goal with
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _  _) ] => idtac
+  (* | [ |- iHyp _ _ ] => *)
+  (*   repeat rewrite URA.add_assoc; *)
+  (*   (*** corner case: goal is pure \/ probably already sorted ***) *)
+  (*   try rewrite (URA.add_comm _ r0); (*** probably already sorted; so "try" ***) *)
+  (*   repeat rewrite URA.add_assoc *)
+  | _ =>
+    repeat rewrite URA.add_assoc;
+    (*** corner case: goal is pure \/ probably already sorted ***)
+    try rewrite (URA.add_comm _ r0); (*** probably already sorted; so "try" ***)
+    repeat rewrite URA.add_assoc
+  end
 .
-Ltac r_merge r0 r1 :=
-  bring_front r1; bring_front r0;
+Ltac r_merge H r0 r1 :=
+  bring_front H r1; bring_front H r0;
 
   let tmp := fresh "tmp" in
   let tmpH := fresh "tmpH" in
@@ -515,7 +547,7 @@ Ltac iMerge A0 A1 :=
       rename A0 into ttmp;
       assert(A0: iHyp (p0 ** p1) (r0 ⋅ r1)) by (apply sepconj_merge; try assumption);
       clear ttmp; clear A1;
-      r_merge r0 r1
+      r_merge A0 r0 r1
     end
   end.
 Ltac iSpecialize H G :=
@@ -523,7 +555,7 @@ Ltac iSpecialize H G :=
   let rp := r_gather G in
   specialize (H rp); eapply hexploit_mp in H; [|on_gwf ltac:(fun GWF => eapply wf_downward; cycle 1; [by apply GWF|r_equalize; r_solve])];
   specialize (H G); rewrite intro_iHyp in H; clear G;
-  r_merge rh rp; iRefresh
+  r_merge H rh rp; iRefresh
 .
 Ltac iAssert H Abody :=
   let A := fresh "A" in
@@ -533,7 +565,8 @@ Ltac iAssert H Abody :=
     | ltac_wild => eassert(A: iHyp (Hbody -* _) ε)
     | _ => assert(A: iHyp (Hbody -* Abody) ε)
     end;
-    [|iSpecialize A H; rewrite URA.unit_idl in A]
+    [|on_gwf ltac:(fun GWF => rewrite <- URA.unit_id in GWF; set (my_r:=ε) in GWF, A; clearbody my_r);
+     iSpecialize A H]
   end
 .
 
@@ -611,23 +644,25 @@ Section AUX.
 
   Context `{@GRA.inG Echo1.echoRA Σ}.
 
-  Goal forall (a b c d e: Σ), __gwf_mark__ ε (d ⋅ c) -> a ⋅ (b ⋅ c) ⋅ (d ⋅ e) = ε.
-    i. bring_front d. bring_front c.
-    match goal with | |- ?G => match G with | c ⋅ d ⋅ a ⋅ b ⋅ e = ε => idtac | _ => fail end end.
+  Goal forall (a b c d e: Σ) (GWF: __gwf_mark__ ε (d ⋅ c)), iHyp ⌜True⌝ (d ⋅ c) -> iHyp ⌜True⌝ (a ⋅ (b ⋅ c) ⋅ (d ⋅ e)).
+    i. bar. bring_front H1 d. bring_front H1 c.
+    match goal with | |- ?G => match G with | iHyp _ (c ⋅ d ⋅ a ⋅ b ⋅ e) => idtac | _ => fail end end.
   Abort.
 
-  Goal forall (a b c d e f: Σ), __gwf_mark__ (a ⋅ (b ⋅ c) ⋅ (d ⋅ e)) (a ⋅ (b ⋅ c) ⋅ (d ⋅ e)) -> a ⋅ (b ⋅ c) ⋅ (d ⋅ e) = f.
-    i. bring_front d. bring_front c.
-    match goal with | |- ?G => match G with | c ⋅ d ⋅ a ⋅ b ⋅ e = f => idtac | _ => fail end end.
-    match goal with | [H: __gwf_mark__ ?rs0 ?rs1 |- _ ] => match rs0 with | (c ⋅ d ⋅ a ⋅ b ⋅ e) => idtac | _ => fail end end.
+  Goal forall (a b c d e f: Σ) (GWF: __gwf_mark__ (a ⋅ (b ⋅ c) ⋅ (d ⋅ e)) (a ⋅ (b ⋅ c) ⋅ (d ⋅ e))), iHyp ⌜True⌝ ((a ⋅ d) ⋅ (c ⋅ b)) -> iHyp ⌜True⌝ (a ⋅ (b ⋅ c) ⋅ (d ⋅ e)).
+    i. bar. bring_front H1 d. bring_front H1 c.
+    match goal with | |- ?G => match G with | iHyp _ (c ⋅ d ⋅ a ⋅ b ⋅ e) => idtac | _ => fail end end.
+    match goal with | [H: __gwf_mark__ ?rs0 ?rs1 |- _ ] => match rs0 with | (a ⋅ (b ⋅ c) ⋅ (d ⋅ e)) => idtac | _ => fail end end.
     match goal with | [H: __gwf_mark__ ?rs0 ?rs1 |- _ ] => match rs1 with | (c ⋅ d ⋅ a ⋅ b ⋅ e) => idtac | _ => fail end end.
+    match type of H1 with | iHyp _ ?rs => match rs with | (c ⋅ d ⋅ a ⋅ b) => idtac | _ => fail end end.
   Abort.
 
-  Goal forall (a b c d e f: Σ), __gwf_mark__ ε (a ⋅ (b ⋅ c) ⋅ (d ⋅ e)) -> a ⋅ (b ⋅ c) ⋅ (d ⋅ e) = f.
-    i. bring_front d. bring_front c.
-    match goal with | |- ?G => match G with | c ⋅ d ⋅ a ⋅ b ⋅ e = f => idtac | _ => fail end end.
+  Goal forall (a b c d e f: Σ) (GWF: __gwf_mark__ ε (a ⋅ (b ⋅ c) ⋅ (d ⋅ e))), iHyp ⌜True⌝ ((a ⋅ d) ⋅ (c ⋅ b)) -> iHyp ⌜True⌝ (a ⋅ (b ⋅ c) ⋅ (d ⋅ e)).
+    i. bar. bring_front H1 d. bring_front H1 c.
+    match goal with | |- ?G => match G with | iHyp _ (c ⋅ d ⋅ a ⋅ b ⋅ e) => idtac | _ => fail end end.
     match goal with | [H: __gwf_mark__ ?rs0 ?rs1 |- _ ] => match rs0 with | ε => idtac | _ => fail end end.
     match goal with | [H: __gwf_mark__ ?rs0 ?rs1 |- _ ] => match rs1 with | (c ⋅ d ⋅ a ⋅ b ⋅ e) => idtac | _ => fail end end.
+    match type of H1 with | iHyp _ ?rs => match rs with | (c ⋅ d ⋅ a ⋅ b) => idtac | _ => fail end end.
   Abort.
 
   Goal forall P Q, iHyp (P -* Q -* P ** Q) ε.
@@ -765,8 +800,9 @@ Ltac until_bar TAC :=
 Ltac rr_until_bar := until_bar ltac:(fun H => rr in H).
 Ltac r_until_bar := until_bar ltac:(fun H => r in H).
 
-Ltac iPurify H := specialize (H ε URA.wf_unit I); rewrite intro_iHyp in H;
-                  on_gwf ltac:(fun GWF => rewrite <- URA.unit_id in GWF; set (my_r:=ε) in GWF, H; clearbody my_r).
+Ltac iPurify H := let name := fresh "my_r" in
+                  specialize (H ε URA.wf_unit I); rewrite intro_iHyp in H;
+                  on_gwf ltac:(fun GWF => rewrite <- URA.unit_id in GWF; set (name:=ε) in GWF, H; clearbody name).
 
 
 
@@ -797,6 +833,8 @@ Section SIMMODSEM.
 
   Opaque URA.unit.
   Opaque points_to.
+
+  Lemma gwf_update_cur: forall past cur0 cur1, cur0 = cur1 -> __gwf_mark__ past cur0 -> __gwf_mark__ past cur1. i. subst. eauto. Qed.
 
   Theorem correct: ModSemPair.sim Echo1.EchoSem Echo0.EchoSem.
   Proof.
@@ -942,40 +980,16 @@ Section SIMMODSEM.
 
 
 
-Ltac iAssert2 H Abody :=
-  let A := fresh "A" in
-  match type of H with
-  | iHyp ?Hbody ?rH =>
-    match Abody with
-    | ltac_wild => eassert(A: iHyp (Hbody -* _) ε)
-    | _ => assert(A: iHyp (Hbody -* Abody) ε)
-    end;
-    [|on_gwf ltac:(fun GWF => rewrite <- URA.unit_id in GWF; set (my_r:=ε) in GWF, A; clearbody my_r);
-     iSpecialize A H]
-  end
-.
-        Ltac iGuard' :=
-          match goal with
-          | [GWF: (__gwf_mark__ ?past _) |- _ ] =>
-            match goal with
-            | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (([(_, (?mr, _))], ?fr), _)  _) ] =>
-              tryif r_contains past (mr ⋅ fr)
-              then idtac
-              else fail 2
-            end
-          end
-        .
 
         rename x into hd. rename x4 into tmp.
         iMerge A1 A2.
-        iAssert2 A1 (is_list (Vptr hd 0) (List.map Vint (z :: ns))).
+        iAssert A1 (is_list (Vptr hd 0) (List.map Vint (z :: ns))).
         { iIntro. rewrite unfold_is_list. cbn.
           iDestruct' A2. do 2 eexists; iRefresh.
           iSplitL A.
           { iSplitP; ss; et. }
           { iRefresh; ss. }
         }
-        iGuard'.
 
 
 
@@ -993,9 +1007,9 @@ Ltac iAssert2 H Abody :=
         apply_all_once Any.upcast_inj. des; clarify. steps.
         rewrite Any.upcast_downcast in *. clarify.
         rename SIM0 into SIM. destruct SIM as [SIM|SIM]; iRefresh.
-        { iDestruct' SIM. hexploit echo_ra_black; et. intro T. iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
+        { iDestruct' SIM. hexploit echo_ra_black; et. intro T. iPurify T. iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
         assert(ll = Vptr hd 0 /\ x = z :: ns); des; subst.
-        { hexploit echo_ra_merge; et. intro T. iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
+        { hexploit echo_ra_merge; et. intro T. iPurify T. iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
 
 
 
@@ -1017,9 +1031,9 @@ Ltac iAssert2 H Abody :=
         apply_all_once Any.upcast_inj. des; clarify. steps.
         rewrite Any.upcast_downcast in *. clarify.
         destruct SIM as [SIM|SIM]; iRefresh.
-        { iDestruct' SIM. hexploit echo_ra_black; et. intro T. iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
+        { iDestruct' SIM. hexploit echo_ra_black; et. intro T. iPurify T. iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
         assert(v = ll /\ x = ns); des; subst.
-        { hexploit echo_ra_merge; et. intro T. iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
+        { hexploit echo_ra_merge; et. intro T. iPurify T. iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
 
 
 
@@ -1031,9 +1045,9 @@ Ltac iAssert2 H Abody :=
         { esplits; ss; et. eexists; iRefresh. right; iRefresh; ss; et. }
         des; iRefresh. subst. iDestruct SIM0.
         rename SIM0 into SIM. destruct SIM as [SIM|SIM]; iRefresh.
-        { iDestruct' SIM. hexploit echo_ra_black; et. intro T. iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
+        { iDestruct' SIM. hexploit echo_ra_black; et. intro T. iPurify T. iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
         assert(ll0 = ll /\ x = ns); des; subst.
-        { hexploit echo_ra_merge; et. intro T. iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
+        { hexploit echo_ra_merge; et. intro T. iPurify T. iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
 
 
 
