@@ -8,6 +8,7 @@ Require Import PCM.
 Require Import HoareDef.
 Require Import Stack1 Client1.
 Require Import TODOYJ.
+Require Import Logic.
 
 Generalizable Variables E R A B C X Y Σ.
 

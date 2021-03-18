@@ -6,6 +6,7 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
+Require Import Logic.
 Require Import Mem1 Mem2.
 Require Import TODOYJ.
 
