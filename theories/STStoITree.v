@@ -112,11 +112,33 @@ Section INV.
 
   Import ModSem.ModSem.
   
+  (* Let state: Type := itree eventE Any.t. *)
+  
+  (* Inductive step: state -> option event -> state -> Prop := *)
+  (* | step_tau *)
+  (*     itr *)
+  (*   : *)
+  (*     step (Tau itr) None itr *)
+  (* | step_choose *)
+  (*     X k (x: X) *)
+  (*   : *)
+  (*     step (Vis (Choose X) k) None (k x) *)
+  (* | step_take *)
+  (*     X k (x: X) *)
+  (*   : *)
+  (*     step (Vis (Take X) k) None (k x) *)
+  (* | step_syscall *)
+  (*     fn args k ev rv *)
+  (*     (SYSCALL: syscall_sem fn args = (ev, rv)) *)
+  (*   : *)
+  (*     step (Vis (Syscall fn args) k) (Some ev) (k rv) *)
+  (* . *)
+  
   Program Definition interpITree:
     (itree eventE Any.t) -> semantics :=
     fun itr =>
       {|
-        STS.state := (itree eventE Any.t);
+        STS.state := itree eventE Any.t;
         STS.step := step;
         STS.initial_state := itr;
         STS.state_sort := state_sort;
@@ -149,14 +171,22 @@ Section PROOF.
   Hypothesis wf_demonic :
     forall (st0 : state) (ev : option event) (st1 : state),
       state_sort st0 = demonic -> step st0 ev st1 -> ev = None.
-  
-  Theorem beh_preserved:
+
+(**
+of_state = 
+fun L : semantics => paco2 (_of_state L) bot2
+     : forall L : semantics, STS.state L -> Tr.t -> Prop
+
+paco2 has 'fixed' semantics -> needs fixed semantics to do pcofix
+So, fix semantics with st_init, later let st_init = st0 in the main thm.
+ **)
+  Theorem beh_preserved st_init :
     forall (st0: state) (tr: Tr.t),
       of_state
         {|
           STS.state := state;
           STS.step := step;
-          STS.initial_state := st0;
+          STS.initial_state := st_init;
           STS.state_sort := state_sort;
           STS.wf_vis := wf_vis;
           STS.wf_angelic := wf_angelic;
@@ -166,11 +196,13 @@ Section PROOF.
         tr
       ->
       of_state
-        (interpITree (interpSTS step state_sort st0))
+        (interpITree (interpSTS step state_sort st_init))
         (initial_state (interpITree (interpSTS step state_sort st0)))
         tr.
   Proof.
-    intros st0. pcofix CIH. i. punfold H0.
+    revert_until st_init.
+    pcofix CIH.
+    i. punfold H0.
     induction H0 using of_state_ind; ss; clarify.
     - pfold. econs. ss.
       erewrite interpSTS_red. rewrite H.
@@ -180,15 +212,37 @@ Section PROOF.
           but
           state of 'final' sort returns only Z. *)
       admit "TODO: fix the return type".
-    - pfold. econs. clear CIH.
-      (* revert st1 H.  *)
-      pcofix CIH. punfold H. ss. inv H.
+    - pfold. econs. clear CIH r.
+      revert_until wf_demonic.
+      pcofix CIH. i. punfold H0. inv H0.
       + pfold. econs 1.
         * ss. erewrite interpSTS_red. rewrite SRT. ss.
         * i. ss. rewrite interpSTS_red in STEP0. rewrite SRT in STEP0.
-          dependent destruction STEP0. destruct x as [st2 STEP0].
-          right. admit "paco bug".
+          (* inv STEP0. *)
+          dependent destruction STEP0. destruct x as [st1 STEP0].
+          remember STEP0 as ST. clear HeqST.
+          apply STEP in STEP0. destruct STEP0; clarify.
+          right. apply CIH. apply H.
       + pfold. econs 2.
+        * ss. erewrite interpSTS_red. rewrite SRT. ss.
+        * ss. des. destruct TL.
+          { exists None. do 2 eexists.
+            2:{ right. apply CIH. apply H. }
+            rewrite interpSTS_red in *; rewrite SRT in *.
+            remember STEP0 as ST. clear HeqST.
+            apply (wf_demonic SRT) in STEP0. clarify.
+            (* apply (step_choose (fun st2 : {st' : state | step st0 None st'} => interpSTS step state_sort (st2 $)) (exist _ st1 ST)). } *)
+            apply (ModSem.step_choose (fun st2 : {st' : state | step st0 None st'} => interpSTS step state_sort (st2 $)) (exist _ st1 ST)). }
+          { clarify. }
+    - pfold. econs.
+    - pfold. econs. ss.
+      rewrite interpSTS_red. rewrite SRT.
+      unfold ModSem.state_sort.
+      
+      destruct TL; clarify.
+      
+            
+          
           
 
       
