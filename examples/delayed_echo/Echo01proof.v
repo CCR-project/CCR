@@ -800,10 +800,18 @@ Ltac until_bar TAC :=
 Ltac rr_until_bar := until_bar ltac:(fun H => rr in H).
 Ltac r_until_bar := until_bar ltac:(fun H => r in H).
 
+Notation "'⌞' P '⌟'" := (purify P).
 Ltac iPurify H := let name := fresh "my_r" in
                   specialize (H ε URA.wf_unit I); rewrite intro_iHyp in H;
                   on_gwf ltac:(fun GWF => rewrite <- URA.unit_id in GWF; set (name:=ε) in GWF, H; clearbody name).
-
+Ltac iMod H :=
+  match type of H with
+  | purify _ => iPurify H
+  | iHyp (⌜ _ ⌝) _ => iPure H
+  | iHyp ( |=> _ ) _ => iUpdate H
+  | _ => fail
+  end
+.
 
 
 
@@ -835,31 +843,29 @@ Section SIMMODSEM.
   Opaque points_to.
 
   Lemma gwf_update_cur: forall past cur0 cur1, cur0 = cur1 -> __gwf_mark__ past cur0 -> __gwf_mark__ past cur1. i. subst. eauto. Qed.
+  Lemma gwf_dummy: (__gwf_mark__ ε ε). Proof. split; try refl. apply URA.wf_unit. Qed.
 
   Theorem correct: ModSemPair.sim Echo1.EchoSem Echo0.EchoSem.
   Proof.
     econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
     { typeclasses eauto. }
-    { admit "". }
-    (* { ss. unfold alist_add; cbn. esplits; ss; eauto. eexists nil; ss; iRefresh. *)
-    (*   rewrite unfold_is_list. left. eexists _, ε. split; ss. *)
-    (*   { rewrite URA.unit_id; ss. } *)
-    (*   split; ss. refl. *)
-    (* } *)
+    { ss. unfold alist_add; cbn. esplits; ss; eauto. hexploit gwf_dummy; i. eexists nil; ss; iRefresh.
+      rewrite unfold_is_list. left; iRefresh. iSplitP; ss. eexists ε. rewrite URA.unit_id; ss.
+    }
 
     Opaque URA.add.
     econs; ss.
     { unfold echoF, echo_body. init.
       harg_tac. des_ifs_safe. repeat rewrite URA.unit_idl in *. repeat rewrite URA.unit_id in *.
-      iRefresh. do 2 iDestruct PRE. iPure A. iPure A0. clarify.
+      iRefresh. do 2 iDestruct PRE. iMod A. iMod A0. clarify.
       iDestruct SIM.
       destruct SIM as [A|A]; iRefresh; cycle 1.
-      { hexploit echo_ra_white; et. intro T. iPurify T. iSpecialize T A. iSpecialize T PRE. iPure T; des; ss. }
+      { hexploit echo_ra_white; et. intro T. iMod T. iSpecialize T A. iSpecialize T PRE. iMod T; des; ss. }
 
       iDestruct A. subst.
       rename x into ns. rename x0 into ns0.
       assert(l = ns /\ v = ll); des; subst.
-      { hexploit echo_ra_merge; et. intro T. iPurify T. iSpecialize T A. iSpecialize T PRE. iPure T; des; ss. }
+      { hexploit echo_ra_merge; et. intro T. iPurify T. iSpecialize T A. iSpecialize T PRE. iMod T; des; ss. }
 
 
 
@@ -878,10 +884,10 @@ Section SIMMODSEM.
 
 
       iDestruct SIM. destruct SIM as [SIM|SIM]; iRefresh; cycle 1.
-      { hexploit echo_ra_white; et. intro T. iPurify T. iSpecialize T SIM. iSpecialize T PRE. iPure T; des; ss. }
+      { hexploit echo_ra_white; et. intro T. iMod T. iSpecialize T SIM. iSpecialize T PRE. iMod T; des; ss. }
       iDestruct SIM. subst.
       assert(ll0 = ll /\ x = ns); des; subst.
-      { hexploit echo_ra_merge; et. intro T. iPurify T. iSpecialize T SIM. iSpecialize T PRE. iPure T; des; ss. }
+      { hexploit echo_ra_merge; et. intro T. iMod T. iSpecialize T SIM. iSpecialize T PRE. iMod T; des; ss. }
       subst.
 
 
@@ -910,19 +916,19 @@ Section SIMMODSEM.
         hcall_tac __ (ord_pure 2) PRE SIM A; ss; et.
         { instantiate (1:=(_, _)). esplits; try refl; iRefresh. eexists; iRefresh. iSplitP; ss. iSplitP; ss. iApply A; ss. }
         { esplits; ss; et. exists ns; iRefresh. right; iRefresh; ss. }
-        des; iRefresh. do 2 iDestruct POST0. iPure A. subst. apply Any.upcast_inj in A. des; clarify.
+        des; iRefresh. do 2 iDestruct POST0. iMod A. subst. apply Any.upcast_inj in A. des; clarify.
         iDestruct SIM0. destruct SIM0; iRefresh.
-        { iDestruct' H1. hexploit echo_ra_black; et. intro T. iPurify T. iSpecialize T SIM. iSpecialize T H1. iPure T; des; ss. }
+        { iDestruct' H1. hexploit echo_ra_black; et. intro T. iMod T. iSpecialize T SIM. iSpecialize T H1. iMod T; des; ss. }
 
         rename H1 into A.
         assert(ll0 = ll /\ x8 = ns); des; subst.
-        { hexploit echo_ra_merge; et. intro T. iPurify T. iSpecialize T SIM. iSpecialize T A. iPure T; des; ss. }
+        { hexploit echo_ra_merge; et. intro T. iMod T. iSpecialize T SIM. iSpecialize T A. iMod T; des; ss. }
 
 
 
 
         iMerge A SIM. rewrite <- own_sep in A. rewrite GRA.embed_add in A. rewrite URA.add_comm in A.
-        eapply own_upd in A; cycle 1; [|rewrite intro_iHyp in A;iUpdate A].
+        eapply own_upd in A; cycle 1; [|rewrite intro_iHyp in A;iMod A].
         { eapply GRA.embed_updatable. instantiate (1:= echo_black x (z :: ns) ⋅ echo_white x (z :: ns)).
           eapply URA.auth_update. rr. ii. des; ss. destruct ctx; ss; clarify.
         }
@@ -943,15 +949,15 @@ Section SIMMODSEM.
     }
     econs; ss.
     { unfold echo_finishF, echo_finish_body. init. harg_tac; des_ifs_safe; iRefresh. repeat rewrite URA.unit_idl in *. repeat rewrite URA.unit_id in *.
-      do 2 iDestruct PRE. iPure A. iPure A0. clarify.
+      do 2 iDestruct PRE. iMod A. iMod A0. clarify.
       iDestruct SIM.
       destruct SIM as [A|A]; iRefresh; cycle 1.
-      { hexploit echo_ra_white; et. intro T. iPurify T. iSpecialize T A. iSpecialize T PRE. iPure T; des; ss. }
+      { hexploit echo_ra_white; et. intro T. iMod T. iSpecialize T A. iSpecialize T PRE. iMod T; des; ss. }
 
       iDestruct A. subst.
       rename x into ns. rename x0 into ns0.
       assert(v = ll /\ l = ns).
-      { hexploit echo_ra_merge; et. intro T. iPurify T. iSpecialize T A. iSpecialize T PRE. iPure T; des; ss. }
+      { hexploit echo_ra_merge; et. intro T. iMod T. iSpecialize T A. iSpecialize T PRE. iMod T; des; ss. }
       des; subst.
 
 
@@ -959,11 +965,11 @@ Section SIMMODSEM.
 
       steps. unfold hcall, ccall. rewrite unfold_is_list in A0. destruct ns; ss; steps.
       - unfold interp_hCallE_tgt, APC. steps. (********** TODO: never unfold it, make a lemma ******************)
-        rewrite Any.upcast_downcast. steps. iPure A0. subst.
+        rewrite Any.upcast_downcast. steps. iMod A0. subst.
         hret_tac x3 (@URA.unit Σ); ss. (********************* TODO **************************************)
         { eapply URA.extends_updatable. esplit. r_equalize; r_solve. }
         { iRefresh. esplits; ss; eauto. exists nil; iRefresh. left; iRefresh. iSplitL A; ss. } (************ TODO ************)
-      - rewrite Any.upcast_downcast. steps. do 4 iDestruct A0. iPure A0. subst. ss.
+      - rewrite Any.upcast_downcast. steps. do 4 iDestruct A0. iMod A0. subst. ss.
         unfold interp_hCallE_tgt, APC. steps. force_l. exists 3. steps.
 
         rewrite unfold_APC. steps. force_l. exists false. steps. force_l. eexists ("alloc", [Vint 1]↑). steps.
@@ -971,12 +977,12 @@ Section SIMMODSEM.
         hcall_tac __ (ord_pure 1) PRE (A, A1, A2) (@URA.unit Σ); ss; et.
         { esplits; try refl; iRefresh. instantiate (1:=1). esplits; ss; et. }
         { esplits; ss; et. eexists; iRefresh. right; iRefresh; ss; et. }
-        des; iRefresh. do 2 iDestruct POST. iPure POST. subst.
+        des; iRefresh. do 2 iDestruct POST. iMod POST. subst.
         apply_all_once Any.upcast_inj. des; clarify. steps. rewrite Any.upcast_downcast in *. clarify.
         iDestruct SIM. destruct SIM as [SIM|SIM]; iRefresh.
-        { iDestruct' SIM. hexploit echo_ra_black; et. intro T. iPurify T. iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
+        { iDestruct' SIM. hexploit echo_ra_black; et. intro T. iMod T. iSpecialize T A. iSpecialize T SIM. iMod T; des; ss. }
         assert(ll = (Vptr x 0) /\ x10 = z :: ns); des; subst.
-        { hexploit echo_ra_merge; et. intro T. iPurify T. iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
+        { hexploit echo_ra_merge; et. intro T. iMod T. iSpecialize T A. iSpecialize T SIM. iMod T; des; ss. }
 
 
 
@@ -1003,18 +1009,18 @@ Section SIMMODSEM.
           - eexists; iRefresh. eauto.
         }
         { esplits; ss; et. eexists; iRefresh. right; iRefresh; ss; et. }
-        des; iRefresh. iDestruct SIM0. do 3 iDestruct POST. iPure POST. subst.
+        des; iRefresh. iDestruct SIM0. do 3 iDestruct POST. iMod POST. subst.
         apply_all_once Any.upcast_inj. des; clarify. steps.
         rewrite Any.upcast_downcast in *. clarify.
         rename SIM0 into SIM. destruct SIM as [SIM|SIM]; iRefresh.
-        { iDestruct' SIM. hexploit echo_ra_black; et. intro T. iPurify T. iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
+        { iDestruct' SIM. hexploit echo_ra_black; et. intro T. iMod T. iSpecialize T A. iSpecialize T SIM. iMod T; des; ss. }
         assert(ll = Vptr hd 0 /\ x = z :: ns); des; subst.
-        { hexploit echo_ra_merge; et. intro T. iPurify T. iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
+        { hexploit echo_ra_merge; et. intro T. iMod T. iSpecialize T A. iSpecialize T SIM. iMod T; des; ss. }
 
 
 
         iMerge A SIM. rewrite <- own_sep in A. rewrite GRA.embed_add in A.
-        eapply own_upd in A; cycle 1; [|rewrite intro_iHyp in A;iUpdate A].
+        eapply own_upd in A; cycle 1; [|rewrite intro_iHyp in A;iMod A].
         { eapply GRA.embed_updatable. instantiate (1:= echo_black v (ns) ⋅ echo_white v (ns)).
           eapply URA.auth_update. rr. ii. des; ss. destruct ctx; ss; clarify.
         }
@@ -1027,13 +1033,13 @@ Section SIMMODSEM.
         hcall_tac __ (ord_pure 1) A2 (A, A1) A0; ss; et.
         { instantiate (1:=(_, _, _)). esplits; try refl; iRefresh. iSplitP; ss. iSplitP; ss. eauto. }
         { esplits; ss; et. eexists; iRefresh. right; iRefresh; ss; et. }
-        des; iRefresh. iDestruct SIM. iDestruct POST. iPure A0. subst.
+        des; iRefresh. iDestruct SIM. iDestruct POST. iMod A0. subst.
         apply_all_once Any.upcast_inj. des; clarify. steps.
         rewrite Any.upcast_downcast in *. clarify.
         destruct SIM as [SIM|SIM]; iRefresh.
-        { iDestruct' SIM. hexploit echo_ra_black; et. intro T. iPurify T. iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
+        { iDestruct' SIM. hexploit echo_ra_black; et. intro T. iMod T. iSpecialize T A. iSpecialize T SIM. iMod T; des; ss. }
         assert(v = ll /\ x = ns); des; subst.
-        { hexploit echo_ra_merge; et. intro T. iPurify T. iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
+        { hexploit echo_ra_merge; et. intro T. iMod T. iSpecialize T A. iSpecialize T SIM. iMod T; des; ss. }
 
 
 
@@ -1045,9 +1051,9 @@ Section SIMMODSEM.
         { esplits; ss; et. eexists; iRefresh. right; iRefresh; ss; et. }
         des; iRefresh. subst. iDestruct SIM0.
         rename SIM0 into SIM. destruct SIM as [SIM|SIM]; iRefresh.
-        { iDestruct' SIM. hexploit echo_ra_black; et. intro T. iPurify T. iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
+        { iDestruct' SIM. hexploit echo_ra_black; et. intro T. iMod T. iSpecialize T A. iSpecialize T SIM. iMod T; des; ss. }
         assert(ll0 = ll /\ x = ns); des; subst.
-        { hexploit echo_ra_merge; et. intro T. iPurify T. iSpecialize T A. iSpecialize T SIM. iPure T; des; ss. }
+        { hexploit echo_ra_merge; et. intro T. iMod T. iSpecialize T A. iSpecialize T SIM. iMod T; des; ss. }
 
 
 
