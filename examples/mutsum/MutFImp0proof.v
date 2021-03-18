@@ -31,7 +31,6 @@ Local Open Scope nat_scope.
 Section SIMMODSEM.
 
   Context `{Σ: GRA.t}.
-  Local Opaque GRA.to_URA.
 
   Let W: Type := (alist mname (Σ * Any.t)) * (alist mname (Σ * Any.t)).
 

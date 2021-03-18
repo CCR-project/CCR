@@ -33,7 +33,6 @@ Hint Resolve sim_itree_mon: paco.
 Section SIMMODSEM.
 
   Context `{Σ: GRA.t}.
-  Local Opaque GRA.to_URA.
 
   Let W: Type := (alist mname (Σ * Any.t)) * (alist mname (Σ * Any.t)).
 

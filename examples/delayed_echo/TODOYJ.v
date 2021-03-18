@@ -16,11 +16,6 @@ Set Typeclasses Depth 5.
 
 
 
-Global Opaque GRA.to_URA.
-Infix "⋅" := URA.add (at level 50, left associativity).
-Notation "(⋅)" := URA.add (only parsing).
-
-
 Definition unleftU {E X Y} `{eventE -< E} (xy: X + Y): itree E X :=
   match xy with
   | inl x => Ret x

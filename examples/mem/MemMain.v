@@ -75,9 +75,6 @@ Section PROOF.
     Local Opaque GRA.to_URA.
   Qed.
 
-  Infix "⋅" := URA.add (at level 50, left associativity).
-  Notation "(⋅)" := URA.add (only parsing).
-
   (* Definition incl (sbtb0 sbtb1: list (string * fspec)): Prop := List.incl  *)
   (* Lemma handle_hCallE_tgt_ext *)
   (*       sbtb0 sbtb1 mn cur *)

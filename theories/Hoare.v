@@ -21,7 +21,6 @@ Set Implicit Arguments.
 Section CANCEL.
 
   Context `{Σ: GRA.t}.
-  Opaque GRA.to_URA.
 
   Variable md_tgt: Mod.t.
   Let ms_tgt: ModSem.t := (Mod.get_modsem md_tgt (Sk.load_skenv md_tgt.(Mod.sk))).

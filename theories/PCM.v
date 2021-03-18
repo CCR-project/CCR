@@ -863,6 +863,9 @@ End GRA.
 Coercion GRA.to_URA: GRA.t >-> URA.t.
 
 Notation "'ε'" := URA.unit.
+Global Opaque GRA.to_URA.
+Infix "⋅" := URA.add (at level 50, left associativity).
+Notation "(⋅)" := URA.add (only parsing).
 (* Definition ε `{Σ: GRA.t}: Σ := URA.unit. *)
 
 (***
