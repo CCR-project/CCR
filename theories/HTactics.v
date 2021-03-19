@@ -491,43 +491,51 @@ Ltac interp_state_red := rewrite interp_state_trigger ||
 
 Ltac _red_itree f :=
   match goal with
-  | [ |- ITree.bind' _ (ITree.bind' _ _) = _] =>
-    instantiate (f:=_continue); apply bind_bind; fail 2
-  | [ |- ITree.bind' _ (Tau _) = _] =>
-    instantiate (f:=_break); apply bind_tau; fail 2
-  | [ |- ITree.bind' _ (Ret _) = _] =>
-    instantiate (f:=_continue); apply bind_ret_l; fail 2
-  | _ =>
-    instantiate (f:=_fail)
+  | [ |- ITree.bind' _ ?itr = _] =>
+    match itr with
+    | ITree.bind' _ _ => 
+      instantiate (f:=_continue); apply bind_bind; fail 3
+    | Tau _ =>
+      instantiate (f:=_break); apply bind_tau; fail 3
+    | Ret _ =>
+      instantiate (f:=_continue); apply bind_ret_l; fail 3
+    | _ =>
+      instantiate (f:=_fail)
+    end
+  | _ => fail
   end.
 
 Ltac _red_interp_tgt f :=
   match goal with
-  | [ |- ITree.bind' _ (interp_hCallE_tgt _ _ _ (ITree.bind' _ _)) = _ ] =>
-    instantiate (f:=_continue); eapply interp_tgt_bind; fail 2
-  | [ |- ITree.bind' _ (interp_hCallE_tgt _ _ _ (Tau _)) = _ ] =>
-    instantiate (f:=_break); apply interp_tgt_tau; fail 2
-  | [ |- ITree.bind' _ (interp_hCallE_tgt _ _ _ (Ret _)) = _ ] =>
-    instantiate (f:=_continue); apply interp_tgt_ret; fail 2
-  | [ |- ITree.bind' _ (interp_hCallE_tgt _ _ _ (trigger _)) = _ ] =>
-    instantiate (f:=_break);
-    (apply interp_tgt_hcall ||
-     apply interp_tgt_triggere ||
-     apply interp_tgt_triggerp); fail 2
-  | [ |- ITree.bind' _ (interp_hCallE_tgt _ _ _ triggerUB) = _ ] =>
-    instantiate (f:=_break); apply interp_tgt_triggerUB; fail 2
-  | [ |- ITree.bind' _ (interp_hCallE_tgt _ _ _ triggerNB) = _ ] =>
-    instantiate (f:=_break); apply interp_tgt_triggerNB; fail 2
-  | [ |- ITree.bind' _ (interp_hCallE_tgt _ _ _ (unwrapU _)) = _ ] =>
-    instantiate (f:=_break); apply interp_tgt_unwrapU; fail 2
-  | [ |- ITree.bind' _ (interp_hCallE_tgt _ _ _ (unwrapN _)) = _ ] =>
-    instantiate (f:=_break); apply interp_tgt_unwrapN; fail 2
-  | [ |- ITree.bind' _ (interp_hCallE_tgt _ _ _ (assume _)) = _ ] =>
-    instantiate (f:=_break); apply interp_tgt_assume; fail 2
-  | [ |- ITree.bind' _ (interp_hCallE_tgt _ _ _ (guarantee _)) = _ ] =>
-    instantiate (f:=_break); apply interp_tgt_guarantee; fail 2
-  | _ =>
-    instantiate (f:=_fail)
+  | [ |- ITree.bind' _ (interp_hCallE_tgt _ _ _ ?itr) = _ ] =>
+    match itr with
+    | ITree.bind' _ _ =>
+      instantiate (f:=_continue); eapply interp_tgt_bind; fail 3
+    | Tau _ =>
+      instantiate (f:=_break); apply interp_tgt_tau; fail 3
+    | Ret _ =>
+      instantiate (f:=_continue); apply interp_tgt_ret; fail 3
+    | trigger _ =>
+      instantiate (f:=_break);
+      (apply interp_tgt_hcall ||
+       apply interp_tgt_triggere ||
+       apply interp_tgt_triggerp); fail 3
+    | triggerUB =>
+      instantiate (f:=_break); apply interp_tgt_triggerUB; fail 3
+    | triggerNB =>
+      instantiate (f:=_break); apply interp_tgt_triggerNB; fail 3
+    | unwrapU _ =>
+      instantiate (f:=_break); apply interp_tgt_unwrapU; fail 3
+    | unwrapN _ =>
+      instantiate (f:=_break); apply interp_tgt_unwrapN; fail 3
+    | assume _ =>
+      instantiate (f:=_break); apply interp_tgt_assume; fail 3
+    | guarantee _ =>
+      instantiate (f:=_break); apply interp_tgt_guarantee; fail 3
+    | _ =>
+      instantiate (f:=_fail)
+    end
+  | _ => fail
   end.
 
 Ltac _red_lsim f :=
@@ -536,7 +544,7 @@ Ltac _red_lsim f :=
     _red_interp_tgt f
   | [ |- trigger _ = _] =>
     instantiate (f:=_break); apply bind_ret_r_rev; fail 2
-  | [ |- _ = _ ] =>
+  | [ |- ITree.bind' _ ?itr = _ ] =>    
     _red_itree f
   end.
 
