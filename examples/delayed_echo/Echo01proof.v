@@ -81,7 +81,11 @@ Ltac hcall_tac x o MR_SRC1 FR_SRC1 RARG_SRC :=
   end
 .
 
-
+Ltac hret_tac MR_SRC RT_SRC :=
+  let mr_src1 := r_gather MR_SRC in
+  let fr_src1 := r_gather RT_SRC in
+  HTactics.hret_tac mr_src1 fr_src1; [eapply URA.extends_updatable; r_equalize; r_solve| |]
+.
 
 
 
@@ -293,8 +297,7 @@ Section SIMMODSEM.
         { esplits; ss; et. }
         { esplits; ss; et. exists ns; iRefresh. left; iRefresh. iSplitL SIM; ss. }
         steps.
-        hret_tac mr (@URA.unit Σ); ss.
-        { eapply URA.extends_updatable. esplit. r_equalize; r_solve. }
+        hret_tac SIM0 (@URA.unit Σ); ss.
         { iRefresh. iDestruct SIM0. esplits; eauto. eexists; iRefresh. eauto. }
       - steps.
         force_l. eexists 1. steps. rewrite Any.upcast_downcast. ss. steps.
@@ -331,8 +334,7 @@ Section SIMMODSEM.
         { instantiate (1:=(_, _)). esplits; try refl; iRefresh. iSplitP; ss. iSplitP; ss; et. }
         { esplits; ss; eauto. exists (z :: ns); iRefresh. left; iRefresh. iSplitL A; ss. }
         steps.
-        hret_tac mr0 (@URA.unit Σ); ss.
-        { eapply URA.extends_updatable; et. r_equalize; r_solve. }
+        hret_tac SIM (@URA.unit Σ); ss.
         { esplits; eauto. }
     }
     econs; ss.
@@ -354,9 +356,8 @@ Section SIMMODSEM.
       steps. unfold hcall, ccall. rewrite unfold_is_list in A0. destruct ns; ss; steps.
       - unfold interp_hCallE_tgt, APC. steps. (********** TODO: never unfold it, make a lemma ******************)
         rewrite Any.upcast_downcast. steps. iMod A0. subst.
-        hret_tac x3 (@URA.unit Σ); ss. (********************* TODO **************************************)
-        { eapply URA.extends_updatable. esplit. r_equalize; r_solve. }
-        { iRefresh. esplits; ss; eauto. exists nil; iRefresh. left; iRefresh. iSplitL A; ss. } (************ TODO ************)
+        hret_tac A (@URA.unit Σ); ss.
+        { iRefresh. esplits; ss; eauto. exists nil; iRefresh. left; iRefresh. iSplitL A; ss. }
       - rewrite Any.upcast_downcast. steps. do 4 iDestruct A0. iMod A0. subst. ss.
         unfold interp_hCallE_tgt, APC. steps. force_l. exists 3. steps.
 
@@ -453,8 +454,7 @@ Section SIMMODSEM.
         des; iRefresh. subst. iDestruct SIM0.
 
         steps.
-        hret_tac mr3 (@URA.unit Σ); ss.
-        { eapply URA.extends_updatable. r_equalize; r_solve. }
+        hret_tac SIM0 (@URA.unit Σ); ss.
         { iRefresh. esplits; eauto. eexists; iRefresh. eauto. }
     }
   Unshelve.
