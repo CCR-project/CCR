@@ -293,8 +293,7 @@ Section PROOF.
         { instantiate (1:=(0+1)%ord). rewrite Ord.from_nat_O. eapply OrdArith.add_O_l. }
         muclo lbindC_spec. econs; eauto.
         { eapply SELFSIM. esplits; eauto. }
-        { i. eapply sim_l_trigger_ret_rev.
-          eapply sim_r_trigger_ret_rev.
+        { i. ired_all.
           destruct st_src1 as [w_src fr_src0]. destruct st_tgt1 as [w_tgt fr_tgt0].
           unfold liftRR in SIM. des; subst.
           mstep. eapply sim_itree_choose_both.

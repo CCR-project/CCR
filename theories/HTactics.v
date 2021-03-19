@@ -534,7 +534,7 @@ Ltac _red_lsim f :=
   match goal with
   | [ |- ITree.bind' _ (interp_hCallE_tgt _ _ _ _) = _ ] =>
     _red_interp_tgt f
-  | [ |- ITree.bind' _ (trigger _) = _] =>
+  | [ |- trigger _ = _] =>
     instantiate (f:=_break); apply bind_ret_r_rev; fail 2
   | [ |- _ = _ ] =>
     _red_itree f
@@ -565,7 +565,7 @@ Proof.
 Qed.
 
 Ltac ired_l := try (prw lsim_l_context _red_lsim).
-Ltac ired_w := try (prw lsim_r_context _red_lsim).
+Ltac ired_r := try (prw lsim_r_context _red_lsim).
 
 
 Ltac ired_all := ired_l; ired_r.
