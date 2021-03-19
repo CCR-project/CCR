@@ -16,7 +16,7 @@ From ExtLib Require Import
      Core.RelDec
      Structures.Maps
      Data.Map.FMapAList.
-Require Import TODOYJ.
+Require Import HTactics TODOYJ YPM.
 
 Generalizable Variables E R A B C X Y.
 
@@ -26,105 +26,27 @@ Local Open Scope nat_scope.
 
 
 
-(* Notation "wf n '------------------------------------------------------------------' src0 tgt0 '------------------------------------------------------------------' src1 tgt1 '------------------------------------------------------------------' src2 tgt2" *)
-(*   := *)
-(*     (gpaco3 (_sim_itree wf) _ _ _ n (([(_, src0)], src1), src2) (([(_, tgt0)], tgt1), tgt2)) *)
-(*       (at level 60, *)
-(*        format "wf  n '//' '------------------------------------------------------------------' '//' src0 '//' tgt0 '//' '------------------------------------------------------------------' '//' src1 '//' tgt1 '//' '------------------------------------------------------------------' '//' src2 '//' '//' '//' tgt2 '//' "). *)
+Section AUX.
+  Context `{Σ: GRA.t}.
+
+  Lemma unfold_APC: forall n, _APC n =
+    match n with
+    | 0 => Ret tt
+    | S n => break <- trigger (Choose _);;
+             if break: bool
+             then Ret tt
+             else '(fn, varg) <- trigger (Choose _);;
+                  trigger (hCall true fn varg);; _APC n
+    end.
+    { i. destruct n; ss. }
+  Qed.
+  Lemma _Own_ε: Own ε = ⌜True⌝. Proof. apply func_ext; i. unfold Own. apply prop_ext. split; i; ss. r. esplit. rewrite URA.unit_idl; refl. Qed.
+  Lemma Own_ε: ⌞Own ε⌟. Proof. iIntro. rewrite _Own_ε. ss. Fail Qed. Abort. (********** coq bug !!!!!!!!!!!!!!! **************)
+  Lemma Own_ε: ⌞Own ε⌟. Proof. iIntro. exists r. r_solve. Qed.
+End AUX.
+Global Opaque _APC.
 
 
-
-(* Ltac prep := ired; try rewrite ! unfold_interp. *)
-
-(* Ltac force_l := *)
-(*   prep; *)
-(*   match goal with *)
-(*   | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, unwrapN ?ox >>= _) (_, _)) ] => *)
-(*     let tvar := fresh "tmp" in *)
-(*     let thyp := fresh "TMP" in *)
-(*     remember (unwrapN ox) as tvar eqn:thyp; unfold unwrapN in thyp; subst tvar; *)
-(*     let name := fresh "_UNWRAPN" in *)
-(*     destruct (ox) eqn:name; [|exfalso]; cycle 1 *)
-(*   | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, guarantee ?P >>= _) (_, _)) ] => *)
-(*     let tvar := fresh "tmp" in *)
-(*     let thyp := fresh "TMP" in *)
-(*     remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar; *)
-(*     let name := fresh "_GUARANTEE" in *)
-(*     destruct (classic P) as [name|name]; [gstep; ired; eapply sim_itree_choose_src; [eauto|exists name]|contradict name]; cycle 1 *)
-
-(*   | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, ?i_src) (_, ?i_tgt)) ] => *)
-(*     seal i_tgt; gstep; econs; eauto; unseal i_tgt *)
-(*   end *)
-(* . *)
-(* Ltac force_r := *)
-(*   prep; *)
-(*   match goal with *)
-(*   | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, _) (_, unwrapU ?ox >>= _)) ] => *)
-(*     let tvar := fresh "tmp" in *)
-(*     let thyp := fresh "TMP" in *)
-(*     remember (unwrapU ox) as tvar eqn:thyp; unfold unwrapU in thyp; subst tvar; *)
-(*     let name := fresh "_UNWRAPU" in *)
-(*     destruct (ox) eqn:name; [|exfalso]; cycle 1 *)
-(*   | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, _) (_, assume ?P >>= _)) ] => *)
-(*     let tvar := fresh "tmp" in *)
-(*     let thyp := fresh "TMP" in *)
-(*     remember (assume P) as tvar eqn:thyp; unfold assume in thyp; subst tvar; *)
-(*     let name := fresh "_ASSUME" in *)
-(*     destruct (classic P) as [name|name]; [gstep; ired; eapply sim_itree_take_tgt; [eauto|exists name]|contradict name]; cycle 1 *)
-
-(*   | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, ?i_src) (_, ?i_tgt)) ] => *)
-(*     seal i_src; gstep; econs; eauto; unseal i_src *)
-(*   end *)
-(* . *)
-(* Ltac init := *)
-(*   split; ss; ii; clarify; rename y into varg; eexists 100%nat; ss; des; clarify; *)
-(*   ginit; [eapply cpn3_wcompat; eauto with paco|]; unfold alist_add, alist_remove; ss; *)
-(*   unfold fun_to_tgt, cfun, HoareFun; ss. *)
-
-(* Ltac _step := *)
-(*   match goal with *)
-(*   (*** blacklisting ***) *)
-(*   (* | [ |- (gpaco3 (_sim_itree wf) _ _ _ _ (_, trigger (Choose _) >>= _) (_, ?i_tgt)) ] => idtac *) *)
-(*   | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, unwrapU ?ox >>= _) (_, _)) ] => *)
-(*     let tvar := fresh "tmp" in *)
-(*     let thyp := fresh "TMP" in *)
-(*     remember (unwrapU ox) as tvar eqn:thyp; unfold unwrapU in thyp; subst tvar; *)
-(*     let name := fresh "_UNWRAPU" in *)
-(*     destruct (ox) eqn:name; [|unfold triggerUB; ired; _step; ss; fail] *)
-(*   | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, assume ?P >>= _) (_, _)) ] => *)
-(*     let tvar := fresh "tmp" in *)
-(*     let thyp := fresh "TMP" in *)
-(*     remember (assume P) as tvar eqn:thyp; unfold assume in thyp; subst tvar; *)
-(*     let name := fresh "_ASSUME" in *)
-(*     ired; gstep; eapply sim_itree_take_src; [apply Nat.lt_succ_diag_r|]; intro name *)
-
-(*   (*** blacklisting ***) *)
-(*   (* | [ |- (gpaco3 (_sim_itree wf) _ _ _ _ (_, _) (_, trigger (Take _) >>= _)) ] => idtac *) *)
-(*   | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, _) (_, unwrapN ?ox >>= _)) ] => *)
-(*     let tvar := fresh "tmp" in *)
-(*     let thyp := fresh "TMP" in *)
-(*     remember (unwrapN ox) as tvar eqn:thyp; unfold unwrapN in thyp; subst tvar; *)
-(*     let name := fresh "_UNWRAPN" in *)
-(*     destruct (ox) eqn:name; [|unfold triggerNB; ired; _step; ss; fail] *)
-(*   | [ |- (gpaco3 (_sim_itree _) _ _ _ _ (_, _) (_, guarantee ?P >>= _)) ] => *)
-(*     let tvar := fresh "tmp" in *)
-(*     let thyp := fresh "TMP" in *)
-(*     remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar; *)
-(*     let name := fresh "_GUARANTEE" in *)
-(*     ired; gstep; eapply sim_itree_choose_tgt; [apply Nat.lt_succ_diag_r|]; intro name *)
-
-
-
-(*   | _ => (*** default ***) *)
-(*     gstep; econs; try apply Nat.lt_succ_diag_r; i *)
-(*   end; *)
-(*   (* idtac *) *)
-(*   match goal with *)
-(*   | [ |- exists _, _ ] => fail 1 *)
-(*   | _ => idtac *)
-(*   end *)
-(* . *)
-(* Ltac steps := repeat ((*** pre processing ***) prep; try _step; (*** post processing ***) unfold alist_add; simpl; des_ifs_safe). *)
 
 
 
@@ -148,18 +70,11 @@ Section SIMMODSEM.
 
   Opaque URA.unit.
 
+  Lemma iHyp_update_r: forall P r0 r1, r0 = r1 -> iHyp P r0 -> iHyp P r1. Proof. i. subst. ss. Qed.
 
-  Lemma unfold_APC: forall n, _APC n = match n with
-                                       | 0 => Ret tt
-                                       | S n => break <- trigger (Choose _);;
-                                                if break: bool
-                                                then Ret tt
-                                                else '(fn, varg) <- trigger (Choose _);;
-                                                     trigger (hCall true fn varg);; _APC n
-                                       end.
-    { i. destruct n; ss. }
-  Qed.
-  Opaque _APC.
+  Ltac iImpure H := let name := fresh "my_r" in
+                    specialize (H ε URA.wf_unit I); rewrite intro_iHyp in H;
+                    on_gwf ltac:(fun GWF => rewrite <- URA.unit_id in GWF; set (name:=ε) in GWF; eapply iHyp_update_r with (r1:=name) in H; [|refl]; clearbody name).
 
 
 
@@ -170,6 +85,116 @@ Section SIMMODSEM.
     { ss. }
 
     econs; ss.
+    { unfold popF. init.
+      harg_tac. des_ifs_safe. des. repeat rewrite URA.unit_idl in *. repeat rewrite URA.unit_id in *.
+      iRefresh. do 4 iDestruct PRE. iMod A. iMod PRE. clarify.
+      apply Any.upcast_inj in PRE. des; clarify. steps. rewrite Any.upcast_downcast in *. clarify. steps.
+
+      unfold ccall, interp_hCallE_tgt, APC. steps. (********** TODO: never unfold it, make a lemma ******************)
+      force_l. exists 7. steps.
+
+      rewrite unfold_APC. steps. force_l. exists false. steps. force_l. eexists ("load", [Vptr n 0]↑). steps.
+      force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
+      hcall_tac __ __ (@URA.unit Σ) A0 A1; ss; et.
+      { instantiate (2:= (_, _, _)). esplits; try refl; iRefresh. iSplitP; ss. iSplitP; ss; et. }
+      { esplits; ss; et. }
+      des; subst. rewrite Any.upcast_downcast. steps. iRefresh. iDestruct POST. iMod A. apply Any.upcast_inj in A; des; clarify.
+
+
+      destruct l; ss.
+      - iMod A0. subst.
+        rewrite unfold_APC. steps. force_l. exists false. steps. force_l. eexists ("cmp", [Vnullptr; Vnullptr]↑). steps.
+        force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
+        hcall_tac __ __ (@URA.unit Σ) POST (@URA.unit Σ); ss; et.
+        { instantiate (2:= (_, _)). esplits; try refl; iRefresh. iSplitP; ss. hexploit Own_ε; intro A. iImpure A. iRefresh.
+          TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
+          r.
+          r in GWF. r in A.
+          iSplitR A; ss; et. right. iRefresh. split; ss. }
+        { esplits; ss; et. }
+        des; subst. rewrite Any.upcast_downcast. steps. iRefresh. iDestruct POST. iMod A. apply Any.upcast_inj in A; des; clarify.
+
+
+
+      des; subst. steps.
+
+
+
+      unfold ccall.
+      unfold body_to_tgt. unfold interp_hCallE_tgt, APC. steps. (********** TODO: never unfold it, make a lemma ******************)
+      force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
+
+      hcall_tac __ __ (A, A0) PRE (@URA.unit Σ); ss; et.
+      { esplits; ss; et. eexists; iRefresh. left; iRefresh. iSplitL A; ss.
+        - iApply A; ss.
+        - iApply A0; ss.
+      }
+      des; subst. rewrite Any.upcast_downcast. steps. rewrite Any.upcast_downcast. steps.
+
+
+
+      iDestruct SIM. destruct SIM as [SIM|SIM]; iRefresh; cycle 1.
+      { hexploit echo_ra_white; et. intro T. iMod T. iSpecialize T SIM. iSpecialize T PRE. iMod T; des; ss. }
+      iDestruct SIM. subst.
+      assert(ll0 = ll /\ x = ns); des; subst.
+      { hexploit echo_ra_merge; et. intro T. iMod T. iSpecialize T SIM. iSpecialize T PRE. iMod T; des; ss. }
+      subst.
+
+
+
+
+      destruct (unint vret_src) eqn:T; cycle 1.
+      { steps. unfold triggerUB. steps. }
+      destruct vret_src; ss. clarify. steps.
+
+      destruct (dec z (- 1)%Z).
+      - subst. ss. steps.
+        force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
+        hcall_tac __ __ (A, SIM) (@URA.unit Σ) PRE; ss; et.
+        { instantiate (2:= (_, _)). esplits; try refl; iRefresh. iSplitP; ss. iSplitP; ss; et. }
+        { esplits; ss; et. }
+        { esplits; ss; et. exists ns; iRefresh. left; iRefresh. iSplitL SIM; ss. }
+        steps.
+        hret_tac SIM0 (@URA.unit Σ); ss.
+        { iRefresh. iDestruct SIM0. esplits; eauto. eexists; iRefresh. eauto. }
+      - steps.
+        force_l. eexists 1. steps. rewrite Any.upcast_downcast. ss. steps.
+
+        rewrite unfold_APC. steps. force_l. exists false. steps. force_l. eexists ("push", [ll; Vint z]↑). steps.
+        force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
+        hcall_tac __ (ord_pure 2) PRE SIM A; ss; et.
+        { instantiate (1:=(_, _)). esplits; try refl; iRefresh. eexists; iRefresh. iSplitP; ss. iSplitP; ss. iApply A; ss. }
+        { esplits; ss; et. exists ns; iRefresh. right; iRefresh; ss. }
+        des; iRefresh. do 2 iDestruct POST0. iMod A. subst. apply Any.upcast_inj in A. des; clarify.
+        iDestruct SIM0. destruct SIM0; iRefresh.
+        { iDestruct H1. hexploit echo_ra_black; et. intro T. iMod T. iSpecialize T SIM. iSpecialize T H1. iMod T; des; ss. }
+
+        rename H1 into A.
+        assert(ll0 = ll /\ x8 = ns); des; subst.
+        { hexploit echo_ra_merge; et. intro T. iMod T. iSpecialize T SIM. iSpecialize T A. iMod T; des; ss. }
+
+
+
+
+        iMerge A SIM. rewrite <- own_sep in A. rewrite GRA.embed_add in A. rewrite URA.add_comm in A.
+        eapply own_upd in A; cycle 1; [|rewrite intro_iHyp in A;iMod A].
+        { eapply GRA.embed_updatable. instantiate (1:= echo_black x (z :: ns) ⋅ echo_white x (z :: ns)).
+          eapply URA.auth_update. rr. ii. des; ss. destruct ctx; ss; clarify.
+        }
+        rewrite <- GRA.embed_add in A. rewrite own_sep in A. iDestruct A. subst.
+
+
+
+        rewrite unfold_APC. steps.
+        force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast in *. steps.
+
+        hcall_tac __ ord_top (POST0, A) (@URA.unit Σ) A0; ss; et.
+        { instantiate (1:=(_, _)). esplits; try refl; iRefresh. iSplitP; ss. iSplitP; ss; et. }
+        { esplits; ss; eauto. exists (z :: ns); iRefresh. left; iRefresh. iSplitL A; ss. }
+        steps.
+        hret_tac SIM (@URA.unit Σ); ss.
+        { esplits; eauto. }
+    }
     { init.
       unfold checkWf, forge, discard, put. steps.
       unfold popF. steps.

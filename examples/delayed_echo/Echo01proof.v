@@ -17,86 +17,13 @@ From ExtLib Require Import
      Structures.Maps
      Data.Map.FMapAList.
 Require Import TODOYJ.
-Require Import Logic YPM.
+Require Import HTactics Logic YPM.
 
 Generalizable Variables E R A B C X Y.
 
 Set Implicit Arguments.
 
 Local Open Scope nat_scope.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Require Import HTactics.
-Ltac harg_tac :=
-  HTactics.harg_tac;
-  match goal with
-  | [H: URA.wf ?cur |- _] =>
-    let name := fresh "GWF" in
-    assert(name: __gwf_mark__ cur cur) by (split; [refl|exact H]); clear H
-  end.
-
-Ltac hcall_tac x o MR_SRC1 FR_SRC1 RARG_SRC :=
-  let mr_src1 := r_gather MR_SRC1 in
-  let fr_src1 := r_gather FR_SRC1 in
-  let rarg_src := r_gather RARG_SRC in
-  (* let tac0 := etrans; [on_gwf ltac:(fun GWF => apply GWF)|eapply URA.extends_updatable; r_equalize; r_solve] in *)
-  (* let tac0 := idtac in *)
-  let tac0 := etrans; [etrans; [|on_gwf ltac:(fun GWF => apply GWF)]|]; eapply URA.extends_updatable; r_equalize; r_solve; fail in
-  let tac1 := (on_gwf ltac:(fun H => clear H);
-               let WF := fresh "WF" in
-               let tmp := fresh "_tmp_" in
-               let GWF := fresh "GWF" in
-               intros ? ? ? ? ? WF; cbn in WF; desH WF; subst;
-               esplits; ss; et; intros tmp ?; assert(GWF: ☀) by (split; [refl|exact tmp]); clear tmp; iRefresh; iClears') in
-  prep;
-  match x with
-  | ltac_wild =>
-    match o with
-    | ltac_wild => eapply (hcall_clo _ (mr_src1:=mr_src1) (fr_src1:=fr_src1) (rarg_src:=rarg_src)); [tac0|lia|..|tac1]
-    | _ => eapply (hcall_clo _ (o:=o) (mr_src1:=mr_src1) (fr_src1:=fr_src1) (rarg_src:=rarg_src)); [tac0|lia|..|tac1]
-    end
-  | _ => eapply (hcall_clo x (o:=o) (mr_src1:=mr_src1) (fr_src1:=fr_src1) (rarg_src:=rarg_src)); [tac0|lia|..|tac1]
-  end
-.
-
-Ltac hret_tac MR_SRC RT_SRC :=
-  let mr_src1 := r_gather MR_SRC in
-  let fr_src1 := r_gather RT_SRC in
-  HTactics.hret_tac mr_src1 fr_src1; [eapply URA.extends_updatable; r_equalize; r_solve| |]
-.
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -131,31 +58,9 @@ Section AUX.
 
   Context `{@GRA.inG Echo1.echoRA Σ}.
 
-  (* Lemma echo_ra_merge2 *)
-  (*       ll0 ns0 ll1 ns1 *)
-  (*   : *)
-  (*     iHyp (Own (GRA.embed (echo_black ll0 ns0)) -* Own (GRA.embed (echo_white ll1 ns1)) *)
-  (*               -* (⌜ll1 = ll0 /\ ns1 = ns0⌝ ** Own (GRA.embed (echo_black ll0 ns0)) ** Own (GRA.embed (echo_white ll1 ns1)))) ε *)
-  (* . *)
-  (* Proof. *)
-  (*   iIntro. iIntro. *)
-  (*   { *)
-  (*     iMerge A A0. rewrite <- own_sep in A. rewrite GRA.embed_add in A. *)
-  (*     iOwnWf A. eapply GRA.embed_wf in WF. des. eapply URA.auth_included in WF. des. *)
-  (*     Local Transparent URA.add. *)
-  (*     rr in WF. des. cbn in WF. *)
-  (*     Local Opaque URA.add. *)
-  (*     des_ifs. *)
-  (*     rewrite <- GRA.embed_add in A. rewrite own_sep in A. iDestruct' A. *)
-  (*     iSplitL A; ss. *)
-  (*     - iSplitP; ss. *)
-  (*   } *)
-  (* Qed. *)
-
   Lemma echo_ra_merge
         ll0 ns0 ll1 ns1
     :
-      (* iHyp (Own (GRA.embed (echo_black ll0 ns0)) -* Own (GRA.embed (echo_white ll1 ns1)) -* (⌜ll1 = ll0 /\ ns1 = ns0⌝)) ε *)
       ⌞(Own (GRA.embed (echo_black ll0 ns0)) -* Own (GRA.embed (echo_white ll1 ns1)) -* (⌜ll1 = ll0 /\ ns1 = ns0⌝))⌟
   .
   Proof.
@@ -174,7 +79,6 @@ Section AUX.
   Lemma echo_ra_white
         ll0 ns0 ll1 ns1
     :
-      (* iHyp (Own (GRA.embed (echo_white ll0 ns0)) -* Own (GRA.embed (echo_white ll1 ns1)) -* ⌜False⌝) ε *)
       ⌞(Own (GRA.embed (echo_white ll0 ns0)) -* Own (GRA.embed (echo_white ll1 ns1)) -* ⌜False⌝)⌟
   .
   Proof.
@@ -190,7 +94,6 @@ Section AUX.
   Lemma echo_ra_black
         ll0 ns0 ll1 ns1
     :
-      (* iHyp (Own (GRA.embed (echo_black ll0 ns0)) -* Own (GRA.embed (echo_black ll1 ns1)) -* ⌜False⌝) ε *)
       ⌞(Own (GRA.embed (echo_black ll0 ns0)) -* Own (GRA.embed (echo_black ll1 ns1)) -* ⌜False⌝)⌟
   .
   Proof.
@@ -224,9 +127,6 @@ Section SIMMODSEM.
       exists (mr: Σ) (ll: val),
         (<<SRC: mrps_src0 = Maps.add "Echo" (mr, tt↑) Maps.empty>>) /\
         (<<TGT: mrps_tgt0 = Maps.add "Echo" (ε, ll↑) Maps.empty>>) /\
-        (* (<<SIM: (iHyp (⌜ll = Vnullptr⌝ ∨ (Exists ns, (Own(GRA.embed(echo_black ns))) ** is_list ll (List.map Vint ns))) mr)>>) *)
-        (* (<<SIM: (iHyp (Exists ns, (Own(GRA.embed(echo_black ns))) *)
-        (*                             ** (is_list ll (List.map Vint ns) ∨ (Own(GRA.embed(echo_white ns))))) mr)>>) *)
         (<<SIM: (iHyp (Exists ns, ((Own(GRA.embed(echo_black ll ns))) ** is_list ll (List.map Vint ns)) ∨ (Own(GRA.embed(echo_white ll ns)))) mr)>>)
   .
 
