@@ -707,5 +707,6 @@ Ltac hcall_tac x o MR_SRC1 FR_SRC1 RARG_SRC :=
 Ltac hret_tac MR_SRC RT_SRC :=
   let mr_src1 := r_gather MR_SRC in
   let fr_src1 := r_gather RT_SRC in
-  _hret_tac mr_src1 fr_src1; [eapply URA.extends_updatable; r_equalize; r_solve| |]
+  let tac0 := etrans; [etrans; [|on_gwf ltac:(fun GWF => apply GWF)]|]; eapply URA.extends_updatable; r_equalize; r_solve; fail in
+  _hret_tac mr_src1 fr_src1; [tac0| |]
 .

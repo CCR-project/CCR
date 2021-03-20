@@ -228,16 +228,17 @@ Ltac r_bring_front H r0 :=
    ***)
   match goal with
   | [ |- (gpaco3 (SimModSem._sim_itree _) _ _ _ _ _  _) ] => idtac
-  (* | [ |- iHyp _ _ ] => *)
+  | [ |- iHyp _ _ ] =>
   (*   repeat rewrite URA.add_assoc; *)
   (*   (*** corner case: goal is pure \/ probably already sorted ***) *)
   (*   try rewrite (URA.add_comm _ r0); (*** probably already sorted; so "try" ***) *)
   (*   repeat rewrite URA.add_assoc *)
-  | _ =>
     repeat rewrite URA.add_assoc;
     (*** corner case: goal is pure \/ probably already sorted ***)
     try rewrite (URA.add_comm _ r0); (*** probably already sorted; so "try" ***)
     repeat rewrite URA.add_assoc
+  | _ =>
+    idtac
   end
 .
 Ltac r_merge H r0 r1 :=

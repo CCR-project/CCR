@@ -79,8 +79,9 @@ Section PROOF.
   Definition MemSem: ModSem.t := {|
     ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt MemStb fn fsb)) MemSbtb;
     ModSem.initial_mrs :=
-      [("Mem", (GRA.embed (URA.black (M:=Mem1._memRA)
-                            (fun b ofs => if (b =? 0)%nat && (ofs =? 0)%Z then inl (Some Vundef) else inr tt)), tt↑))];
+      [("Mem", (GRA.embed (URA.black (M:=Mem1._memRA) (fun _ _ => inr tt)
+                            (* (fun b ofs => if (b =? 0)%nat && (ofs =? 0)%Z then inl (Some Vundef) else inr tt) *)
+                          ), tt↑))];
   |}
   .
 

@@ -109,7 +109,8 @@ Module Mem.
   .
 
   Opaque Z.ltb Z.leb Z.mul Z.eq_dec Nat.eq_dec.
-  Definition empty: t := mk (update (fun _ _ => None) 0 (fun ofs => if dec ofs 0%Z then Some Vundef else None)) 0.
+  (* Definition empty: t := mk (update (fun _ _ => None) 0 (fun ofs => if dec ofs 0%Z then Some Vundef else None)) 0. *)
+  Definition empty: t := mk (fun _ _ => None) 0.
   (* Let empty2: t := Eval compute in *)
   (*   let m0 := mk (fun _ _ => None) 0 in *)
   (*   let (_, m1) := alloc m0 1%Z in *)
