@@ -1,4 +1,5 @@
 Require Import Coqlib.
+Require Import String.
 Require Import ITreelib.
 (* Require Import Qcanon. *)
 (* (*** from stdpp ***) *)
@@ -352,6 +353,7 @@ End RA.
 
 
 
+Local Obligation Tactic := i; unseal "ra"; ss; des_ifs_safe.
 
 (*** PCM == Unital RA ***)
 (*** When URA, not RA? (1) Auth algebra (2) global RA construction ***)
@@ -359,10 +361,12 @@ Module URA.
   Class t: Type := mk {
     car:> Type;
     unit: car;
-    add: car -> car -> car;
-    wf: car -> Prop;
-    add_comm: forall a b, add a b = add b a;
-    add_assoc: forall a b c, add a (add b c) = add (add a b) c;
+    _add: car -> car -> car;
+    _wf: car -> Prop;
+    _add_comm: forall a b, _add a b = _add b a;
+    _add_assoc: forall a b c, _add a (_add b c) = _add (_add a b) c;
+    add: car -> car -> car := Seal.sealing "ra" _add;
+    wf: car -> Prop := Seal.sealing "ra" _wf;
     unit_id: forall a, add a unit = a;
     wf_unit: wf unit;
     wf_mon: forall a b, wf (add a b) -> wf a;
@@ -375,6 +379,9 @@ Module URA.
                          exists b, <<IN: B b>> /\ <<WF: wf (add b ctx)>>;
   }
   .
+
+  Lemma add_comm `{M: t}: forall a b, add a b = add b a. Proof. i. unfold add. unseal "ra". rewrite _add_comm; ss. Qed.
+  Lemma add_assoc `{M: t}: forall a b c, add a (add b c) = add (add a b) c. Proof. i. unfold add. unseal "ra". rewrite _add_assoc; ss. Qed.
 
   Lemma extends_updatable
         `{M: t}
@@ -435,15 +442,15 @@ Module URA.
   Program Instance prod (M0 M1: t): t := {
     car := car (t:=M0) * car (t:=M1);
     unit := (unit, unit);
-    add := fun '(a0, a1) '(b0, b1) => ((add a0 b0), (add a1 b1));
-    wf := fun '(a0, a1) => wf a0 /\ wf a1;
+    _add := fun '(a0, a1) '(b0, b1) => ((add a0 b0), (add a1 b1));
+    _wf := fun '(a0, a1) => wf a0 /\ wf a1;
   }
   .
   Next Obligation. f_equal; rewrite add_comm; ss. Qed.
   Next Obligation. f_equal; rewrite add_assoc; ss. Qed.
   Next Obligation. f_equal; rewrite unit_id; ss. Qed.
   Next Obligation. split; eapply wf_unit. Qed.
-  Next Obligation. split; eapply wf_mon; et. Qed.
+  Next Obligation. des. split; eapply wf_mon; et. Qed.
 
   Program Definition to_RA (M: t): RA.t := {|
     RA.car := car;
@@ -493,8 +500,8 @@ Module URA.
   Program Instance t (RA: RA.t): URA.t := {
     car := car;
     unit := of_RA.unit;
-    wf := wf;
-    add := add;
+    _wf := wf;
+    _add := add;
   }.
   Next Obligation. unfold add. des_ifs. { rewrite RA.add_comm; ss. } Qed.
   Next Obligation. unfold add. des_ifs. { rewrite RA.add_assoc; ss. } Qed.
@@ -572,8 +579,8 @@ Module URA.
   Program Instance auth (M: t): t := {
     car := auth_t;
     unit := frag unit;
-    add := auth_add;
-    wf := auth_wf;
+    _add := auth_add;
+    _wf := auth_wf;
   }
   .
   Next Obligation. subst auth_add auth_wf. ss. des_ifs; f_equal; eauto using add_comm. Qed.
@@ -597,6 +604,13 @@ Module URA.
                 (<<WF: wf a1>> /\ <<FRAME: a1 = add b1 ctx>>)
   .
 
+  Lemma unfold_add `{M: t}: add = _add. Proof. unfold add. unseal "ra". refl. Qed.
+  Hint Resolve unfold_add.
+  Lemma unfold_wf `{M: t}: wf = _wf. Proof. unfold wf. unseal "ra". refl. Qed.
+  Hint Resolve unfold_wf.
+  Lemma unfold_wf2 `{M: t}: forall x, wf x <-> _wf x. Proof. unfold wf. unseal "ra". refl. Qed.
+  Hint Resolve unfold_wf2.
+
   Theorem auth_update
           `{M: t}
           a b a' b'
@@ -605,10 +619,11 @@ Module URA.
       <<UPD: updatable (add (black a) (white b)) (add (black a') (white b'))>>
   .
   Proof.
-    r in UPD. rr. ii. des_ifs. ss. des. r in H. des; clarify.
-    rewrite unit_idl in *. ss.
-    exploit (UPD (add f0 ctx)); et.
-    { esplits; et.  rewrite add_assoc. ss. }
+    r in UPD. rr. ii. unfold wf, add in *. unseal "ra". ss. des_ifs_safe.
+    rewrite unit_idl in *. des. r in H. des. subst.
+    exploit (UPD (add f ctx)); et.
+    { esplits; et. { eapply unfold_wf2. ss. unfold wf in *. unseal "ra". ss. } unfold add in *. unseal "ra". rewrite _add_assoc; ss. }
+    TTTTTTTTTTTTT
     i; des. clarify. esplits; et. rr. exists ctx. rewrite add_assoc. ss.
   Qed.
 
