@@ -32,7 +32,7 @@ Section PROOF.
     let (b, ofs) := loc in
     URA.white (M:=_memRA)
               (fun _b _ofs => if (dec _b b) && ((ofs <=? _ofs) && (_ofs <? (ofs + Z.of_nat (List.length vs))))%Z
-                              then inl (List.nth_error vs (Z.to_nat (_ofs - ofs))) else inr tt)
+                              then URA.of_RA.just (List.nth_error vs (Z.to_nat (_ofs - ofs))) else ε)
   .
 
   Lemma points_to_split
@@ -153,7 +153,7 @@ Section PROOF.
     ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt MemStb fn fsb)) MemSbtb;
     ModSem.initial_mrs :=
       [("Mem", (GRA.embed (URA.black (M:=_memRA)
-                            (fun b ofs => if (b =? 0)%nat && (ofs =? 0)%Z then inl (Some Vundef) else inr tt)), tt↑))];
+                            (fun b ofs => if (b =? 0)%nat && (ofs =? 0)%Z then URA.of_RA.just (Some Vundef) else ε)), tt↑))];
   |}
   .
 

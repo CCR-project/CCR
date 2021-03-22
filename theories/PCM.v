@@ -470,32 +470,42 @@ Module URA.
 
 
 
+  Module of_RA.
+  Section of_RA.
 
-  Let of_RA_wf `{M: RA.t}: (RA.car + Datatypes.unit) -> Prop := fun a => match a with
-                                                                         | inl a => RA.wf a
-                                                                         | _ => True
-                                                                         end.
-  Let of_RA_add `{M: RA.t}: (RA.car + Datatypes.unit) -> (RA.car + Datatypes.unit) -> (RA.car + Datatypes.unit) :=
+  Inductive car {X: Type}: Type :=
+  | just (x: X): car
+  | unit: car
+  .
+
+  Let wf `{M: RA.t}: car -> Prop := fun a => match a with
+                                             | just a => RA.wf a
+                                             | _ => True
+                                             end.
+  Let add `{M: RA.t}: car -> car -> car :=
     fun a b =>
       match a, b with
-      | inl a, inl b => inl (RA.add a b)
-      | inr _, _ => b
-      | _, inr _ => a
+      | just a, just b => just (RA.add a b)
+      | unit, _ => b
+      | _, unit => a
       end.
 
-  Program Instance of_RA (RA: RA.t): t := {
-    car := RA.car + Datatypes.unit;
-    unit := inr tt;
-    wf := of_RA_wf;
-    add := of_RA_add;
+  Program Instance t (RA: RA.t): URA.t := {
+    car := car;
+    unit := of_RA.unit;
+    wf := wf;
+    add := add;
   }.
-  Next Obligation. unfold of_RA_add. des_ifs. { rewrite RA.add_comm; ss. } { repeat des_u; ss. } Qed.
-  Next Obligation. unfold of_RA_add. des_ifs. { rewrite RA.add_assoc; ss. } Qed.
-  Next Obligation. unfold of_RA_add. des_ifs. { repeat des_u; ss. } Qed.
-  Next Obligation. unfold of_RA_add in *. des_ifs. eapply RA.wf_mon; eauto. Qed.
+  Next Obligation. unfold add. des_ifs. { rewrite RA.add_comm; ss. } Qed.
+  Next Obligation. unfold add. des_ifs. { rewrite RA.add_assoc; ss. } Qed.
+  Next Obligation. unfold add. des_ifs. Qed.
+  Next Obligation. unfold add in *. des_ifs. eapply RA.wf_mon; eauto. Qed.
+
+  End of_RA.
+  End of_RA.
 
   (* Coercion to_RA: t >-> RA.t. *)
-  Coercion of_RA: RA.t >-> t.
+  Coercion of_RA.t: RA.t >-> t.
 
   (* Lemma eta *)
   (*       RA0 RA1 *)
@@ -538,50 +548,7 @@ Module URA.
 
 
 
-
-  Inductive excl_t {X: Type}: Type :=
-  | excl_some: X -> excl_t
-  | excl_boom: excl_t
-  | excl_unit: excl_t
-  .
-
-  Let excl_add
-
-  Program Instance excl (A: Type): t := {
-    car := @excl_t A;
-    add := fun a0 a1 =>
-             match a0, a1 with
-             | _, excl_unit => a0
-             | excl_unit, _ => a1
-             | _, _ => excl_boom
-             end
-    ;
-    wf := fun a => a <> excl_boom;
-    unit := excl_unit;
-  }
-  .
-  Next Obligation. i.
-  Qed.
-
-  Theorem excl_updatable
-          A
-          a0 a1
-    :
-      <<UPD: @updatable (excl A) (Some a0) a1>>
-  .
-  Proof. rr. ii. ss. Qed.
-
-
-
-
-
-
-
-
-
-
-
-
+  Section AUTH.
 
   Inductive auth_t `{M: t}: Type :=
   | frag (f: car)
@@ -589,40 +556,38 @@ Module URA.
   | boom
   .
 
+  Let auth_add `{M: t} := fun a0 a1 => match a0, a1 with
+                                       | frag f0, frag f1 => frag (add f0 f1)
+                                       | frag f0, excl e1 f1 => excl e1 (add f0 f1)
+                                       | excl e0 f0, frag f1 => excl e0 (add f0 f1)
+                                       | _, _ => boom
+                                       end.
+  Let auth_wf `{M: t} := fun a =>
+                           match a with
+                           | frag f => wf f
+                           | excl e f => extends f e /\ wf e
+                           | boom => False
+                           end.
+
   Program Instance auth (M: t): t := {
     car := auth_t;
     unit := frag unit;
-    add := fun a0 a1 => match a0, a1 with
-                        | frag f0, frag f1 => frag (add f0 f1)
-                        | frag f0, excl e1 f1 => excl e1 (add f0 f1)
-                        | excl e0 f0, frag f1 => excl e0 (add f0 f1)
-                        | _, _ => boom
-                        end;
-    wf := fun a =>
-            match a with
-            | frag f => wf f
-            | excl e f => extends f e /\ wf e
-            | boom => False
-            end;
+    add := auth_add;
+    wf := auth_wf;
   }
   .
-  Next Obligation. esplits; ii; des; ss. Qed.
-  Next Obligation. esplits; ii; des; ss. Qed.
-  Next Obligation. esplits; ii; des; ss. Qed.
-  Next Obligation. esplits; ii; des; ss. Qed.
-  Next Obligation. des_ifs; f_equal; eauto using add_comm. Qed.
-  Next Obligation. des_ifs; f_equal; eauto using add_assoc. Qed.
+  Next Obligation. subst auth_add auth_wf. ss. des_ifs; f_equal; eauto using add_comm. Qed.
+  Next Obligation. subst auth_add auth_wf. ss. des_ifs; f_equal; eauto using add_assoc. Qed.
+  Next Obligation. subst auth_add auth_wf. ss. ii; des_ifs; ss; rewrite unit_id; ss. Qed.
+  Next Obligation. subst auth_add auth_wf. eauto using wf_unit. Qed.
   Next Obligation.
-    des_ifs; f_equal; eauto using unit_id.
-  Qed.
-  Next Obligation.
-    eauto using wf_unit.
-  Qed.
-  Next Obligation.
+    subst auth_add auth_wf. ss.
     des_ifs; des; eauto using wf_mon.
     - rr in H. des. subst. eapply wf_mon. rewrite add_assoc. eauto.
     - esplits; eauto. etrans; et. rr. ss. esplits; et.
   Qed.
+
+  End AUTH.
 
   Definition black `{M: t} (a: car): car (t:=auth M) := excl a unit.
   Definition white `{M: t} (a: car): car (t:=auth M) := frag a.
@@ -642,7 +607,7 @@ Module URA.
   Proof.
     r in UPD. rr. ii. des_ifs. ss. des. r in H. des; clarify.
     rewrite unit_idl in *. ss.
-    exploit (UPD (add f ctx)); et.
+    exploit (UPD (add f0 ctx)); et.
     { esplits; et.  rewrite add_assoc. ss. }
     i; des. clarify. esplits; et. rr. exists ctx. rewrite add_assoc. ss.
   Qed.
@@ -762,7 +727,7 @@ Module URA.
 End URA.
 
 (* Coercion URA.to_RA: URA.t >-> RA.t. *)
-Coercion URA.of_RA: RA.t >-> URA.t.
+Coercion URA.of_RA.t: RA.t >-> URA.t.
 Coercion RA.car: RA.t >-> Sortclass.
 Coercion URA.car: URA.t >-> Sortclass.
 
@@ -795,7 +760,7 @@ Module GRA.
   Class subG (Σ0 Σ1: t) := SubG i : { j | Σ0 i = Σ1 j }.
   (* Class subG (GRA0 GRA1: t) := SubG { subG_prf: forall i, { j | GRA0 i = GRA1 j } }. *)
 
-  Definition of_list (RAs: list URA.t): t := fun n => List.nth n RAs (URA.of_RA RA.empty).
+  Definition of_list (RAs: list URA.t): t := fun n => List.nth n RAs (URA.of_RA.t RA.empty).
 
   Definition to_URA (Σ: t): URA.t := URA.pointwise_dep Σ.
 

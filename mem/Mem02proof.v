@@ -97,8 +97,8 @@ Qed.
 Section AUX.
   Context {K: Type} `{M: URA.t}.
   Let RA := URA.pointwise K M.
-  Local Existing Instance RA.
-  Local Existing Instance M.
+
+  Lemma pw_unfold_wf (f: K -> M): (forall k, URA.wf (f k)) -> @URA.wf RA f. Proof. i. ss. Qed.
 
   Lemma empty_wf: forall k, URA.wf ((@URA.unit RA) k).
   Proof. ii; ss. eapply URA.wf_unit. Qed.
@@ -132,7 +132,7 @@ Section SIMMODSEM.
   Definition _points_to (loc: block * Z) (vs: list val): Mem1._memRA :=
     let (b, ofs) := loc in
     (fun _b _ofs => if (dec _b b) && ((ofs <=? _ofs) && (_ofs <? (ofs + Z.of_nat (List.length vs))))%Z
-                    then inl (List.nth_error vs (Z.to_nat (_ofs - ofs))) else inr tt)
+                    then URA.of_RA.just (List.nth_error vs (Z.to_nat (_ofs - ofs))) else ε)
   .
 
 
@@ -140,9 +140,9 @@ Section SIMMODSEM.
   Let W: Type := (alist mname (Σ * Any.t)) * (alist mname (Σ * Any.t)).
   (* Eval compute in (@RA.car (RA.excl Mem.t)). *)
   Eval compute in (@URA.car Mem1._memRA).
-  Inductive sim_loc: option val -> (option val + unit) -> Prop :=
-  | sim_loc_present v: sim_loc (Some v) (inl (Some v))
-  | sim_loc_absent: sim_loc None (ε: (URA.of_RA (RA.excl val)))
+  Inductive sim_loc: option val -> URA.car (t:=URA.of_RA.t (RA.excl val)) -> Prop :=
+  | sim_loc_present v: sim_loc (Some v) (URA.of_RA.just (Some v))
+  | sim_loc_absent: sim_loc None ε
   .
 
   Let wf: W -> Prop :=
@@ -168,6 +168,12 @@ Section SIMMODSEM.
 
   Hint Resolve sim_itree_mon: paco.
 
+  Lemma just_wf `{M: RA.t}: forall (x: @RA.car M), RA.wf x -> @URA.wf (URA.of_RA.t M) (URA.of_RA.just x).
+  Proof. i; ss. Qed.
+
+  Opaque URA.of_RA.t.
+  (* Opaque URA.auth. *)
+  (* Opaque URA.pointwise. *)
   Opaque URA.unit.
 
   Theorem correct: ModSemPair.sim Mem2.MemSem Mem0.MemSem.
@@ -197,19 +203,16 @@ Section SIMMODSEM.
         instantiate (1:=(_points_to (blk, 0%Z) (repeat (Vint 0) sz))).
         (* instantiate (1:=(fun _b _ofs => if (dec _b blk) && ((0 <=? _ofs) && (_ofs <? Z.of_nat sz))%Z then inl (Some (Vint 0)) else inr tt)). *)
         iOwnWf SIM. iRefresh.
-        Opaque URA.of_RA.
         clear - WF WFTGT A.
         ss. ii. des_ifs.
          - bsimpl. des. des_sumbool. subst. hexploit (A blk k0); et. intro T. inv T; [|eq_closure_tac].
            + exploit WFTGT; et. i; des. lia.
            + rewrite URA.unit_idl. apply_all_once Z.leb_le. apply_all_once Z.ltb_lt. rewrite repeat_length in *.
              rewrite Z.sub_0_r. rewrite repeat_nth_some; [|lia].
-             Transparent URA.of_RA.
-             ss.
-             Opaque URA.of_RA.
-         - replace (inr (A:=option val) ()) with (ε: (URA.of_RA (RA.excl val))) by ss. rewrite URA.unit_id.
-           do 2 eapply lookup_wf.
-           eapply GRA.embed_wf in WF. des. ss. des. et.
+             eapply (@just_wf (RA.excl _)). ss.
+         - rewrite URA.unit_id. do 2 eapply lookup_wf. eapply GRA.embed_wf in WF. des.
+           ss.
+           ss. des. et.
       }
       rewrite <- GRA.embed_add in SIM. rewrite own_sep in SIM. iDestruct SIM.
 
