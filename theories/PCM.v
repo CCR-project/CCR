@@ -465,24 +465,34 @@ Module URA.
   Next Obligation. ii. ss. Qed.
   Next Obligation. ii. r in H. r in H0. eauto. Qed.
 
+
+
+
+
+
+
+  Let of_RA_wf `{M: RA.t}: (RA.car + Datatypes.unit) -> Prop := fun a => match a with
+                                                                         | inl a => RA.wf a
+                                                                         | _ => True
+                                                                         end.
+  Let of_RA_add `{M: RA.t}: (RA.car + Datatypes.unit) -> (RA.car + Datatypes.unit) -> (RA.car + Datatypes.unit) :=
+    fun a b =>
+      match a, b with
+      | inl a, inl b => inl (RA.add a b)
+      | inr _, _ => b
+      | _, inr _ => a
+      end.
+
   Program Instance of_RA (RA: RA.t): t := {
     car := RA.car + Datatypes.unit;
     unit := inr tt;
-    wf := fun a => match a with
-                   | inl a => RA.wf a
-                   | _ => True
-                   end;
-    add := fun a b =>
-             match a, b with
-             | inl a, inl b => inl (RA.add a b)
-             | inr _, _ => b
-             | _, inr _ => a
-             end;
+    wf := of_RA_wf;
+    add := of_RA_add;
   }.
-  Next Obligation. des_ifs. { rewrite RA.add_comm; ss. } { repeat des_u; ss. } Qed.
-  Next Obligation. des_ifs. { rewrite RA.add_assoc; ss. } Qed.
-  Next Obligation. des_ifs. { repeat des_u; ss. } Qed.
-  Next Obligation. des_ifs. eapply RA.wf_mon; eauto. Qed.
+  Next Obligation. unfold of_RA_add. des_ifs. { rewrite RA.add_comm; ss. } { repeat des_u; ss. } Qed.
+  Next Obligation. unfold of_RA_add. des_ifs. { rewrite RA.add_assoc; ss. } Qed.
+  Next Obligation. unfold of_RA_add. des_ifs. { repeat des_u; ss. } Qed.
+  Next Obligation. unfold of_RA_add in *. des_ifs. eapply RA.wf_mon; eauto. Qed.
 
   (* Coercion to_RA: t >-> RA.t. *)
   Coercion of_RA: RA.t >-> t.
@@ -519,6 +529,59 @@ Module URA.
   (* Proof. *)
   (*   r. eapply eta; ss. *)
   (* Qed. *)
+
+
+
+
+
+
+
+
+
+
+  Inductive excl_t {X: Type}: Type :=
+  | excl_some: X -> excl_t
+  | excl_boom: excl_t
+  | excl_unit: excl_t
+  .
+
+  Let excl_add
+
+  Program Instance excl (A: Type): t := {
+    car := @excl_t A;
+    add := fun a0 a1 =>
+             match a0, a1 with
+             | _, excl_unit => a0
+             | excl_unit, _ => a1
+             | _, _ => excl_boom
+             end
+    ;
+    wf := fun a => a <> excl_boom;
+    unit := excl_unit;
+  }
+  .
+  Next Obligation. i.
+  Qed.
+
+  Theorem excl_updatable
+          A
+          a0 a1
+    :
+      <<UPD: @updatable (excl A) (Some a0) a1>>
+  .
+  Proof. rr. ii. ss. Qed.
+
+
+
+
+
+
+
+
+
+
+
+
 
   Inductive auth_t `{M: t}: Type :=
   | frag (f: car)

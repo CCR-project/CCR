@@ -95,12 +95,32 @@ Qed.
 
 
 Section AUX.
+  Context {K: Type} `{M: URA.t}.
+  Let RA := URA.pointwise K M.
+  Local Existing Instance RA.
+  Local Existing Instance M.
+
+  Lemma empty_wf: forall k, URA.wf ((@URA.unit RA) k).
+  Proof. ii; ss. eapply URA.wf_unit. Qed.
+
+  Lemma update_wf: forall `{Dec K} (f: @URA.car RA) k v (WF: URA.wf f) (WF: URA.wf v), URA.wf (update f k v: (@URA.car RA)).
+  Proof. ii. unfold update. des_ifs; ss. Qed.
+
+  Lemma lookup_wf: forall (f: @URA.car RA) k (WF: URA.wf f), URA.wf (f k).
+  Proof. ii; ss. Qed.
+
+End AUX.
+
+Section AUX.
   Context `{Σ: GRA.t}.
   Definition Univ {X: Type} (P: X -> iProp): iProp := fun r => forall x, P x r.
 End AUX.
 Notation "'Forall' x .. y , p" := (Univ (fun x => .. (Univ (fun y => p)) ..))
                                     (at level 200, x binder, right associativity,
                                      format "'[' 'Forall'  '/  ' x  ..  y ,  '/  ' p ']'").
+
+
+
 
 
 Section SIMMODSEM.
@@ -122,7 +142,7 @@ Section SIMMODSEM.
   Eval compute in (@URA.car Mem1._memRA).
   Inductive sim_loc: option val -> (option val + unit) -> Prop :=
   | sim_loc_present v: sim_loc (Some v) (inl (Some v))
-  | sim_loc_absent: sim_loc None (inr tt)
+  | sim_loc_absent: sim_loc None (ε: (URA.of_RA (RA.excl val)))
   .
 
   Let wf: W -> Prop :=
@@ -177,13 +197,19 @@ Section SIMMODSEM.
         instantiate (1:=(_points_to (blk, 0%Z) (repeat (Vint 0) sz))).
         (* instantiate (1:=(fun _b _ofs => if (dec _b blk) && ((0 <=? _ofs) && (_ofs <? Z.of_nat sz))%Z then inl (Some (Vint 0)) else inr tt)). *)
         iOwnWf SIM. iRefresh.
+        Opaque URA.of_RA.
         clear - WF WFTGT A.
         ss. ii. des_ifs.
          - bsimpl. des. des_sumbool. subst. hexploit (A blk k0); et. intro T. inv T; [|eq_closure_tac].
-           exploit WFTGT; et. i; des. lia.
-         - specialize (A k k0). inv A; eq_closure_tac.
-         - rewrite Z.sub_0_r. bsimpl. des. des_sumbool. subst. apply_all_once Z.leb_le. apply_all_once Z.ltb_lt.
-           intro B. apply nth_error_None in B. lia.
+           + exploit WFTGT; et. i; des. lia.
+           + rewrite URA.unit_idl. apply_all_once Z.leb_le. apply_all_once Z.ltb_lt. rewrite repeat_length in *.
+             rewrite Z.sub_0_r. rewrite repeat_nth_some; [|lia].
+             Transparent URA.of_RA.
+             ss.
+             Opaque URA.of_RA.
+         - replace (inr (A:=option val) ()) with (ε: (URA.of_RA (RA.excl val))) by ss. rewrite URA.unit_id.
+           do 2 eapply lookup_wf.
+           eapply GRA.embed_wf in WF. des. ss. des. et.
       }
       rewrite <- GRA.embed_add in SIM. rewrite own_sep in SIM. iDestruct SIM.
 
