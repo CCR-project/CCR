@@ -224,6 +224,7 @@ So, fix semantics with st_init, later let st_init = st0 in the main thm.
           left. pfold. destruct ev. eapply sim_vis; eauto.
           ss. eapply ModSem.step_syscall with (k := (fun _ : val => interpSTS step state_sort st1)) (ev := event_sys fn args).
           admit "TODO: syscall_sem is an axiom".
+          (* Unshelve. *)
   Admitted.
   
 
