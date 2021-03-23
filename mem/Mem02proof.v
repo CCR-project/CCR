@@ -94,20 +94,25 @@ Qed.
 
 
 
+Tactic Notation "ur" := try rewrite ! URA.unfold_wf; try rewrite ! URA.unfold_add; cbn.
+Tactic Notation "ur" "in" hyp(H)  := try rewrite ! URA.unfold_wf in H; try rewrite ! URA.unfold_add in H; cbn in H.
+
 Section AUX.
   Context {K: Type} `{M: URA.t}.
   Let RA := URA.pointwise K M.
 
-  Lemma pw_unfold_wf (f: K -> M): (forall k, URA.wf (f k)) -> @URA.wf RA f. Proof. i. ss. Qed.
+  Lemma pw_extends (f0 f1: K -> M) (EXT: @URA.extends RA f0 f1): forall k, <<EXT: URA.extends (f0 k) (f1 k)>>.
+  Proof. ii. r in EXT. des. subst. ur. ss. eexists; et. Qed.
+  (* Lemma pw_unfold_wf (f: K -> M): (forall k, URA.wf (f k)) -> @URA.wf RA f. Proof. i. ss. Qed. *)
 
-  Lemma empty_wf: forall k, URA.wf ((@URA.unit RA) k).
-  Proof. ii; ss. eapply URA.wf_unit. Qed.
+  (* Lemma empty_wf: forall k, URA.wf ((@URA.unit RA) k). *)
+  (* Proof. ii; ss. eapply URA.wf_unit. Qed. *)
 
-  Lemma update_wf: forall `{Dec K} (f: @URA.car RA) k v (WF: URA.wf f) (WF: URA.wf v), URA.wf (update f k v: (@URA.car RA)).
-  Proof. ii. unfold update. des_ifs; ss. Qed.
+  (* Lemma update_wf: forall `{Dec K} (f: @URA.car RA) k v (WF: URA.wf f) (WF: URA.wf v), URA.wf (update f k v: (@URA.car RA)). *)
+  (* Proof. ii. unfold update. des_ifs; ss. Qed. *)
 
   Lemma lookup_wf: forall (f: @URA.car RA) k (WF: URA.wf f), URA.wf (f k).
-  Proof. ii; ss. Qed.
+  Proof. ii; ss. rewrite URA.unfold_wf in WF. ss. Qed.
 
 End AUX.
 
@@ -122,20 +127,40 @@ Notation "'Forall' x .. y , p" := (Univ (fun x => .. (Univ (fun y => p)) ..))
 
 
 
+Definition _points_to (loc: block * Z) (vs: list val): Mem1._memRA :=
+  let (b, ofs) := loc in
+  (fun _b _ofs => if (dec _b b) && ((ofs <=? _ofs) && (_ofs <? (ofs + Z.of_nat (List.length vs))))%Z
+                  then URA.of_RA.just (List.nth_error vs (Z.to_nat (_ofs - ofs))) else ε)
+.
+
+(* Opaque _points_to. *)
+Lemma unfold_points_to loc vs:
+  _points_to loc vs =
+  let (b, ofs) := loc in
+  (fun _b _ofs => if (dec _b b) && ((ofs <=? _ofs) && (_ofs <? (ofs + Z.of_nat (List.length vs))))%Z
+                  then URA.of_RA.just (List.nth_error vs (Z.to_nat (_ofs - ofs))) else ε)
+.
+Proof. refl. Qed.
+
+Opaque points_to.
+Opaque _points_to.
+
+(* Lemma local_update_same *)
+(*       `{M: URA.t} *)
+(*       x0 y0 x1 y1 *)
+(*       (SAME: x0 ⋅ y0 = x1 ⋅ y1) *)
+(*   : *)
+(*     URA.local_update x0 y0 x1 y1 *)
+(* . *)
+(* Proof. *)
+(*   r. ii. des. subst. esplits; et. *)
+(*   - *)
+(* Qed. *)
 
 Section SIMMODSEM.
 
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG Mem1.memRA Σ}.
-
-
-  Definition _points_to (loc: block * Z) (vs: list val): Mem1._memRA :=
-    let (b, ofs) := loc in
-    (fun _b _ofs => if (dec _b b) && ((ofs <=? _ofs) && (_ofs <? (ofs + Z.of_nat (List.length vs))))%Z
-                    then URA.of_RA.just (List.nth_error vs (Z.to_nat (_ofs - ofs))) else ε)
-  .
-
-
 
   Let W: Type := (alist mname (Σ * Any.t)) * (alist mname (Σ * Any.t)).
   (* Eval compute in (@RA.car (RA.excl Mem.t)). *)
@@ -164,17 +189,17 @@ Section SIMMODSEM.
         (<<WFTGT: forall b ofs v, mem_tgt.(Mem.cnts) b ofs = Some v -> <<NB: b < mem_tgt.(Mem.nb)>> >>)
   .
 
-  Local Opaque points_to.
-
   Hint Resolve sim_itree_mon: paco.
 
-  Lemma just_wf `{M: RA.t}: forall (x: @RA.car M), RA.wf x -> @URA.wf (URA.of_RA.t M) (URA.of_RA.just x).
-  Proof. i; ss. Qed.
+  (* Lemma just_wf `{M: RA.t}: forall (x: @RA.car M), RA.wf x -> @URA.wf (URA.of_RA.t M) (URA.of_RA.just x). *)
+  (* Proof. i; ss. Qed. *)
 
-  Opaque URA.of_RA.t.
+  (* Opaque URA.of_RA.t. *)
   (* Opaque URA.auth. *)
   (* Opaque URA.pointwise. *)
   Opaque URA.unit.
+
+  Ltac Ztac := all_once_fast ltac:(fun H => first[apply Z.leb_le in H|apply Z.ltb_lt in H|apply Z.leb_gt in H|apply Z.ltb_ge in H|idtac]).
 
   Theorem correct: ModSemPair.sim Mem2.MemSem Mem0.MemSem.
   Proof.
@@ -204,15 +229,11 @@ Section SIMMODSEM.
         (* instantiate (1:=(fun _b _ofs => if (dec _b blk) && ((0 <=? _ofs) && (_ofs <? Z.of_nat sz))%Z then inl (Some (Vint 0)) else inr tt)). *)
         iOwnWf SIM. iRefresh.
         clear - WF WFTGT A.
-        ss. ii. des_ifs.
+        ss. do 2 ur. ii. rewrite unfold_points_to. des_ifs.
          - bsimpl. des. des_sumbool. subst. hexploit (A blk k0); et. intro T. inv T; [|eq_closure_tac].
            + exploit WFTGT; et. i; des. lia.
-           + rewrite URA.unit_idl. apply_all_once Z.leb_le. apply_all_once Z.ltb_lt. rewrite repeat_length in *.
-             rewrite Z.sub_0_r. rewrite repeat_nth_some; [|lia].
-             eapply (@just_wf (RA.excl _)). ss.
-         - rewrite URA.unit_id. do 2 eapply lookup_wf. eapply GRA.embed_wf in WF. des.
-           ss.
-           ss. des. et.
+           + rewrite URA.unit_idl. Ztac. rewrite repeat_length in *. rewrite Z.sub_0_r. rewrite repeat_nth_some; [|lia]. ur. ss.
+         - rewrite URA.unit_id. do 2 eapply lookup_wf. eapply GRA.embed_wf in WF. des. ur in WF. admit "black wf".
       }
       rewrite <- GRA.embed_add in SIM. rewrite own_sep in SIM. iDestruct SIM.
 
@@ -222,16 +243,13 @@ Section SIMMODSEM.
         + eexists; iRefresh. iSplitL SIM; et. ii.
           destruct (mem_tgt.(Mem.cnts) blk ofs) eqn:T.
           { exfalso. exploit WFTGT; et. i; des. lia. }
-          exploit A; et. rewrite T. intro U. inv U. ss. rewrite repeat_length.
-          destruct (dec b blk).
-          * subst. ss. unfold update. des_ifs_safe. des_ifs.
-            { rewrite Z.sub_0_r. bsimpl. des. apply_all_once Z.leb_le. apply_all_once Z.ltb_lt.
-              rewrite repeat_nth_some; try lia. econs. }
+          ss. do 2 ur.
+          exploit A; et. rewrite T. intro U. inv U. rewrite unfold_points_to. ss. rewrite repeat_length.
+          destruct (dec b blk); subst; ss.
+          * unfold update. des_ifs_safe. rewrite <- H0. rewrite URA.unit_idl. des_ifs.
+            { rewrite Z.sub_0_r. bsimpl. des. Ztac. rewrite repeat_nth_some; try lia. econs. }
             { econs. }
-          * ss. unfold update. des_ifs_safe.
-            hexploit (A b ofs); et. intro V. inv V; ss.
-            { econs. }
-            { econs. }
+          * rewrite URA.unit_id. unfold update. des_ifs.
         + clear - WFTGT. i. ss. unfold update in *. des_ifs. exploit WFTGT; et.
     }
     econs; ss.
@@ -247,25 +265,21 @@ Section SIMMODSEM.
       rename n into b. rename z into ofs. rename x0 into mem_src0. rename x into v.
       iMerge SIM A0. rewrite <- own_sep in SIM. rewrite GRA.embed_add in SIM.
       iOwnWf SIM. eapply GRA.embed_wf in WF; des.
-      assert(HIT: mem_src0 b ofs = inl (Some v)).
+      assert(HIT: mem_src0 b ofs = URA.of_RA.just (Some v)).
       { clear - WF.
         Local Transparent points_to.
-        (* assert(A: mem_src0 b ofs <> inl None). *)
-        (* { ss. des. admit "". } *)
-        dup WF. rename WF0 into X.
-        eapply URA.auth_included in WF.
-        ss. des. rr in WF. des. subst. ss.
-        destruct (dec b b); ss. destruct (ofs <=? ofs)%Z eqn:T; ss; cycle 1.
-        { try rewrite Z.leb_le in *; try rewrite Z.leb_gt in *; try rewrite Z.ltb_lt in *; try rewrite Z.ltb_ge in *; try lia. }
-        destruct ((ofs <? ofs + 1)%Z) eqn:U; ss; cycle 1.
-        { try rewrite Z.leb_le in *; try rewrite Z.leb_gt in *; try rewrite Z.ltb_lt in *; try rewrite Z.ltb_ge in *; try lia. }
-        destruct (ctx b ofs) eqn:V; ss; cycle 1.
-        { try rewrite Z.sub_diag in *. ss. }
-        specialize (X0 b ofs). des_ifs_safe. clear - Heq1. bsimpl. des_sumbool; ss.
+        eapply URA.auth_included in WF. des. eapply pw_extends with (k:=b) in WF. eapply pw_extends with (k:=ofs) in WF.
+        ss. des_ifs; cycle 1.
+        { bsimpl. des; des_sumbool; Ztac; try lia. }
+        { bsimpl. des. Ztac. rewrite Z.sub_diag in *. ss. admit "ez -- of_RA extends && RA.excl extends". }
       }
-      set (mem_src1 := fun _b _ofs => if dec _b b && dec _ofs ofs then inr () else mem_src0 _b _ofs).
+      set (mem_src1 := fun _b _ofs => if dec _b b && dec _ofs ofs then URA.of_RA.unit else mem_src0 _b _ofs).
       assert(WF': URA.wf (mem_src1: URA.car (t:=Mem1._memRA))).
-      { unfold mem_src1. ss. ii. des_ifs. des. exploit WF0; et. rewrite Heq. ii; ss. }
+      { clear - WF. unfold mem_src1. do 2 ur. ii. eapply URA.wf_mon in WF. ur in WF. des.
+        des_ifs; et.
+        - rp; [eapply URA.wf_unit|ss].
+        - do 2 eapply lookup_wf; et.
+      }
       hexploit (A b ofs); et. rewrite HIT. intro B. inv B.
       force_r.
       { unfold Mem.free in *. des_ifs. }
@@ -276,34 +290,25 @@ Section SIMMODSEM.
         Local Transparent points_to.
         eapply URA.auth_dealloc.
         instantiate (1:=mem_src1).
-        clear - WF'.
+        clear - WF'. rewrite <- (unfold_points_to (b, ofs) [v]).
 
         r. i. rewrite URA.unit_idl.
         Local Opaque Mem1._memRA.
         ss. destruct H; clear H. (*** coq bug; des infloops ***) des. clarify.
         esplits; et.
         Local Transparent Mem1._memRA.
+        unfold mem_src1. ss.
         apply func_ext. intro _b. apply func_ext. intro _ofs.
-        destruct (classic (b = _b /\ ofs = _ofs)).
-        - destruct H; clear H. clarify.
-          subst mem_src1. ss. des_ifs; bsimpl; des; des_sumbool; clarify.
+        des_ifs.
+        - bsimpl; des; des_sumbool; subst.
+          subst mem_src1. do 2 ur in WF'. do 2 spc WF'. des_ifs; bsimpl; des; des_sumbool; ss.
           clear - H0.
-          Local Transparent URA.wf.
-          Local Transparent URA.add.
-          specialize (H0 _b _ofs). ss.
-          des_ifs; bsimpl; des; des_sumbool;
-            try rewrite Z.leb_le in *; try rewrite Z.leb_gt in *; try rewrite Z.ltb_lt in *; try rewrite Z.ltb_ge in *;
-              try rewrite Z.sub_diag in *;
-              try lia; ss.
-          des_u. ss.
-        - Psimpl.
-          subst mem_src1. s.
-          des_ifs; bsimpl; des; des_sumbool;
-            try rewrite Z.leb_le in *; try rewrite Z.leb_gt in *; try rewrite Z.ltb_lt in *; try rewrite Z.ltb_ge in *;
-              try rewrite Z.sub_diag in *;
-              try lia; ss.
-          Local Opaque URA.wf.
-          Local Opaque URA.add.
+          do 2 ur in H0.
+          specialize (H0 b ofs).
+          des_ifs; bsimpl; des; des_sumbool; Ztac; try lia. try rewrite Z.sub_diag in *; ss.
+          admit "ez".
+        - rewrite unfold_points_to in *. do 2 ur. do 2 ur in H0.
+          bsimpl. des_ifs; bsimpl; des; des_sumbool; subst; Ztac; try lia; try rewrite URA.unit_idl; try refl.
       }
       steps. iRefresh. force_l. eexists. hret_tac SIM (@URA.unit Σ).
       { split; [|refl]. ss. }

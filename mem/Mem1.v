@@ -41,7 +41,8 @@ Section PROOF.
       (points_to (blk, ofs) (hd :: tl)) = (points_to (blk, ofs) [hd]) ⋅ (points_to (blk, (ofs + 1)%Z) tl)
   .
   Proof.
-    ss. unfold URA.white. f_equal.
+    ss. unfold URA.white. repeat (rewrite URA.unfold_add; ss).
+    f_equal.
     repeat (apply func_ext; i).
     des_ifs; bsimpl; des; des_sumbool; ss; try rewrite Z.leb_gt in *; try rewrite Z.leb_le in *;
       try rewrite Z.ltb_ge in *; try rewrite Z.ltb_lt in *; try lia.
