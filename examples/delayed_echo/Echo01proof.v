@@ -1,4 +1,4 @@
-Require Import Stack1 Client1 Mem1 Mem2.
+Require Import Stack1 Client1 Mem1.
 Require Import Coqlib.
 Require Import Universe.
 Require Import Skeleton.

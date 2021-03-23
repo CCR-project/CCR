@@ -8,7 +8,7 @@ Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
 Require Import MutHeader SimModSem.
-Require Import Mem2 Stack1 Echo2 EchoMain1 Client1.
+Require Import Mem1 Stack1 Echo2 EchoMain1 Client1.
 
 Require Import TODOYJ.
 

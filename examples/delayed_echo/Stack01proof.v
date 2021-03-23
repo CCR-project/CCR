@@ -1,4 +1,4 @@
-Require Import Mem1 Mem2.
+Require Import Mem1.
 Require Import Coqlib.
 Require Import Universe.
 Require Import Skeleton.
