@@ -28,12 +28,22 @@ Compute (URA.car).
 Section PROOF.
   Context `{@GRA.inG memRA Σ}.
 
-  Definition points_to (loc: block * Z) (vs: list val): memRA :=
+  Definition _points_to (loc: block * Z) (vs: list val): Mem1._memRA :=
     let (b, ofs) := loc in
-    URA.white (M:=_memRA)
-              (fun _b _ofs => if (dec _b b) && ((ofs <=? _ofs) && (_ofs <? (ofs + Z.of_nat (List.length vs))))%Z
-                              then URA.of_RA.just (List.nth_error vs (Z.to_nat (_ofs - ofs))) else ε)
+    (fun _b _ofs => if (dec _b b) && ((ofs <=? _ofs) && (_ofs <? (ofs + Z.of_nat (List.length vs))))%Z
+                    then URA.of_RA.just (List.nth_error vs (Z.to_nat (_ofs - ofs))) else ε)
   .
+
+  (* Opaque _points_to. *)
+  Lemma unfold_points_to loc vs:
+    _points_to loc vs =
+    let (b, ofs) := loc in
+    (fun _b _ofs => if (dec _b b) && ((ofs <=? _ofs) && (_ofs <? (ofs + Z.of_nat (List.length vs))))%Z
+                    then URA.of_RA.just (List.nth_error vs (Z.to_nat (_ofs - ofs))) else ε)
+  .
+  Proof. refl. Qed.
+
+  Definition points_to (loc: block * Z) (vs: list val): memRA := URA.white (_points_to loc vs).
 
   Lemma points_to_split
         blk ofs hd tl
@@ -41,7 +51,7 @@ Section PROOF.
       (points_to (blk, ofs) (hd :: tl)) = (points_to (blk, ofs) [hd]) ⋅ (points_to (blk, (ofs + 1)%Z) tl)
   .
   Proof.
-    ss. unfold URA.white. repeat (rewrite URA.unfold_add; ss).
+    ss. unfold points_to. unfold URA.white. repeat (rewrite URA.unfold_add; ss).
     f_equal.
     repeat (apply func_ext; i).
     des_ifs; bsimpl; des; des_sumbool; ss; try rewrite Z.leb_gt in *; try rewrite Z.leb_le in *;
@@ -166,3 +176,6 @@ Section PROOF.
 
 End PROOF.
 Global Hint Unfold MemStb: stb.
+
+(* Opaque points_to. *)
+Global Opaque _points_to.
