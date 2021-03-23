@@ -200,8 +200,8 @@ So, fix semantics with st_init, later let st_init = st0 in the main thm.
         rewrite Any.upcast_downcast. reflexivity.
         (* ModSem.state_sort do not match type (Z, val) *)
       + auto.
-    - assert (CASE: (forall e st1, not (step st0 e st1)) \/ (exists e st1, (step st0 e st1))).
-      { destruct (classic (exists e st1, step st0 e st1)); eauto.
+    - assert (CASE: (forall ev st1, not (step st0 (Some ev) st1)) \/ (exists ev st1, (step st0 (Some ev) st1))).
+      { destruct (classic (exists ev st1, step st0 (Some ev) st1)); eauto.
         left. ii. apply H. eauto. }
       destruct CASE.
       + eapply sim_vis_stuck_tgt; eauto.
@@ -213,193 +213,88 @@ So, fix semantics with st_init, later let st_init = st0 in the main thm.
                   | event_sys fn args =>
                     Vis (Syscall fn args) (fun _ : val => interpSTS step state_sort st1)
                   end)).
-        des. destruct e.
-        { eapply sim_demonic_src; ss; clarify.
-          - rewrite interpSTS_red. rewrite SRT. ss.
-          - exists (cont (exist (fun '(ev, st) => step st0 (Some ev) st) (e, st1) H)).
-            eexists.
-            { rewrite interpSTS_red. rewrite SRT. rewrite bind_trigger.
-              eapply (ModSem.step_choose cont). }
-            exists 9. split; auto.
-            left. pfold. destruct e. eapply sim_vis; eauto.
-            ss. eapply ModSem.step_syscall with (k := (fun _ : val => interpSTS step state_sort st1)) (ev := event_sys fn args).
-            admit "TODO: syscall_sem is an axiom". }
-        { eapply sim_demonic_src; ss; clarify.
-          - rewrite interpSTS_red. rewrite SRT. ss.
-          - exists (cont (exist (fun '(ev, st) => step st0 (Some ev) st) (e, st1) H)).
-            eexists.
-            { rewrite interpSTS_red. rewrite SRT. rewrite bind_trigger.
-              eapply (ModSem.step_choose cont). }
-            exists 9. split; auto.
-            left. pfold. destruct e. eapply sim_vis; eauto.
-            ss. eapply ModSem.step_syscall with (k := (fun _ : val => interpSTS step state_sort st1)) (ev := event_sys fn args).
-            admit "TODO: syscall_sem is an axiom". }
+        des.
+        eapply sim_demonic_src; ss; clarify.
+        * rewrite interpSTS_red. rewrite SRT. ss.
+        * exists (cont (exist (fun '(ev, st) => step st0 (Some ev) st) (ev, st1) H)).
+          eexists.
+          { rewrite interpSTS_red. rewrite SRT. rewrite bind_trigger.
+            eapply (ModSem.step_choose cont). }
+          exists 9. split; auto.
+          left. pfold. destruct ev. eapply sim_vis; eauto.
+          ss. eapply ModSem.step_syscall with (k := (fun _ : val => interpSTS step state_sort st1)) (ev := event_sys fn args).
+          admit "TODO: syscall_sem is an axiom".
+  Admitted.
+  
+
+         (** ver. behavior proof **) 
+    (* revert_until st_init. *)
+    (* pcofix CIH. *)
+    (* i. punfold H0. *)
+    (* induction H0 using of_state_ind; ss; clarify. *)
+    (* - pfold. econs. ss. *)
+    (*   erewrite interpSTS_red. rewrite H. *)
+    (*   unfold ModSem.state_sort. ss. *)
+    (*   (** type mismatch: *)
+    (*       ModSem.state_sort assumes return type = val, *)
+    (*       but *)
+    (*       state of 'final' sort returns only Z. *) *)
+    (*   admit "TODO: fix the return type". *)
+    (* - pfold. econs. clear CIH r. *)
+    (*   revert_until wf_demonic. *)
+    (*   pcofix CIH. i. punfold H0. inv H0. *)
+    (*   + pfold. econs 1. *)
+    (*     * ss. erewrite interpSTS_red. rewrite SRT. ss. *)
+    (*     * i. ss. rewrite interpSTS_red in STEP0. rewrite SRT in STEP0. *)
+    (*       (* inv STEP0. *) *)
+    (*       dependent destruction STEP0. destruct x as [st1 STEP0]. *)
+    (*       remember STEP0 as ST. clear HeqST. *)
+    (*       apply STEP in STEP0. destruct STEP0; clarify. *)
+    (*       right. apply CIH. apply H. *)
+    (*   + pfold. econs 2. *)
+    (*     * ss. erewrite interpSTS_red. rewrite SRT. ss. *)
+    (*     * ss. des. destruct TL. *)
+    (*       { exists None. do 2 eexists. *)
+    (*         2:{ right. apply CIH. apply H. } *)
+    (*         rewrite interpSTS_red in *; rewrite SRT in *. *)
+    (*         remember STEP0 as ST. clear HeqST. *)
+    (*         apply (wf_demonic SRT) in STEP0. clarify. *)
+    (*         (* apply (step_choose (fun st2 : {st' : state | step st0 None st'} => interpSTS step state_sort (st2 $)) (exist _ st1 ST)). } *) *)
+    (*         apply (ModSem.step_choose (fun st2 : {st' : state | step st0 None st'} => interpSTS step state_sort (st2 $)) (exist _ st1 ST)). } *)
+    (*       { clarify. } *)
+    (* - pfold. econs. *)
+    (* - pfold. eapply sb_demonic. *)
+    (*   { ss. rewrite interpSTS_red. rewrite SRT. ired. ss. } *)
+    (*   set (p := exist (fun '(ev', st') => step st0 (Some ev') st') (ev, st1) STEP). *)
+    (*   set (cont :=  *)
+    (*          (fun x : {'(ev', st') : event * state | step st0 (Some ev') st'} => *)
+    (*             let (x0, _) := x in *)
+    (*             let (y0, st2) := x0 in *)
+    (*             match y0 with *)
+    (*             | event_sys fn args => *)
+    (*               Vis (Syscall fn args) (fun _ : val => interpSTS step state_sort st2) *)
+    (*             end)). *)
+    (*   set (next := cont p). *)
+    (*   exists None. exists next. split. *)
+    (*   { ss. rewrite interpSTS_red. rewrite SRT. *)
+    (*     rewrite bind_trigger. *)
+    (*     apply (ModSem.step_choose cont p). } *)
+    (*   split; auto. ss; clarify. destruct ev. ss; clarify. *)
+    (*   econs; ss. *)
+    (*   { instantiate (1:= interpSTS step state_sort st1). *)
+    (*     set (sys_cont := (fun _ : val => interpSTS step state_sort st1)). *)
+    (*     apply (ModSem.step_syscall sys_cont (rv:= snd (syscall_sem fn args))). *)
+    (*     admit "TODO: syscall_sem axiom?". } *)
+    (*   clear p cont next. right. apply CIH. *)
+    (*   destruct TL; clarify. *)
+    (* - pfold. unfold union in STEP. des. *)
+    (*   econs; ss; clarify. *)
+    (*   { rewrite interpSTS_red. rewrite SRT. ss. } *)
+    (*   set (cont := (fun st2 : {st' : state | step st0 None st'} => interpSTS step state_sort (st2 $))). *)
+    (*   set (p := exist (fun st' => step st0 None st') st1 STEP0). *)
+    (*   exists None. exists (cont p). split. *)
+    (*   { ss. rewrite interpSTS_red. rewrite SRT. econs. } *)
+    (*   split; auto. econs; ss; clarify. *)
         
-
-        
-            right. 
-            destruct e.
-            { instantiate (1 := ((
-                                    
-                                    left. pfold.
-                                    set (itr := (let (x, _) := ?x in
-     let (y0, st1) := x in
-     match y0 with
-     | event_sys fn args =>
-         Vis (Syscall fn args) (fun _ : val => interpSTS step state_sort st1)
-     end)).
-        destruct (itr_state_sort (
-        eapply sim_vis; ss; clarify.
-        {
-
-
-
-      
-    revert_until st_init.
-    pcofix CIH.
-    i. punfold H0.
-    induction H0 using of_state_ind; ss; clarify.
-    - pfold. econs. ss.
-      erewrite interpSTS_red. rewrite H.
-      unfold ModSem.state_sort. ss.
-      (** type mismatch:
-          ModSem.state_sort assumes return type = val,
-          but
-          state of 'final' sort returns only Z. *)
-      admit "TODO: fix the return type".
-    - pfold. econs. clear CIH r.
-      revert_until wf_demonic.
-      pcofix CIH. i. punfold H0. inv H0.
-      + pfold. econs 1.
-        * ss. erewrite interpSTS_red. rewrite SRT. ss.
-        * i. ss. rewrite interpSTS_red in STEP0. rewrite SRT in STEP0.
-          (* inv STEP0. *)
-          dependent destruction STEP0. destruct x as [st1 STEP0].
-          remember STEP0 as ST. clear HeqST.
-          apply STEP in STEP0. destruct STEP0; clarify.
-          right. apply CIH. apply H.
-      + pfold. econs 2.
-        * ss. erewrite interpSTS_red. rewrite SRT. ss.
-        * ss. des. destruct TL.
-          { exists None. do 2 eexists.
-            2:{ right. apply CIH. apply H. }
-            rewrite interpSTS_red in *; rewrite SRT in *.
-            remember STEP0 as ST. clear HeqST.
-            apply (wf_demonic SRT) in STEP0. clarify.
-            (* apply (step_choose (fun st2 : {st' : state | step st0 None st'} => interpSTS step state_sort (st2 $)) (exist _ st1 ST)). } *)
-            apply (ModSem.step_choose (fun st2 : {st' : state | step st0 None st'} => interpSTS step state_sort (st2 $)) (exist _ st1 ST)). }
-          { clarify. }
-    - pfold. econs.
-    - pfold. eapply sb_demonic.
-      { ss. rewrite interpSTS_red. rewrite SRT. ired. ss. }
-      set (p := exist (fun '(ev', st') => step st0 (Some ev') st') (ev, st1) STEP).
-      set (cont := 
-             (fun x : {'(ev', st') : event * state | step st0 (Some ev') st'} =>
-                let (x0, _) := x in
-                let (y0, st2) := x0 in
-                match y0 with
-                | event_sys fn args =>
-                  Vis (Syscall fn args) (fun _ : val => interpSTS step state_sort st2)
-                end)).
-      set (next := cont p).
-      exists None. exists next. split.
-      { ss. rewrite interpSTS_red. rewrite SRT.
-        rewrite bind_trigger.
-        apply (ModSem.step_choose cont p). }
-      split; auto. ss; clarify. destruct ev. ss; clarify.
-      econs; ss.
-      { instantiate (1:= interpSTS step state_sort st1).
-        set (sys_cont := (fun _ : val => interpSTS step state_sort st1)).
-        apply (ModSem.step_syscall sys_cont (rv:= snd (syscall_sem fn args))).
-        admit "TODO: syscall_sem axiom?". }
-      clear p cont next. right. apply CIH.
-      destruct TL; clarify.
-    - pfold. unfold union in STEP. des.
-      econs; ss; clarify.
-      { rewrite interpSTS_red. rewrite SRT. ss. }
-      set (cont := (fun st2 : {st' : state | step st0 None st'} => interpSTS step state_sort (st2 $))).
-      set (p := exist (fun st' => step st0 None st') st1 STEP0).
-      exists None. exists (cont p). split.
-      { ss. rewrite interpSTS_red. rewrite SRT. econs. }
-      split; auto. econs; ss; clarify.
-      { subst p. subst cont. 
-        
-        
-      
-      
-        
-      
-      (*   set (p := exist (fun (ev': event) => exists (st': state), step st0 (Some ev') st') ev (ex_intro (fun (st': state) => step st0 (Some ev) st') st1 STEP)). *)
-      (* set (next := *)
-      (*        (fun x : {ev' : event | exists st' : state, step st0 (Some ev') st'} => *)
-      (*           let (x0, _) := x in *)
-      (*           match x0 with *)
-      (*           | event_sys fn args => *)
-      (*             trigger (Syscall fn args);; *)
-      (*             Vis (Choose {st' : state | step st0 (Some (event_sys fn args)) st'}) *)
-      (*                 (fun st2 : {st' : state | step st0 (Some (event_sys fn args)) st'} *)
-      (*                  => interpSTS step state_sort (st2 $)) *)
-      (*           end) p). *)
-      (* exists None. exists next. splits; auto. *)
-      (* { ss. rewrite interpSTS_red. rewrite SRT. *)
-      (*   rewrite bind_trigger. *)
-      (*   apply (ModSem.step_choose  *)
-      (*            (fun x : {ev' : event | exists st' : state, step st0 (Some ev') st'} => *)
-      (*               let (x0, _) := x in *)
-      (*               match x0 with *)
-      (*               | event_sys fn args => *)
-      (*                 trigger (Syscall fn args);; *)
-      (*                 Vis (Choose {st' : state | step st0 (Some (event_sys fn args)) st'}) *)
-      (*                     (fun st2 : {st' : state | step st0 (Some (event_sys fn args)) st'} *)
-      (*                      => interpSTS step state_sort (st2 $)) *)
-      (*               end) p). *)
-      (* } *)
-      
-
-          ired.
-          instantiate (1:=p).
-
-            None ?st1
-        eapply ModSem.step_choose.
-
-        ss. ired.
-
-      exists (interpSTS step state_sort st1). esplits; 
-      unfold union.
-      eexists. eexists.
-      {
-      
-        ired.
-
-        rewrite SRT.
-
-      econs. ss.
-      rewrite interpSTS_red. rewrite SRT.
-      rewrite 
-      
-      unfold ModSem.state_sort.
-      
-      destruct TL; clarify.
-      
-            
-          
-          
-
-      
-
-    Abort.
-  (* paco gf r = gfp (fun x => r \/ gf (paco gf r)) *)
-   
-  (* Theorem beh_preserved: *)
-  (*   forall (sm: semantics) (st0: state sm) (tr: Tr.t), *)
-  (*     of_state *)
-  (*       sm *)
-  (*       st0 tr *)
-  (*     -> *)
-  (*     of_state *)
-  (*       (interpITree (interpSTS (step sm) (state_sort sm) st0)) *)
-  (*       st0 tr. *)
-                      
-
 
 End PROOF.
