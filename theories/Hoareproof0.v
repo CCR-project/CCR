@@ -90,6 +90,7 @@ Section CANCEL.
     simg RR (Ordinal.from_nat 100%nat) i_src i_tgt
   .
   Proof.
+    Set Ltac Profiling.
     i. ginit.
     { eapply cpn5_wcompat; eauto with paco. }
     (* remember (` x : ModSem.r_state * R <- interp_Es p_src (interp_hCallE_src (trigger ce)) st_src0;; Ret (snd x)) as tmp. *)
@@ -380,6 +381,7 @@ Section CANCEL.
         { unfold interp_hCallE_tgt. erewrite Any.downcast_upcast; et. }
         rr. esplits; et. { destruct l2; ss. } clear - ST1. admit "ez".
     }
+    Show Ltac Profile.
   Unshelve.
     all: ss.
     all: try (by apply Ordinal.O).
