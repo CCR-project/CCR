@@ -94,9 +94,6 @@ Qed.
 
 
 
-Tactic Notation "ur" := try rewrite ! URA.unfold_wf; try rewrite ! URA.unfold_add; cbn.
-Tactic Notation "ur" "in" hyp(H)  := try rewrite ! URA.unfold_wf in H; try rewrite ! URA.unfold_add in H; cbn in H.
-
 Section AUX.
   Context {K: Type} `{M: URA.t}.
   Let RA := URA.pointwise K M.
@@ -126,10 +123,10 @@ Notation "'Forall' x .. y , p" := (Univ (fun x => .. (Univ (fun y => p)) ..))
 
 Ltac Ztac := all_once_fast ltac:(fun H => first[apply Z.leb_le in H|apply Z.ltb_lt in H|apply Z.leb_gt in H|apply Z.ltb_ge in H|idtac]).
 
-Lemma _points_to_hit: forall b ofs v, (_points_to (b, ofs) [v] b ofs) = URA.of_RA.just (Some v).
+Lemma _points_to_hit: forall b ofs v, (_points_to (b, ofs) [v] b ofs) = (Some v).
 Proof. i. rewrite unfold_points_to. ss. des_ifs; bsimpl; des; des_sumbool; subst; Ztac; try lia. rewrite Z.sub_diag. ss. Qed.
 
-Lemma _points_to_miss: forall b ofs b' ofs' (MISS: b <> b' \/ ofs <> ofs') v, (_points_to (b, ofs) [v] b' ofs') = URA.of_RA.unit.
+Lemma _points_to_miss: forall b ofs b' ofs' (MISS: b <> b' \/ ofs <> ofs') v, (_points_to (b, ofs) [v] b' ofs') = ε.
 Proof. i. rewrite unfold_points_to. ss. des_ifs; bsimpl; des; des_sumbool; subst; Ztac; try lia. Qed.
 
 Lemma dec_true: forall X `{Dec X} (x0 x1: X), x0 = x1 -> ((dec x0 x1): bool) = true.
@@ -157,8 +154,8 @@ Section SIMMODSEM.
   Let W: Type := (alist mname (Σ * Any.t)) * (alist mname (Σ * Any.t)).
   (* Eval compute in (@RA.car (RA.excl Mem.t)). *)
   Eval compute in (@URA.car Mem1._memRA).
-  Inductive sim_loc: option val -> URA.car (t:=URA.of_RA.t (RA.excl val)) -> Prop :=
-  | sim_loc_present v: sim_loc (Some v) (URA.of_RA.just (Some v))
+  Inductive sim_loc: option val -> URA.car (t:=(URA.Excl.t _)) -> Prop :=
+  | sim_loc_present v: sim_loc (Some v) (Some v)
   | sim_loc_absent: sim_loc None ε
   .
 
@@ -255,14 +252,14 @@ Section SIMMODSEM.
       rename n into b. rename z into ofs. rename x0 into mem_src0. rename x into v.
       iMerge SIM A0. rewrite <- own_sep in SIM. rewrite GRA.embed_add in SIM.
       iOwnWf SIM. eapply GRA.embed_wf in WF; des.
-      assert(HIT: mem_src0 b ofs = URA.of_RA.just (Some v)).
+      assert(HIT: mem_src0 b ofs = (Some v)).
       { clear - WF.
         Local Transparent points_to.
         eapply URA.auth_included in WF. des. eapply pw_extends in WF. eapply pw_extends in WF.
         rewrite _points_to_hit in WF.
         admit "ez".
       }
-      set (mem_src1 := fun _b _ofs => if dec _b b && dec _ofs ofs then URA.of_RA.unit else mem_src0 _b _ofs).
+      set (mem_src1 := fun _b _ofs => if dec _b b && dec _ofs ofs then (ε: URA.car (t:=URA.Excl.t _)) else mem_src0 _b _ofs).
       assert(WF': URA.wf (mem_src1: URA.car (t:=Mem1._memRA))).
       { clear - WF. unfold mem_src1. do 2 ur. ii. eapply URA.wf_mon in WF. ur in WF. des.
         des_ifs; et.
@@ -329,7 +326,7 @@ Section SIMMODSEM.
       force_l. exists 0. steps.
       rename n into b. rename z into ofs. rename x into mem_src0.
       iMerge SIM A0. rewrite <- own_sep in SIM. rewrite GRA.embed_add in SIM. iOwnWf SIM.
-      assert(T: mem_src0 b ofs = URA.of_RA.just (Some v)).
+      assert(T: mem_src0 b ofs = (Some v)).
       { clear - WF.
         apply GRA.embed_wf in WF. des; ss. eapply URA.auth_included in WF. des.
         eapply pw_extends in WF. eapply pw_extends in WF. rewrite _points_to_hit in WF.
@@ -354,7 +351,7 @@ Section SIMMODSEM.
       force_l. exists 0. steps.
       rename n into b. rename z into ofs. rename x0 into mem_src0. rename x into v0. rename v into v1.
       iMerge SIM A0. rewrite <- own_sep in SIM. rewrite GRA.embed_add in SIM. iOwnWf SIM.
-      assert(T: mem_src0 b ofs = URA.of_RA.just (Some v0)).
+      assert(T: mem_src0 b ofs = (Some v0)).
       { clear - WF.
         apply GRA.embed_wf in WF. des; ss. eapply URA.auth_included in WF. des.
         eapply pw_extends in WF. eapply pw_extends in WF. rewrite _points_to_hit in WF.
@@ -362,7 +359,7 @@ Section SIMMODSEM.
         admit "ez".
       }
       exploit A; et. intro U. rewrite T in U. inv U; ss. unfold Mem.store. des_ifs. steps.
-      set (mem_src1 := fun _b _ofs => if dec _b b && dec _ofs ofs then URA.of_RA.just (Some v1) else mem_src0 _b _ofs).
+      set (mem_src1 := fun _b _ofs => if dec _b b && dec _ofs ofs then (Some v1: URA.car (t:=URA.Excl.t _)) else mem_src0 _b _ofs).
       eapply GRA.embed_wf in WF; des.
       assert(WF': URA.wf (mem_src1: URA.car (t:=Mem1._memRA))).
       { clear - WF. unfold mem_src1. do 2 ur. ii. eapply URA.wf_mon in WF. ur in WF. des.
@@ -407,7 +404,7 @@ Section SIMMODSEM.
       (* } *)
       assert (VALIDPTR: forall b ofs v (WF: URA.wf ((URA.black (mem_src0: URA.car (t:=Mem1._memRA))) ⋅ ((b, ofs) |-> [v]))),
                  Mem.valid_ptr mem_tgt b ofs = true).
-      { clear - A. i. cut (mem_src0 b ofs = URA.of_RA.just (Some v)).
+      { clear - A. i. cut (mem_src0 b ofs = Some v).
         - i. unfold Mem.valid_ptr.
           specialize (A b ofs). rewrite H in *. inv A. ss.
         - clear - WF.

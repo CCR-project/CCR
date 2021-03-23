@@ -58,10 +58,9 @@ Section AUX.
     {
       iMerge A A0. rewrite <- own_sep in A. rewrite GRA.embed_add in A.
       iOwnWf A. eapply GRA.embed_wf in WF. des. eapply URA.auth_included in WF. des.
-      Local Transparent URA.add.
-      rr in WF. des. cbn in WF.
-      Local Opaque URA.add.
-      des_ifs.
+      eapply URA.Excl.extends in WF; ss.
+      - des; clarify.
+      - ur; ss.
     }
   Qed.
 
@@ -121,7 +120,7 @@ Section SIMMODSEM.
       eapply own_upd in SIM; cycle 1; [|rewrite intro_iHyp in SIM;iUpdate SIM].
       { rewrite GRA.embed_add. eapply GRA.embed_updatable.
         instantiate (1:= bw_full (Z.odd (n+1)) ⋅ bw_frag (Z.odd (n+1))).
-        eapply URA.auth_update. rr. ii. des; ss. destruct ctx; ss; clarify.
+        eapply URA.auth_update. rr. ii. des; ss. ur in FRAME. ur. destruct ctx; ss; clarify.
       }
       rewrite <- GRA.embed_add in SIM. rewrite own_sep in SIM. iDestruct SIM. clarify.
 

@@ -413,7 +413,7 @@ End ImpMod.
 
 Section Example_Extract.
 
-  Let Σ: GRA.t := fun _ => URA.of_RA RA.empty.
+  Let Σ: GRA.t := fun _ => URA.of_RA.t RA.empty.
   Local Existing Instance Σ.
 
   Open Scope expr_scope.

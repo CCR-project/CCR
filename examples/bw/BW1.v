@@ -15,9 +15,10 @@ Generalizable Variables E R A B C X Y Σ.
 Set Implicit Arguments.
 
 
-Definition bwRA: URA.t := URA.auth (RA.excl bool).
-Definition bw_full (b: bool) : (@URA.car bwRA) := URA.black (M:=(RA.excl _)) (inl (Some b)).
-Definition bw_frag (b: bool) : (@URA.car bwRA) := URA.white (M:=(RA.excl _)) (inl (Some b)).
+
+Definition bwRA: URA.t := URA.auth (URA.Excl.t bool).
+Definition bw_full (b: bool) : (@URA.car bwRA) := URA.black (M:=(URA.Excl.t _)) (Some b).
+Definition bw_frag (b: bool) : (@URA.car bwRA) := URA.white (M:=(URA.Excl.t _)) (Some b).
 
 Section BW.
 

@@ -476,6 +476,69 @@ Module URA.
 
 
 
+  Module Excl.
+  Section EXCL.
+
+  Context {X: Type}.
+  Inductive car: Type :=
+  | just (x: X)
+  | unit
+  | boom
+  .
+
+  Let _add := fun x y => match x, y with | _, unit => x | unit, _ => y | _, _ => boom end.
+  Let _wf := fun a => a <> boom.
+
+  Program Instance t: URA.t := {
+    URA.car := car;
+    URA._add := _add;
+    URA._wf := _wf;
+    URA.unit := unit;
+  }
+  .
+  Next Obligation. unfold _wf, _add in *. des_ifs. Qed.
+  Next Obligation. unfold _wf, _add in *. des_ifs. Qed.
+  Next Obligation. unfold _wf, _add in *. des_ifs. Qed.
+  Next Obligation. unfold _wf, _add in *. des_ifs. Qed.
+
+  Theorem updatable
+          a0 a1
+          (WF: URA.wf a1)
+    :
+      <<UPD: URA.updatable (just a0) a1>>
+  .
+  Proof. rr. unfold wf, add in *. unseal "ra". ss. ii. des_ifs; ss. unfold _wf, _add in *. des_ifs; ss. Qed.
+
+  Theorem extends
+          a0 a1
+          (WF: URA.wf a1)
+          (EXT: URA.extends (just a0) a1)
+    :
+      <<EQ: a1 = just a0>>
+  .
+  Proof. rr. rr in EXT. des; subst. unfold wf, add in *. unseal "ra". ss. des_ifs; ss. Qed.
+
+  Theorem wf
+          a0 a1
+          (WF: URA.wf (URA.add (just a0) a1))
+    :
+      <<EQ: a1 = unit>>
+  .
+  Proof. rr. unfold wf, add in *. unseal "ra". ss. des_ifs; ss. Qed.
+
+  Coercion option_coercion (x: option X): car :=
+    match x with
+    | Some x => just x
+    | None => boom
+    end
+  .
+
+  End EXCL.
+  End Excl.
+
+
+
+
 
   Module of_RA.
   Section of_RA.
@@ -745,10 +808,16 @@ Module URA.
 
 End URA.
 
+Arguments URA.Excl.t: clear implicits.
+Coercion URA.Excl.option_coercion: option >-> URA.Excl.car.
 (* Coercion URA.to_RA: URA.t >-> RA.t. *)
 Coercion URA.of_RA.t: RA.t >-> URA.t.
 Coercion RA.car: RA.t >-> Sortclass.
 Coercion URA.car: URA.t >-> Sortclass.
+
+Tactic Notation "ur" := try rewrite ! URA.unfold_wf; try rewrite ! URA.unfold_add; cbn.
+Tactic Notation "ur" "in" hyp(H)  := try rewrite ! URA.unfold_wf in H; try rewrite ! URA.unfold_add in H; cbn in H.
+
 
 
 

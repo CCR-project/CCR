@@ -69,10 +69,9 @@ Section AUX.
     {
       iMerge A A0. rewrite <- own_sep in A. rewrite GRA.embed_add in A.
       iOwnWf A. eapply GRA.embed_wf in WF. des. eapply URA.auth_included in WF. des.
-      Local Transparent URA.add.
-      rr in WF. des. cbn in WF.
-      Local Opaque URA.add.
-      des_ifs.
+      eapply URA.Excl.extends in WF; ss.
+      - des; clarify.
+      - ur; ss.
     }
   Qed.
 
@@ -87,7 +86,7 @@ Section AUX.
     {
       exfalso. iMerge A A0.
       rewrite <- own_sep in A. rewrite GRA.embed_add in A.
-      iOwnWf A. clear - WF. apply GRA.embed_wf in WF. des. ss.
+      iOwnWf A. clear - WF. apply GRA.embed_wf in WF. des. do 2 ur in WF. ss.
     }
   Qed.
 
@@ -102,7 +101,7 @@ Section AUX.
     {
       exfalso. iMerge A A0.
       rewrite <- own_sep in A. rewrite GRA.embed_add in A.
-      iOwnWf A. clear - WF. apply GRA.embed_wf in WF. des. ss.
+      iOwnWf A. clear - WF. apply GRA.embed_wf in WF. des. do 2 ur in WF. ss.
     }
   Qed.
 End AUX.
@@ -221,7 +220,7 @@ Section SIMMODSEM.
         iMerge A SIM. rewrite <- own_sep in A. rewrite GRA.embed_add in A. rewrite URA.add_comm in A.
         eapply own_upd in A; cycle 1; [|rewrite intro_iHyp in A;iMod A].
         { eapply GRA.embed_updatable. instantiate (1:= echo_black x (z :: ns) ⋅ echo_white x (z :: ns)).
-          eapply URA.auth_update. rr. ii. des; ss. destruct ctx; ss; clarify.
+          eapply URA.auth_update. rr. ii. des; ss. ur in FRAME. ur. destruct ctx; ss; clarify.
         }
         rewrite <- GRA.embed_add in A. rewrite own_sep in A. iDestruct A. subst.
 
@@ -311,7 +310,7 @@ Section SIMMODSEM.
         iMerge A SIM. rewrite <- own_sep in A. rewrite GRA.embed_add in A.
         eapply own_upd in A; cycle 1; [|rewrite intro_iHyp in A;iMod A].
         { eapply GRA.embed_updatable. instantiate (1:= echo_black v (ns) ⋅ echo_white v (ns)).
-          eapply URA.auth_update. rr. ii. des; ss. destruct ctx; ss; clarify.
+          eapply URA.auth_update. rr. ii. des; ss. ur in FRAME. ur. destruct ctx; ss; clarify.
         }
         rewrite <- GRA.embed_add in A. rewrite own_sep in A. iDestruct A.
 

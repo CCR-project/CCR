@@ -21,7 +21,7 @@ Set Implicit Arguments.
 
 Section PROOF.
 
-  Definition Σ: GRA.t := fun _ => URA.of_RA RA.empty.
+  Definition Σ: GRA.t := fun _ => URA.of_RA.t RA.empty.
   Local Existing Instance Σ.
 
   Definition FGImp: Mod.t := Mod.add_list [MutMain0.main ; MutFImp.F ; MutGImp.G].

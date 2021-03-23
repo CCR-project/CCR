@@ -19,11 +19,10 @@ Set Implicit Arguments.
 
 
 
-Let _memRA: URA.t := (block ==> Z ==> (RA.excl val))%ra.
+Let _memRA: URA.t := (block ==> Z ==> (URA.Excl.t val))%ra.
 Compute (URA.car (t:=_memRA)).
 Instance memRA: URA.t := URA.auth _memRA.
 Compute (URA.car).
-
 
 Section PROOF.
   Context `{@GRA.inG memRA Σ}.
@@ -31,7 +30,7 @@ Section PROOF.
   Definition _points_to (loc: block * Z) (vs: list val): Mem1._memRA :=
     let (b, ofs) := loc in
     (fun _b _ofs => if (dec _b b) && ((ofs <=? _ofs) && (_ofs <? (ofs + Z.of_nat (List.length vs))))%Z
-                    then URA.of_RA.just (List.nth_error vs (Z.to_nat (_ofs - ofs))) else ε)
+                    then (List.nth_error vs (Z.to_nat (_ofs - ofs))) else ε)
   .
 
   (* Opaque _points_to. *)
@@ -39,7 +38,7 @@ Section PROOF.
     _points_to loc vs =
     let (b, ofs) := loc in
     (fun _b _ofs => if (dec _b b) && ((ofs <=? _ofs) && (_ofs <? (ofs + Z.of_nat (List.length vs))))%Z
-                    then URA.of_RA.just (List.nth_error vs (Z.to_nat (_ofs - ofs))) else ε)
+                    then (List.nth_error vs (Z.to_nat (_ofs - ofs))) else ε)
   .
   Proof. refl. Qed.
 
@@ -54,18 +53,29 @@ Section PROOF.
     ss. unfold points_to. unfold URA.white. repeat (rewrite URA.unfold_add; ss).
     f_equal.
     repeat (apply func_ext; i).
-    des_ifs; bsimpl; des; des_sumbool; ss; try rewrite Z.leb_gt in *; try rewrite Z.leb_le in *;
-      try rewrite Z.ltb_ge in *; try rewrite Z.ltb_lt in *; try lia.
+    des_ifs; bsimpl; des; des_sumbool; subst; ss;
+      try rewrite Z.leb_gt in *; try rewrite Z.leb_le in *; try rewrite Z.ltb_ge in *; try rewrite Z.ltb_lt in *; try lia.
     - clear_tac. subst. rewrite Zpos_P_of_succ_nat in *. rewrite <- Zlength_correct in *.
-      assert(x0 = ofs).
-      { lia. }
-      subst.
-      f_equal. rewrite Z.sub_diag. ss.
-    - clear_tac. subst. rewrite Zpos_P_of_succ_nat in *. rewrite <- Zlength_correct in *.
-      f_equal. clear Heq4. clear Heq5. clear_tac.
+      assert(x0 = ofs). { lia. } subst.
+      rewrite Z.sub_diag in *. ss.
+    - clear_tac. rewrite Zpos_P_of_succ_nat in *. rewrite <- Zlength_correct in *.
       destruct (Z.to_nat (x0 - ofs)) eqn:T; ss.
       { exfalso. lia. }
-      f_equal. lia.
+      rewrite Z.sub_add_distr in *. rewrite Z2Nat.inj_sub in Heq1; ss. rewrite T in *. ss. rewrite Nat.sub_0_r in *. ss.
+    - clear_tac. rewrite Zpos_P_of_succ_nat in *. rewrite <- Zlength_correct in *.
+      destruct (Z.to_nat (x0 - ofs)) eqn:T; ss.
+      { exfalso. lia. }
+      rewrite Z.sub_add_distr in *. rewrite Z2Nat.inj_sub in Heq1; ss. rewrite T in *. ss. rewrite Nat.sub_0_r in *. ss.
+    - clear_tac. rewrite Zpos_P_of_succ_nat in *. rewrite <- Zlength_correct in *.
+      assert(x0 = ofs). { lia. } subst.
+      rewrite Z.sub_diag in *. ss.
+    - clear_tac. rewrite Zpos_P_of_succ_nat in *. rewrite <- Zlength_correct in *.
+      destruct (Z.to_nat (x0 - ofs)) eqn:T; ss.
+      { exfalso. lia. }
+      rewrite Z.sub_add_distr in *. rewrite Z2Nat.inj_sub in Heq1; ss. rewrite T in *. ss. rewrite Nat.sub_0_r in *. ss.
+    - clear_tac. rewrite Zpos_P_of_succ_nat in *. rewrite <- Zlength_correct in *.
+      assert(x0 = ofs). { lia. } subst.
+      rewrite Z.sub_diag in *. ss.
   Qed.
 
 (* Lemma points_tos_points_to *)
@@ -164,7 +174,7 @@ Section PROOF.
     ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt MemStb fn fsb)) MemSbtb;
     ModSem.initial_mrs :=
       [("Mem", (GRA.embed (URA.black (M:=_memRA)
-                            (fun b ofs => if (b =? 0)%nat && (ofs =? 0)%Z then URA.of_RA.just (Some Vundef) else ε)), tt↑))];
+                            (fun b ofs => if (b =? 0)%nat && (ofs =? 0)%Z then (Some Vundef) else ε)), tt↑))];
   |}
   .
 
