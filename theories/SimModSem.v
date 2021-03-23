@@ -810,6 +810,12 @@ Qed.
 (*** (3) would be great if induction tactic works !!!! (study itree case study more) ***)
 
 
+
+Definition wf_mod `{Σ: GRA.t} (ms: ModSem.t): Prop :=
+  let mns := List.map fst ms.(ModSem.initial_mrs) in
+  (<<ND: NoDup mns>>) /\
+  (<<WFFUN: List.Forall (fun '(_, fn) => forall arg, wf_function mns (fn arg)) ms.(ModSem.fnsems)>>).
+
 Module ModSemPair.
 Section SIMMODSEM.
 
@@ -827,6 +833,20 @@ Section SIMMODSEM.
   }.
 
 End SIMMODSEM.
+
+Lemma self_sim_mod `{Σ: GRA.t} (ms: ModSem.t) (WF: wf_mod ms):
+  sim ms ms.
+Proof.
+  eapply mk with (wf:=fun p => fst p = snd p /\ wf_mrs (List.map fst ms.(ModSem.initial_mrs)) (fst p)) (le:=top2); ss.
+  2: {
+    split; auto. ii. eapply in_map_iff in IN. des. subst. admit "ez".
+  }
+  unfold wf_mod in *. des.
+  revert WFFUN. generalize (ModSem.fnsems ms).
+  induction l; i; ss. inv WFFUN. destruct a. econs; eauto.
+  econs; ss. ii. subst. ss. des. subst.
+  exists 0. eapply self_sim_itree; eauto.
+Qed.
 
 Section ADD.
   Context `{Σ: GRA.t}.
@@ -1477,69 +1497,7 @@ Section SIMMOD.
 
    Local Opaque Ordinal.add.
 
-   (* Theorem adequacy_global *)
-   (*         (SIM: sim) *)
-   (*   : *)
-   (*     Beh.of_program (Mod.interp md_tgt) <1= *)
-   (*     Beh.of_program (Mod.interp md_src) *)
-   (* . *)
-   (* Proof. *)
-   (*   inv SIM. specialize (sim_modsem0 (Sk.load_skenv (Mod.sk md_src))). *)
-   (*   inv sim_modsem0. red in sim_sk0. *)
-
-   (*   eapply adequacy_global; et. exists (Ordinal.add Ordinal.O Ordinal.O). *)
-   (*   unfold ModSem.initial_itr, Mod.enclose. *)
-
-   (*   ginit. gclo. eapply wrespect5_companion; auto with paco. *)
-   (*   { eapply bindC_wrespectful. } *)
-   (*   econs. *)
-   (*   { instantiate (1:=eq). unfold assume. gstep. *)
-   (*     econs; auto. instantiate (1:=Ordinal.O). *)
-   (*     i. esplits; eauto. *)
-   (*     { eapply sim_wf0; eauto. rewrite sim_sk0 in *. ss. } *)
-   (*     gstep. econs. auto. *)
-   (*   } *)
-   (*   i. subst. unfold ITree.map. *)
-
-   (*   guclo ordC_spec. econs. *)
-   (*   { eapply Ordinal.add_O_l. } *)
-   (*   guclo bindC_spec. econs. *)
-   (*   2: { *)
-   (*     instantiate (1:=fun vret_src vret_tgt => snd vret_src = snd vret_tgt). ss. *)
-   (*     i. gstep. econs; eauto. *)
-   (*   } *)
-   (*   ss. guclo ordC_spec. econs. *)
-   (*   { eapply Ordinal.add_O_l. } *)
-   (*   guclo bindC_spec. econs. *)
-   (*   2: { *)
-   (*     instantiate (1:=fun vret_src vret_tgt => snd (snd vret_src) = snd (snd vret_tgt)). ss. *)
-   (*     i. destruct vret_src, vret_tgt0. destruct p0, p2. ss. *)
-   (*     gstep. econs; eauto. *)
-   (*   } *)
-
-   (*   assert (FNS: forall fn : string, *)
-   (*              option_rel (sim_fnsem wf) *)
-   (*                         (find (fun fnsem : string * (Any.t -> itree Es Any.t) => dec fn (fst fnsem)) *)
-   (*                               (ModSem.fnsems (Mod.get_modsem md_src (Sk.load_skenv (Mod.sk md_src))))) *)
-   (*                         (find (fun fnsem : string * (Any.t -> itree Es Any.t) => dec fn (fst fnsem)) *)
-   (*                               (ModSem.fnsems (Mod.get_modsem md_tgt (Sk.load_skenv (Mod.sk md_tgt)))))). *)
-   (*   { rewrite <- sim_sk0 in *. *)
-   (*     remember (ModSem.fnsems (Mod.get_modsem md_src (Sk.load_skenv (Mod.sk md_src)))). *)
-   (*     remember (ModSem.fnsems (Mod.get_modsem md_tgt (Sk.load_skenv (Mod.sk md_src)))). *)
-   (*     clear - sim_fnsems. induction sim_fnsems; ss. *)
-   (*     i. unfold sumbool_to_bool. des_ifs; eauto. *)
-   (*     - inv H. ss. *)
-   (*     - inv H. exfalso. eapply n. ss. *)
-   (*   } *)
-
-   (*   unfold interp_pE, interp_rE. *)
-   (*   repeat rewrite interp_mrec_bind. *)
-   (*   repeat rewrite interp_state_bind. *)
-   (*   guclo ordC_spec. econs. *)
-   (*   { eapply Ordinal.add_O_l. } *)
-   (* Admitted. *)
-
-   Lemma lift_sim_aux ms_src ms_tgt
+   Lemma lift_sim ms_src ms_tgt
          (wf: alist string (Σ * Any.t) * alist string (Σ * Any.t) -> Prop)
          (FNS: forall fn : string,
              option_rel (sim_fnsem wf)
@@ -1571,310 +1529,341 @@ Section SIMMOD.
                  (mrs_tgt, fr_tgt::frs_tgt, mps_tgt)).
    Proof.
      ginit. gcofix CIH. i.
-     punfold SIM. gstep.
-     (* inv SIM; pclearbot; ss; mgo; ss; mgo. *)
-     (* - econs. esplits; ss. econs; eauto. *)
-     (* - econs; ss. gbase. *)
-     (*   eapply CIH; eauto. *)
-     (* - econs; ss. unfold unwrapU. *)
-     (*   generalize (FNS fn). i. inv H; cycle 1. *)
-     (*   { clear H1 H2. unfold triggerUB. mgo. *)
-     (*     gstep. econs; ss. *)
-     (*   } *)
-     (*   clear H1 H2. mgo. *)
-     (*   destruct a as [fn_src f_src]. destruct b as [fn_tgt f_tgt]. *)
-     (*   inv IN. inv H. simpl in H1. clarify. *)
-     (*   exploit H0; eauto. instantiate (2:=varg). i. des. *)
-     (*   mgo. ss. mgo. *)
-     (*   gstep. econs; auto. *)
-     (*   gstep. econs; auto. *)
-     (*   gclo. eapply wrespect5_companion; auto with paco. *)
-     (*   { eapply bindC_wrespectful. } *)
-     (*   econs. *)
-     (*   + gbase. eapply CIH; eauto. ss. *)
-     (*   + i. ss. des. *)
-     (*     destruct vret_src as [[mrs_src' frs_src'] val_src]. *)
-     (*     destruct vret_tgt as [[mrs_tgt' frs_tgt'] val_tgt]. *)
-     (*     ss. subst. mgo. ss. mgo. *)
-     (*     gstep. econs; ss. *)
-     (*     inv WF0. hexploit K; eauto. i. des. pclearbot. *)
-     (*     eapply CIH in H; eauto; ss. *)
-     (*     gstep. econs; ss. *)
-     (*     gbase. eauto. *)
-     (* - unfold guarantee. mgo. econs; ss. i. hexploit K. *)
-     (*   { eapply eqv_lookup in MR1; eauto. subst. eauto. } *)
-     (*   i. des. pclearbot. esplits. *)
-     (*   { eapply eqv_lookup in MR0; eauto. subst. eauto. } *)
-     (*   gstep. econs; auto. *)
-     (*   gstep. econs; auto. *)
-     (*   gbase. eapply CIH; ss; eauto. *)
-     (*   { eapply eqv_add; eauto. } *)
-     (*   { eapply eqv_add; eauto. } *)
-     (* - econs; ss. gstep. econs; ss. *)
-     (*   eapply eqv_lookup in MR0; eauto. eapply eqv_lookup in MR1; eauto. subst. *)
-     (*   gbase. eapply CIH; eauto. *)
-     (* - econs; ss. *)
-     (*   gstep. econs; ss. *)
-     (*   gbase. eapply CIH; eauto. *)
-     (* - econs; ss. *)
-     (*   gstep. econs; ss. *)
-     (*   gbase. eapply CIH; eauto. *)
-     (* - unfold guarantee. *)
-     (*   eapply simg_chooseR; ss. *)
-     (*   { eapply arith_lt_2 with (n1:=3); auto. } *)
-     (*   i. mgo. gstep. eapply simg_chooseR; ss. *)
-     (*   { eapply arith_lt_2 with (n1:=2); auto. } *)
-     (*   i. hexploit (K x). *)
-     (*   { subst. extensionality k. eapply URA.add_comm. } *)
-     (*   i. des. pclearbot. *)
-     (*   gstep. eapply simg_chooseL; ss. *)
-     (*   { eapply arith_lt_2 with (n1:=1); auto. } *)
-     (*   eexists. gstep. mgo. eapply simg_chooseL; ss. *)
-     (*   { eapply arith_lt_2 with (n1:=0); auto. } *)
-     (*   eexists. *)
-     (*   { instantiate (1:=fr_src1). subst. *)
-     (*     extensionality k. eapply URA.add_comm. } *)
-     (*   gstep. econs; ss. gstep. econs; ss. pclearbot. *)
-     (*   gbase. eapply CIH; eauto. *)
-     (* - unfold assume. mgo. econs; ss. *)
-     (*   i. hexploit K. *)
-     (*   { i. eapply eqv_lookup in MR0; eauto. subst. eapply x_src. } *)
-     (*   i. des. pclearbot. esplits. *)
-     (*   { i. eapply eqv_lookup in MR1; eauto. subst. eapply WF. } *)
-     (*   gstep. econs; ss. gstep. econs; ss. *)
-     (*   gbase. eapply CIH; eauto. ss. *)
-     (* - econs; ss. i. *)
-     (*   hexploit (K x_tgt). i. des. pclearbot. *)
-     (*   eexists. mgo. gstep. econs; ss. gstep. econs; ss. *)
-     (*   gbase. eapply CIH; eauto. *)
-     (* - econs; ss. i. *)
-     (*   hexploit (K x_src). i. des. pclearbot. *)
-     (*   eexists. mgo. gstep. econs; ss. gstep. econs; ss. *)
-     (*   gbase. eapply CIH; eauto. *)
-     (* - econs; ss. ii. specialize (K x). subst. mgo. *)
-     (*   gstep. econs; ss. gstep. econs; ss. *)
-     (*   gbase. eapply CIH; eauto. *)
-     (* - econs; ss. *)
-     (*   { eapply arith_lt_1 with (n1:=4); auto. *)
-     (*     - eapply OrdArith.lt_from_nat; eauto. *)
-     (*     - clear. lia. } *)
-     (*   gbase. eapply CIH; eauto. *)
-     (* - unfold guarantee. mgo. econs; ss. *)
-     (*   { eapply arith_lt_1 with (n1:=7); auto. *)
-     (*     eapply OrdArith.lt_from_nat; eauto. } *)
-     (*   esplits. *)
-     (*   { eapply eqv_lookup in MR0; eauto. subst. auto. } *)
-     (*   gstep. econs; ss. *)
-     (*   { eapply arith_lt_2 with (n1:=6); auto. } *)
-     (*   gstep. econs; ss. *)
-     (*   { eapply arith_lt_2 with (n1:=4); auto. } *)
-     (*   gbase. eapply CIH; eauto; ss. *)
-     (*   eapply eqv_add; eauto. *)
-     (* - econs; ss. *)
-     (*   { eapply arith_lt_1 with (n1:=7); auto. *)
-     (*     eapply OrdArith.lt_from_nat; eauto. } *)
-     (*   gstep. econs; ss. *)
-     (*   { eapply arith_lt_2 with (n1:=4); auto. } *)
-     (*   eapply eqv_lookup in MR0; eauto. subst. *)
-     (*   gbase. eapply CIH; eauto; ss. *)
-     (* - econs; ss. *)
-     (*   { eapply arith_lt_1 with (n1:=7); auto. *)
-     (*     eapply OrdArith.lt_from_nat; eauto. } *)
-     (*   gstep. econs; ss. *)
-     (*   { eapply arith_lt_2 with (n1:=4); auto. } *)
-     (*   gbase. eapply CIH; eauto; ss. *)
-     (* - econs; ss. *)
-     (*   { eapply arith_lt_1 with (n1:=7); auto. *)
-     (*     eapply OrdArith.lt_from_nat; eauto. } *)
-     (*   gstep. econs; ss. *)
-     (*   { eapply arith_lt_2 with (n1:=4); auto. } *)
-     (*   gbase. eapply CIH; eauto; ss. *)
-     (* - unfold guarantee. econs; ss. *)
-     (*   { eapply arith_lt_1 with (n1:=7); auto. *)
-     (*     eapply OrdArith.lt_from_nat; eauto. } *)
-     (*   eexists. gstep. mgo. econs; ss. *)
-     (*   { eapply arith_lt_2 with (n1:=6); auto. } *)
-     (*   eexists. *)
-     (*   { extensionality k. eapply URA.add_comm. } *)
-     (*   gstep. econs; ss. *)
-     (*   { eapply arith_lt_2 with (n1:=5); auto. } *)
-     (*   gstep. econs; ss. *)
-     (*   { eapply arith_lt_2 with (n1:=4); auto. } *)
-     (*   gbase. eapply CIH; eauto; ss. *)
-     (* - unfold assume. mgo. econs; ss. *)
-     (*   { eapply arith_lt_1 with (n1:=7); auto. *)
-     (*     eapply OrdArith.lt_from_nat; eauto. } *)
-     (*   i. hexploit K. *)
-     (*   { eapply eqv_lookup in MR0; eauto. subst. auto. } *)
-     (*   i. pclearbot. *)
-     (*   gstep. econs; ss. *)
-     (*   { eapply arith_lt_2 with (n1:=6); auto. } *)
-     (*   gstep. econs; ss. *)
-     (*   { eapply arith_lt_2 with (n1:=4); auto. } *)
-     (*   gbase. eapply CIH; eauto; ss. *)
-     (* - econs; ss. *)
-     (*   { eapply arith_lt_1 with (n1:=7); auto. *)
-     (*     eapply OrdArith.lt_from_nat; eauto. } *)
-     (*   des. pclearbot. eexists. mgo. *)
-     (*   gstep. econs; ss. *)
-     (*   { eapply arith_lt_2 with (n1:=6); auto. } *)
-     (*   gstep. econs; ss. *)
-     (*   { eapply arith_lt_2 with (n1:=4); auto. } *)
-     (*   gbase. eapply CIH; eauto. *)
-     (* - econs; ss. *)
-     (*   { eapply arith_lt_1 with (n1:=7); auto. *)
-     (*     eapply OrdArith.lt_from_nat; eauto. } *)
-     (*   i. specialize (K x). mgo. *)
-     (*   gstep. econs; ss. *)
-     (*   { eapply arith_lt_2 with (n1:=6); auto. } *)
-     (*   gstep. econs; ss. *)
-     (*   { eapply arith_lt_2 with (n1:=4); auto. } *)
-     (*   gbase. eapply CIH; eauto. *)
-     (* - econs; ss. *)
-     (*   { eapply arith_lt_1 with (n1:=4); [|lia]. *)
-     (*     eapply OrdArith.lt_from_nat; eauto. } *)
-     (*   gbase. eapply CIH; eauto. *)
-     (* - unfold guarantee. mgo. econs; ss. *)
-     (*   { eapply arith_lt_1 with (n1:=7); auto. *)
-     (*     eapply OrdArith.lt_from_nat; eauto. } *)
-     (*   i. hexploit K. *)
-     (*   { eapply eqv_lookup in MR0; eauto. subst. auto. } *)
-     (*   i. pclearbot. *)
-     (*   gstep. econs; ss. *)
-     (*   { eapply arith_lt_2 with (n1:=6); auto. } *)
-     (*   gstep. econs; ss. *)
-     (*   { eapply arith_lt_2 with (n1:=4); auto. } *)
-     (*   gbase. eapply CIH; eauto; ss. *)
-     (*   eapply eqv_add; eauto. *)
-     (* - eapply eqv_lookup in MR0; eauto. subst. *)
-     (*   econs; ss. *)
-     (*   { eapply arith_lt_1 with (n1:=7); auto. *)
-     (*     eapply OrdArith.lt_from_nat; eauto. } *)
-     (*   gstep. econs; ss. *)
-     (*   { eapply arith_lt_2 with (n1:=4); auto. } *)
-     (*   gbase. eapply CIH; eauto; ss. *)
-     (* - econs; ss. *)
-     (*   { eapply arith_lt_1 with (n1:=7); auto. *)
-     (*     eapply OrdArith.lt_from_nat; eauto. } *)
-     (*   gstep. econs; ss. *)
-     (*   { eapply arith_lt_2 with (n1:=4); auto. } *)
-     (*   gbase. eapply CIH; eauto; ss. *)
-     (* - econs; ss. *)
-     (*   { eapply arith_lt_1 with (n1:=7); auto. *)
-     (*     eapply OrdArith.lt_from_nat; eauto. } *)
-     (*   gstep. econs; ss. *)
-     (*   { eapply arith_lt_2 with (n1:=4); auto. } *)
-     (*   gbase. eapply CIH; eauto; ss. *)
-     (* - unfold guarantee. mgo. econs; ss. *)
-     (*   { eapply arith_lt_1 with (n1:=7); auto. *)
-     (*     eapply OrdArith.lt_from_nat; eauto. } *)
-     (*   i. mgo. gstep. econs; ss. *)
-     (*   { eapply arith_lt_2 with (n1:=6); auto. } *)
-     (*   i. hexploit K. *)
-     (*   { instantiate (1:=x). subst. *)
-     (*     extensionality k. eapply URA.add_comm. } *)
-     (*   i. pclearbot. *)
-     (*   gstep. econs; ss. *)
-     (*   { eapply arith_lt_2 with (n1:=5); auto. } *)
-     (*   gstep. econs; ss. *)
-     (*   { eapply arith_lt_2 with (n1:=4); auto. } *)
-     (*   gbase. eapply CIH; eauto. *)
-     (* - unfold assume. mgo. econs; ss. *)
-     (*   { eapply arith_lt_1 with (n1:=7); auto. *)
-     (*     eapply OrdArith.lt_from_nat; eauto. } *)
-     (*   des. pclearbot. esplits. *)
-     (*   { eapply eqv_lookup in MR0; eauto. subst. eauto. } *)
-     (*   gstep. econs; ss. *)
-     (*   { eapply arith_lt_2 with (n1:=6); auto. } *)
-     (*   gstep. econs; ss. *)
-     (*   { eapply arith_lt_2 with (n1:=4); auto. } *)
-     (*   gbase. eapply CIH; eauto; ss. *)
-     (* - econs; ss. *)
-     (*   { eapply arith_lt_1 with (n1:=7); auto. *)
-     (*     eapply OrdArith.lt_from_nat; eauto. } *)
-     (*   i. mgo. specialize (K x). *)
-     (*   gstep. econs; ss. *)
-     (*   { eapply arith_lt_2 with (n1:=6); auto. } *)
-     (*   gstep. econs; ss. *)
-     (*   { eapply arith_lt_2 with (n1:=4); auto. } *)
-     (*   gbase. eapply CIH; eauto; ss. *)
-     (* - des. pclearbot. econs; ss. *)
-     (*   { eapply arith_lt_1 with (n1:=7); auto. *)
-     (*     eapply OrdArith.lt_from_nat; eauto. } *)
-     (*   eexists. mgo. gstep. econs; ss. *)
-     (*   { eapply arith_lt_2 with (n1:=6); auto. } *)
-     (*   gstep. econs; ss. *)
-     (*   { eapply arith_lt_2 with (n1:=4); auto. } *)
-     (*   gbase. eapply CIH; eauto. *)
-     (*   Unshelve. all: exact Ord.O. *)
-   Admitted.
-
-
-   (* Hypothesis SIM: sim. *)
-   (* Variable ske: SkEnv.t. *)
-   (* Variable (md_ctx: Mod.t). *)
-   (* Let ms_src: ModSem.t := md_src.(Mod.get_modsem) ske. *)
-   (* Let ms_tgt: ModSem.t := md_tgt.(Mod.get_modsem) ske. *)
-   (* Let ms_ctx: ModSem.t := md_ctx.(Mod.get_modsem) ske. *)
-
-   (* Let adequacy_local_aux: *)
-   (*   forall (R: Type) (RR: R -> R -> Prop) (TY: R = val) (REL: RR = (@eq R)) *)
-   (*          i_src i_tgt *)
-   (*          (SRC: i_src ~= (ModSem.initial_itr (ModSem.add ms_ctx *)
-   (*                                                         ms_src))) *)
-   (*          (TGT: i_tgt ~= (ModSem.initial_itr (ModSem.add ms_ctx *)
-   (*                                                         ms_tgt))) *)
-   (*   , *)
-   (*     simg RR Ordinal.O i_src i_tgt *)
-   (* . *)
-   (* Proof. *)
-   (*   inv SIM. spc sim_modsem0. rename sim_modsem0 into SIMMS. rename sim_sk0 into SIMSK. des. *)
-   (*   i. ginit. *)
-   (*   { eapply cpn5_wcompat; eapply simg_mon. } *)
-   (*   revert_until ske. do 4 intro. gcofix CIH. i. clarify. *)
-   (*   unfold ModSem.initial_itr. ss. unfold ITree.map. mgo. folder. *)
-   (*   unfold assume. mgo. *)
-   (*   Ltac mstep := try (gstep; econs; eauto; try (by eapply from_nat_lt;ss); check_safe; i). *)
-   (*   mstep. unshelve esplits; et. *)
-   (*   { clear - SIMMS. inv SIMMS. ss. *)
-   (*     admit "ez -- probably need to add some trivial condition on initial_mrs". *)
-   (*   } *)
-   (*   unfold unwrapU at 1. des_ifs; cycle 1. *)
-   (*   { mgo. unfold triggerUB. mgo. mstep; ss. } *)
-   (*   unfold unwrapU. des_ifs; cycle 1. *)
-   (*   { ss. admit "ez". } *)
-   (*   mgo. *)
-   (*   TTTT *)
-   (*   irw. *)
-   (*   ss. *)
-   (*   ss. inv SIM. rewrite <- ! sim_sk0 in *. *)
-   (*   set (Sk.load_skenv (Sk.add (Mod.sk ctx) (Mod.sk md_src))) as skenv_link in *. *)
-   (*   gstep. *)
-   (* Qed. *)
-
-   Theorem adequacy_local
-           (SIM: sim)
-           (*** You will need some wf conditions for ctx ***)
-     :
-       <<CR: forall ctx, Beh.of_program (Mod.interp (Mod.add ctx md_tgt)) <1=
-                         Beh.of_program (Mod.interp (Mod.add ctx md_src))>>
-   .
-   Proof.
-     ii. eapply adequacy_global; et. exists Ordinal.O.
-     admit "TODO".
+     punfold SIM. gstep. Local Opaque interp_Es.
+     inv SIM; pclearbot; ss; mgo; ss; mgo.
+     - econs; ss. esplits; et. econs; eauto.
+     - econs; ss. gbase. eapply CIH; eauto.
+     - econs; ss. unfold unwrapU.
+       generalize (FNS fn). i. inv H; cycle 1.
+       { clear H1 H2. unfold triggerUB. mgo.
+         gstep. econs; ss.
+       }
+       clear H1 H2. mgo.
+       destruct a as [fn_src f_src]. destruct b as [fn_tgt f_tgt].
+       inv IN. inv H. simpl in H1. clarify.
+       exploit H0; eauto. instantiate (2:=varg). i. des.
+       mgo. ss.
+       erewrite interp_Es_rE with (rst0:=(mrs_src, fr_src :: frs_src)).
+       erewrite interp_Es_rE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
+       gstep. econs; auto.
+       gstep. econs; auto.
+       gclo. eapply wrespect5_companion; auto with paco.
+       { eapply bindC_wrespectful. }
+       econs.
+       + gbase. eapply CIH; eauto.
+       + i. ss. des.
+         destruct vret_src as [[mrs_src' frs_src'] val_src].
+         destruct vret_tgt as [[mrs_tgt' frs_tgt'] val_tgt].
+         destruct mrs_src', mrs_tgt'. ss. subst. mgo. ss. mgo.
+         gstep. econs; auto.
+         inv WF0. hexploit K; eauto. i. des. pclearbot.
+         eapply CIH in H; eauto; ss.
+         gstep. econs; auto.
+         gbase. eapply H.
+     - econs. ii. mgo.
+       gstep. econs; auto.
+       gstep. econs; auto.
+       subst. hexploit K; eauto. i. des. pclearbot.
+       eapply CIH in H; eauto; ss.
+       gstep. econs; auto.
+       gbase. eapply H.
+     - econs; eauto. i. hexploit K; eauto. i. des. pclearbot.
+       eexists. mgo.
+       gstep. econs; auto.
+       gstep. econs; auto.
+       gstep. econs; auto.
+       gbase. eapply CIH; eauto.
+     - econs; eauto. i. hexploit K; eauto. i. des. pclearbot.
+       eexists. mgo.
+       gstep. econs; auto.
+       gstep. econs; auto.
+       gstep. econs; auto.
+       gbase. eapply CIH; eauto.
+     - erewrite interp_Es_pE with (rst0:=(mrs_src, fr_src :: frs_src)).
+       erewrite interp_Es_pE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
+       econs; eauto.
+       gstep. econs; auto.
+       gstep. econs; auto.
+       gbase. eapply CIH; eauto.
+       { eapply eqv_add_ms; eauto. }
+       { eapply eqv_add_ms; eauto. }
+     - erewrite interp_Es_rE with (rst0:=(mrs_src, fr_src :: frs_src)).
+       erewrite interp_Es_rE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
+       econs; eauto.
+       gstep. econs; auto.
+       gbase. eapply CIH; eauto.
+       { eapply eqv_add_mr; eauto. }
+       { eapply eqv_add_mr; eauto. }
+     - erewrite interp_Es_rE with (rst0:=(mrs_src, fr_src :: frs_src)).
+       erewrite interp_Es_rE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
+       econs; eauto.
+       gstep. econs; auto.
+       gbase. eapply CIH; eauto.
+     - eapply eqv_lookup_mp in MRSRC; eauto.
+       eapply eqv_lookup_mp in MRTGT; eauto. subst.
+       erewrite interp_Es_pE with (rst0:=(mrs_src, fr_src :: frs_src)).
+       erewrite interp_Es_pE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
+       econs; eauto.
+       gstep. econs; auto.
+       gstep. econs; auto.
+       gbase. eapply CIH; eauto.
+     - eapply eqv_lookup_mr in MRSRC; eauto.
+       eapply eqv_lookup_mr in MRTGT; eauto. subst.
+       erewrite interp_Es_rE with (rst0:=(mrs_src, fr_src :: frs_src)).
+       erewrite interp_Es_rE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
+       econs; eauto.
+       gstep. econs; auto.
+       gbase. eapply CIH; eauto.
+     - erewrite interp_Es_rE with (rst0:=(mrs_src, fr_src :: frs_src)).
+       erewrite interp_Es_rE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
+       econs; eauto.
+       gstep. econs; auto.
+       gbase. eapply CIH; eauto.
+     - econs; eauto.
+       { eapply arith_lt_1 with (n1:=4); auto.
+         - eapply from_nat_lt; eauto.
+         - clear. lia. }
+       gbase. eapply CIH; eauto.
+     - des. pclearbot. econs; eauto.
+       { eapply arith_lt_1 with (n1:=7); auto.
+         - eapply from_nat_lt; eauto. }
+       eexists. mgo. gstep. econs; eauto.
+       { eapply arith_lt_2 with (n1:=6); auto. }
+       gstep. econs; eauto.
+       { eapply arith_lt_2 with (n1:=5); auto. }
+       gstep. econs; eauto.
+       { eapply arith_lt_2 with (n1:=4); auto. }
+       gbase. eapply CIH; eauto.
+     - econs; eauto.
+       { eapply arith_lt_1 with (n1:=7); auto.
+         - eapply from_nat_lt; eauto. }
+       i. mgo. gstep. econs; eauto.
+       { eapply arith_lt_2 with (n1:=6); auto. }
+       gstep. econs; eauto.
+       { eapply arith_lt_2 with (n1:=5); auto. }
+       gstep. econs; eauto.
+       { eapply arith_lt_2 with (n1:=4); auto. }
+       gbase. eapply CIH; eauto. eapply K.
+     - erewrite interp_Es_pE with (rst0:=(mrs_src, fr_src :: frs_src)). ss. mgo.
+       econs; eauto.
+       { eapply arith_lt_1 with (n1:=7); auto.
+         - eapply from_nat_lt; eauto. }
+       gstep. econs; auto.
+       { eapply arith_lt_2 with (n1:=6); auto. }
+       gstep. econs; auto.
+       { eapply arith_lt_2 with (n1:=4); auto. }
+       gbase. eapply CIH; eauto.
+       { eapply eqv_add_ms; eauto. }
+     - erewrite interp_Es_rE with (rst0:=(mrs_src, fr_src :: frs_src)).  ss. mgo.
+       econs; eauto.
+       { eapply arith_lt_1 with (n1:=7); auto.
+         - eapply from_nat_lt; eauto. }
+       gstep. econs; auto.
+       { eapply arith_lt_2 with (n1:=4); auto. }
+       gbase. eapply CIH; eauto.
+       { eapply eqv_add_mr; eauto. }
+     - erewrite interp_Es_rE with (rst0:=(mrs_src, fr_src :: frs_src)). ss. mgo.
+       econs; eauto.
+       { eapply arith_lt_1 with (n1:=7); auto.
+         - eapply from_nat_lt; eauto. }
+       gstep. econs; auto.
+       { eapply arith_lt_2 with (n1:=4); auto. }
+       gbase. eapply CIH; eauto.
+     - eapply eqv_lookup_mp in MR0; eauto. subst.
+       erewrite interp_Es_pE with (rst0:=(mrs_src, fr_src :: frs_src)). ss. mgo.
+       econs; eauto.
+       { eapply arith_lt_1 with (n1:=7); auto.
+         - eapply from_nat_lt; eauto. }
+       gstep. econs; auto.
+       { eapply arith_lt_2 with (n1:=6); auto. }
+       gstep. econs; auto.
+       { eapply arith_lt_2 with (n1:=4); auto. }
+       gbase. eapply CIH; eauto.
+     - eapply eqv_lookup_mr in MR0; eauto. subst.
+       erewrite interp_Es_rE with (rst0:=(mrs_src, fr_src :: frs_src)). ss. mgo.
+       econs; eauto.
+       { eapply arith_lt_1 with (n1:=7); auto.
+         - eapply from_nat_lt; eauto. }
+       gstep. econs; auto.
+       { eapply arith_lt_2 with (n1:=4); auto. }
+       gbase. eapply CIH; eauto.
+     - erewrite interp_Es_rE with (rst0:=(mrs_src, fr_src :: frs_src)). ss. mgo.
+       econs; eauto.
+       { eapply arith_lt_1 with (n1:=7); auto.
+         - eapply from_nat_lt; eauto. }
+       gstep. econs; auto.
+       { eapply arith_lt_2 with (n1:=4); auto. }
+       gbase. eapply CIH; eauto.
+     - econs; eauto.
+       { eapply arith_lt_1 with (n1:=4); auto.
+         - eapply from_nat_lt; eauto.
+         - clear. lia. }
+       gbase. eapply CIH; eauto.
+     - econs; eauto.
+       { eapply arith_lt_1 with (n1:=7); auto.
+         - eapply from_nat_lt; eauto. }
+       i. mgo. gstep. econs; eauto.
+       { eapply arith_lt_2 with (n1:=6); auto. }
+       gstep. econs; eauto.
+       { eapply arith_lt_2 with (n1:=5); auto. }
+       gstep. econs; eauto.
+       { eapply arith_lt_2 with (n1:=4); auto. }
+       gbase. eapply CIH; eauto. eapply K.
+     - des. pclearbot. econs; eauto.
+       { eapply arith_lt_1 with (n1:=7); auto.
+         - eapply from_nat_lt; eauto. }
+       eexists. mgo. gstep. econs; eauto.
+       { eapply arith_lt_2 with (n1:=6); auto. }
+       gstep. econs; eauto.
+       { eapply arith_lt_2 with (n1:=5); auto. }
+       gstep. econs; eauto.
+       { eapply arith_lt_2 with (n1:=4); auto. }
+       gbase. eapply CIH; eauto.
+     - erewrite interp_Es_pE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
+       econs; eauto.
+       { eapply arith_lt_1 with (n1:=7); auto.
+         - eapply from_nat_lt; eauto. }
+       gstep. econs; auto.
+       { eapply arith_lt_2 with (n1:=6); auto. }
+       gstep. econs; auto.
+       { eapply arith_lt_2 with (n1:=4); auto. }
+       gbase. eapply CIH; eauto.
+       { eapply eqv_add_ms; eauto. }
+     - erewrite interp_Es_rE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
+       econs; eauto.
+       { eapply arith_lt_1 with (n1:=7); auto.
+         - eapply from_nat_lt; eauto. }
+       gstep. econs; auto.
+       { eapply arith_lt_2 with (n1:=4); auto. }
+       gbase. eapply CIH; eauto.
+       { eapply eqv_add_mr; eauto. }
+     - erewrite interp_Es_rE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
+       econs; eauto.
+       { eapply arith_lt_1 with (n1:=7); auto.
+         - eapply from_nat_lt; eauto. }
+       gstep. econs; auto.
+       { eapply arith_lt_2 with (n1:=4); auto. }
+       gbase. eapply CIH; eauto.
+     - eapply eqv_lookup_mp in MR0; eauto. subst.
+       erewrite interp_Es_pE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
+       econs; eauto.
+       { eapply arith_lt_1 with (n1:=7); auto.
+         - eapply from_nat_lt; eauto. }
+       gstep. econs; auto.
+       { eapply arith_lt_2 with (n1:=6); auto. }
+       gstep. econs; auto.
+       { eapply arith_lt_2 with (n1:=4); auto. }
+       gbase. eapply CIH; eauto.
+     - eapply eqv_lookup_mr in MR0; eauto. subst.
+       erewrite interp_Es_rE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
+       econs; eauto.
+       { eapply arith_lt_1 with (n1:=7); auto.
+         - eapply from_nat_lt; eauto. }
+       gstep. econs; auto.
+       { eapply arith_lt_2 with (n1:=4); auto. }
+       gbase. eapply CIH; eauto.
+     - erewrite interp_Es_rE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
+       econs; eauto.
+       { eapply arith_lt_1 with (n1:=7); auto.
+         - eapply from_nat_lt; eauto. }
+       gstep. econs; auto.
+       { eapply arith_lt_2 with (n1:=4); auto. }
+       gbase. eapply CIH; eauto.
+       Unshelve. all: exact Ordinal.O.
    Qed.
+
 
    Theorem adequacy_local_closed
            (SIM: sim)
      :
        Beh.of_program (Mod.interp md_tgt) <1=
-       Beh.of_program (Mod.interp md_src).
+       Beh.of_program (Mod.interp md_src)
+   .
    Proof.
-     hexploit adequacy_local.
-     { eauto. }
-     i. specialize (H Mod.empty). repeat rewrite Mod.add_empty_l in H. auto.
+     inv SIM. specialize (sim_modsem0 (Sk.load_skenv (Mod.sk md_src))).
+     inv sim_modsem0. red in sim_sk0.
+
+     eapply adequacy_global; et. exists (Ordinal.add Ordinal.O Ordinal.O).
+     unfold ModSem.initial_itr, Mod.enclose.
+
+     assert (FNS: forall fn : string,
+                option_rel (sim_fnsem wf)
+                           (find (fun fnsem : string * (Any.t -> itree Es Any.t) => dec fn (fst fnsem))
+                                 (ModSem.fnsems (Mod.get_modsem md_src (Sk.load_skenv (Mod.sk md_src)))))
+                           (find (fun fnsem : string * (Any.t -> itree Es Any.t) => dec fn (fst fnsem))
+                                 (ModSem.fnsems (Mod.get_modsem md_tgt (Sk.load_skenv (Mod.sk md_tgt)))))).
+     { rewrite <- sim_sk0 in *.
+       remember (ModSem.fnsems (Mod.get_modsem md_src (Sk.load_skenv (Mod.sk md_src)))).
+       remember (ModSem.fnsems (Mod.get_modsem md_tgt (Sk.load_skenv (Mod.sk md_src)))).
+       clear - sim_fnsems. induction sim_fnsems; ss.
+       i. unfold sumbool_to_bool. des_ifs; eauto.
+       - inv H. ss.
+       - inv H. exfalso. eapply n. ss.
+     }
+
+     ginit. unfold assume. mgo.
+     gstep. econs; eauto. i. esplits; eauto.
+     { eapply sim_wf0. rewrite sim_sk0 in *. ss. } clear x_src.
+     ss. unfold ITree.map, unwrapU, triggerUB. mgo.
+     generalize (FNS "main"). i. inv H.
+     2: { mgo. gstep. econs; eauto. ss. }
+     destruct a, b. inv IN. mgo.
+     exploit H0; eauto. i. des.
+     ss. mgo.
+     gstep. econs; eauto. gstep. econs; eauto.
+     guclo bindC_spec. econs.
+     { gfinal. right. eapply lift_sim.
+       { eapply FNS. }
+       { eapply x. }
+       { ii. unfold ModSem.initial_p_state. des_ifs. }
+       { ii. rewrite sim_sk0 in *. unfold ModSem.initial_p_state. des_ifs. }
+     }
+     { i. ss. des.
+       destruct vret_src as [[[mrs_src frs_src] p_src] v_src].
+       destruct vret_tgt as [[[mrs_tgt frs_tgt] p_tgt] v_tgt]. ss. subst.
+       mgo. ss. mgo.
+       gstep. econs; eauto.
+       gstep. econs; eauto.
+       gstep. econs; eauto.
+     }
+     Unshelve. all: exact Ordinal.O.
    Qed.
 
+   (* Theorem adequacy_local *)
+   (*         (SIM: sim) *)
+   (*         (*** You will need some wf conditions for ctx ***) *)
+   (*   : *)
+   (*     <<CR: forall ctx, Beh.of_program (Mod.interp (Mod.add ctx md_tgt)) <1= *)
+   (*                       Beh.of_program (Mod.interp (Mod.add ctx md_src))>> *)
+   (* . *)
+   (* Proof. *)
+   (*   ii. eapply adequacy_global; et. exists Ordinal.O. *)
+   (*   admit "TODO". *)
+   (* Qed. *)
+
+End SIMMOD.
+
+Section SIMMOD.
+   Context `{Σ: GRA.t}.
+
+   Theorem adequacy_local md_src md_tgt
+           (SIM: sim md_src md_tgt)
+     (*** You will need some wf conditions for ctx ***)
+     :
+       <<CR: forall ctx, Beh.of_program (Mod.interp (Mod.add ctx md_tgt)) <1=
+                         Beh.of_program (Mod.interp (Mod.add ctx md_src))>>
+   .
+   Proof.
+     ii. eapply adequacy_local_closed; eauto. econs.
+     { ss. red. ii. eapply ModSemPair.add_modsempair.
+       { admit "ModSem wf". }
+       { admit "ModSem wf". }
+       { eapply ModSemPair.self_sim_mod. admit "ModSem wf". }
+       { eapply SIM. }
+     }
+     { ss. red. f_equal. eapply SIM. }
+     { ii. red. ss. admit "ModSem wf". }
+   Qed.
 End SIMMOD.
 
 Section SIMMODS.
@@ -1918,216 +1907,3 @@ End ModPair.
 (* TODO: write client *)
 (* TODO: show cancellation *)
 (* TODO: meta-level (no forge -> checkwf always succeeds) *)
-
-
-
-Lemma sim_l_bind_bind `{Σ: GRA.t}
-      (R R_src R_tgt S : Type) (RR: _ -> _ -> R_src -> R_tgt -> Prop)
-      a b c d e f g
-      (s : itree _ R) (k : R -> itree _ S) (h : S -> itree _ _)
-      (SIM: gpaco6 (_sim_itree c) d e f _ _ RR g (b, ` r : R <- s;; ` x : _ <- k r;; h x) a)
-  :
-    gpaco6 (_sim_itree c) d e f _ _ RR g (b, ` x : _ <- (` x : _ <- s;; k x);; h x) a.
-Proof.
-  rewrite bind_bind. auto.
-Qed.
-
-Lemma sim_l_bind_tau `{Σ: GRA.t}
-      (U R_src R_tgt S : Type) (RR: _ -> _ -> R_src -> R_tgt -> Prop)
-      a b c d e f g
-      (t : itree _ _) (k : U -> itree _ _)
-      (SIM: gpaco6 (_sim_itree c) d e f _ _ RR g (b, Tau (` x : _ <- t;; k x)) a)
-  :
-    gpaco6 (_sim_itree c) d e f _ _ RR g (b, ` x : _ <- Tau t;; k x) a.
-Proof.
-  rewrite bind_tau. auto.
-Qed.
-
-Lemma sim_l_bind_ret_l `{Σ: GRA.t}
-      (R R_src R_tgt : Type) (RR: _ -> _ -> R_src -> R_tgt -> Prop)
-      a b c d e f g
-      (r : R) (k : R -> itree _ _)
-      (SIM: gpaco6 (_sim_itree c) d e f _ _ RR g (b, k r) a)
-  :
-    gpaco6 (_sim_itree c) d e f _ _ RR g (b, ` x : _ <- Ret r;; k x) a.
-Proof.
-  rewrite bind_ret_l. auto.
-Qed.
-
-Lemma sim_r_bind_bind `{Σ: GRA.t}
-      (R R_src R_tgt S: Type) (RR: _ -> _ -> R_src -> R_tgt -> Prop)
-      a b c d e f g
-      (s : itree _ R) (k : R -> itree _ S) (h : S -> itree _ _)
-      (SIM: gpaco6 (_sim_itree c) d e f _ _ RR g a (b, ` r : R <- s;; ` x : _ <- k r;; h x))
-  :
-    gpaco6 (_sim_itree c) d e f _ _ RR g a (b, ` x : _ <- (` x : _ <- s;; k x);; h x).
-Proof.
-  rewrite bind_bind. auto.
-Qed.
-
-Lemma sim_r_bind_tau `{Σ: GRA.t}
-      (U R_src R_tgt: Type) (RR: _ -> _ -> R_src -> R_tgt -> Prop)
-      a b c d e f g
-      (t : itree _ _) (k : U -> itree _ _)
-      (SIM: gpaco6 (_sim_itree c) d e f _ _ RR g a (b, Tau (` x : _ <- t;; k x)))
-  :
-    gpaco6 (_sim_itree c) d e f _ _ RR g a (b, ` x : _ <- Tau t;; k x).
-Proof.
-  rewrite bind_tau. auto.
-Qed.
-
-Lemma sim_r_bind_ret_l `{Σ: GRA.t}
-      (R R_src R_tgt: Type) (RR: _ -> _ -> R_src -> R_tgt -> Prop)
-      a b c d e f g
-      (r : R) (k : R -> itree _ _)
-      (SIM: gpaco6 (_sim_itree c) d e f _ _ RR g a (b, k r))
-  :
-    gpaco6 (_sim_itree c) d e f _ _ RR g a (b, ` x : _ <- Ret r;; k x).
-Proof.
-  rewrite bind_ret_l. auto.
-Qed.
-
-Ltac interp_red := rewrite interp_vis ||
-                           rewrite interp_ret ||
-                           rewrite interp_tau ||
-                           rewrite interp_trigger ||
-                           rewrite interp_bind.
-
-Ltac interp_mrec_red := rewrite interp_mrec_hit ||
-                                rewrite interp_mrec_miss ||
-                                rewrite interp_mrec_bind ||
-                                rewrite interp_mrec_tau ||
-                                rewrite interp_mrec_ret.
-
-Ltac interp_state_red := rewrite interp_state_trigger ||
-                                 rewrite interp_state_bind ||
-                                 rewrite interp_state_tau ||
-                                 rewrite interp_state_ret.
-
-Ltac ired_l :=
-  cbn;
-  match goal with
-  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ (_, ITree.bind' _ (ITree.bind' _ _)) _) ] =>
-    apply sim_l_bind_bind; ired_l
-  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ (_, ITree.bind' _ (Tau _)) _) ] =>
-    apply sim_l_bind_tau
-  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ (_, ITree.bind' _ (Ret _)) _) ] =>
-    apply sim_l_bind_ret_l; ired_l
-  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ (_, interp _ _) _) ] =>
-    ((interp_red; ired_l) || idtac)
-  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ (_, ITree.bind' _ (interp _ _)) _) ] =>
-    ((interp_red; ired_l) || idtac)
-  | _ => idtac
-  end.
-
-Ltac ired_r :=
-  cbn;
-  match goal with
-  | [ |- (gpaco5 (_sim_itree _) _ _ _ _ _ _ _ _ (_, ITree.bind' _ (ITree.bind' _ _))) ] =>
-    apply sim_r_bind_bind; ired_r
-  | [ |- (gpaco5 (_sim_itree _) _ _ _ _ _ _ _ _ (_, ITree.bind' _ (Tau _))) ] =>
-    apply sim_r_bind_tau
-  | [ |- (gpaco5 (_sim_itree _) _ _ _ _ _ _ _ _ (_, ITree.bind' _ (Ret _))) ] =>
-    apply sim_r_bind_ret_l
-  | [ |- (gpaco5 (_sim_itree _) _ _ _ _ _ _ _ _ (_, interp _ _)) ] =>
-    ((interp_red; ired_r) || idtac)
-  | [ |- (gpaco5 (_sim_itree _) _ _ _ _ _ _ _ _ (_, ITree.bind' _ (interp _ _))) ] =>
-    ((interp_red; ired_l) || idtac)
-  | _ => idtac
-  end.
-
-Ltac ired_all := ired_l; ired_r.
-
-Ltac prep := ired_all.
-
-Ltac force_l :=
-  prep;
-  match goal with
-  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, unwrapN ?ox >>= _) (_, _)) ] =>
-    let tvar := fresh "tmp" in
-    let thyp := fresh "TMP" in
-    remember (unwrapN ox) as tvar eqn:thyp; unfold unwrapN in thyp; subst tvar;
-    let name := fresh "_UNWRAPN" in
-    destruct (ox) eqn:name; [|exfalso]; cycle 1
-  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, guarantee ?P >>= _) (_, _)) ] =>
-    let tvar := fresh "tmp" in
-    let thyp := fresh "TMP" in
-    remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar;
-    let name := fresh "_GUARANTEE" in
-    destruct (classic P) as [name|name]; [ired_all; gstep; eapply sim_itree_choose_src; [eauto|exists name]|contradict name]; cycle 1
-
-  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, ?i_src) (_, ?i_tgt)) ] =>
-    seal i_tgt; gstep; econs; eauto; unseal i_tgt
-  end
-.
-Ltac force_r :=
-  prep;
-  match goal with
-  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, _) (_, unwrapU ?ox >>= _)) ] =>
-    let tvar := fresh "tmp" in
-    let thyp := fresh "TMP" in
-    remember (unwrapU ox) as tvar eqn:thyp; unfold unwrapU in thyp; subst tvar;
-    let name := fresh "_UNWRAPU" in
-    destruct (ox) eqn:name; [|exfalso]; cycle 1
-  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, _) (_, assume ?P >>= _)) ] =>
-    let tvar := fresh "tmp" in
-    let thyp := fresh "TMP" in
-    remember (assume P) as tvar eqn:thyp; unfold assume in thyp; subst tvar;
-    let name := fresh "_ASSUME" in
-    destruct (classic P) as [name|name]; [ired_all; gstep; eapply sim_itree_take_tgt; [eauto|exists name]|contradict name]; cycle 1
-
-  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, ?i_src) (_, ?i_tgt)) ] =>
-    seal i_src; gstep; econs; eauto; unseal i_src
-  end
-.
-
-Ltac _step :=
-  match goal with
-  (*** blacklisting ***)
-  (* | [ |- (gpaco5 (_sim_itree wf) _ _ _ _ (_, trigger (Choose _) >>= _) (_, ?i_tgt)) ] => idtac *)
-  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, unwrapU ?ox >>= _) (_, _)) ] =>
-    let tvar := fresh "tmp" in
-    let thyp := fresh "TMP" in
-    remember (unwrapU ox) as tvar eqn:thyp; unfold unwrapU in thyp; subst tvar;
-    let name := fresh "_UNWRAPU" in
-    destruct (ox) eqn:name; [|unfold triggerUB; ired_all; _step; ss; fail]
-  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, assume ?P >>= _) (_, _)) ] =>
-    let tvar := fresh "tmp" in
-    let thyp := fresh "TMP" in
-    remember (assume P) as tvar eqn:thyp; unfold assume in thyp; subst tvar;
-    let name := fresh "_ASSUME" in
-    ired_all; gstep; eapply sim_itree_take_src; [apply Nat.lt_succ_diag_r|]; intro name
-
-  (*** blacklisting ***)
-  (* | [ |- (gpaco5 (_sim_itree wf) _ _ _ _ (_, _) (_, trigger (Take _) >>= _)) ] => idtac *)
-  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, _) (_, unwrapN ?ox >>= _)) ] =>
-    let tvar := fresh "tmp" in
-    let thyp := fresh "TMP" in
-    remember (unwrapN ox) as tvar eqn:thyp; unfold unwrapN in thyp; subst tvar;
-    let name := fresh "_UNWRAPN" in
-    destruct (ox) eqn:name; [|unfold triggerNB; ired_all; _step; ss; fail]
-  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, _) (_, guarantee ?P >>= _)) ] =>
-    let tvar := fresh "tmp" in
-    let thyp := fresh "TMP" in
-    remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar;
-    let name := fresh "_GUARANTEE" in
-    ired_all; gstep; eapply sim_itree_choose_tgt; [apply Nat.lt_succ_diag_r|]; intro name
-
-
-
-  | _ => (*** default ***)
-    gstep; econs; try apply Nat.lt_succ_diag_r; i
-  end;
-  (* idtac *)
-  match goal with
-  | [ |- exists _, _ ] => fail 1
-  | _ => idtac
-  end
-.
-Ltac steps := repeat ((*** pre processing ***) prep; try _step; (*** post processing ***) unfold alist_add; simpl; des_ifs_safe).
-
-Notation "wf n '------------------------------------------------------------------' src0 tgt0 '------------------------------------------------------------------' src1 tgt1 '------------------------------------------------------------------' src2 tgt2"
-  :=
-    (gpaco6 (_sim_itree wf) _ _ _ _ _ _ n (([(_, src0)], src1), src2) (([(_, tgt0)], tgt1), tgt2))
-      (at level 60,
-       format "wf  n '//' '------------------------------------------------------------------' '//' src0 '//' tgt0 '//' '------------------------------------------------------------------' '//' src1 '//' tgt1 '//' '------------------------------------------------------------------' '//' src2 '//' '//' '//' tgt2 '//' ").

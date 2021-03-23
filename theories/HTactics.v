@@ -430,7 +430,7 @@ Ltac ired_r :=
   | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ _ (_, ITree.bind' _ (Tau _))) ] =>
     apply sim_r_bind_tau
   | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ _ (_, ITree.bind' _ (Ret _))) ] =>
-    apply sim_r_bind_ret_l
+    apply sim_r_bind_ret_l; ired_r
   | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ _ (_, trigger _)) ] =>
     apply sim_r_trigger_ret_rev
   | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ _ (_, interp _ _)) ] =>
