@@ -213,7 +213,7 @@ Section PROOF.
     { Local Transparent MemSbtb. cbn. Local Opaque MemSbtb. des_ifs; ss. }
     ss. unfold compose. ss. rewrite ! URA.unit_id. rewrite ! URA.unit_idl.
     eapply embed_wf; et.
-    assert(@URA.wf (Mem1._memRA) (fun b ofs => if (b =? 0)%nat && (ofs =? 0)%Z then URA.Excl.just Vundef else URA.Excl.unit)).
+    assert(@URA.wf (Mem1._memRA) (fun b ofs => if (b =? 0)%nat && (ofs =? 0)%Z then Excl.just Vundef else Excl.unit)).
     { repeat ur. i; des_ifs. }
     admit "EZ -- add black wf lemma".
   Qed.

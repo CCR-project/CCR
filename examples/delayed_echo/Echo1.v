@@ -27,9 +27,9 @@ Definition hcall {X Y} (fn: gname) (varg: X): itree (hCallE +' pE +' eventE) Y :
 (* Let echoRA: URA.t := (RA.excl (list Z)). *)
 (* Compute (@URA.car echoRA). *)
 (* Definition echo_r (ns: list Z): (@URA.car echoRA) := inl (Some ns). *)
-Let echoRA: URA.t := URA.auth (URA.Excl.t (val * list Z)).
-Definition echo_black (hd: val) (ns: list Z): (@URA.car echoRA) := URA.black (M:=(URA.Excl.t _)) (Some (hd, ns)).
-Definition echo_white (hd: val) (ns: list Z): (@URA.car echoRA) := URA.white (M:=(URA.Excl.t _)) (Some (hd, ns)).
+Let echoRA: URA.t := Auth.t (Excl.t (val * list Z)).
+Definition echo_black (hd: val) (ns: list Z): (@URA.car echoRA) := Auth.black (M:=(Excl.t _)) (Some (hd, ns)).
+Definition echo_white (hd: val) (ns: list Z): (@URA.car echoRA) := Auth.white (M:=(Excl.t _)) (Some (hd, ns)).
 
 
 

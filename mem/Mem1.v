@@ -16,9 +16,9 @@ Set Implicit Arguments.
 
 
 
-Let _memRA: URA.t := (block ==> Z ==> (URA.Excl.t val))%ra.
+Let _memRA: URA.t := (block ==> Z ==> (Excl.t val))%ra.
 Compute (URA.car (t:=_memRA)).
-Instance memRA: URA.t := URA.auth _memRA.
+Instance memRA: URA.t := Auth.t _memRA.
 Compute (URA.car).
 
 Section PROOF.
@@ -39,7 +39,7 @@ Section PROOF.
   .
   Proof. refl. Qed.
 
-  Definition points_to (loc: block * Z) (vs: list val): memRA := URA.white (_points_to loc vs).
+  Definition points_to (loc: block * Z) (vs: list val): memRA := Auth.white (_points_to loc vs).
 
   Lemma points_to_split
         blk ofs hd tl
@@ -47,7 +47,7 @@ Section PROOF.
       (points_to (blk, ofs) (hd :: tl)) = (points_to (blk, ofs) [hd]) ⋅ (points_to (blk, (ofs + 1)%Z) tl)
   .
   Proof.
-    ss. unfold points_to. unfold URA.white. repeat (rewrite URA.unfold_add; ss).
+    ss. unfold points_to. unfold Auth.white. repeat (rewrite URA.unfold_add; ss).
     f_equal.
     repeat (apply func_ext; i).
     des_ifs; bsimpl; des; des_sumbool; subst; ss;
@@ -168,7 +168,7 @@ Section PROOF.
   Definition MemSem: ModSem.t := {|
     ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt MemStb fn fsb)) MemSbtb;
     ModSem.initial_mrs :=
-      [("Mem", (GRA.embed (URA.black (M:=_memRA) ε), tt↑))];
+      [("Mem", (GRA.embed (Auth.black (M:=_memRA) ε), tt↑))];
   |}
   .
 

@@ -16,9 +16,9 @@ Set Implicit Arguments.
 
 
 
-Definition bwRA: URA.t := URA.auth (URA.Excl.t bool).
-Definition bw_full (b: bool) : (@URA.car bwRA) := URA.black (M:=(URA.Excl.t _)) (Some b).
-Definition bw_frag (b: bool) : (@URA.car bwRA) := URA.white (M:=(URA.Excl.t _)) (Some b).
+Definition bwRA: URA.t := Auth.t (Excl.t bool).
+Definition bw_full (b: bool) : (@URA.car bwRA) := Auth.black (M:=(Excl.t _)) (Some b).
+Definition bw_frag (b: bool) : (@URA.car bwRA) := Auth.white (M:=(Excl.t _)) (Some b).
 
 Section BW.
 

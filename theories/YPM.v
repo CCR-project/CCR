@@ -763,5 +763,13 @@ I needed to write this because "ss" does not work. create iApply that understand
     iSplitL A; ss.
   Qed.
 
+  Goal forall x y (UPD: URA.updatable x y), ⌞(Own x -* Own y)⌟.
+  Proof.
+    i. iIntro. clear A. iIntro.
+    eapply own_upd in A; cycle 1; [|rewrite intro_iHyp in A; iMod A].
+    { eauto. }
+    match goal with | [H: iHyp _ _ |- _] => fail 2 | _ => idtac end.
+  Abort.
+
 End LTEST.
 

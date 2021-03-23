@@ -68,8 +68,8 @@ Section AUX.
     do 2 iIntro.
     {
       iMerge A A0. rewrite <- own_sep in A. rewrite GRA.embed_add in A.
-      iOwnWf A. eapply GRA.embed_wf in WF. des. eapply URA.auth_included in WF. des.
-      eapply URA.Excl.extends in WF; ss.
+      iOwnWf A. eapply GRA.embed_wf in WF. des. eapply Auth.auth_included in WF. des.
+      eapply Excl.extends in WF; ss.
       - des; clarify.
       - ur; ss.
     }
@@ -220,7 +220,7 @@ Section SIMMODSEM.
         iMerge A SIM. rewrite <- own_sep in A. rewrite GRA.embed_add in A. rewrite URA.add_comm in A.
         eapply own_upd in A; cycle 1; [|rewrite intro_iHyp in A;iMod A].
         { eapply GRA.embed_updatable. instantiate (1:= echo_black x (z :: ns) ⋅ echo_white x (z :: ns)).
-          eapply URA.auth_update. rr. ii. des; ss. ur in FRAME. ur. destruct ctx; ss; clarify.
+          eapply Auth.auth_update. rr. ii. des; ss. ur in FRAME. ur. destruct ctx; ss; clarify.
         }
         rewrite <- GRA.embed_add in A. rewrite own_sep in A. iDestruct A. subst.
 
@@ -310,7 +310,7 @@ Section SIMMODSEM.
         iMerge A SIM. rewrite <- own_sep in A. rewrite GRA.embed_add in A.
         eapply own_upd in A; cycle 1; [|rewrite intro_iHyp in A;iMod A].
         { eapply GRA.embed_updatable. instantiate (1:= echo_black v (ns) ⋅ echo_white v (ns)).
-          eapply URA.auth_update. rr. ii. des; ss. ur in FRAME. ur. destruct ctx; ss; clarify.
+          eapply Auth.auth_update. rr. ii. des; ss. ur in FRAME. ur. destruct ctx; ss; clarify.
         }
         rewrite <- GRA.embed_add in A. rewrite own_sep in A. iDestruct A.
 
