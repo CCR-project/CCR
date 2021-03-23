@@ -36,7 +36,6 @@ Section CANCEL.
 
 
   Context `{Σ: GRA.t}.
-  Opaque GRA.to_URA.
 
   Variable md_tgt: Mod.t.
   Let ms_tgt: ModSem.t := (Mod.get_modsem md_tgt (Sk.load_skenv md_tgt.(Mod.sk))).
@@ -75,8 +74,6 @@ Section CANCEL.
   (*                     try rewrite interp_tau *)
   (*                     (* try rewrite interp_trigger *) *)
   (*                    ). *)
-  Infix "⋅" := URA.add (at level 50, left associativity).
-  Notation "(⋅)" := URA.add (only parsing).
 
   Let adequacy_type_aux:
     forall (R: Type) (RR: R -> R -> Prop) RT (TY: R = (r_state * p_state * RT)%type)
@@ -143,7 +140,6 @@ Section CANCEL.
     dependent destruction h.
     set (ModSem.prog ms_mid) as p_mid in *.
     set (ModSem.prog ms_tgt) as p_tgt in *.
-    Local Opaque GRA.to_URA.
     ss.
     seal_left.
 

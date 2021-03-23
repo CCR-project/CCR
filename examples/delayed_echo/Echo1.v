@@ -6,8 +6,9 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
-Require Import Stack1 Client1 Mem2.
+Require Import Stack1 Client1 Mem1.
 Require Import TODOYJ.
+Require Import Logic.
 
 Generalizable Variables E R A B C X Y Σ.
 
@@ -26,9 +27,9 @@ Definition hcall {X Y} (fn: gname) (varg: X): itree (hCallE +' pE +' eventE) Y :
 (* Let echoRA: URA.t := (RA.excl (list Z)). *)
 (* Compute (@URA.car echoRA). *)
 (* Definition echo_r (ns: list Z): (@URA.car echoRA) := inl (Some ns). *)
-Let echoRA: URA.t := URA.auth (RA.excl (val * list Z)).
-Definition echo_black (hd: val) (ns: list Z): (@URA.car echoRA) := URA.black (M:=(RA.excl _)) (inl (Some (hd, ns))).
-Definition echo_white (hd: val) (ns: list Z): (@URA.car echoRA) := URA.white (M:=(RA.excl _)) (inl (Some (hd, ns))).
+Let echoRA: URA.t := Auth.t (Excl.t (val * list Z)).
+Definition echo_black (hd: val) (ns: list Z): (@URA.car echoRA) := Auth.black (M:=(Excl.t _)) (Some (hd, ns)).
+Definition echo_white (hd: val) (ns: list Z): (@URA.car echoRA) := Auth.white (M:=(Excl.t _)) (Some (hd, ns)).
 
 
 

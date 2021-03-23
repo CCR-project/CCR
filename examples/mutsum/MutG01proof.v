@@ -16,7 +16,7 @@ From ExtLib Require Import
      Structures.Maps
      Data.Map.FMapAList.
 
-Require Import HTactics.
+Require Import HTactics Logic YPM.
 
 Generalizable Variables E R A B C X Y.
 
@@ -33,7 +33,6 @@ Hint Resolve sim_itree_mon: paco.
 Section SIMMODSEM.
 
   Context `{Σ: GRA.t}.
-  Local Opaque GRA.to_URA.
 
   Let W: Type := (alist mname (Σ * Any.t)) * (alist mname (Σ * Any.t)).
 
@@ -51,8 +50,6 @@ Section SIMMODSEM.
     destruct (dec (Z.of_nat x) 0%Z).
     - destruct x; ss. force_l. exists 0. steps.
       force_l. eexists. hret_tac (@URA.unit Σ) (@URA.unit Σ).
-      { eapply URA.extends_updatable. exists rarg_src.
-        rewrite ! URA.unit_idl. auto. }
       { esplits; eauto. }
       { split; auto. }
     - destruct x; [ss|]. rewrite Nat2Z.inj_succ.
@@ -60,16 +57,12 @@ Section SIMMODSEM.
       steps. force_l. eexists ("f", [Vint (Z.of_nat x)]↑).
       steps. anytac.
       hcall_tac x (ord_pure x) (@URA.unit Σ) (@URA.unit Σ) (@URA.unit Σ).
-      { eapply URA.extends_updatable. exists rarg_src.
-        rewrite ! URA.unit_idl. auto. }
       { replace (Z.succ (Z.of_nat x) - 1)%Z with (Z.of_nat x) by lia.
         splits; auto. }
       { splits; ss. }
       { split; auto. }
-      i. inv WF; des; clarify. esplits; ss. i. des; clarify. anytac. asimpl.
+      des; subst. anytac. asimpl.
       steps. force_l. eexists. hret_tac (@URA.unit Σ) (@URA.unit Σ).
-      { eapply URA.extends_updatable. exists rret.
-        rewrite ! URA.unit_idl. auto. }
       { splits; auto. unfold sum. splits; auto. ss. repeat f_equal. lia. }
       { split; ss. }
   Qed.

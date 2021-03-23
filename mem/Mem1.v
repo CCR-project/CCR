@@ -8,6 +8,7 @@ Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
 Require Import TODOYJ.
+Require Import Logic.
 
 Generalizable Variables E R A B C X Y Σ.
 
@@ -15,25 +16,30 @@ Set Implicit Arguments.
 
 
 
-
-
-
-
-Let _memRA: URA.t := (block ==> Z ==> (RA.excl val))%ra.
+Let _memRA: URA.t := (block ==> Z ==> (Excl.t val))%ra.
 Compute (URA.car (t:=_memRA)).
-Instance memRA: URA.t := URA.auth _memRA.
+Instance memRA: URA.t := Auth.t _memRA.
 Compute (URA.car).
-
 
 Section PROOF.
   Context `{@GRA.inG memRA Σ}.
 
-  Definition points_to (loc: block * Z) (vs: list val): memRA :=
+  Definition _points_to (loc: block * Z) (vs: list val): _memRA :=
     let (b, ofs) := loc in
-    URA.white (M:=_memRA)
-              (fun _b _ofs => if (dec _b b) && ((ofs <=? _ofs) && (_ofs <? (ofs + Z.of_nat (List.length vs))))%Z
-                              then inl (List.nth_error vs (Z.to_nat (_ofs - ofs))) else inr tt)
+    (fun _b _ofs => if (dec _b b) && ((ofs <=? _ofs) && (_ofs <? (ofs + Z.of_nat (List.length vs))))%Z
+                    then (List.nth_error vs (Z.to_nat (_ofs - ofs))) else ε)
   .
+
+  (* Opaque _points_to. *)
+  Lemma unfold_points_to loc vs:
+    _points_to loc vs =
+    let (b, ofs) := loc in
+    (fun _b _ofs => if (dec _b b) && ((ofs <=? _ofs) && (_ofs <? (ofs + Z.of_nat (List.length vs))))%Z
+                    then (List.nth_error vs (Z.to_nat (_ofs - ofs))) else ε)
+  .
+  Proof. refl. Qed.
+
+  Definition points_to (loc: block * Z) (vs: list val): memRA := Auth.white (_points_to loc vs).
 
   Lemma points_to_split
         blk ofs hd tl
@@ -41,20 +47,32 @@ Section PROOF.
       (points_to (blk, ofs) (hd :: tl)) = (points_to (blk, ofs) [hd]) ⋅ (points_to (blk, (ofs + 1)%Z) tl)
   .
   Proof.
-    ss. unfold URA.white. f_equal.
+    ss. unfold points_to. unfold Auth.white. repeat (rewrite URA.unfold_add; ss).
+    f_equal.
     repeat (apply func_ext; i).
-    des_ifs; bsimpl; des; des_sumbool; ss; try rewrite Z.leb_gt in *; try rewrite Z.leb_le in *;
-      try rewrite Z.ltb_ge in *; try rewrite Z.ltb_lt in *; try lia.
+    des_ifs; bsimpl; des; des_sumbool; subst; ss;
+      try rewrite Z.leb_gt in *; try rewrite Z.leb_le in *; try rewrite Z.ltb_ge in *; try rewrite Z.ltb_lt in *; try lia.
     - clear_tac. subst. rewrite Zpos_P_of_succ_nat in *. rewrite <- Zlength_correct in *.
-      assert(x0 = ofs).
-      { lia. }
-      subst.
-      f_equal. rewrite Z.sub_diag. ss.
-    - clear_tac. subst. rewrite Zpos_P_of_succ_nat in *. rewrite <- Zlength_correct in *.
-      f_equal. clear Heq4. clear Heq5. clear_tac.
+      assert(x0 = ofs). { lia. } subst.
+      rewrite Z.sub_diag in *. ss.
+    - clear_tac. rewrite Zpos_P_of_succ_nat in *. rewrite <- Zlength_correct in *.
       destruct (Z.to_nat (x0 - ofs)) eqn:T; ss.
       { exfalso. lia. }
-      f_equal. lia.
+      rewrite Z.sub_add_distr in *. rewrite Z2Nat.inj_sub in Heq1; ss. rewrite T in *. ss. rewrite Nat.sub_0_r in *. ss.
+    - clear_tac. rewrite Zpos_P_of_succ_nat in *. rewrite <- Zlength_correct in *.
+      destruct (Z.to_nat (x0 - ofs)) eqn:T; ss.
+      { exfalso. lia. }
+      rewrite Z.sub_add_distr in *. rewrite Z2Nat.inj_sub in Heq1; ss. rewrite T in *. ss. rewrite Nat.sub_0_r in *. ss.
+    - clear_tac. rewrite Zpos_P_of_succ_nat in *. rewrite <- Zlength_correct in *.
+      assert(x0 = ofs). { lia. } subst.
+      rewrite Z.sub_diag in *. ss.
+    - clear_tac. rewrite Zpos_P_of_succ_nat in *. rewrite <- Zlength_correct in *.
+      destruct (Z.to_nat (x0 - ofs)) eqn:T; ss.
+      { exfalso. lia. }
+      rewrite Z.sub_add_distr in *. rewrite Z2Nat.inj_sub in Heq1; ss. rewrite T in *. ss. rewrite Nat.sub_0_r in *. ss.
+    - clear_tac. rewrite Zpos_P_of_succ_nat in *. rewrite <- Zlength_correct in *.
+      assert(x0 = ofs). { lia. } subst.
+      rewrite Z.sub_diag in *. ss.
   Qed.
 
 (* Lemma points_tos_points_to *)
@@ -88,51 +106,49 @@ Notation "loc |-> vs" := (points_to loc vs) (at level 20).
 
 
 
+
 Section PROOF.
   Context `{@GRA.inG memRA Σ}.
   Let GURA: URA.t := GRA.to_URA Σ.
   Local Existing Instance GURA.
 
   Let alloc_spec: fspec := (mk_simple "Mem"
-                                      (fun sz varg o _ => varg = [Vint (Z.of_nat sz)]↑ /\ o = ord_pure 1)
-                                      (fun sz vret rret =>
-                                         exists b, vret = (Vptr b 0)↑ /\
-                                                   rret = GRA.embed ((b, 0%Z) |-> (List.repeat (Vint 0) sz)))).
+                                      (fun sz varg o => ⌜varg = [Vint (Z.of_nat sz)]↑ /\ o = ord_pure 1⌝)
+                                      (fun sz vret => Exists b, ⌜vret = (Vptr b 0)↑⌝ **
+                                                   Own(GRA.embed ((b, 0%Z) |-> (List.repeat (Vint 0) sz))))).
 
   Let free_spec: fspec := (mk_simple "Mem"
-                                     (fun '(b, ofs) varg o rarg => exists v, varg = ([Vptr b ofs])↑ /\
-                                                                             rarg = GRA.embed ((b, ofs) |-> [v]) /\
-                                                                             o = ord_pure 1)
+                                     (fun '(b, ofs) varg o => Exists v, ⌜varg = ([Vptr b ofs])↑⌝ **
+                                                                        Own(GRA.embed ((b, ofs) |-> [v])) **
+                                                                        ⌜o = ord_pure 1⌝)
                                      (top3)).
 
   Let load_spec: fspec := (mk_simple "Mem"
-                                     (fun '(b, ofs, v) varg o rarg => varg = ([Vptr b ofs])↑ /\
-                                                                      rarg = GRA.embed ((b, ofs) |-> [v]) /\
-                                                                      o = ord_pure 1)
-                                     (fun '(b, ofs, v) vret rret => rret = GRA.embed ((b, ofs) |-> [v]) /\ vret = v↑)).
+                                     (fun '(b, ofs, v) varg o => ⌜varg = ([Vptr b ofs])↑⌝ **
+                                                                      Own(GRA.embed ((b, ofs) |-> [v])) **
+                                                                      ⌜o = ord_pure 1⌝)
+                                     (fun '(b, ofs, v) vret => Own(GRA.embed ((b, ofs) |-> [v])) ** ⌜vret = v↑⌝)).
 
   Let store_spec: fspec := (mk_simple
                               "Mem"
-                              (fun '(b, ofs, v_new) varg o rarg => exists v_old,
-                                   varg = ([Vptr b ofs ; v_new])↑ /\ rarg = GRA.embed ((b, ofs) |-> [v_old]) /\ o = ord_pure 1)
-                              (fun '(b, ofs, v_new) _ rret => rret = GRA.embed ((b, ofs) |-> [v_new]))).
+                              (fun '(b, ofs, v_new) varg o => Exists v_old,
+                                   ⌜varg = ([Vptr b ofs ; v_new])↑⌝ ** Own(GRA.embed ((b, ofs) |-> [v_old])) ** ⌜o = ord_pure 1⌝)
+                              (fun '(b, ofs, v_new) _ => Own(GRA.embed ((b, ofs) |-> [v_new])))).
 
   Let cmp_spec: fspec :=
     (mk_simple
        "Mem"
-       (fun '(result, resource) varg o rarg =>
-          rarg = resource /\
-          ((exists b ofs v, varg = [Vptr b ofs; Vnullptr]↑ /\ rarg = GRA.embed ((b, ofs) |-> [v]) /\ result = false) \/
-           (exists b ofs v, varg = [Vnullptr; Vptr b ofs]↑ /\ rarg = GRA.embed ((b, ofs) |-> [v]) /\ result = false) \/
-           (exists b0 ofs0 v0 b1 ofs1 v1, varg = [Vptr b0 ofs0; Vptr b1 ofs1]↑ /\
-                                          rarg = GRA.embed ((b0, ofs0) |-> [v0]) ⋅ GRA.embed ((b1, ofs1) |-> [v1]) /\ result = false) \/
-           (exists b ofs v, varg = [Vptr b ofs; Vptr b  ofs]↑ /\ rarg = GRA.embed ((b, ofs) |-> [v]) /\ result = true) \/
-           (varg = [Vnullptr; Vnullptr]↑ /\ result = true)
-          ) /\
-          o = ord_pure 1
+       (fun '(result, resource) varg o =>
+          ((Exists b ofs v, ⌜varg = [Vptr b ofs; Vnullptr]↑⌝ ** ⌜resource = (GRA.embed ((b, ofs) |-> [v]))⌝ ** ⌜result = false⌝) ∨
+           (Exists b ofs v, ⌜varg = [Vnullptr; Vptr b ofs]↑⌝ ** ⌜resource = (GRA.embed ((b, ofs) |-> [v]))⌝ ** ⌜result = false⌝) ∨
+           (Exists b0 ofs0 v0 b1 ofs1 v1, ⌜varg = [Vptr b0 ofs0; Vptr b1 ofs1]↑⌝ **
+                     ⌜resource = (GRA.embed ((b0, ofs0) |-> [v0])) ⋅ (GRA.embed ((b1, ofs1) |-> [v1]))⌝ ** ⌜result = false⌝) ∨
+           (Exists b ofs v, ⌜varg = [Vptr b ofs; Vptr b  ofs]↑⌝ ** ⌜resource = (GRA.embed ((b, ofs) |-> [v]))⌝ ** ⌜result = true⌝) ∨
+           (⌜varg = [Vnullptr; Vnullptr]↑ /\ result = true⌝))
+            ** Own(resource)
+            ** ⌜o = ord_pure 1⌝
        )
-       (fun '(result, resource) vret rret =>
-          vret = (if result then Vint 1 else Vint 0)↑ /\ rret = resource)
+       (fun '(result, resource) vret => Own(resource) ** ⌜vret = (if result then Vint 1 else Vint 0)↑⌝)
     ).
 
   Definition MemStb: list (gname * fspec).
@@ -152,8 +168,7 @@ Section PROOF.
   Definition MemSem: ModSem.t := {|
     ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt MemStb fn fsb)) MemSbtb;
     ModSem.initial_mrs :=
-      [("Mem", (GRA.embed (URA.black (M:=_memRA)
-                            (fun b ofs => if (b =? 0)%nat && (ofs =? 0)%Z then inl (Some Vundef) else inr tt)), tt↑))];
+      [("Mem", (GRA.embed (Auth.black (M:=_memRA) ε), tt↑))];
   |}
   .
 
@@ -165,3 +180,5 @@ Section PROOF.
 
 End PROOF.
 Global Hint Unfold MemStb: stb.
+
+Global Opaque _points_to.

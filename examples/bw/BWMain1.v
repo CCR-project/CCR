@@ -7,7 +7,7 @@ Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
 Require Import Stack1 Client1 BW1.
-Require Import TODO TODOYJ.
+Require Import TODO TODOYJ Logic.
 
 Set Implicit Arguments.
 
@@ -20,25 +20,19 @@ Section MAIN.
   Context `{@GRA.inG bwRA Σ}.
 
   Let getbool_spec:  fspec := (mk_simple "Client"
-                                         (fun (_: unit) _ o =>
-                                            iHyp (⌜True⌝))
-                                         (fun _ _ =>
-                                            iHyp (⌜True⌝))).
+                                         (fun (_: unit) _ o => (⌜True⌝))
+                                         (fun _ _ => (⌜True⌝))).
 
   Let putint_spec:  fspec := (mk_simple "Client"
-                                        (fun (_: unit) _ o =>
-                                           iHyp (⌜True⌝))
-                                        (fun _ _ =>
-                                           iHyp (⌜True⌝))).
+                                        (fun (_: unit) _ o => (⌜True⌝))
+                                        (fun _ _ => (⌜True⌝))).
 
   Definition ClientStb: list (gname * fspec) :=
     Seal.sealing "stb" [("getbool", getbool_spec) ; ("putint", putint_spec)].
 
   Let main_spec:  fspec := (mk_simple "Main"
-                                     (fun (_: unit) _ o =>
-                                        iHyp (Own (GRA.embed (bw_frag true)) ** ⌜o = ord_top⌝))
-                                     (fun _ _ =>
-                                        iHyp (⌜True⌝))).
+                                     (fun (_: unit) _ o => (Own (GRA.embed (bw_frag true)) ** ⌜o = ord_top⌝))
+                                     (fun _ _ => (⌜True⌝))).
 
   Definition main_body: list val -> itree (hCallE +' pE +' eventE) val :=
     fun _ =>

@@ -69,14 +69,11 @@ Section PROOF.
   .
   Proof.
     ss. ii. unfold GRA.embed.
-    Local Transparent GRA.to_URA. ss. i. des_ifs; cycle 1.
+    Local Transparent GRA.to_URA. ur. i. des_ifs; cycle 1.
     { apply URA.wf_unit. }
     ss. unfold PCM.GRA.cast_ra, eq_rect, eq_sym. destruct GRA.inG_prf. ss.
     Local Opaque GRA.to_URA.
   Qed.
-
-  Infix "⋅" := URA.add (at level 50, left associativity).
-  Notation "(⋅)" := URA.add (only parsing).
 
   (* Definition incl (sbtb0 sbtb1: list (string * fspec)): Prop := List.incl  *)
   (* Lemma handle_hCallE_tgt_ext *)
@@ -215,9 +212,10 @@ Section PROOF.
     }
     { Local Transparent MemSbtb. cbn. Local Opaque MemSbtb. des_ifs; ss. }
     ss. unfold compose. ss. rewrite ! URA.unit_id. rewrite ! URA.unit_idl.
-    eapply embed_wf; et. ss. esplits; et.
-    { rr. esplits; et. ss. }
-    { i. des_ifs. }
+    eapply embed_wf; et.
+    assert(@URA.wf (Mem1._memRA) (fun b ofs => if (b =? 0)%nat && (ofs =? 0)%Z then Excl.just Vundef else Excl.unit)).
+    { repeat ur. i; des_ifs. }
+    admit "EZ -- add black wf lemma".
   Qed.
 
 End PROOF.

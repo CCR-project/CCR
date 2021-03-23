@@ -76,9 +76,9 @@ Section PROOF.
       unfold library, client.
       rewrite GRA.embed_add.
       ss.
-      assert(A: URA.wf (t:=boxRA) (URA.excl (M:=BoxHeader._boxRA) (inl (Some 0%Z)) (inl (Some 0%Z)))).
+      assert(A: URA.wf (t:=boxRA) (Auth.excl (M:=BoxHeader._boxRA) (inl (Some 0%Z)) (inl (Some 0%Z)))).
       { ss. esplits; ss; et. rr. exists URA.unit. ss. }
-      abstr (URA.excl (M:=BoxHeader._boxRA) (inl (Some 0%Z)) (inl (Some 0%Z))) r.
+      abstr (Auth.excl (M:=BoxHeader._boxRA) (inl (Some 0%Z)) (inl (Some 0%Z))) r.
       clear - A.
       eapply embed_wf; et.
     }

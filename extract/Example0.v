@@ -13,7 +13,7 @@ Generalizable Variables E R A B C X Y Σ.
 Set Implicit Arguments.
 
 
-Let Σ: GRA.t := fun _ => URA.of_RA RA.empty.
+Let Σ: GRA.t := fun _ => of_RA.t RA.empty.
 Local Existing Instance Σ.
 
 Definition main0: itree Es Any.t :=
