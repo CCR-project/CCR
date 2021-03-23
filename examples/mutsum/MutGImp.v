@@ -24,10 +24,10 @@ Section G.
   Definition gF :=
     mk_function
       ["n"]
-      (if# (Var "n")
-       then# ("f_ret" :=# (Fun "f") [(Var "n") - (Vint 1)] ;;;
-                      Expr ((Var "n") + "f_ret"))
-       else# (Expr (Vint 0)) fi#).
+      (if# "n"
+       then# "f_ret" :=# (Fun "f") ["n" - 1%Z : expr] ;;#
+             "n" + "f_ret"
+       else# 0%Z fi#).
 
   Definition g_prog : program :=
     [("g", gF)].

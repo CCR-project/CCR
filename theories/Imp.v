@@ -79,10 +79,14 @@ Definition program : Type := list (gname * function).
 Module ImpNotations.
 
   (** A few notations for convenience.  *)
+  Definition Expr_coerce: expr -> stmt := Expr.
   Definition Var_coerce: string -> expr := Var.
   Definition Lit_coerce: val -> expr := Lit.
+  Definition Vint_coerce: Z -> val := Vint.
+  Coercion Expr_coerce: expr >-> stmt.
   Coercion Var_coerce: string >-> expr.
   Coercion Lit_coerce: val >-> expr.
+  Coercion Vint_coerce: Z >-> val.
 
   Bind Scope expr_scope with expr.
 
@@ -95,11 +99,11 @@ Module ImpNotations.
   Notation "x '=#' e" :=
     (Assign x e) (at level 60, e at level 50): stmt_scope.
 
-  Notation "a ';;;' b" :=
+  Notation "a ';;#' b" :=
     (Seq a b)
       (at level 100, right associativity,
        format
-         "'[v' a  ';;;' '/' '[' b ']' ']'"
+         "'[v' a  ';;#' '/' '[' b ']' ']'"
       ): stmt_scope.
 
   Notation "'if#' i 'then#' t 'else#' e 'fi#'" :=
@@ -107,14 +111,14 @@ Module ImpNotations.
       (at level 100,
        right associativity,
        format
-         "'[v ' 'if#'  i '/' '[' 'then#'  t  ']' '/' '[' 'else#'  e ']' 'fi#' ']'").
+         "'[v ' 'if#'  i '/' '[' 'then#'  t  ']' '/' '[' 'else#'  e ']' '/' 'fi#' ']'").
 
   Notation "'while#' t 'do#' b 'end#'" :=
     (While t b)
       (at level 100,
        right associativity,
        format
-         "'[v  ' 'while#'  t  'do#' '/' '[v' b  ']' ']' 'end#'").
+         "'[v  ' 'while#'  t  'do#' '/' '[v' b  ']' ']' '/' 'end#'").
 
   Notation "x ':=#' '(' f ')' args" :=
     (CallFun x f args) (at level 60): stmt_scope.
@@ -157,23 +161,47 @@ Section Denote.
   Context {HasCall : callE -< eff}.
   Context {HasEvent : eventE -< eff}.
 
-  (** _Imp_ expressions are denoted as [itree eff value], where the returned
-      value in the tree is the value computed by the expression.
-      In the [Var] case, the [trigger] operator smoothly lifts a single event to
-      an [itree] by performing the corresponding [Vis] event and returning the
-      environment's answer immediately.
-      A constant (literal) is simply returned.
-      Usual monadic notations are used in the other cases: we can [bind]
-      recursive computations in the case of operators as one would expect. *)
-
   Fixpoint denote_expr (e : expr) : itree eff val :=
     match e with
     | Var v     => trigger (GetVar v)
-    | Lit n     => ret n
+    | Lit n     => Ret n
     | Plus a b  => l <- denote_expr a ;; r <- denote_expr b ;; (vadd l r)?
     | Minus a b => l <- denote_expr a ;; r <- denote_expr b ;; (vsub l r)?
     | Mult a b  => l <- denote_expr a ;; r <- denote_expr b ;; (vmul l r)?
     end.
+
+  Lemma denote_expr_Var
+        v
+    :
+      denote_expr (Var v) = trigger (GetVar v).
+  Proof. reflexivity. Qed.
+
+  Lemma denote_expr_Lit
+        n
+    :
+      denote_expr (Lit n) = Ret n.
+  Proof. reflexivity. Qed.
+  
+  Lemma denote_expr_Plus
+        a b
+    :
+      denote_expr (Plus a b) =
+      l <- denote_expr a ;; r <- denote_expr b ;; (vadd l r)?.
+  Proof. reflexivity. Qed.
+
+  Lemma denote_expr_Minus
+        a b
+    :
+      denote_expr (Minus a b) =
+      l <- denote_expr a ;; r <- denote_expr b ;; (vsub l r)?.
+  Proof. reflexivity. Qed.
+  
+  Lemma denote_expr_Mult
+        a b
+    :
+      denote_expr (Mult a b) =
+      l <- denote_expr a ;; r <- denote_expr b ;; (vmul l r)?.
+  Proof. reflexivity. Qed.
 
   (** We turn to the denotation of statements. As opposed to expressions,
       statements do not return any value: their semantic domain is therefore
@@ -207,19 +235,12 @@ Section Denote.
   Definition while (step : itree eff (unit + val)) : itree eff val :=
     ITree.iter (fun _ => step) tt.
 
-  (** Casting values into [bool]:  [0] corresponds to [false] and any nonzero
+  (** Casting values into [bool]: [Vint 0] corresponds to [false] and any nonzero
       value corresponds to [true].  *)
   Definition is_true (v : val) : option bool :=
     match v with
     | Vint n => if (n =? 0)%Z then Some false else Some true
     | _ => None
-    end.
-
-  (* LDJ: can use vcmp instead if we include Mem.t features *)
-  Definition if_itree {B} (c : itree eff bool) (t f : itree eff B) : itree eff B :=
-    match c with
-    | Ret b => if b then t else f
-    | _ => triggerUB
     end.
 
   (** The meaning of Imp statements is now easy to define. They are all
@@ -230,32 +251,89 @@ Section Denote.
   (* change to "v <- ccall f eval_args ;;" ? *)
   Fixpoint denote_stmt (s : stmt) : itree eff val :=
     match s with
-    | Assign x e =>  v <- denote_expr e ;; trigger (SetVar x v) ;; ret Vundef
+    | Assign x e =>  v <- denote_expr e ;; trigger (SetVar x v) ;; Ret Vundef
     | Seq a b    =>
       denote_stmt a ;; denote_stmt b
     | If i t e   =>
-      v <- denote_expr i ;;
-      if_itree (is_true v)? (denote_stmt t) (denote_stmt e)
+      v <- denote_expr i ;; `b: bool <- (is_true v)? ;;
+      if b then (denote_stmt t) else (denote_stmt e)
 
     | While t b =>
-      while (v <- denote_expr t ;;
-             if_itree (is_true v)? (denote_stmt b ;; ret (inl tt)) (ret (inr Vundef)))
+      while (v <- denote_expr t ;; `c: bool <- (is_true v)? ;;
+             if c then (denote_stmt b ;; Ret (inl tt)) else (Ret (inr Vundef)))
 
-    | Skip => ret Vundef
+    | Skip => Ret Vundef
     | CallFun x ft args =>
       match ft with
       | Fun f =>
         eval_args <- (mapT denote_expr args) ;;
         v <- trigger (Call f (eval_args↑)) ;; v <- unwrapN (v↓);;
-        trigger (SetVar x v) ;; ret Vundef
+        trigger (SetVar x v) ;; Ret Vundef
       | Sys f =>
         eval_args <- (mapT denote_expr args) ;;
         v <- trigger (Syscall f eval_args) ;;
-        trigger (SetVar x v) ;; ret Vundef
+        trigger (SetVar x v) ;; Ret Vundef
       end
 
     | Expr e => v <- denote_expr e ;; Ret v
     end.
+
+  Lemma denote_stmt_Assign
+        x e
+    :
+      denote_stmt (Assign x e) =
+      v <- denote_expr e ;; trigger (SetVar x v) ;; Ret Vundef.
+  Proof. reflexivity. Qed.
+
+  Lemma denote_stmt_Seq
+        a b
+    :
+      denote_stmt (Seq a b) =
+      denote_stmt a ;; denote_stmt b.
+  Proof. reflexivity. Qed.
+
+  Lemma denote_stmt_If
+        i t e
+    :
+      denote_stmt (If i t e) =
+      v <- denote_expr i ;; `b: bool <- (is_true v)? ;;
+      if b then (denote_stmt t) else (denote_stmt e).
+  Proof. reflexivity. Qed.
+
+  Lemma denote_stmt_While
+        t b
+    :
+      denote_stmt (While t b) =
+      while (v <- denote_expr t ;; `c: bool <- (is_true v)? ;;
+      if c then (denote_stmt b ;; Ret (inl tt)) else (Ret (inr Vundef))).
+  Proof. reflexivity. Qed.
+
+  Lemma denote_stmt_Skip
+    :
+      denote_stmt (Skip) = Ret Vundef.
+  Proof. reflexivity. Qed.
+
+  Lemma denote_stmt_CallFun
+        x ft args
+    :
+      denote_stmt (CallFun x ft args) =
+      match ft with
+      | Fun f =>
+        eval_args <- (mapT denote_expr args) ;;
+        v <- trigger (Call f (eval_args↑)) ;; v <- unwrapN (v↓);;
+        trigger (SetVar x v) ;; Ret Vundef
+      | Sys f =>
+        eval_args <- (mapT denote_expr args) ;;
+        v <- trigger (Syscall f eval_args) ;;
+        trigger (SetVar x v) ;; Ret Vundef
+      end.
+  Proof. reflexivity. Qed.
+
+  Lemma denote_stmt_Expr
+        e
+    :
+      denote_stmt (Expr e) = v <- denote_expr e ;; Ret v.
+  Proof. reflexivity. Qed.
 
 End Denote.
 
@@ -287,47 +365,41 @@ Proof.
 Qed.
 (* end hide *)
 
-(** We provide an _ITree event handler_ to interpret away [ImpState] events.  We
-    use an _environment event_ to do so, modeling the environment as a
-    0-initialized map from strings to values.  Recall from [Introduction.v] that
-    a _handler_ for the events [ImpState] is a function of type [forall R, ImpState R
-    -> M R] for some monad [M].  Here we take for our monad the special case of
-    [M = itree E] for some universe of events [E] required to contain the
-    environment events [mapE] provided by the library. It comes with an event
-    interpreter [interp_map] that yields a computation in the state monad.  *)
-Definition handle_ImpState {E: Type -> Type} `{mapE var (Vundef) -< E}: ImpState ~> itree E :=
-  fun _ e =>
+(* Definition handle_ImpState {E: Type -> Type} `{mapE var (Vundef) -< E}: ImpState ~> itree E := *)
+(*   fun _ e => *)
+(*     match e with *)
+(*     | GetVar x => lookup_def x *)
+(*     | SetVar x v => insert x v *)
+(*     end. *)
+(* (** We now concretely implement this environment using ExtLib's finite maps. *) *)
+(* Definition lenv := alist var val. *)
+
+Definition lenv := alist var val.
+Definition handle_ImpState {E: Type -> Type} `{Σ: GRA.t} `{eventE -< E}: ImpState ~> stateT lenv (itree E) :=
+  fun _ e old =>
     match e with
-    | GetVar x => lookup_def x
-    | SetVar x v => insert x v
+    | GetVar x => r <- unwrapU (alist_find _ x old) ;; Ret (old, r)
+    | SetVar x v => Ret (alist_add _ x v old, tt)
     end.
 
-(** We now concretely implement this environment using ExtLib's finite maps. *)
-Definition fun_loc_env := alist var val.
+(* Definition interp_imp `{Σ: GRA.t} {A} (t : itree (ImpState +' Es) A) : stateT fun_loc_env (itree Es) A := *)
+(*   let t' := interp (bimap handle_ImpState (id_ Es)) t in *)
+(*   interp_map t'. *)
 
-(** Finally, we can define an evaluator for our statements.
-   To do so, we first denote them, leading to an [itree ImpState unit].
-   We then [interp]ret [ImpState] into [mapE] using [handle_ImpState], leading to
-   an [itree (mapE var value) unit].
-   Finally, [interp_map] interprets the latter [itree] into the state monad,
-   resulting in an [itree] free of any event, but returning the final
-   _Imp_ env.
- *)
-(* SAZ: would rather write something like the following:
- h : E ~> M A
- h' : F[void1] ~> M A
-forall eff, {pf:E -< eff == F[E]} (t : itree eff A)
-        interp pf h h' t : M A
-*)
+Definition interp_imp `{Σ: GRA.t} : itree (ImpState +' Es) ~> stateT lenv (itree Es) :=
+  State.interp_state (case_ handle_ImpState ModSem.pure_state).
 
-Definition interp_function `{Σ: GRA.t} {A} (t : itree (ImpState +' Es) A) : stateT fun_loc_env (itree Es) A :=
-  let t' := interp (bimap handle_ImpState (id_ Es)) t in
-  interp_map t'.
 
-Definition eval_function `{Σ: GRA.t} (f: function) (args: list val) : itree Es val :=
+(* Definition eval_imp `{Σ: GRA.t} (f: function) (args: list val) : itree Es val := *)
+(*   if (List.length f.(params) =? List.length args)%nat *)
+(*   then '(_, retv) <- (interp_imp (denote_stmt f.(body)) (List.combine f.(params) args));; Ret retv *)
+(*   else triggerUB. *)
+
+Definition eval_imp `{Σ: GRA.t} (f: function) (args: list val) : itree Es val :=
   if (List.length f.(params) =? List.length args)%nat
-  then '(_, retv) <- (interp_function (denote_stmt f.(body)) (List.combine f.(params) args));; Ret retv
+  then '(_, retv) <- (interp_imp (denote_stmt f.(body)) (List.combine f.(params) args));; Ret retv
   else triggerUB.
+
 
 (* ========================================================================== *)
 (**
@@ -379,13 +451,7 @@ Section InterpImpProperties.
 
 End InterpImpProperties.
 
- **)
-
-(****************** copy-paste end **********************)
-(****************** copy-paste end **********************)
-(****************** copy-paste end **********************)
-(****************** copy-paste end **********************)
-(****************** copy-paste end **********************)
+**)
 
 (**** ModSem ****)
 Module ImpMod.
@@ -398,7 +464,7 @@ Section MODSEM.
   Instance Initial_void1 : @Initial (Type -> Type) IFun void1 := @elim_void1. (*** TODO: move to ITreelib ***)
 
   Definition modsem: ModSem.t := {|
-    ModSem.fnsems := List.map (fun '(fn, st) => (fn, cfun (eval_function st))) prog;
+    ModSem.fnsems := List.map (fun '(fn, st) => (fn, cfun (eval_imp st))) prog;
     ModSem.initial_mrs := [(mn, (URA.unit, tt↑))];
   |}.
 
@@ -420,18 +486,18 @@ Section Example_Extract.
   Open Scope stmt_scope.
 
   Definition factorial : stmt :=
-    "output" =# (Vint 1);;;
+    "output" =# 1%Z ;;#
     while# "input"
-    do# "output" =# "output" * "input";;;
-       "input"  =# "input" - (Vint 1) end#;;;
-    Expr "output".
+    do# "output" =# "output" * "input";;#
+       "input"  =# "input" - 1%Z end#;;#
+    "output".
 
   Definition factorial_fundef : function :=
     {| params := ["input"] ; body := factorial |}.
 
   Definition main : stmt :=
-    "result" :=# (Fun "factorial") [Lit (Vint 4)] ;;;
-    Expr "result".
+    "result" :=# (Fun "factorial") [4%Z : expr] ;;#
+    "result".
 
   Definition main_fundef : function :=
     {| params := [] ; body := main |}.
@@ -444,3 +510,192 @@ Section Example_Extract.
   Definition imp_ex := ModSem.initial_itr_no_check (Mod.enclose ex_prog).
 
 End Example_Extract.
+
+
+Section PROOFS.
+
+  Context `{Σ: GRA.t}.
+  
+  Lemma interp_imp_bind
+        A B
+        (itr: itree (ImpState +' Es) A) (ktr: A -> itree (ImpState +' Es) B)
+        st0
+    :
+      interp_imp (v <- itr ;; ktr v) st0 =
+      '(st1, v) <- interp_imp (itr) st0 ;;
+      interp_imp (ktr v) st1.
+  Proof. unfold interp_imp. grind. des_ifs. Qed.
+
+  Lemma interp_imp_tau
+        A
+        (itr: itree (ImpState +' Es) A)
+        st0
+    :
+      interp_imp (tau;; itr) st0 =
+      tau;; interp_imp itr st0.
+  Proof. unfold interp_imp. grind. Qed.
+
+  Lemma interp_imp_Ret
+        T
+        st0 (v: T)
+    :
+      interp_imp (Ret v) st0 = Ret (st0, v).
+  Proof. unfold interp_imp. grind. Qed.
+
+  Lemma interp_imp_triggerUB
+        st0 A
+    :
+      (interp_imp (triggerUB) st0 : itree Es (_ * A)) = triggerUB.
+  Proof.
+    unfold interp_imp, pure_state, triggerUB. grind.
+  Qed.
+  
+  Lemma interp_imp_triggerNB
+        st0 A
+    :
+      (interp_imp (triggerNB) st0 : itree Es (_ * A)) = triggerNB.
+  Proof.
+    unfold interp_imp, pure_state, triggerNB. grind.
+  Qed.
+
+  Lemma interp_imp_GetVar
+        st0 x
+    :
+      interp_imp (trigger (GetVar x)) st0 =
+      r <- unwrapU (alist_find _ x st0);; tau;; Ret (st0, r).
+  Proof.
+    unfold interp_imp. grind.
+  Qed.
+
+  Lemma interp_imp_SetVar
+        st0 x v
+    :
+      interp_imp (trigger (SetVar x v)) st0 =
+      tau;; Ret (alist_add _ x v st0, tt).
+  Proof.
+    unfold interp_imp. grind.
+  Qed.
+  
+  Lemma interp_imp_Call
+        st0 f args
+    :
+      interp_imp (trigger (Call f args)) st0 =
+      r <- trigger (Call f args);; tau;; Ret (st0, r).
+  Proof.
+    unfold interp_imp, pure_state. grind.
+  Qed.
+  
+  Lemma interp_imp_Syscall
+        st0 f args
+    :
+      interp_imp (trigger (Syscall f args)) st0 =
+      r <- trigger (Syscall f args);; tau;; Ret (st0, r).
+  Proof.
+    unfold interp_imp, pure_state. grind.
+  Qed.
+  
+  Lemma interp_imp_unwrapU
+        X (x: option X) st0
+    :
+      interp_imp (unwrapU x) st0 =
+      x <- unwrapU x;; Ret (st0, x).
+  Proof.
+    unfold unwrapU. des_ifs.
+    - rewrite interp_imp_Ret. ired. ss.
+    - rewrite interp_imp_triggerUB.
+      unfold triggerUB. grind.
+  Qed.
+
+  Lemma interp_imp_unwrapN
+        X (x: option X) st0
+    :
+      interp_imp (unwrapN x) st0 =
+      x <- unwrapN x;; Ret (st0, x).
+  Proof.
+    unfold unwrapN. des_ifs.
+    - rewrite interp_imp_Ret. ired. ss.
+    - rewrite interp_imp_triggerNB.
+      unfold triggerNB. grind.
+  Qed.
+
+  Lemma eval_imp_unfold
+        input params body
+    :
+       ` vret : val <- eval_imp {| params := params; body := body |} input ;;
+       Ret (vret↑)
+      =
+       ` vret : val <-
+       (if ((Datatypes.length params) =? (Datatypes.length input))%nat
+        then
+          ` x : lenv * val <-
+          interp_imp
+            (denote_stmt body)
+            (List.combine params input);;
+          (let (_, retv) := x in Ret retv)
+        else triggerUB);; Ret (vret↑).
+  Proof. reflexivity. Qed.
+
+End PROOFS.
+
+Global Opaque denote_expr.
+Global Opaque denote_stmt.
+Global Opaque interp_imp.
+Global Opaque eval_imp.
+
+Require Import SimModSem.
+Require Import HTactics.
+
+(** tactic for imp-program reduction *)
+Ltac imp_red :=
+  cbn;
+  match goal with
+      (** denote_stmt *)
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (denote_stmt (?stmt)) _))) ] =>
+    match stmt with
+    | Assign _ _ => rewrite denote_stmt_Assign
+    | Seq _ _ => rewrite denote_stmt_Seq
+    | If _ _ _ => rewrite denote_stmt_If
+    | While _ _ => rewrite denote_stmt_While
+    | Skip => rewrite denote_stmt_Skip
+    | CallFun _ _ _ => rewrite denote_stmt_CallFun
+    | Expr _ => rewrite denote_stmt_Expr
+    | Expr_coerce _ => rewrite denote_stmt_Expr
+    | _ => fail
+    end
+      
+      (** denote_expr *)
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (denote_expr (?expr)) _))) ] =>
+    match expr with
+    | Var _ => rewrite denote_expr_Var
+    | Lit _ => rewrite denote_expr_Lit
+    | Plus _ _ => rewrite denote_expr_Plus
+    | Minus _ _ => rewrite denote_expr_Minus
+    | Mult _ _ => rewrite denote_expr_Mult
+    | Var_coerce _ => rewrite denote_expr_Var
+    | Lit_coerce _ => rewrite denote_expr_Lit
+    | _ => fail
+    end
+        
+       (** interp_imp *)
+  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (?itr) _))) ] =>
+    match itr with
+    | ITree.bind' _ _ => rewrite interp_imp_bind
+    | Ret _ => rewrite interp_imp_Ret
+    | triggerUB => rewrite interp_imp_triggerUB
+    | triggerNB => rewrite interp_imp_triggerNB
+    | trigger (GetVar _) => rewrite interp_imp_GetVar
+    | trigger (SetVar _ _) => rewrite interp_imp_SetVar
+    | trigger (Call _ _) => rewrite interp_imp_Call
+    | trigger (Syscall _ _) => rewrite interp_imp_Syscall
+    | unwrapU _ => rewrite interp_imp_unwrapU
+    | unwrapN _ => rewrite interp_imp_unwrapN
+    | _ => fail
+    end
+      
+  (* | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (Tau _) _))) ] => *)
+  (*   rewrite interp_imp_tau *)
+       (** default *)
+  | _ => idtac
+  end.
+
+Ltac imp_steps := repeat (repeat imp_red; steps).
