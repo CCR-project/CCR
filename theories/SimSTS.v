@@ -140,7 +140,7 @@ Section SIM.
 
   | sim_vis_stuck_tgt
       (SRT: _.(state_sort) st_tgt0 = vis)
-      (STUCK: forall e st_tgt1, not (_.(step) st_tgt0 e st_tgt1))
+      (STUCK: forall ev st_tgt1, not (_.(step) st_tgt0 (Some ev) st_tgt1))
       (* e st_tgt1 *)
       (* (STUCK: not (_.(step) st_tgt0 e st_tgt1)) *)
     :

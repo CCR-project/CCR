@@ -200,22 +200,49 @@ So, fix semantics with st_init, later let st_init = st0 in the main thm.
         rewrite Any.upcast_downcast. reflexivity.
         (* ModSem.state_sort do not match type (Z, val) *)
       + auto.
-    - eapply sim_demonic_src; ss; clarify.
-      + rewrite interpSTS_red. rewrite SRT. ss.
-      + eexists. eexists.
-        { rewrite interpSTS_red. rewrite SRT. rewrite bind_trigger.
-          set (cont :=
-                 (fun x_ : {'(ev', st') : event * state | step st0 (Some ev') st'}
-                  => let (x, _) := x_ in
-                    let (y0, st1) := x in
-                    match y0 with
-                    | event_sys fn args =>
-                      Vis (Syscall fn args) (fun _ : val => interpSTS step state_sort st1)
-                    end)).
-          eapply (ModSem.step_choose cont). }
-        exists 9. split; auto.
-        left. pfold.
-    set (itr := (let (x, _) := ?x in
+    - assert (CASE: (forall e st1, not (step st0 e st1)) \/ (exists e st1, (step st0 e st1))).
+      { destruct (classic (exists e st1, step st0 e st1)); eauto.
+        left. ii. apply H. eauto. }
+      destruct CASE.
+      + eapply sim_vis_stuck_tgt; eauto.
+      + set (cont :=
+               (fun x_ : {'(ev', st') : event * state | step st0 (Some ev') st'}
+                => let (x, _) := x_ in
+                  let (y0, st1) := x in
+                  match y0 with
+                  | event_sys fn args =>
+                    Vis (Syscall fn args) (fun _ : val => interpSTS step state_sort st1)
+                  end)).
+        des. destruct e.
+        { eapply sim_demonic_src; ss; clarify.
+          - rewrite interpSTS_red. rewrite SRT. ss.
+          - exists (cont (exist (fun '(ev, st) => step st0 (Some ev) st) (e, st1) H)).
+            eexists.
+            { rewrite interpSTS_red. rewrite SRT. rewrite bind_trigger.
+              eapply (ModSem.step_choose cont). }
+            exists 9. split; auto.
+            left. pfold. destruct e. eapply sim_vis; eauto.
+            ss. eapply ModSem.step_syscall with (k := (fun _ : val => interpSTS step state_sort st1)) (ev := event_sys fn args).
+            admit "TODO: syscall_sem is an axiom". }
+        { eapply sim_demonic_src; ss; clarify.
+          - rewrite interpSTS_red. rewrite SRT. ss.
+          - exists (cont (exist (fun '(ev, st) => step st0 (Some ev) st) (e, st1) H)).
+            eexists.
+            { rewrite interpSTS_red. rewrite SRT. rewrite bind_trigger.
+              eapply (ModSem.step_choose cont). }
+            exists 9. split; auto.
+            left. pfold. destruct e. eapply sim_vis; eauto.
+            ss. eapply ModSem.step_syscall with (k := (fun _ : val => interpSTS step state_sort st1)) (ev := event_sys fn args).
+            admit "TODO: syscall_sem is an axiom". }
+        
+
+        
+            right. 
+            destruct e.
+            { instantiate (1 := ((
+                                    
+                                    left. pfold.
+                                    set (itr := (let (x, _) := ?x in
      let (y0, st1) := x in
      match y0 with
      | event_sys fn args =>
