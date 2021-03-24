@@ -1031,10 +1031,10 @@ End PSEUDOTYPING.
       apply simg_l_interp_Es_ret
     | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ (trigger ?e) _) _) ] =>
       match (type of e) with
-      | rE _ => apply simg_l_interp_Es_rE
-      | eventE _ => apply simg_l_interp_Es_eventE
-      | pE _ => apply simg_l_interp_Es_pE
-      | callE _ => apply simg_l_interp_Es_callE
+      | context[rE] => apply simg_l_interp_Es_rE
+      | context[eventE] => apply simg_l_interp_Es_eventE
+      | context[pE] => apply simg_l_interp_Es_pE
+      | context[callE] => apply simg_l_interp_Es_callE
       | _ => fail 2
       end
     | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ triggerNB _) _) ] =>
@@ -1051,10 +1051,10 @@ End PSEUDOTYPING.
       apply simg_l_interp_Es_ret2; ired_l
     | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ (trigger ?e) _) >>= _) _) ] =>
       match (type of e) with
-      | rE _ => apply simg_l_interp_Es_rE2
-      | eventE _ => apply simg_l_interp_Es_eventE2
-      | pE _ => apply simg_l_interp_Es_pE2
-      | callE _ => apply simg_l_interp_Es_callE2
+      | context[rE] => apply simg_l_interp_Es_rE2
+      | context[eventE] => apply simg_l_interp_Es_eventE2
+      | context[pE] => apply simg_l_interp_Es_pE2
+      | context[callE] => apply simg_l_interp_Es_callE2
       | _ => fail 2
       end
     | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ triggerNB _) >>= _) _) ] =>
@@ -1090,10 +1090,10 @@ End PSEUDOTYPING.
       apply simg_r_interp_Es_ret
     | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ (trigger ?e) _)) ] =>
       match (type of e) with
-      | rE _ => apply simg_r_interp_Es_rE
-      | eventE _ => apply simg_r_interp_Es_eventE
-      | pE _ => apply simg_r_interp_Es_pE
-      | callE _ => apply simg_r_interp_Es_callE
+      | context[rE] => apply simg_r_interp_Es_rE
+      | context[eventE] => apply simg_r_interp_Es_eventE
+      | context[pE] => apply simg_r_interp_Es_pE
+      | context[callE] => apply simg_r_interp_Es_callE
       | _ => fail 2
       end
     | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ triggerNB _)) ] =>
@@ -1110,10 +1110,10 @@ End PSEUDOTYPING.
       apply simg_r_interp_Es_ret2; ired_l
     | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ (trigger ?e) _) >>= _)) ] =>
       match (type of e) with
-      | rE _ => apply simg_r_interp_Es_rE2
-      | eventE _ => apply simg_r_interp_Es_eventE2
-      | pE _ => apply simg_r_interp_Es_pE2
-      | callE _ => apply simg_r_interp_Es_callE2
+      | context[rE] => apply simg_r_interp_Es_rE2
+      | context[eventE] => apply simg_r_interp_Es_eventE2
+      | context[pE] => apply simg_r_interp_Es_pE2
+      | context[callE] => apply simg_r_interp_Es_callE2
       | _ => fail 2
       end
     | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ triggerNB _) >>= _)) ] =>
@@ -1128,12 +1128,11 @@ End PSEUDOTYPING.
 
   Ltac mred :=
     repeat (cbn;
-            (* try rewrite ! interp_Es_bind; try rewrite ! interp_Es_ret; try rewrite ! interp_Es_tau; *)
-            (* try rewrite ! interp_Es_rE; *)
-            (* try rewrite ! interp_Es_pE; *)
-            (* try rewrite ! interp_Es_eventE; try rewrite ! interp_Es_callE; *)
-            (* try rewrite ! interp_Es_triggerNB; try rewrite ! interp_Es_triggerUB; (*** igo ***) *)
-            ired_all).
+            ired_all;
+            try rewrite ! interp_Es_rE; try rewrite ! interp_Es_pE;
+            try rewrite ! interp_Es_eventE; try rewrite ! interp_Es_callE;
+            try rewrite ! interp_Es_triggerNB; try rewrite ! interp_Es_triggerUB (*** igo ***)
+           ).
   (*** step and some post-processing ***)
   Ltac _step :=
     match goal with
