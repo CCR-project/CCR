@@ -517,12 +517,14 @@ End PSEUDOTYPING.
   .
   Proof. rewrite bind_ret_r in SIM. ss. Qed.
 
+  (**************************** interp_Es ******************************)
+
   Lemma simg_l_interp_Es_bind
         `{Σ: GRA.t}
         R S
         x0 x1 x2 x3 x4 x5
         a (k: ktree _ R S) prog st0
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (`str: (r_state * p_state * R) <- interp_Es prog a st0;;
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (`str: (_ * R) <- interp_Es prog a st0;;
                                                    (let (st1, r) := str in interp_Es prog (k r) st1)) x5)
     :
       <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (interp_Es prog (a >>= k) st0) x5>>
@@ -551,18 +553,85 @@ End PSEUDOTYPING.
   .
   Proof. rewrite interp_Es_tau. ss. Qed.
 
+  Lemma simg_l_interp_Es_rE
+        `{Σ: GRA.t}
+        R
+        x0 x1 x2 x3 x4 x5
+        (e: rE R) prog rst0 pst0
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (`rstr: (_ * R) <- handle_rE e rst0;; (let (rst1, r) := rstr in tau;; tau;; Ret (rst1, pst0, r))) x5)
+    :
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (interp_Es prog (trigger e) (rst0, pst0)) x5>>
+  .
+  Proof. rewrite interp_Es_rE. ss. Qed.
+
+  Lemma simg_l_interp_Es_eventE
+        `{Σ: GRA.t}
+        R
+        x0 x1 x2 x3 x4 x5
+        (e: eventE R) prog st0
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (r <- trigger e;; (tau;; tau;; tau;; Ret (st0, r))) x5)
+    :
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (interp_Es prog (trigger e) st0) x5>>
+  .
+  Proof. rewrite interp_Es_eventE. ss. Qed.
+
+  Lemma simg_l_interp_Es_pE
+        `{Σ: GRA.t}
+        R
+        x0 x1 x2 x3 x4 x5
+        (e: pE R) prog rst0 pst0
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (`pstr: (_ * R) <- handle_pE e pst0;; (let (pst1, r) := pstr in tau;; tau;; tau;; Ret (rst0, pst1, r))) x5)
+    :
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (interp_Es prog (trigger e) (rst0, pst0)) x5>>
+  .
+  Proof. rewrite interp_Es_pE. ss. Qed.
+
+  Lemma simg_l_interp_Es_callE
+        `{Σ: GRA.t}
+        x0 x1 x2 x3 x4 x5
+        (e: callE Any.t) prog st0
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (tau;; interp_Es prog (prog _ e) st0) x5)
+    :
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (interp_Es prog (trigger e) st0) x5>>
+  .
+  Proof. rewrite interp_Es_callE. ss. Qed.
+
+  Lemma simg_l_interp_Es_triggerNB
+        `{Σ: GRA.t}
+        R
+        x0 x1 x2 x3 x4 x5
+        prog st0
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (triggerNB) x5)
+    :
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (interp_Es (A:=R) prog triggerNB st0) x5>>
+  .
+  Proof. rewrite interp_Es_triggerNB. ss. Qed.
+
+  Lemma simg_l_interp_Es_triggerUB
+        `{Σ: GRA.t}
+        R
+        x0 x1 x2 x3 x4 x5
+        prog st0
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (triggerUB) x5)
+    :
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (interp_Es (A:=R) prog triggerUB st0) x5>>
+  .
+  Proof. rewrite interp_Es_triggerUB. ss. Qed.
+
+  (**************************** interp_Es2 ******************************)
+
   Lemma simg_l_interp_Es_bind2
         `{Σ: GRA.t}
         R S T
         x0 x1 x2 x3 x4 x5
         a (k: ktree _ R S) prog st0
         (h: ktree _ _ T)
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (`str: (r_state * p_state * R) <- interp_Es prog a st0;;
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (`str: (_ * R) <- interp_Es prog a st0;;
                                              (let (st1, r) := str in interp_Es prog (k r) st1) >>= h) x5)
     :
       <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 ((interp_Es prog (a >>= k) st0) >>= h) x5>>
   .
-  Proof. rewrite interp_Es_bind. rewrite bind_bind. ss. Qed.
+  Proof. rewrite interp_Es_bind. rp; et. grind. Qed.
 
   Lemma simg_l_interp_Es_ret2
         `{Σ: GRA.t}
@@ -574,7 +643,7 @@ End PSEUDOTYPING.
     :
       <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 ((interp_Es prog (Ret a) st0) >>= h) x5>>
   .
-  Proof. rewrite interp_Es_ret. rewrite bind_ret_l. ss. Qed.
+  Proof. rewrite interp_Es_ret. rp; et. grind. Qed.
 
   Lemma simg_l_interp_Es_tau2
         `{Σ: GRA.t}
@@ -586,7 +655,89 @@ End PSEUDOTYPING.
     :
       <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 ((interp_Es prog (tau;; a) st0) >>= h) x5>>
   .
-  Proof. rewrite interp_Es_tau. rewrite bind_tau; ss. Qed.
+  Proof. rewrite interp_Es_tau. rp; et. grind. Qed.
+
+  Lemma simg_l_interp_Es_rE2
+        `{Σ: GRA.t}
+        R S
+        x0 x1 x2 x3 x4 x5
+        (e: rE R) prog rst0 pst0
+        (h: ktree _ _ S)
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (`rstr: (_ * R) <- handle_rE e rst0;;
+                                                     (let (rst1, r) := rstr in tau;; tau;; h (rst1, pst0, r))) x5)
+    :
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 ((interp_Es prog (trigger e) (rst0, pst0)) >>= h) x5>>
+  .
+  Proof. rewrite interp_Es_rE. rp; et. grind. Qed.
+
+  Lemma simg_l_interp_Es_eventE2
+        `{Σ: GRA.t}
+        R S
+        x0 x1 x2 x3 x4 x5
+        (e: eventE R) prog st0
+        (h: ktree _ _ S)
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (r <- trigger e;; (tau;; tau;; tau;; h (st0, r))) x5)
+    :
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 ((interp_Es prog (trigger e) st0) >>= h) x5>>
+  .
+  Proof. rewrite interp_Es_eventE. rp; et. grind. Qed.
+
+  Lemma simg_l_interp_Es_pE2
+        `{Σ: GRA.t}
+        R S
+        x0 x1 x2 x3 x4 x5
+        (e: pE R) prog rst0 pst0
+        (h: ktree _ _ S)
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (`pstr: (_ * R) <- handle_pE e pst0;; (let (pst1, r) := pstr in tau;; tau;; tau;; h (rst0, pst1, r))) x5)
+    :
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 ((interp_Es prog (trigger e) (rst0, pst0)) >>= h) x5>>
+  .
+  Proof. rewrite interp_Es_pE. rp; et. grind. Qed.
+
+  Lemma simg_l_interp_Es_callE2
+        `{Σ: GRA.t}
+        S
+        x0 x1 x2 x3 x4 x5
+        (e: callE Any.t) prog st0
+        (h: ktree _ _ S)
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (tau;; interp_Es prog (prog _ e) st0 >>= h) x5)
+    :
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 ((interp_Es prog (trigger e) st0) >>= h) x5>>
+  .
+  Proof. rewrite interp_Es_callE. ss. rp; et. grind. Qed.
+
+  Lemma simg_l_interp_Es_triggerNB2
+        `{Σ: GRA.t}
+        R S
+        x0 x1 x2 x3 x4 x5
+        prog st0
+        (h: ktree _ _ S)
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (triggerNB >>= h) x5)
+    :
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 ((interp_Es (A:=R) prog triggerNB st0) >>= h) x5>>
+  .
+  Proof. rewrite interp_Es_triggerNB. ss. Qed.
+
+  Lemma simg_l_interp_Es_triggerUB2
+        `{Σ: GRA.t}
+        R S
+        x0 x1 x2 x3 x4 x5
+        prog st0
+        (h: ktree _ _ S)
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (triggerUB >>= h) x5)
+    :
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (interp_Es (A:=R) prog triggerUB st0 >>= h) x5>>
+  .
+  Proof. rewrite interp_Es_triggerUB. ss. Qed.
+
+
+
+
+
+
+
+
+
 
 
 
@@ -632,12 +783,14 @@ End PSEUDOTYPING.
   .
   Proof. rewrite bind_ret_r in SIM. ss. Qed.
 
+  (**************************** interp_Es ******************************)
+
   Lemma simg_r_interp_Es_bind
         `{Σ: GRA.t}
         R S
         x0 x1 x2 x3 x4 x5
         a (k: ktree _ R S) prog st0
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (`str: (r_state * p_state * R) <- interp_Es prog a st0;;
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (`str: (_ * R) <- interp_Es prog a st0;;
                                                       (let (st1, r) := str in interp_Es prog (k r) st1)))
     :
       <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (interp_Es prog (a >>= k) st0)>>
@@ -666,18 +819,85 @@ End PSEUDOTYPING.
   .
   Proof. rewrite interp_Es_tau. ss. Qed.
 
+  Lemma simg_r_interp_Es_rE
+        `{Σ: GRA.t}
+        R
+        x0 x1 x2 x3 x4 x5
+        (e: rE R) prog rst0 pst0
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (`rstr: (_ * R) <- handle_rE e rst0;; (let (rst1, r) := rstr in tau;; tau;; Ret (rst1, pst0, r))))
+    :
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (interp_Es prog (trigger e) (rst0, pst0))>>
+  .
+  Proof. rewrite interp_Es_rE. ss. Qed.
+
+  Lemma simg_r_interp_Es_eventE
+        `{Σ: GRA.t}
+        R
+        x0 x1 x2 x3 x4 x5
+        (e: eventE R) prog st0
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (r <- trigger e;; (tau;; tau;; tau;; Ret (st0, r))))
+    :
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (interp_Es prog (trigger e) st0)>>
+  .
+  Proof. rewrite interp_Es_eventE. ss. Qed.
+
+  Lemma simg_r_interp_Es_pE
+        `{Σ: GRA.t}
+        R
+        x0 x1 x2 x3 x4 x5
+        (e: pE R) prog rst0 pst0
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (`pstr: (_ * R) <- handle_pE e pst0;; (let (pst1, r) := pstr in tau;; tau;; tau;; Ret (rst0, pst1, r))))
+    :
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (interp_Es prog (trigger e) (rst0, pst0))>>
+  .
+  Proof. rewrite interp_Es_pE. ss. Qed.
+
+  Lemma simg_r_interp_Es_callE
+        `{Σ: GRA.t}
+        x0 x1 x2 x3 x4 x5
+        (e: callE Any.t) prog st0
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (tau;; interp_Es prog (prog _ e) st0))
+    :
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (interp_Es prog (trigger e) st0)>>
+  .
+  Proof. rewrite interp_Es_callE. ss. Qed.
+
+  Lemma simg_r_interp_Es_triggerNB
+        `{Σ: GRA.t}
+        R
+        x0 x1 x2 x3 x4 x5
+        prog st0
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (triggerNB))
+    :
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (interp_Es (A:=R) prog triggerNB st0)>>
+  .
+  Proof. rewrite interp_Es_triggerNB. ss. Qed.
+
+  Lemma simg_r_interp_Es_triggerUB
+        `{Σ: GRA.t}
+        R
+        x0 x1 x2 x3 x4 x5
+        prog st0
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (triggerUB))
+    :
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (interp_Es (A:=R) prog triggerUB st0)>>
+  .
+  Proof. rewrite interp_Es_triggerUB. ss. Qed.
+
+  (**************************** interp_Es2 ******************************)
+
   Lemma simg_r_interp_Es_bind2
         `{Σ: GRA.t}
         R S T
         x0 x1 x2 x3 x4 x5
         a (k: ktree _ R S) prog st0
         (h: ktree _ _ T)
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (`str: (r_state * p_state * R) <- interp_Es prog a st0;;
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (`str: (_ * R) <- interp_Es prog a st0;;
                                                       (let (st1, r) := str in interp_Es prog (k r) st1) >>= h))
     :
       <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 ((interp_Es prog (a >>= k) st0) >>= h)>>
   .
-  Proof. rewrite interp_Es_bind. rewrite bind_bind. ss. Qed.
+  Proof. rewrite interp_Es_bind. rp; et. grind. Qed.
 
   Lemma simg_r_interp_Es_ret2
         `{Σ: GRA.t}
@@ -689,7 +909,7 @@ End PSEUDOTYPING.
     :
       <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 ((interp_Es prog (Ret a) st0) >>= h)>>
   .
-  Proof. rewrite interp_Es_ret. rewrite bind_ret_l. ss. Qed.
+  Proof. rewrite interp_Es_ret. rp; et. grind. Qed.
 
   Lemma simg_r_interp_Es_tau2
         `{Σ: GRA.t}
@@ -701,7 +921,84 @@ End PSEUDOTYPING.
     :
       <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 ((interp_Es prog (tau;; a) st0) >>= h)>>
   .
-  Proof. rewrite interp_Es_tau. rewrite bind_tau; ss. Qed.
+  Proof. rewrite interp_Es_tau. rp; et. grind. Qed.
+
+  Lemma simg_r_interp_Es_rE2
+        `{Σ: GRA.t}
+        R S
+        x0 x1 x2 x3 x4 x5
+        (e: rE R) prog rst0 pst0
+        (h: ktree _ _ S)
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (`rstr: (_ * R) <- handle_rE e rst0;;
+                                                       (let (rst1, r) := rstr in tau;; tau;; h (rst1, pst0, r))))
+    :
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 ((interp_Es prog (trigger e) (rst0, pst0)) >>= h)>>
+  .
+  Proof. rewrite interp_Es_rE. rp; et. grind. Qed.
+
+  Lemma simg_r_interp_Es_eventE2
+        `{Σ: GRA.t}
+        R S
+        x0 x1 x2 x3 x4 x5
+        (e: eventE R) prog st0
+        (h: ktree _ _ S)
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (r <- trigger e;; (tau;; tau;; tau;; h (st0, r))))
+    :
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 ((interp_Es prog (trigger e) st0) >>= h)>>
+  .
+  Proof. rewrite interp_Es_eventE. rp; et. grind. Qed.
+
+  Lemma simg_r_interp_Es_pE2
+        `{Σ: GRA.t}
+        R S
+        x0 x1 x2 x3 x4 x5
+        (e: pE R) prog rst0 pst0
+        (h: ktree _ _ S)
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (`pstr: (_ * R) <- handle_pE e pst0;; (let (pst1, r) := pstr in tau;; tau;; tau;; h (rst0, pst1, r))))
+    :
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 ((interp_Es prog (trigger e) (rst0, pst0)) >>= h)>>
+  .
+  Proof. rewrite interp_Es_pE. rp; et. grind. Qed.
+
+  Lemma simg_r_interp_Es_callE2
+        `{Σ: GRA.t}
+        S
+        x0 x1 x2 x3 x4 x5
+        (e: callE Any.t) prog st0
+        (h: ktree _ _ S)
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (tau;; interp_Es prog (prog _ e) st0 >>= h))
+    :
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 ((interp_Es prog (trigger e) st0) >>= h)>>
+  .
+  Proof. rewrite interp_Es_callE. ss. rp; et. grind. Qed.
+
+  Lemma simg_r_interp_Es_triggerNB2
+        `{Σ: GRA.t}
+        R S
+        x0 x1 x2 x3 x4 x5
+        prog st0
+        (h: ktree _ _ S)
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (triggerNB >>= h))
+    :
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 ((interp_Es (A:=R) prog triggerNB st0) >>= h)>>
+  .
+  Proof. rewrite interp_Es_triggerNB. ss. Qed.
+
+  Lemma simg_r_interp_Es_triggerUB2
+        `{Σ: GRA.t}
+        R S
+        x0 x1 x2 x3 x4 x5
+        prog st0
+        (h: ktree _ _ S)
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (triggerUB >>= h))
+    :
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (interp_Es (A:=R) prog triggerUB st0 >>= h)>>
+  .
+  Proof. rewrite interp_Es_triggerUB. ss. Qed.
+
+
+
+
 
   Ltac interp_red := rewrite interp_vis ||
                              rewrite interp_ret ||
@@ -725,18 +1022,45 @@ End PSEUDOTYPING.
     | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp _ _) >>= _) _) ] =>
       ((interp_red; ired_l) || idtac)
 
+    (**************************** interp_Es ******************************)
     | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ (_ >>= _) _) _) ] =>
       apply simg_l_interp_Es_bind; ired_l
     | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ (tau;; _) _) _) ] =>
       apply simg_l_interp_Es_tau
     | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ (Ret _) _) _) ] =>
       apply simg_l_interp_Es_ret
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ (trigger ?e) _) _) ] =>
+      match (type of e) with
+      | rE _ => apply simg_l_interp_Es_rE
+      | eventE _ => apply simg_l_interp_Es_eventE
+      | pE _ => apply simg_l_interp_Es_pE
+      | callE _ => apply simg_l_interp_Es_callE
+      | _ => fail 2
+      end
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ triggerNB _) _) ] =>
+      apply simg_l_interp_Es_triggerNB
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ triggerUB _) _) ] =>
+      apply simg_l_interp_Es_triggerUB
+
+    (**************************** interp_Es2 ******************************)
     | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ (_ >>= _) _) >>= _) _) ] =>
       apply simg_l_interp_Es_bind2; ired_l
     | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ (tau;; _) _) >>= _) _) ] =>
       apply simg_l_interp_Es_tau2
     | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ (Ret _) _) >>= _) _) ] =>
       apply simg_l_interp_Es_ret2; ired_l
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ (trigger ?e) _) >>= _) _) ] =>
+      match (type of e) with
+      | rE _ => apply simg_l_interp_Es_rE2
+      | eventE _ => apply simg_l_interp_Es_eventE2
+      | pE _ => apply simg_l_interp_Es_pE2
+      | callE _ => apply simg_l_interp_Es_callE2
+      | _ => fail 2
+      end
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ triggerNB _) >>= _) _) ] =>
+      apply simg_l_interp_Es_triggerNB2
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ triggerUB _) >>= _) _) ] =>
+      apply simg_l_interp_Es_triggerUB2
 
     | _ => idtac
     end.
@@ -757,18 +1081,45 @@ End PSEUDOTYPING.
     | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp _ _) >>= _)) ] =>
       ((interp_red; ired_r) || idtac)
 
+    (**************************** interp_Es ******************************)
     | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ (_ >>= _) _)) ] =>
       apply simg_r_interp_Es_bind; ired_l
     | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ (tau;; _) _)) ] =>
       apply simg_r_interp_Es_tau
     | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ (Ret _) _)) ] =>
       apply simg_r_interp_Es_ret
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ (trigger ?e) _)) ] =>
+      match (type of e) with
+      | rE _ => apply simg_r_interp_Es_rE
+      | eventE _ => apply simg_r_interp_Es_eventE
+      | pE _ => apply simg_r_interp_Es_pE
+      | callE _ => apply simg_r_interp_Es_callE
+      | _ => fail 2
+      end
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ triggerNB _)) ] =>
+      apply simg_r_interp_Es_triggerNB
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ triggerUB _)) ] =>
+      apply simg_r_interp_Es_triggerUB
+
+    (**************************** interp_Es2 ******************************)
     | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ (_ >>= _) _) >>= _)) ] =>
       apply simg_r_interp_Es_bind2; ired_l
     | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ (tau;; _) _) >>= _)) ] =>
       apply simg_r_interp_Es_tau2
     | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ (Ret _) _) >>= _)) ] =>
       apply simg_r_interp_Es_ret2; ired_l
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ (trigger ?e) _) >>= _)) ] =>
+      match (type of e) with
+      | rE _ => apply simg_r_interp_Es_rE2
+      | eventE _ => apply simg_r_interp_Es_eventE2
+      | pE _ => apply simg_r_interp_Es_pE2
+      | callE _ => apply simg_r_interp_Es_callE2
+      | _ => fail 2
+      end
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ triggerNB _) >>= _)) ] =>
+      apply simg_r_interp_Es_triggerNB2
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ triggerUB _) >>= _)) ] =>
+      apply simg_r_interp_Es_triggerUB2
 
     | _ => idtac
     end.
@@ -778,10 +1129,11 @@ End PSEUDOTYPING.
   Ltac mred :=
     repeat (cbn;
             (* try rewrite ! interp_Es_bind; try rewrite ! interp_Es_ret; try rewrite ! interp_Es_tau; *)
-            try rewrite ! interp_Es_rE;
-            try rewrite ! interp_Es_pE;
-            try rewrite ! interp_Es_eventE; try rewrite ! interp_Es_callE;
-            try rewrite ! interp_Es_triggerNB; try rewrite ! interp_Es_triggerUB; (*** igo ***) ired_all).
+            (* try rewrite ! interp_Es_rE; *)
+            (* try rewrite ! interp_Es_pE; *)
+            (* try rewrite ! interp_Es_eventE; try rewrite ! interp_Es_callE; *)
+            (* try rewrite ! interp_Es_triggerNB; try rewrite ! interp_Es_triggerUB; (*** igo ***) *)
+            ired_all).
   (*** step and some post-processing ***)
   Ltac _step :=
     match goal with
