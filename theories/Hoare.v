@@ -40,8 +40,11 @@ Section CANCEL.
 
   Hypothesis WTY: ms_tgt.(ModSem.fnsems) = List.map (fun '(fn, sb) => (fn, fun_to_tgt stb fn sb)) sbtb.
   Hypothesis WF1: Forall (fun '(_, sp) => In sp.(mn) (List.map fst ms_tgt.(ModSem.initial_mrs))) stb.
-  Hypothesis MAIN: List.find (fun '(_fn, _) => dec "main" _fn) stb = Some ("main", (@mk_simple _ "Main" unit (fun _ _ o _ => o = ord_top) top3)).
-  Hypothesis WFR: URA.wf (rsum (ModSem.initial_r_state ms_tgt)).
+  Variable entry_r: Σ.
+  Variable main_pre: unit -> Any.t -> ord -> Σ -> Prop.
+  Hypothesis MAIN: List.find (fun '(_fn, _) => dec "main" _fn) stb = Some ("main", (@mk_simple _ "Main" unit main_pre top3)).
+  Hypothesis MAINPRE: main_pre tt ([]: list val)↑ ord_top entry_r.
+  Hypothesis WFR: URA.wf (entry_r ⋅ rsum (ModSem.initial_r_state ms_tgt)).
 
   Theorem adequacy_type: Beh.of_program (Mod.interp md_tgt) <1= Beh.of_program (Mod.interp md_src).
   Proof.

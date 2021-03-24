@@ -45,8 +45,7 @@ Section CANCEL.
 
   Let W: Type := (r_state * p_state).
   Let rsum: r_state -> Σ :=
-    fun '(mrs_tgt, frs_tgt) => (URA.add (fold_left URA.add (List.map (mrs_tgt <*> fst) ms_tgt.(ModSem.initial_mrs)) ε)
-                                        (fold_left URA.add frs_tgt ε)).
+    fun '(mrs_tgt, frs_tgt) => (fold_left (⋅) (List.map (mrs_tgt <*> fst) ms_tgt.(ModSem.initial_mrs)) ε) ⋅ (fold_left (⋅) frs_tgt ε).
   Let wf: W -> W -> Prop :=
     fun '((mrs_src, frs_src), mps_src) '((mrs_tgt, frs_tgt), mps_tgt) =>
       (<<LEN: List.length frs_src = List.length frs_tgt>>) /\
@@ -161,7 +160,7 @@ Section CANCEL.
     unfold guarantee. steps.
     unseal_left.
     destruct tbr.
-    { steps. esplits; eauto. steps. esplits; eauto. { eapply x6. } steps. unfold unwrapU.
+    { steps. esplits; eauto. steps. esplits; eauto. { des; et. } steps. unfold unwrapU.
       destruct (find (fun fnsem => dec fn (fst fnsem)) (List.map (fun '(fn0, sb) => (fn0, fun_to_mid (fsb_body sb))) sbtb)) eqn:FINDFS; cycle 1.
       { steps. }
       destruct (find (fun fnsem => dec fn (fst fnsem)) (ModSem.fnsems ms_tgt)) eqn:FINDFT0; cycle 1.
@@ -354,16 +353,24 @@ Section CANCEL.
         gbase. eapply Any.downcast_upcast in CAST0. des. subst. eapply CIH.
         rr. esplits; et. { destruct l2; ss. } clear - ST1. admit "ez".
     }
-    Show Ltac Profile.
   Unshelve.
     all: ss.
     all: try (by apply Ordinal.O).
   Qed.
 
-  Hypothesis MAIN: List.find (fun '(_fn, _) => dec "main" _fn) stb = Some ("main",
-    (* (@mk "Main" unit (fun _ varg_high _ _ => varg_high = tt↑) (fun _ vret_high _ _ => vret_high = tt↑) (fun _ => None))). *)
-    (@mk_simple _ "Main" unit (fun _ _ o _ => o = ord_top) top3)).
-  Hypothesis WFR: URA.wf (rsum (ModSem.initial_r_state ms_tgt)).
+  Variable entry_r: Σ.
+  Variable main_pre: unit -> Any.t -> ord -> Σ -> Prop.
+  Hypothesis MAINPRE: main_pre tt ([]: list val)↑ ord_top entry_r.
+  Hypothesis MAIN: List.find (fun '(_fn, _) => dec "main" _fn) stb = Some ("main", (@mk_simple _ "Main" unit main_pre top3)).
+  Hypothesis WFR: URA.wf (entry_r ⋅ rsum (ModSem.initial_r_state ms_tgt)).
+
+  Let initial_r_state ms entry_r: r_state :=
+    (fun mn => match List.find (fun mnr => dec mn (fst mnr)) ms.(ModSem.initial_mrs) with
+               | Some r => fst (snd r)
+               | None => ε
+               end, [entry_r]). (*** we have a dummy-stack here ***)
+  Lemma initial_r_state_spec: forall ms, initial_r_state ms ε = ModSem.initial_r_state ms.
+  Proof. refl. Qed.
 
   Opaque interp_Es.
   Theorem adequacy_type_t2m: Beh.of_program (Mod.interp md_tgt) <1= Beh.of_program (Mod.interp md_mid).
@@ -376,13 +383,14 @@ Section CANCEL.
     unfold ITree.map.
     unfold assume.
     steps.
-    esplits; et. { admit "ez - wf". }
+    esplits; et. { admit "ez - wf". } steps.
     set (st_mid0 := ((ModSem.initial_r_state ms_mid), (ModSem.initial_p_state ms_mid))).
     replace (Mod.enclose md_tgt) with ms_tgt by ss.
-    set (st_tgt0 := ((ModSem.initial_r_state ms_tgt), (ModSem.initial_p_state ms_tgt))).
+    set (st_midmid0 := ((initial_r_state ms_tgt entry_r), (ModSem.initial_p_state ms_tgt))).
+    set (st_tgt0 := (ModSem.initial_r_state ms_tgt, (ModSem.initial_p_state ms_tgt))).
     (* Local Opaque URA.add. *)
-    assert(SIM: wf st_mid0 st_tgt0).
-    { r. ss. esplits; ss; et. unfold ms_mid. unfold ModSem.initial_p_state. ss.
+    assert(SIM: wf st_mid0 st_midmid0).
+    { r. ss. esplits; ss; et. { admit "ez". } unfold ms_mid. unfold ModSem.initial_p_state. ss.
       apply func_ext. clear - Σ. i. rewrite ! find_map; ss. unfold compose. uo. unfold ms_tgt.
       des_ifs; ss; apply_all_once find_some; des; ss; des_sumbool; clarify.
       - destruct p0; ss. admit "ez - uniqueness of s".
@@ -438,7 +446,7 @@ Section CANCEL.
     }
     assert(TRANSR: simg eq (Ordinal.from_nat 100)
 (x0 <- interp_Es (ModSem.prog ms_tgt)
-                 (interp_hCallE_tgt (E:=pE +' eventE) stb "Main" ord_top (trigger (hCall false "main" ([]: list val)↑))) st_tgt0;; Ret (snd x0))
+                 (interp_hCallE_tgt (E:=pE +' eventE) stb "Main" ord_top (trigger (hCall false "main" ([]: list val)↑))) st_midmid0;; Ret (snd x0))
 (x0 <- interp_Es (ModSem.prog ms_tgt)
                  ((ModSem.prog ms_tgt) _ (Call "main" ([]: list val)↑)) st_tgt0;; Ret (snd x0))).
     { clear SIM. ginit. { eapply cpn5_wcompat; eauto with paco. }
@@ -449,13 +457,10 @@ Section CANCEL.
       destruct p; ss.
       assert(s = "Main") by admit "ez". clarify.
       rewrite Any.upcast_downcast.
-      steps. eexists ((fst (fst st_tgt0)) "Main", ε). steps.
-      unfold put, guarantee. steps. unfold st_tgt0. steps.
-      ss.
-      unshelve esplits; eauto.
-      { refl. }
+      steps. eexists ((fst (fst st_tgt0)) "Main", entry_r). steps.
+      unfold put, guarantee. steps. unshelve esplits; eauto. { refl. }
       steps. esplits; et. steps. unfold discard, guarantee. steps. esplits; et. steps. unshelve esplits; et.
-      { instantiate (1:=ε). rewrite URA.unit_id. ss. }
+      { rewrite URA.unit_id. ss. }
       steps. unfold guarantee. steps. esplits; ss; et. steps. exists (([]: list val)↑).
       replace (update
                  (fun mn0 : string =>
@@ -480,7 +485,7 @@ we should know that stackframe is not popped (unary property)". }
 
 
 
-    steps. fold ms_mid. fold st_mid0.
+    fold ms_mid. fold st_mid0.
     replace (x0 <- interp_Es (ModSem.prog ms_mid) ((ModSem.prog ms_mid) _ (Call "main" (Any.pair ord_top↑ ([]: list val)↑))) st_mid0;;
              Ret (snd x0)) with
         (x0 <- interp_Es (ModSem.prog ms_mid) (interp_hCallE_mid (E:=pE +' eventE) ord_top (trigger (hCall false "main" ([]: list val)↑))) st_mid0;;
@@ -489,13 +494,14 @@ we should know that stackframe is not popped (unary property)". }
     replace (x0 <- interp_Es (ModSem.prog ms_tgt) ((ModSem.prog ms_tgt) _ (Call "main" ([]: list val)↑)) st_tgt0;;
              Ret (snd x0)) with
         (x0 <- interp_Es (ModSem.prog ms_tgt) (interp_hCallE_tgt (E:=pE +' eventE) stb "Main" ord_top (trigger (hCall false "main" ([]: list val)↑)))
-                         st_tgt0;; Ret (snd x0)); cycle 1.
+                         st_midmid0;; Ret (snd x0)); cycle 1.
     { admit "hard -- by transitivity". }
     guclo bindC_spec.
     eapply bindR_intro.
     - gfinal. right. fold simg. eapply adequacy_type_aux; ss.
     - ii. ss. des_ifs. des; ss. clarify. steps.
   Unshelve.
+    revert WFR. i. (*** dummy action that keeps "WFR" as a requirement; TODO: remove it later ! ! ***)
     all: ss.
     all: try (by apply Ordinal.O).
   Qed.
