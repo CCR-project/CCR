@@ -16,6 +16,8 @@ From ExtLib Require Import
      Structures.Maps
      Data.Map.FMapAList.
 
+Require Import HTactics.
+
 Generalizable Variables E R A B C X Y.
 
 Set Implicit Arguments.
@@ -44,28 +46,11 @@ Section SIMMODSEM.
   Proof.
     econstructor 1 with (wf:=wf) (le:=top2); et; ss.
     econs; ss. init.
-    unfold mainF, checkWf, forge, discard, put. steps. des; subst.
-    unfold APC. unfold body_to_tgt, mainBody, interp_hCallE_tgt. steps.
-    rewrite Any.upcast_downcast in *. ss. steps.
-    unfold HoareCall, checkWf, forge, discard, put. steps.
-    force_l. eexists (_, _). steps. force_l.
-    { refl. }
-    steps. force_l. eexists. steps. force_l. eexists. force_l.
-    { refl. }
-    steps. force_l. exists 10. force_l. eexists. force_l. eexists. force_l.
-    { esplits; et. }
-    force_l.
-    { splits; ss. } ired.
-    match goal with
-    | [ |- gpaco3 _ _ _ _ _ ?i_src ?i_tgt ] => remember i_src
-    end.
-    rewrite <- (@bind_ret_r Es Any.t (trigger (Call "f" (Any.upcast [Vint 10])))).
-    subst. gstep. econs; ss. i. des; clarify. unfold alist_add. ss. exists 100.
-    steps. des; clarify. force_l. eexists. force_l. eexists (_, _). steps. force_l.
-    { refl. }
-    steps. force_l. eexists. force_l.
-    { splits; ss. }
-    steps. force_l. eexists. force_l; ss. steps.
+    unfold mainF, mainBody, interp_hCallE_tgt.
+    harg_tac. des; clarify. steps. anytac. steps.
+    hcall_tac 10 (ord_pure 10) (@URA.unit (GRA.to_URA Σ)) rarg_src (@URA.unit (GRA.to_URA Σ)); splits; ss.
+    des; clarify. esplits; ss. i. des; clarify.
+    steps. hret_tac (@URA.unit (GRA.to_URA Σ)) (URA.add rarg_src rret); ss.
   Qed.
 
 End SIMMODSEM.

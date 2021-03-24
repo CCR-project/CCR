@@ -301,5 +301,3 @@ Section SIMMODSEM.
   Qed.
 
 End SIMMODSEM.
-
-
