@@ -5,7 +5,7 @@ Require Import Behavior.
 Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
-From Ordinal Require Import Ordinal Arithmetic.
+From Ordinal Require Export Ordinal Arithmetic.
 Require Import Any.
 
 Generalizable Variables E R A B C X Y Σ.
@@ -40,7 +40,7 @@ Set Implicit Arguments.
 
 
 Inductive ord: Type :=
-| ord_pure (n: nat)
+| ord_pure (n: Ord.t)
 | ord_top
 .
 
@@ -48,7 +48,7 @@ Definition is_pure (o: ord): bool := match o with | ord_pure _ => true | _ => fa
 
 Definition ord_lt (next cur: ord): Prop :=
   match next, cur with
-  | ord_pure next, ord_pure cur => (next < cur)%nat
+  | ord_pure next, ord_pure cur => (next < cur)%ord
   | _, ord_top => True
   | _, _ => False
   end

@@ -59,7 +59,7 @@ Section SIMMODSEM.
       hcall_tac x (ord_pure x) (@URA.unit Σ) (@URA.unit Σ) (@URA.unit Σ).
       { replace (Z.succ (Z.of_nat x) - 1)%Z with (Z.of_nat x) by lia.
         splits; auto. }
-      { splits; ss. }
+      { splits; ss. eauto with ord_step. }
       { split; auto. }
       des. subst. anytac. asimpl. steps.
       force_l. eexists. hret_tac (@URA.unit Σ) (@URA.unit Σ).

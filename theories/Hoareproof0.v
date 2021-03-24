@@ -357,6 +357,7 @@ Section CANCEL.
     all: ss.
     all: try (by apply Ord.O).
     { apply x6. }
+    { apply 0. }
   Qed.
 
   Variable entry_r: Σ.
