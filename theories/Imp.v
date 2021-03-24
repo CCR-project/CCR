@@ -181,7 +181,7 @@ Section Denote.
     :
       denote_expr (Lit n) = Ret n.
   Proof. reflexivity. Qed.
-  
+
   Lemma denote_expr_Plus
         a b
     :
@@ -195,7 +195,7 @@ Section Denote.
       denote_expr (Minus a b) =
       l <- denote_expr a ;; r <- denote_expr b ;; (vsub l r)?.
   Proof. reflexivity. Qed.
-  
+
   Lemma denote_expr_Mult
         a b
     :
@@ -515,7 +515,7 @@ End Example_Extract.
 Section PROOFS.
 
   Context `{Σ: GRA.t}.
-  
+
   Lemma interp_imp_bind
         A B
         (itr: itree (ImpState +' Es) A) (ktr: A -> itree (ImpState +' Es) B)
@@ -549,7 +549,7 @@ Section PROOFS.
   Proof.
     unfold interp_imp, pure_state, triggerUB. grind.
   Qed.
-  
+
   Lemma interp_imp_triggerNB
         st0 A
     :
@@ -575,7 +575,7 @@ Section PROOFS.
   Proof.
     unfold interp_imp. grind.
   Qed.
-  
+
   Lemma interp_imp_Call
         st0 f args
     :
@@ -584,7 +584,7 @@ Section PROOFS.
   Proof.
     unfold interp_imp, pure_state. grind.
   Qed.
-  
+
   Lemma interp_imp_Syscall
         st0 f args
     :
@@ -593,7 +593,7 @@ Section PROOFS.
   Proof.
     unfold interp_imp, pure_state. grind.
   Qed.
-  
+
   Lemma interp_imp_unwrapU
         X (x: option X) st0
     :
@@ -650,7 +650,7 @@ Ltac imp_red :=
   cbn;
   match goal with
       (** denote_stmt *)
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (denote_stmt (?stmt)) _))) ] =>
+  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ _ (_, ITree.bind' _ (interp_imp (denote_stmt (?stmt)) _))) ] =>
     match stmt with
     | Assign _ _ => rewrite denote_stmt_Assign
     | Seq _ _ => rewrite denote_stmt_Seq
@@ -662,9 +662,9 @@ Ltac imp_red :=
     | Expr_coerce _ => rewrite denote_stmt_Expr
     | _ => fail
     end
-      
+
       (** denote_expr *)
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (denote_expr (?expr)) _))) ] =>
+  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ _ (_, ITree.bind' _ (interp_imp (denote_expr (?expr)) _))) ] =>
     match expr with
     | Var _ => rewrite denote_expr_Var
     | Lit _ => rewrite denote_expr_Lit
@@ -675,9 +675,9 @@ Ltac imp_red :=
     | Lit_coerce _ => rewrite denote_expr_Lit
     | _ => fail
     end
-        
+
        (** interp_imp *)
-  | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (?itr) _))) ] =>
+  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ _ (_, ITree.bind' _ (interp_imp (?itr) _))) ] =>
     match itr with
     | ITree.bind' _ _ => rewrite interp_imp_bind
     | Ret _ => rewrite interp_imp_Ret
@@ -691,7 +691,7 @@ Ltac imp_red :=
     | unwrapN _ => rewrite interp_imp_unwrapN
     | _ => fail
     end
-      
+
   (* | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (Tau _) _))) ] => *)
   (*   rewrite interp_imp_tau *)
        (** default *)

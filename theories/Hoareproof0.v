@@ -70,27 +70,24 @@ Section CANCEL.
   (*                     (* try rewrite interp_trigger *) *)
   (*                    ). *)
 
+
   Let adequacy_type_aux:
-    forall (R: Type) (RR: R -> R -> Prop) RT (TY: R = (r_state * p_state * RT)%type)
-           (REL: RR ~= (fun '((rs_src, v_src)) '((rs_tgt, v_tgt)) => wf rs_src rs_tgt /\ (v_src: RT) = v_tgt))
-           (* (REL: RR ~= (fun '((rs_src, v_src)) '((rs_tgt, v_tgt)) => wf rs_src rs_tgt /\ exists (o: ord), (v_src: Any_mid) = Any.pair o↑ (v_tgt: Any_src))) *)
+    forall RT
            st_src0 st_tgt0 (SIM: wf st_src0 st_tgt0) (i0: itree (hCallE +' pE +' eventE) RT)
-           i_src i_tgt mn cur
-           (SRC: i_src ~= (interp_Es (ModSem.prog ms_mid) (interp_hCallE_mid (E:=pE +' eventE) cur i0) st_src0))
-           (TGT: i_tgt ~= (interp_Es (ModSem.prog ms_tgt) (interp_hCallE_tgt (E:=pE +' eventE) stb mn cur i0) st_tgt0))
+           mn cur
     ,
-    (* sim (Mod.interp md_src) (Mod.interp md_tgt) lt 100%nat *)
-    (*     (x <- (interp_Es p_src (interp_hCallE_src (trigger ce)) st_src0);; Ret (snd x)) *)
-    (*     (x <- (interp_Es p_tgt (interp_hCallE_tgt stb (trigger ce)) st_tgt0);; Ret (snd x)) *)
-    simg RR (Ordinal.from_nat 100%nat) i_src i_tgt
+      (* sim (Mod.interp md_src) (Mod.interp md_tgt) lt 100%nat *)
+      (*     (x <- (interp_Es p_src (interp_hCallE_src (trigger ce)) st_src0);; Ret (snd x)) *)
+      (*     (x <- (interp_Es p_tgt (interp_hCallE_tgt stb (trigger ce)) st_tgt0);; Ret (snd x)) *)
+      simg (fun '((rs_src, v_src)) '((rs_tgt, v_tgt)) => wf rs_src rs_tgt /\ (v_src: RT) = v_tgt)
+           (Ordinal.from_nat 100%nat)
+           (interp_Es (ModSem.prog ms_mid) (interp_hCallE_mid (E:=pE +' eventE) cur i0) st_src0)
+           (interp_Es (ModSem.prog ms_tgt) (interp_hCallE_tgt (E:=pE +' eventE) stb mn cur i0) st_tgt0)
   .
   Proof.
-    Set Ltac Profiling.
-    i. ginit.
-    { eapply cpn5_wcompat; eauto with paco. }
+    ginit.
+    { i. eapply cpn5_wcompat; eauto with paco. }
     (* remember (` x : ModSem.r_state * R <- interp_Es p_src (interp_hCallE_src (trigger ce)) st_src0;; Ret (snd x)) as tmp. *)
-    revert_until R. revert R.
-    unfold Relation_Definitions.relation.
     gcofix CIH. i; subst.
     (* intros ? ?. *)
     (* pcofix CIH. i. *)
@@ -98,10 +95,7 @@ Section CANCEL.
     unfold interp_hCallE_tgt.
     ides i0; try rewrite ! unfold_interp; cbn; mred.
     { steps. }
-    { steps. gbase. eapply CIH; [..|M]; Mskip et.
-      { refl. }
-      { instantiate (1:=mn). fold (interp_hCallE_tgt stb mn). refl. }
-    }
+    { steps. gbase. eapply CIH; [..|M]; Mskip et. ss. }
     destruct e; cycle 1.
     {
       Opaque interp_Es.
@@ -109,28 +103,16 @@ Section CANCEL.
       {
         destruct st_src0 as [rst_src0 pst_src0], st_tgt0 as [rst_tgt0 pst_tgt0]; ss. des_ifs. des; clarify.
         destruct p; ss.
-        - steps. Esred. steps. gbase. eapply CIH; [refl|ss|..]; cycle 1.
-          { unfold interp_hCallE_src. refl. }
-          { unfold interp_hCallE_tgt. refl. }
-          ss.
-        - steps. Esred. steps. gbase. eapply CIH; [refl|ss|..]; cycle 1.
-          { unfold interp_hCallE_src. refl. }
-          { unfold interp_hCallE_tgt. refl. }
-          ss.
+        - steps. Esred. steps. gbase. eapply CIH. ss.
+        - steps. Esred. steps. gbase. eapply CIH. ss.
       }
       { dependent destruction e.
         - steps. Esred. steps. esplits; eauto. steps.
-          gbase. eapply CIH; [..|M]; Mskip et.
-          { refl. }
-          { instantiate (2:=mn). fold (interp_hCallE_tgt stb mn). refl. }
+          gbase. eapply CIH; [..|M]; Mskip et. ss.
         - steps. Esred. steps. esplits; eauto. steps.
-          gbase. eapply CIH; [..|M]; Mskip et.
-          { refl. }
-          { instantiate (1:=mn). fold (interp_hCallE_tgt stb mn). refl. }
+          gbase. eapply CIH; [..|M]; Mskip et. ss.
         - steps. Esred. steps.
-          gbase. eapply CIH; [..|M]; Mskip et.
-          { refl. }
-          { instantiate (1:=mn). fold (interp_hCallE_tgt stb mn). refl. }
+          gbase. eapply CIH; [..|M]; Mskip et. ss.
       }
     }
     dependent destruction h.
@@ -251,7 +233,7 @@ Section CANCEL.
         replace (Ordinal.from_nat 168) with (Ordinal.add (Ordinal.from_nat 68) (Ordinal.from_nat 100)); cycle 1.
         { admit "ez - ordinal nat add". }
         econs.
-        + gbase. eapply CIH; et; try refl. rr. esplits; ss; et. rewrite URA.unit_idl. clear - WFTGT x. admit "ez".
+        + gbase. eapply CIH. rr. esplits; ss; et. rewrite URA.unit_idl. clear - WFTGT x. admit "ez".
         + ii. ss. des_ifs_safe. des; ss. clarify. des_u.
           steps. esplits; eauto. steps. unfold put. steps. destruct p0; ss. steps.
           unfold handle_rE. destruct r0; ss. destruct l0; ss.
@@ -270,9 +252,7 @@ Section CANCEL.
         unfold forge; steps. des_ifs; ss. { steps. } steps. exists vret_src'. instantiate (1:=rret). esplits; et.
         steps. unshelve esplits; eauto. { clear - ST1. admit "ez". } steps. unshelve esplits; eauto. steps.
         fold (interp_hCallE_mid). fold (interp_hCallE_tgt stb mn).
-        gbase. eapply CIH; [refl|ss|..]; cycle 1.
-        { refl. }
-        { unfold interp_hCallE_tgt. erewrite Any.downcast_upcast; et. }
+        gbase. eapply Any.downcast_upcast in CAST0. des. subst. eapply CIH.
         rr. esplits; et. { destruct l2; ss. } clear - ST1. admit "ez".
     }
     { des. clear x7. exploit x8; et. i; clarify. clear x8.
@@ -345,7 +325,7 @@ Section CANCEL.
         replace (Ordinal.from_nat 168) with (Ordinal.add (Ordinal.from_nat 68) (Ordinal.from_nat 100)); cycle 1.
         { admit "ez - ordinal nat add". }
         econs.
-        + gbase. unfold body_to_tgt, body_to_mid. eapply CIH; try refl.
+        + gbase. unfold body_to_tgt, body_to_mid. eapply CIH.
           rr. esplits; ss; et. rewrite URA.unit_idl. clear - WFTGT x. admit "ez".
         + ii. ss. des_ifs_safe. des; ss. clarify.
           steps. esplits; eauto. steps. unfold put. steps. destruct p0; ss. steps.
@@ -371,9 +351,7 @@ Section CANCEL.
         steps. unshelve esplits; eauto.
         steps.
         fold interp_hCallE_src. fold (interp_hCallE_tgt stb mn).
-        gbase. eapply CIH; [refl|ss|..]; cycle 1.
-        { refl. }
-        { unfold interp_hCallE_tgt. erewrite Any.downcast_upcast; et. }
+        gbase. eapply Any.downcast_upcast in CAST0. des. subst. eapply CIH.
         rr. esplits; et. { destruct l2; ss. } clear - ST1. admit "ez".
     }
     Show Ltac Profile.
@@ -515,7 +493,7 @@ we should know that stackframe is not popped (unary property)". }
     { admit "hard -- by transitivity". }
     guclo bindC_spec.
     eapply bindR_intro.
-    - gfinal. right. fold simg. eapply adequacy_type_aux; ss. subst st_mid0 st_tgt0. ss.
+    - gfinal. right. fold simg. eapply adequacy_type_aux; ss.
     - ii. ss. des_ifs. des; ss. clarify. steps.
   Unshelve.
     all: ss.
