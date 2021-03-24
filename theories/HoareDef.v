@@ -5,7 +5,7 @@ Require Import Behavior.
 Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
-Require Import Ordinal ClassicalOrdinal.
+From Ordinal Require Import Ordinal Arithmetic.
 Require Import Any.
 
 Generalizable Variables E R A B C X Y Σ.
@@ -414,66 +414,16 @@ End PSEUDOTYPING.
 
 
 
-  Lemma S_lt_O
-        o
-    :
-      <<LT: Ordinal.lt Ordinal.O (Ordinal.S o)>>
-  .
-  Proof.
-    r. econs. unfold Ordinal.O. unfold unit_rect. des_ifs. destruct o. econs. ii; ss.
-    Unshelve.
-    all: ss.
-  Qed.
-
-  Lemma le_trans: Transitive Ordinal.le. typeclasses eauto. Qed.
-  Lemma lt_trans: Transitive Ordinal.le. typeclasses eauto. Qed.
-  Hint Resolve Ordinal.lt_le_lt Ordinal.le_lt_lt Ordinal.add_lt_r Ordinal.add_le_l
-       Ordinal.add_le_r Ordinal.lt_le
-       Ordinal.S_lt_mon
-       Ordinal.S_lt
-       Ordinal.S_spec
-       S_lt_O
+  Hint Resolve Ord.lt_le_lt Ord.le_lt_lt OrdArith.lt_add_r OrdArith.le_add_l
+       OrdArith.le_add_r Ord.lt_le
+       Ord.lt_S
+       Ord.S_lt
+       Ord.S_supremum
+       Ord.S_pos
     : ord.
-  Hint Resolve le_trans lt_trans: ord_trans.
-  Hint Resolve Ordinal.add_base_l Ordinal.add_base_r: ord_proj.
+  Hint Resolve Ord.le_trans Ord.lt_trans: ord_trans.
+  Hint Resolve OrdArith.add_base_l OrdArith.add_base_r: ord_proj.
 
-  Lemma from_nat_lt
-        n m
-        (LT: Nat.lt n m)
-    :
-      <<LT: Ordinal.lt (Ordinal.from_nat n) (Ordinal.from_nat m)>>
-  .
-  Proof.
-    generalize dependent m. induction n; ii; ss.
-    - destruct m; try lia. r; ss. eapply S_lt_O.
-    - destruct m; ss; try lia. r. rewrite <- Ordinal.S_lt_mon. eapply IHn; try lia.
-  Qed.
-
-  Lemma from_nat_le
-        n m
-        (LT: Nat.le n m)
-    :
-      <<LT: Ordinal.le (Ordinal.from_nat n) (Ordinal.from_nat m)>>
-  .
-  Proof.
-    generalize dependent m. induction n; ii; ss.
-    - destruct m; try lia; ss.
-    - destruct m; ss; try lia; ss. r. rewrite <- Ordinal.S_le_mon. eapply IHn; try lia.
-  Qed.
-
-  Lemma from_nat_eq
-        n m
-        (LT: Nat.eq n m)
-    :
-      <<LT: Ordinal.eq (Ordinal.from_nat n) (Ordinal.from_nat m)>>
-  .
-  Proof.
-    generalize dependent m. induction n; ii; ss.
-    - destruct m; try lia; ss.
-    - destruct m; ss; try lia; ss. r. rewrite <- Ordinal.S_eq_mon. eapply IHn; try lia.
-  Qed.
-
-  Global Opaque Ordinal.from_nat.
   Global Opaque interp_Es.
 
   Require Import SimGlobal.
@@ -1167,7 +1117,7 @@ End PSEUDOTYPING.
 
     (*** default cases ***)
     | _ =>
-      (gstep; econs; eauto; try (by eapply from_nat_lt; ss);
+      (gstep; econs; eauto; try (by eapply OrdArith.lt_from_nat; ss);
        (*** some post-processing ***)
        i;
        try match goal with

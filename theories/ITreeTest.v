@@ -9,7 +9,6 @@ Require Import PCM.
 Require Import Coq.Relations.Relation_Definitions.
 Require Import Relation_Operators.
 Require Import RelationPairs.
-Require Import Ordinal ClassicalOrdinal.
 
 Generalizable Variables E R A B C X Y Σ.
 

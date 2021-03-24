@@ -5,10 +5,10 @@ Require Import Behavior.
 Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
-Require Import Ordinal ClassicalOrdinal.
 Require Import Any.
 Require Import HoareDef.
 Require Import SimSTS.
+From Ordinal Require Import Ordinal Arithmetic.
 
 Generalizable Variables E R A B C X Y Σ.
 
