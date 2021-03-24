@@ -157,6 +157,62 @@ fun L : semantics => paco2 (_of_state L) bot2
 paco2 has 'fixed' semantics -> needs fixed semantics to do pcofix
 So, fix semantics with st_init, later let st_init = st0 in the main thm.
  **)
+  Theorem beh_preserved st_init :
+    forall (st0: state) (tr: Tr.t),
+      of_state
+        (interpITree (interpSTS step state_sort st_init))
+        (initial_state (interpITree (interpSTS step state_sort st0)))
+        tr
+    ->
+      of_state
+        {|
+          STS.state := state;
+          STS.step := step;
+          STS.initial_state := st_init;
+          STS.state_sort := state_sort;
+          STS.wf_vis := wf_vis;
+          STS.wf_angelic := wf_angelic;
+          STS.wf_demonic := wf_demonic;
+        |}
+        st0
+        tr.
+  Proof.
+    intros st0. eapply adequacy_aux with (i0 := 10).
+    { apply Nat.lt_wf_0. }
+    revert st0.
+    pcofix CIH. i. pfold.
+    destruct (state_sort st0) eqn:SRT.
+    - eapply sim_angelic_both; ss; clarify.
+      + rewrite interpSTS_red. rewrite SRT. ss.
+      + i.
+        set (cont:= (fun st1 : {st' : state | step st0 None st'} => interpSTS step state_sort (st1 $))).
+        exists (cont (exist (fun st => step st0 None st) st_src1 STEP)). eexists.
+        { rewrite interpSTS_red. rewrite SRT. econs 3. }
+        exists 10. right. eapply CIH.
+    - eapply sim_demonic_both; ss; clarify.
+      + rewrite interpSTS_red. rewrite SRT. ss.
+      + i. rewrite interpSTS_red in STEP. rewrite SRT in STEP.
+        dependent destruction STEP.
+        destruct x. rename x into st1.
+        exists st1. eexists; auto.
+        exists 10. right. apply CIH.
+    - eapply sim_fin; eauto.
+      ss. rewrite interpSTS_red. rewrite SRT. unfold itr_state_sort.
+      ss. rewrite Any.upcast_downcast. reflexivity.
+    - eapply sim_demonic_tgt; ss; clarify.
+      + rewrite interpSTS_red. rewrite SRT. ss.
+      + i. rewrite interpSTS_red in STEP. rewrite SRT in STEP.
+        rewrite bind_trigger in STEP.
+        dependent destruction STEP.
+        destruct x. destruct x. destruct e.
+        exists 9. split; auto.
+        left. pfold. eapply sim_vis; ss; clarify.
+        { apply y. }
+        { econs 4. admit "TODO: add return value to event". }
+        right. instantiate (1:= 10). apply CIH.
+  Admitted.
+
+  
   Theorem beh_preserved_inv st_init :
     forall (st0: state) (tr: Tr.t),
       of_state
@@ -223,7 +279,7 @@ So, fix semantics with st_init, later let st_init = st0 in the main thm.
           exists 9. split; auto.
           left. pfold. destruct ev. eapply sim_vis; eauto.
           ss. eapply ModSem.step_syscall with (k := (fun _ : val => interpSTS step state_sort st1)) (ev := event_sys fn args).
-          admit "TODO: syscall_sem is an axiom".
+          admit "TODO: syscall_sem is an axiom, add return value to event".
           (* Unshelve. *)
   Admitted.
   
