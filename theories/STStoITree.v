@@ -40,7 +40,7 @@ Section CONV.
       | final z =>
         Ret z↑
       | vis =>
-        '(exist _ ((event_sys fn args, st1)) _) <-
+        '(exist _ ((event_sys fn args rv, st1)) _) <-
         trigger (Choose {'(ev', st'): event * state | @step st0 (Some ev') st' });;
         Vis (Syscall fn args) (fun _ => interpSTS step state_sort st1)
         (* '(exist _ (event_sys fn args) _) <- *)
@@ -78,7 +78,7 @@ Section CONV.
     | final z =>
       Ret z↑
     | vis =>
-      '(exist _ ((event_sys fn args, st1)) _) <-
+      '(exist _ ((event_sys fn args rv, st1)) _) <-
       trigger (Choose {'(ev', st'): event * state | @step st0 (Some ev') st' });;
       Vis (Syscall fn args) (fun _ => interpSTS step state_sort st1)
     end
@@ -149,6 +149,10 @@ Section PROOF.
     forall (st0 : state) (ev : option event) (st1 : state),
       state_sort st0 = demonic -> step st0 ev st1 -> ev = None.
 
+  Hypothesis wf_syscall :
+    forall fn args rv,
+      syscall_sem fn args = (event_sys fn args rv, rv).
+  
 (**
 of_state = 
 fun L : semantics => paco2 (_of_state L) bot2
@@ -208,10 +212,10 @@ So, fix semantics with st_init, later let st_init = st0 in the main thm.
         exists 9. split; auto.
         left. pfold. eapply sim_vis; ss; clarify.
         { apply y. }
-        { econs 4. admit "TODO: add return value to event". }
+        { econs 4. instantiate (1:= rv). apply wf_syscall. }
         right. instantiate (1:= 10). apply CIH.
-  Admitted.
-
+  Qed.
+  
   
   Theorem beh_preserved_inv st_init :
     forall (st0: state) (tr: Tr.t),
@@ -266,7 +270,7 @@ So, fix semantics with st_init, later let st_init = st0 in the main thm.
                 => let (x, _) := x_ in
                   let (y0, st1) := x in
                   match y0 with
-                  | event_sys fn args =>
+                  | event_sys fn args rv =>
                     Vis (Syscall fn args) (fun _ : val => interpSTS step state_sort st1)
                   end)).
         des.
@@ -278,10 +282,9 @@ So, fix semantics with st_init, later let st_init = st0 in the main thm.
             eapply (ModSem.step_choose cont). }
           exists 9. split; auto.
           left. pfold. destruct ev. eapply sim_vis; eauto.
-          ss. eapply ModSem.step_syscall with (k := (fun _ : val => interpSTS step state_sort st1)) (ev := event_sys fn args).
-          admit "TODO: syscall_sem is an axiom, add return value to event".
-          (* Unshelve. *)
-  Admitted.
+          ss. eapply ModSem.step_syscall with (k := (fun _ : val => interpSTS step state_sort st1)) (ev := event_sys fn args rv).
+          instantiate (1:= rv). apply wf_syscall.
+  Qed.
   
 
          (** ver. behavior proof **) 
@@ -352,6 +355,5 @@ So, fix semantics with st_init, later let st_init = st0 in the main thm.
     (*   exists None. exists (cont p). split. *)
     (*   { ss. rewrite interpSTS_red. rewrite SRT. econs. } *)
     (*   split; auto. econs; ss; clarify. *)
-        
 
 End PROOF.
