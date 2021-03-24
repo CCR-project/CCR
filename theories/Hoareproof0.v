@@ -9,6 +9,7 @@ Require Import Ordinal ClassicalOrdinal.
 Require Import Any.
 Require Import HoareDef.
 Require Import SimSTS.
+Require Import SimGlobal.
 
 Generalizable Variables E R A B C X Y Σ.
 
@@ -17,6 +18,176 @@ Set Implicit Arguments.
 
 
 
+  Ltac ired_l :=
+    cbn;
+    match goal with
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ (_ >>= _ >>= _) _) ] =>
+      apply simg_l_bind_bind; ired_l
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ ((tau;; _) >>= _) _) ] =>
+      apply simg_l_bind_tau
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ ((Ret _) >>= _) _) ] =>
+      apply simg_l_bind_ret_l; ired_l
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ (trigger _) _) ] =>
+      apply simg_l_trigger_ret_rev
+
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ (_ >>= _) _) _) ] =>
+      apply simg_l_interp_Es_bind; ired_l
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ (tau;; _) _) _) ] =>
+      apply simg_l_interp_Es_tau
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ (Ret _) _) _) ] =>
+      apply simg_l_interp_Es_ret
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ (_ >>= _) _) >>= _) _) ] =>
+      apply simg_l_interp_Es_bind2; ired_l
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ (tau;; _) _) >>= _) _) ] =>
+      apply simg_l_interp_Es_tau2
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ (Ret _) _) >>= _) _) ] =>
+      apply simg_l_interp_Es_ret2; ired_l
+
+    | _ => idtac
+    end.
+
+  Ltac hide_l :=
+    match goal with
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ (_ >>= ?tl) _) ] =>
+      let name := fresh "__L__" in
+      set (name:=tl)
+    end
+  .
+
+  Ltac unhide_l :=
+    match goal with
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ (_ >>= ?tl) _) ] => subst tl
+    end
+  .
+
+  Ltac ired_r :=
+    cbn;
+    match goal with
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (_ >>= _ >>= _)) ] =>
+      apply simg_r_bind_bind; ired_r
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((tau;; _) >>= _)) ] =>
+      apply simg_r_bind_tau
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((Ret _) >>= _)) ] =>
+      apply simg_r_bind_ret_l; ired_r
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (trigger _)) ] =>
+      apply simg_r_trigger_ret_rev
+
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ (_ >>= _) _)) ] =>
+      apply simg_r_interp_Es_bind; ired_l
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ (tau;; _) _)) ] =>
+      apply simg_r_interp_Es_tau
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ (Ret _) _)) ] =>
+      apply simg_r_interp_Es_ret
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ (_ >>= _) _) >>= _)) ] =>
+      apply simg_r_interp_Es_bind2; ired_l
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ (tau;; _) _) >>= _)) ] =>
+      apply simg_r_interp_Es_tau2
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ (Ret _) _) >>= _)) ] =>
+      apply simg_r_interp_Es_ret2; ired_l
+
+    | _ => idtac
+    end.
+
+  Ltac hide_r :=
+    match goal with
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (_ >>= ?tl)) ] =>
+      let name := fresh "__R__" in
+      set (name:=tl)
+    | _ => idtac
+    end
+  .
+
+  Ltac unhide_r :=
+    match goal with
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (_ >>= ?tl)) ] => subst tl
+    end
+  .
+
+  Ltac ired_all := ired_l; ired_r.
+
+  Ltac mred :=
+    repeat (cbn; ired_all; try hide_l; try hide_r;
+            try rewrite ! interp_Es_rE;
+            try rewrite ! interp_Es_pE;
+            try rewrite ! interp_Es_eventE; try rewrite ! interp_Es_callE;
+            try rewrite ! interp_Es_triggerNB; try rewrite ! interp_Es_triggerUB;
+            try unhide_l; try unhide_r
+           )
+  .
+
+  (*** step and some post-processing ***)
+  Ltac _step :=
+    match goal with
+    (*** terminal cases ***)
+    | [ |- gpaco5 _ _ _ _ _ _ _ (triggerUB >>= _) _ ] =>
+      unfold triggerUB; mred; _step; ss; fail
+    | [ |- gpaco5 _ _ _ _ _ _ _ (triggerNB >>= _) _ ] =>
+      exfalso
+    | [ |- gpaco5 _ _ _ _ _ _ _ _ (triggerUB >>= _) ] =>
+      exfalso
+    | [ |- gpaco5 _ _ _ _ _ _ _ _ (triggerNB >>= _) ] =>
+      unfold triggerNB; mred; _step; ss; fail
+
+    (*** assume/guarantee ***)
+    | [ |- gpaco5 _ _ _ _ _ _ _ (assume ?P ;; _) _ ] =>
+      let tvar := fresh "tmp" in
+      let thyp := fresh "TMP" in
+      remember (assume P) as tvar eqn:thyp; unfold assume in thyp; subst tvar
+    | [ |- gpaco5 _ _ _ _ _ _ _ (guarantee ?P ;; _) _ ] =>
+      let tvar := fresh "tmp" in
+      let thyp := fresh "TMP" in
+      remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar
+    | [ |- gpaco5 _ _ _ _ _ _ _ _ (assume ?P ;; _) ] =>
+      let tvar := fresh "tmp" in
+      let thyp := fresh "TMP" in
+      remember (assume P) as tvar eqn:thyp; unfold assume in thyp; subst tvar
+    | [ |- gpaco5 _ _ _ _ _ _ _ _ (guarantee ?P ;; _) ] =>
+      let tvar := fresh "tmp" in
+      let thyp := fresh "TMP" in
+      remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar
+
+    (*** default cases ***)
+    | _ =>
+      (gstep; econs; eauto; try (by eapply from_nat_lt; ss);
+       (*** some post-processing ***)
+       i;
+       try match goal with
+           | [ |- (eq ==> _)%signature _ _ ] =>
+             let v_src := fresh "v_src" in
+             let v_tgt := fresh "v_tgt" in
+             intros v_src v_tgt ?; subst v_tgt
+           end)
+    end
+  .
+  Ltac steps := repeat (mred; try _step; des_ifs_safe).
+  Ltac seal_left :=
+    match goal with
+    | [ |- gpaco5 _ _ _ _ _ _ _ ?i_src ?i_tgt ] => seal i_src
+    end.
+  Ltac seal_right :=
+    match goal with
+    | [ |- gpaco5 _ _ _ _ _ _ _ ?i_src ?i_tgt ] => seal i_tgt
+    end.
+  Ltac unseal_left :=
+    match goal with
+    | [ |- gpaco5 _ _ _ _ _ _ _ (@Seal.sealing _ _ ?i_src) ?i_tgt ] => unseal i_src
+    end.
+  Ltac unseal_right :=
+    match goal with
+    | [ |- gpaco5 _ _ _ _ _ _ _ ?i_src (@Seal.sealing _ _ ?i_tgt) ] => unseal i_tgt
+    end.
+  Ltac force_l := seal_right; _step; unseal_right.
+  Ltac force_r := seal_left; _step; unseal_left.
+  (* Ltac mstep := gstep; econs; eauto; [eapply from_nat_lt; ss|]. *)
+
+  From ExtLib Require Import
+       Data.Map.FMapAList.
+
+  Hint Resolve cpn3_wcompat: paco.
+  Ltac init :=
+    split; ss; ii; clarify; rename y into varg; eexists 100%nat; ss; des; clarify;
+    ginit; []; unfold alist_add, alist_remove; ss;
+    unfold fun_to_tgt, cfun, HoareFun; ss.
 
 
 
@@ -62,8 +233,6 @@ Section CANCEL.
   Let WF0: List.map fst sbtb = List.map fst stb.
   Proof. unfold stb. rewrite List.map_map. apply List.map_ext. i. des_ifs. Qed.
   Hypothesis WF1: Forall (fun '(_, sp) => In sp.(mn) (List.map fst ms_tgt.(ModSem.initial_mrs))) stb.
-
-  Require Import SimGlobal.
 
 
   (* Ltac grind := repeat (f_equiv; try apply func_ext; ii; try (des_ifs; check_safe)). *)
@@ -143,6 +312,11 @@ Section CANCEL.
     set (ModSem.prog ms_tgt) as p_tgt in *.
     ss.
     seal_left.
+
+    (* hide_r. move __R__ at top. *)
+    (* unhide_r. *)
+    (* time do 10 (hide_r; unhide_r). *)
+    (* TTTTTTTTTTTTTTTTTT *)
 
     (* Ltac hide_left := *)
     (*   match goal with *)
