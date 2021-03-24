@@ -81,6 +81,7 @@ Section PROOF.
   Proof.
     ii.
     eapply adequacy_type with (sbtb:=mainsbtb++(Fsbtb++Gsbtb)) in PR; ss.
+    instantiate (1:=ε).
     cbn in *. unfold compose. ss. rewrite ! URA.unit_id. apply URA.wf_unit.
     Unshelve.
     all: try (by econs; ss).

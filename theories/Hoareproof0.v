@@ -501,6 +501,7 @@ we should know that stackframe is not popped (unary property)". }
     - gfinal. right. fold simg. eapply adequacy_type_aux; ss.
     - ii. ss. des_ifs. des; ss. clarify. steps.
   Unshelve.
+    revert WFR. i. (*** dummy action that keeps "WFR" as a requirement; TODO: remove it later ! ! ***)
     all: ss.
     all: try (by apply Ordinal.O).
   Qed.
