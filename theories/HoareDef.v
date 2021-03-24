@@ -1128,11 +1128,12 @@ End PSEUDOTYPING.
 
   Ltac mred :=
     repeat (cbn;
-            ired_all;
+            ired_all
+           ).
+  Ltac Esred :=
             try rewrite ! interp_Es_rE; try rewrite ! interp_Es_pE;
             try rewrite ! interp_Es_eventE; try rewrite ! interp_Es_callE;
-            try rewrite ! interp_Es_triggerNB; try rewrite ! interp_Es_triggerUB (*** igo ***)
-           ).
+            try rewrite ! interp_Es_triggerNB; try rewrite ! interp_Es_triggerUB (*** igo ***).
   (*** step and some post-processing ***)
   Ltac _step :=
     match goal with
