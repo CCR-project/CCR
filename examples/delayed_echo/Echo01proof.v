@@ -32,20 +32,8 @@ Local Open Scope nat_scope.
 Section AUX.
   Context `{Σ: GRA.t}.
 
-  Lemma unfold_APC: forall n, _APC n =
-    match n with
-    | 0 => Ret tt
-    | S n => break <- trigger (Choose _);;
-             if break: bool
-             then Ret tt
-             else '(fn, varg) <- trigger (Choose _);;
-                  trigger (hCall true fn varg);; _APC n
-    end.
-    { i. destruct n; ss. }
-  Qed.
-
   Context `{@GRA.inG Mem1.memRA Σ}.
-  Lemma unfold_is_list: forall ll xs, is_list ll xs = 
+  Lemma unfold_is_list: forall ll xs, is_list ll xs =
     match xs with
     | [] => ⌜ll = Vnullptr⌝
     | xhd :: xtl =>
@@ -162,7 +150,6 @@ Section SIMMODSEM.
 
 
       steps. unfold hcall, ccall. steps.
-      unfold body_to_tgt. unfold interp_hCallE_tgt, APC. steps. (********** TODO: never unfold it, make a lemma ******************)
       force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
 
       hcall_tac __ __ (A, A0) PRE (@URA.unit Σ); ss; et.
@@ -170,7 +157,8 @@ Section SIMMODSEM.
         - iApply A; ss.
         - iApply A0; ss.
       }
-      des; subst. rewrite Any.upcast_downcast. steps. rewrite Any.upcast_downcast. steps.
+      des; subst. rewrite Any.upcast_downcast. steps.
+      rewrite Any.upcast_downcast in _UNWRAPU. clarify.
 
 
 
@@ -184,9 +172,9 @@ Section SIMMODSEM.
 
 
 
-      destruct (unint vret_src) eqn:T; cycle 1.
-      { steps. unfold triggerUB. steps. }
-      destruct vret_src; ss. clarify. steps.
+      destruct (unint v) eqn:T; cycle 1.
+      { steps. }
+      destruct v; ss. clarify. steps.
 
       destruct (dec z (- 1)%Z).
       - subst. ss. steps.
@@ -198,12 +186,8 @@ Section SIMMODSEM.
         steps.
         hret_tac SIM0 (@URA.unit Σ); ss.
         { iRefresh. iDestruct SIM0. esplits; eauto. eexists; iRefresh. eauto. }
-      - steps.
-        force_l. eexists 1. steps. rewrite Any.upcast_downcast. ss. steps.
-
-        rewrite unfold_APC. steps. force_l. exists false. steps. force_l. eexists ("push", [ll; Vint z]↑). steps.
-        force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
-        hcall_tac __ (ord_pure 2) PRE SIM A; ss; et.
+      - steps. astart 10. rewrite Any.upcast_downcast. ss. steps.
+        acall_tac __ (ord_pure 2) PRE SIM A; ss; et.
         { instantiate (1:=(_, _)). esplits; try refl; iRefresh. eexists; iRefresh. iSplitP; ss. iSplitP; ss. iApply A; ss. }
         { esplits; ss; et. exists ns; iRefresh. right; iRefresh; ss. }
         des; iRefresh. do 2 iDestruct POST0. iMod A. subst. apply Any.upcast_inj in A. des; clarify.
@@ -224,11 +208,9 @@ Section SIMMODSEM.
         }
         rewrite <- GRA.embed_add in A. rewrite own_sep in A. iDestruct A. subst.
 
-
-
-        rewrite unfold_APC. steps.
-        force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast in *. steps.
-
+        steps. rewrite Any.upcast_downcast in *. clarify. astop.
+        steps. force_l; stb_tac; clarify.
+        steps. rewrite Any.upcast_downcast in *. ss. steps.
         hcall_tac __ ord_top (POST0, A) (@URA.unit Σ) A0; ss; et.
         { instantiate (1:=(_, _)). esplits; try refl; iRefresh. iSplitP; ss. iSplitP; ss; et. }
         { esplits; ss; eauto. exists (z :: ns); iRefresh. left; iRefresh. iSplitL A; ss. }
@@ -253,16 +235,12 @@ Section SIMMODSEM.
 
 
       steps. unfold hcall, ccall. rewrite unfold_is_list in A0. destruct ns; ss; steps.
-      - unfold interp_hCallE_tgt, APC. steps. (********** TODO: never unfold it, make a lemma ******************)
-        rewrite Any.upcast_downcast. steps. iMod A0. subst.
+      - rewrite Any.upcast_downcast. steps. iMod A0. subst.
         hret_tac A (@URA.unit Σ); ss.
         { iRefresh. esplits; ss; eauto. exists nil; iRefresh. left; iRefresh. iSplitL A; ss. }
       - rewrite Any.upcast_downcast. steps. do 4 iDestruct A0. iMod A0. subst. ss.
-        unfold interp_hCallE_tgt, APC. steps. force_l. exists 3. steps.
-
-        rewrite unfold_APC. steps. force_l. exists false. steps. force_l. eexists ("alloc", [Vint 1]↑). steps.
-        force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
-        hcall_tac __ (ord_pure 1) PRE (A, A1, A2) (@URA.unit Σ); ss; et.
+        astart 10. steps.
+        acall_tac __ (ord_pure 1) PRE (A, A1, A2) (@URA.unit Σ); ss; et.
         { esplits; try refl; iRefresh. instantiate (1:=1). esplits; ss; et. }
         { esplits; ss; et. eexists; iRefresh. right; iRefresh; ss; et. }
         des; iRefresh. do 2 iDestruct POST. iMod POST. subst.
@@ -288,9 +266,7 @@ Section SIMMODSEM.
 
 
 
-        rewrite unfold_APC. steps. force_l. exists false. steps. force_l. eexists ("pop2", [Vptr hd 0; Vptr tmp 0]↑). steps.
-        force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
-        hcall_tac __ (ord_pure 2) SIM A (A0, A2); ss; et.
+        acall_tac __ (ord_pure 2) SIM A (A0, A2); ss; et.
         { instantiate (1:=(_, _)). esplits; try refl; iRefresh. eexists; iRefresh. iSplitP; ss.
           iSplitR (A0); ss; et.
           - iSplitP; ss. eauto.
@@ -316,9 +292,7 @@ Section SIMMODSEM.
 
 
 
-        rewrite unfold_APC. steps. force_l. exists false. steps. force_l. eexists ("load", [Vptr tmp 0]↑). steps.
-        force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
-        hcall_tac __ (ord_pure 1) A2 (A, A1) A0; ss; et.
+        acall_tac __ (ord_pure 1) A2 (A, A1) A0; ss; et.
         { instantiate (1:=(_, _, _)). esplits; try refl; iRefresh. iSplitP; ss. iSplitP; ss. eauto. }
         { esplits; ss; et. eexists; iRefresh. right; iRefresh; ss; et. }
         des; iRefresh. iDestruct SIM. iDestruct POST. iMod A0. subst.
@@ -333,7 +307,7 @@ Section SIMMODSEM.
 
 
 
-        rewrite unfold_APC. steps.
+        astop. steps.
         force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
         hcall_tac __ (ord_top) SIM (A, A1, POST) (@URA.unit Σ); ss; et.
         { esplits; ss; et. eexists; iRefresh. right; iRefresh; ss; et. }
@@ -362,5 +336,3 @@ Section SIMMODSEM.
   Qed.
 
 End SIMMODSEM.
-
-

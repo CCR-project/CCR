@@ -18,6 +18,8 @@ From ExtLib Require Import
      Data.Map.FMapAList.
 Require Import Any.
 
+From Ordinal Require Import Ordinal Arithmetic.
+
 Generalizable Variables E R A B C X Y.
 
 Set Implicit Arguments.
@@ -186,9 +188,9 @@ Section SIM.
   Variable le: relation W.
   Hypothesis le_PreOrder: PreOrder le.
 
-  Variant _sim_itree (sim_itree: forall (R_src R_tgt: Type) (RR: st_local -> st_local -> R_src -> R_tgt -> Prop), nat -> st_local * itree Es R_src -> st_local * itree Es R_tgt -> Prop)
+  Variant _sim_itree (sim_itree: forall (R_src R_tgt: Type) (RR: st_local -> st_local -> R_src -> R_tgt -> Prop), Ord.t -> st_local * itree Es R_src -> st_local * itree Es R_tgt -> Prop)
           {R_src R_tgt} (RR: st_local -> st_local -> R_src -> R_tgt -> Prop)
-    : nat -> st_local * itree Es R_src -> st_local * itree Es R_tgt -> Prop :=
+    : Ord.t -> st_local * itree Es R_src -> st_local * itree Es R_tgt -> Prop :=
   | sim_itree_ret
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       (WF: wf (mrs_src0, mrs_tgt0))
@@ -301,14 +303,14 @@ Section SIM.
   | sim_itree_tau_src
       i0 st_src0 st_tgt0
       i1 i_src i_tgt
-      (ORD: i1 < i0)
+      (ORD: Ord.lt i1 i0)
       (K: sim_itree _ _ RR i1 (st_src0, i_src) (st_tgt0, i_tgt))
     :
       _sim_itree sim_itree RR i0 (st_src0, tau;; i_src) (st_tgt0, i_tgt)
   | sim_itree_choose_src
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       i1 X k_src i_tgt
-      (ORD: i1 < i0)
+      (ORD: Ord.lt i1 i0)
       (K: exists (x: X), sim_itree _ _ RR i1 ((mrs_src0, fr_src0), k_src x) ((mrs_tgt0, fr_tgt0), i_tgt))
     :
       _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), trigger (Choose X) >>= k_src)
@@ -316,7 +318,7 @@ Section SIM.
   | sim_itree_take_src
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       i1 X k_src i_tgt
-      (ORD: i1 < i0)
+      (ORD: Ord.lt i1 i0)
       (K: forall (x: X), sim_itree _ _ RR i1 ((mrs_src0, fr_src0), k_src x) ((mrs_tgt0, fr_tgt0), i_tgt))
     :
       _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), trigger (Take X) >>= k_src)
@@ -325,7 +327,7 @@ Section SIM.
   | sim_itree_pput_src
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       i1 k_src i_tgt
-      (ORD: i1 < i0)
+      (ORD: Ord.lt i1 i0)
       mn mr0 mp1 mrs_src1 mp0
       (MR0: Maps.lookup mn mrs_src0 = Some (mr0, mp0))
       (EQ: mrs_src1 = Maps.add mn (mr0, mp1) mrs_src0)
@@ -336,7 +338,7 @@ Section SIM.
   | sim_itree_mput_src
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       i1 k_src i_tgt
-      (ORD: i1 < i0)
+      (ORD: Ord.lt i1 i0)
       mn mr0 mr1 mrs_src1 mp0
       (MR0: Maps.lookup mn mrs_src0 = Some (mr0, mp0))
       (EQ: mrs_src1 = Maps.add mn (mr1, mp0) mrs_src0)
@@ -347,7 +349,7 @@ Section SIM.
   | sim_itree_fput_src
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       i1 k_src i_tgt
-      (ORD: i1 < i0)
+      (ORD: Ord.lt i1 i0)
       fr_src1
       (K: sim_itree _ _ RR i1 ((mrs_src0, fr_src1), k_src tt) ((mrs_tgt0, fr_tgt0), i_tgt))
     :
@@ -357,7 +359,7 @@ Section SIM.
   | sim_itree_pget_src
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       i1 k_src i_tgt
-      (ORD: i1 < i0)
+      (ORD: Ord.lt i1 i0)
       mn mr0 mp0
       (MR0: Maps.lookup mn mrs_src0 = Some (mr0, mp0))
       (K: sim_itree _ _ RR i1 ((mrs_src0, fr_src0), k_src mp0) ((mrs_tgt0, fr_tgt0), i_tgt))
@@ -367,7 +369,7 @@ Section SIM.
   | sim_itree_mget_src
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       i1 k_src i_tgt
-      (ORD: i1 < i0)
+      (ORD: Ord.lt i1 i0)
       mn mr0 mp0
       (MR0: Maps.lookup mn mrs_src0 = Some (mr0, mp0))
       (K: sim_itree _ _ RR i1 ((mrs_src0, fr_src0), k_src mr0) ((mrs_tgt0, fr_tgt0), i_tgt))
@@ -377,7 +379,7 @@ Section SIM.
   | sim_itree_fget_src
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       i1 k_src i_tgt
-      (ORD: i1 < i0)
+      (ORD: Ord.lt i1 i0)
       (K: sim_itree _ _ RR i1 ((mrs_src0, fr_src0), k_src fr_src0) ((mrs_tgt0, fr_tgt0), i_tgt))
     :
       _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), trigger (FGet) >>= k_src)
@@ -391,14 +393,14 @@ Section SIM.
   | sim_itree_tau_tgt
       i0 st_src0 st_tgt0
       i1 i_src i_tgt
-      (ORD: i1 < i0)
+      (ORD: Ord.lt i1 i0)
       (K: sim_itree _ _ RR i1 (st_src0, i_src) (st_tgt0, i_tgt))
     :
       _sim_itree sim_itree RR i0 (st_src0, i_src) (st_tgt0, tau;; i_tgt)
   | sim_itree_choose_tgt
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       i1 X i_src k_tgt
-      (ORD: i1 < i0)
+      (ORD: Ord.lt i1 i0)
       (K: forall (x: X), sim_itree _ _ RR i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt0), k_tgt x))
     :
       _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), i_src)
@@ -406,7 +408,7 @@ Section SIM.
   | sim_itree_take_tgt
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       i1 X i_src k_tgt
-      (ORD: i1 < i0)
+      (ORD: Ord.lt i1 i0)
       (K: exists (x: X), sim_itree _ _ RR i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt0), k_tgt x))
     :
       _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), i_src)
@@ -415,7 +417,7 @@ Section SIM.
   | sim_itree_pput_tgt
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       i1 i_src k_tgt
-      (ORD: i1 < i0)
+      (ORD: Ord.lt i1 i0)
       mn mr0 mp1 mrs_tgt1 mp0
       (MR0: Maps.lookup mn mrs_tgt0 = Some (mr0, mp0))
       (EQ: mrs_tgt1 = Maps.add mn (mr0, mp1) mrs_tgt0)
@@ -426,7 +428,7 @@ Section SIM.
   | sim_itree_mput_tgt
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       i1 i_src k_tgt
-      (ORD: i1 < i0)
+      (ORD: Ord.lt i1 i0)
       mn mr0 mr1 mrs_tgt1 mp0
       (MR0: Maps.lookup mn mrs_tgt0 = Some (mr0, mp0))
       (EQ: mrs_tgt1 = Maps.add mn (mr1, mp0) mrs_tgt0)
@@ -437,7 +439,7 @@ Section SIM.
   | sim_itree_fput_tgt
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       i1 i_src k_tgt
-      (ORD: i1 < i0)
+      (ORD: Ord.lt i1 i0)
       fr_tgt1
       (K: sim_itree _ _ RR i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt1), k_tgt tt))
     :
@@ -447,7 +449,7 @@ Section SIM.
   | sim_itree_pget_tgt
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       i1 i_src k_tgt
-      (ORD: i1 < i0)
+      (ORD: Ord.lt i1 i0)
       mn mr0 mp0
       (MR0: Maps.lookup mn mrs_tgt0 = Some (mr0, mp0))
       (K: sim_itree _ _ RR i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt0), k_tgt mp0))
@@ -457,7 +459,7 @@ Section SIM.
   | sim_itree_mget_tgt
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       i1 i_src k_tgt
-      (ORD: i1 < i0)
+      (ORD: Ord.lt i1 i0)
       mn mr0 mp0
       (MR0: Maps.lookup mn mrs_tgt0 = Some (mr0, mp0))
       (K: sim_itree _ _ RR i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt0), k_tgt mr0))
@@ -467,7 +469,7 @@ Section SIM.
   | sim_itree_fget_tgt
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       i1 i_src k_tgt
-      (ORD: i1 < i0)
+      (ORD: Ord.lt i1 i0)
       (K: sim_itree _ _ RR i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt0), k_tgt  fr_tgt0))
     :
       _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), i_src)
@@ -490,28 +492,28 @@ Section SIM.
   Hint Unfold sim_itree.
   Hint Resolve sim_itree_mon: paco.
 
-  Lemma sim_itree_mon_ord r S_src S_tgt SS i0 i1 (ORD: (i0 <= i1)%nat): @_sim_itree r S_src S_tgt SS i0 <2= @_sim_itree r S_src S_tgt SS i1.
+  Lemma sim_itree_mon_ord r S_src S_tgt SS i0 i1 (ORD: (i0 <= i1)%ord): @_sim_itree r S_src S_tgt SS i0 <2= @_sim_itree r S_src S_tgt SS i1.
   Proof.
     ii. inv PR; try (by econs; et).
     (* - econs; try apply SIM; et. etrans; et. *)
-    - econs; try apply SIM; et. eapply Nat.lt_le_trans; et.
-    - econs; try apply SIM; et. eapply Nat.lt_le_trans; et.
-    - econs; try apply SIM; et. eapply Nat.lt_le_trans; et.
-    - econs; try apply SIM; et. eapply Nat.lt_le_trans; et.
-    - econs; try apply SIM; et. eapply Nat.lt_le_trans; et.
-    - econs; try apply SIM; et. eapply Nat.lt_le_trans; et.
-    - econs; try apply SIM; et. eapply Nat.lt_le_trans; et.
-    - econs; try apply SIM; et. eapply Nat.lt_le_trans; et.
-    - econs; try apply SIM; et. eapply Nat.lt_le_trans; et.
-    - econs; try apply SIM; et. eapply Nat.lt_le_trans; et.
-    - econs; try apply SIM; et. eapply Nat.lt_le_trans; et.
-    - econs; try apply SIM; et. eapply Nat.lt_le_trans; et.
-    - econs; try apply SIM; et. eapply Nat.lt_le_trans; et.
-    - econs; try apply SIM; et. eapply Nat.lt_le_trans; et.
-    - econs; try apply SIM; et. eapply Nat.lt_le_trans; et.
-    - econs; try apply SIM; et. eapply Nat.lt_le_trans; et.
-    - econs; try apply SIM; et. eapply Nat.lt_le_trans; et.
-    - econs; try apply SIM; et. eapply Nat.lt_le_trans; et.
+    - econs; try apply SIM; et. eapply Ord.lt_le_lt; et.
+    - econs; try apply SIM; et. eapply Ord.lt_le_lt; et.
+    - econs; try apply SIM; et. eapply Ord.lt_le_lt; et.
+    - econs; try apply SIM; et. eapply Ord.lt_le_lt; et.
+    - econs; try apply SIM; et. eapply Ord.lt_le_lt; et.
+    - econs; try apply SIM; et. eapply Ord.lt_le_lt; et.
+    - econs; try apply SIM; et. eapply Ord.lt_le_lt; et.
+    - econs; try apply SIM; et. eapply Ord.lt_le_lt; et.
+    - econs; try apply SIM; et. eapply Ord.lt_le_lt; et.
+    - econs; try apply SIM; et. eapply Ord.lt_le_lt; et.
+    - econs; try apply SIM; et. eapply Ord.lt_le_lt; et.
+    - econs; try apply SIM; et. eapply Ord.lt_le_lt; et.
+    - econs; try apply SIM; et. eapply Ord.lt_le_lt; et.
+    - econs; try apply SIM; et. eapply Ord.lt_le_lt; et.
+    - econs; try apply SIM; et. eapply Ord.lt_le_lt; et.
+    - econs; try apply SIM; et. eapply Ord.lt_le_lt; et.
+    - econs; try apply SIM; et. eapply Ord.lt_le_lt; et.
+    - econs; try apply SIM; et. eapply Ord.lt_le_lt; et.
   Qed.
 
   Definition sim_fsem: relation (Any.t -> itree Es Any.t) :=
@@ -522,8 +524,46 @@ Section SIM.
 
   Definition sim_fnsem: relation (string * (Any.t -> itree Es Any.t)) := RelProd eq sim_fsem.
 
-  Variant lbindR (r s: forall S_src S_tgt (SS: st_local -> st_local -> S_src -> S_tgt -> Prop), nat -> st_local * itree Es S_src -> st_local * itree Es S_tgt -> Prop):
-    forall S_src S_tgt (SS: st_local -> st_local -> S_src -> S_tgt -> Prop), nat -> st_local * itree Es S_src -> st_local * itree Es S_tgt -> Prop :=
+
+  Variant lordC (r: forall (R_src R_tgt: Type) (RR: st_local -> st_local -> R_src -> R_tgt -> Prop), Ord.t -> st_local * itree Es R_src -> st_local * itree Es R_tgt -> Prop)
+          {R_src R_tgt} (RR: st_local -> st_local -> R_src -> R_tgt -> Prop)
+    : Ord.t -> st_local * itree Es R_src -> st_local * itree Es R_tgt -> Prop :=
+  | lordC_intro
+      o0 o1 st_src st_tgt
+      (ORD: Ord.le o0 o1)
+      (SIM: r _ _ RR o0 st_src st_tgt)
+    :
+      lordC r RR o1 st_src st_tgt
+  .
+  Hint Constructors lordC: core.
+
+  Lemma lordC_mon
+        r1 r2
+        (LE: r1 <6= r2)
+    :
+      @lordC r1 <6= @lordC r2
+  .
+  Proof. ii. destruct PR; econs; et. Qed.
+
+  Hint Resolve lordC_mon: paco.
+
+  Lemma lordC_compatible: compatible6 (_sim_itree) lordC.
+  Proof.
+    econs; eauto with paco.
+    ii. inv PR. eapply sim_itree_mon_ord; eauto.
+    eapply sim_itree_mon; eauto.
+    i. econs; eauto. refl.
+  Qed.
+
+  Lemma lordC_spec: lordC <7= gupaco6 (_sim_itree) (cpn6 _sim_itree).
+  Proof.
+    intros. gclo. econs.
+    { eapply lordC_compatible. }
+    ss. eapply lordC_mon; [|eauto]. i. gbase. auto.
+  Qed.
+
+  Variant lbindR (r s: forall S_src S_tgt (SS: st_local -> st_local -> S_src -> S_tgt -> Prop), Ord.t -> st_local * itree Es S_src -> st_local * itree Es S_tgt -> Prop):
+    forall S_src S_tgt (SS: st_local -> st_local -> S_src -> S_tgt -> Prop), Ord.t -> st_local * itree Es S_src -> st_local * itree Es S_tgt -> Prop :=
   | lbindR_intro
       o0 o1
 
@@ -536,7 +576,7 @@ Section SIM.
       (k_src: ktree Es R_src S_src) (k_tgt: ktree Es R_tgt S_tgt)
       (SIMK: forall st_src1 st_tgt1 vret_src vret_tgt (SIM: RR st_src1 st_tgt1 vret_src vret_tgt), s _ _ SS o1 (st_src1, k_src vret_src) (st_tgt1, k_tgt vret_tgt))
     :
-      lbindR r s SS (o1 + o0)%nat (st_src0, ITree.bind i_src k_src) (st_tgt0, ITree.bind i_tgt k_tgt)
+      lbindR r s SS (OrdArith.add o1 o0) (st_src0, ITree.bind i_src k_src) (st_tgt0, ITree.bind i_tgt k_tgt)
   .
 
   Hint Constructors lbindR: core.
@@ -563,7 +603,7 @@ Section SIM.
     inv PR. csc. inv SIM.
     + rewrite ! bind_ret_l. exploit SIMK; eauto. i.
       eapply sim_itree_mon_ord.
-      { instantiate (1:=o1). eapply Nat.le_add_r. }
+      { instantiate (1:=o1). eapply OrdArith.add_base_l. }
       eapply sim_itree_mon; eauto with paco.
     + rewrite ! bind_tau. econs; eauto.
       econs 2; eauto with paco. econs; eauto with paco.
@@ -592,60 +632,60 @@ Section SIM.
     + rewrite ! bind_bind. econs; eauto.
       eapply rclo6_clo_base. econs; eauto.
     + rewrite ! bind_tau. econs; eauto.
-      { eapply plus_lt_compat_l; eauto. }
+      { eapply OrdArith.lt_add_r; eauto. }
       econs 2; eauto with paco. econs; eauto with paco.
     + rewrite ! bind_bind. des. econs; eauto.
-      { eapply plus_lt_compat_l; eauto. }
+      { eapply OrdArith.lt_add_r; eauto. }
       eexists. eapply rclo6_clo_base. econs; eauto.
     + rewrite ! bind_bind. econs; eauto.
-      { eapply plus_lt_compat_l; eauto. }
+      { eapply OrdArith.lt_add_r; eauto. }
       i. hexploit K; eauto. i.
       eapply rclo6_clo_base. econs; eauto.
     + rewrite ! bind_bind. econs; eauto.
-      { eapply plus_lt_compat_l; eauto. }
+      { eapply OrdArith.lt_add_r; eauto. }
       eapply rclo6_clo_base. econs; eauto.
     + rewrite ! bind_bind. econs; eauto.
-      { eapply plus_lt_compat_l; eauto. }
+      { eapply OrdArith.lt_add_r; eauto. }
       eapply rclo6_clo_base. econs; eauto.
     + rewrite ! bind_bind. econs; eauto.
-      { eapply plus_lt_compat_l; eauto. }
+      { eapply OrdArith.lt_add_r; eauto. }
       eapply rclo6_clo_base. econs; eauto.
     + rewrite ! bind_bind. econs; eauto.
-      { eapply plus_lt_compat_l; eauto. }
+      { eapply OrdArith.lt_add_r; eauto. }
       eapply rclo6_clo_base. econs; eauto.
     + rewrite ! bind_bind. econs; eauto.
-      { eapply plus_lt_compat_l; eauto. }
+      { eapply OrdArith.lt_add_r; eauto. }
       eapply rclo6_clo_base. econs; eauto.
     + rewrite ! bind_bind. econs; eauto.
-      { eapply plus_lt_compat_l; eauto. }
+      { eapply OrdArith.lt_add_r; eauto. }
       eapply rclo6_clo_base. econs; eauto.
     + rewrite ! bind_tau. econs; eauto.
-      { eapply plus_lt_compat_l; eauto. }
+      { eapply OrdArith.lt_add_r; eauto. }
       econs 2; eauto with paco. econs; eauto with paco.
     + rewrite ! bind_bind. econs; eauto.
-      { eapply plus_lt_compat_l; eauto. }
+      { eapply OrdArith.lt_add_r; eauto. }
       i. hexploit K; eauto. i.
       eapply rclo6_clo_base. econs; eauto.
     + rewrite ! bind_bind. des. econs; eauto.
-      { eapply plus_lt_compat_l; eauto. }
+      { eapply OrdArith.lt_add_r; eauto. }
       eexists. eapply rclo6_clo_base. econs; eauto.
     + rewrite ! bind_bind. econs; eauto.
-      { eapply plus_lt_compat_l; eauto. }
+      { eapply OrdArith.lt_add_r; eauto. }
       eapply rclo6_clo_base. econs; eauto.
     + rewrite ! bind_bind. econs; eauto.
-      { eapply plus_lt_compat_l; eauto. }
+      { eapply OrdArith.lt_add_r; eauto. }
       eapply rclo6_clo_base. econs; eauto.
     + rewrite ! bind_bind. econs; eauto.
-      { eapply plus_lt_compat_l; eauto. }
+      { eapply OrdArith.lt_add_r; eauto. }
       eapply rclo6_clo_base. econs; eauto.
     + rewrite ! bind_bind. econs; eauto.
-      { eapply plus_lt_compat_l; eauto. }
+      { eapply OrdArith.lt_add_r; eauto. }
       eapply rclo6_clo_base. econs; eauto.
     + rewrite ! bind_bind. econs; eauto.
-      { eapply plus_lt_compat_l; eauto. }
+      { eapply OrdArith.lt_add_r; eauto. }
       eapply rclo6_clo_base. econs; eauto.
     + rewrite ! bind_bind. econs; eauto.
-      { eapply plus_lt_compat_l; eauto. }
+      { eapply OrdArith.lt_add_r; eauto. }
       eapply rclo6_clo_base. econs; eauto.
   Qed.
 
@@ -1188,7 +1228,6 @@ End ModSemPair.
 
 
 Require Import SimGlobal.
-Require Import Ordinal ClassicalOrdinal.
 
 
 
@@ -1215,67 +1254,6 @@ Require Import Ordinal ClassicalOrdinal.
 
 
 
-
-  Lemma S_lt_O
-        o
-    :
-      <<LT: Ordinal.lt Ordinal.O (Ordinal.S o)>>
-  .
-  Proof.
-    r. econs. unfold Ordinal.O. unfold unit_rect. des_ifs. destruct o. econs. ii; ss.
-    Unshelve.
-    all: ss.
-  Qed.
-
-  Lemma le_trans: Transitive Ordinal.le. typeclasses eauto. Qed.
-  Lemma lt_trans: Transitive Ordinal.le. typeclasses eauto. Qed.
-  Hint Resolve Ordinal.lt_le_lt Ordinal.le_lt_lt Ordinal.add_lt_r Ordinal.add_le_l
-       Ordinal.add_le_r Ordinal.lt_le
-       Ordinal.S_lt_mon
-       Ordinal.S_lt
-       Ordinal.S_spec
-       S_lt_O
-    : ord.
-  Hint Resolve le_trans lt_trans: ord_trans.
-  Hint Resolve Ordinal.add_base_l Ordinal.add_base_r: ord_proj.
-
-  Lemma from_nat_lt
-        n m
-        (LT: Nat.lt n m)
-    :
-      <<LT: Ordinal.lt (Ordinal.from_nat n) (Ordinal.from_nat m)>>
-  .
-  Proof.
-    generalize dependent m. induction n; ii; ss.
-    - destruct m; try lia. r; ss. eapply S_lt_O.
-    - destruct m; ss; try lia. r. rewrite <- Ordinal.S_lt_mon. eapply IHn; try lia.
-  Qed.
-
-  Lemma from_nat_le
-        n m
-        (LT: Nat.le n m)
-    :
-      <<LT: Ordinal.le (Ordinal.from_nat n) (Ordinal.from_nat m)>>
-  .
-  Proof.
-    generalize dependent m. induction n; ii; ss.
-    - destruct m; try lia; ss.
-    - destruct m; ss; try lia; ss. r. rewrite <- Ordinal.S_le_mon. eapply IHn; try lia.
-  Qed.
-
-  Lemma from_nat_eq
-        n m
-        (LT: Nat.eq n m)
-    :
-      <<LT: Ordinal.eq (Ordinal.from_nat n) (Ordinal.from_nat m)>>
-  .
-  Proof.
-    generalize dependent m. induction n; ii; ss.
-    - destruct m; try lia; ss.
-    - destruct m; ss; try lia; ss. r. rewrite <- Ordinal.S_eq_mon. eapply IHn; try lia.
-  Qed.
-
-  Opaque Ordinal.from_nat.
 
    Ltac igo := repeat (try rewrite bind_bind; try rewrite bind_ret_l; try rewrite bind_ret_r; try rewrite bind_tau;
                        try rewrite interp_vis;
@@ -1287,7 +1265,7 @@ Require Import Ordinal ClassicalOrdinal.
   Ltac mgo := repeat (try rewrite ! interp_Es_bind; try rewrite ! interp_Es_ret; try rewrite ! interp_Es_tau;
                       try rewrite ! interp_Es_rE; try rewrite ! interp_Es_eventE; try rewrite ! interp_Es_callE;
                       try rewrite ! interp_Es_triggerNB; try rewrite ! interp_Es_triggerUB; igo).
-  Ltac mstep := gstep; econs; eauto; [eapply from_nat_lt; ss|].
+  Ltac mstep := gstep; econs; eauto; [eapply OrdArith.lt_from_nat; ss|].
 
 
 
@@ -1448,54 +1426,40 @@ Section SIMMOD.
        (WF: wf (mrsl_src, mrsl_tgt))
    .
 
-   Definition arith (o: Ordinal.t) (n0: nat) (n1: nat): Ordinal.t :=
-     Ordinal.add (Ordinal.mult (Ordinal.from_nat n0) o) (Ordinal.from_nat n1).
+   Let arith (o: Ord.t) (n0: nat) (n1: nat): Ord.t :=
+     (n0 * o + n1)%ord.
 
-   Lemma from_nat_add n0 n1
-     :
-       Ordinal.eq (Ordinal.from_nat (n0 + n1)) (Ordinal.add (Ordinal.from_nat n0) (Ordinal.from_nat n1)).
-   Proof.
-     Local Transparent Ordinal.from_nat.
-     induction n1; auto.
-     - rewrite Nat.add_0_r. symmetry. eapply Ordinal.add_O_r.
-     - erewrite Nat.add_succ_r. etransitivity.
-       2: { symmetry. eapply Ordinal.add_S. }
-       ss. eapply Ordinal.S_eq. auto.
-   Qed.
-
-   Lemma arith_lt_1 o0 o1 n0 n1 n2
-         (OLT: Ordinal.lt o0 o1)
+   Let arith_lt_1 o0 o1 n0 n1 n2
+         (OLT: (o0 < o1)%ord)
          (LT: n1 < n0 + n2)
      :
-       Ordinal.lt (arith o0 n0 n1) (arith o1 n0 n2).
+       Ord.lt (arith o0 n0 n1) (arith o1 n0 n2).
    Proof.
-     unfold arith. eapply Ordinal.lt_le_lt.
+     unfold arith. eapply Ord.lt_le_lt.
      2: {
-       eapply Ordinal.add_le_l.
-       eapply Ordinal.mult_le_r.
-       eapply Ordinal.S_spec. eauto.
+       eapply OrdArith.le_add_l.
+       eapply OrdArith.le_mult_r.
+       eapply Ord.S_supremum. eauto.
      }
-     eapply Ordinal.lt_eq_lt.
-     { eapply Ordinal.add_eq_l.
-       eapply Ordinal.mult_S.
+     eapply Ord.lt_eq_lt.
+     { eapply OrdArith.eq_add_l.
+       eapply OrdArith.mult_S.
      }
-     eapply Ordinal.lt_eq_lt.
-     { eapply Ordinal.add_assoc. }
-     eapply Ordinal.add_lt_r.
-     eapply Ordinal.lt_eq_lt.
-     { symmetry. eapply from_nat_add. }
-     eapply from_nat_lt. eauto.
+     eapply Ord.lt_eq_lt.
+     { eapply OrdArith.add_assoc. }
+     eapply OrdArith.lt_add_r.
+     eapply Ord.lt_eq_lt.
+     { symmetry. eapply OrdArith.add_from_nat.  }
+     eapply OrdArith.lt_from_nat. eauto.
    Qed.
 
    Lemma arith_lt_2 o n0 n1 n2
-         (LT: n1 < n2)
+         (LT: (n1 < n2)%nat)
      :
-       Ordinal.lt (arith o n0 n1) (arith o n0 n2).
+       Ord.lt (arith o n0 n1) (arith o n0 n2).
    Proof.
-     eapply Ordinal.add_lt_r. eapply from_nat_lt. eauto.
+     eapply OrdArith.lt_add_r. eapply OrdArith.lt_from_nat. eauto.
    Qed.
-
-   Local Opaque Ordinal.add.
 
    Lemma lift_sim ms_src ms_tgt
          (wf: alist string (Σ * Any.t) * alist string (Σ * Any.t) -> Prop)
@@ -1518,7 +1482,7 @@ Section SIMMOD.
                    (<<WF: lift_wf wf (fst (fst (fst vret_src))) (fst (fst (fst vret_tgt))) (snd (fst vret_src)) (snd (fst vret_tgt))>>) /\
                    (<<FRSRC: snd (fst (fst vret_src)) = fr_src'::frs_src>>) /\
                    (<<FRTGT: snd (fst (fst vret_tgt)) = fr_tgt'::frs_tgt>>) /\
-                   (<<VAL: snd vret_src = snd vret_tgt>>)) (arith (Ordinal.from_nat n) 4 4)
+                   (<<VAL: snd vret_src = snd vret_tgt>>)) (arith n 4 4)
               (interp_Es
                  (ModSem.prog ms_src)
                  f_src
@@ -1621,12 +1585,12 @@ Section SIMMOD.
        gbase. eapply CIH; eauto.
      - econs; eauto.
        { eapply arith_lt_1 with (n1:=4); auto.
-         - eapply from_nat_lt; eauto.
+         - eassumption.
          - clear. lia. }
        gbase. eapply CIH; eauto.
      - des. pclearbot. econs; eauto.
        { eapply arith_lt_1 with (n1:=7); auto.
-         - eapply from_nat_lt; eauto. }
+         - eassumption. }
        eexists. mgo. gstep. econs; eauto.
        { eapply arith_lt_2 with (n1:=6); auto. }
        gstep. econs; eauto.
@@ -1636,7 +1600,7 @@ Section SIMMOD.
        gbase. eapply CIH; eauto.
      - econs; eauto.
        { eapply arith_lt_1 with (n1:=7); auto.
-         - eapply from_nat_lt; eauto. }
+         - eassumption. }
        i. mgo. gstep. econs; eauto.
        { eapply arith_lt_2 with (n1:=6); auto. }
        gstep. econs; eauto.
@@ -1647,7 +1611,7 @@ Section SIMMOD.
      - erewrite interp_Es_pE with (rst0:=(mrs_src, fr_src :: frs_src)). ss. mgo.
        econs; eauto.
        { eapply arith_lt_1 with (n1:=7); auto.
-         - eapply from_nat_lt; eauto. }
+         - eassumption. }
        gstep. econs; auto.
        { eapply arith_lt_2 with (n1:=6); auto. }
        gstep. econs; auto.
@@ -1657,7 +1621,7 @@ Section SIMMOD.
      - erewrite interp_Es_rE with (rst0:=(mrs_src, fr_src :: frs_src)).  ss. mgo.
        econs; eauto.
        { eapply arith_lt_1 with (n1:=7); auto.
-         - eapply from_nat_lt; eauto. }
+         - eassumption. }
        gstep. econs; auto.
        { eapply arith_lt_2 with (n1:=4); auto. }
        gbase. eapply CIH; eauto.
@@ -1665,7 +1629,7 @@ Section SIMMOD.
      - erewrite interp_Es_rE with (rst0:=(mrs_src, fr_src :: frs_src)). ss. mgo.
        econs; eauto.
        { eapply arith_lt_1 with (n1:=7); auto.
-         - eapply from_nat_lt; eauto. }
+         - eassumption. }
        gstep. econs; auto.
        { eapply arith_lt_2 with (n1:=4); auto. }
        gbase. eapply CIH; eauto.
@@ -1673,7 +1637,7 @@ Section SIMMOD.
        erewrite interp_Es_pE with (rst0:=(mrs_src, fr_src :: frs_src)). ss. mgo.
        econs; eauto.
        { eapply arith_lt_1 with (n1:=7); auto.
-         - eapply from_nat_lt; eauto. }
+         - eassumption. }
        gstep. econs; auto.
        { eapply arith_lt_2 with (n1:=6); auto. }
        gstep. econs; auto.
@@ -1683,25 +1647,25 @@ Section SIMMOD.
        erewrite interp_Es_rE with (rst0:=(mrs_src, fr_src :: frs_src)). ss. mgo.
        econs; eauto.
        { eapply arith_lt_1 with (n1:=7); auto.
-         - eapply from_nat_lt; eauto. }
+         - eassumption. }
        gstep. econs; auto.
        { eapply arith_lt_2 with (n1:=4); auto. }
        gbase. eapply CIH; eauto.
      - erewrite interp_Es_rE with (rst0:=(mrs_src, fr_src :: frs_src)). ss. mgo.
        econs; eauto.
        { eapply arith_lt_1 with (n1:=7); auto.
-         - eapply from_nat_lt; eauto. }
+         - eassumption. }
        gstep. econs; auto.
        { eapply arith_lt_2 with (n1:=4); auto. }
        gbase. eapply CIH; eauto.
      - econs; eauto.
        { eapply arith_lt_1 with (n1:=4); auto.
-         - eapply from_nat_lt; eauto.
+         - eassumption.
          - clear. lia. }
        gbase. eapply CIH; eauto.
      - econs; eauto.
        { eapply arith_lt_1 with (n1:=7); auto.
-         - eapply from_nat_lt; eauto. }
+         - eassumption. }
        i. mgo. gstep. econs; eauto.
        { eapply arith_lt_2 with (n1:=6); auto. }
        gstep. econs; eauto.
@@ -1711,7 +1675,7 @@ Section SIMMOD.
        gbase. eapply CIH; eauto. eapply K.
      - des. pclearbot. econs; eauto.
        { eapply arith_lt_1 with (n1:=7); auto.
-         - eapply from_nat_lt; eauto. }
+         - eassumption. }
        eexists. mgo. gstep. econs; eauto.
        { eapply arith_lt_2 with (n1:=6); auto. }
        gstep. econs; eauto.
@@ -1722,7 +1686,7 @@ Section SIMMOD.
      - erewrite interp_Es_pE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
        econs; eauto.
        { eapply arith_lt_1 with (n1:=7); auto.
-         - eapply from_nat_lt; eauto. }
+         - eassumption. }
        gstep. econs; auto.
        { eapply arith_lt_2 with (n1:=6); auto. }
        gstep. econs; auto.
@@ -1732,7 +1696,7 @@ Section SIMMOD.
      - erewrite interp_Es_rE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
        econs; eauto.
        { eapply arith_lt_1 with (n1:=7); auto.
-         - eapply from_nat_lt; eauto. }
+         - eassumption. }
        gstep. econs; auto.
        { eapply arith_lt_2 with (n1:=4); auto. }
        gbase. eapply CIH; eauto.
@@ -1740,7 +1704,7 @@ Section SIMMOD.
      - erewrite interp_Es_rE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
        econs; eauto.
        { eapply arith_lt_1 with (n1:=7); auto.
-         - eapply from_nat_lt; eauto. }
+         - eassumption. }
        gstep. econs; auto.
        { eapply arith_lt_2 with (n1:=4); auto. }
        gbase. eapply CIH; eauto.
@@ -1748,7 +1712,7 @@ Section SIMMOD.
        erewrite interp_Es_pE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
        econs; eauto.
        { eapply arith_lt_1 with (n1:=7); auto.
-         - eapply from_nat_lt; eauto. }
+         - eassumption. }
        gstep. econs; auto.
        { eapply arith_lt_2 with (n1:=6); auto. }
        gstep. econs; auto.
@@ -1758,18 +1722,18 @@ Section SIMMOD.
        erewrite interp_Es_rE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
        econs; eauto.
        { eapply arith_lt_1 with (n1:=7); auto.
-         - eapply from_nat_lt; eauto. }
+         - eassumption. }
        gstep. econs; auto.
        { eapply arith_lt_2 with (n1:=4); auto. }
        gbase. eapply CIH; eauto.
      - erewrite interp_Es_rE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
        econs; eauto.
        { eapply arith_lt_1 with (n1:=7); auto.
-         - eapply from_nat_lt; eauto. }
+         - eassumption. }
        gstep. econs; auto.
        { eapply arith_lt_2 with (n1:=4); auto. }
        gbase. eapply CIH; eauto.
-       Unshelve. all: exact Ordinal.O.
+       Unshelve. all: exact O.
    Qed.
 
 
@@ -1783,7 +1747,7 @@ Section SIMMOD.
      inv SIM. specialize (sim_modsem0 (Sk.load_skenv (Mod.sk md_src))).
      inv sim_modsem0. red in sim_sk0.
 
-     eapply adequacy_global; et. exists (Ordinal.add Ordinal.O Ordinal.O).
+     eapply adequacy_global; et. exists (OrdArith.add Ord.O Ord.O).
      unfold ModSem.initial_itr, Mod.enclose.
 
      assert (FNS: forall fn : string,
@@ -1826,7 +1790,7 @@ Section SIMMOD.
        gstep. econs; eauto.
        gstep. econs; eauto.
      }
-     Unshelve. all: exact Ordinal.O.
+     Unshelve. all: exact Ord.O.
    Qed.
 
    (* Theorem adequacy_local *)

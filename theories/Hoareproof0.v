@@ -5,11 +5,11 @@ Require Import Behavior.
 Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
-Require Import Ordinal ClassicalOrdinal.
 Require Import Any.
 Require Import HoareDef.
 Require Import SimSTS.
 Require Import SimGlobal.
+From Ordinal Require Import Ordinal Arithmetic.
 
 Generalizable Variables E R A B C X Y Σ.
 
@@ -79,7 +79,7 @@ Section CANCEL.
       (*     (x <- (interp_Es p_src (interp_hCallE_src (trigger ce)) st_src0);; Ret (snd x)) *)
       (*     (x <- (interp_Es p_tgt (interp_hCallE_tgt stb (trigger ce)) st_tgt0);; Ret (snd x)) *)
       simg (fun '((rs_src, v_src)) '((rs_tgt, v_tgt)) => wf rs_src rs_tgt /\ (v_src: RT) = v_tgt)
-           (Ordinal.from_nat 100%nat)
+           (Ord.from_nat 100%nat)
            (interp_Es (ModSem.prog ms_mid) (interp_hCallE_mid (E:=pE +' eventE) cur i0) st_src0)
            (interp_Es (ModSem.prog ms_tgt) (interp_hCallE_tgt (E:=pE +' eventE) stb mn cur i0) st_tgt0)
   .
@@ -177,9 +177,9 @@ Section CANCEL.
       rename i into i_src.
       rename i0 into i_tgt.
       guclo bindC_spec.
-      instantiate (1:=Ordinal.from_nat 400).
-      replace (Ordinal.from_nat 400) with
-          (Ordinal.add (Ordinal.from_nat 200) (Ordinal.from_nat 200)); cycle 1.
+      instantiate (1:=Ord.from_nat 400).
+      replace (Ord.from_nat 400) with
+          (OrdArith.add (Ord.from_nat 200) (Ord.from_nat 200)); cycle 1.
       { admit "ez". }
       rename f into fs.
       econs.
@@ -229,7 +229,7 @@ Section CANCEL.
         { exfalso. exploit x7; ii; ss. }
         steps.
         guclo bindC_spec.
-        replace (Ordinal.from_nat 168) with (Ordinal.add (Ordinal.from_nat 68) (Ordinal.from_nat 100)); cycle 1.
+        replace (Ord.from_nat 168) with (OrdArith.add (Ord.from_nat 68) (Ord.from_nat 100)); cycle 1.
         { admit "ez - ordinal nat add". }
         econs.
         + gbase. eapply CIH. rr. esplits; ss; et. rewrite URA.unit_idl. clear - WFTGT x. admit "ez".
@@ -271,9 +271,9 @@ Section CANCEL.
       rename i into i_src.
       rename i0 into i_tgt.
       guclo bindC_spec.
-      instantiate (1:=Ordinal.from_nat 400).
-      replace (Ordinal.from_nat 400) with
-          (Ordinal.add (Ordinal.from_nat 200) (Ordinal.from_nat 200)); cycle 1.
+      instantiate (1:=Ord.from_nat 400).
+      replace (Ord.from_nat 400) with
+          (OrdArith.add (Ord.from_nat 200) (Ord.from_nat 200)); cycle 1.
       { admit "ez". }
       rename f into fs.
       econs.
@@ -321,7 +321,7 @@ Section CANCEL.
         rewrite Any_pair_downcast.
         steps.
         guclo bindC_spec.
-        replace (Ordinal.from_nat 168) with (Ordinal.add (Ordinal.from_nat 68) (Ordinal.from_nat 100)); cycle 1.
+        replace (Ord.from_nat 168) with (OrdArith.add (Ord.from_nat 68) (Ord.from_nat 100)); cycle 1.
         { admit "ez - ordinal nat add". }
         econs.
         + gbase. unfold body_to_tgt, body_to_mid. eapply CIH.
@@ -355,7 +355,8 @@ Section CANCEL.
     }
   Unshelve.
     all: ss.
-    all: try (by apply Ordinal.O).
+    all: try (by apply Ord.O).
+    { apply 0. }
   Qed.
 
   Variable entry_r: Σ.
@@ -376,7 +377,7 @@ Section CANCEL.
   Theorem adequacy_type_t2m: Beh.of_program (Mod.interp md_tgt) <1= Beh.of_program (Mod.interp md_mid).
   Proof.
     eapply adequacy_global.
-    exists (Ordinal.from_nat 100%nat). ss.
+    exists (Ord.from_nat 100%nat). ss.
     ginit.
     { eapply cpn5_wcompat; eauto with paco. }
     unfold ModSem.initial_itr. Local Opaque ModSem.prog. ss.
@@ -430,21 +431,21 @@ Section CANCEL.
     replace (([]: list val)↑) with (Any.pair ord_top↑ ([]: list val)↑) by admit "
       TODO: parameterize semantics with initial value of main; also, use this same initial value in Hoareproof1".
     subst.
-    assert(TRANSL: simg eq (Ordinal.from_nat 100)
+    assert(TRANSL: simg eq (Ord.from_nat 100)
 (x0 <- interp_Es (ModSem.prog ms_mid)
                  ((ModSem.prog ms_mid) _ (Call "main" (Any.pair ord_top↑ ([]: list val)↑))) st_mid0;; Ret (snd x0))
 (x0 <- interp_Es (ModSem.prog ms_mid)
                  (interp_hCallE_mid (E:=pE +' eventE) ord_top (trigger (hCall false "main" ([]: list val)↑))) st_mid0;; Ret (snd x0))).
     { clear SIM. ginit. { eapply cpn5_wcompat; eauto with paco. }
       unfold interp_hCallE_mid. rewrite unfold_interp. ss. cbn. steps. unfold guarantee. steps.
-      replace (Ordinal.from_nat 95) with (Ordinal.add (Ordinal.from_nat 50) (Ordinal.from_nat 45))
+      replace (Ord.from_nat 95) with (OrdArith.add (Ord.from_nat 50) (Ord.from_nat 45))
         by admit "ez".
       guclo bindC_spec.
       eapply bindR_intro.
       - eapply simg_gpaco_refl. typeclasses eauto.
       - ii. des_ifs. ss. steps. interp_red. steps.
     }
-    assert(TRANSR: simg eq (Ordinal.from_nat 100)
+    assert(TRANSR: simg eq (Ord.from_nat 100)
 (x0 <- interp_Es (ModSem.prog ms_tgt)
                  (interp_hCallE_tgt (E:=pE +' eventE) stb "Main" ord_top (trigger (hCall false "main" ([]: list val)↑))) st_midmid0;; Ret (snd x0))
 (x0 <- interp_Es (ModSem.prog ms_tgt)
@@ -471,7 +472,7 @@ Section CANCEL.
       { unfold st_tgt0.
         unfold ModSem.initial_r_state. f_equal. f_equal. apply func_ext. i. unfold update. des_ifs; ss; clarify. }
       steps. esplits; et. steps. esplits; et. steps. unshelve esplits; eauto. steps.
-      replace (Ordinal.from_nat 47) with (Ordinal.add (Ordinal.from_nat 37) (Ordinal.from_nat 10)) by admit "ez".
+      replace (Ord.from_nat 47) with (OrdArith.add (Ord.from_nat 37) (Ord.from_nat 10)) by admit "ez".
       guclo bindC_spec.
       eapply bindR_intro with (RR:=eq).
       - fold st_tgt0. eapply simg_gpaco_refl. typeclasses eauto.
@@ -503,7 +504,7 @@ we should know that stackframe is not popped (unary property)". }
   Unshelve.
     revert WFR. i. (*** dummy action that keeps "WFR" as a requirement; TODO: remove it later ! ! ***)
     all: ss.
-    all: try (by apply Ordinal.O).
+    all: try (by apply Ord.O).
   Qed.
 
 End CANCEL.

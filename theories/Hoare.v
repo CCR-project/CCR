@@ -5,7 +5,6 @@ Require Import Behavior.
 Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
-Require Import Ordinal ClassicalOrdinal.
 Require Import Any.
 Require Export HoareDef.
 Require Import Hoareproof0 Hoareproof1.

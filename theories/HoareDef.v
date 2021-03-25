@@ -5,7 +5,7 @@ Require Import Behavior.
 Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
-Require Import Ordinal ClassicalOrdinal.
+From Ordinal Require Export Ordinal Arithmetic.
 Require Import Any.
 
 Generalizable Variables E R A B C X Y Σ.
@@ -40,7 +40,7 @@ Set Implicit Arguments.
 
 
 Inductive ord: Type :=
-| ord_pure (n: nat)
+| ord_pure (n: Ord.t)
 | ord_top
 .
 
@@ -48,7 +48,7 @@ Definition is_pure (o: ord): bool := match o with | ord_pure _ => true | _ => fa
 
 Definition ord_lt (next cur: ord): Prop :=
   match next, cur with
-  | ord_pure next, ord_pure cur => (next < cur)%nat
+  | ord_pure next, ord_pure cur => (next < cur)%ord
   | _, ord_top => True
   | _, _ => False
   end
@@ -133,22 +133,45 @@ Variant hCallE: Type -> Type :=
 
 Notation Es' := (hCallE +' pE +' eventE).
 
-Fixpoint _APC (at_most: nat): itree Es' unit :=
-  match at_most with
-  | 0 => Ret tt
-  | S n =>
-    break <- trigger (Choose _);;
-    if break: bool
-    then Ret tt
-    else
-      '(fn, varg) <- trigger (Choose _);;
-      trigger (hCall true fn varg);;
-      _APC n
-  end.
+Program Fixpoint _APC (at_most: Ord.t) {wf Ord.lt at_most}: itree Es' unit :=
+  break <- trigger (Choose _);;
+  if break: bool
+  then Ret tt
+  else
+    n <- trigger (Choose Ord.t);;
+    trigger (Choose (n < at_most)%ord);;
+    '(fn, varg) <- trigger (Choose _);;
+    trigger (hCall true fn varg);;
+    _APC n.
+Next Obligation.
+  eapply Ord.lt_well_founded.
+Qed.
 
 Definition APC: itree Es' unit :=
   at_most <- trigger (Choose _);; _APC at_most
 .
+
+Lemma unfold_APC:
+  forall at_most, _APC at_most =
+                  break <- trigger (Choose _);;
+                  if break: bool
+                  then Ret tt
+                  else
+                    n <- trigger (Choose Ord.t);;
+                    guarantee (n < at_most)%ord;;
+                    '(fn, varg) <- trigger (Choose _);;
+                    trigger (hCall true fn varg);;
+                    _APC n.
+Proof.
+  i. unfold _APC. rewrite Fix_eq; eauto.
+  { repeat f_equal. extensionality break. destruct break; ss.
+    repeat f_equal. extensionality n.
+    unfold guarantee. rewrite bind_bind.
+    repeat f_equal. extensionality p.
+    rewrite bind_ret_l. repeat f_equal. extensionality x. destruct x. auto. }
+  { i. replace g with f; auto. extensionality o. eapply H. }
+Qed.
+Global Opaque _APC.
 
 
 
@@ -414,66 +437,16 @@ End PSEUDOTYPING.
 
 
 
-  Lemma S_lt_O
-        o
-    :
-      <<LT: Ordinal.lt Ordinal.O (Ordinal.S o)>>
-  .
-  Proof.
-    r. econs. unfold Ordinal.O. unfold unit_rect. des_ifs. destruct o. econs. ii; ss.
-    Unshelve.
-    all: ss.
-  Qed.
-
-  Lemma le_trans: Transitive Ordinal.le. typeclasses eauto. Qed.
-  Lemma lt_trans: Transitive Ordinal.le. typeclasses eauto. Qed.
-  Hint Resolve Ordinal.lt_le_lt Ordinal.le_lt_lt Ordinal.add_lt_r Ordinal.add_le_l
-       Ordinal.add_le_r Ordinal.lt_le
-       Ordinal.S_lt_mon
-       Ordinal.S_lt
-       Ordinal.S_spec
-       S_lt_O
+  Hint Resolve Ord.lt_le_lt Ord.le_lt_lt OrdArith.lt_add_r OrdArith.le_add_l
+       OrdArith.le_add_r Ord.lt_le
+       Ord.lt_S
+       Ord.S_lt
+       Ord.S_supremum
+       Ord.S_pos
     : ord.
-  Hint Resolve le_trans lt_trans: ord_trans.
-  Hint Resolve Ordinal.add_base_l Ordinal.add_base_r: ord_proj.
+  Hint Resolve Ord.le_trans Ord.lt_trans: ord_trans.
+  Hint Resolve OrdArith.add_base_l OrdArith.add_base_r: ord_proj.
 
-  Lemma from_nat_lt
-        n m
-        (LT: Nat.lt n m)
-    :
-      <<LT: Ordinal.lt (Ordinal.from_nat n) (Ordinal.from_nat m)>>
-  .
-  Proof.
-    generalize dependent m. induction n; ii; ss.
-    - destruct m; try lia. r; ss. eapply S_lt_O.
-    - destruct m; ss; try lia. r. rewrite <- Ordinal.S_lt_mon. eapply IHn; try lia.
-  Qed.
-
-  Lemma from_nat_le
-        n m
-        (LT: Nat.le n m)
-    :
-      <<LT: Ordinal.le (Ordinal.from_nat n) (Ordinal.from_nat m)>>
-  .
-  Proof.
-    generalize dependent m. induction n; ii; ss.
-    - destruct m; try lia; ss.
-    - destruct m; ss; try lia; ss. r. rewrite <- Ordinal.S_le_mon. eapply IHn; try lia.
-  Qed.
-
-  Lemma from_nat_eq
-        n m
-        (LT: Nat.eq n m)
-    :
-      <<LT: Ordinal.eq (Ordinal.from_nat n) (Ordinal.from_nat m)>>
-  .
-  Proof.
-    generalize dependent m. induction n; ii; ss.
-    - destruct m; try lia; ss.
-    - destruct m; ss; try lia; ss. r. rewrite <- Ordinal.S_eq_mon. eapply IHn; try lia.
-  Qed.
-
-  Global Opaque Ordinal.from_nat.
   Global Opaque interp_Es.
 
   Require Import SimGlobal.
@@ -1167,7 +1140,7 @@ End PSEUDOTYPING.
 
     (*** default cases ***)
     | _ =>
-      (gstep; econs; eauto; try (by eapply from_nat_lt; ss);
+      (gstep; econs; eauto; try (by eapply OrdArith.lt_from_nat; ss);
        (*** some post-processing ***)
        i;
        try match goal with

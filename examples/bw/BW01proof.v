@@ -27,22 +27,6 @@ Local Open Scope nat_scope.
 
 
 
-(**************** TODO: remove this redundancy *************************)
-(**************** TODO: remove this redundancy *************************)
-(**************** TODO: remove this redundancy *************************)
-Lemma unfold_APC: forall n, _APC n =
-  match n with
-  | 0 => Ret tt
-  | S n => break <- trigger (Choose _);;
-           if break: bool
-           then Ret tt
-           else '(fn, varg) <- trigger (Choose _);;
-                trigger (hCall true fn varg);; _APC n
-  end.
-  { i. destruct n; ss. }
-Qed.
-Global Opaque _APC.
-
 
 
 Section AUX.
@@ -99,9 +83,8 @@ Section SIMMODSEM.
       iRefresh. iDestruct PRE. iPure A. clarify.
       assert (x = Z.odd n); subst.
       { hexploit bw_ra_merge; et. intro T. iSpecialize T SIM. iSpecialize T PRE. iPure T. auto. }
-      unfold body_to_tgt. unfold interp_hCallE_tgt, APC. steps. (********** TODO: never unfold it, make a lemma ******************)
-      force_l. exists 0. steps. rewrite unfold_APC. steps.
-      rewrite Any.upcast_downcast. force_l. eexists.
+      unfold body_to_tgt. steps. astart 0. astop.
+      force_l. rewrite Any.upcast_downcast. eexists.
       hret_tac SIM PRE.
       { split; eauto. iRefresh. iSplitL PRE; eauto. rr. f_equal.
         rewrite <- Z.negb_odd. rewrite negb_if. des_ifs. }
@@ -113,16 +96,15 @@ Section SIMMODSEM.
       iRefresh. iDestruct PRE. iPure A. clarify.
       assert (x = Z.odd n); subst.
       { hexploit bw_ra_merge; et. intro T. iSpecialize T SIM. iSpecialize T PRE. iPure T. auto. }
-      unfold body_to_tgt. unfold interp_hCallE_tgt, APC. steps. (********** TODO: never unfold it, make a lemma ******************)
-      force_l. exists 0. steps. rewrite unfold_APC. steps.
-      rewrite Any.upcast_downcast. force_l. eexists. steps.
+      unfold body_to_tgt. steps. astart 0. astop.
+      rewrite Any.upcast_downcast. force_l. eexists.
       iMerge SIM PRE. rewrite <- own_sep in SIM.
       eapply own_upd in SIM; cycle 1; [|rewrite intro_iHyp in SIM;iUpdate SIM].
       { rewrite GRA.embed_add. eapply GRA.embed_updatable.
         instantiate (1:= bw_full (Z.odd (n+1)) ⋅ bw_frag (Z.odd (n+1))).
         eapply Auth.auth_update. rr. ii. des; ss. ur in FRAME. ur. destruct ctx; ss; clarify.
       }
-      rewrite <- GRA.embed_add in SIM. rewrite own_sep in SIM. iDestruct SIM. clarify.
+      rewrite <- GRA.embed_add in SIM. rewrite own_sep in SIM. iDestruct SIM. steps.
 
       hret_tac SIM A.
       { split; eauto. iRefresh. replace (negb (Z.odd n)) with (Z.odd (n+1)); auto.

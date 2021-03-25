@@ -107,7 +107,8 @@ Section PROOF.
                             (itr: itree (hCallE +' pE +' eventE) R)
                             (WF: wf (st_src, st_tgt)),
                gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) bot6 bot6 R R (liftRR eq) 1 (st_src, fr, interp_hCallE_tgt stb_src mn o itr) (st_tgt, fr, interp_hCallE_tgt stb_tgt mn o itr)).
-    { unfold interp_hCallE_tgt. gcofix CIH. i. ides itr.
+    { Local Transparent interp_hCallE_tgt.
+      unfold interp_hCallE_tgt. gcofix CIH. i. ides itr.
       { repeat interp_red.
         mstep. eapply sim_itree_ret; ss. }
       { repeat interp_red.
@@ -121,7 +122,9 @@ Section PROOF.
           rewrite FINDSRC. rewrite ! bind_ret_l. rewrite ! bind_bind.
           destruct (Any.downcast varg_src); ss.
           { rewrite ! bind_ret_l. rewrite ! bind_bind.
-            muclo lbindC_spec. replace 1 with (1+0); auto. econs.
+            muclo lordC_spec. econs.
+            { instantiate (1:=(1+0)%ord). rewrite Ord.from_nat_O. eapply OrdArith.add_O_r. }
+            muclo lbindC_spec. econs.
             { instantiate (1:=liftRR eq).
               unfold HoareCall, put, discard, forge, checkWf, assume, guarantee.
               mstep. eapply sim_itree_choose_both.
@@ -197,7 +200,7 @@ Section PROOF.
           { rewrite ! bind_bind.
             mstep. eapply sim_itree_choose_both. i; ss. }
         }
-        rewrite ! bind_bind. mstep. eapply sim_itree_choose_tgt; ss.
+        rewrite ! bind_bind. mstep. eapply sim_itree_choose_tgt; ss. eauto with ord_step.
       }
       { des; subst. repeat interp_red. rewrite ! bind_bind. destruct p.
         { cbn.
@@ -245,7 +248,9 @@ Section PROOF.
     ii. subst. exists 1.
     unfold fun_to_tgt. ss. des; subst. repeat rewrite HoareFun_parse.
     ginit.
-    replace 1 with (1 + 0); auto. muclo lbindC_spec. econs; eauto.
+    muclo lordC_spec. econs.
+    { instantiate (1:=(1+0)%ord). rewrite Ord.from_nat_O. eapply OrdArith.add_O_r. }
+    muclo lbindC_spec. econs; eauto.
     { unfold HoareFunArg, forge, checkWf, assume.
       mstep. eapply sim_itree_take_both.
       intros varg_src. exists varg_src. exists 0.
@@ -279,10 +284,14 @@ Section PROOF.
     destruct st_src1 as [w_src fr_src]. destruct st_tgt1 as [w_tgt fr_tgt].
     destruct vret_src as [[x_src varg'] o']. destruct vret_tgt as [[x_tgt varg] o].
     unfold liftRR in SIM. des; subst.
-    replace 1 with (0 + 1); auto. muclo lbindC_spec.
+    muclo lordC_spec. econs.
+    { instantiate (1:=(0+1)%ord). rewrite Ord.from_nat_O. eapply OrdArith.add_O_l. }
+    muclo lbindC_spec.
     econs; eauto.
     { instantiate (1:= liftRR eq). destruct o.
-      { replace 1 with (0 + 1); auto. muclo lbindC_spec. econs; eauto.
+      { muclo lordC_spec. econs.
+        { instantiate (1:=(0+1)%ord). rewrite Ord.from_nat_O. eapply OrdArith.add_O_l. }
+        muclo lbindC_spec. econs; eauto.
         { eapply SELFSIM. esplits; eauto. }
         { i. eapply sim_l_trigger_ret_rev.
           eapply sim_r_trigger_ret_rev.

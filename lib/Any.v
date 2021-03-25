@@ -1,4 +1,5 @@
 Require Import Coqlib.
+From Ordinal Require Import Ordinal.
 
 Set Implicit Arguments.
 
@@ -36,16 +37,22 @@ Module _Any: ANY.
   Record _t := _upcast { ty: Type; val: ty }.
   Definition t := _t.
 
+  Section FOO.
+    Let _foo: _t := _upcast Ord.O.
+  End FOO.
+
   Definition upcast := @_upcast.
   Arguments _upcast {ty}.
   Arguments upcast {ty}.
 
-  Definition downcast {T: Type} (a: t): option T.
-    destruct a.
-    destruct (excluded_middle_informative (ty0 = T)).
-    - subst. apply Some. assumption.
-    - apply None.
-  Defined.
+  Definition downcast {T: Type} (a: t): option T :=
+    match (excluded_middle_informative (a.(ty) = T)) with
+    | left e =>
+      Some (match e in (_ = y0) return ((fun X => X) y0) with
+            | eq_refl => a.(val)
+            end)
+    | right _ => None
+    end.
 
   Lemma downcast_elim
         a T (v: T)
@@ -54,8 +61,7 @@ Module _Any: ANY.
       <<TY: a.(ty) = T>> /\ <<VAL: a.(val) ~= v>>
   .
   Proof.
-    unfold downcast in *. des_ifs. ss.
-    simpl_depind. eauto.
+    unfold downcast in *. des_ifs.
   Qed.
 
   Lemma downcast_intro
@@ -168,7 +174,9 @@ Module _Any: ANY.
   Qed.
 
   Lemma downcast_upcast: forall T (v: T) (a: t), downcast a = Some v -> <<CAST: upcast v = a>>.
-  Proof. i. destruct a; ss. des_ifs. dependent destruction H. ss. Qed.
+  Proof.
+    i. unfold upcast, downcast in *. des_ifs. destruct a; ss.
+  Qed.
 
 End _Any.
 Goal _Any.upcast 0 = _Any.upcast () -> False. i. Fail injection H. Abort.
