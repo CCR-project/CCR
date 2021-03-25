@@ -177,7 +177,7 @@ Section CANCEL.
       rename i into i_src.
       rename i0 into i_tgt.
       guclo bindC_spec.
-      instantiate (2:=Ord.from_nat 400).
+      instantiate (1:=Ord.from_nat 400).
       replace (Ord.from_nat 400) with
           (OrdArith.add (Ord.from_nat 200) (Ord.from_nat 200)); cycle 1.
       { admit "ez". }
@@ -356,7 +356,6 @@ Section CANCEL.
   Unshelve.
     all: ss.
     all: try (by apply Ord.O).
-    { apply x6. }
     { apply 0. }
   Qed.
 
@@ -472,7 +471,7 @@ Section CANCEL.
                     end) "Main" (fst p), [ε], ModSem.initial_p_state ms_tgt) with st_tgt0; cycle 1.
       { unfold st_tgt0.
         unfold ModSem.initial_r_state. f_equal. f_equal. apply func_ext. i. unfold update. des_ifs; ss; clarify. }
-      steps. esplits; et. steps. esplits; et. steps. unshelve esplits; eauto. { esplits; ii; ss; et. rr. ss. } steps.
+      steps. esplits; et. steps. esplits; et. steps. unshelve esplits; eauto. steps.
       replace (Ord.from_nat 47) with (OrdArith.add (Ord.from_nat 37) (Ord.from_nat 10)) by admit "ez".
       guclo bindC_spec.
       eapply bindR_intro with (RR:=eq).
