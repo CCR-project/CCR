@@ -23,7 +23,9 @@ Set Implicit Arguments.
 #[export] Hint Resolve cpn6_wcompat: paco.
 
 Create HintDb ord_step.
-#[export] Hint Resolve OrdArith.lt_from_nat OrdArith.lt_add_r Nat.lt_succ_diag_r: ord_step.
+#[export] Hint Resolve Nat.lt_succ_diag_r OrdArith.lt_from_nat OrdArith.lt_add_r: ord_step.
+#[export] Hint Extern 1000 => lia: ord_step.
+
 
 Ltac anytac := (try rewrite ! Any.upcast_downcast in *); clarify; apply_all_once Any.upcast_inj; des; clarify; clear_tac.
 

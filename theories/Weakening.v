@@ -107,7 +107,8 @@ Section PROOF.
                             (itr: itree (hCallE +' pE +' eventE) R)
                             (WF: wf (st_src, st_tgt)),
                gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) bot6 bot6 R R (liftRR eq) 1 (st_src, fr, interp_hCallE_tgt stb_src mn o itr) (st_tgt, fr, interp_hCallE_tgt stb_tgt mn o itr)).
-    { unfold interp_hCallE_tgt. gcofix CIH. i. ides itr.
+    { Local Transparent interp_hCallE_tgt.
+      unfold interp_hCallE_tgt. gcofix CIH. i. ides itr.
       { repeat interp_red.
         mstep. eapply sim_itree_ret; ss. }
       { repeat interp_red.

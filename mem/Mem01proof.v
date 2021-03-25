@@ -214,8 +214,7 @@ Section SIMMODSEM.
       do 2 iDestruct SIM. iPure A.
       set (blk := (Mem.nb mem_tgt)). rename x into sz. rename x0 into mem_src0.
 
-      unfold interp_hCallE_tgt, APC. steps. (********** TODO: never unfold it, make a lemma ******************)
-      force_l. exists 0. steps.
+      astart 0. astop.
 
       eapply own_upd in SIM; cycle 1; [|rewrite intro_iHyp in SIM; iMod SIM].
       { eapply GRA.embed_updatable.
@@ -254,8 +253,7 @@ Section SIMMODSEM.
       do 2 iDestruct SIM. iPure A.
       steps. rewrite Any.upcast_downcast in *. steps.
 
-      unfold interp_hCallE_tgt, APC. steps. (********** TODO: never unfold it, make a lemma ******************)
-      force_l. exists 0. steps.
+      astart 0. astop.
 
       rename n into b. rename z into ofs. rename x0 into mem_src0. rename x into v.
       iMerge SIM A0. rewrite <- own_sep in SIM. rewrite GRA.embed_add in SIM.
@@ -327,8 +325,7 @@ Section SIMMODSEM.
       do 2 iDestruct SIM. iPure A.
       steps. rewrite Any.upcast_downcast in *. steps.
 
-      unfold interp_hCallE_tgt, APC. steps. (********** TODO: never unfold it, make a lemma ******************)
-      force_l. exists 0. steps.
+      astart 0. astop.
       rename n into b. rename z into ofs. rename x into mem_src0.
       iMerge SIM A0. rewrite <- own_sep in SIM. rewrite GRA.embed_add in SIM. iOwnWf SIM.
       assert(T: mem_src0 b ofs = (Some v)).
@@ -352,8 +349,7 @@ Section SIMMODSEM.
       do 2 iDestruct SIM. iPure A.
       steps. rewrite Any.upcast_downcast in *. steps.
 
-      unfold interp_hCallE_tgt, APC. steps. (********** TODO: never unfold it, make a lemma ******************)
-      force_l. exists 0. steps.
+      astart 0. astop.
       rename n into b. rename z into ofs. rename x0 into mem_src0. rename x into v0. rename v into v1.
       iMerge SIM A0. rewrite <- own_sep in SIM. rewrite GRA.embed_add in SIM. iOwnWf SIM.
       assert(T: mem_src0 b ofs = (Some v0)).
@@ -415,8 +411,7 @@ Section SIMMODSEM.
           eapply Excl.extends in WF; ss. do 2 eapply lookup_wf. eapply Auth.black_wf. eapply URA.wf_mon; et.
       }
       steps. rewrite Any.upcast_downcast in *. steps.
-      unfold interp_hCallE_tgt, APC. steps. (********** TODO: never unfold it, make a lemma ******************)
-      force_l. exists 0. steps.
+      astart 0. astop.
       Ltac iDestruct H :=
         match type of H with
         | iHyp (Exists _, _) _ => destruct H as [? H]; iRefresh
@@ -429,7 +424,8 @@ Section SIMMODSEM.
         end.
       iMerge SIM A1. rewrite <- own_sep in SIM. iOwnWf SIM. rewrite own_sep in SIM. iDestruct SIM.
       iDestruct PRE; cycle 1.
-      { iPure A1. des; subst. apply Any.upcast_inj in A1. des; clarify. steps. force_l. eexists. hret_tac SIM A0.
+      { iPure A1. des; subst. apply Any.upcast_inj in A1. des; clarify. steps.
+        force_l. eexists. hret_tac SIM A0.
         { split; [iRefresh|refl]. iSplitP; ss. }
         { ss. esplits; et. eexists; iRefresh. iSplitP; ss; et. }
       }
@@ -454,8 +450,7 @@ Section SIMMODSEM.
           exploit _points_to_disj; et. intro NEQ.
           des; try (by rewrite dec_false; ss). rewrite dec_false with (x0:=x7); ss. rewrite andb_false_r; ss.
         }
-        steps.
-        force_l. eexists. hret_tac SIM A0.
+        steps. force_l. eexists. hret_tac SIM A0.
         { split; [iRefresh|refl]. iSplitP; ss. }
         { ss. esplits; et. eexists; iRefresh. iSplitP; ss; et. }
       }

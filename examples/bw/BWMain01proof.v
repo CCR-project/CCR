@@ -27,22 +27,6 @@ Local Open Scope nat_scope.
 
 
 
-(**************** TODO: remove this redundancy *************************)
-(**************** TODO: remove this redundancy *************************)
-(**************** TODO: remove this redundancy *************************)
-Lemma unfold_APC: forall n, _APC n =
-  match n with
-  | 0 => Ret tt
-  | S n => break <- trigger (Choose _);;
-           if break: bool
-           then Ret tt
-           else '(fn, varg) <- trigger (Choose _);;
-                trigger (hCall true fn varg);; _APC n
-  end.
-  { i. destruct n; ss. }
-Qed.
-Global Opaque _APC.
-
 
 
 Section SIMMODSEM.
@@ -72,7 +56,6 @@ Section SIMMODSEM.
     { unfold main_body, mainF, ccall, hcall. init.
       harg_tac. des. subst. rewrite Any.upcast_downcast. ss.
       iRefresh. iDestruct PRE. iPure A. clarify. steps.
-      unfold interp_hCallE_tgt. steps.
       replace (find (fun '(_fn, _) => dec "getbool" _fn) (ClientStb ++ MainStb)) with
           (Some ("getbool", (mk_simple "Client"
                                        (fun (_: unit) _ o =>
@@ -84,9 +67,8 @@ Section SIMMODSEM.
       hcall_tac tt ord_top (@URA.unit Σ) PRE (@URA.unit Σ); ss.
       { esplits; eauto. }
       des; clarify. steps. rewrite Any.upcast_downcast in *. ss. clarify. steps.
-      unfold APC, TODO.unbool. des_ifs; ss.
-      { steps. force_l. exists 2. steps. rewrite unfold_APC. steps. force_l. exists false.
-        steps. force_l. eexists ("get", Any.upcast []). steps.
+      unfold TODO.unbool. des_ifs; ss.
+      { steps. astart 10.
   Admitted.
 
 End SIMMODSEM.

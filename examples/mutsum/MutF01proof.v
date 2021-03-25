@@ -45,23 +45,20 @@ Section SIMMODSEM.
   Theorem correct: ModSemPair.sim MutF1.FSem MutF0.FSem.
   Proof.
     econstructor 1 with (wf:=wf) (le:=top2); et; ss.
-    econs; ss. init. unfold ccall, interp_hCallE_tgt.
-    harg_tac. des; clarify. unfold fF, ccall. anytac. ss. unfold APC. steps.
-    destruct (dec (Z.of_nat x) 0%Z).
-    - destruct x; ss. force_l. exists 0. steps.
+    econs; ss. init. unfold ccall.
+    harg_tac. des; clarify. unfold fF, ccall. anytac. ss.
+    steps. astart 10. destruct (dec (Z.of_nat x) 0%Z).
+    - destruct x; ss. astop.
       force_l. eexists. hret_tac (@URA.unit Σ) (@URA.unit Σ).
       { esplits; eauto. }
       { split; auto. }
-    - destruct x; [ss|]. rewrite Nat2Z.inj_succ.
-      force_l. exists 1. steps. force_l. exists false.
-      steps. force_l. eexists ("g", [Vint (Z.of_nat x)]↑).
-      steps. anytac.
-      hcall_tac x (ord_pure x) (@URA.unit Σ) (@URA.unit Σ) (@URA.unit Σ).
+    - destruct x; [ss|]. rewrite Nat2Z.inj_succ. steps.
+      acall_tac x (ord_pure x) (@URA.unit Σ) (@URA.unit Σ) (@URA.unit Σ).
       { replace (Z.succ (Z.of_nat x) - 1)%Z with (Z.of_nat x) by lia.
         splits; auto. }
-      { splits; ss. eauto with ord_step. }
+      { splits; ss. auto with ord_step. }
       { split; auto. }
-      des. subst. anytac. asimpl. steps.
+      des. subst. anytac. asimpl. steps. astop.
       force_l. eexists. hret_tac (@URA.unit Σ) (@URA.unit Σ).
       { splits; auto. unfold sum. splits; auto. ss. repeat f_equal. lia. }
       { split; ss. }

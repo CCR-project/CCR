@@ -46,7 +46,7 @@ Section SIMMODSEM.
   Proof.
     econstructor 1 with (wf:=wf) (le:=top2); et; ss.
     econs; ss. init.
-    unfold mainF, mainBody, interp_hCallE_tgt.
+    unfold mainF, mainBody.
     harg_tac. des; clarify. steps. anytac. steps.
     hcall_tac 10 (ord_pure 10) (@URA.unit (GRA.to_URA Σ)) rarg_src (@URA.unit (GRA.to_URA Σ)); splits; ss.
     des; clarify. esplits; ss. i. des; clarify.
