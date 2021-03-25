@@ -40,14 +40,14 @@ Section CONV.
       | final z =>
         Ret z↑
       | vis =>
-        '(exist _ ((event_sys fn args rv, st1)) _) <-
-        trigger (Choose {'(ev', st'): event * state | @step st0 (Some ev') st' });;
-        Vis (Syscall fn args) (fun _ => interpSTS step state_sort st1)
-        (* '(exist _ (event_sys fn args) _) <- *)
-        (* trigger (Choose {ev': event | exists st', @step st0 (Some ev') st' });; *)
-        (* v <- trigger (Syscall fn args);; *)
-        (* Vis (Choose {st': state | @step st0 (Some (event_sys fn args)) st' }) *)
-        (*     (fun st1 => interpSTS step state_sort (proj1_sig st1)) *)
+        (* '(exist _ ((event_sys fn args rv, st1)) _) <- *)
+        (* trigger (Choose {'(ev', st'): event * state | @step st0 (Some ev') st' });; *)
+        (* Vis (Syscall fn args) (fun _ => interpSTS step state_sort st1) *)
+        '(exist _ (event_sys fn args _) _) <-
+        trigger (Choose {ev': event | exists st', @step st0 (Some ev') st' });;
+        rv <- trigger (Syscall fn args);;
+        Vis (Choose {st': state | @step st0 (Some (event_sys fn args rv)) st' })
+            (fun st1 => interpSTS step state_sort (proj1_sig st1))
       end
   .
 
@@ -78,9 +78,14 @@ Section CONV.
     | final z =>
       Ret z↑
     | vis =>
-      '(exist _ ((event_sys fn args rv, st1)) _) <-
-      trigger (Choose {'(ev', st'): event * state | @step st0 (Some ev') st' });;
-      Vis (Syscall fn args) (fun _ => interpSTS step state_sort st1)
+      (* '(exist _ ((event_sys fn args rv, st1)) _) <- *)
+      (* trigger (Choose {'(ev', st'): event * state | @step st0 (Some ev') st' });; *)
+      (* Vis (Syscall fn args) (fun _ => interpSTS step state_sort st1) *)
+      '(exist _ (event_sys fn args _) _) <-
+      trigger (Choose {ev': event | exists st', @step st0 (Some ev') st' });;
+      rv <- trigger (Syscall fn args);;
+      Vis (Choose {st': state | @step st0 (Some (event_sys fn args rv)) st' })
+          (fun st1 => interpSTS step state_sort (proj1_sig st1))
     end
   .
   Proof.
@@ -121,7 +126,7 @@ Section INV.
         STS.state_sort := itr_state_sort;
       |}
   .
-  Next Obligation. inv STEP; inv STEP0; ss. csc. rewrite SYSCALL in *. csc. Qed.
+  Next Obligation. inv STEP; inv STEP0; ss. csc. Qed.
   Next Obligation. inv STEP; ss. Qed.
   Next Obligation. inv STEP; ss. Qed.
 
@@ -139,7 +144,7 @@ Section PROOF.
   Hypothesis wf_vis :
     forall (st0 : state) (ev0 ev1 : option event) (st1 st2 : state),
       state_sort st0 = vis ->
-      step st0 ev0 st1 -> step st0 ev1 st2 -> ev0 = ev1 /\ st1 = st2.
+      step st0 ev0 st1 -> step st0 ev1 st2 -> ev0 = ev1 -> st1 = st2.
 
   Hypothesis wf_angelic :
     forall (st0 : state) (ev : option event) (st1 : state),
@@ -150,9 +155,9 @@ Section PROOF.
       state_sort st0 = demonic -> step st0 ev st1 -> ev = None.
 
   Hypothesis wf_syscall :
-    forall fn args rv,
-      syscall_sem fn args = (event_sys fn args rv, rv).
-  
+    forall ev, exists st0 st1, (step st0 (Some ev) st1) -> syscall_sem ev.
+    (* exists ev, syscall_sem ev. *)
+
 (**
 of_state = 
 fun L : semantics => paco2 (_of_state L) bot2
@@ -161,13 +166,13 @@ fun L : semantics => paco2 (_of_state L) bot2
 paco2 has 'fixed' semantics -> needs fixed semantics to do pcofix
 So, fix semantics with st_init, later let st_init = st0 in the main thm.
  **)
-  Theorem beh_preserved st_init :
+  Theorem beh_preserved_dir st_init :
     forall (st0: state) (tr: Tr.t),
       of_state
         (interpITree (interpSTS step state_sort st_init))
         (initial_state (interpITree (interpSTS step state_sort st0)))
         tr
-    ->
+      ->
       of_state
         {|
           STS.state := state;
@@ -208,11 +213,19 @@ So, fix semantics with st_init, later let st_init = st0 in the main thm.
       + i. rewrite interpSTS_red in STEP. rewrite SRT in STEP.
         rewrite bind_trigger in STEP.
         dependent destruction STEP.
-        destruct x. destruct x. destruct e.
+        destruct x. des. destruct x.
         exists 9. split; auto.
-        left. pfold. eapply sim_vis; ss; clarify.
+        left. pfold. eapply sim_vis; i; ss; clarify.
+        rewrite bind_trigger in STEP.
+        dependent destruction STEP.
+        
+        
+        
         { apply y. }
-        { econs 4. instantiate (1:= rv). apply wf_syscall. }
+        { econs 4. 
+          destruct (wf_syscall fn args).
+          specialize (fn = fn) in wf_syscall.
+          apply wf_syscall. }
         right. instantiate (1:= 10). apply CIH.
   Qed.
   
@@ -356,4 +369,29 @@ So, fix semantics with st_init, later let st_init = st0 in the main thm.
     (*   { ss. rewrite interpSTS_red. rewrite SRT. econs. } *)
     (*   split; auto. econs; ss; clarify. *)
 
+  Theorem beh_preserved :
+    forall (st0: state) (tr: Tr.t),
+      of_state
+        {|
+          STS.state := state;
+          STS.step := step;
+          STS.initial_state := st0;
+          STS.state_sort := state_sort;
+          STS.wf_vis := wf_vis;
+          STS.wf_angelic := wf_angelic;
+          STS.wf_demonic := wf_demonic;
+        |}
+        st0
+        tr
+      <->
+      of_state
+        (interpITree (interpSTS step state_sort st0))
+        (initial_state (interpITree (interpSTS step state_sort st0)))
+        tr.
+  Proof.
+    split.
+    - apply beh_preserved_inv.
+    - apply beh_preserved_dir.
+  Qed.
+  
 End PROOF.

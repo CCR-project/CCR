@@ -127,22 +127,21 @@ Section SIM.
       (SRT: _.(state_sort) st_tgt0 = final retv)
     :
       _sim sim i0 st_src0 st_tgt0
-
+           
   | sim_vis
       (SRT: _.(state_sort) st_src0 = vis)
       (SRT: _.(state_sort) st_tgt0 = vis)
-      i1 ev st_src1 st_tgt1
-      (STEP: _.(step) st_src0 (Some ev) st_src1)
-      (STEP: _.(step) st_tgt0 (Some ev) st_tgt1)
-      (SIM: (sim i1 st_src1 st_tgt1): Prop)
+      (SIM: forall ev st_tgt1
+          (STEP: _.(step) st_tgt0 (Some ev) st_tgt1)
+        ,
+          exists st_src1 (STEP: _.(step) st_src0 (Some ev) st_src1),
+            <<SIM: exists i1, sim i1 st_src1 st_tgt1>>)
     :
       _sim sim i0 st_src0 st_tgt0
 
   | sim_vis_stuck_tgt
       (SRT: _.(state_sort) st_tgt0 = vis)
       (STUCK: forall ev st_tgt1, not (_.(step) st_tgt0 (Some ev) st_tgt1))
-      (* e st_tgt1 *)
-      (* (STUCK: not (_.(step) st_tgt0 e st_tgt1)) *)
     :
       _sim sim i0 st_src0 st_tgt0
 
@@ -233,7 +232,7 @@ Section SIM.
     ii. inv IN.
 
     - econs 1; et.
-    - econs 2; et.
+    - econs 2; et. i. exploit SIM; et. i; des. esplits; et.
     - econs 3; et.
     - econs 4; et. des. esplits; et.
     - econs 5; et. i. exploit SIM; et. i; des. esplits; et.
@@ -367,8 +366,8 @@ Section SIM.
       pc TL.
       punfold SIM. inv SIM; try rewrite SRT in *; ss.
       + (** vv **)
-        exploit wf_vis. { eapply SRT. } { eauto. } { eapply STEP. } i; des; clarify.
-        pfold. econs 4; eauto. pc SIM0. right. eapply CIH; eauto.
+        specialize (SIM0 ev st1). apply SIM0 in STEP; clear SIM0; des.
+        pfold. econs 4; eauto. pc SIM. right. eapply CIH; eauto.
       + (** vis stuck **)
         apply STUCK in STEP. clarify.
       + (** d_ **)

@@ -186,7 +186,6 @@ Definition unint (v: val): option Z :=
 (*** NOTE: Probably we can support comparison between nullptr and 0 ***)
 (*** NOTE: Unlike CompCert, we don't support comparison with weak_valid_ptr (for simplicity) ***)
 
-Parameter syscall_sem: gname -> list val -> (event * val).
+(* Parameter syscall_sem: gname -> list val -> (event * val). *)
 (* Parameter syscall_sem: gname -> list val -> event. *)
-(* only event is too weak, need to fix return value too *)
-(* Parameter syscall_sem: event -> Prop. *)
+Parameter syscall_sem: event -> Prop.

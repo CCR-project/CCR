@@ -424,10 +424,12 @@ Section MODSEM.
     :
       step (Vis (subevent _ (Take X)) k) None (k x)
   | step_syscall
-      fn args k ev rv
-      (SYSCALL: syscall_sem fn args = (ev, rv))
+      (* fn args k ev rv *)
+      (* (SYSCALL: syscall_sem fn args = (ev, rv)) *)
+      fn args rv k
+      (SYSCALL: syscall_sem (event_sys fn args rv))
     :
-      step (Vis (subevent _ (Syscall fn args)) k) (Some ev) (k rv)
+      step (Vis (subevent _ (Syscall fn args)) k) (Some (event_sys fn args rv)) (k rv)
   .
 
   Program Definition interp: semantics := {|
@@ -437,7 +439,8 @@ Section MODSEM.
     STS.state_sort := state_sort;
   |}
   .
-  Next Obligation. inv STEP; inv STEP0; ss. csc. rewrite SYSCALL in *. csc. Qed.
+  Next Obligation. inv STEP; inv STEP0; ss. csc. Qed.
+  (* Next Obligation. inv STEP; inv STEP0; ss. csc. rewrite SYSCALL in *. csc. Qed. *)
   Next Obligation. inv STEP; ss. Qed.
   Next Obligation. inv STEP; ss. Qed.
 
