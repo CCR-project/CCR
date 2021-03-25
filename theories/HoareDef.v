@@ -5,7 +5,7 @@ Require Import Behavior.
 Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
-From Ordinal Require Export Ordinal Arithmetic.
+From Ordinal Require Export Ordinal Arithmetic Inaccessible.
 Require Import Any.
 
 Generalizable Variables E R A B C X Y Σ.
@@ -148,7 +148,9 @@ Next Obligation.
 Qed.
 
 Definition APC: itree Es' unit :=
-  at_most <- trigger (Choose _);; _APC at_most
+  at_most <- trigger (Choose _);;
+  guarantee(at_most < kappa)%ord;;
+  _APC at_most
 .
 
 Lemma unfold_APC:
@@ -172,6 +174,7 @@ Proof.
   { i. replace g with f; auto. extensionality o. eapply H. }
 Qed.
 Global Opaque _APC.
+Global Opaque APC.
 
 
 
