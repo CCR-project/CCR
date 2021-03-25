@@ -181,6 +181,11 @@ Hint Rewrite (Seal.sealing_eq "stb"): stb.
 
 Ltac stb_tac :=
   match goal with
+  | [ |- find _ ?xs = _ ] =>
+    match type of xs with
+    | (list (string * fspec)) =>
+      autounfold with stb; autorewrite with stb; simpl
+    end
   | [H: find _ ?xs = _ |- _ ] =>
     match type of xs with
     | (list (string * fspec)) =>

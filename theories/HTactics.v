@@ -391,6 +391,211 @@ Proof.
   rewrite bind_ret_r in SIM. auto.
 Qed.
 
+Lemma interp_tgt_sim_l_bind `{Σ: GRA.t} stb mn o
+      (R S R_src R_tgt: Type) (RR: _ -> _ -> R_src -> R_tgt -> Prop)
+      a b c d e f g
+      (s : itree (hCallE +' pE +' eventE) R) (k : R -> itree (hCallE +' pE +' eventE) S) (h : S -> itree _ _)
+      (SIM: gpaco6 (_sim_itree c) d e f _ _ RR g (b, ` r : R <- (interp_hCallE_tgt (E:=pE +' eventE) stb mn o s);; ` x : _ <- (interp_hCallE_tgt stb mn o (k r));; h x) a)
+  :
+    gpaco6 (_sim_itree c) d e f _ _ RR g (b, ` x : _ <- interp_hCallE_tgt (E:=pE +' eventE) stb mn o (` x : _ <- s;; k x);; h x) a.
+Proof.
+  unfold interp_hCallE_tgt in *. grind.
+Qed.
+
+Lemma interp_tgt_sim_l_tau `{Σ: GRA.t} stb mn o
+      (U R_src R_tgt: Type) (RR: _ -> _ -> R_src -> R_tgt -> Prop)
+      a b c d e f g
+      (t : itree _ _) (k : U -> itree _ _)
+      (SIM: gpaco6 (_sim_itree c) d e f _ _ RR g (b, Tau (` x : _ <- (interp_hCallE_tgt (E:=pE +' eventE) stb mn o t);; k x)) a)
+  :
+    gpaco6 (_sim_itree c) d e f _ _ RR g (b, ` x : _ <- (interp_hCallE_tgt (E:=pE +' eventE) stb mn o (Tau t));; k x) a.
+Proof.
+  unfold interp_hCallE_tgt in *. grind.
+Qed.
+
+Lemma interp_tgt_sim_l_ret `{Σ: GRA.t} stb mn o
+      (U R_src R_tgt: Type) (RR: _ -> _ -> R_src -> R_tgt -> Prop)
+      a b c d e f g
+      t (k : U -> itree Es _)
+      (SIM: gpaco6 (_sim_itree c) d e f _ _ RR g (b, k t) a)
+  :
+    gpaco6 (_sim_itree c) d e f _ _ RR g (b, ` x : _ <- (interp_hCallE_tgt (E:=pE +' eventE) stb mn o (Ret t));; k x) a.
+Proof.
+  unfold interp_hCallE_tgt in *. grind.
+Qed.
+
+Lemma interp_tgt_sim_l_triggerp `{Σ: GRA.t} stb mn o
+      (R R_src R_tgt: Type) (RR: _ -> _ -> R_src -> R_tgt -> Prop)
+      a b c d e f g
+      (h : R -> itree _ _) (i: pE R)
+      (SIM: gpaco6 (_sim_itree c) d e f _ _ RR g (b, ` r : R <- trigger i;; Tau (h r)) a)
+  :
+    gpaco6 (_sim_itree c) d e f _ _ RR g (b, ` x : R <- interp_hCallE_tgt (E:=pE +' eventE) stb mn o (trigger i);; h x) a.
+Proof.
+  match goal with
+  | [SIM: gpaco6 _ _ _ _ _ _ _ _ ?i0 _ |- gpaco6 _ _ _ _ _ _ _ _ ?i1 _] =>
+    replace i1 with i0; auto
+  end.
+  clear. unfold interp_hCallE_tgt in *. grind.
+  repeat rewrite interp_trigger.
+  f_equal. grind.
+Qed.
+
+Lemma interp_tgt_sim_l_triggere `{Σ: GRA.t} stb mn o
+      (R R_src R_tgt: Type) (RR: _ -> _ -> R_src -> R_tgt -> Prop)
+      a b c d e f g
+      (h : R -> itree _ _) (i: eventE R)
+      (SIM: gpaco6 (_sim_itree c) d e f _ _ RR g (b, ` r : R <- trigger i;; Tau (h r)) a)
+  :
+    gpaco6 (_sim_itree c) d e f _ _ RR g (b, ` x : R <- interp_hCallE_tgt (E:=pE +' eventE) stb mn o (trigger i);; h x) a.
+Proof.
+  match goal with
+  | [SIM: gpaco6 _ _ _ _ _ _ _ _ ?i0 _ |- gpaco6 _ _ _ _ _ _ _ _ ?i1 _] =>
+    replace i1 with i0; auto
+  end.
+  clear. unfold interp_hCallE_tgt in *. grind.
+  repeat rewrite interp_trigger.
+  f_equal. grind.
+Qed.
+
+Lemma interp_tgt_sim_l_hcall `{Σ: GRA.t} stb mn o
+      (R R_src R_tgt: Type) (RR: _ -> _ -> R_src -> R_tgt -> Prop)
+      a b c d e f g
+      (h : R -> itree _ _) (i: hCallE R)
+      (SIM: gpaco6 (_sim_itree c) d e f _ _ RR g (b, ` r : R <- (handle_hCallE_tgt stb mn o i);; Tau (h r)) a)
+  :
+    gpaco6 (_sim_itree c) d e f _ _ RR g (b, ` x : R <- interp_hCallE_tgt (E:=pE +' eventE) stb mn o (trigger i);; h x) a.
+Proof.
+  match goal with
+  | [SIM: gpaco6 _ _ _ _ _ _ _ _ ?i0 _ |- gpaco6 _ _ _ _ _ _ _ _ ?i1 _] =>
+    replace i1 with i0; auto
+  end.
+  clear. unfold interp_hCallE_tgt in *. grind.
+  repeat rewrite interp_trigger. f_equal. grind.
+Qed.
+
+Lemma interp_tgt_sim_l_triggerUB `{Σ: GRA.t} stb mn o
+      (R R_src R_tgt: Type) (RR: _ -> _ -> R_src -> R_tgt -> Prop)
+      a b c d e f g
+      (h : R -> itree _ _)
+      (SIM: gpaco6 (_sim_itree c) d e f _ _ RR g (b, triggerUB) a)
+  :
+    gpaco6 (_sim_itree c) d e f _ _ RR g (b, ` x : R <- interp_hCallE_tgt (E:=pE +' eventE) stb mn o (@triggerUB (hCallE +' pE +' eventE) _ _);; h x) a.
+Proof.
+  unfold triggerUB in *. eapply interp_tgt_sim_l_bind.
+  eapply interp_tgt_sim_l_triggere.
+  match goal with
+  | [SIM: gpaco6 _ _ _ _ _ _ _ _ ?i0 _ |- gpaco6 _ _ _ _ _ _ _ _ ?i1 _] =>
+    replace i1 with i0; auto
+  end.
+  f_equal. grind.
+Qed.
+
+Lemma interp_tgt_sim_l_triggerNB `{Σ: GRA.t} stb mn o
+      (R R_src R_tgt: Type) (RR: _ -> _ -> R_src -> R_tgt -> Prop)
+      a b c d e f g
+      (h : R -> itree _ _)
+      (SIM: gpaco6 (_sim_itree c) d e f _ _ RR g (b, triggerNB) a)
+  :
+    gpaco6 (_sim_itree c) d e f _ _ RR g (b, ` x : R <- interp_hCallE_tgt (E:=pE +' eventE) stb mn o (@triggerNB (hCallE +' pE +' eventE) _ _);; h x) a.
+Proof.
+  unfold triggerNB in *. eapply interp_tgt_sim_l_bind.
+  eapply interp_tgt_sim_l_triggere.
+  match goal with
+  | [SIM: gpaco6 _ _ _ _ _ _ _ _ ?i0 _ |- gpaco6 _ _ _ _ _ _ _ _ ?i1 _] =>
+    replace i1 with i0; auto
+  end.
+  f_equal. grind.
+Qed.
+
+Lemma interp_tgt_sim_l_unwrapU `{Σ: GRA.t} stb mn o
+      (R R_src R_tgt: Type) (RR: _ -> _ -> R_src -> R_tgt -> Prop)
+      a b c d e f g
+      (h : R -> itree _ _) (i: option R)
+      (SIM: gpaco6 (_sim_itree c) d e f _ _ RR g (b, ` r : R <- unwrapU i;; h r) a)
+  :
+    gpaco6 (_sim_itree c) d e f _ _ RR g (b, ` x : R <- interp_hCallE_tgt (E:=pE +' eventE) stb mn o (@unwrapU (hCallE +' pE +' eventE) _ _ i);; h x) a.
+Proof.
+  unfold unwrapU, triggerUB in *. des_ifs.
+  { eapply interp_tgt_sim_l_ret.
+    match goal with
+    | [SIM: gpaco6 _ _ _ _ _ _ _ _ ?i0 _ |- gpaco6 _ _ _ _ _ _ _ _ ?i1 _] =>
+      replace i1 with i0; auto
+    end.
+    grind.
+  }
+  { eapply interp_tgt_sim_l_bind.
+    eapply interp_tgt_sim_l_triggere.
+    match goal with
+    | [SIM: gpaco6 _ _ _ _ _ _ _ _ ?i0 _ |- gpaco6 _ _ _ _ _ _ _ _ ?i1 _] =>
+      replace i1 with i0; auto
+    end.
+    f_equal. grind.
+  }
+Qed.
+
+Lemma interp_tgt_sim_l_unwrapN `{Σ: GRA.t} stb mn o
+      (R R_src R_tgt: Type) (RR: _ -> _ -> R_src -> R_tgt -> Prop)
+      a b c d e f g
+      (h : R -> itree _ _) (i: option R)
+      (SIM: gpaco6 (_sim_itree c) d e f _ _ RR g (b, ` r : R <- unwrapN i;; h r) a)
+  :
+    gpaco6 (_sim_itree c) d e f _ _ RR g (b, ` x : R <- interp_hCallE_tgt (E:=pE +' eventE) stb mn o (@unwrapN (hCallE +' pE +' eventE) _ _ i);; h x) a.
+Proof.
+  unfold unwrapN, triggerNB in *. des_ifs.
+  { eapply interp_tgt_sim_l_ret.
+    match goal with
+    | [SIM: gpaco6 _ _ _ _ _ _ _ _ ?i0 _ |- gpaco6 _ _ _ _ _ _ _ _ ?i1 _] =>
+      replace i1 with i0; auto
+    end.
+    grind.
+  }
+  { eapply interp_tgt_sim_l_bind.
+    eapply interp_tgt_sim_l_triggere.
+    match goal with
+    | [SIM: gpaco6 _ _ _ _ _ _ _ _ ?i0 _ |- gpaco6 _ _ _ _ _ _ _ _ ?i1 _] =>
+      replace i1 with i0; auto
+    end.
+    f_equal. grind.
+  }
+Qed.
+
+Lemma interp_tgt_sim_l_assume `{Σ: GRA.t} stb mn o
+      (R_src R_tgt: Type) (RR: _ -> _ -> R_src -> R_tgt -> Prop)
+      a b c d e f g
+      (h : unit -> itree _ _) P
+      (SIM: gpaco6 (_sim_itree c) d e f _ _ RR g (b, ` r : unit <- assume P;; Tau (h r)) a)
+  :
+    gpaco6 (_sim_itree c) d e f _ _ RR g (b, ` x : unit <- interp_hCallE_tgt (E:=pE +' eventE) stb mn o (@assume (hCallE +' pE +' eventE) _ P);; h x) a.
+Proof.
+  unfold assume in *.
+  eapply interp_tgt_sim_l_bind.
+  eapply interp_tgt_sim_l_triggere.
+  match goal with
+  | [SIM: gpaco6 _ _ _ _ _ _ _ _ ?i0 _ |- gpaco6 _ _ _ _ _ _ _ _ ?i1 _] =>
+    replace i1 with i0; auto
+  end.
+  f_equal. unfold interp_hCallE_tgt. rewrite interp_ret. grind.
+Qed.
+
+Lemma interp_tgt_sim_l_guarantee `{Σ: GRA.t} stb mn o
+      (R_src R_tgt: Type) (RR: _ -> _ -> R_src -> R_tgt -> Prop)
+      a b c d e f g
+      (h : unit -> itree _ _) P
+      (SIM: gpaco6 (_sim_itree c) d e f _ _ RR g (b, ` r : unit <- guarantee P;; Tau (h r)) a)
+  :
+    gpaco6 (_sim_itree c) d e f _ _ RR g (b, ` x : unit <- interp_hCallE_tgt (E:=pE +' eventE) stb mn o (@guarantee (hCallE +' pE +' eventE) _ P);; h x) a.
+Proof.
+  unfold guarantee in *.
+  eapply interp_tgt_sim_l_bind.
+  eapply interp_tgt_sim_l_triggere.
+  match goal with
+  | [SIM: gpaco6 _ _ _ _ _ _ _ _ ?i0 _ |- gpaco6 _ _ _ _ _ _ _ _ ?i1 _] =>
+    replace i1 with i0; auto
+  end.
+  f_equal. unfold interp_hCallE_tgt. rewrite interp_ret. grind.
+Qed.
+
 
 Ltac interp_red := rewrite interp_vis ||
                            rewrite interp_ret ||
@@ -409,6 +614,34 @@ Ltac interp_state_red := rewrite interp_state_trigger ||
                                  rewrite interp_state_tau ||
                                  rewrite interp_state_ret.
 
+Ltac interp_tgt_red_l tac :=
+  cbn;
+  match goal with
+  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, ITree.bind' _ (interp_hCallE_tgt _ _ _ (ITree.bind' _ _))) _) ] =>
+    apply interp_tgt_sim_l_bind; interp_tgt_red_l tac
+  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, ITree.bind' _ (interp_hCallE_tgt _ _ _ (Tau _))) _) ] =>
+    apply interp_tgt_sim_l_tau
+  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, ITree.bind' _ (interp_hCallE_tgt _ _ _ (Ret _))) _) ] =>
+    apply interp_tgt_sim_l_ret; tac
+  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, ITree.bind' _ (interp_hCallE_tgt _ _ _ (trigger _))) _) ] =>
+    (apply interp_tgt_sim_l_hcall ||
+     apply interp_tgt_sim_l_triggere ||
+     apply interp_tgt_sim_l_triggerp)
+  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, ITree.bind' _ (interp_hCallE_tgt _ _ _ triggerUB)) _) ] =>
+    apply interp_tgt_sim_l_triggerUB
+  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, ITree.bind' _ (interp_hCallE_tgt _ _ _ triggerNB)) _) ] =>
+    apply interp_tgt_sim_l_triggerNB
+  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, ITree.bind' _ (interp_hCallE_tgt _ _ _ (unwrapU _))) _) ] =>
+    apply interp_tgt_sim_l_unwrapU
+  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, ITree.bind' _ (interp_hCallE_tgt _ _ _ (unwrapN _))) _) ] =>
+    apply interp_tgt_sim_l_unwrapN
+  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, ITree.bind' _ (interp_hCallE_tgt _ _ _ (assume _))) _) ] =>
+    apply interp_tgt_sim_l_assume
+  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, ITree.bind' _ (interp_hCallE_tgt _ _ _ (guarantee _))) _) ] =>
+    apply interp_tgt_sim_l_guarantee
+  | _ => idtac
+  end.
+
 Ltac ired_l :=
   cbn;
   match goal with
@@ -422,8 +655,10 @@ Ltac ired_l :=
     apply sim_l_trigger_ret_rev
   | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, interp _ _) _) ] =>
     ((interp_red; ired_l) || idtac)
-  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, ITree.bind' _ (interp _ _)) _) ] =>
-    ((interp_red; ired_l) || idtac)
+  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, interp _ _) _) ] =>
+    (((progress interp_red); ired_l) || idtac)
+  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, ITree.bind' _ (interp_hCallE_tgt _ _ _ _)) _) ] =>
+    ((progress interp_tgt_red_l ired_l) || idtac)
   | _ => idtac
   end.
 
@@ -464,6 +699,21 @@ Ltac force_l :=
     remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar;
     let name := fresh "_GUARANTEE" in
     destruct (classic P) as [name|name]; [ired_all; gstep; eapply sim_itree_choose_src; [eauto with ord_step|exists name]|contradict name]; cycle 1
+
+  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, ITree.bind' _ (interp _ guarantee ?P) (_, _))) ] =>
+    let tvar := fresh "tmp" in
+    let thyp := fresh "TMP" in
+    remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar;
+    let name := fresh "_GUARANTEE" in
+    destruct (classic P) as [name|name]; [ired_all; gstep; eapply sim_itree_choose_src; [eauto with ord_step|exists name]|contradict name]; cycle 1
+
+   (* TODO: handle interp_hCallE_tgt better and remove this case *)
+  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, ITree.bind' _ (interp _ (guarantee ?P ))) (_, _)) ] =>
+    let tvar := fresh "tmp" in
+    let thyp := fresh "TMP" in
+    remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar;
+    let name := fresh "_GUARANTEE" in
+    destruct (classic P) as [name|name]; [ired_all; gstep; eapply sim_itree_choose_src; [eauto with ord_step|exists name]|contradict name]; cycle 1; clear name
 
   | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, ?i_src) (_, ?i_tgt)) ] =>
     seal i_tgt; gstep; econs; eauto with ord_step; unseal i_tgt
@@ -723,6 +973,126 @@ Section HLEMMAS.
     2: { admit "ez". }
     auto.
   Qed.
+
+  Lemma APC_step_clo
+        (fn: gname) X (args: X) (next: Ord.t) (n1: Ord.t)
+
+        (o: ord)
+        r rg (n0: Ord.t) mr_src0 mp_src0 fr_src0
+        mrs_tgt frs_tgt k_src
+        mn (at_most: Ord.t)
+        (wf: (alist mname (Σ * Any.t)) * (alist mname (Σ * Any.t)) -> Prop)
+        stb itr_tgt
+
+        (FUEL: (n1 + 7 < n0)%ord)
+        (fsp: fspec)
+        (FIND: find (fun '(_fn, _) => dec fn _fn) stb = Some (fn, fsp))
+        (EQ: X = fsp.(AA))
+        (NEXT: (next < at_most)%ord)
+
+        (POST: forall args' (EQ: args' ~= args),
+            gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ (fun _ _ => @eq Any.t) n1
+                   (([(mn, (mr_src0, mp_src0))], fr_src0),
+                    (HoareCall mn true o (precond fsp) (postcond fsp) fn args');; Tau (ITree.bind (interp_hCallE_tgt stb mn o (_APC next)) k_src))
+                   ((mrs_tgt, frs_tgt),
+                    itr_tgt))
+    :
+      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ (fun _ _ => @eq Any.t) n0
+             (([(mn, (mr_src0, mp_src0))], fr_src0),
+              (interp_hCallE_tgt stb mn o (_APC at_most)) >>= k_src)
+             ((mrs_tgt, frs_tgt),
+              itr_tgt).
+  Proof.
+    rewrite unfold_APC. ired_l. gstep. eapply sim_itree_choose_src.
+    { eapply FUEL. }
+    exists false. gstep. eapply sim_itree_tau_src.
+    { eapply OrdArith.lt_add_r. eauto with ord_step. }
+    ired_l. gstep. eapply sim_itree_choose_src.
+    { eapply OrdArith.lt_add_r. eauto with ord_step. }
+    exists next. gstep. eapply sim_itree_tau_src.
+    { eapply OrdArith.lt_add_r. eauto with ord_step. }
+    ired_l. unfold guarantee. ired_l. gstep. eapply sim_itree_choose_src.
+    { eapply OrdArith.lt_add_r. eauto with ord_step. }
+    split.
+    { auto. }
+    ired_l. gstep. eapply sim_itree_tau_src.
+    { eapply OrdArith.lt_add_r. eauto with ord_step. }
+    ired_l. gstep. eapply sim_itree_choose_src.
+    { eapply OrdArith.lt_add_r. eauto with ord_step. }
+    exists (fn, args↑).
+    ired_l. gstep. eapply sim_itree_tau_src.
+    { eapply OrdArith.add_lt_l. rewrite Ord.from_nat_S. eapply Ord.S_pos. }
+    ired_l. steps. rewrite FIND. ss. ired_l.
+    subst. rewrite Any.upcast_downcast. ss. ired_l.
+    exploit (POST args); ss. intros SIM.
+    match goal with
+    | [SIM: gpaco6 _ _ _ _ _ _ _ _ ?i0 _ |- gpaco6 _ _ _ _ _ _ _ _ ?i1 _] =>
+      replace i1 with i0; auto
+    end.
+    f_equal. grind.
+  Qed.
+
+  Lemma APC_stop_clo
+        (n1: Ord.t)
+
+        (o: ord)
+        r rg (n0: Ord.t) mr_src0 mp_src0 fr_src0
+        mrs_tgt frs_tgt k_src
+        mn (at_most: Ord.t)
+        (wf: (alist mname (Σ * Any.t)) * (alist mname (Σ * Any.t)) -> Prop)
+        stb itr_tgt
+
+        (FUEL: (n1 + 1 < n0)%ord)
+
+        (POST: gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ (fun _ _ => @eq Any.t) n1
+                      (([(mn, (mr_src0, mp_src0))], fr_src0),
+                       k_src ())
+                      ((mrs_tgt, frs_tgt),
+                       itr_tgt))
+    :
+      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ (fun _ _ => @eq Any.t) n0
+             (([(mn, (mr_src0, mp_src0))], fr_src0),
+              (interp_hCallE_tgt stb mn o (_APC at_most)) >>= k_src)
+             ((mrs_tgt, frs_tgt),
+              itr_tgt).
+  Proof.
+    rewrite unfold_APC. ired_l. gstep. eapply sim_itree_choose_src.
+    { eapply FUEL. }
+    exists true. steps.
+    { eapply OrdArith.add_lt_l. rewrite Ord.from_nat_S. eapply Ord.S_pos. }
+    { auto. }
+  Qed.
+
+  Lemma APC_start_clo
+        (at_most: Ord.t) (n1: Ord.t)
+        (o: ord)
+        r rg (n0: Ord.t) mr_src0 mp_src0 fr_src0
+        mrs_tgt frs_tgt k_src
+        mn
+        (wf: (alist mname (Σ * Any.t)) * (alist mname (Σ * Any.t)) -> Prop)
+        stb itr_tgt
+
+        (FUEL: (n1 + 1 < n0)%ord)
+
+        (POST: gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ (fun _ _ => @eq Any.t) n1
+                      (([(mn, (mr_src0, mp_src0))], fr_src0),
+                       (interp_hCallE_tgt stb mn o (_APC at_most))>>= k_src)
+                      ((mrs_tgt, frs_tgt),
+                       itr_tgt))
+    :
+      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ (fun _ _ => @eq Any.t) n0
+             (([(mn, (mr_src0, mp_src0))], fr_src0),
+              (interp_hCallE_tgt stb mn o APC) >>= k_src)
+             ((mrs_tgt, frs_tgt),
+              itr_tgt).
+  Proof.
+    unfold APC. ired_l. gstep. eapply sim_itree_choose_src.
+    { eapply FUEL. }
+    exists at_most. steps.
+    { eapply OrdArith.add_lt_l. rewrite Ord.from_nat_S. eapply Ord.S_pos. }
+    { eapply POST. }
+  Qed.
+
 End HLEMMAS.
 
 Ltac _harg_tac := prep; eapply harg_clo; i.
@@ -771,3 +1141,39 @@ Ltac hret_tac MR_SRC RT_SRC :=
   let tac0 := etrans; [etrans; [|on_gwf ltac:(fun GWF => apply GWF)]|]; eapply URA.extends_updatable; r_equalize; r_solve; fail in
   _hret_tac mr_src1 fr_src1; [tac0| |]
 .
+
+Ltac astep_full _fn _args _next _n1 :=
+  eapply APC_step_clo with (fn:=_fn) (args:=_args) (next:=_next) (n1:=_n1);
+  [(try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; lia)]))|
+   (try by (stb_tac; refl))|
+   (try refl)|
+   (eapply OrdArith.lt_from_nat; lia)|
+   (let args := fresh "args" in
+    let EQ := fresh "EQ" in
+    intros args EQ; subst args)].
+
+Ltac astep _fn _args :=
+  eapply APC_step_clo with (fn:=_fn) (args:=_args);
+  [(try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r; eapply Nat.lt_succ_diag_r)]))|
+   (try by (stb_tac; refl))|
+   (try refl)|
+   (eapply OrdArith.lt_from_nat; eapply Nat.lt_succ_diag_r)|
+   (let args := fresh "args" in
+    let EQ := fresh "EQ" in
+    intros args EQ; subst args)].
+
+Ltac astop :=
+  eapply APC_stop_clo;
+  [(try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r; eapply Nat.lt_succ_diag_r)]))|].
+
+Ltac astart _at_most :=
+  eapply APC_start_clo with (at_most:=_at_most);
+  [(try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r; eapply Nat.lt_succ_diag_r)]))|].
+
+Ltac acall_tac A0 A1 A2 A3 A4 :=
+  match goal with
+  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, _) (_, trigger (Call ?fn (Any.upcast ?args)) >>= _)) ] =>
+    astep fn args; hcall_tac A0 A1 A2 A3 A4
+  end.
+
+Global Opaque _APC APC interp interp_hCallE_tgt.
