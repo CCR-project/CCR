@@ -121,7 +121,7 @@ Qed.
 
 (*** TODO: move to SIRCommon ***)
 Lemma unfold_interp_mrec :
-forall (D E : Type -> Type) (ctx : forall T : Type, D T -> itree (D +' E) T) 
+forall (D E : Type -> Type) (ctx : forall T : Type, D T -> itree (D +' E) T)
   (R : Type) (t : itree (D +' E) R), interp_mrec ctx t = _interp_mrec ctx (observe t).
 Proof.
   i. f. eapply unfold_interp_mrec; et.
@@ -136,6 +136,11 @@ Qed.
 Lemma bind_ret_r : forall (E : Type -> Type) (R : Type) (s : itree E R), ` x : R <- s;; Ret x = s.
 Proof.
   i. f. eapply bind_ret_r.
+Qed.
+
+Lemma bind_ret_r_rev : forall (E : Type -> Type) (R : Type) (s : itree E R), s = ` x : R <- s;; Ret x.
+Proof.
+  i. symmetry. apply bind_ret_r.
 Qed.
 
 Lemma bind_tau : forall (E : Type -> Type) (R U : Type) (t : itree E U) (k : U -> itree E R),
@@ -244,7 +249,7 @@ Lemma interp_trigger:
 Proof. i. f. rewrite unfold_interp. ss. f_equiv; ii. rewrite interp_ret. refl. Qed.
 
 Lemma interp_bind :
-forall {E F : Type -> Type} {R S : Type} (f : forall T : Type, E T -> itree F T) 
+forall {E F : Type -> Type} {R S : Type} (f : forall T : Type, E T -> itree F T)
   (t : itree E R) (k : R -> itree E S),
 interp f (` x : _ <- t;; k x) = ` r : R <- interp f t;; interp f (k r).
 Proof. i. f. apply interp_bind. Qed.
