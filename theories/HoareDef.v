@@ -133,22 +133,45 @@ Variant hCallE: Type -> Type :=
 
 Notation Es' := (hCallE +' pE +' eventE).
 
-Fixpoint _APC (at_most: nat): itree Es' unit :=
-  match at_most with
-  | 0 => Ret tt
-  | S n =>
-    break <- trigger (Choose _);;
-    if break: bool
-    then Ret tt
-    else
-      '(fn, varg) <- trigger (Choose _);;
-      trigger (hCall true fn varg);;
-      _APC n
-  end.
+Program Fixpoint _APC (at_most: Ord.t) {wf Ord.lt at_most}: itree Es' unit :=
+  break <- trigger (Choose _);;
+  if break: bool
+  then Ret tt
+  else
+    n <- trigger (Choose Ord.t);;
+    trigger (Choose (n < at_most)%ord);;
+    '(fn, varg) <- trigger (Choose _);;
+    trigger (hCall true fn varg);;
+    _APC n.
+Next Obligation.
+  eapply Ord.lt_well_founded.
+Qed.
 
 Definition APC: itree Es' unit :=
   at_most <- trigger (Choose _);; _APC at_most
 .
+
+Lemma unfold_APC:
+  forall at_most, _APC at_most =
+                  break <- trigger (Choose _);;
+                  if break: bool
+                  then Ret tt
+                  else
+                    n <- trigger (Choose Ord.t);;
+                    guarantee (n < at_most)%ord;;
+                    '(fn, varg) <- trigger (Choose _);;
+                    trigger (hCall true fn varg);;
+                    _APC n.
+Proof.
+  i. unfold _APC. rewrite Fix_eq; eauto.
+  { repeat f_equal. extensionality break. destruct break; ss.
+    repeat f_equal. extensionality n.
+    unfold guarantee. rewrite bind_bind.
+    repeat f_equal. extensionality p.
+    rewrite bind_ret_l. repeat f_equal. extensionality x. destruct x. auto. }
+  { i. replace g with f; auto. extensionality o. eapply H. }
+Qed.
+Global Opaque _APC.
 
 
 
