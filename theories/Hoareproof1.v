@@ -190,11 +190,6 @@ Section CANCEL.
   (* Let wf: Ord.t -> W -> W -> Prop := top3. *)
   Let wf: W -> W -> Prop := eq.
 
-  Let c: Ord.t := 10%ord.
-  Let d: Ord.t := 10%ord.
-  Let _formula (o0: Ord.t): Ord.t := ((kappa * c + d) ^ (o0 + 1))%ord.
-  Let _formula2 (o0 at_most: Ord.t): Ord.t := ((kappa * c + d) ^ o0 * at_most)%ord.
-
   (* Program Instance ord_lt_proper: Proper (Ord.eq ==> Ord.eq ==> eq) Ord.lt. *)
   (* Next Obligation. *)
   (*   ii. *)
@@ -327,6 +322,22 @@ Section CANCEL.
     - eapply OrdArith.le_mult_r; et.
   Qed.
 
+  Let c: Ord.t := 10%ord.
+  Let d: Ord.t := 10%ord.
+  Let _formula (o0: Ord.t): Ord.t := ((kappa * c + d) ^ (o0 + 1))%ord.
+  Let _formula2 (o0 at_most: Ord.t): Ord.t := ((kappa * c + d) ^ o0 * at_most + c)%ord.
+
+  Lemma expn_pos: forall base o, (1 <= base ^ o)%ord.
+  Proof. i. rewrite Ord.from_nat_S. eapply Ord.S_supremum. eapply OrdArith.expn_pos. Qed.
+
+  Lemma c_one_one: (1 + 1 <= c)%ord.
+  Proof.
+    unfold c.
+    etrans.
+    { instantiate (1:=2%ord). rewrite <- OrdArith.add_from_nat. ss. refl. }
+    eapply OrdArith.le_from_nat. lia.
+  Qed.
+
   Theorem my_thm1: forall o0, (_formula2 o0 kappa + d <= _formula o0)%ord.
   Proof.
     i. unfold _formula, _formula2.
@@ -336,12 +347,16 @@ Section CANCEL.
     { admit "ez". }
     rewrite OrdArith.mult_dist.
     eapply add_le_le.
-    { rewrite <- (OrdArith.mult_1_r kappa) at 2.
-      eapply OrdArith.le_mult_r.
-      eapply OrdArith.le_mult_r.
-      replace (Ord.S Ord.O) with (Ord.from_nat 1); ss.
-      eapply OrdArith.le_from_nat.
-      lia.
+    {
+      rewrite <- c_one_one at 4.
+      rewrite OrdArith.mult_dist.
+      rewrite ! (OrdArith.mult_1_r kappa).
+      rewrite OrdArith.mult_dist.
+      eapply add_le_le; try refl.
+      rewrite <- expn_pos. rewrite OrdArith.mult_1_l.
+      eapply Ord.lt_le.
+      rewrite <- kappa_inaccessible_omega.
+      eapply Ord.omega_upperbound.
     }
     rewrite <- (OrdArith.mult_1_l) at 1.
     eapply mul_le_le; try refl.
@@ -457,9 +472,14 @@ Section CANCEL.
            ).
 
   Let adequacy_type_aux_aux:
-    forall at_most o0 st0
+    forall at_most o0
+           st_src0 st_tgt0
     ,
-      simg eq (_formula2 o0 at_most) (interp_Es p_src (trigger (Choose _)) st0) (interp_Es p_mid (interp_hCallE_mid (ord_pure o0) (_APC at_most)) st0)
+      simg (* (fun '(st_src1, r_src) '(st_tgt1, r_tgt) => st_src1 = st_src0 /\ st_tgt1 = st_tgt0 /\ r_src = r_tgt) *)
+           (* (fun '(st_src1, _) '(st_tgt1, _) => st_src1 = st_src0 /\ st_tgt1 = st_tgt0) *)
+           (fun _ '(st_tgt1, _) => st_tgt1 = st_tgt0)
+           (_formula2 o0 at_most) (* (interp_Es p_src (trigger (Choose _)) st_src0) *) (Ret (st_src0, tt))
+           (interp_Es p_mid (interp_hCallE_mid (ord_pure o0) (_APC at_most)) st_tgt0)
   .
   Proof.
     ginit.
@@ -468,8 +488,11 @@ Section CANCEL.
     eapply well_founded_induction. { eapply Ord.lt_well_founded. } clear at_most.
     intros at_most IH.
     i. rewrite unfold_APC.
-    destruct st0 as [rst0 pst0]. destruct rst0 as [mrs0 [|frs_hd frs_tl]]; ss.
+    destruct st_tgt0 as [rst_tgt0 pst_tgt0]. destruct rst_tgt0 as [mrs_tgt0 [|frs_hd frs_tl]]; ss.
     { admit "-----------------------------------it should not happen...". }
+    TTTTTTTTTTT
+    guclo ordC_spec. econs.
+    { rewrite my_thm2.
     hred. steps. exists tt. steps.
     des_ifs.
     { hred. steps. }
@@ -477,7 +500,8 @@ Section CANCEL.
     unfold guarantee. steps. unfold unwrapU. des_ifs; cycle 1.
     { admit "-----------------------------------FINDF: make it to unwrapN". }
     steps.
-    destruct rst0 as 
+    instantiate (1:=
+    Unshelve.
     hred. ired_r. mred. steps_safe.
     Unset Printing Notations. Set Printing Implicit.
     (interp_hCallE_mid (ord_pure o0) (trigger (hCall true s t)))
