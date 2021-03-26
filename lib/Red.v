@@ -1,3 +1,11 @@
+(* Control Flag *)
+Variant _flag: Set :=
+| _break
+| _continue
+| _fail
+.
+
+(* Internals *)
 Lemma _equal_f (A B : Type) (f g : A -> B)
       x
       (EQ: f = g)
@@ -21,14 +29,6 @@ Ltac _ctx n :=
   | S ?m => apply _equal_f; _ctx m
   end.
 
-(* Control Flag *)
-Variant _flag: Set :=
-| _break
-| _continue
-| _fail
-.
-
-(* Internal *)
 Ltac _prw0 red_tac success :=
   cbn;
   tryif (let f := fresh "f" in
@@ -75,22 +75,32 @@ Module TUTORIAL.
     Hypothesis foo_red2: c = d.
     Hypothesis foo_red3: x = y.
 
-    (* Second Step: Define Reduction Strategy (= tac) *)
-    Ltac _red_l f := (* f is a flag indicating continue/break/fail. Must set f before return *)
+    (* Second Step: Define Reduction Strategy (= red_tac) *)
+    Ltac red_l f := (* f is a flag indicating continue/break/fail. Must set f before return *)
       ((instantiate (f:=_continue); apply foo_red0; fail) ||
        (instantiate (f:=_break); apply foo_red1; fail) ||
        (instantiate (f:=_fail); apply foo_red2; fail)).
 
-    Ltac _red_r f :=
+    Ltac red_r f :=
       (instantiate (f:=_continue); apply foo_red3; fail).
 
+    (* Done. Let's use it! *)
     Lemma foo: forall (p: C) (q: D) (H: sim c ((q, y), p) 9),
-      sim a ((q, x), p) 9.
+        sim a ((q, x), p) 9.
     Proof.
       intros p q H.
-      prw _red_l 3 0.
-      prw _red_r 2 2 1 0.
-      apply H.
+      (* goal = sim a (q, x, p) 9 *)
+      prw red_r 2 2 1 0.
+      (* prw [red_tac (= red_r)] [l_0 (= 2)] [l_1 (= 2)] [l_2 (= 1)] ... 0 =>
+         - find the right l_0th term x0 (= ((q, y), p)) in the goal
+         - find the right l_1th term x1 (=      (q, y)) in the   x0
+         - find the right l_2th term x2 (=           y) in the   x1
+         ...
+         - the last argument must be 0. reduce the x2 following _red_r *)
+      (* goal = sim a (q, y, p) 9 *)
+      prw red_l 3 0.
+      (* goal = sim c (q, y, p) 9 *)
+      exact H.
     Qed.
   End FOO.
 End TUTORIAL.
