@@ -296,6 +296,7 @@ Section PROOF.
         { i. ired_all.
           destruct st_src1 as [w_src fr_src0]. destruct st_tgt1 as [w_tgt fr_tgt0].
           unfold liftRR in SIM. des; subst.
+          ired_both.
           mstep. eapply sim_itree_choose_both.
           intros vret_src. exists vret_src. exists 0.
           mstep. eapply sim_itree_ret.
