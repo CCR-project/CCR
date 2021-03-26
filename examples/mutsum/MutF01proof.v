@@ -54,8 +54,7 @@ Section SIMMODSEM.
       { split; auto. }
     - destruct x; [ss|]. rewrite Nat2Z.inj_succ. steps.
       acall_tac x (ord_pure x) (@URA.unit Σ) (@URA.unit Σ) (@URA.unit Σ).
-      { replace (Z.succ (Z.of_nat x) - 1)%Z with (Z.of_nat x) by lia.
-        splits; auto. }
+      { replace (Z.succ (Z.of_nat x) - 1)%Z with (Z.of_nat x) by lia. ss. }
       { splits; ss. auto with ord_step. }
       { split; auto. }
       des. subst. anytac. asimpl. steps. astop.
