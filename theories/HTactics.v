@@ -493,16 +493,18 @@ Ltac _red_itree f :=
   match goal with
   | [ |- ITree.bind' _ ?itr = _] =>
     match itr with
-    | ITree.bind' _ _ => 
+    | ITree.bind' _ _ =>
       instantiate (f:=_continue); apply bind_bind; fail 3
     | Tau _ =>
       instantiate (f:=_break); apply bind_tau; fail 3
     | Ret _ =>
       instantiate (f:=_continue); apply bind_ret_l; fail 3
     | _ =>
-      instantiate (f:=_fail)
+      fail 3
     end
-  | _ => fail
+  | [ |- trigger _ = _] =>
+    instantiate (f:=_break); apply bind_ret_r_rev; fail 2
+  | _ => fail 1
   end.
 
 Ltac _red_interp_tgt f :=
@@ -533,20 +535,15 @@ Ltac _red_interp_tgt f :=
     | guarantee _ =>
       instantiate (f:=_break); apply interp_tgt_guarantee; fail 3
     | _ =>
-      instantiate (f:=_fail)
+      fail 3
     end
-  | _ => fail
+  | [ |- interp_hCallE_tgt _ _ _ _ = _] =>
+    instantiate (f:=_continue); apply bind_ret_r_rev; fail 2
+  | _ => fail 1
   end.
 
 Ltac _red_lsim f :=
-  match goal with
-  | [ |- ITree.bind' _ (interp_hCallE_tgt _ _ _ _) = _ ] =>
-    _red_interp_tgt f
-  | [ |- trigger _ = _] =>
-    instantiate (f:=_break); apply bind_ret_r_rev; fail 2
-  | [ |- ITree.bind' _ ?itr = _ ] =>    
-    _red_itree f
-  end.
+  _red_interp_tgt f || _red_itree f || fail.
 
 Definition lsim_l_context `{Σ: GRA.t}
            (R_src R_tgt: Type) (RR: _ -> _ -> R_src -> R_tgt -> Prop)

@@ -10,13 +10,13 @@ Ltac _prw tac success :=
   cbn;
   tryif (let f := fresh "f" in
          evar (f:_flag);
-         eapply eq_trans;
+         etransitivity;
          [tac f|
           match goal with
           | [f0:= ?f1: _flag|- _] =>
             match f1 with
             | _continue => subst f; _prw tac true
-            | _break => subst f; apply eq_refl
+            | _break => subst f; reflexivity
             | _fail => fail 2
             end
           end])
@@ -24,7 +24,7 @@ Ltac _prw tac success :=
     idtac
   else
     match success with
-    | true => apply eq_refl
+    | true => reflexivity
     | false => fail
     end.
 
