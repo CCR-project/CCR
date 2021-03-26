@@ -1,3 +1,26 @@
+Lemma _equal_f (A B : Type) (f g : A -> B)
+      x
+      (EQ: f = g)
+  :
+    f x = g x.
+Proof.
+  subst. apply eq_refl.
+Qed.
+
+Lemma _einit (P Q: Prop)
+      (EQ: P = Q)
+  :
+    Q -> P.
+Proof.
+  subst. apply id.
+Qed.
+
+Ltac _ctx n :=
+  match n with
+  | O => apply f_equal
+  | S ?m => apply _equal_f; _ctx m
+  end.
+
 (* Control Flag *)
 Variant _flag: Set :=
 | _break
@@ -6,16 +29,16 @@ Variant _flag: Set :=
 .
 
 (* Internal *)
-Ltac _prw tac success :=
+Ltac _prw0 red_tac success :=
   cbn;
   tryif (let f := fresh "f" in
          evar (f:_flag);
          etransitivity;
-         [tac f|
+         [red_tac f|
           match goal with
           | [f0:= ?f1: _flag|- _] =>
             match f1 with
-            | _continue => subst f; _prw tac true
+            | _continue => subst f; _prw0 red_tac true
             | _break => subst f; reflexivity
             | _fail => fail 2
             end
@@ -28,20 +51,23 @@ Ltac _prw tac success :=
     | false => fail
     end.
 
+Ltac _prw1 k0 k1 X :=
+  match X with
+  | O => eapply _einit; [(k0; k1)|]
+  | S ?n => _prw1 ltac:(k0; _ctx n) k1
+  end.
+
 (* Main Tactic *)
-Ltac prw pat tac :=
-  eapply pat; [_prw tac false|].
-(* pat: forall _ _ (x0 x1: X), ctx[x0] = ctx[x1] where ctx: X -> Prop*)
-(* tac: var -> ltac *)
+Ltac prw red_tac X := _prw1 ltac:(idtac) ltac:(_prw0 red_tac false) X.
 
 Module TUTORIAL.
   Section FOO.
     (* Variables *)
-    Variable A B: Type.
+    Variable A B C D: Type.
     Variable a b c d: A.
     Variable x y: B.
 
-    Variable sim: A -> B -> Prop.
+    Variable sim: A -> (D * B) * C -> nat -> Prop.
 
     (* First Step: Prove Reduction Lemmas *)
     Hypothesis foo_red0: a = b.
@@ -58,32 +84,13 @@ Module TUTORIAL.
     Ltac _red_r f :=
       (instantiate (f:=_continue); apply foo_red3; fail).
 
-    (* Third Step: Prove Pattern Lemmas (= pat) *)
-    Lemma sim_left_pattern p0 p1 q
-          (EQ: p0 = p1)
-      :
-        sim p1 q -> sim p0 q.
-    Proof. intros. subst. assumption. Qed.
-
-    Lemma sim_right_pattern p q0 q1
-          (EQ: q0 = q1)
-      :
-        sim p q1 -> sim p q0.
-    Proof. intros. subst. assumption. Qed.
-
-    (* Done!! Let' use Generated Reduction Tactics *)
-    Ltac red_l := prw sim_left_pattern _red_l. (* prw [pat] [tac] *)
-    Ltac red_r := prw sim_right_pattern _red_r.
-
-    Lemma foo (H: sim c y):
-      sim a x.
+    Lemma foo: forall (p: C) (q: D) (H: sim c ((q, y), p) 9),
+      sim a ((q, x), p) 9.
     Proof.
-      (* Goal: sim a x *)
-      red_l.
-      (* Goal: sim c x *)
-      red_r.
-      (* Goal: sim c y *)
-      exact H.
+      intros p q H.
+      prw _red_l 3 0.
+      prw _red_r 2 2 1 0.
+      apply H.
     Qed.
   End FOO.
 End TUTORIAL.

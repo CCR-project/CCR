@@ -290,8 +290,8 @@ Proof.
   subst. auto.
 Qed.
 
-Ltac ired_l := try (prw lsim_l_context _red_lsim).
-Ltac ired_r := try (prw lsim_r_context _red_lsim).
+Ltac ired_l := try (prw _red_lsim 2 1 0).
+Ltac ired_r := try (prw _red_lsim 1 1 0).
 
 Ltac ired_both := ired_l; ired_r.
 
