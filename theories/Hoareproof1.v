@@ -190,10 +190,10 @@ Section CANCEL.
   (* Let wf: Ord.t -> W -> W -> Prop := top3. *)
   Let wf: W -> W -> Prop := eq.
 
-  Definition c: Ord.t := 2%ord.
-  Definition d: Ord.t := 2%ord.
-  Definition _formula (o0: Ord.t): Ord.t := ((kappa * c + d) ^ (o0 + 1))%ord.
-  Definition _formula2 (o0 at_most: Ord.t): Ord.t := ((kappa * c + d) ^ o0 * at_most)%ord.
+  Let c: Ord.t := 10%ord.
+  Let d: Ord.t := 10%ord.
+  Let _formula (o0: Ord.t): Ord.t := ((kappa * c + d) ^ (o0 + 1))%ord.
+  Let _formula2 (o0 at_most: Ord.t): Ord.t := ((kappa * c + d) ^ o0 * at_most)%ord.
 
   (* Program Instance ord_lt_proper: Proper (Ord.eq ==> Ord.eq ==> eq) Ord.lt. *)
   (* Next Obligation. *)
@@ -211,12 +211,28 @@ Section CANCEL.
     - eapply Ord.lt_eq_lt; et. eapply Ord.eq_lt_lt; et.
   Qed.
 
+  Program Instance le_proper: Proper (Ord.eq ==> Ord.eq ==> iff) (Ord.le).
+  Next Obligation.
+    ii.
+    split; i.
+    - eapply Ord.le_eq_le. { sym. et. } eapply Ord.eq_le_le; et. sym. et.
+    - eapply Ord.le_eq_le; et. eapply Ord.eq_le_le; et.
+  Qed.
+
   Program Instance expn_proper: Proper (Ord.eq ==> Ord.eq ==> Ord.eq) (OrdArith.expn).
   Next Obligation.
     ii.
     etrans.
     - eapply OrdArith.eq_expn_l; et.
     - eapply OrdArith.eq_expn_r; et.
+  Qed.
+
+  Program Instance expn_le_proper: Proper (Ord.le ==> Ord.le ==> Ord.le) (OrdArith.expn).
+  Next Obligation.
+    ii.
+    etrans.
+    - eapply OrdArith.le_expn_l; et.
+    - eapply OrdArith.le_expn_r; et.
   Qed.
 
   Program Instance add_proper: Proper (Ord.eq ==> Ord.eq ==> Ord.eq) (OrdArith.add).
@@ -227,12 +243,34 @@ Section CANCEL.
     - eapply OrdArith.eq_add_r; et.
   Qed.
 
-  Program Instance mult_proper: Proper (Ord.eq ==> Ord.eq ==> Ord.eq) (OrdArith.mult).
+  Program Instance add_le_proper: Proper (Ord.le ==> Ord.le ==> Ord.le) (OrdArith.add).
+  Next Obligation.
+    ii.
+    etrans.
+    - eapply OrdArith.le_add_l; et.
+    - eapply OrdArith.le_add_r; et.
+  Qed.
+
+  Program Instance mult_eq_proper: Proper (Ord.eq ==> Ord.eq ==> Ord.eq) (OrdArith.mult).
   Next Obligation.
     ii.
     etrans.
     - eapply OrdArith.eq_mult_l; et.
     - eapply OrdArith.eq_mult_r; et.
+  Qed.
+
+  Program Instance mult_le_proper: Proper (Ord.le ==> Ord.le ==> Ord.le) (OrdArith.mult).
+  Next Obligation.
+    ii.
+    etrans.
+    - eapply OrdArith.le_mult_l; et.
+    - eapply OrdArith.le_mult_r; et.
+  Qed.
+
+  Program Instance S_proper: Proper (Ord.eq ==> Ord.eq) (Ord.S).
+  Next Obligation.
+    ii.
+    eapply Ord.eq_S; et.
   Qed.
 
   (* Program Instance eq_proper: Proper (Ord.eq ==> Ord.eq ==> Ord.eq) (Ord.lt). *)
@@ -257,7 +295,39 @@ Section CANCEL.
   (*   etrans. rewrite OrdArith.expn_add. *)
   (* Qed. *)
 
-  Theorem my_thm1: forall o0, (_formula2 o0 kappa + d < _formula o0)%ord.
+  Lemma add_le_lt: forall x0 x1 y0 y1, (x0 <= x1)%ord -> (y0 < y1)%ord -> (x0 + y0 < x1 + y1)%ord.
+  Proof.
+    i.
+    eapply Ord.le_lt_lt.
+    - eapply OrdArith.le_add_l; et.
+    - eapply OrdArith.lt_add_r; et.
+  Qed.
+
+  Lemma add_le_le: forall x0 x1 y0 y1, (x0 <= x1)%ord -> (y0 <= y1)%ord -> (x0 + y0 <= x1 + y1)%ord.
+  Proof.
+    i.
+    etrans.
+    - eapply OrdArith.le_add_r; et.
+    - eapply OrdArith.le_add_l; et.
+  Qed.
+
+  Lemma mul_le_lt: forall x0 x1 y0 y1, (0 < x1)%ord -> (x0 <= x1)%ord -> (y0 < y1)%ord -> (x0 * y0 < x1 * y1)%ord.
+  Proof.
+    i.
+    eapply Ord.le_lt_lt.
+    - eapply OrdArith.le_mult_l; et.
+    - eapply OrdArith.lt_mult_r; et.
+  Qed.
+
+  Lemma mul_le_le: forall x0 x1 y0 y1, (x0 <= x1)%ord -> (y0 <= y1)%ord -> (x0 * y0 <= x1 * y1)%ord.
+  Proof.
+    i.
+    etrans.
+    - eapply OrdArith.le_mult_l; et.
+    - eapply OrdArith.le_mult_r; et.
+  Qed.
+
+  Theorem my_thm1: forall o0, (_formula2 o0 kappa + d <= _formula o0)%ord.
   Proof.
     i. unfold _formula, _formula2.
     rewrite OrdArith.expn_add; cycle 1.
@@ -265,37 +335,69 @@ Section CANCEL.
     rewrite OrdArith.expn_1_r; cycle 1.
     { admit "ez". }
     rewrite OrdArith.mult_dist.
-    eapply Ord.le_lt_lt.
-    { eapply OrdArith.le_add_l.
-      instantiate (1:=((kappa * c + d) ^ o0 * (kappa * c))%ord).
-      rewrite <- (OrdArith.mult_1_r kappa) at 2.
+    eapply add_le_le.
+    { rewrite <- (OrdArith.mult_1_r kappa) at 2.
       eapply OrdArith.le_mult_r.
       eapply OrdArith.le_mult_r.
       replace (Ord.S Ord.O) with (Ord.from_nat 1); ss.
       eapply OrdArith.le_from_nat.
       lia.
     }
-    TTTTTTTTTTtttTTTTTTTTTTTTTTTT
-    eapply Ord.le_lt_lt.
-    {
-      ss.
-      eapply Ord.from_nat
-      unfold c.
-      ss.
-    OrdArith.lt_add_r
-    OrdArith.le_add_r
-    OrdArith.le_add_l
+    rewrite <- (OrdArith.mult_1_l) at 1.
+    eapply mul_le_le; try refl.
+    eapply Ord.S_supremum.
+    eapply OrdArith.expn_pos.
+    (* OrdArith.lt_add_r *)
+    (* OrdArith.le_add_r *)
+    (* OrdArith.le_add_l *)
 
-    OrdArith.add
-    OrdArith.mult
-    OrdArith.expn
+    (* OrdArith.add *)
+    (* OrdArith.mult *)
+    (* OrdArith.expn *)
   Qed.
-  (* Definition formula (o0: ord): ord := *)
-  (*   match o0 with *)
-  (*   | ord_pure o0 => ord_pure (_formula o0) *)
-  (*   | ord_top => ord_top *)
-  (*   end *)
-  (* . *)
+
+  Lemma add_one_lt: forall o0 o1, (o0 < o1)%ord -> (o0 + 1 <= o1)%ord.
+  Proof.
+    i.
+    rewrite Ord.from_nat_S.
+    rewrite OrdArith.add_S.
+    rewrite OrdArith.add_O_r.
+    eapply Ord.S_supremum; et.
+  Qed.
+
+  Theorem my_thm2
+          o0 o1 at_most_cur at_most_next
+          (O: (o1 < o0)%ord)
+          (AM: (at_most_next < at_most_cur)%ord)
+    :
+      (_formula2 o0 at_most_next + _formula o1 <= _formula2 o0 at_most_cur)%ord
+  .
+  Proof.
+    i. unfold _formula, _formula2.
+    eapply add_one_lt in O. eapply add_one_lt in AM.
+    rewrite OrdArith.expn_add; cycle 1.
+    { admit "ez". }
+    rewrite OrdArith.expn_1_r; cycle 1.
+    { admit "ez". }
+    rewrite <- AM.
+    rewrite OrdArith.mult_dist with (o2:=1) at 1.
+    rewrite OrdArith.mult_1_r.
+    eapply add_le_le; try refl.
+    rewrite <- O.
+    rewrite OrdArith.expn_add; cycle 1.
+    { admit "ez". }
+    rewrite OrdArith.expn_1_r; cycle 1.
+    { admit "ez". }
+    refl.
+    (* OrdArith.lt_add_r *)
+    (* OrdArith.le_add_r *)
+    (* OrdArith.le_add_l *)
+
+    (* OrdArith.add *)
+    (* OrdArith.mult *)
+    (* OrdArith.expn *)
+  Qed.
+
   Definition formula (o0: ord): Ord.t :=
     match o0 with
     | ord_pure o0 => (_formula o0)
@@ -307,20 +409,6 @@ Section CANCEL.
 
   Let p_src := ModSem.prog ms_src.
   Let p_mid := ModSem.prog ms_mid.
-
-  Let adequacy_type_aux_aux:
-    forall o0
-           at_most
-           st0
-    ,
-      simg eq (formula o0) (interp_Es p_src (trigger (Choose _)) st0) (interp_Es p_mid (interp_hCallE_mid o0 (_APC at_most)) st0)
-  .
-  Proof.
-    admit "".
-  Qed.
-
-
-
 
   Let Any_pair_downcast: forall T0 T1 (v0: T0) (v1: T1), @Any.downcast (T0 * T1)%type (Any.pair v0↑ v1↑) = Some (v0, v1).
     { admit "ez - add this to Any.v ------------------". }
@@ -355,9 +443,49 @@ Section CANCEL.
   .
   Proof. unfold interp_hCallE_mid. rewrite interp_trigger. cbn. grind. Qed.
 
+  Lemma interp_hCallE_mid_hCallE
+        (* `{E -< Es} *)
+        o0 (e: hCallE Any.t)
+    :
+      interp_hCallE_mid (E:=pE +' eventE) o0 (trigger e) = r <- (handle_hCallE_mid o0 e);; tau;; Ret r
+  .
+  Proof. unfold interp_hCallE_mid. rewrite interp_trigger. cbn. grind. Qed.
+
   Ltac hred :=
-    repeat (try rewrite interp_hCallE_mid_bind; try rewrite interp_hCallE_mid_tau; try rewrite interp_hCallE_mid_ret; try rewrite interp_hCallE_mid_eventE
+    repeat (try rewrite interp_hCallE_mid_bind; try rewrite interp_hCallE_mid_tau; try rewrite interp_hCallE_mid_ret; try rewrite interp_hCallE_mid_eventE;
+            try rewrite interp_hCallE_mid_hCallE           
            ).
+
+  Let adequacy_type_aux_aux:
+    forall at_most o0 st0
+    ,
+      simg eq (_formula2 o0 at_most) (interp_Es p_src (trigger (Choose _)) st0) (interp_Es p_mid (interp_hCallE_mid (ord_pure o0) (_APC at_most)) st0)
+  .
+  Proof.
+    ginit.
+    { i. eapply cpn5_wcompat; eauto with paco. }
+    intro. pattern at_most.
+    eapply well_founded_induction. { eapply Ord.lt_well_founded. } clear at_most.
+    intros at_most IH.
+    i. rewrite unfold_APC.
+    destruct st0 as [rst0 pst0]. destruct rst0 as [mrs0 [|frs_hd frs_tl]]; ss.
+    { admit "-----------------------------------it should not happen...". }
+    hred. steps. exists tt. steps.
+    des_ifs.
+    { hred. steps. }
+    hred. steps. unfold guarantee. hred. steps. hred. steps.
+    unfold guarantee. steps. unfold unwrapU. des_ifs; cycle 1.
+    { admit "-----------------------------------FINDF: make it to unwrapN". }
+    steps.
+    destruct rst0 as 
+    hred. ired_r. mred. steps_safe.
+    Unset Printing Notations. Set Printing Implicit.
+    (interp_hCallE_mid (ord_pure o0) (trigger (hCall true s t)))
+      (@ITree.trigger (sum1 hCallE (sum1 pE eventE)) Any.t
+                (@subevent hCallE (sum1 hCallE (sum1 pE eventE))
+                   (@ReSum_inl (forall _ : Type, Type) IFun sum1 Cat_IFun Inl_sum1 hCallE hCallE (sum1 pE eventE) (@ReSum_id (forall _ : Type, Type) IFun Id_IFun hCallE))
+                   Any.t (hCall true s t)))
+  Qed.
 
   Let adequacy_type_aux:
     forall
