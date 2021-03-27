@@ -77,11 +77,11 @@ Ltac _rwa k X :=
 
 (* Main Tactic *)
 Ltac prw red_tac X := _prw ltac:(idtac) ltac:(__prw red_tac false) X.
+
 Ltac rwbl X := _rwb ltac:(fun f => fail) X.
 Ltac rwcl X := _rwc ltac:(fun f => fail) X.
 Ltac rwal X := _rwa ltac:(fun f => fail) X.
-
-Ltac rrw X _f n := ltac:(fun f => instantiate (f:=_f); eapply X; fail n).
+Ltac rrw X _f := ltac:(fun f => instantiate (f:=_f); eapply X; fail).
 
 Module TUTORIAL.
   Section FOO.
@@ -124,7 +124,7 @@ Module TUTORIAL.
        (instantiate (f:=_continue); apply foo_red4; fail)).
 
     Ltac red_C :=
-      rrw foo_red5 _break integer:(1).
+      rrw foo_red5 _break.
 
     Ltac red_C' := (* = red_C *)
       rwbl
