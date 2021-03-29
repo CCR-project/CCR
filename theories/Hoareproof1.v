@@ -478,7 +478,7 @@ Module MyParam <: PARAM.
   Definition c: Ord.t := 10%ord.
   Definition d: Ord.t := 50%ord.
   Definition e: Ord.t := 10%ord.
-  Definition f: Ord.t := 10%ord.
+  Definition f: Ord.t := (d + 10)%ord.
 End MyParam.
 
 Module C := (Construction MyParam).
@@ -679,11 +679,13 @@ Section CANCEL.
       admit "??????????????????????????????????????????".
     }
     i. ss. des_ifs. destruct vret_src; ss. repeat des_u. unfold idK.
-    repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+    unfold C.f.
     guclo ordC_spec. econs.
-    { admit "????????????????????". }
-    eapply IH.
-    ss.
+    { rewrite <- OrdArith.add_assoc. refl. }
+    repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+    guclo ordC_spec. econs; cycle 1.
+    { eapply IH. ss. }
+    { eapply OrdArith.add_base_l. }
   Qed.
     set (rst_tgt0:=(mrs_tgt0, frs_hd :: frs_tl)) in *.
     set (st_tgt0:=(@pair (@r_state Σ) _ rst_tgt0 pst_tgt0)) in *.
