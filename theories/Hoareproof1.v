@@ -475,9 +475,9 @@ End Construction.
 
 
 Module MyParam <: PARAM.
-  Definition c: Ord.t := 10%ord.
   Definition d: Ord.t := 50%ord.
-  Definition e: Ord.t := 10%ord.
+  Definition c: Ord.t := (d + 30)%ord.
+  Definition e: Ord.t := 50%ord.
   Definition f: Ord.t := (d + 10)%ord.
 End MyParam.
 
@@ -568,13 +568,6 @@ Section CANCEL.
   (* Let wf: Ord.t -> W -> W -> Prop := top3. *)
   Let wf: W -> W -> Prop := eq.
 
-  Definition formula (o0: ord): Ord.t :=
-    match o0 with
-    | ord_pure o0 => (C.myF o0)
-    | ord_top => 100%ord
-    end
-  .
-
   Opaque interp_Es.
 
   Let p_src := ModSem.prog ms_src.
@@ -626,7 +619,7 @@ Section CANCEL.
             try rewrite interp_hCallE_mid_hCallE           
            ).
 
-  Let adequacy_type_aux_aux:
+  Let adequacy_type_aux__APC:
     forall at_most o0
            st_src0 st_tgt0
     ,
@@ -699,7 +692,7 @@ Section CANCEL.
         rewrite OrdArith.add_assoc.
         eapply add_le_le.
         - admit "ez".
-        - admit "ez".
+        - etrans; [|eapply OrdArith.add_base_l]. etrans; [|eapply OrdArith.add_base_l]. refl.
       }
       eapply IH; et. econs; et.
     }
@@ -713,6 +706,40 @@ Section CANCEL.
     { eapply OrdArith.add_base_l. }
   Qed.
 
+  Let adequacy_type_aux_APC:
+    forall o0 st_src0 st_tgt0
+    ,
+      simg (fun _ '(st_tgt1, _) => st_tgt1 = st_tgt0)
+           (C.myF o0)%ord (Ret (st_src0, tt))
+           (interp_Es p_mid (interp_hCallE_mid (ord_pure o0) APC) st_tgt0)
+  .
+  Proof.
+    ginit.
+    { i. eapply cpn5_wcompat; eauto with paco. }
+    i. unfold APC.
+    guclo ordC_spec. econs.
+    { rewrite <- C.my_thm1. refl. }
+    unfold guarantee.
+    repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+    unfold C.c.
+    guclo ordC_spec. econs.
+    { rewrite <- OrdArith.add_assoc. refl. }
+    repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+    guclo ordC_spec. econs.
+    { etrans; [|eapply OrdArith.add_base_l]. eapply add_le_le; [|refl]. instantiate (1:=C.myG o0 x). admit "ez". }
+    gfinal. right.
+    eapply adequacy_type_aux__APC.
+  Qed.
+
+  Lemma idK_spec2: forall E A B (a: A) (itr: itree E B), itr = Ret a >>= fun _ => itr. Proof. { i. ired. ss. } Qed.
+
+  Definition formula (o0: ord): Ord.t :=
+    match o0 with
+    | ord_pure o0 => (10 + C.myF o0)%ord
+    | ord_top => 100%ord
+    end
+  .
+
   Let adequacy_type_aux:
     forall
       AA AR
@@ -720,7 +747,7 @@ Section CANCEL.
       o0
       body st0
     ,
-      simg eq (formula o0) (interp_Es p_src ((fun_to_src (AA:=AA) (AR:=AR) body) args↑) st0)
+      simg eq (formula o0) (if is_pure o0 then trigger (Choose _) else (interp_Es p_src ((fun_to_src (AA:=AA) (AR:=AR) body) args↑) st0))
            (interp_Es p_mid ((fun_to_mid body) (Any.pair o0↑ args↑)) st0)
   .
   Proof.
@@ -729,11 +756,84 @@ Section CANCEL.
     gcofix CIH. i.
     unfold fun_to_src, fun_to_mid. steps. rewrite Any_pair_downcast. ss. steps.
     unfold body_to_src, cfun. steps. rewrite Any.upcast_downcast. ss. steps.
-    destruct o0.
+    destruct o0; ss.
     - (*** PURE ***)
+      seal_left.
       steps.
+      unseal_left.
+      erewrite idK_spec2 at 1.
+      guclo bindC_spec.
+      econs.
+      { gfinal. right. eapply paco5_mon. { eapply adequacy_type_aux_APC. } ii; ss. }
+      ii; ss. des_ifs. des_u.
+      repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+      steps. esplits; eauto.
+      repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+      steps.
+    - (*** IMPURE ***)
+      steps. unfold body_to_mid.
+      abstr (body args) itr. clear body args AA.
+
+      guclo ordC_spec. econs.
+      { instantiate (1:=(1 + 99)%ord). rewrite <- OrdArith.add_from_nat. ss. refl. }
+      guclo bindC_spec. eapply bindR_intro with (RR:=eq); cycle 1.
+      { ii. subst. des_ifs. steps. }
+
+      revert_until CIH. gcofix CIH0. i.
+
+      ides itr.
+      { unfold interp_hCallE_src, interp_hCallE_mid. try rewrite ! unfold_interp; cbn; mred.
+        steps. }
+      { unfold interp_hCallE_src, interp_hCallE_mid. try rewrite ! unfold_interp; cbn; mred.
+        steps. gbase. eapply CIH0. }
+      destruct e; cycle 1.
+      {
+        unfold interp_hCallE_src, interp_hCallE_mid. try rewrite ! unfold_interp; cbn; mred.
+        destruct s; ss.
+        {
+          destruct st0 as [rst0 pst0]; ss.
+          destruct p; ss.
+          - steps. Esred. steps. gbase. et.
+          - steps. Esred. steps. gbase. et.
+        }
+        { dependent destruction e.
+          - steps. Esred. steps. esplits; et. steps. gbase. et.
+          - steps. Esred. steps. esplits; et. steps. gbase. et.
+          - steps. Esred. steps. esplits; et. steps. gbase. et.
+        }
+      }
+      dependent destruction h.
+
+      destruct st0 as [rst0 pst0]; ss.
+      unfold interp_hCallE_src, interp_hCallE_mid. try rewrite ! unfold_interp; cbn; mred.
+      destruct tbr.
+      + (*** PURE CALL ***)
+        mred.
+        seal_left.
+        steps. unfold guarantee. steps. unfold unwrapU. des_ifs; cycle 1.
+        { admit "unwrapN!!!!!!!!!!!!!!!!!!!!!!!!!!". }
+        steps.
+        destruct rst0 as [mrs0 [|frs_hd frs_tl]]; ss.
+        { steps. }
+        steps.
+        rewrite find_map in *. uo. des_ifs.
+        unseal_left.
+        TTTTTTTTTTTTTTTTTTTTTTTT
+        unseal_left.
+        steps. esplits; eauto. steps.
+        Esred.
+        esplits; eauto.
+      + (*** IMPURE CALL ***)
+      des_ifs.
+      hred.
+      ss.
+      seal_left.
+
+
       Local Transparent APC. unfold APC. Local Opaque APC.
-      hred. steps_safe.
+      hred.
+      guclo ordC_spec.
+      steps_safe.
       steps.
       rewrite interp_hCallE_mid_eventE.
       unfold interp_hCallE_mid. rewrite unfold_interp. steps.
