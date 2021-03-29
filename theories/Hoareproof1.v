@@ -475,8 +475,8 @@ End Construction.
 
 
 Module MyParam <: PARAM.
+  Definition c: Ord.t := 10%ord.
   Definition d: Ord.t := 50%ord.
-  Definition c: Ord.t := (d + 10)%ord.
   Definition e: Ord.t := 10%ord.
   Definition f: Ord.t := (d + 10)%ord.
 End MyParam.
@@ -511,64 +511,6 @@ Qed.
 
 
 
-Definition myadd (o0 o1: Ord.t): Ord.t := OrdArith.mult (Ord.S o0) (Ord.S o1).
-
-Lemma myadd_proj1 o0 o1: Ord.le o0 (myadd o0 o1).
-Proof.
-  unfold myadd. etransitivity.
-  2: { eapply OrdArith.mult_S. }
-  transitivity (Ord.S o0).
-  { eapply Ord.lt_le. eapply Ord.S_lt. }
-  { eapply OrdArith.add_base_r. }
-Qed.
-
-Lemma myadd_proj2 o0 o1: Ord.le o1 (myadd o0 o1).
-Proof.
-  unfold myadd. etransitivity.
-  { eapply OrdArith.mult_1_l. }
-  transitivity (OrdArith.mult (Ord.from_nat 1) (Ord.S o1)).
-  { apply OrdArith.le_mult_r. apply Ord.lt_le. apply Ord.S_lt. }
-  { apply OrdArith.le_mult_l. ss.
-    rewrite Ord.from_nat_S. rewrite Ord.from_nat_O.
-    eapply Ord.le_S. eapply Ord.O_bot. }
-Qed.
-
-Lemma myadd_le_l o0 o1 o2 (LE: Ord.le o0 o1): Ord.le (myadd o0 o2) (myadd o1 o2).
-Proof.
-  eapply OrdArith.le_mult_l. eapply Ord.le_S. auto.
-Qed.
-
-Lemma myadd_le_r o0 o1 o2 (LE: Ord.le o1 o2): Ord.le (myadd o0 o1) (myadd o0 o2).
-Proof.
-  eapply OrdArith.le_mult_r. eapply Ord.le_S. auto.
-Qed.
-
-Lemma myadd_lt_r o0 o1 o2 (LT: Ord.lt o1 o2): Ord.lt (myadd o0 o1) (myadd o0 o2).
-Proof.
-  eapply (@Ord.lt_le_lt (myadd o0 (Ord.S o1))).
-  { unfold myadd. eapply Ord.lt_eq_lt.
-    { eapply OrdArith.mult_S. }
-    eapply Ord.lt_eq_lt.
-    { eapply OrdArith.add_S. }
-    eapply Ord.le_lt_lt.
-    2: { eapply Ord.S_lt. }
-    eapply OrdArith.add_base_l.
-  }
-  { eapply myadd_le_r. eapply Ord.S_supremum in LT. auto. }
-Qed.
-
-Lemma myadd_lt_l o0 o1 o2 (LT: Ord.lt o0 o1): Ord.lt (myadd o0 o2) (myadd o1 o2).
-Proof.
-  unfold myadd. eapply Ord.lt_eq_lt.
-  { eapply OrdArith.mult_S. }
-  eapply Ord.eq_lt_lt.
-  { eapply OrdArith.mult_S. }
-  eapply Ord.le_lt_lt.
-  2: { eapply OrdArith.lt_add_r. eapply Ord.lt_S. eapply LT. }
-  eapply OrdArith.le_add_l.
-  eapply OrdArith.le_mult_l.
-  eapply Ord.le_S. eapply Ord.lt_le. auto.
-Qed.
 
 
 
@@ -667,9 +609,7 @@ Section CANCEL.
            ).
 
   Let adequacy_type_aux_aux:
-    forall fuel
-           at_most o0
-           (FUEL: (myadd o0 at_most <= fuel)%ord)
+    forall at_most o0
            st_src0 st_tgt0
     ,
       simg (* (fun '(st_src1, r_src) '(st_tgt1, r_tgt) => st_src1 = st_src0 /\ st_tgt1 = st_tgt0 /\ r_src = r_tgt) *)
@@ -681,9 +621,9 @@ Section CANCEL.
   Proof.
     ginit.
     { i. eapply cpn5_wcompat; eauto with paco. }
-    intro. pattern fuel.
-    eapply well_founded_induction. { eapply Ord.lt_well_founded. } clear fuel.
-    intros fuel IH.
+    intro. pattern at_most.
+    eapply well_founded_induction. { eapply Ord.lt_well_founded. } clear at_most.
+    intros at_most IH.
     i. rewrite unfold_APC.
     destruct st_tgt0 as [rst_tgt0 pst_tgt0]. destruct rst_tgt0 as [mrs_tgt0 [|frs_hd frs_tl]]; ss.
     { admit "-----------------------------------it should not happen...". }
@@ -734,18 +674,8 @@ Section CANCEL.
       unfold guarantee.
       repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
       guclo ordC_spec. econs.
-      { instantiate (1:=(C.myG n x1 + C.d)%ord). rewrite <- C.my_thm3; et. rewrite <- C.my_thm1.
-        etrans; [|eapply OrdArith.add_base_l].
-        etrans; [|eapply OrdArith.add_base_l].
-        eapply add_le_le.
-        - admit "ez".
-        - unfold C.c. eapply OrdArith.add_base_l.
-      }
-      eapply IH; try refl.
-      eapply Ord.lt_le_lt; et.
-      etrans.
-      { eapply myadd_lt_r; et. }
-      { eapply myadd_lt_l; et. }
+      { admit "????????????????????". }
+      eapply IH.
       admit "??????????????????????????????????????????".
     }
     i. ss. des_ifs. destruct vret_src; ss. repeat des_u. unfold idK.
