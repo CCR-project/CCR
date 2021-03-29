@@ -324,8 +324,9 @@ Section CANCEL.
 
   Let c: Ord.t := 10%ord.
   Let d: Ord.t := 10%ord.
-  Let _formula (o0: Ord.t): Ord.t := ((kappa * c + d) ^ (o0 + 1))%ord.
-  Let _formula2 (o0 at_most: Ord.t): Ord.t := ((kappa * c + d) ^ o0 * at_most + c)%ord.
+  Let myF (o0: Ord.t): Ord.t := ((kappa + d) ^ (c * o0 + 1))%ord.
+  Let myG (o0 at_most: Ord.t): Ord.t := ((kappa + d) ^ (c * o0) * at_most)%ord.
+  Let myH (o0: Ord.t): Ord.t := ((kappa + d) ^ (c * o0))%ord.
 
   Lemma expn_pos: forall base o, (1 <= base ^ o)%ord.
   Proof. i. rewrite Ord.from_nat_S. eapply Ord.S_supremum. eapply OrdArith.expn_pos. Qed.
@@ -338,26 +339,16 @@ Section CANCEL.
     eapply OrdArith.le_from_nat. lia.
   Qed.
 
-  Theorem my_thm1: forall o0, (_formula2 o0 kappa + d <= _formula o0)%ord.
+  Theorem my_thm1: forall o0, (myG o0 kappa + d <= myF o0)%ord.
   Proof.
-    i. unfold _formula, _formula2.
+    i. unfold myF, myG.
     rewrite OrdArith.expn_add; cycle 1.
     { admit "ez". }
     rewrite OrdArith.expn_1_r; cycle 1.
     { admit "ez". }
     rewrite OrdArith.mult_dist.
     eapply add_le_le.
-    {
-      rewrite <- c_one_one at 4.
-      rewrite OrdArith.mult_dist.
-      rewrite ! (OrdArith.mult_1_r kappa).
-      rewrite OrdArith.mult_dist.
-      eapply add_le_le; try refl.
-      rewrite <- expn_pos. rewrite OrdArith.mult_1_l.
-      eapply Ord.lt_le.
-      rewrite <- kappa_inaccessible_omega.
-      eapply Ord.omega_upperbound.
-    }
+    { refl. }
     rewrite <- (OrdArith.mult_1_l) at 1.
     eapply mul_le_le; try refl.
     eapply Ord.S_supremum.
@@ -381,14 +372,47 @@ Section CANCEL.
   Qed.
 
   Theorem my_thm2
-          o0 o1 at_most_cur at_most_next
-          (O: (o1 < o0)%ord)
-          (AM: (at_most_next < at_most_cur)%ord)
+          o0 m0 m1
+          (AM: (m1 < m0)%ord)
     :
-      (_formula2 o0 at_most_next + _formula o1 <= _formula2 o0 at_most_cur)%ord
+      (myG o0 m1 + myH o0 + c <= myG o0 m0)%ord
   .
   Proof.
-    i. unfold _formula, _formula2.
+    admit "".
+  Qed.
+
+  Theorem my_thm3
+          o0 o1
+          (O: (o1 < o0)%ord)
+    :
+      (myF o1 + d <= myH o0)%ord
+  .
+  Proof.
+    unfold myF, myG, myH.
+    eapply add_one_lt in O.
+    rewrite <- O.
+    rewrite OrdArith.mult_dist with (o2:=1) at 1.
+    rewrite OrdArith.mult_1_r.
+    rewrite <- c_one_one at 3.
+    rewrite <- OrdArith.add_assoc.
+    admit "ez".
+  Qed.
+  TTTTTTTTTTTTTTTTTTTTTTTTTTTT
+
+
+
+
+
+
+  Theorem my_thm2
+          o0 o1 m0 m1
+          (O: (o1 < o0)%ord)
+          (AM: (m1 < m0)%ord)
+    :
+      (myG o0 m1 + myF o1 + c <= myG o0 m0)%ord
+  .
+  Proof.
+    i. unfold myF, myG.
     eapply add_one_lt in O. eapply add_one_lt in AM.
     rewrite OrdArith.expn_add; cycle 1.
     { admit "ez". }
@@ -397,13 +421,25 @@ Section CANCEL.
     rewrite <- AM.
     rewrite OrdArith.mult_dist with (o2:=1) at 1.
     rewrite OrdArith.mult_1_r.
+    rewrite OrdArith.add_assoc.
     eapply add_le_le; try refl.
     rewrite <- O.
+    rewrite OrdArith.mult_dist with (o2:=1).
+    rewrite OrdArith.mult_1_r.
+    rewrite OrdArith.expn_add; cycle 1.
+    { admit "ez". }
+    rewrite <- c_one_one at 4.
     rewrite OrdArith.expn_add; cycle 1.
     { admit "ez". }
     rewrite OrdArith.expn_1_r; cycle 1.
     { admit "ez". }
-    refl.
+    replace (kappa + d)%ord with (1+1)%ord at 5; cycle 1.
+    { admit "ez". }
+    rewrite OrdArith.mult_dist with (o2:=1).
+    rewrite OrdArith.mult_1_r.
+    rewrite OrdArith.mult_dist with (o1:=(kappa + d)%ord).
+    eapply add_le_le; try refl.
+    admit "ez".
     (* OrdArith.lt_add_r *)
     (* OrdArith.le_add_r *)
     (* OrdArith.le_add_l *)
@@ -415,7 +451,7 @@ Section CANCEL.
 
   Definition formula (o0: ord): Ord.t :=
     match o0 with
-    | ord_pure o0 => (_formula o0)
+    | ord_pure o0 => (myF o0)
     | ord_top => 100%ord
     end
   .
@@ -478,7 +514,7 @@ Section CANCEL.
       simg (* (fun '(st_src1, r_src) '(st_tgt1, r_tgt) => st_src1 = st_src0 /\ st_tgt1 = st_tgt0 /\ r_src = r_tgt) *)
            (* (fun '(st_src1, _) '(st_tgt1, _) => st_src1 = st_src0 /\ st_tgt1 = st_tgt0) *)
            (fun _ '(st_tgt1, _) => st_tgt1 = st_tgt0)
-           (_formula2 o0 at_most) (* (interp_Es p_src (trigger (Choose _)) st_src0) *) (Ret (st_src0, tt))
+           (myG o0 at_most) (* (interp_Es p_src (trigger (Choose _)) st_src0) *) (Ret (st_src0, tt))
            (interp_Es p_mid (interp_hCallE_mid (ord_pure o0) (_APC at_most)) st_tgt0)
   .
   Proof.
@@ -490,9 +526,8 @@ Section CANCEL.
     i. rewrite unfold_APC.
     destruct st_tgt0 as [rst_tgt0 pst_tgt0]. destruct rst_tgt0 as [mrs_tgt0 [|frs_hd frs_tl]]; ss.
     { admit "-----------------------------------it should not happen...". }
-    TTTTTTTTTTT
     guclo ordC_spec. econs.
-    { rewrite my_thm2.
+    { TTTTTTTTTTTTTTTTTTT rewrite my_thm2.
     hred. steps. exists tt. steps.
     des_ifs.
     { hred. steps. }
