@@ -747,7 +747,9 @@ Section CANCEL.
       o0
       body st0
     ,
-      simg eq (formula o0) (if is_pure o0 then trigger (Choose _) else (interp_Es p_src ((fun_to_src (AA:=AA) (AR:=AR) body) args↑) st0))
+      simg eq (formula o0)
+           (* (if is_pure o0 then trigger (Choose _) else (interp_Es p_src ((fun_to_src (AA:=AA) (AR:=AR) body) args↑) st0)) *)
+           (interp_Es p_src (if is_pure o0 then trigger (Choose _) else ((fun_to_src (AA:=AA) (AR:=AR) body) args↑)) st0)
            (interp_Es p_mid ((fun_to_mid body) (Any.pair o0↑ args↑)) st0)
   .
   Proof.
@@ -803,6 +805,7 @@ Section CANCEL.
         }
       }
       dependent destruction h.
+      Opaque fun_to_src fun_to_mid.
 
       destruct st0 as [rst0 pst0]; ss.
       unfold interp_hCallE_src, interp_hCallE_mid. try rewrite ! unfold_interp; cbn; mred.
@@ -810,14 +813,33 @@ Section CANCEL.
       + (*** PURE CALL ***)
         mred.
         seal_left.
-        steps. unfold guarantee. steps. unfold unwrapU. des_ifs; cycle 1.
+        (mred; try HoareDef._step; des_ifs_safe).
+        unseal_left.
+        (mred; try HoareDef._step; des_ifs_safe).
+        instantiate (1:=(100 + formula x + 100)%ord).
+        seal_left.
+        repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+        unfold guarantee.
+        repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+        unfold unwrapU. des_ifs; cycle 1.
         { admit "unwrapN!!!!!!!!!!!!!!!!!!!!!!!!!!". }
-        steps.
+        repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+        des_ifs_safe.
+        repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
         destruct rst0 as [mrs0 [|frs_hd frs_tl]]; ss.
-        { steps. }
+        { unseal_left. steps. }
+        repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+        unseal_left.
+        rewrite find_map in *. uo. des_ifs.
+        guclo ordC_spec. econs.
+        { eapply OrdArith.add_base_l. }
+        rename x into o1.
+        guclo bindC_spec. econs.
+        * gbase. hexploit CIH; et. intro T. eapply T.
         steps.
         rewrite find_map in *. uo. des_ifs.
         unseal_left.
+        instantiate (1:=formula x).
         TTTTTTTTTTTTTTTTTTTTTTTT
         unseal_left.
         steps. esplits; eauto. steps.

@@ -234,7 +234,7 @@ Section CANCEL.
   Definition handle_hCallE_src: hCallE ~> itree Es :=
     fun _ '(hCall tbr fn varg_src) =>
       match tbr with
-      | true => trigger (Choose _)
+      | true => tau;; trigger (Choose _)
       | false => trigger (Call fn varg_src)
       end
   .
