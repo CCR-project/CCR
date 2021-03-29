@@ -745,29 +745,38 @@ Section CANCEL.
   Let adequacy_type_aux:
     forall
       AA AR
-      (args: AA)
+      args
       o0
       body st_src0 st_tgt0
       (SIM: wf st_src0 st_tgt0)
     ,
       simg wf'
-           (formula o0)
+           (formula o0 + 10)%ord
            (* (if is_pure o0 then trigger (Choose _) else (interp_Es p_src ((fun_to_src (AA:=AA) (AR:=AR) body) args↑) st0)) *)
-           (interp_Es p_src (if is_pure o0 then trigger (Choose _) else ((fun_to_src (AA:=AA) (AR:=AR) body) args↑)) st_src0)
-           (interp_Es p_mid ((fun_to_mid body) (Any.pair o0↑ args↑)) st_tgt0)
+           (interp_Es p_src (if is_pure o0 then trigger (Choose _) else ((fun_to_src (AA:=AA) (AR:=AR) body) args)) st_src0)
+           (interp_Es p_mid ((fun_to_mid body) (Any.pair o0↑ args)) st_tgt0)
   .
   Proof.
     ginit.
     { i. eapply cpn5_wcompat; eauto with paco. }
     gcofix CIH. i.
-    unfold fun_to_src, fun_to_mid. steps. rewrite Any_pair_downcast. ss. steps.
+    unfold fun_to_src, fun_to_mid. steps. unfold unwrapN.
+    destruct (Any.downcast (Any.pair (Any.upcast o0) args)) eqn:T; cycle 1.
+    { unfold triggerNB.
+      repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+      ss.
+    }
+    destruct p.
+    eapply pair_downcast_lemma in T. des; subst; ss. eapply Any.downcast_upcast in T0. des; subst.
     unfold body_to_src, cfun. steps. rewrite Any.upcast_downcast. ss. steps.
-    destruct o0; ss.
+    destruct o; ss.
     - (*** PURE ***)
       seal_left.
       steps.
       unseal_left.
       erewrite idK_spec2 at 1.
+      guclo ordC_spec. econs.
+      { eapply OrdArith.add_base_l. }
       guclo bindC_spec.
       econs.
       { gfinal. right. eapply paco5_mon. { eapply adequacy_type_aux_APC. } ii; ss. }
@@ -778,10 +787,11 @@ Section CANCEL.
       steps.
     - (*** IMPURE ***)
       steps. unfold body_to_mid.
-      abstr (body args) itr. clear body args AA.
+      abstr (body a) itr. clear body a AA.
 
       guclo ordC_spec. econs.
-      { instantiate (1:=(1 + 99)%ord). rewrite <- OrdArith.add_from_nat. ss. refl. }
+      { instantiate (1:=(10 + 100)%ord). rewrite <- ! OrdArith.add_from_nat. ss. refl. }
+      (* { instantiate (1:=(1 + 99)%ord). rewrite <- OrdArith.add_from_nat. ss. refl. } *)
       guclo bindC_spec. eapply bindR_intro with (RR:=wf'); cycle 1.
       { ii. subst. des_ifs. steps. r in SIM0. des; subst; ss. }
 
@@ -820,7 +830,7 @@ Section CANCEL.
         (mred; try HoareDef._step; des_ifs_safe).
         unseal_left.
         (mred; try HoareDef._step; des_ifs_safe).
-        instantiate (1:=(100 + formula (ord_pure x) + 100)%ord).
+        instantiate (1:=(120 + formula (ord_pure x) + 100)%ord).
         seal_left.
         repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
         unfold guarantee.
@@ -836,140 +846,61 @@ Section CANCEL.
         unseal_left.
         rewrite find_map in *. uo. des_ifs.
         guclo ordC_spec. econs.
-        { eapply OrdArith.add_base_l. }
+        { instantiate (1:=(120 + (10 + C.myF x + 10))%ord).
+          rewrite <- ! OrdArith.add_assoc. eapply add_le_le; try refl. eapply OrdArith.le_from_nat; ss. lia. }
         rename x into o1.
         guclo bindC_spec. econs.
-        * gbase. hexploit CIH; et.
+        * (* guclo ordC_spec. econs. *)
+          (* { eapply OrdArith.add_base_r. } *)
+          (* gbase. eapply CIH; et. *)
+          gbase. hexploit CIH; et.
           { instantiate (1:=(mrs_tgt0, ε :: frs_tgt_hd :: frs_tgt_tl, pst_tgt0)). instantiate (1:= (rst_src0, pst_tgt0)). ss. }
-          intro T. instantiate (3:=(ord_pure o1)) in T. ss. eapply T.
+          intro T. instantiate (2:=(ord_pure o1)) in T. ss.
+          eapply T.
+        * ii. des_ifs. destruct p, p0; ss. des; subst.
+          steps.
+          repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+          destruct r1; ss.
+          des_ifs.
+          { steps. }
+          steps.
+          guclo ordC_spec. econs.
+          { instantiate (1:=100%ord). eapply OrdArith.le_from_nat; ss. lia. }
+          gbase. eapply CIH0. ss.
+      + (*** IMPURE CALL ***)
+        steps. unfold unwrapU. des_ifs; cycle 1.
+        { steps. }
+        steps.
+        unfold guarantee.
+        steps.
+        unfold unwrapU. des_ifs; cycle 1.
+        { admit "unwrapN!!!!!!!!!!!!!!!!!!". }
+        steps.
+        destruct rst_tgt0 as [mrs_tgt0 [|frs_tgt_hd frs_tgt_tl]]; ss.
+        { steps. }
+        destruct rst_src0 as [mrs_src0 [|frs_src_hd frs_src_tl]]; ss.
+        { admit "SOMEHOW". }
         steps.
         rewrite find_map in *. uo. des_ifs.
-        unseal_left.
-        instantiate (1:=formula x).
-        TTTTTTTTTTTTTTTTTTTTTTTT
-        unseal_left.
-        steps. esplits; eauto. steps.
-        Esred.
-        esplits; eauto.
-      + (*** IMPURE CALL ***)
-      des_ifs.
-      hred.
-      ss.
-      seal_left.
-
-
-      Local Transparent APC. unfold APC. Local Opaque APC.
-      hred.
-      guclo ordC_spec.
-      steps_safe.
-      steps.
-      rewrite interp_hCallE_mid_eventE.
-      unfold interp_hCallE_mid. rewrite unfold_interp. steps.
-      Esred.
-      steps.
-      move n at top.
-      revert_until CIH.
-      pattern n. eapply well_founded_induction. { eapply Ord.lt_well_founded. } clear n.
-      intros nnn IH. i.
-      i.
-      eapply well_founded_ind.
-      (* rename n into nnn. *)
-      (* revert nnn. *)
-      (* eapply ClassicalOrdinal.ClassicOrd.ind; i. *)
-      +
-    - (*** IMPURE ***)
-    - steps.
-    unfold interp_hCallE_src. unfold interp_hCallE_mid. rewrite  des_ifs. rewrite ! interp_trigger. steps.
-  Qed.
-
-  Let adequacy_type_aux:
-    forall
-      R
-      ord_cur o0
-      st0 tbr fn (args: R)
-      (*     (he: hCallE Any.t) *)
-    ,
-      simg eq (formula o0) (interp_Es (ModSem.prog ms_src) (interp_hCallE_src (E:=pE +' eventE) (trigger (hCall tbr fn args↑))) st0)
-           (interp_Es (ModSem.prog ms_mid) (interp_hCallE_mid (E:=pE +' eventE) ord_cur (trigger (hCall tbr fn (Any.pair o0↑ args↑)))) st0)
-  .
-  Proof.
-    ginit.
-    { i. eapply cpn5_wcompat; eauto with paco. }
-    gcofix CIH. i.
-    unfold interp_hCallE_src. unfold interp_hCallE_mid. rewrite ! interp_trigger. steps.
-  Qed.
-
-  Let adequacy_type_aux:
-    forall RT
-           o0
-           (* st_src0 st_tgt0 (SIM: wf st_src0 st_tgt0) *)
-           st0
-           (i0: itree (hCallE +' pE +' eventE) RT)
-    ,
-      simg (* (fun '((rs_src, v_src)) '((rs_tgt, v_tgt)) => wf rs_src rs_tgt /\ (v_src: RT) = v_tgt) *) eq (formula o0)
-           (interp_Es (ModSem.prog ms_src) (interp_hCallE_src (E:=pE +' eventE) i0) st0)
-           (interp_Es (ModSem.prog ms_mid) (interp_hCallE_mid (E:=pE +' eventE) o0 i0) st0)
-  .
-  Proof.
-    ginit.
-    { i. eapply cpn5_wcompat; eauto with paco. }
-    gcofix CIH. i; subst.
-    unfold interp_hCallE_src.
-    unfold interp_hCallE_mid.
-    ides i0; try rewrite ! unfold_interp; cbn; mred.
-    { steps. }
-    { steps. gbase. eapply CIH. }
-    destruct st0 as [rst0 pst0]; ss.
-    destruct e; cycle 1.
-    {
-      destruct s; ss.
-      {
-        destruct p; ss.
-        - steps. Esred. steps. gbase. eapply CIH.
-        - steps. Esred. steps. gbase. eapply CIH.
-      }
-      { dependent destruction e.
-        - steps. Esred. steps. esplits; eauto. steps. gbase. eapply CIH.
-        - steps. Esred. steps. esplits; eauto. steps. gbase. eapply CIH.
-        - steps. Esred. steps. esplits; eauto. steps. gbase. eapply CIH.
-      }
-    }
-    dependent destruction h.
-    cbn. steps.
-    destruct tbr; cycle 1.
-    - (*** IMPURE ***)
-      destruct o0.
-      { (*** can't be true ***)
-        steps.
-        { instantiate (1:=100). admit "ez". }
-        unfold guarantee. steps.
-      }
-      steps. unfold unwrapU. des_ifs; steps.
-      unfold guarantee. steps. unfold unwrapU. des_ifs; steps; cycle 1.
-      { admit "ez - FINDF". }
-      destruct rst0 as [mrs0 [|frs_hd frs_tl]]; ss.
-      { seal_left. steps. }
-      steps.
-      guclo bindC_spec.
-      admit "??????????????".
-    - (*** PURE ***)
-
-      (***
-         We should execute APC <-
-         We should call with ord_pure <-
-         Current ord should be ord_pure <-
-       ***)
-
-      steps_safe.
-      { instantiate (1:=100). admit "ez". }
-      steps.
-      eexists.
-      seal_left.
-      steps.
-    rewrite unfold_interp.
-    ss.
-    seal_left.
-TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
+        apply find_some in Heq0. apply find_some in Heq1.des; ss. unfold compose in *. ss. des_sumbool. clarify.
+        assert(f = f0).
+        { admit "ez - uniqueness". }
+        subst.
+        instantiate (1:=(100 + (100 + 10))%ord).
+        guclo bindC_spec.
+        econs.
+        * hexploit CIH; et; cycle 1.
+          { intro T. gbase. instantiate (3:=ord_top) in T. ss. eapply T. }
+          { ss. }
+        * ii; ss. des_ifs. steps. destruct p, p0; ss. des; subst.
+          steps. destruct r1; ss. des_ifs. { steps. } destruct r0; ss. des_ifs. { admit "somehow". } steps.
+          gbase. eapply CIH0 ;ss.
+  Unshelve.
+    all: try (by econs; et).
+    all: try (by exact Ord.O).
+    all: ss.
+  Unshelve.
+    all: try (by exact unit).
   Qed.
 
   Theorem adequacy_type_m2s: Beh.of_program (Mod.interp md_mid) <1= Beh.of_program (Mod.interp md_src).
@@ -983,163 +914,56 @@ TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
     unfold assume.
     steps.
     esplits; et. { admit "ez - wf". } steps.
-    folder.
-    set (st_src0 := ((ModSem.initial_r_state ms_src), (ModSem.initial_p_state ms_src))).
-    set (st_mid0 := ((ModSem.initial_r_state ms_mid), (ModSem.initial_p_state ms_mid))).
-    TTTTTTTTTTTTTTTTTT
-    (* Local Opaque URA.add. *)
-    assert(SIM: wf st_mid0 st_midmid0).
-    { r. ss. esplits; ss; et. { admit "ez". } unfold ms_mid. unfold ModSem.initial_p_state. ss.
-      apply func_ext. clear - Σ. i. rewrite ! find_map; ss. unfold compose. uo. unfold ms_tgt.
-      des_ifs; ss; apply_all_once find_some; des; ss; des_sumbool; clarify.
-      - destruct p0; ss. admit "ez - uniqueness of s".
-      - eapply find_none in Heq0; et. ss. des_sumbool; ss.
-      - eapply find_none in Heq1; et. des_ifs. ss. des_sumbool; ss.
-    }
-    unfold mrec.
+    Local Transparent ModSem.prog.
+    unfold ModSem.prog at 4.
+    unfold ModSem.prog at 2.
+    Local Opaque ModSem.prog.
+    ss. steps.
+    (* Opaque ModSem.initial_r_state. *)
+    (* Opaque ModSem.initial_p_state. *)
+    set (rs_src0 := ModSem.initial_r_state (HoareDef.ms_src md_tgt sbtb)) in *.
+    set (rs_tgt0 := ModSem.initial_r_state (HoareDef.ms_mid md_tgt sbtb)) in *.
+    assert(exists mrs_src0 hd_src tl_src, rs_src0 = (mrs_src0, hd_src :: tl_src)).
+    { esplits. refl. }
+    assert(exists mrs_tgt0 hd_tgt tl_tgt, rs_tgt0 = (mrs_tgt0, hd_tgt :: tl_tgt)).
+    { esplits. refl. }
+    des. clearbody rs_src0 rs_tgt0. subst.
+    unfold unwrapU at 1. des_ifs; cycle 1.
+    { steps. }
+    unfold unwrapU. des_ifs; cycle 1.
+    { admit "unwrapN!!!!!!!!!!". }
+    rewrite find_map in *. uo. des_ifs.
+    apply find_some in Heq0. apply find_some in Heq1. des; ss. unfold compose in *. ss. des_sumbool. subst; ss.
+    assert(f = f0).
+    { admit "ez - uniqueness". }
+    subst.
+    fold ms_src. fold ms_mid. fold p_src. fold p_mid.
 
-    admit "migrate the proof from CompCertM-private".
+    steps.
+
+    match goal with
+    | [ |- gpaco5 _ _ _ _ _ _ _ ?i_src _ ] => remember i_src as tmp
+    end.
+    replace (([]: list val)↑) with (Any.pair ord_top↑ ([]: list val)↑) by admit "TODO".
+    subst tmp.
+
+    instantiate (1:=(10 + (100 + 10))%ord).
+    guclo bindC_spec.
+    econs.
+    - hexploit adequacy_type_aux; cycle 1.
+      { intro T. gfinal. right. instantiate (3:=ord_top) in T. ss. eapply T. }
+      ss.
+    - ii. rr in SIM. des_ifs. des; ss. subst. r in SIM. des_ifs.
+      steps.
+      destruct r0; ss. des_ifs.
+      { steps. }
+      destruct r; ss. des_ifs.
+      { admit "somehow". }
+      steps.
+  Unshelve.
+    all: ss.
+    all: try (by exact Ord.O).
+    all: try (by econs; et).
   Qed.
 
 End CANCEL.
-
-
-
-
-
-
-
-
-
-
-
-Section EXPNS.
-  Variable a: Ordinal.t.
-  Hypothesis OMEGA: Ordinal.le Ordinal.omega a.
-  Let NBOT: Ordinal.lt Ordinal.O a.
-  Proof.
-    eapply Ordinal.lt_le_lt; eauto. eapply Ordinal.lt_le_lt.
-    { eapply Ordinal.S_lt. }
-    eapply (Ordinal.join_upperbound Ordinal.from_nat 1).
-  Qed.
-  Lemma expn_positive o: Ordinal.lt Ordinal.O (Ordinal.expn a o).
-  Proof.
-    eapply Ordinal.lt_le_lt.
-    { eapply Ordinal.S_lt. }
-    eapply (Ordinal.orec_le_base (Ordinal.S Ordinal.O)
-                                 (flip Ordinal.mult a)).
-    i. eapply Ordinal.mult_le_l. auto.
-  Qed.
-  Lemma mult_base_l o: Ordinal.le o (Ordinal.mult o a).
-  Proof.
-    i. transitivity (Ordinal.mult o (Ordinal.from_nat 1)).
-    { eapply Ordinal.mult_1_r. }
-    eapply Ordinal.mult_le_r.
-    eapply Ordinal.S_spec. eapply NBOT.
-  Qed.
-  Lemma expn_mon o0 o1 (LT: Ordinal.lt o0 o1):
-    Ordinal.lt (Ordinal.expn a o0) (Ordinal.expn a o1).
-  Proof.
-    eapply (@Ordinal.lt_le_lt (Ordinal.expn a (Ordinal.S o0))).
-    { eapply Ordinal.lt_eq_lt.
-      { eapply Ordinal.orec_S.
-        { apply mult_base_l. }
-        { i. eapply Ordinal.mult_le_l. auto. }
-      }
-      { ss. eapply Ordinal.eq_lt_lt.
-        { symmetry. eapply Ordinal.mult_1_r. }
-        eapply Ordinal.mult_lt_r.
-        { eapply Ordinal.lt_le_lt.
-          { eapply Ordinal.S_lt. }
-          transitivity Ordinal.omega; auto.
-          eapply (Ordinal.join_upperbound Ordinal.from_nat 2).
-        }
-        eapply expn_positive.
-      }
-    }
-    { eapply Ordinal.orec_le.
-      { i. eapply Ordinal.mult_le_l. auto. }
-      { eapply Ordinal.S_spec. auto. }
-    }
-  Qed.
-  Fixpoint expns (l: list Ordinal.t): Ordinal.t :=
-    match l with
-    | [] => Ordinal.O
-    | hd::tl => Ordinal.add (expns tl) (Ordinal.expn a hd)
-    end.
-  Lemma expns_positive hd: Ordinal.lt Ordinal.O (expns [hd]).
-  Proof.
-    ss. eapply Ordinal.lt_eq_lt.
-    { eapply Ordinal.add_O_l. }
-    eapply expn_positive.
-  Qed.
-  Lemma expns_app l0 l1: Ordinal.eq (expns (l0 ++ l1)) (Ordinal.add (expns l1) (expns l0)).
-  Proof.
-    induction l0; ss.
-    { symmetry. eapply Ordinal.add_O_r. }
-    etransitivity.
-    { eapply Ordinal.add_eq_l. eapply IHl0. }
-    eapply Ordinal.add_assoc.
-  Qed.
-  Lemma expns_ret hd tl: Ordinal.lt (expns tl) (expns (hd :: tl)).
-  Proof.
-    eapply Ordinal.lt_eq_lt.
-    { eapply (expns_app [hd] tl). }
-    eapply Ordinal.eq_lt_lt.
-    { symmetry. eapply Ordinal.add_O_r. }
-    eapply Ordinal.add_lt_r. eapply expns_positive.
-  Qed.
-  Fixpoint repeat X (n: nat) (x: X): list X :=
-    match n with
-    | O => []
-    | S n' => x :: repeat n' x
-    end.
-  Lemma expns_call hd0 hd1 (LT: Ordinal.lt hd0 hd1) n:
-    Ordinal.lt (expns (repeat n hd0)) (expns [hd1]).
-  Proof.
-    ss. eapply Ordinal.lt_eq_lt.
-    { eapply Ordinal.add_O_l. }
-    eapply (@Ordinal.lt_le_lt (Ordinal.expn a (Ordinal.S hd0))).
-    2: {
-      eapply Ordinal.orec_le.
-      { i. eapply Ordinal.mult_le_l. auto. }
-      { eapply Ordinal.S_spec. auto. }
-    }
-    eapply Ordinal.lt_eq_lt.
-    { eapply Ordinal.orec_S.
-      { apply mult_base_l. }
-      { i. eapply Ordinal.mult_le_l. auto. }
-    }
-    ss. eapply Ordinal.lt_le_lt.
-    2: {
-      instantiate (1:=Ordinal.mult (Ordinal.expn a hd0) Ordinal.omega).
-      eapply Ordinal.mult_le_r. auto.
-    }
-    eapply Ordinal.le_lt_lt.
-    2: {
-      eapply Ordinal.mult_lt_r.
-      { instantiate (1:=Ordinal.from_nat n).
-        eapply Ordinal.lt_le_lt.
-        { eapply Ordinal.S_lt. }
-        { eapply (Ordinal.join_upperbound Ordinal.from_nat (S n)). }
-      }
-      { eapply expn_positive. }
-    }
-    Local Opaque Ordinal.mult.
-    induction n; ss.
-    { eapply Ordinal.mult_O_r. }
-    { etransitivity.
-      { eapply Ordinal.add_le_l. eapply IHn. }
-      { eapply Ordinal.mult_S. }
-    }
-  Qed.
-  Lemma expns_call_list hd0 hd1 tl (LT: Ordinal.lt hd0 hd1) n:
-    Ordinal.lt (expns ((repeat n hd0) ++ tl)) (expns (hd1 :: tl)).
-  Proof.
-    eapply Ordinal.eq_lt_lt.
-    { eapply expns_app. }
-    eapply Ordinal.lt_eq_lt.
-    { eapply (expns_app [hd1] tl). }
-    eapply Ordinal.add_lt_r. eapply expns_call. auto.
-  Qed.
-End EXPNS.

@@ -468,7 +468,7 @@ Section CANCEL.
                     end) "Main" (fst p), [ε], ModSem.initial_p_state ms_tgt) with st_tgt0; cycle 1.
       { unfold st_tgt0.
         unfold ModSem.initial_r_state. f_equal. f_equal. apply func_ext. i. unfold update. des_ifs; ss; clarify. }
-      steps. esplits; et. steps. esplits; et. steps. unshelve esplits; eauto. steps.
+      steps. esplits; et. steps. esplits; et. steps. unshelve esplits; eauto. { ss. } steps.
       replace (Ord.from_nat 47) with (OrdArith.add (Ord.from_nat 37) (Ord.from_nat 10)) by admit "ez".
       guclo bindC_spec.
       eapply bindR_intro with (RR:=eq).
