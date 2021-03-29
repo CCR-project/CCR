@@ -566,7 +566,6 @@ Section CANCEL.
 
   Let W: Type := (r_state * p_state).
   (* Let wf: Ord.t -> W -> W -> Prop := top3. *)
-  Let wf: W -> W -> Prop := eq.
 
   Opaque interp_Es.
 
@@ -740,17 +739,22 @@ Section CANCEL.
     end
   .
 
+  Let wf: W -> W -> Prop := fun '(_, pst_src0) '(_, pst_tgt0) => pst_src0 = pst_tgt0.
+  Let wf': forall {X}, (W * X)%type -> (W * X)%type -> Prop := (fun _ '(st_src0, rv_src) '(st_tgt0, rv_tgt) => wf st_src0 st_tgt0 /\ rv_src = rv_tgt).
+
   Let adequacy_type_aux:
     forall
       AA AR
       (args: AA)
       o0
-      body st0
+      body st_src0 st_tgt0
+      (SIM: wf st_src0 st_tgt0)
     ,
-      simg eq (formula o0)
+      simg wf'
+           (formula o0)
            (* (if is_pure o0 then trigger (Choose _) else (interp_Es p_src ((fun_to_src (AA:=AA) (AR:=AR) body) args↑) st0)) *)
-           (interp_Es p_src (if is_pure o0 then trigger (Choose _) else ((fun_to_src (AA:=AA) (AR:=AR) body) args↑)) st0)
-           (interp_Es p_mid ((fun_to_mid body) (Any.pair o0↑ args↑)) st0)
+           (interp_Es p_src (if is_pure o0 then trigger (Choose _) else ((fun_to_src (AA:=AA) (AR:=AR) body) args↑)) st_src0)
+           (interp_Es p_mid ((fun_to_mid body) (Any.pair o0↑ args↑)) st_tgt0)
   .
   Proof.
     ginit.
@@ -778,8 +782,8 @@ Section CANCEL.
 
       guclo ordC_spec. econs.
       { instantiate (1:=(1 + 99)%ord). rewrite <- OrdArith.add_from_nat. ss. refl. }
-      guclo bindC_spec. eapply bindR_intro with (RR:=eq); cycle 1.
-      { ii. subst. des_ifs. steps. }
+      guclo bindC_spec. eapply bindR_intro with (RR:=wf'); cycle 1.
+      { ii. subst. des_ifs. steps. r in SIM0. des; subst; ss. }
 
       revert_until CIH. gcofix CIH0. i.
 
@@ -787,16 +791,16 @@ Section CANCEL.
       { unfold interp_hCallE_src, interp_hCallE_mid. try rewrite ! unfold_interp; cbn; mred.
         steps. }
       { unfold interp_hCallE_src, interp_hCallE_mid. try rewrite ! unfold_interp; cbn; mred.
-        steps. gbase. eapply CIH0. }
+        steps. gbase. eapply CIH0; ss. }
       destruct e; cycle 1.
       {
         unfold interp_hCallE_src, interp_hCallE_mid. try rewrite ! unfold_interp; cbn; mred.
         destruct s; ss.
         {
-          destruct st0 as [rst0 pst0]; ss.
+          destruct st_src0 as [rst_src0 pst_src0]; ss. destruct st_tgt0 as [rst_tgt0 pst_tgt0]; ss.
           destruct p; ss.
-          - steps. Esred. steps. gbase. et.
-          - steps. Esred. steps. gbase. et.
+          - steps. Esred. steps. gbase. eapply CIH0; ss; et.
+          - steps. Esred. steps. gbase. eapply CIH0; ss; et.
         }
         { dependent destruction e.
           - steps. Esred. steps. esplits; et. steps. gbase. et.
@@ -807,7 +811,7 @@ Section CANCEL.
       dependent destruction h.
       Opaque fun_to_src fun_to_mid.
 
-      destruct st0 as [rst0 pst0]; ss.
+      destruct st_src0 as [rst_src0 pst_src0]; ss. destruct st_tgt0 as [rst_tgt0 pst_tgt0]; ss.
       unfold interp_hCallE_src, interp_hCallE_mid. try rewrite ! unfold_interp; cbn; mred.
       destruct tbr.
       + (*** PURE CALL ***)
@@ -826,7 +830,7 @@ Section CANCEL.
         repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
         des_ifs_safe.
         repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
-        destruct rst0 as [mrs0 [|frs_hd frs_tl]]; ss.
+        destruct rst_tgt0 as [mrs_tgt0 [|frs_tgt_hd frs_tgt_tl]]; ss.
         { unseal_left. steps. }
         repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
         unseal_left.
@@ -835,8 +839,9 @@ Section CANCEL.
         { eapply OrdArith.add_base_l. }
         rename x into o1.
         guclo bindC_spec. econs.
-        * gbase. hexploit CIH; et. intro T. instantiate (4:=(ord_pure o1)) in T. ss.
-          eapply T.
+        * gbase. hexploit CIH; et.
+          { instantiate (1:=(mrs_tgt0, ε :: frs_tgt_hd :: frs_tgt_tl, pst_tgt0)). instantiate (1:= (rst_src0, pst_tgt0)). ss. }
+          intro T. instantiate (3:=(ord_pure o1)) in T. ss. eapply T.
         steps.
         rewrite find_map in *. uo. des_ifs.
         unseal_left.
