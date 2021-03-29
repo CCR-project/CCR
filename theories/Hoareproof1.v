@@ -160,6 +160,336 @@ Proof. i. inv PR; try by (econs; eauto). Qed.
 
 
 
+
+
+
+
+
+(* Program Instance ord_lt_proper: Proper (Ord.eq ==> Ord.eq ==> eq) Ord.lt. *)
+(* Next Obligation. *)
+(*   ii. *)
+(*   apply prop_ext. split; i. *)
+(*   - eapply Ord.lt_eq_lt. { sym. et. } eapply Ord.eq_lt_lt; et. sym. et. *)
+(*   - eapply Ord.lt_eq_lt; et. eapply Ord.eq_lt_lt; et. *)
+(* Qed. *)
+
+Program Instance lt_proper: Proper (Ord.eq ==> Ord.eq ==> iff) (Ord.lt).
+Next Obligation.
+  ii.
+  split; i.
+  - eapply Ord.lt_eq_lt. { sym. et. } eapply Ord.eq_lt_lt; et. sym. et.
+  - eapply Ord.lt_eq_lt; et. eapply Ord.eq_lt_lt; et.
+Qed.
+
+Program Instance le_proper: Proper (Ord.eq ==> Ord.eq ==> iff) (Ord.le).
+Next Obligation.
+  ii.
+  split; i.
+  - eapply Ord.le_eq_le. { sym. et. } eapply Ord.eq_le_le; et. sym. et.
+  - eapply Ord.le_eq_le; et. eapply Ord.eq_le_le; et.
+Qed.
+
+Program Instance expn_proper: Proper (Ord.eq ==> Ord.eq ==> Ord.eq) (OrdArith.expn).
+Next Obligation.
+  ii.
+  etrans.
+  - eapply OrdArith.eq_expn_l; et.
+  - eapply OrdArith.eq_expn_r; et.
+Qed.
+
+Program Instance expn_le_proper: Proper (Ord.le ==> Ord.le ==> Ord.le) (OrdArith.expn).
+Next Obligation.
+  ii.
+  etrans.
+  - eapply OrdArith.le_expn_l; et.
+  - eapply OrdArith.le_expn_r; et.
+Qed.
+
+Program Instance add_proper: Proper (Ord.eq ==> Ord.eq ==> Ord.eq) (OrdArith.add).
+Next Obligation.
+  ii.
+  etrans.
+  - eapply OrdArith.eq_add_l; et.
+  - eapply OrdArith.eq_add_r; et.
+Qed.
+
+Program Instance add_le_proper: Proper (Ord.le ==> Ord.le ==> Ord.le) (OrdArith.add).
+Next Obligation.
+  ii.
+  etrans.
+  - eapply OrdArith.le_add_l; et.
+  - eapply OrdArith.le_add_r; et.
+Qed.
+
+(* Program Instance add_lt_proper: Proper (Ord.le ==> Ord.lt ==> Ord.lt) (OrdArith.add). *)
+(* Next Obligation. *)
+(*   ii. *)
+(*   eapply Ord.le_lt_lt. *)
+(*   - rewrite H. refl. *)
+(*   - eapply OrdArith.lt_add_r; et. *)
+(* Qed. *)
+
+Program Instance mult_eq_proper: Proper (Ord.eq ==> Ord.eq ==> Ord.eq) (OrdArith.mult).
+Next Obligation.
+  ii.
+  etrans.
+  - eapply OrdArith.eq_mult_l; et.
+  - eapply OrdArith.eq_mult_r; et.
+Qed.
+
+Program Instance mult_le_proper: Proper (Ord.le ==> Ord.le ==> Ord.le) (OrdArith.mult).
+Next Obligation.
+  ii.
+  etrans.
+  - eapply OrdArith.le_mult_l; et.
+  - eapply OrdArith.le_mult_r; et.
+Qed.
+
+Program Instance S_proper: Proper (Ord.eq ==> Ord.eq) (Ord.S).
+Next Obligation.
+  ii.
+  eapply Ord.eq_S; et.
+Qed.
+
+(* Program Instance eq_proper: Proper (Ord.eq ==> Ord.eq ==> Ord.eq) (Ord.lt). *)
+(* Next Obligation. *)
+(*   ii. *)
+(*   split; i. *)
+(*   - eapply Ord.lt_eq_lt. { sym. et. } eapply Ord.eq_lt_lt; et. sym. et. *)
+(*   - eapply Ord.lt_eq_lt; et. eapply Ord.eq_lt_lt; et. *)
+(* Qed. *)
+
+(* Theorem ord_pow_one: forall o0, (o0 ^ 1 == o0)%ord. *)
+(* Proof. *)
+(*   i. *)
+(*   unfold OrdArith.expn. *)
+(*   rewrite <- (OrdArith.add_O_r 1%ord). *)
+(*   rewrite OrdArith.expn_add. *)
+(*   replace (Ord.from_nat 1) with (1 + 0)%ord; cycle 1. *)
+(*   { rewrite OrdArith.add_O_r. Ord.add_0_r. *)
+(*   Set Printing All. *)
+(*   ss. *)
+(*   replace (1%ord) with (Ord.O + (1%ord))%ord. by ss. *)
+(*   etrans. rewrite OrdArith.expn_add. *)
+(* Qed. *)
+
+Lemma add_le_lt: forall x0 x1 y0 y1, (x0 <= x1)%ord -> (y0 < y1)%ord -> (x0 + y0 < x1 + y1)%ord.
+Proof.
+  i.
+  eapply Ord.le_lt_lt.
+  - eapply OrdArith.le_add_l; et.
+  - eapply OrdArith.lt_add_r; et.
+Qed.
+
+Lemma add_le_le: forall x0 x1 y0 y1, (x0 <= x1)%ord -> (y0 <= y1)%ord -> (x0 + y0 <= x1 + y1)%ord.
+Proof.
+  i.
+  etrans.
+  - eapply OrdArith.le_add_r; et.
+  - eapply OrdArith.le_add_l; et.
+Qed.
+
+Lemma mul_le_lt: forall x0 x1 y0 y1, (0 < x1)%ord -> (x0 <= x1)%ord -> (y0 < y1)%ord -> (x0 * y0 < x1 * y1)%ord.
+Proof.
+  i.
+  eapply Ord.le_lt_lt.
+  - eapply OrdArith.le_mult_l; et.
+  - eapply OrdArith.lt_mult_r; et.
+Qed.
+
+Lemma mult_le_le: forall x0 x1 y0 y1, (x0 <= x1)%ord -> (y0 <= y1)%ord -> (x0 * y0 <= x1 * y1)%ord.
+Proof.
+  i.
+  etrans.
+  - eapply OrdArith.le_mult_l; et.
+  - eapply OrdArith.le_mult_r; et.
+Qed.
+
+Lemma expn_pos: forall base o, (1 <= base ^ o)%ord.
+Proof. i. rewrite Ord.from_nat_S. eapply Ord.S_supremum. eapply OrdArith.expn_pos. Qed.
+
+Lemma add_one_lt: forall o0 o1, (o0 < o1)%ord -> (o0 + 1 <= o1)%ord.
+Proof.
+  i.
+  rewrite Ord.from_nat_S.
+  rewrite OrdArith.add_S.
+  rewrite OrdArith.add_O_r.
+  eapply Ord.S_supremum; et.
+Qed.
+
+
+
+
+
+
+Module Type PARAM.
+  Parameter c: Ord.t.
+  Parameter d: Ord.t.
+  Parameter e: Ord.t.
+End PARAM.
+
+Module Construction (P: PARAM).
+  Include P.
+
+  Section CONSTRUCTION.
+
+  Let alpha := (2 + d + e)%ord.
+  (* Let alpha_d: ((1 + d) <= alpha)%ord. *)
+  (* Proof. unfold alpha. rewrite <- OrdArith.add_O_r at 1. eapply add_le_le; try refl. eapply Ord.O_is_O. Qed. *)
+  Let alpha_e: (e <= alpha)%ord.
+  Proof. unfold alpha. eapply OrdArith.add_base_r. Qed.
+  Let alpha_d: (2 + d <= alpha)%ord.
+  Proof. unfold alpha. eapply OrdArith.add_base_l. Qed.
+
+  Definition myF (o0: Ord.t): Ord.t := ((alpha * kappa + c) ^ (o0 + 1))%ord.
+  Definition myG (o0 m0: Ord.t): Ord.t := ((alpha * kappa + c) ^ (o0) * alpha * m0)%ord.
+  Definition myH (o0: Ord.t): Ord.t := ((alpha * kappa + c) ^ (o0) * 2)%ord.
+  (***
+                         (myG o0 kappa + d <= myF o0)
+  (AM: (m1 < m0)%ord) -> (myG o0 m1 + myH o0 + c <= myG o0 m0)%ord
+  (O: (o1 < o0)%ord)  -> (myF o1 + e <= myH o0)%ord
+   ***)
+
+  Let NZERO: (Ord.O < alpha * kappa + c)%ord.
+  Proof.
+    unfold alpha.
+
+    assert(T: (1 < 2 + d + e)%ord).
+    { assert(U: ((Ord.from_nat 2) == 1 + 1)%ord).
+      { rewrite <- OrdArith.add_from_nat. ss. refl. }
+      rewrite U.
+      rewrite ! OrdArith.add_assoc.
+      eapply OrdArith.add_lt_l.
+      rewrite Ord.from_nat_S at 1.
+      eapply Ord.lt_le_lt.
+      { instantiate (1:=1%ord). rewrite Ord.from_nat_S. eapply Ord.S_pos. }
+      { rewrite Ord.from_nat_S. eapply OrdArith.add_base_l. }
+    }
+
+    eapply Ord.lt_le_lt; cycle 1.
+    { eapply OrdArith.add_base_l. }
+    rewrite <- OrdArith.mult_1_r.
+    eapply Ord.le_lt_lt; cycle 1.
+    { instantiate (1:=((2 + d + e) * 1)%ord).
+      eapply OrdArith.lt_mult_r.
+      - rewrite <- kappa_inaccessible_omega. eapply Ord.omega_upperbound.
+      - rewrite <- T. replace (Ord.from_nat 1) with (Ord.S Ord.O) by ss. eapply Ord.S_pos. }
+    eapply mult_le_le.
+    - eapply Ord.O_is_O.
+    - refl.
+  Qed.
+
+  Theorem my_thm1: forall o0, (myG o0 kappa + c <= myF o0)%ord.
+  Proof.
+    i. unfold myF, myG, myH.
+    rewrite OrdArith.expn_add; et.
+    rewrite OrdArith.expn_1_r; et.
+    rewrite OrdArith.mult_dist.
+    eapply add_le_le.
+    - rewrite <- OrdArith.mult_assoc. refl.
+    - rewrite <- (OrdArith.mult_1_l) at 1. eapply mult_le_le; try refl. eapply expn_pos.
+    (* OrdArith.add *)
+    (* OrdArith.mult *)
+    (* OrdArith.expn *)
+  Qed.
+
+  Theorem my_thm3
+          o0 o1
+          (O: (o1 < o0)%ord)
+    :
+      (myF o1 + e <= myH o0)%ord
+  .
+  Proof.
+    unfold myF, myG, myH.
+    eapply add_one_lt in O.
+    rewrite <- O.
+    rewrite OrdArith.expn_add; et.
+    rewrite OrdArith.expn_1_r; et.
+    assert(T: (2 == 1 + 1)%ord).
+    { rewrite <- OrdArith.add_from_nat. ss. refl. }
+    rewrite T.
+    rewrite OrdArith.mult_dist with (o2:=1).
+    rewrite OrdArith.mult_1_r.
+    eapply add_le_le; try refl.
+    rewrite <- (OrdArith.mult_1_l) at 1.
+    eapply mult_le_le.
+    { eapply expn_pos. }
+    rewrite <- alpha_e.
+    etrans; [|eapply OrdArith.add_base_l].
+    rewrite <- (OrdArith.mult_1_r) at 1.
+    eapply mult_le_le; try refl.
+    eapply Ord.lt_le.
+    rewrite <- kappa_inaccessible_omega.
+    replace (Ord.S Ord.O) with (Ord.from_nat 1) by ss.
+    eapply Ord.omega_upperbound.
+  Qed.
+
+  Theorem my_thm2
+          o0 m0 m1
+          (AM: (m1 < m0)%ord)
+    :
+      (myG o0 m1 + myH o0 + d <= myG o0 m0)%ord
+  .
+  Proof.
+    unfold myF, myG, myH.
+    eapply add_one_lt in AM.
+    rewrite <- AM.
+    rewrite OrdArith.mult_dist.
+    rewrite OrdArith.mult_1_r.
+    rewrite OrdArith.add_assoc.
+    eapply add_le_le; try refl.
+    rewrite <- alpha_d at 3.
+    rewrite OrdArith.mult_dist.
+    eapply add_le_le; try refl.
+    rewrite <- (OrdArith.mult_1_l) at 1.
+    eapply mult_le_le; try refl.
+    { eapply expn_pos. }
+  Qed.
+
+  End CONSTRUCTION.
+
+End Construction.
+
+
+Module MyParam <: PARAM.
+  Definition c: Ord.t := 10%ord.
+  Definition d: Ord.t := 10%ord.
+  Definition e: Ord.t := 10%ord.
+End MyParam.
+
+Module C := (Construction MyParam).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 Section CANCEL.
 
   (*** execute following commands in emacs (by C-x C-e)
@@ -190,283 +520,9 @@ Section CANCEL.
   (* Let wf: Ord.t -> W -> W -> Prop := top3. *)
   Let wf: W -> W -> Prop := eq.
 
-  (* Program Instance ord_lt_proper: Proper (Ord.eq ==> Ord.eq ==> eq) Ord.lt. *)
-  (* Next Obligation. *)
-  (*   ii. *)
-  (*   apply prop_ext. split; i. *)
-  (*   - eapply Ord.lt_eq_lt. { sym. et. } eapply Ord.eq_lt_lt; et. sym. et. *)
-  (*   - eapply Ord.lt_eq_lt; et. eapply Ord.eq_lt_lt; et. *)
-  (* Qed. *)
-
-  Program Instance lt_proper: Proper (Ord.eq ==> Ord.eq ==> iff) (Ord.lt).
-  Next Obligation.
-    ii.
-    split; i.
-    - eapply Ord.lt_eq_lt. { sym. et. } eapply Ord.eq_lt_lt; et. sym. et.
-    - eapply Ord.lt_eq_lt; et. eapply Ord.eq_lt_lt; et.
-  Qed.
-
-  Program Instance le_proper: Proper (Ord.eq ==> Ord.eq ==> iff) (Ord.le).
-  Next Obligation.
-    ii.
-    split; i.
-    - eapply Ord.le_eq_le. { sym. et. } eapply Ord.eq_le_le; et. sym. et.
-    - eapply Ord.le_eq_le; et. eapply Ord.eq_le_le; et.
-  Qed.
-
-  Program Instance expn_proper: Proper (Ord.eq ==> Ord.eq ==> Ord.eq) (OrdArith.expn).
-  Next Obligation.
-    ii.
-    etrans.
-    - eapply OrdArith.eq_expn_l; et.
-    - eapply OrdArith.eq_expn_r; et.
-  Qed.
-
-  Program Instance expn_le_proper: Proper (Ord.le ==> Ord.le ==> Ord.le) (OrdArith.expn).
-  Next Obligation.
-    ii.
-    etrans.
-    - eapply OrdArith.le_expn_l; et.
-    - eapply OrdArith.le_expn_r; et.
-  Qed.
-
-  Program Instance add_proper: Proper (Ord.eq ==> Ord.eq ==> Ord.eq) (OrdArith.add).
-  Next Obligation.
-    ii.
-    etrans.
-    - eapply OrdArith.eq_add_l; et.
-    - eapply OrdArith.eq_add_r; et.
-  Qed.
-
-  Program Instance add_le_proper: Proper (Ord.le ==> Ord.le ==> Ord.le) (OrdArith.add).
-  Next Obligation.
-    ii.
-    etrans.
-    - eapply OrdArith.le_add_l; et.
-    - eapply OrdArith.le_add_r; et.
-  Qed.
-
-  Program Instance mult_eq_proper: Proper (Ord.eq ==> Ord.eq ==> Ord.eq) (OrdArith.mult).
-  Next Obligation.
-    ii.
-    etrans.
-    - eapply OrdArith.eq_mult_l; et.
-    - eapply OrdArith.eq_mult_r; et.
-  Qed.
-
-  Program Instance mult_le_proper: Proper (Ord.le ==> Ord.le ==> Ord.le) (OrdArith.mult).
-  Next Obligation.
-    ii.
-    etrans.
-    - eapply OrdArith.le_mult_l; et.
-    - eapply OrdArith.le_mult_r; et.
-  Qed.
-
-  Program Instance S_proper: Proper (Ord.eq ==> Ord.eq) (Ord.S).
-  Next Obligation.
-    ii.
-    eapply Ord.eq_S; et.
-  Qed.
-
-  (* Program Instance eq_proper: Proper (Ord.eq ==> Ord.eq ==> Ord.eq) (Ord.lt). *)
-  (* Next Obligation. *)
-  (*   ii. *)
-  (*   split; i. *)
-  (*   - eapply Ord.lt_eq_lt. { sym. et. } eapply Ord.eq_lt_lt; et. sym. et. *)
-  (*   - eapply Ord.lt_eq_lt; et. eapply Ord.eq_lt_lt; et. *)
-  (* Qed. *)
-
-  (* Theorem ord_pow_one: forall o0, (o0 ^ 1 == o0)%ord. *)
-  (* Proof. *)
-  (*   i. *)
-  (*   unfold OrdArith.expn. *)
-  (*   rewrite <- (OrdArith.add_O_r 1%ord). *)
-  (*   rewrite OrdArith.expn_add. *)
-  (*   replace (Ord.from_nat 1) with (1 + 0)%ord; cycle 1. *)
-  (*   { rewrite OrdArith.add_O_r. Ord.add_0_r. *)
-  (*   Set Printing All. *)
-  (*   ss. *)
-  (*   replace (1%ord) with (Ord.O + (1%ord))%ord. by ss. *)
-  (*   etrans. rewrite OrdArith.expn_add. *)
-  (* Qed. *)
-
-  Lemma add_le_lt: forall x0 x1 y0 y1, (x0 <= x1)%ord -> (y0 < y1)%ord -> (x0 + y0 < x1 + y1)%ord.
-  Proof.
-    i.
-    eapply Ord.le_lt_lt.
-    - eapply OrdArith.le_add_l; et.
-    - eapply OrdArith.lt_add_r; et.
-  Qed.
-
-  Lemma add_le_le: forall x0 x1 y0 y1, (x0 <= x1)%ord -> (y0 <= y1)%ord -> (x0 + y0 <= x1 + y1)%ord.
-  Proof.
-    i.
-    etrans.
-    - eapply OrdArith.le_add_r; et.
-    - eapply OrdArith.le_add_l; et.
-  Qed.
-
-  Lemma mul_le_lt: forall x0 x1 y0 y1, (0 < x1)%ord -> (x0 <= x1)%ord -> (y0 < y1)%ord -> (x0 * y0 < x1 * y1)%ord.
-  Proof.
-    i.
-    eapply Ord.le_lt_lt.
-    - eapply OrdArith.le_mult_l; et.
-    - eapply OrdArith.lt_mult_r; et.
-  Qed.
-
-  Lemma mul_le_le: forall x0 x1 y0 y1, (x0 <= x1)%ord -> (y0 <= y1)%ord -> (x0 * y0 <= x1 * y1)%ord.
-  Proof.
-    i.
-    etrans.
-    - eapply OrdArith.le_mult_l; et.
-    - eapply OrdArith.le_mult_r; et.
-  Qed.
-
-  Let c: Ord.t := 10%ord.
-  Let d: Ord.t := 10%ord.
-  Let myF (o0: Ord.t): Ord.t := ((kappa + d) ^ (c * o0 + 1))%ord.
-  Let myG (o0 at_most: Ord.t): Ord.t := ((kappa + d) ^ (c * o0) * at_most)%ord.
-  Let myH (o0: Ord.t): Ord.t := ((kappa + d) ^ (c * o0))%ord.
-
-  Lemma expn_pos: forall base o, (1 <= base ^ o)%ord.
-  Proof. i. rewrite Ord.from_nat_S. eapply Ord.S_supremum. eapply OrdArith.expn_pos. Qed.
-
-  Lemma c_one_one: (1 + 1 <= c)%ord.
-  Proof.
-    unfold c.
-    etrans.
-    { instantiate (1:=2%ord). rewrite <- OrdArith.add_from_nat. ss. refl. }
-    eapply OrdArith.le_from_nat. lia.
-  Qed.
-
-  Goal ((1+1)*0 == 0)%ord. Abort.
-
-  Theorem my_thm1: forall o0, (myG o0 kappa + d <= myF o0)%ord.
-  Proof.
-    i. unfold myF, myG.
-    rewrite OrdArith.expn_add; cycle 1.
-    { admit "ez". }
-    rewrite OrdArith.expn_1_r; cycle 1.
-    { admit "ez". }
-    rewrite OrdArith.mult_dist.
-    eapply add_le_le.
-    { refl. }
-    rewrite <- (OrdArith.mult_1_l) at 1.
-    eapply mul_le_le; try refl.
-    eapply Ord.S_supremum.
-    eapply OrdArith.expn_pos.
-    (* OrdArith.lt_add_r *)
-    (* OrdArith.le_add_r *)
-    (* OrdArith.le_add_l *)
-
-    (* OrdArith.add *)
-    (* OrdArith.mult *)
-    (* OrdArith.expn *)
-  Qed.
-
-  Lemma add_one_lt: forall o0 o1, (o0 < o1)%ord -> (o0 + 1 <= o1)%ord.
-  Proof.
-    i.
-    rewrite Ord.from_nat_S.
-    rewrite OrdArith.add_S.
-    rewrite OrdArith.add_O_r.
-    eapply Ord.S_supremum; et.
-  Qed.
-
-  Theorem my_thm2
-          o0 m0 m1
-          (AM: (m1 < m0)%ord)
-    :
-      (myG o0 m1 + myH o0 + c <= myG o0 m0)%ord
-  .
-  Proof.
-    unfold myF, myG, myH.
-    eapply add_one_lt in AM.
-    rewrite <- AM.
-    rewrite OrdArith.mult_dist with (o2:=1) at 1.
-    rewrite OrdArith.mult_1_r.
-  Abort.
-
-  Theorem my_thm3
-          o0 o1
-          (O: (o1 < o0)%ord)
-    :
-      (myF o1 + d <= myH o0)%ord
-  .
-  Proof.
-    unfold myF, myG, myH.
-    eapply add_one_lt in O.
-    rewrite <- O.
-    rewrite OrdArith.mult_dist with (o2:=1) at 1.
-    rewrite OrdArith.mult_1_r.
-    rewrite <- c_one_one at 3.
-    rewrite <- OrdArith.add_assoc.
-    rewrite OrdArith.expn_add with (o0:=(c * o1 + 1)%ord) (o1:=1); cycle 1.
-    { admit "ez". }
-    rewrite OrdArith.expn_1_r; cycle 1.
-    { admit "ez". }
-    rewrite OrdArith.mult_dist with (o2:=d).
-    assert(T: (1 <= kappa)%ord).
-    { admit "ez". }
-    eapply add_le_le.
-    - rewrite <- T at 3. rewrite OrdArith.mult_1_r. refl.
-    - admit "ez".
-  Qed.
-  TTTTTTTTTTTTTTTTTTTTTTTTTTTT
-
-
-
-
-
-
-  Theorem my_thm2
-          o0 o1 m0 m1
-          (O: (o1 < o0)%ord)
-          (AM: (m1 < m0)%ord)
-    :
-      (myG o0 m1 + myF o1 + c <= myG o0 m0)%ord
-  .
-  Proof.
-    i. unfold myF, myG.
-    eapply add_one_lt in O. eapply add_one_lt in AM.
-    rewrite OrdArith.expn_add; cycle 1.
-    { admit "ez". }
-    rewrite OrdArith.expn_1_r; cycle 1.
-    { admit "ez". }
-    rewrite <- AM.
-    rewrite OrdArith.mult_dist with (o2:=1) at 1.
-    rewrite OrdArith.mult_1_r.
-    rewrite OrdArith.add_assoc.
-    eapply add_le_le; try refl.
-    rewrite <- O.
-    rewrite OrdArith.mult_dist with (o2:=1).
-    rewrite OrdArith.mult_1_r.
-    rewrite OrdArith.expn_add; cycle 1.
-    { admit "ez". }
-    rewrite <- c_one_one at 4.
-    rewrite OrdArith.expn_add; cycle 1.
-    { admit "ez". }
-    rewrite OrdArith.expn_1_r; cycle 1.
-    { admit "ez". }
-    replace (kappa + d)%ord with (1+1)%ord at 5; cycle 1.
-    { admit "ez". }
-    rewrite OrdArith.mult_dist with (o2:=1).
-    rewrite OrdArith.mult_1_r.
-    rewrite OrdArith.mult_dist with (o1:=(kappa + d)%ord).
-    eapply add_le_le; try refl.
-    admit "ez".
-    (* OrdArith.lt_add_r *)
-    (* OrdArith.le_add_r *)
-    (* OrdArith.le_add_l *)
-
-    (* OrdArith.add *)
-    (* OrdArith.mult *)
-    (* OrdArith.expn *)
-  Qed.
-
   Definition formula (o0: ord): Ord.t :=
     match o0 with
-    | ord_pure o0 => (myF o0)
+    | ord_pure o0 => (C.myF o0)
     | ord_top => 100%ord
     end
   .
@@ -529,7 +585,7 @@ Section CANCEL.
       simg (* (fun '(st_src1, r_src) '(st_tgt1, r_tgt) => st_src1 = st_src0 /\ st_tgt1 = st_tgt0 /\ r_src = r_tgt) *)
            (* (fun '(st_src1, _) '(st_tgt1, _) => st_src1 = st_src0 /\ st_tgt1 = st_tgt0) *)
            (fun _ '(st_tgt1, _) => st_tgt1 = st_tgt0)
-           (myG o0 at_most) (* (interp_Es p_src (trigger (Choose _)) st_src0) *) (Ret (st_src0, tt))
+           (C.myG o0 at_most) (* (interp_Es p_src (trigger (Choose _)) st_src0) *) (Ret (st_src0, tt))
            (interp_Es p_mid (interp_hCallE_mid (ord_pure o0) (_APC at_most)) st_tgt0)
   .
   Proof.
