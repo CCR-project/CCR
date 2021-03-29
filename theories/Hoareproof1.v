@@ -453,7 +453,7 @@ End Construction.
 
 Module MyParam <: PARAM.
   Definition c: Ord.t := 10%ord.
-  Definition d: Ord.t := 10%ord.
+  Definition d: Ord.t := 50%ord.
   Definition e: Ord.t := 10%ord.
 End MyParam.
 
@@ -470,9 +470,15 @@ Module C := (Construction MyParam).
 
 
 
+Lemma upcast_ty: forall T (v: T), Any.ty v↑ = T. admit "ez". Qed.
+Lemma upcast_val: forall T (v: T), Any.val v↑ ~= v. admit "ez". Qed.
 
+Lemma apply_f: forall A B (f: A -> B) (a0 a1: A), a0 = a1 -> f a0 = f a1. Proof. i. subst. ss. Qed.
 
-
+Lemma pair_downcast_lemma: forall T U (v0 v1: T) a (u: U), (Any.pair v0↑ a)↓ = Some (v1, u) -> v0 = v1 /\ a↓ = Some u.
+Proof.
+  admit "ez".
+Qed.
 
 
 
@@ -585,7 +591,7 @@ Section CANCEL.
       simg (* (fun '(st_src1, r_src) '(st_tgt1, r_tgt) => st_src1 = st_src0 /\ st_tgt1 = st_tgt0 /\ r_src = r_tgt) *)
            (* (fun '(st_src1, _) '(st_tgt1, _) => st_src1 = st_src0 /\ st_tgt1 = st_tgt0) *)
            (fun _ '(st_tgt1, _) => st_tgt1 = st_tgt0)
-           (C.myG o0 at_most) (* (interp_Es p_src (trigger (Choose _)) st_src0) *) (Ret (st_src0, tt))
+           (C.myG o0 at_most + C.d)%ord (* (interp_Es p_src (trigger (Choose _)) st_src0) *) (Ret (st_src0, tt))
            (interp_Es p_mid (interp_hCallE_mid (ord_pure o0) (_APC at_most)) st_tgt0)
   .
   Proof.
@@ -597,9 +603,83 @@ Section CANCEL.
     i. rewrite unfold_APC.
     destruct st_tgt0 as [rst_tgt0 pst_tgt0]. destruct rst_tgt0 as [mrs_tgt0 [|frs_hd frs_tl]]; ss.
     { admit "-----------------------------------it should not happen...". }
+    unfold C.d.
+    repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+    mred.
+    destruct x.
+    { hred. steps. }
+    repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+    mred. unfold guarantee.
+    repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+    des_ifs.
+    repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+    unfold guarantee.
+    repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+    unfold unwrapU. des_ifs; cycle 1.
+    { admit "-----------------------------------FINDF: make it to unwrapN". }
+    repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+    des_ifs.
+    repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+    rewrite find_map in *. uo. des_ifs.
+    unfold fun_to_mid.
+    repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+    unfold unwrapN.
+    des_ifs; cycle 1.
+    { unfold triggerNB.
+      repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+      ss.
+    }
+    repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+    des_ifs_safe.
+    eapply pair_downcast_lemma in Heq. des. subst.
+    des_ifs; ss.
+    repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+
     guclo ordC_spec. econs.
-    { TTTTTTTTTTTTTTTTTTT rewrite my_thm2.
-    hred. steps. exists tt. steps.
+    { eapply OrdArith.add_base_l. }
+    guclo ordC_spec. econs.
+    { eapply C.my_thm2; et. }
+    guclo ordC_spec. econs.
+    { rewrite OrdArith.add_assoc. refl. }
+    rewrite idK_spec at 1.
+    guclo bindC_spec. econs.
+    {
+      Local Transparent APC.
+      unfold APC.
+      repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+      unfold guarantee.
+      repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+      guclo ordC_spec. econs.
+      { admit "????????????????????". }
+      eapply IH.
+      admit "??????????????????????????????????????????".
+    }
+    i. ss. des_ifs.
+    repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+    TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
+    inv x2.
+    Set Printing Implicit.
+    eapply Any.downcast_elim in Heq. des. unfold Any.pair in *.
+    TTTTTTTTTTTTTTTTTTTT
+    rewrite Any.upcast_eta in *.
+    Set Printing Implicit.
+    rewrite Any_pair_downcast.
+
+
+    repeat (hred; mred; gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i).
+    hred. mred.
+    gstep; econs; et. { eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]. } i.
+    gstep; econs; et. { eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]. } i.
+    gstep; econs; et. { eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]. } i.
+    gstep; econs; et. { eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]. } i.
+    gstep; econs; et. { eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]. } i.
+    gstep; econs; et. { eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]. } i.
+    gstep; econs; et. { eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]. } i.
+    gstep; econs; et. { eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]. } i.
+    gstep; econs; et. { eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]. } i.
+    gstep; econs; et. { eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]. } i.
+    gstep; econs; et. { eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]. } i.
+    steps. exists tt. steps.
     des_ifs.
     { hred. steps. }
     hred. steps. unfold guarantee. hred. steps. hred. steps.
