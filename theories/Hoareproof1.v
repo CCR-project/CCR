@@ -326,6 +326,7 @@ Module Type PARAM.
   Parameter c: Ord.t.
   Parameter d: Ord.t.
   Parameter e: Ord.t.
+  Parameter f: Ord.t.
 End PARAM.
 
 Module Construction (P: PARAM).
@@ -333,17 +334,33 @@ Module Construction (P: PARAM).
 
   Section CONSTRUCTION.
 
-  Let alpha := (2 + d + e)%ord.
+  Let alpha := (f + 3 + d + e)%ord.
   (* Let alpha_d: ((1 + d) <= alpha)%ord. *)
   (* Proof. unfold alpha. rewrite <- OrdArith.add_O_r at 1. eapply add_le_le; try refl. eapply Ord.O_is_O. Qed. *)
   Let alpha_e: (e <= alpha)%ord.
-  Proof. unfold alpha. eapply OrdArith.add_base_r. Qed.
-  Let alpha_d: (2 + d <= alpha)%ord.
-  Proof. unfold alpha. eapply OrdArith.add_base_l. Qed.
+  Proof.
+    unfold alpha.
+    eapply OrdArith.add_base_r.
+    (* etrans; [eapply OrdArith.add_base_l|]. *)
+    (* etrans; [eapply OrdArith.add_base_r|]. *)
+    (* rewrite <- OrdArith.add_assoc. rewrite OrdArith.add_assoc. refl. *)
+  Qed.
+
+  Let alpha_d: (f + 3 + d <= alpha)%ord.
+  Proof.
+    unfold alpha. 
+    eapply OrdArith.add_base_l.
+    (* etrans; [eapply OrdArith.add_base_l|]. *)
+    (* etrans; [eapply OrdArith.add_base_r|]. *)
+    (* rewrite <- OrdArith.add_assoc. *)
+    (* eapply add_le_le; try refl. *)
+    (* rewrite <- OrdArith.add_assoc. *)
+    (* refl. *)
+  Qed.
 
   Definition myF (o0: Ord.t): Ord.t := ((alpha * kappa + c) ^ (o0 + 1))%ord.
   Definition myG (o0 m0: Ord.t): Ord.t := ((alpha * kappa + c) ^ (o0) * alpha * m0)%ord.
-  Definition myH (o0: Ord.t): Ord.t := ((alpha * kappa + c) ^ (o0) * 2)%ord.
+  Definition myH (o0: Ord.t): Ord.t := ((alpha * kappa + c) ^ (o0) * 3)%ord.
   (***
                          (myG o0 kappa + d <= myF o0)
   (AM: (m1 < m0)%ord) -> (myG o0 m1 + myH o0 + c <= myG o0 m0)%ord
@@ -354,11 +371,14 @@ Module Construction (P: PARAM).
   Proof.
     unfold alpha.
 
-    assert(T: (1 < 2 + d + e)%ord).
-    { assert(U: ((Ord.from_nat 2) == 1 + 1)%ord).
-      { rewrite <- OrdArith.add_from_nat. ss. refl. }
-      rewrite U.
+    assert(T: (1 < f + 3 + d + e)%ord).
+    { assert(U: (1 + 1 <= (Ord.from_nat 3))%ord).
+      { rewrite <- OrdArith.add_from_nat. ss. eapply OrdArith.le_from_nat; et. }
+      eapply Ord.lt_le_lt; cycle 1.
+      { rewrite <- U. refl. }
       rewrite ! OrdArith.add_assoc.
+      eapply Ord.lt_le_lt; cycle 1.
+      { eapply OrdArith.add_base_r. }
       eapply OrdArith.add_lt_l.
       rewrite Ord.from_nat_S at 1.
       eapply Ord.lt_le_lt.
@@ -370,7 +390,7 @@ Module Construction (P: PARAM).
     { eapply OrdArith.add_base_l. }
     rewrite <- OrdArith.mult_1_r.
     eapply Ord.le_lt_lt; cycle 1.
-    { instantiate (1:=((2 + d + e) * 1)%ord).
+    { instantiate (1:=((f + 3 + d + e) * 1)%ord).
       eapply OrdArith.lt_mult_r.
       - rewrite <- kappa_inaccessible_omega. eapply Ord.omega_upperbound.
       - rewrite <- T. replace (Ord.from_nat 1) with (Ord.S Ord.O) by ss. eapply Ord.S_pos. }
@@ -405,9 +425,9 @@ Module Construction (P: PARAM).
     rewrite <- O.
     rewrite OrdArith.expn_add; et.
     rewrite OrdArith.expn_1_r; et.
-    assert(T: (2 == 1 + 1)%ord).
-    { rewrite <- OrdArith.add_from_nat. ss. refl. }
-    rewrite T.
+    assert(T: (1 + 1 <= 3)%ord).
+    { rewrite <- OrdArith.add_from_nat. ss. eapply OrdArith.le_from_nat; et. }
+    rewrite <- T.
     rewrite OrdArith.mult_dist with (o2:=1).
     rewrite OrdArith.mult_1_r.
     eapply add_le_le; try refl.
@@ -428,7 +448,7 @@ Module Construction (P: PARAM).
           o0 m0 m1
           (AM: (m1 < m0)%ord)
     :
-      (myG o0 m1 + myH o0 + d <= myG o0 m0)%ord
+      (myG o0 m1 + f + myH o0 + d <= myG o0 m0)%ord
   .
   Proof.
     unfold myF, myG, myH.
@@ -437,13 +457,16 @@ Module Construction (P: PARAM).
     rewrite OrdArith.mult_dist.
     rewrite OrdArith.mult_1_r.
     rewrite OrdArith.add_assoc.
+    rewrite OrdArith.add_assoc.
     eapply add_le_le; try refl.
     rewrite <- alpha_d at 3.
     rewrite OrdArith.mult_dist.
-    eapply add_le_le; try refl.
-    rewrite <- (OrdArith.mult_1_l) at 1.
-    eapply mult_le_le; try refl.
-    { eapply expn_pos. }
+    rewrite OrdArith.mult_dist.
+    rewrite <- OrdArith.add_assoc.
+    eapply add_le_le; try refl; cycle 1.
+    { rewrite <- (OrdArith.mult_1_l) at 1. eapply mult_le_le; try refl. eapply expn_pos. }
+    eapply add_le_le; try refl; cycle 1.
+    { rewrite <- (OrdArith.mult_1_l) at 1. eapply mult_le_le; try refl. eapply expn_pos. }
   Qed.
 
   End CONSTRUCTION.
@@ -455,6 +478,7 @@ Module MyParam <: PARAM.
   Definition c: Ord.t := 10%ord.
   Definition d: Ord.t := 50%ord.
   Definition e: Ord.t := 10%ord.
+  Definition f: Ord.t := 10%ord.
 End MyParam.
 
 Module C := (Construction MyParam).
@@ -654,8 +678,16 @@ Section CANCEL.
       eapply IH.
       admit "??????????????????????????????????????????".
     }
-    i. ss. des_ifs.
+    i. ss. des_ifs. destruct vret_src; ss. repeat des_u. unfold idK.
     repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+    guclo ordC_spec. econs.
+    { admit "????????????????????". }
+    eapply IH.
+    ss.
+  Qed.
+    set (rst_tgt0:=(mrs_tgt0, frs_hd :: frs_tl)) in *.
+    set (st_tgt0:=(@pair (@r_state Σ) _ rst_tgt0 pst_tgt0)) in *.
+    admit "??????????????????????????????????????????".
     TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
     inv x2.
     Set Printing Implicit.
