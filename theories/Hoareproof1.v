@@ -339,6 +339,8 @@ Section CANCEL.
     eapply OrdArith.le_from_nat. lia.
   Qed.
 
+  Goal ((1+1)*0 == 0)%ord. Abort.
+
   Theorem my_thm1: forall o0, (myG o0 kappa + d <= myF o0)%ord.
   Proof.
     i. unfold myF, myG.
@@ -378,8 +380,12 @@ Section CANCEL.
       (myG o0 m1 + myH o0 + c <= myG o0 m0)%ord
   .
   Proof.
-    admit "".
-  Qed.
+    unfold myF, myG, myH.
+    eapply add_one_lt in AM.
+    rewrite <- AM.
+    rewrite OrdArith.mult_dist with (o2:=1) at 1.
+    rewrite OrdArith.mult_1_r.
+  Abort.
 
   Theorem my_thm3
           o0 o1
@@ -395,7 +401,16 @@ Section CANCEL.
     rewrite OrdArith.mult_1_r.
     rewrite <- c_one_one at 3.
     rewrite <- OrdArith.add_assoc.
-    admit "ez".
+    rewrite OrdArith.expn_add with (o0:=(c * o1 + 1)%ord) (o1:=1); cycle 1.
+    { admit "ez". }
+    rewrite OrdArith.expn_1_r; cycle 1.
+    { admit "ez". }
+    rewrite OrdArith.mult_dist with (o2:=d).
+    assert(T: (1 <= kappa)%ord).
+    { admit "ez". }
+    eapply add_le_le.
+    - rewrite <- T at 3. rewrite OrdArith.mult_1_r. refl.
+    - admit "ez".
   Qed.
   TTTTTTTTTTTTTTTTTTTTTTTTTTTT
 
