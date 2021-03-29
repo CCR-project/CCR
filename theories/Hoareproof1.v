@@ -509,6 +509,24 @@ Qed.
 
 
 
+Inductive opair: Type := mk_opair { ofst: Ord.t; osnd: Ord.t }.
+(* Definition opair_lt: opair -> opair -> Prop := fun '(mk_opair x0 x1) '(mk_opair y0 y1) => (x0 < y0)%ord \/ (x0 == y0 /\ x1 < y1)%ord. *)
+Inductive opair_lt: opair -> opair -> Prop :=
+| intro_opair_lt
+    x0 x1 y0 y1
+    (LT: (x0 < y0)%ord \/ (x0 == y0 /\ x1 < y1)%ord)
+  :
+    opair_lt (mk_opair x0 x1) (mk_opair y0 y1)
+.
+Theorem wf_opair_lt: well_founded opair_lt.
+Proof.
+  ii. destruct a.
+  revert osnd0. pattern ofst0. eapply well_founded_ind. { eapply Ord.lt_well_founded. } clear ofst0. intros ? IH0.
+  intro. generalize dependent x. pattern osnd0. eapply well_founded_ind. { eapply Ord.lt_well_founded. } clear osnd0. intros ? IH1.
+  econs. i. inv H. des.
+  { eapply IH0; et. }
+  { eapply IH1; et. i. eapply IH0; et. rewrite <- LT. ss. }
+Qed.
 
 
 
@@ -621,9 +639,9 @@ Section CANCEL.
   Proof.
     ginit.
     { i. eapply cpn5_wcompat; eauto with paco. }
-    intro. pattern at_most.
-    eapply well_founded_induction. { eapply Ord.lt_well_founded. } clear at_most.
-    intros at_most IH.
+    intros ? ?. remember (mk_opair o0 at_most) as fuel. move fuel at top. revert at_most o0 Heqfuel.
+    pattern fuel. eapply well_founded_induction. { eapply wf_opair_lt. } clear fuel.
+    intros fuel IH.
     i. rewrite unfold_APC.
     destruct st_tgt0 as [rst_tgt0 pst_tgt0]. destruct rst_tgt0 as [mrs_tgt0 [|frs_hd frs_tl]]; ss.
     { admit "-----------------------------------it should not happen...". }
@@ -674,9 +692,16 @@ Section CANCEL.
       unfold guarantee.
       repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
       guclo ordC_spec. econs.
-      { admit "????????????????????". }
-      eapply IH.
-      admit "??????????????????????????????????????????".
+      { instantiate (1:=(C.myG n x1 + C.d)%ord).
+        rewrite <- C.my_thm3; et.
+        rewrite <- C.my_thm1; et.
+        rewrite OrdArith.add_assoc.
+        rewrite OrdArith.add_assoc.
+        eapply add_le_le.
+        - admit "ez".
+        - admit "ez".
+      }
+      eapply IH; et. econs; et.
     }
     i. ss. des_ifs. destruct vret_src; ss. repeat des_u. unfold idK.
     unfold C.f.
@@ -684,51 +709,8 @@ Section CANCEL.
     { rewrite <- OrdArith.add_assoc. refl. }
     repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
     guclo ordC_spec. econs; cycle 1.
-    { eapply IH. ss. }
+    { eapply IH; et. econs; et. right; split; et. refl. }
     { eapply OrdArith.add_base_l. }
-  Qed.
-    set (rst_tgt0:=(mrs_tgt0, frs_hd :: frs_tl)) in *.
-    set (st_tgt0:=(@pair (@r_state Σ) _ rst_tgt0 pst_tgt0)) in *.
-    admit "??????????????????????????????????????????".
-    TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
-    inv x2.
-    Set Printing Implicit.
-    eapply Any.downcast_elim in Heq. des. unfold Any.pair in *.
-    TTTTTTTTTTTTTTTTTTTT
-    rewrite Any.upcast_eta in *.
-    Set Printing Implicit.
-    rewrite Any_pair_downcast.
-
-
-    repeat (hred; mred; gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i).
-    hred. mred.
-    gstep; econs; et. { eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]. } i.
-    gstep; econs; et. { eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]. } i.
-    gstep; econs; et. { eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]. } i.
-    gstep; econs; et. { eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]. } i.
-    gstep; econs; et. { eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]. } i.
-    gstep; econs; et. { eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]. } i.
-    gstep; econs; et. { eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]. } i.
-    gstep; econs; et. { eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]. } i.
-    gstep; econs; et. { eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]. } i.
-    gstep; econs; et. { eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]. } i.
-    gstep; econs; et. { eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]. } i.
-    steps. exists tt. steps.
-    des_ifs.
-    { hred. steps. }
-    hred. steps. unfold guarantee. hred. steps. hred. steps.
-    unfold guarantee. steps. unfold unwrapU. des_ifs; cycle 1.
-    { admit "-----------------------------------FINDF: make it to unwrapN". }
-    steps.
-    instantiate (1:=
-    Unshelve.
-    hred. ired_r. mred. steps_safe.
-    Unset Printing Notations. Set Printing Implicit.
-    (interp_hCallE_mid (ord_pure o0) (trigger (hCall true s t)))
-      (@ITree.trigger (sum1 hCallE (sum1 pE eventE)) Any.t
-                (@subevent hCallE (sum1 hCallE (sum1 pE eventE))
-                   (@ReSum_inl (forall _ : Type, Type) IFun sum1 Cat_IFun Inl_sum1 hCallE hCallE (sum1 pE eventE) (@ReSum_id (forall _ : Type, Type) IFun Id_IFun hCallE))
-                   Any.t (hCall true s t)))
   Qed.
 
   Let adequacy_type_aux:
