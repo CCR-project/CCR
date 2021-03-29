@@ -685,7 +685,7 @@ Section CANCEL.
       unfold guarantee.
       repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
       guclo ordC_spec. econs.
-      { instantiate (1:=(C.myG n x1 + C.d)%ord).
+      { instantiate (1:=(C.myG x1 x3 + C.d)%ord).
         rewrite <- C.my_thm3; et.
         rewrite <- C.my_thm1; et.
         rewrite OrdArith.add_assoc.
@@ -816,7 +816,7 @@ Section CANCEL.
         (mred; try HoareDef._step; des_ifs_safe).
         unseal_left.
         (mred; try HoareDef._step; des_ifs_safe).
-        instantiate (1:=(100 + formula x + 100)%ord).
+        instantiate (1:=(100 + formula (ord_pure x) + 100)%ord).
         seal_left.
         repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
         unfold guarantee.
@@ -835,7 +835,8 @@ Section CANCEL.
         { eapply OrdArith.add_base_l. }
         rename x into o1.
         guclo bindC_spec. econs.
-        * gbase. hexploit CIH; et. intro T. eapply T.
+        * gbase. hexploit CIH; et. intro T. instantiate (4:=(ord_pure o1)) in T. ss.
+          eapply T.
         steps.
         rewrite find_map in *. uo. des_ifs.
         unseal_left.
