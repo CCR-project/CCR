@@ -8,17 +8,17 @@ Set Implicit Arguments.
 
 Section VISNORM.
 
-  Definition norm_state (L: semantics) : L.(state) -> L.(state) * (option event) :=
+  Definition norm_state state : state -> state * (option event) :=
     fun old => (old, None).
 
-  Definition norm_state_sort (L: semantics) :
-    (L.(state) * (option event)) -> sort :=
+  Definition norm_state_sort state state_sort :
+    (state * (option event)) -> sort :=
     fun '(st, ev) =>
       match ev with
       | None =>
-        match (L.(state_sort) st) with
+        match (state_sort st) with
         | vis => demonic
-        | _ => (L.(state_sort) st)
+        | _ => (state_sort st)
         end
       | _ => vis
       end
@@ -27,37 +27,37 @@ Section VISNORM.
   (** normalization in 2-fold:
       1. make vis states deterministic
       2. erase vis states with 'None' event *)
-  Inductive norm_step (L: semantics) :
-    (L.(state) * (option event)) -> option event -> (L.(state) * (option event)) -> Prop :=
+  Inductive norm_step state state_sort step :
+    (state * (option event)) -> option event -> (state * (option event)) -> Prop :=
   | step_vis_before
       st0 ev st1
-      (VIS: L.(state_sort) st0 = vis)
-      (STEP: L.(step) st0 (Some ev) st1)
+      (VIS: state_sort st0 = vis)
+      (STEP: step st0 (Some ev) st1)
     :
-      norm_step L (st0, None) None (st0, Some ev)
+      norm_step state_sort step (st0, None) None (st0, Some ev)
                 
   | step_vis_after
       st0 ev st1
-      (VIS: L.(state_sort) st0 = vis)
-      (STEP: L.(step) st0 (Some ev) st1)
-      (HALF: norm_step L (st0, None) None (st0, Some ev))
+      (VIS: state_sort st0 = vis)
+      (STEP: step st0 (Some ev) st1)
+      (HALF: norm_step state_sort step (st0, None) None (st0, Some ev))
     :
-      norm_step L (st0, Some ev) (Some ev) (st1, None)
+      norm_step state_sort step (st0, Some ev) (Some ev) (st1, None)
                 
   | step_else
       st0 st1
-      (NOVIS: L.(state_sort) st0 <> vis)
-      (STEP: L.(step) st0 None st1)
+      (NOVIS: state_sort st0 <> vis)
+      (STEP: step st0 None st1)
     :
-      norm_step L (st0, None) None (st1, None)
+      norm_step state_sort step (st0, None) None (st1, None)
   .
 
   Program Definition vis_normalize (L: semantics) : semantics :=
     {|
     state := (L.(state) * (option event));
-    step := (norm_step L);
-    initial_state := (norm_state L L.(initial_state));
-    state_sort := (norm_state_sort L);
+    step := (norm_step L.(state_sort) L.(step));
+    initial_state := (norm_state L.(initial_state));
+    state_sort := (norm_state_sort L.(state_sort));
     |}
   .
   Next Obligation.
@@ -107,7 +107,7 @@ Section PROOF.
 
   Lemma beh_preserved_dir_spin:
     forall (L: semantics) st0,
-      state_spin (vis_normalize L) (norm_state L st0) ->
+      state_spin (vis_normalize L) (norm_state st0) ->
       state_spin L st0.
   Proof.
     i. generalize dependent st0. pcofix CIH. i.
@@ -141,11 +141,11 @@ Section PROOF.
   
   Theorem beh_preserved_dir:
     forall (L: semantics) st0 tr,
-      of_state (vis_normalize L) (norm_state L st0) tr ->
+      of_state (vis_normalize L) (norm_state st0) tr ->
       of_state L st0 tr.
   Proof.
     intros L. pcofix CIH. i. pfold. punfold H0.
-    remember (norm_state L st0) as st0'.
+    remember (norm_state st0) as st0'.
     generalize dependent st0.
     induction H0 using of_state_ind; i; ss; clarify.
     - econs. unfold norm_state in H. unfold norm_state_sort in H.
@@ -183,7 +183,7 @@ Section PROOF.
   Lemma beh_preserved_inv_spin:
     forall (L: semantics) st0,
       state_spin L st0 ->
-      state_spin (vis_normalize L) (norm_state L st0).
+      state_spin (vis_normalize L) (norm_state st0).
   Proof.
     i. generalize dependent st0. pcofix CIH. i.
     pfold. punfold H0. inv H0.
@@ -206,7 +206,7 @@ Section PROOF.
   Theorem beh_preserved_inv:
     forall (L: semantics) st0 tr,
       of_state L st0 tr ->
-      of_state (vis_normalize L) (norm_state L st0) tr.
+      of_state (vis_normalize L) (norm_state st0) tr.
   Proof.
     intros L. pcofix CIH. i. pfold. punfold H0.
     remember st0 as st'. generalize dependent st0.
@@ -239,7 +239,7 @@ Section PROOF.
   Theorem beh_preserved:
     forall (L: semantics) st0 tr,
       of_state L st0 tr <->
-      of_state (vis_normalize L) (norm_state L st0) tr.
+      of_state (vis_normalize L) (norm_state st0) tr.
   Proof.
     split.
     - apply beh_preserved_inv.
