@@ -882,7 +882,7 @@ Section CANCEL.
         { admit "SOMEHOW". }
         steps.
         rewrite find_map in *. uo. des_ifs.
-        apply find_some in Heq0. apply find_some in Heq1.des; ss. unfold compose in *. ss. des_sumbool. clarify.
+        apply find_some in Heq0. apply find_some in Heq1. des; ss. unfold compose in *. ss. des_sumbool. clarify.
         assert(f = f0).
         { admit "ez - uniqueness". }
         subst.
