@@ -36,12 +36,12 @@ Definition putint_parg: list val -> option val :=
 
 
 Definition getintF:  list val -> itree eventE val :=
-  fun _ => trigger (Syscall "scanf" []).
+  fun _ => trigger (Syscall "scanf" [] (fun _ => True)).
 
 Definition putintF: list val -> itree eventE val :=
   fun varg =>
     `v: val <- (putint_parg varg)?;;
-    trigger (Syscall "printf" varg);;
+    trigger (Syscall "printf" varg (fun _ => True));;
     Ret Vundef
 .
 

@@ -17,7 +17,7 @@ Section EVENTS.
   Variant eventE: Type -> Type :=
   | Choose (X: Type): eventE X
   | Take X: eventE X
-  | Syscall (fn: gname) (args: list val): eventE val
+  | Syscall (fn: gname) (args: list val) (rvs: val -> Prop): eventE val
   .
 
   Inductive callE: Type -> Type :=
@@ -406,7 +406,7 @@ Section MODSEM.
       end
     | VisF (Choose X) k => demonic
     | VisF (Take X) k => angelic
-    | VisF (Syscall fn args) k => vis
+    | VisF (Syscall fn args rvs) k => vis
     end
   .
 
@@ -426,10 +426,10 @@ Section MODSEM.
   | step_syscall
       (* fn args k ev rv *)
       (* (SYSCALL: syscall_sem fn args = (ev, rv)) *)
-      fn args rv k
-      (SYSCALL: syscall_sem (event_sys fn args rv))
+      fn args rv rvs k
+      (SYSCALL: (syscall_sem (event_sys fn args rv)) /\ (rvs rv))
     :
-      step (Vis (subevent _ (Syscall fn args)) k) (Some (event_sys fn args rv)) (k rv)
+      step (Vis (subevent _ (Syscall fn args rvs)) k) (Some (event_sys fn args rv)) (k rv)
   .
 
   Program Definition interp: semantics := {|

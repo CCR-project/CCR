@@ -44,9 +44,9 @@ Section CONV.
         (* trigger (Choose {'(ev', st'): event * state | @step st0 (Some ev') st' });; *)
         (* Vis (Syscall fn args) (fun _ => interpSTS step state_sort st1) *)
         '(exist _ (event_sys fn args _) _) <-
-        trigger (Choose {ev': event | exists st', @step st0 (Some ev') st' });;
-        rv <- trigger (Syscall fn args);;
-        Vis (Choose {st': state | @step st0 (Some (event_sys fn args rv)) st' })
+        trigger (Choose {ev': event | exists st1, @step st0 (Some ev') st1 });;
+        rv <- trigger (Syscall fn args (fun rv => exists st1, (@step st0 (Some (event_sys fn args rv)) st1)));;
+        Vis (Choose {st1: state | @step st0 (Some (event_sys fn args rv)) st1 })
             (fun st1 => interpSTS step state_sort (proj1_sig st1))
       end
   .
@@ -78,13 +78,10 @@ Section CONV.
     | final z =>
       Ret z↑
     | vis =>
-      (* '(exist _ ((event_sys fn args rv, st1)) _) <- *)
-      (* trigger (Choose {'(ev', st'): event * state | @step st0 (Some ev') st' });; *)
-      (* Vis (Syscall fn args) (fun _ => interpSTS step state_sort st1) *)
       '(exist _ (event_sys fn args _) _) <-
-      trigger (Choose {ev': event | exists st', @step st0 (Some ev') st' });;
-      rv <- trigger (Syscall fn args);;
-      Vis (Choose {st': state | @step st0 (Some (event_sys fn args rv)) st' })
+      trigger (Choose {ev': event | exists st1, @step st0 (Some ev') st1 });;
+      rv <- trigger (Syscall fn args (fun rv => exists st1, (@step st0 (Some (event_sys fn args rv)) st1)));;
+      Vis (Choose {st1: state | @step st0 (Some (event_sys fn args rv)) st1 })
           (fun st1 => interpSTS step state_sort (proj1_sig st1))
     end
   .
@@ -112,7 +109,7 @@ Section INV.
       end
     | VisF (Choose X) k => demonic
     | VisF (Take X) k => angelic
-    | VisF (Syscall fn args) k => vis
+    | VisF (Syscall fn args rvs) k => vis
     end
   .
   
@@ -154,9 +151,9 @@ Section PROOF.
     forall (st0 : state) (ev : option event) (st1 : state),
       state_sort st0 = demonic -> step st0 ev st1 -> ev = None.
 
-  Hypothesis wf_syscall :
-    forall ev, exists st0 st1, (step st0 (Some ev) st1) -> syscall_sem ev.
-    (* exists ev, syscall_sem ev. *)
+  (* Hypothesis wf_syscall : *)
+  (*   forall ev, exists st0 st1, (step st0 (Some ev) st1) -> syscall_sem ev. *)
+  (*   (* exists ev, syscall_sem ev. *) *)
 
 (**
 of_state = 
@@ -218,17 +215,17 @@ So, fix semantics with st_init, later let st_init = st0 in the main thm.
         left. pfold. eapply sim_vis; i; ss; clarify.
         rewrite bind_trigger in STEP.
         dependent destruction STEP.
-        
-        
-        
-        { apply y. }
-        { econs 4. 
-          destruct (wf_syscall fn args).
-          specialize (fn = fn) in wf_syscall.
-          apply wf_syscall. }
-        right. instantiate (1:= 10). apply CIH.
+        destruct SYSCALL. des. rename H0 into STEP.
+        exists st2. eexists.
+        { auto. }
+        exists 11. left. pfold. eapply sim_demonic_tgt; ss; clarify.
+        i. dependent destruction STEP0.
+        destruct x.
+        exists 10. split; auto. right.
+        assert (st2 = x).
+        { eapply wf_vis. apply SRT. apply STEP. apply s. reflexivity. }
+        clarify.
   Qed.
-  
   
   Theorem beh_preserved_inv st_init :
     forall (st0: state) (tr: Tr.t),
@@ -278,18 +275,48 @@ So, fix semantics with st_init, later let st_init = st0 in the main thm.
         left. ii. apply H. eauto. }
       destruct CASE.
       + eapply sim_vis_stuck_tgt; eauto.
-      + set (cont :=
-               (fun x_ : {'(ev', st') : event * state | step st0 (Some ev') st'}
-                => let (x, _) := x_ in
-                  let (y0, st1) := x in
-                  match y0 with
-                  | event_sys fn args rv =>
-                    Vis (Syscall fn args) (fun _ : val => interpSTS step state_sort st1)
-                  end)).
-        des.
+      + set (cont := fun x_ : {ev' : event | exists st1 : state, step st0 (Some ev') st1} =>
+                       (let (x, _) := x_ in
+                        match x with
+                        | event_sys fn args _ =>
+                          ` rv0 : val <-
+                                  trigger
+                                    (Syscall fn args
+                                             (fun rv0 : val =>
+                                                exists st1 : state, step st0 (Some (event_sys fn args rv0)) st1));;
+                                  Vis
+                                    (Choose {st1 : state | step st0 (Some (event_sys fn args rv0)) st1})
+                                    (fun
+                                        st1 : {st1 : state | step st0 (Some (event_sys fn args rv0)) st1}
+                                      => interpSTS step state_sort (st1 $))
+                        end)).
+        destruct H.
         eapply sim_demonic_src; ss; clarify.
-        * rewrite interpSTS_red. rewrite SRT. ss.
-        * exists (cont (exist (fun '(ev, st) => step st0 (Some ev) st) (ev, st1) H)).
+        { rewrite interpSTS_red. rewrite SRT. ss. }
+        exists (cont (exist (fun 'ev => exists st1, step st0 (Some ev) st1) x H)).
+        destruct x. eexists.
+        { rewrite interpSTS_red. rewrite SRT. ss. rewrite bind_trigger.
+          eapply (ModSem.step_choose cont (exist (fun 'ev => exists st1, step st0 (Some ev) st1) (event_sys fn args rv) H)). }
+        exists 9. split; auto.
+        left. pfold. destruct H. rename s into STEP. subst cont.
+        set (cont := fun rv0 =>
+                       Vis
+                         (Choose
+                            {st1 : state | step st0 (Some (event_sys fn args rv0)) st1})
+                         (fun
+                             st1 : {st1 : state
+                                     | step st0 (Some (event_sys fn args rv0)) st1} =>
+                             interpSTS step state_sort (st1 $))).
+        eapply sim_vis; eauto.
+        i. ss. exists (cont rv). eexists.
+        { ss. rewrite bind_trigger. subst cont. ss.
+          apply (@ModSem.step_syscall fn args rv (fun rv0 : val => exists st1 : state, step st0 (Some (event_sys fn args rv0)) st1) (fun x : val => Vis (Choose {st1 : state | step st0 (Some (event_sys fn args x)) st1}) (fun st1 : {st1 : state | step st0 (Some (event_sys fn args x)) st1} => interpSTS step state_sort (st1 $)))).
+
+
+
+          
+          
+        exists (cont (exist (fun '(ev, st) => step st0 (Some ev) st) (ev, st1) H)).
           eexists.
           { rewrite interpSTS_red. rewrite SRT. rewrite bind_trigger.
             eapply (ModSem.step_choose cont). }

@@ -18,7 +18,7 @@ Local Existing Instance Σ.
 
 Definition main0: itree Es Any.t :=
   n <- trigger (Choose nat) ;;
-  r <- trigger (Syscall "print" [Vint (Z.of_nat n)]) ;;
+  r <- trigger (Syscall "print" [Vint (Z.of_nat n)] (fun _ => True)) ;;
   Ret r↑
 .
 
