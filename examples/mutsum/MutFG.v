@@ -94,11 +94,12 @@ Section PROOF.
     ii.
     eapply ModSemPair.mk with (wf:=top1) (le:=top2); ss.
     econs; [|econs; [|econs;ss]].
-    - init. unfold fun_to_src, cfun, body_to_src, mainBody, interp_hCallE_src. steps.
     - init. unfold fun_to_src, cfun, body_to_src, mainBody, interp_hCallE_src.
-      steps. force_l. eexists. steps.
+      interp_red. steps. interp_red. steps. interp_red. steps.
     - init. unfold fun_to_src, cfun, body_to_src, mainBody, interp_hCallE_src.
-      steps. force_l. eexists. steps.
+      interp_red. steps. force_l. eexists. steps.
+    - init. unfold fun_to_src, cfun, body_to_src, mainBody, interp_hCallE_src.
+      interp_red. steps. force_l. eexists. steps.
   Qed.
 
   Theorem FG_correct:

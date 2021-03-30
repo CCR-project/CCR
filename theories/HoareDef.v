@@ -174,7 +174,6 @@ Proof.
   { i. replace g with f; auto. extensionality o. eapply H. }
 Qed.
 Global Opaque _APC.
-Global Opaque APC.
 
 
 
