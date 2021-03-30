@@ -160,7 +160,7 @@ Section CANCEL.
     unfold guarantee. steps.
     unseal_left.
     destruct tbr.
-    { steps. esplits; eauto. steps. esplits; eauto. { des; et. } steps. unfold unwrapU.
+    { des; et. Opaque ord_lt. destruct x4; ss; cycle 1. { exfalso. exploit x7; et. } steps. esplits; eauto. steps. esplits; eauto. steps. unfold unwrapU.
       destruct (find (fun fnsem => dec fn (fst fnsem)) (List.map (fun '(fn0, sb) => (fn0, fun_to_mid (fsb_body sb))) sbtb)) eqn:FINDFS; cycle 1.
       { steps. }
       destruct (find (fun fnsem => dec fn (fst fnsem)) (ModSem.fnsems ms_tgt)) eqn:FINDFT0; cycle 1.
@@ -172,7 +172,6 @@ Section CANCEL.
         unfold compose in *. des_ifs. ss. des_sumbool. ss.
       }
       mred. des_ifs. mred. destruct l; ss.
-      { des; ss. }
       mred. steps.
       rename i into i_src.
       rename i0 into i_tgt.
@@ -225,8 +224,6 @@ Section CANCEL.
         assert(Any_pair_downcast: forall T0 T1 (v0: T0) (v1: T1), @Any.downcast (T0 * T1)%type (Any.pair v0↑ v1↑) = Some (v0, v1)).
         { admit "ez - add this to Any.v ------------------". }
         rewrite Any_pair_downcast.
-        steps. destruct x4; ss; cycle 1.
-        { exfalso. exploit x7; ii; ss. }
         steps.
         guclo bindC_spec.
         replace (Ord.from_nat 168) with (OrdArith.add (Ord.from_nat 68) (Ord.from_nat 100)); cycle 1.
@@ -471,7 +468,7 @@ Section CANCEL.
                     end) "Main" (fst p), [ε], ModSem.initial_p_state ms_tgt) with st_tgt0; cycle 1.
       { unfold st_tgt0.
         unfold ModSem.initial_r_state. f_equal. f_equal. apply func_ext. i. unfold update. des_ifs; ss; clarify. }
-      steps. esplits; et. steps. esplits; et. steps. unshelve esplits; eauto. steps.
+      steps. esplits; et. steps. esplits; et. steps. unshelve esplits; eauto. { ss. } steps.
       replace (Ord.from_nat 47) with (OrdArith.add (Ord.from_nat 37) (Ord.from_nat 10)) by admit "ez".
       guclo bindC_spec.
       eapply bindR_intro with (RR:=eq).

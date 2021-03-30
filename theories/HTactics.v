@@ -849,7 +849,8 @@ Section HLEMMAS.
         (wf: (alist mname (Σ * Any.t)) * (alist mname (Σ * Any.t)) -> Prop)
         stb itr_tgt
 
-        (FUEL: (n1 + 1 < n0)%ord)
+        (ATMOST: (at_most < kappa)%ord)
+        (FUEL: (n1 + 3 < n0)%ord)
 
         (POST: gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ (fun _ _ => @eq Any.t) n1
                       (([(mn, (mr_src0, mp_src0))], fr_src0),
@@ -865,9 +866,12 @@ Section HLEMMAS.
   Proof.
     unfold APC. ired_l. gstep. eapply sim_itree_choose_src.
     { eapply FUEL. }
-    exists at_most. gstep. eapply sim_itree_tau_src.
-    { eapply OrdArith.add_lt_l. rewrite Ord.from_nat_S. eapply Ord.S_pos. }
-    auto.
+    exists at_most. steps.
+    { eauto with ord_step. }
+    { unfold guarantee. ired_both. gstep. econs; eauto with ord_step. esplits; eauto.
+      ired_both. gstep. econs.
+      { instantiate (1:=n1). eapply OrdArith.add_lt_l. rewrite Ord.from_nat_S. eapply Ord.S_pos. }
+      ired_both. ss. }
   Qed.
 
 End HLEMMAS.
@@ -1065,7 +1069,10 @@ Ltac astop :=
 
 Ltac astart _at_most :=
   eapply APC_start_clo with (at_most:=_at_most);
-  [(try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r; eapply Nat.lt_succ_diag_r)]))|].
+  [try (etrans; [eapply Ord.omega_upperbound|eapply kappa_inaccessible_omega]; fail)|
+   (try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r; eapply Nat.lt_succ_diag_r)]))|
+  ]
+.
 
 Ltac acall_tac A0 A1 A2 A3 A4 :=
   match goal with

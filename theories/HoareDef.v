@@ -5,7 +5,7 @@ Require Import Behavior.
 Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
-From Ordinal Require Export Ordinal Arithmetic.
+From Ordinal Require Export Ordinal Arithmetic Inaccessible.
 Require Import Any.
 
 Generalizable Variables E R A B C X Y Σ.
@@ -148,7 +148,9 @@ Next Obligation.
 Qed.
 
 Definition APC: itree Es' unit :=
-  at_most <- trigger (Choose _);; _APC at_most
+  at_most <- trigger (Choose _);;
+  guarantee(at_most < kappa)%ord;;
+  _APC at_most
 .
 
 Lemma unfold_APC:
@@ -231,7 +233,7 @@ Section CANCEL.
   Definition handle_hCallE_src: hCallE ~> itree Es :=
     fun _ '(hCall tbr fn varg_src) =>
       match tbr with
-      | true => trigger (Choose _)
+      | true => tau;; trigger (Choose _)
       | false => trigger (Call fn varg_src)
       end
   .
@@ -255,7 +257,7 @@ Section CANCEL.
 
   Definition handle_hCallE_mid (ord_cur: ord): hCallE ~> itree Es :=
     fun _ '(hCall tbr fn varg_src) =>
-      ord_next <- (if tbr then trigger (Choose _) else Ret ord_top);;
+      ord_next <- (if tbr then o0 <- trigger (Choose _);; Ret (ord_pure o0) else Ret ord_top);;
       guarantee(ord_lt ord_next ord_cur);;
       let varg_mid: Any_mid := (Any.pair ord_next↑ varg_src) in
       trigger (Call fn varg_mid)
