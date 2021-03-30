@@ -361,6 +361,7 @@ Module Construction (P: PARAM).
   Definition myF (o0: Ord.t): Ord.t := ((alpha * kappa + c) ^ (o0 + 1))%ord.
   Definition myG (o0 m0: Ord.t): Ord.t := ((alpha * kappa + c) ^ (o0) * alpha * m0)%ord.
   Definition myH (o0: Ord.t): Ord.t := ((alpha * kappa + c) ^ (o0) * 3)%ord.
+
   (***
                          (myG o0 kappa + d <= myF o0)
   (AM: (m1 < m0)%ord) -> (myG o0 m1 + myH o0 + c <= myG o0 m0)%ord
@@ -397,6 +398,15 @@ Module Construction (P: PARAM).
     eapply mult_le_le.
     - eapply Ord.O_is_O.
     - refl.
+  Qed.
+
+  Global Program Instance myG_proper: Proper (Ord.le ==> Ord.le ==> Ord.le) (myG).
+  Next Obligation.
+    ii. unfold myG.
+    rewrite <- H0.
+    eapply mult_le_le; et; try refl.
+    eapply mult_le_le; et; try refl.
+    rewrite <- H. refl.
   Qed.
 
   Theorem my_thm1: forall o0, (myG o0 kappa + c <= myF o0)%ord.
@@ -494,8 +504,8 @@ Module C := (Construction MyParam).
 
 
 
-Lemma upcast_ty: forall T (v: T), Any.ty v↑ = T. admit "ez". Qed.
-Lemma upcast_val: forall T (v: T), Any.val v↑ ~= v. admit "ez". Qed.
+(* Lemma upcast_ty: forall T (v: T), Any.ty v↑ = T. admit "ez". Qed. *)
+(* Lemma upcast_val: forall T (v: T), Any.val v↑ ~= v. admit "ez". Qed. *)
 
 Lemma apply_f: forall A B (f: A -> B) (a0 a1: A), a0 = a1 -> f a0 = f a1. Proof. i. subst. ss. Qed.
 
@@ -690,7 +700,7 @@ Section CANCEL.
         rewrite OrdArith.add_assoc.
         rewrite OrdArith.add_assoc.
         eapply add_le_le.
-        - admit "ez".
+        - eapply Ord.lt_le in x4. rewrite <- x4. refl.
         - etrans; [|eapply OrdArith.add_base_l]. etrans; [|eapply OrdArith.add_base_l]. refl.
       }
       eapply IH; et. econs; et.
@@ -725,7 +735,9 @@ Section CANCEL.
     { rewrite <- OrdArith.add_assoc. refl. }
     repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
     guclo ordC_spec. econs.
-    { etrans; [|eapply OrdArith.add_base_l]. eapply add_le_le; [|refl]. instantiate (1:=C.myG o0 x). admit "ez". }
+    { etrans; [|eapply OrdArith.add_base_l]. eapply add_le_le; [|refl].
+      instantiate (1:=C.myG o0 x).
+      eapply Ord.lt_le in x0. rewrite <- x0. refl. }
     gfinal. right.
     eapply adequacy_type_aux__APC.
   Qed.
