@@ -39,11 +39,8 @@ Section CONV.
         Vis (Choose {st': state | @step st0 None st' })
             (fun st1 => interpSTS step state_sort (proj1_sig st1))
       | final z =>
-        Ret z↑
+        Ret (Vint z)↑
       | vis =>
-        (* '(exist _ ((event_sys fn args rv, st1)) _) <- *)
-        (* trigger (Choose {'(ev', st'): event * state | @step st0 (Some ev') st' });; *)
-        (* Vis (Syscall fn args) (fun _ => interpSTS step state_sort st1) *)
         '(exist _ (event_sys fn args _) _) <-
         trigger (Choose {ev': event | exists st1, @step st0 (Some ev') st1 });;
         rv <- trigger (Syscall fn args (fun rv => exists st1, (@step st0 (Some (event_sys fn args rv)) st1)));;
@@ -77,7 +74,7 @@ Section CONV.
       Vis (Choose {st': state | @step st0 None st' })
           (fun st1 => interpSTS step state_sort (proj1_sig st1))
     | final z =>
-      Ret z↑
+      Ret (Vint z)↑
     | vis =>
       '(exist _ (event_sys fn args _) _) <-
       trigger (Choose {ev': event | exists st1, @step st0 (Some ev') st1 });;
@@ -94,41 +91,39 @@ Section CONV.
 
 End CONV.
 
-Section INV.
+(* Section INV. *)
 
-  Import ModSem.ModSem.
+(*   Let state: Type := itree eventE Any.t. *)
 
-  Let state: Type := itree eventE Any.t.
-
-  Definition itr_state_sort (st0: state): sort :=
-    match (observe st0) with
-    | TauF _ => demonic
-    | RetF rv =>
-      match rv↓ with
-      | Some z => final z
-      | _ => angelic
-      end
-    | VisF (Choose X) k => demonic
-    | VisF (Take X) k => angelic
-    | VisF (Syscall fn args rvs) k => vis
-    end
-  .
+(*   Definition itr_state_sort (st0: state): sort := *)
+(*     match (observe st0) with *)
+(*     | TauF _ => demonic *)
+(*     | RetF rv => *)
+(*       match rv↓ with *)
+(*       | Some z => final z *)
+(*       | _ => angelic *)
+(*       end *)
+(*     | VisF (Choose X) k => demonic *)
+(*     | VisF (Take X) k => angelic *)
+(*     | VisF (Syscall fn args rvs) k => vis *)
+(*     end *)
+(*   . *)
   
-  Program Definition interpITree:
-    (itree eventE Any.t) -> semantics :=
-    fun itr =>
-      {|
-        STS.state := itree eventE Any.t;
-        STS.step := step;
-        STS.initial_state := itr;
-        STS.state_sort := itr_state_sort;
-      |}
-  .
-  Next Obligation. inv STEP; inv STEP0; ss. csc. Qed.
-  Next Obligation. inv STEP; ss. Qed.
-  Next Obligation. inv STEP; ss. Qed.
+(*   Program Definition interpITree: *)
+(*     (itree eventE Any.t) -> semantics := *)
+(*     fun itr => *)
+(*       {| *)
+(*         STS.state := itree eventE Any.t; *)
+(*         STS.step := step; *)
+(*         STS.initial_state := itr; *)
+(*         STS.state_sort := state_sort; *)
+(*       |} *)
+(*   . *)
+(*   Next Obligation. inv STEP; inv STEP0; ss. csc. Qed. *)
+(*   Next Obligation. inv STEP; ss. Qed. *)
+(*   Next Obligation. inv STEP; ss. Qed. *)
 
-End INV.
+(* End INV. *)
 
 Module PROOF.
 Section BEH_PROOF.
@@ -177,7 +172,8 @@ Section BEH_PROOF.
   Definition wf_demonic := L.(wf_demonic).
 
   Definition STS_itree := interpSTS step state_sort st_init.
-  Definition L_itree := interpITree STS_itree.
+  (* Definition L_itree := interpITree STS_itree. *)
+  Definition L_itree := ModSem.interp_itree STS_itree.
   
   Hypothesis wf_syscall0 :
     forall ev,
@@ -208,7 +204,7 @@ So, fix semantics with st_init, later let st_init = st0 in the main thm.
     forall st0 (tr: Tr.t),
       of_state
         L_itree
-        (initial_state (interpITree (interpSTS step state_sort st0)))
+        (initial_state (ModSem.interp_itree (interpSTS step state_sort st0)))
         tr
       ->
       of_state
@@ -236,8 +232,9 @@ So, fix semantics with st_init, later let st_init = st0 in the main thm.
         exists st1. eexists; auto.
         exists 10. right. apply CIH.
     - eapply sim_fin; eauto.
-      ss. rewrite interpSTS_red. rewrite SRT. unfold itr_state_sort.
-      ss. rewrite Any.upcast_downcast. reflexivity.
+      ss. rewrite interpSTS_red. rewrite SRT.
+      unfold ModSem.state_sort. ss.
+      rewrite Any.upcast_downcast. reflexivity.
     - eapply sim_demonic_tgt; ss; clarify.
       + rewrite interpSTS_red. rewrite SRT. ss.
       + i. rewrite interpSTS_red in STEP. rewrite SRT in STEP.
@@ -269,7 +266,7 @@ So, fix semantics with st_init, later let st_init = st0 in the main thm.
       ->
       of_state
         L_itree
-        (initial_state (interpITree (interpSTS step state_sort st0)))
+        (initial_state (ModSem.interp_itree (interpSTS step state_sort st0)))
         tr.
   Proof.
     intros st0. eapply adequacy_aux with (i0:=10).
@@ -291,9 +288,8 @@ So, fix semantics with st_init, later let st_init = st0 in the main thm.
         exists 10. right. apply CIH.
     - econs; ss.
       + rewrite interpSTS_red. rewrite SRT.
-        unfold itr_state_sort. ss.
+        unfold ModSem.state_sort. ss.
         rewrite Any.upcast_downcast. reflexivity.
-        (* ModSem.state_sort do not match type (Z, val) *)
       + auto.
     - assert (CASE: (forall ev st1, not (step st0 (Some ev) st1)) \/ (exists ev st1, (step st0 (Some ev) st1))).
       { destruct (classic (exists ev st1, step st0 (Some ev) st1)); eauto.
@@ -370,7 +366,7 @@ So, fix semantics with st_init, later let st_init = st0 in the main thm.
       <->
       of_state
         L_itree
-        (initial_state (interpITree (interpSTS step state_sort st0)))
+        (initial_state (ModSem.interp_itree (interpSTS step state_sort st0)))
         tr.
   Proof.
     split.
@@ -386,7 +382,7 @@ So, fix semantics with st_init, later let st_init = st0 in the main thm.
           tr
         <->
         of_state
-          (interpITree itr)
+          (ModSem.interp_itree itr)
           itr
           tr.
   Proof.

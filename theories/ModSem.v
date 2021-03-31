@@ -432,18 +432,22 @@ Section MODSEM.
       step (Vis (subevent _ (Syscall fn args rvs)) k) (Some (event_sys fn args rv)) (k rv)
   .
 
-  Program Definition interp: semantics := {|
-    STS.state := state;
-    STS.step := step;
-    STS.initial_state := initial_itr;
-    STS.state_sort := state_sort;
-  |}
+  Program Definition interp_itree: itree eventE Any.t -> semantics :=
+    fun itr =>
+      {|
+        STS.state := state;
+        STS.step := step;
+        STS.initial_state := itr;
+        STS.state_sort := state_sort;
+      |}
   .
   Next Obligation. inv STEP; inv STEP0; ss. csc. Qed.
-  (* Next Obligation. inv STEP; inv STEP0; ss. csc. rewrite SYSCALL in *. csc. Qed. *)
   Next Obligation. inv STEP; ss. Qed.
   Next Obligation. inv STEP; ss. Qed.
 
+  Program Definition interp: semantics :=
+    interp_itree initial_itr.
+  
   (* Program Definition interp_no_forge: semantics := {| *)
   (*   STS.state := state; *)
   (*   STS.step := step; *)
