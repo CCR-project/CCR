@@ -130,7 +130,8 @@ Section INV.
 
 End INV.
 
-Section PROOF.
+Module PROOF.
+Section BEH_PROOF.
 
   Import Behavior.Beh.
 
@@ -394,17 +395,23 @@ So, fix semantics with st_init, later let st_init = st0 in the main thm.
     rewrite STS_vis.beh_preserved. eauto.
   Qed.
   
+End BEH_PROOF.
 End PROOF.
 
 (* Import Behavior.Beh. *)
 
 (* Theorem exists_itree : *)
-(*   forall L, exists itr, forall tr, *)
+(*   forall (L: semantics), *)
+(*     (forall ev, *)
+(*         (exists st0 st1, (state_sort L st0 = vis) /\ (step L st0 (Some ev) st1)) -> *)
+(*         syscall_sem ev) -> *)
+(*     exists itr, forall tr, *)
 (*         of_state L L.(initial_state) tr *)
 (*         <-> *)
 (*         of_state (interpITree itr) itr tr. *)
 (* Proof. *)
-(*   i. destruct L1. *)
-  (* eapply beh_preserved. *)
+(*   i. destruct L. ss. *)
+(*   revert state initial_state step state_sort wf_vis wf_angelic wf_demonic H. *)
+(*   eapply PROOF.beh_preserved. *)
 
-(** Universe consistency *)
+(* (** Universe consistency *) *)
