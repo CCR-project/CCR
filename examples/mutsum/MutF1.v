@@ -21,9 +21,9 @@ Section PROOF.
 
   Definition Fsbtb: list (string * fspecbody) := [("f", mk_specbody f_spec (fun _ => trigger (Choose _)))].
 
-  Definition FSem: ModSem.t := {|
-    ModSem.fnsems := List.map (fun '(fn, body) => (fn, fun_to_tgt GlobalStb fn body)) Fsbtb;
-    ModSem.initial_mrs := [("F", (ε, tt↑))];
+  Definition FSem: ModSemL.t := {|
+    ModSemL.fnsems := List.map (fun '(fn, body) => (fn, fun_to_tgt GlobalStb fn body)) Fsbtb;
+    ModSemL.initial_mrs := [("F", (ε, tt↑))];
   |}
   .
 

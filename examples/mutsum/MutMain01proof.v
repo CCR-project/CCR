@@ -1,4 +1,4 @@
-Require Import HoareDef MutHeader MutMain0 MutMain1 SimModSem.
+Require Import HoareDef MutHeader MutMain0 MutMain1 SimModSemL.
 Require Import Coqlib.
 Require Import Universe.
 Require Import Skeleton.
@@ -26,11 +26,11 @@ Local Open Scope nat_scope.
 
 
 
-(* TODO: move to SimModSem & add cpn3_wcompat *)
+(* TODO: move to SimModSemL & add cpn3_wcompat *)
 Hint Resolve sim_itree_mon: paco.
 
 
-Section SIMMODSEM.
+Section SIMMODSEML.
 
   Context `{Σ: GRA.t}.
 
@@ -42,7 +42,7 @@ Section SIMMODSEM.
       (<<TGT: mrps_tgt0 = Maps.add "Main" (ε, tt↑) Maps.empty>>)
   .
 
-  Theorem correct: ModSemPair.sim MutMain1.mainSem MutMain0.mainSem.
+  Theorem correct: ModSemLPair.sim MutMain1.mainSem MutMain0.mainSem.
   Proof.
     econstructor 1 with (wf:=wf) (le:=top2); et; ss.
     econs; ss. init.
@@ -53,4 +53,4 @@ Section SIMMODSEM.
     steps. hret_tac (@URA.unit (GRA.to_URA Σ)) (URA.add rarg_src rret); ss.
   Qed.
 
-End SIMMODSEM.
+End SIMMODSEML.

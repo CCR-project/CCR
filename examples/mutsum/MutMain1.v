@@ -27,9 +27,9 @@ Section PROOF.
 
   Definition mainsbtb := [("main", mk_specbody main_spec mainBody)].
 
-  Definition mainSem: ModSem.t := {|
-    ModSem.fnsems := List.map (fun '(fn, body) => (fn, fun_to_tgt GlobalStb fn body)) mainsbtb;
-    ModSem.initial_mrs := [("Main", (ε, tt↑))];
+  Definition mainSem: ModSemL.t := {|
+    ModSemL.fnsems := List.map (fun '(fn, body) => (fn, fun_to_tgt GlobalStb fn body)) mainsbtb;
+    ModSemL.initial_mrs := [("Main", (ε, tt↑))];
   |}
   .
 

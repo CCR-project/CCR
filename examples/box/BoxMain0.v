@@ -27,9 +27,9 @@ Section PROOF.
       Ret r↑
   .
 
-  Definition MainSem: ModSem.t := {|
-    ModSem.fnsems := [("main", mainF)];
-    ModSem.initial_mrs := [("Main", ε)];
+  Definition MainSem: ModSemL.t := {|
+    ModSemL.fnsems := [("main", mainF)];
+    ModSemL.initial_mrs := [("Main", ε)];
   |}
   .
 

@@ -1,4 +1,4 @@
-Require Import Mem0 Mem1 HoareDef SimModSem.
+Require Import Mem0 Mem1 HoareDef SimModSemL.
 Require Import Coqlib.
 Require Import Universe.
 Require Import Skeleton.
@@ -154,7 +154,7 @@ Proof. ii. subst. unfold dec. destruct H; ss. Qed.
 (*   - *)
 (* Qed. *)
 
-Section SIMMODSEM.
+Section SIMMODSEML.
 
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG Mem1.memRA Σ}.
@@ -196,7 +196,7 @@ Section SIMMODSEM.
   (* Opaque URA.pointwise. *)
   Opaque URA.unit.
 
-  Theorem correct: ModSemPair.sim Mem1.MemSem Mem0.MemSem.
+  Theorem correct: ModSemLPair.sim Mem1.MemSem Mem0.MemSem.
   Proof.
    econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
     { typeclasses eauto. }
@@ -473,4 +473,4 @@ Section SIMMODSEM.
     }
   Qed.
 
-End SIMMODSEM.
+End SIMMODSEML.

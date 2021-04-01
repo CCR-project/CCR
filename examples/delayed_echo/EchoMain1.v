@@ -38,9 +38,9 @@ Section PROOF.
     [("main", mk_specbody main_spec main_body)]
   .
 
-  Definition MainSem: ModSem.t := {|
-    ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt (EchoStb ++ MainStb) fn fsb)) MainSbtb;
-    ModSem.initial_mrs := [("Main", (ε, ([]: list val)↑))];
+  Definition MainSem: ModSemL.t := {|
+    ModSemL.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt (EchoStb ++ MainStb) fn fsb)) MainSbtb;
+    ModSemL.initial_mrs := [("Main", (ε, ([]: list val)↑))];
   |}
   .
 

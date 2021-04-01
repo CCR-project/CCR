@@ -32,10 +32,10 @@ Section PROOF.
     trigger (Call "set" [x_plus_one])
   .
 
-  Definition AddSem: ModSem.t :=
+  Definition AddSem: ModSemL.t :=
     {|
-      ModSem.fnsems := [("add", addF) ];
-      ModSem.initial_mrs := [("Add", URA.unit)];
+      ModSemL.fnsems := [("add", addF) ];
+      ModSemL.initial_mrs := [("Add", URA.unit)];
     |}
   .
 

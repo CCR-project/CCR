@@ -24,7 +24,7 @@ Set Implicit Arguments.
 Local Open Scope nat_scope.
 
 
-Section SIMMODSEM.
+Section SIMMODSEML.
 
   Context `{Σ: GRA.t}.
 
@@ -41,7 +41,7 @@ Section SIMMODSEM.
   Opaque URA.unit.
 
 
-  Theorem correct: ModSemPair.sim Client1.ClientSem Client0.ClientSem.
+  Theorem correct: ModSemLPair.sim Client1.ClientSem Client0.ClientSem.
   Proof.
     econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
     { typeclasses eauto. }
@@ -51,4 +51,4 @@ Section SIMMODSEM.
     { admit "ez". }
   Qed.
 
-End SIMMODSEM.
+End SIMMODSEML.

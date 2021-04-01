@@ -85,9 +85,9 @@ void echo_finish() {
         )
   .
 
-  Definition EchoSem: ModSem.t := {|
-    ModSem.fnsems := [("echo", cfun echoF); ("echo_finish", cfun echo_finishF)];
-    ModSem.initial_mrs := [("Echo", (ε, Vnullptr↑))];
+  Definition EchoSem: ModSemL.t := {|
+    ModSemL.fnsems := [("echo", cfun echoF); ("echo_finish", cfun echo_finishF)];
+    ModSemL.initial_mrs := [("Echo", (ε, Vnullptr↑))];
   |}
   .
 

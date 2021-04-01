@@ -5,7 +5,7 @@ Require Import Skeleton.
 Require Import PCM.
 Require Import ModSem Behavior.
 Require Import Relation_Definitions.
-Require Import HoareDef Stack0 Stack1 SimModSem.
+Require Import HoareDef Stack0 Stack1 SimModSemL.
 
 (*** TODO: export these in Coqlib or Universe ***)
 Require Import Relation_Operators.
@@ -47,7 +47,7 @@ Ltac iImpure H :=
   eapply iHyp_update_r with (r1:=name) in H; [|refl];
   on_gwf ltac:(fun GWF => erewrite <- unit_id' with (my_ε:=name) in GWF; [|refl]);
   match goal with
-  | [ |- (gpaco3 (SimModSem._sim_itree _) _ _ _ _ _  _) ] => idtac
+  | [ |- (gpaco3 (SimModSemL._sim_itree _) _ _ _ _ _  _) ] => idtac
   | [ |- iHyp _ _ ] => erewrite <- unit_id' with (my_ε:=name); [|refl]
   | _ => idtac
   end;
@@ -58,7 +58,7 @@ Ltac iImpure H :=
 
 
 
-Section SIMMODSEM.
+Section SIMMODSEML.
 
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG Mem1.memRA Σ}.
@@ -78,7 +78,7 @@ Section SIMMODSEM.
 
   Opaque URA.unit.
 
-  Theorem correct: ModSemPair.sim Stack1.StackSem Stack0.StackSem.
+  Theorem correct: ModSemLPair.sim Stack1.StackSem Stack0.StackSem.
   Proof.
     econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
     { typeclasses eauto. }
@@ -249,4 +249,4 @@ Section SIMMODSEM.
     }
   Qed.
 
-End SIMMODSEM.
+End SIMMODSEML.

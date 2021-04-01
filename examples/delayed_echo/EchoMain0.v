@@ -27,9 +27,9 @@ Section PROOF.
       Ret Vundef
   .
 
-  Definition MainSem: ModSem.t := {|
-    ModSem.fnsems := [("main", cfun mainF)];
-    ModSem.initial_mrs := [("main", (ε, tt↑))];
+  Definition MainSem: ModSemL.t := {|
+    ModSemL.fnsems := [("main", cfun mainF)];
+    ModSemL.initial_mrs := [("main", (ε, tt↑))];
   |}
   .
 

@@ -3,6 +3,7 @@ Require Import Universe.
 Require Import STS.
 Require Import Behavior.
 Require Import ModSem.
+Import ModSemL.
 Require Import Skeleton.
 Require Import PCM.
 Require Import Any.
@@ -563,24 +564,24 @@ Section CANCEL.
   Context `{Σ: GRA.t}.
 
   Variable md_tgt: Mod.t.
-  Let ms_tgt: ModSem.t := (Mod.get_modsem md_tgt (Sk.load_skenv md_tgt.(Mod.sk))).
+  Let ms_tgt: ModSemL.t := (Mod.get_modsem md_tgt (Sk.load_skenv md_tgt.(Mod.sk))).
 
   Variable sbtb: list (gname * fspecbody).
   Let stb: list (gname * fspec) := List.map (fun '(gn, fsb) => (gn, fsb_fspec fsb)) sbtb.
 
   Let md_mid: Mod.t := md_mid md_tgt sbtb.
-  Let ms_mid: ModSem.t := ms_mid md_tgt sbtb.
+  Let ms_mid: ModSemL.t := ms_mid md_tgt sbtb.
 
   Let md_src: Mod.t := md_src md_tgt sbtb.
-  Let ms_src: ModSem.t := ms_src md_tgt sbtb.
+  Let ms_src: ModSemL.t := ms_src md_tgt sbtb.
 
   Let W: Type := (r_state * p_state).
   (* Let wf: Ord.t -> W -> W -> Prop := top3. *)
 
   Opaque interp_Es.
 
-  Let p_src := ModSem.prog ms_src.
-  Let p_mid := ModSem.prog ms_mid.
+  Let p_src := ModSemL.prog ms_src.
+  Let p_mid := ModSemL.prog ms_mid.
 
   Let Any_pair_downcast: forall T0 T1 (v0: T0) (v1: T1), @Any.downcast (T0 * T1)%type (Any.pair v0↑ v1↑) = Some (v0, v1).
     { admit "ez - add this to Any.v ------------------". }
@@ -915,26 +916,26 @@ Section CANCEL.
     all: try (by exact unit).
   Qed.
 
-  Theorem adequacy_type_m2s: Beh.of_program (Mod.interp md_mid) <1= Beh.of_program (Mod.interp md_src).
+  Theorem adequacy_type_m2s: Beh.of_program (Mod.compile md_mid) <1= Beh.of_program (Mod.compile md_src).
   Proof.
     eapply adequacy_global.
     exists (100)%ord. ss.
     ginit.
     { eapply cpn5_wcompat; eauto with paco. }
-    unfold ModSem.initial_itr. Local Opaque ModSem.prog. ss.
+    unfold ModSemL.initial_itr. Local Opaque ModSemL.prog. ss.
     unfold ITree.map.
     unfold assume.
     steps.
     esplits; et. { admit "ez - wf". } steps.
-    Local Transparent ModSem.prog.
-    unfold ModSem.prog at 4.
-    unfold ModSem.prog at 2.
-    Local Opaque ModSem.prog.
+    Local Transparent ModSemL.prog.
+    unfold ModSemL.prog at 4.
+    unfold ModSemL.prog at 2.
+    Local Opaque ModSemL.prog.
     ss. steps.
-    (* Opaque ModSem.initial_r_state. *)
-    (* Opaque ModSem.initial_p_state. *)
-    set (rs_src0 := ModSem.initial_r_state (HoareDef.ms_src md_tgt sbtb)) in *.
-    set (rs_tgt0 := ModSem.initial_r_state (HoareDef.ms_mid md_tgt sbtb)) in *.
+    (* Opaque ModSemL.initial_r_state. *)
+    (* Opaque ModSemL.initial_p_state. *)
+    set (rs_src0 := ModSemL.initial_r_state (HoareDef.ms_src md_tgt sbtb)) in *.
+    set (rs_tgt0 := ModSemL.initial_r_state (HoareDef.ms_mid md_tgt sbtb)) in *.
     assert(exists mrs_src0 hd_src tl_src, rs_src0 = (mrs_src0, hd_src :: tl_src)).
     { esplits. refl. }
     assert(exists mrs_tgt0 hd_tgt tl_tgt, rs_tgt0 = (mrs_tgt0, hd_tgt :: tl_tgt)).

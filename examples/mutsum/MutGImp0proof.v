@@ -1,4 +1,4 @@
-Require Import HoareDef MutHeader MutGImp MutG0 SimModSem.
+Require Import HoareDef MutHeader MutGImp MutG0 SimModSemL.
 Require Import Coqlib.
 Require Import Universe.
 Require Import Skeleton.
@@ -28,7 +28,7 @@ Set Implicit Arguments.
 
 Local Open Scope nat_scope.
 
-Section SIMMODSEM.
+Section SIMMODSEML.
 
   Context `{Σ: GRA.t}.
 
@@ -40,7 +40,7 @@ Section SIMMODSEM.
       (<<TGT: mrps_tgt0 = Maps.add "G" (ε, tt↑) Maps.empty>>)
   .
 
-  Theorem correct: ModSemPair.sim MutG0.GSem MutGImp.GSem.
+  Theorem correct: ModSemLPair.sim MutG0.GSem MutGImp.GSem.
   Proof.
     econstructor 1 with (wf:=wf) (le:=top2); et; ss.
     econs; ss. init. unfold cfun.
@@ -63,4 +63,4 @@ Section SIMMODSEM.
       rewrite _UNWRAPU. imp_steps.
   Qed.
 
-End SIMMODSEM.
+End SIMMODSEML.

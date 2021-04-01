@@ -7,7 +7,7 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import Hoare.
-Require Import MutHeader SimModSem.
+Require Import MutHeader SimModSemL.
 Require Import MutFImp MutGImp MutF0 MutG0 MutMain0 MutF1 MutG1 MutMain1.
 Require Import MutFImp0proof MutGImp0proof MutF01proof MutG01proof MutMain01proof.
 
@@ -39,18 +39,18 @@ Section PROOF.
 
   Definition FG3: Mod.t := {|
     Mod.get_modsem := fun _ => {|
-        ModSem.fnsems :=
+        ModSemL.fnsems :=
           [("main", fun _ => Ret (Vint 55)↑) ;
           ("f", fun _ => trigger (Choose _)) ;
           ("g", fun _ => trigger (Choose _))];
-        ModSem.initial_mrs := [("Main", (ε, tt↑)) ; ("F", (ε, tt↑)) ; ("G", (ε, tt↑))];
+        ModSemL.initial_mrs := [("Main", (ε, tt↑)) ; ("F", (ε, tt↑)) ; ("G", (ε, tt↑))];
       |};
     Mod.sk := Sk.unit;
   |}
   .
 
   Lemma FGImp0_correct:
-    Beh.of_program (Mod.interp FGImp) <1= Beh.of_program (Mod.interp FG0).
+    Beh.of_program (Mod.compile FGImp) <1= Beh.of_program (Mod.compile FG0).
   Proof.
     eapply ModPair.sim_list_adequacy. econs; [|econs; [|econs; ss]].
     - split; auto.
@@ -62,7 +62,7 @@ Section PROOF.
   Qed.
 
   Lemma FG01_correct:
-    Beh.of_program (Mod.interp FG0) <1= Beh.of_program (Mod.interp FG1).
+    Beh.of_program (Mod.compile FG0) <1= Beh.of_program (Mod.compile FG1).
   Proof.
     eapply ModPair.sim_list_adequacy_closed. econs; [|econs; [|econs; ss]].
     - split; auto.
@@ -77,7 +77,7 @@ Section PROOF.
   Qed.
 
   Lemma FG12_correct:
-    Beh.of_program (Mod.interp FG1) <1= Beh.of_program (Mod.interp FG2).
+    Beh.of_program (Mod.compile FG1) <1= Beh.of_program (Mod.compile FG2).
   Proof.
     ii.
     eapply adequacy_type with (sbtb:=mainsbtb++(Fsbtb++Gsbtb)) in PR; ss.
@@ -87,12 +87,12 @@ Section PROOF.
     all: try (by econs; ss).
   Qed.
 
-  Lemma FG23_correct: Beh.of_program (Mod.interp FG2) <1= Beh.of_program (Mod.interp FG3).
+  Lemma FG23_correct: Beh.of_program (Mod.compile FG2) <1= Beh.of_program (Mod.compile FG3).
   Proof.
     eapply ModPair.adequacy_local_closed. econs; auto.
     2: { i. ss. split; ss; repeat (econs; eauto; ii; ss; des; clarify). }
     ii.
-    eapply ModSemPair.mk with (wf:=top1) (le:=top2); ss.
+    eapply ModSemLPair.mk with (wf:=top1) (le:=top2); ss.
     econs; [|econs; [|econs;ss]].
     - init. unfold fun_to_src, cfun, body_to_src, mainBody, interp_hCallE_src.
       interp_red. steps. interp_red. steps. interp_red. steps.
@@ -103,12 +103,12 @@ Section PROOF.
   Qed.
 
   Theorem FG_correct:
-    Beh.of_program (Mod.interp FGImp) <1= Beh.of_program (Mod.interp FG3).
+    Beh.of_program (Mod.compile FGImp) <1= Beh.of_program (Mod.compile FG3).
   Proof.
     i. eapply FG23_correct, FG12_correct, FG01_correct, FGImp0_correct, PR.
   Qed.
 
 End PROOF.
 
-Definition mutsum_imp := ModSem.initial_itr_no_check (Mod.enclose FGImp).
-Definition mutsum := ModSem.initial_itr_no_check (Mod.enclose FG3).
+Definition mutsum_imp := ModSemL.initial_itr_no_check (Mod.enclose FGImp).
+Definition mutsum := ModSemL.initial_itr_no_check (Mod.enclose FG3).

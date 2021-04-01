@@ -52,9 +52,9 @@ Section MAIN.
     ]
   .
 
-  Definition MainSem: ModSem.t := {|
-    ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt (ClientStb++MainStb) fn fsb)) MainSbtb;
-    ModSem.initial_mrs := [("Main", (ε, tt↑))];
+  Definition MainSem: ModSemL.t := {|
+    ModSemL.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt (ClientStb++MainStb) fn fsb)) MainSbtb;
+    ModSemL.initial_mrs := [("Main", (ε, tt↑))];
   |}
   .
 

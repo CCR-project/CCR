@@ -46,9 +46,9 @@ Section BW.
     ]
   .
 
-  Definition BWSem: ModSem.t := {|
-    ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt BWStb fn fsb)) BWSbtb;
-    ModSem.initial_mrs := [("BW", (GRA.embed (bw_full false), tt↑))];
+  Definition BWSem: ModSemL.t := {|
+    ModSemL.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt BWStb fn fsb)) BWSbtb;
+    ModSemL.initial_mrs := [("BW", (GRA.embed (bw_full false), tt↑))];
   |}
   .
 

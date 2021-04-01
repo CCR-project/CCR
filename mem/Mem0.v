@@ -113,10 +113,10 @@ Section PROOF.
       else Ret (Vint 0%Z)
   .
 
-  Definition MemSem: ModSem.t :=
+  Definition MemSem: ModSemL.t :=
     {|
-      ModSem.fnsems := [("alloc", cfun allocF) ; ("free", cfun freeF) ; ("load", cfun loadF) ; ("store", cfun storeF) ; ("cmp", cfun cmpF)];
-      ModSem.initial_mrs := [("Mem", (ε, Mem.empty↑))];
+      ModSemL.fnsems := [("alloc", cfun allocF) ; ("free", cfun freeF) ; ("load", cfun loadF) ; ("store", cfun storeF) ; ("cmp", cfun cmpF)];
+      ModSemL.initial_mrs := [("Mem", (ε, Mem.empty↑))];
     |}
   .
 

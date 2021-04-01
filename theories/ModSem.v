@@ -55,6 +55,29 @@ Section EVENTS.
   (* Notation "'Ret!' f" := (RetG f) (at level 57, only parsing). *)
   (* Notation "'Ret?' f" := (RetA f) (at level 57, only parsing). *)
 
+End EVENTS.
+
+Notation "f '?'" := (unwrapU f) (at level 9, only parsing).
+Notation "f 'ǃ'" := (unwrapN f) (at level 9, only parsing).
+Notation "(?)" := (unwrapU) (only parsing).
+Notation "(ǃ)" := (unwrapN) (only parsing).
+Goal (tt ↑↓?) = Ret tt. rewrite Any.upcast_downcast. ss. Qed.
+Goal (tt ↑↓ǃ) = Ret tt. rewrite Any.upcast_downcast. ss. Qed.
+
+
+
+
+
+
+
+
+
+
+Module ModSemL.
+Section MODSEML.
+
+  Section EVENTS.
+
   Context `{Σ: GRA.t}.
 
   Inductive pE: Type -> Type :=
@@ -286,41 +309,7 @@ Section EVENTS.
     unfold interp_Es, interp_rE, interp_pE, pure_state, triggerNB. grind.
   Qed.
 
-End EVENTS.
-
-Notation "f '?'" := (unwrapU f) (at level 9, only parsing).
-Notation "f 'ǃ'" := (unwrapN f) (at level 9, only parsing).
-Notation "(?)" := (unwrapU) (only parsing).
-Notation "(ǃ)" := (unwrapN) (only parsing).
-Goal (tt ↑↓?) = Ret tt. rewrite Any.upcast_downcast. ss. Qed.
-Goal (tt ↑↓ǃ) = Ret tt. rewrite Any.upcast_downcast. ss. Qed.
-
-
-
-
-
-Section AUX.
-
-  Context `{Σ: GRA.t}.
-(*** casting call, fun ***)
-(* Definition ccallN {X Y} (fn: gname) (varg: X): itree Es Y := vret <- trigger (Call fn varg↑);; vret <- vret↓ǃ;; Ret vret. *)
-(* Definition ccallU {X Y} (fn: gname) (varg: X): itree Es Y := vret <- trigger (Call fn varg↑);; vret <- vret↓?;; Ret vret. *)
-(* Definition cfunN {X Y} (body: X -> itree Es Y): Any.t -> itree Es Any.t := *)
-(*   fun varg => varg <- varg↓ǃ;; vret <- body varg;; Ret vret↑. *)
-(* Definition cfunU {X Y} (body: X -> itree Es Y): Any.t -> itree Es Any.t := *)
-(*   fun varg => varg <- varg↓?;; vret <- body varg;; Ret vret↑. *)
-Definition ccall {X Y} (fn: gname) (varg: X): itree Es Y := vret <- trigger (Call fn varg↑);; vret <- vret↓ǃ;; Ret vret.
-Definition cfun {X Y} (body: X -> itree Es Y): Any.t -> itree Es Any.t :=
-  fun varg => varg <- varg↓ǃ;; vret <- body varg;; Ret vret↑.
-
-End AUX.
-
-
-
-
-
-Module ModSem.
-Section MODSEM.
+  End EVENTS.
 
   (* Record t: Type := mk { *)
   (*   state: Type; *)
@@ -430,7 +419,7 @@ Section MODSEM.
       step (Vis (subevent _ (Syscall fn args)) k) (Some ev) (k rv)
   .
 
-  Program Definition interp: semantics := {|
+  Program Definition compile: semantics := {|
     STS.state := state;
     STS.step := step;
     STS.initial_state := initial_itr;
@@ -454,14 +443,14 @@ Section MODSEM.
 
   End INTERP.
 
-  (*** TODO: probably we can make ModSem.t as an RA too. (together with Sk.t) ***)
+  (*** TODO: probably we can make ModSemL.t as an RA too. (together with Sk.t) ***)
   (*** However, I am not sure what would be the gain; and there might be universe problem. ***)
 
   Let add_comm_aux
       ms0 ms1 stl0 str0
       (SIM: stl0 = str0)
     :
-      <<COMM: Beh.of_state (interp (add ms0 ms1)) stl0 <1= Beh.of_state (interp (add ms1 ms0)) str0>>
+      <<COMM: Beh.of_state (compile (add ms0 ms1)) stl0 <1= Beh.of_state (compile (add ms1 ms0)) str0>>
   .
   Proof.
     revert_until ms1.
@@ -495,7 +484,7 @@ Section MODSEM.
           ms0 ms1
           (* (WF: wf (add ms0 ms1)) *)
     :
-      <<COMM: Beh.of_program (interp (add ms0 ms1)) <1= Beh.of_program (interp (add ms1 ms0))>>
+      <<COMM: Beh.of_program (compile (add ms0 ms1)) <1= Beh.of_program (compile (add ms1 ms0))>>
   .
   Proof.
     destruct (classic (wf (add ms1 ms0))); cycle 1.
@@ -532,8 +521,8 @@ Section MODSEM.
           ms0 ms1 ms2
           (WF: wf (add ms0 (add ms1 ms2)))
     :
-      <<COMM: Beh.of_program (interp (add ms0 (add ms1 ms2))) <1=
-              Beh.of_program (interp (add (add ms0 ms1) ms2))>>
+      <<COMM: Beh.of_program (compile (add ms0 (add ms1 ms2))) <1=
+              Beh.of_program (compile (add (add ms0 ms1) ms2))>>
   .
   Proof.
     admit "TODO".
@@ -543,15 +532,127 @@ Section MODSEM.
           ms0 ms1 ms2
           (WF: wf (add ms0 (add ms1 ms2)))
     :
-      <<COMM: Beh.of_program (interp (add ms0 (add ms1 ms2))) <1=
-              Beh.of_program (interp (add (add ms0 ms1) ms2))>>
+      <<COMM: Beh.of_program (compile (add ms0 (add ms1 ms2))) <1=
+              Beh.of_program (compile (add (add ms0 ms1) ms2))>>
   .
   Proof.
     admit "TODO".
   Qed.
 
+End MODSEML.
+End ModSemL.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Section MODSEMEVENTS.
+  Context `{Σ: GRA.t}.
+
+  Inductive pE: Type -> Type :=
+  | PPut (p: Any.t): pE unit
+  | PGet: pE Any.t
+  .
+  Inductive rE: Type -> Type :=
+  | MPut (mr: Σ): rE unit
+  | FPut (fr: Σ): rE unit
+  | MGet: rE Σ
+  | FGet: rE Σ
+  .
+  Definition Es: Type -> Type := (callE +' rE +' pE+' eventE).
+
+(*** casting call, fun ***)
+(* Definition ccallN {X Y} (fn: gname) (varg: X): itree Es Y := vret <- trigger (Call fn varg↑);; vret <- vret↓ǃ;; Ret vret. *)
+(* Definition ccallU {X Y} (fn: gname) (varg: X): itree Es Y := vret <- trigger (Call fn varg↑);; vret <- vret↓?;; Ret vret. *)
+(* Definition cfunN {X Y} (body: X -> itree Es Y): Any.t -> itree Es Any.t := *)
+(*   fun varg => varg <- varg↓ǃ;; vret <- body varg;; Ret vret↑. *)
+(* Definition cfunU {X Y} (body: X -> itree Es Y): Any.t -> itree Es Any.t := *)
+(*   fun varg => varg <- varg↓?;; vret <- body varg;; Ret vret↑. *)
+
+  (* Definition ccall {X Y} (fn: gname) (varg: X): itree Es Y := vret <- trigger (Call fn varg↑);; vret <- vret↓ǃ;; Ret vret. *)
+  (* Definition cfun {X Y} (body: X -> itree Es Y): Any.t -> itree Es Any.t := *)
+  (*   fun varg => varg <- varg↓ǃ;; vret <- body varg;; Ret vret↑. *)
+  Context `{HasCallE: callE -< E}.
+  Context `{HasEventE: eventE -< E}.
+  Definition ccall {X Y} (fn: gname) (varg: X): itree E Y := vret <- trigger (Call fn varg↑);; vret <- vret↓ǃ;; Ret vret.
+  Definition cfun {X Y} (body: X -> itree E Y): Any.t -> itree E Any.t :=
+    fun varg => varg <- varg↓ǃ;; vret <- body varg;; Ret vret↑.
+
+End MODSEMEVENTS.
+
+
+
+Module ModSem.
+Section MODSEM.
+  Context `{Σ: GRA.t}.
+
+  Record t: Type := mk {
+    fnsems: list (gname * (Any.t -> itree Es Any.t));
+    mn: mname;
+    initial_mr: Σ;
+    initial_st: Any.t;
+  }
+  .
+
+  Definition handle_rE `{ModSemL.rE -< E} (mn: mname): rE ~> itree E :=
+    fun _ re =>
+      match re with
+      | MPut mr0 => trigger (ModSemL.MPut mn mr0)
+      | FPut fr0 => trigger (ModSemL.FPut fr0)
+      | MGet => trigger (ModSemL.MGet mn)
+      | FGet => trigger (ModSemL.FGet)
+      end
+  .
+
+  Definition handle_pE `{ModSemL.pE -< E} (mn: mname): pE ~> itree E :=
+    fun _ pe =>
+      match pe with
+      | PPut a0 => trigger (ModSemL.PPut mn a0)
+      | PGet => trigger (ModSemL.PGet mn)
+      end
+  .
+
+  Definition handle_all (mn: mname): Es ~> itree ModSemL.Es.
+    i. destruct X.
+    { exact (trigger c). }
+    destruct s.
+    { exact (handle_rE mn r). }
+    destruct s.
+    { exact (handle_pE mn p). }
+    exact (trigger e).
+  Defined.
+
+  Definition transl_all (mn: mname): itree Es ~> itree ModSemL.Es := interp (handle_all mn).
+
+  (*** TODO: move to CoqlibC ***)
+  Definition map_fst A0 A1 B (f: A0 -> A1): (A0 * B) -> (A1 * B) := fun '(a, b) => (f a, b).
+  Definition map_snd A B0 B1 (f: B0 -> B1): (A * B0) -> (A * B1) := fun '(a, b) => (a, f b).
+
+  Definition lift (ms: t): ModSemL.t := {|
+    ModSemL.fnsems := List.map (map_snd (fun sem args => transl_all ms.(mn) (sem args))) ms.(fnsems);
+    ModSemL.initial_mrs := [(ms.(mn), (ms.(initial_mr), ms.(initial_st)))];
+  |}
+  .
+
+  Definition compile (ms: t): semantics := ModSemL.compile (lift ms).
+
 End MODSEM.
 End ModSem.
+
+Coercion ModSem.lift: ModSem.t >-> ModSemL.t.
+
 
 
 
@@ -561,10 +662,10 @@ Section MOD.
   Context `{Σ: GRA.t}.
 
   Record t: Type := mk {
-    get_modsem: SkEnv.t -> ModSem.t;
+    get_modsem: SkEnv.t -> ModSemL.t;
     sk: Sk.t;
-    enclose: ModSem.t := (get_modsem (Sk.load_skenv sk));
-    interp: semantics := ModSem.interp enclose;
+    enclose: ModSemL.t := (get_modsem (Sk.load_skenv sk));
+    compile: semantics := ModSemL.compile enclose;
   }
   .
 
@@ -577,7 +678,7 @@ Section MOD.
 
   Definition add (md0 md1: t): t := {|
     get_modsem := fun skenv_link =>
-                    ModSem.add (md0.(get_modsem) skenv_link) (md1.(get_modsem) skenv_link);
+                    ModSemL.add (md0.(get_modsem) skenv_link) (md1.(get_modsem) skenv_link);
     sk := Sk.add md0.(sk) md1.(sk);
   |}
   .
@@ -585,12 +686,12 @@ Section MOD.
   Theorem add_comm
           md0 md1
     :
-      <<COMM: Beh.of_program (interp (add md0 md1)) <1= Beh.of_program (interp (add md1 md0))>>
+      <<COMM: Beh.of_program (compile (add md0 md1)) <1= Beh.of_program (compile (add md1 md0))>>
   .
   Proof.
     ii.
-    unfold interp in *. ss.
-    eapply ModSem.add_comm; et.
+    unfold compile in *. ss.
+    eapply ModSemL.add_comm; et.
     rp; et. do 4 f_equal.
     - admit "TODO: maybe the easy way is to 'canonicalize' the list by sorting.".
     - admit "TODO: maybe the easy way is to 'canonicalize' the list by sorting.".
@@ -600,22 +701,22 @@ Section MOD.
     add ms0 (add ms1 ms2) = add (add ms0 ms1) ms2.
   Proof.
     unfold add. f_equal.
-    { extensionality skenv_link. ss. apply ModSem.add_assoc'. }
+    { extensionality skenv_link. ss. apply ModSemL.add_assoc'. }
     { eapply app_assoc. }
   Qed.
 
   Theorem add_assoc
           md0 md1 md2
     :
-      <<COMM: Beh.of_program (interp (add md0 (add md1 md2))) =
-              Beh.of_program (interp (add (add md0 md1) md2))>>
+      <<COMM: Beh.of_program (compile (add md0 (add md1 md2))) =
+              Beh.of_program (compile (add (add md0 md1) md2))>>
   .
   Proof.
     admit "ez".
   Qed.
 
   Definition empty: t := {|
-    get_modsem := fun _ => ModSem.mk [] [];
+    get_modsem := fun _ => ModSemL.mk [] [];
     sk := Sk.unit;
   |}
   .
@@ -623,7 +724,7 @@ Section MOD.
   Lemma add_empty_r md: add md empty = md.
   Proof.
     destruct md; ss.
-    unfold add, ModSem.add. f_equal; ss.
+    unfold add, ModSemL.add. f_equal; ss.
     - extensionality skenv. destruct (get_modsem0 skenv); ss.
       repeat rewrite app_nil_r. auto.
     - unfold Sk.add. rewrite app_nil_r. auto.
@@ -632,7 +733,7 @@ Section MOD.
   Lemma add_empty_l md: add empty md = md.
   Proof.
     destruct md; ss.
-    unfold add, ModSem.add. f_equal; ss.
+    unfold add, ModSemL.add. f_equal; ss.
     extensionality skenv. destruct (get_modsem0 skenv); ss.
   Qed.
 
@@ -644,6 +745,17 @@ Section MOD.
 
 End MOD.
 End Mod.
+
+
+
+
+
+
+
+
+
+
+
 
 
 Module Equisatisfiability.

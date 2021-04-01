@@ -49,10 +49,10 @@ Section PROOF.
     Ret (Vint 0)↑
   .
 
-  Definition BoxSem: ModSem.t :=
+  Definition BoxSem: ModSemL.t :=
     {|
-      ModSem.fnsems := [("get", getF) ; ("set", setF) ];
-      ModSem.initial_mrs := [("Box", GRA.embed ((inl (Some 0%Z)): URA.car (t:=RA.excl Z)))];
+      ModSemL.fnsems := [("get", getF) ; ("set", setF) ];
+      ModSemL.initial_mrs := [("Box", GRA.embed ((inl (Some 0%Z)): URA.car (t:=RA.excl Z)))];
     |}
   .
 

@@ -45,4 +45,4 @@ Section ECHO.
 
 End ECHO.
 
-Definition echo_prog := ModSem.initial_itr_no_check (Mod.enclose echo_spec).
+Definition echo_prog := ModSemL.initial_itr_no_check (Mod.enclose echo_spec).

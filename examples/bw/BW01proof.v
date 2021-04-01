@@ -4,7 +4,7 @@ Require Import Skeleton.
 Require Import PCM.
 Require Import ModSem Behavior.
 Require Import Relation_Definitions.
-Require Import HoareDef BW0 BW1 SimModSem.
+Require Import HoareDef BW0 BW1 SimModSemL.
 
 (*** TODO: export these in Coqlib or Universe ***)
 Require Import Relation_Operators.
@@ -52,7 +52,7 @@ End AUX.
 
 
 
-Section SIMMODSEM.
+Section SIMMODSEML.
 
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG BW1.bwRA Σ}.
@@ -69,7 +69,7 @@ Section SIMMODSEM.
 
   Opaque URA.unit.
 
-  Theorem correct: ModSemPair.sim BW1.BWSem BW0.BWSem.
+  Theorem correct: ModSemLPair.sim BW1.BWSem BW0.BWSem.
   Proof.
     econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
     { typeclasses eauto. }
@@ -113,4 +113,4 @@ Section SIMMODSEM.
     }
   Qed.
 
-End SIMMODSEM.
+End SIMMODSEML.

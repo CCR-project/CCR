@@ -7,7 +7,7 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
-Require Import MutHeader SimModSem.
+Require Import MutHeader SimModSemL.
 Require Import Mem0 Stack0 Echo0 EchoMain0 Client0 EchoAll.
 
 Require Import TODOYJ.
@@ -44,7 +44,7 @@ Section ECHO.
       ].
 
   Theorem echo_correct:
-    Beh.of_program (Mod.interp echo_impl) <1= Beh.of_program (Mod.interp echo_spec).
+    Beh.of_program (Mod.compile echo_impl) <1= Beh.of_program (Mod.compile echo_spec).
   Proof.
     (* TODO: use Mem12proof Stack01proof Echo01proof EchoMain01proof Client01proof *)
   Admitted.

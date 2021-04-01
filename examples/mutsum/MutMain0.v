@@ -26,9 +26,11 @@ Section PROOF.
       r <- trigger (Call "f" [Vint 10]↑);;
       Ret r.
 
-  Definition mainSem: ModSem.t := {|
+  Definition mainSem: ModSemL.t := {|
     ModSem.fnsems := [("main", mainF)];
-    ModSem.initial_mrs := [("Main", (ε, tt↑))];
+    ModSem.mn := "Main";
+    ModSem.initial_mr := ε;
+    ModSem.initial_st := tt↑;
   |}
   .
 

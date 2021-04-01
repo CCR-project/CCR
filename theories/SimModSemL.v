@@ -4,6 +4,7 @@ Require Import Universe.
 Require Import Skeleton.
 Require Import PCM.
 Require Import ModSem.
+Import ModSemL.
 Require Import Behavior.
 Require Import Relation_Definitions.
 
@@ -1184,13 +1185,13 @@ Section ADD.
                             (IN1: In mn (List.map fst (ModSemL.initial_mrs ms_src0))),
                False).
     { inv WFSRC. ss. rewrite map_app in *.
-      i. eapply app_nodup in wf_initial_mrs; eauto. }
+      i. eapply app_nodup in wf_initial_mrs0; eauto. }
     assert (DISJTGT: forall mn
                             (IN0: In mn (List.map fst (ModSemL.initial_mrs ms_tgt1)))
                             (IN1: In mn (List.map fst (ModSemL.initial_mrs ms_tgt0))),
                False).
     { inv WFTGT. ss. rewrite map_app in *.
-      i. eapply app_nodup in wf_initial_mrs; eauto. }
+      i. eapply app_nodup in wf_initial_mrs0; eauto. }
     destruct SIM0 as [wf0 le0 le_PreOrder0 sim_fnsems0 sim_initial_mrs0].
     destruct SIM1 as [wf1 le1 le_PreOrder1 sim_fnsems1 sim_initial_mrs1].
     eapply mk with (wf:=add_wf (List.map fst ms_src0.(ModSemL.initial_mrs))
@@ -1751,7 +1752,7 @@ Section SIMMOD.
      unfold ModSemL.initial_itr, Mod.enclose.
 
      assert (FNS: forall fn : string,
-                option_rel (sim_fnsem wf)
+                option_rel (sim_fnsem wf0)
                            (find (fun fnsem : string * (Any.t -> itree Es Any.t) => dec fn (fst fnsem))
                                  (ModSemL.fnsems (Mod.get_modsem md_src (Sk.load_skenv (Mod.sk md_src)))))
                            (find (fun fnsem : string * (Any.t -> itree Es Any.t) => dec fn (fst fnsem))

@@ -5,7 +5,7 @@ Require Import Skeleton.
 Require Import PCM.
 Require Import ModSem Behavior.
 Require Import Relation_Definitions.
-Require Import HoareDef Echo0 Echo1 SimModSem.
+Require Import HoareDef Echo0 Echo1 SimModSemL.
 
 (*** TODO: export these in Coqlib or Universe ***)
 Require Import Relation_Operators.
@@ -100,7 +100,7 @@ Global Opaque _APC.
 
 
 
-Section SIMMODSEM.
+Section SIMMODSEML.
 
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG Mem1.memRA Σ}.
@@ -124,7 +124,7 @@ Section SIMMODSEM.
   Opaque URA.unit.
   Opaque points_to.
 
-  Theorem correct: ModSemPair.sim Echo1.EchoSem Echo0.EchoSem.
+  Theorem correct: ModSemLPair.sim Echo1.EchoSem Echo0.EchoSem.
   Proof.
     econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
     { typeclasses eauto. }
@@ -335,4 +335,4 @@ Section SIMMODSEM.
     all: try (by repeat econs; et).
   Qed.
 
-End SIMMODSEM.
+End SIMMODSEML.

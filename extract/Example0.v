@@ -25,11 +25,11 @@ Definition main0: itree Es Any.t :=
 Definition Ex0: Mod.t := {|
   Mod.get_modsem :=
     fun _ => {|
-        ModSem.fnsems := [("main", fun _ => main0)];
-        ModSem.initial_mrs := [("Main", (ε, unit↑))];
+        ModSemL.fnsems := [("main", fun _ => main0)];
+        ModSemL.initial_mrs := [("Main", (ε, unit↑))];
       |};
   Mod.sk := Sk.unit;
                         |}
 .
 
-Definition ex0 := ModSem.initial_itr_no_check (Mod.enclose Ex0).
+Definition ex0 := ModSemL.initial_itr_no_check (Mod.enclose Ex0).

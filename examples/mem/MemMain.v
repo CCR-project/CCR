@@ -23,9 +23,9 @@ Section PROOF.
 
   Definition MemMain1: Mod.t := Mod.add Mem Main.
 
-  (* Definition MainSem2: ModSem.t := {| *)
-  (*   ModSem.fnsems := List.map (map_snd fun_to_src) MainStb; *)
-  (*   ModSem.initial_mrs := [("Main", ε)]; *)
+  (* Definition MainSem2: ModSemL.t := {| *)
+  (*   ModSemL.fnsems := List.map (map_snd fun_to_src) MainStb; *)
+  (*   ModSemL.initial_mrs := [("Main", ε)]; *)
   (* |} *)
   (* . *)
 
@@ -35,9 +35,9 @@ Section PROOF.
   (* |} *)
   (* . *)
 
-  (* Definition MemSem2: ModSem.t := {| *)
-  (*   ModSem.fnsems := List.map (map_snd fun_to_src) MemStb; *)
-  (*   ModSem.initial_mrs := [("Mem", ε)]; *)
+  (* Definition MemSem2: ModSemL.t := {| *)
+  (*   ModSemL.fnsems := List.map (map_snd fun_to_src) MemStb; *)
+  (*   ModSemL.initial_mrs := [("Mem", ε)]; *)
   (* |} *)
   (* . *)
 
@@ -51,9 +51,9 @@ Section PROOF.
 
   Definition MemMain2: Mod.t := {|
     Mod.get_modsem := fun _ => {|
-        ModSem.fnsems := List.map (fun '(fn, sb) => (fn, fun_to_src sb.(fsb_body))) (MemSbtb ++ MainSbtb);
-        (* ModSem.initial_mrs := [("Mem", ε) ; ("Main", ε)]; *)
-        ModSem.initial_mrs := [("Mem", (ε, tt↑)) ; ("Main", (ε, tt↑))];
+        ModSemL.fnsems := List.map (fun '(fn, sb) => (fn, fun_to_src sb.(fsb_body))) (MemSbtb ++ MainSbtb);
+        (* ModSemL.initial_mrs := [("Mem", ε) ; ("Main", ε)]; *)
+        ModSemL.initial_mrs := [("Mem", (ε, tt↑)) ; ("Main", (ε, tt↑))];
       |};
     Mod.sk := Sk.unit;
   |}
@@ -185,7 +185,7 @@ Section PROOF.
   (*   - eapply IHl; et. *)
   (* Qed. *)
 
-  Theorem correct: Beh.of_program (Mod.interp MemMain1) <1= Beh.of_program (Mod.interp MemMain2).
+  Theorem correct: Beh.of_program (Mod.compile MemMain1) <1= Beh.of_program (Mod.compile MemMain2).
   Proof.
     ii.
     set (global_sbtb:=MemSbtb++MainSbtb).

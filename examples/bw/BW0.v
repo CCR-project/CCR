@@ -49,9 +49,9 @@ def flip(): Unit
       Ret Vundef
     .
 
-  Definition BWSem: ModSem.t := {|
-    ModSem.fnsems := [("get", cfun getF); ("flip", cfun flipF)];
-    ModSem.initial_mrs := [("BW", (ε, 0%Z↑))];
+  Definition BWSem: ModSemL.t := {|
+    ModSemL.fnsems := [("get", cfun getF); ("flip", cfun flipF)];
+    ModSemL.initial_mrs := [("BW", (ε, 0%Z↑))];
   |}
   .
 

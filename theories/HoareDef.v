@@ -3,6 +3,7 @@ Require Import Universe.
 Require Import STS.
 Require Import Behavior.
 Require Import ModSem.
+Import ModSemL.
 Require Import Skeleton.
 Require Import PCM.
 From Ordinal Require Export Ordinal Arithmetic Inaccessible.
@@ -220,8 +221,8 @@ Section CANCEL.
   Section INTERP.
   (* Variable stb: gname -> option fspec. *)
   (*** TODO: I wanted to use above definiton, but doing so makes defining ms_src hard ***)
-  (*** We can fix this by making ModSem.fnsems to a function, but doing so will change the type of
-       ModSem.add to predicate (t -> t -> t -> Prop), not function.
+  (*** We can fix this by making ModSemL.fnsems to a function, but doing so will change the type of
+       ModSemL.add to predicate (t -> t -> t -> Prop), not function.
        - Maybe not. I thought one needed to check uniqueness of gname at the "add",
          but that might not be the case.
          We may define fnsems: string -> option (list val -> itree Es val).
@@ -352,16 +353,16 @@ If this feature is needed; we can extend it then. At the moment, I will only all
 
 
   Variable md_tgt: Mod.t.
-  Let ms_tgt: ModSem.t := (Mod.get_modsem md_tgt (Sk.load_skenv md_tgt.(Mod.sk))).
+  Let ms_tgt: ModSemL.t := (Mod.get_modsem md_tgt (Sk.load_skenv md_tgt.(Mod.sk))).
 
   Variable sbtb: list (gname * fspecbody).
   Let stb: list (gname * fspec) := List.map (fun '(gn, fsb) => (gn, fsb_fspec fsb)) sbtb.
-  Hypothesis WTY: ms_tgt.(ModSem.fnsems) = List.map (fun '(fn, sb) => (fn, fun_to_tgt stb fn sb)) sbtb.
+  Hypothesis WTY: ms_tgt.(ModSemL.fnsems) = List.map (fun '(fn, sb) => (fn, fun_to_tgt stb fn sb)) sbtb.
 
-  Definition ms_src: ModSem.t := {|
-    ModSem.fnsems := List.map (fun '(fn, sb) => (fn, fun_to_src (fsb_body sb))) sbtb;
-    (* ModSem.initial_mrs := []; *)
-    ModSem.initial_mrs := List.map (fun '(mn, (mr, mp)) => (mn, (ε, mp))) ms_tgt.(ModSem.initial_mrs);
+  Definition ms_src: ModSemL.t := {|
+    ModSemL.fnsems := List.map (fun '(fn, sb) => (fn, fun_to_src (fsb_body sb))) sbtb;
+    (* ModSemL.initial_mrs := []; *)
+    ModSemL.initial_mrs := List.map (fun '(mn, (mr, mp)) => (mn, (ε, mp))) ms_tgt.(ModSemL.initial_mrs);
     (*** Note: we don't use resources, so making everything as a unit ***)
   |}
   .
@@ -374,10 +375,10 @@ If this feature is needed; we can extend it then. At the moment, I will only all
   |}
   .
 
-  Definition ms_mid: ModSem.t := {|
-    ModSem.fnsems := List.map (fun '(fn, sb) => (fn, fun_to_mid (fsb_body sb))) sbtb;
-    (* ModSem.initial_mrs := []; *)
-    ModSem.initial_mrs := List.map (fun '(mn, (mr, mp)) => (mn, (ε, mp))) ms_tgt.(ModSem.initial_mrs);
+  Definition ms_mid: ModSemL.t := {|
+    ModSemL.fnsems := List.map (fun '(fn, sb) => (fn, fun_to_mid (fsb_body sb))) sbtb;
+    (* ModSemL.initial_mrs := []; *)
+    ModSemL.initial_mrs := List.map (fun '(mn, (mr, mp)) => (mn, (ε, mp))) ms_tgt.(ModSemL.initial_mrs);
     (*** Note: we don't use resources, so making everything as a unit ***)
   |}
   .

@@ -50,9 +50,9 @@ Section PROOF.
 
   Context `{Σ: GRA.t}.
 
-  Definition ClientSem: ModSem.t := {|
-    ModSem.fnsems := [("getint", cfun (resum_ktr getintF)); ("putint", cfun (resum_ktr putintF))];
-    ModSem.initial_mrs := [("Client", (ε, tt↑))];
+  Definition ClientSem: ModSemL.t := {|
+    ModSemL.fnsems := [("getint", cfun (resum_ktr getintF)); ("putint", cfun (resum_ktr putintF))];
+    ModSemL.initial_mrs := [("Client", (ε, tt↑))];
   |}
   .
 
