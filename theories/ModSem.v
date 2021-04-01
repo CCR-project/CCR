@@ -12,7 +12,7 @@ Set Implicit Arguments.
 
 
 
-Section EVENTS.
+Section EVENTSCOMMON.
 
   Variant eventE: Type -> Type :=
   | Choose (X: Type): eventE X
@@ -55,7 +55,7 @@ Section EVENTS.
   (* Notation "'Ret!' f" := (RetG f) (at level 57, only parsing). *)
   (* Notation "'Ret?' f" := (RetA f) (at level 57, only parsing). *)
 
-End EVENTS.
+End EVENTSCOMMON.
 
 Notation "f '?'" := (unwrapU f) (at level 9, only parsing).
 Notation "f 'ǃ'" := (unwrapN f) (at level 9, only parsing).
@@ -64,6 +64,26 @@ Notation "(ǃ)" := (unwrapN) (only parsing).
 Goal (tt ↑↓?) = Ret tt. rewrite Any.upcast_downcast. ss. Qed.
 Goal (tt ↑↓ǃ) = Ret tt. rewrite Any.upcast_downcast. ss. Qed.
 
+Section EVENTSCOMMON.
+
+(*** casting call, fun ***)
+(* Definition ccallN {X Y} (fn: gname) (varg: X): itree Es Y := vret <- trigger (Call fn varg↑);; vret <- vret↓ǃ;; Ret vret. *)
+(* Definition ccallU {X Y} (fn: gname) (varg: X): itree Es Y := vret <- trigger (Call fn varg↑);; vret <- vret↓?;; Ret vret. *)
+(* Definition cfunN {X Y} (body: X -> itree Es Y): Any.t -> itree Es Any.t := *)
+(*   fun varg => varg <- varg↓ǃ;; vret <- body varg;; Ret vret↑. *)
+(* Definition cfunU {X Y} (body: X -> itree Es Y): Any.t -> itree Es Any.t := *)
+(*   fun varg => varg <- varg↓?;; vret <- body varg;; Ret vret↑. *)
+
+  (* Definition ccall {X Y} (fn: gname) (varg: X): itree Es Y := vret <- trigger (Call fn varg↑);; vret <- vret↓ǃ;; Ret vret. *)
+  (* Definition cfun {X Y} (body: X -> itree Es Y): Any.t -> itree Es Any.t := *)
+  (*   fun varg => varg <- varg↓ǃ;; vret <- body varg;; Ret vret↑. *)
+  Context `{HasCallE: callE -< E}.
+  Context `{HasEventE: eventE -< E}.
+  Definition ccall {X Y} (fn: gname) (varg: X): itree E Y := vret <- trigger (Call fn varg↑);; vret <- vret↓ǃ;; Ret vret.
+  Definition cfun {X Y} (body: X -> itree E Y): Any.t -> itree E Any.t :=
+    fun varg => varg <- varg↓ǃ;; vret <- body varg;; Ret vret↑.
+
+End EVENTSCOMMON.
 
 
 
@@ -71,13 +91,9 @@ Goal (tt ↑↓ǃ) = Ret tt. rewrite Any.upcast_downcast. ss. Qed.
 
 
 
-
-
-Module ModSemL.
-Section MODSEML.
-
-  Section EVENTS.
-
+Module EventsL.
+Section EVENTSL.
+  
   Context `{Σ: GRA.t}.
 
   Inductive pE: Type -> Type :=
@@ -309,7 +325,16 @@ Section MODSEML.
     unfold interp_Es, interp_rE, interp_pE, pure_state, triggerNB. grind.
   Qed.
 
-  End EVENTS.
+End EVENTSL.
+End EventsL.
+
+
+
+
+Module ModSemL.
+  Include EventsL.
+Section MODSEML.
+
 
   (* Record t: Type := mk { *)
   (*   state: Type; *)
@@ -557,8 +582,8 @@ End ModSemL.
 
 
 
-
-Section MODSEMEVENTS.
+Module Events.
+Section EVENTS.
   Context `{Σ: GRA.t}.
 
   Inductive pE: Type -> Type :=
@@ -573,28 +598,13 @@ Section MODSEMEVENTS.
   .
   Definition Es: Type -> Type := (callE +' rE +' pE+' eventE).
 
-(*** casting call, fun ***)
-(* Definition ccallN {X Y} (fn: gname) (varg: X): itree Es Y := vret <- trigger (Call fn varg↑);; vret <- vret↓ǃ;; Ret vret. *)
-(* Definition ccallU {X Y} (fn: gname) (varg: X): itree Es Y := vret <- trigger (Call fn varg↑);; vret <- vret↓?;; Ret vret. *)
-(* Definition cfunN {X Y} (body: X -> itree Es Y): Any.t -> itree Es Any.t := *)
-(*   fun varg => varg <- varg↓ǃ;; vret <- body varg;; Ret vret↑. *)
-(* Definition cfunU {X Y} (body: X -> itree Es Y): Any.t -> itree Es Any.t := *)
-(*   fun varg => varg <- varg↓?;; vret <- body varg;; Ret vret↑. *)
-
-  (* Definition ccall {X Y} (fn: gname) (varg: X): itree Es Y := vret <- trigger (Call fn varg↑);; vret <- vret↓ǃ;; Ret vret. *)
-  (* Definition cfun {X Y} (body: X -> itree Es Y): Any.t -> itree Es Any.t := *)
-  (*   fun varg => varg <- varg↓ǃ;; vret <- body varg;; Ret vret↑. *)
-  Context `{HasCallE: callE -< E}.
-  Context `{HasEventE: eventE -< E}.
-  Definition ccall {X Y} (fn: gname) (varg: X): itree E Y := vret <- trigger (Call fn varg↑);; vret <- vret↓ǃ;; Ret vret.
-  Definition cfun {X Y} (body: X -> itree E Y): Any.t -> itree E Any.t :=
-    fun varg => varg <- varg↓ǃ;; vret <- body varg;; Ret vret↑.
-
-End MODSEMEVENTS.
+End EVENTS.
+End Events.
 
 
 
 Module ModSem.
+  Include Events.
 Section MODSEM.
   Context `{Σ: GRA.t}.
 
