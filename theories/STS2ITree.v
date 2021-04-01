@@ -334,7 +334,7 @@ paco2 has 'fixed' semantics -> needs fixed semantics to do pcofix
     { ss. }
     rewrite A.
     rewrite <- (beh_preserved_L1 st_init tr).
-    rewrite STS_vis.beh_preserved. eauto.
+    rewrite STSNorm.beh_preserved. eauto.
   Qed.
   
 End PROOF.
