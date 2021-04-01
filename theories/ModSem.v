@@ -332,7 +332,7 @@ End EventsL.
 
 
 Module ModSemL.
-  Include EventsL.
+Import EventsL.
 Section MODSEML.
 
 
@@ -596,7 +596,38 @@ Section EVENTS.
   | MGet: rE Σ
   | FGet: rE Σ
   .
+
   Definition Es: Type -> Type := (callE +' rE +' pE+' eventE).
+
+  Definition handle_rE `{EventsL.rE -< E} (mn: mname): rE ~> itree E :=
+    fun _ re =>
+      match re with
+      | MPut mr0 => trigger (EventsL.MPut mn mr0)
+      | FPut fr0 => trigger (EventsL.FPut fr0)
+      | MGet => trigger (EventsL.MGet mn)
+      | FGet => trigger (EventsL.FGet)
+      end
+  .
+
+  Definition handle_pE `{EventsL.pE -< E} (mn: mname): pE ~> itree E :=
+    fun _ pe =>
+      match pe with
+      | PPut a0 => trigger (EventsL.PPut mn a0)
+      | PGet => trigger (EventsL.PGet mn)
+      end
+  .
+
+  Definition handle_all (mn: mname): Es ~> itree EventsL.Es.
+    i. destruct X.
+    { exact (trigger c). }
+    destruct s.
+    { exact (handle_rE mn r). }
+    destruct s.
+    { exact (handle_pE mn p). }
+    exact (trigger e).
+  Defined.
+
+  Definition transl_all (mn: mname): itree Es ~> itree EventsL.Es := interp (handle_all mn).
 
 End EVENTS.
 End Events.
@@ -604,7 +635,7 @@ End Events.
 
 
 Module ModSem.
-  Include Events.
+Import Events.
 Section MODSEM.
   Context `{Σ: GRA.t}.
 
@@ -615,36 +646,6 @@ Section MODSEM.
     initial_st: Any.t;
   }
   .
-
-  Definition handle_rE `{ModSemL.rE -< E} (mn: mname): rE ~> itree E :=
-    fun _ re =>
-      match re with
-      | MPut mr0 => trigger (ModSemL.MPut mn mr0)
-      | FPut fr0 => trigger (ModSemL.FPut fr0)
-      | MGet => trigger (ModSemL.MGet mn)
-      | FGet => trigger (ModSemL.FGet)
-      end
-  .
-
-  Definition handle_pE `{ModSemL.pE -< E} (mn: mname): pE ~> itree E :=
-    fun _ pe =>
-      match pe with
-      | PPut a0 => trigger (ModSemL.PPut mn a0)
-      | PGet => trigger (ModSemL.PGet mn)
-      end
-  .
-
-  Definition handle_all (mn: mname): Es ~> itree ModSemL.Es.
-    i. destruct X.
-    { exact (trigger c). }
-    destruct s.
-    { exact (handle_rE mn r). }
-    destruct s.
-    { exact (handle_pE mn p). }
-    exact (trigger e).
-  Defined.
-
-  Definition transl_all (mn: mname): itree Es ~> itree ModSemL.Es := interp (handle_all mn).
 
   (*** TODO: move to CoqlibC ***)
   Definition map_fst A0 A1 B (f: A0 -> A1): (A0 * B) -> (A1 * B) := fun '(a, b) => (f a, b).
@@ -657,6 +658,8 @@ Section MODSEM.
   .
 
   Definition compile (ms: t): semantics := ModSemL.compile (lift ms).
+
+  Definition wf (ms: t): Prop := ModSemL.wf (lift ms).
 
 End MODSEM.
 End ModSem.
