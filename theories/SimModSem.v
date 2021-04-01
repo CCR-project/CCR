@@ -1054,18 +1054,95 @@ Section ADQ.
   Proof.
     inv SIM.
     econs; eauto.
-    { instantiate (1:=top2). ss. }
-    { instantiate (1:=wf_lift wf).
-      ss.
-      eapply Forall2_apply_Forall2; et.
-      i. destruct a, b; ss. rr in H. des; ss. rr in H. r in H0. ss. clarify.
-      split; ss. r. ss.
-      eapply adequacy_lift_fsem; et.
-    }
-    ss. esplits; ss; et.
   Qed.
 
 End ADQ.
+
+Section SIMMOD.
+   Context `{Σ: GRA.t}.
+
+   Theorem adequacy_local md_src md_tgt
+           (SIM: ModPair.sim md_src md_tgt)
+     (*** You will need some wf conditions for ctx ***)
+     :
+       <<CR: forall (ctx: Mod.t), Beh.of_program (ModL.compile (ModL.add ctx md_tgt)) <1=
+                                  Beh.of_program (ModL.compile (ModL.add ctx md_src))>>
+   .
+   Proof.
+     ii. eapply ModLPair.adequacy_local_closed; eauto. econs.
+     { ss. red. ii. eapply ModSemLPair.add_modsempair.
+       { admit "ModSemL wf". }
+       { admit "ModSemL wf". }
+       { eapply adequacy_lift. eapply ModSemPair.self_sim_mod. r. admit "ModSemL wf". }
+       { eapply SIM. }
+     }
+     { ss. red. f_equal. eapply SIM. }
+     { ii. red. ss. admit "ModSemL wf". }
+   Qed.
+
+   (* Theorem adequacy_local md_src md_tgt *)
+   (*         (SIM: ModPair.sim md_src md_tgt) *)
+   (*   (*** You will need some wf conditions for ctx ***) *)
+   (*   : *)
+   (*     <<CR: forall ctx (WF: exists ctxs, ctx = ModL.add_list (List.map Mod.lift ctxs)), *)
+   (*       Beh.of_program (ModL.compile (ModL.add ctx md_tgt)) <1= *)
+   (*       Beh.of_program (ModL.compile (ModL.add ctx md_src))>> *)
+   (* . *)
+   (* Proof. *)
+   (*   ii. eapply ModLPair.adequacy_local_closed; eauto. econs. *)
+   (*   { ss. red. ii. eapply ModSemLPair.add_modsempair. *)
+   (*     { admit "ModSemL wf". } *)
+   (*     { admit "ModSemL wf". } *)
+   (*     { des. subst. eapply adequacy_lift. eapply ModSemPair.self_sim_mod. r. admit "ModSemL wf". } *)
+   (*     { eapply SIM. } *)
+   (*   } *)
+   (*   { ss. red. f_equal. eapply SIM. } *)
+   (*   { ii. red. ss. admit "ModSemL wf". } *)
+   (* Qed. *)
+End SIMMOD.
+
+Section SIMMODS.
+  Context `{Σ: GRA.t}.
+
+  Lemma sim_list_adequacy (mds_src mds_tgt: list Mod.t)
+        (FORALL: List.Forall2 ModPair.sim mds_src mds_tgt)
+    :
+      <<CR: forall ctx, Beh.of_program (ModL.compile (ModL.add ctx (ModL.add_list (List.map Mod.lift mds_tgt)))) <1=
+                        Beh.of_program (ModL.compile (ModL.add ctx (ModL.add_list (List.map Mod.lift mds_src))))>>.
+  Proof.
+    induction FORALL; ss.
+    cut (forall ctx,
+            Beh.of_program (ModL.compile (ModL.add ctx (ModL.add y (ModL.add_list (List.map Mod.lift l'))))) <1=
+            Beh.of_program (ModL.compile (ModL.add ctx (ModL.add y (ModL.add_list (List.map Mod.lift l)))))).
+    { ii. eapply H0 in PR.
+      apply ModL.add_comm in PR. apply ModL.add_comm.
+      erewrite <- ModL.add_assoc in *.
+      apply ModL.add_comm in PR. apply ModL.add_comm.
+      eapply adequacy_local with (ctx0:=(ModL.add (ModL.add_list (List.map Mod.lift l)) ctx)).
+      { eauto. }
+      { eapply PR. }
+    }
+    { i. erewrite ModL.add_assoc in *. eapply IHFORALL. auto. }
+  Qed.
+
+  Lemma sim_list_adequacy_closed (mds_src mds_tgt: list ModL.t)
+        (FORALL: List.Forall2 sim mds_src mds_tgt)
+    :
+      Beh.of_program (ModL.compile (ModL.add_list mds_tgt)) <1=
+      Beh.of_program (ModL.compile (ModL.add_list mds_src)).
+  Proof.
+    hexploit sim_list_adequacy.
+    { eauto. }
+    i. specialize (H ModL.empty). repeat rewrite ModL.add_empty_l in H. auto.
+  Qed.
+End SIMMODS.
+
+
+
+
+
+
+
    Hint Resolve cpn5_wcompat: paco.
 
    Definition eqv (mrsl: alist string (Σ * Any.t)) (mrs: string -> Σ) (mps: string -> Any.t): Prop :=
@@ -1297,55 +1374,7 @@ End ADQ.
        { eapply eqv_add_mr; eauto. }
      - erewrite interp_Es_rE with (rst0:=(mrs_src, fr_src :: frs_src)).
        erewrite interp_Es_rE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
-       econs; eauto.
-       gstep. econs; auto.
-       gbase. eapply CIH; eauto.
-     - eapply eqv_lookup_mp in MRSRC; eauto.
-       eapply eqv_lookup_mp in MRTGT; eauto. subst.
-       erewrite interp_Es_pE with (rst0:=(mrs_src, fr_src :: frs_src)).
-       erewrite interp_Es_pE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
-       econs; eauto.
-       gstep. econs; auto.
-       gstep. econs; auto.
-       gbase. eapply CIH; eauto.
-     - eapply eqv_lookup_mr in MRSRC; eauto.
-       eapply eqv_lookup_mr in MRTGT; eauto. subst.
-       erewrite interp_Es_rE with (rst0:=(mrs_src, fr_src :: frs_src)).
-       erewrite interp_Es_rE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
-       econs; eauto.
-       gstep. econs; auto.
-       gbase. eapply CIH; eauto.
-     - erewrite interp_Es_rE with (rst0:=(mrs_src, fr_src :: frs_src)).
-       erewrite interp_Es_rE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
-       econs; eauto.
-       gstep. econs; auto.
-       gbase. eapply CIH; eauto.
-     - econs; eauto.
-       { eapply arith_lt_1 with (n1:=4); auto.
-         - eassumption.
-         - clear. lia. }
-       gbase. eapply CIH; eauto.
-     - des. pclearbot. econs; eauto.
-       { eapply arith_lt_1 with (n1:=7); auto.
-         - eassumption. }
-       eexists. mgo. gstep. econs; eauto.
-       { eapply arith_lt_2 with (n1:=6); auto. }
-       gstep. econs; eauto.
-       { eapply arith_lt_2 with (n1:=5); auto. }
-       gstep. econs; eauto.
-       { eapply arith_lt_2 with (n1:=4); auto. }
-       gbase. eapply CIH; eauto.
-     - econs; eauto.
-       { eapply arith_lt_1 with (n1:=7); auto.
-         - eassumption. }
-       i. mgo. gstep. econs; eauto.
-       { eapply arith_lt_2 with (n1:=6); auto. }
-       gstep. econs; eauto.
-       { eapply arith_lt_2 with (n1:=5); auto. }
-       gstep. econs; eauto.
-       { eapply arith_lt_2 with (n1:=4); auto. }
-       gbase. eapply CIH; eauto. eapply K.
-     - erewrite interp_Es_pE with (rst0:=(mrs_src, fr_src :: frs_src)). ss. mgo.
+       ecith (rst0:=(mrs_src, fr_src :: frs_src)). ss. mgo.
        econs; eauto.
        { eapply arith_lt_1 with (n1:=7); auto.
          - eassumption. }
