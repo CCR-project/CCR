@@ -52,14 +52,12 @@ Section VISNORM.
       norm_step state_sort step (st0, None) None (st1, None)
   .
 
-  Program Definition vis_normalize (L: semantics) : semantics :=
-    {|
+  Program Definition vis_normalize (L: semantics) : semantics := {|
     state := (L.(state) * (option event));
     step := (norm_step L.(state_sort) L.(step));
     initial_state := (norm_state L.(initial_state));
     state_sort := (norm_state_sort L.(state_sort));
-    |}
-  .
+  |}.
   Next Obligation.
     inv VIS. destruct o1; clarify.
     - inv STEP; inv STEP0; ss; clarify.
@@ -73,7 +71,8 @@ Section VISNORM.
     inv STEP; ss; clarify.
   Qed.
   Next Obligation.
-    inv VIS. destruct o0; clarify. destruct (state_sort L s0) eqn:EQ; ss; clarify; inv STEP; ss; clarify.
+    inv VIS. destruct o0; clarify.
+    destruct (state_sort L s0) eqn:EQ; ss; clarify; inv STEP; ss; clarify.
   Qed.
 
   Definition vis_normalized (L: semantics) :=

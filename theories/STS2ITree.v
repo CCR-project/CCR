@@ -6,26 +6,13 @@ Require Import STS Behavior.
 Require Import Any.
 Require Import ModSem.
 Require Import SimSTS.
-Require Import STS_vis.
+Require Import STSNorm.
 
 Set Implicit Arguments.
 
-(** 
-Any state st & given step relation step (transition system)
-st0 -(step A)-> st1/st2/st3/...
-->
-itree trigger Choose {states which satisfy (st0 -(step A)->) | all state}
-
-f(st0) = Vis (Choose X) (cont: f(st1/st2/st3/...))
-
-interp: ModSem.t -> semantics
-semantics -> ModSem.t
- **)
-
 Section CONV.
 
-  Context `{Σ: GRA.t}.
-  CoFixpoint interpSTS
+  CoFixpoint decompile_STS
              (state: Type)
              (step: state -> option event -> state -> Prop)
              (state_sort: state -> sort):
@@ -34,10 +21,10 @@ Section CONV.
       match (state_sort st0) with
       | angelic =>
         Vis (Take {st': state | @step st0 None st' })
-            (fun st1 => interpSTS step state_sort (proj1_sig st1))
+            (fun st1 => decompile_STS step state_sort (proj1_sig st1))
       | demonic =>
         Vis (Choose {st': state | @step st0 None st' })
-            (fun st1 => interpSTS step state_sort (proj1_sig st1))
+            (fun st1 => decompile_STS step state_sort (proj1_sig st1))
       | final z =>
         Ret (Vint z)↑
       | vis =>
@@ -45,10 +32,11 @@ Section CONV.
         trigger (Choose {ev': event | exists st1, @step st0 (Some ev') st1 });;
         rv <- trigger (Syscall fn args (fun rv => exists st1, (@step st0 (Some (event_sys fn args rv)) st1)));;
         Vis (Choose {st1: state | @step st0 (Some (event_sys fn args rv)) st1 })
-            (fun st1 => interpSTS step state_sort (proj1_sig st1))
+            (fun st1 => decompile_STS step state_sort (proj1_sig st1))
       end
   .
 
+  (** TODO: move to ITreelib? *)
   Lemma observe_eta E R (itr0 itr1: itree E R)
         (EQ: _observe itr0 = _observe itr1)
     :
@@ -59,20 +47,20 @@ Section CONV.
     f_equal. auto.
   Qed.
 
-  Lemma interpSTS_red
+  Lemma unfold_decompile_STS
         (state: Type)
         (step: state -> option event -> state -> Prop)
         (state_sort: state -> sort)
         (st0: state):
-    interpSTS step state_sort st0
+    decompile_STS step state_sort st0
     =
     match (state_sort st0) with
     | angelic =>
       Vis (Take {st': state | @step st0 None st' })
-          (fun st1 => interpSTS step state_sort (proj1_sig st1))
+          (fun st1 => decompile_STS step state_sort (proj1_sig st1))
     | demonic =>
       Vis (Choose {st': state | @step st0 None st' })
-          (fun st1 => interpSTS step state_sort (proj1_sig st1))
+          (fun st1 => decompile_STS step state_sort (proj1_sig st1))
     | final z =>
       Ret (Vint z)↑
     | vis =>
@@ -80,7 +68,7 @@ Section CONV.
       trigger (Choose {ev': event | exists st1, @step st0 (Some ev') st1 });;
       rv <- trigger (Syscall fn args (fun rv => exists st1, (@step st0 (Some (event_sys fn args rv)) st1)));;
       Vis (Choose {st1: state | @step st0 (Some (event_sys fn args rv)) st1 })
-          (fun st1 => interpSTS step state_sort (proj1_sig st1))
+          (fun st1 => decompile_STS step state_sort (proj1_sig st1))
     end
   .
   Proof.
@@ -91,42 +79,7 @@ Section CONV.
 
 End CONV.
 
-(* Section INV. *)
-
-(*   Let state: Type := itree eventE Any.t. *)
-
-(*   Definition itr_state_sort (st0: state): sort := *)
-(*     match (observe st0) with *)
-(*     | TauF _ => demonic *)
-(*     | RetF rv => *)
-(*       match rv↓ with *)
-(*       | Some z => final z *)
-(*       | _ => angelic *)
-(*       end *)
-(*     | VisF (Choose X) k => demonic *)
-(*     | VisF (Take X) k => angelic *)
-(*     | VisF (Syscall fn args rvs) k => vis *)
-(*     end *)
-(*   . *)
-  
-(*   Program Definition interpITree: *)
-(*     (itree eventE Any.t) -> semantics := *)
-(*     fun itr => *)
-(*       {| *)
-(*         STS.state := itree eventE Any.t; *)
-(*         STS.step := step; *)
-(*         STS.initial_state := itr; *)
-(*         STS.state_sort := state_sort; *)
-(*       |} *)
-(*   . *)
-(*   Next Obligation. inv STEP; inv STEP0; ss. csc. Qed. *)
-(*   Next Obligation. inv STEP; ss. Qed. *)
-(*   Next Obligation. inv STEP; ss. Qed. *)
-
-(* End INV. *)
-
-Module PROOF.
-Section BEH_PROOF.
+Section PROOF.
 
   Import Behavior.Beh.
 
@@ -149,7 +102,7 @@ Section BEH_PROOF.
     forall (st0 : state) (ev : option event) (st1 : state),
       state_sort0 st0 = demonic -> step0 st0 ev st1 -> ev = None.
 
-  Definition L0 :=
+  Let L0 :=
     {|
     STS.state := state;
     STS.step := step0;
@@ -161,19 +114,18 @@ Section BEH_PROOF.
     |}
   .
 
-  Definition L := vis_normalize L0.
+  Let L1 := vis_normalize L0.
 
-  Definition step := norm_step state_sort0 step0.
-  Definition state_sort := norm_state_sort state_sort0.
-  Definition st_init := norm_state st_init0.
+  Let step := norm_step state_sort0 step0.
+  Let state_sort := norm_state_sort state_sort0.
+  Let st_init := norm_state st_init0.
 
-  Definition wf_vis := L.(wf_vis).
-  Definition wf_angelic := L.(wf_angelic).
-  Definition wf_demonic := L.(wf_demonic).
+  Let wf_vis := L1.(wf_vis).
+  Let wf_angelic := L1.(wf_angelic).
+  Let wf_demonic := L1.(wf_demonic).
 
-  Definition STS_itree := interpSTS step state_sort st_init.
-  (* Definition L_itree := interpITree STS_itree. *)
-  Definition L_itree := ModSem.interp_itree STS_itree.
+  Let STS_itree := decompile_STS step state_sort st_init.
+  Let L1_itree := ModSem.interp_itree STS_itree.
   
   Hypothesis wf_syscall0 :
     forall ev,
@@ -194,21 +146,20 @@ Section BEH_PROOF.
 
 (**
 of_state = 
-fun L : semantics => paco2 (_of_state L) bot2
-     : forall L : semantics, STS.state L -> Tr.t -> Prop
+fun L1 : semantics => paco2 (_of_state L1) bot2
+     : forall L1 : semantics, STS.state L1 -> Tr.t -> Prop
 
 paco2 has 'fixed' semantics -> needs fixed semantics to do pcofix
-So, fix semantics with st_init, later let st_init = st0 in the main thm.
  **)
-  Theorem beh_preserved_vis_norm_dir :
+  Lemma beh_preserved_L1_dir :
     forall st0 (tr: Tr.t),
       of_state
-        L_itree
-        (initial_state (ModSem.interp_itree (interpSTS step state_sort st0)))
+        L1_itree
+        (decompile_STS step state_sort st0)
         tr
       ->
       of_state
-        L
+        L1
         st0
         tr.
   Proof.
@@ -218,26 +169,26 @@ So, fix semantics with st_init, later let st_init = st0 in the main thm.
     pcofix CIH. i. pfold.
     destruct (state_sort st0) eqn:SRT.
     - eapply sim_angelic_both; ss; clarify.
-      + rewrite interpSTS_red. rewrite SRT. ss.
+      + rewrite unfold_decompile_STS. rewrite SRT. ss.
       + i.
-        set (cont:= (fun st1 : {st' | step st0 None st'} => interpSTS step state_sort (st1 $))).
+        set (cont:= (fun st1 : {st' | step st0 None st'} => decompile_STS step state_sort (st1 $))).
         exists (cont (exist (fun st => step st0 None st) st_src1 STEP)). eexists.
-        { rewrite interpSTS_red. rewrite SRT. econs 3. }
+        { rewrite unfold_decompile_STS. rewrite SRT. econs 3. }
         exists 10. right. eapply CIH.
     - eapply sim_demonic_both; ss; clarify.
-      + rewrite interpSTS_red. rewrite SRT. ss.
-      + i. rewrite interpSTS_red in STEP. rewrite SRT in STEP.
+      + rewrite unfold_decompile_STS. rewrite SRT. ss.
+      + i. rewrite unfold_decompile_STS in STEP. rewrite SRT in STEP.
         dependent destruction STEP.
         destruct x. rename x into st1.
         exists st1. eexists; auto.
         exists 10. right. apply CIH.
     - eapply sim_fin; eauto.
-      ss. rewrite interpSTS_red. rewrite SRT.
+      ss. rewrite unfold_decompile_STS. rewrite SRT.
       unfold ModSem.state_sort. ss.
       rewrite Any.upcast_downcast. reflexivity.
     - eapply sim_demonic_tgt; ss; clarify.
-      + rewrite interpSTS_red. rewrite SRT. ss.
-      + i. rewrite interpSTS_red in STEP. rewrite SRT in STEP.
+      + rewrite unfold_decompile_STS. rewrite SRT. ss.
+      + i. rewrite unfold_decompile_STS in STEP. rewrite SRT in STEP.
         rewrite bind_trigger in STEP.
         dependent destruction STEP.
         destruct x. des. destruct x.
@@ -245,7 +196,7 @@ So, fix semantics with st_init, later let st_init = st0 in the main thm.
         left. pfold. eapply sim_vis; i; ss; clarify.
         rewrite bind_trigger in STEP.
         dependent destruction STEP.
-        destruct SYSCALL. des. rename H0 into STEP.
+        des. rename RETURN into STEP.
         exists st2. eexists.
         { auto. }
         exists 11. left. pfold. eapply sim_demonic_tgt; ss; clarify.
@@ -257,16 +208,16 @@ So, fix semantics with st_init, later let st_init = st0 in the main thm.
         clarify.
   Qed.
   
-  Theorem beh_preserved_vis_norm_inv :
+  Lemma beh_preserved_L1_inv :
     forall st0 (tr: Tr.t),
       of_state
-        L
+        L1
         st0
         tr
       ->
       of_state
-        L_itree
-        (initial_state (ModSem.interp_itree (interpSTS step state_sort st0)))
+        L1_itree
+        (decompile_STS step state_sort st0)
         tr.
   Proof.
     intros st0. eapply adequacy_aux with (i0:=10).
@@ -275,19 +226,19 @@ So, fix semantics with st_init, later let st_init = st0 in the main thm.
     pcofix CIH. i. pfold.
     destruct (state_sort st0) eqn:SRT.
     - eapply sim_angelic_both; ss; clarify.
-      + rewrite interpSTS_red. rewrite SRT. ss.
-      + i. rewrite interpSTS_red in STEP. rewrite SRT in STEP.
+      + rewrite unfold_decompile_STS. rewrite SRT. ss.
+      + i. rewrite unfold_decompile_STS in STEP. rewrite SRT in STEP.
         dependent destruction STEP. destruct x.
         exists x. exists s. exists 10. right. apply CIH.
     - eapply sim_demonic_both; ss; clarify.
-      + rewrite interpSTS_red. rewrite SRT. ss.
-      + i. exists (interpSTS step state_sort st_tgt1).
+      + rewrite unfold_decompile_STS. rewrite SRT. ss.
+      + i. exists (decompile_STS step state_sort st_tgt1).
         eexists.
-        { rewrite interpSTS_red in *. rewrite SRT in *.
-          apply (ModSem.step_choose (fun st1 : {st' | step st0 None st'} => interpSTS step state_sort (st1 $)) (exist _ st_tgt1 STEP)). }
+        { rewrite unfold_decompile_STS in *. rewrite SRT in *.
+          apply (ModSem.step_choose (fun st1 : {st' | step st0 None st'} => decompile_STS step state_sort (st1 $)) (exist _ st_tgt1 STEP)). }
         exists 10. right. apply CIH.
     - econs; ss.
-      + rewrite interpSTS_red. rewrite SRT.
+      + rewrite unfold_decompile_STS. rewrite SRT.
         unfold ModSem.state_sort. ss.
         rewrite Any.upcast_downcast. reflexivity.
       + auto.
@@ -309,14 +260,14 @@ So, fix semantics with st_init, later let st_init = st0 in the main thm.
                                     (Choose {st1 | step st0 (Some (event_sys fn args rv0)) st1})
                                     (fun
                                         st1 : {st1 | step st0 (Some (event_sys fn args rv0)) st1}
-                                      => interpSTS step state_sort (st1 $))
+                                      => decompile_STS step state_sort (st1 $))
                         end)).
         destruct H.
         eapply sim_demonic_src; ss; clarify.
-        { rewrite interpSTS_red. rewrite SRT. ss. }
+        { rewrite unfold_decompile_STS. rewrite SRT. ss. }
         exists (cont (exist (fun 'ev => exists st1, step st0 (Some ev) st1) x H)).
         destruct x. eexists.
-        { rewrite interpSTS_red. rewrite SRT. ss. rewrite bind_trigger.
+        { rewrite unfold_decompile_STS. rewrite SRT. ss. rewrite bind_trigger.
           eapply (ModSem.step_choose cont (exist (fun 'ev => exists st1, step st0 (Some ev) st1) (event_sys fn args rv) H)). }
         exists 9. split; auto.
         left. pfold. destruct H. rename s into STEP. subst cont.
@@ -326,19 +277,18 @@ So, fix semantics with st_init, later let st_init = st0 in the main thm.
                             {st1 | step st0 (Some (event_sys fn args rv0)) st1})
                          (fun
                              st1 : {st1 | step st0 (Some (event_sys fn args rv0)) st1} =>
-                             interpSTS step state_sort (st1 $))).
+                             decompile_STS step state_sort (st1 $))).
         eapply sim_vis; eauto.
         i. ss. 
         exploit wf_vis_norm.
-        { instantiate (1:= L). exists L0. reflexivity. }
+        { instantiate (1:= L1). exists L0. reflexivity. }
         { ss. apply SRT. }
         { apply STEP. }
         { apply STEP0. }
         i. des. clarify.
         exists (cont rv). eexists.
         { ss. rewrite bind_trigger. subst cont. ss.
-          apply (@ModSem.step_syscall fn args rv (fun rv0 : val => exists st1, step st0 (Some (event_sys fn args rv0)) st1) (fun x : val => Vis (Choose {st1 | step st0 (Some (event_sys fn args x)) st1}) (fun st1 : {st1 | step st0 (Some (event_sys fn args x)) st1} => interpSTS step state_sort (st1 $)))).
-          split.
+          apply (@ModSem.step_syscall fn args rv (fun rv0 : val => exists st1, step st0 (Some (event_sys fn args rv0)) st1) (fun x : val => Vis (Choose {st1 | step st0 (Some (event_sys fn args x)) st1}) (fun st1 : {st1 | step st0 (Some (event_sys fn args x)) st1} => decompile_STS step state_sort (st1 $)))).
           2:{ exists st_tgt1. auto. }
           apply wf_syscall.
           exists st0, st_tgt1. auto. }
@@ -350,63 +300,58 @@ So, fix semantics with st_init, later let st_init = st0 in the main thm.
                      {st1 | step st0
                                  (Some (event_sys fn args rv))
                                  st1} =>
-                   interpSTS step state_sort (st1 $))).
+                   decompile_STS step state_sort (st1 $))).
         exists (cont (exist (fun st1 => step st0 (Some (event_sys fn args rv)) st1) st_tgt1 STEP)).
         eexists.
         { econs. }
         exists 10. split; eauto.
   Qed.
   
-  Theorem beh_preserved_vis_norm :
+  Lemma beh_preserved_L1 :
     forall st0 (tr: Tr.t),
-      of_state
-        L
-        st0
-        tr
+      of_state L1 st0 tr
       <->
       of_state
-        L_itree
-        (initial_state (ModSem.interp_itree (interpSTS step state_sort st0)))
+        L1_itree
+        (decompile_STS step state_sort st0)
         tr.
   Proof.
     split.
-    - apply beh_preserved_vis_norm_inv.
-    - apply beh_preserved_vis_norm_dir.
+    - apply beh_preserved_L1_inv.
+    - apply beh_preserved_L1_dir.
   Qed.
 
   Theorem beh_preserved :
     exists itr, forall tr,
-        of_state
-          L0
-          st_init0
-          tr
+        of_state L0 st_init0 tr
         <->
-        of_state
-          (ModSem.interp_itree itr)
-          itr
-          tr.
+        of_state (ModSem.interp_itree itr) itr tr.
   Proof.
     exists STS_itree. i.
-    rewrite <- (beh_preserved_vis_norm st_init).
+    assert (A: of_state (ModSem.interp_itree STS_itree) STS_itree tr
+               =
+               of_state L1_itree (decompile_STS step state_sort st_init) tr).
+    { ss. }
+    rewrite A.
+    rewrite <- (beh_preserved_L1 st_init tr).
     rewrite STS_vis.beh_preserved. eauto.
   Qed.
   
-End BEH_PROOF.
 End PROOF.
 
 (* Import Behavior.Beh. *)
 
 (* Theorem exists_itree : *)
-(*   forall (L: semantics), *)
+(*   forall (L1: semantics), *)
 (*     (forall ev, *)
-(*         (exists st0 st1, (state_sort L st0 = vis) /\ (step L st0 (Some ev) st1)) -> *)
+(*         (exists st0 st1, (state_sort L1 st0 = vis) /\ (step L1 st0 (Some ev) st1)) -> *)
 (*         syscall_sem ev) -> *)
 (*     exists itr, forall tr, *)
-(*         of_state L L.(initial_state) tr *)
+(*         of_state L1 L1.(initial_state) tr *)
 (*         <-> *)
 (*         of_state (interpITree itr) itr tr. *)
 (* Proof. *)
-(*   i. destruct L. ss. *)
+(*   i. destruct L1. ss. *)
 (*   revert state initial_state step state_sort wf_vis wf_angelic wf_demonic H. *)
 (*   eapply PROOF.beh_preserved. *)
 

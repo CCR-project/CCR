@@ -271,7 +271,7 @@ Section Denote.
         trigger (SetVar x v) ;; Ret Vundef
       | Sys f =>
         eval_args <- (mapT denote_expr args) ;;
-        v <- trigger (Syscall f eval_args (fun _ => True)) ;;
+        v <- trigger (Syscall f eval_args top1) ;;
         trigger (SetVar x v) ;; Ret Vundef
       end
 
@@ -324,7 +324,7 @@ Section Denote.
         trigger (SetVar x v) ;; Ret Vundef
       | Sys f =>
         eval_args <- (mapT denote_expr args) ;;
-        v <- trigger (Syscall f eval_args (fun _ => True)) ;;
+        v <- trigger (Syscall f eval_args top1) ;;
         trigger (SetVar x v) ;; Ret Vundef
       end.
   Proof. reflexivity. Qed.
@@ -588,8 +588,8 @@ Section PROOFS.
   Lemma interp_imp_Syscall
         st0 f args
     :
-      interp_imp (trigger (Syscall f args (fun _ => True))) st0 =
-      r <- trigger (Syscall f args (fun _ => True));; tau;; Ret (st0, r).
+      interp_imp (trigger (Syscall f args top1)) st0 =
+      r <- trigger (Syscall f args top1);; tau;; Ret (st0, r).
   Proof.
     unfold interp_imp, pure_state. grind.
   Qed.

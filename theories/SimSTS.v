@@ -127,7 +127,7 @@ Section SIM.
       (SRT: _.(state_sort) st_tgt0 = final retv)
     :
       _sim sim i0 st_src0 st_tgt0
-           
+
   | sim_vis
       (SRT: _.(state_sort) st_src0 = vis)
       (SRT: _.(state_sort) st_tgt0 = vis)
