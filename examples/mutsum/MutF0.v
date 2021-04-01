@@ -31,7 +31,7 @@ Section PROOF.
         r <- (vadd (Vint n) m)?;;
         Ret r).
 
-  Definition FSem: ModSemL.t := {|
+  Definition FSem: ModSem.t := {|
     ModSem.fnsems := [("f", cfun fF)];
     ModSem.mn := "F";
     ModSem.initial_mr := ε;

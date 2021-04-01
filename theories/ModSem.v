@@ -582,7 +582,7 @@ End ModSemL.
 
 
 
-Module Events.
+(* Module Events. *)
 Section EVENTS.
   Context `{Σ: GRA.t}.
 
@@ -630,12 +630,12 @@ Section EVENTS.
   Definition transl_all (mn: mname): itree Es ~> itree EventsL.Es := interp (handle_all mn).
 
 End EVENTS.
-End Events.
+(* End Events. *)
 
 
 
 Module ModSem.
-Import Events.
+(* Import Events. *)
 Section MODSEM.
   Context `{Σ: GRA.t}.
 
@@ -669,8 +669,8 @@ Coercion ModSem.lift: ModSem.t >-> ModSemL.t.
 
 
 
-Module Mod.
-Section MOD.
+Module ModL.
+Section MODL.
 
   Context `{Σ: GRA.t}.
 
@@ -756,8 +756,34 @@ Section MOD.
     | [] => empty
     end.
 
+End MODL.
+End ModL.
+
+
+
+Module Mod.
+Section MOD.
+
+  Context `{Σ: GRA.t}.
+
+  Record t: Type := mk {
+    get_modsem: SkEnv.t -> ModSem.t;
+    sk: Sk.t;
+  }
+  .
+
+  Definition lift (md: t): ModL.t := {|
+    ModL.get_modsem := fun skenv => md.(get_modsem) skenv;
+    ModL.sk := md.(sk);
+  |}
+  .
+
+  Definition wf (md: t): Prop := <<WF: ModL.wf (lift md)>>.
+
 End MOD.
 End Mod.
+
+Coercion Mod.lift: Mod.t >-> ModL.t.
 
 
 

@@ -1318,16 +1318,16 @@ Require Import SimGlobal.
   Hint Constructors option_rel: core.
 
 
-Module ModPair.
+Module ModLPair.
 Section SIMMOD.
    Context `{Σ: GRA.t}.
-   Variable (md_src md_tgt: Mod.t).
+   Variable (md_src md_tgt: ModL.t).
    Inductive sim: Prop := mk {
      sim_modsem:
-       forall skenv, <<SIM: ModSemLPair.sim (md_src.(Mod.get_modsem) skenv) (md_tgt.(Mod.get_modsem) skenv)>>;
-     sim_sk: <<SIM: md_src.(Mod.sk) = md_tgt.(Mod.sk)>>;
+       forall skenv, <<SIM: ModSemLPair.sim (md_src.(ModL.get_modsem) skenv) (md_tgt.(ModL.get_modsem) skenv)>>;
+     sim_sk: <<SIM: md_src.(ModL.sk) = md_tgt.(ModL.sk)>>;
      sim_wf:
-       forall skenv (WF: ModSemL.wf (md_src.(Mod.get_modsem) skenv)), <<WF: ModSemL.wf (md_tgt.(Mod.get_modsem) skenv)>>;
+       forall skenv (WF: ModSemL.wf (md_src.(ModL.get_modsem) skenv)), <<WF: ModSemL.wf (md_tgt.(ModL.get_modsem) skenv)>>;
    }.
 
    Hint Resolve cpn5_wcompat: paco.
@@ -1741,25 +1741,25 @@ Section SIMMOD.
    Theorem adequacy_local_closed
            (SIM: sim)
      :
-       Beh.of_program (Mod.compile md_tgt) <1=
-       Beh.of_program (Mod.compile md_src)
+       Beh.of_program (ModL.compile md_tgt) <1=
+       Beh.of_program (ModL.compile md_src)
    .
    Proof.
-     inv SIM. specialize (sim_modsem0 (Sk.load_skenv (Mod.sk md_src))).
+     inv SIM. specialize (sim_modsem0 (Sk.load_skenv (ModL.sk md_src))).
      inv sim_modsem0. red in sim_sk0.
 
      eapply adequacy_global; et. exists (OrdArith.add Ord.O Ord.O).
-     unfold ModSemL.initial_itr, Mod.enclose.
+     unfold ModSemL.initial_itr, ModL.enclose.
 
      assert (FNS: forall fn : string,
                 option_rel (sim_fnsem wf)
                            (find (fun fnsem : string * (Any.t -> itree Es Any.t) => dec fn (fst fnsem))
-                                 (ModSemL.fnsems (Mod.get_modsem md_src (Sk.load_skenv (Mod.sk md_src)))))
+                                 (ModSemL.fnsems (ModL.get_modsem md_src (Sk.load_skenv (ModL.sk md_src)))))
                            (find (fun fnsem : string * (Any.t -> itree Es Any.t) => dec fn (fst fnsem))
-                                 (ModSemL.fnsems (Mod.get_modsem md_tgt (Sk.load_skenv (Mod.sk md_tgt)))))).
+                                 (ModSemL.fnsems (ModL.get_modsem md_tgt (Sk.load_skenv (ModL.sk md_tgt)))))).
      { rewrite <- sim_sk0 in *.
-       remember (ModSemL.fnsems (Mod.get_modsem md_src (Sk.load_skenv (Mod.sk md_src)))).
-       remember (ModSemL.fnsems (Mod.get_modsem md_tgt (Sk.load_skenv (Mod.sk md_src)))).
+       remember (ModSemL.fnsems (ModL.get_modsem md_src (Sk.load_skenv (ModL.sk md_src)))).
+       remember (ModSemL.fnsems (ModL.get_modsem md_tgt (Sk.load_skenv (ModL.sk md_src)))).
        clear - sim_fnsems. induction sim_fnsems; ss.
        i. unfold sumbool_to_bool. des_ifs; eauto.
        - inv H. ss.
@@ -1815,8 +1815,8 @@ Section SIMMOD.
            (SIM: sim md_src md_tgt)
      (*** You will need some wf conditions for ctx ***)
      :
-       <<CR: forall ctx, Beh.of_program (Mod.compile (Mod.add ctx md_tgt)) <1=
-                         Beh.of_program (Mod.compile (Mod.add ctx md_src))>>
+       <<CR: forall ctx, Beh.of_program (ModL.compile (ModL.add ctx md_tgt)) <1=
+                         Beh.of_program (ModL.compile (ModL.add ctx md_src))>>
    .
    Proof.
      ii. eapply adequacy_local_closed; eauto. econs.
@@ -1834,39 +1834,39 @@ End SIMMOD.
 Section SIMMODS.
   Context `{Σ: GRA.t}.
 
-  Lemma sim_list_adequacy (mds_src mds_tgt: list Mod.t)
+  Lemma sim_list_adequacy (mds_src mds_tgt: list ModL.t)
         (FORALL: List.Forall2 sim mds_src mds_tgt)
     :
-      <<CR: forall ctx, Beh.of_program (Mod.compile (Mod.add ctx (Mod.add_list mds_tgt))) <1=
-                        Beh.of_program (Mod.compile (Mod.add ctx (Mod.add_list mds_src)))>>.
+      <<CR: forall ctx, Beh.of_program (ModL.compile (ModL.add ctx (ModL.add_list mds_tgt))) <1=
+                        Beh.of_program (ModL.compile (ModL.add ctx (ModL.add_list mds_src)))>>.
   Proof.
     induction FORALL; ss.
     cut (forall ctx,
-            Beh.of_program (Mod.compile (Mod.add ctx (Mod.add y (Mod.add_list l')))) <1=
-            Beh.of_program (Mod.compile (Mod.add ctx (Mod.add y (Mod.add_list l))))).
+            Beh.of_program (ModL.compile (ModL.add ctx (ModL.add y (ModL.add_list l')))) <1=
+            Beh.of_program (ModL.compile (ModL.add ctx (ModL.add y (ModL.add_list l))))).
     { ii. eapply H0 in PR.
-      apply Mod.add_comm in PR. apply Mod.add_comm.
-      erewrite <- Mod.add_assoc in *.
-      apply Mod.add_comm in PR. apply Mod.add_comm.
+      apply ModL.add_comm in PR. apply ModL.add_comm.
+      erewrite <- ModL.add_assoc in *.
+      apply ModL.add_comm in PR. apply ModL.add_comm.
       eapply adequacy_local.
       { eauto. }
       { eapply PR. }
     }
-    { i. erewrite Mod.add_assoc in *. eapply IHFORALL. auto. }
+    { i. erewrite ModL.add_assoc in *. eapply IHFORALL. auto. }
   Qed.
 
-  Lemma sim_list_adequacy_closed (mds_src mds_tgt: list Mod.t)
+  Lemma sim_list_adequacy_closed (mds_src mds_tgt: list ModL.t)
         (FORALL: List.Forall2 sim mds_src mds_tgt)
     :
-      Beh.of_program (Mod.compile (Mod.add_list mds_tgt)) <1=
-      Beh.of_program (Mod.compile (Mod.add_list mds_src)).
+      Beh.of_program (ModL.compile (ModL.add_list mds_tgt)) <1=
+      Beh.of_program (ModL.compile (ModL.add_list mds_src)).
   Proof.
     hexploit sim_list_adequacy.
     { eauto. }
-    i. specialize (H Mod.empty). repeat rewrite Mod.add_empty_l in H. auto.
+    i. specialize (H ModL.empty). repeat rewrite ModL.add_empty_l in H. auto.
   Qed.
 End SIMMODS.
-End ModPair.
+End ModLPair.
 
 (* TODO: prove sim *)
 (* TODO: write client *)

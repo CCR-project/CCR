@@ -4,7 +4,6 @@ Require Import Universe.
 Require Import Skeleton.
 Require Import PCM.
 Require Import ModSem.
-Import Events.
 Require Import Behavior.
 Require Import Relation_Definitions.
 
@@ -622,83 +621,6 @@ End ModSemPair.
 
 Require Import SimModSemL.
 
-Program Instance lt_proper: Proper (Ord.eq ==> Ord.eq ==> iff) (Ord.lt).
-Next Obligation.
-  ii.
-  split; i.
-  - eapply Ord.lt_eq_lt. { sym. et. } eapply Ord.eq_lt_lt; et. sym. et.
-  - eapply Ord.lt_eq_lt; et. eapply Ord.eq_lt_lt; et.
-Qed.
-
-Program Instance le_proper: Proper (Ord.eq ==> Ord.eq ==> iff) (Ord.le).
-Next Obligation.
-  ii.
-  split; i.
-  - eapply Ord.le_eq_le. { sym. et. } eapply Ord.eq_le_le; et. sym. et.
-  - eapply Ord.le_eq_le; et. eapply Ord.eq_le_le; et.
-Qed.
-
-Program Instance expn_proper: Proper (Ord.eq ==> Ord.eq ==> Ord.eq) (OrdArith.expn).
-Next Obligation.
-  ii.
-  etrans.
-  - eapply OrdArith.eq_expn_l; et.
-  - eapply OrdArith.eq_expn_r; et.
-Qed.
-
-Program Instance expn_le_proper: Proper (Ord.le ==> Ord.le ==> Ord.le) (OrdArith.expn).
-Next Obligation.
-  ii.
-  etrans.
-  - eapply OrdArith.le_expn_l; et.
-  - eapply OrdArith.le_expn_r; et.
-Qed.
-
-Program Instance add_proper: Proper (Ord.eq ==> Ord.eq ==> Ord.eq) (OrdArith.add).
-Next Obligation.
-  ii.
-  etrans.
-  - eapply OrdArith.eq_add_l; et.
-  - eapply OrdArith.eq_add_r; et.
-Qed.
-
-Program Instance add_le_proper: Proper (Ord.le ==> Ord.le ==> Ord.le) (OrdArith.add).
-Next Obligation.
-  ii.
-  etrans.
-  - eapply OrdArith.le_add_l; et.
-  - eapply OrdArith.le_add_r; et.
-Qed.
-
-(* Program Instance add_lt_proper: Proper (Ord.le ==> Ord.lt ==> Ord.lt) (OrdArith.add). *)
-(* Next Obligation. *)
-(*   ii. *)
-(*   eapply Ord.le_lt_lt. *)
-(*   - rewrite H. refl. *)
-(*   - eapply OrdArith.lt_add_r; et. *)
-(* Qed. *)
-
-Program Instance mult_eq_proper: Proper (Ord.eq ==> Ord.eq ==> Ord.eq) (OrdArith.mult).
-Next Obligation.
-  ii.
-  etrans.
-  - eapply OrdArith.eq_mult_l; et.
-  - eapply OrdArith.eq_mult_r; et.
-Qed.
-
-Program Instance mult_le_proper: Proper (Ord.le ==> Ord.le ==> Ord.le) (OrdArith.mult).
-Next Obligation.
-  ii.
-  etrans.
-  - eapply OrdArith.le_mult_l; et.
-  - eapply OrdArith.le_mult_r; et.
-Qed.
-
-Program Instance S_proper: Proper (Ord.eq ==> Ord.eq) (Ord.S).
-Next Obligation.
-  ii.
-  eapply Ord.eq_S; et.
-Qed.
 
 
 
@@ -1118,6 +1040,32 @@ Section SIMMOD.
        forall skenv (WF: ModSemL.wf (md_src.(Mod.get_modsem) skenv)), <<WF: ModSemL.wf (md_tgt.(Mod.get_modsem) skenv)>>;
    }.
 
+End SIMMOD.
+End ModPair.
+
+Section ADQ.
+  Context `{Σ: GRA.t}.
+  Variable md_src md_tgt: Mod.t.
+  Theorem adequacy_lift_mod
+          (SIM: ModPair.sim md_src md_tgt)
+    :
+      <<SIM: ModLPair.sim md_src md_tgt>>
+  .
+  Proof.
+    inv SIM.
+    econs; eauto.
+    { instantiate (1:=top2). ss. }
+    { instantiate (1:=wf_lift wf).
+      ss.
+      eapply Forall2_apply_Forall2; et.
+      i. destruct a, b; ss. rr in H. des; ss. rr in H. r in H0. ss. clarify.
+      split; ss. r. ss.
+      eapply adequacy_lift_fsem; et.
+    }
+    ss. esplits; ss; et.
+  Qed.
+
+End ADQ.
    Hint Resolve cpn5_wcompat: paco.
 
    Definition eqv (mrsl: alist string (Σ * Any.t)) (mrs: string -> Σ) (mps: string -> Any.t): Prop :=

@@ -3,7 +3,7 @@ Require Import Universe.
 Require Import STS.
 Require Import Behavior.
 Require Import ModSem.
-Import ModSemL.
+Import EventsL ModSemL.
 Require Import Skeleton.
 Require Import PCM.
 From Ordinal Require Export Ordinal Arithmetic Inaccessible.
@@ -352,8 +352,8 @@ If this feature is needed; we can extend it then. At the moment, I will only all
 
 
 
-  Variable md_tgt: Mod.t.
-  Let ms_tgt: ModSemL.t := (Mod.get_modsem md_tgt (Sk.load_skenv md_tgt.(Mod.sk))).
+  Variable md_tgt: ModL.t.
+  Let ms_tgt: ModSemL.t := (ModL.get_modsem md_tgt (Sk.load_skenv md_tgt.(ModL.sk))).
 
   Variable sbtb: list (gname * fspecbody).
   Let stb: list (gname * fspec) := List.map (fun '(gn, fsb) => (gn, fsb_fspec fsb)) sbtb.
@@ -367,9 +367,9 @@ If this feature is needed; we can extend it then. At the moment, I will only all
   |}
   .
 
-  Definition md_src: Mod.t := {|
-    Mod.get_modsem := fun _ => ms_src;
-    Mod.sk := Sk.unit;
+  Definition md_src: ModL.t := {|
+    ModL.get_modsem := fun _ => ms_src;
+    ModL.sk := Sk.unit;
     (*** It is already a whole-program, so we don't need Sk.t anymore. ***)
     (*** Note: Actually, md_tgt's sk could also have been unit, which looks a bit more uniform. ***)
   |}
@@ -383,9 +383,9 @@ If this feature is needed; we can extend it then. At the moment, I will only all
   |}
   .
 
-  Definition md_mid: Mod.t := {|
-    Mod.get_modsem := fun _ => ms_mid;
-    Mod.sk := Sk.unit;
+  Definition md_mid: ModL.t := {|
+    ModL.get_modsem := fun _ => ms_mid;
+    ModL.sk := Sk.unit;
     (*** It is already a whole-program, so we don't need Sk.t anymore. ***)
     (*** Note: Actually, md_tgt's sk could also have been unit, which looks a bit more uniform. ***)
   |}

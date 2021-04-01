@@ -3,7 +3,7 @@ Require Import Universe.
 Require Import STS.
 Require Import Behavior.
 Require Import ModSem.
-Import ModSemL.
+Import ModSemL. Import EventsL.
 Require Import Skeleton.
 Require Import PCM.
 Require Import Any.
@@ -563,16 +563,16 @@ Section CANCEL.
 
   Context `{Σ: GRA.t}.
 
-  Variable md_tgt: Mod.t.
-  Let ms_tgt: ModSemL.t := (Mod.get_modsem md_tgt (Sk.load_skenv md_tgt.(Mod.sk))).
+  Variable md_tgt: ModL.t.
+  Let ms_tgt: ModSemL.t := (ModL.get_modsem md_tgt (Sk.load_skenv md_tgt.(ModL.sk))).
 
   Variable sbtb: list (gname * fspecbody).
   Let stb: list (gname * fspec) := List.map (fun '(gn, fsb) => (gn, fsb_fspec fsb)) sbtb.
 
-  Let md_mid: Mod.t := md_mid md_tgt sbtb.
+  Let md_mid: ModL.t := md_mid md_tgt sbtb.
   Let ms_mid: ModSemL.t := ms_mid md_tgt sbtb.
 
-  Let md_src: Mod.t := md_src md_tgt sbtb.
+  Let md_src: ModL.t := md_src md_tgt sbtb.
   Let ms_src: ModSemL.t := ms_src md_tgt sbtb.
 
   Let W: Type := (r_state * p_state).
@@ -916,7 +916,7 @@ Section CANCEL.
     all: try (by exact unit).
   Qed.
 
-  Theorem adequacy_type_m2s: Beh.of_program (Mod.compile md_mid) <1= Beh.of_program (Mod.compile md_src).
+  Theorem adequacy_type_m2s: Beh.of_program (ModL.compile md_mid) <1= Beh.of_program (ModL.compile md_src).
   Proof.
     eapply adequacy_global.
     exists (100)%ord. ss.
