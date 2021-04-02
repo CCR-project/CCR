@@ -1067,22 +1067,44 @@ Section SIMMOD.
      fold_right ModL.add ModL.empty (List.map Mod.lift xs)
    .
 
+   Lemma add_list_single: forall (x: Mod.t), add_list [x] = x.
+   Proof. ii; cbn. rewrite ModL.add_empty_r. refl. Qed.
+
    Lemma add_list_cons
          x xs
      :
-       (* Beh.of_program (ModL.compile (add_list (x :: xs))) <1= Beh.of_program (ModL.compile (ModL.add x (add_list xs))) *)
        (add_list (x :: xs)) = (ModL.add x (add_list xs))
    .
+   Proof. ss. Qed.
+
+   Lemma add_list_snoc
+         x xs
+     :
+       (add_list (snoc xs x)) = (ModL.add (add_list xs) x)
+   .
    Proof.
-     ss.
-     (* ginduction xs; ii; ss. *)
+     ginduction xs; ii; ss.
+     { cbn. rewrite ModL.add_empty_l. rewrite ModL.add_empty_r. refl. }
+     { cbn. rewrite <- ModL.add_assoc'. f_equal. rewrite <- IHxs. refl. }
+   Qed.
+
+   Lemma add_list_app
+         xs ys
+     :
+       add_list (xs ++ ys) = ModL.add (add_list xs) (add_list ys)
+   .
+   Proof.
+     (* unfold add_list. rewrite map_app. rewrite fold_right_app. *)
+     ginduction xs; ii; ss.
+     - cbn. rewrite ModL.add_empty_l. refl.
+     - rewrite ! add_list_cons. rewrite <- ModL.add_assoc'. f_equal. eapply IHxs; ss.
    Qed.
 
    Definition refines (md_tgt md_src: ModL.t): Prop :=
      (* forall (ctx: list Mod.t), Beh.of_program (ModL.compile (add_list (md_tgt :: ctx))) <1= *)
      (*                           Beh.of_program (ModL.compile (add_list (md_src :: ctx))) *)
-     forall (ctx: list Mod.t), Beh.of_program (ModL.compile (ModL.add md_tgt (add_list ctx))) <1=
-                               Beh.of_program (ModL.compile (ModL.add md_src (add_list ctx)))
+     forall (ctx: list Mod.t), Beh.of_program (ModL.compile (ModL.add (add_list ctx) md_tgt)) <1=
+                               Beh.of_program (ModL.compile (ModL.add (add_list ctx) md_src))
    .
 
    (*** vertical composition ***)
@@ -1091,7 +1113,7 @@ Section SIMMOD.
    Next Obligation. ii. eapply H0. eapply H. ss. Qed.
 
    (*** horizontal composition ***)
-   Lemma refines_add
+   Theorem refines_add
          (md0_src md0_tgt md1_src md1_tgt: Mod.t)
          (SIM0: refines md0_tgt md0_src)
          (SIM1: refines md1_tgt md1_src)
@@ -1100,16 +1122,123 @@ Section SIMMOD.
    .
    Proof.
      ii. r in SIM0. r in SIM1.
-     specialize (SIM0 (md1_tgt :: ctx)). spc SIM0.
-     rewrite add_list_cons in SIM0. rewrite <- ModL.add_assoc' in PR.
-     eapply SIM0 in PR.
-     specialize (SIM1 (md0_src :: ctx)). spc SIM1.
-     rewrite add_list_cons in SIM1.
-     rewrite <- ModL.add_assoc'.
+     (***
+ctx (a0 b0)
+(ctx a0) b0
+(ctx a0) b1
+      ***)
+     rewrite ModL.add_assoc in PR.
+     specialize (SIM1 (snoc ctx md0_tgt)). spc SIM1. rewrite add_list_snoc in SIM1. eapply SIM1 in PR.
+     (***
+ctx (a0 b1)
+(a0 b1) ctx
+a0 (b1 ctx)
+(b1 ctx) a0
+      ***)
      rewrite <- ModL.add_assoc' in PR.
-     eapply SIM0.
-     rewrite <- add_list_cons with (x:=(ModL.add md0_tgt md1_tgt)) (xs:=ctx) in PR. eapply add_list_cons in PR. cbn in *.
+     eapply ModL.add_comm in PR.
+     rewrite <- ModL.add_assoc' in PR.
+     eapply ModL.add_comm in PR.
+     (***
+(b1 ctx) a1
+a1 (b1 ctx)
+(a1 b1) ctx
+ctx (a1 b1)
+      ***)
+     specialize (SIM0 (cons md1_src ctx)). spc SIM0. rewrite add_list_cons in SIM0. eapply SIM0 in PR.
+     eapply ModL.add_comm in PR.
+     rewrite ModL.add_assoc' in PR.
+     eapply ModL.add_comm in PR.
+     ss.
    Qed.
+
+(*    Theorem refines_proper_r *)
+(*          (md0_src md0_tgt: Mod.t) (ctx: list Mod.t) *)
+(*          (SIM0: refines md0_tgt md0_src) *)
+(*      : *)
+(*        <<SIM: refines (ModL.add md0_tgt (add_list ctx)) (ModL.add md0_src (add_list ctx))>> *)
+(*    . *)
+(*    Proof. *)
+(*      ii. r in SIM0. rename ctx into xs. rename ctx0 into ys. *)
+(*      (*** *)
+(* ys + (tgt + xs) *)
+(* (tgt + xs) + ys *)
+(* tgt + (xs + ys) *)
+(* (xs + ys) + tgt *)
+(*       ***) *)
+(*      eapply ModL.add_comm in PR. *)
+(*      rewrite <- ModL.add_assoc' in PR. *)
+(*      eapply ModL.add_comm in PR. *)
+(*      (*** *)
+(* (xs + ys) + src *)
+(* src + (xs + ys) *)
+(* (src + xs) + ys *)
+(* ys + (src + xs) *)
+(*       ***) *)
+(*      specialize (SIM0 (xs ++ ys)). spc SIM0. rewrite add_list_app in SIM0. eapply SIM0 in PR. *)
+(*      eapply ModL.add_comm in PR. *)
+(*      rewrite ModL.add_assoc' in PR. *)
+(*      eapply ModL.add_comm in PR. *)
+(*      ss. *)
+(*    Qed. *)
+   Theorem refines_proper_r
+         (mds0_src mds0_tgt: list Mod.t) (ctx: list Mod.t)
+         (SIM0: refines (add_list mds0_tgt) (add_list mds0_src))
+     :
+       <<SIM: refines (ModL.add (add_list mds0_tgt) (add_list ctx)) (ModL.add (add_list mds0_src) (add_list ctx))>>
+   .
+   Proof.
+     ii. r in SIM0. rename ctx into xs. rename ctx0 into ys.
+     (***
+ys + (tgt + xs)
+(tgt + xs) + ys
+tgt + (xs + ys)
+(xs + ys) + tgt
+      ***)
+     eapply ModL.add_comm in PR.
+     rewrite <- ModL.add_assoc' in PR.
+     eapply ModL.add_comm in PR.
+     (***
+(xs + ys) + src
+src + (xs + ys)
+(src + xs) + ys
+ys + (src + xs)
+      ***)
+     specialize (SIM0 (xs ++ ys)). spc SIM0. rewrite add_list_app in SIM0. eapply SIM0 in PR.
+     eapply ModL.add_comm in PR.
+     rewrite ModL.add_assoc' in PR.
+     eapply ModL.add_comm in PR.
+     ss.
+   Qed.
+
+   Theorem refines_proper_l
+         (mds0_src mds0_tgt: list Mod.t) (ctx: list Mod.t)
+         (SIM0: refines (add_list mds0_tgt) (add_list mds0_src))
+     :
+       <<SIM: refines (ModL.add (add_list ctx) (add_list mds0_tgt)) (ModL.add (add_list ctx) (add_list mds0_src))>>
+   .
+   Proof.
+     ii. r in SIM0. rename ctx into xs. rename ctx0 into ys.
+     (***
+ys + (xs + tgt)
+(ys + xs) + tgt
+(ys + xs) + src
+ys + (xs + src)
+      ***)
+     rewrite ModL.add_assoc' in PR.
+     specialize (SIM0 (ys ++ xs)). spc SIM0. rewrite add_list_app in SIM0. eapply SIM0 in PR.
+     rewrite <- ModL.add_assoc' in PR.
+     ss.
+   Qed.
+
+   Theorem refines_comm
+           (x y: ModL.t)
+     :
+       <<SIM: refines (ModL.add x y) (ModL.add y x)>>
+   .
+   Proof.
+     ii.
+   Abort.
 
    Theorem adequacy_local md_src md_tgt
            (SIM: ModPair.sim md_src md_tgt)
@@ -1122,7 +1251,6 @@ Section SIMMOD.
      { ss. red. ii. eapply ModSemLPair.add_modsempair.
        { admit "ModSemL wf". }
        { admit "ModSemL wf". }
-       { eapply SIM. }
        { clear - ctx. induction ctx.
          - ss. econs; et.
            + instantiate (1:=top2). typeclasses eauto.
@@ -1132,6 +1260,7 @@ Section SIMMOD.
            + admit "ModSemL wf".
            + admit "ModSemL wf".
            + eapply adequacy_lift. eapply ModSemPair.self_sim_mod. r. admit "ModSemL wf". }
+       { eapply SIM. }
      }
      { ss. red. f_equal. eapply SIM. }
      { ii. red. ss. admit "ModSemL wf". }
@@ -1145,618 +1274,12 @@ Section SIMMOD.
    .
    Proof.
      r. induction FORALL; ss.
+     rewrite ! add_list_cons.
+     etrans.
+     { rewrite <- add_list_single. eapply refines_proper_r. rewrite ! add_list_single. eapply adequacy_local; et. }
+     replace (Mod.lift x) with (add_list [x]); cycle 1.
+     { cbn. rewrite ModL.add_empty_r. refl. }
+     eapply refines_proper_l; et.
    Qed.
-  (* Lemma sim_list_adequacy (mds_src mds_tgt: list Mod.t) *)
-  (*       (FORALL: List.Forall2 ModPair.sim mds_src mds_tgt) *)
-  (*   : *)
-  (*     <<CR: forall (ctx: Mod.t), Beh.of_program (ModL.compile (ModL.add ctx (ModL.add_list (List.map Mod.lift mds_tgt)))) <1= *)
-  (*                                Beh.of_program (ModL.compile (ModL.add ctx (ModL.add_list (List.map Mod.lift mds_src))))>>. *)
-  (* Proof. *)
-  (*   induction FORALL; ss. *)
-  (*   cut (forall ctx, *)
-  (*           Beh.of_program (ModL.compile (ModL.add ctx (ModL.add y (ModL.add_list (List.map Mod.lift l'))))) <1= *)
-  (*           Beh.of_program (ModL.compile (ModL.add ctx (ModL.add y (ModL.add_list (List.map Mod.lift l)))))). *)
-  (*   { ii. eapply H0 in PR. *)
-  (*     apply ModL.add_comm in PR. apply ModL.add_comm. *)
-  (*     erewrite <- ModL.add_assoc in *. *)
-  (*     apply ModL.add_comm in PR. apply ModL.add_comm. *)
-  (*     eapply adequacy_local_strong. *)
-  (*     { eauto. } *)
-  (*     { exists (snoc l ctx). ss. *)
-  (*       clear - l. ginduction l; ii; ss. *)
-  (*       { rewrite ModL.add_empty_l, ModL.add_empty_r. ss. } *)
-  (*       { rewrite ModL.add_assoc. rewrite ModL.add_empty_l, ModL.add_empty_r. ss. } *)
-  (*       esplits. ss. admit "". } *)
-  (*     { eapply PR. } *)
-  (*   } *)
-  (*   { i. erewrite ModL.add_assoc in *. eapply IHFORALL. auto. } *)
-  (* Qed. *)
 
 End SIMMOD.
-
-Section SIMMODS.
-  Context `{Σ: GRA.t}.
-
-  (* Lemma sim_list_adequacy (mds_src mds_tgt: list Mod.t) *)
-  (*       (FORALL: List.Forall2 ModPair.sim mds_src mds_tgt) *)
-  (*   : *)
-  (*     <<CR: forall (ctx: Mod.t), Beh.of_program (ModL.compile (ModL.add ctx (ModL.add_list (List.map Mod.lift mds_tgt)))) <1= *)
-  (*                                Beh.of_program (ModL.compile (ModL.add ctx (ModL.add_list (List.map Mod.lift mds_src))))>>. *)
-  (* Proof. *)
-  (*   induction FORALL; ss. *)
-  (*   cut (forall ctx, *)
-  (*           Beh.of_program (ModL.compile (ModL.add ctx (ModL.add y (ModL.add_list (List.map Mod.lift l'))))) <1= *)
-  (*           Beh.of_program (ModL.compile (ModL.add ctx (ModL.add y (ModL.add_list (List.map Mod.lift l)))))). *)
-  (*   { ii. eapply H0 in PR. *)
-  (*     apply ModL.add_comm in PR. apply ModL.add_comm. *)
-  (*     erewrite <- ModL.add_assoc in *. *)
-  (*     apply ModL.add_comm in PR. apply ModL.add_comm. *)
-  (*     eapply adequacy_local_strong. *)
-  (*     { eauto. } *)
-  (*     { exists (snoc l ctx). ss. *)
-  (*       clear - l. ginduction l; ii; ss. *)
-  (*       { rewrite ModL.add_empty_l, ModL.add_empty_r. ss. } *)
-  (*       { rewrite ModL.add_assoc. rewrite ModL.add_empty_l, ModL.add_empty_r. ss. } *)
-  (*       esplits. ss. admit "". } *)
-  (*     { eapply PR. } *)
-  (*   } *)
-  (*   { i. erewrite ModL.add_assoc in *. eapply IHFORALL. auto. } *)
-  (* Qed. *)
-  Lemma sim_list_adequacy_strong (mds_src mds_tgt: list Mod.t)
-        (FORALL: List.Forall2 ModPair.sim mds_src mds_tgt)
-    :
-      <<CR: forall ctx (WF: exists ctxs, ctx = ModL.add_list (List.map Mod.lift ctxs)),
-        Beh.of_program (ModL.compile (ModL.add ctx (ModL.add_list (List.map Mod.lift mds_tgt)))) <1=
-        Beh.of_program (ModL.compile (ModL.add ctx (ModL.add_list (List.map Mod.lift mds_src))))>>.
-  Proof.
-    induction FORALL; ss.
-    cut (forall ctx (WF: exists ctxs, ctx = ModL.add_list (List.map Mod.lift ctxs)),
-            Beh.of_program (ModL.compile (ModL.add ctx (ModL.add y (ModL.add_list (List.map Mod.lift l'))))) <1=
-            Beh.of_program (ModL.compile (ModL.add ctx (ModL.add y (ModL.add_list (List.map Mod.lift l)))))).
-    { ii. eapply H0 in PR; cycle 1.
-      { des. esplits; eauto. }
-      apply ModL.add_comm in PR. apply ModL.add_comm.
-      erewrite <- ModL.add_assoc in *.
-      apply ModL.add_comm in PR. apply ModL.add_comm.
-      eapply adequacy_local_strong.
-      { eauto. }
-      { des. subst. exists (l ++ ctxs). ss.
-        clear - l.
-        replace (ModL.add_list (List.map Mod.lift l)) with (List.fold_right ModL.add ModL.empty (List.map Mod.lift l)); cycle 1.
-        { refl. }
-        replace (ModL.add_list (List.map Mod.lift (l ++ ctxs))) with (List.fold_right ModL.add ModL.empty (List.map Mod.lift (l ++ ctxs))); cycle 1.
-        { refl. }
-        rewrite map_app. rewrite fold_right_app.
-        ginduction l; ii; ss.
-        { ginduction ctxs; ii; ss. }
-        { erewrite <- IHl. rewrite ModL.add_assoc'. ss. }
-      }
-      { eapply PR. }
-    }
-    { i. erewrite ModL.add_assoc in *. eapply IHFORALL; auto. des. subst.
-      replace (ModL.add_list (List.map Mod.lift ctxs)) with (List.fold_right ModL.add ModL.empty (List.map Mod.lift ctxs)); cycle 1.
-      { refl. }
-      (* eexists (y :: ctxs ). *)
-      (* replace (ModL.add_list (List.map Mod.lift (y :: ctxs))) with (List.fold_right ModL.add ModL.empty (List.map Mod.lift (y :: ctxs))); cycle 1. *)
-      (* { refl. } *)
-      (* ss. *)
-      eexists (ctxs ++ [y]).
-      replace (ModL.add_list (List.map Mod.lift (ctxs ++ [y]))) with (List.fold_right ModL.add ModL.empty (List.map Mod.lift (ctxs ++ [y]))); cycle 1.
-      { refl. }
-      rewrite map_app. rewrite fold_right_app. ss. rewrite ModL.add_empty_r.
-      clear - ctxs. ginduction ctxs; ii; ss. rewrite <- IHctxs. rewrite ModL.add_assoc'. ss.
-    }
-  Qed.
-
-  Lemma sim_list_adequacy_closed (mds_src mds_tgt: list ModL.t)
-        (FORALL: List.Forall2 sim mds_src mds_tgt)
-    :
-      Beh.of_program (ModL.compile (ModL.add_list mds_tgt)) <1=
-      Beh.of_program (ModL.compile (ModL.add_list mds_src)).
-  Proof.
-    hexploit sim_list_adequacy.
-    { eauto. }
-    i. specialize (H ModL.empty). repeat rewrite ModL.add_empty_l in H. auto.
-  Qed.
-End SIMMODS.
-
-
-
-
-
-
-
-   Hint Resolve cpn5_wcompat: paco.
-
-   Definition eqv (mrsl: alist string (Σ * Any.t)) (mrs: string -> Σ) (mps: string -> Any.t): Prop :=
-     forall mn mn' mr mp
-            (FIND: find (fun mnr : string * (Σ * Any.t) => dec mn (fst mnr)) mrsl = Some (mn', (mr, mp))),
-       mrs mn = mr /\ mps mn = mp.
-
-   Lemma lookup_find (mrsl: alist string (Σ * Any.t)) mn mr
-         (LOOKUP: Maps.lookup mn mrsl = Some mr)
-     :
-       find (fun mnr : string * (Σ * Any.t) => dec mn (fst mnr)) mrsl = Some (mn, mr).
-   Proof.
-     induction mrsl; ss. unfold sumbool_to_bool. des_ifs; ss; eauto.
-     { eapply neg_rel_dec_correct in Heq0. ss. }
-     { rewrite rel_dec_correct in Heq0. ss. }
-   Qed.
-
-   Lemma find_lookup (mrsl: alist string (Σ * Any.t)) mn0 mn1 mr
-         (FIND: find (fun mnr : string * (Σ * Any.t) => dec mn0 (fst mnr)) mrsl = Some (mn1, mr))
-     :
-       mn0 = mn1 /\ Maps.lookup mn0 mrsl = Some mr.
-   Proof.
-     induction mrsl; ss.
-     unfold sumbool_to_bool in *. des_ifs; auto.
-     { rewrite rel_dec_correct in Heq. ss. }
-     { eapply neg_rel_dec_correct in Heq. ss. }
-   Qed.
-
-   Lemma eqv_lookup_mr mrsl mrs mps (EQV: eqv mrsl mrs mps)
-         mn mr mp
-         (LOOKUP: Maps.lookup mn mrsl = Some (mr, mp))
-     :
-       mrs mn = mr.
-   Proof.
-     eapply lookup_find in LOOKUP.
-     eapply EQV in LOOKUP. des; auto.
-   Qed.
-
-   Lemma eqv_lookup_mp mrsl mrs mps (EQV: eqv mrsl mrs mps)
-         mn mr mp
-         (LOOKUP: Maps.lookup mn mrsl = Some (mr, mp))
-     :
-       mps mn = mp.
-   Proof.
-     eapply lookup_find in LOOKUP.
-     eapply EQV in LOOKUP. des; auto.
-   Qed.
-
-   Lemma eqv_add_mr mrsl mrs mps (EQV: eqv mrsl mrs mps)
-         mn mr0 mr1 mp0
-         (LOOKUP: Maps.lookup mn mrsl = Some (mr0, mp0))
-     :
-       eqv (Maps.add mn (mr1, mp0) mrsl) (update mrs mn mr1) mps.
-   Proof.
-     ii. eapply find_lookup in FIND. des; subst.
-     simpl. unfold update. des_ifs.
-     { assert (lookup mn' (add mn' (mr1, mp0) mrsl) = Some (mr1, mp0)).
-       { eapply mapsto_lookup. eapply mapsto_add_eq. }
-       clarify. split; auto. eapply eqv_lookup_mp in LOOKUP; eauto.
-     }
-     { split.
-       { eapply eqv_lookup_mr; eauto. eapply mapsto_lookup in FIND0.
-         eapply mapsto_lookup. eapply mapsto_add_neq; eauto. }
-       { eapply eqv_lookup_mp; eauto. eapply mapsto_lookup in FIND0.
-         eapply mapsto_lookup. eapply mapsto_add_neq; eauto. }
-     }
-   Qed.
-
-   Lemma eqv_add_ms mrsl mrs mps (EQV: eqv mrsl mrs mps)
-         mn mr0 mp0 mp1
-         (LOOKUP: Maps.lookup mn mrsl = Some (mr0, mp0))
-     :
-       eqv (Maps.add mn (mr0, mp1) mrsl) mrs (update mps mn mp1).
-   Proof.
-     ii. eapply find_lookup in FIND. des; subst.
-     simpl. unfold update. des_ifs.
-     { assert (lookup mn' (add mn' (mr0, mp1) mrsl) = Some (mr0, mp1)).
-       { eapply mapsto_lookup. eapply mapsto_add_eq. }
-       clarify. split; auto. eapply eqv_lookup_mr in LOOKUP; eauto.
-     }
-     { split.
-       { eapply eqv_lookup_mr; eauto. eapply mapsto_lookup in FIND0.
-         eapply mapsto_lookup. eapply mapsto_add_neq; eauto. }
-       { eapply eqv_lookup_mp; eauto. eapply mapsto_lookup in FIND0.
-         eapply mapsto_lookup. eapply mapsto_add_neq; eauto. }
-     }
-   Qed.
-
-   Variant lift_wf (wf: alist string (Σ * Any.t) * alist string (Σ * Any.t) -> Prop)
-           (mrs_src mrs_tgt: string -> Σ) (mps_src mps_tgt: string -> Any.t): Prop :=
-   | lift_wf_intro
-       mrsl_src mrsl_tgt
-       (EQVSRC: eqv mrsl_src mrs_src mps_src)
-       (EQVTGT: eqv mrsl_tgt mrs_tgt mps_tgt)
-       (WF: wf (mrsl_src, mrsl_tgt))
-   .
-
-   Let arith (o: Ord.t) (n0: nat) (n1: nat): Ord.t :=
-     (n0 * o + n1)%ord.
-
-   Let arith_lt_1 o0 o1 n0 n1 n2
-         (OLT: (o0 < o1)%ord)
-         (LT: n1 < n0 + n2)
-     :
-       Ord.lt (arith o0 n0 n1) (arith o1 n0 n2).
-   Proof.
-     unfold arith. eapply Ord.lt_le_lt.
-     2: {
-       eapply OrdArith.le_add_l.
-       eapply OrdArith.le_mult_r.
-       eapply Ord.S_supremum. eauto.
-     }
-     eapply Ord.lt_eq_lt.
-     { eapply OrdArith.eq_add_l.
-       eapply OrdArith.mult_S.
-     }
-     eapply Ord.lt_eq_lt.
-     { eapply OrdArith.add_assoc. }
-     eapply OrdArith.lt_add_r.
-     eapply Ord.lt_eq_lt.
-     { symmetry. eapply OrdArith.add_from_nat.  }
-     eapply OrdArith.lt_from_nat. eauto.
-   Qed.
-
-   Lemma arith_lt_2 o n0 n1 n2
-         (LT: (n1 < n2)%nat)
-     :
-       Ord.lt (arith o n0 n1) (arith o n0 n2).
-   Proof.
-     eapply OrdArith.lt_add_r. eapply OrdArith.lt_from_nat. eauto.
-   Qed.
-
-   Lemma lift_sim ms_src ms_tgt
-         (wf: alist string (Σ * Any.t) * alist string (Σ * Any.t) -> Prop)
-         (FNS: forall fn : string,
-             option_rel (sim_fnsem wf)
-                        (find (fun fnsem : string * (Any.t -> itree Es Any.t) => dec fn (fst fnsem))
-                              (ModSemL.fnsems ms_src))
-                        (find (fun fnsem : string * (Any.t -> itree Es Any.t) => dec fn (fst fnsem))
-                              (ModSemL.fnsems ms_tgt)))
-     :
-       forall n mrsl_src fr_src f_src mrsl_tgt fr_tgt f_tgt
-              (* (WF: wf (mrsl_src, mrsl_tgt)) *)
-              (SIM: sim_itree wf n (mrsl_src, fr_src, f_src) (mrsl_tgt, fr_tgt, f_tgt))
-              mrs_src mrs_tgt mps_src mps_tgt
-              (EQVSRC: eqv mrsl_src mrs_src mps_src)
-              (EQVTGT: eqv mrsl_tgt mrs_tgt mps_tgt)
-              frs_src frs_tgt,
-         simg (fun (vret_src vret_tgt: r_state * p_state * Any.t) =>
-                 exists fr_src' fr_tgt',
-                   (<<WF: lift_wf wf (fst (fst (fst vret_src))) (fst (fst (fst vret_tgt))) (snd (fst vret_src)) (snd (fst vret_tgt))>>) /\
-                   (<<FRSRC: snd (fst (fst vret_src)) = fr_src'::frs_src>>) /\
-                   (<<FRTGT: snd (fst (fst vret_tgt)) = fr_tgt'::frs_tgt>>) /\
-                   (<<VAL: snd vret_src = snd vret_tgt>>)) (arith n 4 4)
-              (interp_Es
-                 (ModSemL.prog ms_src)
-                 f_src
-                 (mrs_src, fr_src::frs_src, mps_src))
-              (interp_Es
-                 (ModSemL.prog ms_tgt)
-                 f_tgt
-                 (mrs_tgt, fr_tgt::frs_tgt, mps_tgt)).
-   Proof.
-     ginit. gcofix CIH. i.
-     punfold SIM. gstep. Local Opaque interp_Es.
-     inv SIM; pclearbot; ss; mgo; ss; mgo.
-     - econs; ss. esplits; et. econs; eauto.
-     - econs; ss. gbase. eapply CIH; eauto.
-     - econs; ss. unfold unwrapU.
-       generalize (FNS fn). i. inv H; cycle 1.
-       { clear H1 H2. unfold triggerUB. mgo.
-         gstep. econs; ss.
-       }
-       clear H1 H2. mgo.
-       destruct a as [fn_src f_src]. destruct b as [fn_tgt f_tgt].
-       inv IN. inv H. simpl in H1. clarify.
-       exploit H0; eauto. instantiate (2:=varg). i. des.
-       mgo. ss.
-       erewrite interp_Es_rE with (rst0:=(mrs_src, fr_src :: frs_src)).
-       erewrite interp_Es_rE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
-       gstep. econs; auto.
-       gstep. econs; auto.
-       gclo. eapply wrespect5_companion; auto with paco.
-       { eapply bindC_wrespectful. }
-       econs.
-       + gbase. eapply CIH; eauto.
-       + i. ss. des.
-         destruct vret_src as [[mrs_src' frs_src'] val_src].
-         destruct vret_tgt as [[mrs_tgt' frs_tgt'] val_tgt].
-         destruct mrs_src', mrs_tgt'. ss. subst. mgo. ss. mgo.
-         gstep. econs; auto.
-         inv WF0. hexploit K; eauto. i. des. pclearbot.
-         eapply CIH in H; eauto; ss.
-         gstep. econs; auto.
-         gbase. eapply H.
-     - econs. ii. mgo.
-       gstep. econs; auto.
-       gstep. econs; auto.
-       subst. hexploit K; eauto. i. des. pclearbot.
-       eapply CIH in H; eauto; ss.
-       gstep. econs; auto.
-       gbase. eapply H.
-     - econs; eauto. i. hexploit K; eauto. i. des. pclearbot.
-       eexists. mgo.
-       gstep. econs; auto.
-       gstep. econs; auto.
-       gstep. econs; auto.
-       gbase. eapply CIH; eauto.
-     - econs; eauto. i. hexploit K; eauto. i. des. pclearbot.
-       eexists. mgo.
-       gstep. econs; auto.
-       gstep. econs; auto.
-       gstep. econs; auto.
-       gbase. eapply CIH; eauto.
-     - erewrite interp_Es_pE with (rst0:=(mrs_src, fr_src :: frs_src)).
-       erewrite interp_Es_pE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
-       econs; eauto.
-       gstep. econs; auto.
-       gstep. econs; auto.
-       gbase. eapply CIH; eauto.
-       { eapply eqv_add_ms; eauto. }
-       { eapply eqv_add_ms; eauto. }
-     - erewrite interp_Es_rE with (rst0:=(mrs_src, fr_src :: frs_src)).
-       erewrite interp_Es_rE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
-       econs; eauto.
-       gstep. econs; auto.
-       gbase. eapply CIH; eauto.
-       { eapply eqv_add_mr; eauto. }
-       { eapply eqv_add_mr; eauto. }
-     - erewrite interp_Es_rE with (rst0:=(mrs_src, fr_src :: frs_src)).
-       erewrite interp_Es_rE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
-       ecith (rst0:=(mrs_src, fr_src :: frs_src)). ss. mgo.
-       econs; eauto.
-       { eapply arith_lt_1 with (n1:=7); auto.
-         - eassumption. }
-       gstep. econs; auto.
-       { eapply arith_lt_2 with (n1:=6); auto. }
-       gstep. econs; auto.
-       { eapply arith_lt_2 with (n1:=4); auto. }
-       gbase. eapply CIH; eauto.
-       { eapply eqv_add_ms; eauto. }
-     - erewrite interp_Es_rE with (rst0:=(mrs_src, fr_src :: frs_src)).  ss. mgo.
-       econs; eauto.
-       { eapply arith_lt_1 with (n1:=7); auto.
-         - eassumption. }
-       gstep. econs; auto.
-       { eapply arith_lt_2 with (n1:=4); auto. }
-       gbase. eapply CIH; eauto.
-       { eapply eqv_add_mr; eauto. }
-     - erewrite interp_Es_rE with (rst0:=(mrs_src, fr_src :: frs_src)). ss. mgo.
-       econs; eauto.
-       { eapply arith_lt_1 with (n1:=7); auto.
-         - eassumption. }
-       gstep. econs; auto.
-       { eapply arith_lt_2 with (n1:=4); auto. }
-       gbase. eapply CIH; eauto.
-     - eapply eqv_lookup_mp in MR0; eauto. subst.
-       erewrite interp_Es_pE with (rst0:=(mrs_src, fr_src :: frs_src)). ss. mgo.
-       econs; eauto.
-       { eapply arith_lt_1 with (n1:=7); auto.
-         - eassumption. }
-       gstep. econs; auto.
-       { eapply arith_lt_2 with (n1:=6); auto. }
-       gstep. econs; auto.
-       { eapply arith_lt_2 with (n1:=4); auto. }
-       gbase. eapply CIH; eauto.
-     - eapply eqv_lookup_mr in MR0; eauto. subst.
-       erewrite interp_Es_rE with (rst0:=(mrs_src, fr_src :: frs_src)). ss. mgo.
-       econs; eauto.
-       { eapply arith_lt_1 with (n1:=7); auto.
-         - eassumption. }
-       gstep. econs; auto.
-       { eapply arith_lt_2 with (n1:=4); auto. }
-       gbase. eapply CIH; eauto.
-     - erewrite interp_Es_rE with (rst0:=(mrs_src, fr_src :: frs_src)). ss. mgo.
-       econs; eauto.
-       { eapply arith_lt_1 with (n1:=7); auto.
-         - eassumption. }
-       gstep. econs; auto.
-       { eapply arith_lt_2 with (n1:=4); auto. }
-       gbase. eapply CIH; eauto.
-     - econs; eauto.
-       { eapply arith_lt_1 with (n1:=4); auto.
-         - eassumption.
-         - clear. lia. }
-       gbase. eapply CIH; eauto.
-     - econs; eauto.
-       { eapply arith_lt_1 with (n1:=7); auto.
-         - eassumption. }
-       i. mgo. gstep. econs; eauto.
-       { eapply arith_lt_2 with (n1:=6); auto. }
-       gstep. econs; eauto.
-       { eapply arith_lt_2 with (n1:=5); auto. }
-       gstep. econs; eauto.
-       { eapply arith_lt_2 with (n1:=4); auto. }
-       gbase. eapply CIH; eauto. eapply K.
-     - des. pclearbot. econs; eauto.
-       { eapply arith_lt_1 with (n1:=7); auto.
-         - eassumption. }
-       eexists. mgo. gstep. econs; eauto.
-       { eapply arith_lt_2 with (n1:=6); auto. }
-       gstep. econs; eauto.
-       { eapply arith_lt_2 with (n1:=5); auto. }
-       gstep. econs; eauto.
-       { eapply arith_lt_2 with (n1:=4); auto. }
-       gbase. eapply CIH; eauto.
-     - erewrite interp_Es_pE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
-       econs; eauto.
-       { eapply arith_lt_1 with (n1:=7); auto.
-         - eassumption. }
-       gstep. econs; auto.
-       { eapply arith_lt_2 with (n1:=6); auto. }
-       gstep. econs; auto.
-       { eapply arith_lt_2 with (n1:=4); auto. }
-       gbase. eapply CIH; eauto.
-       { eapply eqv_add_ms; eauto. }
-     - erewrite interp_Es_rE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
-       econs; eauto.
-       { eapply arith_lt_1 with (n1:=7); auto.
-         - eassumption. }
-       gstep. econs; auto.
-       { eapply arith_lt_2 with (n1:=4); auto. }
-       gbase. eapply CIH; eauto.
-       { eapply eqv_add_mr; eauto. }
-     - erewrite interp_Es_rE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
-       econs; eauto.
-       { eapply arith_lt_1 with (n1:=7); auto.
-         - eassumption. }
-       gstep. econs; auto.
-       { eapply arith_lt_2 with (n1:=4); auto. }
-       gbase. eapply CIH; eauto.
-     - eapply eqv_lookup_mp in MR0; eauto. subst.
-       erewrite interp_Es_pE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
-       econs; eauto.
-       { eapply arith_lt_1 with (n1:=7); auto.
-         - eassumption. }
-       gstep. econs; auto.
-       { eapply arith_lt_2 with (n1:=6); auto. }
-       gstep. econs; auto.
-       { eapply arith_lt_2 with (n1:=4); auto. }
-       gbase. eapply CIH; eauto.
-     - eapply eqv_lookup_mr in MR0; eauto. subst.
-       erewrite interp_Es_rE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
-       econs; eauto.
-       { eapply arith_lt_1 with (n1:=7); auto.
-         - eassumption. }
-       gstep. econs; auto.
-       { eapply arith_lt_2 with (n1:=4); auto. }
-       gbase. eapply CIH; eauto.
-     - erewrite interp_Es_rE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
-       econs; eauto.
-       { eapply arith_lt_1 with (n1:=7); auto.
-         - eassumption. }
-       gstep. econs; auto.
-       { eapply arith_lt_2 with (n1:=4); auto. }
-       gbase. eapply CIH; eauto.
-       Unshelve. all: exact O.
-   Qed.
-
-
-   Theorem adequacy_local_closed
-           (SIM: sim)
-     :
-       Beh.of_program (Mod.compile md_tgt) <1=
-       Beh.of_program (Mod.compile md_src)
-   .
-   Proof.
-     inv SIM. specialize (sim_modsem0 (Sk.load_skenv (Mod.sk md_src))).
-     inv sim_modsem0. red in sim_sk0.
-
-     eapply adequacy_global; et. exists (OrdArith.add Ord.O Ord.O).
-     unfold ModSemL.initial_itr, Mod.enclose.
-
-     assert (FNS: forall fn : string,
-                option_rel (sim_fnsem wf)
-                           (find (fun fnsem : string * (Any.t -> itree Es Any.t) => dec fn (fst fnsem))
-                                 (ModSemL.fnsems (Mod.get_modsem md_src (Sk.load_skenv (Mod.sk md_src)))))
-                           (find (fun fnsem : string * (Any.t -> itree Es Any.t) => dec fn (fst fnsem))
-                                 (ModSemL.fnsems (Mod.get_modsem md_tgt (Sk.load_skenv (Mod.sk md_tgt)))))).
-     { rewrite <- sim_sk0 in *.
-       remember (ModSemL.fnsems (Mod.get_modsem md_src (Sk.load_skenv (Mod.sk md_src)))).
-       remember (ModSemL.fnsems (Mod.get_modsem md_tgt (Sk.load_skenv (Mod.sk md_src)))).
-       clear - sim_fnsems. induction sim_fnsems; ss.
-       i. unfold sumbool_to_bool. des_ifs; eauto.
-       - inv H. ss.
-       - inv H. exfalso. eapply n. ss.
-     }
-
-     ginit. unfold assume. mgo.
-     gstep. econs; eauto. i. esplits; eauto.
-     { eapply sim_wf0. rewrite sim_sk0 in *. ss. } clear x_src.
-     ss. unfold ITree.map, unwrapU, triggerUB. mgo.
-     generalize (FNS "main"). i. inv H.
-     2: { mgo. gstep. econs; eauto. ss. }
-     destruct a, b. inv IN. mgo.
-     exploit H0; eauto. i. des.
-     ss. mgo.
-     gstep. econs; eauto. gstep. econs; eauto.
-     guclo bindC_spec. econs.
-     { gfinal. right. eapply lift_sim.
-       { eapply FNS. }
-       { eapply x. }
-       { ii. unfold ModSemL.initial_p_state. des_ifs. }
-       { ii. rewrite sim_sk0 in *. unfold ModSemL.initial_p_state. des_ifs. }
-     }
-     { i. ss. des.
-       destruct vret_src as [[[mrs_src frs_src] p_src] v_src].
-       destruct vret_tgt as [[[mrs_tgt frs_tgt] p_tgt] v_tgt]. ss. subst.
-       mgo. ss. mgo.
-       gstep. econs; eauto.
-       gstep. econs; eauto.
-       gstep. econs; eauto.
-     }
-     Unshelve. all: exact Ord.O.
-   Qed.
-
-   (* Theorem adequacy_local *)
-   (*         (SIM: sim) *)
-   (*         (*** You will need some wf conditions for ctx ***) *)
-   (*   : *)
-   (*     <<CR: forall ctx, Beh.of_program (Mod.compile (Mod.add ctx md_tgt)) <1= *)
-   (*                       Beh.of_program (Mod.compile (Mod.add ctx md_src))>> *)
-   (* . *)
-   (* Proof. *)
-   (*   ii. eapply adequacy_global; et. exists Ordinal.O. *)
-   (*   admit "TODO". *)
-   (* Qed. *)
-
-End SIMMOD.
-
-Section SIMMOD.
-   Context `{Σ: GRA.t}.
-
-   Theorem adequacy_local md_src md_tgt
-           (SIM: sim md_src md_tgt)
-     (*** You will need some wf conditions for ctx ***)
-     :
-       <<CR: forall ctx, Beh.of_program (Mod.compile (Mod.add ctx md_tgt)) <1=
-                         Beh.of_program (Mod.compile (Mod.add ctx md_src))>>
-   .
-   Proof.
-     ii. eapply adequacy_local_closed; eauto. econs.
-     { ss. red. ii. eapply ModSemLPair.add_modsempair.
-       { admit "ModSemL wf". }
-       { admit "ModSemL wf". }
-       { eapply ModSemLPair.self_sim_mod. admit "ModSemL wf". }
-       { eapply SIM. }
-     }
-     { ss. red. f_equal. eapply SIM. }
-     { ii. red. ss. admit "ModSemL wf". }
-   Qed.
-End SIMMOD.
-
-Section SIMMODS.
-  Context `{Σ: GRA.t}.
-
-  Lemma sim_list_adequacy (mds_src mds_tgt: list Mod.t)
-        (FORALL: List.Forall2 sim mds_src mds_tgt)
-    :
-      <<CR: forall ctx, Beh.of_program (Mod.compile (Mod.add ctx (Mod.add_list mds_tgt))) <1=
-                        Beh.of_program (Mod.compile (Mod.add ctx (Mod.add_list mds_src)))>>.
-  Proof.
-    induction FORALL; ss.
-    cut (forall ctx,
-            Beh.of_program (Mod.compile (Mod.add ctx (Mod.add y (Mod.add_list l')))) <1=
-            Beh.of_program (Mod.compile (Mod.add ctx (Mod.add y (Mod.add_list l))))).
-    { ii. eapply H0 in PR.
-      apply Mod.add_comm in PR. apply Mod.add_comm.
-      erewrite <- Mod.add_assoc in *.
-      apply Mod.add_comm in PR. apply Mod.add_comm.
-      eapply adequacy_local.
-      { eauto. }
-      { eapply PR. }
-    }
-    { i. erewrite Mod.add_assoc in *. eapply IHFORALL. auto. }
-  Qed.
-
-  Lemma sim_list_adequacy_closed (mds_src mds_tgt: list Mod.t)
-        (FORALL: List.Forall2 sim mds_src mds_tgt)
-    :
-      Beh.of_program (Mod.compile (Mod.add_list mds_tgt)) <1=
-      Beh.of_program (Mod.compile (Mod.add_list mds_src)).
-  Proof.
-    hexploit sim_list_adequacy.
-    { eauto. }
-    i. specialize (H Mod.empty). repeat rewrite Mod.add_empty_l in H. auto.
-  Qed.
-End SIMMODS.
-End ModPair.
-
-(* TODO: prove sim *)
-(* TODO: write client *)
-(* TODO: show cancellation *)
-(* TODO: meta-level (no forge -> checkwf always succeeds) *)
