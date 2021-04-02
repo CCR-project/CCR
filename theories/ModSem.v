@@ -609,9 +609,17 @@ Section EVENTS.
       end
   .
 
+  Definition handle_callE `{callE -< E} `{EventsL.rE -< E}: callE ~> itree E :=
+    fun _ '(Call fn args) =>
+      trigger EventsL.PushFrame;;
+      r <- trigger (Call fn args);;
+      trigger EventsL.PopFrame;;
+      Ret r
+  .
+
   Definition handle_all (mn: mname): Es ~> itree EventsL.Es.
     i. destruct X.
-    { exact (trigger c). }
+    { apply handle_callE; assumption. }
     destruct s.
     { exact (trigger (handle_rE mn r)). }
     destruct s.
@@ -620,6 +628,11 @@ Section EVENTS.
   Defined.
 
   Definition transl_all (mn: mname): itree Es ~> itree EventsL.Es := interp (handle_all mn).
+
+
+
+
+
 
   Lemma transl_all_bind
         mn
@@ -715,14 +728,29 @@ Section EVENTS.
   Proof. unfold interp_Es. des_ifs. my_rw. grind. Qed.
 
   Lemma interp_Es_callE
-        mn p st0
+        mn p mrs0 fr0 pst0
         (* (e: Es Σ) *)
         (e: callE Any.t)
     :
-      interp_Es mn p (trigger e) st0 = tau;; r <- (interp_Es mn p (p _ e) st0);; tau;; Ret r
+      interp_Es mn p (trigger e) (mrs0, fr0, pst0) =
+      match fr0 with
+      | nil => triggerNB
+      | _ => tau;; tau;; tau;;
+             '(mrs1, fr1, pst1, r) <- (interp_Es mn p (p _ e) (mrs0, ε :: fr0, pst0));;
+             match fr1 with
+             | nil => triggerNB
+             | _ :: fr2 => tau;; tau;; tau;; Ret (mrs1, fr2, pst1, r)
+             end
+      end
   .
   Proof.
-    unfold interp_Es. des_ifs. my_rw. unfold transl_all. rewrite unfold_interp. cbn. my_rw. grind. my_rw. grind.
+    unfold interp_Es. my_rw. unfold transl_all.
+    rewrite unfold_interp. cbn. my_rw. unfold handle_callE. dependent destruction e. cbn. my_rw.
+    des_ifs.
+    { unfold triggerNB. grind. }
+    my_rw. grind. my_rw. des_ifs.
+    { unfold triggerNB. grind. }
+    my_rw. grind.
   Qed.
 
   Lemma interp_Es_rE
@@ -794,6 +822,12 @@ Section MODSEM.
     initial_mr: Σ;
     initial_st: Any.t;
   }
+  .
+
+  Definition prog (ms: t): callE ~> itree Es :=
+    fun _ '(Call fn args) =>
+      '(_, sem) <- (List.find (fun fnsem => dec fn (fst fnsem)) ms.(fnsems))?;;
+      (sem args)
   .
 
   (*** TODO: move to CoqlibC ***)
