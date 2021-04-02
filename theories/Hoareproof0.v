@@ -10,7 +10,6 @@ Require Import HoareDef.
 Require Import SimSTS.
 Require Import SimGlobal.
 From Ordinal Require Import Ordinal Arithmetic.
-Import ModSemL.
 
 Generalizable Variables E R A B C X Y Σ.
 
@@ -36,13 +35,13 @@ Section CANCEL.
   Context `{Σ: GRA.t}.
 
   Variable md_tgt: Mod.t.
-  Let ms_tgt: ModSemL.t := (Mod.get_modsem md_tgt (Sk.load_skenv md_tgt.(Mod.sk))).
+  Let ms_tgt: ModSem.t := (Mod.get_modsem md_tgt (Sk.load_skenv md_tgt.(Mod.sk))).
 
   Variable sbtb: list (gname * fspecbody).
   Let stb: list (gname * fspec) := List.map (fun '(gn, fsb) => (gn, fsb_fspec fsb)) sbtb.
-  Hypothesis WTY: ms_tgt.(ModSemL.fnsems) = List.map (fun '(fn, sb) => (fn, fun_to_tgt stb fn sb)) sbtb.
+  Hypothesis WTY: ms_tgt.(ModSem.fnsems) = List.map (fun '(fn, sb) => (fn, fun_to_tgt stb fn sb)) sbtb.
   Let md_mid: Mod.t := md_mid md_tgt sbtb.
-  Let ms_mid: ModSemL.t := ms_mid md_tgt sbtb.
+  Let ms_mid: ModSem.t := ms_mid md_tgt sbtb.
 
   Let W: Type := (r_state * p_state).
   Let rsum: r_state -> Σ :=
@@ -81,8 +80,8 @@ Section CANCEL.
       (*     (x <- (interp_Es p_tgt (interp_hCallE_tgt stb (trigger ce)) st_tgt0);; Ret (snd x)) *)
       simg (fun '((rs_src, v_src)) '((rs_tgt, v_tgt)) => wf rs_src rs_tgt /\ (v_src: RT) = v_tgt)
            (Ord.from_nat 100%nat)
-           (interp_Es (ModSemL.prog ms_mid) (interp_hCallE_mid (E:=pE +' eventE) cur i0) st_src0)
-           (interp_Es (ModSemL.prog ms_tgt) (interp_hCallE_tgt (E:=pE +' eventE) stb mn cur i0) st_tgt0)
+           (interp_Es mn (ModSemL.prog ms_mid) (interp_hCallE_mid (E:=pE +' eventE) cur i0) st_src0)
+           (interp_Es mn (ModSemL.prog ms_tgt) (interp_hCallE_tgt (E:=pE +' eventE) stb mn cur i0) st_tgt0)
   .
   Proof.
     ginit.

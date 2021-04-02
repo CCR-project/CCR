@@ -591,21 +591,21 @@ Section EVENTS.
 
   Definition Es: Type -> Type := (callE +' rE +' pE+' eventE).
 
-  Definition handle_rE `{EventsL.rE -< E} (mn: mname): rE ~> itree E :=
+  Definition handle_rE (mn: mname): rE ~> EventsL.rE :=
     fun _ re =>
       match re with
-      | MPut mr0 => trigger (EventsL.MPut mn mr0)
-      | FPut fr0 => trigger (EventsL.FPut fr0)
-      | MGet => trigger (EventsL.MGet mn)
-      | FGet => trigger (EventsL.FGet)
+      | MPut mr0 => (EventsL.MPut mn mr0)
+      | FPut fr0 => (EventsL.FPut fr0)
+      | MGet => (EventsL.MGet mn)
+      | FGet => (EventsL.FGet)
       end
   .
 
-  Definition handle_pE `{EventsL.pE -< E} (mn: mname): pE ~> itree E :=
+  Definition handle_pE (mn: mname): pE ~> EventsL.pE :=
     fun _ pe =>
       match pe with
-      | PPut a0 => trigger (EventsL.PPut mn a0)
-      | PGet => trigger (EventsL.PGet mn)
+      | PPut a0 => (EventsL.PPut mn a0)
+      | PGet => (EventsL.PGet mn)
       end
   .
 
@@ -613,9 +613,9 @@ Section EVENTS.
     i. destruct X.
     { exact (trigger c). }
     destruct s.
-    { exact (handle_rE mn r). }
+    { exact (trigger (handle_rE mn r)). }
     destruct s.
-    { exact (handle_pE mn p). }
+    { exact (trigger (handle_pE mn p)). }
     exact (trigger e).
   Defined.
 
@@ -732,66 +732,52 @@ Section EVENTS.
         (e: rE T)
     :
       interp_Es mn p (trigger e) (rst0, pst0) =
-      '(rst1, r) <- handle_rE mn e rst0;;
-      tau;; tau;;
+      '(rst1, r) <- EventsL.handle_rE (handle_rE mn e) rst0;;
+      tau;; tau;; tau;;
       Ret ((rst1, pst0), r)
   .
-  Proof.
-    unfold interp_Es, interp_rE, interp_pE. grind.
-    destruct rst0; ss. unfold triggerNB, pure_state. destruct e; ss; des_ifs; grind.
-  Qed.
+  Proof. unfold interp_Es. unfold transl_all. rewrite unfold_interp. cbn. my_rw. grind. my_rw. grind. Qed.
 
   Lemma interp_Es_pE
-        p rst0 pst0
+        mn p rst0 pst0
         (* (e: Es Σ) *)
         T
         (e: pE T)
     :
-      interp_Es p (trigger e) (rst0, pst0) =
-      '(pst1, r) <- handle_pE e pst0;;
-      tau;; tau;; tau;;
+      interp_Es mn p (trigger e) (rst0, pst0) =
+      '(pst1, r) <- EventsL.handle_pE (handle_pE mn e) pst0;;
+      tau;; tau;; tau;; tau;;
       Ret ((rst0, pst1), r)
   .
-  Proof.
-    unfold interp_Es, interp_rE, interp_pE. grind.
-    (* Ltac grind := repeat (ired; f; repeat (f_equiv; ii; des_ifs_safe); f). *)
-    destruct rst0; ss. unfold triggerNB, pure_state. destruct e; ss; des_ifs; grind.
-  Qed.
+  Proof. unfold interp_Es. unfold transl_all. rewrite unfold_interp. cbn. my_rw. grind. my_rw. grind. Qed.
 
   Lemma interp_Es_eventE
-        p st0
+        mn p st0
         (* (e: Es Σ) *)
         T
         (e: eventE T)
     :
-      interp_Es p (trigger e) st0 = r <- trigger e;; tau;; tau;; tau;; Ret (st0, r)
+      interp_Es mn p (trigger e) st0 = r <- trigger e;; tau;; tau;; tau;; tau;; Ret (st0, r)
   .
-  Proof.
-    unfold interp_Es, interp_rE, interp_pE. grind.
-    unfold pure_state. grind.
-  Qed.
+  Proof. unfold interp_Es. unfold transl_all. rewrite unfold_interp. cbn. my_rw. grind. my_rw. grind. my_rw. grind. Qed.
 
   Lemma interp_Es_triggerUB
-        (prog: callE ~> itree Es)
+        mn (prog: callE ~> itree Es)
         st0
         A
     :
-      (interp_Es prog (triggerUB) st0: itree eventE (_ * A)) = triggerUB
+      (interp_Es mn prog (triggerUB) st0: itree eventE (_ * A)) = triggerUB
   .
-  Proof.
-    unfold interp_Es, interp_rE, interp_pE, pure_state, triggerUB. grind.
-  Qed.
+  Proof. unfold interp_Es. des_ifs. unfold transl_all. rewrite unfold_interp. cbn. my_rw. unfold triggerUB. grind. Qed.
 
   Lemma interp_Es_triggerNB
-        (prog: callE ~> itree Es)
+        mn (prog: callE ~> itree Es)
         st0
         A
     :
-      (interp_Es prog (triggerNB) st0: itree eventE (_ * A)) = triggerNB
+      (interp_Es mn prog (triggerNB) st0: itree eventE (_ * A)) = triggerNB
   .
-  Proof.
-    unfold interp_Es, interp_rE, interp_pE, pure_state, triggerNB. grind.
-  Qed.
+  Proof. unfold interp_Es. des_ifs. unfold transl_all. rewrite unfold_interp. cbn. my_rw. unfold triggerNB. grind. Qed.
 End EVENTS.
 (* End Events. *)
 

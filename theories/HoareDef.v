@@ -79,7 +79,6 @@ Section PROOF.
   Context {Σ: GRA.t}.
   Let GURA: URA.t := GRA.to_URA Σ.
   Local Existing Instance GURA.
-  Variable mn: mname.
   Context {X Y Z: Type}.
 
   Definition HoareCall
@@ -89,7 +88,7 @@ Section PROOF.
              (Q: X -> Z -> Any_tgt -> Σ -> Prop):
     gname -> Y -> itree Es Z :=
     fun fn varg_src =>
-      '(marg, farg) <- trigger (Choose _);; put mn marg farg;; (*** updating resources in an abstract way ***)
+      '(marg, farg) <- trigger (Choose _);; put marg farg;; (*** updating resources in an abstract way ***)
       rarg <- trigger (Choose Σ);; discard rarg;; (*** virtual resource passing ***)
       x <- trigger (Choose X);; varg_tgt <- trigger (Choose Any_tgt);;
       ord_next <- trigger (Choose _);;
@@ -100,7 +99,7 @@ Section PROOF.
 
       rret <- trigger (Take Σ);; forge rret;; (*** virtual resource passing ***)
       vret_src <- trigger (Take Z);;
-      checkWf mn;;
+      checkWf;;
       assume(Q x vret_src vret_tgt rret);; (*** postcondition ***)
 
       Ret vret_src (*** return to body ***)
@@ -286,26 +285,25 @@ Section CANCEL.
 
 
 
-  Definition handle_hCallE_tgt (mn: mname) (ord_cur: ord): hCallE ~> itree Es :=
+  Definition handle_hCallE_tgt (ord_cur: ord): hCallE ~> itree Es :=
     fun _ '(hCall tbr fn varg_src) =>
       '(_, f) <- (List.find (fun '(_fn, _) => dec fn _fn) stb)ǃ;;
       varg_src <- varg_src↓ǃ;;
-      vret_src <- (HoareCall (mn) tbr ord_cur (f.(precond)) (f.(postcond)) fn varg_src);;
+      vret_src <- (HoareCall tbr ord_cur (f.(precond)) (f.(postcond)) fn varg_src);;
       Ret vret_src↑
   .
 
-  Definition interp_hCallE_tgt `{E -< Es} (mn: mname) (ord_cur: ord): itree (hCallE +' E) ~> itree Es :=
-    interp (case_ (bif:=sum1) (handle_hCallE_tgt mn ord_cur)
+  Definition interp_hCallE_tgt `{E -< Es} (ord_cur: ord): itree (hCallE +' E) ~> itree Es :=
+    interp (case_ (bif:=sum1) (handle_hCallE_tgt ord_cur)
                   ((fun T X => trigger X): E ~> itree Es))
   .
 
-  Definition body_to_tgt {AA AR} (mn: mname) (ord_cur: ord)
+  Definition body_to_tgt {AA AR} (ord_cur: ord)
              (body: AA -> itree (hCallE +' pE +' eventE) AR): AA -> itree Es AR :=
-    fun varg_tgt => interp_hCallE_tgt mn ord_cur (body varg_tgt)
+    fun varg_tgt => interp_hCallE_tgt ord_cur (body varg_tgt)
   .
 
   Definition HoareFun
-             (mn: mname)
              {X Y Z: Type}
              (P: X -> Y -> Any_tgt -> ord -> Σ -> Prop)
              (Q: X -> Z -> Any_tgt -> Σ -> Prop)
@@ -313,19 +311,19 @@ Section CANCEL.
     varg_src <- trigger (Take Y);;
     x <- trigger (Take X);;
     rarg <- trigger (Take Σ);; forge rarg;; (*** virtual resource passing ***)
-    (checkWf mn);;
+    (checkWf);;
     ord_cur <- trigger (Take _);;
     assume(P x varg_src varg_tgt  ord_cur rarg);; (*** precondition ***)
 
 
     vret_src <- match ord_cur with
-                | ord_pure n => (interp_hCallE_tgt mn ord_cur APC);; trigger (Choose _)
-                | _ => (body_to_tgt mn ord_cur body) varg_src
+                | ord_pure n => (interp_hCallE_tgt ord_cur APC);; trigger (Choose _)
+                | _ => (body_to_tgt ord_cur body) varg_src
                 end;;
     (* vret_src <- body ord_cur varg_src;; (*** "rudiment": we don't remove extcalls because of termination-sensitivity ***) *)
 
     vret_tgt <- trigger (Choose Any_tgt);;
-    '(mret, fret) <- trigger (Choose _);; put mn mret fret;; (*** updating resources in an abstract way ***)
+    '(mret, fret) <- trigger (Choose _);; put mret fret;; (*** updating resources in an abstract way ***)
     rret <- trigger (Choose Σ);; guarantee(Q x vret_src vret_tgt rret);; (*** postcondition ***)
     (discard rret);; (*** virtual resource passing ***)
 
@@ -334,7 +332,7 @@ Section CANCEL.
 
   Definition fun_to_tgt (fn: gname) (sb: fspecbody): (Any_tgt -> itree Es Any_tgt) :=
     let fs: fspec := sb.(fsb_fspec) in
-    HoareFun fs.(mn) (fs.(precond)) (fs.(postcond)) sb.(fsb_body)
+    HoareFun (fs.(precond)) (fs.(postcond)) sb.(fsb_body)
   .
 
 (*** NOTE:
@@ -351,40 +349,44 @@ If this feature is needed; we can extend it then. At the moment, I will only all
 
 
 
-  Variable md_tgt: ModL.t.
-  Let ms_tgt: ModSemL.t := (ModL.get_modsem md_tgt (Sk.load_skenv md_tgt.(ModL.sk))).
+  Variable md_tgt: Mod.t.
+  Let ms_tgt: ModSem.t := (Mod.get_modsem md_tgt (Sk.load_skenv md_tgt.(Mod.sk))).
 
   Variable sbtb: list (gname * fspecbody).
   Let stb: list (gname * fspec) := List.map (fun '(gn, fsb) => (gn, fsb_fspec fsb)) sbtb.
-  Hypothesis WTY: ms_tgt.(ModSemL.fnsems) = List.map (fun '(fn, sb) => (fn, fun_to_tgt stb fn sb)) sbtb.
+  Hypothesis WTY: ms_tgt.(ModSem.fnsems) = List.map (fun '(fn, sb) => (fn, fun_to_tgt stb fn sb)) sbtb.
 
-  Definition ms_src: ModSemL.t := {|
-    ModSemL.fnsems := List.map (fun '(fn, sb) => (fn, fun_to_src (fsb_body sb))) sbtb;
+  Definition ms_src: ModSem.t := {|
+    ModSem.fnsems := List.map (fun '(fn, sb) => (fn, fun_to_src (fsb_body sb))) sbtb;
     (* ModSemL.initial_mrs := []; *)
-    ModSemL.initial_mrs := List.map (fun '(mn, (mr, mp)) => (mn, (ε, mp))) ms_tgt.(ModSemL.initial_mrs);
+    ModSem.mn := ms_tgt.(ModSem.mn);
+    ModSem.initial_mr := ε;
+    ModSem.initial_st := ms_tgt.(ModSem.initial_st);
     (*** Note: we don't use resources, so making everything as a unit ***)
   |}
   .
 
-  Definition md_src: ModL.t := {|
-    ModL.get_modsem := fun _ => ms_src;
-    ModL.sk := Sk.unit;
+  Definition md_src: Mod.t := {|
+    Mod.get_modsem := fun _ => ms_src;
+    Mod.sk := Sk.unit;
     (*** It is already a whole-program, so we don't need Sk.t anymore. ***)
     (*** Note: Actually, md_tgt's sk could also have been unit, which looks a bit more uniform. ***)
   |}
   .
 
-  Definition ms_mid: ModSemL.t := {|
-    ModSemL.fnsems := List.map (fun '(fn, sb) => (fn, fun_to_mid (fsb_body sb))) sbtb;
+  Definition ms_mid: ModSem.t := {|
+    ModSem.fnsems := List.map (fun '(fn, sb) => (fn, fun_to_mid (fsb_body sb))) sbtb;
     (* ModSemL.initial_mrs := []; *)
-    ModSemL.initial_mrs := List.map (fun '(mn, (mr, mp)) => (mn, (ε, mp))) ms_tgt.(ModSemL.initial_mrs);
+    ModSem.mn := ms_tgt.(ModSem.mn);
+    ModSem.initial_mr := ε;
+    ModSem.initial_st := ms_tgt.(ModSem.initial_st);
     (*** Note: we don't use resources, so making everything as a unit ***)
   |}
   .
 
-  Definition md_mid: ModL.t := {|
-    ModL.get_modsem := fun _ => ms_mid;
-    ModL.sk := Sk.unit;
+  Definition md_mid: Mod.t := {|
+    Mod.get_modsem := fun _ => ms_mid;
+    Mod.sk := Sk.unit;
     (*** It is already a whole-program, so we don't need Sk.t anymore. ***)
     (*** Note: Actually, md_tgt's sk could also have been unit, which looks a bit more uniform. ***)
   |}
@@ -413,9 +415,9 @@ If this feature is needed; we can extend it then. At the moment, I will only all
   Lemma interp_hCallE_tgt_bind
         `{E -< Es} A B
         (itr: itree (hCallE +' E) A) (ktr: A -> itree (hCallE +' E) B)
-        stb0 fn cur
+        stb0 cur
     :
-      interp_hCallE_tgt stb0 fn cur (v <- itr ;; ktr v) = v <- interp_hCallE_tgt stb0 fn cur (itr);; interp_hCallE_tgt stb0 fn cur (ktr v)
+      interp_hCallE_tgt stb0 cur (v <- itr ;; ktr v) = v <- interp_hCallE_tgt stb0 cur (itr);; interp_hCallE_tgt stb0 cur (ktr v)
   .
   Proof. unfold interp_hCallE_tgt. ired. grind. Qed.
 
@@ -498,11 +500,11 @@ End PSEUDOTYPING.
         `{Σ: GRA.t}
         R S
         x0 x1 x2 x3 x4 x5
-        a (k: ktree _ R S) prog st0
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (`str: (_ * R) <- interp_Es prog a st0;;
-                                                   (let (st1, r) := str in interp_Es prog (k r) st1)) x5)
+        a (k: ktree _ R S) mn prog st0
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (`str: (_ * R) <- interp_Es mn prog a st0;;
+                                                   (let (st1, r) := str in interp_Es mn prog (k r) st1)) x5)
     :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (interp_Es prog (a >>= k) st0) x5>>
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (interp_Es mn prog (a >>= k) st0) x5>>
   .
   Proof. rewrite interp_Es_bind. ss. Qed.
 
@@ -510,10 +512,10 @@ End PSEUDOTYPING.
         `{Σ: GRA.t}
         R
         x0 x1 x2 x3 x4 x5
-        (a: R) prog st0
+        (a: R) mn prog st0
         (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (Ret (st0, a)) x5)
     :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (interp_Es prog (Ret a) st0) x5>>
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (interp_Es mn prog (Ret a) st0) x5>>
   .
   Proof. rewrite interp_Es_ret. ss. Qed.
 
@@ -521,10 +523,10 @@ End PSEUDOTYPING.
         `{Σ: GRA.t}
         R
         x0 x1 x2 x3 x4 x5
-        (a: itree Es R) prog st0
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (tau;; (interp_Es prog a st0)) x5)
+        (a: itree Es R) mn prog st0
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (tau;; (interp_Es mn prog a st0)) x5)
     :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (interp_Es prog (tau;; a) st0) x5>>
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (interp_Es mn prog (tau;; a) st0) x5>>
   .
   Proof. rewrite interp_Es_tau. ss. Qed.
 
@@ -532,10 +534,11 @@ End PSEUDOTYPING.
         `{Σ: GRA.t}
         R
         x0 x1 x2 x3 x4 x5
-        (e: rE R) prog rst0 pst0
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (`rstr: (_ * R) <- handle_rE e rst0;; (let (rst1, r) := rstr in tau;; tau;; Ret (rst1, pst0, r))) x5)
+        (e: rE R) mn prog rst0 pst0
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (`rstr: (_ * R) <- EventsL.handle_rE (handle_rE mn e) rst0;;
+                                                    (let (rst1, r) := rstr in tau;; tau;; tau;; Ret (rst1, pst0, r))) x5)
     :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (interp_Es prog (trigger e) (rst0, pst0)) x5>>
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (interp_Es mn prog (trigger e) (rst0, pst0)) x5>>
   .
   Proof. rewrite interp_Es_rE. ss. Qed.
 
@@ -543,10 +546,10 @@ End PSEUDOTYPING.
         `{Σ: GRA.t}
         R
         x0 x1 x2 x3 x4 x5
-        (e: eventE R) prog st0
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (r <- trigger e;; (tau;; tau;; tau;; Ret (st0, r))) x5)
+        (e: eventE R) mn prog st0
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (r <- trigger e;; (tau;; tau;; tau;; tau;; Ret (st0, r))) x5)
     :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (interp_Es prog (trigger e) st0) x5>>
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (interp_Es mn prog (trigger e) st0) x5>>
   .
   Proof. rewrite interp_Es_eventE. ss. Qed.
 
@@ -554,20 +557,21 @@ End PSEUDOTYPING.
         `{Σ: GRA.t}
         R
         x0 x1 x2 x3 x4 x5
-        (e: pE R) prog rst0 pst0
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (`pstr: (_ * R) <- handle_pE e pst0;; (let (pst1, r) := pstr in tau;; tau;; tau;; Ret (rst0, pst1, r))) x5)
+        (e: pE R) mn prog rst0 pst0
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (`pstr: (_ * R) <- EventsL.handle_pE (handle_pE mn e) pst0;;
+                                                    (let (pst1, r) := pstr in tau;; tau;; tau;; tau;; Ret (rst0, pst1, r))) x5)
     :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (interp_Es prog (trigger e) (rst0, pst0)) x5>>
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (interp_Es mn prog (trigger e) (rst0, pst0)) x5>>
   .
   Proof. rewrite interp_Es_pE. ss. Qed.
 
   Lemma simg_l_interp_Es_callE
         `{Σ: GRA.t}
         x0 x1 x2 x3 x4 x5
-        (e: callE Any.t) prog st0
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (tau;; interp_Es prog (prog _ e) st0) x5)
+        (e: callE Any.t) mn prog st0
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (tau;; r <- interp_Es mn prog (prog _ e) st0;; tau;; Ret r) x5)
     :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (interp_Es prog (trigger e) st0) x5>>
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (interp_Es mn prog (trigger e) st0) x5>>
   .
   Proof. rewrite interp_Es_callE. ss. Qed.
 
@@ -575,10 +579,10 @@ End PSEUDOTYPING.
         `{Σ: GRA.t}
         R
         x0 x1 x2 x3 x4 x5
-        prog st0
+        mn prog st0
         (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (triggerNB) x5)
     :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (interp_Es (A:=R) prog triggerNB st0) x5>>
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (interp_Es (A:=R) mn prog triggerNB st0) x5>>
   .
   Proof. rewrite interp_Es_triggerNB. ss. Qed.
 
@@ -586,10 +590,10 @@ End PSEUDOTYPING.
         `{Σ: GRA.t}
         R
         x0 x1 x2 x3 x4 x5
-        prog st0
+        mn prog st0
         (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (triggerUB) x5)
     :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (interp_Es (A:=R) prog triggerUB st0) x5>>
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (interp_Es (A:=R) mn prog triggerUB st0) x5>>
   .
   Proof. rewrite interp_Es_triggerUB. ss. Qed.
 
@@ -599,12 +603,12 @@ End PSEUDOTYPING.
         `{Σ: GRA.t}
         R S T
         x0 x1 x2 x3 x4 x5
-        a (k: ktree _ R S) prog st0
+        a (k: ktree _ R S) mn prog st0
         (h: ktree _ _ T)
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (`str: (_ * R) <- interp_Es prog a st0;;
-                                             (let (st1, r) := str in interp_Es prog (k r) st1) >>= h) x5)
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (`str: (_ * R) <- interp_Es mn prog a st0;;
+                                             (let (st1, r) := str in interp_Es mn prog (k r) st1) >>= h) x5)
     :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 ((interp_Es prog (a >>= k) st0) >>= h) x5>>
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 ((interp_Es mn prog (a >>= k) st0) >>= h) x5>>
   .
   Proof. rewrite interp_Es_bind. rp; et. grind. Qed.
 
@@ -612,11 +616,11 @@ End PSEUDOTYPING.
         `{Σ: GRA.t}
         R S
         x0 x1 x2 x3 x4 x5
-        (a: R) prog st0 
+        (a: R) mn prog st0 
         (h: ktree _ _ S)
         (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (h (st0, a)) x5)
     :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 ((interp_Es prog (Ret a) st0) >>= h) x5>>
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 ((interp_Es mn prog (Ret a) st0) >>= h) x5>>
   .
   Proof. rewrite interp_Es_ret. rp; et. grind. Qed.
 
@@ -624,11 +628,11 @@ End PSEUDOTYPING.
         `{Σ: GRA.t}
         R S
         x0 x1 x2 x3 x4 x5
-        (a: itree Es R) prog st0
+        (a: itree Es R) mn prog st0
         (h: ktree _ _ S)
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (tau;; ((interp_Es prog a st0)) >>= h) x5)
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (tau;; ((interp_Es mn prog a st0)) >>= h) x5)
     :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 ((interp_Es prog (tau;; a) st0) >>= h) x5>>
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 ((interp_Es mn prog (tau;; a) st0) >>= h) x5>>
   .
   Proof. rewrite interp_Es_tau. rp; et. grind. Qed.
 
@@ -636,12 +640,12 @@ End PSEUDOTYPING.
         `{Σ: GRA.t}
         R S
         x0 x1 x2 x3 x4 x5
-        (e: rE R) prog rst0 pst0
+        (e: rE R) mn prog rst0 pst0
         (h: ktree _ _ S)
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (`rstr: (_ * R) <- handle_rE e rst0;;
-                                                     (let (rst1, r) := rstr in tau;; tau;; h (rst1, pst0, r))) x5)
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (`rstr: (_ * R) <- EventsL.handle_rE (handle_rE mn e) rst0;;
+                                                     (let (rst1, r) := rstr in tau;; tau;; tau;; h (rst1, pst0, r))) x5)
     :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 ((interp_Es prog (trigger e) (rst0, pst0)) >>= h) x5>>
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 ((interp_Es mn prog (trigger e) (rst0, pst0)) >>= h) x5>>
   .
   Proof. rewrite interp_Es_rE. rp; et. grind. Qed.
 
@@ -649,11 +653,11 @@ End PSEUDOTYPING.
         `{Σ: GRA.t}
         R S
         x0 x1 x2 x3 x4 x5
-        (e: eventE R) prog st0
+        (e: eventE R) mn prog st0
         (h: ktree _ _ S)
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (r <- trigger e;; (tau;; tau;; tau;; h (st0, r))) x5)
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (r <- trigger e;; (tau;; tau;; tau;; tau;; h (st0, r))) x5)
     :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 ((interp_Es prog (trigger e) st0) >>= h) x5>>
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 ((interp_Es mn prog (trigger e) st0) >>= h) x5>>
   .
   Proof. rewrite interp_Es_eventE. rp; et. grind. Qed.
 
@@ -661,11 +665,12 @@ End PSEUDOTYPING.
         `{Σ: GRA.t}
         R S
         x0 x1 x2 x3 x4 x5
-        (e: pE R) prog rst0 pst0
+        (e: pE R) mn prog rst0 pst0
         (h: ktree _ _ S)
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (`pstr: (_ * R) <- handle_pE e pst0;; (let (pst1, r) := pstr in tau;; tau;; tau;; h (rst0, pst1, r))) x5)
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (`pstr: (_ * R) <- EventsL.handle_pE (handle_pE mn e) pst0;;
+                                                    (let (pst1, r) := pstr in tau;; tau;; tau;; tau;; h (rst0, pst1, r))) x5)
     :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 ((interp_Es prog (trigger e) (rst0, pst0)) >>= h) x5>>
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 ((interp_Es mn prog (trigger e) (rst0, pst0)) >>= h) x5>>
   .
   Proof. rewrite interp_Es_pE. rp; et. grind. Qed.
 
@@ -673,11 +678,11 @@ End PSEUDOTYPING.
         `{Σ: GRA.t}
         S
         x0 x1 x2 x3 x4 x5
-        (e: callE Any.t) prog st0
+        (e: callE Any.t) mn prog st0
         (h: ktree _ _ S)
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (tau;; interp_Es prog (prog _ e) st0 >>= h) x5)
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (tau;; r <- interp_Es mn prog (prog _ e) st0;; tau;; h r) x5)
     :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 ((interp_Es prog (trigger e) st0) >>= h) x5>>
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 ((interp_Es mn prog (trigger e) st0) >>= h) x5>>
   .
   Proof. rewrite interp_Es_callE. ss. rp; et. grind. Qed.
 
@@ -685,11 +690,11 @@ End PSEUDOTYPING.
         `{Σ: GRA.t}
         R S
         x0 x1 x2 x3 x4 x5
-        prog st0
+        mn prog st0
         (h: ktree _ _ S)
         (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (triggerNB >>= h) x5)
     :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 ((interp_Es (A:=R) prog triggerNB st0) >>= h) x5>>
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 ((interp_Es (A:=R) mn prog triggerNB st0) >>= h) x5>>
   .
   Proof. rewrite interp_Es_triggerNB. ss. Qed.
 
@@ -697,11 +702,11 @@ End PSEUDOTYPING.
         `{Σ: GRA.t}
         R S
         x0 x1 x2 x3 x4 x5
-        prog st0
+        mn prog st0
         (h: ktree _ _ S)
         (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (triggerUB >>= h) x5)
     :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (interp_Es (A:=R) prog triggerUB st0 >>= h) x5>>
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (interp_Es (A:=R) mn prog triggerUB st0 >>= h) x5>>
   .
   Proof. rewrite interp_Es_triggerUB. ss. Qed.
 
@@ -764,11 +769,11 @@ End PSEUDOTYPING.
         `{Σ: GRA.t}
         R S
         x0 x1 x2 x3 x4 x5
-        a (k: ktree _ R S) prog st0
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (`str: (_ * R) <- interp_Es prog a st0;;
-                                                      (let (st1, r) := str in interp_Es prog (k r) st1)))
+        a (k: ktree _ R S) mn prog st0
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (`str: (_ * R) <- interp_Es mn prog a st0;;
+                                                      (let (st1, r) := str in interp_Es mn prog (k r) st1)))
     :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (interp_Es prog (a >>= k) st0)>>
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (interp_Es mn prog (a >>= k) st0)>>
   .
   Proof. rewrite interp_Es_bind. ss. Qed.
 
@@ -776,10 +781,10 @@ End PSEUDOTYPING.
         `{Σ: GRA.t}
         R
         x0 x1 x2 x3 x4 x5
-        (a: R) prog st0
+        (a: R) mn prog st0
         (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (Ret (st0, a)))
     :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (interp_Es prog (Ret a) st0)>>
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (interp_Es mn prog (Ret a) st0)>>
   .
   Proof. rewrite interp_Es_ret. ss. Qed.
 
@@ -787,10 +792,10 @@ End PSEUDOTYPING.
         `{Σ: GRA.t}
         R
         x0 x1 x2 x3 x4 x5
-        (a: itree Es R) prog st0
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (tau;; (interp_Es prog a st0)))
+        (a: itree Es R) mn prog st0
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (tau;; (interp_Es mn prog a st0)))
     :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (interp_Es prog (tau;; a) st0)>>
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (interp_Es mn prog (tau;; a) st0)>>
   .
   Proof. rewrite interp_Es_tau. ss. Qed.
 
@@ -798,10 +803,11 @@ End PSEUDOTYPING.
         `{Σ: GRA.t}
         R
         x0 x1 x2 x3 x4 x5
-        (e: rE R) prog rst0 pst0
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (`rstr: (_ * R) <- handle_rE e rst0;; (let (rst1, r) := rstr in tau;; tau;; Ret (rst1, pst0, r))))
+        (e: rE R) mn prog rst0 pst0
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (`rstr: (_ * R) <- EventsL.handle_rE (handle_rE mn e) rst0;;
+                                                       (let (rst1, r) := rstr in tau;; tau;; tau;; Ret (rst1, pst0, r))))
     :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (interp_Es prog (trigger e) (rst0, pst0))>>
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (interp_Es mn prog (trigger e) (rst0, pst0))>>
   .
   Proof. rewrite interp_Es_rE. ss. Qed.
 
@@ -809,10 +815,10 @@ End PSEUDOTYPING.
         `{Σ: GRA.t}
         R
         x0 x1 x2 x3 x4 x5
-        (e: eventE R) prog st0
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (r <- trigger e;; (tau;; tau;; tau;; Ret (st0, r))))
+        (e: eventE R) mn prog st0
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (r <- trigger e;; (tau;; tau;; tau;; tau;; Ret (st0, r))))
     :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (interp_Es prog (trigger e) st0)>>
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (interp_Es mn prog (trigger e) st0)>>
   .
   Proof. rewrite interp_Es_eventE. ss. Qed.
 
@@ -820,20 +826,21 @@ End PSEUDOTYPING.
         `{Σ: GRA.t}
         R
         x0 x1 x2 x3 x4 x5
-        (e: pE R) prog rst0 pst0
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (`pstr: (_ * R) <- handle_pE e pst0;; (let (pst1, r) := pstr in tau;; tau;; tau;; Ret (rst0, pst1, r))))
+        (e: pE R) mn prog rst0 pst0
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (`pstr: (_ * R) <- EventsL.handle_pE (handle_pE mn e) pst0;;
+                                                       (let (pst1, r) := pstr in tau;; tau;; tau;; tau;; Ret (rst0, pst1, r))))
     :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (interp_Es prog (trigger e) (rst0, pst0))>>
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (interp_Es mn prog (trigger e) (rst0, pst0))>>
   .
   Proof. rewrite interp_Es_pE. ss. Qed.
 
   Lemma simg_r_interp_Es_callE
         `{Σ: GRA.t}
         x0 x1 x2 x3 x4 x5
-        (e: callE Any.t) prog st0
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (tau;; interp_Es prog (prog _ e) st0))
+        (e: callE Any.t) mn prog st0
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (tau;; r <- interp_Es mn prog (prog _ e) st0;; tau;; Ret r))
     :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (interp_Es prog (trigger e) st0)>>
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (interp_Es mn prog (trigger e) st0)>>
   .
   Proof. rewrite interp_Es_callE. ss. Qed.
 
@@ -841,10 +848,10 @@ End PSEUDOTYPING.
         `{Σ: GRA.t}
         R
         x0 x1 x2 x3 x4 x5
-        prog st0
+        mn prog st0
         (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (triggerNB))
     :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (interp_Es (A:=R) prog triggerNB st0)>>
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (interp_Es (A:=R) mn prog triggerNB st0)>>
   .
   Proof. rewrite interp_Es_triggerNB. ss. Qed.
 
@@ -852,10 +859,10 @@ End PSEUDOTYPING.
         `{Σ: GRA.t}
         R
         x0 x1 x2 x3 x4 x5
-        prog st0
+        mn prog st0
         (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (triggerUB))
     :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (interp_Es (A:=R) prog triggerUB st0)>>
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (interp_Es (A:=R) mn prog triggerUB st0)>>
   .
   Proof. rewrite interp_Es_triggerUB. ss. Qed.
 
@@ -865,12 +872,12 @@ End PSEUDOTYPING.
         `{Σ: GRA.t}
         R S T
         x0 x1 x2 x3 x4 x5
-        a (k: ktree _ R S) prog st0
+        a (k: ktree _ R S) mn prog st0
         (h: ktree _ _ T)
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (`str: (_ * R) <- interp_Es prog a st0;;
-                                                      (let (st1, r) := str in interp_Es prog (k r) st1) >>= h))
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (`str: (_ * R) <- interp_Es mn prog a st0;;
+                                                      (let (st1, r) := str in interp_Es mn prog (k r) st1) >>= h))
     :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 ((interp_Es prog (a >>= k) st0) >>= h)>>
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 ((interp_Es mn prog (a >>= k) st0) >>= h)>>
   .
   Proof. rewrite interp_Es_bind. rp; et. grind. Qed.
 
@@ -878,11 +885,11 @@ End PSEUDOTYPING.
         `{Σ: GRA.t}
         R S
         x0 x1 x2 x3 x4 x5
-        (a: R) prog st0 
+        (a: R) mn prog st0 
         (h: ktree _ _ S)
         (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (h (st0, a)))
     :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 ((interp_Es prog (Ret a) st0) >>= h)>>
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 ((interp_Es mn prog (Ret a) st0) >>= h)>>
   .
   Proof. rewrite interp_Es_ret. rp; et. grind. Qed.
 
@@ -890,11 +897,11 @@ End PSEUDOTYPING.
         `{Σ: GRA.t}
         R S
         x0 x1 x2 x3 x4 x5
-        (a: itree Es R) prog st0
+        (a: itree Es R) mn prog st0
         (h: ktree _ _ S)
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (tau;; ((interp_Es prog a st0)) >>= h))
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (tau;; ((interp_Es mn prog a st0)) >>= h))
     :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 ((interp_Es prog (tau;; a) st0) >>= h)>>
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 ((interp_Es mn prog (tau;; a) st0) >>= h)>>
   .
   Proof. rewrite interp_Es_tau. rp; et. grind. Qed.
 
@@ -902,12 +909,12 @@ End PSEUDOTYPING.
         `{Σ: GRA.t}
         R S
         x0 x1 x2 x3 x4 x5
-        (e: rE R) prog rst0 pst0
+        (e: rE R) mn prog rst0 pst0
         (h: ktree _ _ S)
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (`rstr: (_ * R) <- handle_rE e rst0;;
-                                                       (let (rst1, r) := rstr in tau;; tau;; h (rst1, pst0, r))))
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (`rstr: (_ * R) <- EventsL.handle_rE (handle_rE mn e) rst0;;
+                                                       (let (rst1, r) := rstr in tau;; tau;; tau;; h (rst1, pst0, r))))
     :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 ((interp_Es prog (trigger e) (rst0, pst0)) >>= h)>>
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 ((interp_Es mn prog (trigger e) (rst0, pst0)) >>= h)>>
   .
   Proof. rewrite interp_Es_rE. rp; et. grind. Qed.
 
@@ -915,11 +922,11 @@ End PSEUDOTYPING.
         `{Σ: GRA.t}
         R S
         x0 x1 x2 x3 x4 x5
-        (e: eventE R) prog st0
+        (e: eventE R) mn prog st0
         (h: ktree _ _ S)
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (r <- trigger e;; (tau;; tau;; tau;; h (st0, r))))
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (r <- trigger e;; (tau;; tau;; tau;; tau;; h (st0, r))))
     :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 ((interp_Es prog (trigger e) st0) >>= h)>>
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 ((interp_Es mn prog (trigger e) st0) >>= h)>>
   .
   Proof. rewrite interp_Es_eventE. rp; et. grind. Qed.
 
@@ -927,11 +934,12 @@ End PSEUDOTYPING.
         `{Σ: GRA.t}
         R S
         x0 x1 x2 x3 x4 x5
-        (e: pE R) prog rst0 pst0
+        (e: pE R) mn prog rst0 pst0
         (h: ktree _ _ S)
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (`pstr: (_ * R) <- handle_pE e pst0;; (let (pst1, r) := pstr in tau;; tau;; tau;; h (rst0, pst1, r))))
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (`pstr: (_ * R) <- EventsL.handle_pE (handle_pE mn e) pst0;;
+                                                       (let (pst1, r) := pstr in tau;; tau;; tau;; tau;; h (rst0, pst1, r))))
     :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 ((interp_Es prog (trigger e) (rst0, pst0)) >>= h)>>
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 ((interp_Es mn prog (trigger e) (rst0, pst0)) >>= h)>>
   .
   Proof. rewrite interp_Es_pE. rp; et. grind. Qed.
 
@@ -939,11 +947,11 @@ End PSEUDOTYPING.
         `{Σ: GRA.t}
         S
         x0 x1 x2 x3 x4 x5
-        (e: callE Any.t) prog st0
+        (e: callE Any.t) mn prog st0
         (h: ktree _ _ S)
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (tau;; interp_Es prog (prog _ e) st0 >>= h))
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (tau;; r <- interp_Es mn prog (prog _ e) st0;; tau;; h r))
     :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 ((interp_Es prog (trigger e) st0) >>= h)>>
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 ((interp_Es mn prog (trigger e) st0) >>= h)>>
   .
   Proof. rewrite interp_Es_callE. ss. rp; et. grind. Qed.
 
@@ -951,11 +959,11 @@ End PSEUDOTYPING.
         `{Σ: GRA.t}
         R S
         x0 x1 x2 x3 x4 x5
-        prog st0
+        mn prog st0
         (h: ktree _ _ S)
         (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (triggerNB >>= h))
     :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 ((interp_Es (A:=R) prog triggerNB st0) >>= h)>>
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 ((interp_Es (A:=R) mn prog triggerNB st0) >>= h)>>
   .
   Proof. rewrite interp_Es_triggerNB. ss. Qed.
 
@@ -963,11 +971,11 @@ End PSEUDOTYPING.
         `{Σ: GRA.t}
         R S
         x0 x1 x2 x3 x4 x5
-        prog st0
+        mn prog st0
         (h: ktree _ _ S)
         (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (triggerUB >>= h))
     :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (interp_Es (A:=R) prog triggerUB st0 >>= h)>>
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (interp_Es (A:=R) mn prog triggerUB st0 >>= h)>>
   .
   Proof. rewrite interp_Es_triggerUB. ss. Qed.
 
