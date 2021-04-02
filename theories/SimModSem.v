@@ -1058,42 +1058,72 @@ Section ADQ.
 
 End ADQ.
 
+
+
 Section SIMMOD.
    Context `{Σ: GRA.t}.
+
+   Definition add_list (xs: list Mod.t): ModL.t :=
+     fold_right ModL.add ModL.empty (List.map Mod.lift xs)
+   .
+
+   Lemma add_list_cons
+         x xs
+     :
+       (* Beh.of_program (ModL.compile (add_list (x :: xs))) <1= Beh.of_program (ModL.compile (ModL.add x (add_list xs))) *)
+       (add_list (x :: xs)) = (ModL.add x (add_list xs))
+   .
+   Proof.
+     ss.
+     (* ginduction xs; ii; ss. *)
+   Qed.
+
+   Definition refines (md_tgt md_src: ModL.t): Prop :=
+     (* forall (ctx: list Mod.t), Beh.of_program (ModL.compile (add_list (md_tgt :: ctx))) <1= *)
+     (*                           Beh.of_program (ModL.compile (add_list (md_src :: ctx))) *)
+     forall (ctx: list Mod.t), Beh.of_program (ModL.compile (ModL.add md_tgt (add_list ctx))) <1=
+                               Beh.of_program (ModL.compile (ModL.add md_src (add_list ctx)))
+   .
+
+   (*** vertical composition ***)
+   Global Program Instance refines_PreOrder: PreOrder refines.
+   Next Obligation. ii. ss. Qed.
+   Next Obligation. ii. eapply H0. eapply H. ss. Qed.
+
+   (*** horizontal composition ***)
+   Lemma refines_add
+         (md0_src md0_tgt md1_src md1_tgt: Mod.t)
+         (SIM0: refines md0_tgt md0_src)
+         (SIM1: refines md1_tgt md1_src)
+     :
+       <<SIM: refines (ModL.add md0_tgt md1_tgt) (ModL.add md0_src md1_src)>>
+   .
+   Proof.
+     ii. r in SIM0. r in SIM1.
+     specialize (SIM0 (md1_tgt :: ctx)). spc SIM0.
+     rewrite add_list_cons in SIM0. rewrite <- ModL.add_assoc' in PR.
+     eapply SIM0 in PR.
+     specialize (SIM1 (md0_src :: ctx)). spc SIM1.
+     rewrite add_list_cons in SIM1.
+     rewrite <- ModL.add_assoc'.
+     rewrite <- ModL.add_assoc' in PR.
+     eapply SIM0.
+     rewrite <- add_list_cons with (x:=(ModL.add md0_tgt md1_tgt)) (xs:=ctx) in PR. eapply add_list_cons in PR. cbn in *.
+   Qed.
 
    Theorem adequacy_local md_src md_tgt
            (SIM: ModPair.sim md_src md_tgt)
      (*** You will need some wf conditions for ctx ***)
      :
-       <<CR: forall (ctx: Mod.t), Beh.of_program (ModL.compile (ModL.add ctx md_tgt)) <1=
-                                  Beh.of_program (ModL.compile (ModL.add ctx md_src))>>
+       <<CR: (refines md_tgt md_src)>>
    .
    Proof.
      ii. eapply ModLPair.adequacy_local_closed; eauto. econs.
      { ss. red. ii. eapply ModSemLPair.add_modsempair.
        { admit "ModSemL wf". }
        { admit "ModSemL wf". }
-       { eapply adequacy_lift. eapply ModSemPair.self_sim_mod. r. admit "ModSemL wf". }
        { eapply SIM. }
-     }
-     { ss. red. f_equal. eapply SIM. }
-     { ii. red. ss. admit "ModSemL wf". }
-   Qed.
-
-   Theorem adequacy_local_strong md_src md_tgt
-           (SIM: ModPair.sim md_src md_tgt)
-     (*** You will need some wf conditions for ctx ***)
-     :
-       <<CR: forall ctx (WF: exists ctxs, ctx = ModL.add_list (List.map Mod.lift ctxs)),
-         Beh.of_program (ModL.compile (ModL.add ctx md_tgt)) <1=
-         Beh.of_program (ModL.compile (ModL.add ctx md_src))>>
-   .
-   Proof.
-     ii. eapply ModLPair.adequacy_local_closed; eauto. econs.
-     { ss. red. ii. eapply ModSemLPair.add_modsempair.
-       { admit "ModSemL wf". }
-       { admit "ModSemL wf". }
-       { des. subst. clear - ctxs. induction ctxs.
+       { clear - ctx. induction ctx.
          - ss. econs; et.
            + instantiate (1:=top2). typeclasses eauto.
            + econs.
@@ -1102,11 +1132,46 @@ Section SIMMOD.
            + admit "ModSemL wf".
            + admit "ModSemL wf".
            + eapply adequacy_lift. eapply ModSemPair.self_sim_mod. r. admit "ModSemL wf". }
-       { eapply SIM. }
      }
      { ss. red. f_equal. eapply SIM. }
      { ii. red. ss. admit "ModSemL wf". }
    Qed.
+
+   Corollary adequacy_local_list
+             mds_src mds_tgt
+             (FORALL: List.Forall2 ModPair.sim mds_src mds_tgt)
+     :
+       <<CR: refines (add_list mds_tgt) (add_list mds_src)>>
+   .
+   Proof.
+     r. induction FORALL; ss.
+   Qed.
+  (* Lemma sim_list_adequacy (mds_src mds_tgt: list Mod.t) *)
+  (*       (FORALL: List.Forall2 ModPair.sim mds_src mds_tgt) *)
+  (*   : *)
+  (*     <<CR: forall (ctx: Mod.t), Beh.of_program (ModL.compile (ModL.add ctx (ModL.add_list (List.map Mod.lift mds_tgt)))) <1= *)
+  (*                                Beh.of_program (ModL.compile (ModL.add ctx (ModL.add_list (List.map Mod.lift mds_src))))>>. *)
+  (* Proof. *)
+  (*   induction FORALL; ss. *)
+  (*   cut (forall ctx, *)
+  (*           Beh.of_program (ModL.compile (ModL.add ctx (ModL.add y (ModL.add_list (List.map Mod.lift l'))))) <1= *)
+  (*           Beh.of_program (ModL.compile (ModL.add ctx (ModL.add y (ModL.add_list (List.map Mod.lift l)))))). *)
+  (*   { ii. eapply H0 in PR. *)
+  (*     apply ModL.add_comm in PR. apply ModL.add_comm. *)
+  (*     erewrite <- ModL.add_assoc in *. *)
+  (*     apply ModL.add_comm in PR. apply ModL.add_comm. *)
+  (*     eapply adequacy_local_strong. *)
+  (*     { eauto. } *)
+  (*     { exists (snoc l ctx). ss. *)
+  (*       clear - l. ginduction l; ii; ss. *)
+  (*       { rewrite ModL.add_empty_l, ModL.add_empty_r. ss. } *)
+  (*       { rewrite ModL.add_assoc. rewrite ModL.add_empty_l, ModL.add_empty_r. ss. } *)
+  (*       esplits. ss. admit "". } *)
+  (*     { eapply PR. } *)
+  (*   } *)
+  (*   { i. erewrite ModL.add_assoc in *. eapply IHFORALL. auto. } *)
+  (* Qed. *)
+
 End SIMMOD.
 
 Section SIMMODS.
