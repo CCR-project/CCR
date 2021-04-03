@@ -50,19 +50,20 @@ Section SIMMODSEM.
     Local Opaque vadd.
     steps.
     rewrite eval_imp_unfold.
-    ss.
-    eapply Any.downcast_upcast in _UNWRAPN. des. clarify.
-    unfold unint in *. ss.
+    eapply Any.downcast_upcast in _UNWRAPN. des.
+    unfold unint in *. destruct v; clarify; ss.
     steps.
     imp_steps.
     des_ifs.
     - imp_steps.
-    - apply Z.eqb_eq in Heq0. apply n in Heq0. inversion Heq0.
+    - apply Z.eqb_eq in Heq2. apply n0 in Heq2. inversion Heq2.
     - unfold ccall.
       imp_steps.
       gstep. econs; ss. i. des; subst. exists 100.
       imp_steps.
-      rewrite _UNWRAPU. imp_steps.
+      destruct v; ss; clarify.
+      2:{ imp_steps. unfold triggerNB. steps. }
+      imp_steps. rewrite _UNWRAPU. imp_steps.
   Qed.
   
 End SIMMODSEM.

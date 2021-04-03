@@ -23,14 +23,19 @@ Section F.
 
   Definition fF :=
     mk_function
-      ["n"]
+      Tint
+      [("n", Tint)]
+      [("n", Tint); ("g_ret", Tint)]
       (if# "n"
-       then# "g_ret" :=# (Fun "g") ["n" - 1%Z : expr] ;;#
+       then# "g_ret" :=# (Fun "g" Tint) ["n" - 1%Z : expr] ;;#
              "n" + "g_ret"
        else# 0%Z fi#).
 
-  Definition f_prog : program :=
-    [("f", fF)].
+  Definition f_prog : module :=
+    mk_module
+      []
+      [("f", fF)]
+      "f".
 
   Definition FSem: ModSem.t := ImpMod.modsem "F" f_prog.
 

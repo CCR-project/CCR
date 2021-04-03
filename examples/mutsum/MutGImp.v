@@ -23,14 +23,19 @@ Section G.
 
   Definition gF :=
     mk_function
-      ["n"]
+      Tint
+      [("n", Tint)]
+      [("n", Tint); ("f_ret", Tint)]
       (if# "n"
-       then# "f_ret" :=# (Fun "f") ["n" - 1%Z : expr] ;;#
+       then# "f_ret" :=# (Fun "f" Tint) ["n" - 1%Z : expr] ;;#
              "n" + "f_ret"
        else# 0%Z fi#).
 
-  Definition g_prog : program :=
-    [("g", gF)].
+  Definition g_prog : module :=
+    mk_module
+      []
+      [("g", gF)]
+      "g".
 
   Definition GSem: ModSem.t := ImpMod.modsem "G" g_prog.
 
