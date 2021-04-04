@@ -83,11 +83,13 @@ Inductive stmt : Type :=
 | Return (e : expr)    (* return e *)
 .
 
+Definition names (l : list (var * type)) := List.map (fun '(n, _) => n) l.
+
 (** information of a function *)
 Record function : Type := mk_function {
   fn_return : type;
   fn_params : list (var * type);
-  fn_vars : list (var * type); (* includes fn_params *)
+  fn_vars : list (var * type); (* disjoint with fn_params *)
   fn_body : stmt
 }.
 
@@ -377,9 +379,9 @@ Fixpoint init_args params args (acc: lenv) : option lenv :=
 .
 
 Definition eval_imp `{Σ: GRA.t} (f: function) (args: list val) : itree Es val :=
-  match (init_args f.(fn_params) args (init_lenv f.(fn_vars))) with
-  | Some le =>
-    '(_, retv) <- (interp_imp (denote_stmt f.(fn_body)) le) ;; Ret retv
+  match (init_args f.(fn_params) args []) with
+  | Some iargs =>
+    '(_, retv) <- (interp_imp (denote_stmt f.(fn_body)) (iargs++(init_lenv f.(fn_vars)))) ;; Ret retv
   | None => triggerUB
   end
 .
@@ -599,9 +601,9 @@ Section PROOFS.
       ` vret : val <- eval_imp (mk_function fret fparams fvars fbody) args ;; Ret (vret↑)
                =
                ` vret : val <-
-                        (match init_args fparams args (init_lenv fvars) with
-                         | Some le =>
-                           ITree.bind (interp_imp (denote_stmt fbody) le)
+                        (match init_args fparams args [] with
+                         | Some iargs =>
+                           ITree.bind (interp_imp (denote_stmt fbody) (iargs++(init_lenv (fvars))))
                                       (fun x_ : lenv * val => let (_, retv) := x_ in Ret retv)
                          | None => triggerUB
                          end) ;; Ret (vret↑).

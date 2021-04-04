@@ -7,148 +7,155 @@ Require Import Any.
 Require Import ModSem.
 Require Import Imp.
 
-From compcert Require Import Clight.
+From compcert Require Import AST.
 From compcert Require Import Integers.
 From compcert Require Import Ctypes.
+From compcert Require Import Clight.
 
 Import Int.
 
 Set Implicit Arguments.
 
 Section Compile.
-
-  Definition cast (nextID: AST.ident) := var -> option (AST.ident * type).
-  Definition empty : cast 1%positive := fun _ => None.
-
-  Definition update_cast {i} newKey newType (curr: cast i) : cast (Pos.succ i):=
-    fun key =>
-      if (String.string_dec key newKey) then (Some (i, newType))
-      else (curr key).
-
-  Hypothesis is_int :
-    forall (intval : Z),
-      ((Zneg xH) < intval < modulus)%Z.
   
-  Let attr_bot : attr := {|
-    attr_volatile := false; attr_alignas := None;
-  |}.
+  (* Definition cast (nextID: AST.ident) := var -> option (AST.ident * type). *)
+  (* Definition empty : cast 1%positive := fun _ => None. *)
+
+  (* Definition update_cast {i} newKey newType (curr: cast i) : cast (Pos.succ i):= *)
+  (*   fun key => *)
+  (*     if (String.string_dec key newKey) then (Some (i, newType)) *)
+  (*     else (curr key). *)
+
+  (* Hypothesis is_int : *)
+  (*   forall (intval : Z), *)
+  (*     ((Zneg xH) < intval < modulus)%Z. *)
+
+  Variable f : Imp.function.
+  
+  Variable s2p : string -> ident.
+  Variable to_int : Z -> int.
 
   Let canon_Tint :=
-    (Tint I32 Signed attr_bot).
+    (Tint I32 Signed noattr).
 
-  (* Let canon_Tptr := *)
-  (*   (Tpointer canon_Tint attr_bot). *)
+  Let canon_Tptr tgt :=
+    (Tpointer tgt noattr).
+
+  Fixpoint compile_type imp_ty : type :=
+    match imp_ty with
+    | Imp.Tint => canon_Tint
+    | Imp.Tptr tgt => canon_Tptr (compile_type tgt)
+    end.
+
+  Let i2c_names inames :=
+    List.map (fun '(name, ty) => (s2p name, compile_type ty)) inames.
+
+  Let cfn_params := i2c_names f.(Imp.fn_params).
+  Let cfn_temps := i2c_names f.(Imp.fn_vars).
+
+  Let imp_string_type l x : option Imp.type :=
+    SetoidList.findA (sflib.beq_str x) l.
+
+  Let imp_vs := f.(Imp.fn_params) ++ f.(Imp.fn_vars).
+
+  Let iv2t x := imp_string_type imp_vs x.
   
-  Fixpoint compile_expr leCast expr : option Clight.expr :=
+  Fixpoint compile_expr expr : option Clight.expr :=
     match expr with
     | Var x =>
-      match (leCast x) with
-      | None => None
-      | Some (i, t) => Some (Etempvar i t)
-      end
+      do ty <- (iv2t x); Some (Etempvar (s2p x) (compile_type ty))
     | Lit v =>
       match v with
-      | Vint z => Some (Econst_int (mkint z (is_int z)) canon_Tint)
+      | Vint z => Some (Econst_int (to_int z) canon_Tint)
       | _ => None
       end
     | Plus a b =>
-      match (compile_expr leCast a), (compile_expr leCast b) with
-      | Some (Econst_int x t), Some (Econst_int y s) =>
-        Some (Ebinop Cop.Oadd (Econst_int x t) (Econst_int y s) canon_Tint)
+      match (compile_expr a), (compile_expr b) with
+      | Some ca, Some cb =>
+        match (typeof ca), (typeof cb) with
+        | Tint _ _ _, Tint _ _ _ =>
+          Some (Ebinop Cop.Oadd ca cb canon_Tint)
+        | Tint _ _ _, Tpointer _ _ =>
+          Some (Ebinop Cop.Oadd ca cb (typeof cb))
+        | Tpointer _ _, Tint _ _ _ =>
+          Some (Ebinop Cop.Oadd ca cb (typeof ca))
+        | _, _ => None
+        end
       | _, _ => None
       end
     | Minus a b =>
-      match (compile_expr leCast a), (compile_expr leCast b) with
-      | Some (Econst_int x t), Some (Econst_int y s) =>
-        Some (Ebinop Cop.Osub (Econst_int x t) (Econst_int y s) canon_Tint)
+      match (compile_expr a), (compile_expr b) with
+      | Some ca, Some cb =>
+        match (typeof ca), (typeof cb) with
+        | Tint _ _ _, Tint _ _ _ =>
+          Some (Ebinop Cop.Osub ca cb canon_Tint)
+        | Tint _ _ _, Tpointer _ _ =>
+          Some (Ebinop Cop.Osub ca cb (typeof cb))
+        | Tpointer _ _, Tint _ _ _ =>
+          Some (Ebinop Cop.Osub ca cb (typeof ca))
+        | _, _ => None
+        end
       | _, _ => None
       end
     | Mult a b =>
-      match (compile_expr leCast a), (compile_expr leCast b) with
-      | Some (Econst_int x t), Some (Econst_int y s) =>
-        Some (Ebinop Cop.Omul (Econst_int x t) (Econst_int y s) canon_Tint)
+      match (compile_expr a), (compile_expr b) with
+      | Some ca, Some cb =>
+        match (typeof ca), (typeof cb) with
+        | Tint _ _ _, Tint _ _ _ =>
+          Some (Ebinop Cop.Omul ca cb canon_Tint)
+        | Tint _ _ _, Tpointer _ _ =>
+          Some (Ebinop Cop.Omul ca cb (typeof cb))
+        | Tpointer _ _, Tint _ _ _ =>
+          Some (Ebinop Cop.Omul ca cb (typeof ca))
+        | _, _ => None
+        end
       | _, _ => None
       end
     end
   .
 
-  Fixpoint compile_exprs leCast (exprs: list Imp.expr) : option (list Clight.expr) :=
+  Fixpoint compile_exprs (exprs: list Imp.expr) acc : option (list Clight.expr) :=
     match exprs with
     | h :: t =>
-      match (compile_expr leCast h), (compile_exprs leCast t) with
-      | Some h', Some t' => Some (h' :: t')
-      | _, _ => None
-      end
-    | [] => Some []
+      do hexp <- (compile_expr h); compile_exprs t (hexp :: acc)
+    | [] => Some acc
     end
   .
   
-  Fixpoint type_Imp_expr (leCast: string -> option (AST.ident * type)) expr : option type :=
-    match expr with
-    | Var x =>
-      match (leCast x) with
-      | None => None
-      | Some (_, t) => Some t
-      end
-    | Lit v =>
-      match v with
-      | Vint _ => Some canon_Tint
-      | _ => None
-      end
-    | Plus a b =>
-      match (type_Imp_expr leCast a), (type_Imp_expr leCast b) with
-      | Some (Tint _ _ _), Some (Tint _ _ _) => Some canon_Tint
-      | _, _ => None
-      end
-    | Minus a b =>
-      match (type_Imp_expr leCast a), (type_Imp_expr leCast b) with
-      | Some (Tint _ _ _), Some (Tint _ _ _) => Some canon_Tint
-      | _, _ => None
-      end
-    | Mult a b =>
-      match (type_Imp_expr leCast a), (type_Imp_expr leCast b) with
-      | Some (Tint _ _ _), Some (Tint _ _ _) => Some canon_Tint
-      | _, _ => None
-      end
-    end
-  .
-  
-  Fixpoint compile_stmt leCast stmt : option Clight.statement :=
+  Fixpoint compile_stmt stmt : option Clight.statement :=
     match stmt with
     | Assign x e =>
-      match (type_Imp_expr leCast e) with
-      | Some t => Some (Sset ((update_cast x t leCast) x) (compile_expr leCast e))
-      | _ => None
-      end
+      do ex <- (compile_expr e);
+      Some (Sset (s2p x) ex)
     | Seq s1 s2 =>
-      match (compile_stmt leCast s1), (compile_stmt leCast s2) with
-      | Some cs1, Some cs2 => Some (Ssequence cs1 cs2)
-      | _ => None
-      end
+      do cs1 <- (compile_stmt s1);
+      do cs2 <- (compile_stmt s2);
+      Some (Ssequence cs1 cs2)
     | If cond sif selse =>
-      match (compile_expr leCast cond), (compile_stmt leCast sif), (compile_stmt leCast selse) with
-      | Some cc, Some cif, Some celse =>
-        Some (Sifthenelse cc cif celse)
-      | _ => None
-      end
+      do cc <- (compile_expr cond);
+      do cif <- (compile_stmt sif);
+      do celse <- (compile_stmt selse);
+      Some (Sifthenelse cc cif celse)
     | While cond body =>
-      match (compile_expr leCast cond), (compile_stmt leCast body) with
-      | Some cc, Some cb => Some (Swhile cc cb)
-      | _ => None
-      end
+      do cc <- (compile_expr cond);
+      do cbody <- (compile_stmt body);
+      Some (Swhile cc cbody)
     | Skip =>
       Some Sskip
     | CallFun x ftype args =>
-      match (leCast x), (compile_exprs leCast args) with
-      | Some (i, t), Some cargs =>
-        match ftype with
-        | Fun fn =>
-          Some (Scall (Some i) (compile_expr (Var fn)) cargs
-      
+      do cargs <- (compile_exprs args []);
+      match ftype with
+      | Fun fn _ =>
+        do f <- (compile_expr (Var fn));
+        Some (Scall (Some (s2p x)) f cargs)
+      | Sys sn _ =>
+        do s <- (compile_expr (Var sn));
+        Some (Scall (Some (s2p x)) s cargs)
+      end
     | Return r =>
+      do cr <- (compile_expr r);
+      Some (Sreturn (Some cr))
     end
   .
-  
-
 
 End Compile.

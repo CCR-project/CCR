@@ -25,7 +25,7 @@ Section F.
     mk_function
       Tint
       [("n", Tint)]
-      [("n", Tint); ("g_ret", Tint)]
+      [("g_ret", Tint)]
       (if# "n"
        then# "g_ret" :=# (Fun "g" Tint) ["n" - 1%Z : expr] ;;#
              "n" + "g_ret"

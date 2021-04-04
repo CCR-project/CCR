@@ -56,7 +56,7 @@ Section SIMMODSEM.
     imp_steps.
     des_ifs.
     - imp_steps.
-    - apply Z.eqb_eq in Heq2. apply n0 in Heq2. inversion Heq2.
+    - apply Z.eqb_eq in Heq0. apply n in Heq0. inversion Heq0.
     - unfold ccall.
       imp_steps.
       gstep. econs; ss. i. des; subst. exists 100.
