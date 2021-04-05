@@ -256,6 +256,7 @@ Section CANCEL.
 
   Definition handle_hCallE_mid (ord_cur: ord): hCallE ~> itree Es :=
     fun _ '(hCall tbr fn varg_src) =>
+      tau;;
       ord_next <- (if tbr then o0 <- trigger (Choose _);; Ret (ord_pure o0) else Ret ord_top);;
       guarantee(ord_lt ord_next ord_cur);;
       let varg_mid: Any_mid := (Any.pair ord_next↑ varg_src) in
