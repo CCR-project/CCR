@@ -374,9 +374,7 @@ Section MODSEML.
   Definition prog: callE ~> itree Es :=
     fun _ '(Call fn args) =>
       '(_, sem) <- (List.find (fun fnsem => dec fn (fst fnsem)) ms.(fnsems))?;;
-      trigger PushFrame;;
       rv <- (sem args);;
-      trigger PopFrame;;
       Ret rv
   .
 
@@ -386,7 +384,7 @@ Section MODSEML.
     (fun mn => match List.find (fun mnr => dec mn (fst mnr)) ms.(initial_mrs) with
                | Some r => fst (snd r)
                | None => ε
-               end, [ε]). (*** we have a dummy-stack here ***)
+               end, [ε]).
   Definition initial_p_state: p_state :=
     (fun mn => match List.find (fun mnr => dec mn (fst mnr)) ms.(initial_mrs) with
                | Some r => (snd (snd r))
@@ -831,18 +829,69 @@ Section MODSEM.
   .
 
   (*** TODO: move to CoqlibC ***)
+  (*** ss, cbn does not work as expected (in both version) ***)
   Definition map_fst A0 A1 B (f: A0 -> A1): (A0 * B) -> (A1 * B) := fun '(a, b) => (f a, b).
   Definition map_snd A B0 B1 (f: B0 -> B1): (A * B0) -> (A * B1) := fun '(a, b) => (a, f b).
+  (* Definition map_fst A0 A1 B (f: A0 -> A1): (A0 * B) -> (A1 * B) := fun ab => match ab with (a, b) => (f a, b) end. *)
+  (* Definition map_snd A B0 B1 (f: B0 -> B1): (A * B0) -> (A * B1) := fun ab => match ab with (a, b) => (a, f b) end. *)
 
   Definition lift (ms: t): ModSemL.t := {|
     ModSemL.fnsems := List.map (map_snd (fun sem args => transl_all ms.(mn) (sem args))) ms.(fnsems);
     ModSemL.initial_mrs := [(ms.(mn), (ms.(initial_mr), ms.(initial_st)))];
   |}
   .
+  Coercion lift: t >-> ModSemL.t.
 
   Definition compile (ms: t): semantics := ModSemL.compile (lift ms).
 
   Definition wf (ms: t): Prop := ModSemL.wf (lift ms).
+
+  Theorem lift_lemma
+        (ms: t) fn args st0
+    :
+      (EventsL.interp_Es (ModSemL.prog ms) (ModSemL.prog ms (Call fn args)) st0) =
+      (interp_Es ms.(mn) (prog ms) (prog ms (Call fn args)) st0)
+  .
+  Proof.
+    ss.
+    unfold interp_Es. des_ifs; ss.
+    f_equal.
+    - unfold prog, ModSemL.prog. ss. repeat (apply func_ext_dep; i). des_ifs.
+      unfold unwrapU at 1. des_ifs.
+      + irw. des_ifs. rewrite find_map in *. uo. des_ifs. cbn in *. unfold map_snd in *. des_ifs.
+        eapply find_some in Heq0. des; ss. unfold compose in *. ss. des_sumbool. subst.
+        unfold unwrapU. des_ifs; cycle 1.
+        { eapply find_none in Heq; et. ss. des_sumbool; ss. }
+        irw. des_ifs.
+        eapply find_some in Heq. des; ss. des_sumbool. subst.
+        assert(i = i0).
+        { admit "uniqueness". }
+        subst. ss.
+      + rewrite find_map in *. uo. des_ifs. cbn in *.
+        unfold unwrapU. des_ifs.
+        { eapply find_some in Heq1. des; ss. des_sumbool. subst.
+          eapply find_none in Heq0; et. unfold compose in *. unfold map_snd in *. des_ifs. ss. des_sumbool; ss.
+        }
+        rewrite transl_all_bind. grind.
+        unfold triggerUB. unfold transl_all at 2. rewrite unfold_interp. irw. f_equiv. f_equiv. apply func_ext. ii; ss.
+    - unfold unwrapU at 1. des_ifs.
+      + irw. des_ifs. rewrite find_map in *. uo. des_ifs. cbn in *. unfold map_snd in *. des_ifs.
+        eapply find_some in Heq0. des; ss. unfold compose in *. ss. des_sumbool. subst.
+        unfold unwrapU. des_ifs; cycle 1.
+        { eapply find_none in Heq; et. ss. des_sumbool; ss. }
+        irw. des_ifs.
+        eapply find_some in Heq. des; ss. des_sumbool. subst.
+        assert(i = i0).
+        { admit "uniqueness". }
+        subst. ss.
+      + rewrite find_map in *. uo. des_ifs. cbn in *.
+        unfold unwrapU. des_ifs.
+        { eapply find_some in Heq1. des; ss. des_sumbool. subst.
+          eapply find_none in Heq0; et. unfold compose in *. unfold map_snd in *. des_ifs. ss. des_sumbool; ss.
+        }
+        rewrite transl_all_bind. grind.
+        unfold triggerUB. unfold transl_all at 2. rewrite unfold_interp. irw. f_equiv. f_equiv. apply func_ext. ii; ss.
+  Qed.
 
 End MODSEM.
 End ModSem.

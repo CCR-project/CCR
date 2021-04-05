@@ -375,52 +375,6 @@ Section CANCEL.
   Opaque interp_Es.
   Opaque EventsL.interp_Es.
 
-  Definition new_prog (ms: ModSemL.t): callE ~> itree EventsL.Es :=
-    fun _ '(Call fn args) =>
-      '(_, sem) <- (List.find (fun fnsem => dec fn (fst fnsem)) ms.(ModSemL.fnsems))?;;
-      (sem args)
-  .
-
-  Lemma my_lemma
-        (ms0 ms1: ModSem.t) args st0 (mn: string)
-    :
-      (EventsL.interp_Es (new_prog ms0) (new_prog ms1 (Call "main" args)) st0) =
-      (interp_Es (ModSem.mn ms0) (ModSem.prog ms0) (ModSem.prog ms1 (Call "main" args)) st0)
-  .
-  Proof.
-    clear. ss.
-    Local Transparent interp_Es. unfold interp_Es. Local Opaque interp_Es.
-    des_ifs; ss.
-    f_equal.
-    - unfold new_prog, ModSem.prog. ss. repeat (apply func_ext_dep; i). des_ifs.
-      unfold unwrapU at 1. des_ifs.
-      + irw. des_ifs. rewrite find_map in *. uo. des_ifs. cbn in *. unfold ModSem.map_snd in *. des_ifs.
-        eapply find_some in Heq0. des; ss. unfold compose in *. ss. des_sumbool. subst.
-        unfold unwrapU. des_ifs; cycle 1.
-        { eapply find_none in Heq; et. ss. des_sumbool; ss. }
-        irw. des_ifs.
-        eapply find_some in Heq. des; ss. des_sumbool. subst.
-        assert(i = i0).
-        { admit "uniqueness". }
-        subst. ss.
-      + rewrite find_map in *. uo. des_ifs. cbn in *.
-        unfold unwrapU. des_ifs.
-        { eapply find_some in Heq1. des; ss. des_sumbool. subst.
-          eapply find_none in Heq0; et. unfold compose in *. unfold ModSem.map_snd in *. des_ifs. ss. des_sumbool; ss.
-        }
-        rewrite transl_all_bind. grind.
-        unfold triggerUB. unfold transl_all at 2. rewrite unfold_interp. irw. f_equiv. f_equiv. apply func_ext. ii; ss.
-    -
-        grind.
-        des_ifs.
-        irw.
-        unfold ModSem.map_snd in *. des_ifs.
-        rewrite  rewrite find_some in Heq.
-        unfold unwrapU.
-        repeat rewrite transl_all
-    Local Transparent interp_Es. unfold ModSemL.prog. Local Opaque interp_Es.
-  Qed.
-
   Theorem adequacy_type_t2m: Beh.of_program (ModL.compile md_tgt) <1= Beh.of_program (ModL.compile md_mid).
   Proof.
     eapply adequacy_global.
@@ -495,6 +449,7 @@ Section CANCEL.
              end, [ε; ε]) with (ModSemL.initial_r_state ms_mid); cycle 1.
         { unfold ModSemL.initial_r_state. cbn. f_equal. admit "-----------------------------------------------------------------------------FIXME!!!!!!!!!". }
         replace (@pair (prod _ _) _ (ModSemL.initial_r_state ms_mid) (ModSemL.initial_p_state ms_mid)) with st_mid0 by refl.
+        rewrite ModSem.lift_lemma.
         TTTTTTTTTTTTTTTT
         eapply find_some in Heq. des; ss. des_sumbool. subst. rewrite in_map_iff in *. des. des_ifs.
         (* assert(LEMMA: forall (md: ModSem.t) R (itr: itree _ R) st0, EventsL.interp_Es (ModSemL.prog md) (transl_all md.(ModSem.mn) itr) st0 = *)
