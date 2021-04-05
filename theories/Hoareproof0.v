@@ -69,6 +69,8 @@ Section CANCEL.
   (*                     (* try rewrite interp_trigger *) *)
   (*                    ). *)
 
+  Opaque EventsL.interp_Es.
+  Opaque interp_Es.
 
   Let adequacy_type_aux:
     forall RT
@@ -80,10 +82,10 @@ Section CANCEL.
       (*     (x <- (interp_Es p_tgt (interp_hCallE_tgt stb (trigger ce)) st_tgt0);; Ret (snd x)) *)
       simg (fun '((rs_src, v_src)) '((rs_tgt, v_tgt)) => wf rs_src rs_tgt /\ (v_src: RT) = v_tgt)
            (Ord.from_nat 100%nat)
-           (EventsL.interp_Es (ModSemL.prog ms_mid) (transl_all mn (interp_hCallE_mid (E:=pE +' eventE) cur i0)) st_src0)
-           (EventsL.interp_Es (ModSemL.prog ms_tgt) (transl_all mn (interp_hCallE_tgt (E:=pE +' eventE) stb cur i0)) st_tgt0)
-           (* (interp_Es mn (ModSemL.prog ms_mid) ((interp_hCallE_mid (E:=pE +' eventE) cur i0)) st_src0) *)
-           (* (interp_Es mn (ModSemL.prog ms_tgt) ((interp_hCallE_tgt (E:=pE +' eventE) stb cur i0)) st_tgt0) *)
+           (* (EventsL.interp_Es (ModSemL.prog ms_mid) (transl_all mn (interp_hCallE_mid (E:=pE +' eventE) cur i0)) st_src0) *)
+           (* (EventsL.interp_Es (ModSemL.prog ms_tgt) (transl_all mn (interp_hCallE_tgt (E:=pE +' eventE) stb cur i0)) st_tgt0) *)
+           (interp_Es mn (ModSemL.prog ms_mid) ((interp_hCallE_mid (E:=pE +' eventE) cur i0)) st_src0)
+           (interp_Es mn (ModSemL.prog ms_tgt) ((interp_hCallE_tgt (E:=pE +' eventE) stb cur i0)) st_tgt0)
   .
   Proof.
     ginit.
@@ -171,15 +173,20 @@ Section CANCEL.
     destruct tbr.
     { des; et. Opaque ord_lt. destruct x4; ss; cycle 1. { exfalso. exploit x7; et. } steps. esplits; eauto. steps. esplits; eauto. steps. unfold unwrapU.
       destruct (find (fun fnsem => dec fn (fst fnsem)) (List.map (fun '(fn0, sb) => (fn0, fun_to_mid (fsb_body sb))) sbtb)) eqn:FINDFS; cycle 1.
-      { steps. }
-      destruct (find (fun fnsem => dec fn (fst fnsem)) (ModSem.fnsems ms_tgt)) eqn:FINDFT0; cycle 1.
-      { steps.
+      { repeat (try rewrite EventsL.interp_Es_bind; try rewrite EventsL.interp_Es_ret; try rewrite EventsL.interp_Es_tau; try rewrite EventsL.interp_Es_triggerUB; ired).
+        steps. }
+      destruct (find (fun fnsem => dec fn (fst fnsem)) (ModSemL.fnsems ms_tgt)) eqn:FINDFT0; cycle 1.
+      { exfalso.
         rewrite WTY in *. ss. clear - FINDFS FINDFT0.
         rewrite find_map in *. uo. des_ifs.
         apply_all_once find_some. des.
         eapply find_none in Heq0; eauto.
         unfold compose in *. des_ifs. ss. des_sumbool. ss.
       }
+      repeat (try rewrite EventsL.interp_Es_bind; try rewrite EventsL.interp_Es_ret; try rewrite EventsL.interp_Es_tau; try rewrite EventsL.interp_Es_triggerUB; ired).
+      des_ifs.
+      repeat (try rewrite EventsL.interp_Es_bind; try rewrite EventsL.interp_Es_ret; try rewrite EventsL.interp_Es_tau; try rewrite EventsL.interp_Es_triggerUB; ired).
+
       instantiate (1:=399).
       mred. steps.
       rename i into i_src.
@@ -201,6 +208,9 @@ Section CANCEL.
                              (<<POST: fs.(postcond) x2 vret_src' vret_tgt rret>>) /\
                              (<<PHYS: mps_src = mps_tgt>>)
                     ).
+        rewrite find_map in FINDFS. uo. des_ifs. eapply find_some in Heq. eapply find_some in FINDFT0.
+        unfold compose in *. des; ss. des_sumbool. clarify.
+        rewrite ModSem.lift_lemma.
         apply find_some in FINDFT0. des.
         apply find_some in FINDFS. des. ss. des_sumbool. clarify.
         rewrite WTY in *. fold Any_src in FINDFS. fold Any_tgt in FINDFT0. rewrite in_map_iff in *. des. des_ifs.

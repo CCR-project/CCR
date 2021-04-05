@@ -571,7 +571,7 @@ End PSEUDOTYPING.
                      (match fr0 with
                       | nil => triggerNB
                       | _ => tau;; tau;; tau;;
-                             '(mrs1, fr1, pst1, r) <- (interp_Es mn prog (prog _ e) (mrs0, ε :: fr0, pst0));;
+                             '(mrs1, fr1, pst1, r) <- (EventsL.interp_Es prog (prog _ e) (mrs0, ε :: fr0, pst0));;
                              match fr1 with
                              | nil => triggerNB
                              | _ :: fr2 => tau;; tau;; tau;; Ret (mrs1, fr2, pst1, r)
@@ -692,7 +692,7 @@ End PSEUDOTYPING.
                      (match fr0 with
                       | nil => triggerNB
                       | _ => tau;; tau;; tau;;
-                             '(mrs1, fr1, pst1, r) <- (interp_Es mn prog (prog _ e) (mrs0, ε :: fr0, pst0));;
+                             '(mrs1, fr1, pst1, r) <- (EventsL.interp_Es prog (prog _ e) (mrs0, ε :: fr0, pst0));;
                              match fr1 with
                              | nil => triggerNB
                              | _ :: fr2 => tau;; tau;; tau;; h (mrs1, fr2, pst1, r)
@@ -863,7 +863,7 @@ End PSEUDOTYPING.
         (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (match fr0 with
                                                 | nil => triggerNB
                                                 | _ => tau;; tau;; tau;;
-                                                       '(mrs1, fr1, pst1, r) <- (interp_Es mn prog (prog _ e) (mrs0, ε :: fr0, pst0));;
+                                                       '(mrs1, fr1, pst1, r) <- (EventsL.interp_Es prog (prog _ e) (mrs0, ε :: fr0, pst0));;
                                                        match fr1 with
                                                        | nil => triggerNB
                                                        | _ :: fr2 => tau;; tau;; tau;; Ret (mrs1, fr2, pst1, r)
@@ -983,7 +983,7 @@ End PSEUDOTYPING.
                      (match fr0 with
                       | nil => triggerNB
                       | _ => tau;; tau;; tau;;
-                             '(mrs1, fr1, pst1, r) <- (interp_Es mn prog (prog _ e) (mrs0, ε :: fr0, pst0));;
+                             '(mrs1, fr1, pst1, r) <- (EventsL.interp_Es prog (prog _ e) (mrs0, ε :: fr0, pst0));;
                              match fr1 with
                              | nil => triggerNB
                              | _ :: fr2 => tau;; tau;; tau;; h (mrs1, fr2, pst1, r)

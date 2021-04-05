@@ -682,10 +682,10 @@ Section EVENTS.
     assume(URA.wf (URA.add mr0 fr0))
   .
 
-  Definition interp_Es A (mn: mname) (prog: callE ~> itree Es) (itr0: itree Es A) (st0: r_state * p_state):
+  Definition interp_Es A (mn: mname) (prog: callE ~> itree EventsL.Es) (itr0: itree Es A) (st0: r_state * p_state):
     itree eventE ((r_state * p_state) * _)%type :=
     let (rst0, pst0) := st0 in
-    let progL: callE ~> itree EventsL.Es := (fun _ ce => transl_all mn (prog _ ce)) in
+    let progL: callE ~> itree EventsL.Es := (fun _ ce => (prog _ ce)) in
     EventsL.interp_Es progL (transl_all mn itr0) (rst0, pst0)
   .
 
@@ -697,7 +697,7 @@ Section EVENTS.
             ired).
 
   Lemma interp_Es_bind
-        mn (prog: callE ~> itree Es)
+        mn prog
         A B
         (itr: itree Es A) (ktr: A -> itree Es B)
         st0
@@ -708,7 +708,7 @@ Section EVENTS.
   Proof. unfold interp_Es. des_ifs. my_rw. grind. Qed.
 
   Lemma interp_Es_tau
-        mn (prog: callE ~> itree Es)
+        mn prog
         A
         (itr: itree Es A)
         st0
@@ -734,7 +734,7 @@ Section EVENTS.
       match fr0 with
       | nil => triggerNB
       | _ => tau;; tau;; tau;;
-             '(mrs1, fr1, pst1, r) <- (interp_Es mn p (p _ e) (mrs0, ε :: fr0, pst0));;
+             '(mrs1, fr1, pst1, r) <- (EventsL.interp_Es p (p _ e) (mrs0, ε :: fr0, pst0));;
              match fr1 with
              | nil => triggerNB
              | _ :: fr2 => tau;; tau;; tau;; Ret (mrs1, fr2, pst1, r)
@@ -788,7 +788,7 @@ Section EVENTS.
   Proof. unfold interp_Es. unfold transl_all. rewrite unfold_interp. cbn. my_rw. grind. my_rw. grind. my_rw. grind. Qed.
 
   Lemma interp_Es_triggerUB
-        mn (prog: callE ~> itree Es)
+        mn prog
         st0
         A
     :
@@ -797,7 +797,7 @@ Section EVENTS.
   Proof. unfold interp_Es. des_ifs. unfold transl_all. rewrite unfold_interp. cbn. my_rw. unfold triggerUB. grind. Qed.
 
   Lemma interp_Es_triggerNB
-        mn (prog: callE ~> itree Es)
+        mn prog
         st0
         A
     :
@@ -850,7 +850,7 @@ Section MODSEM.
         (ms: t) fn args st0
     :
       (EventsL.interp_Es (ModSemL.prog ms) (ModSemL.prog ms (Call fn args)) st0) =
-      (interp_Es ms.(mn) (prog ms) (prog ms (Call fn args)) st0)
+      (interp_Es ms.(mn) (ModSemL.prog ms) (prog ms (Call fn args)) st0)
   .
   Proof.
     ss.
@@ -858,23 +858,6 @@ Section MODSEM.
     f_equal.
     - unfold prog, ModSemL.prog. ss. repeat (apply func_ext_dep; i). des_ifs.
       unfold unwrapU at 1. des_ifs.
-      + irw. des_ifs. rewrite find_map in *. uo. des_ifs. cbn in *. unfold map_snd in *. des_ifs.
-        eapply find_some in Heq0. des; ss. unfold compose in *. ss. des_sumbool. subst.
-        unfold unwrapU. des_ifs; cycle 1.
-        { eapply find_none in Heq; et. ss. des_sumbool; ss. }
-        irw. des_ifs.
-        eapply find_some in Heq. des; ss. des_sumbool. subst.
-        assert(i = i0).
-        { admit "uniqueness". }
-        subst. ss.
-      + rewrite find_map in *. uo. des_ifs. cbn in *.
-        unfold unwrapU. des_ifs.
-        { eapply find_some in Heq1. des; ss. des_sumbool. subst.
-          eapply find_none in Heq0; et. unfold compose in *. unfold map_snd in *. des_ifs. ss. des_sumbool; ss.
-        }
-        rewrite transl_all_bind. grind.
-        unfold triggerUB. unfold transl_all at 2. rewrite unfold_interp. irw. f_equiv. f_equiv. apply func_ext. ii; ss.
-    - unfold unwrapU at 1. des_ifs.
       + irw. des_ifs. rewrite find_map in *. uo. des_ifs. cbn in *. unfold map_snd in *. des_ifs.
         eapply find_some in Heq0. des; ss. unfold compose in *. ss. des_sumbool. subst.
         unfold unwrapU. des_ifs; cycle 1.
