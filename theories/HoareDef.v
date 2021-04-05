@@ -568,10 +568,20 @@ End PSEUDOTYPING.
   Lemma simg_l_interp_Es_callE
         `{Σ: GRA.t}
         x0 x1 x2 x3 x4 x5
-        (e: callE Any.t) mn prog st0
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (tau;; r <- interp_Es mn prog (prog _ e) st0;; tau;; Ret r) x5)
+        (e: callE Any.t) mn prog mrs0 fr0 pst0
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4
+                     (match fr0 with
+                      | nil => triggerNB
+                      | _ => tau;; tau;; tau;;
+                             '(mrs1, fr1, pst1, r) <- (interp_Es mn prog (prog _ e) (mrs0, ε :: fr0, pst0));;
+                             match fr1 with
+                             | nil => triggerNB
+                             | _ :: fr2 => tau;; tau;; tau;; Ret (mrs1, fr2, pst1, r)
+                             end
+                      end)
+                     x5)
     :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (interp_Es mn prog (trigger e) st0) x5>>
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (interp_Es mn prog (trigger e) (mrs0, fr0, pst0)) x5>>
   .
   Proof. rewrite interp_Es_callE. ss. Qed.
 
@@ -678,13 +688,27 @@ End PSEUDOTYPING.
         `{Σ: GRA.t}
         S
         x0 x1 x2 x3 x4 x5
-        (e: callE Any.t) mn prog st0
+        (e: callE Any.t) mn prog mrs0 fr0 pst0
         (h: ktree _ _ S)
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (tau;; r <- interp_Es mn prog (prog _ e) st0;; tau;; h r) x5)
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4
+                     (match fr0 with
+                      | nil => triggerNB
+                      | _ => tau;; tau;; tau;;
+                             '(mrs1, fr1, pst1, r) <- (interp_Es mn prog (prog _ e) (mrs0, ε :: fr0, pst0));;
+                             match fr1 with
+                             | nil => triggerNB
+                             | _ :: fr2 => tau;; tau;; tau;; h (mrs1, fr2, pst1, r)
+                             end
+                      end)
+                     x5)
     :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 ((interp_Es mn prog (trigger e) st0) >>= h) x5>>
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 ((interp_Es mn prog (trigger e) (mrs0, fr0, pst0)) >>= h) x5>>
   .
-  Proof. rewrite interp_Es_callE. ss. rp; et. grind. Qed.
+  Proof.
+    rewrite interp_Es_callE. ss. rp; et.
+    des_ifs; ss. { unfold triggerNB. grind. }
+    grind. des_ifs. { unfold triggerNB. grind. } grind.
+  Qed.
 
   Lemma simg_l_interp_Es_triggerNB2
         `{Σ: GRA.t}
@@ -837,10 +861,18 @@ End PSEUDOTYPING.
   Lemma simg_r_interp_Es_callE
         `{Σ: GRA.t}
         x0 x1 x2 x3 x4 x5
-        (e: callE Any.t) mn prog st0
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (tau;; r <- interp_Es mn prog (prog _ e) st0;; tau;; Ret r))
+        (e: callE Any.t) mn prog mrs0 fr0 pst0
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (match fr0 with
+                                                | nil => triggerNB
+                                                | _ => tau;; tau;; tau;;
+                                                       '(mrs1, fr1, pst1, r) <- (interp_Es mn prog (prog _ e) (mrs0, ε :: fr0, pst0));;
+                                                       match fr1 with
+                                                       | nil => triggerNB
+                                                       | _ :: fr2 => tau;; tau;; tau;; Ret (mrs1, fr2, pst1, r)
+                                                       end
+                                                end))
     :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (interp_Es mn prog (trigger e) st0)>>
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (interp_Es mn prog (trigger e) (mrs0, fr0, pst0))>>
   .
   Proof. rewrite interp_Es_callE. ss. Qed.
 
@@ -947,13 +979,26 @@ End PSEUDOTYPING.
         `{Σ: GRA.t}
         S
         x0 x1 x2 x3 x4 x5
-        (e: callE Any.t) mn prog st0
+        (e: callE Any.t) mn prog mrs0 fr0 pst0
         (h: ktree _ _ S)
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (tau;; r <- interp_Es mn prog (prog _ e) st0;; tau;; h r))
+        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5
+                     (match fr0 with
+                      | nil => triggerNB
+                      | _ => tau;; tau;; tau;;
+                             '(mrs1, fr1, pst1, r) <- (interp_Es mn prog (prog _ e) (mrs0, ε :: fr0, pst0));;
+                             match fr1 with
+                             | nil => triggerNB
+                             | _ :: fr2 => tau;; tau;; tau;; h (mrs1, fr2, pst1, r)
+                             end
+                      end))
     :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 ((interp_Es mn prog (trigger e) st0) >>= h)>>
+      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 ((interp_Es mn prog (trigger e) (mrs0, fr0, pst0)) >>= h)>>
   .
-  Proof. rewrite interp_Es_callE. ss. rp; et. grind. Qed.
+  Proof.
+    rewrite interp_Es_callE. ss. rp; et.
+    des_ifs; ss. { unfold triggerNB. grind. }
+    grind. des_ifs. { unfold triggerNB. grind. } grind.
+  Qed.
 
   Lemma simg_r_interp_Es_triggerNB2
         `{Σ: GRA.t}
@@ -1006,13 +1051,13 @@ End PSEUDOTYPING.
       ((interp_red; ired_l) || idtac)
 
     (**************************** interp_Es ******************************)
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ (_ >>= _) _) _) ] =>
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ _ (_ >>= _) _) _) ] =>
       apply simg_l_interp_Es_bind; ired_l
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ (tau;; _) _) _) ] =>
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ _ (tau;; _) _) _) ] =>
       apply simg_l_interp_Es_tau
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ (Ret _) _) _) ] =>
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ _ (Ret _) _) _) ] =>
       apply simg_l_interp_Es_ret
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ (trigger ?e) _) _) ] =>
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ _ (trigger ?e) _) _) ] =>
       match (type of e) with
       | context[rE] => apply simg_l_interp_Es_rE
       | context[eventE] => apply simg_l_interp_Es_eventE
@@ -1020,19 +1065,19 @@ End PSEUDOTYPING.
       | context[callE] => apply simg_l_interp_Es_callE
       | _ => fail 2
       end
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ triggerNB _) _) ] =>
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ _ triggerNB _) _) ] =>
       apply simg_l_interp_Es_triggerNB
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ triggerUB _) _) ] =>
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ _ triggerUB _) _) ] =>
       apply simg_l_interp_Es_triggerUB
 
     (**************************** interp_Es2 ******************************)
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ (_ >>= _) _) >>= _) _) ] =>
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ _ (_ >>= _) _) >>= _) _) ] =>
       apply simg_l_interp_Es_bind2; ired_l
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ (tau;; _) _) >>= _) _) ] =>
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ _ (tau;; _) _) >>= _) _) ] =>
       apply simg_l_interp_Es_tau2
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ (Ret _) _) >>= _) _) ] =>
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ _ (Ret _) _) >>= _) _) ] =>
       apply simg_l_interp_Es_ret2; ired_l
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ (trigger ?e) _) >>= _) _) ] =>
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ _ (trigger ?e) _) >>= _) _) ] =>
       match (type of e) with
       | context[rE] => apply simg_l_interp_Es_rE2
       | context[eventE] => apply simg_l_interp_Es_eventE2
@@ -1040,9 +1085,9 @@ End PSEUDOTYPING.
       | context[callE] => apply simg_l_interp_Es_callE2
       | _ => fail 2
       end
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ triggerNB _) >>= _) _) ] =>
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ _ triggerNB _) >>= _) _) ] =>
       apply simg_l_interp_Es_triggerNB2
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ triggerUB _) >>= _) _) ] =>
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ _ triggerUB _) >>= _) _) ] =>
       apply simg_l_interp_Es_triggerUB2
 
     | _ => idtac
@@ -1065,13 +1110,13 @@ End PSEUDOTYPING.
       ((interp_red; ired_r) || idtac)
 
     (**************************** interp_Es ******************************)
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ (_ >>= _) _)) ] =>
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ _ (_ >>= _) _)) ] =>
       apply simg_r_interp_Es_bind; ired_l
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ (tau;; _) _)) ] =>
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ _ (tau;; _) _)) ] =>
       apply simg_r_interp_Es_tau
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ (Ret _) _)) ] =>
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ _ (Ret _) _)) ] =>
       apply simg_r_interp_Es_ret
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ (trigger ?e) _)) ] =>
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ _ (trigger ?e) _)) ] =>
       match (type of e) with
       | context[rE] => apply simg_r_interp_Es_rE
       | context[eventE] => apply simg_r_interp_Es_eventE
@@ -1079,19 +1124,19 @@ End PSEUDOTYPING.
       | context[callE] => apply simg_r_interp_Es_callE
       | _ => fail 2
       end
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ triggerNB _)) ] =>
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ _ triggerNB _)) ] =>
       apply simg_r_interp_Es_triggerNB
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ triggerUB _)) ] =>
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ _ triggerUB _)) ] =>
       apply simg_r_interp_Es_triggerUB
 
     (**************************** interp_Es2 ******************************)
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ (_ >>= _) _) >>= _)) ] =>
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ _ (_ >>= _) _) >>= _)) ] =>
       apply simg_r_interp_Es_bind2; ired_l
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ (tau;; _) _) >>= _)) ] =>
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ _ (tau;; _) _) >>= _)) ] =>
       apply simg_r_interp_Es_tau2
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ (Ret _) _) >>= _)) ] =>
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ _ (Ret _) _) >>= _)) ] =>
       apply simg_r_interp_Es_ret2; ired_l
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ (trigger ?e) _) >>= _)) ] =>
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ _ (trigger ?e) _) >>= _)) ] =>
       match (type of e) with
       | context[rE] => apply simg_r_interp_Es_rE2
       | context[eventE] => apply simg_r_interp_Es_eventE2
@@ -1099,9 +1144,9 @@ End PSEUDOTYPING.
       | context[callE] => apply simg_r_interp_Es_callE2
       | _ => fail 2
       end
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ triggerNB _) >>= _)) ] =>
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ _ triggerNB _) >>= _)) ] =>
       apply simg_r_interp_Es_triggerNB2
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ triggerUB _) >>= _)) ] =>
+    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ _ triggerUB _) >>= _)) ] =>
       apply simg_r_interp_Es_triggerUB2
 
     | _ => idtac
