@@ -42,6 +42,64 @@ Ltac _red_itree f :=
   | _ => fail
   end.
 
+Lemma interp_Es_unwrapU
+      `{Σ: GRA.t}
+      prog R st0 (r: option R)
+  :
+    interp_Es prog (unwrapU r) st0 = r <- unwrapU r;; Ret (st0, r)
+.
+Proof.
+  unfold unwrapU. des_ifs.
+  - rewrite interp_Es_ret. grind.
+  - rewrite interp_Es_triggerUB. unfold triggerUB. grind.
+Qed.
+
+Lemma interp_Es_unwrapN
+      `{Σ: GRA.t}
+      prog R st0 (r: option R)
+  :
+    interp_Es prog (unwrapN r) st0 = r <- unwrapN r;; Ret (st0, r)
+.
+Proof.
+  unfold unwrapN. des_ifs.
+  - rewrite interp_Es_ret. grind.
+  - rewrite interp_Es_triggerNB. unfold triggerNB. grind.
+Qed.
+
+Lemma interp_Es_assume
+      `{Σ: GRA.t}
+      prog st0 (P: Prop)
+  :
+    interp_Es prog (assume P) st0 = assume P;; tau;; tau;; tau;; Ret (st0, tt)
+.
+Proof.
+  unfold assume.
+  repeat (try rewrite interp_Es_bind; try rewrite bind_bind). grind.
+  rewrite interp_Es_eventE.
+  repeat (try rewrite interp_Es_bind; try rewrite bind_bind). grind.
+  rewrite interp_Es_ret.
+  refl.
+Qed.
+
+Lemma interp_Es_guarantee
+      `{Σ: GRA.t}
+      prog st0 (P: Prop)
+  :
+    interp_Es prog (guarantee P) st0 = guarantee P;; tau;; tau;; tau;; Ret (st0, tt)
+.
+Proof.
+  unfold guarantee.
+  repeat (try rewrite interp_Es_bind; try rewrite bind_bind). grind.
+  rewrite interp_Es_eventE.
+  repeat (try rewrite interp_Es_bind; try rewrite bind_bind). grind.
+  rewrite interp_Es_ret.
+  refl.
+Qed.
+
+
+
+
+
 Ltac _red_interp_tgt_aux f itr :=
   match itr with
   | ITree.bind' _ _ =>
@@ -65,14 +123,14 @@ Ltac _red_interp_tgt_aux f itr :=
   | triggerNB =>
     idtac "T - triggerNB";
     instantiate (f:=_break); apply interp_Es_triggerNB; fail
-  (* | unwrapU _ => *)
-  (*   instantiate (f:=_break); apply interp_tgt_unwrapU; fail *)
-  (* | unwrapN _ => *)
-  (*   instantiate (f:=_break); apply interp_tgt_unwrapN; fail *)
-  (* | assume _ => *)
-  (*   instantiate (f:=_break); apply interp_tgt_assume; fail *)
-  (* | guarantee _ => *)
-  (*   instantiate (f:=_break); apply interp_tgt_guarantee; fail *)
+  | unwrapU _ =>
+    instantiate (f:=_break); apply interp_Es_unwrapU; fail
+  | unwrapN _ =>
+    instantiate (f:=_break); apply interp_Es_unwrapN; fail
+  | assume _ =>
+    instantiate (f:=_break); apply interp_Es_assume; fail
+  | guarantee _ =>
+    instantiate (f:=_break); apply interp_Es_guarantee; fail
   | _ =>
     fail
   end
@@ -384,7 +442,7 @@ Section CANCEL.
     unfold guarantee. steps.
     unseal_left.
     destruct tbr.
-    { des; et. Opaque ord_lt. destruct x4; ss; cycle 1. { exfalso. exploit x7; et. } steps. esplits; eauto. steps. esplits; eauto. steps. unfold unwrapU.
+    { des; et. Opaque ord_lt. destruct x4; ss; cycle 1. { exfalso. exploit x7; et. } steps. esplits; eauto. steps. unshelve esplits; eauto. steps. unfold unwrapU.
       destruct (find (fun fnsem => dec fn (fst fnsem)) (List.map (fun '(fn0, sb) => (fn0, fun_to_mid (fsb_body sb))) sbtb)) eqn:FINDFS; cycle 1.
       { steps. }
       destruct (find (fun fnsem => dec fn (fst fnsem)) (ModSem.fnsems ms_tgt)) eqn:FINDFT0; cycle 1.
@@ -692,7 +750,7 @@ Section CANCEL.
                     end) "Main" (fst p), [ε], ModSem.initial_p_state ms_tgt) with st_tgt0; cycle 1.
       { unfold st_tgt0.
         unfold ModSem.initial_r_state. f_equal. f_equal. apply func_ext. i. unfold update. des_ifs; ss; clarify. }
-      steps. esplits; et. steps. esplits; et. steps. unshelve esplits; eauto. { ss. } steps.
+      steps. esplits; et. steps. unshelve esplits; et. steps. unshelve esplits; eauto. { ss. } steps.
       replace (Ord.from_nat 47) with (OrdArith.add (Ord.from_nat 37) (Ord.from_nat 10)) by admit "ez".
       guclo bindC_spec.
       eapply bindR_intro with (RR:=eq).
