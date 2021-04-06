@@ -881,10 +881,8 @@ Section CANCEL.
           { instantiate (1:=100%ord). eapply OrdArith.le_from_nat; ss. lia. }
           gbase. eapply CIH0. ss.
       + (*** IMPURE CALL ***)
-        steps. unfold unwrapU. des_ifs; cycle 1.
+        steps. unfold unwrapU at 1. des_ifs; cycle 1.
         { steps. }
-        steps.
-        unfold guarantee.
         steps.
         unfold unwrapU. des_ifs; cycle 1.
         { admit "unwrapN!!!!!!!!!!!!!!!!!!". }

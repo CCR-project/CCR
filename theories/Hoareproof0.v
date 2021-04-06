@@ -10,12 +10,156 @@ Require Import HoareDef.
 Require Import SimSTS.
 Require Import SimGlobal.
 From Ordinal Require Import Ordinal Arithmetic.
+Require Import Red.
 
 Generalizable Variables E R A B C X Y Σ.
 
 Set Implicit Arguments.
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  (* Ltac ired_l := *)
+  (*   cbn; *)
+  (*   match goal with *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ (_ >>= _ >>= _) _) ] => *)
+  (*     prw ltac:(rrw bind_bind _continue) 2 0 *)
+  (*     (* apply simg_l_bind_bind; ired_l *) *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ ((tau;; _) >>= _) _) ] => *)
+  (*     apply simg_l_bind_tau *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ ((Ret _) >>= _) _) ] => *)
+  (*     apply simg_l_bind_ret_l; ired_l *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ (trigger _) _) ] => *)
+  (*     apply simg_l_trigger_ret_rev *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp _ _) _) ] => *)
+  (*     ((interp_red; ired_l) || idtac) *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp _ _) >>= _) _) ] => *)
+  (*     ((interp_red; ired_l) || idtac) *)
+
+  (*   (**************************** interp_Es ******************************) *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ (_ >>= _) _) _) ] => *)
+  (*     apply simg_l_interp_Es_bind; ired_l *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ (tau;; _) _) _) ] => *)
+  (*     apply simg_l_interp_Es_tau *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ (Ret _) _) _) ] => *)
+  (*     apply simg_l_interp_Es_ret *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ (trigger ?e) _) _) ] => *)
+  (*     match (type of e) with *)
+  (*     | context[rE] => apply simg_l_interp_Es_rE *)
+  (*     | context[eventE] => apply simg_l_interp_Es_eventE *)
+  (*     | context[pE] => apply simg_l_interp_Es_pE *)
+  (*     | context[callE] => apply simg_l_interp_Es_callE *)
+  (*     | _ => fail 2 *)
+  (*     end *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ triggerNB _) _) ] => *)
+  (*     apply simg_l_interp_Es_triggerNB *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ triggerUB _) _) ] => *)
+  (*     apply simg_l_interp_Es_triggerUB *)
+
+  (*   (**************************** interp_Es2 ******************************) *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ (_ >>= _) _) >>= _) _) ] => *)
+  (*     apply simg_l_interp_Es_bind2; ired_l *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ (tau;; _) _) >>= _) _) ] => *)
+  (*     apply simg_l_interp_Es_tau2 *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ (Ret _) _) >>= _) _) ] => *)
+  (*     apply simg_l_interp_Es_ret2; ired_l *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ (trigger ?e) _) >>= _) _) ] => *)
+  (*     match (type of e) with *)
+  (*     | context[rE] => apply simg_l_interp_Es_rE2 *)
+  (*     | context[eventE] => apply simg_l_interp_Es_eventE2 *)
+  (*     | context[pE] => apply simg_l_interp_Es_pE2 *)
+  (*     | context[callE] => apply simg_l_interp_Es_callE2 *)
+  (*     | _ => fail 2 *)
+  (*     end *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ triggerNB _) >>= _) _) ] => *)
+  (*     apply simg_l_interp_Es_triggerNB2 *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ triggerUB _) >>= _) _) ] => *)
+  (*     apply simg_l_interp_Es_triggerUB2 *)
+
+  (*   | _ => idtac *)
+  (*   end. *)
+
+  (* Ltac ired_r := *)
+  (*   cbn; *)
+  (*   match goal with *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (_ >>= _ >>= _)) ] => *)
+  (*     apply simg_r_bind_bind; ired_r *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((tau;; _) >>= _)) ] => *)
+  (*     apply simg_r_bind_tau *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((Ret _) >>= _)) ] => *)
+  (*     apply simg_r_bind_ret_l; ired_r *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (trigger _)) ] => *)
+  (*     apply simg_r_trigger_ret_rev *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp _ _)) ] => *)
+  (*     ((interp_red; ired_r) || idtac) *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp _ _) >>= _)) ] => *)
+  (*     ((interp_red; ired_r) || idtac) *)
+
+  (*   (**************************** interp_Es ******************************) *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ (_ >>= _) _)) ] => *)
+  (*     apply simg_r_interp_Es_bind; ired_l *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ (tau;; _) _)) ] => *)
+  (*     apply simg_r_interp_Es_tau *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ (Ret _) _)) ] => *)
+  (*     apply simg_r_interp_Es_ret *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ (trigger ?e) _)) ] => *)
+  (*     match (type of e) with *)
+  (*     | context[rE] => apply simg_r_interp_Es_rE *)
+  (*     | context[eventE] => apply simg_r_interp_Es_eventE *)
+  (*     | context[pE] => apply simg_r_interp_Es_pE *)
+  (*     | context[callE] => apply simg_r_interp_Es_callE *)
+  (*     | _ => fail 2 *)
+  (*     end *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ triggerNB _)) ] => *)
+  (*     apply simg_r_interp_Es_triggerNB *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ triggerUB _)) ] => *)
+  (*     apply simg_r_interp_Es_triggerUB *)
+
+  (*   (**************************** interp_Es2 ******************************) *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ (_ >>= _) _) >>= _)) ] => *)
+  (*     apply simg_r_interp_Es_bind2; ired_l *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ (tau;; _) _) >>= _)) ] => *)
+  (*     apply simg_r_interp_Es_tau2 *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ (Ret _) _) >>= _)) ] => *)
+  (*     apply simg_r_interp_Es_ret2; ired_l *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ (trigger ?e) _) >>= _)) ] => *)
+  (*     match (type of e) with *)
+  (*     | context[rE] => apply simg_r_interp_Es_rE2 *)
+  (*     | context[eventE] => apply simg_r_interp_Es_eventE2 *)
+  (*     | context[pE] => apply simg_r_interp_Es_pE2 *)
+  (*     | context[callE] => apply simg_r_interp_Es_callE2 *)
+  (*     | _ => fail 2 *)
+  (*     end *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ triggerNB _) >>= _)) ] => *)
+  (*     apply simg_r_interp_Es_triggerNB2 *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ triggerUB _) >>= _)) ] => *)
+  (*     apply simg_r_interp_Es_triggerUB2 *)
+
+  (*   | _ => idtac *)
+  (*   end. *)
+
+  (* Ltac ired_all := ired_l; ired_r. *)
+
+  Ltac mred :=
+    repeat (cbn;
+            ired_both
+           ).
+
+  Ltac steps := repeat (mred; try _step; des_ifs_safe).
 
 
 
@@ -169,7 +313,7 @@ Section CANCEL.
     (* i; subst. *)
     (* destruct vret_tgt as [[[mrs0 frs0] mps0] ord_cur]. *)
     destruct tbr.
-    { des; et. Opaque ord_lt. destruct x4; ss; cycle 1. { exfalso. exploit x7; et. } steps. esplits; eauto. steps. esplits; eauto. steps. unfold unwrapU.
+    { des; et. Opaque ord_lt. destruct x4; ss; cycle 1. { exfalso. exploit x7; et. } steps. esplits; eauto. steps. unshelve esplits; eauto. steps. unfold unwrapU.
       destruct (find (fun fnsem => dec fn (fst fnsem)) (List.map (fun '(fn0, sb) => (fn0, fun_to_mid (fsb_body sb))) sbtb)) eqn:FINDFS; cycle 1.
       { steps. }
       destruct (find (fun fnsem => dec fn (fst fnsem)) (ModSem.fnsems ms_tgt)) eqn:FINDFT0; cycle 1.
@@ -482,44 +626,43 @@ Section CANCEL.
       - ii. des_ifs. ss. steps. interp_red. steps.
     }
     assert(TRANSR: simg eq (Ord.from_nat 100)
-(x0 <- interp_Es "Main" (ModSem.prog ms_tgt)
-                 (interp_hCallE_tgt (E:=pE +' eventE) stb ord_top (trigger (hCall false "main" ([]: list val)↑))) st_midmid0;; Ret (snd x0))
-(x0 <- EventsL.interp_Es (ModSemL.prog ms_tgt)
-                 ((ModSemL.prog ms_tgt) _ (Call "main" ([]: list val)↑)) st_tgt0;; Ret (snd x0))).
-(*     { clear SIM. ginit. { eapply cpn5_wcompat; eauto with paco. } *)
-(*       unfold interp_hCallE_tgt. rewrite unfold_interp. steps. rewrite MAIN. steps. *)
-(*       unfold HoareCall. *)
-(*       destruct (find (fun mnr => dec "Main" (fst mnr)) (ModSemL.initial_mrs ms_tgt)) eqn:MAINR; cycle 1. *)
-(*       { exfalso. clear - WF1 MAIN MAINR. admit "ez - use WF1". } *)
-(*       destruct p; ss. *)
-(*       assert(s = "Main") by admit "ez". clarify. *)
-(*       rewrite Any.upcast_downcast. *)
-(*       steps. eexists ((fst (fst st_tgt0)) "Main", entry_r). steps. *)
-(*       unfold put, guarantee. steps. unshelve esplits; eauto. { refl. } *)
-(*       steps. esplits; et. steps. unfold discard, guarantee. steps. esplits; et. steps. unshelve esplits; et. *)
-(*       { rewrite URA.unit_id. ss. } *)
-(*       steps. unfold guarantee. steps. esplits; ss; et. steps. exists (([]: list val)↑). *)
-(*       replace (update *)
-(*                  (fun mn0 : string => *)
-(*                     match find (fun mnr => dec mn0 (fst mnr)) (ModSemL.initial_mrs ms_tgt) with *)
-(*                     | Some r => fst (snd r) *)
-(*                     | None => ε *)
-(*                     end) "Main" (fst p), [ε], ModSemL.initial_p_state ms_tgt) with st_tgt0; cycle 1. *)
-(*       { unfold st_tgt0. *)
-(*         unfold ModSemL.initial_r_state. f_equal. f_equal. apply func_ext. i. unfold update. des_ifs; ss; clarify. } *)
-(*       steps. esplits; et. steps. esplits; et. steps. unshelve esplits; eauto. { ss. } steps. *)
-(*       replace (Ord.from_nat 47) with (OrdArith.add (Ord.from_nat 37) (Ord.from_nat 10)) by admit "ez". *)
-(*       guclo bindC_spec. *)
-(*       eapply bindR_intro with (RR:=eq). *)
-(*       - fold st_tgt0. eapply simg_gpaco_refl. typeclasses eauto. *)
-(*       - ii. des_ifs. ss. steps. *)
-(*         unfold forge, checkWf, assume. steps. destruct p0. steps. *)
-(*         unfold ModSemL.handle_rE. des_ifs. *)
-(*         { admit "we should use stronger RR, not eq; *)
-(* we should know that stackframe is not popped (unary property)". } *)
-(*         steps. interp_red. des; ss. steps. *)
-(*     } *)
-    { admit "". }
+(x0 <- interp_Es (ModSem.prog ms_tgt)
+                 (interp_hCallE_tgt (E:=pE +' eventE) stb "Main" ord_top (trigger (hCall false "main" ([]: list val)↑))) st_midmid0;; Ret (snd x0))
+(x0 <- interp_Es (ModSem.prog ms_tgt)
+                 ((ModSem.prog ms_tgt) _ (Call "main" ([]: list val)↑)) st_tgt0;; Ret (snd x0))).
+    { clear SIM. ginit. { eapply cpn5_wcompat; eauto with paco. }
+      unfold interp_hCallE_tgt. rewrite unfold_interp. steps. rewrite MAIN. steps.
+      unfold HoareCall.
+      destruct (find (fun mnr => dec "Main" (fst mnr)) (ModSem.initial_mrs ms_tgt)) eqn:MAINR; cycle 1.
+      { exfalso. clear - WF1 MAIN MAINR. admit "ez - use WF1". }
+      destruct p; ss.
+      assert(s = "Main") by admit "ez". clarify.
+      rewrite Any.upcast_downcast.
+      steps. eexists ((fst (fst st_tgt0)) "Main", entry_r). steps.
+      unfold put, guarantee. steps. unshelve esplits; eauto. { refl. }
+      steps. esplits; et. steps. unfold discard, guarantee. steps. esplits; et. steps. unshelve esplits; et.
+      { rewrite URA.unit_id. ss. }
+      steps. unfold guarantee. steps. esplits; ss; et. steps. exists (([]: list val)↑).
+      replace (update
+                 (fun mn0 : string =>
+                    match find (fun mnr => dec mn0 (fst mnr)) (ModSem.initial_mrs ms_tgt) with
+                    | Some r => fst (snd r)
+                    | None => ε
+                    end) "Main" (fst p), [ε], ModSem.initial_p_state ms_tgt) with st_tgt0; cycle 1.
+      { unfold st_tgt0.
+        unfold ModSem.initial_r_state. f_equal. f_equal. apply func_ext. i. unfold update. des_ifs; ss; clarify. }
+      steps. esplits; et. steps. unshelve esplits; et. steps. unshelve esplits; eauto. { ss. } steps.
+      replace (Ord.from_nat 47) with (OrdArith.add (Ord.from_nat 37) (Ord.from_nat 10)) by admit "ez".
+      guclo bindC_spec.
+      eapply bindR_intro with (RR:=eq).
+      - fold st_tgt0. eapply simg_gpaco_refl. typeclasses eauto.
+      - ii. des_ifs. ss. steps.
+        unfold forge, checkWf, assume. steps. destruct p0. steps.
+        unfold ModSem.handle_rE. des_ifs.
+        { admit "we should use stronger RR, not eq;
+we should know that stackframe is not popped (unary property)". }
+        steps. interp_red. des; ss. steps.
+    }
 
 
 
