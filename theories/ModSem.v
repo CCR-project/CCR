@@ -659,6 +659,52 @@ Section EVENTS.
   .
   Proof. unfold transl_all. grind. Qed.
 
+  Lemma transl_all_callE
+        mn
+        (e: callE Any.t)
+    :
+      transl_all mn (trigger e) = trigger EventsL.PushFrame;; r <- (trigger e);; trigger EventsL.PopFrame;; tau;; Ret r
+  .
+  Proof. dependent destruction e; ss. unfold transl_all. rewrite unfold_interp. ss. grind. Qed.
+
+  Lemma transl_all_rE
+        mn
+        T (e: rE T)
+    :
+      transl_all mn (trigger e) = r <- trigger (handle_rE mn e);; tau;; Ret r
+  .
+  Proof. dependent destruction e; ss; unfold transl_all; rewrite unfold_interp; ss; grind. Qed.
+
+  Lemma transl_all_pE
+        mn
+        T (e: pE T)
+    :
+      transl_all mn (trigger e) = r <- trigger (handle_pE mn e);; tau;; Ret r
+  .
+  Proof. dependent destruction e; ss; unfold transl_all; rewrite unfold_interp; ss; grind. Qed.
+
+  Lemma transl_all_eventE
+        mn
+        T (e: eventE T)
+    :
+      transl_all mn (trigger e) = r <- trigger e;; tau;; Ret r
+  .
+  Proof. dependent destruction e; ss; unfold transl_all; rewrite unfold_interp; ss; grind. Qed.
+
+  Lemma transl_all_triggerUB
+        mn T
+    :
+      transl_all mn (triggerUB: itree _ T) = triggerUB
+  .
+  Proof. unfold triggerUB. unfold transl_all; rewrite unfold_interp; ss; grind. Qed.
+
+  Lemma transl_all_triggerNB
+        mn T
+    :
+      transl_all mn (triggerNB: itree _ T) = triggerNB
+  .
+  Proof. unfold triggerNB. unfold transl_all; rewrite unfold_interp; ss; grind. Qed.
+
   Definition put E `{rE -< E} `{eventE -< E} (mr1: Σ) (fr1: Σ): itree E unit :=
     mr0 <- trigger (MGet);; fr0 <- trigger FGet;;
     guarantee(URA.updatable (URA.add mr0 fr0) (URA.add mr1 fr1));;
@@ -682,128 +728,6 @@ Section EVENTS.
     assume(URA.wf (URA.add mr0 fr0))
   .
 
-  Definition interp_Es A (mn: mname) (prog: callE ~> itree Es) (itr0: itree Es A) (st0: r_state * p_state):
-    itree eventE ((r_state * p_state) * _)%type :=
-    let (rst0, pst0) := st0 in
-    let progL: callE ~> itree EventsL.Es := (fun _ ce => transl_all mn (prog _ ce)) in
-    EventsL.interp_Es progL (transl_all mn itr0) (rst0, pst0)
-  .
-
-  Ltac my_rw :=
-    repeat (try rewrite EventsL.interp_Es_bind; try rewrite EventsL.interp_Es_tau; try rewrite EventsL.interp_Es_ret;
-            try rewrite EventsL.interp_Es_callE; try rewrite EventsL.interp_Es_eventE;
-            try rewrite EventsL.interp_Es_rE; try rewrite EventsL.interp_Es_pE;
-            try rewrite transl_all_bind; try rewrite transl_all_tau; try rewrite transl_all_ret;
-            ired).
-
-  Lemma interp_Es_bind
-        mn (prog: callE ~> itree Es)
-        A B
-        (itr: itree Es A) (ktr: A -> itree Es B)
-        st0
-    :
-      interp_Es mn prog (v <- itr ;; ktr v) st0 =
-      '(st1, v) <- interp_Es mn prog (itr) st0 ;; interp_Es mn prog (ktr v) st1
-  .
-  Proof. unfold interp_Es. des_ifs. my_rw. grind. Qed.
-
-  Lemma interp_Es_tau
-        mn (prog: callE ~> itree Es)
-        A
-        (itr: itree Es A)
-        st0
-    :
-      interp_Es mn prog (tau;; itr) st0 = tau;; interp_Es mn prog itr st0
-  .
-  Proof. unfold interp_Es. des_ifs. my_rw. grind. Qed.
-
-  Lemma interp_Es_ret
-        T
-        mn prog st0 (v: T)
-    :
-      interp_Es mn prog (Ret v) st0 = Ret (st0, v)
-  .
-  Proof. unfold interp_Es. des_ifs. my_rw. grind. Qed.
-
-  Lemma interp_Es_callE
-        mn p mrs0 fr0 pst0
-        (* (e: Es Σ) *)
-        (e: callE Any.t)
-    :
-      interp_Es mn p (trigger e) (mrs0, fr0, pst0) =
-      match fr0 with
-      | nil => triggerNB
-      | _ => tau;; tau;; tau;;
-             '(mrs1, fr1, pst1, r) <- (interp_Es mn p (p _ e) (mrs0, ε :: fr0, pst0));;
-             match fr1 with
-             | nil => triggerNB
-             | _ :: fr2 => tau;; tau;; tau;; Ret (mrs1, fr2, pst1, r)
-             end
-      end
-  .
-  Proof.
-    unfold interp_Es. my_rw. unfold transl_all.
-    rewrite unfold_interp. cbn. my_rw. unfold handle_callE. dependent destruction e. cbn. my_rw.
-    des_ifs.
-    { unfold triggerNB. grind. }
-    my_rw. grind. my_rw. des_ifs.
-    { unfold triggerNB. grind. }
-    my_rw. grind.
-  Qed.
-
-  Lemma interp_Es_rE
-        mn p rst0 pst0
-        (* (e: Es Σ) *)
-        T
-        (e: rE T)
-    :
-      interp_Es mn p (trigger e) (rst0, pst0) =
-      '(rst1, r) <- EventsL.handle_rE (handle_rE mn e) rst0;;
-      tau;; tau;; tau;;
-      Ret ((rst1, pst0), r)
-  .
-  Proof. unfold interp_Es. unfold transl_all. rewrite unfold_interp. cbn. my_rw. grind. my_rw. grind. Qed.
-
-  Lemma interp_Es_pE
-        mn p rst0 pst0
-        (* (e: Es Σ) *)
-        T
-        (e: pE T)
-    :
-      interp_Es mn p (trigger e) (rst0, pst0) =
-      '(pst1, r) <- EventsL.handle_pE (handle_pE mn e) pst0;;
-      tau;; tau;; tau;; tau;;
-      Ret ((rst0, pst1), r)
-  .
-  Proof. unfold interp_Es. unfold transl_all. rewrite unfold_interp. cbn. my_rw. grind. my_rw. grind. Qed.
-
-  Lemma interp_Es_eventE
-        mn p st0
-        (* (e: Es Σ) *)
-        T
-        (e: eventE T)
-    :
-      interp_Es mn p (trigger e) st0 = r <- trigger e;; tau;; tau;; tau;; tau;; Ret (st0, r)
-  .
-  Proof. unfold interp_Es. unfold transl_all. rewrite unfold_interp. cbn. my_rw. grind. my_rw. grind. my_rw. grind. Qed.
-
-  Lemma interp_Es_triggerUB
-        mn (prog: callE ~> itree Es)
-        st0
-        A
-    :
-      (interp_Es mn prog (triggerUB) st0: itree eventE (_ * A)) = triggerUB
-  .
-  Proof. unfold interp_Es. des_ifs. unfold transl_all. rewrite unfold_interp. cbn. my_rw. unfold triggerUB. grind. Qed.
-
-  Lemma interp_Es_triggerNB
-        mn (prog: callE ~> itree Es)
-        st0
-        A
-    :
-      (interp_Es mn prog (triggerNB) st0: itree eventE (_ * A)) = triggerNB
-  .
-  Proof. unfold interp_Es. des_ifs. unfold transl_all. rewrite unfold_interp. cbn. my_rw. unfold triggerNB. grind. Qed.
 End EVENTS.
 (* End Events. *)
 
@@ -845,53 +769,6 @@ Section MODSEM.
   Definition compile (ms: t): semantics := ModSemL.compile (lift ms).
 
   Definition wf (ms: t): Prop := ModSemL.wf (lift ms).
-
-  Theorem lift_lemma
-        (ms: t) fn args st0
-    :
-      (EventsL.interp_Es (ModSemL.prog ms) (ModSemL.prog ms (Call fn args)) st0) =
-      (interp_Es ms.(mn) (prog ms) (prog ms (Call fn args)) st0)
-  .
-  Proof.
-    ss.
-    unfold interp_Es. des_ifs; ss.
-    f_equal.
-    - unfold prog, ModSemL.prog. ss. repeat (apply func_ext_dep; i). des_ifs.
-      unfold unwrapU at 1. des_ifs.
-      + irw. des_ifs. rewrite find_map in *. uo. des_ifs. cbn in *. unfold map_snd in *. des_ifs.
-        eapply find_some in Heq0. des; ss. unfold compose in *. ss. des_sumbool. subst.
-        unfold unwrapU. des_ifs; cycle 1.
-        { eapply find_none in Heq; et. ss. des_sumbool; ss. }
-        irw. des_ifs.
-        eapply find_some in Heq. des; ss. des_sumbool. subst.
-        assert(i = i0).
-        { admit "uniqueness". }
-        subst. ss.
-      + rewrite find_map in *. uo. des_ifs. cbn in *.
-        unfold unwrapU. des_ifs.
-        { eapply find_some in Heq1. des; ss. des_sumbool. subst.
-          eapply find_none in Heq0; et. unfold compose in *. unfold map_snd in *. des_ifs. ss. des_sumbool; ss.
-        }
-        rewrite transl_all_bind. grind.
-        unfold triggerUB. unfold transl_all at 2. rewrite unfold_interp. irw. f_equiv. f_equiv. apply func_ext. ii; ss.
-    - unfold unwrapU at 1. des_ifs.
-      + irw. des_ifs. rewrite find_map in *. uo. des_ifs. cbn in *. unfold map_snd in *. des_ifs.
-        eapply find_some in Heq0. des; ss. unfold compose in *. ss. des_sumbool. subst.
-        unfold unwrapU. des_ifs; cycle 1.
-        { eapply find_none in Heq; et. ss. des_sumbool; ss. }
-        irw. des_ifs.
-        eapply find_some in Heq. des; ss. des_sumbool. subst.
-        assert(i = i0).
-        { admit "uniqueness". }
-        subst. ss.
-      + rewrite find_map in *. uo. des_ifs. cbn in *.
-        unfold unwrapU. des_ifs.
-        { eapply find_some in Heq1. des; ss. des_sumbool. subst.
-          eapply find_none in Heq0; et. unfold compose in *. unfold map_snd in *. des_ifs. ss. des_sumbool; ss.
-        }
-        rewrite transl_all_bind. grind.
-        unfold triggerUB. unfold transl_all at 2. rewrite unfold_interp. irw. f_equiv. f_equiv. apply func_ext. ii; ss.
-  Qed.
 
 End MODSEM.
 End ModSem.
