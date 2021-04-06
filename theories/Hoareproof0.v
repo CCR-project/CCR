@@ -10,12 +10,236 @@ Require Import HoareDef.
 Require Import SimSTS.
 Require Import SimGlobal.
 From Ordinal Require Import Ordinal Arithmetic.
+Require Import Red.
 
 Generalizable Variables E R A B C X Y Σ.
 
 Set Implicit Arguments.
 
 
+  Ltac interp_red := rewrite interp_vis ||
+                             rewrite interp_ret ||
+                             rewrite interp_tau ||
+                             rewrite interp_trigger ||
+                             rewrite interp_bind.
+
+Ltac _red_itree f :=
+  match goal with
+  | [ |- ITree.bind' _ ?itr = _] =>
+    match itr with
+    | ITree.bind' _ _ =>
+      idtac "bind";
+      instantiate (f:=_continue); apply bind_bind; fail
+    | Tau _ =>
+      instantiate (f:=_break); apply bind_tau; fail
+    | Ret _ =>
+      instantiate (f:=_continue); apply bind_ret_l; fail
+    | _ =>
+      fail
+    end
+  (* | [ |- trigger _ = _] => *)
+  (*   instantiate (f:=_break); apply bind_ret_r_rev; fail *)
+  | _ => fail
+  end.
+
+Ltac _red_interp_tgt_aux f itr :=
+  match itr with
+  | ITree.bind' _ _ =>
+    idtac "T - bind";
+    instantiate (f:=_continue); eapply interp_Es_bind; fail
+  | Tau _ =>
+    instantiate (f:=_break); apply interp_Es_tau; fail
+  | Ret _ =>
+    instantiate (f:=_continue); apply interp_Es_ret; fail
+  | trigger ?e =>
+    instantiate (f:=_break);
+    match (type of e) with
+    | context[callE] => apply interp_Es_callE
+    | context[eventE] => apply interp_Es_eventE
+    | context[pE] => apply interp_Es_pE
+    | context[rE] => apply interp_Es_rE
+    | _ => fail 2
+    end
+  | triggerUB =>
+    instantiate (f:=_break); apply interp_Es_triggerUB; fail
+  | triggerNB =>
+    idtac "T - triggerNB";
+    instantiate (f:=_break); apply interp_Es_triggerNB; fail
+  (* | unwrapU _ => *)
+  (*   instantiate (f:=_break); apply interp_tgt_unwrapU; fail *)
+  (* | unwrapN _ => *)
+  (*   instantiate (f:=_break); apply interp_tgt_unwrapN; fail *)
+  (* | assume _ => *)
+  (*   instantiate (f:=_break); apply interp_tgt_assume; fail *)
+  (* | guarantee _ => *)
+  (*   instantiate (f:=_break); apply interp_tgt_guarantee; fail *)
+  | _ =>
+    fail
+  end
+.
+
+Lemma bind_eta E X Y itr0 itr1 (ktr: ktree E X Y): itr0 = itr1 -> itr0 >>= ktr = itr1 >>= ktr. i; subst; refl. Qed.
+
+Ltac _red_interp_tgt f :=
+  match goal with
+  | [ |- ITree.bind' _ (interp_Es _ ?itr _) = _ ] =>
+    (* f_equal; _red_interp_tgt_aux f itr *)
+    eapply bind_eta; _red_interp_tgt_aux f itr
+  | [ |- interp_Es _ ?itr _ = _] =>
+    _red_interp_tgt_aux f itr
+  | _ => fail
+  end.
+
+Ltac _red_lsim f :=
+  (idtac "X"; _red_interp_tgt f) || (idtac "Y"; _red_itree f) || (idtac "Z"; fail).
+
+Ltac ired_l := try (prw _red_lsim 2 0).
+Ltac ired_r := try (prw _red_lsim 1 0).
+
+Ltac ired_both := ired_l; ired_r.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  (* Ltac ired_l := *)
+  (*   cbn; *)
+  (*   match goal with *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ (_ >>= _ >>= _) _) ] => *)
+  (*     prw ltac:(rrw bind_bind _continue) 2 0 *)
+  (*     (* apply simg_l_bind_bind; ired_l *) *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ ((tau;; _) >>= _) _) ] => *)
+  (*     apply simg_l_bind_tau *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ ((Ret _) >>= _) _) ] => *)
+  (*     apply simg_l_bind_ret_l; ired_l *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ (trigger _) _) ] => *)
+  (*     apply simg_l_trigger_ret_rev *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp _ _) _) ] => *)
+  (*     ((interp_red; ired_l) || idtac) *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp _ _) >>= _) _) ] => *)
+  (*     ((interp_red; ired_l) || idtac) *)
+
+  (*   (**************************** interp_Es ******************************) *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ (_ >>= _) _) _) ] => *)
+  (*     apply simg_l_interp_Es_bind; ired_l *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ (tau;; _) _) _) ] => *)
+  (*     apply simg_l_interp_Es_tau *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ (Ret _) _) _) ] => *)
+  (*     apply simg_l_interp_Es_ret *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ (trigger ?e) _) _) ] => *)
+  (*     match (type of e) with *)
+  (*     | context[rE] => apply simg_l_interp_Es_rE *)
+  (*     | context[eventE] => apply simg_l_interp_Es_eventE *)
+  (*     | context[pE] => apply simg_l_interp_Es_pE *)
+  (*     | context[callE] => apply simg_l_interp_Es_callE *)
+  (*     | _ => fail 2 *)
+  (*     end *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ triggerNB _) _) ] => *)
+  (*     apply simg_l_interp_Es_triggerNB *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ triggerUB _) _) ] => *)
+  (*     apply simg_l_interp_Es_triggerUB *)
+
+  (*   (**************************** interp_Es2 ******************************) *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ (_ >>= _) _) >>= _) _) ] => *)
+  (*     apply simg_l_interp_Es_bind2; ired_l *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ (tau;; _) _) >>= _) _) ] => *)
+  (*     apply simg_l_interp_Es_tau2 *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ (Ret _) _) >>= _) _) ] => *)
+  (*     apply simg_l_interp_Es_ret2; ired_l *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ (trigger ?e) _) >>= _) _) ] => *)
+  (*     match (type of e) with *)
+  (*     | context[rE] => apply simg_l_interp_Es_rE2 *)
+  (*     | context[eventE] => apply simg_l_interp_Es_eventE2 *)
+  (*     | context[pE] => apply simg_l_interp_Es_pE2 *)
+  (*     | context[callE] => apply simg_l_interp_Es_callE2 *)
+  (*     | _ => fail 2 *)
+  (*     end *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ triggerNB _) >>= _) _) ] => *)
+  (*     apply simg_l_interp_Es_triggerNB2 *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ triggerUB _) >>= _) _) ] => *)
+  (*     apply simg_l_interp_Es_triggerUB2 *)
+
+  (*   | _ => idtac *)
+  (*   end. *)
+
+  (* Ltac ired_r := *)
+  (*   cbn; *)
+  (*   match goal with *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (_ >>= _ >>= _)) ] => *)
+  (*     apply simg_r_bind_bind; ired_r *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((tau;; _) >>= _)) ] => *)
+  (*     apply simg_r_bind_tau *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((Ret _) >>= _)) ] => *)
+  (*     apply simg_r_bind_ret_l; ired_r *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (trigger _)) ] => *)
+  (*     apply simg_r_trigger_ret_rev *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp _ _)) ] => *)
+  (*     ((interp_red; ired_r) || idtac) *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp _ _) >>= _)) ] => *)
+  (*     ((interp_red; ired_r) || idtac) *)
+
+  (*   (**************************** interp_Es ******************************) *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ (_ >>= _) _)) ] => *)
+  (*     apply simg_r_interp_Es_bind; ired_l *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ (tau;; _) _)) ] => *)
+  (*     apply simg_r_interp_Es_tau *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ (Ret _) _)) ] => *)
+  (*     apply simg_r_interp_Es_ret *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ (trigger ?e) _)) ] => *)
+  (*     match (type of e) with *)
+  (*     | context[rE] => apply simg_r_interp_Es_rE *)
+  (*     | context[eventE] => apply simg_r_interp_Es_eventE *)
+  (*     | context[pE] => apply simg_r_interp_Es_pE *)
+  (*     | context[callE] => apply simg_r_interp_Es_callE *)
+  (*     | _ => fail 2 *)
+  (*     end *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ triggerNB _)) ] => *)
+  (*     apply simg_r_interp_Es_triggerNB *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ triggerUB _)) ] => *)
+  (*     apply simg_r_interp_Es_triggerUB *)
+
+  (*   (**************************** interp_Es2 ******************************) *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ (_ >>= _) _) >>= _)) ] => *)
+  (*     apply simg_r_interp_Es_bind2; ired_l *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ (tau;; _) _) >>= _)) ] => *)
+  (*     apply simg_r_interp_Es_tau2 *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ (Ret _) _) >>= _)) ] => *)
+  (*     apply simg_r_interp_Es_ret2; ired_l *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ (trigger ?e) _) >>= _)) ] => *)
+  (*     match (type of e) with *)
+  (*     | context[rE] => apply simg_r_interp_Es_rE2 *)
+  (*     | context[eventE] => apply simg_r_interp_Es_eventE2 *)
+  (*     | context[pE] => apply simg_r_interp_Es_pE2 *)
+  (*     | context[callE] => apply simg_r_interp_Es_callE2 *)
+  (*     | _ => fail 2 *)
+  (*     end *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ triggerNB _) >>= _)) ] => *)
+  (*     apply simg_r_interp_Es_triggerNB2 *)
+  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ triggerUB _) >>= _)) ] => *)
+  (*     apply simg_r_interp_Es_triggerUB2 *)
+
+  (*   | _ => idtac *)
+  (*   end. *)
+
+  (* Ltac ired_all := ired_l; ired_r. *)
+
+  Ltac mred :=
+    repeat (cbn;
+            ired_both
+           ).
+
+  Ltac steps := repeat (mred; try _step; des_ifs_safe).
 
 
 
