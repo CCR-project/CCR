@@ -452,528 +452,13 @@ End PSEUDOTYPING.
   Global Opaque interp_Es.
 
   Require Import SimGlobal.
-  Lemma simg_l_bind_bind
-        R S T
-        (k: ktree _ R S) (h: ktree _ S T)
-        x0 x1 x2 x3 x4 x5 a
-        (SIM: gpaco5 _simg x0 x1 x2 T x3 x4 (r <- a;; s <- k r;; h s) x5)
-    :
-      <<SIM: gpaco5 _simg x0 x1 x2 T x3 x4 (a >>= k >>= h) x5>>
-  .
-  Proof. rewrite bind_bind. ss. Qed.
 
-  Lemma simg_l_bind_tau
-        R S
-        (k: ktree _ R S)
-        x0 x1 x2 x3 x4 x5 a
-        (SIM: gpaco5 _simg x0 x1 x2 S x3 x4 (tau;; a >>= k) x5)
-    :
-      <<SIM: gpaco5 _simg x0 x1 x2 S x3 x4 ((tau;; a) >>= k) x5>>
-  .
-  Proof. rewrite bind_tau. ss. Qed.
 
-  Lemma simg_l_bind_ret_l
-        R S
-        (k: ktree _ R S)
-        x0 x1 x2 x3 x4 x5 a
-        (SIM: gpaco5 _simg x0 x1 x2 S x3 x4 (k a) x5)
-    :
-      <<SIM: gpaco5 _simg x0 x1 x2 S x3 x4 (Ret a >>= k) x5>>
-  .
-  Proof. rewrite bind_ret_l. ss. Qed.
 
-  Lemma simg_l_trigger_ret_rev
-        S
-        (e: eventE _)
-        x0 x1 x2 x3 x4 x5
-        (SIM: gpaco5 _simg x0 x1 x2 S x3 x4 (trigger e >>= (fun x => Ret x)) x5)
-    :
-      <<SIM: gpaco5 _simg x0 x1 x2 S x3 x4 (trigger e) x5>>
-  .
-  Proof. rewrite bind_ret_r in SIM. ss. Qed.
 
-  (**************************** interp_Es ******************************)
 
-  Lemma simg_l_interp_Es_bind
-        `{Σ: GRA.t}
-        R S
-        x0 x1 x2 x3 x4 x5
-        a (k: ktree _ R S) prog st0
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (`str: (_ * R) <- interp_Es prog a st0;;
-                                                   (let (st1, r) := str in interp_Es prog (k r) st1)) x5)
-    :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (interp_Es prog (a >>= k) st0) x5>>
-  .
-  Proof. rewrite interp_Es_bind. ss. Qed.
 
-  Lemma simg_l_interp_Es_ret
-        `{Σ: GRA.t}
-        R
-        x0 x1 x2 x3 x4 x5
-        (a: R) prog st0
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (Ret (st0, a)) x5)
-    :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (interp_Es prog (Ret a) st0) x5>>
-  .
-  Proof. rewrite interp_Es_ret. ss. Qed.
-
-  Lemma simg_l_interp_Es_tau
-        `{Σ: GRA.t}
-        R
-        x0 x1 x2 x3 x4 x5
-        (a: itree Es R) prog st0
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (tau;; (interp_Es prog a st0)) x5)
-    :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (interp_Es prog (tau;; a) st0) x5>>
-  .
-  Proof. rewrite interp_Es_tau. ss. Qed.
-
-  Lemma simg_l_interp_Es_rE
-        `{Σ: GRA.t}
-        R
-        x0 x1 x2 x3 x4 x5
-        (e: rE R) prog rst0 pst0
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (`rstr: (_ * R) <- handle_rE e rst0;; (let (rst1, r) := rstr in tau;; tau;; Ret (rst1, pst0, r))) x5)
-    :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (interp_Es prog (trigger e) (rst0, pst0)) x5>>
-  .
-  Proof. rewrite interp_Es_rE. ss. Qed.
-
-  Lemma simg_l_interp_Es_eventE
-        `{Σ: GRA.t}
-        R
-        x0 x1 x2 x3 x4 x5
-        (e: eventE R) prog st0
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (r <- trigger e;; (tau;; tau;; tau;; Ret (st0, r))) x5)
-    :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (interp_Es prog (trigger e) st0) x5>>
-  .
-  Proof. rewrite interp_Es_eventE. ss. Qed.
-
-  Lemma simg_l_interp_Es_pE
-        `{Σ: GRA.t}
-        R
-        x0 x1 x2 x3 x4 x5
-        (e: pE R) prog rst0 pst0
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (`pstr: (_ * R) <- handle_pE e pst0;; (let (pst1, r) := pstr in tau;; tau;; tau;; Ret (rst0, pst1, r))) x5)
-    :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (interp_Es prog (trigger e) (rst0, pst0)) x5>>
-  .
-  Proof. rewrite interp_Es_pE. ss. Qed.
-
-  Lemma simg_l_interp_Es_callE
-        `{Σ: GRA.t}
-        x0 x1 x2 x3 x4 x5
-        (e: callE Any.t) prog st0
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (tau;; interp_Es prog (prog _ e) st0) x5)
-    :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (interp_Es prog (trigger e) st0) x5>>
-  .
-  Proof. rewrite interp_Es_callE. ss. Qed.
-
-  Lemma simg_l_interp_Es_triggerNB
-        `{Σ: GRA.t}
-        R
-        x0 x1 x2 x3 x4 x5
-        prog st0
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (triggerNB) x5)
-    :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (interp_Es (A:=R) prog triggerNB st0) x5>>
-  .
-  Proof. rewrite interp_Es_triggerNB. ss. Qed.
-
-  Lemma simg_l_interp_Es_triggerUB
-        `{Σ: GRA.t}
-        R
-        x0 x1 x2 x3 x4 x5
-        prog st0
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (triggerUB) x5)
-    :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (interp_Es (A:=R) prog triggerUB st0) x5>>
-  .
-  Proof. rewrite interp_Es_triggerUB. ss. Qed.
-
-  (**************************** interp_Es2 ******************************)
-
-  Lemma simg_l_interp_Es_bind2
-        `{Σ: GRA.t}
-        R S T
-        x0 x1 x2 x3 x4 x5
-        a (k: ktree _ R S) prog st0
-        (h: ktree _ _ T)
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (`str: (_ * R) <- interp_Es prog a st0;;
-                                             (let (st1, r) := str in interp_Es prog (k r) st1) >>= h) x5)
-    :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 ((interp_Es prog (a >>= k) st0) >>= h) x5>>
-  .
-  Proof. rewrite interp_Es_bind. rp; et. grind. Qed.
-
-  Lemma simg_l_interp_Es_ret2
-        `{Σ: GRA.t}
-        R S
-        x0 x1 x2 x3 x4 x5
-        (a: R) prog st0 
-        (h: ktree _ _ S)
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (h (st0, a)) x5)
-    :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 ((interp_Es prog (Ret a) st0) >>= h) x5>>
-  .
-  Proof. rewrite interp_Es_ret. rp; et. grind. Qed.
-
-  Lemma simg_l_interp_Es_tau2
-        `{Σ: GRA.t}
-        R S
-        x0 x1 x2 x3 x4 x5
-        (a: itree Es R) prog st0
-        (h: ktree _ _ S)
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (tau;; ((interp_Es prog a st0)) >>= h) x5)
-    :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 ((interp_Es prog (tau;; a) st0) >>= h) x5>>
-  .
-  Proof. rewrite interp_Es_tau. rp; et. grind. Qed.
-
-  Lemma simg_l_interp_Es_rE2
-        `{Σ: GRA.t}
-        R S
-        x0 x1 x2 x3 x4 x5
-        (e: rE R) prog rst0 pst0
-        (h: ktree _ _ S)
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (`rstr: (_ * R) <- handle_rE e rst0;;
-                                                     (let (rst1, r) := rstr in tau;; tau;; h (rst1, pst0, r))) x5)
-    :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 ((interp_Es prog (trigger e) (rst0, pst0)) >>= h) x5>>
-  .
-  Proof. rewrite interp_Es_rE. rp; et. grind. Qed.
-
-  Lemma simg_l_interp_Es_eventE2
-        `{Σ: GRA.t}
-        R S
-        x0 x1 x2 x3 x4 x5
-        (e: eventE R) prog st0
-        (h: ktree _ _ S)
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (r <- trigger e;; (tau;; tau;; tau;; h (st0, r))) x5)
-    :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 ((interp_Es prog (trigger e) st0) >>= h) x5>>
-  .
-  Proof. rewrite interp_Es_eventE. rp; et. grind. Qed.
-
-  Lemma simg_l_interp_Es_pE2
-        `{Σ: GRA.t}
-        R S
-        x0 x1 x2 x3 x4 x5
-        (e: pE R) prog rst0 pst0
-        (h: ktree _ _ S)
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (`pstr: (_ * R) <- handle_pE e pst0;; (let (pst1, r) := pstr in tau;; tau;; tau;; h (rst0, pst1, r))) x5)
-    :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 ((interp_Es prog (trigger e) (rst0, pst0)) >>= h) x5>>
-  .
-  Proof. rewrite interp_Es_pE. rp; et. grind. Qed.
-
-  Lemma simg_l_interp_Es_callE2
-        `{Σ: GRA.t}
-        S
-        x0 x1 x2 x3 x4 x5
-        (e: callE Any.t) prog st0
-        (h: ktree _ _ S)
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (tau;; interp_Es prog (prog _ e) st0 >>= h) x5)
-    :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 ((interp_Es prog (trigger e) st0) >>= h) x5>>
-  .
-  Proof. rewrite interp_Es_callE. ss. rp; et. grind. Qed.
-
-  Lemma simg_l_interp_Es_triggerNB2
-        `{Σ: GRA.t}
-        R S
-        x0 x1 x2 x3 x4 x5
-        prog st0
-        (h: ktree _ _ S)
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (triggerNB >>= h) x5)
-    :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 ((interp_Es (A:=R) prog triggerNB st0) >>= h) x5>>
-  .
-  Proof. rewrite interp_Es_triggerNB. ss. Qed.
-
-  Lemma simg_l_interp_Es_triggerUB2
-        `{Σ: GRA.t}
-        R S
-        x0 x1 x2 x3 x4 x5
-        prog st0
-        (h: ktree _ _ S)
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (triggerUB >>= h) x5)
-    :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 (interp_Es (A:=R) prog triggerUB st0 >>= h) x5>>
-  .
-  Proof. rewrite interp_Es_triggerUB. ss. Qed.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  Lemma simg_r_bind_bind
-        R S T
-        (k: ktree _ R S) (h: ktree _ S T)
-        x0 x1 x2 x3 x4 x5 a
-        (SIM: gpaco5 _simg x0 x1 x2 T x3 x4 x5 (r <- a;; s <- k r;; h s))
-    :
-      <<SIM: gpaco5 _simg x0 x1 x2 T x3 x4 x5 (a >>= k >>= h)>>
-  .
-  Proof. rewrite bind_bind. ss. Qed.
-
-  Lemma simg_r_bind_tau
-        R S
-        (k: ktree _ R S)
-        x0 x1 x2 x3 x4 x5 a
-        (SIM: gpaco5 _simg x0 x1 x2 S x3 x4 x5 (tau;; a >>= k))
-    :
-      <<SIM: gpaco5 _simg x0 x1 x2 S x3 x4 x5 ((tau;; a) >>= k)>>
-  .
-  Proof. rewrite bind_tau. ss. Qed.
-
-  Lemma simg_r_bind_ret_l
-        R S
-        (k: ktree _ R S)
-        x0 x1 x2 x3 x4 x5 a
-        (SIM: gpaco5 _simg x0 x1 x2 S x3 x4 x5 (k a))
-    :
-      <<SIM: gpaco5 _simg x0 x1 x2 S x3 x4 x5 (Ret a >>= k)>>
-  .
-  Proof. rewrite bind_ret_l. ss. Qed.
-
-  Lemma simg_r_trigger_ret_rev
-        S
-        (e: eventE _)
-        x0 x1 x2 x3 x4 x5
-        (SIM: gpaco5 _simg x0 x1 x2 S x3 x4 x5 (trigger e >>= (fun x => Ret x)))
-    :
-      <<SIM: gpaco5 _simg x0 x1 x2 S x3 x4 x5 (trigger e)>>
-  .
-  Proof. rewrite bind_ret_r in SIM. ss. Qed.
-
-  (**************************** interp_Es ******************************)
-
-  Lemma simg_r_interp_Es_bind
-        `{Σ: GRA.t}
-        R S
-        x0 x1 x2 x3 x4 x5
-        a (k: ktree _ R S) prog st0
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (`str: (_ * R) <- interp_Es prog a st0;;
-                                                      (let (st1, r) := str in interp_Es prog (k r) st1)))
-    :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (interp_Es prog (a >>= k) st0)>>
-  .
-  Proof. rewrite interp_Es_bind. ss. Qed.
-
-  Lemma simg_r_interp_Es_ret
-        `{Σ: GRA.t}
-        R
-        x0 x1 x2 x3 x4 x5
-        (a: R) prog st0
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (Ret (st0, a)))
-    :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (interp_Es prog (Ret a) st0)>>
-  .
-  Proof. rewrite interp_Es_ret. ss. Qed.
-
-  Lemma simg_r_interp_Es_tau
-        `{Σ: GRA.t}
-        R
-        x0 x1 x2 x3 x4 x5
-        (a: itree Es R) prog st0
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (tau;; (interp_Es prog a st0)))
-    :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (interp_Es prog (tau;; a) st0)>>
-  .
-  Proof. rewrite interp_Es_tau. ss. Qed.
-
-  Lemma simg_r_interp_Es_rE
-        `{Σ: GRA.t}
-        R
-        x0 x1 x2 x3 x4 x5
-        (e: rE R) prog rst0 pst0
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (`rstr: (_ * R) <- handle_rE e rst0;; (let (rst1, r) := rstr in tau;; tau;; Ret (rst1, pst0, r))))
-    :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (interp_Es prog (trigger e) (rst0, pst0))>>
-  .
-  Proof. rewrite interp_Es_rE. ss. Qed.
-
-  Lemma simg_r_interp_Es_eventE
-        `{Σ: GRA.t}
-        R
-        x0 x1 x2 x3 x4 x5
-        (e: eventE R) prog st0
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (r <- trigger e;; (tau;; tau;; tau;; Ret (st0, r))))
-    :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (interp_Es prog (trigger e) st0)>>
-  .
-  Proof. rewrite interp_Es_eventE. ss. Qed.
-
-  Lemma simg_r_interp_Es_pE
-        `{Σ: GRA.t}
-        R
-        x0 x1 x2 x3 x4 x5
-        (e: pE R) prog rst0 pst0
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (`pstr: (_ * R) <- handle_pE e pst0;; (let (pst1, r) := pstr in tau;; tau;; tau;; Ret (rst0, pst1, r))))
-    :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (interp_Es prog (trigger e) (rst0, pst0))>>
-  .
-  Proof. rewrite interp_Es_pE. ss. Qed.
-
-  Lemma simg_r_interp_Es_callE
-        `{Σ: GRA.t}
-        x0 x1 x2 x3 x4 x5
-        (e: callE Any.t) prog st0
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (tau;; interp_Es prog (prog _ e) st0))
-    :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (interp_Es prog (trigger e) st0)>>
-  .
-  Proof. rewrite interp_Es_callE. ss. Qed.
-
-  Lemma simg_r_interp_Es_triggerNB
-        `{Σ: GRA.t}
-        R
-        x0 x1 x2 x3 x4 x5
-        prog st0
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (triggerNB))
-    :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (interp_Es (A:=R) prog triggerNB st0)>>
-  .
-  Proof. rewrite interp_Es_triggerNB. ss. Qed.
-
-  Lemma simg_r_interp_Es_triggerUB
-        `{Σ: GRA.t}
-        R
-        x0 x1 x2 x3 x4 x5
-        prog st0
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (triggerUB))
-    :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (interp_Es (A:=R) prog triggerUB st0)>>
-  .
-  Proof. rewrite interp_Es_triggerUB. ss. Qed.
-
-  (**************************** interp_Es2 ******************************)
-
-  Lemma simg_r_interp_Es_bind2
-        `{Σ: GRA.t}
-        R S T
-        x0 x1 x2 x3 x4 x5
-        a (k: ktree _ R S) prog st0
-        (h: ktree _ _ T)
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (`str: (_ * R) <- interp_Es prog a st0;;
-                                                      (let (st1, r) := str in interp_Es prog (k r) st1) >>= h))
-    :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 ((interp_Es prog (a >>= k) st0) >>= h)>>
-  .
-  Proof. rewrite interp_Es_bind. rp; et. grind. Qed.
-
-  Lemma simg_r_interp_Es_ret2
-        `{Σ: GRA.t}
-        R S
-        x0 x1 x2 x3 x4 x5
-        (a: R) prog st0 
-        (h: ktree _ _ S)
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (h (st0, a)))
-    :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 ((interp_Es prog (Ret a) st0) >>= h)>>
-  .
-  Proof. rewrite interp_Es_ret. rp; et. grind. Qed.
-
-  Lemma simg_r_interp_Es_tau2
-        `{Σ: GRA.t}
-        R S
-        x0 x1 x2 x3 x4 x5
-        (a: itree Es R) prog st0
-        (h: ktree _ _ S)
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (tau;; ((interp_Es prog a st0)) >>= h))
-    :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 ((interp_Es prog (tau;; a) st0) >>= h)>>
-  .
-  Proof. rewrite interp_Es_tau. rp; et. grind. Qed.
-
-  Lemma simg_r_interp_Es_rE2
-        `{Σ: GRA.t}
-        R S
-        x0 x1 x2 x3 x4 x5
-        (e: rE R) prog rst0 pst0
-        (h: ktree _ _ S)
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (`rstr: (_ * R) <- handle_rE e rst0;;
-                                                       (let (rst1, r) := rstr in tau;; tau;; h (rst1, pst0, r))))
-    :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 ((interp_Es prog (trigger e) (rst0, pst0)) >>= h)>>
-  .
-  Proof. rewrite interp_Es_rE. rp; et. grind. Qed.
-
-  Lemma simg_r_interp_Es_eventE2
-        `{Σ: GRA.t}
-        R S
-        x0 x1 x2 x3 x4 x5
-        (e: eventE R) prog st0
-        (h: ktree _ _ S)
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (r <- trigger e;; (tau;; tau;; tau;; h (st0, r))))
-    :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 ((interp_Es prog (trigger e) st0) >>= h)>>
-  .
-  Proof. rewrite interp_Es_eventE. rp; et. grind. Qed.
-
-  Lemma simg_r_interp_Es_pE2
-        `{Σ: GRA.t}
-        R S
-        x0 x1 x2 x3 x4 x5
-        (e: pE R) prog rst0 pst0
-        (h: ktree _ _ S)
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (`pstr: (_ * R) <- handle_pE e pst0;; (let (pst1, r) := pstr in tau;; tau;; tau;; h (rst0, pst1, r))))
-    :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 ((interp_Es prog (trigger e) (rst0, pst0)) >>= h)>>
-  .
-  Proof. rewrite interp_Es_pE. rp; et. grind. Qed.
-
-  Lemma simg_r_interp_Es_callE2
-        `{Σ: GRA.t}
-        S
-        x0 x1 x2 x3 x4 x5
-        (e: callE Any.t) prog st0
-        (h: ktree _ _ S)
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (tau;; interp_Es prog (prog _ e) st0 >>= h))
-    :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 ((interp_Es prog (trigger e) st0) >>= h)>>
-  .
-  Proof. rewrite interp_Es_callE. ss. rp; et. grind. Qed.
-
-  Lemma simg_r_interp_Es_triggerNB2
-        `{Σ: GRA.t}
-        R S
-        x0 x1 x2 x3 x4 x5
-        prog st0
-        (h: ktree _ _ S)
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (triggerNB >>= h))
-    :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 ((interp_Es (A:=R) prog triggerNB st0) >>= h)>>
-  .
-  Proof. rewrite interp_Es_triggerNB. ss. Qed.
-
-  Lemma simg_r_interp_Es_triggerUB2
-        `{Σ: GRA.t}
-        R S
-        x0 x1 x2 x3 x4 x5
-        prog st0
-        (h: ktree _ _ S)
-        (SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (triggerUB >>= h))
-    :
-      <<SIM: gpaco5 _simg x0 x1 x2 _ x3 x4 x5 (interp_Es (A:=R) prog triggerUB st0 >>= h)>>
-  .
-  Proof. rewrite interp_Es_triggerUB. ss. Qed.
-
-
-
-
+  Require Import Red.
 
   Ltac interp_red := rewrite interp_vis ||
                              rewrite interp_ret ||
@@ -981,130 +466,136 @@ End PSEUDOTYPING.
                              rewrite interp_trigger ||
                              rewrite interp_bind.
 
-  Ltac ired_l :=
-    cbn;
+  Ltac _red_itree f :=
     match goal with
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ (_ >>= _ >>= _) _) ] =>
-      apply simg_l_bind_bind; ired_l
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ ((tau;; _) >>= _) _) ] =>
-      apply simg_l_bind_tau
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ ((Ret _) >>= _) _) ] =>
-      apply simg_l_bind_ret_l; ired_l
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ (trigger _) _) ] =>
-      apply simg_l_trigger_ret_rev
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp _ _) _) ] =>
-      ((interp_red; ired_l) || idtac)
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp _ _) >>= _) _) ] =>
-      ((interp_red; ired_l) || idtac)
-
-    (**************************** interp_Es ******************************)
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ (_ >>= _) _) _) ] =>
-      apply simg_l_interp_Es_bind; ired_l
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ (tau;; _) _) _) ] =>
-      apply simg_l_interp_Es_tau
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ (Ret _) _) _) ] =>
-      apply simg_l_interp_Es_ret
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ (trigger ?e) _) _) ] =>
-      match (type of e) with
-      | context[rE] => apply simg_l_interp_Es_rE
-      | context[eventE] => apply simg_l_interp_Es_eventE
-      | context[pE] => apply simg_l_interp_Es_pE
-      | context[callE] => apply simg_l_interp_Es_callE
-      | _ => fail 2
+    | [ |- ITree.bind' _ ?itr = _] =>
+      match itr with
+      | ITree.bind' _ _ =>
+        instantiate (f:=_continue); apply bind_bind; fail
+      | Tau _ =>
+        instantiate (f:=_break); apply bind_tau; fail
+      | Ret _ =>
+        instantiate (f:=_continue); apply bind_ret_l; fail
+      | _ =>
+        fail
       end
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ triggerNB _) _) ] =>
-      apply simg_l_interp_Es_triggerNB
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ triggerUB _) _) ] =>
-      apply simg_l_interp_Es_triggerUB
-
-    (**************************** interp_Es2 ******************************)
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ (_ >>= _) _) >>= _) _) ] =>
-      apply simg_l_interp_Es_bind2; ired_l
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ (tau;; _) _) >>= _) _) ] =>
-      apply simg_l_interp_Es_tau2
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ (Ret _) _) >>= _) _) ] =>
-      apply simg_l_interp_Es_ret2; ired_l
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ (trigger ?e) _) >>= _) _) ] =>
-      match (type of e) with
-      | context[rE] => apply simg_l_interp_Es_rE2
-      | context[eventE] => apply simg_l_interp_Es_eventE2
-      | context[pE] => apply simg_l_interp_Es_pE2
-      | context[callE] => apply simg_l_interp_Es_callE2
-      | _ => fail 2
-      end
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ triggerNB _) >>= _) _) ] =>
-      apply simg_l_interp_Es_triggerNB2
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ triggerUB _) >>= _) _) ] =>
-      apply simg_l_interp_Es_triggerUB2
-
-    | _ => idtac
+    | _ => fail
     end.
 
-  Ltac ired_r :=
-    cbn;
-    match goal with
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (_ >>= _ >>= _)) ] =>
-      apply simg_r_bind_bind; ired_r
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((tau;; _) >>= _)) ] =>
-      apply simg_r_bind_tau
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((Ret _) >>= _)) ] =>
-      apply simg_r_bind_ret_l; ired_r
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (trigger _)) ] =>
-      apply simg_r_trigger_ret_rev
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp _ _)) ] =>
-      ((interp_red; ired_r) || idtac)
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp _ _) >>= _)) ] =>
-      ((interp_red; ired_r) || idtac)
+  (*** TODO: Move to ModSem.v ***)
+  Lemma interp_Es_unwrapU
+        `{Σ: GRA.t}
+        prog R st0 (r: option R)
+    :
+      interp_Es prog (unwrapU r) st0 = r <- unwrapU r;; Ret (st0, r)
+  .
+  Proof.
+    unfold unwrapU. des_ifs.
+    - rewrite interp_Es_ret. grind.
+    - rewrite interp_Es_triggerUB. unfold triggerUB. grind.
+  Qed.
 
-    (**************************** interp_Es ******************************)
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ (_ >>= _) _)) ] =>
-      apply simg_r_interp_Es_bind; ired_l
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ (tau;; _) _)) ] =>
-      apply simg_r_interp_Es_tau
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ (Ret _) _)) ] =>
-      apply simg_r_interp_Es_ret
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ (trigger ?e) _)) ] =>
-      match (type of e) with
-      | context[rE] => apply simg_r_interp_Es_rE
-      | context[eventE] => apply simg_r_interp_Es_eventE
-      | context[pE] => apply simg_r_interp_Es_pE
-      | context[callE] => apply simg_r_interp_Es_callE
-      | _ => fail 2
-      end
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ triggerNB _)) ] =>
-      apply simg_r_interp_Es_triggerNB
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ triggerUB _)) ] =>
-      apply simg_r_interp_Es_triggerUB
+  Lemma interp_Es_unwrapN
+        `{Σ: GRA.t}
+        prog R st0 (r: option R)
+    :
+      interp_Es prog (unwrapN r) st0 = r <- unwrapN r;; Ret (st0, r)
+  .
+  Proof.
+    unfold unwrapN. des_ifs.
+    - rewrite interp_Es_ret. grind.
+    - rewrite interp_Es_triggerNB. unfold triggerNB. grind.
+  Qed.
 
-    (**************************** interp_Es2 ******************************)
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ (_ >>= _) _) >>= _)) ] =>
-      apply simg_r_interp_Es_bind2; ired_l
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ (tau;; _) _) >>= _)) ] =>
-      apply simg_r_interp_Es_tau2
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ (Ret _) _) >>= _)) ] =>
-      apply simg_r_interp_Es_ret2; ired_l
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ (trigger ?e) _) >>= _)) ] =>
-      match (type of e) with
-      | context[rE] => apply simg_r_interp_Es_rE2
-      | context[eventE] => apply simg_r_interp_Es_eventE2
-      | context[pE] => apply simg_r_interp_Es_pE2
-      | context[callE] => apply simg_r_interp_Es_callE2
-      | _ => fail 2
-      end
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ triggerNB _) >>= _)) ] =>
-      apply simg_r_interp_Es_triggerNB2
-    | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ triggerUB _) >>= _)) ] =>
-      apply simg_r_interp_Es_triggerUB2
+  Lemma interp_Es_assume
+        `{Σ: GRA.t}
+        prog st0 (P: Prop)
+    :
+      interp_Es prog (assume P) st0 = assume P;; tau;; tau;; tau;; Ret (st0, tt)
+  .
+  Proof.
+    unfold assume.
+    repeat (try rewrite interp_Es_bind; try rewrite bind_bind). grind.
+    rewrite interp_Es_eventE.
+    repeat (try rewrite interp_Es_bind; try rewrite bind_bind). grind.
+    rewrite interp_Es_ret.
+    refl.
+  Qed.
 
-    | _ => idtac
-    end.
+  Lemma interp_Es_guarantee
+        `{Σ: GRA.t}
+        prog st0 (P: Prop)
+    :
+      interp_Es prog (guarantee P) st0 = guarantee P;; tau;; tau;; tau;; Ret (st0, tt)
+  .
+  Proof.
+    unfold guarantee.
+    repeat (try rewrite interp_Es_bind; try rewrite bind_bind). grind.
+    rewrite interp_Es_eventE.
+    repeat (try rewrite interp_Es_bind; try rewrite bind_bind). grind.
+    rewrite interp_Es_ret.
+    refl.
+  Qed.
 
-  Ltac ired_all := ired_l; ired_r.
 
-  Ltac mred :=
-    repeat (cbn;
-            ired_all
-           ).
+
+
+
+Ltac _red_Es_aux f itr :=
+  match itr with
+  | ITree.bind' _ _ =>
+    instantiate (f:=_continue); eapply interp_Es_bind; fail
+  | Tau _ =>
+    instantiate (f:=_break); apply interp_Es_tau; fail
+  | Ret _ =>
+    instantiate (f:=_continue); apply interp_Es_ret; fail
+  | trigger ?e =>
+    instantiate (f:=_break);
+    match (type of e) with
+    | context[callE] => apply interp_Es_callE
+    | context[eventE] => apply interp_Es_eventE
+    | context[pE] => apply interp_Es_pE
+    | context[rE] => apply interp_Es_rE
+    | _ => fail 2
+    end
+  | triggerUB =>
+    instantiate (f:=_break); apply interp_Es_triggerUB; fail
+  | triggerNB =>
+    instantiate (f:=_break); apply interp_Es_triggerNB; fail
+  | unwrapU _ =>
+    instantiate (f:=_break); apply interp_Es_unwrapU; fail
+  | unwrapN _ =>
+    instantiate (f:=_break); apply interp_Es_unwrapN; fail
+  | assume _ =>
+    instantiate (f:=_break); apply interp_Es_assume; fail
+  | guarantee _ =>
+    instantiate (f:=_break); apply interp_Es_guarantee; fail
+  | _ =>
+    fail
+  end
+.
+
+(*** TODO: move to ITreeLib ***)
+Lemma bind_eta E X Y itr0 itr1 (ktr: ktree E X Y): itr0 = itr1 -> itr0 >>= ktr = itr1 >>= ktr. i; subst; refl. Qed.
+
+Ltac _red_Es f :=
+  match goal with
+  | [ |- ITree.bind' _ (interp_Es _ ?itr _) = _ ] =>
+    eapply bind_eta; _red_Es_aux f itr
+  | [ |- interp_Es _ ?itr _ = _] =>
+    _red_Es_aux f itr
+  | _ => fail
+  end.
+
+Ltac _red_lsim f :=
+  (_red_Es f) || (_red_itree f) || (fail).
+
+Ltac ired_l := try (prw _red_lsim 2 0).
+Ltac ired_r := try (prw _red_lsim 1 0).
+
+Ltac ired_both := ired_l; ired_r.
+
+  Ltac mred := repeat (cbn; ired_both).
   Ltac Esred :=
             try rewrite ! interp_Es_rE; try rewrite ! interp_Es_pE;
             try rewrite ! interp_Es_eventE; try rewrite ! interp_Es_callE;
