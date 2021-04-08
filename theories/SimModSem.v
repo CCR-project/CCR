@@ -659,11 +659,21 @@ Section ADQ.
     - unfold transl_all. rewrite ! unfold_interp. ss. gstep. econs; eauto.
       pclearbot. gbase. eapply CIH; et.
     - unfold transl_all. rewrite ! interp_bind. rewrite ! unfold_interp. ss. rewrite ! bind_bind.
+      replace (trigger EventsL.PushFrame;; r1 <- trigger (Call fn varg);; x <- (trigger EventsL.PopFrame;; Ret r1);;
+               x0 <- (tau;; interp (handle_all (ModSem.mn ms_src)) (Ret x));; interp (handle_all (ModSem.mn ms_src)) (k_src x0)) with
+          (trigger EventsL.PushFrame;; r <- trigger (Call fn varg);; trigger EventsL.PopFrame;; tau;; (interp (handle_all (ModSem.mn ms_src)) (k_src r))); cycle 1.
+      { grind. }
+      replace (trigger EventsL.PushFrame;; r1 <- trigger (Call fn varg);; x <- (trigger EventsL.PopFrame;; Ret r1);;
+               x0 <- (tau;; interp (handle_all (ModSem.mn ms_tgt)) (Ret x));; interp (handle_all (ModSem.mn ms_tgt)) (k_tgt x0)) with
+          (trigger EventsL.PushFrame;; r <- trigger (Call fn varg);; trigger EventsL.PopFrame;; tau;; (interp (handle_all (ModSem.mn ms_tgt)) (k_tgt r))); cycle 1.
+      { grind. }
       gstep. econs; eauto.
       { rr. esplits; ss. }
-      ii. ss. des; ss.  subst. unfold alist_add. ss.
-      exploit K; et. i; des. pclearbot. exists i1.
-      ired. gstep. econs; et. gbase. eapply CIH; et.
+      ii. ss. des; ss. subst. unfold alist_add. ss.
+      exploit K; et. i; des. pclearbot. exists (2 * i1)%ord.
+      replace (interp (handle_all (ModSem.mn ms_src))) with (transl_all (ModSem.mn ms_src)) by refl.
+      replace (interp (handle_all (ModSem.mn ms_tgt))) with (transl_all (ModSem.mn ms_tgt)) by refl.
+      gbase. eapply CIH; et.
     - unfold transl_all. rewrite ! unfold_interp. ired.
       gstep. econs; et. ii. exploit K; et. i; des. pclearbot. esplits; et. ired. gstep. econs; et. gbase. eapply CIH; et.
     - unfold transl_all. rewrite ! unfold_interp. ired.
