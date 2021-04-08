@@ -274,13 +274,13 @@ Section CANCEL.
     fun varg_mid => interp_hCallE_mid ord_cur (body varg_mid)
   .
 
-  Definition fun_to_mid {AA AR} (body: AA -> itree (hCallE +' pE +' eventE) AR): (Any_mid -> itree EventsL.Es Any_src) :=
+  Definition fun_to_mid {AA AR} (mn: mname) (body: AA -> itree (hCallE +' pE +' eventE) AR): (Any_mid -> itree EventsL.Es Any_src) :=
     fun varg_mid =>
       '(ord_cur, varg_src) <- varg_mid↓ǃ;;
-      vret_src <- (transl_all "mn" (match ord_cur with
-                                    | ord_pure n => (interp_hCallE_mid ord_cur APC);; trigger (Choose _)
-                                    | _ => (body_to_mid ord_cur body) varg_src
-                                    end));;
+      vret_src <- (transl_all mn (match ord_cur with
+                                  | ord_pure n => (interp_hCallE_mid ord_cur APC);; trigger (Choose _)
+                                  | _ => (body_to_mid ord_cur body) varg_src
+                                  end));;
       Ret vret_src↑
   .
 
@@ -375,7 +375,7 @@ If this feature is needed; we can extend it then. At the moment, I will only all
   .
 
   Definition ms_mid: ModSemL.t := {|
-    ModSemL.fnsems := List.map (fun '(fn, sb) => (fn, fun_to_mid (fsb_body sb))) sbtb;
+    ModSemL.fnsems := List.map (fun '(fn, sb) => (fn, fun_to_mid sb.(fsb_fspec).(mn) (fsb_body sb))) sbtb;
     (* ModSem.initial_mrs := []; *)
     ModSemL.initial_mrs := List.map (fun '(mn, (mr, mp)) => (mn, (ε, mp))) ms_tgt.(ModSemL.initial_mrs);
     (*** Note: we don't use resources, so making everything as a unit ***)
@@ -554,8 +554,8 @@ Ltac _red_Es_aux f itr :=
     match (type of e) with
     | context[callE] => apply EventsL.interp_Es_callE
     | context[eventE] => apply EventsL.interp_Es_eventE
-    | context[pE] => apply EventsL.interp_Es_pE
-    | context[rE] => apply EventsL.interp_Es_rE
+    | context[EventsL.pE] => apply EventsL.interp_Es_pE
+    | context[EventsL.rE] => apply EventsL.interp_Es_rE
     | _ => fail 2
     end
   | triggerUB =>
