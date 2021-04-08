@@ -212,8 +212,8 @@ Section SIM.
       (K: forall vret mrs_src1 mrs_tgt1 (WF: wf (mrs_src1, mrs_tgt1)),
           exists i1, sim_itree _ _ RR i1 ((mrs_src1, fr_src0), k_src vret) ((mrs_tgt1, fr_tgt0), k_tgt vret))
     :
-      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), trigger (Call fn varg) >>= k_src)
-                 ((mrs_tgt0, fr_tgt0), trigger (Call fn varg) >>= k_tgt)
+      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), (trigger PushFrame;; r <- trigger (Call fn varg);; trigger PopFrame;; tau;; k_src r))
+                 ((mrs_tgt0, fr_tgt0), (trigger PushFrame;; r <- trigger (Call fn varg);; trigger PopFrame;; tau;; k_tgt r))
   | sim_itree_syscall
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       fn varg k_src k_tgt
@@ -608,7 +608,13 @@ Section SIM.
       eapply sim_itree_mon; eauto with paco.
     + rewrite ! bind_tau. econs; eauto.
       econs 2; eauto with paco. econs; eauto with paco.
-    + rewrite ! bind_bind. econs; eauto.
+    + replace (x <- (trigger PushFrame;; r0 <- trigger (Call fn varg);; trigger PopFrame;; (tau;; k_src0 r0));; k_src x) with
+          (trigger PushFrame;; r <- trigger (Call fn varg);; trigger PopFrame;; tau;; (k_src0 >=> k_src) r); cycle 1.
+      { grind. }
+      replace (x <- (trigger PushFrame;; r0 <- trigger (Call fn varg);; trigger PopFrame;; (tau;; k_tgt0 r0));; k_tgt x) with
+          (trigger PushFrame;; r <- trigger (Call fn varg);; trigger PopFrame;; tau;; (k_tgt0 >=> k_tgt) r); cycle 1.
+      { grind. }
+      econs; eauto.
       i. exploit K; eauto. i. des. eexists.
       eapply rclo6_clo_base. econs; eauto.
     + rewrite ! bind_bind. econs; eauto.
@@ -1498,24 +1504,31 @@ Section SIMMOD.
      inv SIM; pclearbot; ss; mgo; ss; mgo.
      - econs; ss. esplits; et. econs; eauto.
      - econs; ss. gbase. eapply CIH; eauto.
-     - econs; ss. unfold unwrapU.
+     - rewrite interp_Es_rE with (rst0:=(mrs_src, fr_src :: frs_src)).
+       rewrite interp_Es_rE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)).
+       mgo. ss. mgo.
+
        generalize (FNS fn). i. inv H; cycle 1.
-       { clear H1 H2. unfold triggerUB. mgo.
-         gstep. econs; ss.
+       { unfold ModSemL.prog at 3. mgo. unfold unwrapU. des_ifs_safe. mgo. unfold triggerUB. mgo.
+         econs; ss; et.
+         gstep. econs; ss; et.
+         gstep. econs; ss; et.
+         gstep. econs; ss; et.
+         instantiate (1:=1). instantiate (1:=0). eapply OrdArith.lt_from_nat; ss.
        }
-       clear H1 H2. mgo.
+       mgo.
        destruct a as [fn_src f_src]. destruct b as [fn_tgt f_tgt].
        inv IN. inv H. simpl in H1. clarify.
        exploit H0; eauto. instantiate (2:=varg). i. des.
-       mgo. ss.
-       (* erewrite interp_Es_rE with (rst0:=(mrs_src, fr_src :: frs_src)). *)
-       (* erewrite interp_Es_rE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo. *)
-       (* gstep. econs; auto. *)
-       (* gstep. econs; auto. *)
+       econs; et.
+       gstep. econs; et.
+       gstep. econs; et.
+       instantiate (1:=(20 + (arith n0 4 4))%ord).
        gclo. eapply wrespect5_companion; auto with paco.
        { eapply bindC_wrespectful. }
        econs.
-       + gbase. eapply CIH; eauto.
+       + gbase. eapply CIH; eauto. ss.
+         unfold unwrapU. des_ifs. mgo. ss.
        + i. ss. des.
          destruct vret_src as [[mrs_src' frs_src'] val_src].
          destruct vret_tgt as [[mrs_tgt' frs_tgt'] val_tgt].
@@ -1523,6 +1536,7 @@ Section SIMMOD.
          gstep. econs; auto.
          inv WF0. hexploit K; eauto. i. des. pclearbot.
          eapply CIH in H; eauto; ss.
+         gstep. econs; auto.
          gstep. econs; auto.
          gbase. eapply H.
      - econs. ii. mgo.
@@ -1767,15 +1781,20 @@ Section SIMMOD.
      }
 
      ginit. unfold assume. mgo.
+     generalize (FNS "main"). i. inv H; cycle 1.
+     { gstep. econs; eauto. i. esplits; eauto.
+       { eapply sim_wf0. rewrite sim_sk0 in *. ss. } clear x_src.
+       ss. unfold ITree.map, unwrapU, triggerUB. mgo.
+       des_ifs_safe.
+       mgo. gstep. econs; eauto. ss. }
+     destruct a, b. inv IN. mgo.
+     exploit H0; eauto. i. des.
+
+
      gstep. econs; eauto. i. esplits; eauto.
      { eapply sim_wf0. rewrite sim_sk0 in *. ss. } clear x_src.
      ss. unfold ITree.map, unwrapU, triggerUB. mgo.
-     generalize (FNS "main"). i. inv H.
-     2: { mgo. gstep. econs; eauto. ss. }
-     destruct a, b. inv IN. mgo.
-     exploit H0; eauto. i. des.
-     ss. mgo.
-     gstep. econs; eauto. gstep. econs; eauto.
+     des_ifs_safe. ss. mgo.
      guclo bindC_spec. econs.
      { gfinal. right. eapply lift_sim.
        { eapply FNS. }
@@ -1787,8 +1806,6 @@ Section SIMMOD.
        destruct vret_src as [[[mrs_src frs_src] p_src] v_src].
        destruct vret_tgt as [[[mrs_tgt frs_tgt] p_tgt] v_tgt]. ss. subst.
        mgo. ss. mgo.
-       gstep. econs; eauto.
-       gstep. econs; eauto.
        gstep. econs; eauto.
      }
      Unshelve. all: exact Ord.O.
