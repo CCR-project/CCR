@@ -384,7 +384,7 @@ Section MODSEML.
     (fun mn => match List.find (fun mnr => dec mn (fst mnr)) ms.(initial_mrs) with
                | Some r => fst (snd r)
                | None => ε
-               end, [ε]).
+               end, [ε; ε]).
   Definition initial_p_state: p_state :=
     (fun mn => match List.find (fun mnr => dec mn (fst mnr)) ms.(initial_mrs) with
                | Some r => (snd (snd r))
