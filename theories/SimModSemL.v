@@ -1508,10 +1508,10 @@ Section SIMMOD.
        inv IN. inv H. simpl in H1. clarify.
        exploit H0; eauto. instantiate (2:=varg). i. des.
        mgo. ss.
-       erewrite interp_Es_rE with (rst0:=(mrs_src, fr_src :: frs_src)).
-       erewrite interp_Es_rE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
-       gstep. econs; auto.
-       gstep. econs; auto.
+       (* erewrite interp_Es_rE with (rst0:=(mrs_src, fr_src :: frs_src)). *)
+       (* erewrite interp_Es_rE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo. *)
+       (* gstep. econs; auto. *)
+       (* gstep. econs; auto. *)
        gclo. eapply wrespect5_companion; auto with paco.
        { eapply bindC_wrespectful. }
        econs.
