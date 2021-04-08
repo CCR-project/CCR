@@ -30,6 +30,7 @@ Section Compile.
   (*   forall (intval : Z), *)
   (*     ((Zneg xH) < intval < modulus)%Z. *)
 
+  Variable m : Imp.module.
   Variable f : Imp.function.
   
   Variable s2p : string -> ident.
@@ -53,12 +54,12 @@ Section Compile.
   Let cfn_params := i2c_names f.(Imp.fn_params).
   Let cfn_temps := i2c_names f.(Imp.fn_vars).
 
-  Let imp_string_type l x : option Imp.type :=
+  Let string_key {T} l x : option T :=
     SetoidList.findA (sflib.beq_str x) l.
 
   Let imp_vs := f.(Imp.fn_params) ++ f.(Imp.fn_vars).
 
-  Let iv2t x := imp_string_type imp_vs x.
+  Let iv2t x := string_key imp_vs x.
   
   Fixpoint compile_expr expr : option Clight.expr :=
     match expr with
@@ -121,6 +122,9 @@ Section Compile.
     | [] => Some acc
     end
   .
+
+  Definition get_fun_expr fn rt : option Clight.expr :=
+    do (string_key m.(mod_funs)
   
   Fixpoint compile_stmt stmt : option Clight.statement :=
     match stmt with
@@ -145,10 +149,10 @@ Section Compile.
     | CallFun x ftype args =>
       do cargs <- (compile_exprs args []);
       match ftype with
-      | Fun fn _ =>
-        do f <- (compile_expr (Var fn));
+      | Fun fn rt =>
+        let f = (Evar (s2p fn) (Tfunction )) in
         Some (Scall (Some (s2p x)) f cargs)
-      | Sys sn _ =>
+      | Sys sn rt =>
         do s <- (compile_expr (Var sn));
         Some (Scall (Some (s2p x)) s cargs)
       end
