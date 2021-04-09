@@ -859,12 +859,6 @@ Section MODL.
     extensionality skenv. destruct (get_modsem0 skenv); ss.
   Qed.
 
-  Fixpoint add_list (mds: list t): t :=
-    match mds with
-    | hd::tl => add hd (add_list tl)
-    | [] => empty
-    end.
-
 End MODL.
 End ModL.
 
@@ -887,8 +881,46 @@ Section MOD.
   |}
   .
 
+  Coercion lift: t >-> ModL.t.
+
   Definition wf (md: t): Prop := <<WF: ModL.wf (lift md)>>.
 
+   Definition add_list (xs: list t): ModL.t :=
+     fold_right ModL.add ModL.empty (List.map lift xs)
+   .
+
+   Lemma add_list_single: forall (x: t), add_list [x] = x.
+   Proof. ii; cbn. rewrite ModL.add_empty_r. refl. Qed.
+
+   Lemma add_list_cons
+         x xs
+     :
+       (add_list (x :: xs)) = (ModL.add x (add_list xs))
+   .
+   Proof. ss. Qed.
+
+   Lemma add_list_snoc
+         x xs
+     :
+       (add_list (snoc xs x)) = (ModL.add (add_list xs) x)
+   .
+   Proof.
+     ginduction xs; ii; ss.
+     { cbn. rewrite ModL.add_empty_l. rewrite ModL.add_empty_r. refl. }
+     { cbn. rewrite <- ModL.add_assoc'. f_equal. rewrite <- IHxs. refl. }
+   Qed.
+
+   Lemma add_list_app
+         xs ys
+     :
+       add_list (xs ++ ys) = ModL.add (add_list xs) (add_list ys)
+   .
+   Proof.
+     (* unfold add_list. rewrite map_app. rewrite fold_right_app. *)
+     ginduction xs; ii; ss.
+     - cbn. rewrite ModL.add_empty_l. refl.
+     - rewrite ! add_list_cons. rewrite <- ModL.add_assoc'. f_equal. eapply IHxs; ss.
+   Qed.
 End MOD.
 End Mod.
 

@@ -1073,48 +1073,11 @@ End ADQ.
 Section SIMMOD.
    Context `{Σ: GRA.t}.
 
-   Definition add_list (xs: list Mod.t): ModL.t :=
-     fold_right ModL.add ModL.empty (List.map Mod.lift xs)
-   .
-
-   Lemma add_list_single: forall (x: Mod.t), add_list [x] = x.
-   Proof. ii; cbn. rewrite ModL.add_empty_r. refl. Qed.
-
-   Lemma add_list_cons
-         x xs
-     :
-       (add_list (x :: xs)) = (ModL.add x (add_list xs))
-   .
-   Proof. ss. Qed.
-
-   Lemma add_list_snoc
-         x xs
-     :
-       (add_list (snoc xs x)) = (ModL.add (add_list xs) x)
-   .
-   Proof.
-     ginduction xs; ii; ss.
-     { cbn. rewrite ModL.add_empty_l. rewrite ModL.add_empty_r. refl. }
-     { cbn. rewrite <- ModL.add_assoc'. f_equal. rewrite <- IHxs. refl. }
-   Qed.
-
-   Lemma add_list_app
-         xs ys
-     :
-       add_list (xs ++ ys) = ModL.add (add_list xs) (add_list ys)
-   .
-   Proof.
-     (* unfold add_list. rewrite map_app. rewrite fold_right_app. *)
-     ginduction xs; ii; ss.
-     - cbn. rewrite ModL.add_empty_l. refl.
-     - rewrite ! add_list_cons. rewrite <- ModL.add_assoc'. f_equal. eapply IHxs; ss.
-   Qed.
-
    Definition refines (md_tgt md_src: ModL.t): Prop :=
      (* forall (ctx: list Mod.t), Beh.of_program (ModL.compile (add_list (md_tgt :: ctx))) <1= *)
      (*                           Beh.of_program (ModL.compile (add_list (md_src :: ctx))) *)
-     forall (ctx: list Mod.t), Beh.of_program (ModL.compile (ModL.add (add_list ctx) md_tgt)) <1=
-                               Beh.of_program (ModL.compile (ModL.add (add_list ctx) md_src))
+     forall (ctx: list Mod.t), Beh.of_program (ModL.compile (ModL.add (Mod.add_list ctx) md_tgt)) <1=
+                               Beh.of_program (ModL.compile (ModL.add (Mod.add_list ctx) md_src))
    .
 
    (*** vertical composition ***)
@@ -1138,7 +1101,7 @@ ctx (a0 b0)
 (ctx a0) b1
       ***)
      rewrite ModL.add_assoc in PR.
-     specialize (SIM1 (snoc ctx md0_tgt)). spc SIM1. rewrite add_list_snoc in SIM1. eapply SIM1 in PR.
+     specialize (SIM1 (snoc ctx md0_tgt)). spc SIM1. rewrite Mod.add_list_snoc in SIM1. eapply SIM1 in PR.
      (***
 ctx (a0 b1)
 (a0 b1) ctx
@@ -1155,7 +1118,7 @@ a1 (b1 ctx)
 (a1 b1) ctx
 ctx (a1 b1)
       ***)
-     specialize (SIM0 (cons md1_src ctx)). spc SIM0. rewrite add_list_cons in SIM0. eapply SIM0 in PR.
+     specialize (SIM0 (cons md1_src ctx)). spc SIM0. rewrite Mod.add_list_cons in SIM0. eapply SIM0 in PR.
      eapply ModL.add_comm in PR.
      rewrite ModL.add_assoc' in PR.
      eapply ModL.add_comm in PR.
@@ -1193,9 +1156,9 @@ ctx (a1 b1)
 (*    Qed. *)
    Theorem refines_proper_r
          (mds0_src mds0_tgt: list Mod.t) (ctx: list Mod.t)
-         (SIM0: refines (add_list mds0_tgt) (add_list mds0_src))
+         (SIM0: refines (Mod.add_list mds0_tgt) (Mod.add_list mds0_src))
      :
-       <<SIM: refines (ModL.add (add_list mds0_tgt) (add_list ctx)) (ModL.add (add_list mds0_src) (add_list ctx))>>
+       <<SIM: refines (ModL.add (Mod.add_list mds0_tgt) (Mod.add_list ctx)) (ModL.add (Mod.add_list mds0_src) (Mod.add_list ctx))>>
    .
    Proof.
      ii. r in SIM0. rename ctx into xs. rename ctx0 into ys.
@@ -1214,7 +1177,7 @@ src + (xs + ys)
 (src + xs) + ys
 ys + (src + xs)
       ***)
-     specialize (SIM0 (xs ++ ys)). spc SIM0. rewrite add_list_app in SIM0. eapply SIM0 in PR.
+     specialize (SIM0 (xs ++ ys)). spc SIM0. rewrite Mod.add_list_app in SIM0. eapply SIM0 in PR.
      eapply ModL.add_comm in PR.
      rewrite ModL.add_assoc' in PR.
      eapply ModL.add_comm in PR.
@@ -1223,9 +1186,9 @@ ys + (src + xs)
 
    Theorem refines_proper_l
          (mds0_src mds0_tgt: list Mod.t) (ctx: list Mod.t)
-         (SIM0: refines (add_list mds0_tgt) (add_list mds0_src))
+         (SIM0: refines (Mod.add_list mds0_tgt) (Mod.add_list mds0_src))
      :
-       <<SIM: refines (ModL.add (add_list ctx) (add_list mds0_tgt)) (ModL.add (add_list ctx) (add_list mds0_src))>>
+       <<SIM: refines (ModL.add (Mod.add_list ctx) (Mod.add_list mds0_tgt)) (ModL.add (Mod.add_list ctx) (Mod.add_list mds0_src))>>
    .
    Proof.
      ii. r in SIM0. rename ctx into xs. rename ctx0 into ys.
@@ -1236,7 +1199,7 @@ ys + (xs + tgt)
 ys + (xs + src)
       ***)
      rewrite ModL.add_assoc' in PR.
-     specialize (SIM0 (ys ++ xs)). spc SIM0. rewrite add_list_app in SIM0. eapply SIM0 in PR.
+     specialize (SIM0 (ys ++ xs)). spc SIM0. rewrite Mod.add_list_app in SIM0. eapply SIM0 in PR.
      rewrite <- ModL.add_assoc' in PR.
      ss.
    Qed.
@@ -1280,14 +1243,14 @@ ys + (xs + src)
              mds_src mds_tgt
              (FORALL: List.Forall2 ModPair.sim mds_src mds_tgt)
      :
-       <<CR: refines (add_list mds_tgt) (add_list mds_src)>>
+       <<CR: refines (Mod.add_list mds_tgt) (Mod.add_list mds_src)>>
    .
    Proof.
      r. induction FORALL; ss.
-     rewrite ! add_list_cons.
+     rewrite ! Mod.add_list_cons.
      etrans.
-     { rewrite <- add_list_single. eapply refines_proper_r. rewrite ! add_list_single. eapply adequacy_local; et. }
-     replace (Mod.lift x) with (add_list [x]); cycle 1.
+     { rewrite <- Mod.add_list_single. eapply refines_proper_r. rewrite ! Mod.add_list_single. eapply adequacy_local; et. }
+     replace (Mod.lift x) with (Mod.add_list [x]); cycle 1.
      { cbn. rewrite ModL.add_empty_r. refl. }
      eapply refines_proper_l; et.
    Qed.

@@ -24,62 +24,100 @@ Section PROOF.
   Definition Σ: GRA.t := fun _ => of_RA.t RA.empty.
   Local Existing Instance Σ.
 
-  Definition FGImp: Mod.t := Mod.add_list [MutMain0.main ; MutFImp.F ; MutGImp.G].
+  Definition FGImp: ModL.t := Mod.add_list [MutMain0.main ; MutFImp.F ; MutGImp.G].
 
-  Definition FG0: Mod.t := Mod.add_list [MutMain0.main ; MutF0.F ; MutG0.G].
+  Definition FG0: ModL.t := Mod.add_list [MutMain0.main ; MutF0.F ; MutG0.G].
 
-  Definition FG1: Mod.t := Mod.add_list [MutMain1.main ; MutF1.F ; MutG1.G].
+  Definition FG1: ModL.t := Mod.add_list [MutMain1.main ; MutF1.F ; MutG1.G].
 
-  Definition FG2: Mod.t :=
-    Mod.add_list [
+  Definition add_list (ms: list ModL.t): ModL.t := fold_right ModL.add ModL.empty ms.
+
+  Definition FG2: ModL.t :=
+    add_list [
         md_src MutMain1.main mainsbtb ; (* Main *)
         md_src MutF1.F Fsbtb ;  (* F *)
         md_src MutG1.G Gsbtb  (* G *)
       ].
 
-  Definition FG3: Mod.t := {|
+  Definition F3: Mod.t := {|
     Mod.get_modsem := fun _ => {|
+      ModSem.fnsems := [("f", fun _ => trigger (Choose _))];
+      ModSem.mn := "F";
+      ModSem.initial_mr := ε;
+      ModSem.initial_st := tt↑;
+    |};
+    Mod.sk := Sk.unit;
+  |}
+  .
+
+  Definition G3: Mod.t := {|
+    Mod.get_modsem := fun _ => {|
+      ModSem.fnsems := [("g", fun _ => trigger (Choose _))];
+      ModSem.mn := "G";
+      ModSem.initial_mr := ε;
+      ModSem.initial_st := tt↑;
+    |};
+    Mod.sk := Sk.unit;
+  |}
+  .
+
+  Definition Main3: Mod.t := {|
+    Mod.get_modsem := fun _ => {|
+      ModSem.fnsems := [("main", fun _ => trigger (Choose _))];
+      ModSem.mn := "Main";
+      ModSem.initial_mr := ε;
+      ModSem.initial_st := tt↑;
+    |};
+    Mod.sk := Sk.unit;
+  |}
+  .
+
+  Definition FG3: ModL.t := {|
+    ModL.get_modsem := fun _ => {|
         ModSemL.fnsems :=
           [("main", fun _ => Ret (Vint 55)↑) ;
           ("f", fun _ => trigger (Choose _)) ;
           ("g", fun _ => trigger (Choose _))];
         ModSemL.initial_mrs := [("Main", (ε, tt↑)) ; ("F", (ε, tt↑)) ; ("G", (ε, tt↑))];
       |};
-    Mod.sk := Sk.unit;
+    ModL.sk := Sk.unit;
   |}
   .
 
   Lemma FGImp0_correct:
-    Beh.of_program (Mod.compile FGImp) <1= Beh.of_program (Mod.compile FG0).
+    SimModSem.refines FGImp FG0.
   Proof.
-    eapply ModPair.sim_list_adequacy. econs; [|econs; [|econs; ss]].
+    eapply SimModSem.adequacy_local_list. econs; [|econs; [|econs; ss]].
+    - econs; ss.
+      i. eapply SimModSem.adequacy_lift. eapply SimModSem.ModSemPair.self_sim_mod. ss. repeat (econs; ss).
     - split; auto.
-      + ii. ss. eapply MutFImp0proof.correct.
+      + ii. ss. eapply SimModSem.adequacy_lift. eapply MutFImp0proof.correct.
       + i. ss. split; ss; repeat econs; eauto.
     - split; auto.
-      + ii. ss. eapply MutGImp0proof.correct.
+      + ii. ss. eapply SimModSem.adequacy_lift. eapply MutGImp0proof.correct.
       + i. ss. split; ss; repeat econs; eauto.
   Qed.
 
   Lemma FG01_correct:
-    Beh.of_program (Mod.compile FG0) <1= Beh.of_program (Mod.compile FG1).
+    SimModSem.refines FG0 FG1.
   Proof.
-    eapply ModPair.sim_list_adequacy_closed. econs; [|econs; [|econs; ss]].
+    eapply SimModSem.adequacy_local_list. econs; [|econs; [|econs; ss]].
     - split; auto.
-      + ii. ss. eapply MutMain01proof.correct.
+      + ii. ss. eapply SimModSem.adequacy_lift. eapply MutMain01proof.correct.
       + i. ss. split; ss; repeat econs; eauto.
     - split; auto.
-      + ii. ss. eapply MutF01proof.correct.
+      + ii. ss. eapply SimModSem.adequacy_lift. eapply MutF01proof.correct.
       + i. ss. split; ss; repeat econs; eauto.
     - split; auto.
-      + ii. ss. eapply MutG01proof.correct.
+      + ii. ss. eapply SimModSem.adequacy_lift. eapply MutG01proof.correct.
       + i. ss. split; ss; repeat econs; eauto.
   Qed.
 
   Lemma FG12_correct:
-    Beh.of_program (Mod.compile FG1) <1= Beh.of_program (Mod.compile FG2).
+    Beh.of_program (ModL.compile FG1) <1= Beh.of_program (ModL.compile FG2).
   Proof.
     ii.
+    TTTTTTTTTTTTTTTTTTTTTTTTTTTttt
     eapply adequacy_type with (sbtb:=mainsbtb++(Fsbtb++Gsbtb)) in PR; ss.
     instantiate (1:=ε).
     cbn in *. unfold compose. ss. rewrite ! URA.unit_id. apply URA.wf_unit.
@@ -87,7 +125,26 @@ Section PROOF.
     all: try (by econs; ss).
   Qed.
 
-  Lemma FG23_correct: Beh.of_program (Mod.compile FG2) <1= Beh.of_program (Mod.compile FG3).
+  Lemma FG23_correct: SimModSem.refines FG2 FG3.
+  Proof.
+    eapply SimModSem.adequacy_local.
+    Opaque FG2 FG3.
+    hexploit (@SimModSem.adequacy_local _ FG2 FG3); et.
+    apply SimModSem.adequacy_local.
+    eapply ModPair.adequacy_local_closed. econs; auto.
+    2: { i. ss. split; ss; repeat (econs; eauto; ii; ss; des; clarify). }
+    ii.
+    eapply ModSemLPair.mk with (wf:=top1) (le:=top2); ss.
+    econs; [|econs; [|econs;ss]].
+    - init. unfold fun_to_src, cfun, body_to_src, mainBody, interp_hCallE_src.
+      interp_red. steps. interp_red. steps. interp_red. steps.
+    - init. unfold fun_to_src, cfun, body_to_src, mainBody, interp_hCallE_src.
+      interp_red. steps. force_l. eexists. steps.
+    - init. unfold fun_to_src, cfun, body_to_src, mainBody, interp_hCallE_src.
+      interp_red. steps. force_l. eexists. steps.
+  Qed.
+
+  Lemma FG23_correct: Beh.of_program (ModL.compile FG2) <1= Beh.of_program (ModL.compile FG3).
   Proof.
     eapply ModPair.adequacy_local_closed. econs; auto.
     2: { i. ss. split; ss; repeat (econs; eauto; ii; ss; des; clarify). }

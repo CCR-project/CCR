@@ -1848,41 +1848,6 @@ Section SIMMOD.
    Qed.
 End SIMMOD.
 
-Section SIMMODS.
-  Context `{Σ: GRA.t}.
-
-  Lemma sim_list_adequacy (mds_src mds_tgt: list ModL.t)
-        (FORALL: List.Forall2 sim mds_src mds_tgt)
-    :
-      <<CR: forall ctx, Beh.of_program (ModL.compile (ModL.add ctx (ModL.add_list mds_tgt))) <1=
-                        Beh.of_program (ModL.compile (ModL.add ctx (ModL.add_list mds_src)))>>.
-  Proof.
-    induction FORALL; ss.
-    cut (forall ctx,
-            Beh.of_program (ModL.compile (ModL.add ctx (ModL.add y (ModL.add_list l')))) <1=
-            Beh.of_program (ModL.compile (ModL.add ctx (ModL.add y (ModL.add_list l))))).
-    { ii. eapply H0 in PR.
-      apply ModL.add_comm in PR. apply ModL.add_comm.
-      erewrite <- ModL.add_assoc in *.
-      apply ModL.add_comm in PR. apply ModL.add_comm.
-      eapply adequacy_local.
-      { eauto. }
-      { eapply PR. }
-    }
-    { i. erewrite ModL.add_assoc in *. eapply IHFORALL. auto. }
-  Qed.
-
-  Lemma sim_list_adequacy_closed (mds_src mds_tgt: list ModL.t)
-        (FORALL: List.Forall2 sim mds_src mds_tgt)
-    :
-      Beh.of_program (ModL.compile (ModL.add_list mds_tgt)) <1=
-      Beh.of_program (ModL.compile (ModL.add_list mds_src)).
-  Proof.
-    hexploit sim_list_adequacy.
-    { eauto. }
-    i. specialize (H ModL.empty). repeat rewrite ModL.add_empty_l in H. auto.
-  Qed.
-End SIMMODS.
 End ModLPair.
 
 (* TODO: prove sim *)
