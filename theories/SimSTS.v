@@ -131,13 +131,19 @@ Section SIM.
   | sim_vis
       (SRT: _.(state_sort) st_src0 = vis)
       (SRT: _.(state_sort) st_tgt0 = vis)
-      i1 ev st_src1 st_tgt1
-      (STEP: _.(step) st_src0 (Some ev) st_src1)
-      (STEP: _.(step) st_tgt0 (Some ev) st_tgt1)
-      (SIM: (sim i1 st_src1 st_tgt1): Prop)
+      (SIM: forall ev st_tgt1
+          (STEP: _.(step) st_tgt0 (Some ev) st_tgt1)
+        ,
+          exists st_src1 (STEP: _.(step) st_src0 (Some ev) st_src1),
+            <<SIM: exists i1, sim i1 st_src1 st_tgt1>>)
     :
       _sim sim i0 st_src0 st_tgt0
 
+  | sim_vis_stuck_tgt
+      (SRT: _.(state_sort) st_tgt0 = vis)
+      (STUCK: forall ev st_tgt1, not (_.(step) st_tgt0 (Some ev) st_tgt1))
+    :
+      _sim sim i0 st_src0 st_tgt0
 
   | sim_demonic_src
       (SRT: _.(state_sort) st_src0 = demonic)
@@ -226,15 +232,16 @@ Section SIM.
     ii. inv IN.
 
     - econs 1; et.
-    - econs 2; et.
-    - econs 3; et. des. esplits; et.
-    - econs 4; et. i. exploit SIM; et. i; des. esplits; et.
+    - econs 2; et. i. exploit SIM; et. i; des. esplits; et.
+    - econs 3; et.
+    - econs 4; et. des. esplits; et.
     - econs 5; et. i. exploit SIM; et. i; des. esplits; et.
-    - econs 6; et. des. esplits; et.
-    - econs 7; et. i. exploit SIM; et. i; des. esplits; et.
+    - econs 6; et. i. exploit SIM; et. i; des. esplits; et.
+    - econs 7; et. des. esplits; et.
     - econs 8; et. i. exploit SIM; et. i; des. esplits; et.
-    - econs 9; et. des. esplits; et.
-    - econs 10; et. i. exploit SIM; et. i; des. esplits; et.
+    - econs 9; et. i. exploit SIM; et. i; des. esplits; et.
+    - econs 10; et. des. esplits; et.
+    - econs 11; et. i. exploit SIM; et. i; des. esplits; et.
   Qed.
 
   Hint Constructors _sim.
@@ -270,6 +277,8 @@ Section SIM.
       des. exfalso. punfold SPIN. inv SPIN; rewrite SRT1 in *; ss.
     - (** vis **)
       des. exfalso. punfold SPIN. inv SPIN; rewrite SRT1 in *; ss.
+    - (** vis stuck **)
+      exfalso. punfold SPIN. inv SPIN; rewrite SRT0 in *; ss.
     - (** dsrc **)
       des. pc SIM. gstep. econs 2; et. esplits; et. gbase. et.
     - (** dtgt **)
@@ -357,8 +366,10 @@ Section SIM.
       pc TL.
       punfold SIM. inv SIM; try rewrite SRT in *; ss.
       + (** vv **)
-        exploit wf_vis. { eapply SRT. } { eauto. } { eapply STEP. } i; des; clarify.
-        pfold. econs 4; eauto. pc SIM0. right. eapply CIH; eauto.
+        specialize (SIM0 ev st1). apply SIM0 in STEP; clear SIM0; des.
+        pfold. econs 4; eauto. pc SIM. right. eapply CIH; eauto.
+      + (** vis stuck **)
+        apply STUCK in STEP. clarify.
       + (** d_ **)
         des. pc SIM.
         pfold. econs 5; eauto. rr. esplits; eauto.

@@ -17,7 +17,7 @@ Section EVENTS.
   Variant eventE: Type -> Type :=
   | Choose (X: Type): eventE X
   | Take X: eventE X
-  | Syscall (fn: gname) (args: list val): eventE val
+  | Syscall (fn: gname) (args: list val) (rvs: val -> Prop): eventE val
   .
 
   Inductive callE: Type -> Type :=
@@ -406,7 +406,7 @@ Section MODSEM.
       end
     | VisF (Choose X) k => demonic
     | VisF (Take X) k => angelic
-    | VisF (Syscall fn args) k => vis
+    | VisF (Syscall fn args rvs) k => vis
     end
   .
 
@@ -424,23 +424,29 @@ Section MODSEM.
     :
       step (Vis (subevent _ (Take X)) k) None (k x)
   | step_syscall
-      fn args k ev rv
-      (SYSCALL: syscall_sem fn args = (ev, rv))
+      fn args rv (rvs: val -> Prop) k
+      (SYSCALL: syscall_sem (event_sys fn args rv))
+      (RETURN: rvs rv)
     :
-      step (Vis (subevent _ (Syscall fn args)) k) (Some ev) (k rv)
+      step (Vis (subevent _ (Syscall fn args rvs)) k) (Some (event_sys fn args rv)) (k rv)
   .
 
-  Program Definition interp: semantics := {|
-    STS.state := state;
-    STS.step := step;
-    STS.initial_state := initial_itr;
-    STS.state_sort := state_sort;
-  |}
+  Program Definition interp_itree: itree eventE Any.t -> semantics :=
+    fun itr =>
+      {|
+        STS.state := state;
+        STS.step := step;
+        STS.initial_state := itr;
+        STS.state_sort := state_sort;
+      |}
   .
-  Next Obligation. inv STEP; inv STEP0; ss. csc. rewrite SYSCALL in *. csc. Qed.
+  Next Obligation. inv STEP; inv STEP0; ss. csc. Qed.
   Next Obligation. inv STEP; ss. Qed.
   Next Obligation. inv STEP; ss. Qed.
 
+  Definition interp: semantics :=
+    interp_itree initial_itr.
+  
   (* Program Definition interp_no_forge: semantics := {| *)
   (*   STS.state := state; *)
   (*   STS.step := step; *)

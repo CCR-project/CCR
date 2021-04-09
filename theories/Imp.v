@@ -271,7 +271,7 @@ Section Denote.
         trigger (SetVar x v) ;; Ret Vundef
       | Sys f =>
         eval_args <- (mapT denote_expr args) ;;
-        v <- trigger (Syscall f eval_args) ;;
+        v <- trigger (Syscall f eval_args top1) ;;
         trigger (SetVar x v) ;; Ret Vundef
       end
 
@@ -324,7 +324,7 @@ Section Denote.
         trigger (SetVar x v) ;; Ret Vundef
       | Sys f =>
         eval_args <- (mapT denote_expr args) ;;
-        v <- trigger (Syscall f eval_args) ;;
+        v <- trigger (Syscall f eval_args top1) ;;
         trigger (SetVar x v) ;; Ret Vundef
       end.
   Proof. reflexivity. Qed.
@@ -588,8 +588,8 @@ Section PROOFS.
   Lemma interp_imp_Syscall
         st0 f args
     :
-      interp_imp (trigger (Syscall f args)) st0 =
-      r <- trigger (Syscall f args);; tau;; Ret (st0, r).
+      interp_imp (trigger (Syscall f args top1)) st0 =
+      r <- trigger (Syscall f args top1);; tau;; Ret (st0, r).
   Proof.
     unfold interp_imp, pure_state. grind.
   Qed.
@@ -686,7 +686,7 @@ Ltac imp_red :=
     | trigger (GetVar _) => rewrite interp_imp_GetVar
     | trigger (SetVar _ _) => rewrite interp_imp_SetVar
     | trigger (Call _ _) => rewrite interp_imp_Call
-    | trigger (Syscall _ _) => rewrite interp_imp_Syscall
+    | trigger (Syscall _ _ _) => rewrite interp_imp_Syscall
     | unwrapU _ => rewrite interp_imp_unwrapU
     | unwrapN _ => rewrite interp_imp_unwrapN
     | _ => fail
