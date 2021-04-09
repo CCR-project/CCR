@@ -32,7 +32,7 @@ Section G.
   Definition g_prog : program :=
     [("g", gF)].
 
-  Definition GSem: ModSemL.t := ImpMod.modsem "G" g_prog.
+  Definition GSem: ModSem.t := ImpMod.modsem "G" g_prog.
 
   Definition G : Mod.t := ImpMod.get_mod "G" g_prog.
 

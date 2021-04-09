@@ -34,17 +34,17 @@ Section ECHO.
   Qed.
   Local Existing Instance echoRA_inG.
 
-  Definition echo_impl: Mod.t :=
-    Mod.add_list [
-        Mem ; (* Mem *)
-        Main ; (* Main *)
-        Stack ; (* Stack *)
-        Echo ; (* Echo *)
-        Client (* Client *)
+  Definition echo_impl: ModL.t :=
+    ModL.add_list [
+        (Mem: ModL.t) ; (* Mem *)
+        (Main: ModL.t); (* Main *)
+        (Stack: ModL.t); (* Stack *)
+        (Echo: ModL.t) ; (* Echo *)
+        (Client: ModL.t) (* Client *)
       ].
 
   Theorem echo_correct:
-    Beh.of_program (Mod.compile echo_impl) <1= Beh.of_program (Mod.compile echo_spec).
+    Beh.of_program (ModL.compile echo_impl) <1= Beh.of_program (ModL.compile echo_spec).
   Proof.
     (* TODO: use Mem12proof Stack01proof Echo01proof EchoMain01proof Client01proof *)
   Admitted.

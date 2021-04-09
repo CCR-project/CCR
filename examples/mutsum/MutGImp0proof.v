@@ -1,4 +1,4 @@
-Require Import HoareDef MutHeader MutGImp MutG0 SimModSemL.
+Require Import HoareDef MutHeader MutGImp MutG0 SimModSem.
 Require Import Coqlib.
 Require Import Universe.
 Require Import Skeleton.
@@ -28,21 +28,21 @@ Set Implicit Arguments.
 
 Local Open Scope nat_scope.
 
-Section SIMMODSEML.
+Section SIMMODSEM.
 
   Context `{Σ: GRA.t}.
 
-  Let W: Type := (alist mname (Σ * Any.t)) * (alist mname (Σ * Any.t)).
+  Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
 
   Let wf: W -> Prop :=
     fun '(mrps_src0, mrps_tgt0) =>
-      (<<SRC: mrps_src0 = Maps.add "G" (ε, tt↑) Maps.empty>>) /\
-      (<<TGT: mrps_tgt0 = Maps.add "G" (ε, tt↑) Maps.empty>>)
+      (<<SRC: mrps_src0 = (ε, tt↑)>>) /\
+      (<<TGT: mrps_tgt0 = (ε, tt↑)>>)
   .
 
-  Theorem correct: ModSemLPair.sim MutG0.GSem MutGImp.GSem.
+  Theorem correct: ModSemPair.sim MutG0.GSem MutGImp.GSem.
   Proof.
-    econstructor 1 with (wf:=wf) (le:=top2); et; ss.
+    econstructor 1 with (wf:=wf); et; ss.
     econs; ss. init. unfold cfun.
     unfold gF.
     unfold MutGImp.gF.
@@ -63,4 +63,4 @@ Section SIMMODSEML.
       rewrite _UNWRAPU. imp_steps.
   Qed.
 
-End SIMMODSEML.
+End SIMMODSEM.

@@ -32,7 +32,7 @@ Section F.
   Definition f_prog : program :=
     [("f", fF)].
 
-  Definition FSem: ModSemL.t := ImpMod.modsem "F" f_prog.
+  Definition FSem: ModSem.t := ImpMod.modsem "F" f_prog.
 
   Definition F : Mod.t := ImpMod.get_mod "F" f_prog.
 
