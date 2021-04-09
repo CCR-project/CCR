@@ -177,7 +177,7 @@ Section CANCEL.
 
   Variable sbtb: list (gname * fspecbody).
   Let stb: list (gname * fspec) := List.map (fun '(gn, fsb) => (gn, fsb_fspec fsb)) sbtb.
-  Hypothesis WTY: ms_tgt.(ModSemL.fnsems) = List.map (fun '(fn, sb) => (fn, fun_to_tgt stb fn sb)) sbtb.
+  Hypothesis WTY: ms_tgt.(ModSemL.fnsems) = List.map (fun '(fn, sb) => (fn, (transl_all sb.(fsb_fspec).(mn)) <*> fun_to_tgt stb fn sb)) sbtb.
   Let md_mid: ModL.t := md_mid md_tgt sbtb.
   Let ms_mid: ModSemL.t := ms_mid md_tgt sbtb.
 
@@ -470,7 +470,7 @@ Section CANCEL.
     (* destruct vret_tgt as [[[mrs0 frs0] mps0] ord_cur]. *)
     destruct tbr.
     { des; et. Opaque ord_lt. destruct x4; ss; cycle 1. { exfalso. exploit x7; et. } steps. esplits; eauto. steps. unshelve esplits; eauto. steps. unfold unwrapU.
-      destruct (find (fun fnsem => dec fn (fst fnsem)) (List.map (fun '(fn0, sb) => (fn0, fun_to_mid (HoareDef.mn sb.(fsb_fspec)) sb.(fsb_body))) sbtb)) eqn:FINDFS; cycle 1.
+      destruct (find (fun fnsem => dec fn (fst fnsem)) (List.map (fun '(fn0, sb) => (fn0, transl_all sb.(fsb_fspec).(HoareDef.mn) <*> fun_to_mid sb.(fsb_body))) sbtb)) eqn:FINDFS; cycle 1.
       { steps. }
       destruct (find (fun fnsem => dec fn (fst fnsem)) (ModSemL.fnsems ms_tgt)) eqn:FINDFT0; cycle 1.
       { steps.
@@ -561,7 +561,7 @@ Section CANCEL.
     }
     { des. clear x7. exploit x8; et. i; clarify. clear x8.
       steps. esplits; eauto. steps. esplits; eauto. steps. unfold unwrapU.
-      destruct (find (fun fnsem => dec fn (fst fnsem)) (List.map (fun '(fn0, sb) => (fn0, fun_to_mid sb.(fsb_fspec).(HoareDef.mn) sb.(fsb_body))) sbtb)) eqn:FINDFS; cycle 1.
+      destruct (find (fun fnsem => dec fn (fst fnsem)) (List.map (fun '(fn0, sb) => (fn0, transl_all sb.(fsb_fspec).(HoareDef.mn) <*> fun_to_mid sb.(fsb_body))) sbtb)) eqn:FINDFS; cycle 1.
       { steps. }
       destruct (find (fun fnsem => dec fn (fst fnsem)) (ModSemL.fnsems ms_tgt)) eqn:FINDFT0; cycle 1.
       { exfalso.

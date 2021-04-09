@@ -151,26 +151,26 @@ Section EXTEND.
   Proof.
   Admitted.
 
-  Lemma modsempair_extends (md_tgt md_src0 md_src1: ModSemL.t)
-          sbtb stb0 stb1 initial_mrs
-          (SIM: ModSemLPair.sim (ModSemL.mk (List.map (fun '(fn, fsb) => (fn, fun_to_tgt stb1 fn fsb)) sbtb) initial_mrs) md_tgt)
-          (EXTENDS: extends stb0 stb1)
-    :
-      ModSemLPair.sim (ModSemL.mk (List.map (fun '(fn, fsb) => (fn, fun_to_tgt stb0 fn fsb)) sbtb) initial_mrs) md_tgt.
-  Proof.
-    inv SIM. econs.
-    { eapply le_PreOrder. }
-    { instantiate (1:=wf). simpl in *. revert sim_fnsems.
-      generalize (ModSemL.fnsems md_tgt). induction sbtb.
-      { i. inv sim_fnsems. econs. }
-      i. destruct a as [fn fb]. inv sim_fnsems. simpl in *. econs.
-      2: { eapply IHsbtb. auto. }
-      destruct y as [fn' tr]. inv H1. econs.
-      { unfold RelationPairs.RelCompFun in *. simpl in *. subst. auto. }
-      { unfold RelationPairs.RelCompFun in *. simpl in *. subst. ii.
-        exploit H0; [apply H|apply SIMMRS|]. i. des. exists n.
-        clear - EXTENDS x0. revert x0.
-  Admitted.
+  (* Lemma modsempair_extends (md_tgt md_src0 md_src1: ModSemL.t) *)
+  (*         sbtb stb0 stb1 initial_mrs *)
+  (*         (SIM: ModSemLPair.sim (ModSemL.mk (List.map (fun '(fn, fsb) => (fn, fun_to_tgt stb1 fn fsb)) sbtb) initial_mrs) md_tgt) *)
+  (*         (EXTENDS: extends stb0 stb1) *)
+  (*   : *)
+  (*     ModSemLPair.sim (ModSemL.mk (List.map (fun '(fn, fsb) => (fn, fun_to_tgt stb0 fn fsb)) sbtb) initial_mrs) md_tgt. *)
+  (* Proof. *)
+  (*   inv SIM. econs. *)
+  (*   { eapply le_PreOrder. } *)
+  (*   { instantiate (1:=wf). simpl in *. revert sim_fnsems. *)
+  (*     generalize (ModSemL.fnsems md_tgt). induction sbtb. *)
+  (*     { i. inv sim_fnsems. econs. } *)
+  (*     i. destruct a as [fn fb]. inv sim_fnsems. simpl in *. econs. *)
+  (*     2: { eapply IHsbtb. auto. } *)
+  (*     destruct y as [fn' tr]. inv H1. econs. *)
+  (*     { unfold RelationPairs.RelCompFun in *. simpl in *. subst. auto. } *)
+  (*     { unfold RelationPairs.RelCompFun in *. simpl in *. subst. ii. *)
+  (*       exploit H0; [apply H|apply SIMMRS|]. i. des. exists n. *)
+  (*       clear - EXTENDS x0. revert x0. *)
+  (* Admitted. *)
 
 End EXTEND.
 

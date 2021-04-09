@@ -39,6 +39,8 @@ Set Implicit Arguments.
 
 
 
+Arguments transl_all {Σ} _%string_scope {T}%type_scope _%itree_scope. (*** TODO: move to ModSem ***)
+
 Inductive ord: Type :=
 | ord_pure (n: Ord.t)
 | ord_top
@@ -246,10 +248,8 @@ Section CANCEL.
     fun varg_src => interp_hCallE_src (body varg_src)
   .
 
-  Arguments transl_all {Σ} _%string_scope {T}%type_scope _%itree_scope. (*** TODO: move to ModSem ***)
-
-  Definition fun_to_src {AA AR} (mn: mname) (body: AA -> itree (hCallE +' pE +' eventE) AR): (Any_src -> itree EventsL.Es Any_src) :=
-    (transl_all mn) <*> (cfun (body_to_src body))
+  Definition fun_to_src {AA AR} (body: AA -> itree (hCallE +' pE +' eventE) AR): (Any_src -> itree Es Any_src) :=
+    (cfun (body_to_src body))
   .
 
 
@@ -274,13 +274,13 @@ Section CANCEL.
     fun varg_mid => interp_hCallE_mid ord_cur (body varg_mid)
   .
 
-  Definition fun_to_mid {AA AR} (mn: mname) (body: AA -> itree (hCallE +' pE +' eventE) AR): (Any_mid -> itree EventsL.Es Any_src) :=
+  Definition fun_to_mid {AA AR} (body: AA -> itree (hCallE +' pE +' eventE) AR): (Any_mid -> itree Es Any_src) :=
     fun varg_mid =>
       '(ord_cur, varg_src) <- varg_mid↓ǃ;;
-      vret_src <- (transl_all mn (match ord_cur with
-                                  | ord_pure n => (interp_hCallE_mid ord_cur APC);; trigger (Choose _)
-                                  | _ => (body_to_mid ord_cur body) varg_src
-                                  end));;
+      vret_src <- (match ord_cur with
+                   | ord_pure n => (interp_hCallE_mid ord_cur APC);; trigger (Choose _)
+                   | _ => (body_to_mid ord_cur body) varg_src
+                   end);;
       Ret vret_src↑
   .
 
@@ -333,9 +333,9 @@ Section CANCEL.
     Ret vret_tgt (*** return ***)
   .
 
-  Definition fun_to_tgt (fn: gname) (sb: fspecbody): (Any_tgt -> itree EventsL.Es Any_tgt) :=
+  Definition fun_to_tgt (fn: gname) (sb: fspecbody): (Any_tgt -> itree Es Any_tgt) :=
     let fs: fspec := sb.(fsb_fspec) in
-    transl_all fs.(mn) <*> (HoareFun (fs.(precond)) (fs.(postcond)) sb.(fsb_body))
+    (HoareFun (fs.(precond)) (fs.(postcond)) sb.(fsb_body))
   .
 
 (*** NOTE:
@@ -357,10 +357,10 @@ If this feature is needed; we can extend it then. At the moment, I will only all
 
   Variable sbtb: list (gname * fspecbody).
   Let stb: list (gname * fspec) := List.map (fun '(gn, fsb) => (gn, fsb_fspec fsb)) sbtb.
-  Hypothesis WTY: ms_tgt.(ModSemL.fnsems) = List.map (fun '(fn, sb) => (fn, fun_to_tgt stb fn sb)) sbtb.
+  Hypothesis WTY: ms_tgt.(ModSemL.fnsems) = List.map (fun '(fn, sb) => (fn, (transl_all sb.(fsb_fspec).(mn)) <*> fun_to_tgt stb fn sb)) sbtb.
 
   Definition ms_src: ModSemL.t := {|
-    ModSemL.fnsems := List.map (fun '(fn, sb) => (fn, fun_to_src (sb.(fsb_fspec).(mn)) (fsb_body sb))) sbtb;
+    ModSemL.fnsems := List.map (fun '(fn, sb) => (fn, (transl_all sb.(fsb_fspec).(mn)) <*> fun_to_src (fsb_body sb))) sbtb;
     ModSemL.initial_mrs := List.map (fun '(mn, (mr, mp)) => (mn, (ε, mp))) ms_tgt.(ModSemL.initial_mrs);
     (*** Note: we don't use resources, so making everything as a unit ***)
   |}
@@ -375,7 +375,7 @@ If this feature is needed; we can extend it then. At the moment, I will only all
   .
 
   Definition ms_mid: ModSemL.t := {|
-    ModSemL.fnsems := List.map (fun '(fn, sb) => (fn, fun_to_mid sb.(fsb_fspec).(mn) (fsb_body sb))) sbtb;
+    ModSemL.fnsems := List.map (fun '(fn, sb) => (fn, (transl_all sb.(fsb_fspec).(mn)) <*> fun_to_mid (fsb_body sb))) sbtb;
     (* ModSem.initial_mrs := []; *)
     ModSemL.initial_mrs := List.map (fun '(mn, (mr, mp)) => (mn, (ε, mp))) ms_tgt.(ModSemL.initial_mrs);
     (*** Note: we don't use resources, so making everything as a unit ***)
