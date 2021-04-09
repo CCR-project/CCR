@@ -51,7 +51,6 @@ Definition var : Set := string.
 Inductive type : Type :=
 | Tint : type
 | Tptr : type -> type
-| Tvoid : type
 .
 
 Definition has_type (v: val) (t: type) : bool :=
@@ -59,7 +58,6 @@ Definition has_type (v: val) (t: type) : bool :=
   | Vint _, Tint => true
   | Vptr _ _, Tptr _ => true
   | Vundef, _ => true
-  | _, Tvoid => true
   | _, _ => false
   end
 .
