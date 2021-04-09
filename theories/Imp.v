@@ -182,7 +182,7 @@ End ImpNotations.
 (** Get/Set function local variables *)
 Variant ImpState : Type -> Type :=
 | GetVar (x : var) : ImpState val
-| SetVar (x : var) (v : val) : ImpState val.
+| SetVar (x : var) (v : val) : ImpState unit.
 
 (** Get pointer to a global variable *)
 Variant GlobVar : Type -> Type :=
@@ -428,16 +428,18 @@ Section Interp.
       | SetVar x v =>
         '(t, _) <- unwrapU (alist_find _ x le) ;;
         if (has_type v t)
-        then Ret (alist_add _ x (t, v) le, Vundef)
+        then Ret (alist_add _ x (t, v) le, tt)
         else triggerUB
       end.
 
   Definition interp_ImpState {eff} `{eventE -< eff}: itree (ImpState +' eff) ~> stateT lenv (itree eff) :=
     State.interp_state (case_ handle_ImpState ModSem.pure_state).
 
-  Definition interp_imp ge le (itr : itree effs val) :=
+  Definition interp_imp ge le (itr: itree effs val) :=
     interp_ImpState (interp_GlobVar itr ge) le.
 
+  Print Coercions.
+  
   Fixpoint init_lenv vts : lenv :=
     match vts with
     | [] => []
@@ -654,10 +656,10 @@ Section PROOFS.
   Lemma interp_imp_SetVar
         ge0 le0 x v
     :
-      interp_imp ge0 le0 (trigger (SetVar x v)) =
+      (interp_imp ge0 le0 (trigger (SetVar x v)) : itree Es (_ * (_ * val))) =
       '(t, _) <- unwrapU (alist_find _ x le0) ;;
       if (has_type v t)
-      then tau;; tau;; Ret ((alist_add _ x (t, v) le0, (ge0, Vundef)))
+           then tau;; tau;; Ret ((alist_add _ x (t, v) le0, (ge0, tt)))
       else triggerUB.
   Proof.
     unfold interp_imp, interp_ImpState, interp_GlobVar.
