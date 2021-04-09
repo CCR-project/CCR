@@ -387,7 +387,7 @@ Definition handle_ImpState {E: Type -> Type} `{Σ: GRA.t} `{eventE -< E}: ImpSta
 (*   interp_map t'. *)
 
 Definition interp_imp `{Σ: GRA.t} : itree (ImpState +' Es) ~> stateT lenv (itree Es) :=
-  State.interp_state (case_ handle_ImpState ModSemL.pure_state).
+  State.interp_state (case_ handle_ImpState ModSem.pure_state).
 
 
 (* Definition eval_imp `{Σ: GRA.t} (f: function) (args: list val) : itree Es val := *)
@@ -463,9 +463,11 @@ Section MODSEML.
   Set Typeclasses Depth 5.
   Instance Initial_void1 : @Initial (Type -> Type) IFun void1 := @elim_void1. (*** TODO: move to ITreelib ***)
 
-  Definition modsem: ModSemL.t := {|
-    ModSemL.fnsems := List.map (fun '(fn, st) => (fn, cfun (eval_imp st))) prog;
-    ModSemL.initial_mrs := [(mn, (URA.unit, tt↑))];
+  Definition modsem: ModSem.t := {|
+    ModSem.fnsems := List.map (fun '(fn, st) => (fn, cfun (eval_imp st))) prog;
+    ModSem.mn := mn;
+    ModSem.initial_mr := ε;
+    ModSem.initial_st := tt↑;
   |}.
 
   Definition get_mod: Mod.t := {|
@@ -507,7 +509,7 @@ Section Example_Extract.
 
   Definition ex_prog: Mod.t := ImpMod.get_mod "Main" ex_extract.
 
-  Definition imp_ex := ModSemL.initial_itr_no_check (Mod.enclose ex_prog).
+  Definition imp_ex := ModSemL.initial_itr_no_check (ModL.enclose ex_prog).
 
 End Example_Extract.
 

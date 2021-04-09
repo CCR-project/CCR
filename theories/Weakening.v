@@ -27,7 +27,7 @@ Section PROOF.
 
   Context `{Σ: GRA.t}.
 
-  Let W: Type := (alist mname (Σ * Any.t)) * (alist mname (Σ * Any.t)).
+  Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
 
   Variant fspec_weaker (fsp_src fsp_tgt: fspec): Prop :=
   | fspec_weaker_intro
@@ -76,12 +76,12 @@ Section PROOF.
   Let wf: W -> Prop :=
     fun '(mrps_src0, mrps_tgt0) =>
       exists (mr: Σ) (mp: Any.t),
-        (<<SRC: mrps_src0 = Maps.add m (mr, mp) Maps.empty>>) /\
-        (<<TGT: mrps_tgt0 = Maps.add m (mr, mp) Maps.empty>>)
+        (<<SRC: mrps_src0 = (mr, mp)>>) /\
+        (<<TGT: mrps_tgt0 = (mr, mp)>>)
   .
 
   Let liftRR: forall (R_src R_tgt: Type) (RR: R_src -> R_tgt -> Prop),
-      ((alist mname (Σ * Any.t)) * Σ) -> ((alist mname (Σ * Any.t)) * Σ) ->
+      (((Σ * Any.t)) * Σ) -> (((Σ * Any.t)) * Σ) ->
       R_src -> R_tgt -> Prop :=
     fun R_src R_tgt RR '(w_src, fr_src) '(w_tgt, fr_tgt) r_src r_tgt =>
       (<<WF: wf (w_src, w_tgt)>>) /\
@@ -106,7 +106,7 @@ Section PROOF.
     assert (SELFSIM: forall R o fr st_src st_tgt
                             (itr: itree (hCallE +' pE +' eventE) R)
                             (WF: wf (st_src, st_tgt)),
-               gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) bot6 bot6 R R (liftRR eq) 1 (st_src, fr, interp_hCallE_tgt stb_src mn o itr) (st_tgt, fr, interp_hCallE_tgt stb_tgt mn o itr)).
+               gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) bot6 bot6 R R (liftRR eq) 1 (st_src, fr, interp_hCallE_tgt stb_src o itr) (st_tgt, fr, interp_hCallE_tgt stb_tgt o itr)).
     { Local Transparent interp_hCallE_tgt.
       unfold interp_hCallE_tgt. gcofix CIH. i. ides itr.
       { repeat interp_red.
@@ -131,8 +131,6 @@ Section PROOF.
               intros (mr0, fr0). exists (mr0, fr0). exists 0.
               rewrite ! bind_bind.
               mstep. eapply sim_itree_mget_both.
-              { instantiate (1:=mp). instantiate (1:=mr). admit "ez". }
-              { instantiate (1:=mp). instantiate (1:=mr). admit "ez". }
               rewrite ! bind_bind.
               mstep. eapply sim_itree_fget_both.
               rewrite ! bind_bind.
@@ -140,10 +138,6 @@ Section PROOF.
               rewrite ! bind_ret_l.
               mstep. eapply sim_itree_fput_both.
               mstep. eapply sim_itree_mput_both.
-              { instantiate (1:=mp). instantiate (1:=mr). admit "ez". }
-              { instantiate (1:=mp). instantiate (1:=mr). admit "ez". }
-              { ss. }
-              { ss. }
               mstep. eapply sim_itree_choose_both.
               intros rarg. exists rarg. exists 0.
               rewrite ! bind_bind.
@@ -167,10 +161,7 @@ Section PROOF.
               rewrite ! bind_ret_l.
               mstep. eapply sim_itree_choose_both. i. split; eauto. exists 0.
               mstep. eapply sim_itree_call.
-              { unfold wf. esplits; eauto.
-                { instantiate (1:=mp). instantiate (1:=mr0). admit "ez". }
-                { admit "ez". }
-              }
+              { unfold wf. esplits; eauto. }
               i. unfold wf in WF. des; clarify. exists 0.
               mstep. eapply sim_itree_take_both. i. exists x_src0. exists 0.
               rewrite ! bind_bind.
@@ -179,8 +170,6 @@ Section PROOF.
               mstep. eapply sim_itree_take_both. i. exists x_src1. exists 0.
               rewrite ! bind_bind.
               mstep. eapply sim_itree_mget_both.
-              { instantiate (1:=mp0). instantiate (1:=mr1). admit "ez". }
-              { instantiate (1:=mp0). instantiate (1:=mr1). admit "ez". }
               rewrite ! bind_bind.
               mstep. eapply sim_itree_fget_both.
               rewrite ! bind_bind.
@@ -205,20 +194,12 @@ Section PROOF.
       { des; subst. repeat interp_red. rewrite ! bind_bind. destruct p.
         { cbn.
           mstep. eapply sim_itree_pput_both.
-          { instantiate (1:=mp). instantiate (1:=mr). admit "ez". }
-          { instantiate (1:=mp). instantiate (1:=mr). admit "ez". }
-          { ss. }
-          { ss. }
           rewrite ! bind_tau.
           mstep. eapply sim_itree_tau.
           rewrite ! bind_ret_l. gbase. eapply CIH. esplits; eauto.
-          { instantiate (1:=p). instantiate (1:=mr). admit "ez". }
-          { admit "ez". }
         }
         { cbn.
           mstep. eapply sim_itree_pget_both.
-          { instantiate (1:=mp). instantiate (1:=mr). admit "ez". }
-          { instantiate (1:=mp). instantiate (1:=mr). admit "ez". }
           rewrite ! bind_tau.
           mstep. eapply sim_itree_tau.
           rewrite ! bind_ret_l. gbase. eapply CIH. esplits; eauto.
@@ -261,8 +242,6 @@ Section PROOF.
       mstep. eapply sim_itree_fget_both.
       mstep. eapply sim_itree_fput_both.
       mstep. eapply sim_itree_mget_both.
-      { instantiate (1:=mp). instantiate (1:=mr). admit "ez". }
-      { instantiate (1:=mp). instantiate (1:=mr). admit "ez". }
       rewrite ! bind_bind.
       mstep. eapply sim_itree_fget_both. rewrite ! bind_bind.
       mstep. eapply sim_itree_take_both. i. esplit; ss. exists 0.
@@ -314,8 +293,6 @@ Section PROOF.
     mstep. eapply sim_itree_choose_both.
     intros (mret, fret). exists (mret, fret). exists 0.
     mstep. rewrite ! bind_bind. eapply sim_itree_mget_both.
-    { instantiate (1:=mp1). instantiate (1:=mr1). admit "ez". }
-    { instantiate (1:=mp1). instantiate (1:=mr1). admit "ez". }
     rewrite ! bind_bind.
     mstep. eapply sim_itree_fget_both.
     rewrite ! bind_bind.
@@ -323,10 +300,6 @@ Section PROOF.
     rewrite ! bind_ret_l.
     mstep. eapply sim_itree_fput_both.
     mstep. eapply sim_itree_mput_both.
-    { instantiate (1:=mp1). instantiate (1:=mr1). admit "ez". }
-    { instantiate (1:=mp1). instantiate (1:=mr1). admit "ez". }
-    { ss. }
-    { ss. }
     mstep. eapply sim_itree_choose_both. intros rret. exists rret. exists 0.
     rewrite ! bind_bind.
     mstep. eapply sim_itree_choose_both. i. esplit; eauto. exists 0.

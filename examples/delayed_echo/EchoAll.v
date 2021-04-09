@@ -34,8 +34,8 @@ Section ECHO.
   Qed.
   Local Existing Instance echoRA_inG.
 
-  Definition echo_spec: Mod.t :=
-    Mod.add_list [
+  Definition echo_spec: ModL.t :=
+    ModL.add_list [
         md_src Mem MemSbtb ; (* Mem *)
         md_src Main MainSbtb ; (* Main *)
         md_src Stack StackSbtb ; (* Stack *)
@@ -45,4 +45,4 @@ Section ECHO.
 
 End ECHO.
 
-Definition echo_prog := ModSemL.initial_itr_no_check (Mod.enclose echo_spec).
+Definition echo_prog := ModSemL.initial_itr_no_check (ModL.enclose echo_spec).

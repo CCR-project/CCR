@@ -3,7 +3,7 @@ Require Import Universe.
 Require Import STS.
 Require Import Behavior.
 Require Import ModSem.
-Import ModSemL. Import EventsL.
+Import ModSemL.
 Require Import Skeleton.
 Require Import PCM.
 Require Import Any.
@@ -578,7 +578,7 @@ Section CANCEL.
   Let W: Type := (r_state * p_state).
   (* Let wf: Ord.t -> W -> W -> Prop := top3. *)
 
-  Opaque interp_Es.
+  Opaque EventsL.interp_Es.
 
   Let p_src := ModSemL.prog ms_src.
   Let p_mid := ModSemL.prog ms_mid.
@@ -630,14 +630,14 @@ Section CANCEL.
            ).
 
   Let adequacy_type_aux__APC:
-    forall at_most o0
+    forall at_most o0 mn
            st_src0 st_tgt0
     ,
       simg (* (fun '(st_src1, r_src) '(st_tgt1, r_tgt) => st_src1 = st_src0 /\ st_tgt1 = st_tgt0 /\ r_src = r_tgt) *)
            (* (fun '(st_src1, _) '(st_tgt1, _) => st_src1 = st_src0 /\ st_tgt1 = st_tgt0) *)
            (fun _ '(st_tgt1, _) => st_tgt1 = st_tgt0)
            (C.myG o0 at_most + C.d)%ord (* (interp_Es p_src (trigger (Choose _)) st_src0) *) (Ret (st_src0, tt))
-           (interp_Es p_mid (interp_hCallE_mid (ord_pure o0) (_APC at_most)) st_tgt0)
+           (EventsL.interp_Es p_mid (transl_all mn (interp_hCallE_mid (ord_pure o0) (_APC at_most))) st_tgt0)
   .
   Proof.
     ginit.
@@ -649,36 +649,40 @@ Section CANCEL.
     destruct st_tgt0 as [rst_tgt0 pst_tgt0]. destruct rst_tgt0 as [mrs_tgt0 [|frs_hd frs_tl]]; ss.
     { admit "-----------------------------------it should not happen...". }
     unfold C.d.
-    repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+    Ltac tred := repeat (try rewrite transl_all_ret; try rewrite transl_all_bind; try rewrite transl_all_tau;
+                         try rewrite transl_all_triggerNB; try rewrite transl_all_triggerUB; try rewrite transl_all_eventE;
+                         try rewrite transl_all_rE; try rewrite transl_all_pE; try rewrite transl_all_callE).
+    Ltac myred := repeat (tred; hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+    myred.
     mred.
     destruct x.
-    { hred. steps. }
-    repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+    { myred. steps. }
+    myred.
     mred. unfold guarantee.
-    repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+    myred.
     des_ifs.
-    repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+    myred.
     unfold guarantee.
-    repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+    myred.
     unfold unwrapU. des_ifs; cycle 1.
     { admit "-----------------------------------FINDF: make it to unwrapN". }
-    repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+    myred.
     des_ifs.
-    repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+    myred.
     rewrite find_map in *. uo. des_ifs.
-    unfold fun_to_mid.
-    repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+    unfold fun_to_mid, compose.
+    myred.
     unfold unwrapN.
     des_ifs; cycle 1.
     { unfold triggerNB.
-      repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+      myred.
       ss.
     }
-    repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+    myred.
     des_ifs_safe.
     eapply pair_downcast_lemma in Heq. des. subst.
     des_ifs; ss.
-    repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+    myred.
 
     guclo ordC_spec. econs.
     { eapply OrdArith.add_base_l. }
@@ -691,9 +695,9 @@ Section CANCEL.
     {
       Local Transparent APC.
       unfold APC.
-      repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+      myred.
       unfold guarantee.
-      repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+      myred.
       guclo ordC_spec. econs.
       { instantiate (1:=(C.myG x1 x3 + C.d)%ord).
         rewrite <- C.my_thm3; et.
@@ -710,18 +714,18 @@ Section CANCEL.
     unfold C.f.
     guclo ordC_spec. econs.
     { rewrite <- OrdArith.add_assoc. refl. }
-    repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+    myred.
     guclo ordC_spec. econs; cycle 1.
     { eapply IH; et. econs; et. right; split; et. refl. }
     { eapply OrdArith.add_base_l. }
   Qed.
 
   Let adequacy_type_aux_APC:
-    forall o0 st_src0 st_tgt0
+    forall o0 st_src0 st_tgt0 mn
     ,
       simg (fun _ '(st_tgt1, _) => st_tgt1 = st_tgt0)
            (C.myF o0)%ord (Ret (st_src0, tt))
-           (interp_Es p_mid (interp_hCallE_mid (ord_pure o0) APC) st_tgt0)
+           (EventsL.interp_Es p_mid (transl_all mn (interp_hCallE_mid (ord_pure o0) APC)) st_tgt0)
   .
   Proof.
     ginit.
@@ -730,11 +734,11 @@ Section CANCEL.
     guclo ordC_spec. econs.
     { rewrite <- C.my_thm1. refl. }
     unfold guarantee.
-    repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+    myred.
     unfold C.c.
     guclo ordC_spec. econs.
     { rewrite <- OrdArith.add_assoc. refl. }
-    repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+    myred.
     guclo ordC_spec. econs.
     { etrans; [|eapply OrdArith.add_base_l]. eapply add_le_le; [|refl].
       instantiate (1:=C.myG o0 x).
@@ -760,14 +764,14 @@ Section CANCEL.
       AA AR
       args
       o0
-      body st_src0 st_tgt0
+      body st_src0 st_tgt0 mn
       (SIM: wf st_src0 st_tgt0)
     ,
       simg wf'
            (formula o0 + 10)%ord
            (* (if is_pure o0 then trigger (Choose _) else (interp_Es p_src ((fun_to_src (AA:=AA) (AR:=AR) body) args↑) st0)) *)
-           (interp_Es p_src (if is_pure o0 then trigger (Choose _) else ((fun_to_src (AA:=AA) (AR:=AR) body) args)) st_src0)
-           (interp_Es p_mid ((fun_to_mid body) (Any.pair o0↑ args)) st_tgt0)
+           (EventsL.interp_Es p_src (transl_all mn (if is_pure o0 then trigger (Choose _) else ((fun_to_src (AA:=AA) (AR:=AR) body) args))) st_src0)
+           (EventsL.interp_Es p_mid (transl_all mn ((fun_to_mid body) (Any.pair o0↑ args))) st_tgt0)
   .
   Proof.
     ginit.
@@ -776,7 +780,7 @@ Section CANCEL.
     unfold fun_to_src, fun_to_mid. steps. unfold unwrapN.
     destruct (Any.downcast (Any.pair (Any.upcast o0) args)) eqn:T; cycle 1.
     { unfold triggerNB.
-      repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+      myred.
       ss.
     }
     destruct p.
@@ -787,6 +791,7 @@ Section CANCEL.
       seal_left.
       steps.
       unseal_left.
+      repeat (tred; hred; mred).
       erewrite idK_spec2 at 1.
       guclo ordC_spec. econs.
       { eapply OrdArith.add_base_l. }
@@ -794,41 +799,45 @@ Section CANCEL.
       econs.
       { gfinal. right. eapply paco5_mon. { eapply adequacy_type_aux_APC. } ii; ss. }
       ii; ss. des_ifs. des_u.
-      repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+      myred.
       steps. esplits; eauto.
-      repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+      myred.
       steps.
     - (*** IMPURE ***)
       steps. unfold body_to_mid.
+      myred.
       abstr (body a) itr. clear body a AA.
 
       guclo ordC_spec. econs.
       { instantiate (1:=(10 + 100)%ord). rewrite <- ! OrdArith.add_from_nat. ss. refl. }
       (* { instantiate (1:=(1 + 99)%ord). rewrite <- OrdArith.add_from_nat. ss. refl. } *)
       guclo bindC_spec. eapply bindR_intro with (RR:=wf'); cycle 1.
-      { ii. subst. des_ifs. steps. r in SIM0. des; subst; ss. }
+      { ii. subst. des_ifs. myred. steps. r in SIM0. des; subst; ss. }
 
       revert_until CIH. gcofix CIH0. i.
 
       ides itr.
-      { unfold interp_hCallE_src, interp_hCallE_mid. try rewrite ! unfold_interp; cbn; mred.
+      { unfold interp_hCallE_src, interp_hCallE_mid. try rewrite ! unfold_interp; cbn; myred.
         steps. }
-      { unfold interp_hCallE_src, interp_hCallE_mid. try rewrite ! unfold_interp; cbn; mred.
+      { unfold interp_hCallE_src, interp_hCallE_mid. try rewrite ! unfold_interp; cbn; myred.
         steps. gbase. eapply CIH0; ss. }
       destruct e; cycle 1.
       {
-        unfold interp_hCallE_src, interp_hCallE_mid. try rewrite ! unfold_interp; cbn; mred.
+        unfold interp_hCallE_src, interp_hCallE_mid. try rewrite ! unfold_interp; cbn; myred.
         destruct s; ss.
         {
           destruct st_src0 as [rst_src0 pst_src0]; ss. destruct st_tgt0 as [rst_tgt0 pst_tgt0]; ss.
           destruct p; ss.
-          - steps. Esred. steps. gbase. eapply CIH0; ss; et.
-          - steps. Esred. steps. gbase. eapply CIH0; ss; et.
+          - steps. myred. steps. instantiate (1:=100). myred. steps. instantiate (1:=100). gbase. eapply CIH0; ss; et.
+          - steps. myred. steps. instantiate (1:=100). myred. steps. instantiate (1:=100). gbase. eapply CIH0; ss; et.
         }
         { dependent destruction e.
-          - steps. Esred. steps. esplits; et. steps. gbase. et.
-          - steps. Esred. steps. esplits; et. steps. gbase. et.
-          - steps. Esred. steps. esplits; et. steps. gbase. et.
+          - steps. myred. steps. unshelve esplits; et. instantiate (1:=100). myred. steps. instantiate (1:=100).
+            myred. steps. instantiate (1:=100). gbase. eapply CIH0; ss; et.
+          - steps. myred. steps. unshelve esplits; et. instantiate (1:=100). myred. steps. instantiate (1:=100).
+            myred. steps. instantiate (1:=100). gbase. eapply CIH0; ss; et.
+          - steps. myred. steps. unshelve esplits; et. instantiate (1:=100). myred. steps. instantiate (1:=100).
+            gbase. eapply CIH0; ss; et.
         }
       }
       dependent destruction h.
@@ -838,30 +847,36 @@ Section CANCEL.
       unfold interp_hCallE_src, interp_hCallE_mid. try rewrite ! unfold_interp; cbn; mred.
       destruct tbr.
       + (*** PURE CALL ***)
-        mred.
+        repeat (tred; mred; hred).
         seal_left.
-        (mred; try HoareDef._step; des_ifs_safe).
+        (repeat (tred; mred; hred); try HoareDef._step; des_ifs_safe).
+        (repeat (tred; mred; hred); try HoareDef._step; des_ifs_safe).
         unseal_left.
-        (mred; try HoareDef._step; des_ifs_safe).
+        repeat (tred; mred; hred).
+        (repeat (tred; mred; hred); try HoareDef._step; des_ifs_safe).
         instantiate (1:=(120 + formula (ord_pure x) + 100)%ord).
         seal_left.
-        repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+        myred.
         unfold guarantee.
-        repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
-        unfold unwrapU. des_ifs; cycle 1.
-        { admit "unwrapN!!!!!!!!!!!!!!!!!!!!!!!!!!". }
-        repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
-        des_ifs_safe.
-        repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+        myred.
         destruct rst_tgt0 as [mrs_tgt0 [|frs_tgt_hd frs_tgt_tl]]; ss.
         { unseal_left. steps. }
-        repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+        myred.
+        unfold compose.
+        unfold unwrapU. des_ifs; cycle 1.
+        { admit "unwrapN!!!!!!!!!!!!!!!!!!!!!!!!!!". }
+        myred.
+        des_ifs_safe.
+        myred.
         unseal_left.
         rewrite find_map in *. uo. des_ifs.
+        repeat (tred; hred; mred).
         guclo ordC_spec. econs.
         { instantiate (1:=(120 + (10 + C.myF x + 10))%ord).
           rewrite <- ! OrdArith.add_assoc. eapply add_le_le; try refl. eapply OrdArith.le_from_nat; ss. lia. }
         rename x into o1.
+        rewrite <- bind_bind.
+        rewrite <- bind_bind.
         guclo bindC_spec. econs.
         * (* guclo ordC_spec. econs. *)
           (* { eapply OrdArith.add_base_r. } *)
@@ -869,6 +884,7 @@ Section CANCEL.
           gbase. hexploit CIH; et.
           { instantiate (1:=(mrs_tgt0, ε :: frs_tgt_hd :: frs_tgt_tl, pst_tgt0)). instantiate (1:= (rst_src0, pst_tgt0)). ss. }
           intro T. instantiate (2:=(ord_pure o1)) in T. ss.
+          revert T. repeat (tred; hred; Esred; try rewrite EventsL.interp_Es_bind; try rewrite EventsL.interp_Es_tau; try rewrite EventsL.interp_Es_ret). i.
           eapply T.
         * ii. des_ifs. destruct p, p0; ss. des; subst.
           steps.
@@ -878,26 +894,31 @@ Section CANCEL.
           { steps. }
           steps.
           guclo ordC_spec. econs.
-          { instantiate (1:=100%ord). eapply OrdArith.le_from_nat; ss. lia. }
+          { instantiate (1:=101%ord). eapply OrdArith.le_from_nat; ss. lia. }
+          repeat (tred; hred; mred; try (gstep; econs; et; [ eapply add_le_lt; [ refl | eapply OrdArith.lt_from_nat; ss ] |  ]; i)).
+          gstep. econs; eauto.
           gbase. eapply CIH0. ss.
       + (*** IMPURE CALL ***)
-        steps. unfold unwrapU at 1. des_ifs; cycle 1.
-        { steps. }
-        steps.
-        unfold unwrapU. des_ifs; cycle 1.
-        { admit "unwrapN!!!!!!!!!!!!!!!!!!". }
-        steps.
-        destruct rst_tgt0 as [mrs_tgt0 [|frs_tgt_hd frs_tgt_tl]]; ss.
-        { steps. }
+        myred.
         destruct rst_src0 as [mrs_src0 [|frs_src_hd frs_src_tl]]; ss.
         { admit "SOMEHOW". }
-        steps.
+        myred. gstep. econs; eauto. instantiate (1:=(100 + (100 + 10) + 42)%ord). myred. unfold guarantee. myred.
+        destruct rst_tgt0 as [mrs_tgt0 [|frs_tgt_hd frs_tgt_tl]]; ss.
+        { unfold triggerNB. myred. ss. }
+        myred. steps. unfold unwrapU at 2. des_ifs; cycle 1.
+        { admit "unwrapN!!!!!!!!!!!!!!!!!!". }
+        myred. steps.
+        unfold unwrapU. des_ifs; cycle 1.
+        { unfold triggerUB. myred. ss. }
+        myred. steps.
+
         rewrite find_map in *. uo. des_ifs.
         apply find_some in Heq0. apply find_some in Heq1. des; ss. unfold compose in *. ss. des_sumbool. clarify.
         assert(f = f0).
         { admit "ez - uniqueness". }
         subst.
-        instantiate (1:=(100 + (100 + 10))%ord).
+        guclo ordC_spec. econs.
+        { eapply OrdArith.add_base_l. }
         guclo bindC_spec.
         econs.
         * hexploit CIH; et; cycle 1.
@@ -905,6 +926,8 @@ Section CANCEL.
           { ss. }
         * ii; ss. des_ifs. steps. destruct p, p0; ss. des; subst.
           steps. destruct r1; ss. des_ifs. { steps. } destruct r0; ss. des_ifs. { admit "somehow". } steps.
+          instantiate (1:=101).
+          myred. gstep; econs; et.
           gbase. eapply CIH0 ;ss.
   Unshelve.
     all: try (by econs; et).
@@ -924,6 +947,7 @@ Section CANCEL.
     unfold ITree.map.
     unfold assume.
     steps.
+    instantiate (1:=(10 + (100 + 10) + 42)%ord).
     esplits; et. { admit "ez - wf". } steps.
     Local Transparent ModSemL.prog.
     unfold ModSemL.prog at 4.
@@ -940,7 +964,7 @@ Section CANCEL.
     { esplits. refl. }
     des. clearbody rs_src0 rs_tgt0. subst.
     unfold unwrapU at 1. des_ifs; cycle 1.
-    { steps. }
+    { unfold triggerUB. myred. ss. }
     unfold unwrapU. des_ifs; cycle 1.
     { admit "unwrapN!!!!!!!!!!". }
     rewrite find_map in *. uo. des_ifs.
@@ -958,18 +982,15 @@ Section CANCEL.
     replace (([]: list val)↑) with (Any.pair ord_top↑ ([]: list val)↑) by admit "TODO".
     subst tmp.
 
-    instantiate (1:=(10 + (100 + 10))%ord).
+    guclo ordC_spec. econs.
+    { eapply OrdArith.add_base_l. }
     guclo bindC_spec.
     econs.
     - hexploit adequacy_type_aux; cycle 1.
       { intro T. gfinal. right. instantiate (3:=ord_top) in T. ss. eapply T. }
       ss.
     - ii. rr in SIM. des_ifs. des; ss. subst. r in SIM. des_ifs.
-      steps.
-      destruct r0; ss. des_ifs.
-      { steps. }
-      destruct r; ss. des_ifs.
-      { admit "somehow". }
+      myred.
       steps.
   Unshelve.
     all: ss.
