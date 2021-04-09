@@ -50,10 +50,10 @@ void echo() {
       if is_minus_one n
       then `_: val <- (ccall "echo_finish"  ([]: list val));; Ret Vundef
       else
-        my_list0 <- trigger (PGet "Echo");;
+        my_list0 <- trigger (PGet);;
         `my_list0: val <- my_list0↓?;;
         `my_list1: val <- (ccall "push" [my_list0; n]);;
-        trigger(PPut "Echo" my_list1↑);;
+        trigger(PPut my_list1↑);;
         `_: val <- ccall "echo" ([]: list val);;
         Ret Vundef
   .
@@ -71,13 +71,13 @@ void echo_finish() {
 
   Definition echo_finishF: list val -> itree Es val :=
     fun _ =>
-      my_list0 <- trigger (PGet "Echo");; `my_list0: val <- my_list0↓?;;
+      my_list0 <- trigger (PGet);; `my_list0: val <- my_list0↓?;;
       if is_zero my_list0
       then Ret Vundef
       else (
           `nref: val     <- (ccall "alloc" ([Vint 1%Z]));;
           `my_list1: val <- (ccall "pop2" ([my_list0; nref]));;
-          trigger (PPut "Echo" my_list1↑);;
+          trigger (PPut my_list1↑);;
           `n: val        <- (ccall "load" ([nref]));;
           `_: val        <- (ccall "putint" ([n]));;
           `_: val        <- (ccall "echo_finish" ([]: list val));;
@@ -85,9 +85,11 @@ void echo_finish() {
         )
   .
 
-  Definition EchoSem: ModSemL.t := {|
-    ModSemL.fnsems := [("echo", cfun echoF); ("echo_finish", cfun echo_finishF)];
-    ModSemL.initial_mrs := [("Echo", (ε, Vnullptr↑))];
+  Definition EchoSem: ModSem.t := {|
+    ModSem.fnsems := [("echo", cfun echoF); ("echo_finish", cfun echo_finishF)];
+    ModSem.mn := "Echo";
+    ModSem.initial_mr := ε;
+    ModSem.initial_st := Vnullptr↑;
   |}
   .
 

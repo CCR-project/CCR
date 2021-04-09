@@ -67,11 +67,11 @@ Possible improvements:
           In other words, the "Choose" in the code is choosing "x", but we want to choose "x" when writing the spec.
    ***)
 
-  Definition MainSem: ModSemL.t := {|
-    (* ModSemL.fnsems := [("main", mainF)]; *)
-    (* ModSemL.fnsems := List.map (map_snd (fun_to_tgt (MainStb ++ MemStb))) MainStb; *)
-    ModSemL.fnsems := List.map (fun '(fn, body) => (fn, fun_to_tgt (MemStb ++ MainStb) fn body)) MainSbtb;
-    ModSemL.initial_mrs := [("Main", (ε, tt↑))];
+  Definition MainSem: ModSem.t := {|
+    ModSem.fnsems := List.map (fun '(fn, body) => (fn, fun_to_tgt (MemStb ++ MainStb) fn body)) MainSbtb;
+    ModSem.mn := "Main";
+    ModSem.initial_mr := ε;
+    ModSem.initial_st := tt↑;
   |}
   .
 

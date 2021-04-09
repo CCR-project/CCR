@@ -52,9 +52,11 @@ def main(): Unit
       Ret Vundef
   .
 
-  Definition MainSem: ModSemL.t := {|
-    ModSemL.fnsems := [("main", cfun mainF)];
-    ModSemL.initial_mrs := [("Main", (ε, 0%Z↑))];
+  Definition MainSem: ModSem.t := {|
+    ModSem.fnsems := [("main", cfun mainF)];
+    ModSem.mn := "Main";
+    ModSem.initial_mr := ε;
+    ModSem.initial_st := 0%Z↑;
   |}
   .
 

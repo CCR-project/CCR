@@ -1,4 +1,4 @@
-Require Import Mem0 Mem1 HoareDef SimModSemL.
+Require Import Mem0 Mem1 HoareDef SimModSem.
 Require Import Coqlib.
 Require Import Universe.
 Require Import Skeleton.
@@ -154,12 +154,12 @@ Proof. ii. subst. unfold dec. destruct H; ss. Qed.
 (*   - *)
 (* Qed. *)
 
-Section SIMMODSEML.
+Section SIMMODSEM.
 
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG Mem1.memRA Σ}.
 
-  Let W: Type := (alist mname (Σ * Any.t)) * (alist mname (Σ * Any.t)).
+  Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
   (* Eval compute in (@RA.car (RA.excl Mem.t)). *)
   Eval compute in (@URA.car Mem1._memRA).
   Inductive sim_loc: option val -> URA.car (t:=(Excl.t _)) -> Prop :=
@@ -170,11 +170,8 @@ Section SIMMODSEML.
   Let wf: W -> Prop :=
     fun '(mrps_src0, mrps_tgt0) =>
       exists mr_src (mem_tgt: Mem.t),
-        (<<SRC: mrps_src0 = Maps.add "Mem" (mr_src, tt↑) Maps.empty>>) /\
-        (<<TGT: mrps_tgt0 = Maps.add "Mem" (ε, mem_tgt↑) Maps.empty>>) /\
-        (* (<<SIM: forall b ofs, sim_loc ((mem_tgt.(Mem.cnts)) b ofs) (mem_src b ofs)>>) *)
-        (* (<<SIM: forall b ofs v, (mem_tgt.(Mem.cnts) b ofs = Some v) -> iHyp (⌜True⌝) mem_src>>) *)
-        (* (<<SIM: iHyp (Forall b ofs v, ⌜mem_tgt.(Mem.cnts) b ofs = Some v⌝ -* Own (GRA.embed ((b, ofs) |-> [v]))) mem_src>>) *)
+        (<<SRC: mrps_src0 = (mr_src, tt↑)>>) /\
+        (<<TGT: mrps_tgt0 = (ε, mem_tgt↑)>>) /\
         (<<SIM: iHyp (Exists mem_src, Own (GRA.embed ((Auth.black mem_src): URA.car (t:=Mem1.memRA))) **
                                           (* (Forall b ofs, ⌜~(b = 0 /\ ofs = 0%Z)⌝ -* *)
                                           (*                  match mem_tgt.(Mem.cnts) b ofs with *)
@@ -196,10 +193,9 @@ Section SIMMODSEML.
   (* Opaque URA.pointwise. *)
   Opaque URA.unit.
 
-  Theorem correct: ModSemLPair.sim Mem1.MemSem Mem0.MemSem.
+  Theorem correct: ModSemPair.sim Mem1.MemSem Mem0.MemSem.
   Proof.
-   econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
-    { typeclasses eauto. }
+   econstructor 1 with (wf:=wf); et; swap 2 3.
     { ss. esplits; ss; et. hexploit gwf_dummy; i. iRefresh.
       eexists; iRefresh. iSplitP; ss.
       { eexists. rewrite URA.unit_id. refl. }
@@ -473,4 +469,4 @@ Section SIMMODSEML.
     }
   Qed.
 
-End SIMMODSEML.
+End SIMMODSEM.

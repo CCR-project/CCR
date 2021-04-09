@@ -4,7 +4,7 @@ Require Import Skeleton.
 Require Import PCM.
 Require Import ModSem Behavior.
 Require Import Relation_Definitions.
-Require Import HoareDef BW0 BW1 SimModSemL.
+Require Import HoareDef BW0 BW1 SimModSem.
 
 (*** TODO: export these in Coqlib or Universe ***)
 Require Import Relation_Operators.
@@ -52,27 +52,26 @@ End AUX.
 
 
 
-Section SIMMODSEML.
+Section SIMMODSEM.
 
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG BW1.bwRA Σ}.
 
-  Let W: Type := (alist mname (Σ * Any.t)) * (alist mname (Σ * Any.t)).
+  Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
 
   Let wf: W -> Prop :=
     fun '(mrps_src0, mrps_tgt0) =>
       exists (mr: Σ) (n: Z),
-        (<<SRC: mrps_src0 = Maps.add "BW" (mr, tt↑) Maps.empty>>) /\
-        (<<TGT: mrps_tgt0 = Maps.add "BW" (ε, n↑) Maps.empty>>) /\
+        (<<SRC: mrps_src0 = (mr, tt↑)>>) /\
+        (<<TGT: mrps_tgt0 = (ε, n↑)>>) /\
         (<<SIM: (iHyp (Own (GRA.embed (bw_full (Z.odd n)))) mr)>>)
   .
 
   Opaque URA.unit.
 
-  Theorem correct: ModSemLPair.sim BW1.BWSem BW0.BWSem.
+  Theorem correct: ModSemPair.sim BW1.BWSem BW0.BWSem.
   Proof.
-    econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
-    { typeclasses eauto. }
+    econstructor 1 with (wf:=wf); et; swap 2 3.
     { ss. unfold alist_add; cbn. esplits; ss; eauto.
       exists ε. rewrite URA.unit_id; ss. }
 
@@ -113,4 +112,4 @@ Section SIMMODSEML.
     }
   Qed.
 
-End SIMMODSEML.
+End SIMMODSEM.

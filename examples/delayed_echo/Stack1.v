@@ -79,9 +79,11 @@ Section PROOF.
     ]
   .
 
-  Definition StackSem: ModSemL.t := {|
-    ModSemL.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt (MemStb ++ StackStb) fn fsb)) StackSbtb;
-    ModSemL.initial_mrs := [("Stack", (ε, tt↑))];
+  Definition StackSem: ModSem.t := {|
+    ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt (MemStb ++ StackStb) fn fsb)) StackSbtb;
+    ModSem.mn := "Stack";
+    ModSem.initial_mr := ε;
+    ModSem.initial_st := tt↑;
   |}
   .
 

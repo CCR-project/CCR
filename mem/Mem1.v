@@ -165,10 +165,11 @@ Section PROOF.
     ]
   .
 
-  Definition MemSem: ModSemL.t := {|
-    ModSemL.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt MemStb fn fsb)) MemSbtb;
-    ModSemL.initial_mrs :=
-      [("Mem", (GRA.embed (Auth.black (M:=_memRA) ε), tt↑))];
+  Definition MemSem: ModSem.t := {|
+    ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt MemStb fn fsb)) MemSbtb;
+    ModSem.mn := "Mem";
+    ModSem.initial_mr := (GRA.embed (Auth.black (M:=_memRA) ε));
+    ModSem.initial_st := tt↑;
   |}
   .
 

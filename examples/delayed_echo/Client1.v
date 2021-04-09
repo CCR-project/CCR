@@ -36,9 +36,11 @@ Section PROOF.
     [("in", mk_specbody getint_spec getint_body); ("putint", mk_specbody putint_spec putint_body)]
   .
 
-  Definition ClientSem: ModSemL.t := {|
-    ModSemL.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt ClientStb fn fsb)) ClientSbtb;
-    ModSemL.initial_mrs := [("Client", (ε, tt↑))];
+  Definition ClientSem: ModSem.t := {|
+    ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt ClientStb fn fsb)) ClientSbtb;
+    ModSem.mn := "Client";
+    ModSem.initial_mr := ε;
+    ModSem.initial_st := tt↑;
   |}
   .
 

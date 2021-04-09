@@ -1,4 +1,4 @@
-Require Import HoareDef MutHeader MutMain0 MutMain1 SimModSemL.
+Require Import HoareDef MutHeader MutMain0 MutMain1 SimModSem.
 Require Import Coqlib.
 Require Import Universe.
 Require Import Skeleton.
@@ -26,25 +26,25 @@ Local Open Scope nat_scope.
 
 
 
-(* TODO: move to SimModSemL & add cpn3_wcompat *)
+(* TODO: move to SimModSem & add cpn3_wcompat *)
 Hint Resolve sim_itree_mon: paco.
 
 
-Section SIMMODSEML.
+Section SIMMODSEM.
 
   Context `{Σ: GRA.t}.
 
-  Let W: Type := (alist mname (Σ * Any.t)) * (alist mname (Σ * Any.t)).
+  Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
 
   Let wf: W -> Prop :=
     fun '(mrps_src0, mrps_tgt0) =>
-      (<<SRC: mrps_src0 = Maps.add "Main" (ε, tt↑) Maps.empty>>) /\
-      (<<TGT: mrps_tgt0 = Maps.add "Main" (ε, tt↑) Maps.empty>>)
+      (<<SRC: mrps_src0 = (ε, tt↑)>>) /\
+      (<<TGT: mrps_tgt0 = (ε, tt↑)>>)
   .
 
-  Theorem correct: ModSemLPair.sim MutMain1.mainSem MutMain0.mainSem.
+  Theorem correct: ModSemPair.sim MutMain1.mainSem MutMain0.mainSem.
   Proof.
-    econstructor 1 with (wf:=wf) (le:=top2); et; ss.
+    econstructor 1 with (wf:=wf); et; ss.
     econs; ss. init.
     unfold mainF, mainBody.
     harg_tac. des; clarify. steps. anytac. steps.
@@ -53,4 +53,4 @@ Section SIMMODSEML.
     steps. hret_tac (@URA.unit (GRA.to_URA Σ)) (URA.add rarg_src rret); ss.
   Qed.
 
-End SIMMODSEML.
+End SIMMODSEM.

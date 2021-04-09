@@ -5,7 +5,7 @@ Require Import Skeleton.
 Require Import PCM.
 Require Import ModSem Behavior.
 Require Import Relation_Definitions.
-Require Import HoareDef Echo0 Echo1 SimModSemL.
+Require Import HoareDef Echo0 Echo1 SimModSem.
 
 (*** TODO: export these in Coqlib or Universe ***)
 Require Import Relation_Operators.
@@ -100,20 +100,20 @@ Global Opaque _APC.
 
 
 
-Section SIMMODSEML.
+Section SIMMODSEM.
 
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG Mem1.memRA Σ}.
   Context `{@GRA.inG Echo1.echoRA Σ}.
 
-  Let W: Type := (alist mname (Σ * Any.t)) * (alist mname (Σ * Any.t)).
+  Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
   Eval compute in (@URA.car Mem1._memRA).
 
   Let wf: W -> Prop :=
     fun '(mrps_src0, mrps_tgt0) =>
       exists (mr: Σ) (ll: val),
-        (<<SRC: mrps_src0 = Maps.add "Echo" (mr, tt↑) Maps.empty>>) /\
-        (<<TGT: mrps_tgt0 = Maps.add "Echo" (ε, ll↑) Maps.empty>>) /\
+        (<<SRC: mrps_src0 = (mr, tt↑)>>) /\
+        (<<TGT: mrps_tgt0 = (ε, ll↑)>>) /\
         (<<SIM: (iHyp (Exists ns, ((Own(GRA.embed(echo_black ll ns))) ** is_list ll (List.map Vint ns)) ∨ (Own(GRA.embed(echo_white ll ns)))) mr)>>)
   .
 
@@ -124,10 +124,9 @@ Section SIMMODSEML.
   Opaque URA.unit.
   Opaque points_to.
 
-  Theorem correct: ModSemLPair.sim Echo1.EchoSem Echo0.EchoSem.
+  Theorem correct: ModSemPair.sim Echo1.EchoSem Echo0.EchoSem.
   Proof.
-    econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
-    { typeclasses eauto. }
+    econstructor 1 with (wf:=wf); et; swap 2 3.
     { ss. unfold alist_add; cbn. esplits; ss; eauto. hexploit gwf_dummy; i. eexists nil; ss; iRefresh.
       rewrite unfold_is_list. left; iRefresh. iSplitP; ss. eexists ε. rewrite URA.unit_id; ss.
     }
@@ -335,4 +334,4 @@ Section SIMMODSEML.
     all: try (by repeat econs; et).
   Qed.
 
-End SIMMODSEML.
+End SIMMODSEM.

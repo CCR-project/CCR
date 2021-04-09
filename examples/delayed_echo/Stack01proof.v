@@ -5,7 +5,7 @@ Require Import Skeleton.
 Require Import PCM.
 Require Import ModSem Behavior.
 Require Import Relation_Definitions.
-Require Import HoareDef Stack0 Stack1 SimModSemL.
+Require Import HoareDef Stack0 Stack1 SimModSem.
 
 (*** TODO: export these in Coqlib or Universe ***)
 Require Import Relation_Operators.
@@ -47,7 +47,7 @@ Ltac iImpure H :=
   eapply iHyp_update_r with (r1:=name) in H; [|refl];
   on_gwf ltac:(fun GWF => erewrite <- unit_id' with (my_ε:=name) in GWF; [|refl]);
   match goal with
-  | [ |- (gpaco3 (SimModSemL._sim_itree _) _ _ _ _ _  _) ] => idtac
+  | [ |- (gpaco3 (SimModSem._sim_itree _) _ _ _ _ _  _) ] => idtac
   | [ |- iHyp _ _ ] => erewrite <- unit_id' with (my_ε:=name); [|refl]
   | _ => idtac
   end;
@@ -58,18 +58,18 @@ Ltac iImpure H :=
 
 
 
-Section SIMMODSEML.
+Section SIMMODSEM.
 
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG Mem1.memRA Σ}.
 
-  Let W: Type := (alist mname (Σ * Any.t)) * (alist mname (Σ * Any.t)).
+  Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
   Eval compute in (@URA.car Mem1._memRA).
 
   Let wf: W -> Prop :=
     fun '(mrps_src0, mrps_tgt0) =>
-        (<<SRC: mrps_src0 = Maps.add "Stack" (ε, tt↑) Maps.empty>>) /\
-        (<<TGT: mrps_tgt0 = Maps.add "Stack" (ε, tt↑) Maps.empty>>)
+        (<<SRC: mrps_src0 = (ε, tt↑)>>) /\
+        (<<TGT: mrps_tgt0 = (ε, tt↑)>>)
   .
 
   Local Opaque points_to.
@@ -78,10 +78,9 @@ Section SIMMODSEML.
 
   Opaque URA.unit.
 
-  Theorem correct: ModSemLPair.sim Stack1.StackSem Stack0.StackSem.
+  Theorem correct: ModSemPair.sim Stack1.StackSem Stack0.StackSem.
   Proof.
-    econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
-    { typeclasses eauto. }
+    econstructor 1 with (wf:=wf); et; swap 2 3.
     { ss. }
 
     econs; ss.
@@ -249,4 +248,4 @@ Section SIMMODSEML.
     }
   Qed.
 
-End SIMMODSEML.
+End SIMMODSEM.
