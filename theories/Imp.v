@@ -125,6 +125,13 @@ Section Denote.
     | _ => None
     end.
 
+  Fixpoint denote_exprs (es : list expr) (acc : list val) : itree eff (list val) :=
+    match es with
+    | [] => Ret acc
+    | e :: s =>
+      v <- denote_expr e;; denote_exprs s (v::acc)
+    end.
+
   Fixpoint denote_stmt (s : stmt) : itree eff val :=
     match s with
     | Assign x e =>
@@ -146,7 +153,7 @@ Section Denote.
       if (String.string_dec f "load" || String.string_dec f "store")
       then triggerUB
       else
-        eval_args <- (mapT denote_expr args);;
+        eval_args <- denote_exprs args [];;
         v <- trigger (Call f (eval_args↑));; v <- unwrapN (v↓);;
         trigger (SetVar x v);; Ret Vundef
 
@@ -154,7 +161,7 @@ Section Denote.
       if (String.string_dec f "load" || String.string_dec f "store")
       then triggerUB
       else
-        eval_args <- (mapT denote_expr args);;
+        eval_args <- denote_exprs args [];;
         trigger (Call f (eval_args↑));; Ret Vundef
 
     | CallPtr1 x e args =>
@@ -162,7 +169,7 @@ Section Denote.
       if (String.string_dec f "load" || String.string_dec f "store")
       then triggerUB
       else
-        eval_args <- (mapT denote_expr args);;
+        eval_args <- denote_exprs args [];;
         v <- trigger (Call f (eval_args↑));; v <- unwrapN (v↓);;
         trigger (SetVar x v);; Ret Vundef
 
@@ -171,16 +178,16 @@ Section Denote.
       if (String.string_dec f "load" || String.string_dec f "store")
       then triggerUB
       else
-        eval_args <- (mapT denote_expr args);;
+        eval_args <- denote_exprs args [];;
         trigger (Call f (eval_args↑));; Ret Vundef
 
     | CallSys1 x f args =>
-      eval_args <- (mapT denote_expr args);;
+      eval_args <- denote_exprs args [];;
       v <- trigger (Syscall f eval_args top1);;
       trigger (SetVar x v);; Ret Vundef
 
     | CallSys2 f args =>
-      eval_args <- (mapT denote_expr args);;
+      eval_args <- denote_exprs args [];;
       trigger (Syscall f eval_args top1);; Ret Vundef
 
     | Return1 e => v <- denote_expr e;; Ret v
@@ -586,7 +593,7 @@ Section PROOFS.
       if (String.string_dec f "load" || String.string_dec f "store")
       then triggerUB
       else
-        eval_args <- (@mapT list _ (itree _) _ expr val denote_expr args);;
+        eval_args <- (denote_exprs args []);;
         v <- trigger (Call f (eval_args↑));; v <- unwrapN (v↓);;
         trigger (SetVar x v);; Ret Vundef).
   Proof. reflexivity. Qed.
@@ -599,7 +606,7 @@ Section PROOFS.
       if (String.string_dec f "load" || String.string_dec f "store")
       then triggerUB
       else
-        eval_args <- (@mapT list _ (itree _) _ expr val denote_expr args);;
+        eval_args <- (denote_exprs args []);;
         trigger (Call f (eval_args↑));; Ret Vundef).
   Proof. reflexivity. Qed.
 
@@ -612,7 +619,7 @@ Section PROOFS.
       if (String.string_dec f "load" || String.string_dec f "store")
       then triggerUB
       else
-        eval_args <- (@mapT list _ (itree _) _ expr val denote_expr args);;
+        eval_args <- (denote_exprs args []);;
         v <- trigger (Call f (eval_args↑));; v <- unwrapN (v↓);;
         trigger (SetVar x v);; Ret Vundef).
   Proof. reflexivity. Qed.
@@ -626,7 +633,7 @@ Section PROOFS.
       if (String.string_dec f "load" || String.string_dec f "store")
       then triggerUB
       else
-        eval_args <- (@mapT list _ (itree _) _ expr val denote_expr args);;
+        eval_args <- (denote_exprs args []);;
         trigger (Call f (eval_args↑));; Ret Vundef).
   Proof. reflexivity. Qed.
 
@@ -635,7 +642,7 @@ Section PROOFS.
     :
       interp_imp ge0 le0 (denote_stmt (CallSys1 x f args)) =
       interp_imp ge0 le0 (
-      eval_args <- (mapT denote_expr args);;
+      eval_args <- (denote_exprs args []);;
       v <- trigger (Syscall f eval_args top1);;
       trigger (SetVar x v);; Ret Vundef).
   Proof. reflexivity. Qed.
@@ -645,31 +652,9 @@ Section PROOFS.
     :
       interp_imp ge0 le0 (denote_stmt (CallSys2 f args)) =
       interp_imp ge0 le0 (
-      eval_args <- (mapT denote_expr args);;
+      eval_args <- (denote_exprs args []);;
       trigger (Syscall f eval_args top1);; Ret Vundef).
   Proof. reflexivity. Qed.
-
-  (* Lemma denote_stmt_CallFun2_bug *)
-  (*       f *)
-  (*   : *)
-  (*     denote_stmt (CallFun2 f [Lit Vundef]) = *)
-  (*     if (true) *)
-  (*     then Ret Vundef *)
-  (*     else *)
-  (*       eval <- (@mapT (list) _ (itree _) _ (expr) (val) denote_expr [Lit Vundef]);; *)
-  (*       trigger (Call f (eval)↑);; Ret Vundef. *)
-  (* Proof. Abort. *)
-
-  (* (* mapT cannot resolve types I guess... *) *)
-  (* Lemma denote_stmt_CallFun2_bug *)
-  (*       f *)
-  (*   : *)
-  (*     denote_stmt (CallFun2 f [Lit Vundef]) = *)
-  (*     if (true) *)
-  (*     then Ret Vundef *)
-  (*     else *)
-  (*       eval <- (mapT denote_expr [Lit Vundef]);; *)
-  (*       trigger (Call f (eval)↑);; Ret Vundef. *)
 
   (* interp_imp *)
 
@@ -1025,32 +1010,77 @@ Section PROOFS.
     apply interp_imp_Call_only.
   Qed.
 
-  Lemma _interp_imp_CallFun1
-        ge0 le0 x f args
+  Fixpoint interp_imp_denote_exprs ge le h es acc :=
+    match es with
+    | [] =>
+      '(le1, (ge1, v)) <- interp_imp ge le (denote_expr h);;
+      Ret (le1, (ge1, v::acc))
+    | e :: s =>
+      '(le1, (ge1, v)) <- interp_imp ge le (denote_expr h);;
+      interp_imp_denote_exprs ge1 le1 e s (v::acc)
+    end.
+
+  Lemma interp_imp_exprs
+        ge0 le0 x f args acc
     :
       interp_imp ge0 le0 (
-        eval_args <- (@mapT list _ (itree _) _ expr val denote_expr args);;
-        v <- trigger (Call f (eval_args↑));; v <- unwrapN (v↓);;
-        trigger (SetVar x v);; Ret Vundef)
+                   eval_args <- (denote_exprs args acc);;
+                   v <- trigger (Call f (eval_args↑));; v <- unwrapN (v↓);;
+                   trigger (SetVar x v);; Ret Vundef)
       =
-      list_lgv <-
-      (@mapT list _ (itree _) _ expr _
-             (fun e => interp_imp ge0 le0 (denote_expr e)) args);;
-      v <- trigger (Call f (List.map (fun p => snd (snd p)) list_lgv)↑);;
-      (* v <- trigger (Call f (eval_args↑));; *)
-      tau;; tau;; v <- unwrapN (v↓);;
-      tau;; tau;; Ret (alist_add _ x v le0, (ge0, Vundef)).
+      match args with
+      | [] =>
+        v <- trigger (Call f ((acc : list val)↑));;
+        tau;; tau;; v <- unwrapN (v↓);;
+        tau;; tau;; Ret (alist_add _ x v le0, (ge0, Vundef))
+      | h::t =>
+        '(le1, (ge1, vs)) <- interp_imp_denote_exprs ge0 le0 h t acc;;
+        v <- trigger (Call f (vs↑));;
+        tau;; tau;; v <- unwrapN (v↓);;
+        tau;; tau;; Ret (alist_add _ x v le1, (ge1, Vundef))
+      end.
   Proof.
-    unfold interp_imp, interp_GlobEnv, interp_ImpState. grind.
-    move args before Σ. revert_until args.
-    induction args; i; ss; clarify; grind.
-    - rewrite <- interp_imp_Call_ret.
+    destruct args.
+    - ss. unfold interp_imp, interp_GlobEnv, interp_ImpState. grind.
+      rewrite <- interp_imp_Call_ret.
       unfold interp_imp, interp_GlobEnv, interp_ImpState. grind.
-    - ss. grind.
-      
-      reflexivity.
-    unfold mapT_list. ss. 
-      
+    - move args before Σ. revert_until args. induction args; i.
+      + ss. unfold interp_imp, interp_GlobEnv, interp_ImpState. grind.
+        rewrite <- interp_imp_Call_ret.
+        unfold interp_imp, interp_GlobEnv, interp_ImpState. grind.
+      + ss. grind. rewrite interp_imp_bind. grind.
+        destruct p. ss.
+  Qed.
+
+  Lemma interp_imp_exprs_only
+        ge0 le0 f args acc
+    :
+      interp_imp ge0 le0 (
+                   eval_args <- (denote_exprs args acc);;
+                   trigger (Call f (eval_args↑));; Ret Vundef)
+      =
+      match args with
+      | [] =>
+        trigger (Call f ((acc : list val)↑));;
+        tau;; tau;; Ret (le0, (ge0, Vundef))
+      | h::t =>
+        '(le1, (ge1, vs)) <- interp_imp_denote_exprs ge0 le0 h t acc;;
+        trigger (Call f (vs↑));;
+        tau;; tau;; Ret (le1, (ge1, Vundef))
+      end.
+  Proof.
+    destruct args.
+    - ss. unfold interp_imp, interp_GlobEnv, interp_ImpState. grind.
+      rewrite <- interp_imp_Call_only.
+      unfold interp_imp, interp_GlobEnv, interp_ImpState. grind.
+    - move args before Σ. revert_until args. induction args; i.
+      + ss. unfold interp_imp, interp_GlobEnv, interp_ImpState. grind.
+        rewrite <- interp_imp_Call_only.
+        unfold interp_imp, interp_GlobEnv, interp_ImpState. grind.
+      + ss. grind. rewrite interp_imp_bind. grind.
+        destruct p. ss.
+  Qed.
+
   Lemma interp_imp_CallFun1
         ge0 le0 x f args
     :
@@ -1058,85 +1088,231 @@ Section PROOFS.
       if (String.string_dec f "load" || String.string_dec f "store")
       then triggerUB
       else
-        eval_args <- (@mapT list _ (itree _) _ expr val denote_expr args);;
-        v <- trigger (Call f (eval_args↑));;
-        tau;; tau;; v <- unwrapN (v↓);;
-        tau;; tau;; Ret (alist_add _ x v le0, (ge0, Vundef)).
+        match args with
+        | [] =>
+          v <- trigger (Call f ([]: list val)↑);;
+          tau;; tau;; v <- unwrapN (v↓);;
+          tau;; tau;; Ret (alist_add _ x v le0, (ge0, Vundef))
+        | h::t =>
+          '(le1, (ge1, vs)) <- interp_imp_denote_exprs ge0 le0 h t [];;
+          v <- trigger (Call f (vs↑));;
+          tau;; tau;; v <- unwrapN (v↓);;
+          tau;; tau;; Ret (alist_add _ x v le1, (ge1, Vundef))
+        end.
+  Proof.
+    rewrite denote_stmt_CallFun1. des_ifs; try (apply interp_imp_exprs).
+    apply interp_imp_triggerUB.
+  Qed.
 
-    v <- trigger (Call f (eval_args↑));; v <- unwrapN (v↓);;
-        trigger (SetVar x v);; Ret Vundef.
-  Proof. reflexivity. Qed.
-
-      interp_imp ge0 le0
-                 (v <- trigger (Call f args);; v <- unwrapN (v↓);;
-                  trigger (SetVar x v);; Ret Vundef) =
-      v <- trigger (Call f args);;
-      tau;; tau;; v <- unwrapN (v↓);;
-      tau;; tau;; Ret (alist_add _ x v le0, (ge0, Vundef)).
-  Lemma denote_stmt_CallFun2
-        f args
+  Lemma interp_imp_CallFun2
+        ge0 le0 f args
     :
-      denote_stmt (CallFun2 f args) =
+      interp_imp ge0 le0 (denote_stmt (CallFun2 f args)) =
       if (String.string_dec f "load" || String.string_dec f "store")
       then triggerUB
       else
-        eval_args <- (@mapT list _ (itree _) _ expr val denote_expr args);;
-        trigger (Call f (eval_args↑));; Ret Vundef.
-  Proof. reflexivity. Qed.
+        match args with
+        | [] =>
+          trigger (Call f ([]: list val)↑);;
+          tau;; tau;; Ret (le0, (ge0, Vundef))
+        | h::t =>
+          '(le1, (ge1, vs)) <- interp_imp_denote_exprs ge0 le0 h t [];;
+          trigger (Call f (vs↑));;
+          tau;; tau;; Ret (le1, (ge1, Vundef))
+        end.
+  Proof.
+    rewrite denote_stmt_CallFun2. des_ifs; try (apply interp_imp_exprs_only).
+    apply interp_imp_triggerUB.
+  Qed.
 
-  Lemma denote_stmt_CallPtr1
-        x e args
+  Lemma interp_imp_CallPtr1
+        ge0 le0 x e args
     :
-      denote_stmt (CallPtr1 x e args) =
-      p <- denote_expr e;; f <- trigger (GetName p);;
-      if (String.string_dec f "load" || String.string_dec f "store")
-      then triggerUB
-      else
-        eval_args <- (@mapT list _ (itree _) _ expr val denote_expr args);;
-        v <- trigger (Call f (eval_args↑));; v <- unwrapN (v↓);;
-        trigger (SetVar x v);; Ret Vundef.
-  Proof. reflexivity. Qed.
-  
-  Lemma denote_stmt_CallPtr2
-        e args
-    :
-      denote_stmt (CallPtr2 e args) =
-      p <- denote_expr e;; f <- trigger (GetName p);;
-      if (String.string_dec f "load" || String.string_dec f "store")
-      then triggerUB
-      else
-        eval_args <- (mapT denote_expr args);;
-        trigger (Call f (eval_args↑));; Ret Vundef.
-  Proof. reflexivity. Qed.
+      interp_imp ge0 le0 (denote_stmt (CallPtr1 x e args)) =
+      '(le1, (ge1, p)) <- interp_imp ge0 le0 (denote_expr e);;
+      match p with
+      | Vptr n _ =>
+        match (SkEnv.blk2id ge1 n) with
+        | Some f =>
+          if (String.string_dec f "load" || String.string_dec f "store")
+          then tau;; triggerUB
+          else
+            match args with
+            | [] =>
+              tau;;
+              v <- trigger (Call f ([]: list val)↑);;
+              tau;; tau;; v <- unwrapN (v↓);;
+              tau;; tau;; Ret (alist_add _ x v le1, (ge1, Vundef))
+            | h::t =>
+              tau;;
+              '(le2, (ge2, vs)) <- interp_imp_denote_exprs ge1 le1 h t [];;
+              v <- trigger (Call f (vs↑));;
+              tau;; tau;; v <- unwrapN (v↓);;
+              tau;; tau;; Ret (alist_add _ x v le2, (ge2, Vundef))
+            end
+        | None => triggerUB
+        end
+      | _ => triggerUB
+      end.
+  Proof.
+    rewrite denote_stmt_CallPtr1. rewrite interp_imp_bind.
+    grind. unfold interp_imp, interp_GlobEnv, interp_ImpState. grind.
+    des_ifs; grind.
+    1, 2, 5, 6:( unfold triggerUB, pure_state; grind ).
+    - rewrite <- interp_imp_exprs with (args := []).
+      unfold interp_imp, interp_GlobEnv, interp_ImpState. grind.
+    - rewrite <- interp_imp_exprs with (args := (e0::l0)).
+      unfold interp_imp, interp_GlobEnv, interp_ImpState. grind.
+  Qed.
 
-  Lemma denote_stmt_CallSys1
-        x f args
+  Lemma interp_imp_CallPtr2
+        ge0 le0 e args
     :
-      denote_stmt (CallSys1 x f args) =
-      eval_args <- (mapT denote_expr args);;
-      v <- trigger (Syscall f eval_args top1);;
-      trigger (SetVar x v);; Ret Vundef.
-  Proof. reflexivity. Qed.
+      interp_imp ge0 le0 (denote_stmt (CallPtr2 e args)) =
+      '(le1, (ge1, p)) <- interp_imp ge0 le0 (denote_expr e);;
+      match p with
+      | Vptr n _ =>
+        match (SkEnv.blk2id ge1 n) with
+        | Some f =>
+          if (String.string_dec f "load" || String.string_dec f "store")
+          then tau;; triggerUB
+          else
+            match args with
+            | [] =>
+              tau;;
+              trigger (Call f ([]: list val)↑);;
+              tau;; tau;; Ret (le1, (ge1, Vundef))
+            | h::t =>
+              tau;;
+              '(le2, (ge2, vs)) <- interp_imp_denote_exprs ge1 le1 h t [];;
+              trigger (Call f (vs↑));;
+              tau;; tau;; Ret (le2, (ge2, Vundef))
+            end
+        | None => triggerUB
+        end
+      | _ => triggerUB
+      end.
+  Proof.
+    rewrite denote_stmt_CallPtr2. rewrite interp_imp_bind.
+    grind. unfold interp_imp, interp_GlobEnv, interp_ImpState. grind.
+    des_ifs; grind.
+    1, 2, 5, 6:( unfold triggerUB, pure_state; grind ).
+    - rewrite <- interp_imp_exprs_only with (args := []).
+      unfold interp_imp, interp_GlobEnv, interp_ImpState. grind.
+    - rewrite <- interp_imp_exprs_only with (args := (e0::l0)).
+      unfold interp_imp, interp_GlobEnv, interp_ImpState. grind.
+  Qed.
 
-  Lemma denote_stmt_CallSys2
-        f args
+  Lemma interp_imp_exprs_sys
+        ge0 le0 x f args acc
     :
-      denote_stmt (CallSys2 f args) =
-      eval_args <- (mapT denote_expr args);;
-      trigger (Syscall f eval_args top1);; Ret Vundef.
-  Proof. reflexivity. Qed.
+      interp_imp ge0 le0 (
+                   eval_args <- (denote_exprs args acc);;
+                   v <- trigger (Syscall f eval_args top1);;
+                   trigger (SetVar x v);; Ret Vundef)
+      =
+      match args with
+      | [] =>
+        v <- trigger (Syscall f ((acc : list val)) top1);;
+        tau;; tau;; tau;; tau;;
+        Ret (alist_add _ x v le0, (ge0, Vundef))
+      | h::t =>
+        '(le1, (ge1, vs)) <- interp_imp_denote_exprs ge0 le0 h t acc;;
+        v <- trigger (Syscall f vs top1);;
+        tau;; tau;; tau;; tau;;
+        Ret (alist_add _ x v le1, (ge1, Vundef))
+      end.
+  Proof.
+    destruct args.
+    - ss. unfold interp_imp, interp_GlobEnv, interp_ImpState. grind.
+      rewrite <- interp_imp_Syscall_ret.
+      unfold interp_imp, interp_GlobEnv, interp_ImpState. grind.
+    - move args before Σ. revert_until args. induction args; i.
+      + ss. unfold interp_imp, interp_GlobEnv, interp_ImpState. grind.
+        rewrite <- interp_imp_Syscall_ret.
+        unfold interp_imp, interp_GlobEnv, interp_ImpState. grind.
+      + ss. grind. rewrite interp_imp_bind. grind.
+        destruct p. ss.
+  Qed.
+
+  Lemma interp_imp_exprs_sys_only
+        ge0 le0 f args acc
+    :
+      interp_imp ge0 le0 (
+                   eval_args <- (denote_exprs args acc);;
+                   trigger (Syscall f eval_args top1);; Ret Vundef)
+      =
+      match args with
+      | [] =>
+        trigger (Syscall f (acc : list val) top1);;
+        tau;; tau;; Ret (le0, (ge0, Vundef))
+      | h::t =>
+        '(le1, (ge1, vs)) <- interp_imp_denote_exprs ge0 le0 h t acc;;
+        trigger (Syscall f vs top1);;
+        tau;; tau;; Ret (le1, (ge1, Vundef))
+      end.
+  Proof.
+    destruct args.
+    - ss. unfold interp_imp, interp_GlobEnv, interp_ImpState. grind.
+      rewrite <- interp_imp_Syscall_only.
+      unfold interp_imp, interp_GlobEnv, interp_ImpState. grind.
+    - move args before Σ. revert_until args. induction args; i.
+      + ss. unfold interp_imp, interp_GlobEnv, interp_ImpState. grind.
+        rewrite <- interp_imp_Syscall_only.
+        unfold interp_imp, interp_GlobEnv, interp_ImpState. grind.
+      + ss. grind. rewrite interp_imp_bind. grind.
+        destruct p. ss.
+  Qed.
+
+  Lemma interp_imp_CallSys1
+        ge0 le0 x f args
+    :
+      interp_imp ge0 le0 (denote_stmt (CallSys1 x f args)) =
+      match args with
+      | [] =>
+        v <- trigger (Syscall f ([]: list val) top1);;
+        tau;; tau;; tau;; tau;;
+        Ret (alist_add _ x v le0, (ge0, Vundef))
+      | h::t =>
+        '(le1, (ge1, vs)) <- interp_imp_denote_exprs ge0 le0 h t [];;
+        v <- trigger (Syscall f vs top1);;
+        tau;; tau;; tau;; tau;;
+        Ret (alist_add _ x v le1, (ge1, Vundef))
+      end.
+  Proof.
+    rewrite denote_stmt_CallSys1. apply interp_imp_exprs_sys.
+  Qed.
+
+  Lemma interp_imp_CallSys2
+        ge0 le0 f args
+    :
+      interp_imp ge0 le0 (denote_stmt (CallSys2 f args)) =
+      match args with
+      | [] =>
+        trigger (Syscall f ([]: list val) top1);;
+        tau;; tau;;
+        Ret (le0, (ge0, Vundef))
+      | h::t =>
+        '(le1, (ge1, vs)) <- interp_imp_denote_exprs ge0 le0 h t [];;
+        trigger (Syscall f vs top1);;
+        tau;; tau;;
+        Ret (le1, (ge1, Vundef))
+      end.
+  Proof.
+    rewrite denote_stmt_CallSys2. apply interp_imp_exprs_sys_only.
+  Qed.
 
   (* eval_imp  *)
   Lemma eval_imp_unfold
-        fret fparams fvars fbody args
+        ge fparams fvars fbody args
     :
-      ` vret : val <- eval_imp (mk_function fret fparams fvars fbody) args ;; Ret (vret↑)
+      ` vret : val <- eval_imp ge (mk_function fparams fvars fbody) args ;; Ret (vret↑)
                =
                ` vret : val <-
                         (match init_args fparams args [] with
                          | Some iargs =>
-                           ITree.bind (interp_imp (denote_stmt fbody) (iargs++(init_lenv (fvars))))
-                                      (fun x_ : lenv * val => let (_, retv) := x_ in Ret retv)
+                           ITree.bind (interp_imp ge (iargs++(init_lenv (fvars))) (denote_stmt fbody))
+                                      (fun x_ : lenv * (_ * val) => let '(_, (_, retv)) := x_ in Ret retv)
                          | None => triggerUB
                          end) ;; Ret (vret↑).
   Proof. reflexivity. Qed.
