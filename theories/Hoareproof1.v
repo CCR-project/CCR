@@ -40,10 +40,10 @@ Inductive _simg_safe (simg: forall R (RR: R -> R -> Prop), Ord.t -> (itree event
   :
     _simg_safe simg RR i0 (Ret r_src) (Ret r_tgt)
 | simg_safe_syscall
-    i1 ktr_src0 ktr_tgt0 fn varg
+    i1 ktr_src0 ktr_tgt0 fn varg rvs
     (SIM: (eq ==> simg _ RR i1)%signature ktr_src0 ktr_tgt0)
   :
-    _simg_safe simg RR i0 (trigger (Syscall fn varg) >>= ktr_src0) (trigger (Syscall fn varg) >>= ktr_tgt0)
+    _simg_safe simg RR i0 (trigger (Syscall fn varg rvs) >>= ktr_src0) (trigger (Syscall fn varg rvs) >>= ktr_tgt0)
 
 
 

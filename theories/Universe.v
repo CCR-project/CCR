@@ -82,6 +82,7 @@ Inductive event: Type :=
 | event_sys
     (fn: gname)
     (args: list val)
+    (rv: val)
 .
 
 Module Mem.
@@ -185,4 +186,4 @@ Definition unint (v: val): option Z :=
 (*** NOTE: Probably we can support comparison between nullptr and 0 ***)
 (*** NOTE: Unlike CompCert, we don't support comparison with weak_valid_ptr (for simplicity) ***)
 
-Axiom syscall_sem: gname -> list val -> (event * val).
+Parameter syscall_sem: event -> Prop.

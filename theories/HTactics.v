@@ -371,12 +371,12 @@ Section SIM.
                  ((mrs_tgt0, fr_tgt0), trigger (Call fn varg) >>= k_tgt)
   | safe_safe_sim_itree_syscall
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
-      fn varg k_src k_tgt
+      fn varg rvs k_src k_tgt
       (K: forall vret,
           exists i1, sim_itree _ _ RR i1 ((mrs_src0, fr_src0), k_src vret) ((mrs_tgt0, fr_tgt0), k_tgt vret))
     :
-      _safe_sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), trigger (Syscall fn varg) >>= k_src)
-                 ((mrs_tgt0, fr_tgt0), trigger (Syscall fn varg) >>= k_tgt)
+      _safe_sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), trigger (Syscall fn varg rvs) >>= k_src)
+                 ((mrs_tgt0, fr_tgt0), trigger (Syscall fn varg rvs) >>= k_tgt)
   (*** TODO: sim_syscall is nontrivial; it should accept "injected" memory... ***)
   (*** TODO: simplify the model: Syscall: list val -> val ***)
 
