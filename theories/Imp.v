@@ -1334,7 +1334,7 @@ Ltac imp_red :=
   cbn;
   match goal with
   (** denote_stmt *)
-  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ _ (_, ITree.bind' _ (interp_imp (denote_stmt (?stmt)) _))) ] =>
+  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ _ (_, ITree.bind' _ (interp_imp _ _ (denote_stmt (?stmt))))) ] =>
     match stmt with
     | Assign _ _ => rewrite interp_imp_Assign
     | Seq _ _ => rewrite interp_imp_Seq; imp_red
@@ -1356,7 +1356,7 @@ Ltac imp_red :=
     end
 
       (** denote_expr *)
-  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ _ (_, ITree.bind' _ (interp_imp (denote_expr (?expr)) _))) ] =>
+  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ _ (_, ITree.bind' _ (interp_imp _ _ (denote_expr (?expr))))) ] =>
     match expr with
     | Var _ => rewrite interp_imp_expr_Var
     | Lit _ => rewrite interp_imp_expr_Lit

@@ -48,21 +48,19 @@ Section SIMMODSEM.
     unfold MutGImp.gF.
     Local Opaque vadd.
     steps.
-    rewrite eval_imp_unfold.
+    rewrite unfold_eval_imp.
     eapply Any.downcast_upcast in _UNWRAPN. des.
     unfold unint in *. destruct v; clarify; ss.
-    steps.
     imp_steps.
     des_ifs.
     - imp_steps.
-    - apply Z.eqb_eq in Heq0. apply n in Heq0. inversion Heq0.
+    - apply Z.eqb_eq in Heq. clarify.
     - unfold ccall.
       imp_steps.
       gstep. econs; ss. i. des; subst. exists 100.
       imp_steps.
-      destruct v; ss; clarify.
-      2:{ imp_steps. unfold triggerNB. steps. }
-      imp_steps. rewrite _UNWRAPU. imp_steps.
+      Local Transparent vadd.
+      destruct v; ss; clarify; imp_steps.
   Qed.
 
 End SIMMODSEM.

@@ -23,22 +23,22 @@ Section G.
 
   Definition gF :=
     mk_function
-      Tint
-      [("n", Tint)]
-      [("f_ret", Tint)]
+      ["n"]
+      ["f_ret"]
       (if# "n"
-       then# "f_ret" :=# (Fun "f" Tint) ["n" - 1%Z : expr] ;;#
-             "n" + "f_ret"
-       else# 0%Z fi#).
+       then# "f_ret" =@ "f" ["n" - 1%Z : expr] ;#
+             ret# "n" + "f_ret"
+       else# ret# 0%Z
+       fi#).
 
   Definition g_prog : module :=
     mk_module
       []
       [("g", gF)]
-      "g".
-
-  Definition GSem: ModSem.t := ImpMod.modsem "G" g_prog.
+  .
 
   Definition G : Mod.t := ImpMod.get_mod "G" g_prog.
+  
+  Definition GSem: ModSem.t := G.(Mod.enclose).
 
 End G.
