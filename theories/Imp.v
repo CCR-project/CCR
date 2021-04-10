@@ -1303,7 +1303,7 @@ Section PROOFS.
   Qed.
 
   (* eval_imp  *)
-  Lemma eval_imp_unfold
+  Lemma unfold_eval_imp
         ge fparams fvars fbody args
     :
       ` vret : val <- eval_imp ge (mk_function fparams fvars fbody) args ;; Ret (vret↑)
@@ -1328,53 +1328,61 @@ Global Opaque eval_imp.
 Require Import SimModSem.
 Require Import HTactics.
 
+Import ImpNotations.
 (** tactic for imp-program reduction *)
 Ltac imp_red :=
   cbn;
   match goal with
-      (** denote_stmt *)
+  (** denote_stmt *)
   | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ _ (_, ITree.bind' _ (interp_imp (denote_stmt (?stmt)) _))) ] =>
     match stmt with
-    | Assign _ _ => rewrite denote_stmt_Assign
-    | AddrOf _ _ => rewrite denote_stmt_AddrOf
-    | Seq _ _ => rewrite denote_stmt_Seq
-    | If _ _ _ => rewrite denote_stmt_If
-    | While _ _ => rewrite denote_stmt_While
-    | Skip => rewrite denote_stmt_Skip
-    | CallFun _ _ _ => rewrite denote_stmt_CallFun
-    | Return _ => rewrite denote_stmt_Return
-    | Return_coerce _ => rewrite denote_stmt_Return
+    | Assign _ _ => rewrite interp_imp_Assign
+    | Seq _ _ => rewrite interp_imp_Seq; imp_red
+    | If _ _ _ => rewrite interp_imp_If
+    | While _ _ => rewrite _interp_imp_While0 (* need upgrade *)
+    | Skip => rewrite interp_imp_Skip
+    | CallFun1 _ _ _ => rewrite interp_imp_CallFun1
+    | CallFun2 _ _ => rewrite interp_imp_CallFun2
+    | CallPtr1 _ _ _ => rewrite interp_imp_CallPtr1
+    | CallPtr2 _ _ => rewrite interp_imp_CallPtr2
+    | CallSys1 _ _ _ => rewrite interp_imp_CallSys1
+    | CallSys2 _ _ => rewrite interp_imp_CallSys2
+    | Return1 _ => rewrite interp_imp_Return1
+    | Return2 => rewrite interp_imp_Return2
+    | AddrOf _ _ => rewrite interp_imp_AddrOf
+    | Load _ _ => rewrite interp_imp_Load
+    | Store _ _ => rewrite interp_imp_Store
     | _ => fail
     end
 
       (** denote_expr *)
   | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ _ (_, ITree.bind' _ (interp_imp (denote_expr (?expr)) _))) ] =>
     match expr with
-    | Var _ => rewrite denote_expr_Var
-    | Lit _ => rewrite denote_expr_Lit
-    | Plus _ _ => rewrite denote_expr_Plus
-    | Minus _ _ => rewrite denote_expr_Minus
-    | Mult _ _ => rewrite denote_expr_Mult
-    | Var_coerce _ => rewrite denote_expr_Var
-    | Lit_coerce _ => rewrite denote_expr_Lit
+    | Var _ => rewrite interp_imp_expr_Var
+    | Lit _ => rewrite interp_imp_expr_Lit
+    | Plus _ _ => rewrite interp_imp_expr_Plus
+    | Minus _ _ => rewrite interp_imp_expr_Minus
+    | Mult _ _ => rewrite interp_imp_expr_Mult
+    | Var_coerce _ => rewrite interp_imp_expr_Var
+    | Lit_coerce _ => rewrite interp_imp_expr_Lit
     | _ => fail
     end
 
-       (** interp_imp *)
-  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ _ (_, ITree.bind' _ (interp_imp (?itr) _))) ] =>
-    match itr with
-    | ITree.bind' _ _ => rewrite interp_imp_bind
-    | Ret _ => rewrite interp_imp_Ret
-    | triggerUB => rewrite interp_imp_triggerUB
-    | triggerNB => rewrite interp_imp_triggerNB
-    | trigger (GetVar _) => rewrite interp_imp_GetVar
-    | trigger (SetVar _ _) => rewrite interp_imp_SetVar
-    | trigger (Call _ _) => rewrite interp_imp_Call
-    | trigger (Syscall _ _ _) => rewrite interp_imp_Syscall
-    | unwrapU _ => rewrite interp_imp_unwrapU
-    | unwrapN _ => rewrite interp_imp_unwrapN
-    | _ => fail
-    end
+  (*      (** interp_imp *) *)
+  (* | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ _ (_, ITree.bind' _ (interp_imp (?itr) _))) ] => *)
+  (*   match itr with *)
+  (*   | ITree.bind' _ _ => rewrite interp_imp_bind *)
+  (*   | Ret _ => rewrite interp_imp_Ret *)
+  (*   | triggerUB => rewrite interp_imp_triggerUB *)
+  (*   | triggerNB => rewrite interp_imp_triggerNB *)
+  (*   | trigger (GetVar _) => rewrite interp_imp_GetVar *)
+  (*   | trigger (SetVar _ _) => rewrite interp_imp_SetVar *)
+  (*   | trigger (Call _ _) => rewrite interp_imp_Call *)
+  (*   | trigger (Syscall _ _ _) => rewrite interp_imp_Syscall *)
+  (*   | unwrapU _ => rewrite interp_imp_unwrapU *)
+  (*   | unwrapN _ => rewrite interp_imp_unwrapN *)
+  (*   | _ => fail *)
+  (*   end *)
 
   (* | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (Tau _) _))) ] => *)
   (*   rewrite interp_imp_tau *)
