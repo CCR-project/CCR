@@ -69,9 +69,11 @@ Inductive stmt : Type :=
 | If     (i : expr) (t e : stmt) (* if (i) then { t } else { e } *)
 | While  (t : expr) (b : stmt)   (* while (t) { b } *)
 | Skip                           (* ; *)
-| CallFun (x : option var) (f : option fun_type) (p : option val) (args : list expr)  (* x = f(args), call with either name or pointer *)
+| CallFun (x : option var) (f : option fun_type) (p : option expr) (args : list expr)  (* x = f(args), call with either name or pointer *)
+| Return (e : expr)              (* return e *)
 | AddrOf (x : var) (X : gname)   (* x = &X *)
-| Return (e : expr)    (* return e *)
+| Load (x : var) (p : expr)      (* x = *p *)
+| Store (p : expr) (v : expr)    (* *p = v *)
 .
 
 (** information of a function *)
@@ -129,13 +131,14 @@ Section Denote.
       v <- denote_expr e;; trigger (SetVar x v);; Ret Vundef
     | Seq a b =>
       denote_stmt a;; denote_stmt b
+
     | If i t e =>
       v <- denote_expr i;; `b: bool <- (is_true v)?;;
       if b then (denote_stmt t) else (denote_stmt e)
 
     | While t b =>
       while (v <- denote_expr t;; `c: bool <- (is_true v)?;;
-             if c then (denote_stmt b;; Ret (inl tt)) else (Ret (inr Vundef)))
+      if c then (denote_stmt b;; Ret (inl tt)) else (Ret (inr Vundef)))
 
     | Skip => Ret Vundef
 
@@ -146,13 +149,16 @@ Section Denote.
       | Some ft, None =>
         match ft with
         | Fun f =>
-          match ov with
-          | Some x =>
-            v <- trigger (Call f (eval_args↑));; v <- unwrapN (v↓);;
-            trigger (SetVar x v);; Ret Vundef
-          | None =>
-            trigger (Call f (eval_args↑));; Ret Vundef
-          end
+          if (String.string_dec f "load" || String.string_dec f "store")
+          then triggerUB
+          else
+            match ov with
+            | Some x =>
+              v <- trigger (Call f (eval_args↑));; v <- unwrapN (v↓);;
+              trigger (SetVar x v);; Ret Vundef
+            | None =>
+              trigger (Call f (eval_args↑));; Ret Vundef
+            end
         | Sys f =>
           match ov with
           | Some x =>
@@ -163,22 +169,34 @@ Section Denote.
           end
         end
       (* call with pointer *)
-      | None, Some p =>
+      | None, Some e =>
+        p <- denote_expr e;;
         f <- trigger (GetName p);;
-        match ov with
-        | Some x =>
-          v <- trigger (Call f (eval_args↑));; v <- unwrapN (v↓);;
-          trigger (SetVar x v);; Ret Vundef
-        | None =>
-          trigger (Call f (eval_args↑));; Ret Vundef
-        end
+        if (String.string_dec f "load" || String.string_dec f "store")
+        then triggerUB
+        else
+          match ov with
+          | Some x =>
+            v <- trigger (Call f (eval_args↑));; v <- unwrapN (v↓);;
+            trigger (SetVar x v);; Ret Vundef
+          | None =>
+            trigger (Call f (eval_args↑));; Ret Vundef
+          end
       | _, _ => triggerUB
       end
 
+    | Return e => v <- denote_expr e;; Ret v
+
     | AddrOf x X =>
       v <- trigger (GetPtr X);; trigger (SetVar x v);; Ret Vundef
+    | Load x pe =>
+      p <- denote_expr pe;;
+      v <- trigger (Call "load" (p↑));; v <- unwrapN(v↓);;
+      trigger (SetVar x v);; Ret Vundef
+    | Store pe ve =>
+      p <- denote_expr pe;; v <- denote_expr ve;;
+      trigger (Call "store" ([p ; v]↑));; Ret Vundef
 
-    | Return e => v <- denote_expr e;; Ret v
     end.
 
 End Denote.
@@ -246,6 +264,9 @@ Section Interp.
   .
 
 End Interp.
+
+(* ========================================================================== *)
+(** ** Module *)
 
 (** module components *)
 Definition modVars := list (gname * val).
@@ -336,30 +357,39 @@ Module ImpNotations.
        format
          "'[v  ' 'while#'  t  'do#' '/' '[v' b  ']' ']' '/' 'end#'").
 
+  (* Different methods for function calls *)
   Notation "x ':=#' '(' f ')' args" :=
-    (CallFun (Some x) f args) (at level 60): stmt_scope.
+    (CallFun (Some x) (Some f) None args) (at level 60): stmt_scope.
 
-  Notation "'#' '(' f ')' args" :=
-    (CallFun None f args) (at level 60): stmt_scope.
+  Notation "'#(' f ')' args" :=
+    (CallFun None (Some f) None args) (at level 60): stmt_scope.
 
-  Notation "x ':=#' 'alloc' t s" :=
-    (CallFun (Some x) (Fun "alloc" t [Tint]) [s]) (at level 60): stmt_scope.
+  Notation "x ':=#' '*(' fp ')' args" :=
+    (CallFun (Some x) None (Some fp) args) (at level 60): stmt_scope.
+
+  Notation "'#*(' fp ')' args" :=
+    (CallFun None None (Some fp) args) (at level 60): stmt_scope.
+
+  Notation "x ':=#' 'alloc' s" :=
+    (CallFun (Some x) (Fun "alloc") None [s]) (at level 60): stmt_scope.
 
   Notation "'#free' p" :=
-    (CallFun None (Fun "free" Tvoid [Tptr Tvoid]) [p]) (at level 60): stmt_scope.
+    (CallFun None (Fun "free") None [p]) (at level 60): stmt_scope.
 
-  Notation "x ':=#' 'load' p t" :=
-    (CallFun (Some x) (Fun "load" t [Tptr t]) [p]) (at level 60): stmt_scope.
+  Notation "x ':=#' '(' a '==' b ')'" :=
+    (CallFun (Some x) (Fun "cmp") None [a ; b]) (at level 60): stmt_scope.
 
-  Notation "'#store' p v" :=
-    (CallFun None (Fun "store" Tvoid [Tptr Tvoid; Tvoid]) [p; v]) (at level 60): stmt_scope.
+  Notation "x ':=#' '*(' p ')'" :=
+    (Load x p) (at level 60): stmt_scope.
 
-  Notation "x ':=#' '(' a ',#' t1 ')' == '(' b ',#' t2 ')'" :=
-    (CallFun (Some x) (Fun "cmp" Tint [t1; t2]) [a; b]) (at level 60): stmt_scope.
+  Notation "'*(' p ')' ':=#' v" :=
+    (Store p v) (at level 60): stmt_scope.
 
 End ImpNotations.
 Import ImpNotations.
 
+(* ========================================================================== *)
+(** ** Example *)
 Section Example_Extract.
 
   Let Σ: GRA.t := fun _ => of_RA.t RA.empty.
@@ -376,21 +406,19 @@ Section Example_Extract.
     "output".
 
   Definition factorial_fundef : function := {|
-    fn_return := Tint;
-    fn_params := [("input", Tint)];
-    fn_vars := [("output", Tint)];
+    fn_params := ["input"];
+    fn_vars := ["output"];
     fn_body := factorial
   |}.
 
-  Let f_factorial := Fun "factorial" Tint [Tint].
+  Let f_factorial := Fun "factorial".
   Definition main : stmt :=
     "result" :=# (f_factorial) [4%Z : expr] ;;#
     "result".
 
   Definition main_fundef : function := {|
-    fn_return := Tint;
     fn_params := [];
-    fn_vars := [("result", Tint)];
+    fn_vars := ["result"];
     fn_body := main
   |}.
 
@@ -405,7 +433,8 @@ Section Example_Extract.
 
 End Example_Extract.
 
-(** Rewriting lemmas **)
+(* ========================================================================== *)
+(** ** Rewriting Leamms *)
 Section PROOFS.
 
   (* expr *)
