@@ -16,20 +16,20 @@ Set Implicit Arguments.
 Let Σ: GRA.t := fun _ => of_RA.t RA.empty.
 Local Existing Instance Σ.
 
-Definition main0: itree Es Any.t :=
+Definition main0: itree EventsL.Es Any.t :=
   n <- trigger (Choose nat) ;;
   r <- trigger (Syscall "print" [Vint (Z.of_nat n)]) ;;
   Ret r↑
 .
 
-Definition Ex0: Mod.t := {|
-  Mod.get_modsem :=
+Definition Ex0: ModL.t := {|
+  ModL.get_modsem :=
     fun _ => {|
         ModSemL.fnsems := [("main", fun _ => main0)];
         ModSemL.initial_mrs := [("Main", (ε, unit↑))];
       |};
-  Mod.sk := Sk.unit;
+  ModL.sk := Sk.unit;
                         |}
 .
 
-Definition ex0 := ModSemL.initial_itr_no_check (Mod.enclose Ex0).
+Definition ex0 := ModSemL.initial_itr_no_check (ModL.enclose Ex0).

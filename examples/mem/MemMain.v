@@ -7,6 +7,7 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import Hoare.
+Require Import Weakening.
 
 Generalizable Variables E R A B C X Y Σ.
 
@@ -14,14 +15,132 @@ Set Implicit Arguments.
 
 
 
-Require Import Mem1 Main1.
+Require Import Mem0 Mem1 Main0 Main1.
+
+
+
+
+Section AUX________REMOVEME_____REDUNDANT.
+
+  Context `{Σ: GRA.t}.
+
+  Definition refines_closed (md_tgt md_src: ModL.t): Prop :=
+    Beh.of_program (ModL.compile md_tgt) <1= Beh.of_program (ModL.compile md_src)
+  .
+
+  Lemma refines_close: SimModSem.refines <2= refines_closed.
+  Proof. ii. specialize (PR nil). ss. unfold Mod.add_list in *. ss. rewrite ! ModL.add_empty_l in PR. eauto. Qed.
+
+  Definition add_list (ms: list ModL.t): ModL.t := fold_right ModL.add ModL.empty ms.
+
+  Global Program Instance refines_closed_PreOrder: PreOrder refines_closed.
+  Next Obligation. ii; ss. Qed.
+  Next Obligation. ii; ss. r in H. r in H0. eauto. Qed.
+
+End AUX________REMOVEME_____REDUNDANT.
+
+
+
+
+Module Mem2.
+Section MEM2.
+
+  Context `{Σ: GRA.t}.
+  Context `{@GRA.inG memRA Σ}.
+
+  Definition MemSem: ModSem.t := {|
+    ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt (MainStb++MemStb) fn fsb)) MemSbtb;
+    ModSem.mn := "Mem";
+    ModSem.initial_mr := (GRA.embed (Auth.black (M:=Mem1._memRA) ε));
+    ModSem.initial_st := tt↑;
+  |}
+  .
+
+  Definition Mem: Mod.t := {|
+    Mod.get_modsem := fun _ => MemSem;
+    Mod.sk := List.map (fun '(n, _) => (n, Sk.Gfun)) MemStb;
+  |}
+  .
+
+End MEM2.
+End Mem2.
+
+
+
+
+Section WEAKENING.
+
+  Context `{Σ: GRA.t}.
+  Context `{@GRA.inG memRA Σ}.
+
+  Require Import Logic TODOYJ.
+  Let weaken: forall (fn fn_tgt : string) (fsp_tgt : fspec),
+      find (fun '(_fn, _) => dec fn _fn) MemStb = Some (fn_tgt, fsp_tgt) ->
+      exists (fn_src : string) (fsp_src : fspec),
+        (<< _ : find (fun '(_fn, _) => dec fn _fn) (MainStb ++ MemStb) = Some (fn_src, fsp_src) >>) /\ << _ : fspec_weaker fsp_tgt fsp_src >>
+  .
+  Proof.
+    ii. stb_tac. des_ifs.
+    - des_sumbool. subst. esplits; eauto. { stb_tac. ss. } refl.
+    - des_sumbool. subst. esplits; eauto. { stb_tac. ss. } refl.
+    - des_sumbool. subst. esplits; eauto. { stb_tac. ss. } refl.
+    - des_sumbool. subst. esplits; eauto. { stb_tac. ss. } refl.
+    - des_sumbool. subst. esplits; eauto. { stb_tac. ss. } refl.
+  Qed.
+
+  Theorem Mem12correct: SimModSem.ModSemPair.sim Mem2.MemSem Mem1.MemSem.
+  Proof.
+    econs.
+    { econs.
+      { r. split.
+        { cbn. unfold RelationPairs.RelCompFun. cbn. refl. }
+        eapply weakening_fn; try refl.
+        { eapply weaken. }
+      }
+      econs.
+      { r. split.
+        { cbn. unfold RelationPairs.RelCompFun. cbn. refl. }
+        eapply weakening_fn; try refl.
+        { eapply weaken. }
+      }
+      econs.
+      { r. split.
+        { cbn. unfold RelationPairs.RelCompFun. cbn. refl. }
+        eapply weakening_fn; try refl.
+        { eapply weaken. }
+      }
+      econs.
+      { r. split.
+        { cbn. unfold RelationPairs.RelCompFun. cbn. refl. }
+        eapply weakening_fn; try refl.
+        { eapply weaken. }
+      }
+      econs.
+      { r. split.
+        { cbn. unfold RelationPairs.RelCompFun. cbn. refl. }
+        eapply weakening_fn; try refl.
+        { eapply weaken. }
+      }
+      econs.
+    }
+    { ss. }
+    { ss. esplits; eauto. }
+  Qed.
+
+End WEAKENING.
+
+
+
+
+
 
 Section PROOF.
 
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG memRA Σ}.
 
-  Definition MemMain1: Mod.t := Mod.add Mem Main.
+  Definition MemMain0: ModL.t := ModL.add Mem0.Mem Main0.Main.
+  Definition MemMain1: ModL.t := ModL.add Mem2.Mem Main1.Main.
 
   (* Definition MainSem2: ModSemL.t := {| *)
   (*   ModSemL.fnsems := List.map (map_snd fun_to_src) MainStb; *)
@@ -49,15 +168,26 @@ Section PROOF.
 
   (* Definition MemMain2: Mod.t := Mod.add Mem2 Main2. *)
 
-  Definition MemMain2: Mod.t := {|
-    Mod.get_modsem := fun _ => {|
-        ModSemL.fnsems := List.map (fun '(fn, sb) => (fn, fun_to_src sb.(fsb_body))) (MemSbtb ++ MainSbtb);
+  Definition MemMain2: ModL.t := {|
+    ModL.get_modsem := fun _ => {|
+        ModSemL.fnsems := List.map (fun '(fn, sb) => (fn, (transl_all sb.(fsb_fspec).(mn)) <*> fun_to_src sb.(fsb_body))) (MemSbtb ++ MainSbtb);
         (* ModSemL.initial_mrs := [("Mem", ε) ; ("Main", ε)]; *)
         ModSemL.initial_mrs := [("Mem", (ε, tt↑)) ; ("Main", (ε, tt↑))];
       |};
-    Mod.sk := Sk.unit;
+    ModL.sk := Sk.unit;
   |}
   .
+
+  Theorem correct: refines_closed MemMain1 MemMain2.
+  Proof.
+    r.
+    set (global_sbtb:=MemSbtb++MainSbtb).
+    Local Opaque MemSbtb.
+    Local Opaque MainSbtb.
+    eapply adequacy_type with (sbtb:=global_sbtb).
+    { unfold compose. cbn. f_equal.
+    eapply adequacy_type.
+  Qed.
 
   Theorem embed_wf
           A
