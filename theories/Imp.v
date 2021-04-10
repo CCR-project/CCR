@@ -47,25 +47,10 @@ Set Implicit Arguments.
 (** Imp manipulates a countable set of variables represented as [string]s: *)
 Definition var : Set := string.
 
-(** Imp types *)
-Inductive type : Type :=
-| Tint : type
-| Tptr : type -> type
-.
-
-Definition has_type (v: val) (t: type) : bool :=
-  match v, t with
-  | Vint _, Tint => true
-  | Vptr _ _, Tptr _ => true
-  | Vundef, _ => true
-  | _, _ => false
-  end
-.
-
-(* function name, return type, arguments types *)
+(* function name *)
 Inductive fun_type : Type :=
-| Fun (_ : gname) (_ : type) (_: list type)
-| Sys (_ : gname) (_ : type) (_: list type)
+| Fun (_ : gname)
+| Sys (_ : gname)
 .
 
 (** Expressions are made of variables, constant literals, and arithmetic operations. *)
@@ -84,20 +69,220 @@ Inductive stmt : Type :=
 | If     (i : expr) (t e : stmt) (* if (i) then { t } else { e } *)
 | While  (t : expr) (b : stmt)   (* while (t) { b } *)
 | Skip                           (* ; *)
-| CallFun (x : option var) (f : fun_type) (args : list expr)  (* x = f(args) *)
+| CallFun (x : option var) (f : option fun_type) (p : option val) (args : list expr)  (* x = f(args), call with either name or pointer *)
 | AddrOf (x : var) (X : gname)   (* x = &X *)
 | Return (e : expr)    (* return e *)
 .
 
-Definition names (l : list (var * type)) := List.map (fun '(n, _) => n) l.
-
 (** information of a function *)
 Record function : Type := mk_function {
-  fn_return : type;
-  fn_params : list (var * type);
-  fn_vars : list (var * type); (* disjoint with fn_params *)
+  fn_params : list var;
+  fn_vars : list var; (* disjoint with fn_params *)
   fn_body : stmt
 }.
+
+(* ========================================================================== *)
+(** ** Semantics *)
+
+(** Get/Set function local variables *)
+Variant ImpState : Type -> Type :=
+| GetVar (x : var) : ImpState val
+| SetVar (x : var) (v : val) : ImpState unit.
+
+(** Get pointer to a global variable/function *)
+Variant GlobEnv : Type -> Type :=
+| GetPtr (x: gname) : GlobEnv val
+| GetName (p: val) : GlobEnv gname.
+
+Section Denote.
+ 
+  Context `{Σ: GRA.t}.
+  Context {eff : Type -> Type}.
+  Context {HasImpState : ImpState -< eff}.
+  Context {HasCall : callE -< eff}.
+  Context {HasEvent : eventE -< eff}.
+  Context {HasGlobVar: GlobEnv -< eff}.
+
+  (** Denotation of expressions *)
+  Fixpoint denote_expr (e : expr) : itree eff val :=
+    match e with
+    | Var v     => trigger (GetVar v)
+    | Lit n     => Ret n
+    | Plus a b  => l <- denote_expr a ;; r <- denote_expr b ;; (vadd l r)?
+    | Minus a b => l <- denote_expr a ;; r <- denote_expr b ;; (vsub l r)?
+    | Mult a b  => l <- denote_expr a ;; r <- denote_expr b ;; (vmul l r)?
+    end.
+
+  (** Denotation of statements *)
+  Definition while (step : itree eff (unit + val)) : itree eff val :=
+    ITree.iter (fun _ => step) tt.
+
+  Definition is_true (v : val) : option bool :=
+    match v with
+    | Vint n => if (n =? 0)%Z then Some false else Some true
+    | _ => None
+    end.
+
+  Fixpoint denote_stmt (s : stmt) : itree eff val :=
+    match s with
+    | Assign x e =>
+      v <- denote_expr e;; trigger (SetVar x v);; Ret Vundef
+    | Seq a b =>
+      denote_stmt a;; denote_stmt b
+    | If i t e =>
+      v <- denote_expr i;; `b: bool <- (is_true v)?;;
+      if b then (denote_stmt t) else (denote_stmt e)
+
+    | While t b =>
+      while (v <- denote_expr t;; `c: bool <- (is_true v)?;;
+             if c then (denote_stmt b;; Ret (inl tt)) else (Ret (inr Vundef)))
+
+    | Skip => Ret Vundef
+
+    | CallFun ov oft op args =>
+      eval_args <- (mapT denote_expr args);;
+      match oft, op with
+      (* call with name *)
+      | Some ft, None =>
+        match ft with
+        | Fun f =>
+          match ov with
+          | Some x =>
+            v <- trigger (Call f (eval_args↑));; v <- unwrapN (v↓);;
+            trigger (SetVar x v);; Ret Vundef
+          | None =>
+            trigger (Call f (eval_args↑));; Ret Vundef
+          end
+        | Sys f =>
+          match ov with
+          | Some x =>
+            v <- trigger (Syscall f eval_args top1);;
+            trigger (SetVar x v);; Ret Vundef
+          | None =>
+            trigger (Syscall f eval_args top1);; Ret Vundef
+          end
+        end
+      (* call with pointer *)
+      | None, Some p =>
+        f <- trigger (GetName p);;
+        match ov with
+        | Some x =>
+          v <- trigger (Call f (eval_args↑));; v <- unwrapN (v↓);;
+          trigger (SetVar x v);; Ret Vundef
+        | None =>
+          trigger (Call f (eval_args↑));; Ret Vundef
+        end
+      | _, _ => triggerUB
+      end
+
+    | AddrOf x X =>
+      v <- trigger (GetPtr X);; trigger (SetVar x v);; Ret Vundef
+
+    | Return e => v <- denote_expr e;; Ret v
+    end.
+
+End Denote.
+
+(* ========================================================================== *)
+(** ** Interpretation *)
+
+Section Interp.
+
+  Context `{Σ: GRA.t}.
+  Definition effs := GlobEnv +' ImpState +' Es.
+
+  Definition handle_GlobEnv {eff} `{eventE -< eff} : GlobEnv ~> stateT SkEnv.t (itree eff) :=
+    fun _ e ge =>
+      match e with
+      | GetPtr X =>
+        r <- (ge.(SkEnv.id2blk) X)?;; Ret (ge, Vptr r 0)
+      | GetName p =>
+        match p with
+        | Vptr n z => x <- (ge.(SkEnv.blk2id) n)?;; Ret (ge, x)
+        | _ => triggerUB
+        end
+      end.
+
+  Definition interp_GlobEnv {eff} `{eventE -< eff}: itree (GlobEnv +' eff) ~> stateT SkEnv.t (itree eff) :=
+    State.interp_state (case_ handle_GlobEnv ModSem.pure_state).
+
+  (** function local environment *)
+  Definition lenv := alist var val.
+  Definition handle_ImpState {eff} `{eventE -< eff} : ImpState ~> stateT lenv (itree eff) :=
+    fun _ e le =>
+      match e with
+      | GetVar x => r <- unwrapU (alist_find _ x le);; Ret (le, r)
+      | SetVar x v => Ret (alist_add _ x v le, tt)
+      end.
+
+  Definition interp_ImpState {eff} `{eventE -< eff}: itree (ImpState +' eff) ~> stateT lenv (itree eff) :=
+    State.interp_state (case_ handle_ImpState ModSem.pure_state).
+
+  Definition interp_imp ge le (itr: itree effs val) :=
+    interp_ImpState (interp_GlobEnv itr ge) le.
+  
+  Fixpoint init_lenv xs : lenv :=
+    match xs with
+    | [] => []
+    | x :: t => (x, Vundef) :: (init_lenv t)
+    end
+  .
+
+  Fixpoint init_args params args (acc: lenv) : option lenv :=
+    match params, args with
+    | [], [] => Some acc
+    | x :: part, v :: argt =>
+      init_args part argt (alist_add _ x v acc)
+    | _, _ => None
+    end
+  .
+
+  Definition eval_imp (ge: SkEnv.t) (f: function) (args: list val) : itree Es val :=
+    match (init_args f.(fn_params) args []) with
+    | Some iargs =>
+      '(_, (_, retv)) <- (interp_imp ge (iargs++(init_lenv f.(fn_vars))) (denote_stmt f.(fn_body)));; Ret retv
+    | None => triggerUB
+    end
+  .
+
+End Interp.
+
+(** module components *)
+Definition modVars := list (gname * val).
+Definition modFuns := list (gname * function).
+
+(** Imp module *)
+Record module : Type := mk_module {
+  mod_vars : modVars;
+  mod_funs : modFuns;
+}.
+
+(**** ModSem ****)
+Module ImpMod.
+Section MODSEM.
+
+  Context `{GRA: GRA.t}.
+  Variable mn: mname.
+  Variable m: module.
+
+  Set Typeclasses Depth 5.
+  (* Instance Initial_void1 : @Initial (Type -> Type) IFun void1 := @elim_void1. (*** TODO: move to ITreelib ***) *)
+
+  Definition modsem (ge: SkEnv.t) : ModSem.t := {|
+    ModSem.fnsems :=
+      List.map (fun '(fn, f) => (fn, cfun (eval_imp ge f))) m.(mod_funs);
+    ModSem.initial_mrs := [(mn, (URA.unit, tt↑))];
+  |}.
+
+  Definition get_mod: Mod.t := {|
+    Mod.get_modsem := fun ge => (modsem ge);
+    Mod.sk :=
+      (List.map (fun '(vn, vv) => (vn, Sk.Gvar vv)) m.(mod_vars)) ++
+      (List.map (fun '(fn, _) => (fn, Sk.Gfun)) m.(mod_funs));
+  |}.
+
+End MODSEM.
+End ImpMod.
 
 (* ========================================================================== *)
 (** ** Notations *)
@@ -173,39 +358,57 @@ Module ImpNotations.
     (CallFun (Some x) (Fun "cmp" Tint [t1; t2]) [a; b]) (at level 60): stmt_scope.
 
 End ImpNotations.
+Import ImpNotations.
 
-(* ========================================================================== *)
-(** ** Semantics *)
+Section Example_Extract.
 
-(** Get/Set function local variables *)
-Variant ImpState : Type -> Type :=
-| GetVar (x : var) : ImpState val
-| SetVar (x : var) (v : val) : ImpState unit.
+  Let Σ: GRA.t := fun _ => of_RA.t RA.empty.
+  Local Existing Instance Σ.
 
-(** Get pointer to a global variable *)
-Variant GlobVar : Type -> Type :=
-| GetPtr (x: var) : GlobVar val.
+  Open Scope expr_scope.
+  Open Scope stmt_scope.
 
-Section Denote.
- 
-  Context `{Σ: GRA.t}.
-  Context {eff : Type -> Type}.
-  Context {HasImpState : ImpState -< eff}.
-  Context {HasCall : callE -< eff}.
-  Context {HasEvent : eventE -< eff}.
-  Context {HasGlobVar: GlobVar -< eff}.
+  Definition factorial : stmt :=
+    "output" =# 1%Z ;;#
+    while# "input"
+    do# "output" =# "output" * "input";;#
+       "input"  =# "input" - 1%Z end#;;#
+    "output".
 
-  (** Denotation of expressions *)
-  Fixpoint denote_expr (e : expr) : itree eff val :=
-    match e with
-    | Var v     => trigger (GetVar v)
-    | Lit n     => Ret n
-    | Plus a b  => l <- denote_expr a ;; r <- denote_expr b ;; (vadd l r)?
-    | Minus a b => l <- denote_expr a ;; r <- denote_expr b ;; (vsub l r)?
-    | Mult a b  => l <- denote_expr a ;; r <- denote_expr b ;; (vmul l r)?
-    end.
+  Definition factorial_fundef : function := {|
+    fn_return := Tint;
+    fn_params := [("input", Tint)];
+    fn_vars := [("output", Tint)];
+    fn_body := factorial
+  |}.
 
-  (** Rewriting lemmas *)
+  Let f_factorial := Fun "factorial" Tint [Tint].
+  Definition main : stmt :=
+    "result" :=# (f_factorial) [4%Z : expr] ;;#
+    "result".
+
+  Definition main_fundef : function := {|
+    fn_return := Tint;
+    fn_params := [];
+    fn_vars := [("result", Tint)];
+    fn_body := main
+  |}.
+
+  Definition ex_extract : module := {|
+    mod_vars := [];
+    mod_funs := [("factorial", factorial_fundef); ("main", main_fundef)];
+  |}.
+  
+  Definition ex_prog: Mod.t := ImpMod.get_mod "Main" ex_extract.
+
+  Definition imp_ex := ModSem.initial_itr_no_check (Mod.enclose ex_prog).
+
+End Example_Extract.
+
+(** Rewriting lemmas **)
+Section PROOFS.
+
+  (* expr *)
   Lemma denote_expr_Var
         v
     :
@@ -239,80 +442,7 @@ Section Denote.
       l <- denote_expr a ;; r <- denote_expr b ;; (vmul l r)?.
   Proof. reflexivity. Qed.
 
-  (** Denotation of statements *)
-  Definition while (step : itree eff (unit + val)) : itree eff val :=
-    ITree.iter (fun _ => step) tt.
-
-  (** Casting values into [bool]: [Vint 0] corresponds to [false] and any other
-      value corresponds to [true].  *)
-  Definition is_true (v : val) : option bool :=
-    match v with
-    | Vint n => if (n =? 0)%Z then Some false else Some true
-    | _ => None
-    end.
-
-  Fixpoint check_args args types : bool :=
-    match args, types with
-    | [], [] => true
-    | a::t1, t::t2 => (has_type a t) && (check_args t1 t2)
-    | _, _ => false    
-    end
-  .
-
-  Fixpoint denote_stmt (s : stmt) : itree eff val :=
-    match s with
-    | Assign x e =>  v <- denote_expr e ;; trigger (SetVar x v) ;; Ret Vundef
-    | Seq a b    =>
-      denote_stmt a ;; denote_stmt b
-    | If i t e   =>
-      v <- denote_expr i ;; `b: bool <- (is_true v)? ;;
-      if b then (denote_stmt t) else (denote_stmt e)
-
-    | While t b =>
-      while (v <- denote_expr t ;; `c: bool <- (is_true v)? ;;
-             if c then (denote_stmt b ;; Ret (inl tt)) else (Ret (inr Vundef)))
-
-    | Skip => Ret Vundef
-    | CallFun opt ft args =>
-      match opt with
-      | Some x =>        
-        match ft with
-        | Fun f ty atys =>
-          eval_args <- (mapT denote_expr args) ;;
-          if (check_args eval_args atys)
-          then v <- trigger (Call f (eval_args↑)) ;; v <- unwrapN (v↓);;
-               trigger (SetVar x v) ;; Ret Vundef
-          else triggerUB
-        | Sys f ty atys =>
-          eval_args <- (mapT denote_expr args) ;;
-          if (check_args eval_args atys)
-          then v <- trigger (Syscall f eval_args top1) ;;
-               trigger (SetVar x v) ;; Ret Vundef
-          else triggerUB
-        end
-
-      | None =>
-        match ft with
-        | Fun f ty atys =>
-          eval_args <- (mapT denote_expr args) ;;
-          if (check_args eval_args atys)
-          then trigger (Call f (eval_args↑)) ;; Ret Vundef
-          else triggerUB
-        | Sys f ty atys =>
-          eval_args <- (mapT denote_expr args) ;;
-          if (check_args eval_args atys)
-          then trigger (Syscall f eval_args top1) ;; Ret Vundef
-          else triggerUB
-        end
-      end
-
-    | AddrOf x X =>
-      v <- trigger (GetPtr X) ;; trigger (SetVar x v) ;; Ret Vundef
-
-    | Return e => v <- denote_expr e ;; Ret v
-    end.
-
-  (** Rewriting lemmas *)
+  (* stmt *)
   Lemma denote_stmt_Assign
         x e
     :
@@ -398,161 +528,7 @@ Section Denote.
       denote_stmt (Return e) = v <- denote_expr e ;; Ret v.
   Proof. reflexivity. Qed.
 
-End Denote.
-
-(* ========================================================================== *)
-(** ** Interpretation *)
-
-Section Interp.
-
-  Context `{Σ: GRA.t}.
-  Definition effs := GlobVar +' ImpState +' Es.
-
-  Definition handle_GlobVar {eff} `{eventE -< eff} : GlobVar ~> stateT SkEnv.t (itree eff) :=
-    fun _ e ge =>
-      match e with
-      | GetPtr X => r <- (ge.(SkEnv.id2blk) X)? ;; Ret (ge, Vptr r 0)
-      end.
-
-  Definition interp_GlobVar {eff} `{eventE -< eff}: itree (GlobVar +' eff) ~> stateT SkEnv.t (itree eff) :=
-    State.interp_state (case_ handle_GlobVar ModSem.pure_state).
-
-  (** function local environment *)
-  Definition lenv := alist var (type * val).
-  Definition handle_ImpState {eff} `{eventE -< eff} : ImpState ~> stateT lenv (itree eff) :=
-    fun _ e le =>
-      match e with
-      | GetVar x => '(_, r) <- unwrapU (alist_find _ x le) ;; Ret (le, r)
-      | SetVar x v =>
-        '(t, _) <- unwrapU (alist_find _ x le) ;;
-        if (has_type v t)
-        then Ret (alist_add _ x (t, v) le, tt)
-        else triggerUB
-      end.
-
-  Definition interp_ImpState {eff} `{eventE -< eff}: itree (ImpState +' eff) ~> stateT lenv (itree eff) :=
-    State.interp_state (case_ handle_ImpState ModSem.pure_state).
-
-  Definition interp_imp ge le (itr: itree effs val) :=
-    interp_ImpState (interp_GlobVar itr ge) le.
-
-  Print Coercions.
-  
-  Fixpoint init_lenv vts : lenv :=
-    match vts with
-    | [] => []
-    | (x, ty) :: t => (x, (ty, Vundef)) :: (init_lenv t)
-    end
-  .
-
-  Fixpoint init_args params args (acc: lenv) : option lenv :=
-    match params, args with
-    | [], [] => Some acc
-    | (x, ty) :: pt, argv :: argt =>
-      if (has_type argv ty)
-      then (init_args pt argt (alist_add _ x (ty, argv) acc))
-      else None
-    | _, _ => None
-    end
-  .
-
-  Definition eval_imp (ge: SkEnv.t) (f: function) (args: list val) : itree Es val :=
-    match (init_args f.(fn_params) args []) with
-    | Some iargs =>
-      '(_, (_, retv)) <- (interp_imp ge (iargs++(init_lenv f.(fn_vars))) (denote_stmt f.(fn_body))) ;; Ret retv
-    | None => triggerUB
-    end
-  .
-
-End Interp.
-
-(** module components *)
-Definition modVars := list (gname * val).
-Definition modFuns := list (gname * function).
-
-(** Imp module *)
-Record module : Type := mk_module {
-  mod_vars : modVars;
-  mod_funs : modFuns;
-}.
-
-(**** ModSemL ****)
-Module ImpMod.
-Section MODSEML.
-  Context `{GRA: GRA.t}.
-  Variable mn: mname.
-  Variable m: module.
-
-  Set Typeclasses Depth 5.
-  (* Instance Initial_void1 : @Initial (Type -> Type) IFun void1 := @elim_void1. (*** TODO: move to ITreelib ***) *)
-
-  Definition modsem: ModSem.t := {|
-    ModSem.fnsems :=
-      List.map (fun '(fn, f) => (fn, cfun (eval_imp f))) m.(mod_funs);
-    ModSem.mn := mn;
-    ModSem.initial_mr := ε;
-    ModSem.initial_st := tt↑;
-  |}.
-
-  Definition get_mod: Mod.t := {|
-    Mod.get_modsem := fun ge => (modsem ge);
-    Mod.sk :=
-      (List.map (fun '(vn, vv) => (vn, Sk.Gvar vv)) m.(mod_vars)) ++
-      (List.map (fun '(fn, _) => (fn, Sk.Gfun)) m.(mod_funs));
-  |}.
-
-End MODSEML.
-End ImpMod.
-
-Import ImpNotations.
-Section Example_Extract.
-
-  Let Σ: GRA.t := fun _ => of_RA.t RA.empty.
-  Local Existing Instance Σ.
-
-  Open Scope expr_scope.
-  Open Scope stmt_scope.
-
-  Definition factorial : stmt :=
-    "output" =# 1%Z ;;#
-    while# "input"
-    do# "output" =# "output" * "input";;#
-       "input"  =# "input" - 1%Z end#;;#
-    "output".
-
-  Definition factorial_fundef : function := {|
-    fn_return := Tint;
-    fn_params := [("input", Tint)];
-    fn_vars := [("output", Tint)];
-    fn_body := factorial
-  |}.
-
-  Let f_factorial := Fun "factorial" Tint [Tint].
-  Definition main : stmt :=
-    "result" :=# (f_factorial) [4%Z : expr] ;;#
-    "result".
-
-  Definition main_fundef : function := {|
-    fn_return := Tint;
-    fn_params := [];
-    fn_vars := [("result", Tint)];
-    fn_body := main
-  |}.
-
-  Definition ex_extract : module := {|
-    mod_vars := [];
-    mod_funs := [("factorial", factorial_fundef); ("main", main_fundef)];
-  |}.
-  
-  Definition ex_prog: Mod.t := ImpMod.get_mod "Main" ex_extract.
-
-  Definition imp_ex := ModSemL.initial_itr_no_check (ModL.enclose ex_prog).
-
-End Example_Extract.
-
-
-Section PROOFS.
-
+  (* interp_imp *)
   Context `{Σ: GRA.t}.
 
   Lemma interp_imp_bind
@@ -684,7 +660,7 @@ Section PROOFS.
     unfold interp_imp, pure_state. grind.
   Qed.
 
-
+  (* eval_imp  *)
   Lemma eval_imp_unfold
         fret fparams fvars fbody args
     :
@@ -701,6 +677,7 @@ Section PROOFS.
 
 End PROOFS.
 
+(** tactics **)
 Global Opaque denote_expr.
 Global Opaque denote_stmt.
 Global Opaque interp_imp.
