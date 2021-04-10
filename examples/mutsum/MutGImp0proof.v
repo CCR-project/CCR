@@ -40,7 +40,8 @@ Section SIMMODSEM.
       (<<TGT: mrps_tgt0 = (ε, tt↑)>>)
   .
 
-  Theorem correct: ModSemPair.sim MutG0.GSem MutGImp.GSem.
+  Theorem correct:
+    forall ge, ModSemPair.sim MutG0.GSem (MutGImp.GSem ge).
   Proof.
     econstructor 1 with (wf:=wf); et; ss.
     econs; ss. init. unfold cfun.

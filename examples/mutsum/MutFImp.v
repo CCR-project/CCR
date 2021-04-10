@@ -37,8 +37,7 @@ Section F.
       [("f", fF)]
   .
 
+  Definition FSem ge: ModSem.t := ImpMod.modsem "F" f_prog ge.
   Definition F : Mod.t := ImpMod.get_mod "F" f_prog.
-  
-  Definition FSem: ModSem.t := F.(Mod.enclose).
 
 End F.

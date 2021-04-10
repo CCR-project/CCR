@@ -36,9 +36,8 @@ Section G.
       []
       [("g", gF)]
   .
-
-  Definition G : Mod.t := ImpMod.get_mod "G" g_prog.
   
-  Definition GSem: ModSem.t := G.(Mod.enclose).
+  Definition GSem ge: ModSem.t := ImpMod.modsem "G" g_prog ge.
+  Definition G : Mod.t := ImpMod.get_mod "G" g_prog.
 
 End G.
