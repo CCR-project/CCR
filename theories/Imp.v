@@ -47,12 +47,6 @@ Set Implicit Arguments.
 (** Imp manipulates a countable set of variables represented as [string]s: *)
 Definition var : Set := string.
 
-(* function name *)
-Inductive fun_type : Type :=
-| Fun (_ : gname)
-| Sys (_ : gname)
-.
-
 (** Expressions are made of variables, constant literals, and arithmetic operations. *)
 Inductive expr : Type :=
 | Var (_ : var)
@@ -69,8 +63,10 @@ Inductive stmt : Type :=
 | If     (i : expr) (t e : stmt) (* if (i) then { t } else { e } *)
 | While  (t : expr) (b : stmt)   (* while (t) { b } *)
 | Skip                           (* ; *)
-| CallFun (x : option var) (f : option fun_type) (p : option expr) (args : list expr)  (* x = f(args), call with either name or pointer *)
-| Return (e : expr)              (* return e *)
+| CallFun (x : option var) (f : gname) (args : list expr) (* [x =] f(args), call by function name *)
+| CallPtr (x : option var) (p : expr) (args : list expr)  (* [x =] f(args), call by function pointer *)
+| CallSys (x : option var) (f : gname) (args : list expr) (* [x =] f(args), system call *)
+| Return (e : option expr)              (* return [e] *)
 | AddrOf (x : var) (X : gname)   (* x = &X *)
 | Load (x : var) (p : expr)      (* x = *p *)
 | Store (p : expr) (v : expr)    (* *p = v *)
@@ -142,50 +138,49 @@ Section Denote.
 
     | Skip => Ret Vundef
 
-    | CallFun ov oft op args =>
+    | CallFun ov f args =>
       eval_args <- (mapT denote_expr args);;
-      match oft, op with
-      (* call with name *)
-      | Some ft, None =>
-        match ft with
-        | Fun f =>
-          if (String.string_dec f "load" || String.string_dec f "store")
-          then triggerUB
-          else
-            match ov with
-            | Some x =>
-              v <- trigger (Call f (eval_args↑));; v <- unwrapN (v↓);;
-              trigger (SetVar x v);; Ret Vundef
-            | None =>
-              trigger (Call f (eval_args↑));; Ret Vundef
-            end
-        | Sys f =>
-          match ov with
-          | Some x =>
-            v <- trigger (Syscall f eval_args top1);;
-            trigger (SetVar x v);; Ret Vundef
-          | None =>
-            trigger (Syscall f eval_args top1);; Ret Vundef
-          end
+      if (String.string_dec f "load" || String.string_dec f "store")
+      then triggerUB
+      else
+        match ov with
+        | Some x =>
+          v <- trigger (Call f (eval_args↑));; v <- unwrapN (v↓);;
+          trigger (SetVar x v);; Ret Vundef
+        | None =>
+          trigger (Call f (eval_args↑));; Ret Vundef
         end
-      (* call with pointer *)
-      | None, Some e =>
-        p <- denote_expr e;;
-        f <- trigger (GetName p);;
-        if (String.string_dec f "load" || String.string_dec f "store")
-        then triggerUB
-        else
-          match ov with
-          | Some x =>
-            v <- trigger (Call f (eval_args↑));; v <- unwrapN (v↓);;
-            trigger (SetVar x v);; Ret Vundef
-          | None =>
-            trigger (Call f (eval_args↑));; Ret Vundef
-          end
-      | _, _ => triggerUB
+
+    | CallPtr ov e args =>
+      eval_args <- (mapT denote_expr args);;
+      p <- denote_expr e;; f <- trigger (GetName p);;
+      if (String.string_dec f "load" || String.string_dec f "store")
+      then triggerUB
+      else
+        match ov with
+        | Some x =>
+          v <- trigger (Call f (eval_args↑));; v <- unwrapN (v↓);;
+          trigger (SetVar x v);; Ret Vundef
+        | None =>
+          trigger (Call f (eval_args↑));; Ret Vundef
+        end
+
+    | CallSys ov f args =>
+      eval_args <- (mapT denote_expr args);;
+      match ov with
+      | Some x =>
+        v <- trigger (Syscall f eval_args top1);;
+        trigger (SetVar x v);; Ret Vundef
+      | None =>
+        trigger (Syscall f eval_args top1);; Ret Vundef
       end
 
-    | Return e => v <- denote_expr e;; Ret v
+    | Return oe =>
+      match oe with
+      | Some e =>
+        v <- denote_expr e;; Ret v
+      | None => Ret Vundef
+      end
 
     | AddrOf x X =>
       v <- trigger (GetPtr X);; trigger (SetVar x v);; Ret Vundef
@@ -311,14 +306,18 @@ End ImpMod.
 Module ImpNotations.
 
   (** A few notations for convenience.  *)
-  Definition Return_coerce: expr -> stmt := Return.
   Definition Var_coerce: string -> expr := Var.
   Definition Lit_coerce: val -> expr := Lit.
   Definition Vint_coerce: Z -> val := Vint.
-  Coercion Return_coerce: expr >-> stmt.
   Coercion Var_coerce: string >-> expr.
   Coercion Lit_coerce: val >-> expr.
   Coercion Vint_coerce: Z >-> val.
+
+  (* Definition opExpr := option expr. *)
+  (* Definition opStr := option string. *)
+  (* Definition opStr_coerce: opStr -> opExpr := *)
+  (*   (fun os => do s <- os; Some (Var s)). *)
+  (* Coercion opStr_coerce: opStr >-> opExpr. *)
 
   Declare Scope expr_scope.
   Bind Scope expr_scope with expr.
@@ -333,14 +332,11 @@ Module ImpNotations.
   Notation "x '=#' e" :=
     (Assign x e) (at level 60, e at level 50): stmt_scope.
 
-  Notation "x '=#' '&' X" :=
-    (AddrOf x X) (at level 60): stmt_scope.
-
-  Notation "a ';;#' b" :=
+  Notation "a ';#' b" :=
     (Seq a b)
       (at level 100, right associativity,
        format
-         "'[v' a  ';;#' '/' '[' b ']' ']'"
+         "'[v' a  ';#' '/' '[' b ']' ']'"
       ): stmt_scope.
 
   Notation "'if#' i 'then#' t 'else#' e 'fi#'" :=
@@ -357,53 +353,80 @@ Module ImpNotations.
        format
          "'[v  ' 'while#'  t  'do#' '/' '[v' b  ']' ']' '/' 'end#'").
 
-  (* Different methods for function calls *)
-  Notation "x ':=#' '(' f ')' args" :=
-    (CallFun (Some x) (Some f) None args) (at level 60): stmt_scope.
+  Notation "'skip#'" :=
+    (Skip) (at level 100): stmt_scope.
 
-  Notation "'#(' f ')' args" :=
-    (CallFun None (Some f) None args) (at level 60): stmt_scope.
+  Notation "'ret#'" :=
+    (Return None) (at level 60): stmt_scope.
 
-  Notation "x ':=#' '*(' fp ')' args" :=
-    (CallFun (Some x) None (Some fp) args) (at level 60): stmt_scope.
+  Notation "'ret#' e" :=
+    (Return (Some e)) (at level 60): stmt_scope.
+  
+  Notation "x '=#&' X" :=
+    (AddrOf x X) (at level 60): stmt_scope.
 
-  Notation "'#*(' fp ')' args" :=
-    (CallFun None None (Some fp) args) (at level 60): stmt_scope.
-
-  Notation "x ':=#' 'alloc' s" :=
-    (CallFun (Some x) (Fun "alloc") None [s]) (at level 60): stmt_scope.
-
-  Notation "'#free' p" :=
-    (CallFun None (Fun "free") None [p]) (at level 60): stmt_scope.
-
-  Notation "x ':=#' '(' a '==' b ')'" :=
-    (CallFun (Some x) (Fun "cmp") None [a ; b]) (at level 60): stmt_scope.
-
-  Notation "x ':=#' '*(' p ')'" :=
+  Notation "x '=#' '*(' p ')'" :=
     (Load x p) (at level 60): stmt_scope.
 
-  Notation "'*(' p ')' ':=#' v" :=
+  Notation "'*(' p ')' '=#' v" :=
     (Store p v) (at level 60): stmt_scope.
 
+  (* Different methods for function calls *)
+  Notation "x ':=#' f args" :=
+    (CallFun (Some x : option var) f args)
+      (at level 60, f at level 9): stmt_scope.
+
+  Notation "'@' f args" :=
+    (CallFun None f args)
+      (at level 60, f at level 9): stmt_scope.
+
+  Notation "x ':=#*' fp args" :=
+    (CallPtr (Some x) fp args)
+      (at level 60, fp at level 9): stmt_scope.
+
+  Notation "'@*' fp args" :=
+    (CallPtr None fp args)
+      (at level 60, fp at level 9): stmt_scope.
+
+  Notation "x ':=#!' f args" :=
+    (CallSys (Some x) f args)
+      (at level 60, f at level 9): stmt_scope.
+
+  Notation "'@!' f args" :=
+    (CallSys None f args)
+      (at level 60, f at level 9): stmt_scope.
+  
+  Notation "x ':=#' 'alloc' s" :=
+    (CallFun (Some x) (Fun "alloc") None [s])
+      (at level 60): stmt_scope.
+
+  Notation "'#free' p" :=
+    (CallFun None (Fun "free") None [p])
+      (at level 60): stmt_scope.
+
+  Notation "x ':=#?' '(' a '==' b ')'" :=
+    (CallFun (Some x) (Fun "cmp") None [a ; b])
+      (at level 60): stmt_scope.
+
 End ImpNotations.
-Import ImpNotations.
 
 (* ========================================================================== *)
 (** ** Example *)
 Section Example_Extract.
 
+  Import ImpNotations.
   Let Σ: GRA.t := fun _ => of_RA.t RA.empty.
   Local Existing Instance Σ.
 
-  Open Scope expr_scope.
-  Open Scope stmt_scope.
+  Local Open Scope expr_scope.
+  Local Open Scope stmt_scope.
 
   Definition factorial : stmt :=
-    "output" =# 1%Z ;;#
+    "output" =# 1%Z ;#
     while# "input"
-    do# "output" =# "output" * "input";;#
-       "input"  =# "input" - 1%Z end#;;#
-    "output".
+    do# "output" =# "output" * "input";#
+       "input"  =# "input" - 1%Z end#;#
+    ret# ("output" : expr).
 
   Definition factorial_fundef : function := {|
     fn_params := ["input"];
@@ -411,10 +434,9 @@ Section Example_Extract.
     fn_body := factorial
   |}.
 
-  Let f_factorial := Fun "factorial".
   Definition main : stmt :=
-    "result" :=# (f_factorial) [4%Z : expr] ;;#
-    "result".
+    "result" :=# "factorial" [4%Z : expr] ;#
+    ret# ("result" : expr).
 
   Definition main_fundef : function := {|
     fn_params := [];
@@ -514,42 +536,113 @@ Section PROOFS.
       denote_stmt (Skip) = Ret Vundef.
   Proof. reflexivity. Qed.
 
-  Lemma denote_stmt_CallFun
-        opt ft args
+  Lemma denote_stmt_CallFun1
+        x ft args
     :
-      denote_stmt (CallFun opt ft args) =
-      match opt with
-      | Some x =>        
-        match ft with
-        | Fun f ty atys =>
-          eval_args <- (mapT denote_expr args) ;;
-          if (check_args eval_args atys)
-          then v <- trigger (Call f (eval_args↑)) ;; v <- unwrapN (v↓);;
-               trigger (SetVar x v) ;; Ret Vundef
-          else triggerUB
-        | Sys f ty atys =>
-          eval_args <- (mapT denote_expr args) ;;
-          if (check_args eval_args atys)
-          then v <- trigger (Syscall f eval_args top1) ;;
-               trigger (SetVar x v) ;; Ret Vundef
-          else triggerUB
-        end
-
-      | None =>
-        match ft with
-        | Fun f ty atys =>
-          eval_args <- (mapT denote_expr args) ;;
-          if (check_args eval_args atys)
-          then trigger (Call f (eval_args↑)) ;; Ret Vundef
-          else triggerUB
-        | Sys f ty atys =>
-          eval_args <- (mapT denote_expr args) ;;
-          if (check_args eval_args atys)
-          then trigger (Syscall f eval_args top1) ;; Ret Vundef
-          else triggerUB
-        end
-      end.
+      denote_stmt (CallFun (Some x) (Some ft) None args) =
+      eval_args <- (mapT denote_expr args);;
+      match ft with
+      | Fun f =>
+        if (String.string_dec f "load" || String.string_dec f "store")
+        then triggerUB
+        else
+          v <- trigger (Call f (eval_args↑));; v <- unwrapN (v↓);;
+          trigger (SetVar x v);; Ret Vundef
+      | Sys f =>
+        v <- trigger (Syscall f eval_args top1);;
+        trigger (SetVar x v);; Ret Vundef
+      end
+  .
   Proof. reflexivity. Qed.
+
+  Lemma denote_stmt_CallFun2
+        ft args
+    :
+      denote_stmt (CallFun None (Some ft) None args) =
+      eval_args <- (mapT denote_expr args);;
+      match ft with
+      | Fun f =>
+        if (String.string_dec f "load" || String.string_dec f "store")
+        then triggerUB
+        else
+          trigger (Call f (eval_args↑));; Ret Vundef
+      | Sys f =>
+        trigger (Syscall f eval_args top1);; Ret Vundef
+      end
+  .
+  Proof. reflexivity. Qed.
+
+  Lemma denote_stmt_CallFun3
+        x e args
+    :
+      denote_stmt (CallFun (Some x) None (Some e) args) =
+      eval_args <- (mapT denote_expr args);;
+      p <- denote_expr e;;
+      f <- trigger (GetName p);;
+      if (String.string_dec f "load" || String.string_dec f "store")
+      then triggerUB
+      else
+        v <- trigger (Call f (eval_args↑));; v <- unwrapN (v↓);;
+        trigger (SetVar x v);; Ret Vundef
+  .
+  Proof. reflexivity. Qed.
+
+  Lemma denote_stmt_CallFun4
+        e args
+    :
+      denote_stmt (CallFun None None (Some e) args) =
+      eval_args <- (mapT denote_expr args);;
+      p <- denote_expr e;;
+      f <- trigger (GetName p);;
+      if (String.string_dec f "load" || String.string_dec f "store")
+      then triggerUB
+      else trigger (Call f (eval_args↑));; Ret Vundef
+  .
+    
+
+            
+     | CallFun ov oft op args =>
+      eval_args <- (mapT denote_expr args);;
+      match oft, op with
+      (* call with name *)
+      | Some ft, None =>
+        match ft with
+        | Fun f =>
+          if (String.string_dec f "load" || String.string_dec f "store")
+          then triggerUB
+          else
+            match ov with
+            | Some x =>
+              v <- trigger (Call f (eval_args↑));; v <- unwrapN (v↓);;
+              trigger (SetVar x v);; Ret Vundef
+            | None =>
+              trigger (Call f (eval_args↑));; Ret Vundef
+            end
+        | Sys f =>
+          match ov with
+          | Some x =>
+            v <- trigger (Syscall f eval_args top1);;
+            trigger (SetVar x v);; Ret Vundef
+          | None =>
+            trigger (Syscall f eval_args top1);; Ret Vundef
+          end
+        end
+      (* call with pointer *)
+      | None, Some e =>
+        p <- denote_expr e;;
+        f <- trigger (GetName p);;
+        if (String.string_dec f "load" || String.string_dec f "store")
+        then triggerUB
+        else
+          match ov with
+          | Some x =>
+            v <- trigger (Call f (eval_args↑));; v <- unwrapN (v↓);;
+            trigger (SetVar x v);; Ret Vundef
+          | None =>
+            trigger (Call f (eval_args↑));; Ret Vundef
+          end
+      | _, _ => triggerUB
+      end
 
   Lemma denote_stmt_Return
         e
