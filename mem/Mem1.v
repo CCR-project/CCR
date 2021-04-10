@@ -175,7 +175,8 @@ Section PROOF.
 
   Definition Mem: Mod.t := {|
     Mod.get_modsem := fun _ => MemSem; (*** TODO: we need proper handling of function pointers ***)
-    Mod.sk := List.map (fun '(n, _) => (n, Sk.Gfun)) MemStb;
+    (* Mod.sk := List.map (fun '(n, _) => (n, Sk.Gfun)) MemStb; *)
+    Mod.sk := Sk.unit;
   |}
   .
 

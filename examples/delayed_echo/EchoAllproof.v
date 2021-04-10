@@ -35,12 +35,12 @@ Section ECHO.
   Local Existing Instance echoRA_inG.
 
   Definition echo_impl: ModL.t :=
-    ModL.add_list [
-        (Mem: ModL.t) ; (* Mem *)
-        (Main: ModL.t); (* Main *)
-        (Stack: ModL.t); (* Stack *)
-        (Echo: ModL.t) ; (* Echo *)
-        (Client: ModL.t) (* Client *)
+    Mod.add_list [
+        Mem; (* Mem *)
+        Main; (* Main *)
+        Stack; (* Stack *)
+        Echo; (* Echo *)
+        Client (* Client *)
       ].
 
   Theorem echo_correct:
