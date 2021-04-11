@@ -73,7 +73,7 @@ Inductive stmt : Type :=
 | Return2                         (* return *)
 | AddrOf (x : var) (X : gname)   (* x = &X *)
 | Load (x : var) (p : expr)      (* x = *p *)
-| Store (X : gname) (v : expr)    (* *X = v *)
+| Store (p : expr) (v : expr)    (* *p = v *)
 .
 
 (** information of a function *)
@@ -199,8 +199,8 @@ Section Denote.
       p <- denote_expr pe;;
       v <- trigger (Call "load" (p↑));; v <- unwrapN(v↓);;
       trigger (SetVar x v);; Ret Vundef
-    | Store X ve =>
-      p <- trigger (GetPtr X);; v <- denote_expr ve;;
+    | Store pe ve =>
+      p <- denote_expr pe;; v <- denote_expr ve;;
       trigger (Call "store" ([p ; v]↑));; Ret Vundef
 
     end.
@@ -405,8 +405,8 @@ Module ImpNotations.
   Notation "x '=#' '*' p" :=
     (Load x p) (at level 60): stmt_scope.
 
-  Notation "'*' X '=#' v" :=
-    (Store X v) (at level 60): stmt_scope.
+  Notation "'*' p '=#' v" :=
+    (Store p v) (at level 60): stmt_scope.
 
   Notation "x '=#' 'alloc#' s" :=
     (CallFun1 x "alloc" [s])
@@ -578,10 +578,10 @@ Section PROOFS.
   Proof. reflexivity. Qed.
 
   Lemma denote_stmt_Store
-        ge0 le0 X ve
+        ge0 le0 pe ve
     :
-      interp_imp ge0 le0 (denote_stmt (Store X ve)) =
-      interp_imp ge0 le0 (p <- trigger (GetPtr X);; v <- denote_expr ve;;
+      interp_imp ge0 le0 (denote_stmt (Store pe ve)) =
+      interp_imp ge0 le0 (p <- denote_expr pe;; v <- denote_expr ve;;
       trigger (Call "store" ([p ; v]↑));; Ret Vundef).
   Proof. reflexivity. Qed.
 
@@ -998,16 +998,15 @@ Section PROOFS.
   Qed.
 
   Lemma interp_imp_Store
-        ge0 le0 X ve
+        ge0 le0 pe ve
     :
-      interp_imp ge0 le0 (denote_stmt (Store X ve)) =
-      r <- (ge0.(SkEnv.id2blk) X)?;; tau;;
-      '(le1, (ge1, v)) <- interp_imp ge0 le0 (denote_expr ve);;
-      trigger (Call "store" ([Vptr r 0; v]↑));; tau;; tau;; Ret (le1, (ge1, Vundef)).
+      interp_imp ge0 le0 (denote_stmt (Store pe ve)) =
+      '(le1, (ge1, p)) <- interp_imp ge0 le0 (denote_expr pe);;
+      '(le2, (ge2, v)) <- interp_imp ge1 le1 (denote_expr ve);;
+      trigger (Call "store" ([p ; v]↑));; tau;; tau;; Ret (le2, (ge2, Vundef)).
   Proof.
     rewrite denote_stmt_Store. rewrite interp_imp_bind.
-    rewrite interp_imp_GetPtr. grind.
-    rewrite interp_imp_bind. grind.
+    grind. rewrite interp_imp_bind. grind.
     apply interp_imp_Call_only.
   Qed.
 
