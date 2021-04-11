@@ -7,10 +7,7 @@ Require Import Any.
 Require Import ModSem.
 Require Import Imp.
 
-From compcert Require Import AST.
-From compcert Require Import Integers.
-From compcert Require Import Ctypes.
-From compcert Require Import Clight.
+From compcert Require Import AST Integers Ctypes Clight Globalenvs.
 
 Import Int.
 
@@ -30,90 +27,54 @@ Section Compile.
   (*   forall (intval : Z), *)
   (*     ((Zneg xH) < intval < modulus)%Z. *)
 
-  Variable m : Imp.module.
-  Variable f : Imp.function.
-  
-  Variable s2p : string -> ident.
-  Variable to_int : Z -> int.
+  Context `{Σ: GRA.t}.
+  Variable src : Mod.t.
+  Variable src_ge : SkEnv.t.
+  Variable tgt : program.
+  (* Variable tgt_ge0 : Genv.t (Ctypes.fundef function) type. *)
 
-  Let canon_Tint :=
-    (Tint I32 Signed noattr).
+  Context {s2p : string -> ident}.
+  Context {to_long : Z -> int64}.
 
-  Let canon_Tptr tgt :=
+  Let Tlong0 :=
+    (Tlong Signed noattr).
+
+  Let Tptr0 tgt :=
     (Tpointer tgt noattr).
 
-  Fixpoint compile_type imp_ty : type :=
-    match imp_ty with
-    | Imp.Tint => canon_Tint
-    | Imp.Tptr tgt => canon_Tptr (compile_type tgt)
-    end.
-
-  Let i2c_names inames :=
-    List.map (fun '(name, ty) => (s2p name, compile_type ty)) inames.
-
-  Let cfn_params := i2c_names f.(Imp.fn_params).
-  Let cfn_temps := i2c_names f.(Imp.fn_vars).
-
   Let string_key {T} l x : option T :=
-    SetoidList.findA (sflib.beq_str x) l.
+    SetoidList.findA (String.string_dec x) l.
 
-  Let imp_vs := f.(Imp.fn_params) ++ f.(Imp.fn_vars).
-
-  Let iv2t x := string_key imp_vs x.
-  
   Fixpoint compile_expr expr : option Clight.expr :=
     match expr with
     | Var x =>
-      do ty <- (iv2t x); Some (Etempvar (s2p x) (compile_type ty))
+      Some (Etempvar (s2p x) Tlong0)
     | Lit v =>
       match v with
-      | Vint z => Some (Econst_int (to_int z) canon_Tint)
+      | Vint z => Some (Econst_long (to_long z) Tlong0)
       | _ => None
       end
     | Plus a b =>
       match (compile_expr a), (compile_expr b) with
       | Some ca, Some cb =>
-        match (typeof ca), (typeof cb) with
-        | Tint _ _ _, Tint _ _ _ =>
-          Some (Ebinop Cop.Oadd ca cb canon_Tint)
-        | Tint _ _ _, Tpointer _ _ =>
-          Some (Ebinop Cop.Oadd ca cb (typeof cb))
-        | Tpointer _ _, Tint _ _ _ =>
-          Some (Ebinop Cop.Oadd ca cb (typeof ca))
-        | _, _ => None
-        end
+        Some (Ebinop Cop.Oadd ca cb Tlong0)
       | _, _ => None
       end
     | Minus a b =>
       match (compile_expr a), (compile_expr b) with
       | Some ca, Some cb =>
-        match (typeof ca), (typeof cb) with
-        | Tint _ _ _, Tint _ _ _ =>
-          Some (Ebinop Cop.Osub ca cb canon_Tint)
-        | Tint _ _ _, Tpointer _ _ =>
-          Some (Ebinop Cop.Osub ca cb (typeof cb))
-        | Tpointer _ _, Tint _ _ _ =>
-          Some (Ebinop Cop.Osub ca cb (typeof ca))
-        | _, _ => None
-        end
+        Some (Ebinop Cop.Osub ca cb Tlong0)
       | _, _ => None
       end
     | Mult a b =>
       match (compile_expr a), (compile_expr b) with
       | Some ca, Some cb =>
-        match (typeof ca), (typeof cb) with
-        | Tint _ _ _, Tint _ _ _ =>
-          Some (Ebinop Cop.Omul ca cb canon_Tint)
-        | Tint _ _ _, Tpointer _ _ =>
-          Some (Ebinop Cop.Omul ca cb (typeof cb))
-        | Tpointer _ _, Tint _ _ _ =>
-          Some (Ebinop Cop.Omul ca cb (typeof ca))
-        | _, _ => None
-        end
+        Some (Ebinop Cop.Omul ca cb Tlong0)
       | _, _ => None
       end
     end
   .
+  (** vsub, vmul may not match with compcert's cop semantics *)
 
   Fixpoint compile_exprs (exprs: list Imp.expr) acc : option (list Clight.expr) :=
     match exprs with
@@ -123,14 +84,10 @@ Section Compile.
     end
   .
 
-  Definition get_fun_expr fn rt : option Clight.expr :=
-    do (string_key m.(mod_funs)
-  
   Fixpoint compile_stmt stmt : option Clight.statement :=
     match stmt with
     | Assign x e =>
-      do ex <- (compile_expr e);
-      Some (Sset (s2p x) ex)
+      do ex <- (compile_expr e); Some (Sset (s2p x) ex)
     | Seq s1 s2 =>
       do cs1 <- (compile_stmt s1);
       do cs2 <- (compile_stmt s2);
@@ -146,19 +103,24 @@ Section Compile.
       Some (Swhile cc cbody)
     | Skip =>
       Some Sskip
-    | CallFun x ftype args =>
-      do cargs <- (compile_exprs args []);
-      match ftype with
-      | Fun fn rt =>
-        let f = (Evar (s2p fn) (Tfunction )) in
-        Some (Scall (Some (s2p x)) f cargs)
-      | Sys sn rt =>
-        do s <- (compile_expr (Var sn));
-        Some (Scall (Some (s2p x)) s cargs)
-      end
-    | Return r =>
-      do cr <- (compile_expr r);
-      Some (Sreturn (Some cr))
+
+    | CallFun1 x f args =>
+    | CallFun2 f args =>
+    | CallPtr1 x pe args =>
+    | CallPtr2 pe args =>
+    | CallSys1 x f args =>
+    | CallSys2 f args =>
+
+    | Return1 r =>
+      do cr <- (compile_expr r); Some (Sreturn (Some cr))
+    | Return2 =>
+      Some (Sreturn None)
+    | AddrOf x GN =>
+      Some (Sset (s2p x) (Eaddrof (Evar (s2p GN) Tlong0) Tlong0))
+    | Load x pe =>
+      do cpe <- (compile_expr pe); Some (Sset (s2p x) (Ederef cpe Tlong0))
+    | Store X ve =>
+      do vpe <- (compile_expr ve); Some (Sassign (Evar (s2p X) Tlong0) vpe)
     end
   .
 
