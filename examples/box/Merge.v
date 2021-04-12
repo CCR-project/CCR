@@ -25,8 +25,8 @@ Section PROOF.
   (*** cancelled ***)
   Definition Merge2: Mod.t := {|
     Mod.get_modsem := fun _ => {|
-        ModSem.fnsems := List.map (fun '(fn, body) => (fn, fun_to_src body)) (AddFtb ++ BoxFtb ++ MainFtb);
-        ModSem.initial_mrs := [];
+        ModSemL.fnsems := List.map (fun '(fn, body) => (fn, fun_to_src body)) (AddFtb ++ BoxFtb ++ MainFtb);
+        ModSemL.initial_mrs := [];
       |};
     Mod.sk := Sk.unit;
   |}
@@ -51,7 +51,7 @@ Section PROOF.
   Notation "(⋅)" := URA.add (only parsing).
   (* Local Opaque URA.add. *)
 
-  Theorem correct: Beh.of_program (Mod.interp Merge1) <1= Beh.of_program (Mod.interp Merge2).
+  Theorem correct: Beh.of_program (Mod.compile Merge1) <1= Beh.of_program (Mod.compile Merge2).
   Proof.
     ii.
     set (global_ftb:=AddFtb++BoxFtb++MainFtb).

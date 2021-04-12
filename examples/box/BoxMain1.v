@@ -29,9 +29,9 @@ Section PROOF.
 
   Definition MainFtb := zip pair [("main")] [mainBody].
 
-  Definition MainSem: ModSem.t := {|
-    ModSem.fnsems := List.map (fun '(fn, body) => (fn, fun_to_tgt (MainStb ++ BoxStb) fn body)) MainFtb;
-    ModSem.initial_mrs := [("Main", client 0%Z)];
+  Definition MainSem: ModSemL.t := {|
+    ModSemL.fnsems := List.map (fun '(fn, body) => (fn, fun_to_tgt (MainStb ++ BoxStb) fn body)) MainFtb;
+    ModSemL.initial_mrs := [("Main", client 0%Z)];
   |}
   .
 

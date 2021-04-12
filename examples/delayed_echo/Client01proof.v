@@ -28,12 +28,12 @@ Section SIMMODSEM.
 
   Context `{Σ: GRA.t}.
 
-  Let W: Type := (alist mname (Σ * Any.t)) * (alist mname (Σ * Any.t)).
+  Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
 
   Let wf: W -> Prop :=
     fun '(mrps_src0, mrps_tgt0) =>
-        (<<SRC: mrps_src0 = Maps.add "Client" (ε, tt↑) Maps.empty>>) /\
-        (<<TGT: mrps_tgt0 = Maps.add "Client" (ε, tt↑) Maps.empty>>)
+        (<<SRC: mrps_src0 = (ε, tt↑)>>) /\
+        (<<TGT: mrps_tgt0 = (ε, tt↑)>>)
   .
 
   Hint Resolve sim_itree_mon: paco.
@@ -43,8 +43,7 @@ Section SIMMODSEM.
 
   Theorem correct: ModSemPair.sim Client1.ClientSem Client0.ClientSem.
   Proof.
-    econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
-    { typeclasses eauto. }
+    econstructor 1 with (wf:=wf); et; swap 2 3.
     { ss. }
     econs; ss.
     { admit "ez". }

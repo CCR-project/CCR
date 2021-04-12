@@ -117,7 +117,9 @@ Section PROOF.
 
   Definition EchoSem: ModSem.t := {|
     ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt (StackStb ++ ClientStb ++ MemStb ++ EchoStb) fn fsb)) EchoSbtb;
-    ModSem.initial_mrs := [("Echo", (GRA.embed(echo_black Vnullptr []), tt↑))];
+    ModSem.mn := "Echo";
+    ModSem.initial_mr := (GRA.embed(echo_black Vnullptr []));
+    ModSem.initial_st := tt↑;
   |}
   .
 

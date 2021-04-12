@@ -453,9 +453,9 @@ End InterpImpProperties.
 
 **)
 
-(**** ModSem ****)
+(**** ModSemL ****)
 Module ImpMod.
-Section MODSEM.
+Section MODSEML.
   Context `{GRA: GRA.t}.
   Variable mn: mname.
   Variable prog: program.
@@ -465,7 +465,9 @@ Section MODSEM.
 
   Definition modsem: ModSem.t := {|
     ModSem.fnsems := List.map (fun '(fn, st) => (fn, cfun (eval_imp st))) prog;
-    ModSem.initial_mrs := [(mn, (URA.unit, tt↑))];
+    ModSem.mn := mn;
+    ModSem.initial_mr := ε;
+    ModSem.initial_st := tt↑;
   |}.
 
   Definition get_mod: Mod.t := {|
@@ -473,7 +475,7 @@ Section MODSEM.
     Mod.sk := List.map (fun '(fn, _) => (fn, Sk.Gfun)) prog;
   |}.
 
-End MODSEM.
+End MODSEML.
 End ImpMod.
 
 
@@ -507,7 +509,7 @@ Section Example_Extract.
 
   Definition ex_prog: Mod.t := ImpMod.get_mod "Main" ex_extract.
 
-  Definition imp_ex := ModSem.initial_itr_no_check (Mod.enclose ex_prog).
+  Definition imp_ex := ModSemL.initial_itr_no_check (ModL.enclose ex_prog).
 
 End Example_Extract.
 

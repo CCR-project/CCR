@@ -12,7 +12,7 @@ Set Implicit Arguments.
 
 
 
-Section EVENTS.
+Section EVENTSCOMMON.
 
   Variant eventE: Type -> Type :=
   | Choose (X: Type): eventE X
@@ -55,6 +55,68 @@ Section EVENTS.
   (* Notation "'Ret!' f" := (RetG f) (at level 57, only parsing). *)
   (* Notation "'Ret?' f" := (RetA f) (at level 57, only parsing). *)
 
+End EVENTSCOMMON.
+
+Notation "f '?'" := (unwrapU f) (at level 9, only parsing).
+Notation "f 'ǃ'" := (unwrapN f) (at level 9, only parsing).
+Notation "(?)" := (unwrapU) (only parsing).
+Notation "(ǃ)" := (unwrapN) (only parsing).
+Goal (tt ↑↓?) = Ret tt. rewrite Any.upcast_downcast. ss. Qed.
+Goal (tt ↑↓ǃ) = Ret tt. rewrite Any.upcast_downcast. ss. Qed.
+
+Section EVENTSCOMMON.
+
+(*** casting call, fun ***)
+(* Definition ccallN {X Y} (fn: gname) (varg: X): itree Es Y := vret <- trigger (Call fn varg↑);; vret <- vret↓ǃ;; Ret vret. *)
+(* Definition ccallU {X Y} (fn: gname) (varg: X): itree Es Y := vret <- trigger (Call fn varg↑);; vret <- vret↓?;; Ret vret. *)
+(* Definition cfunN {X Y} (body: X -> itree Es Y): Any.t -> itree Es Any.t := *)
+(*   fun varg => varg <- varg↓ǃ;; vret <- body varg;; Ret vret↑. *)
+(* Definition cfunU {X Y} (body: X -> itree Es Y): Any.t -> itree Es Any.t := *)
+(*   fun varg => varg <- varg↓?;; vret <- body varg;; Ret vret↑. *)
+
+  (* Definition ccall {X Y} (fn: gname) (varg: X): itree Es Y := vret <- trigger (Call fn varg↑);; vret <- vret↓ǃ;; Ret vret. *)
+  (* Definition cfun {X Y} (body: X -> itree Es Y): Any.t -> itree Es Any.t := *)
+  (*   fun varg => varg <- varg↓ǃ;; vret <- body varg;; Ret vret↑. *)
+  Context `{HasCallE: callE -< E}.
+  Context `{HasEventE: eventE -< E}.
+  Definition ccall {X Y} (fn: gname) (varg: X): itree E Y := vret <- trigger (Call fn varg↑);; vret <- vret↓ǃ;; Ret vret.
+  Definition cfun {X Y} (body: X -> itree E Y): Any.t -> itree E Any.t :=
+    fun varg => varg <- varg↓ǃ;; vret <- body varg;; Ret vret↑.
+
+End EVENTSCOMMON.
+
+
+
+
+
+
+
+Section EVENTSCOMMON.
+
+  Context `{Σ: GRA.t}.
+
+  Definition r_state: Type := ((mname -> Σ) * list Σ).
+  Definition p_state: Type := (mname -> Any.t).
+
+  (*** Same as State.pure_state, but does not use "Vis" directly ***)
+  Definition pure_state {S E}: E ~> stateT S (itree E) := fun _ e s => x <- trigger e;; Ret (s, x).
+
+  Lemma unfold_interp_state: forall {E F} {S R} (h: E ~> stateT S (itree F)) (t: itree E R) (s: S),
+      interp_state h t s = _interp_state h (observe t) s.
+  Proof. i. f. apply unfold_interp_state. Qed.
+
+End EVENTSCOMMON.
+
+
+
+
+
+
+
+
+Module EventsL.
+Section EVENTSL.
+  
   Context `{Σ: GRA.t}.
 
   Inductive pE: Type -> Type :=
@@ -75,29 +137,6 @@ Section EVENTS.
 
   | PushFrame: rE unit
   | PopFrame: rE unit
-  .
-
-  Definition put E `{rE -< E} `{eventE -< E} (mn: mname) (mr1: Σ) (fr1: Σ): itree E unit :=
-    mr0 <- trigger (MGet mn);; fr0 <- trigger FGet;;
-    guarantee(URA.updatable (URA.add mr0 fr0) (URA.add mr1 fr1));;
-    trigger (FPut fr1);; trigger (MPut mn mr1)
-  .
-
-  Definition forge E `{rE -< E} `{eventE -< E} (delta: Σ): itree E unit :=
-    fr0 <- trigger FGet;;
-    trigger (FPut (URA.add fr0 delta))
-  .
-
-  Definition discard E `{rE -< E} `{eventE -< E} (fr1: Σ): itree E unit :=
-    fr0 <- trigger FGet;;
-    rest <- trigger (Choose _);;
-    guarantee(fr0 = URA.add fr1 rest);;
-    trigger (FPut rest)
-  .
-
-  Definition checkWf E `{rE -< E} `{eventE -< E} (mn: mname): itree E unit :=
-    mr0 <- trigger (MGet mn);; fr0 <- trigger FGet;;
-    assume(URA.wf (URA.add mr0 fr0))
   .
 
   (*** TODO: we don't want to require "mname" here ***)
@@ -126,7 +165,6 @@ Section EVENTS.
   (********************************************************************)
   (*************************** Interpretation *************************)
   (********************************************************************)
-  Definition r_state: Type := ((mname -> Σ) * list Σ).
   Definition handle_rE `{eventE -< E}: rE ~> stateT r_state (itree E) :=
     fun _ e '(mrs, frs) =>
       match frs with
@@ -145,16 +183,12 @@ Section EVENTS.
       | _ => triggerNB
       end.
 
-  (*** Same as State.pure_state, but does not use "Vis" directly ***)
-  Definition pure_state {S E}: E ~> stateT S (itree E) := fun _ e s => x <- trigger e;; Ret (s, x).
-
   (* Definition compose2 A B C R: (C -> R) -> (A -> B -> C) -> A -> B -> R := fun f g a b => f (g a b). *)
   Definition interp_rE `{eventE -< E}: itree (rE +' E) ~> stateT r_state (itree E) :=
     State.interp_state (case_ handle_rE pure_state).
     (* State.interp_state (case_ ((fun _ e s0 => resum_itr (handle_rE e s0)): _ ~> stateT _ _) State.pure_state). *)
     (* State.interp_state (case_ ((fun _ => compose2 (@resum_itr _ _ _ _) (@handle_rE _)): rE ~> stateT r_state (itree E)) State.pure_state). *)
 
-  Definition p_state: Type := (mname -> Any.t).
   Definition handle_pE {E}: pE ~> stateT p_state (itree E) :=
     fun _ e mps =>
       match e with
@@ -213,10 +247,6 @@ Section EVENTS.
       interp_Es p (trigger e) st0 = tau;; (interp_Es p (p _ e) st0)
   .
   Proof. unfold interp_Es, interp_rE, interp_pE. des_ifs. grind. Qed.
-
-  Lemma unfold_interp_state: forall {E F} {S R} (h: E ~> stateT S (itree F)) (t: itree E R) (s: S),
-      interp_state h t s = _interp_state h (observe t) s.
-  Proof. i. f. apply unfold_interp_state. Qed.
 
   Lemma interp_Es_rE
         p rst0 pst0
@@ -285,42 +315,18 @@ Section EVENTS.
   Proof.
     unfold interp_Es, interp_rE, interp_pE, pure_state, triggerNB. grind.
   Qed.
-
-End EVENTS.
-
-Notation "f '?'" := (unwrapU f) (at level 9, only parsing).
-Notation "f 'ǃ'" := (unwrapN f) (at level 9, only parsing).
-Notation "(?)" := (unwrapU) (only parsing).
-Notation "(ǃ)" := (unwrapN) (only parsing).
-Goal (tt ↑↓?) = Ret tt. rewrite Any.upcast_downcast. ss. Qed.
-Goal (tt ↑↓ǃ) = Ret tt. rewrite Any.upcast_downcast. ss. Qed.
+  Opaque interp_Es.
+End EVENTSL.
+End EventsL.
+Opaque EventsL.interp_Es.
 
 
 
 
+Module ModSemL.
+Import EventsL.
+Section MODSEML.
 
-Section AUX.
-
-  Context `{Σ: GRA.t}.
-(*** casting call, fun ***)
-(* Definition ccallN {X Y} (fn: gname) (varg: X): itree Es Y := vret <- trigger (Call fn varg↑);; vret <- vret↓ǃ;; Ret vret. *)
-(* Definition ccallU {X Y} (fn: gname) (varg: X): itree Es Y := vret <- trigger (Call fn varg↑);; vret <- vret↓?;; Ret vret. *)
-(* Definition cfunN {X Y} (body: X -> itree Es Y): Any.t -> itree Es Any.t := *)
-(*   fun varg => varg <- varg↓ǃ;; vret <- body varg;; Ret vret↑. *)
-(* Definition cfunU {X Y} (body: X -> itree Es Y): Any.t -> itree Es Any.t := *)
-(*   fun varg => varg <- varg↓?;; vret <- body varg;; Ret vret↑. *)
-Definition ccall {X Y} (fn: gname) (varg: X): itree Es Y := vret <- trigger (Call fn varg↑);; vret <- vret↓ǃ;; Ret vret.
-Definition cfun {X Y} (body: X -> itree Es Y): Any.t -> itree Es Any.t :=
-  fun varg => varg <- varg↓ǃ;; vret <- body varg;; Ret vret↑.
-
-End AUX.
-
-
-
-
-
-Module ModSem.
-Section MODSEM.
 
   (* Record t: Type := mk { *)
   (*   state: Type; *)
@@ -368,9 +374,7 @@ Section MODSEM.
   Definition prog: callE ~> itree Es :=
     fun _ '(Call fn args) =>
       '(_, sem) <- (List.find (fun fnsem => dec fn (fst fnsem)) ms.(fnsems))?;;
-      trigger PushFrame;;
       rv <- (sem args);;
-      trigger PopFrame;;
       Ret rv
   .
 
@@ -380,7 +384,7 @@ Section MODSEM.
     (fun mn => match List.find (fun mnr => dec mn (fst mnr)) ms.(initial_mrs) with
                | Some r => fst (snd r)
                | None => ε
-               end, [ε]). (*** we have a dummy-stack here ***)
+               end, [ε; ε]).
   Definition initial_p_state: p_state :=
     (fun mn => match List.find (fun mnr => dec mn (fst mnr)) ms.(initial_mrs) with
                | Some r => (snd (snd r))
@@ -431,7 +435,7 @@ Section MODSEM.
       step (Vis (subevent _ (Syscall fn args rvs)) k) (Some (event_sys fn args rv)) (k rv)
   .
 
-  Program Definition interp_itree: itree eventE Any.t -> semantics :=
+  Program Definition compile_itree: itree eventE Any.t -> semantics :=
     fun itr =>
       {|
         STS.state := state;
@@ -444,8 +448,8 @@ Section MODSEM.
   Next Obligation. inv STEP; ss. Qed.
   Next Obligation. inv STEP; ss. Qed.
 
-  Definition interp: semantics :=
-    interp_itree initial_itr.
+  Definition compile: semantics :=
+    compile_itree initial_itr.
   
   (* Program Definition interp_no_forge: semantics := {| *)
   (*   STS.state := state; *)
@@ -460,14 +464,14 @@ Section MODSEM.
 
   End INTERP.
 
-  (*** TODO: probably we can make ModSem.t as an RA too. (together with Sk.t) ***)
+  (*** TODO: probably we can make ModSemL.t as an RA too. (together with Sk.t) ***)
   (*** However, I am not sure what would be the gain; and there might be universe problem. ***)
 
   Let add_comm_aux
       ms0 ms1 stl0 str0
       (SIM: stl0 = str0)
     :
-      <<COMM: Beh.of_state (interp (add ms0 ms1)) stl0 <1= Beh.of_state (interp (add ms1 ms0)) str0>>
+      <<COMM: Beh.of_state (compile (add ms0 ms1)) stl0 <1= Beh.of_state (compile (add ms1 ms0)) str0>>
   .
   Proof.
     revert_until ms1.
@@ -501,7 +505,7 @@ Section MODSEM.
           ms0 ms1
           (* (WF: wf (add ms0 ms1)) *)
     :
-      <<COMM: Beh.of_program (interp (add ms0 ms1)) <1= Beh.of_program (interp (add ms1 ms0))>>
+      <<COMM: Beh.of_program (compile (add ms0 ms1)) <1= Beh.of_program (compile (add ms1 ms0))>>
   .
   Proof.
     destruct (classic (wf (add ms1 ms0))); cycle 1.
@@ -538,8 +542,8 @@ Section MODSEM.
           ms0 ms1 ms2
           (WF: wf (add ms0 (add ms1 ms2)))
     :
-      <<COMM: Beh.of_program (interp (add ms0 (add ms1 ms2))) <1=
-              Beh.of_program (interp (add (add ms0 ms1) ms2))>>
+      <<COMM: Beh.of_program (compile (add ms0 (add ms1 ms2))) <1=
+              Beh.of_program (compile (add (add ms0 ms1) ms2))>>
   .
   Proof.
     admit "TODO".
@@ -549,28 +553,247 @@ Section MODSEM.
           ms0 ms1 ms2
           (WF: wf (add ms0 (add ms1 ms2)))
     :
-      <<COMM: Beh.of_program (interp (add ms0 (add ms1 ms2))) <1=
-              Beh.of_program (interp (add (add ms0 ms1) ms2))>>
+      <<COMM: Beh.of_program (compile (add ms0 (add ms1 ms2))) <1=
+              Beh.of_program (compile (add (add ms0 ms1) ms2))>>
   .
   Proof.
     admit "TODO".
   Qed.
 
+End MODSEML.
+End ModSemL.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+(* Module Events. *)
+Section EVENTS.
+  Context `{Σ: GRA.t}.
+
+  Inductive pE: Type -> Type :=
+  | PPut (p: Any.t): pE unit
+  | PGet: pE Any.t
+  .
+  Inductive rE: Type -> Type :=
+  | MPut (mr: Σ): rE unit
+  | FPut (fr: Σ): rE unit
+  | MGet: rE Σ
+  | FGet: rE Σ
+  .
+
+  Definition Es: Type -> Type := (callE +' rE +' pE+' eventE).
+
+  Definition handle_rE (mn: mname): rE ~> EventsL.rE :=
+    fun _ re =>
+      match re with
+      | MPut mr0 => (EventsL.MPut mn mr0)
+      | FPut fr0 => (EventsL.FPut fr0)
+      | MGet => (EventsL.MGet mn)
+      | FGet => (EventsL.FGet)
+      end
+  .
+
+  Definition handle_pE (mn: mname): pE ~> EventsL.pE :=
+    fun _ pe =>
+      match pe with
+      | PPut a0 => (EventsL.PPut mn a0)
+      | PGet => (EventsL.PGet mn)
+      end
+  .
+
+  Definition handle_callE `{callE -< E} `{EventsL.rE -< E}: callE ~> itree E :=
+    fun _ '(Call fn args) =>
+      trigger EventsL.PushFrame;;
+      r <- trigger (Call fn args);;
+      trigger EventsL.PopFrame;;
+      Ret r
+  .
+
+  Definition handle_all (mn: mname): Es ~> itree EventsL.Es.
+    i. destruct X.
+    { apply handle_callE; assumption. }
+    destruct s.
+    { exact (trigger (handle_rE mn r)). }
+    destruct s.
+    { exact (trigger (handle_pE mn p)). }
+    exact (trigger e).
+  Defined.
+
+  Definition transl_all (mn: mname): itree Es ~> itree EventsL.Es := interp (handle_all mn).
+
+
+
+
+
+
+  Lemma transl_all_bind
+        mn
+        A B
+        (itr: itree Es A) (ktr: A -> itree Es B)
+    :
+      transl_all mn (itr >>= ktr) = a <- (transl_all mn itr);; (transl_all mn (ktr a))
+  .
+  Proof. unfold transl_all. grind. Qed.
+
+  Lemma transl_all_tau
+        mn
+        A
+        (itr: itree Es A)
+    :
+      transl_all mn (tau;; itr) = tau;; (transl_all mn itr)
+  .
+  Proof. unfold transl_all. grind. Qed.
+
+  Lemma transl_all_ret
+        mn
+        A
+        (a: A)
+    :
+      transl_all mn (Ret a) = Ret a
+  .
+  Proof. unfold transl_all. grind. Qed.
+
+  Lemma transl_all_callE
+        mn
+        (e: callE Any.t)
+    :
+      transl_all mn (trigger e) = trigger EventsL.PushFrame;; r <- (trigger e);; trigger EventsL.PopFrame;; tau;; Ret r
+  .
+  Proof. dependent destruction e; ss. unfold transl_all. rewrite unfold_interp. ss. grind. Qed.
+
+  Lemma transl_all_rE
+        mn
+        T (e: rE T)
+    :
+      transl_all mn (trigger e) = r <- trigger (handle_rE mn e);; tau;; Ret r
+  .
+  Proof. dependent destruction e; ss; unfold transl_all; rewrite unfold_interp; ss; grind. Qed.
+
+  Lemma transl_all_pE
+        mn
+        T (e: pE T)
+    :
+      transl_all mn (trigger e) = r <- trigger (handle_pE mn e);; tau;; Ret r
+  .
+  Proof. dependent destruction e; ss; unfold transl_all; rewrite unfold_interp; ss; grind. Qed.
+
+  Lemma transl_all_eventE
+        mn
+        T (e: eventE T)
+    :
+      transl_all mn (trigger e) = r <- trigger e;; tau;; Ret r
+  .
+  Proof. dependent destruction e; ss; unfold transl_all; rewrite unfold_interp; ss; grind. Qed.
+
+  Lemma transl_all_triggerUB
+        mn T
+    :
+      transl_all mn (triggerUB: itree _ T) = triggerUB
+  .
+  Proof. unfold triggerUB. unfold transl_all; rewrite unfold_interp; ss; grind. Qed.
+
+  Lemma transl_all_triggerNB
+        mn T
+    :
+      transl_all mn (triggerNB: itree _ T) = triggerNB
+  .
+  Proof. unfold triggerNB. unfold transl_all; rewrite unfold_interp; ss; grind. Qed.
+
+  Definition put E `{rE -< E} `{eventE -< E} (mr1: Σ) (fr1: Σ): itree E unit :=
+    mr0 <- trigger (MGet);; fr0 <- trigger FGet;;
+    guarantee(URA.updatable (URA.add mr0 fr0) (URA.add mr1 fr1));;
+    trigger (FPut fr1);; trigger (MPut mr1)
+  .
+
+  Definition forge E `{rE -< E} `{eventE -< E} (delta: Σ): itree E unit :=
+    fr0 <- trigger FGet;;
+    trigger (FPut (URA.add fr0 delta))
+  .
+
+  Definition discard E `{rE -< E} `{eventE -< E} (fr1: Σ): itree E unit :=
+    fr0 <- trigger FGet;;
+    rest <- trigger (Choose _);;
+    guarantee(fr0 = URA.add fr1 rest);;
+    trigger (FPut rest)
+  .
+
+  Definition checkWf E `{rE -< E} `{eventE -< E}: itree E unit :=
+    mr0 <- trigger (MGet);; fr0 <- trigger FGet;;
+    assume(URA.wf (URA.add mr0 fr0))
+  .
+
+End EVENTS.
+(* End Events. *)
+
+
+
+Module ModSem.
+(* Import Events. *)
+Section MODSEM.
+  Context `{Σ: GRA.t}.
+
+  Record t: Type := mk {
+    fnsems: list (gname * (Any.t -> itree Es Any.t));
+    mn: mname;
+    initial_mr: Σ;
+    initial_st: Any.t;
+  }
+  .
+
+  Definition prog (ms: t): callE ~> itree Es :=
+    fun _ '(Call fn args) =>
+      '(_, sem) <- (List.find (fun fnsem => dec fn (fst fnsem)) ms.(fnsems))?;;
+      (sem args)
+  .
+
+  (*** TODO: move to CoqlibC ***)
+  (*** ss, cbn does not work as expected (in both version) ***)
+  Definition map_fst A0 A1 B (f: A0 -> A1): (A0 * B) -> (A1 * B) := fun '(a, b) => (f a, b).
+  Definition map_snd A B0 B1 (f: B0 -> B1): (A * B0) -> (A * B1) := fun '(a, b) => (a, f b).
+  (* Definition map_fst A0 A1 B (f: A0 -> A1): (A0 * B) -> (A1 * B) := fun ab => match ab with (a, b) => (f a, b) end. *)
+  (* Definition map_snd A B0 B1 (f: B0 -> B1): (A * B0) -> (A * B1) := fun ab => match ab with (a, b) => (a, f b) end. *)
+
+  Definition lift (ms: t): ModSemL.t := {|
+    ModSemL.fnsems := List.map (map_snd (fun sem args => transl_all ms.(mn) (sem args))) ms.(fnsems);
+    ModSemL.initial_mrs := [(ms.(mn), (ms.(initial_mr), ms.(initial_st)))];
+  |}
+  .
+  Coercion lift: t >-> ModSemL.t.
+
+  Definition compile (ms: t): semantics := ModSemL.compile (lift ms).
+
+  Definition wf (ms: t): Prop := ModSemL.wf (lift ms).
+
 End MODSEM.
 End ModSem.
 
+Coercion ModSem.lift: ModSem.t >-> ModSemL.t.
 
 
-Module Mod.
-Section MOD.
+
+
+Module ModL.
+Section MODL.
 
   Context `{Σ: GRA.t}.
 
   Record t: Type := mk {
-    get_modsem: SkEnv.t -> ModSem.t;
+    get_modsem: SkEnv.t -> ModSemL.t;
     sk: Sk.t;
-    enclose: ModSem.t := (get_modsem (Sk.load_skenv sk));
-    interp: semantics := ModSem.interp enclose;
+    enclose: ModSemL.t := (get_modsem (Sk.load_skenv sk));
+    compile: semantics := ModSemL.compile enclose;
   }
   .
 
@@ -583,7 +806,7 @@ Section MOD.
 
   Definition add (md0 md1: t): t := {|
     get_modsem := fun skenv_link =>
-                    ModSem.add (md0.(get_modsem) skenv_link) (md1.(get_modsem) skenv_link);
+                    ModSemL.add (md0.(get_modsem) skenv_link) (md1.(get_modsem) skenv_link);
     sk := Sk.add md0.(sk) md1.(sk);
   |}
   .
@@ -591,12 +814,12 @@ Section MOD.
   Theorem add_comm
           md0 md1
     :
-      <<COMM: Beh.of_program (interp (add md0 md1)) <1= Beh.of_program (interp (add md1 md0))>>
+      <<COMM: Beh.of_program (compile (add md0 md1)) <1= Beh.of_program (compile (add md1 md0))>>
   .
   Proof.
     ii.
-    unfold interp in *. ss.
-    eapply ModSem.add_comm; et.
+    unfold compile in *. ss.
+    eapply ModSemL.add_comm; et.
     rp; et. do 4 f_equal.
     - admit "TODO: maybe the easy way is to 'canonicalize' the list by sorting.".
     - admit "TODO: maybe the easy way is to 'canonicalize' the list by sorting.".
@@ -606,22 +829,22 @@ Section MOD.
     add ms0 (add ms1 ms2) = add (add ms0 ms1) ms2.
   Proof.
     unfold add. f_equal.
-    { extensionality skenv_link. ss. apply ModSem.add_assoc'. }
+    { extensionality skenv_link. ss. apply ModSemL.add_assoc'. }
     { eapply app_assoc. }
   Qed.
 
   Theorem add_assoc
           md0 md1 md2
     :
-      <<COMM: Beh.of_program (interp (add md0 (add md1 md2))) =
-              Beh.of_program (interp (add (add md0 md1) md2))>>
+      <<COMM: Beh.of_program (compile (add md0 (add md1 md2))) =
+              Beh.of_program (compile (add (add md0 md1) md2))>>
   .
   Proof.
     admit "ez".
   Qed.
 
   Definition empty: t := {|
-    get_modsem := fun _ => ModSem.mk [] [];
+    get_modsem := fun _ => ModSemL.mk [] [];
     sk := Sk.unit;
   |}
   .
@@ -629,7 +852,7 @@ Section MOD.
   Lemma add_empty_r md: add md empty = md.
   Proof.
     destruct md; ss.
-    unfold add, ModSem.add. f_equal; ss.
+    unfold add, ModSemL.add. f_equal; ss.
     - extensionality skenv. destruct (get_modsem0 skenv); ss.
       repeat rewrite app_nil_r. auto.
     - unfold Sk.add. rewrite app_nil_r. auto.
@@ -638,18 +861,87 @@ Section MOD.
   Lemma add_empty_l md: add empty md = md.
   Proof.
     destruct md; ss.
-    unfold add, ModSem.add. f_equal; ss.
+    unfold add, ModSemL.add. f_equal; ss.
     extensionality skenv. destruct (get_modsem0 skenv); ss.
   Qed.
 
-  Fixpoint add_list (mds: list t): t :=
-    match mds with
-    | hd::tl => add hd (add_list tl)
-    | [] => empty
-    end.
+End MODL.
+End ModL.
 
+
+
+Module Mod.
+Section MOD.
+
+  Context `{Σ: GRA.t}.
+
+  Record t: Type := mk {
+    get_modsem: SkEnv.t -> ModSem.t;
+    sk: Sk.t;
+  }
+  .
+
+  Definition lift (md: t): ModL.t := {|
+    ModL.get_modsem := fun skenv => md.(get_modsem) skenv;
+    ModL.sk := md.(sk);
+  |}
+  .
+
+  Coercion lift: t >-> ModL.t.
+
+  Definition wf (md: t): Prop := <<WF: ModL.wf (lift md)>>.
+
+   Definition add_list (xs: list t): ModL.t :=
+     fold_right ModL.add ModL.empty (List.map lift xs)
+   .
+
+   Lemma add_list_single: forall (x: t), add_list [x] = x.
+   Proof. ii; cbn. rewrite ModL.add_empty_r. refl. Qed.
+
+   Lemma add_list_cons
+         x xs
+     :
+       (add_list (x :: xs)) = (ModL.add x (add_list xs))
+   .
+   Proof. ss. Qed.
+
+   Lemma add_list_snoc
+         x xs
+     :
+       (add_list (snoc xs x)) = (ModL.add (add_list xs) x)
+   .
+   Proof.
+     ginduction xs; ii; ss.
+     { cbn. rewrite ModL.add_empty_l. rewrite ModL.add_empty_r. refl. }
+     { cbn. rewrite <- ModL.add_assoc'. f_equal. rewrite <- IHxs. refl. }
+   Qed.
+
+   Lemma add_list_app
+         xs ys
+     :
+       add_list (xs ++ ys) = ModL.add (add_list xs) (add_list ys)
+   .
+   Proof.
+     (* unfold add_list. rewrite map_app. rewrite fold_right_app. *)
+     ginduction xs; ii; ss.
+     - cbn. rewrite ModL.add_empty_l. refl.
+     - rewrite ! add_list_cons. rewrite <- ModL.add_assoc'. f_equal. eapply IHxs; ss.
+   Qed.
 End MOD.
 End Mod.
+
+Coercion Mod.lift: Mod.t >-> ModL.t.
+
+
+
+
+
+
+
+
+
+
+
 
 
 Module Equisatisfiability.

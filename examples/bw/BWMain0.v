@@ -54,7 +54,9 @@ def main(): Unit
 
   Definition MainSem: ModSem.t := {|
     ModSem.fnsems := [("main", cfun mainF)];
-    ModSem.initial_mrs := [("Main", (ε, 0%Z↑))];
+    ModSem.mn := "Main";
+    ModSem.initial_mr := ε;
+    ModSem.initial_st := 0%Z↑;
   |}
   .
 

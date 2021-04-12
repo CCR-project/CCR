@@ -65,7 +65,9 @@ Section PROOF.
 
   Definition EchoSem: ModSem.t := {|
     ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt (StackStb ++ ClientStb ++ EchoStb) fn fsb)) EchoSbtb;
-    ModSem.initial_mrs := [("Echo", (ε, tt↑))];
+    ModSem.mn := "Echo";
+    ModSem.initial_mr := ε;
+    ModSem.initial_st := tt↑;
   |}
   .
 
@@ -99,9 +101,9 @@ End PROOF.
 (*         Ret tt *)
 (*       end. *)
 
-(*   Definition EchoSem: ModSem.t := {| *)
-(*     ModSem.fnsems := [("echo", cfun echo_body); ("echo_finish", cfun echo_finish_body)]; *)
-(*     ModSem.initial_mrs := [("Echo", (ε, tt↑))]; *)
+(*   Definition EchoSem: ModSemL.t := {| *)
+(*     ModSemL.fnsems := [("echo", cfun echo_body); ("echo_finish", cfun echo_finish_body)]; *)
+(*     ModSemL.initial_mrs := [("Echo", (ε, tt↑))]; *)
 (*   |} *)
 (*   . *)
 

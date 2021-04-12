@@ -27,10 +27,10 @@ Section PROOF.
     zip pair ["get"; "set"] (List.repeat (fun _ => trigger (Choose _)) 2)
   .
 
-  Definition BoxSem: ModSem.t :=
+  Definition BoxSem: ModSemL.t :=
     {|
-      ModSem.fnsems := List.map (fun '(fn, body) => (fn, fun_to_tgt BoxStb fn body)) BoxFtb;
-      ModSem.initial_mrs := [("Box", library 0%Z)];
+      ModSemL.fnsems := List.map (fun '(fn, body) => (fn, fun_to_tgt BoxStb fn body)) BoxFtb;
+      ModSemL.initial_mrs := [("Box", library 0%Z)];
     |}
   .
 

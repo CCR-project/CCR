@@ -38,7 +38,9 @@ Section PROOF.
 
   Definition ClientSem: ModSem.t := {|
     ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt ClientStb fn fsb)) ClientSbtb;
-    ModSem.initial_mrs := [("Client", (ε, tt↑))];
+    ModSem.mn := "Client";
+    ModSem.initial_mr := ε;
+    ModSem.initial_st := tt↑;
   |}
   .
 

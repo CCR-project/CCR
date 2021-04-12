@@ -68,10 +68,10 @@ Possible improvements:
    ***)
 
   Definition MainSem: ModSem.t := {|
-    (* ModSem.fnsems := [("main", mainF)]; *)
-    (* ModSem.fnsems := List.map (map_snd (fun_to_tgt (MainStb ++ MemStb))) MainStb; *)
     ModSem.fnsems := List.map (fun '(fn, body) => (fn, fun_to_tgt (MemStb ++ MainStb) fn body)) MainSbtb;
-    ModSem.initial_mrs := [("Main", (ε, tt↑))];
+    ModSem.mn := "Main";
+    ModSem.initial_mr := ε;
+    ModSem.initial_st := tt↑;
   |}
   .
 

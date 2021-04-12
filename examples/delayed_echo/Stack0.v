@@ -123,7 +123,9 @@ int pop(struct Node## llref) {
 
   Definition StackSem: ModSem.t := {|
     ModSem.fnsems := [("pop", cfun popF); ("pop2", cfun pop2F); ("push", cfun pushF)];
-    ModSem.initial_mrs := [("Stack", (ε, tt↑))];
+    ModSem.mn := "Stack";
+    ModSem.initial_mr := ε;
+    ModSem.initial_st := tt↑;
   |}
   .
 

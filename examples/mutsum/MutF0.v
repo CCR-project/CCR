@@ -33,7 +33,9 @@ Section PROOF.
 
   Definition FSem: ModSem.t := {|
     ModSem.fnsems := [("f", cfun fF)];
-    ModSem.initial_mrs := [("F", (ε, tt↑))];
+    ModSem.mn := "F";
+    ModSem.initial_mr := ε;
+    ModSem.initial_st := tt↑;
   |}
   .
 

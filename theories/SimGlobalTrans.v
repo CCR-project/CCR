@@ -1051,9 +1051,9 @@ Qed.
 
 
 
-Variable md_src md_tgt: Mod.t.
-Let ms_src: ModSem.t := md_src.(Mod.enclose).
-Let ms_tgt: ModSem.t := md_tgt.(Mod.enclose).
+Variable md_src md_tgt: ModL.t.
+Let ms_src: ModSemL.t := md_src.(ModL.enclose).
+Let ms_tgt: ModSemL.t := md_tgt.(ModL.enclose).
 (* Let sim_fnsem: relation (string * (list val -> itree Es val)) := *)
 (*   fun '(fn_src, fsem_src) '(fn_tgt, fsem_tgt) => *)
 (*     (<<NAME: fn_src = fn_tgt>>) /\ *)
@@ -1062,11 +1062,11 @@ Let ms_tgt: ModSem.t := md_tgt.(Mod.enclose).
 (*           (<<TGT: fsem_tgt varg = resum_itr itr_tgt>>) /\ *)
 (*           (<<SIM: exists i0, simg i0 itr_src itr_tgt>>)>>) *)
 (* . *)
-(* Hypothesis (SIM: Forall2 sim_fnsem ms_src.(ModSem.fnsems) ms_tgt.(ModSem.fnsems)). *)
+(* Hypothesis (SIM: Forall2 sim_fnsem ms_src.(ModSemL.fnsems) ms_tgt.(ModSemL.fnsems)). *)
 
-Hypothesis (SIM: exists o0, simg eq o0 (ModSem.initial_itr ms_src) (ModSem.initial_itr ms_tgt)).
+Hypothesis (SIM: exists o0, simg eq o0 (ModSemL.initial_itr ms_src) (ModSemL.initial_itr ms_tgt)).
 
-Theorem adequacy_global: Beh.of_program (Mod.interp md_tgt) <1= Beh.of_program (Mod.interp md_src).
+Theorem adequacy_global: Beh.of_program (ModL.compile md_tgt) <1= Beh.of_program (ModL.compile md_src).
 Proof.
   revert SIM. i.
   admit "TODO".

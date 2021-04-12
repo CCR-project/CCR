@@ -33,10 +33,10 @@ Section PROOF.
     zip pair ["add"] [addBody]
   .
 
-  Definition AddSem: ModSem.t :=
+  Definition AddSem: ModSemL.t :=
     {|
-      ModSem.fnsems := List.map (fun '(fn, body) => (fn, fun_to_tgt (BoxStb++AddStb) fn body)) AddFtb;
-      ModSem.initial_mrs := [("Add", URA.unit)];
+      ModSemL.fnsems := List.map (fun '(fn, body) => (fn, fun_to_tgt (BoxStb++AddStb) fn body)) AddFtb;
+      ModSemL.initial_mrs := [("Add", URA.unit)];
     |}
   .
 

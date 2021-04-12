@@ -1,4 +1,4 @@
-Require Import Mem0 Mem1 SimModSem Hoare.
+Require Import Mem0 Mem1 SimModSemL Hoare.
 Require Import Coqlib.
 Require Import ITreelib.
 Require Import Universe.
@@ -43,7 +43,7 @@ Ltac go := try first[pfold; econs; [..|M]; (Mskip ss); et; check_safe; ii; left|
                      pfold; econsr; [..|M]; (Mskip ss); et; check_safe; ii; left].
 Ltac force_l := pfold; econs; [..|M]; Mskip ss; et.
 Ltac force_r := pfold; econsr; [..|M]; Mskip ss; et.
-Section SIMMODSEM.
+Section SIMMODSEML.
 
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG boxRA Σ} `{@GRA.inG (RA.excl Z) Σ}.
@@ -67,7 +67,7 @@ Section SIMMODSEM.
   Notation "(⋅)" := URA.add (only parsing).
 
   Local Opaque MainStb BoxStb.
-  Theorem correct: ModSemPair.sim BoxMain1.MainSem BoxMain0.MainSem.
+  Theorem correct: ModSemLPair.sim BoxMain1.MainSem BoxMain0.MainSem.
   Proof.
     econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
     { typeclasses eauto. }
@@ -147,6 +147,6 @@ Section SIMMODSEM.
     all: ss.
   Qed.
 
-End SIMMODSEM.
+End SIMMODSEML.
 
 

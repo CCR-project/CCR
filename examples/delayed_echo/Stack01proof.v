@@ -63,13 +63,13 @@ Section SIMMODSEM.
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG Mem1.memRA Σ}.
 
-  Let W: Type := (alist mname (Σ * Any.t)) * (alist mname (Σ * Any.t)).
+  Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
   Eval compute in (@URA.car Mem1._memRA).
 
   Let wf: W -> Prop :=
     fun '(mrps_src0, mrps_tgt0) =>
-        (<<SRC: mrps_src0 = Maps.add "Stack" (ε, tt↑) Maps.empty>>) /\
-        (<<TGT: mrps_tgt0 = Maps.add "Stack" (ε, tt↑) Maps.empty>>)
+        (<<SRC: mrps_src0 = (ε, tt↑)>>) /\
+        (<<TGT: mrps_tgt0 = (ε, tt↑)>>)
   .
 
   Local Opaque points_to.
@@ -80,8 +80,7 @@ Section SIMMODSEM.
 
   Theorem correct: ModSemPair.sim Stack1.StackSem Stack0.StackSem.
   Proof.
-    econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
-    { typeclasses eauto. }
+    econstructor 1 with (wf:=wf); et; swap 2 3.
     { ss. }
 
     econs; ss.

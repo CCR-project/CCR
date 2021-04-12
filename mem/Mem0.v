@@ -37,11 +37,11 @@ Section PROOF.
 
   Definition allocF: list val -> itree Es val :=
     fun varg =>
-      mp0 <- trigger (PGet "Mem");;
+      mp0 <- trigger (PGet);;
       m0 <- mp0↓?;;
       `sz: Z <- (allocF_parg varg)?;;
       let (blk, m1) := Mem.alloc m0 sz in
-      trigger (PPut "Mem" m1↑);;
+      trigger (PPut m1↑);;
       Ret (Vptr blk 0)
   .
 
@@ -54,11 +54,11 @@ Section PROOF.
 
   Definition freeF: list val -> itree Es val :=
     fun varg =>
-      mp0 <- trigger (PGet "Mem");;
+      mp0 <- trigger (PGet);;
       m0 <- mp0↓?;;
       '(b, ofs) <- (freeF_parg varg)?;;
       m1 <- (Mem.free m0 b ofs)?;;
-      trigger (PPut "Mem" m1↑);;
+      trigger (PPut m1↑);;
       Ret (Vint 0)
   .
 
@@ -71,7 +71,7 @@ Section PROOF.
 
   Definition loadF: list val -> itree Es val :=
     fun varg =>
-      mp0 <- trigger (PGet "Mem");;
+      mp0 <- trigger (PGet);;
       m0 <- mp0↓?;;
       '(b, ofs) <- (loadF_parg varg)?;;
       v <- (Mem.load m0 b ofs)?;;
@@ -87,11 +87,11 @@ Section PROOF.
 
   Definition storeF: list val -> itree Es val :=
     fun varg =>
-      mp0 <- trigger (PGet "Mem");;
+      mp0 <- trigger (PGet);;
       m0 <- mp0↓?;;
       '(b, ofs, v) <- (storeF_parg varg)?;;
       m1 <- (Mem.store m0 b ofs v)?;;
-      trigger (PPut "Mem" m1↑);;
+      trigger (PPut m1↑);;
       Ret (Vint 0)
   .
 
@@ -104,7 +104,7 @@ Section PROOF.
 
   Definition cmpF: list val -> itree Es val :=
     fun varg =>
-      mp0 <- trigger (PGet "Mem");;
+      mp0 <- trigger (PGet);;
       m0 <- mp0↓?;;
       '(v0, v1) <- (cmpF_parg varg)?;;
       b <- (vcmp m0 v0 v1)?;;
@@ -116,7 +116,9 @@ Section PROOF.
   Definition MemSem: ModSem.t :=
     {|
       ModSem.fnsems := [("alloc", cfun allocF) ; ("free", cfun freeF) ; ("load", cfun loadF) ; ("store", cfun storeF) ; ("cmp", cfun cmpF)];
-      ModSem.initial_mrs := [("Mem", (ε, Mem.empty↑))];
+      ModSem.mn := "Mem";
+      ModSem.initial_mr := ε;
+      ModSem.initial_st := Mem.empty↑;
     |}
   .
 

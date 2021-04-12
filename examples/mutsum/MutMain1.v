@@ -29,7 +29,9 @@ Section PROOF.
 
   Definition mainSem: ModSem.t := {|
     ModSem.fnsems := List.map (fun '(fn, body) => (fn, fun_to_tgt GlobalStb fn body)) mainsbtb;
-    ModSem.initial_mrs := [("Main", (ε, tt↑))];
+    ModSem.mn := "Main";
+    ModSem.initial_mr := ε;
+    ModSem.initial_st := tt↑;
   |}
   .
 

@@ -33,17 +33,17 @@ Section SIMMODSEM.
 
   Context `{Σ: GRA.t}.
 
-  Let W: Type := (alist mname (Σ * Any.t)) * (alist mname (Σ * Any.t)).
+  Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
 
   Let wf: W -> Prop :=
     fun '(mrps_src0, mrps_tgt0) =>
-      (<<SRC: mrps_src0 = Maps.add "F" (ε, tt↑) Maps.empty>>) /\
-      (<<TGT: mrps_tgt0 = Maps.add "F" (ε, tt↑) Maps.empty>>)
+      (<<SRC: mrps_src0 = (ε, tt↑)>>) /\
+      (<<TGT: mrps_tgt0 = (ε, tt↑)>>)
   .
   
   Theorem correct: ModSemPair.sim MutF0.FSem MutFImp.FSem.
   Proof.
-    econstructor 1 with (wf:=wf) (le:=top2); et; ss.
+    econstructor 1 with (wf:=wf); et; ss.
     econs; ss. init. unfold cfun.
     unfold fF.
     unfold MutFImp.fF.

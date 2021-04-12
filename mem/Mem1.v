@@ -167,14 +167,16 @@ Section PROOF.
 
   Definition MemSem: ModSem.t := {|
     ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt MemStb fn fsb)) MemSbtb;
-    ModSem.initial_mrs :=
-      [("Mem", (GRA.embed (Auth.black (M:=_memRA) ε), tt↑))];
+    ModSem.mn := "Mem";
+    ModSem.initial_mr := (GRA.embed (Auth.black (M:=_memRA) ε));
+    ModSem.initial_st := tt↑;
   |}
   .
 
   Definition Mem: Mod.t := {|
     Mod.get_modsem := fun _ => MemSem; (*** TODO: we need proper handling of function pointers ***)
-    Mod.sk := List.map (fun '(n, _) => (n, Sk.Gfun)) MemStb;
+    (* Mod.sk := List.map (fun '(n, _) => (n, Sk.Gfun)) MemStb; *)
+    Mod.sk := Sk.unit;
   |}
   .
 

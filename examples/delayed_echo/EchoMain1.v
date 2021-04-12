@@ -40,7 +40,9 @@ Section PROOF.
 
   Definition MainSem: ModSem.t := {|
     ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt (EchoStb ++ MainStb) fn fsb)) MainSbtb;
-    ModSem.initial_mrs := [("Main", (ε, ([]: list val)↑))];
+    ModSem.mn := "Main";
+    ModSem.initial_mr := ε;
+    ModSem.initial_st := ([]: list val)↑;
   |}
   .
 
