@@ -1006,7 +1006,7 @@ Ltac astop :=
 
 Ltac astart _at_most :=
   eapply APC_start_clo with (at_most:=_at_most);
-  [try (etrans; [eapply Ord.omega_upperbound|eapply kappa_inaccessible_omega]; fail)|
+  [eauto with ord_kappa|
    (try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r; eapply Nat.lt_succ_diag_r)]))|
   ]
 .
