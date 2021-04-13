@@ -268,7 +268,6 @@ Section CANCEL.
     | Ret _ =>
       instantiate (f:=_continue); apply transl_all_ret; fail
     | trigger ?e =>
-      idtac "E";
       instantiate (f:=_break);
       match (type of e) with
       | context[callE] => apply transl_all_callE
@@ -307,10 +306,8 @@ Section CANCEL.
     (*   idtac "A"; *)
     (*   eapply interp_Es_eta; eapply bind_eta; _red_transl_all_aux f itr *)
     | [ |- ITree.bind' _ (EventsL.interp_Es _ (transl_all _ ?itr) _) = _ ] =>
-      idtac "A";
       eapply bind_eta; eapply interp_Es_eta; _red_transl_all_aux f itr
     | [ |- EventsL.interp_Es _ (transl_all _ ?itr) _ = _] =>
-      idtac "B";
       eapply interp_Es_eta; _red_transl_all_aux f itr
     | _ => fail
     end.
