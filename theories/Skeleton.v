@@ -126,7 +126,8 @@ Module Sk.
 
   Definition add: t -> t -> t := @List.app _.
 
-  Definition wf: t -> Prop := @List.NoDup _.
+  (* Definition wf: t -> Prop := @List.NoDup _. *)
+  Definition wf (sk: t): Prop := @List.NoDup _ (List.map fst sk).
 
   (*** TODO: It might be nice if Sk.t also constitutes a resource algebra ***)
   (*** At the moment, List.app is not assoc/commutative. We need to equip RA with custom equiv. ***)
