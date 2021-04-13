@@ -268,7 +268,6 @@ Section CANCEL.
     | Ret _ =>
       instantiate (f:=_continue); apply transl_all_ret; fail
     | trigger ?e =>
-      idtac "E";
       instantiate (f:=_break);
       match (type of e) with
       | context[callE] => apply transl_all_callE
@@ -307,10 +306,8 @@ Section CANCEL.
     (*   idtac "A"; *)
     (*   eapply interp_Es_eta; eapply bind_eta; _red_transl_all_aux f itr *)
     | [ |- ITree.bind' _ (EventsL.interp_Es _ (transl_all _ ?itr) _) = _ ] =>
-      idtac "A";
       eapply bind_eta; eapply interp_Es_eta; _red_transl_all_aux f itr
     | [ |- EventsL.interp_Es _ (transl_all _ ?itr) _ = _] =>
-      idtac "B";
       eapply interp_Es_eta; _red_transl_all_aux f itr
     | _ => fail
     end.
@@ -663,9 +660,10 @@ Section CANCEL.
   Qed.
 
   Variable entry_r: Σ.
-  Variable main_pre: unit -> Any.t -> ord -> Σ -> Prop.
-  Hypothesis MAINPRE: main_pre tt ([]: list val)↑ ord_top entry_r.
-  Hypothesis MAIN: List.find (fun '(_fn, _) => dec "main" _fn) stb = Some ("main", (@mk_simple _ "Main" unit main_pre top3)).
+  Variable main_pre: Any.t -> ord -> Σ -> Prop.
+  Hypothesis MAINPRE: main_pre ([]: list val)↑ ord_top entry_r.
+  Hypothesis MAIN: List.find (fun '(_fn, _) => dec "main" _fn) stb =
+                   Some ("main", (mk_simple "Main" (fun (_: unit) => (main_pre, top2)))).
   Hypothesis WFR: URA.wf (entry_r ⋅ rsum (ModSemL.initial_r_state ms_tgt)).
 
   Let initial_r_state ms entry_r: r_state :=

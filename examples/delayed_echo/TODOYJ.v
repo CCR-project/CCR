@@ -101,24 +101,6 @@ Notation " K ==> V' " := (URA.pointwise K V'): ra_scope.
 
 
 
-Section PROOF.
-  Context {Σ: GRA.t}.
-  (*** TODO: move to proper place, together with "mk_simple" ***)
-  (*** TODO: rename sb into spb ***)
-  (*** TODO: remove redundancy with Hoareproof0.v ***)
-
-
-  (*** TODO: write use below (commented) iProp version instead ***)
-  Definition mk_simple (mn: string) {X: Type} (P: X -> Any.t -> ord -> Σ -> Prop) (Q: X -> Any.t -> Σ -> Prop): fspec :=
-    @mk _ mn X (list val) (val) (fun x y a o r => P x a o r /\ y↑ = a) (fun x z a r => Q x a r /\ z↑ = a)
-  .
-  (* Definition mk_simple (mn: string) {X: Type} (P: X -> Any.t -> ord -> Σ -> Prop) (Q: X -> Any.t -> Σ -> Prop): fspec := *)
-  (*   @mk _ mn X (list val) (val) (fun x y a o => P x a o ∧ ⌜y↑ = a⌝) (fun x z a => Q x a ∧ ⌜z↑ = a⌝) *)
-  (* . *)
-  Definition mk_sb_simple (mn: string) {X: Type} (P: X -> Any.t -> ord -> Σ -> Prop) (Q: X -> Any.t -> Σ -> Prop)
-             (body: list val -> itree (hCallE +' pE +' eventE) val): fspecbody := mk_specbody (mk_simple mn P Q) body.
-
-End PROOF.
 
 Definition is_zero (v: val): bool := match v with | Vint x => dec x 0%Z | _ => false end.
 

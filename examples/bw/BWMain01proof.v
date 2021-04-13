@@ -28,7 +28,6 @@ Local Open Scope nat_scope.
 
 
 
-
 Section SIMMODSEM.
 
   Context `{Σ: GRA.t}.
@@ -55,13 +54,7 @@ Section SIMMODSEM.
     { unfold main_body, mainF, ccall, hcall. init.
       harg_tac. des. subst. rewrite Any.upcast_downcast. ss.
       iRefresh. iDestruct PRE. iPure A. clarify. steps.
-      replace (find (fun '(_fn, _) => dec "getbool" _fn) (ClientStb ++ MainStb)) with
-          (Some ("getbool", (mk_simple "Client"
-                                       (fun (_: unit) _ o =>
-                                          iHyp (⌜True⌝))
-                                       (fun _ _ =>
-                                          iHyp (⌜True⌝))))).
-      2: { unfold ClientStb, MainStb. unseal "stb". ss. }
+      destruct (find (fun '(_fn, _) => dec "getbool" _fn) (ClientStb ++ MainStb)) eqn:T; stb_tac; clarify.
       steps. rewrite Any.upcast_downcast. ss. steps.
       hcall_tac tt ord_top (@URA.unit Σ) PRE (@URA.unit Σ); ss.
       { esplits; eauto. }

@@ -244,7 +244,7 @@ Section SIMMODSEM.
     }
     econs; ss.
     { unfold freeF. init.
-      harg_tac. des_ifs_safe. des. repeat rewrite URA.unit_idl in *. repeat rewrite URA.unit_id in *.
+      harg_tac. des_ifs_safe. des. repeat rewrite URA.unit_idl in *. repeat rewrite URA.unit_id in *. ss.
       iRefresh. do 3 iDestruct PRE. iPure PRE. iPure A. clarify. apply Any.upcast_inj in PRE. des; clarify.
       do 2 iDestruct SIM. iPure A.
       steps. rewrite Any.upcast_downcast in *. steps.
@@ -316,7 +316,7 @@ Section SIMMODSEM.
     }
     econs; ss.
     { unfold loadF. init.
-      harg_tac. des_ifs_safe. des. repeat rewrite URA.unit_idl in *. repeat rewrite URA.unit_id in *.
+      harg_tac. des_ifs_safe. des. repeat rewrite URA.unit_idl in *. repeat rewrite URA.unit_id in *. ss.
       iRefresh. do 2 iDestruct PRE. iPure PRE. iPure A. clarify. apply Any.upcast_inj in PRE. des; clarify.
       do 2 iDestruct SIM. iPure A.
       steps. rewrite Any.upcast_downcast in *. steps.
@@ -335,12 +335,12 @@ Section SIMMODSEM.
       rewrite <- GRA.embed_add in SIM. rewrite own_sep in SIM. iDestruct SIM.
       force_r; ss. clarify. steps. force_l. esplits.
       hret_tac SIM A0.
-      { split; [|refl]; iRefresh. iSplitP; ss. }
+      { split; [|refl]; ss; iRefresh. iSplitP; ss. }
       { ss. esplits; eauto. eexists; iRefresh. iSplitP; ss; et. }
     }
     econs; ss.
     { unfold storeF. init.
-      harg_tac. des_ifs_safe. des. repeat rewrite URA.unit_idl in *. repeat rewrite URA.unit_id in *.
+      harg_tac. des_ifs_safe. des. repeat rewrite URA.unit_idl in *. repeat rewrite URA.unit_id in *. ss.
       iRefresh. do 3 iDestruct PRE. iPure PRE. iPure A. clarify. apply Any.upcast_inj in PRE. des; clarify.
       do 2 iDestruct SIM. iPure A.
       steps. rewrite Any.upcast_downcast in *. steps.
@@ -391,7 +391,7 @@ Section SIMMODSEM.
     }
     econs; ss.
     { unfold cmpF. init.
-      harg_tac. des_ifs_safe. des. repeat rewrite URA.unit_idl in *. repeat rewrite URA.unit_id in *.
+      harg_tac. des_ifs_safe. des. repeat rewrite URA.unit_idl in *. repeat rewrite URA.unit_id in *. ss.
       iRefresh. do 2 iDestruct SIM. iPure A. do 2 iDestruct PRE. iPure A0. clarify.
       rename x into mem_src0.
       assert (VALIDPTR: forall b ofs v (WF: URA.wf ((Auth.black (mem_src0: URA.car (t:=Mem1._memRA))) ⋅ ((b, ofs) |-> [v]))),
@@ -422,7 +422,7 @@ Section SIMMODSEM.
       iDestruct PRE; cycle 1.
       { iPure A1. des; subst. apply Any.upcast_inj in A1. des; clarify. steps.
         force_l. eexists. hret_tac SIM A0.
-        { split; [iRefresh|refl]. iSplitP; ss. }
+        { split; [ss; iRefresh|refl]. iSplitP; ss. }
         { ss. esplits; et. eexists; iRefresh. iSplitP; ss; et. }
       }
       iDestruct PRE; cycle 1.
@@ -430,7 +430,7 @@ Section SIMMODSEM.
         rewrite GRA.embed_add in WF. eapply GRA.embed_wf in WF; des.
         erewrite VALIDPTR; et. ss. rewrite ! dec_true; ss. steps.
         force_l. eexists. hret_tac SIM A0.
-        { split; [iRefresh|refl]. iSplitP; ss. }
+        { split; [ss; iRefresh|refl]. iSplitP; ss. }
         { ss. esplits; et. eexists; iRefresh. iSplitP; ss; et. }
       }
       iDestruct PRE; cycle 1.
@@ -447,7 +447,7 @@ Section SIMMODSEM.
           des; try (by rewrite dec_false; ss). rewrite dec_false with (x0:=x7); ss. rewrite andb_false_r; ss.
         }
         steps. force_l. eexists. hret_tac SIM A0.
-        { split; [iRefresh|refl]. iSplitP; ss. }
+        { split; [ss; iRefresh|refl]. iSplitP; ss. }
         { ss. esplits; et. eexists; iRefresh. iSplitP; ss; et. }
       }
       iDestruct PRE; cycle 1.
@@ -455,7 +455,7 @@ Section SIMMODSEM.
         rewrite GRA.embed_add in WF. eapply GRA.embed_wf in WF; des.
         erewrite VALIDPTR; et. ss. steps.
         force_l. eexists. hret_tac SIM A0.
-        { split; [iRefresh|refl]. iSplitP; ss. }
+        { split; [ss; iRefresh|refl]. iSplitP; ss. }
         { ss. esplits; et. eexists; iRefresh. iSplitP; ss; et. }
       }
       iDestruct PRE; cycle 1.
@@ -463,7 +463,7 @@ Section SIMMODSEM.
         rewrite GRA.embed_add in WF. eapply GRA.embed_wf in WF; des.
         erewrite VALIDPTR; et. ss. steps.
         force_l. eexists. hret_tac SIM A0.
-        { split; [iRefresh|refl]. iSplitP; ss. }
+        { split; [ss; iRefresh|refl]. iSplitP; ss. }
         { ss. esplits; et. eexists; iRefresh. iSplitP; ss; et. }
       }
     }

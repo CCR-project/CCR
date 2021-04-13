@@ -41,6 +41,8 @@ Set Implicit Arguments.
 
 Arguments transl_all {Σ} _%string_scope {T}%type_scope _%itree_scope. (*** TODO: move to ModSem ***)
 
+Notation "f ∘ g" := (fun x => (f (g x))). (*** TODO: move to Coqlib ***)
+
 Inductive ord: Type :=
 | ord_pure (n: Ord.t)
 | ord_top
@@ -211,8 +213,8 @@ Section CANCEL.
   (*   apply (list val). *)
   (*   apply (val). *)
   (* Defined. *)
-  Definition mk_simple (mn: string) {X: Type} (P: X -> Any_tgt -> ord -> Σ -> Prop) (Q: X -> Any_tgt -> Σ -> Prop): fspec :=
-    @mk mn X (list val) (val) (fun x y a o r => P x a o r /\ y↑ = a) (fun x z a r => Q x a r /\ z↑ = a)
+  Definition mk_simple (mn: string) {X: Type} (PQ: X -> ((Any_tgt -> ord -> Σ -> Prop) * (Any_tgt -> Σ -> Prop))): fspec :=
+    @mk mn X (list val) (val) (fun x y a o r => (fst ∘ PQ) x a o r /\ y↑ = a) (fun x z a r => (snd ∘ PQ) x a r /\ z↑ = a)
   .
 
 
