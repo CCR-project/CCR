@@ -28,7 +28,7 @@ Section PROOF.
       Ret Vundef
   .
 
-  Let main_spec:        fspec := (mk_simple "Main" (X:=unit) (fun _ _ o _ => o = ord_top) (top3)).
+  Let main_spec: fspec := (mk_simple "Main" (X:=unit) (fun _ => ((fun _ o _ => o = ord_top), (top2)))).
 
   Definition MainStb: list (gname * fspec) :=
     [("main", main_spec)]

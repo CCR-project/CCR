@@ -19,20 +19,15 @@ Section MAIN.
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG bwRA Σ}.
 
-  Let getbool_spec:  fspec := (mk_simple "Client"
-                                         (fun (_: unit) _ o => (⌜True⌝))
-                                         (fun _ _ => (⌜True⌝))).
+  Let getbool_spec:  fspec := (mk_simple "Client" (fun (_: unit) => ((fun _ o => (⌜True⌝)), (fun _ => (⌜True⌝))))).
 
-  Let putint_spec:  fspec := (mk_simple "Client"
-                                        (fun (_: unit) _ o => (⌜True⌝))
-                                        (fun _ _ => (⌜True⌝))).
+  Let putint_spec:  fspec := (mk_simple "Client" (fun (_: unit) => ((fun _ o => (⌜True⌝)), (fun _ => (⌜True⌝))))).
 
   Definition ClientStb: list (gname * fspec) :=
     Seal.sealing "stb" [("getbool", getbool_spec) ; ("putint", putint_spec)].
 
-  Let main_spec:  fspec := (mk_simple "Main"
-                                     (fun (_: unit) _ o => (Own (GRA.embed (bw_frag true)) ** ⌜o = ord_top⌝))
-                                     (fun _ _ => (⌜True⌝))).
+  Let main_spec:  fspec := (mk_simple "Main" (fun (_: unit) => ((fun _ o => (Own (GRA.embed (bw_frag true)) ** ⌜o = ord_top⌝)),
+                                                                (fun _ => (⌜True⌝))))).
 
   Definition main_body: list val -> itree (hCallE +' pE +' eventE) val :=
     fun _ =>
@@ -67,4 +62,5 @@ Section MAIN.
   .
 
 End MAIN.
-Global Hint Unfold MainStb: main.
+Global Hint Unfold MainStb: stb.
+Global Hint Unfold ClientStb: stb.

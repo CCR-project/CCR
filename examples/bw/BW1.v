@@ -26,16 +26,16 @@ Section BW.
   Context `{@GRA.inG bwRA Σ}.
 
   Let get_spec:  fspec := (mk_simple "BW"
-                                     (fun b varg o =>
-                                        (Own (GRA.embed (bw_frag b)) ** ⌜o = ord_pure 1⌝))
-                                     (fun b vret =>
-                                        (Own (GRA.embed (bw_frag b)) ** ⌜vret = (Vint (if b then 0xffffff else 0))↑⌝))).
+                                     (fun b => (
+                                          (fun varg o => (Own (GRA.embed (bw_frag b)) ** ⌜o = ord_pure 1⌝)),
+                                          (fun vret => (Own (GRA.embed (bw_frag b)) ** ⌜vret = (Vint (if b then 0xffffff else 0))↑⌝))
+                                        ))).
 
   Let flip_spec: fspec := (mk_simple "BW"
-                                     (fun b varg o =>
-                                        (Own (GRA.embed (bw_frag b)) ** ⌜o = ord_pure 1⌝))
-                                     (fun b vret =>
-                                        (Own (GRA.embed (bw_frag (negb b)))))).
+                                     (fun b => (
+                                          (fun varg o => (Own (GRA.embed (bw_frag b)) ** ⌜o = ord_pure 1⌝)),
+                                          (fun vret => (Own (GRA.embed (bw_frag (negb b)))))
+                                        ))).
 
   Definition BWStb: list (gname * fspec) :=
     Seal.sealing "stb" [("get", get_spec) ; ("flip", flip_spec)].

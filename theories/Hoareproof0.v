@@ -660,9 +660,10 @@ Section CANCEL.
   Qed.
 
   Variable entry_r: Σ.
-  Variable main_pre: unit -> Any.t -> ord -> Σ -> Prop.
-  Hypothesis MAINPRE: main_pre tt ([]: list val)↑ ord_top entry_r.
-  Hypothesis MAIN: List.find (fun '(_fn, _) => dec "main" _fn) stb = Some ("main", (@mk_simple _ "Main" unit main_pre top3)).
+  Variable main_pre: Any.t -> ord -> Σ -> Prop.
+  Hypothesis MAINPRE: main_pre ([]: list val)↑ ord_top entry_r.
+  Hypothesis MAIN: List.find (fun '(_fn, _) => dec "main" _fn) stb =
+                   Some ("main", (mk_simple "Main" (fun (_: unit) => (main_pre, top2)))).
   Hypothesis WFR: URA.wf (entry_r ⋅ rsum (ModSemL.initial_r_state ms_tgt)).
 
   Let initial_r_state ms entry_r: r_state :=
