@@ -49,7 +49,7 @@ Section PROOF.
   .
 
   (*** main's view on stb ***)
-  Definition main_spec: fspec := mk_simple "Main" (X:=unit) (fun _ _ o _ => o = ord_top) top3.
+  Definition main_spec: fspec := mk_simple "Main" (fun (_: unit) => ((fun _ o _ => o = ord_top), top2)).
 
   Definition MainStb: list (gname * fspec).
     eapply (Seal.sealing "stb").

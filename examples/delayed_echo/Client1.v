@@ -21,8 +21,8 @@ Section PROOF.
 
   Context `{Σ: GRA.t}.
 
-  Let getint_spec:  fspec := (mk_simple "Client" (X:=unit) (fun _ _ o _ => o = ord_top) (top3)).
-  Let putint_spec: fspec := (mk_simple "Client" (X:=unit) (fun _ _ o _ => o = ord_top) (top3)).
+  Let getint_spec: fspec := (mk_simple "Client" (X:=unit) (fun _ => ((fun _ o _ => o = ord_top), top2))).
+  Let putint_spec: fspec := (mk_simple "Client" (X:=unit) (fun _ => ((fun _ o _ => o = ord_top), top2))).
 
   Definition ClientStb: list (gname * fspec).
     eapply (Seal.sealing "stb").
