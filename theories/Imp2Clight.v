@@ -7,13 +7,13 @@ Require Import Any.
 Require Import ModSem.
 Require Import Imp.
 
-From compcert Require Import AST Integers Ctypes Clight Globalenvs Linking.
+From compcert Require Import AST Integers Ctypes Clight Globalenvs Linking Errors.
 
 Import Int.
 
 Set Implicit Arguments.
 
-Section Compile.
+Section Compile_Mod.
   
   (* Definition cast (nextID: AST.ident) := var -> option (AST.ident * type). *)
   (* Definition empty : cast 1%positive := fun _ => None. *)
@@ -30,10 +30,6 @@ Section Compile.
   (* compile each module indiv, 
      prove behavior refinement for whole (closed) prog after linking *)
   Context `{Σ: GRA.t}.
-  Variable src : Mod.t.
-  Variable src_ge : SkEnv.t.
-  Variable tgt : program.
-  (* Variable tgt_ge0 : Genv.t (Ctypes.fundef function) type. *)
 
   Context {s2p : string -> ident}.
   Context {to_long : Z -> int64}.
@@ -48,13 +44,14 @@ Section Compile.
      -> memory mod is not compiled with other Imps, 
      load/store are compiled in other way, so OK.
      cmp: ?? *)
-  Let tgt_gdefs := list (ident * globdef (Ctypes.fundef function) type).
+  Let tgt_gdef := globdef (Ctypes.fundef function) type.
+  Let tgt_gdefs := list (ident * tgt_gdef).
 
   Let Tlong0 :=
     (Tlong Signed noattr).
 
-  Let Tptr0 tgt :=
-    (Tpointer tgt noattr).
+  Let Tptr0 tgt_ty :=
+    (Tpointer tgt_ty noattr).
 
   Definition ident_key {T} id l : option T :=
     SetoidList.findA (Pos.eqb id) l.
@@ -147,10 +144,6 @@ Section Compile.
       do '(g1, cif) <- (compile_stmt g0 sif);
       do '(g2, celse) <- (compile_stmt g1 selse);
       Some (g2, Sifthenelse cc cif celse)
-    | While cond body =>
-      do cc <- (compile_expr cond);
-      do '(g1, cbody) <- (compile_stmt g0 body);
-      Some (g1, Swhile cc cbody)
     | Skip =>
       Some (g0, Sskip)
 
@@ -255,7 +248,7 @@ Section Compile.
       Some (g0, Sreturn None)
 
     | AddrOf x GN =>
-      (* GN: global name, tgt_g may not contain -> resolved by linking *)
+      (* GN: global name, g0 may not contain -> resolved by linking *)
       Some (g0, Sset (s2p x) (Eaddrof (Evar (s2p GN) Tlong0) Tlong0))
     | Load x pe =>
       do cpe <- (compile_expr pe); Some (g0, Sset (s2p x) (Ederef cpe Tlong0))
@@ -263,7 +256,72 @@ Section Compile.
       do cpe <- (compile_expr pe);
       do cve <- (compile_expr ve);
       Some (g0, Sassign (Ederef cpe Tlong0) cve)
+    | Cmp x ae be =>
+      do cae <- (compile_expr ae);
+      do cbe <- (compile_expr be);
+      let cmpexpr := (Ebinop Cop.Oeq cae cbe Tlong0) in
+      Some (g0, Sset (s2p x) cmpexpr)
     end
   .
 
-End Compile.
+  (** memory accessing calls *)
+  (** load, store, cmp are translated to non-function calls. *)
+  (** need to register alloc and free in advance to be properly called *)
+  Let alloc_def : Ctypes.fundef function :=
+    External EF_malloc (Tcons Tlong0 Tnil) (Tptr0 Tlong0) cc_default.
+
+  Let free_def : Ctypes.fundef function :=
+    External EF_free (Tcons (Tptr0 Tlong0) Tnil) Tlong0 cc_default.
+
+  Fixpoint compile_gVars (src : modVars) : tgt_gdefs :=
+    match src with
+    | [] => []
+    | (name, v) :: t =>
+      let init_value :=
+          match v with
+          | Vint z => [Init_int64 (to_long z)]
+          | _ => [Init_int64 (to_long 0)]
+          end in
+      (s2p name, Gvar (mkglobvar Tlong0 init_value false false))::(compile_gVars t)
+    end
+  .
+
+  (* g0 carries updated syscall defs found in compilation *)
+  Fixpoint compile_gFuns (src : modFuns) g0 acc : option (tgt_gdefs * tgt_gdefs) :=
+    match src with
+    | [] => Some (g0, acc)
+    | (name, f) :: t =>
+      do '(g1, fbody) <- (compile_stmt g0 f.(Imp.fn_body));
+      let fdef := {|
+            fn_return := Tlong0;
+            fn_callconv := cc_default;
+            fn_params := (List.map (fun vn => (s2p vn, Tlong0)) f.(Imp.fn_params));
+            fn_vars := [];
+            fn_temps := (List.map (fun vn => (s2p vn, Tlong0)) f.(Imp.fn_vars));
+            fn_body := fbody;
+          |} in
+      let gf := Internal fdef in
+      compile_gFuns t g1 ((s2p name, Gfun gf)::acc)
+    end
+  .
+
+  Definition compile_gdefs (src : Imp.module) : option tgt_gdefs :=
+    let g0 := [(s2p "alloc", Gfun alloc_def); (s2p "free", Gfun free_def)] in
+    do '(g_sys, g_fun) <- compile_gFuns src.(mod_funs) g0 [] ;
+    let g_var := compile_gVars src.(mod_vars) in
+    Some (g_sys ++ g_var ++ g_fun)
+  .
+
+  Variable src_name : mname.
+  Variable src_defs : Imp.module.
+
+  Definition compile :=
+    let optdefs := (compile_gdefs src_defs) in
+    match optdefs with
+    | None => Error [MSG "statement compile failed"]
+    | Some defs =>
+      make_program [] defs (List.map (fun '(i, g) => i) defs) (s2p "main")
+    end
+  .
+
+End Compile_Mod.
