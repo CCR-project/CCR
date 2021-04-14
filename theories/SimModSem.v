@@ -1044,7 +1044,9 @@ Section SIMMOD.
    Variable (md_src md_tgt: Mod.t).
    Inductive sim: Prop := mk {
      sim_modsem:
-       forall skenv, <<SIM: ModSemLPair.sim (md_src.(Mod.get_modsem) skenv) (md_tgt.(Mod.get_modsem) skenv)>>;
+       forall skenv (INCL: Sk.incl md_tgt.(Mod.sk)
+
+, <<SIM: ModSemLPair.sim (md_src.(Mod.get_modsem) skenv) (md_tgt.(Mod.get_modsem) skenv)>>;
      sim_sk: <<SIM: md_src.(Mod.sk) = md_tgt.(Mod.sk)>>;
      sim_wf:
        forall skenv (WF: ModSemL.wf (md_src.(Mod.get_modsem) skenv)), <<WF: ModSemL.wf (md_tgt.(Mod.get_modsem) skenv)>>;
