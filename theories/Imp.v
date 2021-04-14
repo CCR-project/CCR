@@ -281,7 +281,7 @@ Record module : Type := mk_module {
 
 (**** ModSem ****)
 Module ImpMod.
-Section MODSEML.
+Section MODSEM.
 
   Context `{GRA: GRA.t}.
   Variable mn: mname.
@@ -290,8 +290,8 @@ Section MODSEML.
   Set Typeclasses Depth 5.
   (* Instance Initial_void1 : @Initial (Type -> Type) IFun void1 := @elim_void1. (*** TODO: move to ITreelib ***) *)
 
-  Definition modsem (ge: SkEnv.t) : ModSemL.t := {|
-    ModSemL.fnsems :=
+  Definition modsem (ge: SkEnv.t) : ModSem.t := {|
+    ModSem.fnsems :=
       List.map (fun '(fn, f) => (fn, cfun (eval_imp ge f))) m.(mod_funs);
     ModSem.mn := mn;
     ModSem.initial_mr := ε;
@@ -305,7 +305,7 @@ Section MODSEML.
       (List.map (fun '(fn, _) => (fn, Sk.Gfun)) m.(mod_funs));
   |}.
 
-End MODSEML.
+End MODSEM.
 End ImpMod.
 
 (* ========================================================================== *)
