@@ -281,7 +281,7 @@ Record module : Type := mk_module {
 
 (**** ModSem ****)
 Module ImpMod.
-Section MODSEM.
+Section MODSEML.
 
   Context `{GRA: GRA.t}.
   Variable mn: mname.
@@ -290,10 +290,12 @@ Section MODSEM.
   Set Typeclasses Depth 5.
   (* Instance Initial_void1 : @Initial (Type -> Type) IFun void1 := @elim_void1. (*** TODO: move to ITreelib ***) *)
 
-  Definition modsem (ge: SkEnv.t) : ModSem.t := {|
-    ModSem.fnsems :=
+  Definition modsem (ge: SkEnv.t) : ModSemL.t := {|
+    ModSemL.fnsems :=
       List.map (fun '(fn, f) => (fn, cfun (eval_imp ge f))) m.(mod_funs);
-    ModSem.initial_mrs := [(mn, (URA.unit, tt↑))];
+    ModSem.mn := mn;
+    ModSem.initial_mr := ε;
+    ModSem.initial_st := tt↑;
   |}.
 
   Definition get_mod: Mod.t := {|
@@ -303,7 +305,7 @@ Section MODSEM.
       (List.map (fun '(fn, _) => (fn, Sk.Gfun)) m.(mod_funs));
   |}.
 
-End MODSEM.
+End MODSEML.
 End ImpMod.
 
 (* ========================================================================== *)
@@ -451,7 +453,7 @@ Section Example_Extract.
   
   Definition ex_prog: Mod.t := ImpMod.get_mod "Main" ex_extract.
 
-  Definition imp_ex := ModSem.initial_itr_no_check (Mod.enclose ex_prog).
+  Definition imp_ex := ModSemL.initial_itr_no_check (ModL.enclose ex_prog).
 
 End Example_Extract.
 
@@ -1358,25 +1360,6 @@ Ltac imp_red :=
     | _ => fail
     end
 
-  (*      (** interp_imp *) *)
-  (* | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ _ (_, ITree.bind' _ (interp_imp (?itr) _))) ] => *)
-  (*   match itr with *)
-  (*   | ITree.bind' _ _ => rewrite interp_imp_bind *)
-  (*   | Ret _ => rewrite interp_imp_Ret *)
-  (*   | triggerUB => rewrite interp_imp_triggerUB *)
-  (*   | triggerNB => rewrite interp_imp_triggerNB *)
-  (*   | trigger (GetVar _) => rewrite interp_imp_GetVar *)
-  (*   | trigger (SetVar _ _) => rewrite interp_imp_SetVar *)
-  (*   | trigger (Call _ _) => rewrite interp_imp_Call *)
-  (*   | trigger (Syscall _ _ _) => rewrite interp_imp_Syscall *)
-  (*   | unwrapU _ => rewrite interp_imp_unwrapU *)
-  (*   | unwrapN _ => rewrite interp_imp_unwrapN *)
-  (*   | _ => fail *)
-  (*   end *)
-
-  (* | [ |- (gpaco3 (_sim_itree _) _ _ _ _ _ (_, ITree.bind' _ (interp_imp (Tau _) _))) ] => *)
-  (*   rewrite interp_imp_tau *)
-       (** default *)
   | _ => idtac
   end.
 
