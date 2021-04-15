@@ -14,18 +14,6 @@ Import Int.
 Set Implicit Arguments.
 
 Section Compile_Mod.
-  
-  (* Definition cast (nextID: AST.ident) := var -> option (AST.ident * type). *)
-  (* Definition empty : cast 1%positive := fun _ => None. *)
-
-  (* Definition update_cast {i} newKey newType (curr: cast i) : cast (Pos.succ i):= *)
-  (*   fun key => *)
-  (*     if (String.string_dec key newKey) then (Some (i, newType)) *)
-  (*     else (curr key). *)
-
-  (* Hypothesis is_int : *)
-  (*   forall (intval : Z), *)
-  (*     ((Zneg xH) < intval < modulus)%Z. *)
 
   (* compile each module indiv, 
      prove behavior refinement for whole (closed) prog after linking *)
@@ -243,10 +231,8 @@ Section Compile_Mod.
              al)
       end
 
-    | Return1 r =>
+    | Expr r =>
       do cr <- (compile_expr r); Some (g0, Sreturn (Some cr))
-    | Return2 =>
-      Some (g0, Sreturn None)
 
     | AddrOf x GN =>
       (* GN: global name, g0 may not contain -> resolved by linking *)

@@ -68,8 +68,7 @@ Inductive stmt : Type :=
 | CallPtr2 (p : expr) (args : list expr)            (* f(args) *)
 | CallSys1 (x : var) (f : gname) (args : list expr) (* x = f(args), system call *)
 | CallSys2 (f : gname) (args : list expr)           (* f(args) *)
-| Return1 (e : expr)                                (* return e *)
-| Return2                                           (* return *)
+| Expr (e : expr)                                   (* expression e *)
 | AddrOf (x : var) (X : gname)         (* x = &X *)
 | Load (x : var) (p : expr)            (* x = *p *)
 | Store (p : expr) (v : expr)          (* *p = v *)
@@ -181,8 +180,7 @@ Section Denote.
       eval_args <- denote_exprs args [];;
       trigger (Syscall f eval_args top1);; Ret Vundef
 
-    | Return1 e => v <- denote_expr e;; Ret v
-    | Return2 => Ret Vundef
+    | Expr e => v <- denote_expr e;; Ret v
 
     | AddrOf x X =>
       v <- trigger (GetPtr X);; trigger (SetVar x v);; Ret Vundef
@@ -314,18 +312,14 @@ End ImpMod.
 Module ImpNotations.
 
   (** A few notations for convenience.  *)
+  Definition Expr_coerce: expr -> stmt := Expr.
   Definition Var_coerce: string -> expr := Var.
   Definition Lit_coerce: val -> expr := Lit.
   Definition Vint_coerce: Z -> val := Vint.
+  Coercion Expr_coerce: expr >-> stmt.
   Coercion Var_coerce: string >-> expr.
   Coercion Lit_coerce: val >-> expr.
   Coercion Vint_coerce: Z >-> val.
-
-  (* Definition opExpr := option expr. *)
-  (* Definition opStr := option string. *)
-  (* Definition opStr_coerce: opStr -> opExpr := *)
-  (*   (fun os => do s <- os; Some (Var s)). *)
-  (* Coercion opStr_coerce: opStr >-> opExpr. *)
 
   Declare Scope expr_scope.
   Bind Scope expr_scope with expr.
@@ -356,13 +350,7 @@ Module ImpNotations.
 
   Notation "'skip#'" :=
     (Skip) (at level 100): stmt_scope.
-
-  Notation "'ret#'" :=
-    (Return2) (at level 60): stmt_scope.
-
-  Notation "'ret#' e" :=
-    (Return1 e) (at level 60): stmt_scope.
-  
+ 
   (* Different methods for function calls *)
   Notation "x '=@' f args" :=
     (CallFun1 x f args)
@@ -423,26 +411,29 @@ Section Example_Extract.
   Local Open Scope stmt_scope.
 
   Definition factorial : stmt :=
+    "fptr" =#& "factorial" ;#
     if# "input"
-    then# "output" =@ "factorial" ["input" - 1%Z] ;#
+    then# "output" =@* "fptr" ["input" - 1%Z] ;#
           "output" =# "input" * "output"
     else# "output" =# 1%Z
     fi#;#
-    ret# "output".
+    "output".
 
   Definition factorial_fundef : function := {|
     fn_params := ["input"];
-    fn_vars := ["output"];
+    fn_vars := ["output"; "fptr"];
     fn_body := factorial
   |}.
 
   Definition main : stmt :=
-    "result" =@ "factorial" [4%Z : expr] ;#
-    ret# "result".
+    "in" =@! "scanf" [] ;#
+    "result" =@ "factorial" ["in": expr] ;#
+    @! "printf" ["in": expr] ;#
+    "result".
 
   Definition main_fundef : function := {|
     fn_params := [];
-    fn_vars := ["result"];
+    fn_vars := ["in"; "result"];
     fn_body := main
   |}.
 
@@ -529,18 +520,11 @@ Section PROOFS.
       interp_imp ge le0 (Ret Vundef).
   Proof. reflexivity. Qed.
 
-  Lemma denote_stmt_Return1
+  Lemma denote_stmt_Expr
         ge le0 e
     :
-      interp_imp ge le0 (denote_stmt (Return1 e)) =
+      interp_imp ge le0 (denote_stmt (Expr e)) =
       interp_imp ge le0 (v <- denote_expr e;; Ret v).
-  Proof. reflexivity. Qed.
-
-  Lemma denote_stmt_Return2
-        ge le0
-    :
-      interp_imp ge le0 (denote_stmt (Return2)) =
-      interp_imp ge le0 (Ret Vundef).
   Proof. reflexivity. Qed.
 
   Lemma denote_stmt_AddrOf
@@ -919,24 +903,15 @@ Section PROOFS.
     rewrite denote_stmt_Skip. apply interp_imp_Ret.
   Qed.
 
-  Lemma interp_imp_Return1
+  Lemma interp_imp_Expr
         ge le0 e
     :
-      interp_imp ge le0 (denote_stmt (Return1 e)) =
+      interp_imp ge le0 (denote_stmt (Expr e)) =
       '(le1, v) <- interp_imp ge le0 (denote_expr e) ;;
       Ret (le1, v).
   Proof.
-    rewrite denote_stmt_Return1. rewrite interp_imp_bind.
+    rewrite denote_stmt_Expr. rewrite interp_imp_bind.
     grind. apply interp_imp_Ret.
-  Qed.
-
-  Lemma interp_imp_Return2
-        ge le0
-    :
-      interp_imp ge le0 (denote_stmt (Return2)) =
-      Ret (le0, Vundef).
-  Proof.
-    rewrite denote_stmt_Return2. apply interp_imp_Ret.
   Qed.
 
   Lemma interp_imp_AddrOf
@@ -1232,8 +1207,8 @@ Ltac imp_red :=
     | CallPtr2 _ _ => rewrite interp_imp_CallPtr2
     | CallSys1 _ _ _ => rewrite interp_imp_CallSys1
     | CallSys2 _ _ => rewrite interp_imp_CallSys2
-    | Return1 _ => rewrite interp_imp_Return1
-    | Return2 => rewrite interp_imp_Return2
+    | Expr _ => rewrite interp_imp_Expr
+    | Expr_coerce _ => rewrite interp_imp_Expr
     | AddrOf _ _ => rewrite interp_imp_AddrOf
     | Load _ _ => rewrite interp_imp_Load
     | Store _ _ => rewrite interp_imp_Store

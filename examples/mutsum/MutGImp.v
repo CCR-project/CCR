@@ -27,8 +27,8 @@ Section G.
       ["f_ret"]
       (if# "n"
        then# "f_ret" =@ "f" ["n" - 1%Z : expr] ;#
-             ret# "n" + "f_ret"
-       else# ret# 0%Z
+             "n" + "f_ret"
+       else# 0%Z
        fi#).
 
   Definition g_prog : module :=
