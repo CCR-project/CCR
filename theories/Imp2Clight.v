@@ -7,11 +7,15 @@ Require Import Any.
 Require Import ModSem.
 Require Import Imp.
 
+Require Import Coq.Lists.SetoidList.
+
 From compcert Require Import AST Integers Ctypes Clight Globalenvs Linking Errors.
 
 Import Int.
 
 Set Implicit Arguments.
+
+Parameter s2p: string -> ident.
 
 Section Compile_Mod.
 
@@ -19,9 +23,9 @@ Section Compile_Mod.
      prove behavior refinement for whole (closed) prog after linking *)
   Context `{Σ: GRA.t}.
 
-  Context {s2p : string -> ident}.
   (* maybe use Int64.repr ? *)
-  Context {to_long : Z -> int64}.
+  (* Context {to_long : Z -> int64}. *)
+  Let to_long := Int64.repr.
 
   (* initial gdefs = Imp.module, 
      contains single module's glob vars & internal funs. *)

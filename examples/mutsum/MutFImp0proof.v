@@ -20,7 +20,8 @@ Require Import HTactics.
 Require Import TODO.
 
 Require Import Imp.
-Import ImpNotations.
+Require Import ImpNotations.
+Require Import ImpProofs.
 
 Generalizable Variables E R A B C X Y.
 

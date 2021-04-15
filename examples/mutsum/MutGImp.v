@@ -7,6 +7,7 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import Imp.
+Require Import ImpNotations.
 
 Generalizable Variables E R A B C X Y Σ.
 
