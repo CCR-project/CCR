@@ -102,7 +102,7 @@ Section Compile_Mod.
   Fixpoint compile_exprs (exprs: list Imp.expr) acc : option (list Clight.expr) :=
     match exprs with
     | h :: t =>
-      do hexp <- (compile_expr h); compile_exprs t (hexp :: acc)
+      do hexp <- (compile_expr h); compile_exprs t (acc ++ [hexp])
     | [] => Some acc
     end
   .
