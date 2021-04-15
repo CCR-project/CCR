@@ -32,6 +32,7 @@ Section Compile_Mod.
   Context `{Σ: GRA.t}.
 
   Context {s2p : string -> ident}.
+  (* maybe use Int64.repr ? *)
   Context {to_long : Z -> int64}.
 
   (* initial gdefs = Imp.module, 
@@ -318,7 +319,7 @@ Section Compile_Mod.
   Definition compile :=
     let optdefs := (compile_gdefs src_defs) in
     match optdefs with
-    | None => Error [MSG "statement compile failed"]
+    | None => Error [MSG "statement compilation failed"]
     | Some defs =>
       make_program [] defs (List.map (fun '(i, g) => i) defs) (s2p "main")
     end
