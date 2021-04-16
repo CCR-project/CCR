@@ -32,8 +32,4 @@ main.byte
 *.out
 *~
 
-imp_compile/*.ml
-imp_compile/*.mli
-!imp_compile/main.ml
-imp_compile/main.native
-imp_compile/_build/
+/imp_compile/*

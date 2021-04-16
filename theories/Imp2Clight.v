@@ -9,7 +9,8 @@ Require Import Imp.
 
 Require Import Coq.Lists.SetoidList.
 
-From compcert Require Import AST Integers Ctypes Clight Globalenvs Linking Errors.
+From compcert Require Import
+     AST Integers Ctypes Clight Globalenvs Linking Errors Cshmgen.
 
 Import Int.
 
@@ -52,6 +53,13 @@ Section Compile_Mod.
   Definition string_key {T} l x : option T :=
     SetoidList.findA (String.string_dec x) l.
 
+  (* from velus, Generation.v *)
+  Fixpoint list_type_to_typelist (tys: list Ctypes.type): Ctypes.typelist :=
+    match tys with
+    | [] => Ctypes.Tnil
+    | ty :: tys => Ctypes.Tcons ty (list_type_to_typelist tys)
+    end.
+  
   Fixpoint compile_expr expr : option Clight.expr :=
     match expr with
     | Var x =>
@@ -259,10 +267,10 @@ Section Compile_Mod.
   (** load, store, cmp are translated to non-function calls. *)
   (** need to register alloc and free in advance to be properly called *)
   Let alloc_def : Ctypes.fundef function :=
-    External EF_malloc (Tcons Tlong0 Tnil) (Tptr0 Tlong0) cc_default.
+    External EF_malloc (Tcons (Tptr0 Tlong0) Tnil) (Tptr0 Tlong0) cc_default.
 
   Let free_def : Ctypes.fundef function :=
-    External EF_free (Tcons (Tptr0 Tlong0) Tnil) Tlong0 cc_default.
+    External EF_free (Tcons (Tptr0 Tlong0) Tnil) Tvoid cc_default.
 
   Fixpoint compile_gVars (src : modVars) : tgt_gdefs :=
     match src with
@@ -296,9 +304,10 @@ Section Compile_Mod.
     end
   .
 
+  Let init_g : tgt_gdefs := [(s2p "alloc", Gfun alloc_def); (s2p "free", Gfun free_def)].
+
   Definition compile_gdefs (src : Imp.module) : option tgt_gdefs :=
-    let g0 := [(s2p "alloc", Gfun alloc_def); (s2p "free", Gfun free_def)] in
-    do '(g_sys, g_fun) <- compile_gFuns src.(mod_funs) g0 [] ;
+    do '(g_sys, g_fun) <- compile_gFuns src.(mod_funs) init_g [] ;
     let g_var := compile_gVars src.(mod_vars) in
     Some (g_sys ++ g_var ++ g_fun)
   .
