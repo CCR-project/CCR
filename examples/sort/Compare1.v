@@ -8,6 +8,7 @@ Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
 Require Import MutHeader.
+Require Import Logic.
 
 Generalizable Variables E R A B C X Y Σ.
 
@@ -29,14 +30,25 @@ Section PROOF.
   Section SKENV.
     Variable skenv: SkEnv.t.
 
-    Definition main_spec: fspec := mk_simple "Main" (X:=unit) (fun _ _ o _ => o = ord_top) top3.
+    Definition main_spec: fspec := mk_simple "Main" (X:=unit) 
+                                             (fun _ => (
+                                                  (fun _ o => ⌜o = ord_top⌝),
+                                                  top2
+                                             )).
 
-    Definition compare_spec:    fspec := mk_simple "Main" (X:=Z*Z) (fun '(n0, n1) varg o _ => varg = [Vint n0; Vint n1]↑ /\ o = ord_pure 1) (fun '(n0, n1) vret _ => vret = (Vint (mycmp n0 n1))↑).
+    Definition compare_spec:    fspec := mk_simple "Main" (X:=Z*Z)
+                                                   (fun '(n0, n1) => (
+                                                        (fun varg o => ⌜varg = [Vint n0; Vint n1]↑ /\ o = ord_pure 1⌝), 
+                                                        (fun vret => ⌜vret = (Vint (mycmp n0 n1))↑⌝)
+                                                   )).
 
-    Definition wrap_spec:    fspec := mk_simple "Main" (X:=Z*Z*(Z -> Z -> Z)) (fun '(n0, n1, f) varg o _ => exists fn blk, varg = [Vint n0; Vint n1; Vptr blk 0]↑ /\ o = ord_pure 1 /\ skenv.(SkEnv.blk2id) blk = Some fn /\ cmpspecs fn = Some f)
-                                                (fun '(n0, n1, f) vret _ => vret = (Vint (f n0 n1))↑).
+    Definition wrap_spec:    fspec := mk_simple "Main" (X:=Z*Z*(Z -> Z -> Z))
+                                                (fun '(n0, n1, f) => (
+                                                     (fun varg o => ⌜exists fn blk, varg = [Vint n0; Vint n1; Vptr blk 0]↑ /\ o = ord_pure 1 /\ skenv.(SkEnv.blk2id) blk = Some fn /\ cmpspecs fn = Some f⌝), 
+                                                     (fun vret => ⌜vret = (Vint (f n0 n1))↑⌝)
+                                                )).
 
-    Definition Mainsbtb: list (string * fspecbody) := [("main", mk_specbody main_spec (fun _ => trigger (Choose _))); ("compare", mk_specbody compare_spec (fun _ => trigger (Choose _))); ("wrap", mk_specbody wrap_spec (fun _ => trigger (Choose _)))].
+    Definition Mainsbtb: list (string * fspecbody) := [("main", mk_specbody main_spec (fun _ => APC;; trigger (Choose _))); ("compare", mk_specbody compare_spec (fun _ => trigger (Choose _))); ("wrap", mk_specbody wrap_spec (fun _ => trigger (Choose _)))].
 
     Definition GlobalStb: list (gname * fspec) := [("main", main_spec); ("compare", compare_spec); ("wrap", wrap_spec)].
 

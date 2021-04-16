@@ -16,7 +16,7 @@ From ExtLib Require Import
      Structures.Maps
      Data.Map.FMapAList.
 
-Require Import HTactics Logic YPM.
+Require Import HTactics Logic YPM TODOYJ.
 
 Generalizable Variables E R A B C X Y.
 
@@ -39,6 +39,38 @@ Section SIMMODSEM.
       (<<TGT: mrps_tgt0 = (ε, tt↑)>>)
   .
 
+  Lemma cmpspecs_globalstb fn f
+        (SPECS: cmpspecs fn = Some f)
+        skenv        
+        (SKINCL: Sk.incl Compare0.Compare.(Mod.sk) skenv)
+        (SKWF: SkEnv.wf skenv)
+    :
+      exists fsp,
+        (<<FIND: List.find (fun '(_fn, _) => dec fn _fn) (GlobalStb cmpspecs skenv) = Some (fn, fsp)>>) /\
+        (<<SPEC: forall 
+
+
+.
+  Proof. 
+
+fspec    
+
+(*   PRE2 : SkEnv.blk2id skenv blk = Some fn0 *)
+(*   PRE3 : cmpspecs fn0 = Some f *)
+(*   EQ : list val = list val *)
+(*   GWF : ☀ *)
+(*   ============================ *)
+(*   find (fun '(_fn, _) => dec fn0 _fn) (GlobalStb cmpspecs skenv) = Some (fn0, ?fsp) *)
+
+(* Record fspec (Σ : GRA.t) : Type := mk *)
+(*   { mn : string; *)
+(*     X : Type; *)
+(*     AA : Type; *)
+(*     AR : Type; *)
+(*     precond : X -> AA -> Any.t -> ord -> Σ -> Prop; *)
+(*     postcond : X -> AR -> Any.t -> Σ -> Prop } *)
+
+
   Theorem correct: ModPair.sim (Compare1.Main cmpspecs) Compare0.Compare.
   Proof.
     econs; ss; [|admit ""].
@@ -46,8 +78,125 @@ Section SIMMODSEM.
     econstructor 1 with (wf:=wf); et; ss.
     econs; ss; [|econs; ss; [|econs; ss]].
     - init. unfold mainF, ccall. harg_tac. des; subst. iRefresh.
-      rewrite Any.upcast_downcast. ss. steps.
-      force_l. eexists. steps. ss.
+      rewrite Any.upcast_downcast. ss. steps. astart 10.
+      hexploit (SKINCL "compare").
+      { econs; ss. }
+      i. des. rewrite H. ss. steps.
+      acall_tac (x0, x1, mycmp) (ord_pure 1) (@URA.unit Σ) (@URA.unit Σ) (@URA.unit Σ); ss.
+      { ss. esplits; eauto. red. esplits; eauto.
+        - eapply SKWF. eauto.
+        - ss. }
+      des. iPure POST. clarify. eapply Any.upcast_inj in POST. des; clarify.
+      steps. rewrite Any.upcast_downcast in _UNWRAPN. clarify. 
+      steps.
+      acall_tac (x0, x1, mycmp) (ord_pure 1) (@URA.unit Σ) (@URA.unit Σ) (@URA.unit Σ); ss.
+      { ss. esplits; eauto. red. esplits; eauto.
+        - eapply SKWF. eauto.
+        - ss. }
+      des. iPure POST. clarify. eapply Any.upcast_inj in POST. des; clarify.
+      steps. rewrite Any.upcast_downcast in _UNWRAPN. clarify. 
+      steps. astop. steps. force_l. eexists. force_r; auto. steps.
+      hret_tac (@URA.unit Σ) (@URA.unit Σ); ss.
+    - init. unfold compareF, ccall. harg_tac. des; subst. iRefresh.
+      rewrite Any.upcast_downcast. ss. steps. 
+      ss. iPure PRE. des; clarify. 
+      apply Any.upcast_inj in PRE. des; clarify. steps.
+      astart 0. astop. force_l. eexists.
+      hret_tac (@URA.unit Σ) (@URA.unit Σ); ss.
+    - init. unfold wrapF, ccall. harg_tac.
+      destruct x as [[n0 n1] f]. ss. des. red in PRE. des; clarify.
+      eapply Any.upcast_inj in PRE0. des; clarify.
+      rewrite Any.upcast_downcast. ss. steps. rewrite PRE2. steps. astart 1.
+
+      rename fn into fn0.
+
+      eapply APC_step_clo with (fn:=fn0) (args:=[Vint n0; Vint n1]);
+        [(try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r; eapply Nat.lt_succ_diag_r)]))|
+         (try by (stb_tac; refl))|
+         (try refl)|
+         (eapply OrdArith.lt_from_nat; eapply Nat.lt_succ_diag_r)|
+         (let args := fresh "args" in
+          let EQ := fresh "EQ" in
+          intros args EQ)].
+      { 
+
+
+
+astep fn (Any.upcast [Vint n0; Vint n1]).
+
+Ltac astep _fn _args :=
+
+
+      rewrite _APC.
+
+eapply 
+
+      acall_tac tt (ord_pure 1) (@URA.unit Σ) (@URA.unit Σ) (@URA.unit Σ); ss.
+
+
+      astart 1.
+
+      astart 0. astop. rewrite PRE2. force_l. eexists. steps.
+
+  ss.
+
+des; subst. iRefresh.
+      rewrite Any.upcast_downcast. ss. steps. 
+      ss. iPure PRE. des; clarify. 
+      apply Any.upcast_inj in PRE. des; clarify. steps.
+      astart 0. astop. force_l. eexists.
+      hret_tac (@URA.unit Σ) (@URA.unit Σ); ss.
+
+
+    -       hret_tac
+
+ steps.
+
+astop.
+      
+
+ss. steps. 
+
+iDestruct PRE.
+astart 10.
+      hexploit (SKINCL "compare").
+      { econs; ss. }
+      i. des. rewrite H. ss. steps.
+      acall_tac (x0, x1, mycmp) (ord_pure 1) (@URA.unit Σ) (@URA.unit Σ) (@URA.unit Σ); ss.
+      { ss. esplits; eauto. red. esplits; eauto.
+        - eapply SKWF. eauto.
+        - ss. }
+      des. iPure POST. clarify. eapply Any.upcast_inj in POST. des; clarify.
+      steps. rewrite Any.upcast_downcast in _UNWRAPN. clarify. 
+      steps.
+      acall_tac (x0, x1, mycmp) (ord_pure 1) (@URA.unit Σ) (@URA.unit Σ) (@URA.unit Σ); ss.
+      { ss. esplits; eauto. red. esplits; eauto.
+        - eapply SKWF. eauto.
+        - ss. }
+      des. iPure POST. clarify. eapply Any.upcast_inj in POST. des; clarify.
+      steps. rewrite Any.upcast_downcast in _UNWRAPN. clarify. 
+      steps. astop. steps. force_l. eexists. force_r; auto. steps.
+      hret_tac (@URA.unit Σ) (@URA.unit Σ); ss.
+
+
+__ PRE.
+      
+hret_tac
+
+      steps.
+
+      astop.
+      steps.
+
+      steps.
+      steps.
+
+
+      iDes POST.
+
+      steps.
+
+ ss.
 
       r
  anytac.

@@ -7,7 +7,7 @@ Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
 Require Import Mem1.
-Require Import TODOYJ TODO.
+Require Import TODOYJ TODO CompareHeader.
 
 Generalizable Variables E R A B C X Y Σ.
 
@@ -20,23 +20,12 @@ Set Implicit Arguments.
 Section PROOF.
 
   Context `{Σ: GRA.t}.
-  Context `{@GRA.inG memRA Σ}.
-
-  (* TODO: move it to better place *)
-  Definition Vbool (b: bool): val :=
-    if b then Vint 0 else Vint 1.
 
   Definition compareF (skenv: SkEnv.t): list val -> itree Es val :=
     fun varg =>
       '(n0, n1) <- (pargs [Tint; Tint] varg)?;;
-      Ret (Vint (if (Z_le_gt_dec n0 n1) then 0 else 1))
+      Ret (Vint (mycmp n0 n1))
   .
-
-  Definition wrapF (skenv: SkEnv.t): list val -> itree Es val :=
-    fun varg =>
-      '(n0, (n1, fb)) <- (pargs [Tint; Tint; Tblk] varg)?;;
-      fn <- (skenv.(SkEnv.blk2id) fb)?;;
-      ccall fn [Vint n0; Vint n1].
 
   Definition mainF (skenv: SkEnv.t): list val -> itree Es val :=
     fun varg =>
@@ -49,17 +38,19 @@ Section PROOF.
       Ret Vundef
   .
 
-  Definition CompareSem (skenv: SkEnv.t): ModSem.t := {|
-    ModSem.fnsems := [("main", cfun (mainF skenv)); ("compare", cfun (compareF skenv)); ("wrap", cfun (wrapF skenv))];
+  Definition MainSem (skenv: SkEnv.t): ModSem.t := {|
+    ModSem.fnsems := [("main", cfun (mainF skenv)); ("compare", cfun (compareF skenv))];
     ModSem.mn := "Main";
     ModSem.initial_mr := ε;
     ModSem.initial_st := tt↑;
   |}
   .
 
-  Definition Compare: Mod.t := {|
-    Mod.get_modsem := fun skenv => CompareSem skenv;
+  Definition Main: Mod.t := {|
+    Mod.get_modsem := fun skenv => MainSem skenv;
     Mod.sk := [("compare", Sk.Gfun)];
   |}
   .
 End PROOF.
+
+Definition cmpspecs: list (gname * (Z -> Z -> Z)) := [("compare", mycmp)].
