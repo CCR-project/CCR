@@ -563,22 +563,26 @@ Section CANCEL.
 
   Context `{Σ: GRA.t}.
 
-  Variable md_tgt: ModL.t.
-  Let ms_tgt: ModSemL.t := (ModL.get_modsem md_tgt (Sk.load_skenv md_tgt.(ModL.sk))).
+  Variable mds: list SMod.t.
 
-  Variable sbtb: list (gname * fspecbody).
-  Let stb: list (gname * fspec) := List.map (fun '(gn, fsb) => (gn, fsb_fspec fsb)) sbtb.
+  Let sk: Sk.t := fold_right Sk.add Sk.unit (List.map SMod.sk mds).
+  Let skenv: SkEnv.t := Sk.load_skenv sk.
+  Let mss: list SModSem.t := (List.map ((flip SMod.get_modsem) skenv) mds).
+  Let sbtb: list (gname * fspecbody) := (List.flat_map (SModSem.fnsems) mss).
+  Let stb: list (gname * fspec) := List.map (fun '(fn, fs) => (fn, fs.(fsb_fspec))) sbtb.
 
-  Let md_mid: ModL.t := md_mid md_tgt sbtb.
-  Let ms_mid: ModSemL.t := ms_mid md_tgt sbtb.
+  Let mds_src: list Mod.t := List.map (SMod.to_src) mds.
+  Let mds_mid: list Mod.t := List.map (SMod.to_mid) mds.
 
-  Let md_src: ModL.t := md_src md_tgt sbtb.
-  Let ms_src: ModSemL.t := ms_src md_tgt sbtb.
+
 
   Let W: Type := (r_state * p_state).
   (* Let wf: Ord.t -> W -> W -> Prop := top3. *)
 
   Opaque EventsL.interp_Es.
+
+  Let ms_src: ModSemL.t := ModL.enclose (Mod.add_list mds_src).
+  Let ms_mid: ModSemL.t := ModL.enclose (Mod.add_list mds_mid).
 
   Let p_src := ModSemL.prog ms_src.
   Let p_mid := ModSemL.prog ms_mid.
@@ -669,8 +673,12 @@ Section CANCEL.
     myred.
     des_ifs.
     myred.
-    rewrite find_map in *. uo. des_ifs.
-    unfold fun_to_mid, compose.
+    unfold ms_mid, mds_mid, SMod.to_mid in Heq. rewrite SMod.transl_fnsems in Heq.
+    unfold SMod.load_fnsems in Heq. apply find_some in Heq. des; ss. des_sumbool; subst.
+    rewrite in_flat_map in Heq. des; ss. rewrite in_flat_map in Heq0. des; ss. des_ifs. ss; des; ss; clarify.
+    rename Heq0 into INF. rename Heq into IN.
+    rename x3 into md0. fold sk in INF. fold skenv in INF.
+    unfold fun_to_mid.
     myred.
     unfold unwrapN.
     des_ifs; cycle 1.
@@ -869,7 +877,11 @@ Section CANCEL.
         des_ifs_safe.
         myred.
         unseal_left.
-        rewrite find_map in *. uo. des_ifs.
+        unfold ms_mid, mds_mid, SMod.to_mid in Heq. rewrite SMod.transl_fnsems in Heq.
+        unfold SMod.load_fnsems in Heq. apply find_some in Heq. des; ss. des_sumbool; subst.
+        rewrite in_flat_map in Heq. des; ss. rewrite in_flat_map in Heq0. des; ss. des_ifs. ss; des; ss; clarify.
+        rename Heq0 into INF. rename Heq into IN.
+        rename x1 into md0. fold sk in INF. fold skenv in INF.
         repeat (tred; hred; mred).
         guclo ordC_spec. econs.
         { instantiate (1:=(120 + (10 + C.myF x + 10))%ord).
@@ -912,11 +924,24 @@ Section CANCEL.
         { unfold triggerUB. myred. ss. }
         myred. steps.
 
-        rewrite find_map in *. uo. des_ifs.
-        apply find_some in Heq0. apply find_some in Heq1. des; ss. unfold compose in *. ss. des_sumbool. clarify.
-        assert(f = f0).
+        unfold ms_mid, mds_mid, SMod.to_mid in Heq. rewrite SMod.transl_fnsems in Heq.
+        unfold SMod.load_fnsems in Heq. apply find_some in Heq. des; ss. des_sumbool; subst.
+        rewrite in_flat_map in Heq. des; ss. rewrite in_flat_map in Heq1. des; ss. des_ifs. ss; des; ss; clarify.
+        rename Heq1 into INF. rename Heq into IN.
+        rename x0 into md0. fold sk in INF. fold skenv in INF.
+
+        unfold ms_src, mds_src, SMod.to_src in Heq0. rewrite SMod.transl_fnsems in Heq0.
+        unfold SMod.load_fnsems in Heq0. apply find_some in Heq0. des; ss. des_sumbool; subst.
+        rewrite in_flat_map in Heq0. des; ss. rewrite in_flat_map in Heq1. des; ss. des_ifs. ss; des; ss; clarify.
+        rename Heq1 into INF0. rename Heq0 into IN0.
+        rename x0 into md1. fold sk in INF0. fold skenv in INF0.
+
+        assert(md0 = md1); subst.
         { admit "ez - uniqueness". }
-        subst.
+
+        assert(f = f0); subst.
+        { admit "ez - uniqueness". }
+
         guclo ordC_spec. econs.
         { eapply OrdArith.add_base_l. }
         guclo bindC_spec.
@@ -937,7 +962,8 @@ Section CANCEL.
     all: try (by exact unit).
   Qed.
 
-  Theorem adequacy_type_m2s: Beh.of_program (ModL.compile md_mid) <1= Beh.of_program (ModL.compile md_src).
+  Theorem adequacy_type_m2s: Beh.of_program (ModL.compile (Mod.add_list mds_mid)) <1=
+                             Beh.of_program (ModL.compile (Mod.add_list mds_src)).
   Proof.
     eapply adequacy_global.
     exists (100)%ord. ss.
@@ -956,8 +982,9 @@ Section CANCEL.
     ss. steps.
     (* Opaque ModSemL.initial_r_state. *)
     (* Opaque ModSemL.initial_p_state. *)
-    set (rs_src0 := ModSemL.initial_r_state (HoareDef.ms_src md_tgt sbtb)) in *.
-    set (rs_tgt0 := ModSemL.initial_r_state (HoareDef.ms_mid md_tgt sbtb)) in *.
+    fold ms_src. fold ms_mid.
+    set (rs_src0 := initial_r_state ms_src) in *.
+    set (rs_tgt0 := initial_r_state ms_mid) in *.
     assert(exists mrs_src0 hd_src tl_src, rs_src0 = (mrs_src0, hd_src :: tl_src)).
     { esplits. refl. }
     assert(exists mrs_tgt0 hd_tgt tl_tgt, rs_tgt0 = (mrs_tgt0, hd_tgt :: tl_tgt)).
@@ -967,8 +994,22 @@ Section CANCEL.
     { unfold triggerUB. myred. ss. }
     unfold unwrapU. des_ifs; cycle 1.
     { admit "unwrapN!!!!!!!!!!". }
-    rewrite find_map in *. uo. des_ifs.
-    apply find_some in Heq0. apply find_some in Heq1. des; ss. unfold compose in *. ss. des_sumbool. subst; ss.
+
+
+    unfold ms_mid, mds_mid, SMod.to_mid in Heq0. rewrite SMod.transl_fnsems in Heq0.
+    unfold SMod.load_fnsems in Heq0. apply find_some in Heq0. des; ss. des_sumbool; subst.
+    rewrite in_flat_map in Heq0. des; ss. rewrite in_flat_map in Heq2. des; ss. des_ifs. ss; des; ss; clarify. ss. subst.
+    rename Heq2 into INF. rename Heq0 into IN.
+    rename x into md0. fold sk in INF. fold skenv in INF.
+
+    unfold ms_src, mds_src, SMod.to_src in Heq. rewrite SMod.transl_fnsems in Heq.
+    unfold SMod.load_fnsems in Heq. apply find_some in Heq. des; ss. destruct p; ss. des_sumbool; subst.
+    rewrite in_flat_map in Heq. des; ss. rewrite in_flat_map in Heq0. des; ss. des_ifs. ss; des; ss; clarify.
+    rename Heq0 into INF0. rename Heq into IN0.
+    rename x into md1. fold sk in INF0. fold skenv in INF0.
+
+    assert(md0 = md1); subst.
+    { admit "ez - uniqueness". }
     assert(f = f0).
     { admit "ez - uniqueness". }
     subst.
@@ -988,7 +1029,9 @@ Section CANCEL.
     econs.
     - hexploit adequacy_type_aux; cycle 1.
       { intro T. gfinal. right. instantiate (3:=ord_top) in T. ss. eapply T. }
-      ss.
+      ss. unfold ms_src, ms_mid. unfold initial_p_state.
+      apply func_ext. intro mn. unfold mds_src, mds_mid, SMod.to_src, SMod.to_mid.
+      rewrite ! SMod.transl_initial_mrs. ss.
     - ii. rr in SIM. des_ifs. des; ss. subst. r in SIM. des_ifs.
       myred.
       steps.
