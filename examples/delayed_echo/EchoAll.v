@@ -8,7 +8,7 @@ Require Import Skeleton.
 Require Import PCM.
 Require Import Hoare.
 Require Import MutHeader SimModSem.
-Require Import Mem1 Stack1 Echo1 EchoMain1 Client1.
+Require Import Mem1 Stack1 Echo2 EchoMain1 Client1.
 
 Require Import TODOYJ.
 
@@ -47,11 +47,6 @@ Section ECHO.
       SMod.to_src SStack;
       SMod.to_src SEcho;
       SMod.to_src SClient
-        (* md_src Mem MemSbtb ; (* Mem *) *)
-        (* md_src Main MainSbtb ; (* Main *) *)
-        (* md_src Stack StackSbtb ; (* Stack *) *)
-        (* md_src Echo EchoSbtb ; (* Echo *) *)
-        (* md_src Client ClientSbtb (* Client *) *)
       ].
 
 End ECHO.
