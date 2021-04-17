@@ -20,54 +20,6 @@ Require Import Mem0 Mem1 Mem01proof Main0 Main1.
 
 
 
-Section AUX________REMOVEME_____REDUNDANT.
-
-  Context `{Σ: GRA.t}.
-
-  Definition refines_closed (md_tgt md_src: ModL.t): Prop :=
-    Beh.of_program (ModL.compile md_tgt) <1= Beh.of_program (ModL.compile md_src)
-  .
-
-  Lemma refines_close: SimModSem.refines <2= refines_closed.
-  Proof. ii. specialize (PR nil). ss. unfold Mod.add_list in *. ss. rewrite ! ModL.add_empty_l in PR. eauto. Qed.
-
-  Definition add_list (ms: list ModL.t): ModL.t := fold_right ModL.add ModL.empty ms.
-
-  Global Program Instance refines_closed_PreOrder: PreOrder refines_closed.
-  Next Obligation. ii; ss. Qed.
-  Next Obligation. ii; ss. r in H. r in H0. eauto. Qed.
-
-End AUX________REMOVEME_____REDUNDANT.
-
-
-
-
-Module Mem2.
-Section MEM2.
-
-  Context `{Σ: GRA.t}.
-  Context `{@GRA.inG memRA Σ}.
-
-  Definition MemSem: ModSem.t := {|
-    ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt (MemStb ++ MainStb) fn fsb)) MemSbtb;
-    ModSem.mn := "Mem";
-    ModSem.initial_mr := (GRA.embed (Auth.black (M:=Mem1._memRA) ε));
-    ModSem.initial_st := tt↑;
-  |}
-  .
-
-  Definition Mem: Mod.t := {|
-    Mod.get_modsem := fun _ => MemSem;
-    Mod.sk := Sk.unit;
-  |}
-  .
-
-End MEM2.
-End Mem2.
-
-
-
-
 Section WEAKENING.
 
   Context `{Σ: GRA.t}.
@@ -86,45 +38,6 @@ Section WEAKENING.
     - des_sumbool. subst. esplits; eauto. { stb_tac. ss. } refl.
     - des_sumbool. subst. esplits; eauto. { stb_tac. ss. } refl.
     - des_sumbool. subst. esplits; eauto. { stb_tac. ss. } refl.
-  Qed.
-
-  Theorem Mem12correct: SimModSem.ModSemPair.sim Mem2.MemSem Mem1.MemSem.
-  Proof.
-    econs.
-    { econs.
-      { r. split.
-        { cbn. unfold RelationPairs.RelCompFun. cbn. refl. }
-        eapply weakening_fn; try refl.
-        { eapply weaken. }
-      }
-      econs.
-      { r. split.
-        { cbn. unfold RelationPairs.RelCompFun. cbn. refl. }
-        eapply weakening_fn; try refl.
-        { eapply weaken. }
-      }
-      econs.
-      { r. split.
-        { cbn. unfold RelationPairs.RelCompFun. cbn. refl. }
-        eapply weakening_fn; try refl.
-        { eapply weaken. }
-      }
-      econs.
-      { r. split.
-        { cbn. unfold RelationPairs.RelCompFun. cbn. refl. }
-        eapply weakening_fn; try refl.
-        { eapply weaken. }
-      }
-      econs.
-      { r. split.
-        { cbn. unfold RelationPairs.RelCompFun. cbn. refl. }
-        eapply weakening_fn; try refl.
-        { eapply weaken. }
-      }
-      econs.
-    }
-    { ss. }
-    { ss. esplits; eauto. }
   Qed.
 
 End WEAKENING.
@@ -170,8 +83,12 @@ Section PROOF.
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG memRA Σ}.
 
-  Definition MemMain0: ModL.t := ModL.add Mem0.Mem Main0.Main.
-  Definition MemMain1: ModL.t := ModL.add Mem2.Mem Main1.Main.
+  (* Definition MemMain0: ModL.t := ModL.add Mem0.Mem Main0.Main. *)
+  (* Definition MemMain1: ModL.t := ModL.add Mem1.Mem Main1.Main. *)
+  (* Definition MemMain2: ModL.t := ModL.add (SMod.to_src Mem1.SMem) (SMod.to_src Main1.SMain). *)
+  Definition MemMain0: ModL.t := Mod.add_list [Mem0.Mem; Main0.Main].
+  Definition MemMain1: ModL.t := Mod.add_list [Mem1.Mem; Main1.Main].
+  Definition MemMain2: ModL.t := Mod.add_list [(SMod.to_src Mem1.SMem); (SMod.to_src Main1.SMain)].
 
   (* Definition MainSem2: ModSemL.t := {| *)
   (*   ModSemL.fnsems := List.map (map_snd fun_to_src) MainStb; *)
@@ -199,63 +116,40 @@ Section PROOF.
 
   (* Definition MemMain2: Mod.t := Mod.add Mem2 Main2. *)
 
-  Definition MemMain2: ModL.t := {|
-    ModL.get_modsem := fun _ => {|
-        ModSemL.fnsems := List.map (fun '(fn, sb) => (fn, (transl_all sb.(fsb_fspec).(mn)) <*> fun_to_src sb.(fsb_body))) (MemSbtb ++ MainSbtb);
-        (* ModSemL.initial_mrs := [("Mem", ε) ; ("Main", ε)]; *)
-        ModSemL.initial_mrs := [("Mem", (ε, tt↑)) ; ("Main", (ε, tt↑))];
-      |};
-    ModL.sk := Sk.unit;
-  |}
-  .
-
   Let sbtb_stb: (MemStb ++ MainStb) = List.map (fun '(gn, fsb) => (gn, fsb.(fsb_fspec))) (MemSbtb ++ MainSbtb).
   Proof. rewrite map_app. ss. unfold MainStb, MemStb. unseal "stb". refl. Qed.
 
-  Theorem correct12: refines_closed MemMain1 MemMain2.
+  Let correct12: refines_closed MemMain1 MemMain2.
   Proof.
-    r.
     set (global_sbtb:=MemSbtb++MainSbtb).
     Local Opaque MemSbtb.
     Local Opaque MainSbtb.
-    eapply adequacy_type with (sbtb:=global_sbtb).
-    { seal fun_to_tgt. unfold compose. cbn. unfold global_sbtb. rewrite map_app. unfold ModSem.map_snd.
-      f_equal.
-      - rewrite List.map_map. eapply map_ext. ii. des_ifs. r. f_equal. apply func_ext. i. f_equal.
-        + Local Transparent MemSbtb. cbn in IN. Local Opaque MemSbtb.
-          des; ss; clarify; ss.
-        + unseal fun_to_tgt. f_equal. ss.
-      - rewrite List.map_map. eapply map_ext. ii. des_ifs. r. f_equal. apply func_ext. i. f_equal.
-        + Local Transparent MainSbtb. cbn in IN. Local Opaque MainSbtb.
-          des; ss; clarify; ss.
-        + unseal fun_to_tgt. f_equal. ss.
+    unfold MemMain1, MemMain2.
+    replace ([SMod.to_src SMem; SMod.to_src SMain]) with (List.map SMod.to_src [SMem; SMain]) by refl.
+    eapply adequacy_type2; revgoals.
+    { ss. right. left. unfold SMain. ss. }
+    { instantiate (1:=ε). des_ifs. unfold compose. cbn.
+      unfold ModSemL.initial_r_state in *. clarify. ss. repeat (try rewrite URA.unit_id; try rewrite URA.unit_idl).
+      eapply GRA_wf_embed. eapply Auth_wf_black. repeat ur. i; ss.
     }
     { ss. }
-    { ss. }
-    { instantiate (1:=ε). des_ifs. ss. unfold compose, ModSemL.initial_r_state in *. des_ifs.
-      rewrite ! URA.unit_idl. ss. rewrite ! URA.unit_id. eapply GRA_wf_embed. eapply Auth_wf_black.
-      repeat ur. i; ss.
+    { set (skenv := Sk.load_skenv (fold_right Sk.add Sk.unit (List.map SMod.sk [SMem; SMain]))).
+      econs.
+      { esplits; cycle 1.
+        { Fail Timeout 1 refl. (**************** FIXTHIS!!!!!!!!!!!!!!!!! ********************) unfold Mem. refl. }
+        ii. ss. stb_tac. des_ifs; des_sumbool; subst; esplits; try refl; et.
+      }
+      econs.
+      { esplits; cycle 1.
+        { Fail Timeout 1 refl. (**************** FIXTHIS!!!!!!!!!!!!!!!!! ********************) unfold Main. refl. }
+        ii. ss. stb_tac. des_ifs; des_sumbool; subst; esplits; try refl; et.
+      }
+      econs.
     }
   Qed.
 
-  Theorem correct: refines_closed MemMain0 MemMain2.
+  Let correct01: refines_closed MemMain0 MemMain1.
   Proof.
-    etrans; cycle 1.
-    { eapply correct12. }
-    etrans; cycle 1.
-    { instantiate (1:=ModL.add Mem1.Mem Main1.Main).
-      eapply refines_close.
-      hexploit (SimModSem.refines_proper_r [Mem2.Mem] [Mem1.Mem] [Main1.Main]).
-      { cbn. rewrite ! ModL.add_empty_r. eapply SimModSem.adequacy_local.
-        econs.
-        - i. cbn. eapply SimModSem.adequacy_lift. eapply Mem12correct.
-        - ss.
-        - cbn. ii. rr. econs; ss.
-          { repeat (econs; ii; ss; des; ss). }
-          { repeat (econs; ii; ss; des; ss). }
-      }
-      intro T; des. cbn in T. rewrite ! ModL.add_empty_r in T. ss.
-    }
     etrans; cycle 1.
     { instantiate (1:=ModL.add Mem0.Mem Main1.Main).
       eapply refines_close.
@@ -285,6 +179,13 @@ Section PROOF.
       intro T; des. cbn in T. rewrite ! ModL.add_empty_r in T. ss.
     }
     refl.
+  Qed.
+
+  Theorem correct: refines_closed MemMain0 MemMain2.
+  Proof.
+    etrans. Fail Timeout 1 eauto. (************* FIXME!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! *********)
+    { eassumption. }
+    { eapply correct12. }
   Qed.
 
 End PROOF.

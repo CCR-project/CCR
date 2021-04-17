@@ -51,7 +51,7 @@ Section SIMMODSEM.
 
     Opaque URA.add.
     econs; ss.
-    { unfold main_body, mainF, ccall, hcall. init.
+    { unfold mainbody, mainF, ccall, hcall. init.
       harg_tac. des. subst. rewrite Any.upcast_downcast. ss.
       iRefresh. iDestruct PRE. iPure A. clarify. steps.
       destruct (find (fun '(_fn, _) => dec "getbool" _fn) (ClientStb ++ MainStb)) eqn:T; stb_tac; clarify.

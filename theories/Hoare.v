@@ -33,6 +33,52 @@ Section AUX________REMOVEME_____REDUNDANT.
 
 End AUX________REMOVEME_____REDUNDANT.
 
+Lemma fold_right_map
+      XS XI YS YI
+      (xs: XS) (xi: list XI)
+      (xadd: XI -> XS -> XS)
+      
+      (* (ys: YS) (yi: list YI) *)
+      (yadd: YI -> YS -> YS)
+
+      (fs: XS -> YS)
+      (fi: XI -> YI)
+      (HOM: forall xi xs, fs (xadd xi xs) = yadd (fi xi) (fs xs))
+  :
+    <<EQ: fs (fold_right xadd xs xi) = fold_right yadd (fs xs) (List.map fi xi)>>
+.
+Proof.
+  r. ginduction xi; ii; ss.
+  rewrite HOM. f_equal. eapply IHxi; et.
+Qed.
+
+Lemma Forall2_eq
+      A
+      (xs0 xs1: list A)
+      (EQ: Forall2 eq xs0 xs1)
+  :
+    <<EQ: xs0 = xs1>>
+.
+Proof. induction EQ; ss. des; subst. refl. Qed.
+
+(*** TODO: move to Coqlib ***)
+Lemma find_app
+      X (xs0 xs1: list X) (f: X -> bool) x
+      (FIND: find f xs0 = Some x)
+  :
+    <<FIND: find f (xs0 ++ xs1) = Some x>>
+.
+Proof.
+  revert_until xs0. induction xs0; ii; ss. des_ifs. erewrite IHxs0; et.
+Qed.
+
+
+
+
+
+
+
+
 
 
 
@@ -65,16 +111,16 @@ Section CANCEL.
   (*   fun '(mrs_tgt, frs_tgt) => (URA.add (fold_left URA.add (List.map (mrs_tgt <*> fst) ms_tgt.(ModSemL.initial_mrs)) ε) *)
   (*                                       (fold_left URA.add frs_tgt ε)). *)
   Let rsum: r_state -> Σ :=
-    fun '(mrs_tgt, frs_tgt) => (fold_left (⋅) (List.map (mrs_tgt <*> fst) sbtb) ε) ⋅ (fold_left (⋅) frs_tgt ε).
+    fun '(mrs_tgt, frs_tgt) => (fold_left (⋅) (List.map (mrs_tgt <*> fst) ms_tgt.(ModSemL.initial_mrs)) ε) ⋅ (fold_left (⋅) frs_tgt ε).
 
   Variable entry_r: Σ.
-  Variable main_pre: Any.t -> ord -> Σ -> Prop.
+  Variable mainpre: Any.t -> ord -> Σ -> Prop.
   Variable (mainbody: list val -> itree (hCallE +' pE +' eventE) val).
-  Hypothesis MAINPRE: main_pre ([]: list val)↑ ord_top entry_r.
+  Hypothesis MAINPRE: mainpre ([]: list val)↑ ord_top entry_r.
 
   Hypothesis WFR: URA.wf (entry_r ⋅ rsum (ModSemL.initial_r_state ms_tgt)).
 
-  Hypothesis MAINM: In (main_mod main_pre mainbody) mds.
+  Hypothesis MAINM: In (SMod.main mainpre mainbody) mds.
 
   Theorem adequacy_type: refines_closed (Mod.add_list mds_tgt) (Mod.add_list mds_src).
   Proof. ii. eapply adequacy_type_m2s. eapply adequacy_type_t2m; et. Qed.
@@ -96,6 +142,36 @@ Section AUX.
       (<<FINDSRC: List.find (fun '(_fn, _) => dec fn _fn) stb1 = Some (fn1, fsp1)>>) /\
       (<<WEAKER: fspec_weaker fsp0 fsp1>>)
   .
+
+  Global Program Instance stb_weaker_PreOrder: PreOrder stb_weaker.
+  Next Obligation. ii. esplits; eauto. refl. Qed.
+  Next Obligation.
+    ii. r in H. r in H0. exploit H; et. intro T; des.
+    exploit H0; et. intro U; des. esplits; eauto. etrans; et.
+  Qed.
+
+  Theorem incl_weaker: forall stb0 stb1 (NODUP: NoDup (List.map fst stb1)) (INCL: incl stb0 stb1), stb_weaker stb0 stb1.
+  Proof.
+    ii. eapply find_some in FINDTGT. des. des_sumbool. subst.
+    destruct (find (fun '(_fn, _) => dec fn0 _fn) stb1) eqn:T.
+    { eapply find_some in T. des. des_ifs. des_sumbool. subst.
+      eapply INCL in FINDTGT.
+      destruct (classic (fsp0 = f)).
+      { subst. esplits; et. refl. }
+      exfalso.
+      eapply NoDup_inj_aux in NODUP; revgoals.
+      { eapply T. }
+      { eapply FINDTGT. }
+      { ii; clarify. }
+      ss.
+    }
+    eapply find_none in T; et. des_ifs. des_sumbool; ss.
+  Qed.
+
+  Lemma app_weaker: forall stb0 stb1, stb_weaker stb0 (stb0 ++ stb1).
+  Proof.
+    ii. eapply find_app in FINDTGT. esplits; eauto. refl.
+  Qed.
 
 End AUX.
 
@@ -133,16 +209,16 @@ Section CANCEL.
   (*   fun '(mrs_tgt, frs_tgt) => (URA.add (fold_left URA.add (List.map (mrs_tgt <*> fst) ms_tgt.(ModSemL.initial_mrs)) ε) *)
   (*                                       (fold_left URA.add frs_tgt ε)). *)
   Let rsum: r_state -> Σ :=
-    fun '(mrs_tgt, frs_tgt) => (fold_left (⋅) (List.map (mrs_tgt <*> fst) sbtb) ε) ⋅ (fold_left (⋅) frs_tgt ε).
+    fun '(mrs_tgt, frs_tgt) => (fold_left (⋅) (List.map (mrs_tgt <*> fst) ms_tgt.(ModSemL.initial_mrs)) ε) ⋅ (fold_left (⋅) frs_tgt ε).
 
   Variable entry_r: Σ.
-  Variable main_pre: Any.t -> ord -> Σ -> Prop.
+  Variable mainpre: Any.t -> ord -> Σ -> Prop.
   Variable (mainbody: list val -> itree (hCallE +' pE +' eventE) val).
-  Hypothesis MAINPRE: main_pre ([]: list val)↑ ord_top entry_r.
+  Hypothesis MAINPRE: mainpre ([]: list val)↑ ord_top entry_r.
 
   Hypothesis WFR: URA.wf (entry_r ⋅ rsum (ModSemL.initial_r_state ms_tgt)).
 
-  Hypothesis MAINM: In (main_mod main_pre mainbody) mds.
+  Hypothesis MAINM: In (SMod.main mainpre mainbody) mds.
 
   Let initial_mrs_eq_aux
       skenv0
@@ -175,6 +251,30 @@ Section CANCEL.
     f_equal. erewrite IHn; ss.
   Qed.
 
+  (* Lemma sk_fold_comm *)
+  (*       md0 mds0 *)
+  (*   : *)
+  (*     <<EQ: ModL.sk (fold_right ModL.add md0 mds0) = (fold_right Sk.add (ModL.sk md0) (List.map ModL.sk mds0))>> *)
+  (* . *)
+  (* Proof. *)
+  (* Qed. *)
+
+  Lemma sk_eq2: fold_right Sk.add Sk.unit (List.map SMod.sk mds) = (ModL.sk (Mod.add_list (List.map (SMod.to_tgt stb) mds))).
+  Proof.
+    rewrite sk_eq. clear - WEAKEN.
+    eapply Forall2_impl in WEAKEN; cycle 1.
+    { instantiate (1:=(fun md md_tgt => exists stb0, (<<MD: md_tgt = SMod.to_tgt stb0 md>>))).
+      ii. ss. des. subst. eauto. } des.
+    unfold Mod.add_list.
+    erewrite fold_right_map with (fi:=ModL.sk) (fs:=ModL.sk) (yadd:=Sk.add); try refl; cycle 1.
+    erewrite fold_right_map with (fi:=ModL.sk) (fs:=ModL.sk) (yadd:=Sk.add); try refl; cycle 1.
+    f_equal.
+    rewrite ! List.map_map.
+    eapply Forall2_apply_Forall2 with (Q:=eq) (f:=ModL.sk ∘ (SMod.to_tgt stb)) (g:=(ModL.sk ∘ Mod.lift)) in WEAKEN.
+    { eapply Forall2_eq in WEAKEN. des; ss. }
+    ii. des. subst. ss.
+  Qed.
+
   Lemma initial_mrs_eq
     :
       List.map
@@ -187,6 +287,48 @@ Section CANCEL.
     unfold ModL.enclose.
     erewrite initial_mrs_eq_aux. repeat f_equal. unfold skenv, sk. ss.
     f_equal. rewrite sk_eq. ss.
+  Qed.
+
+  (* Let initial_mrs_eq2_aux skenv0 stb0 *)
+  (*   : *)
+  (*     List.map fst (ModSemL.initial_mrs (ModL.get_modsem (Mod.add_list mds_tgt) skenv0)) = *)
+  (*     List.map fst (ModSemL.initial_mrs (ModL.get_modsem (Mod.add_list (List.map (SMod.to_tgt stb0) mds)) skenv0)) *)
+  (* . *)
+  (* Proof. *)
+  (*   unfold mds_tgt. rewrite <- initial_mrs_eq. *)
+  (*   clear. *)
+  (*   induction mds; ss. *)
+  (* Qed. *)
+
+
+
+
+  (* Declare Scope l_monad_scope. *)
+  (* Local Open Scope l_monad_scope. *)
+  (* Notation "'do' X <- A ; B" := (List.flat_map (fun X => B) A) : l_monad_scope. *)
+  (* Notation "'do' ' X <- A ; B" := (List.flat_map (fun _x => match _x with | X => B end) A) : l_monad_scope. *)
+  (* Notation "'ret'" := (fun X => [X]) (at level 60) : l_monad_scope. *)
+
+  Lemma initial_mrs_eq2
+    :
+      List.map fst (ModSemL.initial_mrs ms_tgt) =
+      List.map fst (ModSemL.initial_mrs (ModL.enclose (Mod.add_list (List.map (SMod.to_tgt stb) mds))))
+  .
+  Proof.
+    unfold ms_tgt. rewrite <- initial_mrs_eq.
+    unfold ModL.enclose. rewrite <- sk_eq2. folder.
+    unfold Mod.add_list.
+    match goal with
+    | [ |- context[ModL.get_modsem ?x ?skenv] ] =>
+      replace (ModL.get_modsem x skenv) with (((flip ModL.get_modsem) skenv) x) by refl
+    end.
+    erewrite fold_right_map with (yadd:=ModSemL.add) (fi:=(flip ModL.get_modsem) skenv); cycle 1.
+    { refl. }
+    erewrite fold_right_map with (yadd:=@List.app _) (fi:=ModSemL.initial_mrs); cycle 1.
+    { refl. }
+    rewrite ! List.map_map. cbn.
+    clear - mds. clearbody skenv. clear sk.
+    induction mds; ii; ss. f_equal; ss.
   Qed.
 
   (* Definition load_fnsems (skenv: SkEnv.t) (md: SMod.t) (tr0: fspecbody -> Any.t -> itree Es Any.t): *)
@@ -224,7 +366,16 @@ Section CANCEL.
       folder.
       unfold ModSemL.initial_r_state in Heq. unfold SMod.to_tgt in Heq. clarify.
       rewrite SMod.transl_initial_mrs. ss. folder.
-      rp; et. repeat f_equal. apply func_ext. intro mn.
+      rp; et.
+      (* Check (fun mn : string => *)
+      (* match find (fun mnr : string * (Σ * Any.t) => dec mn (fst mnr)) (SMod.load_initial_mrs skenv mds SModSem.initial_mr) with *)
+      (* | Some r => fst (snd r) *)
+      (* | None => ε *)
+      (* end). *)
+      repeat match goal with
+      | |- context[List.map (?gg <*> ?ff) _] => rewrite <- List.map_map with (f:=ff) (g:=gg)
+      end.
+      erewrite initial_mrs_eq2.
       assert(T: (SMod.load_initial_mrs skenv mds SModSem.initial_mr) = (ModSemL.initial_mrs ms_tgt)).
       { unfold SMod.load_initial_mrs. unfold ms_tgt.
         rewrite SMod.red_do_ret. rewrite initial_mrs_eq. ss.

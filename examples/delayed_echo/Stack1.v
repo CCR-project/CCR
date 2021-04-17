@@ -32,8 +32,7 @@ Section PROOF.
     end
   .
 
-  Let pop_spec: fspec := (mk_simple "Stack"
-                                    (fun '(llref, xs) => (
+  Let pop_spec: fspec := (mk_simple (fun '(llref, xs) => (
                                          (fun varg o =>
                                             Exists ll, ⌜varg = [Vptr llref 0%Z]↑⌝ ** Own (GRA.embed ((llref,0%Z) |-> [ll]))
                                                                                ** (is_list ll xs) ** ⌜o = ord_pure 2⌝),
@@ -44,8 +43,7 @@ Section PROOF.
                                             end)
                          ))).
 
-  Let pop2_spec: fspec := (mk_simple "Stack"
-                                     (fun '(xs, nref) => (
+  Let pop2_spec: fspec := (mk_simple (fun '(xs, nref) => (
                                         (fun varg o => Exists ll, ⌜varg = [ll; Vptr nref 0%Z]↑⌝ ** (is_list ll xs) **
                                                                            (Exists v, Own (GRA.embed ((nref, 0%Z) |-> [v]))) **
                                                                            ⌜o = ord_pure 2⌝),
@@ -68,8 +66,7 @@ Section PROOF.
 (*   return NULL; *)
 (* } *)
 
-  Let push_spec: fspec := (mk_simple "Stack"
-                                     (fun '(x, xs) => (
+  Let push_spec: fspec := (mk_simple (fun '(x, xs) => (
                                         (fun varg o => Exists ll, ⌜varg = [ll; x]↑⌝ ** is_list ll xs ** ⌜o = ord_pure 2⌝),
                                         (fun vret => Exists ll', is_list ll' (x :: xs) ** ⌜vret = ll'↑⌝)
                           ))).
@@ -86,19 +83,23 @@ Section PROOF.
     ]
   .
 
-  Definition StackSem: ModSem.t := {|
-    ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt (MemStb ++ StackStb) fn fsb)) StackSbtb;
-    ModSem.mn := "Stack";
-    ModSem.initial_mr := ε;
-    ModSem.initial_st := tt↑;
+  Definition SStackSem: SModSem.t := {|
+    SModSem.fnsems := StackSbtb;
+    SModSem.mn := "Stack";
+    SModSem.initial_mr := ε;
+    SModSem.initial_st := tt↑;
   |}
   .
 
-  Definition Stack: Mod.t := {|
-    Mod.get_modsem := fun _ => StackSem;
-    Mod.sk := Sk.unit;
+  Definition StackSem: ModSem.t := (SModSem.to_tgt (MemStb ++ StackStb)) SStackSem.
+
+  Definition SStack: SMod.t := {|
+    SMod.get_modsem := fun _ => SStackSem;
+    SMod.sk := Sk.unit;
   |}
   .
+
+  Definition Stack: Mod.t := (SMod.to_tgt (MemStb ++ StackStb)) SStack.
 
 End PROOF.
 Global Hint Unfold StackStb: stb.

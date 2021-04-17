@@ -183,9 +183,13 @@ Section CANCEL.
   Let mds_mid: list Mod.t := List.map (SMod.to_mid) mds.
   Let mds_tgt: list Mod.t := List.map (SMod.to_tgt stb) mds.
 
+  Let ms_mid: ModSemL.t := ModL.enclose (Mod.add_list mds_mid).
+  Let ms_tgt: ModSemL.t := ModL.enclose (Mod.add_list mds_tgt).
+
   Let W: Type := (r_state * p_state).
   Let rsum: r_state -> Σ :=
-    fun '(mrs_tgt, frs_tgt) => (fold_left (⋅) (List.map (mrs_tgt <*> fst) sbtb) ε) ⋅ (fold_left (⋅) frs_tgt ε).
+    fun '(mrs_tgt, frs_tgt) => (fold_left (⋅) (List.map (mrs_tgt <*> fst) ms_tgt.(ModSemL.initial_mrs)) ε) ⋅ (fold_left (⋅) frs_tgt ε).
+
   Let wf: W -> W -> Prop :=
     fun '((mrs_src, frs_src), mps_src) '((mrs_tgt, frs_tgt), mps_tgt) =>
       (<<LEN: List.length frs_src = List.length frs_tgt>>) /\
@@ -367,8 +371,6 @@ Section CANCEL.
 
 
 
-  Let ms_mid: ModSemL.t := ModL.enclose (Mod.add_list mds_mid).
-  Let ms_tgt: ModSemL.t := ModL.enclose (Mod.add_list mds_tgt).
 
   Let adequacy_type_aux:
     forall RT
@@ -692,32 +694,20 @@ Section CANCEL.
   Qed.
 
   Variable entry_r: Σ.
-  Variable main_pre: Any.t -> ord -> Σ -> Prop.
+  Variable mainpre: Any.t -> ord -> Σ -> Prop.
   Variable (mainbody: list val -> itree (hCallE +' pE +' eventE) val).
-  Hypothesis MAINPRE: main_pre ([]: list val)↑ ord_top entry_r.
+  Hypothesis MAINPRE: mainpre ([]: list val)↑ ord_top entry_r.
 
   Hypothesis WFR: URA.wf (entry_r ⋅ rsum (ModSemL.initial_r_state ms_tgt)).
 
-  Definition main_mod : SMod.t := {|
-    SMod.get_modsem := fun _ => {|
-      SModSem.fnsems := [("main", (mk_specbody (mk_simple (fun (_: unit) => (main_pre, top2))) mainbody))];
-      SModSem.mn := "Main";
-      SModSem.initial_mr := ε;
-      SModSem.initial_st := tt↑;
-    |}
-    ;
-    SMod.sk := Sk.unit;
-  |}
-  .
+  Hypothesis MAINM: In (SMod.main mainpre mainbody) mds.
 
-  Hypothesis MAINM: In main_mod mds.
-
-  Let MAINF: List.find (fun '(_fn, _) => dec "main" _fn) stb = Some ("main", (mk_simple (fun (_: unit) => (main_pre, top2)))).
+  Let MAINF: List.find (fun '(_fn, _) => dec "main" _fn) stb = Some ("main", (mk_simple (fun (_: unit) => (mainpre, top2)))).
   Proof.
     unfold stb.
     rewrite find_map. uo. unfold compose. des_ifs.
     - eapply find_some in Heq. des. des_sumbool. subst. repeat f_equal.
-      assert(In ("main", (mk_specbody (mk_simple (fun (_: unit) => (main_pre, top2))) mainbody)) sbtb).
+      assert(In ("main", (mk_specbody (mk_simple (fun (_: unit) => (mainpre, top2))) mainbody)) sbtb).
       { unfold sbtb, mss. eapply in_flat_map. esplits; et.
         { rewrite in_map_iff. esplits; et. }
         ss. et.

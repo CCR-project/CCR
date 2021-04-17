@@ -424,6 +424,14 @@ Section SMODSEM.
   Definition to_mid (ms: t): ModSem.t := transl (fun_to_mid ∘ fsb_body) (fun _ => ε) ms.
   Definition to_tgt (stb: list (gname * fspec)) (ms: t): ModSem.t := transl (fun_to_tgt stb) (initial_mr) ms.
 
+  Definition main (mainpre: Any.t -> ord -> Σ -> Prop) (mainbody: list val -> itree (hCallE +' pE +' eventE) val): t := {|
+      fnsems := [("main", (mk_specbody (mk_simple (fun (_: unit) => (mainpre, top2))) mainbody))];
+      mn := "Main";
+      initial_mr := ε;
+      initial_st := tt↑;
+    |}
+  .
+
 End SMODSEM.
 End SModSem.
 
@@ -459,7 +467,15 @@ Section SMOD.
   (* Definition to_src (md: t): Mod.t := transl SModSem.to_src md. *)
   (* Definition to_mid (md: t): Mod.t := transl SModSem.to_mid md. *)
   (* Definition to_tgt (stb: list (gname * fspec)) (md: t): Mod.t := transl (SModSem.to_tgt stb) md. *)
-
+  Lemma to_src_comm: forall skenv smd,
+      (SModSem.to_src) (get_modsem smd skenv) = (to_src smd).(Mod.get_modsem) skenv.
+  Proof. refl. Qed.
+  Lemma to_mid_comm: forall skenv smd,
+      (SModSem.to_mid) (get_modsem smd skenv) = (to_mid smd).(Mod.get_modsem) skenv.
+  Proof. refl. Qed.
+  Lemma to_tgt_comm: forall skenv stb smd,
+      (SModSem.to_tgt stb) (get_modsem smd skenv) = (to_tgt stb smd).(Mod.get_modsem) skenv.
+  Proof. refl. Qed.
 
 
 
@@ -641,6 +657,12 @@ Section SMOD.
     rewrite ! transl_initial_mrs. unfold load_initial_mrs. rewrite <- ! red_do_ret.
     rewrite ! flat_map_assoc. eapply flat_map_ext. i. ss.
   Qed.
+
+  Definition main (mainpre: Any.t -> ord -> Σ -> Prop) (mainbody: list val -> itree (hCallE +' pE +' eventE) val): t := {|
+    get_modsem := fun _ => (SModSem.main mainpre mainbody);
+    sk := Sk.unit;
+  |}
+  .
 
 End SMOD.
 End SMod.

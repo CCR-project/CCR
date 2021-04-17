@@ -99,9 +99,9 @@ Section PROOF.
   (*     end *)
   (* . *)
 
-  Let echo_spec:        fspec := (@mk _ "Echo" (val * list Z) (list Z) unit
+  Let echo_spec:        fspec := (@mk _ (val * list Z) (list Z) unit
                                       (fun '(hd, ns) varg_high _ o => Own(GRA.embed(echo_white hd ns)) ** ⌜o = ord_top⌝ ** ⌜varg_high = ns⌝) (top4)).
-  Let echo_finish_spec: fspec := (@mk _ "Echo" (val * list Z) (list Z) unit
+  Let echo_finish_spec: fspec := (@mk _ (val * list Z) (list Z) unit
                                       (fun '(hd, ns) varg_high _ o => Own(GRA.embed(echo_white hd ns)) ** ⌜o = ord_top⌝ ** ⌜varg_high = ns⌝) (top4)).
   (* Let echo_spec:        fspec := (mk_simple "Echo" (X:=unit) (fun _ _ o _ => o = ord_top) (top3)). *)
   (* Let echo_finish_spec: fspec := (mk_simple "Echo" (X:=unit) (fun _ _ o _ => o = ord_top) (top3)). *)
@@ -115,18 +115,23 @@ Section PROOF.
     [("echo", mk_specbody echo_spec echo_body); ("echo_finish", mk_specbody echo_finish_spec echo_finish_body)]
   .
 
-  Definition EchoSem: ModSem.t := {|
-    ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt (StackStb ++ ClientStb ++ MemStb ++ EchoStb) fn fsb)) EchoSbtb;
-    ModSem.mn := "Echo";
-    ModSem.initial_mr := (GRA.embed(echo_black Vnullptr []));
-    ModSem.initial_st := tt↑;
+  Definition SEchoSem: SModSem.t := {|
+    SModSem.fnsems := EchoSbtb;
+    SModSem.mn := "Echo";
+    SModSem.initial_mr := (GRA.embed(echo_black Vnullptr []));
+    SModSem.initial_st := tt↑;
   |}
   .
 
-  Definition Echo: Mod.t := {|
-    Mod.get_modsem := fun _ => EchoSem;
-    Mod.sk := Sk.unit;
+  Definition EchoSem: ModSem.t := (SModSem.to_tgt (StackStb ++ ClientStb ++ MemStb ++ EchoStb)) SEchoSem.
+
+  Definition SEcho: SMod.t := {|
+    SMod.get_modsem := fun _ => SEchoSem;
+    SMod.sk := Sk.unit;
   |}
   .
+
+  Definition Echo: Mod.t := (SMod.to_tgt (MemStb ++ StackStb)) SEcho.
+
 End PROOF.
 Global Hint Unfold EchoStb: stb.
