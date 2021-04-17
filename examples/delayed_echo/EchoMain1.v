@@ -28,7 +28,7 @@ Section PROOF.
       Ret Vundef
   .
 
-  Let main_spec: fspec := (mk_simple "Main" (X:=unit) (fun _ => ((fun _ o _ => o = ord_top), (top2)))).
+  Let main_spec: fspec := (mk_simple (X:=unit) (fun _ => ((fun _ o _ => o = ord_top), (top2)))).
 
   Definition MainStb: list (gname * fspec) :=
     [("main", main_spec)]
@@ -38,18 +38,9 @@ Section PROOF.
     [("main", mk_specbody main_spec main_body)]
   .
 
-  Definition MainSem: ModSem.t := {|
-    ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt (EchoStb ++ MainStb) fn fsb)) MainSbtb;
-    ModSem.mn := "Main";
-    ModSem.initial_mr := ε;
-    ModSem.initial_st := ([]: list val)↑;
-  |}
-  .
-
-  Definition Main: Mod.t := {|
-    Mod.get_modsem := fun _ => MainSem;
-    Mod.sk := Sk.unit;
-  |}
-  .
+  Definition SMain: SMod.t := SMod.main (fun _ o _ => o = ord_top) main_body.
+  Definition Main: Mod.t := SMod.to_tgt MainStb SMain.
+  Definition SMainSem: SModSem.t := SModSem.main (fun _ o _ => o = ord_top) main_body.
+  Definition MainSem: ModSem.t := SModSem.to_tgt MainStb SMainSem.
 
 End PROOF.

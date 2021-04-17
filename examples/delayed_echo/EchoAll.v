@@ -6,9 +6,9 @@ Require Import Behavior.
 Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
-Require Import HoareDef.
+Require Import Hoare.
 Require Import MutHeader SimModSem.
-Require Import Mem1 Stack1 Echo2 EchoMain1 Client1.
+Require Import Mem1 Stack1 Echo1 EchoMain1 Client1.
 
 Require Import TODOYJ.
 
@@ -18,25 +18,6 @@ Set Implicit Arguments.
 
 
 
-
-Section AUX________REMOVEME_____REDUNDANT.
-
-  Context `{Σ: GRA.t}.
-
-  Definition refines_closed (md_tgt md_src: ModL.t): Prop :=
-    Beh.of_program (ModL.compile md_tgt) <1= Beh.of_program (ModL.compile md_src)
-  .
-
-  Lemma refines_close: SimModSem.refines <2= refines_closed.
-  Proof. ii. specialize (PR nil). ss. unfold Mod.add_list in *. ss. rewrite ! ModL.add_empty_l in PR. eauto. Qed.
-
-  Definition add_list (ms: list ModL.t): ModL.t := fold_right ModL.add ModL.empty ms.
-
-  Global Program Instance refines_closed_PreOrder: PreOrder refines_closed.
-  Next Obligation. ii; ss. Qed.
-  Next Obligation. ii; ss. r in H. r in H0. eauto. Qed.
-
-End AUX________REMOVEME_____REDUNDANT.
 
 
 
@@ -60,12 +41,17 @@ Section ECHO.
   Local Existing Instance echoRA_inG.
 
   Definition echo_spec: ModL.t :=
-    add_list [
-        md_src Mem MemSbtb ; (* Mem *)
-        md_src Main MainSbtb ; (* Main *)
-        md_src Stack StackSbtb ; (* Stack *)
-        md_src Echo EchoSbtb ; (* Echo *)
-        md_src Client ClientSbtb (* Client *)
+    Mod.add_list [
+        SMod.to_src SMem;
+      SMod.to_src SMain;
+      SMod.to_src SStack;
+      SMod.to_src SEcho;
+      SMod.to_src SClient
+        (* md_src Mem MemSbtb ; (* Mem *) *)
+        (* md_src Main MainSbtb ; (* Main *) *)
+        (* md_src Stack StackSbtb ; (* Stack *) *)
+        (* md_src Echo EchoSbtb ; (* Echo *) *)
+        (* md_src Client ClientSbtb (* Client *) *)
       ].
 
 End ECHO.

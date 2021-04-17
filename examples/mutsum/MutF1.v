@@ -21,17 +21,22 @@ Section PROOF.
 
   Definition Fsbtb: list (string * fspecbody) := [("f", mk_specbody f_spec (fun _ => trigger (Choose _)))].
 
-  Definition FSem: ModSem.t := {|
-    ModSem.fnsems := List.map (fun '(fn, body) => (fn, fun_to_tgt GlobalStb fn body)) Fsbtb;
-    ModSem.mn := "F";
-    ModSem.initial_mr := ε;
-    ModSem.initial_st := tt↑;
+  Definition SFSem: SModSem.t := {|
+    SModSem.fnsems := Fsbtb;
+    SModSem.mn := "F";
+    SModSem.initial_mr := ε;
+    SModSem.initial_st := tt↑;
   |}
   .
 
-  Definition F: Mod.t := {|
-    Mod.get_modsem := fun _ => FSem;
-    Mod.sk := [("f", Sk.Gfun)];
+  Definition FSem: ModSem.t := (SModSem.to_tgt GlobalStb) SFSem.
+
+  Definition SF: SMod.t := {|
+    SMod.get_modsem := fun _ => SFSem;
+    SMod.sk := [("f", Sk.Gfun)];
   |}
   .
+
+  Definition F: Mod.t := (SMod.to_tgt GlobalStb) SF.
+
 End PROOF.
