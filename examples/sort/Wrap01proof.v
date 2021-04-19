@@ -39,28 +39,28 @@ Section SIMMODSEM.
       (<<TGT: mrps_tgt0 = (ε, tt↑)>>)
   .
 
-  Variable cmpspecs: list (gname * (Z -> Z -> Z)).
+  Variable CmpsStb: SkEnv.t -> list (gname * fspec).
   Variable GlobalStb: SkEnv.t -> list (gname * fspec).
 
-  Variable cmpspecs_globalstb
+  (* TODO: define alist inclusion relation *)
+  Variable CmpsStb_incl
     :
-      forall skenv fn f fn'
-             (SPECS: List.find (fun '(_fn, _) => dec fn _fn) cmpspecs = Some (fn', f)),
-      exists mn,
-        (<<FIND: List.find (fun '(_fn, _) => dec fn _fn) (GlobalStb skenv) = Some (fn, compare_gen f mn)>>).
+      forall skenv fn fsp
+             (SPECS: List.find (fun '(_fn, _) => dec fn _fn) (CmpsStb skenv) = Some fsp),
+        List.find (fun '(_fn, _) => dec fn _fn) (GlobalStb skenv) = Some fsp.
 
-  Theorem correct: ModPair.sim (Wrap1.Wrap cmpspecs GlobalStb) Wrap0.Wrap.
+  Theorem correct: ModPair.sim (Wrap1.Wrap CmpsStb GlobalStb) Wrap0.Wrap.
   Proof.
     econs; ss; [|admit ""].
     i. eapply adequacy_lift.
     econstructor 1 with (wf:=wf); et; ss.
-    econs; ss. init. unfold wrapF, ccall. harg_tac. 
-    destruct x as [[n0 n1] f]. ss. des; subst. 
+    econs; ss. init. unfold wrapF, ccall. harg_tac.
+    destruct x as [[n0 n1] f]. ss. des; subst.
     iPure PRE. des; clarify.
     eapply Any.upcast_inj in PRE. des; clarify.
     rewrite Any.upcast_downcast. ss. steps. astart 1.
-    rewrite PRE1. ss. steps. rename fn into fn0. 
-    hexploit cmpspecs_globalstb; eauto. i. des.
+    rewrite PRE1. ss. steps. rename fn into fn0.
+    hexploit CmpsStb_incl; eauto. i. des.
     eapply APC_step_clo with (fn:=fn0) (args:=[Vint n0; Vint n1]).
     { try by
       eapply Ord.eq_lt_lt;
@@ -70,11 +70,11 @@ Section SIMMODSEM.
     { eauto. }
     { ss. }
     { eapply OrdArith.lt_from_nat; eapply Nat.lt_succ_diag_r. }
-    i. subst args'. 
+    i. subst args'.
     hcall_tac (n0, n1) (ord_pure 0) (@URA.unit Σ) (@URA.unit Σ) (@URA.unit Σ); ss.
     { splits; ss. eauto with ord_step. }
     des. iPure POST. clarify. eapply Any.upcast_inj in POST. des; clarify.
-    steps. rewrite Any.upcast_downcast in _UNWRAPN. clarify. astop. 
+    steps. rewrite Any.upcast_downcast in _UNWRAPN. clarify. astop.
     force_l. eexists.
     hret_tac (@URA.unit Σ) (@URA.unit Σ); ss.
   Qed.

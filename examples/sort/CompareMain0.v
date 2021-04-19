@@ -52,5 +52,3 @@ Section PROOF.
   |}
   .
 End PROOF.
-
-Definition cmpspecs: list (gname * (Z -> Z -> Z)) := [("compare", mycmp)].

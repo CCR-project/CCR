@@ -1,4 +1,4 @@
-Require Import HoareDef CompareMain0 CompareMain1 CompareHeader SimModSemL SimModSem.
+Require Import HoareDef CompareMain0 CompareMain1 Wrap1 CompareHeader SimModSemL SimModSem.
 Require Import Coqlib.
 Require Import Universe.
 Require Import Skeleton.
@@ -39,56 +39,78 @@ Section SIMMODSEM.
       (<<TGT: mrps_tgt0 = (ε, tt↑)>>)
   .
 
-  Variable global_cmpspecs: list (gname * (Z -> Z -> Z)).
+  Variable CmpsStb: SkEnv.t -> list (gname * fspec).
   Variable GlobalStb: SkEnv.t -> list (gname * fspec).
 
-  Variable cmpspecs_incl: 
-    forall fn fd
-           (FIND: List.find (fun '(_fn, _) => dec fn _fn) cmpspecs = Some fd),
-      List.find (fun '(_fn, _) => dec fn _fn) global_cmpspecs = Some fd.
-
-  Variable globalstb_incl
+  (* TODO: define alist inclusion relation *)
+  Variable CmpsStb_incl
     :
-      forall skenv fn f fn'
-             (SPECS: List.find (fun '(_fn, _) => dec fn _fn) cmpspecs = Some (fn', f)),
-      exists mn,
-        (<<FIND: List.find (fun '(_fn, _) => dec fn _fn) (GlobalStb skenv) = Some (fn, compare_gen f mn)>>).
+      forall fn skenv fsp
+             (SPECS: List.find (fun '(_fn, _) => dec fn _fn) MainCmpsStb = Some fsp),
+        List.find (fun '(_fn, _) => dec fn _fn) (CmpsStb skenv) = Some fsp.
 
-  Variable cmpspecs_globalstb
+  Variable GlobalStb_wrap
     :
-      forall skenv fn f fn'
-             (SPECS: List.find (fun '(_fn, _) => dec fn _fn) cmpspecs = Some (fn', f)),
-      exists mn,
-        (<<FIND: List.find (fun '(_fn, _) => dec fn _fn) (GlobalStb skenv) = Some (fn, compare_gen f mn)>>).
+      forall skenv,
+        List.find (fun '(_fn, _) => dec "wrap" _fn) (GlobalStb skenv) = Some ("wrap", wrap_spec CmpsStb skenv).
 
-  Theorem correct: ModPair.sim (Wrap1.Wrap cmpspecs GlobalStb) Wrap0.Wrap.
+  Theorem correct: ModPair.sim (CompareMain1.Main GlobalStb) (CompareMain0.Main).
   Proof.
     econs; ss; [|admit ""].
     i. eapply adequacy_lift.
     econstructor 1 with (wf:=wf); et; ss.
-    econs; ss. init. unfold wrapF, ccall. harg_tac. 
-    destruct x as [[n0 n1] f]. ss. des; subst. 
-    iPure PRE. des; clarify.
-    eapply Any.upcast_inj in PRE. des; clarify.
-    rewrite Any.upcast_downcast. ss. steps. astart 1.
-    rewrite PRE1. ss. steps. rename fn into fn0. 
-    hexploit cmpspecs_globalstb; eauto. i. des.
-    eapply APC_step_clo with (fn:=fn0) (args:=[Vint n0; Vint n1]).
-    { try by
-      eapply Ord.eq_lt_lt;
-       [ symmetry; eapply OrdArith.add_from_nat
-       | eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r;
-          eapply Nat.lt_succ_diag_r ]. }
-    { eauto. }
-    { ss. }
-    { eapply OrdArith.lt_from_nat; eapply Nat.lt_succ_diag_r. }
-    i. subst args'. 
-    hcall_tac (n0, n1) (ord_pure 0) (@URA.unit Σ) (@URA.unit Σ) (@URA.unit Σ); ss.
-    { splits; ss. eauto with ord_step. }
-    des. iPure POST. clarify. eapply Any.upcast_inj in POST. des; clarify.
-    steps. rewrite Any.upcast_downcast in _UNWRAPN. clarify. astop. 
-    force_l. eexists.
-    hret_tac (@URA.unit Σ) (@URA.unit Σ); ss.
+    econs; ss; [|econs; ss].
+    - init. unfold mainF, ccall. harg_tac. des; clarify.
+      iPure PRE. des; clarify.
+      rewrite Any.upcast_downcast. ss. steps. astart 2.
+      hexploit (@SKINCL "compare").
+      { econs; ss. }
+      i. des. rewrite H. steps.
+      eapply APC_step_clo with (fn:="wrap") (args:=[Vint x0; Vint x1; Vptr blk 0]).
+      { try by
+            eapply Ord.eq_lt_lt;
+          [ symmetry; eapply OrdArith.add_from_nat
+          | eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r;
+            eapply Nat.lt_succ_diag_r ]. }
+      { eauto. }
+      { ss. }
+      { eapply OrdArith.lt_from_nat; eapply Nat.lt_succ_diag_r. }
+      i. subst args'.
+      hcall_tac (x0, x1, mycmp) (ord_pure 1) (@URA.unit Σ) (@URA.unit Σ) (@URA.unit Σ); ss.
+      { esplits; eauto. red. esplits; eauto.
+        { eapply SKWF. eauto. }
+        { eapply CmpsStb_incl. des_ifs. ss.
+          unfold CompareMain1.compare_spec. f_equal. f_equal. f_equal. admit "module name...". }
+      }
+      des. iPure POST. des;clarify.
+      eapply Any.upcast_inj in POST. des; clarify. steps.
+      rewrite Any.upcast_downcast in _UNWRAPN. clarify. steps.
+      eapply APC_step_clo with (fn:="wrap") (args:=[Vint x0; Vint x1; Vptr blk 0]).
+      { try by
+            eapply Ord.eq_lt_lt;
+          [ symmetry; eapply OrdArith.add_from_nat
+          | eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r;
+            eapply Nat.lt_succ_diag_r ]. }
+      { eauto. }
+      { ss. }
+      { eapply OrdArith.lt_from_nat; eapply Nat.lt_succ_diag_r. }
+      i. subst args'.
+      hcall_tac (x0, x1, mycmp) (ord_pure 1) (@URA.unit Σ) (@URA.unit Σ) (@URA.unit Σ); ss.
+      { esplits; eauto. red. esplits; eauto.
+        { eapply SKWF. eauto. }
+        { eapply CmpsStb_incl. des_ifs. ss.
+          unfold CompareMain1.compare_spec. f_equal. f_equal. f_equal. admit "module name...". }
+      }
+      des. iPure POST. des;clarify.
+      eapply Any.upcast_inj in POST. des; clarify. steps.
+      rewrite Any.upcast_downcast in _UNWRAPN. clarify. steps.
+      astop. force_r; auto. steps.
+      force_l. eexists. steps. hret_tac (@URA.unit Σ) (@URA.unit Σ); ss.
+    - init. unfold compareF, ccall. harg_tac. des; clarify.
+      destruct x as [n0 n1]. ss. iPure PRE. des; clarify.
+      rewrite Any.upcast_downcast. ss. steps. astart 0. astop.
+      eapply Any.upcast_inj in PRE. des; clarify. steps.
+      force_l. eexists. hret_tac (@URA.unit Σ) (@URA.unit Σ); ss.
   Qed.
 
 End SIMMODSEM.
