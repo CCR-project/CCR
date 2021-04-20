@@ -20,24 +20,6 @@ Set Implicit Arguments.
 
 
 
-Section AUX.
-
-  Context `{Σ: GRA.t}.
-
-  Definition refines_closed (md_tgt md_src: ModL.t): Prop :=
-    Beh.of_program (ModL.compile md_tgt) <1= Beh.of_program (ModL.compile md_src)
-  .
-
-  Lemma refines_close: SimModSem.refines <2= refines_closed.
-  Proof. ii. specialize (PR nil). ss. unfold Mod.add_list in *. ss. rewrite ! ModL.add_empty_l in PR. eauto. Qed.
-
-  Definition add_list (ms: list ModL.t): ModL.t := fold_right ModL.add ModL.empty ms.
-
-  Global Program Instance refines_closed_PreOrder: PreOrder refines_closed.
-  Next Obligation. ii; ss. Qed.
-  Next Obligation. ii; ss. r in H. r in H0. eauto. Qed.
-
-End AUX.
 
 Section PROOF.
 
@@ -48,13 +30,13 @@ Section PROOF.
 
   Definition FG0: ModL.t := Mod.add_list [MutMain0.main ; MutF0.F ; MutG0.G].
 
-  Definition FG1: ModL.t := Mod.add_list [MutMain1.main ; MutF1.F ; MutG1.G].
+  Definition FG1: ModL.t := Mod.add_list [MutMain1.Main ; MutF1.F ; MutG1.G].
 
   Definition FG2: ModL.t :=
-    add_list [
-        md_src MutMain1.main mainsbtb ; (* Main *)
-        md_src MutF1.F Fsbtb ;  (* F *)
-        md_src MutG1.G Gsbtb  (* G *)
+    Mod.add_list [
+        SMod.to_src MutMain1.SMain;
+        SMod.to_src MutF1.SF;
+        SMod.to_src MutG1.SG
       ].
 
   Definition FG3: ModL.t := {|
@@ -65,7 +47,7 @@ Section PROOF.
           ("g", fun _ => trigger (Choose _))];
         ModSemL.initial_mrs := [("Main", (ε, tt↑)) ; ("F", (ε, tt↑)) ; ("G", (ε, tt↑))];
       |};
-    ModL.sk := Sk.unit;
+    ModL.sk := [("f", Sk.Gfun)] ++ [("g", Sk.Gfun)];
   |}
   .
 
@@ -101,12 +83,17 @@ Section PROOF.
   Lemma FG12_correct:
     refines_closed (FG1) (FG2).
   Proof.
-    ii.
-    eapply adequacy_type with (sbtb:=mainsbtb++(Fsbtb++Gsbtb)) in PR; ss.
-    instantiate (1:=ε).
-    cbn in *. unfold compose. ss. rewrite ! URA.unit_id. apply URA.wf_unit.
-    Unshelve.
-    all: try (by econs; ss).
+    unfold FG1, FG2.
+    replace [SMod.to_src SMain; SMod.to_src SF; SMod.to_src SG] with (List.map SMod.to_src [SMain; SF; SG]) by refl.
+    { erewrite f_equal with (x:=[Main; F; G]).
+      {
+        eapply adequacy_type; revgoals.
+        { ss. left. refl. }
+        { instantiate (1:=ε). unfold compose. ss. rewrite ! URA.unit_id. apply URA.wf_unit. }
+        { ss. }
+      }
+      refl.
+    }
   Qed.
 
   (* Definition F3: Mod.t := {| *)

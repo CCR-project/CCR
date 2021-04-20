@@ -25,17 +25,15 @@ Section BW.
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG bwRA Σ}.
 
-  Let get_spec:  fspec := (mk_simple "BW"
-                                     (fun b => (
+  Let get_spec:  fspec := (mk_simple (fun b => (
                                           (fun varg o => (Own (GRA.embed (bw_frag b)) ** ⌜o = ord_pure 1⌝)),
                                           (fun vret => (Own (GRA.embed (bw_frag b)) ** ⌜vret = (Vint (if b then 0xffffff else 0))↑⌝))
-                                        ))).
+                          ))).
 
-  Let flip_spec: fspec := (mk_simple "BW"
-                                     (fun b => (
+  Let flip_spec: fspec := (mk_simple (fun b => (
                                           (fun varg o => (Own (GRA.embed (bw_frag b)) ** ⌜o = ord_pure 1⌝)),
                                           (fun vret => (Own (GRA.embed (bw_frag (negb b)))))
-                                        ))).
+                          ))).
 
   Definition BWStb: list (gname * fspec) :=
     Seal.sealing "stb" [("get", get_spec) ; ("flip", flip_spec)].
@@ -46,19 +44,23 @@ Section BW.
     ]
   .
 
-  Definition BWSem: ModSem.t := {|
-    ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt BWStb fn fsb)) BWSbtb;
-    ModSem.mn := "BW";
-    ModSem.initial_mr := GRA.embed (bw_full false);
-    ModSem.initial_st := tt↑;
+  Definition SBWSem: SModSem.t := {|
+    SModSem.fnsems := BWSbtb;
+    SModSem.mn := "BW";
+    SModSem.initial_mr := GRA.embed (bw_full false);
+    SModSem.initial_st := tt↑;
   |}
   .
 
-  Definition BW: Mod.t := {|
-    Mod.get_modsem := fun _ => BWSem;
-    Mod.sk := Sk.unit;
+  Definition SBW: SMod.t := {|
+    SMod.get_modsem := fun _ => SBWSem;
+    SMod.sk := Sk.unit;
   |}
   .
+
+  Definition BWSem: ModSem.t := SModSem.to_tgt BWStb SBWSem.
+
+  Definition BW: Mod.t := SMod.to_tgt BWStb SBW.
 
 End BW.
 Global Hint Unfold BWStb: bw.

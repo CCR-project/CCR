@@ -19,17 +19,17 @@ Section MAIN.
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG bwRA Σ}.
 
-  Let getbool_spec:  fspec := (mk_simple "Client" (fun (_: unit) => ((fun _ o => (⌜True⌝)), (fun _ => (⌜True⌝))))).
+  Let getbool_spec:  fspec := (mk_simple (fun (_: unit) => ((fun _ o => (⌜True⌝)), (fun _ => (⌜True⌝))))).
 
-  Let putint_spec:  fspec := (mk_simple "Client" (fun (_: unit) => ((fun _ o => (⌜True⌝)), (fun _ => (⌜True⌝))))).
+  Let putint_spec:  fspec := (mk_simple (fun (_: unit) => ((fun _ o => (⌜True⌝)), (fun _ => (⌜True⌝))))).
 
   Definition ClientStb: list (gname * fspec) :=
     Seal.sealing "stb" [("getbool", getbool_spec) ; ("putint", putint_spec)].
 
-  Let main_spec:  fspec := (mk_simple "Main" (fun (_: unit) => ((fun _ o => (Own (GRA.embed (bw_frag true)) ** ⌜o = ord_top⌝)),
-                                                                (fun _ => (⌜True⌝))))).
+  Let mainpre: Any.t -> ord -> Σ -> Prop := (fun _ o => (Own (GRA.embed (bw_frag true)) ** ⌜o = ord_top⌝)).
+  Let main_spec: fspec := mk_simple (fun (_: unit) => (mainpre, top2)).
 
-  Definition main_body: list val -> itree (hCallE +' pE +' eventE) val :=
+  Definition mainbody: list val -> itree (hCallE +' pE +' eventE) val :=
     fun _ =>
       `b: val <- hcall "getbool" ([]: list val);; `b: bool <- (unbool b)?;;
       APC;;
@@ -43,23 +43,14 @@ Section MAIN.
     Seal.sealing "stb" [("main", main_spec)].
 
   Definition MainSbtb: list (gname * fspecbody) :=
-    [("main", mk_specbody main_spec main_body)
+    [("main", mk_specbody main_spec mainbody)
     ]
   .
 
-  Definition MainSem: ModSem.t := {|
-    ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt (ClientStb++MainStb) fn fsb)) MainSbtb;
-    ModSem.mn := "Main";
-    ModSem.initial_mr := ε;
-    ModSem.initial_st := tt↑;
-  |}
-  .
-
-  Definition Main: Mod.t := {|
-    Mod.get_modsem := fun _ => MainSem;
-    Mod.sk := Sk.unit;
-  |}
-  .
+  Definition SMain: SMod.t := SMod.main mainpre mainbody.
+  Definition Main: Mod.t := SMod.to_tgt (ClientStb++MainStb) SMain.
+  Definition SMainSem: SModSem.t := SModSem.main mainpre mainbody.
+  Definition MainSem: ModSem.t := SModSem.to_tgt (ClientStb++MainStb) SMainSem.
 
 End MAIN.
 Global Hint Unfold MainStb: stb.

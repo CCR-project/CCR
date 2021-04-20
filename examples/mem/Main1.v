@@ -48,8 +48,7 @@ Section PROOF.
       Ret (Vint 42)
   .
 
-  (*** main's view on stb ***)
-  Definition main_spec: fspec := mk_simple "Main" (fun (_: unit) => ((fun _ o _ => o = ord_top), top2)).
+  Definition main_spec: fspec := mk_simple (fun (_: unit) => ((fun _ o _ => o = ord_top), top2)).
 
   Definition MainStb: list (gname * fspec).
     eapply (Seal.sealing "stb").
@@ -58,28 +57,10 @@ Section PROOF.
 
   Definition MainSbtb: list (gname * fspecbody) := [("main", mk_specbody main_spec mainBody)].
 
-  (***
-Possible improvements:
-(1) "exists b" in "alloc"
-      --> it would be better if we can just use "b" in the remaning of the code.
-(2) (fun x varg rarg => k x)
-      --> We know what "x" will be, so why not just write "(fun varg rarg => k x)"?.
-          In other words, the "Choose" in the code is choosing "x", but we want to choose "x" when writing the spec.
-   ***)
-
-  Definition MainSem: ModSem.t := {|
-    ModSem.fnsems := List.map (fun '(fn, body) => (fn, fun_to_tgt (MemStb ++ MainStb) fn body)) MainSbtb;
-    ModSem.mn := "Main";
-    ModSem.initial_mr := ε;
-    ModSem.initial_st := tt↑;
-  |}
-  .
-
-  Definition Main: Mod.t := {|
-    Mod.get_modsem := fun _ => MainSem;
-    Mod.sk := List.map (fun '(n, _) => (n, Sk.Gfun)) MainSbtb;
-  |}
-  .
+  Definition SMain: SMod.t := SMod.main (fun _ o _ => o = ord_top) mainBody.
+  Definition Main: Mod.t := SMod.to_tgt MainStb SMain.
+  Definition SMainSem: SModSem.t := SModSem.main (fun _ o _ => o = ord_top) mainBody.
+  Definition MainSem: ModSem.t := SModSem.to_tgt MainStb SMainSem.
 
 End PROOF.
 Global Hint Unfold MainStb: stb.

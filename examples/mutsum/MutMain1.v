@@ -27,17 +27,9 @@ Section PROOF.
 
   Definition mainsbtb := [("main", mk_specbody main_spec mainBody)].
 
-  Definition mainSem: ModSem.t := {|
-    ModSem.fnsems := List.map (fun '(fn, body) => (fn, fun_to_tgt GlobalStb fn body)) mainsbtb;
-    ModSem.mn := "Main";
-    ModSem.initial_mr := ε;
-    ModSem.initial_st := tt↑;
-  |}
-  .
+  Definition SMain: SMod.t := SMod.main (fun _ o _ => o = ord_top) mainBody.
+  Definition Main: Mod.t := SMod.to_tgt GlobalStb SMain.
+  Definition SMainSem: SModSem.t := SModSem.main (fun _ o _ => o = ord_top) mainBody.
+  Definition MainSem: ModSem.t := SModSem.to_tgt GlobalStb SMainSem.
 
-  Definition main: Mod.t := {|
-    Mod.get_modsem := fun _ => mainSem;
-    Mod.sk := [("Main", Sk.Gfun)];
-  |}
-  .
 End PROOF.

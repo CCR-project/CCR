@@ -21,17 +21,22 @@ Section PROOF.
 
   Definition Gsbtb: list (string * fspecbody) := [("g", mk_specbody g_spec (fun _ => trigger (Choose _)))].
 
-  Definition GSem: ModSem.t := {|
-    ModSem.fnsems := List.map (fun '(fn, body) => (fn, fun_to_tgt GlobalStb fn body)) Gsbtb;
-    ModSem.mn := "G";
-    ModSem.initial_mr := ε;
-    ModSem.initial_st := tt↑;
+  Definition SGSem: SModSem.t := {|
+    SModSem.fnsems := Gsbtb;
+    SModSem.mn := "G";
+    SModSem.initial_mr := ε;
+    SModSem.initial_st := tt↑;
   |}
   .
 
-  Definition G: Mod.t := {|
-    Mod.get_modsem := fun _ => GSem;
-    Mod.sk := [("g", Sk.Gfun)];
+  Definition GSem: ModSem.t := (SModSem.to_tgt GlobalStb) SGSem.
+
+  Definition SG: SMod.t := {|
+    SMod.get_modsem := fun _ => SGSem;
+    SMod.sk := [("g", Sk.Gfun)];
   |}
   .
+
+  Definition G: Mod.t := (SMod.to_tgt GlobalStb) SG.
+
 End PROOF.

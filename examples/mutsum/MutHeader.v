@@ -32,11 +32,11 @@ Section PROOF.
 
   Context `{Σ: GRA.t}.
 
-  Definition main_spec: fspec := mk_simple "Main" (fun (_: unit) => ((fun _ o _ => o = ord_top), top2)).
-  Definition f_spec:    fspec := mk_simple "F" (fun (n: nat) => ((fun varg o _ => varg = [Vint (Z.of_nat n)]↑ /\ o = ord_pure n),
-                                                                 (fun vret _ => vret = (Vint (Z.of_nat (sum n)))↑))).
-  Definition g_spec:    fspec := mk_simple "G" (fun (n: nat) => ((fun varg o _ => varg = [Vint (Z.of_nat n)]↑ /\ o = ord_pure n),
-                                                                 (fun vret _ => vret = (Vint (Z.of_nat (sum n)))↑))).
+  Definition main_spec: fspec := mk_simple (fun (_: unit) => ((fun _ o _ => o = ord_top), top2)).
+  Definition f_spec:    fspec := mk_simple (fun (n: nat) => ((fun varg o _ => varg = [Vint (Z.of_nat n)]↑ /\ o = ord_pure n),
+                                                             (fun vret _ => vret = (Vint (Z.of_nat (sum n)))↑))).
+  Definition g_spec:    fspec := mk_simple (fun (n: nat) => ((fun varg o _ => varg = [Vint (Z.of_nat n)]↑ /\ o = ord_pure n),
+                                                             (fun vret _ => vret = (Vint (Z.of_nat (sum n)))↑))).
   Definition GlobalStb: list (gname * fspec) := [("main", main_spec); ("f", f_spec); ("g", g_spec)].
 
 End PROOF.

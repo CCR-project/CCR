@@ -112,23 +112,20 @@ Section PROOF.
   Let GURA: URA.t := GRA.to_URA Σ.
   Local Existing Instance GURA.
 
-  Let alloc_spec: fspec := (mk_simple "Mem"
-                                      (fun sz => (
+  Let alloc_spec: fspec := (mk_simple (fun sz => (
                                            (fun varg o => ⌜varg = [Vint (Z.of_nat sz)]↑ /\ o = ord_pure 1⌝),
                                            (fun vret => Exists b, ⌜vret = (Vptr b 0)↑⌝ **
                                                                   Own(GRA.embed ((b, 0%Z) |-> (List.repeat (Vint 0) sz))))
                            ))).
 
-  Let free_spec: fspec := (mk_simple "Mem"
-                                     (fun '(b, ofs) => (
+  Let free_spec: fspec := (mk_simple (fun '(b, ofs) => (
                                           (fun varg o => Exists v, ⌜varg = ([Vptr b ofs])↑⌝ **
                                                                    Own(GRA.embed ((b, ofs) |-> [v])) **
                                                                    ⌜o = ord_pure 1⌝),
                                           top2
                           ))).
 
-  Let load_spec: fspec := (mk_simple "Mem"
-                                     (fun '(b, ofs, v) => (
+  Let load_spec: fspec := (mk_simple (fun '(b, ofs, v) => (
                                           (fun varg o => ⌜varg = ([Vptr b ofs])↑⌝ **
                                                                   Own(GRA.embed ((b, ofs) |-> [v])) **
                                                                   ⌜o = ord_pure 1⌝),
@@ -136,7 +133,6 @@ Section PROOF.
                           ))).
 
   Let store_spec: fspec := (mk_simple
-                              "Mem"
                               (fun '(b, ofs, v_new) => (
                                    (fun varg o => Exists v_old,
                                      ⌜varg = ([Vptr b ofs ; v_new])↑⌝ ** Own(GRA.embed ((b, ofs) |-> [v_old])) ** ⌜o = ord_pure 1⌝),
@@ -145,7 +141,6 @@ Section PROOF.
 
   Let cmp_spec: fspec :=
     (mk_simple
-       "Mem"
        (fun '(result, resource) => (
           (fun varg o =>
           ((Exists b ofs v, ⌜varg = [Vptr b ofs; Vnullptr]↑⌝ ** ⌜resource = (GRA.embed ((b, ofs) |-> [v]))⌝ ** ⌜result = false⌝) ∨
@@ -174,20 +169,23 @@ Section PROOF.
     ]
   .
 
-  Definition MemSem: ModSem.t := {|
-    ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt MemStb fn fsb)) MemSbtb;
-    ModSem.mn := "Mem";
-    ModSem.initial_mr := (GRA.embed (Auth.black (M:=_memRA) ε));
-    ModSem.initial_st := tt↑;
+  Definition SMemSem: SModSem.t := {|
+    SModSem.fnsems := MemSbtb;
+    SModSem.mn := "Mem";
+    SModSem.initial_mr := (GRA.embed (Auth.black (M:=_memRA) ε));
+    SModSem.initial_st := tt↑;
   |}
   .
 
-  Definition Mem: Mod.t := {|
-    Mod.get_modsem := fun _ => MemSem; (*** TODO: we need proper handling of function pointers ***)
-    (* Mod.sk := List.map (fun '(n, _) => (n, Sk.Gfun)) MemStb; *)
-    Mod.sk := Sk.unit;
+  Definition MemSem: ModSem.t := (SModSem.to_tgt MemStb) SMemSem.
+
+  Definition SMem: SMod.t := {|
+    SMod.get_modsem := fun _ => SMemSem;
+    SMod.sk := Sk.unit;
   |}
   .
+
+  Definition Mem: Mod.t := (SMod.to_tgt MemStb) SMem.
 
 End PROOF.
 Global Hint Unfold MemStb: stb.

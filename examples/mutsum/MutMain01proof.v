@@ -42,7 +42,7 @@ Section SIMMODSEM.
       (<<TGT: mrps_tgt0 = (ε, tt↑)>>)
   .
 
-  Theorem correct: ModSemPair.sim MutMain1.mainSem MutMain0.mainSem.
+  Theorem correct: ModSemPair.sim MutMain1.MainSem MutMain0.mainSem.
   Proof.
     econstructor 1 with (wf:=wf); et; ss.
     econs; ss. init.

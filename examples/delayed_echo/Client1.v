@@ -21,8 +21,8 @@ Section PROOF.
 
   Context `{Σ: GRA.t}.
 
-  Let getint_spec: fspec := (mk_simple "Client" (X:=unit) (fun _ => ((fun _ o _ => o = ord_top), top2))).
-  Let putint_spec: fspec := (mk_simple "Client" (X:=unit) (fun _ => ((fun _ o _ => o = ord_top), top2))).
+  Let getint_spec: fspec := (mk_simple (X:=unit) (fun _ => ((fun _ o _ => o = ord_top), top2))).
+  Let putint_spec: fspec := (mk_simple (X:=unit) (fun _ => ((fun _ o _ => o = ord_top), top2))).
 
   Definition ClientStb: list (gname * fspec).
     eapply (Seal.sealing "stb").
@@ -33,21 +33,26 @@ Section PROOF.
   Definition putint_body: list val -> itree (hCallE +' pE +' eventE) val := resum_ktr putintF.
 
   Definition ClientSbtb: list (gname * fspecbody) :=
-    [("in", mk_specbody getint_spec getint_body); ("putint", mk_specbody putint_spec putint_body)]
+    [("getint", mk_specbody getint_spec getint_body); ("putint", mk_specbody putint_spec putint_body)]
   .
 
-  Definition ClientSem: ModSem.t := {|
-    ModSem.fnsems := List.map (fun '(fn, fsb) => (fn, fun_to_tgt ClientStb fn fsb)) ClientSbtb;
-    ModSem.mn := "Client";
-    ModSem.initial_mr := ε;
-    ModSem.initial_st := tt↑;
+  Definition SClientSem: SModSem.t := {|
+    SModSem.fnsems := ClientSbtb;
+    SModSem.mn := "Client";
+    SModSem.initial_mr := ε;
+    SModSem.initial_st := tt↑;
   |}
   .
 
-  Definition Client: Mod.t := {|
-    Mod.get_modsem := fun _ => ClientSem;
-    Mod.sk := Sk.unit;
+  Definition ClientSem: ModSem.t := (SModSem.to_tgt ClientStb) SClientSem.
+
+  Definition SClient: SMod.t := {|
+    SMod.get_modsem := fun _ => SClientSem;
+    SMod.sk := Sk.unit;
   |}
   .
+
+  Definition Client: Mod.t := (SMod.to_tgt ClientStb) SClient.
+
 End PROOF.
 Global Hint Unfold ClientStb: stb.

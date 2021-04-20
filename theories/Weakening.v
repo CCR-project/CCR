@@ -31,9 +31,9 @@ Section PROOF.
 
   Variant fspec_weaker (fsp_src fsp_tgt: fspec): Prop :=
   | fspec_weaker_intro
-      mn X_src X_tgt AA AR P_src P_tgt Q_src Q_tgt
-      (FSPEC0: fsp_src = @mk _ mn X_src AA AR P_src Q_src)
-      (FSPEC1: fsp_tgt = @mk _ mn X_tgt AA AR P_tgt Q_tgt)
+      X_src X_tgt AA AR P_src P_tgt Q_src Q_tgt
+      (FSPEC0: fsp_src = @mk _ X_src AA AR P_src Q_src)
+      (FSPEC1: fsp_tgt = @mk _ X_tgt AA AR P_tgt Q_tgt)
       (WEAK: forall (x_src: X_src),
           exists (x_tgt: X_tgt),
             (<<PRE: P_src x_src <4= P_tgt x_tgt>>) /\
@@ -67,8 +67,6 @@ Section PROOF.
   Variable fsp_src fsp_tgt: fspec.
   Hypothesis fsp_weaker: fspec_weaker fsp_src fsp_tgt.
 
-  Hypothesis MNAME: fsp_src.(mn) = m.
-
   Variable body_src: fsp_src.(AA) -> itree (hCallE +' pE +' eventE) fsp_src.(AR).
   Variable body_tgt: fsp_tgt.(AA) -> itree (hCallE +' pE +' eventE) fsp_tgt.(AR).
   Hypothesis body_eq: JMeq body_src body_tgt.
@@ -90,8 +88,8 @@ Section PROOF.
 
   Lemma weakening_fn:
     sim_fsem wf
-             (fun_to_tgt stb_src fn (mk_specbody fsp_src body_src))
-             (fun_to_tgt stb_tgt fn (mk_specbody fsp_tgt body_tgt)).
+             (fun_to_tgt stb_src (mk_specbody fsp_src body_src))
+             (fun_to_tgt stb_tgt (mk_specbody fsp_tgt body_tgt)).
   Proof.
     Ltac mstep := gstep; match goal with
                          | [|- monotone6 (_sim_itree wf)] => eapply sim_itree_mon
