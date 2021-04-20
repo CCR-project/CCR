@@ -43,13 +43,13 @@ Section SIMMODSEM.
   Variable GlobalStb: SkEnv.t -> list (gname * fspec).
 
   (* TODO: define alist inclusion relation *)
-  Variable CmpsStb_incl
+  Hypothesis CmpsStb_incl
     :
       forall fn skenv fsp
              (SPECS: List.find (fun '(_fn, _) => dec fn _fn) MainCmpsStb = Some fsp),
         List.find (fun '(_fn, _) => dec fn _fn) (CmpsStb skenv) = Some fsp.
 
-  Variable GlobalStb_wrap
+  Hypotheses GlobalStb_wrap
     :
       forall skenv,
         List.find (fun '(_fn, _) => dec "wrap" _fn) (GlobalStb skenv) = Some ("wrap", wrap_spec CmpsStb skenv).
