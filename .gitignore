@@ -33,3 +33,10 @@ main.byte
 *~
 
 /imp_compile/*
+!/imp_compile/*.v
+!/imp_compile/build.sh
+!/imp_compile/_tags
+!/imp_compile/test.ml
+!/imp_compile/configure
+!/imp_compile/Makefile
+!/imp_compile/CompCert
