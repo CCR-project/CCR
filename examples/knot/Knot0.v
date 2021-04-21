@@ -31,13 +31,13 @@ Section PROOF.
   Definition recF (skenv: SkEnv.t): list val -> itree Es val :=
     fun varg =>
       'n <- (pargs [Tint] varg)?;;
-      fb <- trigger (PGet);; `fb: block <- fb↓?;;
+      fb <- trigger (PGet);; `fb: option block <- fb↓?;; `fb: block <- fb?;;
       fn <- (skenv.(SkEnv.blk2id) fb)?;;
       rb <- (skenv.(SkEnv.id2blk) "rec")?;;
       ccall fn [Vptr rb 0; Vint n].
 
   Definition KnotSem (skenv: SkEnv.t): ModSem.t := {|
-    ModSem.fnsems := [("knot", cfun (knotF skenv)); ("rec", cfun (recF skenv))];
+    ModSem.fnsems := [("rec", cfun (recF skenv)); ("knot", cfun (knotF skenv))];
     ModSem.mn := "Knot";
     ModSem.initial_mr := ε;
     ModSem.initial_st := (None: option block)↑;
