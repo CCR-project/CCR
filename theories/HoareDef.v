@@ -448,15 +448,15 @@ Section SMOD.
   }
   .
 
-  Definition transl (tr: fspecbody -> (Any.t -> itree Es Any.t)) (mr: SModSem.t -> Σ) (md: t): Mod.t := {|
-    Mod.get_modsem := (SModSem.transl tr mr) ∘ md.(get_modsem);
+  Definition transl (tr: SkEnv.t -> fspecbody -> (Any.t -> itree Es Any.t)) (mr: SModSem.t -> Σ) (md: t): Mod.t := {|
+    Mod.get_modsem := fun skenv => SModSem.transl (tr skenv) mr (md.(get_modsem) skenv);
     Mod.sk := md.(sk);
   |}
   .
 
-  Definition to_src (md: t): Mod.t := transl (fun_to_src ∘ fsb_body) (fun _ => ε) md.
-  Definition to_mid (md: t): Mod.t := transl (fun_to_mid ∘ fsb_body) (fun _ => ε) md.
-  Definition to_tgt (stb: list (gname * fspec)) (md: t): Mod.t := transl (fun_to_tgt stb) SModSem.initial_mr md.
+  Definition to_src (md: t): Mod.t := transl (fun _ => fun_to_src ∘ fsb_body) (fun _ => ε) md.
+  Definition to_mid (md: t): Mod.t := transl (fun _ => fun_to_mid ∘ fsb_body) (fun _ => ε) md.
+  Definition to_tgt (stb: SkEnv.t -> list (gname * fspec)) (md: t): Mod.t := transl (fun_to_tgt ∘ stb) SModSem.initial_mr md.
 
   (* Definition transl (tr: SModSem.t -> ModSem.t) (md: t): Mod.t := {| *)
   (*   Mod.get_modsem := (SModSem.transl tr) ∘ md.(get_modsem); *)
@@ -474,7 +474,7 @@ Section SMOD.
       (SModSem.to_mid) (get_modsem smd skenv) = (to_mid smd).(Mod.get_modsem) skenv.
   Proof. refl. Qed.
   Lemma to_tgt_comm: forall skenv stb smd,
-      (SModSem.to_tgt stb) (get_modsem smd skenv) = (to_tgt stb smd).(Mod.get_modsem) skenv.
+      (SModSem.to_tgt (stb skenv)) (get_modsem smd skenv) = (to_tgt stb smd).(Mod.get_modsem) skenv.
   Proof. refl. Qed.
 
 
@@ -558,7 +558,7 @@ Section SMOD.
         (skenv: SkEnv.t)
     :
       (ModSemL.fnsems (ModL.get_modsem (Mod.add_list (List.map (transl tr0 mr0) mds)) skenv)) =
-      (load_fnsems skenv mds tr0)
+      (load_fnsems skenv mds (tr0 skenv))
   .
   Proof.
     induction mds; ii; ss.
@@ -566,8 +566,8 @@ Section SMOD.
     rewrite ! List.map_map.
 
     rewrite flat_map_concat_map.
-    replace (fun _x: string * fspecbody => let (fn, fsb) := _x in [(fn, transl_all (SModSem.mn (get_modsem a skenv)) ∘ tr0 fsb)]) with
-        (ret ∘ (fun _x: string * fspecbody => let (fn, fsb) := _x in (fn, transl_all (SModSem.mn (get_modsem a skenv)) ∘ tr0 fsb)));
+    replace (fun _x: string * fspecbody => let (fn, fsb) := _x in [(fn, transl_all (SModSem.mn (get_modsem a skenv)) ∘ (tr0 skenv fsb))]) with
+        (ret ∘ (fun _x: string * fspecbody => let (fn, fsb) := _x in (fn, transl_all (SModSem.mn (get_modsem a skenv)) ∘ (tr0 skenv fsb))));
       cycle 1.
     { apply func_ext. i. des_ifs. }
     erewrite <- List.map_map with (g:=ret).
@@ -579,11 +579,12 @@ Section SMOD.
         tr0 mr0 mds
     :
       (ModSemL.fnsems (ModL.enclose (Mod.add_list (List.map (transl tr0 mr0) mds)))) =
-      (load_fnsems (Sk.load_skenv (List.fold_right Sk.add Sk.unit (List.map sk mds))) mds tr0)
+      (load_fnsems (Sk.load_skenv (List.fold_right Sk.add Sk.unit (List.map sk mds))) mds (tr0 (Sk.load_skenv (List.fold_right Sk.add Sk.unit (List.map sk mds)))))
   .
   Proof.
     unfold ModL.enclose.
     rewrite transl_fnsems_aux. do 2 f_equal. rewrite transl_sk. ss.
+    rewrite transl_sk. auto.
   Qed.
 
   Lemma flat_map_assoc
@@ -603,7 +604,7 @@ Section SMOD.
   Lemma transl_fnsems_stable
         tr0 tr1 mr0 mr1 mds
     :
-      List.map fst (ModL.enclose (Mod.add_list (List.map (transl tr0 mr0) mds))).(ModSemL.fnsems) = 
+      List.map fst (ModL.enclose (Mod.add_list (List.map (transl tr0 mr0) mds))).(ModSemL.fnsems) =
       List.map fst (ModL.enclose (Mod.add_list (List.map (transl tr1 mr1) mds))).(ModSemL.fnsems)
   .
   Proof.
@@ -650,7 +651,7 @@ Section SMOD.
   Lemma transl_stable_mn
         tr0 tr1 mr0 mr1 mds
     :
-      List.map fst (ModL.enclose (Mod.add_list (List.map (transl tr0 mr0) mds))).(ModSemL.initial_mrs) = 
+      List.map fst (ModL.enclose (Mod.add_list (List.map (transl tr0 mr0) mds))).(ModSemL.initial_mrs) =
       List.map fst (ModL.enclose (Mod.add_list (List.map (transl tr1 mr1) mds))).(ModSemL.initial_mrs)
   .
   Proof.

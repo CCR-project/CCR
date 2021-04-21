@@ -34,8 +34,6 @@ Section AUX.
   Definition add_list (ms: list ModL.t): ModL.t := fold_right ModL.add ModL.empty ms.
 
   Global Program Instance refines_closed_PreOrder: PreOrder refines_closed.
-  Next Obligation. ii; ss. Qed.
-  Next Obligation. ii; ss. r in H. r in H0. eauto. Qed.
 
 End AUX.
 

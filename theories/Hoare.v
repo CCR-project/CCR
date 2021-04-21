@@ -37,7 +37,7 @@ Lemma fold_right_map
       XS XI YS YI
       (xs: XS) (xi: list XI)
       (xadd: XI -> XS -> XS)
-      
+
       (* (ys: YS) (yi: list YI) *)
       (yadd: YI -> YS -> YS)
 
@@ -90,12 +90,17 @@ Section CANCEL.
 
   Let sk: Sk.t := fold_right Sk.add Sk.unit (List.map SMod.sk mds).
   Let skenv: SkEnv.t := Sk.load_skenv sk.
-  Let mss: list SModSem.t := (List.map ((flip SMod.get_modsem) skenv) mds).
-  Let sbtb: list (gname * fspecbody) := (List.flat_map (SModSem.fnsems) mss).
-  Let stb: list (gname * fspec) := List.map (fun '(fn, fs) => (fn, fs.(fsb_fspec))) sbtb.
+
+  Let _mss: SkEnv.t -> list SModSem.t := fun skenv => (List.map ((flip SMod.get_modsem) skenv) mds).
+  Let _sbtb: SkEnv.t -> list (gname * fspecbody) := fun skenv => (List.flat_map (SModSem.fnsems) (_mss skenv)).
+  Let _stb: SkEnv.t -> list (gname * fspec) := fun skenv => List.map (fun '(fn, fs) => (fn, fs.(fsb_fspec))) (_sbtb skenv).
+
+  Let mss: list SModSem.t := _mss skenv.
+  Let sbtb: list (gname * fspecbody) := _sbtb skenv.
+  Let stb: list (gname * fspec) := _stb skenv.
 
   Let mds_src: list Mod.t := List.map (SMod.to_src) mds.
-  Let mds_tgt: list Mod.t := List.map (SMod.to_tgt stb) mds.
+  Let mds_tgt: list Mod.t := List.map (SMod.to_tgt _stb) mds.
 
 
 
@@ -177,6 +182,7 @@ End AUX.
 
 
 
+Require Import ClassicalChoice.
 
 Section CANCEL.
 
@@ -184,15 +190,21 @@ Section CANCEL.
 
   Variable mds: list SMod.t.
 
+
   Let sk: Sk.t := fold_right Sk.add Sk.unit (List.map SMod.sk mds).
   Let skenv: SkEnv.t := Sk.load_skenv sk.
-  Let mss: list SModSem.t := (List.map ((flip SMod.get_modsem) skenv) mds).
-  Let sbtb: list (gname * fspecbody) := (List.flat_map (SModSem.fnsems) mss).
-  Let stb: list (gname * fspec) := List.map (fun '(fn, fs) => (fn, fs.(fsb_fspec))) sbtb.
+
+  Let _mss: SkEnv.t -> list SModSem.t := fun skenv => (List.map ((flip SMod.get_modsem) skenv) mds).
+  Let _sbtb: SkEnv.t -> list (gname * fspecbody) := fun skenv => (List.flat_map (SModSem.fnsems) (_mss skenv)).
+  Let _stb: SkEnv.t -> list (gname * fspec) := fun skenv => List.map (fun '(fn, fs) => (fn, fs.(fsb_fspec))) (_sbtb skenv).
+
+  Let mss: list SModSem.t := _mss skenv.
+  Let sbtb: list (gname * fspecbody) := _sbtb skenv.
+  Let stb: list (gname * fspec) := _stb skenv.
 
   Let mds_src: list Mod.t := List.map (SMod.to_src) mds.
   Variable mds_tgt: list Mod.t.
-  Hypothesis WEAKEN: Forall2 (fun md md_tgt => exists stb0, (<<WEAK: stb_weaker stb0 stb>>)
+  Hypothesis WEAKEN: Forall2 (fun md md_tgt => exists stb0, (<<WEAK: forall skenv, stb_weaker (stb0 skenv) (_stb skenv)>>)
                                                             /\ (<<MD: md_tgt = SMod.to_tgt stb0 md>>)) mds mds_tgt.
 
 
@@ -259,7 +271,7 @@ Section CANCEL.
   (* Proof. *)
   (* Qed. *)
 
-  Lemma sk_eq2: fold_right Sk.add Sk.unit (List.map SMod.sk mds) = (ModL.sk (Mod.add_list (List.map (SMod.to_tgt stb) mds))).
+  Lemma sk_eq2: fold_right Sk.add Sk.unit (List.map SMod.sk mds) = (ModL.sk (Mod.add_list (List.map (SMod.to_tgt _stb) mds))).
   Proof.
     rewrite sk_eq. clear - WEAKEN.
     eapply Forall2_impl in WEAKEN; cycle 1.
@@ -270,7 +282,7 @@ Section CANCEL.
     erewrite fold_right_map with (fi:=ModL.sk) (fs:=ModL.sk) (yadd:=Sk.add); try refl; cycle 1.
     f_equal.
     rewrite ! List.map_map.
-    eapply Forall2_apply_Forall2 with (Q:=eq) (f:=ModL.sk ∘ (SMod.to_tgt stb)) (g:=(ModL.sk ∘ Mod.lift)) in WEAKEN.
+    eapply Forall2_apply_Forall2 with (Q:=eq) (f:=ModL.sk ∘ (SMod.to_tgt _stb)) (g:=(ModL.sk ∘ Mod.lift)) in WEAKEN.
     { eapply Forall2_eq in WEAKEN. des; ss. }
     ii. des. subst. ss.
   Qed.
@@ -312,7 +324,7 @@ Section CANCEL.
   Lemma initial_mrs_eq2
     :
       List.map fst (ModSemL.initial_mrs ms_tgt) =
-      List.map fst (ModSemL.initial_mrs (ModL.enclose (Mod.add_list (List.map (SMod.to_tgt stb) mds))))
+      List.map fst (ModSemL.initial_mrs (ModL.enclose (Mod.add_list (List.map (SMod.to_tgt _stb) mds))))
   .
   Proof.
     unfold ms_tgt. rewrite <- initial_mrs_eq.
@@ -359,6 +371,7 @@ Section CANCEL.
   (*   rewrite transl_fnsems_aux. do 2 f_equal. rewrite transl_sk. ss. *)
   (* Qed. *)
 
+
   Theorem adequacy_type2: refines_closed (Mod.add_list mds_tgt) (Mod.add_list mds_src).
   Proof.
     etrans; cycle 1.
@@ -382,13 +395,14 @@ Section CANCEL.
       }
       rewrite T; ss.
     }
-    folder.
+    cut (refines_closed (Mod.add_list mds_tgt)
+                        (Mod.add_list (List.map (SMod.to_tgt _stb) mds))); auto.
     eapply refines_close.
     eapply adequacy_local_list.
     (* clear initial_mrs_eq_aux WFR MAINM MAINPRE. clear_tac. *)
     clear - WEAKEN.
-    clearbody stb.
-    clear sk skenv mss sbtb.
+    clearbody _stb.
+    clear _mss _sbtb.
     induction WEAKEN; ss.
     des; subst. rename l into ll. econs; cycle 1.
     { eapply IHf. ss. }
@@ -397,7 +411,7 @@ Section CANCEL.
     econs; cycle 1.
     { unfold SMod.to_tgt. cbn. eauto. }
     { i. admit "ez - wf". }
-    i. r. eapply adequacy_lift. econs.
+    i. specialize (WEAK skenv). r. eapply adequacy_lift. econs.
     { instantiate (1:=fun '(x, y) => x = y).
       unfold SMod.to_tgt.
       unfold SMod.transl. ss.

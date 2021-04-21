@@ -22,8 +22,8 @@ Definition mycmp (n0 n1: Z): Z :=
   then 0
   else 1.
 
-Definition compare_gen `{Σ: GRA.t} (f: Z -> Z -> Z) (mn: mname): fspec :=
-  mk_simple mn (X:=Z*Z)
+Definition compare_gen `{Σ: GRA.t} (f: Z -> Z -> Z): fspec :=
+  mk_simple (X:=Z*Z)
             (fun '(n0, n1) => (
                  (fun varg o => ⌜varg = [Vint n0; Vint n1]↑ /\ o = ord_pure 0⌝),
                  (fun vret => ⌜vret = (Vint (f n0 n1))↑⌝)

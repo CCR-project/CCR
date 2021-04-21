@@ -79,8 +79,7 @@ Section SIMMODSEM.
       hcall_tac (x0, x1, mycmp) (ord_pure 1) (@URA.unit Σ) (@URA.unit Σ) (@URA.unit Σ); ss.
       { esplits; eauto. red. esplits; eauto.
         { eapply SKWF. eauto. }
-        { eapply CmpsStb_incl. des_ifs. ss.
-          unfold CompareMain1.compare_spec. f_equal. f_equal. f_equal. admit "module name...". }
+        { eapply CmpsStb_incl. des_ifs. }
       }
       des. iPure POST. des;clarify.
       eapply Any.upcast_inj in POST. des; clarify. steps.
@@ -98,8 +97,7 @@ Section SIMMODSEM.
       hcall_tac (x0, x1, mycmp) (ord_pure 1) (@URA.unit Σ) (@URA.unit Σ) (@URA.unit Σ); ss.
       { esplits; eauto. red. esplits; eauto.
         { eapply SKWF. eauto. }
-        { eapply CmpsStb_incl. des_ifs. ss.
-          unfold CompareMain1.compare_spec. f_equal. f_equal. f_equal. admit "module name...". }
+        { eapply CmpsStb_incl. des_ifs. }
       }
       des. iPure POST. des;clarify.
       eapply Any.upcast_inj in POST. des; clarify. steps.

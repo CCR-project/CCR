@@ -27,9 +27,9 @@ Section PROOF.
     Variable skenv: SkEnv.t.
 
     (* TODO: define (myfind: list (string * A) -> A -> option A) and use it *)
-    Definition wrap_spec:    fspec := mk_simple "Wrap" (X:=Z*Z*(Z -> Z -> Z))
+    Definition wrap_spec:    fspec := mk_simple (X:=Z*Z*(Z -> Z -> Z))
                                                 (fun '(n0, n1, f) => (
-                                                     (fun varg o => ⌜exists fn blk, varg = [Vint n0; Vint n1; Vptr blk 0]↑ /\ o = ord_pure 1 /\ skenv.(SkEnv.blk2id) blk = Some fn /\ List.find (fun '(_fn, _) => dec fn _fn) (CmpsStb skenv) = Some (fn, compare_gen f fn)⌝),
+                                                     (fun varg o => ⌜exists fn blk, varg = [Vint n0; Vint n1; Vptr blk 0]↑ /\ o = ord_pure 1 /\ skenv.(SkEnv.blk2id) blk = Some fn /\ List.find (fun '(_fn, _) => dec fn _fn) (CmpsStb skenv) = Some (fn, compare_gen f)⌝),
                                                      (fun vret => ⌜vret = (Vint (f n0 n1))↑⌝)
                                                 )).
 
@@ -37,19 +37,20 @@ Section PROOF.
 
     Definition WrapSbtb: list (gname * fspecbody) := [("wrap", mk_specbody wrap_spec (fun _ => trigger (Choose _)))].
 
-    Definition WrapSem: ModSem.t := {|
-      ModSem.fnsems := List.map (fun '(fn, body) => (fn, fun_to_tgt (GlobalStb skenv) fn body)) WrapSbtb;
-      ModSem.mn := "Wrap";
-      ModSem.initial_mr := ε;
-      ModSem.initial_st := tt↑;
+    Definition SWrapSem: SModSem.t := {|
+      SModSem.fnsems := WrapSbtb;
+      SModSem.mn := "Wrap";
+      SModSem.initial_mr := ε;
+      SModSem.initial_st := tt↑;
                                    |}
     .
   End SKENV.
 
-  Definition Wrap: Mod.t := {|
-    Mod.get_modsem := fun skenv => WrapSem skenv;
-    Mod.sk := Sk.unit;
+  Definition SWrap: SMod.t := {|
+    SMod.get_modsem := fun skenv => SWrapSem skenv;
+    SMod.sk := Sk.unit;
   |}
   .
 
+  Definition Wrap: Mod.t := (SMod.to_tgt GlobalStb) SWrap.
 End PROOF.
