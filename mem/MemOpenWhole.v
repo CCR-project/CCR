@@ -183,102 +183,110 @@ Section AUX.
   .
 
   Definition disclose_smodsem (ms: SModSem.t): SModSem.t := {|
-    SModSem.fnsems
+    SModSem.fnsems     := List.map (map_snd disclose_fsb) ms.(SModSem.fnsems);
+    SModSem.mn         := ms.(SModSem.mn);
+    SModSem.initial_mr := ms.(SModSem.initial_mr);
+    SModSem.initial_st := ms.(SModSem.initial_st);
   |}
   .
 
-  Definition expose_smod (md: SMod.t): SMod.t.
+  Definition disclose_smod (ms: SMod.t): SMod.t := {|
+    SMod.get_modsem := disclose_smodsem ∘ ms.(SMod.get_modsem);
+    SMod.sk := ms.(SMod.sk);
+  |}
+  .
 
 End AUX.
 
-Module KModSem.
-Section KMODSEM.
 
-  Context `{Σ: GRA.t}.
+(* Module KModSem. *)
+(* Section KMODSEM. *)
 
-  Record t: Type := mk {
-    fnsems: list (gname * (list val -> itree (callE +' pE +' eventE) val));
-    mn: mname;
-    initial_st: Any.t;
-  }
-  .
+(*   Context `{Σ: GRA.t}. *)
 
-  Definition to_modsem (ms: t): ModSem.t := {|
-    (* ModSem.fnsems := List.map (map_snd (fun ktr arg => resum_itr (T:=Any.t) (cfun ktr arg))) ms.(fnsems); *)
-    (* ModSem.fnsems := List.map (map_snd (fun ktr => resum_itr (T:=Any.t) ∘ cfun ktr)) ms.(fnsems); *)
-    ModSem.fnsems := List.map (map_snd (((∘)∘(∘)) (resum_itr (T:=Any.t)) cfun)) ms.(fnsems);
-    ModSem.mn := ms.(mn);
-    ModSem.initial_mr := ε;
-    ModSem.initial_st := ms.(initial_st);
-  |}
-  .
+(*   Record t: Type := mk { *)
+(*     fnsems: list (gname * (list val -> itree (callE +' pE +' eventE) val)); *)
+(*     mn: mname; *)
+(*     initial_st: Any.t; *)
+(*   } *)
+(*   . *)
 
-
-
-
-  Definition transl_callE: callE ~> hCallE :=
-    fun T '(Call fn args) => hCall false fn args
-  .
-
-  Definition transl_event: (callE +' pE +' eventE) ~> (hCallE +' pE +' eventE) :=
-    (bimap transl_callE (bimap (id_ _) (id_ _)))
-  .
-
-  Definition transl_itr: (callE +' pE +' eventE) ~> itree (hCallE +' pE +' eventE) :=
-    embed ∘ transl_event
-  .
-
-  Definition transl_fun: (list val -> itree (callE +' pE +' eventE) val) -> fspecbody :=
-    fun ktr =>
-      mk_specbody fspec_trivial (interp (T:=val) transl_itr ∘ ktr)
-  .
-
-  Definition to_smodsem (ms: t): SModSem.t := {|
-    SModSem.fnsems := List.map (map_snd transl_fun) ms.(fnsems);
-    SModSem.mn := ms.(mn);
-    SModSem.initial_mr := ε;
-    SModSem.initial_st := ms.(initial_st);
-  |}
-  .
-
-End KMODSEM.
-End KModSem.
+(*   Definition to_modsem (ms: t): ModSem.t := {| *)
+(*     (* ModSem.fnsems := List.map (map_snd (fun ktr arg => resum_itr (T:=Any.t) (cfun ktr arg))) ms.(fnsems); *) *)
+(*     (* ModSem.fnsems := List.map (map_snd (fun ktr => resum_itr (T:=Any.t) ∘ cfun ktr)) ms.(fnsems); *) *)
+(*     ModSem.fnsems := List.map (map_snd (((∘)∘(∘)) (resum_itr (T:=Any.t)) cfun)) ms.(fnsems); *)
+(*     ModSem.mn := ms.(mn); *)
+(*     ModSem.initial_mr := ε; *)
+(*     ModSem.initial_st := ms.(initial_st); *)
+(*   |} *)
+(*   . *)
 
 
 
 
-Module KMod.
-Section KMOD.
+(*   Definition transl_callE: callE ~> hCallE := *)
+(*     fun T '(Call fn args) => hCall false fn args *)
+(*   . *)
 
-  Context `{Σ: GRA.t}.
+(*   Definition transl_event: (callE +' pE +' eventE) ~> (hCallE +' pE +' eventE) := *)
+(*     (bimap transl_callE (bimap (id_ _) (id_ _))) *)
+(*   . *)
 
-  Record t: Type := mk {
-    get_modsem: SkEnv.t -> UModSem.t;
-    sk: Sk.t;
-  }
-  .
+(*   Definition transl_itr: (callE +' pE +' eventE) ~> itree (hCallE +' pE +' eventE) := *)
+(*     embed ∘ transl_event *)
+(*   . *)
 
-  Definition to_mod (md: t): Mod.t := {|
-    Mod.get_modsem := UModSem.to_modsem ∘ md.(get_modsem);
-    Mod.sk := md.(sk);
-  |}
-  .
+(*   Definition transl_fun: (list val -> itree (callE +' pE +' eventE) val) -> fspecbody := *)
+(*     fun ktr => *)
+(*       mk_specbody fspec_trivial (interp (T:=val) transl_itr ∘ ktr) *)
+(*   . *)
 
-  Lemma to_mod_comm: forall md skenv, UModSem.to_modsem (md.(get_modsem) skenv) = (to_mod md).(Mod.get_modsem) skenv.
-  Proof. i. refl. Qed.
+(*   Definition to_smodsem (ms: t): SModSem.t := {| *)
+(*     SModSem.fnsems := List.map (map_snd transl_fun) ms.(fnsems); *)
+(*     SModSem.mn := ms.(mn); *)
+(*     SModSem.initial_mr := ε; *)
+(*     SModSem.initial_st := ms.(initial_st); *)
+(*   |} *)
+(*   . *)
+
+(* End KMODSEM. *)
+(* End KModSem. *)
 
 
-  Definition to_smod (md: t): SMod.t := {|
-    SMod.get_modsem := UModSem.to_smodsem ∘ md.(get_modsem);
-    SMod.sk := md.(sk);
-  |}
-  .
 
-  Lemma to_smod_comm: forall md skenv, UModSem.to_smodsem (md.(get_modsem) skenv) = (to_smod md).(SMod.get_modsem) skenv.
-  Proof. i. refl. Qed.
 
-End KMOD.
-End KMod.
+(* Module KMod. *)
+(* Section KMOD. *)
+
+(*   Context `{Σ: GRA.t}. *)
+
+(*   Record t: Type := mk { *)
+(*     get_modsem: SkEnv.t -> UModSem.t; *)
+(*     sk: Sk.t; *)
+(*   } *)
+(*   . *)
+
+(*   Definition to_mod (md: t): Mod.t := {| *)
+(*     Mod.get_modsem := UModSem.to_modsem ∘ md.(get_modsem); *)
+(*     Mod.sk := md.(sk); *)
+(*   |} *)
+(*   . *)
+
+(*   Lemma to_mod_comm: forall md skenv, UModSem.to_modsem (md.(get_modsem) skenv) = (to_mod md).(Mod.get_modsem) skenv. *)
+(*   Proof. i. refl. Qed. *)
+
+
+(*   Definition to_smod (md: t): SMod.t := {| *)
+(*     SMod.get_modsem := UModSem.to_smodsem ∘ md.(get_modsem); *)
+(*     SMod.sk := md.(sk); *)
+(*   |} *)
+(*   . *)
+
+(*   Lemma to_smod_comm: forall md skenv, UModSem.to_smodsem (md.(get_modsem) skenv) = (to_smod md).(SMod.get_modsem) skenv. *)
+(*   Proof. i. refl. Qed. *)
+
+(* End KMOD. *)
+(* End KMod. *)
 
 
 
@@ -300,39 +308,39 @@ Require Import Hoare.
 Section ADQ.
   Context `{Σ: GRA.t}.
 
-  Variable mds: list SMod.t.
-  Variable ctxs: list UMod.t.
+  Variable kmds: list SMod.t.
+  Variable umds: list UMod.t.
 
-  Let sk_link: Sk.t := fold_right Sk.add Sk.unit ((List.map SMod.sk mds) ++ (List.map UMod.sk ctxs)).
+  Let sk_link: Sk.t := fold_right Sk.add Sk.unit ((List.map SMod.sk kmds) ++ (List.map UMod.sk umds)).
   Let skenv: SkEnv.t := Sk.load_skenv sk_link.
 
-  Let imss: list SModSem.t := List.map (flip SMod.get_modsem skenv) mds.
-  Let emss: list UModSem.t := List.map (flip UMod.get_modsem skenv) ctxs.
+  Let kmss: list SModSem.t := List.map (flip SMod.get_modsem skenv) kmds.
+  Let umss: list UModSem.t := List.map (flip UMod.get_modsem skenv) umds.
 
   Let gstb: list (gname * fspec) :=
-    (flat_map (List.map (map_snd fsb_fspec) ∘ SModSem.fnsems) imss)
-      ++ (flat_map (List.map (map_snd (fun _ => fspec_trivial)) ∘ UModSem.fnsems) emss).
+    (flat_map (List.map (map_snd fsb_fspec) ∘ SModSem.fnsems) kmss)
+      ++ (flat_map (List.map (map_snd (fun _ => fspec_trivial)) ∘ UModSem.fnsems) umss).
 
   Lemma my_lemma1
-        ctx
-        (IN: In ctx ctxs)
+        umd
+        (IN: In umd umds)
     :
-      ModPair.sim (SMod.to_tgt gstb (UMod.to_smod ctx)) (UMod.to_mod ctx)
+      ModPair.sim (SMod.to_tgt gstb (UMod.to_smod umd)) (UMod.to_mod umd)
   .
   Proof.
     admit "somehow".
   Qed.
 
   (* Lemma my_lemma2 *)
-  (*       ctx *)
-  (*       (IN: In ctx ctxs) *)
+  (*       umd *)
+  (*       (IN: In umd umds) *)
   (*   : *)
-  (*     ModPair.sim (UMod.to_mod ctx) (SMod.to_tgt gstb (UMod.to_smod ctx)) *)
+  (*     ModPair.sim (UMod.to_mod umd) (SMod.to_tgt gstb (UMod.to_smod umd)) *)
   (* . *)
   (* Proof. *)
   (* Qed. *)
 
-  Lemma sk_link_eq: sk_link = (fold_right Sk.add Sk.unit (List.map SMod.sk (mds ++ List.map UMod.to_smod ctxs))).
+  Lemma sk_link_eq: sk_link = (fold_right Sk.add Sk.unit (List.map SMod.sk (kmds ++ List.map UMod.to_smod umds))).
   Proof.
     unfold sk_link. f_equal. rewrite List.map_app. f_equal. rewrite List.map_map. ss.
   Qed.
@@ -348,17 +356,17 @@ Section ADQ.
     (List.map (fun '(fn, fs) => (fn, fs.(fsb_fspec)))
        (flat_map SModSem.fnsems
           (List.map
-             (flip SMod.get_modsem (Sk.load_skenv (fold_right Sk.add Sk.unit (List.map SMod.sk (mds ++ List.map UMod.to_smod ctxs)))))
-             (mds ++ List.map UMod.to_smod ctxs))))
+             (flip SMod.get_modsem (Sk.load_skenv (fold_right Sk.add Sk.unit (List.map SMod.sk (kmds ++ List.map UMod.to_smod umds)))))
+             (kmds ++ List.map UMod.to_smod umds))))
   .
   Proof.
     rewrite <- sk_link_eq. folder. unfold gstb.
-    unfold imss, emss.
+    unfold kmss, umss.
     rewrite map_app. rewrite flat_map_app. rewrite map_app.
     f_equal.
     - rewrite <- ! SMod.red_do_ret. erewrite ! SMod.flat_map_assoc. ss.
     - rewrite <- ! SMod.red_do_ret. erewrite ! SMod.flat_map_assoc.
-      eapply flat_map_ext. intro ctx. unfold flip. ss.
+      eapply flat_map_ext. intro umd. unfold flip. ss.
       rewrite <- ! SMod.red_do_ret. erewrite ! SMod.flat_map_assoc. rewrite ! List.app_nil_r.
       eapply flat_map_ext. intro. unfold map_snd. des_ifs.
   Qed.
@@ -368,18 +376,18 @@ Section ADQ.
   Variable (mainbody: list val -> itree (hCallE +' pE +' eventE) val).
   Hypothesis MAINPRE: mainpre ([]: list val)↑ ord_top entry_r.
 
-  Hypothesis WFR: URA.wf (entry_r ⋅ (List.fold_left (⋅) (List.map (SModSem.initial_mr) imss) ε)).
+  Hypothesis WFR: URA.wf (entry_r ⋅ (List.fold_left (⋅) (List.map (SModSem.initial_mr) kmss) ε)).
 
   (* Let ms_tgt: ModSemL.t := admit "". *)
   (* Let rsum: r_state -> Σ := *)
   (*   fun '(mrs_tgt, frs_tgt) => (fold_left (⋅) (List.map (mrs_tgt <*> fst) ms_tgt.(ModSemL.initial_mrs)) ε) ⋅ (fold_left (⋅) frs_tgt ε). *)
   (* Hypothesis WFR: URA.wf (entry_r ⋅ rsum (ModSemL.initial_r_state ms_tgt)). *)
 
-  Hypothesis MAINM: In (SMod.main mainpre mainbody) mds.
+  Hypothesis MAINM: In (SMod.main mainpre mainbody) kmds.
 
   Theorem adequacy_open:
-    refines_closed (Mod.add_list (List.map (SMod.to_tgt gstb) mds ++ List.map UMod.to_mod ctxs))
-                   (Mod.add_list (List.map SMod.to_src mds ++ List.map UMod.to_mod ctxs))
+    refines_closed (Mod.add_list (List.map (SMod.to_tgt gstb) kmds ++ List.map UMod.to_mod umds))
+                   (Mod.add_list (List.map SMod.to_src kmds ++ List.map UMod.to_mod umds))
   .
   Proof.
     etrans.
@@ -387,7 +395,7 @@ Section ADQ.
       rewrite Mod.add_list_app.
       eapply refines_proper_l.
       eapply adequacy_local_list.
-      instantiate (1:=(List.map (SMod.to_tgt gstb ∘ UMod.to_smod) ctxs)).
+      instantiate (1:=(List.map (SMod.to_tgt gstb ∘ UMod.to_smod) umds)).
       eapply Forall2_apply_Forall2.
       { instantiate (1:=eq). admit "ez - generalize this lemma to iff: Forall2_eq". }
       i. subst. eapply my_lemma1; ss.
@@ -397,8 +405,8 @@ Section ADQ.
     { rewrite <- List.map_map with (f:=UMod.to_smod).
       rewrite <- map_app.
       eapply adequacy_type2.
-      - instantiate (1:=(mds ++ List.map UMod.to_smod ctxs)).
-        rewrite <- List.map_id with (l:=(mds ++ List.map UMod.to_smod ctxs)) at 1.
+      - instantiate (1:=(kmds ++ List.map UMod.to_smod umds)).
+        rewrite <- List.map_id with (l:=(kmds ++ List.map UMod.to_smod umds)) at 1.
         eapply Forall2_apply_Forall2.
         { instantiate (1:=eq). admit "ez - ditto". }
         i. subst. exists gstb. split; ss. r. rewrite <- gstb_eq. refl.
