@@ -308,7 +308,9 @@ Require Import Hoare.
 Section ADQ.
   Context `{Σ: GRA.t}.
 
-  Variable kmds: list SMod.t.
+  Variable _kmds: list SMod.t.
+  Let kmds: list SMod.t := List.map disclose_smod _kmds.
+  Let kmds_top: list Mod.t := List.map SMod.to_src _kmds.
   Variable umds: list UMod.t.
 
   Let sk_link: Sk.t := fold_right Sk.add Sk.unit ((List.map SMod.sk kmds) ++ (List.map UMod.sk umds)).
@@ -340,9 +342,11 @@ Section ADQ.
   (* Proof. *)
   (* Qed. *)
 
-  Lemma sk_link_eq: sk_link = (fold_right Sk.add Sk.unit (List.map SMod.sk (kmds ++ List.map UMod.to_smod umds))).
+  Lemma sk_link_eq: sk_link = (fold_right Sk.add Sk.unit (List.map SMod.sk
+                                          (kmds ++ List.map UMod.to_smod umds))).
   Proof.
-    unfold sk_link. f_equal. rewrite List.map_app. f_equal. rewrite List.map_map. ss.
+    unfold sk_link. f_equal. rewrite List.map_app. f_equal; ss.
+    { rewrite List.map_map; ss. }
   Qed.
 
   Declare Scope l_monad_scope.
@@ -356,7 +360,8 @@ Section ADQ.
     (List.map (fun '(fn, fs) => (fn, fs.(fsb_fspec)))
        (flat_map SModSem.fnsems
           (List.map
-             (flip SMod.get_modsem (Sk.load_skenv (fold_right Sk.add Sk.unit (List.map SMod.sk (kmds ++ List.map UMod.to_smod umds)))))
+             (flip SMod.get_modsem (Sk.load_skenv (fold_right Sk.add Sk.unit (List.map SMod.sk
+                                   (kmds ++ List.map UMod.to_smod umds)))))
              (kmds ++ List.map UMod.to_smod umds))))
   .
   Proof.
@@ -365,6 +370,8 @@ Section ADQ.
     rewrite map_app. rewrite flat_map_app. rewrite map_app.
     f_equal.
     - rewrite <- ! SMod.red_do_ret. erewrite ! SMod.flat_map_assoc. ss.
+      (* eapply flat_map_ext. intro kmd. rewrite ! List.app_nil_r. *)
+      (* rewrite SMod.red_do_ret. rewrite List.map_map. apply List.map_ext. i. des_ifs. unfold map_snd in *. des_ifs. *)
     - rewrite <- ! SMod.red_do_ret. erewrite ! SMod.flat_map_assoc.
       eapply flat_map_ext. intro umd. unfold flip. ss.
       rewrite <- ! SMod.red_do_ret. erewrite ! SMod.flat_map_assoc. rewrite ! List.app_nil_r.
@@ -385,9 +392,37 @@ Section ADQ.
 
   Hypothesis MAINM: In (SMod.main mainpre mainbody) kmds.
 
+  Global Program Instance Forall2_Reflexive `{Reflexive A R}: Reflexive (Forall2 R).
+  Next Obligation. induction x; ii; ss. econs; ss. Qed.
+
+  Global Program Instance Forall2_Transitive `{Transitive A R}: Transitive (Forall2 R).
+  Next Obligation.
+    revert_until x. induction x; ii; ss.
+    { inv H0. inv H1. ss. }
+    inv H0. inv H1. econs; ss; et.
+  Qed.
+
+  Global Program Instance Forall2_PreOrder `{PreOrder A R}: PreOrder (Forall2 R).
+
+  (* Lemma Forall2_eq: forall A (xs0 xs1: list A), Forall2 eq xs0 xs1 <-> xs0 = xs1. *)
+  (* Proof. *)
+  (*   split; i. *)
+  (*   - induction H; ii; ss. subst; ss. *)
+  (*   - subst. induction xs1; ss. econs; ss. *)
+  (* Qed. *)
+
+  Lemma my_lemma2
+        :
+          refines_closed (Mod.add_list (List.map SMod.to_src (kmds ++ List.map UMod.to_smod umds)))
+                         (Mod.add_list (kmds_top ++ List.map UMod.to_mod umds))
+  .
+  Proof.
+    admit "".
+  Qed.
+
   Theorem adequacy_open:
     refines_closed (Mod.add_list (List.map (SMod.to_tgt gstb) kmds ++ List.map UMod.to_mod umds))
-                   (Mod.add_list (List.map SMod.to_src kmds ++ List.map UMod.to_mod umds))
+                   (Mod.add_list (kmds_top ++ List.map UMod.to_mod umds))
   .
   Proof.
     etrans.
@@ -397,7 +432,7 @@ Section ADQ.
       eapply adequacy_local_list.
       instantiate (1:=(List.map (SMod.to_tgt gstb ∘ UMod.to_smod) umds)).
       eapply Forall2_apply_Forall2.
-      { instantiate (1:=eq). admit "ez - generalize this lemma to iff: Forall2_eq". }
+      { instantiate (1:=eq). refl. }
       i. subst. eapply my_lemma1; ss.
     }
     rewrite <- Mod.add_list_app.
@@ -408,17 +443,16 @@ Section ADQ.
       - instantiate (1:=(kmds ++ List.map UMod.to_smod umds)).
         rewrite <- List.map_id with (l:=(kmds ++ List.map UMod.to_smod umds)) at 1.
         eapply Forall2_apply_Forall2.
-        { instantiate (1:=eq). admit "ez - ditto". }
+        { instantiate (1:=eq). refl. }
         i. subst. exists gstb. split; ss. r. rewrite <- gstb_eq. refl.
       - eauto.
       - ss. rewrite ! URA.unit_id. admit "should be ez".
       - rewrite in_app_iff. eauto.
     }
-    rewrite map_app. rewrite List.map_map.
-    etrans.
-    {
+    eapply my_lemma2.
   Qed.
 
+End ADQ.
 
 
 
