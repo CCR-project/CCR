@@ -153,28 +153,33 @@ End UMod.
 Section AUX.
   Context `{Σ: GRA.t}.
 
-  Record fspecbodyk: Type := mk_fsbk {
-    fsbk_fspec:> fspec;
-    (* fsbk_body: (fsbk_fspec.(AA) * bool) -> itree (hCallE +' pE +' eventE) fsbk_fspec.(AR); *)
-    (*** <--- this is not handy when removing the "is_k" argument at the top level ***)
+  (* Record fspecbodyk: Type := mk_fsbk { *)
+  (*   fsbk_fspec:> fspec; *)
+  (*   (* fsbk_body: (fsbk_fspec.(AA) * bool) -> itree (hCallE +' pE +' eventE) fsbk_fspec.(AR); *) *)
+  (*   (*** <--- this is not handy when removing the "is_k" argument at the top level ***) *)
 
-    (* fsbk_bodyk: fsbk_fspec.(AA) -> itree (hCallE +' pE +' eventE) fsbk_fspec.(AR); *)
-    (* fsbk_bodyu: fsbk_fspec.(AA) -> itree (hCallE +' pE +' eventE) fsbk_fspec.(AR); *)
-    (*** <--- do we need fsbk_bodyk at all? it will always be APC (or just choose) because the k-cases will all be removed ***)
+  (*   (* fsbk_bodyk: fsbk_fspec.(AA) -> itree (hCallE +' pE +' eventE) fsbk_fspec.(AR); *) *)
+  (*   (* fsbk_bodyu: fsbk_fspec.(AA) -> itree (hCallE +' pE +' eventE) fsbk_fspec.(AR); *) *)
+  (*   (*** <--- do we need fsbk_bodyk at all? it will always be APC (or just choose) because the k-cases will all be removed ***) *)
 
-    fsbk_bodyu: fsbk_fspec.(AA) -> itree (hCallE +' pE +' eventE) fsbk_fspec.(AR);
-    (*** <--- Now fspecbodyk has the same type with fspecbody! we don't need this definition ***)
-  }
-  .
+  (*   fsbk_bodyu: fsbk_fspec.(AA) -> itree (hCallE +' pE +' eventE) fsbk_fspec.(AR); *)
+  (*   (*** <--- Now fspecbodyk has the same type with fspecbody! we don't need this definition ***) *)
+  (* } *)
+  (* . *)
 
   Definition disclose (fs: fspec): fspec :=
     @mk _ (fs.(X) * bool)%type (fs.(AA) * bool)%type (fs.(AR))
         (fun '(x, is_k) '(argh, is_k') argl o => ⌜is_k = is_k'⌝ ** (⌜is_k⌝ -* fs.(precond) x argh argl o ** ⌜is_pure o⌝))
         (fun '(x, is_k) reth retl =>                               (⌜is_k⌝ -* fs.(postcond) x reth retl))
   .
+  (*** YJ: We may generalize a bit further and not require "is_pure o"
+-- by defining an equiv-class of physical state and proving that the is_k cases behave same upto the equiv class && is_u cases change the state upto equiv class --
+   but it looks like an over-engineering at the moment. ***)
 
-  Definition disclose_fsbk (fsbk: fspecbodyk): fspecbody :=
-    mk_specbody (disclose fsbk) fsbk.(fsbk_body)
+  Definition disclose_fsb (fsb: fspecbody): fspecbody :=
+    mk_specbody (disclose fsb) (fun '(argh, is_k) => if is_k
+                                                     then trigger (Choose _) (*** YJ: We may generalize this to APC ***)
+                                                     else fsb.(fsb_body) argh)
   .
 
   Definition disclose_smodsem (ms: SModSem.t): SModSem.t := {|
