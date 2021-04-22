@@ -42,8 +42,10 @@ Section SIMMODSEM.
       (<<TGT: mrps_tgt0 = (ε, tt↑)>>)
   .
 
-  Theorem correct: ModSemPair.sim MutG1.GSem MutG0.GSem.
+  Theorem correct: ModPair.sim MutG1.G MutG0.G.
   Proof.
+    econs; ss; [|admit ""].
+    i. eapply adequacy_lift.
     econstructor 1 with (wf:=wf); et; ss.
     econs; ss. init. unfold ccall.
     harg_tac. des; clarify. unfold gF, ccall. anytac. ss.

@@ -176,12 +176,21 @@ Section CANCEL.
 
   Let sk: Sk.t := fold_right Sk.add Sk.unit (List.map SMod.sk mds).
   Let skenv: SkEnv.t := Sk.load_skenv sk.
-  Let mss: list SModSem.t := (List.map ((flip SMod.get_modsem) skenv) mds).
-  Let sbtb: list (gname * fspecbody) := (List.flat_map (SModSem.fnsems) mss).
-  Let stb: list (gname * fspec) := List.map (fun '(fn, fs) => (fn, fs.(fsb_fspec))) sbtb.
+
+  Let _mss: SkEnv.t -> list SModSem.t := fun skenv => (List.map ((flip SMod.get_modsem) skenv) mds).
+  Let _sbtb: SkEnv.t -> list (gname * fspecbody) := fun skenv => (List.flat_map (SModSem.fnsems) (_mss skenv)).
+  Let _stb: SkEnv.t -> list (gname * fspec) := fun skenv => List.map (fun '(fn, fs) => (fn, fs.(fsb_fspec))) (_sbtb skenv).
+
+  Let mss: list SModSem.t := _mss skenv.
+  Let sbtb: list (gname * fspecbody) := _sbtb skenv.
+  Let stb: list (gname * fspec) := _stb skenv.
+
+  (* Let mss: list SModSem.t := (List.map ((flip SMod.get_modsem) skenv) mds). *)
+  (* Let sbtb: list (gname * fspecbody) := (List.flat_map (SModSem.fnsems) mss). *)
+  (* Let stb: list (gname * fspec) := List.map (fun '(fn, fs) => (fn, fs.(fsb_fspec))) sbtb. *)
 
   Let mds_mid: list Mod.t := List.map (SMod.to_mid) mds.
-  Let mds_tgt: list Mod.t := List.map (SMod.to_tgt stb) mds.
+  Let mds_tgt: list Mod.t := List.map (SMod.to_tgt _stb) mds.
 
   Let ms_mid: ModSemL.t := ModL.enclose (Mod.add_list mds_mid).
   Let ms_tgt: ModSemL.t := ModL.enclose (Mod.add_list mds_tgt).
@@ -200,7 +209,7 @@ Section CANCEL.
   Local Opaque rsum.
 
   Let WF0: List.map fst sbtb = List.map fst stb.
-  Proof. unfold stb. rewrite List.map_map. apply List.map_ext. i. des_ifs. Qed.
+  Proof. unfold stb, _stb. rewrite List.map_map. apply List.map_ext. i. des_ifs. Qed.
 
 
   (* Ltac grind := repeat (f_equiv; try apply func_ext; ii; try (des_ifs; check_safe)). *)
@@ -480,8 +489,8 @@ Section CANCEL.
         assert(IN: In fn (List.map fst ms_mid.(ModSemL.fnsems))).
         { rewrite in_map_iff. esplits; et. ss. }
         unfold ms_mid in IN. unfold mds_mid in IN. unfold SMod.to_mid in IN.
-        erewrite SMod.transl_fnsems_stable with (tr1:=(fun_to_tgt stb)) (mr1:=SModSem.initial_mr) in IN.
-        replace (SMod.transl (fun_to_tgt stb) SModSem.initial_mr) with (SMod.to_tgt stb) in IN by refl.
+        erewrite SMod.transl_fnsems_stable with (tr1:=(fun_to_tgt ∘ _stb)) (mr1:=SModSem.initial_mr) in IN.
+        replace (SMod.transl (fun_to_tgt ∘ _stb) SModSem.initial_mr) with (SMod.to_tgt _stb) in IN by refl.
         fold mds_tgt in IN. fold ms_tgt in IN.
         rewrite in_map_iff in IN. des. subst.
         eapply find_none in FINDFT0; et.
@@ -589,8 +598,8 @@ Section CANCEL.
         assert(IN: In fn (List.map fst ms_mid.(ModSemL.fnsems))).
         { rewrite in_map_iff. esplits; et. ss. }
         unfold ms_mid in IN. unfold mds_mid in IN. unfold SMod.to_mid in IN.
-        erewrite SMod.transl_fnsems_stable with (tr1:=(fun_to_tgt stb)) (mr1:=SModSem.initial_mr) in IN.
-        replace (SMod.transl (fun_to_tgt stb) SModSem.initial_mr) with (SMod.to_tgt stb) in IN by refl.
+        erewrite SMod.transl_fnsems_stable with (tr1:=(fun_to_tgt ∘ _stb)) (mr1:=SModSem.initial_mr) in IN.
+        replace (SMod.transl (fun_to_tgt ∘ _stb) SModSem.initial_mr) with (SMod.to_tgt _stb) in IN by refl.
         fold mds_tgt in IN. fold ms_tgt in IN.
         rewrite in_map_iff in IN. des. subst.
         eapply find_none in FINDFT0; et.
@@ -704,17 +713,17 @@ Section CANCEL.
 
   Let MAINF: List.find (fun '(_fn, _) => dec "main" _fn) stb = Some ("main", (mk_simple (fun (_: unit) => (mainpre, top2)))).
   Proof.
-    unfold stb.
+    unfold stb, _stb.
     rewrite find_map. uo. unfold compose. des_ifs.
     - eapply find_some in Heq. des. des_sumbool. subst. repeat f_equal.
       assert(In ("main", (mk_specbody (mk_simple (fun (_: unit) => (mainpre, top2))) mainbody)) sbtb).
-      { unfold sbtb, mss. eapply in_flat_map. esplits; et.
+      { unfold sbtb, _sbtb, mss, _mss. eapply in_flat_map. esplits; et.
         { rewrite in_map_iff. esplits; et. }
         ss. et.
       }
       admit "ez - uniqueness of fname".
     - eapply find_none in Heq; cycle 1.
-      { unfold sbtb, mss. eapply in_flat_map. esplits; et.
+      { unfold sbtb, _sbtb, mss, _mss. eapply in_flat_map. esplits; et.
         { rewrite in_map_iff. esplits; et. }
         ss. et.
       }

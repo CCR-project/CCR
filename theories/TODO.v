@@ -14,10 +14,18 @@ Definition unbool (v: val): option bool :=
   | _ => None
   end.
 
+Definition unblk (v: val): option block :=
+  match v with
+  | Vptr b ofs =>
+    if (Z.eq_dec ofs 0) then Some b else None
+  | _ => None
+  end.
+
 Variant val_type: Set :=
 | Tint
 | Tbool
 | Tptr
+| Tblk
 | Tuntyped
 .
 
@@ -26,6 +34,7 @@ Definition val_type_sem (t: val_type): Set :=
   | Tint => Z
   | Tbool => bool
   | Tptr => (block * ptrofs)
+  | Tblk => block
   | Tuptyped => val
   end.
 
@@ -41,6 +50,7 @@ Definition parg (t: val_type) (v: val): option (val_type_sem t) :=
   | Tint => unint v
   | Tbool => unbool v
   | Tptr => unptr v
+  | Tblk => unblk v
   | Tuntyped => Some v
   end.
 

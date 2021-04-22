@@ -349,7 +349,7 @@ Module Construction (P: PARAM).
 
   Let alpha_d: (f + 3 + d <= alpha)%ord.
   Proof.
-    unfold alpha. 
+    unfold alpha.
     eapply OrdArith.add_base_l.
     (* etrans; [eapply OrdArith.add_base_l|]. *)
     (* etrans; [eapply OrdArith.add_base_r|]. *)
@@ -394,7 +394,7 @@ Module Construction (P: PARAM).
     eapply Ord.le_lt_lt; cycle 1.
     { instantiate (1:=((f + 3 + d + e) * 1)%ord).
       eapply OrdArith.lt_mult_r.
-      - rewrite <- kappa_inaccessible_omega. eapply Ord.omega_upperbound.
+      - eauto with ord_kappa.
       - rewrite <- T. replace (Ord.from_nat 1) with (Ord.S Ord.O) by ss. eapply Ord.S_pos. }
     eapply mult_le_le.
     - eapply Ord.O_is_O.
@@ -450,9 +450,7 @@ Module Construction (P: PARAM).
     rewrite <- (OrdArith.mult_1_r) at 1.
     eapply mult_le_le; try refl.
     eapply Ord.lt_le.
-    rewrite <- kappa_inaccessible_omega.
-    replace (Ord.S Ord.O) with (Ord.from_nat 1) by ss.
-    eapply Ord.omega_upperbound.
+    eauto with ord_kappa.
   Qed.
 
   Theorem my_thm2
@@ -630,7 +628,7 @@ Section CANCEL.
 
   Ltac hred :=
     repeat (try rewrite interp_hCallE_mid_bind; try rewrite interp_hCallE_mid_tau; try rewrite interp_hCallE_mid_ret; try rewrite interp_hCallE_mid_eventE;
-            try rewrite interp_hCallE_mid_hCallE           
+            try rewrite interp_hCallE_mid_hCallE
            ).
 
   Let adequacy_type_aux__APC:

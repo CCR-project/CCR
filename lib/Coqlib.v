@@ -1419,3 +1419,12 @@ Notation "☃ y" := (Seal.sealing _ y) (at level 60, only printing).
 Goal forall x, 5 + 5 = x. i. seal 5. seal x. Fail progress cbn. unseal key0. unseal 5. progress cbn. Abort.
 Goal forall x y z, x + y = z. i. seal x. seal y. unseal y. unseal key. Abort.
 Goal forall x y z, x + y = z. i. seal_with "a" x. seal_with "b" y. unseal "a". unseal "b". Abort.
+
+
+Definition  __shelve__ (A: Type) := A.
+
+Ltac shelve_goal :=
+  match goal with
+  | [|- __shelve__ _] => shelve
+  | _ => idtac
+  end.

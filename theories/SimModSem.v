@@ -1044,7 +1044,9 @@ Section SIMMOD.
    Variable (md_src md_tgt: Mod.t).
    Inductive sim: Prop := mk {
      sim_modsem:
-       forall skenv, <<SIM: ModSemLPair.sim (md_src.(Mod.get_modsem) skenv) (md_tgt.(Mod.get_modsem) skenv)>>;
+       forall skenv
+              (SKINCL: Sk.incl md_tgt.(Mod.sk) skenv)
+              (SKWF: SkEnv.wf skenv), <<SIM: ModSemLPair.sim (md_src.(Mod.get_modsem) skenv) (md_tgt.(Mod.get_modsem) skenv)>>;
      sim_sk: <<SIM: md_src.(Mod.sk) = md_tgt.(Mod.sk)>>;
      sim_wf:
        forall skenv (WF: ModSemL.wf (md_src.(Mod.get_modsem) skenv)), <<WF: ModSemL.wf (md_tgt.(Mod.get_modsem) skenv)>>;
@@ -1064,6 +1066,7 @@ Section ADQ.
   Proof.
     inv SIM.
     econs; eauto.
+    admit "Fix ModSemLPair".
   Qed.
 
 End ADQ.
@@ -1233,7 +1236,9 @@ ys + (xs + src)
            + admit "ModSemL wf".
            + admit "ModSemL wf".
            + eapply adequacy_lift. eapply ModSemPair.self_sim_mod. r. admit "ModSemL wf". }
-       { eapply SIM. }
+       { eapply SIM.
+         admit "ModLPair.adequacy_local_closed".
+         admit "ModLPair.adequacy_local_closed". }
      }
      { ss. red. f_equal. eapply SIM. }
      { ii. red. ss. admit "ModSemL wf". }

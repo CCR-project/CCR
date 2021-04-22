@@ -131,7 +131,7 @@ Section PROOF.
   |}
   .
 
-  Definition Echo: Mod.t := (SMod.to_tgt (MemStb ++ StackStb)) SEcho.
+  Definition Echo: Mod.t := (SMod.to_tgt (fun _ => MemStb ++ StackStb)) SEcho.
 
 End PROOF.
 Global Hint Unfold EchoStb: stb.

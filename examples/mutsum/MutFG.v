@@ -26,9 +26,9 @@ Section PROOF.
   Definition Σ: GRA.t := fun _ => of_RA.t RA.empty.
   Local Existing Instance Σ.
 
-  Definition FGImp: ModL.t := Mod.add_list [MutMain0.main ; MutFImp.F ; MutGImp.G].
+  Definition FGImp: ModL.t := Mod.add_list [MutMain0.Main ; MutFImp.F ; MutGImp.G].
 
-  Definition FG0: ModL.t := Mod.add_list [MutMain0.main ; MutF0.F ; MutG0.G].
+  Definition FG0: ModL.t := Mod.add_list [MutMain0.Main ; MutF0.F ; MutG0.G].
 
   Definition FG1: ModL.t := Mod.add_list [MutMain1.Main ; MutF1.F ; MutG1.G].
 
@@ -69,15 +69,9 @@ Section PROOF.
     SimModSem.refines FG0 FG1.
   Proof.
     eapply SimModSem.adequacy_local_list. econs; [|econs; [|econs; ss]].
-    - split; auto.
-      + ii. ss. eapply SimModSem.adequacy_lift. eapply MutMain01proof.correct.
-      + i. ss. split; ss; repeat econs; eauto.
-    - split; auto.
-      + ii. ss. eapply SimModSem.adequacy_lift. eapply MutF01proof.correct.
-      + i. ss. split; ss; repeat econs; eauto.
-    - split; auto.
-      + ii. ss. eapply SimModSem.adequacy_lift. eapply MutG01proof.correct.
-      + i. ss. split; ss; repeat econs; eauto.
+    - eapply MutMain01proof.correct.
+    - eapply MutF01proof.correct.
+    - eapply MutG01proof.correct.
   Qed.
 
   Lemma FG12_correct:

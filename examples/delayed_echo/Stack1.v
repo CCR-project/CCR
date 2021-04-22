@@ -99,7 +99,7 @@ Section PROOF.
   |}
   .
 
-  Definition Stack: Mod.t := (SMod.to_tgt (MemStb ++ StackStb)) SStack.
+  Definition Stack: Mod.t := (SMod.to_tgt (fun _ => MemStb ++ StackStb)) SStack.
 
 End PROOF.
 Global Hint Unfold StackStb: stb.

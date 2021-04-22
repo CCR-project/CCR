@@ -48,7 +48,7 @@ Section MAIN.
   .
 
   Definition SMain: SMod.t := SMod.main mainpre mainbody.
-  Definition Main: Mod.t := SMod.to_tgt (ClientStb++MainStb) SMain.
+  Definition Main: Mod.t := SMod.to_tgt (fun _ => ClientStb++MainStb) SMain.
   Definition SMainSem: SModSem.t := SModSem.main mainpre mainbody.
   Definition MainSem: ModSem.t := SModSem.to_tgt (ClientStb++MainStb) SMainSem.
 
