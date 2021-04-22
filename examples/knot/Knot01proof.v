@@ -155,41 +155,33 @@ Section SIMMODSEM.
     { init. unfold recF, ccall. harg_tac. iRefresh.
       destruct x as [f n]. ss. des. subst.
       iRefresh. iDestruct PRE. iPure A. des; clarify.
-      iDestruct SEP.
-      { iExploitP (@knot_frag_unique _ _ f' (Some f)); ss. }
-      iDestruct SEP. rewrite FIND1. eapply Any.upcast_inj in A. des; clarify. steps.
-      rewrite Any.upcast_downcast in _UNWRAPN. clarify. astart 2.
-      iExploitP (@knot_ra_merge _ _ f' (Some f)). i. subst.
-      iDestruct A0. iDestruct A0. iPure A.
-      hexploit A; eauto. i. des. clarify. iRefresh. steps.
-      acall_tac (blk1, 0%Z, Vptr fb 0) (ord_pure 0) PRE SEP A0.
-      { eapply MemStb_incl. ss. stb_tac. ss. }
-      { splits; ss. iRefresh. iSplitL A0; ss.
-        iSplitR A0; ss. unfold knot_var in *. rewrite FIND1 in *. iApply A0. }
-      { splits; ss. eauto with ord_step. }
-      { unfold wf. esplits; eauto. iRefresh.
-        iLeft. iApply PRE. }
-      ss. des. clarify. iRefresh. iDestruct POST. iDestruct SEP0; cycle 1.
-      { iDestruct SEP0. iExploitP (@knot_full_unique _ _ f' (Some f)); ss. }
-      iExploitP (@knot_ra_merge _ _ (Some f) f'). i. subst.
-      steps. iPure A0. eapply Any.upcast_inj in A0. des; clarify.
-      rewrite Any.upcast_downcast in _UNWRAPN. clarify.
-      steps. rewrite FN. steps. rewrite FIND0. steps.
-      iMerge POST SEP. steps.
-      acall_tac n (ord_pure (2 * n)) POST (@URA.unit Σ) SEP0; ss.
-      { eapply FunStb_incl. eauto. }
-      { splits; ss. iRefresh. iSplitR SEP0; ss.
+      eapply Any.upcast_inj in A. des; clarify. steps.
+      rewrite Any.upcast_downcast in _UNWRAPN. clarify. astart 1.
+      assert (f' = Some f); subst.
+      { hexploit knot_ra_merge; et. intro T. iSpecialize T SIM. iSpecialize T PRE. iPure T. auto. }
+      hexploit SOME; eauto. clear SOME. i. des. clarify. steps.
+      rewrite Any.upcast_downcast. ss. steps. rewrite FN. ss. steps.
+      hexploit (SKINCL "rec"); ss; eauto. i. des. rewrite H0. ss. steps.
+      eapply APC_step_clo with (fn0:=fn) (args:=[Vptr blk 0; Vint (Z.of_nat n)]).
+      { try by
+            eapply Ord.eq_lt_lt;
+          [ symmetry; eapply OrdArith.add_from_nat
+          | eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r;
+            eapply Nat.lt_succ_diag_r ]. }
+      { eauto. }
+      { ss. }
+      { eapply OrdArith.lt_from_nat; eapply Nat.lt_succ_diag_r. }
+      i. subst args'. iRefresh.
+      hcall_tac n (ord_pure (2 * n)) SIM (@URA.unit Σ) PRE; ss.
+      { splits; ss. iRefresh. iSplitR PRE; ss.
         red. red. esplits; eauto.
         { eapply SKWF. eauto. }
         { eapply RecStb_incl. des_ifs. }
       }
       { splits; ss. eauto with ord_step. }
-      { esplits; eauto. iRefresh. iDestruct POST.
-        iRight. iSplitL A0; et. iExists (Vptr fb 0). iSplitL POST; ss.
-        unfold knot_var. rewrite FIND1. iApply POST.
-      }
-      ss. des. clarify. iRefresh. iDestruct POST0. iPure POST0.
-      eapply Any.upcast_inj in POST0. des; clarify.
+      { esplits; eauto. i. clarify. esplits; eauto. }
+      des. clarify. iRefresh. iDestruct POST. iPure POST.
+      eapply Any.upcast_inj in POST. des; clarify.
       steps. rewrite Any.upcast_downcast in _UNWRAPN. clarify.
       astop. force_l. eexists.
       hret_tac SEP A0; ss.

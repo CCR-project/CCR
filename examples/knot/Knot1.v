@@ -37,10 +37,11 @@ Section KNOT.
       mk_simple (X:=(nat -> nat))
                 (fun f => (
                      (fun varg o =>
-                        ⌜exists fn fb,
+                        ⌜exists fn fb (ftsp: ftspec (list val) val),
                             varg = [Vptr fb 0]↑ /\ o = ord_pure 1 /\
                             skenv.(SkEnv.blk2id) fb = Some fn /\
-                            List.find (fun '(_fn, _) => dec fn _fn) (FunStb skenv) = Some (fn, fun_gen RecStb skenv f)⌝ ** Exists old, Own (GRA.embed (knot_frag old))),
+                            List.find (fun '(_fn, _) => dec fn _fn) (FunStb skenv) = Some (fn, mk_fspec ftsp) /\
+                            ftspec_weaker (fun_gen RecStb skenv f) ftsp⌝ ** Exists old, Own (GRA.embed (knot_frag old))),
                      (fun vret => ⌜exists fn fb,
                             vret = (Vptr fb 0)↑ /\
                             skenv.(SkEnv.blk2id) fb = Some fn /\

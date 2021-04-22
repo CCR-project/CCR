@@ -179,7 +179,7 @@ Section HEADER.
   Section SKENV.
     Variable skenv: SkEnv.t.
 
-    Definition fun_gen (f: nat -> nat): fspec :=
+    Definition fun_gen (f: nat -> nat): ftspec (list val) (val) :=
       mk_simple (X:=nat)
                 (fun n => (
                      (fun varg o =>

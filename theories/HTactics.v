@@ -544,8 +544,10 @@ Section HLEMMAS.
   Context `{Σ: GRA.t}.
   Local Opaque GRA.to_URA.
 
-  Lemma hcall_clo_ord_weaken (o_new: Ord.t) Y Z (ftsp1: ftspec Y Z) (x: ftsp1.(X)) (o: ord)
+  Lemma hcall_clo_ord_weaken (o_new: Ord.t)
+        Y Z (ftsp1: ftspec Y Z)
         (mr_src1 fr_src1 rarg_src: Σ)
+        (o: ord) (x: ftsp1.(X))
         r rg (n: nat) mr_src0 mp_src0 fr_src0
         (ftsp0: ftspec Y Z)
         mrs_tgt frs_tgt k_tgt k_src
@@ -603,8 +605,9 @@ Section HLEMMAS.
     ired_both; ss. et.
   Qed.
 
-  Lemma hcall_clo_weaken Y Z (ftsp1: ftspec Y Z) (x: ftsp1.(X)) (o: ord)
+  Lemma hcall_clo_weaken Y Z (ftsp1: ftspec Y Z)
         (mr_src1 fr_src1 rarg_src: Σ)
+        (o: ord) (x: __shelve__ ftsp1.(X))
         r rg (n: nat) mr_src0 mp_src0 fr_src0
         (ftsp0: ftspec Y Z)
         mrs_tgt frs_tgt k_tgt k_src
@@ -1016,6 +1019,32 @@ Ltac hcall_tac x o MR_SRC1 FR_SRC1 RARG_SRC :=
   shelve_goal; [tac0|eapply OrdArith.lt_from_nat; lia|..|tac1]
 .
 
+Ltac hcall_tac_weaken fsp x o MR_SRC1 FR_SRC1 RARG_SRC :=
+  let mr_src1 := r_gather MR_SRC1 in
+  let fr_src1 := r_gather FR_SRC1 in
+  let rarg_src := r_gather RARG_SRC in
+  (* let tac0 := etrans; [on_gwf ltac:(fun GWF => apply GWF)|eapply URA.extends_updatable; r_equalize; r_solve] in *)
+  (* let tac0 := idtac in *)
+  let tac0 := etrans; [etrans; [|on_gwf ltac:(fun GWF => apply GWF)]|]; eapply URA.extends_updatable; r_equalize; r_solve; fail in
+  let tac1 := (on_gwf ltac:(fun H => clear H);
+               let WF := fresh "WF" in
+               let tmp := fresh "_tmp_" in
+               let GWF := fresh "GWF" in
+               intros ? ? ? ? ? WF; cbn in WF; desH WF; subst;
+               esplits; ss; et; intros tmp ?; assert(GWF: ☀) by (split; [refl|exact tmp]); clear tmp; iRefresh; iClears') in
+  prep;
+  (match x with
+   | ltac_wild =>
+     match o with
+     | ltac_wild => eapply (@hcall_clo _ _ _ fsp mr_src1 fr_src1 rarg_src)
+     | _ => eapply (@hcall_clo _ _ _ fsp mr_src1 fr_src1 rarg_src o)
+     end
+   | _ => eapply (@hcall_clo_weaken _ _ _ fsp mr_src1 fr_src1 rarg_src o x)
+   end);
+  shelve_goal; [|tac0|eapply OrdArith.lt_from_nat; lia|..|tac1]
+.
+
+
 Ltac hret_tac MR_SRC RT_SRC :=
   let mr_src1 := r_gather MR_SRC in
   let fr_src1 := r_gather RT_SRC in
@@ -1052,6 +1081,12 @@ Ltac acall_tac A0 A1 A2 A3 A4 :=
   match goal with
   | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, _) (_, trigger (Call ?fn (Any.upcast ?args)) >>= _)) ] =>
     astep fn args; [..|hcall_tac A0 A1 A2 A3 A4]
+  end.
+
+Ltac acall_tac_weaken fsp A0 A1 A2 A3 A4 :=
+  match goal with
+  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, _) (_, trigger (Call ?fn (Any.upcast ?args)) >>= _)) ] =>
+    astep fn args; [..|hcall_tac_weaken fsp A0 A1 A2 A3 A4]
   end.
 
 Global Opaque _APC APC interp interp_hCallE_tgt.
