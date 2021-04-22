@@ -293,6 +293,23 @@ End AUX.
 
 
 
+Global Program Instance Forall2_Reflexive `{Reflexive A R}: Reflexive (Forall2 R).
+Next Obligation. induction x; ii; ss. econs; ss. Qed.
+
+Global Program Instance Forall2_Transitive `{Transitive A R}: Transitive (Forall2 R).
+Next Obligation.
+  revert_until x. induction x; ii; ss.
+  { inv H0. inv H1. ss. }
+  inv H0. inv H1. econs; ss; et.
+Qed.
+
+Global Program Instance Forall2_PreOrder `{PreOrder A R}: PreOrder (Forall2 R).
+
+
+
+
+
+
 
 
 
@@ -332,15 +349,6 @@ Section ADQ.
   Proof.
     admit "somehow".
   Qed.
-
-  (* Lemma my_lemma2 *)
-  (*       umd *)
-  (*       (IN: In umd umds) *)
-  (*   : *)
-  (*     ModPair.sim (UMod.to_mod umd) (SMod.to_tgt gstb (UMod.to_smod umd)) *)
-  (* . *)
-  (* Proof. *)
-  (* Qed. *)
 
   Lemma sk_link_eq: sk_link = (fold_right Sk.add Sk.unit (List.map SMod.sk
                                           (kmds ++ List.map UMod.to_smod umds))).
@@ -391,25 +399,6 @@ Section ADQ.
   (* Hypothesis WFR: URA.wf (entry_r ⋅ rsum (ModSemL.initial_r_state ms_tgt)). *)
 
   Hypothesis MAINM: In (SMod.main mainpre mainbody) kmds.
-
-  Global Program Instance Forall2_Reflexive `{Reflexive A R}: Reflexive (Forall2 R).
-  Next Obligation. induction x; ii; ss. econs; ss. Qed.
-
-  Global Program Instance Forall2_Transitive `{Transitive A R}: Transitive (Forall2 R).
-  Next Obligation.
-    revert_until x. induction x; ii; ss.
-    { inv H0. inv H1. ss. }
-    inv H0. inv H1. econs; ss; et.
-  Qed.
-
-  Global Program Instance Forall2_PreOrder `{PreOrder A R}: PreOrder (Forall2 R).
-
-  (* Lemma Forall2_eq: forall A (xs0 xs1: list A), Forall2 eq xs0 xs1 <-> xs0 = xs1. *)
-  (* Proof. *)
-  (*   split; i. *)
-  (*   - induction H; ii; ss. subst; ss. *)
-  (*   - subst. induction xs1; ss. econs; ss. *)
-  (* Qed. *)
 
   Lemma my_lemma2
         :
