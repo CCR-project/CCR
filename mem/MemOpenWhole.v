@@ -26,7 +26,7 @@ Notation "(∘)" := (fun g f => g ∘ f) (at level 40, left associativity).
 
 Section AUX.
   Context `{Σ: GRA.t}.
-  Definition fspec_trivial: fspec := (mk_simple (fun (_: unit) => (fun _ _ => ⌜True⌝, fun _ => ⌜True⌝))).
+  Definition fspec_trivial: fspec := (mk_simple (fun (_: unit) => (fun _ o => ⌜o = ord_top⌝, fun _ => ⌜True⌝))).
 
 End AUX.
 
@@ -71,7 +71,8 @@ Section UMODSEM.
   .
 
   Definition transl_itr: (callE +' pE +' eventE) ~> itree (hCallE +' pE +' eventE) :=
-    embed ∘ transl_event
+    (* embed ∘ transl_event *) (*** <- it works but it is not handy ***)
+    fun _ e => trigger (transl_event e)
   .
 
   Definition transl_fun: (list val -> itree (callE +' pE +' eventE) val) -> fspecbody :=
@@ -340,6 +341,192 @@ Section ADQ.
     (flat_map (List.map (map_snd fsb_fspec) ∘ SModSem.fnsems) kmss)
       ++ (flat_map (List.map (map_snd (fun _ => fspec_trivial)) ∘ UModSem.fnsems) umss).
 
+  Require Import HTactics YPM.
+
+  Lemma resum_itr_bind
+        E F R S
+        `{E -< F}
+        (itr: itree E R) (ktr: ktree E R S)
+    :
+      resum_itr (F:=F) (itr >>= ktr) = resum_itr itr >>= (fun r => resum_itr (ktr r))
+  .
+  Proof. unfold resum_itr. grind. Qed.
+
+  Lemma resum_itr_ret
+        E F R
+        `{E -< F}
+        (r: R)
+    :
+      resum_itr (F:=F) (Ret r) = Ret r
+  .
+  Proof. unfold resum_itr. grind. Qed.
+
+  Lemma resum_itr_tau
+        E F R
+        `{E -< F}
+        (itr: itree E R)
+    :
+      resum_itr (F:=F) (tau;; itr) = tau;; resum_itr itr
+  .
+  Proof. unfold resum_itr. grind. Qed.
+
+  Lemma transl_event_pE
+        T (e: pE T)
+    :
+      (UModSem.transl_event (|e|)) = (|e|)%sum
+  .
+  Proof. grind. Qed.
+
+(********** TODO: remove below Notation after the fix in HTactics ***************)
+Notation "wf n '------------------------------------------------------------------' src0 tgt0 '------------------------------------------------------------------' src1 tgt1 '------------------------------------------------------------------' src2 tgt2"
+  :=
+    (gpaco6 (_sim_itree wf) _ _ _ _ _ _ n ((src0, src1), src2) ((tgt0, tgt1), tgt2))
+      (at level 60,
+       format "wf  n '//' '------------------------------------------------------------------' '//' src0 '//' tgt0 '//' '------------------------------------------------------------------' '//' src1 '//' tgt1 '//' '------------------------------------------------------------------' '//' src2 '//' '//' '//' tgt2 '//' ").
+
+  (* Lemma resub_l *)
+  (*       (E1 E2: Type -> Type) *)
+  (*       `{E1 -< E} *)
+  (*       `{E2 -< E} *)
+  (*       T (e: E1 T) *)
+  (*   : *)
+  (*     subevent (F:=E) _ (@inl1 E1 E2 _ e)%sum = subevent _ e *)
+  (* . *)
+  (* Proof. refl. Qed. *)
+
+  (* Lemma resub_r *)
+  (*       (E1 E2: Type -> Type) *)
+  (*       `{E1 -< E} *)
+  (*       `{E2 -< E} *)
+  (*       T (e: E2 T) *)
+  (*   : *)
+  (*     (* subevent (F:=E) _ (@inr1 E1 E2 _ e)%sum = subevent _ e *) *)
+  (*     subevent _ (@inr1 E1 E2 _ e)%sum = subevent _ e *)
+  (* . *)
+  (* Proof. refl. Qed. *)
+
+  Lemma my_lemma1_aux
+        mrs ktr arg
+    :
+      sim_itree (fun '(x, y) => x = y) 100%nat
+                (mrs, ε, fun_to_tgt gstb (UModSem.transl_fun ktr) arg)
+                (mrs, ε, resum_itr (cfun ktr arg))
+  .
+  Proof.
+    destruct mrs as [mr st].
+    ginit.
+    revert_until gstb. gcofix CIH. i.
+    unfold cfun. unfold UModSem.transl_fun. unfold fun_to_tgt. cbn.
+    unfold HoareFun, put, forge, checkWf, discard. ss.
+    steps. des. subst.
+    Ltac red_resum := repeat (try rewrite resum_itr_bind; try rewrite resum_itr_tau; try rewrite resum_itr_ret).
+    red_resum.
+    rewrite Any.upcast_downcast. ss.
+    red_resum.
+    steps.
+    guclo lordC_spec. econs.
+    { instantiate (1:=(45 + 45)%ord). rewrite <- OrdArith.add_from_nat. eapply OrdArith.le_from_nat. lia. }
+    red_resum.
+    guclo lbindC_spec. econs; cycle 1.
+    - instantiate (1:=fun '(mr0, st0, fr0) '(mr1, st1, fr1) y0 y1 => mr0 = mr1 /\ st0 = st1 /\ y0 = y1).
+      i. ss. des_ifs. des; subst.
+      red_resum.
+      force_l. esplits. force_l. eexists (_, _). steps. force_l. { refl. } steps.
+      force_l. esplits. force_l. { esplits; ss; et. } steps.
+      force_l. esplits. force_l. { rewrite URA.unit_id. refl. } steps.
+    - unfold body_to_tgt. steps.
+      abstr (ktr x) itr.
+      clear _ASSUME _ASSUME0. des_u.
+      revert itr. gcofix CIH0. i.
+      ides itr.
+      { rewrite unfold_interp. cbn. steps. red_resum. gstep. econs; eauto. }
+      { rewrite unfold_interp. cbn. red_resum. steps. red_resum. steps. gbase. eapply CIH0. }
+      destruct e; cycle 1.
+      {
+        rewrite unfold_interp. steps.
+        destruct s; ss.
+        { destruct p; ss.
+          - unfold UModSem.transl_itr at 2.
+            Local Opaque subevent.
+            unfold resum_itr. rewrite transl_event_pE.
+            (* match goal with | [ |- context[trigger ?x] ] => idtac x; let ty := type of x in idtac ty end. *)
+            (* erewrite resub_r with (E:=hCallE +' pE +' eventE); [|typeclasses eauto|typeclasses eauto]. *)
+            erewrite resub_l.
+            (@subevent (sum1 E1 E2) F (@ReSum_sum (forall _ : Type, Type) IFun sum1 Case_sum1 E1 E2 F H H0) T (@inl1 E1 E2 T e))
+            (@subevent (sum1 pE eventE) (sum1 hCallE (sum1 pE eventE))
+                   (@ReSum_inr (forall _ : Type, Type) IFun sum1 Cat_IFun Inr_sum1 (sum1 pE eventE) (sum1 pE eventE) hCallE
+                      (@ReSum_id (forall _ : Type, Type) IFun Id_IFun (sum1 pE eventE))) unit (@inl1 pE eventE unit (PPut p)))
+
+            (@subevent (sum1 E1 E2) (sum1 E1 E2) (@ReSum_id (forall _ : Type, Type) IFun Id_IFun (sum1 E1 E2)) T (@inl1 E1 E2 T e))
+            erewrite resub_l with (E:=hCallE +' pE +' eventE); [|typeclasses eauto|typeclasses eauto].
+            rewrite <- bind_trigger.
+            erewrite resub_l with (E:=hCallE +' pE +' eventE); [|typeclasses eauto|typeclasses eauto].
+            set (inl1 (PPut p)) as mye.
+            erewrite resub_r with (E:=hCallE +' pE +' eventE); [|typeclasses eauto|typeclasses eauto].
+            { typeclasses eauto. }
+            Set Printing All.
+            rewrite embed_r_gen with (e:=mye) (E2:=pE).
+            rewrite Hoareproof0.embed_r_gen with (e:=PPut p).
+UModSem.transl_itr : forall [T : Type], (callE +' pE +' eventE) T -> itree (hCallE +' pE +' eventE) T
+            cbn.
+            replace (trigger (UModSem.transl_event (|PPut p|))) with (trigger (|PPut p|)%sum).
+            rewrite ! unfold_interp. cbn.
+            (* replace ((bimap (id_ pE) (id_ eventE) >>> inr_) unit (PPut p|)%sum) with (PPut p). *)
+            unfold bimap, Bimap_Coproduct. unfold cat, Cat_IFun. cbn. unfold id_, Id_IFun. cbn.
+            unfold inr_, inl_, Inr_sum1, Inl_sum1.
+            (trigger (|PPut p|)%sum)
+            match goal with
+            | [ |- context[trigger ?x] ] => idtac x; replace (trigger x) with (trigger (PPut p)) 
+            end.
+            Set Printing All.
+            rewrite interp_tgt_triggerp.
+            replace (inr_ unit (inl_ unit (PPut p))) with (inr_ unit (inl_ unit (PPut p))).
+            (subevent _ (PPut p)).
+            steps.
+            replace (trigger (inr_ ()%type (inl_ ()%type (PPut p)))) with (trigger (PPut p)).
+            ired_both.
+            steps.
+            unfold embed, Embeddable_forall. cbn.
+            unfold embed.
+        }
+        unfold interp_hCallE_tgt. try rewrite ! unfold_interp; cbn; myred.
+        destruct s; ss.
+        {
+          destruct st_src0 as [rst_src0 pst_src0]; ss. destruct st_tgt0 as [rst_tgt0 pst_tgt0]; ss.
+          destruct p; ss.
+          - steps. myred. steps. instantiate (1:=100). myred. steps. instantiate (1:=100). gbase. eapply CIH0; ss; et.
+          - steps. myred. steps. instantiate (1:=100). myred. steps. instantiate (1:=100). gbase. eapply CIH0; ss; et.
+        }
+        { dependent destruction e.
+          - steps. myred. steps. unshelve esplits; et. instantiate (1:=100). myred. steps. instantiate (1:=100).
+            myred. steps. instantiate (1:=100). gbase. eapply CIH0; ss; et.
+          - steps. myred. steps. unshelve esplits; et. instantiate (1:=100). myred. steps. instantiate (1:=100).
+            myred. steps. instantiate (1:=100). gbase. eapply CIH0; ss; et.
+          - steps. myred. steps. unshelve esplits; et. instantiate (1:=100). myred. steps. instantiate (1:=100).
+            gbase. eapply CIH0; ss; et.
+        }
+      }
+      dependent destruction h.
+
+
+      clear CIH0 CIH1.
+      +
+    TT
+    (* repeat rewrite URA.unit_idl in *. repeat rewrite URA.unit_id in *. iRefresh. *)
+    r in _ASSUME0.
+  Qed.
+
+  Lemma my_lemma1_aux
+        s i
+    :
+      sim_fnsem (fun '(x, y) => x = y) (s, fun_to_tgt gstb (UModSem.transl_fun i)) (s, resum_itr (T:=_) ∘ cfun i)
+  .
+  Proof.
+    rr. split; ss. r.
+    ii. subst. cbn. rename y into arg. rename i into f. rename s into fn.
+    revert s i. pcofix CIH.
+  Qed.
+
   Lemma my_lemma1
         umd
         (IN: In umd umds)
@@ -347,7 +534,19 @@ Section ADQ.
       ModPair.sim (SMod.to_tgt gstb (UMod.to_smod umd)) (UMod.to_mod umd)
   .
   Proof.
-    admit "somehow".
+    econs; ss; cycle 1.
+    { admit "ez - wf". }
+    i. r. eapply adequacy_lift.
+    econs.
+    { instantiate (1:=fun '(x, y) => x = y). ss.
+      set (ums:=UMod.get_modsem umd skenv0) in *.
+      rewrite ! List.map_map.
+      eapply Forall2_apply_Forall2.
+      { refl. }
+      i. subst. unfold map_snd. des_ifs.
+    }
+    { ss. }
+    { ss. }
   Qed.
 
   Lemma sk_link_eq: sk_link = (fold_right Sk.add Sk.unit (List.map SMod.sk
