@@ -637,7 +637,7 @@ Section HLEMMAS.
 
   Lemma hcall_clo
         (mr_src1 fr_src1 rarg_src: Σ)
-        (o: ord) X (x: X)
+        (o: ord) X (x: __shelve__ X)
         r rg (n: nat) mr_src0 mp_src0 fr_src0 Y Z
         (P: X -> Y -> Any.t -> ord -> Σ -> Prop)
         (Q: X -> Z -> Any.t -> Σ -> Prop)
@@ -999,14 +999,15 @@ Ltac hcall_tac x o MR_SRC1 FR_SRC1 RARG_SRC :=
                intros ? ? ? ? ? WF; cbn in WF; desH WF; subst;
                esplits; ss; et; intros tmp ?; assert(GWF: ☀) by (split; [refl|exact tmp]); clear tmp; iRefresh; iClears') in
   prep;
-  match x with
-  | ltac_wild =>
-    match o with
-    | ltac_wild => eapply (@hcall_clo _ mr_src1 fr_src1 rarg_src); [|tac0|eapply OrdArith.lt_from_nat; lia|..|tac1]
-    | _ => eapply (@hcall_clo _ mr_src1 fr_src1 rarg_src o); [|tac0|eapply OrdArith.lt_from_nat; lia|..|tac1]
-    end
-  | _ => eapply (@hcall_clo _ mr_src1 fr_src1 rarg_src o _ x); [tac0|eapply OrdArith.lt_from_nat; lia|..|tac1]
-  end
+  (match x with
+   | ltac_wild =>
+     match o with
+     | ltac_wild => eapply (@hcall_clo _ mr_src1 fr_src1 rarg_src)
+     | _ => eapply (@hcall_clo _ mr_src1 fr_src1 rarg_src o)
+     end
+   | _ => eapply (@hcall_clo _ mr_src1 fr_src1 rarg_src o _ x)
+   end);
+  shelve_goal; [tac0|eapply OrdArith.lt_from_nat; lia|..|tac1]
 .
 
 Ltac hret_tac MR_SRC RT_SRC :=
