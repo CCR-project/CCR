@@ -377,6 +377,20 @@ Section ADQ.
   .
   Proof. grind. Qed.
 
+  Lemma transl_event_eventE
+        T (e: eventE T)
+    :
+      (UModSem.transl_event (||e)) = (||e)%sum
+  .
+  Proof. grind. Qed.
+
+  Lemma transl_event_callE
+        fn args
+    :
+      (UModSem.transl_event ((Call fn args)|))%sum = ((hCall false fn args)|)%sum
+  .
+  Proof. grind. Qed.
+
 (********** TODO: remove below Notation after the fix in HTactics ***************)
 Notation "wf n '------------------------------------------------------------------' src0 tgt0 '------------------------------------------------------------------' src1 tgt1 '------------------------------------------------------------------' src2 tgt2"
   :=
@@ -437,40 +451,144 @@ Notation "wf n '----------------------------------------------------------------
     - unfold body_to_tgt. steps.
       abstr (ktr x) itr.
       clear _ASSUME _ASSUME0. des_u.
-      revert itr. gcofix CIH0. i.
+      revert itr. revert st. revert mr. gcofix CIH0. i.
       ides itr.
-      { rewrite unfold_interp. cbn. steps. red_resum. gstep. econs; eauto. }
-      { rewrite unfold_interp. cbn. red_resum. steps. red_resum. steps. gbase. eapply CIH0. }
+      { interp_red. cbn. steps. red_resum. gstep. econs; eauto. }
+      { interp_red. cbn. red_resum. steps. red_resum. steps. gbase. eapply CIH0. }
       destruct e; cycle 1.
       {
         rewrite unfold_interp. steps.
         destruct s; ss.
         { destruct p; ss.
           - unfold UModSem.transl_itr at 2.
+            rewrite <- bind_trigger. red_resum. unfold resum_itr at 2. rewrite transl_event_pE.
+            rewrite ! unfold_interp. cbn.
+            repeat match goal with
+            | [ |- context[trigger ?e]] =>
+              replace (trigger e%sum) with (trigger e: itree (hCallE +' pE +' eventE) _) by refl
+            | [ |- context[trigger ?e]] =>
+              replace (trigger e%sum) with (trigger e: itree Es _) by refl
+            end.
+            ired_both.
+            gstep. econs. steps.
+            interp_red. steps.
+            gbase. eapply CIH0.
+          - unfold UModSem.transl_itr at 2.
+            rewrite <- bind_trigger. red_resum. unfold resum_itr at 2. rewrite transl_event_pE.
+            rewrite ! unfold_interp. cbn.
+            repeat match goal with
+            | [ |- context[trigger ?e]] =>
+              replace (trigger e%sum) with (trigger e: itree (hCallE +' pE +' eventE) _) by refl
+            | [ |- context[trigger ?e]] =>
+              replace (trigger e%sum) with (trigger e: itree Es _) by refl
+            end.
+            ired_both.
+            gstep. econs. steps. 
+            interp_red. steps.
+            gbase. eapply CIH0.
+        }
+        { destruct e.
+          - unfold UModSem.transl_itr at 2.
+            rewrite <- bind_trigger. red_resum. unfold resum_itr at 2. rewrite transl_event_eventE.
+            rewrite ! unfold_interp. cbn.
+            repeat match goal with
+            | [ |- context[trigger ?e]] =>
+              replace (trigger e%sum) with (trigger e: itree (hCallE +' pE +' eventE) _) by refl
+            | [ |- context[trigger ?e]] =>
+              replace (trigger e%sum) with (trigger e: itree Es _) by refl
+            end.
+            ired_both.
+            gstep. econs. i. esplits. steps.
+            interp_red. steps.
+            gbase. eapply CIH0.
+          - unfold UModSem.transl_itr at 2.
+            rewrite <- bind_trigger. red_resum. unfold resum_itr at 2. rewrite transl_event_eventE.
+            rewrite ! unfold_interp. cbn.
+            repeat match goal with
+            | [ |- context[trigger ?e]] =>
+              replace (trigger e%sum) with (trigger e: itree (hCallE +' pE +' eventE) _) by refl
+            | [ |- context[trigger ?e]] =>
+              replace (trigger e%sum) with (trigger e: itree Es _) by refl
+            end.
+            ired_both.
+            gstep. econs. i. esplits. steps. 
+            interp_red. steps.
+            gbase. eapply CIH0.
+          - unfold UModSem.transl_itr at 2.
+            rewrite <- bind_trigger. red_resum. unfold resum_itr at 2. rewrite transl_event_eventE.
+            rewrite ! unfold_interp. cbn.
+            repeat match goal with
+            | [ |- context[trigger ?e]] =>
+              replace (trigger e%sum) with (trigger e: itree (hCallE +' pE +' eventE) _) by refl
+            | [ |- context[trigger ?e]] =>
+              replace (trigger e%sum) with (trigger e: itree Es _) by refl
+            end.
+            ired_both.
+            gstep. econs. i. esplits. steps. 
+            interp_red. steps.
+            gbase. eapply CIH0.
+        }
+      }
+      destruct c.
+      rewrite <- bind_trigger.
+      red_resum. interp_red. steps. interp_red. steps.
+      unfold UModSem.transl_itr at 2. rewrite transl_event_callE. steps.
+      force_l.
+      { admit "TODO". }
+      steps. force_l.
+      { admit "TODO". }
+      steps.
+      rename _UNWRAPN into T.
+      eapply find_some in T. des; ss. des_sumbool. subst.
+      unfold gstb in T. rewrite in_app_iff in T. des ;ss.
+      + rewrite in_flat_map in T. des; ss. rewrite in_map_iff in *. des; subst.
+        unfold map_snd in *. des_ifs. unfold kmss in T. rewrite in_map_iff in *. des; subst.
+        unfold kmds in *. rewrite in_map_iff in *. des; subst. ss. rewrite in_map_iff in *. des; subst.
+        unfold map_snd in *. des_ifs. ss.
+
+        unfold HoareCall, put, discard, forge, checkWf.
+        steps.
+        force_l. eexists (_, _). steps. force_l. { refl. } steps. force_l. esplits. steps.
+        force_l. esplits. force_l. { refl. } steps. force_l. eexists (_, false). steps. force_l. esplits. steps.
+        force_l. esplits. force_l. { TTTTTTTTTTTTTTTTTTTTTTTTTTT
+      +
+        
+      unfold HoareCall, put, discard, forge, checkWf.
+      steps.
+      force_l. eexists (_, _). steps. force_l. { refl. } steps. force_l. esplits. steps.
+      force_l. esplits. force_l. { refl. } steps. force_l. esplits. steps. force_l. esplits. steps.
+      force_l. esplits. force_l. {
+
+          - unfold UModSem.transl_itr at 2.
             Local Opaque subevent.
             unfold resum_itr. rewrite transl_event_pE.
-            (* match goal with | [ |- context[trigger ?x] ] => idtac x; let ty := type of x in idtac ty end. *)
-            (* erewrite resub_r with (E:=hCallE +' pE +' eventE); [|typeclasses eauto|typeclasses eauto]. *)
-            erewrite resub_l.
-            (@subevent (sum1 E1 E2) F (@ReSum_sum (forall _ : Type, Type) IFun sum1 Case_sum1 E1 E2 F H H0) T (@inl1 E1 E2 T e))
-            (@subevent (sum1 pE eventE) (sum1 hCallE (sum1 pE eventE))
-                   (@ReSum_inr (forall _ : Type, Type) IFun sum1 Cat_IFun Inr_sum1 (sum1 pE eventE) (sum1 pE eventE) hCallE
-                      (@ReSum_id (forall _ : Type, Type) IFun Id_IFun (sum1 pE eventE))) unit (@inl1 pE eventE unit (PPut p)))
-
-            (@subevent (sum1 E1 E2) (sum1 E1 E2) (@ReSum_id (forall _ : Type, Type) IFun Id_IFun (sum1 E1 E2)) T (@inl1 E1 E2 T e))
-            erewrite resub_l with (E:=hCallE +' pE +' eventE); [|typeclasses eauto|typeclasses eauto].
-            rewrite <- bind_trigger.
-            erewrite resub_l with (E:=hCallE +' pE +' eventE); [|typeclasses eauto|typeclasses eauto].
-            set (inl1 (PPut p)) as mye.
-            erewrite resub_r with (E:=hCallE +' pE +' eventE); [|typeclasses eauto|typeclasses eauto].
-            { typeclasses eauto. }
-            Set Printing All.
-            rewrite embed_r_gen with (e:=mye) (E2:=pE).
-            rewrite Hoareproof0.embed_r_gen with (e:=PPut p).
-UModSem.transl_itr : forall [T : Type], (callE +' pE +' eventE) T -> itree (hCallE +' pE +' eventE) T
-            cbn.
-            replace (trigger (UModSem.transl_event (|PPut p|))) with (trigger (|PPut p|)%sum).
             rewrite ! unfold_interp. cbn.
+            repeat match goal with
+            | [ |- context[trigger(|?e|)%sum]] =>
+              replace (trigger (|e|)%sum) with (trigger e: itree (hCallE +' pE +' eventE) _) by refl
+            | [ |- context[trigger(|?e|)%sum]] =>
+              replace (trigger (|e|)%sum) with (trigger e: itree Es _) by refl
+            end.
+            rewrite interp_tgt_triggerp.
+            gstep. eapply sim_itree_pput_both. steps.
+            gbase.
+            steps.
+
+
+
+
+
+
+
+
+
+            Local Opaque subevent.
+            rewrite <- bind_trigger. red_resum.
+            unfold resum_itr at 2. rewrite transl_event_pE.
+            rewrite ! unfold_interp. cbn.
+            replace (trigger (|PPut p|)%sum) with (trigger (PPut p): itree (hCallE +' pE +' eventE) _) by refl.
+            replace (trigger (|PPut p|)%sum) with (trigger (PPut p): itree Es _) by refl.
+            rewrite interp_tgt_triggerp.
             (* replace ((bimap (id_ pE) (id_ eventE) >>> inr_) unit (PPut p|)%sum) with (PPut p). *)
             unfold bimap, Bimap_Coproduct. unfold cat, Cat_IFun. cbn. unfold id_, Id_IFun. cbn.
             unfold inr_, inl_, Inr_sum1, Inl_sum1.
