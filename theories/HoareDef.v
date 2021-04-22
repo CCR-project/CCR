@@ -78,33 +78,70 @@ Let Any_src := Any.t. (*** src argument (e.g., List nat) ***)
 Let Any_mid := Any.t. (*** src argument (e.g., List nat) ***)
 Let Any_tgt := Any.t. (*** tgt argument (i.e., list val) ***)
 
+
+Section FSPEC.
+  Context `{Σ: GRA.t}.
+
+  (*** spec table ***)
+  Record fspec: Type := mk {
+    X: Type; (*** a meta-variable ***)
+    AA: Type;
+    AR: Type;
+    precond: X -> AA -> Any_tgt -> ord -> Σ -> Prop; (*** meta-variable -> new logical arg -> current logical arg -> resource arg -> Prop ***)
+    postcond: X -> AR -> Any_tgt -> Σ -> Prop; (*** meta-variable -> new logical ret -> current logical ret -> resource ret -> Prop ***)
+  }
+  .
+
+  Variant fspec_weaker (fsp_src fsp_tgt: fspec): Prop :=
+  | fspec_weaker_intro
+      X_src X_tgt AA AR P_src P_tgt Q_src Q_tgt
+      (FSPEC0: fsp_src = @mk X_src AA AR P_src Q_src)
+      (FSPEC1: fsp_tgt = @mk X_tgt AA AR P_tgt Q_tgt)
+      (WEAK: forall (x_src: X_src),
+          exists (x_tgt: X_tgt),
+            (<<PRE: P_src x_src <4= P_tgt x_tgt>>) /\
+            (<<POST: Q_tgt x_tgt <3= Q_src x_src>>))
+  .
+
+  Global Program Instance fspec_weaker_PreOrder: PreOrder fspec_weaker.
+  Next Obligation.
+  Proof.
+    ii. destruct x. econs; eauto.
+  Qed.
+  Next Obligation.
+  Proof.
+    ii. inv H; inv H0. dependent destruction FSPEC0.
+    econs; eauto. i. hexploit WEAK; eauto. i. des.
+    hexploit WEAK0; eauto. i. des. esplits; eauto.
+  Qed.
+End FSPEC.
+
+
 Section PROOF.
   (* Context {myRA} `{@GRA.inG myRA Σ}. *)
   Context {Σ: GRA.t}.
   Let GURA: URA.t := GRA.to_URA Σ.
   Local Existing Instance GURA.
-  Context {X Y Z: Type}.
 
   Definition HoareCall
              (tbr: bool)
              (ord_cur: ord)
-             (P: X -> Y -> Any_tgt -> ord -> Σ -> Prop)
-             (Q: X -> Z -> Any_tgt -> Σ -> Prop):
-    gname -> Y -> itree Es Z :=
+             (fsp: fspec):
+    gname -> fsp.(AA) -> itree Es fsp.(AR) :=
     fun fn varg_src =>
       '(marg, farg) <- trigger (Choose _);; put marg farg;; (*** updating resources in an abstract way ***)
       rarg <- trigger (Choose Σ);; discard rarg;; (*** virtual resource passing ***)
-      x <- trigger (Choose X);; varg_tgt <- trigger (Choose Any_tgt);;
+      x <- trigger (Choose fsp.(X));; varg_tgt <- trigger (Choose Any_tgt);;
       ord_next <- trigger (Choose _);;
-      guarantee(P x varg_src varg_tgt  ord_next rarg);; (*** precondition ***)
+      guarantee(fsp.(precond) x varg_src varg_tgt  ord_next rarg);; (*** precondition ***)
 
       guarantee(ord_lt ord_next ord_cur /\ (tbr = true -> is_pure ord_next) /\ (tbr = false -> ord_next = ord_top));;
       vret_tgt <- trigger (Call fn varg_tgt);; (*** call ***)
 
       rret <- trigger (Take Σ);; forge rret;; (*** virtual resource passing ***)
-      vret_src <- trigger (Take Z);;
+      vret_src <- trigger (Take fsp.(AR));;
       checkWf;;
-      assume(Q x vret_src vret_tgt rret);; (*** postcondition ***)
+      assume(fsp.(postcond) x vret_src vret_tgt rret);; (*** postcondition ***)
 
       Ret vret_src (*** return to body ***)
   .
@@ -186,15 +223,6 @@ Section CANCEL.
 
   Context `{Σ: GRA.t}.
 
-  (*** spec table ***)
-  Record fspec: Type := mk {
-    X: Type; (*** a meta-variable ***)
-    AA: Type;
-    AR: Type;
-    precond: X -> AA -> Any_tgt -> ord -> Σ -> Prop; (*** meta-variable -> new logical arg -> current logical arg -> resource arg -> Prop ***)
-    postcond: X -> AR -> Any_tgt -> Σ -> Prop; (*** meta-variable -> new logical ret -> current logical ret -> resource ret -> Prop ***)
-  }
-  .
 
   Record fspecbody: Type := mk_specbody {
     fsb_fspec:> fspec;
@@ -213,7 +241,7 @@ Section CANCEL.
   (*   apply (val). *)
   (* Defined. *)
   Definition mk_simple {X: Type} (PQ: X -> ((Any_tgt -> ord -> Σ -> Prop) * (Any_tgt -> Σ -> Prop))): fspec :=
-    @mk X (list val) (val) (fun x y a o r => (fst ∘ PQ) x a o r /\ y↑ = a) (fun x z a r => (snd ∘ PQ) x a r /\ z↑ = a)
+    @mk _ X (list val) (val) (fun x y a o r => (fst ∘ PQ) x a o r /\ y↑ = a) (fun x z a r => (snd ∘ PQ) x a r /\ z↑ = a)
   .
 
 
@@ -293,7 +321,7 @@ Section CANCEL.
     fun _ '(hCall tbr fn varg_src) =>
       '(_, f) <- (List.find (fun '(_fn, _) => dec fn _fn) stb)ǃ;;
       varg_src <- varg_src↓ǃ;;
-      vret_src <- (HoareCall tbr ord_cur (f.(precond)) (f.(postcond)) fn varg_src);;
+      vret_src <- (HoareCall tbr ord_cur f fn varg_src);;
       Ret vret_src↑
   .
 

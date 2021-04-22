@@ -29,29 +29,6 @@ Section PROOF.
 
   Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
 
-  Variant fspec_weaker (fsp_src fsp_tgt: fspec): Prop :=
-  | fspec_weaker_intro
-      X_src X_tgt AA AR P_src P_tgt Q_src Q_tgt
-      (FSPEC0: fsp_src = @mk _ X_src AA AR P_src Q_src)
-      (FSPEC1: fsp_tgt = @mk _ X_tgt AA AR P_tgt Q_tgt)
-      (WEAK: forall (x_src: X_src),
-          exists (x_tgt: X_tgt),
-            (<<PRE: P_src x_src <4= P_tgt x_tgt>>) /\
-            (<<POST: Q_tgt x_tgt <3= Q_src x_src>>))
-  .
-
-  Global Program Instance fspec_weaker_PreOrder: PreOrder fspec_weaker.
-  Next Obligation.
-  Proof.
-    ii. destruct x. econs; eauto.
-  Qed.
-  Next Obligation.
-  Proof.
-    ii. inv H; inv H0. dependent destruction FSPEC0.
-    econs; eauto. i. hexploit WEAK; eauto. i. des.
-    hexploit WEAK0; eauto. i. des. esplits; eauto.
-  Qed.
-
   Variable stb_src stb_tgt: list (gname * fspec).
   Hypothesis stb_stronger:
     forall fn fn_tgt fsp_tgt (FINDTGT: List.find (fun '(_fn, _) => dec fn _fn) stb_tgt = Some (fn_tgt, fsp_tgt)),

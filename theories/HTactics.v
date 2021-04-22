@@ -571,7 +571,7 @@ Section HLEMMAS.
                        (mrs_src1, URA.add fr_src1 rret, k_src vret_src) (mrs_tgt1, frs_tgt, k_tgt vret_tgt))
     :
       gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ (fun _ _ => @eq Any.t) n
-             (mr_src0, mp_src0, fr_src0, (HoareCall tbr ord_cur P Q fn varg_src) >>= k_src)
+             (mr_src0, mp_src0, fr_src0, (HoareCall tbr ord_cur (mk P Q) fn varg_src) >>= k_src)
              (mrs_tgt, frs_tgt, trigger (Call fn varg_tgt) >>= k_tgt)
   .
   Proof.
@@ -629,7 +629,7 @@ Section HLEMMAS.
                        (mrs_src1, URA.add fr_src1 rret, k_src vret_src) (mrs_tgt1, frs_tgt, k_tgt vret_tgt))
     :
       gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ (fun _ _ => @eq Any.t) n
-             (mr_src0, mp_src0, fr_src0, (HoareCall tbr ord_cur P Q fn varg_src) >>= k_src)
+             (mr_src0, mp_src0, fr_src0, (HoareCall tbr ord_cur (mk P Q) fn varg_src) >>= k_src)
              (mrs_tgt, frs_tgt, trigger (Call fn varg_tgt) >>= k_tgt).
   Proof.
     eapply (@hcall_clo_ord 100); eauto.
@@ -710,7 +710,7 @@ Section HLEMMAS.
         (POST: forall args' (EQ: args' ~= args),
             gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ (fun _ _ => @eq Any.t) n1
                     (mr_src0, mp_src0, fr_src0,
-                     (HoareCall true o (precond fsp) (postcond fsp) fn args');; Tau (ITree.bind (interp_hCallE_tgt stb o (_APC next)) k_src))
+                     (HoareCall true o fsp fn args');; Tau (ITree.bind (interp_hCallE_tgt stb o (_APC next)) k_src))
                    ((mrs_tgt, frs_tgt),
                     itr_tgt))
     :
