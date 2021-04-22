@@ -230,8 +230,8 @@ Section PROOF.
       { unfold wf. esplits; eauto. }
       instantiate (1:=liftRR (fun '(x_src, varg_src, o_src) '(x_tgt, varg_tgt, o_tgt) =>
                                 varg_src = varg_tgt /\ o_src = o_tgt /\
-                                (<<PRE: P_src x_src <4= P_tgt x_tgt>>) /\
-                                (<<POST: Q_tgt x_tgt <3= Q_src x_src>>))).
+                                (<<PRE: ftsp_src.(precond) x_src <4= ftsp_tgt.(precond) x_tgt>>) /\
+                                (<<POST: ftsp_tgt.(postcond) x_tgt <3= ftsp_src.(postcond) x_src>>))).
       unfold liftRR, wf. esplits; eauto.
     }
     ss. i.

@@ -82,38 +82,65 @@ Let Any_tgt := Any.t. (*** tgt argument (i.e., list val) ***)
 Section FSPEC.
   Context `{Σ: GRA.t}.
 
+  Section FSPECTYPE.
+    Variable AA AR: Type.
+
   (*** spec table ***)
-  Record fspec: Type := mk {
-    X: Type; (*** a meta-variable ***)
+    Record ftspec: Type := mk_ftspec {
+      X: Type; (*** a meta-variable ***)
+      precond: X -> AA -> Any_tgt -> ord -> Σ -> Prop; (*** meta-variable -> new logical arg -> current logical arg -> resource arg -> Prop ***)
+      postcond: X -> AR -> Any_tgt -> Σ -> Prop; (*** meta-variable -> new logical ret -> current logical ret -> resource ret -> Prop ***)
+    }
+    .
+
+    Definition ftspec_weaker (fsp_src fsp_tgt: ftspec): Prop :=
+      forall (x_src: fsp_src.(X)),
+      exists (x_tgt: fsp_tgt.(X)),
+        (<<PRE: fsp_src.(precond) x_src <4= fsp_tgt.(precond) x_tgt>>) /\
+        (<<POST: fsp_tgt.(postcond) x_tgt <3= fsp_src.(postcond) x_src>>)
+    .
+
+    Global Program Instance ftspec_weaker_PreOrder: PreOrder ftspec_weaker.
+    Next Obligation.
+    Proof.
+      ii. exists x_src. esplits; eauto.
+    Qed.
+    Next Obligation.
+    Proof.
+      ii. hexploit (H x_src). i. des.
+      hexploit (H0 x_tgt). i. des. esplits; eauto.
+    Qed.
+  End FSPECTYPE.
+
+  (*** spec table ***)
+  Record fspec: Type := mk_fspec {
     AA: Type;
     AR: Type;
-    precond: X -> AA -> Any_tgt -> ord -> Σ -> Prop; (*** meta-variable -> new logical arg -> current logical arg -> resource arg -> Prop ***)
-    postcond: X -> AR -> Any_tgt -> Σ -> Prop; (*** meta-variable -> new logical ret -> current logical ret -> resource ret -> Prop ***)
+    tspec:> ftspec AA AR;
   }
   .
 
   Variant fspec_weaker (fsp_src fsp_tgt: fspec): Prop :=
   | fspec_weaker_intro
-      X_src X_tgt AA AR P_src P_tgt Q_src Q_tgt
-      (FSPEC0: fsp_src = @mk X_src AA AR P_src Q_src)
-      (FSPEC1: fsp_tgt = @mk X_tgt AA AR P_tgt Q_tgt)
-      (WEAK: forall (x_src: X_src),
-          exists (x_tgt: X_tgt),
-            (<<PRE: P_src x_src <4= P_tgt x_tgt>>) /\
-            (<<POST: Q_tgt x_tgt <3= Q_src x_src>>))
+      AA AR ftsp_src ftsp_tgt
+      (FSPEC0: fsp_src = @mk_fspec AA AR ftsp_src)
+      (FSPEC1: fsp_tgt = @mk_fspec AA AR ftsp_tgt)
+      (WEAK: ftspec_weaker ftsp_src ftsp_tgt)
   .
 
   Global Program Instance fspec_weaker_PreOrder: PreOrder fspec_weaker.
   Next Obligation.
   Proof.
-    ii. destruct x. econs; eauto.
+    ii. destruct x. econs; eauto. refl.
   Qed.
   Next Obligation.
   Proof.
     ii. inv H; inv H0. dependent destruction FSPEC0.
-    econs; eauto. i. hexploit WEAK; eauto. i. des.
-    hexploit WEAK0; eauto. i. des. esplits; eauto.
+    econs; eauto. etrans; eauto.
   Qed.
+
+  Definition mk (X AA AR: Type) (precond: X -> AA -> Any_tgt -> ord -> Σ -> Prop) (postcond: X -> AR -> Any_tgt -> Σ -> Prop) :=
+    mk_fspec (mk_ftspec precond postcond).
 End FSPEC.
 
 
