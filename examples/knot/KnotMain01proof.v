@@ -52,6 +52,17 @@ Section SIMMODSEM.
              (SPECS: List.find (fun '(_fn, _) => dec fn _fn) (RecStb skenv) = Some fsp),
         List.find (fun '(_fn, _) => dec fn _fn) (GlobalStb skenv) = Some fsp.
 
+
+  (* Variable RecStb_incl *)
+  (*   : *)
+  (*     forall skenv fn fsp *)
+  (*            (SPECS: List.find (fun '(_fn, _) => dec fn _fn) (RecStb skenv) = Some fsp), *)
+  (*     exists (fstp: ftspec (list val) val), *)
+  (*       List.find (fun '(_fn, _) => dec fn _fn) (GlobalStb skenv) = Some (fn, mk_fspec fstp) /\ *)
+  (*       fspec_weaker mrec_spec fstp mrec_spec *)
+  (* . *)
+
+
   Variable FunStb_incl
     :
       forall skenv fn fsp
@@ -70,7 +81,7 @@ Section SIMMODSEM.
     econstructor 1 with (wf:=wf); et; ss.
     econs; ss; [|econs; ss].
     { init. unfold fibF, ccall. harg_tac.
-      ss. des. subst.
+      destruct x as [x INV]. ss. des. subst.
       iRefresh. iDestruct PRE. iPure PRE. des; clarify.
       eapply Any.upcast_inj in PRE. des; clarify. steps.
       rewrite Any.upcast_downcast in _UNWRAPN. clarify. astart 2. steps.
@@ -82,31 +93,31 @@ Section SIMMODSEM.
         clear - l. destruct x; ss. destruct x; ss. lia.
       }
       steps.
-      acall_tac (Fib, x - 1) (ord_pure (2 * x - 1)) (@URA.unit Σ) (@URA.unit Σ) A; ss.
+      acall_tac_weaken (mrec_spec INV) (x - 1) (ord_pure (2 * x - 1)) (@URA.unit Σ) (@URA.unit Σ) A; ss.
       { eapply RecStb_incl. eauto. }
-      { ss. splits; ss. iRefresh. iSplitL A; ss.
+      { ss. splits; ss. iRefresh. iSplitR A; ss.
         red. red. esplits; eauto.
         { repeat f_equal. clear - g. lia. }
         { f_equal. clear - g. eauto with ord_step. }
       }
       { esplits; ss. eauto with ord_step. }
-      steps. ss. des. clarify. iRefresh. iDestruct POST. iPure A.
+      steps. ss. des. clarify. iRefresh. iDestruct POST. iPure POST.
       rewrite Any.upcast_downcast in _UNWRAPN. clarify.
-      eapply Any.upcast_inj in A. des; clarify. steps.
-      acall_tac (Fib, x - 2) (ord_pure (2 * (x - 1) - 1)) (@URA.unit Σ) (@URA.unit Σ) POST; ss.
+      eapply Any.upcast_inj in POST. des; clarify. steps.
+      acall_tac_weaken (mrec_spec INV) (x - 2) (ord_pure (2 * (x - 1) - 1)) (@URA.unit Σ) (@URA.unit Σ) A; ss.
       { eapply RecStb_incl. eauto. }
-      { splits; ss. iRefresh. iSplitL POST; ss.
+      { splits; ss. iRefresh. iSplitR A; ss.
         red. red. esplits; eauto.
         { repeat f_equal. clear - g. lia. }
         { f_equal. clear - g. eauto with ord_step. }
       }
       { esplits; ss. eauto with ord_step. }
-      steps. ss. des. clarify. iRefresh. iDestruct POST0. iPure A.
+      steps. ss. des. clarify. iRefresh. iDestruct POST. iPure POST.
       rewrite Any.upcast_downcast in _UNWRAPN. clarify.
-      eapply Any.upcast_inj in A. des; clarify. steps.
+      eapply Any.upcast_inj in POST. des; clarify. steps.
       astop. force_l. eexists.
-      hret_tac (@URA.unit Σ) POST0; ss.
-      splits; ss. iRefresh. iSplitR POST0; ss. red. red.
+      hret_tac (@URA.unit Σ) A; ss.
+      splits; ss. iRefresh. iSplitR A; ss. red. red.
       repeat f_equal. destruct x; ss. destruct x; ss.
       clear - g.
       remember (match x with
@@ -126,6 +137,13 @@ Section SIMMODSEM.
         { red. red. esplits; eauto.
           { eapply SKWF. eauto. }
           { eapply FunStb_incl. des_ifs. }
+          { ii. ss. eexists (x_src, Own (GRA.embed (knot_frag (Some Fib)))). splits; ss.
+            { i. fspec_weaker des; clarify. split; auto. iRefresh.
+
+
+exists (x
+
+admit "". }
         }
         { exists None. ss. }
       }

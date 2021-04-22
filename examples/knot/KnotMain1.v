@@ -38,7 +38,24 @@ Section MAIN.
   Section SKENV.
     Variable skenv: SkEnv.t.
 
-    Definition fib_spec:    fspec := fun_gen RecStb skenv Fib.
+    Definition mrec_spec (INV: Σ -> Prop): ftspec (list val) val :=
+      mk_simple (X:=nat)
+                (fun n => (
+                     (fun varg o => ⌜varg = [Vint (Z.of_nat n)]↑ /\ o = ord_pure (2 * n + 1)⌝ ** INV),
+                     (fun vret => ⌜vret = (Vint (Z.of_nat (Fib n)))↑⌝ ** INV)
+                )).
+
+    Definition fib_spec: fspec :=
+      mk_simple (X:=nat*(Σ -> Prop))
+                (fun '(n, INV) => (
+                     (fun varg o =>
+                        ⌜exists fb fn (ftsp: ftspec (list val) val),
+                            varg = [Vptr fb 0; Vint (Z.of_nat n)]↑ /\ o = ord_pure (2 * n) /\
+                            skenv.(SkEnv.blk2id) fb = Some fn /\
+                            List.find (fun '(_fn, _) => dec fn _fn) (RecStb skenv) = Some (fn, mk_fspec ftsp) /\
+                            ftspec_weaker (mrec_spec INV) ftsp⌝ ** INV),
+                     (fun vret => ⌜vret = (Vint (Z.of_nat (Fib n)))↑⌝ ** INV)
+                )).
 
     Definition MainFunStb: list (gname * fspec) := [("fib", fib_spec)].
 
