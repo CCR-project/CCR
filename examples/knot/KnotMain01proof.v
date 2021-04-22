@@ -82,44 +82,26 @@ Section SIMMODSEM.
         clear - l. destruct x; ss. destruct x; ss. lia.
       }
       steps.
-      eapply APC_step_clo with (fn0:=fn) (args:=[Vint (Z.of_nat x - 1)]).
-      { try by
-            eapply Ord.eq_lt_lt;
-          [ symmetry; eapply OrdArith.add_from_nat
-          | eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r;
-            eapply Nat.lt_succ_diag_r ]. }
-      { eauto. }
-      { ss. }
-      { eapply OrdArith.lt_from_nat; eapply Nat.lt_succ_diag_r. }
-      i. subst args'. iRefresh.
-      hcall_tac (Fib, x - 1) (ord_pure (2 * x - 1)) (@URA.unit Σ) (@URA.unit Σ) A; ss.
-      { splits; ss. iRefresh. iSplitL A; ss.
+      acall_tac (Fib, x - 1) (ord_pure (2 * x - 1)) (@URA.unit Σ) (@URA.unit Σ) A; ss.
+      { eapply RecStb_incl. eauto. }
+      { ss. splits; ss. iRefresh. iSplitL A; ss.
         red. red. esplits; eauto.
         { repeat f_equal. clear - g. lia. }
         { f_equal. clear - g. eauto with ord_step. }
       }
       { esplits; ss. eauto with ord_step. }
-      steps. des. clarify. iRefresh. iDestruct POST. iPure A.
+      steps. ss. des. clarify. iRefresh. iDestruct POST. iPure A.
       rewrite Any.upcast_downcast in _UNWRAPN. clarify.
       eapply Any.upcast_inj in A. des; clarify. steps.
-      eapply APC_step_clo with (fn0:=fn) (args:=[Vint (Z.of_nat x - 2)]).
-      { try by
-            eapply Ord.eq_lt_lt;
-          [ symmetry; eapply OrdArith.add_from_nat
-          | eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r;
-            eapply Nat.lt_succ_diag_r ]. }
-      { eauto. }
-      { ss. }
-      { eapply OrdArith.lt_from_nat; eapply Nat.lt_succ_diag_r. }
-      i. subst args'. iRefresh.
-      hcall_tac (Fib, x - 2) (ord_pure (2 * (x - 1) - 1)) (@URA.unit Σ) (@URA.unit Σ) POST; ss.
+      acall_tac (Fib, x - 2) (ord_pure (2 * (x - 1) - 1)) (@URA.unit Σ) (@URA.unit Σ) POST; ss.
+      { eapply RecStb_incl. eauto. }
       { splits; ss. iRefresh. iSplitL POST; ss.
         red. red. esplits; eauto.
         { repeat f_equal. clear - g. lia. }
         { f_equal. clear - g. eauto with ord_step. }
       }
       { esplits; ss. eauto with ord_step. }
-      steps. des. clarify. iRefresh. iDestruct POST0. iPure A.
+      steps. ss. des. clarify. iRefresh. iDestruct POST0. iPure A.
       rewrite Any.upcast_downcast in _UNWRAPN. clarify.
       eapply Any.upcast_inj in A. des; clarify. steps.
       astop. force_l. eexists.
@@ -138,17 +120,8 @@ Section SIMMODSEM.
       hexploit (SKINCL "fib"); ss; eauto. i. des.
       rewrite H0. ss. steps.
       astart 2.
-      eapply APC_step_clo with (fn:="knot") (args:=[Vptr blk 0]).
-      { try by
-            eapply Ord.eq_lt_lt;
-          [ symmetry; eapply OrdArith.add_from_nat
-          | eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r;
-            eapply Nat.lt_succ_diag_r ]. }
-      { eauto. }
-      { ss. }
-      { eapply OrdArith.lt_from_nat; eapply Nat.lt_succ_diag_r. }
-      i. subst args'. iRefresh.
-      hcall_tac Fib (ord_pure 0) (@URA.unit Σ) (@URA.unit Σ) PRE; ss.
+      acall_tac Fib (ord_pure 0) (@URA.unit Σ) (@URA.unit Σ) PRE; ss.
+      { eapply GlobalStb_knot. }
       { splits; ss. iRefresh. iSplitR PRE; ss.
         { red. red. esplits; eauto.
           { eapply SKWF. eauto. }
@@ -156,24 +129,14 @@ Section SIMMODSEM.
         }
         { exists None. ss. }
       }
-      des. clarify. iRefresh. iDestruct POST. iPure POST. des; clarify.
+      ss. des. clarify. iRefresh. iDestruct POST. iPure POST. des; clarify.
       eapply Any.upcast_inj in POST. des; clarify.
       steps. rewrite Any.upcast_downcast in _UNWRAPN. clarify.
       ss. steps. rewrite POST0. steps.
-      eapply APC_step_clo with (fn0:=fn) (args:=[Vint 10]).
-      { try by
-            eapply Ord.eq_lt_lt;
-          [ symmetry; eapply OrdArith.add_from_nat
-          | eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r;
-            eapply Nat.lt_succ_diag_r ]. }
-      { eauto. }
-      { ss. }
-      { eapply OrdArith.lt_from_nat; eapply Nat.lt_succ_diag_r. }
-      i. subst args'. iRefresh.
-
-      hcall_tac (Fib, 10) (ord_pure 21) (@URA.unit Σ) (@URA.unit Σ) A; ss.
+      acall_tac (Fib, 10) (ord_pure 21) (@URA.unit Σ) (@URA.unit Σ) A; ss.
+      { eapply RecStb_incl. eauto. }
       { splits; ss. iRefresh. iSplitL A; ss. }
-      steps. des. clarify.
+      steps. ss. des. clarify.
       iRefresh. iDestruct POST. iPure A.
       erewrite Any.upcast_downcast in _UNWRAPN. clarify.
       eapply Any.upcast_inj in A. des; clarify.

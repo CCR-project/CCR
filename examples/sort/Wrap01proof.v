@@ -60,20 +60,11 @@ Section SIMMODSEM.
     eapply Any.upcast_inj in PRE. des; clarify.
     rewrite Any.upcast_downcast. ss. steps. astart 1.
     rewrite PRE1. ss. steps. rename fn into fn0.
-    hexploit CmpsStb_incl; eauto. i. des.
-    eapply APC_step_clo with (fn:=fn0) (args:=[Vint n0; Vint n1]).
-    { try by
-      eapply Ord.eq_lt_lt;
-       [ symmetry; eapply OrdArith.add_from_nat
-       | eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r;
-          eapply Nat.lt_succ_diag_r ]. }
-    { eauto. }
+    acall_tac (n0, n1) (ord_pure 0) (@URA.unit Σ) (@URA.unit Σ) (@URA.unit Σ); ss.
+    { eapply CmpsStb_incl. eauto. }
     { ss. }
-    { eapply OrdArith.lt_from_nat; eapply Nat.lt_succ_diag_r. }
-    i. subst args'.
-    hcall_tac (n0, n1) (ord_pure 0) (@URA.unit Σ) (@URA.unit Σ) (@URA.unit Σ); ss.
-    { splits; ss. eauto with ord_step. }
-    des. iPure POST. clarify. eapply Any.upcast_inj in POST. des; clarify.
+    { ss. splits; ss. eauto with ord_step. }
+    ss. des. iPure POST. clarify. eapply Any.upcast_inj in POST. des; clarify.
     steps. rewrite Any.upcast_downcast in _UNWRAPN. clarify. astop.
     force_l. eexists.
     hret_tac (@URA.unit Σ) (@URA.unit Σ); ss.

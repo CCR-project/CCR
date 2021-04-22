@@ -728,7 +728,7 @@ Section HLEMMAS.
   Qed.
 
   Lemma APC_step_clo
-        (fn: gname) X (args: X) (next: Ord.t) (n1: Ord.t)
+        (fn: gname) Y (args: Y) (next: Ord.t) (n1: Ord.t)
 
         (o: ord)
         r rg (n0: Ord.t) mr_src0 mp_src0 fr_src0
@@ -738,20 +738,18 @@ Section HLEMMAS.
         stb itr_tgt
 
         (FUEL: (n1 + 7 < n0)%ord)
-        (fsp: fspec)
-        (FIND: find (fun '(_fn, _) => dec fn _fn) stb = Some (fn, fsp))
-        (EQ: X = fsp.(AA))
+        Z (ftsp: ftspec Y Z)
+        (FIND: find (fun '(_fn, _) => dec fn _fn) stb = Some (fn, mk_fspec ftsp))
         (NEXT: (next < at_most)%ord)
 
-        (POST: forall args' (EQ: args' ~= args),
-            gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ (fun _ _ => @eq Any.t) n1
-                    (mr_src0, mp_src0, fr_src0,
-                     (HoareCall true o fsp fn args');; Tau (ITree.bind (interp_hCallE_tgt stb o (_APC next)) k_src))
-                   ((mrs_tgt, frs_tgt),
-                    itr_tgt))
+        (POST: gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ (fun _ _ => @eq Any.t) n1
+                      (mr_src0, mp_src0, fr_src0,
+                       (HoareCall true o (mk_fspec ftsp) fn args);; Tau (ITree.bind (interp_hCallE_tgt stb o (_APC next)) k_src))
+                      ((mrs_tgt, frs_tgt),
+                       itr_tgt))
     :
       gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ (fun _ _ => @eq Any.t) n0
-              (mr_src0, mp_src0, fr_src0, (interp_hCallE_tgt stb o (_APC at_most)) >>= k_src)
+             (mr_src0, mp_src0, fr_src0, (interp_hCallE_tgt stb o (_APC at_most)) >>= k_src)
              ((mrs_tgt, frs_tgt),
               itr_tgt).
   Proof.
@@ -776,7 +774,6 @@ Section HLEMMAS.
     { eapply OrdArith.add_lt_l. rewrite Ord.from_nat_S. eapply Ord.S_pos. }
     ired_l. ss. rewrite FIND. ss. subst. ired_l.
     rewrite Any.upcast_downcast. ss. ired_l.
-    exploit (POST args); ss. intros SIM.
     match goal with
     | [SIM: gpaco6 _ _ _ _ _ _ _ _ ?i0 _ |- gpaco6 _ _ _ _ _ _ _ _ ?i1 _] =>
       replace i1 with i0; auto
@@ -1021,21 +1018,15 @@ Ltac astep_full _fn _args _next _n1 :=
   eapply (@APC_step_clo _ _fn _ _args _next _n1);
   [(try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; lia)]))|
    (try by (stb_tac; refl))|
-   (try refl)|
    (eapply OrdArith.lt_from_nat; lia)|
-   (let args := fresh "args" in
-    let EQ := fresh "EQ" in
-    intros args EQ; subst args)].
+  ].
 
 Ltac astep _fn _args :=
   eapply (@APC_step_clo _ _fn _ _args);
   [(try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r; eapply Nat.lt_succ_diag_r)]))|
    (try by (stb_tac; refl))|
-   (try refl)|
    (eapply OrdArith.lt_from_nat; eapply Nat.lt_succ_diag_r)|
-   (let args := fresh "args" in
-    let EQ := fresh "EQ" in
-    intros args EQ; subst args)].
+  ].
 
 Ltac astop :=
   eapply APC_stop_clo;
@@ -1051,7 +1042,7 @@ Ltac astart _at_most :=
 Ltac acall_tac A0 A1 A2 A3 A4 :=
   match goal with
   | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, _) (_, trigger (Call ?fn (Any.upcast ?args)) >>= _)) ] =>
-    astep fn args; hcall_tac A0 A1 A2 A3 A4
+    astep fn args; [..|hcall_tac A0 A1 A2 A3 A4]
   end.
 
 Global Opaque _APC APC interp interp_hCallE_tgt.

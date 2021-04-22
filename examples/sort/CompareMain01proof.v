@@ -66,40 +66,22 @@ Section SIMMODSEM.
       hexploit (@SKINCL "compare").
       { econs; ss. }
       i. des. rewrite H. steps.
-      eapply APC_step_clo with (fn:="wrap") (args:=[Vint x0; Vint x1; Vptr blk 0]).
-      { try by
-            eapply Ord.eq_lt_lt;
-          [ symmetry; eapply OrdArith.add_from_nat
-          | eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r;
-            eapply Nat.lt_succ_diag_r ]. }
-      { eauto. }
-      { ss. }
-      { eapply OrdArith.lt_from_nat; eapply Nat.lt_succ_diag_r. }
-      i. subst args'.
-      hcall_tac (x0, x1, mycmp) (ord_pure 1) (@URA.unit Σ) (@URA.unit Σ) (@URA.unit Σ); ss.
-      { esplits; eauto. red. esplits; eauto.
+      acall_tac (x0, x1, mycmp) (ord_pure 1) (@URA.unit Σ) (@URA.unit Σ) (@URA.unit Σ); ss.
+      { eapply GlobalStb_wrap. }
+      { ss. esplits; eauto. red. esplits; eauto.
         { eapply SKWF. eauto. }
         { eapply CmpsStb_incl. des_ifs. }
       }
-      des. iPure POST. des;clarify.
+      ss. des. iPure POST. des;clarify.
       eapply Any.upcast_inj in POST. des; clarify. steps.
       rewrite Any.upcast_downcast in _UNWRAPN. clarify. steps.
-      eapply APC_step_clo with (fn:="wrap") (args:=[Vint x0; Vint x1; Vptr blk 0]).
-      { try by
-            eapply Ord.eq_lt_lt;
-          [ symmetry; eapply OrdArith.add_from_nat
-          | eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r;
-            eapply Nat.lt_succ_diag_r ]. }
-      { eauto. }
-      { ss. }
-      { eapply OrdArith.lt_from_nat; eapply Nat.lt_succ_diag_r. }
-      i. subst args'.
-      hcall_tac (x0, x1, mycmp) (ord_pure 1) (@URA.unit Σ) (@URA.unit Σ) (@URA.unit Σ); ss.
-      { esplits; eauto. red. esplits; eauto.
+      acall_tac (x0, x1, mycmp) (ord_pure 1) (@URA.unit Σ) (@URA.unit Σ) (@URA.unit Σ); ss.
+      { eapply GlobalStb_wrap. }
+      { ss. esplits; eauto. red. esplits; eauto.
         { eapply SKWF. eauto. }
         { eapply CmpsStb_incl. des_ifs. }
       }
-      des. iPure POST. des;clarify.
+      ss. des. iPure POST. des;clarify.
       eapply Any.upcast_inj in POST. des; clarify. steps.
       rewrite Any.upcast_downcast in _UNWRAPN. clarify. steps.
       astop. force_r; auto. steps.
