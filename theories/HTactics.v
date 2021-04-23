@@ -559,6 +559,7 @@ Section HLEMMAS.
         (PURE: ord_lt o ord_cur /\
                (tbr = true -> is_pure o) /\ (tbr = false -> o = ord_top))
         (WF: wf ((mr_src1, mp_src0), mrs_tgt))
+        (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
         (POST: forall (vret_tgt : Any.t) (mrs_src1 mrs_tgt1 : (Σ * Any.t))
                       (rret: Σ) (vret_src: Z)
                       (WF: wf (mrs_src1, mrs_tgt1)),
@@ -566,10 +567,10 @@ Section HLEMMAS.
               (<<LOOKUP: mrs_src1 = (mr_src2, mp_src2)>>) /\
               forall (VALID: URA.wf (URA.add mr_src2 (URA.add fr_src1 rret)))
                      (POST: ftsp1.(postcond) x vret_src vret_tgt rret),
-                gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ (fun _ _ => @eq Any.t) o_new
+                gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ eqr o_new
                        (mrs_src1, URA.add fr_src1 rret, k_src vret_src) (mrs_tgt1, frs_tgt, k_tgt vret_tgt))
     :
-      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ (fun _ _ => @eq Any.t) n
+      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ eqr n
              (mr_src0, mp_src0, fr_src0, (HoareCall tbr ord_cur (mk_fspec ftsp0) fn varg_src) >>= k_src)
              (mrs_tgt, frs_tgt, trigger (Call fn varg_tgt) >>= k_tgt)
   .
@@ -617,6 +618,7 @@ Section HLEMMAS.
         (PURE: ord_lt o ord_cur /\
                (tbr = true -> is_pure o) /\ (tbr = false -> o = ord_top))
         (WF: wf ((mr_src1, mp_src0), mrs_tgt))
+        (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
         (POST: forall (vret_tgt : Any.t) (mrs_src1 mrs_tgt1 : (Σ * Any.t))
                       (rret: Σ) (vret_src: Z)
                       (WF: wf (mrs_src1, mrs_tgt1)),
@@ -624,10 +626,10 @@ Section HLEMMAS.
               (<<LOOKUP: mrs_src1 = (mr_src2, mp_src2)>>) /\
               forall (VALID: URA.wf (URA.add mr_src2 (URA.add fr_src1 rret)))
                      (POST: ftsp1.(postcond) x vret_src vret_tgt rret),
-                gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ (fun _ _ => @eq Any.t) 100
+                gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ eqr 100
                        (mrs_src1, URA.add fr_src1 rret, k_src vret_src) (mrs_tgt1, frs_tgt, k_tgt vret_tgt))
     :
-      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ (fun _ _ => @eq Any.t) n
+      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ eqr n
              (mr_src0, mp_src0, fr_src0, (HoareCall tbr ord_cur (mk_fspec ftsp0) fn varg_src) >>= k_src)
              (mrs_tgt, frs_tgt, trigger (Call fn varg_tgt) >>= k_tgt)
   .
@@ -651,6 +653,7 @@ Section HLEMMAS.
         (PURE: ord_lt o ord_cur /\
                (tbr = true -> is_pure o) /\ (tbr = false -> o = ord_top))
         (WF: wf ((mr_src1, mp_src0), mrs_tgt))
+        (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
         (POST: forall (vret_tgt : Any.t) (mrs_src1 mrs_tgt1 : (Σ * Any.t))
                       (rret: Σ) (vret_src: Z)
                       (WF: wf (mrs_src1, mrs_tgt1)),
@@ -658,10 +661,10 @@ Section HLEMMAS.
               (<<LOOKUP: mrs_src1 = (mr_src2, mp_src2)>>) /\
               forall (VALID: URA.wf (URA.add mr_src2 (URA.add fr_src1 rret)))
                      (POST: Q x vret_src vret_tgt rret),
-                gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ (fun _ _ => @eq Any.t) 100
+                gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ eqr 100
                        (mrs_src1, URA.add fr_src1 rret, k_src vret_src) (mrs_tgt1, frs_tgt, k_tgt vret_tgt))
     :
-      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ (fun _ _ => @eq Any.t) n
+      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ eqr n
              (mr_src0, mp_src0, fr_src0, (HoareCall tbr ord_cur (mk P Q) fn varg_src) >>= k_src)
              (mrs_tgt, frs_tgt, trigger (Call fn varg_tgt) >>= k_tgt).
   Proof.
@@ -676,15 +679,16 @@ Section HLEMMAS.
         X Y (P: X -> Y -> Any.t -> ord -> Σ -> Prop) varg_tgt
         mrs_tgt frs_tgt f_tgt k_src
         (wf: (Σ * Any.t) * (Σ * Any.t) -> Prop)
+        (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
         (ARG:
            forall x varg_src rarg_src ord_cur
                   (VALID: URA.wf (URA.add mr_src0 (URA.add fr_src0 rarg_src)))
                   (PRE: P x varg_src varg_tgt ord_cur rarg_src),
-             gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ (fun _ _ => @eq Any.t) 90
+             gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ eqr 90
                     (mr_src0, mp_src0, URA.add fr_src0 rarg_src, k_src (x, varg_src, ord_cur))
                     (mrs_tgt, frs_tgt, f_tgt))
     :
-      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ (fun _ _ => @eq Any.t) 100
+      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ eqr 100
               (mr_src0, mp_src0, fr_src0, (HoareFunArg P varg_tgt >>= k_src))
               (mrs_tgt, frs_tgt, f_tgt)
   .
@@ -705,12 +709,14 @@ Section HLEMMAS.
         x vret_src vret_tgt
         mrs_tgt frs_tgt
         (wf: (Σ * Any.t) * (Σ * Any.t) -> Prop)
+        (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
         (FUEL: (14 < n)%ord)
         (UPDATABLE: URA.updatable (URA.add mr_src0 fr_src0) (URA.add mr_src1 rret_src))
         (POST: Q x vret_src vret_tgt rret_src)
         (WF: wf ((mr_src1, mp_src0), mrs_tgt))
+        (EQ: eqr (mr_src1, mp_src0, ε) (mrs_tgt, frs_tgt) vret_tgt vret_tgt)
     :
-      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ (fun _ _ => @eq Any.t) n
+      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ eqr n
              (mr_src0, mp_src0, fr_src0, (HoareFunRet Q x vret_src))
              ((mrs_tgt, frs_tgt), (Ret vret_tgt))
   .
@@ -735,6 +741,7 @@ Section HLEMMAS.
         mrs_tgt frs_tgt k_src
         (at_most: Ord.t)
         (wf: (Σ * Any.t) * (Σ * Any.t) -> Prop)
+        (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
         stb itr_tgt
 
         (FUEL: (n1 + 7 < n0)%ord)
@@ -742,13 +749,13 @@ Section HLEMMAS.
         (FIND: find (fun '(_fn, _) => dec fn _fn) stb = Some (fn, mk_fspec ftsp))
         (NEXT: (next < at_most)%ord)
 
-        (POST: gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ (fun _ _ => @eq Any.t) n1
+        (POST: gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ eqr n1
                       (mr_src0, mp_src0, fr_src0,
                        (HoareCall true o (mk_fspec ftsp) fn args);; Tau (ITree.bind (interp_hCallE_tgt stb o (_APC next)) k_src))
                       ((mrs_tgt, frs_tgt),
                        itr_tgt))
     :
-      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ (fun _ _ => @eq Any.t) n0
+      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ eqr n0
              (mr_src0, mp_src0, fr_src0, (interp_hCallE_tgt stb o (_APC at_most)) >>= k_src)
              ((mrs_tgt, frs_tgt),
               itr_tgt).
@@ -789,16 +796,17 @@ Section HLEMMAS.
         mrs_tgt frs_tgt k_src
         (at_most: Ord.t)
         (wf: (Σ * Any.t) * (Σ * Any.t) -> Prop)
+        (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
         stb itr_tgt
 
         (FUEL: (n1 + 1 < n0)%ord)
 
-        (POST: gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ (fun _ _ => @eq Any.t) n1
+        (POST: gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ eqr n1
                       (mr_src0, mp_src0, fr_src0, k_src ())
                       ((mrs_tgt, frs_tgt),
                        itr_tgt))
     :
-      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ (fun _ _ => @eq Any.t) n0
+      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ eqr n0
               (mr_src0, mp_src0, fr_src0,
               (interp_hCallE_tgt stb o (_APC at_most)) >>= k_src)
              ((mrs_tgt, frs_tgt),
@@ -817,18 +825,19 @@ Section HLEMMAS.
         r rg (n0: Ord.t) mr_src0 mp_src0 fr_src0
         mrs_tgt frs_tgt k_src
         (wf: (Σ * Any.t) * (Σ * Any.t) -> Prop)
+        (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
         stb itr_tgt
 
         (ATMOST: (at_most < kappa)%ord)
         (FUEL: (n1 + 3 < n0)%ord)
 
-        (POST: gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ (fun _ _ => @eq Any.t) n1
+        (POST: gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ eqr n1
                        (mr_src0, mp_src0, fr_src0,
                        (interp_hCallE_tgt stb o (_APC at_most))>>= k_src)
                       ((mrs_tgt, frs_tgt),
                        itr_tgt))
     :
-      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ (fun _ _ => @eq Any.t) n0
+      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ eqr n0
               (mr_src0, mp_src0, fr_src0,
               (interp_hCallE_tgt stb o APC) >>= k_src)
              ((mrs_tgt, frs_tgt),
@@ -1011,7 +1020,7 @@ Ltac hret_tac MR_SRC RT_SRC :=
   let mr_src1 := r_gather MR_SRC in
   let fr_src1 := r_gather RT_SRC in
   let tac0 := etrans; [etrans; [|on_gwf ltac:(fun GWF => apply GWF)]|]; eapply URA.extends_updatable; r_equalize; r_solve; fail in
-  _hret_tac mr_src1 fr_src1; [tac0| |]
+  _hret_tac mr_src1 fr_src1; [tac0| | |try refl]
 .
 
 Ltac astep_full _fn _args _next _n1 :=
