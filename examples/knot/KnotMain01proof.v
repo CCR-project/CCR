@@ -17,6 +17,7 @@ From ExtLib Require Import
      Data.Map.FMapAList.
 
 Require Import HTactics Logic YPM TODOYJ.
+Require Import STB.
 
 Generalizable Variables E R A B C X Y.
 
@@ -46,22 +47,14 @@ Section SIMMODSEM.
       (<<TGT: mrps_tgt0 = (ε, tt↑)>>)
   .
 
-  Variable RecStb_incl
-    :
-      forall skenv fn fsp
-             (SPECS: List.find (fun '(_fn, _) => dec fn _fn) (RecStb skenv) = Some fsp),
-        List.find (fun '(_fn, _) => dec fn _fn) (GlobalStb skenv) = Some fsp.
+  Hypothesis RecStb_incl: forall skenv,
+      stb_incl (RecStb skenv) (GlobalStb skenv).
 
-  Variable FunStb_incl
-    :
-      forall skenv fn fsp
-             (SPECS: List.find (fun '(_fn, _) => dec fn _fn) (MainFunStb RecStb skenv) = Some fsp),
-        List.find (fun '(_fn, _) => dec fn _fn) (FunStb skenv) = Some fsp.
+  Hypothesis FunStb_fib: forall skenv,
+      fn_has_spec (FunStb skenv) "fib" (fib_spec RecStb skenv).
 
-  Hypotheses GlobalStb_knot
-    :
-      forall skenv,
-        List.find (fun '(_fn, _) => dec "knot" _fn) (GlobalStb skenv) = Some ("knot", knot_spec RecStb FunStb skenv).
+  Hypotheses GlobalStb_knot: forall skenv,
+      fn_has_spec (GlobalStb skenv) "knot" (knot_spec RecStb FunStb skenv).
 
   Theorem correct: ModPair.sim (KnotMain1.Main RecStb GlobalStb) KnotMain0.Main.
   Proof.
@@ -74,7 +67,7 @@ Section SIMMODSEM.
       iRefresh. iDestruct PRE. iPure PRE. des; clarify.
       eapply Any.upcast_inj in PRE. des; clarify. steps.
       rewrite Any.upcast_downcast in _UNWRAPN. clarify. astart 2. steps.
-      rewrite PRE1. ss. steps.
+      inv PRE1. rewrite FBLOCK. ss. steps.
       des_ifs.
       { astop. steps. force_l. eexists.
         hret_tac (@URA.unit Σ) A; ss. esplits; eauto.

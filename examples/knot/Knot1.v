@@ -9,11 +9,11 @@ Require Import HoareDef.
 Require Import TODOYJ.
 Require Import Logic.
 Require Import KnotHeader.
+Require Import STB.
 
 Generalizable Variables E R A B C X Y Σ.
 
 Set Implicit Arguments.
-
 
 
 
@@ -29,21 +29,40 @@ Section KNOT.
   Section SKENV.
     Variable skenv: SkEnv.t.
 
+    Definition rec_spec:    fspec := mk_simple (X:=(nat -> nat) * nat)
+                                               (fun '(f, n) => (
+                                                    (fun varg o => Own (GRA.embed (knot_frag (Some f))) ** ⌜varg = [Vint (Z.of_nat n)]↑ /\ o = ord_pure (2 * n + 1)⌝),
+                                                    (fun vret => Own (GRA.embed (knot_frag (Some f))) ** ⌜vret = (Vint (Z.of_nat (f n)))↑⌝)
+                                               )).
+
+    Definition fun_gen (f: nat -> nat): ftspec (list val) (val) :=
+      mk_simple (X:=nat)
+                (fun n => (
+                     (fun varg o =>
+                        (⌜exists fb,
+                              varg = [Vptr fb 0; Vint (Z.of_nat n)]↑ /\ o = ord_pure (2 * n) /\
+                              fb_has_spec skenv (RecStb skenv) fb rec_spec⌝)
+                          ** Own (GRA.embed (knot_frag (Some f)))),
+                     (fun vret =>
+                        (⌜vret = (Vint (Z.of_nat (f n)))↑⌝)
+                          ** Own (GRA.embed (knot_frag (Some f))))
+                )).
+
     Definition KnotRecStb: list (gname * fspec) := [("rec", rec_spec)].
 
     Definition knot_spec:    fspec :=
       mk_simple (X:=(nat -> nat))
                 (fun f => (
                      (fun varg o =>
-                        ⌜exists fn fb (ftsp: ftspec (list val) val),
-                            varg = [Vptr fb 0]↑ /\ o = ord_pure 0 /\
-                            skenv.(SkEnv.blk2id) fb = Some fn /\
-                            List.find (fun '(_fn, _) => dec fn _fn) (FunStb skenv) = Some (fn, mk_fspec ftsp) /\
-                            ftspec_weaker (fun_gen RecStb skenv f) ftsp⌝ ** Exists old, Own (GRA.embed (knot_frag old))),
-                     (fun vret => ⌜exists fn fb,
+                        (⌜exists fb,
+                              varg = [Vptr fb 0]↑ /\ o = ord_pure 0 /\
+                              fb_has_spec skenv (FunStb skenv) fb (fun_gen f)⌝)
+                          ** Exists old, Own (GRA.embed (knot_frag old))),
+                     (fun vret =>
+                        (⌜exists fb,
                             vret = (Vptr fb 0)↑ /\
-                            skenv.(SkEnv.blk2id) fb = Some fn /\
-                            List.find (fun '(_fn, _) => dec fn _fn) (RecStb skenv) = Some (fn, rec_spec)⌝ ** Own (GRA.embed (knot_frag (Some f))))
+                            fb_has_spec skenv (RecStb skenv) fb rec_spec⌝)
+                          ** Own (GRA.embed (knot_frag (Some f))))
                 )).
 
     Definition KnotStb: list (gname * fspec) := [("rec", rec_spec); ("knot", knot_spec)].
