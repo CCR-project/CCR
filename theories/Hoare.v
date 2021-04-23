@@ -6,7 +6,7 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import Any.
-Require Export HoareDef.
+Require Export HoareDef STB.
 Require Import Hoareproof0 Hoareproof1.
 Require Import SimModSem.
 

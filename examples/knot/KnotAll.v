@@ -7,7 +7,7 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import Hoare.
-Require Import KnotHeader SimModSemL.
+Require Import STB KnotHeader SimModSemL.
 Require Import KnotMain0 KnotMain1 Knot0 Knot1 Mem0 Mem1.
 Require Import KnotMain01proof Knot01proof Mem01proof.
 
@@ -72,13 +72,12 @@ Section PROOF.
   Proof.
     eapply SimModSem.adequacy_local_list. econs; [|econs; [|econs; ss]].
     - eapply KnotMain01proof.correct with (RecStb0:=RecStb) (FunStb0:=FunStb) (GlobalStb0:=GlobalStb).
-      + i. ss. unfold sumbool_to_bool in *. des_ifs.
-      + i. ss.
-      + i. ss.
+      + ii. ss. rewrite ! eq_rel_dec_correct in *. des_ifs.
+      + ii. econs; ss. refl.
+      + ii. econs; ss. refl.
     - eapply Knot01proof.correct with (RecStb0:=RecStb) (FunStb0:=FunStb) (GlobalStb0:=GlobalStb).
-      + i. ss.
-      + i. ss. unfold sumbool_to_bool in *. des_ifs.
-      + i. ss.  admit "ez".
+      + ii. ss.
+      + ii. ss. rewrite ! eq_rel_dec_correct in *. des_ifs.
     - eapply Mem01proof.correct.
   Qed.
 

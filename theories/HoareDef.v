@@ -98,30 +98,6 @@ Section FSPEC.
       postcond: X -> AR -> Any_tgt -> Σ -> Prop; (*** meta-variable -> new logical ret -> current logical ret -> resource ret -> Prop ***)
     }
     .
-
-    Definition ftspec_weaker (fsp_src fsp_tgt: ftspec): Prop :=
-      forall (x_src: fsp_src.(X)),
-      exists (x_tgt: fsp_tgt.(X)),
-        (<<PRE: forall arg_src arg_tgt o,
-            (fsp_src.(precond) x_src arg_src arg_tgt o -* fsp_tgt.(precond) x_tgt arg_src arg_tgt o) ε>>) /\
-        (<<POST: forall ret_src ret_tgt,
-            (fsp_tgt.(postcond) x_tgt ret_src ret_tgt -* fsp_src.(postcond) x_src ret_src ret_tgt) ε>>)
-    .
-
-    Global Program Instance ftspec_weaker_PreOrder: PreOrder ftspec_weaker.
-    Next Obligation.
-    Proof.
-      ii. exists x_src. esplits; ii.
-      { rewrite URA.unit_idl. auto. }
-      { rewrite URA.unit_idl. auto. }
-    Qed.
-    Next Obligation.
-    Proof.
-      ii. hexploit (H x_src). i. des.
-      hexploit (H0 x_tgt). i. des. esplits; ii.
-      { eapply PRE0; ss. rewrite <- URA.unit_idl. eapply PRE; auto. }
-      { eapply POST; ss. rewrite <- URA.unit_idl. eapply POST0; auto. }
-    Qed.
   End FSPECTYPE.
 
   (*** spec table ***)
@@ -131,25 +107,6 @@ Section FSPEC.
     tspec:> ftspec AA AR;
   }
   .
-
-  Variant fspec_weaker (fsp_src fsp_tgt: fspec): Prop :=
-  | fspec_weaker_intro
-      AA AR ftsp_src ftsp_tgt
-      (FSPEC0: fsp_src = @mk_fspec AA AR ftsp_src)
-      (FSPEC1: fsp_tgt = @mk_fspec AA AR ftsp_tgt)
-      (WEAK: ftspec_weaker ftsp_src ftsp_tgt)
-  .
-
-  Global Program Instance fspec_weaker_PreOrder: PreOrder fspec_weaker.
-  Next Obligation.
-  Proof.
-    ii. destruct x. econs; eauto. refl.
-  Qed.
-  Next Obligation.
-  Proof.
-    ii. inv H; inv H0. dependent destruction FSPEC0.
-    econs; eauto. etrans; eauto.
-  Qed.
 
   Definition mk (X AA AR: Type) (precond: X -> AA -> Any_tgt -> ord -> Σ -> Prop) (postcond: X -> AR -> Any_tgt -> Σ -> Prop) :=
     mk_fspec (mk_ftspec precond postcond).

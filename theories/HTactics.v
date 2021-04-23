@@ -6,7 +6,7 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import Any.
-Require Import HoareDef SimModSem.
+Require Import HoareDef STB SimModSem.
 
 Require Import Relation_Definitions.
 Require Import Relation_Operators.
@@ -1061,8 +1061,8 @@ Ltac hcall_tac_weaken fsp x o MR_SRC1 FR_SRC1 RARG_SRC :=
   (match x with
    | ltac_wild =>
      match o with
-     | ltac_wild => eapply (@hcall_clo _ _ _ fsp mr_src1 fr_src1 rarg_src)
-     | _ => eapply (@hcall_clo _ _ _ fsp mr_src1 fr_src1 rarg_src o)
+     | ltac_wild => eapply (@hcall_clo_weaken _ _ _ fsp mr_src1 fr_src1 rarg_src)
+     | _ => eapply (@hcall_clo_weaken _ _ _ fsp mr_src1 fr_src1 rarg_src o)
      end
    | _ => eapply (@hcall_clo_weaken _ _ _ fsp mr_src1 fr_src1 rarg_src o x)
    end);
@@ -1091,6 +1091,12 @@ Ltac astep _fn _args :=
    (eapply OrdArith.lt_from_nat; eapply Nat.lt_succ_diag_r)|
   ].
 
+Ltac acatch :=
+  match goal with
+  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, _) (_, trigger (Call ?fn (Any.upcast ?args)) >>= _)) ] =>
+    astep fn args
+  end.
+
 Ltac astop :=
   eapply APC_stop_clo;
   [(try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r; eapply Nat.lt_succ_diag_r)]))|].
@@ -1103,15 +1109,9 @@ Ltac astart _at_most :=
 .
 
 Ltac acall_tac A0 A1 A2 A3 A4 :=
-  match goal with
-  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, _) (_, trigger (Call ?fn (Any.upcast ?args)) >>= _)) ] =>
-    astep fn args; [..|hcall_tac A0 A1 A2 A3 A4]
-  end.
+  acatch; [..|hcall_tac A0 A1 A2 A3 A4].
 
 Ltac acall_tac_weaken fsp A0 A1 A2 A3 A4 :=
-  match goal with
-  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, _) (_, trigger (Call ?fn (Any.upcast ?args)) >>= _)) ] =>
-    astep fn args; [..|hcall_tac_weaken fsp A0 A1 A2 A3 A4]
-  end.
+  acatch; [..|hcall_tac_weaken fsp A0 A1 A2 A3 A4].
 
 Global Opaque _APC APC interp interp_hCallE_tgt.
