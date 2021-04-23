@@ -72,7 +72,7 @@ Section SIMMODSEM.
             exists fb fn,
               (<<BLK: fb' = Some fb>>) /\
               (<<FN: skenv.(SkEnv.blk2id) fb = Some fn>>) /\
-              (<<FIND: List.find (fun '(_fn, _) => dec fn _fn) (FunStb skenv) = Some (fn, fun_gen RecStb skenv f)>>)>>)
+              (<<FIND: List.find (fun '(_fn, _) => dec fn _fn) (FunStb skenv) = Some (fn, mk_fspec (fun_gen RecStb skenv f))>>)>>)
   .
 
   Variable RecStb_incl
@@ -104,24 +104,16 @@ Section SIMMODSEM.
       hexploit SOME; eauto. clear SOME. i. des. clarify. steps.
       rewrite Any.upcast_downcast. ss. steps. rewrite FN. ss. steps.
       hexploit (SKINCL "rec"); ss; eauto. i. des. rewrite H0. ss. steps.
-      eapply APC_step_clo with (fn0:=fn) (args:=[Vptr blk 0; Vint (Z.of_nat n)]).
-      { try by
-            eapply Ord.eq_lt_lt;
-          [ symmetry; eapply OrdArith.add_from_nat
-          | eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r;
-            eapply Nat.lt_succ_diag_r ]. }
-      { eauto. }
-      { ss. }
-      { eapply OrdArith.lt_from_nat; eapply Nat.lt_succ_diag_r. }
-      i. subst args'. iRefresh.
-      hcall_tac n (ord_pure (2 * n)) SIM (@URA.unit Σ) PRE; ss.
-      { splits; ss. iRefresh. iSplitR PRE; ss.
+      acall_tac_weaken (fun_gen RecStb skenv f) n (ord_pure (2 * n)) SIM (@URA.unit Σ) PRE.
+      { eapply FunStb_incl. eapply FIND. }
+      { refl. }
+      { ss. splits; ss. iRefresh. iSplitR PRE; ss.
         red. red. esplits; eauto.
         { eapply SKWF. eauto. }
         { eapply RecStb_incl. des_ifs. }
       }
       { splits; ss. eauto with ord_step. }
-      { esplits; eauto. i. clarify. esplits; eauto. }
+      { ss. esplits; eauto. i. clarify. esplits; eauto. }
       des. clarify. iRefresh. iDestruct POST. iPure POST.
       eapply Any.upcast_inj in POST. des; clarify.
       steps. rewrite Any.upcast_downcast in _UNWRAPN. clarify.
@@ -151,7 +143,7 @@ Section SIMMODSEM.
         { eapply SKWF; eauto. }
         { eapply RecStb_incl; eauto. }
       }
-      { esplits; eauto. i. clarify. esplits; eauto. }
+      { esplits; eauto. i. clarify. esplits; eauto. admit "". }
     }
   Qed.
 
