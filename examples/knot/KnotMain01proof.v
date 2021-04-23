@@ -52,17 +52,6 @@ Section SIMMODSEM.
              (SPECS: List.find (fun '(_fn, _) => dec fn _fn) (RecStb skenv) = Some fsp),
         List.find (fun '(_fn, _) => dec fn _fn) (GlobalStb skenv) = Some fsp.
 
-
-  (* Variable RecStb_incl *)
-  (*   : *)
-  (*     forall skenv fn fsp *)
-  (*            (SPECS: List.find (fun '(_fn, _) => dec fn _fn) (RecStb skenv) = Some fsp), *)
-  (*     exists (fstp: ftspec (list val) val), *)
-  (*       List.find (fun '(_fn, _) => dec fn _fn) (GlobalStb skenv) = Some (fn, mk_fspec fstp) /\ *)
-  (*       fspec_weaker mrec_spec fstp mrec_spec *)
-  (* . *)
-
-
   Variable FunStb_incl
     :
       forall skenv fn fsp
@@ -138,14 +127,24 @@ Section SIMMODSEM.
           { eapply SKWF. eauto. }
           { eapply FunStb_incl. des_ifs. }
           { ii. ss. eexists (x_src, Own (GRA.embed (knot_frag (Some Fib)))). splits; ss.
-            { i. fspec_weaker des; clarify. split; auto. iRefresh.
-
-
-exists (x
-
-admit "". }
+            { i. iRefresh. iIntro. des. split; auto. iRefresh.
+              iDestruct A. iPure A. des; clarify. iSplitR A1; ss.
+              red. red. esplits; eauto.
+              { ii. ss. exists (Fib, x_src0). splits; ss.
+                { i. iRefresh. iIntro. des. split; auto. iRefresh.
+                  iDestruct A0. iPure A0. des; clarify.
+                  iSplitL A4; ss.
+                }
+                { i. iRefresh. iIntro. des. split; auto. iRefresh.
+                  iDestruct A0. iPure A4. iSplitR A0; ss. }
+              }
+            }
+            { i. iRefresh. iIntro. des. split; auto. iRefresh.
+              iDestruct A. iPure A. iSplitR A1; ss.
+            }
+          }
         }
-        { exists None. ss. }
+        { exists None. iRefresh. ss. }
       }
       ss. des. clarify. iRefresh. iDestruct POST. iPure POST. des; clarify.
       eapply Any.upcast_inj in POST. des; clarify.
