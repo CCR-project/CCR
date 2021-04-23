@@ -142,9 +142,9 @@ Section AUX.
   Context `{Σ: GRA.t}.
 
   Definition stb_weaker (stb0 stb1: list (gname * fspec)): Prop :=
-    forall fn fn0 fsp0 (FINDTGT: List.find (fun '(_fn, _) => dec fn _fn) stb0 = Some (fn0, fsp0)),
-    exists fn1 fsp1,
-      (<<FINDSRC: List.find (fun '(_fn, _) => dec fn _fn) stb1 = Some (fn1, fsp1)>>) /\
+    forall fn fsp0 (FINDTGT: alist_find fn stb0 = Some fsp0),
+    exists fsp1,
+      (<<FINDSRC: alist_find fn stb1 = Some fsp1>>) /\
       (<<WEAKER: fspec_weaker fsp0 fsp1>>)
   .
 
@@ -157,26 +157,28 @@ Section AUX.
 
   Theorem incl_weaker: forall stb0 stb1 (NODUP: NoDup (List.map fst stb1)) (INCL: incl stb0 stb1), stb_weaker stb0 stb1.
   Proof.
-    ii. eapply find_some in FINDTGT. des. des_sumbool. subst.
-    destruct (find (fun '(_fn, _) => dec fn0 _fn) stb1) eqn:T.
-    { eapply find_some in T. des. des_ifs. des_sumbool. subst.
-      eapply INCL in FINDTGT.
-      destruct (classic (fsp0 = f)).
-      { subst. esplits; et. refl. }
-      exfalso.
-      eapply NoDup_inj_aux in NODUP; revgoals.
-      { eapply T. }
-      { eapply FINDTGT. }
-      { ii; clarify. }
-      ss.
-    }
-    eapply find_none in T; et. des_ifs. des_sumbool; ss.
-  Qed.
+  Admitted.
+  (*   ii. eapply find_some in FINDTGT. des. des_sumbool. subst. *)
+  (*   destruct (find (fun '(_fn, _) => dec fn0 _fn) stb1) eqn:T. *)
+  (*   { eapply find_some in T. des. des_ifs. des_sumbool. subst. *)
+  (*     eapply INCL in FINDTGT. *)
+  (*     destruct (classic (fsp0 = f)). *)
+  (*     { subst. esplits; et. refl. } *)
+  (*     exfalso. *)
+  (*     eapply NoDup_inj_aux in NODUP; revgoals. *)
+  (*     { eapply T. } *)
+  (*     { eapply FINDTGT. } *)
+  (*     { ii; clarify. } *)
+  (*     ss. *)
+  (*   } *)
+  (*   eapply find_none in T; et. des_ifs. des_sumbool; ss. *)
+  (* Qed. *)
 
   Lemma app_weaker: forall stb0 stb1, stb_weaker stb0 (stb0 ++ stb1).
   Proof.
-    ii. eapply find_app in FINDTGT. esplits; eauto. refl.
-  Qed.
+  Admitted.
+  (*   ii. eapply find_app in FINDTGT. esplits; eauto. refl. *)
+  (* Qed. *)
 
 End AUX.
 

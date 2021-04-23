@@ -1,4 +1,4 @@
-Require Import Coqlib.
+Require Import Coqlib AList.
 Require Import Universe.
 Require Import STS.
 Require Import Behavior.
@@ -8,6 +8,11 @@ Require Import PCM.
 From Ordinal Require Export Ordinal Arithmetic Inaccessible.
 Require Import Any.
 Require Import Logic.
+
+From ExtLib Require Import
+     Core.RelDec
+     Structures.Maps
+     Data.Map.FMapAList.
 
 Generalizable Variables E R A B C X Y Σ.
 
@@ -294,6 +299,7 @@ Section CANCEL.
          When adding two ms, it is pointwise addition, and addition of (option A) will yield None when both are Some.
  ***)
   (*** TODO: try above idea; if it fails, document it; and refactor below with alist ***)
+
   Variable stb: list (gname * fspec).
 
   Definition handle_hCallE_src: hCallE ~> itree Es :=
@@ -353,9 +359,21 @@ Section CANCEL.
 
 
 
+Global Instance Dec_RelDec K `{Dec K}: @RelDec K eq :=
+  { rel_dec := dec }.
+
+Global Instance Dec_RelDec_Correct K `{Dec K}: RelDec_Correct Dec_RelDec.
+Proof.
+  unfold Dec_RelDec. ss.
+  econs. ii. ss. unfold Dec_RelDec. split; ii.
+  - unfold rel_dec in *. unfold sumbool_to_bool in *. des_ifs.
+  - unfold rel_dec in *. unfold sumbool_to_bool in *. des_ifs.
+Qed.
+
+
   Definition handle_hCallE_tgt (ord_cur: ord): hCallE ~> itree Es :=
     fun _ '(hCall tbr fn varg_src) =>
-      '(_, f) <- (List.find (fun '(_fn, _) => dec fn _fn) stb)ǃ;;
+      f <- (alist_find fn stb)ǃ;;
       varg_src <- varg_src↓ǃ;;
       vret_src <- (HoareCall tbr ord_cur f fn varg_src);;
       Ret vret_src↑
@@ -420,8 +438,8 @@ If this feature is needed; we can extend it then. At the moment, I will only all
   Variable md_tgt: ModL.t.
   Let ms_tgt: ModSemL.t := (ModL.get_modsem md_tgt (Sk.load_skenv md_tgt.(ModL.sk))).
 
-  Variable sbtb: list (gname * fspecbody).
-  Let stb: list (gname * fspec) := List.map (fun '(gn, fsb) => (gn, fsb_fspec fsb)) sbtb.
+  Variable sbtb: alist gname fspecbody.
+  Let stb: alist gname fspec := List.map (fun '(gn, fsb) => (gn, fsb_fspec fsb)) sbtb.
 
 
 

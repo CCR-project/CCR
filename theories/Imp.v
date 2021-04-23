@@ -378,7 +378,7 @@ Definition lenv := alist var val.
 Definition handle_ImpState {E: Type -> Type} `{Σ: GRA.t} `{eventE -< E}: ImpState ~> stateT lenv (itree E) :=
   fun _ e old =>
     match e with
-    | GetVar x => r <- unwrapU (alist_find _ x old) ;; Ret (old, r)
+    | GetVar x => r <- unwrapU (alist_find x old) ;; Ret (old, r)
     | SetVar x v => Ret (alist_add _ x v old, tt)
     end.
 
@@ -564,7 +564,7 @@ Section PROOFS.
         st0 x
     :
       interp_imp (trigger (GetVar x)) st0 =
-      r <- unwrapU (alist_find _ x st0);; tau;; Ret (st0, r).
+      r <- unwrapU (alist_find x st0);; tau;; Ret (st0, r).
   Proof.
     unfold interp_imp. grind.
   Qed.

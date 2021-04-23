@@ -35,18 +35,6 @@ Set Implicit Arguments.
 
 
 
-Global Instance function_Map (K V: Type) (dec: forall k0 k1, {k0=k1} + {k0<>k1}): (Map K V (K -> option V)) :=
-  Build_Map
-    (fun _ => None)
-    (fun k0 v m => fun k1 => if dec k0 k1 then Some v else m k1)
-    (fun k0 m => fun k1 => if dec k0 k1 then None else m k1)
-    (fun k m => m k)
-    (fun m0 m1 => fun k => match (m0 k) with
-                           | Some v => Some v
-                           | _ => m1 k
-                           end)
-.
-
 
 
 Lemma eq_is_bisim: forall E R (t1 t2 : itree E R), t1 = t2 -> t1 ≅ t2.

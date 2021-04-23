@@ -777,7 +777,7 @@ Section HLEMMAS.
 
         (FUEL: (n1 + 7 < n0)%ord)
         Z (ftsp: ftspec Y Z)
-        (FIND: find (fun '(_fn, _) => dec fn _fn) stb = Some (fn, mk_fspec ftsp))
+        (FIND: alist_find fn stb = Some (mk_fspec ftsp))
         (NEXT: (next < at_most)%ord)
 
         (POST: gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ eqr n1

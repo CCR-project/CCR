@@ -6,7 +6,7 @@
 (* *********************************************************************)
 
 (** This file collects a number of basic lemmas and tactics for better
-    proof automation, structuring large proofs, or rewriting.  Most of 
+    proof automation, structuring large proofs, or rewriting.  Most of
     the rewriting support is ported from ssreflect. *)
 
 (** Symbols starting with [sflib__] are internal. *)
@@ -53,28 +53,28 @@ Hint Resolve sflib__true_is_true sflib__not_false_is_true.
 
 (** Set up for basic simplification *)
 
-Create HintDb sflib discriminated. 
+Create HintDb sflib discriminated.
 
 (** Adaptation of the ss-reflect "[done]" tactic. *)
 
-Ltac sflib__basic_done := 
+Ltac sflib__basic_done :=
   solve [trivial with sflib | apply sym_equal; trivial | discriminate | contradiction].
 
 Ltac done := unfold not in *; trivial with sflib; hnf; intros;
-  solve [try sflib__basic_done; split; 
-         try sflib__basic_done; split; 
-         try sflib__basic_done; split; 
-         try sflib__basic_done; split; 
+  solve [try sflib__basic_done; split;
+         try sflib__basic_done; split;
+         try sflib__basic_done; split;
+         try sflib__basic_done; split;
          try sflib__basic_done; split; sflib__basic_done
     | match goal with H : _ -> False |- _ => solve [case H; trivial] end].
 
 (** A variant of the ssr "done" tactic that performs "eassumption". *)
 
 Ltac edone := try eassumption; trivial; hnf; intros;
-  solve [try eassumption; try sflib__basic_done; split; 
-         try eassumption; try sflib__basic_done; split; 
-         try eassumption; try sflib__basic_done; split; 
-         try eassumption; try sflib__basic_done; split; 
+  solve [try eassumption; try sflib__basic_done; split;
+         try eassumption; try sflib__basic_done; split;
+         try eassumption; try sflib__basic_done; split;
+         try eassumption; try sflib__basic_done; split;
          try eassumption; try sflib__basic_done; split;
          try eassumption; sflib__basic_done
     | match goal with H : ~ _ |- _ => solve [case H; trivial] end].
@@ -130,7 +130,7 @@ Tactic Notation "hinv" ident(a) ident(b) :=
   (hinv a; hinv b).
 Tactic Notation "hinv" ident(a) ident(b) ident(c) :=
   (hinv a; hinv b c).
-Tactic Notation "hinv" ident(a) ident(b) ident(c) ident(d) := 
+Tactic Notation "hinv" ident(a) ident(b) ident(c) ident(d) :=
   (hinv a b; hinv c d).
 
 Ltac hinvc x := hinv x; clear x.
@@ -141,9 +141,9 @@ Tactic Notation "hinvc" ident(a) ident(b) :=
   (hinvc a; hinvc b).
 Tactic Notation "hinvc" ident(a) ident(b) ident(c) :=
   (hinvc a; hinvc b c).
-Tactic Notation "hinvc" ident(a) ident(b) ident(c) ident(d) := 
+Tactic Notation "hinvc" ident(a) ident(b) ident(c) ident(d) :=
   (hinvc a b; hinvc c d).
-Tactic Notation "hinvc" ident(a) ident(b) ident(c) ident(d) ident(e) := 
+Tactic Notation "hinvc" ident(a) ident(b) ident(c) ident(d) ident(e) :=
   (hinvc a b c; hinvc d e).
 
 Ltac simpls  := simpl in *; try done.
@@ -176,10 +176,9 @@ Ltac autos   := clarsimp; auto with sflib.
 
 Definition  NW A (P: () -> A) : A := P ().
 
-(* Notation "<< x : t >>" := (NW (fun x => (t):Prop)) (at level 80, x ident, no associativity). *)
-Notation "<< x : t >>" := (NW (fun x => (t))) (at level 80, x ident, no associativity).
-Notation "<< t >>" := (NW (fun _ => t)) (at level 79, no associativity).
-Notation "<< t >>" := (NW (fun _ => (t):Prop)) (at level 79, no associativity).
+Notation "<< x : t >>" := (NW (fun x => (t):Prop)) (at level 80, x name, no associativity).
+Notation "<< t >>" := (NW (fun _ => t)) (at level 79, no associativity, only printing).
+Notation "<< t >>" := (NW (fun _ => (t):Prop)) (at level 79, no associativity, only printing).
 
 Ltac unnw := unfold NW in *.
 Ltac rednw := red; unnw.
@@ -191,17 +190,17 @@ Ltac get_concl := lazymatch goal with [ |- ?G ] => G end.
 Ltac des1 :=
   match goal with
     | H : NW _ |- _ => red in H
-    | H : exists x, NW (fun y => _) |- _ => 
+    | H : exists x, NW (fun y => _) |- _ =>
       let x' := fresh x in let y' := fresh y in destruct H as [x' y']; red in y'
-    | H : exists x, ?p |- _ => 
+    | H : exists x, ?p |- _ =>
       let x' := fresh x in destruct H as [x' H]
-    | H : ?p /\ ?q |- _ => 
+    | H : ?p /\ ?q |- _ =>
       let x' := match p with | NW (fun z => _) => fresh z | _ => H end in
       let y' := match q with | NW (fun z => _) => fresh z | _ => fresh H end in
       destruct H as [x' y'];
       match p with | NW _ => red in x' | _ => idtac end;
       match q with | NW _ => red in y' | _ => idtac end
-    | H : ?p <-> ?q |- _ => 
+    | H : ?p <-> ?q |- _ =>
       let x' := match p with | NW (fun z => _) => fresh z | _ => H end in
       let y' := match q with | NW (fun z => _) => fresh z | _ => fresh H end in
       destruct H as [x' y'];
@@ -237,17 +236,17 @@ Ltac desc :=
 Ltac nbdes1 :=
   match goal with
     | H : NW _ |- _ => red in H
-    | H : exists x, NW (fun y => _) |- _ => 
+    | H : exists x, NW (fun y => _) |- _ =>
       let x' := fresh x in let y' := fresh y in destruct H as [x' y']; red in y'
-    | H : exists x, ?p |- _ => 
+    | H : exists x, ?p |- _ =>
       let x' := fresh x in destruct H as [x' H]
-    | H : ?p /\ ?q |- _ => 
+    | H : ?p /\ ?q |- _ =>
       let x' := match p with | NW (fun z => _) => fresh z | _ => H end in
       let y' := match q with | NW (fun z => _) => fresh z | _ => fresh H end in
       destruct H as [x' y'];
       match p with | NW _ => red in x' | _ => idtac end;
       match q with | NW _ => red in y' | _ => idtac end
-    | H : ?p <-> ?q |- _ => 
+    | H : ?p <-> ?q |- _ =>
       let x' := match p with | NW (fun z => _) => fresh z | _ => H end in
       let y' := match q with | NW (fun z => _) => fresh z | _ => fresh H end in
       destruct H as [x' y'];
@@ -270,17 +269,17 @@ Ltac forall_split :=
 Definition _HID_ (A : Type) (a : A) := a.
 
 Ltac hdesHi H P x y :=
-  let FF := fresh "__hdesfalse__" in 
-  let TMP := fresh "__hdesHi__" in 
-  let P1 := fresh "__hdesHi__" in 
-  let P2 := fresh "__hdesHi__" in 
+  let FF := fresh "__hdesfalse__" in
+  let TMP := fresh "__hdesHi__" in
+  let P1 := fresh "__hdesHi__" in
+  let P2 := fresh "__hdesHi__" in
     evar (P1 : Prop); evar (P2 : Prop);
     assert (TMP: False -> P) by
       (intro FF; forall_split;
          [ let G := get_concl in set (TMP := G); revert P1; instantiate (1:=G)
          | let G := get_concl in set (TMP := G); revert P2; instantiate (1:=G) ];
        destruct FF);
-    try clear TMP; 
+    try clear TMP;
     try (try (match goal with [Def := ?G : _ |- _] =>
               match Def with P1 =>
               match goal with [_ : G |- _] => fail 4 end end end);
@@ -289,35 +288,35 @@ Ltac hdesHi H P x y :=
     try (try (match goal with [Def := ?G : _ |- _] =>
               match Def with P2 =>
               match goal with [_ : G |- _] => fail 4 end end end);
-         assert (y: P2) by (unfold P2; repeat (let x := fresh "__xhj__" in intro x; specialize (H x)); apply H)); 
+         assert (y: P2) by (unfold P2; repeat (let x := fresh "__xhj__" in intro x; specialize (H x)); apply H));
     try unfold P2 in y; try clear P2;
     fold (_HID_ P) in H;
     try clear H.
 
 Ltac hdesHP H P :=
   let H' := fresh H in let H'' := fresh H in
-  match P with 
-  | context[ NW (fun x => _) /\ NW (fun y => _) ] => 
+  match P with
+  | context[ NW (fun x => _) /\ NW (fun y => _) ] =>
     let x' := fresh x in let y' := fresh y in
     hdesHi H P x' y'; red in x'; red in y'
-  | context[ NW (fun x => _) /\ _ ] => 
+  | context[ NW (fun x => _) /\ _ ] =>
     let x' := fresh x in
     hdesHi H P x' H'; red in x'
-  | context[ _ /\ NW (fun y => _) ] => 
+  | context[ _ /\ NW (fun y => _) ] =>
     let y' := fresh y in
     hdesHi H P H' y'; red in y'
-  | context[ _ /\ _ ] => 
+  | context[ _ /\ _ ] =>
     hdesHi H P H' H''
   | context[ NW (fun x => _) <-> NW (fun y => _) ] =>
     let x' := fresh x in let y' := fresh y in
     hdesHi H P x' y'; red in x'; red in y'
-  | context[ NW (fun x => _) <-> _ ] => 
+  | context[ NW (fun x => _) <-> _ ] =>
     let x' := fresh x in
     hdesHi H P x' H'; red in x'
-  | context[ _ <-> NW (fun y => _) ] => 
+  | context[ _ <-> NW (fun y => _) ] =>
     let y' := fresh y in
     hdesHi H P H' y'; red in y'
-  | context[ _ <-> _ ] => 
+  | context[ _ <-> _ ] =>
     hdesHi H P H' H''
   end.
 
@@ -334,32 +333,32 @@ Ltac hdesF P :=
       hdesF P'
   end.
 
-Ltac hdes := 
-  repeat match goal with | H : ?P |- _ => hdesF (fun _ : unit => P); hdesHP H P end; 
+Ltac hdes :=
+  repeat match goal with | H : ?P |- _ => hdesF (fun _ : unit => P); hdesHP H P end;
   unfold _HID_ in *.
 *)
 
 Ltac hdesF P :=
-  match P with | _ /\ _ => idtac | _ <-> _ => idtac | forall _, _ => 
-  match P with | forall _, _ /\ _ => idtac | forall _, _ <-> _ => idtac | forall _ _, _ => 
+  match P with | _ /\ _ => idtac | _ <-> _ => idtac | forall _, _ =>
+  match P with | forall _, _ /\ _ => idtac | forall _, _ <-> _ => idtac | forall _ _, _ =>
   match P with | forall _ _, _ /\ _ => idtac | forall _ _, _ <-> _ => idtac | forall _ _ _, _ =>
-  match P with | forall _ _ _, _ /\ _ => idtac | forall _ _ _, _ <-> _ => idtac | forall _ _ _ _, _ => 
+  match P with | forall _ _ _, _ /\ _ => idtac | forall _ _ _, _ <-> _ => idtac | forall _ _ _ _, _ =>
   match P with | forall _ _ _ _, _ /\ _ => idtac | forall _ _ _ _, _ <-> _ => idtac | forall _ _ _ _ _, _ =>
-  match P with | forall _ _ _ _ _, _ /\ _ => idtac | forall _ _ _ _ _, _ <-> _ => idtac | forall _ _ _ _ _ _, _ => 
-  match P with | forall _ _ _ _ _ _, _ /\ _ => idtac | forall _ _ _ _ _ _, _ <-> _ => idtac | forall _ _ _ _ _ _ _, _ => 
-  match P with | forall _ _ _ _ _ _ _, _ /\ _ => idtac | forall _ _ _ _ _ _ _, _ <-> _ => idtac | forall _ _ _ _ _ _ _ _, _ => 
+  match P with | forall _ _ _ _ _, _ /\ _ => idtac | forall _ _ _ _ _, _ <-> _ => idtac | forall _ _ _ _ _ _, _ =>
+  match P with | forall _ _ _ _ _ _, _ /\ _ => idtac | forall _ _ _ _ _ _, _ <-> _ => idtac | forall _ _ _ _ _ _ _, _ =>
+  match P with | forall _ _ _ _ _ _ _, _ /\ _ => idtac | forall _ _ _ _ _ _ _, _ <-> _ => idtac | forall _ _ _ _ _ _ _ _, _ =>
   match P with | forall _ _ _ _ _ _ _ _, _ /\ _ => idtac | forall _ _ _ _ _ _ _ _, _ <-> _ => idtac | forall _ _ _ _ _ _ _ _ _, _ =>
-  match P with | forall _ _ _ _ _ _ _ _ _, _ /\ _ => idtac | forall _ _ _ _ _ _ _ _ _, _ <-> _ => idtac | forall _ _ _ _ _ _ _ _ _ _, _ => 
-  match P with | forall _ _ _ _ _ _ _ _ _ _, _ /\ _ => idtac | forall _ _ _ _ _ _ _ _ _ _, _ <-> _ => idtac | forall _ _ _ _ _ _ _ _ _ _ _, _ => 
-  match P with | forall _ _ _ _ _ _ _ _ _ _ _, _ /\ _ => idtac | forall _ _ _ _ _ _ _ _ _ _ _, _ <-> _ => idtac | forall _ _ _ _ _ _ _ _ _ _ _ _, _ => 
-  match P with | forall _ _ _ _ _ _ _ _ _ _ _ _, _ /\ _ => idtac | forall _ _ _ _ _ _ _ _ _ _ _ _, _ <-> _ => idtac | forall _ _ _ _ _ _ _ _ _ _ _ _ _, _ => 
-  match P with | forall _ _ _ _ _ _ _ _ _ _ _ _ _, _ /\ _ => idtac | forall _ _ _ _ _ _ _ _ _ _ _ _ _, _ <-> _ => idtac | forall _ _ _ _ _ _ _ _ _ _ _ _ _ _, _ => 
-  match P with | forall _ _ _ _ _ _ _ _ _ _ _ _ _ _, _ /\ _ => idtac | forall _ _ _ _ _ _ _ _ _ _ _ _ _ _, _ <-> _ => idtac | forall _ _ _ _ _ _ _ _ _ _ _ _ _ _ _, _ => 
-  match P with | forall _ _ _ _ _ _ _ _ _ _ _ _ _ _ _, _ /\ _ => idtac | forall _ _ _ _ _ _ _ _ _ _ _ _ _ _ _, _ <-> _ => idtac | forall _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _, _ => 
-  match P with | forall _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _, _ /\ _ => idtac | forall _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _, _ <-> _ => idtac | forall _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _, _ => 
-  match P with | forall _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _, _ /\ _ => idtac | forall _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _, _ <-> _ => idtac | forall _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _, _ => 
-  match P with | forall _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _, _ /\ _ => idtac | forall _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _, _ <-> _ => idtac | forall _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _, _ => 
-  match P with | forall _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _, _ /\ _ => idtac | forall _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _, _ <-> _ => idtac | forall _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _, _ => 
+  match P with | forall _ _ _ _ _ _ _ _ _, _ /\ _ => idtac | forall _ _ _ _ _ _ _ _ _, _ <-> _ => idtac | forall _ _ _ _ _ _ _ _ _ _, _ =>
+  match P with | forall _ _ _ _ _ _ _ _ _ _, _ /\ _ => idtac | forall _ _ _ _ _ _ _ _ _ _, _ <-> _ => idtac | forall _ _ _ _ _ _ _ _ _ _ _, _ =>
+  match P with | forall _ _ _ _ _ _ _ _ _ _ _, _ /\ _ => idtac | forall _ _ _ _ _ _ _ _ _ _ _, _ <-> _ => idtac | forall _ _ _ _ _ _ _ _ _ _ _ _, _ =>
+  match P with | forall _ _ _ _ _ _ _ _ _ _ _ _, _ /\ _ => idtac | forall _ _ _ _ _ _ _ _ _ _ _ _, _ <-> _ => idtac | forall _ _ _ _ _ _ _ _ _ _ _ _ _, _ =>
+  match P with | forall _ _ _ _ _ _ _ _ _ _ _ _ _, _ /\ _ => idtac | forall _ _ _ _ _ _ _ _ _ _ _ _ _, _ <-> _ => idtac | forall _ _ _ _ _ _ _ _ _ _ _ _ _ _, _ =>
+  match P with | forall _ _ _ _ _ _ _ _ _ _ _ _ _ _, _ /\ _ => idtac | forall _ _ _ _ _ _ _ _ _ _ _ _ _ _, _ <-> _ => idtac | forall _ _ _ _ _ _ _ _ _ _ _ _ _ _ _, _ =>
+  match P with | forall _ _ _ _ _ _ _ _ _ _ _ _ _ _ _, _ /\ _ => idtac | forall _ _ _ _ _ _ _ _ _ _ _ _ _ _ _, _ <-> _ => idtac | forall _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _, _ =>
+  match P with | forall _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _, _ /\ _ => idtac | forall _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _, _ <-> _ => idtac | forall _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _, _ =>
+  match P with | forall _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _, _ /\ _ => idtac | forall _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _, _ <-> _ => idtac | forall _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _, _ =>
+  match P with | forall _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _, _ /\ _ => idtac | forall _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _, _ <-> _ => idtac | forall _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _, _ =>
+  match P with | forall _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _, _ /\ _ => idtac | forall _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _, _ <-> _ => idtac | forall _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _, _ =>
   match P with | forall _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _, _ /\ _ => idtac | forall _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _, _ <-> _ => idtac
   end end end end end end end end end end end end end end end end end end end end end.
 
@@ -369,8 +368,8 @@ Ltac check_hyp H := match H with _ => idtac end.
 (** Fail if hypothesis [H1] is not [H2]. *)
 Ltac check_equal H1 H2 := match H1 with H2 => idtac end.
 
-Ltac hdes := 
-  repeat match goal with | H : ?P |- _ => hdesF P; hdesHP H P end; 
+Ltac hdes :=
+  repeat match goal with | H : ?P |- _ => hdesF P; hdesHP H P end;
   unfold _HID_ in *.
 Ltac rdes H := red in H; des.
 Ltac rrdes H := move H at bottom; repeat red in H; des.
@@ -383,7 +382,7 @@ Tactic Notation "rrdes" ident(a) ident(b) :=
   (rrdes a; rrdes b).
 Tactic Notation "rrdes" ident(a) ident(b) ident(c) :=
   (rrdes a; rrdes b c).
-Tactic Notation "rrdes" ident(a) ident(b) ident(c) ident(d) := 
+Tactic Notation "rrdes" ident(a) ident(b) ident(c) ident(d) :=
   (rrdes a b; rrdes c d).
 
 (** Destruct the condition of an [if] expression occuring in the goal. *)
@@ -405,18 +404,18 @@ Ltac des_ifH H :=
 (* TODO tactics such as these should always do clean at the end to remove junk like [H : x = x] *)
 Ltac des_ifs :=
  clarify;
-  repeat 
-    match goal with 
-      | |- context[match ?x with _ => _ end] => 
+  repeat
+    match goal with
+      | |- context[match ?x with _ => _ end] =>
         match (type of x) with
           | { _ } + { _ } => destruct x; clarify
           | _ => let Heq := fresh "Heq" in destruct x as [] eqn: Heq; clarify
-        end 
-      | H: context[ match ?x with _ => _ end ] |- _ => 
+        end
+      | H: context[ match ?x with _ => _ end ] |- _ =>
         match (type of x) with
           | { _ } + { _ } => destruct x; clarify
           | _ => let Heq := fresh "Heq" in destruct x as [] eqn: Heq; clarify
-        end 
+        end
     end.
 
 Ltac desf := clarify; des; des_ifs.
@@ -430,7 +429,7 @@ Tactic Notation "dup" hyp(H) :=
 (* Tactic Notation "dup" hyp(H) tactic(tac) := *)
 (*   let H' := fresh H in assert (H' := H); tac H'. *)
 
-Ltac clarassoc := clarsimp; autorewrite with sflib sflibA in *; try done. 
+Ltac clarassoc := clarsimp; autorewrite with sflib sflibA in *; try done.
 
 Ltac sflib__hacksimp1 :=
    clarsimp;
@@ -550,7 +549,7 @@ Ltac hexploit' x := let H := fresh in set (H := x); clear H; eapply mp; [eapply 
 
 (* set_prop N T A performs 'assert (A : P); [|set (N := T A)]' when T is a term of type (P -> _) *)
 
-Ltac set_prop N T A := 
+Ltac set_prop N T A :=
   let b := fresh in let ty := type of T in
   match ty with (forall (_:?P), _) => assert (A: P); [|set (N := T A)] end.
 
@@ -570,7 +569,7 @@ Tactic Notation "induction" "[" ident_list(y) "]" ident(x) "[" ident(z) "]"  :=
 
 Tactic Notation "induct" ident(x) := induction x; hacksimp.
 
-Tactic Notation "induct" ident(x) "[" ident(z) "]" := 
+Tactic Notation "induct" ident(x) "[" ident(z) "]" :=
   induction x; destruct z; hacksimp.
 
 Tactic Notation "induct" "[" ident_list(y) "]" ident(x)  :=
@@ -581,32 +580,32 @@ Tactic Notation "induct" "[" ident_list(y) "]" ident(x) "[" ident(z) "]"  :=
   first [ try (intros until x); revert y; induction x; destruct z; hacksimp
         | red; try (intros until x); revert y; induction x; destruct z; hacksimp ].
 
-Tactic Notation "edestructs" ident(a) := 
+Tactic Notation "edestructs" ident(a) :=
   (edestruct a).
-Tactic Notation "edestructs" ident(a) ident(b) := 
+Tactic Notation "edestructs" ident(a) ident(b) :=
   (edestruct a; edestruct b).
-Tactic Notation "edestructs" ident(a) ident(b) ident(c) := 
+Tactic Notation "edestructs" ident(a) ident(b) ident(c) :=
   (edestruct a; edestructs b c).
-Tactic Notation "edestructs" ident(a) ident(b) ident(c) ident(d) := 
+Tactic Notation "edestructs" ident(a) ident(b) ident(c) ident(d) :=
   (edestruct a; edestructs b c d).
-Tactic Notation "edestructs" ident(a) ident(b) ident(c) ident(d) ident(e) := 
+Tactic Notation "edestructs" ident(a) ident(b) ident(c) ident(d) ident(e) :=
   (edestruct a; edestructs b c d e).
 Tactic Notation "edestructs" ident(a) ident(b) ident(c) ident(d) ident(e) ident(f) :=
   (edestruct a; edestructs b c d e f).
-Tactic Notation "edestructs" ident(a) ident(b) ident(c) ident(d) ident(e) ident(f) ident(g) := 
+Tactic Notation "edestructs" ident(a) ident(b) ident(c) ident(d) ident(e) ident(f) ident(g) :=
   (edestruct a; edestructs b c d e f g).
 Tactic Notation "edestructs" ident(a) ident(b) ident(c) ident(d) ident(e) ident(f) ident(g) ident(h) :=
   (edestruct a; edestructs b c d e f g h).
-Tactic Notation "edestructs" ident(a) ident(b) ident(c) ident(d) ident(e) ident(f) ident(g) ident(h) ident(i) := 
+Tactic Notation "edestructs" ident(a) ident(b) ident(c) ident(d) ident(e) ident(f) ident(g) ident(h) ident(i) :=
   (edestruct a; edestructs b c d e f g h i).
-Tactic Notation "edestructs" ident(a) ident(b) ident(c) ident(d) ident(e) ident(f) ident(g) ident(h) ident(i) ident(j) := 
+Tactic Notation "edestructs" ident(a) ident(b) ident(c) ident(d) ident(e) ident(f) ident(g) ident(h) ident(i) ident(j) :=
   (edestruct a; edestructs b c d e f g h i j).
 
 Tactic Notation "destructs" ident(a) :=
   (destruct a).
-Tactic Notation "destructs" ident(a) ident(b) := 
+Tactic Notation "destructs" ident(a) ident(b) :=
   (destruct a; destruct b).
-Tactic Notation "destructs" ident(a) ident(b) ident(c) := 
+Tactic Notation "destructs" ident(a) ident(b) ident(c) :=
   (destruct a; destructs b c).
 Tactic Notation "destructs" ident(a) ident(b) ident(c) ident(d) :=
   (destruct a; destructs b c d).
@@ -616,19 +615,19 @@ Tactic Notation "destructs" ident(a) ident(b) ident(c) ident(d) ident(e) ident(f
   (destruct a; destructs b c d e f).
 Tactic Notation "destructs" ident(a) ident(b) ident(c) ident(d) ident(e) ident(f) ident(g) :=
   (destruct a; destructs b c d e f g).
-Tactic Notation "destructs" ident(a) ident(b) ident(c) ident(d) ident(e) ident(f) ident(g) ident(h) := 
+Tactic Notation "destructs" ident(a) ident(b) ident(c) ident(d) ident(e) ident(f) ident(g) ident(h) :=
   (destruct a; destructs b c d e f g h).
-Tactic Notation "destructs" ident(a) ident(b) ident(c) ident(d) ident(e) ident(f) ident(g) ident(h) ident(i) := 
+Tactic Notation "destructs" ident(a) ident(b) ident(c) ident(d) ident(e) ident(f) ident(g) ident(h) ident(i) :=
   (destruct a; destructs b c d e f g h i).
-Tactic Notation "destructs" ident(a) ident(b) ident(c) ident(d) ident(e) ident(f) ident(g) ident(h) ident(i) ident(j) := 
+Tactic Notation "destructs" ident(a) ident(b) ident(c) ident(d) ident(e) ident(f) ident(g) ident(h) ident(i) ident(j) :=
   (destruct a; destructs b c d e f g h i j).
 
 Tactic Notation "depdes" ident(_something_which_shold_not_occur_in_the_goal_) :=
-  (let _x_ := type of _something_which_shold_not_occur_in_the_goal_ 
+  (let _x_ := type of _something_which_shold_not_occur_in_the_goal_
    in dependent destruction _something_which_shold_not_occur_in_the_goal_).
-Tactic Notation "depdes" ident(a) ident(b) := 
+Tactic Notation "depdes" ident(a) ident(b) :=
   (depdes a; depdes b).
-Tactic Notation "depdes" ident(a) ident(b) ident(c) := 
+Tactic Notation "depdes" ident(a) ident(b) ident(c) :=
   (depdes a; depdes b c).
 Tactic Notation "depdes" ident(a) ident(b) ident(c) ident(d) :=
   (depdes a; depdes b c d).
@@ -638,11 +637,11 @@ Tactic Notation "depdes" ident(a) ident(b) ident(c) ident(d) ident(e) ident(f) :
   (depdes a; depdes b c d e f).
 Tactic Notation "depdes" ident(a) ident(b) ident(c) ident(d) ident(e) ident(f) ident(g) :=
   (depdes a; depdes b c d e f g).
-Tactic Notation "depdes" ident(a) ident(b) ident(c) ident(d) ident(e) ident(f) ident(g) ident(h) := 
+Tactic Notation "depdes" ident(a) ident(b) ident(c) ident(d) ident(e) ident(f) ident(g) ident(h) :=
   (depdes a; depdes b c d e f g h).
-Tactic Notation "depdes" ident(a) ident(b) ident(c) ident(d) ident(e) ident(f) ident(g) ident(h) ident(i) := 
+Tactic Notation "depdes" ident(a) ident(b) ident(c) ident(d) ident(e) ident(f) ident(g) ident(h) ident(i) :=
   (depdes a; depdes b c d e f g h i).
-Tactic Notation "depdes" ident(a) ident(b) ident(c) ident(d) ident(e) ident(f) ident(g) ident(h) ident(i) ident(j) := 
+Tactic Notation "depdes" ident(a) ident(b) ident(c) ident(d) ident(e) ident(f) ident(g) ident(h) ident(i) ident(j) :=
   (depdes a; depdes b c d e f g h i j).
 
 Tactic Notation "depgen" ident(x) := generalize dependent x.
@@ -670,7 +669,7 @@ Arguments __GUARD__ A a : simpl never.
 
 Tactic Notation "guard" constr(t) "in" hyp(H) := fold (__guard__ t) in H.
 Tactic Notation "guardH" hyp(H) := let t := type of H in guard t in H.
-Tactic Notation "guard" :=  
+Tactic Notation "guard" :=
   repeat match goal with [H: ?P |- _] =>
     try (match P with __guard__ _ => fail 2 end); guardH H
   end.
@@ -685,12 +684,12 @@ Ltac desH H := guard; unguardH H; des; unguard.
 
 Ltac splits :=
   intros; unfold NW;
-  repeat match goal with 
+  repeat match goal with
   | [ |- _ /\ _ ] => split
   end.
 Ltac esplits :=
   intros; unfold NW;
-  repeat match goal with 
+  repeat match goal with
   | [ |- @ex _ _ ] => eexists
   | [ |- _ /\ _ ] => split
   | [ |- @sig _ _ ] => eexists
@@ -699,10 +698,10 @@ Ltac esplits :=
   end.
 
 Tactic Notation "replace_all" constr(e) := repeat (
-  let X := fresh in assert (X: e) by (clarify; eauto; done); 
+  let X := fresh in assert (X: e) by (clarify; eauto; done);
   first [rewrite !X | setoid_rewrite X]; clear X).
 
-Lemma all_conj_dist: forall A (P Q: A -> Prop), 
+Lemma all_conj_dist: forall A (P Q: A -> Prop),
   (forall a, P a /\ Q a) -> (forall a, P a) /\ (forall a, Q a).
 Proof. intros; hdes; eauto. Qed.
 
@@ -744,7 +743,7 @@ Tactic Notation "rr" "in" hyp(H) := repeat red in H.
 
 Definition __mark__ A (a : A) : A := a.
 
-Tactic Notation "M" := 
+Tactic Notation "M" :=
   match goal with [|-?G] => fold (__mark__ G) end.
 
 Tactic Notation "Mdo" tactic(tac) :=
@@ -753,7 +752,7 @@ Tactic Notation "Mdo" tactic(tac) :=
 Tactic Notation "Mskip" tactic(tac) :=
   first [ match goal with [|- __mark__ _ ] => unfold __mark__ end | tac ].
 
-Tactic Notation "Mfirst" tactic(main) ";;" tactic(post) := 
+Tactic Notation "Mfirst" tactic(main) ";;" tactic(post) :=
    main; (Mdo (post; M)); (Mskip post).
 
 (* revert until *)
@@ -771,7 +770,7 @@ Ltac revert_until id :=
 Open Scope string_scope.
 Open Scope list_scope.
 
-Fixpoint beq_str (s1 s2: string) : bool := 
+Fixpoint beq_str (s1 s2: string) : bool :=
   match s1, s2 with
   | "", "" => true
   | String a s1', String b s2' => if Ascii.ascii_dec a b then beq_str s1' s2' else false
@@ -791,8 +790,8 @@ Definition _Evar_sflib_ (A:Type) (x:A) := x.
 
 Tactic Notation "hide_evar" int_or_var(n) := let QQ := fresh "QQ" in
   hget_evar n; intro;
-  lazymatch goal with [ H := ?X |- _] => 
-    set (QQ := X) in *; fold (_Evar_sflib_ X) in QQ; clear H 
+  lazymatch goal with [ H := ?X |- _] =>
+    set (QQ := X) in *; fold (_Evar_sflib_ X) in QQ; clear H
   end.
 
 Ltac hide_evars := repeat (hide_evar 1).
@@ -802,13 +801,13 @@ Ltac show_evars := repeat (match goal with [ H := @_Evar_sflib_ _ _ |- _ ] => un
 
 Ltac revert1 := match goal with [H: _|-_] => revert H end.
 
-Lemma eqimpl: forall P Q : Prop, P = Q -> P -> Q. 
+Lemma eqimpl: forall P Q : Prop, P = Q -> P -> Q.
 Proof. by i; subst; auto. Qed.
 
 Ltac ginduction H :=
   move H at top; revert_until H; induction H.
 
-Tactic Notation "greflgen" constr(t) "as" ident(g)  := 
+Tactic Notation "greflgen" constr(t) "as" ident(g)  :=
   let EQ := fresh "XEQ" in
   generalize (eq_refl t); generalize t at -2 as g
   ; intros ? EQ ?; revert EQ.

@@ -32,9 +32,9 @@ Section PROOF.
 
   Variable stb_src stb_tgt: list (gname * fspec).
   Hypothesis stb_stronger:
-    forall fn fn_tgt fsp_tgt (FINDTGT: List.find (fun '(_fn, _) => dec fn _fn) stb_tgt = Some (fn_tgt, fsp_tgt)),
-    exists fn_src fsp_src,
-      (<<FINDSRC: List.find (fun '(_fn, _) => dec fn _fn) stb_src = Some (fn_src, fsp_src)>>) /\
+    forall fn fsp_tgt (FINDTGT: alist_find fn stb_tgt = Some (fsp_tgt)),
+    exists fsp_src,
+      (<<FINDSRC: alist_find fn stb_src = Some (fsp_src)>>) /\
       (<<WEAKER: fspec_weaker fsp_tgt fsp_src>>)
   .
 
@@ -95,8 +95,8 @@ Section PROOF.
       rewrite <- bind_trigger. destruct e as [|[|]]; ss.
       { destruct h. repeat interp_red. cbn.
         unfold unwrapN, triggerNB. rewrite ! bind_bind.
-        destruct (find (fun '(_fn, _) => dec fn0 _fn) stb_tgt) eqn:EQ.
-        { destruct p. eapply stb_stronger in EQ. des. inv WEAKER.
+        destruct (alist_find fn0 stb_tgt) eqn:EQ.
+        { eapply stb_stronger in EQ. des. inv WEAKER.
           rewrite FINDSRC. rewrite ! bind_ret_l. rewrite ! bind_bind.
           destruct (Any.downcast varg_src); ss.
           { rewrite ! bind_ret_l. rewrite ! bind_bind.

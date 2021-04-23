@@ -32,19 +32,6 @@ Local Open Scope nat_scope.
 
 
 
-Print function_Map. (*** TODO: use Dec. Move to proper place ***)
-
-Global Instance Dec_RelDec K `{Dec K}: @RelDec K eq :=
-  { rel_dec := dec }.
-
-Global Instance Dec_RelDec_Correct K `{Dec K}: RelDec_Correct Dec_RelDec.
-Proof.
-  unfold Dec_RelDec. ss.
-  econs. ii. ss. unfold Dec_RelDec. split; ii.
-  - unfold rel_dec in *. unfold sumbool_to_bool in *. des_ifs.
-  - unfold rel_dec in *. unfold sumbool_to_bool in *. des_ifs.
-Qed.
-
 
 
 
