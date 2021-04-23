@@ -29,14 +29,12 @@ Section PROOF.
   |}
   .
 
-  Definition GSem: ModSem.t := (SModSem.to_tgt GlobalStb) SGSem.
-
   Definition SG: SMod.t := {|
     SMod.get_modsem := fun _ => SGSem;
     SMod.sk := [("g", Sk.Gfun)];
   |}
   .
 
-  Definition G: Mod.t := (SMod.to_tgt GlobalStb) SG.
+  Definition G: Mod.t := (SMod.to_tgt (fun _ => GlobalStb)) SG.
 
 End PROOF.

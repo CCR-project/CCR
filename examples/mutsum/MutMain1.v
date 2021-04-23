@@ -28,7 +28,7 @@ Section PROOF.
   Definition mainsbtb := [("main", mk_specbody main_spec mainBody)].
 
   Definition SMain: SMod.t := SMod.main (fun _ o _ => o = ord_top) mainBody.
-  Definition Main: Mod.t := SMod.to_tgt GlobalStb SMain.
+  Definition Main: Mod.t := SMod.to_tgt (fun _ => GlobalStb) SMain.
   Definition SMainSem: SModSem.t := SModSem.main (fun _ o _ => o = ord_top) mainBody.
   Definition MainSem: ModSem.t := SModSem.to_tgt GlobalStb SMainSem.
 

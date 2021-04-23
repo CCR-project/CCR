@@ -26,7 +26,7 @@ Section PROOF.
       r <- trigger (Call "f" [Vint 10]↑);;
       Ret r.
 
-  Definition mainSem: ModSem.t := {|
+  Definition MainSem: ModSem.t := {|
     ModSem.fnsems := [("main", mainF)];
     ModSem.mn := "Main";
     ModSem.initial_mr := ε;
@@ -34,8 +34,8 @@ Section PROOF.
   |}
   .
 
-  Definition main: Mod.t := {|
-    Mod.get_modsem := fun _ => mainSem;
+  Definition Main: Mod.t := {|
+    Mod.get_modsem := fun _ => MainSem;
     (* Mod.sk := [("Main", Sk.Gfun)]; *)
     Mod.sk := Sk.unit;
   |}

@@ -78,33 +78,97 @@ Let Any_src := Any.t. (*** src argument (e.g., List nat) ***)
 Let Any_mid := Any.t. (*** src argument (e.g., List nat) ***)
 Let Any_tgt := Any.t. (*** tgt argument (i.e., list val) ***)
 
+
+Section FSPEC.
+  Context `{Σ: GRA.t}.
+
+  Section FSPECTYPE.
+    Variable AA AR: Type.
+
+  (*** spec table ***)
+    Record ftspec: Type := mk_ftspec {
+      X: Type; (*** a meta-variable ***)
+      precond: X -> AA -> Any_tgt -> ord -> Σ -> Prop; (*** meta-variable -> new logical arg -> current logical arg -> resource arg -> Prop ***)
+      postcond: X -> AR -> Any_tgt -> Σ -> Prop; (*** meta-variable -> new logical ret -> current logical ret -> resource ret -> Prop ***)
+    }
+    .
+
+    Definition ftspec_weaker (fsp_src fsp_tgt: ftspec): Prop :=
+      forall (x_src: fsp_src.(X)),
+      exists (x_tgt: fsp_tgt.(X)),
+        (<<PRE: fsp_src.(precond) x_src <4= fsp_tgt.(precond) x_tgt>>) /\
+        (<<POST: fsp_tgt.(postcond) x_tgt <3= fsp_src.(postcond) x_src>>)
+    .
+
+    Global Program Instance ftspec_weaker_PreOrder: PreOrder ftspec_weaker.
+    Next Obligation.
+    Proof.
+      ii. exists x_src. esplits; eauto.
+    Qed.
+    Next Obligation.
+    Proof.
+      ii. hexploit (H x_src). i. des.
+      hexploit (H0 x_tgt). i. des. esplits; eauto.
+    Qed.
+  End FSPECTYPE.
+
+  (*** spec table ***)
+  Record fspec: Type := mk_fspec {
+    AA: Type;
+    AR: Type;
+    tspec:> ftspec AA AR;
+  }
+  .
+
+  Variant fspec_weaker (fsp_src fsp_tgt: fspec): Prop :=
+  | fspec_weaker_intro
+      AA AR ftsp_src ftsp_tgt
+      (FSPEC0: fsp_src = @mk_fspec AA AR ftsp_src)
+      (FSPEC1: fsp_tgt = @mk_fspec AA AR ftsp_tgt)
+      (WEAK: ftspec_weaker ftsp_src ftsp_tgt)
+  .
+
+  Global Program Instance fspec_weaker_PreOrder: PreOrder fspec_weaker.
+  Next Obligation.
+  Proof.
+    ii. destruct x. econs; eauto. refl.
+  Qed.
+  Next Obligation.
+  Proof.
+    ii. inv H; inv H0. dependent destruction FSPEC0.
+    econs; eauto. etrans; eauto.
+  Qed.
+
+  Definition mk (X AA AR: Type) (precond: X -> AA -> Any_tgt -> ord -> Σ -> Prop) (postcond: X -> AR -> Any_tgt -> Σ -> Prop) :=
+    mk_fspec (mk_ftspec precond postcond).
+End FSPEC.
+
+
 Section PROOF.
   (* Context {myRA} `{@GRA.inG myRA Σ}. *)
   Context {Σ: GRA.t}.
   Let GURA: URA.t := GRA.to_URA Σ.
   Local Existing Instance GURA.
-  Context {X Y Z: Type}.
 
   Definition HoareCall
              (tbr: bool)
              (ord_cur: ord)
-             (P: X -> Y -> Any_tgt -> ord -> Σ -> Prop)
-             (Q: X -> Z -> Any_tgt -> Σ -> Prop):
-    gname -> Y -> itree Es Z :=
+             (fsp: fspec):
+    gname -> fsp.(AA) -> itree Es fsp.(AR) :=
     fun fn varg_src =>
       '(marg, farg) <- trigger (Choose _);; put marg farg;; (*** updating resources in an abstract way ***)
       rarg <- trigger (Choose Σ);; discard rarg;; (*** virtual resource passing ***)
-      x <- trigger (Choose X);; varg_tgt <- trigger (Choose Any_tgt);;
+      x <- trigger (Choose fsp.(X));; varg_tgt <- trigger (Choose Any_tgt);;
       ord_next <- trigger (Choose _);;
-      guarantee(P x varg_src varg_tgt  ord_next rarg);; (*** precondition ***)
+      guarantee(fsp.(precond) x varg_src varg_tgt  ord_next rarg);; (*** precondition ***)
 
       guarantee(ord_lt ord_next ord_cur /\ (tbr = true -> is_pure ord_next) /\ (tbr = false -> ord_next = ord_top));;
       vret_tgt <- trigger (Call fn varg_tgt);; (*** call ***)
 
       rret <- trigger (Take Σ);; forge rret;; (*** virtual resource passing ***)
-      vret_src <- trigger (Take Z);;
+      vret_src <- trigger (Take fsp.(AR));;
       checkWf;;
-      assume(Q x vret_src vret_tgt rret);; (*** postcondition ***)
+      assume(fsp.(postcond) x vret_src vret_tgt rret);; (*** postcondition ***)
 
       Ret vret_src (*** return to body ***)
   .
@@ -186,15 +250,6 @@ Section CANCEL.
 
   Context `{Σ: GRA.t}.
 
-  (*** spec table ***)
-  Record fspec: Type := mk {
-    X: Type; (*** a meta-variable ***)
-    AA: Type;
-    AR: Type;
-    precond: X -> AA -> Any_tgt -> ord -> Σ -> Prop; (*** meta-variable -> new logical arg -> current logical arg -> resource arg -> Prop ***)
-    postcond: X -> AR -> Any_tgt -> Σ -> Prop; (*** meta-variable -> new logical ret -> current logical ret -> resource ret -> Prop ***)
-  }
-  .
 
   Record fspecbody: Type := mk_specbody {
     fsb_fspec:> fspec;
@@ -213,7 +268,7 @@ Section CANCEL.
   (*   apply (val). *)
   (* Defined. *)
   Definition mk_simple {X: Type} (PQ: X -> ((Any_tgt -> ord -> Σ -> Prop) * (Any_tgt -> Σ -> Prop))): fspec :=
-    @mk X (list val) (val) (fun x y a o r => (fst ∘ PQ) x a o r /\ y↑ = a) (fun x z a r => (snd ∘ PQ) x a r /\ z↑ = a)
+    @mk _ X (list val) (val) (fun x y a o r => (fst ∘ PQ) x a o r /\ y↑ = a) (fun x z a r => (snd ∘ PQ) x a r /\ z↑ = a)
   .
 
 
@@ -293,7 +348,7 @@ Section CANCEL.
     fun _ '(hCall tbr fn varg_src) =>
       '(_, f) <- (List.find (fun '(_fn, _) => dec fn _fn) stb)ǃ;;
       varg_src <- varg_src↓ǃ;;
-      vret_src <- (HoareCall tbr ord_cur (f.(precond)) (f.(postcond)) fn varg_src);;
+      vret_src <- (HoareCall tbr ord_cur f fn varg_src);;
       Ret vret_src↑
   .
 
@@ -448,15 +503,15 @@ Section SMOD.
   }
   .
 
-  Definition transl (tr: fspecbody -> (Any.t -> itree Es Any.t)) (mr: SModSem.t -> Σ) (md: t): Mod.t := {|
-    Mod.get_modsem := (SModSem.transl tr mr) ∘ md.(get_modsem);
+  Definition transl (tr: SkEnv.t -> fspecbody -> (Any.t -> itree Es Any.t)) (mr: SModSem.t -> Σ) (md: t): Mod.t := {|
+    Mod.get_modsem := fun skenv => SModSem.transl (tr skenv) mr (md.(get_modsem) skenv);
     Mod.sk := md.(sk);
   |}
   .
 
-  Definition to_src (md: t): Mod.t := transl (fun_to_src ∘ fsb_body) (fun _ => ε) md.
-  Definition to_mid (md: t): Mod.t := transl (fun_to_mid ∘ fsb_body) (fun _ => ε) md.
-  Definition to_tgt (stb: list (gname * fspec)) (md: t): Mod.t := transl (fun_to_tgt stb) SModSem.initial_mr md.
+  Definition to_src (md: t): Mod.t := transl (fun _ => fun_to_src ∘ fsb_body) (fun _ => ε) md.
+  Definition to_mid (md: t): Mod.t := transl (fun _ => fun_to_mid ∘ fsb_body) (fun _ => ε) md.
+  Definition to_tgt (stb: SkEnv.t -> list (gname * fspec)) (md: t): Mod.t := transl (fun_to_tgt ∘ stb) SModSem.initial_mr md.
 
   (* Definition transl (tr: SModSem.t -> ModSem.t) (md: t): Mod.t := {| *)
   (*   Mod.get_modsem := (SModSem.transl tr) ∘ md.(get_modsem); *)
@@ -474,7 +529,7 @@ Section SMOD.
       (SModSem.to_mid) (get_modsem smd skenv) = (to_mid smd).(Mod.get_modsem) skenv.
   Proof. refl. Qed.
   Lemma to_tgt_comm: forall skenv stb smd,
-      (SModSem.to_tgt stb) (get_modsem smd skenv) = (to_tgt stb smd).(Mod.get_modsem) skenv.
+      (SModSem.to_tgt (stb skenv)) (get_modsem smd skenv) = (to_tgt stb smd).(Mod.get_modsem) skenv.
   Proof. refl. Qed.
 
 
@@ -558,7 +613,7 @@ Section SMOD.
         (skenv: SkEnv.t)
     :
       (ModSemL.fnsems (ModL.get_modsem (Mod.add_list (List.map (transl tr0 mr0) mds)) skenv)) =
-      (load_fnsems skenv mds tr0)
+      (load_fnsems skenv mds (tr0 skenv))
   .
   Proof.
     induction mds; ii; ss.
@@ -566,8 +621,8 @@ Section SMOD.
     rewrite ! List.map_map.
 
     rewrite flat_map_concat_map.
-    replace (fun _x: string * fspecbody => let (fn, fsb) := _x in [(fn, transl_all (SModSem.mn (get_modsem a skenv)) ∘ tr0 fsb)]) with
-        (ret ∘ (fun _x: string * fspecbody => let (fn, fsb) := _x in (fn, transl_all (SModSem.mn (get_modsem a skenv)) ∘ tr0 fsb)));
+    replace (fun _x: string * fspecbody => let (fn, fsb) := _x in [(fn, transl_all (SModSem.mn (get_modsem a skenv)) ∘ (tr0 skenv fsb))]) with
+        (ret ∘ (fun _x: string * fspecbody => let (fn, fsb) := _x in (fn, transl_all (SModSem.mn (get_modsem a skenv)) ∘ (tr0 skenv fsb))));
       cycle 1.
     { apply func_ext. i. des_ifs. }
     erewrite <- List.map_map with (g:=ret).
@@ -579,11 +634,12 @@ Section SMOD.
         tr0 mr0 mds
     :
       (ModSemL.fnsems (ModL.enclose (Mod.add_list (List.map (transl tr0 mr0) mds)))) =
-      (load_fnsems (Sk.load_skenv (List.fold_right Sk.add Sk.unit (List.map sk mds))) mds tr0)
+      (load_fnsems (Sk.load_skenv (List.fold_right Sk.add Sk.unit (List.map sk mds))) mds (tr0 (Sk.load_skenv (List.fold_right Sk.add Sk.unit (List.map sk mds)))))
   .
   Proof.
     unfold ModL.enclose.
     rewrite transl_fnsems_aux. do 2 f_equal. rewrite transl_sk. ss.
+    rewrite transl_sk. auto.
   Qed.
 
   Lemma flat_map_assoc
@@ -603,7 +659,7 @@ Section SMOD.
   Lemma transl_fnsems_stable
         tr0 tr1 mr0 mr1 mds
     :
-      List.map fst (ModL.enclose (Mod.add_list (List.map (transl tr0 mr0) mds))).(ModSemL.fnsems) = 
+      List.map fst (ModL.enclose (Mod.add_list (List.map (transl tr0 mr0) mds))).(ModSemL.fnsems) =
       List.map fst (ModL.enclose (Mod.add_list (List.map (transl tr1 mr1) mds))).(ModSemL.fnsems)
   .
   Proof.
@@ -650,7 +706,7 @@ Section SMOD.
   Lemma transl_stable_mn
         tr0 tr1 mr0 mr1 mds
     :
-      List.map fst (ModL.enclose (Mod.add_list (List.map (transl tr0 mr0) mds))).(ModSemL.initial_mrs) = 
+      List.map fst (ModL.enclose (Mod.add_list (List.map (transl tr0 mr0) mds))).(ModSemL.initial_mrs) =
       List.map fst (ModL.enclose (Mod.add_list (List.map (transl tr1 mr1) mds))).(ModSemL.initial_mrs)
   .
   Proof.

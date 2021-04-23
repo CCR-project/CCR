@@ -52,7 +52,7 @@ Section PROOF.
   |}
   .
 
-  Definition Client: Mod.t := (SMod.to_tgt ClientStb) SClient.
+  Definition Client: Mod.t := (SMod.to_tgt (fun _ => ClientStb)) SClient.
 
 End PROOF.
 Global Hint Unfold ClientStb: stb.

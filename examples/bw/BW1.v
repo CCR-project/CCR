@@ -60,7 +60,7 @@ Section BW.
 
   Definition BWSem: ModSem.t := SModSem.to_tgt BWStb SBWSem.
 
-  Definition BW: Mod.t := SMod.to_tgt BWStb SBW.
+  Definition BW: Mod.t := SMod.to_tgt (fun _ => BWStb) SBW.
 
 End BW.
 Global Hint Unfold BWStb: bw.
