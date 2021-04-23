@@ -7,6 +7,7 @@ Require Import Skeleton.
 Require Import PCM.
 From Ordinal Require Export Ordinal Arithmetic Inaccessible.
 Require Import Any.
+Require Import Logic.
 
 Generalizable Variables E R A B C X Y Σ.
 
@@ -96,19 +97,25 @@ Section FSPEC.
     Definition ftspec_weaker (fsp_src fsp_tgt: ftspec): Prop :=
       forall (x_src: fsp_src.(X)),
       exists (x_tgt: fsp_tgt.(X)),
-        (<<PRE: fsp_src.(precond) x_src <4= fsp_tgt.(precond) x_tgt>>) /\
-        (<<POST: fsp_tgt.(postcond) x_tgt <3= fsp_src.(postcond) x_src>>)
+        (<<PRE: forall arg_src arg_tgt o,
+            (fsp_src.(precond) x_src arg_src arg_tgt o -* fsp_tgt.(precond) x_tgt arg_src arg_tgt o) ε>>) /\
+        (<<POST: forall ret_src ret_tgt,
+            (fsp_tgt.(postcond) x_tgt ret_src ret_tgt -* fsp_src.(postcond) x_src ret_src ret_tgt) ε>>)
     .
 
     Global Program Instance ftspec_weaker_PreOrder: PreOrder ftspec_weaker.
     Next Obligation.
     Proof.
-      ii. exists x_src. esplits; eauto.
+      ii. exists x_src. esplits; ii.
+      { rewrite URA.unit_idl. auto. }
+      { rewrite URA.unit_idl. auto. }
     Qed.
     Next Obligation.
     Proof.
       ii. hexploit (H x_src). i. des.
-      hexploit (H0 x_tgt). i. des. esplits; eauto.
+      hexploit (H0 x_tgt). i. des. esplits; ii.
+      { eapply PRE0; ss. rewrite <- URA.unit_idl. eapply PRE; auto. }
+      { eapply POST; ss. rewrite <- URA.unit_idl. eapply POST0; auto. }
     Qed.
   End FSPECTYPE.
 
@@ -119,7 +126,6 @@ Section FSPEC.
     tspec:> ftspec AA AR;
   }
   .
-  Coercion mk_fspec: ftspec >-> fspec.
 
   Variant fspec_weaker (fsp_src fsp_tgt: fspec): Prop :=
   | fspec_weaker_intro
@@ -141,7 +147,7 @@ Section FSPEC.
   Qed.
 
   Definition mk (X AA AR: Type) (precond: X -> AA -> Any_tgt -> ord -> Σ -> Prop) (postcond: X -> AR -> Any_tgt -> Σ -> Prop) :=
-    mk_ftspec precond postcond.
+    mk_fspec (mk_ftspec precond postcond).
 End FSPEC.
 
 
@@ -268,10 +274,12 @@ Section CANCEL.
   (*   apply (list val). *)
   (*   apply (val). *)
   (* Defined. *)
-  Definition mk_simple {X: Type} (PQ: X -> ((Any_tgt -> ord -> Σ -> Prop) * (Any_tgt -> Σ -> Prop))): ftspec (list val) (val) :=
+  Definition mk_tsimple {X: Type} (PQ: X -> ((Any_tgt -> ord -> Σ -> Prop) * (Any_tgt -> Σ -> Prop))): ftspec (list val) (val) :=
     @mk_ftspec _ _ _ X (fun x y a o r => (fst ∘ PQ) x a o r /\ y↑ = a) (fun x z a r => (snd ∘ PQ) x a r /\ z↑ = a)
   .
 
+  Definition mk_simple {X: Type} (PQ: X -> ((Any_tgt -> ord -> Σ -> Prop) * (Any_tgt -> Σ -> Prop))): fspec :=
+    mk_fspec (mk_tsimple PQ).
 
 
 

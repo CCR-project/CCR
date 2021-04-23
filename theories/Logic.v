@@ -6,7 +6,6 @@ Require Import Behavior.
 Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
-Require Import HoareDef.
 
 Generalizable Variables E R A B C X Y Σ.
 
