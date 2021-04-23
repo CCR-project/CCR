@@ -10,6 +10,7 @@ Require Import HoareDef.
 Require Import SimModSem.
 
 Require Import HTactics.
+Require Import Logic YPM.
 
 From ITree Require Import
      Events.MapDefault.
@@ -61,6 +62,7 @@ Section PROOF.
     fun R_src R_tgt RR '(w_src, fr_src) '(w_tgt, fr_tgt) r_src r_tgt =>
       (<<WF: wf (w_src, w_tgt)>>) /\
       (<<FR: fr_src = fr_tgt>>) /\
+      (<<GWF: @URA.wf (GRA.to_URA Σ) (@URA.add (GRA.to_URA Σ) (fst w_src) fr_src)>>) /\
       RR r_src r_tgt.
 
   Lemma weakening_fn:
@@ -80,7 +82,8 @@ Section PROOF.
 
     assert (SELFSIM: forall R o fr st_src st_tgt
                             (itr: itree (hCallE +' pE +' eventE) R)
-                            (WF: wf (st_src, st_tgt)),
+                            (WF: wf (st_src, st_tgt))
+                            (GWF: @URA.wf (GRA.to_URA Σ) (@URA.add (GRA.to_URA Σ) (fst st_src) fr)),
                gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) bot6 bot6 R R (liftRR eq) 1 (st_src, fr, interp_hCallE_tgt stb_src o itr) (st_tgt, fr, interp_hCallE_tgt stb_tgt o itr)).
     { Local Transparent interp_hCallE_tgt.
       unfold interp_hCallE_tgt. gcofix CIH. i. ides itr.
@@ -88,7 +91,7 @@ Section PROOF.
         mstep. eapply sim_itree_ret; ss. }
       { repeat interp_red.
         mstep. eapply sim_itree_tau; ss.
-        gbase. eapply CIH. eauto. }
+        gbase. eapply CIH; eauto. }
       rewrite <- bind_trigger. destruct e as [|[|]]; ss.
       { destruct h. repeat interp_red. cbn.
         unfold unwrapN, triggerNB. rewrite ! bind_bind.
@@ -132,7 +135,17 @@ Section PROOF.
               mstep. eapply sim_itree_choose_both.
               intros o0. exists o0. exists 0.
               rewrite ! bind_bind.
-              mstep. eapply sim_itree_choose_both. i. split; eauto. exists 0.
+              mstep. eapply sim_itree_choose_both. i. split; eauto.
+              { subst. exploit PRE; eauto.
+                { exploit (x_tgt ε).
+                  { erewrite URA.unit_id. auto. }
+                  { i. erewrite URA.unit_idl. erewrite URA.unit_id in x0.
+                    erewrite URA.add_comm in x0. eapply URA.wf_mon in x0.
+                    eapply URA.wf_mon in x0. auto. }
+                }
+                { erewrite URA.unit_idl. auto. }
+              }
+              exists 0.
               rewrite ! bind_ret_l.
               mstep. eapply sim_itree_choose_both. i. split; eauto. exists 0.
               mstep. eapply sim_itree_call.
@@ -150,7 +163,15 @@ Section PROOF.
               rewrite ! bind_bind.
               mstep. eapply sim_itree_take_both. i. split; auto. exists 0.
               rewrite ! bind_ret_l.
-              mstep. eapply sim_itree_take_both. i. split; eauto. exists 0.
+              mstep. eapply sim_itree_take_both. i. split; eauto.
+              { exploit POST; eauto.
+                { erewrite URA.unit_idl.
+                  erewrite URA.add_comm in x_src2. eapply URA.wf_mon in x_src2.
+                  erewrite URA.add_comm in x_src2. eapply URA.wf_mon in x_src2. auto.
+                }
+                { erewrite URA.unit_idl. auto. }
+              }
+              exists 0.
               mstep. eapply sim_itree_ret.
               { unfold wf. esplits; eauto. }
               { unfold liftRR. esplits; eauto. }
@@ -159,7 +180,7 @@ Section PROOF.
             mstep. eapply sim_itree_tau. rewrite ! bind_ret_l.
             destruct st_src1 as [st_src1 fr0'].
             destruct st_tgt1 as [st_tgt1 fr0]. ss. des; subst.
-            gbase. eapply CIH. esplits; eauto.
+            gbase. eapply CIH; auto. esplits; eauto.
           }
           { rewrite ! bind_bind.
             mstep. eapply sim_itree_choose_both. i; ss. }
@@ -171,13 +192,13 @@ Section PROOF.
           mstep. eapply sim_itree_pput_both.
           rewrite ! bind_tau.
           mstep. eapply sim_itree_tau.
-          rewrite ! bind_ret_l. gbase. eapply CIH. esplits; eauto.
+          rewrite ! bind_ret_l. gbase. eapply CIH; auto. esplits; eauto.
         }
         { cbn.
           mstep. eapply sim_itree_pget_both.
           rewrite ! bind_tau.
           mstep. eapply sim_itree_tau.
-          rewrite ! bind_ret_l. gbase. eapply CIH. esplits; eauto.
+          rewrite ! bind_ret_l. gbase. eapply CIH; auto. esplits; eauto.
         }
       }
       { des; subst. repeat interp_red. rewrite ! bind_bind. destruct e.
@@ -185,19 +206,19 @@ Section PROOF.
           mstep. eapply sim_itree_choose_both. intros x. exists x.
           eexists. rewrite ! bind_tau.
           mstep. eapply sim_itree_tau.
-          rewrite ! bind_ret_l. gbase. eapply CIH. esplits; eauto.
+          rewrite ! bind_ret_l. gbase. eapply CIH; auto. esplits; eauto.
         }
         { cbn.
           mstep. eapply sim_itree_take_both. intros x. exists x.
           eexists. rewrite ! bind_tau.
           mstep. eapply sim_itree_tau.
-          rewrite ! bind_ret_l. gbase. eapply CIH. esplits; eauto.
+          rewrite ! bind_ret_l. gbase. eapply CIH; auto. esplits; eauto.
         }
         { cbn.
           mstep. eapply sim_itree_syscall. i. eexists.
           rewrite ! bind_tau.
           mstep. eapply sim_itree_tau.
-          rewrite ! bind_ret_l. gbase. eapply CIH. esplits; eauto.
+          rewrite ! bind_ret_l. gbase. eapply CIH; auto. esplits; eauto.
         }
       }
     }
@@ -224,14 +245,23 @@ Section PROOF.
       mstep. eapply sim_itree_take_both.
       intros o. exists o. exists 0.
       rewrite ! bind_bind.
-      mstep. eapply sim_itree_take_both. i. esplit; eauto. exists 0.
+      mstep. eapply sim_itree_take_both. i. esplit; eauto.
+      { subst. exploit PRE; eauto.
+        { erewrite URA.add_comm in x_src0. eapply URA.wf_mon in x_src0. auto. }
+        { erewrite URA.unit_idl. auto. }
+      }
+      exists 0.
       rewrite ! bind_ret_l.
       mstep. eapply sim_itree_ret.
       { unfold wf. esplits; eauto. }
       instantiate (1:=liftRR (fun '(x_src, varg_src, o_src) '(x_tgt, varg_tgt, o_tgt) =>
                                 varg_src = varg_tgt /\ o_src = o_tgt /\
-                                (<<PRE: ftsp_src.(precond) x_src <4= ftsp_tgt.(precond) x_tgt>>) /\
-                                (<<POST: ftsp_tgt.(postcond) x_tgt <3= ftsp_src.(postcond) x_src>>))).
+                                (<<PRE: forall (arg_src : AA) (arg_tgt : Any.t) (o : ord),
+                                    (precond ftsp_src x_src arg_src arg_tgt o -*
+                                             precond ftsp_tgt x_tgt arg_src arg_tgt o) ε>>) /\
+                                (<<POST: forall (ret_src : AR) (ret_tgt : Any.t),
+                                    (postcond ftsp_tgt x_tgt ret_src ret_tgt -*
+                                              postcond ftsp_src x_src ret_src ret_tgt) ε>>))).
       unfold liftRR, wf. esplits; eauto.
     }
     ss. i.
@@ -246,7 +276,7 @@ Section PROOF.
       { muclo lordC_spec. econs.
         { instantiate (1:=(0+1)%ord). rewrite Ord.from_nat_O. eapply OrdArith.add_O_l. }
         muclo lbindC_spec. econs; eauto.
-        { eapply SELFSIM. esplits; eauto. }
+        { eapply SELFSIM; auto. esplits; eauto. }
         { i. ired_both.
           destruct st_src1 as [w_src fr_src0]. destruct st_tgt1 as [w_tgt fr_tgt0].
           unfold liftRR in SIM. des; subst.
@@ -258,7 +288,7 @@ Section PROOF.
           { esplit; eauto. }
         }
       }
-      { eapply SELFSIM. esplits; eauto. }
+      { eapply SELFSIM; auto. esplits; eauto. }
     }
     i. destruct st_src1 as [w_src fr_src1]. destruct st_tgt1 as [w_tgt fr_tgt1].
     unfold liftRR in SIM. des; subst.
@@ -275,19 +305,38 @@ Section PROOF.
     rewrite ! bind_ret_l.
     mstep. eapply sim_itree_fput_both.
     mstep. eapply sim_itree_mput_both.
-    mstep. eapply sim_itree_choose_both. intros rret. exists rret. exists 0.
+    mstep. eapply sim_itree_choose_both. intros rret. exists rret. exists 20.
     rewrite ! bind_bind.
-    mstep. eapply sim_itree_choose_both. i. esplit; eauto. exists 0.
-    rewrite ! bind_ret_l.
-    mstep. eapply sim_itree_fget_both.
-    rewrite ! bind_bind.
-    mstep. eapply sim_itree_choose_both. intros rmod. exists rmod. exists 0.
-    rewrite ! bind_bind.
-    mstep. eapply sim_itree_choose_both. i. esplits; ss.
-    rewrite ! bind_ret_l.
-    mstep. eapply sim_itree_fput_both.
-    mstep. eapply sim_itree_ret; ss.
-    exists mret, mp1. admit "ez".
+
+    mstep. eapply sim_itree_choose_tgt.
+    { eauto with ord_step. }
+    intros H. mstep. rewrite ! bind_ret_l. eapply sim_itree_fget_tgt.
+    { eauto with ord_step. }
+    mstep. rewrite ! bind_bind. eapply sim_itree_choose_tgt.
+    { eauto with ord_step. }
+    i. mstep. rewrite ! bind_bind. eapply sim_itree_choose_tgt.
+    { eauto with ord_step. }
+    mstep. i. subst. eapply sim_itree_choose_src.
+    { eauto with ord_step. }
+    split.
+    { exploit POST; eauto.
+      { erewrite URA.unit_idl.
+        exploit (x_tgt0 ε).
+        { erewrite URA.unit_id. auto. }
+        erewrite URA.unit_id. i.
+        erewrite URA.add_comm in x1. eapply URA.wf_mon in x1.
+        eapply URA.wf_mon in x1. auto.
+      }
+      { erewrite URA.unit_idl. auto. }
+    }
+    mstep. rewrite ! bind_ret_l. eapply sim_itree_fget_src.
+    { eauto with ord_step. }
+    mstep. rewrite ! bind_bind. eapply sim_itree_choose_src.
+    { eauto with ord_step. }
+    exists x. mstep. rewrite ! bind_bind. eapply sim_itree_choose_src.
+    { eauto with ord_step. }
+    split; ss.
+    steps. exists mret, mp1. split; ss. 
     Unshelve. all: exact 0.
   Qed.
 
