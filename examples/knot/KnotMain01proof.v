@@ -74,7 +74,7 @@ Section SIMMODSEM.
         iRefresh. iSplitR A; ss. red. red. f_equal. f_equal.
         clear - l. destruct x; ss. destruct x; ss. lia.
       }
-      steps.
+      steps. inv SPEC.
       acall_tac_weaken (mrec_spec INV) (x - 1) (ord_pure (2 * x - 1)) (@URA.unit Σ) (@URA.unit Σ) A; ss.
       { eapply RecStb_incl. eauto. }
       { ss. splits; ss. iRefresh. iSplitR A; ss.
@@ -108,33 +108,31 @@ Section SIMMODSEM.
                 end). clear Heqn. rewrite Nat.sub_0_r. lia.
     }
     { init. unfold mainF, ccall. harg_tac. des; clarify.
-      iRefresh. iDestruct PRE. iPure A. des; clarify.
+      iRefresh. iDestruct PRE. iPure PRE. des; clarify.
       rewrite Any.upcast_downcast. ss. steps.
       hexploit (SKINCL "fib"); ss; eauto. i. des.
       rewrite H0. ss. steps.
-      astart 2.
-      acall_tac Fib (ord_pure 0) (@URA.unit Σ) (@URA.unit Σ) PRE; ss.
-      { eapply GlobalStb_knot. }
-      { splits; ss. iRefresh. iSplitR PRE; ss.
-        { red. red. esplits; eauto.
+      astart 2. specialize (GlobalStb_knot skenv). inv GlobalStb_knot.
+      acatch; eauto.
+      hcall_tac_weaken (knot_spec RecStb FunStb skenv) Fib (ord_pure 0) (@URA.unit Σ) (@URA.unit Σ) A; ss.
+      { splits; ss. iRefresh. iSplitR A; ss.
+        { red. red. esplits; eauto. econs.
           { eapply SKWF. eauto. }
-          { eapply FunStb_incl. des_ifs. }
-          { ii. ss. eexists (x_src, Own (GRA.embed (knot_frag (Some Fib)))). splits; ss.
+          eapply fn_has_spec_weaker; eauto.
+          ii. ss. eexists (x_src, Own (GRA.embed (knot_frag (Some Fib)))). splits; ss.
+          { i. iRefresh. iIntro. des. split; auto. iRefresh.
+            iDestruct A. iPure A. des; clarify. iSplitR A1; ss.
+            red. red. esplits; eauto. eapply fb_has_spec_weaker; eauto.
+            ii. ss. exists (Fib, x_src0). splits; ss.
             { i. iRefresh. iIntro. des. split; auto. iRefresh.
-              iDestruct A. iPure A. des; clarify. iSplitR A1; ss.
-              red. red. esplits; eauto.
-              { ii. ss. exists (Fib, x_src0). splits; ss.
-                { i. iRefresh. iIntro. des. split; auto. iRefresh.
-                  iDestruct A0. iPure A0. des; clarify.
-                  iSplitL A4; ss.
-                }
-                { i. iRefresh. iIntro. des. split; auto. iRefresh.
-                  iDestruct A0. iPure A4. iSplitR A0; ss. }
-              }
+              iDestruct A0. iPure A0. des; clarify.
+              iSplitL A3; ss.
             }
             { i. iRefresh. iIntro. des. split; auto. iRefresh.
-              iDestruct A. iPure A. iSplitR A1; ss.
-            }
+              iDestruct A0. iPure A3. iSplitR A0; ss. }
+          }
+          { i. iRefresh. iIntro. des. split; auto. iRefresh.
+            iDestruct A. iPure A. iSplitR A1; ss.
           }
         }
         { exists None. iRefresh. ss. }
@@ -142,9 +140,9 @@ Section SIMMODSEM.
       ss. des. clarify. iRefresh. iDestruct POST. iPure POST. des; clarify.
       eapply Any.upcast_inj in POST. des; clarify.
       steps. rewrite Any.upcast_downcast in _UNWRAPN. clarify.
-      ss. steps. rewrite POST0. steps.
-      acall_tac (Fib, 10) (ord_pure 21) (@URA.unit Σ) (@URA.unit Σ) A; ss.
+      ss. steps. inv POST0. rewrite FBLOCK. inv SPEC. steps. acatch.
       { eapply RecStb_incl. eauto. }
+      hcall_tac_weaken rec_spec (Fib, 10) (ord_pure 21) (@URA.unit Σ) (@URA.unit Σ) A; ss.
       { splits; ss. iRefresh. iSplitL A; ss. }
       steps. ss. des. clarify.
       iRefresh. iDestruct POST. iPure A.

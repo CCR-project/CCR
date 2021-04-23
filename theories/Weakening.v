@@ -6,7 +6,7 @@ Require Import Behavior.
 Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
-Require Import HoareDef.
+Require Import HoareDef STB.
 Require Import SimModSem.
 
 Require Import HTactics.
@@ -256,10 +256,10 @@ Section PROOF.
       { unfold wf. esplits; eauto. }
       instantiate (1:=liftRR (fun '(x_src, varg_src, o_src) '(x_tgt, varg_tgt, o_tgt) =>
                                 varg_src = varg_tgt /\ o_src = o_tgt /\
-                                (<<PRE: forall (arg_src : AA) (arg_tgt : Any.t) (o : ord),
+                                (<<PRE: forall (arg_src : Y) (arg_tgt : Any.t) (o : ord),
                                     (precond ftsp_src x_src arg_src arg_tgt o -*
                                              precond ftsp_tgt x_tgt arg_src arg_tgt o) ε>>) /\
-                                (<<POST: forall (ret_src : AR) (ret_tgt : Any.t),
+                                (<<POST: forall (ret_src : Z) (ret_tgt : Any.t),
                                     (postcond ftsp_tgt x_tgt ret_src ret_tgt -*
                                               postcond ftsp_src x_src ret_src ret_tgt) ε>>))).
       unfold liftRR, wf. esplits; eauto.
@@ -336,7 +336,7 @@ Section PROOF.
     exists x. mstep. rewrite ! bind_bind. eapply sim_itree_choose_src.
     { eauto with ord_step. }
     split; ss.
-    steps. exists mret, mp1. split; ss. 
+    steps. exists mret, mp1. split; ss.
     Unshelve. all: exact 0.
   Qed.
 

@@ -1,4 +1,4 @@
-Require Import HoareDef KnotHeader Knot0 Knot1 SimModSemL SimModSem.
+Require Import HoareDef STB KnotHeader Knot0 Knot1 SimModSemL SimModSem.
 Require Import Coqlib.
 Require Import Universe.
 Require Import Skeleton.
@@ -69,23 +69,16 @@ Section SIMMODSEM.
         (<<TGT: mrps_tgt0 = (ε, fb'↑)>>) /\
         (<<SIM: (iHyp (Own (GRA.embed (knot_full f'))) mr)>>) /\
         (<<SOME: forall f (FUN: f' = Some f),
-            exists fb fn,
+            exists fb,
               (<<BLK: fb' = Some fb>>) /\
-              (<<FN: skenv.(SkEnv.blk2id) fb = Some fn>>) /\
-              (<<FIND: List.find (fun '(_fn, _) => dec fn _fn) (FunStb skenv) = Some (fn, mk_fspec (fun_gen RecStb skenv f))>>)>>)
+              (<<FN: fb_has_spec skenv (FunStb skenv) fb (fun_gen RecStb skenv f)>>)>>)
   .
 
-  Variable RecStb_incl
-    :
-      forall skenv fn fsp
-             (SPECS: List.find (fun '(_fn, _) => dec fn _fn) KnotRecStb = Some fsp),
-        List.find (fun '(_fn, _) => dec fn _fn) (RecStb skenv) = Some fsp.
+  Hypothesis RecStb_incl: forall skenv,
+      stb_incl KnotRecStb (RecStb skenv).
 
-  Variable FunStb_incl
-    :
-      forall skenv fn fsp
-             (SPECS: List.find (fun '(_fn, _) => dec fn _fn) (FunStb skenv) = Some fsp),
-        List.find (fun '(_fn, _) => dec fn _fn) (GlobalStb skenv) = Some fsp.
+  Hypothesis FunStb_incl: forall skenv,
+      stb_incl (FunStb skenv) (GlobalStb skenv).
 
   Theorem correct: ModPair.sim (Knot1.Knot RecStb FunStb GlobalStb) Knot0.Knot.
   Proof.
@@ -102,15 +95,20 @@ Section SIMMODSEM.
       assert (f' = Some f); subst.
       { hexploit knot_ra_merge; et. intro T. iSpecialize T SIM. iSpecialize T PRE. iPure T. auto. }
       hexploit SOME; eauto. clear SOME. i. des. clarify. steps.
-      rewrite Any.upcast_downcast. ss. steps. rewrite FN. ss. steps.
+      rewrite Any.upcast_downcast. ss. steps.
+      dup FN. inv FN. rewrite FBLOCK. steps.
       hexploit (SKINCL "rec"); ss; eauto. i. des. rewrite H0. ss. steps.
-      acall_tac_weaken (fun_gen RecStb skenv f) n (ord_pure (2 * n)) SIM (@URA.unit Σ) PRE.
-      { eapply FunStb_incl. eapply FIND. }
-      { refl. }
+      inv SPEC. exploit FunStb_incl; et. i.
+      acatch.
+      { eapply x1. }
+      hcall_tac_weaken (fun_gen RecStb skenv f) n (ord_pure (2 * n)) SIM (@URA.unit Σ) PRE.
+      { et. }
       { ss. splits; ss. iRefresh. iSplitR PRE; ss.
-        red. red. esplits; eauto.
+        red. red. esplits; eauto. econs; eauto.
         { eapply SKWF. eauto. }
+        econs.
         { eapply RecStb_incl. des_ifs. }
+        { refl. }
       }
       { splits; ss. eauto with ord_step. }
       { ss. esplits; eauto. i. clarify. esplits; eauto. }
@@ -140,10 +138,13 @@ Section SIMMODSEM.
       force_l. eexists.
       hret_tac SIM A; ss.
       { esplits; eauto. iRefresh. iSplitR A; eauto. red. red. esplits; eauto.
+        econs; eauto.
         { eapply SKWF; eauto. }
-        { eapply RecStb_incl; eauto. }
+        econs.
+        { eapply RecStb_incl; eauto. ss. }
+        { refl. }
       }
-      { esplits; eauto. i. clarify. esplits; eauto. admit "". }
+      { esplits; eauto. i. clarify. esplits; eauto. }
     }
   Qed.
 
