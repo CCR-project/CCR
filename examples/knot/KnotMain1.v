@@ -40,24 +40,13 @@ Section MAIN.
   Section SKENV.
     Variable skenv: SkEnv.t.
 
-    Definition mrec_spec (INV: Σ -> Prop): ftspec (list val) val :=
-      mk_simple (X:=nat)
-                (fun n => (
-                     (fun varg o =>
-                        (⌜varg = [Vint (Z.of_nat n)]↑ /\ o = ord_pure (2 * n + 1)⌝)
-                          ** INV),
-                     (fun vret =>
-                        (⌜vret = (Vint (Z.of_nat (Fib n)))↑⌝)
-                          ** INV)
-                )).
-
     Definition fib_spec: fspec :=
       mk_simple (X:=nat*(Σ -> Prop))
                 (fun '(n, INV) => (
                      (fun varg o =>
                         (⌜exists fb,
                               varg = [Vptr fb 0; Vint (Z.of_nat n)]↑ /\ o = ord_pure (2 * n) /\
-                              fb_has_spec skenv (RecStb skenv) fb (mrec_spec INV)⌝)
+                              fb_has_spec skenv (RecStb skenv) fb (mrec_spec Fib INV)⌝)
                           ** INV),
                      (fun vret =>
                         (⌜vret = (Vint (Z.of_nat (Fib n)))↑⌝)
@@ -71,7 +60,7 @@ Section MAIN.
                 (fun f => (
                      (fun varg o =>
                         (⌜o = ord_top⌝)
-                          ** Own (GRA.embed (knot_frag None))),
+                          ** Own (GRA.embed knot_init)),
                      (fun vret =>
                         (⌜vret = (Vint (Z.of_nat (Fib 10)))↑⌝))
                 )).
@@ -84,7 +73,7 @@ Section MAIN.
     Definition SMainSem: SModSem.t := {|
       SModSem.fnsems := MainSbtb;
       SModSem.mn := "Main";
-      SModSem.initial_mr := ε;
+      SModSem.initial_mr := GRA.embed knot_init;
       SModSem.initial_st := tt↑;
     |}
     .
