@@ -20,24 +20,42 @@ Require Import Mem0 Mem1 Mem01proof Main0 Main1.
 
 
 
+
+Arguments rel_dec_eq_true [T] eqt {r} {rc}.
+(* rel_dec_eq_true =  *)
+(* fun (T : Type) (eqt : T -> T -> Prop) (r : RelDec eqt) (rc : RelDec_Correct r) *)
+(*   (x y : T) (H : eqt x y) => *)
+(* let H0 : forall x0 y0 : T, eqt x0 y0 -> x0 ?[ eqt ] y0 = true := *)
+(*   fun x0 y0 : T => match rel_dec_correct x0 y0 with *)
+(*                    | conj _ x2 => x2 *)
+(*                    end in *)
+(* let H1 : x ?[ eqt ] y = true := H0 x y H in H1 *)
+(*      : forall (T : Type) (eqt : T -> T -> Prop) (r : RelDec eqt), *)
+(*        RelDec_Correct r -> forall x y : T, eqt x y -> x ?[ eqt ] y = true *)
+
+(* Arguments rel_dec_eq_true [T]%type_scope [eqt]%function_scope [r] _ _ _ _ *)
+
+
 Section WEAKENING.
 
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG memRA Σ}.
 
   Require Import Logic TODOYJ.
-  Let weaken: forall (fn fn_tgt : string) (fsp_tgt : fspec),
-      find (fun '(_fn, _) => dec fn _fn) MemStb = Some (fn_tgt, fsp_tgt) ->
-      exists (fn_src : string) (fsp_src : fspec),
-        (<< _ : find (fun '(_fn, _) => dec fn _fn) (MemStb ++ MainStb) = Some (fn_src, fsp_src) >>) /\ << _ : fspec_weaker fsp_tgt fsp_src >>
+
+
+  Let weaken: forall (fn : string) (fsp_tgt : fspec),
+      alist_find fn MemStb = Some fsp_tgt ->
+      exists (fsp_src : fspec),
+        (<< _ : alist_find fn (MemStb ++ MainStb) = Some fsp_src >>) /\ << _ : fspec_weaker fsp_tgt fsp_src >>
   .
   Proof.
     ii. stb_tac. des_ifs.
-    - des_sumbool. subst. esplits; eauto. { stb_tac. ss. } refl.
-    - des_sumbool. subst. esplits; eauto. { stb_tac. ss. } refl.
-    - des_sumbool. subst. esplits; eauto. { stb_tac. ss. } refl.
-    - des_sumbool. subst. esplits; eauto. { stb_tac. ss. } refl.
-    - des_sumbool. subst. esplits; eauto. { stb_tac. ss. } refl.
+    - rewrite eq_rel_dec_correct in *. des_ifs. subst. esplits; eauto. { stb_tac. ss. } refl.
+    - rewrite eq_rel_dec_correct in *. des_ifs. subst. esplits; eauto. { stb_tac. ss. } refl.
+    - rewrite eq_rel_dec_correct in *. des_ifs. subst. esplits; eauto. { stb_tac. ss. } refl.
+    - rewrite eq_rel_dec_correct in *. des_ifs. subst. esplits; eauto. { stb_tac. ss. } refl.
+    - rewrite eq_rel_dec_correct in *. des_ifs. subst. esplits; eauto. { stb_tac. ss. } refl.
   Qed.
 
 End WEAKENING.
@@ -137,12 +155,14 @@ Section PROOF.
       econs.
       { esplits; cycle 1.
         { Fail Timeout 1 refl. (**************** FIXTHIS!!!!!!!!!!!!!!!!! ********************) unfold Mem. refl. }
-        ii. ss. stb_tac. des_ifs; des_sumbool; subst; esplits; try refl; et.
+        ii. ss. stb_tac.
+        rewrite ! eq_rel_dec_correct in *. des_ifs; subst; esplits; try refl; et.
       }
       econs.
       { esplits; cycle 1.
         { Fail Timeout 1 refl. (**************** FIXTHIS!!!!!!!!!!!!!!!!! ********************) unfold Main. refl. }
-        ii. ss. stb_tac. des_ifs; des_sumbool; subst; esplits; try refl; et.
+        ii. ss. stb_tac. 
+        rewrite ! eq_rel_dec_correct in *. des_ifs; subst; esplits; try refl; et.
       }
       econs.
     }

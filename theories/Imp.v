@@ -96,7 +96,7 @@ Variant GlobEnv : Type -> Type :=
 | GetName (p: val) : GlobEnv gname.
 
 Section Denote.
- 
+
   Context `{Σ: GRA.t}.
   Context {eff : Type -> Type}.
   Context {HasGlobVar: GlobEnv -< eff}.
@@ -228,8 +228,8 @@ Section Interp.
   Definition handle_ImpState {eff} `{eventE -< eff} : ImpState ~> stateT lenv (itree eff) :=
     fun _ e le =>
       match e with
-      | GetVar x => r <- unwrapU (alist_find _ x le);; Ret (le, r)
-      | SetVar x v => Ret (alist_add _ x v le, tt)
+      | GetVar x => r <- unwrapU (alist_find x le);; Ret (le, r)
+      | SetVar x v => Ret (alist_add x v le, tt)
       end.
 
   Definition interp_ImpState {eff} `{eventE -< eff}: itree (ImpState +' eff) ~> stateT lenv (itree eff) :=
@@ -237,7 +237,7 @@ Section Interp.
 
   Definition interp_imp ge le (itr : itree effs val) :=
     interp_ImpState (interp_GlobEnv ge itr) le.
-  
+
   Fixpoint init_lenv xs : lenv :=
     match xs with
     | [] => []
