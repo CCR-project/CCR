@@ -1074,7 +1074,7 @@ Ltac hret_tac MR_SRC RT_SRC :=
   let mr_src1 := r_gather MR_SRC in
   let fr_src1 := r_gather RT_SRC in
   let tac0 := try by (eapply URA.extends_updatable; r_equalize; r_solve) in
-  _hret_tac mr_src1 fr_src1; [on_gwf ltac:(fun GWF => apply GWF)|tac0| |]
+  _hret_tac mr_src1 fr_src1; [on_gwf ltac:(fun GWF => apply GWF)|tac0| | |try refl]
 .
 
 Ltac astep_full _fn _args _next _n1 :=
