@@ -9,10 +9,12 @@ Require Import HoareDef.
 Require Import TODOYJ.
 Require Import Logic.
 Require Import KnotHeader.
+Require Import STB.
 
 Generalizable Variables E R A B C X Y Σ.
 
 Set Implicit Arguments.
+
 
 
 
@@ -41,20 +43,25 @@ Section MAIN.
     Definition mrec_spec (INV: Σ -> Prop): ftspec (list val) val :=
       mk_simple (X:=nat)
                 (fun n => (
-                     (fun varg o => ⌜varg = [Vint (Z.of_nat n)]↑ /\ o = ord_pure (2 * n + 1)⌝ ** INV),
-                     (fun vret => ⌜vret = (Vint (Z.of_nat (Fib n)))↑⌝ ** INV)
+                     (fun varg o =>
+                        (⌜varg = [Vint (Z.of_nat n)]↑ /\ o = ord_pure (2 * n + 1)⌝)
+                          ** INV),
+                     (fun vret =>
+                        (⌜vret = (Vint (Z.of_nat (Fib n)))↑⌝)
+                          ** INV)
                 )).
 
     Definition fib_spec: fspec :=
       mk_simple (X:=nat*(Σ -> Prop))
                 (fun '(n, INV) => (
                      (fun varg o =>
-                        ⌜exists fb fn (ftsp: ftspec (list val) val),
-                            varg = [Vptr fb 0; Vint (Z.of_nat n)]↑ /\ o = ord_pure (2 * n) /\
-                            skenv.(SkEnv.blk2id) fb = Some fn /\
-                            List.find (fun '(_fn, _) => dec fn _fn) (RecStb skenv) = Some (fn, mk_fspec ftsp) /\
-                            ftspec_weaker (mrec_spec INV) ftsp⌝ ** INV),
-                     (fun vret => ⌜vret = (Vint (Z.of_nat (Fib n)))↑⌝ ** INV)
+                        (⌜exists fb,
+                              varg = [Vptr fb 0; Vint (Z.of_nat n)]↑ /\ o = ord_pure (2 * n) /\
+                              fb_has_spec skenv (RecStb skenv) fb (mrec_spec INV)⌝)
+                          ** INV),
+                     (fun vret =>
+                        (⌜vret = (Vint (Z.of_nat (Fib n)))↑⌝)
+                          ** INV)
                 )).
 
     Definition MainFunStb: list (gname * fspec) := [("fib", fib_spec)].
@@ -63,9 +70,10 @@ Section MAIN.
       mk_simple (X:=(nat -> nat))
                 (fun f => (
                      (fun varg o =>
-                        Own (GRA.embed (knot_frag None)) ** ⌜o = ord_top⌝),
+                        (⌜o = ord_top⌝)
+                          ** Own (GRA.embed (knot_frag None))),
                      (fun vret =>
-                        ⌜vret = (Vint (Z.of_nat (Fib 10)))↑⌝)
+                        (⌜vret = (Vint (Z.of_nat (Fib 10)))↑⌝))
                 )).
 
     Definition MainStb: list (gname * fspec) := [("fib", fib_spec); ("main", main_spec)].
