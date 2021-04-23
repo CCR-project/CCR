@@ -391,12 +391,24 @@ Section ADQ.
   .
   Proof. grind. Qed.
 
-(********** TODO: remove below Notation after the fix in HTactics ***************)
-Notation "wf n '------------------------------------------------------------------' src0 tgt0 '------------------------------------------------------------------' src1 tgt1 '------------------------------------------------------------------' src2 tgt2"
-  :=
-    (gpaco6 (_sim_itree wf) _ _ _ _ _ _ n ((src0, src1), src2) ((tgt0, tgt1), tgt2))
-      (at level 60,
-       format "wf  n '//' '------------------------------------------------------------------' '//' src0 '//' tgt0 '//' '------------------------------------------------------------------' '//' src1 '//' tgt1 '//' '------------------------------------------------------------------' '//' src2 '//' '//' '//' tgt2 '//' ").
+(* (********** TODO: remove below Notation after the fix in HTactics ***************) *)
+(* Notation "wf n '------------------------------------------------------------------' src0 tgt0 '------------------------------------------------------------------' src1 tgt1 '------------------------------------------------------------------' src2 tgt2" *)
+(*   := *)
+(*     (gpaco6 (_sim_itree wf) _ _ _ _ _ _ n ((src0, src1), src2) ((tgt0, tgt1), tgt2)) *)
+(*       (at level 60, *)
+(*        format "wf  n '//' '------------------------------------------------------------------' '//' src0 '//' tgt0 '//' '------------------------------------------------------------------' '//' src1 '//' tgt1 '//' '------------------------------------------------------------------' '//' src2 '//' '//' '//' tgt2 '//' "). *)
+
+
+
+
+
+
+
+
+
+
+
+
 
   (* Lemma resub_l *)
   (*       (E1 E2: Type -> Type) *)
@@ -450,8 +462,8 @@ Notation "wf n '----------------------------------------------------------------
       force_l. esplits. force_l. { rewrite URA.unit_id. refl. } steps.
     - unfold body_to_tgt. steps.
       abstr (ktr x) itr.
-      clear _ASSUME _ASSUME0. des_u.
-      revert itr. revert st. revert mr. gcofix CIH0. i.
+      clear _ASSUME0. des_u. rewrite URA.unit_idl in *.
+      revert itr. revert st. gcofix CIH0. i.
       ides itr.
       { interp_red. cbn. steps. red_resum. gstep. econs; eauto. }
       { interp_red. cbn. red_resum. steps. red_resum. steps. gbase. eapply CIH0. }
@@ -538,9 +550,28 @@ Notation "wf n '----------------------------------------------------------------
       steps. force_l.
       { admit "TODO". }
       steps.
-      rename _UNWRAPN into T.
+      replace (resum_itr (F:=Es) (ITree.trigger (Call fn args|)%sum)) with
+          (r <- trigger (Call fn args);; tau;; Ret r: itree Es _); cycle 1.
+      { unfold resum_itr. interp_red. grind. }
+      rename _UNWRAPN into T. ired_both.
+      (* assert(WF: exists r0, URA.wf r0). { esplits. eapply URA.wf_unit. } des. *)
+      assert (GWF: ☀) by (split; [refl|exact _ASSUME]); clear _ASSUME.
+      iRefresh.
+      eapply hcall_clo.
+
+gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg Any.t Any.t (fun _ _ : Σ * Any.t * Σ => eq) n
+  (mr_src0, mp_src0, fr_src0, ` x : _ <- HoareCall tbr ord_cur P Q fn varg_src;; k_src x)
+  (mrs_tgt, frs_tgt, ` x : _ <- trigger (Call fn varg_tgt);; k_tgt x)
+      hcall_tac __ ord_top (@URA.unit Σ) (@URA.unit Σ) (@URA.unit Σ); ss; et.
+           eapply (hcall_clo _ (o:=o) (mr_src1:=mr_src1) (fr_src1:=fr_src1) (rarg_src:=rarg_src));
+            [ tac0 | eapply OrdArith.lt_from_nat; lia | .. | tac1 ]
+
+      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ (fun _ _ => @eq Any.t) n
+             (mr_src0, mp_src0, fr_src0, (HoareCall tbr ord_cur P Q fn varg_src) >>= k_src)
+             (mrs_tgt, frs_tgt, trigger (Call fn varg_tgt) >>= k_tgt)
+
       eapply find_some in T. des; ss. des_sumbool. subst.
-      unfold gstb in T. rewrite in_app_iff in T. des ;ss.
+      unfold gstb in T. rewrite in_app_iff in T. des; ss.
       + rewrite in_flat_map in T. des; ss. rewrite in_map_iff in *. des; subst.
         unfold map_snd in *. des_ifs. unfold kmss in T. rewrite in_map_iff in *. des; subst.
         unfold kmds in *. rewrite in_map_iff in *. des; subst. ss. rewrite in_map_iff in *. des; subst.
