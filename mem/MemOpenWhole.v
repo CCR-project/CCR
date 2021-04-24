@@ -10,7 +10,7 @@ Require Import HoareDef.
 Require Import TODOYJ.
 Require Import Logic.
 Require Import TODO.
-Require Import Mem0 MemOpen.
+(* Require Import Mem0 MemOpen. *)
 Require Import Hoare.
 
 Generalizable Variables E R A B C X Y Σ.
@@ -169,10 +169,17 @@ Section AUX.
   (* . *)
 
   Definition disclose (fs: fspec): fspec :=
-    @mk _ (fs.(X) * bool)%type (fs.(AA) * bool)%type (fs.(AR))
-        (fun '(x, is_k) '(argh, is_k') argl o => ⌜is_k = is_k'⌝ ** (⌜is_k⌝ -* fs.(precond) x argh argl o ** ⌜is_pure o⌝))
-        (fun '(x, is_k) reth retl =>                               (⌜is_k⌝ -* fs.(postcond) x reth retl))
+    @mk _ (option fs.(X)) (fs.(AA) * bool)%type (fs.(AR))
+        (fun ox '(argh, is_k) argl o => ⌜is_some ox = is_k⌝ **
+                                        ((Exists x, ⌜ox = Some x⌝ ** fs.(precond) x argh argl o ** ⌜is_pure o⌝) ∨
+                                         (⌜ox = None⌝)))
+        (fun ox reth retl => ((Exists x, ⌜ox = Some x⌝ ** fs.(postcond) x reth retl) ∨ (⌜ox = None⌝)))
   .
+  (* Definition disclose (fs: fspec): fspec := *)
+  (*   @mk _ (fs.(X) * bool)%type (fs.(AA) * bool)%type (fs.(AR)) *)
+  (*       (fun '(x, is_k) '(argh, is_k') argl o => ⌜is_k = is_k'⌝ ** (⌜is_k⌝ -* fs.(precond) x argh argl o ** ⌜is_pure o⌝)) *)
+  (*       (fun '(x, is_k) reth retl =>                               (⌜is_k⌝ -* fs.(postcond) x reth retl)) *)
+  (* . *)
   (*** YJ: We may generalize a bit further and not require "is_pure o"
 -- by defining an equiv-class of physical state and proving that the is_k cases behave same upto the equiv class && is_u cases change the state upto equiv class --
    but it looks like an over-engineering at the moment. ***)
@@ -431,6 +438,74 @@ Section ADQ.
   (* . *)
   (* Proof. refl. Qed. *)
 
+  Lemma hcall_clo
+        (mr_src1 fr_src1 rarg_src: Σ)
+        R0 R1
+        (o: ord) (fs: fspec) (x: __shelve__ fs.(X))
+        r rg (n: nat) mr_src0 mp_src0 fr_src0
+        mrs_tgt frs_tgt k_tgt k_src
+        fn tbr ord_cur varg_src varg_tgt
+        (wf: (Σ * Any.t) * (Σ * Any.t) -> Prop)
+
+        (UPDATABLE: URA.updatable (URA.add mr_src0 fr_src0) (URA.add mr_src1 (URA.add rarg_src fr_src1)))
+        (FUEL: (15 < n)%ord)
+        (PRE: fs.(precond) x varg_src varg_tgt o rarg_src)
+        (PURE: ord_lt o ord_cur /\
+               (tbr = true -> is_pure o) /\ (tbr = false -> o = ord_top))
+        (WF: wf ((mr_src1, mp_src0), mrs_tgt))
+        (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> R0 -> R1 -> Prop)
+        (POST: forall (vret_tgt : Any.t) (mrs_src1 mrs_tgt1 : (Σ * Any.t))
+                      (rret: Σ) vret_src
+                      (WF: wf (mrs_src1, mrs_tgt1)),
+            exists (mr_src2: Σ) (mp_src2: Any.t),
+              (<<LOOKUP: mrs_src1 = (mr_src2, mp_src2)>>) /\
+              forall (VALID: URA.wf (URA.add mr_src2 (URA.add fr_src1 rret)))
+                     (POST: fs.(postcond) x vret_src vret_tgt rret),
+                gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ eqr 100
+                       (mrs_src1, URA.add fr_src1 rret, k_src vret_src) (mrs_tgt1, frs_tgt, k_tgt vret_tgt))
+    :
+      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ eqr n
+             (mr_src0, mp_src0, fr_src0, (HoareCall tbr ord_cur fs fn varg_src) >>= k_src)
+             (mrs_tgt, frs_tgt, trigger (Call fn varg_tgt) >>= k_tgt).
+  Proof.
+  Admitted.
+
+  Lemma hcall_clo2
+        R0 R1
+        (mr_src1 fr_src1 rarg_src: Σ)
+        (o: ord) X (x: __shelve__ X)
+        r rg (n: nat) mr_src0 mp_src0 fr_src0 Y Z
+        (P: X -> Y -> Any.t -> ord -> Σ -> Prop)
+        (Q: X -> Z -> Any.t -> Σ -> Prop)
+        mrs_tgt frs_tgt k_tgt k_src
+        fn tbr ord_cur varg_src varg_tgt
+        (wf: (Σ * Any.t) * (Σ * Any.t) -> Prop)
+
+        (UPDATABLE: URA.updatable (URA.add mr_src0 fr_src0) (URA.add mr_src1 (URA.add rarg_src fr_src1)))
+        (FUEL: (15 < n)%ord)
+        (PRE: P x varg_src varg_tgt o rarg_src)
+        (PURE: ord_lt o ord_cur /\
+               (tbr = true -> is_pure o) /\ (tbr = false -> o = ord_top))
+        (WF: wf ((mr_src1, mp_src0), mrs_tgt))
+        (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> R0 -> R1 -> Prop)
+        (POST: forall (vret_tgt : Any.t) (mrs_src1 mrs_tgt1 : (Σ * Any.t))
+                      (rret: Σ) (vret_src: Z)
+                      (WF: wf (mrs_src1, mrs_tgt1)),
+            exists (mr_src2: Σ) (mp_src2: Any.t),
+              (<<LOOKUP: mrs_src1 = (mr_src2, mp_src2)>>) /\
+              forall (VALID: URA.wf (URA.add mr_src2 (URA.add fr_src1 rret)))
+                     (POST: Q x vret_src vret_tgt rret),
+                gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ eqr 100
+                       (mrs_src1, URA.add fr_src1 rret, k_src vret_src) (mrs_tgt1, frs_tgt, k_tgt vret_tgt))
+    :
+      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ eqr n
+             (mr_src0, mp_src0, fr_src0, (HoareCall tbr ord_cur (mk P Q) fn varg_src) >>= k_src)
+             (mrs_tgt, frs_tgt, trigger (Call fn varg_tgt) >>= k_tgt).
+  Proof.
+  Admitted.
+
+
+
   Lemma my_lemma1_aux
         mrs ktr arg
     :
@@ -554,10 +629,68 @@ Section ADQ.
           (r <- trigger (Call fn args);; tau;; Ret r: itree Es _); cycle 1.
       { unfold resum_itr. interp_red. grind. }
       rename _UNWRAPN into T. ired_both.
+
+      {
+        assert (GWF: ☀) by (split; [refl|exact _ASSUME]); clear _ASSUME.
+        iRefresh.
+        eapply find_some in T. des; des_sumbool; subst. unfold gstb in T. rewrite in_app_iff in *. des; ss.
+        - rewrite in_flat_map in *. des; ss. rewrite in_map_iff in *. des. unfold map_snd in T0. des_ifs.
+          unfold kmss in T. rewrite in_map_iff in *. des. subst. unfold flip in T1.
+          unfold kmds in T0. rewrite in_map_iff in *. des. subst. ss. rewrite in_map_iff in *. des.
+          unfold map_snd in T1. des_ifs. ss.
+          eapply hcall_clo with (fs:=disclose f); try refl.
+          { rewrite URA.unit_idl. refl. }
+          { eapply OrdArith.lt_from_nat. lia. }
+          { instantiate (1:=ord_top). instantiate(1:=None). cbn. des_ifs. iRefresh.
+            iSplitP; ss.
+            { admit "????????". }
+            { right; iRefresh. ss. }
+          }
+          { ss. }
+          i.
+        -
+      }
+      (* { *)
+      (*   eapply find_some in T. des; des_sumbool; subst. unfold gstb in T. rewrite in_app_iff in *. des; ss. *)
+      (*   - rewrite in_flat_map in *. des; ss. rewrite in_map_iff in *. des. unfold map_snd in T0. des_ifs. *)
+      (*     unfold kmss in T. rewrite in_map_iff in *. des. subst. unfold flip in T1. *)
+      (*     unfold kmds in T0. rewrite in_map_iff in *. des. subst. ss. rewrite in_map_iff in *. des. *)
+      (*     unfold map_snd in T1. des_ifs. ss. *)
+      (*   - *)
+      (*   eapply hcall_clo2 with (wf:=(fun '(x, y) => x = y)) (R0:=val) (R1:=val). *)
+      (* } *)
       (* assert(WF: exists r0, URA.wf r0). { esplits. eapply URA.wf_unit. } des. *)
       assert (GWF: ☀) by (split; [refl|exact _ASSUME]); clear _ASSUME.
       iRefresh.
+      ired_both.
+      match goal with
+      | [ |- gpaco6 _ _ _ _ _ _ _ _ (_, _, _, _ >>= ?ktr0) (_, _, _, _ >>= ?ktr1) ] =>
+        remember ktr0 as tmp0; remember ktr1 as tmp1
+      (* | [ |- gpaco6 _ _ _ _ _ _ _ _ _ _ ] => idtac *)
+      end.
+
+      eapply hcall_clo2 with (wf:=(fun '(x, y) => x = y)) (R0:=val) (R1:=val).
+      eapply hcall_clo with (wf:=(fun '(x, y) => x = y)) (R0:=val) (R1:=val).
+      remember _sim_itree as ggg.
+      erewrite f_equal.
+      evar (xyz: (Σ * Any.t * Σ * itree Es val)%type).
+      match goal with
+      | [ |- gpaco6 _ _ _ _ _ _ _ _ ?left _ ] => replace left with xyz
+      end. subst xyz.
+      Set Printing All. subst ggg.
+      eapply hcall_clo with (wf:=(fun '(x, y) => x = y)) (R0:=val) (R1:=val).
+      eapply hcall_clo with (wf:=(fun '(x, y) => x = y)).
+
+
+
+
+      subst ggg.
+      replace (mr, st, x1, ` x : _ <- HoareCall false ord_top f fn a;; tmp0 x) with xyz.
       eapply hcall_clo.
+      rapply hcall_clo.
+      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ eqr n
+             (mr_src0, mp_src0, fr_src0, (HoareCall tbr ord_cur (mk P Q) fn varg_src) >>= k_src)
+             (mrs_tgt, frs_tgt, trigger (Call fn varg_tgt) >>= k_tgt).
 
 gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg Any.t Any.t (fun _ _ : Σ * Any.t * Σ => eq) n
   (mr_src0, mp_src0, fr_src0, ` x : _ <- HoareCall tbr ord_cur P Q fn varg_src;; k_src x)
