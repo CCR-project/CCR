@@ -28,6 +28,12 @@ Section AUX.
   Context `{Σ: GRA.t}.
   Definition fspec_trivial: fspec := (mk_simple (fun (_: unit) => (fun _ o => ⌜o = ord_top⌝, fun _ => ⌜True⌝))).
 
+  Definition fspec_trivial2: fspec :=
+    @mk _ unit ((list val) * bool)%type (val)
+        (fun _ _ _ o => ⌜o = ord_top⌝)
+        (fun _ _ _ => ⌜True⌝)
+  .
+
 End AUX.
 
 
@@ -77,7 +83,8 @@ Section UMODSEM.
 
   Definition transl_fun: (list val -> itree (callE +' pE +' eventE) val) -> fspecbody :=
     fun ktr =>
-      mk_specbody fspec_trivial (interp (T:=val) transl_itr ∘ ktr)
+      (* mk_specbody fspec_trivial2 (fun '(vargs, _) => interp (T:=val) transl_itr (ktr vargs)) *)
+      mk_specbody fspec_trivial2 (interp (T:=val) transl_itr ∘ ktr ∘ fst)
   .
 
   Definition to_smodsem (ms: t): SModSem.t := {|
@@ -346,7 +353,7 @@ Section ADQ.
 
   Let gstb: list (gname * fspec) :=
     (flat_map (List.map (map_snd fsb_fspec) ∘ SModSem.fnsems) kmss)
-      ++ (flat_map (List.map (map_snd (fun _ => fspec_trivial)) ∘ UModSem.fnsems) umss).
+      ++ (flat_map (List.map (map_snd (fun _ => fspec_trivial2)) ∘ UModSem.fnsems) umss).
 
   Require Import HTactics YPM.
 
