@@ -63,7 +63,7 @@ Section UMODSEM.
 
 
   Definition transl_callE: callE ~> hCallE :=
-    fun T '(Call fn args) => hCall false fn args
+    fun T '(Call fn args) => hCall false fn (Any.pair args false↑)
   .
 
   Definition transl_event: (callE +' pE +' eventE) ~> (hCallE +' pE +' eventE) :=
@@ -173,7 +173,7 @@ Section AUX.
         (fun ox '(argh, is_k) argl o => ⌜is_some ox = is_k⌝ **
                                         ((Exists x, ⌜ox = Some x⌝ ** fs.(precond) x argh argl o ** ⌜is_pure o⌝) ∨
                                          (⌜ox = None⌝)))
-        (fun ox reth retl => ((Exists x, ⌜ox = Some x⌝ ** fs.(postcond) x reth retl) ∨ (⌜ox = None⌝)))
+        (fun ox reth retl => ((Exists x, ⌜ox = Some x⌝ ** fs.(postcond) x reth retl) ∨ (⌜ox = None /\ reth↑ = retl⌝)))
   .
   (* Definition disclose (fs: fspec): fspec := *)
   (*   @mk _ (fs.(X) * bool)%type (fs.(AA) * bool)%type (fs.(AR)) *)
@@ -394,7 +394,7 @@ Section ADQ.
   Lemma transl_event_callE
         fn args
     :
-      (UModSem.transl_event ((Call fn args)|))%sum = ((hCall false fn args)|)%sum
+      (UModSem.transl_event ((Call fn args)|))%sum = ((hCall false fn (Any.pair args false↑))|)%sum
   .
   Proof. grind. Qed.
 
@@ -505,6 +505,14 @@ Section ADQ.
   Admitted.
 
 
+  Lemma pair_downcast_lemma2
+        T U (v0 v1: T) x (u: U)
+    :
+      (Any.pair x v0↑)↓ = Some (u, v1) -> v0 = v1 /\ x↓ = Some u
+  .
+  Proof.
+    admit "ez".
+  Qed.
 
   Lemma my_lemma1_aux
         mrs ktr arg
@@ -536,12 +544,12 @@ Section ADQ.
       force_l. esplits. force_l. { esplits; ss; et. } steps.
       force_l. esplits. force_l. { rewrite URA.unit_id. refl. } steps.
     - unfold body_to_tgt. steps.
-      abstr (ktr x) itr.
+      abstr (ktr x) itr. clear x ktr.
       clear _ASSUME0. des_u. rewrite URA.unit_idl in *.
-      revert itr. revert st. gcofix CIH0. i.
+      revert itr. revert st. revert_until CIH. gcofix CIH0. i.
       ides itr.
       { interp_red. cbn. steps. red_resum. gstep. econs; eauto. }
-      { interp_red. cbn. red_resum. steps. red_resum. steps. gbase. eapply CIH0. }
+      { interp_red. cbn. red_resum. steps. red_resum. steps. gbase. eapply CIH0; et. }
       destruct e; cycle 1.
       {
         rewrite unfold_interp. steps.
@@ -559,7 +567,7 @@ Section ADQ.
             ired_both.
             gstep. econs. steps.
             interp_red. steps.
-            gbase. eapply CIH0.
+            gbase. eapply CIH0; et.
           - unfold UModSem.transl_itr at 2.
             rewrite <- bind_trigger. red_resum. unfold resum_itr at 2. rewrite transl_event_pE.
             rewrite ! unfold_interp. cbn.
@@ -572,7 +580,7 @@ Section ADQ.
             ired_both.
             gstep. econs. steps. 
             interp_red. steps.
-            gbase. eapply CIH0.
+            gbase. eapply CIH0; et.
         }
         { destruct e.
           - unfold UModSem.transl_itr at 2.
@@ -587,7 +595,7 @@ Section ADQ.
             ired_both.
             gstep. econs. i. esplits. steps.
             interp_red. steps.
-            gbase. eapply CIH0.
+            gbase. eapply CIH0; et.
           - unfold UModSem.transl_itr at 2.
             rewrite <- bind_trigger. red_resum. unfold resum_itr at 2. rewrite transl_event_eventE.
             rewrite ! unfold_interp. cbn.
@@ -600,7 +608,7 @@ Section ADQ.
             ired_both.
             gstep. econs. i. esplits. steps. 
             interp_red. steps.
-            gbase. eapply CIH0.
+            gbase. eapply CIH0; et.
           - unfold UModSem.transl_itr at 2.
             rewrite <- bind_trigger. red_resum. unfold resum_itr at 2. rewrite transl_event_eventE.
             rewrite ! unfold_interp. cbn.
@@ -613,7 +621,7 @@ Section ADQ.
             ired_both.
             gstep. econs. i. esplits. steps. 
             interp_red. steps.
-            gbase. eapply CIH0.
+            gbase. eapply CIH0; et.
         }
       }
       destruct c.
@@ -638,17 +646,49 @@ Section ADQ.
           unfold kmss in T. rewrite in_map_iff in *. des. subst. unfold flip in T1.
           unfold kmds in T0. rewrite in_map_iff in *. des. subst. ss. rewrite in_map_iff in *. des.
           unfold map_snd in T1. des_ifs. ss.
+          destruct a. eapply pair_downcast_lemma2 in _UNWRAPN0. des. subst.
           eapply hcall_clo with (fs:=disclose f); try refl.
           { rewrite URA.unit_idl. refl. }
           { eapply OrdArith.lt_from_nat. lia. }
-          { instantiate (1:=ord_top). instantiate(1:=None). cbn. des_ifs. iRefresh.
+          { instantiate (1:=ord_top). instantiate(1:=None). cbn. iRefresh.
             iSplitP; ss.
-            { admit "????????". }
-            { right; iRefresh. ss. }
-          }
+            right; iRefresh. ss. }
           { ss. }
-          i.
-        -
+          i. subst. ss. destruct mrs_tgt1. esplits; et. i.
+          clear GWF. assert(GWF: ☀) by (split; [refl|exact VALID]).
+          iRefresh.
+          destruct POST; iRefresh.
+          { iDestruct H. iDestruct H. iPure H. ss. }
+          iPure H. des; subst.
+          steps. gbase. eapply CIH0; et.
+        - rewrite in_flat_map in *. des; ss. rewrite in_map_iff in *. des. unfold map_snd in T0. des_ifs.
+          eapply pair_downcast_lemma2 in _UNWRAPN0. des. subst.
+          eapply hcall_clo; try refl.
+          { rewrite URA.unit_idl. refl. }
+          { eapply OrdArith.lt_from_nat. lia. }
+          { instantiate (1:=ord_top). instantiate(1:=tt). cbn. split; ss. iRefresh.
+            iSplitP; ss.
+            right; iRefresh. ss. }
+          { ss. }
+
+          unfold kmss in T. rewrite in_map_iff in *. des. subst. unfold flip in T1.
+          unfold kmds in T0. rewrite in_map_iff in *. des. subst. ss. rewrite in_map_iff in *. des.
+          unfold map_snd in T1. des_ifs. ss.
+          destruct a. eapply pair_downcast_lemma2 in _UNWRAPN0. des. subst.
+          eapply hcall_clo with (fs:=disclose f); try refl.
+          { rewrite URA.unit_idl. refl. }
+          { eapply OrdArith.lt_from_nat. lia. }
+          { instantiate (1:=ord_top). instantiate(1:=None). cbn. iRefresh.
+            iSplitP; ss.
+            right; iRefresh. ss. }
+          { ss. }
+          i. subst. ss. destruct mrs_tgt1. esplits; et. i.
+          clear GWF. assert(GWF: ☀) by (split; [refl|exact VALID]).
+          iRefresh.
+          destruct POST; iRefresh.
+          { iDestruct H. iDestruct H. iPure H. ss. }
+          iPure H. des; subst.
+          steps. gbase. eapply CIH0; et.
       }
       (* { *)
       (*   eapply find_some in T. des; des_sumbool; subst. unfold gstb in T. rewrite in_app_iff in *. des; ss. *)
