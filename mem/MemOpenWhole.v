@@ -998,7 +998,38 @@ Section ADQ.
               { destruct c. ss. cbn. rewrite unfold_interp. ss. unfold UModSem.transl_callE. cbn.
   Abort.
 
-  Definition sim_body: forall T, itree EventsL.Es T -> itree EventsL.Es T -> Prop := top3.
+  Inductive _sim_body (sim_body: forall [T], itree EventsL.Es T -> itree EventsL.Es T -> Prop):
+    forall [T], itree EventsL.Es T -> itree EventsL.Es T -> Prop :=
+  | sim_body_tau
+      T (itr0 itr1: itree _ T)
+      (SIM: sim_body itr0 itr1)
+    :
+      _sim_body sim_body (tau;; itr0) (tau;; itr1)
+  | sim_body_ret
+      T (t: T)
+    :
+      _sim_body sim_body (Ret t) (Ret t)
+  | sim_body_call
+      fn args T (ktr0 ktr1: ktree _ _ T)
+      (SIM: forall rv, sim_body (ktr0 rv) (ktr1 rv))
+    :
+      _sim_body sim_body (trigger (Call fn args) >>= ktr0) (trigger (Call fn (Any.pair args false↑)) >>= ktr1)
+  .
+
+  Definition sim_body: forall [T], itree EventsL.Es T -> itree EventsL.Es T -> Prop := paco3 _sim_body bot3.
+
+  Lemma sim_body_mon: monotone3 _sim_body.
+  Proof.
+    ii. dependent destruction IN.
+    - econs; et.
+    - econs; et.
+    - econs; et.
+  Qed.
+
+  Hint Constructors _sim_body.
+  Hint Unfold sim_body.
+  Hint Resolve sim_body_mon: paco.
+
   Definition sim_fun T (f0 f1: (Any.t -> itree EventsL.Es T)): Prop :=
     forall args, sim_body (f0 args) (f1 (Any.pair args false↑))
   .
@@ -1015,6 +1046,25 @@ Section ADQ.
   .
   Hint Constructors option_rel: core.
 
+
+  Lemma sim_known
+        md ske f0
+    :
+      sim_fun (transl_all (SModSem.mn (SMod.get_modsem md ske)) ∘ fun_to_src (fsb_body f0))
+              (transl_all (SModSem.mn (SMod.get_modsem md ske))
+                          ∘ fun_to_src
+                          (fun pat : AA f0 * bool => match pat with
+                                                     | (argh, true) => trigger (Choose (AR f0))
+                                                     | (argh, false) => fsb_body f0 argh
+                                                     end))
+  .
+  Proof.
+    ii.
+  Qed.
+
+  sim_fun (fun args : Any.t => transl_all (UModSem.mn (UMod.get_modsem x3 ske)) (resum_itr (cfun i1 args)))
+    (transl_all (UModSem.mn (UMod.get_modsem x3 ske))
+     ∘ fun_to_src (fun x : list val * bool => interp UModSem.transl_itr (i1 (fst x))))
   Lemma find_sim
         fn
     :
@@ -1023,8 +1073,95 @@ Section ADQ.
                    (find (fun fnsem => dec fn (fst fnsem)) (ModSemL.fnsems ms_tgt))
   .
   Proof.
-    admit "TODO".
-    (* destruct (find (fun fnsem => dec fn (fst fnsem)) (ModSemL.fnsems ms_src)) eqn:T. *)
+    destruct (find (fun fnsem => dec fn (fst fnsem)) (ModSemL.fnsems ms_src)) eqn:T.
+    - Ltac _list_tac :=
+        match goal with
+        | [ H: find _ _ = Some _ |- _ ] => apply find_some in H; des; des_sumbool; subst
+        | [ H: context[ModL.enclose] |- _ ] => unfold ModL.enclose in H; try rewrite add_list_fnsems in H
+        | [ H: In _ (flat_map _ _) |- _ ] => apply in_flat_map in H; des
+        | [ H: In _ (List.map _ _) |- _ ] => apply in_map_iff in H; des
+        | [ H: ModSem.map_snd _ _ = _ |- _ ] => unfold ModSem.map_snd in H; ss
+        | [ H: map_snd _ _ = _ |- _ ] => unfold map_snd in H; ss
+        | [ H: flip _ _ _ = _ |- _ ] => unfold flip in H; ss
+
+        | [ |- context[ModL.enclose] ] => unfold ModL.enclose; try rewrite add_list_fnsems
+        | [ |- In _ (flat_map _ _) ] => apply in_flat_map; esplits; et
+        | [ |- In _ (List.map _ _) ] => apply in_map_iff; esplits; et
+        | [ |- ModSem.map_snd _ _ = _ ] => unfold ModSem.map_snd; ss
+        | [ |- map_snd _ _ = _ ] => unfold map_snd; ss
+        | [ |- flip _ _ _ = _ ] => unfold flip; ss
+        end
+      .
+      Ltac list_tac := repeat _list_tac.
+      list_tac.
+      unfold ms_src in T.
+      list_tac.
+      rewrite <- sk_link_eq3 in *. folder. subst.
+      ss. list_tac. subst. des_ifs. ss. subst. list_tac. des_ifs.
+      rewrite in_app_iff in *. des.
+      + destruct (find (fun fnsem => dec s (fst fnsem)) (ModSemL.fnsems ms_tgt)) eqn:U.
+        * list_tac. unfold ms_tgt in U. list_tac. subst. ss. list_tac.
+          des_ifs. ss. rewrite <- sk_link_eq2 in *. folder.
+          rewrite in_app_iff in *. des.
+          { unfold kmds in U2. unfold kmds_top in T1. list_tac. subst. ss. list_tac. des_ifs. ss.
+            assert(x = x1) by admit "ez - uniqueness"; subst.
+            assert(f = f0) by admit "ez - uniqueness"; subst.
+            econs. split; ss.
+            admit "TODO".
+          }
+          { unfold kmds_top in *. list_tac. subst. exfalso. admit "ez - uniqueness". }
+        * exfalso.
+          ss. list_tac. des_ifs. ss.
+          unfold kmds_top in *. list_tac. subst. ss. list_tac. des_ifs.
+          eapply find_none in U; cycle 1.
+          { unfold ms_tgt. list_tac.
+            { rewrite in_app_iff. left. unfold kmds. list_tac. }
+            rewrite <- sk_link_eq2. folder.
+            unfold flip. ss.
+            list_tac.
+          }
+          ss. des_sumbool; ss.
+      + destruct (find (fun fnsem => dec s (fst fnsem)) (ModSemL.fnsems ms_tgt)) eqn:U.
+        * unfold ms_tgt in U. list_tac. subst. ss. list_tac. des_ifs. ss. econs. split; ss.
+          rewrite <- sk_link_eq2 in *. folder.
+          rewrite in_app_iff in *. des.
+          { exfalso. unfold kmds in U2. list_tac. subst. ss. list_tac. des_ifs. admit "ez - uniqueness". }
+          list_tac. subst. ss. list_tac. des_ifs. ss.
+          assert(x = x3) by admit "ez - uniqueness"; subst.
+          assert(i = i1) by admit "ez - uniqueness"; subst. clear_tac.
+          admit "TODO".
+        * exfalso.
+          ss. list_tac. subst. ss. list_tac. des_ifs. ss.
+          eapply find_none in U; cycle 1.
+          { unfold ms_tgt. list_tac.
+            { rewrite in_app_iff. right. list_tac. }
+            rewrite <- sk_link_eq2. folder.
+            unfold flip. ss.
+            list_tac.
+          }
+          ss. des_sumbool; ss.
+    - destruct (find (fun fnsem => dec fn (fst fnsem)) (ModSemL.fnsems ms_tgt)) eqn:U.
+      + exfalso.
+        list_tac. unfold ms_tgt in U. list_tac. subst. ss. list_tac. des_ifs. ss.
+        rewrite <- sk_link_eq2 in *. folder.
+        rewrite in_app_iff in *. des.
+        * unfold kmds in U2. list_tac. subst. ss. list_tac. des_ifs.
+          eapply find_none in T; cycle 1.
+          { unfold ms_src. list_tac.
+            { rewrite in_app_iff. left; et. unfold kmds_top. list_tac. }
+            ss. list_tac.
+            rewrite <- sk_link_eq3 in *. folder. et.
+          }
+          ss. des_sumbool; ss.
+        * list_tac. subst. ss. list_tac. des_ifs.
+          eapply find_none in T; cycle 1.
+          { unfold ms_src. list_tac.
+            { rewrite in_app_iff. right; et. list_tac. }
+            ss. list_tac.
+            rewrite <- sk_link_eq3 in *. folder. et.
+          }
+          ss. des_sumbool; ss.
+      + econs.
   Qed.
 
   Lemma my_lemma2_aux
@@ -1041,6 +1178,10 @@ Section ADQ.
     des; subst. specialize (IN0 args).
     abstr (i args) itr_src. abstr (i0 (Any.pair args (Any.upcast false))) itr_tgt. clear i i0 args H H0. clear_tac.
     revert_until sk_link_eq3. gcofix CIH. i.
+    guclo ordC_spec. econs.
+    { instantiate (1:=(50 + 50)%ord). rewrite <- OrdArith.add_from_nat. ss. refl. }
+    guclo bindC_spec. econs; cycle 1.
+    { instantiate (1:=eq). ii. subst. des_ifs. steps. }
   Qed.
 
 (` x : r_state * p_state * Any.t <-
