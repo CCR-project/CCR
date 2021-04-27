@@ -998,11 +998,9 @@ Section ADQ.
               { destruct c. ss. cbn. rewrite unfold_interp. ss. unfold UModSem.transl_callE. cbn.
   Abort.
 
-  Notation "(≈)" := (fun itr0 itr1 => itr0 ≈ itr1).
-
-  (* Definition sim_body T (b0 b1: itree EventsL.Es T): Prop := b0 ≈ b1. *)
+  Definition sim_body: forall T, itree EventsL.Es T -> itree EventsL.Es T -> Prop := top3.
   Definition sim_fun T (f0 f1: (Any.t -> itree EventsL.Es T)): Prop :=
-    forall args, (f0 args) ≈ (f1 (Any.pair args false↑))
+    forall args, sim_body (f0 args) (f1 (Any.pair args false↑))
   .
 
   (*** TODO: remove redundancy with SimModSemL && migrate related lemmas ***)
@@ -1029,36 +1027,15 @@ Section ADQ.
     (* destruct (find (fun fnsem => dec fn (fst fnsem)) (ModSemL.fnsems ms_src)) eqn:T. *)
   Qed.
 
-  Lemma sim_prog
-        fn args
-    :
-      p_src (Call fn args) ≈ p_tgt (Call fn (Any.pair args false↑))
-  .
-  Proof.
-    admit "TODO".
-  Qed.
-
   Lemma my_lemma2_aux
         fn args st0
     :
-      (str <- EventsL.interp_Es p_src (p_src (Call fn args)) st0;; Ret (snd str))
-        ≈ (str <- EventsL.interp_Es p_tgt (p_tgt (Call fn (Any.pair args false↑))) st0;; Ret (snd str))
+        simg (@eq Any.t) 100
+             (str <- EventsL.interp_Es p_src (p_src (Call fn args)) st0;; Ret (snd str))
+             (str <- EventsL.interp_Es p_tgt (p_tgt (Call fn (Any.pair args false↑))) st0;; Ret (snd str))
   .
   Proof.
-    {
-      ss. steps.
-      generalize (find_sim fn). intro T. inv T; ss; steps; cycle 1.
-      { unfold triggerUB. steps. f_equiv; ss. refl. }
-      des; subst. specialize (IN0 args).
-      abstr (i args) itr_src. abstr (i0 (Any.pair args (Any.upcast false))) itr_tgt. clear i i0 args H H0. clear_tac.
-      f_equiv.
-      - admit "".
-      - ii. des_ifs. steps. refl.
-      revert_until sk_link_eq3. gcofix CIH. i.
-    }
-
-
-    ginit. { eapply cpn2_wcompat; eauto with paco. } revert_until p_tgt. gcofix CIH. i.
+    ginit. { eapply cpn5_wcompat; eauto with paco. } revert_until p_tgt. gcofix CIH. i.
     ss. steps.
     generalize (find_sim fn). intro T. inv T; ss; steps.
     des; subst. specialize (IN0 args).
