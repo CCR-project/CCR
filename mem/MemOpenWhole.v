@@ -996,53 +996,51 @@ Section ADQ.
               unfold UModSem.transl_itr. apply func_ext. intro e.
               destruct e.
               { destruct c. ss. cbn. rewrite unfold_interp. ss. unfold UModSem.transl_callE. cbn.
-                unfold handle_hCallE_src. des_ifs.
-            }
+  Abort.
 
-            ss. unfold fun_to_src. unfold cfun. destruct (args↓) eqn:A.
-            { cbn. irw. erewrite <- Any.downcast_upcast with (a:=args); et. rewrite upcast_pair_downcast. ss. irw. ss. }
-            ss.
-            destruct ((Any.pair args (Any.upcast false))↓) eqn:B.
-            { exfalso. destruct p. eapply pair_downcast_lemma2 in B. des. clarify. }
-            ss. unfold triggerNB. grind.
-          }
-          { rewrite in_map_iff in *. des. subst. ss.
-            rewrite in_map_iff in *. des. unfold map_snd in *. des_ifs.
-            clear - T0 T1 U1 U2. exfalso.
-            admit "uniqueness of fname".
-          }
-        }
-        { unfold ms_tgt in U. eapply find_none in U; cycle 1.
-          { unfold ModL.enclose. rewrite add_list_fnsems. rewrite in_flat_map. esplits; et.
-            { rewrite List.map_map.
-              rewrite in_map_iff. esplits; et. 
-              rewrite in_app_iff. left.
-              unfold kmds. rewrite in_map_iff. esplits; et.
-            }
-            ss. rewrite ! List.map_map.
-            rewrite in_map_iff. esplits ;et.
-            rewrite <- sk_link_eq2. folder. et.
-          }
-          ss. des_sumbool; ss.
-        }
+  Definition sim_body: forall T, itree EventsL.Es T -> itree EventsL.Es T -> Prop := top3.
+  Definition sim_fun T (f0 f1: (Any.t -> itree EventsL.Es T)): Prop :=
+    forall args, sim_body (f0 args) (f1 (Any.pair args false↑))
+  .
+
+  (*** TODO: remove redundancy with SimModSemL && migrate related lemmas ***)
+  Variant option_rel A B (P: A -> B -> Prop): option A -> option B -> Prop :=
+  | option_rel_some
+      a b (IN: P a b)
+    :
+      option_rel P (Some a) (Some b)
+  | option_rel_none
+    :
+      option_rel P None None
+  .
+  Hint Constructors option_rel: core.
+
+  Lemma find_sim
+        fn
+    :
+        option_rel (fun '(fn0, fsem0) '(fn1, fsem1) => fn0 = fn1 /\ sim_fun fsem0 fsem1)
+                   (find (fun fnsem => dec fn (fst fnsem)) (ModSemL.fnsems ms_src))
+                   (find (fun fnsem => dec fn (fst fnsem)) (ModSemL.fnsems ms_tgt))
+  .
+  Proof.
+    admit "TODO".
+    (* destruct (find (fun fnsem => dec fn (fst fnsem)) (ModSemL.fnsems ms_src)) eqn:T. *)
   Qed.
 
   Lemma my_lemma2_aux
-        ce st0
+        fn args st0
     :
         simg (@eq Any.t) 100
-             (str <- EventsL.interp_Es p_src (p_src ce) st0;; Ret (snd str))
-             (str <- EventsL.interp_Es p_tgt (p_tgt ce) st0;; Ret (snd str))
+             (str <- EventsL.interp_Es p_src (p_src (Call fn args)) st0;; Ret (snd str))
+             (str <- EventsL.interp_Es p_tgt (p_tgt (Call fn (Any.pair args false↑))) st0;; Ret (snd str))
   .
   Proof.
     ginit. { eapply cpn5_wcompat; eauto with paco. } revert_until p_tgt. gcofix CIH. i.
-    destruct ce. ss. steps.
-    unfold unwrapU at 1. des_ifs; steps. rename Heq into FS.
-    unfold unwrapU. des_ifs; steps; rename Heq into FT; cycle 1.
-    { clear - FS FT. admit "ez". }
-    assert(s = s0) by admit "ez". subst.
-    steps.
-                 
+    ss. steps.
+    generalize (find_sim fn). intro T. inv T; ss; steps.
+    des; subst. specialize (IN0 args).
+    abstr (i args) itr_src. abstr (i0 (Any.pair args (Any.upcast false))) itr_tgt. clear i i0 args H H0. clear_tac.
+    revert_until sk_link_eq3. gcofix CIH. i.
   Qed.
 
 (` x : r_state * p_state * Any.t <-
