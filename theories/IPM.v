@@ -154,3 +154,10 @@ Proof. Admitted.
 End restate.
 
 End uPred.
+
+From iris.proofmode Require Export tactics.
+
+Goal forall `{M : GRA.t} (P Q: iProp), Sepconj P Q ⊢ P.
+Proof.
+  i. iStartProof. iIntros "[Hxs Hys]". iApply "Hxs".
+Qed.
