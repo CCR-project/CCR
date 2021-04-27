@@ -39,8 +39,8 @@ Section BW.
     Seal.sealing "stb" [("get", get_spec) ; ("flip", flip_spec)].
 
   Definition BWSbtb: list (gname * fspecbody) :=
-    [("get", mk_specbody get_spec (fun _ => APC;; trigger (Choose _)));
-    ("flip", mk_specbody flip_spec (fun _ => APC;; trigger (Choose _)))
+    [("get", mk_specbody get_spec (fun _ => APC;;; trigger (Choose _)));
+    ("flip", mk_specbody flip_spec (fun _ => APC;;; trigger (Choose _)))
     ]
   .
 

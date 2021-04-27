@@ -31,8 +31,8 @@ Section PROOF.
       (* x <- ((↓) <$> trigger (Call "alloc" [Vint 1]↑)) >>= (ǃ);; *)
       x <- trigger (Call "alloc" [Vint 1]↑);;
       `x: val <- x↓ǃ;;
-      trigger (Call "store" [x ; Vint 42]↑);;
-      trigger (Call "unknown_call" ([]: list val)↑);;
+      trigger (Call "store" [x ; Vint 42]↑);;;
+      trigger (Call "unknown_call" ([]: list val)↑);;;
       (* `y: val <- ((↓) <$> trigger (Call "load" [x]↑)) >>= (ǃ);; *)
       y <- trigger (Call "load" [x]↑);;
       `y: val <- y↓ǃ;;

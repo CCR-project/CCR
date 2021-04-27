@@ -646,13 +646,13 @@ Section ADQ.
     - unfold transl_all. rewrite ! unfold_interp. ss. gstep. econs; eauto.
       pclearbot. gbase. eapply CIH; et.
     - unfold transl_all. rewrite ! interp_bind. rewrite ! unfold_interp. ss. rewrite ! bind_bind.
-      replace (trigger EventsL.PushFrame;; r1 <- trigger (Call fn varg);; x <- (trigger EventsL.PopFrame;; Ret r1);;
+      replace (trigger EventsL.PushFrame;;; r1 <- trigger (Call fn varg);; x <- (trigger EventsL.PopFrame;;; Ret r1);;
                x0 <- (tau;; interp (handle_all (ModSem.mn ms_src)) (Ret x));; interp (handle_all (ModSem.mn ms_src)) (k_src x0)) with
-          (trigger EventsL.PushFrame;; r <- trigger (Call fn varg);; trigger EventsL.PopFrame;; tau;; (interp (handle_all (ModSem.mn ms_src)) (k_src r))); cycle 1.
+          (trigger EventsL.PushFrame;;; r <- trigger (Call fn varg);; trigger EventsL.PopFrame;;; tau;; (interp (handle_all (ModSem.mn ms_src)) (k_src r))); cycle 1.
       { grind. }
-      replace (trigger EventsL.PushFrame;; r1 <- trigger (Call fn varg);; x <- (trigger EventsL.PopFrame;; Ret r1);;
+      replace (trigger EventsL.PushFrame;;; r1 <- trigger (Call fn varg);; x <- (trigger EventsL.PopFrame;;; Ret r1);;
                x0 <- (tau;; interp (handle_all (ModSem.mn ms_tgt)) (Ret x));; interp (handle_all (ModSem.mn ms_tgt)) (k_tgt x0)) with
-          (trigger EventsL.PushFrame;; r <- trigger (Call fn varg);; trigger EventsL.PopFrame;; tau;; (interp (handle_all (ModSem.mn ms_tgt)) (k_tgt r))); cycle 1.
+          (trigger EventsL.PushFrame;;; r <- trigger (Call fn varg);; trigger EventsL.PopFrame;;; tau;; (interp (handle_all (ModSem.mn ms_tgt)) (k_tgt r))); cycle 1.
       { grind. }
       gstep. econs; eauto.
       { rr. esplits; ss. }

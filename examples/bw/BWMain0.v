@@ -46,7 +46,7 @@ def main(): Unit
       `b: val <- ccall "getbool" ([]: list val);; `b: bool <- (unbool b)?;;
       (if(b)
        then ccall "flip" ([]: list val)
-       else Ret Vundef);;
+       else Ret Vundef);;;
       `i: val <- ccall "get" ([]: list val);;
       `_: val <- ccall "putint" [i];;
       Ret Vundef

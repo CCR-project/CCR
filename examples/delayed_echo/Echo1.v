@@ -51,10 +51,10 @@ Section PROOF.
       n <- trigger (hCall false "getint" ([]: list val)↑);;
       `n: val <- n↓?;; `n: Z <- (unint n)?;;
       if dec n (- 1)%Z
-      then trigger (hCall false "echo_finish" ns↑);; Ret tt
+      then trigger (hCall false "echo_finish" ns↑);;; Ret tt
       else
-        APC;;
-        trigger (hCall false "echo" (n :: ns)↑);;
+        APC;;;
+        trigger (hCall false "echo" (n :: ns)↑);;;
         Ret tt
   .
 
@@ -63,9 +63,9 @@ Section PROOF.
       match ns with
       | [] => Ret tt
       | hd :: tl =>
-        APC;;
-        trigger (hCall false "putint" [Vint hd]↑);;
-        trigger (hCall false "echo_finish" tl↑);;
+        APC;;;
+        trigger (hCall false "putint" [Vint hd]↑);;;
+        trigger (hCall false "echo_finish" tl↑);;;
         Ret tt
       end
   .

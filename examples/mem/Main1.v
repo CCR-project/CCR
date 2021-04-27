@@ -42,9 +42,9 @@ Section PROOF.
 
   Definition mainBody: list val -> itree (hCallE +' pE +' eventE) val :=
     fun _ =>
-      APC;;
-      trigger (hCall false "unknown_call" ([]: list val, false)↑);;
-      APC;;
+      APC;;;
+      trigger (hCall false "unknown_call" ([]: list val, false)↑);;;
+      APC;;;
       Ret (Vint 42)
   .
 

@@ -126,19 +126,19 @@ Section PROOF.
              (fsp: fspec):
     gname -> fsp.(AA) -> itree Es fsp.(AR) :=
     fun fn varg_src =>
-      '(marg, farg) <- trigger (Choose _);; put marg farg;; (*** updating resources in an abstract way ***)
-      rarg <- trigger (Choose Σ);; discard rarg;; (*** virtual resource passing ***)
+      '(marg, farg) <- trigger (Choose _);; put marg farg;;; (*** updating resources in an abstract way ***)
+      rarg <- trigger (Choose Σ);; discard rarg;;; (*** virtual resource passing ***)
       x <- trigger (Choose fsp.(X));; varg_tgt <- trigger (Choose Any_tgt);;
       ord_next <- trigger (Choose _);;
-      guarantee(fsp.(precond) x varg_src varg_tgt  ord_next rarg);; (*** precondition ***)
+      guarantee(fsp.(precond) x varg_src varg_tgt  ord_next rarg);;; (*** precondition ***)
 
-      guarantee(ord_lt ord_next ord_cur /\ (tbr = true -> is_pure ord_next) /\ (tbr = false -> ord_next = ord_top));;
+      guarantee(ord_lt ord_next ord_cur /\ (tbr = true -> is_pure ord_next) /\ (tbr = false -> ord_next = ord_top));;;
       vret_tgt <- trigger (Call fn varg_tgt);; (*** call ***)
 
-      rret <- trigger (Take Σ);; forge rret;; (*** virtual resource passing ***)
+      rret <- trigger (Take Σ);; forge rret;;; (*** virtual resource passing ***)
       vret_src <- trigger (Take fsp.(AR));;
-      checkWf;;
-      assume(fsp.(postcond) x vret_src vret_tgt rret);; (*** postcondition ***)
+      checkWf;;;
+      assume(fsp.(postcond) x vret_src vret_tgt rret);;; (*** postcondition ***)
 
       Ret vret_src (*** return to body ***)
   .
@@ -176,9 +176,9 @@ Program Fixpoint _APC (at_most: Ord.t) {wf Ord.lt at_most}: itree Es' unit :=
   then Ret tt
   else
     n <- trigger (Choose Ord.t);;
-    trigger (Choose (n < at_most)%ord);;
+    trigger (Choose (n < at_most)%ord);;;
     '(fn, varg) <- trigger (Choose _);;
-    trigger (hCall true fn varg);;
+    trigger (hCall true fn varg);;;
     _APC n.
 Next Obligation.
   eapply Ord.lt_well_founded.
@@ -186,7 +186,7 @@ Qed.
 
 Definition APC: itree Es' unit :=
   at_most <- trigger (Choose _);;
-  guarantee(at_most < kappa)%ord;;
+  guarantee(at_most < kappa)%ord;;;
   _APC at_most
 .
 
@@ -197,9 +197,9 @@ Lemma unfold_APC:
                   then Ret tt
                   else
                     n <- trigger (Choose Ord.t);;
-                    guarantee (n < at_most)%ord;;
+                    guarantee (n < at_most)%ord;;;
                     '(fn, varg) <- trigger (Choose _);;
-                    trigger (hCall true fn varg);;
+                    trigger (hCall true fn varg);;;
                     _APC n.
 Proof.
   i. unfold _APC. rewrite Fix_eq; eauto.
@@ -289,7 +289,7 @@ Section CANCEL.
     fun _ '(hCall tbr fn varg_src) =>
       tau;;
       ord_next <- (if tbr then o0 <- trigger (Choose _);; Ret (ord_pure o0) else Ret ord_top);;
-      guarantee(ord_lt ord_next ord_cur);;
+      guarantee(ord_lt ord_next ord_cur);;;
       let varg_mid: Any_mid := (Any.pair ord_next↑ varg_src) in
       trigger (Call fn varg_mid)
   .
@@ -307,7 +307,7 @@ Section CANCEL.
     fun varg_mid =>
       '(ord_cur, varg_src) <- varg_mid↓ǃ;;
       vret_src <- (match ord_cur with
-                   | ord_pure n => (interp_hCallE_mid ord_cur APC);; trigger (Choose _)
+                   | ord_pure n => (interp_hCallE_mid ord_cur APC);;; trigger (Choose _)
                    | _ => (body_to_mid ord_cur body) varg_src
                    end);;
       Ret vret_src↑
@@ -342,22 +342,22 @@ Section CANCEL.
              (body: Y -> itree Es' Z): Any_tgt -> itree Es Any_tgt := fun varg_tgt =>
     varg_src <- trigger (Take Y);;
     x <- trigger (Take X);;
-    rarg <- trigger (Take Σ);; forge rarg;; (*** virtual resource passing ***)
-    (checkWf);;
+    rarg <- trigger (Take Σ);; forge rarg;;; (*** virtual resource passing ***)
+    (checkWf);;;
     ord_cur <- trigger (Take _);;
-    assume(P x varg_src varg_tgt  ord_cur rarg);; (*** precondition ***)
+    assume(P x varg_src varg_tgt  ord_cur rarg);;; (*** precondition ***)
 
 
     vret_src <- match ord_cur with
-                | ord_pure n => (interp_hCallE_tgt ord_cur APC);; trigger (Choose _)
+                | ord_pure n => (interp_hCallE_tgt ord_cur APC);;; trigger (Choose _)
                 | _ => (body_to_tgt ord_cur body) varg_src
                 end;;
     (* vret_src <- body ord_cur varg_src;; (*** "rudiment": we don't remove extcalls because of termination-sensitivity ***) *)
 
     vret_tgt <- trigger (Choose Any_tgt);;
-    '(mret, fret) <- trigger (Choose _);; put mret fret;; (*** updating resources in an abstract way ***)
-    rret <- trigger (Choose Σ);; guarantee(Q x vret_src vret_tgt rret);; (*** postcondition ***)
-    (discard rret);; (*** virtual resource passing ***)
+    '(mret, fret) <- trigger (Choose _);; put mret fret;;; (*** updating resources in an abstract way ***)
+    rret <- trigger (Choose Σ);; guarantee(Q x vret_src vret_tgt rret);;; (*** postcondition ***)
+    (discard rret);;; (*** virtual resource passing ***)
 
     Ret vret_tgt (*** return ***)
   .
@@ -782,7 +782,7 @@ End SMod.
         `{Σ: GRA.t}
         prog st0 (P: Prop)
     :
-      EventsL.interp_Es prog (assume P) st0 = assume P;; tau;; tau;; tau;; Ret (st0, tt)
+      EventsL.interp_Es prog (assume P) st0 = assume P;;; tau;; tau;; tau;; Ret (st0, tt)
   .
   Proof.
     unfold assume.
@@ -797,7 +797,7 @@ End SMod.
         `{Σ: GRA.t}
         prog st0 (P: Prop)
     :
-      EventsL.interp_Es prog (guarantee P) st0 = guarantee P;; tau;; tau;; tau;; Ret (st0, tt)
+      EventsL.interp_Es prog (guarantee P) st0 = guarantee P;;; tau;; tau;; tau;; Ret (st0, tt)
   .
   Proof.
     unfold guarantee.
@@ -1504,19 +1504,19 @@ Ltac ired_both := ired_l; ired_r.
       unfold triggerNB; mred; _step; ss; fail
 
     (*** assume/guarantee ***)
-    | [ |- gpaco5 _ _ _ _ _ _ _ (assume ?P ;; _) _ ] =>
+    | [ |- gpaco5 _ _ _ _ _ _ _ (assume ?P ;;; _) _ ] =>
       let tvar := fresh "tmp" in
       let thyp := fresh "TMP" in
       remember (assume P) as tvar eqn:thyp; unfold assume in thyp; subst tvar
-    | [ |- gpaco5 _ _ _ _ _ _ _ (guarantee ?P ;; _) _ ] =>
+    | [ |- gpaco5 _ _ _ _ _ _ _ (guarantee ?P ;;; _) _ ] =>
       let tvar := fresh "tmp" in
       let thyp := fresh "TMP" in
       remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar
-    | [ |- gpaco5 _ _ _ _ _ _ _ _ (assume ?P ;; _) ] =>
+    | [ |- gpaco5 _ _ _ _ _ _ _ _ (assume ?P ;;; _) ] =>
       let tvar := fresh "tmp" in
       let thyp := fresh "TMP" in
       remember (assume P) as tvar eqn:thyp; unfold assume in thyp; subst tvar
-    | [ |- gpaco5 _ _ _ _ _ _ _ _ (guarantee ?P ;; _) ] =>
+    | [ |- gpaco5 _ _ _ _ _ _ _ _ (guarantee ?P ;;; _) ] =>
       let tvar := fresh "tmp" in
       let thyp := fresh "TMP" in
       remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar
