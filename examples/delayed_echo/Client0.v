@@ -41,7 +41,7 @@ Definition getintF:  list val -> itree eventE val :=
 Definition putintF: list val -> itree eventE val :=
   fun varg =>
     `v: val <- (putint_parg varg)?;;
-    trigger (Syscall "printf" varg top1);;
+    trigger (Syscall "printf" varg top1);;;
     Ret Vundef
 .
 

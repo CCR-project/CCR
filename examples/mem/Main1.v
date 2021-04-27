@@ -42,9 +42,9 @@ Section PROOF.
   Definition mainBody: list val -> itree (hCallE +' pE +' eventE) val :=
     fun _ =>
       x <- trigger (hCall true "malloc" [Vint 1]↑);; x <- x↓?;;
-      trigger (hCall true "store" [x ; Vint 42]↑);;
+      trigger (hCall true "store" [x ; Vint 42]↑);;;
       (* trigger (Call "unknown_call" [x]);; *)
-      trigger (hCall true "load" [x]↑);;
+      trigger (hCall true "load" [x]↑);;;
       Ret (Vint 42)
   .
 

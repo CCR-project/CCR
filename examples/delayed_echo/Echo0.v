@@ -53,7 +53,7 @@ void echo() {
         my_list0 <- trigger (PGet);;
         `my_list0: val <- my_list0↓?;;
         `my_list1: val <- (ccall "push" [my_list0; n]);;
-        trigger(PPut my_list1↑);;
+        trigger(PPut my_list1↑);;;
         `_: val <- ccall "echo" ([]: list val);;
         Ret Vundef
   .
@@ -77,7 +77,7 @@ void echo_finish() {
       else (
           `nref: val     <- (ccall "malloc" ([Vint 1%Z]));;
           `my_list1: val <- (ccall "pop2" ([my_list0; nref]));;
-          trigger (PPut my_list1↑);;
+          trigger (PPut my_list1↑);;;
           `n: val        <- (ccall "load" ([nref]));;
           `_: val        <- (ccall "putint" ([n]));;
           `_: val        <- (ccall "echo_finish" ([]: list val));;

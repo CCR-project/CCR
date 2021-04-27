@@ -952,7 +952,7 @@ Fixpoint ntaus {E} (n: nat): itree E unit :=
 
 Require Import RelationClasses.
 
-Goal eutt eq (Ret 1) (n <- trigger (Choose _);; ntaus n;; Ret 1).
+Goal eutt eq (Ret 1) (n <- trigger (Choose _);; ntaus n;;; Ret 1).
 Proof.
   replace (Ret 1) with ((Ret tt: itree eventE _) >>= (fun _ => Ret 1)) at 1; cycle 1.
   { irw; ss. }
@@ -971,7 +971,7 @@ Proof.
     eapply simg_paco_refl; ss. }
 Qed.
 
-Goal eutt eq (Ret 1) (n <- trigger (Choose _);; ntaus n;; m <- trigger (Choose _);; ntaus m;; Ret 1).
+Goal eutt eq (Ret 1) (n <- trigger (Choose _);; ntaus n;;; m <- trigger (Choose _);; ntaus m;;; Ret 1).
 Proof.
   replace (Ret 1) with ((Ret 1: itree eventE _) >>= (fun x => Ret x)); cycle 1.
   { irw. ss. }
@@ -1039,7 +1039,7 @@ Theorem cancel_assume_guarantee
       (P: Prop) R (RR: R -> R -> Prop) `{Reflexive _ RR}
       (code: itree eventE R)
   :
-    eutt RR code (guarantee P;; assume P;; code).
+    eutt RR code (guarantee P;;; assume P;;; code).
 Proof.
   r. exists (Ord.from_nat 5). unfold assume, guarantee.
   repeat (try rewrite bind_bind; try rewrite bind_ret_l; try rewrite bind_ret_r).

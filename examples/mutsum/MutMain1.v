@@ -21,7 +21,7 @@ Section PROOF.
 
   Definition mainBody: list val -> itree (hCallE +' pE +' eventE) val :=
     fun _ =>
-      trigger (hCall true "f" [Vint 10]↑);;
+      trigger (hCall true "f" [Vint 10]↑);;;
       Ret (Vint 55)
   .
 

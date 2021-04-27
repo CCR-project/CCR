@@ -32,9 +32,9 @@ Section MAIN.
   Definition mainbody: list val -> itree (hCallE +' pE +' eventE) val :=
     fun _ =>
       `b: val <- hcall "getbool" ([]: list val);; `b: bool <- (unbool b)?;;
-      APC;;
+      APC;;;
       `i: Z <- trigger (Choose _);;
-      guarantee(i = if b then 0xffffff%Z else 0%Z);;
+      guarantee(i = if b then 0xffffff%Z else 0%Z);;;
       `_: val <- hcall "putint" [Vint i];;
       Ret Vundef
     .

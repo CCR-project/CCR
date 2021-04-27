@@ -40,7 +40,7 @@ Section PROOF.
       m0 <- mp0↓?;;
       `sz: Z <- (allocF_parg varg)?;;
       let (blk, m1) := Mem.malloc m0 sz in
-      trigger (PPut m1↑);;
+      trigger (PPut m1↑);;;
       Ret (Vptr blk 0)
   .
 
@@ -57,7 +57,7 @@ Section PROOF.
       m0 <- mp0↓?;;
       '(b, ofs) <- (freeF_parg varg)?;;
       m1 <- (Mem.free m0 b ofs)?;;
-      trigger (PPut m1↑);;
+      trigger (PPut m1↑);;;
       Ret (Vint 0)
   .
 
@@ -90,7 +90,7 @@ Section PROOF.
       m0 <- mp0↓?;;
       '(b, ofs, v) <- (storeF_parg varg)?;;
       m1 <- (Mem.store m0 b ofs v)?;;
-      trigger (PPut m1↑);;
+      trigger (PPut m1↑);;;
       Ret (Vint 0)
   .
 

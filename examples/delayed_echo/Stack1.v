@@ -77,9 +77,9 @@ Section PROOF.
   Defined.
 
   Definition StackSbtb: list (gname * fspecbody) :=
-    [("pop", mk_specbody pop_spec (fun _ => APC;; trigger (Choose _)));
-    ("pop2", mk_specbody pop2_spec (fun _ => APC;; trigger (Choose _)));
-    ("push",   mk_specbody push_spec (fun _ => APC;; trigger (Choose _)))
+    [("pop", mk_specbody pop_spec (fun _ => APC;;; trigger (Choose _)));
+    ("pop2", mk_specbody pop2_spec (fun _ => APC;;; trigger (Choose _)));
+    ("push",   mk_specbody push_spec (fun _ => APC;;; trigger (Choose _)))
     ]
   .
 

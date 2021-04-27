@@ -75,10 +75,10 @@ Section HOARE.
              (P: X -> Y -> Any_tgt -> ord -> Σ -> Prop): Any_tgt -> itree Es (X * Y * ord) := fun varg_tgt =>
     varg_src <- trigger (Take Y);;
     x <- trigger (Take X);;
-    rarg <- trigger (Take Σ);; forge rarg;; (*** virtual resource passing ***)
-    (checkWf);;
+    rarg <- trigger (Take Σ);; forge rarg;;; (*** virtual resource passing ***)
+    (checkWf);;;
     ord_cur <- trigger (Take _);;
-    assume(P x varg_src varg_tgt ord_cur rarg);; (*** precondition ***)
+    assume(P x varg_src varg_tgt ord_cur rarg);;; (*** precondition ***)
     Ret (x, varg_src, ord_cur)
   .
 
@@ -86,9 +86,9 @@ Section HOARE.
              {X Z: Type}
              (Q: X -> Z -> Any_tgt -> Σ -> Prop): X -> Z -> itree Es Any_tgt := fun x vret_src =>
     vret_tgt <- trigger (Choose Any_tgt);;
-    '(mret, fret) <- trigger (Choose _);; put mret fret;; (*** updating resources in an abstract way ***)
-    rret <- trigger (Choose Σ);; guarantee(Q x vret_src vret_tgt rret);; (*** postcondition ***)
-    (discard rret);; (*** virtual resource passing ***)
+    '(mret, fret) <- trigger (Choose _);; put mret fret;;; (*** updating resources in an abstract way ***)
+    rret <- trigger (Choose Σ);; guarantee(Q x vret_src vret_tgt rret);;; (*** postcondition ***)
+    (discard rret);;; (*** virtual resource passing ***)
 
     Ret vret_tgt (*** return ***)
   .
@@ -103,7 +103,7 @@ Section HOARE.
       HoareFun stb P Q body varg_tgt =
       '(x, varg_src, ord_cur) <- HoareFunArg P varg_tgt;;
       vret_src <- match ord_cur with
-                  | ord_pure n => (interp_hCallE_tgt stb ord_cur APC);; trigger (Choose _)
+                  | ord_pure n => (interp_hCallE_tgt stb ord_cur APC);;; trigger (Choose _)
                   | _ => (interp_hCallE_tgt stb ord_cur (body varg_src))
                   end;;
       HoareFunRet Q x vret_src.
@@ -561,7 +561,7 @@ Section HLEMMAS.
 
         (POST: gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ eqr n1
                       (mr_src0, mp_src0, fr_src0,
-                       (HoareCall true o (mk_fspec ftsp) fn args);; Tau (ITree.bind (interp_hCallE_tgt stb o (_APC next)) k_src))
+                       (HoareCall true o (mk_fspec ftsp) fn args);;; Tau (ITree.bind (interp_hCallE_tgt stb o (_APC next)) k_src))
                       ((mrs_tgt, frs_tgt),
                        itr_tgt))
     :
