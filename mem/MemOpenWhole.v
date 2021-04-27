@@ -1047,24 +1047,41 @@ Section ADQ.
   Hint Constructors option_rel: core.
 
 
-  Lemma sim_known
-        md ske f0
-    :
-      sim_fun (transl_all (SModSem.mn (SMod.get_modsem md ske)) ∘ fun_to_src (fsb_body f0))
-              (transl_all (SModSem.mn (SMod.get_modsem md ske))
-                          ∘ fun_to_src
-                          (fun pat : AA f0 * bool => match pat with
-                                                     | (argh, true) => trigger (Choose (AR f0))
-                                                     | (argh, false) => fsb_body f0 argh
-                                                     end))
-  .
-  Proof.
-    ii.
-  Qed.
+  (* Lemma sim_known *)
+  (*       md ske f0 *)
+  (*   : *)
+  (*     sim_fun (transl_all (SModSem.mn (SMod.get_modsem md ske)) ∘ fun_to_src (fsb_body f0)) *)
+  (*             (transl_all (SModSem.mn (SMod.get_modsem md ske)) *)
+  (*                         ∘ fun_to_src *)
+  (*                         (fun pat : AA f0 * bool => match pat with *)
+  (*                                                    | (argh, true) => trigger (Choose (AR f0)) *)
+  (*                                                    | (argh, false) => fsb_body f0 argh *)
+  (*                                                    end)) *)
+  (* . *)
+  (* Proof. *)
+  (*   ii. *)
+  (*   { *)
+  (*     set (mn:=(SModSem.mn (SMod.get_modsem md ske))) in *. *)
+  (*     unfold fun_to_src. *)
+  (*     unfold body_to_src. *)
+  (*     unfold cfun. *)
+  (*     Ltac red_transl_all := *)
+  (*       repeat (try rewrite transl_all_bind; try rewrite transl_all_ret; try rewrite transl_all_tau) *)
+  (*     . *)
+  (*     destruct (args↓) eqn:A. *)
+  (*     { cbn. red_transl_all. ired. *)
+  (*       erewrite <- Any.downcast_upcast with (a:=args); et. *)
+  (*       rewrite upcast_pair_downcast. ss. red_transl_all. ired. refl. *)
+  (*       destruct ((Any.pair args false↑)↓) eqn:B. *)
+  (*   } *)
+  (*   abstr (fsb_body f0) itr. *)
+  (*   ginit. revert_until md. revert md. gcofix CIH. i. *)
+  (* Qed. *)
 
-  sim_fun (fun args : Any.t => transl_all (UModSem.mn (UMod.get_modsem x3 ske)) (resum_itr (cfun i1 args)))
-    (transl_all (UModSem.mn (UMod.get_modsem x3 ske))
-     ∘ fun_to_src (fun x : list val * bool => interp UModSem.transl_itr (i1 (fst x))))
+  (* sim_fun (fun args : Any.t => transl_all (UModSem.mn (UMod.get_modsem x3 ske)) (resum_itr (cfun i1 args))) *)
+  (*   (transl_all (UModSem.mn (UMod.get_modsem x3 ske)) *)
+  (*    ∘ fun_to_src (fun x : list val * bool => interp UModSem.transl_itr (i1 (fst x)))) *)
+
   Lemma find_sim
         fn
     :
