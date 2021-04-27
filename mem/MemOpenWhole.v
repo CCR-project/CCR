@@ -1025,7 +1025,8 @@ Section ADQ.
       fn args T (ktr0 ktr1: ktree _ _ T)
       (SIM: forall rv, sim_body (ktr0 rv) (ktr1 rv))
     :
-      _sim_body sim_body (trigger (Call fn args) >>= ktr0) (r <- trigger (Call fn (Any.pair args false↑));; tau;; ktr1 r)
+      _sim_body sim_body (trigger (Call fn args) >>= ktr0)
+                (trigger (Call fn (Any.pair args false↑)) >>= ktr1)
   | sim_rE
       T (re: EventsL.rE T) S (ktr0 ktr1: ktree _ _ S)
       (SIM: forall rv, sim_body (ktr0 rv) (ktr1 rv))
@@ -1097,9 +1098,6 @@ Section ADQ.
       exploit SIMK; eauto. i.
       eapply sim_body_mon; eauto with paco.
     + rewrite ! bind_bind.
-      replace (r0 <- trigger (Call fn (Any.pair args (Any.upcast false)));; x <- (tau;; ktr1 r0);; k_tgt x) with
-          (r0 <- trigger (Call fn (Any.pair args (Any.upcast false)));; tau;; x <- ktr1 r0;; k_tgt x); cycle 1.
-      { grind. }
       econs; eauto. ii.
       { econs 2; eauto with paco. econs; eauto with paco. }
     + rewrite ! bind_bind. econs; eauto. ii.
@@ -1213,7 +1211,6 @@ Section ADQ.
       unfold interp_hCallE_src at 2. rewrite interp_trigger. cbn.
       red_transl_all. ired.
       gstep; econs; et. ii.
-      TTTTTTTTTTTTTTTTTTTTTT
       gstep; econs; et. ii.
       ired.
       gstep; econs; et. ii.
