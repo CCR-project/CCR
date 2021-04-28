@@ -671,7 +671,7 @@ Ltac iUpdate H :=
                            clear wf upd; iRefresh; clear _GWF).
 
 Ltac iImpure H := let name := fresh "my_r" in
-                  set (name:=ε);
+                  set (name:=@URA.unit (@GRA.to_URA _));
                   specialize (H name URA.wf_unit I); rewrite intro_iHyp in H;
                   on_gwf ltac:(fun GWF => rewrite <- (@URA.unit_id_ _ name eq_refl) in GWF; clearbody name).
 Ltac iMod H :=
