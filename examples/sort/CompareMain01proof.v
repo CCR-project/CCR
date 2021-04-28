@@ -51,8 +51,10 @@ Section SIMMODSEM.
 
   Hypotheses GlobalStb_wrap
     :
-      forall skenv,
-        List.find (fun '(_fn, _) => dec "wrap" _fn) (GlobalStb skenv) = Some ("wrap", wrap_spec CmpsStb skenv).
+      forall (sk: Sk.t),
+        List.find (fun '(_fn, _) => dec "wrap" _fn) (GlobalStb sk) = Some ("wrap", wrap_spec CmpsStb sk).
+
+  Local Opaque Sk.load_skenv.
 
   Theorem correct: ModPair.sim (CompareMain1.Main GlobalStb) (CompareMain0.Main).
   Proof.

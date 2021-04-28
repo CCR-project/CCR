@@ -175,17 +175,17 @@ Section CANCEL.
   Variable mds: list SMod.t.
 
   Let sk: Sk.t := fold_right Sk.add Sk.unit (List.map SMod.sk mds).
-  Let skenv: SkEnv.t := Sk.load_skenv sk.
+  (* Let skenv: SkEnv.t := Sk.load_skenv sk. *)
 
-  Let _mss: SkEnv.t -> list SModSem.t := fun skenv => (List.map ((flip SMod.get_modsem) skenv) mds).
-  Let _sbtb: SkEnv.t -> list (gname * fspecbody) := fun skenv => (List.flat_map (SModSem.fnsems) (_mss skenv)).
-  Let _stb: SkEnv.t -> list (gname * fspec) := fun skenv => List.map (fun '(fn, fs) => (fn, fs.(fsb_fspec))) (_sbtb skenv).
+  Let _mss: Sk.t -> list SModSem.t := fun sk => (List.map ((flip SMod.get_modsem) sk) mds).
+  Let _sbtb: Sk.t -> list (gname * fspecbody) := fun sk => (List.flat_map (SModSem.fnsems) (_mss sk)).
+  Let _stb: Sk.t -> list (gname * fspec) := fun sk => List.map (fun '(fn, fs) => (fn, fs.(fsb_fspec))) (_sbtb sk).
 
-  Let mss: list SModSem.t := _mss skenv.
-  Let sbtb: list (gname * fspecbody) := _sbtb skenv.
-  Let stb: list (gname * fspec) := _stb skenv.
+  Let mss: list SModSem.t := _mss sk.
+  Let sbtb: list (gname * fspecbody) := _sbtb sk.
+  Let stb: list (gname * fspec) := _stb sk.
 
-  (* Let mss: list SModSem.t := (List.map ((flip SMod.get_modsem) skenv) mds). *)
+  (* Let mss: list SModSem.t := (List.map ((flip SMod.get_modsem) sk) mds). *)
   (* Let sbtb: list (gname * fspecbody) := (List.flat_map (SModSem.fnsems) mss). *)
   (* Let stb: list (gname * fspec) := List.map (fun '(fn, fs) => (fn, fs.(fsb_fspec))) sbtb. *)
 
@@ -539,7 +539,7 @@ Section CANCEL.
         assert(fs = f0).
         { clear - FINDFT FINDFS0. admit "ez - no function name duplication". }
         subst.
-        fold sk. fold skenv. set (mn0:=(SModSem.mn (SMod.get_modsem md0 skenv))) in *.
+        fold sk. fold sk. set (mn0:=(SModSem.mn (SMod.get_modsem md0 sk))) in *.
         fold Any_tgt in x3.
         unfold fun_to_src, fun_to_tgt, compose. des_ifs. unfold HoareFun.
         rename x3 into PRECOND. rename x0 into rarg.
@@ -640,7 +640,7 @@ Section CANCEL.
         assert(fs = f0).
         { clear - FINDFT FINDFS0. admit "ez - no function name duplication". }
         subst.
-        fold sk. fold skenv. set (mn0:=(SModSem.mn (SMod.get_modsem md0 skenv))) in *.
+        fold sk. fold sk. set (mn0:=(SModSem.mn (SMod.get_modsem md0 sk))) in *.
         fold Any_tgt in x3.
         unfold fun_to_src, fun_to_tgt, compose. des_ifs. unfold HoareFun.
         rename x3 into PRECOND. rename x0 into rarg.

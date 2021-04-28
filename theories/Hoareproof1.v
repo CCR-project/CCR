@@ -564,8 +564,8 @@ Section CANCEL.
   Variable mds: list SMod.t.
 
   Let sk: Sk.t := fold_right Sk.add Sk.unit (List.map SMod.sk mds).
-  Let skenv: SkEnv.t := Sk.load_skenv sk.
-  Let mss: list SModSem.t := (List.map ((flip SMod.get_modsem) skenv) mds).
+  (* Let skenv: SkEnv.t := Sk.load_skenv sk. *)
+  Let mss: list SModSem.t := (List.map ((flip SMod.get_modsem) sk) mds).
   Let sbtb: list (gname * fspecbody) := (List.flat_map (SModSem.fnsems) mss).
   Let stb: list (gname * fspec) := List.map (fun '(fn, fs) => (fn, fs.(fsb_fspec))) sbtb.
 
@@ -675,7 +675,7 @@ Section CANCEL.
     unfold SMod.load_fnsems in Heq. apply find_some in Heq. des; ss. des_sumbool; subst.
     rewrite in_flat_map in Heq. des; ss. rewrite in_flat_map in Heq0. des; ss. des_ifs. ss; des; ss; clarify.
     rename Heq0 into INF. rename Heq into IN.
-    rename x3 into md0. fold sk in INF. fold skenv in INF.
+    rename x3 into md0. fold sk in INF. fold sk in INF.
     unfold fun_to_mid.
     myred.
     unfold unwrapN.
@@ -879,7 +879,7 @@ Section CANCEL.
         unfold SMod.load_fnsems in Heq. apply find_some in Heq. des; ss. des_sumbool; subst.
         rewrite in_flat_map in Heq. des; ss. rewrite in_flat_map in Heq0. des; ss. des_ifs. ss; des; ss; clarify.
         rename Heq0 into INF. rename Heq into IN.
-        rename x1 into md0. fold sk in INF. fold skenv in INF.
+        rename x1 into md0. fold sk in INF. fold sk in INF.
         repeat (tred; hred; mred).
         guclo ordC_spec. econs.
         { instantiate (1:=(120 + (10 + C.myF x + 10))%ord).
@@ -926,13 +926,13 @@ Section CANCEL.
         unfold SMod.load_fnsems in Heq. apply find_some in Heq. des; ss. des_sumbool; subst.
         rewrite in_flat_map in Heq. des; ss. rewrite in_flat_map in Heq1. des; ss. des_ifs. ss; des; ss; clarify.
         rename Heq1 into INF. rename Heq into IN.
-        rename x0 into md0. fold sk in INF. fold skenv in INF.
+        rename x0 into md0. fold sk in INF. fold sk in INF.
 
         unfold ms_src, mds_src, SMod.to_src in Heq0. rewrite SMod.transl_fnsems in Heq0.
         unfold SMod.load_fnsems in Heq0. apply find_some in Heq0. des; ss. des_sumbool; subst.
         rewrite in_flat_map in Heq0. des; ss. rewrite in_flat_map in Heq1. des; ss. des_ifs. ss; des; ss; clarify.
         rename Heq1 into INF0. rename Heq0 into IN0.
-        rename x0 into md1. fold sk in INF0. fold skenv in INF0.
+        rename x0 into md1. fold sk in INF0. fold sk in INF0.
 
         assert(md0 = md1); subst.
         { admit "ez - uniqueness". }
@@ -998,13 +998,13 @@ Section CANCEL.
     unfold SMod.load_fnsems in Heq0. apply find_some in Heq0. des; ss. des_sumbool; subst.
     rewrite in_flat_map in Heq0. des; ss. rewrite in_flat_map in Heq2. des; ss. des_ifs. ss; des; ss; clarify. ss. subst.
     rename Heq2 into INF. rename Heq0 into IN.
-    rename x into md0. fold sk in INF. fold skenv in INF.
+    rename x into md0. fold sk in INF. fold sk in INF.
 
     unfold ms_src, mds_src, SMod.to_src in Heq. rewrite SMod.transl_fnsems in Heq.
     unfold SMod.load_fnsems in Heq. apply find_some in Heq. des; ss. destruct p; ss. des_sumbool; subst.
     rewrite in_flat_map in Heq. des; ss. rewrite in_flat_map in Heq0. des; ss. des_ifs. ss; des; ss; clarify.
     rename Heq0 into INF0. rename Heq into IN0.
-    rename x into md1. fold sk in INF0. fold skenv in INF0.
+    rename x into md1. fold sk in INF0. fold sk in INF0.
 
     assert(md0 = md1); subst.
     { admit "ez - uniqueness". }

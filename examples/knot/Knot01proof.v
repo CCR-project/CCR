@@ -87,11 +87,13 @@ Section SIMMODSEM.
              (SPECS: List.find (fun '(_fn, _) => dec fn _fn) (FunStb skenv) = Some fsp),
         List.find (fun '(_fn, _) => dec fn _fn) (GlobalStb skenv) = Some fsp.
 
+  Local Opaque Sk.load_skenv.
+
   Theorem correct: ModPair.sim (Knot1.Knot RecStb FunStb GlobalStb) Knot0.Knot.
   Proof.
     econs; ss; [|admit ""].
     i. eapply adequacy_lift.
-    econstructor 1 with (wf:=wf skenv); et; ss.
+    econstructor 1 with (wf:=wf (Sk.load_skenv sk)); et; ss.
     2: { eexists. exists None. esplits; ss. eexists. eapply URA.unit_id. }
     econs; ss; [|econs; ss].
     { init. unfold recF, ccall. harg_tac.

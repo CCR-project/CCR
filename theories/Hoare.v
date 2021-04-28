@@ -89,15 +89,15 @@ Section CANCEL.
   Variable mds: list SMod.t.
 
   Let sk: Sk.t := fold_right Sk.add Sk.unit (List.map SMod.sk mds).
-  Let skenv: SkEnv.t := Sk.load_skenv sk.
+  (* Let skenv: SkEnv.t := Sk.load_skenv sk. *)
 
-  Let _mss: SkEnv.t -> list SModSem.t := fun skenv => (List.map ((flip SMod.get_modsem) skenv) mds).
-  Let _sbtb: SkEnv.t -> list (gname * fspecbody) := fun skenv => (List.flat_map (SModSem.fnsems) (_mss skenv)).
-  Let _stb: SkEnv.t -> list (gname * fspec) := fun skenv => List.map (fun '(fn, fs) => (fn, fs.(fsb_fspec))) (_sbtb skenv).
+  Let _mss: Sk.t -> list SModSem.t := fun sk => (List.map ((flip SMod.get_modsem) sk) mds).
+  Let _sbtb: Sk.t -> list (gname * fspecbody) := fun sk => (List.flat_map (SModSem.fnsems) (_mss sk)).
+  Let _stb: Sk.t -> list (gname * fspec) := fun sk => List.map (fun '(fn, fs) => (fn, fs.(fsb_fspec))) (_sbtb sk).
 
-  Let mss: list SModSem.t := _mss skenv.
-  Let sbtb: list (gname * fspecbody) := _sbtb skenv.
-  Let stb: list (gname * fspec) := _stb skenv.
+  Let mss: list SModSem.t := _mss sk.
+  Let sbtb: list (gname * fspecbody) := _sbtb sk.
+  Let stb: list (gname * fspec) := _stb sk.
 
   Let mds_src: list Mod.t := List.map (SMod.to_src) mds.
   Let mds_tgt: list Mod.t := List.map (SMod.to_tgt _stb) mds.
@@ -192,19 +192,19 @@ Section CANCEL.
 
 
   Let sk: Sk.t := fold_right Sk.add Sk.unit (List.map SMod.sk mds).
-  Let skenv: SkEnv.t := Sk.load_skenv sk.
+  (* Let skenv: SkEnv.t := Sk.load_skenv sk. *)
 
-  Let _mss: SkEnv.t -> list SModSem.t := fun skenv => (List.map ((flip SMod.get_modsem) skenv) mds).
-  Let _sbtb: SkEnv.t -> list (gname * fspecbody) := fun skenv => (List.flat_map (SModSem.fnsems) (_mss skenv)).
-  Let _stb: SkEnv.t -> list (gname * fspec) := fun skenv => List.map (fun '(fn, fs) => (fn, fs.(fsb_fspec))) (_sbtb skenv).
+  Let _mss: Sk.t -> list SModSem.t := fun sk => (List.map ((flip SMod.get_modsem) sk) mds).
+  Let _sbtb: Sk.t -> list (gname * fspecbody) := fun sk => (List.flat_map (SModSem.fnsems) (_mss sk)).
+  Let _stb: Sk.t -> list (gname * fspec) := fun sk => List.map (fun '(fn, fs) => (fn, fs.(fsb_fspec))) (_sbtb sk).
 
-  Let mss: list SModSem.t := _mss skenv.
-  Let sbtb: list (gname * fspecbody) := _sbtb skenv.
-  Let stb: list (gname * fspec) := _stb skenv.
+  Let mss: list SModSem.t := _mss sk.
+  Let sbtb: list (gname * fspecbody) := _sbtb sk.
+  Let stb: list (gname * fspec) := _stb sk.
 
   Let mds_src: list Mod.t := List.map (SMod.to_src) mds.
   Variable mds_tgt: list Mod.t.
-  Hypothesis WEAKEN: Forall2 (fun md md_tgt => exists stb0, (<<WEAK: forall skenv, stb_weaker (stb0 skenv) (_stb skenv)>>)
+  Hypothesis WEAKEN: Forall2 (fun md md_tgt => exists stb0, (<<WEAK: forall sk, stb_weaker (stb0 sk) (_stb sk)>>)
                                                             /\ (<<MD: md_tgt = SMod.to_tgt stb0 md>>)) mds mds_tgt.
 
 
@@ -233,13 +233,13 @@ Section CANCEL.
   Hypothesis MAINM: In (SMod.main mainpre mainbody) mds.
 
   Let initial_mrs_eq_aux
-      skenv0
+      sk0
     :
       List.map
         (fun x =>
-           (SModSem.mn (SMod.get_modsem x skenv0),
-            (SModSem.initial_mr (SMod.get_modsem x skenv0), SModSem.initial_st (SMod.get_modsem x skenv0)))) mds =
-      ModSemL.initial_mrs (ModL.get_modsem (Mod.add_list mds_tgt) skenv0)
+           (SModSem.mn (SMod.get_modsem x sk0),
+            (SModSem.initial_mr (SMod.get_modsem x sk0), SModSem.initial_st (SMod.get_modsem x sk0)))) mds =
+      ModSemL.initial_mrs (ModL.get_modsem (Mod.add_list mds_tgt) sk0)
   .
   Proof.
     clear - WEAKEN.
@@ -291,20 +291,20 @@ Section CANCEL.
     :
       List.map
         (fun x =>
-           (SModSem.mn (SMod.get_modsem x skenv),
-            (SModSem.initial_mr (SMod.get_modsem x skenv), SModSem.initial_st (SMod.get_modsem x skenv)))) mds =
+           (SModSem.mn (SMod.get_modsem x sk),
+            (SModSem.initial_mr (SMod.get_modsem x sk), SModSem.initial_st (SMod.get_modsem x sk)))) mds =
       ModSemL.initial_mrs (ModL.enclose (Mod.add_list mds_tgt))
   .
   Proof.
     unfold ModL.enclose.
-    erewrite initial_mrs_eq_aux. repeat f_equal. unfold skenv, sk. ss.
+    erewrite initial_mrs_eq_aux. repeat f_equal. unfold sk, sk. ss.
     f_equal. rewrite sk_eq. ss.
   Qed.
 
-  (* Let initial_mrs_eq2_aux skenv0 stb0 *)
+  (* Let initial_mrs_eq2_aux sk0 stb0 *)
   (*   : *)
-  (*     List.map fst (ModSemL.initial_mrs (ModL.get_modsem (Mod.add_list mds_tgt) skenv0)) = *)
-  (*     List.map fst (ModSemL.initial_mrs (ModL.get_modsem (Mod.add_list (List.map (SMod.to_tgt stb0) mds)) skenv0)) *)
+  (*     List.map fst (ModSemL.initial_mrs (ModL.get_modsem (Mod.add_list mds_tgt) sk0)) = *)
+  (*     List.map fst (ModSemL.initial_mrs (ModL.get_modsem (Mod.add_list (List.map (SMod.to_tgt stb0) mds)) sk0)) *)
   (* . *)
   (* Proof. *)
   (*   unfold mds_tgt. rewrite <- initial_mrs_eq. *)
@@ -331,40 +331,40 @@ Section CANCEL.
     unfold ModL.enclose. rewrite <- sk_eq2. folder.
     unfold Mod.add_list.
     match goal with
-    | [ |- context[ModL.get_modsem ?x ?skenv] ] =>
-      replace (ModL.get_modsem x skenv) with (((flip ModL.get_modsem) skenv) x) by refl
+    | [ |- context[ModL.get_modsem ?x ?sk] ] =>
+      replace (ModL.get_modsem x sk) with (((flip ModL.get_modsem) sk) x) by refl
     end.
-    erewrite fold_right_map with (yadd:=ModSemL.add) (fi:=(flip ModL.get_modsem) skenv); cycle 1.
+    erewrite fold_right_map with (yadd:=ModSemL.add) (fi:=(flip ModL.get_modsem) sk); cycle 1.
     { refl. }
     erewrite fold_right_map with (yadd:=@List.app _) (fi:=ModSemL.initial_mrs); cycle 1.
     { refl. }
     rewrite ! List.map_map. cbn.
-    clear - mds. clearbody skenv. clear sk.
+    clear - mds. clearbody sk.
     induction mds; ii; ss. f_equal; ss.
   Qed.
 
-  (* Definition load_fnsems (skenv: SkEnv.t) (md: SMod.t) (tr0: fspecbody -> Any.t -> itree Es Any.t): *)
+  (* Definition load_fnsems (sk: Sk.t) (md: SMod.t) (tr0: fspecbody -> Any.t -> itree Es Any.t): *)
   (*   list (string * (Any.t -> itree Es Any.t)) := *)
-  (*   let ms := (SMod.get_modsem md skenv) in *)
+  (*   let ms := (SMod.get_modsem md sk) in *)
   (*   List.map (ModSem.map_snd tr0) ms.(SModSem.fnsems) *)
   (* . *)
 
   (* Lemma transl_fnsems_aux *)
   (*       tr0 mr0 md *)
-  (*       (skenv0: SkEnv.t) *)
+  (*       (sk0: Sk.t) *)
   (*   : *)
-  (*     (ModSem.fnsems (Mod.get_modsem (SMod.transl tr0 mr0 md) skenv0)) = *)
-  (*     (load_fnsems skenv0 md tr0) *)
+  (*     (ModSem.fnsems (Mod.get_modsem (SMod.transl tr0 mr0 md) sk0)) = *)
+  (*     (load_fnsems sk0 md tr0) *)
   (* . *)
   (* Proof. refl. Qed. *)
 
   (* Lemma transl_fnsems *)
   (*       tr0 mr0 mds *)
   (*   : *)
-  (*     (ModSem.fnsems (Mod.get_modsem (SMod.transl tr0 mr0 md) skenv0)) = *)
-  (*     (load_fnsems skenv0 md tr0) *)
+  (*     (ModSem.fnsems (Mod.get_modsem (SMod.transl tr0 mr0 md) sk0)) = *)
+  (*     (load_fnsems sk0 md tr0) *)
   (*     (ModSemL.fnsems (ModL.enclose (Mod.add_list (List.map (transl tr0 mr0) mds)))) = *)
-  (*     (load_fnsems (Sk.load_skenv (List.fold_right Sk.add Sk.unit (List.map sk mds))) mds tr0) *)
+  (*     (load_fnsems (Sk.load_sk (List.fold_right Sk.add Sk.unit (List.map sk mds))) mds tr0) *)
   (* . *)
   (* Proof. *)
   (*   unfold ModL.enclose. *)
@@ -381,7 +381,7 @@ Section CANCEL.
       rewrite SMod.transl_initial_mrs. ss. folder.
       rp; et.
       (* Check (fun mn : string => *)
-      (* match find (fun mnr : string * (Σ * Any.t) => dec mn (fst mnr)) (SMod.load_initial_mrs skenv mds SModSem.initial_mr) with *)
+      (* match find (fun mnr : string * (Σ * Any.t) => dec mn (fst mnr)) (SMod.load_initial_mrs sk mds SModSem.initial_mr) with *)
       (* | Some r => fst (snd r) *)
       (* | None => ε *)
       (* end). *)
@@ -389,7 +389,7 @@ Section CANCEL.
       | |- context[List.map (?gg <*> ?ff) _] => rewrite <- List.map_map with (f:=ff) (g:=gg)
       end.
       erewrite initial_mrs_eq2.
-      assert(T: (SMod.load_initial_mrs skenv mds SModSem.initial_mr) = (ModSemL.initial_mrs ms_tgt)).
+      assert(T: (SMod.load_initial_mrs sk mds SModSem.initial_mr) = (ModSemL.initial_mrs ms_tgt)).
       { unfold SMod.load_initial_mrs. unfold ms_tgt.
         rewrite SMod.red_do_ret. rewrite initial_mrs_eq. ss.
       }
@@ -411,12 +411,12 @@ Section CANCEL.
     econs; cycle 1.
     { unfold SMod.to_tgt. cbn. eauto. }
     { i. admit "ez - wf". }
-    i. specialize (WEAK skenv). r. eapply adequacy_lift. econs.
+    i. specialize (WEAK sk). r. eapply adequacy_lift. econs.
     { instantiate (1:=fun '(x, y) => x = y).
       unfold SMod.to_tgt.
       unfold SMod.transl. ss.
       rename x into md.
-      abstr (SModSem.fnsems (SMod.get_modsem md skenv)) fnsems.
+      abstr (SModSem.fnsems (SMod.get_modsem md sk)) fnsems.
       induction fnsems; ss.
       econs; et. destruct a. cbn. split; cbn.
       { rr. cbn. ss. }

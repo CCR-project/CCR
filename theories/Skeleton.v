@@ -171,7 +171,20 @@ Module Sk.
       + admit "ez".
   Qed.
 
-  Definition incl (sk0: Sk.t) (skenv: SkEnv.t): Prop :=
+  Definition incl (sk0 sk1: Sk.t): Prop :=
+    forall gn gd (IN: List.In (gn, gd) sk0),
+      List.In (gn, gd) sk1.
+
+  Definition incl_env (sk0: Sk.t) (skenv: SkEnv.t): Prop :=
     forall gn gd (IN: List.In (gn, gd) sk0),
     exists blk, skenv.(SkEnv.id2blk) gn = Some blk.
+
+  Lemma incl_incl_env sk0 sk1
+        (INCL: incl sk0 sk1)
+    :
+      incl_env sk0 (load_skenv sk1).
+  Proof.
+  Admitted.
 End Sk.
+
+Coercion Sk.load_skenv: Sk.t >-> SkEnv.t.
