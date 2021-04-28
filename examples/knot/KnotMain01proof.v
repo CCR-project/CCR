@@ -63,8 +63,6 @@ Section SIMMODSEM.
       forall (sk: Sk.t),
         List.find (fun '(_fn, _) => dec "knot" _fn) (GlobalStb sk) = Some ("knot", knot_spec RecStb FunStb sk).
 
-  Local Opaque Sk.load_skenv.
-
   Theorem correct: ModPair.sim (KnotMain1.Main RecStb GlobalStb) KnotMain0.Main.
   Proof.
     econs; ss; [|admit ""].

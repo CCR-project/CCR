@@ -87,8 +87,6 @@ Section SIMMODSEM.
              (SPECS: List.find (fun '(_fn, _) => dec fn _fn) (FunStb skenv) = Some fsp),
         List.find (fun '(_fn, _) => dec fn _fn) (GlobalStb skenv) = Some fsp.
 
-  Local Opaque Sk.load_skenv.
-
   Theorem correct: ModPair.sim (Knot1.Knot RecStb FunStb GlobalStb) Knot0.Knot.
   Proof.
     econs; ss; [|admit ""].

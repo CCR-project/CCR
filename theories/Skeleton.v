@@ -188,3 +188,4 @@ Module Sk.
 End Sk.
 
 Coercion Sk.load_skenv: Sk.t >-> SkEnv.t.
+Global Opaque Sk.load_skenv.
