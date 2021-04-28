@@ -132,10 +132,15 @@ Module Sk.
   (*** At the moment, List.app is not assoc/commutative. We need to equip RA with custom equiv. ***)
 
   Definition load_mem (sk: t): Mem.t :=
-    let n := List.length sk in
     Mem.mk
-      (* (fun blk => if (blk <? n)%nat then (fun _ => None) else (fun _ => None)) *)
-      (fun _ _ => None)
+      (fun blk ofs =>
+         do '(_, gd) <- (List.nth_error sk blk);
+         match gd with
+         | Gfun =>
+           None
+         | Gvar gv =>
+           if (dec ofs 0%Z) then Some gv else None
+         end)
       (*** TODO: This simplified model doesn't allow function pointer comparsion.
            To be more faithful, we need to migrate the notion of "permission" from CompCert.
            CompCert expresses it with "nonempty" permission.
@@ -143,13 +148,13 @@ Module Sk.
       (*** TODO: When doing so, I would like to extend val with "Vfid (id: gname)" case.
            That way, I might be able to support more higher-order features (overriding, newly allocating function)
        ***)
-      n
+      (List.length sk)
   .
 
   Definition load_skenv (sk: t): (SkEnv.t) :=
     let n := List.length sk in
     {|
-      SkEnv.blk2id := fun blk => do '(ofs, _) <- (List.nth_error sk blk); Some ofs;
+      SkEnv.blk2id := fun blk => do '(gn, _) <- (List.nth_error sk blk); Some gn;
       SkEnv.id2blk := fun id => do '(blk, _) <- find_idx (fun '(id', _) => string_dec id id') sk; Some blk
     |}
   .

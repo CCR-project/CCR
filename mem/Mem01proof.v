@@ -193,13 +193,20 @@ Section SIMMODSEM.
   (* Opaque URA.pointwise. *)
   Opaque URA.unit.
 
-  Theorem correct: ModSemPair.sim Mem1.MemSem Mem0.MemSem.
+  Theorem correct: ModPair.sim Mem1.Mem Mem0.Mem.
   Proof.
-   econstructor 1 with (wf:=wf); et; swap 2 3.
+    econs; ss; [|admit "modsem wf"].
+    i. eapply adequacy_lift.
+    econstructor 1 with (wf:=wf); et; swap 2 3.
     { ss. esplits; ss; et. hexploit gwf_dummy; i. iRefresh.
       eexists; iRefresh. iSplitP; ss.
       { eexists. rewrite URA.unit_id. refl. }
-      ii. econs.
+      { ii. destruct (nth_error sk b) eqn:FIND.
+        { destruct p. cbn. des_ifs; try econs. }
+        { cbn. econs. }
+      }
+      { i. ss. eapply nth_error_Some.
+        intros EQ. rewrite EQ in *. ss. }
     }
 
     econs; ss.

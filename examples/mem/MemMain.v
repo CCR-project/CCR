@@ -130,7 +130,7 @@ Section PROOF.
     { ss. right. left. unfold SMain. ss. }
     { instantiate (1:=ε). des_ifs. unfold compose. cbn.
       unfold ModSemL.initial_r_state in *. clarify. ss. repeat (try rewrite URA.unit_id; try rewrite URA.unit_idl).
-      eapply GRA_wf_embed. eapply Auth_wf_black. repeat ur. i; ss.
+      eapply GRA_wf_embed. eapply Auth_wf_black. repeat ur. i; ss. des_ifs.
     }
     { ss. }
     { set (skenv := Sk.load_skenv (fold_right Sk.add Sk.unit (List.map SMod.sk [SMem; SMain]))).
@@ -155,13 +155,7 @@ Section PROOF.
       eapply refines_close.
       hexploit (SimModSem.refines_proper_r [Mem1.Mem] [Mem0.Mem] [Main1.Main]).
       { cbn. rewrite ! ModL.add_empty_r. eapply SimModSem.adequacy_local.
-        econs.
-        - i. cbn. eapply SimModSem.adequacy_lift. eapply Mem01proof.correct.
-        - ss.
-        - cbn. ii. rr. econs; ss.
-          { repeat (econs; ii; ss; des; ss). }
-          { repeat (econs; ii; ss; des; ss). }
-      }
+        eapply Mem01proof.correct. }
       intro T; des. cbn in T. rewrite ! ModL.add_empty_r in T. ss.
     }
     etrans; cycle 1.

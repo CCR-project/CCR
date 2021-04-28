@@ -117,7 +117,6 @@ Module Mem.
   (*   m1 *)
   (* . *)
   (*** shoul allocated with Vundef, not 0 ***)
-  Definition init (nb: block): t := mk (fun _ _ => None) nb.
 
   (*** TODO: Unlike CompCert, this "free" function does not take offset.
        In order to support this, we need more sophisticated RA. it would be interesting.
