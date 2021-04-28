@@ -64,6 +64,21 @@ Section AUX.
       ur in WF. ur in WF. ss.
     }
   Qed.
+
+  Lemma knot_full_unique
+        f0 f1
+    :
+      ⌞(Own (GRA.embed (knot_full f0)) -* Own (GRA.embed (knot_full f1)) -* (⌜False⌝))⌟
+  .
+  Proof.
+    iIntro; clear A.
+    do 2 iIntro.
+    {
+      iMerge A A0. rewrite <- own_sep in A. rewrite GRA.embed_add in A.
+      iOwnWf A. eapply GRA.embed_wf in WF. des.
+      ur in WF. ur in WF. ss.
+    }
+  Qed.
 End AUX.
 
 
@@ -80,23 +95,43 @@ Section SIMMODSEM.
   Variable GlobalStb: SkEnv.t -> list (gname * fspec).
 
 
+  (* Let wf (skenv: SkEnv.t): W -> Prop := *)
+  (*   fun '(mrps_src0, mrps_tgt0) => *)
+  (*     exists (mr: Σ)(f': option (nat -> nat)), *)
+  (*       (<<SRC: mrps_src0 = (mr, tt↑)>>) /\ *)
+  (*       (<<TGT: mrps_tgt0 = (ε, tt↑)>>) /\ *)
+  (*       (<<SEP: iHyp ((Own (GRA.embed (knot_full f'))) *)
+  (*                       ** *)
+  (*                       ((Own (GRA.embed (knot_frag f'))) *)
+  (*                        ∨ *)
+  (*                        (Forall f, *)
+  (*                         (⌜f' = Some f⌝) *)
+  (*                           -* *)
+  (*                           Exists fb', *)
+  (*                         (⌜exists fb fn, *)
+  (*                               (<<BLK: fb' = Vptr fb 0>>) /\ *)
+  (*                               (<<FN: skenv.(SkEnv.blk2id) fb = Some fn>>) /\ *)
+  (*                               (<<FIND: List.find (fun '(_fn, _) => dec fn _fn) (FunStb skenv) = Some (fn, fun_gen RecStb skenv f)>>)⌝) ** (Own (knot_var skenv fb'))))) mr>>). *)
+
+
   Let wf (skenv: SkEnv.t): W -> Prop :=
     fun '(mrps_src0, mrps_tgt0) =>
       exists (mr: Σ)(f': option (nat -> nat)),
         (<<SRC: mrps_src0 = (mr, tt↑)>>) /\
         (<<TGT: mrps_tgt0 = (ε, tt↑)>>) /\
-        (<<SEP: iHyp ((Own (GRA.embed (knot_full f')))
-                        **
-                        ((Own (GRA.embed (knot_frag f')))
-                         ∨
-                         (Forall f,
-                          (⌜f' = Some f⌝)
-                            -*
-                            Exists fb',
-                          (⌜exists fb fn,
-                                (<<BLK: fb' = Vptr fb 0>>) /\
-                                (<<FN: skenv.(SkEnv.blk2id) fb = Some fn>>) /\
-                                (<<FIND: List.find (fun '(_fn, _) => dec fn _fn) (FunStb skenv) = Some (fn, fun_gen RecStb skenv f)>>)⌝) ** (Own (knot_var skenv fb'))))) mr>>).
+        (<<SEP: iHyp ((Own (GRA.embed (knot_frag f')))
+                      ∨
+                      ((Own (GRA.embed (knot_full f')))
+                         **
+                         (Exists fb',
+                          (Own (knot_var skenv fb'))
+                            **
+                            (⌜forall f (EQ: f' = Some f),
+                                  exists fb fn,
+                                    (<<BLK: fb' = Vptr fb 0>>) /\
+                                    (<<FN: skenv.(SkEnv.blk2id) fb = Some fn>>) /\
+                                    (<<FIND: List.find (fun '(_fn, _) => dec fn _fn) (FunStb skenv) = Some (fn, fun_gen RecStb skenv f)>>)⌝)))) mr>>).
+
 
   Variable RecStb_incl
     :
@@ -163,11 +198,14 @@ Section SIMMODSEM.
     i. eapply adequacy_lift.
     econstructor 1 with (wf:=wf (Sk.load_skenv sk)); et; ss.
     2: {
-      eexists. exists None. esplits; ss.
+      eexists. exists None. esplits; ss. right.
       exists (GRA.embed (knot_full None)), (knot_var sk Vundef). splits; ss.
       { apply URA.add_comm. }
       { exists ε. rewrite URA.unit_id. ss. }
-      { right. ii. ss. }
+      { exists Vundef. exists (knot_var sk Vundef), (@URA.unit Σ). splits; ss.
+        { rewrite URA.unit_id. ss. }
+        { exists ε. rewrite URA.unit_id. ss. }
+      }
     }
     hexploit (SKINCL "rec"); ss; eauto. intros [blk0 FIND0].
     hexploit (SKINCL "_f"); ss; eauto. intros [blk1 FIND1].
@@ -175,94 +213,100 @@ Section SIMMODSEM.
     { init. unfold recF, ccall. harg_tac. iRefresh.
       destruct x as [f n]. ss. des. subst.
       iRefresh. iDestruct PRE. iPure A. des; clarify.
-      iDestruct SEP. iDestruct A0.
+      iDestruct SEP.
       { hexploit knot_frag_unique; et. intro T.
-        iImpure T. iSpecialize T A0. iSpecialize T PRE. ss. }
-      rewrite FIND1. eapply Any.upcast_inj in A. des; clarify. steps.
-      rewrite Any.upcast_downcast in _UNWRAPN. clarify. astart 1.
+        iImpure T. iSpecialize T SEP. iSpecialize T PRE. ss. }
+      iDestruct SEP. rewrite FIND1. eapply Any.upcast_inj in A. des; clarify. steps.
+      rewrite Any.upcast_downcast in _UNWRAPN. clarify. astart 2.
       assert (f' = Some f); subst.
       { hexploit knot_ra_merge; et. intro T.
         iImpure T. iSpecialize T SEP. iSpecialize T PRE. iPure T. auto. }
-      specialize (A0 f). iRefresh.
-      assert (TMP: Some f = Some f); auto.
-      iUnpure TMP. iRefresh. iSpecialize A0 TMP.
-      iDestruct A0. iDestruct A0. iPure A0. des. clarify.
-      steps. iMerge PRE SEP.
-      acall_tac (blk1, 0%Z, Vptr fb 0) (ord_pure 1) PRE (@URA.unit Σ) A.
+      iDestruct A0. iDestruct A0. iPure A.
+      hexploit A; eauto. i. des. clarify. iRefresh. steps.
+      acall_tac (blk1, 0%Z, Vptr fb 0) (ord_pure 0) PRE SEP A0.
       { eapply MemStb_incl. ss. stb_tac. ss. }
-      { splits; ss. iRefresh. iSplitL A; ss.
-        iSplitR A; ss. unfold knot_var in *. rewrite FIND1 in *. iApply A. }
-      { splits; ss. admit "fix mem". }
-      { unfold wf. iDestruct PRE. esplits; eauto. iRefresh.
-        iSplitL A0.
-        { iApply A0. }
-        { iLeft. iApply PRE. }
-      }
-      iDestruct SEP.
-      steps.
-
-left. iLeft.
-
-
-        iSplitR
-
-
-
- eauto with ord_step.
-iApply A.
-
-red. red. esplits; eauto.
-        { eapply SKWF. eauto. }
-        { eapply RecStb_incl. des_ifs. }
-      }
-
-Ltac hcall_tac x o MR_SRC1 FR_SRC1 RARG_SRC :=
-
-
-      acatch.
-
-      rewrite Any.upcast_downcast. ss. steps. rewrite FN. ss. steps.
-      hexploit (SKINCL "rec"); ss; eauto. i. des. rewrite H0. ss. steps.
-      acall_tac n (ord_pure (2 * n)) SIM (@URA.unit Σ) PRE; ss.
+      { splits; ss. iRefresh. iSplitL A0; ss.
+        iSplitR A0; ss. unfold knot_var in *. rewrite FIND1 in *. iApply A0. }
+      { splits; ss. eauto with ord_step. }
+      { unfold wf. esplits; eauto. iRefresh.
+        iLeft. iApply PRE. }
+      ss. des. clarify. iRefresh. iDestruct POST. iDestruct SEP0; cycle 1.
+      { iDestruct SEP0.
+        hexploit knot_full_unique; et. intro T.
+        iImpure T. iSpecialize T SEP. iSpecialize T SEP0. ss. }
+      assert (f' = Some f); subst.
+      { hexploit knot_ra_merge; et. intro T.
+        iImpure T. iSpecialize T SEP. iSpecialize T SEP0. iPure T. auto. }
+      steps. iPure A0. eapply Any.upcast_inj in A0. des; clarify.
+      rewrite Any.upcast_downcast in _UNWRAPN. clarify.
+      steps. rewrite FN. steps. rewrite FIND0. steps.
+      iMerge POST SEP. steps.
+      acall_tac n (ord_pure (2 * n)) POST (@URA.unit Σ) SEP0; ss.
       { eapply FunStb_incl. eauto. }
-      { splits; ss. iRefresh. iSplitR PRE; ss.
+      { splits; ss. iRefresh. iSplitR SEP0; ss.
         red. red. esplits; eauto.
         { eapply SKWF. eauto. }
         { eapply RecStb_incl. des_ifs. }
       }
       { splits; ss. eauto with ord_step. }
-      { esplits; eauto. i. clarify. esplits; eauto. }
-      ss. des. clarify. iRefresh. iDestruct POST. iPure POST.
-      eapply Any.upcast_inj in POST. des; clarify.
+      { esplits; eauto. iRefresh. iDestruct POST.
+        iRight. iSplitL A0; et. iExists (Vptr fb 0). iSplitL POST; ss.
+        unfold knot_var. rewrite FIND1. iApply POST.
+      }
+      ss. des. clarify. iRefresh. iDestruct POST0. iPure POST0.
+      eapply Any.upcast_inj in POST0. des; clarify.
       steps. rewrite Any.upcast_downcast in _UNWRAPN. clarify.
       astop. force_l. eexists.
-      hret_tac SIM0 A; ss.
-      { split; ss. iRefresh. iSplitL A; ss. }
+      hret_tac SEP A0; ss.
+      { split; ss. iRefresh. iSplitL A0; ss. }
       { esplits; eauto. }
     }
     { init. unfold knotF, ccall. harg_tac.
       ss. des. subst.
       iRefresh. iDestruct PRE. iPure PRE. des; clarify.
       iDestruct A. eapply Any.upcast_inj in PRE. des; clarify. steps.
-      rewrite Any.upcast_downcast in _UNWRAPN. clarify. astart 0. astop.
-      steps. hexploit (SKINCL "rec"); ss; eauto. i. des. rewrite H0. ss. steps.
-      iRefresh. iMerge SIM A.
-
-      rewrite <- own_sep in SIM.
-      eapply own_upd in SIM; cycle 1; [|rewrite intro_iHyp in SIM;iUpdate SIM].
+      rewrite Any.upcast_downcast in _UNWRAPN. clarify. iDestruct SEP.
+      { hexploit knot_frag_unique; et. intro T.
+        iImpure T. iSpecialize T SEP. iSpecialize T A. ss. }
+      iDestruct SEP. astart 1.
+      iMerge SEP A. rewrite <- own_sep in SEP.
+      eapply own_upd in SEP; cycle 1; [|rewrite intro_iHyp in SEP;iUpdate SEP].
       { rewrite GRA.embed_add. eapply GRA.embed_updatable.
         instantiate (1:= knot_full (Some x) ⋅ knot_frag (Some x)).
         eapply Auth.auth_update. rr. ii. des; ss. ur in FRAME. ur. destruct ctx; ss; clarify.
       }
-      rewrite <- GRA.embed_add in SIM. rewrite own_sep in SIM. iDestruct SIM.
-      force_l. eexists.
-      hret_tac SIM A; ss.
-      { esplits; eauto. iRefresh. iSplitR A; eauto. red. red. esplits; eauto.
+      rewrite <- GRA.embed_add in SEP. rewrite own_sep in SEP. iDestruct SEP.
+      steps. rewrite FIND1. steps.
+      iDestruct A0. iDestruct A0. iPure A1.
+      acall_tac (blk1, 0%Z, Vptr fb 0) (ord_pure 0) A SEP A0; ss.
+      { eapply MemStb_incl. stb_tac. ss. }
+      { splits; ss. iRefresh. iExists x5. iSplitL A0; ss.
+        iSplitR A0; ss. unfold knot_var in *. rewrite FIND1 in *. iApply A0. }
+      { splits; ss. eauto with ord_step. }
+      { esplits; eauto. iLeft. iApply A. }
+      steps. ss. des; clarify.
+      rewrite Any.upcast_downcast in _UNWRAPN. clarify. iDestruct SEP0; cycle 1.
+      { iDestruct SEP0.
+        hexploit knot_full_unique; et. intro T.
+        iImpure T. iSpecialize T SEP0. iSpecialize T SEP. ss. }
+      assert (f'0 = Some x); subst.
+      { hexploit knot_ra_merge; et. intro T.
+        iImpure T. iSpecialize T SEP. iSpecialize T SEP0. iPure T. auto. }
+      astop. rewrite FIND0. steps. force_l. eexists.
+      iMerge POST SEP. hret_tac POST SEP0; ss.
+      { esplits; eauto. iRefresh. iSplitR SEP0; ss. red. red. esplits; eauto.
         { eapply SKWF; eauto. }
         { eapply RecStb_incl; eauto. }
       }
-      { esplits; eauto. i. clarify. esplits; eauto. }
+      { iDestruct POST. esplits; eauto. iRight. iSplitL A; ss.
+        { iApply A. }
+        { iExists (Vptr fb 0). iSplitL POST.
+          { unfold knot_var. rewrite FIND1. iApply POST. }
+          { red. red. i. clarify. esplits; eauto. }
+        }
+      }
     }
-  Qed.
+  Admitted.
+  (* proof is done. but Coq rejects it...  *)
 
 End SIMMODSEM.

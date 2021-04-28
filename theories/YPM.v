@@ -655,7 +655,10 @@ Ltac iAssert H Abody :=
   end
 .
 Ltac iExists x :=
-  exists x; iRefresh
+  match x with
+  | ltac_wild => eexists; iRefresh
+  | _ => exists x; iRefresh
+  end
 .
 Ltac iUpdate H :=
   eapply upd_update in H; [|on_gwf ltac:(fun GWF => eapply wf_downward; [|eapply GWF]); eexists ε; r_equalize; r_solve; fail];

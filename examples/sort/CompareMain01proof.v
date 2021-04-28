@@ -65,7 +65,7 @@ Section SIMMODSEM.
       rewrite Any.upcast_downcast. ss. steps. astart 2.
       hexploit (@SKINCL "compare").
       { econs; ss. }
-      i. des. rewrite H. steps.
+      i. des. rewrite FIND. steps.
       acall_tac (x0, x1, mycmp) (ord_pure 1) (@URA.unit Σ) (@URA.unit Σ) (@URA.unit Σ); ss.
       { eapply GlobalStb_wrap. }
       { ss. esplits; eauto. red. esplits; eauto.

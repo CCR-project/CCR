@@ -118,9 +118,9 @@ Section SIMMODSEM.
       iRefresh. iDestruct PRE. iPure A. des; clarify.
       rewrite Any.upcast_downcast. ss. steps.
       hexploit (SKINCL "fib"); ss; eauto. i. des.
-      rewrite H0. ss. steps.
+      rewrite FIND. ss. steps.
       astart 2.
-      acall_tac Fib (ord_pure 0) (@URA.unit Σ) (@URA.unit Σ) PRE; ss.
+      acall_tac Fib (ord_pure 1) (@URA.unit Σ) (@URA.unit Σ) PRE; ss.
       { eapply GlobalStb_knot. }
       { splits; ss. iRefresh. iSplitR PRE; ss.
         { red. red. esplits; eauto.

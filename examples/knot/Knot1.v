@@ -38,7 +38,7 @@ Section KNOT.
                 (fun f => (
                      (fun varg o =>
                         ⌜exists fn fb,
-                            varg = [Vptr fb 0]↑ /\ o = ord_pure 0 /\
+                            varg = [Vptr fb 0]↑ /\ o = ord_pure 1 /\
                             skenv.(SkEnv.blk2id) fb = Some fn /\
                             List.find (fun '(_fn, _) => dec fn _fn) (FunStb skenv) = Some (fn, fun_gen RecStb skenv f)⌝ ** Exists old, Own (GRA.embed (knot_frag old))),
                      (fun vret => ⌜exists fn fb,
