@@ -205,7 +205,9 @@ Section AUX.
 
   Definition disclose_fsb (fsb: fspecbody): fspecbody :=
     mk_specbody (disclose fsb) (fun '(argh, is_k) => if is_k
-                                                     then trigger (Choose _) (*** YJ: We may generalize this to APC ***)
+                                                     then trigger (Choose _)
+                                                                  (*** YJ: We may generalize this to APC ***)
+                                                                  (*** YJ: We may further generalize this to any itree without pE ***)
                                                      (* else interp transl_itr (fsb.(fsb_body) argh) *)
                                                      else (fsb.(fsb_body) argh)
                                )
@@ -228,94 +230,140 @@ Section AUX.
 End AUX.
 
 
-(* Module KModSem. *)
-(* Section KMODSEM. *)
-
-(*   Context `{Σ: GRA.t}. *)
-
-(*   Record t: Type := mk { *)
-(*     fnsems: list (gname * (list val -> itree (callE +' pE +' eventE) val)); *)
-(*     mn: mname; *)
-(*     initial_st: Any.t; *)
-(*   } *)
-(*   . *)
-
-(*   Definition to_modsem (ms: t): ModSem.t := {| *)
-(*     (* ModSem.fnsems := List.map (map_snd (fun ktr arg => resum_itr (T:=Any.t) (cfun ktr arg))) ms.(fnsems); *) *)
-(*     (* ModSem.fnsems := List.map (map_snd (fun ktr => resum_itr (T:=Any.t) ∘ cfun ktr)) ms.(fnsems); *) *)
-(*     ModSem.fnsems := List.map (map_snd (((∘)∘(∘)) (resum_itr (T:=Any.t)) cfun)) ms.(fnsems); *)
-(*     ModSem.mn := ms.(mn); *)
-(*     ModSem.initial_mr := ε; *)
-(*     ModSem.initial_st := ms.(initial_st); *)
-(*   |} *)
-(*   . *)
 
 
+Variant oCallE: Type -> Type :=
+| oCall (is_k: bool) (tbr: bool) (fn: gname) (varg_src: Any.t): oCallE Any.t
+.
+
+Module KModSem.
+Section KMODSEM.
+
+  Context `{Σ: GRA.t}.
+
+  Record fspecbody := mk_specbody {
+    fsb_fspec:> fspec;
+    fsb_body: fsb_fspec.(AA) -> itree (oCallE +' pE +' eventE) fsb_fspec.(AR);
+  }
+  .
+
+  Record t: Type := mk {
+    (* fnsems: list (gname * (list val -> itree (oCallE +' pE +' eventE) val)); *)
+    fnsems: list (gname * fspecbody);
+    mn: mname;
+    initial_mr: Σ;
+    initial_st: Any.t;
+  }
+  .
+
+  (************************* TGT ***************************)
+  (************************* TGT ***************************)
+  (************************* TGT ***************************)
+
+  Definition transl_oCallE_tgt: oCallE ~> hCallE :=
+    fun T '(oCall is_k tbr fn args) => hCall tbr fn (Any.pair args is_k↑)
+  .
+
+  Definition transl_event_tgt: (oCallE +' pE +' eventE) ~> (hCallE +' pE +' eventE) :=
+    (bimap transl_oCallE_tgt (bimap (id_ _) (id_ _)))
+  .
+
+  Definition transl_itr_tgt: (oCallE +' pE +' eventE) ~> itree (hCallE +' pE +' eventE) :=
+    fun _ e => trigger (transl_event_tgt e)
+  .
+
+  Definition transl_fsb (fsb: fspecbody): HoareDef.fspecbody :=
+    HoareDef.mk_specbody fsb (interp (T:=_) transl_itr_tgt ∘ fsb.(fsb_body))
+  .
+
+  Coercion transl_fsb: fspecbody >-> HoareDef.fspecbody.
+
+  Definition to_tgt (ms: t): SModSem.t := {|
+    SModSem.fnsems := List.map (map_snd transl_fsb) ms.(fnsems);
+    SModSem.mn := ms.(mn);
+    SModSem.initial_mr := ms.(initial_mr);
+    SModSem.initial_st := ms.(initial_st);
+  |}
+  .
+
+  (************************* SRC ***************************)
+  (************************* SRC ***************************)
+  (************************* SRC ***************************)
+
+  Definition handle_oCallE_src: oCallE ~> itree Es :=
+    fun T '(oCall _ tbr fn args) =>
+      match tbr with
+      | true => tau;; trigger (Choose _)
+      | false => trigger (Call fn args)
+      end
+  .
+
+  Definition interp_oCallE_src `{E -< Es}: itree (oCallE +' E) ~> itree Es :=
+    interp (case_ (bif:=sum1) (handle_oCallE_src)
+                  ((fun T X => trigger X): E ~> itree Es))
+  .
+
+  Definition body_to_src {AA AR} (body: AA -> itree (oCallE +' pE +' eventE) AR): AA -> itree Es AR :=
+    fun varg_src => interp_oCallE_src (body varg_src)
+  .
+
+  Definition fun_to_src {AA AR} (body: AA -> itree (oCallE +' pE +' eventE) AR): (Any.t -> itree Es Any.t) :=
+    (cfun (body_to_src body))
+  .
+
+  Definition to_src (ms: t): ModSem.t := {|
+    ModSem.fnsems := List.map (map_snd (fun_to_src ∘ fsb_body)) ms.(fnsems);
+    ModSem.mn := ms.(mn);
+    ModSem.initial_mr := ε;
+    ModSem.initial_st := ms.(initial_st);
+  |}
+  .
+
+  Lemma interp_oCallE_src_bind
+        `{E -< Es} A B
+        (itr: itree (oCallE +' E) A) (ktr: A -> itree (oCallE +' E) B)
+    :
+      interp_oCallE_src (v <- itr ;; ktr v) = v <- interp_oCallE_src (itr);; interp_oCallE_src (ktr v)
+  .
+  Proof. unfold interp_oCallE_src. ired. grind. Qed.
+
+End KMODSEM.
+End KModSem.
 
 
-(*   Definition transl_callE: callE ~> hCallE := *)
-(*     fun T '(Call fn args) => hCall false fn args *)
-(*   . *)
-
-(*   Definition transl_event: (callE +' pE +' eventE) ~> (hCallE +' pE +' eventE) := *)
-(*     (bimap transl_callE (bimap (id_ _) (id_ _))) *)
-(*   . *)
-
-(*   Definition transl_itr: (callE +' pE +' eventE) ~> itree (hCallE +' pE +' eventE) := *)
-(*     embed ∘ transl_event *)
-(*   . *)
-
-(*   Definition transl_fun: (list val -> itree (callE +' pE +' eventE) val) -> fspecbody := *)
-(*     fun ktr => *)
-(*       mk_specbody fspec_trivial (interp (T:=val) transl_itr ∘ ktr) *)
-(*   . *)
-
-(*   Definition to_smodsem (ms: t): SModSem.t := {| *)
-(*     SModSem.fnsems := List.map (map_snd transl_fun) ms.(fnsems); *)
-(*     SModSem.mn := ms.(mn); *)
-(*     SModSem.initial_mr := ε; *)
-(*     SModSem.initial_st := ms.(initial_st); *)
-(*   |} *)
-(*   . *)
-
-(* End KMODSEM. *)
-(* End KModSem. *)
 
 
+Module KMod.
+Section KMOD.
 
+  Context `{Σ: GRA.t}.
 
-(* Module KMod. *)
-(* Section KMOD. *)
+  Record t: Type := mk {
+    get_modsem: SkEnv.t -> KModSem.t;
+    sk: Sk.t;
+  }
+  .
 
-(*   Context `{Σ: GRA.t}. *)
+  Definition to_src (md: t): Mod.t := {|
+    Mod.get_modsem := fun skenv => KModSem.to_src (md.(get_modsem) skenv);
+    Mod.sk := md.(sk);
+  |}
+  .
 
-(*   Record t: Type := mk { *)
-(*     get_modsem: SkEnv.t -> UModSem.t; *)
-(*     sk: Sk.t; *)
-(*   } *)
-(*   . *)
+  Definition to_tgt (md: t): SMod.t := {|
+    SMod.get_modsem := fun skenv => KModSem.to_tgt (md.(get_modsem) skenv);
+    SMod.sk := md.(sk);
+  |}
+  .
 
-(*   Definition to_mod (md: t): Mod.t := {| *)
-(*     Mod.get_modsem := UModSem.to_modsem ∘ md.(get_modsem); *)
-(*     Mod.sk := md.(sk); *)
-(*   |} *)
-(*   . *)
+  Lemma to_src_comm: forall md skenv, KModSem.to_src (md.(get_modsem) skenv) = (to_src md).(Mod.get_modsem) skenv.
+  Proof. i. refl. Qed.
 
-(*   Lemma to_mod_comm: forall md skenv, UModSem.to_modsem (md.(get_modsem) skenv) = (to_mod md).(Mod.get_modsem) skenv. *)
-(*   Proof. i. refl. Qed. *)
+  Lemma to_tgt_comm: forall md skenv, KModSem.to_tgt (md.(get_modsem) skenv) = (to_tgt md).(SMod.get_modsem) skenv.
+  Proof. i. refl. Qed.
 
-
-(*   Definition to_smod (md: t): SMod.t := {| *)
-(*     SMod.get_modsem := UModSem.to_smodsem ∘ md.(get_modsem); *)
-(*     SMod.sk := md.(sk); *)
-(*   |} *)
-(*   . *)
-
-(*   Lemma to_smod_comm: forall md skenv, UModSem.to_smodsem (md.(get_modsem) skenv) = (to_smod md).(SMod.get_modsem) skenv. *)
-(*   Proof. i. refl. Qed. *)
-
-(* End KMOD. *)
-(* End KMod. *)
+End KMOD.
+End KMod.
 
 
 
@@ -538,9 +586,9 @@ End LEMMA.
 Section ADQ.
   Context `{Σ: GRA.t}.
 
-  Variable _kmds: list SMod.t.
-  Let kmds: list SMod.t := List.map disclose_smod _kmds.
-  Let kmds_top: list Mod.t := List.map SMod.to_src _kmds.
+  Variable _kmds: list KMod.t.
+  Let kmds: list SMod.t := List.map (disclose_smod ∘ KMod.to_tgt) _kmds.
+  Let kmds_top: list Mod.t := List.map KMod.to_src _kmds.
   Variable umds: list UMod.t.
 
   Let sk_link: Sk.t := fold_right Sk.add Sk.unit ((List.map SMod.sk kmds) ++ (List.map UMod.sk umds)).
@@ -1190,21 +1238,144 @@ Section ADQ.
 
 
 
-  Lemma sim_known
-        md ske f0
+  Lemma sim_unknown_aux
+        mn (itr: itree _ val)
     :
-      sim_fun (transl_all (SModSem.mn (SMod.get_modsem md ske)) ∘ fun_to_src (fsb_body f0))
-              (transl_all (SModSem.mn (SMod.get_modsem md ske))
-                          ∘ fun_to_src
-                          (fun pat : AA f0 * bool => match pat with
-                                                     | (argh, true) => trigger (Choose (AR f0))
-                                                     | (argh, false) => fsb_body f0 argh
-                                                     end))
+      sim_body 100 (transl_all mn (KModSem.interp_oCallE_src itr))
+               (transl_all mn (interp_hCallE_src (interp KModSem.transl_itr_tgt itr)))
+  .
+  Proof.
+    ginit. { eapply cpn4_wcompat; eauto with paco. } revert itr. gcofix CIH. i.
+    ides itr.
+    { red_resum. red_transl_all. rewrite interp_ret. unfold interp_hCallE_src, KModSem.interp_oCallE_src.
+      rewrite ! interp_ret. red_transl_all. gstep; econs; et. }
+    { red_resum. red_transl_all. rewrite interp_tau. unfold interp_hCallE_src, KModSem.interp_oCallE_src.
+      rewrite ! interp_tau. red_transl_all. gstep; econs; et. gbase. eapply CIH. }
+    destruct e.
+    { destruct o.
+      rewrite unfold_interp. cbn.
+      unfold KModSem.interp_oCallE_src. rewrite unfold_interp. cbn.
+      rewrite interp_hCallE_src_bind.
+      red_transl_all.
+      unfold KModSem.transl_itr_tgt at 2. cbn.
+      unfold interp_hCallE_src at 2. rewrite unfold_interp. cbn.
+      ired. red_transl_all. ired.
+      des_ifs.
+      - red_transl_all. ired.
+        gstep; econs; et.
+        gstep; econs; et. ii.
+        red_transl_all. ired.
+        gstep; econs; et.
+        red_transl_all. ired.
+        gstep; econs; et.
+        unfold interp_hCallE_src at 1. rewrite interp_tau. red_transl_all.
+        instantiate (1:=101).
+        gstep; econs; et; [|by eapply OrdArith.lt_from_nat; ss].
+        gbase. eapply CIH; et.
+      - red_transl_all. ired.
+        gstep; econs; et. ii.
+        gstep; econs; et. ii.
+        red_transl_all. ired.
+        gstep; econs; et.
+        red_transl_all. ired.
+        gstep; econs; et.
+        unfold interp_hCallE_src at 1. rewrite interp_tau. red_transl_all.
+        instantiate (1:=101).
+        gstep; econs; et; [|by eapply OrdArith.lt_from_nat; ss].
+        gbase. eapply CIH; et.
+      -
+    }
+    { destruct o.
+      rewrite <- bind_trigger. rewrite ! interp_bind.
+      rewrite KModSem.interp_oCallE_src_bind.
+      rewrite interp_hCallE_src_bind.
+      red_transl_all.
+
+      set (fun x => transl_all mn (KModSem.interp_oCallE_src (k x))) as ksrc.
+      set (fun x => transl_all mn (interp_hCallE_src (interp KModSem.transl_itr_tgt (k x)))) as ktgt.
+
+      interp_red. rewrite interp_hCallE_src_bind. red_transl_all.
+      unfold KModSem.transl_itr_tgt. cbn. 
+      rewrite unfold_interp. cbn. unfold resum_itr. rewrite unfold_interp. cbn.
+      red_transl_all. ired.
+      rewrite interp_hCallE_src_bind. red_transl_all.
+      unfold UModSem.transl_itr at 2. cbn.
+      unfold interp_hCallE_src at 2. rewrite interp_trigger. cbn.
+      red_transl_all. ired.
+      gstep; econs; et. ii.
+      gstep; econs; et. ii.
+      ired.
+      gstep; econs; et. ii.
+      gstep; econs; et.
+      red_transl_all. ired.
+      gstep; econs; et.
+      unfold interp_hCallE_src. rewrite interp_tau. rewrite interp_ret. red_transl_all. ired.
+      instantiate (1:=101).
+      gstep; econs; et; [|by eapply OrdArith.lt_from_nat; ss].
+      gbase. eapply CIH; et.
+    }
+    destruct s.
+    { rewrite <- bind_trigger.
+      red_resum. red_transl_all.
+      set (fun x => transl_all mn (resum_itr (k x))) as ksrc.
+      interp_red. rewrite interp_hCallE_src_bind. red_transl_all.
+      set (fun x => transl_all mn (interp_hCallE_src (interp UModSem.transl_itr (k x)))) as ktgt.
+      rewrite unfold_interp. cbn. unfold resum_itr. rewrite unfold_interp. cbn.
+      red_transl_all. ired.
+      rewrite interp_hCallE_src_bind. red_transl_all.
+      unfold UModSem.transl_itr at 2. cbn.
+      unfold interp_hCallE_src at 2. rewrite interp_trigger. cbn.
+      red_transl_all. ired.
+      gstep; econs; et. ii. ired.
+      gstep; econs; et. ii. red_transl_all. ired.
+      gstep; econs; et. ii. unfold interp_hCallE_src.
+      rewrite unfold_interp; cbn.
+      rewrite unfold_interp; cbn.
+      red_transl_all. ired.
+      instantiate (1:=101).
+      gstep; econs; et; [|by eapply OrdArith.lt_from_nat; ss].
+      gbase. eapply CIH; et.
+    }
+    { rewrite <- bind_trigger.
+      red_resum. red_transl_all.
+      set (fun x => transl_all mn (resum_itr (k x))) as ksrc.
+      interp_red. rewrite interp_hCallE_src_bind. red_transl_all.
+      set (fun x => transl_all mn (interp_hCallE_src (interp UModSem.transl_itr (k x)))) as ktgt.
+      rewrite unfold_interp. cbn. unfold resum_itr. rewrite unfold_interp. cbn.
+      red_transl_all. ired.
+      rewrite interp_hCallE_src_bind. red_transl_all.
+      unfold UModSem.transl_itr at 2. cbn.
+      unfold interp_hCallE_src at 2. rewrite interp_trigger. cbn.
+      red_transl_all. ired.
+      gstep; econs; et. ii. ired.
+      gstep; econs; et. ii. red_transl_all. ired.
+      gstep; econs; et. ii. unfold interp_hCallE_src.
+      rewrite unfold_interp; cbn.
+      rewrite unfold_interp; cbn.
+      red_transl_all. ired.
+      instantiate (1:=101).
+      gstep; econs; et; [|by eapply OrdArith.lt_from_nat; ss].
+      gbase. eapply CIH; et.
+    }
+  Unshelve.
+    all: try (by exact Ord.O).
+  Qed.
+
+  Lemma sim_known
+        mn (f0: KModSem.fspecbody)
+    :
+      sim_fun (transl_all mn ∘ KModSem.fun_to_src (KModSem.fsb_body f0))
+              (transl_all mn ∘ fun_to_src
+                          (fun pat => match pat with
+                                      | (_, true) => trigger (Choose _)
+                                      | (argh, false) => interp KModSem.transl_itr_tgt (KModSem.fsb_body f0 argh)
+                                      end))
   .
   Proof.
     ii.
     esplits.
     unfold fun_to_src. unfold body_to_src. unfold cfun.
+    unfold KModSem.fun_to_src. unfold KModSem.body_to_src. unfold cfun.
     red_resum.
     red_transl_all.
     destruct (args↓) eqn:A; cycle 1.
@@ -1228,23 +1399,14 @@ Section ADQ.
     all: try (by exact Ord.O).
   Qed.
 
-  (* sim_fun (transl_all (SModSem.mn (SMod.get_modsem x1 skenv)) ∘ fun_to_src (fsb_body f0)) *)
-  (*   (transl_all (SModSem.mn (SMod.get_modsem x1 skenv)) *)
-  (*    ∘ fun_to_src *)
-  (*        (fun pat : AA f0 * bool => match pat with *)
-  (*                                   | (argh, true) => trigger (Choose (AR f0)) *)
-  (*                                   | (argh, false) => fsb_body f0 argh *)
-  (*                                   end)) *)
-
-
-  (* sim_fun (transl_all (SModSem.mn (SMod.get_modsem x1 skenv)) ∘ fun_to_src (fsb_body f0)) *)
-  (*   (transl_all (SModSem.mn (SMod.get_modsem x1 skenv)) *)
-  (*    ∘ fun_to_src *)
-  (*        (fun pat : AA f0 * bool => *)
-  (*         match pat with *)
-  (*         | (argh, true) => trigger (Choose (AR f0)) *)
-  (*         | (argh, false) => interp transl_itr (fsb_body f0 argh) *)
-  (*         end)) *)
+  sim_fun (transl_all (KModSem.mn (KMod.get_modsem x1 skenv)) ∘ KModSem.fun_to_src (KModSem.fsb_body f0))
+    (transl_all (KModSem.mn (KMod.get_modsem x1 skenv))
+     ∘ fun_to_src
+         (fun pat : AA (KModSem.fsb_fspec f0) * bool =>
+          match pat with
+          | (argh, true) => trigger (Choose (AR (KModSem.fsb_fspec f0)))
+          | (argh, false) => interp KModSem.transl_itr_tgt (KModSem.fsb_body f0 argh)
+          end))
 
   Lemma sim_unknown_aux
         mn (itr: itree _ val)
