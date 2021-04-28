@@ -1010,43 +1010,64 @@ Section ADQ.
   (*             { destruct c. ss. cbn. rewrite unfold_interp. ss. unfold UModSem.transl_callE. cbn. *)
   (* Abort. *)
 
-  Inductive _sim_body (sim_body: forall [T], itree EventsL.Es T -> itree EventsL.Es T -> Prop):
-    forall [T], itree EventsL.Es T -> itree EventsL.Es T -> Prop :=
+  Inductive _sim_body (sim_body: forall [T], Ord.t -> itree EventsL.Es T -> itree EventsL.Es T -> Prop):
+    forall [T], Ord.t -> itree EventsL.Es T -> itree EventsL.Es T -> Prop :=
   | sim_body_tau
+      o0 o1
       T (itr0 itr1: itree _ T)
-      (SIM: sim_body itr0 itr1)
+      (SIM: sim_body o1 itr0 itr1)
     :
-      _sim_body sim_body (tau;; itr0) (tau;; itr1)
+      _sim_body sim_body o0 (tau;; itr0) (tau;; itr1)
   | sim_body_ret
+      o0
       T (t: T)
     :
-      _sim_body sim_body (Ret t) (Ret t)
+      _sim_body sim_body o0 (Ret t) (Ret t)
   | sim_body_call
+      o0 o1
       fn args T (ktr0 ktr1: ktree _ _ T)
-      (SIM: forall rv, sim_body (ktr0 rv) (ktr1 rv))
+      (SIM: forall rv, sim_body o1 (ktr0 rv) (ktr1 rv))
     :
-      _sim_body sim_body (trigger (Call fn args) >>= ktr0)
+      _sim_body sim_body o0 (trigger (Call fn args) >>= ktr0)
                 (trigger (Call fn (Any.pair args false↑)) >>= ktr1)
   | sim_rE
+      o0 o1
       T (re: EventsL.rE T) S (ktr0 ktr1: ktree _ _ S)
-      (SIM: forall rv, sim_body (ktr0 rv) (ktr1 rv))
+      (SIM: forall rv, sim_body o1 (ktr0 rv) (ktr1 rv))
     :
-      _sim_body sim_body (trigger re >>= ktr0) (trigger re >>= ktr1)
+      _sim_body sim_body o0 (trigger re >>= ktr0) (trigger re >>= ktr1)
   | sim_pE
+      o0 o1
       T (pe: EventsL.pE T) S (ktr0 ktr1: ktree _ _ S)
-      (SIM: forall rv, sim_body (ktr0 rv) (ktr1 rv))
+      (SIM: forall rv, sim_body o1 (ktr0 rv) (ktr1 rv))
     :
-      _sim_body sim_body (trigger pe >>= ktr0) (trigger pe >>= ktr1)
+      _sim_body sim_body o0 (trigger pe >>= ktr0) (trigger pe >>= ktr1)
   | sim_eventE
+      o0 o1
       T (ee: eventE T) S (ktr0 ktr1: ktree _ _ S)
-      (SIM: forall rv, sim_body (ktr0 rv) (ktr1 rv))
+      (SIM: forall rv, sim_body o1 (ktr0 rv) (ktr1 rv))
     :
-      _sim_body sim_body (trigger ee >>= ktr0) (trigger ee >>= ktr1)
+      _sim_body sim_body o0 (trigger ee >>= ktr0) (trigger ee >>= ktr1)
+
+  | sim_body_tauL
+      o0 o1
+      T (itr0 itr1: itree _ T)
+      (SIM: sim_body o1 itr0 itr1)
+      (LT: (o1 < o0)%ord)
+    :
+      _sim_body sim_body o0 (tau;; itr0) (itr1)
+  | sim_body_tauR
+      o0 o1
+      T (itr0 itr1: itree _ T)
+      (SIM: sim_body o1 itr0 itr1)
+      (LT: (o1 < o0)%ord)
+    :
+      _sim_body sim_body o0 (itr0) (tau;; itr1)
   .
 
-  Definition sim_body: forall [T], itree EventsL.Es T -> itree EventsL.Es T -> Prop := paco3 _sim_body bot3.
+  Definition sim_body: forall [T], Ord.t -> itree EventsL.Es T -> itree EventsL.Es T -> Prop := paco4 _sim_body bot4.
 
-  Lemma sim_body_mon: monotone3 _sim_body.
+  Lemma sim_body_mon: monotone4 _sim_body.
   Proof.
     ii. dependent destruction IN; try (by econs; et).
   Qed.
@@ -1055,35 +1076,43 @@ Section ADQ.
   Hint Unfold sim_body.
   Hint Resolve sim_body_mon: paco.
 
-  Variant bbindR (r s: forall S, (itree EventsL.Es S) -> (itree EventsL.Es S) -> Prop):
-    forall S, (itree _ S) -> (itree _ S) -> Prop :=
+  Lemma sim_body_mon_ord r S i0 i1 (ORD: (i0 <= i1)%ord): @_sim_body r S i0 <2= @_sim_body r S i1.
+  Proof.
+    ii. dependent destruction PR; try (by econs; et).
+    - econs; try apply SIM; et. eapply Ord.lt_le_lt; et.
+    - econs; try apply SIM; et. eapply Ord.lt_le_lt; et.
+  Qed.
+
+  Variant bbindR (r s: forall S, Ord.t -> (itree EventsL.Es S) -> (itree EventsL.Es S) -> Prop):
+    forall S, Ord.t -> (itree _ S) -> (itree _ S) -> Prop :=
   | bbindR_intro
+      o0 o1
 
       R
       (i_src i_tgt: itree _ R)
-      (SIM: r _ i_src i_tgt)
+      (SIM: r _ o0 i_src i_tgt)
 
       S
       (k_src k_tgt: ktree _ R S)
-      (SIMK: forall vret, s _ (k_src vret) (k_tgt vret))
+      (SIMK: forall vret, s _ o1 (k_src vret) (k_tgt vret))
     :
-      bbindR r s (i_src >>= k_src) (i_tgt >>= k_tgt)
+      bbindR r s (o1 + o0)%ord (i_src >>= k_src) (i_tgt >>= k_tgt)
   .
 
   Hint Constructors bbindR: core.
 
   Lemma bbindR_mon
         r1 r2 s1 s2
-        (LEr: r1 <3= r2) (LEs: s1 <3= s2)
+        (LEr: r1 <4= r2) (LEs: s1 <4= s2)
     :
-      bbindR r1 s1 <3= bbindR r2 s2
+      bbindR r1 s1 <4= bbindR r2 s2
   .
   Proof. ii. destruct PR; econs; et. Qed.
 
   Definition bbindC r := bbindR r r.
   Hint Unfold bbindC: core.
 
-  Lemma bbindC_wrespectful: wrespectful3 (_sim_body) bbindC.
+  Lemma bbindC_wrespectful: wrespectful4 (_sim_body) bbindC.
   Proof.
     econstructor; repeat intro.
     { eapply bbindR_mon; eauto. }
@@ -1096,6 +1125,8 @@ Section ADQ.
       { econs 2; eauto with paco. econs; eauto with paco. }
     + irw.
       exploit SIMK; eauto. i.
+      eapply sim_body_mon_ord.
+      { instantiate (1:=o1). eapply OrdArith.add_base_l. }
       eapply sim_body_mon; eauto with paco.
     + rewrite ! bind_bind.
       econs; eauto. ii.
@@ -1106,17 +1137,23 @@ Section ADQ.
       { econs 2; eauto with paco. econs; eauto with paco. }
     + rewrite ! bind_bind. econs; eauto. ii.
       { econs 2; eauto with paco. econs; eauto with paco. }
+    + ired. econsr; eauto.
+      { econs 2; eauto with paco. econs; eauto with paco. }
+      eapply OrdArith.lt_add_r; et.
+    + ired. econsr; eauto.
+      { econs 2; eauto with paco. econs; eauto with paco. }
+      eapply OrdArith.lt_add_r; et.
   Qed.
 
-  Lemma bbindC_spec: bbindC <4= gupaco3 (_sim_body) (cpn3 (_sim_body)).
+  Lemma bbindC_spec: bbindC <5= gupaco4 (_sim_body) (cpn4 (_sim_body)).
   Proof.
-    intros. eapply wrespect3_uclo; eauto with paco. eapply bbindC_wrespectful.
+    intros. eapply wrespect4_uclo; eauto with paco. eapply bbindC_wrespectful.
   Qed.
 
 
 
   Definition sim_fun T (f0 f1: (Any.t -> itree EventsL.Es T)): Prop :=
-    forall args, sim_body (f0 args) (f1 (Any.pair args false↑))
+    forall args, exists o0, sim_body o0 (f0 args) (f1 (Any.pair args false↑))
   .
 
   (*** TODO: remove redundancy with SimModSemL && migrate related lemmas ***)
@@ -1187,11 +1224,11 @@ Section ADQ.
   Lemma sim_unknown_aux
         mn (itr: itree _ val)
     :
-      sim_body (transl_all mn (resum_itr itr))
+      sim_body 100 (transl_all mn (resum_itr itr))
                (transl_all mn (interp_hCallE_src (interp UModSem.transl_itr itr)))
   .
   Proof.
-    ginit. revert itr. gcofix CIH. i.
+    ginit. { eapply cpn4_wcompat; eauto with paco. } revert itr. gcofix CIH. i.
     ides itr.
     { red_resum. red_transl_all. rewrite interp_ret. unfold interp_hCallE_src. rewrite interp_ret. red_transl_all.
       gstep; econs; et. }
