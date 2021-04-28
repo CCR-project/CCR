@@ -191,22 +191,24 @@ Section AUX.
 -- by defining an equiv-class of physical state and proving that the is_k cases behave same upto the equiv class && is_u cases change the state upto equiv class --
    but it looks like an over-engineering at the moment. ***)
 
-  Definition transl_hCallE: hCallE ~> hCallE :=
-    fun T '(hCall tbr fn args) => hCall tbr fn (Any.pair args false↑)
-  .
+  (* Definition transl_hCallE: hCallE ~> hCallE := *)
+  (*   fun T '(hCall tbr fn args) => hCall tbr fn (Any.pair args false↑) *)
+  (* . *)
 
-  Definition transl_event: (hCallE +' pE +' eventE) ~> (hCallE +' pE +' eventE) :=
-    (bimap transl_hCallE (bimap (id_ _) (id_ _)))
-  .
+  (* Definition transl_event: (hCallE +' pE +' eventE) ~> (hCallE +' pE +' eventE) := *)
+  (*   (bimap transl_hCallE (bimap (id_ _) (id_ _))) *)
+  (* . *)
 
-  Definition transl_itr: (hCallE +' pE +' eventE) ~> itree (hCallE +' pE +' eventE) :=
-    fun _ e => trigger (transl_event e)
-  .
+  (* Definition transl_itr: (hCallE +' pE +' eventE) ~> itree (hCallE +' pE +' eventE) := *)
+  (*   fun _ e => trigger (transl_event e) *)
+  (* . *)
 
   Definition disclose_fsb (fsb: fspecbody): fspecbody :=
     mk_specbody (disclose fsb) (fun '(argh, is_k) => if is_k
                                                      then trigger (Choose _) (*** YJ: We may generalize this to APC ***)
-                                                     else interp transl_itr (fsb.(fsb_body) argh))
+                                                     (* else interp transl_itr (fsb.(fsb_body) argh) *)
+                                                     else (fsb.(fsb_body) argh)
+                               )
   .
 
   Definition disclose_smodsem (ms: SModSem.t): SModSem.t := {|
@@ -1184,33 +1186,56 @@ Section ADQ.
             try rewrite transl_all_callE
            )
   .
-  (* Lemma sim_known *)
-  (*       md ske f0 *)
-  (*   : *)
-  (*     sim_fun (transl_all (SModSem.mn (SMod.get_modsem md ske)) ∘ fun_to_src (fsb_body f0)) *)
-  (*             (transl_all (SModSem.mn (SMod.get_modsem md ske)) *)
-  (*                         ∘ fun_to_src *)
-  (*                         (fun pat : AA f0 * bool => match pat with *)
-  (*                                                    | (argh, true) => trigger (Choose (AR f0)) *)
-  (*                                                    | (argh, false) => fsb_body f0 argh *)
-  (*                                                    end)) *)
-  (* . *)
-  (* Proof. *)
-  (*   ii. *)
-  (*   { *)
-  (*     set (mn:=(SModSem.mn (SMod.get_modsem md ske))) in *. *)
-  (*     unfold fun_to_src. *)
-  (*     unfold body_to_src. *)
-  (*     unfold cfun. *)
-  (*     destruct (args↓) eqn:A. *)
-  (*     { cbn. red_transl_all. ired. *)
-  (*       erewrite <- Any.downcast_upcast with (a:=args); et. *)
-  (*       rewrite upcast_pair_downcast. ss. red_transl_all. ired. refl. *)
-  (*       destruct ((Any.pair args false↑)↓) eqn:B. *)
-  (*   } *)
-  (*   abstr (fsb_body f0) itr. *)
-  (*   ginit. revert_until md. revert md. gcofix CIH. i. *)
-  (* Qed. *)
+
+
+
+
+  Lemma sim_known
+        md ske f0
+    :
+      sim_fun (transl_all (SModSem.mn (SMod.get_modsem md ske)) ∘ fun_to_src (fsb_body f0))
+              (transl_all (SModSem.mn (SMod.get_modsem md ske))
+                          ∘ fun_to_src
+                          (fun pat : AA f0 * bool => match pat with
+                                                     | (argh, true) => trigger (Choose (AR f0))
+                                                     | (argh, false) => fsb_body f0 argh
+                                                     end))
+  .
+  Proof.
+    ii.
+    esplits.
+    unfold fun_to_src. unfold body_to_src. unfold cfun.
+    red_resum.
+    red_transl_all.
+    destruct (args↓) eqn:A; cycle 1.
+    { cbn.
+      destruct ((Any.pair args false↑)↓) eqn:B.
+      { ss. destruct p. eapply pair_downcast_lemma2 in B. des. clarify. }
+      { ss.
+        Fail rewrite transl_all_triggerNB. (******** WHY??? FIXME *********)
+        unfold triggerNB. red_transl_all. ired.
+        ginit. { eapply cpn4_wcompat; eauto with paco. } gstep. econs; et. ii; ss.
+      }
+    }
+    cbn. erewrite <- Any.downcast_upcast with (a:=args); et. rewrite upcast_pair_downcast. ss. ired.
+    red_transl_all. ired. red_resum. red_transl_all.
+    instantiate (1:=(100 + 100)%ord).
+    ginit. { eapply cpn4_wcompat; eauto with paco. } guclo bbindC_spec.
+    econs.
+    { gfinal. right. admit "". }
+    ii. red_resum. red_transl_all. gstep; econs; et.
+  Unshelve.
+    all: try (by exact Ord.O).
+  Qed.
+
+  (* sim_fun (transl_all (SModSem.mn (SMod.get_modsem x1 skenv)) ∘ fun_to_src (fsb_body f0)) *)
+  (*   (transl_all (SModSem.mn (SMod.get_modsem x1 skenv)) *)
+  (*    ∘ fun_to_src *)
+  (*        (fun pat : AA f0 * bool => match pat with *)
+  (*                                   | (argh, true) => trigger (Choose (AR f0)) *)
+  (*                                   | (argh, false) => fsb_body f0 argh *)
+  (*                                   end)) *)
+
 
   (* sim_fun (transl_all (SModSem.mn (SMod.get_modsem x1 skenv)) ∘ fun_to_src (fsb_body f0)) *)
   (*   (transl_all (SModSem.mn (SMod.get_modsem x1 skenv)) *)
@@ -1255,30 +1280,66 @@ Section ADQ.
       red_transl_all. ired.
       gstep; econs; et.
       unfold interp_hCallE_src. rewrite interp_tau. rewrite interp_ret. red_transl_all. ired.
-      rewrite 
-      TTTTTTTTTTTTTTTTTTTTTTT
-      guclo bbindC_spec. econs.
-      - rewrite unfold_interp. cbn.
-        admit "".
-      - i. gstep.
-      rewrite interp_bind. ired.
+      instantiate (1:=101).
+      gstep; econs; et; [|by eapply OrdArith.lt_from_nat; ss].
+      gbase. eapply CIH; et.
     }
-    unfold resum_itr. unfold transl_all. unfold interp_hCallE_src.
-    rewrite ! interp_interp.
-    ides itr.
-    - 
+    destruct s.
+    { rewrite <- bind_trigger.
+      red_resum. red_transl_all.
+      set (fun x => transl_all mn (resum_itr (k x))) as ksrc.
+      interp_red. rewrite interp_hCallE_src_bind. red_transl_all.
+      set (fun x => transl_all mn (interp_hCallE_src (interp UModSem.transl_itr (k x)))) as ktgt.
+      rewrite unfold_interp. cbn. unfold resum_itr. rewrite unfold_interp. cbn.
+      red_transl_all. ired.
+      rewrite interp_hCallE_src_bind. red_transl_all.
+      unfold UModSem.transl_itr at 2. cbn.
+      unfold interp_hCallE_src at 2. rewrite interp_trigger. cbn.
+      red_transl_all. ired.
+      gstep; econs; et. ii. ired.
+      gstep; econs; et. ii. red_transl_all. ired.
+      gstep; econs; et. ii. unfold interp_hCallE_src.
+      rewrite unfold_interp; cbn.
+      rewrite unfold_interp; cbn.
+      red_transl_all. ired.
+      instantiate (1:=101).
+      gstep; econs; et; [|by eapply OrdArith.lt_from_nat; ss].
+      gbase. eapply CIH; et.
+    }
+    { rewrite <- bind_trigger.
+      red_resum. red_transl_all.
+      set (fun x => transl_all mn (resum_itr (k x))) as ksrc.
+      interp_red. rewrite interp_hCallE_src_bind. red_transl_all.
+      set (fun x => transl_all mn (interp_hCallE_src (interp UModSem.transl_itr (k x)))) as ktgt.
+      rewrite unfold_interp. cbn. unfold resum_itr. rewrite unfold_interp. cbn.
+      red_transl_all. ired.
+      rewrite interp_hCallE_src_bind. red_transl_all.
+      unfold UModSem.transl_itr at 2. cbn.
+      unfold interp_hCallE_src at 2. rewrite interp_trigger. cbn.
+      red_transl_all. ired.
+      gstep; econs; et. ii. ired.
+      gstep; econs; et. ii. red_transl_all. ired.
+      gstep; econs; et. ii. unfold interp_hCallE_src.
+      rewrite unfold_interp; cbn.
+      rewrite unfold_interp; cbn.
+      red_transl_all. ired.
+      instantiate (1:=101).
+      gstep; econs; et; [|by eapply OrdArith.lt_from_nat; ss].
+      gbase. eapply CIH; et.
+    }
+  Unshelve.
+    all: try (by exact Ord.O).
   Qed.
 
   Lemma sim_unknown
-        md (ktr: list val -> itree _ val) ske
+        (ktr: list val -> itree _ val) mn
     :
-      sim_fun (fun args => transl_all (UModSem.mn (UMod.get_modsem md ske)) (resum_itr (cfun ktr args)))
-              (transl_all (UModSem.mn (UMod.get_modsem md ske))
-                          ∘ fun_to_src (fun (x: list val * bool) => interp UModSem.transl_itr (ktr (fst x))))
+      sim_fun (fun args => transl_all mn (resum_itr (cfun ktr args)))
+              (transl_all mn ∘ fun_to_src (fun (x: list val * bool) => interp UModSem.transl_itr (ktr (fst x))))
   .
   Proof.
-    set (UModSem.mn (UMod.get_modsem md ske)) as mn.
     ii.
+    esplits.
     unfold fun_to_src. unfold body_to_src. unfold cfun.
     red_resum.
     red_transl_all.
@@ -1289,25 +1350,18 @@ Section ADQ.
       { ss.
         Fail rewrite transl_all_triggerNB. (******** WHY??? FIXME *********)
         unfold triggerNB. red_transl_all. ired. unfold transl_all at 3. rewrite unfold_interp. cbn. ired.
-        ginit. gstep. econs; et. ii; ss.
+        ginit. { eapply cpn4_wcompat; eauto with paco. } gstep. econs; et. ii; ss.
       }
     }
     cbn. erewrite <- Any.downcast_upcast with (a:=args); et. rewrite upcast_pair_downcast. ss. ired.
     red_transl_all. ired. red_resum. red_transl_all.
-        rewrite transl_all_triggerNB.
-        unfold triggerNB. red_transl_all. ired. red_transl_all.
-        (@transl_all Σ mn (list val)
-          (@triggerNB (@Es Σ) (list val)
-             (fun (T : Type) (X : eventE T) =>
-              @resum (forall _ : Type, Type) IFun eventE (@Es Σ)
-                (@ReSum_inr (forall _ : Type, Type) IFun sum1 Cat_IFun Inr_sum1 eventE (sum1 (@rE Σ) (sum1 pE eventE)) callE
-                   (@ReSum_inr (forall _ : Type, Type) IFun sum1 Cat_IFun Inr_sum1 eventE (sum1 pE eventE) 
-                      (@rE Σ)
-                      (@ReSum_inr (forall _ : Type, Type) IFun sum1 Cat_IFun Inr_sum1 eventE eventE pE
-                         (@ReSum_id (forall _ : Type, Type) IFun Id_IFun eventE)))) T
-                (@resum (forall _ : Type, Type) IFun eventE eventE (@ReSum_id (forall _ : Type, Type) IFun Id_IFun eventE) T X))))
-        Set Printing All.
-        rewrite transl_all_eventE with (e:=Choose void).
+    instantiate (1:=(100 + 100)%ord).
+    ginit. { eapply cpn4_wcompat; eauto with paco. } guclo bbindC_spec.
+    econs.
+    { gfinal. right. eapply sim_unknown_aux. }
+    ii. red_resum. red_transl_all. gstep; econs; et.
+  Unshelve.
+    all: try (by exact Ord.O).
   Qed.
 
   Lemma find_sim
@@ -1374,7 +1428,7 @@ Section ADQ.
           list_tac. subst. ss. list_tac. des_ifs. ss.
           assert(x = x3) by admit "ez - uniqueness"; subst.
           assert(i = i1) by admit "ez - uniqueness"; subst. clear_tac.
-          admit "TODO".
+          eapply sim_unknown.
         * exfalso.
           ss. list_tac. subst. ss. list_tac. des_ifs. ss.
           eapply find_none in U; cycle 1.
