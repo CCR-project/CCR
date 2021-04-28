@@ -591,6 +591,7 @@ Ltac iDestruct H :=
   | iHyp (_ ** _) _ =>
     let name0 := fresh "A" in
     apply sepconj_split in H as [? [? [H [name0 ?]]]]; subst; iRefresh
+  | iHyp (_ ∨ _) _ => destruct H as [H|H]; iRefresh
   end.
 
 Ltac iSplitL Hs0 :=
@@ -605,12 +606,14 @@ Ltac iSplitR Hs0 :=
     let tmp := (r_gather Hs0) in
     erewrite f_equal; cycle 1; [instantiate (1 := _ ⋅ tmp); r_equalize; r_solve|eapply sepconj_merge; iRefresh]
   end.
-Ltac iIntro :=
+Ltac iIntro A :=
   try on_gwf ltac:(fun GWF => clear GWF); (*** if GWF exists, remove it. otherwise don't ***)
-  let A := fresh "A" in
   let wf := fresh "wf" in
   let GWF := fresh "GWF" in
   intros ? wf A; eassert(GWF: ☀) by (split; [refl|exact wf]); clear wf; iRefresh.
+Tactic Notation "iIntro" :=
+  let A := fresh "A" in
+  iIntro A.
 
 Ltac iOwnWf G :=
   match goal with
@@ -651,6 +654,9 @@ Ltac iAssert H Abody :=
      iSpecialize A H]
   end
 .
+Ltac iExists x :=
+  exists x; iRefresh
+.
 Ltac iUpdate H :=
   eapply upd_update in H; [|on_gwf ltac:(fun GWF => eapply wf_downward; [|eapply GWF]); eexists ε; r_equalize; r_solve; fail];
   let GWF := fresh "GWF" in
@@ -662,8 +668,9 @@ Ltac iUpdate H :=
                            clear wf upd; iRefresh; clear _GWF).
 
 Ltac iImpure H := let name := fresh "my_r" in
-                  specialize (H ε URA.wf_unit I); rewrite intro_iHyp in H;
-                  on_gwf ltac:(fun GWF => rewrite <- URA.unit_id in GWF; set (name:=ε) in GWF, H; clearbody name).
+                  set (name:=ε);
+                  specialize (H name URA.wf_unit I); rewrite intro_iHyp in H;
+                  on_gwf ltac:(fun GWF => rewrite <- (@URA.unit_id_ _ name eq_refl) in GWF; clearbody name).
 Ltac iMod H :=
   match type of H with
   | Impure _ => iImpure H
@@ -745,7 +752,7 @@ I needed to write this because "ss" does not work. create iApply that understand
     (* r in A. r. r in GWF. *)
     iDestruct A.
     (* r in A. r in A0. r. r in GWF. *)
-    (*** 
+    (***
   GWF : URA.updatable (rp ⋅ rp0 ⋅ ε) (x ⋅ x0 ⋅ ε) /\ URA.wf (x ⋅ x0 ⋅ ε)
   ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ : IPROPS
   A : P x
@@ -772,4 +779,3 @@ I needed to write this because "ss" does not work. create iApply that understand
   Abort.
 
 End LTEST.
-

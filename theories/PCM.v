@@ -399,6 +399,8 @@ Module URA.
     rewrite <- add_assoc. rewrite (add_comm ctx). et.
   Qed.
 
+  Lemma unit_id_ `{M: t} b (EQ: b = unit): forall a, add a b = a. i. subst. apply unit_id. Qed.
+
   Lemma unit_idl `{M: t}: forall a, add unit a = a. i. rewrite add_comm. rewrite unit_id; ss. Qed.
 
   (*** TODO: remove redundancy with "updatable_horizontal" above ***)
@@ -499,7 +501,7 @@ Module URA.
 
   (* Inductive iso (RA0 RA1: t): Prop := *)
   (* | iso_intro *)
-      
+
   (* . *)
 
   (* Lemma isomorphic *)

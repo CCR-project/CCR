@@ -182,7 +182,7 @@ Module Sk.
 
   Definition incl_env (sk0: Sk.t) (skenv: SkEnv.t): Prop :=
     forall gn gd (IN: List.In (gn, gd) sk0),
-    exists blk, skenv.(SkEnv.id2blk) gn = Some blk.
+    exists blk, <<FIND: skenv.(SkEnv.id2blk) gn = Some blk>>.
 
   Lemma incl_incl_env sk0 sk1
         (INCL: incl sk0 sk1)

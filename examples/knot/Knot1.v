@@ -6,6 +6,7 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
+Require Import Mem1.
 Require Import TODOYJ.
 Require Import Logic.
 Require Import KnotHeader.
@@ -21,6 +22,7 @@ Section KNOT.
 
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG knotRA Σ}.
+  Context `{@GRA.inG memRA Σ}.
 
   Variable RecStb: SkEnv.t -> list (gname * fspec).
   Variable FunStb: SkEnv.t -> list (gname * fspec).
@@ -50,10 +52,16 @@ Section KNOT.
     Definition KnotSbtb: list (gname * fspecbody) :=[("rec", mk_specbody rec_spec (fun _ => trigger (Choose _)));
                                                     ("knot", mk_specbody knot_spec (fun _ => trigger (Choose _)))].
 
+    Definition knot_var (v: val): Σ :=
+      match (skenv.(SkEnv.id2blk) "_f") with
+      | Some  blk => GRA.embed ((blk,0%Z) |-> [v])
+      | None => ε
+      end.
+
     Definition SKnotSem: SModSem.t := {|
       SModSem.fnsems := KnotSbtb;
       SModSem.mn := "Knot";
-      SModSem.initial_mr := GRA.embed (knot_full None);
+      SModSem.initial_mr := knot_var Vundef ⋅ (GRA.embed (knot_full None));
       SModSem.initial_st := tt↑;
     |}
     .
@@ -61,7 +69,7 @@ Section KNOT.
 
   Definition SKnot: SMod.t := {|
     SMod.get_modsem := SKnotSem;
-    SMod.sk := [("rec", Sk.Gfun)];
+    SMod.sk := [("rec", Sk.Gfun); ("_f", Sk.Gvar Vundef)];
   |}
   .
 

@@ -113,14 +113,6 @@ Section AUX.
 
 End AUX.
 
-Section AUX.
-  Context `{Σ: GRA.t}.
-  Definition Univ {X: Type} (P: X -> iProp): iProp := fun r => forall x, P x r.
-End AUX.
-Notation "'Forall' x .. y , p" := (Univ (fun x => .. (Univ (fun y => p)) ..))
-                                    (at level 200, x binder, right associativity,
-                                     format "'[' 'Forall'  '/  ' x  ..  y ,  '/  ' p ']'").
-
 Ltac Ztac := all_once_fast ltac:(fun H => first[apply Z.leb_le in H|apply Z.ltb_lt in H|apply Z.leb_gt in H|apply Z.ltb_ge in H|idtac]).
 
 Lemma _points_to_hit: forall b ofs v, (_points_to (b, ofs) [v] b ofs) = (Some v).

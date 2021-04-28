@@ -3,6 +3,7 @@ Require Import Coqlib.
 Require Import Universe.
 Require Import Skeleton.
 Require Import PCM.
+Require Import Mem1.
 Require Import ModSem Behavior.
 Require Import Relation_Definitions.
 
@@ -35,10 +36,11 @@ Section AUX.
   Lemma knot_ra_merge
         f0 f1
     :
-      iHyp (Own (GRA.embed (knot_full f0)) -* Own (GRA.embed (knot_frag f1)) -* (⌜f1 = f0⌝)) ε
+      ⌞(Own (GRA.embed (knot_full f0)) -* Own (GRA.embed (knot_frag f1)) -* (⌜f1 = f0⌝))⌟
   .
   Proof.
-    iIntro. iIntro.
+    iIntro; clear A.
+    do 2 iIntro.
     {
       iMerge A A0. rewrite <- own_sep in A. rewrite GRA.embed_add in A.
       iOwnWf A. eapply GRA.embed_wf in WF. des. eapply Auth.auth_included in WF. des.
@@ -48,6 +50,20 @@ Section AUX.
     }
   Qed.
 
+  Lemma knot_frag_unique
+        f0 f1
+    :
+      ⌞(Own (GRA.embed (knot_frag f0)) -* Own (GRA.embed (knot_frag f1)) -* (⌜False⌝))⌟
+  .
+  Proof.
+    iIntro; clear A.
+    do 2 iIntro.
+    {
+      iMerge A A0. rewrite <- own_sep in A. rewrite GRA.embed_add in A.
+      iOwnWf A. eapply GRA.embed_wf in WF. des.
+      ur in WF. ur in WF. ss.
+    }
+  Qed.
 End AUX.
 
 
@@ -55,6 +71,7 @@ Section SIMMODSEM.
 
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG knotRA Σ}.
+  Context `{@GRA.inG memRA Σ}.
 
   Let W: Type := (Σ * Any.t) * (Σ * Any.t).
 
@@ -62,18 +79,24 @@ Section SIMMODSEM.
   Variable FunStb: SkEnv.t -> list (gname * fspec).
   Variable GlobalStb: SkEnv.t -> list (gname * fspec).
 
+
   Let wf (skenv: SkEnv.t): W -> Prop :=
     fun '(mrps_src0, mrps_tgt0) =>
-      exists (mr: Σ) (f': option (nat -> nat)) (fb': option block),
+      exists (mr: Σ)(f': option (nat -> nat)),
         (<<SRC: mrps_src0 = (mr, tt↑)>>) /\
-        (<<TGT: mrps_tgt0 = (ε, fb'↑)>>) /\
-        (<<SIM: (iHyp (Own (GRA.embed (knot_full f'))) mr)>>) /\
-        (<<SOME: forall f (FUN: f' = Some f),
-            exists fb fn,
-              (<<BLK: fb' = Some fb>>) /\
-              (<<FN: skenv.(SkEnv.blk2id) fb = Some fn>>) /\
-              (<<FIND: List.find (fun '(_fn, _) => dec fn _fn) (FunStb skenv) = Some (fn, fun_gen RecStb skenv f)>>)>>)
-  .
+        (<<TGT: mrps_tgt0 = (ε, tt↑)>>) /\
+        (<<SEP: iHyp ((Own (GRA.embed (knot_full f')))
+                        **
+                        ((Own (GRA.embed (knot_frag f')))
+                         ∨
+                         (Forall f,
+                          (⌜f' = Some f⌝)
+                            -*
+                            Exists fb',
+                          (⌜exists fb fn,
+                                (<<BLK: fb' = Vptr fb 0>>) /\
+                                (<<FN: skenv.(SkEnv.blk2id) fb = Some fn>>) /\
+                                (<<FIND: List.find (fun '(_fn, _) => dec fn _fn) (FunStb skenv) = Some (fn, fun_gen RecStb skenv f)>>)⌝) ** (Own (knot_var skenv fb'))))) mr>>).
 
   Variable RecStb_incl
     :
@@ -87,21 +110,117 @@ Section SIMMODSEM.
              (SPECS: List.find (fun '(_fn, _) => dec fn _fn) (FunStb skenv) = Some fsp),
         List.find (fun '(_fn, _) => dec fn _fn) (GlobalStb skenv) = Some fsp.
 
+  Variable MemStb_incl
+    :
+      forall skenv fn fsp
+             (SPECS: List.find (fun '(_fn, _) => dec fn _fn) MemStb = Some fsp),
+        List.find (fun '(_fn, _) => dec fn _fn) (GlobalStb skenv) = Some fsp.
+
+
+  (* AUX -------------------------------------------- *)
+  Lemma unit_id_ b (EQ: b = @URA.unit Σ): forall a, a ⋅ b = a.
+  Proof.
+    subst. apply URA.unit_id.
+  Qed.
+
+  Ltac set_just name X :=
+    let H := fresh "_tmp" in
+    generalize I; intros H; set (name := X) in H; clear H.
+
+  Ltac iImpure H :=
+    let name := fresh "my_r" in
+    set_just name (@URA.unit Σ);
+    specialize (H name URA.wf_unit I); rewrite intro_iHyp in H;
+    on_gwf
+      ltac:(fun GWF =>
+              rewrite <- (@unit_id_ name eq_refl) in GWF; clearbody name).
+
+  Lemma pure_intro a (P: Prop):
+    P -> ⌜P⌝ a.
+  Proof.
+    ss.
+  Qed.
+
+  Ltac iUnpure H :=
+    let name := fresh "my_r" in
+    set_just name (@URA.unit Σ);
+    apply (@pure_intro name) in H; rewrite intro_iHyp in H;
+    on_gwf
+      ltac:(fun GWF =>
+              rewrite <- (@unit_id_ name eq_refl) in GWF; clearbody name).
+
+  Ltac iLeft := left; iRefresh.
+  Ltac iRight := right; iRefresh.
+
+  Definition EMP: iHyp (⌜ True ⌝) (@URA.unit Σ). ss. Qed.
+
+  (* AUX END -------------------------------------------- *)
+
+
   Theorem correct: ModPair.sim (Knot1.Knot RecStb FunStb GlobalStb) Knot0.Knot.
   Proof.
     econs; ss; [|admit ""].
     i. eapply adequacy_lift.
     econstructor 1 with (wf:=wf (Sk.load_skenv sk)); et; ss.
-    2: { eexists. exists None. esplits; ss. eexists. eapply URA.unit_id. }
+    2: {
+      eexists. exists None. esplits; ss.
+      exists (GRA.embed (knot_full None)), (knot_var sk Vundef). splits; ss.
+      { apply URA.add_comm. }
+      { exists ε. rewrite URA.unit_id. ss. }
+      { right. ii. ss. }
+    }
+    hexploit (SKINCL "rec"); ss; eauto. intros [blk0 FIND0].
+    hexploit (SKINCL "_f"); ss; eauto. intros [blk1 FIND1].
     econs; ss; [|econs; ss].
-    { init. unfold recF, ccall. harg_tac.
+    { init. unfold recF, ccall. harg_tac. iRefresh.
       destruct x as [f n]. ss. des. subst.
       iRefresh. iDestruct PRE. iPure A. des; clarify.
-      eapply Any.upcast_inj in A. des; clarify. steps.
+      iDestruct SEP. iDestruct A0.
+      { hexploit knot_frag_unique; et. intro T.
+        iImpure T. iSpecialize T A0. iSpecialize T PRE. ss. }
+      rewrite FIND1. eapply Any.upcast_inj in A. des; clarify. steps.
       rewrite Any.upcast_downcast in _UNWRAPN. clarify. astart 1.
       assert (f' = Some f); subst.
-      { hexploit knot_ra_merge; et. intro T. iSpecialize T SIM. iSpecialize T PRE. iPure T. auto. }
-      hexploit SOME; eauto. clear SOME. i. des. clarify. steps.
+      { hexploit knot_ra_merge; et. intro T.
+        iImpure T. iSpecialize T SEP. iSpecialize T PRE. iPure T. auto. }
+      specialize (A0 f). iRefresh.
+      assert (TMP: Some f = Some f); auto.
+      iUnpure TMP. iRefresh. iSpecialize A0 TMP.
+      iDestruct A0. iDestruct A0. iPure A0. des. clarify.
+      steps. iMerge PRE SEP.
+      acall_tac (blk1, 0%Z, Vptr fb 0) (ord_pure 1) PRE (@URA.unit Σ) A.
+      { eapply MemStb_incl. ss. stb_tac. ss. }
+      { splits; ss. iRefresh. iSplitL A; ss.
+        iSplitR A; ss. unfold knot_var in *. rewrite FIND1 in *. iApply A. }
+      { splits; ss. admit "fix mem". }
+      { unfold wf. iDestruct PRE. esplits; eauto. iRefresh.
+        iSplitL A0.
+        { iApply A0. }
+        { iLeft. iApply PRE. }
+      }
+      iDestruct SEP.
+      steps.
+
+left. iLeft.
+
+
+        iSplitR
+
+
+
+ eauto with ord_step.
+iApply A.
+
+red. red. esplits; eauto.
+        { eapply SKWF. eauto. }
+        { eapply RecStb_incl. des_ifs. }
+      }
+
+Ltac hcall_tac x o MR_SRC1 FR_SRC1 RARG_SRC :=
+
+
+      acatch.
+
       rewrite Any.upcast_downcast. ss. steps. rewrite FN. ss. steps.
       hexploit (SKINCL "rec"); ss; eauto. i. des. rewrite H0. ss. steps.
       acall_tac n (ord_pure (2 * n)) SIM (@URA.unit Σ) PRE; ss.
