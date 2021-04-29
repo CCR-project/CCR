@@ -10,9 +10,11 @@ Require Import ExtrOcamlString.
 
 Require Import Imp ImpNotations.
 Require ImpNotations.
-Require Import ImpFactorial.
-Require Import ImpSimple.
 Require Import Imp2Clight.
+
+Require Import ImpSimple.
+Require Import ImpFactorial.
+Require Import ImpMutsum.
 
 Extract Constant excluded_middle_informative => "true".
 
@@ -157,6 +159,8 @@ Separate Extraction
    (* For imp compilation *)
    Compiler.transf_clight_program
    Imp2Clight.compile Imp2Clight.list_type_to_typelist
-   imp_factorial_prog imp_simple_prog.
+   imp_factorial_prog imp_simple_prog
+   imp_mutsumF_prog imp_mutsumG_prog imp_mutsumMain_prog
+.
 
 Cd "..".

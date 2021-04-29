@@ -1,10 +1,10 @@
 open Diagnostics
 open Driveraux
-(* open Driver *)
 open Compiler
 open Imp2Clight
 open ImpSimple
 open ImpFactorial
+open ImpMutsum
 
 (* Preprocessing clight programs *)
 (* ref: velus, veluslib.ml *)
@@ -32,9 +32,9 @@ let add_builtins p =
 
 
 (* Imp program compilations *)
-let compile_imp_simple =
+let compile_imp p ofile =
   (* Convert Imp to Clight *)
-  let i2c = Imp2Clight.compile (ImpSimple.imp_simple_prog) in
+  let i2c = Imp2Clight.compile p in
   match i2c with
   | Errors.OK clight_out ->
      let cl_built = add_builtins clight_out in
@@ -44,41 +44,83 @@ let compile_imp_simple =
               Asmexpand.expand_program with
       | Errors.OK asm ->
          (* Print Asm in text form *)
-         let oc = open_out "simple.s" in
+         let oc = open_out ofile in
          PrintAsm.print_program oc asm;
          close_out oc
       | Errors.Error msg ->
-         let loc = file_loc "test.c" in
+         let loc = file_loc ofile in
          fatal_error loc "%a"  print_error msg)
   | Errors.Error msg ->
      print_endline "imp to clight failed"
 
-let compile_imp_factorial =
-  (* Convert Imp to Clight *)
-  let i2c = Imp2Clight.compile (ImpFactorial.imp_factorial_prog) in
-  match i2c with
-  | Errors.OK clight_out ->
-     let cl_built = add_builtins clight_out in
-     (* Convert to Asm *)
-     (match Compiler.apply_partial
-              (Compiler.transf_clight_program cl_built)
-              Asmexpand.expand_program with
-      | Errors.OK asm ->
-         (* Print Asm in text form *)
-         let oc = open_out "factorial.s" in
-         PrintAsm.print_program oc asm;
-         close_out oc
-      | Errors.Error msg ->
-         let loc = file_loc "test.c" in
-         fatal_error loc "%a"  print_error msg)
-  | Errors.Error msg ->
-     print_endline "imp to clight failed"
 
 let main =
-  print_endline "Start compilations...";
-  compile_imp_simple;
-  compile_imp_factorial;
+  print_endline "Start Imp compilations...";
+  compile_imp (ImpSimple.imp_simple_prog) "simple.s";
+  compile_imp (ImpFactorial.imp_factorial_prog) "factorial.s";
+  compile_imp (ImpMutsum.imp_mutsumF_prog) "mutsumF.s";
+  compile_imp (ImpMutsum.imp_mutsumG_prog) "mutsumG.s";
+  compile_imp (ImpMutsum.imp_mutsumMain_prog) "mutsumMain.s";
   print_endline "Done."
+
+
+
+
+
+
+
+
+
+
+
+
+(* let compile_imp_simple =
+ *   (\* Convert Imp to Clight *\)
+ *   let i2c = Imp2Clight.compile (ImpSimple.imp_simple_prog) in
+ *   match i2c with
+ *   | Errors.OK clight_out ->
+ *      let cl_built = add_builtins clight_out in
+ *      (\* Convert to Asm *\)
+ *      (match Compiler.apply_partial
+ *               (Compiler.transf_clight_program cl_built)
+ *               Asmexpand.expand_program with
+ *       | Errors.OK asm ->
+ *          (\* Print Asm in text form *\)
+ *          let oc = open_out "simple.s" in
+ *          PrintAsm.print_program oc asm;
+ *          close_out oc
+ *       | Errors.Error msg ->
+ *          let loc = file_loc "test.c" in
+ *          fatal_error loc "%a"  print_error msg)
+ *   | Errors.Error msg ->
+ *      print_endline "imp to clight failed"
+ * 
+ * let compile_imp_factorial =
+ *   (\* Convert Imp to Clight *\)
+ *   let i2c = Imp2Clight.compile (ImpFactorial.imp_factorial_prog) in
+ *   match i2c with
+ *   | Errors.OK clight_out ->
+ *      let cl_built = add_builtins clight_out in
+ *      (\* Convert to Asm *\)
+ *      (match Compiler.apply_partial
+ *               (Compiler.transf_clight_program cl_built)
+ *               Asmexpand.expand_program with
+ *       | Errors.OK asm ->
+ *          (\* Print Asm in text form *\)
+ *          let oc = open_out "factorial.s" in
+ *          PrintAsm.print_program oc asm;
+ *          close_out oc
+ *       | Errors.Error msg ->
+ *          let loc = file_loc "test.c" in
+ *          fatal_error loc "%a"  print_error msg)
+ *   | Errors.Error msg ->
+ *      print_endline "imp to clight failed"
+ * 
+ * let main =
+ *   print_endline "Start compilations...";
+ *   compile_imp_simple;
+ *   compile_imp_factorial;
+ *   print_endline "Done." *)
 
 
 

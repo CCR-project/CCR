@@ -147,17 +147,83 @@ Section Compile_Mod.
       Some (g0, Sskip)
 
     | CallFun1 x f args =>
-      do al <- (compile_exprs args []);
-      Some (g0,
-            Scall (Some (s2p x))
-            (Evar (s2p f) (Tfunction (args_to_typelist al) Tlong0 cc_default))
-            al)
+      match ident_key (s2p f) g0 with
+      | Some gd =>
+        match gd with
+        | Gfun fd =>
+          match fd with
+          | External ef tyargs tyres cconv =>
+            do al <- (compile_exprs args []);
+            if (cnt_args tyargs al)
+            then Some (g0,
+                       Scall (Some (s2p x))
+                       (Evar (s2p f) (Tfunction tyargs tyres cconv))
+                       al)
+            else None
+          | Internal inF =>
+            let tyargs := list_type_to_typelist (List.map (fun p => snd p) inF.(fn_params)) in
+            let tyres := inF.(fn_return) in
+            let cconv := inF.(fn_callconv) in
+            do al <- (compile_exprs args []);
+            if (cnt_args tyargs al)
+            then Some (g0,
+                       Scall (Some (s2p x))
+                             (Evar (s2p f) (Tfunction tyargs tyres cconv))
+                       al)
+            else None
+          end
+        | _ => None
+        end
+      | None =>
+        do al <- (compile_exprs args []);
+        let tyargs := args_to_typelist al in
+        let sg := mksignature (typelist_to_typs tyargs) (Tret AST.Tlong) cc_default in
+        let fd := Gfun (External (EF_external f sg) tyargs Tlong0 cc_default) in
+        let g1 := ((s2p f), fd)::g0 in
+        Some (g1,
+              Scall (Some (s2p x))
+              (Evar (s2p f) (Tfunction tyargs Tlong0 cc_default))
+              al)
+      end
     | CallFun2 f args =>
-      do al <- (compile_exprs args []);
-      Some (g0,
-            Scall None
-            (Evar (s2p f) (Tfunction (args_to_typelist al) Tlong0 cc_default))
-            al)
+      match ident_key (s2p f) g0 with
+      | Some gd =>
+        match gd with
+        | Gfun fd =>
+          match fd with
+          | External ef tyargs tyres cconv =>
+            do al <- (compile_exprs args []);
+            if (cnt_args tyargs al)
+            then Some (g0,
+                       Scall None
+                       (Evar (s2p f) (Tfunction tyargs tyres cconv))
+                       al)
+            else None
+          | Internal inF =>
+            let tyargs := list_type_to_typelist (List.map (fun p => snd p) inF.(fn_params)) in
+            let tyres := inF.(fn_return) in
+            let cconv := inF.(fn_callconv) in
+            do al <- (compile_exprs args []);
+            if (cnt_args tyargs al)
+            then Some (g0,
+                       Scall None
+                       (Evar (s2p f) (Tfunction tyargs tyres cconv))
+                       al)
+            else None
+          end
+        | _ => None
+        end
+      | None =>
+        do al <- (compile_exprs args []);
+        let tyargs := args_to_typelist al in
+        let sg := mksignature (typelist_to_typs tyargs) (Tret AST.Tlong) cc_default in
+        let fd := Gfun (External (EF_external f sg) tyargs Tlong0 cc_default) in
+        let g1 := ((s2p f), fd)::g0 in
+        Some (g1,
+              Scall None
+              (Evar (s2p f) (Tfunction tyargs Tlong0 cc_default))
+              al)
+      end
 
     | CallPtr1 x pe args =>
       do al <- (compile_exprs args []);

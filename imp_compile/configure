@@ -26,7 +26,7 @@ has_standard_headers=true
 clightgen=false
 install_coqdev=false
 responsefile="gnu"
-ignore_coq_version=false
+ignore_coq_version=true
 library_Flocq=local
 library_MenhirLib=local
 
@@ -801,8 +801,6 @@ B exportclight
 B cparser
 B extraction
 EOF
-
-make CoqProject
 
 #
 # Clean up target-dependent files to force their recompilation
