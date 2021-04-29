@@ -208,19 +208,19 @@ Section SIMMODSEM.
       iRefresh. iPure PRE. des. clarify. apply Any.upcast_inj in PRE. des; clarify.
       steps. rewrite Any.upcast_downcast in *. steps.
       do 2 iDestruct SIM. iPure A.
-      set (blk := (Mem.nb mem_tgt)). rename x into sz. rename x0 into mem_src0.
+      set (blk := (Mem.nb mem_tgt)). rename x into sz. rename x0 into delta. rename x1 into mem_src0.
 
       astart 0. astop.
 
       eapply own_upd in SIM; cycle 1; [|rewrite intro_iHyp in SIM; iMod SIM].
       { eapply GRA.embed_updatable.
         eapply Auth.auth_alloc2.
-        instantiate (1:=(_points_to (blk, 0%Z) (repeat (Vint 0) sz))).
+        instantiate (1:=(_points_to (blk + delta, 0%Z) (repeat (Vint 0) sz))).
         (* instantiate (1:=(fun _b _ofs => if (dec _b blk) && ((0 <=? _ofs) && (_ofs <? Z.of_nat sz))%Z then inl (Some (Vint 0)) else inr tt)). *)
         iOwnWf SIM. iRefresh.
         clear - WF WFTGT A.
         ss. do 2 ur. ii. rewrite unfold_points_to. des_ifs.
-         - bsimpl. des. des_sumbool. subst. hexploit (A blk k0); et. intro T. inv T; [|eq_closure_tac].
+         - bsimpl. des. des_sumbool. subst. hexploit (A (blk + delta) k0); et. intro T. inv T; [|eq_closure_tac].
            + exploit WFTGT; et. i; des. lia.
            + rewrite URA.unit_idl. Ztac. rewrite repeat_length in *. rewrite Z.sub_0_r. rewrite repeat_nth_some; [|lia]. ur. ss.
          - rewrite URA.unit_id. do 2 eapply lookup_wf. eapply GRA.embed_wf in WF. des. eapply Auth.black_wf; et.
@@ -231,16 +231,16 @@ Section SIMMODSEM.
       - split; [|refl]; iRefresh. eexists; iRefresh. iSplitP; ss.
       - cbn. esplits; et.
         + eexists; iRefresh. iSplitL SIM; et. ii.
-          destruct (mem_tgt.(Mem.cnts) blk ofs) eqn:T.
+          destruct (mem_tgt.(Mem.cnts) (blk + delta) ofs) eqn:T.
           { exfalso. exploit WFTGT; et. i; des. lia. }
           ss. do 2 ur.
           exploit A; et. rewrite T. intro U. inv U. rewrite unfold_points_to. ss. rewrite repeat_length.
-          destruct (dec b blk); subst; ss.
+          destruct (dec b (blk + delta)); subst; ss.
           * unfold update. des_ifs_safe. rewrite <- H0. rewrite URA.unit_idl. des_ifs.
             { rewrite Z.sub_0_r. bsimpl. des. Ztac. rewrite repeat_nth_some; try lia. econs. }
             { econs. }
           * rewrite URA.unit_id. unfold update. des_ifs.
-        + clear - WFTGT. i. ss. unfold update in *. des_ifs. exploit WFTGT; et.
+        + clear - WFTGT. i. ss. unfold update in *. des_ifs. exploit WFTGT; et. i. des. lia.
     }
     econs; ss.
     { unfold freeF. init.
@@ -343,10 +343,10 @@ Section SIMMODSEM.
       harg_tac. des_ifs_safe. des. repeat rewrite URA.unit_idl in *. repeat rewrite URA.unit_id in *. ss.
       iRefresh. do 3 iDestruct PRE. iPure PRE. iPure A. clarify. apply Any.upcast_inj in PRE. des; clarify.
       do 2 iDestruct SIM. iPure A.
-      steps. rewrite Any.upcast_downcast in *. steps.
+      steps. rewrite Any.upcast_downcast in *. steps. ss. clarify.
 
       astart 0. astop.
-      rename n into b. rename z into ofs. rename x0 into mem_src0. rename x into v0. rename v into v1.
+      rename n0 into b. rename z0 into ofs. rename x0 into mem_src0. rename x into v0. rename v into v1.
       iMerge SIM A0. rewrite <- own_sep in SIM. rewrite GRA.embed_add in SIM. iOwnWf SIM.
       assert(T: mem_src0 b ofs = (Some v0)).
       { clear - WF.
