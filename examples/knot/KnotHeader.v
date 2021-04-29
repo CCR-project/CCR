@@ -84,7 +84,7 @@ Ltac puregoal H :=
 
 Ltac _iExploitP H :=
   match (puregoal H) with
-  | Some ?P => cut P; cycle 1; [_iExploit H; try by apply H|]
+  | Some ?P => cut P; cycle 1; [_iExploit H; try by apply H|clear H]
   | None => fail
   end.
 
@@ -165,18 +165,20 @@ Definition knot_frag (f: option (nat -> nat)) : (@URA.car knotRA) := Auth.white 
 Definition knot_init: (@URA.car knotRA) := knot_frag None.
 
 Section REC.
-
   Context `{Σ: GRA.t}.
+  Context `{@GRA.inG invRA Σ}.
 
   Definition mrec_spec (f: nat -> nat) (INV: Σ -> Prop): ftspec (list val) val :=
     mk_simple (X:=nat)
               (fun n => (
                    (fun varg o =>
                       (⌜varg = [Vint (Z.of_nat n)]↑ /\ o = ord_pure (2 * n + 1)⌝)
-                        ** INV),
+                        ** INV
+                   ),
                    (fun vret =>
                       (⌜vret = (Vint (Z.of_nat (f n)))↑⌝)
-                        ** INV)
+                        ** INV
+                   )
               )).
 
 End REC.

@@ -33,6 +33,7 @@ Local Open Scope nat_scope.
 Section SIMMODSEM.
 
   Context `{Σ: GRA.t}.
+  Context `{@GRA.inG invRA Σ}.
   Context `{@GRA.inG knotRA Σ}.
 
   Let W: Type := (Σ * Any.t) * (Σ * Any.t).
@@ -109,33 +110,34 @@ Section SIMMODSEM.
                 end). clear Heqn. rewrite Nat.sub_0_r. lia.
     }
     { init. unfold mainF, ccall. harg_tac. des; clarify.
-      iRefresh. iDestruct PRE. iPure PRE. des; clarify.
+      iRefresh. iDestruct PRE. iDestruct PRE. iPure PRE. des; clarify.
       rewrite Any.upcast_downcast. ss. steps.
       hexploit (SKINCL "fib"); ss; eauto. i. des.
-      rewrite H0. ss. steps.
-      astart 2. specialize (GlobalStb_knot skenv). inv GlobalStb_knot.
-      acatch; eauto.
-      hcall_tac_weaken (knot_spec2 RecStb FunStb skenv) Fib (ord_pure 0) (@URA.unit Σ) (@URA.unit Σ) A; ss; et.
+      rewrite FIND. ss. steps.
+      astart 2. specialize (GlobalStb_knot sk). inv GlobalStb_knot.
+      acatch; eauto. iMerge A0 A.
+      hcall_tac_weaken (knot_spec2 RecStb FunStb sk) Fib (ord_pure 1) (@URA.unit Σ) (@URA.unit Σ) A0; ss; et.
       { etrans; eauto. eapply knot_spec2_weaker. }
-      { splits; ss. iRefresh. iSplitR A; ss.
+      { splits; ss. iRefresh.
+        iDestruct A0. iSplitR A; ss. iSplitR A0; ss.
         red. red. esplits; eauto. econs.
         { eapply SKWF. eauto. }
         eapply fn_has_spec_weaker; eauto.
-        ii. ss. eexists (x_src, Own (GRA.embed (knot_frag (Some Fib)))). splits; ss.
+        ii. ss.
+        eexists (x_src, Own (GRA.embed (knot_frag (Some Fib))) ** inv_closed).
+        splits; ss.
         { i. iRefresh. iIntro. des. split; auto. iRefresh.
-          iDestruct A. iPure A. des; clarify. iSplitR A1; ss.
+          iDestruct A. iDestruct A. iMerge A0 A1. iSplitR A0; ss.
+          iPure A. des; clarify.
           red. red. esplits; eauto. eapply fb_has_spec_weaker; eauto.
           ii. ss. exists (Fib, x_src0). splits; ss.
+          { i. iRefresh. iIntros. des. split; auto. iRefresh.
+            iDestruct A0. iDestruct A3. iSplitR A2; ss. iSplitR A3; ss. }
           { i. iRefresh. iIntro. des. split; auto. iRefresh.
-            iDestruct A0. iPure A0. des; clarify.
-            iSplitL A3; ss.
-          }
-          { i. iRefresh. iIntro. des. split; auto. iRefresh.
-            iDestruct A0. iPure A3. iSplitR A0; ss. }
+            iDestruct A0. iDestruct A0. iMerge A2 A3. iSplitR A2; ss. }
         }
-        { i. iRefresh. iIntro. des. split; auto. iRefresh.
-          iDestruct A. iPure A. iSplitR A1; ss.
-        }
+        { i. iRefresh. iIntros. des. split; auto. iRefresh.
+          iDestruct A. iDestruct A1. iSplitR A0; ss. iSplitR A1; ss. }
       }
       ss. des. clarify. iRefresh. iDestruct POST. iDestruct POST.
       iPure POST. des; clarify.
@@ -143,7 +145,7 @@ Section SIMMODSEM.
       steps. rewrite Any.upcast_downcast in _UNWRAPN. clarify.
       ss. steps. inv POST0. rewrite FBLOCK. inv SPEC. steps. acatch.
       { eapply RecStb_incl. eauto. }
-      hcall_tac_weaken (mrec_spec Fib x2) 10 (ord_pure 21) (@URA.unit Σ) (@URA.unit Σ) A; ss; et.
+      hcall_tac_weaken (mrec_spec Fib x0) 10 (ord_pure 21) (@URA.unit Σ) (@URA.unit Σ) A; ss; et.
       { splits; ss. iRefresh. iSplitR A; ss. }
       steps. ss. des. clarify.
       iRefresh. iDestruct POST. iPure POST.

@@ -32,6 +32,7 @@ Fixpoint Fib (n: nat): nat :=
 Section MAIN.
 
   Context `{Σ: GRA.t}.
+  Context `{@GRA.inG invRA Σ}.
   Context `{@GRA.inG knotRA Σ}.
 
   Variable RecStb: SkEnv.t -> list (gname * fspec).
@@ -60,7 +61,9 @@ Section MAIN.
                 (fun f => (
                      (fun varg o =>
                         (⌜o = ord_top⌝)
-                          ** Own (GRA.embed knot_init)),
+                          ** Own (GRA.embed knot_init)
+                          ** inv_closed
+                     ),
                      (fun vret =>
                         (⌜vret = (Vint (Z.of_nat (Fib 10)))↑⌝))
                 )).
@@ -73,7 +76,7 @@ Section MAIN.
     Definition SMainSem: SModSem.t := {|
       SModSem.fnsems := MainSbtb;
       SModSem.mn := "Main";
-      SModSem.initial_mr := GRA.embed knot_init;
+      SModSem.initial_mr := ε;
       SModSem.initial_st := tt↑;
     |}
     .

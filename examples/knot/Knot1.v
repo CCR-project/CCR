@@ -21,8 +21,9 @@ Set Implicit Arguments.
 Section KNOT.
 
   Context `{Σ: GRA.t}.
-  Context `{@GRA.inG knotRA Σ}.
+  Context `{@GRA.inG invRA Σ}.
   Context `{@GRA.inG memRA Σ}.
+  Context `{@GRA.inG knotRA Σ}.
 
   Variable RecStb: SkEnv.t -> list (gname * fspec).
   Variable FunStb: SkEnv.t -> list (gname * fspec).
@@ -31,11 +32,20 @@ Section KNOT.
   Section SKENV.
     Variable skenv: SkEnv.t.
 
-    Definition rec_spec:    fspec := mk_simple (X:=(nat -> nat) * nat)
-                                               (fun '(f, n) => (
-                                                    (fun varg o => Own (GRA.embed (knot_frag (Some f))) ** ⌜varg = [Vint (Z.of_nat n)]↑ /\ o = ord_pure (2 * n + 1)⌝),
-                                                    (fun vret => Own (GRA.embed (knot_frag (Some f))) ** ⌜vret = (Vint (Z.of_nat (f n)))↑⌝)
-                                               )).
+    Definition rec_spec:    fspec :=
+      mk_simple (X:=(nat -> nat) * nat)
+                (fun '(f, n) => (
+                     (fun varg o =>
+                        (⌜varg = [Vint (Z.of_nat n)]↑ /\ o = ord_pure (2 * n + 1)⌝)
+                          ** (Own (GRA.embed (knot_frag (Some f))))
+                          ** inv_closed
+                     ),
+                     (fun vret =>
+                        (⌜vret = (Vint (Z.of_nat (f n)))↑⌝)
+                          ** (Own (GRA.embed (knot_frag (Some f))))
+                          ** inv_closed
+                     )
+                )).
 
     Definition fun_gen (f: nat -> nat): ftspec (list val) (val) :=
       mk_simple (X:=nat)
@@ -44,10 +54,14 @@ Section KNOT.
                         (⌜exists fb,
                               varg = [Vptr fb 0; Vint (Z.of_nat n)]↑ /\ o = ord_pure (2 * n) /\
                               fb_has_spec skenv (RecStb skenv) fb rec_spec⌝)
-                          ** Own (GRA.embed (knot_frag (Some f)))),
+                          ** Own (GRA.embed (knot_frag (Some f)))
+                          ** inv_closed
+                     ),
                      (fun vret =>
                         (⌜vret = (Vint (Z.of_nat (f n)))↑⌝)
-                          ** Own (GRA.embed (knot_frag (Some f))))
+                          ** Own (GRA.embed (knot_frag (Some f)))
+                          ** inv_closed
+                     )
                 )).
 
     Definition KnotRecStb: list (gname * fspec) := [("rec", rec_spec)].
@@ -57,14 +71,18 @@ Section KNOT.
                 (fun f => (
                      (fun varg o =>
                         (⌜exists fb,
-                              varg = [Vptr fb 0]↑ /\ o = ord_pure 0 /\
+                              varg = [Vptr fb 0]↑ /\ o = ord_pure 1 /\
                               fb_has_spec skenv (FunStb skenv) fb (fun_gen f)⌝)
-                          ** Exists old, Own (GRA.embed (knot_frag old))),
+                          ** (Exists old, Own (GRA.embed (knot_frag old)))
+                          ** inv_closed
+                     ),
                      (fun vret =>
                         (⌜exists fb,
                               vret = (Vptr fb 0)↑ /\
                               fb_has_spec skenv (RecStb skenv) fb rec_spec⌝)
-                          ** Own (GRA.embed (knot_frag (Some f))))
+                          ** Own (GRA.embed (knot_frag (Some f)))
+                          ** inv_closed
+                     )
                 )).
 
     Definition knot_spec2:    fspec :=
@@ -72,15 +90,18 @@ Section KNOT.
                 (fun f => (
                      (fun varg o =>
                         (⌜exists fb,
-                              varg = [Vptr fb 0]↑ /\ o = ord_pure 0 /\
+                              varg = [Vptr fb 0]↑ /\ o = ord_pure 1 /\
                               fb_has_spec skenv (FunStb skenv) fb (fun_gen f)⌝)
-                          ** Own (GRA.embed knot_init)),
+                          ** Own (GRA.embed knot_init)
+                          ** inv_closed
+                     ),
                      (fun vret =>
                         Exists INV,
                         (⌜exists fb,
                               vret = (Vptr fb 0)↑ /\
                               fb_has_spec skenv (RecStb skenv) fb (mrec_spec f INV)⌝)
-                          ** INV)
+                          ** INV
+                     )
                 )).
 
     Definition KnotStb: list (gname * fspec) := [("rec", rec_spec); ("knot", knot_spec)].
@@ -97,7 +118,7 @@ Section KNOT.
     Definition SKnotSem: SModSem.t := {|
       SModSem.fnsems := KnotSbtb;
       SModSem.mn := "Knot";
-      SModSem.initial_mr := knot_var Vundef ⋅ (GRA.embed (knot_full None));
+      SModSem.initial_mr := knot_var Vundef ⋅ (GRA.embed (knot_full None)) ⋅ (GRA.embed inv_black);
       SModSem.initial_st := tt↑;
     |}
     .
@@ -114,43 +135,46 @@ End KNOT.
 
 
 Section WEAK.
-
   Context `{Σ: GRA.t}.
+  Context `{@GRA.inG invRA Σ}.
+  Context `{@GRA.inG knotRA Σ}.
+
+  Lemma rec_spec_weaker f: ftspec_weaker (mrec_spec f (Own (GRA.embed (knot_frag (Some f))) ** inv_closed)) rec_spec.
+  Proof.
+    ii. ss. exists (f, x_src). split.
+    { intros arg_src arg_tgt o. ss. iIntro. (* TODO: use iIntros *)
+      des; subst. split; auto. iRefresh.
+      iDestruct A. iDestruct A0. iSplitR A1; ss. iSplitR A0; ss. (* TODO: make lemma: ** is commute *) }
+    { intros ret_src ret_tgt. ss. iIntro. (* TODO: use iIntros *)
+      des; subst. split; auto. iRefresh.
+      iDestruct A. iDestruct A. iSplitL A; ss. iSplitR A0; ss. (* TODO: make lemma: ** is commute *) }
+  Qed.
+End WEAK.
+
+Section WEAK.
+  Context `{Σ: GRA.t}.
+  Context `{@GRA.inG invRA Σ}.
   Context `{@GRA.inG knotRA Σ}.
 
   Variable RecStb: SkEnv.t -> list (gname * fspec).
   Variable FunStb: SkEnv.t -> list (gname * fspec).
 
-  Lemma rec_spec_weaker f: ftspec_weaker (mrec_spec f (Own (GRA.embed (knot_frag (Some f))))) rec_spec.
-  Proof.
-    ii. ss. exists (f, x_src). split.
-    { intros arg_src arg_tgt o. ss. iIntro. des; subst. split; auto.
-      iRefresh. iDestruct A. iPure A. des; clarify.
-      iSplitL A0; ss.
-    }
-    { intros ret_src ret_tgt. ss. iIntro. des; subst. split; auto.
-      iRefresh. iDestruct A. iPure A0.
-      iSplitR A; ss.
-    }
-  Qed.
-
   Lemma knot_spec2_weaker skenv: ftspec_weaker (knot_spec2 RecStb FunStb skenv) (knot_spec RecStb FunStb skenv).
   Proof.
     ii. ss. exists x_src. split.
     { intros arg_src arg_tgt o. iIntro. des; subst. split; auto.
-      iRefresh. iDestruct A. iPure A. des; clarify.
-      iSplitR A0.
-      { red. red. esplits; eauto. }
-      { exists None. ss. }
+      iRefresh. iDestruct A. iSplitL A.
+      { iDestruct A. iSplitL A; ss.
+        iExists (None: option (nat -> nat)). ss. }
+      { iApply A0. }
     }
     { intros ret_src ret_tgt. iIntro. des; subst. split; auto.
-      iRefresh. iDestruct A. iPure A. des; clarify.
-      exists (Own (GRA.embed (knot_frag (Some x_src)))). iRefresh.
-      iSplitR A0; ss. red. red. esplits; eauto.
+      iRefresh. iDestruct A.
+      iExists (Own (GRA.embed (knot_frag (Some x_src))) ** inv_closed).
+      iDestruct A. iMerge A1 A0. iSplitR A1; ss.
+      iPure A. des. iExists fb. split; auto.
       eapply fb_has_spec_weaker; eauto.
       eapply rec_spec_weaker.
     }
-    (* proof is done. but Qed failed bcz of Coq bug... *)
-  Admitted.
-
+  Qed.
 End WEAK.

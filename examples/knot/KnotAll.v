@@ -39,18 +39,24 @@ End AUX.
 
 Section PROOF.
 
-  Let Σ: GRA.t := GRA.of_list [knotRA; memRA].
+  Let Σ: GRA.t := GRA.of_list [invRA; knotRA; memRA].
   Local Existing Instance Σ.
+
+  Let invRA_inG: @GRA.inG invRA Σ.
+  Proof.
+    exists 0. ss.
+  Qed.
+  Local Existing Instance invRA_inG.
 
   Let knotRA_inG: @GRA.inG knotRA Σ.
   Proof.
-    exists 0. ss.
+    exists 1. ss.
   Qed.
   Local Existing Instance knotRA_inG.
 
   Let memRA_inG: @GRA.inG memRA Σ.
   Proof.
-    exists 1. ss.
+    exists 2. ss.
   Qed.
   Local Existing Instance memRA_inG.
 
@@ -61,7 +67,7 @@ Section PROOF.
     fun skenv => MainFunStb RecStb skenv.
 
   Let GlobalStb: SkEnv.t -> list (gname * fspec) :=
-    fun skenv => (MainStb RecStb skenv) ++ (KnotStb RecStb FunStb skenv).
+    fun skenv => (MainStb RecStb skenv) ++ (KnotStb RecStb FunStb skenv) ++ MemStb.
 
   Definition KnotAll0: ModL.t := Mod.add_list [KnotMain0.Main; Knot0.Knot; Mem0.Mem].
 
@@ -78,6 +84,7 @@ Section PROOF.
     - eapply Knot01proof.correct with (RecStb0:=RecStb) (FunStb0:=FunStb) (GlobalStb0:=GlobalStb).
       + ii. ss.
       + ii. ss. rewrite ! eq_rel_dec_correct in *. des_ifs.
+      + ii. ss. rewrite ! eq_rel_dec_correct in *. des_ifs; stb_tac; ss.
     - eapply Mem01proof.correct.
   Qed.
 
