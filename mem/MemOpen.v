@@ -21,40 +21,12 @@ Set Implicit Arguments.
 
 
 
-Definition mem_pad (m0: Mem.t) (delta: nat): Mem.t :=
-  Mem.mk m0.(Mem.cnts) (m0.(Mem.nb) + delta)
-.
-
 Let _memRA: URA.t := (block ==> Z ==> (Excl.t val))%ra.
 
 Section PROOF.
   Context `{@GRA.inG memRA Σ}.
   Let GURA: URA.t := GRA.to_URA Σ.
   Local Existing Instance GURA.
-
-
-
-  (* Definition alloc_body: (list val) -> itree (hCallE +' pE +' eventE) val := *)
-  (*   fun varg => *)
-  (*     mp0 <- trigger (PGet);; *)
-  (*     m0 <- mp0↓?;; *)
-  (*     `sz: Z <- (pargs [Tint] varg)?;; *)
-  (*     delta <- trigger (Choose _);; *)
-  (*     let m0': Mem.t := mem_pad m0 delta in *)
-  (*     let (blk, m1) := Mem.alloc m0' sz in *)
-  (*     trigger (PPut m1↑);; *)
-  (*     Ret (Vptr blk 0) *)
-  (* . *)
-
-  (* Definition free_body: (list val) -> itree (hCallE +' pE +' eventE) val := *)
-  (*   fun varg => *)
-  (*     mp0 <- trigger (PGet);; *)
-  (*     m0 <- mp0↓?;; *)
-  (*     '(b, ofs) <- (pargs [Tptr] varg)?;; *)
-  (*     m1 <- (Mem.free m0 b ofs)?;; *)
-  (*     trigger (PPut m1↑);; *)
-  (*     Ret (Vint 0) *)
-  (* . *)
 
   Definition MemSbtb: list (gname * fspecbody) :=
     [("alloc", mk_specbody alloc_spec allocF);
