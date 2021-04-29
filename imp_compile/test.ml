@@ -3,9 +3,8 @@ open Driveraux
 (* open Driver *)
 open Compiler
 open Imp2Clight
-open ClightToAsm
-open Imp_simple
-open Imp_factorial
+open ImpSimple
+open ImpFactorial
 
 (* Preprocessing clight programs *)
 (* ref: velus, veluslib.ml *)
@@ -35,13 +34,13 @@ let add_builtins p =
 (* Imp program compilations *)
 let compile_imp_simple =
   (* Convert Imp to Clight *)
-  let i2c = Imp2Clight.compile (Imp_simple.imp_simple_mod) in
+  let i2c = Imp2Clight.compile (ImpSimple.imp_simple_prog) in
   match i2c with
   | Errors.OK clight_out ->
      let cl_built = add_builtins clight_out in
      (* Convert to Asm *)
      (match Compiler.apply_partial
-              (ClightToAsm.transf_clight2_program cl_built)
+              (Compiler.transf_clight_program cl_built)
               Asmexpand.expand_program with
       | Errors.OK asm ->
          (* Print Asm in text form *)
@@ -56,13 +55,13 @@ let compile_imp_simple =
 
 let compile_imp_factorial =
   (* Convert Imp to Clight *)
-  let i2c = Imp2Clight.compile (Imp_factorial.imp_factorial_mod) in
+  let i2c = Imp2Clight.compile (ImpFactorial.imp_factorial_prog) in
   match i2c with
   | Errors.OK clight_out ->
      let cl_built = add_builtins clight_out in
      (* Convert to Asm *)
      (match Compiler.apply_partial
-              (ClightToAsm.transf_clight2_program cl_built)
+              (Compiler.transf_clight_program cl_built)
               Asmexpand.expand_program with
       | Errors.OK asm ->
          (* Print Asm in text form *)
@@ -76,7 +75,7 @@ let compile_imp_factorial =
      print_endline "imp to clight failed"
 
 let main =
-  print_endline "Start compilation...";
+  print_endline "Start compilations...";
   compile_imp_simple;
   compile_imp_factorial;
   print_endline "Done."

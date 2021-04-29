@@ -22,10 +22,7 @@ Section Compile_Mod.
 
   (* compile each module indiv, 
      prove behavior refinement for whole (closed) prog after linking *)
-  Context `{Σ: GRA.t}.
 
-  (* maybe use Int64.repr ? *)
-  (* Context {to_long : Z -> int64}. *)
   Let to_long := Int64.repr.
 
   (* initial gdefs = Imp.module, 
@@ -59,7 +56,7 @@ Section Compile_Mod.
     | [] => Ctypes.Tnil
     | ty :: tys => Ctypes.Tcons ty (list_type_to_typelist tys)
     end.
-  
+
   Fixpoint compile_expr expr : option Clight.expr :=
     match expr with
     | Var x =>
@@ -132,6 +129,7 @@ Section Compile_Mod.
   .
 
   (* Imp has no type, value is either int64/ptr64 -> sem_cast can convert *)
+  (* Assumes linking is done before beh.ref. proof (no ext.funs left) *)
   Fixpoint compile_stmt (g0: tgt_gdefs) stmt : option (tgt_gdefs * statement) :=
     match stmt with
     | Assign x e =>
@@ -150,21 +148,17 @@ Section Compile_Mod.
 
     | CallFun1 x f args =>
       do al <- (compile_exprs args []);
-      Some
-        (g0,
-         Scall
-           (Some (s2p x))
-           (Evar (s2p f) (Tfunction (args_to_typelist al) Tlong0 cc_default))
-           al)
+      Some (g0,
+            Scall (Some (s2p x))
+            (Evar (s2p f) (Tfunction (args_to_typelist al) Tlong0 cc_default))
+            al)
     | CallFun2 f args =>
       do al <- (compile_exprs args []);
-      Some
-        (g0,
-         Scall
-           None
-           (Evar (s2p f) (Tfunction (args_to_typelist al) Tlong0 cc_default))
-           al)
-      
+      Some (g0,
+            Scall None
+            (Evar (s2p f) (Tfunction (args_to_typelist al) Tlong0 cc_default))
+            al)
+
     | CallPtr1 x pe args =>
       do al <- (compile_exprs args []);
       do a <- compile_expr_ptr (args_to_typelist al) pe;
@@ -183,13 +177,10 @@ Section Compile_Mod.
           | External ef tyargs tyres cconv =>
             do al <- (compile_exprs args []);
             if (cnt_args tyargs al)
-            then
-              Some
-                (g0,
-                 Scall
-                   (Some (s2p x))
-                   (Evar (s2p f) (Tfunction tyargs tyres cconv))
-                   al)
+            then Some (g0,
+                       Scall (Some (s2p x))
+                       (Evar (s2p f) (Tfunction tyargs tyres cconv))
+                       al)
             else None
           | _ => None
           end
@@ -201,12 +192,10 @@ Section Compile_Mod.
         let sg := mksignature (typelist_to_typs tyargs) (Tret AST.Tlong) cc_default in
         let fd := Gfun (External (EF_external f sg) tyargs Tlong0 cc_default) in
         let g1 := ((s2p f), fd)::g0 in
-        Some
-          (g1,
-           Scall
-             (Some (s2p x))
-             (Evar (s2p f) (Tfunction tyargs Tlong0 cc_default))
-             al)
+        Some (g1,
+              Scall (Some (s2p x))
+              (Evar (s2p f) (Tfunction tyargs Tlong0 cc_default))
+              al)
       end
     | CallSys2 f args =>
       match ident_key (s2p f) g0 with
@@ -217,13 +206,10 @@ Section Compile_Mod.
           | External ef tyargs tyres cconv =>
             do al <- (compile_exprs args []);
             if (cnt_args tyargs al)
-            then
-              Some
-                (g0,
-                 Scall
-                   None
-                   (Evar (s2p f) (Tfunction tyargs tyres cconv))
-                   al)
+            then Some (g0,
+                       Scall None
+                       (Evar (s2p f) (Tfunction tyargs tyres cconv))
+                       al)
             else None
           | _ => None
           end
@@ -235,12 +221,10 @@ Section Compile_Mod.
         let sg := mksignature (typelist_to_typs tyargs) (Tret AST.Tlong) cc_default in
         let fd := Gfun (External (EF_external f sg) tyargs Tlong0 cc_default) in
         let g1 := ((s2p f), fd)::g0 in
-        Some
-          (g1,
-           Scall
-             None
-             (Evar (s2p f) (Tfunction tyargs Tlong0 cc_default))
-             al)
+        Some (g1,
+              Scall None
+              (Evar (s2p f) (Tfunction tyargs Tlong0 cc_default))
+              al)
       end
 
     | Expr r =>
@@ -272,7 +256,7 @@ Section Compile_Mod.
   Let free_def : Ctypes.fundef function :=
     External EF_free (Tcons (Tptr0 Tlong0) Tnil) Tvoid cc_default.
 
-  Fixpoint compile_gVars (src : modVars) : tgt_gdefs :=
+  Fixpoint compile_gVars (src : progVars) : tgt_gdefs :=
     match src with
     | [] => []
     | (name, v) :: t =>
@@ -286,7 +270,7 @@ Section Compile_Mod.
   .
 
   (* g0 carries updated syscall defs found in compilation *)
-  Fixpoint compile_gFuns (src : modFuns) g0 acc : option (tgt_gdefs * tgt_gdefs) :=
+  Fixpoint compile_gFuns (src : progFuns) g0 acc : option (tgt_gdefs * tgt_gdefs) :=
     match src with
     | [] => Some (g0, acc)
     | (name, f) :: t =>
@@ -306,14 +290,14 @@ Section Compile_Mod.
 
   Let init_g : tgt_gdefs := [(s2p "alloc", Gfun alloc_def); (s2p "free", Gfun free_def)].
 
-  Definition compile_gdefs (src : Imp.module) : option tgt_gdefs :=
-    do '(g_sys, g_fun) <- compile_gFuns src.(mod_funs) init_g [] ;
-    let g_var := compile_gVars src.(mod_vars) in
+  Definition compile_gdefs (src : Imp.program) : option tgt_gdefs :=
+    do '(g_sys, g_fun) <- compile_gFuns src.(prog_funs) init_g [] ;
+    let g_var := compile_gVars src.(prog_vars) in
     Some (g_sys ++ g_var ++ g_fun)
   .
 
   Variable src_name : mname.
-  Variable src_defs : Imp.module.
+  Variable src_defs : Imp.program.
 
   Definition compile :=
     let optdefs := (compile_gdefs src_defs) in

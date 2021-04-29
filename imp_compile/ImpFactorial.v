@@ -38,9 +38,9 @@ Section Example_Extract.
     fn_body := main
   |}.
 
-  Definition imp_factorial_mod : module := {|
-    mod_vars := [];
-    mod_funs := [("factorial", factorial_fundef); ("main", main_fundef)];
+  Definition imp_factorial_prog : program := {|
+    prog_vars := [];
+    prog_funs := [("factorial", factorial_fundef); ("main", main_fundef)];
   |}.
 
 End Example_Extract.

@@ -32,8 +32,8 @@ Section F.
        else# 0%Z
        fi#).
 
-  Definition f_prog : module :=
-    mk_module
+  Definition f_prog : program :=
+    mk_program
       []
       [("f", fF)]
   .

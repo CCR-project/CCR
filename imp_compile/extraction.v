@@ -10,10 +10,9 @@ Require Import ExtrOcamlString.
 
 Require Import Imp ImpNotations.
 Require ImpNotations.
-Require Import Imp_factorial.
-Require Import Imp_simple.
+Require Import ImpFactorial.
+Require Import ImpSimple.
 Require Import Imp2Clight.
-Require Import ClightToAsm.
 
 Extract Constant excluded_middle_informative => "true".
 
@@ -156,8 +155,8 @@ Separate Extraction
    Globalenvs.Senv.invert_symbol
    (* Parser.translation_unit_file *)
    (* For imp compilation *)
-   (* Compiler.transf_clight_program *)
-   transf_clight2_program Imp2Clight.compile Imp2Clight.list_type_to_typelist
-   imp_factorial_mod imp_simple_mod.
+   Compiler.transf_clight_program
+   Imp2Clight.compile Imp2Clight.list_type_to_typelist
+   imp_factorial_prog imp_simple_prog.
 
 Cd "..".

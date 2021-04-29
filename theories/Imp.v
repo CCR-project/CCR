@@ -265,16 +265,16 @@ Section Interp.
 End Interp.
 
 (* ========================================================================== *)
-(** ** Module *)
+(** ** Program *)
 
-(** module components *)
-Definition modVars := list (gname * val).
-Definition modFuns := list (gname * function).
+(** program components *)
+Definition progVars := list (gname * val).
+Definition progFuns := list (gname * function).
 
-(** Imp module *)
-Record module : Type := mk_module {
-  mod_vars : modVars;
-  mod_funs : modFuns;
+(** Imp program *)
+Record program : Type := mk_program {
+  prog_vars : progVars;
+  prog_funs : progFuns;
 }.
 
 (**** ModSem ****)
@@ -283,14 +283,14 @@ Section MODSEM.
 
   Context `{GRA: GRA.t}.
   Variable mn: mname.
-  Variable m: module.
+  Variable m: program.
 
   Set Typeclasses Depth 5.
   (* Instance Initial_void1 : @Initial (Type -> Type) IFun void1 := @elim_void1. (*** TODO: move to ITreelib ***) *)
 
   Definition modsem (ge: SkEnv.t) : ModSem.t := {|
     ModSem.fnsems :=
-      List.map (fun '(fn, f) => (fn, cfun (eval_imp ge f))) m.(mod_funs);
+      List.map (fun '(fn, f) => (fn, cfun (eval_imp ge f))) m.(prog_funs);
     ModSem.mn := mn;
     ModSem.initial_mr := ε;
     ModSem.initial_st := tt↑;
@@ -299,8 +299,8 @@ Section MODSEM.
   Definition get_mod: Mod.t := {|
     Mod.get_modsem := fun ge => (modsem ge);
     Mod.sk :=
-      (List.map (fun '(vn, vv) => (vn, Sk.Gvar vv)) m.(mod_vars)) ++
-      (List.map (fun '(fn, _) => (fn, Sk.Gfun)) m.(mod_funs));
+      (List.map (fun '(vn, vv) => (vn, Sk.Gvar vv)) m.(prog_vars)) ++
+      (List.map (fun '(fn, _) => (fn, Sk.Gfun)) m.(prog_funs));
   |}.
 
 End MODSEM.

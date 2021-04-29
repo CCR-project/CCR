@@ -141,9 +141,9 @@ Section Example_Extract.
     fn_body := main
   |}.
 
-  Definition ex_extract : module := {|
-    mod_vars := [];
-    mod_funs := [("factorial", factorial_fundef); ("main", main_fundef)];
+  Definition ex_extract : program := {|
+    prog_vars := [];
+    prog_funs := [("factorial", factorial_fundef); ("main", main_fundef)];
   |}.
   
   Definition ex_prog: Mod.t := ImpMod.get_mod "Main" ex_extract.

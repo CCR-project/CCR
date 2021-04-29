@@ -21,9 +21,9 @@ Section Example_Extract.
     fn_body := main
   |}.
 
-  Definition imp_simple_mod : module := {|
-    mod_vars := [];
-    mod_funs := [("main", main_fundef)];
+  Definition imp_simple_prog : program := {|
+    prog_vars := [];
+    prog_funs := [("main", main_fundef)];
   |}.
 
 End Example_Extract.
