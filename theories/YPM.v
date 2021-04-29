@@ -611,6 +611,8 @@ Ltac iIntro A :=
   let wf := fresh "wf" in
   let GWF := fresh "GWF" in
   intros ? wf A; eassert(GWF: ☀) by (split; [refl|exact wf]); clear wf; iRefresh.
+Tactic Notation "iIntro" ident(H) :=
+  iIntro H.
 Tactic Notation "iIntro" :=
   let A := fresh "A" in
   iIntro A.
@@ -671,7 +673,7 @@ Ltac iUpdate H :=
                            clear wf upd; iRefresh; clear _GWF).
 
 Ltac iImpure H := let name := fresh "my_r" in
-                  set (name:=@URA.unit (@GRA.to_URA _));
+                  pose (name:=@URA.unit (@GRA.to_URA _));
                   specialize (H name URA.wf_unit I); rewrite intro_iHyp in H;
                   on_gwf ltac:(fun GWF => rewrite <- (@URA.unit_id_ _ name eq_refl) in GWF; clearbody name).
 Ltac iMod H :=

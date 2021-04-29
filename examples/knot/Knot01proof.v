@@ -94,26 +94,6 @@ Section SIMMODSEM.
   Variable FunStb: SkEnv.t -> list (gname * fspec).
   Variable GlobalStb: SkEnv.t -> list (gname * fspec).
 
-
-  (* Let wf (skenv: SkEnv.t): W -> Prop := *)
-  (*   fun '(mrps_src0, mrps_tgt0) => *)
-  (*     exists (mr: Σ)(f': option (nat -> nat)), *)
-  (*       (<<SRC: mrps_src0 = (mr, tt↑)>>) /\ *)
-  (*       (<<TGT: mrps_tgt0 = (ε, tt↑)>>) /\ *)
-  (*       (<<SEP: iHyp ((Own (GRA.embed (knot_full f'))) *)
-  (*                       ** *)
-  (*                       ((Own (GRA.embed (knot_frag f'))) *)
-  (*                        ∨ *)
-  (*                        (Forall f, *)
-  (*                         (⌜f' = Some f⌝) *)
-  (*                           -* *)
-  (*                           Exists fb', *)
-  (*                         (⌜exists fb fn, *)
-  (*                               (<<BLK: fb' = Vptr fb 0>>) /\ *)
-  (*                               (<<FN: skenv.(SkEnv.blk2id) fb = Some fn>>) /\ *)
-  (*                               (<<FIND: List.find (fun '(_fn, _) => dec fn _fn) (FunStb skenv) = Some (fn, fun_gen RecStb skenv f)>>)⌝) ** (Own (knot_var skenv fb'))))) mr>>). *)
-
-
   Let wf (skenv: SkEnv.t): W -> Prop :=
     fun '(mrps_src0, mrps_tgt0) =>
       exists (mr: Σ)(f': option (nat -> nat)),
@@ -151,44 +131,6 @@ Section SIMMODSEM.
              (SPECS: List.find (fun '(_fn, _) => dec fn _fn) MemStb = Some fsp),
         List.find (fun '(_fn, _) => dec fn _fn) (GlobalStb skenv) = Some fsp.
 
-
-  (* AUX -------------------------------------------- *)
-  Lemma unit_id_ b (EQ: b = @URA.unit Σ): forall a, a ⋅ b = a.
-  Proof.
-    subst. apply URA.unit_id.
-  Qed.
-
-  Ltac set_just name X :=
-    let H := fresh "_tmp" in
-    generalize I; intros H; set (name := X) in H; clear H.
-
-  Ltac iImpure H :=
-    let name := fresh "my_r" in
-    set_just name (@URA.unit Σ);
-    specialize (H name URA.wf_unit I); rewrite intro_iHyp in H;
-    on_gwf
-      ltac:(fun GWF =>
-              rewrite <- (@unit_id_ name eq_refl) in GWF; clearbody name).
-
-  Lemma pure_intro a (P: Prop):
-    P -> ⌜P⌝ a.
-  Proof.
-    ss.
-  Qed.
-
-  Ltac iUnpure H :=
-    let name := fresh "my_r" in
-    set_just name (@URA.unit Σ);
-    apply (@pure_intro name) in H; rewrite intro_iHyp in H;
-    on_gwf
-      ltac:(fun GWF =>
-              rewrite <- (@unit_id_ name eq_refl) in GWF; clearbody name).
-
-  Ltac iLeft := left; iRefresh.
-  Ltac iRight := right; iRefresh.
-
-  Definition EMP: iHyp (⌜ True ⌝) (@URA.unit Σ). ss. Qed.
-
   (* AUX END -------------------------------------------- *)
 
 
@@ -214,13 +156,10 @@ Section SIMMODSEM.
       destruct x as [f n]. ss. des. subst.
       iRefresh. iDestruct PRE. iPure A. des; clarify.
       iDestruct SEP.
-      { hexploit knot_frag_unique; et. intro T.
-        iImpure T. iSpecialize T SEP. iSpecialize T PRE. ss. }
+      { iExploitP (@knot_frag_unique _ _ f' (Some f)); ss. }
       iDestruct SEP. rewrite FIND1. eapply Any.upcast_inj in A. des; clarify. steps.
       rewrite Any.upcast_downcast in _UNWRAPN. clarify. astart 2.
-      assert (f' = Some f); subst.
-      { hexploit knot_ra_merge; et. intro T.
-        iImpure T. iSpecialize T SEP. iSpecialize T PRE. iPure T. auto. }
+      iExploitP (@knot_ra_merge _ _ f' (Some f)). i. subst.
       iDestruct A0. iDestruct A0. iPure A.
       hexploit A; eauto. i. des. clarify. iRefresh. steps.
       acall_tac (blk1, 0%Z, Vptr fb 0) (ord_pure 0) PRE SEP A0.
@@ -231,12 +170,8 @@ Section SIMMODSEM.
       { unfold wf. esplits; eauto. iRefresh.
         iLeft. iApply PRE. }
       ss. des. clarify. iRefresh. iDestruct POST. iDestruct SEP0; cycle 1.
-      { iDestruct SEP0.
-        hexploit knot_full_unique; et. intro T.
-        iImpure T. iSpecialize T SEP. iSpecialize T SEP0. ss. }
-      assert (f' = Some f); subst.
-      { hexploit knot_ra_merge; et. intro T.
-        iImpure T. iSpecialize T SEP. iSpecialize T SEP0. iPure T. auto. }
+      { iDestruct SEP0. iExploitP (@knot_full_unique _ _ f' (Some f)); ss. }
+      iExploitP (@knot_ra_merge _ _ (Some f) f'). i. subst.
       steps. iPure A0. eapply Any.upcast_inj in A0. des; clarify.
       rewrite Any.upcast_downcast in _UNWRAPN. clarify.
       steps. rewrite FN. steps. rewrite FIND0. steps.
@@ -266,8 +201,7 @@ Section SIMMODSEM.
       iRefresh. iDestruct PRE. iPure PRE. des; clarify.
       iDestruct A. eapply Any.upcast_inj in PRE. des; clarify. steps.
       rewrite Any.upcast_downcast in _UNWRAPN. clarify. iDestruct SEP.
-      { hexploit knot_frag_unique; et. intro T.
-        iImpure T. iSpecialize T SEP. iSpecialize T A. ss. }
+      { iExploitP (@knot_frag_unique _ _ f' x2); ss. }
       iDestruct SEP. astart 1.
       iMerge SEP A. rewrite <- own_sep in SEP.
       eapply own_upd in SEP; cycle 1; [|rewrite intro_iHyp in SEP;iUpdate SEP].
@@ -286,12 +220,8 @@ Section SIMMODSEM.
       { esplits; eauto. iLeft. iApply A. }
       steps. ss. des; clarify.
       rewrite Any.upcast_downcast in _UNWRAPN. clarify. iDestruct SEP0; cycle 1.
-      { iDestruct SEP0.
-        hexploit knot_full_unique; et. intro T.
-        iImpure T. iSpecialize T SEP0. iSpecialize T SEP. ss. }
-      assert (f'0 = Some x); subst.
-      { hexploit knot_ra_merge; et. intro T.
-        iImpure T. iSpecialize T SEP. iSpecialize T SEP0. iPure T. auto. }
+      { iDestruct SEP0. iExploitP (@knot_full_unique _ _ f'0 (Some x)); ss. }
+      iExploitP (@knot_ra_merge _ _ (Some x) f'0). i. subst.
       astop. rewrite FIND0. steps. force_l. eexists.
       iMerge POST SEP. hret_tac POST SEP0; ss.
       { esplits; eauto. iRefresh. iSplitR SEP0; ss. red. red. esplits; eauto.
@@ -306,7 +236,6 @@ Section SIMMODSEM.
         }
       }
     }
-  Admitted.
-  (* proof is done. but Coq rejects it...  *)
+  Qed.
 
 End SIMMODSEM.
