@@ -1070,8 +1070,8 @@ Section ADQ.
       fn args T (ktr0 ktr1: ktree _ _ T)
       (SIM: forall rv, sim_body o1 (ktr0 rv) (ktr1 rv))
     :
-      _sim_body sim_body o0 (trigger (Call fn args) >>= ktr0)
-                (trigger (Call fn (Any.pair args false↑)) >>= ktr1)
+      _sim_body sim_body o0 (trigger EventsL.PushFrame;; trigger (Call fn args) >>= ktr0)
+                (trigger EventsL.PushFrame;; trigger (Call fn (Any.pair args false↑)) >>= ktr1)
   | sim_rE
       o0 o1
       T (re: EventsL.rE T) S (ktr0 ktr1: ktree _ _ S)
@@ -1266,7 +1266,6 @@ Section ADQ.
         gbase. eapply CIH; et.
       - red_transl_all. ired.
         gstep; econs; et. ii.
-        gstep; econs; et. ii.
         red_transl_all. ired.
         gstep; econs; et.
         red_transl_all. ired.
@@ -1381,7 +1380,6 @@ Section ADQ.
       unfold UModSem.transl_itr at 2. cbn.
       unfold interp_hCallE_src at 2. rewrite interp_trigger. cbn.
       red_transl_all. ired.
-      gstep; econs; et. ii.
       gstep; econs; et. ii.
       ired.
       gstep; econs; et. ii.
@@ -1577,60 +1575,10 @@ Section ADQ.
         fn args st0
     :
         simg eq 200
-             (EventsL.interp_Es p_src (trigger (Call fn args)) st0)
-             (EventsL.interp_Es p_tgt (trigger (Call fn (Any.pair args false↑))) st0)
-  .
-  Proof.
-    ginit. { eapply cpn5_wcompat; eauto with paco. } revert_until p_tgt. gcofix CIH. i.
-    cbn. steps.
-    generalize (find_sim fn). intro T. inv T; cbn; steps.
-    des; subst. specialize (IN0 args).
-    abstr (i args) itr_src. abstr (i0 (Any.pair args (Any.upcast false))) itr_tgt. clear i i0 args H H0. clear_tac.
-    revert_until sk_link_eq3. gcofix CIH. i.
-    (* guclo ordC_spec. econs. *)
-    (* { instantiate (1:=(100 + 100)%ord). rewrite <- OrdArith.add_from_nat. cbn. refl. } *)
-    instantiate (1:=(100 + 100)%ord).
-    guclo bindC_spec. econs; cycle 1.
-    { instantiate (1:=eq). ii. subst. des_ifs. steps. }
-    revert_until CIH0. generalize (Ord.from_nat 100) as idx. gcofix CIH.
-    i. punfold IN0. destruct st0 as [rst0 pst0].  destruct rst0 as [mrs0 frs0].
-    dependent destruction IN0; pclearbot.
-    - steps. gbase. eapply CIH2; et.
-    - steps.
-    - (*** call case ***)
-      TTTTT
-      guclo ordC_spec. econs.
-      { instantiate (1:=(o0 + 0)%ord). rewrite OrdArith.add_O_r. refl. }
-      guclo bindC_spec. Fail progress Esred. (*** FIXME ***) rewrite ! EventsL.interp_Es_bind.
-      econs; cycle 1.
-      { instantiate (1:=eq). i. subst. des_ifs. gbase. eapply CIH2.
-      assert(r (r_state * p_state * Any.t)%type eq 200 
-    (EventsL.interp_Es p_src (trigger (Call fn args)) (mrs0, frs0, pst0))
-    (EventsL.interp_Es p_tgt (trigger (Call fn (Any.pair args (Any.upcast false)))) (mrs0, frs0, pst0))).
-      { eapply CIH; et. }
-      gbase. eapply CIH.
-      (****** TODO: 
-      steps.
-      gbase. eapply CIH.
-    - steps. destruct frs0.
-      { unfold triggerNB. steps. }
-      destruct re; cbn; steps; try (by gbase; eapply CIH1; et).
-    - steps. destruct pe; cbn; steps; try (by gbase; eapply CIH1; et).
-    - steps. destruct ee; cbn; steps; try (by gbase; eapply CIH1; et).
-      + esplits. spc SIM. steps. gbase; eapply CIH1; et.
-      + esplits. spc SIM. steps. gbase; eapply CIH1; et.
-    - steps. gbase; eapply CIH1; et.
-    - steps. gbase; eapply CIH1; et.
-  Unshelve.
-    all: (try by apply Ord.O).
-  Qed.
-
-  Lemma my_lemma2_aux
-        fn args st0
-    :
-        simg (@eq Any.t) 200
-             (str <- EventsL.interp_Es p_src (p_src (Call fn args)) st0;; Ret (snd str))
-             (str <- EventsL.interp_Es p_tgt (p_tgt (Call fn (Any.pair args false↑))) st0;; Ret (snd str))
+             (* (EventsL.interp_Es p_src (trigger (Call fn args)) st0) *)
+             (* (EventsL.interp_Es p_tgt (trigger (Call fn (Any.pair args false↑))) st0) *)
+             (EventsL.interp_Es p_src (p_src (Call fn args)) st0)
+             (EventsL.interp_Es p_tgt (p_tgt (Call fn (Any.pair args false↑))) st0)
   .
   Proof.
     ginit. { eapply cpn5_wcompat; eauto with paco. } revert_until p_tgt. gcofix CIH. i.
@@ -1641,6 +1589,7 @@ Section ADQ.
     revert_until sk_link_eq3. gcofix CIH. i.
     guclo ordC_spec. econs.
     { instantiate (1:=(100 + 100)%ord). rewrite <- OrdArith.add_from_nat. cbn. refl. }
+    (* instantiate (1:=(100 + 100)%ord). *)
     guclo bindC_spec. econs; cycle 1.
     { instantiate (1:=eq). ii. subst. des_ifs. steps. }
     revert_until CIH0. generalize (Ord.from_nat 100) as idx. gcofix CIH.
@@ -1649,7 +1598,12 @@ Section ADQ.
     - steps. gbase. eapply CIH1; et.
     - steps.
     - (*** call case ***)
-      steps. gbase. eapply CIH.
+      steps. des_ifs.
+      { unfold triggerNB. steps. }
+      Local Opaque p_src p_tgt. steps. Local Transparent p_src p_tgt.
+      guclo bindC_spec. econs.
+      { gbase. eapply CIH; et. }
+      ii. subst. des_ifs. gbase. eapply CIH1; et.
     - steps. destruct frs0.
       { unfold triggerNB. steps. }
       destruct re; cbn; steps; try (by gbase; eapply CIH1; et).
@@ -1663,50 +1617,26 @@ Section ADQ.
     all: (try by apply Ord.O).
   Qed.
 
-(` x : r_state * p_state * Any.t <-
- EventsL.interp_Es p_src (p_src (Call "main" (Any.upcast []))) (ModSemL.initial_r_state ms_src, ModSemL.initial_p_state ms_src);;
- Ret (snd x))
-(` x : r_state * p_state * Any.t <-
- EventsL.interp_Es p_tgt (p_tgt (Call "main" (Any.upcast []))) (ModSemL.initial_r_state ms_tgt, ModSemL.initial_p_state ms_tgt);;
- Ret (snd x))
+  Lemma add_list_initial_mrs
+        mds ske
+    :
+      ModSemL.initial_mrs (ModL.get_modsem (Mod.add_list mds) ske) =
+      flat_map ModSemL.initial_mrs (List.map (flip ModL.get_modsem ske ∘ Mod.lift) mds)
+  .
+  Proof. induction mds; ii; ss. f_equal; et. Qed.
 
-  @gpaco5 Type (fun R : Type => forall (_ : R) (_ : R), Prop) (fun (R : Type) (_ : forall (_ : R) (_ : R), Prop) => Ord.t)
-    (fun (R : Type) (_ : forall (_ : R) (_ : R), Prop) (_ : Ord.t) => itree eventE R)
-    (fun (R : Type) (_ : forall (_ : R) (_ : R), Prop) (_ : Ord.t) (_ : itree eventE R) => itree eventE R) _simg
-    (@cpn5 Type (fun R : Type => forall (_ : R) (_ : R), Prop) (fun (R : Type) (_ : forall (_ : R) (_ : R), Prop) => Ord.t)
-       (fun (R : Type) (_ : forall (_ : R) (_ : R), Prop) (_ : Ord.t) => itree eventE R)
-       (fun (R : Type) (_ : forall (_ : R) (_ : R), Prop) (_ : Ord.t) (_ : itree eventE R) => itree eventE R) _simg)
-    (@bot5 Type (fun R : Type => forall (_ : R) (_ : R), Prop) (fun (R : Type) (_ : forall (_ : R) (_ : R), Prop) => Ord.t)
-       (fun (R : Type) (_ : forall (_ : R) (_ : R), Prop) (_ : Ord.t) => itree eventE R)
-       (fun (R : Type) (_ : forall (_ : R) (_ : R), Prop) (_ : Ord.t) (_ : itree eventE R) => itree eventE R))
-    (@bot5 Type (fun R : Type => forall (_ : R) (_ : R), Prop) (fun (R : Type) (_ : forall (_ : R) (_ : R), Prop) => Ord.t)
-       (fun (R : Type) (_ : forall (_ : R) (_ : R), Prop) (_ : Ord.t) => itree eventE R)
-       (fun (R : Type) (_ : forall (_ : R) (_ : R), Prop) (_ : Ord.t) (_ : itree eventE R) => itree eventE R)) Any.t 
-    (@eq Any.t) ?i1
-    (@ITree.bind' eventE (prod (prod (@r_state Σ) p_state) Any.t) Any.t
-       (fun x : prod (prod (@r_state Σ) p_state) Any.t =>
-        @go eventE Any.t (@RetF eventE Any.t (itree eventE Any.t) (@snd (prod (@r_state Σ) p_state) Any.t x)))
-       (@EventsL.interp_Es Σ Any.t p_src
-          (@p_src Any.t
-             (Call
-                (String (Ascii.Ascii true false true true false true true false)
-                   (String (Ascii.Ascii true false false false false true true false)
-                      (String (Ascii.Ascii true false false true false true true false)
-                         (String (Ascii.Ascii false true true true false true true false) EmptyString))))
-                (@Any.upcast (list val) (@nil val))))
-          (@pair (@r_state Σ) p_state (@ModSemL.initial_r_state Σ ms_src) (@ModSemL.initial_p_state Σ ms_src))))
-    (@ITree.bind' eventE (prod (prod (@r_state Σ) p_state) Any.t) Any.t
-       (fun x : prod (prod (@r_state Σ) p_state) Any.t =>
-        @go eventE Any.t (@RetF eventE Any.t (itree eventE Any.t) (@snd (prod (@r_state Σ) p_state) Any.t x)))
-       (@EventsL.interp_Es Σ Any.t p_tgt
-          (@p_tgt Any.t
-             (Call
-                (String (Ascii.Ascii true false true true false true true false)
-                   (String (Ascii.Ascii true false false false false true true false)
-                      (String (Ascii.Ascii true false false true false true true false)
-                         (String (Ascii.Ascii false true true true false true true false) EmptyString))))
-                (@Any.upcast (list val) (@nil val))))
-          (@pair (@r_state Σ) p_state (@ModSemL.initial_r_state Σ ms_tgt) (@ModSemL.initial_p_state Σ ms_tgt))))
+  (*** TODO: move to Coqlib ***)
+  Lemma flat_map_ext_h
+        A0 A1 B0 B1
+        (f0: A0 -> list B0) (f1: A1 -> list B1)
+        (RA: A0 -> A1 -> Prop) (RB: B0 -> B1 -> Prop)
+        l0 l1
+        (HD: Forall2 RA l0 l1)
+        (TL: forall a0 a1 (SIM: RA a0 a1), Forall2 RB (f0 a0) (f1 a1))
+    :
+      Forall2 RB (do X <- l0; f0 X) (do X <- l1; f1 X)
+  .
+  Proof. induction HD; ii; ss. eapply Forall2_app; et. Qed.
 
   Lemma my_lemma2
         :
@@ -1719,82 +1649,42 @@ Section ADQ.
     { eapply cpn5_wcompat; eauto with paco. }
     unfold ModSemL.initial_itr. Local Opaque ModSemL.prog. ss.
     unfold ITree.map.
-    unfold assume.
+    unfold assume. folder.
     steps.
     esplits; et. { admit "ez - wf". } steps.
-    Local Transparent ModSemL.prog.
-    unfold ModSemL.prog at 4.
-    unfold ModSemL.prog at 2.
-    Local Opaque ModSemL.prog.
-    folder.
-    ss. steps.
-    (* Opaque ModSemL.initial_r_state. *)
-    (* Opaque ModSemL.initial_p_state. *)
-    fold ms_src. fold ms_mid.
-    set (rs_src0 := initial_r_state ms_src) in *.
-    set (rs_tgt0 := initial_r_state ms_mid) in *.
-    assert(exists mrs_src0 hd_src tl_src, rs_src0 = (mrs_src0, hd_src :: tl_src)).
-    { esplits. refl. }
-    assert(exists mrs_tgt0 hd_tgt tl_tgt, rs_tgt0 = (mrs_tgt0, hd_tgt :: tl_tgt)).
-    { esplits. refl. }
-    des. clearbody rs_src0 rs_tgt0. subst.
-    unfold unwrapU at 1. des_ifs; cycle 1.
-    { unfold triggerUB. myred. ss. }
-    unfold unwrapU. des_ifs; cycle 1.
-    { admit "unwrapN!!!!!!!!!!". }
-
-
-    unfold ms_mid, mds_mid, SMod.to_mid in Heq0. rewrite SMod.transl_fnsems in Heq0.
-    unfold SMod.load_fnsems in Heq0. apply find_some in Heq0. des; ss. des_sumbool; subst.
-    rewrite in_flat_map in Heq0. des; ss. rewrite in_flat_map in Heq2. des; ss. des_ifs. ss; des; ss; clarify. ss. subst.
-    rename Heq2 into INF. rename Heq0 into IN.
-    rename x into md0. fold sk in INF. fold skenv in INF.
-
-    unfold ms_src, mds_src, SMod.to_src in Heq. rewrite SMod.transl_fnsems in Heq.
-    unfold SMod.load_fnsems in Heq. apply find_some in Heq. des; ss. destruct p; ss. des_sumbool; subst.
-    rewrite in_flat_map in Heq. des; ss. rewrite in_flat_map in Heq0. des; ss. des_ifs. ss; des; ss; clarify.
-    rename Heq0 into INF0. rename Heq into IN0.
-    rename x into md1. fold sk in INF0. fold skenv in INF0.
-
-    assert(md0 = md1); subst.
-    { admit "ez - uniqueness". }
-    assert(f = f0).
-    { admit "ez - uniqueness". }
+    instantiate (1:=(200 + 200)%ord).
+    match goal with | [ |- gpaco5 _ _ _ _ _ _ _ ?src ?tgt ] => remember src as tmp end.
+    replace ([]↑) with (Any.pair ([]: list val)↑ false↑); cycle 1.
+    { admit "ez - parameterize initial argument && use transitivity of refinement". }
     subst.
-    fold ms_src. fold ms_mid. fold p_src. fold p_mid.
-
-    steps.
-
-    match goal with
-    | [ |- gpaco5 _ _ _ _ _ _ _ ?i_src _ ] => remember i_src as tmp
-    end.
-    replace (([]: list val)↑) with (Any.pair ord_top↑ ([]: list val)↑) by admit "TODO".
-    subst tmp.
-
-    guclo ordC_spec. econs.
-    { eapply OrdArith.add_base_l. }
-    guclo bindC_spec.
-    econs.
-    - hexploit adequacy_type_aux; cycle 1.
-      { intro T. gfinal. right. instantiate (3:=ord_top) in T. ss. eapply T. }
-      ss. unfold ms_src, ms_mid. unfold initial_p_state.
-      apply func_ext. intro mn. unfold mds_src, mds_mid, SMod.to_src, SMod.to_mid.
-      rewrite ! SMod.transl_initial_mrs. ss.
-    - ii. rr in SIM. des_ifs. des; ss. subst. r in SIM. des_ifs.
-      myred.
-      steps.
-  Unshelve.
-    all: ss.
-    all: try (by exact Ord.O).
-    all: try (by econs; et).
-
-    admit "".
+    assert(STEQ: (ModSemL.initial_r_state ms_src, ModSemL.initial_p_state ms_src)
+                 = (ModSemL.initial_r_state ms_tgt, ModSemL.initial_p_state ms_tgt)).
+    { assert(forall fn, find (fun mnr => dec fn (fst mnr)) (ModSemL.initial_mrs ms_src) =
+                        find (fun mnr => dec fn (fst mnr)) (ModSemL.initial_mrs ms_tgt)).
+      { i. f_equal.
+        unfold ms_src, ms_tgt. unfold ModL.enclose.
+        rewrite ! add_list_initial_mrs.
+        rewrite <- sk_link_eq3. folder.
+        rewrite <- sk_link_eq2. folder.
+        rewrite ! map_app. rewrite ! flat_map_app. f_equal.
+        + eapply Forall2_eq.
+          eapply flat_map_ext_h with (RA:=fun ms0 ms1 => ms0.(ModSemL.initial_mrs) = ms1.(ModSemL.initial_mrs)).
+          { unfold kmds, kmds_top. rewrite ! List.map_map. eapply Forall2_apply_Forall2; try refl. i; subst. ss. }
+          i. rewrite SIM. refl.
+        + eapply Forall2_eq.
+          eapply flat_map_ext_h with (RA:=fun ms0 ms1 => ms0.(ModSemL.initial_mrs) = ms1.(ModSemL.initial_mrs)).
+          { unfold kmds, kmds_top. rewrite ! List.map_map. eapply Forall2_apply_Forall2; try refl. i; subst. ss. }
+          i. rewrite SIM. refl.
+      }
+      f_equal.
+      - unfold ModSemL.initial_r_state. f_equal. apply func_ext. i. rewrite H; refl.
+      - unfold ModSemL.initial_p_state. f_equal. apply func_ext. i. rewrite H; refl.
+    }
+    rewrite STEQ.
+    guclo bindC_spec. econs.
+    { gfinal. right. eapply my_lemma2_aux. }
+    i. subst. steps.
   Qed.
-
-  (* Let ms_tgt: ModSemL.t := admit "". *)
-  (* Let rsum: r_state -> Σ := *)
-  (*   fun '(mrs_tgt, frs_tgt) => (fold_left (⋅) (List.map (mrs_tgt <*> fst) ms_tgt.(ModSemL.initial_mrs)) ε) ⋅ (fold_left (⋅) frs_tgt ε). *)
-  (* Hypothesis WFR: URA.wf (entry_r ⋅ rsum (ModSemL.initial_r_state ms_tgt)). *)
 
   Variable entry_r: Σ.
   Variable mainpre: Any.t -> ord -> Σ -> Prop.
