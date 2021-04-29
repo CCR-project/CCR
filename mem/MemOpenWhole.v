@@ -1577,8 +1577,8 @@ Section ADQ.
         fn args st0
     :
         simg eq 200
-             (EventsL.interp_Es p_src (p_src (Call fn args)) st0)
-             (EventsL.interp_Es p_tgt (p_tgt (Call fn (Any.pair args false↑))) st0)
+             (EventsL.interp_Es p_src (trigger (Call fn args)) st0)
+             (EventsL.interp_Es p_tgt (trigger (Call fn (Any.pair args false↑))) st0)
   .
   Proof.
     ginit. { eapply cpn5_wcompat; eauto with paco. } revert_until p_tgt. gcofix CIH. i.
@@ -1587,17 +1587,31 @@ Section ADQ.
     des; subst. specialize (IN0 args).
     abstr (i args) itr_src. abstr (i0 (Any.pair args (Any.upcast false))) itr_tgt. clear i i0 args H H0. clear_tac.
     revert_until sk_link_eq3. gcofix CIH. i.
-    guclo ordC_spec. econs.
-    { instantiate (1:=(100 + 100)%ord). rewrite <- OrdArith.add_from_nat. cbn. refl. }
+    (* guclo ordC_spec. econs. *)
+    (* { instantiate (1:=(100 + 100)%ord). rewrite <- OrdArith.add_from_nat. cbn. refl. } *)
+    instantiate (1:=(100 + 100)%ord).
     guclo bindC_spec. econs; cycle 1.
     { instantiate (1:=eq). ii. subst. des_ifs. steps. }
     revert_until CIH0. generalize (Ord.from_nat 100) as idx. gcofix CIH.
     i. punfold IN0. destruct st0 as [rst0 pst0].  destruct rst0 as [mrs0 frs0].
     dependent destruction IN0; pclearbot.
-    - steps. gbase. eapply CIH1; et.
+    - steps. gbase. eapply CIH2; et.
     - steps.
     - (*** call case ***)
-      steps. gbase. eapply CIH.
+      TTTTT
+      guclo ordC_spec. econs.
+      { instantiate (1:=(o0 + 0)%ord). rewrite OrdArith.add_O_r. refl. }
+      guclo bindC_spec. Fail progress Esred. (*** FIXME ***) rewrite ! EventsL.interp_Es_bind.
+      econs; cycle 1.
+      { instantiate (1:=eq). i. subst. des_ifs. gbase. eapply CIH2.
+      assert(r (r_state * p_state * Any.t)%type eq 200 
+    (EventsL.interp_Es p_src (trigger (Call fn args)) (mrs0, frs0, pst0))
+    (EventsL.interp_Es p_tgt (trigger (Call fn (Any.pair args (Any.upcast false)))) (mrs0, frs0, pst0))).
+      { eapply CIH; et. }
+      gbase. eapply CIH.
+      (****** TODO: 
+      steps.
+      gbase. eapply CIH.
     - steps. destruct frs0.
       { unfold triggerNB. steps. }
       destruct re; cbn; steps; try (by gbase; eapply CIH1; et).
