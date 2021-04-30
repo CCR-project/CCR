@@ -178,7 +178,7 @@ Section AUX.
     @mk _ (option fs.(X)) (fs.(AA) * bool)%type (fs.(AR))
         (fun ox '(argh, is_k) argl o => ⌜is_some ox = is_k⌝ **
                                         ((Exists x, ⌜ox = Some x⌝ ** fs.(precond) x argh argl o ** ⌜is_pure o⌝) ∨
-                                         (⌜ox = None⌝)))
+                                         (⌜ox = None /\ argh↑ = argl /\ o = ord_top⌝)))
         (fun ox reth retl => ((Exists x, ⌜ox = Some x⌝ ** fs.(postcond) x reth retl) ∨ (⌜ox = None /\ reth↑ = retl⌝)))
   .
 
@@ -741,7 +741,7 @@ Section ADQ.
           { eapply OrdArith.lt_from_nat. lia. }
           { instantiate (1:=ord_top). instantiate(1:=None). cbn. iRefresh.
             iSplitP; ss.
-            right; iRefresh. ss. }
+            right; iRefresh. repeat split; ss. eapply Any.downcast_upcast; et. }
           { ss. }
           i. subst. ss. destruct mrs_tgt1. esplits; et. i.
           clear GWF. assert(GWF: ☀) by (split; [refl|exact VALID]).

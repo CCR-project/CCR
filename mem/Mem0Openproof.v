@@ -1,4 +1,4 @@
-Require Import Mem0 Mem1 HoareDef SimModSem.
+Require Import Mem0 Mem1 MemOpen HoareDef SimModSem.
 Require Import Coqlib.
 Require Import Universe.
 Require Import Skeleton.
@@ -33,7 +33,6 @@ Definition add_delta_to_black `{M: URA.t} (b: Auth.t M) (w: Auth.t _): Auth.t _ 
   | _, _ => Auth.boom
   end
 .
-
 
 
 (*** TODO: move to Coqlib ***)
@@ -147,20 +146,43 @@ Section SIMMODSEM.
   | sim_loc_absent: sim_loc None ε
   .
 
+  Inductive mem_extends (m0 m1: Mem.t): Prop :=
+  | mem_extends_intro
+      (NB: m0.(Mem.nb) <= m1.(Mem.nb))
+      (CNTS: forall b ofs, (m0.(Mem.cnts) b ofs) = None \/ (m0.(Mem.cnts) b ofs) = (m1.(Mem.cnts) b ofs))
+  .
+
+  Global Program Instance mem_extends_PreOrder: PreOrder mem_extends.
+  Next Obligation.
+    ii. econs; et.
+  Qed.
+  Next Obligation.
+    ii. inv H0; inv H1. econs; et; try lia. ii. repeat spc CNTS. des; et. repeat spc CNTS0. des; eauto with congruence.
+  Qed.
+
+  Search (option _ -> option _ -> option _).
+  SearchPattern (option _ -> option _ -> option _).
+
+  Definition o_combine X (f: X -> X -> option X) (x0 x1: option X): option X :=
+    match x0, x1 with
+    | Some x0, Some x1 => do x <- (f x0 x1); Some x
+    | Some x0, _ => Some x0
+    | _, Some x1 => Some x1
+    | _, _ => None
+    end
+  .
+
+  Definition o_xor X (x0 x1: option X): option X := Eval cbv delta in (o_combine (fun _ _ => None) x0 x1).
+
   Let wf: W -> Prop :=
     fun '(mrps_src0, mrps_tgt0) =>
-      exists mr_src (mem_tgt: Mem.t),
-        (<<SRC: mrps_src0 = (mr_src, tt↑)>>) /\
+      exists mr_src (mem_src: Mem.t) (mem_tgt: Mem.t),
+        (<<SRC: mrps_src0 = (mr_src, mem_src↑)>>) /\
         (<<TGT: mrps_tgt0 = (ε, mem_tgt↑)>>) /\
         (<<SIM: iHyp (Exists mem_src, Own (GRA.embed ((Auth.black mem_src): URA.car (t:=Mem1.memRA))) **
-                                          (* (Forall b ofs, ⌜~(b = 0 /\ ofs = 0%Z)⌝ -* *)
-                                          (*                  match mem_tgt.(Mem.cnts) b ofs with *)
-                                          (*                  | Some v => Own (GRA.embed ((b, ofs) |-> [v])) *)
-                                          (*                  | None => ⌜True⌝ *)
-                                          (*                  end) *)
-                                          (⌜forall b ofs, sim_loc ((mem_tgt.(Mem.cnts)) b ofs) (mem_src b ofs)⌝)
-                     ) mr_src>>) /\
-        (<<WFTGT: forall b ofs v, mem_tgt.(Mem.cnts) b ofs = Some v -> <<NB: b < mem_tgt.(Mem.nb)>> >>)
+                                          (⌜forall b ofs, sim_loc ((mem_tgt.(Mem.cnts)) b ofs) (mem_src b ofs)⌝)) mr_src>>) /\
+        (<<WFTGT: forall b ofs v, mem_tgt.(Mem.cnts) b ofs = Some v -> <<NB: b < mem_tgt.(Mem.nb)>> >>) /\
+        (<<SIMM: mem_extends mem_src mem_tgt>>)
   .
 
   Hint Resolve sim_itree_mon: paco.
@@ -173,10 +195,52 @@ Section SIMMODSEM.
   (* Opaque URA.pointwise. *)
   Opaque URA.unit.
 
-  Theorem correct: ModSemPair.sim Mem1.MemSem Mem0.MemSem.
+  (* Lemma or_split: (forall (ab: Σ) (Pa Pb: iProp), iHyp (Pa ∨ Pb) (ab) -> iHyp Pa ab \/ iHyp Pb ab). *)
+  (*   { clear - Σ. ii. unfold iHyp in *. r in H. et. } *)
+  (* Qed. *)
+Ltac iDestruct H :=
+  match type of H with
+  | iHyp (Exists _, _) _ => destruct H as [? H]; iRefresh
+  | iHyp (_ ** _) _ =>
+    let name0 := fresh "A" in
+    apply sepconj_split in H as [? [? [H [name0 ?]]]]; subst; iRefresh
+  | iHyp (_ ∧ ⌜ _ ⌝) _ =>
+    let name0 := fresh "B" in
+    destruct H as [H name0]; iRefresh; iPure name0
+  | iHyp (⌜ _ ⌝ ∧ _) _ =>
+    let name0 := fresh "B" in
+    destruct H as [name0 H]; iRefresh; iPure name0
+  | iHyp (_ ∨ _) _ =>
+    destruct H as [H|H]; iRefresh
+  (*** TODO: make iDestructL/iDestructR ***)
+  end.
+
+  (* Definition __NEVER_USE_THIS___KSRC__ := "__KSRC__". *)
+  (* Definition __NEVER_USE_THIS___KTGT__ := "__KTGT__". *)
+
+  Definition __hide_mark__ A (a : A) : A := a.
+  Lemma intro_hide_mark: forall A (a: A), a = __hide_mark__ a. refl. Qed.
+
+  Ltac hide_k := 
+    match goal with
+    | [ |- (gpaco6 _ _ _ _ _ _ _ _ (_, ?isrc >>= ?ksrc) (_, ?itgt >>= ?ktgt)) ] =>
+      rewrite intro_hide_mark with (a:=ksrc);
+      rewrite intro_hide_mark with (a:=ktgt);
+      let name0 := fresh "__KSRC__" in set (__hide_mark__ ksrc) as name0; move name0 at top;
+      let name0 := fresh "__KTGT__" in set (__hide_mark__ ktgt) as name0; move name0 at top
+    end.
+
+  Ltac unhide_k :=
+    do 2 match goal with
+    | [ H := __hide_mark__ _ |- _ ] => subst H
+    end;
+    rewrite <- ! intro_hide_mark
+  .
+
+  Theorem correct: ModSemPair.sim MemOpen.MemSem Mem0.MemSem.
   Proof.
    econstructor 1 with (wf:=wf); et; swap 2 3.
-    { ss. esplits; ss; et. hexploit gwf_dummy; i. iRefresh.
+    { ss. esplits; ss; et; try refl. hexploit gwf_dummy; i. iRefresh.
       eexists; iRefresh. iSplitP; ss.
       { eexists. rewrite URA.unit_id. refl. }
       ii. econs.
@@ -185,9 +249,34 @@ Section SIMMODSEM.
     econs; ss.
     { unfold allocF. init.
       harg_tac. des_ifs_safe. des. repeat rewrite URA.unit_idl in *. repeat rewrite URA.unit_id in *.
-      iRefresh. iPure PRE. des. clarify. apply Any.upcast_inj in PRE. des; clarify.
+      hide_k. iRefresh.
+      do 2 iDestruct SIM. iPure A. iDestruct PRE. iPure PRE. iDestruct A0; cycle 1.
+      - iPure A0. des; subst. ss. steps.
+        rewrite Any.upcast_downcast in *. clarify. destruct v; ss. clarify.
+        rename t into mem_src.
+        unhide_k. steps. rewrite Any.upcast_downcast in *. steps.
+        force_l. esplits. steps.
+        hret_tac SIM (@URA.unit Σ); ss; et.
+        { iRefresh. right; iRefresh. rr; ss. esplits; et.
+          instantiate (1:=mem_tgt.(Mem.nb) - mem_src.(Mem.nb) + x).
+          admit "ez - arith".
+        }
+        { esplits; ss; et; ss.
+          - eexists; iRefresh. iSplitP; et.
+        }
+      - do 3 iDestruct A0. iMod A0. iMod A1. iDestruct A2. iMod A2. des; subst. ss.
+        apply_all_once Any.upcast_inj. des; clarify. steps.
+        rewrite Any.upcast_downcast in *. steps.
+        astart 0. astop. force_l. esplits; et.
+        unhide_k. steps. rewrite Any.upcast_downcast in *. steps.
+        hret_tac SIM (@URA.unit Σ); ss; et.
+        { iRefresh. left; iRefresh. eexists; iRefresh. iSplitP; ss. iSplitP; ss.
+          - eexists; iRefresh. iSplitP; ss.
+        }
+      -
+      Idestruct A0.
+      (* des. clarify. apply Any.upcast_inj in PRE. des; clarify. *)
       steps. rewrite Any.upcast_downcast in *. steps.
-      do 2 iDestruct SIM. iPure A.
       set (blk := (Mem.nb mem_tgt)). rename x into sz. rename x0 into delta. rename x1 into mem_src0.
 
       astart 0. astop.

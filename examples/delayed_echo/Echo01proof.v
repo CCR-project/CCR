@@ -156,7 +156,8 @@ Section SIMMODSEM.
         - iApply A; ss.
         - iApply A0; ss.
       }
-      des; subst. rewrite Any.upcast_downcast. steps.
+      iDestruct POST. subst.
+      rewrite Any.upcast_downcast. steps.
       rewrite Any.upcast_downcast in _UNWRAPU. clarify.
 
 
@@ -187,9 +188,9 @@ Section SIMMODSEM.
         { iRefresh. iDestruct SIM0. esplits; eauto. eexists; iRefresh. eauto. }
       - steps. astart 10. rewrite Any.upcast_downcast. ss. steps.
         acall_tac __ (ord_pure 2) PRE SIM A; ss; et.
-        { instantiate (1:=(_, _)). esplits; try refl; iRefresh. eexists; iRefresh. iSplitP; ss. iSplitP; ss. iApply A; ss. }
+        { instantiate (1:=(_, _)). cbn; iRefresh. iSplitP; ss. eexists; iRefresh. iSplitP; ss. iSplitP; ss. iApply A; ss. }
         { esplits; ss; et. exists ns; iRefresh. right; iRefresh; ss. }
-        ss. des; iRefresh. do 2 iDestruct POST0. iMod A. subst. apply Any.upcast_inj in A. des; clarify.
+        ss. do 3 iDestruct POST0. iMod A. apply Any.upcast_inj in A. des; clarify.
         iDestruct SIM0. destruct SIM0; iRefresh.
         { iDestruct H1. hexploit echo_ra_black; et. intro T. iMod T. iSpecialize T SIM. iSpecialize T H1. iMod T; des; ss. }
 
@@ -242,7 +243,7 @@ Section SIMMODSEM.
         acall_tac __ (ord_pure 1) PRE (A, A1, A2) (@URA.unit Σ); ss; et.
         { esplits; try refl; iRefresh. instantiate (1:=1). esplits; ss; et. }
         { esplits; ss; et. eexists; iRefresh. right; iRefresh; ss; et. }
-        des; iRefresh. do 2 iDestruct POST. iMod POST. subst.
+        ss. do 3 iDestruct POST. iMod POST. apply Any.upcast_inj in POST. des; clarify.
         apply_all_once Any.upcast_inj. des; clarify. steps. rewrite Any.upcast_downcast in *. clarify.
         iDestruct SIM. destruct SIM as [SIM|SIM]; iRefresh.
         { iDestruct SIM. hexploit echo_ra_black; et. intro T. iMod T. iSpecialize T A. iSpecialize T SIM. iMod T; des; ss. }
@@ -266,13 +267,13 @@ Section SIMMODSEM.
 
 
         acall_tac __ (ord_pure 2) SIM A (A0, A2); ss; et.
-        { instantiate (1:=(_, _)). esplits; try refl; iRefresh. eexists; iRefresh. iSplitP; ss.
+        { instantiate (1:=(_, _)). cbn; iRefresh. iSplitP; ss. eexists; iRefresh. iSplitP; ss.
           iSplitR (A0); ss; et.
           - iSplitP; ss. eauto.
           - eexists; iRefresh. eauto.
         }
         { esplits; ss; et. eexists; iRefresh. right; iRefresh; ss; et. }
-        ss. des; iRefresh. iDestruct SIM0. do 3 iDestruct POST. iMod POST. subst.
+        ss. des; iRefresh. iDestruct SIM0. do 4 iDestruct POST. iMod POST. subst.
         apply_all_once Any.upcast_inj. des; clarify. steps.
         rewrite Any.upcast_downcast in *. clarify.
         rename SIM0 into SIM. destruct SIM as [SIM|SIM]; iRefresh.
@@ -292,9 +293,9 @@ Section SIMMODSEM.
 
 
         acall_tac __ (ord_pure 1) A2 (A, A1) A0; ss; et.
-        { instantiate (1:=(_, _, _)). ss. esplits; try refl; iRefresh. iSplitP; ss. iSplitP; ss. eauto. }
+        { instantiate (1:=(_, _, _)). cbn; iRefresh. iSplitP; ss. iSplitP; ss. iSplitP; ss. eauto. }
         { esplits; ss; et. eexists; iRefresh. right; iRefresh; ss; et. }
-        ss. des; iRefresh. iDestruct SIM. iDestruct POST. iMod A0. subst.
+        ss. des; iRefresh. iDestruct SIM. do 2 iDestruct POST. iMod A0. subst.
         apply_all_once Any.upcast_inj. des; clarify. steps.
         rewrite Any.upcast_downcast in *. clarify.
         destruct SIM as [SIM|SIM]; iRefresh.

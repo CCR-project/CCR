@@ -7,6 +7,7 @@ Require Import Skeleton.
 Require Import PCM.
 From Ordinal Require Export Ordinal Arithmetic Inaccessible.
 Require Import Any.
+Require Import Logic.
 
 Generalizable Variables E R A B C X Y Σ.
 
@@ -268,7 +269,8 @@ Section CANCEL.
   (*   apply (val). *)
   (* Defined. *)
   Definition mk_simple {X: Type} (PQ: X -> ((Any_tgt -> ord -> Σ -> Prop) * (Any_tgt -> Σ -> Prop))): fspec :=
-    @mk _ X (list val) (val) (fun x y a o r => (fst ∘ PQ) x a o r /\ y↑ = a) (fun x z a r => (snd ∘ PQ) x a r /\ z↑ = a)
+    (* @mk _ X (list val) (val) (fun x y a o r => (fst ∘ PQ) x a o r /\ y↑ = a) (fun x z a r => (snd ∘ PQ) x a r /\ z↑ = a) *)
+    @mk _ X (list val) (val) (fun x y a o => (fst ∘ PQ) x a o ∧ ⌜y↑ = a⌝) (fun x z a => (snd ∘ PQ) x a ∧ ⌜z↑ = a⌝)
   .
 
 

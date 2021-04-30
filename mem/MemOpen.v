@@ -41,7 +41,7 @@ Section PROOF.
     SModSem.fnsems := MemSbtb;
     SModSem.mn := "Mem";
     SModSem.initial_mr := (GRA.embed (Auth.black (M:=_memRA) ε));
-    SModSem.initial_st := tt↑;
+    SModSem.initial_st := Mem.empty↑;
   |}
   .
 
