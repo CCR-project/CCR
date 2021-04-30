@@ -28,8 +28,8 @@ Section PROOF.
    ***)
   Definition mainF: Any.t -> itree Es Any.t :=
     fun _ =>
-      (* x <- ((↓) <$> trigger (Call "alloc" [Vint 1]↑)) >>= (ǃ);; *)
-      x <- trigger (Call "alloc" [Vint 1]↑);;
+      (* x <- ((↓) <$> trigger (Call "malloc" [Vint 1]↑)) >>= (ǃ);; *)
+      x <- trigger (Call "malloc" [Vint 1]↑);;
       `x: val <- x↓ǃ;;
       trigger (Call "store" [x ; Vint 42]↑);;
       (* trigger (Call "unknown_call" [x]);; *)
