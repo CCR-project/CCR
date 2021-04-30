@@ -5,6 +5,9 @@ open Imp2Clight
 open ImpSimple
 open ImpFactorial
 open ImpMutsum
+open ImpKnot
+open ImpMem1
+open ImpMem2
 
 (* Preprocessing clight programs *)
 (* ref: velus, veluslib.ml *)
@@ -33,6 +36,10 @@ let add_builtins p =
 
 (* Imp program compilations *)
 let compile_imp p ofile =
+  (* Prepare to dump Clight if requested *)
+  let set_dest dst ext =
+    dst := Some (output_filename ofile ".c" ext) in
+  set_dest PrintClight.destination ".light.c";
   (* Convert Imp to Clight *)
   let i2c = Imp2Clight.compile p in
   match i2c with
@@ -61,6 +68,9 @@ let main =
   compile_imp (ImpMutsum.imp_mutsumF_prog) "mutsumF.s";
   compile_imp (ImpMutsum.imp_mutsumG_prog) "mutsumG.s";
   compile_imp (ImpMutsum.imp_mutsumMain_prog) "mutsumMain.s";
+  compile_imp (ImpKnot.imp_knot_prog) "knot.s";
+  compile_imp (ImpMem1.imp_mem1_prog) "mem1.s";
+  compile_imp (ImpMem2.imp_mem2_prog) "mem2.s";
   print_endline "Done."
 
 

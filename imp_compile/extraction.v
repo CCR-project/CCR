@@ -15,6 +15,9 @@ Require Import Imp2Clight.
 Require Import ImpSimple.
 Require Import ImpFactorial.
 Require Import ImpMutsum.
+Require Import ImpKnot.
+Require Import ImpMem1.
+Require Import ImpMem2.
 
 Extract Constant excluded_middle_informative => "true".
 
@@ -161,6 +164,9 @@ Separate Extraction
    Imp2Clight.compile Imp2Clight.list_type_to_typelist
    imp_factorial_prog imp_simple_prog
    imp_mutsumF_prog imp_mutsumG_prog imp_mutsumMain_prog
+   imp_knot_prog
+   imp_mem1_prog
+   imp_mem2_prog
 .
 
 Cd "..".

@@ -84,10 +84,10 @@ Module ImpNotations.
   Notation "x '=#&' X" :=
     (AddrOf x X) (at level 60): stmt_scope.
 
-  Notation "x '=#' '*' p" :=
+  Notation "x '=#*' p" :=
     (Load x p) (at level 60): stmt_scope.
 
-  Notation "'*' p '=#' v" :=
+  Notation " p '*=#' v" :=
     (Store p v) (at level 60): stmt_scope.
 
   Notation "x '=#' '(' a '==' b ')'" :=
