@@ -316,18 +316,6 @@ Section CANCEL.
 
 
 
-Global Instance Dec_RelDec K `{Dec K}: @RelDec K eq :=
-  { rel_dec := dec }.
-
-Global Instance Dec_RelDec_Correct K `{Dec K}: RelDec_Correct Dec_RelDec.
-Proof.
-  unfold Dec_RelDec. ss.
-  econs. ii. ss. unfold Dec_RelDec. split; ii.
-  - unfold rel_dec in *. unfold sumbool_to_bool in *. des_ifs.
-  - unfold rel_dec in *. unfold sumbool_to_bool in *. des_ifs.
-Qed.
-
-
   Definition handle_hCallE_tgt (ord_cur: ord): hCallE ~> itree Es :=
     fun _ '(hCall tbr fn varg_src) =>
       f <- (alist_find fn stb)ǃ;;
