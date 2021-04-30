@@ -713,24 +713,22 @@ Section CANCEL.
 
   Let MAINF: @alist_find _ _ (@Dec_RelDec string string_Dec) _  "main" stb = Some (mk_simple (fun (_: unit) => (mainpre, top2))).
   Proof.
-  Admitted.
-  (*   unfold stb, _stb. *)
-  (*   unfold alist_find *)
-  (*   rewrite find_map. uo. unfold compose. des_ifs. *)
-  (*   - eapply find_some in Heq. des. des_sumbool. subst. repeat f_equal. *)
-  (*     assert(In ("main", (mk_specbody (mk_simple (fun (_: unit) => (mainpre, top2))) mainbody)) sbtb). *)
-  (*     { unfold sbtb, _sbtb, mss, _mss. eapply in_flat_map. esplits; et. *)
-  (*       { rewrite in_map_iff. esplits; et. } *)
-  (*       ss. et. *)
-  (*     } *)
-  (*     admit "ez - uniqueness of fname". *)
-  (*   - eapply find_none in Heq; cycle 1. *)
-  (*     { unfold sbtb, _sbtb, mss, _mss. eapply in_flat_map. esplits; et. *)
-  (*       { rewrite in_map_iff. esplits; et. } *)
-  (*       ss. et. *)
-  (*     } *)
-  (*     des_ifs. *)
-  (* Qed. *)
+    unfold stb, _stb.
+    rewrite alist_find_map. uo. unfold compose. des_ifs.
+    - eapply alist_find_some in Heq. des. des_sumbool. subst. repeat f_equal.
+      assert(In ("main", (mk_specbody (mk_simple (fun (_: unit) => (mainpre, top2))) mainbody)) sbtb).
+      { unfold sbtb, _sbtb, mss, _mss. eapply in_flat_map. esplits; et.
+        { rewrite in_map_iff. esplits; et. }
+        ss. et.
+      }
+      admit "ez - uniqueness of fname".
+    - eapply alist_find_none in Heq.
+      { exfalso. eapply Heq.
+        unfold sbtb, _sbtb, mss, _mss. eapply in_flat_map. esplits; et.
+        { rewrite in_map_iff. esplits; et. }
+        ss. et.
+      }
+  Qed.
 
   Let initial_r_state ms entry_r: r_state :=
     (fun mn => match List.find (fun mnr => dec mn (fst mnr)) ms.(ModSemL.initial_mrs) with

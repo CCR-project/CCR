@@ -67,3 +67,37 @@ Lemma eq_rel_dec_correct T `{DEC: Dec T}
 Proof.
   des_ifs.
 Qed.
+
+Section ALIST.
+  Lemma alist_find_some V (k: string) (l: alist string V) (v: V)
+        (FIND: alist_find k l = Some v)
+  :
+    In (k, v) l.
+  Proof.
+    admit "ez".
+  Qed.
+
+  Lemma alist_find_none K `{Dec K} V (k: K) (l: alist K V)
+        (FIND: alist_find k l = None)
+        v
+    :
+      ~ In (k, v) l.
+  Proof.
+    admit "ez".
+  Qed.
+
+  Lemma alist_find_app K `{Dec K} V (k: K) (l0 l1: alist K V) (v: V)
+        (FIND: alist_find k l0 = Some v)
+    :
+      alist_find k (l0 ++ l1) = Some v.
+  Proof.
+    admit "ez".
+  Qed.
+
+  Lemma alist_find_map K `{Dec K} V0 V1 (f: V0 -> V1) (k: K) (l: alist K V0)
+    :
+      alist_find k (List.map (fun '(k, v) => (k, f v)) l) = o_map (alist_find k l) f.
+  Proof.
+    admit "ez".
+  Qed.
+End ALIST.

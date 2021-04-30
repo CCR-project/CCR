@@ -155,34 +155,6 @@ Section AUX.
     exploit H0; et. intro U; des. esplits; eauto. etrans; et.
   Qed.
 
-  (* TODO: generalize and move to AList *)
-  Section ALIST.
-    Lemma alist_find_some (fn: string) (l: alist gname fspec) (fsp: fspec)
-          (FIND: alist_find fn l = Some fsp)
-    :
-      In (fn, fsp) l.
-    Proof.
-      admit "ez".
-    Qed.
-
-    Lemma alist_find_none (fn: string) (l: alist gname fspec)
-          (FIND: alist_find fn l = None)
-          fsp
-      :
-        ~ In (fn, fsp) l.
-    Proof.
-      admit "ez".
-    Qed.
-
-    Lemma alist_find_app (fn: string) (l0 l1: alist gname fspec) (fsp: fspec)
-          (FIND: alist_find fn l0 = Some fsp)
-    :
-      alist_find fn (l0 ++ l1) = Some fsp.
-    Proof.
-      admit "ez".
-    Qed.
-  End ALIST.
-
   Theorem incl_weaker: forall stb0 stb1 (NODUP: NoDup (List.map fst stb1)) (INCL: incl stb0 stb1), stb_weaker stb0 stb1.
   Proof.
     ii. eapply alist_find_some in FINDTGT.
