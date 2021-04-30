@@ -61,7 +61,7 @@ void echo() {
 (***
 void echo_finish() {
   if(my_list) {
-    int #n = mmalloc(sizeof(int));
+    int #n = malloc(sizeof(int));
     my_list = pop2(my_list, n);
     putint(#n);
     echo_finish();
@@ -75,7 +75,7 @@ void echo_finish() {
       if is_zero my_list0
       then Ret Vundef
       else (
-          `nref: val     <- (ccall "malloc" ([Vint 1%Z]));;
+          `nref: val     <- (ccall "alloc" ([Vint 1%Z]));;
           `my_list1: val <- (ccall "pop2" ([my_list0; nref]));;
           trigger (PPut my_list1↑);;
           `n: val        <- (ccall "load" ([nref]));;

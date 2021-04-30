@@ -28,19 +28,19 @@ Section PROOF.
 
   Compute (URA.car (t:=memRA)).
 
-  Definition mallocF_parg (args: list val): option Z :=
+  Definition allocF_parg (args: list val): option Z :=
     match args with
     | [Vint sz] => Some sz
     | _ => None
     end
   .
 
-  Definition mallocF: list val -> itree Es val :=
+  Definition allocF: list val -> itree Es val :=
     fun varg =>
       mp0 <- trigger (PGet);;
       m0 <- mp0↓?;;
-      `sz: Z <- (mallocF_parg varg)?;;
-      let (blk, m1) := Mem.malloc m0 sz in
+      `sz: Z <- (allocF_parg varg)?;;
+      let (blk, m1) := Mem.alloc m0 sz in
       trigger (PPut m1↑);;
       Ret (Vptr blk 0)
   .
@@ -115,7 +115,7 @@ Section PROOF.
 
   Definition MemSem: ModSem.t :=
     {|
-      ModSem.fnsems := [("malloc", cfun mallocF) ; ("free", cfun freeF) ; ("load", cfun loadF) ; ("store", cfun storeF) ; ("cmp", cfun cmpF)];
+      ModSem.fnsems := [("alloc", cfun allocF) ; ("free", cfun freeF) ; ("load", cfun loadF) ; ("store", cfun storeF) ; ("cmp", cfun cmpF)];
       ModSem.mn := "Mem";
       ModSem.initial_mr := ε;
       ModSem.initial_st := Mem.empty↑;

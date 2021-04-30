@@ -93,8 +93,8 @@ Module ImpNotations.
   Notation "x '=#' '(' a '==' b ')'" :=
     (Cmp x a b) (at level 60): stmt_scope.
 
-  Notation "x '=#' 'malloc#' s" :=
-    (CallFun1 x "malloc" [s])
+  Notation "x '=#' 'alloc#' s" :=
+    (CallFun1 x "alloc" [s])
       (at level 60): stmt_scope.
 
   Notation "'free#' p" :=

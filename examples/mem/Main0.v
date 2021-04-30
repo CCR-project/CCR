@@ -20,7 +20,7 @@ Section PROOF.
   (* Context `{@GRA.inG memRA Σ}. *)
 
   (***
-        void* x = mmalloc(1);
+        void* x = malloc(1);
         *x = 42;
         (* unknown_call(x); *)
         y = *x;
@@ -28,8 +28,8 @@ Section PROOF.
    ***)
   Definition mainF: Any.t -> itree Es Any.t :=
     fun _ =>
-      (* x <- ((↓) <$> trigger (Call "malloc" [Vint 1]↑)) >>= (ǃ);; *)
-      x <- trigger (Call "malloc" [Vint 1]↑);;
+      (* x <- ((↓) <$> trigger (Call "alloc" [Vint 1]↑)) >>= (ǃ);; *)
+      x <- trigger (Call "alloc" [Vint 1]↑);;
       `x: val <- x↓ǃ;;
       trigger (Call "store" [x ; Vint 42]↑);;
       (* trigger (Call "unknown_call" [x]);; *)

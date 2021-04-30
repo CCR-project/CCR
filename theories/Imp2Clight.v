@@ -31,7 +31,7 @@ Section Compile_Mod.
   (* external funs (not syscall) : in other mod (resolved by linking) / 
      syscall : update gdefs dynamically by syntax *)
   (* no external variables: with weak typing, can resort to linking *)
-  (* malloc/free should remain external (EF_malloc, EF_free)
+  (* alloc/free should remain external (EF_malloc, EF_free)
      -> memory mod is not compiled with other Imps, 
      load/store are compiled in other way, so OK.
      cmp: ?? *)
@@ -315,8 +315,8 @@ Section Compile_Mod.
 
   (** memory accessing calls *)
   (** load, store, cmp are translated to non-function calls. *)
-  (** need to register malloc and free in advance to be properly called *)
-  Let malloc_def : Ctypes.fundef function :=
+  (** need to register alloc and free in advance to be properly called *)
+  Let alloc_def : Ctypes.fundef function :=
     External EF_malloc (Tcons (Tptr0 Tlong0) Tnil) (Tptr0 Tlong0) cc_default.
 
   Let free_def : Ctypes.fundef function :=
@@ -354,7 +354,7 @@ Section Compile_Mod.
     end
   .
 
-  Let init_g : tgt_gdefs := [(s2p "malloc", Gfun malloc_def); (s2p "free", Gfun free_def)].
+  Let init_g : tgt_gdefs := [(s2p "alloc", Gfun alloc_def); (s2p "free", Gfun free_def)].
 
   Definition compile_gdefs (src : Imp.program) : option tgt_gdefs :=
     do '(g_sys, g_fun) <- compile_gFuns src.(prog_funs) init_g [] ;

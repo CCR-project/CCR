@@ -141,7 +141,7 @@ Module Sk.
            CompCert expresses it with "nonempty" permission.
        ***)
       (*** TODO: When doing so, I would like to extend val with "Vfid (id: gname)" case.
-           That way, I might be able to support more higher-order features (overriding, newly mallocating function)
+           That way, I might be able to support more higher-order features (overriding, newly allocating function)
        ***)
       n
   .
