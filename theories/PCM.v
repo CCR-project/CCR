@@ -790,7 +790,7 @@ Proof.
   - ss. des. esplits; et. rewrite <- CORE. ss.
 Qed.
 
-Theorem auth_alloc
+Theorem auth_malloc
         `{M: URA.t}
         a0 a1 b1
         (UPD: local_update a0 ε a1 b1)
@@ -801,7 +801,7 @@ Proof.
   r. rewrite <- URA.unit_id at 1. ss. eapply auth_update. ss.
 Qed.
 
-Theorem auth_alloc2
+Theorem auth_malloc2
         `{M: URA.t}
         a0 delta
         (WF: URA.wf (a0 ⋅ delta))
@@ -818,7 +818,7 @@ Proof.
   rewrite URA.add_comm. ss.
 Qed.
 
-Theorem auth_dealloc
+Theorem auth_demalloc
         `{M: URA.t}
         a0 a1 b0
         (UPD: local_update a0 b0 a1 ε)

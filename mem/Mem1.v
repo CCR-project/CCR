@@ -112,7 +112,7 @@ Section PROOF.
   Let GURA: URA.t := GRA.to_URA Σ.
   Local Existing Instance GURA.
 
-  Let alloc_spec: fspec := (mk_simple (fun sz => (
+  Let malloc_spec: fspec := (mk_simple (fun sz => (
                                            (fun varg o => ⌜varg = [Vint (Z.of_nat sz)]↑ /\ o = ord_pure 1⌝),
                                            (fun vret => Exists b, ⌜vret = (Vptr b 0)↑⌝ **
                                                                   Own(GRA.embed ((b, 0%Z) |-> (List.repeat (Vint 0) sz))))
@@ -157,11 +157,11 @@ Section PROOF.
 
   Definition MemStb: list (gname * fspec).
     eapply (Seal.sealing "stb").
-    apply [("alloc", alloc_spec) ; ("free", free_spec) ; ("load", load_spec) ; ("store", store_spec) ; ("cmp", cmp_spec)].
+    apply [("malloc", malloc_spec) ; ("free", free_spec) ; ("load", load_spec) ; ("store", store_spec) ; ("cmp", cmp_spec)].
   Defined.
 
   Definition MemSbtb: list (gname * fspecbody) :=
-    [("alloc", mk_specbody alloc_spec (fun _ => trigger (Choose _)));
+    [("malloc", mk_specbody malloc_spec (fun _ => trigger (Choose _)));
     ("free",   mk_specbody free_spec (fun _ => trigger (Choose _)));
     ("load",   mk_specbody load_spec (fun _ => trigger (Choose _)));
     ("store",  mk_specbody store_spec (fun _ => trigger (Choose _)));

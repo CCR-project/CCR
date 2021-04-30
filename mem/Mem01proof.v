@@ -203,7 +203,7 @@ Section SIMMODSEM.
     }
 
     econs; ss.
-    { unfold allocF. init.
+    { unfold mallocF. init.
       harg_tac. des_ifs_safe. des. repeat rewrite URA.unit_idl in *. repeat rewrite URA.unit_id in *.
       iRefresh. iPure PRE. des. clarify. apply Any.upcast_inj in PRE. des; clarify.
       steps. rewrite Any.upcast_downcast in *. steps.
@@ -214,7 +214,7 @@ Section SIMMODSEM.
 
       eapply own_upd in SIM; cycle 1; [|rewrite intro_iHyp in SIM; iMod SIM].
       { eapply GRA.embed_updatable.
-        eapply Auth.auth_alloc2.
+        eapply Auth.auth_malloc2.
         instantiate (1:=(_points_to (blk, 0%Z) (repeat (Vint 0) sz))).
         (* instantiate (1:=(fun _b _ofs => if (dec _b blk) && ((0 <=? _ofs) && (_ofs <? Z.of_nat sz))%Z then inl (Some (Vint 0)) else inr tt)). *)
         iOwnWf SIM. iRefresh.
@@ -275,7 +275,7 @@ Section SIMMODSEM.
       eapply own_upd in SIM; cycle 1; [|rewrite intro_iHyp in SIM; iMod SIM].
       { eapply GRA.embed_updatable.
         Local Transparent points_to.
-        eapply Auth.auth_dealloc.
+        eapply Auth.auth_demalloc.
         instantiate (1:=mem_src1).
         clear - WF'.
 

@@ -95,7 +95,7 @@ int pop(struct Node## llref) {
   .
 
 (* struct Node* push(struct Node* ll, int x) { *)
-(*   struct Node* new_node = malloc(sizeof(struct Node)); *)
+(*   struct Node* new_node = mmalloc(sizeof(struct Node)); *)
 (*   new_node->val = x; *)
 (*   new_node->next = ll; *)
 (*   printf("[DEBUG]: "); *)
@@ -112,7 +112,7 @@ int pop(struct Node## llref) {
   Definition pushF: list val -> itree Es val :=
     fun varg =>
       '(node, v)     <- (pushF_parg varg)?;;
-      `new_node: val <- (ccall "alloc" [Vint 2]);;
+      `new_node: val <- (ccall "malloc" [Vint 2]);;
       addr_v         <- (vadd new_node (Vint 0))?;;
       addr_next      <- (vadd new_node (Vint 1))?;;
       `_: val        <- (ccall "store" [addr_v;    v]);;

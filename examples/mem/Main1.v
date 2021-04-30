@@ -32,7 +32,7 @@ Section PROOF.
   Context `{@GRA.inG memRA Σ}.
 
   (***
-        void* x = malloc(1);
+        void* x = mmalloc(1);
         *x = 42;
         unknown_call(x);
         y = *x;
@@ -41,7 +41,7 @@ Section PROOF.
 
   Definition mainBody: list val -> itree (hCallE +' pE +' eventE) val :=
     fun _ =>
-      x <- trigger (hCall true "alloc" [Vint 1]↑);; x <- x↓?;;
+      x <- trigger (hCall true "malloc" [Vint 1]↑);; x <- x↓?;;
       trigger (hCall true "store" [x ; Vint 42]↑);;
       (* trigger (Call "unknown_call" [x]);; *)
       trigger (hCall true "load" [x]↑);;
