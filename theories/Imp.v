@@ -249,7 +249,7 @@ Section Interp.
     match params, args with
     | [], [] => Some acc
     | x :: part, v :: argt =>
-      init_args part argt (alist_add _ x v acc)
+      init_args part argt (alist_add x v acc)
     | _, _ => None
     end
   .

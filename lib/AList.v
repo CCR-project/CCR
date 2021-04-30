@@ -58,6 +58,7 @@ Proof.
 Qed.
 
 Arguments alist_find [K R] {RD_K} [V].
+Arguments alist_add [K R] {RD_K} [V].
 
 Lemma eq_rel_dec_correct T `{DEC: Dec T}
       x0 x1
