@@ -6,7 +6,6 @@ Require Import Behavior.
 Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
-Require Import TODOYJ.
 
 Generalizable Variables E R A B C X Y Σ.
 
@@ -113,17 +112,17 @@ Section PROOF.
       else Ret (Vint 0%Z)
   .
 
-  Definition MemSem: ModSem.t :=
+  Definition MemSem (sk: Sk.t): ModSem.t :=
     {|
       ModSem.fnsems := [("malloc", cfun allocF) ; ("free", cfun freeF) ; ("load", cfun loadF) ; ("store", cfun storeF) ; ("cmp", cfun cmpF)];
       ModSem.mn := "Mem";
       ModSem.initial_mr := ε;
-      ModSem.initial_st := Mem.empty↑;
+      ModSem.initial_st := (Sk.load_mem sk)↑;
     |}
   .
 
   Definition Mem: Mod.t := {|
-    Mod.get_modsem := fun _ => MemSem; (*** TODO: we need proper handling of function pointers ***)
+    Mod.get_modsem := MemSem;
     Mod.sk := Sk.unit;
   |}
   .

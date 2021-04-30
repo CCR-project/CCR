@@ -32,19 +32,6 @@ Local Open Scope nat_scope.
 
 
 
-Print function_Map. (*** TODO: use Dec. Move to proper place ***)
-
-Global Instance Dec_RelDec K `{Dec K}: @RelDec K eq :=
-  { rel_dec := dec }.
-
-Global Instance Dec_RelDec_Correct K `{Dec K}: RelDec_Correct Dec_RelDec.
-Proof.
-  unfold Dec_RelDec. ss.
-  econs. ii. ss. unfold Dec_RelDec. split; ii.
-  - unfold rel_dec in *. unfold sumbool_to_bool in *. des_ifs.
-  - unfold rel_dec in *. unfold sumbool_to_bool in *. des_ifs.
-Qed.
-
 
 
 
@@ -1044,12 +1031,12 @@ Section SIMMOD.
    Variable (md_src md_tgt: Mod.t).
    Inductive sim: Prop := mk {
      sim_modsem:
-       forall skenv
-              (SKINCL: Sk.incl md_tgt.(Mod.sk) skenv)
-              (SKWF: SkEnv.wf skenv), <<SIM: ModSemLPair.sim (md_src.(Mod.get_modsem) skenv) (md_tgt.(Mod.get_modsem) skenv)>>;
+       forall sk
+              (SKINCL: Sk.incl_env md_tgt.(Mod.sk) (Sk.load_skenv sk))
+              (SKWF: SkEnv.wf (Sk.load_skenv sk)), <<SIM: ModSemLPair.sim (md_src.(Mod.get_modsem) sk) (md_tgt.(Mod.get_modsem) sk)>>;
      sim_sk: <<SIM: md_src.(Mod.sk) = md_tgt.(Mod.sk)>>;
      sim_wf:
-       forall skenv (WF: ModSemL.wf (md_src.(Mod.get_modsem) skenv)), <<WF: ModSemL.wf (md_tgt.(Mod.get_modsem) skenv)>>;
+       forall sk (WF: ModSemL.wf (md_src.(Mod.get_modsem) sk)), <<WF: ModSemL.wf (md_tgt.(Mod.get_modsem) sk)>>;
    }.
 
 End SIMMOD.

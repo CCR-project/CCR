@@ -9,10 +9,12 @@ Require Import HoareDef.
 Require Import TODOYJ.
 Require Import Logic.
 Require Import KnotHeader.
+Require Import STB.
 
 Generalizable Variables E R A B C X Y Σ.
 
 Set Implicit Arguments.
+
 
 
 
@@ -30,6 +32,7 @@ Fixpoint Fib (n: nat): nat :=
 Section MAIN.
 
   Context `{Σ: GRA.t}.
+  Context `{@GRA.inG invRA Σ}.
   Context `{@GRA.inG knotRA Σ}.
 
   Variable RecStb: SkEnv.t -> list (gname * fspec).
@@ -38,7 +41,18 @@ Section MAIN.
   Section SKENV.
     Variable skenv: SkEnv.t.
 
-    Definition fib_spec:    fspec := fun_gen RecStb skenv Fib.
+    Definition fib_spec: fspec :=
+      mk_simple (X:=nat*(Σ -> Prop))
+                (fun '(n, INV) => (
+                     (fun varg o =>
+                        (⌜exists fb,
+                              varg = [Vptr fb 0; Vint (Z.of_nat n)]↑ /\ o = ord_pure (2 * n) /\
+                              fb_has_spec skenv (RecStb skenv) fb (mrec_spec Fib INV)⌝)
+                          ** INV),
+                     (fun vret =>
+                        (⌜vret = (Vint (Z.of_nat (Fib n)))↑⌝)
+                          ** INV)
+                )).
 
     Definition MainFunStb: list (gname * fspec) := [("fib", fib_spec)].
 
@@ -46,9 +60,12 @@ Section MAIN.
       mk_simple (X:=(nat -> nat))
                 (fun f => (
                      (fun varg o =>
-                        Own (GRA.embed (knot_frag None)) ** ⌜o = ord_top⌝),
+                        (⌜o = ord_top⌝)
+                          ** Own (GRA.embed knot_init)
+                          ** inv_closed
+                     ),
                      (fun vret =>
-                        ⌜vret = (Vint (Z.of_nat (Fib 10)))↑⌝)
+                        (⌜vret = (Vint (Z.of_nat (Fib 10)))↑⌝))
                 )).
 
     Definition MainStb: list (gname * fspec) := [("fib", fib_spec); ("main", main_spec)].

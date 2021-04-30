@@ -6,7 +6,6 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
-Require Import Mem1.
 Require Import TODOYJ TODO.
 
 Generalizable Variables E R A B C X Y Σ.
@@ -24,29 +23,31 @@ Section PROOF.
   Definition knotF (skenv: SkEnv.t): list val -> itree Es val :=
     fun varg =>
       'fb <- (pargs [Tblk] varg)?;;
-      trigger (PPut (Some fb)↑);;
+      blk <- (skenv.(SkEnv.id2blk) "_f")?;;
+      `_: val <- ccall "store" [Vptr blk 0; Vptr fb 0];;
       rb <- (skenv.(SkEnv.id2blk) "rec")?;;
       Ret (Vptr rb 0).
 
   Definition recF (skenv: SkEnv.t): list val -> itree Es val :=
     fun varg =>
       'n <- (pargs [Tint] varg)?;;
-      fb <- trigger (PGet);; `fb: option block <- fb↓?;; `fb: block <- fb?;;
+      blk <- (skenv.(SkEnv.id2blk) "_f")?;;
+      `fb: val <- ccall "load" [Vptr blk 0];; fb <- (unblk fb)?;;
       fn <- (skenv.(SkEnv.blk2id) fb)?;;
       rb <- (skenv.(SkEnv.id2blk) "rec")?;;
       ccall fn [Vptr rb 0; Vint n].
 
-  Definition KnotSem (skenv: SkEnv.t): ModSem.t := {|
-    ModSem.fnsems := [("rec", cfun (recF skenv)); ("knot", cfun (knotF skenv))];
+  Definition KnotSem (sk: Sk.t): ModSem.t := {|
+    ModSem.fnsems := [("rec", cfun (recF sk)); ("knot", cfun (knotF sk))];
     ModSem.mn := "Knot";
     ModSem.initial_mr := ε;
-    ModSem.initial_st := (None: option block)↑;
+    ModSem.initial_st := tt↑;
   |}
   .
 
   Definition Knot: Mod.t := {|
     Mod.get_modsem := fun skenv => KnotSem skenv;
-    Mod.sk := [("rec", Sk.Gfun)];
+    Mod.sk := [("rec", Sk.Gfun); ("_f", Sk.Gvar Vundef)];
   |}
   .
 End PROOF.

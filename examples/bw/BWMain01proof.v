@@ -54,7 +54,7 @@ Section SIMMODSEM.
     { unfold mainbody, mainF, ccall, hcall. init.
       harg_tac. des. subst. rewrite Any.upcast_downcast. ss.
       iRefresh. iDestruct PRE. iPure A. clarify. steps.
-      destruct (find (fun '(_fn, _) => dec "getbool" _fn) (ClientStb ++ MainStb)) eqn:T; stb_tac; clarify.
+      destruct (alist_find "getbool" (ClientStb ++ MainStb)) eqn:T; stb_tac; clarify.
       steps. rewrite Any.upcast_downcast. ss. steps.
       hcall_tac tt ord_top (@URA.unit Σ) PRE (@URA.unit Σ); ss.
       { esplits; eauto. }

@@ -290,10 +290,13 @@ Abort.
 Definition aof_true: Type := True.
 Global Opaque aof_true.
 
+Ltac place_bar name :=
+  first [ on_last_hyp ltac:(fun H => revert H; place_bar name; intros H) | assert(name: aof_true) by constructor].
+
 Ltac all_once_fast TAC :=
   generalize (I: aof_true);
   let name := fresh "bar" in
-  assert(name: aof_true) by constructor; move name at top; revert_until name;
+  place_bar name; revert_until name;
   repeat
     match goal with
     | [ |- aof_true -> _ ] => fail 1

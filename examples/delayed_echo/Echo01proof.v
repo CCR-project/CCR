@@ -239,7 +239,7 @@ Section SIMMODSEM.
         { iRefresh. esplits; ss; eauto. exists nil; iRefresh. left; iRefresh. iSplitL A; ss. }
       - rewrite Any.upcast_downcast. steps. do 4 iDestruct A0. iMod A0. subst. ss.
         astart 10. steps.
-        acall_tac __ (ord_pure 1) PRE (A, A1, A2) (@URA.unit Σ); ss; et.
+        acall_tac __ (ord_pure 0) PRE (A, A1, A2) (@URA.unit Σ); ss; et.
         { esplits; try refl; iRefresh. instantiate (1:=1). esplits; ss; et. }
         { esplits; ss; et. eexists; iRefresh. right; iRefresh; ss; et. }
         des; iRefresh. do 2 iDestruct POST. iMod POST. subst.
@@ -291,7 +291,7 @@ Section SIMMODSEM.
 
 
 
-        acall_tac __ (ord_pure 1) A2 (A, A1) A0; ss; et.
+        acall_tac __ (ord_pure 0) A2 (A, A1) A0; ss; et.
         { instantiate (1:=(_, _, _)). ss. esplits; try refl; iRefresh. iSplitP; ss. iSplitP; ss. eauto. }
         { esplits; ss; et. eexists; iRefresh. right; iRefresh; ss; et. }
         ss. des; iRefresh. iDestruct SIM. iDestruct POST. iMod A0. subst.
