@@ -86,24 +86,24 @@ Section SIMMODSEM.
     econs; ss.
     { unfold popF. init.
       harg_tac. des_ifs_safe. des. repeat rewrite URA.unit_idl in *. repeat rewrite URA.unit_id in *. ss.
-      iRefresh. do 4 iDestruct PRE. iMod A. iMod PRE. clarify.
+      iRefresh. do 5 iDestruct PRE. iMod A. iMod PRE. clarify.
       apply Any.upcast_inj in PRE. des; clarify. steps. rewrite Any.upcast_downcast in *. clarify. steps.
 
       unfold ccall. steps. astart 10.
 
       acall_tac __ __ (@URA.unit Σ) A0 A1; ss; et.
-      { instantiate (2:= (_, _, _)). cbn. esplits; try refl; iRefresh. iSplitP; ss. iSplitP; ss; et. }
+      { instantiate (2:= (_, _, _)). split; ss. esplits; try refl; iRefresh. iSplitP; ss. iSplitP; ss; et. }
       { esplits; ss; et. eauto with ord_step. }
-      ss. des; subst. rewrite Any.upcast_downcast. steps. iRefresh. iDestruct POST. iMod A. apply Any.upcast_inj in A; des; clarify.
+      ss. iDestruct POST; subst. rewrite Any.upcast_downcast. steps. iRefresh. iDestruct POST. iMod A. apply Any.upcast_inj in A; des; clarify.
 
 
       destruct l; ss.
       - iMod A0. subst.
         hexploit Own_ε; intro A. iImpure A.
         acall_tac __ __ (@URA.unit Σ) POST A; ss; et.
-        { instantiate (2:= (_, _)). cbn. esplits; try refl; iRefresh. iSplitP; ss. iSplitR A; ss; et. right; iRefresh. rr. esplits; et. }
+        { instantiate (2:= (_, _)). split; ss. esplits; try refl; iRefresh. iSplitP; ss. iSplitR A; ss; et. right; iRefresh. rr. esplits; et. }
         { esplits; ss. eauto with ord_step. }
-        ss. des; subst. rewrite Any.upcast_downcast. steps. iRefresh. iDestruct POST0. iMod A. apply Any.upcast_inj in A; des; clarify.
+        ss. iDestruct POST0; subst. rewrite Any.upcast_downcast. steps. iRefresh. iDestruct POST0. iMod A. apply Any.upcast_inj in A; des; clarify.
         clear POST0. steps.
 
         astop. force_l. eexists. hret_tac (@URA.unit Σ) POST; ss.
@@ -111,50 +111,50 @@ Section SIMMODSEM.
         rename n into rref. rename x6 into hd. rename x7 into next.
         rewrite points_to_split in A1. rewrite <- GRA.embed_add in A1. rewrite own_sep in A1. iDestruct A1. ss.
         acall_tac __ __ (@URA.unit Σ) (A, A0, POST) A1; ss; et.
-        { instantiate (2:= (_, _)). cbn. esplits; try refl; iRefresh. iSplitP; ss. iSplitR A1; ss; et. do 4 left; do 3 eexists; iRefresh.
+        { instantiate (2:= (_, _)). split; ss. esplits; try refl; iRefresh. iSplitP; ss. iSplitR A1; ss; et. do 4 left; do 3 eexists; iRefresh.
           iSplitP; ss. iSplitP; ss. }
         { esplits; ss. eauto with ord_step. }
-        ss. des; subst. rewrite Any.upcast_downcast. steps. iRefresh. iDestruct POST0. iMod A1. apply Any.upcast_inj in A1; des; clarify.
+        ss. iDestruct POST0; subst. rewrite Any.upcast_downcast. steps. iRefresh. iDestruct POST0. iMod A1. apply Any.upcast_inj in A1; des; clarify.
         steps.
 
         acall_tac __ __ (@URA.unit Σ) (A0, A, POST) POST0; ss; et.
-        { instantiate (2:=(_, _, _)). cbn. esplits; try refl; iRefresh. iSplitP; ss. iSplitP; ss. et. }
+        { instantiate (2:=(_, _, _)). split; ss. esplits; try refl; iRefresh. iSplitP; ss. iSplitP; ss. et. }
         { esplits; ss. eauto with ord_step. }
-        ss. des; iRefresh. iDestruct POST1. iMod A1. apply Any.upcast_inj in A1. des; clarify. steps.
+        ss. do 2 iDestruct POST1. iMod A1. apply Any.upcast_inj in A1. des; clarify. steps.
 
 
         acall_tac __ __ (@URA.unit Σ) (A, POST, POST1) A0; ss; et.
-        { instantiate (2:=(_, _, _)). cbn. esplits; try refl; iRefresh. iSplitP; ss. iSplitP; ss. et. }
+        { instantiate (2:=(_, _, _)). split; ss. esplits; try refl; iRefresh. iSplitP; ss. iSplitP; ss. et. }
         { esplits; ss. eauto with ord_step. }
-        ss. des; iRefresh. iDestruct POST0. iMod A0. apply Any.upcast_inj in A0. des; clarify. steps.
+        ss. do 2 iDestruct POST0. iMod A0. apply Any.upcast_inj in A0. des; clarify. steps.
         rewrite Any.upcast_downcast in *. clarify.
 
 
         acall_tac __ __ (@URA.unit Σ) (A, POST, POST0) POST1; ss; et.
-        { instantiate (2:=(_, _)). esplits; try refl; iRefresh. eexists; iRefresh. iSplitP; ss. iSplitP; ss. et. }
+        { instantiate (2:=(_, _)). split; ss. esplits; try refl; iRefresh. eexists; iRefresh. iSplitP; ss. iSplitP; ss. et. }
         { esplits; ss. eauto with ord_step. }
-        des; iRefresh. subst. steps. rewrite Any.upcast_downcast in *. clarify.
+        ss. iDestruct POST2; subst. steps. rewrite Any.upcast_downcast in *. clarify.
 
 
         acall_tac __ __ (@URA.unit Σ) (A, POST) POST0; ss; et.
-        { instantiate (2:=(_, _)). esplits; try refl; iRefresh. eexists; iRefresh. iSplitP; ss. iSplitP; ss. et. }
+        { instantiate (2:=(_, _)). split; ss. esplits; try refl; iRefresh. eexists; iRefresh. iSplitP; ss. iSplitP; ss. et. }
         { esplits; ss. eauto with ord_step. }
-        des; iRefresh. subst. steps. rewrite Any.upcast_downcast in *. clarify.
+        ss. iDestruct POST1; subst. steps. rewrite Any.upcast_downcast in *. clarify.
 
 
         acall_tac __ __ (@URA.unit Σ) (A) POST; ss; et.
-        { instantiate (2:=(_, _, _)). esplits; try refl; iRefresh. eexists; iRefresh. iSplitP; ss. iSplitP; ss. et. }
+        { instantiate (2:=(_, _, _)). split; ss. esplits; try refl; iRefresh. eexists; iRefresh. iSplitP; ss. iSplitP; ss. et. }
         { esplits; ss. eauto with ord_step. }
-        ss. des; iRefresh. subst. steps. rewrite Any.upcast_downcast in *. clarify.
+        ss. iDestruct POST0; subst. steps. rewrite Any.upcast_downcast in *. clarify.
 
         astop. force_l. eexists.
         hret_tac (@URA.unit Σ) (POST0, A); ss.
-        { esplits; try refl; iRefresh. iSplitP; ss. eexists; iRefresh. iSplitR A; et. }
+        { split; ss. esplits; try refl; iRefresh. iSplitP; ss. eexists; iRefresh. iSplitR A; et. }
     }
     econs; ss.
     { unfold pop2F. init.
       harg_tac. des_ifs_safe. des. repeat rewrite URA.unit_idl in *. repeat rewrite URA.unit_id in *. ss.
-      iRefresh. do 4 iDestruct PRE. iDestruct A0. iMod A. iMod PRE. clarify.
+      iRefresh. do 5 iDestruct PRE. iDestruct A0. iMod A. iMod PRE. clarify.
       apply Any.upcast_inj in PRE. des; clarify. steps. rewrite Any.upcast_downcast in *. clarify. steps.
 
       unfold ccall. astart 10. steps.
@@ -163,9 +163,9 @@ Section SIMMODSEM.
       - iMod A1; subst.
         hexploit Own_ε; intro A. iImpure A.
         acall_tac __ __ (@URA.unit Σ) A0 A; ss; et.
-        { instantiate (2:= (_, _)). cbn. esplits; try refl; iRefresh. iSplitP; ss. iSplitR A; ss; et. right; iRefresh. rr. esplits; et. }
+        { instantiate (2:= (_, _)). split ;ss. esplits; try refl; iRefresh. iSplitP; ss. iSplitR A; ss; et. right; iRefresh. rr. esplits; et. }
         { esplits; ss. eauto with ord_step. }
-        ss. des; subst. rewrite Any.upcast_downcast. steps. iRefresh. iDestruct POST. iMod A. apply Any.upcast_inj in A; des; clarify.
+        ss. iDestruct POST; subst. rewrite Any.upcast_downcast. steps. iRefresh. iDestruct POST. iMod A. apply Any.upcast_inj in A; des; clarify.
         clear POST. steps.
 
         astop. force_l. eexists.
@@ -175,50 +175,50 @@ Section SIMMODSEM.
 
         rewrite points_to_split in A1. rewrite <- GRA.embed_add in A1. rewrite own_sep in A1. iDestruct A1. ss.
         acall_tac __ __ (@URA.unit Σ) (A, A0, A2) A1; ss; et.
-        { instantiate (2:= (_, _)). cbn. esplits; try refl; iRefresh. iSplitP; ss. iSplitR A1; ss; et. do 4 left; do 3 eexists; iRefresh.
+        { instantiate (2:= (_, _)). split; ss. esplits; try refl; iRefresh. iSplitP; ss. iSplitR A1; ss; et. do 4 left; do 3 eexists; iRefresh.
           iSplitP; ss. iSplitP; ss. }
         { esplits; ss. eauto with ord_step. }
-        ss. des; subst. rewrite Any.upcast_downcast. steps. iRefresh. iDestruct POST. iMod A1. apply Any.upcast_inj in A1; des; clarify.
+        ss. iDestruct POST; subst. rewrite Any.upcast_downcast. steps. iRefresh. iDestruct POST. iMod A1. apply Any.upcast_inj in A1; des; clarify.
         steps.
 
         acall_tac __ __ (@URA.unit Σ) (A0, A, A2) POST; ss; et.
-        { instantiate (2:=(_, _, _)). cbn. esplits; try refl; iRefresh. iSplitP; ss. iSplitP; ss. et. }
+        { instantiate (2:=(_, _, _)). split; ss. esplits; try refl; iRefresh. iSplitP; ss. iSplitP; ss. et. }
         { esplits; ss. eauto with ord_step. }
-        ss. des; iRefresh. iDestruct POST0. iMod A1. apply Any.upcast_inj in A1. des; clarify. steps.
+        ss. do 2 iDestruct POST0; subst. iMod A1. apply Any.upcast_inj in A1. des; clarify. steps.
 
 
         acall_tac __ __ (@URA.unit Σ) (A, A0, POST0) A2; ss; et.
-        { instantiate (2:=(_, _, _)). cbn. esplits; try refl; iRefresh. iSplitP; ss. iSplitP; ss. et. }
+        { instantiate (2:=(_, _, _)). split; ss. esplits; try refl; iRefresh. iSplitP; ss. iSplitP; ss. et. }
         { esplits; ss. eauto with ord_step. }
-        ss. des; iRefresh. iDestruct POST. iMod A1. apply Any.upcast_inj in A1. des; clarify. steps.
+        ss. do 2 iDestruct POST; subst. iMod A1. apply Any.upcast_inj in A1. des; clarify. steps.
         rewrite Any.upcast_downcast in *. clarify.
 
 
         acall_tac __ __ (@URA.unit Σ) (A, A0, POST) POST0; ss; et.
-        { instantiate (2:=(_, _)). esplits; try refl; iRefresh. eexists; iRefresh. iSplitP; ss. iSplitP; ss. et. }
+        { instantiate (2:=(_, _)). split; ss. esplits; try refl; iRefresh. eexists; iRefresh. iSplitP; ss. iSplitP; ss. et. }
         { esplits; ss. eauto with ord_step. }
-        des; iRefresh. subst. steps. rewrite Any.upcast_downcast in *. clarify.
+        ss. iDestruct POST1; subst. steps. rewrite Any.upcast_downcast in *. clarify.
 
 
         acall_tac __ __ (@URA.unit Σ) (A, A0) POST; ss; et.
-        { instantiate (2:=(_, _)). esplits; try refl; iRefresh. eexists; iRefresh. iSplitP; ss. iSplitP; ss. et. }
+        { instantiate (2:=(_, _)). split; ss. esplits; try refl; iRefresh. eexists; iRefresh. iSplitP; ss. iSplitP; ss. et. }
         { esplits; ss. eauto with ord_step. }
-        des; iRefresh. subst. steps. rewrite Any.upcast_downcast in *. clarify.
+        ss. iDestruct POST0; subst. steps. rewrite Any.upcast_downcast in *. clarify.
 
 
         acall_tac __ __ (@URA.unit Σ) (A) A0; ss; et.
-        { instantiate (2:=(_, _, _)). esplits; try refl; iRefresh. eexists; iRefresh. iSplitP; ss. iSplitP; ss. et. }
+        { instantiate (2:=(_, _, _)). split; ss. esplits; try refl; iRefresh. eexists; iRefresh. iSplitP; ss. iSplitP; ss. et. }
         { esplits; ss. eauto with ord_step. }
-        ss. des; iRefresh. subst. steps. rewrite Any.upcast_downcast in *. clarify.
+        ss. iDestruct POST; subst. steps. rewrite Any.upcast_downcast in *. clarify.
 
         astop. force_l. eexists.
         hret_tac (@URA.unit Σ) (POST, A); ss.
-        { esplits; try refl; iRefresh. eexists; iRefresh. iSplitR POST; ss. iSplitP; ss. }
+        { split; ss. esplits; try refl; iRefresh. eexists; iRefresh. iSplitR POST; ss. iSplitP; ss. }
     }
     econs; ss.
     { unfold pushF. init.
       harg_tac. des_ifs_safe. des. repeat rewrite URA.unit_idl in *. repeat rewrite URA.unit_id in *. ss.
-      iRefresh. do 3 iDestruct PRE. iMod A. iMod PRE. clarify.
+      iRefresh. do 4 iDestruct PRE. iMod A. iMod PRE. clarify.
       apply Any.upcast_inj in PRE. des; clarify. steps. rewrite Any.upcast_downcast in *. clarify. steps.
 
       unfold ccall. astart 10. steps.
@@ -226,23 +226,23 @@ Section SIMMODSEM.
       acall_tac __ __ (@URA.unit Σ) A0 (@URA.unit Σ); ss; et.
       { instantiate (2:=2). esplits; try refl; iRefresh. ss. }
       { esplits; ss. eauto with ord_step. }
-      des; iRefresh. subst. do 2 iDestruct POST. iMod POST. rewrite Any.upcast_downcast. apply Any.upcast_inj in POST. des; clarify. steps.
+      do 3 iDestruct POST; subst. iMod POST. rewrite Any.upcast_downcast. apply Any.upcast_inj in POST. des; clarify. steps.
 
       ss. rewrite points_to_split in A. rewrite <- GRA.embed_add in A. rewrite own_sep in A. iDestruct A. ss.
 
       acall_tac __ __ (@URA.unit Σ) (A0, A1) A; ss; et.
-      { instantiate (2:=(_, _, _)). esplits; try refl; iRefresh. eexists; iRefresh. iSplitP; ss. iSplitR A; ss. et. }
+      { instantiate (2:=(_, _, _)). split; ss. esplits; try refl; iRefresh. eexists; iRefresh. iSplitP; ss. iSplitR A; ss. et. }
       { esplits; ss. eauto with ord_step. }
-      ss. des; iRefresh. subst. rewrite Any.upcast_downcast. steps.
+      ss. iDestruct POST; subst. rewrite Any.upcast_downcast. steps.
 
       acall_tac __ __ (@URA.unit Σ) (A0, POST) A1; ss; et.
-      { instantiate (2:=(_, _, _)). esplits; try refl; iRefresh. eexists; iRefresh. iSplitP; ss. iSplitR A1; ss. et. }
+      { instantiate (2:=(_, _, _)). split; ss. esplits; try refl; iRefresh. eexists; iRefresh. iSplitP; ss. iSplitR A1; ss. et. }
       { esplits; ss. eauto with ord_step. }
-      ss. des; iRefresh. subst. rewrite Any.upcast_downcast. steps.
+      ss. iDestruct POST0; subst. rewrite Any.upcast_downcast. steps.
 
       astop. force_l. eexists.
       hret_tac (@URA.unit Σ) (A0, POST, POST0); ss.
-      { esplits; try refl; iRefresh. eexists; iRefresh. iSplitP; ss. do 2 eexists; iRefresh. iSplitR A0; et. iSplitP; ss; et.
+      { esplits; try refl; iRefresh. split; ss. eexists; iRefresh. iSplitP; ss. do 2 eexists; iRefresh. iSplitR A0; et. iSplitP; ss; et.
         rewrite points_to_split. rewrite <- GRA.embed_add. rewrite own_sep. iSplitL POST; ss.
       }
     }

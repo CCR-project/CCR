@@ -56,7 +56,7 @@ Section SIMMODSEM.
     econstructor 1 with (wf:=wf); et; ss.
     econs; ss. init. unfold wrapF, ccall. harg_tac.
     destruct x as [[n0 n1] f]. ss. des; subst.
-    iPure PRE. des; clarify.
+    iRefresh. iDestruct PRE. iPure PRE. des; clarify.
     eapply Any.upcast_inj in PRE. des; clarify.
     rewrite Any.upcast_downcast. ss. steps. astart 1.
     rewrite PRE1. ss. steps. rename fn into fn0.
@@ -64,7 +64,7 @@ Section SIMMODSEM.
     { eapply CmpsStb_incl. eauto. }
     { ss. }
     { ss. splits; ss. eauto with ord_step. }
-    ss. des. iPure POST. clarify. eapply Any.upcast_inj in POST. des; clarify.
+    ss. iRefresh. iDestruct POST. iPure POST. clarify. eapply Any.upcast_inj in POST. des; clarify.
     steps. rewrite Any.upcast_downcast in _UNWRAPN. clarify. astop.
     force_l. eexists.
     hret_tac (@URA.unit Σ) (@URA.unit Σ); ss.

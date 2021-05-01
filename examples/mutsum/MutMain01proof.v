@@ -16,7 +16,7 @@ From ExtLib Require Import
      Structures.Maps
      Data.Map.FMapAList.
 
-Require Import HTactics.
+Require Import YPM HTactics.
 
 Generalizable Variables E R A B C X Y.
 
@@ -49,9 +49,9 @@ Section SIMMODSEM.
     econstructor 1 with (wf:=wf); et; ss.
     econs; ss. init.
     unfold mainF, mainBody.
-    harg_tac. des; clarify. steps. anytac. steps.
+    harg_tac. iRefresh. iDestruct PRE. des; clarify. steps. anytac. steps.
     hcall_tac 10 (ord_pure 10) (@URA.unit (GRA.to_URA Σ)) rarg_src (@URA.unit (GRA.to_URA Σ)); splits; ss.
-    des; clarify. esplits; ss. i. des; clarify.
+    iDestruct POST. des; clarify. esplits; ss. i. des; clarify.
     steps. hret_tac (@URA.unit (GRA.to_URA Σ)) (URA.add rarg_src rret); ss.
   Qed.
 

@@ -96,7 +96,7 @@ Section SIMMODSEM.
     econs; ss; [|econs; ss].
     { init. unfold recF, ccall. harg_tac.
       destruct x as [f n]. ss. des. subst.
-      iRefresh. iDestruct PRE. iPure A. des; clarify.
+      iRefresh. do 2 iDestruct PRE. iPure A. des; clarify.
       eapply Any.upcast_inj in A. des; clarify. steps.
       rewrite Any.upcast_downcast in _UNWRAPN. clarify. astart 1.
       assert (f' = Some f); subst.
@@ -106,14 +106,14 @@ Section SIMMODSEM.
       hexploit (SKINCL "rec"); ss; eauto. i. des. rewrite H0. ss. steps.
       acall_tac n (ord_pure (2 * n)) SIM (@URA.unit Σ) PRE; ss.
       { eapply FunStb_incl. eauto. }
-      { splits; ss. iRefresh. iSplitR PRE; ss.
+      { splits; ss. split; ss. iRefresh. iSplitR PRE; ss.
         red. red. esplits; eauto.
         { eapply SKWF. eauto. }
         { eapply RecStb_incl. des_ifs. }
       }
       { splits; ss. eauto with ord_step. }
       { esplits; eauto. i. clarify. esplits; eauto. }
-      ss. des. clarify. iRefresh. iDestruct POST. iPure POST.
+      ss. iRefresh. do 2 iDestruct POST. clarify. iPure POST.
       eapply Any.upcast_inj in POST. des; clarify.
       steps. rewrite Any.upcast_downcast in _UNWRAPN. clarify.
       astop. force_l. eexists.
@@ -123,7 +123,7 @@ Section SIMMODSEM.
     }
     { init. unfold knotF, ccall. harg_tac.
       ss. des. subst.
-      iRefresh. iDestruct PRE. iPure PRE. des; clarify.
+      iRefresh. do 2 iDestruct PRE. iPure PRE. des; clarify.
       iDestruct A. eapply Any.upcast_inj in PRE. des; clarify. steps.
       rewrite Any.upcast_downcast in _UNWRAPN. clarify. astart 0. astop.
       steps. hexploit (SKINCL "rec"); ss; eauto. i. des. rewrite H0. ss. steps.
@@ -138,7 +138,7 @@ Section SIMMODSEM.
       rewrite <- GRA.embed_add in SIM. rewrite own_sep in SIM. iDestruct SIM.
       force_l. eexists.
       hret_tac SIM A; ss.
-      { esplits; eauto. iRefresh. iSplitR A; eauto. red. red. esplits; eauto.
+      { split; ss. esplits; eauto. iRefresh. iSplitR A; eauto. red. red. esplits; eauto.
         { eapply SKWF; eauto. }
         { eapply RecStb_incl; eauto. }
       }

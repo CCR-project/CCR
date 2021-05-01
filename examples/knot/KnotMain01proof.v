@@ -71,42 +71,42 @@ Section SIMMODSEM.
     econs; ss; [|econs; ss].
     { init. unfold fibF, ccall. harg_tac.
       ss. des. subst.
-      iRefresh. iDestruct PRE. iPure PRE. des; clarify.
+      iRefresh. do 2 iDestruct PRE. iPure PRE. des; clarify.
       eapply Any.upcast_inj in PRE. des; clarify. steps.
       rewrite Any.upcast_downcast in _UNWRAPN. clarify. astart 2. steps.
       rewrite PRE1. ss. steps.
       des_ifs.
       { astop. steps. force_l. eexists.
         hret_tac (@URA.unit Σ) A; ss. esplits; eauto.
-        iRefresh. iSplitR A; ss. red. red. f_equal. f_equal.
+        split; ss. iRefresh. iSplitR A; ss. red. red. f_equal. f_equal.
         clear - l. destruct x; ss. destruct x; ss. lia.
       }
       steps.
       acall_tac (Fib, x - 1) (ord_pure (2 * x - 1)) (@URA.unit Σ) (@URA.unit Σ) A; ss.
       { eapply RecStb_incl. eauto. }
-      { ss. splits; ss. iRefresh. iSplitL A; ss.
+      { ss. split; ss. iRefresh. iSplitL A; ss.
         red. red. esplits; eauto.
         { repeat f_equal. clear - g. lia. }
         { f_equal. clear - g. eauto with ord_step. }
       }
       { esplits; ss. eauto with ord_step. }
-      steps. ss. des. clarify. iRefresh. iDestruct POST. iPure A.
+      steps. ss. iRefresh. do 2 iDestruct POST. iPure A. des. clarify.
       rewrite Any.upcast_downcast in _UNWRAPN. clarify.
       eapply Any.upcast_inj in A. des; clarify. steps.
       acall_tac (Fib, x - 2) (ord_pure (2 * (x - 1) - 1)) (@URA.unit Σ) (@URA.unit Σ) POST; ss.
       { eapply RecStb_incl. eauto. }
-      { splits; ss. iRefresh. iSplitL POST; ss.
+      { split; ss. iRefresh. iSplitL POST; ss.
         red. red. esplits; eauto.
         { repeat f_equal. clear - g. lia. }
         { f_equal. clear - g. eauto with ord_step. }
       }
       { esplits; ss. eauto with ord_step. }
-      steps. ss. des. clarify. iRefresh. iDestruct POST0. iPure A.
+      steps. ss. des. clarify. iRefresh. do 2 iDestruct POST0. iPure A.
       rewrite Any.upcast_downcast in _UNWRAPN. clarify.
       eapply Any.upcast_inj in A. des; clarify. steps.
       astop. force_l. eexists.
       hret_tac (@URA.unit Σ) POST0; ss.
-      splits; ss. iRefresh. iSplitR POST0; ss. red. red.
+      split; ss. iRefresh. iSplitR POST0; ss. red. red.
       repeat f_equal. destruct x; ss. destruct x; ss.
       clear - g.
       remember (match x with
@@ -115,29 +115,29 @@ Section SIMMODSEM.
                 end). clear Heqn. rewrite Nat.sub_0_r. lia.
     }
     { init. unfold mainF, ccall. harg_tac. des; clarify.
-      iRefresh. iDestruct PRE. iPure A. des; clarify.
+      iRefresh. do 2 iDestruct PRE. iPure A. des; clarify.
       rewrite Any.upcast_downcast. ss. steps.
       hexploit (SKINCL "fib"); ss; eauto. i. des.
       rewrite H0. ss. steps.
       astart 2.
       acall_tac Fib (ord_pure 0) (@URA.unit Σ) (@URA.unit Σ) PRE; ss.
       { eapply GlobalStb_knot. }
-      { splits; ss. iRefresh. iSplitR PRE; ss.
+      { split; ss. iRefresh. iSplitR PRE; ss.
         { red. red. esplits; eauto.
           { eapply SKWF. eauto. }
           { eapply FunStb_incl. des_ifs. }
         }
         { exists None. ss. }
       }
-      ss. des. clarify. iRefresh. iDestruct POST. iPure POST. des; clarify.
+      ss. des. clarify. iRefresh. do 2 iDestruct POST. iPure POST. des; clarify.
       eapply Any.upcast_inj in POST. des; clarify.
       steps. rewrite Any.upcast_downcast in _UNWRAPN. clarify.
       ss. steps. rewrite POST0. steps.
       acall_tac (Fib, 10) (ord_pure 21) (@URA.unit Σ) (@URA.unit Σ) A; ss.
       { eapply RecStb_incl. eauto. }
-      { splits; ss. iRefresh. iSplitL A; ss. }
+      { split; ss. iRefresh. iSplitL A; ss. }
       steps. ss. des. clarify.
-      iRefresh. iDestruct POST. iPure A.
+      iRefresh. do 2 iDestruct POST. iPure A.
       erewrite Any.upcast_downcast in _UNWRAPN. clarify.
       eapply Any.upcast_inj in A. des; clarify.
       astop. steps.

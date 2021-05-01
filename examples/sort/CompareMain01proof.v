@@ -61,33 +61,33 @@ Section SIMMODSEM.
     econstructor 1 with (wf:=wf); et; ss.
     econs; ss; [|econs; ss].
     - init. unfold mainF, ccall. harg_tac. des; clarify.
-      iPure PRE. des; clarify.
+      iRefresh. iDestruct PRE. iPure PRE. des; clarify.
       rewrite Any.upcast_downcast. ss. steps. astart 2.
       hexploit (@SKINCL "compare").
       { econs; ss. }
       i. des. rewrite H. steps.
       acall_tac (x0, x1, mycmp) (ord_pure 1) (@URA.unit Σ) (@URA.unit Σ) (@URA.unit Σ); ss.
       { eapply GlobalStb_wrap. }
-      { ss. esplits; eauto. red. esplits; eauto.
+      { ss. iRefresh. iSplitP; ss. r; esplits; eauto. red. esplits; eauto.
         { eapply SKWF. eauto. }
         { eapply CmpsStb_incl. des_ifs. }
       }
-      ss. des. iPure POST. des;clarify.
+      ss. iRefresh. iDestruct POST. iPure POST. des;clarify.
       eapply Any.upcast_inj in POST. des; clarify. steps.
       rewrite Any.upcast_downcast in _UNWRAPN. clarify. steps.
       acall_tac (x0, x1, mycmp) (ord_pure 1) (@URA.unit Σ) (@URA.unit Σ) (@URA.unit Σ); ss.
       { eapply GlobalStb_wrap. }
-      { ss. esplits; eauto. red. esplits; eauto.
+      { ss. iRefresh. iSplitP; ss. r; esplits; eauto. red. esplits; eauto.
         { eapply SKWF. eauto. }
         { eapply CmpsStb_incl. des_ifs. }
       }
-      ss. des. iPure POST. des;clarify.
+      ss. iRefresh. iDestruct POST. iPure POST. des;clarify.
       eapply Any.upcast_inj in POST. des; clarify. steps.
       rewrite Any.upcast_downcast in _UNWRAPN. clarify. steps.
       astop. force_r; auto. steps.
       force_l. eexists. steps. hret_tac (@URA.unit Σ) (@URA.unit Σ); ss.
     - init. unfold compareF, ccall. harg_tac. des; clarify.
-      destruct x as [n0 n1]. ss. iPure PRE. des; clarify.
+      destruct x as [n0 n1]. ss. iRefresh. iDestruct PRE. iPure PRE. des; clarify.
       rewrite Any.upcast_downcast. ss. steps. astart 0. astop.
       eapply Any.upcast_inj in PRE. des; clarify. steps.
       force_l. eexists. hret_tac (@URA.unit Σ) (@URA.unit Σ); ss.
