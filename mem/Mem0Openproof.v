@@ -141,10 +141,6 @@ Section SIMMODSEM.
   Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
   (* Eval compute in (@RA.car (RA.excl Mem.t)). *)
   Eval compute in (@URA.car Mem1._memRA).
-  Inductive sim_loc: option val -> URA.car (t:=(Excl.t _)) -> Prop :=
-  | sim_loc_present v: sim_loc (Some v) (Some v)
-  | sim_loc_absent: sim_loc None ε
-  .
 
   Inductive mem_extends (m0 m1: Mem.t): Prop :=
   | mem_extends_intro
@@ -172,7 +168,79 @@ Section SIMMODSEM.
     end
   .
 
-  Definition o_xor X (x0 x1: option X): option X := Eval cbv delta in (o_combine (fun _ _ => None) x0 x1).
+  Definition o_xor X (x0 x1: option X): option X :=
+    Eval red in (o_combine (fun _ _ => None) x0 x1)
+  .
+
+  (*** memk_src -> memu_src -> mem_tgt ***)
+  Inductive sim_loc: URA.car (t:=(Excl.t _)) -> option val -> option val -> Prop :=
+  | sim_loc_k v: sim_loc (Some v) None (Some v)
+  | sim_loc_u v: sim_loc ε (Some v) (Some v)
+  | sim_loc_absent: sim_loc ε None None
+  .
+
+  (* Let wf: W -> Prop := *)
+  (*   fun '((mr_src, memu_src), (mr_tgt, mem_tgt)) => *)
+  (*     exists memk_src, *)
+  (*     (<<SRC: iHyp (Own (GRA.embed ((Auth.black memk_src): URA.car (t:=Mem1.memRA)))) mr_src>>) /\ *)
+  (*     (<<TGT: mr_tgt = ε>>) /\ *)
+  (*     (<<SIM: forall b ofs, sim_loc (memk_src b ofs) (memu_src.(Mem.cnts) b ofs) *)
+  (*                                   (mem_tgt.(Mem.cnts) b ofs)>>) *)
+  (* . *)
+
+  Definition mem_wf (m0: Mem.t): Prop :=
+    forall b ofs v, m0.(Mem.cnts) b ofs = Some v -> <<NB: b < m0.(Mem.nb)>>
+  .
+
+  Let wf: W -> Prop :=
+    fun '(mrps_src0, mrps_tgt0) =>
+      exists (mr_src: Σ) (memu_src: Mem.t) (mr_tgt: Σ) (mem_tgt: Mem.t) memk_src,
+        (<<SRC: mrps_src0 = (mr_src, memk_src↑)>>) /\
+        (<<TGT: mrps_tgt0 = (ε, mem_tgt↑)>>) /\
+        (<<SRCR: iHyp (Own (GRA.embed ((Auth.black memk_src): URA.car (t:=Mem1.memRA)))) mr_src>>) /\
+        (<<SIM: forall b ofs, sim_loc (memk_src b ofs) (memu_src.(Mem.cnts) b ofs)
+                                      (mem_tgt.(Mem.cnts) b ofs)>>) /\
+        (<<SIMM: mem_extends memu_src mem_tgt>>) /\
+        (<<WFSRC: mem_wf memu_src>>) /\
+        (<<WFTGT: mem_wf mem_tgt>>) (*** TODO: put it inside Mem.t? ***)
+  .
+
+  (***
+Simulation Relation
+where _ is physical (unknown src, tgt) and - is logical (known src)
+src: __-_-_-
+tgt: _______
+
+Proof Outline
+- alloc
+  tgt allocates some dead blocks and then allocate the desired block.
+  Such block is absent in both memk_src and memu_src. (by WF, SIM)
+  + known
+    Therefore, we can allocate new block in memk_src and still satisfy SIM.
+    SIMM holds. (should make lemma)
+  + unknown
+    By SIMM, we know that memu_src.(nb) <= the new block.
+    Therefore, we can allocate new block in memu_src and still satisfy SIM.
+    SIMM holds. (should make lemma)
+- free
+  tgt frees some block.
+  Either memk_src or memu_src should have that block, but not both.
+  + known
+    We know that memk_src has the block, and not memu.
+    We have full tokens for the block so we can deallocate, thereby satisfying SIM (k/u both absent).
+  + unknown
+    We know that memu_src has the block, and not memk.
+    We deallocate that block, thereby satisfying SIM (k/u both absent).
+    SIMM holds. (should make lemma)
+- access (load/store)
+  tgt accesses some block.
+  + known
+    ...
+  + unknown
+    ...
+
+It seems like we don't need mem_extends; such information is already present in sim_loc
+   ***)
 
   Let wf: W -> Prop :=
     fun '(mrps_src0, mrps_tgt0) =>
