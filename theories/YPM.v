@@ -600,6 +600,8 @@ Ltac iDestruct H :=
     let name0 := fresh "B" in
     destruct H as [name0 H]; iRefresh; iPure name0
   (*** TODO: make iDestructL/iDestructR ***)
+  | iHyp (_ ∨ _) _ =>
+    destruct H as [H|H]; iRefresh
   end.
 
 Ltac iSplitL Hs0 :=
