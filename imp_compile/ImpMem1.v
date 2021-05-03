@@ -21,6 +21,11 @@ Section Mem1.
         "ret")
   .
 
+  Definition imp_mem1_f : program := {|
+    prog_vars := [];
+    prog_funs := [("f", f)];
+  |}.
+
   Definition main :=
     "GP" =#& "G" ;#
     "GP" *=# 33%Z ;#
@@ -35,9 +40,9 @@ Section Mem1.
     fn_body := main
   |}.
 
-  Definition imp_mem1_prog : program := {|
+  Definition imp_mem1_main : program := {|
     prog_vars := [("G", Vint 3)];
-    prog_funs := [("main", main_def); ("f", f)];
+    prog_funs := [("main", main_def)];
   |}.
 
 End Mem1.
