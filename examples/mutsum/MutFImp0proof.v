@@ -20,7 +20,8 @@ Require Import HTactics.
 Require Import TODO.
 
 Require Import Imp.
-Import ImpNotations.
+Require Import ImpNotations.
+Require Import ImpProofs.
 
 Generalizable Variables E R A B C X Y.
 
@@ -41,7 +42,8 @@ Section SIMMODSEM.
       (<<TGT: mrps_tgt0 = (ε, tt↑)>>)
   .
   
-  Theorem correct: ModSemPair.sim MutF0.FSem MutFImp.FSem.
+  Theorem correct:
+    forall ge, ModSemPair.sim MutF0.FSem (MutFImp.FSem ge).
   Proof.
     econstructor 1 with (wf:=wf); et; ss.
     econs; ss. init. unfold cfun.
@@ -49,20 +51,19 @@ Section SIMMODSEM.
     unfold MutFImp.fF.
     Local Opaque vadd.
     steps.
-    rewrite eval_imp_unfold.
-    ss.
-    eapply Any.downcast_upcast in _UNWRAPN. des. clarify.
-    unfold unint in *. ss.
-    steps.
+    rewrite unfold_eval_imp.
+    eapply Any.downcast_upcast in _UNWRAPN. des.
+    unfold unint in *. destruct v; clarify; ss.
     imp_steps.
     des_ifs.
     - imp_steps.
-    - apply Z.eqb_eq in Heq0. apply n in Heq0. inversion Heq0.
+    - apply Z.eqb_eq in Heq. clarify.
     - unfold ccall.
       imp_steps.
       gstep. econs; ss. i. des; subst. exists 100.
       imp_steps.
-      rewrite _UNWRAPU. imp_steps.
+      Local Transparent vadd.
+      destruct v; ss; clarify; imp_steps.
   Qed.
   
 End SIMMODSEM.

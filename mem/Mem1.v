@@ -114,7 +114,7 @@ Section PROOF.
 
   Definition alloc_spec: fspec :=
     (mk_simple (fun sz => (
-                    (fun varg o => ⌜varg = [Vint (Z.of_nat sz)]↑ /\ o = ord_pure 1⌝),
+                    (fun varg o => ⌜varg = [Vint (Z.of_nat sz)]↑ /\ o = ord_pure 0⌝),
                     (fun vret => Exists b, ⌜vret = (Vptr b 0)↑⌝ **
                                                              Own(GRA.embed ((b, 0%Z) |-> (List.repeat (Vint 0) sz))))
     ))).
@@ -123,7 +123,7 @@ Section PROOF.
     (mk_simple (fun '(b, ofs) => (
                     (fun varg o => Exists v, ⌜varg = ([Vptr b ofs])↑⌝ **
                                              Own(GRA.embed ((b, ofs) |-> [v])) **
-                                             ⌜o = ord_pure 1⌝),
+                                             ⌜o = ord_pure 0⌝),
                     top2
     ))).
 
@@ -131,7 +131,7 @@ Section PROOF.
     (mk_simple (fun '(b, ofs, v) => (
                     (fun varg o => ⌜varg = ([Vptr b ofs])↑⌝ **
                                    Own(GRA.embed ((b, ofs) |-> [v])) **
-                                   ⌜o = ord_pure 1⌝),
+                                   ⌜o = ord_pure 0⌝),
                     (fun vret => Own(GRA.embed ((b, ofs) |-> [v])) ** ⌜vret = v↑⌝)
     ))).
 
@@ -139,7 +139,7 @@ Section PROOF.
     (mk_simple
        (fun '(b, ofs, v_new) => (
             (fun varg o => Exists v_old,
-                           ⌜varg = ([Vptr b ofs ; v_new])↑⌝ ** Own(GRA.embed ((b, ofs) |-> [v_old])) ** ⌜o = ord_pure 1⌝),
+                           ⌜varg = ([Vptr b ofs ; v_new])↑⌝ ** Own(GRA.embed ((b, ofs) |-> [v_old])) ** ⌜o = ord_pure 0⌝),
             (fun _ => Own(GRA.embed ((b, ofs) |-> [v_new])))
     ))).
 
@@ -154,18 +154,18 @@ Section PROOF.
            (Exists b ofs v, ⌜varg = [Vptr b ofs; Vptr b  ofs]↑⌝ ** ⌜resource = (GRA.embed ((b, ofs) |-> [v]))⌝ ** ⌜result = true⌝) ∨
            (⌜varg = [Vnullptr; Vnullptr]↑ /\ result = true⌝))
             ** Own(resource)
-            ** ⌜o = ord_pure 1⌝
+            ** ⌜o = ord_pure 0⌝
           ),
           (fun vret => Own(resource) ** ⌜vret = (if result then Vint 1 else Vint 0)↑⌝)
     ))).
 
   Definition MemStb: list (gname * fspec).
     eapply (Seal.sealing "stb").
-    apply [("alloc", alloc_spec) ; ("free", free_spec) ; ("load", load_spec) ; ("store", store_spec) ; ("cmp", cmp_spec)].
+    apply [("malloc", alloc_spec) ; ("free", free_spec) ; ("load", load_spec) ; ("store", store_spec) ; ("cmp", cmp_spec)].
   Defined.
 
   Definition MemSbtb: list (gname * fspecbody) :=
-    [("alloc", mk_specbody alloc_spec (fun _ => trigger (Choose _)));
+    [("malloc", mk_specbody alloc_spec (fun _ => trigger (Choose _)));
     ("free",   mk_specbody free_spec (fun _ => trigger (Choose _)));
     ("load",   mk_specbody load_spec (fun _ => trigger (Choose _)));
     ("store",  mk_specbody store_spec (fun _ => trigger (Choose _)));
@@ -173,18 +173,27 @@ Section PROOF.
     ]
   .
 
-  Definition SMemSem: SModSem.t := {|
+  Let initial_mr (sk: Sk.t): _memRA :=
+    fun blk ofs =>
+      match List.nth_error sk blk with
+      | Some (_, gd) =>
+        match gd with
+        | Sk.Gfun => ε
+        | Sk.Gvar gv => if (dec ofs 0%Z) then Some gv else ε
+        end
+      | _ => ε
+      end.
+
+  Definition SMemSem (sk: Sk.t): SModSem.t := {|
     SModSem.fnsems := MemSbtb;
     SModSem.mn := "Mem";
-    SModSem.initial_mr := (GRA.embed (Auth.black (M:=_memRA) ε));
+    SModSem.initial_mr := (GRA.embed (Auth.black (initial_mr sk)));
     SModSem.initial_st := tt↑;
   |}
   .
 
-  Definition MemSem: ModSem.t := (SModSem.to_tgt MemStb) SMemSem.
-
   Definition SMem: SMod.t := {|
-    SMod.get_modsem := fun _ => SMemSem;
+    SMod.get_modsem := SMemSem;
     SMod.sk := Sk.unit;
   |}
   .

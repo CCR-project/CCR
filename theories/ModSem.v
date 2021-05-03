@@ -116,7 +116,7 @@ End EVENTSCOMMON.
 
 Module EventsL.
 Section EVENTSL.
-  
+
   Context `{Σ: GRA.t}.
 
   Inductive pE: Type -> Type :=
@@ -450,7 +450,7 @@ Section MODSEML.
 
   Definition compile: semantics :=
     compile_itree initial_itr.
-  
+
   (* Program Definition interp_no_forge: semantics := {| *)
   (*   STS.state := state; *)
   (*   STS.step := step; *)
@@ -790,9 +790,9 @@ Section MODL.
   Context `{Σ: GRA.t}.
 
   Record t: Type := mk {
-    get_modsem: SkEnv.t -> ModSemL.t;
+    get_modsem: Sk.t -> ModSemL.t;
     sk: Sk.t;
-    enclose: ModSemL.t := (get_modsem (Sk.load_skenv sk));
+    enclose: ModSemL.t := (get_modsem sk);
     compile: semantics := ModSemL.compile enclose;
   }
   .
@@ -805,8 +805,8 @@ Section MODL.
   (*** wf about modsem is enforced in the semantics ***)
 
   Definition add (md0 md1: t): t := {|
-    get_modsem := fun skenv_link =>
-                    ModSemL.add (md0.(get_modsem) skenv_link) (md1.(get_modsem) skenv_link);
+    get_modsem := fun sk =>
+                    ModSemL.add (md0.(get_modsem) sk) (md1.(get_modsem) sk);
     sk := Sk.add md0.(sk) md1.(sk);
   |}
   .
@@ -821,6 +821,8 @@ Section MODL.
     unfold compile in *. ss.
     eapply ModSemL.add_comm; et.
     rp; et. do 4 f_equal.
+    - admit "TODO: maybe the easy way is to 'canonicalize' the list by sorting.".
+    - admit "TODO: maybe the easy way is to 'canonicalize' the list by sorting.".
     - admit "TODO: maybe the easy way is to 'canonicalize' the list by sorting.".
     - admit "TODO: maybe the easy way is to 'canonicalize' the list by sorting.".
   Qed.
@@ -876,13 +878,13 @@ Section MOD.
   Context `{Σ: GRA.t}.
 
   Record t: Type := mk {
-    get_modsem: SkEnv.t -> ModSem.t;
+    get_modsem: Sk.t -> ModSem.t;
     sk: Sk.t;
   }
   .
 
   Definition lift (md: t): ModL.t := {|
-    ModL.get_modsem := fun skenv => md.(get_modsem) skenv;
+    ModL.get_modsem := fun sk => md.(get_modsem) sk;
     ModL.sk := md.(sk);
   |}
   .

@@ -132,10 +132,15 @@ Module Sk.
   (*** At the moment, List.app is not assoc/commutative. We need to equip RA with custom equiv. ***)
 
   Definition load_mem (sk: t): Mem.t :=
-    let n := List.length sk in
     Mem.mk
-      (* (fun blk => if (blk <? n)%nat then (fun _ => None) else (fun _ => None)) *)
-      (fun _ _ => None)
+      (fun blk ofs =>
+         do '(_, gd) <- (List.nth_error sk blk);
+         match gd with
+         | Gfun =>
+           None
+         | Gvar gv =>
+           if (dec ofs 0%Z) then Some gv else None
+         end)
       (*** TODO: This simplified model doesn't allow function pointer comparsion.
            To be more faithful, we need to migrate the notion of "permission" from CompCert.
            CompCert expresses it with "nonempty" permission.
@@ -143,13 +148,13 @@ Module Sk.
       (*** TODO: When doing so, I would like to extend val with "Vfid (id: gname)" case.
            That way, I might be able to support more higher-order features (overriding, newly allocating function)
        ***)
-      n
+      (List.length sk)
   .
 
   Definition load_skenv (sk: t): (SkEnv.t) :=
     let n := List.length sk in
     {|
-      SkEnv.blk2id := fun blk => do '(ofs, _) <- (List.nth_error sk blk); Some ofs;
+      SkEnv.blk2id := fun blk => do '(gn, _) <- (List.nth_error sk blk); Some gn;
       SkEnv.id2blk := fun id => do '(blk, _) <- find_idx (fun '(id', _) => string_dec id id') sk; Some blk
     |}
   .
@@ -171,7 +176,21 @@ Module Sk.
       + admit "ez".
   Qed.
 
-  Definition incl (sk0: Sk.t) (skenv: SkEnv.t): Prop :=
+  Definition incl (sk0 sk1: Sk.t): Prop :=
     forall gn gd (IN: List.In (gn, gd) sk0),
-    exists blk, skenv.(SkEnv.id2blk) gn = Some blk.
+      List.In (gn, gd) sk1.
+
+  Definition incl_env (sk0: Sk.t) (skenv: SkEnv.t): Prop :=
+    forall gn gd (IN: List.In (gn, gd) sk0),
+    exists blk, <<FIND: skenv.(SkEnv.id2blk) gn = Some blk>>.
+
+  Lemma incl_incl_env sk0 sk1
+        (INCL: incl sk0 sk1)
+    :
+      incl_env sk0 (load_skenv sk1).
+  Proof.
+  Admitted.
 End Sk.
+
+Coercion Sk.load_skenv: Sk.t >-> SkEnv.t.
+Global Opaque Sk.load_skenv.

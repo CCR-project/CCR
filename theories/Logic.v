@@ -17,6 +17,7 @@ Section IRIS.
   .
   Definition Pure (P: Prop): iProp := fun _ => P.
   Definition Ex {X: Type} (P: X -> iProp): iProp := fun r => exists x, P x r.
+  Definition Univ {X: Type} (P: X -> iProp): iProp := fun r => forall x, P x r.
   Definition Own (r0: Σ): iProp := fun r1 => URA.extends r0 r1.
   Definition And (P Q: iProp): iProp := fun r => P r /\ Q r.
   Definition Or (P Q: iProp): iProp := fun r => P r \/ Q r.
@@ -46,6 +47,9 @@ Notation "'⌜' P '⌝'" := (Pure P).
 Notation "'Exists' x .. y , p" := (Ex (fun x => .. (Ex (fun y => p)) ..))
                                     (at level 200, x binder, right associativity,
                                      format "'[' 'Exists'  '/  ' x  ..  y ,  '/  ' p ']'").
+Notation "'Forall' x .. y , p" := (Univ (fun x => .. (Univ (fun y => p)) ..))
+                                    (at level 200, x binder, right associativity,
+                                     format "'[' 'Forall'  '/  ' x  ..  y ,  '/  ' p ']'").
 Notation "|=> P" := (Upd P) (at level 60).
 Notation "'⌞' P '⌟'" := (Impure P).
 

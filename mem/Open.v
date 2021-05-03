@@ -120,7 +120,7 @@ Section UMOD.
   Context `{Σ: GRA.t}.
 
   Record t: Type := mk {
-    get_modsem: SkEnv.t -> UModSem.t;
+    get_modsem: Sk.t -> UModSem.t;
     sk: Sk.t;
   }
   .
@@ -310,7 +310,7 @@ Section KMOD.
   Context `{Σ: GRA.t}.
 
   Record t: Type := mk {
-    get_modsem: SkEnv.t -> KModSem.t;
+    get_modsem: Sk.t -> KModSem.t;
     sk: Sk.t;
   }
   .
@@ -565,15 +565,15 @@ Section ADQ.
   Let sk_link: Sk.t := fold_right Sk.add Sk.unit ((List.map SMod.sk kmds) ++ (List.map UMod.sk umds)).
   Let skenv: SkEnv.t := Sk.load_skenv sk_link.
 
-  Let _kmss: SkEnv.t -> list SModSem.t := fun ske => List.map (flip SMod.get_modsem ske) kmds.
-  Let _umss: SkEnv.t -> list UModSem.t := fun ske => List.map (flip UMod.get_modsem ske) umds.
-  Let _gstb: SkEnv.t -> list (gname * fspec) := fun ske =>
+  Let _kmss: Sk.t -> list SModSem.t := fun ske => List.map (flip SMod.get_modsem ske) kmds.
+  Let _umss: Sk.t -> list UModSem.t := fun ske => List.map (flip UMod.get_modsem ske) umds.
+  Let _gstb: Sk.t -> list (gname * fspec) := fun ske =>
     (flat_map (List.map (map_snd fsb_fspec) ∘ SModSem.fnsems) (_kmss ske))
       ++ (flat_map (List.map (map_snd (fun _ => fspec_trivial2)) ∘ UModSem.fnsems) (_umss ske)).
 
-  Let kmss: list SModSem.t := Eval red in (_kmss skenv).
-  Let umss: list UModSem.t := Eval red in (_umss skenv).
-  Let gstb: list (gname * fspec) := Eval red in (_gstb skenv).
+  Let kmss: list SModSem.t := Eval red in (_kmss sk_link).
+  Let umss: list UModSem.t := Eval red in (_umss sk_link).
+  Let gstb: list (gname * fspec) := Eval red in (_gstb sk_link).
   (* Let gstb: list (gname * fspec) := *)
   (*   (flat_map (List.map (map_snd fsb_fspec) ∘ SModSem.fnsems) kmss) *)
   (*     ++ (flat_map (List.map (map_snd (fun _ => fspec_trivial2)) ∘ UModSem.fnsems) umss). *)
@@ -730,7 +730,7 @@ Section ADQ.
       {
         assert (GWF: ☀) by (split; [refl|exact _ASSUME]); clear _ASSUME.
         iRefresh.
-        eapply find_some in T. des; des_sumbool; subst. unfold _gstb in T. rewrite in_app_iff in *. des; ss.
+        eapply alist_find_some in T. des; des_sumbool; subst. unfold _gstb in T. rewrite in_app_iff in *. des; ss.
         - rewrite in_flat_map in *. des; ss. rewrite in_map_iff in *. des. unfold map_snd in T0. des_ifs.
           unfold _kmss in T. rewrite in_map_iff in *. des. subst. unfold flip in T1.
           unfold kmds in T0. rewrite in_map_iff in *. des. subst. ss. rewrite in_map_iff in *. des.
@@ -780,7 +780,7 @@ Section ADQ.
     i. r. eapply adequacy_lift.
     econs.
     { instantiate (1:=fun '(x, y) => x = y). ss.
-      set (ums:=UMod.get_modsem umd skenv0) in *.
+      set (ums:=UMod.get_modsem umd sk) in *.
       rewrite ! List.map_map.
       eapply Forall2_apply_Forall2.
       { refl. }

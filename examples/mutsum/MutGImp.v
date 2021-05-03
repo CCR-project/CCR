@@ -7,6 +7,7 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import Imp.
+Require Import ImpNotations.
 
 Generalizable Variables E R A B C X Y Σ.
 
@@ -24,16 +25,20 @@ Section G.
   Definition gF :=
     mk_function
       ["n"]
+      ["f_ret"]
       (if# "n"
-       then# "f_ret" :=# (Fun "f") ["n" - 1%Z : expr] ;;#
+       then# "f_ret" =@ "f" ["n" - 1%Z : expr] ;#
              "n" + "f_ret"
-       else# 0%Z fi#).
+       else# 0%Z
+       fi#).
 
   Definition g_prog : program :=
-    [("g", gF)].
-
-  Definition GSem: ModSem.t := ImpMod.modsem "G" g_prog.
-
+    mk_program
+      []
+      [("g", gF)]
+  .
+  
+  Definition GSem ge: ModSem.t := ImpMod.modsem "G" g_prog ge.
   Definition G : Mod.t := ImpMod.get_mod "G" g_prog.
 
 End G.

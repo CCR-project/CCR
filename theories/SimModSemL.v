@@ -33,19 +33,6 @@ Local Open Scope nat_scope.
 
 
 
-Print function_Map. (*** TODO: use Dec. Move to proper place ***)
-
-Global Instance Dec_RelDec K `{Dec K}: @RelDec K eq :=
-  { rel_dec := dec }.
-
-Global Instance Dec_RelDec_Correct K `{Dec K}: RelDec_Correct Dec_RelDec.
-Proof.
-  unfold Dec_RelDec. ss.
-  econs. ii. ss. unfold Dec_RelDec. split; ii.
-  - unfold rel_dec in *. unfold sumbool_to_bool in *. des_ifs.
-  - unfold rel_dec in *. unfold sumbool_to_bool in *. des_ifs.
-Qed.
-
 
 
 
@@ -1330,7 +1317,7 @@ Section SIMMOD.
    Variable (md_src md_tgt: ModL.t).
    Inductive sim: Prop := mk {
      sim_modsem:
-       forall skenv, <<SIM: ModSemLPair.sim (md_src.(ModL.get_modsem) skenv) (md_tgt.(ModL.get_modsem) skenv)>>;
+       forall sk, <<SIM: ModSemLPair.sim (md_src.(ModL.get_modsem) sk) (md_tgt.(ModL.get_modsem) sk)>>;
      sim_sk: <<SIM: md_src.(ModL.sk) = md_tgt.(ModL.sk)>>;
      sim_wf:
        forall skenv (WF: ModSemL.wf (md_src.(ModL.get_modsem) skenv)), <<WF: ModSemL.wf (md_tgt.(ModL.get_modsem) skenv)>>;
@@ -1759,7 +1746,7 @@ Section SIMMOD.
        Beh.of_program (ModL.compile md_src)
    .
    Proof.
-     inv SIM. specialize (sim_modsem0 (Sk.load_skenv (ModL.sk md_src))).
+     inv SIM. specialize (sim_modsem0 (ModL.sk md_src)).
      inv sim_modsem0. red in sim_sk0.
 
      eapply adequacy_global; et. exists (OrdArith.add Ord.O Ord.O).
@@ -1768,12 +1755,12 @@ Section SIMMOD.
      assert (FNS: forall fn : string,
                 option_rel (sim_fnsem wf)
                            (find (fun fnsem : string * (Any.t -> itree Es Any.t) => dec fn (fst fnsem))
-                                 (ModSemL.fnsems (ModL.get_modsem md_src (Sk.load_skenv (ModL.sk md_src)))))
+                                 (ModSemL.fnsems (ModL.get_modsem md_src (ModL.sk md_src))))
                            (find (fun fnsem : string * (Any.t -> itree Es Any.t) => dec fn (fst fnsem))
-                                 (ModSemL.fnsems (ModL.get_modsem md_tgt (Sk.load_skenv (ModL.sk md_tgt)))))).
+                                 (ModSemL.fnsems (ModL.get_modsem md_tgt (ModL.sk md_tgt))))).
      { rewrite <- sim_sk0 in *.
-       remember (ModSemL.fnsems (ModL.get_modsem md_src (Sk.load_skenv (ModL.sk md_src)))).
-       remember (ModSemL.fnsems (ModL.get_modsem md_tgt (Sk.load_skenv (ModL.sk md_src)))).
+       remember (ModSemL.fnsems (ModL.get_modsem md_src (ModL.sk md_src))).
+       remember (ModSemL.fnsems (ModL.get_modsem md_tgt (ModL.sk md_src))).
        clear - sim_fnsems. induction sim_fnsems; ss.
        i. unfold sumbool_to_bool. des_ifs; eauto.
        - inv H. ss.

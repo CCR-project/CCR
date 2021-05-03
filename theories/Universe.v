@@ -5,28 +5,9 @@ Require Export Any.
 Require Export Axioms.
 Require Export sflib.
 Require Export ITreelib.
+Require Export AList.
 
 Set Implicit Arguments.
-
-Global Opaque string_dec.
-
-(************ temporary buffer before putting it in Coqlib ***********)
-(************ temporary buffer before putting it in Coqlib ***********)
-(************ temporary buffer before putting it in Coqlib ***********)
-
-Class Dec (A: Type) := dec: forall (a0 a1: A), { a0 = a1 } + { a0 <> a1 }.
-
-Global Program Instance positive_Dec: Dec positive. Next Obligation. decide equality. Defined.
-Global Program Instance string_Dec: Dec String.string. Next Obligation. apply String.string_dec. Defined.
-Global Program Instance nat_Dec: Dec nat. Next Obligation. apply Nat.eq_dec. Defined.
-Global Program Instance Z_Dec: Dec Z. Next Obligation. apply Z.eq_dec. Defined.
-
-Definition update K `{Dec K} V (f: K -> V) (k: K) (v: V): K -> V :=
-  fun _k => if dec k _k then v else f _k.
-
-(************ temporary buffer before putting it in Coqlib ***********)
-(************ temporary buffer before putting it in Coqlib ***********)
-(************ temporary buffer before putting it in Coqlib ***********)
 
 
 
@@ -100,7 +81,7 @@ Module Mem.
 
   Definition wf (m0: t): Prop := forall blk ofs (LT: (blk < m0.(nb))%nat), m0.(cnts) blk ofs = None.
 
-  Definition alloc (m0: Mem.t) (sz: Z): (block * Mem.t) :=
+  Definition malloc (m0: Mem.t) (sz: Z): (block * Mem.t) :=
     ((m0.(nb)),
      Mem.mk (update (m0.(cnts)) (m0.(nb))
                     (fun ofs => if (0 <=? ofs)%Z && (ofs <? sz)%Z then Some (Vint 0) else None))
@@ -113,11 +94,10 @@ Module Mem.
   Definition empty: t := mk (fun _ _ => None) 0.
   (* Let empty2: t := Eval compute in *)
   (*   let m0 := mk (fun _ _ => None) 0 in *)
-  (*   let (_, m1) := alloc m0 1%Z in *)
+  (*   let (_, m1) := malloc m0 1%Z in *)
   (*   m1 *)
   (* . *)
   (*** shoul allocated with Vundef, not 0 ***)
-  Definition init (nb: block): t := mk (fun _ _ => None) nb.
 
   (*** TODO: Unlike CompCert, this "free" function does not take offset.
        In order to support this, we need more sophisticated RA. it would be interesting.

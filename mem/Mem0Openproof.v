@@ -290,12 +290,16 @@ Ltac iDestruct H :=
     rewrite <- ! intro_hide_mark
   .
 
-  Theorem correct: ModSemPair.sim MemOpen.MemSem Mem0.MemSem.
+  Variable sk: Sk.t.
+
+  Theorem correct: ModSemPair.sim (MemOpen.MemSem sk) (Mem0.MemSem sk).
   Proof.
    econstructor 1 with (wf:=wf); et; swap 2 3.
     { ss. esplits; ss; et; try refl.
       { eexists. rewrite URA.unit_id. refl. }
-      ii. ss. econs; et.
+      { ii. destruct (Mem.cnts (Sk.load_mem sk) b ofs) eqn:T; econs. }
+      { admit "ez". }
+      { admit "ez". }
     }
 
 

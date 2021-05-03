@@ -175,17 +175,17 @@ Section CANCEL.
   Variable mds: list SMod.t.
 
   Let sk: Sk.t := fold_right Sk.add Sk.unit (List.map SMod.sk mds).
-  Let skenv: SkEnv.t := Sk.load_skenv sk.
+  (* Let skenv: SkEnv.t := Sk.load_skenv sk. *)
 
-  Let _mss: SkEnv.t -> list SModSem.t := fun skenv => (List.map ((flip SMod.get_modsem) skenv) mds).
-  Let _sbtb: SkEnv.t -> list (gname * fspecbody) := fun skenv => (List.flat_map (SModSem.fnsems) (_mss skenv)).
-  Let _stb: SkEnv.t -> list (gname * fspec) := fun skenv => List.map (fun '(fn, fs) => (fn, fs.(fsb_fspec))) (_sbtb skenv).
+  Let _mss: Sk.t -> list SModSem.t := fun sk => (List.map ((flip SMod.get_modsem) sk) mds).
+  Let _sbtb: Sk.t -> list (gname * fspecbody) := fun sk => (List.flat_map (SModSem.fnsems) (_mss sk)).
+  Let _stb: Sk.t -> list (gname * fspec) := fun sk => List.map (fun '(fn, fs) => (fn, fs.(fsb_fspec))) (_sbtb sk).
 
-  Let mss: list SModSem.t := _mss skenv.
-  Let sbtb: list (gname * fspecbody) := _sbtb skenv.
-  Let stb: list (gname * fspec) := _stb skenv.
+  Let mss: list SModSem.t := _mss sk.
+  Let sbtb: list (gname * fspecbody) := _sbtb sk.
+  Let stb: list (gname * fspec) := _stb sk.
 
-  (* Let mss: list SModSem.t := (List.map ((flip SMod.get_modsem) skenv) mds). *)
+  (* Let mss: list SModSem.t := (List.map ((flip SMod.get_modsem) sk) mds). *)
   (* Let sbtb: list (gname * fspecbody) := (List.flat_map (SModSem.fnsems) mss). *)
   (* Let stb: list (gname * fspec) := List.map (fun '(fn, fs) => (fn, fs.(fsb_fspec))) sbtb. *)
 
@@ -439,7 +439,7 @@ Section CANCEL.
     (*   end. *)
     (* hide_left. *)
     steps.
-    destruct (find (fun '(_fn, _) => dec fn _fn) stb) eqn:FINDFT; cycle 1.
+    destruct (alist_find fn stb) eqn:FINDFT; cycle 1.
     { steps. }
     (* unfold ModSemL.prog at 2. steps. *)
     unfold HoareCall.
@@ -539,7 +539,7 @@ Section CANCEL.
         assert(fs = f0).
         { clear - FINDFT FINDFS0. admit "ez - no function name duplication". }
         subst.
-        fold sk. fold skenv. set (mn0:=(SModSem.mn (SMod.get_modsem md0 skenv))) in *.
+        fold sk. fold sk. set (mn0:=(SModSem.mn (SMod.get_modsem md0 sk))) in *.
         fold Any_tgt in x3.
         unfold fun_to_src, fun_to_tgt, compose. des_ifs. unfold HoareFun.
         rename x3 into PRECOND. rename x0 into rarg.
@@ -640,7 +640,7 @@ Section CANCEL.
         assert(fs = f0).
         { clear - FINDFT FINDFS0. admit "ez - no function name duplication". }
         subst.
-        fold sk. fold skenv. set (mn0:=(SModSem.mn (SMod.get_modsem md0 skenv))) in *.
+        fold sk. fold sk. set (mn0:=(SModSem.mn (SMod.get_modsem md0 sk))) in *.
         fold Any_tgt in x3.
         unfold fun_to_src, fun_to_tgt, compose. des_ifs. unfold HoareFun.
         rename x3 into PRECOND. rename x0 into rarg.
@@ -711,23 +711,23 @@ Section CANCEL.
 
   Hypothesis MAINM: In (SMod.main mainpre mainbody) mds.
 
-  Let MAINF: List.find (fun '(_fn, _) => dec "main" _fn) stb = Some ("main", (mk_simple (fun (_: unit) => (mainpre, top2)))).
+  Let MAINF: @alist_find _ _ (@Dec_RelDec string string_Dec) _  "main" stb = Some (mk_simple (fun (_: unit) => (mainpre, top2))).
   Proof.
     unfold stb, _stb.
-    rewrite find_map. uo. unfold compose. des_ifs.
-    - eapply find_some in Heq. des. des_sumbool. subst. repeat f_equal.
+    rewrite alist_find_map. uo. unfold compose. des_ifs.
+    - eapply alist_find_some in Heq. des. des_sumbool. subst. repeat f_equal.
       assert(In ("main", (mk_specbody (mk_simple (fun (_: unit) => (mainpre, top2))) mainbody)) sbtb).
       { unfold sbtb, _sbtb, mss, _mss. eapply in_flat_map. esplits; et.
         { rewrite in_map_iff. esplits; et. }
         ss. et.
       }
       admit "ez - uniqueness of fname".
-    - eapply find_none in Heq; cycle 1.
-      { unfold sbtb, _sbtb, mss, _mss. eapply in_flat_map. esplits; et.
+    - eapply alist_find_none in Heq.
+      { exfalso. eapply Heq.
+        unfold sbtb, _sbtb, mss, _mss. eapply in_flat_map. esplits; et.
         { rewrite in_map_iff. esplits; et. }
         ss. et.
       }
-      des_ifs.
   Qed.
 
   Let initial_r_state ms entry_r: r_state :=

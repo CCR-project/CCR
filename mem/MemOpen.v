@@ -29,7 +29,7 @@ Section PROOF.
   Local Existing Instance GURA.
 
   Definition MemSbtb: list (gname * fspecbody) :=
-    [("alloc", mk_specbody alloc_spec allocF);
+    [("malloc", mk_specbody alloc_spec allocF);
     ("free",   mk_specbody free_spec freeF);
     ("load",   mk_specbody load_spec loadF);
     ("store",  mk_specbody store_spec storeF);
@@ -37,20 +37,20 @@ Section PROOF.
     ]
   .
 
-  Definition _SMemSem: SModSem.t := {|
+  Definition _SMemSem (sk: Sk.t): SModSem.t := {|
     SModSem.fnsems := MemSbtb;
     SModSem.mn := "Mem";
     SModSem.initial_mr := (GRA.embed (Auth.black (M:=_memRA) ε));
-    SModSem.initial_st := Mem.empty↑;
+    SModSem.initial_st := (Sk.load_mem sk)↑;
   |}
   .
 
-  Definition SMemSem: SModSem.t := disclose_smodsem _SMemSem.
+  Definition SMemSem: Sk.t -> SModSem.t := disclose_smodsem ∘ _SMemSem.
 
-  Definition MemSem: ModSem.t := (SModSem.to_tgt MemStb) SMemSem.
+  Definition MemSem: Sk.t -> ModSem.t := (SModSem.to_tgt MemStb) ∘ SMemSem.
 
   Definition _SMem: SMod.t := {|
-    SMod.get_modsem := fun _ => _SMemSem;
+    SMod.get_modsem := _SMemSem;
     SMod.sk := Sk.unit;
   |}
   .
