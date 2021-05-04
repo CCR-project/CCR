@@ -30,13 +30,17 @@ Section IRIS.
   Definition Impl (P Q: iProp): iProp := fun r => URA.wf r -> P r -> Q r.
   Definition Wand (P Q: iProp): iProp := fun r => forall rp, URA.wf (r ⋅ rp) -> P rp -> Q (r ⋅ rp).
 
-  Definition Entails (P Q: iProp): Prop := forall r (WF: URA.wf r), P r -> Q r.
-  Definition Impure (P: iProp): Prop := P ε.
+
+  Inductive Entails (P Q : iProp) : Prop :=
+    { iProp_entails :> forall r (WF: URA.wf r), P r -> Q r }.
+
+  (* Definition Entails (P Q: iProp): Prop := forall r (WF: URA.wf r), P r -> Q r. *)
 
   Definition Upd (P: iProp): iProp := fun r0 => forall ctx, URA.wf (r0 ⋅ ctx) -> exists r1, URA.wf (r1 ⋅ ctx) /\ P r1.
 
   Definition Emp: iProp := eq ε.
-  Definition Persistently (P: iProp): iProp := fun _ => False.
+  Definition Persistently (P: iProp): iProp := Pure (P ε).
+  Definition Later (P: iProp): iProp := P.
 
   (* Trivial Ofe Structure *)
   Inductive uPred_equiv' (P Q : iProp) : Prop :=
@@ -70,9 +74,7 @@ Section IRIS.
       + apply c in g. apply g in H0; et.
   Qed.
 
-
   (* BI axioms *)
-
   Global Program Instance PreOrder_Entails: PreOrder Entails.
   Next Obligation.
   Proof.
@@ -80,102 +82,7 @@ Section IRIS.
   Qed.
   Next Obligation.
   Proof.
-    ii. exploit (H r); et.
-  Qed.
-
-  Lemma equiv_Entails: ∀ P Q : iProp, P ≡ Q ↔ Entails P Q ∧ Entails Q P.
-  Proof.
-    econs.
-    { ii. split; red; i; eapply H; et. }
-    { split. des. i. split; i.
-      { ii. exploit H0; et. }
-      { ii. exploit H; et. }
-    }
-  Qed.
-
-  Lemma Pure_ne: ∀ n : nat, Proper (iff ==> dist n) Pure.
-  Proof.
-    econs. i. split.
-    { ii. eapply H. ss. }
-    { ii. eapply H. ss. }
-  Qed.
-
-  Lemma And_ne: NonExpansive2 And.
-  Proof.
-    econs. i. split.
-    { ii. inv H2. split.
-      { eapply H; et. }
-      { eapply H0; et. }
-    }
-    { ii. inv H2. split.
-      { eapply H; et. }
-      { eapply H0; et. }
-    }
-  Qed.
-
-  Lemma Or_ne: NonExpansive2 Or.
-  Proof.
-    econs. i. split.
-    { ii. inv H2.
-      { left. eapply H; et. }
-      { right. eapply H0; et. }
-    }
-    { ii. inv H2.
-      { left. eapply H; et. }
-      { right. eapply H0; et. }
-    }
-  Qed.
-
-  Lemma Impl_ne: NonExpansive2 Impl.
-  Proof.
-    econs. i. split.
-    { ii. eapply H0; et. eapply H2; et. eapply H; et. }
-    { ii. eapply H0; et. eapply H2; et. eapply H; et. }
-  Qed.
-
-  Lemma Sepconj_ne: NonExpansive2 Sepconj.
-  Proof.
-    econs. i. split.
-    { ii. inv H2. des. subst. eexists. esplits; eauto.
-      { eapply H; et. eapply URA.wf_mon; et. }
-      { eapply H0; et. eapply URA.wf_mon; et. rewrite URA.add_comm. et. }
-    }
-    { ii. inv H2. des. subst. eexists. esplits; eauto.
-      { eapply H; et. eapply URA.wf_mon; et. }
-      { eapply H0; et. eapply URA.wf_mon; et. rewrite URA.add_comm. et. }
-    }
-  Qed.
-
-  Lemma Wand_ne: NonExpansive2 Wand.
-  Proof.
-    econs. i. split.
-    { ii. exploit H2; et.
-      { eapply H; et. eapply URA.wf_mon; et. rewrite URA.add_comm. et. }
-      { i. eapply H0; et. }
-    }
-    { ii. exploit H2; et.
-      { eapply H; et. eapply URA.wf_mon; et. rewrite URA.add_comm. et. }
-      { i. eapply H0; et. }
-    }
-  Qed.
-
-  Lemma Persistently_ne: NonExpansive Persistently.
-  Proof.
-    ii. ss.
-  Qed.
-
-  Lemma Univ_ne: ∀ (A : Type) (n : nat), Proper (pointwise_relation A (dist n) ==> dist n) Univ.
-  Proof.
-    econs. i. split.
-    { ii. exploit H; et. i. eapply x2; et. }
-    { ii. exploit H; et. i. eapply x2; et. }
-  Qed.
-
-  Lemma Ex_ne: ∀ (A : Type) (n : nat), Proper (pointwise_relation A (dist n) ==> dist n) Ex.
-  Proof.
-    econs. i. split.
-    { ii. inv H1. exploit H; et. i. eexists. eapply x2; et. }
-    { ii. inv H1. exploit H; et. i. eexists. eapply x2; et. }
+    ii. econs. ii. exploit (H r); et. eapply H0. auto.
   Qed.
 
   Lemma Pure_intro: ∀ (φ : Prop) (P : iProp), φ → Entails P (Pure φ).
@@ -185,140 +92,134 @@ Section IRIS.
 
   Lemma Pure_elim: ∀ (φ : Prop) (P : iProp), (φ → Entails (Pure True) P) → Entails (Pure φ) P.
   Proof.
-    ii. eapply H in H0. eapply H0; ss.
+    ii. econs. ii. eapply H in H0. eapply H0; ss.
   Qed.
 
   Lemma And_elim_l: ∀ P Q : iProp, Entails (And P Q) P.
   Proof.
-    ii. eapply H.
+    ii. econs. ii. eapply H.
   Qed.
 
   Lemma And_elim_r: ∀ P Q : iProp, Entails (And P Q) Q.
   Proof.
-    ii. eapply H.
+    ii. econs. ii. eapply H.
   Qed.
 
   Lemma And_intro: ∀ P Q R : iProp, Entails P Q → Entails P R → Entails P (And Q R).
   Proof.
-    ii. split; et.
+    ii. econs. ii. split; [eapply H|eapply H0]; et.
   Qed.
 
   Lemma Or_intro_l: ∀ P Q : iProp, Entails P (Or P Q).
   Proof.
-    ii. left. ss.
+    ii. econs. ii. left. ss.
   Qed.
 
   Lemma Or_intro_r: ∀ P Q : iProp, Entails Q (Or P Q).
   Proof.
-    ii. right. ss.
+    ii. econs. ii. right. ss.
   Qed.
 
   Lemma Or_elim: ∀ P Q R : iProp, Entails P R → Entails Q R → Entails (Or P Q) R.
   Proof.
-    ii. inv H1.
+    ii. econs. ii. inv H1.
     { eapply H; ss. }
     { eapply H0; ss. }
   Qed.
 
   Lemma Impl_intro_r: ∀ P Q R : iProp, Entails (And P Q) R → Entails P (Impl Q R).
   Proof.
-    ii. eapply H; et. split; ss.
+    ii. econs. ii. eapply H; et. split; ss.
   Qed.
 
   Lemma Impl_elim_l: ∀ P Q R : iProp, Entails P (Impl Q R) → Entails (And P Q) R.
   Proof.
-    ii. inv H0. eapply H; et.
+    ii. econs. ii. inv H0. eapply H; et.
   Qed.
 
   Lemma Univ_intro: ∀ (A : Type) (P : iProp) (Ψ : A → iProp), (∀ a : A, Entails P (Ψ a)) → Entails P (Univ (λ a : A, Ψ a)).
   Proof.
-    ii. eapply H; et.
+    ii. econs. ii. eapply H; et.
   Qed.
 
   Lemma Univ_elim: ∀ (A : Type) (Ψ : A → iProp) (a : A), Entails (Univ (λ a0 : A, Ψ a0)) (Ψ a).
   Proof.
-    ii. eapply H; et.
+    ii. econs. ii. eapply H; et.
   Qed.
 
   Lemma Ex_intro: ∀ (A : Type) (Ψ : A → iProp) (a : A), Entails (Ψ a) (Ex (λ a0 : A, Ψ a0)).
   Proof.
-    ii. eexists. eauto.
+    ii. econs. ii. eexists. eauto.
   Qed.
 
   Lemma Ex_elim: ∀ (A : Type) (Φ : A → iProp) (Q : iProp), (∀ a : A, Entails (Φ a) Q) → Entails (Ex (λ a : A, Φ a)) Q.
   Proof.
-    ii. inv H0. eapply H; et.
+    ii. econs. ii. inv H0. eapply H; et.
   Qed.
 
   Lemma Sepconj_mono: ∀ P P' Q Q' : iProp, Entails P Q → Entails P' Q' → Entails (Sepconj P P') (Sepconj Q Q').
   Proof.
-    ii. unfold Sepconj in *. des; subst. esplits; et.
+    ii. econs. ii. unfold Sepconj in *. des; subst. esplits; et.
     { eapply H; et. eapply URA.wf_mon; et. }
     { eapply H0; et. eapply URA.wf_mon; et. rewrite URA.add_comm. et. }
   Qed.
 
   Lemma Emp_Sepconj_l: ∀ P : iProp, Entails P (Sepconj Emp P).
   Proof.
-    ii. exists ε, r. splits; ss. rewrite URA.unit_idl. et.
+    ii. econs. ii. exists ε, r. splits; ss. rewrite URA.unit_idl. et.
   Qed.
 
   Lemma Emp_Sepconj_r: ∀ P : iProp, Entails (Sepconj Emp P) P.
   Proof.
-    ii. inv H. des; subst. inv H1. rewrite URA.unit_idl. et.
+    ii. econs. ii. inv H. des; subst. inv H1. rewrite URA.unit_idl. et.
   Qed.
 
   Lemma Sepconj_comm: ∀ P Q : iProp, Entails (Sepconj P Q) (Sepconj Q P).
   Proof.
-    ii. unfold Sepconj in *. des. subst. exists b, a. splits; et. apply URA.add_comm.
+    ii. econs. ii. unfold Sepconj in *. des. subst. exists b, a. splits; et. apply URA.add_comm.
   Qed.
 
   Lemma Sepconj_assoc: ∀ P Q R : iProp, Entails (Sepconj (Sepconj P Q) R) (Sepconj P (Sepconj Q R)).
   Proof.
-    ii. unfold Sepconj in *. des; subst. esplits; [|apply H2| |apply H3|apply H1]; ss.
+    ii. econs. ii. unfold Sepconj in *. des; subst. esplits; [|apply H2| |apply H3|apply H1]; ss.
     rewrite URA.add_assoc. ss.
   Qed.
 
   Lemma Wand_intro_r: ∀ P Q R : iProp, Entails (Sepconj P Q) R → Entails P (Wand Q R).
   Proof.
-    ii. eapply H; et. exists r, rp. splits; et.
+    ii. econs. ii. eapply H; et. exists r, rp. splits; et.
   Qed.
 
   Lemma Wand_elim_l: ∀ P Q R : iProp, Entails P (Wand Q R) → Entails (Sepconj P Q) R.
   Proof.
-    ii. unfold Sepconj in *. des; subst. eapply H; et. eapply URA.wf_mon; et.
+    ii. econs. ii. unfold Sepconj in *. des; subst. eapply H; et. eapply URA.wf_mon; et.
   Qed.
 
-  Lemma Persistently_mono: ∀ P Q : iProp, Entails P Q → Entails (Persistently P) (Persistently Q).
+  Lemma Upd_intro: ∀ P : iProp, Entails P (Upd P).
   Proof.
-    ii. ss.
+    ii. econs. ii. exists r. splits; auto.
   Qed.
 
-  Lemma Persistently_idemp: ∀ P : iProp, Entails (Persistently P) (Persistently (Persistently P)).
+  Lemma Upd_mono: ∀ P Q : iProp, Entails P Q -> Entails (Upd P) (Upd Q).
   Proof.
-    ii. ss.
+    ii. econs. ii. exploit H0; et. i. des.
+    exploit (H r1); et. eapply URA.wf_mon; et.
   Qed.
 
-  Lemma Persistently_Univ: ∀ (A : Type) (Ψ : A → iProp), Entails (Univ (λ a : A, id (Ψ a))) ((Univ (λ a : A, Ψ a))).
+  Lemma Upd_trans: ∀ P : iProp, Entails (Upd (Upd P)) (Upd P).
   Proof.
-    ii. ss.
+    ii. econs. ii. exploit H; et. i. des. exploit x0; eauto.
   Qed.
 
-  Lemma Persistently_Ex: ∀ (A : Type) (Ψ : A → iProp), Entails (id (Ex (λ a : A, Ψ a))) (Ex (λ a : A, id (Ψ a))).
+  Lemma Upd_frame_r: ∀ P R : iProp, Entails (Sepconj (Upd P) R) (Upd (Sepconj P R)).
   Proof.
-    ii. ss.
+    ii. econs. ii. unfold Sepconj in *. des. subst. exploit (H1 (b ⋅ ctx)); et.
+    { rewrite URA.add_assoc. et. }
+    i. des. esplits; [..|eapply x1|eapply H2]; ss.
+    rewrite <- URA.add_assoc. et.
   Qed.
 
-  Lemma Persistently_Sepconj: ∀ P Q : iProp, Entails (Sepconj (Persistently P) Q) (Persistently P).
-  Proof.
-    ii. unfold Sepconj in *. des; subst. ss.
-  Qed.
-
-  Lemma Persistently_And: ∀ P Q : iProp, Entails (And (Persistently P) Q) (Sepconj P Q).
-  Proof.
-    ii. inv H. ss.
-  Qed.
-
-  Lemma uPred_bi_mixin:
+  Lemma iProp_bi_mixin:
     BiMixin
       Entails Emp Pure And Or Impl
       (@Univ) (@Ex) Sepconj Wand
@@ -326,16 +227,63 @@ Section IRIS.
   Proof.
     econs.
     - exact PreOrder_Entails.
-    - exact equiv_Entails.
-    - exact Pure_ne.
-    - exact And_ne.
-    - exact Or_ne.
-    - exact Impl_ne.
-    - exact Univ_ne.
-    - exact Ex_ne.
-    - exact Sepconj_ne.
-    - exact Wand_ne.
-    - exact Persistently_ne.
+    - econs.
+      { ii. split; econs; ii; eapply H; et. }
+      { split. des. i. split; i.
+        { eapply H; et. }
+        { eapply H0; et. }
+      }
+    - econs. i. split.
+      { ii. eapply H. ss. }
+      { ii. eapply H. ss. }
+    - econs. i. split.
+      { ii. inv H2. split.
+        { eapply H; et. }
+        { eapply H0; et. }
+      }
+      { ii. inv H2. split.
+        { eapply H; et. }
+        { eapply H0; et. }
+      }
+    - econs. i. split.
+      { ii. inv H2.
+        { left. eapply H; et. }
+        { right. eapply H0; et. }
+      }
+      { ii. inv H2.
+        { left. eapply H; et. }
+        { right. eapply H0; et. }
+      }
+    - econs. i. split.
+      { ii. eapply H0; et. eapply H2; et. eapply H; et. }
+      { ii. eapply H0; et. eapply H2; et. eapply H; et. }
+    - econs. i. split.
+      { ii. exploit H; et. i. eapply x2; et. }
+      { ii. exploit H; et. i. eapply x2; et. }
+    - econs. i. split.
+      { ii. inv H1. exploit H; et. i. eexists. eapply x2; et. }
+      { ii. inv H1. exploit H; et. i. eexists. eapply x2; et. }
+    - econs. i. split.
+      { ii. inv H2. des. subst. eexists. esplits; eauto.
+        { eapply H; et. eapply URA.wf_mon; et. }
+        { eapply H0; et. eapply URA.wf_mon; et. rewrite URA.add_comm. et. }
+      }
+      { ii. inv H2. des. subst. eexists. esplits; eauto.
+        { eapply H; et. eapply URA.wf_mon; et. }
+        { eapply H0; et. eapply URA.wf_mon; et. rewrite URA.add_comm. et. }
+      }
+    - econs. i. split.
+      { ii. exploit H2; et.
+        { eapply H; et. eapply URA.wf_mon; et. rewrite URA.add_comm. et. }
+        { i. eapply H0; et. }
+      }
+      { ii. exploit H2; et.
+        { eapply H; et. eapply URA.wf_mon; et. rewrite URA.add_comm. et. }
+        { i. eapply H0; et. }
+      }
+    - ii. econs. i. split.
+      { ii. eapply H; ss. eapply URA.wf_unit. }
+      { ii. eapply H; ss. eapply URA.wf_unit. }
     - exact Pure_intro.
     - exact Pure_elim.
     - exact And_elim_l.
@@ -357,196 +305,333 @@ Section IRIS.
     - exact Sepconj_assoc.
     - exact Wand_intro_r.
     - exact Wand_elim_l.
-    - exact Persistently_mono.
-    - exact Persistently_idemp.
+    - ii. econs; ii. eapply H; et. eapply URA.wf_unit.
+    - ii. econs; ii. eapply H; et.
+    - ii. econs; ii. red in H. subst. ss.
+    - ii. econs; ii. eapply H; et.
+    - ii. econs; ii. inv H. exists x. ss.
+    - ii. econs; ii. unfold Sepconj in *. des; subst. ss.
+    - ii. econs; ii. inv H. unfold Sepconj in *. esplits; et. rewrite URA.unit_idl. et.
+  Qed.
+
+  Lemma iProp_bi_later_mixin:
+    BiLaterMixin
+      Entails Pure Or Impl
+      (@Univ) (@Ex) Sepconj Persistently Later.
+  Proof.
+    econs.
+    - ii. econs. i. split.
+      { i. eapply H; et. }
+      { i. eapply H; et. }
+    - ii. eapply H; et.
     - ii. ss.
-
-  : ∀ P : iProp, Entails (Persistently P) (Persistently (Persistently P)).
-  Proof.
-    ii. ss.
+    - ii. econs; ii. eapply H.
+    - ii. econs; ii. right. ss.
+    - ii. ss.
+    - ii. ss.
+    - ii. ss.
+    - ii. ss.
+    - ii. econs; ii. right. ss.
   Qed.
 
-  Lemma Persistently_Univ: ∀ (A : Type) (Ψ : A → iProp), Entails (Univ (λ a : A, id (Ψ a))) ((Univ (λ a : A, Ψ a))).
+  Canonical Structure iPropI: bi :=
+    {| bi_bi_mixin := iProp_bi_mixin;
+       bi_bi_later_mixin := iProp_bi_later_mixin |}.
+
+  (** extra BI instances *)
+  Lemma iProp_bupd_mixin: BiBUpdMixin iPropI Upd.
   Proof.
-    ii. ss.
+    econs.
+    - ii. econs. i. split.
+      { ii. exploit H1; eauto. i. des. esplits; eauto.
+        eapply H; et. eapply URA.wf_mon; et. }
+      { ii. exploit H1; eauto. i. des. esplits; eauto.
+        eapply H; et. eapply URA.wf_mon; et. }
+    - exact Upd_intro.
+    - exact Upd_mono.
+    - exact Upd_trans.
+    - exact Upd_frame_r.
+  Qed.
+  Global Instance iProp_bi_bupd: BiBUpd iPropI := {| bi_bupd_mixin := iProp_bupd_mixin |}.
+
+  Global Instance iProp_bupd_absorbing (P: iPropI): Absorbing (bupd P).
+  Proof.
+    ii. econs; ii. red in H. inv H. des. subst. exploit H3; et.
+    eapply URA.wf_mon. rewrite URA.add_comm. rewrite URA.add_assoc. et.
   Qed.
 
-  Lemma Persistently_Ex: ∀ (A : Type) (Ψ : A → iProp), Entails (id (Ex (λ a : A, Ψ a))) (Ex (λ a : A, id (Ψ a))).
+  Global Instance iProp_pure_forall: BiPureForall iPropI.
   Proof.
-    ii. ss.
-  Qed.
-
-  Lemma Persistently_Sepconj: ∀ P Q : iProp, Entails (Sepconj (Persistently P) Q) (Persistently P).
-  Proof.
-    ii. unfold Sepconj in *. des; subst. ss.
-  Qed.
-
-  Lemma Persistently_And: ∀ P Q : iProp, Entails (And (Persistently P) Q) (Sepconj P Q).
-  Proof.
-    ii. inv H. ss.
+    ii. econs; ii. eapply H.
   Qed.
 
 
+  From iris.proofmode Require Export tactics class_instances.
 
-  Admitted.
+  (** AsEmpValid *)
+  Global Instance as_emp_valid_emp_valid (P: iPropI) : AsEmpValid0 (⊢ P) P | 0.
+  Proof. by rewrite /AsEmpValid. Qed.
+  Global Instance as_emp_valid_entails (P Q: iPropI) : AsEmpValid0 (P ⊢ Q) (P -∗ Q).
+  Proof. split; [ apply bi.entails_wand | apply bi.wand_entails ]. Qed.
+  Global Instance as_emp_valid_equiv (P Q: iPropI) : AsEmpValid0 (P ≡ Q) (P ∗-∗ Q).
+  Proof. Admitted.
+
+  Goal forall (P Q: iPropI), bi_entails (bi_sep (bupd P) Q) (bupd Q).
+  Proof.
+    i. iStartProof.
+    iIntros "[Hxs Hys]". iMod "Hxs". iApply "Hys".
+  Qed.
+
+  Variable P Q R: iProp.
+  Hypothesis PQ: bi_entails P Q.
+  Hypothesis QR: bi_entails Q R.
 
 
-(*   NonExpansive id *)
+  From stdpp Require Import namespaces hlist pretty.
+  From iris.bi Require Export bi telescopes.
+  From iris.proofmode Require Import base intro_patterns spec_patterns
+       sel_patterns coq_tactics reduction.
+  From iris.proofmode Require Export classes notation.
+  From iris.prelude Require Import options.
+  Export ident.
 
-(* subgoal 2 (ID 95) is: *)
-(*  ∀ P Q : iProp, Entails P Q → Entails (id P) (id Q) *)
-(* subgoal 3 (ID 96) is: *)
-(*  ∀ P : iProp, Entails P (id P) *)
-(* subgoal 4 (ID 97) is: *)
-(*  ∀ (A : Type) (Φ : A → iProp), Entails (Univ (λ a : A, id (Φ a))) (id (Univ (λ a : A, Φ a))) *)
-(* subgoal 5 (ID 98) is: *)
-(*  ∀ (A : Type) (Φ : A → iProp), Entails (id (Ex (λ a : A, Φ a))) (Or (id (Pure False)) (Ex (λ a : A, id (Φ a)))) *)
-(* subgoal 6 (ID 99) is: *)
-(*  ∀ P Q : iProp, Entails (id (Sepconj P Q)) (Sepconj (id P) (id Q)) *)
-(* subgoal 7 (ID 100) is: *)
-(*  ∀ P Q : iProp, Entails (Sepconj (id P) (id Q)) (id (Sepconj P Q)) *)
-(* subgoal 8 (ID 101) is: *)
-(*  ∀ P : iProp, Entails (id (id P)) (id (id P)) *)
-(* subgoal 9 (ID 102) is: *)
-(*  ∀ P : iProp, Entails (id (id P)) (id (id P)) *)
-(* subgoal 10 (ID 103) is: *)
-(*  ∀ P : iProp, Entails (id P) (Or (id (Pure False)) (Impl (id (Pure False)) P)) *)
+  From iris.proofmode Require Import tactics ltac_tactics.
 
-(*   NonExpansive bupd *)
 
-(* subgoal 2 (ID 97) is: *)
-(*  ∀ P : uPredI M, P -∗ |==> P *)
-(* subgoal 3 (ID 98) is: *)
-(*  ∀ P Q : uPredI M, (P -∗ Q) → (|==> P) -∗ |==> Q *)
-(* subgoal 4 (ID 99) is: *)
-(*  ∀ P : uPredI M, (|==> |==> P) -∗ |==> P *)
-(* subgoal 5 (ID 100) is: *)
-(*  ∀ P R : uPredI M, (|==> P) ∗ R -∗ |==> P ∗ R *)
+  Local Ltac iApplyHypExact H :=
+    eapply tac_assumption with H _ _; (* (i:=H) *)
+    [pm_reflexivity
+    |iSolveTC
+    |pm_reduce; iSolveTC ||
+                         fail 1 "iApply: remaining hypotheses not affine and the goal not absorbing"].
+
+  Local Ltac iApplyHypLoop H :=
+    first
+      [eapply tac_apply with H _ _ _;
+       [pm_reflexivity
+       |iSolveTC
+       |pm_reduce;
+        pm_prettify (* reduce redexes created by instantiation *)]].
+
+  Tactic Notation "iApplyHyp" constr(H) :=
+    first
+      [iApplyHypExact H
+      |iApplyHypLoop H
+      |lazymatch iTypeOf H with
+       | Some (_,?Q) => fail 1 "iApply: cannot apply" Q
+       end].
+
+  Tactic Notation "iApply" open_constr(lem) :=
+    iPoseProofCore lem as false (fun H => iApplyHyp H).
+
+
+  Tactic Notation "iPoseProofCoreHyp" constr(H) "as" constr(Hnew) :=
+    let Δ := iGetCtx in
+    notypeclasses refine (tac_pose_proof_hyp _ H Hnew _ _);
+    pm_reduce;
+    lazymatch goal with
+    | |- False =>
+      let lookup := pm_eval (envs_lookup_delete false H Δ) in
+      lazymatch lookup with
+      | None =>
+        let H := pretty_ident H in
+        fail "iPoseProof:" H "not found"
+      | _ =>
+        let Hnew := pretty_ident Hnew in
+        fail "iPoseProof:" Hnew "not fresh"
+      end
+    | _ => idtac
+    end.
+
+  Tactic Notation "iPoseProofCoreLem" open_constr(lem) "as" tactic3(tac) :=
+    let Hnew := iFresh in
+    notypeclasses refine (tac_pose_proof _ Hnew _ _ (into_emp_valid_proj _ _ _ lem) _);
+    [iIntoEmpValid
+    |pm_reduce;
+     lazymatch goal with
+     | |- False =>
+       let Hnew := pretty_ident Hnew in
+       fail "iPoseProof:" Hnew "not fresh"
+     | _ => tac Hnew
+     end];
+    (* Solve all remaining TC premises generated by [iIntoEmpValid] *)
+    try iSolveTC.
+
+  Tactic Notation "iPoseProofCore" open_constr(lem)
+         "as" constr(p) tactic3(tac) :=
+    iStartProof;
+    let t := lazymatch lem with ITrm ?t ?xs ?pat => t | _ => lem end in
+    let t := lazymatch type of t with string => constr:(INamed t) | _ => t end in
+    let spec_tac Htmp :=
+        lazymatch lem with
+        | ITrm _ ?xs ?pat => iSpecializeCore (ITrm Htmp xs pat) as p
+        | _ => idtac
+        end in
+    pose t
+  .
+    (* lazymatch type of t with *)
+    (* | _ => iPoseProofCoreLem t as (fun Htmp => spec_tac Htmp; [..|tac Htmp]) *)
+    (* end. *)
+
+
+
+  Ltac iIntoEmpValid_go := first
+                             [(* Case [φ → ψ] *)
+                               notypeclasses refine (into_emp_valid_impl _ _ _ _ _);
+                               [(*goal for [φ] *)|iIntoEmpValid_go]
+                              |(* Case [∀ x : A, φ] *)
+                              notypeclasses refine (into_emp_valid_forall _ _ _ _); iIntoEmpValid_go
+                              |(* Case [∀.. x : TT, φ] *)
+                              notypeclasses refine (into_emp_valid_tforall _ _ _ _); iIntoEmpValid_go
+                              |(* Case [P ⊢ Q], [P ⊣⊢ Q], [⊢ P] *)
+                              notypeclasses refine (into_emp_valid_here _ _ _)].
+
+  Ltac iIntoEmpValid :=
+    (* Factor out the base case of the loop to avoid needless backtracking *)
+    iIntoEmpValid_go;
+    [.. (* goals for premises *)
+    |iSolveTC ||
+              let φ := lazymatch goal with |- AsEmpValid ?φ _ => φ end in
+              fail "iPoseProof:" φ "not a BI assertion"].
+
+
+  Goal bi_entails P R.
+  Proof.
+    i. iStartProof. iIntros "H".
+    Show Proof.
+    Set Printing All.
+
+    let Hnew := iFresh in
+    notypeclasses refine (tac_pose_proof _ Hnew _ _ (into_emp_valid_proj _ _ _ QR) _).
+    {
+
+      refine (into_emp_valid_forall _ _ _ _).
+
+      refine (@into_emp_valid_forall _ _ _ _ _ _).
+
+      iIntoEmpValid_go.
+
+      Local Opaque bi_entails.
+      refine (into_emp_valid_forall _ _ _ _).
+
+      @into_emp_valid_forall ?PROP ?A
+        : forall (φ : forall _ : ?A, Type) (P0 : bi_car ?PROP) (x : ?A) (_ : @IntoEmpValid ?PROP (φ x) P0),
+          @IntoEmpValid ?PROP (forall x0 : ?A, φ x0) P0
+      where
+      ?PROP : [Σ : GRA.t  P : iProp  Q : iProp  R : iProp  PQ : @bi_entails iPropI P Q  QR : @bi_entails iPropI Q R
+               |- bi]
+                ?A : [Σ : GRA.t  P : iProp  Q : iProp  R : iProp  PQ : @bi_entails iPropI P Q  QR : @bi_entails iPropI Q R
+                      |- Type]
+
+
+      iIntoEmpValid_go.
+
+    ].
+
+
+      notypeclasses refine (into_emp_valid_here _ _ _).
+
+
+      first
+        [(* Case [φ → ψ] *)
+          notypeclasses refine (into_emp_valid_impl _ _ _ _ _);
+          [(*goal for [φ] *)|iIntoEmpValid_go]
+         |(* Case [∀ x : A, φ] *)
+         notypeclasses refine (into_emp_valid_forall _ _ _ _); iIntoEmpValid_go
+         |(* Case [∀.. x : TT, φ] *)
+         notypeclasses refine (into_emp_valid_tforall _ _ _ _); iIntoEmpValid_go
+         |(* Case [P ⊢ Q], [P ⊣⊢ Q], [⊢ P] *)
+         notypeclasses refine (into_emp_valid_here _ _ _)].
+
+
+      iIntoEmpValid_go.
+
+      ; cycle 2.
+      { eapply class_instances.as_emp_valid_entails.
+        eapply as_emp_valid_entails.
+
+
+        eapply as_emp_valid_entails.
+        {
+
+        red.        typeclasses eauto.
+
+        solve [ once typeclasses eauto ].
+        .
+        iSolveTC.
+
+      3:{ iSolveTC.
+        [.. (* goals for premises *)
+        |iSolveTC ||
+                  let φ := lazymatch goal with |- AsEmpValid ?φ _ => φ end in
+                  fail "iPoseProof:" φ "not a BI assertion"].
+
+      iIntoEmpValid.
+
+
+
+
+      let Hnew := iFresh in
+      notypeclasses refine (tac_pose_proof _ Hnew _ _ (into_emp_valid_proj _ _ _ QR) _).
+
+      [iIntoEmpValid
+      |pm_reduce;
+       lazymatch goal with
+       | |- False =>
+         let Hnew := pretty_ident Hnew in
+         fail "iPoseProof:" Hnew "not fresh"
+       | _ => iApplyHyp Hnew
+       end];
+      (* Solve all remaining TC premises generated by [iIntoEmpValid] *)
+      try iSolveTC.
+
+
+    iPoseProofCoreLem QR as (fun Htmp => iApplyHyp Htmp).
+
+
+
+
+    end.
+
+
+    iStartProof;
+      let t := lazymatch QR with ITrm ?t ?xs ?pat => t | _ => QR end in
+      let t := lazymatch type of t with string => constr:(INamed t) | _ => t end in
+      let spec_tac Htmp :=
+          lazymatch QR with
+          | ITrm _ ?xs ?pat => iSpecializeCore (ITrm Htmp xs pat) as false
+          | _ => idtac
+          end in
+      lazymatch type of QR with
+      | _ => iPoseProofCoreLem QR as (fun Htmp => idtac Htmp; [..|iApplyHyp Htmp])
+      end.
+
+
+    iApply QR. iApply H. iApply H0. iApply H in "H".
+
+    iIntros "[Hxs Hys]". iMod "Hys". iApply "Hxs".
+  Qed.
 
 End IRIS.
 
-
-Section cofe.
-  Context {M : GRA.t}.
-
-  Inductive uPred_equiv' (P Q : iProp) : Prop :=
-    { uPred_in_equiv : ∀ x, URA.wf x -> Upd P x <-> Upd Q x }.
-
-  Local Instance uPred_equiv : Equiv iProp := uPred_equiv'.
-  Definition uPred_dist' (n : nat) (P Q : iProp) : Prop := uPred_equiv' P Q.
-  Local Instance uPred_dist : Dist iProp := uPred_dist'.
-  Definition uPred_ofe_mixin : OfeMixin iProp.
-  Proof.
-    split.
-    - intros P Q; split.
-      + ii. ss.
-      + ii. specialize (H 0). ss.
-    - i. split.
-      + ii. ss.
-      + ii. econs. i. symmetry. apply H. auto.
-      + ii. econs. i. transitivity (Upd y x0); [apply H|apply H0]; ss.
-    - i. ss.
-  Qed.
-  Canonical Structure uPredO : ofe := Ofe iProp uPred_ofe_mixin.
-
-  Program Definition uPred_compl : Compl uPredO := λ c x, forall n, Upd (c n) x.
-
-  Global Program Instance uPred_cofe : Cofe uPredO := {| compl := uPred_compl |}.
-  Next Obligation.
-    econs. i. split.
-    - ii. exploit H0; et. i. des.
-      specialize (x1 n). exploit x1; et.
-    - ii. exists x. esplits; et.
-      ii. destruct (le_ge_dec n n0).
-      + apply c in l. apply l in H0; et.
-      + apply c in g. apply g in H0; et.
-  Qed.
-End cofe.
-Global Arguments uPredO : clear implicits.
-
-
-Lemma uPred_bi_mixin (M : GRA.t) :
-  BiMixin
-    Entails Emp Pure And Or Impl
-    (@Univ _) (@Ex _) Sepconj Wand
-    id.
-Proof.
-Admitted.
-
-Lemma uPred_bi_later_mixin (M : GRA.t) :
-  BiLaterMixin
-    Entails Pure Or Impl
-    (@Univ _) (@Ex _) Sepconj id id.
-Proof.
-Admitted.
-
-Canonical Structure uPredI (M : GRA.t) : bi :=
-  {| bi_bi_mixin := uPred_bi_mixin M;
-     bi_bi_later_mixin := uPred_bi_later_mixin M |}.
-
-Global Instance uPred_pure_forall M : BiPureForall (uPredI M).
-Proof.
-  ii. exists r. splits; et.
-Qed.
-
-(** extra BI instances *)
-
-Global Instance uPred_affine M : BiAffine (uPredI M) | 0.
-Proof.
-  ii. exists r. esplits; et. ss.
-Qed.
-Global Hint Immediate uPred_affine : core.
-
-(** Re-state/export lemmas about Iris-specific primitive connectives (own, valid) *)
-
-Module uPred.
-
-Section restate.
-Context {M : GRA.t}.
-Implicit Types φ : Prop.
-Implicit Types P Q : iProp.
-Implicit Types A : Type.
-
-(* Force implicit argument M *)
-Notation "P ⊢ Q" := (bi_entails (PROP:=uPredI M) P%I Q%I).
-Notation "P ⊣⊢ Q" := (equiv (A:=uPredI M) P%I Q%I).
-
-(** Re-exporting primitive lemmas that are not in any interface *)
-Lemma ownM_op (a1 a2 : M) :
-  Own (a1 ⋅ a2) ⊣⊢ Own a1 ∗ Own a2.
-Proof. Admitted.
-Lemma ownM_unit P : P ⊢ (Own ε).
-Proof. Admitted.
-Lemma bupd_ownM_updateP x (Φ : M → Prop) :
-  URA.updatable_set x Φ → Own x ⊢ |==> ∃ y, ⌜Φ y⌝ ∧ Own y.
-Proof. Admitted.
-
-Lemma ownM_valid (a : M) : Own a ⊢ Pure (URA.wf a).
-Proof. Admitted.
-Lemma cmra_valid_intro P (a : M) : URA.wf a → P ⊢ Pure (URA.wf a).
-Proof. Admitted.
-Lemma cmra_valid_weaken (a b : M) : Pure (URA.wf (a ⋅ b)) ⊢ Pure (URA.wf a).
-Proof. Admitted.
-
-(** This is really just a special case of an entailment
-between two [siProp], but we do not have the infrastructure
-to express the more general case. This temporary proof rule will
-be replaced by the proper one eventually. *)
-Lemma valid_entails (a b : M) :
-  URA.wf a → URA.wf b → Pure (URA.wf a) ⊢ Pure (URA.wf b).
-Proof. Admitted.
-
-(** Consistency/soundness statement *)
-Lemma pure_soundness φ : (⊢@{uPredI M} ⌜ φ ⌝) → φ.
-Proof. Admitted.
-
-End restate.
-
-End uPred.
-
 From iris.proofmode Require Export tactics.
 
-Goal forall `{M : GRA.t} (P Q: iProp), Sepconj P (Upd Q) ⊢ Upd P.
-Proof.
-  i. iStartProof. iIntros "[Hxs Hys]". iMod "Hxs". iApply "Hxs".
-Qed.
+Section IRIS.
+  Context {Σ: GRA.t}.
+
+  Variable P Q R: iPropI.
+  Hypothesis PQ: bi_entails P Q.
+  Hypothesis QR: bi_entails Q R.
+
+  Goal bi_entails P R.
+  Proof.
+    i. iStartProof. iIntros "H".
+    Set Printing All.
+    iApply QR. iApply H. iApply H0. iApply H in "H".
+
+    iIntros "[Hxs Hys]". iMod "Hys". iApply "Hxs".
+  Qed.
+
+
+
+End IRIS.
