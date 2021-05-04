@@ -17,8 +17,6 @@ From Ordinal Require Export Ordinal Arithmetic.
 Require Import Red IRed.
 Require Import Logic YPM.
 
-Generalizable Variables E R A B C X Y Σ.
-
 Set Implicit Arguments.
 
 #[export] Hint Resolve sim_itree_mon: paco.
@@ -57,9 +55,9 @@ Ltac ired_both := ired_l; ired_r.
 
 (* any, alist things *)
 
-Ltac anytac := (try rewrite ! Any.upcast_downcast in *); clarify; apply_all_once Any.upcast_inj; des; clarify; clear_tac.
+Ltac anytac := (try erewrite ! Any.upcast_downcast in * ); clarify; apply_all_once Any.upcast_inj; des; clarify; clear_tac.
 
-Ltac asimpl := try (unfold alist_add, alist_remove in *); ss.
+Ltac asimpl := try (unfold alist_add, alist_remove in * ); ss.
 
 
 (* Hoare Parse *)
@@ -323,6 +321,102 @@ End SIM.
 Section HLEMMAS.
   Context `{Σ: GRA.t}.
   Local Opaque GRA.to_URA.
+
+  Definition mk_wf (A: Type) (R_src: A -> Any.t -> iProp) (R_tgt: A -> Any.t -> iProp): (Σ * Any.t) * (Σ * Any.t) -> Prop :=
+    fun '((mr_src, mp_src), (mr_tgt, mp_tgt)) =>
+      exists a,
+        (<<SRC: R_src a mp_src mr_src >>) /\
+        (<<TGT: R_tgt a mp_tgt mr_tgt >>)
+  .
+
+  Lemma hcall_clo_ord_weaken (o_new: Ord.t)
+        Y Z (ftsp1: ftspec Y Z)
+        (o: ord) (x: ftsp1.(X))
+        (cur: Σ)
+        r rg (n: nat) mr_src0 mp_src0 fr_src0
+        (ftsp0: ftspec Y Z)
+        mr_tgt0 mp_tgt0 frs_tgt k_tgt k_src
+        fn tbr ord_cur varg_src varg_tgt
+        A (R_src: A -> Any.t -> iProp) (R_tgt: A -> Any.t -> iProp)
+
+        (WEAKER: ftspec_weaker ftsp1 ftsp0)
+
+        I
+        (GWF: (@URA.wf (GRA.to_URA _) (URA.add mr_src0 fr_src0)))
+        (ACC: Own (URA.add mr_src0 fr_src0) ⊢ #=> I)
+
+        a0 FR
+        (UPDATABLE:
+           I ⊢ #=> (FR ** R_src a0 mp_src0 ** (ftsp1.(precond) x varg_src varg_tgt o: iProp)))
+
+        (FUEL: (15 < n)%ord)
+        (PURE: ord_lt o ord_cur /\
+               (tbr = true -> is_pure o) /\ (tbr = false -> o = ord_top))
+        (RTGT: R_tgt a0 mp_tgt0 mr_tgt0)
+        (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
+
+        (POST: forall (vret_tgt : Any.t) (mr_src1 mr_tgt1 fr_src1: Σ) (mp_src1 mp_tgt1 : Any.t) a1
+                      (vret_src: Z)
+                      (RTGT: R_tgt a1 mp_tgt1 mr_tgt1)
+                      (GWF: (@URA.wf (GRA.to_URA _) (URA.add mr_src1 fr_src1)))
+                      (ACC: Own (URA.add mr_src1 fr_src1) ⊢ #=> (FR ** R_src a1 mp_src1 ** ftsp1.(postcond) x vret_src vret_tgt))
+          ,
+                gpaco6 (_sim_itree (mk_wf R_src R_tgt)) (cpn6 (_sim_itree (mk_wf R_src R_tgt))) rg rg _ _ eqr o_new
+                       (mr_src1, mp_tgt1, fr_src1, k_src vret_src) (mr_tgt1, mp_tgt1, frs_tgt, k_tgt vret_tgt))
+    :
+      gpaco6 (_sim_itree (mk_wf R_src R_tgt)) (cpn6 (_sim_itree (mk_wf R_src R_tgt))) r rg _ _ eqr n
+             (mr_src0, mp_src0, fr_src0, (HoareCall tbr ord_cur (mk_fspec ftsp0) fn varg_src) >>= k_src)
+             (mr_tgt0, mp_tgt0, frs_tgt, trigger (Call fn varg_tgt) >>= k_tgt)
+  .
+  Admitted.
+
+  (* Proof. *)
+  (*   Set Printing All. *)
+  (*   unfold HoareCall, put, discard, forge, checkWf, assume, guarantee. *)
+  (*   ired_both. gstep. econs; [eauto with ord_step|]. *)
+  (*   exists (mr_src1, URA.add rarg_src fr_src1). *)
+  (*   repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto. *)
+  (*   { etrans; eauto. eapply GWF. } *)
+  (*   repeat (ired_both; gstep; econs; eauto with ord_step). exists rarg_src. *)
+  (*   repeat (ired_both; gstep; econs; eauto with ord_step). exists fr_src1. *)
+  (*   repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto. *)
+  (*   hexploit (WEAKER x). i. des. *)
+  (*   repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto. *)
+  (*   repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto. *)
+  (*   repeat (ired_both; gstep; econs; eauto with ord_step). exists o. *)
+  (*   repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto. *)
+  (*   { exploit PRE0; cycle 1. *)
+  (*     { eapply PRE. } *)
+  (*     { rewrite URA.unit_idl. auto. } *)
+  (*     { rewrite URA.unit_idl. *)
+  (*       hexploit (UPDATABLE ε). *)
+  (*       { rewrite URA.unit_id. auto. } *)
+  (*       { i. rewrite URA.unit_id in H. *)
+  (*         erewrite URA.add_comm in H. eapply URA.wf_mon in H. *)
+  (*         eapply URA.wf_mon in H. auto. } *)
+  (*     } *)
+  (*   } des. *)
+  (*   repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto. *)
+  (*   repeat (ired_both; gstep; econs; eauto with ord_step). i. exists (o_new + 8)%ord. *)
+  (*   repeat (ired_both; gstep; econs; eauto with ord_step). i. *)
+  (*   repeat (ired_both; gstep; econs; eauto with ord_step). i. *)
+  (*   hexploit (POST vret mrs_src1 mrs_tgt1 x0 x1 WF0). i. des. subst. *)
+  (*   repeat (ired_both; gstep; econs; eauto with ord_step). i. *)
+  (*   ired_both; gstep; econs. *)
+  (*   { instantiate (1:=o_new). eapply Ord.eq_lt_lt. *)
+  (*     { symmetry. eapply OrdArith.add_O_r. } *)
+  (*     { eapply OrdArith.lt_add_r. rewrite Ord.from_nat_S. eapply Ord.S_pos. } *)
+  (*   } *)
+  (*   i. *)
+  (*   repeat spc H0. *)
+  (*   ired_both; ss. *)
+  (*   eapply H0. exploit POST0; cycle 1. *)
+  (*   { eauto. } *)
+  (*   { rewrite URA.unit_idl. auto. } *)
+  (*   { rewrite URA.unit_idl. *)
+  (*     erewrite URA.add_comm in x2. eapply URA.wf_mon in x2. *)
+  (*     erewrite URA.add_comm in x2. eapply URA.wf_mon in x2. auto. } *)
+  (* Qed. *)
 
   Lemma hcall_clo_ord_weaken (o_new: Ord.t)
         Y Z (ftsp1: ftspec Y Z)

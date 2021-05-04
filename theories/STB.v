@@ -8,9 +8,9 @@ Require Import PCM.
 Require Import HoareDef.
 Require Import Logic.
 
-Generalizable Variables E R A B C X Y Σ.
-
 Set Implicit Arguments.
+
+
 
 
 Section HEADER.
@@ -21,24 +21,28 @@ Section HEADER.
     forall (x_src: fsp_src.(X)),
     exists (x_tgt: fsp_tgt.(X)),
       (<<PRE: forall arg_src arg_tgt o,
-          (fsp_src.(precond) x_src arg_src arg_tgt o -* fsp_tgt.(precond) x_tgt arg_src arg_tgt o) ε>>) /\
+          (fsp_src.(precond) x_src arg_src arg_tgt o) ⊢ #=> (fsp_tgt.(precond) x_tgt arg_src arg_tgt o)>>) /\
       (<<POST: forall ret_src ret_tgt,
-          (fsp_tgt.(postcond) x_tgt ret_src ret_tgt -* fsp_src.(postcond) x_src ret_src ret_tgt) ε>>)
+          (fsp_tgt.(postcond) x_tgt ret_src ret_tgt) ⊢ #=> (fsp_src.(postcond) x_src ret_src ret_tgt)>>)
   .
 
   Global Program Instance ftspec_weaker_PreOrder Y Z: PreOrder (@ftspec_weaker Y Z).
   Next Obligation.
   Proof.
     ii. exists x_src. esplits; ii.
-    { rewrite URA.unit_idl. auto. }
-    { rewrite URA.unit_idl. auto. }
+    { iStartProof. iIntros "H". iApply "H". }
+    { iStartProof. iIntros "H". iApply "H". }
   Qed.
   Next Obligation.
   Proof.
     ii. hexploit (H x_src). i. des.
     hexploit (H0 x_tgt). i. des. esplits; ii.
-    { eapply PRE0; ss. rewrite <- URA.unit_idl. eapply PRE; auto. }
-    { eapply POST; ss. rewrite <- URA.unit_idl. eapply POST0; auto. }
+    { iStartProof. iIntros "H".
+      iApply bupd_idemp. iApply PRE0.
+      iApply bupd_idemp. iApply PRE. iApply "H". }
+    { iStartProof. iIntros "H".
+      iApply bupd_idemp. iApply POST.
+      iApply bupd_idemp. iApply POST0. iApply "H". }
   Qed.
 
   Variant fspec_weaker (fsp_src fsp_tgt: fspec): Prop :=
@@ -93,14 +97,14 @@ Section HEADER.
 
   Variable skenv: SkEnv.t.
 
-  Variant fb_has_spec (stb: list (gname * fspec)) (fb: block) Y Z (ftsp: ftspec Y Z): Prop :=
+  Variant fb_has_spec (stb: list (gname * fspec)) (fb: nat) Y Z (ftsp: ftspec Y Z): Prop :=
   | fb_has_spec_intro
       fn
       (FBLOCK: skenv.(SkEnv.blk2id) fb = Some fn)
       (SPEC: fn_has_spec stb fn ftsp)
   .
 
-  Lemma fb_has_spec_weaker (stb: list (gname * fspec)) (fb: block) Y Z (ftsp0 ftsp1: ftspec Y Z)
+  Lemma fb_has_spec_weaker (stb: list (gname * fspec)) (fb: nat) Y Z (ftsp0 ftsp1: ftspec Y Z)
         (SPEC: fb_has_spec stb fb ftsp1)
         (WEAK: ftspec_weaker ftsp0 ftsp1)
     :
