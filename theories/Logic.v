@@ -13,12 +13,10 @@ Set Implicit Arguments.
 Set Typeclasses Depth 5.
 
 
-
+Infix "⊢" := (@bi_entails iProp).
 Infix "**" := bi_sep (at level 99).
 Infix "-*" := bi_wand (at level 99, right associativity).
-Notation "|=> P" := (bupd P) (at level 99).
-
-
+Notation "#=> P" := ((@bupd (bi_car (@iProp _)) (@bi_bupd_bupd (@iProp _) (@iProp_bi_bupd _))) P) (at level 99).
 
 
 Section IRIS.
@@ -67,9 +65,11 @@ Section IRIS.
         (r1: Σ) B
         (UPD: URA.updatable_set r1 B)
     :
-      (Own r1) ⊢ (bupd (∃ b, ⌜B b⌝ ** (Own b)))
+      (Own r1) ⊢ (#=> (∃ b, ⌜B b⌝ ** (Own b)))
   .
   Proof.
+    Set Printing All.
+
     cut (Entails (Own r1) (Upd (Ex (fun b => Sepconj (Pure (B b)) (Own b))))); ss.
     uipropall. i. red in H. des. subst.
     exploit (UPD (ctx0 ⋅ ctx)).
@@ -84,7 +84,7 @@ Section IRIS.
         (r1 r2: Σ)
         (UPD: URA.updatable r1 r2)
     :
-      (Own r1) ⊢ (bupd (Own r2))
+      (Own r1) ⊢ (#=> (Own r2))
   .
   Proof.
     iStartProof. iIntros "H".
@@ -94,5 +94,4 @@ Section IRIS.
     iMod "H". iDestruct "H" as (b) "[#H0 H1]".
     iPure "H0" as Hs. subst. iApply "H1".
   Qed.
-
 End IRIS.

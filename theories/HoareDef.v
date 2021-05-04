@@ -7,7 +7,6 @@ Require Import Skeleton.
 Require Import PCM.
 From Ordinal Require Export Ordinal Arithmetic Inaccessible.
 Require Import Any.
-Require Import Logic.
 Require Import IRed.
 
 From ExtLib Require Import
