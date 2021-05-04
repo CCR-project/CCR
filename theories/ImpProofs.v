@@ -105,12 +105,29 @@ Section PROOFS.
       interp_imp ge le0 (v <- trigger (GetPtr X);; trigger (SetVar x v);; Ret Vundef).
   Proof. reflexivity. Qed.
 
+  Lemma denote_stmt_Malloc
+        ge le0 x se
+    :
+      interp_imp ge le0 (denote_stmt (Malloc x se)) =
+      interp_imp ge le0 (s <- denote_expr se;;
+      v <- trigger (Call "alloc" ([s]↑));; v <- unwrapN(v↓);;
+      trigger (SetVar x v);; Ret Vundef).
+  Proof. reflexivity. Qed.
+
+  Lemma denote_stmt_Free
+        ge le0 pe
+    :
+      interp_imp ge le0 (denote_stmt (Free pe)) =
+      interp_imp ge le0 (p <- denote_expr pe;;
+      trigger (Call "free" ([p]↑));; Ret Vundef).
+  Proof. reflexivity. Qed.
+
   Lemma denote_stmt_Load
         ge le0 x pe
     :
       interp_imp ge le0 (denote_stmt (Load x pe)) =
       interp_imp ge le0 (p <- denote_expr pe;;
-      v <- trigger (Call "load" (p↑));; v <- unwrapN(v↓);;
+      v <- trigger (Call "load" ([p]↑));; v <- unwrapN(v↓);;
       trigger (SetVar x v);; Ret Vundef).
   Proof. reflexivity. Qed.
 
@@ -136,7 +153,7 @@ Section PROOFS.
     :
       interp_imp ge le0 (denote_stmt (CallFun1 x f args)) =
       interp_imp ge le0 (
-      if (String.string_dec f "load" || String.string_dec f "store" || String.string_dec f "cmp")
+      if (call_mem f)
       then triggerUB
       else
         eval_args <- (denote_exprs args []);;
@@ -149,7 +166,7 @@ Section PROOFS.
     :
       interp_imp ge le0 (denote_stmt (CallFun2 f args)) =
       interp_imp ge le0 (
-      if (String.string_dec f "load" || String.string_dec f "store" || String.string_dec f "cmp")
+      if (call_mem f)
       then triggerUB
       else
         eval_args <- (denote_exprs args []);;
@@ -162,7 +179,7 @@ Section PROOFS.
       interp_imp ge le0 (denote_stmt (CallPtr1 x e args)) =
       interp_imp ge le0 (
       p <- denote_expr e;; f <- trigger (GetName p);;
-      if (String.string_dec f "load" || String.string_dec f "store" || String.string_dec f "cmp")
+      if (call_mem f)
       then triggerUB
       else
         eval_args <- (denote_exprs args []);;
@@ -176,7 +193,7 @@ Section PROOFS.
       interp_imp ge le0 (denote_stmt (CallPtr2 e args)) =
       interp_imp ge le0 (
       p <- denote_expr e;; f <- trigger (GetName p);;
-      if (String.string_dec f "load" || String.string_dec f "store") || String.string_dec f "cmp"
+      if (call_mem f)
       then triggerUB
       else
         eval_args <- (denote_exprs args []);;
@@ -497,12 +514,36 @@ Section PROOFS.
     apply interp_imp_SetVar_Vundef.
   Qed.
 
+  Lemma interp_imp_Malloc
+        ge le0 x se
+    :
+      interp_imp ge le0 (denote_stmt (Malloc x se)) =
+      '(le1, s) <- interp_imp ge le0 (denote_expr se);;
+      v <- trigger (Call "alloc" ([s]↑));;
+      tau;; tau;; v <- unwrapN (v↓);;
+      tau;; tau;; Ret (alist_add x v le1, Vundef).
+  Proof.
+    rewrite denote_stmt_Malloc. rewrite interp_imp_bind.
+    grind. apply interp_imp_Call_ret.
+  Qed.
+
+  Lemma interp_imp_Free
+        ge le0 pe
+    :
+      interp_imp ge le0 (denote_stmt (Free pe)) =
+      '(le1, p) <- interp_imp ge le0 (denote_expr pe);;
+      trigger (Call "free" ([p]↑));; tau;; tau;; Ret (le1, Vundef).
+  Proof.
+    rewrite denote_stmt_Free. rewrite interp_imp_bind.
+    grind. apply interp_imp_Call_only.
+  Qed.
+
   Lemma interp_imp_Load
         ge le0 x pe
     :
       interp_imp ge le0 (denote_stmt (Load x pe)) =
       '(le1, p) <- interp_imp ge le0 (denote_expr pe);;
-      v <- trigger (Call "load" (p↑));;
+      v <- trigger (Call "load" ([p]↑));;
       tau;; tau;; v <- unwrapN (v↓);;
       tau;; tau;; Ret (alist_add x v le1, Vundef).
   Proof.
@@ -586,7 +627,7 @@ Section PROOFS.
         ge le0 x f args
     :
       interp_imp ge le0 (denote_stmt (CallFun1 x f args)) =
-      if (String.string_dec f "load" || String.string_dec f "store" || String.string_dec f "cmp")
+      if (call_mem f)
       then triggerUB
       else
         '(le1, vs) <- interp_imp_denote_exprs ge le0 args [];;
@@ -602,7 +643,7 @@ Section PROOFS.
         ge le0 f args
     :
       interp_imp ge le0 (denote_stmt (CallFun2 f args)) =
-      if (String.string_dec f "load" || String.string_dec f "store" || String.string_dec f "cmp")
+      if (call_mem f)
       then triggerUB
       else
         '(le1, vs) <- interp_imp_denote_exprs ge le0 args [];;
@@ -622,7 +663,7 @@ Section PROOFS.
       | Vptr n 0 =>
         match (SkEnv.blk2id ge n) with
         | Some f =>
-          if (String.string_dec f "load" || String.string_dec f "store" || String.string_dec f "cmp")
+          if (call_mem f)
           then tau;; triggerUB
           else
             tau;;
@@ -654,7 +695,7 @@ Section PROOFS.
       | Vptr n 0 =>
         match (SkEnv.blk2id ge n) with
         | Some f =>
-          if (String.string_dec f "load" || String.string_dec f "store" || String.string_dec f "cmp")
+          if (call_mem f)
           then tau;; triggerUB
           else
             tau;;
@@ -782,6 +823,8 @@ Ltac imp_red :=
     | Expr _ => rewrite interp_imp_Expr
     | Expr_coerce _ => rewrite interp_imp_Expr
     | AddrOf _ _ => rewrite interp_imp_AddrOf
+    | Malloc _ _ => rewrite interp_imp_Malloc
+    | Free _ => rewrite interp_imp_Free
     | Load _ _ => rewrite interp_imp_Load
     | Store _ _ => rewrite interp_imp_Store
     | Cmp _ _ _ => rewrite interp_imp_Cmp

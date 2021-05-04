@@ -84,6 +84,12 @@ Module ImpNotations.
   Notation "x '=#&' X" :=
     (AddrOf x X) (at level 60): stmt_scope.
 
+  Notation "x '=#' 'malloc#' s" :=
+    (Malloc x s) (at level 60): stmt_scope.
+
+  Notation "'free#' p" :=
+    (Free p) (at level 60): stmt_scope.
+
   Notation "x '=#*' p" :=
     (Load x p) (at level 60): stmt_scope.
 
@@ -92,14 +98,6 @@ Module ImpNotations.
 
   Notation "x '=#' '(' a '==' b ')'" :=
     (Cmp x a b) (at level 60): stmt_scope.
-
-  Notation "x '=#' 'malloc#' s" :=
-    (CallFun1 x "malloc" [s])
-      (at level 60): stmt_scope.
-
-  Notation "'free#' p" :=
-    (CallFun2 "free" [p])
-      (at level 60): stmt_scope.
 
 End ImpNotations.
 

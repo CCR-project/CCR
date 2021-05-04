@@ -1,14 +1,5 @@
 (** * The Imp language  *)
 
-(* begin hide *)
-(* From Coq Require Import *)
-(*      Arith.PeanoNat *)
-(*      Lists.List *)
-(*      Strings.String *)
-(*      Morphisms *)
-(*      Setoid *)
-(*      RelationClasses. *)
-
 From ExtLib Require Import
      Data.String
      Structures.Monad
@@ -17,17 +8,6 @@ From ExtLib Require Import
      Core.RelDec
      Structures.Maps
      Data.Map.FMapAList.
-
-(* From ITree Require Import *)
-(*      ITree *)
-(*      ITreeFacts *)
-(*      Events.MapDefault *)
-(*      Events.StateFacts. *)
-
-(* Import Monads. *)
-(* Import MonadNotation. *)
-(* Local Open Scope monad_scope. *)
-(* Local Open Scope string_scope. *)
 
 Require Import Coqlib.
 Require Import ITreelib.
@@ -39,7 +19,6 @@ Require Import Any.
 Require Import ModSem.
 
 Set Implicit Arguments.
-(* end hide *)
 
 (* ========================================================================== *)
 (** ** Syntax *)
@@ -70,6 +49,8 @@ Inductive stmt : Type :=
 | CallSys2 (f : gname) (args : list expr)           (* f(args) *)
 | Expr (e : expr)                                   (* expression e *)
 | AddrOf (x : var) (X : gname)         (* x = &X *)
+| Malloc (x : var) (s : expr)          (* x = malloc(s) *)
+| Free (p : expr)                      (* free(p) *)
 | Load (x : var) (p : expr)            (* x = *p *)
 | Store (p : expr) (v : expr)          (* *p = v *)
 | Cmp (x : var) (a : expr) (b : expr)  (* memory accessing equality comparison *)
@@ -78,7 +59,7 @@ Inductive stmt : Type :=
 (** information of a function *)
 Record function : Type := mk_function {
   fn_params : list var;
-  fn_vars : list var; (* disjoint with fn_params *)
+  fn_vars : list var;     (* disjoint with fn_params *)
   fn_body : stmt
 }.
 
@@ -131,6 +112,13 @@ Section Denote.
       v <- denote_expr e;; denote_exprs s (acc ++ [v])
     end.
 
+  Definition call_mem f :=
+    String.string_dec f "alloc"
+    || String.string_dec f "free"
+    || String.string_dec f "load"
+    || String.string_dec f "store"
+    || String.string_dec f "cmp".
+  
   Fixpoint denote_stmt (s : stmt) : itree eff val :=
     match s with
     | Assign x e =>
@@ -143,14 +131,14 @@ Section Denote.
     | Skip => Ret Vundef
 
     | CallFun1 x f args =>
-      if (String.string_dec f "load" || String.string_dec f "store" || String.string_dec f "cmp")
+      if (call_mem f)
       then triggerUB
       else
         eval_args <- denote_exprs args [];;
         v <- trigger (Call f (eval_args↑));; v <- unwrapN (v↓);;
         trigger (SetVar x v);; Ret Vundef
     | CallFun2 f args =>
-      if (String.string_dec f "load" || String.string_dec f "store" || String.string_dec f "cmp")
+      if (call_mem f)
       then triggerUB
       else
         eval_args <- denote_exprs args [];;
@@ -158,7 +146,7 @@ Section Denote.
 
     | CallPtr1 x e args =>
       p <- denote_expr e;; f <- trigger (GetName p);;
-      if (String.string_dec f "load" || String.string_dec f "store" || String.string_dec f "cmp")
+      if (call_mem f)
       then triggerUB
       else
         eval_args <- denote_exprs args [];;
@@ -166,7 +154,7 @@ Section Denote.
         trigger (SetVar x v);; Ret Vundef
     | CallPtr2 e args =>
       p <- denote_expr e;; f <- trigger (GetName p);;
-      if (String.string_dec f "load" || String.string_dec f "store" || String.string_dec f "cmp")
+      if (call_mem f)
       then triggerUB
       else
         eval_args <- denote_exprs args [];;
@@ -184,9 +172,16 @@ Section Denote.
 
     | AddrOf x X =>
       v <- trigger (GetPtr X);; trigger (SetVar x v);; Ret Vundef
+    | Malloc x se =>
+      s <- denote_expr se;;
+      v <- trigger (Call "alloc" ([s]↑));; v <- unwrapN(v↓);;
+      trigger (SetVar x v);; Ret Vundef
+    | Free pe =>
+      p <- denote_expr pe;;
+      trigger (Call "free" ([p]↑));; Ret Vundef
     | Load x pe =>
       p <- denote_expr pe;;
-      v <- trigger (Call "load" (p↑));; v <- unwrapN(v↓);;
+      v <- trigger (Call "load" ([p]↑));; v <- unwrapN(v↓);;
       trigger (SetVar x v);; Ret Vundef
     | Store pe ve =>
       p <- denote_expr pe;; v <- denote_expr ve;;
@@ -268,7 +263,7 @@ End Interp.
 (** ** Program *)
 
 (** program components *)
-Definition progVars := list (gname * val).
+Definition progVars := list (gname * Z).
 Definition progFuns := list (gname * function).
 
 (** Imp program *)

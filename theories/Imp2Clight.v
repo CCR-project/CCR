@@ -128,6 +128,19 @@ Section Compile_Mod.
     end
   .
 
+  (** memory accessing calls *)
+  (** load, store, cmp are translated to non-function calls. *)
+  (** register alloc and free in advance so can be properly called *)
+  Let malloc_args := (Tcons (Tptr0 Tlong0) Tnil).
+  Let malloc_ret := (Tptr0 Tlong0).
+  Let malloc_def : Ctypes.fundef function :=
+    External EF_malloc malloc_args malloc_ret cc_default.
+
+  Let free_args := (Tcons (Tptr0 Tlong0) Tnil).
+  Let free_ret := Tvoid.
+  Let free_def : Ctypes.fundef function :=
+    External EF_free free_args free_ret cc_default.
+
   (* Imp has no type, value is either int64/ptr64 -> sem_cast can convert *)
   (* Assumes linking is done before beh.ref. proof (no ext.funs left) *)
   Fixpoint compile_stmt (g0: tgt_gdefs) stmt : option (tgt_gdefs * statement) :=
@@ -299,6 +312,18 @@ Section Compile_Mod.
     | AddrOf x GN =>
       (* GN: global name, g0 may not contain -> resolved by linking *)
       Some (g0, Sset (s2p x) (Eaddrof (Evar (s2p GN) Tlong0) Tlong0))
+    | Malloc x se =>
+      do a <- (compile_expr se);
+      Some (g0,
+            Scall (Some (s2p x))
+            (Evar (s2p "malloc") (Tfunction malloc_args malloc_ret cc_default))
+            [a])
+    | Free pe =>
+      do a <- (compile_expr pe);
+      Some (g0,
+            Scall None
+            (Evar (s2p "free") (Tfunction free_args free_ret cc_default))
+            [a])
     | Load x pe =>
       do cpe <- (compile_expr pe); Some (g0, Sset (s2p x) (Ederef cpe Tlong0))
     | Store pe ve =>
@@ -313,24 +338,11 @@ Section Compile_Mod.
     end
   .
 
-  (** memory accessing calls *)
-  (** load, store, cmp are translated to non-function calls. *)
-  (** need to register malloc and free in advance to be properly called *)
-  Let alloc_def : Ctypes.fundef function :=
-    External EF_malloc (Tcons (Tptr0 Tlong0) Tnil) (Tptr0 Tlong0) cc_default.
-
-  Let free_def : Ctypes.fundef function :=
-    External EF_free (Tcons (Tptr0 Tlong0) Tnil) Tvoid cc_default.
-
   Fixpoint compile_gVars (src : progVars) : tgt_gdefs :=
     match src with
     | [] => []
-    | (name, v) :: t =>
-      let init_value :=
-          match v with
-          | Vint z => [Init_int64 (to_long z)]
-          | _ => [Init_int64 (to_long 0)]
-          end in
+    | (name, z) :: t =>
+      let init_value := [Init_int64 (to_long z)] in
       (s2p name, Gvar (mkglobvar Tlong0 init_value false false))::(compile_gVars t)
     end
   .
@@ -354,7 +366,8 @@ Section Compile_Mod.
     end
   .
 
-  Let init_g : tgt_gdefs := [(s2p "malloc", Gfun alloc_def); (s2p "free", Gfun free_def)].
+  Let init_g : tgt_gdefs :=
+    [(s2p "malloc", Gfun malloc_def); (s2p "free", Gfun free_def)].
 
   Definition compile_gdefs (src : Imp.program) : option tgt_gdefs :=
     do '(g_sys, g_fun) <- compile_gFuns src.(prog_funs) init_g [] ;

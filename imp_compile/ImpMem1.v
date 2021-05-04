@@ -41,7 +41,7 @@ Section Mem1.
   |}.
 
   Definition imp_mem1_main : program := {|
-    prog_vars := [("G", Vint 3)];
+    prog_vars := [("G", 3%Z)];
     prog_funs := [("main", main_def)];
   |}.
 
