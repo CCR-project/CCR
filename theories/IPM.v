@@ -13,7 +13,7 @@ Set Typeclasses Depth 5.
 Create HintDb iprop.
 Ltac uipropall :=
   try (autounfold with iprop; autorewrite with iprop;
-       all_once_fast ltac:(fun H => autounfold with iprop in H; autorewrite with iprop in H)).
+       all_once_fast ltac:(fun H => autounfold with iprop in H; autorewrite with iprop in H); ss).
 
 Section IPROP.
   Context {Σ: GRA.t}.
@@ -84,7 +84,7 @@ Section IPROP.
   Global Program Instance PreOrder_Entails: PreOrder Entails.
   Next Obligation.
   Proof.
-    ii. uipropall. ss.
+    ii. uipropall.
   Qed.
   Next Obligation.
   Proof.
@@ -93,7 +93,7 @@ Section IPROP.
 
   Lemma Pure_intro: forall (φ : Prop) (P : iProp'), φ -> Entails P (Pure φ).
   Proof.
-    ii. uipropall. ss.
+    ii. uipropall.
   Qed.
 
   Lemma Pure_elim: forall (φ : Prop) (P : iProp'), (φ -> Entails (Pure True) P) -> Entails (Pure φ) P.
@@ -150,7 +150,7 @@ Section IPROP.
 
   Lemma Univ_elim: forall (A : Type) (Ψ : A -> iProp') (a : A), Entails (Univ (fun a0 : A => Ψ a0)) (Ψ a).
   Proof.
-    ii. uipropall. ii. eapply H; et.
+    ii. uipropall.
   Qed.
 
   Lemma Ex_intro: forall (A : Type) (Ψ : A -> iProp') (a : A), Entails (Ψ a) (Ex (fun a0 : A => Ψ a0)).
@@ -355,9 +355,9 @@ Section IPM.
     - exact Wand_intro_r.
     - exact Wand_elim_l.
     - ii. uipropall. i. eapply H; et. eapply URA.wf_unit.
-    - ii. uipropall. i. eapply H; et.
-    - ii. uipropall. ii. subst. ss.
-    - ii. uipropall. ii. specialize (H x). uipropall. eapply H; et.
+    - ii. uipropall.
+    - ii. uipropall.
+    - ii. uipropall. ii. specialize (H x). uipropall.
     - ii. uipropall. i. des. eexists. uipropall. et.
     - ii. uipropall. i. des. subst. ss.
     - ii. uipropall. ii. inv H. esplits; et. rewrite URA.unit_idl. et.
@@ -369,16 +369,15 @@ Section IPM.
       (@Univ _) (@Ex _) Sepconj Persistently Later.
   Proof.
     econs.
-    - ii. uipropall. i. split.
-      { i. eapply H; et. }
-    - ii. uipropall. eapply H; et.
-    - ii. uipropall. ss.
-    - ii. uipropall. ii. specialize (H x). uipropall. eapply H.
-    - ii. uipropall. ii. right. des. exists x. uipropall. ss.
-    - ii. uipropall. ss.
-    - ii. uipropall. ss.
-    - ii. uipropall. ss.
-    - ii. uipropall. ss.
+    - ii. uipropall.
+    - ii. uipropall.
+    - ii. uipropall.
+    - ii. uipropall. ii. specialize (H x). uipropall.
+    - ii. uipropall. ii. right. des. exists x. uipropall.
+    - ii. uipropall.
+    - ii. uipropall.
+    - ii. uipropall.
+    - ii. uipropall.
     - ii. uipropall. ii. right. ss.
   Qed.
 
@@ -412,7 +411,7 @@ Section IPM.
   Global Instance iProp_pure_forall: BiPureForall iProp.
   Proof.
     ii. red. red. uipropall. ii. red. red in H.
-    uipropall. i. specialize (H a). red in H. uipropall. ss.
+    uipropall. i. specialize (H a). red in H. uipropall.
   Qed.
 End IPM.
 
@@ -431,3 +430,155 @@ Section TEST.
     iIntros "[Hxs Hys]". iMod "Hxs". iApply "Hys".
   Qed.
 End TEST.
+
+Infix "⊢" := (@bi_entails iProp).
+Infix "**" := bi_sep (at level 99).
+Infix "-*" := bi_wand (at level 99, right associativity).
+Notation "#=> P" := ((@bupd (bi_car (@iProp _)) (@bi_bupd_bupd (@iProp _) (@iProp_bi_bupd _))) P) (at level 99).
+
+From iris.algebra Require Import proofmode_classes.
+From iris.proofmode Require Import classes.
+From iris.base_logic Require Export derived.
+From iris.prelude Require Import options.
+
+Import base_logic.bi.uPred.
+
+Class IsOp {A : URA.t} (a b1 b2 : A) := is_op : a = URA.add b1 b2.
+Global Arguments is_op {_} _ _ _ {_}.
+Global Hint Mode IsOp + - - - : typeclass_instances.
+
+Global Instance is_op_op {A : URA.t} (a b : A) : IsOp (URA.add a b) a b | 100.
+Proof. by rewrite /IsOp. Qed.
+
+Class IsOp' {A : URA.t} (a b1 b2 : A) := is_op' :> IsOp a b1 b2.
+Global Hint Mode IsOp' + ! - - : typeclass_instances.
+Global Hint Mode IsOp' + - ! ! : typeclass_instances.
+
+Class IsOp'LR {A : URA.t} (a b1 b2 : A) := is_op_lr : IsOp a b1 b2.
+Existing Instance is_op_lr | 0.
+Global Hint Mode IsOp'LR + ! - - : typeclass_instances.
+Global Instance is_op_lr_op {A : URA.t} (a b : A) : IsOp'LR (URA.add a b) a b | 0.
+Proof. by rewrite /IsOp'LR /IsOp. Qed.
+
+#[export] Hint Unfold iProp bi_entails bi_sep bi_and bi_or bi_wand bupd bi_bupd_bupd: iprop.
+
+(* Setup of the proof mode *)
+Section class_instances.
+  Context `{Σ: GRA.t}.
+
+  Lemma from_semantic (a: Σ) (P: iProp') (SAT: P a)
+    :
+      Own a ⊢ #=> P.
+  Proof.
+    uipropall. ss. i. unfold URA.extends in *. des. subst. ss.
+
+
+    Set Printing All.
+
+  Global Instance from_sep_ownM (a b1 b2 : Σ) :
+    IsOp a b1 b2 →
+    FromSep (Own a) (Own b1) (Own b2).
+  Proof.
+    ii. inv H. red. uipropall. i. des. subst.
+    unfold URA.extends in *. des. subst.
+    exists (URA.add ctx0 ctx). repeat rewrite URA.add_assoc.
+    f_equal. rewrite URA.add_comm. rewrite URA.add_assoc. f_equal.
+    eapply URA.add_comm.
+  Qed.
+
+  Global Instance into_and_ownM p (a b1 b2 : Σ) :
+    IsOp a b1 b2 → IntoAnd p (Own a) (Own b1) (Own b2).
+  Proof.
+    ii. apply bi.intuitionistically_if_mono. inv H.
+    uipropall. i. unfold URA.extends in *. des. subst. split.
+    { exists (URA.add b2 ctx). eapply URA.add_assoc. }
+    { exists (URA.add b1 ctx). rewrite URA.add_assoc.
+      f_equal. eapply URA.add_comm. }
+  Qed.
+
+  Global Instance into_sep_ownM (a b1 b2 : Σ) :
+    IsOp a b1 b2 → IntoSep (Own a) (Own b1) (Own b2).
+  Proof.
+    ii. red. inv H. uipropall. i.
+    unfold URA.extends in *. des. subst.
+    exists b1, (URA.add b2 ctx). split.
+    { symmetry. eapply URA.add_assoc. }
+    esplits.
+    { eapply URA.unit_id. }
+    { et. }
+  Qed.
+End class_instances.
+
+
+From iris.algebra Require Import proofmode_classes.
+From iris.proofmode Require Import classes.
+From iris.base_logic Require Export derived.
+From iris.prelude Require Import options.
+
+Import base_logic.bi.uPred.
+
+Class IsOp {A : URA.t} (a b1 b2 : A) := is_op : a = URA.add b1 b2.
+Global Arguments is_op {_} _ _ _ {_}.
+Global Hint Mode IsOp + - - - : typeclass_instances.
+
+Global Instance is_op_op {A : URA.t} (a b : A) : IsOp (URA.add a b) a b | 100.
+Proof. by rewrite /IsOp. Qed.
+
+Class IsOp' {A : URA.t} (a b1 b2 : A) := is_op' :> IsOp a b1 b2.
+Global Hint Mode IsOp' + ! - - : typeclass_instances.
+Global Hint Mode IsOp' + - ! ! : typeclass_instances.
+
+Class IsOp'LR {A : URA.t} (a b1 b2 : A) := is_op_lr : IsOp a b1 b2.
+Existing Instance is_op_lr | 0.
+Global Hint Mode IsOp'LR + ! - - : typeclass_instances.
+Global Instance is_op_lr_op {A : URA.t} (a b : A) : IsOp'LR (URA.add a b) a b | 0.
+Proof. by rewrite /IsOp'LR /IsOp. Qed.
+
+#[export] Hint Unfold iProp bi_entails bi_sep bi_and bi_or bi_wand bupd bi_bupd_bupd: iprop.
+
+(* Setup of the proof mode *)
+Section class_instances.
+  Context `{Σ: GRA.t}.
+
+  Lemma from_semantic (a: Σ) (P: iProp') (SAT: P a)
+    :
+      Own a ⊢ #=> P.
+  Proof.
+    uipropall. ss. i. unfold URA.extends in *. des. subst. ss.
+
+
+    Set Printing All.
+
+  Global Instance from_sep_ownM (a b1 b2 : Σ) :
+    IsOp a b1 b2 →
+    FromSep (Own a) (Own b1) (Own b2).
+  Proof.
+    ii. inv H. red. uipropall. i. des. subst.
+    unfold URA.extends in *. des. subst.
+    exists (URA.add ctx0 ctx). repeat rewrite URA.add_assoc.
+    f_equal. rewrite URA.add_comm. rewrite URA.add_assoc. f_equal.
+    eapply URA.add_comm.
+  Qed.
+
+  Global Instance into_and_ownM p (a b1 b2 : Σ) :
+    IsOp a b1 b2 → IntoAnd p (Own a) (Own b1) (Own b2).
+  Proof.
+    ii. apply bi.intuitionistically_if_mono. inv H.
+    uipropall. i. unfold URA.extends in *. des. subst. split.
+    { exists (URA.add b2 ctx). eapply URA.add_assoc. }
+    { exists (URA.add b1 ctx). rewrite URA.add_assoc.
+      f_equal. eapply URA.add_comm. }
+  Qed.
+
+  Global Instance into_sep_ownM (a b1 b2 : Σ) :
+    IsOp a b1 b2 → IntoSep (Own a) (Own b1) (Own b2).
+  Proof.
+    ii. red. inv H. uipropall. i.
+    unfold URA.extends in *. des. subst.
+    exists b1, (URA.add b2 ctx). split.
+    { symmetry. eapply URA.add_assoc. }
+    esplits.
+    { eapply URA.unit_id. }
+    { et. }
+  Qed.
+End class_instances.

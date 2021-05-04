@@ -318,6 +318,81 @@ Section SIM.
 End SIM.
 
 
+
+From iris.algebra Require Import proofmode_classes.
+From iris.proofmode Require Import classes.
+From iris.base_logic Require Export derived.
+From iris.prelude Require Import options.
+
+Import base_logic.bi.uPred.
+
+Class IsOp {A : URA.t} (a b1 b2 : A) := is_op : a = URA.add b1 b2.
+Global Arguments is_op {_} _ _ _ {_}.
+Global Hint Mode IsOp + - - - : typeclass_instances.
+
+Global Instance is_op_op {A : URA.t} (a b : A) : IsOp (URA.add a b) a b | 100.
+Proof. by rewrite /IsOp. Qed.
+
+Class IsOp' {A : URA.t} (a b1 b2 : A) := is_op' :> IsOp a b1 b2.
+Global Hint Mode IsOp' + ! - - : typeclass_instances.
+Global Hint Mode IsOp' + - ! ! : typeclass_instances.
+
+Class IsOp'LR {A : URA.t} (a b1 b2 : A) := is_op_lr : IsOp a b1 b2.
+Existing Instance is_op_lr | 0.
+Global Hint Mode IsOp'LR + ! - - : typeclass_instances.
+Global Instance is_op_lr_op {A : URA.t} (a b : A) : IsOp'LR (URA.add a b) a b | 0.
+Proof. by rewrite /IsOp'LR /IsOp. Qed.
+
+#[export] Hint Unfold iProp bi_entails bi_sep bi_and bi_or bi_wand bupd bi_bupd_bupd: iprop.
+
+(* Setup of the proof mode *)
+Section class_instances.
+  Context `{Σ: GRA.t}.
+
+  Lemma from_semantic (a: Σ) (P: iProp') (SAT: P a)
+    :
+      Own a ⊢ #=> P.
+  Proof.
+    uipropall. ss. i. unfold URA.extends in *. des. subst. ss.
+
+
+    Set Printing All.
+
+  Global Instance from_sep_ownM (a b1 b2 : Σ) :
+    IsOp a b1 b2 →
+    FromSep (Own a) (Own b1) (Own b2).
+  Proof.
+    ii. inv H. red. uipropall. i. des. subst.
+    unfold URA.extends in *. des. subst.
+    exists (URA.add ctx0 ctx). repeat rewrite URA.add_assoc.
+    f_equal. rewrite URA.add_comm. rewrite URA.add_assoc. f_equal.
+    eapply URA.add_comm.
+  Qed.
+
+  Global Instance into_and_ownM p (a b1 b2 : Σ) :
+    IsOp a b1 b2 → IntoAnd p (Own a) (Own b1) (Own b2).
+  Proof.
+    ii. apply bi.intuitionistically_if_mono. inv H.
+    uipropall. i. unfold URA.extends in *. des. subst. split.
+    { exists (URA.add b2 ctx). eapply URA.add_assoc. }
+    { exists (URA.add b1 ctx). rewrite URA.add_assoc.
+      f_equal. eapply URA.add_comm. }
+  Qed.
+
+  Global Instance into_sep_ownM (a b1 b2 : Σ) :
+    IsOp a b1 b2 → IntoSep (Own a) (Own b1) (Own b2).
+  Proof.
+    ii. red. inv H. uipropall. i.
+    unfold URA.extends in *. des. subst.
+    exists b1, (URA.add b2 ctx). split.
+    { symmetry. eapply URA.add_assoc. }
+    esplits.
+    { eapply URA.unit_id. }
+    { et. }
+  Qed.
+End class_instances.
+
+
 Section HLEMMAS.
   Context `{Σ: GRA.t}.
   Local Opaque GRA.to_URA.
@@ -332,12 +407,13 @@ Section HLEMMAS.
   Lemma hcall_clo_ord_weaken (o_new: Ord.t)
         Y Z (ftsp1: ftspec Y Z)
         (o: ord) (x: ftsp1.(X))
-        (cur: Σ)
+
         r rg (n: nat) mr_src0 mp_src0 fr_src0
         (ftsp0: ftspec Y Z)
         mr_tgt0 mp_tgt0 frs_tgt k_tgt k_src
         fn tbr ord_cur varg_src varg_tgt
         A (R_src: A -> Any.t -> iProp) (R_tgt: A -> Any.t -> iProp)
+        (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
 
         (WEAKER: ftspec_weaker ftsp1 ftsp0)
 
@@ -353,7 +429,6 @@ Section HLEMMAS.
         (PURE: ord_lt o ord_cur /\
                (tbr = true -> is_pure o) /\ (tbr = false -> o = ord_top))
         (RTGT: R_tgt a0 mp_tgt0 mr_tgt0)
-        (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
 
         (POST: forall (vret_tgt : Any.t) (mr_src1 mr_tgt1 fr_src1: Σ) (mp_src1 mp_tgt1 : Any.t) a1
                       (vret_src: Z)
@@ -362,61 +437,150 @@ Section HLEMMAS.
                       (ACC: Own (URA.add mr_src1 fr_src1) ⊢ #=> (FR ** R_src a1 mp_src1 ** ftsp1.(postcond) x vret_src vret_tgt))
           ,
                 gpaco6 (_sim_itree (mk_wf R_src R_tgt)) (cpn6 (_sim_itree (mk_wf R_src R_tgt))) rg rg _ _ eqr o_new
-                       (mr_src1, mp_tgt1, fr_src1, k_src vret_src) (mr_tgt1, mp_tgt1, frs_tgt, k_tgt vret_tgt))
+                       (mr_src1, mp_src1, fr_src1, k_src vret_src) (mr_tgt1, mp_tgt1, frs_tgt, k_tgt vret_tgt))
     :
       gpaco6 (_sim_itree (mk_wf R_src R_tgt)) (cpn6 (_sim_itree (mk_wf R_src R_tgt))) r rg _ _ eqr n
              (mr_src0, mp_src0, fr_src0, (HoareCall tbr ord_cur (mk_fspec ftsp0) fn varg_src) >>= k_src)
              (mr_tgt0, mp_tgt0, frs_tgt, trigger (Call fn varg_tgt) >>= k_tgt)
   .
-  Admitted.
+  Proof.
+    unfold HoareCall, put, discard, forge, checkWf, assume, guarantee.
+    ired_both. gstep. econs; [eauto with ord_step|].
+    hexploit (WEAKER x). i. des.
 
-  (* Proof. *)
-  (*   Set Printing All. *)
-  (*   unfold HoareCall, put, discard, forge, checkWf, assume, guarantee. *)
-  (*   ired_both. gstep. econs; [eauto with ord_step|]. *)
-  (*   exists (mr_src1, URA.add rarg_src fr_src1). *)
-  (*   repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto. *)
-  (*   { etrans; eauto. eapply GWF. } *)
-  (*   repeat (ired_both; gstep; econs; eauto with ord_step). exists rarg_src. *)
-  (*   repeat (ired_both; gstep; econs; eauto with ord_step). exists fr_src1. *)
-  (*   repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto. *)
-  (*   hexploit (WEAKER x). i. des. *)
-  (*   repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto. *)
-  (*   repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto. *)
-  (*   repeat (ired_both; gstep; econs; eauto with ord_step). exists o. *)
-  (*   repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto. *)
-  (*   { exploit PRE0; cycle 1. *)
-  (*     { eapply PRE. } *)
-  (*     { rewrite URA.unit_idl. auto. } *)
-  (*     { rewrite URA.unit_idl. *)
-  (*       hexploit (UPDATABLE ε). *)
-  (*       { rewrite URA.unit_id. auto. } *)
-  (*       { i. rewrite URA.unit_id in H. *)
-  (*         erewrite URA.add_comm in H. eapply URA.wf_mon in H. *)
-  (*         eapply URA.wf_mon in H. auto. } *)
-  (*     } *)
-  (*   } des. *)
-  (*   repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto. *)
-  (*   repeat (ired_both; gstep; econs; eauto with ord_step). i. exists (o_new + 8)%ord. *)
-  (*   repeat (ired_both; gstep; econs; eauto with ord_step). i. *)
-  (*   repeat (ired_both; gstep; econs; eauto with ord_step). i. *)
-  (*   hexploit (POST vret mrs_src1 mrs_tgt1 x0 x1 WF0). i. des. subst. *)
-  (*   repeat (ired_both; gstep; econs; eauto with ord_step). i. *)
-  (*   ired_both; gstep; econs. *)
-  (*   { instantiate (1:=o_new). eapply Ord.eq_lt_lt. *)
-  (*     { symmetry. eapply OrdArith.add_O_r. } *)
-  (*     { eapply OrdArith.lt_add_r. rewrite Ord.from_nat_S. eapply Ord.S_pos. } *)
-  (*   } *)
-  (*   i. *)
-  (*   repeat spc H0. *)
-  (*   ired_both; ss. *)
-  (*   eapply H0. exploit POST0; cycle 1. *)
-  (*   { eauto. } *)
-  (*   { rewrite URA.unit_idl. auto. } *)
-  (*   { rewrite URA.unit_idl. *)
-  (*     erewrite URA.add_comm in x2. eapply URA.wf_mon in x2. *)
-  (*     erewrite URA.add_comm in x2. eapply URA.wf_mon in x2. auto. } *)
-  (* Qed. *)
+    assert (exists mr_src0' rarg_src fr_src0',
+               (<<UPDATABLE: URA.updatable (URA.add mr_src0 fr_src0) (URA.add mr_src0' (URA.add rarg_src fr_src0'))>>) /\
+               (<<RSRC: R_src a0 mp_src0 mr_src0'>>) /\
+               (<<FRS: FR fr_src0'>>) /\
+               (<<PRE: ftsp0.(precond) x_tgt varg_src varg_tgt o rarg_src>>)).
+    { admit "". }
+
+    des. exists (mr_src0', URA.add rarg_src fr_src0').
+    repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
+    repeat (ired_both; gstep; econs; eauto with ord_step). exists rarg_src.
+    repeat (ired_both; gstep; econs; eauto with ord_step). exists fr_src0'.
+    repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
+    repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
+    repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
+    repeat (ired_both; gstep; econs; eauto with ord_step). exists o.
+    repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
+    repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
+    repeat (ired_both; gstep; econs; eauto with ord_step).
+    { red. esplits; eauto. }
+    i. exists (o_new + 8)%ord.
+    repeat (ired_both; gstep; econs; eauto with ord_step). i.
+    repeat (ired_both; gstep; econs; eauto with ord_step). i.
+
+    destruct mrs_src1, mrs_tgt1. ss. des.
+    repeat (ired_both; gstep; econs; eauto with ord_step). i.
+    ired_both; gstep; econs.
+    { instantiate (1:=o_new). eapply Ord.eq_lt_lt.
+      { symmetry. eapply OrdArith.add_O_r. }
+      { eapply OrdArith.lt_add_r. rewrite Ord.from_nat_S. eapply Ord.S_pos. }
+    }
+    i. ired_both; ss. eapply POST; et.
+    iStartProof. iIntros "H". iDestruct "H" as "[H0 [H1 H2]]". iSplitR "H2".
+    { iSplitL "H1".
+      { admit "". }
+      { admit "". }
+    }
+
+        iMod
+
+    bupd
+    iApply own_sep as "H".
+
+
+    exploit POST.
+    et.
+    et.
+    admit "".
+    i.
+
+    eapply POST.
+    eapply H0. exploit POST0; cycle 1.
+    { eauto. }
+    { rewrite URA.unit_idl. auto. }
+    { rewrite URA.unit_idl.
+      erewrite URA.add_comm in x2. eapply URA.wf_mon in x2.
+      erewrite URA.add_comm in x2. eapply URA.wf_mon in x2. auto. }
+
+
+    exploit POST.
+    { et. }
+
+
+    red in WF.
+
+
+
+    hexploit (POST vret mrs_src1 mrs_tgt1 x0 x1 WF0). i. des. subst.
+    repeat (ired_both; gstep; econs; eauto with ord_step). i.
+    ired_both; gstep; econs.
+    { instantiate (1:=o_new). eapply Ord.eq_lt_lt.
+      { symmetry. eapply OrdArith.add_O_r. }
+      { eapply OrdArith.lt_add_r. rewrite Ord.from_nat_S. eapply Ord.S_pos. }
+    }
+    i.
+    repeat spc H0.
+    ired_both; ss.
+    eapply H0. exploit POST0; cycle 1.
+    { eauto. }
+    { rewrite URA.unit_idl. auto. }
+    { rewrite URA.unit_idl.
+      erewrite URA.add_comm in x2. eapply URA.wf_mon in x2.
+      erewrite URA.add_comm in x2. eapply URA.wf_mon in x2. auto. }
+
+
+
+(GWF: URA.updatable (URA.add mr_src0 fr_src0) cur /\ URA.wf cur)
+        (UPDATABLE: URA.updatable cur (URA.add mr_src1 (URA.add rarg_src fr_src1)))
+
+
+
+    exists (mr_src1, URA.add rarg_src fr_src1).
+    repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
+    { etrans; eauto. eapply GWF. }
+    repeat (ired_both; gstep; econs; eauto with ord_step). exists rarg_src.
+    repeat (ired_both; gstep; econs; eauto with ord_step). exists fr_src1.
+    repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
+    hexploit (WEAKER x). i. des.
+    repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
+    repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
+    repeat (ired_both; gstep; econs; eauto with ord_step). exists o.
+    repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
+    { exploit PRE0; cycle 1.
+      { eapply PRE. }
+      { rewrite URA.unit_idl. auto. }
+      { rewrite URA.unit_idl.
+        hexploit (UPDATABLE ε).
+        { rewrite URA.unit_id. auto. }
+        { i. rewrite URA.unit_id in H.
+          erewrite URA.add_comm in H. eapply URA.wf_mon in H.
+          eapply URA.wf_mon in H. auto. }
+      }
+    } des.
+    repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
+    repeat (ired_both; gstep; econs; eauto with ord_step). i. exists (o_new + 8)%ord.
+    repeat (ired_both; gstep; econs; eauto with ord_step). i.
+    repeat (ired_both; gstep; econs; eauto with ord_step). i.
+    hexploit (POST vret mrs_src1 mrs_tgt1 x0 x1 WF0). i. des. subst.
+    repeat (ired_both; gstep; econs; eauto with ord_step). i.
+    ired_both; gstep; econs.
+    { instantiate (1:=o_new). eapply Ord.eq_lt_lt.
+      { symmetry. eapply OrdArith.add_O_r. }
+      { eapply OrdArith.lt_add_r. rewrite Ord.from_nat_S. eapply Ord.S_pos. }
+    }
+    i.
+    repeat spc H0.
+    ired_both; ss.
+    eapply H0. exploit POST0; cycle 1.
+    { eauto. }
+    { rewrite URA.unit_idl. auto. }
+    { rewrite URA.unit_idl.
+      erewrite URA.add_comm in x2. eapply URA.wf_mon in x2.
+      erewrite URA.add_comm in x2. eapply URA.wf_mon in x2. auto. }
+  Qed.
 
   Lemma hcall_clo_ord_weaken (o_new: Ord.t)
         Y Z (ftsp1: ftspec Y Z)

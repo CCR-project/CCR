@@ -8,11 +8,6 @@ Set Implicit Arguments.
 Set Typeclasses Depth 5.
 
 
-Infix "⊢" := (@bi_entails iProp).
-Infix "**" := bi_sep (at level 99).
-Infix "-*" := bi_wand (at level 99, right associativity).
-Notation "#=> P" := ((@bupd (bi_car (@iProp _)) (@bi_bupd_bupd (@iProp _) (@iProp_bi_bupd _))) P) (at level 99).
-
 
 Section IRIS.
   Context {Σ: GRA.t}.
