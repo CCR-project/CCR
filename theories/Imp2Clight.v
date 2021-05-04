@@ -98,37 +98,27 @@ Section Compile.
     end
   .
 
-  Record pre_ge := mk_pre_ge {
+  Record gmap := mk_gmap {
     _ext_vars : list ident;
     _ext_funs : list (ident * type);
     _int_vars : list ident;
     _int_funs : list (ident * type);
   }.
 
-  Fixpoint get_pre_ext_funs (src : extFuns) :=
-    match src with
-    | [] => []
-    | (name, n) :: t =>
-      (s2p name, Tfunction (make_arg_types n) Tlong0 cc_default)
-        :: (get_pre_ext_funs t)
-    end
-  .
+  Let get_gmap_efuns :=
+    fun src =>
+      List.map (fun '(name, n) => (s2p name, Tfunction (make_arg_types n) Tlong0 cc_default)) src.
 
-  Fixpoint get_pre_int_funs (src : progFuns) :=
-    match src with
-    | [] => []
-    | (name, f) :: t =>
-      (s2p name, Tfunction (make_arg_types (length f.(Imp.fn_params))) Tlong0 cc_default)
-        :: (get_pre_int_funs t)
-    end
-  .
+  Let get_gmap_ifuns :=
+    fun src =>
+      List.map (fun '(name, f) => (s2p name, Tfunction (make_arg_types (length f.(Imp.fn_params))) Tlong0 cc_default)) src.
 
-  Definition get_pre_ge (src : Imp.program) :=
-    mk_pre_ge
+  Definition get_gmap (src : Imp.program) :=
+    mk_gmap
       (List.map s2p src.(ext_vars))
-      (get_pre_ext_funs src.(ext_funs))
+      (get_gmap_efuns src.(ext_funs))
       (List.map (fun '(s, z) => s2p s) src.(prog_vars))
-      (get_pre_int_funs src.(prog_funs))
+      (get_gmap_ifuns src.(prog_funs))
   .
 
   (** memory accessing calls *)
@@ -144,7 +134,7 @@ Section Compile.
   Let free_def : Ctypes.fundef function :=
     External EF_free free_args free_ret cc_default.
 
-  Variable pg : pre_ge.
+  Variable gm : gmap.
 
   (* Imp has no type, value is either int64/ptr64 -> sem_cast can convert *)
   Fixpoint compile_stmt stmt : option statement :=
@@ -164,13 +154,13 @@ Section Compile.
       Some (Sskip)
 
     | CallFun1 x f args =>
-      let fdecls := pg.(_ext_funs) ++ pg.(_int_funs) in
+      let fdecls := gm.(_ext_funs) ++ gm.(_int_funs) in
       let id := s2p f in
       do fty <- (ident_key id fdecls);
       do al <- (compile_exprs args []);
       Some (Scall (Some (s2p x)) (Evar id fty) al)
     | CallFun2 f args =>
-      let fdecls := pg.(_ext_funs) ++ pg.(_int_funs) in
+      let fdecls := gm.(_ext_funs) ++ gm.(_int_funs) in
       let id := s2p f in
       do fty <- (ident_key id fdecls);
       do al <- (compile_exprs args []);
@@ -200,13 +190,13 @@ Section Compile.
       end
 
     | CallSys1 x f args =>
-      let fdecls := pg.(_ext_funs) in
+      let fdecls := gm.(_ext_funs) in
       let id := s2p f in
       do fty <- (ident_key id fdecls);
       do al <- (compile_exprs args []);
       Some (Scall (Some (s2p x)) (Evar id fty) al)
     | CallSys2 f args =>
-      let fdecls := pg.(_ext_funs) in
+      let fdecls := gm.(_ext_funs) in
       let id := s2p f in
       do fty <- (ident_key id fdecls);
       do al <- (compile_exprs args []);
@@ -217,8 +207,8 @@ Section Compile.
 
     | AddrOf x GN =>
       let id := s2p GN in
-      let vdecls := pg.(_ext_vars) ++ pg.(_int_vars) in
-      let fdecls := pg.(_ext_funs) ++ pg.(_int_funs) in
+      let vdecls := gm.(_ext_vars) ++ gm.(_int_vars) in
+      let fdecls := gm.(_ext_funs) ++ gm.(_int_funs) in
       if (existsb (fun p => Pos.eqb id p) vdecls)
       then Some (Sset (s2p x) (Eaddrof (Evar id Tlong0) Tlong0))
       else
@@ -247,25 +237,18 @@ Section Compile.
     end
   .
 
-  Fixpoint compile_eVars (src : extVars) : tgt_gdefs :=
-    match src with
-    | [] => []
-    | name :: t =>
-      let init_value := [] in
-      let gv := (mkglobvar Tlong0 init_value false false) in
-      (s2p name, Gvar gv)::(compile_eVars t)
-    end
-  .
+  Let compile_eVars : extVars -> tgt_gdefs :=
+    let init_value := [] in
+    let gv := (mkglobvar Tlong0 init_value false false) in
+    fun src => List.map (fun name => (s2p name, Gvar gv)) src.
 
-  Fixpoint compile_iVars (src : progVars) : tgt_gdefs :=
-    match src with
-    | [] => []
-    | (name, z) :: t =>
-      let init_value := [Init_int64 (to_long z)] in
-      let gv := (mkglobvar Tlong0 init_value false false) in
-      (s2p name, Gvar gv)::(compile_iVars t)
-    end
-  .
+  Let compile_iVars : progVars -> tgt_gdefs :=
+    let mapf :=
+        fun '(name, z) =>
+          let init_value := [Init_int64 (to_long z)] in
+          let gv := (mkglobvar Tlong0 init_value false false) in
+          (s2p name, Gvar gv) in
+    fun src => List.map mapf src.
 
   Fixpoint compile_eFuns (src : extFuns) : option tgt_gdefs :=
     match src with
@@ -301,25 +284,79 @@ Section Compile.
   Let init_g : tgt_gdefs :=
     [(s2p "malloc", Gfun malloc_def); (s2p "free", Gfun free_def)].
 
+  Fixpoint NoDupB (l : list ident) : bool :=
+    match l with
+    | [] => true
+    | h :: t =>
+      if (existsb (fun n => Pos.eqb h n) t)
+      then false
+      else NoDupB t
+    end
+  .
+
   Definition compile_gdefs (src : Imp.program) : option tgt_gdefs :=
     let evars := compile_eVars src.(ext_vars) in
     let ivars := compile_iVars src.(prog_vars) in
     do efuns <- compile_eFuns src.(ext_funs);
     do ifuns <- compile_iFuns src.(prog_funs);
-    Some (evars ++ init_g ++ efuns ++ ivars ++ ifuns)
+    let defs := init_g ++ evars ++ efuns ++ ivars ++ ifuns in
+    let ids := List.map (fun p => fst p) defs in
+    if (NoDupB ids) then Some defs else None
   .
 
-  Definition _compile (src_defs : Imp.program) :=
-    let optdefs := (compile_gdefs src_defs) in
+  Definition _compile (src : Imp.program) :=
+    let optdefs := (compile_gdefs src) in
     match optdefs with
     | None => Error [MSG "Imp2clight compilation failed"]
-    | Some defs =>
-      make_program [] defs (List.map (fun '(i, g) => i) defs) (s2p "main")
+    | Some _defs =>
+      let pdefs := Maps.PTree_Properties.of_list _defs in
+      let defs := Maps.PTree.elements pdefs in
+      make_program [] defs (List.map s2p (src.(public) [])) (s2p "main")
     end
   .
 
 End Compile.
 
 Definition compile (src : Imp.program) :=
-  _compile (get_pre_ge src) src
+  _compile (get_gmap src) src
 .
+
+Section Link.
+
+  (* Linker for Imp programs *)
+  
+
+
+
+  (* Imp's linker is Mod.add_list (and Sk.add for ge), 
+     but resulting globval env is different from link_prog of Clight's linker,
+     so we will define new linker which follows link_prog. *)
+
+  (* Context `{Σ: GRA.t}. *)
+
+  (* Definition link_Sk_merge (o1 o2 : option Sk.gdef) := *)
+  (*   match o1 with *)
+  (*   | Some gd1 => *)
+  (*     match o2 with *)
+  (*     | Some gd2 => *)
+  (*     | None => o1 *)
+  (*     end *)
+  (*   | None => o2 *)
+  (*   end *)
+  (* . *)
+
+  (* Definition clink_Sk (s1 s2 : Sk.t) : Sk.t := *)
+  (*   let s2p_l := fun '(name, gd) => (s2p name, gd) in *)
+  (*   let dm1 := Maps.PTree_Properties.of_list (List.map s2p_l s1) in *)
+  (*   let dm2 := Maps.PTree_Properties.of_list (List.map s2p_l s2) in *)
+    
+    
+  (*      Maps.PTree.elements (Maps.PTree.combine link_prog_merge dm1 dm2); *)
+  (* Definition _add (md0 md1 : ModL.t) : ModL.t := {| *)
+  (*   get_modsem := fun sk => *)
+  (*                   ModSemL.add (md0.(get_modsem) sk) (md1.(get_modsem) sk); *)
+  (*   sk := Sk.add md0.(sk) md1.(sk); *)
+  (* |} *)
+  (* . *)
+
+End Link.

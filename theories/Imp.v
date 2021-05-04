@@ -278,6 +278,12 @@ Record program : Type := mk_program {
   ext_funs : extFuns;
   prog_vars : progVars;
   prog_funs : progFuns;
+  public : list gname -> list gname :=
+    let evs := ext_vars in
+    let efs := List.map (fun p => fst p) ext_funs in
+    let ivs := List.map (fun p => fst p) prog_vars in
+    let ifs := List.map (fun p => fst p) prog_funs in
+    fun l2 => ["malloc"; "free"] ++ evs ++ efs ++ ivs ++ ifs ++ l2;
 }.
 
 (**** ModSem ****)
