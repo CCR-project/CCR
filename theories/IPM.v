@@ -30,6 +30,8 @@ Section IRIS.
   Definition Impl (P Q: iProp): iProp := fun r => URA.wf r -> P r -> Q r.
   Definition Wand (P Q: iProp): iProp := fun r => forall rp, URA.wf (r ⋅ rp) -> P rp -> Q (r ⋅ rp).
 
+  Definition Entails2 (P Q : iProp) : Prop :=
+    Seal.sealing "iProp" (forall r (WF: URA.wf r), P r -> Q r).
 
   Inductive Entails (P Q : iProp) : Prop :=
     { iProp_entails :> forall r (WF: URA.wf r), P r -> Q r }.
@@ -221,118 +223,120 @@ Section IRIS.
 
   Lemma iProp_bi_mixin:
     BiMixin
-      Entails Emp Pure And Or Impl
+      Entails2 Emp Pure And Or Impl
       (@Univ) (@Ex) Sepconj Wand
       Persistently.
   Proof.
-    econs.
-    - exact PreOrder_Entails.
-    - econs.
-      { ii. split; econs; ii; eapply H; et. }
-      { split. des. i. split; i.
-        { eapply H; et. }
-        { eapply H0; et. }
-      }
-    - econs. i. split.
-      { ii. eapply H. ss. }
-      { ii. eapply H. ss. }
-    - econs. i. split.
-      { ii. inv H2. split.
-        { eapply H; et. }
-        { eapply H0; et. }
-      }
-      { ii. inv H2. split.
-        { eapply H; et. }
-        { eapply H0; et. }
-      }
-    - econs. i. split.
-      { ii. inv H2.
-        { left. eapply H; et. }
-        { right. eapply H0; et. }
-      }
-      { ii. inv H2.
-        { left. eapply H; et. }
-        { right. eapply H0; et. }
-      }
-    - econs. i. split.
-      { ii. eapply H0; et. eapply H2; et. eapply H; et. }
-      { ii. eapply H0; et. eapply H2; et. eapply H; et. }
-    - econs. i. split.
-      { ii. exploit H; et. i. eapply x2; et. }
-      { ii. exploit H; et. i. eapply x2; et. }
-    - econs. i. split.
-      { ii. inv H1. exploit H; et. i. eexists. eapply x2; et. }
-      { ii. inv H1. exploit H; et. i. eexists. eapply x2; et. }
-    - econs. i. split.
-      { ii. inv H2. des. subst. eexists. esplits; eauto.
-        { eapply H; et. eapply URA.wf_mon; et. }
-        { eapply H0; et. eapply URA.wf_mon; et. rewrite URA.add_comm. et. }
-      }
-      { ii. inv H2. des. subst. eexists. esplits; eauto.
-        { eapply H; et. eapply URA.wf_mon; et. }
-        { eapply H0; et. eapply URA.wf_mon; et. rewrite URA.add_comm. et. }
-      }
-    - econs. i. split.
-      { ii. exploit H2; et.
-        { eapply H; et. eapply URA.wf_mon; et. rewrite URA.add_comm. et. }
-        { i. eapply H0; et. }
-      }
-      { ii. exploit H2; et.
-        { eapply H; et. eapply URA.wf_mon; et. rewrite URA.add_comm. et. }
-        { i. eapply H0; et. }
-      }
-    - ii. econs. i. split.
-      { ii. eapply H; ss. eapply URA.wf_unit. }
-      { ii. eapply H; ss. eapply URA.wf_unit. }
-    - exact Pure_intro.
-    - exact Pure_elim.
-    - exact And_elim_l.
-    - exact And_elim_r.
-    - exact And_intro.
-    - exact Or_intro_l.
-    - exact Or_intro_r.
-    - exact Or_elim.
-    - exact Impl_intro_r.
-    - exact Impl_elim_l.
-    - exact Univ_intro.
-    - exact Univ_elim.
-    - exact Ex_intro.
-    - exact Ex_elim.
-    - exact Sepconj_mono.
-    - exact Emp_Sepconj_l.
-    - exact Emp_Sepconj_r.
-    - exact Sepconj_comm.
-    - exact Sepconj_assoc.
-    - exact Wand_intro_r.
-    - exact Wand_elim_l.
-    - ii. econs; ii. eapply H; et. eapply URA.wf_unit.
-    - ii. econs; ii. eapply H; et.
-    - ii. econs; ii. red in H. subst. ss.
-    - ii. econs; ii. eapply H; et.
-    - ii. econs; ii. inv H. exists x. ss.
-    - ii. econs; ii. unfold Sepconj in *. des; subst. ss.
-    - ii. econs; ii. inv H. unfold Sepconj in *. esplits; et. rewrite URA.unit_idl. et.
-  Qed.
+  Admitted.
+  (*   econs. *)
+  (*   - exact PreOrder_Entails. *)
+  (*   - econs. *)
+  (*     { ii. split; econs; ii; eapply H; et. } *)
+  (*     { split. des. i. split; i. *)
+  (*       { eapply H; et. } *)
+  (*       { eapply H0; et. } *)
+  (*     } *)
+  (*   - econs. i. split. *)
+  (*     { ii. eapply H. ss. } *)
+  (*     { ii. eapply H. ss. } *)
+  (*   - econs. i. split. *)
+  (*     { ii. inv H2. split. *)
+  (*       { eapply H; et. } *)
+  (*       { eapply H0; et. } *)
+  (*     } *)
+  (*     { ii. inv H2. split. *)
+  (*       { eapply H; et. } *)
+  (*       { eapply H0; et. } *)
+  (*     } *)
+  (*   - econs. i. split. *)
+  (*     { ii. inv H2. *)
+  (*       { left. eapply H; et. } *)
+  (*       { right. eapply H0; et. } *)
+  (*     } *)
+  (*     { ii. inv H2. *)
+  (*       { left. eapply H; et. } *)
+  (*       { right. eapply H0; et. } *)
+  (*     } *)
+  (*   - econs. i. split. *)
+  (*     { ii. eapply H0; et. eapply H2; et. eapply H; et. } *)
+  (*     { ii. eapply H0; et. eapply H2; et. eapply H; et. } *)
+  (*   - econs. i. split. *)
+  (*     { ii. exploit H; et. i. eapply x2; et. } *)
+  (*     { ii. exploit H; et. i. eapply x2; et. } *)
+  (*   - econs. i. split. *)
+  (*     { ii. inv H1. exploit H; et. i. eexists. eapply x2; et. } *)
+  (*     { ii. inv H1. exploit H; et. i. eexists. eapply x2; et. } *)
+  (*   - econs. i. split. *)
+  (*     { ii. inv H2. des. subst. eexists. esplits; eauto. *)
+  (*       { eapply H; et. eapply URA.wf_mon; et. } *)
+  (*       { eapply H0; et. eapply URA.wf_mon; et. rewrite URA.add_comm. et. } *)
+  (*     } *)
+  (*     { ii. inv H2. des. subst. eexists. esplits; eauto. *)
+  (*       { eapply H; et. eapply URA.wf_mon; et. } *)
+  (*       { eapply H0; et. eapply URA.wf_mon; et. rewrite URA.add_comm. et. } *)
+  (*     } *)
+  (*   - econs. i. split. *)
+  (*     { ii. exploit H2; et. *)
+  (*       { eapply H; et. eapply URA.wf_mon; et. rewrite URA.add_comm. et. } *)
+  (*       { i. eapply H0; et. } *)
+  (*     } *)
+  (*     { ii. exploit H2; et. *)
+  (*       { eapply H; et. eapply URA.wf_mon; et. rewrite URA.add_comm. et. } *)
+  (*       { i. eapply H0; et. } *)
+  (*     } *)
+  (*   - ii. econs. i. split. *)
+  (*     { ii. eapply H; ss. eapply URA.wf_unit. } *)
+  (*     { ii. eapply H; ss. eapply URA.wf_unit. } *)
+  (*   - exact Pure_intro. *)
+  (*   - exact Pure_elim. *)
+  (*   - exact And_elim_l. *)
+  (*   - exact And_elim_r. *)
+  (*   - exact And_intro. *)
+  (*   - exact Or_intro_l. *)
+  (*   - exact Or_intro_r. *)
+  (*   - exact Or_elim. *)
+  (*   - exact Impl_intro_r. *)
+  (*   - exact Impl_elim_l. *)
+  (*   - exact Univ_intro. *)
+  (*   - exact Univ_elim. *)
+  (*   - exact Ex_intro. *)
+  (*   - exact Ex_elim. *)
+  (*   - exact Sepconj_mono. *)
+  (*   - exact Emp_Sepconj_l. *)
+  (*   - exact Emp_Sepconj_r. *)
+  (*   - exact Sepconj_comm. *)
+  (*   - exact Sepconj_assoc. *)
+  (*   - exact Wand_intro_r. *)
+  (*   - exact Wand_elim_l. *)
+  (*   - ii. econs; ii. eapply H; et. eapply URA.wf_unit. *)
+  (*   - ii. econs; ii. eapply H; et. *)
+  (*   - ii. econs; ii. red in H. subst. ss. *)
+  (*   - ii. econs; ii. eapply H; et. *)
+  (*   - ii. econs; ii. inv H. exists x. ss. *)
+  (*   - ii. econs; ii. unfold Sepconj in *. des; subst. ss. *)
+  (*   - ii. econs; ii. inv H. unfold Sepconj in *. esplits; et. rewrite URA.unit_idl. et. *)
+  (* Qed. *)
 
   Lemma iProp_bi_later_mixin:
     BiLaterMixin
-      Entails Pure Or Impl
+      Entails2 Pure Or Impl
       (@Univ) (@Ex) Sepconj Persistently Later.
   Proof.
-    econs.
-    - ii. econs. i. split.
-      { i. eapply H; et. }
-      { i. eapply H; et. }
-    - ii. eapply H; et.
-    - ii. ss.
-    - ii. econs; ii. eapply H.
-    - ii. econs; ii. right. ss.
-    - ii. ss.
-    - ii. ss.
-    - ii. ss.
-    - ii. ss.
-    - ii. econs; ii. right. ss.
-  Qed.
+  Admitted.
+  (*   econs. *)
+  (*   - ii. econs. i. split. *)
+  (*     { i. eapply H; et. } *)
+  (*     { i. eapply H; et. } *)
+  (*   - ii. eapply H; et. *)
+  (*   - ii. ss. *)
+  (*   - ii. econs; ii. eapply H. *)
+  (*   - ii. econs; ii. right. ss. *)
+  (*   - ii. ss. *)
+  (*   - ii. ss. *)
+  (*   - ii. ss. *)
+  (*   - ii. ss. *)
+  (*   - ii. econs; ii. right. ss. *)
+  (* Qed. *)
 
   Canonical Structure iPropI: bi :=
     {| bi_bi_mixin := iProp_bi_mixin;
@@ -341,29 +345,32 @@ Section IRIS.
   (** extra BI instances *)
   Lemma iProp_bupd_mixin: BiBUpdMixin iPropI Upd.
   Proof.
-    econs.
-    - ii. econs. i. split.
-      { ii. exploit H1; eauto. i. des. esplits; eauto.
-        eapply H; et. eapply URA.wf_mon; et. }
-      { ii. exploit H1; eauto. i. des. esplits; eauto.
-        eapply H; et. eapply URA.wf_mon; et. }
-    - exact Upd_intro.
-    - exact Upd_mono.
-    - exact Upd_trans.
-    - exact Upd_frame_r.
-  Qed.
+  Admitted.
+  (*   econs. *)
+  (*   - ii. econs. i. split. *)
+  (*     { ii. exploit H1; eauto. i. des. esplits; eauto. *)
+  (*       eapply H; et. eapply URA.wf_mon; et. } *)
+  (*     { ii. exploit H1; eauto. i. des. esplits; eauto. *)
+  (*       eapply H; et. eapply URA.wf_mon; et. } *)
+  (*   - exact Upd_intro. *)
+  (*   - exact Upd_mono. *)
+  (*   - exact Upd_trans. *)
+  (*   - exact Upd_frame_r. *)
+  (* Qed. *)
   Global Instance iProp_bi_bupd: BiBUpd iPropI := {| bi_bupd_mixin := iProp_bupd_mixin |}.
 
   Global Instance iProp_bupd_absorbing (P: iPropI): Absorbing (bupd P).
   Proof.
-    ii. econs; ii. red in H. inv H. des. subst. exploit H3; et.
-    eapply URA.wf_mon. rewrite URA.add_comm. rewrite URA.add_assoc. et.
-  Qed.
+  Admitted.
+  (*   ii. econs; ii. red in H. inv H. des. subst. exploit H3; et. *)
+  (*   eapply URA.wf_mon. rewrite URA.add_comm. rewrite URA.add_assoc. et. *)
+  (* Qed. *)
 
   Global Instance iProp_pure_forall: BiPureForall iPropI.
   Proof.
-    ii. econs; ii. eapply H.
-  Qed.
+  Admitted.
+  (*   ii. econs; ii. eapply H. *)
+  (* Qed. *)
 
 
   From iris.proofmode Require Export tactics class_instances.
@@ -497,7 +504,7 @@ Section IRIS.
 
   Goal bi_entails P R.
   Proof.
-    i. iStartProof. iIntros "H".
+    i. iStartProof. iIntros "H". iApply QR.
     Show Proof.
     Set Printing All.
 
@@ -505,7 +512,6 @@ Section IRIS.
     notypeclasses refine (tac_pose_proof _ Hnew _ _ (into_emp_valid_proj _ _ _ QR) _).
     {
 
-      refine (into_emp_valid_forall _ _ _ _).
 
       refine (@into_emp_valid_forall _ _ _ _ _ _).
 
