@@ -318,81 +318,6 @@ Section SIM.
 End SIM.
 
 
-
-From iris.algebra Require Import proofmode_classes.
-From iris.proofmode Require Import classes.
-From iris.base_logic Require Export derived.
-From iris.prelude Require Import options.
-
-Import base_logic.bi.uPred.
-
-Class IsOp {A : URA.t} (a b1 b2 : A) := is_op : a = URA.add b1 b2.
-Global Arguments is_op {_} _ _ _ {_}.
-Global Hint Mode IsOp + - - - : typeclass_instances.
-
-Global Instance is_op_op {A : URA.t} (a b : A) : IsOp (URA.add a b) a b | 100.
-Proof. by rewrite /IsOp. Qed.
-
-Class IsOp' {A : URA.t} (a b1 b2 : A) := is_op' :> IsOp a b1 b2.
-Global Hint Mode IsOp' + ! - - : typeclass_instances.
-Global Hint Mode IsOp' + - ! ! : typeclass_instances.
-
-Class IsOp'LR {A : URA.t} (a b1 b2 : A) := is_op_lr : IsOp a b1 b2.
-Existing Instance is_op_lr | 0.
-Global Hint Mode IsOp'LR + ! - - : typeclass_instances.
-Global Instance is_op_lr_op {A : URA.t} (a b : A) : IsOp'LR (URA.add a b) a b | 0.
-Proof. by rewrite /IsOp'LR /IsOp. Qed.
-
-#[export] Hint Unfold iProp bi_entails bi_sep bi_and bi_or bi_wand bupd bi_bupd_bupd: iprop.
-
-(* Setup of the proof mode *)
-Section class_instances.
-  Context `{Σ: GRA.t}.
-
-  Lemma from_semantic (a: Σ) (P: iProp') (SAT: P a)
-    :
-      Own a ⊢ #=> P.
-  Proof.
-    uipropall. ss. i. unfold URA.extends in *. des. subst. ss.
-
-
-    Set Printing All.
-
-  Global Instance from_sep_ownM (a b1 b2 : Σ) :
-    IsOp a b1 b2 →
-    FromSep (Own a) (Own b1) (Own b2).
-  Proof.
-    ii. inv H. red. uipropall. i. des. subst.
-    unfold URA.extends in *. des. subst.
-    exists (URA.add ctx0 ctx). repeat rewrite URA.add_assoc.
-    f_equal. rewrite URA.add_comm. rewrite URA.add_assoc. f_equal.
-    eapply URA.add_comm.
-  Qed.
-
-  Global Instance into_and_ownM p (a b1 b2 : Σ) :
-    IsOp a b1 b2 → IntoAnd p (Own a) (Own b1) (Own b2).
-  Proof.
-    ii. apply bi.intuitionistically_if_mono. inv H.
-    uipropall. i. unfold URA.extends in *. des. subst. split.
-    { exists (URA.add b2 ctx). eapply URA.add_assoc. }
-    { exists (URA.add b1 ctx). rewrite URA.add_assoc.
-      f_equal. eapply URA.add_comm. }
-  Qed.
-
-  Global Instance into_sep_ownM (a b1 b2 : Σ) :
-    IsOp a b1 b2 → IntoSep (Own a) (Own b1) (Own b2).
-  Proof.
-    ii. red. inv H. uipropall. i.
-    unfold URA.extends in *. des. subst.
-    exists b1, (URA.add b2 ctx). split.
-    { symmetry. eapply URA.add_assoc. }
-    esplits.
-    { eapply URA.unit_id. }
-    { et. }
-  Qed.
-End class_instances.
-
-
 Section HLEMMAS.
   Context `{Σ: GRA.t}.
   Local Opaque GRA.to_URA.
@@ -400,28 +325,28 @@ Section HLEMMAS.
   Definition mk_wf (A: Type) (R_src: A -> Any.t -> iProp) (R_tgt: A -> Any.t -> iProp): (Σ * Any.t) * (Σ * Any.t) -> Prop :=
     fun '((mr_src, mp_src), (mr_tgt, mp_tgt)) =>
       exists a,
-        (<<SRC: R_src a mp_src mr_src >>) /\
-        (<<TGT: R_tgt a mp_tgt mr_tgt >>)
+        (<<RSRC: R_src a mp_src mr_src >>) /\
+        (<<RTGT: R_tgt a mp_tgt mr_tgt >>)
   .
 
   Lemma hcall_clo_ord_weaken (o_new: Ord.t)
         Y Z (ftsp1: ftspec Y Z)
-        (o: ord) (x: ftsp1.(X))
+        (o: ord) (x: shelve__ ftsp1.(X))
+
+        A a0 FR
 
         r rg (n: nat) mr_src0 mp_src0 fr_src0
         (ftsp0: ftspec Y Z)
         mr_tgt0 mp_tgt0 frs_tgt k_tgt k_src
         fn tbr ord_cur varg_src varg_tgt
-        A (R_src: A -> Any.t -> iProp) (R_tgt: A -> Any.t -> iProp)
+        (R_src: A -> Any.t -> iProp) (R_tgt: A -> Any.t -> iProp)
         (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
 
         (WEAKER: ftspec_weaker ftsp1 ftsp0)
 
-        I
         (GWF: (@URA.wf (GRA.to_URA _) (URA.add mr_src0 fr_src0)))
-        (ACC: Own (URA.add mr_src0 fr_src0) ⊢ #=> I)
+        I (ACC: Own (URA.add mr_src0 fr_src0) ⊢ #=> I)
 
-        a0 FR
         (UPDATABLE:
            I ⊢ #=> (FR ** R_src a0 mp_src0 ** (ftsp1.(precond) x varg_src varg_tgt o: iProp)))
 
@@ -453,8 +378,21 @@ Section HLEMMAS.
                (<<RSRC: R_src a0 mp_src0 mr_src0'>>) /\
                (<<FRS: FR fr_src0'>>) /\
                (<<PRE: ftsp0.(precond) x_tgt varg_src varg_tgt o rarg_src>>)).
-    { admit "". }
-
+    { clear - GWF ACC UPDATABLE PRE.
+      assert (ENTAIL: Own (mr_src0 ⋅ fr_src0) ⊢ #=> ((FR ** R_src a0 mp_src0) ** (precond ftsp0 x_tgt varg_src varg_tgt o : iProp))).
+      { iIntros "H".
+        iAssert (#=> ((FR ** R_src a0 mp_src0) ** precond ftsp1 x varg_src varg_tgt o)) with "[H]" as "H".
+        { iApply bupd_trans. iApply UPDATABLE. iApply ACC. iFrame. }
+        { iMod "H". iDestruct "H" as "[H0 H1]". iSplitL "H0"; [et|].
+          iApply PRE. iApply "H1". }
+      }
+      eapply to_semantic in ENTAIL; ss.
+      clear - GWF ENTAIL. uipropall. uipropall.
+      hexploit (ENTAIL URA.unit).
+      { rewrite URA.unit_id. ss. }
+      i. des. subst. esplits; et.
+      { admit "TODO: change HoareCall". }
+    }
     des. exists (mr_src0', URA.add rarg_src fr_src0').
     repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
     repeat (ired_both; gstep; econs; eauto with ord_step). exists rarg_src.
@@ -481,257 +419,93 @@ Section HLEMMAS.
     i. ired_both; ss. eapply POST; et.
     iStartProof. iIntros "H". iDestruct "H" as "[H0 [H1 H2]]". iSplitR "H2".
     { iSplitL "H1".
-      { admit "". }
-      { admit "". }
+      { iApply from_semantic; et. }
+      { iApply from_semantic; et. }
     }
-
-        iMod
-
-    bupd
-    iApply own_sep as "H".
-
-
-    exploit POST.
-    et.
-    et.
-    admit "".
-    i.
-
-    eapply POST.
-    eapply H0. exploit POST0; cycle 1.
-    { eauto. }
-    { rewrite URA.unit_idl. auto. }
-    { rewrite URA.unit_idl.
-      erewrite URA.add_comm in x2. eapply URA.wf_mon in x2.
-      erewrite URA.add_comm in x2. eapply URA.wf_mon in x2. auto. }
-
-
-    exploit POST.
-    { et. }
-
-
-    red in WF.
-
-
-
-    hexploit (POST vret mrs_src1 mrs_tgt1 x0 x1 WF0). i. des. subst.
-    repeat (ired_both; gstep; econs; eauto with ord_step). i.
-    ired_both; gstep; econs.
-    { instantiate (1:=o_new). eapply Ord.eq_lt_lt.
-      { symmetry. eapply OrdArith.add_O_r. }
-      { eapply OrdArith.lt_add_r. rewrite Ord.from_nat_S. eapply Ord.S_pos. }
-    }
-    i.
-    repeat spc H0.
-    ired_both; ss.
-    eapply H0. exploit POST0; cycle 1.
-    { eauto. }
-    { rewrite URA.unit_idl. auto. }
-    { rewrite URA.unit_idl.
-      erewrite URA.add_comm in x2. eapply URA.wf_mon in x2.
-      erewrite URA.add_comm in x2. eapply URA.wf_mon in x2. auto. }
-
-
-
-(GWF: URA.updatable (URA.add mr_src0 fr_src0) cur /\ URA.wf cur)
-        (UPDATABLE: URA.updatable cur (URA.add mr_src1 (URA.add rarg_src fr_src1)))
-
-
-
-    exists (mr_src1, URA.add rarg_src fr_src1).
-    repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
-    { etrans; eauto. eapply GWF. }
-    repeat (ired_both; gstep; econs; eauto with ord_step). exists rarg_src.
-    repeat (ired_both; gstep; econs; eauto with ord_step). exists fr_src1.
-    repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
-    hexploit (WEAKER x). i. des.
-    repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
-    repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
-    repeat (ired_both; gstep; econs; eauto with ord_step). exists o.
-    repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
-    { exploit PRE0; cycle 1.
-      { eapply PRE. }
-      { rewrite URA.unit_idl. auto. }
-      { rewrite URA.unit_idl.
-        hexploit (UPDATABLE ε).
-        { rewrite URA.unit_id. auto. }
-        { i. rewrite URA.unit_id in H.
-          erewrite URA.add_comm in H. eapply URA.wf_mon in H.
-          eapply URA.wf_mon in H. auto. }
-      }
-    } des.
-    repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
-    repeat (ired_both; gstep; econs; eauto with ord_step). i. exists (o_new + 8)%ord.
-    repeat (ired_both; gstep; econs; eauto with ord_step). i.
-    repeat (ired_both; gstep; econs; eauto with ord_step). i.
-    hexploit (POST vret mrs_src1 mrs_tgt1 x0 x1 WF0). i. des. subst.
-    repeat (ired_both; gstep; econs; eauto with ord_step). i.
-    ired_both; gstep; econs.
-    { instantiate (1:=o_new). eapply Ord.eq_lt_lt.
-      { symmetry. eapply OrdArith.add_O_r. }
-      { eapply OrdArith.lt_add_r. rewrite Ord.from_nat_S. eapply Ord.S_pos. }
-    }
-    i.
-    repeat spc H0.
-    ired_both; ss.
-    eapply H0. exploit POST0; cycle 1.
-    { eauto. }
-    { rewrite URA.unit_idl. auto. }
-    { rewrite URA.unit_idl.
-      erewrite URA.add_comm in x2. eapply URA.wf_mon in x2.
-      erewrite URA.add_comm in x2. eapply URA.wf_mon in x2. auto. }
+    { iApply bupd_trans. iApply POST0. iApply from_semantic; et. }
   Qed.
 
-  Lemma hcall_clo_ord_weaken (o_new: Ord.t)
+  Lemma hcall_clo_weaken
         Y Z (ftsp1: ftspec Y Z)
-        (mr_src1 fr_src1 rarg_src: Σ)
-        (o: ord) (x: ftsp1.(X))
-        (cur: Σ)
+        (o: ord) (x: shelve__ ftsp1.(X))
+
+        A a0 FR
+
         r rg (n: nat) mr_src0 mp_src0 fr_src0
         (ftsp0: ftspec Y Z)
-        mrs_tgt frs_tgt k_tgt k_src
+        mr_tgt0 mp_tgt0 frs_tgt k_tgt k_src
         fn tbr ord_cur varg_src varg_tgt
-        (wf: (Σ * Any.t) * (Σ * Any.t) -> Prop)
+        (R_src: A -> Any.t -> iProp) (R_tgt: A -> Any.t -> iProp)
+        (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
 
         (WEAKER: ftspec_weaker ftsp1 ftsp0)
-        (GWF: URA.updatable (URA.add mr_src0 fr_src0) cur /\ URA.wf cur)
-        (UPDATABLE: URA.updatable cur (URA.add mr_src1 (URA.add rarg_src fr_src1)))
+
+        (GWF: (@URA.wf (GRA.to_URA _) (URA.add mr_src0 fr_src0)))
+        I (ACC: Own (URA.add mr_src0 fr_src0) ⊢ #=> I)
+
+        (UPDATABLE:
+           I ⊢ #=> (FR ** R_src a0 mp_src0 ** (ftsp1.(precond) x varg_src varg_tgt o: iProp)))
+
         (FUEL: (15 < n)%ord)
-        (PRE: ftsp1.(precond) x varg_src varg_tgt o rarg_src)
         (PURE: ord_lt o ord_cur /\
                (tbr = true -> is_pure o) /\ (tbr = false -> o = ord_top))
-        (WF: wf ((mr_src1, mp_src0), mrs_tgt))
-        (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
-        (POST: forall (vret_tgt : Any.t) (mrs_src1 mrs_tgt1 : (Σ * Any.t))
-                      (rret: Σ) (vret_src: Z)
-                      (WF: wf (mrs_src1, mrs_tgt1)),
-            exists (mr_src2: Σ) (mp_src2: Any.t),
-              (<<LOOKUP: mrs_src1 = (mr_src2, mp_src2)>>) /\
-              forall (VALID: URA.wf (URA.add mr_src2 (URA.add fr_src1 rret)))
-                     (POST: ftsp1.(postcond) x vret_src vret_tgt rret),
-                gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ eqr o_new
-                       (mrs_src1, URA.add fr_src1 rret, k_src vret_src) (mrs_tgt1, frs_tgt, k_tgt vret_tgt))
-    :
-      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ eqr n
-             (mr_src0, mp_src0, fr_src0, (HoareCall tbr ord_cur (mk_fspec ftsp0) fn varg_src) >>= k_src)
-             (mrs_tgt, frs_tgt, trigger (Call fn varg_tgt) >>= k_tgt)
-  .
-  Proof.
-    unfold HoareCall, put, discard, forge, checkWf, assume, guarantee.
-    ired_both. gstep. econs; [eauto with ord_step|].
-    exists (mr_src1, URA.add rarg_src fr_src1).
-    repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
-    { etrans; eauto. eapply GWF. }
-    repeat (ired_both; gstep; econs; eauto with ord_step). exists rarg_src.
-    repeat (ired_both; gstep; econs; eauto with ord_step). exists fr_src1.
-    repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
-    hexploit (WEAKER x). i. des.
-    repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
-    repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
-    repeat (ired_both; gstep; econs; eauto with ord_step). exists o.
-    repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
-    { exploit PRE0; cycle 1.
-      { eapply PRE. }
-      { rewrite URA.unit_idl. auto. }
-      { rewrite URA.unit_idl.
-        hexploit (UPDATABLE ε).
-        { rewrite URA.unit_id. auto. }
-        { i. rewrite URA.unit_id in H.
-          erewrite URA.add_comm in H. eapply URA.wf_mon in H.
-          eapply URA.wf_mon in H. auto. }
-      }
-    } des.
-    repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
-    repeat (ired_both; gstep; econs; eauto with ord_step). i. exists (o_new + 8)%ord.
-    repeat (ired_both; gstep; econs; eauto with ord_step). i.
-    repeat (ired_both; gstep; econs; eauto with ord_step). i.
-    hexploit (POST vret mrs_src1 mrs_tgt1 x0 x1 WF0). i. des. subst.
-    repeat (ired_both; gstep; econs; eauto with ord_step). i.
-    ired_both; gstep; econs.
-    { instantiate (1:=o_new). eapply Ord.eq_lt_lt.
-      { symmetry. eapply OrdArith.add_O_r. }
-      { eapply OrdArith.lt_add_r. rewrite Ord.from_nat_S. eapply Ord.S_pos. }
-    }
-    i.
-    repeat spc H0.
-    ired_both; ss.
-    eapply H0. exploit POST0; cycle 1.
-    { eauto. }
-    { rewrite URA.unit_idl. auto. }
-    { rewrite URA.unit_idl.
-      erewrite URA.add_comm in x2. eapply URA.wf_mon in x2.
-      erewrite URA.add_comm in x2. eapply URA.wf_mon in x2. auto. }
-  Qed.
+        (RTGT: R_tgt a0 mp_tgt0 mr_tgt0)
 
-  Lemma hcall_clo_weaken Y Z (ftsp1: ftspec Y Z)
-        (mr_src1 fr_src1 rarg_src: Σ)
-        (o: ord) (x: __shelve__ ftsp1.(X))
-        (cur: Σ)
-        r rg (n: nat) mr_src0 mp_src0 fr_src0
-        (ftsp0: ftspec Y Z)
-        mrs_tgt frs_tgt k_tgt k_src
-        fn tbr ord_cur varg_src varg_tgt
-        (wf: (Σ * Any.t) * (Σ * Any.t) -> Prop)
-
-        (WEAKER: ftspec_weaker ftsp1 ftsp0)
-        (GWF: URA.updatable (URA.add mr_src0 fr_src0) cur /\ URA.wf cur)
-        (UPDATABLE: URA.updatable cur (URA.add mr_src1 (URA.add rarg_src fr_src1)))
-        (FUEL: (15 < n)%ord)
-        (PRE: ftsp1.(precond) x varg_src varg_tgt o rarg_src)
-        (PURE: ord_lt o ord_cur /\
-               (tbr = true -> is_pure o) /\ (tbr = false -> o = ord_top))
-        (WF: wf ((mr_src1, mp_src0), mrs_tgt))
-        (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
-        (POST: forall (vret_tgt : Any.t) (mrs_src1 mrs_tgt1 : (Σ * Any.t))
-                      (rret: Σ) (vret_src: Z)
-                      (WF: wf (mrs_src1, mrs_tgt1)),
-            exists (mr_src2: Σ) (mp_src2: Any.t),
-              (<<LOOKUP: mrs_src1 = (mr_src2, mp_src2)>>) /\
-              forall (VALID: URA.wf (URA.add mr_src2 (URA.add fr_src1 rret)))
-                     (POST: ftsp1.(postcond) x vret_src vret_tgt rret),
-                gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ eqr 100
-                       (mrs_src1, URA.add fr_src1 rret, k_src vret_src) (mrs_tgt1, frs_tgt, k_tgt vret_tgt))
+        (POST: forall (vret_tgt : Any.t) (mr_src1 mr_tgt1 fr_src1: Σ) (mp_src1 mp_tgt1 : Any.t) a1
+                      (vret_src: Z)
+                      (RTGT: R_tgt a1 mp_tgt1 mr_tgt1)
+                      (GWF: (@URA.wf (GRA.to_URA _) (URA.add mr_src1 fr_src1)))
+                      (ACC: Own (URA.add mr_src1 fr_src1) ⊢ #=> (FR ** R_src a1 mp_src1 ** ftsp1.(postcond) x vret_src vret_tgt))
+          ,
+                gpaco6 (_sim_itree (mk_wf R_src R_tgt)) (cpn6 (_sim_itree (mk_wf R_src R_tgt))) rg rg _ _ eqr 100
+                       (mr_src1, mp_src1, fr_src1, k_src vret_src) (mr_tgt1, mp_tgt1, frs_tgt, k_tgt vret_tgt))
     :
-      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ eqr n
+      gpaco6 (_sim_itree (mk_wf R_src R_tgt)) (cpn6 (_sim_itree (mk_wf R_src R_tgt))) r rg _ _ eqr n
              (mr_src0, mp_src0, fr_src0, (HoareCall tbr ord_cur (mk_fspec ftsp0) fn varg_src) >>= k_src)
-             (mrs_tgt, frs_tgt, trigger (Call fn varg_tgt) >>= k_tgt)
+             (mr_tgt0, mp_tgt0, frs_tgt, trigger (Call fn varg_tgt) >>= k_tgt)
   .
   Proof.
     eapply (@hcall_clo_ord_weaken 100); eauto.
   Qed.
 
   Lemma hcall_clo
-        (mr_src1 fr_src1 rarg_src: Σ)
-        (o: ord) X (x: __shelve__ X)
-        (cur: Σ)
-        r rg (n: nat) mr_src0 mp_src0 fr_src0 Y Z
+        (FR: iProp) (o: ord) X (x: shelve__ X)
+        A a0
+
+        Y Z
         (P: X -> Y -> Any.t -> ord -> Σ -> Prop)
         (Q: X -> Z -> Any.t -> Σ -> Prop)
-        mrs_tgt frs_tgt k_tgt k_src
+        r rg (n: nat) mr_src0 mp_src0 fr_src0
+        (ftsp0: ftspec Y Z)
+        mr_tgt0 mp_tgt0 frs_tgt k_tgt k_src
         fn tbr ord_cur varg_src varg_tgt
-        (wf: (Σ * Any.t) * (Σ * Any.t) -> Prop)
+        (R_src: A -> Any.t -> iProp) (R_tgt: A -> Any.t -> iProp)
+        (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
 
-        (GWF: URA.updatable (URA.add mr_src0 fr_src0) cur /\ URA.wf cur)
-        (UPDATABLE: URA.updatable cur (URA.add mr_src1 (URA.add rarg_src fr_src1)))
+        (GWF: (@URA.wf (GRA.to_URA _) (URA.add mr_src0 fr_src0)))
+        I (ACC: Own (URA.add mr_src0 fr_src0) ⊢ #=> I)
+
+        (UPDATABLE:
+           I ⊢ #=> (FR ** R_src a0 mp_src0 ** (P x varg_src varg_tgt o: iProp)))
+
         (FUEL: (15 < n)%ord)
-        (PRE: P x varg_src varg_tgt o rarg_src)
         (PURE: ord_lt o ord_cur /\
                (tbr = true -> is_pure o) /\ (tbr = false -> o = ord_top))
-        (WF: wf ((mr_src1, mp_src0), mrs_tgt))
-        (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
-        (POST: forall (vret_tgt : Any.t) (mrs_src1 mrs_tgt1 : (Σ * Any.t))
-                      (rret: Σ) (vret_src: Z)
-                      (WF: wf (mrs_src1, mrs_tgt1)),
-            exists (mr_src2: Σ) (mp_src2: Any.t),
-              (<<LOOKUP: mrs_src1 = (mr_src2, mp_src2)>>) /\
-              forall (VALID: URA.wf (URA.add mr_src2 (URA.add fr_src1 rret)))
-                     (POST: Q x vret_src vret_tgt rret),
-                gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ eqr 100
-                       (mrs_src1, URA.add fr_src1 rret, k_src vret_src) (mrs_tgt1, frs_tgt, k_tgt vret_tgt))
+        (RTGT: R_tgt a0 mp_tgt0 mr_tgt0)
+
+        (POST: forall (vret_tgt : Any.t) (mr_src1 mr_tgt1 fr_src1: Σ) (mp_src1 mp_tgt1 : Any.t) a1
+                      (vret_src: Z)
+                      (RTGT: R_tgt a1 mp_tgt1 mr_tgt1)
+                      (GWF: (@URA.wf (GRA.to_URA _) (URA.add mr_src1 fr_src1)))
+                      (ACC: Own (URA.add mr_src1 fr_src1) ⊢ #=> (FR ** R_src a1 mp_src1 ** Q x vret_src vret_tgt))
+          ,
+                gpaco6 (_sim_itree (mk_wf R_src R_tgt)) (cpn6 (_sim_itree (mk_wf R_src R_tgt))) rg rg _ _ eqr 100
+                       (mr_src1, mp_src1, fr_src1, k_src vret_src) (mr_tgt1, mp_tgt1, frs_tgt, k_tgt vret_tgt))
     :
-      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ eqr n
-             (mr_src0, mp_src0, fr_src0, (HoareCall tbr ord_cur (mk P Q) fn varg_src) >>= k_src)
-             (mrs_tgt, frs_tgt, trigger (Call fn varg_tgt) >>= k_tgt).
+      gpaco6 (_sim_itree (mk_wf R_src R_tgt)) (cpn6 (_sim_itree (mk_wf R_src R_tgt))) r rg _ _ eqr n
+             (mr_src0, mp_src0, fr_src0, (HoareCall tbr ord_cur (mk_fspec (mk_ftspec P Q)) fn varg_src) >>= k_src)
+             (mr_tgt0, mp_tgt0, frs_tgt, trigger (Call fn varg_tgt) >>= k_tgt)
+  .
   Proof.
     eapply hcall_clo_weaken; eauto.
     { refl. }
@@ -740,65 +514,92 @@ Section HLEMMAS.
   Qed.
 
   Lemma harg_clo
-        r rg mr_src0 mp_src0 fr_src0
+        r rg
         X Y (P: X -> Y -> Any.t -> ord -> Σ -> Prop) varg_tgt
-        mrs_tgt frs_tgt f_tgt k_src
-        (wf: (Σ * Any.t) * (Σ * Any.t) -> Prop)
+        mrs_src mrs_tgt fr_src fr_tgt f_tgt k_src
+        A
+        (R_src: A -> Any.t -> iProp) (R_tgt: A -> Any.t -> iProp)
         (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
+        (WF: mk_wf R_src R_tgt (mrs_src, mrs_tgt))
         (ARG:
-           forall x varg_src rarg_src ord_cur
-                  (VALID: URA.wf (URA.add mr_src0 (URA.add fr_src0 rarg_src)))
-                  (PRE: P x varg_src varg_tgt ord_cur rarg_src),
-             gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ eqr 90
-                    (mr_src0, mp_src0, URA.add fr_src0 rarg_src, k_src (x, varg_src, ord_cur))
-                    (mrs_tgt, frs_tgt, f_tgt))
+           forall a x varg_src ord_cur mr_tgt mp_tgt mr_src mp_src fr_src
+                  (RTGT: R_tgt a mp_tgt mr_tgt)
+                  (GWF: (@URA.wf (GRA.to_URA _) (URA.add mr_src fr_src)))
+                  (ACC: Own (URA.add mr_src fr_src) ⊢ #=> ((P x varg_src varg_tgt ord_cur: iProp) ** R_src a mp_src)),
+             gpaco6 (_sim_itree (mk_wf R_src R_tgt)) (cpn6 (_sim_itree (mk_wf R_src R_tgt))) rg rg _ _ eqr 90
+                    (mr_src, mp_src, fr_src, k_src (x, varg_src, ord_cur))
+                    (mr_tgt, mp_tgt, fr_tgt, f_tgt))
     :
-      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ eqr 100
-              (mr_src0, mp_src0, fr_src0, (HoareFunArg P varg_tgt >>= k_src))
-              (mrs_tgt, frs_tgt, f_tgt)
+      gpaco6 (_sim_itree (mk_wf R_src R_tgt)) (cpn6 (_sim_itree (mk_wf R_src R_tgt))) r rg _ _ eqr 100
+             (mrs_src, fr_src, (HoareFunArg P varg_tgt >>= k_src))
+             (mrs_tgt, fr_tgt, f_tgt)
   .
   Proof.
     unfold HoareFunArg, put, discard, forge, checkWf, assume, guarantee.
+    destruct mrs_src, mrs_tgt.
     repeat (ired_both; gstep; econs; eauto with ord_step). intro varg_src.
     repeat (ired_both; gstep; econs; eauto with ord_step). intro x.
     repeat (ired_both; gstep; econs; eauto with ord_step). intro rarg_src.
     repeat (ired_both; gstep; econs; eauto with ord_step). intro VALID.
     repeat (ired_both; gstep; econs; eauto with ord_step). intro ord_cur.
     repeat (ired_both; gstep; econs; eauto with ord_step). i.
-    ired_both. eauto.
+    ired_both. red in WF. des. eapply ARG; et.
+    iIntros "H". iDestruct "H" as "[H0 [_ H1]]". iSplitL "H1".
+    { iApply from_semantic; et. }
+    { iApply from_semantic; et. }
   Qed.
 
-  Lemma hret_clo (mr_src1 rret_src: Σ)
-        r rg n mr_src0 mp_src0 fr_src0
+  Lemma hret_clo
+        A a
+        r rg n mr_src mp_src fr_src
         X Z (Q: X -> Z -> Any.t -> Σ -> Prop)
         x vret_src vret_tgt
-        mrs_tgt frs_tgt
-        (wf: (Σ * Any.t) * (Σ * Any.t) -> Prop)
+        mr_tgt mp_tgt fr_tgt
+        (R_src: A -> Any.t -> iProp) (R_tgt: A -> Any.t -> iProp)
         (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
         (FUEL: (14 < n)%ord)
-        (cur: Σ)
-        (GWF: URA.updatable (URA.add mr_src0 fr_src0) cur /\ URA.wf cur)
-        (UPDATABLE: URA.updatable cur (URA.add mr_src1 rret_src))
-        (POST: Q x vret_src vret_tgt rret_src)
-        (WF: wf ((mr_src1, mp_src0), mrs_tgt))
-        (EQ: eqr (mr_src1, mp_src0, ε) (mrs_tgt, frs_tgt) vret_tgt vret_tgt)
+
+        (GWF: (@URA.wf (GRA.to_URA _) (URA.add mr_src fr_src)))
+        I (ACC: Own (URA.add mr_src fr_src) ⊢ #=> I)
+
+        (UPDATABLE:
+           I ⊢ #=> (R_src a mp_src ** (Q x vret_src vret_tgt: iProp)))
+
+        (RTGT: R_tgt a mp_tgt mr_tgt)
+        (EQ: forall mr_src1 (SAT: R_src a mp_src mr_src1),
+            eqr (mr_src1, mp_src, ε) (mr_tgt, mp_tgt, fr_tgt) vret_tgt vret_tgt)
     :
-      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ eqr n
-             (mr_src0, mp_src0, fr_src0, (HoareFunRet Q x vret_src))
-             ((mrs_tgt, frs_tgt), (Ret vret_tgt))
+      gpaco6 (_sim_itree (mk_wf R_src R_tgt)) (cpn6 (_sim_itree (mk_wf R_src R_tgt))) r rg _ _ eqr n
+             (mr_src, mp_src, fr_src, (HoareFunRet Q x vret_src))
+             (mr_tgt, mp_tgt, fr_tgt, (Ret vret_tgt))
   .
   Proof.
     unfold HoareFunRet, put, discard, forge, checkWf, assume, guarantee.
     repeat (ired_both; gstep; econs; eauto with ord_step). exists vret_tgt.
-    repeat (ired_both; gstep; econs; eauto with ord_step). exists (mr_src1, rret_src).
+    repeat (ired_both; gstep; econs; eauto with ord_step).
+    assert (exists mr_src1 rret_src,
+               (<<UPDATABLE: URA.updatable (URA.add mr_src fr_src) (URA.add mr_src1 rret_src)>>) /\
+               (<<RSRC: R_src a mp_src mr_src1>>) /\
+               (<<PRE: Q x vret_src vret_tgt rret_src>>)).
+    { clear - GWF ACC UPDATABLE.
+      assert (ENTAIL: Own (mr_src ⋅ fr_src) ⊢ #=> (R_src a mp_src ** (Q x vret_src vret_tgt : iProp))).
+      { iIntros "H". iApply bupd_trans. iApply UPDATABLE. iApply ACC. iApply "H". }
+      eapply to_semantic in ENTAIL; ss.
+      clear - GWF ENTAIL. uipropall.
+      hexploit (ENTAIL URA.unit).
+      { rewrite URA.unit_id. ss. }
+      i. des. subst. esplits; et.
+      { admit "TODO: change HoareRet". }
+    }
+    des. exists (mr_src1, rret_src).
     repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
-    { etrans; eauto. eapply GWF. }
     repeat (ired_both; gstep; econs; eauto with ord_step). eexists rret_src.
     repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
     repeat (ired_both; gstep; econs; eauto with ord_step). exists ε.
     repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
     { rewrite URA.unit_id; ss. }
     repeat (ired_both; gstep; econs; eauto with ord_step).
+    { red. esplits; eauto. }
   Qed.
 
   Lemma APC_step_clo
@@ -1053,104 +854,104 @@ Ltac _hret_tac mr_src1 rret_src := prep; eapply (@hret_clo _ mr_src1 rret_src); 
 
 Require Import TODOYJ Logic YPM.
 
-Ltac harg_tac :=
-  _harg_tac;
-  match goal with
-  | [H: URA.wf ?cur |- _] =>
-    let name := fresh "GWF" in
-    assert(name: __gwf_mark__ cur cur) by (split; [refl|exact H]); clear H
-  end.
+(* Ltac harg_tac := *)
+(*   _harg_tac; *)
+(*   match goal with *)
+(*   | [H: URA.wf ?cur |- _] => *)
+(*     let name := fresh "GWF" in *)
+(*     assert(name: __gwf_mark__ cur cur) by (split; [refl|exact H]); clear H *)
+(*   end. *)
 
-Ltac hcall_tac x o MR_SRC1 FR_SRC1 RARG_SRC :=
-  let mr_src1 := r_gather MR_SRC1 in
-  let fr_src1 := r_gather FR_SRC1 in
-  let rarg_src := r_gather RARG_SRC in
-  let tac0 := try by (eapply URA.extends_updatable; r_equalize; r_solve) in
-  let tac1 := (on_gwf ltac:(fun H => clear H);
-               let WF := fresh "WF" in
-               let tmp := fresh "_tmp_" in
-               let GWF := fresh "GWF" in
-               intros ? ? ? ? ? WF; cbn in WF; desH WF; subst;
-               esplits; ss; et; intros tmp ?; assert(GWF: ☀) by (split; [refl|exact tmp]); clear tmp; iRefresh; iClears') in
-  prep;
-  (match x with
-   | ltac_wild =>
-     match o with
-     | ltac_wild => eapply (@hcall_clo _ mr_src1 fr_src1 rarg_src)
-     | _ => eapply (@hcall_clo _ mr_src1 fr_src1 rarg_src o)
-     end
-   | _ => eapply (@hcall_clo _ mr_src1 fr_src1 rarg_src o _ x)
-   end);
-  shelve_goal; [on_gwf ltac:(fun GWF => apply GWF)|tac0|eapply OrdArith.lt_from_nat; lia|..|tac1]
-.
+(* Ltac hcall_tac x o MR_SRC1 FR_SRC1 RARG_SRC := *)
+(*   let mr_src1 := r_gather MR_SRC1 in *)
+(*   let fr_src1 := r_gather FR_SRC1 in *)
+(*   let rarg_src := r_gather RARG_SRC in *)
+(*   let tac0 := try by (eapply URA.extends_updatable; r_equalize; r_solve) in *)
+(*   let tac1 := (on_gwf ltac:(fun H => clear H); *)
+(*                let WF := fresh "WF" in *)
+(*                let tmp := fresh "_tmp_" in *)
+(*                let GWF := fresh "GWF" in *)
+(*                intros ? ? ? ? ? WF; cbn in WF; desH WF; subst; *)
+(*                esplits; ss; et; intros tmp ?; assert(GWF: ☀) by (split; [refl|exact tmp]); clear tmp; iRefresh; iClears') in *)
+(*   prep; *)
+(*   (match x with *)
+(*    | ltac_wild => *)
+(*      match o with *)
+(*      | ltac_wild => eapply (@hcall_clo _ mr_src1 fr_src1 rarg_src) *)
+(*      | _ => eapply (@hcall_clo _ mr_src1 fr_src1 rarg_src o) *)
+(*      end *)
+(*    | _ => eapply (@hcall_clo _ mr_src1 fr_src1 rarg_src o _ x) *)
+(*    end); *)
+(*   shelve_goal; [on_gwf ltac:(fun GWF => apply GWF)|tac0|eapply OrdArith.lt_from_nat; lia|..|tac1] *)
+(* . *)
 
-Ltac hcall_tac_weaken fsp x o MR_SRC1 FR_SRC1 RARG_SRC :=
-  let mr_src1 := r_gather MR_SRC1 in
-  let fr_src1 := r_gather FR_SRC1 in
-  let rarg_src := r_gather RARG_SRC in
-  let tac0 := try by (eapply URA.extends_updatable; r_equalize; r_solve) in
-  (* let tac0 := etrans; [etrans; [|on_gwf ltac:(fun GWF => apply GWF)]|]; eapply URA.extends_updatable; r_equalize; r_solve; fail in *)
-  let tac1 := (on_gwf ltac:(fun H => clear H);
-               let WF := fresh "WF" in
-               let tmp := fresh "_tmp_" in
-               let GWF := fresh "GWF" in
-               intros ? ? ? ? ? WF; cbn in WF; desH WF; subst;
-               esplits; ss; et; intros tmp ?; assert(GWF: ☀) by (split; [refl|exact tmp]); clear tmp; iRefresh; iClears') in
-  prep;
-  (match x with
-   | ltac_wild =>
-     match o with
-     | ltac_wild => eapply (@hcall_clo_weaken _ _ _ fsp mr_src1 fr_src1 rarg_src)
-     | _ => eapply (@hcall_clo_weaken _ _ _ fsp mr_src1 fr_src1 rarg_src o)
-     end
-   | _ => eapply (@hcall_clo_weaken _ _ _ fsp mr_src1 fr_src1 rarg_src o x)
-   end);
-  shelve_goal; [|on_gwf ltac:(fun GWF => apply GWF)|tac0|eapply OrdArith.lt_from_nat; lia|..|tac1]
-.
+(* Ltac hcall_tac_weaken fsp x o MR_SRC1 FR_SRC1 RARG_SRC := *)
+(*   let mr_src1 := r_gather MR_SRC1 in *)
+(*   let fr_src1 := r_gather FR_SRC1 in *)
+(*   let rarg_src := r_gather RARG_SRC in *)
+(*   let tac0 := try by (eapply URA.extends_updatable; r_equalize; r_solve) in *)
+(*   (* let tac0 := etrans; [etrans; [|on_gwf ltac:(fun GWF => apply GWF)]|]; eapply URA.extends_updatable; r_equalize; r_solve; fail in *) *)
+(*   let tac1 := (on_gwf ltac:(fun H => clear H); *)
+(*                let WF := fresh "WF" in *)
+(*                let tmp := fresh "_tmp_" in *)
+(*                let GWF := fresh "GWF" in *)
+(*                intros ? ? ? ? ? WF; cbn in WF; desH WF; subst; *)
+(*                esplits; ss; et; intros tmp ?; assert(GWF: ☀) by (split; [refl|exact tmp]); clear tmp; iRefresh; iClears') in *)
+(*   prep; *)
+(*   (match x with *)
+(*    | ltac_wild => *)
+(*      match o with *)
+(*      | ltac_wild => eapply (@hcall_clo_weaken _ _ _ fsp mr_src1 fr_src1 rarg_src) *)
+(*      | _ => eapply (@hcall_clo_weaken _ _ _ fsp mr_src1 fr_src1 rarg_src o) *)
+(*      end *)
+(*    | _ => eapply (@hcall_clo_weaken _ _ _ fsp mr_src1 fr_src1 rarg_src o x) *)
+(*    end); *)
+(*   shelve_goal; [|on_gwf ltac:(fun GWF => apply GWF)|tac0|eapply OrdArith.lt_from_nat; lia|..|tac1] *)
+(* . *)
 
 
-Ltac hret_tac MR_SRC RT_SRC :=
-  let mr_src1 := r_gather MR_SRC in
-  let fr_src1 := r_gather RT_SRC in
-  let tac0 := try by (eapply URA.extends_updatable; r_equalize; r_solve) in
-  _hret_tac mr_src1 fr_src1; [on_gwf ltac:(fun GWF => apply GWF)|tac0| | |try refl]
-.
+(* Ltac hret_tac MR_SRC RT_SRC := *)
+(*   let mr_src1 := r_gather MR_SRC in *)
+(*   let fr_src1 := r_gather RT_SRC in *)
+(*   let tac0 := try by (eapply URA.extends_updatable; r_equalize; r_solve) in *)
+(*   _hret_tac mr_src1 fr_src1; [on_gwf ltac:(fun GWF => apply GWF)|tac0| | |try refl] *)
+(* . *)
 
-Ltac astep_full _fn _args _next _n1 :=
-  eapply (@APC_step_clo _ _fn _ _args _next _n1);
-  [(try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; lia)]))|
-   (try by (stb_tac; refl))|
-   (eapply OrdArith.lt_from_nat; lia)|
-  ].
+(* Ltac astep_full _fn _args _next _n1 := *)
+(*   eapply (@APC_step_clo _ _fn _ _args _next _n1); *)
+(*   [(try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; lia)]))| *)
+(*    (try by (stb_tac; refl))| *)
+(*    (eapply OrdArith.lt_from_nat; lia)| *)
+(*   ]. *)
 
-Ltac astep _fn _args :=
-  eapply (@APC_step_clo _ _fn _ _args);
-  [(try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r; eapply Nat.lt_succ_diag_r)]))|
-   (try by (stb_tac; refl))|
-   (eapply OrdArith.lt_from_nat; eapply Nat.lt_succ_diag_r)|
-  ].
+(* Ltac astep _fn _args := *)
+(*   eapply (@APC_step_clo _ _fn _ _args); *)
+(*   [(try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r; eapply Nat.lt_succ_diag_r)]))| *)
+(*    (try by (stb_tac; refl))| *)
+(*    (eapply OrdArith.lt_from_nat; eapply Nat.lt_succ_diag_r)| *)
+(*   ]. *)
 
-Ltac acatch :=
-  match goal with
-  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, _) (_, trigger (Call ?fn (Any.upcast ?args)) >>= _)) ] =>
-    astep fn args
-  end.
+(* Ltac acatch := *)
+(*   match goal with *)
+(*   | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, _) (_, trigger (Call ?fn (Any.upcast ?args)) >>= _)) ] => *)
+(*     astep fn args *)
+(*   end. *)
 
-Ltac astop :=
-  eapply APC_stop_clo;
-  [(try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r; eapply Nat.lt_succ_diag_r)]))|].
+(* Ltac astop := *)
+(*   eapply APC_stop_clo; *)
+(*   [(try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r; eapply Nat.lt_succ_diag_r)]))|]. *)
 
-Ltac astart _at_most :=
-  eapply (@APC_start_clo _ _at_most);
-  [eauto with ord_kappa|
-   (try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r; eapply Nat.lt_succ_diag_r)]))|
-  ]
-.
+(* Ltac astart _at_most := *)
+(*   eapply (@APC_start_clo _ _at_most); *)
+(*   [eauto with ord_kappa| *)
+(*    (try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r; eapply Nat.lt_succ_diag_r)]))| *)
+(*   ] *)
+(* . *)
 
-Ltac acall_tac A0 A1 A2 A3 A4 :=
-  acatch; [..|hcall_tac A0 A1 A2 A3 A4].
+(* Ltac acall_tac A0 A1 A2 A3 A4 := *)
+(*   acatch; [..|hcall_tac A0 A1 A2 A3 A4]. *)
 
-Ltac acall_tac_weaken fsp A0 A1 A2 A3 A4 :=
-  acatch; [..|hcall_tac_weaken fsp A0 A1 A2 A3 A4].
+(* Ltac acall_tac_weaken fsp A0 A1 A2 A3 A4 := *)
+(*   acatch; [..|hcall_tac_weaken fsp A0 A1 A2 A3 A4]. *)
 
 Global Opaque _APC APC interp interp_hCallE_tgt.
