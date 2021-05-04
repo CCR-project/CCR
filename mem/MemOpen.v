@@ -37,25 +37,25 @@ Section PROOF.
     ]
   .
 
-  Definition _SMemSem (sk: Sk.t): SModSem.t := {|
-    SModSem.fnsems := MemSbtb;
-    SModSem.mn := "Mem";
-    SModSem.initial_mr := (GRA.embed (Auth.black (M:=_memRA) ε));
-    SModSem.initial_st := (Sk.load_mem sk)↑;
+  Definition KMemSem (sk: Sk.t): KModSem.t := {|
+    KModSem.fnsems := MemSbtb;
+    KModSem.mn := "Mem";
+    KModSem.initial_mr := (GRA.embed (Auth.black (M:=_memRA) ε));
+    KModSem.initial_st := (Sk.load_mem sk)↑;
   |}
   .
 
-  Definition SMemSem: Sk.t -> SModSem.t := disclose_smodsem ∘ _SMemSem.
+  Definition SMemSem: Sk.t -> SModSem.t := (disclose_smodsem ∘ KModSem.to_tgt) ∘ KMemSem.
 
   Definition MemSem: Sk.t -> ModSem.t := (SModSem.to_tgt []) ∘ SMemSem.
 
-  Definition _SMem: SMod.t := {|
-    SMod.get_modsem := _SMemSem;
-    SMod.sk := Sk.unit;
+  Definition KMem: KMod.t := {|
+    KMod.get_modsem := KMemSem;
+    KMod.sk := Sk.unit;
   |}
   .
 
-  Definition SMem: SMod.t := disclose_smod _SMem.
+  Definition SMem: SMod.t := KMod.to_tgt KMem.
 
   Definition Mem: Mod.t := SMod.to_tgt (fun _ => []) SMem.
 
