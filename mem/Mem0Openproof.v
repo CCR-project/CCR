@@ -350,20 +350,10 @@ Ltac iDestruct H :=
           + clear - WFTGT. ii. ss. unfold update in *. des_ifs. exploit WFTGT; et. i; des. r. lia.
       }
       { iMod A. des; subst. rewrite Any.upcast_downcast in *. clarify. steps. unhide_k. steps.
-        hide_k. repeat interp_red. steps. unfold Open.KModSem.transl_itr_tgt at 2. steps.
-        rewrite Any.upcast_downcast. cbn. repeat interp_red. steps.
-        des_ifs; repeat interp_red; steps; swap 2 3.
-        { unfold triggerUB. repeat interp_red. steps. unfold Open.KModSem.transl_itr_tgt. steps. }
-        { unfold triggerUB. repeat interp_red. steps. unfold Open.KModSem.transl_itr_tgt. steps. }
-        destruct v; ss; cycle 1.
-        { unfold triggerUB. repeat interp_red. steps. unfold Open.KModSem.transl_itr_tgt. steps. }
-        { unfold triggerUB. repeat interp_red. steps. unfold Open.KModSem.transl_itr_tgt. steps. }
-        repeat interp_red. steps. unhide_k. steps.
-        repeat interp_red. steps. unfold Open.KModSem.transl_itr_tgt at 2. steps.
-        set (blk := mem_tgt0.(Mem.nb) + x).
-        force_l. exists (mem_tgt0.(Mem.nb) - memu_src0.(Mem.nb) + x). steps. repeat interp_red. steps.
+        set (blk := mem_tgt0.(Mem.nb) + x). destruct v; ss. clarify. rename z into sz.
+        rewrite Any.upcast_downcast in *. sym in _UNWRAPU. clarify.
+        force_l. exists (mem_tgt0.(Mem.nb) - memu_src0.(Mem.nb) + x). steps.
         replace (Mem.nb memu_src0 + (Mem.nb mem_tgt0 - Mem.nb memu_src0 + x)) with (Mem.nb mem_tgt0 + x) by lia.
-        unfold Open.KModSem.transl_itr_tgt. steps.
         hret_tac KNOWN (@URA.unit Σ); ss.
         { iRefresh. right; iRefresh. split; ss; et. }
         { esplits; ss; et; ss.
@@ -463,7 +453,6 @@ Ltac iDestruct H :=
         }
       }
       { iMod A. des; subst. ss. rewrite Any.upcast_downcast in *. clarify. steps. unhide_k.
-        steps.
         steps. destruct v; ss. clarify. rewrite Any.upcast_downcast in *. sym in _UNWRAPU. clarify.
         rename t0 into memu_src1. rename n into b. rename z into ofs.
         force_r.
