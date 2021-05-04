@@ -1424,10 +1424,10 @@ Goal forall x y z, x + y = z. i. seal x. seal y. unseal y. unseal key. Abort.
 Goal forall x y z, x + y = z. i. seal_with "a" x. seal_with "b" y. unseal "a". unseal "b". Abort.
 
 
-Definition  __shelve__ (A: Type) := A.
+Definition  shelve__ (A: Type) := A.
 
-Ltac shelve_goal :=
+Ltac unshelve_goal :=
   match goal with
-  | [|- __shelve__ _] => shelve
+  | [|- shelve__ _] => shelve
   | _ => idtac
   end.
