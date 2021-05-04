@@ -118,7 +118,7 @@ End SkEnv.
 
 Module Sk.
 
-  Inductive gdef: Type := Gfun | Gvar (gv: val).
+  Inductive gdef: Type := Gfun | Gvar (gv: Z).
 
   Definition t: Type := list (gname * gdef).
 
@@ -139,7 +139,7 @@ Module Sk.
          | Gfun =>
            None
          | Gvar gv =>
-           if (dec ofs 0%Z) then Some gv else None
+           if (dec ofs 0%Z) then Some (Vint gv) else None
          end)
       (*** TODO: This simplified model doesn't allow function pointer comparsion.
            To be more faithful, we need to migrate the notion of "permission" from CompCert.

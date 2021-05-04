@@ -179,7 +179,7 @@ Section PROOF.
       | Some (_, gd) =>
         match gd with
         | Sk.Gfun => ε
-        | Sk.Gvar gv => if (dec ofs 0%Z) then Some gv else ε
+        | Sk.Gvar gv => if (dec ofs 0%Z) then Some (Vint gv) else ε
         end
       | _ => ε
       end.
