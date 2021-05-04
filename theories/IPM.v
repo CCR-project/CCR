@@ -1,6 +1,3 @@
-From iris.bi Require Import derived_connectives updates internal_eq plainly.
-From iris.prelude Require Import options.
-
 Require Import Coqlib.
 Require Import Universe.
 Require Import STS.
@@ -14,8 +11,11 @@ Set Typeclasses Depth 5.
 
 
 Create HintDb iprop.
+Ltac uipropall :=
+  try (autounfold with iprop; autorewrite with iprop;
+       all_once_fast ltac:(fun H => autounfold with iprop in H; autorewrite with iprop in H)).
 
-Section IRIS.
+Section IPROP.
   Context {Σ: GRA.t}.
   Definition iProp := Σ -> Prop.
 
@@ -80,9 +80,161 @@ Section IRIS.
   Hint Rewrite (Seal.sealing_eq "iProp"): iprop.
   #[local] Hint Unfold Sepconj Pure Ex Univ Own And Or Impl Wand Emp Persistently Later Upd Entails: iprop.
 
-  Ltac uipropall :=
-    autounfold with iprop; autorewrite with iprop;
-    all_once_fast ltac:(fun H => autounfold with iprop in H; autorewrite with iprop in H).
+  (* BI axioms *)
+  Global Program Instance PreOrder_Entails: PreOrder Entails.
+  Next Obligation.
+  Proof.
+    ii. uipropall. ss.
+  Qed.
+  Next Obligation.
+  Proof.
+    ii. uipropall. ii. exploit (H r); et.
+  Qed.
+
+  Lemma Pure_intro: forall (φ : Prop) (P : iProp), φ -> Entails P (Pure φ).
+  Proof.
+    ii. uipropall. ss.
+  Qed.
+
+  Lemma Pure_elim: forall (φ : Prop) (P : iProp), (φ -> Entails (Pure True) P) -> Entails (Pure φ) P.
+  Proof.
+    ii. uipropall. ii. eapply H in H0; et.
+  Qed.
+
+  Lemma And_elim_l: forall P Q : iProp, Entails (And P Q) P.
+  Proof.
+    ii. uipropall. ii. eapply H.
+  Qed.
+
+  Lemma And_elim_r: forall P Q : iProp, Entails (And P Q) Q.
+  Proof.
+    ii. uipropall. ii. eapply H.
+  Qed.
+
+  Lemma And_intro: forall P Q R : iProp, Entails P Q -> Entails P R -> Entails P (And Q R).
+  Proof.
+    ii. uipropall. ii. split; [eapply H|eapply H0]; et.
+  Qed.
+
+  Lemma Or_intro_l: forall P Q : iProp, Entails P (Or P Q).
+  Proof.
+    ii. uipropall. ii. left. ss.
+  Qed.
+
+  Lemma Or_intro_r: forall P Q : iProp, Entails Q (Or P Q).
+  Proof.
+    ii. uipropall. ii. right. ss.
+  Qed.
+
+  Lemma Or_elim: forall P Q R : iProp, Entails P R -> Entails Q R -> Entails (Or P Q) R.
+  Proof.
+    ii. uipropall. ii. inv H1.
+    { eapply H; ss. }
+    { eapply H0; ss. }
+  Qed.
+
+  Lemma Impl_intro_r: forall P Q R : iProp, Entails (And P Q) R -> Entails P (Impl Q R).
+  Proof.
+    ii. uipropall. ii. eapply H; et.
+  Qed.
+
+  Lemma Impl_elim_l: forall P Q R : iProp, Entails P (Impl Q R) -> Entails (And P Q) R.
+  Proof.
+    ii. uipropall. ii. inv H0. eapply H; et.
+  Qed.
+
+  Lemma Univ_intro: forall (A : Type) (P : iProp) (Ψ : A -> iProp), (forall a : A, Entails P (Ψ a)) -> Entails P (Univ (fun a : A => Ψ a)).
+  Proof.
+    ii. uipropall. ii. specialize (H x). uipropall. eapply H; et.
+  Qed.
+
+  Lemma Univ_elim: forall (A : Type) (Ψ : A -> iProp) (a : A), Entails (Univ (fun a0 : A => Ψ a0)) (Ψ a).
+  Proof.
+    ii. uipropall. ii. eapply H; et.
+  Qed.
+
+  Lemma Ex_intro: forall (A : Type) (Ψ : A -> iProp) (a : A), Entails (Ψ a) (Ex (fun a0 : A => Ψ a0)).
+  Proof.
+    ii. uipropall. ii. eexists. eauto.
+  Qed.
+
+  Lemma Ex_elim: forall (A : Type) (Φ : A -> iProp) (Q : iProp), (forall a : A, Entails (Φ a) Q) -> Entails (Ex (fun a : A => Φ a)) Q.
+  Proof.
+    ii. uipropall. ii. des. specialize (H x). uipropall. et.
+  Qed.
+
+  Lemma Sepconj_mono: forall P P' Q Q' : iProp, Entails P Q -> Entails P' Q' -> Entails (Sepconj P P') (Sepconj Q Q').
+  Proof.
+    ii. uipropall. ii. unfold Sepconj in *. des; subst. esplits; et.
+    { eapply H; et. eapply URA.wf_mon; et. }
+    { eapply H0; et. eapply URA.wf_mon; et. rewrite URA.add_comm. et. }
+  Qed.
+
+  Lemma Emp_Sepconj_l: forall P : iProp, Entails P (Sepconj Emp P).
+  Proof.
+    ii. uipropall. ii. exists ε, r. splits; ss. rewrite URA.unit_idl. et.
+  Qed.
+
+  Lemma Emp_Sepconj_r: forall P : iProp, Entails (Sepconj Emp P) P.
+  Proof.
+    ii. uipropall. ii. inv H. des; subst. rewrite URA.unit_idl. et.
+  Qed.
+
+  Lemma Sepconj_comm: forall P Q : iProp, Entails (Sepconj P Q) (Sepconj Q P).
+  Proof.
+    ii. uipropall. ii. unfold Sepconj in *. des. subst. exists b, a. splits; et. apply URA.add_comm.
+  Qed.
+
+  Lemma Sepconj_assoc: forall P Q R : iProp, Entails (Sepconj (Sepconj P Q) R) (Sepconj P (Sepconj Q R)).
+  Proof.
+    ii. uipropall. ii. unfold Sepconj in *. des; subst. esplits; [|apply H2| |apply H3|apply H1]; ss.
+    rewrite URA.add_assoc. ss.
+  Qed.
+
+  Lemma Wand_intro_r: forall P Q R : iProp, Entails (Sepconj P Q) R -> Entails P (Wand Q R).
+  Proof.
+    ii. uipropall. ii. eapply H; et.
+  Qed.
+
+  Lemma Wand_elim_l: forall P Q R : iProp, Entails P (Wand Q R) -> Entails (Sepconj P Q) R.
+  Proof.
+    ii. uipropall. ii. unfold Sepconj in *. des; subst. eapply H; et. eapply URA.wf_mon; et.
+  Qed.
+
+  Lemma Upd_intro: forall P : iProp, Entails P (Upd P).
+  Proof.
+    ii. uipropall. ii. exists r. splits; auto.
+  Qed.
+
+  Lemma Upd_mono: forall P Q : iProp, Entails P Q -> Entails (Upd P) (Upd Q).
+  Proof.
+    ii. uipropall. ii. exploit H0; et. i. des.
+    exploit (H r1); et. eapply URA.wf_mon; et.
+  Qed.
+
+  Lemma Upd_trans: forall P : iProp, Entails (Upd (Upd P)) (Upd P).
+  Proof.
+    ii. uipropall. ii. exploit H; et. i. des. exploit x0; eauto.
+  Qed.
+
+  Lemma Upd_frame_r: forall P R : iProp, Entails (Sepconj (Upd P) R) (Upd (Sepconj P R)).
+  Proof.
+    ii. uipropall. ii. unfold Sepconj in *. des. subst. exploit (H1 (b ⋅ ctx)); et.
+    { rewrite URA.add_assoc. et. }
+    i. des. esplits; [..|eapply x1|eapply H2]; ss.
+    rewrite <- URA.add_assoc. et.
+  Qed.
+End IPROP.
+Hint Rewrite (Seal.sealing_eq "iProp"): iprop.
+#[export] Hint Unfold Sepconj Pure Ex Univ Own And Or Impl Wand Emp Persistently Later Upd Entails: iprop.
+
+
+From iris.bi Require Import derived_connectives updates internal_eq plainly.
+From iris.prelude Require Import options.
+From iris.proofmode Require Export tactics.
+
+Section IPM.
+  Context {Σ: GRA.t}.
 
   (* Trivial Ofe Structure *)
   Inductive uPred_equiv' (P Q : iProp) : Prop :=
@@ -116,155 +268,10 @@ Section IRIS.
       + apply c in g. apply g in H0; et.
   Qed.
 
-  (* BI axioms *)
-  Global Program Instance PreOrder_Entails: PreOrder Entails.
-  Next Obligation.
-  Proof.
-    ii. uipropall. ss.
-  Qed.
-  Next Obligation.
-  Proof.
-    ii. uipropall. ii. exploit (H r); et.
-  Qed.
-
-  Lemma Pure_intro: ∀ (φ : Prop) (P : iProp), φ → Entails P (Pure φ).
-  Proof.
-    ii. uipropall. ss.
-  Qed.
-
-  Lemma Pure_elim: ∀ (φ : Prop) (P : iProp), (φ → Entails (Pure True) P) → Entails (Pure φ) P.
-  Proof.
-    ii. uipropall. ii. eapply H in H0; et.
-  Qed.
-
-  Lemma And_elim_l: ∀ P Q : iProp, Entails (And P Q) P.
-  Proof.
-    ii. uipropall. ii. eapply H.
-  Qed.
-
-  Lemma And_elim_r: ∀ P Q : iProp, Entails (And P Q) Q.
-  Proof.
-    ii. uipropall. ii. eapply H.
-  Qed.
-
-  Lemma And_intro: ∀ P Q R : iProp, Entails P Q → Entails P R → Entails P (And Q R).
-  Proof.
-    ii. uipropall. ii. split; [eapply H|eapply H0]; et.
-  Qed.
-
-  Lemma Or_intro_l: ∀ P Q : iProp, Entails P (Or P Q).
-  Proof.
-    ii. uipropall. ii. left. ss.
-  Qed.
-
-  Lemma Or_intro_r: ∀ P Q : iProp, Entails Q (Or P Q).
-  Proof.
-    ii. uipropall. ii. right. ss.
-  Qed.
-
-  Lemma Or_elim: ∀ P Q R : iProp, Entails P R → Entails Q R → Entails (Or P Q) R.
-  Proof.
-    ii. uipropall. ii. inv H1.
-    { eapply H; ss. }
-    { eapply H0; ss. }
-  Qed.
-
-  Lemma Impl_intro_r: ∀ P Q R : iProp, Entails (And P Q) R → Entails P (Impl Q R).
-  Proof.
-    ii. uipropall. ii. eapply H; et.
-  Qed.
-
-  Lemma Impl_elim_l: ∀ P Q R : iProp, Entails P (Impl Q R) → Entails (And P Q) R.
-  Proof.
-    ii. uipropall. ii. inv H0. eapply H; et.
-  Qed.
-
-  Lemma Univ_intro: ∀ (A : Type) (P : iProp) (Ψ : A → iProp), (∀ a : A, Entails P (Ψ a)) → Entails P (Univ (λ a : A, Ψ a)).
-  Proof.
-    ii. uipropall. ii. specialize (H x). uipropall. eapply H; et.
-  Qed.
-
-  Lemma Univ_elim: ∀ (A : Type) (Ψ : A → iProp) (a : A), Entails (Univ (λ a0 : A, Ψ a0)) (Ψ a).
-  Proof.
-    ii. uipropall. ii. eapply H; et.
-  Qed.
-
-  Lemma Ex_intro: ∀ (A : Type) (Ψ : A → iProp) (a : A), Entails (Ψ a) (Ex (λ a0 : A, Ψ a0)).
-  Proof.
-    ii. uipropall. ii. eexists. eauto.
-  Qed.
-
-  Lemma Ex_elim: ∀ (A : Type) (Φ : A → iProp) (Q : iProp), (∀ a : A, Entails (Φ a) Q) → Entails (Ex (λ a : A, Φ a)) Q.
-  Proof.
-    ii. uipropall. ii. des. specialize (H x). uipropall. et.
-  Qed.
-
-  Lemma Sepconj_mono: ∀ P P' Q Q' : iProp, Entails P Q → Entails P' Q' → Entails (Sepconj P P') (Sepconj Q Q').
-  Proof.
-    ii. uipropall. ii. unfold Sepconj in *. des; subst. esplits; et.
-    { eapply H; et. eapply URA.wf_mon; et. }
-    { eapply H0; et. eapply URA.wf_mon; et. rewrite URA.add_comm. et. }
-  Qed.
-
-  Lemma Emp_Sepconj_l: ∀ P : iProp, Entails P (Sepconj Emp P).
-  Proof.
-    ii. uipropall. ii. exists ε, r. splits; ss. rewrite URA.unit_idl. et.
-  Qed.
-
-  Lemma Emp_Sepconj_r: ∀ P : iProp, Entails (Sepconj Emp P) P.
-  Proof.
-    ii. uipropall. ii. inv H. des; subst. rewrite URA.unit_idl. et.
-  Qed.
-
-  Lemma Sepconj_comm: ∀ P Q : iProp, Entails (Sepconj P Q) (Sepconj Q P).
-  Proof.
-    ii. uipropall. ii. unfold Sepconj in *. des. subst. exists b, a. splits; et. apply URA.add_comm.
-  Qed.
-
-  Lemma Sepconj_assoc: ∀ P Q R : iProp, Entails (Sepconj (Sepconj P Q) R) (Sepconj P (Sepconj Q R)).
-  Proof.
-    ii. uipropall. ii. unfold Sepconj in *. des; subst. esplits; [|apply H2| |apply H3|apply H1]; ss.
-    rewrite URA.add_assoc. ss.
-  Qed.
-
-  Lemma Wand_intro_r: ∀ P Q R : iProp, Entails (Sepconj P Q) R → Entails P (Wand Q R).
-  Proof.
-    ii. uipropall. ii. eapply H; et.
-  Qed.
-
-  Lemma Wand_elim_l: ∀ P Q R : iProp, Entails P (Wand Q R) → Entails (Sepconj P Q) R.
-  Proof.
-    ii. uipropall. ii. unfold Sepconj in *. des; subst. eapply H; et. eapply URA.wf_mon; et.
-  Qed.
-
-  Lemma Upd_intro: ∀ P : iProp, Entails P (Upd P).
-  Proof.
-    ii. uipropall. ii. exists r. splits; auto.
-  Qed.
-
-  Lemma Upd_mono: ∀ P Q : iProp, Entails P Q -> Entails (Upd P) (Upd Q).
-  Proof.
-    ii. uipropall. ii. exploit H0; et. i. des.
-    exploit (H r1); et. eapply URA.wf_mon; et.
-  Qed.
-
-  Lemma Upd_trans: ∀ P : iProp, Entails (Upd (Upd P)) (Upd P).
-  Proof.
-    ii. uipropall. ii. exploit H; et. i. des. exploit x0; eauto.
-  Qed.
-
-  Lemma Upd_frame_r: ∀ P R : iProp, Entails (Sepconj (Upd P) R) (Upd (Sepconj P R)).
-  Proof.
-    ii. uipropall. ii. unfold Sepconj in *. des. subst. exploit (H1 (b ⋅ ctx)); et.
-    { rewrite URA.add_assoc. et. }
-    i. des. esplits; [..|eapply x1|eapply H2]; ss.
-    rewrite <- URA.add_assoc. et.
-  Qed.
-
   Lemma iProp_bi_mixin:
     BiMixin
       Entails Emp Pure And Or Impl
-      (@Univ) (@Ex) Sepconj Wand
+      (@Univ _) (@Ex _) Sepconj Wand
       Persistently.
   Proof.
     econs.
@@ -359,7 +366,7 @@ Section IRIS.
   Lemma iProp_bi_later_mixin:
     BiLaterMixin
       Entails Pure Or Impl
-      (@Univ) (@Ex) Sepconj Persistently Later.
+      (@Univ _) (@Ex _) Sepconj Persistently Later.
   Proof.
     econs.
     - ii. uipropall. i. split.
@@ -407,14 +414,7 @@ Section IRIS.
     ii. red. red. uipropall. ii. red. red in H.
     uipropall. i. specialize (H a). red in H. uipropall. ss.
   Qed.
-
-End IRIS.
-
-Hint Rewrite (Seal.sealing_eq "iProp"): iprop.
-#[export] Hint Unfold Sepconj Pure Ex Univ Own And Or Impl Wand Emp Persistently Later Upd Entails: iprop.
-
-From iris.proofmode Require Export tactics.
-
+End IPM.
 
 Section TEST.
   Context {Σ: GRA.t}.
