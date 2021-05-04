@@ -37,9 +37,6 @@ Section Compile.
   Definition ident_key {T} id l : option T :=
     SetoidList.findA (Pos.eqb id) l.
 
-  (* Definition string_key {T} l x : option T := *)
-  (*   SetoidList.findA (String.string_dec x) l. *)
-
   (* ref: Velus, Generation.v *)
   Fixpoint list_type_to_typelist (types: list type): typelist :=
     match types with
@@ -86,15 +83,6 @@ Section Compile.
   .
   (** vsub, vmul may not agree with compcert's cop semantics *)
 
-  (* (* for function pointer call *) *)
-  (* Definition compile_expr_ptr tyargs expr : option Clight.expr := *)
-  (*   match expr with *)
-  (*   | Var x => *)
-  (*     Some (Etempvar (s2p x) (Tptr0 (Tfunction tyargs Tlong0 cc_default))) *)
-  (*   | _ => None *)
-  (*   end *)
-  (* . *)
-
   Fixpoint compile_exprs (exprs: list Imp.expr) acc : option (list Clight.expr) :=
     match exprs with
     | h :: t =>
@@ -102,15 +90,6 @@ Section Compile.
     | [] => Some acc
     end
   .
-
-  (* (* only check number of arguments, exploit Tlong <-> Tptr64 *) *)
-  (* Fixpoint cnt_args (tyargs: typelist) (args: list expr) : bool := *)
-  (*   match tyargs, args with *)
-  (*   | Tnil, [] => true *)
-  (*   | Tcons ty tys, e::es => cnt_args tys es *)
-  (*   | _, _ => false *)
-  (*   end *)
-  (* . *)
 
   Fixpoint make_arg_types n :=
     match n with
