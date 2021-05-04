@@ -327,7 +327,7 @@ Section Compile.
     let ivars := compile_iVars src.(prog_vars) in
     do efuns <- compile_eFuns src.(ext_funs);
     do ifuns <- compile_iFuns src.(prog_funs);
-    Some (evars ++ efuns ++ ivars ++ ifuns)
+    Some (evars ++ init_g ++ efuns ++ ivars ++ ifuns)
   .
 
   Definition _compile (src_defs : Imp.program) :=
