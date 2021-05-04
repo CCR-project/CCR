@@ -140,6 +140,8 @@ Section Example_Extract.
   |}.
 
   Definition ex_extract : program := {|
+    ext_vars := [];
+    ext_funs := [];
     prog_vars := [];
     prog_funs := [("factorial", factorial_fundef); ("main", main_fundef)];
   |}.

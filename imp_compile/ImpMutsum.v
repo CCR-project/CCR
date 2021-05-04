@@ -24,6 +24,8 @@ Section F.
   Definition imp_mutsumF_prog : program :=
     mk_program
       []
+      [("g", 1)]
+      []
       [("f", fF)]
   .
 
@@ -44,6 +46,8 @@ Section G.
   Definition imp_mutsumG_prog : program :=
     mk_program
       []
+      [("f", 1)]
+      []
       [("g", gF)]
   .
 
@@ -60,6 +64,8 @@ Section Main.
 
   Definition imp_mutsumMain_prog : program :=
     mk_program
+      []
+      [("f", 1)]
       []
       [("main", mainF)]
   .

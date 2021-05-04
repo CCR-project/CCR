@@ -39,6 +39,8 @@ Section Example_Extract.
   |}.
 
   Definition imp_factorial_prog : program := {|
+    ext_vars := [];
+    ext_funs := [];
     prog_vars := [];
     prog_funs := [("factorial", factorial_fundef); ("main", main_fundef)];
   |}.

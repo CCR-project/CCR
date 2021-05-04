@@ -35,6 +35,8 @@ Section G.
   Definition g_prog : program :=
     mk_program
       []
+      [("f", 1)]
+      []
       [("g", gF)]
   .
   

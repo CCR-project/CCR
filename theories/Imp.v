@@ -263,11 +263,19 @@ End Interp.
 (** ** Program *)
 
 (** program components *)
+(* declared external global variables *)
+Definition extVars := list gname.
+(* declared external functions with arg nums*)
+Definition extFuns := list (gname * nat).
+(* defined global variables *)
 Definition progVars := list (gname * Z).
+(* defined internal functions *)
 Definition progFuns := list (gname * function).
 
 (** Imp program *)
 Record program : Type := mk_program {
+  ext_vars : extVars;
+  ext_funs : extFuns;
   prog_vars : progVars;
   prog_funs : progFuns;
 }.

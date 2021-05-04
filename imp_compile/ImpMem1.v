@@ -22,6 +22,8 @@ Section Mem1.
   .
 
   Definition imp_mem1_f : program := {|
+    ext_vars := ["G"];
+    ext_funs := [];
     prog_vars := [];
     prog_funs := [("f", f)];
   |}.
@@ -41,6 +43,8 @@ Section Mem1.
   |}.
 
   Definition imp_mem1_main : program := {|
+    ext_vars := [];
+    ext_funs := [("f", 0)];
     prog_vars := [("G", 3%Z)];
     prog_funs := [("main", main_def)];
   |}.

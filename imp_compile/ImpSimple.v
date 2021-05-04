@@ -22,6 +22,8 @@ Section Example_Extract.
   |}.
 
   Definition imp_simple_prog : program := {|
+    ext_vars := [];
+    ext_funs := [];
     prog_vars := [];
     prog_funs := [("main", main_fundef)];
   |}.
