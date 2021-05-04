@@ -17,62 +17,62 @@ Ltac uipropall :=
 
 Section IPROP.
   Context {Σ: GRA.t}.
-  Definition iProp := Σ -> Prop.
+  Definition iProp' := Σ -> Prop.
 
-  Definition Sepconj (P Q: iProp): iProp :=
+  Definition Sepconj (P Q: iProp'): iProp' :=
     Seal.sealing
       "iProp"
       (fun r => exists a b, r = URA.add a b /\ P a /\ Q b).
-  Definition Pure (P: Prop): iProp :=
+  Definition Pure (P: Prop): iProp' :=
     Seal.sealing
       "iProp"
       (fun _ => P).
-  Definition Ex {X: Type} (P: X -> iProp): iProp :=
+  Definition Ex {X: Type} (P: X -> iProp'): iProp' :=
     Seal.sealing
       "iProp"
       (fun r => exists x, P x r).
-  Definition Univ {X: Type} (P: X -> iProp): iProp :=
+  Definition Univ {X: Type} (P: X -> iProp'): iProp' :=
     Seal.sealing
       "iProp"
       (fun r => forall x, P x r).
-  Definition Own (r0: Σ): iProp :=
+  Definition Own (r0: Σ): iProp' :=
     Seal.sealing
       "iProp"
       (fun r1 => URA.extends r0 r1).
-  Definition And (P Q: iProp): iProp :=
+  Definition And (P Q: iProp'): iProp' :=
     Seal.sealing
       "iProp"
       (fun r => P r /\ Q r).
-  Definition Or (P Q: iProp): iProp :=
+  Definition Or (P Q: iProp'): iProp' :=
     Seal.sealing
       "iProp"
       (fun r => P r \/ Q r).
-  Definition Impl (P Q: iProp): iProp :=
+  Definition Impl (P Q: iProp'): iProp' :=
     Seal.sealing
       "iProp"
       (fun r => URA.wf r -> P r -> Q r).
-  Definition Wand (P Q: iProp): iProp :=
+  Definition Wand (P Q: iProp'): iProp' :=
     Seal.sealing
       "iProp"
       (fun r => forall rp, URA.wf (r ⋅ rp) -> P rp -> Q (r ⋅ rp)).
-  Definition Emp: iProp :=
+  Definition Emp: iProp' :=
     Seal.sealing
       "iProp"
       (eq ε).
-  Definition Persistently (P: iProp): iProp :=
+  Definition Persistently (P: iProp'): iProp' :=
     Seal.sealing
       "iProp"
       (Pure (P ε)).
-  Definition Later (P: iProp): iProp :=
+  Definition Later (P: iProp'): iProp' :=
     Seal.sealing
       "iProp"
       P.
-  Definition Upd (P: iProp): iProp :=
+  Definition Upd (P: iProp'): iProp' :=
     Seal.sealing
       "iProp"
       (fun r0 => forall ctx, URA.wf (r0 ⋅ ctx) -> exists r1, URA.wf (r1 ⋅ ctx) /\ P r1).
 
-  Definition Entails (P Q : iProp) : Prop :=
+  Definition Entails (P Q : iProp') : Prop :=
     Seal.sealing
       "iProp"
       (forall r (WF: URA.wf r), P r -> Q r).
@@ -91,133 +91,133 @@ Section IPROP.
     ii. uipropall. ii. exploit (H r); et.
   Qed.
 
-  Lemma Pure_intro: forall (φ : Prop) (P : iProp), φ -> Entails P (Pure φ).
+  Lemma Pure_intro: forall (φ : Prop) (P : iProp'), φ -> Entails P (Pure φ).
   Proof.
     ii. uipropall. ss.
   Qed.
 
-  Lemma Pure_elim: forall (φ : Prop) (P : iProp), (φ -> Entails (Pure True) P) -> Entails (Pure φ) P.
+  Lemma Pure_elim: forall (φ : Prop) (P : iProp'), (φ -> Entails (Pure True) P) -> Entails (Pure φ) P.
   Proof.
     ii. uipropall. ii. eapply H in H0; et.
   Qed.
 
-  Lemma And_elim_l: forall P Q : iProp, Entails (And P Q) P.
+  Lemma And_elim_l: forall P Q : iProp', Entails (And P Q) P.
   Proof.
     ii. uipropall. ii. eapply H.
   Qed.
 
-  Lemma And_elim_r: forall P Q : iProp, Entails (And P Q) Q.
+  Lemma And_elim_r: forall P Q : iProp', Entails (And P Q) Q.
   Proof.
     ii. uipropall. ii. eapply H.
   Qed.
 
-  Lemma And_intro: forall P Q R : iProp, Entails P Q -> Entails P R -> Entails P (And Q R).
+  Lemma And_intro: forall P Q R : iProp', Entails P Q -> Entails P R -> Entails P (And Q R).
   Proof.
     ii. uipropall. ii. split; [eapply H|eapply H0]; et.
   Qed.
 
-  Lemma Or_intro_l: forall P Q : iProp, Entails P (Or P Q).
+  Lemma Or_intro_l: forall P Q : iProp', Entails P (Or P Q).
   Proof.
     ii. uipropall. ii. left. ss.
   Qed.
 
-  Lemma Or_intro_r: forall P Q : iProp, Entails Q (Or P Q).
+  Lemma Or_intro_r: forall P Q : iProp', Entails Q (Or P Q).
   Proof.
     ii. uipropall. ii. right. ss.
   Qed.
 
-  Lemma Or_elim: forall P Q R : iProp, Entails P R -> Entails Q R -> Entails (Or P Q) R.
+  Lemma Or_elim: forall P Q R : iProp', Entails P R -> Entails Q R -> Entails (Or P Q) R.
   Proof.
     ii. uipropall. ii. inv H1.
     { eapply H; ss. }
     { eapply H0; ss. }
   Qed.
 
-  Lemma Impl_intro_r: forall P Q R : iProp, Entails (And P Q) R -> Entails P (Impl Q R).
+  Lemma Impl_intro_r: forall P Q R : iProp', Entails (And P Q) R -> Entails P (Impl Q R).
   Proof.
     ii. uipropall. ii. eapply H; et.
   Qed.
 
-  Lemma Impl_elim_l: forall P Q R : iProp, Entails P (Impl Q R) -> Entails (And P Q) R.
+  Lemma Impl_elim_l: forall P Q R : iProp', Entails P (Impl Q R) -> Entails (And P Q) R.
   Proof.
     ii. uipropall. ii. inv H0. eapply H; et.
   Qed.
 
-  Lemma Univ_intro: forall (A : Type) (P : iProp) (Ψ : A -> iProp), (forall a : A, Entails P (Ψ a)) -> Entails P (Univ (fun a : A => Ψ a)).
+  Lemma Univ_intro: forall (A : Type) (P : iProp') (Ψ : A -> iProp'), (forall a : A, Entails P (Ψ a)) -> Entails P (Univ (fun a : A => Ψ a)).
   Proof.
     ii. uipropall. ii. specialize (H x). uipropall. eapply H; et.
   Qed.
 
-  Lemma Univ_elim: forall (A : Type) (Ψ : A -> iProp) (a : A), Entails (Univ (fun a0 : A => Ψ a0)) (Ψ a).
+  Lemma Univ_elim: forall (A : Type) (Ψ : A -> iProp') (a : A), Entails (Univ (fun a0 : A => Ψ a0)) (Ψ a).
   Proof.
     ii. uipropall. ii. eapply H; et.
   Qed.
 
-  Lemma Ex_intro: forall (A : Type) (Ψ : A -> iProp) (a : A), Entails (Ψ a) (Ex (fun a0 : A => Ψ a0)).
+  Lemma Ex_intro: forall (A : Type) (Ψ : A -> iProp') (a : A), Entails (Ψ a) (Ex (fun a0 : A => Ψ a0)).
   Proof.
     ii. uipropall. ii. eexists. eauto.
   Qed.
 
-  Lemma Ex_elim: forall (A : Type) (Φ : A -> iProp) (Q : iProp), (forall a : A, Entails (Φ a) Q) -> Entails (Ex (fun a : A => Φ a)) Q.
+  Lemma Ex_elim: forall (A : Type) (Φ : A -> iProp') (Q : iProp'), (forall a : A, Entails (Φ a) Q) -> Entails (Ex (fun a : A => Φ a)) Q.
   Proof.
     ii. uipropall. ii. des. specialize (H x). uipropall. et.
   Qed.
 
-  Lemma Sepconj_mono: forall P P' Q Q' : iProp, Entails P Q -> Entails P' Q' -> Entails (Sepconj P P') (Sepconj Q Q').
+  Lemma Sepconj_mono: forall P P' Q Q' : iProp', Entails P Q -> Entails P' Q' -> Entails (Sepconj P P') (Sepconj Q Q').
   Proof.
     ii. uipropall. ii. unfold Sepconj in *. des; subst. esplits; et.
     { eapply H; et. eapply URA.wf_mon; et. }
     { eapply H0; et. eapply URA.wf_mon; et. rewrite URA.add_comm. et. }
   Qed.
 
-  Lemma Emp_Sepconj_l: forall P : iProp, Entails P (Sepconj Emp P).
+  Lemma Emp_Sepconj_l: forall P : iProp', Entails P (Sepconj Emp P).
   Proof.
     ii. uipropall. ii. exists ε, r. splits; ss. rewrite URA.unit_idl. et.
   Qed.
 
-  Lemma Emp_Sepconj_r: forall P : iProp, Entails (Sepconj Emp P) P.
+  Lemma Emp_Sepconj_r: forall P : iProp', Entails (Sepconj Emp P) P.
   Proof.
     ii. uipropall. ii. inv H. des; subst. rewrite URA.unit_idl. et.
   Qed.
 
-  Lemma Sepconj_comm: forall P Q : iProp, Entails (Sepconj P Q) (Sepconj Q P).
+  Lemma Sepconj_comm: forall P Q : iProp', Entails (Sepconj P Q) (Sepconj Q P).
   Proof.
     ii. uipropall. ii. unfold Sepconj in *. des. subst. exists b, a. splits; et. apply URA.add_comm.
   Qed.
 
-  Lemma Sepconj_assoc: forall P Q R : iProp, Entails (Sepconj (Sepconj P Q) R) (Sepconj P (Sepconj Q R)).
+  Lemma Sepconj_assoc: forall P Q R : iProp', Entails (Sepconj (Sepconj P Q) R) (Sepconj P (Sepconj Q R)).
   Proof.
     ii. uipropall. ii. unfold Sepconj in *. des; subst. esplits; [|apply H2| |apply H3|apply H1]; ss.
     rewrite URA.add_assoc. ss.
   Qed.
 
-  Lemma Wand_intro_r: forall P Q R : iProp, Entails (Sepconj P Q) R -> Entails P (Wand Q R).
+  Lemma Wand_intro_r: forall P Q R : iProp', Entails (Sepconj P Q) R -> Entails P (Wand Q R).
   Proof.
     ii. uipropall. ii. eapply H; et.
   Qed.
 
-  Lemma Wand_elim_l: forall P Q R : iProp, Entails P (Wand Q R) -> Entails (Sepconj P Q) R.
+  Lemma Wand_elim_l: forall P Q R : iProp', Entails P (Wand Q R) -> Entails (Sepconj P Q) R.
   Proof.
     ii. uipropall. ii. unfold Sepconj in *. des; subst. eapply H; et. eapply URA.wf_mon; et.
   Qed.
 
-  Lemma Upd_intro: forall P : iProp, Entails P (Upd P).
+  Lemma Upd_intro: forall P : iProp', Entails P (Upd P).
   Proof.
     ii. uipropall. ii. exists r. splits; auto.
   Qed.
 
-  Lemma Upd_mono: forall P Q : iProp, Entails P Q -> Entails (Upd P) (Upd Q).
+  Lemma Upd_mono: forall P Q : iProp', Entails P Q -> Entails (Upd P) (Upd Q).
   Proof.
     ii. uipropall. ii. exploit H0; et. i. des.
     exploit (H r1); et. eapply URA.wf_mon; et.
   Qed.
 
-  Lemma Upd_trans: forall P : iProp, Entails (Upd (Upd P)) (Upd P).
+  Lemma Upd_trans: forall P : iProp', Entails (Upd (Upd P)) (Upd P).
   Proof.
     ii. uipropall. ii. exploit H; et. i. des. exploit x0; eauto.
   Qed.
 
-  Lemma Upd_frame_r: forall P R : iProp, Entails (Sepconj (Upd P) R) (Upd (Sepconj P R)).
+  Lemma Upd_frame_r: forall P R : iProp', Entails (Sepconj (Upd P) R) (Upd (Sepconj P R)).
   Proof.
     ii. uipropall. ii. unfold Sepconj in *. des. subst. exploit (H1 (b ⋅ ctx)); et.
     { rewrite URA.add_assoc. et. }
@@ -229,7 +229,7 @@ Hint Rewrite (Seal.sealing_eq "iProp"): iprop.
 #[export] Hint Unfold Sepconj Pure Ex Univ Own And Or Impl Wand Emp Persistently Later Upd Entails: iprop.
 
 
-From iris.bi Require Import derived_connectives updates internal_eq plainly.
+From iris.bi Require Import derived_connectives updates.
 From iris.prelude Require Import options.
 From iris.proofmode Require Export tactics.
 
@@ -237,13 +237,13 @@ Section IPM.
   Context {Σ: GRA.t}.
 
   (* Trivial Ofe Structure *)
-  Inductive uPred_equiv' (P Q : iProp) : Prop :=
+  Inductive uPred_equiv' (P Q : iProp') : Prop :=
     { uPred_in_equiv : ∀ x, URA.wf x -> P x <-> Q x }.
 
-  Local Instance uPred_equiv : Equiv iProp := uPred_equiv'.
-  Definition uPred_dist' (n : nat) (P Q : iProp) : Prop := uPred_equiv' P Q.
-  Local Instance uPred_dist : Dist iProp := uPred_dist'.
-  Definition uPred_ofe_mixin : OfeMixin iProp.
+  Local Instance uPred_equiv : Equiv iProp' := uPred_equiv'.
+  Definition uPred_dist' (n : nat) (P Q : iProp') : Prop := uPred_equiv' P Q.
+  Local Instance uPred_dist : Dist iProp' := uPred_dist'.
+  Definition uPred_ofe_mixin : OfeMixin iProp'.
   Proof.
     split.
     - intros P Q; split.
@@ -255,7 +255,7 @@ Section IPM.
       + ii. econs. i. transitivity (y x0); [apply H|apply H0]; ss.
     - i. ss.
   Qed.
-  Canonical Structure uPredO : ofe := Ofe iProp uPred_ofe_mixin.
+  Canonical Structure uPredO : ofe := Ofe iProp' uPred_ofe_mixin.
 
   Program Definition uPred_compl : Compl uPredO := λ c x, forall n, c n x.
 
@@ -382,12 +382,12 @@ Section IPM.
     - ii. uipropall. ii. right. ss.
   Qed.
 
-  Canonical Structure iPropI: bi :=
+  Canonical Structure iProp: bi :=
     {| bi_bi_mixin := iProp_bi_mixin;
        bi_bi_later_mixin := iProp_bi_later_mixin |}.
 
   (** extra BI instances *)
-  Lemma iProp_bupd_mixin: BiBUpdMixin iPropI Upd.
+  Lemma iProp_bupd_mixin: BiBUpdMixin iProp Upd.
   Proof.
     econs.
     - ii. econs. unfold bupd. uipropall. i. split.
@@ -400,16 +400,16 @@ Section IPM.
     - exact Upd_trans.
     - exact Upd_frame_r.
   Qed.
-  Global Instance iProp_bi_bupd: BiBUpd iPropI := {| bi_bupd_mixin := iProp_bupd_mixin |}.
+  Global Instance iProp_bi_bupd: BiBUpd iProp := {| bi_bupd_mixin := iProp_bupd_mixin |}.
 
-  Global Instance iProp_bupd_absorbing (P: iPropI): Absorbing (bupd P).
+  Global Instance iProp_bupd_absorbing (P: iProp): Absorbing (bupd P).
   Proof.
     ii. repeat red. unfold bupd, bi_bupd_bupd in *. ss. uipropall.
     ii. repeat red in H. uipropall. des. subst. exploit H2; et.
     eapply URA.wf_mon. rewrite URA.add_comm. rewrite URA.add_assoc. et.
   Qed.
 
-  Global Instance iProp_pure_forall: BiPureForall iPropI.
+  Global Instance iProp_pure_forall: BiPureForall iProp.
   Proof.
     ii. red. red. uipropall. ii. red. red in H.
     uipropall. i. specialize (H a). red in H. uipropall. ss.
@@ -419,13 +419,13 @@ End IPM.
 Section TEST.
   Context {Σ: GRA.t}.
 
-  Goal forall (P Q R: iPropI) (PQ: P -∗ Q) (QR: Q -∗ R), P -∗ R.
+  Goal forall (P Q R: iProp) (PQ: P -∗ Q) (QR: Q -∗ R), P -∗ R.
   Proof.
     i. iStartProof. iIntros "H".
     iApply QR. iApply PQ. iApply "H".
   Qed.
 
-  Goal forall (P Q: iPropI), ((bupd P) ∗ Q) -∗ (bupd Q).
+  Goal forall (P Q: iProp), ((bupd P) ∗ Q) -∗ (bupd Q).
   Proof.
     i. iStartProof.
     iIntros "[Hxs Hys]". iMod "Hxs". iApply "Hys".
