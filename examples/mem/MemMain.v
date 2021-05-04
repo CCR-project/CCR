@@ -15,7 +15,8 @@ Set Implicit Arguments.
 
 
 
-Require Import Mem0 Mem1 Mem01proof Main0 Main1.
+Require Import Mem0 Mem1 MemOpen Mem0Openproof.
+Require Import Main0 Main1 Main01proof.
 
 
 
@@ -93,6 +94,151 @@ Section AUX.
 
 End AUX.
 
+
+
+Require Import Open.
+
+Section PROOF.
+
+  Context `{Σ: GRA.t}.
+  Context `{@GRA.inG memRA Σ}.
+
+  Variable _ctxs: list UMod.t.
+  Let ctxs := List.map UMod.to_mod _ctxs.
+
+  Definition MemMain0 := Mod.add_list ([Mem0.Mem; Main0.Main] ++ ctxs).
+  Definition MemMain1 := Mod.add_list ([MemOpen.Mem; Main1.Main] ++ ctxs).
+  Definition MemMain2 := Mod.add_list ([SMod.to_src MemOpen.SMem; SMod.to_src Main1.SMain] ++ ctxs).
+
+  Let sbtb_stb: (MemStb ++ MainStb) = List.map (fun '(gn, fsb) => (gn, fsb.(fsb_fspec))) (MemSbtb ++ MainSbtb).
+  Proof. rewrite map_app. ss. unfold MainStb, MemStb. unseal "stb". refl. Qed.
+
+  Let TODO_REMOVE_THIS: SimModSem.ModPair.sim MemOpen.Mem Mem0.Mem.
+  Proof.
+    econs.
+    { ii. eapply SimModSem.adequacy_lift.
+      replace (Mod.get_modsem Mem0.Mem sk) with (Mem0.MemSem sk) by refl.
+      replace (Mod.get_modsem MemOpen.Mem sk) with (MemOpen.MemSem sk) by refl.
+      eapply Mem0Openproof.correct.
+    }
+    { ss. }
+    { ii. repeat (econs; ss; ii; des; ss). }
+  Qed.
+
+  Let correct01: refines_closed MemMain0 MemMain1.
+  Proof.
+    etrans; cycle 1.
+    { instantiate (1:=Mod.add_list ([Mem0.Mem; Main1.Main] ++ ctxs)).
+      eapply refines_close.
+      unfold MemMain1. rewrite ! Mod.add_list_app. eapply (SimModSem.refines_proper_r).
+      hexploit (SimModSem.refines_proper_r [MemOpen.Mem] [Mem0.Mem] [Main1.Main]).
+      { cbn. rewrite ! ModL.add_empty_r. eapply SimModSem.adequacy_local. eapply TODO_REMOVE_THIS. }
+      intro T; des. cbn in T. rewrite ! ModL.add_empty_r in T. ss.
+    }
+    etrans; cycle 1.
+    { instantiate (1:=Mod.add_list ([Mem0.Mem; Main0.Main] ++ ctxs)).
+      eapply refines_close.
+      rewrite ! Mod.add_list_app. eapply (SimModSem.refines_proper_r).
+      hexploit (SimModSem.refines_proper_l [Main1.Main] [Main0.Main] [Mem0.Mem]).
+      { cbn. rewrite ! ModL.add_empty_r. eapply SimModSem.adequacy_local.
+        eapply Main01proof.correct.
+      }
+      intro T; des. cbn in T. rewrite ! ModL.add_empty_r in T. ss.
+    }
+    refl.
+  Qed.
+
+  Let _kmds: list KMod.t := [SMem].
+  Let correct12: refines_closed MemMain1 MemMain2.
+  Proof.
+    eapply adequacy_open.
+    
+  (Mod.add_list
+     (List.map
+        (SMod.to_tgt
+           (fun ske : Sk.t =>
+            flat_map (List.map (map_snd fsb_fspec) ∘ SModSem.fnsems)
+              ((fun ske0 : Sk.t => List.map (flip SMod.get_modsem ske0) (List.map (disclose_smod ∘ KMod.to_tgt) _kmds)) ske) ++
+            flat_map (List.map (map_snd (fun _ : list val -> itree (callE +' pE +' eventE) val => fspec_trivial2)) ∘ UModSem.fnsems)
+              ((fun ske0 : Sk.t => List.map (flip UMod.get_modsem ske0) umds) ske))) (List.map (disclose_smod ∘ KMod.to_tgt) _kmds) ++
+      List.map UMod.to_mod umds)) (Mod.add_list (List.map KMod.to_src _kmds ++ List.map UMod.to_mod umds))
+  Qed.
+
+  Theorem correct: refines_closed MemMain0 MemMain2.
+  Proof.
+    etrans. Fail Timeout 1 eauto. (************* FIXME!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! *********)
+    { eassumption. }
+    { eapply correct12. }
+  Qed.
+
+
+
+  Let correct12: refines_closed MemMain1 MemMain2.
+  Proof.
+    set (global_sbtb:=MemSbtb++MainSbtb).
+    Local Opaque MemSbtb.
+    Local Opaque MainSbtb.
+    unfold MemMain1, MemMain2.
+    replace ([SMod.to_src SMem; SMod.to_src SMain]) with (List.map SMod.to_src [SMem; SMain]) by refl.
+    eapply adequacy_type2; revgoals.
+    { ss. right. left. unfold SMain. ss. }
+    { instantiate (1:=ε). des_ifs. unfold compose. cbn.
+      unfold ModSemL.initial_r_state in *. clarify. ss. repeat (try rewrite URA.unit_id; try rewrite URA.unit_idl).
+      eapply GRA_wf_embed. eapply Auth_wf_black. repeat ur. i; ss. des_ifs.
+    }
+    { ss. }
+    { set (skenv := Sk.load_skenv (fold_right Sk.add Sk.unit (List.map SMod.sk [SMem; SMain]))).
+      econs.
+      { esplits; cycle 1.
+        { Fail Timeout 1 refl. (**************** FIXTHIS!!!!!!!!!!!!!!!!! ********************) unfold Mem. refl. }
+        ii. ss. stb_tac.
+        rewrite ! eq_rel_dec_correct in *. des_ifs; subst; esplits; try refl; et.
+      }
+      econs.
+      { esplits; cycle 1.
+        { Fail Timeout 1 refl. (**************** FIXTHIS!!!!!!!!!!!!!!!!! ********************) unfold Main. refl. }
+        ii. ss. stb_tac. 
+        rewrite ! eq_rel_dec_correct in *. des_ifs; subst; esplits; try refl; et.
+      }
+      econs.
+    }
+  Qed.
+
+  Let correct01: refines_closed MemMain0 MemMain1.
+  Proof.
+    etrans; cycle 1.
+    { instantiate (1:=ModL.add Mem0.Mem Main1.Main).
+      eapply refines_close.
+      hexploit (SimModSem.refines_proper_r [Mem1.Mem] [Mem0.Mem] [Main1.Main]).
+      { cbn. rewrite ! ModL.add_empty_r. eapply SimModSem.adequacy_local.
+        eapply Mem01proof.correct. }
+      intro T; des. cbn in T. rewrite ! ModL.add_empty_r in T. ss.
+    }
+    etrans; cycle 1.
+    { instantiate (1:=ModL.add Mem0.Mem Main0.Main).
+      eapply refines_close.
+      hexploit (SimModSem.refines_proper_l [Main1.Main] [Main0.Main] [Mem0.Mem]).
+      { cbn. rewrite ! ModL.add_empty_r. eapply SimModSem.adequacy_local.
+        econs.
+        - i. cbn. eapply SimModSem.adequacy_lift. admit "should be ez".
+        - ss.
+        - cbn. ii. rr. econs; ss.
+          { repeat (econs; ii; ss; des; ss). }
+          { repeat (econs; ii; ss; des; ss). }
+      }
+      intro T; des. cbn in T. rewrite ! ModL.add_empty_r in T. ss.
+    }
+    refl.
+  Qed.
+
+  Theorem correct: refines_closed MemMain0 MemMain2.
+  Proof.
+    etrans. Fail Timeout 1 eauto. (************* FIXME!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! *********)
+    { eassumption. }
+    { eapply correct12. }
+  Qed.
+
+End PROOF.
 
 
 

@@ -35,17 +35,16 @@ Section PROOF.
   (***
         void* x = malloc(1);
         *x = 42;
-        unknown_call(x);
+        unknown_call(); // may GUESS the location &x and change the contents
         y = *x;
         return y; ~~~> return 42;
    ***)
 
   Definition mainBody: list val -> itree (hCallE +' pE +' eventE) val :=
     fun _ =>
-      x <- trigger (hCall true "malloc" [Vint 1]↑);; x <- x↓?;;
-      trigger (hCall true "store" [x ; Vint 42]↑);;
-      trigger (hCall false "unknown_call" [x]↑);;
-      trigger (hCall true "load" [x]↑);;
+      APC;;
+      trigger (hCall false "unknown_call" ([]: list val, false)↑);;
+      APC;;
       Ret (Vint 42)
   .
 

@@ -47,7 +47,7 @@ Section PROOF.
 
   Definition SMemSem: Sk.t -> SModSem.t := disclose_smodsem ∘ _SMemSem.
 
-  Definition MemSem: Sk.t -> ModSem.t := (SModSem.to_tgt MemStb) ∘ SMemSem.
+  Definition MemSem: Sk.t -> ModSem.t := (SModSem.to_tgt []) ∘ SMemSem.
 
   Definition _SMem: SMod.t := {|
     SMod.get_modsem := _SMemSem;
@@ -56,6 +56,8 @@ Section PROOF.
   .
 
   Definition SMem: SMod.t := disclose_smod _SMem.
+
+  Definition Mem: Mod.t := SMod.to_tgt (fun _ => []) SMem.
 
 End PROOF.
 Global Hint Unfold MemStb: stb.
