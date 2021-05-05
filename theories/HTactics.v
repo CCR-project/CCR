@@ -950,48 +950,7 @@ Section HLEMMAS.
              ((mrs_tgt, frs_tgt),
               itr_tgt).
   Proof.
-    rewrite unfold_APC. ired_l.
-    try prw _red_lsim 2 1 0.
-    match goal with
-    | [ |- gpaco6 _ _ _ _ _ _ _ _ (_, ?src) _ ] => replace src with src; cycle 1
-    end.
-    { evar (f: _flag). etrans.
-      - _red_interp_tgt f. Undo 1.
-        _red_interp f.
-    }
-    match goal with
-    | [ |- ITree.bind' _ ?term = _ ] =>
-      let my_interp := get_head term in
-      ltac_database_get namedb my_interp;
-        (* let code := match goal with *)
-        (*             | [ |- let _ := ?code in _ ] => let name := fresh "_TMP_" in intro name; clear name; code *)
-        (*             end *)
-        (* in *)
-        match goal with
-        | [ |- let _ := ?code in _ ] =>
-          let name := fresh "_TMP_" in
-          intro name; clear name;
-            let itr := get_tail term in
-            idtac my_interp; idtac itr;
-              ltac_database_get namedb (code, "bind")
-        end
-    end.
-    Ltac get_code :=
-    .
-    let tmp := get_code in pose tmp.
-    i.
-
-    match goal with
-    | [ |- ITree.bind' _ (interp_hCallE_tgt _ _ ?itr) = _ ] =>
-      idtac itr
-    end.
-
-
-
-
-    Set Ltac Debug.
-    ired_l.
-    gstep. eapply sim_itree_choose_src.
+    rewrite unfold_APC. ired_l. gstep. eapply sim_itree_choose_src.
     { eapply FUEL. }
     exists false. gstep. eapply sim_itree_tau_src.
     { eapply OrdArith.lt_add_r. eauto with ord_step. }
