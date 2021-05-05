@@ -10,8 +10,6 @@ Require Export HoareDef STB.
 Require Import Hoareproof0 Hoareproof1.
 Require Import SimModSem.
 
-Generalizable Variables E R A B C X Y Σ.
-
 Set Implicit Arguments.
 
 

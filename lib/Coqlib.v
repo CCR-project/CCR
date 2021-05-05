@@ -6,6 +6,7 @@ Require Export Bool.
 Ltac check_safe := let n := numgoals in guard n < 2.
 Require Export sflib.
 From Paco Require Export paco.
+Notation "f ∘ g" := (fun x => (f (g x))). (*** TODO: move to Coqlib ***)
 Require Export Basics.
 
 Require Import Relations.
@@ -1431,3 +1432,5 @@ Ltac unshelve_goal :=
   | [|- shelve__ _] => shelve
   | _ => idtac
   end.
+
+Notation "f ∘ g" := (fun x => (f (g x))).

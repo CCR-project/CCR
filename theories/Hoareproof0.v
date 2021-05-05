@@ -12,8 +12,6 @@ Require Import SimGlobal.
 From Ordinal Require Import Ordinal Arithmetic.
 Require Import Red IRed.
 
-Generalizable Variables E R A B C X Y Σ.
-
 Set Implicit Arguments.
 
 
