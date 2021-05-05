@@ -243,6 +243,99 @@ Ltac ltac_database_get D T :=
              end;
     clear H ].
 
+
+
+(* Class red_database := mk_rdb { *)
+(*   rdb_interp: Boxer; *)
+(*   rdb_bind: Boxer; *)
+(*   rdb_tau: Boxer; *)
+(* } *)
+(* . *)
+
+(* Section AUX. *)
+
+(*   Context `{Σ: GRA.t}. *)
+
+(*   Global Program Instance interp_tgt_rdb: red_database := *)
+(*     mk_rdb *)
+(*       (boxer interp_hCallE_tgt) *)
+(*       (boxer interp_tgt_bind) *)
+(*       (boxer interp_tgt_tau) *)
+(*   . *)
+
+(* End AUX. *)
+
+Class red_database (interp: Boxer) := mk_rdb {
+  rdb_bind: Boxer;
+  rdb_tau: Boxer;
+  rdb_ret: Boxer;
+  rdb_trigger0: Boxer;
+  rdb_trigger1: Boxer;
+  rdb_trigger2: Boxer;
+}
+.
+Arguments mk_rdb {interp}.
+Arguments rdb_bind {interp}.
+Arguments rdb_tau {interp}.
+Arguments rdb_ret {interp}.
+Arguments rdb_trigger0 {interp}.
+Arguments rdb_trigger1 {interp}.
+Arguments rdb_trigger2 {interp}.
+
+Section AUX.
+
+  Context `{Σ: GRA.t}.
+
+  Global Program Instance interp_tgt_rdb: red_database (boxer (@interp_hCallE_tgt)) :=
+    mk_rdb
+      (boxer interp_tgt_bind)
+      (boxer interp_tgt_tau)
+      (boxer interp_tgt_ret)
+      (boxer interp_tgt_hcall)
+      (boxer interp_tgt_triggere)
+      (boxer interp_tgt_triggerp)
+  .
+
+  Check interp_tgt_rdb.
+  Check interp_tgt_rdb.(rdb_bind).
+  Compute (interp_tgt_rdb.(rdb_bind)).
+
+  Goal False.
+    unshelve evar (T: red_database (boxer (@interp_hCallE_tgt))).
+    { typeclasses eauto. }
+    assert(H: T.(rdb_bind) = boxer interp_tgt_bind) by refl.
+    Show Proof.
+    Check (T.(rdb_bind)).
+
+    pose (rdb_bind interp_tgt_rdb) as x; cbn in x.
+    match x with
+    | boxer ?y => idtac y
+    | ?y => idtac y
+    end.
+    match goal with
+    | H := boxer ?x |- _ => idtac x
+    end.
+
+    match constr:(rdb_bind interp_tgt_rdb) with
+    | boxer ?x => idtac "A"
+    | _ => idtac "B"
+    end.
+    (* match (T.(rdb_bind)) with *)
+    (* | ?x => idtac x *)
+    (* end. *)
+
+    (* match (rdb_bind T) with *)
+    (* | boxer ?bind_lemma => idtac bind_lemma *)
+    (* end. *)
+    Check (T.(rdb_bind)).
+    (* assert(T: red_database (boxer interp_hCallE_tgt)). *)
+    (* { typeclasses eauto. } *)
+  Abort.
+
+End AUX.
+
+
+
 (* Ltac ltac_database_get_constr D T := *)
 (*   ltac_database_get D T; *)
 (*   match goal with *)
@@ -441,6 +534,57 @@ Ltac _red_interp f :=
   end
 .
 
+
+Ltac __red_interp_tc f tc itr :=
+  let name := fresh "TMP" in
+  match itr with
+  | ITree.bind' _ _ =>
+    instantiate (f:=_continue); pose (rdb_bind tc) as name; cbn in name;
+    match goal with | H := boxer ?lemma |- _ => eapply lemma; fail end
+  | Tau _ =>
+    instantiate (f:=_break); pose (rdb_tau tc) as name; cbn in name;
+    match goal with | H := boxer ?lemma |- _ => eapply lemma; fail end
+  | Ret _ =>
+    instantiate (f:=_continue); pose (rdb_ret tc) as name; cbn in name;
+    match goal with | H := boxer ?lemma |- _ => eapply lemma; fail end
+  | trigger ?e =>
+    instantiate (f:=_break);
+    ((pose (rdb_trigger0 tc) as name; cbn in name; match goal with | H := boxer ?lemma |- _ => eapply lemma end) ||
+     (pose (rdb_trigger1 tc) as name; cbn in name; match goal with | H := boxer ?lemma |- _ => eapply lemma end) ||
+     (pose (rdb_trigger2 tc) as name; cbn in name; match goal with | H := boxer ?lemma |- _ => eapply lemma end) ||
+     fail 2)
+  | triggerUB =>
+    instantiate (f:=_break); apply interp_tgt_triggerUB; fail
+  | triggerNB =>
+    instantiate (f:=_break); apply interp_tgt_triggerNB; fail
+  | unwrapU _ =>
+    instantiate (f:=_break); apply interp_tgt_unwrapU; fail
+  | unwrapN _ =>
+    instantiate (f:=_break); apply interp_tgt_unwrapN; fail
+  | assume _ =>
+    instantiate (f:=_break); apply interp_tgt_assume; fail
+  | guarantee _ =>
+    instantiate (f:=_break); apply interp_tgt_guarantee; fail
+  | _ =>
+    fail
+  end
+.
+
+Ltac _red_interp_tc f :=
+  match goal with
+  | [ |- ITree.bind' _ ?term = _ ] =>
+    let my_interp := get_head term in
+    let itr := get_tail term in
+    let tc := fresh "_TC_" in
+    unshelve evar (tc: red_database (boxer my_interp)); [typeclasses eauto|];
+    __red_interp_tc f tc itr
+  | [ |- interp_hCallE_tgt _ _ _ = _] =>
+    instantiate (f:=_continue); apply bind_ret_r_rev; fail
+  | _ => fail
+  end
+.
+  
+
 (* Ltac _red_interp_tgt f := *)
 (*   match goal with *)
 (*   | [ |- ITree.bind' _ (interp_hCallE_tgt _ _ ?itr) = _ ] => *)
@@ -490,7 +634,7 @@ Ltac _red_interp_tgt f :=
 
 Ltac _red_lsim f :=
   (* _red_interp_tgt f || _red_itree f || fail *)
-  _red_interp f || _red_itree f || fail
+  _red_interp_tc f || _red_itree f || fail
 .
 
 Ltac ired_l := try (prw _red_lsim 2 1 0).
@@ -507,53 +651,6 @@ Ltac asimpl := try (unfold alist_add, alist_remove in *); ss.
 
 
 (* Hoare Parse *)
-
-Section HOARE.
-  Let Any_tgt := Any.t.
-  Notation Es' := (hCallE +' pE +' eventE).
-  Context `{Σ: GRA.t}.
-  Variable stb: list (gname * fspec).
-
-  Definition HoareFunArg
-             {X Y: Type}
-             (P: X -> Y -> Any_tgt -> ord -> Σ -> Prop): Any_tgt -> itree Es (X * Y * ord) := fun varg_tgt =>
-    varg_src <- trigger (Take Y);;
-    x <- trigger (Take X);;
-    rarg <- trigger (Take Σ);; forge rarg;; (*** virtual resource passing ***)
-    (checkWf);;
-    ord_cur <- trigger (Take _);;
-    assume(P x varg_src varg_tgt ord_cur rarg);; (*** precondition ***)
-    Ret (x, varg_src, ord_cur)
-  .
-
-  Definition HoareFunRet
-             {X Z: Type}
-             (Q: X -> Z -> Any_tgt -> Σ -> Prop): X -> Z -> itree Es Any_tgt := fun x vret_src =>
-    vret_tgt <- trigger (Choose Any_tgt);;
-    '(mret, fret) <- trigger (Choose _);; put mret fret;; (*** updating resources in an abstract way ***)
-    rret <- trigger (Choose Σ);; guarantee(Q x vret_src vret_tgt rret);; (*** postcondition ***)
-    (discard rret);; (*** virtual resource passing ***)
-
-    Ret vret_tgt (*** return ***)
-  .
-
-  Lemma HoareFun_parse
-        {X Y Z: Type}
-        (P: X -> Y -> Any_tgt -> ord -> Σ -> Prop)
-        (Q: X -> Z -> Any_tgt -> Σ -> Prop)
-        (body: Y -> itree Es' Z)
-        (varg_tgt: Any_tgt)
-    :
-      HoareFun stb P Q body varg_tgt =
-      '(x, varg_src, ord_cur) <- HoareFunArg P varg_tgt;;
-      vret_src <- match ord_cur with
-                  | ord_pure n => (interp_hCallE_tgt stb ord_cur APC);; trigger (Choose _)
-                  | _ => (interp_hCallE_tgt stb ord_cur (body varg_src))
-                  end;;
-      HoareFunRet Q x vret_src.
-  Proof.
-  Admitted.
-End HOARE.
 
 
 (* "safe" simulation constructors *)
@@ -766,162 +863,6 @@ End SIM.
 Section HLEMMAS.
   Context `{Σ: GRA.t}.
   Local Opaque GRA.to_URA.
-
-  Lemma hcall_clo_ord_weaken (o_new: Ord.t)
-        Y Z (ftsp1: ftspec Y Z)
-        (mr_src1 fr_src1 rarg_src: Σ)
-        (o: ord) (x: ftsp1.(X))
-        (cur: Σ)
-        r rg (n: nat) mr_src0 mp_src0 fr_src0
-        (ftsp0: ftspec Y Z)
-        mrs_tgt frs_tgt k_tgt k_src
-        fn tbr ord_cur varg_src varg_tgt
-        (wf: (Σ * Any.t) * (Σ * Any.t) -> Prop)
-
-        (WEAKER: ftspec_weaker ftsp1 ftsp0)
-        (GWF: URA.updatable (URA.add mr_src0 fr_src0) cur /\ URA.wf cur)
-        (UPDATABLE: URA.updatable cur (URA.add mr_src1 (URA.add rarg_src fr_src1)))
-        (FUEL: (15 < n)%ord)
-        (PRE: ftsp1.(precond) x varg_src varg_tgt o rarg_src)
-        (PURE: ord_lt o ord_cur /\
-               (tbr = true -> is_pure o) /\ (tbr = false -> o = ord_top))
-        (WF: wf ((mr_src1, mp_src0), mrs_tgt))
-        (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
-        (POST: forall (vret_tgt : Any.t) (mrs_src1 mrs_tgt1 : (Σ * Any.t))
-                      (rret: Σ) (vret_src: Z)
-                      (WF: wf (mrs_src1, mrs_tgt1)),
-            exists (mr_src2: Σ) (mp_src2: Any.t),
-              (<<LOOKUP: mrs_src1 = (mr_src2, mp_src2)>>) /\
-              forall (VALID: URA.wf (URA.add mr_src2 (URA.add fr_src1 rret)))
-                     (POST: ftsp1.(postcond) x vret_src vret_tgt rret),
-                gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ eqr o_new
-                       (mrs_src1, URA.add fr_src1 rret, k_src vret_src) (mrs_tgt1, frs_tgt, k_tgt vret_tgt))
-    :
-      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ eqr n
-             (mr_src0, mp_src0, fr_src0, (HoareCall tbr ord_cur (mk_fspec ftsp0) fn varg_src) >>= k_src)
-             (mrs_tgt, frs_tgt, trigger (Call fn varg_tgt) >>= k_tgt)
-  .
-  Proof.
-  Admitted.
-
-  Lemma hcall_clo_weaken Y Z (ftsp1: ftspec Y Z)
-        (mr_src1 fr_src1 rarg_src: Σ)
-        (o: ord) (x: __shelve__ ftsp1.(X))
-        (cur: Σ)
-        r rg (n: nat) mr_src0 mp_src0 fr_src0
-        (ftsp0: ftspec Y Z)
-        mrs_tgt frs_tgt k_tgt k_src
-        fn tbr ord_cur varg_src varg_tgt
-        (wf: (Σ * Any.t) * (Σ * Any.t) -> Prop)
-
-        (WEAKER: ftspec_weaker ftsp1 ftsp0)
-        (GWF: URA.updatable (URA.add mr_src0 fr_src0) cur /\ URA.wf cur)
-        (UPDATABLE: URA.updatable cur (URA.add mr_src1 (URA.add rarg_src fr_src1)))
-        (FUEL: (15 < n)%ord)
-        (PRE: ftsp1.(precond) x varg_src varg_tgt o rarg_src)
-        (PURE: ord_lt o ord_cur /\
-               (tbr = true -> is_pure o) /\ (tbr = false -> o = ord_top))
-        (WF: wf ((mr_src1, mp_src0), mrs_tgt))
-        (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
-        (POST: forall (vret_tgt : Any.t) (mrs_src1 mrs_tgt1 : (Σ * Any.t))
-                      (rret: Σ) (vret_src: Z)
-                      (WF: wf (mrs_src1, mrs_tgt1)),
-            exists (mr_src2: Σ) (mp_src2: Any.t),
-              (<<LOOKUP: mrs_src1 = (mr_src2, mp_src2)>>) /\
-              forall (VALID: URA.wf (URA.add mr_src2 (URA.add fr_src1 rret)))
-                     (POST: ftsp1.(postcond) x vret_src vret_tgt rret),
-                gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ eqr 100
-                       (mrs_src1, URA.add fr_src1 rret, k_src vret_src) (mrs_tgt1, frs_tgt, k_tgt vret_tgt))
-    :
-      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ eqr n
-             (mr_src0, mp_src0, fr_src0, (HoareCall tbr ord_cur (mk_fspec ftsp0) fn varg_src) >>= k_src)
-             (mrs_tgt, frs_tgt, trigger (Call fn varg_tgt) >>= k_tgt)
-  .
-  Proof.
-    eapply (@hcall_clo_ord_weaken 100); eauto.
-  Qed.
-
-  Lemma hcall_clo
-        (mr_src1 fr_src1 rarg_src: Σ)
-        (o: ord) X (x: __shelve__ X)
-        (cur: Σ)
-        r rg (n: nat) mr_src0 mp_src0 fr_src0 Y Z
-        (P: X -> Y -> Any.t -> ord -> Σ -> Prop)
-        (Q: X -> Z -> Any.t -> Σ -> Prop)
-        mrs_tgt frs_tgt k_tgt k_src
-        fn tbr ord_cur varg_src varg_tgt
-        (wf: (Σ * Any.t) * (Σ * Any.t) -> Prop)
-
-        (GWF: URA.updatable (URA.add mr_src0 fr_src0) cur /\ URA.wf cur)
-        (UPDATABLE: URA.updatable cur (URA.add mr_src1 (URA.add rarg_src fr_src1)))
-        (FUEL: (15 < n)%ord)
-        (PRE: P x varg_src varg_tgt o rarg_src)
-        (PURE: ord_lt o ord_cur /\
-               (tbr = true -> is_pure o) /\ (tbr = false -> o = ord_top))
-        (WF: wf ((mr_src1, mp_src0), mrs_tgt))
-        (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
-        (POST: forall (vret_tgt : Any.t) (mrs_src1 mrs_tgt1 : (Σ * Any.t))
-                      (rret: Σ) (vret_src: Z)
-                      (WF: wf (mrs_src1, mrs_tgt1)),
-            exists (mr_src2: Σ) (mp_src2: Any.t),
-              (<<LOOKUP: mrs_src1 = (mr_src2, mp_src2)>>) /\
-              forall (VALID: URA.wf (URA.add mr_src2 (URA.add fr_src1 rret)))
-                     (POST: Q x vret_src vret_tgt rret),
-                gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ eqr 100
-                       (mrs_src1, URA.add fr_src1 rret, k_src vret_src) (mrs_tgt1, frs_tgt, k_tgt vret_tgt))
-    :
-      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ eqr n
-             (mr_src0, mp_src0, fr_src0, (HoareCall tbr ord_cur (mk P Q) fn varg_src) >>= k_src)
-             (mrs_tgt, frs_tgt, trigger (Call fn varg_tgt) >>= k_tgt).
-  Proof.
-    eapply hcall_clo_weaken; eauto.
-    { refl. }
-    { eauto. }
-    { eauto. }
-  Qed.
-
-  Lemma harg_clo
-        r rg mr_src0 mp_src0 fr_src0
-        X Y (P: X -> Y -> Any.t -> ord -> Σ -> Prop) varg_tgt
-        mrs_tgt frs_tgt f_tgt k_src
-        (wf: (Σ * Any.t) * (Σ * Any.t) -> Prop)
-        (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
-        (ARG:
-           forall x varg_src rarg_src ord_cur
-                  (VALID: URA.wf (URA.add mr_src0 (URA.add fr_src0 rarg_src)))
-                  (PRE: P x varg_src varg_tgt ord_cur rarg_src),
-             gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ eqr 90
-                    (mr_src0, mp_src0, URA.add fr_src0 rarg_src, k_src (x, varg_src, ord_cur))
-                    (mrs_tgt, frs_tgt, f_tgt))
-    :
-      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ eqr 100
-              (mr_src0, mp_src0, fr_src0, (HoareFunArg P varg_tgt >>= k_src))
-              (mrs_tgt, frs_tgt, f_tgt)
-  .
-  Proof.
-  Admitted.
-
-  Lemma hret_clo (mr_src1 rret_src: Σ)
-        r rg n mr_src0 mp_src0 fr_src0
-        X Z (Q: X -> Z -> Any.t -> Σ -> Prop)
-        x vret_src vret_tgt
-        mrs_tgt frs_tgt
-        (wf: (Σ * Any.t) * (Σ * Any.t) -> Prop)
-        (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
-        (FUEL: (14 < n)%ord)
-        (cur: Σ)
-        (GWF: URA.updatable (URA.add mr_src0 fr_src0) cur /\ URA.wf cur)
-        (UPDATABLE: URA.updatable cur (URA.add mr_src1 rret_src))
-        (POST: Q x vret_src vret_tgt rret_src)
-        (WF: wf ((mr_src1, mp_src0), mrs_tgt))
-        (EQ: eqr (mr_src1, mp_src0, ε) (mrs_tgt, frs_tgt) vret_tgt vret_tgt)
-    :
-      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ eqr n
-             (mr_src0, mp_src0, fr_src0, (HoareFunRet Q x vret_src))
-             ((mrs_tgt, frs_tgt), (Ret vret_tgt))
-  .
-  Proof.
-  Admitted.
 
   Lemma APC_step_clo
         (fn: gname) Y (args: Y) (next: Ord.t) (n1: Ord.t)
