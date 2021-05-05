@@ -13,8 +13,6 @@ Require Import SimGlobal.
 Require Import HoareDef.
 From Ordinal Require Import Ordinal Arithmetic.
 
-Generalizable Variables E R A B C X Y Σ.
-
 Set Implicit Arguments.
 
 

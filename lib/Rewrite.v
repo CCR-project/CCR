@@ -2,55 +2,58 @@ Tactic Notation "mrewrite" uconstr(EQ) "in" "*" :=
   rewrite EQ in *.
 Tactic Notation "mrewrite" uconstr(EQ) "in" "*" :=
   rewrite EQ in *.
-Tactic Notation "mrewrite" uconstr(EQ) "in" uconstr(H) :=
+Tactic Notation "mrewrite" uconstr(EQ) "in" ident(H) :=
   rewrite EQ in H.
 Tactic Notation "mrewrite" uconstr(EQ) :=
   rewrite EQ.
 Tactic Notation "mrewrite" "<-" uconstr(EQ) "in" "*" :=
   rewrite <- EQ in *.
-Tactic Notation "mrewrite" "<-" uconstr(EQ) "in" uconstr(H) :=
+Tactic Notation "mrewrite" "<-" uconstr(EQ) "in" ident(H) :=
   rewrite <- EQ in H.
 Tactic Notation "mrewrite" "<-" uconstr(EQ) :=
   rewrite <- EQ.
 
 Tactic Notation "mrewrite" "!" uconstr(EQ) "in" "*" :=
   rewrite ! EQ in *.
-Tactic Notation "mrewrite" "!" uconstr(EQ) "in" uconstr(H) :=
+Tactic Notation "mrewrite" "!" uconstr(EQ) "in" ident(H) :=
   rewrite ! EQ in H.
 Tactic Notation "mrewrite" "!" uconstr(EQ) :=
   rewrite ! EQ.
 Tactic Notation "mrewrite" "<-" "!" uconstr(EQ) "in" "*" :=
   rewrite <- ! EQ in *.
-Tactic Notation "mrewrite" "<-" "!" uconstr(EQ) "in" uconstr(H) :=
+Tactic Notation "mrewrite" "<-" "!" uconstr(EQ) "in" ident(H) :=
   rewrite <- ! EQ in H.
 Tactic Notation "mrewrite" "<-" "!" uconstr(EQ) :=
   rewrite <- ! EQ.
 
 Tactic Notation "rewrite" uconstr(EQ) "in" "*" :=
   mrewrite EQ in *.
-Tactic Notation "rewrite" uconstr(EQ) "in" uconstr(H) :=
+Tactic Notation "rewrite" uconstr(EQ) "in" ident(H) :=
   mrewrite EQ in H.
 Tactic Notation "rewrite" uconstr(EQ) :=
   mrewrite EQ.
 Tactic Notation "rewrite" "<-" uconstr(EQ) "in" "*" :=
   mrewrite <- EQ in *.
-Tactic Notation "rewrite" "<-" uconstr(EQ) "in" uconstr(H) :=
+Tactic Notation "rewrite" "<-" uconstr(EQ) "in" ident(H) :=
   mrewrite <- EQ in H.
 Tactic Notation "rewrite" "<-" uconstr(EQ) :=
   mrewrite <- EQ.
 
 Tactic Notation "rewrite" "!" uconstr(EQ) "in" "*" :=
   mrewrite ! EQ in *.
-Tactic Notation "rewrite" "!" uconstr(EQ) "in" uconstr(H) :=
+Tactic Notation "rewrite" "!" uconstr(EQ) "in" ident(H) :=
   mrewrite ! EQ in H.
 Tactic Notation "rewrite" "!" uconstr(EQ) :=
   mrewrite ! EQ.
 Tactic Notation "rewrite" "<-" "!" uconstr(EQ) "in" "*" :=
   mrewrite <- ! EQ in *.
-Tactic Notation "rewrite" "<-" "!" uconstr(EQ) "in" uconstr(H) :=
+Tactic Notation "rewrite" "<-" "!" uconstr(EQ) "in" ident(H) :=
   mrewrite <- ! EQ in H.
 Tactic Notation "rewrite" "<-" "!" uconstr(EQ) :=
   mrewrite <- ! EQ.
+
+Ltac mf_equal := f_equal.
+Ltac f_equal := mf_equal.
 
 Module REWRITETEST.
   Definition x: nat.
@@ -97,3 +100,6 @@ Module REWRITETEST.
     (* rewrite <- ! XY. Undo. *)
   Abort.
 End REWRITETEST.
+
+Require Import Basics.
+Notation "f ∘ g" := (fun x => (f (g x))).

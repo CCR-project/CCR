@@ -19,6 +19,9 @@ Compute (URA.car (t:=_memRA)).
 Instance memRA: URA.t := Auth.t _memRA.
 Compute (URA.car).
 
+Local Arguments Z.of_nat: simpl nomatch.
+
+
 Section PROOF.
   Context `{@GRA.inG memRA Σ}.
 
@@ -46,31 +49,31 @@ Section PROOF.
   .
   Proof.
     ss. unfold points_to. unfold Auth.white. repeat (rewrite URA.unfold_add; ss).
-    f_equal. unfold URA.car. ss.
-    repeat (apply Axioms.func_ext; i).
+    f_equal.
+    repeat (apply func_ext; i).
     des_ifs; bsimpl; des; des_sumbool; subst; ss;
-      try erewrite Z.leb_gt in *; try erewrite Z.leb_le in *; try erewrite Z.ltb_ge in *; try erewrite Z.ltb_lt in *; try lia.
-    - clear_tac. subst. try erewrite Zpos_P_of_succ_nat in *. try erewrite <- Zlength_correct in *.
+      try rewrite Z.leb_gt in *; try rewrite Z.leb_le in *; try rewrite Z.ltb_ge in *; try rewrite Z.ltb_lt in *; try lia.
+    - clear_tac. subst. rewrite Zpos_P_of_succ_nat in *. rewrite <- Zlength_correct in *.
       assert(x0 = ofs). { lia. } subst.
-      erewrite Z.sub_diag in *. ss.
-    - clear_tac. try erewrite Zpos_P_of_succ_nat in *. erewrite <- Zlength_correct in *.
+      rewrite Z.sub_diag in *. ss.
+    - clear_tac. rewrite Zpos_P_of_succ_nat in *. rewrite <- Zlength_correct in *.
       destruct (Z.to_nat (x0 - ofs)) eqn:T; ss.
       { exfalso. lia. }
-      erewrite Z.sub_add_distr in *. rewrite Z2Nat.inj_sub in Heq1; ss. erewrite T in *. ss. erewrite Nat.sub_0_r in *. ss.
-    - clear_tac. try erewrite Zpos_P_of_succ_nat in *. erewrite <- Zlength_correct in *.
+      rewrite Z.sub_add_distr in *. rewrite Z2Nat.inj_sub in Heq1; ss. rewrite T in *. ss. rewrite Nat.sub_0_r in *. ss.
+    - clear_tac. rewrite Zpos_P_of_succ_nat in *. rewrite <- Zlength_correct in *.
       destruct (Z.to_nat (x0 - ofs)) eqn:T; ss.
       { exfalso. lia. }
-      erewrite Z.sub_add_distr in *. rewrite Z2Nat.inj_sub in Heq1; ss. erewrite T in *. ss. erewrite Nat.sub_0_r in *. ss.
-    - clear_tac. try erewrite Zpos_P_of_succ_nat in *. try erewrite <- Zlength_correct in *.
+      rewrite Z.sub_add_distr in *. rewrite Z2Nat.inj_sub in Heq1; ss. rewrite T in *. ss. rewrite Nat.sub_0_r in *. ss.
+    - clear_tac. rewrite Zpos_P_of_succ_nat in *. rewrite <- Zlength_correct in *.
       assert(x0 = ofs). { lia. } subst.
-      erewrite Z.sub_diag in *. ss.
-    - clear_tac. try erewrite Zpos_P_of_succ_nat in *. erewrite <- Zlength_correct in *.
+      rewrite Z.sub_diag in *. ss.
+    - clear_tac. rewrite Zpos_P_of_succ_nat in *. rewrite <- Zlength_correct in *.
       destruct (Z.to_nat (x0 - ofs)) eqn:T; ss.
       { exfalso. lia. }
-      erewrite Z.sub_add_distr in *. rewrite Z2Nat.inj_sub in Heq1; ss. erewrite T in *. ss. erewrite Nat.sub_0_r in *. ss.
-    - clear_tac. try erewrite Zpos_P_of_succ_nat in *. try erewrite <- Zlength_correct in *.
+      rewrite Z.sub_add_distr in *. rewrite Z2Nat.inj_sub in Heq1; ss. rewrite T in *. ss. rewrite Nat.sub_0_r in *. ss.
+    - clear_tac. rewrite Zpos_P_of_succ_nat in *. rewrite <- Zlength_correct in *.
       assert(x0 = ofs). { lia. } subst.
-      erewrite Z.sub_diag in *. ss.
+      rewrite Z.sub_diag in *. ss.
   Qed.
 
 (* Lemma points_tos_points_to *)

@@ -322,11 +322,14 @@ Section HLEMMAS.
   Context `{Σ: GRA.t}.
   Local Opaque GRA.to_URA.
 
-  Definition mk_wf (A: Type) (R_src: A -> Any.t -> iProp) (R_tgt: A -> Any.t -> iProp): (Σ * Any.t) * (Σ * Any.t) -> Prop :=
-    fun '((mr_src, mp_src), (mr_tgt, mp_tgt)) =>
-      exists a,
-        (<<RSRC: R_src a mp_src mr_src >>) /\
-        (<<RTGT: R_tgt a mp_tgt mr_tgt >>)
+  Variant mk_wf (A: Type) (R_src: A -> Any.t -> iProp) (R_tgt: A -> Any.t -> iProp): (Σ * Any.t) * (Σ * Any.t) -> Prop :=
+  | mk_wf_intro
+      a
+      mr_src mp_src mr_tgt mp_tgt
+      (RSRC: R_src a mp_src mr_src)
+      (RTGT: R_tgt a mp_tgt mr_tgt)
+    :
+      mk_wf R_src R_tgt ((mr_src, mp_src), (mr_tgt, mp_tgt))
   .
 
   Lemma hcall_clo_ord_weaken (o_new: Ord.t)
@@ -404,7 +407,7 @@ Section HLEMMAS.
     repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
     repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
     repeat (ired_both; gstep; econs; eauto with ord_step).
-    { red. esplits; eauto. }
+    { econs; eauto. }
     i. exists (o_new + 8)%ord.
     repeat (ired_both; gstep; econs; eauto with ord_step). i.
     repeat (ired_both; gstep; econs; eauto with ord_step). i.
@@ -416,7 +419,7 @@ Section HLEMMAS.
       { symmetry. eapply OrdArith.add_O_r. }
       { eapply OrdArith.lt_add_r. rewrite Ord.from_nat_S. eapply Ord.S_pos. }
     }
-    i. ired_both; ss. eapply POST; et.
+    i. ired_both; ss. inv WF. eapply POST; et.
     iStartProof. iIntros "H". iDestruct "H" as "[H0 [H1 H2]]". iSplitR "H2".
     { iSplitL "H1".
       { iApply from_semantic; et. }
@@ -543,7 +546,7 @@ Section HLEMMAS.
     repeat (ired_both; gstep; econs; eauto with ord_step). intro VALID.
     repeat (ired_both; gstep; econs; eauto with ord_step). intro ord_cur.
     repeat (ired_both; gstep; econs; eauto with ord_step). i.
-    ired_both. red in WF. des. eapply ARG; et.
+    ired_both. inv WF. des. eapply ARG; et.
     iIntros "H". iDestruct "H" as "[H0 [_ H1]]". iSplitL "H1".
     { iApply from_semantic; et. }
     { iApply from_semantic; et. }
@@ -599,7 +602,7 @@ Section HLEMMAS.
     repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
     { rewrite URA.unit_id; ss. }
     repeat (ired_both; gstep; econs; eauto with ord_step).
-    { red. esplits; eauto. }
+    { econs; et. esplits; eauto. }
   Qed.
 
   Lemma APC_step_clo

@@ -47,8 +47,6 @@ Set Implicit Arguments.
 
 Arguments transl_all {Σ} _%string_scope {T}%type_scope _%itree_scope. (*** TODO: move to ModSem ***)
 
-Notation "f ∘ g" := (fun x => (f (g x))). (*** TODO: move to Coqlib ***)
-
 Inductive ord: Type :=
 | ord_pure (n: Ord.t)
 | ord_top
@@ -214,6 +212,7 @@ Global Opaque _APC.
 
 
 
+Require Import Logic.
 
 Section CANCEL.
 
@@ -242,6 +241,12 @@ Section CANCEL.
 
   Definition mk_simple {X: Type} (PQ: X -> ((Any_tgt -> ord -> Σ -> Prop) * (Any_tgt -> Σ -> Prop))): fspec :=
     mk_fspec (mk_tsimple PQ).
+  (* Definition mk_tsimple {X: Type} (PQ: X -> ((Any_tgt -> ord -> Σ -> Prop) * (Any_tgt -> Σ -> Prop))): ftspec (list val) (val) := *)
+  (*   @mk_ftspec _ _ _ X (fun x y a o => ((fst ∘ PQ) x a o: iProp) ** ⌜y↑ = a⌝) (fun x z a => ((snd ∘ PQ) x a: iProp) ** ⌜z↑ = a⌝) *)
+  (* . *)
+
+  (* Definition mk_simple {X: Type} (PQ: X -> ((Any_tgt -> ord -> Σ -> Prop) * (Any_tgt -> Σ -> Prop))): fspec := *)
+  (*   mk_fspec (mk_tsimple PQ). *)
 
 
 
@@ -512,7 +517,6 @@ Section SMOD.
 
 
 
-  Notation "(∘)" := (fun f g => f ∘ g) (at level 59).
 
   (* Definition l_bind A B (x: list A) (f: A -> list B): list B := List.flat_map f x. *)
   (* Definition l_ret A (a: A): list A := [a]. *)

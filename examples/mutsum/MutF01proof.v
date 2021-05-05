@@ -27,7 +27,6 @@ Local Open Scope nat_scope.
 (* TODO: move to SimModSem & add cpn3_wcompat *)
 Hint Resolve sim_itree_mon: paco.
 
-
 Section SIMMODSEM.
 
   Context `{Σ: GRA.t}.
@@ -35,18 +34,19 @@ Section SIMMODSEM.
   Let W: Type := (Σ * Any.t) * (Σ * Any.t).
 
   Let wf: W -> Prop :=
-    fun '(mrps_src0, mrps_tgt0) =>
-      (<<SRC: mrps_src0 = (ε, tt↑)>>) /\
-      (<<TGT: mrps_tgt0 = (ε, tt↑)>>)
-  .
+    mk_wf (fun (_: unit) _ => (True: iProp)%I) (fun _ _ => (True: iProp)%I).
 
   Theorem correct: ModPair.sim MutF1.F MutF0.F.
   Proof.
     econs; ss; [|admit ""].
     i. eapply adequacy_lift.
-    econstructor 1 with (wf:=wf); et; ss.
-    econs; ss. init. unfold ccall.
-    harg_tac. iRefresh. iDestruct PRE. des; clarify. unfold fF, ccall. anytac. ss.
+    econstructor 1 with (wf:=wf); et.
+    2: { econs; ss; red; uipropall. }
+    econs; ss. init.
+    eapply harg_clo; ss. i.
+
+    unfold ccall.
+    harg_tac. des; clarify. unfold fF, ccall. anytac. ss.
     steps. astart 10. destruct (dec (Z.of_nat x) 0%Z).
   Admitted.
 

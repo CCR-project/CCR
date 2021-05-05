@@ -8,8 +8,6 @@ Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
 
-Generalizable Variables E R A B C X Y Σ.
-
 Set Implicit Arguments.
 Set Typeclasses Depth 5.
 
