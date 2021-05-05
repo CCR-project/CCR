@@ -97,14 +97,14 @@ Section HEADER.
 
   Variable skenv: SkEnv.t.
 
-  Variant fb_has_spec (stb: list (gname * fspec)) (fb: nat) Y Z (ftsp: ftspec Y Z): Prop :=
+  Variant fb_has_spec (stb: list (gname * fspec)) (fb: mblock) Y Z (ftsp: ftspec Y Z): Prop :=
   | fb_has_spec_intro
       fn
       (FBLOCK: skenv.(SkEnv.blk2id) fb = Some fn)
       (SPEC: fn_has_spec stb fn ftsp)
   .
 
-  Lemma fb_has_spec_weaker (stb: list (gname * fspec)) (fb: nat) Y Z (ftsp0 ftsp1: ftspec Y Z)
+  Lemma fb_has_spec_weaker (stb: list (gname * fspec)) (fb: mblock) Y Z (ftsp0 ftsp1: ftspec Y Z)
         (SPEC: fb_has_spec stb fb ftsp1)
         (WEAK: ftspec_weaker ftsp0 ftsp1)
     :

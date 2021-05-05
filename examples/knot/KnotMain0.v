@@ -9,8 +9,6 @@ Require Import HoareDef.
 Require Import Mem1.
 Require Import TODOYJ TODO.
 
-Generalizable Variables E R A B C X Y Σ.
-
 Set Implicit Arguments.
 
 
@@ -35,7 +33,7 @@ Section PROOF.
   Definition mainF (skenv: SkEnv.t): list val -> itree Es val :=
     fun varg =>
       fibb <- (skenv.(SkEnv.id2blk) "fib")?;;
-      `fb: val <- ccall "knot" [Vptr fibb 0];; `fb: block <- (unblk fb)?;;
+      `fb: val <- ccall "knot" [Vptr fibb 0];; `fb: mblock <- (unblk fb)?;;
       fn <- (skenv.(SkEnv.blk2id) fb)?;;
       ccall fn [Vint 10].
 

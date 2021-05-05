@@ -12,8 +12,7 @@ From ExtLib Require Import
      Core.RelDec
      Structures.Maps
      Data.Map.FMapAList.
-
-Generalizable Variables E R A B C X Y Σ.
+Require Import Logic.
 
 Set Implicit Arguments.
 
@@ -32,11 +31,11 @@ Section PROOF.
 
   Context `{Σ: GRA.t}.
 
-  Definition main_spec: fspec := mk_simple (fun (_: unit) => ((fun _ o _ => o = ord_top), top2)).
-  Definition f_spec:    fspec := mk_simple (fun (n: nat) => ((fun varg o _ => varg = [Vint (Z.of_nat n)]↑ /\ o = ord_pure n),
-                                                             (fun vret _ => vret = (Vint (Z.of_nat (sum n)))↑))).
-  Definition g_spec:    fspec := mk_simple (fun (n: nat) => ((fun varg o _ => varg = [Vint (Z.of_nat n)]↑ /\ o = ord_pure n),
-                                                             (fun vret _ => vret = (Vint (Z.of_nat (sum n)))↑))).
+  Definition main_spec: fspec := mk_simple (fun (_: unit) => ((fun _ o => (⌜o = ord_top⌝: iProp)%I), fun _ => (True: iProp)%I)).
+  Definition f_spec:    fspec := mk_simple (fun (n: nat) => ((fun varg o => (⌜varg = [Vint (Z.of_nat n)]↑ /\ o = ord_pure n⌝: iProp)%I),
+                                                             (fun vret => (⌜vret = (Vint (Z.of_nat (sum n)))↑⌝: iProp)%I))).
+  Definition g_spec:    fspec := mk_simple (fun (n: nat) => ((fun varg o => (⌜varg = [Vint (Z.of_nat n)]↑ /\ o = ord_pure n⌝: iProp)%I),
+                                                             (fun vret => (⌜vret = (Vint (Z.of_nat (sum n)))↑⌝: iProp)%I))).
   Definition GlobalStb: list (gname * fspec) := [("main", main_spec); ("f", f_spec); ("g", g_spec)].
 
 End PROOF.

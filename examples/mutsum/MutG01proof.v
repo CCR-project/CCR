@@ -18,8 +18,6 @@ From ExtLib Require Import
 
 Require Import HTactics Logic YPM.
 
-Generalizable Variables E R A B C X Y.
-
 Set Implicit Arguments.
 
 Local Open Scope nat_scope.

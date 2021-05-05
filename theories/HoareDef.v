@@ -730,11 +730,18 @@ End SMod.
 
   Require Import Red.
 
-  Ltac interp_red := rewrite interp_vis ||
-                             rewrite interp_ret ||
-                             rewrite interp_tau ||
-                             rewrite interp_trigger ||
-                             rewrite interp_bind.
+  Ltac interp_red := erewrite interp_vis ||
+                              erewrite interp_ret ||
+                              erewrite interp_tau ||
+                              erewrite interp_trigger ||
+                              erewrite interp_bind.
+
+  (* TODO: remove it *)
+  Ltac interp_red2 := rewrite interp_vis ||
+                              rewrite interp_ret ||
+                              rewrite interp_tau ||
+                              rewrite interp_trigger ||
+                              rewrite interp_bind.
 
   Ltac _red_itree f :=
     match goal with
