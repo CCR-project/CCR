@@ -232,6 +232,7 @@ Hint Rewrite (Seal.sealing_eq "iProp"): iprop.
 From iris.bi Require Import derived_connectives updates.
 From iris.prelude Require Import options.
 From iris.proofmode Require Export tactics.
+Require Export Rewrite.
 
 Section IPM.
   Context {Σ: GRA.t}.
