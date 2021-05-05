@@ -9,8 +9,6 @@ Require Import HoareDef.
 Require Import TODOYJ.
 Require Import Logic YPM.
 
-Generalizable Variables E R A B C X Y Σ.
-
 Set Implicit Arguments.
 
 

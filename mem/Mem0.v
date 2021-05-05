@@ -44,7 +44,7 @@ Section PROOF.
       Ret (Vptr blk 0)
   .
 
-  Definition freeF_parg (args: list val): option (block * Z) :=
+  Definition freeF_parg (args: list val): option (mblock * Z) :=
     match args with
     | [Vptr b ofs] => Some (b, ofs)
     | _ => None
@@ -61,7 +61,7 @@ Section PROOF.
       Ret (Vint 0)
   .
 
-  Definition loadF_parg (args: list val): option (block * Z) :=
+  Definition loadF_parg (args: list val): option (mblock * Z) :=
     match args with
     | [Vptr b ofs] => Some (b, ofs)
     | _ => None
@@ -77,7 +77,7 @@ Section PROOF.
       Ret v
   .
 
-  Definition storeF_parg (args: list val): option (block * Z * val) :=
+  Definition storeF_parg (args: list val): option (mblock * Z * val) :=
     match args with
     | [Vptr b ofs; v] => Some (b, ofs, v)
     | _ => None

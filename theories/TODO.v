@@ -14,7 +14,7 @@ Definition unbool (v: val): option bool :=
   | _ => None
   end.
 
-Definition unblk (v: val): option block :=
+Definition unblk (v: val): option mblock :=
   match v with
   | Vptr b ofs =>
     if (Z.eq_dec ofs 0) then Some b else None
@@ -33,8 +33,8 @@ Definition val_type_sem (t: val_type): Set :=
   match t with
   | Tint => Z
   | Tbool => bool
-  | Tptr => (block * ptrofs)
-  | Tblk => block
+  | Tptr => (mblock * ptrofs)
+  | Tblk => mblock
   | Tuptyped => val
   end.
 

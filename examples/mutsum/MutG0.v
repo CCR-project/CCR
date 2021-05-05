@@ -8,8 +8,6 @@ Require Import Skeleton.
 Require Import PCM.
 Require Import TODO.
 
-Generalizable Variables E R A B C X Y Σ.
-
 Set Implicit Arguments.
 
 

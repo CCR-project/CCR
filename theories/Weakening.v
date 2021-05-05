@@ -87,13 +87,13 @@ Section PROOF.
                gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) bot6 bot6 R R (liftRR eq) 1 (st_src, fr, interp_hCallE_tgt stb_src o itr) (st_tgt, fr, interp_hCallE_tgt stb_tgt o itr)).
     { Local Transparent interp_hCallE_tgt.
       unfold interp_hCallE_tgt. gcofix CIH. i. ides itr.
-      { repeat interp_red.
+      { repeat interp_red2.
         mstep. eapply sim_itree_ret; ss. }
       { repeat interp_red.
         mstep. eapply sim_itree_tau; ss.
         gbase. eapply CIH; eauto. }
       rewrite <- bind_trigger. destruct e as [|[|]]; ss.
-      { destruct h. repeat interp_red. cbn.
+      { destruct h. repeat interp_red2. cbn.
         unfold unwrapN, triggerNB. rewrite ! bind_bind.
         destruct (alist_find fn0 stb_tgt) eqn:EQ.
         { eapply stb_stronger in EQ. des. inv WEAKER.

@@ -30,22 +30,22 @@ Create HintDb ord_step.
 
 
 
-Ltac interp_red := rewrite interp_vis ||
-                           rewrite interp_ret ||
-                           rewrite interp_tau ||
-                           rewrite interp_trigger ||
-                           rewrite interp_bind.
+Ltac interp_red := erewrite interp_vis ||
+                            erewrite interp_ret ||
+                            erewrite interp_tau ||
+                            erewrite interp_trigger ||
+                            erewrite interp_bind.
 
-Ltac interp_mrec_red := rewrite interp_mrec_hit ||
-                                rewrite interp_mrec_miss ||
-                                rewrite interp_mrec_bind ||
-                                rewrite interp_mrec_tau ||
-                                rewrite interp_mrec_ret.
+Ltac interp_mrec_red := erewrite interp_mrec_hit ||
+                                 erewrite interp_mrec_miss ||
+                                 erewrite interp_mrec_bind ||
+                                 erewrite interp_mrec_tau ||
+                                 erewrite interp_mrec_ret.
 
-Ltac interp_state_red := rewrite interp_state_trigger ||
-                                 rewrite interp_state_bind ||
-                                 rewrite interp_state_tau ||
-                                 rewrite interp_state_ret.
+Ltac interp_state_red := erewrite interp_state_trigger ||
+                                  erewrite interp_state_bind ||
+                                  erewrite interp_state_tau ||
+                                  erewrite interp_state_ret.
 
 Ltac ired_l := try (prw _red_gen 2 1 0).
 Ltac ired_r := try (prw _red_gen 1 1 0).
