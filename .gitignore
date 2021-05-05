@@ -40,3 +40,4 @@ main.byte
 !/imp_compile/configure
 !/imp_compile/Makefile
 !/imp_compile/CompCert
+!/imp_compile/run.sh

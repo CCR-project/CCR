@@ -1,6 +1,7 @@
 open Diagnostics
 open Driveraux
 open Compiler
+open Imp
 open Imp2Clight
 open ImpSimple
 open ImpFactorial
@@ -63,13 +64,13 @@ let compile_imp p ofile =
 
 let main =
   print_endline "Start Imp compilations...";
-  compile_imp (ImpSimple.imp_simple_prog) "simple.s";
-  compile_imp (ImpFactorial.imp_factorial_prog) "factorial.s";
-  compile_imp (ImpMutsum.imp_mutsumF_prog) "mutsumF.s";
-  compile_imp (ImpMutsum.imp_mutsumG_prog) "mutsumG.s";
-  compile_imp (ImpMutsum.imp_mutsumMain_prog) "mutsumMain.s";
-  compile_imp (ImpKnot.imp_knot_prog) "knot.s";
-  compile_imp (ImpMem1.imp_mem1_f) "mem1F.s";
-  compile_imp (ImpMem1.imp_mem1_main) "mem1Main.s";
-  compile_imp (ImpMem2.imp_mem2_prog) "mem2.s";
+  compile_imp (Imp.lift ImpSimple.imp_simple_prog) "simple.s";
+  compile_imp (Imp.lift ImpFactorial.imp_factorial_prog) "factorial.s";
+  compile_imp (Imp.lift ImpMutsum.imp_mutsumF_prog) "mutsumF.s";
+  compile_imp (Imp.lift ImpMutsum.imp_mutsumG_prog) "mutsumG.s";
+  compile_imp (Imp.lift ImpMutsum.imp_mutsumMain_prog) "mutsumMain.s";
+  compile_imp (Imp.lift ImpKnot.imp_knot_prog) "knot.s";
+  compile_imp (Imp.lift ImpMem1.imp_mem1_f) "mem1F.s";
+  compile_imp (Imp.lift ImpMem1.imp_mem1_main) "mem1Main.s";
+  compile_imp (Imp.lift ImpMem2.imp_mem2_prog) "mem2.s";
   print_endline "Done."

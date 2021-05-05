@@ -273,18 +273,38 @@ Definition progVars := list (gname * Z).
 Definition progFuns := list (gname * function).
 
 (** Imp program *)
+Record programL : Type := mk_programL {
+  ext_varsL : extVars;
+  ext_funsL : extFuns;
+  prog_varsL : progVars;
+  prog_funsL : progFuns;
+  publicL : list gname;
+  defsL : list (gname * Sk.gdef);
+}.
+
 Record program : Type := mk_program {
   ext_vars : extVars;
   ext_funs : extFuns;
   prog_vars : progVars;
   prog_funs : progFuns;
-  public : list gname -> list gname :=
+  public : list gname :=
     let evs := ext_vars in
     let efs := List.map (fun p => fst p) ext_funs in
     let ivs := List.map (fun p => fst p) prog_vars in
     let ifs := List.map (fun p => fst p) prog_funs in
-    fun l2 => ["malloc"; "free"] ++ evs ++ efs ++ ivs ++ ifs ++ l2;
+    evs ++ efs ++ ivs ++ ifs;
+  defs : list (gname * Sk.gdef) :=
+    let vs := (List.map (fun '(vn, vv) => (vn, Sk.Gvar vv)) prog_vars) in
+    let fs := (List.map (fun '(fn, _) => (fn, Sk.Gfun)) prog_funs) in
+    vs ++ fs;
 }.
+
+Definition lift (p : program) : programL :=
+  mk_programL
+    p.(ext_vars) p.(ext_funs) p.(prog_vars) p.(prog_funs) p.(public) p.(defs).
+
+Coercion lift : program >-> programL.
+(* Global Opaque imp_lift. *)
 
 (**** ModSem ****)
 Module ImpMod.
@@ -292,14 +312,14 @@ Section MODSEM.
 
   Context `{GRA: GRA.t}.
   Variable mn: mname.
-  Variable m: program.
+  Variable m: programL.
 
   Set Typeclasses Depth 5.
   (* Instance Initial_void1 : @Initial (Type -> Type) IFun void1 := @elim_void1. (*** TODO: move to ITreelib ***) *)
 
   Definition modsem (ge: SkEnv.t) : ModSem.t := {|
     ModSem.fnsems :=
-      List.map (fun '(fn, f) => (fn, cfun (eval_imp ge f))) m.(prog_funs);
+      List.map (fun '(fn, f) => (fn, cfun (eval_imp ge f))) m.(prog_funsL);
     ModSem.mn := mn;
     ModSem.initial_mr := ε;
     ModSem.initial_st := tt↑;
@@ -307,9 +327,7 @@ Section MODSEM.
 
   Definition get_mod: Mod.t := {|
     Mod.get_modsem := fun ge => (modsem ge);
-    Mod.sk :=
-      (List.map (fun '(vn, vv) => (vn, Sk.Gvar vv)) m.(prog_vars)) ++
-      (List.map (fun '(fn, _) => (fn, Sk.Gfun)) m.(prog_funs));
+    Mod.sk := m.(defsL);
   |}.
 
 End MODSEM.

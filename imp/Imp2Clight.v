@@ -113,12 +113,12 @@ Section Compile.
     fun src =>
       List.map (fun '(name, f) => (s2p name, Tfunction (make_arg_types (length f.(Imp.fn_params))) Tlong0 cc_default)) src.
 
-  Definition get_gmap (src : Imp.program) :=
+  Definition get_gmap (src : Imp.programL) :=
     mk_gmap
-      (List.map s2p src.(ext_vars))
-      (get_gmap_efuns src.(ext_funs))
-      (List.map (fun '(s, z) => s2p s) src.(prog_vars))
-      (get_gmap_ifuns src.(prog_funs))
+      (List.map s2p src.(ext_varsL))
+      (get_gmap_efuns src.(ext_funsL))
+      (List.map (fun '(s, z) => s2p s) src.(prog_varsL))
+      (get_gmap_ifuns src.(prog_funsL))
   .
 
   (** memory accessing calls *)
@@ -284,55 +284,166 @@ Section Compile.
   Let init_g : tgt_gdefs :=
     [(s2p "malloc", Gfun malloc_def); (s2p "free", Gfun free_def)].
 
-  Fixpoint NoDupB (l : list ident) : bool :=
+  Let id_init := List.map fst init_g.
+
+  Fixpoint NoDupB {A} decA (l : list A) : bool :=
     match l with
     | [] => true
     | h :: t =>
-      if (existsb (fun n => Pos.eqb h n) t)
-      then false
-      else NoDupB t
+      if in_dec decA h t then false else NoDupB decA t
     end
   .
 
-  Definition compile_gdefs (src : Imp.program) : option tgt_gdefs :=
-    let evars := compile_eVars src.(ext_vars) in
-    let ivars := compile_iVars src.(prog_vars) in
-    do efuns <- compile_eFuns src.(ext_funs);
-    do ifuns <- compile_iFuns src.(prog_funs);
-    let defs := init_g ++ evars ++ efuns ++ ivars ++ ifuns in
-    let ids := List.map (fun p => fst p) defs in
-    if (NoDupB ids) then Some defs else None
+  (* (* maybe cleanup using Dec... *) *)
+  (* Fixpoint NoDupB {K} {R : K -> K -> Prop} {RD_K : RelDec R} (l : list K) : bool := *)
+  (*   match l with *)
+  (*   | [] => true *)
+  (*   | h :: t => *)
+  (*     if (existsb (fun n => h ?[ R ] n) t) *)
+  (*     then false *)
+  (*     else NoDupB t *)
+  (*   end *)
+  (* . *)
+
+  Definition imp_prog_ids (src : Imp.programL) :=
+    let id_ev := List.map s2p src.(ext_varsL) in
+    let id_ef := List.map (fun p => s2p (fst p)) src.(ext_funsL) in
+    let id_iv := List.map (fun p => s2p (fst p)) src.(prog_varsL) in
+    let id_if := List.map (fun p => s2p (fst p)) src.(prog_funsL) in
+    id_init ++ id_ev ++ id_ef ++ id_iv ++ id_if
   .
 
-  Definition _compile (src : Imp.program) :=
+  Definition compile_gdefs (src : Imp.programL) : option tgt_gdefs :=
+    let ids := imp_prog_ids src in
+    if (@NoDupB _ positive_Dec ids) then
+      let evars := compile_eVars src.(ext_varsL) in
+      let ivars := compile_iVars src.(prog_varsL) in
+      do efuns <- compile_eFuns src.(ext_funsL);
+      do ifuns <- compile_iFuns src.(prog_funsL);
+      let defs := init_g ++ evars ++ efuns ++ ivars ++ ifuns in
+      Some defs
+    else None
+  .
+
+  Definition _compile (src : Imp.programL) :=
     let optdefs := (compile_gdefs src) in
     match optdefs with
     | None => Error [MSG "Imp2clight compilation failed"]
     | Some _defs =>
       let pdefs := Maps.PTree_Properties.of_list _defs in
       let defs := Maps.PTree.elements pdefs in
-      make_program [] defs (List.map s2p (src.(public) [])) (s2p "main")
+      make_program [] defs (id_init ++ List.map s2p src.(publicL)) (s2p "main")
     end
   .
 
 End Compile.
 
-Definition compile (src : Imp.program) :=
+Definition compile (src : Imp.programL) :=
   _compile (get_gmap src) src
 .
 
+Definition extFun_Dec : forall x y : (string * nat), {x = y} + {x <> y}.
+Proof.
+  i. destruct x, y.
+  assert (NC: {n = n0} + {n <> n0}); auto using nat_Dec.
+  assert (SC: {s = s0} + {s <> s0}); auto using string_Dec.
+  destruct NC; destruct SC; clarify; auto.
+  all: right; intros p; apply pair_equal_spec in p; destruct p; clarify.
+Qed.
+
 Section Link.
 
-  (* Linker for Imp programs *)
-  
+  Variable src1 : Imp.programL.
+  Variable src2 : Imp.programL.
 
+  Let l_prog_varsL := src1.(prog_varsL) ++ src2.(prog_varsL).
+  Let l_prog_funsL := src1.(prog_funsL) ++ src2.(prog_funsL).
+  Let l_publicL := src1.(publicL) ++ src2.(publicL).
+  Let l_defsL := src1.(defsL) ++ src2.(defsL).
 
+  Let check_name_unique1 {K} {A} {B} decK
+      (l1 : list (K * A)) (l2 : list (K * B)) :=
+    let l1_k := List.map fst l1 in
+    let l2_k := List.map fst l2 in
+    @NoDupB _ decK (l1_k ++ l2_k).
+  (* Let check_name_unique1 {K} {A} {B} {R : K -> K -> Prop} {RD_K : RelDec R} *)
+  (*     (l1 : list (K * A)) (l2 : list (K * B)) := *)
+  (*   let l1_k := List.map fst l1 in *)
+  (*   let l2_k := List.map fst l2 in *)
+  (*   NoDupB (l1_k ++ l2_k). *)
+    
+  (* check defined names are unique *)
+  Definition link_imp_cond1 :=
+    check_name_unique1 string_Dec l_prog_varsL l_prog_funsL.
+
+  Let check_name_unique2 {K} {B} decK
+      (l1 : list K) (l2 : list (K * B)) :=
+    let l2_k := List.map fst l2 in
+    @NoDupB _ decK (l1 ++ l2_k).
+  (* Let check_name_unique2 {K} {B} {R : K -> K -> Prop} {RD_K : RelDec R} *)
+  (*     (l1 : list K) (l2 : list (K * B)) := *)
+  (*   let l2_k := List.map fst l2 in *)
+  (*   NoDupB (l1 ++ l2_k). *)
+
+  (* check external decls are consistent *)
+  Definition link_imp_cond2 :=
+    let sd := string_Dec in
+    let c1 := check_name_unique2 sd src1.(ext_varsL) l_prog_funsL in
+    let c2 := check_name_unique2 sd src2.(ext_varsL) l_prog_funsL in
+    let c3 := check_name_unique1 sd src1.(ext_funsL) l_prog_varsL in
+    let c4 := check_name_unique1 sd src2.(ext_funsL) l_prog_varsL in
+    c1 && c2 && c3 && c4.
+
+  (* check external fun decls' sig *)
+  Fixpoint _link_imp_cond3' (p : string * nat) (l : extFuns) :=
+    let '(name, n) := p in
+    match l with
+    | [] => true
+    | (name2, n2) :: t =>
+      if (eqb name name2 && negb (n =? n2)) then false
+      else _link_imp_cond3' p t
+    end
+  .
+
+  Fixpoint _link_imp_cond3 l :=
+    match l with
+    | [] => true
+    | h :: t =>
+      if (_link_imp_cond3' h t) then _link_imp_cond3 t
+      else false
+    end
+  .
+
+  Definition link_imp_cond3 :=
+    _link_imp_cond3 (src1.(ext_funsL) ++ src2.(ext_funsL)).
+
+  (* merge external decls; vars is simple, funs assumes cond3 is passed *)
+  Let l_ext_vars0 := nodup string_Dec (src1.(ext_varsL) ++ src2.(ext_varsL)).
+
+  Let l_ext_funs0 := nodup extFun_Dec (src1.(ext_funsL) ++ src2.(ext_funsL)).
+
+  (* link external decls; need to remove defined names *)
+  Let l_ext_vars :=
+    let l_prog_varsL' := List.map fst l_prog_varsL in
+    filter (fun s => negb (in_dec string_Dec s l_prog_varsL')) l_ext_vars0.
+
+  Let l_ext_funs :=
+    let l_prog_funsL' := List.map fst l_prog_funsL in
+    filter (fun sn => negb (in_dec string_Dec (fst sn) l_prog_funsL')) l_ext_funs0.
+
+  (* Linker for Imp programs, follows Clight's link_prog as possible *)
+  Definition link_imp : option Imp.programL :=
+    if (link_imp_cond1 && link_imp_cond2 && link_imp_cond3)
+    then Some (mk_programL l_ext_vars l_ext_funs l_prog_varsL l_prog_funsL l_publicL l_defsL)
+    else None
+  .
+
+  (* Parameter link_imp : Imp.programL -> Imp.programL -> option Imp.programL. *)
 
   (* Imp's linker is Mod.add_list (and Sk.add for ge), 
      but resulting globval env is different from link_prog of Clight's linker,
      so we will define new linker which follows link_prog. *)
 
-  (* Context `{Σ: GRA.t}. *)
 
   (* Definition link_Sk_merge (o1 o2 : option Sk.gdef) := *)
   (*   match o1 with *)
@@ -360,3 +471,87 @@ Section Link.
   (* . *)
 
 End Link.
+
+Section Proof.
+
+  Import Maps.PTree.
+
+  Lemma list_norepet_NoDupB {K} {decK} :
+    forall l, Coqlib.list_norepet l <-> @NoDupB K decK l = true.
+  Proof.
+    split; i.
+    - induction H; ss.
+      clarify.
+      destruct (in_dec decK hd tl); clarify.
+    - induction l; ss; clarify. constructor.
+      des_ifs. econs 2; auto.
+  Qed.
+  (*   split; i. *)
+  (*   - induction H; ss. *)
+  (*     clarify. *)
+  (*     assert (A: existsb (fun n : K => hd ?[ Logic.eq ] n) tl = false). *)
+  (*     { clear H0 IHlist_norepet. induction tl; ss. *)
+  (*       apply not_or_and in H. destruct H. *)
+  (*       apply IHtl in H0. apply orb_false_intro; ss. *)
+  (*       apply rel_dec_neq_false; auto. *)
+  (*       apply Dec_RelDec_Correct. } *)
+  (*     rewrite A; ss. *)
+  (*   - induction l; ss; clarify. constructor. *)
+  (*     destruct (existsb (fun n : K => a ?[ Logic.eq ] n) l) eqn:EQ; clarify. *)
+  (*     econs 2; auto. clear H IHl. *)
+  (*     induction l; ss; clarify. *)
+  (*     apply orb_false_elim in EQ. destruct EQ. clarify. *)
+  (*     apply and_not_or. split; auto. *)
+  (*     unfold Logic.not. i. symmetry in H1. *)
+  (*     eapply rel_dec_eq_true in H1; clarify. *)
+  (*     apply Dec_RelDec_Correct. *)
+  (* Qed. *)
+
+  Definition wf_imp_prog (src : Imp.programL) :=
+    Coqlib.list_norepet (imp_prog_ids src).
+
+  Lemma compile_gdefs_then_wf : forall gm src l,
+      compile_gdefs gm src = Some l
+      ->
+      wf_imp_prog src.
+  Proof.
+    unfold compile_gdefs. i.
+    des_ifs. clear H.
+    unfold wf_imp_prog. eapply list_norepet_NoDupB; eauto.
+  Qed.
+
+  Lemma compile_then_wf : forall src tgt,
+      compile src = OK tgt
+      ->
+      wf_imp_prog src.
+  Proof.
+    unfold compile, _compile. i.
+    destruct (compile_gdefs (get_gmap src) src) eqn:EQ; clarify.
+    eauto using compile_gdefs_then_wf.
+  Qed.
+
+  (* Maps.PTree.elements_extensional 
+     we will rely on above theorem for commutation lemmas *)
+  Lemma comm_link_imp_compile :
+    forall src1 src2 srcl tgt1 tgt2 tgtl,
+      compile src1 = OK tgt1 -> compile src2 = OK tgt2 ->
+      link_imp src1 src2 = Some srcl ->
+      link_program tgt1 tgt2 = Some tgtl ->
+      compile srcl = OK tgtl.
+  Proof.
+  Admitted.
+
+  Context `{Σ: GRA.t}.
+  Lemma comm_link_imp_link_mod :
+    forall sn1 src1 sn2 src2 snl srcl tgt1 tgt2 tgtl (ctx : Mod.t),
+      link_imp src1 src2 = Some srcl ->
+      ImpMod.get_mod sn1 src1 = tgt1 ->
+      ImpMod.get_mod sn2 src2 = tgt2 ->
+      ImpMod.get_mod snl srcl = tgtl ->
+      Mod.add_list [ctx; tgt1; tgt2]
+      =
+      Mod.add_list [ctx; tgtl].
+  Proof.
+  Admitted.
+
+End Proof.
