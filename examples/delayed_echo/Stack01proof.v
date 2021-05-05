@@ -127,6 +127,7 @@ Reset TEST.
 Definition namedb := True.
 Hint Extern 1 (Register namedb @interp_hCallE_tgt) => Provide "interp_hCallE_tgt".
 Hint Extern 1 (Register namedb ("interp_hCallE_tgt", "bind")) => Provide interp_tgt_bind.
+Hint Extern 1 (Register namedb ("interp_hCallE_tgt", "tau")) => Provide interp_tgt_tau.
 
 
 Ltac get_head term :=
@@ -205,7 +206,8 @@ Ltac _red_interp f :=
       let lemma := ltac_database_get namedb (my_interp, "bind") in
       instantiate (f:=_continue); eapply lemma; fail
     | Tau _ =>
-      instantiate (f:=_break); apply interp_tgt_tau; fail
+      let lemma := ltac_database_get namedb (my_interp, "tau") in
+      instantiate (f:=_break); apply lemma; fail
     | Ret _ =>
       instantiate (f:=_continue); apply interp_tgt_ret; fail
     | trigger ?e =>
@@ -235,44 +237,6 @@ Ltac _red_interp f :=
     instantiate (f:=_continue); apply bind_ret_r_rev; fail
   end
 .
-
-Ltac _red_interp_tgt f :=
-  match goal with
-  | [ |- ITree.bind' _ (interp_hCallE_tgt _ _ ?itr) = _ ] =>
-    match itr with
-    | ITree.bind' _ _ =>
-      instantiate (f:=_continue); eapply interp_tgt_bind; fail
-    | Tau _ =>
-      instantiate (f:=_break); apply interp_tgt_tau; fail
-    | Ret _ =>
-      instantiate (f:=_continue); apply interp_tgt_ret; fail
-    | trigger ?e =>
-      instantiate (f:=_break);
-      match (type of e) with
-      | context[hCallE] => apply interp_tgt_hcall
-      | context[eventE] => apply interp_tgt_triggere
-      | context[pE] => apply interp_tgt_triggerp
-      | _ => fail 2
-      end
-    | triggerUB =>
-      instantiate (f:=_break); apply interp_tgt_triggerUB; fail
-    | triggerNB =>
-      instantiate (f:=_break); apply interp_tgt_triggerNB; fail
-    | unwrapU _ =>
-      instantiate (f:=_break); apply interp_tgt_unwrapU; fail
-    | unwrapN _ =>
-      instantiate (f:=_break); apply interp_tgt_unwrapN; fail
-    | assume _ =>
-      instantiate (f:=_break); apply interp_tgt_assume; fail
-    | guarantee _ =>
-      instantiate (f:=_break); apply interp_tgt_guarantee; fail
-    | _ =>
-      fail
-    end
-  | [ |- interp_hCallE_tgt _ _ _ = _] =>
-    instantiate (f:=_continue); apply bind_ret_r_rev; fail
-  | _ => fail
-  end.
 
 Ltac _red_lsim f :=
   _red_interp f || _red_itree f || fail.
