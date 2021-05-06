@@ -15,7 +15,7 @@ From ExtLib Require Import
      Data.Map.FMapAList.
 From Ordinal Require Export Ordinal Arithmetic.
 Require Import Red IRed.
-Require Import Logic YPM.
+Require Import Logic.
 
 Set Implicit Arguments.
 
@@ -602,7 +602,7 @@ Section HLEMMAS.
     repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
     { rewrite URA.unit_id; ss. }
     repeat (ired_both; gstep; econs; eauto with ord_step).
-    { econs; et. esplits; eauto. }
+    { econs; et. }
   Qed.
 
   Lemma APC_step_clo
@@ -855,7 +855,7 @@ Ltac _hcall_tac x o mr_src1 fr_src1 rarg_src := prep; eapply (@hcall_clo _ mr_sr
 
 Ltac _hret_tac mr_src1 rret_src := prep; eapply (@hret_clo _ mr_src1 rret_src); [eapply OrdArith.lt_from_nat; lia|..].
 
-Require Import TODOYJ Logic YPM.
+Require Import TODOYJ.
 
 (* Ltac harg_tac := *)
 (*   _harg_tac; *)

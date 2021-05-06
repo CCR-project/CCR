@@ -10,7 +10,6 @@ Require Import Skeleton.
 Require Import PCM.
 
 Set Implicit Arguments.
-Set Typeclasses Depth 5.
 
 
 
