@@ -227,6 +227,13 @@ Section ILIST.
   Proof.
   Admitted.
 
+  Lemma iPropL_one Hn (l: iPropL) (P: iProp)
+        (FIND: alist_find Hn l = Some P)
+    :
+      from_iPropL l -∗ P.
+  Proof.
+  Admitted.
+
   Lemma iPropL_pure Hn (l: iPropL) (P: Prop)
         (FIND: alist_find Hn l = Some (⌜P⌝)%I)
         (SATISFIABLE: exists r, (from_iPropL l) r)
@@ -264,6 +271,8 @@ Section ILIST.
   Proof.
   Admitted.
 
+  (* TODO: iPropL_own_merge & iPropL_own_split *)
+
   Lemma iPropL_upd Hn (l: iPropL) (P: iProp)
         (FIND: alist_find Hn l = Some (#=> P))
     :
@@ -281,6 +290,13 @@ Section ILIST.
   Lemma iPropL_init (Hn: string) (P: iProp)
     :
       P -∗ from_iPropL [(Hn, P)].
+  Proof.
+  Admitted.
+
+  Lemma current_iprops_own ctx (M: URA.t) `{@GRA.inG M Σ} (m: M)
+        (ACC: current_iprops ctx (Own (GRA.embed m)))
+    :
+      URA.wf m.
   Proof.
   Admitted.
 End ILIST.
