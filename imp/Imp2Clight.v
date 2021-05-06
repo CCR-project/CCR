@@ -332,7 +332,7 @@ Section Compile.
     | Some _defs =>
       let pdefs := Maps.PTree_Properties.of_list _defs in
       let defs := Maps.PTree.elements pdefs in
-      make_program [] defs (id_init ++ List.map s2p src.(publicL)) (s2p "main")
+      make_program [] defs (List.map s2p src.(publicL)) (s2p "main")
     end
   .
 

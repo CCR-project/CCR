@@ -292,7 +292,7 @@ Record program : Type := mk_program {
     let efs := List.map (fun p => fst p) ext_funs in
     let ivs := List.map (fun p => fst p) prog_vars in
     let ifs := List.map (fun p => fst p) prog_funs in
-    evs ++ efs ++ ivs ++ ifs;
+    ["malloc"; "free"] ++ evs ++ efs ++ ivs ++ ifs;
   defs : list (gname * Sk.gdef) :=
     let vs := (List.map (fun '(vn, vv) => (vn, Sk.Gvar vv)) prog_vars) in
     let fs := (List.map (fun '(fn, _) => (fn, Sk.Gfun)) prog_funs) in
