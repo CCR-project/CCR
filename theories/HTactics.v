@@ -374,6 +374,110 @@ Ltac ired_r := try (prw _red_lsim 1 1 0).
 Ltac ired_both := ired_l; ired_r.
 
 
+
+(*** Natural Transformations with Reduction lemmas ***)
+Module NTR.
+  Class t (E F: Type -> Type) := mk {
+    (* E: Type -> Type; *)
+    (* F: Type -> Type; *)
+    n:> itree (eventE +' E) ~> itree (eventE +' F);
+    bind: forall R S T i (k: ktree _ R S) (h: ktree _ S T), (n (i >>= k) >>= h) = (r <- n i;; n (k r) >>= h);
+    tau: forall R S i (h: ktree _ R S), (n (tau;; i) >>= h) = tau;; (n i) >>= h;
+    ret: forall R S i (h: ktree _ R S), (n (Ret i) >>= h) = (h i);
+    triggere: forall R S (i: eventE _) (h: ktree _ R S), (n (trigger i) >>= h) = (trigger i >>= (fun r => tau;; h r));
+    UB: forall R S (h: ktree _ R S), (n triggerUB >>= h) = triggerUB;
+    NB: forall R S (h: ktree _ R S), (n triggerNB >>= h) = triggerNB;
+    unwrapU: forall R S i (h: ktree _ R S), (n (unwrapU i) >>= h) = (unwrapU i) >>= h;
+    unwrapN: forall R S i (h: ktree _ R S), (n (unwrapN i) >>= h) = (unwrapN i) >>= h;
+    assume: forall S P (h: ktree _ _ S), (n (assume P) >>= h) = assume P >>= (fun _ => tau;; h tt);
+    guarantee: forall S P (h: ktree _ _ S), (n (guarantee P) >>= h) = guarantee P >>= (fun _ => tau;; h tt);
+  }
+  .
+  (* Arguments n [_ _] _ [T]. *)
+  Arguments n [_ _].
+  Arguments bind [_ _].
+  Arguments tau [_ _].
+  Arguments ret [_ _].
+  Arguments triggere [_ _].
+  Arguments UB [_ _].
+  Arguments NB [_ _].
+  Arguments unwrapU [_ _].
+  Arguments unwrapN [_ _].
+  Arguments assume [_ _].
+  Arguments guarantee [_ _].
+End NTR.
+Coercion NTR.n: NTR.t >-> Funclass.
+
+
+
+Section TEST.
+  Context `{Σ : GRA.t}.
+
+  Variable E F G H: Type -> Type.
+  Variable x: NTR.t E F.
+  Variable y: NTR.t F G.
+  Variable z: NTR.t G H.
+
+  Global Program Instance x_rdb: red_database (mk_box (NTR.n x)) :=
+    mk_rdb
+      (mk_box (NTR.bind x))
+      (mk_box (NTR.tau x))
+      (mk_box (NTR.ret x))
+      (mk_box (NTR.triggere x))
+      (mk_box (NTR.triggere x))
+      (mk_box (NTR.triggere x))
+      (mk_box (NTR.UB x))
+      (mk_box (NTR.NB x))
+      (mk_box (NTR.unwrapU x))
+      (mk_box (NTR.unwrapN x))
+      (mk_box (NTR.assume x))
+      (mk_box (NTR.guarantee x))
+  .
+
+  Global Program Instance y_rdb: red_database (mk_box (NTR.n y)) :=
+    mk_rdb
+      (mk_box (NTR.bind y))
+      (mk_box (NTR.tau y))
+      (mk_box (NTR.ret y))
+      (mk_box (NTR.triggere y))
+      (mk_box (NTR.triggere y))
+      (mk_box (NTR.triggere y))
+      (mk_box (NTR.UB y))
+      (mk_box (NTR.NB y))
+      (mk_box (NTR.unwrapU y))
+      (mk_box (NTR.unwrapN y))
+      (mk_box (NTR.assume y))
+      (mk_box (NTR.guarantee y))
+  .
+
+  Global Program Instance z_rdb: red_database (mk_box (NTR.n z)) :=
+    mk_rdb
+      (mk_box (NTR.bind z))
+      (mk_box (NTR.tau z))
+      (mk_box (NTR.ret z))
+      (mk_box (NTR.triggere z))
+      (mk_box (NTR.triggere z))
+      (mk_box (NTR.triggere z))
+      (mk_box (NTR.UB z))
+      (mk_box (NTR.NB z))
+      (mk_box (NTR.unwrapU z))
+      (mk_box (NTR.unwrapN z))
+      (mk_box (NTR.assume z))
+      (mk_box (NTR.guarantee z))
+  .
+
+  Ltac my_red_both := repeat (try (prw _red_lsim 2 0); try (prw _red_lsim 1 0)).
+
+  Goal forall T U V (i: itree _ T) (j: ktree _ T U) (k: ktree _ U V),
+      x _ (i >>= j >>= k) = x _ (i >>= j >>= k)
+  .
+  Proof.
+    i. my_red_both.
+  Qed.
+
+End TEST.
+
+
 (* any, alist things *)
 
 Ltac anytac := (try rewrite ! Any.upcast_downcast in *); clarify; apply_all_once Any.upcast_inj; des; clarify; clear_tac.
