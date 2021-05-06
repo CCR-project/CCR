@@ -211,6 +211,84 @@ Ltac interp_state_red := rewrite interp_state_trigger ||
                                  rewrite interp_state_tau ||
                                  rewrite interp_state_ret.
 
+
+
+
+(*** TODO: move to better place ***)
+Ltac get_head term :=
+  match term with
+  | ?f ?x => get_head f
+  | _ => term
+  end
+.
+
+Ltac get_tail term :=
+  match term with
+  | ?f ?x => x
+  end
+.
+
+Variant Box: Type :=
+| mk_box: forall (A:Type), A -> Box
+.
+
+Class red_database (interp: Box) := mk_rdb {
+  rdb_bind: Box;
+  rdb_tau: Box;
+  rdb_ret: Box;
+  rdb_trigger0: Box;
+  rdb_trigger1: Box;
+  rdb_trigger2: Box;
+  rdb_UB: Box;
+  rdb_NB: Box;
+  rdb_unwrapU: Box;
+  rdb_unwrapN: Box;
+  rdb_assume: Box;
+  rdb_guarantee: Box;
+}
+.
+Arguments mk_rdb [interp].
+Arguments rdb_bind [interp].
+Arguments rdb_tau [interp].
+Arguments rdb_ret [interp].
+Arguments rdb_trigger0 [interp].
+Arguments rdb_trigger1 [interp].
+Arguments rdb_trigger2 [interp].
+Arguments rdb_UB [interp].
+Arguments rdb_NB [interp].
+Arguments rdb_unwrapU [interp].
+Arguments rdb_unwrapN [interp].
+Arguments rdb_assume [interp].
+Arguments rdb_guarantee [interp].
+
+Section AUX.
+
+  Context `{Σ: GRA.t}.
+
+  Global Program Instance interp_tgt_rdb: red_database (mk_box (@interp_hCallE_tgt)) :=
+    mk_rdb
+      (mk_box interp_tgt_bind)
+      (mk_box interp_tgt_tau)
+      (mk_box interp_tgt_ret)
+      (mk_box interp_tgt_hcall)
+      (mk_box interp_tgt_triggere)
+      (mk_box interp_tgt_triggerp)
+      (mk_box interp_tgt_triggerUB)
+      (mk_box interp_tgt_triggerNB)
+      (mk_box interp_tgt_unwrapU)
+      (mk_box interp_tgt_unwrapN)
+      (mk_box interp_tgt_assume)
+      (mk_box interp_tgt_guarantee)
+  .
+
+End AUX.
+
+
+
+
+
+
+
 Ltac _red_itree f :=
   match goal with
   | [ |- ITree.bind' _ ?itr = _] =>
@@ -229,46 +307,66 @@ Ltac _red_itree f :=
   | _ => fail
   end.
 
-Ltac _red_interp_tgt f :=
+Ltac __red_interp f tc itr :=
+  let name := fresh "TMP" in
+  match itr with
+  | ITree.bind' _ _ =>
+    instantiate (f:=_continue); pose (rdb_bind tc) as name; cbn in name;
+    match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end
+  | Tau _ =>
+    instantiate (f:=_break); pose (rdb_tau tc) as name; cbn in name;
+    match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end
+  | Ret _ =>
+    instantiate (f:=_continue); pose (rdb_ret tc) as name; cbn in name;
+    match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end
+  | trigger ?e =>
+    instantiate (f:=_break);
+    (* ((pose (rdb_trigger0 tc) as name; cbn in name; match goal with | H := mk_box ?lemma |- _ => eapply lemma end) || *)
+    (*  (pose (rdb_trigger1 tc) as name; cbn in name; match goal with | H := mk_box ?lemma |- _ => eapply lemma end) || *)
+    (*  (pose (rdb_trigger2 tc) as name; cbn in name; match goal with | H := mk_box ?lemma |- _ => eapply lemma end) || *)
+    (*  fail 2) *)
+    (apply interp_tgt_hcall || apply interp_tgt_triggere || apply interp_tgt_triggerp)
+  | triggerUB =>
+    instantiate (f:=_break); pose (rdb_UB tc) as name; cbn in name;
+    match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end
+  | triggerNB =>
+    instantiate (f:=_break); pose (rdb_NB tc) as name; cbn in name;
+    match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end
+  | unwrapU _ =>
+    instantiate (f:=_break); pose (rdb_unwrapU tc) as name; cbn in name;
+    match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end
+  | unwrapN _ =>
+    instantiate (f:=_break); pose (rdb_unwrapN tc) as name; cbn in name;
+    match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end
+  | assume _ =>
+    instantiate (f:=_break); pose (rdb_assume tc) as name; cbn in name;
+    match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end
+  | guarantee _ =>
+    instantiate (f:=_break); pose (rdb_guarantee tc) as name; cbn in name;
+    match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end
+  | _ =>
+    fail
+  end
+.
+
+Ltac _red_interp f :=
   match goal with
-  | [ |- ITree.bind' _ (interp_hCallE_tgt _ _ ?itr) = _ ] =>
-    match itr with
-    | ITree.bind' _ _ =>
-      instantiate (f:=_continue); eapply interp_tgt_bind; fail
-    | Tau _ =>
-      instantiate (f:=_break); apply interp_tgt_tau; fail
-    | Ret _ =>
-      instantiate (f:=_continue); apply interp_tgt_ret; fail
-    | trigger ?e =>
-      instantiate (f:=_break);
-      match (type of e) with
-      | context[hCallE] => apply interp_tgt_hcall
-      | context[eventE] => apply interp_tgt_triggere
-      | context[pE] => apply interp_tgt_triggerp
-      | _ => fail 2
-      end
-    | triggerUB =>
-      instantiate (f:=_break); apply interp_tgt_triggerUB; fail
-    | triggerNB =>
-      instantiate (f:=_break); apply interp_tgt_triggerNB; fail
-    | unwrapU _ =>
-      instantiate (f:=_break); apply interp_tgt_unwrapU; fail
-    | unwrapN _ =>
-      instantiate (f:=_break); apply interp_tgt_unwrapN; fail
-    | assume _ =>
-      instantiate (f:=_break); apply interp_tgt_assume; fail
-    | guarantee _ =>
-      instantiate (f:=_break); apply interp_tgt_guarantee; fail
-    | _ =>
-      fail
-    end
-  | [ |- interp_hCallE_tgt _ _ _ = _] =>
+  | [ |- ITree.bind' _ ?term = _ ] =>
+    let my_interp := get_head term in
+    let itr := get_tail term in
+    let tc := fresh "_TC_" in
+    unshelve evar (tc: @red_database (mk_box (my_interp))); [typeclasses eauto|];
+    __red_interp f tc itr
+  | [ |- ?term = _] =>
+    let my_interp := get_head term in
+    unshelve evar (tc: @red_database (mk_box (my_interp))); [typeclasses eauto|];
     instantiate (f:=_continue); apply bind_ret_r_rev; fail
   | _ => fail
-  end.
+  end
+.
 
 Ltac _red_lsim f :=
-  _red_interp_tgt f || _red_itree f || fail.
+  _red_interp f || _red_itree f || fail.
 
 Ltac ired_l := try (prw _red_lsim 2 1 0).
 Ltac ired_r := try (prw _red_lsim 1 1 0).
