@@ -322,33 +322,6 @@ Section HLEMMAS.
   Context `{Σ: GRA.t}.
   Local Opaque GRA.to_URA.
 
-  Variant mk_wf (A: Type) (R_src: A -> Any.t -> iProp) (R_tgt: A -> Any.t -> iProp): (Σ * Any.t) * (Σ * Any.t) -> Prop :=
-  | mk_wf_intro
-      a
-      mr_src mp_src mr_tgt mp_tgt
-      (RSRC: R_src a mp_src mr_src)
-      (RTGT: R_tgt a mp_tgt mr_tgt)
-    :
-      mk_wf R_src R_tgt ((mr_src, mp_src), (mr_tgt, mp_tgt))
-  .
-
-  Variant current_iprops (r: Σ) (I: iProp): Prop :=
-  | current_iprops_intro
-      (GWF: (@URA.wf (GRA.to_URA _) r))
-      (IPROP: Own r ⊢ #=> I)
-  .
-
-  Lemma current_iprops_update I1 r I0
-        (ACC: current_iprops r I0)
-        (UPD: I0 ⊢ #=> I1)
-    :
-      current_iprops r I1.
-  Proof.
-    inv ACC. econs; et.
-    iIntros "H". iApply bupd_trans.
-    iApply UPD. iApply IPROP. iApply "H".
-  Qed.
-
   (* TODO: find lemma (or typeclass) *)
   Lemma Upd_Pure P
     :
@@ -360,24 +333,69 @@ Section HLEMMAS.
     i. des. red in H1. red. uipropall.
   Qed.
 
-  Lemma current_iprops_pure r I P
-        (ACC: current_iprops r I)
-        (PURE: I ⊢ ⌜P⌝)
+
+  Variant mk_wf (A: Type) (R_src: A -> Any.t -> iProp) (R_tgt: A -> Any.t -> iProp): (Σ * Any.t) * (Σ * Any.t) -> Prop :=
+  | mk_wf_intro
+      a
+      mr_src mp_src mr_tgt mp_tgt
+      (RSRC: R_src a mp_src mr_src)
+      (RTGT: R_tgt a mp_tgt mr_tgt)
     :
-      current_iprops r I /\ <<PURE: P>>.
+      mk_wf R_src R_tgt ((mr_src, mp_src), (mr_tgt, mp_tgt))
+  .
+
+
+  Variant current_iprops (ctx: Σ) (I: iProp): Prop :=
+  | current_iprops_intro
+      r
+      (GWF: (@URA.wf (GRA.to_URA _) (URA.add r ctx)))
+      (IPROP: I r)
+  .
+
+  Lemma current_iprops_entail I1 ctx I0
+        (ACC: current_iprops ctx I0)
+        (UPD: I0 ⊢ I1)
+    :
+      current_iprops ctx I1.
   Proof.
-    split; et. inv ACC. hexploit (@to_semantic _ r (⌜P⌝)%I); et.
-    { iIntros "H". iApply Upd_Pure.
-      iApply PURE. iApply IPROP. iApply "H". }
-    i. red in H. uipropall.
+    inv ACC. econs; et.
+    uipropall. eapply UPD; et. eapply URA.wf_mon; et.
   Qed.
 
-  Lemma current_iprops_exists r A (P: A -> iProp)
-        (ACC: current_iprops r (bi_exist P))
+  Lemma current_iprops_pure P ctx
+        (ACC: current_iprops ctx (⌜P⌝)%I)
     :
-      exists x, current_iprops r (P x).
+      P.
   Proof.
-    admit "It is not true. Modify HoareCall to make it true".
+    inv ACC. red in IPROP. uipropall.
+  Qed.
+
+  Lemma current_iprops_exist ctx A (P: A -> iProp)
+        (ACC: current_iprops ctx (bi_exist P))
+    :
+      exists x, current_iprops ctx (P x).
+  Proof.
+    inv ACC. red in IPROP. uipropall.
+    des. exists x. econs; et.
+  Qed.
+
+  Lemma current_iprops_or ctx I0 I1
+        (ACC: current_iprops ctx (I0 ∨ I1)%I)
+    :
+      current_iprops ctx I0 \/ current_iprops ctx I1.
+  Proof.
+    inv ACC. uipropall. des.
+    { left. econs; et. }
+    { right. econs; et. }
+  Qed.
+
+  Lemma current_iprops_update ctx I
+        (ACC: current_iprops ctx (#=> I))
+    :
+      current_iprops ctx I.
+  Proof.
+    inv ACC. uipropall.
+    hexploit IPROP; et. i. des. econs; et.
   Qed.
 
   Lemma hcall_clo_ord_weaken (o_new: Ord.t)
@@ -395,8 +413,8 @@ Section HLEMMAS.
 
         (WEAKER: ftspec_weaker ftsp1 ftsp0)
 
-        I
-        (ACC: current_iprops (URA.add mr_src0 fr_src0) I)
+        ctx0 I
+        (ACC: current_iprops ctx0 I)
 
         (UPDATABLE:
            I ⊢ #=> (FR ** R_src a0 mp_src0 ** (ftsp1.(precond) x varg_src varg_tgt o: iProp)))
@@ -409,7 +427,8 @@ Section HLEMMAS.
         (POST: forall (vret_tgt : Any.t) (mr_src1 mr_tgt1 fr_src1: Σ) (mp_src1 mp_tgt1 : Any.t) a1
                       (vret_src: Z)
                       (RTGT: R_tgt a1 mp_tgt1 mr_tgt1)
-                      (ACC: current_iprops (URA.add mr_src1 fr_src1) (FR ** R_src a1 mp_src1 ** ftsp1.(postcond) x vret_src vret_tgt))
+                      ctx1
+                      (ACC: current_iprops ctx1 (FR ** R_src a1 mp_src1 ** ftsp1.(postcond) x vret_src vret_tgt))
           ,
                 gpaco6 (_sim_itree (mk_wf R_src R_tgt)) (cpn6 (_sim_itree (mk_wf R_src R_tgt))) rg rg _ _ eqr o_new
                        (mr_src1, mp_src1, fr_src1, k_src vret_src) (mr_tgt1, mp_tgt1, frs_tgt, k_tgt vret_tgt))
@@ -428,21 +447,7 @@ Section HLEMMAS.
                (<<RSRC: R_src a0 mp_src0 mr_src0'>>) /\
                (<<FRS: FR fr_src0'>>) /\
                (<<PRE: ftsp0.(precond) x_tgt varg_src varg_tgt o rarg_src>>)).
-    { clear - ACC UPDATABLE PRE. inv ACC.
-      assert (ENTAIL: Own (mr_src0 ⋅ fr_src0) ⊢ #=> ((FR ** R_src a0 mp_src0) ** (precond ftsp0 x_tgt varg_src varg_tgt o : iProp))).
-      { iIntros "H".
-        iAssert (#=> ((FR ** R_src a0 mp_src0) ** precond ftsp1 x varg_src varg_tgt o)) with "[H]" as "H".
-        { iApply bupd_trans. iApply UPDATABLE. iApply IPROP. iFrame. }
-        { iMod "H". iDestruct "H" as "[H0 H1]". iSplitL "H0"; [et|].
-          iApply PRE. iApply "H1". }
-      }
-      eapply to_semantic in ENTAIL; ss.
-      clear - GWF ENTAIL. uipropall. uipropall.
-      hexploit (ENTAIL URA.unit).
-      { rewrite URA.unit_id. ss. }
-      i. des. subst. esplits; et.
-      { admit "TODO: change HoareCall". }
-    }
+    { admit "TODO: change HoareCall". }
     des. exists (mr_src0', URA.add rarg_src fr_src0').
     repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
     repeat (ired_both; gstep; econs; eauto with ord_step). exists rarg_src.
@@ -466,13 +471,10 @@ Section HLEMMAS.
       { symmetry. eapply OrdArith.add_O_r. }
       { eapply OrdArith.lt_add_r. rewrite Ord.from_nat_S. eapply Ord.S_pos. }
     }
-    i. ired_both; ss. inv WF. eapply POST; et. econs; et.
-    iStartProof. iIntros "H". iDestruct "H" as "[H0 [H1 H2]]". iSplitR "H2".
-    { iSplitL "H1".
-      { iApply from_semantic; et. }
-      { iApply from_semantic; et. }
-    }
-    { iApply bupd_trans. iApply POST0. iApply from_semantic; et. }
+    i. ired_both; ss. inv WF. eapply POST; et.
+    { admit "TODO: change HoareCall". }
+    Unshelve.
+    { admit "TODO: change HoareCall". }
   Qed.
 
   Lemma hcall_clo_weaken
@@ -490,8 +492,8 @@ Section HLEMMAS.
 
         (WEAKER: ftspec_weaker ftsp1 ftsp0)
 
-        I
-        (ACC: current_iprops (URA.add mr_src0 fr_src0) I)
+        ctx0 I
+        (ACC: current_iprops ctx0 I)
 
         (UPDATABLE:
            I ⊢ #=> (FR ** R_src a0 mp_src0 ** (ftsp1.(precond) x varg_src varg_tgt o: iProp)))
@@ -504,7 +506,8 @@ Section HLEMMAS.
         (POST: forall (vret_tgt : Any.t) (mr_src1 mr_tgt1 fr_src1: Σ) (mp_src1 mp_tgt1 : Any.t) a1
                       (vret_src: Z)
                       (RTGT: R_tgt a1 mp_tgt1 mr_tgt1)
-                      (ACC: current_iprops (URA.add mr_src1 fr_src1) (FR ** R_src a1 mp_src1 ** ftsp1.(postcond) x vret_src vret_tgt))
+                      ctx1
+                      (ACC: current_iprops ctx1 (FR ** R_src a1 mp_src1 ** ftsp1.(postcond) x vret_src vret_tgt))
           ,
                 gpaco6 (_sim_itree (mk_wf R_src R_tgt)) (cpn6 (_sim_itree (mk_wf R_src R_tgt))) rg rg _ _ eqr 100
                        (mr_src1, mp_src1, fr_src1, k_src vret_src) (mr_tgt1, mp_tgt1, frs_tgt, k_tgt vret_tgt))
@@ -531,8 +534,8 @@ Section HLEMMAS.
         (R_src: A -> Any.t -> iProp) (R_tgt: A -> Any.t -> iProp)
         (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
 
-        I
-        (ACC: current_iprops (URA.add mr_src0 fr_src0) I)
+        ctx0 I
+        (ACC: current_iprops ctx0 I)
 
         (UPDATABLE:
            I ⊢ #=> (FR ** R_src a0 mp_src0 ** (P x varg_src varg_tgt o: iProp)))
@@ -545,7 +548,8 @@ Section HLEMMAS.
         (POST: forall (vret_tgt : Any.t) (mr_src1 mr_tgt1 fr_src1: Σ) (mp_src1 mp_tgt1 : Any.t) a1
                       (vret_src: Z)
                       (RTGT: R_tgt a1 mp_tgt1 mr_tgt1)
-                      (ACC: current_iprops (URA.add mr_src1 fr_src1) (FR ** R_src a1 mp_src1 ** Q x vret_src vret_tgt))
+                      ctx1
+                      (ACC: current_iprops ctx1 (FR ** R_src a1 mp_src1 ** Q x vret_src vret_tgt))
           ,
                 gpaco6 (_sim_itree (mk_wf R_src R_tgt)) (cpn6 (_sim_itree (mk_wf R_src R_tgt))) rg rg _ _ eqr 100
                        (mr_src1, mp_src1, fr_src1, k_src vret_src) (mr_tgt1, mp_tgt1, frs_tgt, k_tgt vret_tgt))
@@ -572,7 +576,8 @@ Section HLEMMAS.
         (ARG:
            forall a x varg_src ord_cur mr_tgt mp_tgt mr_src mp_src fr_src
                   (RTGT: R_tgt a mp_tgt mr_tgt)
-                  (ACC: current_iprops (URA.add mr_src fr_src) ((P x varg_src varg_tgt ord_cur: iProp) ** R_src a mp_src)),
+                  ctx
+                  (ACC: current_iprops ctx ((P x varg_src varg_tgt ord_cur: iProp) ** R_src a mp_src)),
              gpaco6 (_sim_itree (mk_wf R_src R_tgt)) (cpn6 (_sim_itree (mk_wf R_src R_tgt))) rg rg _ _ eqr 90
                     (mr_src, mp_src, fr_src, k_src (x, varg_src, ord_cur))
                     (mr_tgt, mp_tgt, fr_tgt, f_tgt))
@@ -590,10 +595,10 @@ Section HLEMMAS.
     repeat (ired_both; gstep; econs; eauto with ord_step). intro VALID.
     repeat (ired_both; gstep; econs; eauto with ord_step). intro ord_cur.
     repeat (ired_both; gstep; econs; eauto with ord_step). i.
-    ired_both. inv WF. des. eapply ARG; et. econs; et.
-    iIntros "H". iDestruct "H" as "[H0 [_ H1]]". iSplitL "H1".
-    { iApply from_semantic; et. }
-    { iApply from_semantic; et. }
+    ired_both. inv WF. des. eapply ARG; et.
+    { admit "TODO: change HoareCall". }
+    Unshelve.
+    { admit "TODO: change HoareCall". }
   Qed.
 
   Lemma hret_clo
@@ -628,16 +633,7 @@ Section HLEMMAS.
                (<<UPDATABLE: URA.updatable (URA.add mr_src fr_src) (URA.add mr_src1 rret_src)>>) /\
                (<<RSRC: R_src a mp_src mr_src1>>) /\
                (<<PRE: Q x vret_src vret_tgt rret_src>>)).
-    { clear - ACC UPDATABLE. inv ACC.
-      assert (ENTAIL: Own (mr_src ⋅ fr_src) ⊢ #=> (R_src a mp_src ** (Q x vret_src vret_tgt : iProp))).
-      { iIntros "H". iApply bupd_trans. iApply UPDATABLE. iApply IPROP. iApply "H". }
-      eapply to_semantic in ENTAIL; ss.
-      clear - GWF ENTAIL. uipropall.
-      hexploit (ENTAIL URA.unit).
-      { rewrite URA.unit_id. ss. }
-      i. des. subst. esplits; et.
-      { admit "TODO: change HoareRet". }
-    }
+    { admit "TODO: change HoareRet". }
     des. exists (mr_src1, rret_src).
     repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
     repeat (ired_both; gstep; econs; eauto with ord_step). eexists rret_src.
