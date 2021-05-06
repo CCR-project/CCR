@@ -247,6 +247,13 @@ Section ILIST.
   Proof.
   Admitted.
 
+  Lemma iPropL_one Hn (l: iPropL) (P: iProp)
+        (FIND: alist_find Hn l = Some P)
+    :
+      from_iPropL l -∗ P.
+  Proof.
+  Admitted.
+
   Lemma iPropL_pure Hn (l: iPropL) (P: Prop)
         (FIND: alist_find Hn l = Some (⌜P⌝)%I)
         (SATISFIABLE: exists r, (from_iPropL l) r)
@@ -284,6 +291,8 @@ Section ILIST.
   Proof.
   Admitted.
 
+  (* TODO: iPropL_own_merge & iPropL_own_split *)
+
   Lemma iPropL_upd Hn (l: iPropL) (P: iProp)
         (FIND: alist_find Hn l = Some (#=> P))
     :
@@ -301,6 +310,13 @@ Section ILIST.
   Lemma iPropL_init (Hn: string) (P: iProp)
     :
       P -∗ from_iPropL [(Hn, P)].
+  Proof.
+  Admitted.
+
+  Lemma current_iprops_own ctx (M: URA.t) `{@GRA.inG M Σ} (m: M)
+        (ACC: current_iprops ctx (Own (GRA.embed m)))
+    :
+      URA.wf m.
   Proof.
   Admitted.
 End ILIST.
@@ -387,12 +403,59 @@ Section SIMMODSEM.
       { eapply (@iPropL_destruct_sep _ "H0" "H0" "H2"). simpl. repeat f_equal. }
       try unfold alist_add in ACC. simpl in ACC.
 
+      eassert (PURE0: (_: Prop)).
+      { eapply current_iprops_pure.
+        eapply current_iprops_entail in ACC; [exact ACC|].
+        eapply (@iPropL_one _ "H2").
+        simpl. f_equal. }
       eapply current_iprops_entail in ACC; cycle 1.
-      { eapply (@iPropL_pure _ "H2"); cycle 1.
-        { admit "". }
-        instantiate (1:=l) simpl. repeat f_equal.
-        ss.
-      }
+      { eapply (@iPropL_clear _ "H2"). }
+      try unfold alist_add in ACC. simpl in ACC.
+
+      eassert (PURE1: (_: Prop)).
+      { eapply current_iprops_pure.
+        eapply current_iprops_entail in ACC; [exact ACC|].
+        eapply (@iPropL_one _ "H0").
+        simpl. f_equal. }
+      eapply current_iprops_entail in ACC; cycle 1.
+      { eapply (@iPropL_clear _ "H0"). }
+      try unfold alist_add in ACC. simpl in ACC.
+
+      eapply current_iprops_entail in ACC; cycle 1.
+      { eapply (@iPropL_destruct_ex _ "H1"). simpl. repeat f_equal. refl. }
+      eapply current_iprops_exist in ACC. destruct ACC as [mem_src ACC].
+      try unfold alist_add in ACC. simpl in ACC.
+
+      eapply current_iprops_entail in ACC; cycle 1.
+      { eapply (@iPropL_destruct_sep _ "H1" "H0" "H1"). simpl. repeat f_equal. }
+      try unfold alist_add in ACC. simpl in ACC.
+
+      eassert (PURE2: (_: Prop)).
+      { eapply current_iprops_pure.
+        eapply current_iprops_entail in ACC; [exact ACC|].
+        eapply (@iPropL_one _ "H1").
+        simpl. f_equal. }
+      eapply current_iprops_entail in ACC; cycle 1.
+      { eapply (@iPropL_clear _ "H1"). }
+      try unfold alist_add in ACC. simpl in ACC.
+
+      ss. des. clarify.
+
+
+        H0" "H0" "H2"). simpl. repeat f_equal. }
+      try unfold alist_add in ACC. simpl in ACC.
+
+
+        try unfold alist_add. simpl. in ACC.
+
+        sim
+
+
+          cycle 1.
+          { admit "". }
+          instantiate (1:=l) simpl. repeat f_equal.
+          ss.
+        }
 
         simpl. repeat f_equal. }
       try unfold alist_add in ACC. simpl in ACC.
