@@ -103,3 +103,5 @@ End REWRITETEST.
 
 Require Import Basics.
 Notation "f ∘ g" := (fun x => (f (g x))).
+
+Typeclasses Opaque flip.

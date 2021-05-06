@@ -5,7 +5,6 @@ Require Import Universe.
 Require Import PCM.
 
 Set Implicit Arguments.
-Set Typeclasses Depth 5.
 
 
 
