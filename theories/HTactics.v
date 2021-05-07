@@ -783,11 +783,11 @@ Section HLEMMAS.
   Proof.
     rewrite unfold_APC. ired_l. gstep. eapply sim_itree_choose_src.
     { eapply FUEL. }
-    exists false. gstep. eapply sim_itree_tau_src.
+    exists false. ired_l. gstep. eapply sim_itree_tau_src.
     { eapply OrdArith.lt_add_r. eauto with ord_step. }
     ired_l. gstep. eapply sim_itree_choose_src.
     { eapply OrdArith.lt_add_r. eauto with ord_step. }
-    exists next. gstep. eapply sim_itree_tau_src.
+    exists next. ired_l. gstep. eapply sim_itree_tau_src.
     { eapply OrdArith.lt_add_r. eauto with ord_step. }
     ired_l. unfold guarantee. ired_l. gstep. eapply sim_itree_choose_src.
     { eapply OrdArith.lt_add_r. eauto with ord_step. }
@@ -835,7 +835,7 @@ Section HLEMMAS.
   Proof.
     rewrite unfold_APC. ired_l. gstep. eapply sim_itree_choose_src.
     { eapply FUEL. }
-    exists true. gstep. eapply sim_itree_tau_src.
+    exists true. ired_l. gstep. eapply sim_itree_tau_src.
     { eapply OrdArith.add_lt_l. rewrite Ord.from_nat_S. eapply Ord.S_pos. }
     ired_both. auto.
   Qed.
@@ -866,12 +866,14 @@ Section HLEMMAS.
   Proof.
     unfold APC. ired_l. gstep. eapply sim_itree_choose_src.
     { eapply FUEL. }
-    exists at_most. steps.
+    exists at_most. ired_l. steps.
     { eauto with ord_step. }
     { unfold guarantee. ired_both. gstep. econs; eauto with ord_step. esplits; eauto.
       ired_both. gstep. econs.
       { instantiate (1:=n1). eapply OrdArith.add_lt_l. rewrite Ord.from_nat_S. eapply Ord.S_pos. }
       ired_both. ss. }
+  Unshelve.
+    all: ss.
   Qed.
 
 End HLEMMAS.
