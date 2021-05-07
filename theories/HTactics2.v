@@ -245,6 +245,7 @@ Class red_database (interp: Box) := mk_rdb {
   rdb_unwrapN: Box;
   rdb_assume: Box;
   rdb_guarantee: Box;
+  rdb_ext: Box;
 }
 .
 Arguments mk_rdb [interp].
@@ -260,28 +261,8 @@ Arguments rdb_unwrapU [interp].
 Arguments rdb_unwrapN [interp].
 Arguments rdb_assume [interp].
 Arguments rdb_guarantee [interp].
+Arguments rdb_ext [interp].
 
-Section AUX.
-
-  Context `{Σ: GRA.t}.
-
-  Global Program Instance interp_tgt_rdb: red_database (mk_box (@interp_hCallE_tgt)) :=
-    mk_rdb
-      (mk_box interp_tgt_bind)
-      (mk_box interp_tgt_tau)
-      (mk_box interp_tgt_ret)
-      (mk_box interp_tgt_hcall)
-      (mk_box interp_tgt_triggere)
-      (mk_box interp_tgt_triggerp)
-      (mk_box interp_tgt_triggerUB)
-      (mk_box interp_tgt_triggerNB)
-      (mk_box interp_tgt_unwrapU)
-      (mk_box interp_tgt_unwrapN)
-      (mk_box interp_tgt_assume)
-      (mk_box interp_tgt_guarantee)
-  .
-
-End AUX.
 
 
 
@@ -307,8 +288,12 @@ Ltac _red_itree f :=
   | _ => fail
   end.
 
-Ltac __red_interp f tc itr :=
+Ltac __red_interp f term :=
   idtac "DEBUG:__red_interp";
+  let my_interp := get_head term in
+  let itr := get_tail term in
+  let tc := fresh "_TC_" in
+  unshelve evar (tc: @red_database (mk_box (my_interp))); [typeclasses eauto|];
   let name := fresh "TMP" in
   match itr with
   | ITree.bind' _ _ =>
@@ -322,11 +307,11 @@ Ltac __red_interp f tc itr :=
     match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end
   | trigger ?e =>
     instantiate (f:=_break);
-    (* ((pose (rdb_trigger0 tc) as name; cbn in name; match goal with | H := mk_box ?lemma |- _ => eapply lemma end) || *)
-    (*  (pose (rdb_trigger1 tc) as name; cbn in name; match goal with | H := mk_box ?lemma |- _ => eapply lemma end) || *)
-    (*  (pose (rdb_trigger2 tc) as name; cbn in name; match goal with | H := mk_box ?lemma |- _ => eapply lemma end) || *)
-    (*  fail 2) *)
-    (apply interp_tgt_hcall || apply interp_tgt_triggere || apply interp_tgt_triggerp)
+    ((pose (rdb_trigger0 tc) as name; cbn in name; match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end) ||
+     (pose (rdb_trigger1 tc) as name; cbn in name; match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end) ||
+     (pose (rdb_trigger2 tc) as name; cbn in name; match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end) ||
+     fail 2
+    )
   | triggerUB =>
     instantiate (f:=_break); pose (rdb_UB tc) as name; cbn in name;
     match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end
@@ -346,12 +331,10 @@ Ltac __red_interp f tc itr :=
     instantiate (f:=_break); pose (rdb_guarantee tc) as name; cbn in name;
     match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end
   | ?term =>
-    idtac "DEBUG";
+    pose (rdb_ext tc) as name; cbn in name;
+    match goal with | H := mk_box ?lemma |- _ => eapply lemma end;
     subst tc;
-    let my_interp := get_head term in
-    let itr := get_tail term in
-    unshelve evar (tc: @red_database (mk_box (my_interp))); [typeclasses eauto|];
-    __red_interp f tc itr
+    __red_interp f term
   end
 .
 
@@ -359,22 +342,9 @@ Ltac _red_interp f :=
   idtac "DEBUG:_red_interp";
   match goal with
   | [ |- ITree.bind' _ ?term = _ ] =>
-    let my_interp := get_head term in
-    let itr := get_tail term in
-    let tc := fresh "_TC_" in
-    unshelve evar (tc: @red_database (mk_box (my_interp))); [typeclasses eauto|];
-    __red_interp f tc itr
+    eapply bind_eta; __red_interp f term
   | [ |- ?term = _] =>
-    idtac "FOO";
-    let my_interp := get_head term in
-    let tc := fresh "_TC_" in
-    idtac "BAR";
-    unshelve evar (tc: @red_database (mk_box (my_interp))); [typeclasses eauto|];
-    idtac "BAZ";
-    subst tc;
-    idtac "BOO";
-    instantiate (f:=_continue); apply bind_ret_r_rev; fail
-  | _ => fail
+    __red_interp f term
   end
 .
 
@@ -391,19 +361,18 @@ Ltac ired_both := ired_l; ired_r.
 (*** Natural Transformations with Reduction lemmas ***)
 Module NTR.
   Class t (E F: Type -> Type) := mk {
-    (* E: Type -> Type; *)
-    (* F: Type -> Type; *)
     n:> itree (eventE +' E) ~> itree (eventE +' F);
-    bind: forall R S T i (k: ktree _ R S) (h: ktree _ S T), (n (i >>= k) >>= h) = (r <- n i;; n (k r) >>= h);
-    tau: forall R S i (h: ktree _ R S), (n (tau;; i) >>= h) = tau;; (n i) >>= h;
-    ret: forall R S i (h: ktree _ R S), (n (Ret i) >>= h) = (h i);
-    triggere: forall R S (i: eventE _) (h: ktree _ R S), (n (trigger i) >>= h) = (trigger i >>= (fun r => tau;; h r));
-    UB: forall R S (h: ktree _ R S), (n triggerUB >>= h) = triggerUB;
-    NB: forall R S (h: ktree _ R S), (n triggerNB >>= h) = triggerNB;
-    unwrapU: forall R S i (h: ktree _ R S), (n (unwrapU i) >>= h) = (unwrapU i) >>= h;
-    unwrapN: forall R S i (h: ktree _ R S), (n (unwrapN i) >>= h) = (unwrapN i) >>= h;
-    assume: forall S P (h: ktree _ _ S), (n (assume P) >>= h) = assume P >>= (fun _ => tau;; h tt);
-    guarantee: forall S P (h: ktree _ _ S), (n (guarantee P) >>= h) = guarantee P >>= (fun _ => tau;; h tt);
+    bind: forall R S i (k: ktree _ R S), (n (i >>= k)) = (r <- n i;; n (k r));
+    tau: forall R (i: itree _ R), (n (tau;; i)) = tau;; (n i);
+    ret: forall R (i: R), (n (Ret i)) = Ret i;
+    triggere: forall R (i: eventE R), (n (trigger i)) = (trigger i >>= (fun r => tau;; Ret r));
+    UB: forall R, (n triggerUB) = (triggerUB: itree _ R);
+    NB: forall R, (n triggerNB) = (triggerNB: itree _ R);
+    unwrapU: forall R (i: option R), (n (unwrapU i)) = (unwrapU i);
+    unwrapN: forall R (i: option R), (n (unwrapN i)) = (unwrapN i);
+    assume: forall P, (n (assume P)) = assume P >>= (fun _ => tau;; Ret tt);
+    guarantee: forall P, (n (guarantee P)) = guarantee P >>= (fun _ => tau;; Ret tt);
+    ext: forall R (i0 i1: itree _ R), i0 = i1 -> (n i0) = (n i1);
   }
   .
   (* Arguments n [_ _] _ [T]. *)
@@ -418,6 +387,7 @@ Module NTR.
   Arguments unwrapN [_ _].
   Arguments assume [_ _].
   Arguments guarantee [_ _].
+  Arguments ext [_ _].
 End NTR.
 Coercion NTR.n: NTR.t >-> Funclass.
 
@@ -449,6 +419,7 @@ Section TEST.
       (mk_box (NTR.unwrapN x))
       (mk_box (NTR.assume x))
       (mk_box (NTR.guarantee x))
+      (mk_box (NTR.ext x))
   .
 
   Global Program Instance y_rdb: red_database (mk_box yn) :=
@@ -465,6 +436,7 @@ Section TEST.
       (mk_box (NTR.unwrapN y))
       (mk_box (NTR.assume y))
       (mk_box (NTR.guarantee y))
+      (mk_box (NTR.ext y))
   .
 
   Global Program Instance z_rdb: red_database (mk_box zn) :=
@@ -481,29 +453,41 @@ Section TEST.
       (mk_box (NTR.unwrapN z))
       (mk_box (NTR.assume z))
       (mk_box (NTR.guarantee z))
+      (mk_box (NTR.ext z))
   .
 
   (* Ltac my_red_both := repeat (try (prw _red_lsim 2 0); try (prw _red_lsim 1 0)). *)
   Ltac my_red_both := repeat (try (prw _red_lsim 2 0); try (prw _red_lsim 1 0); folder).
 
   Goal forall T U V (i: itree _ T) (j: ktree _ T U) (k: ktree _ U V),
-      xn (i >>= j >>= k) = xn (i >>= j >>= k)
+      xn (i >>= j >>= k) = iret <- xn i;; jret <- xn (j iret);; xn (k jret)
   .
-  Proof.
-    i. my_red_both.
-  Abort.
+  Proof. i. Fail refl. my_red_both. refl. Qed.
 
   Goal forall T U V (i: itree _ T) (j: ktree _ T U) (k: ktree _ U V),
-      yn (xn (i >>= j >>= k)) = yn (xn (i >>= j >>= k))
+      yn (xn (i >>= j >>= k)) = iret <- yn (xn i);; jret <- yn (xn (j iret));; yn (xn (k jret))
+  .
+  Proof. i. Fail refl. my_red_both. refl. Qed.
+
+  Goal forall T U V (i: itree _ T) (j: ktree _ T U) (k: ktree _ U V),
+      zn (yn (xn (i >>= j >>= k))) = iret <- zn (yn (xn i));; jret <- zn (yn (xn (j iret)));; zn (yn (xn (k jret)))
+  .
+  Proof. i. Fail refl. my_red_both. refl. Qed.
+
+  Goal forall T U V (j: ktree _ T U) (k: ktree _ U V),
+      xn (trigger (Choose _) >>= j >>= k) = iret <- trigger (Choose _);; tau;; jret <- xn (j iret);; xn (k jret)
   .
   Proof.
-    i. my_red_both.
-    rewrite bind_ret_r_rev with (s:=xn _); my_red_both.
-    rewrite bind_ret_r_rev with (s:=xn _); my_red_both.
-    rewrite bind_ret_r_rev with (s:=xn _); my_red_both.
-    rewrite bind_ret_r_rev with (s:=xn _); my_red_both.
-    rewrite bind_ret_r_rev with (s:=xn _); my_red_both.
-  Abort.
+    i. Fail refl. my_red_both.
+    f_equiv. apply func_ext. i.
+    (* { f_equiv. apply func_ext. i. rewrite bind_tau. rewrite bind_ret_l. } *)
+    f.
+    setoid_rewrite Eq.bind_tau.
+    refl.
+  Qed.
+
+
+
 
   Goal forall T U V (i: itree _ T) (j: ktree _ T U) (k: ktree _ U V),
       yn (xn (i >>= j >>= k)) = yn (xn (i >>= j >>= k))

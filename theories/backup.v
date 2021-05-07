@@ -214,7 +214,204 @@ Ltac interp_state_red := rewrite interp_state_trigger ||
 
 
 
-(*** TODO: move to better place ***)
+
+
+
+
+
+
+
+
+Inductive Boxer : Type :=
+  | boxer : forall (A:Type), A -> Boxer.
+Inductive Ltac_database_token : Prop := ltac_database_token.
+Definition ltac_database (D:Boxer) (T:Boxer) (A:Boxer) := Ltac_database_token.
+Notation "'Register' D T" := (ltac_database (boxer D) (boxer T) _)
+  (at level 69, D at level 0, T at level 0).
+Lemma ltac_database_provide : forall (A:Boxer) (D:Boxer) (T:Boxer), ltac_database D T A.
+Proof using. split. Qed.
+Ltac Provide T := apply (@ltac_database_provide (boxer T)).
+Ltac ltac_database_get D T :=
+  let A := fresh "TEMP" in evar (A:Boxer);
+  let H := fresh "TEMP" in
+  assert (H : ltac_database (boxer D) (boxer T) A);
+  [ subst A; auto
+  | subst A; match type of H with
+             | ltac_database _ _ (boxer ?L) =>
+               let RES := fresh "TEMP" in
+               pose L as RES; revert RES
+             end;
+    clear H ].
+
+
+
+(* Class red_database := mk_rdb { *)
+(*   rdb_interp: Boxer; *)
+(*   rdb_bind: Boxer; *)
+(*   rdb_tau: Boxer; *)
+(* } *)
+(* . *)
+
+(* Section AUX. *)
+
+(*   Context `{Σ: GRA.t}. *)
+
+(*   Global Program Instance interp_tgt_rdb: red_database := *)
+(*     mk_rdb *)
+(*       (boxer interp_hCallE_tgt) *)
+(*       (boxer interp_tgt_bind) *)
+(*       (boxer interp_tgt_tau) *)
+(*   . *)
+
+(* End AUX. *)
+
+Class red_database (interp: Boxer) := mk_rdb {
+  rdb_bind: Boxer;
+  rdb_tau: Boxer;
+  rdb_ret: Boxer;
+  rdb_trigger0: Boxer;
+  rdb_trigger1: Boxer;
+  rdb_trigger2: Boxer;
+}
+.
+Arguments mk_rdb {interp}.
+Arguments rdb_bind {interp}.
+Arguments rdb_tau {interp}.
+Arguments rdb_ret {interp}.
+Arguments rdb_trigger0 {interp}.
+Arguments rdb_trigger1 {interp}.
+Arguments rdb_trigger2 {interp}.
+
+Section AUX.
+
+  Context `{Σ: GRA.t}.
+
+  Global Program Instance interp_tgt_rdb: red_database (boxer (@interp_hCallE_tgt)) :=
+    mk_rdb
+      (boxer interp_tgt_bind)
+      (boxer interp_tgt_tau)
+      (boxer interp_tgt_ret)
+      (boxer interp_tgt_hcall)
+      (boxer interp_tgt_triggere)
+      (boxer interp_tgt_triggerp)
+  .
+
+  Check interp_tgt_rdb.
+  Check interp_tgt_rdb.(rdb_bind).
+  Compute (interp_tgt_rdb.(rdb_bind)).
+
+  Goal False.
+    unshelve evar (T: red_database (boxer (@interp_hCallE_tgt))).
+    { typeclasses eauto. }
+    assert(H: T.(rdb_bind) = boxer interp_tgt_bind) by refl.
+    Show Proof.
+    Check (T.(rdb_bind)).
+
+    pose (rdb_bind interp_tgt_rdb) as x; cbn in x.
+    match x with
+    | boxer ?y => idtac y
+    | ?y => idtac y
+    end.
+    match goal with
+    | H := boxer ?x |- _ => idtac x
+    end.
+
+    match constr:(rdb_bind interp_tgt_rdb) with
+    | boxer ?x => idtac "A"
+    | _ => idtac "B"
+    end.
+    (* match (T.(rdb_bind)) with *)
+    (* | ?x => idtac x *)
+    (* end. *)
+
+    (* match (rdb_bind T) with *)
+    (* | boxer ?bind_lemma => idtac bind_lemma *)
+    (* end. *)
+    Check (T.(rdb_bind)).
+    (* assert(T: red_database (boxer interp_hCallE_tgt)). *)
+    (* { typeclasses eauto. } *)
+  Abort.
+
+End AUX.
+
+
+
+(* Ltac ltac_database_get_constr D T := *)
+(*   ltac_database_get D T; *)
+(*   match goal with *)
+(*   | [ |- let _ := ?x in _ ] => constr:(x) *)
+(*   end *)
+(* . *)
+
+(* Ltac _ltac_database_get_constr D T k := *)
+(*   let A := fresh "TEMP" in evar (A:Boxer); *)
+(*   let H := fresh "TEMP" in *)
+(*   assert (H : ltac_database (boxer D) (boxer T) A); *)
+(*   [ subst A; auto *)
+(*   | subst A; match type of H with *)
+(*              | ltac_database _ _ (boxer ?L) => *)
+(*                k L *)
+(*              end; *)
+(*     clear H ]. *)
+
+(*** See: http://adam.chlipala.net/cpdt/html/Match.html , "Error: variable n should be bound to a term." ***)
+
+
+Module TEST.
+Definition mydb0 := True.
+Definition mydb1 := True.
+Hint Extern 1 (Register mydb0 0) => Provide interp_bind.
+Hint Extern 1 (Register mydb1 0) => Provide interp_tgt_bind.
+
+Goal False.
+  ltac_database_get mydb0 0. intro T; clearbody T.
+  ltac_database_get mydb1 0. i.
+
+
+  ltac_database_get mydb1 0.
+  let tmp := match goal with
+             | [ |- let _ := ?x in _ ] => constr:(x)
+             end in pose tmp.
+  (* ltac_database_get_constr mydb1 0 ltac:(fun H => pose H). *)
+  (* let tmp := ltac_database_get_constr mydb1 0 in pose tmp. *)
+
+
+
+  (* let A := fresh "TEMP" in evar (A:Boxer); *)
+  (* let H := fresh "TEMP" in *)
+  (* assert (H : ltac_database (boxer mydb0) (boxer 0) A). *)
+  (* { Set Printing All. subst TEMP. debug eauto. } *)
+  (* Unset Printing All. *)
+  (* subst TEMP. *)
+  (* match type of TEMP0 with *)
+  (* | ltac_database _ _ (boxer ?L) => *)
+  (*   (* generalize L *) *)
+  (*   pose L *)
+  (* end. *)
+  (* clear TEMP0. *)
+Abort.
+
+End TEST.
+Reset TEST.
+(* Note for a possible alternative implementation of the ltac_database_token:
+   Inductive Ltac_database : Type :=
+     | ltac_database : forall A, A -> Ltac_database.
+   Implicit Arguments ltac_database A.
+*)
+
+
+
+
+
+
+(* Hint Extern 1 (interp_hCallE_tgt _ _ _ = _) => pose "A". *)
+(* Hint Extern 1 ((interp_hCallE_tgt _ _ _) >>= _ = _) => pose "A". *)
+Definition namedb := True.
+Hint Extern 1 (Register namedb @interp_hCallE_tgt) => Provide "interp_hCallE_tgt".
+Hint Extern 1 (Register namedb ("interp_hCallE_tgt", "bind")) => Provide interp_tgt_bind.
+Hint Extern 1 (Register namedb ("interp_hCallE_tgt", "tau")) => Provide interp_tgt_tau.
+
+
 Ltac get_head term :=
   match term with
   | ?f ?x => get_head f
@@ -224,65 +421,38 @@ Ltac get_head term :=
 
 Ltac get_tail term :=
   match term with
+  (* | ?f _ _ _ ?x => get_tail x *)
+  (* | ?f _ _ ?x => get_tail x *)
+  (* | ?f _ ?x => get_tail x *)
+  (* | ?f ?x => get_tail x *)
+
+  (* | ?f ?x => x *)
+  (* | _ => constr:(term) *)
+
   | ?f ?x => x
   end
 .
 
-Variant Box: Type :=
-| mk_box: forall (A:Type), A -> Box
-.
+Goal forall (f: nat -> nat -> nat -> nat -> Prop), f 0 1 2 3 -> False.
+Proof.
+  i.
+  let tmp := (get_head (f 0 1 2 3)) in pose tmp as X.
+  let tmp := (get_tail (f 0 1 2 3)) in pose tmp as Y.
+  assert(X = f) by refl.
+  assert(Y = 3) by refl.
+Abort.
 
-Class red_database (interp: Box) := mk_rdb {
-  rdb_bind: Box;
-  rdb_tau: Box;
-  rdb_ret: Box;
-  rdb_trigger0: Box;
-  rdb_trigger1: Box;
-  rdb_trigger2: Box;
-  rdb_UB: Box;
-  rdb_NB: Box;
-  rdb_unwrapU: Box;
-  rdb_unwrapN: Box;
-  rdb_assume: Box;
-  rdb_guarantee: Box;
-}
-.
-Arguments mk_rdb [interp].
-Arguments rdb_bind [interp].
-Arguments rdb_tau [interp].
-Arguments rdb_ret [interp].
-Arguments rdb_trigger0 [interp].
-Arguments rdb_trigger1 [interp].
-Arguments rdb_trigger2 [interp].
-Arguments rdb_UB [interp].
-Arguments rdb_NB [interp].
-Arguments rdb_unwrapU [interp].
-Arguments rdb_unwrapN [interp].
-Arguments rdb_assume [interp].
-Arguments rdb_guarantee [interp].
-
-Section AUX.
-
-  Context `{Σ: GRA.t}.
-
-  Global Program Instance interp_tgt_rdb: red_database (mk_box (@interp_hCallE_tgt)) :=
-    mk_rdb
-      (mk_box interp_tgt_bind)
-      (mk_box interp_tgt_tau)
-      (mk_box interp_tgt_ret)
-      (mk_box interp_tgt_hcall)
-      (mk_box interp_tgt_triggere)
-      (mk_box interp_tgt_triggerp)
-      (mk_box interp_tgt_triggerUB)
-      (mk_box interp_tgt_triggerNB)
-      (mk_box interp_tgt_unwrapU)
-      (mk_box interp_tgt_unwrapN)
-      (mk_box interp_tgt_assume)
-      (mk_box interp_tgt_guarantee)
-  .
-
-End AUX.
-
+Goal forall {Σ : GRA.t} (stb : list (string * fspec)) (o : ord) [R S R_src : Type] (s : itree (hCallE +' pE +' eventE) R)
+  (k : R -> itree (hCallE +' pE +' eventE) S) (h : S -> itree Es R_src),
+` x : _ <- interp_hCallE_tgt stb o (` x : _ <- s;; k x);; h x =
+` r : R <- interp_hCallE_tgt stb o s;; ` x : _ <- interp_hCallE_tgt stb o (k r);; h x.
+  i.
+  match goal with
+  | [ |- ?itr >>= _ = _ ] => let interp := (get_head itr) in ltac_database_get namedb interp
+  | [ |- ?itr = _ ] => let interp := (get_head itr) in ltac_database_get namedb interp
+  end.
+  ltac_database_get namedb ("interp_hCallE_tgt", "bind"); intro tmp; clearbody tmp. rewrite tmp. ss.
+Qed.
 
 
 
@@ -307,232 +477,170 @@ Ltac _red_itree f :=
   | _ => fail
   end.
 
-Ltac __red_interp f tc itr :=
-  idtac "DEBUG:__red_interp";
-  let name := fresh "TMP" in
+Ltac __red_interp f code itr :=
   match itr with
+  (* | ITree.bind' _ _ => *)
+  (*   let lemma := ltac_database_get namedb (my_interp, "bind") in *)
+  (*   instantiate (f:=_continue); eapply lemma; fail *)
+  (* | Tau _ => *)
+  (*   let lemma := ltac_database_get namedb (my_interp, "tau") in *)
+  (*   instantiate (f:=_break); apply lemma; fail *)
   | ITree.bind' _ _ =>
-    instantiate (f:=_continue); pose (rdb_bind tc) as name; cbn in name;
-    match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end
+    instantiate (f:=_continue); eapply interp_tgt_bind; fail
   | Tau _ =>
-    instantiate (f:=_break); pose (rdb_tau tc) as name; cbn in name;
-    match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end
+    instantiate (f:=_break); apply interp_tgt_tau; fail
   | Ret _ =>
-    instantiate (f:=_continue); pose (rdb_ret tc) as name; cbn in name;
-    match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end
+    instantiate (f:=_continue); apply interp_tgt_ret; fail
   | trigger ?e =>
     instantiate (f:=_break);
-    (* ((pose (rdb_trigger0 tc) as name; cbn in name; match goal with | H := mk_box ?lemma |- _ => eapply lemma end) || *)
-    (*  (pose (rdb_trigger1 tc) as name; cbn in name; match goal with | H := mk_box ?lemma |- _ => eapply lemma end) || *)
-    (*  (pose (rdb_trigger2 tc) as name; cbn in name; match goal with | H := mk_box ?lemma |- _ => eapply lemma end) || *)
-    (*  fail 2) *)
-    (apply interp_tgt_hcall || apply interp_tgt_triggere || apply interp_tgt_triggerp)
+    match (type of e) with
+    | context[hCallE] => apply interp_tgt_hcall
+    | context[eventE] => apply interp_tgt_triggere
+    | context[pE] => apply interp_tgt_triggerp
+    | _ => fail 2
+    end
   | triggerUB =>
-    instantiate (f:=_break); pose (rdb_UB tc) as name; cbn in name;
-    match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end
+    instantiate (f:=_break); apply interp_tgt_triggerUB; fail
   | triggerNB =>
-    instantiate (f:=_break); pose (rdb_NB tc) as name; cbn in name;
-    match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end
+    instantiate (f:=_break); apply interp_tgt_triggerNB; fail
   | unwrapU _ =>
-    instantiate (f:=_break); pose (rdb_unwrapU tc) as name; cbn in name;
-    match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end
+    instantiate (f:=_break); apply interp_tgt_unwrapU; fail
   | unwrapN _ =>
-    instantiate (f:=_break); pose (rdb_unwrapN tc) as name; cbn in name;
-    match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end
+    instantiate (f:=_break); apply interp_tgt_unwrapN; fail
   | assume _ =>
-    instantiate (f:=_break); pose (rdb_assume tc) as name; cbn in name;
-    match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end
+    instantiate (f:=_break); apply interp_tgt_assume; fail
   | guarantee _ =>
-    instantiate (f:=_break); pose (rdb_guarantee tc) as name; cbn in name;
-    match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end
-  | ?term =>
-    idtac "DEBUG";
-    subst tc;
-    let my_interp := get_head term in
-    let itr := get_tail term in
-    unshelve evar (tc: @red_database (mk_box (my_interp))); [typeclasses eauto|];
-    __red_interp f tc itr
+    instantiate (f:=_break); apply interp_tgt_guarantee; fail
+  | _ =>
+    fail
   end
 .
-
+  
 Ltac _red_interp f :=
-  idtac "DEBUG:_red_interp";
   match goal with
   | [ |- ITree.bind' _ ?term = _ ] =>
     let my_interp := get_head term in
+    ltac_database_get namedb my_interp;
     let itr := get_tail term in
-    let tc := fresh "_TC_" in
-    unshelve evar (tc: @red_database (mk_box (my_interp))); [typeclasses eauto|];
-    __red_interp f tc itr
-  | [ |- ?term = _] =>
-    idtac "FOO";
-    let my_interp := get_head term in
-    let tc := fresh "_TC_" in
-    idtac "BAR";
-    unshelve evar (tc: @red_database (mk_box (my_interp))); [typeclasses eauto|];
-    idtac "BAZ";
-    subst tc;
-    idtac "BOO";
+    match goal with
+    | [ |- let _ := ?code in _ ] =>
+      let name := fresh "_TMP_" in
+      intro name; clear name;
+      __red_interp f code itr
+    end
+  | [ |- interp_hCallE_tgt _ _ _ = _] =>
     instantiate (f:=_continue); apply bind_ret_r_rev; fail
   | _ => fail
   end
 .
 
+
+Ltac __red_interp_tc f tc itr :=
+  let name := fresh "TMP" in
+  match itr with
+  | ITree.bind' _ _ =>
+    instantiate (f:=_continue); pose (rdb_bind tc) as name; cbn in name;
+    match goal with | H := boxer ?lemma |- _ => eapply lemma; fail end
+  | Tau _ =>
+    instantiate (f:=_break); pose (rdb_tau tc) as name; cbn in name;
+    match goal with | H := boxer ?lemma |- _ => eapply lemma; fail end
+  | Ret _ =>
+    instantiate (f:=_continue); pose (rdb_ret tc) as name; cbn in name;
+    match goal with | H := boxer ?lemma |- _ => eapply lemma; fail end
+  | trigger ?e =>
+    instantiate (f:=_break);
+    ((pose (rdb_trigger0 tc) as name; cbn in name; match goal with | H := boxer ?lemma |- _ => eapply lemma end) ||
+     (pose (rdb_trigger1 tc) as name; cbn in name; match goal with | H := boxer ?lemma |- _ => eapply lemma end) ||
+     (pose (rdb_trigger2 tc) as name; cbn in name; match goal with | H := boxer ?lemma |- _ => eapply lemma end) ||
+     fail 2)
+  | triggerUB =>
+    instantiate (f:=_break); apply interp_tgt_triggerUB; fail
+  | triggerNB =>
+    instantiate (f:=_break); apply interp_tgt_triggerNB; fail
+  | unwrapU _ =>
+    instantiate (f:=_break); apply interp_tgt_unwrapU; fail
+  | unwrapN _ =>
+    instantiate (f:=_break); apply interp_tgt_unwrapN; fail
+  | assume _ =>
+    instantiate (f:=_break); apply interp_tgt_assume; fail
+  | guarantee _ =>
+    instantiate (f:=_break); apply interp_tgt_guarantee; fail
+  | _ =>
+    fail
+  end
+.
+
+Ltac _red_interp_tc f :=
+  match goal with
+  | [ |- ITree.bind' _ ?term = _ ] =>
+    let my_interp := get_head term in
+    let itr := get_tail term in
+    let tc := fresh "_TC_" in
+    unshelve evar (tc: red_database (boxer my_interp)); [typeclasses eauto|];
+    __red_interp_tc f tc itr
+  | [ |- interp_hCallE_tgt _ _ _ = _] =>
+    instantiate (f:=_continue); apply bind_ret_r_rev; fail
+  | _ => fail
+  end
+.
+  
+
+(* Ltac _red_interp_tgt f := *)
+(*   match goal with *)
+(*   | [ |- ITree.bind' _ (interp_hCallE_tgt _ _ ?itr) = _ ] => *)
+(*     match itr with *)
+(*     | ITree.bind' _ _ => *)
+(*       instantiate (f:=_continue); eapply interp_tgt_bind; fail *)
+(*     | Tau _ => *)
+(*       instantiate (f:=_break); apply interp_tgt_tau; fail *)
+(*     | Ret _ => *)
+(*       instantiate (f:=_continue); apply interp_tgt_ret; fail *)
+(*     | trigger ?e => *)
+(*       instantiate (f:=_break); *)
+(*       match (type of e) with *)
+(*       | context[hCallE] => apply interp_tgt_hcall *)
+(*       | context[eventE] => apply interp_tgt_triggere *)
+(*       | context[pE] => apply interp_tgt_triggerp *)
+(*       | _ => fail 2 *)
+(*       end *)
+(*     | triggerUB => *)
+(*       instantiate (f:=_break); apply interp_tgt_triggerUB; fail *)
+(*     | triggerNB => *)
+(*       instantiate (f:=_break); apply interp_tgt_triggerNB; fail *)
+(*     | unwrapU _ => *)
+(*       instantiate (f:=_break); apply interp_tgt_unwrapU; fail *)
+(*     | unwrapN _ => *)
+(*       instantiate (f:=_break); apply interp_tgt_unwrapN; fail *)
+(*     | assume _ => *)
+(*       instantiate (f:=_break); apply interp_tgt_assume; fail *)
+(*     | guarantee _ => *)
+(*       instantiate (f:=_break); apply interp_tgt_guarantee; fail *)
+(*     | _ => *)
+(*       fail *)
+(*     end *)
+(*   | [ |- interp_hCallE_tgt _ _ _ = _] => *)
+(*     instantiate (f:=_continue); apply bind_ret_r_rev; fail *)
+(*   | _ => fail *)
+(*   end. *)
+
+Ltac _red_interp_tgt f :=
+  match goal with
+  | [ |- ITree.bind' _ (interp_hCallE_tgt _ _ ?itr) = _ ] =>
+    __red_interp f "DUMMYCODE" itr
+  | [ |- interp_hCallE_tgt _ _ _ = _] =>
+    instantiate (f:=_continue); apply bind_ret_r_rev; fail
+  | _ => fail
+  end.
+
 Ltac _red_lsim f :=
-  _red_interp f || _red_itree f || fail.
+  (* _red_interp_tgt f || _red_itree f || fail *)
+  _red_interp_tc f || _red_itree f || fail
+.
 
 Ltac ired_l := try (prw _red_lsim 2 1 0).
 Ltac ired_r := try (prw _red_lsim 1 1 0).
 
 Ltac ired_both := ired_l; ired_r.
-
-
-
-(*** Natural Transformations with Reduction lemmas ***)
-Module NTR.
-  Class t (E F: Type -> Type) := mk {
-    (* E: Type -> Type; *)
-    (* F: Type -> Type; *)
-    n:> itree (eventE +' E) ~> itree (eventE +' F);
-    bind: forall R S T i (k: ktree _ R S) (h: ktree _ S T), (n (i >>= k) >>= h) = (r <- n i;; n (k r) >>= h);
-    tau: forall R S i (h: ktree _ R S), (n (tau;; i) >>= h) = tau;; (n i) >>= h;
-    ret: forall R S i (h: ktree _ R S), (n (Ret i) >>= h) = (h i);
-    triggere: forall R S (i: eventE _) (h: ktree _ R S), (n (trigger i) >>= h) = (trigger i >>= (fun r => tau;; h r));
-    UB: forall R S (h: ktree _ R S), (n triggerUB >>= h) = triggerUB;
-    NB: forall R S (h: ktree _ R S), (n triggerNB >>= h) = triggerNB;
-    unwrapU: forall R S i (h: ktree _ R S), (n (unwrapU i) >>= h) = (unwrapU i) >>= h;
-    unwrapN: forall R S i (h: ktree _ R S), (n (unwrapN i) >>= h) = (unwrapN i) >>= h;
-    assume: forall S P (h: ktree _ _ S), (n (assume P) >>= h) = assume P >>= (fun _ => tau;; h tt);
-    guarantee: forall S P (h: ktree _ _ S), (n (guarantee P) >>= h) = guarantee P >>= (fun _ => tau;; h tt);
-  }
-  .
-  (* Arguments n [_ _] _ [T]. *)
-  Arguments n [_ _].
-  Arguments bind [_ _].
-  Arguments tau [_ _].
-  Arguments ret [_ _].
-  Arguments triggere [_ _].
-  Arguments UB [_ _].
-  Arguments NB [_ _].
-  Arguments unwrapU [_ _].
-  Arguments unwrapN [_ _].
-  Arguments assume [_ _].
-  Arguments guarantee [_ _].
-End NTR.
-Coercion NTR.n: NTR.t >-> Funclass.
-
-
-
-Section TEST.
-  Context `{Σ : GRA.t}.
-
-  Variable E F G H: Type -> Type.
-  Variable x: NTR.t E F.
-  Variable y: NTR.t F G.
-  Variable z: NTR.t G H.
-
-  Let xn := NTR.n x.
-  Let yn := NTR.n y.
-  Let zn := NTR.n z.
-
-  Global Program Instance x_rdb: red_database (mk_box xn) :=
-    mk_rdb
-      (mk_box (NTR.bind x))
-      (mk_box (NTR.tau x))
-      (mk_box (NTR.ret x))
-      (mk_box (NTR.triggere x))
-      (mk_box (NTR.triggere x))
-      (mk_box (NTR.triggere x))
-      (mk_box (NTR.UB x))
-      (mk_box (NTR.NB x))
-      (mk_box (NTR.unwrapU x))
-      (mk_box (NTR.unwrapN x))
-      (mk_box (NTR.assume x))
-      (mk_box (NTR.guarantee x))
-  .
-
-  Global Program Instance y_rdb: red_database (mk_box yn) :=
-    mk_rdb
-      (mk_box (NTR.bind y))
-      (mk_box (NTR.tau y))
-      (mk_box (NTR.ret y))
-      (mk_box (NTR.triggere y))
-      (mk_box (NTR.triggere y))
-      (mk_box (NTR.triggere y))
-      (mk_box (NTR.UB y))
-      (mk_box (NTR.NB y))
-      (mk_box (NTR.unwrapU y))
-      (mk_box (NTR.unwrapN y))
-      (mk_box (NTR.assume y))
-      (mk_box (NTR.guarantee y))
-  .
-
-  Global Program Instance z_rdb: red_database (mk_box zn) :=
-    mk_rdb
-      (mk_box (NTR.bind z))
-      (mk_box (NTR.tau z))
-      (mk_box (NTR.ret z))
-      (mk_box (NTR.triggere z))
-      (mk_box (NTR.triggere z))
-      (mk_box (NTR.triggere z))
-      (mk_box (NTR.UB z))
-      (mk_box (NTR.NB z))
-      (mk_box (NTR.unwrapU z))
-      (mk_box (NTR.unwrapN z))
-      (mk_box (NTR.assume z))
-      (mk_box (NTR.guarantee z))
-  .
-
-  (* Ltac my_red_both := repeat (try (prw _red_lsim 2 0); try (prw _red_lsim 1 0)). *)
-  Ltac my_red_both := repeat (try (prw _red_lsim 2 0); try (prw _red_lsim 1 0); folder).
-
-  Goal forall T U V (i: itree _ T) (j: ktree _ T U) (k: ktree _ U V),
-      xn (i >>= j >>= k) = xn (i >>= j >>= k)
-  .
-  Proof.
-    i. my_red_both.
-  Abort.
-
-  Goal forall T U V (i: itree _ T) (j: ktree _ T U) (k: ktree _ U V),
-      yn (xn (i >>= j >>= k)) = yn (xn (i >>= j >>= k))
-  .
-  Proof.
-    i. my_red_both.
-    rewrite bind_ret_r_rev with (s:=xn _); my_red_both.
-    rewrite bind_ret_r_rev with (s:=xn _); my_red_both.
-    rewrite bind_ret_r_rev with (s:=xn _); my_red_both.
-    rewrite bind_ret_r_rev with (s:=xn _); my_red_both.
-    rewrite bind_ret_r_rev with (s:=xn _); my_red_both.
-  Abort.
-
-  Goal forall T U V (i: itree _ T) (j: ktree _ T U) (k: ktree _ U V),
-      yn (xn (i >>= j >>= k)) = yn (xn (i >>= j >>= k))
-  .
-  Proof.
-    i. my_red_both.
-    rewrite bind_ret_r_rev with (s:=xn _).
-    rewrite ! x.(NTR.bind).
-  (* ` x0 : V <- yn (` r : T <- x T i;; ` r0 : U <- x U (j r);; ` x0 : V <- x V (k r0);; Ret x0);; Ret x0 = *)
-    my_red_both.
-  (* ` r : T <- yn (xn i);; ` x0 : V <- yn (` r0 : U <- xn (j r);; ` x0 : V <- xn (k r0);; Ret x0);; Ret x0 = *)
-  Abort.
-
-  Hypothesis xbind:
-    forall (R S: Type) (i : itree (eventE +' E) R) (k : ktree (eventE +' E) R S),
-       x S (` x : _ <- i;; k x) = ` r : R <- x R i;; x S (k r).
-
-  Goal forall T U V (i: itree _ T) (j: ktree _ T U) (k: ktree _ U V),
-      yn (xn (i >>= j >>= k)) = yn (xn (i >>= j >>= k))
-  .
-  Proof.
-    i. my_red_both.
-    rewrite ! xbind.
-  (* ` x0 : V <- yn (` r : U <- (` r : T <- xn i;; xn (j r));; xn (k r));; Ret x0 = *)
-    my_red_both.
-  (* ` r : T <- yn (xn i);; ` r0 : U <- yn (xn (j r));; ` x0 : V <- yn (xn (k r0));; Ret x0 = *)
-  Abort.
-
-End TEST.
 
 
 (* any, alist things *)
@@ -543,54 +651,6 @@ Ltac asimpl := try (unfold alist_add, alist_remove in *); ss.
 
 
 (* Hoare Parse *)
-
-Section HOARE.
-  Let Any_tgt := Any.t.
-  Notation Es' := (hCallE +' pE +' eventE).
-  Context `{Σ: GRA.t}.
-  Variable stb: list (gname * fspec).
-
-  Definition HoareFunArg
-             {X Y: Type}
-             (P: X -> Y -> Any_tgt -> ord -> Σ -> Prop): Any_tgt -> itree Es (X * Y * ord) := fun varg_tgt =>
-    varg_src <- trigger (Take Y);;
-    x <- trigger (Take X);;
-    rarg <- trigger (Take Σ);; forge rarg;; (*** virtual resource passing ***)
-    (checkWf);;
-    ord_cur <- trigger (Take _);;
-    assume(P x varg_src varg_tgt ord_cur rarg);; (*** precondition ***)
-    Ret (x, varg_src, ord_cur)
-  .
-
-  Definition HoareFunRet
-             {X Z: Type}
-             (Q: X -> Z -> Any_tgt -> Σ -> Prop): X -> Z -> itree Es Any_tgt := fun x vret_src =>
-    vret_tgt <- trigger (Choose Any_tgt);;
-    '(mret, fret) <- trigger (Choose _);; put mret fret;; (*** updating resources in an abstract way ***)
-    rret <- trigger (Choose Σ);; guarantee(Q x vret_src vret_tgt rret);; (*** postcondition ***)
-    (discard rret);; (*** virtual resource passing ***)
-
-    Ret vret_tgt (*** return ***)
-  .
-
-  Lemma HoareFun_parse
-        {X Y Z: Type}
-        (P: X -> Y -> Any_tgt -> ord -> Σ -> Prop)
-        (Q: X -> Z -> Any_tgt -> Σ -> Prop)
-        (body: Y -> itree Es' Z)
-        (varg_tgt: Any_tgt)
-    :
-      HoareFun stb P Q body varg_tgt =
-      '(x, varg_src, ord_cur) <- HoareFunArg P varg_tgt;;
-      vret_src <- match ord_cur with
-                  | ord_pure n => (interp_hCallE_tgt stb ord_cur APC);; trigger (Choose _)
-                  | _ => (interp_hCallE_tgt stb ord_cur (body varg_src))
-                  end;;
-      HoareFunRet Q x vret_src.
-  Proof.
-    unfold HoareFun, HoareFunArg, HoareFunRet, body_to_tgt. grind.
-  Qed.
-End HOARE.
 
 
 (* "safe" simulation constructors *)
@@ -803,225 +863,6 @@ End SIM.
 Section HLEMMAS.
   Context `{Σ: GRA.t}.
   Local Opaque GRA.to_URA.
-
-  Lemma hcall_clo_ord_weaken (o_new: Ord.t)
-        Y Z (ftsp1: ftspec Y Z)
-        (mr_src1 fr_src1 rarg_src: Σ)
-        (o: ord) (x: ftsp1.(X))
-        (cur: Σ)
-        r rg (n: nat) mr_src0 mp_src0 fr_src0
-        (ftsp0: ftspec Y Z)
-        mrs_tgt frs_tgt k_tgt k_src
-        fn tbr ord_cur varg_src varg_tgt
-        (wf: (Σ * Any.t) * (Σ * Any.t) -> Prop)
-
-        (WEAKER: ftspec_weaker ftsp1 ftsp0)
-        (GWF: URA.updatable (URA.add mr_src0 fr_src0) cur /\ URA.wf cur)
-        (UPDATABLE: URA.updatable cur (URA.add mr_src1 (URA.add rarg_src fr_src1)))
-        (FUEL: (15 < n)%ord)
-        (PRE: ftsp1.(precond) x varg_src varg_tgt o rarg_src)
-        (PURE: ord_lt o ord_cur /\
-               (tbr = true -> is_pure o) /\ (tbr = false -> o = ord_top))
-        (WF: wf ((mr_src1, mp_src0), mrs_tgt))
-        (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
-        (POST: forall (vret_tgt : Any.t) (mrs_src1 mrs_tgt1 : (Σ * Any.t))
-                      (rret: Σ) (vret_src: Z)
-                      (WF: wf (mrs_src1, mrs_tgt1)),
-            exists (mr_src2: Σ) (mp_src2: Any.t),
-              (<<LOOKUP: mrs_src1 = (mr_src2, mp_src2)>>) /\
-              forall (VALID: URA.wf (URA.add mr_src2 (URA.add fr_src1 rret)))
-                     (POST: ftsp1.(postcond) x vret_src vret_tgt rret),
-                gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ eqr o_new
-                       (mrs_src1, URA.add fr_src1 rret, k_src vret_src) (mrs_tgt1, frs_tgt, k_tgt vret_tgt))
-    :
-      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ eqr n
-             (mr_src0, mp_src0, fr_src0, (HoareCall tbr ord_cur (mk_fspec ftsp0) fn varg_src) >>= k_src)
-             (mrs_tgt, frs_tgt, trigger (Call fn varg_tgt) >>= k_tgt)
-  .
-  Proof.
-    unfold HoareCall, put, discard, forge, checkWf, assume, guarantee.
-    ired_both. gstep. econs; [eauto with ord_step|].
-    exists (mr_src1, URA.add rarg_src fr_src1).
-    repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
-    { etrans; eauto. eapply GWF. }
-    repeat (ired_both; gstep; econs; eauto with ord_step). exists rarg_src.
-    repeat (ired_both; gstep; econs; eauto with ord_step). exists fr_src1.
-    repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
-    hexploit (WEAKER x). i. des.
-    repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
-    repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
-    repeat (ired_both; gstep; econs; eauto with ord_step). exists o.
-    repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
-    { exploit PRE0; cycle 1.
-      { eapply PRE. }
-      { rewrite URA.unit_idl. auto. }
-      { rewrite URA.unit_idl.
-        hexploit (UPDATABLE ε).
-        { rewrite URA.unit_id. auto. }
-        { i. rewrite URA.unit_id in H.
-          erewrite URA.add_comm in H. eapply URA.wf_mon in H.
-          eapply URA.wf_mon in H. auto. }
-      }
-    } des.
-    repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
-    repeat (ired_both; gstep; econs; eauto with ord_step). i. exists (o_new + 8)%ord.
-    repeat (ired_both; gstep; econs; eauto with ord_step). i.
-    repeat (ired_both; gstep; econs; eauto with ord_step). i.
-    hexploit (POST vret mrs_src1 mrs_tgt1 x0 x1 WF0). i. des. subst.
-    repeat (ired_both; gstep; econs; eauto with ord_step). i.
-    ired_both; gstep; econs.
-    { instantiate (1:=o_new). eapply Ord.eq_lt_lt.
-      { symmetry. eapply OrdArith.add_O_r. }
-      { eapply OrdArith.lt_add_r. rewrite Ord.from_nat_S. eapply Ord.S_pos. }
-    }
-    i.
-    repeat spc H0.
-    ired_both; ss.
-    eapply H0. exploit POST0; cycle 1.
-    { eauto. }
-    { rewrite URA.unit_idl. auto. }
-    { rewrite URA.unit_idl.
-      erewrite URA.add_comm in x2. eapply URA.wf_mon in x2.
-      erewrite URA.add_comm in x2. eapply URA.wf_mon in x2. auto. }
-  Qed.
-
-  Lemma hcall_clo_weaken Y Z (ftsp1: ftspec Y Z)
-        (mr_src1 fr_src1 rarg_src: Σ)
-        (o: ord) (x: __shelve__ ftsp1.(X))
-        (cur: Σ)
-        r rg (n: nat) mr_src0 mp_src0 fr_src0
-        (ftsp0: ftspec Y Z)
-        mrs_tgt frs_tgt k_tgt k_src
-        fn tbr ord_cur varg_src varg_tgt
-        (wf: (Σ * Any.t) * (Σ * Any.t) -> Prop)
-
-        (WEAKER: ftspec_weaker ftsp1 ftsp0)
-        (GWF: URA.updatable (URA.add mr_src0 fr_src0) cur /\ URA.wf cur)
-        (UPDATABLE: URA.updatable cur (URA.add mr_src1 (URA.add rarg_src fr_src1)))
-        (FUEL: (15 < n)%ord)
-        (PRE: ftsp1.(precond) x varg_src varg_tgt o rarg_src)
-        (PURE: ord_lt o ord_cur /\
-               (tbr = true -> is_pure o) /\ (tbr = false -> o = ord_top))
-        (WF: wf ((mr_src1, mp_src0), mrs_tgt))
-        (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
-        (POST: forall (vret_tgt : Any.t) (mrs_src1 mrs_tgt1 : (Σ * Any.t))
-                      (rret: Σ) (vret_src: Z)
-                      (WF: wf (mrs_src1, mrs_tgt1)),
-            exists (mr_src2: Σ) (mp_src2: Any.t),
-              (<<LOOKUP: mrs_src1 = (mr_src2, mp_src2)>>) /\
-              forall (VALID: URA.wf (URA.add mr_src2 (URA.add fr_src1 rret)))
-                     (POST: ftsp1.(postcond) x vret_src vret_tgt rret),
-                gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ eqr 100
-                       (mrs_src1, URA.add fr_src1 rret, k_src vret_src) (mrs_tgt1, frs_tgt, k_tgt vret_tgt))
-    :
-      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ eqr n
-             (mr_src0, mp_src0, fr_src0, (HoareCall tbr ord_cur (mk_fspec ftsp0) fn varg_src) >>= k_src)
-             (mrs_tgt, frs_tgt, trigger (Call fn varg_tgt) >>= k_tgt)
-  .
-  Proof.
-    eapply (@hcall_clo_ord_weaken 100); eauto.
-  Qed.
-
-  Lemma hcall_clo
-        (mr_src1 fr_src1 rarg_src: Σ)
-        (o: ord) X (x: __shelve__ X)
-        (cur: Σ)
-        r rg (n: nat) mr_src0 mp_src0 fr_src0 Y Z
-        (P: X -> Y -> Any.t -> ord -> Σ -> Prop)
-        (Q: X -> Z -> Any.t -> Σ -> Prop)
-        mrs_tgt frs_tgt k_tgt k_src
-        fn tbr ord_cur varg_src varg_tgt
-        (wf: (Σ * Any.t) * (Σ * Any.t) -> Prop)
-
-        (GWF: URA.updatable (URA.add mr_src0 fr_src0) cur /\ URA.wf cur)
-        (UPDATABLE: URA.updatable cur (URA.add mr_src1 (URA.add rarg_src fr_src1)))
-        (FUEL: (15 < n)%ord)
-        (PRE: P x varg_src varg_tgt o rarg_src)
-        (PURE: ord_lt o ord_cur /\
-               (tbr = true -> is_pure o) /\ (tbr = false -> o = ord_top))
-        (WF: wf ((mr_src1, mp_src0), mrs_tgt))
-        (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
-        (POST: forall (vret_tgt : Any.t) (mrs_src1 mrs_tgt1 : (Σ * Any.t))
-                      (rret: Σ) (vret_src: Z)
-                      (WF: wf (mrs_src1, mrs_tgt1)),
-            exists (mr_src2: Σ) (mp_src2: Any.t),
-              (<<LOOKUP: mrs_src1 = (mr_src2, mp_src2)>>) /\
-              forall (VALID: URA.wf (URA.add mr_src2 (URA.add fr_src1 rret)))
-                     (POST: Q x vret_src vret_tgt rret),
-                gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ eqr 100
-                       (mrs_src1, URA.add fr_src1 rret, k_src vret_src) (mrs_tgt1, frs_tgt, k_tgt vret_tgt))
-    :
-      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ eqr n
-             (mr_src0, mp_src0, fr_src0, (HoareCall tbr ord_cur (mk P Q) fn varg_src) >>= k_src)
-             (mrs_tgt, frs_tgt, trigger (Call fn varg_tgt) >>= k_tgt).
-  Proof.
-    eapply hcall_clo_weaken; eauto.
-    { refl. }
-    { eauto. }
-    { eauto. }
-  Qed.
-
-  Lemma harg_clo
-        r rg mr_src0 mp_src0 fr_src0
-        X Y (P: X -> Y -> Any.t -> ord -> Σ -> Prop) varg_tgt
-        mrs_tgt frs_tgt f_tgt k_src
-        (wf: (Σ * Any.t) * (Σ * Any.t) -> Prop)
-        (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
-        (ARG:
-           forall x varg_src rarg_src ord_cur
-                  (VALID: URA.wf (URA.add mr_src0 (URA.add fr_src0 rarg_src)))
-                  (PRE: P x varg_src varg_tgt ord_cur rarg_src),
-             gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ eqr 90
-                    (mr_src0, mp_src0, URA.add fr_src0 rarg_src, k_src (x, varg_src, ord_cur))
-                    (mrs_tgt, frs_tgt, f_tgt))
-    :
-      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ eqr 100
-              (mr_src0, mp_src0, fr_src0, (HoareFunArg P varg_tgt >>= k_src))
-              (mrs_tgt, frs_tgt, f_tgt)
-  .
-  Proof.
-    unfold HoareFunArg, put, discard, forge, checkWf, assume, guarantee.
-    repeat (ired_both; gstep; econs; eauto with ord_step). intro varg_src.
-    repeat (ired_both; gstep; econs; eauto with ord_step). intro x.
-    repeat (ired_both; gstep; econs; eauto with ord_step). intro rarg_src.
-    repeat (ired_both; gstep; econs; eauto with ord_step). intro VALID.
-    repeat (ired_both; gstep; econs; eauto with ord_step). intro ord_cur.
-    repeat (ired_both; gstep; econs; eauto with ord_step). i.
-    ired_both. eauto.
-  Qed.
-
-  Lemma hret_clo (mr_src1 rret_src: Σ)
-        r rg n mr_src0 mp_src0 fr_src0
-        X Z (Q: X -> Z -> Any.t -> Σ -> Prop)
-        x vret_src vret_tgt
-        mrs_tgt frs_tgt
-        (wf: (Σ * Any.t) * (Σ * Any.t) -> Prop)
-        (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
-        (FUEL: (14 < n)%ord)
-        (cur: Σ)
-        (GWF: URA.updatable (URA.add mr_src0 fr_src0) cur /\ URA.wf cur)
-        (UPDATABLE: URA.updatable cur (URA.add mr_src1 rret_src))
-        (POST: Q x vret_src vret_tgt rret_src)
-        (WF: wf ((mr_src1, mp_src0), mrs_tgt))
-        (EQ: eqr (mr_src1, mp_src0, ε) (mrs_tgt, frs_tgt) vret_tgt vret_tgt)
-    :
-      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ eqr n
-             (mr_src0, mp_src0, fr_src0, (HoareFunRet Q x vret_src))
-             ((mrs_tgt, frs_tgt), (Ret vret_tgt))
-  .
-  Proof.
-    unfold HoareFunRet, put, discard, forge, checkWf, assume, guarantee.
-    repeat (ired_both; gstep; econs; eauto with ord_step). exists vret_tgt.
-    repeat (ired_both; gstep; econs; eauto with ord_step). exists (mr_src1, rret_src).
-    repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
-    { etrans; eauto. eapply GWF. }
-    repeat (ired_both; gstep; econs; eauto with ord_step). eexists rret_src.
-    repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
-    repeat (ired_both; gstep; econs; eauto with ord_step). exists ε.
-    repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
-    { rewrite URA.unit_id; ss. }
-    repeat (ired_both; gstep; econs; eauto with ord_step).
-  Qed.
 
   Lemma APC_step_clo
         (fn: gname) Y (args: Y) (next: Ord.t) (n1: Ord.t)
