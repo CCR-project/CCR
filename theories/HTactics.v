@@ -318,84 +318,9 @@ Section SIM.
 End SIM.
 
 
-
-  Variant current_iprops (ctx: Σ) (I: iProp): Prop :=
-  | current_iprops_intro
-      r
-      (GWF: (@URA.wf (GRA.to_URA _) (URA.add r ctx)))
-      (IPROP: I r)
-  .
-
-  Lemma current_iprops_entail I1 ctx I0
-        (ACC: current_iprops ctx I0)
-        (UPD: I0 ⊢ I1)
-    :
-      current_iprops ctx I1.
-  Proof.
-    inv ACC. econs; et.
-    uipropall. eapply UPD; et. eapply URA.wf_mon; et.
-  Qed.
-
-  Lemma current_iprops_pure P ctx
-        (ACC: current_iprops ctx (⌜P⌝)%I)
-    :
-      P.
-  Proof.
-    inv ACC. red in IPROP. uipropall.
-  Qed.
-
-  Lemma current_iprops_exist ctx A (P: A -> iProp)
-        (ACC: current_iprops ctx (bi_exist P))
-    :
-      exists x, current_iprops ctx (P x).
-  Proof.
-    inv ACC. red in IPROP. uipropall.
-    des. exists x. econs; et.
-  Qed.
-
-  Lemma current_iprops_or ctx I0 I1
-        (ACC: current_iprops ctx (I0 ∨ I1)%I)
-    :
-      current_iprops ctx I0 \/ current_iprops ctx I1.
-  Proof.
-    inv ACC. uipropall. des.
-    { left. econs; et. }
-    { right. econs; et. }
-  Qed.
-
-  Lemma current_iprops_update ctx I
-        (ACC: current_iprops ctx (#=> I))
-    :
-      current_iprops ctx I.
-  Proof.
-    inv ACC. uipropall.
-    hexploit IPROP; et. i. des. econs; et.
-  Qed.
-
-  Lemma current_iprops_own ctx (M: URA.t) `{@GRA.inG M Σ} (m: M)
-        (ACC: current_iprops ctx (Own (GRA.embed m)))
-    :
-      URA.wf m.
-  Proof.
-  Admitted.
-
-
-
 Section HLEMMAS.
   Context `{Σ: GRA.t}.
   Local Opaque GRA.to_URA.
-
-  (* TODO: find lemma (or typeclass) *)
-  Lemma Upd_Pure P
-    :
-      #=> ⌜P⌝ ⊢ ⌜P⌝.
-  Proof.
-    red. uipropall. i.
-    hexploit (H URA.unit).
-    { rewrite URA.unit_id. et. }
-    i. des. red in H1. red. uipropall.
-  Qed.
-
 
   Variant mk_wf (A: Type) (R_src: A -> Any.t -> iProp) (R_tgt: A -> Any.t -> iProp): (Σ * Any.t) * (Σ * Any.t) -> Prop :=
   | mk_wf_intro
@@ -407,9 +332,7 @@ Section HLEMMAS.
       mk_wf R_src R_tgt ((mr_src, mp_src), (mr_tgt, mp_tgt))
   .
 
-
-
-  Lemma hcall_clo_ord_weaken (o_new: Ord.t)
+  Lemma hcall_clo_ord_weaken' (o_new: Ord.t)
         Y Z (ftsp1: ftspec Y Z)
         (o: ord) (x: shelve__ ftsp1.(X))
 
@@ -425,7 +348,7 @@ Section HLEMMAS.
         (WEAKER: ftspec_weaker ftsp1 ftsp0)
 
         ctx0 I
-        (ACC: current_iprops ctx0 I)
+        (ACC: current_iProp ctx0 I)
 
         (UPDATABLE:
            I ⊢ #=> (FR ** R_src a0 mp_src0 ** (ftsp1.(precond) x varg_src varg_tgt o: iProp)))
@@ -439,7 +362,7 @@ Section HLEMMAS.
                       (vret_src: Z)
                       (RTGT: R_tgt a1 mp_tgt1 mr_tgt1)
                       ctx1
-                      (ACC: current_iprops ctx1 (FR ** R_src a1 mp_src1 ** ftsp1.(postcond) x vret_src vret_tgt))
+                      (ACC: current_iProp ctx1 (FR ** R_src a1 mp_src1 ** ftsp1.(postcond) x vret_src vret_tgt))
           ,
                 gpaco6 (_sim_itree (mk_wf R_src R_tgt)) (cpn6 (_sim_itree (mk_wf R_src R_tgt))) rg rg _ _ eqr o_new
                        (mr_src1, mp_src1, fr_src1, k_src vret_src) (mr_tgt1, mp_tgt1, frs_tgt, k_tgt vret_tgt))
@@ -488,11 +411,12 @@ Section HLEMMAS.
     { admit "TODO: change HoareCall". }
   Qed.
 
-  Lemma hcall_clo_weaken
+
+  Lemma hcall_clo_ord_weaken (o_new: Ord.t)
         Y Z (ftsp1: ftspec Y Z)
         (o: ord) (x: shelve__ ftsp1.(X))
 
-        A a0 FR
+        A a0 Hns Rn Invn
 
         r rg (n: nat) mr_src0 mp_src0 fr_src0
         (ftsp0: ftspec Y Z)
@@ -503,11 +427,11 @@ Section HLEMMAS.
 
         (WEAKER: ftspec_weaker ftsp1 ftsp0)
 
-        ctx0 I
-        (ACC: current_iprops ctx0 I)
+        ctx0 l
+        (ACC: current_iPropL ctx0 l)
 
         (UPDATABLE:
-           I ⊢ #=> (FR ** R_src a0 mp_src0 ** (ftsp1.(precond) x varg_src varg_tgt o: iProp)))
+           from_iPropL2 (fst (alist_pops Hns l)) ⊢ #=> (R_src a0 mp_src0 ** (ftsp1.(precond) x varg_src varg_tgt o: iProp)))
 
         (FUEL: (15 < n)%ord)
         (PURE: ord_lt o ord_cur /\
@@ -518,7 +442,49 @@ Section HLEMMAS.
                       (vret_src: Z)
                       (RTGT: R_tgt a1 mp_tgt1 mr_tgt1)
                       ctx1
-                      (ACC: current_iprops ctx1 (FR ** R_src a1 mp_src1 ** ftsp1.(postcond) x vret_src vret_tgt))
+                      (ACC: current_iPropL ctx1 ((Rn, R_src a1 mp_src1) :: (Invn, ftsp1.(postcond) x vret_src vret_tgt) :: snd (alist_pops Hns l)))
+          ,
+            gpaco6 (_sim_itree (mk_wf R_src R_tgt)) (cpn6 (_sim_itree (mk_wf R_src R_tgt))) rg rg _ _ eqr o_new
+                   (mr_src1, mp_src1, fr_src1, k_src vret_src) (mr_tgt1, mp_tgt1, frs_tgt, k_tgt vret_tgt))
+    :
+      gpaco6 (_sim_itree (mk_wf R_src R_tgt)) (cpn6 (_sim_itree (mk_wf R_src R_tgt))) r rg _ _ eqr n
+             (mr_src0, mp_src0, fr_src0, (HoareCall tbr ord_cur (mk_fspec ftsp0) fn varg_src) >>= k_src)
+             (mr_tgt0, mp_tgt0, frs_tgt, trigger (Call fn varg_tgt) >>= k_tgt)
+  .
+  Proof.
+  Admitted.
+
+  Lemma hcall_clo_weaken
+        Y Z (ftsp1: ftspec Y Z)
+        (o: ord) (x: shelve__ ftsp1.(X))
+
+        A a0 Hns Rn Invn
+
+        r rg (n: nat) mr_src0 mp_src0 fr_src0
+        (ftsp0: ftspec Y Z)
+        mr_tgt0 mp_tgt0 frs_tgt k_tgt k_src
+        fn tbr ord_cur varg_src varg_tgt
+        (R_src: A -> Any.t -> iProp) (R_tgt: A -> Any.t -> iProp)
+        (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
+
+        (WEAKER: ftspec_weaker ftsp1 ftsp0)
+
+        ctx0 l
+        (ACC: current_iPropL ctx0 l)
+
+        (UPDATABLE:
+           from_iPropL2 (fst (alist_pops Hns l)) ⊢ #=> (R_src a0 mp_src0 ** (ftsp1.(precond) x varg_src varg_tgt o: iProp)))
+
+        (FUEL: (15 < n)%ord)
+        (PURE: ord_lt o ord_cur /\
+               (tbr = true -> is_pure o) /\ (tbr = false -> o = ord_top))
+        (RTGT: R_tgt a0 mp_tgt0 mr_tgt0)
+
+        (POST: forall (vret_tgt : Any.t) (mr_src1 mr_tgt1 fr_src1: Σ) (mp_src1 mp_tgt1 : Any.t) a1
+                      (vret_src: Z)
+                      (RTGT: R_tgt a1 mp_tgt1 mr_tgt1)
+                      ctx1
+                      (ACC: current_iPropL ctx1 ((Rn, R_src a1 mp_src1) :: (Invn, ftsp1.(postcond) x vret_src vret_tgt) :: (snd (alist_pops Hns l))))
           ,
                 gpaco6 (_sim_itree (mk_wf R_src R_tgt)) (cpn6 (_sim_itree (mk_wf R_src R_tgt))) rg rg _ _ eqr 100
                        (mr_src1, mp_src1, fr_src1, k_src vret_src) (mr_tgt1, mp_tgt1, frs_tgt, k_tgt vret_tgt))
@@ -533,7 +499,7 @@ Section HLEMMAS.
 
   Lemma hcall_clo
         (FR: iProp) (o: ord) X (x: shelve__ X)
-        A a0
+        A a0 Hns Rn Invn
 
         Y Z
         (P: X -> Y -> Any.t -> ord -> Σ -> Prop)
@@ -545,11 +511,11 @@ Section HLEMMAS.
         (R_src: A -> Any.t -> iProp) (R_tgt: A -> Any.t -> iProp)
         (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
 
-        ctx0 I
-        (ACC: current_iprops ctx0 I)
+        ctx0 l
+        (ACC: current_iPropL ctx0 l)
 
         (UPDATABLE:
-           I ⊢ #=> (FR ** R_src a0 mp_src0 ** (P x varg_src varg_tgt o: iProp)))
+           from_iPropL2 (fst (alist_pops Hns l)) ⊢ #=> (R_src a0 mp_src0 ** (P x varg_src varg_tgt o: iProp)))
 
         (FUEL: (15 < n)%ord)
         (PURE: ord_lt o ord_cur /\
@@ -560,7 +526,7 @@ Section HLEMMAS.
                       (vret_src: Z)
                       (RTGT: R_tgt a1 mp_tgt1 mr_tgt1)
                       ctx1
-                      (ACC: current_iprops ctx1 (FR ** R_src a1 mp_src1 ** Q x vret_src vret_tgt))
+                      (ACC: current_iPropL ctx1 ((Rn, R_src a1 mp_src1) :: (Invn, Q x vret_src vret_tgt) :: (snd (alist_pops Hns l))))
           ,
                 gpaco6 (_sim_itree (mk_wf R_src R_tgt)) (cpn6 (_sim_itree (mk_wf R_src R_tgt))) rg rg _ _ eqr 100
                        (mr_src1, mp_src1, fr_src1, k_src vret_src) (mr_tgt1, mp_tgt1, frs_tgt, k_tgt vret_tgt))
@@ -577,6 +543,7 @@ Section HLEMMAS.
   Qed.
 
   Lemma harg_clo
+        Rn Invn
         r rg
         X Y (P: X -> Y -> Any.t -> ord -> Σ -> Prop) varg_tgt
         mrs_src mrs_tgt fr_src fr_tgt f_tgt k_src
@@ -588,7 +555,7 @@ Section HLEMMAS.
            forall a x varg_src ord_cur mr_tgt mp_tgt mr_src mp_src fr_src
                   (RTGT: R_tgt a mp_tgt mr_tgt)
                   ctx
-                  (ACC: current_iprops ctx ((P x varg_src varg_tgt ord_cur: iProp) ** R_src a mp_src)),
+                  (ACC: current_iPropL ctx [(Rn, P x varg_src varg_tgt ord_cur); (Invn, R_src a mp_src)]),
              gpaco6 (_sim_itree (mk_wf R_src R_tgt)) (cpn6 (_sim_itree (mk_wf R_src R_tgt))) rg rg _ _ eqr 90
                     (mr_src, mp_src, fr_src, k_src (x, varg_src, ord_cur))
                     (mr_tgt, mp_tgt, fr_tgt, f_tgt))
@@ -622,11 +589,11 @@ Section HLEMMAS.
         (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
         (FUEL: (14 < n)%ord)
 
-        I
-        (ACC: current_iprops (URA.add mr_src fr_src) I)
+        ctx l
+        (ACC: current_iPropL ctx l)
 
         (UPDATABLE:
-           I ⊢ #=> (R_src a mp_src ** (Q x vret_src vret_tgt: iProp)))
+           (from_iPropL2 l) ⊢ #=> (R_src a mp_src ** (Q x vret_src vret_tgt: iProp)))
 
         (RTGT: R_tgt a mp_tgt mr_tgt)
         (EQ: forall mr_src1 (SAT: R_src a mp_src mr_src1),
@@ -908,6 +875,37 @@ Ltac _hret_tac mr_src1 rret_src := prep; eapply (@hret_clo _ mr_src1 rret_src); 
 
 Require Import TODOYJ.
 
+Ltac astep_full _fn _args _next _n1 :=
+  eapply (@APC_step_clo _ _fn _ _args _next _n1);
+  [(try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; lia)]))|
+   (try by (stb_tac; refl))|
+   (eapply OrdArith.lt_from_nat; lia)|
+  ].
+
+Ltac astep _fn _args :=
+  eapply (@APC_step_clo _ _fn _ _args);
+  [(try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r; eapply Nat.lt_succ_diag_r)]))|
+   (try by (stb_tac; refl))|
+   (eapply OrdArith.lt_from_nat; eapply Nat.lt_succ_diag_r)|
+  ].
+
+Ltac acatch :=
+  match goal with
+  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, _) (_, trigger (Call ?fn (Any.upcast ?args)) >>= _)) ] =>
+    astep fn args
+  end.
+
+Ltac astop :=
+  eapply APC_stop_clo;
+  [(try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r; eapply Nat.lt_succ_diag_r)]))|].
+
+Ltac astart _at_most :=
+  eapply (@APC_start_clo _ _at_most);
+  [eauto with ord_kappa|
+   (try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r; eapply Nat.lt_succ_diag_r)]))|
+  ]
+.
+
 (* Ltac harg_tac := *)
 (*   _harg_tac; *)
 (*   match goal with *)
@@ -963,43 +961,11 @@ Require Import TODOYJ.
 (*   shelve_goal; [|on_gwf ltac:(fun GWF => apply GWF)|tac0|eapply OrdArith.lt_from_nat; lia|..|tac1] *)
 (* . *)
 
-
 (* Ltac hret_tac MR_SRC RT_SRC := *)
 (*   let mr_src1 := r_gather MR_SRC in *)
 (*   let fr_src1 := r_gather RT_SRC in *)
 (*   let tac0 := try by (eapply URA.extends_updatable; r_equalize; r_solve) in *)
 (*   _hret_tac mr_src1 fr_src1; [on_gwf ltac:(fun GWF => apply GWF)|tac0| | |try refl] *)
-(* . *)
-
-(* Ltac astep_full _fn _args _next _n1 := *)
-(*   eapply (@APC_step_clo _ _fn _ _args _next _n1); *)
-(*   [(try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; lia)]))| *)
-(*    (try by (stb_tac; refl))| *)
-(*    (eapply OrdArith.lt_from_nat; lia)| *)
-(*   ]. *)
-
-(* Ltac astep _fn _args := *)
-(*   eapply (@APC_step_clo _ _fn _ _args); *)
-(*   [(try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r; eapply Nat.lt_succ_diag_r)]))| *)
-(*    (try by (stb_tac; refl))| *)
-(*    (eapply OrdArith.lt_from_nat; eapply Nat.lt_succ_diag_r)| *)
-(*   ]. *)
-
-(* Ltac acatch := *)
-(*   match goal with *)
-(*   | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, _) (_, trigger (Call ?fn (Any.upcast ?args)) >>= _)) ] => *)
-(*     astep fn args *)
-(*   end. *)
-
-(* Ltac astop := *)
-(*   eapply APC_stop_clo; *)
-(*   [(try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r; eapply Nat.lt_succ_diag_r)]))|]. *)
-
-(* Ltac astart _at_most := *)
-(*   eapply (@APC_start_clo _ _at_most); *)
-(*   [eauto with ord_kappa| *)
-(*    (try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r; eapply Nat.lt_succ_diag_r)]))| *)
-(*   ] *)
 (* . *)
 
 (* Ltac acall_tac A0 A1 A2 A3 A4 := *)

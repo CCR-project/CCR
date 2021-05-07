@@ -165,7 +165,7 @@ Section SIMMODSEM.
     @mk_wf
       _
       Mem.t
-      (fun mem_tgt _ => (∃ mem_src, (Own (GRA.embed ((Auth.black mem_src): URA.car (t:=Mem1.memRA))))
+      (fun mem_tgt _ => (∃ mem_src, (OwnM ((Auth.black mem_src): URA.car (t:=Mem1.memRA)))
                                       **
                                       (⌜forall b ofs, sim_loc ((mem_tgt.(Mem.cnts)) b ofs) (mem_src b ofs)⌝)
                         )%I)
@@ -211,156 +211,71 @@ Section SIMMODSEM.
     { unfold allocF. init.
 
       (* harg_tac *)
-      eapply harg_clo; ss. clear SIMMRS mrs_src mrs_tgt.
-
+      eapply (@harg_clo _ "H" "INV"); ss. clear SIMMRS mrs_src mrs_tgt.
       i. des; clarify.
 
-      eapply current_iprops_entail in ACC; cycle 1.
-      { eapply (@iPropL_init _ "H"). }
-
-      eapply current_iprops_entail in ACC; cycle 1.
-      { eapply (@iPropL_destruct_sep _ "H" "H0" "H1"). simpl. repeat f_equal. }
-      try unfold alist_add in ACC. simpl in ACC.
-
-      eapply current_iprops_entail in ACC; cycle 1.
-      { eapply (@iPropL_destruct_sep _ "H0" "H0" "H2"). simpl. repeat f_equal. }
-      try unfold alist_add in ACC. simpl in ACC.
-
-      eassert (PURE0: (_: Prop)).
-      { eapply current_iprops_pure.
-        eapply current_iprops_entail in ACC; [exact ACC|].
-        eapply (@iPropL_one _ "H2").
-        simpl. f_equal. }
-      eapply current_iprops_entail in ACC; cycle 1.
-      { eapply (@iPropL_clear _ "H2"). }
-      try unfold alist_add in ACC. simpl in ACC.
-
-      eassert (PURE1: (_: Prop)).
-      { eapply current_iprops_pure.
-        eapply current_iprops_entail in ACC; [exact ACC|].
-        eapply (@iPropL_one _ "H0").
-        simpl. f_equal. }
-      eapply current_iprops_entail in ACC; cycle 1.
-      { eapply (@iPropL_clear _ "H0"). }
-      try unfold alist_add in ACC. simpl in ACC.
-
-      eapply current_iprops_entail in ACC; cycle 1.
-      { eapply (@iPropL_destruct_ex _ "H1"). simpl. repeat f_equal. refl. }
-      eapply current_iprops_exist in ACC. destruct ACC as [mem_src ACC].
-      try unfold alist_add in ACC. simpl in ACC.
-
-      eapply current_iprops_entail in ACC; cycle 1.
-      { eapply (@iPropL_destruct_sep _ "H1" "H0" "H1"). simpl. repeat f_equal. }
-      try unfold alist_add in ACC. simpl in ACC.
-
-      eassert (PURE2: (_: Prop)).
-      { eapply current_iprops_pure.
-        eapply current_iprops_entail in ACC; [exact ACC|].
-        eapply (@iPropL_one _ "H1").
-        simpl. f_equal. }
-      eapply current_iprops_entail in ACC; cycle 1.
-      { eapply (@iPropL_clear _ "H1"). }
-      try unfold alist_add in ACC. simpl in ACC.
-
-      ss. des. clarify.
-
-
-        H0" "H0" "H2"). simpl. repeat f_equal. }
-      try unfold alist_add in ACC. simpl in ACC.
-
-
-        try unfold alist_add. simpl. in ACC.
-
-        sim
-
-
-          cycle 1.
-          { admit "". }
-          instantiate (1:=l) simpl. repeat f_equal.
-          ss.
-        }
-
-        simpl. repeat f_equal. }
-      try unfold alist_add in ACC. simpl in ACC.
-
-
-  Lemma iPropL_pure Hn (l: iPropL) (P: Prop)
-        (FIND: alist_find Hn l = Some (⌜P⌝)%I)
-        (SATISFIABLE: exists r, (from_iPropL l) r)
-    :
-      P.
-  Proof.
-  Admitted.
-
-
-      , alis
-      simpl in ACC.
-
-
-        eapply (@iPropL_init _ "H"). }
-
-
-  Lemma iPropL_destruct_sep Hn_old Hn_new0 Hn_new1 (l: iPropL) (P0 P1: iProp)
-        (FIND: alist_find Hn_old l = Some (P0 ** P1))
-    :
-      from_iPropL l -∗ from_iPropL (alist_add Hn_new1 P1 (alist_add Hn_new0 P0 (alist_remove Hn_old l))).
-  Proof.
-  Admitted.
-
-
-          in ACC.
-
-      change
-
-      (* pure tac *)
-      exploit current_iprops_pure.
-      { eapply ACC. }
-
-
-      . in ACC; destruct ACC as [ACC PURE]; cycle 1.
-      { iIntros "[[H0 H1] _]". iCombine "H0 H1" as "H0". iApply "H0". }
-
+      mDesSep "H" "H0" "H1". mPure "H1" PURE0. mPure "H0" PURE1.
+      mDesEx "INV" mem_src. mDesSep "INV" "H0" "H1". mPure "H1" PURE2.
       des; clarify.
 
-      (* impl tac *)
-      eapply current_iprops_update in ACC; cycle 1.
-      { iIntros "[_ H2]". iApply "H2". }
-
-      (* exists tac *)
-      eapply current_iprops_exists in ACC; destruct ACC as [mem_src ACC].
-
-      (* pure tac *)
-      eapply current_iprops_pure in ACC; destruct ACC as [ACC PURE]; cycle 1.
-      { iIntros "[H0 H1]". iApply "H1". }
-
-      (* impl tac *)
-      eapply current_iprops_update in ACC; cycle 1.
-      { iIntros "[H0 _]". iApply "H0". }
-
-      steps. rewrite Any.upcast_downcast in *. steps. astart 0.
+      steps. rewrite Any.upcast_downcast in *. steps. astart 0. astop.
       rename a into mem_tgt.
       set (blk := (Mem.nb mem_tgt)).
+      rename x into sz. eapply Any.upcast_inj in PURE1. des; clarify.
 
-      rename x into sz. rename x0 into mem_src0.
-
-      astart 0. astop.
-
-      eapply own_upd in SIM; cycle 1; [|rewrite intro_iHyp in SIM; iMod SIM].
-      { eapply GRA.embed_updatable.
-        eapply Auth.auth_alloc2.
+      mApply OwnM_Upd "H0"; cycle 1.
+      { eapply Auth.auth_alloc2.
         instantiate (1:=(_points_to (blk, 0%Z) (repeat (Vint 0) sz))).
-        (* instantiate (1:=(fun _b _ofs => if (dec _b blk) && ((0 <=? _ofs) && (_ofs <? Z.of_nat sz))%Z then inl (Some (Vint 0)) else inr tt)). *)
-        iOwnWf SIM. iRefresh.
-        clear - WF WFTGT A.
+        mOwnWf "H0" WF.
+        clear - WF RTGT0 PURE2.
         ss. do 2 ur. ii. rewrite unfold_points_to. des_ifs.
-         - bsimpl. des. des_sumbool. subst. hexploit (A blk k0); et. intro T. inv T; [|eq_closure_tac].
-           + exploit WFTGT; et. i; des. lia.
+         - bsimpl. des. des_sumbool. subst. hexploit (PURE2 blk k0); et. intro T. inv T; [|eq_closure_tac].
+           + exploit RTGT0; et. i; des. lia.
            + rewrite URA.unit_idl. Ztac. rewrite repeat_length in *. rewrite Z.sub_0_r. rewrite repeat_nth_some; [|lia]. ur. ss.
-         - rewrite URA.unit_id. do 2 eapply lookup_wf. eapply GRA.embed_wf in WF. des. eapply Auth.black_wf; et.
+         - rewrite URA.unit_id. do 2 eapply lookup_wf.
+           eapply Auth.black_wf; et.
       }
-      rewrite <- GRA.embed_add in SIM. rewrite own_sep in SIM. iDestruct SIM.
+      mUpd "H0". mDesOwn "H0" "H0" "H1".
 
-      force_l. eexists. hret_tac SIM A0.
+      steps. force_l. eexists.
+      eapply hret_clo.
+      { eauto with ord_step. }
+      { eassumption. }
+      (* TODO: change goal order *)
+      2: { split; ss. i. ss. admit "". }
+      { simpl. iIntros "[H0 H1]". iModIntro. iSplitL "H1".
+        { iExists _. iSplit.
+          { iApply "H1". }
+          { iPureIntro. i. unfold update.
+            destruct (dec blk b); subst; ss.
+            { des_ifs.  ss.
+
+_safe. rewrite <- H0. rewrite URA.unit_idl. des_ifs.
+              { rewrite Z.sub_0_r. bsimpl. des. Ztac. rewrite repeat_nth_some; try lia. econs. }
+              { econs. }
+            * rewrite URA.unit_id. unfold update. des_ifs.
+
+d
+
+admit "". }
+        }
+        { iSplit; [|ss]. iExists _. iSplit; [ss|]. iApply "H0". }
+      }
+      { split; ss.
+
+{
+
+  iFrame.
+
+"H0".
+
+admit "". }
+      { admit "". }
+      { ss. }
+
+ai
+
+hret_tac SIM A0.
       - split; [|refl]; iRefresh. eexists; iRefresh. iSplitP; ss.
       - cbn. esplits; et.
         + eexists; iRefresh. iSplitL SIM; et. ii.

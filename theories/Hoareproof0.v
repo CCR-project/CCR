@@ -754,6 +754,7 @@ we should know that stackframe is not popped (unary property)". }
         { admit "we should use stronger RR, not eq;
 we should know that stackframe is not popped (unary property)". }
         steps. des; ss.
+        clear - x2. admit "ez".
     }
 
 
@@ -779,6 +780,7 @@ we should know that stackframe is not popped (unary property)". }
     revert WFR. i. (*** dummy action that keeps "WFR" as a requirement; TODO: remove it later ! ! ***)
     all: ss.
     all: try (by apply Ord.O).
+    all: admit "ez".
   Qed.
 
 End CANCEL.
