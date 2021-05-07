@@ -40,6 +40,8 @@ Section IPROP.
     Seal.sealing
       "iProp"
       (fun r1 => URA.extends r0 r1).
+  Definition OwnM (M: URA.t) `{@GRA.inG M Σ} (r: M): iProp' :=
+    Own (GRA.embed r).
   Definition And (P Q: iProp'): iProp' :=
     Seal.sealing
       "iProp"
@@ -228,6 +230,7 @@ Section IPROP.
 End IPROP.
 Hint Rewrite (Seal.sealing_eq "iProp"): iprop.
 #[export] Hint Unfold Sepconj Pure Ex Univ Own And Or Impl Wand Emp Persistently Later Upd Entails: iprop.
+Arguments OwnM: simpl never.
 
 
 From iris.bi Require Import derived_connectives updates.
@@ -410,6 +413,17 @@ Section IPM.
     eapply URA.wf_mon. rewrite URA.add_comm. rewrite URA.add_assoc. et.
   Qed.
 
+  Global Instance iProp_own_absorbing r: Absorbing (Own r).
+  Proof.
+    ii. repeat red. uipropall. i. repeat red in H. uipropall.
+    des. subst. etrans; eauto. exists a. apply URA.add_comm.
+  Qed.
+
+  Global Instance iProp_ownm_absorbing M `{@GRA.inG M Σ} (m: M): Absorbing (OwnM m).
+  Proof.
+    unfold OwnM. eapply iProp_own_absorbing.
+  Qed.
+
   Global Instance iProp_pure_forall: BiPureForall iProp.
   Proof.
     ii. red. red. uipropall. ii. red. red in H.
@@ -477,7 +491,7 @@ Section class_instances.
     uipropall. eapply SAT; et. refl.
   Qed.
 
-  Global Instance from_sep_ownM (a b1 b2 : Σ) :
+  Global Instance from_sep_own (a b1 b2 : Σ) :
     IsOp a b1 b2 →
     FromSep (Own a) (Own b1) (Own b2).
   Proof.
@@ -488,7 +502,7 @@ Section class_instances.
     eapply URA.add_comm.
   Qed.
 
-  Global Instance into_and_ownM p (a b1 b2 : Σ) :
+  Global Instance into_and_own p (a b1 b2 : Σ) :
     IsOp a b1 b2 → IntoAnd p (Own a) (Own b1) (Own b2).
   Proof.
     ii. apply bi.intuitionistically_if_mono. inv H.
@@ -498,7 +512,7 @@ Section class_instances.
       f_equal. eapply URA.add_comm. }
   Qed.
 
-  Global Instance into_sep_ownM (a b1 b2 : Σ) :
+  Global Instance into_sep_own (a b1 b2 : Σ) :
     IsOp a b1 b2 → IntoSep (Own a) (Own b1) (Own b2).
   Proof.
     ii. red. inv H. uipropall. i.
@@ -508,6 +522,31 @@ Section class_instances.
     esplits.
     { eapply URA.unit_id. }
     { et. }
+  Qed.
+
+  Global Instance from_sep_ownM (M: URA.t) `{@GRA.inG M Σ} (a b1 b2 : M) :
+    IsOp a b1 b2 →
+    FromSep (OwnM a) (OwnM b1) (OwnM b2).
+  Proof.
+    ii. red. unfold OwnM. inv H0.
+    iIntros "[H1 H2]". iCombine "H1 H2" as "H".
+    rewrite GRA.embed_add. iApply "H".
+  Qed.
+
+  Global Instance into_and_ownM (M: URA.t) `{@GRA.inG M Σ} p (a b1 b2 : M) :
+    IsOp a b1 b2 → IntoAnd p (OwnM a) (OwnM b1) (OwnM b2).
+  Proof.
+    ii. red. apply bi.intuitionistically_if_mono. inv H0.
+    unfold OwnM. rewrite <- GRA.embed_add. iIntros "[H1 H2]". iSplit.
+    { iApply "H1". }
+    { iApply "H2". }
+  Qed.
+
+  Global Instance into_sep_ownM (M: URA.t) `{@GRA.inG M Σ} (a b1 b2 : M) :
+    IsOp a b1 b2 → IntoSep (OwnM a) (OwnM b1) (OwnM b2).
+  Proof.
+    ii. red. inv H0. unfold OwnM.
+    rewrite <- GRA.embed_add. iIntros "[H1 H2]". iSplitL "H1"; iFrame.
   Qed.
 End class_instances.
 
@@ -567,6 +606,37 @@ Section ILEMMAS.
   Proof.
     red. uipropall. ii. etrans; et.
   Qed.
+
+  Lemma OwnM_Upd_set (M: URA.t) `{@GRA.inG M Σ}
+        (r1: M) B
+        (UPD: URA.updatable_set r1 B)
+    :
+      (OwnM r1) ⊢ (#=> (∃ b, ⌜B b⌝ ** (OwnM b)))
+  .
+  Proof.
+    admit "ez".
+  Qed.
+
+  Lemma OwnM_Upd (M: URA.t) `{@GRA.inG M Σ}
+        (r1 r2: M)
+        (UPD: URA.updatable r1 r2)
+    :
+      (OwnM r1) ⊢ (#=> (OwnM r2))
+  .
+  Proof.
+    admit "ez".
+  Qed.
+
+  Lemma OwnM_extends (M: URA.t) `{@GRA.inG M Σ}
+        (a b: M)
+        (EXT: URA.extends a b)
+    :
+      OwnM b ⊢ OwnM a
+  .
+  Proof.
+    admit "ez".
+  Qed.
+
 End ILEMMAS.
 
 
@@ -733,10 +803,11 @@ Section CURRENT.
   Qed.
 
   Lemma current_iprops_own ctx (M: URA.t) `{@GRA.inG M Σ} (m: M)
-        (ACC: current_iprops ctx (Own (GRA.embed m)))
+        (ACC: current_iprops ctx (OwnM m))
     :
       URA.wf m.
   Proof.
+    unfold OwnM in *.
     inv ACC. uipropall. unfold URA.extends in *. des. subst.
     eapply URA.wf_mon in GWF. eapply URA.wf_mon in GWF.
     eapply GRA.embed_wf. auto.
@@ -819,7 +890,7 @@ Section TACTICS.
 
   Lemma current_iPropL_own_wf Hn ctx (l: iPropL) M `{@GRA.inG M Σ} (m: M)
         (ACC: current_iprops ctx (from_iPropL l))
-        (FIND: alist_find Hn l = Some (Own (GRA.embed m)))
+        (FIND: alist_find Hn l = Some (OwnM m))
     :
       URA.wf m.
   Proof.
@@ -958,101 +1029,28 @@ Section TACTICS.
   Lemma current_iPropL_destruct_own Hn_old Hn_new0 Hn_new1
         ctx (l: iPropL) M `{@GRA.inG M Σ} (m0 m1: M)
         (ACC: current_iprops ctx (from_iPropL l))
-        (FIND: alist_find Hn_old l = Some (Own (GRA.embed (URA.add m0 m1))))
+        (FIND: alist_find Hn_old l = Some (OwnM (URA.add m0 m1)))
     :
-      current_iprops ctx (from_iPropL (alist_add Hn_new1 (Own (GRA.embed m1)) (alist_add Hn_new0 (Own (GRA.embed m0)) (alist_remove Hn_old l)))).
+      current_iprops ctx (from_iPropL (alist_add Hn_new1 (OwnM m1) (alist_add Hn_new0 (OwnM m0) (alist_remove Hn_old l)))).
   Proof.
     eapply current_iPropL_destruct_sep'; et.
-    iIntros "[H". iDestruct "H" as "[H0 H1]". iFrame.
-
-
-      URA.wf m0.
-  Proof.
-    eapply current_iprops_own.
-    eapply current_iprops_upd.
-    eapply current_iprops_entail; et.
-    eapply iPropL_one; et.
+    iIntros "[H0 H1]". iFrame.
   Qed.
 
-
-  Lemma current_iPropL_destruct_own
-        Hn_old Hn_new0 Hn_new1 ctx (l: iPropL) (P0: Prop) (P1: iProp)
+  Lemma current_iPropL_merge_own Hn0 Hn1 ctx (l l0 l1: iPropL)
+        M `{@GRA.inG M Σ} (m0 m1: M)
         (ACC: current_iprops ctx (from_iPropL l))
-        (FIND: alist_find Hn_old l = Some ((⌜P0⌝) ∧ P1)%I)
+        (FIND0: alist_pop Hn0 l = Some (OwnM m0, l0))
+        (FIND1: alist_pop Hn1 l0 = Some (OwnM m1, l1))
     :
-      current_iprops ctx (from_iPropL (alist_add Hn_new1 P1 (alist_add Hn_new0 (⌜P0⌝)%I (alist_remove Hn_old l)))).
+      current_iprops ctx (from_iPropL (alist_add Hn0 (OwnM (URA.add m0 m1)) l1)).
   Proof.
-    eapply current_iPropL_destruct_sep'; et.
-    iIntros "H". iDestruct "H" as "[H0 H1]". iFrame.
+    exploit (@current_iPropL_assert [Hn1; Hn0] Hn0 (OwnM (URA.add m0 m1))); et.
+    { ss. rewrite FIND0. rewrite FIND1. ss.
+      iIntros "[H0 [H1 _]]". iSplitL "H1"; iFrame. }
+    ss. rewrite FIND0. rewrite FIND1. ss.
   Qed.
-
-Set Printing All. bsimpl. des_ifs.
-
- Set Printing All.
-
-
-      bsimpl.
-
-    2: {
-
-    eapply cur
-
-
-    i
-    iApply FIN
-
-
-
-    eapply current_iPropL_entail; et.
-    iIntros "H". iDestruct "H" as "[H _]". iApply "H".
-  Qed.
-
-
-iApply "H".
-
-
-    eapply current_iprops_entail in ACC.
-    2: { eapply iPropL_destruct_or; et. }
-    eapply current_iprops_or in ACC. des.
-    { left. eapply current_iprops_upd. et. }
-    { right. eapply current_iprops_upd. et. }
-  Qed.
-
-
-ownmerge ownspli
-
-
-
-  Lemma current_iprops_ex ctx A (P: A -> iProp)
-        (ACC: current_iprops ctx (bi_exist P))
-    :
-      exists x, current_iprops ctx (P x).
-  Proof.
-    inv ACC. red in IPROP. uipropall.
-    des. exists x. econs; et.
-  Qed.
-
-
-
-
-; et.
-      eapply iPropL_clear.
-    -
-
-      from_iPropL l -∗ #=> P.
-  Proof.
-  Admitted.
-
-
-
- *)
-
-
-Section TACTICS.
-  Context `{Σ: GRA.t}.
-
-
-** pure exists own and univ or impl wand emp upd
+End TACTICS.
 
 
 Module PARSE.
