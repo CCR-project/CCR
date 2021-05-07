@@ -241,14 +241,70 @@ Section SIMMODSEM.
       eapply hret_clo.
       { eauto with ord_step. }
       { eassumption. }
-      (* TODO: change goal order *)
-      2: { split; ss. i. ss. admit "". }
+      { unfold update. split; ss. i. ss. subst blk. des_ifs.
+        eapply RTGT0 in H0. clear - H0. red in H0. red. lia. }
       { simpl. iIntros "[H0 H1]". iModIntro. iSplitL "H1".
         { iExists _. iSplit.
           { iApply "H1". }
-          { iPureIntro. i. unfold update.
-            destruct (dec blk b); subst; ss.
-            { des_ifs.  ss.
+          { iPureIntro. i. rewrite unfold_points_to. ur. ur.
+            destruct (dec blk b), (dec b blk); subst; ss.
+            { rewrite repeat_length. rewrite Z.add_0_l.
+              rewrite Z.sub_0_r. des_ifs.
+              { rewrite repeat_nth_some.
+                { admit "". }
+                { bsimpl. des. lia. }
+              }
+              { admit "". }
+            }
+            admit "".
+          }
+        }
+        { iSplit; [|ss]. iExists _. iSplit; [ss|]. iApply "H0". }
+      }
+      { i. ss. }
+    }
+
+    econs; ss.
+    {
+
+
+
+{
+
+<=? des_sumbool. bsimpl. des_ifs.
+
+
+ss.
+
+ss.
+
+              ss.
+
+ des_ifs_safe. bsimpl;  des_ifs.
+
+destruct (dec blk b); subst; ss.
+            { des_ifs. admit "". admit "". }
+            { rewrite unfold_points_to. ur. ur. specialize (PURE2 b ofs). inv PURE2.
+              { des_ifs.
+
+rewrite unfold_points_to.  ur. erewrite _points_to _hit. des_ifs. red in Heq.
+
+ur.
+
+inv PURE2. repeat ur. des_ifs.
+c
+ur. ur.
+
+Set unfold _points_to. ss. unfold URA.add. red. ss.
+
+replace ((mem_src ⋅ _points_to (blk, 0%Z) (repeat (Vint 0) sz)) b ofs) with (mem_src b ofs); ss.
+
+replace
+econs.
+
+bsimpl.
+
+des_ifs.  ss.
 
 _safe. rewrite <- H0. rewrite URA.unit_idl. des_ifs.
               { rewrite Z.sub_0_r. bsimpl. des. Ztac. rewrite repeat_nth_some; try lia. econs. }
