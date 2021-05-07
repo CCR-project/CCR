@@ -34,6 +34,7 @@ Class red_database (interp: Box) := mk_rdb {
   rdb_trigger0: Box;
   rdb_trigger1: Box;
   rdb_trigger2: Box;
+  rdb_trigger3: Box;
   rdb_UB: Box;
   rdb_NB: Box;
   rdb_unwrapU: Box;
@@ -122,6 +123,7 @@ Ltac __red_interp f term :=
     ((pose (rdb_trigger0 tc) as name; cbn in name; match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end) ||
      (pose (rdb_trigger1 tc) as name; cbn in name; match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end) ||
      (pose (rdb_trigger2 tc) as name; cbn in name; match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end) ||
+     (pose (rdb_trigger3 tc) as name; cbn in name; match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end) ||
      fail 2
     )
   | triggerUB =>
@@ -196,6 +198,7 @@ Section TEST.
       (mk_box (x_triggere))
       (mk_box (x_triggere))
       (mk_box (x_triggere))
+      (mk_box (x_triggere))
       (mk_box (x_UB))
       (mk_box (x_NB))
       (mk_box (x_unwrapU))
@@ -225,6 +228,7 @@ Section TEST.
       (mk_box (y_triggere))
       (mk_box (y_triggere))
       (mk_box (y_triggere))
+      (mk_box (y_triggere))
       (mk_box (y_UB))
       (mk_box (y_NB))
       (mk_box (y_unwrapU))
@@ -251,6 +255,7 @@ Section TEST.
       (mk_box (z_bind))
       (mk_box (z_tau))
       (mk_box (z_ret))
+      (mk_box (z_triggere))
       (mk_box (z_triggere))
       (mk_box (z_triggere))
       (mk_box (z_triggere))

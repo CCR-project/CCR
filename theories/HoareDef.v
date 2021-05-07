@@ -8,6 +8,7 @@ Require Import PCM.
 From Ordinal Require Export Ordinal Arithmetic Inaccessible.
 Require Import Any.
 Require Import Logic.
+Require Import IRed.
 
 From ExtLib Require Import
      Core.RelDec
@@ -811,57 +812,115 @@ End SMod.
 
 
 
-Ltac _red_Es_aux f itr :=
-  match itr with
-  | ITree.bind' _ _ =>
-    instantiate (f:=_continue); eapply EventsL.interp_Es_bind; fail
-  | Tau _ =>
-    instantiate (f:=_break); apply EventsL.interp_Es_tau; fail
-  | Ret _ =>
-    instantiate (f:=_continue); apply EventsL.interp_Es_ret; fail
-  | trigger ?e =>
-    instantiate (f:=_break);
-    match (type of e) with
-    | context[callE] => apply EventsL.interp_Es_callE
-    | context[eventE] => apply EventsL.interp_Es_eventE
-    | context[EventsL.pE] => apply EventsL.interp_Es_pE
-    | context[EventsL.rE] => apply EventsL.interp_Es_rE
-    | _ => fail 2
-    end
-  | triggerUB =>
-    instantiate (f:=_break); apply EventsL.interp_Es_triggerUB; fail
-  | triggerNB =>
-    instantiate (f:=_break); apply EventsL.interp_Es_triggerNB; fail
-  | unwrapU _ =>
-    instantiate (f:=_break); apply interp_Es_unwrapU; fail
-  | unwrapN _ =>
-    instantiate (f:=_break); apply interp_Es_unwrapN; fail
-  | assume _ =>
-    instantiate (f:=_break); apply interp_Es_assume; fail
-  | guarantee _ =>
-    instantiate (f:=_break); apply interp_Es_guarantee; fail
-  | _ =>
-    fail
-  end
-.
+Section AUX.
+  Context `{Σ: GRA.t}.
+  Lemma interp_Es_ext
+        prog R (itr0 itr1: itree _ R) st0
+    :
+      itr0 = itr1 -> EventsL.interp_Es prog itr0 st0 = EventsL.interp_Es prog itr1 st0
+  .
+  Proof. i; subst; refl. Qed.
+
+  Global Program Instance interp_Es_rdb: red_database (mk_box (@EventsL.interp_Es)) :=
+    mk_rdb
+      (mk_box EventsL.interp_Es_bind)
+      (mk_box EventsL.interp_Es_tau)
+      (mk_box EventsL.interp_Es_ret)
+      (mk_box EventsL.interp_Es_pE)
+      (mk_box EventsL.interp_Es_rE)
+      (mk_box EventsL.interp_Es_callE)
+      (mk_box EventsL.interp_Es_eventE)
+      (mk_box EventsL.interp_Es_triggerUB)
+      (mk_box EventsL.interp_Es_triggerNB)
+      (mk_box interp_Es_unwrapU)
+      (mk_box interp_Es_unwrapN)
+      (mk_box interp_Es_assume)
+      (mk_box interp_Es_guarantee)
+      (mk_box interp_Es_ext)
+  .
+
+  Lemma transl_all_unwrapU
+        mn R (r: option R)
+    :
+      transl_all mn (unwrapU r) = unwrapU r
+  .
+  Proof.
+    unfold unwrapU. des_ifs.
+    - rewrite transl_all_ret. grind.
+    - rewrite transl_all_triggerUB. unfold triggerUB. grind.
+  Qed.
+
+  Lemma transl_all_unwrapN
+        mn R (r: option R)
+    :
+      transl_all mn (unwrapN r) = unwrapN r
+  .
+  Proof.
+    unfold unwrapN. des_ifs.
+    - rewrite transl_all_ret. grind.
+    - rewrite transl_all_triggerNB. unfold triggerNB. grind.
+  Qed.
+
+  Lemma transl_all_assume
+        mn (P: Prop)
+    :
+      transl_all mn (assume P) = assume P;; tau;; Ret (tt)
+  .
+  Proof.
+    unfold assume.
+    repeat (try rewrite transl_all_bind; try rewrite bind_bind). grind.
+    rewrite transl_all_eventE.
+    repeat (try rewrite transl_all_bind; try rewrite bind_bind). grind.
+    rewrite transl_all_ret.
+    refl.
+  Qed.
+
+  Lemma transl_all_guarantee
+        mn (P: Prop)
+    :
+      transl_all mn (guarantee P) = guarantee P;; tau;; Ret (tt)
+  .
+  Proof.
+    unfold guarantee.
+    repeat (try rewrite transl_all_bind; try rewrite bind_bind). grind.
+    rewrite transl_all_eventE.
+    repeat (try rewrite transl_all_bind; try rewrite bind_bind). grind.
+    rewrite transl_all_ret.
+    refl.
+  Qed.
+
+  Lemma transl_all_ext
+        mn R (itr0 itr1: itree _ R)
+        (EQ: itr0 = itr1)
+    :
+      transl_all mn itr0 = transl_all mn itr1
+  .
+  Proof. subst; refl. Qed.
+
+  Global Program Instance transl_all_rdb: red_database (mk_box (@transl_all)) :=
+    mk_rdb
+      (mk_box transl_all_bind)
+      (mk_box transl_all_tau)
+      (mk_box transl_all_ret)
+      (mk_box transl_all_pE)
+      (mk_box transl_all_rE)
+      (mk_box transl_all_callE)
+      (mk_box transl_all_eventE)
+      (mk_box transl_all_triggerUB)
+      (mk_box transl_all_triggerNB)
+      (mk_box transl_all_unwrapU)
+      (mk_box transl_all_unwrapN)
+      (mk_box transl_all_assume)
+      (mk_box transl_all_guarantee)
+      (mk_box transl_all_ext)
+  .
+End AUX.
 
 (*** TODO: move to ITreeLib ***)
 Lemma bind_eta E X Y itr0 itr1 (ktr: ktree E X Y): itr0 = itr1 -> itr0 >>= ktr = itr1 >>= ktr. i; subst; refl. Qed.
 
-Ltac _red_Es f :=
-  match goal with
-  | [ |- ITree.bind' _ (EventsL.interp_Es _ ?itr _) = _ ] =>
-    eapply bind_eta; _red_Es_aux f itr
-  | [ |- EventsL.interp_Es _ ?itr _ = _] =>
-    _red_Es_aux f itr
-  | _ => fail
-  end.
-
-Ltac _red_lsim f :=
-  (_red_Es f) || (_red_itree f) || (fail).
-
-Ltac ired_l := try (prw _red_lsim 2 0).
-Ltac ired_r := try (prw _red_lsim 1 0).
+Ltac ired_l := try (prw _red_gen 2 0).
+Ltac ired_r := try (prw _red_gen 1 0).
 
 Ltac ired_both := ired_l; ired_r.
 

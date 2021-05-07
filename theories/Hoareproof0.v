@@ -10,7 +10,7 @@ Require Import HoareDef.
 Require Import SimSTS.
 Require Import SimGlobal.
 From Ordinal Require Import Ordinal Arithmetic.
-Require Import Red.
+Require Import Red IRed.
 
 Generalizable Variables E R A B C X Y Σ.
 
@@ -212,125 +212,9 @@ Section CANCEL.
   Proof. unfold stb, _stb. rewrite List.map_map. apply List.map_ext. i. des_ifs. Qed.
 
 
-  (* Ltac grind := repeat (f_equiv; try apply func_ext; ii; try (des_ifs; check_safe)). *)
 
-  (* Ltac igo := repeat (try rewrite bind_bind; try rewrite bind_ret_l; try rewrite bind_ret_r; try rewrite bind_tau; *)
-  (*                     try rewrite interp_vis; *)
-  (*                     try rewrite interp_ret; *)
-  (*                     try rewrite interp_tau *)
-  (*                     (* try rewrite interp_trigger *) *)
-  (*                    ). *)
-
-  Lemma transl_all_unwrapU
-        mn R (r: option R)
-    :
-      transl_all mn (unwrapU r) = unwrapU r
-  .
-  Proof.
-    unfold unwrapU. des_ifs.
-    - rewrite transl_all_ret. grind.
-    - rewrite transl_all_triggerUB. unfold triggerUB. grind.
-  Qed.
-
-  Lemma transl_all_unwrapN
-        mn R (r: option R)
-    :
-      transl_all mn (unwrapN r) = unwrapN r
-  .
-  Proof.
-    unfold unwrapN. des_ifs.
-    - rewrite transl_all_ret. grind.
-    - rewrite transl_all_triggerNB. unfold triggerNB. grind.
-  Qed.
-
-  Lemma transl_all_assume
-        mn (P: Prop)
-    :
-      transl_all mn (assume P) = assume P;; tau;; Ret (tt)
-  .
-  Proof.
-    unfold assume.
-    repeat (try rewrite transl_all_bind; try rewrite bind_bind). grind.
-    rewrite transl_all_eventE.
-    repeat (try rewrite transl_all_bind; try rewrite bind_bind). grind.
-    rewrite transl_all_ret.
-    refl.
-  Qed.
-
-  Lemma transl_all_guarantee
-        mn (P: Prop)
-    :
-      transl_all mn (guarantee P) = guarantee P;; tau;; Ret (tt)
-  .
-  Proof.
-    unfold guarantee.
-    repeat (try rewrite transl_all_bind; try rewrite bind_bind). grind.
-    rewrite transl_all_eventE.
-    repeat (try rewrite transl_all_bind; try rewrite bind_bind). grind.
-    rewrite transl_all_ret.
-    refl.
-  Qed.
-
-
-
-  Ltac _red_transl_all_aux f itr :=
-    match itr with
-    | ITree.bind' _ _ =>
-      instantiate (f:=_continue); eapply transl_all_bind; fail
-    | Tau _ =>
-      instantiate (f:=_break); apply transl_all_tau; fail
-    | Ret _ =>
-      instantiate (f:=_continue); apply transl_all_ret; fail
-    | trigger ?e =>
-      instantiate (f:=_break);
-      match (type of e) with
-      | context[callE] => apply transl_all_callE
-      | context[eventE] => apply transl_all_eventE
-      | context[pE] => apply transl_all_pE
-      | context[rE] => apply transl_all_rE
-      | _ => fail 2
-      end
-    | triggerUB =>
-      instantiate (f:=_break); apply transl_all_triggerUB; fail
-    | triggerNB =>
-      instantiate (f:=_break); apply transl_all_triggerNB; fail
-    | unwrapU _ =>
-      instantiate (f:=_break); apply transl_all_unwrapU; fail
-    | unwrapN _ =>
-      instantiate (f:=_break); apply transl_all_unwrapN; fail
-    | assume _ =>
-      instantiate (f:=_break); apply transl_all_assume; fail
-    | guarantee _ =>
-      instantiate (f:=_break); apply transl_all_guarantee; fail
-    | _ =>
-      fail
-    end
-  .
-
-  Lemma interp_Es_eta
-        prog R (itr0 itr1: itree _ R) st0
-    :
-      itr0 = itr1 -> EventsL.interp_Es prog itr0 st0 = EventsL.interp_Es prog itr1 st0
-  .
-  Proof. i; subst; refl. Qed.
-
-  Ltac _red_transl_all f :=
-    match goal with
-    (* | [ |- EventsL.interp_Es _ (ITree.bind' _ (transl_all _ ?itr)) _ = _ ] => *)
-    (*   idtac "A"; *)
-    (*   eapply interp_Es_eta; eapply bind_eta; _red_transl_all_aux f itr *)
-    | [ |- ITree.bind' _ (EventsL.interp_Es _ (transl_all _ ?itr) _) = _ ] =>
-      eapply bind_eta; eapply interp_Es_eta; _red_transl_all_aux f itr
-    | [ |- EventsL.interp_Es _ (transl_all _ ?itr) _ = _] =>
-      eapply interp_Es_eta; _red_transl_all_aux f itr
-    | _ => fail
-    end.
-
-  Ltac _red_lsim f :=
-    (_red_Es f) || (_red_transl_all f) || (_red_itree f) || (fail).
-
-  Ltac ired_l := try (prw _red_lsim 2 0).
-  Ltac ired_r := try (prw _red_lsim 1 0).
+  Ltac ired_l := try (prw _red_gen 2 0).
+  Ltac ired_r := try (prw _red_gen 1 0).
 
   Ltac ired_both := ired_l; ired_r.
 
