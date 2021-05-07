@@ -269,10 +269,19 @@ Arguments rdb_ext [interp].
 
 
 
+Lemma bind_extk: forall [E : Type -> Type] [X Y : Type] [itr: itree E X] (ktr0 ktr1: ktree E X Y),
+    (forall x, ktr0 x = ktr1 x) -> (itr >>= ktr0) = (itr >>= ktr1)
+.
+Proof. i. f_equiv. eapply func_ext. et. Qed.
+
+Lemma tau_ext: forall [E : Type -> Type] [X : Type] [itr0 itr1: itree E X],
+    itr0 = itr1 -> (tau;; itr0) = (tau;; itr1)
+.
+Proof. i. grind. Qed.
 
 Ltac _red_itree f :=
   match goal with
-  | [ |- ITree.bind' _ ?itr = _] =>
+  | [ |- ITree.bind' ?ktr ?itr = _] =>
     match itr with
     | ITree.bind' _ _ =>
       instantiate (f:=_continue); apply bind_bind; fail
@@ -281,10 +290,13 @@ Ltac _red_itree f :=
     | Ret _ =>
       instantiate (f:=_continue); apply bind_ret_l; fail
     | _ =>
-      fail
+      eapply bind_extk; i;
+      _red_itree f
     end
   | [ |- trigger _ = _] =>
     instantiate (f:=_break); apply bind_ret_r_rev; fail
+  | [ |- (tau;; _) = _ ] =>
+    eapply tau_ext; _red_itree f
   | _ => fail
   end.
 
@@ -478,13 +490,11 @@ Section TEST.
       xn (trigger (Choose _) >>= j >>= k) = iret <- trigger (Choose _);; tau;; jret <- xn (j iret);; xn (k jret)
   .
   Proof.
-    i. Fail refl. my_red_both.
-    f_equiv. apply func_ext. i.
-    (* { f_equiv. apply func_ext. i. rewrite bind_tau. rewrite bind_ret_l. } *)
-    f.
-    setoid_rewrite Eq.bind_tau.
-    refl.
+    i. Fail refl. my_red_both. refl.
   Qed.
+
+
+  TTTTTTTTTTTTTTTTTTTTTTTTTTTT
 
 
 
