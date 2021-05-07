@@ -6,6 +6,7 @@ Require Import PCM.
 Require Import Any.
 Require Import ITreelib.
 Require Import AList.
+Require Import Coq.Init.Decimal.
 
 Set Implicit Arguments.
 Set Typeclasses Depth 5.
@@ -645,39 +646,90 @@ Section ILIST.
 
   Definition iPropL := alist string iProp.
 
-  (* Definition from_iPropL (l: iPropL): iProp := *)
-  (*   fold_alist (fun _ P acc => P ** acc) (emp)%I l. *)
-
-  Fixpoint from_iPropL2 (l: iPropL): iProp :=
-    match l with
-    | [(_, P)] => P
-    | [] => (emp)%I
-    | (_, Phd)::Ptl => Phd ** (from_iPropL2 Ptl)
-    end.
-
   Fixpoint from_iPropL (l: iPropL): iProp :=
     match l with
     | [] => (emp)%I
     | (_, Phd)::Ptl => Phd ** (from_iPropL Ptl)
     end.
 
-  Lemma from_iPropL2_equiv l:
-    from_iPropL2 l ⊢ from_iPropL l.
-  Proof.
-    induction l; ss. destruct a. destruct l; ss.
-    { iIntros "H". iFrame. }
-    destruct p. iIntros "[H0 H1]". iSplitL "H0"; iFrame.
-    iApply IHl. iFrame.
-  Qed.
+  (* Definition from_iPropL (l: iPropL): iProp := *)
+  (*   fold_alist (fun _ P acc => P ** acc) (emp)%I l. *)
 
-  Lemma from_iPropL2_equiv2 l:
-    from_iPropL l ⊢ from_iPropL2 l.
-  Proof.
-    induction l; ss. destruct a. destruct l; ss.
-    { iIntros "[H _]". iFrame. }
-    destruct p. iIntros "[H0 H1]". iSplitL "H0"; iFrame.
-    iApply IHl. iFrame.
-  Qed.
+  (* Fixpoint from_iPropL2 (l: iPropL): iProp := *)
+  (*   match l with *)
+  (*   | [(_, P)] => P *)
+  (*   | [] => (emp)%I *)
+  (*   | (_, Phd)::Ptl => Phd ** (from_iPropL2 Ptl) *)
+  (*   end. *)
+
+  (* Lemma from_iPropL2_equiv l: *)
+  (*   from_iPropL2 l ⊢ from_iPropL l. *)
+  (* Proof. *)
+  (*   induction l; ss. destruct a. destruct l; ss. *)
+  (*   { iIntros "H". iFrame. } *)
+  (*   destruct p. iIntros "[H0 H1]". iSplitL "H0"; iFrame. *)
+  (*   iApply IHl. iFrame. *)
+  (* Qed. *)
+
+  (* Lemma from_iPropL2_equiv2 l: *)
+  (*   from_iPropL l ⊢ from_iPropL2 l. *)
+  (* Proof. *)
+  (*   induction l; ss. destruct a. destruct l; ss. *)
+  (*   { iIntros "[H _]". iFrame. } *)
+  (*   destruct p. iIntros "[H0 H1]". iSplitL "H0"; iFrame. *)
+  (*   iApply IHl. iFrame. *)
+  (* Qed. *)
+
+  Fixpoint get_ipm_pat (l: iPropL): string :=
+    match l with
+    | [] => "_"
+    | (Hn, _) :: tl =>
+      append "[" (append Hn (append " " (append (get_ipm_pat tl) "]")))
+    end.
+
+  Fixpoint is_fresh_name (Hn: string) (l: iPropL): bool :=
+    match l with
+    | [] => true
+    | (Hn', _)::tl =>
+      match String.eqb Hn Hn' with
+      | true => false
+      | false => is_fresh_name Hn tl
+      end
+    end.
+
+  Fixpoint uint_to_string (n: uint) (acc: string): string :=
+    match n with
+    | Nil => acc
+    | D0 tl => uint_to_string tl (append "0" acc)
+    | D1 tl => uint_to_string tl (append "1" acc)
+    | D2 tl => uint_to_string tl (append "2" acc)
+    | D3 tl => uint_to_string tl (append "3" acc)
+    | D4 tl => uint_to_string tl (append "4" acc)
+    | D5 tl => uint_to_string tl (append "5" acc)
+    | D6 tl => uint_to_string tl (append "6" acc)
+    | D7 tl => uint_to_string tl (append "7" acc)
+    | D8 tl => uint_to_string tl (append "8" acc)
+    | D9 tl => uint_to_string tl (append "9" acc)
+    end.
+
+  Definition nat_to_string :=
+    (fun n => uint_to_string (Nat.to_little_uint n Nil) "").
+
+  Fixpoint get_fresh_name'
+           (base: string) (n: nat) (fuel: nat) (l: iPropL): string :=
+    match fuel with
+    | 0 => "TMP"
+    | S fuel' =>
+      let Hn := append base (nat_to_string n) in
+      if is_fresh_name Hn l
+      then Hn
+      else get_fresh_name' base (S n) fuel' l
+    end.
+
+  Definition get_fresh_name (base: string) (l: iPropL): string :=
+    if is_fresh_name base l
+    then base
+    else get_fresh_name' base 0 100 l.
 
   Lemma iPropL_clear (Hn: string) (l: iPropL)
     :
@@ -743,6 +795,14 @@ Section ILIST.
   Admitted.
 End ILIST.
 Arguments from_iPropL: simpl never.
+
+Ltac start_ipm_proof :=
+  match goal with
+  | |- from_iPropL ?l -∗ _ =>
+    let pat := (eval compute in (get_ipm_pat l)) in
+    simpl; iIntros pat
+  | _ => try unfold from_iPropL
+  end.
 
 Section CURRENT.
   Context `{Σ: GRA.t}.
@@ -908,14 +968,23 @@ Section TACTICS.
 
   Lemma current_iPropL_assert Hns Hn_new (P: iProp) ctx (l: iPropL)
         (ACC: current_iPropL ctx l)
-        (FIND: from_iPropL2 (fst (alist_pops Hns l)) -∗ P)
+        (FIND: from_iPropL (fst (alist_pops Hns l)) -∗ P)
     :
       current_iPropL ctx (alist_add Hn_new P (snd (alist_pops Hns l))).
   Proof.
     eapply current_iProp_upd.
     eapply current_iProp_entail; et.
     eapply iPropL_assert; et.
-    etrans; [|et]. eapply from_iPropL2_equiv2.
+  Qed.
+
+  Lemma current_iPropL_assert_pure (P: Prop) ctx (l: iPropL)
+        (ACC: current_iPropL ctx l)
+        (FIND: from_iPropL l -∗ ⌜P⌝)
+    :
+      P.
+  Proof.
+    eapply current_iProp_pure.
+    eapply current_iProp_entail; et.
   Qed.
 
   Lemma current_iPropL_entail Hn ctx (l: iPropL) (P0 P1: iProp)
@@ -952,7 +1021,7 @@ Section TACTICS.
   Proof.
     exploit (@current_iPropL_assert [Hn1; Hn0] Hn0 P1); et.
     { ss. rewrite FIND0. rewrite FIND1. ss.
-      iIntros "[H0 H1]". iApply "H1". iApply "H0". }
+      iIntros "[H0 [H1 _]]". iApply "H1". iApply "H0". }
     ss. rewrite FIND0. rewrite FIND1. ss.
   Qed.
 
@@ -1044,7 +1113,7 @@ Section TACTICS.
   Proof.
     exploit (@current_iPropL_assert [Hn1; Hn0] Hn0 (OwnM (URA.add m0 m1))); et.
     { ss. rewrite FIND0. rewrite FIND1. ss.
-      iIntros "[H0 H1]". iSplitL "H1"; iFrame. }
+      iIntros "[H0 [H1 _]]". iSplitL "H1"; iFrame. }
     ss. rewrite FIND0. rewrite FIND1. ss.
   Qed.
 End TACTICS.
@@ -1069,17 +1138,38 @@ Ltac on_current TAC :=
   | ACC: @current_iPropL _ _ _ |- _ => TAC ACC
   end.
 
-Ltac mPure Hn PURE := on_current ltac:(fun H =>
+Ltac get_fresh_name_tac :=
+  match goal with
+  | _: @current_iPropL _ _ ?l |- _ =>
+    let Hn := (eval compute in (get_fresh_name "A" l)) in
+    constr:(Hn)
+  end.
+
+Ltac mPure' Hn PURE := on_current ltac:(fun H =>
                                          eapply (@current_iPropL_pure _ Hn) in H;
                                          [|asimpl; reflexivity];
                                          destruct H as [H PURE];
                                          asimpl in H).
 
-Ltac mDesEx Hn a := on_current ltac:(fun H =>
-                                       eapply (@current_iPropL_destruct_ex _ Hn) in H;
-                                       [|asimpl; reflexivity];
-                                       destruct H as [a H];
-                                       asimpl in H).
+Tactic Notation "mPure" constr(Hn) "as" ident(PURE) :=
+  mPure' Hn PURE.
+
+Tactic Notation "mPure" constr(Hn) :=
+  let PURE := fresh "PURE" in
+  mPure' Hn PURE.
+
+Ltac mDesEx' Hn a := on_current ltac:(fun H =>
+                                        eapply (@current_iPropL_destruct_ex _ Hn) in H;
+                                        [|asimpl; reflexivity];
+                                        destruct H as [a H];
+                                        asimpl in H).
+
+Tactic Notation "mDesEx" constr(Hn) "as" ident(a) :=
+  mDesEx' Hn a.
+
+Tactic Notation "mDesEx" constr(Hn) :=
+  let a := fresh "a" in
+  mDesEx' Hn a.
 
 Ltac mDesOr Hn := on_current ltac:(fun H =>
                                      eapply (@current_iPropL_destruct_or _ Hn) in H;
@@ -1087,45 +1177,110 @@ Ltac mDesOr Hn := on_current ltac:(fun H =>
                                      destruct H as [H|H];
                                      asimpl in H).
 
-Ltac mDesSep Hn_old Hn_new0 Hn_new1 := on_current ltac:(fun H =>
-                                                          eapply (@current_iPropL_destruct_sep _ Hn_old Hn_new0 Hn_new1) in H;
-                                                          [|asimpl; reflexivity];
-                                                          asimpl in H).
+Ltac mDesSep' Hn_old Hn_new0 Hn_new1 := on_current ltac:(fun H =>
+                                                           eapply (@current_iPropL_destruct_sep _ Hn_old Hn_new0 Hn_new1) in H;
+                                                           [|asimpl; reflexivity];
+                                                           asimpl in H).
+
+Tactic Notation "mDesSep" constr(Hn_old) "as" constr(Hn_new0) constr(Hn_new1) :=
+  mDesSep' Hn_old Hn_new0 Hn_new1.
+
+Tactic Notation "mDesSep" constr(Hn_old) :=
+  let Hn_new1 := get_fresh_name_tac in
+  mDesSep' Hn_old Hn_old Hn_new1.
 
 Ltac mUpd Hn := on_current ltac:(fun H =>
                                    eapply (@current_iPropL_upd _ Hn) in H;
                                    [|asimpl; reflexivity];
                                    asimpl in H).
 
-Ltac mOwnWf Hn WF := on_current ltac:(fun H =>
-                                        pose proof H as WF;
-                                        eapply (@current_iPropL_own_wf _ Hn) in WF;
-                                        [|asimpl; reflexivity];
-                                        asimpl in H).
+Ltac mOwnWf' Hn WF := on_current ltac:(fun H =>
+                                         pose proof H as WF;
+                                         eapply (@current_iPropL_own_wf _ Hn) in WF;
+                                         [|asimpl; reflexivity];
+                                         asimpl in H).
+
+Tactic Notation "mOwnWf" constr(Hn) "as" ident(WF) :=
+  mOwnWf' Hn WF.
+
+Tactic Notation "mOwnWf" constr(Hn) :=
+  let WF := fresh "WF" in
+  mOwnWf' Hn WF.
 
 Ltac mClear Hn := on_current ltac:(fun H =>
                                      eapply (@current_iPropL_clear _ Hn) in H;
                                      asimpl in H).
 
-Ltac mAssert P Hns Hn_new := on_current ltac:(fun H =>
+Ltac mAssert' P Hns Hn_new := on_current ltac:(fun H =>
                                                 eapply (@current_iPropL_assert _ Hns Hn_new P) in H;
                                                 cycle 1;
-                                                [unfold from_iPropL;asimpl|asimpl in H]).
+                                                [start_ipm_proof|asimpl in H]).
+
+Tactic Notation "mAssert" constr(P) "with" uconstr(Hns) "as" constr(Hn_new) :=
+  mAssert' P Hns Hn_new.
+
+Tactic Notation "mAssert" constr(P) "with" uconstr(Hns) :=
+  let Hn_new := get_fresh_name_tac in
+  mAssert' P Hns Hn_new.
+
+Tactic Notation "mAssert" "_" "with" uconstr(Hns) "as" constr(Hn_new) :=
+  let P := fresh "P" in
+  evar (P: iProp');
+  mAssert P with Hns as Hn_new;
+  [subst P|subst P].
+
+Tactic Notation "mAssert" "_" "with" uconstr(Hns) :=
+  let P := fresh "P" in
+  evar (P: iProp');
+  mAssert P with Hns;
+  [subst P|subst P].
+
+Ltac mAssertPure' P PURE := on_current ltac:(fun H =>
+                                               pose proof H as PURE;
+                                               eapply (@current_iPropL_assert_pure _ P) in PURE;
+                                               cycle 1;
+                                               [clear PURE; start_ipm_proof|asimpl in H]).
+
+Tactic Notation "mAssertPure" constr(P) "as" ident(PURE) :=
+  mAssertPure' P PURE.
+
+Tactic Notation "mAssertPure" constr(P) :=
+  let PURE := fresh "PURE" in
+  mAssertPure' P PURE.
+
+Tactic Notation "mAssertPure" "_" "as" ident(PURE) :=
+  let P := fresh "P" in
+  evar (P: Prop);
+  mAssertPure P as PURE;
+  [subst P|subst P].
+
+Tactic Notation "mAssertPure" "_" :=
+  let PURE := fresh "PURE" in
+  let P := fresh "P" in
+  evar (P: Prop);
+  mAssertPure P as PURE;
+  [subst P|subst P].
 
 Ltac mApply LEM Hn := on_current ltac:(fun H =>
                                          eapply (@current_iPropL_entail _ Hn) in H;
                                          [|asimpl in H; reflexivity|eapply LEM];
                                          asimpl in H).
 
-Ltac mSpcUniv Hn a := on_current ltac:(fun H =>
-                                         eapply (@current_iPropL_univ _ Hn _ a) in H;
-                                         [|asimpl; reflexivity];
-                                         asimpl in H).
+Ltac mSpcUniv' Hn a := on_current ltac:(fun H =>
+                                          eapply (@current_iPropL_univ _ Hn _ a) in H;
+                                          [|asimpl; reflexivity];
+                                          asimpl in H).
 
-Ltac mSpcWand Hn0 Hn1 := on_current ltac:(fun H =>
-                                            eapply (@current_iPropL_wand _ Hn0 Hn1) in H;
-                                            [|asimpl; reflexivity|asimpl; reflexivity];
-                                            asimpl in H).
+Tactic Notation "mSpcUniv" constr(Hn) "with" uconstr(a) :=
+  mSpcUniv' Hn a.
+
+Ltac mSpcWand' Hn0 Hn1 := on_current ltac:(fun H =>
+                                             eapply (@current_iPropL_wand _ Hn0 Hn1) in H;
+                                             [|asimpl; reflexivity|asimpl; reflexivity];
+                                             asimpl in H).
+
+Tactic Notation "mSpcWand" constr(Hn0) "with" constr(Hn1) :=
+  mSpcWand' Hn0 Hn1.
 
 Ltac mDesAndL Hn := on_current ltac:(fun H =>
                                        eapply (@current_iPropL_destruct_and_l _ Hn) in H;
@@ -1137,20 +1292,41 @@ Ltac mDesAndR Hn := on_current ltac:(fun H =>
                                        [|asimpl; reflexivity];
                                        asimpl in H).
 
-Ltac mDesAndPureL Hn_old Hn_new0 Hn_new1 := on_current ltac:(fun H =>
-                                                               eapply (@current_iPropL_destruct_and_pure_l _ Hn_old Hn_new0 Hn_new1) in H;
-                                                               [|asimpl; reflexivity];
-                                                               asimpl in H).
+Ltac mDesAndPureL' Hn_old Hn_new0 Hn_new1 := on_current ltac:(fun H =>
+                                                                eapply (@current_iPropL_destruct_and_pure_l _ Hn_old Hn_new0 Hn_new1) in H;
+                                                                [|asimpl; reflexivity];
+                                                                asimpl in H).
 
-Ltac mDesAndPureR Hn_old Hn_new0 Hn_new1 := on_current ltac:(fun H =>
-                                                               eapply (@current_iPropL_destruct_and_pure_r _ Hn_old Hn_new0 Hn_new1) in H;
-                                                               [|asimpl; reflexivity];
-                                                               asimpl in H).
+Tactic Notation "mDesAndPureL" constr(Hn_old) "as" constr(Hn_new0) constr(Hn_new1) :=
+  mDesAndPureL' Hn_old Hn_new0 Hn_new1.
 
-Ltac mDesOwn Hn_old Hn_new0 Hn_new1 := on_current ltac:(fun H =>
-                                                          eapply (@current_iPropL_destruct_own _ Hn_old Hn_new0 Hn_new1) in H;
-                                                          [|asimpl; reflexivity];
-                                                          asimpl in H).
+Tactic Notation "mDesAndPureL" constr(Hn_old) :=
+  let Hn_new1 := get_fresh_name_tac in
+  mDesAndPureL' Hn_old Hn_old Hn_new1.
+
+Ltac mDesAndPureR' Hn_old Hn_new0 Hn_new1 := on_current ltac:(fun H =>
+                                                                eapply (@current_iPropL_destruct_and_pure_r _ Hn_old Hn_new0 Hn_new1) in H;
+                                                                [|asimpl; reflexivity];
+                                                                asimpl in H).
+
+Tactic Notation "mDesAndPureR" constr(Hn_old) "as" constr(Hn_new0) constr(Hn_new1) :=
+  mDesAndPureR' Hn_old Hn_new0 Hn_new1.
+
+Tactic Notation "mDesAndPureR" constr(Hn_old) :=
+  let Hn_new1 := get_fresh_name_tac in
+  mDesAndPureR' Hn_old Hn_old Hn_new1.
+
+Ltac mDesOwn' Hn_old Hn_new0 Hn_new1 := on_current ltac:(fun H =>
+                                                           eapply (@current_iPropL_destruct_own _ Hn_old Hn_new0 Hn_new1) in H;
+                                                           [|asimpl; reflexivity];
+                                                           asimpl in H).
+
+Tactic Notation "mDesOwn" constr(Hn_old) "as" constr(Hn_new0) constr(Hn_new1) :=
+  mDesOwn' Hn_old Hn_new0 Hn_new1.
+
+Tactic Notation "mDesOwn" constr(Hn_old) :=
+  let Hn_new1 := get_fresh_name_tac in
+  mDesOwn' Hn_old Hn_old Hn_new1.
 
 Ltac mCombine Hn0 Hn1 := on_current ltac:(fun H =>
                                             eapply (@current_iPropL_merge_own _ Hn0 Hn1) in H;
@@ -1159,8 +1335,27 @@ Ltac mCombine Hn0 Hn1 := on_current ltac:(fun H =>
 
 (* TODO: tactic for reduction, rewrite *)
 
+Ltac mDes' l :=
+  match l with
+  | [] => idtac
+  | (?Hn, ?P) :: ?tl =>
+    match P with
+    | @bi_pure _ _ => mPure Hn
+    | @bi_exist _ _ _ => mDesEx Hn
+    | @bi_sep _ _ _ => mDesSep Hn
+    | @bi_and _ _ (@bi_pure _ _) => mDesAndPureR Hn
+    | @bi_and _ (@bi_pure _ _) _ => mDesAndPureL Hn
+    | _ => mDes' tl
+    end
+  end.
 
+Ltac mDes :=
+  match goal with
+  | _: @current_iPropL _ _ ?l |- _ => mDes' l
+  end.
 
+Ltac mDesAll :=
+  repeat mDes.
 
 Section TEST.
   Context {Σ: GRA.t}.
@@ -1172,7 +1367,14 @@ Section TEST.
               (ACC: current_iPropL ctx [("A", X); ("H", P ** Q); ("B", Y)]),
       False.
   Proof.
-    i. mDesSep "H" "H0" "H1".
+    i. mDesSep "H".
+  Abort.
+
+  Goal forall ctx P Q X Y
+              (ACC: current_iPropL ctx [("A", X); ("H", P ** Q); ("B", Y)]),
+      False.
+  Proof.
+    i. mDesSep "H" as "H0" "H1".
   Abort.
 
   (* mDesOr *)
@@ -1188,7 +1390,14 @@ Section TEST.
               (ACC: current_iPropL ctx [("A", X); ("H", (⌜P⌝)%I); ("B", Y)]),
       False.
   Proof.
-    i. mPure "H" PURE.
+    i. mPure "H".
+  Abort.
+
+  Goal forall ctx P X Y
+              (ACC: current_iPropL ctx [("A", X); ("H", (⌜P⌝)%I); ("B", Y)]),
+      False.
+  Proof.
+    i. mPure "H" as PURE.
   Abort.
 
   (* mDesEx *)
@@ -1196,7 +1405,14 @@ Section TEST.
               (ACC: current_iPropL ctx [("A", X); ("H", (∃ (a: A), P a)%I); ("B", Y)]),
       False.
   Proof.
-    i. mDesEx "H" a.
+    i. mDesEx "H" as a.
+  Abort.
+
+  Goal forall ctx A P X Y
+              (ACC: current_iPropL ctx [("A", X); ("H", (∃ (a: A), P a)%I); ("B", Y)]),
+      False.
+  Proof.
+    i. mDesEx "H".
   Abort.
 
   (* mUpd *)
@@ -1212,7 +1428,14 @@ Section TEST.
               (ACC: current_iPropL ctx [("A", X); ("H", OwnM m); ("B", Y)]),
       False.
   Proof.
-    i. mOwnWf "H" WF.
+    i. mOwnWf "H" as WF.
+  Abort.
+
+  Goal forall ctx (m: M) X Y
+              (ACC: current_iPropL ctx [("A", X); ("H", OwnM m); ("B", Y)]),
+      False.
+  Proof.
+    i. mOwnWf "H".
   Abort.
 
   (* mClear *)
@@ -1228,7 +1451,14 @@ Section TEST.
               (ACC: current_iPropL ctx [("A", X); ("H", OwnM (URA.add m0 m1)); ("B", Y)]),
       False.
   Proof.
-    i. mDesOwn "H" "H0" "H1".
+    i. mDesOwn "H" as "H0" "H1".
+  Abort.
+
+  Goal forall ctx (m0 m1: M) X Y
+              (ACC: current_iPropL ctx [("A", X); ("H", OwnM (URA.add m0 m1)); ("B", Y)]),
+      False.
+  Proof.
+    i. mDesOwn "H".
   Abort.
 
   (* mCombine *)
@@ -1260,7 +1490,14 @@ Section TEST.
               (ACC: current_iPropL ctx [("A", X); ("H", ((⌜P⌝)%I ∧ Q)%I); ("B", Y)]),
       False.
   Proof.
-    i. mDesAndPureL "H" "H0" "H1".
+    i. mDesAndPureL "H" as "H0" "H1".
+  Abort.
+
+  Goal forall ctx P Q X Y
+              (ACC: current_iPropL ctx [("A", X); ("H", ((⌜P⌝)%I ∧ Q)%I); ("B", Y)]),
+      False.
+  Proof.
+    i. mDesAndPureL "H".
   Abort.
 
   (* mDesAndPureR *)
@@ -1268,7 +1505,14 @@ Section TEST.
               (ACC: current_iPropL ctx [("A", X); ("H", (P ∧ (⌜Q⌝)%I )%I); ("B", Y)]),
       False.
   Proof.
-    i. mDesAndPureR "H" "H0" "H1".
+    i. mDesAndPureR "H" as "H0" "H1".
+  Abort.
+
+  Goal forall ctx P Q X Y
+              (ACC: current_iPropL ctx [("A", X); ("H", (P ∧ (⌜Q⌝)%I )%I); ("B", Y)]),
+      False.
+  Proof.
+    i. mDesAndPureR "H".
   Abort.
 
   (* mSpcUniv *)
@@ -1276,7 +1520,7 @@ Section TEST.
               (ACC: current_iPropL ctx [("A", X); ("H", (∀ (n: nat), P n)%I); ("B", Y)]),
       False.
   Proof.
-    i. mSpcUniv "H" 3.
+    i. mSpcUniv "H" with 3.
   Abort.
 
   (* mSpcWand *)
@@ -1284,7 +1528,7 @@ Section TEST.
               (ACC: current_iPropL ctx [("H1", (P -∗ Q)%I); ("A", X); ("H0", P); ("B", Y)]),
       False.
   Proof.
-    i. mSpcWand "H1" "H0".
+    i. mSpcWand "H1" with "H0".
   Abort.
 
   (* mAssert *)
@@ -1292,8 +1536,65 @@ Section TEST.
               (ACC: current_iPropL ctx [("H1", (P -∗ Q)%I); ("A", X); ("H0", P); ("B", Y)]),
       False.
   Proof.
-    i. mAssert Q ["H0"; "H1"] "H0".
-    { iIntros "[H0 H1]". iApply "H1". iApply "H0". }
+    i. mAssert Q with ["H0"; "H1"] as "H0".
+    { iApply "H1". iApply "H0". }
+  Abort.
+
+  Goal forall ctx P Q X Y
+              (ACC: current_iPropL ctx [("H1", (P -∗ Q)%I); ("A", X); ("H0", P); ("B", Y)]),
+      False.
+  Proof.
+    i. mAssert Q with ["H0"; "H1"].
+    { iApply "H1". iApply "H0". }
+  Abort.
+
+  Goal forall ctx P Q X Y
+              (ACC: current_iPropL ctx [("H1", (P -∗ Q)%I); ("A", X); ("H0", P); ("B", Y)]),
+      False.
+  Proof.
+    i. mAssert _ with ["H0"; "H1"].
+    { iSpecialize ("H1" with "H0"). iExact "H1". }
+  Abort.
+
+  Goal forall ctx P Q X Y
+              (ACC: current_iPropL ctx [("H1", (P -∗ Q)%I); ("A", X); ("H0", P); ("B", Y)]),
+      False.
+  Proof.
+    i. mAssert _ with ["H0"; "H1"] as "H0".
+    { iSpecialize ("H1" with "H0"). iExact "H1". }
+  Abort.
+
+  (* mAssertPure *)
+  Goal forall ctx P X Y
+              (ACC: current_iPropL ctx [("A", X); ("H0", (X -∗ ⌜P⌝)%I); ("B", Y)]),
+      False.
+  Proof.
+    i. mAssertPure P as PURE.
+    { iClear "B". iApply "H0". iApply "A". }
+  Abort.
+
+  Goal forall ctx P X Y
+              (ACC: current_iPropL ctx [("A", X); ("H0", (X -∗ ⌜P⌝)%I); ("B", Y)]),
+      False.
+  Proof.
+    i. mAssertPure P.
+    { iClear "B". iApply "H0". iApply "A". }
+  Abort.
+
+  Goal forall ctx P X Y
+              (ACC: current_iPropL ctx [("A", X); ("H0", (X -∗ ⌜P⌝)%I); ("B", Y)]),
+      False.
+  Proof.
+    i. mAssertPure _ as PURE.
+    { iClear "B". iApply "H0". iApply "A". }
+  Abort.
+
+  Goal forall ctx P X Y
+              (ACC: current_iPropL ctx [("A", X); ("H0", (X -∗ ⌜P⌝)%I); ("B", Y)]),
+      False.
+  Proof.
+    i. mAssertPure _.
+    { iClear "B". iApply "H0". iApply "A". }
   Abort.
 End TEST.
 

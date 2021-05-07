@@ -158,8 +158,6 @@ Section SIMMODSEM.
   .
   Hint Constructors sim_loc: core.
 
-  Definition mem_tgt: Mem.t. Admitted.
-
   Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
   Let wf: W -> Prop :=
     @mk_wf
