@@ -16,9 +16,36 @@ Ltac get_head term :=
   end
 .
 
-Ltac get_tail term :=
+(* Ltac get_tail term := *)
+(*   match term with *)
+(*   | ?f ?x => x *)
+(*   end *)
+(* . *)
+
+Ltac get_itr term :=
+  (* repeat multimatch term with *)
+  (*        | _ ?x => match type of x with itree _ _ => x end *)
+  (*        | _ ?x _ => match type of x with itree _ _ => x end *)
+  (*        | _ ?x _ _ => match type of x with itree _ _ => x end *)
+  (*        | _ ?x _ _ _ => match type of x with itree _ _ => x end *)
+  (*        | _ ?x _ _ _ _ => match type of x with itree _ _ => x end *)
+  (*        | _ ?x _ _ _ _ _ => match type of x with itree _ _ => x end *)
+  (*        end *)
+  (* repeat multimatch term with *)
+  (*        | _ ?x => match type of x with itree _ _ => constr:(x) end *)
+  (*        | _ ?x _ => match type of x with itree _ _ => constr:(x) end *)
+  (*        | _ ?x _ _ => match type of x with itree _ _ => constr:(x) end *)
+  (*        | _ ?x _ _ _ => match type of x with itree _ _ => constr:(x) end *)
+  (*        | _ ?x _ _ _ _ => match type of x with itree _ _ => constr:(x) end *)
+  (*        | _ ?x _ _ _ _ _ => match type of x with itree _ _ => constr:(x) end *)
+  (*        end *)
   match term with
-  | ?f ?x => x
+  | _ ?x => match type of x with itree _ _ => constr:(x) end
+  | _ ?x _ => match type of x with itree _ _ => constr:(x) end
+  | _ ?x _ _ => match type of x with itree _ _ => constr:(x) end
+  | _ ?x _ _ _ => match type of x with itree _ _ => constr:(x) end
+  | _ ?x _ _ _ _ => match type of x with itree _ _ => constr:(x) end
+  | _ ?x _ _ _ _ _ => match type of x with itree _ _ => constr:(x) end
   end
 .
 
@@ -51,6 +78,7 @@ Arguments rdb_ret [interp].
 Arguments rdb_trigger0 [interp].
 Arguments rdb_trigger1 [interp].
 Arguments rdb_trigger2 [interp].
+Arguments rdb_trigger3 [interp].
 Arguments rdb_UB [interp].
 Arguments rdb_NB [interp].
 Arguments rdb_unwrapU [interp].
@@ -79,6 +107,8 @@ Lemma tau_ext: forall [E : Type -> Type] [X : Type] [itr0 itr1: itree E X],
 Proof. i. grind. Qed.
 
 
+(* Tactic Notation "debug" string(str) := idtac str. (*** debug mode ***) *)
+(* Tactic Notation "debug" string(str) := idtac. (*** release mode ***) *)
 
 Ltac _red_itree f :=
   match goal with
@@ -102,20 +132,24 @@ Ltac _red_itree f :=
   end.
 
 Ltac __red_interp f term :=
-  (* idtac "DEBUG:__red_interp"; *)
+  idtac "__red_interp";
+  idtac term;
   let my_interp := get_head term in
-  let itr := get_tail term in
+  let itr := get_itr term in
+  idtac itr;
   let tc := fresh "_TC_" in
   unshelve evar (tc: @red_database (mk_box (my_interp))); [typeclasses eauto|];
   let name := fresh "TMP" in
   match itr with
   | ITree.bind' _ _ =>
+    idtac "bind";
     instantiate (f:=_continue); pose (rdb_bind tc) as name; cbn in name;
     match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end
   | Tau _ =>
     instantiate (f:=_break); pose (rdb_tau tc) as name; cbn in name;
     match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end
   | Ret _ =>
+    idtac "ret";
     instantiate (f:=_continue); pose (rdb_ret tc) as name; cbn in name;
     match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end
   | trigger ?e =>
@@ -145,6 +179,7 @@ Ltac __red_interp f term :=
     instantiate (f:=_break); pose (rdb_guarantee tc) as name; cbn in name;
     match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end
   | ?term =>
+    idtac "term";
     pose (rdb_ext tc) as name; cbn in name;
     match goal with | H := mk_box ?lemma |- _ => eapply lemma end;
     subst tc;
@@ -153,11 +188,13 @@ Ltac __red_interp f term :=
 .
 
 Ltac _red_interp f :=
-  (* idtac "DEBUG:_red_interp"; *)
+  idtac "_red_interp";
   match goal with
   | [ |- ITree.bind' _ ?term = _ ] =>
+    idtac "_red_interp_bind";
     eapply bind_ext; __red_interp f term
   | [ |- ?term = _] =>
+    idtac "_red_interp_term";
     __red_interp f term
   end
 .
@@ -288,6 +325,43 @@ Section TEST.
 
   Goal forall T U V (j: ktree _ T U) (k: ktree _ U V),
       x (trigger (Choose _) >>= j >>= k) = iret <- trigger (Choose _);; iret <- (tau;; Ret iret);; jret <- x (j iret);; x (k jret)
+  .
+  Proof. i. Fail refl. my_red_both. refl. Qed.
+
+  Variable xx: forall T, nat -> itree (eventE +' E) T -> nat -> itree (eventE +' F) T.
+
+  Hypothesis xx_bind: forall R S i p q (k: ktree _ R S), (xx p (i >>= k) q) = (r <- xx p i q;; xx p (k r) q).
+  Hypothesis xx_tau: forall R p q (i: itree _ R), (xx p (tau;; i) q) = tau;; (xx p i q).
+  Hypothesis xx_ret: forall R p q (i: R), (xx p (Ret i) q) = Ret i.
+  Hypothesis xx_triggere: forall R p q (i: eventE R), (xx p (trigger i) q) = (trigger i >>= (fun r => tau;; Ret r)).
+  Hypothesis xx_UB: forall R p q, (xx p triggerUB q) = (triggerUB: itree _ R).
+  Hypothesis xx_NB: forall R p q, (xx p triggerNB q) = (triggerNB: itree _ R).
+  Hypothesis xx_unwrapU: forall R p q (i: option R), (xx p (unwrapU i) q) = (unwrapU i).
+  Hypothesis xx_unwrapN: forall R p q (i: option R), (xx p (unwrapN i) q) = (unwrapN i).
+  Hypothesis xx_assume: forall P p q, (xx p (assume P) q) = assume P >>= (fun _ => tau;; Ret tt).
+  Hypothesis xx_guarantee: forall P p q, (xx p (guarantee P) q) = guarantee P >>= (fun _ => tau;; Ret tt).
+  Hypothesis xx_exxt: forall R p q (i0 i1: itree _ R), i0 = i1 -> (xx p i0 q) = (xx p i1 q).
+
+  Global Program Instance xx_rdb: red_database (mk_box xx) :=
+    mk_rdb
+      (mk_box (xx_bind))
+      (mk_box (xx_tau))
+      (mk_box (xx_ret))
+      (mk_box (xx_triggere))
+      (mk_box (xx_triggere))
+      (mk_box (xx_triggere))
+      (mk_box (xx_triggere))
+      (mk_box (xx_UB))
+      (mk_box (xx_NB))
+      (mk_box (xx_unwrapU))
+      (mk_box (xx_unwrapN))
+      (mk_box (xx_assume))
+      (mk_box (xx_guarantee))
+      (mk_box (xx_exxt))
+  .
+
+  Goal forall p q T U V (i: itree _ T) (j: ktree _ T U) (k: ktree _ U V),
+      xx p (i >>= j >>= k) q = iret <- xx p i q;; jret <- xx p (j iret) q;; xx p (k jret) q
   .
   Proof. i. Fail refl. my_red_both. refl. Qed.
 
