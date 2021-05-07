@@ -318,32 +318,6 @@ Section SIM.
 End SIM.
 
 
-Section HLEMMAS.
-  Context `{Σ: GRA.t}.
-  Local Opaque GRA.to_URA.
-
-  (* TODO: find lemma (or typeclass) *)
-  Lemma Upd_Pure P
-    :
-      #=> ⌜P⌝ ⊢ ⌜P⌝.
-  Proof.
-    red. uipropall. i.
-    hexploit (H URA.unit).
-    { rewrite URA.unit_id. et. }
-    i. des. red in H1. red. uipropall.
-  Qed.
-
-
-  Variant mk_wf (A: Type) (R_src: A -> Any.t -> iProp) (R_tgt: A -> Any.t -> iProp): (Σ * Any.t) * (Σ * Any.t) -> Prop :=
-  | mk_wf_intro
-      a
-      mr_src mp_src mr_tgt mp_tgt
-      (RSRC: R_src a mp_src mr_src)
-      (RTGT: R_tgt a mp_tgt mr_tgt)
-    :
-      mk_wf R_src R_tgt ((mr_src, mp_src), (mr_tgt, mp_tgt))
-  .
-
 
   Variant current_iprops (ctx: Σ) (I: iProp): Prop :=
   | current_iprops_intro
@@ -397,6 +371,43 @@ Section HLEMMAS.
     inv ACC. uipropall.
     hexploit IPROP; et. i. des. econs; et.
   Qed.
+
+  Lemma current_iprops_own ctx (M: URA.t) `{@GRA.inG M Σ} (m: M)
+        (ACC: current_iprops ctx (Own (GRA.embed m)))
+    :
+      URA.wf m.
+  Proof.
+  Admitted.
+
+
+
+Section HLEMMAS.
+  Context `{Σ: GRA.t}.
+  Local Opaque GRA.to_URA.
+
+  (* TODO: find lemma (or typeclass) *)
+  Lemma Upd_Pure P
+    :
+      #=> ⌜P⌝ ⊢ ⌜P⌝.
+  Proof.
+    red. uipropall. i.
+    hexploit (H URA.unit).
+    { rewrite URA.unit_id. et. }
+    i. des. red in H1. red. uipropall.
+  Qed.
+
+
+  Variant mk_wf (A: Type) (R_src: A -> Any.t -> iProp) (R_tgt: A -> Any.t -> iProp): (Σ * Any.t) * (Σ * Any.t) -> Prop :=
+  | mk_wf_intro
+      a
+      mr_src mp_src mr_tgt mp_tgt
+      (RSRC: R_src a mp_src mr_src)
+      (RTGT: R_tgt a mp_tgt mr_tgt)
+    :
+      mk_wf R_src R_tgt ((mr_src, mp_src), (mr_tgt, mp_tgt))
+  .
+
+
 
   Lemma hcall_clo_ord_weaken (o_new: Ord.t)
         Y Z (ftsp1: ftspec Y Z)

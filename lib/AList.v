@@ -57,8 +57,37 @@ Proof.
   - unfold rel_dec in *. unfold sumbool_to_bool in *. des_ifs.
 Qed.
 
+Fixpoint alist_pop (K : Type) (R : K -> K -> Prop) (RD_K : RelDec R) (V : Type)
+         (k : K) (m : alist K V): option (V * alist K V) :=
+  match m with
+  | [] => None
+  | (k', v) :: ms =>
+    if k ?[R] k'
+    then Some (v, ms)
+    else match @alist_pop K R RD_K V k ms with
+         | Some (v', ms') => Some (v', (k', v) :: ms')
+         | None => None
+         end
+  end.
+
+Fixpoint alist_pops (K : Type) (R : K -> K -> Prop) (RD_K : RelDec R) (V : Type)
+         (k : list K) (m : alist K V): alist K V * alist K V :=
+  match k with
+  | [] => ([], m)
+  | khd::ktl =>
+    let (l, m0) := alist_pops RD_K ktl m in
+    match alist_pop RD_K khd m0 with
+    | Some (v, m1) => ((khd, v)::l, m1)
+    | None => (l, m0)
+    end
+  end.
+
+
 Arguments alist_find [K R] {RD_K} [V].
 Arguments alist_add [K R] {RD_K} [V].
+Arguments alist_pop [K R] {RD_K} [V].
+Arguments alist_pops [K R] {RD_K} [V].
+Arguments alist_remove [K R] {RD_K} [V].
 
 Lemma eq_rel_dec_correct T `{DEC: Dec T}
       x0 x1
@@ -101,3 +130,13 @@ Section ALIST.
     admit "ez".
   Qed.
 End ALIST.
+
+
+Tactic Notation "asimpl" "in" ident(H) :=
+  (try unfold alist_add in H); simpl in H.
+
+Tactic Notation "asimpl" "in" "*" :=
+  (try unfold alist_add in *); simpl in *.
+
+Tactic Notation "asimpl" :=
+  (try unfold alist_add); simpl.
