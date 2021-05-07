@@ -434,7 +434,7 @@ Section HLEMMAS.
         (RTGT: R_tgt a0 mp_tgt0 mr_tgt0)
 
         (UPDATABLE:
-           from_iPropL2 (fst (alist_pops Hns l)) ⊢ #=> (R_src a0 mp_src0 ** (ftsp1.(precond) x varg_src varg_tgt o: iProp)))
+           from_iPropL (fst (alist_pops Hns l)) ⊢ #=> (R_src a0 mp_src0 ** (ftsp1.(precond) x varg_src varg_tgt o: iProp)))
 
         (FUEL: (15 < n)%ord)
         (PURE: ord_lt o ord_cur /\
@@ -477,7 +477,7 @@ Section HLEMMAS.
         (RTGT: R_tgt a0 mp_tgt0 mr_tgt0)
 
         (UPDATABLE:
-           from_iPropL2 (fst (alist_pops Hns l)) ⊢ #=> (R_src a0 mp_src0 ** (ftsp1.(precond) x varg_src varg_tgt o: iProp)))
+           from_iPropL (fst (alist_pops Hns l)) ⊢ #=> (R_src a0 mp_src0 ** (ftsp1.(precond) x varg_src varg_tgt o: iProp)))
 
         (FUEL: (15 < n)%ord)
         (PURE: ord_lt o ord_cur /\
@@ -520,7 +520,7 @@ Section HLEMMAS.
         (RTGT: R_tgt a0 mp_tgt0 mr_tgt0)
 
         (UPDATABLE:
-           from_iPropL2 (fst (alist_pops Hns l)) ⊢ #=> (R_src a0 mp_src0 ** (P x varg_src varg_tgt o: iProp)))
+           from_iPropL (fst (alist_pops Hns l)) ⊢ #=> (R_src a0 mp_src0 ** (P x varg_src varg_tgt o: iProp)))
 
         (FUEL: (15 < n)%ord)
         (PURE: ord_lt o ord_cur /\
@@ -599,7 +599,7 @@ Section HLEMMAS.
         (RTGT: R_tgt a mp_tgt mr_tgt)
 
         (UPDATABLE:
-           (from_iPropL2 l) ⊢ #=> (R_src a mp_src ** (Q x vret_src vret_tgt: iProp)))
+           (from_iPropL l) ⊢ #=> (R_src a mp_src ** (Q x vret_src vret_tgt: iProp)))
 
         (EQ: forall mr_src1 (SAT: R_src a mp_src mr_src1),
             eqr (mr_src1, mp_src, ε) (mr_tgt, mp_tgt, fr_tgt) vret_tgt vret_tgt)
