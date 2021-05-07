@@ -350,13 +350,14 @@ Section HLEMMAS.
         ctx0 I
         (ACC: current_iProp ctx0 I)
 
+        (RTGT: R_tgt a0 mp_tgt0 mr_tgt0)
+
         (UPDATABLE:
            I ⊢ #=> (FR ** R_src a0 mp_src0 ** (ftsp1.(precond) x varg_src varg_tgt o: iProp)))
 
         (FUEL: (15 < n)%ord)
         (PURE: ord_lt o ord_cur /\
                (tbr = true -> is_pure o) /\ (tbr = false -> o = ord_top))
-        (RTGT: R_tgt a0 mp_tgt0 mr_tgt0)
 
         (POST: forall (vret_tgt : Any.t) (mr_src1 mr_tgt1 fr_src1: Σ) (mp_src1 mp_tgt1 : Any.t) a1
                       (vret_src: Z)
@@ -430,13 +431,14 @@ Section HLEMMAS.
         ctx0 l
         (ACC: current_iPropL ctx0 l)
 
+        (RTGT: R_tgt a0 mp_tgt0 mr_tgt0)
+
         (UPDATABLE:
            from_iPropL2 (fst (alist_pops Hns l)) ⊢ #=> (R_src a0 mp_src0 ** (ftsp1.(precond) x varg_src varg_tgt o: iProp)))
 
         (FUEL: (15 < n)%ord)
         (PURE: ord_lt o ord_cur /\
                (tbr = true -> is_pure o) /\ (tbr = false -> o = ord_top))
-        (RTGT: R_tgt a0 mp_tgt0 mr_tgt0)
 
         (POST: forall (vret_tgt : Any.t) (mr_src1 mr_tgt1 fr_src1: Σ) (mp_src1 mp_tgt1 : Any.t) a1
                       (vret_src: Z)
@@ -472,13 +474,14 @@ Section HLEMMAS.
         ctx0 l
         (ACC: current_iPropL ctx0 l)
 
+        (RTGT: R_tgt a0 mp_tgt0 mr_tgt0)
+
         (UPDATABLE:
            from_iPropL2 (fst (alist_pops Hns l)) ⊢ #=> (R_src a0 mp_src0 ** (ftsp1.(precond) x varg_src varg_tgt o: iProp)))
 
         (FUEL: (15 < n)%ord)
         (PURE: ord_lt o ord_cur /\
                (tbr = true -> is_pure o) /\ (tbr = false -> o = ord_top))
-        (RTGT: R_tgt a0 mp_tgt0 mr_tgt0)
 
         (POST: forall (vret_tgt : Any.t) (mr_src1 mr_tgt1 fr_src1: Σ) (mp_src1 mp_tgt1 : Any.t) a1
                       (vret_src: Z)
@@ -514,13 +517,14 @@ Section HLEMMAS.
         ctx0 l
         (ACC: current_iPropL ctx0 l)
 
+        (RTGT: R_tgt a0 mp_tgt0 mr_tgt0)
+
         (UPDATABLE:
            from_iPropL2 (fst (alist_pops Hns l)) ⊢ #=> (R_src a0 mp_src0 ** (P x varg_src varg_tgt o: iProp)))
 
         (FUEL: (15 < n)%ord)
         (PURE: ord_lt o ord_cur /\
                (tbr = true -> is_pure o) /\ (tbr = false -> o = ord_top))
-        (RTGT: R_tgt a0 mp_tgt0 mr_tgt0)
 
         (POST: forall (vret_tgt : Any.t) (mr_src1 mr_tgt1 fr_src1: Σ) (mp_src1 mp_tgt1 : Any.t) a1
                       (vret_src: Z)
@@ -592,10 +596,11 @@ Section HLEMMAS.
         ctx l
         (ACC: current_iPropL ctx l)
 
+        (RTGT: R_tgt a mp_tgt mr_tgt)
+
         (UPDATABLE:
            (from_iPropL2 l) ⊢ #=> (R_src a mp_src ** (Q x vret_src vret_tgt: iProp)))
 
-        (RTGT: R_tgt a mp_tgt mr_tgt)
         (EQ: forall mr_src1 (SAT: R_src a mp_src mr_src1),
             eqr (mr_src1, mp_src, ε) (mr_tgt, mp_tgt, fr_tgt) vret_tgt vret_tgt)
     :
