@@ -133,10 +133,10 @@ End ALIST.
 
 
 Tactic Notation "asimpl" "in" ident(H) :=
-  (try unfold alist_add in H); simpl in H.
+  (try unfold alist_remove, alist_add in H); simpl in H.
 
 Tactic Notation "asimpl" "in" "*" :=
-  (try unfold alist_add in *); simpl in *.
+  (try unfold alist_remove, alist_add in *); simpl in *.
 
 Tactic Notation "asimpl" :=
-  (try unfold alist_add); simpl.
+  (try unfold alist_remove, alist_add); simpl.

@@ -648,44 +648,42 @@ Section ILIST.
   (* Definition from_iPropL (l: iPropL): iProp := *)
   (*   fold_alist (fun _ P acc => P ** acc) (emp)%I l. *)
 
+  Fixpoint from_iPropL2 (l: iPropL): iProp :=
+    match l with
+    | [(_, P)] => P
+    | [] => (emp)%I
+    | (_, Phd)::Ptl => Phd ** (from_iPropL2 Ptl)
+    end.
+
   Fixpoint from_iPropL (l: iPropL): iProp :=
     match l with
     | [] => (emp)%I
     | (_, Phd)::Ptl => Phd ** (from_iPropL Ptl)
     end.
 
-  Definition from_iPropL2 (l: iPropL): iProp :=
-    match l with
-    | [(_, P)] => P
-    | _ => from_iPropL l
-    end.
-
   Lemma from_iPropL2_equiv l:
-    from_iPropL l ⊢ from_iPropL2 l.
+    from_iPropL2 l ⊢ from_iPropL l.
   Proof.
-    destruct l; ss. destruct p. destruct l; ss.
-    iIntros "[H _]". iApply "H".
+    induction l; ss. destruct a. destruct l; ss.
+    { iIntros "H". iFrame. }
+    destruct p. iIntros "[H0 H1]". iSplitL "H0"; iFrame.
+    iApply IHl. iFrame.
   Qed.
 
   Lemma from_iPropL2_equiv2 l:
-    from_iPropL2 l ⊢ from_iPropL l.
+    from_iPropL l ⊢ from_iPropL2 l.
   Proof.
-    destruct l; ss. destruct p. destruct l; ss.
-    iIntros "H". iSplitL "H"; auto.
+    induction l; ss. destruct a. destruct l; ss.
+    { iIntros "[H _]". iFrame. }
+    destruct p. iIntros "[H0 H1]". iSplitL "H0"; iFrame.
+    iApply IHl. iFrame.
   Qed.
 
   Lemma iPropL_clear (Hn: string) (l: iPropL)
     :
       from_iPropL l -∗ #=> from_iPropL (alist_remove Hn l).
   Proof.
-    induction l; ss.
-    { iIntros "H". iModIntro. iApply "H". }
-    destruct a. des_ifs; ss.
-    { iIntros "[H0 H1]". iSplitL "H0"; auto.
-      iApply IHl. auto. }
-    { iIntros "[_ H1]".
-      iApply IHl. auto. }
-  Qed.
+  Admitted.
 
   Lemma iPropL_one Hn (l: iPropL) (P: iProp)
         (FIND: alist_find Hn l = Some P)
@@ -749,61 +747,61 @@ Arguments from_iPropL: simpl never.
 Section CURRENT.
   Context `{Σ: GRA.t}.
 
-  Variant current_iprops (ctx: Σ) (I: iProp): Prop :=
-  | current_iprops_intro
+  Variant current_iProp (ctx: Σ) (I: iProp): Prop :=
+  | current_iProp_intro
       r
       (GWF: (@URA.wf (GRA.to_URA _) (URA.add r ctx)))
       (IPROP: I r)
   .
 
-  Lemma current_iprops_entail I1 ctx I0
-        (ACC: current_iprops ctx I0)
+  Lemma current_iProp_entail I1 ctx I0
+        (ACC: current_iProp ctx I0)
         (UPD: I0 ⊢ I1)
     :
-      current_iprops ctx I1.
+      current_iProp ctx I1.
   Proof.
     inv ACC. econs; et.
     uipropall. eapply UPD; et. eapply URA.wf_mon; et.
   Qed.
 
-  Lemma current_iprops_pure P ctx
-        (ACC: current_iprops ctx (⌜P⌝)%I)
+  Lemma current_iProp_pure P ctx
+        (ACC: current_iProp ctx (⌜P⌝)%I)
     :
       P.
   Proof.
     inv ACC. red in IPROP. uipropall.
   Qed.
 
-  Lemma current_iprops_ex ctx A (P: A -> iProp)
-        (ACC: current_iprops ctx (bi_exist P))
+  Lemma current_iProp_ex ctx A (P: A -> iProp)
+        (ACC: current_iProp ctx (bi_exist P))
     :
-      exists x, current_iprops ctx (P x).
+      exists x, current_iProp ctx (P x).
   Proof.
     inv ACC. red in IPROP. uipropall.
     des. exists x. econs; et.
   Qed.
 
-  Lemma current_iprops_or ctx I0 I1
-        (ACC: current_iprops ctx (I0 ∨ I1)%I)
+  Lemma current_iProp_or ctx I0 I1
+        (ACC: current_iProp ctx (I0 ∨ I1)%I)
     :
-      current_iprops ctx I0 \/ current_iprops ctx I1.
+      current_iProp ctx I0 \/ current_iProp ctx I1.
   Proof.
     inv ACC. uipropall. des.
     { left. econs; et. }
     { right. econs; et. }
   Qed.
 
-  Lemma current_iprops_upd ctx I
-        (ACC: current_iprops ctx (#=> I))
+  Lemma current_iProp_upd ctx I
+        (ACC: current_iProp ctx (#=> I))
     :
-      current_iprops ctx I.
+      current_iProp ctx I.
   Proof.
     inv ACC. uipropall.
     hexploit IPROP; et. i. des. econs; et.
   Qed.
 
-  Lemma current_iprops_own ctx (M: URA.t) `{@GRA.inG M Σ} (m: M)
-        (ACC: current_iprops ctx (OwnM m))
+  Lemma current_iProp_own ctx (M: URA.t) `{@GRA.inG M Σ} (m: M)
+        (ACC: current_iProp ctx (OwnM m))
     :
       URA.wf m.
   Proof.
@@ -819,125 +817,124 @@ End CURRENT.
 Section TACTICS.
   Context `{Σ: GRA.t}.
 
-  Ltac on_current TAC :=
-    match goal with
-    | ACC: current_iprops _ (from_iPropL _) |- _ => TAC ACC
-    end.
+  Definition current_iPropL (ctx: Σ) (l: iPropL) :=
+    current_iProp ctx (from_iPropL l).
 
   Lemma current_iPropL_pure Hn ctx (l: iPropL) (P: Prop)
-        (ACC: current_iprops ctx (from_iPropL l))
+        (ACC: current_iPropL ctx l)
         (FIND: alist_find Hn l = Some (⌜P⌝)%I)
     :
-      current_iprops ctx (from_iPropL (alist_remove Hn l)) /\ P.
+      current_iPropL ctx (alist_remove Hn l) /\ P.
   Proof.
     split.
-    - eapply current_iprops_upd.
-      eapply current_iprops_entail; et.
+    - eapply current_iProp_upd.
+      eapply current_iProp_entail; et.
       eapply iPropL_clear.
-    - eapply current_iprops_pure.
-      eapply current_iprops_upd.
-      eapply current_iprops_entail; et.
+    - eapply current_iProp_pure.
+      eapply current_iProp_upd.
+      eapply current_iProp_entail; et.
       eapply iPropL_one; et.
   Qed.
 
   Lemma current_iPropL_destruct_ex Hn ctx (l: iPropL) A (P: A -> iProp)
-        (ACC: current_iprops ctx (from_iPropL l))
+        (ACC: current_iPropL ctx l)
         (FIND: alist_find Hn l = Some (bi_exist P))
     :
-      exists (a: A), current_iprops ctx (from_iPropL (alist_add Hn (P a) l)).
+      exists (a: A), current_iPropL ctx (alist_add Hn (P a) l).
   Proof.
-    eapply current_iprops_entail in ACC.
+    eapply current_iProp_entail in ACC.
     2: { eapply iPropL_destruct_ex; et. }
-    eapply current_iprops_ex in ACC. des.
-    exists x. eapply current_iprops_upd. et.
+    eapply current_iProp_ex in ACC. des.
+    exists x. eapply current_iProp_upd. et.
   Qed.
 
   Lemma current_iPropL_destruct_or Hn ctx (l: iPropL) (P0 P1: iProp)
-        (ACC: current_iprops ctx (from_iPropL l))
+        (ACC: current_iPropL ctx l)
         (FIND: alist_find Hn l = Some (P0 ∨ P1)%I)
     :
-      current_iprops ctx (from_iPropL (alist_add Hn P0 l)) \/
-      current_iprops ctx (from_iPropL (alist_add Hn P1 l)).
+      current_iPropL ctx (alist_add Hn P0 l) \/
+      current_iPropL ctx (alist_add Hn P1 l).
   Proof.
-    eapply current_iprops_entail in ACC.
+    eapply current_iProp_entail in ACC.
     2: { eapply iPropL_destruct_or; et. }
-    eapply current_iprops_or in ACC. des.
-    { left. eapply current_iprops_upd. et. }
-    { right. eapply current_iprops_upd. et. }
+    eapply current_iProp_or in ACC. des.
+    { left. eapply current_iProp_upd. et. }
+    { right. eapply current_iProp_upd. et. }
   Qed.
 
   Lemma current_iPropL_destruct_sep Hn_old Hn_new0 Hn_new1 ctx (l: iPropL) (P0 P1: iProp)
-        (ACC: current_iprops ctx (from_iPropL l))
+        (ACC: current_iPropL ctx l)
         (FIND: alist_find Hn_old l = Some (P0 ** P1)%I)
     :
-      current_iprops ctx (from_iPropL (alist_add Hn_new1 P1 (alist_add Hn_new0 P0 (alist_remove Hn_old l)))).
+      current_iPropL ctx (alist_add Hn_new1 P1 (alist_add Hn_new0 P0 (alist_remove Hn_old l))).
   Proof.
-    eapply current_iprops_upd.
-    eapply current_iprops_entail; et.
+    eapply current_iProp_upd.
+    eapply current_iProp_entail; et.
     eapply iPropL_destruct_sep; et.
   Qed.
 
   Lemma current_iPropL_upd Hn ctx (l: iPropL) (P: iProp)
-        (ACC: current_iprops ctx (from_iPropL l))
+        (ACC: current_iPropL ctx l)
         (FIND: alist_find Hn l = Some (#=> P)%I)
     :
-      current_iprops ctx (from_iPropL (alist_add Hn P l)).
+      current_iPropL ctx (alist_add Hn P l).
   Proof.
-    eapply current_iprops_upd.
-    eapply current_iprops_entail; et.
+    eapply current_iProp_upd.
+    eapply current_iProp_entail; et.
     eapply iPropL_upd; et.
   Qed.
 
   Lemma current_iPropL_own_wf Hn ctx (l: iPropL) M `{@GRA.inG M Σ} (m: M)
-        (ACC: current_iprops ctx (from_iPropL l))
+        (ACC: current_iPropL ctx l)
         (FIND: alist_find Hn l = Some (OwnM m))
     :
       URA.wf m.
   Proof.
-    eapply current_iprops_own.
-    eapply current_iprops_upd.
-    eapply current_iprops_entail; et.
+    eapply current_iProp_own.
+    eapply current_iProp_upd.
+    eapply current_iProp_entail; et.
     eapply iPropL_one; et.
   Qed.
 
   Lemma current_iPropL_clear Hn ctx (l: iPropL)
-        (ACC: current_iprops ctx (from_iPropL l))
+        (ACC: current_iPropL ctx l)
     :
-      current_iprops ctx (from_iPropL (alist_remove Hn l)).
+      current_iPropL ctx (alist_remove Hn l).
   Proof.
-    eapply current_iprops_upd.
-    eapply current_iprops_entail; et.
+    eapply current_iProp_upd.
+    eapply current_iProp_entail; et.
     eapply iPropL_clear; et.
   Qed.
 
   Lemma current_iPropL_assert Hns Hn_new (P: iProp) ctx (l: iPropL)
-        (ACC: current_iprops ctx (from_iPropL l))
-        (FIND: from_iPropL (fst (alist_pops Hns l)) -∗ P)
+        (ACC: current_iPropL ctx l)
+        (FIND: from_iPropL2 (fst (alist_pops Hns l)) -∗ P)
     :
-      current_iprops ctx (from_iPropL (alist_add Hn_new P (snd (alist_pops Hns l)))).
+      current_iPropL ctx (alist_add Hn_new P (snd (alist_pops Hns l))).
   Proof.
-    eapply current_iprops_upd.
-    eapply current_iprops_entail; et.
+    eapply current_iProp_upd.
+    eapply current_iProp_entail; et.
     eapply iPropL_assert; et.
+    etrans; [|et]. eapply from_iPropL2_equiv2.
   Qed.
 
   Lemma current_iPropL_entail Hn ctx (l: iPropL) (P0 P1: iProp)
-        (ACC: current_iprops ctx (from_iPropL l))
+        (ACC: current_iPropL ctx l)
         (FIND: alist_find Hn l = Some P0)
         (ENTAIL: P0 -∗ P1)
     :
-      current_iprops ctx (from_iPropL (alist_add Hn P1 l)).
+      current_iPropL ctx (alist_add Hn P1 l).
   Proof.
-    eapply current_iprops_upd.
-    eapply current_iprops_entail; et.
+    eapply current_iProp_upd.
+    eapply current_iProp_entail; et.
     eapply iPropL_entail; et.
   Qed.
 
   Lemma current_iPropL_univ Hn A a ctx (l: iPropL) (P: A -> iProp)
-        (ACC: current_iprops ctx (from_iPropL l))
+        (ACC: current_iPropL ctx l)
         (FIND: alist_find Hn l = Some (bi_forall P))
     :
-      current_iprops ctx (from_iPropL (alist_add Hn (P a) l)).
+      current_iPropL ctx (alist_add Hn (P a) l).
   Proof.
     eapply current_iPropL_entail; et.
     iIntros "H".
@@ -947,33 +944,33 @@ Section TACTICS.
 
   Lemma current_iPropL_wand Hn0 Hn1 ctx (l l0 l1: iPropL)
         (P0 P1: iProp)
-        (ACC: current_iprops ctx (from_iPropL l))
+        (ACC: current_iPropL ctx l)
         (FIND0: alist_pop Hn0 l = Some ((P0 -∗ P1)%I, l0))
         (FIND1: alist_pop Hn1 l0 = Some (P0, l1))
     :
-      current_iprops ctx (from_iPropL (alist_add Hn0 P1 l1)).
+      current_iPropL ctx (alist_add Hn0 P1 l1).
   Proof.
     exploit (@current_iPropL_assert [Hn1; Hn0] Hn0 P1); et.
     { ss. rewrite FIND0. rewrite FIND1. ss.
-      iIntros "[H0 [H1 _]]". iApply "H1". iApply "H0". }
+      iIntros "[H0 H1]". iApply "H1". iApply "H0". }
     ss. rewrite FIND0. rewrite FIND1. ss.
   Qed.
 
   Lemma current_iPropL_destruct_and_l Hn ctx (l: iPropL) (P0 P1: iProp)
-        (ACC: current_iprops ctx (from_iPropL l))
+        (ACC: current_iPropL ctx l)
         (FIND: alist_find Hn l = Some (P0 ∧ P1)%I)
     :
-      current_iprops ctx (from_iPropL (alist_add Hn P0 l)).
+      current_iPropL ctx (alist_add Hn P0 l).
   Proof.
     eapply current_iPropL_entail; et.
     iIntros "H". iDestruct "H" as "[H _]". iApply "H".
   Qed.
 
   Lemma current_iPropL_destruct_and_r Hn ctx (l: iPropL) (P0 P1: iProp)
-        (ACC: current_iprops ctx (from_iPropL l))
+        (ACC: current_iPropL ctx l)
         (FIND: alist_find Hn l = Some (P0 ∧ P1)%I)
     :
-      current_iprops ctx (from_iPropL (alist_add Hn P1 l)).
+      current_iPropL ctx (alist_add Hn P1 l).
   Proof.
     eapply current_iPropL_entail; et.
     iIntros "H". iDestruct "H" as "[_ H]". iApply "H".
@@ -986,16 +983,16 @@ Section TACTICS.
   Qed.
 
   Lemma current_iPropL_destruct_sep' Hn_old Hn_new0 Hn_new1 ctx (l: iPropL) (P0 P1 P2: iProp)
-        (ACC: current_iprops ctx (from_iPropL l))
+        (ACC: current_iPropL ctx l)
         (FIND: alist_find Hn_old l = Some P2)
         (ENTAIL: P2 -∗ (P0 ** P1)%I)
     :
-      current_iprops ctx (from_iPropL (alist_add Hn_new1 P1 (alist_add Hn_new0 P0 (alist_remove Hn_old l)))).
+      current_iPropL ctx (alist_add Hn_new1 P1 (alist_add Hn_new0 P0 (alist_remove Hn_old l))).
   Proof.
     eapply current_iPropL_entail in ACC; et.
     eapply (@current_iPropL_destruct_sep Hn_old Hn_new0 Hn_new1 _ _ P0 P1) in ACC; et.
     { match goal with
-      | [H: current_iprops _ (from_iPropL ?l0) |- current_iprops _ (from_iPropL ?l1)] => replace l1 with l0
+      | [H: current_iPropL _ ?l0 |- current_iPropL _ ?l1] => replace l1 with l0
       end; auto.
       f_equal. f_equal. clear. unfold alist_add, alist_remove. ss.
       rewrite eq_rel_dec_correct. des_ifs. eapply list_filter_idemp.
@@ -1005,22 +1002,22 @@ Section TACTICS.
   Qed.
 
   Lemma current_iPropL_destruct_and_pure_l
-        Hn_old Hn_new0 Hn_new1 ctx (l: iPropL) (P0: iProp) (P1: Prop)
-        (ACC: current_iprops ctx (from_iPropL l))
-        (FIND: alist_find Hn_old l = Some (P0 ∧ (⌜P1⌝))%I)
+        Hn_old Hn_new0 Hn_new1 ctx (l: iPropL) (P0: Prop) (P1: iProp)
+        (ACC: current_iPropL ctx l)
+        (FIND: alist_find Hn_old l = Some ((⌜P0⌝) ∧ P1)%I)
     :
-      current_iprops ctx (from_iPropL (alist_add Hn_new1 (⌜P1⌝)%I (alist_add Hn_new0 P0 (alist_remove Hn_old l)))).
+      current_iPropL ctx (alist_add Hn_new1 P1 (alist_add Hn_new0 (⌜P0⌝)%I (alist_remove Hn_old l))).
   Proof.
     eapply current_iPropL_destruct_sep'; et.
     iIntros "H". iDestruct "H" as "[H0 H1]". iFrame.
   Qed.
 
   Lemma current_iPropL_destruct_and_pure_r
-        Hn_old Hn_new0 Hn_new1 ctx (l: iPropL) (P0: Prop) (P1: iProp)
-        (ACC: current_iprops ctx (from_iPropL l))
-        (FIND: alist_find Hn_old l = Some ((⌜P0⌝) ∧ P1)%I)
+        Hn_old Hn_new0 Hn_new1 ctx (l: iPropL) (P0: iProp) (P1: Prop)
+        (ACC: current_iPropL ctx l)
+        (FIND: alist_find Hn_old l = Some (P0 ∧ (⌜P1⌝))%I)
     :
-      current_iprops ctx (from_iPropL (alist_add Hn_new1 P1 (alist_add Hn_new0 (⌜P0⌝)%I (alist_remove Hn_old l)))).
+      current_iPropL ctx (alist_add Hn_new1 (⌜P1⌝)%I (alist_add Hn_new0 P0 (alist_remove Hn_old l))).
   Proof.
     eapply current_iPropL_destruct_sep'; et.
     iIntros "H". iDestruct "H" as "[H0 H1]". iFrame.
@@ -1028,10 +1025,10 @@ Section TACTICS.
 
   Lemma current_iPropL_destruct_own Hn_old Hn_new0 Hn_new1
         ctx (l: iPropL) M `{@GRA.inG M Σ} (m0 m1: M)
-        (ACC: current_iprops ctx (from_iPropL l))
+        (ACC: current_iPropL ctx l)
         (FIND: alist_find Hn_old l = Some (OwnM (URA.add m0 m1)))
     :
-      current_iprops ctx (from_iPropL (alist_add Hn_new1 (OwnM m1) (alist_add Hn_new0 (OwnM m0) (alist_remove Hn_old l)))).
+      current_iPropL ctx (alist_add Hn_new1 (OwnM m1) (alist_add Hn_new0 (OwnM m0) (alist_remove Hn_old l))).
   Proof.
     eapply current_iPropL_destruct_sep'; et.
     iIntros "[H0 H1]". iFrame.
@@ -1039,18 +1036,266 @@ Section TACTICS.
 
   Lemma current_iPropL_merge_own Hn0 Hn1 ctx (l l0 l1: iPropL)
         M `{@GRA.inG M Σ} (m0 m1: M)
-        (ACC: current_iprops ctx (from_iPropL l))
+        (ACC: current_iPropL ctx l)
         (FIND0: alist_pop Hn0 l = Some (OwnM m0, l0))
         (FIND1: alist_pop Hn1 l0 = Some (OwnM m1, l1))
     :
-      current_iprops ctx (from_iPropL (alist_add Hn0 (OwnM (URA.add m0 m1)) l1)).
+      current_iPropL ctx (alist_add Hn0 (OwnM (URA.add m0 m1)) l1).
   Proof.
     exploit (@current_iPropL_assert [Hn1; Hn0] Hn0 (OwnM (URA.add m0 m1))); et.
     { ss. rewrite FIND0. rewrite FIND1. ss.
-      iIntros "[H0 [H1 _]]". iSplitL "H1"; iFrame. }
+      iIntros "[H0 H1]". iSplitL "H1"; iFrame. }
     ss. rewrite FIND0. rewrite FIND1. ss.
   Qed.
 End TACTICS.
+
+Arguments current_iPropL: simpl never.
+
+Notation "☀----IPROPS----☀ ctx" := (@current_iPropL _ ctx)
+                                 (at level 2,
+                                  format "☀----IPROPS----☀  ctx '//'",
+                                  only printing).
+
+Local Notation "P .. Q" :=
+  (@cons (prod string (bi_car iProp)) Q .. (@cons (prod string (bi_car iProp)) P nil) ..)
+    (at level 1,
+     P at level 200,
+     format "P '//' .. '//' Q",
+     only printing,
+     left associativity).
+
+Ltac on_current TAC :=
+  match goal with
+  | ACC: @current_iPropL _ _ _ |- _ => TAC ACC
+  end.
+
+Ltac mPure Hn PURE := on_current ltac:(fun H =>
+                                         eapply (@current_iPropL_pure _ Hn) in H;
+                                         [|asimpl; reflexivity];
+                                         destruct H as [H PURE];
+                                         asimpl in H).
+
+Ltac mDesEx Hn a := on_current ltac:(fun H =>
+                                       eapply (@current_iPropL_destruct_ex _ Hn) in H;
+                                       [|asimpl; reflexivity];
+                                       destruct H as [a H];
+                                       asimpl in H).
+
+Ltac mDesOr Hn := on_current ltac:(fun H =>
+                                     eapply (@current_iPropL_destruct_or _ Hn) in H;
+                                     [|asimpl; reflexivity];
+                                     destruct H as [H|H];
+                                     asimpl in H).
+
+Ltac mDesSep Hn_old Hn_new0 Hn_new1 := on_current ltac:(fun H =>
+                                                          eapply (@current_iPropL_destruct_sep _ Hn_old Hn_new0 Hn_new1) in H;
+                                                          [|asimpl; reflexivity];
+                                                          asimpl in H).
+
+Ltac mUpd Hn := on_current ltac:(fun H =>
+                                   eapply (@current_iPropL_upd _ Hn) in H;
+                                   [|asimpl; reflexivity];
+                                   asimpl in H).
+
+Ltac mOwnWf Hn WF := on_current ltac:(fun H =>
+                                        pose proof H as WF;
+                                        eapply (@current_iPropL_own_wf _ Hn) in WF;
+                                        [|asimpl; reflexivity];
+                                        asimpl in H).
+
+Ltac mClear Hn := on_current ltac:(fun H =>
+                                     eapply (@current_iPropL_clear _ Hn) in H;
+                                     asimpl in H).
+
+Ltac mAssert P Hns Hn_new := on_current ltac:(fun H =>
+                                                eapply (@current_iPropL_assert _ Hns Hn_new P) in H;
+                                                cycle 1;
+                                                [unfold from_iPropL;asimpl|asimpl in H]).
+
+Ltac mApply LEM Hn := on_current ltac:(fun H =>
+                                         eapply (@current_iPropL_entail _ Hn) in H;
+                                         [|asimpl in H; reflexivity|eapply LEM];
+                                         asimpl in H).
+
+Ltac mSpcUniv Hn a := on_current ltac:(fun H =>
+                                         eapply (@current_iPropL_univ _ Hn _ a) in H;
+                                         [|asimpl; reflexivity];
+                                         asimpl in H).
+
+Ltac mSpcWand Hn0 Hn1 := on_current ltac:(fun H =>
+                                            eapply (@current_iPropL_wand _ Hn0 Hn1) in H;
+                                            [|asimpl; reflexivity|asimpl; reflexivity];
+                                            asimpl in H).
+
+Ltac mDesAndL Hn := on_current ltac:(fun H =>
+                                       eapply (@current_iPropL_destruct_and_l _ Hn) in H;
+                                       [|asimpl; reflexivity];
+                                       asimpl in H).
+
+Ltac mDesAndR Hn := on_current ltac:(fun H =>
+                                       eapply (@current_iPropL_destruct_and_r _ Hn) in H;
+                                       [|asimpl; reflexivity];
+                                       asimpl in H).
+
+Ltac mDesAndPureL Hn_old Hn_new0 Hn_new1 := on_current ltac:(fun H =>
+                                                               eapply (@current_iPropL_destruct_and_pure_l _ Hn_old Hn_new0 Hn_new1) in H;
+                                                               [|asimpl; reflexivity];
+                                                               asimpl in H).
+
+Ltac mDesAndPureR Hn_old Hn_new0 Hn_new1 := on_current ltac:(fun H =>
+                                                               eapply (@current_iPropL_destruct_and_pure_r _ Hn_old Hn_new0 Hn_new1) in H;
+                                                               [|asimpl; reflexivity];
+                                                               asimpl in H).
+
+Ltac mDesOwn Hn_old Hn_new0 Hn_new1 := on_current ltac:(fun H =>
+                                                          eapply (@current_iPropL_destruct_own _ Hn_old Hn_new0 Hn_new1) in H;
+                                                          [|asimpl; reflexivity];
+                                                          asimpl in H).
+
+Ltac mCombine Hn0 Hn1 := on_current ltac:(fun H =>
+                                            eapply (@current_iPropL_merge_own _ Hn0 Hn1) in H;
+                                            [|asimpl; reflexivity|asimpl; reflexivity];
+                                            asimpl in H).
+
+(* TODO: tactic for reduction, rewrite *)
+
+
+
+
+Section TEST.
+  Context {Σ: GRA.t}.
+  Context {M: URA.t}.
+  Context `{@GRA.inG M Σ}.
+
+  (* mDesSep *)
+  Goal forall ctx P Q X Y
+              (ACC: current_iPropL ctx [("A", X); ("H", P ** Q); ("B", Y)]),
+      False.
+  Proof.
+    i. mDesSep "H" "H0" "H1".
+  Abort.
+
+  (* mDesOr *)
+  Goal forall ctx P Q X Y
+              (ACC: current_iPropL ctx [("A", X); ("H", (P ∨ Q)%I); ("B", Y)]),
+      False.
+  Proof.
+    i. mDesOr "H".
+  Abort.
+
+  (* mPure *)
+  Goal forall ctx P X Y
+              (ACC: current_iPropL ctx [("A", X); ("H", (⌜P⌝)%I); ("B", Y)]),
+      False.
+  Proof.
+    i. mPure "H" PURE.
+  Abort.
+
+  (* mDesEx *)
+  Goal forall ctx A P X Y
+              (ACC: current_iPropL ctx [("A", X); ("H", (∃ (a: A), P a)%I); ("B", Y)]),
+      False.
+  Proof.
+    i. mDesEx "H" a.
+  Abort.
+
+  (* mUpd *)
+  Goal forall ctx P X Y
+              (ACC: current_iPropL ctx [("A", X); ("H", #=> P); ("B", Y)]),
+      False.
+  Proof.
+    i. mUpd "H".
+  Abort.
+
+  (* mOwnWf *)
+  Goal forall ctx (m: M) X Y
+              (ACC: current_iPropL ctx [("A", X); ("H", OwnM m); ("B", Y)]),
+      False.
+  Proof.
+    i. mOwnWf "H" WF.
+  Abort.
+
+  (* mClear *)
+  Goal forall ctx P X Y
+              (ACC: current_iPropL ctx [("A", X); ("H", P); ("B", Y)]),
+      False.
+  Proof.
+    i. mClear "H".
+  Abort.
+
+  (* mDesOwn *)
+  Goal forall ctx (m0 m1: M) X Y
+              (ACC: current_iPropL ctx [("A", X); ("H", OwnM (URA.add m0 m1)); ("B", Y)]),
+      False.
+  Proof.
+    i. mDesOwn "H" "H0" "H1".
+  Abort.
+
+  (* mCombine *)
+  Goal forall ctx (m0 m1: M) X Y
+              (ACC: current_iPropL ctx [("H1", OwnM (m1)); ("A", X); ("H0", OwnM (m0)); ("B", Y)]),
+      False.
+  Proof.
+    i. mCombine "H0" "H1".
+  Abort.
+
+  (* mDesAndL *)
+  Goal forall ctx P Q X Y
+              (ACC: current_iPropL ctx [("A", X); ("H", (P ∧ Q)%I); ("B", Y)]),
+      False.
+  Proof.
+    i. mDesAndL "H".
+  Abort.
+
+  (* mDesAndR *)
+  Goal forall ctx P Q X Y
+              (ACC: current_iPropL ctx [("A", X); ("H", (P ∧ Q)%I); ("B", Y)]),
+      False.
+  Proof.
+    i. mDesAndR "H".
+  Abort.
+
+  (* mDesAndPureL *)
+  Goal forall ctx P Q X Y
+              (ACC: current_iPropL ctx [("A", X); ("H", ((⌜P⌝)%I ∧ Q)%I); ("B", Y)]),
+      False.
+  Proof.
+    i. mDesAndPureL "H" "H0" "H1".
+  Abort.
+
+  (* mDesAndPureR *)
+  Goal forall ctx P Q X Y
+              (ACC: current_iPropL ctx [("A", X); ("H", (P ∧ (⌜Q⌝)%I )%I); ("B", Y)]),
+      False.
+  Proof.
+    i. mDesAndPureR "H" "H0" "H1".
+  Abort.
+
+  (* mSpcUniv *)
+  Goal forall ctx P X Y
+              (ACC: current_iPropL ctx [("A", X); ("H", (∀ (n: nat), P n)%I); ("B", Y)]),
+      False.
+  Proof.
+    i. mSpcUniv "H" 3.
+  Abort.
+
+  (* mSpcWand *)
+  Goal forall ctx P Q X Y
+              (ACC: current_iPropL ctx [("H1", (P -∗ Q)%I); ("A", X); ("H0", P); ("B", Y)]),
+      False.
+  Proof.
+    i. mSpcWand "H1" "H0".
+  Abort.
+
+  (* mAssert *)
+  Goal forall ctx P Q X Y
+              (ACC: current_iPropL ctx [("H1", (P -∗ Q)%I); ("A", X); ("H0", P); ("B", Y)]),
+      False.
+  Proof.
+    i. mAssert Q ["H0"; "H1"] "H0".
+    { iIntros "[H0 H1]". iApply "H1". iApply "H0". }
+  Abort.
+End TEST.
 
 
 Module PARSE.
