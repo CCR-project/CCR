@@ -1,17 +1,17 @@
-Require Import Coqlib.
-Require Import ITreelib.
-Require Import Universe.
-Require Import STS.
-Require Import Behavior.
-Require Import ModSem.
-Require Import Skeleton.
-Require Import PCM.
-Require Import HoareDef.
-Require Export Logic.
-Require Import TODOYJ.
+(* Require Import Coqlib. *)
+(* Require Import ITreelib. *)
+(* Require Import Universe. *)
+(* Require Import STS. *)
+(* Require Import Behavior. *)
+(* Require Import ModSem. *)
+(* Require Import Skeleton. *)
+(* Require Import PCM. *)
+(* Require Import HoareDef. *)
+(* Require Export Logic. *)
+(* Require Import TODOYJ. *)
 
-Set Implicit Arguments.
-Set Typeclasses Depth 5.
+(* Set Implicit Arguments. *)
+(* Set Typeclasses Depth 5. *)
 
 Require Export IPM.
 
