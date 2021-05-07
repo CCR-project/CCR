@@ -145,7 +145,7 @@ Section SIMMODSEM.
     @mk_wf
       _
       Mem.t
-      (fun mem_tgt _ => (∃ mem_src, (Own (GRA.embed ((Auth.black mem_src): URA.car (t:=Mem1.memRA))))
+      (fun mem_tgt _ => (∃ mem_src, (OwnM ((Auth.black mem_src): URA.car (t:=Mem1.memRA)))
                                       **
                                       (⌜forall b ofs, sim_loc ((mem_tgt.(Mem.cnts)) b ofs) (mem_src b ofs)⌝)
                         )%I)
