@@ -332,6 +332,39 @@ Section CANCEL.
     (* Opaque interp_Es. (*** TODO: move to ModSemL ***) *)
     destruct (varg_src↓) eqn:CAST; cycle 1.
     { steps. }
+
+    match goal with
+    | |- gpaco5 _ _ _ _ _ _ _ _ (?i >>= ?k) => remember k as kkk
+    end.
+    ired_r.
+    subst.
+
+    match goal with
+    | |- gpaco5 _ _ _ _ _ _ _ _ (?i >>= ?k) => remember k as kkk
+    end.
+    ired_r.
+    subst.
+
+    match goal with
+    | |- gpaco5 _ _ _ _ _ _ _ _ (?i >>= ?k) => remember k as kkk
+    end.
+    match goal with
+    | |- gpaco5 _ _ _ _ _ _ _ _ ((EventsL.interp_Es _ (transl_all _ (?i >>= ?k)) _) >>= _) =>
+      idtac i; idtac k
+    end.
+    (* ired_r. *)
+    ired.
+    (* ired_r. *)
+    match goal with
+    | |- gpaco5 _ _ _ _ _ _ _ _ ((EventsL.interp_Es _ (transl_all _ (?i >>= ?k)) _) >>= _) =>
+      idtac i; remember k as kkkk
+    end.
+    ired_r.
+    TTTTTTTTTTTTTTTTTTTTTTTT
+    
+    ired_r.
+    subst.
+
     steps. unfold handle_rE. destruct rst_tgt0 as [mrs_tgt0 [|frs_tgt_hd frs_tgt_tl]] eqn:T; ss.
     { rr in SIM. des_ifs_safe. des; ss. destruct l; ss. }
 
