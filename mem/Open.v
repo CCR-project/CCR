@@ -243,8 +243,12 @@ Section KMODSEM.
     fun _ e => trigger (transl_event_tgt e)
   .
 
+  Definition interp_tgt: itree (hCallE +' pE +' eventE) ~> itree (hCallE +' pE +' eventE) :=
+    fun _ => interp (T:=_) transl_itr_tgt
+  .
+
   Definition transl_fsb (fsb: fspecbody): HoareDef.fspecbody :=
-    HoareDef.mk_specbody fsb (interp (T:=_) transl_itr_tgt ∘ fsb.(fsb_body))
+    HoareDef.mk_specbody fsb (interp_tgt (T:=_) ∘ fsb.(fsb_body))
   .
 
   Coercion transl_fsb: fspecbody >-> HoareDef.fspecbody.
@@ -256,6 +260,107 @@ Section KMODSEM.
     SModSem.initial_st := ms.(initial_st);
   |}
   .
+
+  Lemma interp_tgt_ret
+        R S (h: ktree _ R S)
+        r
+    :
+      interp_tgt (Ret r >>= h) = interp_tgt (h r)
+  .
+  Proof. unfold interp_tgt. grind. Qed.
+
+  Lemma interp_tgt_tau
+        R S (h: ktree _ R S)
+        itr
+    :
+      interp_tgt (tau;; itr) >>= h = tau;; interp_tgt (itr) >>= h
+  .
+  Proof. unfold interp_tgt. grind. Qed.
+
+  Lemma interp_tgt_bind
+        R S T (k: ktree _ R S) (h: ktree _ S T)
+        itr
+    :
+      interp_tgt (itr >>= k) >>= h = (interp_tgt itr) >>= (fun s => interp_tgt (k s) >>= h)
+  .
+  Proof. unfold interp_tgt. grind. Qed.
+
+  Lemma interp_tgt_triggerp
+        R S (h: ktree _ R S)
+        (p: pE R)
+    :
+      interp_tgt (trigger p) >>= h = trigger p >>= (fun r => tau;; h r)
+  .
+  Proof. unfold interp_tgt. interp_red. grind. Qed.
+
+  Lemma interp_tgt_triggere
+        R S (h: ktree _ R S)
+        (e: eventE R)
+    :
+      interp_tgt (trigger e) >>= h = trigger e >>= (fun r => tau;; h r)
+  .
+  Proof. unfold interp_tgt. interp_red. grind. Qed.
+
+  Lemma interp_tgt_triggerh
+        S (h: ktree _ _ S)
+        (tbr: bool)
+        (fn: gname)
+        (arg: Any.t)
+    :
+      (interp_tgt (trigger (hCall tbr fn arg)) >>= h)
+      = (trigger (hCall tbr fn (Any.pair arg tbr↑)) >>= (fun r => tau;; h r))
+  .
+  Proof. unfold interp_tgt. interp_red. grind. Qed.
+
+  Lemma interp_tgt_triggerUB
+        R S (h: ktree _ R S)
+    :
+      (interp_tgt triggerUB >>= h)
+      = triggerUB
+  .
+  Proof. unfold interp_tgt. unfold triggerUB. grind. interp_red. grind. Qed.
+
+  Lemma interp_tgt_triggerNB
+        R S (h: ktree _ R S)
+    :
+      (interp_tgt triggerNB >>= h)
+      = triggerNB
+  .
+  Proof. unfold interp_tgt. unfold triggerNB. grind. interp_red. grind. Qed.
+
+  Lemma interp_tgt_unwrapU
+        R S (h: ktree _ R S)
+        r
+    :
+      (interp_tgt (unwrapU r) >>= h) = (unwrapU r >>= h)
+  .
+  Proof. unfold interp_tgt. unfold unwrapU. des_ifs; grind. unfold triggerUB. grind. interp_red. grind. Qed.
+
+  Lemma interp_tgt_unwrapN
+        R S (h: ktree _ R S)
+        r
+    :
+      (interp_tgt (unwrapN r) >>= h) = (unwrapN r >>= h)
+  .
+  Proof. unfold interp_tgt. unfold unwrapN. des_ifs; grind. unfold triggerNB. grind. interp_red. grind. Qed.
+
+  Lemma interp_tgt_assume
+        S (h: ktree _ _ S)
+        P
+    :
+      (interp_tgt (assume P) >>= h) = (assume P >>= (fun _ => tau;; h tt))
+  .
+  Proof. unfold interp_tgt. unfold assume. des_ifs; grind. interp_red. grind. Qed.
+
+  Lemma interp_tgt_guarantee
+        S (h: ktree _ _ S)
+        P
+    :
+      (interp_tgt (guarantee P) >>= h) = (guarantee P >>= (fun _ => tau;; h tt))
+  .
+  Proof. unfold interp_tgt. unfold guarantee. des_ifs; grind. interp_red. grind. Qed.
+
+  Global Opaque interp_tgt.
 
   (************************* SRC ***************************)
   (************************* SRC ***************************)
@@ -301,6 +406,21 @@ Section KMODSEM.
 End KMODSEM.
 End KModSem.
 
+Ltac red_kinterp :=
+  repeat (try rewrite KModSem.interp_tgt_ret;
+          try rewrite KModSem.interp_tgt_tau;
+          try rewrite KModSem.interp_tgt_bind;
+          try rewrite KModSem.interp_tgt_triggerp;
+          try rewrite KModSem.interp_tgt_triggere;
+          try rewrite KModSem.interp_tgt_triggerh;
+          try rewrite KModSem.interp_tgt_triggerUB;
+          try rewrite KModSem.interp_tgt_triggerNB;
+          try rewrite KModSem.interp_tgt_assume;
+          try rewrite KModSem.interp_tgt_guarantee;
+          try rewrite KModSem.interp_tgt_unwrapU;
+          try rewrite KModSem.interp_tgt_unwrapN
+         )
+.
 
 
 
@@ -1006,7 +1126,7 @@ Section ADQ.
         T mn (itr: itree _ T)
     :
       sim_body 100 (transl_all mn (KModSem.interp_hCallE_src itr))
-               (transl_all mn (interp_hCallE_src (interp KModSem.transl_itr_tgt itr)))
+               (transl_all mn (interp_hCallE_src (KModSem.interp_tgt itr)))
   .
   Proof.
     ginit. { eapply cpn4_wcompat; eauto with paco. } revert itr. gcofix CIH. i.
