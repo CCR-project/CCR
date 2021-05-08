@@ -47,37 +47,20 @@ Section SIMMODSEM.
     { ss. red. econs; et; ss. red. uipropall. }
 
     econs; ss.
-    { unfold mainbody, mainF, ccall, hcall. init.
-      (* harg_tac begin *)
-      eapply (@harg_clo _ "H" "INV"); ss. clear SIMMRS mrs_src mrs_tgt. i.
-      (* harg_tac end*)
+    { unfold mainbody, mainF, ccall, hcall. init. harg.
       mDesAll. des; clarify.
       steps. rewrite Any.upcast_downcast in *. clarify.
       destruct (alist_find "getbool" (ClientStb ++ MainStb)) eqn:T; stb_tac; clarify.
       steps. rewrite Any.upcast_downcast. steps.
-
-
-
-      steps.
-
-      stb_tac.
-      unfold alist_find. ss.
-
-      astart 0. astop.
-      mAssertPure (x = Z.odd a); subst.
-      { iApply (bw_ra_merge with "INV H"). }
-      steps. force_l. eexists.
-
-
-      harg_tac. des. subst. rewrite Any.upcast_downcast. ss.
-      iRefresh. iDestruct PRE. iPure A. clarify. steps.
-      destruct (alist_find "getbool" (ClientStb ++ MainStb)) eqn:T; stb_tac; clarify.
-      steps. rewrite Any.upcast_downcast. ss. steps.
-      hcall_tac tt ord_top (@URA.unit Σ) PRE (@URA.unit Σ); ss.
-      { esplits; eauto. }
-      des; clarify. steps. rewrite Any.upcast_downcast in *. ss. clarify. steps.
-      unfold TODO.unbool. des_ifs; ss.
-      { steps. astart 10.
+      hcall _ _ _ with "".
+      { ss. }
+      { iModIntro. iSplit; ss. }
+      { splits; ss. ss. }
+      mDesAll. clarify. steps.
+      rewrite Any.upcast_downcast in *. clarify.
+      unfold TODO.unbool in *. astart 3. des_ifs.
+      { steps. acatch.
+        (* TODO: add BWStb *)
   Admitted.
 
 End SIMMODSEM.

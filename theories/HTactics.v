@@ -53,13 +53,6 @@ Ltac ired_r := try (prw _red_gen 1 1 0).
 Ltac ired_both := ired_l; ired_r.
 
 
-(* any, alist things *)
-
-Ltac anytac := (try erewrite ! Any.upcast_downcast in * ); clarify; apply_all_once Any.upcast_inj; des; clarify; clear_tac.
-
-Ltac asimpl := try (unfold alist_add, alist_remove in * ); ss.
-
-
 (* Hoare Parse *)
 
 Section HOARE.
@@ -336,7 +329,7 @@ Section HLEMMAS.
         Y Z (ftsp1: ftspec Y Z)
         (o: ord) (x: shelve__ ftsp1.(X))
 
-        A a0 FR
+        A (a0: shelve__ A) FR
 
         r rg (n: nat) mr_src0 mp_src0 fr_src0
         (ftsp0: ftspec Y Z)
@@ -413,11 +406,13 @@ Section HLEMMAS.
   Qed.
 
 
-  Lemma hcall_clo_ord_weaken (o_new: Ord.t)
+  Lemma hcall_clo_ord_weaken
+        Hns Rn Invn
+        (o_new: Ord.t)
         Y Z (ftsp1: ftspec Y Z)
         (o: ord) (x: shelve__ ftsp1.(X))
 
-        A a0 Hns Rn Invn
+        A (a0: shelve__ A)
 
         r rg (n: nat) mr_src0 mp_src0 fr_src0
         (ftsp0: ftspec Y Z)
@@ -456,11 +451,13 @@ Section HLEMMAS.
   Proof.
   Admitted.
 
+
   Lemma hcall_clo_weaken
+        Hns Rn Invn
         Y Z (ftsp1: ftspec Y Z)
         (o: ord) (x: shelve__ ftsp1.(X))
 
-        A a0 Hns Rn Invn
+        A (a0: shelve__ A)
 
         r rg (n: nat) mr_src0 mp_src0 fr_src0
         (ftsp0: ftspec Y Z)
@@ -497,12 +494,13 @@ Section HLEMMAS.
              (mr_tgt0, mp_tgt0, frs_tgt, trigger (Call fn varg_tgt) >>= k_tgt)
   .
   Proof.
-    eapply (@hcall_clo_ord_weaken 100); eauto.
+    eapply (@hcall_clo_ord_weaken _ _ _ 100); eauto.
   Qed.
 
   Lemma hcall_clo
+        Hns Rn Invn
         (o: ord) X (x: shelve__ X)
-        A a0 Hns Rn Invn
+        A (a0: shelve__ A)
 
         Y Z
         (P: X -> Y -> Any.t -> ord -> Σ -> Prop)
@@ -529,7 +527,7 @@ Section HLEMMAS.
                       (vret_src: Z)
                       (RTGT: R_tgt a1 mp_tgt1 mr_tgt1)
                       ctx1
-                      (ACC: current_iPropL ctx1 ((Rn, R_src a1 mp_src1) :: (Invn, Q x vret_src vret_tgt) :: (snd (alist_pops Hns l))))
+                      (ACC: current_iPropL ctx1 (@cons (prod string (bi_car iProp)) (Rn, R_src a1 mp_src1) (@cons (prod string (bi_car iProp)) (Invn, Q x vret_src vret_tgt) (snd (alist_pops Hns l)))))
           ,
                 gpaco6 (_sim_itree (mk_wf R_src R_tgt)) (cpn6 (_sim_itree (mk_wf R_src R_tgt))) rg rg _ _ eqr 100
                        (mr_src1, mp_src1, fr_src1, k_src vret_src) (mr_tgt1, mp_tgt1, frs_tgt, k_tgt vret_tgt))
@@ -549,27 +547,26 @@ Section HLEMMAS.
         Rn Invn
         r rg
         X Y (P: X -> Y -> Any.t -> ord -> Σ -> Prop) varg_tgt
-        mrs_src mrs_tgt fr_src fr_tgt f_tgt k_src
+        mr_src mp_src mr_tgt mp_tgt fr_src fr_tgt f_tgt k_src
         A
         (R_src: A -> Any.t -> iProp) (R_tgt: A -> Any.t -> iProp)
         (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
-        (WF: mk_wf R_src R_tgt (mrs_src, mrs_tgt))
+        (WF: mk_wf R_src R_tgt ((mr_src, mp_src), (mr_tgt, mp_tgt)))
         (ARG:
-           forall a x varg_src ord_cur mr_tgt mp_tgt mr_src mp_src fr_src
+           forall a x varg_src ord_cur fr_src
                   (RTGT: R_tgt a mp_tgt mr_tgt)
                   ctx
-                  (ACC: current_iPropL ctx [(Rn, P x varg_src varg_tgt ord_cur); (Invn, R_src a mp_src)]),
+                  (ACC: current_iPropL ctx (@cons (prod string (bi_car iProp)) (Rn, P x varg_src varg_tgt ord_cur) (@cons (prod string (bi_car iProp)) (Invn, R_src a mp_src) (@nil (prod string (bi_car iProp)))))),
              gpaco6 (_sim_itree (mk_wf R_src R_tgt)) (cpn6 (_sim_itree (mk_wf R_src R_tgt))) rg rg _ _ eqr 90
                     (mr_src, mp_src, fr_src, k_src (x, varg_src, ord_cur))
                     (mr_tgt, mp_tgt, fr_tgt, f_tgt))
     :
       gpaco6 (_sim_itree (mk_wf R_src R_tgt)) (cpn6 (_sim_itree (mk_wf R_src R_tgt))) r rg _ _ eqr 100
-             (mrs_src, fr_src, (HoareFunArg P varg_tgt >>= k_src))
-             (mrs_tgt, fr_tgt, f_tgt)
+             (mr_src, mp_src, fr_src, (HoareFunArg P varg_tgt >>= k_src))
+             (mr_tgt, mp_tgt, fr_tgt, f_tgt)
   .
   Proof.
     unfold HoareFunArg, put, discard, forge, checkWf, assume, guarantee.
-    destruct mrs_src, mrs_tgt.
     repeat (ired_both; gstep; econs; eauto with ord_step). intro varg_src.
     repeat (ired_both; gstep; econs; eauto with ord_step). intro x.
     repeat (ired_both; gstep; econs; eauto with ord_step). intro rarg_src.
@@ -583,7 +580,7 @@ Section HLEMMAS.
   Qed.
 
   Lemma hret_clo
-        A a
+        A (a: shelve__ A)
         r rg n mr_src mp_src fr_src
         X Z (Q: X -> Z -> Any.t -> Σ -> Prop)
         x vret_src vret_tgt
@@ -754,10 +751,10 @@ End HLEMMAS.
 
 (* main tactics *)
 
-Ltac init :=
-  split; ss; ii; clarify; rename y into varg; eexists 100%nat; ss; des; clarify;
-  ginit; asimpl;
-  try (unfold fun_to_tgt, cfun; rewrite HoareFun_parse); ss.
+(* Ltac init := *)
+(*   split; ss; ii; clarify; rename y into varg; eexists 100%nat; ss; des; clarify; *)
+(*   ginit; asimpl; *)
+(*   try (unfold fun_to_tgt, cfun; rewrite HoareFun_parse); ss. *)
 
 (* TODO: init with user given ordinal *)
 
@@ -977,5 +974,81 @@ Ltac astart _at_most :=
 
 (* Ltac acall_tac_weaken fsp A0 A1 A2 A3 A4 := *)
 (*   acatch; [..|hcall_tac_weaken fsp A0 A1 A2 A3 A4]. *)
+
+Ltac init :=
+  let varg_src := fresh "varg_src" in
+  let varg := fresh "varg" in
+  let EQ := fresh "EQ" in
+  let mr_src := fresh "mr_src" in
+  let mp_src := fresh "mp_src" in
+  let mr_tgt := fresh "mr_tgt" in
+  let mp_tgt := fresh "mp_tgt" in
+  let WF := fresh "WF" in
+  split; ss; intros varg_src varg EQ [mr_src mp_src] [mr_tgt mp_tgt] WF;
+  (try subst varg_src); exists 100; cbn;
+  ginit;
+  try (unfold fun_to_tgt, cfun; rewrite HoareFun_parse); simpl.
+
+Ltac harg :=
+  let PRE := constr:("PRE") in
+  let INV := constr:("INV") in
+  eapply (@harg_clo _ PRE INV);
+  [eassumption|]; i.
+
+Tactic Notation "hret" uconstr(a) :=
+  eapply (@hret_clo _ _ a); unshelve_goal;
+  [eauto with ord_step|
+   eassumption| |
+   start_ipm_proof|].
+
+Tactic Notation "hret" "_" :=
+  eapply (@hret_clo _ _ _); unshelve_goal;
+  [eauto with ord_step|
+   eassumption| |
+   start_ipm_proof|].
+
+Tactic Notation "_hcall" constr(Hns) tactic(TAC) :=
+  let POST := get_fresh_name_tac "POST" in
+  let INV := get_fresh_name_tac "INV" in
+  let Hns := select_ihyps Hns in
+  TAC (@hcall_clo _ Hns POST INV);
+  unshelve_goal;
+  [eassumption|
+   |start_ipm_proof
+   |eauto with ord_step
+   |
+   |on_current ltac:(fun H => try clear H); i].
+
+Tactic Notation "hcall" "_" "_" "_" "with" constr(Hns) :=
+  let tac := ltac:(fun LEM => eapply (LEM _ _ _ _ _)) in
+  _hcall Hns tac.
+
+Tactic Notation "hcall" "_" "_" uconstr(a) "with" constr(Hns) :=
+  let tac := ltac:(fun LEM => eapply (LEM _ _ _ _ a)) in
+  _hcall Hns tac.
+
+Tactic Notation "hcall" "_" uconstr(x) "_" "with" constr(Hns) :=
+  let tac := ltac:(fun LEM => eapply (LEM _ _ x _ _)) in
+  _hcall Hns tac.
+
+Tactic Notation "hcall" "_" uconstr(x) uconstr(a) "with" constr(Hns) :=
+  let tac := ltac:(fun LEM => eapply (LEM _ _ x _ a)) in
+  _hcall Hns tac.
+
+Tactic Notation "hcall" constr(o) "_" "_" "with" constr(Hns) :=
+  let tac := ltac:(fun LEM => eapply (LEM o _ _ _ _)) in
+  _hcall Hns tac.
+
+Tactic Notation "hcall" constr(o) "_" uconstr(a) "with" constr(Hns) :=
+  let tac := ltac:(fun LEM => eapply (LEM o _ _ _ a)) in
+  _hcall Hns tac.
+
+Tactic Notation "hcall" constr(o) uconstr(x) "_" "with" constr(Hns) :=
+  let tac := ltac:(fun LEM => eapply (LEM o _ x _ _)) in
+  _hcall Hns tac.
+
+Tactic Notation "hcall" constr(o) uconstr(x) uconstr(a) "with" constr(Hns) :=
+  let tac := ltac:(fun LEM => eapply (LEM o _ x _ a)) in
+  _hcall Hns tac.
 
 Global Opaque _APC APC interp interp_hCallE_tgt.

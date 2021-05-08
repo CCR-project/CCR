@@ -67,46 +67,32 @@ Section SIMMODSEM.
   Theorem correct: ModSemPair.sim BW1.BWSem BW0.BWSem.
   Proof.
     econstructor 1 with (wf:=wf); et; swap 2 3.
-    { ss. red. econs; et. red. uipropall.
+    { ss. red. econs; et. red. red. uipropall.
       exists ε. rewrite URA.unit_id; ss. }
     econs; ss.
-    { unfold getF. init.
-      (* harg_tac begin *)
-      eapply (@harg_clo _ "H" "INV"); ss. clear SIMMRS mrs_src mrs_tgt. i.
-      (* harg_tac end*)
+    { unfold getF. init. harg.
       mDesAll. des; clarify.
       steps. rewrite Any.upcast_downcast in *. astart 0. astop.
       mAssertPure (x = Z.odd a); subst.
-      { iApply (bw_ra_merge with "INV H"). }
+      { iApply (bw_ra_merge with "INV PRE"). }
       steps. force_l. eexists.
-      (* hret_tac begin *)
-      eapply hret_clo.
-      { eauto with ord_step. }
-      { eassumption. }
-      (* hret_tac end *)
+      hret _.
       { et. }
-      { start_ipm_proof. iModIntro. iFrame.
+      { iModIntro. iFrame.
         iPureIntro. split; ss. f_equal.
         rewrite <- Z.negb_odd. rewrite negb_if. des_ifs. }
       { i. ss. }
     }
     econs; ss.
-    { unfold flipF. init.
-      (* harg_tac begin *)
-      eapply (@harg_clo _ "H" "INV"); ss. clear SIMMRS mrs_src mrs_tgt. i.
-      (* harg_tac end*)
+    { unfold flipF. init. harg.
       mDesAll. des; clarify.
       steps. rewrite Any.upcast_downcast in *. astart 0. astop.
       mAssertPure (x = Z.odd a); subst.
-      { iApply (bw_ra_merge with "INV H"). }
+      { iApply (bw_ra_merge with "INV PRE"). }
       steps. force_l. eexists.
-      (* hret_tac begin *)
-      eapply hret_clo.
-      { eauto with ord_step. }
-      { eassumption. }
-      (* hret_tac end *)
+      hret _.
       { et. }
-      { start_ipm_proof. iCombine "INV" "H" as "H".
+      { iCombine "INV" "PRE" as "H".
         iPoseProof (OwnM_Upd with "H") as "H".
         { (* TODO: make lemma *)
           instantiate (1:= bw_full (Z.odd (a+1)) ⋅ bw_frag (Z.odd (a+1))).
