@@ -501,14 +501,13 @@ Section HLEMMAS.
   Qed.
 
   Lemma hcall_clo
-        (FR: iProp) (o: ord) X (x: shelve__ X)
+        (o: ord) X (x: shelve__ X)
         A a0 Hns Rn Invn
 
         Y Z
         (P: X -> Y -> Any.t -> ord -> Σ -> Prop)
         (Q: X -> Z -> Any.t -> Σ -> Prop)
         r rg (n: nat) mr_src0 mp_src0 fr_src0
-        (ftsp0: ftspec Y Z)
         mr_tgt0 mp_tgt0 frs_tgt k_tgt k_src
         fn tbr ord_cur varg_src varg_tgt
         (R_src: A -> Any.t -> iProp) (R_tgt: A -> Any.t -> iProp)

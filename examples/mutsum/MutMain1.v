@@ -7,9 +7,8 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
+Require Import Logic.
 Require Import MutHeader.
-
-Generalizable Variables E R A B C X Y Σ.
 
 Set Implicit Arguments.
 
@@ -27,9 +26,9 @@ Section PROOF.
 
   Definition mainsbtb := [("main", mk_specbody main_spec mainBody)].
 
-  Definition SMain: SMod.t := SMod.main (fun _ o _ => o = ord_top) mainBody.
+  Definition SMain: SMod.t := SMod.main (fun _ o => (⌜o = ord_top⌝: iProp)%I) mainBody.
   Definition Main: Mod.t := SMod.to_tgt (fun _ => GlobalStb) SMain.
-  Definition SMainSem: SModSem.t := SModSem.main (fun _ o _ => o = ord_top) mainBody.
+  Definition SMainSem: SModSem.t := SModSem.main (fun _ o => (⌜o = ord_top⌝: iProp)%I) mainBody.
   Definition MainSem: ModSem.t := SModSem.to_tgt GlobalStb SMainSem.
 
 End PROOF.
