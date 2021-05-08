@@ -41,7 +41,7 @@ Section IPROP.
     Seal.sealing
       "iProp"
       (fun r1 => URA.extends r0 r1).
-  Definition OwnM (M: URA.t) `{@GRA.inG M Σ} (r: M): iProp' :=
+  Definition OwnM' (M: URA.t) `{@GRA.inG M Σ} (r: M): iProp' :=
     Own (GRA.embed r).
   Definition And (P Q: iProp'): iProp' :=
     Seal.sealing
@@ -231,7 +231,6 @@ Section IPROP.
 End IPROP.
 Hint Rewrite (Seal.sealing_eq "iProp"): iprop.
 #[export] Hint Unfold Sepconj Pure Ex Univ Own And Or Impl Wand Emp Persistently Later Upd Entails: iprop.
-Arguments OwnM: simpl never.
 
 
 From iris.bi Require Import derived_connectives updates.
@@ -391,6 +390,8 @@ Section IPM.
     {| bi_bi_mixin := iProp_bi_mixin;
        bi_bi_later_mixin := iProp_bi_later_mixin |}.
 
+  Definition OwnM (M: URA.t) `{@GRA.inG M Σ} (r: M): iProp := OwnM' r.
+
   (** extra BI instances *)
   Lemma iProp_bupd_mixin: BiBUpdMixin iProp Upd.
   Proof.
@@ -431,6 +432,7 @@ Section IPM.
     uipropall. i. specialize (H a). red in H. uipropall.
   Qed.
 End IPM.
+Arguments OwnM: simpl never.
 
 Section TEST.
   Context {Σ: GRA.t}.
@@ -538,7 +540,7 @@ Section class_instances.
     IsOp a b1 b2 → IntoAnd p (OwnM a) (OwnM b1) (OwnM b2).
   Proof.
     ii. red. apply bi.intuitionistically_if_mono. inv H0.
-    unfold OwnM. rewrite <- GRA.embed_add. iIntros "[H1 H2]". iSplit.
+    unfold OwnM, OwnM'. rewrite <- GRA.embed_add. iIntros "[H1 H2]". iSplit.
     { iApply "H1". }
     { iApply "H2". }
   Qed.
@@ -546,7 +548,7 @@ Section class_instances.
   Global Instance into_sep_ownM (M: URA.t) `{@GRA.inG M Σ} (a b1 b2 : M) :
     IsOp a b1 b2 → IntoSep (OwnM a) (OwnM b1) (OwnM b2).
   Proof.
-    ii. red. inv H0. unfold OwnM.
+    ii. red. inv H0. unfold OwnM, OwnM'.
     rewrite <- GRA.embed_add. iIntros "[H1 H2]". iSplitL "H1"; iFrame.
   Qed.
 End class_instances.
@@ -559,7 +561,7 @@ Section ILEMMAS.
   Lemma OwnM_valid (M: URA.t) `{@GRA.inG M Σ} (m: M):
     OwnM m -∗ ⌜URA.wf m⌝.
   Proof.
-    uipropall. i. red. unfold OwnM, Own in *. uipropall.
+    uipropall. i. red. unfold OwnM, OwnM', Own in *. uipropall.
     unfold URA.extends in *. des. subst.
     eapply URA.wf_mon in WF. eapply GRA.embed_wf. et.
   Qed.
@@ -677,31 +679,6 @@ Section ILIST.
   (* Definition from_iPropL (l: iPropL): iProp := *)
   (*   fold_alist (fun _ P acc => P ** acc) (emp)%I l. *)
 
-  (* Fixpoint from_iPropL2 (l: iPropL): iProp := *)
-  (*   match l with *)
-  (*   | [(_, P)] => P *)
-  (*   | [] => (emp)%I *)
-  (*   | (_, Phd)::Ptl => Phd ** (from_iPropL2 Ptl) *)
-  (*   end. *)
-
-  (* Lemma from_iPropL2_equiv l: *)
-  (*   from_iPropL2 l ⊢ from_iPropL l. *)
-  (* Proof. *)
-  (*   induction l; ss. destruct a. destruct l; ss. *)
-  (*   { iIntros "H". iFrame. } *)
-  (*   destruct p. iIntros "[H0 H1]". iSplitL "H0"; iFrame. *)
-  (*   iApply IHl. iFrame. *)
-  (* Qed. *)
-
-  (* Lemma from_iPropL2_equiv2 l: *)
-  (*   from_iPropL l ⊢ from_iPropL2 l. *)
-  (* Proof. *)
-  (*   induction l; ss. destruct a. destruct l; ss. *)
-  (*   { iIntros "[H _]". iFrame. } *)
-  (*   destruct p. iIntros "[H0 H1]". iSplitL "H0"; iFrame. *)
-  (*   iApply IHl. iFrame. *)
-  (* Qed. *)
-
   Fixpoint get_ipm_pat (l: iPropL): string :=
     match l with
     | [] => "_"
@@ -815,13 +792,37 @@ Section ILIST.
       P -∗ from_iPropL [(Hn, P)].
   Proof.
   Admitted.
+
+  Fixpoint parse_hyps (b: bool) (k: string -> string) (Hns: string): list string :=
+    match Hns with
+    | EmptyString => if b then [k ""] else []
+    | String (Ascii.Ascii false false false false false true false false) tl =>
+      (k "") :: parse_hyps false id tl
+    | String c tl =>
+      parse_hyps true (fun str => k (String c str)) tl
+    end.
+
+  Definition parse_hyps_complete (Hns: string): (bool * list string) :=
+    match Hns with
+    | EmptyString => (true, [])
+    | "*" => (false, [])
+    | String (Ascii.Ascii true false true true false true false false)
+             (String (Ascii.Ascii false false false false false true false false)
+                     tl) => (false, parse_hyps true id tl)
+    | String (Ascii.Ascii true false true true false true false false)
+             tl => (false, parse_hyps true id tl)
+    | _ => (true, parse_hyps true id Hns)
+    end.
+
+  Definition list_compl (l0 l1: list string): list string :=
+    List.filter (fun str0 => forallb (fun str1 => negb (beq_str str0 str1)) l0) l1.
 End ILIST.
 Arguments from_iPropL: simpl never.
 
 Ltac start_ipm_proof :=
   match goal with
   | |- from_iPropL ?l -∗ _ =>
-    let pat := (eval compute in (get_ipm_pat l)) in
+    let pat := (eval simpl in (get_ipm_pat l)) in
     simpl; iIntros pat
   | _ => try unfold from_iPropL
   end.
@@ -887,7 +888,7 @@ Section CURRENT.
     :
       URA.wf m.
   Proof.
-    unfold OwnM in *.
+    unfold OwnM, OwnM' in *.
     inv ACC. uipropall. unfold URA.extends in *. des. subst.
     eapply URA.wf_mon in GWF. eapply URA.wf_mon in GWF.
     eapply GRA.embed_wf. auto.
@@ -1139,15 +1140,15 @@ Section TACTICS.
     ss. rewrite FIND0. rewrite FIND1. ss.
   Qed.
 End TACTICS.
-
 Arguments current_iPropL: simpl never.
+
 
 Notation "☀----IPROPS----☀ ctx" := (@current_iPropL _ ctx)
                                  (at level 2,
                                   format "☀----IPROPS----☀  ctx '//'",
                                   only printing).
 
-Local Notation "P .. Q" :=
+Notation "P .. Q" :=
   (@cons (prod string (bi_car iProp)) Q .. (@cons (prod string (bi_car iProp)) P nil) ..)
     (at level 1,
      P at level 200,
@@ -1160,12 +1161,24 @@ Ltac on_current TAC :=
   | ACC: @current_iPropL _ _ _ |- _ => TAC ACC
   end.
 
-Ltac get_fresh_name_tac :=
+Ltac get_fresh_name_tac Hn :=
   match goal with
   | _: @current_iPropL _ _ ?l |- _ =>
-    let Hn := (eval compute in (get_fresh_name "A" l)) in
-    constr:(Hn)
+    let H := (eval compute in (get_fresh_name Hn l)) in
+    constr:(H)
   end.
+
+Ltac select_ihyps Hns :=
+  let pat := (eval simpl in (parse_hyps_complete Hns)) in
+  match pat with
+  | (true, ?l0) => constr:(l0)
+  | (false, ?l0) =>
+    match goal with
+    | ACC: @current_iPropL _ _ ?l1 |- _ =>
+      eval simpl in (list_compl l0 (List.map fst l1))
+    end
+  end.
+
 
 Ltac mPure' Hn PURE := on_current ltac:(fun H =>
                                          eapply (@current_iPropL_pure _ Hn) in H;
@@ -1208,7 +1221,7 @@ Tactic Notation "mDesSep" constr(Hn_old) "as" constr(Hn_new0) constr(Hn_new1) :=
   mDesSep' Hn_old Hn_new0 Hn_new1.
 
 Tactic Notation "mDesSep" constr(Hn_old) :=
-  let Hn_new1 := get_fresh_name_tac in
+  let Hn_new1 := get_fresh_name_tac "A" in
   mDesSep' Hn_old Hn_old Hn_new1.
 
 Ltac mUpd Hn := on_current ltac:(fun H =>
@@ -1233,16 +1246,18 @@ Ltac mClear Hn := on_current ltac:(fun H =>
                                      eapply (@current_iPropL_clear _ Hn) in H;
                                      asimpl in H).
 
-Ltac mAssert' P Hns Hn_new := on_current ltac:(fun H =>
-                                                eapply (@current_iPropL_assert _ Hns Hn_new P) in H;
-                                                cycle 1;
-                                                [start_ipm_proof|asimpl in H]).
+Ltac mAssert' P Hns Hn_new :=
+  let Hns := select_ihyps Hns in
+  on_current ltac:(fun H =>
+                     eapply (@current_iPropL_assert _ Hns Hn_new P) in H;
+                     cycle 1;
+                     [start_ipm_proof|asimpl in H]).
 
 Tactic Notation "mAssert" constr(P) "with" uconstr(Hns) "as" constr(Hn_new) :=
   mAssert' P Hns Hn_new.
 
 Tactic Notation "mAssert" constr(P) "with" uconstr(Hns) :=
-  let Hn_new := get_fresh_name_tac in
+  let Hn_new := get_fresh_name_tac "A" in
   mAssert' P Hns Hn_new.
 
 Tactic Notation "mAssert" "_" "with" uconstr(Hns) "as" constr(Hn_new) :=
@@ -1323,7 +1338,7 @@ Tactic Notation "mDesAndPureL" constr(Hn_old) "as" constr(Hn_new0) constr(Hn_new
   mDesAndPureL' Hn_old Hn_new0 Hn_new1.
 
 Tactic Notation "mDesAndPureL" constr(Hn_old) :=
-  let Hn_new1 := get_fresh_name_tac in
+  let Hn_new1 := get_fresh_name_tac "A" in
   mDesAndPureL' Hn_old Hn_old Hn_new1.
 
 Ltac mDesAndPureR' Hn_old Hn_new0 Hn_new1 := on_current ltac:(fun H =>
@@ -1335,7 +1350,7 @@ Tactic Notation "mDesAndPureR" constr(Hn_old) "as" constr(Hn_new0) constr(Hn_new
   mDesAndPureR' Hn_old Hn_new0 Hn_new1.
 
 Tactic Notation "mDesAndPureR" constr(Hn_old) :=
-  let Hn_new1 := get_fresh_name_tac in
+  let Hn_new1 := get_fresh_name_tac "A" in
   mDesAndPureR' Hn_old Hn_old Hn_new1.
 
 Ltac mDesOwn' Hn_old Hn_new0 Hn_new1 := on_current ltac:(fun H =>
@@ -1347,7 +1362,7 @@ Tactic Notation "mDesOwn" constr(Hn_old) "as" constr(Hn_new0) constr(Hn_new1) :=
   mDesOwn' Hn_old Hn_new0 Hn_new1.
 
 Tactic Notation "mDesOwn" constr(Hn_old) :=
-  let Hn_new1 := get_fresh_name_tac in
+  let Hn_new1 := get_fresh_name_tac "A" in
   mDesOwn' Hn_old Hn_old Hn_new1.
 
 Ltac mCombine Hn0 Hn1 := on_current ltac:(fun H =>
@@ -1558,7 +1573,7 @@ Section TEST.
               (ACC: current_iPropL ctx [("H1", (P -∗ Q)%I); ("A", X); ("H0", P); ("B", Y)]),
       False.
   Proof.
-    i. mAssert Q with ["H0"; "H1"] as "H0".
+    i. mAssert Q with "- A B" as "H0".
     { iApply "H1". iApply "H0". }
   Abort.
 
@@ -1566,7 +1581,7 @@ Section TEST.
               (ACC: current_iPropL ctx [("H1", (P -∗ Q)%I); ("A", X); ("H0", P); ("B", Y)]),
       False.
   Proof.
-    i. mAssert Q with ["H0"; "H1"].
+    i. mAssert Q with "H0 H1".
     { iApply "H1". iApply "H0". }
   Abort.
 
@@ -1574,7 +1589,7 @@ Section TEST.
               (ACC: current_iPropL ctx [("H1", (P -∗ Q)%I); ("A", X); ("H0", P); ("B", Y)]),
       False.
   Proof.
-    i. mAssert _ with ["H0"; "H1"].
+    i. mAssert _ with "H0 H1".
     { iSpecialize ("H1" with "H0"). iExact "H1". }
   Abort.
 
@@ -1582,7 +1597,7 @@ Section TEST.
               (ACC: current_iPropL ctx [("H1", (P -∗ Q)%I); ("A", X); ("H0", P); ("B", Y)]),
       False.
   Proof.
-    i. mAssert _ with ["H0"; "H1"] as "H0".
+    i. mAssert _ with "- B A" as "H0".
     { iSpecialize ("H1" with "H0"). iExact "H1". }
   Abort.
 

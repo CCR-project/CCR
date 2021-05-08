@@ -41,31 +41,16 @@ Section SIMMODSEM.
     econstructor 1 with (wf:=wf); et; ss.
     2: { red. econs; ss. red. uipropall. }
     econs; ss. init.
-    unfold mainF, mainBody.
-    (* harg_tac begin *)
-    eapply (@harg_clo _ "H" "INV"); [eassumption|]. clear SIMMRS mrs_src mrs_tgt. i.
-    (* harg_tac end*)
+    unfold mainF, mainBody. harg.
     mDesAll. des; clarify. steps. rewrite Any.upcast_downcast. steps.
-
-    (* hcall_tac begin *)
-    eapply hcall_clo with (Rn:="H") (Invn:="INV") (Hns := []).
-    { admit "fix". }
-    { et. }
-    { admit "fix". }
-    { start_ipm_proof. iPureIntro. splits; eauto. instantiate (1:=10). ss. }
-    { eauto with ord_step. }
-    { splits; ss. }
-    clear ACC ctx. i.
-    mDesAll. des; clarify. eapply Any.upcast_inj in PURE2. des; clarify. steps.
-    (* hret_tac begin *)
-    eapply hret_clo.
-    { et. }
-    { eauto with ord_step. }
-    { eassumption. }
-    (* hret_tac end *)
+    hcall _ _ tt with "*".
     { ss. }
-    { start_ipm_proof.
-      (* TODO: change top2 => pure top in SMod.main *)
+    { iPureIntro. splits; eauto. instantiate (1:=10). ss. }
+    { splits; ss. }
+    mDesAll. des; clarify. eapply Any.upcast_inj in PURE2. des; clarify. steps.
+    hret tt.
+    { et. }
+    { (* TODO: change top2 => pure top in SMod.main *)
       iModIntro. repeat iSplit; ss.
       iStopProof. red. uipropall. }
     { i. ss. }
