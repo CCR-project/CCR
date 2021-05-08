@@ -556,6 +556,14 @@ End class_instances.
 Section ILEMMAS.
   Context `{Σ: GRA.t}.
 
+  Lemma OwnM_valid (M: URA.t) `{@GRA.inG M Σ} (m: M):
+    OwnM m -∗ ⌜URA.wf m⌝.
+  Proof.
+    uipropall. i. red. unfold OwnM, Own in *. uipropall.
+    unfold URA.extends in *. des. subst.
+    eapply URA.wf_mon in WF. eapply GRA.embed_wf. et.
+  Qed.
+
   Lemma Upd_Pure P
     :
       #=> ⌜P⌝ ⊢ ⌜P⌝.
@@ -639,6 +647,20 @@ Section ILEMMAS.
   Qed.
 
 End ILEMMAS.
+
+Ltac iOwnWf' H :=
+  iPoseProof (OwnM_valid with "H") as "%".
+
+Tactic Notation "iOwnWf" constr(H) :=
+  iOwnWf' H.
+
+Tactic Notation "iOwnWf" constr(H) "as" ident(WF) :=
+  iOwnWf' H;
+  match goal with
+  | H0: @URA.wf _ _ |- _ => rename H0 into WF
+  end
+.
+
 
 
 Section ILIST.

@@ -6,11 +6,8 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
-Require Import Stack1 Client1.
 Require Import TODOYJ.
 Require Import Logic.
-
-Generalizable Variables E R A B C X Y Σ.
 
 Set Implicit Arguments.
 
@@ -26,13 +23,13 @@ Section BW.
   Context `{@GRA.inG bwRA Σ}.
 
   Let get_spec:  fspec := (mk_simple (fun b => (
-                                          (fun varg o => (Own (GRA.embed (bw_frag b)) ** ⌜o = ord_pure 1⌝)),
-                                          (fun vret => (Own (GRA.embed (bw_frag b)) ** ⌜vret = (Vint (if b then 0xffffff else 0))↑⌝))
+                                          (fun varg o => (OwnM (bw_frag b)) ** ⌜o = ord_pure 1⌝),
+                                          (fun vret => (OwnM (bw_frag b)) ** ⌜vret = (Vint (if b then 0xffffff%Z else 0))↑⌝)
                           ))).
 
   Let flip_spec: fspec := (mk_simple (fun b => (
-                                          (fun varg o => (Own (GRA.embed (bw_frag b)) ** ⌜o = ord_pure 1⌝)),
-                                          (fun vret => (Own (GRA.embed (bw_frag (negb b)))))
+                                          (fun varg o => (OwnM (bw_frag b) ** ⌜o = ord_pure 1⌝)),
+                                          (fun vret => (OwnM (bw_frag (negb b))))
                           ))).
 
   Definition BWStb: list (gname * fspec) :=

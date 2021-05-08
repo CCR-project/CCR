@@ -208,42 +208,41 @@ Section SIMMODSEM.
     econs; ss.
     { unfold allocF. init.
 
-      (* harg_tac *)
-      eapply (@harg_clo _ "H" "INV"); ss. clear SIMMRS mrs_src mrs_tgt.
-      i. des; clarify.
+      (* harg_tac begin *)
+      eapply (@harg_clo _ "H" "INV"); ss. clear SIMMRS mrs_src mrs_tgt. i.
+      (* harg_tac end*)
 
-      mDesSep "H" "H0" "H1". mPure "H1" PURE0. mPure "H0" PURE1.
-      mDesEx "INV" mem_src. mDesSep "INV" "H0" "H1". mPure "H1" PURE2.
-      des; clarify.
-
+      mDesAll. des; clarify.
       steps. rewrite Any.upcast_downcast in *. steps. astart 0. astop.
-      rename a into mem_tgt.
-      set (blk := (Mem.nb mem_tgt)).
-      rename x into sz. eapply Any.upcast_inj in PURE1. des; clarify.
+      rename a into mem_tgt. set (blk := (Mem.nb mem_tgt)). rename x into sz.
+      eapply Any.upcast_inj in PURE0. des; clarify.
 
-      mApply OwnM_Upd "H0"; cycle 1.
+      mApply OwnM_Upd "INV"; cycle 1.
       { eapply Auth.auth_alloc2.
         instantiate (1:=(_points_to (blk, 0%Z) (repeat (Vint 0) sz))).
-        mOwnWf "H0" WF.
-        clear - WF RTGT0 PURE2.
+        mOwnWf "INV".
+        clear - WF RTGT0 PURE1.
         ss. do 2 ur. ii. rewrite unfold_points_to. des_ifs.
-         - bsimpl. des. des_sumbool. subst. hexploit (PURE2 blk k0); et. intro T. inv T; [|eq_closure_tac].
+         - bsimpl. des. des_sumbool. subst. hexploit (PURE1 blk k0); et. intro T. inv T; [|eq_closure_tac].
            + exploit RTGT0; et. i; des. lia.
            + rewrite URA.unit_idl. Ztac. rewrite repeat_length in *. rewrite Z.sub_0_r. rewrite repeat_nth_some; [|lia]. ur. ss.
          - rewrite URA.unit_id. do 2 eapply lookup_wf.
            eapply Auth.black_wf; et.
       }
-      mUpd "H0". mDesOwn "H0" "H0" "H1".
+      mUpd "INV". mDesOwn "INV".
 
       steps. force_l. eexists.
+
+      (* hret_tac begin *)
       eapply hret_clo.
       { eauto with ord_step. }
       { eassumption. }
+      (* hret_tac end *)
       { unfold update. split; ss. i. ss. subst blk. des_ifs.
         eapply RTGT0 in H0. clear - H0. red in H0. red. lia. }
-      { simpl. iIntros "[H0 H1]". iModIntro. iSplitL "H1".
+      { start_ipm_proof. iModIntro. iSplitL "INV".
         { iExists _. iSplit.
-          { iApply "H1". }
+          { iApply "INV". }
           { iPureIntro. i. rewrite unfold_points_to. ur. ur.
             destruct (dec blk b), (dec b blk); subst; ss.
             { rewrite repeat_length. rewrite Z.add_0_l.
@@ -257,95 +256,25 @@ Section SIMMODSEM.
             admit "".
           }
         }
-        { iSplit; [|ss]. iExists _. iSplit; [ss|]. iApply "H0". }
+        { iSplit; [|ss]. iExists _. iSplit; [ss|]. iApply "A". }
       }
       { i. ss. }
     }
 
     econs; ss.
-    {
-
-
-
-{
-
-<=? des_sumbool. bsimpl. des_ifs.
-
-
-ss.
-
-ss.
-
-              ss.
-
- des_ifs_safe. bsimpl;  des_ifs.
-
-destruct (dec blk b); subst; ss.
-            { des_ifs. admit "". admit "". }
-            { rewrite unfold_points_to. ur. ur. specialize (PURE2 b ofs). inv PURE2.
-              { des_ifs.
-
-rewrite unfold_points_to.  ur. erewrite _points_to _hit. des_ifs. red in Heq.
-
-ur.
-
-inv PURE2. repeat ur. des_ifs.
-c
-ur. ur.
-
-Set unfold _points_to. ss. unfold URA.add. red. ss.
-
-replace ((mem_src ⋅ _points_to (blk, 0%Z) (repeat (Vint 0) sz)) b ofs) with (mem_src b ofs); ss.
-
-replace
-econs.
-
-bsimpl.
-
-des_ifs.  ss.
-
-_safe. rewrite <- H0. rewrite URA.unit_idl. des_ifs.
-              { rewrite Z.sub_0_r. bsimpl. des. Ztac. rewrite repeat_nth_some; try lia. econs. }
-              { econs. }
-            * rewrite URA.unit_id. unfold update. des_ifs.
-
-d
-
-admit "". }
-        }
-        { iSplit; [|ss]. iExists _. iSplit; [ss|]. iApply "H0". }
-      }
-      { split; ss.
-
-{
-
-  iFrame.
-
-"H0".
-
-admit "". }
-      { admit "". }
-      { ss. }
-
-ai
-
-hret_tac SIM A0.
-      - split; [|refl]; iRefresh. eexists; iRefresh. iSplitP; ss.
-      - cbn. esplits; et.
-        + eexists; iRefresh. iSplitL SIM; et. ii.
-          destruct (mem_tgt.(Mem.cnts) blk ofs) eqn:T.
-          { exfalso. exploit WFTGT; et. i; des. lia. }
-          ss. do 2 ur.
-          exploit A; et. rewrite T. intro U. inv U. rewrite unfold_points_to. ss. rewrite repeat_length.
-          destruct (dec b blk); subst; ss.
-          * unfold update. des_ifs_safe. rewrite <- H0. rewrite URA.unit_idl. des_ifs.
-            { rewrite Z.sub_0_r. bsimpl. des. Ztac. rewrite repeat_nth_some; try lia. econs. }
-            { econs. }
-          * rewrite URA.unit_id. unfold update. des_ifs.
-        + clear - WFTGT. i. ss. unfold update in *. des_ifs. exploit WFTGT; et.
-    }
-    econs; ss.
     { unfold freeF. init.
+
+      (* harg_tac begin *)
+      eapply (@harg_clo _ "H" "INV"); ss. clear SIMMRS mrs_src mrs_tgt. i.
+      (* harg_tac end*)
+
+      destruct x. mDesAll. des; clarify.
+      steps. rewrite Any.upcast_downcast in *. steps. astart 0. astop.
+
+      rename a into mem_tgt. set (blk := (Mem.nb mem_tgt)). rename x into sz.
+      eapply Any.upcast_inj in PURE0. des; clarify.
+
+
       harg_tac. des_ifs_safe. des. repeat rewrite URA.unit_idl in *. repeat rewrite URA.unit_id in *. ss.
       iRefresh. do 3 iDestruct PRE. iPure PRE. iPure A. clarify. apply Any.upcast_inj in PRE. des; clarify.
       do 2 iDestruct SIM. iPure A.

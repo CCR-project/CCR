@@ -18,8 +18,6 @@ From ExtLib Require Import
 Require Import TODOYJ Logic YPM.
 Require Import HTactics.
 
-Generalizable Variables E R A B C X Y.
-
 Set Implicit Arguments.
 
 Local Open Scope nat_scope.
@@ -32,22 +30,20 @@ Local Open Scope nat_scope.
 Section AUX.
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG bwRA Σ}.
+
   Lemma bw_ra_merge
         b0 b1
     :
-      iHyp (Own (GRA.embed (bw_full b0)) -* Own (GRA.embed (bw_frag b1)) -* (⌜b1 = b0⌝)) ε
+      (OwnM (bw_full b0)) -∗ OwnM (bw_frag b1) -∗ (⌜b1 = b0⌝)
   .
   Proof.
-    iIntro. iIntro.
-    {
-      iMerge A A0. rewrite <- own_sep in A. rewrite GRA.embed_add in A.
-      iOwnWf A. eapply GRA.embed_wf in WF. des. eapply Auth.auth_included in WF. des.
-      eapply Excl.extends in WF; ss.
-      - des; clarify.
-      - ur; ss.
-    }
+    iIntros "H0 H1". iCombine "H0 H1" as "H".
+    iOwnWf "H" as WF. iPureIntro.
+    eapply Auth.auth_included in WF. des.
+    eapply Excl.extends in WF; ss.
+    - des; clarify.
+    - ur; ss.
   Qed.
-
 End AUX.
 
 
@@ -58,57 +54,69 @@ Section SIMMODSEM.
   Context `{@GRA.inG BW1.bwRA Σ}.
 
   Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
-
   Let wf: W -> Prop :=
-    fun '(mrps_src0, mrps_tgt0) =>
-      exists (mr: Σ) (n: Z),
-        (<<SRC: mrps_src0 = (mr, tt↑)>>) /\
-        (<<TGT: mrps_tgt0 = (ε, n↑)>>) /\
-        (<<SIM: (iHyp (Own (GRA.embed (bw_full (Z.odd n)))) mr)>>)
+    @mk_wf
+      _
+      Z
+      (fun n _ => (OwnM (bw_full (Z.odd n))))
+      (fun n mp_tgt _ => mp_tgt = n↑)
   .
 
-  Opaque URA.unit.
+  Require Import Red.
 
   Theorem correct: ModSemPair.sim BW1.BWSem BW0.BWSem.
   Proof.
     econstructor 1 with (wf:=wf); et; swap 2 3.
-    { ss. unfold alist_add; cbn. esplits; ss; eauto.
+    { ss. red. econs; et. red. uipropall.
       exists ε. rewrite URA.unit_id; ss. }
-
-    Opaque URA.add.
     econs; ss.
     { unfold getF. init.
-      harg_tac. des. subst. rewrite Any.upcast_downcast. ss.
-      iRefresh. iDestruct PRE. iPure A. clarify.
-      assert (x = Z.odd n); subst.
-      { hexploit bw_ra_merge; et. intro T. iSpecialize T SIM. iSpecialize T PRE. iPure T. auto. }
-      unfold body_to_tgt. steps. astart 0. astop.
-      force_l. rewrite Any.upcast_downcast. eexists.
-      hret_tac SIM PRE.
-      { split; eauto. iRefresh. iSplitL PRE; eauto. rr. f_equal.
+      (* harg_tac begin *)
+      eapply (@harg_clo _ "H" "INV"); ss. clear SIMMRS mrs_src mrs_tgt. i.
+      (* harg_tac end*)
+      mDesAll. des; clarify.
+      steps. rewrite Any.upcast_downcast in *. astart 0. astop.
+      mAssertPure (x = Z.odd a); subst.
+      { iApply (bw_ra_merge with "INV H"). }
+      steps. force_l. eexists.
+      (* hret_tac begin *)
+      eapply hret_clo.
+      { eauto with ord_step. }
+      { eassumption. }
+      (* hret_tac end *)
+      { et. }
+      { start_ipm_proof. iModIntro. iFrame.
+        iPureIntro. split; ss. f_equal.
         rewrite <- Z.negb_odd. rewrite negb_if. des_ifs. }
-      { unfold wf. esplits; eauto. }
+      { i. ss. }
     }
     econs; ss.
     { unfold flipF. init.
-      harg_tac. des. subst. rewrite Any.upcast_downcast. ss.
-      iRefresh. iDestruct PRE. iPure A. clarify.
-      assert (x = Z.odd n); subst.
-      { hexploit bw_ra_merge; et. intro T. iSpecialize T SIM. iSpecialize T PRE. iPure T. auto. }
-      unfold body_to_tgt. steps. astart 0. astop.
-      rewrite Any.upcast_downcast. force_l. eexists.
-      iMerge SIM PRE. rewrite <- own_sep in SIM.
-      eapply own_upd in SIM; cycle 1; [|rewrite intro_iHyp in SIM;iUpdate SIM].
-      { rewrite GRA.embed_add. eapply GRA.embed_updatable.
-        instantiate (1:= bw_full (Z.odd (n+1)) ⋅ bw_frag (Z.odd (n+1))).
-        eapply Auth.auth_update. rr. ii. des; ss. ur in FRAME. ur. destruct ctx; ss; clarify.
+      (* harg_tac begin *)
+      eapply (@harg_clo _ "H" "INV"); ss. clear SIMMRS mrs_src mrs_tgt. i.
+      (* harg_tac end*)
+      mDesAll. des; clarify.
+      steps. rewrite Any.upcast_downcast in *. astart 0. astop.
+      mAssertPure (x = Z.odd a); subst.
+      { iApply (bw_ra_merge with "INV H"). }
+      steps. force_l. eexists.
+      (* hret_tac begin *)
+      eapply hret_clo.
+      { eauto with ord_step. }
+      { eassumption. }
+      (* hret_tac end *)
+      { et. }
+      { start_ipm_proof. iCombine "INV" "H" as "H".
+        iPoseProof (OwnM_Upd with "H") as "H".
+        { (* TODO: make lemma *)
+          instantiate (1:= bw_full (Z.odd (a+1)) ⋅ bw_frag (Z.odd (a+1))).
+          eapply Auth.auth_update. rr. ii. des; ss. ur in FRAME. ur. destruct ctx0; ss; clarify.
+        }
+        iMod "H". iDestruct "H" as "[H0 H1]". iModIntro.
+        replace (negb (Z.odd a)) with (Z.odd (a+1)); [iFrame; et|].
+        rewrite Z.odd_add. ss.
       }
-      rewrite <- GRA.embed_add in SIM. rewrite own_sep in SIM. iDestruct SIM. steps.
-
-      hret_tac SIM A.
-      { split; eauto. iRefresh. replace (negb (Z.odd n)) with (Z.odd (n+1)); auto.
-        rewrite Z.odd_add. ss. }
-      { unfold wf. esplits; eauto. }
+      { i. ss.}
     }
   Qed.
 
