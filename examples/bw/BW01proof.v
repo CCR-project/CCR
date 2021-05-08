@@ -116,7 +116,7 @@ Section SIMMODSEM.
         replace (negb (Z.odd a)) with (Z.odd (a+1)); [iFrame; et|].
         rewrite Z.odd_add. ss.
       }
-      { i. ss.}
+      { i. ss. }
     }
   Qed.
 

@@ -7,10 +7,9 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
+Require Import Logic.
 Require Import TODOYJ.
 Require Import OpenDef Open.
-
-Generalizable Variables E R A B C X Y Σ.
 
 Set Implicit Arguments.
 
@@ -48,7 +47,7 @@ Section PROOF.
       Ret (Vint 42)
   .
 
-  Definition main_spec: fspec := mk_simple (fun (_: unit) => ((fun _ o _ => o = ord_top), top2)).
+  Definition main_spec: fspec := mk_simple (fun (_: unit) => ((fun _ o => (⌜o = ord_top⌝: iProp)%I), top2)).
 
   Definition MainStb: list (gname * fspec).
     eapply (Seal.sealing "stb").

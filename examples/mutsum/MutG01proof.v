@@ -35,32 +35,56 @@ Section SIMMODSEM.
   Let W: Type := (Σ * Any.t) * (Σ * Any.t).
 
   Let wf: W -> Prop :=
-    fun '(mrps_src0, mrps_tgt0) =>
-      (<<SRC: mrps_src0 = (ε, tt↑)>>) /\
-      (<<TGT: mrps_tgt0 = (ε, tt↑)>>)
-  .
+    mk_wf (fun (_: unit) _ => (True: iProp)%I) (fun _ _ => (True: iProp)%I).
 
   Theorem correct: ModPair.sim MutG1.G MutG0.G.
   Proof.
     econs; ss; [|admit ""].
     i. eapply adequacy_lift.
-    econstructor 1 with (wf:=wf); et; ss.
-    econs; ss. init. unfold ccall.
-    harg_tac. iRefresh. iDestruct PRE. des; clarify. unfold gF, ccall. anytac. ss.
-    steps. astart 10. destruct (dec (Z.of_nat x) 0%Z).
-    - destruct x; ss. astop.
-      force_l. eexists. hret_tac (@URA.unit Σ) (@URA.unit Σ).
-      { iRefresh. iSplitP; ss. }
-      { split; auto. }
-    - destruct x; [ss|]. rewrite Nat2Z.inj_succ. steps.
-      acall_tac x (ord_pure x) (@URA.unit Σ) (@URA.unit Σ) (@URA.unit Σ).
-      { replace (Z.succ (Z.of_nat x) - 1)%Z with (Z.of_nat x) by lia. ss. }
-      { splits; ss. auto with ord_step. }
-      { split; auto. }
-      iDestruct POST. des. subst. anytac. asimpl. steps. astop.
-      force_l. eexists. hret_tac (@URA.unit Σ) (@URA.unit Σ).
-      { iRefresh. iSplitP; ss. splits; auto. unfold sum. splits; auto. ss. repeat f_equal. lia. }
-      { split; ss. }
+    econstructor 1 with (wf:=wf); et.
+    2: { econs; ss; red; uipropall. }
+    econs; ss. init.
+    (* harg_tac begin *)
+    eapply (@harg_clo _ "H" "INV"); [eassumption|]. clear SIMMRS mrs_src mrs_tgt. i.
+    (* harg_tac end*)
+    unfold ccall. mDesAll. des; clarify. unfold gF, ccall.
+    apply Any.upcast_inj in PURE0. des; clarify.
+    rewrite Any.upcast_downcast. steps. astart 10.
+    destruct (dec (Z.of_nat x) 0%Z).
+    - destruct x; ss. astop. force_l. eexists.
+      (* hret_tac begin *)
+      eapply hret_clo.
+      { et. }
+      { eauto with ord_step. }
+      { eassumption. }
+      (* hret_tac end *)
+      { ss. }
+      { start_ipm_proof. iPureIntro. split; ss. }
+      { i. ss. }
+    - destruct x; [ss|]. rewrite Nat2Z.inj_succ. steps. acatch.
+      (* hcall_tac begin *)
+      eapply hcall_clo with (Rn:="H") (Invn:="INV") (Hns := []).
+      { et. }
+      { eassumption. }
+      { ss. }
+      { start_ipm_proof. iPureIntro. splits; eauto.
+        replace (Z.succ (Z.of_nat x) - 1)%Z with (Z.of_nat x) by lia. ss. }
+      { eauto with ord_step. }
+      { splits; ss. eauto with ord_step. }
+      clear ACC ctx. i.
+      mDesAll. des; clarify. eapply Any.upcast_inj in PURE2. des; clarify.
+      rewrite Any.upcast_downcast. steps. astop.
+      force_l. eexists.
+      (* hret_tac begin *)
+      eapply hret_clo.
+      { et. }
+      { eauto with ord_step. }
+      { eassumption. }
+      (* hret_tac end *)
+      { ss. }
+      { start_ipm_proof. iPureIntro. splits; ss.
+        f_equal. f_equal. lia. }
+      { i. ss. }
   Qed.
 
 End SIMMODSEM.

@@ -43,11 +43,47 @@ Section SIMMODSEM.
     econstructor 1 with (wf:=wf); et.
     2: { econs; ss; red; uipropall. }
     econs; ss. init.
-    eapply harg_clo; ss. i.
-
-    unfold ccall.
-    harg_tac. des; clarify. unfold fF, ccall. anytac. ss.
-    steps. astart 10. destruct (dec (Z.of_nat x) 0%Z).
-  Admitted.
+    (* harg_tac begin *)
+    eapply (@harg_clo _ "H" "INV"); [eassumption|]. clear SIMMRS mrs_src mrs_tgt. i.
+    (* harg_tac end*)
+    unfold ccall. mDesAll. des; clarify. unfold fF, ccall.
+    apply Any.upcast_inj in PURE0. des; clarify.
+    rewrite Any.upcast_downcast. steps. astart 10.
+    destruct (dec (Z.of_nat x) 0%Z).
+    - destruct x; ss. astop. force_l. eexists.
+      (* hret_tac begin *)
+      eapply hret_clo.
+      { et. }
+      { eauto with ord_step. }
+      { eassumption. }
+      (* hret_tac end *)
+      { ss. }
+      { start_ipm_proof. iPureIntro. split; ss. }
+      { i. ss. }
+    - destruct x; [ss|]. rewrite Nat2Z.inj_succ. steps. acatch.
+      (* hcall_tac begin *)
+      eapply hcall_clo with (Rn:="H") (Invn:="INV") (Hns := []).
+      { et. }
+      { eassumption. }
+      { ss. }
+      { start_ipm_proof. iPureIntro. splits; eauto.
+        replace (Z.succ (Z.of_nat x) - 1)%Z with (Z.of_nat x) by lia. ss. }
+      { eauto with ord_step. }
+      { splits; ss. eauto with ord_step. }
+      clear ACC ctx. i.
+      mDesAll. des; clarify. eapply Any.upcast_inj in PURE2. des; clarify.
+      rewrite Any.upcast_downcast. steps. astop.
+      force_l. eexists.
+      (* hret_tac begin *)
+      eapply hret_clo.
+      { et. }
+      { eauto with ord_step. }
+      { eassumption. }
+      (* hret_tac end *)
+      { ss. }
+      { start_ipm_proof. iPureIntro. splits; ss.
+        f_equal. f_equal. lia. }
+      { i. ss. }
+  Qed.
 
 End SIMMODSEM.

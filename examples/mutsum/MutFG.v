@@ -13,8 +13,6 @@ Require Import MutFImp0proof MutGImp0proof MutF01proof MutG01proof MutMain01proo
 
 Require Import HTactics.
 
-Generalizable Variables E R A B C X Y Σ.
-
 Set Implicit Arguments.
 
 
@@ -84,9 +82,8 @@ Section PROOF.
         eapply adequacy_type; revgoals.
         { ss. left. refl. }
         { instantiate (1:=ε). unfold compose. ss. rewrite ! URA.unit_id. apply URA.wf_unit. }
-        { ss. }
       }
-      refl.
+      { simpl. admit "ez". }
     }
   Qed.
 

@@ -23,8 +23,6 @@ Require Import Imp.
 Require Import ImpNotations.
 Require Import ImpProofs.
 
-Generalizable Variables E R A B C X Y.
-
 Set Implicit Arguments.
 
 Local Open Scope nat_scope.
@@ -41,7 +39,7 @@ Section SIMMODSEM.
       (<<SRC: mrps_src0 = (ε, tt↑)>>) /\
       (<<TGT: mrps_tgt0 = (ε, tt↑)>>)
   .
-  
+
   Theorem correct:
     forall ge, ModSemPair.sim MutF0.FSem (MutFImp.FSem ge).
   Proof.
@@ -56,6 +54,14 @@ Section SIMMODSEM.
     unfold unint in *. destruct v; clarify; ss.
     imp_steps. force_r. auto. inv _ASSUME.
     des_ifs.
-  Admitted.
+    - imp_steps.
+    - apply Z.eqb_eq in Heq. clarify.
+    - unfold ccall.
+      imp_steps.
+      gstep. econs; ss. i. des; subst. exists 100.
+      imp_steps.
+      Local Transparent vadd.
+      destruct v; ss; clarify; imp_steps.
+  Qed.
 
 End SIMMODSEM.
