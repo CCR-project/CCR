@@ -19,8 +19,6 @@ Require Import TODOYJ.
 Require Import HTactics.
 Require Import Logic YPM.
 
-Generalizable Variables E R A B C X Y.
-
 Set Implicit Arguments.
 
 Local Open Scope nat_scope.
@@ -36,23 +34,43 @@ Section SIMMODSEM.
   Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
 
   Let wf: W -> Prop :=
-    fun '(mrps_src0, mrps_tgt0) =>
-      exists (mr: Σ) (n: Z),
-        (<<SRC: mrps_src0 = (mr, tt↑)>>) /\
-        (<<TGT: mrps_tgt0 = (ε, n↑)>>)
+    @mk_wf
+      _
+      unit
+      (fun _ _ => (⌜True⌝)%I)
+      top3
   .
-
-  Opaque URA.unit.
 
   Theorem correct: ModSemPair.sim BWMain1.MainSem BWMain0.MainSem.
   Proof.
     econstructor 1 with (wf:=wf); et; swap 2 3.
-    { ss. unfold alist_add; cbn. esplits; ss; eauto. }
+    { ss. red. econs; et; ss. red. uipropall. }
 
-    Opaque URA.add.
     econs; ss.
     { unfold mainbody, mainF, ccall, hcall. init.
-      harg_tac. iRefresh. do 2 iDestruct PRE. iPure A. subst. rewrite Any.upcast_downcast. ss. steps.
+      (* harg_tac begin *)
+      eapply (@harg_clo _ "H" "INV"); ss. clear SIMMRS mrs_src mrs_tgt. i.
+      (* harg_tac end*)
+      mDesAll. des; clarify.
+      steps. rewrite Any.upcast_downcast in *. clarify.
+      destruct (alist_find "getbool" (ClientStb ++ MainStb)) eqn:T; stb_tac; clarify.
+      steps. rewrite Any.upcast_downcast. steps.
+
+
+
+      steps.
+
+      stb_tac.
+      unfold alist_find. ss.
+
+      astart 0. astop.
+      mAssertPure (x = Z.odd a); subst.
+      { iApply (bw_ra_merge with "INV H"). }
+      steps. force_l. eexists.
+
+
+      harg_tac. des. subst. rewrite Any.upcast_downcast. ss.
+      iRefresh. iDestruct PRE. iPure A. clarify. steps.
       destruct (alist_find "getbool" (ClientStb ++ MainStb)) eqn:T; stb_tac; clarify.
       steps. rewrite Any.upcast_downcast. ss. steps.
       hcall_tac tt ord_top (@URA.unit Σ) PRE (@URA.unit Σ); ss.

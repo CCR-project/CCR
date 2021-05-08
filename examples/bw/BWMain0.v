@@ -6,10 +6,9 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
-Require Import Stack1 Client1 BW1.
+Require Import BW1.
 Require Import TODOYJ.
 
-Generalizable Variables E R A B C X Y Σ.
 Require Import Coqlib.
 Require Import Universe.
 Require Import STS.
@@ -18,7 +17,6 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
-Require Import Stack1.
 Require Import TODO TODOYJ.
 
 Set Implicit Arguments.

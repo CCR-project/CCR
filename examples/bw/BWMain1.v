@@ -6,7 +6,7 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
-Require Import Stack1 Client1 BW1.
+Require Import BW1.
 Require Import TODO TODOYJ Logic.
 
 Set Implicit Arguments.
@@ -19,15 +19,15 @@ Section MAIN.
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG bwRA Σ}.
 
-  Let getbool_spec:  fspec := (mk_simple (fun (_: unit) => ((fun _ o => (⌜True⌝)), (fun _ => (⌜True⌝))))).
+  Let getbool_spec:  fspec := (mk_simple (fun (_: unit) => ((fun _ o => (⌜True⌝: iProp)%I), (fun _ => (⌜True⌝: iProp)%I)))).
 
-  Let putint_spec:  fspec := (mk_simple (fun (_: unit) => ((fun _ o => (⌜True⌝)), (fun _ => (⌜True⌝))))).
+  Let putint_spec:  fspec := (mk_simple (fun (_: unit) => ((fun _ o => (⌜True⌝: iProp)%I), (fun _ => (⌜True⌝: iProp)%I)))).
 
   Definition ClientStb: list (gname * fspec) :=
     Seal.sealing "stb" [("getbool", getbool_spec) ; ("putint", putint_spec)].
 
-  Let mainpre: Any.t -> ord -> Σ -> Prop := (fun _ o => (Own (GRA.embed (bw_frag true)) ** ⌜o = ord_top⌝)).
-  Let main_spec: fspec := mk_simple (fun (_: unit) => (mainpre, top2)).
+  Let mainpre: Any.t -> ord -> Σ -> Prop := (fun _ o => (OwnM (bw_frag true) ** ⌜o = ord_top⌝)).
+  Let main_spec: fspec := mk_simple (fun (_: unit) => (mainpre, fun _ => ⌜True⌝: iProp)%I).
 
   Definition mainbody: list val -> itree (hCallE +' pE +' eventE) val :=
     fun _ =>
