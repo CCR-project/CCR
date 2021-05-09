@@ -506,8 +506,6 @@ Module C := (Construction MyParam).
 (* Lemma upcast_ty: forall T (v: T), Any.ty v↑ = T. admit "ez". Qed. *)
 (* Lemma upcast_val: forall T (v: T), Any.val v↑ ~= v. admit "ez". Qed. *)
 
-Lemma apply_f: forall A B (f: A -> B) (a0 a1: A), a0 = a1 -> f a0 = f a1. Proof. i. subst. ss. Qed.
-
 Lemma pair_downcast_lemma: forall T U (v0 v1: T) a (u: U), (Any.pair v0↑ a)↓ = Some (v1, u) -> v0 = v1 /\ a↓ = Some u.
 Proof.
   admit "ez".
