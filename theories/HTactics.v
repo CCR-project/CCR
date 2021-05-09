@@ -1051,4 +1051,16 @@ Tactic Notation "hcall" constr(o) uconstr(x) uconstr(a) "with" constr(Hns) :=
   let tac := ltac:(fun LEM => eapply (LEM o _ x _ a)) in
   _hcall Hns tac.
 
+Tactic Notation "hcall_weaken" uconstr(ftsp) uconstr(o) uconstr(x) uconstr(a) "with" constr(Hns) :=
+  let POST := get_fresh_name_tac "POST" in
+  let INV := get_fresh_name_tac "INV" in
+  let Hns := select_ihyps Hns in
+  eapply (@hcall_clo_weaken _ Hns POST INV _ _ ftsp o _ x _ a);
+  unshelve_goal;
+  [|eassumption|
+   |start_ipm_proof
+   |eauto with ord_step
+   |
+   |on_current ltac:(fun H => try clear H); i; on_current ltac:(fun H => simpl in H)].
+
 Global Opaque _APC APC interp interp_hCallE_tgt.

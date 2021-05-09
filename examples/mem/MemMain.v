@@ -9,13 +9,11 @@ Require Import PCM.
 Require Import Hoare.
 Require Import Weakening.
 
-Generalizable Variables E R A B C X Y Σ.
-
 Set Implicit Arguments.
 
 
 
-Require Import Mem0 Mem1 Mem01proof Main0 Main1.
+Require Import Mem0 Mem1 Main0 Main1.
 
 
 
@@ -161,7 +159,7 @@ Section PROOF.
       econs.
       { esplits; cycle 1.
         { Fail Timeout 1 refl. (**************** FIXTHIS!!!!!!!!!!!!!!!!! ********************) unfold Main. refl. }
-        ii. ss. stb_tac. 
+        ii. ss. stb_tac.
         rewrite ! eq_rel_dec_correct in *. des_ifs; subst; esplits; try refl; et.
       }
       econs.
