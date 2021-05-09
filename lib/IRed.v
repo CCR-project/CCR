@@ -175,44 +175,44 @@ Ltac __red_interp f term :=
   | ITree.bind' ?k0 ?i0 =>
     (* idtac "bind"; *)
     instantiate (f:=_continue); pose (rdb_bind tc) as name; cbn in name;
-    match goal with | H := mk_box ?lemma |- _ => apply (@lemma _ _ i0 k0); fail end
+    match goal with | name := mk_box ?lemma |- _ => apply (@lemma _ _ i0 k0); fail end
   | Tau _ =>
     instantiate (f:=_break); pose (rdb_tau tc) as name; cbn in name;
-    match goal with | H := mk_box ?lemma |- _ => apply lemma; fail end
+    match goal with | name := mk_box ?lemma |- _ => apply lemma; fail end
   | Ret _ =>
     (* idtac "ret"; *)
     instantiate (f:=_continue); pose (rdb_ret tc) as name; cbn in name;
-    match goal with | H := mk_box ?lemma |- _ => apply lemma; fail end
+    match goal with | name := mk_box ?lemma |- _ => apply lemma; fail end
   | trigger ?e =>
     instantiate (f:=_continue);
-    ((pose (rdb_trigger0 tc) as name; cbn in name; match goal with | H := mk_box ?lemma |- _ => apply lemma; fail end) ||
-     (pose (rdb_trigger1 tc) as name; cbn in name; match goal with | H := mk_box ?lemma |- _ => apply lemma; fail end) ||
-     (pose (rdb_trigger2 tc) as name; cbn in name; match goal with | H := mk_box ?lemma |- _ => apply lemma; fail end) ||
-     (pose (rdb_trigger3 tc) as name; cbn in name; match goal with | H := mk_box ?lemma |- _ => apply lemma; fail end) ||
+    ((pose (rdb_trigger0 tc) as name; cbn in name; match goal with | name := mk_box ?lemma |- _ => apply lemma; fail end) ||
+     (pose (rdb_trigger1 tc) as name; cbn in name; match goal with | name := mk_box ?lemma |- _ => apply lemma; fail end) ||
+     (pose (rdb_trigger2 tc) as name; cbn in name; match goal with | name := mk_box ?lemma |- _ => apply lemma; fail end) ||
+     (pose (rdb_trigger3 tc) as name; cbn in name; match goal with | name := mk_box ?lemma |- _ => apply lemma; fail end) ||
      fail 2
     )
   | triggerUB =>
     instantiate (f:=_break); pose (rdb_UB tc) as name; cbn in name;
-    match goal with | H := mk_box ?lemma |- _ => apply lemma; fail end
+    match goal with | name := mk_box ?lemma |- _ => apply lemma; fail end
   | triggerNB =>
     instantiate (f:=_break); pose (rdb_NB tc) as name; cbn in name;
-    match goal with | H := mk_box ?lemma |- _ => apply lemma; fail end
+    match goal with | name := mk_box ?lemma |- _ => apply lemma; fail end
   | unwrapU _ =>
     instantiate (f:=_break); pose (rdb_unwrapU tc) as name; cbn in name;
-    match goal with | H := mk_box ?lemma |- _ => apply lemma; fail end
+    match goal with | name := mk_box ?lemma |- _ => apply lemma; fail end
   | unwrapN _ =>
     instantiate (f:=_break); pose (rdb_unwrapN tc) as name; cbn in name;
-    match goal with | H := mk_box ?lemma |- _ => apply lemma; fail end
+    match goal with | name := mk_box ?lemma |- _ => apply lemma; fail end
   | assume _ =>
     instantiate (f:=_break); pose (rdb_assume tc) as name; cbn in name;
-    match goal with | H := mk_box ?lemma |- _ => apply lemma; fail end
+    match goal with | name := mk_box ?lemma |- _ => apply lemma; fail end
   | guarantee _ =>
     instantiate (f:=_break); pose (rdb_guarantee tc) as name; cbn in name;
-    match goal with | H := mk_box ?lemma |- _ => apply lemma; fail end
+    match goal with | name := mk_box ?lemma |- _ => apply lemma; fail end
   | ?term =>
     (* idtac "term"; *)
     pose (rdb_ext tc) as name; cbn in name;
-    match goal with | H := mk_box ?lemma |- _ => apply lemma end;
+    match goal with | name := mk_box ?lemma |- _ => apply lemma end;
     subst tc;
     __red_interp f term
   end
