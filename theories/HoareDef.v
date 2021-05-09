@@ -823,6 +823,7 @@ Section AUX.
 
   Global Program Instance interp_Es_rdb: red_database (mk_box (@EventsL.interp_Es)) :=
     mk_rdb
+      1
       (mk_box EventsL.interp_Es_bind)
       (mk_box EventsL.interp_Es_tau)
       (mk_box EventsL.interp_Es_ret)
@@ -899,6 +900,7 @@ Section AUX.
 
   Global Program Instance transl_all_rdb: red_database (mk_box (@transl_all)) :=
     mk_rdb
+      0
       (mk_box transl_all_bind)
       (mk_box transl_all_tau)
       (mk_box transl_all_ret)

@@ -49,12 +49,40 @@ Ltac get_itr term :=
   end
 .
 
+Ltac get_nth term n :=
+  match term with
+  | ?f ?x =>
+    match n with
+    | O => x
+    | S ?m => get_nth f m
+      (* let res := get_nth x m in *)
+      (* constr:(res) *)
+    end
+  | ?x =>
+    match n with
+    | O => x
+    end
+  end
+.
+
+Goal forall (f: nat -> nat -> nat -> nat -> nat) a b c d, f a b c d = 0.
+  i.
+  let tmp := get_nth (f a b c d) 0 in pose tmp as d'. assert(d' = d) by refl.
+  let tmp := get_nth (f a b c d) 1 in pose tmp as c'. assert(c' = c) by refl.
+  let tmp := get_nth (f a b c d) 2 in pose tmp as b'. assert(b' = b) by refl.
+  let tmp := get_nth (f a b c d) 3 in pose tmp as a'. assert(a' = a) by refl.
+  let tmp := get_nth (f a b c d) 4 in pose tmp as f'. assert(f' = f) by refl.
+Abort.
+
+
+
 (*** TODO: move to better place or use dedicated name (like ired_box) ***)
 Variant Box: Type :=
 | mk_box: forall (A:Type), A -> Box
 .
 
 Class red_database (interp: Box) := mk_rdb {
+  rdb_pos: nat;
   rdb_bind: Box;
   rdb_tau: Box;
   rdb_ret: Box;
@@ -72,6 +100,7 @@ Class red_database (interp: Box) := mk_rdb {
 }
 .
 Arguments mk_rdb [interp].
+Arguments rdb_pos [interp].
 Arguments rdb_bind [interp].
 Arguments rdb_tau [interp].
 Arguments rdb_ret [interp].
@@ -135,11 +164,13 @@ Ltac __red_interp f term :=
   (* idtac "__red_interp"; *)
   (* idtac term; *)
   let my_interp := get_head term in
-  let itr := get_itr term in
   (* idtac itr; *)
   let tc := fresh "_TC_" in
   unshelve evar (tc: @red_database (mk_box (my_interp))); [typeclasses eauto|];
   let name := fresh "TMP" in
+  let _nth := constr:(rdb_pos tc) in
+  let nth := (eval simpl in _nth) in
+  let itr := get_nth term nth in
   match itr with
   | ITree.bind' ?k0 ?i0 =>
     (* idtac "bind"; *)
@@ -229,6 +260,7 @@ Section TEST.
 
   Global Program Instance x_rdb: red_database (mk_box x) :=
     mk_rdb
+      0
       (mk_box (x_bind))
       (mk_box (x_tau))
       (mk_box (x_ret))
@@ -259,6 +291,7 @@ Section TEST.
 
   Global Program Instance y_rdb: red_database (mk_box y) :=
     mk_rdb
+      0
       (mk_box (y_bind))
       (mk_box (y_tau))
       (mk_box (y_ret))
@@ -289,6 +322,7 @@ Section TEST.
 
   Global Program Instance z_rdb: red_database (mk_box z) :=
     mk_rdb
+      0
       (mk_box (z_bind))
       (mk_box (z_tau))
       (mk_box (z_ret))
@@ -344,6 +378,7 @@ Section TEST.
 
   Global Program Instance xx_rdb: red_database (mk_box xx) :=
     mk_rdb
+      1
       (mk_box (xx_bind))
       (mk_box (xx_tau))
       (mk_box (xx_ret))

@@ -195,6 +195,7 @@ Section AUX.
   Context `{Σ: GRA.t}.
   Global Program Instance interp_hCallE_tgt_rdb: red_database (mk_box (@interp_hCallE_tgt)) :=
     mk_rdb
+      0
       (mk_box interp_tgt_bind)
       (mk_box interp_tgt_tau)
       (mk_box interp_tgt_ret)
