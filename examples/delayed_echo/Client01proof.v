@@ -17,8 +17,6 @@ From ExtLib Require Import
      Data.Map.FMapAList.
 Require Import TODOYJ.
 
-Generalizable Variables E R A B C X Y.
-
 Set Implicit Arguments.
 
 Local Open Scope nat_scope.

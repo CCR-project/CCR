@@ -10,8 +10,6 @@ Require Import Logic.
 Require Import Mem1.
 Require Import TODOYJ.
 
-Generalizable Variables E R A B C X Y Σ.
-
 Set Implicit Arguments.
 
 
@@ -25,34 +23,34 @@ Section PROOF.
 
   Fixpoint is_list (ll: val) (xs: list val): iProp :=
     match xs with
-    | [] => ⌜ll = Vnullptr⌝
+    | [] => (⌜ll = Vnullptr⌝: iProp)%I
     | xhd :: xtl =>
-      Exists lhd ltl, ⌜ll = Vptr lhd 0⌝ ** (Own (GRA.embed ((lhd,0%Z) |-> [xhd; ltl])))
-                                 ** is_list ltl xtl
+      (∃ lhd ltl, ⌜ll = Vptr lhd 0⌝ ** (OwnM ((lhd,0%Z) |-> [xhd; ltl]))
+                             ** is_list ltl xtl: iProp)%I
     end
   .
 
   Let pop_spec: fspec := (mk_simple (fun '(llref, xs) => (
                                          (fun varg o =>
-                                            Exists ll, ⌜varg = [Vptr llref 0%Z]↑⌝ ** Own (GRA.embed ((llref,0%Z) |-> [ll]))
-                                                                               ** (is_list ll xs) ** ⌜o = ord_pure 2⌝),
+                                            (∃ ll, ⌜varg = [Vptr llref 0%Z]↑⌝ ** OwnM ((llref,0%Z) |-> [ll])
+                                                                           ** (is_list ll xs) ** ⌜o = ord_pure 2⌝: iProp)%I),
                                          (fun vret =>
-                                            match xs with
-                                            | [] => ⌜vret = (Vint (- 1))↑⌝
-                                            | xhd :: xtl => ⌜vret = xhd↑⌝ ** (Exists ll', Own (GRA.embed ((llref,0%Z) |-> [ll'])) ** is_list ll' xtl)
-                                            end)
+                                            (match xs with
+                                             | [] => ⌜vret = (Vint (- 1))↑⌝
+                                             | xhd :: xtl => ⌜vret = xhd↑⌝ ** (∃ ll', OwnM ((llref,0%Z) |-> [ll']) ** is_list ll' xtl)
+                                             end: iProp)%I)
                          ))).
 
   Let pop2_spec: fspec := (mk_simple (fun '(xs, nref) => (
-                                        (fun varg o => Exists ll, ⌜varg = [ll; Vptr nref 0%Z]↑⌝ ** (is_list ll xs) **
-                                                                           (Exists v, Own (GRA.embed ((nref, 0%Z) |-> [v]))) **
-                                                                           ⌜o = ord_pure 2⌝),
-                                        (fun vret =>
-                                           match xs with
-                                           | [] => ⌜vret = Vnullptr↑⌝
-                                           | xhd :: xtl => Exists ll', ⌜vret = ll'↑⌝ ** is_list ll' xtl **
-                                                                                  Own (GRA.embed ((nref, 0%Z) |-> [xhd]))
-                                           end)
+                                          (fun varg o => (∃ ll, ⌜varg = [ll; Vptr nref 0%Z]↑⌝ ** (is_list ll xs) **
+                                                                                           (∃ v, OwnM ((nref, 0%Z) |-> [v])) **
+                                                                                           ⌜o = ord_pure 2⌝)%I),
+                                          (fun vret =>
+                                             (match xs with
+                                              | [] => ⌜vret = Vnullptr↑⌝
+                                              | xhd :: xtl => ∃ ll', ⌜vret = ll'↑⌝ ** is_list ll' xtl **
+                                                                                OwnM ((nref, 0%Z) |-> [xhd])
+                                              end)%I)
                           ))).
 
 (* struct Node* pop2(struct Node* ll, int *n) { *)
@@ -67,8 +65,8 @@ Section PROOF.
 (* } *)
 
   Let push_spec: fspec := (mk_simple (fun '(x, xs) => (
-                                        (fun varg o => Exists ll, ⌜varg = [ll; x]↑⌝ ** is_list ll xs ** ⌜o = ord_pure 2⌝),
-                                        (fun vret => Exists ll', is_list ll' (x :: xs) ** ⌜vret = ll'↑⌝)
+                                          (fun varg o => (∃ ll, ⌜varg = [ll; x]↑⌝ ** is_list ll xs ** ⌜o = ord_pure 2⌝)%I),
+                                          (fun vret => (∃ ll', is_list ll' (x :: xs) ** ⌜vret = ll'↑⌝)%I)
                           ))).
 
   Definition StackStb: list (gname * fspec).
