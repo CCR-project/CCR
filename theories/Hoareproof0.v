@@ -10,7 +10,7 @@ Require Import HoareDef.
 Require Import SimSTS.
 Require Import SimGlobal.
 From Ordinal Require Import Ordinal Arithmetic.
-Require Import Red.
+Require Import Red IRed.
 
 Generalizable Variables E R A B C X Y Σ.
 
@@ -212,125 +212,9 @@ Section CANCEL.
   Proof. unfold stb, _stb. rewrite List.map_map. apply List.map_ext. i. des_ifs. Qed.
 
 
-  (* Ltac grind := repeat (f_equiv; try apply func_ext; ii; try (des_ifs; check_safe)). *)
 
-  (* Ltac igo := repeat (try rewrite bind_bind; try rewrite bind_ret_l; try rewrite bind_ret_r; try rewrite bind_tau; *)
-  (*                     try rewrite interp_vis; *)
-  (*                     try rewrite interp_ret; *)
-  (*                     try rewrite interp_tau *)
-  (*                     (* try rewrite interp_trigger *) *)
-  (*                    ). *)
-
-  Lemma transl_all_unwrapU
-        mn R (r: option R)
-    :
-      transl_all mn (unwrapU r) = unwrapU r
-  .
-  Proof.
-    unfold unwrapU. des_ifs.
-    - rewrite transl_all_ret. grind.
-    - rewrite transl_all_triggerUB. unfold triggerUB. grind.
-  Qed.
-
-  Lemma transl_all_unwrapN
-        mn R (r: option R)
-    :
-      transl_all mn (unwrapN r) = unwrapN r
-  .
-  Proof.
-    unfold unwrapN. des_ifs.
-    - rewrite transl_all_ret. grind.
-    - rewrite transl_all_triggerNB. unfold triggerNB. grind.
-  Qed.
-
-  Lemma transl_all_assume
-        mn (P: Prop)
-    :
-      transl_all mn (assume P) = assume P;; tau;; Ret (tt)
-  .
-  Proof.
-    unfold assume.
-    repeat (try rewrite transl_all_bind; try rewrite bind_bind). grind.
-    rewrite transl_all_eventE.
-    repeat (try rewrite transl_all_bind; try rewrite bind_bind). grind.
-    rewrite transl_all_ret.
-    refl.
-  Qed.
-
-  Lemma transl_all_guarantee
-        mn (P: Prop)
-    :
-      transl_all mn (guarantee P) = guarantee P;; tau;; Ret (tt)
-  .
-  Proof.
-    unfold guarantee.
-    repeat (try rewrite transl_all_bind; try rewrite bind_bind). grind.
-    rewrite transl_all_eventE.
-    repeat (try rewrite transl_all_bind; try rewrite bind_bind). grind.
-    rewrite transl_all_ret.
-    refl.
-  Qed.
-
-
-
-  Ltac _red_transl_all_aux f itr :=
-    match itr with
-    | ITree.bind' _ _ =>
-      instantiate (f:=_continue); eapply transl_all_bind; fail
-    | Tau _ =>
-      instantiate (f:=_break); apply transl_all_tau; fail
-    | Ret _ =>
-      instantiate (f:=_continue); apply transl_all_ret; fail
-    | trigger ?e =>
-      instantiate (f:=_break);
-      match (type of e) with
-      | context[callE] => apply transl_all_callE
-      | context[eventE] => apply transl_all_eventE
-      | context[pE] => apply transl_all_pE
-      | context[rE] => apply transl_all_rE
-      | _ => fail 2
-      end
-    | triggerUB =>
-      instantiate (f:=_break); apply transl_all_triggerUB; fail
-    | triggerNB =>
-      instantiate (f:=_break); apply transl_all_triggerNB; fail
-    | unwrapU _ =>
-      instantiate (f:=_break); apply transl_all_unwrapU; fail
-    | unwrapN _ =>
-      instantiate (f:=_break); apply transl_all_unwrapN; fail
-    | assume _ =>
-      instantiate (f:=_break); apply transl_all_assume; fail
-    | guarantee _ =>
-      instantiate (f:=_break); apply transl_all_guarantee; fail
-    | _ =>
-      fail
-    end
-  .
-
-  Lemma interp_Es_eta
-        prog R (itr0 itr1: itree _ R) st0
-    :
-      itr0 = itr1 -> EventsL.interp_Es prog itr0 st0 = EventsL.interp_Es prog itr1 st0
-  .
-  Proof. i; subst; refl. Qed.
-
-  Ltac _red_transl_all f :=
-    match goal with
-    (* | [ |- EventsL.interp_Es _ (ITree.bind' _ (transl_all _ ?itr)) _ = _ ] => *)
-    (*   idtac "A"; *)
-    (*   eapply interp_Es_eta; eapply bind_eta; _red_transl_all_aux f itr *)
-    | [ |- ITree.bind' _ (EventsL.interp_Es _ (transl_all _ ?itr) _) = _ ] =>
-      eapply bind_eta; eapply interp_Es_eta; _red_transl_all_aux f itr
-    | [ |- EventsL.interp_Es _ (transl_all _ ?itr) _ = _] =>
-      eapply interp_Es_eta; _red_transl_all_aux f itr
-    | _ => fail
-    end.
-
-  Ltac _red_lsim f :=
-    (_red_Es f) || (_red_transl_all f) || (_red_itree f) || (fail).
-
-  Ltac ired_l := try (prw _red_lsim 2 0).
-  Ltac ired_r := try (prw _red_lsim 1 0).
+  Ltac ired_l := try (prw _red_gen 2 0).
+  Ltac ired_r := try (prw _red_gen 1 0).
 
   Ltac ired_both := ired_l; ired_r.
 
@@ -380,6 +264,22 @@ Section CANCEL.
 
 
 
+  (*** TODO: move to ITreelib ***)
+  (*** it inserts "subevent" ***)
+  (* Lemma bind_trigger: *)
+  (*   forall [E : Type -> Type] [R U : Type] (e : E U) (k : U -> itree E R), ` x : U <- trigger e;; k x = Vis e (fun x : U => k x). *)
+  (* Proof. i. eapply bind_trigger. Qed. *)
+
+  Ltac resub :=
+    repeat multimatch goal with
+           | |- context[ITree.trigger ?e] =>
+             match e with
+             | subevent _ _ => idtac
+             | _ => replace (ITree.trigger e) with (trigger e) by refl
+             end
+           | |- context[@subevent _ ?F ?prf _ (?e|)%sum] => replace (@subevent _ F prf _ (e|)%sum) with (@subevent _ F _ _ e) by refl
+           | |- context[@subevent _ ?F ?prf _ (|?e)%sum] => replace (@subevent _ F prf _ (|e)%sum) with (@subevent _ F _ _ e) by refl
+           end.
 
   Let adequacy_type_aux:
     forall RT
@@ -404,8 +304,6 @@ Section CANCEL.
     gcofix CIH. i; subst.
     (* intros ? ?. *)
     (* pcofix CIH. i. *)
-    unfold interp_hCallE_mid.
-    unfold interp_hCallE_tgt.
     ides i0; try rewrite ! unfold_interp; cbn; mred.
     { steps. }
     { steps. gbase. eapply CIH; [..|M]; Mskip et. ss. }
@@ -415,19 +313,17 @@ Section CANCEL.
       {
         destruct st_src0 as [rst_src0 pst_src0], st_tgt0 as [rst_tgt0 pst_tgt0]; ss. des_ifs. des; clarify.
         destruct p; ss.
-        - steps. rewrite embed_l_gen. steps. gbase. eapply CIH. ss.
-        - steps. rewrite embed_l_gen. steps. gbase. eapply CIH. ss.
+        - rewrite <- bind_trigger. resub. steps. gbase. eapply CIH. ss.
+        - rewrite <- bind_trigger. resub. steps. gbase. eapply CIH. ss.
       }
       { dependent destruction e.
-        - steps. rewrite embed_r_gen. steps. esplits; eauto. steps.
-          gbase. eapply CIH; [..|M]; Mskip et. ss.
-        - steps. rewrite embed_r_gen. steps. esplits; eauto. steps.
-          gbase. eapply CIH; [..|M]; Mskip et. ss.
-        - steps. rewrite embed_r_gen. steps. esplits; eauto. steps.
-          gbase. eapply CIH; [..|M]; Mskip et. ss.
+        - rewrite <- bind_trigger. resub. steps. esplits; eauto. steps. gbase. eapply CIH; [..|M]; Mskip et. ss.
+        - rewrite <- bind_trigger. resub. steps. esplits; eauto. steps. gbase. eapply CIH; [..|M]; Mskip et. ss.
+        - rewrite <- bind_trigger. resub. steps. gbase. eapply CIH; [..|M]; Mskip et. ss.
       }
     }
     dependent destruction h.
+    rewrite <- bind_trigger. resub.
     set (ModSemL.prog ms_mid) as p_mid in *.
     set (ModSemL.prog ms_tgt) as p_tgt in *.
     ss.
@@ -584,7 +480,6 @@ Section CANCEL.
         unfold checkWf, assume; steps. clear_tac. esplits. steps.
         unfold forge; steps. des_ifs; ss. { steps. } steps. exists vret_src'. instantiate (1:=rret). esplits; et.
         steps. unshelve esplits; eauto. { clear - ST1. admit "ez". } steps. unshelve esplits; eauto. steps.
-        fold (interp_hCallE_mid). fold (interp_hCallE_tgt stb).
         gbase. eapply Any.downcast_upcast in CAST0. des. subst. eapply CIH.
         rr. esplits; et. { destruct l2; ss. } clear - ST1. admit "ez".
     }
@@ -692,7 +587,6 @@ Section CANCEL.
         { clear - ST1. admit "ez". }
         steps. unshelve esplits; eauto.
         steps.
-        fold interp_hCallE_src. fold (interp_hCallE_tgt stb).
         gbase. eapply Any.downcast_upcast in CAST0. des. subst. eapply CIH.
         rr. esplits; et. { destruct l2; ss. } clear - ST1. admit "ez".
     }
@@ -811,15 +705,13 @@ Section CANCEL.
 (x0 <- EventsL.interp_Es (ModSemL.prog ms_mid)
                  (transl_all "Main" (interp_hCallE_mid (E:=pE +' eventE) ord_top (trigger (hCall false "main" ([]: list val)↑)))) st_midr0;; Ret (snd x0))).
     { clear SIM. ginit. { eapply cpn5_wcompat; eauto with paco. }
-      unfold interp_hCallE_mid. rewrite unfold_interp. ss.
-      Local Transparent subevent. cbn. Local Opaque subevent. steps.
-      unfold guarantee. steps.
+      steps.
       replace (Ord.from_nat 91) with (OrdArith.add (Ord.from_nat 50) (Ord.from_nat 41))
         by admit "ez".
       guclo bindC_spec.
       eapply bindR_intro.
       - eapply simg_gpaco_refl. typeclasses eauto.
-      - ii. subst. steps. destruct p as [[mrs0 frs0] mps0]; ss. steps. des_ifs. { steps. } steps. interp_red. steps.
+      - ii. subst. steps. destruct p as [[mrs0 frs0] mps0]; ss. steps. des_ifs. { steps. } steps.
     }
     assert(TRANSR: simg eq (Ord.from_nat 200)
 (x0 <- EventsL.interp_Es (ModSemL.prog ms_tgt)
@@ -827,8 +719,6 @@ Section CANCEL.
 (x0 <- EventsL.interp_Es (ModSemL.prog ms_tgt)
                  ((ModSemL.prog ms_tgt) _ (Call "main" ([]: list val)↑)) st_tgt0;; Ret (snd x0))).
     { clear SIM. ginit. { eapply cpn5_wcompat; eauto with paco. }
-      unfold interp_hCallE_tgt. rewrite unfold_interp. steps.
-      Local Transparent subevent. cbn. Local Opaque subevent.
       steps. rewrite MAINF. steps. rewrite Any.upcast_downcast. steps.
       unfold HoareCall.
       destruct (find (fun mnr  => dec "Main" (fst mnr)) (ModSemL.initial_mrs ms_tgt)) eqn:MAINR; cycle 1.
@@ -865,7 +755,7 @@ we should know that stackframe is not popped (unary property)". }
         unfold forge, checkWf, assume. steps. des_ifs.
         { admit "we should use stronger RR, not eq;
 we should know that stackframe is not popped (unary property)". }
-        steps. interp_red. des; ss. steps.
+        steps. des; ss.
     }
 
 

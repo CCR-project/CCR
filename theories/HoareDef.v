@@ -8,6 +8,7 @@ Require Import PCM.
 From Ordinal Require Export Ordinal Arithmetic Inaccessible.
 Require Import Any.
 Require Import Logic.
+Require Import IRed.
 
 From ExtLib Require Import
      Core.RelDec
@@ -811,57 +812,676 @@ End SMod.
 
 
 
-Ltac _red_Es_aux f itr :=
-  match itr with
-  | ITree.bind' _ _ =>
-    instantiate (f:=_continue); eapply EventsL.interp_Es_bind; fail
-  | Tau _ =>
-    instantiate (f:=_break); apply EventsL.interp_Es_tau; fail
-  | Ret _ =>
-    instantiate (f:=_continue); apply EventsL.interp_Es_ret; fail
-  | trigger ?e =>
-    instantiate (f:=_break);
-    match (type of e) with
-    | context[callE] => apply EventsL.interp_Es_callE
-    | context[eventE] => apply EventsL.interp_Es_eventE
-    | context[EventsL.pE] => apply EventsL.interp_Es_pE
-    | context[EventsL.rE] => apply EventsL.interp_Es_rE
-    | _ => fail 2
-    end
-  | triggerUB =>
-    instantiate (f:=_break); apply EventsL.interp_Es_triggerUB; fail
-  | triggerNB =>
-    instantiate (f:=_break); apply EventsL.interp_Es_triggerNB; fail
-  | unwrapU _ =>
-    instantiate (f:=_break); apply interp_Es_unwrapU; fail
-  | unwrapN _ =>
-    instantiate (f:=_break); apply interp_Es_unwrapN; fail
-  | assume _ =>
-    instantiate (f:=_break); apply interp_Es_assume; fail
-  | guarantee _ =>
-    instantiate (f:=_break); apply interp_Es_guarantee; fail
-  | _ =>
-    fail
-  end
+Section AUX.
+  Context `{Σ: GRA.t}.
+  Lemma interp_Es_ext
+        prog R (itr0 itr1: itree _ R) st0
+    :
+      itr0 = itr1 -> EventsL.interp_Es prog itr0 st0 = EventsL.interp_Es prog itr1 st0
+  .
+  Proof. i; subst; refl. Qed.
+
+  Global Program Instance interp_Es_rdb: red_database (mk_box (@EventsL.interp_Es)) :=
+    mk_rdb
+      1
+      (mk_box EventsL.interp_Es_bind)
+      (mk_box EventsL.interp_Es_tau)
+      (mk_box EventsL.interp_Es_ret)
+      (mk_box EventsL.interp_Es_pE)
+      (mk_box EventsL.interp_Es_rE)
+      (mk_box EventsL.interp_Es_callE)
+      (mk_box EventsL.interp_Es_eventE)
+      (mk_box EventsL.interp_Es_triggerUB)
+      (mk_box EventsL.interp_Es_triggerNB)
+      (mk_box interp_Es_unwrapU)
+      (mk_box interp_Es_unwrapN)
+      (mk_box interp_Es_assume)
+      (mk_box interp_Es_guarantee)
+      (mk_box interp_Es_ext)
+  .
+
+  Lemma transl_all_unwrapU
+        mn R (r: option R)
+    :
+      transl_all mn (unwrapU r) = unwrapU r
+  .
+  Proof.
+    unfold unwrapU. des_ifs.
+    - rewrite transl_all_ret. grind.
+    - rewrite transl_all_triggerUB. unfold triggerUB. grind.
+  Qed.
+
+  Lemma transl_all_unwrapN
+        mn R (r: option R)
+    :
+      transl_all mn (unwrapN r) = unwrapN r
+  .
+  Proof.
+    unfold unwrapN. des_ifs.
+    - rewrite transl_all_ret. grind.
+    - rewrite transl_all_triggerNB. unfold triggerNB. grind.
+  Qed.
+
+  Lemma transl_all_assume
+        mn (P: Prop)
+    :
+      transl_all mn (assume P) = assume P;; tau;; Ret (tt)
+  .
+  Proof.
+    unfold assume.
+    repeat (try rewrite transl_all_bind; try rewrite bind_bind). grind.
+    rewrite transl_all_eventE.
+    repeat (try rewrite transl_all_bind; try rewrite bind_bind). grind.
+    rewrite transl_all_ret.
+    refl.
+  Qed.
+
+  Lemma transl_all_guarantee
+        mn (P: Prop)
+    :
+      transl_all mn (guarantee P) = guarantee P;; tau;; Ret (tt)
+  .
+  Proof.
+    unfold guarantee.
+    repeat (try rewrite transl_all_bind; try rewrite bind_bind). grind.
+    rewrite transl_all_eventE.
+    repeat (try rewrite transl_all_bind; try rewrite bind_bind). grind.
+    rewrite transl_all_ret.
+    refl.
+  Qed.
+
+  Lemma transl_all_ext
+        mn R (itr0 itr1: itree _ R)
+        (EQ: itr0 = itr1)
+    :
+      transl_all mn itr0 = transl_all mn itr1
+  .
+  Proof. subst; refl. Qed.
+
+  Global Program Instance transl_all_rdb: red_database (mk_box (@transl_all)) :=
+    mk_rdb
+      0
+      (mk_box transl_all_bind)
+      (mk_box transl_all_tau)
+      (mk_box transl_all_ret)
+      (mk_box transl_all_pE)
+      (mk_box transl_all_rE)
+      (mk_box transl_all_callE)
+      (mk_box transl_all_eventE)
+      (mk_box transl_all_triggerUB)
+      (mk_box transl_all_triggerNB)
+      (mk_box transl_all_unwrapU)
+      (mk_box transl_all_unwrapN)
+      (mk_box transl_all_assume)
+      (mk_box transl_all_guarantee)
+      (mk_box transl_all_ext)
+  .
+End AUX.
+
+
+
+Section AUX.
+
+Context `{Σ: GRA.t}.
+(* itree reduction *)
+Lemma interp_tgt_bind
+      (R S: Type)
+      (s : itree (hCallE +' pE +' eventE) R) (k : R -> itree (hCallE +' pE +' eventE) S)
+      stb o
+  :
+    (interp_hCallE_tgt (E:=pE +' eventE) stb o (s >>= k))
+    =
+    ((interp_hCallE_tgt (E:=pE +' eventE) stb o s) >>= (fun r => interp_hCallE_tgt stb o (k r))).
+Proof.
+  unfold interp_hCallE_tgt in *. grind.
+Qed.
+
+Lemma interp_tgt_tau stb o
+      (U: Type)
+      (t : itree _ U)
+  :
+    (interp_hCallE_tgt (E:=pE +' eventE) stb o (Tau t))
+    =
+    (Tau (interp_hCallE_tgt (E:=pE +' eventE) stb o t)).
+Proof.
+  unfold interp_hCallE_tgt in *. grind.
+Qed.
+
+Lemma interp_tgt_ret stb o
+      (U: Type)
+      (t: U)
+  :
+    ((interp_hCallE_tgt (E:=pE +' eventE) stb o (Ret t)))
+    =
+    Ret t.
+Proof.
+  unfold interp_hCallE_tgt in *. grind.
+Qed.
+
+Lemma interp_tgt_triggerp stb o
+      (R: Type)
+      (i: pE R)
+  :
+    (interp_hCallE_tgt (E:=pE +' eventE) stb o (trigger i))
+    =
+    (trigger i >>= (fun r => tau;; Ret r)).
+Proof.
+  unfold interp_hCallE_tgt in *.
+  repeat rewrite interp_trigger. grind.
+Qed.
+
+Lemma interp_tgt_triggere stb o
+      (R: Type)
+      (i: eventE R)
+  :
+    (interp_hCallE_tgt (E:=pE +' eventE) stb o (trigger i))
+    =
+    (trigger i >>= (fun r => tau;; Ret r)).
+Proof.
+  unfold interp_hCallE_tgt in *.
+  repeat rewrite interp_trigger. grind.
+Qed.
+
+Lemma interp_tgt_hcall stb o
+      (R: Type)
+      (i: hCallE R)
+  :
+    (interp_hCallE_tgt (E:=pE +' eventE) stb o (trigger i))
+    =
+    ((handle_hCallE_tgt stb o i) >>= (fun r => tau;; Ret r)).
+Proof.
+  unfold interp_hCallE_tgt in *.
+  repeat rewrite interp_trigger. grind.
+Qed.
+
+Lemma interp_tgt_triggerUB stb o
+      (R: Type)
+  :
+    (interp_hCallE_tgt (E:=pE +' eventE) stb o (triggerUB))
+    =
+    triggerUB (A:=R).
+Proof.
+  unfold interp_hCallE_tgt, triggerUB in *. rewrite unfold_interp. cbn. grind.
+Qed.
+
+Lemma interp_tgt_triggerNB stb o
+      (R: Type)
+  :
+    (interp_hCallE_tgt (E:=pE +' eventE) stb o (triggerNB))
+    =
+    triggerNB (A:=R).
+Proof.
+  unfold interp_hCallE_tgt, triggerNB in *. rewrite unfold_interp. cbn. grind.
+Qed.
+
+Lemma interp_tgt_unwrapU stb o
+      (R: Type)
+      (i: option R)
+  :
+    (interp_hCallE_tgt (E:=pE +' eventE) stb o (@unwrapU (hCallE +' pE +' eventE) _ _ i))
+    =
+    (unwrapU i).
+Proof.
+  unfold interp_hCallE_tgt, unwrapU in *. des_ifs.
+  { etrans.
+    { eapply interp_tgt_ret. }
+    { grind. }
+  }
+  { etrans.
+    { eapply interp_tgt_triggerUB. }
+    { unfold triggerUB. grind. }
+  }
+Qed.
+
+Lemma interp_tgt_unwrapN stb o
+      (R: Type)
+      (i: option R)
+  :
+    (interp_hCallE_tgt (E:=pE +' eventE) stb o (@unwrapN (hCallE +' pE +' eventE) _ _ i))
+    =
+    (unwrapN i).
+Proof.
+  unfold interp_hCallE_tgt, unwrapN in *. des_ifs.
+  { etrans.
+    { eapply interp_tgt_ret. }
+    { grind. }
+  }
+  { etrans.
+    { eapply interp_tgt_triggerNB. }
+    { unfold triggerNB. grind. }
+  }
+Qed.
+
+Lemma interp_tgt_assume stb o
+      P
+  :
+    (interp_hCallE_tgt (E:=pE +' eventE) stb o (assume P))
+    =
+    (assume P;; tau;; Ret tt)
 .
+Proof.
+  unfold assume. rewrite interp_tgt_bind. rewrite interp_tgt_triggere. grind. eapply interp_tgt_ret.
+Qed.
+
+Lemma interp_tgt_guarantee stb o
+      P
+  :
+    (interp_hCallE_tgt (E:=pE +' eventE) stb o (guarantee P))
+    =
+    (guarantee P;; tau;; Ret tt).
+Proof.
+  unfold guarantee. rewrite interp_tgt_bind. rewrite interp_tgt_triggere. grind. eapply interp_tgt_ret.
+Qed.
+
+Lemma interp_tgt_ext stb o
+      R (itr0 itr1: itree _ R)
+      (EQ: itr0 = itr1)
+  :
+    (interp_hCallE_tgt (E:=pE +' eventE) stb o itr0)
+    =
+    (interp_hCallE_tgt (E:=pE +' eventE) stb o itr1)
+.
+Proof. subst; et. Qed.
+
+Global Program Instance interp_hCallE_tgt_rdb: red_database (mk_box (@interp_hCallE_tgt)) :=
+  mk_rdb
+    0
+    (mk_box interp_tgt_bind)
+    (mk_box interp_tgt_tau)
+    (mk_box interp_tgt_ret)
+    (mk_box interp_tgt_hcall)
+    (mk_box interp_tgt_triggere)
+    (mk_box interp_tgt_triggerp)
+    (mk_box interp_tgt_triggerp)
+    (mk_box interp_tgt_triggerUB)
+    (mk_box interp_tgt_triggerNB)
+    (mk_box interp_tgt_unwrapU)
+    (mk_box interp_tgt_unwrapN)
+    (mk_box interp_tgt_assume)
+    (mk_box interp_tgt_guarantee)
+    (mk_box interp_tgt_ext)
+.
+
+End AUX.
+
+
+
+Section AUX.
+
+Context `{Σ: GRA.t}.
+(* itree reduction *)
+Lemma interp_mid_bind
+      (R S: Type)
+      (s : itree (hCallE +' pE +' eventE) R) (k : R -> itree (hCallE +' pE +' eventE) S)
+      o
+  :
+    (interp_hCallE_mid (E:=pE +' eventE) o (s >>= k))
+    =
+    ((interp_hCallE_mid (E:=pE +' eventE) o s) >>= (fun r => interp_hCallE_mid o (k r))).
+Proof.
+  unfold interp_hCallE_mid in *. grind.
+Qed.
+
+Lemma interp_mid_tau o
+      (U: Type)
+      (t : itree _ U)
+  :
+    (interp_hCallE_mid (E:=pE +' eventE) o (Tau t))
+    =
+    (Tau (interp_hCallE_mid (E:=pE +' eventE) o t)).
+Proof.
+  unfold interp_hCallE_mid in *. grind.
+Qed.
+
+Lemma interp_mid_ret o
+      (U: Type)
+      (t: U)
+  :
+    ((interp_hCallE_mid (E:=pE +' eventE) o (Ret t)))
+    =
+    Ret t.
+Proof.
+  unfold interp_hCallE_mid in *. grind.
+Qed.
+
+Lemma interp_mid_triggerp o
+      (R: Type)
+      (i: pE R)
+  :
+    (interp_hCallE_mid (E:=pE +' eventE) o (trigger i))
+    =
+    (trigger i >>= (fun r => tau;; Ret r)).
+Proof.
+  unfold interp_hCallE_mid in *.
+  repeat rewrite interp_trigger. grind.
+Qed.
+
+Lemma interp_mid_triggere o
+      (R: Type)
+      (i: eventE R)
+  :
+    (interp_hCallE_mid (E:=pE +' eventE) o (trigger i))
+    =
+    (trigger i >>= (fun r => tau;; Ret r)).
+Proof.
+  unfold interp_hCallE_mid in *.
+  repeat rewrite interp_trigger. grind.
+Qed.
+
+Lemma interp_mid_hcall o
+      (R: Type)
+      (i: hCallE R)
+  :
+    (interp_hCallE_mid (E:=pE +' eventE) o (trigger i))
+    =
+    ((handle_hCallE_mid o i) >>= (fun r => tau;; Ret r)).
+Proof.
+  unfold interp_hCallE_mid in *.
+  repeat rewrite interp_trigger. grind.
+Qed.
+
+Lemma interp_mid_triggerUB o
+      (R: Type)
+  :
+    (interp_hCallE_mid (E:=pE +' eventE) o (triggerUB))
+    =
+    triggerUB (A:=R).
+Proof.
+  unfold interp_hCallE_mid, triggerUB in *. rewrite unfold_interp. cbn. grind.
+Qed.
+
+Lemma interp_mid_triggerNB o
+      (R: Type)
+  :
+    (interp_hCallE_mid (E:=pE +' eventE) o (triggerNB))
+    =
+    triggerNB (A:=R).
+Proof.
+  unfold interp_hCallE_mid, triggerNB in *. rewrite unfold_interp. cbn. grind.
+Qed.
+
+Lemma interp_mid_unwrapU o
+      (R: Type)
+      (i: option R)
+  :
+    (interp_hCallE_mid (E:=pE +' eventE) o (@unwrapU (hCallE +' pE +' eventE) _ _ i))
+    =
+    (unwrapU i).
+Proof.
+  unfold interp_hCallE_mid, unwrapU in *. des_ifs.
+  { etrans.
+    { eapply interp_mid_ret. }
+    { grind. }
+  }
+  { etrans.
+    { eapply interp_mid_triggerUB. }
+    { unfold triggerUB. grind. }
+  }
+Qed.
+
+Lemma interp_mid_unwrapN o
+      (R: Type)
+      (i: option R)
+  :
+    (interp_hCallE_mid (E:=pE +' eventE) o (@unwrapN (hCallE +' pE +' eventE) _ _ i))
+    =
+    (unwrapN i).
+Proof.
+  unfold interp_hCallE_mid, unwrapN in *. des_ifs.
+  { etrans.
+    { eapply interp_mid_ret. }
+    { grind. }
+  }
+  { etrans.
+    { eapply interp_mid_triggerNB. }
+    { unfold triggerNB. grind. }
+  }
+Qed.
+
+Lemma interp_mid_assume o
+      P
+  :
+    (interp_hCallE_mid (E:=pE +' eventE) o (assume P))
+    =
+    (assume P;; tau;; Ret tt)
+.
+Proof.
+  unfold assume. rewrite interp_mid_bind. rewrite interp_mid_triggere. grind. eapply interp_mid_ret.
+Qed.
+
+Lemma interp_mid_guarantee o
+      P
+  :
+    (interp_hCallE_mid (E:=pE +' eventE) o (guarantee P))
+    =
+    (guarantee P;; tau;; Ret tt).
+Proof.
+  unfold guarantee. rewrite interp_mid_bind. rewrite interp_mid_triggere. grind. eapply interp_mid_ret.
+Qed.
+
+Lemma interp_mid_ext o
+      R (itr0 itr1: itree _ R)
+      (EQ: itr0 = itr1)
+  :
+    (interp_hCallE_mid (E:=pE +' eventE) o itr0)
+    =
+    (interp_hCallE_mid (E:=pE +' eventE) o itr1)
+.
+Proof. subst; et. Qed.
+
+Global Program Instance interp_hCallE_mid_rdb: red_database (mk_box (@interp_hCallE_mid)) :=
+  mk_rdb
+    0
+    (mk_box interp_mid_bind)
+    (mk_box interp_mid_tau)
+    (mk_box interp_mid_ret)
+    (mk_box interp_mid_hcall)
+    (mk_box interp_mid_triggere)
+    (mk_box interp_mid_triggerp)
+    (mk_box interp_mid_triggerp)
+    (mk_box interp_mid_triggerUB)
+    (mk_box interp_mid_triggerNB)
+    (mk_box interp_mid_unwrapU)
+    (mk_box interp_mid_unwrapN)
+    (mk_box interp_mid_assume)
+    (mk_box interp_mid_guarantee)
+    (mk_box interp_mid_ext)
+.
+
+End AUX.
+
+
+
+Section AUX.
+
+Context `{Σ: GRA.t}.
+(* itree reduction *)
+Lemma interp_src_bind
+      (R S: Type)
+      (s : itree (hCallE +' pE +' eventE) R) (k : R -> itree (hCallE +' pE +' eventE) S)
+  :
+    (interp_hCallE_src (E:=pE +' eventE) (s >>= k))
+    =
+    ((interp_hCallE_src (E:=pE +' eventE) s) >>= (fun r => interp_hCallE_src (k r))).
+Proof.
+  unfold interp_hCallE_src in *. grind.
+Qed.
+
+Lemma interp_src_tau
+      (U: Type)
+      (t : itree _ U)
+  :
+    (interp_hCallE_src (E:=pE +' eventE) (Tau t))
+    =
+    (Tau (interp_hCallE_src (E:=pE +' eventE) t)).
+Proof.
+  unfold interp_hCallE_src in *. grind.
+Qed.
+
+Lemma interp_src_ret
+      (U: Type)
+      (t: U)
+  :
+    ((interp_hCallE_src (E:=pE +' eventE) (Ret t)))
+    =
+    Ret t.
+Proof.
+  unfold interp_hCallE_src in *. grind.
+Qed.
+
+Lemma interp_src_triggerp
+      (R: Type)
+      (i: pE R)
+  :
+    (interp_hCallE_src (E:=pE +' eventE) (trigger i))
+    =
+    (trigger i >>= (fun r => tau;; Ret r)).
+Proof.
+  unfold interp_hCallE_src in *.
+  repeat rewrite interp_trigger. grind.
+Qed.
+
+Lemma interp_src_triggere
+      (R: Type)
+      (i: eventE R)
+  :
+    (interp_hCallE_src (E:=pE +' eventE) (trigger i))
+    =
+    (trigger i >>= (fun r => tau;; Ret r)).
+Proof.
+  unfold interp_hCallE_src in *.
+  repeat rewrite interp_trigger. grind.
+Qed.
+
+Lemma interp_src_hcall
+      (R: Type)
+      (i: hCallE R)
+  :
+    (interp_hCallE_src (E:=pE +' eventE) (trigger i))
+    =
+    ((handle_hCallE_src i) >>= (fun r => tau;; Ret r)).
+Proof.
+  unfold interp_hCallE_src in *.
+  repeat rewrite interp_trigger. grind.
+Qed.
+
+Lemma interp_src_triggerUB
+      (R: Type)
+  :
+    (interp_hCallE_src (E:=pE +' eventE) (triggerUB))
+    =
+    triggerUB (A:=R).
+Proof.
+  unfold interp_hCallE_src, triggerUB in *. rewrite unfold_interp. cbn. grind.
+Qed.
+
+Lemma interp_src_triggerNB
+      (R: Type)
+  :
+    (interp_hCallE_src (E:=pE +' eventE) (triggerNB))
+    =
+    triggerNB (A:=R).
+Proof.
+  unfold interp_hCallE_src, triggerNB in *. rewrite unfold_interp. cbn. grind.
+Qed.
+
+Lemma interp_src_unwrapU
+      (R: Type)
+      (i: option R)
+  :
+    (interp_hCallE_src (E:=pE +' eventE) (@unwrapU (hCallE +' pE +' eventE) _ _ i))
+    =
+    (unwrapU i).
+Proof.
+  unfold interp_hCallE_src, unwrapU in *. des_ifs.
+  { etrans.
+    { eapply interp_src_ret. }
+    { grind. }
+  }
+  { etrans.
+    { eapply interp_src_triggerUB. }
+    { unfold triggerUB. grind. }
+  }
+Qed.
+
+Lemma interp_src_unwrapN
+      (R: Type)
+      (i: option R)
+  :
+    (interp_hCallE_src (E:=pE +' eventE) (@unwrapN (hCallE +' pE +' eventE) _ _ i))
+    =
+    (unwrapN i).
+Proof.
+  unfold interp_hCallE_src, unwrapN in *. des_ifs.
+  { etrans.
+    { eapply interp_src_ret. }
+    { grind. }
+  }
+  { etrans.
+    { eapply interp_src_triggerNB. }
+    { unfold triggerNB. grind. }
+  }
+Qed.
+
+Lemma interp_src_assume
+      P
+  :
+    (interp_hCallE_src (E:=pE +' eventE) (assume P))
+    =
+    (assume P;; tau;; Ret tt)
+.
+Proof.
+  unfold assume. rewrite interp_src_bind. rewrite interp_src_triggere. grind. eapply interp_src_ret.
+Qed.
+
+Lemma interp_src_guarantee
+      P
+  :
+    (interp_hCallE_src (E:=pE +' eventE) (guarantee P))
+    =
+    (guarantee P;; tau;; Ret tt).
+Proof.
+  unfold guarantee. rewrite interp_src_bind. rewrite interp_src_triggere. grind. eapply interp_src_ret.
+Qed.
+
+Lemma interp_src_ext
+      R (itr0 itr1: itree _ R)
+      (EQ: itr0 = itr1)
+  :
+    (interp_hCallE_src (E:=pE +' eventE) itr0)
+    =
+    (interp_hCallE_src (E:=pE +' eventE) itr1)
+.
+Proof. subst; et. Qed.
+
+Global Program Instance interp_hCallE_src_rdb: red_database (mk_box (@interp_hCallE_src)) :=
+  mk_rdb
+    0
+    (mk_box interp_src_bind)
+    (mk_box interp_src_tau)
+    (mk_box interp_src_ret)
+    (mk_box interp_src_hcall)
+    (mk_box interp_src_triggere)
+    (mk_box interp_src_triggerp)
+    (mk_box interp_src_triggerp)
+    (mk_box interp_src_triggerUB)
+    (mk_box interp_src_triggerNB)
+    (mk_box interp_src_unwrapU)
+    (mk_box interp_src_unwrapN)
+    (mk_box interp_src_assume)
+    (mk_box interp_src_guarantee)
+    (mk_box interp_src_ext)
+.
+
+End AUX.
+
+
 
 (*** TODO: move to ITreeLib ***)
 Lemma bind_eta E X Y itr0 itr1 (ktr: ktree E X Y): itr0 = itr1 -> itr0 >>= ktr = itr1 >>= ktr. i; subst; refl. Qed.
 
-Ltac _red_Es f :=
-  match goal with
-  | [ |- ITree.bind' _ (EventsL.interp_Es _ ?itr _) = _ ] =>
-    eapply bind_eta; _red_Es_aux f itr
-  | [ |- EventsL.interp_Es _ ?itr _ = _] =>
-    _red_Es_aux f itr
-  | _ => fail
-  end.
-
-Ltac _red_lsim f :=
-  (_red_Es f) || (_red_itree f) || (fail).
-
-Ltac ired_l := try (prw _red_lsim 2 0).
-Ltac ired_r := try (prw _red_lsim 1 0).
+Ltac ired_l := try (prw _red_gen 2 0).
+Ltac ired_r := try (prw _red_gen 1 0).
 
 Ltac ired_both := ired_l; ired_r.
 

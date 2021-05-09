@@ -14,7 +14,7 @@ Require Import RelationPairs.
 From ExtLib Require Import
      Data.Map.FMapAList.
 From Ordinal Require Export Ordinal Arithmetic.
-Require Import Red.
+Require Import Red IRed.
 Require Import Logic YPM.
 
 Generalizable Variables E R A B C X Y Σ.
@@ -29,170 +29,8 @@ Create HintDb ord_step.
 #[export] Hint Extern 1000 => lia: ord_step.
 
 
-(* itree reduction *)
 
-Lemma interp_tgt_bind `{Σ: GRA.t} stb o
-      (R S R_src: Type)
-      (s : itree (hCallE +' pE +' eventE) R) (k : R -> itree (hCallE +' pE +' eventE) S) (h : S -> itree _ R_src)
-  :
-    (interp_hCallE_tgt (E:=pE +' eventE) stb o (s >>= k) >>= h)
-    =
-    ((interp_hCallE_tgt (E:=pE +' eventE) stb o s) >>= (fun r => interp_hCallE_tgt stb o (k r) >>= h)).
-Proof.
-  unfold interp_hCallE_tgt in *. grind.
-Qed.
 
-Lemma interp_tgt_tau `{Σ: GRA.t} stb o
-      (U R_src: Type)
-      (t : itree _ _) (k : U -> itree _ R_src)
-  :
-    (interp_hCallE_tgt (E:=pE +' eventE) stb o (Tau t) >>= k)
-    =
-    (Tau (interp_hCallE_tgt (E:=pE +' eventE) stb o t >>= k)).
-Proof.
-  unfold interp_hCallE_tgt in *. grind.
-Qed.
-
-Lemma interp_tgt_ret `{Σ: GRA.t} stb o
-      (U R_src: Type)
-      t (k : U -> itree Es R_src)
-  :
-    ((interp_hCallE_tgt (E:=pE +' eventE) stb o (Ret t)) >>= k)
-    =
-    k t.
-Proof.
-  unfold interp_hCallE_tgt in *. grind.
-Qed.
-
-Lemma interp_tgt_triggerp `{Σ: GRA.t} stb o
-      (R R_src: Type)
-      (h : R -> itree _ R_src) (i: pE R)
-  :
-    (interp_hCallE_tgt (E:=pE +' eventE) stb o (trigger i) >>= h)
-    =
-    (trigger i >>= (fun r => Tau (h r))).
-Proof.
-  unfold interp_hCallE_tgt in *.
-  repeat rewrite interp_trigger. grind.
-Qed.
-
-Lemma interp_tgt_triggere `{Σ: GRA.t} stb o
-      (R R_src: Type)
-      (h : R -> itree _ R_src) (i: eventE R)
-  :
-    (interp_hCallE_tgt (E:=pE +' eventE) stb o (trigger i) >>= h)
-    =
-    (trigger i >>= (fun r => Tau (h r))).
-Proof.
-  unfold interp_hCallE_tgt in *.
-  repeat rewrite interp_trigger. grind.
-Qed.
-
-Lemma interp_tgt_hcall `{Σ: GRA.t} stb o
-      (R R_src: Type)
-      (h : R -> itree _ R_src) (i: hCallE R)
-  :
-    (interp_hCallE_tgt (E:=pE +' eventE) stb o (trigger i) >>= h)
-    =
-    ((handle_hCallE_tgt stb o i) >>= (fun r => Tau (h r))).
-Proof.
-  unfold interp_hCallE_tgt in *.
-  repeat rewrite interp_trigger. grind.
-Qed.
-
-Lemma interp_tgt_triggerUB `{Σ: GRA.t} stb o
-      (R R_src: Type)
-      (h : R -> itree _ R_src)
-  :
-    (interp_hCallE_tgt (E:=pE +' eventE) stb o (triggerUB)) >>= h
-    =
-    triggerUB >>= (fun x => Ret x).
-Proof.
-  unfold interp_hCallE_tgt, triggerUB in *. etrans.
-  { eapply interp_tgt_bind. } etrans.
-  { eapply interp_tgt_triggere. }
-  grind.
-Qed.
-
-Lemma interp_tgt_triggerNB `{Σ: GRA.t} stb o
-      (R R_src: Type)
-      (h : R -> itree _ R_src)
-  :
-    (interp_hCallE_tgt (E:=pE +' eventE) stb o (triggerNB)) >>= h
-    =
-    triggerNB >>= (fun x => Ret x).
-Proof.
-  unfold interp_hCallE_tgt, triggerNB in *. etrans.
-  { eapply interp_tgt_bind. } etrans.
-  { eapply interp_tgt_triggere. }
-  grind.
-Qed.
-
-Lemma interp_tgt_unwrapU `{Σ: GRA.t} stb o
-      (R R_src: Type)
-      (h : R -> itree _ R_src) (i: option R)
-  :
-    (interp_hCallE_tgt (E:=pE +' eventE) stb o (@unwrapU (hCallE +' pE +' eventE) _ _ i) >>= h)
-    =
-    (unwrapU i >>= h).
-Proof.
-  unfold interp_hCallE_tgt, unwrapU in *. des_ifs.
-  { etrans.
-    { eapply interp_tgt_ret. }
-    { grind. }
-  }
-  { etrans.
-    { eapply interp_tgt_triggerUB. }
-    { unfold triggerUB. grind. }
-  }
-Qed.
-
-Lemma interp_tgt_unwrapN `{Σ: GRA.t} stb o
-      (R R_src: Type)
-      (h : R -> itree _ R_src) (i: option R)
-  :
-    (interp_hCallE_tgt (E:=pE +' eventE) stb o (@unwrapN (hCallE +' pE +' eventE) _ _ i) >>= h)
-    =
-    (unwrapN i >>= h).
-Proof.
-  unfold interp_hCallE_tgt, unwrapN in *. des_ifs.
-  { etrans.
-    { eapply interp_tgt_ret. }
-    { grind. }
-  }
-  { etrans.
-    { eapply interp_tgt_triggerNB. }
-    { unfold triggerNB. grind. }
-  }
-Qed.
-
-Lemma interp_tgt_assume `{Σ: GRA.t} stb o
-      (R_src: Type)
-      (h : _ -> itree _ R_src) P
-  :
-    (interp_hCallE_tgt (E:=pE +' eventE) stb o (assume P) >>= h)
-    =
-    (assume P >>= (fun r => Tau (h r))).
-Proof.
-  unfold assume. etrans.
-  { eapply interp_tgt_bind. } etrans.
-  { eapply interp_tgt_triggere. }
-  grind. eapply interp_tgt_ret.
-Qed.
-
-Lemma interp_tgt_guarantee `{Σ: GRA.t} stb o
-      (R_src: Type)
-      (h : _ -> itree _ R_src) P
-  :
-    (interp_hCallE_tgt (E:=pE +' eventE) stb o (guarantee P) >>= h)
-    =
-    (guarantee P >>= (fun r => Tau (h r))).
-Proof.
-  unfold guarantee. etrans.
-  { eapply interp_tgt_bind. } etrans.
-  { eapply interp_tgt_triggere. }
-  grind. eapply interp_tgt_ret.
-Qed.
 
 Ltac interp_red := rewrite interp_vis ||
                            rewrite interp_ret ||
@@ -211,67 +49,8 @@ Ltac interp_state_red := rewrite interp_state_trigger ||
                                  rewrite interp_state_tau ||
                                  rewrite interp_state_ret.
 
-Ltac _red_itree f :=
-  match goal with
-  | [ |- ITree.bind' _ ?itr = _] =>
-    match itr with
-    | ITree.bind' _ _ =>
-      instantiate (f:=_continue); apply bind_bind; fail
-    | Tau _ =>
-      instantiate (f:=_break); apply bind_tau; fail
-    | Ret _ =>
-      instantiate (f:=_continue); apply bind_ret_l; fail
-    | _ =>
-      fail
-    end
-  | [ |- trigger _ = _] =>
-    instantiate (f:=_break); apply bind_ret_r_rev; fail
-  | _ => fail
-  end.
-
-Ltac _red_interp_tgt f :=
-  match goal with
-  | [ |- ITree.bind' _ (interp_hCallE_tgt _ _ ?itr) = _ ] =>
-    match itr with
-    | ITree.bind' _ _ =>
-      instantiate (f:=_continue); eapply interp_tgt_bind; fail
-    | Tau _ =>
-      instantiate (f:=_break); apply interp_tgt_tau; fail
-    | Ret _ =>
-      instantiate (f:=_continue); apply interp_tgt_ret; fail
-    | trigger ?e =>
-      instantiate (f:=_break);
-      match (type of e) with
-      | context[hCallE] => apply interp_tgt_hcall
-      | context[eventE] => apply interp_tgt_triggere
-      | context[pE] => apply interp_tgt_triggerp
-      | _ => fail 2
-      end
-    | triggerUB =>
-      instantiate (f:=_break); apply interp_tgt_triggerUB; fail
-    | triggerNB =>
-      instantiate (f:=_break); apply interp_tgt_triggerNB; fail
-    | unwrapU _ =>
-      instantiate (f:=_break); apply interp_tgt_unwrapU; fail
-    | unwrapN _ =>
-      instantiate (f:=_break); apply interp_tgt_unwrapN; fail
-    | assume _ =>
-      instantiate (f:=_break); apply interp_tgt_assume; fail
-    | guarantee _ =>
-      instantiate (f:=_break); apply interp_tgt_guarantee; fail
-    | _ =>
-      fail
-    end
-  | [ |- interp_hCallE_tgt _ _ _ = _] =>
-    instantiate (f:=_continue); apply bind_ret_r_rev; fail
-  | _ => fail
-  end.
-
-Ltac _red_lsim f :=
-  _red_interp_tgt f || _red_itree f || fail.
-
-Ltac ired_l := try (prw _red_lsim 2 1 0).
-Ltac ired_r := try (prw _red_lsim 1 1 0).
+Ltac ired_l := try (prw _red_gen 2 1 0).
+Ltac ired_r := try (prw _red_gen 1 1 0).
 
 Ltac ired_both := ired_l; ired_r.
 
@@ -793,11 +572,11 @@ Section HLEMMAS.
   Proof.
     rewrite unfold_APC. ired_l. gstep. eapply sim_itree_choose_src.
     { eapply FUEL. }
-    exists false. gstep. eapply sim_itree_tau_src.
+    exists false. ired_l. gstep. eapply sim_itree_tau_src.
     { eapply OrdArith.lt_add_r. eauto with ord_step. }
     ired_l. gstep. eapply sim_itree_choose_src.
     { eapply OrdArith.lt_add_r. eauto with ord_step. }
-    exists next. gstep. eapply sim_itree_tau_src.
+    exists next. ired_l. gstep. eapply sim_itree_tau_src.
     { eapply OrdArith.lt_add_r. eauto with ord_step. }
     ired_l. unfold guarantee. ired_l. gstep. eapply sim_itree_choose_src.
     { eapply OrdArith.lt_add_r. eauto with ord_step. }
@@ -845,7 +624,7 @@ Section HLEMMAS.
   Proof.
     rewrite unfold_APC. ired_l. gstep. eapply sim_itree_choose_src.
     { eapply FUEL. }
-    exists true. gstep. eapply sim_itree_tau_src.
+    exists true. ired_l. gstep. eapply sim_itree_tau_src.
     { eapply OrdArith.add_lt_l. rewrite Ord.from_nat_S. eapply Ord.S_pos. }
     ired_both. auto.
   Qed.
@@ -876,12 +655,14 @@ Section HLEMMAS.
   Proof.
     unfold APC. ired_l. gstep. eapply sim_itree_choose_src.
     { eapply FUEL. }
-    exists at_most. steps.
+    exists at_most. ired_l. steps.
     { eauto with ord_step. }
     { unfold guarantee. ired_both. gstep. econs; eauto with ord_step. esplits; eauto.
       ired_both. gstep. econs.
       { instantiate (1:=n1). eapply OrdArith.add_lt_l. rewrite Ord.from_nat_S. eapply Ord.S_pos. }
       ired_both. ss. }
+  Unshelve.
+    all: ss.
   Qed.
 
 End HLEMMAS.
