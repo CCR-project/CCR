@@ -177,7 +177,7 @@ Ltac __red_interp f term :=
     instantiate (f:=_continue); pose (rdb_bind tc) as name; cbn in name;
     match goal with | name := mk_box ?lemma |- _ => apply (@lemma _ _ i0 k0); fail end
   | Tau _ =>
-    instantiate (f:=_break); pose (rdb_tau tc) as name; cbn in name;
+    instantiate (f:=_continue); pose (rdb_tau tc) as name; cbn in name;
     match goal with | name := mk_box ?lemma |- _ => apply lemma; fail end
   | Ret _ =>
     (* idtac "ret"; *)
@@ -192,22 +192,22 @@ Ltac __red_interp f term :=
      fail 2
     )
   | triggerUB =>
-    instantiate (f:=_break); pose (rdb_UB tc) as name; cbn in name;
+    instantiate (f:=_continue); pose (rdb_UB tc) as name; cbn in name;
     match goal with | name := mk_box ?lemma |- _ => apply lemma; fail end
   | triggerNB =>
-    instantiate (f:=_break); pose (rdb_NB tc) as name; cbn in name;
+    instantiate (f:=_continue); pose (rdb_NB tc) as name; cbn in name;
     match goal with | name := mk_box ?lemma |- _ => apply lemma; fail end
   | unwrapU _ =>
-    instantiate (f:=_break); pose (rdb_unwrapU tc) as name; cbn in name;
+    instantiate (f:=_continue); pose (rdb_unwrapU tc) as name; cbn in name;
     match goal with | name := mk_box ?lemma |- _ => apply lemma; fail end
   | unwrapN _ =>
-    instantiate (f:=_break); pose (rdb_unwrapN tc) as name; cbn in name;
+    instantiate (f:=_continue); pose (rdb_unwrapN tc) as name; cbn in name;
     match goal with | name := mk_box ?lemma |- _ => apply lemma; fail end
   | assume _ =>
-    instantiate (f:=_break); pose (rdb_assume tc) as name; cbn in name;
+    instantiate (f:=_continue); pose (rdb_assume tc) as name; cbn in name;
     match goal with | name := mk_box ?lemma |- _ => apply lemma; fail end
   | guarantee _ =>
-    instantiate (f:=_break); pose (rdb_guarantee tc) as name; cbn in name;
+    instantiate (f:=_continue); pose (rdb_guarantee tc) as name; cbn in name;
     match goal with | name := mk_box ?lemma |- _ => apply lemma; fail end
   | ?term =>
     (* idtac "term"; *)
@@ -361,6 +361,20 @@ Section TEST.
       x (trigger (Choose _) >>= j >>= k) = iret <- trigger (Choose _);; iret <- (tau;; Ret iret);; jret <- x (j iret);; x (k jret)
   .
   Proof. i. Fail refl. my_red_both. refl. Qed.
+
+  Goal forall T U (i: itree _ T) (j: ktree _ T U),
+      y (x (tau;; i >>= j)) = tau;; y (x (i >>= j))
+  .
+  Proof. i. Fail refl. my_red_both. refl. Qed.
+
+  Goal forall T U V (i: itree _ T) (j: ktree _ T U) (k: ktree _ U V),
+      y (x (i >>= j >>= k)) = y (x (i >>= (j >>> k)))
+  .
+  Proof. i. Fail refl. my_red_both. Fail refl.
+  (*** NOTE: We are normalizing ONLY THE HEAD on each layer. Is this what we really want?
+             We may also normalize as much as we can on each layer.
+             Which one is better? (in terms of performance, readability, etc)? ***)
+  Abort.
 
   Variable xx: forall T, nat -> itree (eventE +' E) T -> nat -> itree (eventE +' F) T.
 

@@ -103,52 +103,6 @@ Lemma simg_safe_spec:
   _simg_safe <6= _simg.
 Proof. i. inv PR; try by (econs; eauto). Qed.
 
-  Ltac _step :=
-    match goal with
-    (*** terminal cases ***)
-    | [ |- gpaco5 _ _ _ _ _ _ _ (triggerUB >>= _) _ ] =>
-      unfold triggerUB; mred; _step; ss; fail
-    | [ |- gpaco5 _ _ _ _ _ _ _ (triggerNB >>= _) _ ] =>
-      exfalso
-    | [ |- gpaco5 _ _ _ _ _ _ _ _ (triggerUB >>= _) ] =>
-      exfalso
-    | [ |- gpaco5 _ _ _ _ _ _ _ _ (triggerNB >>= _) ] =>
-      unfold triggerNB; mred; _step; ss; fail
-
-    (*** assume/guarantee ***)
-    | [ |- gpaco5 _ _ _ _ _ _ _ (assume ?P ;; _) _ ] =>
-      let tvar := fresh "tmp" in
-      let thyp := fresh "TMP" in
-      remember (assume P) as tvar eqn:thyp; unfold assume in thyp; subst tvar
-    | [ |- gpaco5 _ _ _ _ _ _ _ (guarantee ?P ;; _) _ ] =>
-      let tvar := fresh "tmp" in
-      let thyp := fresh "TMP" in
-      remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar
-    | [ |- gpaco5 _ _ _ _ _ _ _ _ (assume ?P ;; _) ] =>
-      let tvar := fresh "tmp" in
-      let thyp := fresh "TMP" in
-      remember (assume P) as tvar eqn:thyp; unfold assume in thyp; subst tvar
-    | [ |- gpaco5 _ _ _ _ _ _ _ _ (guarantee ?P ;; _) ] =>
-      let tvar := fresh "tmp" in
-      let thyp := fresh "TMP" in
-      remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar
-
-    (*** default cases ***)
-    | _ =>
-      (* gstep; eapply simg_safe_spec; econs; eauto; [|i] *)
-      (gstep; eapply simg_safe_spec; econs; eauto; try (by eapply OrdArith.lt_from_nat; ss);
-       (*** some post-processing ***)
-       i;
-       try match goal with
-           | [ |- (eq ==> _)%signature _ _ ] =>
-             let v_src := fresh "v_src" in
-             let v_tgt := fresh "v_tgt" in
-             intros v_src v_tgt ?; subst v_tgt
-           end)
-    end
-  .
-  Ltac steps_safe := repeat (mred; try _step; des_ifs_safe).
-
 
 
 
@@ -587,47 +541,51 @@ Section CANCEL.
     { admit "ez - add this to Any.v ------------------". }
   Qed.
 
-  Lemma interp_hCallE_mid_bind
-        `{E -< Es} o0 R S (itr: itree (hCallE +' E) R) (ktr: ktree _ _ S)
-    :
-      interp_hCallE_mid o0 (itr >>= ktr) = (interp_hCallE_mid o0 itr) >>= (fun r => interp_hCallE_mid o0 (ktr r))
-  .
-  Proof. unfold interp_hCallE_mid. grind. Qed.
+  Ltac _step :=
+    match goal with
+    (*** terminal cases ***)
+    | [ |- gpaco5 _ _ _ _ _ _ _ (triggerUB >>= _) _ ] =>
+      unfold triggerUB; mred; _step; ss; fail
+    | [ |- gpaco5 _ _ _ _ _ _ _ (triggerNB >>= _) _ ] =>
+      exfalso
+    | [ |- gpaco5 _ _ _ _ _ _ _ _ (triggerUB >>= _) ] =>
+      exfalso
+    | [ |- gpaco5 _ _ _ _ _ _ _ _ (triggerNB >>= _) ] =>
+      unfold triggerNB; mred; _step; ss; fail
 
-  Lemma interp_hCallE_mid_tau
-        `{E -< Es} o0 R (itr: itree (hCallE +' E) R)
-    :
-      interp_hCallE_mid o0 (tau;; itr) = tau;; (interp_hCallE_mid o0 itr)
-  .
-  Proof. unfold interp_hCallE_mid. grind. Qed.
+    (*** assume/guarantee ***)
+    | [ |- gpaco5 _ _ _ _ _ _ _ (assume ?P ;; _) _ ] =>
+      let tvar := fresh "tmp" in
+      let thyp := fresh "TMP" in
+      remember (assume P) as tvar eqn:thyp; unfold assume in thyp; subst tvar
+    | [ |- gpaco5 _ _ _ _ _ _ _ (guarantee ?P ;; _) _ ] =>
+      let tvar := fresh "tmp" in
+      let thyp := fresh "TMP" in
+      remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar
+    | [ |- gpaco5 _ _ _ _ _ _ _ _ (assume ?P ;; _) ] =>
+      let tvar := fresh "tmp" in
+      let thyp := fresh "TMP" in
+      remember (assume P) as tvar eqn:thyp; unfold assume in thyp; subst tvar
+    | [ |- gpaco5 _ _ _ _ _ _ _ _ (guarantee ?P ;; _) ] =>
+      let tvar := fresh "tmp" in
+      let thyp := fresh "TMP" in
+      remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar
 
-  Lemma interp_hCallE_mid_ret
-        `{E -< Es} o0 R (r: R)
-    :
-      interp_hCallE_mid o0 (Ret r) = Ret r
+    (*** default cases ***)
+    | _ =>
+      (gstep; econs; eauto; try (eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]);
+       (*** some post-processing ***)
+       i;
+       try match goal with
+           | [ |- (eq ==> _)%signature _ _ ] =>
+             let v_src := fresh "v_src" in
+             let v_tgt := fresh "v_tgt" in
+             intros v_src v_tgt ?; subst v_tgt
+           end)
+    end
   .
-  Proof. unfold interp_hCallE_mid. grind. Qed.
 
-  Lemma interp_hCallE_mid_eventE
-        (* `{E -< Es} *)
-        o0 R (e: eventE R)
-    :
-      interp_hCallE_mid (E:=pE +' eventE) o0 (trigger e) = r <- trigger e;; tau;; Ret r
-  .
-  Proof. unfold interp_hCallE_mid. rewrite interp_trigger. cbn. grind. Qed.
-
-  Lemma interp_hCallE_mid_hCallE
-        (* `{E -< Es} *)
-        o0 (e: hCallE Any.t)
-    :
-      interp_hCallE_mid (E:=pE +' eventE) o0 (trigger e) = r <- (handle_hCallE_mid o0 e);; tau;; Ret r
-  .
-  Proof. unfold interp_hCallE_mid. rewrite interp_trigger. cbn. grind. Qed.
-
-  Ltac hred :=
-    repeat (try rewrite interp_hCallE_mid_bind; try rewrite interp_hCallE_mid_tau; try rewrite interp_hCallE_mid_ret; try rewrite interp_hCallE_mid_eventE;
-            try rewrite interp_hCallE_mid_hCallE
-           ).
+  Ltac steps := repeat (mred; try _step; des_ifs_safe).
 
   Let adequacy_type_aux__APC:
     forall at_most o0 mn
@@ -649,44 +607,29 @@ Section CANCEL.
     destruct st_tgt0 as [rst_tgt0 pst_tgt0]. destruct rst_tgt0 as [mrs_tgt0 [|frs_hd frs_tl]]; ss.
     { admit "-----------------------------------it should not happen...". }
     unfold C.d.
-    Ltac tred := repeat (try rewrite transl_all_ret; try rewrite transl_all_bind; try rewrite transl_all_tau;
-                         try rewrite transl_all_triggerNB; try rewrite transl_all_triggerUB; try rewrite transl_all_eventE;
-                         try rewrite transl_all_rE; try rewrite transl_all_pE; try rewrite transl_all_callE).
-    Ltac myred := repeat (tred; hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
-    myred.
-    mred.
+    steps.
     destruct x.
-    { myred. steps. }
-    myred.
-    mred. unfold guarantee.
-    myred.
-    des_ifs.
-    myred.
-    unfold guarantee.
-    myred.
+    { steps. }
+    steps.
+    (*************** TODO: define force_l/r *************)
     unfold unwrapU. des_ifs; cycle 1.
     { admit "-----------------------------------FINDF: make it to unwrapN". }
-    myred.
-    des_ifs.
-    myred.
+    steps.
     unfold ms_mid, mds_mid, SMod.to_mid in Heq. rewrite SMod.transl_fnsems in Heq.
     unfold SMod.load_fnsems in Heq. apply find_some in Heq. des; ss. des_sumbool; subst.
     rewrite in_flat_map in Heq. des; ss. rewrite in_flat_map in Heq0. des; ss. des_ifs. ss; des; ss; clarify.
     rename Heq0 into INF. rename Heq into IN.
     rename x3 into md0. fold sk in INF. fold sk in INF.
     unfold fun_to_mid.
-    myred.
+    steps.
     unfold unwrapN.
     des_ifs; cycle 1.
-    { unfold triggerNB.
-      myred.
-      ss.
-    }
-    myred.
+    { steps. }
+    steps.
     des_ifs_safe.
     eapply pair_downcast_lemma in Heq. des. subst.
     des_ifs; ss.
-    myred.
+    steps.
 
     guclo ordC_spec. econs.
     { eapply OrdArith.add_base_l. }
@@ -699,9 +642,7 @@ Section CANCEL.
     {
       Local Transparent APC.
       unfold APC.
-      myred.
-      unfold guarantee.
-      myred.
+      steps.
       guclo ordC_spec. econs.
       { instantiate (1:=(C.myG x1 x3 + C.d)%ord).
         rewrite <- C.my_thm3; et.
@@ -718,7 +659,7 @@ Section CANCEL.
     unfold C.f.
     guclo ordC_spec. econs.
     { rewrite <- OrdArith.add_assoc. refl. }
-    myred.
+    steps.
     guclo ordC_spec. econs; cycle 1.
     { eapply IH; et. econs; et. right; split; et. refl. }
     { eapply OrdArith.add_base_l. }
@@ -737,12 +678,10 @@ Section CANCEL.
     i. unfold APC.
     guclo ordC_spec. econs.
     { rewrite <- C.my_thm1. refl. }
-    unfold guarantee.
-    myred.
     unfold C.c.
     guclo ordC_spec. econs.
     { rewrite <- OrdArith.add_assoc. refl. }
-    myred.
+    steps.
     guclo ordC_spec. econs.
     { etrans; [|eapply OrdArith.add_base_l]. eapply add_le_le; [|refl].
       instantiate (1:=C.myG o0 x).
@@ -783,10 +722,7 @@ Section CANCEL.
     gcofix CIH. i.
     unfold fun_to_src, fun_to_mid. steps. unfold unwrapN.
     destruct (Any.downcast (Any.pair (Any.upcast o0) args)) eqn:T; cycle 1.
-    { unfold triggerNB.
-      myred.
-      ss.
-    }
+    { steps. }
     destruct p.
     eapply pair_downcast_lemma in T. des; subst; ss. eapply Any.downcast_upcast in T0. des; subst.
     unfold body_to_src, cfun. steps. rewrite Any.upcast_downcast. ss. steps.
@@ -795,7 +731,6 @@ Section CANCEL.
       seal_left.
       steps.
       unseal_left.
-      repeat (tred; hred; mred).
       erewrite idK_spec2 at 1.
       guclo ordC_spec. econs.
       { eapply OrdArith.add_base_l. }
@@ -803,81 +738,82 @@ Section CANCEL.
       econs.
       { gfinal. right. eapply paco5_mon. { eapply adequacy_type_aux_APC. } ii; ss. }
       ii; ss. des_ifs. des_u.
-      myred.
-      steps. esplits; eauto.
-      myred.
-      steps.
+      steps. esplits; eauto. steps.
     - (*** IMPURE ***)
       steps. unfold body_to_mid.
-      myred.
       abstr (body a) itr. clear body a AA.
 
       guclo ordC_spec. econs.
       { instantiate (1:=(10 + 100)%ord). rewrite <- ! OrdArith.add_from_nat. ss. refl. }
       (* { instantiate (1:=(1 + 99)%ord). rewrite <- OrdArith.add_from_nat. ss. refl. } *)
       guclo bindC_spec. eapply bindR_intro with (RR:=wf'); cycle 1.
-      { ii. subst. des_ifs. myred. steps. r in SIM0. des; subst; ss. }
+      { ii. subst. des_ifs. steps. r in SIM0. des; subst; ss. }
 
       revert_until CIH. gcofix CIH0. i.
 
       ides itr.
-      { unfold interp_hCallE_src, interp_hCallE_mid. try rewrite ! unfold_interp; cbn; myred.
-        steps. }
-      { unfold interp_hCallE_src, interp_hCallE_mid. try rewrite ! unfold_interp; cbn; myred.
-        steps. gbase. eapply CIH0; ss. }
+      { steps. }
+      { steps. gbase. eapply CIH0; ss. }
       destruct e; cycle 1.
       {
-        unfold interp_hCallE_src, interp_hCallE_mid. try rewrite ! unfold_interp; cbn; myred.
+
+        (*** TODO: remove redundancy with Hoareproof0 ***)
+  Ltac resub :=
+    repeat multimatch goal with
+           | |- context[ITree.trigger ?e] =>
+             match e with
+             | subevent _ _ => idtac
+             | _ => replace (ITree.trigger e) with (trigger e) by refl
+             end
+           | |- context[@subevent _ ?F ?prf _ (?e|)%sum] => replace (@subevent _ F prf _ (e|)%sum) with (@subevent _ F _ _ e) by refl
+           | |- context[@subevent _ ?F ?prf _ (|?e)%sum] => replace (@subevent _ F prf _ (|e)%sum) with (@subevent _ F _ _ e) by refl
+           end.
+        rewrite <- bind_trigger. resub. steps.
         destruct s; ss.
         {
           destruct st_src0 as [rst_src0 pst_src0]; ss. destruct st_tgt0 as [rst_tgt0 pst_tgt0]; ss.
           destruct p; ss.
-          - steps. myred. steps. instantiate (1:=100). gbase. eapply CIH0; ss; et.
-          - steps. myred. steps. instantiate (1:=100). gbase. eapply CIH0; ss; et.
+          - steps. instantiate (1:=100). gbase. eapply CIH0; ss; et.
+          - steps. instantiate (1:=100). gbase. eapply CIH0; ss; et.
         }
         { dependent destruction e.
-          - steps. myred. steps. unshelve esplits; et. instantiate (1:=100). myred. steps. instantiate (1:=100).
-            gbase. eapply CIH0; ss; et.
-          - steps. myred. steps. unshelve esplits; et. instantiate (1:=100). myred. steps. instantiate (1:=100).
-            gbase. eapply CIH0; ss; et.
-          - steps. myred. steps. unshelve esplits; et. instantiate (1:=100). gbase. eapply CIH0; ss; et.
+          - steps. unshelve esplits; et. instantiate (1:=100). steps. gbase. eapply CIH0; ss; et.
+          - steps. unshelve esplits; et. instantiate (1:=100). steps. gbase. eapply CIH0; ss; et.
+          - steps. unshelve esplits; et. instantiate (1:=100). steps. gbase. eapply CIH0; ss; et.
         }
       }
       dependent destruction h.
+      rewrite <- bind_trigger. resub.
       Opaque fun_to_src fun_to_mid.
 
       destruct st_src0 as [rst_src0 pst_src0]; ss. destruct st_tgt0 as [rst_tgt0 pst_tgt0]; ss.
-      unfold interp_hCallE_src, interp_hCallE_mid. try rewrite ! unfold_interp; cbn; mred.
+      ired_both.
       destruct tbr.
       + (*** PURE CALL ***)
-        repeat (tred; mred; hred).
+        mred.
         seal_left.
-        (repeat (tred; mred; hred); try HoareDef._step; des_ifs_safe).
-        (repeat (tred; mred; hred); try HoareDef._step; des_ifs_safe).
+        Ltac step := (mred; try _step; des_ifs_safe).
+        step; try by eapply OrdArith.lt_from_nat.
+        step; try by eapply OrdArith.lt_from_nat.
         unseal_left.
-        repeat (tred; mred; hred).
-        (repeat (tred; mred; hred); try HoareDef._step; des_ifs_safe).
+        step; try by eapply OrdArith.lt_from_nat.
         instantiate (1:=(120 + formula (ord_pure x) + 100)%ord).
         seal_left.
-        myred.
-        unfold guarantee.
-        myred.
+
+        steps.
         destruct rst_tgt0 as [mrs_tgt0 [|frs_tgt_hd frs_tgt_tl]]; ss.
         { unseal_left. steps. }
-        myred.
-        unfold compose.
+        steps.
         unfold unwrapU. des_ifs; cycle 1.
         { admit "unwrapN!!!!!!!!!!!!!!!!!!!!!!!!!!". }
-        myred.
-        des_ifs_safe.
-        myred.
+        steps.
         unseal_left.
         unfold ms_mid, mds_mid, SMod.to_mid in Heq. rewrite SMod.transl_fnsems in Heq.
         unfold SMod.load_fnsems in Heq. apply find_some in Heq. des; ss. des_sumbool; subst.
         rewrite in_flat_map in Heq. des; ss. rewrite in_flat_map in Heq0. des; ss. des_ifs. ss; des; ss; clarify.
         rename Heq0 into INF. rename Heq into IN.
         rename x1 into md0. fold sk in INF. fold sk in INF.
-        repeat (tred; hred; mred).
+        mred.
         guclo ordC_spec. econs.
         { instantiate (1:=(120 + (10 + C.myF x + 10))%ord).
           rewrite <- ! OrdArith.add_assoc. eapply add_le_le; try refl. eapply OrdArith.le_from_nat; ss. lia. }
@@ -891,32 +827,38 @@ Section CANCEL.
           gbase. hexploit CIH; et.
           { instantiate (1:=(mrs_tgt0, ε :: frs_tgt_hd :: frs_tgt_tl, pst_tgt0)). instantiate (1:= (rst_src0, pst_tgt0)). ss. }
           intro T. instantiate (2:=(ord_pure o1)) in T. ss.
-          revert T. repeat (tred; hred; Esred; try rewrite EventsL.interp_Es_bind; try rewrite EventsL.interp_Es_tau; try rewrite EventsL.interp_Es_ret). i.
+          mred.
+          (*** applying reduction in "T" begin ***)
+          (*** TODO: make prw "in" tactic ***)
+          revert T. pose (fun (x: Prop) (y: Prop) => (x -> y)) as myf.
+          match goal with | |- ?a -> ?b => replace (a -> b) with (myf a b) by refl end.
+          try Red.prw ltac:(IRed._red_gen) 2 2 0.
+          subst myf; cbn. intro T.
+          (*** applying reduction in "T" end ***)
           eapply T.
         * ii. des_ifs. destruct p, p0; ss. des; subst.
-          steps.
-          repeat (hred; mred; try (gstep; econs; et; [eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]|]; i)).
+          step; try by eapply OrdArith.lt_from_nat. steps.
           destruct r1; ss.
           des_ifs.
-          { steps. }
-          steps.
+          { unfold triggerNB. steps; try by eapply OrdArith.lt_from_nat. (*** TODO: fix tactic, don't unfold triggerNB ***) }
+          repeat (step; try by eapply OrdArith.lt_from_nat).
           guclo ordC_spec. econs.
           { instantiate (1:=100%ord). eapply OrdArith.le_from_nat; ss. lia. }
-          repeat (tred; hred; mred; try (gstep; econs; et; [ eapply add_le_lt; [ refl | eapply OrdArith.lt_from_nat; ss ] |  ]; i)).
           gbase. eapply CIH0. ss.
       + (*** IMPURE CALL ***)
-        myred.
+        mred.
         destruct rst_src0 as [mrs_src0 [|frs_src_hd frs_src_tl]]; ss.
         { admit "SOMEHOW". }
-        myred. gstep. econs; eauto. instantiate (1:=(100 + (100 + 10) + 42)%ord). myred. unfold guarantee. myred.
+        mred. steps. instantiate (2:=(100 + (100 + 10) + 42)%ord). instantiate (1:=0%ord).
+        guclo ordC_spec. econs. { rewrite OrdArith.add_O_r. refl. }
         destruct rst_tgt0 as [mrs_tgt0 [|frs_tgt_hd frs_tgt_tl]]; ss.
-        { unfold triggerNB. myred. ss. }
-        myred. steps. unfold unwrapU at 2. des_ifs; cycle 1.
+        { steps. }
+        steps. unfold unwrapU at 2. des_ifs; cycle 1.
         { admit "unwrapN!!!!!!!!!!!!!!!!!!". }
-        myred. steps.
+        steps.
         unfold unwrapU. des_ifs; cycle 1.
-        { unfold triggerUB. myred. ss. }
-        myred. steps.
+        { steps. }
+        steps.
 
         unfold ms_mid, mds_mid, SMod.to_mid in Heq. rewrite SMod.transl_fnsems in Heq.
         unfold SMod.load_fnsems in Heq. apply find_some in Heq. des; ss. des_sumbool; subst.
@@ -944,7 +886,9 @@ Section CANCEL.
           { intro T. gbase. instantiate (3:=ord_top) in T. ss. eapply T. }
           { ss. }
         * ii; ss. des_ifs. steps. destruct p, p0; ss. des; subst.
-          steps. destruct r1; ss. des_ifs. { steps. } destruct r0; ss. des_ifs. { admit "somehow". } steps.
+          steps. destruct r1; ss. des_ifs.
+          { unfold triggerNB. (step; try by eapply OrdArith.lt_from_nat). (*** TODO: fix tactic ***) }
+          destruct r0; ss. des_ifs. { admit "somehow". } steps.
           instantiate (1:=100).
           gbase. eapply CIH0 ;ss.
   Unshelve.
@@ -984,7 +928,7 @@ Section CANCEL.
     { esplits. refl. }
     des. clearbody rs_src0 rs_tgt0. subst.
     unfold unwrapU at 1. des_ifs; cycle 1.
-    { unfold triggerUB. myred. ss. }
+    { steps. }
     unfold unwrapU. des_ifs; cycle 1.
     { admit "unwrapN!!!!!!!!!!". }
 
@@ -1025,9 +969,7 @@ Section CANCEL.
       ss. unfold ms_src, ms_mid. unfold initial_p_state.
       apply func_ext. intro mn. unfold mds_src, mds_mid, SMod.to_src, SMod.to_mid.
       rewrite ! SMod.transl_initial_mrs. ss.
-    - ii. rr in SIM. des_ifs. des; ss. subst. r in SIM. des_ifs.
-      myred.
-      steps.
+    - ii. rr in SIM. des_ifs. des; ss. subst. r in SIM. des_ifs. steps.
   Unshelve.
     all: ss.
     all: try (by exact Ord.O).
