@@ -6,11 +6,13 @@ Require Import STS Behavior.
 Require Import Any.
 Require Import ModSem.
 Require Import Imp.
+Require Import IMem0.
 
 Require Import Coq.Lists.SetoidList.
 
 From compcert Require Import
-     AST Integers Ctypes Clight Globalenvs Linking Errors Cshmgen.
+     AST Integers Ctypes Clight Globalenvs
+     Linking Errors Cshmgen Behaviors Events.
 
 Import Int.
 
@@ -18,13 +20,12 @@ Set Implicit Arguments.
 
 Parameter s2p: string -> ident.
 
+Definition to_long := Int64.repr.
+
 Section Compile.
 
   (* compile each program indiv, 
      prove behavior refinement for whole (closed) prog after linking *)
-
-  Let to_long := Int64.repr.
-
   Let tgt_gdef := globdef (Ctypes.fundef function) type.
   Let tgt_gdefs := list (ident * tgt_gdef).
 
@@ -472,6 +473,71 @@ Section Link.
 
 End Link.
 
+Section Beh.
+
+  Definition map_val (v : eventval) : option val :=
+    match v with
+    | EVlong vl => Some (Vint vl.(Int64.intval))
+    | _ => None
+    end.
+
+  Fixpoint map_vals (vlist : list eventval) acc : option (list val) :=
+    match vlist with
+    | [] => Some acc
+    | v :: t => do mv <- map_val v; map_vals t (acc ++ [mv])
+    end.
+
+  Definition map_event (ev : event) : option Universe.event :=
+    match ev with
+    | Event_syscall name args r =>
+      do margs <- map_vals args [];
+      do mr <- map_val r;
+      Some (event_sys name margs mr)
+    | _ => None
+    end.
+
+  Fixpoint map_trace (tr : trace) acc : option (list Universe.event) :=
+    match tr with
+    | [] => Some acc
+    | ev :: t =>
+      do mev <- map_event ev; map_trace t (acc ++ [mev])
+    end.
+
+  (* CoFixpoint map_traceinf (tri : traceinf)  *)
+
+  (* Definition map_beh (b: program_behavior) : option Tr.t := *)
+  (*   match b with *)
+  (*   | Terminates tr r => *)
+  (*     do mtr <- map_trace tr []; Some (Tr.app mtr (Tr.done r.(intval))) *)
+  (*   | Diverges tr => *)
+  (*     do mtr <- map_trace tr []; Some (Tr.app mtr (Tr.spin)) *)
+  (*   | Reacts trinf => *)
+  (*     None *)
+  (*   | Goes_wrong tr => *)
+  (*     do mtr <- map_trace tr []; Some (Tr.app mtr (Tr.ub)) *)
+  (*   end. *)
+
+  Inductive match_beh : program_behavior -> Tr.t -> Prop :=
+  | match_beh_Terminates :
+      forall tr mtr r,
+        map_trace tr [] = Some mtr ->
+        match_beh (Terminates tr r) (Tr.app mtr (Tr.done r.(intval)))
+  | match_beh_Diverges :
+      forall tr mtr,
+        map_trace tr [] = Some mtr ->
+        match_beh (Diverges tr) (Tr.app mtr (Tr.spin))
+  | match_beh_Reacts :
+      forall ev mev trinf mt,
+        map_event ev = Some mev ->
+        match_beh (Reacts trinf) mt ->
+        match_beh (Reacts (Econsinf ev trinf)) (Tr.cons mev mt)
+  | match_beh_Goes_wrong :
+      forall tr mtr,
+        map_trace tr [] = Some mtr ->
+        match_beh (Goes_wrong tr) (Tr.app mtr (Tr.ub)).
+
+End Beh.
+
 Section Proof.
 
   Import Maps.PTree.
@@ -532,7 +598,7 @@ Section Proof.
 
   (* Maps.PTree.elements_extensional 
      we will rely on above theorem for commutation lemmas *)
-  Lemma comm_link_imp_compile :
+  Lemma _comm_link_imp_compile :
     forall src1 src2 srcl tgt1 tgt2 tgtl,
       compile src1 = OK tgt1 -> compile src2 = OK tgt2 ->
       link_imp src1 src2 = Some srcl ->
@@ -541,16 +607,119 @@ Section Proof.
   Proof.
   Admitted.
 
+  Definition wf_link {T} (program_list : list T) :=
+    exists h t, program_list = h :: t.
+
+  Inductive compile_list :
+    list programL -> list (Ctypes.program function) -> Prop :=
+  | compile_nil :
+      compile_list [] []
+  | compile_head :
+      forall src_h src_t tgt_h tgt_t,
+        compile src_h = OK tgt_h ->
+        compile_list src_t tgt_t ->
+        compile_list (src_h :: src_t) (tgt_h :: tgt_t).
+
+  Definition fold_right_option {T} f (opth : option T) (t : list T) :=
+    fold_right
+      (fun s2 opt => match opt with | Some s1 => f s1 s2 | None => None end)
+      opth t.
+
+  Lemma fold_right_option_None {T} :
+    forall f (l : list T), fold_right_option f None l = None.
+  Proof.
+    intros f. induction l; ss; clarify.
+    rewrite IHl. ss.
+  Qed.
+
+  Definition link_imp_list src_list :=
+    match src_list with
+    | [] => None
+    | src_h :: src_t =>
+      fold_right_option link_imp (Some src_h) src_t
+    end.
+
+  Definition link_clight_list (tgt_list : list (Ctypes.program function)) :=
+    match tgt_list with
+    | [] => None
+    | tgt_h :: tgt_t =>
+      fold_right_option link_program (Some tgt_h) tgt_t
+    end.
+
+  Lemma comm_link_imp_compile :
+    forall src_list srcl tgt_list tgtl,
+      compile_list src_list tgt_list ->
+      link_imp_list src_list = Some srcl ->
+      link_clight_list tgt_list = Some tgtl
+      ->
+      compile srcl = OK tgtl.
+  Proof.
+    i. destruct src_list; destruct tgt_list; ss; clarify.
+    inv H; clarify.
+    generalize dependent srcl. generalize dependent tgtl.
+    generalize dependent p. generalize dependent p0.
+    induction H7; i; ss; clarify.
+    destruct (fold_right_option link_program (Some p0) tgt_t) eqn:FC;
+      destruct (fold_right_option link_imp (Some p) src_t) eqn:FI;
+      ss; clarify.
+    eapply _comm_link_imp_compile.
+    3: apply H0.
+    3: apply H1.
+    eapply IHcompile_list; eauto.
+    auto.
+  Qed.
+
   Context `{Σ: GRA.t}.
-  Lemma comm_link_imp_link_mod :
+
+  Lemma _comm_link_imp_link_mod :
     forall sn1 src1 sn2 src2 snl srcl tgt1 tgt2 tgtl (ctx : Mod.t),
-      link_imp src1 src2 = Some srcl ->
       ImpMod.get_mod sn1 src1 = tgt1 ->
       ImpMod.get_mod sn2 src2 = tgt2 ->
+      link_imp src1 src2 = Some srcl ->
       ImpMod.get_mod snl srcl = tgtl ->
-      Mod.add_list [ctx; tgt1; tgt2]
+      Mod.add_list ([tgt1; tgt2] ++ [ctx])
       =
-      Mod.add_list [ctx; tgtl].
+      Mod.add_list ([tgtl] ++ [ctx]).
+  Proof.
+  Admitted.
+
+  Definition get_mod_list ns_list :=
+    List.map (fun '(name, src) => ImpMod.get_mod name src) ns_list.
+
+  Lemma comm_link_imp_link_mod :
+    forall name_src_list namel srcl tgt_list tgtl ctx,
+      get_mod_list name_src_list = tgt_list ->
+      let src_list := List.map snd name_src_list in
+      link_imp_list src_list = Some srcl ->
+      ImpMod.get_mod namel srcl = tgtl ->
+      Mod.add_list (tgt_list ++ [ctx])
+      =
+      Mod.add_list ([tgtl] ++ [ctx]).
+  Proof.
+    induction name_src_list; i; ss; clarify.
+    destruct a as [name src]. ss.
+    destruct name_src_list eqn:NSL; ss; clarify.
+    (* Need to redefine ImpMod's ModSem's name *)
+  Admitted.
+
+  Lemma exists_mapped_beh :
+    forall (src: Imp.program) tgt (beh: program_behavior),
+      compile src = OK tgt ->
+      program_behaves (semantics2 tgt) beh
+      ->
+      exists mbeh, match_beh beh mbeh.
+  Proof.
+  Admitted.
+
+  Lemma single_compile_behavior_improves :
+    forall name (src: Imp.program) srcM tgt (beh: program_behavior),
+      compile src = OK tgt ->
+      program_behaves (semantics2 tgt) beh ->
+      Mod.add_list ([ImpMod.get_mod name src] ++ [IMem]) = srcM
+      ->
+      exists mbeh,
+        match_beh beh mbeh /\
+        Beh.of_program (ModL.compile srcM) mbeh.
   Proof.
   Admitted.
 
