@@ -7,9 +7,7 @@ Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
 Require Import Echo1.
-Require Import TODOYJ.
-
-Generalizable Variables E R A B C X Y Σ.
+Require Import TODOYJ Logic.
 
 Set Implicit Arguments.
 
@@ -28,7 +26,7 @@ Section PROOF.
       Ret Vundef
   .
 
-  Let main_spec: fspec := (mk_simple (X:=unit) (fun _ => ((fun _ o _ => o = ord_top), (top2)))).
+  Let main_spec: fspec := (mk_simple (X:=unit) (fun _ => ((fun _ o => (⌜o = ord_top⌝: iProp)%I), (top2)))).
 
   Definition MainStb: list (gname * fspec) :=
     [("main", main_spec)]

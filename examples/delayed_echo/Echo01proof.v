@@ -19,8 +19,6 @@ From ExtLib Require Import
 Require Import TODOYJ.
 Require Import HTactics Logic YPM.
 
-Generalizable Variables E R A B C X Y.
-
 Set Implicit Arguments.
 
 Local Open Scope nat_scope.
@@ -33,15 +31,25 @@ Section AUX.
   Context `{Σ: GRA.t}.
 
   Context `{@GRA.inG Mem1.memRA Σ}.
-  Lemma unfold_is_list: forall ll xs, is_list ll xs =
-    match xs with
-    | [] => ⌜ll = Vnullptr⌝
-    | xhd :: xtl =>
-      Exists lhd ltl, ⌜ll = Vptr lhd 0⌝ ** (Own (GRA.embed ((lhd,0%Z) |-> [xhd; ltl])))
-                                 ** is_list ltl xtl
-    end
+  Lemma unfold_is_list: forall ll xs,
+      is_list ll xs =
+      match xs with
+      | [] => (⌜ll = Vnullptr⌝: iProp)%I
+      | xhd :: xtl =>
+        (∃ lhd ltl, ⌜ll = Vptr lhd 0⌝ ** (OwnM ((lhd,0%Z) |-> [xhd; ltl]))
+                               ** is_list ltl xtl: iProp)%I
+      end
   .
-    { i. destruct xs; ss. }
+  Proof.
+    i. destruct xs; auto.
+  Qed.
+
+  Lemma unfold_is_list_cons: forall ll xhd xtl,
+      is_list ll (xhd :: xtl) =
+      (∃ lhd ltl, ⌜ll = Vptr lhd 0⌝ ** (OwnM ((lhd,0%Z) |-> [xhd; ltl]))
+                             ** is_list ltl xtl: iProp)%I.
+  Proof.
+    i. eapply unfold_is_list.
   Qed.
 
   Context `{@GRA.inG Echo1.echoRA Σ}.
@@ -49,48 +57,37 @@ Section AUX.
   Lemma echo_ra_merge
         ll0 ns0 ll1 ns1
     :
-      ⌞(Own (GRA.embed (echo_black ll0 ns0)) -* Own (GRA.embed (echo_white ll1 ns1)) -* (⌜ll1 = ll0 /\ ns1 = ns0⌝))⌟
+      (OwnM (echo_black ll0 ns0) -∗ OwnM (echo_white ll1 ns1) -∗ (⌜ll1 = ll0 /\ ns1 = ns0⌝))
   .
   Proof.
-    iIntro; clear A.
-    do 2 iIntro.
-    {
-      iMerge A A0. rewrite <- own_sep in A. rewrite GRA.embed_add in A.
-      iOwnWf A. eapply GRA.embed_wf in WF. des. eapply Auth.auth_included in WF. des.
-      eapply Excl.extends in WF; ss.
-      - des; clarify.
-      - ur; ss.
-    }
+    iIntros "H0 H1". iCombine "H0" "H1" as "H0".
+    iOwnWf "H0" as WF. iPureIntro.
+    eapply Auth.auth_included in WF. des.
+    eapply Excl.extends in WF; ss.
+    - des; clarify.
+    - ur; ss.
   Qed.
 
   Lemma echo_ra_white
         ll0 ns0 ll1 ns1
     :
-      ⌞(Own (GRA.embed (echo_white ll0 ns0)) -* Own (GRA.embed (echo_white ll1 ns1)) -* ⌜False⌝)⌟
+      (OwnM (echo_white ll0 ns0) -∗ OwnM (echo_white ll1 ns1) -∗ ⌜False⌝)
   .
   Proof.
-    iIntro; clear A.
-    do 2 iIntro.
-    {
-      exfalso. iMerge A A0.
-      rewrite <- own_sep in A. rewrite GRA.embed_add in A.
-      iOwnWf A. clear - WF. apply GRA.embed_wf in WF. des. do 2 ur in WF. ss.
-    }
+    iIntros "H0 H1". iCombine "H0" "H1" as "H0".
+    iOwnWf "H0" as WF. iPureIntro.
+    do 2 ur in WF. ss.
   Qed.
 
   Lemma echo_ra_black
         ll0 ns0 ll1 ns1
     :
-      ⌞(Own (GRA.embed (echo_black ll0 ns0)) -* Own (GRA.embed (echo_black ll1 ns1)) -* ⌜False⌝)⌟
+      (OwnM (echo_black ll0 ns0) -∗ OwnM (echo_black ll1 ns1) -∗ ⌜False⌝)
   .
   Proof.
-    iIntro; clear A.
-    do 2 iIntro.
-    {
-      exfalso. iMerge A A0.
-      rewrite <- own_sep in A. rewrite GRA.embed_add in A.
-      iOwnWf A. clear - WF. apply GRA.embed_wf in WF. des. do 2 ur in WF. ss.
-    }
+    iIntros "H0 H1". iCombine "H0" "H1" as "H0".
+    iOwnWf "H0" as WF. iPureIntro.
+    do 2 ur in WF. ss.
   Qed.
 End AUX.
 Global Opaque _APC.
@@ -110,228 +107,208 @@ Section SIMMODSEM.
   Eval compute in (@URA.car Mem1._memRA).
 
   Let wf: W -> Prop :=
-    fun '(mrps_src0, mrps_tgt0) =>
-      exists (mr: Σ) (ll: val),
-        (<<SRC: mrps_src0 = (mr, tt↑)>>) /\
-        (<<TGT: mrps_tgt0 = (ε, ll↑)>>) /\
-        (<<SIM: (iHyp (Exists ns, ((Own(GRA.embed(echo_black ll ns))) ** is_list ll (List.map Vint ns)) ∨ (Own(GRA.embed(echo_white ll ns)))) mr)>>)
+    @mk_wf
+      _
+      val
+      (fun ll _ => ((∃ ns, (OwnM(echo_black ll ns)) ** is_list ll (List.map Vint ns)) ∨ (∃ ns, OwnM(echo_white ll ns)): iProp)%I)
+      (fun ll mp_tgt _ => mp_tgt = ll↑)
   .
-
   Local Opaque is_list.
 
-  Hint Resolve sim_itree_mon: paco.
-
-  Opaque URA.unit.
   Opaque points_to.
 
   Theorem correct: ModSemPair.sim Echo1.EchoSem Echo0.EchoSem.
   Proof.
     econstructor 1 with (wf:=wf); et; swap 2 3.
-    { ss. unfold alist_add; cbn. esplits; ss; eauto. hexploit gwf_dummy; i. eexists nil; ss; iRefresh.
-      rewrite unfold_is_list. left; iRefresh. iSplitP; ss. eexists ε. rewrite URA.unit_id; ss.
-    }
-
-    Opaque URA.add.
-    econs; ss.
-    { unfold echoF, echo_body. init.
-      harg_tac. des_ifs_safe. repeat rewrite URA.unit_idl in *. repeat rewrite URA.unit_id in *.
-      iRefresh. do 2 iDestruct PRE. iMod A. iMod A0. clarify.
-      iDestruct SIM.
-      destruct SIM as [A|A]; iRefresh; cycle 1.
-      { hexploit echo_ra_white; et. intro T. iMod T. iSpecialize T A. iSpecialize T PRE. iMod T; des; ss. }
-
-      iDestruct A. subst.
-      rename x into ns. rename x0 into ns0.
-      assert(l = ns /\ v = ll); des; subst.
-      { hexploit echo_ra_merge; et. intro T. iMod T. iSpecialize T A. iSpecialize T PRE. iMod T; des; ss. }
-
-
-
-
-      steps. unfold hcall, ccall. steps.
-      force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
-
-      hcall_tac __ __ (A, A0) PRE (@URA.unit Σ); ss; et.
-      { esplits; ss; et. eexists; iRefresh. left; iRefresh. iSplitL A; ss.
-        - iApply A; ss.
-        - iApply A0; ss.
+    { ss. econs; et. eapply to_semantic.
+      { iIntros "H". iLeft. iExists _. iSplitL; ss.
+        ss. rewrite unfold_is_list. iPureIntro. auto. }
+      { eapply GRA.wf_embed. ur. split.
+        { eexists (Excl.just (Vnullptr, [])). ur. auto. }
+        { ur. ss. }
       }
-      des; subst. rewrite Any.upcast_downcast. steps.
-      rewrite Any.upcast_downcast in _UNWRAPU. clarify.
-
-
-
-      iDestruct SIM. destruct SIM as [SIM|SIM]; iRefresh; cycle 1.
-      { hexploit echo_ra_white; et. intro T. iMod T. iSpecialize T SIM. iSpecialize T PRE. iMod T; des; ss. }
-      iDestruct SIM. subst.
-      assert(ll0 = ll /\ x = ns); des; subst.
-      { hexploit echo_ra_merge; et. intro T. iMod T. iSpecialize T SIM. iSpecialize T PRE. iMod T; des; ss. }
-      subst.
-
-
-
-
-      destruct (unint v) eqn:T; cycle 1.
-      { steps. }
-      destruct v; ss. clarify. steps.
-
-      destruct (dec z (- 1)%Z).
-      - subst. ss. steps.
-        force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
-        hcall_tac __ __ (A, SIM) (@URA.unit Σ) PRE; ss; et.
-        { instantiate (2:= (_, _)). esplits; try refl; iRefresh. iSplitP; ss. iSplitP; ss; et. }
-        { esplits; ss; et. }
-        { esplits; ss; et. exists ns; iRefresh. left; iRefresh. iSplitL SIM; ss. }
-        steps.
-        hret_tac SIM0 (@URA.unit Σ); ss.
-        { iRefresh. iDestruct SIM0. esplits; eauto. eexists; iRefresh. eauto. }
-      - steps. astart 10. rewrite Any.upcast_downcast. ss. steps.
-        acall_tac __ (ord_pure 2) PRE SIM A; ss; et.
-        { instantiate (1:=(_, _)). esplits; try refl; iRefresh. eexists; iRefresh. iSplitP; ss. iSplitP; ss. iApply A; ss. }
-        { esplits; ss; et. exists ns; iRefresh. right; iRefresh; ss. }
-        ss. des; iRefresh. do 2 iDestruct POST0. iMod A. subst. apply Any.upcast_inj in A. des; clarify.
-        iDestruct SIM0. destruct SIM0; iRefresh.
-        { iDestruct H1. hexploit echo_ra_black; et. intro T. iMod T. iSpecialize T SIM. iSpecialize T H1. iMod T; des; ss. }
-
-        rename H1 into A.
-        assert(ll0 = ll /\ x8 = ns); des; subst.
-        { hexploit echo_ra_merge; et. intro T. iMod T. iSpecialize T SIM. iSpecialize T A. iMod T; des; ss. }
-
-
-
-
-        iMerge A SIM. rewrite <- own_sep in A. rewrite GRA.embed_add in A. rewrite URA.add_comm in A.
-        eapply own_upd in A; cycle 1; [|rewrite intro_iHyp in A;iMod A].
-        { eapply GRA.embed_updatable. instantiate (1:= echo_black x (z :: ns) ⋅ echo_white x (z :: ns)).
-          eapply Auth.auth_update. rr. ii. des; ss. ur in FRAME. ur. destruct ctx; ss; clarify.
-        }
-        rewrite <- GRA.embed_add in A. rewrite own_sep in A. iDestruct A. subst.
-
-        steps. rewrite Any.upcast_downcast in *. clarify. astop.
-        steps. force_l; stb_tac; clarify.
-        steps. rewrite Any.upcast_downcast in *. ss. steps.
-        hcall_tac __ ord_top (POST0, A) (@URA.unit Σ) A0; ss; et.
-        { instantiate (1:=(_, _)). esplits; try refl; iRefresh. iSplitP; ss. iSplitP; ss; et. }
-        { esplits; ss; eauto. exists (z :: ns); iRefresh. left; iRefresh. iSplitL A; ss. }
-        steps.
-        hret_tac SIM (@URA.unit Σ); ss.
-        { esplits; eauto. }
     }
-    econs; ss.
-    { unfold echo_finishF, echo_finish_body. init. harg_tac; des_ifs_safe; iRefresh. repeat rewrite URA.unit_idl in *. repeat rewrite URA.unit_id in *.
-      do 2 iDestruct PRE. iMod A. iMod A0. clarify.
-      iDestruct SIM.
-      destruct SIM as [A|A]; iRefresh; cycle 1.
-      { hexploit echo_ra_white; et. intro T. iMod T. iSpecialize T A. iSpecialize T PRE. iMod T; des; ss. }
 
-      iDestruct A. subst.
-      rename x into ns. rename x0 into ns0.
-      assert(v = ll /\ l = ns).
-      { hexploit echo_ra_merge; et. intro T. iMod T. iSpecialize T A. iSpecialize T PRE. iMod T; des; ss. }
+    econs; ss.
+    { (* arg *)
+      unfold echoF, echo_body, ccall. init. harg. destruct x.
+      mDesAll. clarify. steps.
+      mDesOr "INV"; cycle 1.
+      { mAssertPure False; ss.
+        iDestruct "INV" as (ns) "INV".
+        iApply (echo_ra_white with "INV PRE"). }
+      mDesAll. mAssertPure _.
+      { iApply (echo_ra_merge with "INV PRE"). }
       des; subst.
 
+      destruct (alist_find "getint" (StackStb ++ ClientStb ++ MemStb ++ EchoStb)) eqn:T; stb_tac; clarify.
+      steps. rewrite Any.upcast_downcast in *. steps.
+      hcall _ _ _ with "PRE"; et.
+      { splits; ss. }
+      mDesAll. clarify. steps.
+      mDesOr "INV1".
+      { mAssertPure False; ss. iDestruct "INV1" as (ns) "[INV1 _]".
+        iApply (echo_ra_black with "INV INV1"). }
+      mDesEx "INV1" as ns.
+      mAssertPure _.
+      { iApply (echo_ra_merge with "INV INV1"). }
+      des; subst.
+      rewrite Any.upcast_downcast in *. clarify.
 
-
-
-      steps. unfold hcall, ccall. rewrite unfold_is_list in A0. destruct ns; ss; steps.
-      - rewrite Any.upcast_downcast. steps. iMod A0. subst.
-        hret_tac A (@URA.unit Σ); ss.
-        { iRefresh. esplits; ss; eauto. exists nil; iRefresh. left; iRefresh. iSplitL A; ss. }
-      - rewrite Any.upcast_downcast. steps. do 4 iDestruct A0. iMod A0. subst. ss.
-        astart 10. steps.
-        acall_tac __ (ord_pure 0) PRE (A, A1, A2) (@URA.unit Σ); ss; et.
-        { esplits; try refl; iRefresh. instantiate (1:=1). esplits; ss; et. }
-        { esplits; ss; et. eexists; iRefresh. right; iRefresh; ss; et. }
-        des; iRefresh. do 2 iDestruct POST. iMod POST. subst.
-        apply_all_once Any.upcast_inj. des; clarify. steps. rewrite Any.upcast_downcast in *. clarify.
-        iDestruct SIM. destruct SIM as [SIM|SIM]; iRefresh.
-        { iDestruct SIM. hexploit echo_ra_black; et. intro T. iMod T. iSpecialize T A. iSpecialize T SIM. iMod T; des; ss. }
-        assert(ll = (Vptr x 0) /\ x10 = z :: ns); des; subst.
-        { hexploit echo_ra_merge; et. intro T. iMod T. iSpecialize T A. iSpecialize T SIM. iMod T; des; ss. }
-
-
-
-
-        rename x into hd. rename x5 into tmp.
-        iMerge A1 A2.
-        iAssert A1 (is_list (Vptr hd 0) (List.map Vint (z :: ns))).
-        { iIntro. rewrite unfold_is_list. cbn.
-          iDestruct A2. do 2 eexists; iRefresh.
-          iSplitL A.
-          { iSplitP; ss; et. }
-          { iRefresh; ss. }
+      unfold unint in *. des_ifs; ss.
+      { steps.
+        destruct (alist_find "echo_finish" (StackStb ++ ClientStb ++ MemStb ++ EchoStb)) eqn:T; stb_tac; clarify.
+        steps. rewrite Any.upcast_downcast. steps.
+        hcall _ (_, _) _ with "*"; et.
+        { iModIntro. iSplitR "INV1".
+          { iLeft. iExists _. iFrame. }
+          { iSplitL; ss. iSplitL; ss. }
         }
+        { split; ss. }
+        clarify. steps.
 
+        hret _; ss.
+        iModIntro. iSplitL; ss.
+      }
+      { des_sumbool. ss. }
+      { steps. rewrite Any.upcast_downcast. steps. astart 1. acatch.
 
-
-
-        acall_tac __ (ord_pure 2) SIM A (A0, A2); ss; et.
-        { instantiate (1:=(_, _)). esplits; try refl; iRefresh. eexists; iRefresh. iSplitP; ss.
-          iSplitR (A0); ss; et.
-          - iSplitP; ss. eauto.
-          - eexists; iRefresh. eauto.
+        hcall _ (_, _) _ with "- INV"; ss.
+        { iModIntro. iSplitL "INV1"; ss.
+          { iRight. iExists _. iFrame. }
+          { iSplitL; ss. iExists _. iSplitL; ss. iSplitR "A"; ss. }
         }
-        { esplits; ss; et. eexists; iRefresh. right; iRefresh; ss; et. }
-        ss. des; iRefresh. iDestruct SIM0. do 3 iDestruct POST. iMod POST. subst.
-        apply_all_once Any.upcast_inj. des; clarify. steps.
+        { split; ss. }
+        steps. mDesAll. subst.
+        eapply Any.upcast_inj in PURE0. des; clarify.
         rewrite Any.upcast_downcast in *. clarify.
-        rename SIM0 into SIM. destruct SIM as [SIM|SIM]; iRefresh.
-        { iDestruct SIM. hexploit echo_ra_black; et. intro T. iMod T. iSpecialize T A. iSpecialize T SIM. iMod T; des; ss. }
-        assert(ll = Vptr hd 0 /\ x = z :: ns); des; subst.
-        { hexploit echo_ra_merge; et. intro T. iMod T. iSpecialize T A. iSpecialize T SIM. iMod T; des; ss. }
+        mDesOr "INV2".
+        { mDesAll. mAssertPure False; ss.
+          iApply (echo_ra_black with "INV INV2"). }
+        mDesEx "INV2" as ns.
+        mAssertPure _.
+        { iApply (echo_ra_merge with "INV INV2"). }
+        des; subst.
 
-
-
-        iMerge A SIM. rewrite <- own_sep in A. rewrite GRA.embed_add in A.
-        eapply own_upd in A; cycle 1; [|rewrite intro_iHyp in A;iMod A].
-        { eapply GRA.embed_updatable. instantiate (1:= echo_black v (ns) ⋅ echo_white v (ns)).
-          eapply Auth.auth_update. rr. ii. des; ss. ur in FRAME. ur. destruct ctx; ss; clarify.
-        }
-        rewrite <- GRA.embed_add in A. rewrite own_sep in A. iDestruct A.
-
-
-
-        acall_tac __ (ord_pure 0) A2 (A, A1) A0; ss; et.
-        { instantiate (1:=(_, _, _)). ss. esplits; try refl; iRefresh. iSplitP; ss. iSplitP; ss. eauto. }
-        { esplits; ss; et. eexists; iRefresh. right; iRefresh; ss; et. }
-        ss. des; iRefresh. iDestruct SIM. iDestruct POST. iMod A0. subst.
-        apply_all_once Any.upcast_inj. des; clarify. steps.
-        rewrite Any.upcast_downcast in *. clarify.
-        destruct SIM as [SIM|SIM]; iRefresh.
-        { iDestruct SIM. hexploit echo_ra_black; et. intro T. iMod T. iSpecialize T A. iSpecialize T SIM. iMod T; des; ss. }
-        assert(v = ll /\ x = ns); des; subst.
-        { hexploit echo_ra_merge; et. intro T. iMod T. iSpecialize T A. iSpecialize T SIM. iMod T; des; ss. }
-
-
-
-
+        mAssert _ with "INV INV2".
+        { iCombine "INV" "INV2" as "INV". iApply (OwnM_Upd with "INV").
+          instantiate (1:= echo_black v (z :: a0) ⋅ echo_white v (z :: a0)).
+          eapply Auth.auth_update. rr. ii. des; ss. ur in FRAME. ur.
+          destruct ctx2; ss; clarify. }
+        mUpd "A". mDesOwn "A".
 
         astop. steps.
-        force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
-        hcall_tac __ (ord_top) SIM (A, A1, POST) (@URA.unit Σ); ss; et.
-        { esplits; ss; et. eexists; iRefresh. right; iRefresh; ss; et. }
-        des; iRefresh. subst. iDestruct SIM0.
-        rename SIM0 into SIM. destruct SIM as [SIM|SIM]; iRefresh.
-        { iDestruct SIM. hexploit echo_ra_black; et. intro T. iMod T. iSpecialize T A. iSpecialize T SIM. iMod T; des; ss. }
-        assert(ll0 = ll /\ x = ns); des; subst.
-        { hexploit echo_ra_merge; et. intro T. iMod T. iSpecialize T A. iSpecialize T SIM. iMod T; des; ss. }
+        destruct (alist_find "echo" (StackStb ++ ClientStb ++ MemStb ++ EchoStb)) eqn:T; stb_tac; clarify.
+        steps. rewrite Any.upcast_downcast. steps.
+        hcall _ (_, _) _ with "*".
+        { et. }
+        { iModIntro. iSplitR "A1"; ss.
+          { iLeft. iExists _. iSplitL "A"; ss. }
+          { iSplitL; ss. iSplitL; ss. }
+        }
+        { split; ss. }
 
-
-
-        steps.
-        force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast in *. steps.
-        hcall_tac __ (ord_top) (A, A1) POST SIM; ss; et.
-        { instantiate (1:= (_, _)). cbn. iRefresh. iSplitP; ss. iSplitP; ss; et. }
-        { esplits; ss; et. eexists; iRefresh. left; iRefresh. iSplitL A; ss; et. }
-        des; iRefresh. subst. iDestruct SIM0.
-
-        steps.
-        hret_tac SIM0 (@URA.unit Σ); ss.
-        { iRefresh. esplits; eauto. eexists; iRefresh. eauto. }
+        steps. hret _; ss.
+        iFrame. iModIntro. ss.
+      }
     }
-  Unshelve.
-    all: ss.
-    all: try (by repeat econs; et).
+    econs; ss.
+    { (* arg *)
+      unfold echo_finishF, echo_finish_body, ccall. init. harg. destruct x.
+      mDesAll. clarify. steps.
+      mDesOr "INV"; cycle 1.
+      { mAssertPure False; ss. iDestruct "INV" as (ns) "INV".
+        iApply (echo_ra_white with "INV PRE"). }
+      mDesAll. mAssertPure _.
+      { iApply (echo_ra_merge with "INV PRE"). }
+      des; subst.
+
+      rewrite Any.upcast_downcast. steps. destruct a0.
+      { rewrite unfold_is_list in ACC. ss.
+        mPure "A". subst. ss.
+        steps. hret _; ss.
+        iModIntro. iSplitL; ss. iRight. iExists _. iFrame.
+      }
+      rewrite unfold_is_list in ACC. ss. mDesAll. subst. ss.
+
+      steps. astart 10. acatch. hcall _ 1 _ with "PRE"; ss.
+      { iModIntro. iSplitL; ss.
+        iRight. iExists _. iFrame. }
+      { split; ss. }
+      mDesSep "POST". mDesEx "POST". mDesSep "POST".
+      mPure "A". mPure "POST". clarify.
+      eapply Any.upcast_inj in PURE0.
+      rewrite Any.upcast_downcast. steps. des; clarify.
+
+      acatch. hcall _ (_, _) _ with "- INV"; ss.
+      { iModIntro. iSplitL "INV1"; ss. iSplitL; ss.
+        iExists _. iSplitL; ss. iSplitR "A3"; ss.
+        { iSplit; ss. instantiate (1:=Vint z :: (map Vint a0)). clear.
+          rewrite unfold_is_list_cons. iExists _, _. iFrame; ss.
+        }
+        { iExists _. et. }
+      }
+      { split; ss. }
+      ss. steps. mDesSep "POST". mDesEx "POST". mDesSep "POST".
+      mDesSep "POST". mPure "A". mPure "POST". subst.
+      eapply Any.upcast_inj in PURE0. erewrite Any.upcast_downcast in *.
+      des; clarify. mDesOr "INV2".
+      { mAssertPure False; ss.
+        iDestruct "INV2" as (ns) "[INV2 _]".
+        iApply (echo_ra_black with "INV2 INV"). }
+
+      mAssert _ with "INV INV2".
+      { iDestruct "INV2" as (ns) "INV2". iCombine "INV" "INV2" as "INV".
+        iApply (OwnM_Upd with "INV").
+        instantiate (1:= echo_black v (z :: a0) ⋅ echo_white v (z :: a0)).
+        eapply Auth.auth_update. rr. ii. des; ss. ur in FRAME. ur.
+        destruct ctx2; ss; clarify. }
+      mUpd "A". mDesOwn "A".
+
+      acatch. hcall _ (_, _, _) _ with "A1 A3"; ss.
+      { iModIntro. iSplitL "A3".
+        { iRight. iExists _. iFrame. }
+        { iSplit; ss. iSplit; ss. iSplit; ss. }
+      }
+      { splits; ss. }
+      steps. astop. steps.
+      destruct (alist_find "putint" (StackStb ++ ClientStb ++ MemStb ++ EchoStb)) eqn:T; stb_tac; clarify.
+      mDesSep "POST". mDesSep "POST". mPure "A1". mPure "A3".
+      steps. eapply Any.upcast_inj in PURE0. des; clarify.
+      rewrite Any.upcast_downcast in *. clarify. steps.
+
+      hcall _ _ _ with "INV".
+      { ss. }
+      { iModIntro. iSplit; ss. }
+      { split; ss. }
+      mDesAll. mDesOr "INV1".
+      { mAssertPure False; ss.
+        iDestruct "INV1" as (ns) "[INV1 _]".
+        iApply (echo_ra_black with "INV1 A"). }
+      mDesAll. mAssertPure _.
+      { iApply (echo_ra_merge with "A INV1"). }
+      des; subst. steps.
+
+      destruct (alist_find "echo_finish" (StackStb ++ ClientStb ++ MemStb ++ EchoStb)) eqn:T; stb_tac; clarify.
+      steps. rewrite Any.upcast_downcast. steps.
+      hcall _ (_, _) _ with "A A2 INV1".
+      { ss. }
+      { iCombine "A" "INV1" as "A".
+        iPoseProof (OwnM_Upd with "A") as "A".
+        { instantiate (1:= echo_black _ _ ⋅ echo_white _ _).
+          eapply Auth.auth_update. rr. ii. des; ss. ur in FRAME. ur.
+          destruct ctx4; ss; clarify. }
+        iMod "A". iDestruct "A" as "[A0 A1]". iModIntro.
+        iSplitR "A1".
+        { iLeft. iExists _. iSplitL "A0"; ss. }
+        { iSplit; ss. iSplit; ss. }
+      }
+      { split; ss. }
+
+      steps. hret _; ss.
+      { iSplitL "INV"; ss. }
+    }
+    Unshelve. all: ss.
   Qed.
 
 End SIMMODSEM.
