@@ -439,7 +439,7 @@ Section HLEMMAS.
                       (vret_src: Z)
                       (RTGT: R_tgt a1 mp_tgt1 mr_tgt1)
                       ctx1
-                      (ACC: current_iPropL ctx1 ((Rn, R_src a1 mp_src1) :: (Invn, ftsp1.(postcond) x vret_src vret_tgt) :: snd (alist_pops Hns l)))
+                      (ACC: current_iPropL ctx1 ((Invn, R_src a1 mp_src1) :: (Rn, ftsp1.(postcond) x vret_src vret_tgt) :: snd (alist_pops Hns l)))
           ,
             gpaco6 (_sim_itree (mk_wf R_src R_tgt)) (cpn6 (_sim_itree (mk_wf R_src R_tgt))) rg rg _ _ eqr o_new
                    (mr_src1, mp_src1, fr_src1, k_src vret_src) (mr_tgt1, mp_tgt1, frs_tgt, k_tgt vret_tgt))
@@ -484,7 +484,7 @@ Section HLEMMAS.
                       (vret_src: Z)
                       (RTGT: R_tgt a1 mp_tgt1 mr_tgt1)
                       ctx1
-                      (ACC: current_iPropL ctx1 ((Rn, R_src a1 mp_src1) :: (Invn, ftsp1.(postcond) x vret_src vret_tgt) :: (snd (alist_pops Hns l))))
+                      (ACC: current_iPropL ctx1 ((Invn, R_src a1 mp_src1) :: (Rn, ftsp1.(postcond) x vret_src vret_tgt) :: (snd (alist_pops Hns l))))
           ,
                 gpaco6 (_sim_itree (mk_wf R_src R_tgt)) (cpn6 (_sim_itree (mk_wf R_src R_tgt))) rg rg _ _ eqr 100
                        (mr_src1, mp_src1, fr_src1, k_src vret_src) (mr_tgt1, mp_tgt1, frs_tgt, k_tgt vret_tgt))
@@ -527,7 +527,7 @@ Section HLEMMAS.
                       (vret_src: Z)
                       (RTGT: R_tgt a1 mp_tgt1 mr_tgt1)
                       ctx1
-                      (ACC: current_iPropL ctx1 (@cons (prod string (bi_car iProp)) (Rn, R_src a1 mp_src1) (@cons (prod string (bi_car iProp)) (Invn, Q x vret_src vret_tgt) (snd (alist_pops Hns l)))))
+                      (ACC: current_iPropL ctx1 (@cons (prod string (bi_car iProp)) (Invn, R_src a1 mp_src1) (@cons (prod string (bi_car iProp)) (Rn, Q x vret_src vret_tgt) (snd (alist_pops Hns l)))))
           ,
                 gpaco6 (_sim_itree (mk_wf R_src R_tgt)) (cpn6 (_sim_itree (mk_wf R_src R_tgt))) rg rg _ _ eqr 100
                        (mr_src1, mp_src1, fr_src1, k_src vret_src) (mr_tgt1, mp_tgt1, frs_tgt, k_tgt vret_tgt))

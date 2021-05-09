@@ -10,8 +10,6 @@ Require Import Stack1 Client1 Mem1.
 Require Import TODOYJ.
 Require Import Logic.
 
-Generalizable Variables E R A B C X Y Σ.
-
 Set Implicit Arguments.
 
 

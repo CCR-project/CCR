@@ -12,8 +12,6 @@ Require Import Mem1 Stack1 Echo2 EchoMain1 Client1.
 
 Require Import TODOYJ.
 
-Generalizable Variables E R A B C X Y Σ.
-
 Set Implicit Arguments.
 
 

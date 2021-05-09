@@ -651,7 +651,7 @@ Section ILEMMAS.
 End ILEMMAS.
 
 Ltac iOwnWf' H :=
-  iPoseProof (OwnM_valid with "H") as "%".
+  iPoseProof (OwnM_valid with H) as "%".
 
 Tactic Notation "iOwnWf" constr(H) :=
   iOwnWf' H.

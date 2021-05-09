@@ -70,7 +70,7 @@ Section SIMMODSEM.
       (* l = [] *)
       { mDesAll. subst.
         (* cmp *)
-        steps. acatch. hcall _ _ _ with "INV"; auto.
+        steps. acatch. hcall _ _ _ with "POST"; auto.
         { instantiate (2:=(true,_)). ss. iModIntro.
           iSplitR; ss. iSplitL; ss. iSplitL; ss. iSplitR; ss.
           iRight. iRight. iRight. iRight. iPureIntro. ss. }
@@ -96,7 +96,7 @@ Section SIMMODSEM.
       steps. erewrite Any.upcast_downcast in *. steps.
 
       (* load *)
-      steps. acatch. hcall _ (a0, 0%Z, v0) _ with "INV1"; auto.
+      steps. acatch. hcall _ (a0, 0%Z, v0) _ with "POST1"; auto.
       { iModIntro. iSplitR; ss. iSplitL; ss. iSplitL; ss. iSplitR; ss. }
       { split; ss. eauto with ord_step. }
       ss. mDesAll. clarify. eapply Any.upcast_inj in PURE4. des; clarify.
@@ -110,7 +110,7 @@ Section SIMMODSEM.
       steps. erewrite Any.upcast_downcast in *. clarify.
 
       (* free *)
-      steps. acatch. hcall _ (a0, 0%Z) _ with "INV2"; auto.
+      steps. acatch. hcall _ (a0, 0%Z) _ with "POST2"; auto.
       { iModIntro. iSplitR; ss. iSplitL; ss. iSplitL; ss.
         iExists _. iSplitR; ss. }
       { split; ss. eauto with ord_step. }
@@ -118,7 +118,7 @@ Section SIMMODSEM.
       steps. erewrite Any.upcast_downcast in *. clarify.
 
       (* free *)
-      steps. acatch. hcall _ (a0, (0+1)%Z) _ with "INV1"; auto.
+      steps. acatch. hcall _ (a0, (0+1)%Z) _ with "POST1"; auto.
       { iModIntro. iSplitR; ss. iSplitL; ss. iSplitL; ss.
         iExists _. iSplitR; ss. }
       { split; ss. eauto with ord_step. }
@@ -126,7 +126,7 @@ Section SIMMODSEM.
       steps. erewrite Any.upcast_downcast in *. clarify.
 
       (* store *)
-      steps. acatch. hcall _ (n, 0%Z, v0) _ with "INV"; auto.
+      steps. acatch. hcall _ (n, 0%Z, v0) _ with "POST"; auto.
       { iModIntro. iSplitR; ss. iSplitL; ss. iSplitL; ss.
         iExists _. iSplitR; ss. }
       { split; ss. eauto with ord_step. }
@@ -177,7 +177,7 @@ Section SIMMODSEM.
       steps. erewrite Any.upcast_downcast in *. steps.
 
       (* load *)
-      steps. acatch. hcall _ (a2, 0%Z, v) _ with "INV"; auto.
+      steps. acatch. hcall _ (a2, 0%Z, v) _ with "POST"; auto.
       { iModIntro. iSplitR; ss. iSplitL; ss. iSplitL; ss. iSplitR; ss. }
       { split; ss. eauto with ord_step. }
       ss. mDesAll. clarify. eapply Any.upcast_inj in PURE3. des; clarify.
@@ -191,7 +191,7 @@ Section SIMMODSEM.
       steps. erewrite Any.upcast_downcast in *. clarify.
 
       (* free *)
-      steps. acatch. hcall _ (a2, 0%Z) _ with "INV1"; auto.
+      steps. acatch. hcall _ (a2, 0%Z) _ with "POST1"; auto.
       { iModIntro. iSplitR; ss. iSplitL; ss. iSplitL; ss.
         iExists _. iSplitR; ss. }
       { split; ss. eauto with ord_step. }
@@ -199,7 +199,7 @@ Section SIMMODSEM.
       steps. erewrite Any.upcast_downcast in *. clarify.
 
       (* free *)
-      steps. acatch. hcall _ (a2, (0+1)%Z) _ with "INV"; auto.
+      steps. acatch. hcall _ (a2, (0+1)%Z) _ with "POST"; auto.
       { iModIntro. iSplitR; ss. iSplitL; ss. iSplitL; ss.
         iExists _. iSplitR; ss. }
       { split; ss. eauto with ord_step. }
@@ -250,7 +250,7 @@ Section SIMMODSEM.
       mDesAll. clarify. erewrite Any.upcast_downcast in *. steps.
 
       (* ret *)
-      mCombine "INV" "INV1".
+      mCombine "POST" "POST1".
       rewrite <- points_to_split in ACC.
       astop. force_l. eexists. hret _; ss.
       iModIntro. iSplitR; ss. iSplitL; ss.
