@@ -132,69 +132,69 @@ Ltac _red_itree f :=
   end.
 
 Ltac __red_interp f term :=
-  idtac "__red_interp";
-  idtac term;
+  (* idtac "__red_interp"; *)
+  (* idtac term; *)
   let my_interp := get_head term in
   let itr := get_itr term in
-  idtac itr;
+  (* idtac itr; *)
   let tc := fresh "_TC_" in
   unshelve evar (tc: @red_database (mk_box (my_interp))); [typeclasses eauto|];
   let name := fresh "TMP" in
   match itr with
   | ITree.bind' ?k0 ?i0 =>
-    idtac "bind";
+    (* idtac "bind"; *)
     instantiate (f:=_continue); pose (rdb_bind tc) as name; cbn in name;
-    match goal with | H := mk_box ?lemma |- _ => eapply (@lemma _ _ i0 k0); fail end
+    match goal with | H := mk_box ?lemma |- _ => apply (@lemma _ _ i0 k0); fail end
   | Tau _ =>
     instantiate (f:=_break); pose (rdb_tau tc) as name; cbn in name;
-    match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end
+    match goal with | H := mk_box ?lemma |- _ => apply lemma; fail end
   | Ret _ =>
-    idtac "ret";
+    (* idtac "ret"; *)
     instantiate (f:=_continue); pose (rdb_ret tc) as name; cbn in name;
-    match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end
+    match goal with | H := mk_box ?lemma |- _ => apply lemma; fail end
   | trigger ?e =>
     instantiate (f:=_continue);
-    ((pose (rdb_trigger0 tc) as name; cbn in name; match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end) ||
-     (pose (rdb_trigger1 tc) as name; cbn in name; match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end) ||
-     (pose (rdb_trigger2 tc) as name; cbn in name; match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end) ||
-     (pose (rdb_trigger3 tc) as name; cbn in name; match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end) ||
+    ((pose (rdb_trigger0 tc) as name; cbn in name; match goal with | H := mk_box ?lemma |- _ => apply lemma; fail end) ||
+     (pose (rdb_trigger1 tc) as name; cbn in name; match goal with | H := mk_box ?lemma |- _ => apply lemma; fail end) ||
+     (pose (rdb_trigger2 tc) as name; cbn in name; match goal with | H := mk_box ?lemma |- _ => apply lemma; fail end) ||
+     (pose (rdb_trigger3 tc) as name; cbn in name; match goal with | H := mk_box ?lemma |- _ => apply lemma; fail end) ||
      fail 2
     )
   | triggerUB =>
     instantiate (f:=_break); pose (rdb_UB tc) as name; cbn in name;
-    match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end
+    match goal with | H := mk_box ?lemma |- _ => apply lemma; fail end
   | triggerNB =>
     instantiate (f:=_break); pose (rdb_NB tc) as name; cbn in name;
-    match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end
+    match goal with | H := mk_box ?lemma |- _ => apply lemma; fail end
   | unwrapU _ =>
     instantiate (f:=_break); pose (rdb_unwrapU tc) as name; cbn in name;
-    match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end
+    match goal with | H := mk_box ?lemma |- _ => apply lemma; fail end
   | unwrapN _ =>
     instantiate (f:=_break); pose (rdb_unwrapN tc) as name; cbn in name;
-    match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end
+    match goal with | H := mk_box ?lemma |- _ => apply lemma; fail end
   | assume _ =>
     instantiate (f:=_break); pose (rdb_assume tc) as name; cbn in name;
-    match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end
+    match goal with | H := mk_box ?lemma |- _ => apply lemma; fail end
   | guarantee _ =>
     instantiate (f:=_break); pose (rdb_guarantee tc) as name; cbn in name;
-    match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end
+    match goal with | H := mk_box ?lemma |- _ => apply lemma; fail end
   | ?term =>
-    idtac "term";
+    (* idtac "term"; *)
     pose (rdb_ext tc) as name; cbn in name;
-    match goal with | H := mk_box ?lemma |- _ => eapply lemma end;
+    match goal with | H := mk_box ?lemma |- _ => apply lemma end;
     subst tc;
     __red_interp f term
   end
 .
 
 Ltac _red_interp f :=
-  idtac "_red_interp";
+  (* idtac "_red_interp"; *)
   match goal with
   | [ |- ITree.bind' _ ?term = _ ] =>
-    idtac "_red_interp_bind";
-    eapply bind_ext; __red_interp f term
+    (* idtac "_red_interp_bind"; *)
+    apply bind_ext; __red_interp f term
   | [ |- ?term = _] =>
-    idtac "_red_interp_term";
+    (* idtac "_red_interp_term"; *)
     __red_interp f term
   end
 .
