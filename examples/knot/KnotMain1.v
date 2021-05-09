@@ -11,8 +11,6 @@ Require Import Logic.
 Require Import KnotHeader.
 Require Import STB.
 
-Generalizable Variables E R A B C X Y Σ.
-
 Set Implicit Arguments.
 
 
@@ -42,13 +40,13 @@ Section MAIN.
     Variable skenv: SkEnv.t.
 
     Definition fib_spec: fspec :=
-      mk_simple (X:=nat*(Σ -> Prop))
+      mk_simple (X:=nat*iProp)
                 (fun '(n, INV) => (
                      (fun varg o =>
-                        (⌜exists fb,
-                              varg = [Vptr fb 0; Vint (Z.of_nat n)]↑ /\ o = ord_pure (2 * n) /\
-                              fb_has_spec skenv (RecStb skenv) fb (mrec_spec Fib INV)⌝)
-                          ** INV),
+                        ((⌜exists fb,
+                               varg = [Vptr fb 0; Vint (Z.of_nat n)]↑ /\ o = ord_pure (2 * n)%nat /\
+                               fb_has_spec skenv (RecStb skenv) fb (mrec_spec Fib INV)⌝)
+                           ** INV)%I),
                      (fun vret =>
                         (⌜vret = (Vint (Z.of_nat (Fib n)))↑⌝)
                           ** INV)
@@ -61,11 +59,11 @@ Section MAIN.
                 (fun f => (
                      (fun varg o =>
                         (⌜o = ord_top⌝)
-                          ** Own (GRA.embed knot_init)
-                          ** inv_closed
+                          ** OwnM (knot_init)
+                          ** inv_closed: iProp
                      ),
                      (fun vret =>
-                        (⌜vret = (Vint (Z.of_nat (Fib 10)))↑⌝))
+                        (⌜vret = (Vint (Z.of_nat (Fib 10)))↑⌝: iProp)%I)
                 )).
 
     Definition MainStb: list (gname * fspec) := [("fib", fib_spec); ("main", main_spec)].

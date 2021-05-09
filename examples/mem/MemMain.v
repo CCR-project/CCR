@@ -9,14 +9,11 @@ Require Import PCM.
 Require Import Hoare Open OpenDef.
 Require Import Weakening.
 
-Generalizable Variables E R A B C X Y Σ.
-
 Set Implicit Arguments.
 
 
 
-Require Import Mem0 Mem1 MemOpen Mem0Openproof.
-Require Import Main0 Main1 Main01proof.
+Require Import Mem0 Mem1 MemOpen Mem0Openproof Main0 Main1.
 
 
 
@@ -122,7 +119,21 @@ Section PROOF.
       eapply Mem0Openproof.correct.
     }
     { ss. }
-    { ii. repeat (econs; ss; ii; des; ss). }
+    { set (skenv := Sk.load_skenv (fold_right Sk.add Sk.unit (List.map SMod.sk [SMem; SMain]))).
+      econs.
+      { esplits; cycle 1.
+        { Fail Timeout 1 refl. (**************** FIXTHIS!!!!!!!!!!!!!!!!! ********************) unfold Mem. refl. }
+        ii. ss. stb_tac.
+        rewrite ! eq_rel_dec_correct in *. des_ifs; subst; esplits; try refl; et.
+      }
+      econs.
+      { esplits; cycle 1.
+        { Fail Timeout 1 refl. (**************** FIXTHIS!!!!!!!!!!!!!!!!! ********************) unfold Main. refl. }
+        ii. ss. stb_tac.
+        rewrite ! eq_rel_dec_correct in *. des_ifs; subst; esplits; try refl; et.
+      }
+      econs.
+    }
   Qed.
 
   Let correct01: refines_closed MemMain0 MemMain1.
@@ -176,4 +187,3 @@ Section PROOF.
   Qed.
 
 End PROOF.
-

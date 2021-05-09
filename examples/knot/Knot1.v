@@ -12,8 +12,6 @@ Require Import Logic YPM.
 Require Import KnotHeader.
 Require Import STB.
 
-Generalizable Variables E R A B C X Y Σ.
-
 Set Implicit Arguments.
 
 
@@ -36,8 +34,8 @@ Section KNOT.
       mk_simple (X:=(nat -> nat) * nat)
                 (fun '(f, n) => (
                      (fun varg o =>
-                        (⌜varg = [Vint (Z.of_nat n)]↑ /\ o = ord_pure (2 * n + 1)⌝)
-                          ** (Own (GRA.embed (knot_frag (Some f))))
+                        (⌜varg = [Vint (Z.of_nat n)]↑ /\ o = ord_pure (2 * n + 1)%nat⌝)
+                          ** (OwnM (knot_frag (Some f)))
                           ** inv_closed
                      ),
                      (fun vret =>
@@ -52,14 +50,14 @@ Section KNOT.
                 (fun n => (
                      (fun varg o =>
                         (⌜exists fb,
-                              varg = [Vptr fb 0; Vint (Z.of_nat n)]↑ /\ o = ord_pure (2 * n) /\
+                              varg = [Vptr fb 0; Vint (Z.of_nat n)]↑ /\ o = ord_pure (2 * n)%nat /\
                               fb_has_spec skenv (RecStb skenv) fb rec_spec⌝)
-                          ** Own (GRA.embed (knot_frag (Some f)))
+                          ** OwnM (knot_frag (Some f))
                           ** inv_closed
                      ),
                      (fun vret =>
                         (⌜vret = (Vint (Z.of_nat (f n)))↑⌝)
-                          ** Own (GRA.embed (knot_frag (Some f)))
+                          ** OwnM (knot_frag (Some f))
                           ** inv_closed
                      )
                 )).
@@ -73,14 +71,14 @@ Section KNOT.
                         (⌜exists fb,
                               varg = [Vptr fb 0]↑ /\ o = ord_pure 1 /\
                               fb_has_spec skenv (FunStb skenv) fb (fun_gen f)⌝)
-                          ** (Exists old, Own (GRA.embed (knot_frag old)))
+                          ** (∃ old, OwnM (knot_frag old))
                           ** inv_closed
                      ),
                      (fun vret =>
                         (⌜exists fb,
                               vret = (Vptr fb 0)↑ /\
                               fb_has_spec skenv (RecStb skenv) fb rec_spec⌝)
-                          ** Own (GRA.embed (knot_frag (Some f)))
+                          ** OwnM (knot_frag (Some f))
                           ** inv_closed
                      )
                 )).
@@ -92,15 +90,15 @@ Section KNOT.
                         (⌜exists fb,
                               varg = [Vptr fb 0]↑ /\ o = ord_pure 1 /\
                               fb_has_spec skenv (FunStb skenv) fb (fun_gen f)⌝)
-                          ** Own (GRA.embed knot_init)
+                          ** OwnM (knot_init)
                           ** inv_closed
                      ),
                      (fun vret =>
-                        Exists INV,
-                        (⌜exists fb,
-                              vret = (Vptr fb 0)↑ /\
-                              fb_has_spec skenv (RecStb skenv) fb (mrec_spec f INV)⌝)
-                          ** INV
+                        (∃ INV,
+                            (⌜exists fb,
+                                  vret = (Vptr fb 0)↑ /\
+                                  fb_has_spec skenv (RecStb skenv) fb (mrec_spec f INV)⌝)
+                              ** INV)%I
                      )
                 )).
 
@@ -139,15 +137,13 @@ Section WEAK.
   Context `{@GRA.inG invRA Σ}.
   Context `{@GRA.inG knotRA Σ}.
 
-  Lemma rec_spec_weaker f: ftspec_weaker (mrec_spec f (Own (GRA.embed (knot_frag (Some f))) ** inv_closed)) rec_spec.
+  Lemma rec_spec_weaker f: ftspec_weaker (mrec_spec f (OwnM (knot_frag (Some f)) ** inv_closed)) rec_spec.
   Proof.
     ii. ss. exists (f, x_src). split.
-    { intros arg_src arg_tgt o. ss. iIntro. (* TODO: use iIntros *)
-      iDestruct A; subst. iSplitP; ss.
-      iDestruct A. iDestruct A0. iSplitR A1; ss. iSplitR A0; ss. (* TODO: make lemma: ** is commute *) }
-    { intros ret_src ret_tgt. ss. iIntro. (* TODO: use iIntros *)
-      iDestruct A; subst. iSplitP; ss.
-      iDestruct A. iDestruct A. iSplitL A; ss. iSplitR A0; ss. (* TODO: make lemma: ** is commute *) }
+    { intros arg_src arg_tgt o. ss.
+      iIntros "[[H0 [H1 H2]] H3]". iModIntro. iFrame. }
+    { intros ret_src ret_tgt. ss.
+      iIntros "[[[H0 H1] H2] H3]". iModIntro. iFrame. }
   Qed.
 End WEAK.
 
@@ -162,18 +158,14 @@ Section WEAK.
   Lemma knot_spec2_weaker skenv: ftspec_weaker (knot_spec2 RecStb FunStb skenv) (knot_spec RecStb FunStb skenv).
   Proof.
     ii. ss. exists x_src. split.
-    { intros arg_src arg_tgt o. iIntro. iDestruct A; subst. iSplitP; ss.
-      iRefresh. iDestruct A. iSplitL A.
-      { iDestruct A. iSplitL A; ss.
-        iExists (None: option (nat -> nat)). ss. }
-      { iApply A0. }
-    }
-    { intros ret_src ret_tgt. iIntro. iDestruct A; subst. iSplitP; ss.
-      iRefresh. iDestruct A.
-      iExists (Own (GRA.embed (knot_frag (Some x_src))) ** inv_closed).
-      iDestruct A. iMerge A1 A0. iSplitR A1; ss.
-      iPure A. des. iExists fb. split; auto.
-      eapply fb_has_spec_weaker; eauto.
+    { intros arg_src arg_tgt o.
+      iIntros "[[[H0 H1] H2] H3]". iModIntro.
+      iFrame. iExists (None: option (nat -> nat)). ss. }
+    { intros ret_src ret_tgt.
+      iIntros "[[[H0 H1] H2] H3]". iModIntro. iFrame.
+      iExists (OwnM (knot_frag (Some x_src)) ** inv_closed).
+      iFrame. iDestruct "H0" as "%". iPureIntro. des. eexists.
+      split; eauto. eapply fb_has_spec_weaker; eauto.
       eapply rec_spec_weaker.
     }
   Qed.
