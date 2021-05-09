@@ -1017,7 +1017,7 @@ Tactic Notation "_hcall" constr(Hns) tactic(TAC) :=
    |start_ipm_proof
    |eauto with ord_step
    |
-   |on_current ltac:(fun H => try clear H); i].
+   |on_current ltac:(fun H => try clear H); i; on_current ltac:(fun H => simpl in H)].
 
 Tactic Notation "hcall" "_" "_" "_" "with" constr(Hns) :=
   let tac := ltac:(fun LEM => eapply (LEM _ _ _ _ _)) in
