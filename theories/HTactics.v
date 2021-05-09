@@ -30,9 +30,10 @@ Create HintDb ord_step.
 
 
 (* itree reduction *)
-Lemma interp_tgt_bind `{Σ: GRA.t} stb o
+Lemma interp_tgt_bind `{Σ: GRA.t}
       (R S: Type)
       (s : itree (hCallE +' pE +' eventE) R) (k : R -> itree (hCallE +' pE +' eventE) S)
+      stb o
   :
     (interp_hCallE_tgt (E:=pE +' eventE) stb o (s >>= k))
     =
@@ -199,6 +200,7 @@ Section AUX.
       (mk_box interp_tgt_ret)
       (mk_box interp_tgt_hcall)
       (mk_box interp_tgt_triggere)
+      (mk_box interp_tgt_triggerp)
       (mk_box interp_tgt_triggerp)
       (mk_box interp_tgt_triggerUB)
       (mk_box interp_tgt_triggerNB)

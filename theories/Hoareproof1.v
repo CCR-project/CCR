@@ -834,16 +834,15 @@ Section CANCEL.
         {
           destruct st_src0 as [rst_src0 pst_src0]; ss. destruct st_tgt0 as [rst_tgt0 pst_tgt0]; ss.
           destruct p; ss.
-          - steps. myred. steps. instantiate (1:=100). myred. steps. instantiate (1:=100). gbase. eapply CIH0; ss; et.
-          - steps. myred. steps. instantiate (1:=100). myred. steps. instantiate (1:=100). gbase. eapply CIH0; ss; et.
+          - steps. myred. steps. instantiate (1:=100). gbase. eapply CIH0; ss; et.
+          - steps. myred. steps. instantiate (1:=100). gbase. eapply CIH0; ss; et.
         }
         { dependent destruction e.
           - steps. myred. steps. unshelve esplits; et. instantiate (1:=100). myred. steps. instantiate (1:=100).
-            myred. steps. instantiate (1:=100). gbase. eapply CIH0; ss; et.
-          - steps. myred. steps. unshelve esplits; et. instantiate (1:=100). myred. steps. instantiate (1:=100).
-            myred. steps. instantiate (1:=100). gbase. eapply CIH0; ss; et.
+            gbase. eapply CIH0; ss; et.
           - steps. myred. steps. unshelve esplits; et. instantiate (1:=100). myred. steps. instantiate (1:=100).
             gbase. eapply CIH0; ss; et.
+          - steps. myred. steps. unshelve esplits; et. instantiate (1:=100). gbase. eapply CIH0; ss; et.
         }
       }
       dependent destruction h.
@@ -904,9 +903,8 @@ Section CANCEL.
           { steps. }
           steps.
           guclo ordC_spec. econs.
-          { instantiate (1:=101%ord). eapply OrdArith.le_from_nat; ss. lia. }
+          { instantiate (1:=100%ord). eapply OrdArith.le_from_nat; ss. lia. }
           repeat (tred; hred; mred; try (gstep; econs; et; [ eapply add_le_lt; [ refl | eapply OrdArith.lt_from_nat; ss ] |  ]; i)).
-          gstep. econs; eauto.
           gbase. eapply CIH0. ss.
       + (*** IMPURE CALL ***)
         myred.
@@ -949,8 +947,7 @@ Section CANCEL.
           { ss. }
         * ii; ss. des_ifs. steps. destruct p, p0; ss. des; subst.
           steps. destruct r1; ss. des_ifs. { steps. } destruct r0; ss. des_ifs. { admit "somehow". } steps.
-          instantiate (1:=101).
-          myred. gstep; econs; et.
+          instantiate (1:=100).
           gbase. eapply CIH0 ;ss.
   Unshelve.
     all: try (by econs; et).

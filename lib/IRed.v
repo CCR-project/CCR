@@ -141,10 +141,10 @@ Ltac __red_interp f term :=
   unshelve evar (tc: @red_database (mk_box (my_interp))); [typeclasses eauto|];
   let name := fresh "TMP" in
   match itr with
-  | ITree.bind' _ _ =>
+  | ITree.bind' ?k0 ?i0 =>
     idtac "bind";
     instantiate (f:=_continue); pose (rdb_bind tc) as name; cbn in name;
-    match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end
+    match goal with | H := mk_box ?lemma |- _ => eapply (@lemma _ _ i0 k0); fail end
   | Tau _ =>
     instantiate (f:=_break); pose (rdb_tau tc) as name; cbn in name;
     match goal with | H := mk_box ?lemma |- _ => eapply lemma; fail end
@@ -215,7 +215,7 @@ Section TEST.
 
 
 
-  Hypothesis x_bind: forall R S i (k: ktree _ R S), (x (i >>= k)) = (r <- x i;; x (k r)).
+  Hypothesis x_bind: forall R S itr (ktr: ktree _ R S), (x (itr >>= ktr)) = (r <- x itr;; x (ktr r)).
   Hypothesis x_tau: forall R (i: itree _ R), (x (tau;; i)) = tau;; (x i).
   Hypothesis x_ret: forall R (i: R), (x (Ret i)) = Ret i.
   Hypothesis x_triggere: forall R (i: eventE R), (x (trigger i)) = (trigger i >>= (fun r => tau;; Ret r)).
@@ -245,7 +245,7 @@ Section TEST.
       (mk_box (x_ext))
   .
 
-  Hypothesis y_bind: forall R S i (k: ktree _ R S), (y (i >>= k)) = (r <- y i;; y (k r)).
+  Hypothesis y_bind: forall R S itr (ktr: ktree _ R S), (y (itr >>= ktr)) = (r <- y itr;; y (ktr r)).
   Hypothesis y_tau: forall R (i: itree _ R), (y (tau;; i)) = tau;; (y i).
   Hypothesis y_ret: forall R (i: R), (y (Ret i)) = Ret i.
   Hypothesis y_triggere: forall R (i: eventE R), (y (trigger i)) = (trigger i >>= (fun r => tau;; Ret r)).
@@ -275,7 +275,7 @@ Section TEST.
       (mk_box (y_ext))
   .
 
-  Hypothesis z_bind: forall R S i (k: ktree _ R S), (z (i >>= k)) = (r <- z i;; z (k r)).
+  Hypothesis z_bind: forall R S itr (ktr: ktree _ R S), (z (itr >>= ktr)) = (r <- z itr;; z (ktr r)).
   Hypothesis z_tau: forall R (i: itree _ R), (z (tau;; i)) = tau;; (z i).
   Hypothesis z_ret: forall R (i: R), (z (Ret i)) = Ret i.
   Hypothesis z_triggere: forall R (i: eventE R), (z (trigger i)) = (trigger i >>= (fun r => tau;; Ret r)).
@@ -330,7 +330,7 @@ Section TEST.
 
   Variable xx: forall T, nat -> itree (eventE +' E) T -> nat -> itree (eventE +' F) T.
 
-  Hypothesis xx_bind: forall R S i p q (k: ktree _ R S), (xx p (i >>= k) q) = (r <- xx p i q;; xx p (k r) q).
+  Hypothesis xx_bind: forall R S i (k: ktree _ R S) p q, (xx p (i >>= k) q) = (r <- xx p i q;; xx p (k r) q).
   Hypothesis xx_tau: forall R p q (i: itree _ R), (xx p (tau;; i) q) = tau;; (xx p i q).
   Hypothesis xx_ret: forall R p q (i: R), (xx p (Ret i) q) = Ret i.
   Hypothesis xx_triggere: forall R p q (i: eventE R), (xx p (trigger i) q) = (trigger i >>= (fun r => tau;; Ret r)).
