@@ -34,7 +34,7 @@ Section MAIN.
       `b: val <- hcall "getbool" ([]: list val);; `b: bool <- (unbool b)?;;
       APC;;;
       `i: Z <- trigger (Choose _);;
-      guarantee(i = if b then 0xffffff%Z else 0%Z);;;
+      guarantee(i = if b then 0%Z else 0xffffff%Z);;;
       `_: val <- hcall "putint" [Vint i];;
       Ret Vundef
     .
@@ -48,9 +48,9 @@ Section MAIN.
   .
 
   Definition SMain: SMod.t := SMod.main mainpre mainbody.
-  Definition Main: Mod.t := SMod.to_tgt (fun _ => ClientStb++MainStb) SMain.
+  Definition Main: Mod.t := SMod.to_tgt (fun _ => BWStb++ClientStb++MainStb) SMain.
   Definition SMainSem: SModSem.t := SModSem.main mainpre mainbody.
-  Definition MainSem: ModSem.t := SModSem.to_tgt (ClientStb++MainStb) SMainSem.
+  Definition MainSem: ModSem.t := SModSem.to_tgt (BWStb++ClientStb++MainStb) SMainSem.
 
 End MAIN.
 Global Hint Unfold MainStb: stb.

@@ -60,4 +60,4 @@ Section BW.
   Definition BW: Mod.t := SMod.to_tgt (fun _ => BWStb) SBW.
 
 End BW.
-Global Hint Unfold BWStb: bw.
+Global Hint Unfold BWStb: stb.
