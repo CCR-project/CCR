@@ -211,9 +211,9 @@ Section EVENTSL.
 
 
   Lemma interp_Es_bind
-        (prog: callE ~> itree Es)
         A B
         (itr: itree Es A) (ktr: A -> itree Es B)
+        (prog: callE ~> itree Es)
         st0
     :
       interp_Es prog (v <- itr ;; ktr v) st0 =
@@ -639,9 +639,9 @@ Section EVENTS.
 
 
   Lemma transl_all_bind
-        mn
         A B
         (itr: itree Es A) (ktr: A -> itree Es B)
+        mn
     :
       transl_all mn (itr >>= ktr) = a <- (transl_all mn itr);; (transl_all mn (ktr a))
   .
