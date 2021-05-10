@@ -110,8 +110,9 @@ Section SIMMODSEM.
     @mk_wf
       _
       val
-      (fun ll _ => ((∃ ns, (OwnM(echo_black ll ns)) ** is_list ll (List.map Vint ns)) ∨ (∃ ns, OwnM(echo_white ll ns)): iProp)%I)
-      (fun ll mp_tgt _ => mp_tgt = ll↑)
+      (fun ll => ((∃ ns, (OwnM(echo_black ll ns)) ** is_list ll (List.map Vint ns)) ∨ (∃ ns, OwnM(echo_white ll ns)): iProp)%I)
+      top2
+      (fun ll mp_src mp_tgt => mp_tgt = ll↑)
   .
   Local Opaque is_list.
 
@@ -144,7 +145,6 @@ Section SIMMODSEM.
       destruct (alist_find "getint" (StackStb ++ ClientStb ++ MemStb ++ EchoStb)) eqn:T; stb_tac; clarify.
       steps. rewrite Any.upcast_downcast in *. steps.
       hcall _ _ _ with "PRE"; et.
-      { splits; ss. }
       mDesAll. clarify. steps.
       mDesOr "INV1".
       { mAssertPure False; ss. iDestruct "INV1" as (ns) "[INV1 _]".
@@ -200,8 +200,7 @@ Section SIMMODSEM.
         astop. steps.
         destruct (alist_find "echo" (StackStb ++ ClientStb ++ MemStb ++ EchoStb)) eqn:T; stb_tac; clarify.
         steps. rewrite Any.upcast_downcast. steps.
-        hcall _ (_, _) _ with "*".
-        { et. }
+        hcall _ (_, _) _ with "*"; ss.
         { iModIntro. iSplitR "A1"; ss.
           { iLeft. iExists _. iSplitL "A"; ss. }
           { iSplitL; ss. iSplitL; ss. }
@@ -277,8 +276,7 @@ Section SIMMODSEM.
       steps. eapply Any.upcast_inj in PURE0. des; clarify.
       rewrite Any.upcast_downcast in *. clarify. steps.
 
-      hcall _ _ _ with "INV".
-      { ss. }
+      hcall _ _ _ with "INV"; ss.
       { iModIntro. iSplit; ss. }
       { split; ss. }
       mDesAll. mDesOr "INV1".
@@ -291,8 +289,7 @@ Section SIMMODSEM.
 
       destruct (alist_find "echo_finish" (StackStb ++ ClientStb ++ MemStb ++ EchoStb)) eqn:T; stb_tac; clarify.
       steps. rewrite Any.upcast_downcast. steps.
-      hcall _ (_, _) _ with "A A2 INV1".
-      { ss. }
+      hcall _ (_, _) _ with "A A2 INV1"; ss.
       { iCombine "A" "INV1" as "A".
         iPoseProof (OwnM_Upd with "A") as "A".
         { instantiate (1:= echo_black _ _ ⋅ echo_white _ _).

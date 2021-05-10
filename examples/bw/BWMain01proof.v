@@ -37,7 +37,8 @@ Section SIMMODSEM.
     @mk_wf
       _
       unit
-      (fun _ _ => (⌜True⌝)%I)
+      (fun _ => (True)%I)
+      top2
       top3
   .
 
@@ -52,9 +53,7 @@ Section SIMMODSEM.
       steps. rewrite Any.upcast_downcast in *. clarify.
       destruct (alist_find "getbool" (BWStb ++ ClientStb ++ MainStb)) eqn:T; stb_tac; clarify.
       steps. rewrite Any.upcast_downcast. steps.
-      hcall _ _ _ with "".
-      { ss. }
-      { iModIntro. iSplit; ss. }
+      hcall _ _ _ with ""; ss.
       { splits; ss. ss. }
       mDesAll. clarify. steps.
       rewrite Any.upcast_downcast in *. clarify.

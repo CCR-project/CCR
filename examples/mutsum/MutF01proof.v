@@ -34,7 +34,7 @@ Section SIMMODSEM.
   Let W: Type := (Σ * Any.t) * (Σ * Any.t).
 
   Let wf: W -> Prop :=
-    mk_wf (fun (_: unit) _ => (True: iProp)%I) top3.
+    mk_wf (fun (_: unit) => (True: iProp)%I) top2 top3.
 
   Theorem correct: ModPair.sim MutF1.F MutF0.F.
   Proof.
@@ -50,24 +50,15 @@ Section SIMMODSEM.
     - destruct x; ss. astop. force_l. eexists.
       hret _; ss.
     - destruct x; [ss|]. rewrite Nat2Z.inj_succ. steps. acatch.
-      hcall _ _ _ with "*".
-      { ss. }
+      hcall _ _ _ with "*"; auto.
       { iPureIntro. splits; eauto.
         replace (Z.succ (Z.of_nat x) - 1)%Z with (Z.of_nat x) by lia. ss. }
       { splits; ss; eauto with ord_step. }
       i. mDesAll. des; clarify. eapply Any.upcast_inj in PURE2. des; clarify.
       rewrite Any.upcast_downcast. steps. astop.
       force_l. eexists.
-      (* hret_tac begin *)
-      eapply hret_clo.
-      { et. }
-      { eauto with ord_step. }
-      { eassumption. }
-      (* hret_tac end *)
-      { ss. }
-      { start_ipm_proof. iPureIntro. splits; ss.
-        f_equal. f_equal. lia. }
-      { i. ss. }
+      hret _; ss. start_ipm_proof. iPureIntro. splits; ss.
+      f_equal. f_equal. lia.
       Unshelve. all: ss.
   Qed.
 

@@ -38,7 +38,7 @@ Section SIMMODSEM.
   Eval compute in (@URA.car Mem1._memRA).
 
   Let wf: W -> Prop :=
-    mk_wf (fun (_: unit) _ => (True: iProp)%I) top3.
+    mk_wf (fun (_: unit) => (True: iProp)%I) top2 top3.
 
   Local Opaque points_to.
 
