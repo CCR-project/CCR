@@ -15,7 +15,7 @@ From ExtLib Require Import
      Core.RelDec
      Structures.Maps
      Data.Map.FMapAList.
-Require Import TODOYJ.
+Require Import TODOYJ Logic HTactics.
 
 Set Implicit Arguments.
 
@@ -29,10 +29,7 @@ Section SIMMODSEM.
   Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
 
   Let wf: W -> Prop :=
-    fun '(mrps_src0, mrps_tgt0) =>
-        (<<SRC: mrps_src0 = (ε, tt↑)>>) /\
-        (<<TGT: mrps_tgt0 = (ε, tt↑)>>)
-  .
+    mk_wf (fun (_: unit) => (True: iProp)%I) top2 top3.
 
   Hint Resolve sim_itree_mon: paco.
 
@@ -42,9 +39,11 @@ Section SIMMODSEM.
   Theorem correct: ModSemPair.sim Client1.ClientSem Client0.ClientSem.
   Proof.
     econstructor 1 with (wf:=wf); et; swap 2 3.
-    { ss. }
-    econs; ss.
-    { admit "ez". }
+    { econs; ss. red. uipropall. }
+    econs; ss; [|econs; ss].
+    { init. unfold getint_body, getintF. harg.
+      mDesAll. clarify. rewrite Any.upcast_downcast. steps.
+      admit "ez". }
     { admit "ez". }
   Qed.
 

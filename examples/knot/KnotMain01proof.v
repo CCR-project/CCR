@@ -42,7 +42,8 @@ Section SIMMODSEM.
     @mk_wf
       _
       unit
-      (fun _ _ => True%I)
+      (fun _ => True%I)
+      top2
       top3
   .
 

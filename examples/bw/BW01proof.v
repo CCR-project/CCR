@@ -58,8 +58,9 @@ Section SIMMODSEM.
     @mk_wf
       _
       Z
-      (fun n _ => (OwnM (bw_full (Z.odd n))))
-      (fun n mp_tgt _ => mp_tgt = n↑)
+      (fun n => (OwnM (bw_full (Z.odd n))))
+      top2
+      (fun n mp_src mp_tgt => mp_tgt = n↑)
   .
 
   Require Import Red.
@@ -76,12 +77,10 @@ Section SIMMODSEM.
       mAssertPure (x = Z.odd a); subst.
       { iApply (bw_ra_merge with "INV PRE"). }
       steps. force_l. eexists.
-      hret _.
-      { et. }
-      { iModIntro. iFrame.
-        iPureIntro. split; ss. f_equal.
-        rewrite <- Z.negb_odd. rewrite negb_if. des_ifs. }
-      { i. ss. }
+      hret _; ss.
+      iModIntro. iFrame.
+      iPureIntro. split; ss. f_equal.
+      rewrite <- Z.negb_odd. rewrite negb_if. des_ifs.
     }
     econs; ss.
     { unfold flipF. init. harg.
@@ -90,19 +89,16 @@ Section SIMMODSEM.
       mAssertPure (x = Z.odd a); subst.
       { iApply (bw_ra_merge with "INV PRE"). }
       steps. force_l. eexists.
-      hret _.
-      { et. }
-      { iCombine "INV" "PRE" as "H".
-        iPoseProof (OwnM_Upd with "H") as "H".
-        { (* TODO: make lemma *)
-          instantiate (1:= bw_full (Z.odd (a+1)) ⋅ bw_frag (Z.odd (a+1))).
-          eapply Auth.auth_update. rr. ii. des; ss. ur in FRAME. ur. destruct ctx0; ss; clarify.
-        }
-        iMod "H". iDestruct "H" as "[H0 H1]". iModIntro.
-        replace (negb (Z.odd a)) with (Z.odd (a+1)); [iFrame; et|].
-        rewrite Z.odd_add. ss.
+      hret _; ss.
+      iCombine "INV" "PRE" as "H".
+      iPoseProof (OwnM_Upd with "H") as "H".
+      { (* TODO: make lemma *)
+        instantiate (1:= bw_full (Z.odd (a+1)) ⋅ bw_frag (Z.odd (a+1))).
+        eapply Auth.auth_update. rr. ii. des; ss. ur in FRAME. ur. destruct ctx0; ss; clarify.
       }
-      { i. ss. }
+      iMod "H". iDestruct "H" as "[H0 H1]". iModIntro.
+      replace (negb (Z.odd a)) with (Z.odd (a+1)); [iFrame; et|].
+      rewrite Z.odd_add. ss.
     }
   Qed.
 
