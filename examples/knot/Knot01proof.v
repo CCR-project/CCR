@@ -34,48 +34,34 @@ Section AUX.
   Lemma knot_ra_merge
         f0 f1
     :
-      ⌞(Own (GRA.embed (knot_full f0)) -* Own (GRA.embed (knot_frag f1)) -* (⌜f1 = f0⌝))⌟
-  .
+      (OwnM (knot_full f0)) -∗ OwnM (knot_frag f1) -∗ (⌜f1 = f0⌝).
   Proof.
-    iIntro; clear A.
-    do 2 iIntro.
-    {
-      iMerge A A0. rewrite <- own_sep in A. rewrite GRA.embed_add in A.
-      iOwnWf A. eapply GRA.embed_wf in WF. des. eapply Auth.auth_included in WF. des.
-      eapply Excl.extends in WF; ss.
-      - des; clarify.
-      - ur; ss.
-    }
+    iIntros "H0 H1". iCombine "H0 H1" as "H".
+    iOwnWf "H" as WF. iPureIntro.
+    eapply Auth.auth_included in WF. des.
+    eapply Excl.extends in WF; ss.
+    - des; clarify.
+    - ur; ss.
   Qed.
 
   Lemma knot_frag_unique
         f0 f1
     :
-      ⌞(Own (GRA.embed (knot_frag f0)) -* Own (GRA.embed (knot_frag f1)) -* (⌜False⌝))⌟
-  .
+      (OwnM (knot_frag f0)) -∗ OwnM (knot_frag f1) -∗ (⌜False⌝).
   Proof.
-    iIntro; clear A.
-    do 2 iIntro.
-    {
-      iMerge A A0. rewrite <- own_sep in A. rewrite GRA.embed_add in A.
-      iOwnWf A. eapply GRA.embed_wf in WF. des.
-      ur in WF. ur in WF. ss.
-    }
+    iIntros "H0 H1". iCombine "H0 H1" as "H".
+    iOwnWf "H" as WF. exfalso.
+    ur in WF. ur in WF. ss.
   Qed.
 
   Lemma knot_full_unique
         f0 f1
     :
-      ⌞(Own (GRA.embed (knot_full f0)) -* Own (GRA.embed (knot_full f1)) -* (⌜False⌝))⌟
-  .
+      (OwnM (knot_full f0)) -∗ OwnM (knot_full f1) -∗ (⌜False⌝).
   Proof.
-    iIntro; clear A.
-    do 2 iIntro.
-    {
-      iMerge A A0. rewrite <- own_sep in A. rewrite GRA.embed_add in A.
-      iOwnWf A. eapply GRA.embed_wf in WF. des.
-      ur in WF. ur in WF. ss.
-    }
+    iIntros "H0 H1". iCombine "H0 H1" as "H".
+    iOwnWf "H" as WF. exfalso.
+    ur in WF. ur in WF. ss.
   Qed.
 End AUX.
 
@@ -94,21 +80,23 @@ Section SIMMODSEM.
   Variable GlobalStb: SkEnv.t -> list (gname * fspec).
 
   Let wf (skenv: SkEnv.t): W -> Prop :=
-    fun '(mrps_src0, mrps_tgt0) =>
-      exists (mr: Σ),
-        (<<SRC: mrps_src0 = (mr, tt↑)>>) /\
-        (<<TGT: mrps_tgt0 = (ε, tt↑)>>) /\
-        (<<SEP: (inv_closed
-                 ∨
-                 ((inv_open)
-                    **
-                    (Exists (f': option (nat -> nat)) (fb': val),
-                     (⌜forall f (EQ: f' = Some f),
-                           exists fb,
-                             (<<BLK: fb' = Vptr fb 0>>) /\
-                             (<<FN: fb_has_spec skenv (FunStb skenv) fb (fun_gen RecStb skenv f)>>)⌝)
-                       ** (Own (GRA.embed (knot_full f')))
-                       ** (Own (knot_var skenv fb'))))) mr>>).
+    @mk_wf
+      _
+      unit
+      (fun _ _ =>
+         (inv_closed
+          ∨
+          ((inv_open)
+             **
+             (∃ (f': option (nat -> nat)) (fb': val),
+                 (⌜forall f (EQ: f' = Some f),
+                       exists fb,
+                         (<<BLK: fb' = Vptr fb 0>>) /\
+                         (<<FN: fb_has_spec skenv (FunStb skenv) fb (fun_gen RecStb skenv f)>>)⌝)
+                   ** (OwnM (knot_full f'))
+                   ** (OwnM (var_points_to skenv "_f" fb')))))%I)
+      top3
+  .
 
   Hypothesis RecStb_incl: forall skenv,
       stb_incl KnotRecStb (RecStb skenv).
@@ -125,23 +113,19 @@ Section SIMMODSEM.
     i. eapply adequacy_lift.
     econstructor 1 with (wf:=wf (Sk.load_skenv sk)); et; ss.
     2: {
-      eexists. esplits; ss. right.
-      exists (GRA.embed inv_black), (knot_var sk Vundef ⋅ GRA.embed (knot_full None)).
-      splits; ss.
-      { r_solve. }
-      { exists ε. r_solve. }
-      exists None, Vundef.
-      exists (GRA.embed (knot_full None)), (knot_var sk Vundef). splits; ss.
-      { r_solve. }
-      2: { exists ε. r_solve. }
-      exists ε, (GRA.embed (knot_full None)). splits; ss.
-      { r_solve. }
-      { exists ε. r_solve. }
+      econs; ss. eapply to_semantic.
+      { iIntros "[[H0 H1] H2]". iRight. iSplitL "H2".
+        { unfold inv_open, OwnM. ss. }
+        { iExists _, _. iSplitR "H0"; ss. iFrame.
+          iPureIntro. i. ss. }
+      }
+      { admit "GRA wf". }
     }
     hexploit (SKINCL "rec"); ss; eauto. intros [blk0 FIND0].
     hexploit (SKINCL "_f"); ss; eauto. intros [blk1 FIND1].
     econs; ss; [|econs; ss].
-    { init. unfold recF, ccall. harg_tac. iRefresh.
+    { init. unfold recF, ccall. harg. destruct x. mDesAll.
+harg_tac. iRefresh.
       destruct x as [f n]. ss. des. subst.
       iRefresh. iDestruct PRE. iDestruct PRE. iPure PRE. des; clarify.
       eapply Any.upcast_inj in PRE. des; clarify. steps.

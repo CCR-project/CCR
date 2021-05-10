@@ -107,16 +107,10 @@ Section KNOT.
     Definition KnotSbtb: list (gname * fspecbody) :=[("rec", mk_specbody rec_spec (fun _ => trigger (Choose _)));
                                                     ("knot", mk_specbody knot_spec (fun _ => trigger (Choose _)))].
 
-    Definition knot_var (v: val): Σ :=
-      match (skenv.(SkEnv.id2blk) "_f") with
-      | Some  blk => GRA.embed ((blk,0%Z) |-> [v])
-      | None => ε
-      end.
-
     Definition SKnotSem: SModSem.t := {|
       SModSem.fnsems := KnotSbtb;
       SModSem.mn := "Knot";
-      SModSem.initial_mr := knot_var Vundef ⋅ (GRA.embed (knot_full None)) ⋅ (GRA.embed inv_black);
+      SModSem.initial_mr := (GRA.embed (var_points_to skenv "_f" Vundef)) ⋅ (GRA.embed (knot_full None)) ⋅ (GRA.embed inv_black);
       SModSem.initial_st := tt↑;
     |}
     .

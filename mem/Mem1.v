@@ -42,6 +42,12 @@ Section PROOF.
 
   Definition points_to (loc: mblock * Z) (vs: list val): memRA := Auth.white (_points_to loc vs).
 
+  Definition var_points_to (skenv: SkEnv.t) (var: gname) (v: val): memRA :=
+    match (skenv.(SkEnv.id2blk) var) with
+    | Some  blk => points_to (blk, 0%Z) [v]
+    | None => ε
+    end.
+
   Lemma points_to_split
         blk ofs hd tl
     :
