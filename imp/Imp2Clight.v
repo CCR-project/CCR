@@ -481,13 +481,22 @@ Section Beh.
     | _ => None
     end.
 
+  Inductive match_val : eventval -> val -> Prop :=
+  | match_val_intro :
+      forall v, match_val (EVlong v) (Vint v.(Int64.intval)).
+
   Fixpoint map_vals (vlist : list eventval) acc : option (list val) :=
     match vlist with
     | [] => Some acc
     | v :: t => do mv <- map_val v; map_vals t (acc ++ [mv])
     end.
 
-  Definition map_event (ev : event) : option Universe.event :=
+  Inductive match_vals : list eventval -> list val -> Prop :=
+  | match_vals_intro :
+      forall v1 v2 l1 l2,
+        match_val v1 v2 -> match_vals l1 l2 -> match_vals (v1 :: l1) (v2 :: l2).
+
+  Definition map_event (ev : Events.event) : option Universe.event :=
     match ev with
     | Event_syscall name args r =>
       do margs <- map_vals args [];
@@ -496,6 +505,12 @@ Section Beh.
     | _ => None
     end.
 
+  Inductive match_event : Events.event -> Universe.event -> Prop :=
+  | match_event_intro :
+      forall name eargs uargs er ur,
+        match_vals eargs uargs -> match_val er ur ->
+        match_event (Event_syscall name eargs er) (event_sys name uargs ur).
+
   Fixpoint map_trace (tr : trace) acc : option (list Universe.event) :=
     match tr with
     | [] => Some acc
@@ -503,40 +518,113 @@ Section Beh.
       do mev <- map_event ev; map_trace t (acc ++ [mev])
     end.
 
-  (* CoFixpoint map_traceinf (tri : traceinf)  *)
+  Inductive match_trace : trace -> list Universe.event -> Prop :=
+  | match_trace_intro :
+      forall ee et ue ut,
+        match_event ee ue -> match_trace et ut ->
+        match_trace (ee :: et) (ue :: ut).
 
-  (* Definition map_beh (b: program_behavior) : option Tr.t := *)
-  (*   match b with *)
-  (*   | Terminates tr r => *)
-  (*     do mtr <- map_trace tr []; Some (Tr.app mtr (Tr.done r.(intval))) *)
-  (*   | Diverges tr => *)
-  (*     do mtr <- map_trace tr []; Some (Tr.app mtr (Tr.spin)) *)
-  (*   | Reacts trinf => *)
-  (*     None *)
-  (*   | Goes_wrong tr => *)
-  (*     do mtr <- map_trace tr []; Some (Tr.app mtr (Tr.ub)) *)
-  (*   end. *)
+  (* Inductive match_beh : program_behavior -> Tr.t -> Prop := *)
+  (* | match_beh_Terminates : *)
+  (*     forall tr mtr r, *)
+  (*       map_trace tr [] = Some mtr -> *)
+  (*       match_beh (Terminates tr r) (Tr.app mtr (Tr.done r.(intval))) *)
+  (* | match_beh_Diverges : *)
+  (*     forall tr mtr, *)
+  (*       map_trace tr [] = Some mtr -> *)
+  (*       match_beh (Diverges tr) (Tr.app mtr (Tr.spin)) *)
+  (* | match_beh_Reacts : *)
+  (*     forall ev mev trinf mt, *)
+  (*       map_event ev = Some mev -> *)
+  (*       match_beh (Reacts trinf) mt -> *)
+  (*       match_beh (Reacts (Econsinf ev trinf)) (Tr.cons mev mt) *)
+  (* | match_beh_Goes_wrong : *)
+  (*     forall tr mtr, *)
+  (*       map_trace tr [] = Some mtr -> *)
+  (*       match_beh (Goes_wrong tr) (Tr.app mtr (Tr.ub)). *)
 
-  Inductive match_beh : program_behavior -> Tr.t -> Prop :=
-  | match_beh_Terminates :
-      forall tr mtr r,
-        map_trace tr [] = Some mtr ->
-        match_beh (Terminates tr r) (Tr.app mtr (Tr.done r.(intval)))
-  | match_beh_Diverges :
-      forall tr mtr,
-        map_trace tr [] = Some mtr ->
-        match_beh (Diverges tr) (Tr.app mtr (Tr.spin))
-  | match_beh_Reacts :
-      forall ev mev trinf mt,
-        map_event ev = Some mev ->
-        match_beh (Reacts trinf) mt ->
-        match_beh (Reacts (Econsinf ev trinf)) (Tr.cons mev mt)
-  | match_beh_Goes_wrong :
-      forall tr mtr,
-        map_trace tr [] = Some mtr ->
-        match_beh (Goes_wrong tr) (Tr.app mtr (Tr.ub)).
+  Variant _match_beh match_beh (tgtb : program_behavior) (srcb : Tr.t) : Prop :=
+  | match_beh_Terminates
+      tr mtr r
+      (MT : match_trace tr mtr)
+      (TB : tgtb = Terminates tr r)
+      (SB : srcb = Tr.done r.(intval))
+    :
+      _match_beh match_beh tgtb srcb
+  | match_beh_Diverges
+      tr mtr
+      (MT : match_trace tr mtr)
+      (TB : tgtb = Diverges tr)
+      (SB : srcb = Tr.app mtr (Tr.spin))
+    :
+      _match_beh match_beh tgtb srcb
+  | match_beh_Reacts
+      ev mev trinf mtrinf
+      (ME : match_event ev mev)
+      (MB : match_beh (Reacts trinf) mtrinf)
+      (TB : tgtb = Reacts (Econsinf ev trinf))
+      (SB : srcb = Tr.cons mev mtrinf)
+    :
+      _match_beh match_beh tgtb srcb
+  | match_beh_Goes_wrong
+      tr mtr
+      (MT : match_trace tr mtr)
+      (TB : tgtb = Goes_wrong tr)
+      (SB : srcb = Tr.app mtr (Tr.ub))
+    :
+      _match_beh match_beh tgtb srcb.
+
+  Definition match_beh : _ -> _ -> Prop := paco2 _match_beh bot2.
+
+  Lemma match_beh_mon : monotone2 _match_beh.
+  Proof.
+    ii. inv IN.
+    - econs 1; eauto.
+    - econs 2; eauto.
+    - econs 3; eauto.
+    - econs 4; eauto.
+  Qed.
+
+  Hint Constructors _match_beh.
+  Hint Unfold match_beh.
+  Hint Resolve match_beh_mon: paco.
 
 End Beh.
+
+Section Sim.
+
+  Context `{Σ: GRA.t}.
+  Variable src : Mod.t.
+  Variable tgt : program.
+
+  Let src_sem := ModL.compile (Mod.add_list ([src] ++ [IMem])).
+  Let tgt_sem := semantics2 tgt.
+
+  (* Variable idx: Type. *)
+  (* Variable ord: idx -> idx -> Prop. *)
+
+  Inductive match_states
+            (src_st : src_sem.(STS.state))
+            (tgt_st : tgt_sem.(Smallstep.state)) : Prop :=
+  .
+
+  (* From compcert Require Import SimplExprproof. *)
+
+  (* Let state: Type := itree eventE Any.t. *)
+  (* Definition state_sort (st0: state): sort := *)
+  (*   match (observe st0) with *)
+  (*   | TauF _ => demonic *)
+  (*   | RetF rv => *)
+  (*     match rv↓ with *)
+  (*     | Some (Vint rv) => final rv *)
+  (*     | _ => angelic *)
+  (*     end *)
+  (*   | VisF (Choose X) k => demonic *)
+  (*   | VisF (Take X) k => angelic *)
+  (*   | VisF (Syscall fn args rvs) k => vis *)
+  (*   end *)
+  (* . *)
+End Sim.
 
 Section Proof.
 
