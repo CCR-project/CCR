@@ -41,8 +41,6 @@ Section IPROP.
     Seal.sealing
       "iProp"
       (fun r1 => URA.extends r0 r1).
-  Definition OwnM' (M: URA.t) `{@GRA.inG M Σ} (r: M): iProp' :=
-    Own (GRA.embed r).
   Definition And (P Q: iProp'): iProp' :=
     Seal.sealing
       "iProp"
@@ -390,7 +388,7 @@ Section IPM.
     {| bi_bi_mixin := iProp_bi_mixin;
        bi_bi_later_mixin := iProp_bi_later_mixin |}.
 
-  Definition OwnM (M: URA.t) `{@GRA.inG M Σ} (r: M): iProp := OwnM' r.
+  Definition OwnM (M: URA.t) `{@GRA.inG M Σ} (r: M): iProp := Own (GRA.embed r).
 
   (** extra BI instances *)
   Lemma iProp_bupd_mixin: BiBUpdMixin iProp Upd.
@@ -540,7 +538,7 @@ Section class_instances.
     IsOp a b1 b2 → IntoAnd p (OwnM a) (OwnM b1) (OwnM b2).
   Proof.
     ii. red. apply bi.intuitionistically_if_mono. inv H0.
-    unfold OwnM, OwnM'. rewrite <- GRA.embed_add. iIntros "[H1 H2]". iSplit.
+    unfold OwnM. rewrite <- GRA.embed_add. iIntros "[H1 H2]". iSplit.
     { iApply "H1". }
     { iApply "H2". }
   Qed.
@@ -548,7 +546,7 @@ Section class_instances.
   Global Instance into_sep_ownM (M: URA.t) `{@GRA.inG M Σ} (a b1 b2 : M) :
     IsOp a b1 b2 → IntoSep (OwnM a) (OwnM b1) (OwnM b2).
   Proof.
-    ii. red. inv H0. unfold OwnM, OwnM'.
+    ii. red. inv H0. unfold OwnM.
     rewrite <- GRA.embed_add. iIntros "[H1 H2]". iSplitL "H1"; iFrame.
   Qed.
 End class_instances.
@@ -561,7 +559,7 @@ Section ILEMMAS.
   Lemma OwnM_valid (M: URA.t) `{@GRA.inG M Σ} (m: M):
     OwnM m -∗ ⌜URA.wf m⌝.
   Proof.
-    uipropall. i. red. unfold OwnM, OwnM', Own in *. uipropall.
+    uipropall. i. red. unfold OwnM, Own in *. uipropall.
     unfold URA.extends in *. des. subst.
     eapply URA.wf_mon in WF. eapply GRA.embed_wf. et.
   Qed.
@@ -888,7 +886,7 @@ Section CURRENT.
     :
       URA.wf m.
   Proof.
-    unfold OwnM, OwnM' in *.
+    unfold OwnM in *.
     inv ACC. uipropall. unfold URA.extends in *. des. subst.
     eapply URA.wf_mon in GWF. eapply URA.wf_mon in GWF.
     eapply GRA.embed_wf. auto.
