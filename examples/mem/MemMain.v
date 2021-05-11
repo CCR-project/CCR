@@ -118,7 +118,6 @@ Section PROOF.
       replace (Mod.get_modsem MemOpen.Mem sk) with (MemOpen.MemSem sk) by refl.
       eapply Mem0Openproof.correct.
     }
-    { ss. }
     { set (skenv := Sk.load_skenv (fold_right Sk.add Sk.unit (List.map SMod.sk [SMem; SMain]))).
       econs.
       { esplits; cycle 1.
@@ -131,6 +130,7 @@ Section PROOF.
         { Fail Timeout 1 refl. (**************** FIXTHIS!!!!!!!!!!!!!!!!! ********************) unfold Main. refl. }
         ii. ss. stb_tac.
         rewrite ! eq_rel_dec_correct in *. des_ifs; subst; esplits; try refl; et.
+        refl.
       }
       econs.
     }
