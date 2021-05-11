@@ -552,19 +552,19 @@ Section CANCEL.
       unfold triggerNB; mred; _step; ss; fail
 
     (*** assume/guarantee ***)
-    | [ |- gpaco5 _ _ _ _ _ _ _ (assume ?P ;; _) _ ] =>
+    | [ |- gpaco5 _ _ _ _ _ _ _ (assume ?P ;;; _) _ ] =>
       let tvar := fresh "tmp" in
       let thyp := fresh "TMP" in
       remember (assume P) as tvar eqn:thyp; unfold assume in thyp; subst tvar
-    | [ |- gpaco5 _ _ _ _ _ _ _ (guarantee ?P ;; _) _ ] =>
+    | [ |- gpaco5 _ _ _ _ _ _ _ (guarantee ?P ;;; _) _ ] =>
       let tvar := fresh "tmp" in
       let thyp := fresh "TMP" in
       remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar
-    | [ |- gpaco5 _ _ _ _ _ _ _ _ (assume ?P ;; _) ] =>
+    | [ |- gpaco5 _ _ _ _ _ _ _ _ (assume ?P ;;; _) ] =>
       let tvar := fresh "tmp" in
       let thyp := fresh "TMP" in
       remember (assume P) as tvar eqn:thyp; unfold assume in thyp; subst tvar
-    | [ |- gpaco5 _ _ _ _ _ _ _ _ (guarantee ?P ;; _) ] =>
+    | [ |- gpaco5 _ _ _ _ _ _ _ _ (guarantee ?P ;;; _) ] =>
       let tvar := fresh "tmp" in
       let thyp := fresh "TMP" in
       remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar
