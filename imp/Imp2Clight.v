@@ -572,6 +572,10 @@ Section Beh.
       (TB : tgtb = Goes_wrong tr)
       (SB : srcb = Tr.app mtr (Tr.ub))
     :
+      _match_beh match_beh tgtb srcb
+  | match_beh_ub
+      (SB : srcb = Tr.ub)
+    :
       _match_beh match_beh tgtb srcb.
 
   Definition match_beh : _ -> _ -> Prop := paco2 _match_beh bot2.
@@ -583,6 +587,7 @@ Section Beh.
     - econs 2; eauto.
     - econs 3; eauto.
     - econs 4; eauto.
+    - econs 5; eauto.
   Qed.
 
   Hint Constructors _match_beh.
@@ -790,14 +795,14 @@ Section Proof.
     (* Need to redefine ImpMod's ModSem's name *)
   Admitted.
 
-  Lemma exists_mapped_beh :
-    forall (src: Imp.program) tgt (beh: program_behavior),
-      compile src = OK tgt ->
-      program_behaves (semantics2 tgt) beh
-      ->
-      exists mbeh, match_beh beh mbeh.
-  Proof.
-  Admitted.
+  (* Lemma exists_mapped_beh : *)
+  (*   forall (src: Imp.program) tgt (beh: program_behavior), *)
+  (*     compile src = OK tgt -> *)
+  (*     program_behaves (semantics2 tgt) beh *)
+  (*     -> *)
+  (*     exists mbeh, match_beh beh mbeh. *)
+  (* Proof. *)
+  (* Admitted. *)
 
   Lemma single_compile_behavior_improves :
     forall name (src: Imp.program) srcM tgt (beh: program_behavior),
