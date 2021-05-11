@@ -13,8 +13,6 @@ Require Import KnotMain01proof Knot01proof Mem01proof.
 
 Require Import HTactics TODOYJ.
 
-Generalizable Variables E R A B C X Y Σ.
-
 Set Implicit Arguments.
 
 

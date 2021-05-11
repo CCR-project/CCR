@@ -130,7 +130,6 @@ Section PROOF.
         { Fail Timeout 1 refl. (**************** FIXTHIS!!!!!!!!!!!!!!!!! ********************) unfold Main. refl. }
         ii. ss. stb_tac.
         rewrite ! eq_rel_dec_correct in *. des_ifs; subst; esplits; try refl; et.
-        refl.
       }
       econs.
     }
