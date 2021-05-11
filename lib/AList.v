@@ -82,7 +82,17 @@ Fixpoint alist_pops (K : Type) (R : K -> K -> Prop) (RD_K : RelDec R) (V : Type)
     end
   end.
 
+Fixpoint alist_replace (K : Type) (R : K -> K -> Prop) (RD_K : RelDec R) (V : Type)
+         (k : K) (v: V) (m : alist K V): alist K V :=
+  match m with
+  | [] => []
+  | (k', v') :: ms =>
+    if k ?[R] k'
+    then (k, v) :: ms
+    else (k', v') :: alist_replace _ k v ms
+  end.
 
+Arguments alist_replace [K R] {RD_K} [V].
 Arguments alist_find [K R] {RD_K} [V].
 Arguments alist_add [K R] {RD_K} [V].
 Arguments alist_pop [K R] {RD_K} [V].

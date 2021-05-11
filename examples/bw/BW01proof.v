@@ -58,9 +58,8 @@ Section SIMMODSEM.
     @mk_wf
       _
       Z
-      (fun n => (OwnM (bw_full (Z.odd n))))
-      top2
-      (fun n mp_src mp_tgt => mp_tgt = n↑)
+      (fun n _ _ => (OwnM (bw_full (Z.odd n))))
+      (fun n mp_src mp_tgt _ => mp_tgt = n↑)
   .
 
   Require Import Red.

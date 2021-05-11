@@ -40,11 +40,9 @@ Section SIMMODSEM.
 
   Let wf: W -> Prop :=
     @mk_wf
-      _
-      unit
-      (fun _ => True%I)
-      top2
-      top3
+      _ unit
+      (fun _ _ _=> True%I)
+      top4
   .
 
   Hypothesis RecStb_incl: forall skenv,
@@ -116,14 +114,14 @@ Section SIMMODSEM.
         { iPureIntro. esplits; eauto. econs.
           { eapply SKWF. eauto. }
           eapply fn_has_spec_weaker; eauto. ii. ss.
-          eexists (x_src, OwnM (knot_frag (Some Fib)) ** inv_closed).
+          eexists (x_src, OwnM (knot_frag (Some Fib)) ** inv_opener).
           splits; ss.
-          { i. iIntros "[[[% H0] H1] %]". iModIntro. iFrame; ss.
-            iSplitR; ss. iPureIntro. des. esplits; et.
+          { i. iIntros "[[OPENER [% H]] %]". iModIntro. iFrame; ss.
+            iPureIntro. des. esplits; et.
             eapply fb_has_spec_weaker; eauto.
             ii. ss. exists (Fib, x_src0). splits; ss.
             { i. iIntros "[[% [H0 H1]] %]". iModIntro. iFrame; ss. }
-            { i. iIntros "[[[% H0] H1] %]". iModIntro. iFrame; ss. }
+            { i. iIntros "[[H0 [% H1]] %]". iModIntro. iFrame; ss. }
           }
           { i. iIntros "[[% [H0 H1]] %]". iModIntro. iFrame; ss. }
         }

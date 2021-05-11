@@ -1177,19 +1177,19 @@ Ltac select_ihyps Hns :=
     end
   end.
 
+Tactic Notation "mPure'" uconstr(Hn) "as" simple_intropattern(pat)
+  := on_current ltac:(fun H =>
+                        eapply (@current_iPropL_pure _ Hn) in H;
+                        [|asimpl; reflexivity];
+                        destruct H as [H pat];
+                        asimpl in H).
 
-Ltac mPure' Hn PURE := on_current ltac:(fun H =>
-                                         eapply (@current_iPropL_pure _ Hn) in H;
-                                         [|asimpl; reflexivity];
-                                         destruct H as [H PURE];
-                                         asimpl in H).
+Tactic Notation "mPure" uconstr(Hn) "as" simple_intropattern(pat) :=
+  mPure' Hn as pat.
 
-Tactic Notation "mPure" constr(Hn) "as" ident(PURE) :=
-  mPure' Hn PURE.
-
-Tactic Notation "mPure" constr(Hn) :=
+Tactic Notation "mPure" uconstr(Hn) :=
   let PURE := fresh "PURE" in
-  mPure' Hn PURE.
+  mPure' Hn as PURE.
 
 Ltac mDesEx' Hn a := on_current ltac:(fun H =>
                                         eapply (@current_iPropL_destruct_ex _ Hn) in H;
@@ -1244,31 +1244,19 @@ Ltac mClear Hn := on_current ltac:(fun H =>
                                      eapply (@current_iPropL_clear _ Hn) in H;
                                      asimpl in H).
 
-Ltac mAssert' P Hns Hn_new :=
+Tactic Notation "mAssert'" uconstr(P) uconstr(Hns) constr(Hn_new) :=
   let Hns := select_ihyps Hns in
   on_current ltac:(fun H =>
                      eapply (@current_iPropL_assert _ Hns Hn_new P) in H;
                      cycle 1;
                      [start_ipm_proof|asimpl in H]).
 
-Tactic Notation "mAssert" constr(P) "with" uconstr(Hns) "as" constr(Hn_new) :=
+Tactic Notation "mAssert" uconstr(P) "with" uconstr(Hns) "as" constr(Hn_new) :=
   mAssert' P Hns Hn_new.
 
-Tactic Notation "mAssert" constr(P) "with" uconstr(Hns) :=
+Tactic Notation "mAssert" uconstr(P) "with" uconstr(Hns) :=
   let Hn_new := get_fresh_name_tac "A" in
   mAssert' P Hns Hn_new.
-
-Tactic Notation "mAssert" "_" "with" uconstr(Hns) "as" constr(Hn_new) :=
-  let P := fresh "P" in
-  evar (P: iProp');
-  mAssert P with Hns as Hn_new;
-  [subst P|subst P].
-
-Tactic Notation "mAssert" "_" "with" uconstr(Hns) :=
-  let P := fresh "P" in
-  evar (P: iProp');
-  mAssert P with Hns;
-  [subst P|subst P].
 
 Ltac mAssertPure' P PURE := on_current ltac:(fun H =>
                                                pose proof H as PURE;
@@ -1368,7 +1356,41 @@ Ltac mCombine Hn0 Hn1 := on_current ltac:(fun H =>
                                             [|asimpl; reflexivity|asimpl; reflexivity];
                                             asimpl in H).
 
-(* TODO: tactic for reduction, rewrite *)
+Tactic Notation "mRed" "in" constr(Hn) :=
+  on_current ltac:(fun H =>
+                     match type of H with
+                     | @current_iPropL _ _ ?l =>
+                       match (eval simpl in (alist_find Hn l)) with
+                       | Some ?v =>
+                         let v := (eval simpl in v) in
+                         let v' := (eval red in v) in
+                         let l' := constr:(alist_replace Hn v' l) in
+                         change l with l' in H;
+                         asimpl in H
+                       end
+                     end).
+
+Tactic Notation "mUnfold" constr(t) "in" constr(Hn) :=
+  on_current ltac:(fun H =>
+                     match type of H with
+                     | @current_iPropL _ _ ?l =>
+                       match (eval simpl in (alist_find Hn l)) with
+                       | Some ?v =>
+                         let v := (eval simpl in v) in
+                         let v' := (eval unfold t in v) in
+                         let l' := constr:(alist_replace Hn v' l) in
+                         change l with l' in H;
+                         asimpl in H
+                       end
+                     end).
+
+Tactic Notation "mEval" tactic(tac) "in" constr(Hn) :=
+  on_current ltac:(fun H =>
+                     eapply (@current_iPropL_entail _ Hn) in H;
+                     [|asimpl in H; reflexivity
+                      |tac; refl];
+                     asimpl in H).
+
 
 Ltac mDes' l :=
   match l with
@@ -1604,6 +1626,16 @@ Section TEST.
               (ACC: current_iPropL ctx [("A", X); ("H0", (X -∗ ⌜P⌝)%I); ("B", Y)]),
       False.
   Proof.
+
+
+
+    Tactic Notation "mAssertPure" constr(P) "as" simple_intropattern(pat) :=
+      on_current ltac:(fun H =>
+                         let TMP := fresh "TMP" in
+                         pose proof H as TMP;
+                         eapply (@current_iPropL_assert_pure _ P) in TMP; cycle 1;
+                         [clear TMP; start_ipm_proof|revert TMP; intros pat]).
+
     i. mAssertPure P as PURE.
     { iClear "B". iApply "H0". iApply "A". }
   Abort.
@@ -1612,7 +1644,7 @@ Section TEST.
               (ACC: current_iPropL ctx [("A", X); ("H0", (X -∗ ⌜P⌝)%I); ("B", Y)]),
       False.
   Proof.
-    i. mAssertPure P.
+    i. mAssertPure P as ?.
     { iClear "B". iApply "H0". iApply "A". }
   Abort.
 

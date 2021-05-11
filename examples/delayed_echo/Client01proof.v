@@ -29,7 +29,7 @@ Section SIMMODSEM.
   Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
 
   Let wf: W -> Prop :=
-    mk_wf (fun (_: unit) => (True: iProp)%I) top2 top3.
+    mk_wf (fun (_: unit) _ _ => (True: iProp)%I) top4.
 
   Hint Resolve sim_itree_mon: paco.
 

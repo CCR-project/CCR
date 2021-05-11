@@ -110,9 +110,8 @@ Section SIMMODSEM.
     @mk_wf
       _
       val
-      (fun ll => ((∃ ns, (OwnM(echo_black ll ns)) ** is_list ll (List.map Vint ns)) ∨ (∃ ns, OwnM(echo_white ll ns)): iProp)%I)
-      top2
-      (fun ll mp_src mp_tgt => mp_tgt = ll↑)
+      (fun ll _ _ => ((∃ ns, (OwnM(echo_black ll ns)) ** is_list ll (List.map Vint ns)) ∨ (∃ ns, OwnM(echo_white ll ns)): iProp)%I)
+      (fun ll mp_src mp_tgt _ => mp_tgt = ll↑)
   .
   Local Opaque is_list.
 
@@ -145,6 +144,7 @@ Section SIMMODSEM.
       destruct (alist_find "getint" (StackStb ++ ClientStb ++ MemStb ++ EchoStb)) eqn:T; stb_tac; clarify.
       steps. rewrite Any.upcast_downcast in *. steps.
       hcall _ _ _ with "PRE"; et.
+      { split; ss. }
       mDesAll. clarify. steps.
       mDesOr "INV1".
       { mAssertPure False; ss. iDestruct "INV1" as (ns) "[INV1 _]".
