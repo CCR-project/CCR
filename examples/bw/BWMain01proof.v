@@ -37,9 +37,8 @@ Section SIMMODSEM.
     @mk_wf
       _
       unit
-      (fun _ => (True)%I)
-      top2
-      top3
+      (fun _ _ _ => (True)%I)
+      top4
   .
 
   Theorem correct: ModSemPair.sim BWMain1.MainSem BWMain0.MainSem.

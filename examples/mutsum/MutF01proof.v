@@ -24,9 +24,6 @@ Local Open Scope nat_scope.
 
 
 
-(* TODO: move to SimModSem & add cpn3_wcompat *)
-Hint Resolve sim_itree_mon: paco.
-
 Section SIMMODSEM.
 
   Context `{Σ: GRA.t}.
@@ -34,7 +31,7 @@ Section SIMMODSEM.
   Let W: Type := (Σ * Any.t) * (Σ * Any.t).
 
   Let wf: W -> Prop :=
-    mk_wf (fun (_: unit) => (True: iProp)%I) top2 top3.
+    mk_wf (fun (_: unit) _ _ => (True: iProp)%I) top4.
 
   Theorem correct: ModPair.sim MutF1.F MutF0.F.
   Proof.
