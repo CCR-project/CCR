@@ -148,7 +148,6 @@ Section PROOF.
       unfold ModSemL.initial_r_state in *. clarify. ss. repeat (try rewrite URA.unit_id; try rewrite URA.unit_idl).
       eapply GRA_wf_embed. eapply Auth_wf_black. repeat ur. i; ss. des_ifs.
     }
-    { ss. }
     { set (skenv := Sk.load_skenv (fold_right Sk.add Sk.unit (List.map SMod.sk [SMem; SMain]))).
       econs.
       { esplits; cycle 1.
@@ -161,6 +160,7 @@ Section PROOF.
         { Fail Timeout 1 refl. (**************** FIXTHIS!!!!!!!!!!!!!!!!! ********************) unfold Main. refl. }
         ii. ss. stb_tac.
         rewrite ! eq_rel_dec_correct in *. des_ifs; subst; esplits; try refl; et.
+        refl.
       }
       econs.
     }
