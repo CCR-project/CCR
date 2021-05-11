@@ -139,52 +139,42 @@ Proof. i. grind. Qed.
 (* Tactic Notation "debug" string(str) := idtac str. (*** debug mode ***) *)
 (* Tactic Notation "debug" string(str) := idtac. (*** release mode ***) *)
 
-Ltac _red_itree f :=
+Ltac _red_itree :=
   match goal with
   | [ |- ITree.bind' ?ktr ?itr = _] =>
     match itr with
-    | ITree.bind' _ _ =>
-      instantiate (f:=_continue); apply bind_bind; fail
-    | Tau _ =>
-      instantiate (f:=_break); apply bind_tau; fail
-    | Ret _ =>
-      instantiate (f:=_continue); apply bind_ret_l; fail
-    (* | _ => *)
-    (*   eapply bind_extk; i; *)
-    (*   _red_itree f *)
+    | ITree.bind' _ _ => apply bind_bind
+    | Tau _ => apply bind_tau
+    | Ret _ => apply bind_ret_l
     end
-  | [ |- trigger _ = _] =>
-    instantiate (f:=_break); apply bind_ret_r_rev; fail
-  (* | [ |- (tau;; _) = _ ] => *)
-  (*   eapply tau_ext; _red_itree f *)
+  | [ |- trigger _ = _] => apply bind_ret_r_rev
   | _ => fail
   end.
 
-Ltac __red_interp f term :=
+Ltac __red_interp term :=
   (* idtac "__red_interp"; *)
   (* idtac term; *)
   let my_interp := get_head term in
-  (* idtac itr; *)
   let tc := fresh "_TC_" in
   unshelve evar (tc: @red_database (mk_box (my_interp))); [typeclasses eauto|];
   let name := fresh "TMP" in
   let _nth := constr:(rdb_pos tc) in
   let nth := (eval simpl in _nth) in
   let itr := get_nth term nth in
+  (* idtac itr; *)
   match itr with
   | ITree.bind' ?k0 ?i0 =>
     (* idtac "bind"; *)
-    instantiate (f:=_continue); pose (rdb_bind tc) as name; cbn in name;
+    pose (rdb_bind tc) as name; cbn in name;
     match goal with | name := mk_box ?lemma |- _ => apply (@lemma _ _ i0 k0); fail end
   | Tau _ =>
-    instantiate (f:=_continue); pose (rdb_tau tc) as name; cbn in name;
+    pose (rdb_tau tc) as name; cbn in name;
     match goal with | name := mk_box ?lemma |- _ => apply lemma; fail end
   | Ret _ =>
     (* idtac "ret"; *)
-    instantiate (f:=_continue); pose (rdb_ret tc) as name; cbn in name;
+    pose (rdb_ret tc) as name; cbn in name;
     match goal with | name := mk_box ?lemma |- _ => apply lemma; fail end
   | trigger ?e =>
-    instantiate (f:=_continue);
     ((pose (rdb_trigger0 tc) as name; cbn in name; match goal with | name := mk_box ?lemma |- _ => apply lemma; fail end) ||
      (pose (rdb_trigger1 tc) as name; cbn in name; match goal with | name := mk_box ?lemma |- _ => apply lemma; fail end) ||
      (pose (rdb_trigger2 tc) as name; cbn in name; match goal with | name := mk_box ?lemma |- _ => apply lemma; fail end) ||
@@ -192,47 +182,54 @@ Ltac __red_interp f term :=
      fail 2
     )
   | triggerUB =>
-    instantiate (f:=_continue); pose (rdb_UB tc) as name; cbn in name;
+    pose (rdb_UB tc) as name; cbn in name;
     match goal with | name := mk_box ?lemma |- _ => apply lemma; fail end
   | triggerNB =>
-    instantiate (f:=_continue); pose (rdb_NB tc) as name; cbn in name;
+    pose (rdb_NB tc) as name; cbn in name;
     match goal with | name := mk_box ?lemma |- _ => apply lemma; fail end
   | unwrapU _ =>
-    instantiate (f:=_continue); pose (rdb_unwrapU tc) as name; cbn in name;
+    pose (rdb_unwrapU tc) as name; cbn in name;
     match goal with | name := mk_box ?lemma |- _ => apply lemma; fail end
   | unwrapN _ =>
-    instantiate (f:=_continue); pose (rdb_unwrapN tc) as name; cbn in name;
+    pose (rdb_unwrapN tc) as name; cbn in name;
     match goal with | name := mk_box ?lemma |- _ => apply lemma; fail end
   | assume _ =>
-    instantiate (f:=_continue); pose (rdb_assume tc) as name; cbn in name;
+    pose (rdb_assume tc) as name; cbn in name;
     match goal with | name := mk_box ?lemma |- _ => apply lemma; fail end
   | guarantee _ =>
-    instantiate (f:=_continue); pose (rdb_guarantee tc) as name; cbn in name;
+    pose (rdb_guarantee tc) as name; cbn in name;
     match goal with | name := mk_box ?lemma |- _ => apply lemma; fail end
   | ?term =>
     (* idtac "term"; *)
     pose (rdb_ext tc) as name; cbn in name;
     match goal with | name := mk_box ?lemma |- _ => apply lemma end;
     subst tc;
-    __red_interp f term
+    __red_interp term
   end
 .
 
-Ltac _red_interp f :=
+Ltac _red_interp :=
   (* idtac "_red_interp"; *)
   match goal with
   | [ |- ITree.bind' _ ?term = _ ] =>
     (* idtac "_red_interp_bind"; *)
-    apply bind_ext; __red_interp f term
+    apply bind_ext; __red_interp term
   | [ |- ?term = _] =>
     (* idtac "_red_interp_term"; *)
-    __red_interp f term
+    __red_interp term
   end
 .
 
-Ltac _red_gen f :=
+Ltac _red_gen :=
   (* idtac "DEBUG:_red_gen"; *)
-  _red_interp f || _red_itree f || fail.
+  _red_interp || _red_itree.
+
+Ltac _prw2 k0 k1 X :=
+  match X with
+  | O => eapply _einit; [(k0; k1)|]
+  | S ?n => _prw2 ltac:(k0; _ctx n) k1
+  end.
+Ltac prw2 red_tac X := _prw2 ltac:(idtac) ltac:(cbn; red_tac) X.
 
 
 
@@ -339,8 +336,18 @@ Section TEST.
       (mk_box (z_ext))
   .
 
-  (* Ltac my_red_both := repeat (try (prw _red_lsim 2 0); try (prw _red_lsim 1 0)). *)
-  Ltac my_red_both := try (prw _red_gen 2 0); try (prw _red_gen 1 0).
+  Ltac red_tac := _red_interp || _red_itree.
+
+  (* Let eq_ext0: forall X (x0 x1 ctx: X), x0 = x1 -> x1 = ctx -> x0 = ctx. Proof. i. subst; et. Qed. *)
+  (* Let eq_ext1: forall X (x0 x1 ctx: X), x0 = x1 -> ctx = x1 -> ctx = x0. Proof. i. subst; et. Qed. *)
+
+  (* Ltac my_red_both := *)
+  (*   repeat multimatch goal with *)
+  (*          | |- ?lhs = _ => eapply eq_ext0; [red_tac|] *)
+  (*          | |- _ = ?rhs => eapply eq_ext1; [red_tac|] *)
+  (*          end *)
+  (* . *)
+  Ltac my_red_both := repeat (prw2 red_tac 2 0); repeat (prw2 red_tac 1 0).
 
   Goal forall T U V (i: itree _ T) (j: ktree _ T U) (k: ktree _ U V),
       x (i >>= j >>= k) = iret <- x i;; jret <- x (j iret);; x (k jret)

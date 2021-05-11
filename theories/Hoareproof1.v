@@ -832,7 +832,7 @@ Section CANCEL.
           (*** TODO: make prw "in" tactic ***)
           revert T. pose (fun (x: Prop) (y: Prop) => (x -> y)) as myf.
           match goal with | |- ?a -> ?b => replace (a -> b) with (myf a b) by refl end.
-          try Red.prw ltac:(IRed._red_gen) 2 2 0.
+          repeat IRed.prw2 ltac:(IRed._red_gen) 2 2 0.
           subst myf; cbn. intro T.
           (*** applying reduction in "T" end ***)
           eapply T.

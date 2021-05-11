@@ -1480,8 +1480,8 @@ End AUX.
 (*** TODO: move to ITreeLib ***)
 Lemma bind_eta E X Y itr0 itr1 (ktr: ktree E X Y): itr0 = itr1 -> itr0 >>= ktr = itr1 >>= ktr. i; subst; refl. Qed.
 
-Ltac ired_l := try (prw _red_gen 2 0).
-Ltac ired_r := try (prw _red_gen 1 0).
+Ltac ired_l := try (prw2 _red_gen 2 0).
+Ltac ired_r := try (prw2 _red_gen 1 0).
 
 Ltac ired_both := ired_l; ired_r.
 

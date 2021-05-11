@@ -213,8 +213,8 @@ Section CANCEL.
 
 
 
-  Ltac ired_l := try (prw _red_gen 2 0).
-  Ltac ired_r := try (prw _red_gen 1 0).
+  Ltac ired_l := try (prw2 _red_gen 2 0).
+  Ltac ired_r := try (prw2 _red_gen 1 0).
 
   Ltac ired_both := ired_l; ired_r.
 
@@ -297,6 +297,7 @@ Section CANCEL.
            (* (interp_Es mn (ModSemL.prog ms_tgt) ((interp_hCallE_tgt (E:=pE +' eventE) stb cur i0)) st_tgt0) *)
   .
   Proof.
+    Set Ltac Profiling.
     Opaque subevent.
     ginit.
     { i. eapply cpn5_wcompat; eauto with paco. }
@@ -594,6 +595,7 @@ Section CANCEL.
     all: ss.
     all: try (by apply Ord.O).
     { apply 0. }
+  Show Ltac Profile.
   Qed.
 
   Variable entry_r: Σ.
