@@ -56,7 +56,7 @@ Section SIMMODSEM.
       { splits; ss. ss. }
       mDesAll. clarify. steps.
       rewrite Any.upcast_downcast in *. clarify.
-      unfold TODO.unbool in *. astart 3.
+      steps. unfold TODO.unbool in *. astart 3.
       (* TODO: use bind rule to reduce redundancy *)
       des_ifs.
       { steps. acatch.

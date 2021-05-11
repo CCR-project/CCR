@@ -869,7 +869,7 @@ Section AUX.
   Lemma transl_all_assume
         mn (P: Prop)
     :
-      transl_all mn (assume P) = assume P;; tau;; Ret (tt)
+      transl_all mn (assume P) = assume P;;; tau;; Ret (tt)
   .
   Proof.
     unfold assume.
@@ -883,7 +883,7 @@ Section AUX.
   Lemma transl_all_guarantee
         mn (P: Prop)
     :
-      transl_all mn (guarantee P) = guarantee P;; tau;; Ret (tt)
+      transl_all mn (guarantee P) = guarantee P;;; tau;; Ret (tt)
   .
   Proof.
     unfold guarantee.
@@ -1061,7 +1061,7 @@ Lemma interp_tgt_assume stb o
   :
     (interp_hCallE_tgt (E:=pE +' eventE) stb o (assume P))
     =
-    (assume P;; tau;; Ret tt)
+    (assume P;;; tau;; Ret tt)
 .
 Proof.
   unfold assume. rewrite interp_tgt_bind. rewrite interp_tgt_triggere. grind. eapply interp_tgt_ret.
@@ -1072,7 +1072,7 @@ Lemma interp_tgt_guarantee stb o
   :
     (interp_hCallE_tgt (E:=pE +' eventE) stb o (guarantee P))
     =
-    (guarantee P;; tau;; Ret tt).
+    (guarantee P;;; tau;; Ret tt).
 Proof.
   unfold guarantee. rewrite interp_tgt_bind. rewrite interp_tgt_triggere. grind. eapply interp_tgt_ret.
 Qed.
@@ -1247,7 +1247,7 @@ Lemma interp_mid_assume o
   :
     (interp_hCallE_mid (E:=pE +' eventE) o (assume P))
     =
-    (assume P;; tau;; Ret tt)
+    (assume P;;; tau;; Ret tt)
 .
 Proof.
   unfold assume. rewrite interp_mid_bind. rewrite interp_mid_triggere. grind. eapply interp_mid_ret.
@@ -1258,7 +1258,7 @@ Lemma interp_mid_guarantee o
   :
     (interp_hCallE_mid (E:=pE +' eventE) o (guarantee P))
     =
-    (guarantee P;; tau;; Ret tt).
+    (guarantee P;;; tau;; Ret tt).
 Proof.
   unfold guarantee. rewrite interp_mid_bind. rewrite interp_mid_triggere. grind. eapply interp_mid_ret.
 Qed.
@@ -1432,7 +1432,7 @@ Lemma interp_src_assume
   :
     (interp_hCallE_src (E:=pE +' eventE) (assume P))
     =
-    (assume P;; tau;; Ret tt)
+    (assume P;;; tau;; Ret tt)
 .
 Proof.
   unfold assume. rewrite interp_src_bind. rewrite interp_src_triggere. grind. eapply interp_src_ret.
@@ -1443,7 +1443,7 @@ Lemma interp_src_guarantee
   :
     (interp_hCallE_src (E:=pE +' eventE) (guarantee P))
     =
-    (guarantee P;; tau;; Ret tt).
+    (guarantee P;;; tau;; Ret tt).
 Proof.
   unfold guarantee. rewrite interp_src_bind. rewrite interp_src_triggere. grind. eapply interp_src_ret.
 Qed.
