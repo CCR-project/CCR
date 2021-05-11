@@ -140,9 +140,9 @@ Proof. i. grind. Qed.
 (* Tactic Notation "debug" string(str) := idtac. (*** release mode ***) *)
 
 Ltac _red_itree f :=
-  match goal with
+  lazymatch goal with
   | [ |- ITree.bind' ?ktr ?itr = _] =>
-    match itr with
+    lazymatch itr with
     | ITree.bind' _ _ =>
       instantiate (f:=_continue); apply bind_bind; fail
     | Tau _ =>
@@ -171,7 +171,7 @@ Ltac __red_interp f term :=
   let _nth := constr:(rdb_pos tc) in
   let nth := (eval simpl in _nth) in
   let itr := get_nth term nth in
-  match itr with
+  lazymatch itr with
   | ITree.bind' ?k0 ?i0 =>
     (* idtac "bind"; *)
     instantiate (f:=_continue); pose (rdb_bind tc) as name; cbn in name;
@@ -220,7 +220,7 @@ Ltac __red_interp f term :=
 
 Ltac _red_interp f :=
   (* idtac "_red_interp"; *)
-  match goal with
+  lazymatch goal with
   | [ |- ITree.bind' _ ?term = _ ] =>
     (* idtac "_red_interp_bind"; *)
     apply bind_ext; __red_interp f term
