@@ -43,7 +43,7 @@ Section SIMMODSEM.
   .
   
   Theorem correct:
-    forall ge, ModSemPair.sim MutF0.FSem (MutFImp.FSem ge).
+    forall ge, SimModSemL.ModSemLPair.sim MutF0.FSem (MutFImp.FSem ge).
   Proof.
     econstructor 1 with (wf:=wf); et; ss.
     econs; ss. init. unfold cfun.

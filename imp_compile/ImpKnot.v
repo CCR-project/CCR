@@ -61,6 +61,7 @@ Section Knot.
   |}.
 
   Definition imp_knot_prog : program := {|
+    name := "Knot";
     ext_vars := [];
     ext_funs := [];
     prog_vars := [("_f", 0%Z)];

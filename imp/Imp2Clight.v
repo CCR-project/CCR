@@ -356,6 +356,7 @@ Section Link.
   Variable src1 : Imp.programL.
   Variable src2 : Imp.programL.
 
+  Let l_nameL := src1.(nameL) ++ src2.(nameL).
   Let l_prog_varsL := src1.(prog_varsL) ++ src2.(prog_varsL).
   Let l_prog_funsL := src1.(prog_funsL) ++ src2.(prog_funsL).
   Let l_publicL := src1.(publicL) ++ src2.(publicL).
@@ -434,7 +435,7 @@ Section Link.
   (* Linker for Imp programs, follows Clight's link_prog as possible *)
   Definition link_imp : option Imp.programL :=
     if (link_imp_cond1 && link_imp_cond2 && link_imp_cond3)
-    then Some (mk_programL l_ext_vars l_ext_funs l_prog_varsL l_prog_funsL l_publicL l_defsL)
+    then Some (mk_programL l_nameL l_ext_vars l_ext_funs l_prog_varsL l_prog_funsL l_publicL l_defsL)
     else None
   .
 
@@ -751,30 +752,29 @@ Section Proof.
         compile_list src_t tgt_t ->
         compile_list (src_h :: src_t) (tgt_h :: tgt_t).
 
-  Definition fold_right_option {T} f (opth : option T) (t : list T) :=
-    fold_right
-      (fun s2 opt => match opt with | Some s1 => f s1 s2 | None => None end)
-      opth t.
+  Definition fold_left_option {T} f (t : list T) (opth : option T) :=
+    fold_left
+      (fun opt s2 => match opt with | Some s1 => f s1 s2 | None => None end)
+      t opth.
 
-  Lemma fold_right_option_None {T} :
-    forall f (l : list T), fold_right_option f None l = None.
+  Lemma fold_left_option_None {T} :
+    forall f (l : list T), fold_left_option f l None = None.
   Proof.
     intros f. induction l; ss; clarify.
-    rewrite IHl. ss.
   Qed.
 
   Definition link_imp_list src_list :=
     match src_list with
     | [] => None
     | src_h :: src_t =>
-      fold_right_option link_imp (Some src_h) src_t
+      fold_left_option link_imp src_t (Some src_h)
     end.
 
   Definition link_clight_list (tgt_list : list (Ctypes.program function)) :=
     match tgt_list with
     | [] => None
     | tgt_h :: tgt_t =>
-      fold_right_option link_program (Some tgt_h) tgt_t
+      fold_left_option link_program tgt_t (Some tgt_h)
     end.
 
   Lemma comm_link_imp_compile :
@@ -790,48 +790,50 @@ Section Proof.
     generalize dependent srcl. generalize dependent tgtl.
     generalize dependent p. generalize dependent p0.
     induction H7; i; ss; clarify.
-    destruct (fold_right_option link_program (Some p0) tgt_t) eqn:FC;
-      destruct (fold_right_option link_imp (Some p) src_t) eqn:FI;
-      ss; clarify.
+    destruct (link_program p0 tgt_h) eqn:LPt; ss; clarify.
+    2:{ rewrite fold_left_option_None in H1; clarify. }
+    destruct (link_imp p src_h) eqn:LPs; ss; clarify.
+    2:{ rewrite fold_left_option_None in H0; clarify. }
+    eapply IHcompile_list.
+    2: apply H1.
+    2: apply H0.
     eapply _comm_link_imp_compile.
-    3: apply H0.
-    3: apply H1.
-    eapply IHcompile_list; eauto.
-    auto.
+    3: apply LPs.
+    3: apply LPt.
+    auto. auto.
   Qed.
 
   Context `{Σ: GRA.t}.
 
   Lemma _comm_link_imp_link_mod :
-    forall sn1 src1 sn2 src2 snl srcl tgt1 tgt2 tgtl (ctx : Mod.t),
-      ImpMod.get_mod sn1 src1 = tgt1 ->
-      ImpMod.get_mod sn2 src2 = tgt2 ->
+    forall src1 src2 srcl tgt1 tgt2 tgtl (ctx : ModL.t),
+      ImpMod.get_mod src1 = tgt1 ->
+      ImpMod.get_mod src2 = tgt2 ->
       link_imp src1 src2 = Some srcl ->
-      ImpMod.get_mod snl srcl = tgtl ->
-      Mod.add_list ([tgt1; tgt2] ++ [ctx])
+      ImpMod.get_mod srcl = tgtl ->
+      ModL.add (ModL.add ctx tgt1) tgt2
       =
-      Mod.add_list ([tgtl] ++ [ctx]).
+      ModL.add ctx tgtl.
   Proof.
   Admitted.
-
-  Definition get_mod_list ns_list :=
-    List.map (fun '(name, src) => ImpMod.get_mod name src) ns_list.
 
   Lemma comm_link_imp_link_mod :
-    forall name_src_list namel srcl tgt_list tgtl ctx,
-      get_mod_list name_src_list = tgt_list ->
-      let src_list := List.map snd name_src_list in
+    forall src_list srcl tgt_list tgtl ctx,
+      List.map (fun src => ImpMod.get_mod src) src_list = tgt_list ->
       link_imp_list src_list = Some srcl ->
-      ImpMod.get_mod namel srcl = tgtl ->
-      Mod.add_list (tgt_list ++ [ctx])
+      ImpMod.get_mod srcl = tgtl ->
+      fold_left ModL.add tgt_list ctx
       =
-      Mod.add_list ([tgtl] ++ [ctx]).
+      ModL.add ctx tgtl.
   Proof.
-    induction name_src_list; i; ss; clarify.
-    destruct a as [name src]. ss.
-    destruct name_src_list eqn:NSL; ss; clarify.
-    (* Need to redefine ImpMod's ModSem's name *)
-  Admitted.
+    destruct src_list eqn:SL; i; ss; clarify.
+    move p after l.
+    revert_until Σ.
+    induction l; i; ss; clarify.
+    destruct (link_imp p a) eqn:LI; ss; clarify.
+    2:{ rewrite fold_left_option_None in H0; clarify. }
+    erewrite _comm_link_imp_link_mod; eauto.
+  Qed.
 
   (* Lemma exists_mapped_beh : *)
   (*   forall (src: Imp.program) tgt (beh: program_behavior), *)
@@ -843,10 +845,10 @@ Section Proof.
   (* Admitted. *)
 
   Lemma single_compile_behavior_improves :
-    forall name (src: Imp.program) srcM tgt (beh: program_behavior),
+    forall (src: Imp.program) srcM tgt (beh: program_behavior),
       compile src = OK tgt ->
       program_behaves (semantics2 tgt) beh ->
-      Mod.add_list ([ImpMod.get_mod name src] ++ [IMem]) = srcM
+      ModL.add (ImpMod.get_mod src) IMem = srcM
       ->
       exists mbeh,
         match_beh beh mbeh /\

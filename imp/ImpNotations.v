@@ -140,13 +140,14 @@ Section Example_Extract.
   |}.
 
   Definition ex_extract : program := {|
+    name := "Main";
     ext_vars := [];
     ext_funs := [];
     prog_vars := [];
     prog_funs := [("factorial", factorial_fundef); ("main", main_fundef)];
   |}.
   
-  Definition ex_prog: Mod.t := ImpMod.get_mod "Main" ex_extract.
+  Definition ex_prog: ModL.t := ImpMod.get_mod ex_extract.
 
   Definition imp_ex := ModSemL.initial_itr_no_check (ModL.enclose ex_prog).
 

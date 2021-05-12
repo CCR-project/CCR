@@ -23,6 +23,7 @@ Section F.
 
   Definition imp_mutsumF_prog : program :=
     mk_program
+      "MutSumF"
       []
       [("g", 1)]
       []
@@ -45,6 +46,7 @@ Section G.
 
   Definition imp_mutsumG_prog : program :=
     mk_program
+      "MutSumG"
       []
       [("f", 1)]
       []
@@ -64,6 +66,7 @@ Section Main.
 
   Definition imp_mutsumMain_prog : program :=
     mk_program
+      "MutSumMain"
       []
       [("f", 1)]
       []
