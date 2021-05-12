@@ -11,8 +11,7 @@ Require Import IMem0.
 Require Import Coq.Lists.SetoidList.
 
 From compcert Require Import
-     AST Integers Ctypes Clight Globalenvs
-     Linking Errors Cshmgen Behaviors Events.
+     AST Integers Ctypes Clight Globalenvs Linking Errors Cshmgen Behaviors Events.
 
 Import Int.
 

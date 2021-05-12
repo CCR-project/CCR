@@ -88,17 +88,14 @@ Section Denote.
   (** Denotation of expressions *)
   Fixpoint denote_expr (e : expr) : itree eff val :=
     match e with
-    | Var v     => trigger (GetVar v)
-    | Lit n     => Ret n
-    | Plus a b  => l <- denote_expr a ;; r <- denote_expr b ;; (vadd l r)?
-    | Minus a b => l <- denote_expr a ;; r <- denote_expr b ;; (vsub l r)?
-    | Mult a b  => l <- denote_expr a ;; r <- denote_expr b ;; (vmul l r)?
+    | Var v     => u <- trigger (GetVar v) ;; assume (wf_val u) ;; Ret u
+    | Lit n     => assume (wf_val n) ;; Ret n
+    | Plus a b  => l <- denote_expr a ;; r <- denote_expr b ;; u <- (vadd l r)? ;; assume (wf_val u) ;; Ret u
+    | Minus a b => l <- denote_expr a ;; r <- denote_expr b ;; u <- (vsub l r)? ;; assume (wf_val u) ;; Ret u
+    | Mult a b  => l <- denote_expr a ;; r <- denote_expr b ;; u <- (vmul l r)? ;; assume (wf_val u) ;; Ret u
     end.
 
   (** Denotation of statements *)
-  Definition while (step : itree eff (unit + val)) : itree eff val :=
-    ITree.iter (fun _ => step) tt.
-
   Definition is_true (v : val) : option bool :=
     match v with
     | Vint n => if (n =? 0)%Z then Some false else Some true

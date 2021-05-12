@@ -54,7 +54,7 @@ Section SIMMODSEM.
     rewrite unfold_eval_imp.
     eapply Any.downcast_upcast in _UNWRAPN. des.
     unfold unint in *. destruct v; clarify; ss.
-    imp_steps.
+    imp_steps. inv _ASSUME.
     des_ifs.
     - imp_steps.
     - apply Z.eqb_eq in Heq. clarify.

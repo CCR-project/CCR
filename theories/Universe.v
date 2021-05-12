@@ -20,6 +20,16 @@ Inductive val: Type :=
 | Vundef
 .
 
+Definition wordsize_64 := 64.
+Definition modulus_64 := two_power_nat wordsize_64.
+Definition intrange_64 : Z -> Prop := fun z => ((- 1) < z < modulus_64)%Z.
+Definition wf_val (v : val) :=
+  match v with
+  | Vint z => intrange_64 z
+  | Vptr _ _ => True
+  | Vundef => True
+  end.
+
 (* Notation ofs0 := 0%Z. *)
 
 Definition Vnullptr := Vint 0.
