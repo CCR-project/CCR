@@ -565,13 +565,6 @@ Section Beh.
       (SB : srcb = Tr.cons mev mtrinf)
     :
       _match_beh match_beh tgtb srcb
-  | match_beh_Goes_wrong
-      tr mtr
-      (MT : match_trace tr mtr)
-      (TB : tgtb = Goes_wrong tr)
-      (SB : srcb = Tr.app mtr (Tr.ub))
-    :
-      _match_beh match_beh tgtb srcb
   | match_beh_ub
       (SB : srcb = Tr.ub)
     :
@@ -586,27 +579,74 @@ Section Beh.
     - econs 2; eauto.
     - econs 3; eauto.
     - econs 4; eauto.
-    - econs 5; eauto.
   Qed.
 
   Hint Constructors _match_beh.
   Hint Unfold match_beh.
   Hint Resolve match_beh_mon: paco.
 
+  Lemma match_beh_ub_all :
+    forall tgtb, match_beh tgtb Tr.ub.
+  Proof.
+    pfold. econs 4. auto.
+  Qed.
+
+  (* Variant _match_beh match_beh (tgtb : program_behavior) (srcb : Tr.t) : Prop := *)
+  (* | match_beh_Terminates *)
+  (*     tr mtr r *)
+  (*     (MT : match_trace tr mtr) *)
+  (*     (TB : tgtb = Terminates tr r) *)
+  (*     (SB : srcb = Tr.done r.(intval)) *)
+  (*   : *)
+  (*     _match_beh match_beh tgtb srcb *)
+  (* | match_beh_Diverges *)
+  (*     tr mtr *)
+  (*     (MT : match_trace tr mtr) *)
+  (*     (TB : tgtb = Diverges tr) *)
+  (*     (SB : srcb = Tr.app mtr (Tr.spin)) *)
+  (*   : *)
+  (*     _match_beh match_beh tgtb srcb *)
+  (* | match_beh_Reacts *)
+  (*     ev mev trinf mtrinf *)
+  (*     (ME : match_event ev mev) *)
+  (*     (MB : match_beh (Reacts trinf) mtrinf) *)
+  (*     (TB : tgtb = Reacts (Econsinf ev trinf)) *)
+  (*     (SB : srcb = Tr.cons mev mtrinf) *)
+  (*   : *)
+  (*     _match_beh match_beh tgtb srcb *)
+  (* | match_beh_Goes_wrong *)
+  (*     tr mtr *)
+  (*     (MT : match_trace tr mtr) *)
+  (*     (TB : tgtb = Goes_wrong tr) *)
+  (*     (SB : srcb = Tr.app mtr (Tr.ub)) *)
+  (*   : *)
+  (*     _match_beh match_beh tgtb srcb *)
+  (* | match_beh_ub *)
+  (*     (SB : srcb = Tr.ub) *)
+  (*   : *)
+  (*     _match_beh match_beh tgtb srcb. *)
+
 End Beh.
 
 Section Sim.
 
   Context `{Σ: GRA.t}.
-  Variable src : Mod.t.
-  Variable tgt : program.
+  Variable src_name : mname.
+  Variable src : Imp.programL.
+  Let src_mod := ImpMod.get_mod src_name src.
+  Variable tgt : Ctypes.program function.
 
-  Let src_sem := ModL.compile (Mod.add_list ([src] ++ [IMem])).
+  Let src_sem := ModL.compile (Mod.add_list ([src_mod] ++ [IMem])).
   Let tgt_sem := semantics2 tgt.
+
+  (* what is mname for? Imp mod should have same name for link... *)
+  (* CC 'final_state' = the return state of "main", should return int32. *)
 
   (* Variable idx: Type. *)
   (* Variable ord: idx -> idx -> Prop. *)
 
+  (* match initial_state with ModSemL.initial_itr 
+     match final_state with "main"'s ret?? *)
   Inductive match_states
             (src_st : src_sem.(STS.state))
             (tgt_st : tgt_sem.(Smallstep.state)) : Prop :=
