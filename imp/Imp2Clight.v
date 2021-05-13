@@ -118,7 +118,7 @@ Section Compile.
       (List.map s2p src.(ext_varsL))
       (get_gmap_efuns src.(ext_funsL))
       (List.map (fun '(s, z) => s2p s) src.(prog_varsL))
-      (get_gmap_ifuns src.(prog_funsL))
+      (get_gmap_ifuns (List.map snd src.(prog_funsL)))
   .
 
   (** memory accessing calls *)
@@ -309,7 +309,7 @@ Section Compile.
     let id_ev := List.map s2p src.(ext_varsL) in
     let id_ef := List.map (fun p => s2p (fst p)) src.(ext_funsL) in
     let id_iv := List.map (fun p => s2p (fst p)) src.(prog_varsL) in
-    let id_if := List.map (fun p => s2p (fst p)) src.(prog_funsL) in
+    let id_if := List.map (fun p => s2p (fst (snd p))) src.(prog_funsL) in
     id_init ++ id_ev ++ id_ef ++ id_iv ++ id_if
   .
 
@@ -319,7 +319,7 @@ Section Compile.
       let evars := compile_eVars src.(ext_varsL) in
       let ivars := compile_iVars src.(prog_varsL) in
       do efuns <- compile_eFuns src.(ext_funsL);
-      do ifuns <- compile_iFuns src.(prog_funsL);
+      do ifuns <- compile_iFuns (List.map snd src.(prog_funsL));
       let defs := init_g ++ evars ++ efuns ++ ivars ++ ifuns in
       Some defs
     else None
@@ -358,7 +358,8 @@ Section Link.
 
   Let l_nameL := src1.(nameL) ++ src2.(nameL).
   Let l_prog_varsL := src1.(prog_varsL) ++ src2.(prog_varsL).
-  Let l_prog_funsL := src1.(prog_funsL) ++ src2.(prog_funsL).
+  Let l_prog_funsLM := src1.(prog_funsL) ++ src2.(prog_funsL).
+  Let l_prog_funsL := List.map snd l_prog_funsLM.
   Let l_publicL := src1.(publicL) ++ src2.(publicL).
   Let l_defsL := src1.(defsL) ++ src2.(defsL).
 
@@ -435,7 +436,7 @@ Section Link.
   (* Linker for Imp programs, follows Clight's link_prog as possible *)
   Definition link_imp : option Imp.programL :=
     if (link_imp_cond1 && link_imp_cond2 && link_imp_cond3)
-    then Some (mk_programL l_nameL l_ext_vars l_ext_funs l_prog_varsL l_prog_funsL l_publicL l_defsL)
+    then Some (mk_programL l_nameL l_ext_vars l_ext_funs l_prog_varsL l_prog_funsLM l_publicL l_defsL)
     else None
   .
 
@@ -633,8 +634,8 @@ Section Sim.
 
   Context `{Σ: GRA.t}.
   Variable src_name : mname.
-  Variable src : Imp.programL.
-  Let src_mod := ImpMod.get_mod src_name src.
+  Variable src : Imp.program.
+  Let src_mod := ImpMod.get_mod src.
   Variable tgt : Ctypes.program function.
 
   Let src_sem := ModL.compile (Mod.add_list ([src_mod] ++ [IMem])).
@@ -739,8 +740,8 @@ Section Proof.
   Proof.
   Admitted.
 
-  Definition wf_link {T} (program_list : list T) :=
-    exists h t, program_list = h :: t.
+  (* Definition wf_link {T} (program_list : list T) := *)
+  (*   exists h t, program_list = h :: t. *)
 
   Inductive compile_list :
     list programL -> list (Ctypes.program function) -> Prop :=
@@ -807,10 +808,10 @@ Section Proof.
 
   Lemma _comm_link_imp_link_mod :
     forall src1 src2 srcl tgt1 tgt2 tgtl (ctx : ModL.t),
-      ImpMod.get_mod src1 = tgt1 ->
-      ImpMod.get_mod src2 = tgt2 ->
+      ImpMod.get_modL src1 = tgt1 ->
+      ImpMod.get_modL src2 = tgt2 ->
       link_imp src1 src2 = Some srcl ->
-      ImpMod.get_mod srcl = tgtl ->
+      ImpMod.get_modL srcl = tgtl ->
       ModL.add (ModL.add ctx tgt1) tgt2
       =
       ModL.add ctx tgtl.
@@ -819,9 +820,9 @@ Section Proof.
 
   Lemma comm_link_imp_link_mod :
     forall src_list srcl tgt_list tgtl ctx,
-      List.map (fun src => ImpMod.get_mod src) src_list = tgt_list ->
+      List.map (fun src => ImpMod.get_modL src) src_list = tgt_list ->
       link_imp_list src_list = Some srcl ->
-      ImpMod.get_mod srcl = tgtl ->
+      ImpMod.get_modL srcl = tgtl ->
       fold_left ModL.add tgt_list ctx
       =
       ModL.add ctx tgtl.

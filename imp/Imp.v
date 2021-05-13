@@ -198,7 +198,7 @@ End Denote.
 Section Interp.
 
   Context `{Σ: GRA.t}.
-  Definition effs := GlobEnv +' ImpState +' EventsL.Es.
+  Definition effs := GlobEnv +' ImpState +' Es.
 
   Definition handle_GlobEnv {eff} `{eventE -< eff} (ge: SkEnv.t) : GlobEnv ~> (itree eff) :=
     fun _ e =>
@@ -246,7 +246,7 @@ Section Interp.
     end
   .
 
-  Definition eval_imp (ge: SkEnv.t) (f: function) (args: list val) : itree EventsL.Es val :=
+  Definition eval_imp (ge: SkEnv.t) (f: function) (args: list val) : itree Es val :=
     match (init_args f.(fn_params) args []) with
     | Some iargs =>
       '(_, retv) <- (interp_imp ge (iargs++(init_lenv f.(fn_vars))) (denote_stmt f.(fn_body)));; Ret retv
@@ -275,7 +275,7 @@ Record programL : Type := mk_programL {
   ext_varsL : extVars;
   ext_funsL : extFuns;
   prog_varsL : progVars;
-  prog_funsL : progFuns;
+  prog_funsL : list (mname * (gname * function));
   publicL : list gname;
   defsL : list (gname * Sk.gdef);
 }.
@@ -300,7 +300,10 @@ Record program : Type := mk_program {
 
 Definition lift (p : program) : programL :=
   mk_programL
-    [p.(name)] p.(ext_vars) p.(ext_funs) p.(prog_vars) p.(prog_funs) p.(public) p.(defs).
+    [p.(name)]
+    p.(ext_vars) p.(ext_funs)
+    p.(prog_vars) (List.map (fun pf => (p.(name), pf)) p.(prog_funs))
+    p.(public) p.(defs).
 
 Coercion lift : program >-> programL.
 (* Global Opaque imp_lift. *)
@@ -310,22 +313,45 @@ Module ImpMod.
 Section MODSEM.
 
   Context `{GRA: GRA.t}.
-  Variable m: programL.
 
   Set Typeclasses Depth 5.
   (* Instance Initial_void1 : @Initial (Type -> Type) IFun void1 := @elim_void1. (*** TODO: move to ITreelib ***) *)
 
-  Definition modsem (ge: SkEnv.t) : ModSemL.t := {|
-    ModSemL.fnsems :=
-      List.map (fun '(fn, f) => (fn, cfun (eval_imp ge f))) m.(prog_funsL);
-    ModSemL.initial_mrs :=
-      List.map (fun name => (name, (ε, tt↑))) m.(nameL);
+  Definition modsem (m : program) (ge: SkEnv.t) : ModSem.t := {|
+    ModSem.fnsems := List.map (fun '(fn, f) => (fn, cfun (eval_imp ge f))) m.(prog_funs);
+    ModSem.mn := m.(name);
+    ModSem.initial_mr := ε;
+    ModSem.initial_st := tt↑;
   |}.
 
-  Definition get_mod : ModL.t := {|
-    ModL.get_modsem := fun ge => (modsem ge);
-    ModL.sk := m.(defsL);
+  Definition get_mod (m : program) : Mod.t := {|
+    Mod.get_modsem := fun ge => (modsem m ge);
+    Mod.sk := m.(defs);
   |}.
+
+  Definition modsemL (mL : programL) (ge: SkEnv.t) : ModSemL.t := {|
+    ModSemL.fnsems :=
+      List.map (fun '(mn, (fn, f)) => (fn, fun a => transl_all mn (cfun (eval_imp ge f) a))) mL.(prog_funsL);
+    ModSemL.initial_mrs :=
+      List.map (fun name => (name, (ε, tt↑))) mL.(nameL);
+  |}.
+
+  Definition get_modL (mL : programL) : ModL.t := {|
+    ModL.get_modsem := fun ge => (modsemL mL ge);
+    ModL.sk := mL.(defsL);
+  |}.
+
+  Lemma comm_imp_mod_lift :
+    forall (p : program),
+      get_modL (lift p) = Mod.lift (get_mod p).
+  Proof.
+    i. unfold lift. unfold Mod.lift. unfold get_modL, get_mod.
+    f_equal. unfold modsemL, modsem. ss. unfold ModSem.lift.
+    ss. extensionality sk. f_equal.
+    revert sk. induction (prog_funs p); i; ss; clarify.
+    destruct a. unfold ModSem.map_snd. f_equal.
+    apply IHp0.
+  Qed.
 
 End MODSEM.
 End ImpMod.

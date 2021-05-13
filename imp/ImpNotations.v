@@ -147,7 +147,7 @@ Section Example_Extract.
     prog_funs := [("factorial", factorial_fundef); ("main", main_fundef)];
   |}.
   
-  Definition ex_prog: ModL.t := ImpMod.get_mod ex_extract.
+  Definition ex_prog: Mod.t := ImpMod.get_mod ex_extract.
 
   Definition imp_ex := ModSemL.initial_itr_no_check (ModL.enclose ex_prog).
 

@@ -254,7 +254,7 @@ Section PROOFS.
   Lemma interp_imp_triggerUB
         ge le0
     :
-      (interp_imp ge le0 (triggerUB) : itree EventsL.Es _) = triggerUB.
+      (interp_imp ge le0 (triggerUB) : itree Es _) = triggerUB.
   Proof.
     unfold interp_imp, interp_ImpState, interp_GlobEnv, pure_state, triggerUB.
     grind. rewrite interp_trigger. grind.
@@ -263,7 +263,7 @@ Section PROOFS.
   Lemma interp_imp_triggerNB
         ge le0
     :
-      (interp_imp ge le0 (triggerNB) : itree EventsL.Es _) = triggerNB.
+      (interp_imp ge le0 (triggerNB) : itree Es _) = triggerNB.
   Proof.
     unfold interp_imp, interp_ImpState, interp_GlobEnv, pure_state, triggerNB.
     grind. rewrite interp_trigger. grind.
@@ -310,7 +310,7 @@ Section PROOFS.
   Lemma interp_imp_GetVar
         ge le0 x
     :
-      (interp_imp ge le0 (trigger (GetVar x)) : itree EventsL.Es _) =
+      (interp_imp ge le0 (trigger (GetVar x)) : itree Es _) =
       r <- unwrapU (alist_find x le0);; tau;; tau;; Ret (le0, r).
   Proof.
     unfold interp_imp, interp_ImpState, interp_GlobEnv.
