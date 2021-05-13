@@ -633,13 +633,45 @@ End Beh.
 Section Sim.
 
   Context `{Σ: GRA.t}.
-  Variable src_name : mname.
+
+  Variable imem : Type.
+  Variable cmem : Type.
+  
   Variable src : Imp.program.
   Let src_mod := ImpMod.get_mod src.
   Variable tgt : Ctypes.program function.
 
   Let src_sem := ModL.compile (Mod.add_list ([src_mod] ++ [IMem])).
   Let tgt_sem := semantics2 tgt.
+
+  Context {effs : Type -> Type}.
+  Context {HasGlobVar: GlobEnv -< effs}.
+  Context {HasImpState : ImpState -< effs}.
+  Context {HasCall : callE -< effs}.
+  Context {HasEvent : eventE -< effs}.
+
+  (* Inductive istate {effs} {A} {B} : Type := *)
+  (* | iState *)
+  (*     (f: Imp.function) *)
+  (*     (s: itree effs A) *)
+  (*     (k: A -> itree effs B) *)
+  (*     (le: lenv) *)
+  (*     (m: imem) : istate *)
+  (* | iIntCallstate *)
+  (*     (fd: gname) *)
+  (*     (args: list val) *)
+  (*     (k: A -> itree effs B) *)
+  (*     (m: imem) : istate *)
+  (* | iExtCallstate *)
+  (*     (fd: gname) *)
+  (*     (args: list val) *)
+  (*     (k: A -> itree effs B) *)
+  (*     (m: imem) : istate *)
+  (* | iReturnstate *)
+  (*     (res: val) *)
+  (*     (k: A -> itree effs B) *)
+  (*     (m: imem) : istate. *)
+
 
   (* CC 'final_state' = the return state of "main", should return int32. *)
 
@@ -648,9 +680,19 @@ Section Sim.
 
   (* match initial_state with ModSemL.initial_itr 
      match final_state with "main"'s ret??: int32, we may need new stmt: Expr_main *)
-  Inductive match_states
-            (src_st : src_sem.(STS.state))
-            (tgt_st : tgt_sem.(Smallstep.state)) : Prop :=
+
+  (* cfun (eval_imp ge f)*)
+  (*(ModSem.map_snd (fun (sem : Any.t -> itree Es Any.t) (args : Any.t) => transl_all (ModSem.mn ms) (sem args)))*)
+  (* assume (<< ModSemL.wf ms >>);; snd <$>
+     EventsL.interp_Es (ModSemL.prog ms) (ModSemL.prog ms (Call "main" (Any.upcast ([] : list val))))
+     (ModSemL.initial_r_state ms, ModSemL.initial_p_state ms)*)
+  (* effs = eventE, A = Any.t ...? *)
+  Definition itree_of_stmt (s : stmt) :=
+    fun ge le prog mn rpst =>
+      EventsL.interp_Es prog (transl_all mn (interp_imp ge le (denote_stmt s))) rpst.
+
+  Inductive match_states {A} (src_st : itree effs A) (tgt_st : Clight.state) : Prop :=
+  | 
   .
 
   (* From compcert Require Import SimplExprproof. *)
@@ -740,8 +782,8 @@ Section Proof.
   Proof.
   Admitted.
 
-  (* Definition wf_link {T} (program_list : list T) := *)
-  (*   exists h t, program_list = h :: t. *)
+  Definition wf_link {T} (program_list : list T) :=
+    exists h t, program_list = h :: t.
 
   Inductive compile_list :
     list programL -> list (Ctypes.program function) -> Prop :=
@@ -846,14 +888,25 @@ Section Proof.
   (* Admitted. *)
 
   Lemma single_compile_behavior_improves :
-    forall (src: Imp.program) srcM tgt (beh: program_behavior),
+    forall (src: Imp.program) tgt (beh: program_behavior),
       compile src = OK tgt ->
       program_behaves (semantics2 tgt) beh ->
-      ModL.add (ImpMod.get_mod src) IMem = srcM
-      ->
+      let srcM := ModL.add IMem (ImpMod.get_mod src) in
       exists mbeh,
-        match_beh beh mbeh /\
-        Beh.of_program (ModL.compile srcM) mbeh.
+        match_beh beh mbeh /\ Beh.of_program (ModL.compile srcM) mbeh.
+  Proof.
+  Admitted.
+
+  Theorem compile_behavior_improves :
+    forall (src_list : list Imp.program) srclM tgt_list tgtl (beh : program_behavior),
+      let src_list_lift := List.map Imp.lift src_list in
+      compile_list src_list_lift tgt_list ->
+      let src_list_mod := List.map (fun src => ImpMod.get_mod src) src_list in
+      Mod.add_list (IMem :: src_list_mod) = srclM ->
+      link_clight_list tgt_list = Some tgtl ->
+      program_behaves (semantics2 tgtl) beh ->
+      exists mbeh,
+        match_beh beh mbeh /\ Beh.of_program (ModL.compile srclM) mbeh.
   Proof.
   Admitted.
 
