@@ -474,35 +474,36 @@ End Link.
 
 Section Beh.
 
-  Definition map_val (v : eventval) : option val :=
-    match v with
-    | EVlong vl => Some (Vint vl.(Int64.intval))
-    | _ => None
-    end.
+  (* Definition map_val (v : eventval) : option val := *)
+  (*   match v with *)
+  (*   | EVlong vl => Some (Vint vl.(Int64.intval)) *)
+  (*   | _ => None *)
+  (*   end. *)
 
   Inductive match_val : eventval -> val -> Prop :=
   | match_val_intro :
       forall v, match_val (EVlong v) (Vint v.(Int64.intval)).
 
-  Fixpoint map_vals (vlist : list eventval) acc : option (list val) :=
-    match vlist with
-    | [] => Some acc
-    | v :: t => do mv <- map_val v; map_vals t (acc ++ [mv])
-    end.
+  (* Fixpoint map_vals (vlist : list eventval) acc : option (list val) := *)
+  (*   match vlist with *)
+  (*   | [] => Some acc *)
+  (*   | v :: t => do mv <- map_val v; map_vals t (acc ++ [mv]) *)
+  (*   end. *)
 
   Inductive match_vals : list eventval -> list val -> Prop :=
-  | match_vals_intro :
+  | match_vals_nil : match_vals [] []
+  | match_vals_cons :
       forall v1 v2 l1 l2,
         match_val v1 v2 -> match_vals l1 l2 -> match_vals (v1 :: l1) (v2 :: l2).
 
-  Definition map_event (ev : Events.event) : option Universe.event :=
-    match ev with
-    | Event_syscall name args r =>
-      do margs <- map_vals args [];
-      do mr <- map_val r;
-      Some (event_sys name margs mr)
-    | _ => None
-    end.
+  (* Definition map_event (ev : Events.event) : option Universe.event := *)
+  (*   match ev with *)
+  (*   | Event_syscall name args r => *)
+  (*     do margs <- map_vals args []; *)
+  (*     do mr <- map_val r; *)
+  (*     Some (event_sys name margs mr) *)
+  (*   | _ => None *)
+  (*   end. *)
 
   Inductive match_event : Events.event -> Universe.event -> Prop :=
   | match_event_intro :
@@ -510,15 +511,16 @@ Section Beh.
         match_vals eargs uargs -> match_val er ur ->
         match_event (Event_syscall name eargs er) (event_sys name uargs ur).
 
-  Fixpoint map_trace (tr : trace) acc : option (list Universe.event) :=
-    match tr with
-    | [] => Some acc
-    | ev :: t =>
-      do mev <- map_event ev; map_trace t (acc ++ [mev])
-    end.
+  (* Fixpoint map_trace (tr : trace) acc : option (list Universe.event) := *)
+  (*   match tr with *)
+  (*   | [] => Some acc *)
+  (*   | ev :: t => *)
+  (*     do mev <- map_event ev; map_trace t (acc ++ [mev]) *)
+  (*   end. *)
 
   Inductive match_trace : trace -> list Universe.event -> Prop :=
-  | match_trace_intro :
+  | match_trace_nil : match_trace [] []
+  | match_trace_cons :
       forall ee et ue ut,
         match_event ee ue -> match_trace et ut ->
         match_trace (ee :: et) (ue :: ut).
@@ -565,8 +567,12 @@ Section Beh.
       (SB : srcb = Tr.cons mev mtrinf)
     :
       _match_beh match_beh tgtb srcb
-  | match_beh_ub
-      (SB : srcb = Tr.ub)
+  | match_beh_ub_trace
+      mtr
+      (SB : srcb = Tr.app mtr (Tr.ub))
+      (TB : exists tr,
+          match_trace tr mtr ->
+          behavior_prefix tr tgtb)
     :
       _match_beh match_beh tgtb srcb.
 
@@ -584,12 +590,6 @@ Section Beh.
   Hint Constructors _match_beh.
   Hint Unfold match_beh.
   Hint Resolve match_beh_mon: paco.
-
-  Lemma match_beh_ub_all :
-    forall tgtb, match_beh tgtb Tr.ub.
-  Proof.
-    pfold. econs 4. auto.
-  Qed.
 
   (* Variant _match_beh match_beh (tgtb : program_behavior) (srcb : Tr.t) : Prop := *)
   (* | match_beh_Terminates *)
@@ -639,14 +639,13 @@ Section Sim.
   Let src_sem := ModL.compile (Mod.add_list ([src_mod] ++ [IMem])).
   Let tgt_sem := semantics2 tgt.
 
-  (* what is mname for? Imp mod should have same name for link... *)
   (* CC 'final_state' = the return state of "main", should return int32. *)
 
   (* Variable idx: Type. *)
   (* Variable ord: idx -> idx -> Prop. *)
 
   (* match initial_state with ModSemL.initial_itr 
-     match final_state with "main"'s ret?? *)
+     match final_state with "main"'s ret??: int32, we may need new stmt: Expr_main *)
   Inductive match_states
             (src_st : src_sem.(STS.state))
             (tgt_st : tgt_sem.(Smallstep.state)) : Prop :=
