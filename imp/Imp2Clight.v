@@ -698,55 +698,141 @@ Section Sim.
   Variable match_le : lenv -> temp_env -> Prop.
   Variable match_mem : Mem.t -> Memory.Mem.mem -> Prop.
   Inductive match_cont {A} : itree eventE A -> Clight.cont -> Prop :=
-  | match_cont_seq
-      gm ge prog mn rpst le st tgtst k tgtk
-      (CS: compile_stmt gm st = Some tgtst)
-      (MC: match_cont k tgtk)
+  | match_cont_stop
+      r
     :
-      let itr := itree_of_stmt st ge le prog mn rpst in
-      match_cont (x <- itr;; k) (Kseq tgtst tgtk)
+      match_cont (Ret r) (Kstop)
 
-  | match_cont_callf1
-      gm ge prog mn rpst vname fname args f tgtf le tgtle k tgtk
+  | match_cont_seq
+      itr gm ge prog mn rpst le st tgtst (knext : itree _ A) kstack tgtk
+      (CS: compile_stmt gm st = Some tgtst)
+      (MCS: match_cont kstack (call_cont tgtk))
+      (MCN: match_cont (x <- knext;; kstack) tgtk)
+      (IS: itr = itree_of_stmt st ge le prog mn rpst)
+    :
+      match_cont (x <- itr;; x <- knext;; kstack) (Kseq tgtst tgtk)
+
+  | match_cont_call
+      gm f tgtf le tgtle (knext : itree _ A) kstack tgtk optid
       (CF: compile_function gm f = Some tgtf)
       (ML: match_le le tgtle)
-      (MC: match_cont k tgtk)
+      (MCS: match_cont kstack (call_cont tgtk))
+      (MCN: match_cont (x <- knext;; kstack) tgtk)
     :
-      let itr := itree_of_stmt (CallFun1 vname fname args) ge le prog mn rpst in
-      let ccont := Kcall (Some (s2p vname)) tgtf empty_env tgtle tgtk in
-      match_cont (x <- itr;; k) ccont
-  | match_cont_callf2
-      gm ge prog mn rpst fname args f tgtf le tgtle k tgtk
-      (CF: compile_function gm f = Some tgtf)
-      (ML: match_le le tgtle)
-      (MC: match_cont k tgtk)
-    :
-      let itr := itree_of_stmt (CallFun2 fname args) ge le prog mn rpst in
-      let ccont := Kcall None tgtf empty_env tgtle tgtk in
-      match_cont (x <- itr;; k) ccont
+      match_cont (x <- knext;; kstack) (Kcall optid tgtf empty_env tgtle tgtk)
   .
 
-(* itree_of_stmt *)
-(*      : stmt -> *)
-(*        SkEnv.t -> *)
-(*        lenv -> *)
-(*        (forall T : Type, callE T -> itree EventsL.Es T) -> *)
-(*        string -> r_state * p_state -> itree eventE (r_state * p_state * (lenv * val)) *)
-  Inductive match_states {effs} {A} : itree effs A -> Clight.state -> Prop :=
-  | match_regular
-      srcst tgtst ge srcle tgtle prog mn rpst srcf tgtf srcm tgtm srck tgtk,
-        (CS: compile_stmt srcst = Some tgtst)
-        (ML: match_le srcle tgtle)
-        (* function is only used to check return type, which compiled one always pass *)
-        (CF: compile_function srcf = Some tgtf)
-        (MM: match_mem srcm tgtm)
-        (MC: match_cont srck tgtk)
-        :
-        let itr := itree_of_stmt srcst ge le prog mn rpst in
-        match_states (x <- itr; srck) (State tgtf tgtst tgtk empty_env tgtle tgtm)
-  |
-        
-        
+  (* | match_cont_callf1 *)
+  (*     itr ccont gm ge prog mn rpst vname fname args f tgtf le tgtle (knext : itree _ A) kstack tgtk *)
+  (*     (CF: compile_function gm f = Some tgtf) *)
+  (*     (ML: match_le le tgtle) *)
+  (*     (MCS: match_cont kstack (call_cont tgtk)) *)
+  (*     (MCN: match_cont (x <- knext;; kstack) tgtk) *)
+  (*     (IS: itr = itree_of_stmt (CallFun1 vname fname args) ge le prog mn rpst) *)
+  (*     (CC: ccont = Kcall (Some (s2p vname)) tgtf empty_env tgtle tgtk) *)
+  (*   : *)
+  (*     match_cont (x <- itr;; x <- knext;; kstack) ccont *)
+  (* | match_cont_callf2 *)
+  (*     itr ccont gm ge prog mn rpst fname args f tgtf le tgtle (knext : itree _ A) kstack tgtk *)
+  (*     (CF: compile_function gm f = Some tgtf) *)
+  (*     (ML: match_le le tgtle) *)
+  (*     (MCS: match_cont kstack (call_cont tgtk)) *)
+  (*     (MCN: match_cont (x <- knext;; kstack) tgtk) *)
+  (*     (IS: itr = itree_of_stmt (CallFun2 fname args) ge le prog mn rpst) *)
+  (*     (CC: ccont = Kcall None tgtf empty_env tgtle tgtk) *)
+  (*   : *)
+  (*     match_cont (x <- itr;; x <- knext;; kstack) ccont *)
+
+  (* | match_cont_callp1 *)
+  (*     itr ccont gm ge prog mn rpst vname fptr args f tgtf le tgtle (knext : itree _ A) kstack tgtk *)
+  (*     (CF: compile_function gm f = Some tgtf) *)
+  (*     (ML: match_le le tgtle) *)
+  (*     (MCS: match_cont kstack (call_cont tgtk)) *)
+  (*     (MCN: match_cont (x <- knext;; kstack) tgtk) *)
+  (*     (IS: itr = itree_of_stmt (CallPtr1 vname fptr args) ge le prog mn rpst) *)
+  (*     (CC: ccont = Kcall (Some (s2p vname)) tgtf empty_env tgtle tgtk) *)
+  (*   : *)
+  (*     match_cont (x <- itr;; x <- knext;; kstack) ccont *)
+  (* | match_cont_callp2 *)
+  (*     itr ccont gm ge prog mn rpst fptr args f tgtf le tgtle (knext : itree _ A) kstack tgtk *)
+  (*     (CF: compile_function gm f = Some tgtf) *)
+  (*     (ML: match_le le tgtle) *)
+  (*     (MCS: match_cont kstack (call_cont tgtk)) *)
+  (*     (MCN: match_cont (x <- knext;; kstack) tgtk) *)
+  (*     (IS: itr = itree_of_stmt (CallPtr2 fptr args) ge le prog mn rpst) *)
+  (*     (CC: ccont = Kcall None tgtf empty_env tgtle tgtk) *)
+  (*   : *)
+  (*     match_cont (x <- itr;; x <- knext;; kstack) ccont *)
+
+  (* | match_cont_sys1 *)
+  (*     itr ccont gm ge prog mn rpst vname fname args f tgtf le tgtle (knext : itree _ A) kstack tgtk *)
+  (*     (CF: compile_function gm f = Some tgtf) *)
+  (*     (ML: match_le le tgtle) *)
+  (*     (MCS: match_cont kstack (call_cont tgtk)) *)
+  (*     (MCN: match_cont (x <- knext;; kstack) tgtk) *)
+  (*     (IS: itr = itree_of_stmt (CallSys1 vname fname args) ge le prog mn rpst) *)
+  (*     (CC: ccont = Kcall (Some (s2p vname)) tgtf empty_env tgtle tgtk) *)
+  (*   : *)
+  (*     match_cont (x <- itr;; x <- knext;; kstack) ccont *)
+  (* | match_cont_sys2 *)
+  (*     itr ccont gm ge prog mn rpst fname args f tgtf le tgtle (knext : itree _ A) kstack tgtk *)
+  (*     (CF: compile_function gm f = Some tgtf) *)
+  (*     (ML: match_le le tgtle) *)
+  (*     (MCS: match_cont kstack (call_cont tgtk)) *)
+  (*     (MCN: match_cont (x <- knext;; kstack) tgtk) *)
+  (*     (IS: itr = itree_of_stmt (CallSys2 fname args) ge le prog mn rpst) *)
+  (*     (CC: ccont = Kcall None tgtf empty_env tgtle tgtk) *)
+  (*   : *)
+  (*     match_cont (x <- itr;; x <- knext;; kstack) ccont *)
+  (* . *)
+
+  (* match_genv: ge = Sk.load_skenv imp.(defs), tgtge = globalenv (compile imp),
+                 need to show they match only at beginning *)
+  Variable match_ge : SkEnv.t -> genv -> Prop.
+  Variable ge : SkEnv.t.
+  Variable tgtge : genv.
+  Hypothesis MGENV : match_ge ge tgtge.
+  Variant match_states {A} : itree eventE A -> Clight.state -> Prop :=
+  | match_states_regular
+      itr gm st tgtst le tgtle prog mn rpst f tgtf m tgtm (knext : itree _ A) kstack tgtk
+      (CS: compile_stmt gm st = Some tgtst)
+      (* function is only used to check return type, which compiled one always passes *)
+      (CF: compile_function gm f = Some tgtf)
+      (ML: match_le le tgtle)
+      (MM: match_mem m tgtm)
+      (MCS: match_cont kstack (call_cont tgtk))
+      (MCN: match_cont (x <- knext;; kstack) tgtk)
+      (IS: itr = itree_of_stmt st ge le prog mn rpst)
+    :
+      match_states (x <- itr;; x <- knext;; kstack) (State tgtf tgtst tgtk empty_env tgtle tgtm)
+
+  | match_states_call
+      itr gm st le tgtle prog mn rpst f tgtf m tgtm (knext : itree _ A) kstack tgtk
+      (CF: compile_function gm f = Some tgtf)
+      (ML: match_le le tgtle)
+      (MM: match_mem m tgtm)
+      (MCS: match_cont kstack (call_cont tgtk))
+      (MCN: match_cont (x <- knext;; kstack) tgtk)
+      (IS: itr = itree_of_stmt st ge le prog mn rpst)
+
+      optid a al tyargs tyres vf vargs fd
+      (CS: compile_stmt gm st = Some (Scall optid a al))
+      (CCF: Cop.classify_fun (typeof a) = Cop.fun_case_f tyargs tyres cc_default)
+      (CEF: eval_expr tgtge empty_env tgtle tgtm a vf)
+      (CEA: eval_exprlist tgtge empty_env tgtle tgtm al tyargs vargs)
+      (CGF: Genv.find_funct tgtge vf = Some fd)
+    :
+      match_states (x <- itr;; x <- knext;; kstack) (Callstate fd vargs (Kcall optid tgtf empty_env tgtle tgtk) tgtm)
+
+  | match_states_return
+      gm le tgtle f tgtf m tgtm (knext : itree _ A) kstack tgtk v optid
+      (CF: compile_function gm f = Some tgtf)
+      (ML: match_le le tgtle)
+      (MM: match_mem m tgtm)
+      (MCS: match_cont kstack (call_cont tgtk))
+      (MCN: match_cont (x <- knext;; kstack) tgtk)
+    :
+      match_states (x <- knext;; kstack) (Returnstate v (Kcall optid tgtf empty_env tgtle tgtk) tgtm)
   .
 
   (* From compcert Require Import SimplExprproof. *)
