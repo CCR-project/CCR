@@ -291,8 +291,8 @@ Section CANCEL.
       (*     (x <- (interp_Es p_tgt (interp_hCallE_tgt stb (trigger ce)) st_tgt0);; Ret (snd x)) *)
       simg (fun '((rs_src, v_src)) '((rs_tgt, v_tgt)) => wf rs_src rs_tgt /\ (v_src: RT) = v_tgt)
            (Ord.from_nat 100%nat)
-           (EventsL.interp_Es (ModSemL.prog ms_mid) (transl_all mn (interp_hCallE_mid (E:=pE +' eventE) cur i0)) st_src0)
-           (EventsL.interp_Es (ModSemL.prog ms_tgt) (transl_all mn (interp_hCallE_tgt (E:=pE +' eventE) stb cur i0)) st_tgt0)
+           (EventsL.interp_Es (ModSemL.prog ms_mid) (transl_all mn (interp_hCallE_mid cur i0)) st_src0)
+           (EventsL.interp_Es (ModSemL.prog ms_tgt) (transl_all mn (interp_hCallE_tgt stb cur i0)) st_tgt0)
            (* (interp_Es mn (ModSemL.prog ms_mid) ((interp_hCallE_mid (E:=pE +' eventE) cur i0)) st_src0) *)
            (* (interp_Es mn (ModSemL.prog ms_tgt) ((interp_hCallE_tgt (E:=pE +' eventE) stb cur i0)) st_tgt0) *)
   .
@@ -703,7 +703,7 @@ Section CANCEL.
 (x0 <- EventsL.interp_Es (ModSemL.prog ms_mid)
                  ((ModSemL.prog ms_mid) _ (Call "main" (Any.pair ord_top↑ ([]: list val)↑))) st_mid0;; Ret (snd x0))
 (x0 <- EventsL.interp_Es (ModSemL.prog ms_mid)
-                 (transl_all "Main" (interp_hCallE_mid (E:=pE +' eventE) ord_top (trigger (hCall false "main" ([]: list val)↑)))) st_midr0;; Ret (snd x0))).
+                 (transl_all "Main" (interp_hCallE_mid ord_top (trigger (hCall false "main" ([]: list val)↑)))) st_midr0;; Ret (snd x0))).
     { clear SIM. ginit. { eapply cpn5_wcompat; eauto with paco. }
       steps.
       replace (Ord.from_nat 91) with (OrdArith.add (Ord.from_nat 50) (Ord.from_nat 41))
@@ -715,7 +715,7 @@ Section CANCEL.
     }
     assert(TRANSR: simg eq (Ord.from_nat 200)
 (x0 <- EventsL.interp_Es (ModSemL.prog ms_tgt)
-                 (transl_all "Main" (interp_hCallE_tgt (E:=pE +' eventE) stb ord_top (trigger (hCall false "main" ([]: list val)↑)))) st_tgtl0;; Ret (snd x0))
+                 (transl_all "Main" (interp_hCallE_tgt stb ord_top (trigger (hCall false "main" ([]: list val)↑)))) st_tgtl0;; Ret (snd x0))
 (x0 <- EventsL.interp_Es (ModSemL.prog ms_tgt)
                  ((ModSemL.prog ms_tgt) _ (Call "main" ([]: list val)↑)) st_tgt0;; Ret (snd x0))).
     { clear SIM. ginit. { eapply cpn5_wcompat; eauto with paco. }
@@ -763,14 +763,12 @@ we should know that stackframe is not popped (unary property)". }
     fold ms_mid. fold st_mid0.
     replace (x <- EventsL.interp_Es (ModSemL.prog ms_mid) (ModSemL.prog ms_mid (Call "main" (Any.pair (Any.upcast ord_top) (Any.upcast [])))) st_mid0;; Ret (snd x))
       with
-        (x0 <- EventsL.interp_Es (ModSemL.prog ms_mid) (transl_all "Main" (interp_hCallE_mid (E:=pE +' eventE)
-                                                                                             ord_top (trigger (hCall false "main" ([]: list val)↑)))) st_midr0;;
+        (x0 <- EventsL.interp_Es (ModSemL.prog ms_mid) (transl_all "Main" (interp_hCallE_mid ord_top (trigger (hCall false "main" ([]: list val)↑)))) st_midr0;;
          Ret (snd x0)); cycle 1.
     { admit "hard -- by transitivity". }
     replace (x <- EventsL.interp_Es (ModSemL.prog ms_tgt) (ModSemL.prog ms_tgt (Call "main" (Any.upcast []))) st_tgt0;; Ret (snd x))
       with
-        (x0 <- EventsL.interp_Es (ModSemL.prog ms_tgt) (transl_all "Main" (interp_hCallE_tgt (E:=pE +' eventE)
-                                                                                             stb ord_top (trigger (hCall false "main" ([]: list val)↑))))
+        (x0 <- EventsL.interp_Es (ModSemL.prog ms_tgt) (transl_all "Main" (interp_hCallE_tgt stb ord_top (trigger (hCall false "main" ([]: list val)↑))))
                          st_tgtl0;; Ret (snd x0)); cycle 1.
     { admit "hard -- by transitivity". }
     guclo bindC_spec.

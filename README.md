@@ -13,5 +13,7 @@
   + menhir (= *20210310*)
   + coq-menhirlib (= *20210310*)
 
+- ocamlbuild (>= *0.14.0*)
+
 
 All packages except coq-ordinal can be installed from [OPAM archive for Coq](https://github.com/coq/opam-coq-archive)
