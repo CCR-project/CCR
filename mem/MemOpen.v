@@ -55,7 +55,7 @@ Section PROOF.
   |}
   .
 
-  Definition SMem: SMod.t := KMod.to_tgt KMem.
+  Definition SMem: SMod.t := (disclose_smod ∘ KMod.to_tgt) KMem.
 
   Definition Mem: Mod.t := SMod.to_tgt (fun _ => []) SMem.
 
