@@ -94,7 +94,7 @@ Section SIMMODSEM.
       steps. astop. steps. force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
 
       hcall_tac __ ord_top (@URA.unit Σ) A (@URA.unit Σ); ss; et.
-      { rewrite Open.upcast_pair_downcast. ss. }
+      { rewrite OpenDef.upcast_pair_downcast. ss. }
       iPure POST. subst. clarify. steps.
 
       astart 1.

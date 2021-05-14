@@ -11,7 +11,7 @@ Require Import TODOYJ.
 Require Import Logic.
 Require Import TODO.
 Require Import Mem0 Mem1.
-Require Import Open.
+Require Import OpenDef Open.
 
 Generalizable Variables E R A B C X Y Σ.
 

@@ -48,164 +48,6 @@ Require Import HTactics YPM.
 
 
 
-Section RESUM.
-
-  (*****************************************************)
-  (****************** Reduction Lemmas *****************)
-  (*****************************************************)
-
-  (* Context {E F: Type -> Type}. *)
-  (* Context `{eventE -< E}. *)
-  (* Context `{E -< F}. *)
-  Context `{E -< F}.
-  Context `{eventE -< E}.
-  Let eventE_F: eventE -< F. rr. ii. eapply H. eapply H0. eapply X. Defined.
-  Local Existing Instance eventE_F.
-
-  Lemma resum_itr_bind
-        (R S: Type)
-        (s: itree _ R) (k : R -> itree _ S)
-    :
-      (resum_itr (s >>= k))
-      =
-      ((resum_itr (F:=F) s) >>= (fun r => resum_itr (k r))).
-  Proof.
-    unfold resum_itr in *. grind.
-  Qed.
-
-  Lemma resum_itr_tau
-        (U: Type)
-        (t : itree _ U)
-    :
-      (resum_itr (F:=F) (Tau t))
-      =
-      (Tau (resum_itr t)).
-  Proof.
-    unfold resum_itr in *. grind.
-  Qed.
-
-  Lemma resum_itr_ret
-        (U: Type)
-        (t: U)
-    :
-      ((resum_itr (F:=F) (Ret t)))
-      =
-      Ret t.
-  Proof.
-    unfold resum_itr in *. grind.
-  Qed.
-
-  Lemma resum_itr_event
-        (R: Type)
-        (i: E R)
-    :
-      (resum_itr (F:=F) (trigger i))
-      =
-      (trigger i >>= (fun r => tau;; Ret r)).
-  Proof.
-    unfold resum_itr in *.
-    repeat rewrite interp_trigger. grind.
-  Qed.
-
-  Lemma resum_itr_triggerUB
-        (R: Type)
-    :
-      (resum_itr (F:=F) (triggerUB))
-      =
-      triggerUB (A:=R).
-  Proof.
-    unfold resum_itr, triggerUB in *. rewrite unfold_interp. cbn. grind.
-  Qed.
-
-  Lemma resum_itr_triggerNB
-        (R: Type)
-    :
-      (resum_itr (F:=F) (triggerNB))
-      =
-      triggerNB (A:=R).
-  Proof.
-    unfold resum_itr, triggerNB in *. rewrite unfold_interp. cbn. grind.
-  Qed.
-
-  Lemma resum_itr_unwrapU
-        (R: Type)
-        (i: option R)
-    :
-      (resum_itr (F:=F) (unwrapU i))
-      =
-      (unwrapU i).
-  Proof.
-    unfold resum_itr. unfold unwrapU. des_ifs; grind. eapply resum_itr_triggerUB.
-  Qed.
-
-  Lemma resum_itr_unwrapN
-        (R: Type)
-        (i: option R)
-    :
-      (resum_itr (F:=F) (unwrapN i))
-      =
-      (unwrapN i).
-  Proof.
-    unfold resum_itr. unfold unwrapN. des_ifs; grind. eapply resum_itr_triggerNB.
-  Qed.
-
-  Lemma resum_itr_assume
-        P
-    :
-      (resum_itr (F:=F) (assume P))
-      =
-      (assume P;; tau;; Ret tt)
-  .
-  Proof.
-    unfold resum_itr, assume. grind. rewrite unfold_interp; cbn. grind.
-  Qed.
-
-  Lemma resum_itr_guarantee
-        P
-    :
-      (resum_itr (F:=F) (guarantee P))
-      =
-      (guarantee P;; tau;; Ret tt).
-  Proof.
-    unfold resum_itr, guarantee. grind. rewrite unfold_interp; cbn. grind.
-  Qed.
-
-  Lemma resum_itr_ext
-        R (itr0 itr1: itree _ R)
-        (EQ: itr0 = itr1)
-    :
-      (resum_itr (F:=F) itr0)
-      =
-      (resum_itr itr1)
-  .
-  Proof. subst; et. Qed.
-
-  Lemma dummy_lemma: True. ss. Qed.
-
-  Global Program Instance resum_itr_rdb: red_database (mk_box (@resum_itr)) :=
-    mk_rdb
-      0
-      (mk_box resum_itr_bind)
-      (mk_box resum_itr_tau)
-      (mk_box resum_itr_ret)
-      (mk_box resum_itr_event)
-      (mk_box dummy_lemma)
-      (mk_box dummy_lemma)
-      (mk_box dummy_lemma)
-      (mk_box resum_itr_triggerUB)
-      (mk_box resum_itr_triggerNB)
-      (mk_box resum_itr_unwrapU)
-      (mk_box resum_itr_unwrapN)
-      (mk_box resum_itr_assume)
-      (mk_box resum_itr_guarantee)
-      (mk_box resum_itr_ext)
-  .
-
-  Global Opaque resum_itr.
-
-End RESUM.
-
-
 
 Lemma pair_downcast_lemma2
       T U (v0 v1: T) x (u: U)
@@ -357,117 +199,71 @@ Section ADQ.
     revert_until gstb. gcofix CIH. i.
     unfold cfun. unfold UModSem.transl_fun. unfold fun_to_tgt. cbn.
     unfold HoareFun, put, forge, checkWf, discard. ss.
-    ired_both.
-    TTTTTTTTTTTTTTTTTTTTTTT
-    steps. des. subst.
-    red_resum. steps. red_resum.
+    steps.
     r in _ASSUME0. des. subst. destruct x as [argl is_k]. apply pair_downcast_lemma2 in _ASSUME0. des. subst.
     clarify.
     guclo lordC_spec. econs.
     { instantiate (1:=(45 + 45)%ord). rewrite <- OrdArith.add_from_nat. eapply OrdArith.le_from_nat. lia. }
-    red_resum.
     guclo lbindC_spec. econs; cycle 1.
     - instantiate (1:=fun '(mr0, st0, fr0) '(mr1, st1, fr1) y0 y1 => mr0 = mr1 /\ st0 = st1 /\ y0 = y1).
       i. ss. des_ifs. des; subst.
-      red_resum.
+      steps.
       force_l. esplits. force_l. eexists (_, _). steps. force_l. { refl. } steps.
       force_l. esplits. force_l. { esplits; ss; et. } steps.
       force_l. esplits. force_l. { rewrite URA.unit_id. refl. } steps.
     - unfold body_to_tgt. steps.
-      abstr (ktr argl) itr. clear arg _UNWRAPN argl ktr.
+      abstr (ktr l) itr. clear arg _ASSUME1 l ktr.
       (* clear _ASSUME0. *)
       des_u. rewrite URA.unit_idl in *.
       revert itr. revert st. revert_until CIH. gcofix CIH0. i.
       ides itr.
-      { interp_red. cbn. steps. red_resum. gstep. econs; eauto. }
-      { interp_red. cbn. red_resum. steps. red_resum. steps. gbase. eapply CIH0; et. }
+      { steps. }
+      { steps. gbase. eapply CIH0; et. }
+      rewrite <- bind_trigger.
       destruct e; cycle 1.
       {
-        rewrite unfold_interp. steps.
+  Ltac resub :=
+    repeat multimatch goal with
+           | |- context[ITree.trigger ?e] =>
+             match e with
+             | subevent _ _ => idtac
+             | _ => replace (ITree.trigger e) with (trigger e) by refl
+             end
+           | |- context[@subevent _ ?F ?prf _ (?e|)%sum] =>
+             let my_tac := ltac:(fun H => replace (@subevent _ F prf _ (e|)%sum) with (@subevent _ F _ _ e) by H) in
+             match (type of e) with
+             | (_ +' _) _ => my_tac ltac:(destruct e; refl)
+             | _ => my_tac ltac:(refl)
+             end
+           | |- context[@subevent _ ?F ?prf _ (|?e)%sum] =>
+             let my_tac := ltac:(fun H => replace (@subevent _ F prf _ (|e)%sum) with (@subevent _ F _ _ e) by H) in
+             match (type of e) with
+             | (_ +' _) _ => my_tac ltac:(destruct e; refl)
+             | _ => my_tac ltac:(refl)
+             end
+           | |- context[ITree.trigger (@subevent _ ?F ?prf _ (resum ?a ?b ?e))] =>
+             replace (ITree.trigger (@subevent _ F prf _ (resum a b e))) with (ITree.trigger (@subevent _ F _ _ e)) by refl
+           end.
         destruct s; ss.
         { destruct p; ss.
-          - unfold UModSem.transl_itr at 2.
-            rewrite <- bind_trigger. red_resum. unfold resum_itr at 2. rewrite transl_event_pE.
-            rewrite ! unfold_interp. cbn.
-            repeat match goal with
-            | [ |- context[trigger ?e]] =>
-              replace (trigger e%sum) with (trigger e: itree (hCallE +' pE +' eventE) _) by refl
-            | [ |- context[trigger ?e]] =>
-              replace (trigger e%sum) with (trigger e: itree Es _) by refl
-            end.
-            ired_both.
-            gstep. econs. steps.
-            interp_red. steps.
-            gbase. eapply CIH0; et.
-          - unfold UModSem.transl_itr at 2.
-            rewrite <- bind_trigger. red_resum. unfold resum_itr at 2. rewrite transl_event_pE.
-            rewrite ! unfold_interp. cbn.
-            repeat match goal with
-            | [ |- context[trigger ?e]] =>
-              replace (trigger e%sum) with (trigger e: itree (hCallE +' pE +' eventE) _) by refl
-            | [ |- context[trigger ?e]] =>
-              replace (trigger e%sum) with (trigger e: itree Es _) by refl
-            end.
-            ired_both.
-            gstep. econs. steps. 
-            interp_red. steps.
-            gbase. eapply CIH0; et.
+          - resub. ired_both. resub. gstep. econs; et. steps. gbase. eapply CIH0; et.
+          - resub. ired_both. resub. gstep. econs; et. steps. gbase. eapply CIH0; et.
         }
         { destruct e.
-          - unfold UModSem.transl_itr at 2.
-            rewrite <- bind_trigger. red_resum. unfold resum_itr at 2. rewrite transl_event_eventE.
-            rewrite ! unfold_interp. cbn.
-            repeat match goal with
-            | [ |- context[trigger ?e]] =>
-              replace (trigger e%sum) with (trigger e: itree (hCallE +' pE +' eventE) _) by refl
-            | [ |- context[trigger ?e]] =>
-              replace (trigger e%sum) with (trigger e: itree Es _) by refl
-            end.
-            ired_both.
-            gstep. econs. i. esplits. steps.
-            interp_red. steps.
-            gbase. eapply CIH0; et.
-          - unfold UModSem.transl_itr at 2.
-            rewrite <- bind_trigger. red_resum. unfold resum_itr at 2. rewrite transl_event_eventE.
-            rewrite ! unfold_interp. cbn.
-            repeat match goal with
-            | [ |- context[trigger ?e]] =>
-              replace (trigger e%sum) with (trigger e: itree (hCallE +' pE +' eventE) _) by refl
-            | [ |- context[trigger ?e]] =>
-              replace (trigger e%sum) with (trigger e: itree Es _) by refl
-            end.
-            ired_both.
-            gstep. econs. i. esplits. steps. 
-            interp_red. steps.
-            gbase. eapply CIH0; et.
-          - unfold UModSem.transl_itr at 2.
-            rewrite <- bind_trigger. red_resum. unfold resum_itr at 2. rewrite transl_event_eventE.
-            rewrite ! unfold_interp. cbn.
-            repeat match goal with
-            | [ |- context[trigger ?e]] =>
-              replace (trigger e%sum) with (trigger e: itree (hCallE +' pE +' eventE) _) by refl
-            | [ |- context[trigger ?e]] =>
-              replace (trigger e%sum) with (trigger e: itree Es _) by refl
-            end.
-            ired_both.
-            gstep. econs. i. esplits. steps. 
-            interp_red. steps.
-            gbase. eapply CIH0; et.
+          - resub. ired_both. resub. gstep. econs; et. i. esplits. steps. gbase. eapply CIH0; et.
+          - resub. ired_both. resub. gstep. econs; et. i. esplits. steps. gbase. eapply CIH0; et.
+          - resub. ired_both. resub. gstep. econs; et. i. esplits. steps. gbase. eapply CIH0; et.
         }
       }
+      resub.
       destruct c.
-      rewrite <- bind_trigger.
-      red_resum. interp_red. steps. interp_red. steps.
-      unfold UModSem.transl_itr at 2. rewrite transl_event_callE. steps.
+      steps. resub.
       force_l.
       { admit "TODO". }
       steps. force_l.
       { admit "TODO". }
       steps.
-      replace (resum_itr (F:=Es) (ITree.trigger (Call fn args|)%sum)) with
-          (r <- trigger (Call fn args);; tau;; Ret r: itree Es _); cycle 1.
-      { unfold resum_itr. interp_red. grind. }
-      rename _UNWRAPN into T. ired_both.
+      rename _UNWRAPN into T.
 
       {
         assert (GWF: ☀) by (split; [refl|exact _ASSUME]); clear _ASSUME.
@@ -549,6 +345,7 @@ Section ADQ.
   Require Import SimGlobal.
 
   Ltac steps := HoareDef.steps.
+  Ltac ired_both := HoareDef.ired_both.
 
   Let ms_src := (ModL.enclose (Mod.add_list (kmds_top ++ List.map UMod.to_mod umds))).
   Let p_src := (ModSemL.prog ms_src).
@@ -726,21 +523,6 @@ Section ADQ.
     forall args, sim_body 100 (f0 args) (f1 (Any.pair args false↑))
   .
 
-  Ltac red_transl_all :=
-    repeat (try rewrite transl_all_bind; try rewrite transl_all_ret; try rewrite transl_all_tau;
-            try rewrite transl_all_triggerNB;
-            try rewrite transl_all_triggerUB;
-            try rewrite transl_all_unwrapN;
-            try rewrite transl_all_unwrapU;
-            try rewrite transl_all_assume;
-            try rewrite transl_all_guarantee;
-            try rewrite transl_all_eventE;
-            try rewrite transl_all_rE;
-            try rewrite transl_all_pE;
-            try rewrite transl_all_callE
-           )
-  .
-
 
 
 
@@ -748,83 +530,24 @@ Section ADQ.
         T mn (itr: itree _ T)
     :
       sim_body 100 (transl_all mn (KModSem.interp_hCallE_src itr))
-               (transl_all mn (interp_hCallE_src (KModSem.interp_tgt itr)))
+               (transl_all mn (interp_hCallE_src (KModSem.transl_itr_tgt itr)))
   .
   Proof.
     ginit. { eapply cpn4_wcompat; eauto with paco. } revert itr. gcofix CIH. i.
     ides itr.
-    { red_resum. red_transl_all. rewrite interp_ret. unfold interp_hCallE_src, KModSem.interp_hCallE_src.
-      rewrite ! interp_ret. red_transl_all. gstep; econs; et. }
-    { red_resum. red_transl_all. rewrite interp_tau. unfold interp_hCallE_src, KModSem.interp_hCallE_src.
-      rewrite ! interp_tau. red_transl_all. gstep; econs; et. gbase. eapply CIH. }
+    { steps. }
+    { steps. gbase. eapply CIH. }
+    rewrite <- bind_trigger. resub.
     destruct e.
     { destruct h.
-      rewrite unfold_interp. cbn.
-      unfold KModSem.interp_hCallE_src. rewrite unfold_interp. cbn.
-      rewrite interp_hCallE_src_bind.
-      red_transl_all.
-      unfold KModSem.transl_itr_tgt at 2. cbn.
-      unfold interp_hCallE_src at 2. rewrite unfold_interp. cbn.
-      ired. red_transl_all. ired.
+      resub. steps.
       des_ifs.
-      - red_transl_all. ired.
-        gstep; econs; et.
-        gstep; econs; et. ii.
-        red_transl_all. ired.
-        gstep; econs; et.
-        red_transl_all. ired.
-        gstep; econs; et.
-        unfold interp_hCallE_src at 1. rewrite interp_tau. red_transl_all.
-        instantiate (1:=101).
-        gstep; econs; et; [|by eapply OrdArith.lt_from_nat; ss].
-        gbase. eapply CIH; et.
-      - red_transl_all. ired.
-        gstep; econs; et. ii.
-        red_transl_all. ired.
-        gstep; econs; et.
-        red_transl_all. ired.
-        gstep; econs; et.
-        unfold interp_hCallE_src at 1. rewrite interp_tau. red_transl_all.
-        gstep; econs; et.
-        instantiate (1:=101).
-        gstep; econs; et; [|by eapply OrdArith.lt_from_nat; ss].
-        gbase. eapply CIH; et.
+      - steps. gbase. eapply CIH; et.
+      - ired_both. ired. gstep; econs; et. i. steps. gbase. eapply CIH; et.
     }
     destruct s.
-    { rewrite unfold_interp. cbn.
-      unfold KModSem.interp_hCallE_src. rewrite unfold_interp. cbn.
-      rewrite interp_hCallE_src_bind.
-      red_transl_all.
-      unfold KModSem.transl_itr_tgt at 2. cbn.
-      unfold interp_hCallE_src at 2. rewrite unfold_interp. cbn.
-      ired. red_transl_all. ired.
-      gstep; econs; et. ii.
-      red_transl_all. ired.
-      gstep; econs; et.
-      red_transl_all. ired.
-      gstep; econs; et.
-      unfold interp_hCallE_src at 1. rewrite interp_tau. red_transl_all.
-      instantiate (1:=101).
-      gstep; econs; et; [|by eapply OrdArith.lt_from_nat; ss].
-      gbase. eapply CIH; et.
-    }
-    { rewrite unfold_interp. cbn.
-      unfold KModSem.interp_hCallE_src. rewrite unfold_interp. cbn.
-      rewrite interp_hCallE_src_bind.
-      red_transl_all.
-      unfold KModSem.transl_itr_tgt at 2. cbn.
-      unfold interp_hCallE_src at 2. rewrite unfold_interp. cbn.
-      ired. red_transl_all. ired.
-      gstep; econs; et. ii.
-      red_transl_all. ired.
-      gstep; econs; et.
-      red_transl_all. ired.
-      gstep; econs; et.
-      unfold interp_hCallE_src at 1. rewrite interp_tau. red_transl_all.
-      instantiate (1:=101).
-      gstep; econs; et; [|by eapply OrdArith.lt_from_nat; ss].
-      gbase. eapply CIH; et.
-    }
+    { resub. steps. gbase. eapply CIH; et. }
+    { resub. steps. gbase. eapply CIH; et. }
   Unshelve.
     all: try (by exact Ord.O).
   Qed.
@@ -836,7 +559,7 @@ Section ADQ.
               (transl_all mn ∘ fun_to_src
                           (fun pat => match pat with
                                       | (_, true) => trigger (Choose _)
-                                      | (argh, false) => interp KModSem.transl_itr_tgt (fsb_body f0 argh)
+                                      | (argh, false) => KModSem.transl_itr_tgt (fsb_body f0 argh)
                                       end))
   .
   Proof.
@@ -844,26 +567,23 @@ Section ADQ.
     esplits.
     unfold fun_to_src. unfold body_to_src. unfold cfun.
     unfold KModSem.fun_to_src. unfold KModSem.body_to_src. unfold cfun.
-    red_resum.
-    red_transl_all.
+    steps.
     destruct (args↓) eqn:A; cycle 1.
     { cbn.
       destruct ((Any.pair args false↑)↓) eqn:B.
       { ss. destruct p. eapply pair_downcast_lemma2 in B. des. clarify. }
-      { ss.
-        Fail rewrite transl_all_triggerNB. (******** WHY??? FIXME *********)
-        unfold triggerNB. red_transl_all. ired.
+      { ss. unfold triggerNB. ired.
         ginit. { eapply cpn4_wcompat; eauto with paco. } gstep. econs; et. ii; ss.
       }
     }
     cbn. erewrite <- Any.downcast_upcast with (a:=args); et. rewrite upcast_pair_downcast. ss. ired.
-    red_transl_all. ired. red_resum. red_transl_all.
+    steps.
     replace (Ord.from_nat 100) with ((Ord.from_nat 0) + (Ord.from_nat 100))%ord; cycle 1.
     { admit "ez - ordC spec". }
     ginit. { eapply cpn4_wcompat; eauto with paco. } guclo bbindC_spec.
     econs.
     { gfinal. right. eapply sim_known_aux. }
-    ii. red_resum. red_transl_all. gstep; econs; et.
+    ii. steps.
   Unshelve.
     all: try (by exact Ord.O).
   Qed.
@@ -872,82 +592,19 @@ Section ADQ.
         mn (itr: itree _ val)
     :
       sim_body 100 (transl_all mn (resum_itr itr))
-               (transl_all mn (interp_hCallE_src (interp UModSem.transl_itr itr)))
+               (transl_all mn (interp_hCallE_src (UModSem.transl_itr itr)))
   .
   Proof.
     ginit. { eapply cpn4_wcompat; eauto with paco. } revert itr. gcofix CIH. i.
     ides itr.
-    { red_resum. red_transl_all. rewrite interp_ret. unfold interp_hCallE_src. rewrite interp_ret. red_transl_all.
-      gstep; econs; et. }
-    { red_resum. red_transl_all. rewrite interp_tau. unfold interp_hCallE_src. rewrite interp_tau. red_transl_all.
-      gstep; econs; et. gbase. eapply CIH. }
+    { steps. }
+    { steps. gbase. eapply CIH. }
+    rewrite <- bind_trigger. resub.
     destruct e.
-    { destruct c.
-      rewrite <- bind_trigger.
-      red_resum. red_transl_all.
-      set (fun x => transl_all mn (resum_itr (k x))) as ksrc.
-      interp_red. rewrite interp_hCallE_src_bind. red_transl_all.
-      set (fun x => transl_all mn (interp_hCallE_src (interp UModSem.transl_itr (k x)))) as ktgt.
-      rewrite unfold_interp. cbn. unfold resum_itr. rewrite unfold_interp. cbn.
-      red_transl_all. ired.
-      rewrite interp_hCallE_src_bind. red_transl_all.
-      unfold UModSem.transl_itr at 2. cbn.
-      unfold interp_hCallE_src at 2. rewrite interp_trigger. cbn.
-      red_transl_all. ired.
-      gstep; econs; et. ii.
-      ired.
-      gstep; econs; et. ii.
-      gstep; econs; et.
-      red_transl_all. ired.
-      gstep; econs; et.
-      unfold interp_hCallE_src. rewrite interp_tau. rewrite interp_ret. red_transl_all. ired.
-      instantiate (1:=101).
-      gstep; econs; et; [|by eapply OrdArith.lt_from_nat; ss].
-      gbase. eapply CIH; et.
-    }
+    { destruct c. resub. ired_both. resub. ired_both. ired. gstep; econs; et. i. steps. gbase. eapply CIH; et. }
     destruct s.
-    { rewrite <- bind_trigger.
-      red_resum. red_transl_all.
-      set (fun x => transl_all mn (resum_itr (k x))) as ksrc.
-      interp_red. rewrite interp_hCallE_src_bind. red_transl_all.
-      set (fun x => transl_all mn (interp_hCallE_src (interp UModSem.transl_itr (k x)))) as ktgt.
-      rewrite unfold_interp. cbn. unfold resum_itr. rewrite unfold_interp. cbn.
-      red_transl_all. ired.
-      rewrite interp_hCallE_src_bind. red_transl_all.
-      unfold UModSem.transl_itr at 2. cbn.
-      unfold interp_hCallE_src at 2. rewrite interp_trigger. cbn.
-      red_transl_all. ired.
-      gstep; econs; et. ii. ired.
-      gstep; econs; et. ii. red_transl_all. ired.
-      gstep; econs; et. ii. unfold interp_hCallE_src.
-      rewrite unfold_interp; cbn.
-      rewrite unfold_interp; cbn.
-      red_transl_all. ired.
-      instantiate (1:=101).
-      gstep; econs; et; [|by eapply OrdArith.lt_from_nat; ss].
-      gbase. eapply CIH; et.
-    }
-    { rewrite <- bind_trigger.
-      red_resum. red_transl_all.
-      set (fun x => transl_all mn (resum_itr (k x))) as ksrc.
-      interp_red. rewrite interp_hCallE_src_bind. red_transl_all.
-      set (fun x => transl_all mn (interp_hCallE_src (interp UModSem.transl_itr (k x)))) as ktgt.
-      rewrite unfold_interp. cbn. unfold resum_itr. rewrite unfold_interp. cbn.
-      red_transl_all. ired.
-      rewrite interp_hCallE_src_bind. red_transl_all.
-      unfold UModSem.transl_itr at 2. cbn.
-      unfold interp_hCallE_src at 2. rewrite interp_trigger. cbn.
-      red_transl_all. ired.
-      gstep; econs; et. ii. ired.
-      gstep; econs; et. ii. red_transl_all. ired.
-      gstep; econs; et. ii. unfold interp_hCallE_src.
-      rewrite unfold_interp; cbn.
-      rewrite unfold_interp; cbn.
-      red_transl_all. ired.
-      instantiate (1:=101).
-      gstep; econs; et; [|by eapply OrdArith.lt_from_nat; ss].
-      gbase. eapply CIH; et.
-    }
+    { resub. steps. resub. steps. gbase. eapply CIH; et. }
+    { resub. steps. resub. steps. gbase. eapply CIH; et. }
   Unshelve.
     all: try (by exact Ord.O).
   Qed.
@@ -956,32 +613,30 @@ Section ADQ.
         (ktr: list val -> itree _ val) mn
     :
       sim_fun (fun args => transl_all mn (resum_itr (cfun ktr args)))
-              (transl_all mn ∘ fun_to_src (fun (x: list val * bool) => interp UModSem.transl_itr (ktr (fst x))))
+              (transl_all mn ∘ fun_to_src (fun (x: list val * bool) => UModSem.transl_itr (ktr (fst x))))
   .
   Proof.
     ii.
     esplits.
     unfold fun_to_src. unfold body_to_src. unfold cfun.
-    red_resum.
-    red_transl_all.
+    steps.
     destruct (args↓) eqn:A; cycle 1.
     { cbn.
       destruct ((Any.pair args false↑)↓) eqn:B.
       { ss. destruct p. eapply pair_downcast_lemma2 in B. des. clarify. }
       { ss.
         Fail rewrite transl_all_triggerNB. (******** WHY??? FIXME *********)
-        unfold triggerNB. red_transl_all. ired. unfold transl_all at 3. rewrite unfold_interp. cbn. ired.
+        unfold triggerNB. steps.
         ginit. { eapply cpn4_wcompat; eauto with paco. } gstep. econs; et. ii; ss.
       }
     }
-    cbn. erewrite <- Any.downcast_upcast with (a:=args); et. rewrite upcast_pair_downcast. ss. ired.
-    red_transl_all. ired. red_resum. red_transl_all.
+    cbn. erewrite <- Any.downcast_upcast with (a:=args); et. rewrite upcast_pair_downcast. ss. steps.
     replace (Ord.from_nat 100) with ((Ord.from_nat 0) + (Ord.from_nat 100))%ord; cycle 1.
     { admit "ez - ordC spec". }
     ginit. { eapply cpn4_wcompat; eauto with paco. } guclo bbindC_spec.
     econs.
     { gfinal. right. eapply sim_unknown_aux. }
-    ii. red_resum. red_transl_all. gstep; econs; et.
+    ii. steps.
   Unshelve.
     all: try (by exact Ord.O).
   Qed.

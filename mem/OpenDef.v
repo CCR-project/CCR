@@ -55,8 +55,6 @@ Section AUX.
 
 End AUX.
 
-Lemma dummy_lemma: True. ss. Qed.
-
 
 
 
@@ -283,7 +281,7 @@ Section UMODSEM.
       (mk_box transl_itr_hcall)
       (mk_box transl_itr_triggere)
       (mk_box transl_itr_triggerp)
-      (mk_box dummy_lemma)
+      (mk_box True)
       (mk_box transl_itr_triggerUB)
       (mk_box transl_itr_triggerNB)
       (mk_box transl_itr_unwrapU)
@@ -612,7 +610,7 @@ Section KMODSEM.
       (mk_box transl_itr_tgt_hcall)
       (mk_box transl_itr_tgt_triggere)
       (mk_box transl_itr_tgt_triggerp)
-      (mk_box dummy_lemma)
+      (mk_box True)
       (mk_box transl_itr_tgt_triggerUB)
       (mk_box transl_itr_tgt_triggerNB)
       (mk_box transl_itr_tgt_unwrapU)
@@ -640,9 +638,10 @@ Section KMODSEM.
       end
   .
 
-  Definition interp_hCallE_src `{E -< Es}: itree (hCallE +' E) ~> itree Es :=
+  Notation Es' := (hCallE +' pE +' eventE).
+  Definition interp_hCallE_src: itree Es' ~> itree Es :=
     interp (case_ (bif:=sum1) (handle_hCallE_src)
-                  ((fun T X => trigger X): E ~> itree Es))
+                  ((fun T X => trigger X): _ ~> itree Es))
   .
 
   Definition body_to_src {AA AR} (body: AA -> itree (hCallE +' pE +' eventE) AR): AA -> itree Es AR :=
@@ -832,7 +831,7 @@ Section KMODSEM.
       (mk_box interp_hCallE_src_hcall)
       (mk_box interp_hCallE_src_triggere)
       (mk_box interp_hCallE_src_triggerp)
-      (mk_box interp_hCallE_src_triggerp)
+      (mk_box True)
       (mk_box interp_hCallE_src_triggerUB)
       (mk_box interp_hCallE_src_triggerNB)
       (mk_box interp_hCallE_src_unwrapU)

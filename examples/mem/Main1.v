@@ -8,7 +8,7 @@ Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
 Require Import TODOYJ.
-Require Import Open.
+Require Import OpenDef Open.
 
 Generalizable Variables E R A B C X Y Σ.
 
