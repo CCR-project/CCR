@@ -3,6 +3,8 @@ Require Import Coqlib.
 Require Import ITreelib.
 Require Import ModSem.
 
+Generalizable Variables E F.
+
 Local Open Scope nat_scope.
 
 Set Implicit Arguments.
@@ -15,6 +17,21 @@ Ltac get_head term :=
   | _ => term
   end
 .
+
+Ltac get_head2 term :=
+  lazymatch term with
+  | ?f ?x =>
+    let ty := type of x in
+    lazymatch ty with
+    | context[ReSum] => term
+    | _ => get_head2 f
+    end
+  | _ => term
+  end
+.
+
+(* Ltac iSolveTC := *)
+(*   solve [once (typeclasses eauto)]. *)
 
 (* Ltac get_tail term := *)
 (*   match term with *)
@@ -163,7 +180,7 @@ Ltac _red_itree f :=
 Ltac __red_interp f term :=
   (* idtac "__red_interp"; *)
   (* idtac term; *)
-  let my_interp := get_head term in
+  let my_interp := get_head2 term in
   (* idtac itr; *)
   let tc := fresh "_TC_" in
   unshelve evar (tc: @red_database (mk_box (my_interp))); [typeclasses eauto|];
@@ -236,8 +253,244 @@ Ltac _red_gen f :=
 
 
 
+
+
+Lemma resum_itr_bind
+      E (R S: Type)
+      (s: itree E R) (k : R -> itree E S)
+      `{E -< F}
+  :
+    (resum_itr (s >>= k))
+    =
+    ((resum_itr (E:=E) (F:=F) s) >>= (fun r => resum_itr (k r))).
+Proof.
+  unfold resum_itr in *. grind.
+Qed.
+
+Section RESUM.
+
+  (*****************************************************)
+  (****************** Reduction Lemmas *****************)
+  (*****************************************************)
+
+  (* Context {E F: Type -> Type}. *)
+  (* Context `{eventE -< E}. *)
+  (* Context `{E -< F}. *)
+  Context `{PRF: E -< F}.
+  Context `{eventE -< E}.
+  Let eventE_F: eventE -< F. rr. ii. eapply PRF. eapply H. eapply X. Defined.
+  Local Existing Instance eventE_F.
+
+  (* Lemma resum_itr_bind *)
+  (*       (R S: Type) *)
+  (*       (s: itree _ R) (k : R -> itree _ S) *)
+  (*   : *)
+  (*     (resum_itr (s >>= k)) *)
+  (*     = *)
+  (*     ((resum_itr (E:=E) (F:=F) s) >>= (fun r => resum_itr (k r))). *)
+  (* Proof. *)
+  (*   unfold resum_itr in *. grind. *)
+  (* Qed. *)
+
+  Lemma resum_itr_tau
+        (U: Type)
+        (t : itree _ U)
+    :
+      (resum_itr (E:=E) (F:=F) (Tau t))
+      =
+      (Tau (resum_itr t)).
+  Proof.
+    unfold resum_itr in *. grind.
+  Qed.
+
+  Lemma resum_itr_ret
+        (U: Type)
+        (t: U)
+    :
+      ((resum_itr (E:=E) (F:=F) (Ret t)))
+      =
+      Ret t.
+  Proof.
+    unfold resum_itr in *. grind.
+  Qed.
+
+  Lemma resum_itr_event
+        (R: Type)
+        (i: E R)
+    :
+      (resum_itr (E:=E) (F:=F) (trigger i))
+      =
+      (trigger i >>= (fun r => tau;; Ret r)).
+  Proof.
+    unfold resum_itr in *.
+    repeat rewrite interp_trigger. grind.
+  Qed.
+
+  Lemma resum_itr_triggerUB
+        (R: Type)
+    :
+      (resum_itr (E:=E) (F:=F) (triggerUB))
+      =
+      triggerUB (A:=R).
+  Proof.
+    unfold resum_itr, triggerUB in *. rewrite unfold_interp. cbn. grind.
+  Qed.
+
+  Lemma resum_itr_triggerNB
+        (R: Type)
+    :
+      (resum_itr (E:=E) (F:=F) (triggerNB))
+      =
+      triggerNB (A:=R).
+  Proof.
+    unfold resum_itr, triggerNB in *. rewrite unfold_interp. cbn. grind.
+  Qed.
+
+  Lemma resum_itr_unwrapU
+        (R: Type)
+        (i: option R)
+    :
+      (resum_itr (E:=E) (F:=F) (unwrapU i))
+      =
+      (unwrapU i).
+  Proof.
+    unfold resum_itr. unfold unwrapU. des_ifs; grind. eapply resum_itr_triggerUB.
+  Qed.
+
+  Lemma resum_itr_unwrapN
+        (R: Type)
+        (i: option R)
+    :
+      (resum_itr (E:=E) (F:=F) (unwrapN i))
+      =
+      (unwrapN i).
+  Proof.
+    unfold resum_itr. unfold unwrapN. des_ifs; grind. eapply resum_itr_triggerNB.
+  Qed.
+
+  Lemma resum_itr_assume
+        P
+    :
+      (resum_itr (E:=E) (F:=F) (assume P))
+      =
+      (assume P;; tau;; Ret tt)
+  .
+  Proof.
+    unfold resum_itr, assume. grind. rewrite unfold_interp; cbn. grind.
+  Qed.
+
+  Lemma resum_itr_guarantee
+        P
+    :
+      (resum_itr (E:=E) (F:=F) (guarantee P))
+      =
+      (guarantee P;; tau;; Ret tt).
+  Proof.
+    unfold resum_itr, guarantee. grind. rewrite unfold_interp; cbn. grind.
+  Qed.
+
+  Lemma resum_itr_ext
+        R (itr0 itr1: itree _ R)
+        (EQ: itr0 = itr1)
+    :
+      (resum_itr (E:=E) (F:=F) itr0)
+      =
+      (resum_itr itr1)
+  .
+  Proof. subst; et. Qed.
+
+  Lemma dummy_lemma: True. ss. Qed.
+
+  Global Program Instance resum_itr_rdb: red_database (mk_box (@resum_itr E F PRF)) :=
+    mk_rdb
+      0
+      (mk_box resum_itr_bind)
+      (mk_box resum_itr_tau)
+      (mk_box resum_itr_ret)
+      (mk_box resum_itr_event)
+      (mk_box dummy_lemma)
+      (mk_box dummy_lemma)
+      (mk_box dummy_lemma)
+      (mk_box resum_itr_triggerUB)
+      (mk_box resum_itr_triggerNB)
+      (mk_box resum_itr_unwrapU)
+      (mk_box resum_itr_unwrapN)
+      (mk_box resum_itr_assume)
+      (mk_box resum_itr_guarantee)
+      (mk_box resum_itr_ext)
+  .
+
+  Global Opaque resum_itr.
+
+End RESUM.
+
+
+
 Module TEST.
 Section TEST.
+
+  (* Ltac my_red_both := repeat (try (prw _red_lsim 2 0); try (prw _red_lsim 1 0)). *)
+  Ltac my_red_both := try (prw _red_gen 2 0); try (prw _red_gen 1 0).
+
+  Goal forall (itr: itree (void1 +' void1 +' eventE) nat), resum_itr (tau;; itr) = tau;; resum_itr itr.
+  Proof.
+    i.
+    (* Set Typeclasses Depth 500. *)
+    
+    (* Ltac get_head2 term := *)
+    (*   lazymatch term with *)
+    (*   | ?f ?x => *)
+    (*     let ty := type of x in *)
+    (*     (* idtac "START"; *) *)
+    (*     (* idtac f; *) *)
+    (*     (* idtac x; *) *)
+    (*     (* idtac ty; *) *)
+    (*     (* idtac "END"; *) *)
+    (*     lazymatch ty with *)
+    (*     | context[ReSum] => *)
+    (*       (* idtac "BREAK!"; *) *)
+    (*       f *)
+    (*     | _ => get_head2 f *)
+    (*     end *)
+    (*   | _ => *)
+    (*     (* idtac "RETURNING:"; *) *)
+    (*     term *)
+    (*   end *)
+    (* . *)
+
+    (* (@resum_itr (sum1 void1 (sum1 void1 eventE)) (sum1 void1 (sum1 void1 eventE)) *)
+    (*    (@ReSum_id (forall _ : Type, Type) IFun Id_IFun (sum1 void1 (sum1 void1 eventE))) nat *)
+    (*    (@go (sum1 void1 (sum1 void1 eventE)) nat *)
+    (*       (@TauF (sum1 void1 (sum1 void1 eventE)) nat (itree (sum1 void1 (sum1 void1 eventE)) nat) itr))) *)
+
+    Set Typeclasses Depth 50.
+    my_red_both.
+
+    (* Set Printing All. *)
+    Set Printing All.
+    match goal with
+    | |- ?lhs = _ => let hd := (get_head2 lhs) in idtac "HD IS :"; idtac hd; pose hd
+    end.
+
+    Set Typeclasses Debug.
+    unshelve evar (r: red_database (mk_box
+                                      (@resum_itr (sum1 void1 (sum1 void1 eventE)) (sum1 void1 (sum1 void1 eventE))
+   (@ReSum_id (forall _ : Type, Type) IFun Id_IFun (sum1 void1 (sum1 void1 eventE)))))).
+    {
+      (* Set Printing All. typeclasses eauto. *)
+      typeclasses eauto.
+      eapply resum_itr_rdb.
+      Set Printing All.
+      typeclasses eauto.
+      (* iSolveTC. *)
+      (* simple eapply @resum_itr_rdb. *)
+    }
+    Set Printing All.
+    pose (rdb_tau r) as tau. cbn in tau.
+    etrans.
+    { eapply resum_itr_tau. match goal with | _ := mk_box ?lemma |- _ => idtac lemma end.
+    my_red_both. refl.
+  Qed.
 
   Variable E F G H: Type -> Type.
   Variable x: itree (eventE +' E) ~> itree (eventE +' F).
@@ -338,9 +591,6 @@ Section TEST.
       (mk_box (z_guarantee))
       (mk_box (z_ext))
   .
-
-  (* Ltac my_red_both := repeat (try (prw _red_lsim 2 0); try (prw _red_lsim 1 0)). *)
-  Ltac my_red_both := try (prw _red_gen 2 0); try (prw _red_gen 1 0).
 
   Goal forall T U V (i: itree _ T) (j: ktree _ T U) (k: ktree _ U V),
       x (i >>= j >>= k) = iret <- x i;; jret <- x (j iret);; x (k jret)
