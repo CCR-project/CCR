@@ -97,40 +97,6 @@ Section LEMMA.
   Proof.
   Admitted.
 
-  Lemma hcall_clo2
-        R0 R1
-        (mr_src1 fr_src1 rarg_src: Σ)
-        (o: ord) X (x: __shelve__ X)
-        r rg (n: nat) mr_src0 mp_src0 fr_src0 Y Z
-        (P: X -> Y -> Any.t -> ord -> Σ -> Prop)
-        (Q: X -> Z -> Any.t -> Σ -> Prop)
-        mrs_tgt frs_tgt k_tgt k_src
-        fn tbr ord_cur varg_src varg_tgt
-        (wf: (Σ * Any.t) * (Σ * Any.t) -> Prop)
-
-        (UPDATABLE: URA.updatable (URA.add mr_src0 fr_src0) (URA.add mr_src1 (URA.add rarg_src fr_src1)))
-        (FUEL: (15 < n)%ord)
-        (PRE: P x varg_src varg_tgt o rarg_src)
-        (PURE: ord_lt o ord_cur /\
-               (tbr = true -> is_pure o) /\ (tbr = false -> o = ord_top))
-        (WF: wf ((mr_src1, mp_src0), mrs_tgt))
-        (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> R0 -> R1 -> Prop)
-        (POST: forall (vret_tgt : Any.t) (mrs_src1 mrs_tgt1 : (Σ * Any.t))
-                      (rret: Σ) (vret_src: Z)
-                      (WF: wf (mrs_src1, mrs_tgt1)),
-            exists (mr_src2: Σ) (mp_src2: Any.t),
-              (<<LOOKUP: mrs_src1 = (mr_src2, mp_src2)>>) /\
-              forall (VALID: URA.wf (URA.add mr_src2 (URA.add fr_src1 rret)))
-                     (POST: Q x vret_src vret_tgt rret),
-                gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ eqr 100
-                       (mrs_src1, URA.add fr_src1 rret, k_src vret_src) (mrs_tgt1, frs_tgt, k_tgt vret_tgt))
-    :
-      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ eqr n
-             (mr_src0, mp_src0, fr_src0, (HoareCall tbr ord_cur (mk P Q) fn varg_src) >>= k_src)
-             (mrs_tgt, frs_tgt, trigger (Call fn varg_tgt) >>= k_tgt).
-  Proof.
-  Admitted.
-
 End LEMMA.
 
 
