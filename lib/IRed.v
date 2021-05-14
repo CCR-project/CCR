@@ -3,6 +3,8 @@ Require Import Coqlib.
 Require Import ITreelib.
 Require Import ModSem.
 
+Generalizable Variables E F.
+
 Local Open Scope nat_scope.
 
 Set Implicit Arguments.
@@ -15,6 +17,21 @@ Ltac get_head term :=
   | _ => term
   end
 .
+
+Ltac get_head2 term :=
+  lazymatch term with
+  | ?f ?x =>
+    let ty := type of x in
+    lazymatch ty with
+    | context[ReSum] => term
+    | _ => get_head2 f
+    end
+  | _ => term
+  end
+.
+
+(* Ltac iSolveTC := *)
+(*   solve [once (typeclasses eauto)]. *)
 
 (* Ltac get_tail term := *)
 (*   match term with *)
@@ -140,9 +157,9 @@ Proof. i. grind. Qed.
 (* Tactic Notation "debug" string(str) := idtac. (*** release mode ***) *)
 
 Ltac _red_itree f :=
-  match goal with
+  lazymatch goal with
   | [ |- ITree.bind' ?ktr ?itr = _] =>
-    match itr with
+    lazymatch itr with
     | ITree.bind' _ _ =>
       instantiate (f:=_continue); apply bind_bind; fail
     | Tau _ =>
@@ -163,7 +180,7 @@ Ltac _red_itree f :=
 Ltac __red_interp f term :=
   (* idtac "__red_interp"; *)
   (* idtac term; *)
-  let my_interp := get_head term in
+  let my_interp := get_head2 term in
   (* idtac itr; *)
   let tc := fresh "_TC_" in
   unshelve evar (tc: @red_database (mk_box (my_interp))); [typeclasses eauto|];
@@ -171,11 +188,12 @@ Ltac __red_interp f term :=
   let _nth := constr:(rdb_pos tc) in
   let nth := (eval simpl in _nth) in
   let itr := get_nth term nth in
-  match itr with
+  lazymatch itr with
   | ITree.bind' ?k0 ?i0 =>
     (* idtac "bind"; *)
     instantiate (f:=_continue); pose (rdb_bind tc) as name; cbn in name;
-    match goal with | name := mk_box ?lemma |- _ => apply (@lemma _ _ i0 k0); fail end
+    (*** Note: Why not just "apply lemma"? Because of Coq bug. (Anomaly) ***)
+    match goal with | name := mk_box ?lemma |- _ => first[apply (@lemma _ _ i0 k0)|apply lemma] end
   | Tau _ =>
     instantiate (f:=_continue); pose (rdb_tau tc) as name; cbn in name;
     match goal with | name := mk_box ?lemma |- _ => apply lemma; fail end
@@ -220,7 +238,7 @@ Ltac __red_interp f term :=
 
 Ltac _red_interp f :=
   (* idtac "_red_interp"; *)
-  match goal with
+  lazymatch goal with
   | [ |- ITree.bind' _ ?term = _ ] =>
     (* idtac "_red_interp_bind"; *)
     apply bind_ext; __red_interp f term
@@ -236,8 +254,196 @@ Ltac _red_gen f :=
 
 
 
+
+
+Lemma resum_itr_bind
+      E (R S: Type)
+      (s: itree E R) (k : R -> itree E S)
+      `{E -< F}
+  :
+    (resum_itr (s >>= k))
+    =
+    ((resum_itr (E:=E) (F:=F) s) >>= (fun r => resum_itr (k r))).
+Proof.
+  unfold resum_itr in *. grind.
+Qed.
+
+Section RESUM.
+
+  (*****************************************************)
+  (****************** Reduction Lemmas *****************)
+  (*****************************************************)
+
+  (* Context {E F: Type -> Type}. *)
+  (* Context `{eventE -< E}. *)
+  (* Context `{E -< F}. *)
+  Context `{PRF: E -< F}.
+  Context `{eventE -< E}.
+  Let eventE_F: eventE -< F. rr. ii. eapply PRF. eapply H. eapply X. Defined.
+  Local Existing Instance eventE_F.
+
+  (* Lemma resum_itr_bind *)
+  (*       (R S: Type) *)
+  (*       (s: itree _ R) (k : R -> itree _ S) *)
+  (*   : *)
+  (*     (resum_itr (s >>= k)) *)
+  (*     = *)
+  (*     ((resum_itr (E:=E) (F:=F) s) >>= (fun r => resum_itr (k r))). *)
+  (* Proof. *)
+  (*   unfold resum_itr in *. grind. *)
+  (* Qed. *)
+
+  Lemma resum_itr_tau
+        (U: Type)
+        (t : itree _ U)
+    :
+      (resum_itr (E:=E) (F:=F) (Tau t))
+      =
+      (Tau (resum_itr t)).
+  Proof.
+    unfold resum_itr in *. grind.
+  Qed.
+
+  Lemma resum_itr_ret
+        (U: Type)
+        (t: U)
+    :
+      ((resum_itr (E:=E) (F:=F) (Ret t)))
+      =
+      Ret t.
+  Proof.
+    unfold resum_itr in *. grind.
+  Qed.
+
+  Lemma resum_itr_event
+        (R: Type)
+        (i: E R)
+    :
+      (resum_itr (E:=E) (F:=F) (trigger i))
+      =
+      (trigger i >>= (fun r => tau;; Ret r)).
+  Proof.
+    unfold resum_itr in *.
+    repeat rewrite interp_trigger. grind.
+  Qed.
+
+  Lemma resum_itr_triggerUB
+        (R: Type)
+    :
+      (resum_itr (E:=E) (F:=F) (triggerUB))
+      =
+      triggerUB (A:=R).
+  Proof.
+    unfold resum_itr, triggerUB in *. rewrite unfold_interp. cbn. grind.
+  Qed.
+
+  Lemma resum_itr_triggerNB
+        (R: Type)
+    :
+      (resum_itr (E:=E) (F:=F) (triggerNB))
+      =
+      triggerNB (A:=R).
+  Proof.
+    unfold resum_itr, triggerNB in *. rewrite unfold_interp. cbn. grind.
+  Qed.
+
+  Lemma resum_itr_unwrapU
+        (R: Type)
+        (i: option R)
+    :
+      (resum_itr (E:=E) (F:=F) (unwrapU i))
+      =
+      (unwrapU i).
+  Proof.
+    unfold resum_itr. unfold unwrapU. des_ifs; grind. eapply resum_itr_triggerUB.
+  Qed.
+
+  Lemma resum_itr_unwrapN
+        (R: Type)
+        (i: option R)
+    :
+      (resum_itr (E:=E) (F:=F) (unwrapN i))
+      =
+      (unwrapN i).
+  Proof.
+    unfold resum_itr. unfold unwrapN. des_ifs; grind. eapply resum_itr_triggerNB.
+  Qed.
+
+  Lemma resum_itr_assume
+        P
+    :
+      (resum_itr (E:=E) (F:=F) (assume P))
+      =
+      (assume P;; tau;; Ret tt)
+  .
+  Proof.
+    unfold resum_itr, assume. grind. rewrite unfold_interp; cbn. grind.
+  Qed.
+
+  Lemma resum_itr_guarantee
+        P
+    :
+      (resum_itr (E:=E) (F:=F) (guarantee P))
+      =
+      (guarantee P;; tau;; Ret tt).
+  Proof.
+    unfold resum_itr, guarantee. grind. rewrite unfold_interp; cbn. grind.
+  Qed.
+
+  Lemma resum_itr_ext
+        R (itr0 itr1: itree _ R)
+        (EQ: itr0 = itr1)
+    :
+      (resum_itr (E:=E) (F:=F) itr0)
+      =
+      (resum_itr itr1)
+  .
+  Proof. subst; et. Qed.
+
+  Global Program Instance resum_itr_rdb: red_database (mk_box (@resum_itr E F PRF)) :=
+    mk_rdb
+      0
+      (mk_box resum_itr_bind)
+      (mk_box resum_itr_tau)
+      (mk_box resum_itr_ret)
+      (mk_box resum_itr_event)
+      (mk_box True)
+      (mk_box True)
+      (mk_box True)
+      (mk_box resum_itr_triggerUB)
+      (mk_box resum_itr_triggerNB)
+      (mk_box resum_itr_unwrapU)
+      (mk_box resum_itr_unwrapN)
+      (mk_box resum_itr_assume)
+      (mk_box resum_itr_guarantee)
+      (mk_box resum_itr_ext)
+  .
+
+  Global Opaque resum_itr.
+
+End RESUM.
+
+
+
 Module TEST.
 Section TEST.
+
+  Ltac my_red_both := try (prw _red_gen 2 0); try (prw _red_gen 1 0).
+
+  Local Set Typeclasses Depth 50.
+
+  Goal forall (itr: itree (void1 +' void1 +' eventE) nat), resum_itr (tau;; itr) = tau;; resum_itr itr.
+  Proof. i. Timeout 1 my_red_both. refl. Qed.
+
+  Goal forall (itr: itree (void1 +' eventE) nat), resum_itr (F:= void1 +' eventE +' void1) (tau;; itr) = tau;; resum_itr itr.
+  Proof. i. Timeout 1 my_red_both. refl. Qed.
+
+  Goal forall (itr: itree (void1 +' eventE) nat) (ktr: ktree _ nat nat),
+      resum_itr (F:= void1 +' eventE +' void1) (itr >>= ktr) = resum_itr itr >>= (fun r => resum_itr (ktr r)).
+  Proof. i. Timeout 1 my_red_both. refl. Qed.
+
+  Local Unset Typeclasses Depth.
+  (* Print Options. *)
 
   Variable E F G H: Type -> Type.
   Variable x: itree (eventE +' E) ~> itree (eventE +' F).
@@ -338,9 +544,6 @@ Section TEST.
       (mk_box (z_guarantee))
       (mk_box (z_ext))
   .
-
-  (* Ltac my_red_both := repeat (try (prw _red_lsim 2 0); try (prw _red_lsim 1 0)). *)
-  Ltac my_red_both := try (prw _red_gen 2 0); try (prw _red_gen 1 0).
 
   Goal forall T U V (i: itree _ T) (j: ktree _ T U) (k: ktree _ U V),
       x (i >>= j >>= k) = iret <- x i;; jret <- x (j iret);; x (k jret)
