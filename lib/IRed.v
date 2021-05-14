@@ -192,7 +192,8 @@ Ltac __red_interp f term :=
   | ITree.bind' ?k0 ?i0 =>
     (* idtac "bind"; *)
     instantiate (f:=_continue); pose (rdb_bind tc) as name; cbn in name;
-    match goal with | name := mk_box ?lemma |- _ => apply (@lemma _ _ i0 k0); fail end
+    (*** Note: Why not just "apply lemma"? Because of Coq bug. (Anomaly) ***)
+    match goal with | name := mk_box ?lemma |- _ => first[apply (@lemma _ _ i0 k0)|apply lemma] end
   | Tau _ =>
     instantiate (f:=_continue); pose (rdb_tau tc) as name; cbn in name;
     match goal with | name := mk_box ?lemma |- _ => apply lemma; fail end
@@ -399,8 +400,6 @@ Section RESUM.
   .
   Proof. subst; et. Qed.
 
-  Lemma dummy_lemma: True. ss. Qed.
-
   Global Program Instance resum_itr_rdb: red_database (mk_box (@resum_itr E F PRF)) :=
     mk_rdb
       0
@@ -408,9 +407,9 @@ Section RESUM.
       (mk_box resum_itr_tau)
       (mk_box resum_itr_ret)
       (mk_box resum_itr_event)
-      (mk_box dummy_lemma)
-      (mk_box dummy_lemma)
-      (mk_box dummy_lemma)
+      (mk_box True)
+      (mk_box True)
+      (mk_box True)
       (mk_box resum_itr_triggerUB)
       (mk_box resum_itr_triggerNB)
       (mk_box resum_itr_unwrapU)
@@ -429,68 +428,22 @@ End RESUM.
 Module TEST.
 Section TEST.
 
-  (* Ltac my_red_both := repeat (try (prw _red_lsim 2 0); try (prw _red_lsim 1 0)). *)
   Ltac my_red_both := try (prw _red_gen 2 0); try (prw _red_gen 1 0).
 
+  Local Set Typeclasses Depth 50.
+
   Goal forall (itr: itree (void1 +' void1 +' eventE) nat), resum_itr (tau;; itr) = tau;; resum_itr itr.
-  Proof.
-    i.
-    (* Set Typeclasses Depth 500. *)
-    
-    (* Ltac get_head2 term := *)
-    (*   lazymatch term with *)
-    (*   | ?f ?x => *)
-    (*     let ty := type of x in *)
-    (*     (* idtac "START"; *) *)
-    (*     (* idtac f; *) *)
-    (*     (* idtac x; *) *)
-    (*     (* idtac ty; *) *)
-    (*     (* idtac "END"; *) *)
-    (*     lazymatch ty with *)
-    (*     | context[ReSum] => *)
-    (*       (* idtac "BREAK!"; *) *)
-    (*       f *)
-    (*     | _ => get_head2 f *)
-    (*     end *)
-    (*   | _ => *)
-    (*     (* idtac "RETURNING:"; *) *)
-    (*     term *)
-    (*   end *)
-    (* . *)
+  Proof. i. Timeout 1 my_red_both. refl. Qed.
 
-    (* (@resum_itr (sum1 void1 (sum1 void1 eventE)) (sum1 void1 (sum1 void1 eventE)) *)
-    (*    (@ReSum_id (forall _ : Type, Type) IFun Id_IFun (sum1 void1 (sum1 void1 eventE))) nat *)
-    (*    (@go (sum1 void1 (sum1 void1 eventE)) nat *)
-    (*       (@TauF (sum1 void1 (sum1 void1 eventE)) nat (itree (sum1 void1 (sum1 void1 eventE)) nat) itr))) *)
+  Goal forall (itr: itree (void1 +' eventE) nat), resum_itr (F:= void1 +' eventE +' void1) (tau;; itr) = tau;; resum_itr itr.
+  Proof. i. Timeout 1 my_red_both. refl. Qed.
 
-    Set Typeclasses Depth 50.
-    my_red_both.
+  Goal forall (itr: itree (void1 +' eventE) nat) (ktr: ktree _ nat nat),
+      resum_itr (F:= void1 +' eventE +' void1) (itr >>= ktr) = resum_itr itr >>= (fun r => resum_itr (ktr r)).
+  Proof. i. Timeout 1 my_red_both. refl. Qed.
 
-    (* Set Printing All. *)
-    Set Printing All.
-    match goal with
-    | |- ?lhs = _ => let hd := (get_head2 lhs) in idtac "HD IS :"; idtac hd; pose hd
-    end.
-
-    Set Typeclasses Debug.
-    unshelve evar (r: red_database (mk_box
-                                      (@resum_itr (sum1 void1 (sum1 void1 eventE)) (sum1 void1 (sum1 void1 eventE))
-   (@ReSum_id (forall _ : Type, Type) IFun Id_IFun (sum1 void1 (sum1 void1 eventE)))))).
-    {
-      (* Set Printing All. typeclasses eauto. *)
-      typeclasses eauto.
-      eapply resum_itr_rdb.
-      Set Printing All.
-      typeclasses eauto.
-      (* iSolveTC. *)
-      (* simple eapply @resum_itr_rdb. *)
-    }
-    Set Printing All.
-    pose (rdb_tau r) as tau. cbn in tau.
-    etrans.
-    { eapply resum_itr_tau. match goal with | _ := mk_box ?lemma |- _ => idtac lemma end.
-    my_red_both. refl.
-  Qed.
+  Local Unset Typeclasses Depth.
+  (* Print Options. *)
 
   Variable E F G H: Type -> Type.
   Variable x: itree (eventE +' E) ~> itree (eventE +' F).
