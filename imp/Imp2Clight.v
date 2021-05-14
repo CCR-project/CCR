@@ -262,21 +262,25 @@ Section Compile.
     end
   .
 
+  Definition compile_function (f : Imp.function) : option function :=
+    do fbody <- (compile_stmt f.(Imp.fn_body));
+    let fdef := {|
+          fn_return := Tlong0;
+          fn_callconv := cc_default;
+          fn_params := (List.map (fun vn => (s2p vn, Tlong0)) f.(Imp.fn_params));
+          fn_vars := [];
+          fn_temps := (List.map (fun vn => (s2p vn, Tlong0)) f.(Imp.fn_vars));
+          fn_body := fbody;
+        |} in
+    Some fdef.
+
   Fixpoint compile_iFuns (src : progFuns) : option tgt_gdefs :=
     match src with
     | [] => Some []
     | (name, f) :: t =>
       do tail <- (compile_iFuns t);
-      do fbody <- (compile_stmt f.(Imp.fn_body));
-      let fdef := {|
-            fn_return := Tlong0;
-            fn_callconv := cc_default;
-            fn_params := (List.map (fun vn => (s2p vn, Tlong0)) f.(Imp.fn_params));
-            fn_vars := [];
-            fn_temps := (List.map (fun vn => (s2p vn, Tlong0)) f.(Imp.fn_vars));
-            fn_body := fbody;
-          |} in
-      let gf := Internal fdef in
+      do cf <- (compile_function f);
+      let gf := Internal cf in
       Some ((s2p name, Gfun gf) :: tail)
     end
   .
@@ -644,11 +648,11 @@ Section Sim.
   Let src_sem := ModL.compile (Mod.add_list ([src_mod] ++ [IMem])).
   Let tgt_sem := semantics2 tgt.
 
-  Context {effs : Type -> Type}.
-  Context {HasGlobVar: GlobEnv -< effs}.
-  Context {HasImpState : ImpState -< effs}.
-  Context {HasCall : callE -< effs}.
-  Context {HasEvent : eventE -< effs}.
+  (* Context {effs : Type -> Type}. *)
+  (* Context {HasGlobVar: GlobEnv -< effs}. *)
+  (* Context {HasImpState : ImpState -< effs}. *)
+  (* Context {HasCall : callE -< effs}. *)
+  (* Context {HasEvent : eventE -< effs}. *)
 
   (* Inductive istate {effs} {A} {B} : Type := *)
   (* | iState *)
@@ -691,8 +695,58 @@ Section Sim.
     fun ge le prog mn rpst =>
       EventsL.interp_Es prog (transl_all mn (interp_imp ge le (denote_stmt s))) rpst.
 
-  Inductive match_states {A} (src_st : itree effs A) (tgt_st : Clight.state) : Prop :=
-  | 
+  Variable match_le : lenv -> temp_env -> Prop.
+  Variable match_mem : Mem.t -> Memory.Mem.mem -> Prop.
+  Inductive match_cont {A} : itree eventE A -> Clight.cont -> Prop :=
+  | match_cont_seq
+      gm ge prog mn rpst le st tgtst k tgtk
+      (CS: compile_stmt gm st = Some tgtst)
+      (MC: match_cont k tgtk)
+    :
+      let itr := itree_of_stmt st ge le prog mn rpst in
+      match_cont (x <- itr;; k) (Kseq tgtst tgtk)
+
+  | match_cont_callf1
+      gm ge prog mn rpst vname fname args f tgtf le tgtle k tgtk
+      (CF: compile_function gm f = Some tgtf)
+      (ML: match_le le tgtle)
+      (MC: match_cont k tgtk)
+    :
+      let itr := itree_of_stmt (CallFun1 vname fname args) ge le prog mn rpst in
+      let ccont := Kcall (Some (s2p vname)) tgtf empty_env tgtle tgtk in
+      match_cont (x <- itr;; k) ccont
+  | match_cont_callf2
+      gm ge prog mn rpst fname args f tgtf le tgtle k tgtk
+      (CF: compile_function gm f = Some tgtf)
+      (ML: match_le le tgtle)
+      (MC: match_cont k tgtk)
+    :
+      let itr := itree_of_stmt (CallFun2 fname args) ge le prog mn rpst in
+      let ccont := Kcall None tgtf empty_env tgtle tgtk in
+      match_cont (x <- itr;; k) ccont
+  .
+
+(* itree_of_stmt *)
+(*      : stmt -> *)
+(*        SkEnv.t -> *)
+(*        lenv -> *)
+(*        (forall T : Type, callE T -> itree EventsL.Es T) -> *)
+(*        string -> r_state * p_state -> itree eventE (r_state * p_state * (lenv * val)) *)
+  Inductive match_states {effs} {A} : itree effs A -> Clight.state -> Prop :=
+  | match_regular
+      srcst tgtst ge srcle tgtle prog mn rpst srcf tgtf srcm tgtm srck tgtk,
+        (CS: compile_stmt srcst = Some tgtst)
+        (ML: match_le srcle tgtle)
+        (* function is only used to check return type, which compiled one always pass *)
+        (CF: compile_function srcf = Some tgtf)
+        (MM: match_mem srcm tgtm)
+        (MC: match_cont srck tgtk)
+        :
+        let itr := itree_of_stmt srcst ge le prog mn rpst in
+        match_states (x <- itr; srck) (State tgtf tgtst tgtk empty_env tgtle tgtm)
+  |
+        
+        
   .
 
   (* From compcert Require Import SimplExprproof. *)
