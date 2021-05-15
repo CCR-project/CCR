@@ -142,9 +142,13 @@ Section Compile.
     | Assign x e =>
       do ex <- (compile_expr e); Some (Sset (s2p x) ex)
     | Seq s1 s2 =>
-      do cs1 <- (compile_stmt s1);
-      do cs2 <- (compile_stmt s2);
-      Some (Ssequence cs1 cs2)
+      match s1 with
+      | Expr _ => None
+      | _ =>
+        do cs1 <- (compile_stmt s1);
+        do cs2 <- (compile_stmt s2);
+        Some (Ssequence cs1 cs2)
+      end
     | If cond sif selse =>
       do cc <- (compile_expr cond);
       do cif <- (compile_stmt sif);
