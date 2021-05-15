@@ -695,8 +695,24 @@ Section Sim.
     fun ge le prog mn rpst =>
       EventsL.interp_Es prog (transl_all mn (interp_imp ge le (denote_stmt s))) rpst.
 
+  Definition alist_add_option optid v (le : lenv) :=
+    match optid with
+    | None => le
+    | Some id => alist_add id v le
+    end.
+
+  Variant match_id : option var -> option ident -> Prop :=
+  | match_id_None
+    :
+      match_id None None
+  | match_id_Some
+      v
+    :
+      match_id (Some v) (Some (s2p v)).
+
   Variable match_le : lenv -> temp_env -> Prop.
   Variable match_mem : Mem.t -> Memory.Mem.mem -> Prop.
+
   Inductive match_cont : ((r_state * p_state * (lenv * val)) -> itree eventE (r_state * p_state * (lenv * val))) -> Clight.cont -> Prop :=
   (* | match_cont_stop *)
   (*     r *)
@@ -843,14 +859,15 @@ Section Sim.
       match_states (x <- itr;; knext x >>= kstack) (Callstate fd vargs (Kcall optid tgtf empty_env tgtle tgtk) tgtm)
 
   | match_states_return
-      gm le tgtle f tgtf m tgtm knext kstack tgtk rs ps v optid
+      gm le tgtle f tgtf m tgtm knext kstack tgtk rs ps v optid tgtid
       (CF: compile_function gm f = Some tgtf)
       (ML: match_le le tgtle)
       (MM: match_mem m tgtm)
       (MCS: match_cont kstack (call_cont tgtk))
       (MCN: match_cont (fun ss => knext ss >>= kstack) tgtk)
+      (MID: match_id optid tgtid)
     :
-      match_states (knext (rs, ps, (le, v)) >>= kstack) (Returnstate (map_val v) (Kcall optid tgtf empty_env tgtle tgtk) tgtm)
+      match_states (knext (rs, ps, (alist_add_option optid v le, v)) >>= kstack) (Returnstate (map_val v) (Kcall tgtid tgtf empty_env tgtle tgtk) tgtm)
   .
 
   (* From compcert Require Import SimplExprproof. *)
