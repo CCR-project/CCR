@@ -143,10 +143,10 @@ Section WEAK.
   Proof.
     ii. ss. exists (f, x_src). split.
     { intros arg_src arg_tgt o. ss. iIntro. (* TODO: use iIntros *)
-      des; subst. split; auto. iRefresh.
+      iDestruct A; subst. iSplitP; ss.
       iDestruct A. iDestruct A0. iSplitR A1; ss. iSplitR A0; ss. (* TODO: make lemma: ** is commute *) }
     { intros ret_src ret_tgt. ss. iIntro. (* TODO: use iIntros *)
-      des; subst. split; auto. iRefresh.
+      iDestruct A; subst. iSplitP; ss.
       iDestruct A. iDestruct A. iSplitL A; ss. iSplitR A0; ss. (* TODO: make lemma: ** is commute *) }
   Qed.
 End WEAK.
@@ -162,13 +162,13 @@ Section WEAK.
   Lemma knot_spec2_weaker skenv: ftspec_weaker (knot_spec2 RecStb FunStb skenv) (knot_spec RecStb FunStb skenv).
   Proof.
     ii. ss. exists x_src. split.
-    { intros arg_src arg_tgt o. iIntro. des; subst. split; auto.
+    { intros arg_src arg_tgt o. iIntro. iDestruct A; subst. iSplitP; ss.
       iRefresh. iDestruct A. iSplitL A.
       { iDestruct A. iSplitL A; ss.
         iExists (None: option (nat -> nat)). ss. }
       { iApply A0. }
     }
-    { intros ret_src ret_tgt. iIntro. des; subst. split; auto.
+    { intros ret_src ret_tgt. iIntro. iDestruct A; subst. iSplitP; ss.
       iRefresh. iDestruct A.
       iExists (Own (GRA.embed (knot_frag (Some x_src))) ** inv_closed).
       iDestruct A. iMerge A1 A0. iSplitR A1; ss.

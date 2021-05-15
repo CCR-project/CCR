@@ -144,7 +144,7 @@ Section SIMMODSEM.
     hexploit (SKINCL "_f"); ss; eauto. intros [blk1 FIND1].
     econs; ss; [|econs; ss].
     { init. unfold recF, ccall. harg_tac. iRefresh.
-      destruct x as [f n]. ss. des. subst.
+      destruct x as [f n]. ss. iDestruct PRE; subst.
       iRefresh. iDestruct PRE. iDestruct PRE. iPure PRE. des; clarify.
       eapply Any.upcast_inj in PRE. des; clarify. steps.
       rewrite Any.upcast_downcast in _UNWRAPN. clarify. astart 2.
@@ -158,11 +158,10 @@ Section SIMMODSEM.
       { eapply MemStb_incl. stb_tac. ss. }
       iMerge A3 A0. iMerge A3 SEP.
       hcall_tac (blk1, 0%Z, Vptr fb 0) (ord_pure 0) A A3 A2.
-      { ss. splits; ss. iRefresh. iSplitL A2; ss. iSplitR A2; ss.
-        unfold knot_var in *. rewrite FIND1 in *. ss. }
+      { cbn. iRefresh. repeat iSplitP; ss. unfold knot_var in *. rewrite FIND1 in *. ss. }
       { splits; ss. eauto with ord_step. }
       { red. eexists. esplits; eauto. left. ss. }
-      steps. des. iRefresh. iDestruct POST. iPure A.
+      iRefresh. iDestruct POST; subst. steps. iDestruct POST. iPure A.
       rewrite Any.upcast_downcast in _UNWRAPN. clarify.
       eapply Any.upcast_inj in A. des; clarify. steps.
       dup FN. inv FN. inv SPEC. rewrite FBLOCK. steps.
@@ -172,7 +171,7 @@ Section SIMMODSEM.
       2:{ iDestruct SEP. inv_clear. }
       iMerge A0 SEP. iMerge A POST. iMerge A A3.
       hcall_tac_weaken (fun_gen RecStb sk f) n (ord_pure (2 * n)) A (@URA.unit Σ) A0; ss.
-      { split; auto. iRefresh. iDestruct A0. iSplitR A; ss. iSplitR A0; ss.
+      { iRefresh. iSplitP; ss. iDestruct A0. iSplitR A; ss. iSplitR A0; ss.
         red. red. esplits; eauto. econs.
         { eapply SKWF. eauto. }
         econs.
@@ -187,7 +186,7 @@ Section SIMMODSEM.
           red. red. i. clarify. esplits; eauto. }
         { unfold knot_var. rewrite FIND1. iApply A1. }
       }
-      steps. des. clarify. iRefresh.
+      steps. iRefresh. iDestruct POST. clarify.
       iDestruct POST. iDestruct POST. iPure POST.
       rewrite Any.upcast_downcast in _UNWRAPN. clarify.
       eapply Any.upcast_inj in POST. des; clarify. iMerge A0 A.
@@ -197,8 +196,7 @@ Section SIMMODSEM.
       { red. esplits; eauto. }
     }
     { init. unfold knotF, ccall. harg_tac.
-      ss. des. subst.
-      iRefresh. iDestruct PRE. iDestruct PRE. iPure PRE. des; clarify.
+      iRefresh. iDestruct PRE; subst. iDestruct PRE. iDestruct PRE. iPure PRE. des; clarify.
       eapply Any.upcast_inj in PRE. des; clarify.
       iDestruct A0. iDestruct SEP.
       { inv_clear. }
@@ -210,11 +208,11 @@ Section SIMMODSEM.
       { eapply MemStb_incl. stb_tac. ss. }
       iMerge A3 A0. iMerge A3 SEP.
       hcall_tac (blk1, 0%Z, Vptr fb 0) (ord_pure 0) A A3 A2.
-      { ss. splits; ss. iRefresh. iExists __. iSplitL A2; ss.
+      { ss. iRefresh. iSplitP; ss. iExists __. iSplitL A2; ss.
         iSplitR A2; ss. iApply A2. }
       { splits; ss. eauto with ord_step. }
       { red. esplits; eauto. left. ss. }
-      steps. astop. des; clarify.
+      steps. astop. iDestruct POST; subst.
       rewrite Any.upcast_downcast in _UNWRAPN. clarify.
       iDestruct A3. iDestruct A3. iDestruct SEP.
       2: { iDestruct SEP. inv_clear. }
@@ -232,7 +230,7 @@ Section SIMMODSEM.
       iMerge POST A. iMerge POST A3. iMerge SEP A0.
       force_l. eexists.
       hret_tac POST SEP.
-      { split; eauto. iRefresh. iDestruct SEP. iSplitR SEP; ss.
+      { iRefresh. iSplitP; ss. iDestruct SEP. iSplitR SEP; ss.
         iSplitR A; ss.
         { red. red. esplits; eauto. econs.
           { eapply SKWF. eauto. }

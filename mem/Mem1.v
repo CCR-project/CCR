@@ -112,34 +112,38 @@ Section PROOF.
   Let GURA: URA.t := GRA.to_URA Σ.
   Local Existing Instance GURA.
 
-  Let alloc_spec: fspec := (mk_simple (fun sz => (
-                                           (fun varg o => ⌜varg = [Vint (Z.of_nat sz)]↑ /\ o = ord_pure 0⌝),
-                                           (fun vret => Exists b, ⌜vret = (Vptr b 0)↑⌝ **
-                                                                  Own(GRA.embed ((b, 0%Z) |-> (List.repeat (Vint 0) sz))))
-                           ))).
+  Definition alloc_spec: fspec :=
+    (mk_simple (fun sz => (
+                    (fun varg o => ⌜varg = [Vint (Z.of_nat sz)]↑ /\ o = ord_pure 0⌝),
+                    (fun vret => Exists b, ⌜vret = (Vptr b 0)↑⌝ **
+                                                             Own(GRA.embed ((b, 0%Z) |-> (List.repeat (Vint 0) sz))))
+    ))).
 
-  Let free_spec: fspec := (mk_simple (fun '(b, ofs) => (
-                                          (fun varg o => Exists v, ⌜varg = ([Vptr b ofs])↑⌝ **
-                                                                   Own(GRA.embed ((b, ofs) |-> [v])) **
-                                                                   ⌜o = ord_pure 0⌝),
-                                          top2
-                          ))).
+  Definition free_spec: fspec :=
+    (mk_simple (fun '(b, ofs) => (
+                    (fun varg o => Exists v, ⌜varg = ([Vptr b ofs])↑⌝ **
+                                             Own(GRA.embed ((b, ofs) |-> [v])) **
+                                             ⌜o = ord_pure 0⌝),
+                    top2
+    ))).
 
-  Let load_spec: fspec := (mk_simple (fun '(b, ofs, v) => (
-                                          (fun varg o => ⌜varg = ([Vptr b ofs])↑⌝ **
-                                                                  Own(GRA.embed ((b, ofs) |-> [v])) **
-                                                                  ⌜o = ord_pure 0⌝),
-                                          (fun vret => Own(GRA.embed ((b, ofs) |-> [v])) ** ⌜vret = v↑⌝)
-                          ))).
+  Definition load_spec: fspec :=
+    (mk_simple (fun '(b, ofs, v) => (
+                    (fun varg o => ⌜varg = ([Vptr b ofs])↑⌝ **
+                                   Own(GRA.embed ((b, ofs) |-> [v])) **
+                                   ⌜o = ord_pure 0⌝),
+                    (fun vret => Own(GRA.embed ((b, ofs) |-> [v])) ** ⌜vret = v↑⌝)
+    ))).
 
-  Let store_spec: fspec := (mk_simple
-                              (fun '(b, ofs, v_new) => (
-                                   (fun varg o => Exists v_old,
-                                     ⌜varg = ([Vptr b ofs ; v_new])↑⌝ ** Own(GRA.embed ((b, ofs) |-> [v_old])) ** ⌜o = ord_pure 0⌝),
-                                   (fun _ => Own(GRA.embed ((b, ofs) |-> [v_new])))
-                           ))).
+  Definition store_spec: fspec :=
+    (mk_simple
+       (fun '(b, ofs, v_new) => (
+            (fun varg o => Exists v_old,
+                           ⌜varg = ([Vptr b ofs ; v_new])↑⌝ ** Own(GRA.embed ((b, ofs) |-> [v_old])) ** ⌜o = ord_pure 0⌝),
+            (fun _ => Own(GRA.embed ((b, ofs) |-> [v_new])))
+    ))).
 
-  Let cmp_spec: fspec :=
+  Definition cmp_spec: fspec :=
     (mk_simple
        (fun '(result, resource) => (
           (fun varg o =>

@@ -582,6 +582,8 @@ Ltac iSplitP :=
     erewrite f_equal; cycle 1; [ instantiate (1 := (ε ⋅ _)); rewrite URA.unit_idl; refl | eapply sepconj_merge; iClears ]
   | |- ᐸ ?ph ** (Pure ?pg) ᐳ =>
     erewrite f_equal; cycle 1; [ instantiate (1 := (_ ⋅ ε)); rewrite URA.unit_id; refl | eapply sepconj_merge; iClears ]
+  | |- ᐸ ?ph ∧ ?pg ᐳ =>
+    split; iRefresh
   end
 .
 
@@ -591,6 +593,13 @@ Ltac iDestruct H :=
   | iHyp (_ ** _) _ =>
     let name0 := fresh "A" in
     apply sepconj_split in H as [? [? [H [name0 ?]]]]; subst; iRefresh
+  | iHyp (_ ∧ ⌜ _ ⌝) _ =>
+    let name0 := fresh "B" in
+    destruct H as [H name0]; iRefresh; iPure name0
+  | iHyp (⌜ _ ⌝ ∧ _) _ =>
+    let name0 := fresh "B" in
+    destruct H as [name0 H]; iRefresh; iPure name0
+  (*** TODO: make iDestructL/iDestructR ***)
   | iHyp (_ ∨ _) _ => destruct H as [H|H]; iRefresh
   end.
 

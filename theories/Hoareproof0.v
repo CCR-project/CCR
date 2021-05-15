@@ -755,7 +755,7 @@ we should know that stackframe is not popped (unary property)". }
         unfold forge, checkWf, assume. steps. des_ifs.
         { admit "we should use stronger RR, not eq;
 we should know that stackframe is not popped (unary property)". }
-        steps. des; ss.
+        steps. rr in x2; des; ss.
     }
 
 

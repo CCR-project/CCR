@@ -78,20 +78,20 @@ Section SIMMODSEM.
     Opaque URA.add.
     econs; ss.
     { unfold getF. init.
-      harg_tac. des. subst. rewrite Any.upcast_downcast. ss.
+      harg_tac. iRefresh. iDestruct PRE. subst. rewrite Any.upcast_downcast. ss.
       iRefresh. iDestruct PRE. iPure A. clarify.
       assert (x = Z.odd n); subst.
       { hexploit bw_ra_merge; et. intro T. iSpecialize T SIM. iSpecialize T PRE. iPure T. auto. }
       unfold body_to_tgt. steps. astart 0. astop.
       force_l. rewrite Any.upcast_downcast. eexists.
       hret_tac SIM PRE.
-      { split; eauto. iRefresh. iSplitL PRE; eauto. rr. f_equal.
+      { iRefresh. iSplitP; ss. iSplitL PRE; eauto. rr. f_equal.
         rewrite <- Z.negb_odd. rewrite negb_if. des_ifs. }
       { unfold wf. esplits; eauto. }
     }
     econs; ss.
     { unfold flipF. init.
-      harg_tac. des. subst. rewrite Any.upcast_downcast. ss.
+      harg_tac. iRefresh. iDestruct PRE. subst. rewrite Any.upcast_downcast. ss.
       iRefresh. iDestruct PRE. iPure A. clarify.
       assert (x = Z.odd n); subst.
       { hexploit bw_ra_merge; et. intro T. iSpecialize T SIM. iSpecialize T PRE. iPure T. auto. }
@@ -106,7 +106,7 @@ Section SIMMODSEM.
       rewrite <- GRA.embed_add in SIM. rewrite own_sep in SIM. iDestruct SIM. steps.
 
       hret_tac SIM A.
-      { split; eauto. iRefresh. replace (negb (Z.odd n)) with (Z.odd (n+1)); auto.
+      { iRefresh. iSplitP; ss. replace (negb (Z.odd n)) with (Z.odd (n+1)); auto.
         rewrite Z.odd_add. ss. }
       { unfold wf. esplits; eauto. }
     }

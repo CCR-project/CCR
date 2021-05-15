@@ -238,7 +238,7 @@ Section CANCEL.
   (*   apply (val). *)
   (* Defined. *)
   Definition mk_tsimple {X: Type} (PQ: X -> ((Any_tgt -> ord -> Σ -> Prop) * (Any_tgt -> Σ -> Prop))): ftspec (list val) (val) :=
-    @mk_ftspec _ _ _ X (fun x y a o r => (fst ∘ PQ) x a o r /\ y↑ = a) (fun x z a r => (snd ∘ PQ) x a r /\ z↑ = a)
+    @mk_ftspec _ _ _ X (fun x y a o => (fst ∘ PQ) x a o ∧ ⌜y↑ = a⌝) (fun x z a => (snd ∘ PQ) x a ∧ ⌜z↑ = a⌝)
   .
 
   Definition mk_simple {X: Type} (PQ: X -> ((Any_tgt -> ord -> Σ -> Prop) * (Any_tgt -> Σ -> Prop))): fspec :=

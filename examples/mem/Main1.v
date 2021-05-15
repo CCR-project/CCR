@@ -8,6 +8,7 @@ Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
 Require Import TODOYJ.
+Require Import OpenDef Open.
 
 Generalizable Variables E R A B C X Y Σ.
 
@@ -15,7 +16,7 @@ Set Implicit Arguments.
 
 
 
-Require Import Mem1.
+Require Import Mem1 MemOpen.
 
 
 (* Notation "'hCall2' fn varg" := *)
@@ -34,17 +35,16 @@ Section PROOF.
   (***
         void* x = malloc(1);
         *x = 42;
-        unknown_call(x);
+        unknown_call(); // may GUESS the location &x and change the contents
         y = *x;
         return y; ~~~> return 42;
    ***)
 
   Definition mainBody: list val -> itree (hCallE +' pE +' eventE) val :=
     fun _ =>
-      x <- trigger (hCall true "malloc" [Vint 1]↑);; x <- x↓?;;
-      trigger (hCall true "store" [x ; Vint 42]↑);;
-      (* trigger (Call "unknown_call" [x]);; *)
-      trigger (hCall true "load" [x]↑);;
+      APC;;
+      trigger (hCall false "unknown_call" ([]: list val, false)↑);;
+      APC;;
       Ret (Vint 42)
   .
 
@@ -57,10 +57,12 @@ Section PROOF.
 
   Definition MainSbtb: list (gname * fspecbody) := [("main", mk_specbody main_spec mainBody)].
 
+  Definition UnknownStb: list (gname * fspec) := [("unknown_call", fspec_trivial2)].
+
   Definition SMain: SMod.t := SMod.main (fun _ o _ => o = ord_top) mainBody.
-  Definition Main: Mod.t := SMod.to_tgt (fun _ => MainStb) SMain.
+  Definition Main: Mod.t := SMod.to_tgt (fun _ => MainStb ++ (List.map (map_snd disclose) MemStb) ++ UnknownStb) SMain.
   Definition SMainSem: SModSem.t := SModSem.main (fun _ o _ => o = ord_top) mainBody.
-  Definition MainSem: ModSem.t := SModSem.to_tgt MainStb SMainSem.
+  Definition MainSem: ModSem.t := SModSem.to_tgt (MainStb ++ (List.map (map_snd disclose) MemStb) ++ UnknownStb) SMainSem.
 
 End PROOF.
 Global Hint Unfold MainStb: stb.
