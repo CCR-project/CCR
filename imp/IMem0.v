@@ -39,7 +39,7 @@ Section PROOF.
       mp0 <- trigger (PGet);;
       m0 <- mp0↓?;;
       `sz: Z <- (allocF_parg varg)?;;
-      let (blk, m1) := Mem.alloc m0 sz in
+      let (blk, m1) := Mem.malloc m0 sz in
       trigger (PPut m1↑);;
       Ret (Vptr blk 0)
   .
