@@ -861,18 +861,51 @@ Section Sim.
       (CGF: Genv.find_funct tgtge vf = Some fd)
     :
       match_states (x <- itr;; knext x >>= kstack) (Callstate fd vargs (Kcall optid tgtf empty_env tgtle tgtk) tgtm)
-
-  | match_states_return
-      gm le tgtle f tgtf m tgtm knext kstack tgtk rs ps v optid tgtid
-      (CF: compile_function gm f = Some tgtf)
-      (ML: match_le le tgtle)
-      (MM: match_mem m tgtm)
-      (MCS: match_cont kstack (call_cont tgtk))
-      (MCN: match_cont (fun ss => knext ss >>= kstack) tgtk)
-      (MID: match_id optid tgtid)
-    :
-      match_states (knext (rs, ps, (alist_add_option optid v le, v)) >>= kstack) (Returnstate (map_val v) (Kcall tgtid tgtf empty_env tgtle tgtk) tgtm)
   .
+
+  (* Variant match_states : itree eventE _ -> Clight.state -> Prop := *)
+  (* | match_states_regular *)
+  (*     itr gm st tgtst le tgtle prog mn rpst f tgtf m tgtm knext kstack tgtk *)
+  (*     (CS: compile_stmt gm st = Some tgtst) *)
+  (*     (* function is only used to check return type, which compiled one always passes *) *)
+  (*     (CF: compile_function gm f = Some tgtf) *)
+  (*     (ML: match_le le tgtle) *)
+  (*     (MM: match_mem m tgtm) *)
+  (*     (MCS: match_cont kstack (call_cont tgtk)) *)
+  (*     (MCN: match_cont (fun ss => knext ss >>= kstack) tgtk) *)
+  (*     (IS: itr = itree_of_stmt st ge le prog mn rpst) *)
+  (*   : *)
+  (*     match_states (x <- itr;; knext x >>= kstack) (State tgtf tgtst tgtk empty_env tgtle tgtm) *)
+
+  (* | match_states_call *)
+  (*     itr gm st le tgtle prog mn rpst f tgtf m tgtm knext kstack tgtk *)
+  (*     (CF: compile_function gm f = Some tgtf) *)
+  (*     (ML: match_le le tgtle) *)
+  (*     (MM: match_mem m tgtm) *)
+  (*     (MCS: match_cont kstack (call_cont tgtk)) *)
+  (*     (MCN: match_cont (fun ss => knext ss >>= kstack) tgtk) *)
+  (*     (IS: itr = itree_of_stmt st ge le prog mn rpst) *)
+
+  (*     optid a al tyargs tyres vf vargs fd *)
+  (*     (CS: compile_stmt gm st = Some (Scall optid a al)) *)
+  (*     (CCF: Cop.classify_fun (typeof a) = Cop.fun_case_f tyargs tyres cc_default) *)
+  (*     (CEF: eval_expr tgtge empty_env tgtle tgtm a vf) *)
+  (*     (CEA: eval_exprlist tgtge empty_env tgtle tgtm al tyargs vargs) *)
+  (*     (CGF: Genv.find_funct tgtge vf = Some fd) *)
+  (*   : *)
+  (*     match_states (x <- itr;; knext x >>= kstack) (Callstate fd vargs (Kcall optid tgtf empty_env tgtle tgtk) tgtm) *)
+
+  (* | match_states_return *)
+  (*     gm le tgtle f tgtf m tgtm knext kstack tgtk rs ps v optid tgtid *)
+  (*     (CF: compile_function gm f = Some tgtf) *)
+  (*     (ML: match_le le tgtle) *)
+  (*     (MM: match_mem m tgtm) *)
+  (*     (MCS: match_cont kstack (call_cont tgtk)) *)
+  (*     (MCN: match_cont (fun ss => knext ss >>= kstack) tgtk) *)
+  (*     (MID: match_id optid tgtid) *)
+  (*   : *)
+  (*     match_states (knext (rs, ps, (alist_add_option optid v le, v)) >>= kstack) (Returnstate (map_val v) (Kcall tgtid tgtf empty_env tgtle tgtk) tgtm) *)
+  (* . *)
 
   (* From compcert Require Import SimplExprproof. *)
 
