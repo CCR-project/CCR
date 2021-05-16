@@ -26,7 +26,7 @@ Definition intrange_64 : Z -> Prop := fun z => ((- 1) < z < modulus_64)%Z.
 Definition wf_val (v : val) :=
   match v with
   | Vint z => intrange_64 z
-  | Vptr _ _ => True
+  | Vptr _ z => intrange_64 z
   | Vundef => True
   end.
 

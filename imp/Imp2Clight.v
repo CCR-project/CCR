@@ -28,11 +28,9 @@ Section Compile.
   Let tgt_gdef := globdef (Ctypes.fundef function) type.
   Let tgt_gdefs := list (ident * tgt_gdef).
 
-  Let Tlong0 :=
-    (Tlong Signed noattr).
+  Definition Tlong0 := (Tlong Signed noattr).
 
-  Let Tptr0 tgt_ty :=
-    (Tpointer tgt_ty noattr).
+  Definition Tptr0 tgt_ty := (Tpointer tgt_ty noattr).
 
   Definition ident_key {T} id l : option T :=
     SetoidList.findA (Pos.eqb id) l.
@@ -302,17 +300,6 @@ Section Compile.
     end
   .
 
-  (* (* maybe cleanup using Dec... *) *)
-  (* Fixpoint NoDupB {K} {R : K -> K -> Prop} {RD_K : RelDec R} (l : list K) : bool := *)
-  (*   match l with *)
-  (*   | [] => true *)
-  (*   | h :: t => *)
-  (*     if (existsb (fun n => h ?[ R ] n) t) *)
-  (*     then false *)
-  (*     else NoDupB t *)
-  (*   end *)
-  (* . *)
-
   Definition imp_prog_ids (src : Imp.programL) :=
     let id_ev := List.map s2p src.(ext_varsL) in
     let id_ef := List.map (fun p => s2p (fst p)) src.(ext_funsL) in
@@ -376,12 +363,7 @@ Section Link.
     let l1_k := List.map fst l1 in
     let l2_k := List.map fst l2 in
     @NoDupB _ decK (l1_k ++ l2_k).
-  (* Let check_name_unique1 {K} {A} {B} {R : K -> K -> Prop} {RD_K : RelDec R} *)
-  (*     (l1 : list (K * A)) (l2 : list (K * B)) := *)
-  (*   let l1_k := List.map fst l1 in *)
-  (*   let l2_k := List.map fst l2 in *)
-  (*   NoDupB (l1_k ++ l2_k). *)
-    
+
   (* check defined names are unique *)
   Definition link_imp_cond1 :=
     check_name_unique1 string_Dec l_prog_varsL l_prog_funsL.
@@ -390,10 +372,6 @@ Section Link.
       (l1 : list K) (l2 : list (K * B)) :=
     let l2_k := List.map fst l2 in
     @NoDupB _ decK (l1 ++ l2_k).
-  (* Let check_name_unique2 {K} {B} {R : K -> K -> Prop} {RD_K : RelDec R} *)
-  (*     (l1 : list K) (l2 : list (K * B)) := *)
-  (*   let l2_k := List.map fst l2 in *)
-  (*   NoDupB (l1 ++ l2_k). *)
 
   (* check external decls are consistent *)
   Definition link_imp_cond2 :=
@@ -447,38 +425,6 @@ Section Link.
     then Some (mk_programL l_nameL l_ext_vars l_ext_funs l_prog_varsL l_prog_funsLM l_publicL l_defsL)
     else None
   .
-
-  (* Parameter link_imp : Imp.programL -> Imp.programL -> option Imp.programL. *)
-
-  (* Imp's linker is Mod.add_list (and Sk.add for ge), 
-     but resulting globval env is different from link_prog of Clight's linker,
-     so we will define new linker which follows link_prog. *)
-
-
-  (* Definition link_Sk_merge (o1 o2 : option Sk.gdef) := *)
-  (*   match o1 with *)
-  (*   | Some gd1 => *)
-  (*     match o2 with *)
-  (*     | Some gd2 => *)
-  (*     | None => o1 *)
-  (*     end *)
-  (*   | None => o2 *)
-  (*   end *)
-  (* . *)
-
-  (* Definition clink_Sk (s1 s2 : Sk.t) : Sk.t := *)
-  (*   let s2p_l := fun '(name, gd) => (s2p name, gd) in *)
-  (*   let dm1 := Maps.PTree_Properties.of_list (List.map s2p_l s1) in *)
-  (*   let dm2 := Maps.PTree_Properties.of_list (List.map s2p_l s2) in *)
-    
-    
-  (*      Maps.PTree.elements (Maps.PTree.combine link_prog_merge dm1 dm2); *)
-  (* Definition _add (md0 md1 : ModL.t) : ModL.t := {| *)
-  (*   get_modsem := fun sk => *)
-  (*                   ModSemL.add (md0.(get_modsem) sk) (md1.(get_modsem) sk); *)
-  (*   sk := Sk.add md0.(sk) md1.(sk); *)
-  (* |} *)
-  (* . *)
 
 End Link.
 
@@ -578,11 +524,10 @@ Section Beh.
     :
       _match_beh match_beh tgtb srcb
   | match_beh_ub_trace
-      mtr
+      mtr tr
       (SB : srcb = Tr.app mtr (Tr.ub))
-      (TB : exists tr,
-          match_trace tr mtr ->
-          behavior_prefix tr tgtb)
+      (MT : match_trace tr mtr)
+      (TB : behavior_prefix tr tgtb)
     :
       _match_beh match_beh tgtb srcb.
 
@@ -601,41 +546,6 @@ Section Beh.
   Hint Unfold match_beh.
   Hint Resolve match_beh_mon: paco.
 
-  (* Variant _match_beh match_beh (tgtb : program_behavior) (srcb : Tr.t) : Prop := *)
-  (* | match_beh_Terminates *)
-  (*     tr mtr r *)
-  (*     (MT : match_trace tr mtr) *)
-  (*     (TB : tgtb = Terminates tr r) *)
-  (*     (SB : srcb = Tr.done r.(intval)) *)
-  (*   : *)
-  (*     _match_beh match_beh tgtb srcb *)
-  (* | match_beh_Diverges *)
-  (*     tr mtr *)
-  (*     (MT : match_trace tr mtr) *)
-  (*     (TB : tgtb = Diverges tr) *)
-  (*     (SB : srcb = Tr.app mtr (Tr.spin)) *)
-  (*   : *)
-  (*     _match_beh match_beh tgtb srcb *)
-  (* | match_beh_Reacts *)
-  (*     ev mev trinf mtrinf *)
-  (*     (ME : match_event ev mev) *)
-  (*     (MB : match_beh (Reacts trinf) mtrinf) *)
-  (*     (TB : tgtb = Reacts (Econsinf ev trinf)) *)
-  (*     (SB : srcb = Tr.cons mev mtrinf) *)
-  (*   : *)
-  (*     _match_beh match_beh tgtb srcb *)
-  (* | match_beh_Goes_wrong *)
-  (*     tr mtr *)
-  (*     (MT : match_trace tr mtr) *)
-  (*     (TB : tgtb = Goes_wrong tr) *)
-  (*     (SB : srcb = Tr.app mtr (Tr.ub)) *)
-  (*   : *)
-  (*     _match_beh match_beh tgtb srcb *)
-  (* | match_beh_ub *)
-  (*     (SB : srcb = Tr.ub) *)
-  (*   : *)
-  (*     _match_beh match_beh tgtb srcb. *)
-
 End Beh.
 
 Section Sim.
@@ -652,277 +562,123 @@ Section Sim.
   Let src_sem := ModL.compile (Mod.add_list ([src_mod] ++ [IMem])).
   Let tgt_sem := semantics2 tgt.
 
-  (* Context {effs : Type -> Type}. *)
-  (* Context {HasGlobVar: GlobEnv -< effs}. *)
-  (* Context {HasImpState : ImpState -< effs}. *)
-  (* Context {HasCall : callE -< effs}. *)
-  (* Context {HasEvent : eventE -< effs}. *)
-
-  (* Inductive istate {effs} {A} {B} : Type := *)
-  (* | iState *)
-  (*     (f: Imp.function) *)
-  (*     (s: itree effs A) *)
-  (*     (k: A -> itree effs B) *)
-  (*     (le: lenv) *)
-  (*     (m: imem) : istate *)
-  (* | iIntCallstate *)
-  (*     (fd: gname) *)
-  (*     (args: list val) *)
-  (*     (k: A -> itree effs B) *)
-  (*     (m: imem) : istate *)
-  (* | iExtCallstate *)
-  (*     (fd: gname) *)
-  (*     (args: list val) *)
-  (*     (k: A -> itree effs B) *)
-  (*     (m: imem) : istate *)
-  (* | iReturnstate *)
-  (*     (res: val) *)
-  (*     (k: A -> itree effs B) *)
-  (*     (m: imem) : istate. *)
-
-
   (* CC 'final_state' = the return state of "main", should return int32. *)
 
-  (* Variable idx: Type. *)
-  (* Variable ord: idx -> idx -> Prop. *)
+  Definition itree_of_imp itr :=
+    fun ge le ms mn rp =>
+      EventsL.interp_Es (ModSemL.prog ms) (transl_all mn (interp_imp ge le itr)) rp.
 
-  (* match initial_state with ModSemL.initial_itr 
-     match final_state with "main"'s ret??: int32, we may need new stmt: Expr_main *)
-
-  (* cfun (eval_imp ge f)*)
-  (*(ModSem.map_snd (fun (sem : Any.t -> itree Es Any.t) (args : Any.t) => transl_all (ModSem.mn ms) (sem args)))*)
-  (* assume (<< ModSemL.wf ms >>);; snd <$>
-     EventsL.interp_Es (ModSemL.prog ms) (ModSemL.prog ms (Call "main" (Any.upcast ([] : list val))))
-     (ModSemL.initial_r_state ms, ModSemL.initial_p_state ms)*)
-  (* effs = eventE, A = Any.t ...? *)
   Definition itree_of_stmt (s : stmt) :=
-    fun ge le prog mn rpst =>
-      EventsL.interp_Es prog (transl_all mn (interp_imp ge le (denote_stmt s))) rpst.
-
-  Definition alist_add_option optid v (le : lenv) :=
-    match optid with
-    | None => le
-    | Some id => alist_add id v le
-    end.
-
-  Variant match_id : option var -> option ident -> Prop :=
-  | match_id_None
-    :
-      match_id None None
-  | match_id_Some
-      v
-    :
-      match_id (Some v) (Some (s2p v)).
+    fun ge le ms mn rp =>
+      itree_of_imp (denote_stmt s) ge le ms mn rp.
 
   Variable match_le : lenv -> temp_env -> Prop.
   Variable match_mem : Mem.t -> Memory.Mem.mem -> Prop.
-
-  Inductive match_cont : ((r_state * p_state * (lenv * val)) -> itree eventE (r_state * p_state * (lenv * val))) -> Clight.cont -> Prop :=
-  (* | match_cont_stop *)
-  (*     r *)
-  (*   : *)
-  (*     match_cont (Ret r) (Kstop) *)
-
-  | match_cont_seq
-      kitr gm ge prog mn st tgtst knext kstack tgtk
-      (CS: compile_stmt gm st = Some tgtst)
-      (MCS: match_cont kstack (call_cont tgtk))
-      (MCN: match_cont (fun ss => knext ss >>= kstack) tgtk)
-      (IS: kitr = fun '(rs, ps, (le, _)) => itree_of_stmt st ge le prog mn (rs, ps))
-    :
-      match_cont (fun ss => (kitr ss) >>= knext >>= kstack) (Kseq tgtst tgtk)
-
-  | match_cont_call
-      knext kstack tgtk optid tgtf tgtle
-      (MCS: match_cont kstack (call_cont tgtk))
-      (MCN: match_cont (fun ss => knext ss >>= kstack) tgtk)
-    :
-      match_cont (fun ss => (knext ss) >>= kstack) (Kcall optid tgtf empty_env tgtle tgtk)
-  .
-
-  (* | match_cont_call *)
-  (*     gm f tgtf le tgtle (knext : itree _ A) kstack tgtk optid *)
-  (*     (CF: compile_function gm f = Some tgtf) *)
-  (*     (ML: match_le le tgtle) *)
-  (*     (MCS: match_cont kstack (call_cont tgtk)) *)
-  (*     (MCN: match_cont (knext >>= kstack) tgtk) *)
-  (*   : *)
-  (*     match_cont (fun ss => (knext ss) >>= kstack) (Kcall optid tgtf empty_env tgtle tgtk) *)
-
-  (* | match_cont_callf1 *)
-  (*     itr ccont gm ge prog mn rpst vname fname args f tgtf le tgtle (knext : itree _ A) kstack tgtk *)
-  (*     (CF: compile_function gm f = Some tgtf) *)
-  (*     (ML: match_le le tgtle) *)
-  (*     (MCS: match_cont kstack (call_cont tgtk)) *)
-  (*     (MCN: match_cont (x <- knext;; kstack) tgtk) *)
-  (*     (IS: itr = itree_of_stmt (CallFun1 vname fname args) ge le prog mn rpst) *)
-  (*     (CC: ccont = Kcall (Some (s2p vname)) tgtf empty_env tgtle tgtk) *)
-  (*   : *)
-  (*     match_cont (x <- itr;; x <- knext;; kstack) ccont *)
-  (* | match_cont_callf2 *)
-  (*     itr ccont gm ge prog mn rpst fname args f tgtf le tgtle (knext : itree _ A) kstack tgtk *)
-  (*     (CF: compile_function gm f = Some tgtf) *)
-  (*     (ML: match_le le tgtle) *)
-  (*     (MCS: match_cont kstack (call_cont tgtk)) *)
-  (*     (MCN: match_cont (x <- knext;; kstack) tgtk) *)
-  (*     (IS: itr = itree_of_stmt (CallFun2 fname args) ge le prog mn rpst) *)
-  (*     (CC: ccont = Kcall None tgtf empty_env tgtle tgtk) *)
-  (*   : *)
-  (*     match_cont (x <- itr;; x <- knext;; kstack) ccont *)
-
-  (* | match_cont_callp1 *)
-  (*     itr ccont gm ge prog mn rpst vname fptr args f tgtf le tgtle (knext : itree _ A) kstack tgtk *)
-  (*     (CF: compile_function gm f = Some tgtf) *)
-  (*     (ML: match_le le tgtle) *)
-  (*     (MCS: match_cont kstack (call_cont tgtk)) *)
-  (*     (MCN: match_cont (x <- knext;; kstack) tgtk) *)
-  (*     (IS: itr = itree_of_stmt (CallPtr1 vname fptr args) ge le prog mn rpst) *)
-  (*     (CC: ccont = Kcall (Some (s2p vname)) tgtf empty_env tgtle tgtk) *)
-  (*   : *)
-  (*     match_cont (x <- itr;; x <- knext;; kstack) ccont *)
-  (* | match_cont_callp2 *)
-  (*     itr ccont gm ge prog mn rpst fptr args f tgtf le tgtle (knext : itree _ A) kstack tgtk *)
-  (*     (CF: compile_function gm f = Some tgtf) *)
-  (*     (ML: match_le le tgtle) *)
-  (*     (MCS: match_cont kstack (call_cont tgtk)) *)
-  (*     (MCN: match_cont (x <- knext;; kstack) tgtk) *)
-  (*     (IS: itr = itree_of_stmt (CallPtr2 fptr args) ge le prog mn rpst) *)
-  (*     (CC: ccont = Kcall None tgtf empty_env tgtle tgtk) *)
-  (*   : *)
-  (*     match_cont (x <- itr;; x <- knext;; kstack) ccont *)
-
-  (* | match_cont_sys1 *)
-  (*     itr ccont gm ge prog mn rpst vname fname args f tgtf le tgtle (knext : itree _ A) kstack tgtk *)
-  (*     (CF: compile_function gm f = Some tgtf) *)
-  (*     (ML: match_le le tgtle) *)
-  (*     (MCS: match_cont kstack (call_cont tgtk)) *)
-  (*     (MCN: match_cont (x <- knext;; kstack) tgtk) *)
-  (*     (IS: itr = itree_of_stmt (CallSys1 vname fname args) ge le prog mn rpst) *)
-  (*     (CC: ccont = Kcall (Some (s2p vname)) tgtf empty_env tgtle tgtk) *)
-  (*   : *)
-  (*     match_cont (x <- itr;; x <- knext;; kstack) ccont *)
-  (* | match_cont_sys2 *)
-  (*     itr ccont gm ge prog mn rpst fname args f tgtf le tgtle (knext : itree _ A) kstack tgtk *)
-  (*     (CF: compile_function gm f = Some tgtf) *)
-  (*     (ML: match_le le tgtle) *)
-  (*     (MCS: match_cont kstack (call_cont tgtk)) *)
-  (*     (MCN: match_cont (x <- knext;; kstack) tgtk) *)
-  (*     (IS: itr = itree_of_stmt (CallSys2 fname args) ge le prog mn rpst) *)
-  (*     (CC: ccont = Kcall None tgtf empty_env tgtle tgtk) *)
-  (*   : *)
-  (*     match_cont (x <- itr;; x <- knext;; kstack) ccont *)
-  (* . *)
-
   (* match_genv: ge = Sk.load_skenv imp.(defs), tgtge = globalenv (compile imp),
                  need to show they match only at beginning *)
-
-  (* Hypothesis archi_ptr64 : Archi.ptr64 = true. *)
-  Definition map_val (v : Universe.val) : Values.val :=
-    match v with
-    | Vint z => Values.Vlong (to_long z)
-    | Vptr blk ofs =>
-      let ofsv := to_long ofs in
-      Values.Vptr (Pos.of_nat blk) (Ptrofs.mkint ofsv.(Int64.intval) ofsv.(Int64.intrange))
-    | Vundef => Values.Vundef
-    end.
-
   Variable match_ge : SkEnv.t -> genv -> Prop.
   Variable ge : SkEnv.t.
   Variable tgtge : genv.
   Hypothesis MGENV : match_ge ge tgtge.
-  Variant match_states : itree eventE _ -> Clight.state -> Prop :=
-  | match_states_regular
-      itr gm st tgtst le tgtle prog mn rpst f tgtf m tgtm knext kstack tgtk
-      (CS: compile_stmt gm st = Some tgtst)
-      (* function is only used to check return type, which compiled one always passes *)
-      (CF: compile_function gm f = Some tgtf)
-      (ML: match_le le tgtle)
-      (MM: match_mem m tgtm)
-      (MCS: match_cont kstack (call_cont tgtk))
-      (MCN: match_cont (fun ss => knext ss >>= kstack) tgtk)
-      (IS: itr = itree_of_stmt st ge le prog mn rpst)
-    :
-      match_states (x <- itr;; knext x >>= kstack) (State tgtf tgtst tgtk empty_env tgtle tgtm)
 
-  | match_states_call
-      itr gm st le tgtle prog mn rpst f tgtf m tgtm knext kstack tgtk
-      (CF: compile_function gm f = Some tgtf)
-      (ML: match_le le tgtle)
-      (MM: match_mem m tgtm)
-      (MCS: match_cont kstack (call_cont tgtk))
-      (MCN: match_cont (fun ss => knext ss >>= kstack) tgtk)
-      (IS: itr = itree_of_stmt st ge le prog mn rpst)
-
-      optid a al tyargs tyres vf vargs fd
-      (CS: compile_stmt gm st = Some (Scall optid a al))
-      (CCF: Cop.classify_fun (typeof a) = Cop.fun_case_f tyargs tyres cc_default)
-      (CEF: eval_expr tgtge empty_env tgtle tgtm a vf)
-      (CEA: eval_exprlist tgtge empty_env tgtle tgtm al tyargs vargs)
-      (CGF: Genv.find_funct tgtge vf = Some fd)
+  Inductive match_cont : itree eventE (r_state * p_state * (lenv * val)) -> Clight.cont -> Prop :=
+  | match_cont_seq
+      gm st tst itr le ms mn rp k tk
+      (CST: compile_stmt gm st = Some tst)
+      (ITR: itr = itree_of_stmt st ge le ms mn rp)
+      (MCONT: match_cont k tk)
     :
-      match_states (x <- itr;; knext x >>= kstack) (Callstate fd vargs (Kcall optid tgtf empty_env tgtle tgtk) tgtm)
+      match_cont (x <- itr;; k) (Kseq tst tk)
+
+  | match_cont_cret_some
+      v rp tf ms mn le tle stack tstack id tid glue tglue
+      (WF_RETF: tf.(fn_return) = Tlong0)
+      (MLE: match_le le tle)
+      (MSTACK: match_cont stack tstack)
+      (MID: s2p id = tid)
+      (GLUE: glue = itree_of_imp (` v0 : val <- (v↓)?;; trigger (SetVar id v0);; Ret Vundef) ge le ms mn rp)
+      (TGLUE: tglue = Kcall (Some tid) tf empty_env tle tstack)
+    :
+      match_cont (x <- glue;; stack) (tglue)
+
+  | match_cont_sret_some
+      v rp tf ms mn le tle stack tstack id tid glue tglue
+      (WF_RETF: tf.(fn_return) = Tlong0)
+      (MLE: match_le le tle)
+      (MSTACK: match_cont stack tstack)
+      (MID: s2p id = tid)
+      (GLUE: glue = itree_of_imp (trigger (SetVar id v);; Ret Vundef) ge le ms mn rp)
+      (TGLUE: tglue = Kcall (Some tid) tf empty_env tle tstack)
+    :
+      match_cont (x <- glue;; stack) (tglue)
+
+  | match_cont_ret_none
+      rp tf ms mn le tle stack tstack id tid glue tglue
+      (WF_RETF: tf.(fn_return) = Tlong0)
+      (MLE: match_le le tle)
+      (MSTACK: match_cont stack tstack)
+      (MID: s2p id = tid)
+      (GLUE: glue = itree_of_imp (Ret Vundef) ge le ms mn rp)
+      (TGLUE: tglue = Kcall None tf empty_env tle tstack)
+    :
+      match_cont (x <- glue;; stack) (tglue)
   .
 
-  (* Variant match_states : itree eventE _ -> Clight.state -> Prop := *)
-  (* | match_states_regular *)
-  (*     itr gm st tgtst le tgtle prog mn rpst f tgtf m tgtm knext kstack tgtk *)
-  (*     (CS: compile_stmt gm st = Some tgtst) *)
-  (*     (* function is only used to check return type, which compiled one always passes *) *)
-  (*     (CF: compile_function gm f = Some tgtf) *)
-  (*     (ML: match_le le tgtle) *)
-  (*     (MM: match_mem m tgtm) *)
-  (*     (MCS: match_cont kstack (call_cont tgtk)) *)
-  (*     (MCN: match_cont (fun ss => knext ss >>= kstack) tgtk) *)
-  (*     (IS: itr = itree_of_stmt st ge le prog mn rpst) *)
+  Variant match_states : itree eventE (r_state * p_state * (lenv * val)) -> Clight.state -> Prop :=
+  | match_states_regular
+      itr gm st tst le tle ms mn rp tf m tm tk
+      (knext glue stack : itree _ (r_state * p_state * (lenv * val)))
+      (* function is only used to check return type, which compiled one always passes, except "main" *)
+      (* (CF: compile_function gm f = Some tgtf) *)
+      (WF_RETF: tf.(fn_return) = Tlong0)
+      (CST: compile_stmt gm st = Some tst)
+      (ML: match_le le tle)
+      (MM: match_mem m tm)
+      (MCS: match_cont (x <- glue;; stack) (call_cont tk))
+      (MCN: match_cont (x <- knext;; x <- glue;; stack) tk)
+      (ITR: itr = itree_of_stmt st ge le ms mn rp)
+    :
+      match_states (x <- itr;; x <- knext;; x <- glue;; stack) (State tf tst tk empty_env tle tm)
+
+  | match_states_stack
+      itr gm st tst le tle ms mn rp tf m tm tk
+      (glue stack : itree _ (r_state * p_state * (lenv * val)))
+      (WF_RETF: tf.(fn_return) = Tlong0)
+      (CST: compile_stmt gm st = Some tst)
+      (ML: match_le le tle)
+      (MM: match_mem m tm)
+      (CCONT: is_call_cont tk)
+      (MCS: match_cont (x <- glue;; stack) tk)
+      (ITR: itr = itree_of_stmt st ge le ms mn rp)
+    :
+      match_states (x <- itr;; x <- glue;; stack) (State tf tst tk empty_env tle tm)
+  .
+
+  (* Definition alist_add_option optid v (le : lenv) := *)
+  (*   match optid with *)
+  (*   | None => le *)
+  (*   | Some id => alist_add id v le *)
+  (*   end. *)
+
+  (* Variant match_id : option var -> option ident -> Prop := *)
+  (* | match_id_None *)
   (*   : *)
-  (*     match_states (x <- itr;; knext x >>= kstack) (State tgtf tgtst tgtk empty_env tgtle tgtm) *)
-
-  (* | match_states_call *)
-  (*     itr gm st le tgtle prog mn rpst f tgtf m tgtm knext kstack tgtk *)
-  (*     (CF: compile_function gm f = Some tgtf) *)
-  (*     (ML: match_le le tgtle) *)
-  (*     (MM: match_mem m tgtm) *)
-  (*     (MCS: match_cont kstack (call_cont tgtk)) *)
-  (*     (MCN: match_cont (fun ss => knext ss >>= kstack) tgtk) *)
-  (*     (IS: itr = itree_of_stmt st ge le prog mn rpst) *)
-
-  (*     optid a al tyargs tyres vf vargs fd *)
-  (*     (CS: compile_stmt gm st = Some (Scall optid a al)) *)
-  (*     (CCF: Cop.classify_fun (typeof a) = Cop.fun_case_f tyargs tyres cc_default) *)
-  (*     (CEF: eval_expr tgtge empty_env tgtle tgtm a vf) *)
-  (*     (CEA: eval_exprlist tgtge empty_env tgtle tgtm al tyargs vargs) *)
-  (*     (CGF: Genv.find_funct tgtge vf = Some fd) *)
+  (*     match_id None None *)
+  (* | match_id_Some *)
+  (*     v *)
   (*   : *)
-  (*     match_states (x <- itr;; knext x >>= kstack) (Callstate fd vargs (Kcall optid tgtf empty_env tgtle tgtk) tgtm) *)
+  (*     match_id (Some v) (Some (s2p v)). *)
 
-  (* | match_states_return *)
-  (*     gm le tgtle f tgtf m tgtm knext kstack tgtk rs ps v optid tgtid *)
-  (*     (CF: compile_function gm f = Some tgtf) *)
-  (*     (ML: match_le le tgtle) *)
-  (*     (MM: match_mem m tgtm) *)
-  (*     (MCS: match_cont kstack (call_cont tgtk)) *)
-  (*     (MCN: match_cont (fun ss => knext ss >>= kstack) tgtk) *)
-  (*     (MID: match_id optid tgtid) *)
-  (*   : *)
-  (*     match_states (knext (rs, ps, (alist_add_option optid v le, v)) >>= kstack) (Returnstate (map_val v) (Kcall tgtid tgtf empty_env tgtle tgtk) tgtm) *)
-  (* . *)
+  (* Hypothesis archi_ptr64 : Archi.ptr64 = true. *)
+  (* Definition map_val (v : Universe.val) : Values.val := *)
+  (*   match v with *)
+  (*   | Vint z => Values.Vlong (to_long z) *)
+  (*   | Vptr blk ofs => *)
+  (*     let ofsv := to_long ofs in *)
+  (*     Values.Vptr (Pos.of_nat blk) (Ptrofs.mkint ofsv.(Int64.intval) ofsv.(Int64.intrange)) *)
+  (*   | Vundef => Values.Vundef *)
+  (*   end. *)
 
-  (* From compcert Require Import SimplExprproof. *)
-
-  (* Let state: Type := itree eventE Any.t. *)
-  (* Definition state_sort (st0: state): sort := *)
-  (*   match (observe st0) with *)
-  (*   | TauF _ => demonic *)
-  (*   | RetF rv => *)
-  (*     match rv↓ with *)
-  (*     | Some (Vint rv) => final rv *)
-  (*     | _ => angelic *)
-  (*     end *)
-  (*   | VisF (Choose X) k => demonic *)
-  (*   | VisF (Take X) k => angelic *)
-  (*   | VisF (Syscall fn args rvs) k => vis *)
-  (*   end *)
-  (* . *)
 End Sim.
 
 Section Proof.
@@ -939,26 +695,6 @@ Section Proof.
     - induction l; ss; clarify. constructor.
       des_ifs. econs 2; auto.
   Qed.
-  (*   split; i. *)
-  (*   - induction H; ss. *)
-  (*     clarify. *)
-  (*     assert (A: existsb (fun n : K => hd ?[ Logic.eq ] n) tl = false). *)
-  (*     { clear H0 IHlist_norepet. induction tl; ss. *)
-  (*       apply not_or_and in H. destruct H. *)
-  (*       apply IHtl in H0. apply orb_false_intro; ss. *)
-  (*       apply rel_dec_neq_false; auto. *)
-  (*       apply Dec_RelDec_Correct. } *)
-  (*     rewrite A; ss. *)
-  (*   - induction l; ss; clarify. constructor. *)
-  (*     destruct (existsb (fun n : K => a ?[ Logic.eq ] n) l) eqn:EQ; clarify. *)
-  (*     econs 2; auto. clear H IHl. *)
-  (*     induction l; ss; clarify. *)
-  (*     apply orb_false_elim in EQ. destruct EQ. clarify. *)
-  (*     apply and_not_or. split; auto. *)
-  (*     unfold Logic.not. i. symmetry in H1. *)
-  (*     eapply rel_dec_eq_true in H1; clarify. *)
-  (*     apply Dec_RelDec_Correct. *)
-  (* Qed. *)
 
   Definition wf_imp_prog (src : Imp.programL) :=
     Coqlib.list_norepet (imp_prog_ids src).
@@ -1089,15 +825,6 @@ Section Proof.
     2:{ rewrite fold_left_option_None in H0; clarify. }
     erewrite _comm_link_imp_link_mod; eauto.
   Qed.
-
-  (* Lemma exists_mapped_beh : *)
-  (*   forall (src: Imp.program) tgt (beh: program_behavior), *)
-  (*     compile src = OK tgt -> *)
-  (*     program_behaves (semantics2 tgt) beh *)
-  (*     -> *)
-  (*     exists mbeh, match_beh beh mbeh. *)
-  (* Proof. *)
-  (* Admitted. *)
 
   Lemma single_compile_behavior_improves :
     forall (src: Imp.program) tgt (beh: program_behavior),
