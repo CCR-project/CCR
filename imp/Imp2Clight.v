@@ -552,25 +552,24 @@ Section Sim.
 
   Context `{Σ: GRA.t}.
 
-  Variable imem : Type.
-  Variable cmem : Type.
-  
-  Variable src : Imp.program.
-  Let src_mod := ImpMod.get_mod src.
-  Variable tgt : Ctypes.program function.
+  (* Variable src : Imp.program. *)
+  (* Let src_mod := ImpMod.get_mod src. *)
+  (* Variable tgt : Ctypes.program function. *)
 
-  Let src_sem := ModL.compile (Mod.add_list ([src_mod] ++ [IMem])).
-  Let tgt_sem := semantics2 tgt.
+  (* Let src_sem := ModL.compile (Mod.add_list ([src_mod] ++ [IMem])). *)
+  (* Let tgt_sem := semantics2 tgt. *)
 
   (* CC 'final_state' = the return state of "main", should return int32. *)
 
   Definition itree_of_imp itr :=
     fun ge le ms mn rp =>
-      EventsL.interp_Es (ModSemL.prog ms) (transl_all mn (interp_imp ge le itr)) rp.
+      snd <$> EventsL.interp_Es (ModSemL.prog ms) (transl_all mn (vret <- ('(_, retv) <- (interp_imp ge le itr);; Ret retv);; Ret (vret↑))) rp.
 
   Definition itree_of_stmt (s : stmt) :=
     fun ge le ms mn rp =>
       itree_of_imp (denote_stmt s) ge le ms mn rp.
+
+  Definition imp_state := itree eventE Any.t.
 
   Variable match_le : lenv -> temp_env -> Prop.
   Variable match_mem : Mem.t -> Memory.Mem.mem -> Prop.
@@ -581,7 +580,7 @@ Section Sim.
   Variable tgtge : genv.
   Hypothesis MGENV : match_ge ge tgtge.
 
-  Inductive match_cont : itree eventE (r_state * p_state * (lenv * val)) -> Clight.cont -> Prop :=
+  Inductive match_cont : imp_state -> Clight.cont -> Prop :=
   | match_cont_seq
       gm st tst itr le ms mn rp k tk
       (CST: compile_stmt gm st = Some tst)
@@ -624,10 +623,10 @@ Section Sim.
       match_cont (x <- glue;; stack) (tglue)
   .
 
-  Variant match_states : itree eventE (r_state * p_state * (lenv * val)) -> Clight.state -> Prop :=
+  Variant match_states : imp_state -> Clight.state -> Prop :=
   | match_states_regular
       itr gm st tst le tle ms mn rp tf m tm tk
-      (knext glue stack : itree _ (r_state * p_state * (lenv * val)))
+      (knext glue stack : imp_state)
       (* function is only used to check return type, which compiled one always passes, except "main" *)
       (* (CF: compile_function gm f = Some tgtf) *)
       (WF_RETF: tf.(fn_return) = Tlong0)
@@ -642,7 +641,7 @@ Section Sim.
 
   | match_states_stack
       itr gm st tst le tle ms mn rp tf m tm tk
-      (glue stack : itree _ (r_state * p_state * (lenv * val)))
+      (glue stack : imp_state)
       (WF_RETF: tf.(fn_return) = Tlong0)
       (CST: compile_stmt gm st = Some tst)
       (ML: match_le le tle)
@@ -653,6 +652,16 @@ Section Sim.
     :
       match_states (x <- itr;; x <- glue;; stack) (State tf tst tk empty_env tle tm)
   .
+
+  Lemma sim:
+    forall src srcev src',
+      ModSemL.step src srcev src' ->
+      forall tgt (MS: match_states src tgt),
+      exists tgt',
+        ((srcev = None /\ step2 tgtge tgt [] tgt') \/
+         (forall ev, srcev = Some ev /\
+          (exists tev, match_event tev ev /\ step2 tgtge tgt [tev] tgt'))) /\
+        match_states src' tgt'.
 
   (* Definition alist_add_option optid v (le : lenv) := *)
   (*   match optid with *)
