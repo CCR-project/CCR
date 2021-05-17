@@ -338,6 +338,40 @@ Section SIM.
   Hint Unfold match_beh.
   Hint Resolve match_beh_mon: paco.
 
+  Lemma sim_step_rev
+        st_src0 st_tgt0 st_tgt1 i0
+        (STEP: Step L1 st_tgt0 E0 st_tgt1)
+        (SIM: sim i0 st_src0 st_tgt0) (*** src0 >= tgt0 ***)
+    :
+      (* forall i1 (LT: ord i1 i0), sim i1 st_src0 st_tgt1 (*** src0 >= tgt1 ***) *)
+      sim i0 st_src0 st_tgt1 (*** src0 >= tgt1 ***)
+  .
+  Proof.
+    revert_until WF. pcofix CIH. i.
+    i. punfold SIM. bar. inv SIM.
+    - exfalso. admit "ez - final nostep".
+    - des. pclearbot.
+      pfold. eapply sim_demonic_src; et. esplits; et.
+    - des. pclearbot. assert(st_tgt1 = st_tgt2). { admit "ez - determinate". } subst.
+      admit "ez - ord mon".
+    - pfold. eapply sim_angelic_src; et. ii. exploit SIM0; et. i; des. pclearbot. esplits; et.
+    -des. pclearbot. assert(st_tgt1 = st_tgt2). { admit "ez - determinate". } subst.
+     pfold. eapply sim_demonic_both; et.
+  Abort.
+  (*** counter example: i0 is 0. SIM can simulate using demonic_both, but the goal can't ***)
+
+  Variable kappa: idx.
+  Lemma sim_step_rev
+        st_src0 st_tgt0 st_tgt1 i0
+        (STEP: Step L1 st_tgt0 E0 st_tgt1)
+        (SIM: sim i0 st_src0 st_tgt0) (*** src0 >= tgt0 ***)
+    :
+      sim kappa st_src0 st_tgt1 (*** src0 >= tgt1 ***)
+  .
+  Proof.
+    admit "somehow".
+  Qed.
+
   Lemma adequacy_aux
         i0 st_src0 st_tgt0
         (SIM: sim i0 st_src0 st_tgt0)
@@ -349,6 +383,23 @@ Section SIM.
     revert_until WF.
     pcofix CIH. i.
     rename SIM0 into M.
+
+    inv BEH.
+    - (rename H into STAR; rename s' into st_tgt1).
+      move STAR before CIH. revert_until STAR. induction STAR; ii; ss; cycle 1.
+      { subst.
+        assert(t1 = E0 \/ exists ev, t1 = [ev]).
+        { admit "ez - single_events". }
+        des.
+        - subst. ss. eapply IHSTAR; et. eapply sim_step_rev; et.
+        - subst. ss. eapply IHSTAR; et.
+          { pfold. eapply sim_demonic_tgt_dtm; et.
+            { admit "ez - tau state is strict_determinate". }
+            esplits; et.
+            econsr; et.
+        subst.
+    -
+
     move i0 before CIH. move M at bottom. revert_until i0. pattern i0.
     eapply well_founded_ind; eauto. clear i0. i. rename H into IH.
     punfold M. inv M.
