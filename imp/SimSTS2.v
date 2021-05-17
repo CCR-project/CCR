@@ -44,6 +44,69 @@ Proof.
 Qed.
 
 
+
+
+
+
+
+
+
+
+(* Section BEH. *)
+
+(* Variable L: Smallstep.semantics. *)
+(* Inductive _state_behaves2 (state_behaves2: L.(Smallstep.state) -> program_behavior -> Prop): *)
+(*   L.(Smallstep.state) -> program_behavior -> Prop := *)
+(* (*   state_terminates : forall (t : trace) (s' : Smallstep.state L) (r : int), *) *)
+(* (*                      Star L s t s' -> Smallstep.final_state L s' r -> state_behaves L s (Terminates t r) *) *)
+(* (* | state_diverges : forall (t : trace) (s' : Smallstep.state L), *) *)
+(* (*                    Star L s t s' -> Forever_silent L s' -> state_behaves L s (Diverges t) *) *)
+(* (* | state_reacts : forall T : traceinf, Forever_reactive L s T -> state_behaves L s (Reacts T) *) *)
+(* (* | state_goes_wrong : forall (t : trace) (s' : Smallstep.state L), *) *)
+(* (*                      Star L s t s' -> *) *)
+(* (*                      Nostep L s' -> (forall r : int, ~ Smallstep.final_state L s' r) -> state_behaves L s (Goes_wrong t) *) *)
+(* | sb2_final *)
+(*     st0 retv *)
+(*     (FINAL: Smallstep.final_state L st0 retv) *)
+(*   : *)
+(*     _state_behaves2 state_behaves2 st0 (Terminates E0 retv) *)
+(* | sb2_spin *)
+(*     st0 *)
+(*     (SPIN: Forever_silent L st0) *)
+(*   : *)
+(*     _state_behaves2 state_behaves2 st0 (Diverges E0) *)
+(* | sb2_step *)
+(* | sb2_syscall *)
+(* | sb2_stuck *)
+(* (* | sb_nb *) *)
+(* (*     st0 *) *)
+(* (*   : *) *)
+(* (*     _of_state of_state st0 (Tr.nb) *) *)
+(* (* | sb_vis *) *)
+(* (*     st0 st1 ev evs *) *)
+(* (*     (SRT: L.(state_sort) st0 = vis) *) *)
+(* (*     (STEP: _.(step) st0 (Some ev) st1) *) *)
+(* (*     (TL: of_state st1 evs) *) *)
+(* (*   : *) *)
+(* (*     _of_state of_state st0 (Tr.cons ev evs) *) *)
+(* (* | sb_demonic *) *)
+(* (*     st0 *) *)
+(* (*     evs *) *)
+(* (*     (SRT: L.(state_sort) st0 = demonic) *) *)
+(* (*     (STEP: union st0 (fun e st1 => (<<HD: e = None>>) /\ (<<TL: _of_state of_state st1 evs>>))) *) *)
+(* (*   : *) *)
+(* (*     _of_state of_state st0 evs *) *)
+(* (* | sb_angelic *) *)
+(* (*     st0 *) *)
+(* (*     evs *) *)
+(* (*     (SRT: L.(state_sort) st0 = angelic) *) *)
+(* (*     (STEP: inter st0 (fun e st1 => (<<HD: e = None>>) /\ (<<TL: _of_state of_state st1 evs>>))) *) *)
+(* (*   : *) *)
+(* (*     _of_state of_state st0 evs *) *)
+(* . *)
+
+
+
 (* Definition single_events_at (L: Smallstep.semantics) (s:L.(Smallstep.state)) : Prop := *)
 (*   forall t s', Step L s t s' -> (List.length t <= 1)%nat. *)
 
@@ -286,15 +349,59 @@ Section SIM.
     revert_until WF.
     pcofix CIH. i.
     rename SIM0 into M.
-    (* move i0 before CIH. revert_until i0. pattern i0. *)
-    (* eapply well_founded_ind; eauto. clear i0. i. rename H into IH. *)
+    move i0 before CIH. move M at bottom. revert_until i0. pattern i0.
+    eapply well_founded_ind; eauto. clear i0. i. rename H into IH.
     punfold M. inv M.
     - punfold SIM. bar. inv SIM; ss; clarify.
       + pfold. econs; eauto.
         inv BEH; ss. assert(r0 = Int.repr retv) by admit "ez". subst.
         rewrite Int.unsigned_repr; ss.
-      + des. pclearbot. punfold SIM.
-        eapply IH.
+      + des. pclearbot.
+        hexploit IH; try apply SIM; et. intro T.
+        eapply Beh._beh_dstep; et.
+      + des. pclearbot.
+        hexploit IH; try apply SIM. et.
+        instantiate (1:=Terminates tr r0).
+        { clear - BEH DTM STEP. admit "ez - if it is hard let me know; there should be some similar proof in compcert". }
+        { et. }
+        { et. }
+      + pfold. econsr; et. rr. ii. exploit wf_angelic; et. i; subst. esplits; et.
+        hexploit SIM0; et. i; des. pclearbot.
+        hexploit IH; try apply SIM; et. intro T. punfold T.
+      + des. pclearbot.
+        admit "Probably I am doing it wrong; just inv state_behaves and do induction on STAR".
+    - inv BEH. rename H0 into STAR. rename s' into st_tgt1. move STAR before IH. revert_until STAR.
+      revert x.
+      induction STAR; i; cycle 1.
+      { subst.
+        assert(t1 = E0 \/ exists ev, t1 = [ev]).
+        { admit "ez - single_events". }
+        des.
+        - subst. ss. eapply IHSTAR. et.
+        admit "???".
+      }
+      inv MT; ss.
+
+      punfold SIM. inv SIM; ss; clarify.
+      + exfalso. clear - SRT0 H1. admit "ez".
+        pfold. eapply Beh.sb_demonic; ss. rr. esplits; et. 
+        right.
+        pfold.
+        eapply Beh._beh_dstep; et.
+        eapply CIH.
+        eapply Beh._beh_astep; et.
+        destruct (classic ( des. pclearbot.
+        hexploit IH; try apply SIM; et. intro T.
+        eapply Beh._beh_dstep; et.
+        et.
+        et.
+        et.
+        { rewrite <- behavior_app_E0. eapply state_behaves_app. et.
+          { econs; et. }
+          eapply star_one; et.
+        }
+        try apply BEH; et. intro T.
+        
         { et. }
         { r. eapply SIM.
         try apply SIM. et. pfold. eapply sim_demonic_src; et. econsr; eauto.
