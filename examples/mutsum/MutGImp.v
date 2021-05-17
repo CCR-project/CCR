@@ -41,7 +41,7 @@ Section G.
       [("g", gF)]
   .
   
-  Definition GSem ge: ModSemL.t := ImpMod.modsem g_prog ge.
-  Definition G : ModL.t := ImpMod.get_mod g_prog.
+  Definition GSem ge: ModSem.t := ImpMod.modsem g_prog ge.
+  Definition G : Mod.t := ImpMod.get_mod g_prog.
 
 End G.

@@ -6,6 +6,7 @@ Require Import STS Behavior.
 Require Import Any.
 Require Import ModSem.
 Require Import Imp.
+Require Import ImpProofs.
 Require Import IMem0.
 
 Require Import Coq.Lists.SetoidList.
@@ -561,15 +562,62 @@ Section Sim.
 
   (* CC 'final_state' = the return state of "main", should return int32. *)
 
-  Definition itree_of_imp itr :=
+  Definition _itree_of_imp itr :=
     fun ge le ms mn rp =>
       snd <$> EventsL.interp_Es (ModSemL.prog ms) (transl_all mn (vret <- ('(_, retv) <- (interp_imp ge le itr);; Ret retv);; Ret (vret↑))) rp.
 
-  Definition itree_of_stmt (s : stmt) :=
+  Definition itree_of_imp_cont itr :=
     fun ge le ms mn rp =>
-      itree_of_imp (denote_stmt s) ge le ms mn rp.
+      EventsL.interp_Es (ModSemL.prog ms) (transl_all mn (lv <- (interp_imp ge le itr);; Ret (lv))) rp.
+
+  Definition itree_of_imp_ret :=
+    fun ms mn rp =>
+      fun (v : val) => EventsL.interp_Es (ModSemL.prog ms) (transl_all mn (Ret (v↑))) rp.
+
+  Definition itree_of_imp_stop itr :=
+    fun ge le ms mn rp =>
+      snd <$> EventsL.interp_Es (ModSemL.prog ms) (transl_all mn ('(_, vret) <- (interp_imp ge le itr);; Ret (vret↑))) rp.
+
+  Lemma itree_of_imp_split
+        ge le ms mn rp itr
+    :
+      itree_of_imp_stop itr ge le ms mn rp
+      =
+      snd <$> ('(r, p, (_, v)) <- (itree_of_imp_cont itr ge le ms mn rp);; (itree_of_imp_ret ms mn (r, p)) v).
+  Proof.
+    unfold itree_of_imp_stop, itree_of_imp_cont, itree_of_imp_ret. grind.
+    rewrite! transl_all_bind; rewrite! EventsL.interp_Es_bind.
+    unfold ITree.map. grind. destruct p0. grind.
+  Qed.
+
+  Lemma itree_of_imp_stop_same
+        ge le ms mn rp itr
+    :
+      _itree_of_imp itr ge le ms mn rp = itree_of_imp_stop itr ge le ms mn rp.
+  Proof.
+    unfold itree_of_imp_stop, _itree_of_imp. grind.
+    rewrite! transl_all_bind; rewrite! EventsL.interp_Es_bind.
+    unfold ITree.map. grind.
+  Qed.
+
+  Lemma itree_of_imp_cont_bind
+        ge le ms mn rp itr ktr
+    :
+      itree_of_imp_cont (x <- itr;; ktr x) ge le ms mn rp
+      =
+      '(r, p, (le2, v)) <- (itree_of_imp_cont itr ge le ms mn rp);; (itree_of_imp_cont (ktr v) ge le2 ms mn (r, p)).
+  Proof.
+    unfold itree_of_imp_cont. rewrite interp_imp_bind. grind.    
+    rewrite! transl_all_bind; rewrite! EventsL.interp_Es_bind.
+    grind.
+  Qed.
+
+  Definition itree_of_stmt (s : stmt) :=
+    fun ge le ms mn rp => itree_of_imp_cont (denote_stmt s) ge le ms mn rp.
 
   Definition imp_state := itree eventE Any.t.
+  Definition imp_cont := (r_state * p_state * (lenv * val)) -> itree eventE (r_state * p_state * (lenv * val)).
+  Definition imp_stack := Any.t -> imp_state.
 
   Variable match_le : lenv -> temp_env -> Prop.
   Variable match_mem : Mem.t -> Memory.Mem.mem -> Prop.
@@ -580,88 +628,76 @@ Section Sim.
   Variable tgtge : genv.
   Hypothesis MGENV : match_ge ge tgtge.
 
-  Inductive match_cont : imp_state -> Clight.cont -> Prop :=
-  | match_cont_seq
-      gm st tst itr le ms mn rp k tk
-      (CST: compile_stmt gm st = Some tst)
-      (ITR: itr = itree_of_stmt st ge le ms mn rp)
-      (MCONT: match_cont k tk)
-    :
-      match_cont (x <- itr;; k) (Kseq tst tk)
+  Fixpoint get_cont_stmts (cc: cont) : list Clight.statement :=
+    match cc with
+    | Kseq s k => s :: (get_cont_stmts k)
+    | _ => []
+    end
+  .
 
-  | match_cont_cret_some
-      v rp tf ms mn le tle stack tstack id tid glue tglue
+  Inductive match_cont : imp_cont -> (list Clight.statement) -> Prop :=
+  | match_nil
+    :
+      match_cont idK []
+  | match_stmt
+      st itr ktr chead ctail gm ge ms mn
+      (CST: compile_stmt gm st = Some chead)
+      (ITR: itr = fun '(r, p, (le, _)) => itree_of_stmt st ge le ms mn (r, p))
+      (MC: match_cont ktr ctail)
+    :
+      match_cont (fun x => (itr x >>= ktr)) (chead :: ctail)
+  .
+
+  Inductive match_stack : imp_stack -> Clight.cont -> Prop :=
+  | match_stack_bottom
+    :
+      match_stack idK Kstop
+
+  | match_stack_cret_some
+      tf rp ms mn le tle next stack tcont id tid glue tglue
       (WF_RETF: tf.(fn_return) = Tlong0)
       (MLE: match_le le tle)
-      (MSTACK: match_cont stack tstack)
       (MID: s2p id = tid)
-      (GLUE: glue = itree_of_imp (` v0 : val <- (v↓)?;; trigger (SetVar id v0);; Ret Vundef) ge le ms mn rp)
-      (TGLUE: tglue = Kcall (Some tid) tf empty_env tle tstack)
-    :
-      match_cont (x <- glue;; stack) (tglue)
 
-  | match_cont_sret_some
-      v rp tf ms mn le tle stack tstack id tid glue tglue
+      (GLUE: glue = fun v: Any.t => itree_of_imp_cont (` v0 : val <- (v↓)?;; trigger (SetVar id v0);; Ret Vundef) ge le ms mn rp)
+
+      (MCONT: match_cont next (get_cont_stmts tcont))
+      (MSTACK: match_stack stack (call_cont tcont))
+
+      (TGLUE: tglue = Kcall (Some tid) tf empty_env tle tcont)
+    :
+      match_stack (fun v: Any.t => (x <- (glue v);; '(_, _, (_, rv)) <- next x;; Ret (rv↑) >>= stack)) (tglue)
+
+  | match_stack_cret_none
+      tf rp ms mn le tle next stack tcont glue tglue
       (WF_RETF: tf.(fn_return) = Tlong0)
       (MLE: match_le le tle)
-      (MSTACK: match_cont stack tstack)
-      (MID: s2p id = tid)
-      (GLUE: glue = itree_of_imp (trigger (SetVar id v);; Ret Vundef) ge le ms mn rp)
-      (TGLUE: tglue = Kcall (Some tid) tf empty_env tle tstack)
-    :
-      match_cont (x <- glue;; stack) (tglue)
 
-  | match_cont_ret_none
-      rp tf ms mn le tle stack tstack id tid glue tglue
-      (WF_RETF: tf.(fn_return) = Tlong0)
-      (MLE: match_le le tle)
-      (MSTACK: match_cont stack tstack)
-      (MID: s2p id = tid)
-      (GLUE: glue = itree_of_imp (Ret Vundef) ge le ms mn rp)
-      (TGLUE: tglue = Kcall None tf empty_env tle tstack)
+      (GLUE: glue = fun _ => itree_of_imp_cont (Ret Vundef) ge le ms mn rp)
+
+      (MCONT: match_cont next (get_cont_stmts tcont))
+      (MSTACK: match_stack stack (call_cont tcont))
+
+      (TGLUE: tglue = Kcall None tf empty_env tle tcont)
     :
-      match_cont (x <- glue;; stack) (tglue)
+      match_stack (fun v: Any.t => (x <- (glue v);; '(_, _, (_, rv)) <- next x;; Ret (rv↑) >>= stack)) (tglue)
   .
 
   Variant match_states : imp_state -> Clight.state -> Prop :=
-  | match_states_regular
-      itr gm st tst le tle ms mn rp tf m tm tk
-      (knext glue stack : imp_state)
+  | match_states_intro
+      gm tf rp ms mn le tle st itr tst m tm next stack tcont
       (* function is only used to check return type, which compiled one always passes, except "main" *)
       (* (CF: compile_function gm f = Some tgtf) *)
       (WF_RETF: tf.(fn_return) = Tlong0)
       (CST: compile_stmt gm st = Some tst)
       (ML: match_le le tle)
       (MM: match_mem m tm)
-      (MCS: match_cont (x <- glue;; stack) (call_cont tk))
-      (MCN: match_cont (x <- knext;; x <- glue;; stack) tk)
+      (MCS: match_cont next (get_cont_stmts tcont))
+      (MCN: match_stack stack (call_cont tcont))
       (ITR: itr = itree_of_stmt st ge le ms mn rp)
     :
-      match_states (x <- itr;; x <- knext;; x <- glue;; stack) (State tf tst tk empty_env tle tm)
-
-  | match_states_stack
-      itr gm st tst le tle ms mn rp tf m tm tk
-      (glue stack : imp_state)
-      (WF_RETF: tf.(fn_return) = Tlong0)
-      (CST: compile_stmt gm st = Some tst)
-      (ML: match_le le tle)
-      (MM: match_mem m tm)
-      (CCONT: is_call_cont tk)
-      (MCS: match_cont (x <- glue;; stack) tk)
-      (ITR: itr = itree_of_stmt st ge le ms mn rp)
-    :
-      match_states (x <- itr;; x <- glue;; stack) (State tf tst tk empty_env tle tm)
+      match_states (x <- itr;; '(_, _, (_, rv)) <- next x;; Ret (rv↑) >>= stack) (State tf tst tcont empty_env tle tm)
   .
-
-  Lemma sim:
-    forall src srcev src',
-      ModSemL.step src srcev src' ->
-      forall tgt (MS: match_states src tgt),
-      exists tgt',
-        ((srcev = None /\ step2 tgtge tgt [] tgt') \/
-         (forall ev, srcev = Some ev /\
-          (exists tev, match_event tev ev /\ step2 tgtge tgt [tev] tgt'))) /\
-        match_states src' tgt'.
 
   (* Definition alist_add_option optid v (le : lenv) := *)
   (*   match optid with *)

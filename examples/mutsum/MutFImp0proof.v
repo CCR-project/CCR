@@ -43,7 +43,7 @@ Section SIMMODSEM.
   .
   
   Theorem correct:
-    forall ge, SimModSemL.ModSemLPair.sim MutF0.FSem (MutFImp.FSem ge).
+    forall ge, ModSemPair.sim MutF0.FSem (MutFImp.FSem ge).
   Proof.
     econstructor 1 with (wf:=wf); et; ss.
     econs; ss. init. unfold cfun.
@@ -56,14 +56,6 @@ Section SIMMODSEM.
     unfold unint in *. destruct v; clarify; ss.
     imp_steps. force_r. auto. inv _ASSUME.
     des_ifs.
-    - imp_steps.
-    - apply Z.eqb_eq in Heq. clarify.
-    - unfold ccall.
-      imp_steps.
-      gstep. econs; ss. i. des; subst. exists 100.
-      imp_steps.
-      Local Transparent vadd.
-      destruct v; ss; clarify; imp_steps.
-  Qed.
-  
+  Admitted.
+
 End SIMMODSEM.

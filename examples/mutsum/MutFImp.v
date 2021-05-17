@@ -41,7 +41,7 @@ Section F.
       [("f", fF)]
   .
 
-  Definition FSem ge: ModSemL.t := ImpMod.modsem f_prog ge.
-  Definition F : ModL.t := ImpMod.get_mod f_prog.
+  Definition FSem ge: ModSem.t := ImpMod.modsem f_prog ge.
+  Definition F : Mod.t := ImpMod.get_mod f_prog.
 
 End F.
