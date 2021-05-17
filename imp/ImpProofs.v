@@ -30,35 +30,35 @@ Section PROOFS.
         ge le0 v
     :
       interp_imp ge le0 (denote_expr (Var v)) =
-      interp_imp ge le0 (trigger (GetVar v)).
+      interp_imp ge le0 (u <- trigger (GetVar v);; assume (wf_val u);; Ret u).
   Proof. reflexivity. Qed.
 
   Lemma denote_expr_Lit
         ge le0 n
     :
       interp_imp ge le0 (denote_expr (Lit n)) =
-      interp_imp ge le0 (Ret n).
+      interp_imp ge le0 (assume (wf_val n);; Ret n).
   Proof. reflexivity. Qed.
 
   Lemma denote_expr_Plus
         ge le0 a b
     :
       interp_imp ge le0 (denote_expr (Plus a b)) =
-      interp_imp ge le0 (l <- denote_expr a ;; r <- denote_expr b ;; (vadd l r)?).
+      interp_imp ge le0 (l <- denote_expr a;; r <- denote_expr b;; u <- unwrapU (vadd l r);; assume (wf_val u);; Ret u).
   Proof. reflexivity. Qed.
 
   Lemma denote_expr_Minus
         ge le0 a b
     :
       interp_imp ge le0 (denote_expr (Minus a b)) =
-      interp_imp ge le0 (l <- denote_expr a ;; r <- denote_expr b ;; (vsub l r)?).
+      interp_imp ge le0 (l <- denote_expr a;; r <- denote_expr b;; u <- unwrapU (vsub l r);; assume (wf_val u);; Ret u).
   Proof. reflexivity. Qed.
 
   Lemma denote_expr_Mult
         ge le0 a b
     :
       interp_imp ge le0 (denote_expr (Mult a b)) =
-      interp_imp ge le0 (l <- denote_expr a ;; r <- denote_expr b ;; (vmul l r)?).
+      interp_imp ge le0 (l <- denote_expr a;; r <- denote_expr b;; u <- unwrapU (vmul l r);; assume (wf_val u);; Ret u).
   Proof. reflexivity. Qed.
 
   (* stmt *)
@@ -105,12 +105,29 @@ Section PROOFS.
       interp_imp ge le0 (v <- trigger (GetPtr X);; trigger (SetVar x v);; Ret Vundef).
   Proof. reflexivity. Qed.
 
+  Lemma denote_stmt_Malloc
+        ge le0 x se
+    :
+      interp_imp ge le0 (denote_stmt (Malloc x se)) =
+      interp_imp ge le0 (s <- denote_expr se;;
+      v <- trigger (Call "alloc" ([s]↑));; v <- unwrapN(v↓);;
+      trigger (SetVar x v);; Ret Vundef).
+  Proof. reflexivity. Qed.
+
+  Lemma denote_stmt_Free
+        ge le0 pe
+    :
+      interp_imp ge le0 (denote_stmt (Free pe)) =
+      interp_imp ge le0 (p <- denote_expr pe;;
+      trigger (Call "free" ([p]↑));; Ret Vundef).
+  Proof. reflexivity. Qed.
+
   Lemma denote_stmt_Load
         ge le0 x pe
     :
       interp_imp ge le0 (denote_stmt (Load x pe)) =
       interp_imp ge le0 (p <- denote_expr pe;;
-      v <- trigger (Call "load" (p↑));; v <- unwrapN(v↓);;
+      v <- trigger (Call "load" ([p]↑));; v <- unwrapN(v↓);;
       trigger (SetVar x v);; Ret Vundef).
   Proof. reflexivity. Qed.
 
@@ -136,7 +153,7 @@ Section PROOFS.
     :
       interp_imp ge le0 (denote_stmt (CallFun1 x f args)) =
       interp_imp ge le0 (
-      if (String.string_dec f "load" || String.string_dec f "store" || String.string_dec f "cmp")
+      if (call_mem f)
       then triggerUB
       else
         eval_args <- (denote_exprs args []);;
@@ -149,7 +166,7 @@ Section PROOFS.
     :
       interp_imp ge le0 (denote_stmt (CallFun2 f args)) =
       interp_imp ge le0 (
-      if (String.string_dec f "load" || String.string_dec f "store" || String.string_dec f "cmp")
+      if (call_mem f)
       then triggerUB
       else
         eval_args <- (denote_exprs args []);;
@@ -162,7 +179,7 @@ Section PROOFS.
       interp_imp ge le0 (denote_stmt (CallPtr1 x e args)) =
       interp_imp ge le0 (
       p <- denote_expr e;; f <- trigger (GetName p);;
-      if (String.string_dec f "load" || String.string_dec f "store" || String.string_dec f "cmp")
+      if (call_mem f)
       then triggerUB
       else
         eval_args <- (denote_exprs args []);;
@@ -176,7 +193,7 @@ Section PROOFS.
       interp_imp ge le0 (denote_stmt (CallPtr2 e args)) =
       interp_imp ge le0 (
       p <- denote_expr e;; f <- trigger (GetName p);;
-      if (String.string_dec f "load" || String.string_dec f "store") || String.string_dec f "cmp"
+      if (call_mem f)
       then triggerUB
       else
         eval_args <- (denote_exprs args []);;
@@ -362,22 +379,33 @@ Section PROOFS.
     rewrite interp_trigger. grind.
   Qed.
 
+  Lemma interp_imp_assume_wf_val
+        ge le0 x
+    :
+      interp_imp ge le0 (assume (wf_val x);; Ret x) = assume (wf_val x);; tau;; tau;; Ret (le0, x).
+  Proof.
+    unfold interp_imp, interp_GlobEnv, interp_ImpState. grind.
+    unfold assume. grind. rewrite interp_trigger. grind.
+    unfold pure_state. grind.
+  Qed.
+
   Lemma interp_imp_expr_Var
         ge le0 v
     :
       interp_imp ge le0 (denote_expr (Var v)) =
-      r <- unwrapU (alist_find v le0);; tau;; tau;; Ret (le0, r).
+      r <- unwrapU (alist_find v le0);; tau;; tau;; assume (wf_val r);; tau;; tau;; Ret (le0, r).
   Proof.
-    apply interp_imp_GetVar.
+    rewrite denote_expr_Var. rewrite interp_imp_bind. rewrite interp_imp_GetVar.
+    grind. apply interp_imp_assume_wf_val.
   Qed.
 
   Lemma interp_imp_expr_Lit
         ge le0 n
     :
       interp_imp ge le0 (denote_expr (Lit n)) =
-      Ret (le0, n).
+      assume (wf_val n);; tau;; tau;; Ret (le0, n).
   Proof.
-    rewrite denote_expr_Lit. apply interp_imp_Ret.
+    rewrite denote_expr_Lit. apply interp_imp_assume_wf_val.
   Qed.
 
   Lemma interp_imp_expr_Plus
@@ -387,12 +415,14 @@ Section PROOFS.
       '(le1, l) <- interp_imp ge le0 (denote_expr a) ;;
       '(le2, r) <- interp_imp ge le1 (denote_expr b) ;;
       v <- (vadd l r)? ;;
+      assume (wf_val v);; tau;; tau;;
       Ret (le2, v)
   .
   Proof.
     rewrite denote_expr_Plus. rewrite interp_imp_bind.
     grind. rewrite interp_imp_bind. grind.
-    apply interp_imp_unwrapU.
+    rewrite interp_imp_bind. rewrite interp_imp_unwrapU. grind.
+    apply interp_imp_assume_wf_val.
   Qed.
 
   Lemma interp_imp_expr_Minus
@@ -402,12 +432,14 @@ Section PROOFS.
       '(le1, l) <- interp_imp ge le0 (denote_expr a) ;;
       '(le2, r) <- interp_imp ge le1 (denote_expr b) ;;
       v <- (vsub l r)? ;;
+      assume (wf_val v);; tau;; tau;;
       Ret (le2, v)
   .
   Proof.
     rewrite denote_expr_Minus. rewrite interp_imp_bind.
     grind. rewrite interp_imp_bind. grind.
-    apply interp_imp_unwrapU.
+    rewrite interp_imp_bind. rewrite interp_imp_unwrapU. grind.
+    apply interp_imp_assume_wf_val.
   Qed.
 
   Lemma interp_imp_expr_Mult
@@ -417,12 +449,14 @@ Section PROOFS.
       '(le1, l) <- interp_imp ge le0 (denote_expr a) ;;
       '(le2, r) <- interp_imp ge le1 (denote_expr b) ;;
       v <- (vmul l r)? ;;
+      assume (wf_val v);; tau;; tau;;
       Ret (le2, v)
   .
   Proof.
     rewrite denote_expr_Mult. rewrite interp_imp_bind.
     grind. rewrite interp_imp_bind. grind.
-    apply interp_imp_unwrapU.
+    rewrite interp_imp_bind. rewrite interp_imp_unwrapU. grind.
+    apply interp_imp_assume_wf_val.
   Qed.
 
   Lemma interp_imp_Assign
@@ -497,12 +531,36 @@ Section PROOFS.
     apply interp_imp_SetVar_Vundef.
   Qed.
 
+  Lemma interp_imp_Malloc
+        ge le0 x se
+    :
+      interp_imp ge le0 (denote_stmt (Malloc x se)) =
+      '(le1, s) <- interp_imp ge le0 (denote_expr se);;
+      v <- trigger (Call "alloc" ([s]↑));;
+      tau;; tau;; v <- unwrapN (v↓);;
+      tau;; tau;; Ret (alist_add x v le1, Vundef).
+  Proof.
+    rewrite denote_stmt_Malloc. rewrite interp_imp_bind.
+    grind. apply interp_imp_Call_ret.
+  Qed.
+
+  Lemma interp_imp_Free
+        ge le0 pe
+    :
+      interp_imp ge le0 (denote_stmt (Free pe)) =
+      '(le1, p) <- interp_imp ge le0 (denote_expr pe);;
+      trigger (Call "free" ([p]↑));; tau;; tau;; Ret (le1, Vundef).
+  Proof.
+    rewrite denote_stmt_Free. rewrite interp_imp_bind.
+    grind. apply interp_imp_Call_only.
+  Qed.
+
   Lemma interp_imp_Load
         ge le0 x pe
     :
       interp_imp ge le0 (denote_stmt (Load x pe)) =
       '(le1, p) <- interp_imp ge le0 (denote_expr pe);;
-      v <- trigger (Call "load" (p↑));;
+      v <- trigger (Call "load" ([p]↑));;
       tau;; tau;; v <- unwrapN (v↓);;
       tau;; tau;; Ret (alist_add x v le1, Vundef).
   Proof.
@@ -586,7 +644,7 @@ Section PROOFS.
         ge le0 x f args
     :
       interp_imp ge le0 (denote_stmt (CallFun1 x f args)) =
-      if (String.string_dec f "load" || String.string_dec f "store" || String.string_dec f "cmp")
+      if (call_mem f)
       then triggerUB
       else
         '(le1, vs) <- interp_imp_denote_exprs ge le0 args [];;
@@ -602,7 +660,7 @@ Section PROOFS.
         ge le0 f args
     :
       interp_imp ge le0 (denote_stmt (CallFun2 f args)) =
-      if (String.string_dec f "load" || String.string_dec f "store" || String.string_dec f "cmp")
+      if (call_mem f)
       then triggerUB
       else
         '(le1, vs) <- interp_imp_denote_exprs ge le0 args [];;
@@ -622,7 +680,7 @@ Section PROOFS.
       | Vptr n 0 =>
         match (SkEnv.blk2id ge n) with
         | Some f =>
-          if (String.string_dec f "load" || String.string_dec f "store" || String.string_dec f "cmp")
+          if (call_mem f)
           then tau;; triggerUB
           else
             tau;;
@@ -654,7 +712,7 @@ Section PROOFS.
       | Vptr n 0 =>
         match (SkEnv.blk2id ge n) with
         | Some f =>
-          if (String.string_dec f "load" || String.string_dec f "store" || String.string_dec f "cmp")
+          if (call_mem f)
           then tau;; triggerUB
           else
             tau;;
@@ -782,6 +840,8 @@ Ltac imp_red :=
     | Expr _ => rewrite interp_imp_Expr
     | Expr_coerce _ => rewrite interp_imp_Expr
     | AddrOf _ _ => rewrite interp_imp_AddrOf
+    | Malloc _ _ => rewrite interp_imp_Malloc
+    | Free _ => rewrite interp_imp_Free
     | Load _ _ => rewrite interp_imp_Load
     | Store _ _ => rewrite interp_imp_Store
     | Cmp _ _ _ => rewrite interp_imp_Cmp

@@ -126,7 +126,7 @@ Section KNOT.
 
   Definition SKnot: SMod.t := {|
     SMod.get_modsem := SKnotSem;
-    SMod.sk := [("rec", Sk.Gfun); ("_f", Sk.Gvar Vundef)];
+    SMod.sk := [("rec", Sk.Gfun); ("_f", Sk.Gvar 0)];
   |}
   .
 

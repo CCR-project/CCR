@@ -129,7 +129,7 @@ Extract Inlined Constant Binary.round_mode => "fun _ -> assert false".
 Extract Inlined Constant Bracket.inbetween_loc => "fun _ -> assert false".
 
 (* Needed in Coq 8.4 to avoid problems with Function definitions. *)
-(* Set Extraction AccessOpaque. *)
+Set Extraction AccessOpaque.
 
 (* Go! *)
 
@@ -161,11 +161,11 @@ Separate Extraction
    (* Parser.translation_unit_file *)
    (* For imp compilation *)
    Compiler.transf_clight_program
-   Imp2Clight.compile Imp2Clight.list_type_to_typelist
+   Imp.lift Imp2Clight.compile Imp2Clight.list_type_to_typelist
    imp_factorial_prog imp_simple_prog
    imp_mutsumF_prog imp_mutsumG_prog imp_mutsumMain_prog
    imp_knot_prog
-   imp_mem1_prog
+   imp_mem1_f imp_mem1_main
    imp_mem2_prog
 .
 

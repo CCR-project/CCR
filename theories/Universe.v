@@ -20,6 +20,16 @@ Inductive val: Type :=
 | Vundef
 .
 
+Definition wordsize_64 := 64.
+Definition modulus_64 := two_power_nat wordsize_64.
+Definition intrange_64 : Z -> Prop := fun z => ((- 1) < z < modulus_64)%Z.
+Definition wf_val (v : val) :=
+  match v with
+  | Vint z => intrange_64 z
+  | Vptr _ z => intrange_64 z
+  | Vundef => True
+  end.
+
 (* Notation ofs0 := 0%Z. *)
 
 Definition Vnullptr := Vint 0.
@@ -81,7 +91,7 @@ Module Mem.
 
   Definition wf (m0: t): Prop := forall blk ofs (LT: (blk < m0.(nb))%nat), m0.(cnts) blk ofs = None.
 
-  Definition malloc (m0: Mem.t) (sz: Z): (block * Mem.t) :=
+  Definition alloc (m0: Mem.t) (sz: Z): (block * Mem.t) :=
     ((m0.(nb)),
      Mem.mk (update (m0.(cnts)) (m0.(nb))
                     (fun ofs => if (0 <=? ofs)%Z && (ofs <? sz)%Z then Some (Vint 0) else None))
@@ -94,7 +104,7 @@ Module Mem.
   Definition empty: t := mk (fun _ _ => None) 0.
   (* Let empty2: t := Eval compute in *)
   (*   let m0 := mk (fun _ _ => None) 0 in *)
-  (*   let (_, m1) := malloc m0 1%Z in *)
+  (*   let (_, m1) := alloc m0 1%Z in *)
   (*   m1 *)
   (* . *)
   (*** shoul allocated with Vundef, not 0 ***)

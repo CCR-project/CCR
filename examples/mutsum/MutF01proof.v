@@ -50,19 +50,6 @@ Section SIMMODSEM.
     econs; ss. init. unfold ccall.
     harg_tac. iRefresh. iDestruct PRE. des; clarify. unfold fF, ccall. anytac. ss.
     steps. astart 10. destruct (dec (Z.of_nat x) 0%Z).
-    - destruct x; ss. astop.
-      force_l. eexists. hret_tac (@URA.unit Σ) (@URA.unit Σ).
-      { iRefresh. iSplitP; ss. }
-      { split; auto. }
-    - destruct x; [ss|]. rewrite Nat2Z.inj_succ. steps.
-      acall_tac x (ord_pure x) (@URA.unit Σ) (@URA.unit Σ) (@URA.unit Σ).
-      { replace (Z.succ (Z.of_nat x) - 1)%Z with (Z.of_nat x) by lia. ss. }
-      { splits; ss. auto with ord_step. }
-      { split; auto. }
-      iDestruct POST. des. subst. anytac. asimpl. steps. astop.
-      force_l. eexists. hret_tac (@URA.unit Σ) (@URA.unit Σ).
-      { iRefresh. iSplitP; ss. splits; auto. unfold sum. splits; auto. ss. repeat f_equal. lia. }
-      { split; ss. }
-  Qed.
+  Admitted.
 
 End SIMMODSEM.

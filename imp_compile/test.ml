@@ -1,6 +1,7 @@
 open Diagnostics
 open Driveraux
 open Compiler
+open Imp
 open Imp2Clight
 open ImpSimple
 open ImpFactorial
@@ -63,94 +64,13 @@ let compile_imp p ofile =
 
 let main =
   print_endline "Start Imp compilations...";
-  compile_imp (ImpSimple.imp_simple_prog) "simple.s";
-  compile_imp (ImpFactorial.imp_factorial_prog) "factorial.s";
-  compile_imp (ImpMutsum.imp_mutsumF_prog) "mutsumF.s";
-  compile_imp (ImpMutsum.imp_mutsumG_prog) "mutsumG.s";
-  compile_imp (ImpMutsum.imp_mutsumMain_prog) "mutsumMain.s";
-  compile_imp (ImpKnot.imp_knot_prog) "knot.s";
-  compile_imp (ImpMem1.imp_mem1_prog) "mem1.s";
-  compile_imp (ImpMem2.imp_mem2_prog) "mem2.s";
+  compile_imp (Imp.lift ImpSimple.imp_simple_prog) "simple.s";
+  compile_imp (Imp.lift ImpFactorial.imp_factorial_prog) "factorial.s";
+  compile_imp (Imp.lift ImpMutsum.imp_mutsumF_prog) "mutsumF.s";
+  compile_imp (Imp.lift ImpMutsum.imp_mutsumG_prog) "mutsumG.s";
+  compile_imp (Imp.lift ImpMutsum.imp_mutsumMain_prog) "mutsumMain.s";
+  compile_imp (Imp.lift ImpKnot.imp_knot_prog) "knot.s";
+  compile_imp (Imp.lift ImpMem1.imp_mem1_f) "mem1F.s";
+  compile_imp (Imp.lift ImpMem1.imp_mem1_main) "mem1Main.s";
+  compile_imp (Imp.lift ImpMem2.imp_mem2_prog) "mem2.s";
   print_endline "Done."
-
-
-
-
-
-
-
-
-
-
-
-
-(* let compile_imp_simple =
- *   (\* Convert Imp to Clight *\)
- *   let i2c = Imp2Clight.compile (ImpSimple.imp_simple_prog) in
- *   match i2c with
- *   | Errors.OK clight_out ->
- *      let cl_built = add_builtins clight_out in
- *      (\* Convert to Asm *\)
- *      (match Compiler.apply_partial
- *               (Compiler.transf_clight_program cl_built)
- *               Asmexpand.expand_program with
- *       | Errors.OK asm ->
- *          (\* Print Asm in text form *\)
- *          let oc = open_out "simple.s" in
- *          PrintAsm.print_program oc asm;
- *          close_out oc
- *       | Errors.Error msg ->
- *          let loc = file_loc "test.c" in
- *          fatal_error loc "%a"  print_error msg)
- *   | Errors.Error msg ->
- *      print_endline "imp to clight failed"
- * 
- * let compile_imp_factorial =
- *   (\* Convert Imp to Clight *\)
- *   let i2c = Imp2Clight.compile (ImpFactorial.imp_factorial_prog) in
- *   match i2c with
- *   | Errors.OK clight_out ->
- *      let cl_built = add_builtins clight_out in
- *      (\* Convert to Asm *\)
- *      (match Compiler.apply_partial
- *               (Compiler.transf_clight_program cl_built)
- *               Asmexpand.expand_program with
- *       | Errors.OK asm ->
- *          (\* Print Asm in text form *\)
- *          let oc = open_out "factorial.s" in
- *          PrintAsm.print_program oc asm;
- *          close_out oc
- *       | Errors.Error msg ->
- *          let loc = file_loc "test.c" in
- *          fatal_error loc "%a"  print_error msg)
- *   | Errors.Error msg ->
- *      print_endline "imp to clight failed"
- * 
- * let main =
- *   print_endline "Start compilations...";
- *   compile_imp_simple;
- *   compile_imp_factorial;
- *   print_endline "Done." *)
-
-
-
-(* let compile_i_file2 sourcename preproname =
- *   Driver.compile_c_file sourcename preproname
- *     (output_filename ~final:true sourcename ".c" ".s");
- *   ""
- * 
- * let process_c_file2 sourcename =
- *   ensure_inputfile_exists sourcename;
- *   let preproname = tmp_file ".i" in
- *     Frontend.preprocess sourcename preproname;
- *     compile_i_file2 sourcename preproname
- * 
- * (\* Processing of a .i / .p file (preprocessed C) *\)
- * let process_i_file2 sourcename =
- *   ensure_inputfile_exists sourcename;
- *   compile_i_file2 sourcename sourcename
- * 
- * let main =
- *     print_endline "start";
- *     process_i_file2 "test.c";
- *     print_endline "end" *)

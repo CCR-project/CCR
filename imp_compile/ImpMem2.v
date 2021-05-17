@@ -35,6 +35,9 @@ Section Mem2.
   |}.
 
   Definition imp_mem2_prog : program := {|
+    name := "Mem2";
+    ext_vars := [];
+    ext_funs := [];
     prog_vars := [];
     prog_funs := [("main", main); ("f", f)];
   |}.

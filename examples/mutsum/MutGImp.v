@@ -34,11 +34,14 @@ Section G.
 
   Definition g_prog : program :=
     mk_program
+      "G"
+      []
+      [("f", 1)]
       []
       [("g", gF)]
   .
   
-  Definition GSem ge: ModSem.t := ImpMod.modsem "G" g_prog ge.
-  Definition G : Mod.t := ImpMod.get_mod "G" g_prog.
+  Definition GSem ge: ModSem.t := ImpMod.modsem g_prog ge.
+  Definition G : Mod.t := ImpMod.get_mod g_prog.
 
 End G.

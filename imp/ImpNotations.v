@@ -84,6 +84,12 @@ Module ImpNotations.
   Notation "x '=#&' X" :=
     (AddrOf x X) (at level 60): stmt_scope.
 
+  Notation "x '=#' 'malloc#' s" :=
+    (Malloc x s) (at level 60): stmt_scope.
+
+  Notation "'free#' p" :=
+    (Free p) (at level 60): stmt_scope.
+
   Notation "x '=#*' p" :=
     (Load x p) (at level 60): stmt_scope.
 
@@ -92,14 +98,6 @@ Module ImpNotations.
 
   Notation "x '=#' '(' a '==' b ')'" :=
     (Cmp x a b) (at level 60): stmt_scope.
-
-  Notation "x '=#' 'malloc#' s" :=
-    (CallFun1 x "malloc" [s])
-      (at level 60): stmt_scope.
-
-  Notation "'free#' p" :=
-    (CallFun2 "free" [p])
-      (at level 60): stmt_scope.
 
 End ImpNotations.
 
@@ -142,11 +140,14 @@ Section Example_Extract.
   |}.
 
   Definition ex_extract : program := {|
+    name := "Main";
+    ext_vars := [];
+    ext_funs := [];
     prog_vars := [];
     prog_funs := [("factorial", factorial_fundef); ("main", main_fundef)];
   |}.
   
-  Definition ex_prog: Mod.t := ImpMod.get_mod "Main" ex_extract.
+  Definition ex_prog: Mod.t := ImpMod.get_mod ex_extract.
 
   Definition imp_ex := ModSemL.initial_itr_no_check (ModL.enclose ex_prog).
 
