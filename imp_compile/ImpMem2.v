@@ -25,7 +25,7 @@ Section Mem2.
     fn_params := [];
     fn_vars := ["ptr"; "a"; "b"];
     fn_body :=
-      "ptr" =# malloc# (16%Z : expr) ;#
+      "ptr" =# alloc# (16%Z : expr) ;#
       "ptr" *=# 20%Z ;#
       @ "f" ["ptr" : expr] ;#
       "a" =#* "ptr" ;#

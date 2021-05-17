@@ -42,7 +42,7 @@ Section PROOF.
         `sz: Z <- (pargs [Tint] varg)?;;
         delta <- trigger (Choose _);;
         let m0': Mem.t := mem_pad m0 delta in
-        let (blk, m1) := Mem.malloc m0' sz in
+        let (blk, m1) := Mem.alloc m0' sz in
         trigger (PPut m1↑);;
         Ret (Vptr blk 0)
     .
@@ -93,7 +93,7 @@ Section PROOF.
 
   Definition MemSem (sk: Sk.t): ModSem.t :=
     {|
-      ModSem.fnsems := [("malloc", cfun allocF) ; ("free", cfun freeF) ; ("load", cfun loadF) ; ("store", cfun storeF) ; ("cmp", cfun cmpF)];
+      ModSem.fnsems := [("alloc", cfun allocF) ; ("free", cfun freeF) ; ("load", cfun loadF) ; ("store", cfun storeF) ; ("cmp", cfun cmpF)];
       ModSem.mn := "Mem";
       ModSem.initial_mr := ε;
       ModSem.initial_st := (Sk.load_mem sk)↑;

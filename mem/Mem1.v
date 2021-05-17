@@ -161,11 +161,11 @@ Section PROOF.
 
   Definition MemStb: list (gname * fspec).
     eapply (Seal.sealing "stb").
-    apply [("malloc", alloc_spec) ; ("free", free_spec) ; ("load", load_spec) ; ("store", store_spec) ; ("cmp", cmp_spec)].
+    apply [("alloc", alloc_spec) ; ("free", free_spec) ; ("load", load_spec) ; ("store", store_spec) ; ("cmp", cmp_spec)].
   Defined.
 
   Definition MemSbtb: list (gname * fspecbody) :=
-    [("malloc", mk_specbody alloc_spec (fun _ => trigger (Choose _)));
+    [("alloc", mk_specbody alloc_spec (fun _ => trigger (Choose _)));
     ("free",   mk_specbody free_spec (fun _ => trigger (Choose _)));
     ("load",   mk_specbody load_spec (fun _ => trigger (Choose _)));
     ("store",  mk_specbody store_spec (fun _ => trigger (Choose _)));

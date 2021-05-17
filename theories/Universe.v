@@ -91,7 +91,7 @@ Module Mem.
 
   Definition wf (m0: t): Prop := forall blk ofs (LT: (blk < m0.(nb))%nat), m0.(cnts) blk ofs = None.
 
-  Definition malloc (m0: Mem.t) (sz: Z): (block * Mem.t) :=
+  Definition alloc (m0: Mem.t) (sz: Z): (block * Mem.t) :=
     ((m0.(nb)),
      Mem.mk (update (m0.(cnts)) (m0.(nb))
                     (fun ofs => if (0 <=? ofs)%Z && (ofs <? sz)%Z then Some (Vint 0) else None))
@@ -104,7 +104,7 @@ Module Mem.
   Definition empty: t := mk (fun _ _ => None) 0.
   (* Let empty2: t := Eval compute in *)
   (*   let m0 := mk (fun _ _ => None) 0 in *)
-  (*   let (_, m1) := malloc m0 1%Z in *)
+  (*   let (_, m1) := alloc m0 1%Z in *)
   (*   m1 *)
   (* . *)
   (*** shoul allocated with Vundef, not 0 ***)
