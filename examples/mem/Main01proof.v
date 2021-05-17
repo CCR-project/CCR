@@ -75,7 +75,7 @@ Section SIMMODSEM.
     { unfold mainF. init. harg_tac. repeat rewrite URA.unit_idl in *. repeat rewrite URA.unit_id in *. iRefresh.
       iDestruct PRE; subst. unfold mainBody. steps.
       astart 2.
-      astep "malloc" ([Vint 1], true).
+      astep "alloc" ([Vint 1], true).
 
       hcall_tac __ (ord_pure 0) (@URA.unit Σ) (@URA.unit Σ) (@URA.unit Σ); ss; et.
       { iRefresh. instantiate (1:=Some _). iSplitP; ss. left; iRefresh. iExists __. iSplitP; ss.

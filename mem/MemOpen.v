@@ -29,7 +29,7 @@ Section PROOF.
   Local Existing Instance GURA.
 
   Definition MemSbtb: list (gname * fspecbody) :=
-    [("malloc", mk_specbody alloc_spec allocF);
+    [("alloc", mk_specbody alloc_spec allocF);
     ("free",   mk_specbody free_spec freeF);
     ("load",   mk_specbody load_spec loadF);
     ("store",  mk_specbody store_spec storeF);
