@@ -3,6 +3,7 @@ Require Import Coqlib.
 Require Import Universe.
 Require Import STS.
 Require Import Behavior.
+Require Import ModSem.
 Require Import Imp.
 Require Import Imp2Clight.
 
@@ -40,7 +41,9 @@ Section SIM.
       (RANGE: (0 <= retv <= Int.max_unsigned)%Z)
       (SRT: _.(state_sort) st_src0 = final retv)
       (SRT: _.(Smallstep.final_state) st_tgt0 (Int.repr retv))
-      (DTM: True) (*** TODO: copy-paste sd_final_determ in Smallstep.v ***)
+      (DTM: (* sd_final_determ *)
+         forall (s : Smallstep.state L1) (r1 r2 : int),
+           Smallstep.final_state L1 s r1 -> Smallstep.final_state L1 s r2 -> r1 = r2)
     :
       _sim sim i0 st_src0 st_tgt0
 
@@ -137,3 +140,8 @@ Section SIM.
 
 End SIM.
 
+Section PROOF.
+
+  Context `{Σ: GRA.t}.
+
+End PROOF.

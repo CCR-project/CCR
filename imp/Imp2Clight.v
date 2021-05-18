@@ -221,15 +221,15 @@ Section Compile.
           (s2p name, Gvar gv) in
     fun src => List.map mapf src.
 
-  Fixpoint compile_eFuns (src : extFuns) : option tgt_gdefs :=
+  Fixpoint compile_eFuns (src : extFuns) : tgt_gdefs :=
     match src with
-    | [] => Some []
+    | [] => []
     | (name, a) :: t =>
-      do tail <- (compile_eFuns t);
+      let tail := (compile_eFuns t) in
       let tyargs := make_arg_types a in
       let sg := mksignature (typlist_of_typelist tyargs) (Tret AST.Tlong) cc_default in
-      let fd := Gfun (External (EF_external name sg) tyargs Tlong0 cc_default) in
-      Some ((s2p name, fd) :: tail)
+      let fd := Gfun (External (EF_external name sg) tyargs Tlong0 cc_default) in 
+      ((s2p name, fd) :: tail)
     end
   .
 
@@ -269,24 +269,21 @@ Section Compile.
     end
   .
 
-  Definition imp_prog_ids (src : Imp.programL) :=
-    let id_ev := List.map s2p src.(ext_varsL) in
-    let id_ef := List.map (fun p => s2p (fst p)) src.(ext_funsL) in
-    let id_iv := List.map (fun p => s2p (fst p)) src.(prog_varsL) in
-    let id_if := List.map (fun p => s2p (fst (snd p))) src.(prog_funsL) in
-    id_init ++ id_ev ++ id_ef ++ id_iv ++ id_if
-  .
+  (* Definition imp_prog_ids (src : Imp.programL) := *)
+  (*   let id_ev := List.map s2p src.(ext_varsL) in *)
+  (*   let id_ef := List.map (fun p => s2p (fst p)) src.(ext_funsL) in *)
+  (*   let id_iv := List.map (fun p => s2p (fst p)) src.(prog_varsL) in *)
+  (*   let id_if := List.map (fun p => s2p (fst (snd p))) src.(prog_funsL) in *)
+  (*   id_init ++ id_ev ++ id_ef ++ id_iv ++ id_if *)
+  (* . *)
 
   Definition compile_gdefs (src : Imp.programL) : option tgt_gdefs :=
-    let ids := imp_prog_ids src in
-    if (@NoDupB _ positive_Dec ids) then
-      let evars := compile_eVars src.(ext_varsL) in
-      let ivars := compile_iVars src.(prog_varsL) in
-      do efuns <- compile_eFuns src.(ext_funsL);
-      do ifuns <- compile_iFuns (List.map snd src.(prog_funsL));
-      let defs := init_g ++ evars ++ efuns ++ ivars ++ ifuns in
-      Some defs
-    else None
+    let evars := compile_eVars src.(ext_varsL) in
+    let ivars := compile_iVars src.(prog_varsL) in
+    let efuns := compile_eFuns src.(ext_funsL) in
+    do ifuns <- compile_iFuns (List.map snd src.(prog_funsL));
+    let defs := init_g ++ evars ++ efuns ++ ivars ++ ifuns in
+    Some defs
   .
 
   Definition _compile (src : Imp.programL) :=
@@ -294,17 +291,18 @@ Section Compile.
     match optdefs with
     | None => Error [MSG "Imp2clight compilation failed"]
     | Some _defs =>
-      let pdefs := Maps.PTree_Properties.of_list _defs in
-      let defs := Maps.PTree.elements pdefs in
-      make_program [] defs (List.map s2p src.(publicL)) (s2p "main")
+      if (@NoDupB _ positive_Dec (List.map fst _defs)) then
+        let pdefs := Maps.PTree_Properties.of_list _defs in
+        let defs := Maps.PTree.elements pdefs in
+        make_program [] defs (List.map s2p src.(publicL)) (s2p "main")
+      else Error [MSG "Imp2clight compilation failed; duplicated declarations"]
     end
   .
 
 End Compile.
 
 Definition compile (src : Imp.programL) :=
-  _compile (get_gmap src) src
-.
+  _compile (get_gmap src) src.
 
 Definition extFun_Dec : forall x y : (string * nat), {x = y} + {x <> y}.
 Proof.
@@ -587,14 +585,54 @@ Section Sim.
   Definition imp_cont := (r_state * p_state * (lenv * val)) -> itree eventE (r_state * p_state * (lenv * val)).
   Definition imp_stack := Any.t -> imp_state.
 
-  Variable match_le : lenv -> temp_env -> Prop.
-  Variable match_mem : Mem.t -> Memory.Mem.mem -> Prop.
+  (* Hypothesis archi_ptr64 : Archi.ptr64 = true. *)
+  Definition map_val (v : Universe.val) : Values.val :=
+    match v with
+    | Vint z => Values.Vlong (to_long z)
+    | Vptr blk ofs =>
+      let ofsv := to_long ofs in
+      Values.Vptr (Pos.of_nat (blk+1)) (Ptrofs.mkint ofsv.(Int64.intval) ofsv.(Int64.intrange))
+    | Vundef => Values.Vundef
+    end.
+
+  Variant match_le : lenv -> temp_env -> Prop :=
+  | match_le_intro
+      sle tle x sv tv
+      (VAL: tv = map_val sv)
+      (SLE: alist_find x sle = Some sv)
+      (TLE: Maps.PTree.get (s2p x) tle = Some tv)
+    :
+      match_le sle tle.
+
   (* match_genv: ge = Sk.load_skenv imp.(defs), tgtge = globalenv (compile imp),
                  need to show they match only at beginning *)
+
+  Definition id2blk_cgenv (src: Imp.program) (id: string) : option positive :=
+    do ids <- (compile_gdefs (get_gmap src) src);
+    let pids := Maps.PTree_Properties.of_list ids in
+    let cids := Maps.PTree.elements pids in
+    do '(_blk, _) <- find_idx (fun '(cid, _) => Pos.eqb (s2p id) cid) cids;
+    Some (Pos.of_nat (1 + _blk)).
+
+  Lemma id2blk_cgenv_correct
+        (src: Imp.program) tgt tgenv id
+        (COMP: compile src = OK tgt)
+        (TGE: tgenv = Genv.globalenv tgt)
+    :
+      Genv.find_symbol tgenv (s2p id) = id2blk_cgenv src id.
+  Proof.
+    unfold Genv.globalenv in TGE. unfold compile in COMP. unfold _compile in COMP.
+    unfold id2blk_cgenv. destruct (compile_gdefs (get_gmap src) src); clarify.
+    destruct (NoDupB positive_Dec (map fst l)) eqn:NODUP; clarify.
+    assert (AST.prog_defs tgt = (Maps.PTree.elements (Maps.PTree_Properties.of_list l))).
+    { unfold make_program in COMP. ss. clarify. }
+    rewrite H; clear H.
+    cbn. uo.
+
+
   Variable match_ge : SkEnv.t -> genv -> Prop.
-  Variable ge : SkEnv.t.
-  Variable tgtge : genv.
-  Hypothesis MGENV : match_ge ge tgtge.
+
+  Variable match_mem : Mem.t -> Memory.Mem.mem -> Prop.
 
   Fixpoint get_cont_stmts (cc: cont) : list Clight.statement :=
     match cc with
@@ -604,10 +642,10 @@ Section Sim.
   .
 
   Inductive match_code : imp_cont -> (list Clight.statement) -> Prop :=
-  | match_nil
+  | match_code_nil
     :
       match_code idK []
-  | match_stmt
+  | match_code_cons
       code itr ktr chead ctail gm ge ms mn
       (CST: compile_stmt gm code = Some chead)
       (ITR: itr = fun '(r, p, (le, _)) => itree_of_cont_stmt code ge le ms mn (r, p))
@@ -621,8 +659,8 @@ Section Sim.
     :
       match_stack idK Kstop
 
-  | match_stack_cret_some
-      tf rp ms mn le tle next stack tcont id tid glue tglue
+  | match_stack_cret
+      ge tf rp ms mn le tle next stack tcont id tid glue tglue
       (WF_RETF: tf.(fn_return) = Tlong0 \/ tf.(fn_return) = type_int32s)
       (MLE: match_le le tle)
       (MID: s2p id = tid)
@@ -639,13 +677,14 @@ Section Sim.
 
   Variant match_states : imp_state -> Clight.state -> Prop :=
   | match_states_intro
-      gm tf rp ms mn le tle code itr tcode m tm next stack tcont
+      ge tge gm tf rp ms mn le tle code itr tcode m tm next stack tcont
       (* function is only used to check return type, which compiled one always has Tlong0, except "main" which has *)
       (* (CF: compile_function gm f = Some tgtf) *)
       (WF_RETF: tf.(fn_return) = Tlong0 \/ tf.(fn_return) = type_int32s)
       (CST: compile_stmt gm code = Some tcode)
       (ML: match_le le tle)
       (MM: match_mem m tm)
+      (MG: match_ge ge tge)
       (MCS: match_code next (get_cont_stmts tcont))
       (MCN: match_stack stack (call_cont tcont))
       (ITR: itr = itree_of_cont_stmt code ge le ms mn rp)
@@ -667,16 +706,6 @@ Section Sim.
   (*     v *)
   (*   : *)
   (*     match_id (Some v) (Some (s2p v)). *)
-
-  (* Hypothesis archi_ptr64 : Archi.ptr64 = true. *)
-  (* Definition map_val (v : Universe.val) : Values.val := *)
-  (*   match v with *)
-  (*   | Vint z => Values.Vlong (to_long z) *)
-  (*   | Vptr blk ofs => *)
-  (*     let ofsv := to_long ofs in *)
-  (*     Values.Vptr (Pos.of_nat blk) (Ptrofs.mkint ofsv.(Int64.intval) ofsv.(Int64.intrange)) *)
-  (*   | Vundef => Values.Vundef *)
-  (*   end. *)
 
 End Sim.
 
