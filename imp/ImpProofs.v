@@ -148,10 +148,10 @@ Section PROOFS.
       trigger (SetVar x v);;; Ret Vundef).
   Proof. reflexivity. Qed.
 
-  Lemma denote_stmt_CallFun1
+  Lemma denote_stmt_CallFun
         ge le0 x f args
     :
-      interp_imp ge le0 (denote_stmt (CallFun1 x f args)) =
+      interp_imp ge le0 (denote_stmt (CallFun x f args)) =
       interp_imp ge le0 (
       if (call_mem f)
       then triggerUB
@@ -161,22 +161,10 @@ Section PROOFS.
         trigger (SetVar x v);;; Ret Vundef).
   Proof. reflexivity. Qed.
 
-  Lemma denote_stmt_CallFun2
-        ge le0 f args
-    :
-      interp_imp ge le0 (denote_stmt (CallFun2 f args)) =
-      interp_imp ge le0 (
-      if (call_mem f)
-      then triggerUB
-      else
-        eval_args <- (denote_exprs args []);;
-        trigger (Call f (eval_args↑));;; Ret Vundef).
-  Proof. reflexivity. Qed.
-
-  Lemma denote_stmt_CallPtr1
+  Lemma denote_stmt_CallPtr
         ge le0 x e args
     :
-      interp_imp ge le0 (denote_stmt (CallPtr1 x e args)) =
+      interp_imp ge le0 (denote_stmt (CallPtr x e args)) =
       interp_imp ge le0 (
       p <- denote_expr e;; f <- trigger (GetName p);;
       if (call_mem f)
@@ -187,36 +175,14 @@ Section PROOFS.
         trigger (SetVar x v);;; Ret Vundef).
   Proof. reflexivity. Qed.
 
-  Lemma denote_stmt_CallPtr2
-        ge le0 e args
-    :
-      interp_imp ge le0 (denote_stmt (CallPtr2 e args)) =
-      interp_imp ge le0 (
-      p <- denote_expr e;; f <- trigger (GetName p);;
-      if (call_mem f)
-      then triggerUB
-      else
-        eval_args <- (denote_exprs args []);;
-        trigger (Call f (eval_args↑));;; Ret Vundef).
-  Proof. reflexivity. Qed.
-
-  Lemma denote_stmt_CallSys1
+  Lemma denote_stmt_CallSys
         ge le0 x f args
     :
-      interp_imp ge le0 (denote_stmt (CallSys1 x f args)) =
+      interp_imp ge le0 (denote_stmt (CallSys x f args)) =
       interp_imp ge le0 (
       eval_args <- (denote_exprs args []);;
       v <- trigger (Syscall f eval_args top1);;
       trigger (SetVar x v);;; Ret Vundef).
-  Proof. reflexivity. Qed.
-
-  Lemma denote_stmt_CallSys2
-        ge le0 f args
-    :
-      interp_imp ge le0 (denote_stmt (CallSys2 f args)) =
-      interp_imp ge le0 (
-      eval_args <- (denote_exprs args []);;
-      trigger (Syscall f eval_args top1);;; Ret Vundef).
   Proof. reflexivity. Qed.
 
   (* interp_imp *)
@@ -623,27 +589,10 @@ Section PROOFS.
       destruct x0. auto.
   Qed.
 
-  Lemma interp_imp_exprs_only
-        ge le0 f args acc
-    :
-      interp_imp ge le0 (
-                   eval_args <- (denote_exprs args acc);;
-                   trigger (Call f (eval_args↑));;; Ret Vundef)
-      =
-      '(le1, vs) <- interp_imp_denote_exprs ge le0 args acc;;
-      trigger (Call f (vs↑));;;
-      tau;; tau;; Ret (le1, Vundef).
-  Proof.
-    move args before Σ. revert_until args. induction args; i.
-    - grind. apply interp_imp_Call_only.
-    - grind. rewrite interp_imp_bind. grind.
-      destruct x. auto.
-  Qed.
-
-  Lemma interp_imp_CallFun1
+  Lemma interp_imp_CallFun
         ge le0 x f args
     :
-      interp_imp ge le0 (denote_stmt (CallFun1 x f args)) =
+      interp_imp ge le0 (denote_stmt (CallFun x f args)) =
       if (call_mem f)
       then triggerUB
       else
@@ -652,29 +601,14 @@ Section PROOFS.
         tau;; tau;; v <- unwrapN (v↓);;
         tau;; tau;; Ret (alist_add x v le1, Vundef).
   Proof.
-    rewrite denote_stmt_CallFun1. des_ifs; try (apply interp_imp_exprs).
+    rewrite denote_stmt_CallFun. des_ifs; try (apply interp_imp_exprs).
     apply interp_imp_triggerUB.
   Qed.
 
-  Lemma interp_imp_CallFun2
-        ge le0 f args
-    :
-      interp_imp ge le0 (denote_stmt (CallFun2 f args)) =
-      if (call_mem f)
-      then triggerUB
-      else
-        '(le1, vs) <- interp_imp_denote_exprs ge le0 args [];;
-        trigger (Call f (vs↑));;;
-        tau;; tau;; Ret (le1, Vundef).
-  Proof.
-    rewrite denote_stmt_CallFun2. des_ifs; try (apply interp_imp_exprs_only).
-    apply interp_imp_triggerUB.
-  Qed.
-
-  Lemma interp_imp_CallPtr1
+  Lemma interp_imp_CallPtr
         ge le0 x e args
     :
-      interp_imp ge le0 (denote_stmt (CallPtr1 x e args)) =
+      interp_imp ge le0 (denote_stmt (CallPtr x e args)) =
       '(le1, p) <- interp_imp ge le0 (denote_expr e);;
       match p with
       | Vptr n 0 =>
@@ -693,43 +627,12 @@ Section PROOFS.
       | _ => triggerUB
       end.
   Proof.
-    rewrite denote_stmt_CallPtr1. rewrite interp_imp_bind. grind.
+    rewrite denote_stmt_CallPtr. rewrite interp_imp_bind. grind.
     unfold interp_imp, interp_GlobEnv, interp_ImpState. grind.
     des_ifs; rewrite interp_trigger; grind.
     all:( unfold triggerUB, unwrapU, pure_state; grind).
     - rewrite interp_trigger; grind.
     - rewrite <- (interp_imp_exprs ge) with (acc := []).
-      unfold interp_imp, interp_GlobEnv, interp_ImpState. grind.
-    - unfold triggerUB. grind.
-  Qed.
-
-  Lemma interp_imp_CallPtr2
-        ge le0 e args
-    :
-      interp_imp ge le0 (denote_stmt (CallPtr2 e args)) =
-      '(le1, p) <- interp_imp ge le0 (denote_expr e);;
-      match p with
-      | Vptr n 0 =>
-        match (SkEnv.blk2id ge n) with
-        | Some f =>
-          if (call_mem f)
-          then tau;; triggerUB
-          else
-            tau;;
-            '(le2, vs) <- interp_imp_denote_exprs ge le1 args [];;
-            trigger (Call f (vs↑));;;
-            tau;; tau;; Ret (le2, Vundef)
-        | None => triggerUB
-        end
-      | _ => triggerUB
-      end.
-  Proof.
-    rewrite denote_stmt_CallPtr2. rewrite interp_imp_bind. grind.
-    unfold interp_imp, interp_GlobEnv, interp_ImpState. grind.
-    des_ifs; rewrite interp_trigger; grind.
-    all:( unfold triggerUB, unwrapU, pure_state; grind).
-    - rewrite interp_trigger; grind.
-    - rewrite <- (interp_imp_exprs_only ge) with (acc := []).
       unfold interp_imp, interp_GlobEnv, interp_ImpState. grind.
     - unfold triggerUB. grind.
   Qed.
@@ -752,44 +655,16 @@ Section PROOFS.
     - grind. rewrite interp_imp_bind. grind. destruct x0. auto.
   Qed.
 
-  Lemma interp_imp_exprs_sys_only
-        ge le0 f args acc
-    :
-      interp_imp ge le0 (
-                   eval_args <- (denote_exprs args acc);;
-                   trigger (Syscall f eval_args top1);;; Ret Vundef)
-      =
-      '(le1, vs) <- interp_imp_denote_exprs ge le0 args acc;;
-      trigger (Syscall f vs top1);;;
-      tau;; tau;; Ret (le1, Vundef).
-  Proof.
-    move args before Σ. revert_until args. induction args; i.
-    - grind. apply interp_imp_Syscall_only.
-    - grind. rewrite interp_imp_bind. grind. destruct x. auto.
-  Qed.
-
-  Lemma interp_imp_CallSys1
+  Lemma interp_imp_CallSys
         ge le0 x f args
     :
-      interp_imp ge le0 (denote_stmt (CallSys1 x f args)) =
+      interp_imp ge le0 (denote_stmt (CallSys x f args)) =
       '(le1, vs) <- interp_imp_denote_exprs ge le0 args [];;
       v <- trigger (Syscall f vs top1);;
       tau;; tau;; tau;; tau;;
       Ret (alist_add x v le1, Vundef).
   Proof.
-    rewrite denote_stmt_CallSys1. apply interp_imp_exprs_sys.
-  Qed.
-
-  Lemma interp_imp_CallSys2
-        ge le0 f args
-    :
-      interp_imp ge le0 (denote_stmt (CallSys2 f args)) =
-      '(le1, vs) <- interp_imp_denote_exprs ge le0 args [];;
-      trigger (Syscall f vs top1);;;
-      tau;; tau;;
-      Ret (le1, Vundef).
-  Proof.
-    rewrite denote_stmt_CallSys2. apply interp_imp_exprs_sys_only.
+    rewrite denote_stmt_CallSys. apply interp_imp_exprs_sys.
   Qed.
 
   (* eval_imp  *)
@@ -831,12 +706,9 @@ Ltac imp_red :=
     | Seq _ _ => rewrite interp_imp_Seq; imp_red
     | If _ _ _ => rewrite interp_imp_If
     | Skip => rewrite interp_imp_Skip
-    | CallFun1 _ _ _ => rewrite interp_imp_CallFun1
-    | CallFun2 _ _ => rewrite interp_imp_CallFun2
-    | CallPtr1 _ _ _ => rewrite interp_imp_CallPtr1
-    | CallPtr2 _ _ => rewrite interp_imp_CallPtr2
-    | CallSys1 _ _ _ => rewrite interp_imp_CallSys1
-    | CallSys2 _ _ => rewrite interp_imp_CallSys2
+    | CallFun _ _ _ => rewrite interp_imp_CallFun
+    | CallPtr _ _ _ => rewrite interp_imp_CallPtr
+    | CallSys _ _ _ => rewrite interp_imp_CallSys
     | Expr _ => rewrite interp_imp_Expr
     | Expr_coerce _ => rewrite interp_imp_Expr
     | AddrOf _ _ => rewrite interp_imp_AddrOf

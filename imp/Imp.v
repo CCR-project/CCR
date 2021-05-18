@@ -41,12 +41,9 @@ Inductive stmt : Type :=
 | Seq    (a b : stmt)            (* a ; b *)
 | If     (i : expr) (t e : stmt) (* if (i) then { t } else { e } *)
 | Skip                           (* ; *)
-| CallFun1 (x : var) (f : gname) (args : list expr) (* x = f(args), call by name *)
-| CallFun2 (f : gname) (args : list expr)           (* f(args) *)
-| CallPtr1 (x : var) (p : expr) (args : list expr)  (* x = f(args), by pointer*)
-| CallPtr2 (p : expr) (args : list expr)            (* f(args) *)
-| CallSys1 (x : var) (f : gname) (args : list expr) (* x = f(args), system call *)
-| CallSys2 (f : gname) (args : list expr)           (* f(args) *)
+| CallFun (x : var) (f : gname) (args : list expr) (* x = f(args), call by name *)
+| CallPtr (x : var) (p : expr) (args : list expr)  (* x = f(args), by pointer*)
+| CallSys (x : var) (f : gname) (args : list expr) (* x = f(args), system call *)
 | Expr (e : expr)                                   (* expression e *)
 | AddrOf (x : var) (X : gname)         (* x = &X *)
 | Malloc (x : var) (s : expr)          (* x = malloc(s) *)
@@ -127,43 +124,27 @@ Section Denote.
       if b then (denote_stmt t) else (denote_stmt e)
     | Skip => Ret Vundef
 
-    | CallFun1 x f args =>
+    | CallFun x f args =>
       if (call_mem f)
       then triggerUB
       else
         eval_args <- denote_exprs args [];;
         v <- trigger (Call f (eval_args↑));; v <- unwrapN (v↓);;
-        trigger (SetVar x v);;; Ret Vundef
-    | CallFun2 f args =>
-      if (call_mem f)
-      then triggerUB
-      else
-        eval_args <- denote_exprs args [];;
-        trigger (Call f (eval_args↑));;; Ret Vundef
+        trigger (SetVar x v);; Ret Vundef
 
-    | CallPtr1 x e args =>
+    | CallPtr x e args =>
       p <- denote_expr e;; f <- trigger (GetName p);;
       if (call_mem f)
       then triggerUB
       else
         eval_args <- denote_exprs args [];;
         v <- trigger (Call f (eval_args↑));; v <- unwrapN (v↓);;
-        trigger (SetVar x v);;; Ret Vundef
-    | CallPtr2 e args =>
-      p <- denote_expr e;; f <- trigger (GetName p);;
-      if (call_mem f)
-      then triggerUB
-      else
-        eval_args <- denote_exprs args [];;
-        trigger (Call f (eval_args↑));;; Ret Vundef
+        trigger (SetVar x v);; Ret Vundef
 
-    | CallSys1 x f args =>
+    | CallSys x f args =>
       eval_args <- denote_exprs args [];;
       v <- trigger (Syscall f eval_args top1);;
-      trigger (SetVar x v);;; Ret Vundef
-    | CallSys2 f args =>
-      eval_args <- denote_exprs args [];;
-      trigger (Syscall f eval_args top1);;; Ret Vundef
+      trigger (SetVar x v);; Ret Vundef
 
     | Expr e => v <- denote_expr e;; Ret v
 

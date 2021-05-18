@@ -54,30 +54,30 @@ Module ImpNotations.
 
   Notation "'skip#'" :=
     (Skip) (at level 100): stmt_scope.
-
-  (* Different methods for function calls *)
+ 
+  (* Different methods for function calls, '_' name is a garbage register *)
   Notation "x '=@' f args" :=
-    (CallFun1 x f args)
+    (CallFun x f args)
       (at level 60, f at level 9): stmt_scope.
 
   Notation "'@' f args" :=
-    (CallFun2 f args)
+    (CallFun "_" f args)
       (at level 60, f at level 9): stmt_scope.
 
   Notation "x '=@*' fp args" :=
-    (CallPtr1 x fp args)
+    (CallPtr x fp args)
       (at level 60, fp at level 9): stmt_scope.
 
   Notation "'@*' fp args" :=
-    (CallPtr2 fp args)
+    (CallPtr "_" fp args)
       (at level 60, fp at level 9): stmt_scope.
 
   Notation "x '=@!' f args" :=
-    (CallSys1 x f args)
+    (CallSys x f args)
       (at level 60, f at level 9): stmt_scope.
 
   Notation "'@!' f args" :=
-    (CallSys2 f args)
+    (CallSys "_" f args)
       (at level 60, f at level 9): stmt_scope.
 
   (* interaction with the memory module *)
@@ -106,8 +106,9 @@ End ImpNotations.
 Section Example_Extract.
 
   Import ImpNotations.
-  Let Σ: GRA.t := fun _ => of_RA.t RA.empty.
-  Local Existing Instance Σ.
+  (* Let Σ: GRA.t := fun _ => of_RA.t RA.empty. *)
+  (* Local Existing Instance Σ. *)
+  Context `{Σ: GRA.t}.
 
   Local Open Scope expr_scope.
   Local Open Scope stmt_scope.
