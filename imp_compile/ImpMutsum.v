@@ -17,8 +17,8 @@ Section F.
       ["g_ret"]
       (if# "n"
        then# "g_ret" =@ "g" ["n" - 1%Z : expr] ;#
-             "n" + "g_ret"
-       else# 0%Z
+             return# ("n" + "g_ret")
+       else# return# (0%Z)
        fi#).
 
   Definition imp_mutsumF_prog : program :=
@@ -40,8 +40,8 @@ Section G.
       ["f_ret"]
       (if# "n"
        then# "f_ret" =@ "f" ["n" - 1%Z : expr] ;#
-             "n" + "f_ret"
-       else# 0%Z
+             return# ("n" + "f_ret")
+       else# return# (0%Z)
        fi#).
 
   Definition imp_mutsumG_prog : program :=
@@ -62,7 +62,7 @@ Section Main.
       []
       ["r"]
       ("r" =@ "f" [10%Z : expr] ;#
-       "r").
+       return# "r").
 
   Definition imp_mutsumMain_prog : program :=
     mk_program

@@ -84,13 +84,6 @@ Section PROOFS.
       if b then (denote_stmt t) else (denote_stmt e)).
   Proof. reflexivity. Qed.
 
-  Lemma denote_stmt_Skip
-        ge le0
-    :
-      interp_imp ge le0 (denote_stmt (Skip)) =
-      interp_imp ge le0 (Ret Vundef).
-  Proof. reflexivity. Qed.
-
   Lemma denote_stmt_AddrOf
         ge le0 x X
     :
@@ -458,15 +451,6 @@ Section PROOFS.
     rewrite interp_trigger. grind.
   Qed.
 
-  Lemma interp_imp_Skip
-        ge le0
-    :
-      interp_imp ge le0 (denote_stmt (Skip)) =
-      Ret (le0, Vundef).
-  Proof.
-    rewrite denote_stmt_Skip. apply interp_imp_Ret.
-  Qed.
-
   Lemma interp_imp_AddrOf
         ge le0 x X
     :
@@ -658,14 +642,15 @@ Section PROOFS.
                ` vret : val <-
                         (match init_args fparams args [] with
                          | Some iargs =>
-                           ` x_ : lenv * val <-
-                                  interp_imp ge (iargs ++ init_lenv fvars)
-                                             (denote_stmt (fbody);;
-                                              ` retv : val <- denote_expr (Var "return");; Ret retv);;
+                           '(le2, rv) <- (interp_imp ge (iargs ++ init_lenv fvars) (denote_stmt (fbody)));;
+                           ` x_ : lenv * val <- (interp_imp ge le2 (` retv : val <- denote_expr (Var "return");; Ret retv));;
                                   (let (_, retv) := x_ in Ret retv)
                          | None => triggerUB
                          end) ;; Ret (vret↑).
-  Proof. reflexivity. Qed.
+  Proof.
+    unfold eval_imp. ss. destruct (init_args fparams args []); ss; clarify.
+    rewrite interp_imp_bind. grind.
+  Qed.
 
 End PROOFS.
 
@@ -690,7 +675,6 @@ Ltac imp_red :=
     | Assign _ _ => rewrite interp_imp_Assign
     | Seq _ _ => rewrite interp_imp_Seq; imp_red
     | If _ _ _ => rewrite interp_imp_If
-    | Skip => rewrite interp_imp_Skip
     | CallFun _ _ _ => rewrite interp_imp_CallFun
     | CallPtr _ _ _ => rewrite interp_imp_CallPtr
     | CallSys _ _ _ => rewrite interp_imp_CallSys

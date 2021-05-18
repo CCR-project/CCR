@@ -20,7 +20,7 @@ Section Knot.
       "_fP" =#* "_fA" ;#
       "recP" =#& "rec" ;#
       "ret" =@* "_fP" ["recP" : expr; "n" : expr] ;#
-      "ret"  
+      return# "ret"  
   |}.
 
   Definition knot : function := {|
@@ -30,7 +30,7 @@ Section Knot.
       "_fA" =#& "_f" ;#
       "_fA" *=# "fP" ;#
       "recP" =#& "rec" ;#
-      "recP"
+      return# "recP"
   |}.
 
   Definition _fib : function := {|
@@ -43,10 +43,10 @@ Section Knot.
             then#
                   "a" =@* "fibP" ["n" - 1%Z] ;#
                   "b" =@* "fibP" ["n" - 2%Z] ;#
-                  "a" + "b"
-            else# 1%Z
+                  return# ("a" + "b")
+            else# return# 1%Z
             fi#
-      else# 1%Z
+      else# return# 1%Z
       fi#
   |}.
 
@@ -57,7 +57,7 @@ Section Knot.
       "_fibP" =#& "_fib" ;#
       "fibP" =@ "knot" ["_fibP" : expr] ;#
       "ret" =@* "fibP" [10%Z : expr] ;#
-      "ret"
+      return# "ret"
   |}.
 
   Definition imp_knot_prog : program := {|

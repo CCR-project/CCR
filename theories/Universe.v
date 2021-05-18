@@ -27,7 +27,7 @@ Definition wf_val (v : val) :=
   match v with
   | Vint z => intrange_64 z
   | Vptr _ z => intrange_64 z
-  | Vundef => True
+  | Vundef => False
   end.
 
 (* Notation ofs0 := 0%Z. *)

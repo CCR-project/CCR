@@ -18,7 +18,7 @@ Section Mem1.
       ( "GP" =#& "G" ;#
         "GP" *=# 55%Z ;#
         "ret" =#* "GP" ;#
-        "ret")
+        return# "ret")
   .
 
   Definition imp_mem1_f : program := {|
@@ -34,7 +34,7 @@ Section Mem1.
     "GP" *=# 33%Z ;#
     "ret" =@ "f" [] ;#
     "Gval" =#* "GP" ;#
-    "Gval"
+    return# "Gval"
   .
 
   Definition main_def : function := {|

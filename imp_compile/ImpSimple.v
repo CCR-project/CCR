@@ -13,7 +13,7 @@ Section Example_Extract.
   Local Open Scope stmt_scope.
 
   Definition main : stmt :=
-    99%Z.
+    return# 99%Z.
 
   Definition main_fundef : function := {|
     fn_params := [];

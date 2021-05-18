@@ -25,7 +25,8 @@ Require Import ImpProofs.
 Set Implicit Arguments.
 
 Local Open Scope nat_scope.
-
+Local Open Scope expr_scope.
+Local Open Scope stmt_scope.
 
 Section SIMMODSEM.
 
@@ -51,7 +52,7 @@ Section SIMMODSEM.
     rewrite unfold_eval_imp.
     eapply Any.downcast_upcast in _UNWRAPN. des.
     unfold unint in *. destruct v; clarify; ss.
-    imp_steps. force_r; auto.
+    imp_steps. force_r. auto. 
     des_ifs.
     - imp_steps. force_r; auto. steps.
     - unfold ccall.

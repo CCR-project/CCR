@@ -40,7 +40,6 @@ Inductive stmt : Type :=
 | Assign (x : var) (e : expr)    (* x = e *)
 | Seq    (a b : stmt)            (* a ; b *)
 | If     (i : expr) (t e : stmt) (* if (i) then { t } else { e } *)
-| Skip                           (* ; *)
 | CallFun (x : var) (f : gname) (args : list expr) (* x = f(args), call by name *)
 | CallPtr (x : var) (p : expr) (args : list expr)  (* x = f(args), by pointer*)
 | CallSys (x : var) (f : gname) (args : list expr) (* x = f(args), system call *)
@@ -121,7 +120,6 @@ Section Denote.
     | If i t e =>
       v <- denote_expr i;; `b: bool <- (is_true v)?;;
       if b then (denote_stmt t) else (denote_stmt e)
-    | Skip => Ret Vundef
 
     | CallFun x f args =>
       if (call_mem f)
@@ -211,7 +209,7 @@ Section Interp.
   (* 'return' is a fixed register, holding the return value of this function. *)
   Fixpoint init_lenv xs : lenv :=
     match xs with
-    | [] => [("return", Vundef)]
+    | [] => [("return", Vundef); ("_", Vundef)]
     | x :: t => (x, Vundef) :: (init_lenv t)
     end
   .

@@ -19,7 +19,7 @@ Section Example_Extract.
           "output" =# "input" * "output"
     else# "output" =# 1%Z
     fi#;#
-    "output".
+    return# "output".
 
   Definition factorial_fundef : function := {|
     fn_params := ["input"];
@@ -30,7 +30,7 @@ Section Example_Extract.
   Definition main : stmt :=
     "in" =# 4%Z ;#
     "result" =@ "factorial" ["in": expr] ;#
-    "result".
+    return# "result".
 
   Definition main_fundef : function := {|
     fn_params := [];
