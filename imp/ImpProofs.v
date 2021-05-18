@@ -91,13 +91,6 @@ Section PROOFS.
       interp_imp ge le0 (Ret Vundef).
   Proof. reflexivity. Qed.
 
-  Lemma denote_stmt_Expr
-        ge le0 e
-    :
-      interp_imp ge le0 (denote_stmt (Expr e)) =
-      interp_imp ge le0 (v <- denote_expr e;; Ret v).
-  Proof. reflexivity. Qed.
-
   Lemma denote_stmt_AddrOf
         ge le0 x X
     :
@@ -474,17 +467,6 @@ Section PROOFS.
     rewrite denote_stmt_Skip. apply interp_imp_Ret.
   Qed.
 
-  Lemma interp_imp_Expr
-        ge le0 e
-    :
-      interp_imp ge le0 (denote_stmt (Expr e)) =
-      '(le1, v) <- interp_imp ge le0 (denote_expr e) ;;
-      Ret (le1, v).
-  Proof.
-    rewrite denote_stmt_Expr. rewrite interp_imp_bind.
-    grind. apply interp_imp_Ret.
-  Qed.
-
   Lemma interp_imp_AddrOf
         ge le0 x X
     :
@@ -676,8 +658,11 @@ Section PROOFS.
                ` vret : val <-
                         (match init_args fparams args [] with
                          | Some iargs =>
-                           ITree.bind (interp_imp ge (iargs++(init_lenv (fvars))) (denote_stmt fbody))
-                                      (fun x_ : lenv * val => let '(_, retv) := x_ in Ret retv)
+                           ` x_ : lenv * val <-
+                                  interp_imp ge (iargs ++ init_lenv fvars)
+                                             (denote_stmt (fbody);;
+                                              ` retv : val <- denote_expr (Var "return");; Ret retv);;
+                                  (let (_, retv) := x_ in Ret retv)
                          | None => triggerUB
                          end) ;; Ret (vret↑).
   Proof. reflexivity. Qed.
@@ -709,8 +694,6 @@ Ltac imp_red :=
     | CallFun _ _ _ => rewrite interp_imp_CallFun
     | CallPtr _ _ _ => rewrite interp_imp_CallPtr
     | CallSys _ _ _ => rewrite interp_imp_CallSys
-    | Expr _ => rewrite interp_imp_Expr
-    | Expr_coerce _ => rewrite interp_imp_Expr
     | AddrOf _ _ => rewrite interp_imp_AddrOf
     | Malloc _ _ => rewrite interp_imp_Malloc
     | Free _ => rewrite interp_imp_Free

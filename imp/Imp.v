@@ -44,7 +44,6 @@ Inductive stmt : Type :=
 | CallFun (x : var) (f : gname) (args : list expr) (* x = f(args), call by name *)
 | CallPtr (x : var) (p : expr) (args : list expr)  (* x = f(args), by pointer*)
 | CallSys (x : var) (f : gname) (args : list expr) (* x = f(args), system call *)
-| Expr (e : expr)                                   (* expression e *)
 | AddrOf (x : var) (X : gname)         (* x = &X *)
 | Malloc (x : var) (s : expr)          (* x = malloc(s) *)
 | Free (p : expr)                      (* free(p) *)
@@ -146,8 +145,6 @@ Section Denote.
       v <- trigger (Syscall f eval_args top1);;
       trigger (SetVar x v);; Ret Vundef
 
-    | Expr e => v <- denote_expr e;; Ret v
-
     | AddrOf x X =>
       v <- trigger (GetPtr X);; trigger (SetVar x v);;; Ret Vundef
     | Malloc x se =>
@@ -211,9 +208,10 @@ Section Interp.
   Definition interp_imp ge le (itr : itree effs val) :=
     interp_ImpState (interp_GlobEnv ge itr) le.
 
+  (* 'return' is a fixed register, holding the return value of this function. *)
   Fixpoint init_lenv xs : lenv :=
     match xs with
-    | [] => []
+    | [] => [("return", Vundef)]
     | x :: t => (x, Vundef) :: (init_lenv t)
     end
   .
@@ -230,7 +228,8 @@ Section Interp.
   Definition eval_imp (ge: SkEnv.t) (f: function) (args: list val) : itree Es val :=
     match (init_args f.(fn_params) args []) with
     | Some iargs =>
-      '(_, retv) <- (interp_imp ge (iargs++(init_lenv f.(fn_vars))) (denote_stmt f.(fn_body)));; Ret retv
+      '(_, retv) <- (interp_imp ge (iargs++(init_lenv f.(fn_vars)))
+                     (denote_stmt f.(fn_body) ;; retv <- (denote_expr (Var "return")) ;; Ret retv));; Ret retv
     | None => triggerUB
     end
   .
