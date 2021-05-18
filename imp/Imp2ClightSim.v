@@ -1,11 +1,18 @@
-From compcert Require Import Smallstep Clight Integers Events Behaviors.
+From compcert Require Import Smallstep Clight Integers Events Behaviors Errors.
 Require Import Coqlib.
+Require Import ITreelib.
 Require Import Universe.
-Require Import STS.
-Require Import Behavior.
+Require Import Skeleton.
+Require Import PCM.
+Require Import STS Behavior.
+Require Import Any.
 Require Import ModSem.
 Require Import Imp.
 Require Import Imp2Clight.
+Require Import ImpProofs.
+Require Import Mem0.
+Require Import HoareDef.
+Require Import IRed.
 
 Set Implicit Arguments.
 
@@ -143,5 +150,37 @@ End SIM.
 Section PROOF.
 
   Context `{Σ: GRA.t}.
+
+  Variable mmem : Mem.t -> Memory.Mem.mem -> Prop.
+
+  (* Variable src : Imp.program. *)
+  (* Let src_mod := ImpMod.get_mod src. *)
+  (* Variable tgt : Ctypes.program Clight.function. *)
+
+  (* Let src_sem := ModL.compile (Mod.add_list ([src_mod] ++ [Mem])). *)
+  (* Let tgt_sem := semantics2 tgt. *)
+
+  Theorem match_states_sim
+          (src: Imp.program) tgt ist cst
+          (COMP: compile src = OK tgt)
+          (MS: match_states mmem ist cst)
+    :
+      <<SIM: sim (ModL.compile (Mod.add_list ([Mem] ++ [ImpMod.get_mod src]))) (semantics2 tgt) lt 100 ist cst>>.
+  Proof.
+    move COMP before tgt.
+    revert_until COMP.
+    pcofix CIH. i. pfold.
+    inv MS. destruct code.
+    - ss. destruct (compile_expr e) as [te|] eqn:CE; uo; clarify.
+      clear gm MM m WF_RETF MM. econs 5; clarify.
+      + unfold ModL.compile, ModSemL.compile, ModSemL.compile_itree. ss.
+        unfold itree_of_cont_stmt, itree_of_imp_cont. ired.
+        rewrite interp_imp_Assign. destruct e.
+        * rewrite interp_imp_expr_Var.
+          destruct (alist_find v le) eqn: AFIND.
+          { ired. rewrite transl_all_tau. ired_both.
+
+  Admitted.
+  
 
 End PROOF.

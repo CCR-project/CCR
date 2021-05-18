@@ -608,11 +608,12 @@ Section Sim.
                  need to show they match only at beginning *)
 
   Definition id2blk_cgenv (src: Imp.program) (id: string) : option positive :=
-    do ids <- (compile_gdefs (get_gmap src) src);
-    let pids := Maps.PTree_Properties.of_list ids in
-    let cids := Maps.PTree.elements pids in
-    do '(_blk, _) <- find_idx (fun '(cid, _) => Pos.eqb (s2p id) cid) cids;
-    Some (Pos.of_nat (1 + _blk)).
+    match compile src with
+    | Error _ => None
+    | OK tgt =>
+      let tgenv := Genv.globalenv tgt in
+      Genv.find_symbol tgenv (s2p id)
+    end.
 
   Lemma id2blk_cgenv_correct
         (src: Imp.program) tgt tgenv id
@@ -621,16 +622,10 @@ Section Sim.
     :
       Genv.find_symbol tgenv (s2p id) = id2blk_cgenv src id.
   Proof.
-    unfold Genv.globalenv in TGE. unfold compile in COMP. unfold _compile in COMP.
-    unfold id2blk_cgenv. destruct (compile_gdefs (get_gmap src) src); clarify.
-    destruct (NoDupB positive_Dec (map fst l)) eqn:NODUP; clarify.
-    assert (AST.prog_defs tgt = (Maps.PTree.elements (Maps.PTree_Properties.of_list l))).
-    { unfold make_program in COMP. ss. clarify. }
-    rewrite H; clear H.
-    cbn. uo.
+    unfold id2blk_cgenv. clarify. rewrite COMP. auto.
+  Qed.
 
-
-  Variable match_ge : SkEnv.t -> genv -> Prop.
+  (* Variable match_ge : SkEnv.t -> genv -> Prop. *)
 
   Variable match_mem : Mem.t -> Memory.Mem.mem -> Prop.
 
@@ -677,14 +672,14 @@ Section Sim.
 
   Variant match_states : imp_state -> Clight.state -> Prop :=
   | match_states_intro
-      ge tge gm tf rp ms mn le tle code itr tcode m tm next stack tcont
+      ge gm tf rp ms mn le tle code itr tcode m tm next stack tcont
       (* function is only used to check return type, which compiled one always has Tlong0, except "main" which has *)
       (* (CF: compile_function gm f = Some tgtf) *)
       (WF_RETF: tf.(fn_return) = Tlong0 \/ tf.(fn_return) = type_int32s)
       (CST: compile_stmt gm code = Some tcode)
       (ML: match_le le tle)
       (MM: match_mem m tm)
-      (MG: match_ge ge tge)
+      (* (MG: match_ge ge tge) *)
       (MCS: match_code next (get_cont_stmts tcont))
       (MCN: match_stack stack (call_cont tcont))
       (ITR: itr = itree_of_cont_stmt code ge le ms mn rp)
@@ -724,28 +719,18 @@ Section Proof.
       des_ifs. econs 2; auto.
   Qed.
 
-  Definition wf_imp_prog (src : Imp.programL) :=
-    Coqlib.list_norepet (imp_prog_ids src).
+  (* Definition wf_imp_prog (src : Imp.programL) := *)
+  (*   Coqlib.list_norepet (compile_gdefs (get_gmap src) src). *)
 
-  Lemma compile_gdefs_then_wf : forall gm src l,
-      compile_gdefs gm src = Some l
-      ->
-      wf_imp_prog src.
-  Proof.
-    unfold compile_gdefs. i.
-    des_ifs. clear H.
-    unfold wf_imp_prog. eapply list_norepet_NoDupB; eauto.
-  Qed.
-
-  Lemma compile_then_wf : forall src tgt,
-      compile src = OK tgt
-      ->
-      wf_imp_prog src.
-  Proof.
-    unfold compile, _compile. i.
-    destruct (compile_gdefs (get_gmap src) src) eqn:EQ; clarify.
-    eauto using compile_gdefs_then_wf.
-  Qed.
+  (* Lemma compile_then_wf : forall src tgt, *)
+  (*     compile src = OK tgt *)
+  (*     -> *)
+  (*     wf_imp_prog src. *)
+  (* Proof. *)
+  (*   unfold compile, _compile. i. *)
+  (*   destruct (compile_gdefs (get_gmap src) src) eqn:EQ; clarify. *)
+  (*   eauto using compile_gdefs_then_wf. *)
+  (* Qed. *)
 
   (* Maps.PTree.elements_extensional
      we will rely on above theorem for commutation lemmas *)
