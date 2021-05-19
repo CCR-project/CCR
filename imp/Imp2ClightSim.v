@@ -11,7 +11,7 @@ Require Import Imp.
 Require Import Imp2Clight.
 Require Import ImpProofs.
 Require Import Mem0.
-Require Import HoareDef.
+(* Require Import HoareDef. *)
 Require Import IRed.
 
 Set Implicit Arguments.
@@ -171,14 +171,33 @@ Section PROOF.
     revert_until COMP.
     pcofix CIH. i. pfold.
     inv MS. destruct code.
+    - ss. unfold itree_of_cont_stmt, itree_of_imp_cont.
+      rewrite interp_imp_Skip. clarify.
+      admit "ez? needs to handle two cases?".
+
+
     - ss. destruct (compile_expr e) as [te|] eqn:CE; uo; clarify.
-      clear gm MM m WF_RETF MM. econs 5; clarify.
-      + unfold ModL.compile, ModSemL.compile, ModSemL.compile_itree. ss.
-        unfold itree_of_cont_stmt, itree_of_imp_cont. ired.
-        rewrite interp_imp_Assign. destruct e.
-        * rewrite interp_imp_expr_Var.
-          destruct (alist_find v le) eqn: AFIND.
-          { ired. rewrite transl_all_tau. ired_both.
+      clear gm MM m WF_RETF MM.
+      unfold itree_of_cont_stmt, itree_of_imp_cont.
+      rewrite interp_imp_Assign. destruct e.
+      + rewrite interp_imp_expr_Var.
+        destruct (alist_find v le) eqn: AFIND; ss.
+        * econs 5; clarify.
+          { unfold ModL.compile, ModSemL.compile, ModSemL.compile_itree. ss.
+            (* ired. rewrite transl_all_tau. *)
+            (* Red.prw ltac:(_red_gen) 2 1 1 0. *)
+            Red.prw ltac:(_red_gen) 2 1 0. ss. }
+          { admit "ez, strict_determinate_at". }
+          ss.
+          eexists (State tf Sskip tcont empty_env (Maps.PTree.set (s2p x) _ tle) tm).
+          eexists.
+          { eapply step_set. econs. inv ML. hexploit ML0. apply AFIND.
+            i. des. destruct tv; ss; clarify. eauto. }
+          eexists ('(_, _, (_, rv)) <- next _;; x <- Ret (rv↑);; stack x).
+          eexists.
+          { Red.prw ltac:(_red_gen) 3 0. 
+            
+
 
   Admitted.
   

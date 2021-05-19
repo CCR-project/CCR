@@ -62,6 +62,13 @@ Section PROOFS.
   Proof. reflexivity. Qed.
 
   (* stmt *)
+  Lemma denote_stmt_Skip
+        ge le0
+    :
+      interp_imp ge le0 (denote_stmt (Skip)) =
+      interp_imp ge le0 (Ret Vundef).
+  Proof. reflexivity. Qed.
+
   Lemma denote_stmt_Assign
         ge le0 x e
     :
@@ -411,6 +418,15 @@ Section PROOFS.
     apply interp_imp_assume_wf_val.
   Qed.
 
+  Lemma interp_imp_Skip
+        ge le0
+    :
+      interp_imp ge le0 (denote_stmt (Skip)) =
+      Ret (le0, Vundef).
+  Proof.
+    rewrite denote_stmt_Skip. apply interp_imp_Ret.
+  Qed.
+
   Lemma interp_imp_Assign
         ge le0 x e
     :
@@ -672,6 +688,7 @@ Ltac imp_red :=
   (** denote_stmt *)
   | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ _ (_, ITree.bind' _ (interp_imp _ _ (denote_stmt (?stmt))))) ] =>
     match stmt with
+    | Skip => rewrite interp_imp_Skip
     | Assign _ _ => rewrite interp_imp_Assign
     | Seq _ _ => rewrite interp_imp_Seq; imp_red
     | If _ _ _ => rewrite interp_imp_If

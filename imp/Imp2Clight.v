@@ -138,6 +138,7 @@ Section Compile.
   (* Imp has no type, value is either int64/ptr64 -> sem_cast can convert *)
   Fixpoint compile_stmt stmt : option statement :=
     match stmt with
+    | Skip => Some (Sskip)
     | Assign x e =>
       do ex <- (compile_expr e); Some (Sset (s2p x) ex)
     | Seq s1 s2 =>
@@ -595,12 +596,19 @@ Section Sim.
     | Vundef => Values.Vundef
     end.
 
+  Definition map_val_opt (optv : option Universe.val) : option Values.val :=
+    match optv with
+    | Some v => Some (map_val v)
+    | None => None
+    end.
+
   Variant match_le : lenv -> temp_env -> Prop :=
   | match_le_intro
-      sle tle x sv tv
-      (VAL: tv = map_val sv)
-      (SLE: alist_find x sle = Some sv)
-      (TLE: Maps.PTree.get (s2p x) tle = Some tv)
+      sle tle
+      (ML: forall x sv,
+          (alist_find x sle = sv) ->
+          (exists tv, (Maps.PTree.get (s2p x) tle = tv) /\
+                 (tv = map_val_opt sv)))
     :
       match_le sle tle.
 
@@ -675,7 +683,7 @@ Section Sim.
       ge gm tf rp ms mn le tle code itr tcode m tm next stack tcont
       (* function is only used to check return type, which compiled one always has Tlong0, except "main" which has *)
       (* (CF: compile_function gm f = Some tgtf) *)
-      (WF_RETF: tf.(fn_return) = Tlong0 \/ tf.(fn_return) = type_int32s)
+      (WF_RETF: tf.(fn_return) = Tlong0 (* \/ tf.(fn_return) = type_int32s *))
       (CST: compile_stmt gm code = Some tcode)
       (ML: match_le le tle)
       (MM: match_mem m tm)
