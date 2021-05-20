@@ -138,6 +138,7 @@ Section Compile.
   (* Imp has no type, value is either int64/ptr64 -> sem_cast can convert *)
   Fixpoint compile_stmt stmt : option statement :=
     match stmt with
+    | Skip => Some (Sskip)
     | Assign x e =>
       do ex <- (compile_expr e); Some (Sset (s2p x) ex)
     | Seq s1 s2 =>

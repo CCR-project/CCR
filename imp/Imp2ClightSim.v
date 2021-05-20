@@ -145,6 +145,29 @@ Section SIM.
 
 End SIM.
 
+Lemma unbind_trigger E:
+  forall [X0 X1 A : Type] (ktr0 : X0 -> itree E A) (ktr1 : X1 -> itree E A) e0 e1,
+    (x <- trigger e0;; ktr0 x = x <- trigger e1;; ktr1 x) -> (X0 = X1 /\ e0 ~= e1 /\ ktr0 ~= ktr1).
+Proof.
+  i. eapply f_equal with (f:=_observe) in H. cbn in H.
+  inv H. split; auto.
+  dependent destruction H3. dependent destruction H2.
+  cbv in x. subst. split; auto.
+  assert (ktr0 = ktr1); clarify.
+  extensionality x. eapply equal_f in x0.
+  irw in x0. eauto.
+Qed.
+
+Lemma angelic_step :
+  forall X (ktr next : itree eventE Any.t),
+    ModSemL.step (trigger (Take X);; ktr) None next -> next = ktr.
+Proof.
+  i. dependent destruction H; try (irw in x; clarify; fail).
+  rewrite <- bind_trigger in x. apply unbind_trigger in x.
+  des. clarify.
+Qed.
+
+(* Lemma idK_spec2: forall [E : Type -> Type] [R : Type] (i0 : itree E R), i0 = ` x : _ <- i0;; idK x *)
 Section PROOF.
 
   Import ModSemL.
@@ -161,7 +184,7 @@ Section PROOF.
   (* Let tgt_sem := semantics2 tgt. *)
 
   Ltac sim_red := Red.prw ltac:(_red_gen) 2 0.
-  Ltac sim_tau i j := sim_red; econs 2; ss; clarify; eexists; exists (step_tau _); exists i; split; auto; exists j.
+  Ltac sim_tau i j := (try sim_red); econs 2; ss; clarify; eexists; exists (step_tau _); exists i; split; auto; exists j.
 
   Theorem match_states_sim
           (src: Imp.program) tgt ist cst
@@ -174,50 +197,48 @@ Section PROOF.
     revert_until COMP.
     pcofix CIH. i. pfold.
     inv MS. destruct code.
+    - admit "mid: skip".
     - ss. unfold itree_of_cont_stmt, itree_of_imp_cont, itree_of_imp_pop.
       rewrite interp_imp_Assign. destruct e.
       + rewrite interp_imp_expr_Var. grind. sim_red.
         destruct (alist_find v le) eqn:AFIND; ss.
         * sim_tau 99 101. left. pfold. sim_tau 98 102. left. pfold.
-          sim_red. destruct (classic (wf_val v0)).
+          sim_red.
+          (* destruct (classic (wf_val v0)). *)
           { unfold assume. grind. econs 4; ss; clarify.
-            i. dependent destruction STEP; ss; clarify.
-            unfold trigger in STEP. ss. inv STEP; clarify. 
-          
-
-
-      clarify. grind.
-      Red.prw ltac:(_red_gen) 2 0.
-      inv MCS; clarify.
-      + 
+            i. apply angelic_step in STEP. clarify.
+            exists 97; split; auto. exists 103. left. pfold.
+            sim_tau 96 104. left. pfold. sim_tau 95 105. left. pfold.
+            sim_tau 94 106. left. pfold. sim_tau 93 107. left. pfold. sim_red.
+            sim_tau 92 108. left. pfold. sim_tau 91 109. left. pfold. sim_red.
+            sim_tau 90 110. left. pfold.
+            rewrite transl_all_tau. rewrite EventsL.interp_Es_tau.
+            sim_tau 89 111. left. pfold. ss.
+            rewrite transl_all_ret. rewrite EventsL.interp_Es_ret. grind.
+            uo. clarify. econs 3.
+            { admit "ez: strict_determinate_at". }
+            eexists. eexists.
+            { eapply step_set. ss. eapply eval_Etempvar. inv ML.
+              apply ML0 in AFIND. destruct AFIND. destruct H. ss. clarify. eauto. }
+            exists 100; split; ss; clarify.
+            { unfold NW. nia. }
+            exists 100. right. apply CIH.
+            eapply match_states_intro with (le0 := alist_add x v0 le) (gm0 := gm) (ge0 := ge) (rp0 := rp) (code := Skip) ; eauto.
+            { econs. i. destruct (classic (x = x0)).
+              - clarify. exists (Some (map_val v0)). ss. split.
+                2:{ des_ifs.
+                    assert (A: x0 ?[ eq ] x0 = true).
+                    { unfold rel_dec. ss. apply String.string_dec_sound. auto. }
+                    clarify. }
+                rewrite Maps.PTree.gss. auto.
+              - inv ML. specialize ML0 with (x:=x0).
+                admit "ez: alist_find & alist_add". }
+            unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
+        * unfold triggerUB. grind. econs 4; ss; clarify.
+          i. dependent destruction STEP; try (irw in x; clarify; fail).
+      +
 
       
-      Red.prw ltac:(_red_gen) 2 1 0.
-      admit "ez? needs to handle two cases?".
-
-
-    - ss. destruct (compile_expr e) as [te|] eqn:CE; uo; clarify.
-      clear gm MM m WF_RETF MM.
-      unfold itree_of_cont_stmt, itree_of_imp_cont.
-      rewrite interp_imp_Assign. destruct e.
-      + rewrite interp_imp_expr_Var.
-        destruct (alist_find v le) eqn: AFIND; ss.
-        * econs 5; clarify.
-          { unfold ModL.compile, ModSemL.compile, ModSemL.compile_itree. ss.
-            (* ired. rewrite transl_all_tau. *)
-            (* Red.prw ltac:(_red_gen) 2 1 1 0. *)
-            Red.prw ltac:(_red_gen) 2 1 0. ss. }
-          { admit "ez, strict_determinate_at". }
-          ss.
-          eexists (State tf Sskip tcont empty_env (Maps.PTree.set (s2p x) _ tle) tm).
-          eexists.
-          { eapply step_set. econs. inv ML. hexploit ML0. apply AFIND.
-            i. des. destruct tv; ss; clarify. eauto. }
-          eexists ('(_, _, (_, rv)) <- next _;; x <- Ret (rv↑);; stack x).
-          eexists.
-          { Red.prw ltac:(_red_gen) 3 0. 
-            
-
 
   Admitted.
   
