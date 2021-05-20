@@ -54,7 +54,7 @@ Module ImpNotations.
          "'[v ' 'if#'  i '/' '[' 'then#'  t  ']' '/' '[' 'else#'  e ']' '/' 'fi#' ']'").
 
   Notation "'skip#'" :=
-    (Skip) (at level 100): stmt_scope.
+    (Assign _ Vundef) (at level 100): stmt_scope.
 
   Notation "'return#' e" :=
     (Assign "return" e) (at level 60, e at level 50): stmt_scope.

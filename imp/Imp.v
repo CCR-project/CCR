@@ -37,7 +37,6 @@ Inductive expr : Type :=
 
 (** function call exists only as a statement *)
 Inductive stmt : Type :=
-| Skip                           (* ; *)
 | Assign (x : var) (e : expr)    (* x = e *)
 | Seq    (a b : stmt)            (* a ; b *)
 | If     (i : expr) (t e : stmt) (* if (i) then { t } else { e } *)
@@ -114,7 +113,6 @@ Section Denote.
 
   Fixpoint denote_stmt (s : stmt) : itree eff val :=
     match s with
-    | Skip => Ret Vundef
     | Assign x e =>
       v <- denote_expr e;; trigger (SetVar x v);;; Ret Vundef
     | Seq a b =>

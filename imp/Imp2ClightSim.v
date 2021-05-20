@@ -171,8 +171,14 @@ Section PROOF.
     revert_until COMP.
     pcofix CIH. i. pfold.
     inv MS. destruct code.
-    - ss. unfold itree_of_cont_stmt, itree_of_imp_cont.
-      rewrite interp_imp_Skip. clarify.
+    - ss. unfold itree_of_cont_stmt, itree_of_imp_cont, itree_of_imp_pop.
+      rewrite interp_imp_Skip. clarify. grind.
+      Red.prw ltac:(_red_gen) 2 0.
+      inv MCS; clarify.
+      + 
+
+      
+      Red.prw ltac:(_red_gen) 2 1 0.
       admit "ez? needs to handle two cases?".
 
 
