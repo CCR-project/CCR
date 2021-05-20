@@ -251,6 +251,77 @@ Section SIM.
 
   Ltac pc H := rr in H; desH H; ss.
 
+  Definition improves2 (st_src0: L0.(STS.state)) (st_tgt0: L1.(Smallstep.state)): Prop :=
+    forall tr_tgt (BEH: state_behaves L1 st_tgt0 tr_tgt),
+    exists tr_src, (<<BEH: (Beh.of_state L0 st_src0) tr_src>>) /\
+                   (<<SIM: match_beh tr_tgt tr_src>>)
+  .
+
+  Definition decompile_eval (ev: eventval): option val :=
+    match ev with
+    | EVlong i => Some (Vint (Int64.signed i))
+    | _ => None
+    end
+  .
+
+  Definition sequence X (xs: list (option X)): option (list X) := admit "ez".
+
+  Definition decompile_event (ev: Events.event): option event :=
+    match ev with
+    | Event_syscall fn evs ev =>
+      do vs <- sequence (List.map decompile_eval evs);
+      do v <- decompile_eval ev;
+      Some (event_sys fn vs v)
+    | _ => None
+    end.
+
+  CoFixpoint decompile_trinf (tr: traceinf): Tr.t :=
+    match tr with
+    | Econsinf ev tr =>
+      match decompile_event ev with
+      | Some ev => Tr.cons ev (decompile_trinf tr)
+      | _ => Tr.done 42 (*** ub? nb? spin? ***)
+      end
+    end
+  .
+
+  Definition transl_beh (p: program_behavior): option Tr.t :=
+    match p with
+    | Terminates tr i =>
+      do es <- sequence (List.map decompile_event tr);
+      Some (Tr.app es (Tr.done (Int.signed i)))
+    | Diverges tr => 
+      do es <- sequence (List.map decompile_event tr);
+      Some (Tr.app es (Tr.spin))
+    | Reacts tr => Some (decompile_trinf tr)
+    | Goes_wrong tr =>
+      do es <- sequence (List.map decompile_event tr);
+      Some (Tr.app es (Tr.ub))
+    end
+  .
+
+  (* Definition safe_along_behavior (s: state L1) (b: program_behavior) : Prop := *)
+  (*   forall t1 s' b2, Star L1 s t1 s' -> b = behavior_app t1 b2 -> *)
+  (*                    (exists r, final_state L1 s' r) *)
+  (*                    \/ (exists t2, exists s'', Step L1 s' t2 s''). *)
+
+  Lemma adequacy_aux
+        i0 st_src0 st_tgt0
+        (SIM: sim i0 st_src0 st_tgt0)
+    :
+      <<IMPR: improves2 st_src0 st_tgt0>>
+  .
+  Proof.
+    ii.
+    pose (tr_src := transl_beh tr_tgt).
+    inv BEH.
+    { (rename H into STAR; rename s' into st_tgt1; rename H0 into FIN).
+    }
+    { (rename H into STAR; rename s' into st_tgt1; rename H0 into STK0; rename H1 into STK1).
+    }
+    - .
+  Qed.
+
   Lemma adequacy_spin
         i0 st_src0 st_tgt0
         (SIM: sim i0 st_src0 st_tgt0)
@@ -315,23 +386,6 @@ Section SIM.
     (*   gbase. eapply CIH; et. *)
     admit "TODO - hard".
   Qed.
-
-  Definition improves2 (st_src0: L0.(STS.state)) (st_tgt0: L1.(Smallstep.state)): Prop :=
-    (* forall tr_tgt (BEH: state_behaves L1 st_tgt0 tr_tgt), *)
-    (* exists tr_src, (<<BEH: (Beh.of_state L0 st_src0) tr_src>>) /\ *)
-    (*                (<<SIM: match_beh tr_tgt tr_src>>) *)
-    forall tr_tgt tr_src (SIM: match_beh tr_tgt tr_src) (BEH: state_behaves L1 st_tgt0 tr_tgt),
-      (<<BEH: (Beh.of_state L0 st_src0) tr_src>>)
-  .
-  (* UB (O) *)
-  (* print "A" *)
-
-  (* print "A" (O, ub is top) *)
-  (* print "A" *)
-
-  (* print "B" (X, filtered by match_beh) *)
-  (* print "A" *)
-
 
   (*** TODO: put this outside of the section ***)
   Hint Constructors _match_beh.
