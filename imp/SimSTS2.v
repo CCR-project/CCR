@@ -51,79 +51,6 @@ Qed.
 
 
 
-
-(* Section BEH. *)
-
-(* Variable L: Smallstep.semantics. *)
-(* Inductive _state_behaves2 (state_behaves2: L.(Smallstep.state) -> program_behavior -> Prop): *)
-(*   L.(Smallstep.state) -> program_behavior -> Prop := *)
-(* (*   state_terminates : forall (t : trace) (s' : Smallstep.state L) (r : int), *) *)
-(* (*                      Star L s t s' -> Smallstep.final_state L s' r -> state_behaves L s (Terminates t r) *) *)
-(* (* | state_diverges : forall (t : trace) (s' : Smallstep.state L), *) *)
-(* (*                    Star L s t s' -> Forever_silent L s' -> state_behaves L s (Diverges t) *) *)
-(* (* | state_reacts : forall T : traceinf, Forever_reactive L s T -> state_behaves L s (Reacts T) *) *)
-(* (* | state_goes_wrong : forall (t : trace) (s' : Smallstep.state L), *) *)
-(* (*                      Star L s t s' -> *) *)
-(* (*                      Nostep L s' -> (forall r : int, ~ Smallstep.final_state L s' r) -> state_behaves L s (Goes_wrong t) *) *)
-(* | sb2_final *)
-(*     st0 retv *)
-(*     (FINAL: Smallstep.final_state L st0 retv) *)
-(*   : *)
-(*     _state_behaves2 state_behaves2 st0 (Terminates E0 retv) *)
-(* | sb2_spin *)
-(*     st0 *)
-(*     (SPIN: Forever_silent L st0) *)
-(*   : *)
-(*     _state_behaves2 state_behaves2 st0 (Diverges E0) *)
-(* | sb2_step *)
-(* | sb2_syscall *)
-(* | sb2_stuck *)
-(* (* | sb_nb *) *)
-(* (*     st0 *) *)
-(* (*   : *) *)
-(* (*     _of_state of_state st0 (Tr.nb) *) *)
-(* (* | sb_vis *) *)
-(* (*     st0 st1 ev evs *) *)
-(* (*     (SRT: L.(state_sort) st0 = vis) *) *)
-(* (*     (STEP: _.(step) st0 (Some ev) st1) *) *)
-(* (*     (TL: of_state st1 evs) *) *)
-(* (*   : *) *)
-(* (*     _of_state of_state st0 (Tr.cons ev evs) *) *)
-(* (* | sb_demonic *) *)
-(* (*     st0 *) *)
-(* (*     evs *) *)
-(* (*     (SRT: L.(state_sort) st0 = demonic) *) *)
-(* (*     (STEP: union st0 (fun e st1 => (<<HD: e = None>>) /\ (<<TL: _of_state of_state st1 evs>>))) *) *)
-(* (*   : *) *)
-(* (*     _of_state of_state st0 evs *) *)
-(* (* | sb_angelic *) *)
-(* (*     st0 *) *)
-(* (*     evs *) *)
-(* (*     (SRT: L.(state_sort) st0 = angelic) *) *)
-(* (*     (STEP: inter st0 (fun e st1 => (<<HD: e = None>>) /\ (<<TL: _of_state of_state st1 evs>>))) *) *)
-(* (*   : *) *)
-(* (*     _of_state of_state st0 evs *) *)
-(* . *)
-
-
-
-(* Definition single_events_at (L: Smallstep.semantics) (s:L.(Smallstep.state)) : Prop := *)
-(*   forall t s', Step L s t s' -> (List.length t <= 1)%nat. *)
-
-(* Record strict_determinate_at (L: Smallstep.semantics) (s:L.(Smallstep.state)) : Prop := *)
-(*   Strict_determinate_at { *)
-(*       ssd_determ_at: forall t1 s1 t2 s2 *)
-(*         (STEP0: Step L s t1 s1) *)
-(*         (STEP1 :Step L s t2 s2), *)
-(*         <<EQ: t1 = t2>> /\ <<EQ: s1 = s2>>; *)
-(*     ssd_determ_at_final: forall tr s' retv *)
-(*         (FINAL: Smallstep.final_state L s retv) *)
-(*         (STEP: Step L s tr s'), *)
-(*         False; *)
-(*     ssd_traces_at: *)
-(*       single_events_at L s *)
-(*   }. *)
-
 Definition single_events_at (L: Smallstep.semantics) (s:L.(Smallstep.state)) : Prop :=
   forall t s', Step L s t s' -> (t = E0).
 
@@ -335,11 +262,22 @@ Section SIM.
   .
   Coercion option_to_list: option >-> list.
 
-  Inductive star L: L.(state) -> list event -> L.(state) -> Prop :=
-  | star_refl: forall st_src0, star L st_src0 [] st_src0
-  | star_step: forall st_src0 tr0 st_src1 tr1 st_src2 (HD: step L st_src0 tr0 st_src1)
-                      (TL: star L st_src1 tr1 st_src2), star L st_src0 (tr0 ++ tr1) st_src2
-  .
+  Section STAR.
+    Variable L: semantics.
+    Variable P: L.(state) -> Prop.
+    Inductive pstar: L.(state) -> list event -> L.(state) -> Prop :=
+    | star_refl: forall st_src0 (P: P st_src0), pstar st_src0 [] st_src0
+    | star_step: forall
+        st_src0 tr0 st_src1 tr1 st_src2
+        (P: P st_src0)
+        (HD: step L st_src0 tr0 st_src1)
+        (TL: pstar st_src1 tr1 st_src2)
+      ,
+        pstar st_src0 (tr0 ++ tr1) st_src2
+    .
+  End STAR.
+  Definition dstar L := pstar L (fun st_src0 => L.(state_sort) st_src0 = demonic).
+  Definition star L := pstar L top1.
 
   Definition NoStuck L (st_src0: state L): Prop :=
     L.(state_sort) st_src0 = angelic ->
@@ -350,18 +288,19 @@ Section SIM.
     (*     st_src1 = st_src1'>>) *)
   .
 
-  Definition safe_along_events (st_src0: state L0) (tr: list event) : Prop := forall
+  Definition safe_along_events (st_src0: state L0) (tr: list Events.event) : Prop := forall
       st_src1
-      thd
-      (STAR: star L0 st_src0 thd st_src1)
-      (PRE: exists ttl, thd ++ ttl = tr)
+      tx tx_src
+      (STAR: star L0 st_src0 tx_src st_src1)
+      (MB: distill (List.map decompile_event tx) = (tx_src, true))
+      (PRE: exists ty, tx ++ ty = tr)
     ,
       <<SAFE: NoStuck L0 st_src1>>
   .
 
-  Definition safe_along_trace (st_src0: state L0) (tr: Tr.t) : Prop := forall
+  Definition safe_along_trace (st_src0: state L0) (tr: program_behavior) : Prop := forall
       thd
-      (BEH: Tr.prefix thd tr)
+      (BEH: behavior_prefix thd tr)
     ,
       safe_along_events st_src0 thd
   .
@@ -435,43 +374,33 @@ Section SIM.
     eapply match_val_inj; et.
   Qed.
 
-  Lemma simulation_star
-        i0 st_src0 tr_src tr_tgt st_tgt1 st_tgt0
-        (MATCH: Forall2 match_event tr_tgt tr_src)
-        (STEP: Star L1 st_tgt0 tr_tgt st_tgt1)
-        (SIM: sim i0 st_src0 st_tgt0)
-    :
-      exists i1 st_src1, (<<STEP: star L0 st_src0 tr_src st_src1>>) /\
-                         (<<SIM: sim i1 st_src1 st_tgt1>>)
-  .
-  Proof.
-    revert_until i0. pattern i0. eapply well_founded_ind; et. clear i0. intros i0 IH. i.
-    punfold SIM. inv SIM.
-    - destruct tr_tgt.
-      + inv MATCH. esplits. { eapply star_refl. }
-  Abort.
-
-  (* Lemma safe_along_events_step *)
-  (*       st_src0 st_src1 e0 es0 *)
-  (*       (SAFE: safe_along_events st_src0 (e0 :: es0)) *)
-  (*       (STEP: step L0 st_src0 (Some e0) st_src1) *)
-  (*   : *)
-  (*     <<SAFE: safe_along_events st_src1 es0>> *)
-  (* . *)
-  (* Proof. *)
-  (*   ii. eapply SAFE; et. rewrite cons_app. *)
-  (*   change [e0] with (option_to_list (Some e0)). econs; et. *)
-  (* Qed. *)
-  Lemma safe_along_events_step
-        st_src0 st_src1 e0 es0
-        (STEP: step L0 st_src0 e0 st_src1)
-        (SAFE: safe_along_events st_src0 (e0 ++ es0))
+  Lemma safe_along_events_step_some
+        st_src0 st_src1 e_src e0 es0
+        (STEP: step L0 st_src0 (Some e_src) st_src1)
+        (MB: decompile_event e0 = Some e_src)
+        (SAFE: safe_along_events st_src0 ([e0] ++ es0))
     :
       <<SAFE: safe_along_events st_src1 es0>>
   .
   Proof.
-    ii. des; clarify. eapply SAFE; ss. { econs; et. } esplits; et.
-    rewrite <- app_assoc. ss.
+    ii. des; clarify. eapply SAFE; ss.
+    { econs; et. }
+    { instantiate (1 := e0 :: _). ss. des_ifs. rewrite MB0 in *; clarify. }
+    { esplits; et. ss. }
+  Qed.
+
+  Lemma safe_along_events_step_none
+        st_src0 st_src1 es0
+        (STEP: step L0 st_src0 None st_src1)
+        (SAFE: safe_along_events st_src0 es0)
+    :
+      <<SAFE: safe_along_events st_src1 es0>>
+  .
+  Proof.
+    ii. des; clarify. eapply SAFE; ss.
+    { econs; et. }
+    { ss. et. }
+    { esplits; et. }
   Qed.
 
   Definition wf (L: semantics): Prop :=
@@ -484,18 +413,26 @@ Section SIM.
   Lemma match_event_iff
         e_src e_tgt
     :
+      decompile_event e_tgt = Some e_src <->
+      match_event e_tgt e_src
+  .
+  Proof.
+    admit "ez".
+  Qed.
+
+  Lemma match_event_distill
+        e_src e_tgt
+    :
       distill [decompile_event e_tgt] = ([e_src], true) <->
       match_event e_tgt e_src
   .
   Proof.
     split; i.
-    - ss. des_ifs. eapply decompile_match_event; ss.
-    - ss. des_ifs.
-      + eapply decompile_match_event in Heq; ss. do 2 f_equal. eapply match_event_inj; et.
-      + exfalso. inv H; ss. uo. admit "ez - remove match_event and just use decompile_event".
+    - ss. des_ifs. eapply match_event_iff; et.
+    - eapply match_event_iff in H; et. ss. des_ifs.
   Qed.
 
-  Lemma match_events_iff
+  Lemma match_events_distill
         es_src es_tgt
     :
       distill (List.map decompile_event es_tgt) = (es_src, true) <->
@@ -506,53 +443,64 @@ Section SIM.
   Qed.
 
   Lemma simulation_star
-        i0 st_src0 tr_src tr_tgt st_tgt1 st_tgt0
-        (MATCH: Forall2 match_event tr_tgt tr_src)
+        i0 st_src0 tr_tgt st_tgt1 st_tgt0
+        (* (MATCH: Forall2 match_event tr_tgt tr_src) *)
         (STEP: Star L1 st_tgt0 tr_tgt st_tgt1)
         (SIM: sim i0 st_src0 st_tgt0)
-        (SAFE: safe_along_events st_src0 tr_src)
+        (SAFE: safe_along_events st_src0 tr_tgt)
     :
-      exists i1 st_src1, (<<STEP: star L0 st_src0 tr_src st_src1>>) /\
-                         (<<SIM: sim i1 st_src1 st_tgt1>>)
+      exists i1 st_src1 tr_src,
+        (<<MB: distill (List.map decompile_event tr_tgt) = (tr_src, true)>>) /\
+        (<<STEP: (_.(state_sort) st_src0 = demonic) -> dstar L0 st_src0 tr_src st_src1>>) /\
+        (<<SIM: sim i1 st_src1 st_tgt1>>)
   .
   Proof.
-    revert SAFE. revert MATCH. revert SIM. revert st_src0. revert tr_src. revert i0.
+    revert SAFE. revert SIM. revert st_src0. revert i0.
     induction STEP; ii; ss.
-    { inv MATCH. esplits; et. econs; ss. }
+    { esplits; et. econs; ss. }
     subst. rename s1 into st_tgt0. rename s2 into st_tgt1. rename s3 into st_tgt2.
     rename t1 into tr_tgt0. rename t2 into tr_tgt1.
 
     revert_until i0. pattern i0. eapply well_founded_ind; et. clear i0. intros i0 IH. i.
 
     punfold SIM. inv SIM.
-    - admit "ez - final nostep".
-    - clear SRT0. exploit SIM0; et. i; des. pclearbot.
-      inv MATCH0; ss. inv H4. ss. inv MATCH.
-      assert(ev_src = y) by (eapply match_event_inj; et). subst. clear_tac.
-      exploit IHSTEP; et. { eapply safe_along_events_step; et. } i; des.
+    - (* fin *)
+      admit "ez - final nostep".
+    - (* vis *)
+      clear SRT0. exploit SIM0; et. i; des. pclearbot.
+      inv MATCH; ss. inv H4; ss. rename H3 into MB. eapply match_event_iff in MB. des_ifs.
+      exploit IHSTEP; et. { eapply safe_along_events_step_some; et. } i; des. clarify.
       esplits; et. rewrite cons_app.
-      change [y] with (option_to_list (Some y)).
+      change [ev_src] with (option_to_list (Some ev_src)).
       econs; et.
-    - des. pclearbot. exploit IH; et. { eapply safe_along_events_step; et. } i; des.
+    - (* dsrc *)
+      des. pclearbot. exploit IH; et. { eapply safe_along_events_step_none; et. } i; des.
       esplits; et.
       rewrite <- (app_nil_l tr_src).
       change [] with (@option_to_list event None).
       econs; et.
-    - des. pclearbot. exploit ssd_determ_at; [et|apply H|apply STEP0|]. i; des. subst.
+    - (* dtgt *)
+      des. pclearbot. exploit ssd_determ_at; [et|apply H|apply STEP0|]. i; des. subst.
       exploit ssd_traces_at; [et|apply H|]. i; subst. clear_tac.
       exploit IHSTEP; et.
-    - exploit SAFE; et. { econs; et. } { esplits; et. rewrite app_nil_l. ss. } i; des.
+    - (* asrc *)
+      exploit SAFE; try apply SRT.
+      { econs; et. }
+      { instantiate (1:=[]). ss. }
+      { esplits; et. rewrite app_nil_l. ss. }
+      i; des.
       exploit wf_angelic; et. i; subst.
       exploit SIM0; et. i; des. pclearbot.
-      exploit IH; et. { eapply safe_along_events_step; et. } i; des.
+      exploit IH; et. { eapply safe_along_events_step_none; et. } i; des.
       esplits; et.
       rewrite <- (app_nil_l tr_src).
       change [] with (@option_to_list event None).
       econs; et.
-    - des. pclearbot.
+    - (* dboth *)
+      des. pclearbot.
       exploit ssd_determ_at; [et|apply H|apply STEP0|]. i; des. subst.
       exploit ssd_traces_at; [et|apply H|]. i; subst. clear_tac.
-      exploit IHSTEP; et. { eapply safe_along_events_step; et. } i; des.
+      exploit IHSTEP; et. { eapply safe_along_events_step_none; et. } i; des.
       esplits; et. rewrite <- (app_nil_l tr_src).
       change [] with (@option_to_list event None).
       econs; et.
@@ -567,7 +515,7 @@ Section SIM.
   Proof.
     ii.
     (* set (transl_beh tr_tgt) as tr_src in *. *)
-    destruct (classic (safe_along_trace st_src0 (transl_beh tr_tgt))); rename H into SAFE.
+    destruct (classic (safe_along_trace st_src0 tr_tgt)); rename H into SAFE.
     { (*** safe ***)
       exists (transl_beh tr_tgt).
       inv BEH.
@@ -575,8 +523,15 @@ Section SIM.
         esplits; et.
         + ss. des_ifs_safe.
           hexploit simulation_star; try apply STAR; et.
-          { 
-          admit "".
+          { eapply SAFE. exists (Terminates [] r). ss. unfold Eapp. rewrite app_nil_r; ss. }
+          i; des.
+          rewrite MB in *. clarify.
+
+
+          punfold SIM0. inv SIM0; ss.
+          * admit "?".
+          * des. admit "ez - final nostep".
+          *
         + ss.
           clear - SAFE SIM.
           clear.
