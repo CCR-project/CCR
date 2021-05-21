@@ -302,11 +302,21 @@ Section SIM.
   (*   end *)
   (* . *)
 
+  Fixpoint distill (es: list (option event)): ((list event) * bool) :=
+    match es with
+    | [] => ([], true)
+    | Some e :: tl => let '(es, succ) := distill tl in ((e :: es), succ)
+    | _ => ([], false)
+    end
+  .
+
   Definition transl_beh (p: program_behavior): Tr.t :=
     match p with
     | Terminates tr i =>
-      let es := (filter_map decompile_event tr) in
-      (Tr.app es (Tr.done (Int.signed i)))
+      let '(es, succ) := distill (List.map decompile_event tr) in
+      Tr.app es (if succ then (Tr.done (Int.signed i)) else Tr.ub)
+      (* let es := (filter_map decompile_event tr) in *)
+      (* (Tr.app es (Tr.done (Int.signed i))) *)
     | Diverges tr => 
       let es := (filter_map decompile_event tr) in
       (Tr.app es (Tr.spin))
@@ -471,6 +481,30 @@ Section SIM.
 
   Hypothesis WFSRC: wf L0.
 
+  Lemma match_event_iff
+        e_src e_tgt
+    :
+      distill [decompile_event e_tgt] = ([e_src], true) <->
+      match_event e_tgt e_src
+  .
+  Proof.
+    split; i.
+    - ss. des_ifs. eapply decompile_match_event; ss.
+    - ss. des_ifs.
+      + eapply decompile_match_event in Heq; ss. do 2 f_equal. eapply match_event_inj; et.
+      + exfalso. inv H; ss. uo. admit "ez - remove match_event and just use decompile_event".
+  Qed.
+
+  Lemma match_events_iff
+        es_src es_tgt
+    :
+      distill (List.map decompile_event es_tgt) = (es_src, true) <->
+      Forall2 match_event es_tgt es_src
+  .
+  Proof.
+    admit "ez - remove match_event and just use decompile_event".
+  Qed.
+
   Lemma simulation_star
         i0 st_src0 tr_src tr_tgt st_tgt1 st_tgt0
         (MATCH: Forall2 match_event tr_tgt tr_src)
@@ -539,12 +573,26 @@ Section SIM.
       inv BEH.
       - (rename t into tr; rename H into STAR; rename s' into st_tgt1; rename H0 into FIN).
         esplits; et.
-        + ss. admit "".
+        + ss. des_ifs_safe.
+          hexploit simulation_star; try apply STAR; et.
+          { 
+          admit "".
         + ss.
           clear - SAFE SIM.
           clear.
           induction tr; ii; ss.
           { pfold. econs; ss; et. admit "ez - change def". }
+          destruct (decompile_event a) eqn:T.
+          * des_ifs_safe.
+            eapply match_beh_cons; ss.
+            { instantiate (1:=Terminates tr r). instantiate (1:=a). ss. }
+            { ss. }
+            { eapply decompile_match_event; ss. }
+          * des_ifs_safe. ss. pfold; econsr; et; ss. r. esplits; et.
+            rewrite behavior_app_E0; et.
+      -
+            }
+
           des_ifs.
           { eapply decompile_match_event in Heq; des. ss.
             eapply match_beh_cons; ss.
