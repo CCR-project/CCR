@@ -451,7 +451,7 @@ Section SIM.
     :
       exists i1 st_src1 tr_src,
         (<<MB: distill (List.map decompile_event tr_tgt) = (tr_src, true)>>) /\
-        (<<STEP: (_.(state_sort) st_src0 = demonic) -> dstar L0 st_src0 tr_src st_src1>>) /\
+        (<<STEP: star L0 st_src0 tr_src st_src1>>) /\
         (<<SIM: sim i1 st_src1 st_tgt1>>)
   .
   Proof.
@@ -527,6 +527,18 @@ Section SIM.
           i; des.
           rewrite MB in *. clarify.
 
+
+
+          (*** 1. Lemma: star + Beh.of_state -> Beh.of_state app ***)
+          (*** 2. wf induction on i1 ***)
+
+
+          clears st_tgt0. clear st_tgt0.
+          revert SAFE. revert SIM0. revert i0.
+          induction STEP; ii; ss.
+          { admit "do reasoning...". }
+          subst. rename s1 into st_tgt0. rename s2 into st_tgt1. rename s3 into st_tgt2.
+          rename t1 into tr_tgt0. rename t2 into tr_tgt1.
 
           punfold SIM0. inv SIM0; ss.
           * admit "?".
