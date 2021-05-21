@@ -160,16 +160,17 @@ Section SIM.
     :
       _sim sim i0 st_src0 st_tgt0
 
-  (* | sim_vis *)
-  (*     (SRT: _.(state_sort) st_src0 = vis) *)
-  (*     (SRT: _.(state_sort) st_tgt0 = vis) *)
-  (*     (SIM: forall ev st_tgt1 *)
-  (*         (STEP: _.(step) st_tgt0 (Some ev) st_tgt1) *)
-  (*       , *)
-  (*         exists st_src1 (STEP: _.(step) st_src0 (Some ev) st_src1), *)
-  (*           <<SIM: exists i1, sim i1 st_src1 st_tgt1>>) *)
-  (*   : *)
-  (*     _sim sim i0 st_src0 st_tgt0 *)
+  | sim_vis
+      (SRT: _.(state_sort) st_src0 = vis)
+      (SRT: exists _ev_tgt _st_tgt1, Step L1 st_tgt0 [_ev_tgt] _st_tgt1)
+      (SIM: forall ev_tgt st_tgt1
+          (STEP: Step L1 st_tgt0 ev_tgt st_tgt1)
+        ,
+          exists st_src1 ev_src (STEP: _.(step) st_src0 (Some ev_src) st_src1),
+            (<<MATCH: Forall2 match_event ev_tgt [ev_src]>>) /\
+            (<<SIM: exists i1, sim i1 st_src1 st_tgt1>>))
+    :
+      _sim sim i0 st_src0 st_tgt0
 
   | sim_demonic_src
       (SRT: _.(state_sort) st_src0 = demonic)
@@ -227,10 +228,11 @@ Section SIM.
     ii. inv IN.
 
     - econs 1; et.
-    - econs 2; et. des. esplits; et.
+    - econs 2; et. i. exploit SIM; et. i; des. esplits; et.
     - econs 3; et. des. esplits; et.
-    - econs 4; et. i. exploit SIM; et. i; des. esplits; et.
-    - econs 5; et. des. esplits; et.
+    - econs 4; et. des. esplits; et.
+    - econs 5; et. i. exploit SIM; et. i; des. esplits; et.
+    - econs 6; et. des. esplits; et.
   Qed.
 
   Hint Constructors _sim.
@@ -285,25 +287,242 @@ Section SIM.
     end
   .
 
-  Definition transl_beh (p: program_behavior): option Tr.t :=
+  (* Definition transl_beh (p: program_behavior): option Tr.t := *)
+  (*   match p with *)
+  (*   | Terminates tr i => *)
+  (*     do es <- sequence (List.map decompile_event tr); *)
+  (*     Some (Tr.app es (Tr.done (Int.signed i))) *)
+  (*   | Diverges tr =>  *)
+  (*     do es <- sequence (List.map decompile_event tr); *)
+  (*     Some (Tr.app es (Tr.spin)) *)
+  (*   | Reacts tr => Some (decompile_trinf tr) *)
+  (*   | Goes_wrong tr => *)
+  (*     do es <- sequence (List.map decompile_event tr); *)
+  (*     Some (Tr.app es (Tr.ub)) *)
+  (*   end *)
+  (* . *)
+
+  Definition transl_beh (p: program_behavior): Tr.t :=
     match p with
     | Terminates tr i =>
-      do es <- sequence (List.map decompile_event tr);
-      Some (Tr.app es (Tr.done (Int.signed i)))
+      let es := (filter_map decompile_event tr) in
+      (Tr.app es (Tr.done (Int.signed i)))
     | Diverges tr => 
-      do es <- sequence (List.map decompile_event tr);
-      Some (Tr.app es (Tr.spin))
-    | Reacts tr => Some (decompile_trinf tr)
+      let es := (filter_map decompile_event tr) in
+      (Tr.app es (Tr.spin))
+    | Reacts tr => (decompile_trinf tr)
     | Goes_wrong tr =>
-      do es <- sequence (List.map decompile_event tr);
-      Some (Tr.app es (Tr.ub))
+      let es := (filter_map decompile_event tr) in
+      (Tr.app es (Tr.ub))
     end
   .
 
-  (* Definition safe_along_behavior (s: state L1) (b: program_behavior) : Prop := *)
-  (*   forall t1 s' b2, Star L1 s t1 s' -> b = behavior_app t1 b2 -> *)
-  (*                    (exists r, final_state L1 s' r) *)
-  (*                    \/ (exists t2, exists s'', Step L1 s' t2 s''). *)
+  Definition option_to_list X (x: option X): list X :=
+    match x with
+    | Some x => [x]
+    | _ => []
+    end
+  .
+  Coercion option_to_list: option >-> list.
+
+  Inductive star L: L.(state) -> list event -> L.(state) -> Prop :=
+  | star_refl: forall st_src0, star L st_src0 [] st_src0
+  | star_step: forall st_src0 tr0 st_src1 tr1 st_src2 (HD: step L st_src0 tr0 st_src1)
+                      (TL: star L st_src1 tr1 st_src2), star L st_src0 (tr0 ++ tr1) st_src2
+  .
+
+  Definition NoStuck L (st_src0: state L): Prop :=
+    L.(state_sort) st_src0 = angelic ->
+    (<<NOSTUCK: exists ev st_src1, step L st_src0 ev st_src1>>)
+    (* (<<DTM: forall st_src1 st_src1', *)
+    (*     step L st_src0 None st_src1 -> *)
+    (*     step L st_src0 None st_src1' -> *)
+    (*     st_src1 = st_src1'>>) *)
+  .
+
+  Definition safe_along_events (st_src0: state L0) (tr: list event) : Prop := forall
+      st_src1
+      thd
+      (STAR: star L0 st_src0 thd st_src1)
+      (PRE: exists ttl, thd ++ ttl = tr)
+    ,
+      <<SAFE: NoStuck L0 st_src1>>
+  .
+
+  Definition safe_along_trace (st_src0: state L0) (tr: Tr.t) : Prop := forall
+      thd
+      (BEH: Tr.prefix thd tr)
+    ,
+      safe_along_events st_src0 thd
+  .
+
+  Lemma decompile_match_event
+        e0 e1
+        (D: decompile_event e0 = Some e1)
+    :
+      <<M: match_event e0 e1>>
+  .
+  Proof.
+    destruct e0; ss. uo. des_ifs.
+    admit "ez".
+  Qed.
+
+  Hint Resolve match_beh_mon: paco.
+
+  Hint Constructors Forall2.
+
+  Lemma match_beh_cons
+        b0 b1
+        e0 e1
+        b0_ b1_
+        (B0_: b0_ = (behavior_app [e0] b0))
+        (B1_: b1_ = (Tr.app [e1] b1))
+        (M0: match_beh b0 b1)
+        (M1: match_event e0 e1)
+    :
+      <<M: match_beh b0_ b1_>>
+  .
+  Proof.
+    subst.
+    revert_until b0. revert b0.
+    pcofix CIH. i. punfold M0. inv M0.
+    - pfold. econs 1; try refl; ss; et.
+    - pfold. econs 2; try refl; ss; et.
+    - pfold. econs 3; try refl; ss; et. pclearbot. right.
+      change (Reacts (Econsinf ev trinf)) with (behavior_app [ev] (Reacts trinf)).
+      eapply CIH; et.
+    - pfold. econs 4.
+      { instantiate (1:=e1 :: mtr). ss; et. }
+      { econs; ss; et. }
+      rr in TB. des. subst.
+      rr. esplits; ss; et. rewrite <- behavior_app_assoc. ss.
+  Qed.
+
+  Lemma match_val_inj
+        v_tgt0 v_src0 v_src1
+        (M0: match_val v_tgt0 v_src0)
+        (M1: match_val v_tgt0 v_src1)
+    :
+      v_src0 = v_src1
+  .
+  Proof. inv M0. inv M1. ss. Qed.
+
+  Lemma match_event_inj
+        e_tgt0 e_src0 e_src1
+        (M0: match_event e_tgt0 e_src0)
+        (M1: match_event e_tgt0 e_src1)
+    :
+      e_src0 = e_src1
+  .
+  Proof.
+    inv M0. inv M1. f_equal.
+    { clear - MV MV1. ginduction MV; ii; ss.
+      { inv MV1; ss. }
+      inv MV1; ss.
+      f_equal; et.
+      eapply match_val_inj; et.
+    }
+    eapply match_val_inj; et.
+  Qed.
+
+  Lemma simulation_star
+        i0 st_src0 tr_src tr_tgt st_tgt1 st_tgt0
+        (MATCH: Forall2 match_event tr_tgt tr_src)
+        (STEP: Star L1 st_tgt0 tr_tgt st_tgt1)
+        (SIM: sim i0 st_src0 st_tgt0)
+    :
+      exists i1 st_src1, (<<STEP: star L0 st_src0 tr_src st_src1>>) /\
+                         (<<SIM: sim i1 st_src1 st_tgt1>>)
+  .
+  Proof.
+    revert_until i0. pattern i0. eapply well_founded_ind; et. clear i0. intros i0 IH. i.
+    punfold SIM. inv SIM.
+    - destruct tr_tgt.
+      + inv MATCH. esplits. { eapply star_refl. }
+  Abort.
+
+  (* Lemma safe_along_events_step *)
+  (*       st_src0 st_src1 e0 es0 *)
+  (*       (SAFE: safe_along_events st_src0 (e0 :: es0)) *)
+  (*       (STEP: step L0 st_src0 (Some e0) st_src1) *)
+  (*   : *)
+  (*     <<SAFE: safe_along_events st_src1 es0>> *)
+  (* . *)
+  (* Proof. *)
+  (*   ii. eapply SAFE; et. rewrite cons_app. *)
+  (*   change [e0] with (option_to_list (Some e0)). econs; et. *)
+  (* Qed. *)
+  Lemma safe_along_events_step
+        st_src0 st_src1 e0 es0
+        (STEP: step L0 st_src0 e0 st_src1)
+        (SAFE: safe_along_events st_src0 (e0 ++ es0))
+    :
+      <<SAFE: safe_along_events st_src1 es0>>
+  .
+  Proof.
+    ii. des; clarify. eapply SAFE; ss. { econs; et. } esplits; et.
+    rewrite <- app_assoc. ss.
+  Qed.
+
+  Definition wf (L: semantics): Prop :=
+    forall (st0: L.(state)) (ANG: L.(state_sort) st0 = angelic),
+    forall st1 st1' (STEP: step L st0 None st1) (STEP: step L st0 None st1), st1 = st1'
+  .
+
+  Hypothesis WFSRC: wf L0.
+
+  Lemma simulation_star
+        i0 st_src0 tr_src tr_tgt st_tgt1 st_tgt0
+        (MATCH: Forall2 match_event tr_tgt tr_src)
+        (STEP: Star L1 st_tgt0 tr_tgt st_tgt1)
+        (SIM: sim i0 st_src0 st_tgt0)
+        (SAFE: safe_along_events st_src0 tr_src)
+    :
+      exists i1 st_src1, (<<STEP: star L0 st_src0 tr_src st_src1>>) /\
+                         (<<SIM: sim i1 st_src1 st_tgt1>>)
+  .
+  Proof.
+    revert SAFE. revert MATCH. revert SIM. revert st_src0. revert tr_src. revert i0.
+    induction STEP; ii; ss.
+    { inv MATCH. esplits; et. econs; ss. }
+    subst. rename s1 into st_tgt0. rename s2 into st_tgt1. rename s3 into st_tgt2.
+    rename t1 into tr_tgt0. rename t2 into tr_tgt1.
+
+    revert_until i0. pattern i0. eapply well_founded_ind; et. clear i0. intros i0 IH. i.
+
+    punfold SIM. inv SIM.
+    - admit "ez - final nostep".
+    - clear SRT0. exploit SIM0; et. i; des. pclearbot.
+      inv MATCH0; ss. inv H4. ss. inv MATCH.
+      assert(ev_src = y) by (eapply match_event_inj; et). subst. clear_tac.
+      exploit IHSTEP; et. { eapply safe_along_events_step; et. } i; des.
+      esplits; et. rewrite cons_app.
+      change [y] with (option_to_list (Some y)).
+      econs; et.
+    - des. pclearbot. exploit IH; et. { eapply safe_along_events_step; et. } i; des.
+      esplits; et.
+      rewrite <- (app_nil_l tr_src).
+      change [] with (@option_to_list event None).
+      econs; et.
+    - des. pclearbot. exploit ssd_determ_at; [et|apply H|apply STEP0|]. i; des. subst.
+      exploit ssd_traces_at; [et|apply H|]. i; subst. clear_tac.
+      exploit IHSTEP; et.
+    - exploit SAFE; et. { econs; et. } { esplits; et. rewrite app_nil_l. ss. } i; des.
+      exploit wf_angelic; et. i; subst.
+      exploit SIM0; et. i; des. pclearbot.
+      exploit IH; et. { eapply safe_along_events_step; et. } i; des.
+      esplits; et.
+      rewrite <- (app_nil_l tr_src).
+      change [] with (@option_to_list event None).
+      econs; et.
+    - des. pclearbot.
+      exploit ssd_determ_at; [et|apply H|apply STEP0|]. i; des. subst.
+      exploit ssd_traces_at; [et|apply H|]. i; subst. clear_tac.
+      exploit IHSTEP; et. { eapply safe_along_events_step; et. } i; des.
+      esplits; et. rewrite <- (app_nil_l tr_src).
+      change [] with (@option_to_list event None).
+      econs; et.
+  Qed.
 
   Lemma adequacy_aux
         i0 st_src0 st_tgt0
@@ -313,10 +532,32 @@ Section SIM.
   .
   Proof.
     ii.
-    pose (tr_src := transl_beh tr_tgt).
-    inv BEH.
-    { (rename H into STAR; rename s' into st_tgt1; rename H0 into FIN).
+    (* set (transl_beh tr_tgt) as tr_src in *. *)
+    destruct (classic (safe_along_trace st_src0 (transl_beh tr_tgt))); rename H into SAFE.
+    { (*** safe ***)
+      exists (transl_beh tr_tgt).
+      inv BEH.
+      - (rename t into tr; rename H into STAR; rename s' into st_tgt1; rename H0 into FIN).
+        esplits; et.
+        + ss. admit "".
+        + ss.
+          clear - SAFE SIM.
+          clear.
+          induction tr; ii; ss.
+          { pfold. econs; ss; et. admit "ez - change def". }
+          des_ifs.
+          { eapply decompile_match_event in Heq; des. ss.
+            eapply match_beh_cons; ss.
+            { instantiate (1:=Terminates tr r). instantiate (1:=a). ss. }
+            { ss. }
+            ss.
+          }
+          { eapply IHtr.
+      -
     }
+    { (*** unsafe ***)
+    }
+    exists (transl_beh tr_tgt).
     { (rename H into STAR; rename s' into st_tgt1; rename H0 into STK0; rename H1 into STK1).
     }
     - .
