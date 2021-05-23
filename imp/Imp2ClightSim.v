@@ -174,58 +174,100 @@ Section PROOF.
 
   Context `{Σ: GRA.t}.
 
+  Definition ordN : nat -> nat -> Prop := fun a b => True.
+
   Ltac sim_red := Red.prw ltac:(_red_gen) 2 0.
-  Ltac sim_tau i j := (try sim_red); econs 2; ss; clarify; eexists; exists (step_tau _); exists i; split; auto; exists j.
+  Ltac sim_tau := (try sim_red); econs 2; ss; clarify; eexists; exists (step_tau _); eexists; split; auto; eexists.
+
+  Lemma compile_expr_always_Tlong0 :
+    forall src tgt,
+      compile_expr src = Some tgt -> typeof tgt = Tlong0.
+  Proof.
+    i. destruct src; ss; clarify.
+    2,3,4: destruct (compile_expr src1); destruct (compile_expr src2); ss; clarify.
+    destruct v; ss; clarify.
+  Qed.
+
+  Lemma map_val_correct
+        tge tle tm srca ea srcb eb a b v
+        (CEA: compile_expr srca = Some ea)
+        (CEB: compile_expr srcb = Some eb)
+        (VADD: vadd a b = Some v)
+        (EVEA: eval_expr tge empty_env tle tm ea (map_val a))
+        (EVEB: eval_expr tge empty_env tle tm eb (map_val b))
+    :
+      eval_expr tge empty_env tle tm (Ebinop Cop.Oadd ea eb Tlong0) (map_val v).
+  Proof.
+    assert (TYEA: typeof ea = Tlong0); eauto using compile_expr_always_Tlong0.
+    assert (TYEB: typeof eb = Tlong0); eauto using compile_expr_always_Tlong0.
+    destruct a; destruct b; ss; clarify.
+    - econs; eauto. rewrite TYEA. rewrite TYEB. ss.
+      unfold Cop.sem_add; ss. unfold Cop.sem_binarith; ss.
+      unfold Cop.sem_cast; ss. des_ifs. unfold to_long.
+      unfold Int64.add. unfold Int64.unsigned.
+      Local Transparent Int64.repr.
+      unfold Int64.repr. ss.
+      Local Opaque Int64.repr.
+      admit "ez? need to assume no overflow".
+    - econs; eauto. rewrite TYEA. rewrite TYEB. ss.
+      unfold Cop.sem_add; ss. unfold Cop.sem_binarith; ss.
+      unfold Cop.sem_cast; ss. des_ifs. unfold to_long.
+      admit "Wrong: need to properly handle pointer type".
+    - admit "Wrong: need to properly handle pointer type".
+  Admitted.
 
   Lemma step_expr
         e te
         tcode tf tcont tge tle tm (src: ModL.t) (tgt: Clight.program)
-        r ms mn ge le rstate pstate ktr i1 j1
+        r ms mn ge le rstate pstate ktr
+        i0 j0 i1 j1
         (MLE: match_le le tle)
         (CEXP: compile_expr e = Some te)
         (SIM:
            forall rv trv,
              eval_expr tge empty_env tle tm te trv ->
              trv = map_val rv ->
-             _sim (ModL.compile src) (semantics2 tgt) lt
-                  (upaco4 (_sim (ModL.compile src) (semantics2 tgt) lt) r) i1 j1
+             _sim (ModL.compile src) (semantics2 tgt) ordN
+                  (upaco4 (_sim (ModL.compile src) (semantics2 tgt) ordN) r) i1 j1
                   (ktr (rstate, pstate, (le, rv)))
                   (State tf tcode tcont empty_env tle tm))
     :
-      _sim (ModL.compile src) (semantics2 tgt) lt
-           (upaco4 (_sim (ModL.compile src) (semantics2 tgt) lt) r) (20+i1) (20+j1)
+      _sim (ModL.compile src) (semantics2 tgt) ordN
+           (upaco4 (_sim (ModL.compile src) (semantics2 tgt) ordN) r) i0 j0
            (r0 <- EventsL.interp_Es (prog ms) (transl_all mn (interp_imp ge le (denote_expr e))) (rstate, pstate);; ktr r0)
            (State tf tcode tcont empty_env tle tm).
   Proof.
+    unfold ordN in *.
     generalize dependent ktr. generalize dependent te.
-    (* generalize dependent rv. generalize dependent trv. *)
-    (* generalize dependent i0. generalize dependent j0. *)
+    move MLE before pstate. revert_until MLE.
     generalize dependent e. Local Opaque Init.Nat.add. induction e; i; ss; des; clarify.
     - rewrite interp_imp_expr_Var. sim_red.
       destruct (alist_find v le) eqn:AFIND; try sim_red.
-      + sim_tau (19 + i1) (21 + j1). left. pfold.
-        sim_tau (18 + i1) (22 + j1). left. pfold.
-        sim_red. econs 4; auto. unfold assume. grind. eapply angelic_step in STEP. clarify.
-        exists (17 + i1); split; auto. exists (23 + j1). left. pfold.
-        sim_tau (16 + i1) (24 + j1). left. pfold.
-        sim_tau (15 + i1) (25 + j1). left. pfold.
-        sim_tau (14 + i1) (26 + j1). left. pfold.
-        sim_tau (13 + i1) (27 + j1). left. pfold.
-        sim_tau (12 + i1) (28 + j1). left. pfold.
-        sim_red. econs 2; ss; clarify. eexists; exists (step_tau _). exists i1; split; auto.
-        { unfold NW. nia. }
-        exists j1. left. pfold. sim_red.
-        eapply SIM; eauto. econs. inv MLE. specialize ML with (x:=v). specialize ML with (sv:=(Some v0)).
-        hexploit ML; auto. i. des. clarify.
+      + repeat (sim_tau; left; pfold).
+        sim_red. unfold assume. grind. econs 4; auto. i. eapply angelic_step in STEP. clarify.
+        eexists; split; auto. eexists. left. pfold.
+        repeat (sim_tau; left; pfold).
+        sim_red. eapply SIM.
+        { econs. inv MLE. specialize ML with (x:=v) (sv:=(Some v0)).
+          hexploit ML; auto. i. des. ss. clarify. apply H0. }
+        auto.
       + ss. unfold triggerUB. sim_red. econs 4; i; ss; auto.
         dependent destruction STEP; try (irw in x; clarify; fail).
-    - admit "ez: Lit".
-    - rewrite interp_imp_expr_Plus. sim_red.
-      destruct (compile_expr e1) eqn:EXP1; destruct (compile_expr e2) eqn:EXP2; ss; clarify.
+    - rewrite interp_imp_expr_Lit.
+      sim_red. unfold assume. grind. econs 4; auto. i. eapply angelic_step in STEP. clarify.
+      eexists; split; auto. eexists. left; pfold.
+      repeat (sim_tau; left; pfold).
+      sim_red. eapply SIM; eauto. econs.
+    - rewrite interp_imp_expr_Plus.
+      sim_red. destruct (compile_expr e1) eqn:EXP1; destruct (compile_expr e2) eqn:EXP2; ss; clarify.
       eapply IHe1; eauto; clear IHe1.
+      i. sim_red. eapply IHe2; eauto; clear IHe2.
       i. sim_red.
-      admit "ez?: Add, index".
-
+      unfold unwrapU. destruct (vadd rv rv0) eqn:VADD; ss; clarify.
+      + sim_red. unfold assume. grind. econs 4; auto. i. eapply angelic_step in STEP. clarify.
+        eexists; split; auto. eexists. left; pfold.
+        repeat (sim_tau; left; pfold).
+        sim_red. specialize SIM with (rv:=v) (trv:= map_val v).
   Admitted.
 
 
@@ -242,32 +284,47 @@ Section PROOF.
 
   Theorem match_states_sim
           (src: Imp.program) tgt ist cst
+          i0 j0
           (COMP: Imp2Clight.compile src = OK tgt)
           (MS: match_states mmem ist cst)
     :
-      <<SIM: sim (ModL.compile (Mod.add_list ([Mem] ++ [ImpMod.get_mod src]))) (semantics2 tgt) lt 100 100 ist cst>>.
+      <<SIM: sim (ModL.compile (Mod.add_list ([Mem] ++ [ImpMod.get_mod src]))) (semantics2 tgt) ordN i0 j0 ist cst>>.
   Proof.
     move COMP before tgt.
     revert_until COMP.
     pcofix CIH. i. pfold.
-    inv MS. destruct code.
-    (* 12:{ ss.  destruct (compile_expr p) eqn:EXP1; destruct (compile_expr v) eqn:EXP2; ss. uo. *)
-    (*      unfold itree_of_cont_stmt, itree_of_imp_cont, itree_of_imp_pop. rewrite interp_imp_Store. *)
-    (*      sim_red. *)
-    - admit "mid: skip".
+    inv MS.
+    unfold ordN in *.
+    destruct code.
+    - ss. unfold itree_of_cont_stmt, itree_of_imp_cont.
+      rewrite interp_imp_Skip. grind.
+      destruct tcont; ss; clarify.
+      + inv MCS. inv MCN; ss; clarify. unfold idK. sim_red.
+        destruct rp. sim_red.
+        econs 3.
+        * admit "ez: determinate".
+        * eexists. eexists.
+          { eapply step_skip_call; ss. }
+          eexists; split; auto. eexists. left. pfold.
+          econs 1.
+          { admit "mid: retv int range". }
+          { ss. admit "wrong: should return Z". }
+          { ss. admit "wrong: should return Z". }
+          { i. admit "ez: unique final state". }
+      + inv MCS.
+        admit "mid: skip".
+      + admit "mid: skip".
     - ss. unfold itree_of_cont_stmt, itree_of_imp_cont.
       rewrite interp_imp_Assign. sim_red. grind.
-      replace 100 with (20 + 80); auto.
       destruct (compile_expr e) eqn:EXP; uo; ss. destruct rp. grind.
       eapply step_expr; eauto. i.
-      sim_tau 79 81; left; pfold. sim_tau 78 110; left; pfold.
+      repeat (sim_tau; left; pfold).
       rewrite transl_all_ret. rewrite EventsL.interp_Es_ret. grind.
       econs 3.
       + admit "ez? strict_determinate_at".
       + eexists. eexists.
         { eapply step_set. eapply H. }
-        exists 100; split; eauto.
-        { unfold NW; nia. }
+        unfold ordN in *. eexists; split; eauto; auto.
         eexists. right. apply CIH.
         eapply match_states_intro with (le0:= alist_add x rv le) (gm0:= gm) (ge0:= ge) (rp:= (r0, p)) (code:= Skip); eauto.
         { econs. i. destruct (classic (x = x0)).
@@ -280,8 +337,17 @@ Section PROOF.
           - inv ML. specialize ML0 with (x:=x0).
             admit "ez: alist_find & alist_add". }
         unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind.
-    -
-
+    - admit "ez?: Seq".
+    - admit "ez?: If".
+    - admit "hard: CallFun".
+    - admit "hard: CallPtr".
+    - admit "mid: CallSys".
+    - admit "hard: AddrOf".
+    - admit "hard: Malloc".
+    - admit "hard: free".
+    - admit "hard: Load".
+    - admit "hard: Store".
+    - admit "hard: Cmp".
   Admitted.
 
 End PROOF.
