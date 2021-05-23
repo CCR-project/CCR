@@ -615,6 +615,65 @@ Section SIM.
     punfold BEH.
   Qed.
 
+  (* Lemma _beh_astep_rev_progress *)
+  (*       r tr st0 ev st1 *)
+  (*       (SRT: _.(state_sort) st0 = angelic) *)
+  (*       (STEP: _.(step) st0 ev st1) *)
+  (*       (BEH: upaco2 (Beh._of_state L0) r st1 tr) *)
+  (*   : *)
+  (*     <<BEH: paco2 (Beh._of_state L0) r st0 tr>> *)
+  (* . *)
+  (* Proof. *)
+  (*   exploit wf_angelic; et. i; clarify. *)
+  (*   pfold. econsr; ss; et. rr. ii. exploit wf_angelic; et. i; des. subst. *)
+  (*   exploit WFSRC; [..|apply STEP|apply STEP0|]; ss. i; subst. esplits; et. *)
+  (*   punfold BEH. *)
+  (* Qed. *)
+
+  Lemma beh_of_state_star_progress
+        r st_src0 st_src1 es0 tr1
+        (BEH: upaco2 (Beh._of_state L0) r st_src1 tr1)
+        (STAR: star L0 st_src0 es0 st_src1)
+        (PROG: es0 <> [])
+    :
+      <<BEH: paco2 (Beh._of_state L0) r st_src0 (Tr.app es0 tr1)>>
+  .
+  Proof.
+    revert BEH. revert tr1. revert PROG.
+    induction STAR; ii; ss.
+    destruct (state_sort L0 st_src0) eqn:T.
+    - exploit wf_angelic; et. i; subst. ss.
+      exploit IHSTAR; et. intro U; des.
+      eapply _beh_astep_rev; et.
+    - exploit wf_demonic; et. i; subst. ss.
+      exploit IHSTAR; et. intro U; des.
+      pfold. econs; ss; et. rr. esplits; ss; et. punfold U.
+    - admit "ez - wf_final; final nostep".
+    - destruct es0; ss; cycle 1.
+      { admit "ez - wf_vis; vis should always make some event". }
+      destruct es1; ss.
+      { clear_tac. 
+        pfold; econs; ss; et.
+        clear - STAR BEH.
+        (*** Make lemma? ***)
+        remember nil as x in STAR. revert Heqx. induction STAR; ii; ss.
+        destruct es0; ss. subst.
+        exploit IHSTAR; et. i; des.
+        destruct (state_sort L0 st_src0) eqn:T.
+        - eapply _beh_astep_rev; et.
+      }
+      pfold; econs; ss; et.
+      exploit IHSTAR; et. intro U; des.
+    (* revert BEH. revert tr1. revert PROG. *)
+    (* induction STAR using star_event_ind; ii; ss. *)
+    (* clear_tac. *)
+    (* destruct es; ss. *)
+    (* { admit "star_single". } *)
+    (* eapply IHSTAR1 in BEH; ss. des. *)
+    (* { admit "star_single". } *)
+  Qed.
+
+
   Lemma _beh_astep_rev'
         cpn rg r tr st0 ev st1
         (SRT: _.(state_sort) st0 = angelic)
