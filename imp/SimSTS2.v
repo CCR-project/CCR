@@ -328,12 +328,12 @@ Section SIM.
     (*     st_src1 = st_src1'>>) *)
   .
 
-  Definition safe_along_events (st_src0: state L0) (tr: list Events.event) : Prop := forall
+  Definition safe_along_events (st_src0: state L0) (tr: list Events.event): Prop := forall
       st_src1
-      tx tx_src
+      tx ty tx_src
       (STAR: star L0 st_src0 tx_src st_src1)
       (MB: distill (List.map decompile_event tx) = (tx_src, true))
-      (PRE: exists ty, tx ++ ty = tr)
+      (PRE: tx ++ ty = tr)
     ,
       <<SAFE: NoStuck L0 st_src1>>
   .
@@ -439,8 +439,7 @@ Section SIM.
   Proof.
     ii. des; clarify. eapply SAFE; ss.
     { econs; et. }
-    { ss. et. }
-    { esplits; et. }
+    { ss. }
   Qed.
 
   Lemma safe_along_events_star
@@ -708,25 +707,27 @@ Section SIM.
         unfold safe_along_events in *. Psimpl. des.
         Psimpl. des. Psimpl. des.
         subst.
-        esplits; ss; et.
-        TTTTTTTTT
         esplits; try apply SAFE1; ss; et.
-        r.
+        clear - SAFE.
+        r in SAFE. des; subst. r. eexists (behavior_app _ _).
+        rewrite <- behavior_app_assoc. ss; et.
       }
-                 
-  forall s b,
-  ~ safe_along_behavior s b ->
-  exists t, exists s',
-     behavior_prefix t b
-  /\ Star L1 s t s'
-  /\ Nostep L1 s'
-  /\ (forall r, ~(final_state L1 s' r)).
-
+      des.
+      exists (Tr.app thd Tr.ub). esplits; ss.
+      - clear - WFSRC STAR STUCK.
+        eapply beh_of_state_star; et. unfold NoStuck in *.
+        repeat (Psimpl; des; unfold NW in *). clears st_src0. clear st_src0.
+        pfold. econsr; ss; et. ii. exploit wf_angelic; ss; et. i; subst. exfalso.
+        exploit STUCK0; ss; et.
+      - r in B. des. subst. clear - MB.
+        ginduction thd_tgt; ii; ss; clarify.
+        { ss. pfold. econsr; ss; et.
+          { r. esplits; ss; et. }
+        }
+        des_ifs. ss.
+        eapply match_event_iff in Heq.
+        eapply match_beh_cons; ss; et. rewrite <- behavior_app_assoc. ss.
     }
-    exists (transl_beh tr_tgt).
-    { (rename H into STAR; rename s' into st_tgt1; rename H0 into STK0; rename H1 into STK1).
-    }
-    - .
   Qed.
 
   Lemma adequacy_spin
