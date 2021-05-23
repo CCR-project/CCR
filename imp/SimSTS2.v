@@ -81,6 +81,7 @@ Section STAR.
       pstar st_src0 (es0 ++ es1) st_src2
   .
 End STAR.
+Hint Constructors pstar.
 Definition dstar L := pstar L (fun st_src0 => L.(state_sort) st_src0 = demonic).
 Definition star L := pstar L top1.
 
@@ -96,7 +97,7 @@ Proof.
   induction STAR; ii; ss.
   destruct es0; ss.
   - clarify. esplits; et. change [e] with ((option_to_list (Some e)) ++ []).
-    econs; ss; et. econs; ss; et.
+    econs; ss; et.
   - subst. exploit IHSTAR; et. i; des. esplits; et.
     change [e] with ((@option_to_list event None) ++ [e]).
     econs; ss; et.
@@ -122,6 +123,24 @@ Proof.
     { et. }
     eapply IH.
     eapply TL.
+Qed.
+
+Lemma star_single_exact
+      L0 st0 st3 e0
+      (STAR: star L0 st0 [e0] st3)
+  :
+    exists st1 st2, (<<STAR: star L0 st0 [] st1>>) /\
+                    (<<VIS: step L0 st1 (Some e0) st2>>) /\
+                    (<<STAR: star L0 st2 [] st3>>)
+.
+Proof.
+  dependent induction STAR; ii; ss.
+  destruct es0; ss.
+  { destruct es1; ss. clarify. esplits; ss; et. econs; ss; et. }
+  clarify.
+  exploit IHSTAR; et. i; des. esplits; try apply VIS; et.
+  replace [] with ((@option_to_list event None) ++ []) by ss.
+  econs; ss; et.
 Qed.
 
 Definition NoStuck L (st_src0: state L): Prop :=
@@ -615,6 +634,28 @@ Section SIM.
     punfold BEH.
   Qed.
 
+  Lemma beh_of_state_star
+        r st_src0 st_src1 es0 tr1
+        (BEH: paco2 (Beh._of_state L0) r st_src1 tr1)
+        (STAR: star L0 st_src0 es0 st_src1)
+    :
+      <<BEH: paco2 (Beh._of_state L0) r st_src0 (Tr.app es0 tr1)>>
+  .
+  Proof.
+    revert BEH. revert tr1.
+    induction STAR; ii; ss.
+    exploit IHSTAR; et. intro U; des.
+    destruct (state_sort L0 st_src0) eqn:T.
+    - exploit wf_angelic; et. i; subst. ss.
+      eapply _beh_astep_rev; et.
+    - exploit wf_demonic; et. i; subst. ss.
+      pfold. econs; ss; et. rr. esplits; ss; et. punfold U.
+    - admit "ez - wf_final; final nostep".
+    - destruct es0; ss; cycle 1.
+      { admit "ez - wf_vis; vis should always make some event". }
+      pfold; econs; ss; et.
+  Qed.
+
   (* Lemma _beh_astep_rev_progress *)
   (*       r tr st0 ev st1 *)
   (*       (SRT: _.(state_sort) st0 = angelic) *)
@@ -630,6 +671,68 @@ Section SIM.
   (*   punfold BEH. *)
   (* Qed. *)
 
+  (* Lemma beh_of_state_star_progress *)
+  (*       r st_src0 st_src1 es0 tr1 *)
+  (*       (BEH: upaco2 (Beh._of_state L0) r st_src1 tr1) *)
+  (*       (STAR: star L0 st_src0 es0 st_src1) *)
+  (*       (PROG: es0 <> []) *)
+  (*   : *)
+  (*     <<BEH: paco2 (Beh._of_state L0) r st_src0 (Tr.app es0 tr1)>> *)
+  (* . *)
+  (* Proof. *)
+  (*   revert BEH. revert tr1. revert PROG. *)
+  (*   induction STAR; ii; ss. *)
+  (*   destruct (state_sort L0 st_src0) eqn:T. *)
+  (*   - exploit wf_angelic; et. i; subst. ss. *)
+  (*     exploit IHSTAR; et. intro U; des. *)
+  (*     eapply _beh_astep_rev; et. *)
+  (*   - exploit wf_demonic; et. i; subst. ss. *)
+  (*     exploit IHSTAR; et. intro U; des. *)
+  (*     pfold. econs; ss; et. rr. esplits; ss; et. punfold U. *)
+  (*   - admit "ez - wf_final; final nostep". *)
+  (*   - destruct es0; ss; cycle 1. *)
+  (*     { admit "ez - wf_vis; vis should always make some event". } *)
+  (*     destruct es1; ss. *)
+  (*     { clear_tac.  *)
+  (*       pfold; econs; ss; et. *)
+  (*       clear - STAR BEH. *)
+  (*       (*** Make lemma? ***) *)
+  (*       remember nil as x in STAR. revert Heqx. induction STAR; ii; ss. *)
+  (*       destruct es0; ss. subst. *)
+  (*       exploit IHSTAR; et. i; des. *)
+  (*       destruct (state_sort L0 st_src0) eqn:T. *)
+  (*       - eapply _beh_astep_rev; et. *)
+  (*     } *)
+  (*     pfold; econs; ss; et. *)
+  (*     exploit IHSTAR; et. intro U; des. *)
+  (*   (* revert BEH. revert tr1. revert PROG. *) *)
+  (*   (* induction STAR using star_event_ind; ii; ss. *) *)
+  (*   (* clear_tac. *) *)
+  (*   (* destruct es; ss. *) *)
+  (*   (* { admit "star_single". } *) *)
+  (*   (* eapply IHSTAR1 in BEH; ss. des. *) *)
+  (*   (* { admit "star_single". } *) *)
+  (* Qed. *)
+
+  Lemma beh_of_state_star_progress_aux
+        r st_src0 st_src1 e0 tr1
+        (BEH: upaco2 (Beh._of_state L0) r st_src1 tr1)
+        (STAR: star L0 st_src0 [e0] st_src1)
+    :
+      <<BEH: paco2 (Beh._of_state L0) r st_src0 (Tr.app [e0] tr1)>>
+  .
+  Proof.
+    eapply star_single_exact in STAR. des.
+    replace (Tr.app [e0] tr1) with (Tr.app [] (Tr.app [e0] tr1)) by ss.
+    eapply beh_of_state_star; et.
+    clears st_src0. clear st_src0.
+    destruct (state_sort L0 st1) eqn:T.
+    { exploit wf_angelic; et. i; clarify. }
+    { exploit wf_demonic; et. i; clarify. }
+    { admit "ez - wf_final; final nostep". }
+    pfold; econs; ss; et.
+  Qed.
+
   Lemma beh_of_state_star_progress
         r st_src0 st_src1 es0 tr1
         (BEH: upaco2 (Beh._of_state L0) r st_src1 tr1)
@@ -640,68 +743,8 @@ Section SIM.
   .
   Proof.
     revert BEH. revert tr1. revert PROG.
-    induction STAR; ii; ss.
-    destruct (state_sort L0 st_src0) eqn:T.
-    - exploit wf_angelic; et. i; subst. ss.
-      exploit IHSTAR; et. intro U; des.
-      eapply _beh_astep_rev; et.
-    - exploit wf_demonic; et. i; subst. ss.
-      exploit IHSTAR; et. intro U; des.
-      pfold. econs; ss; et. rr. esplits; ss; et. punfold U.
-    - admit "ez - wf_final; final nostep".
-    - destruct es0; ss; cycle 1.
-      { admit "ez - wf_vis; vis should always make some event". }
-      destruct es1; ss.
-      { clear_tac. 
-        pfold; econs; ss; et.
-        clear - STAR BEH.
-        (*** Make lemma? ***)
-        remember nil as x in STAR. revert Heqx. induction STAR; ii; ss.
-        destruct es0; ss. subst.
-        exploit IHSTAR; et. i; des.
-        destruct (state_sort L0 st_src0) eqn:T.
-        - eapply _beh_astep_rev; et.
-      }
-      pfold; econs; ss; et.
-      exploit IHSTAR; et. intro U; des.
-    (* revert BEH. revert tr1. revert PROG. *)
-    (* induction STAR using star_event_ind; ii; ss. *)
-    (* clear_tac. *)
-    (* destruct es; ss. *)
-    (* { admit "star_single". } *)
-    (* eapply IHSTAR1 in BEH; ss. des. *)
-    (* { admit "star_single". } *)
-  Qed.
-
-
-  Lemma _beh_astep_rev'
-        cpn rg r tr st0 ev st1
-        (SRT: _.(state_sort) st0 = angelic)
-        (STEP: _.(step) st0 ev st1)
-        (* (BEH: gpaco2 (Beh._of_state L0) cpn rg r st1 tr) *)
-        (BEH: paco2 (Beh._of_state L0) r st1 tr)
-    :
-      <<BEH: gpaco2 (Beh._of_state L0) cpn rg r st0 tr>>
-  .
-  Proof.
-    exploit wf_angelic; et. i; clarify.
-    gstep. econsr; ss; et. rr. ii. exploit wf_angelic; et. i; des. subst.
-    exploit WFSRC; [..|apply STEP|apply STEP0|]; ss. i; subst. esplits; et.
-    punfold BEH. eapply Beh.of_state_mon; et. ii; ss. gfinal. r in PR. des; ss; et.
-  Qed.
-
-  Lemma beh_of_state_star_progress
-        cpn rg r st_src0 st_src1 es0 tr1
-        (BEH: gpaco2 (Beh._of_state L0) cpn (rg \2/ r) r st_src1 tr1)
-        (STAR: star L0 st_src0 es0 st_src1)
-        (PROG: es0 <> [])
-    :
-      <<BEH: gpaco2 (Beh._of_state L0) cpn rg r st_src0 (Tr.app es0 tr1)>>
-  .
-  Proof.
-    revert BEH. revert tr1. revert PROG.
-    induction STAR; ii; ss.
-    destruct (state_sort L0 st_src0) eqn:T.
+    induction STAR using star_event_ind; ii; ss.
+    destruct (state_sort L0 st0) eqn:T.
     - exploit wf_angelic; et. i; subst. ss.
       eapply IHSTAR in BEH; ss. des.
       eapply _beh_astep_rev'; et.
@@ -718,28 +761,6 @@ Section SIM.
     (* { admit "star_single". } *)
     (* eapply IHSTAR1 in BEH; ss. des. *)
     (* { admit "star_single". } *)
-  Qed.
-
-  Lemma beh_of_state_star
-        st_src0 st_src1 es0 tr1
-        (BEH: (Beh.of_state L0) st_src1 tr1)
-        (STAR: star L0 st_src0 es0 st_src1)
-    :
-      <<BEH: (Beh.of_state L0) st_src0 (Tr.app es0 tr1)>>
-  .
-  Proof.
-    revert BEH. revert tr1.
-    induction STAR; ii; ss.
-    exploit IHSTAR; et. intro U; des.
-    destruct (state_sort L0 st_src0) eqn:T.
-    - exploit wf_angelic; et. i; subst. ss.
-      eapply _beh_astep_rev; et.
-    - exploit wf_demonic; et. i; subst. ss.
-      pfold. econs; ss; et. rr. esplits; ss; et. punfold U.
-    - admit "ez - wf_final; final nostep".
-    - destruct es0; ss; cycle 1.
-      { admit "ez - wf_vis; vis should always make some event". }
-      pfold; econs; ss; et.
   Qed.
 
   Lemma adequacy
