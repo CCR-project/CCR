@@ -693,20 +693,35 @@ Section SIM.
             { eapply decompile_match_event; ss. }
           * des_ifs_safe. ss. pfold; econsr; et; ss. r. esplits; et.
             rewrite behavior_app_E0; et.
-      -
-            }
-
-          des_ifs.
-          { eapply decompile_match_event in Heq; des. ss.
-            eapply match_beh_cons; ss.
-            { instantiate (1:=Terminates tr r). instantiate (1:=a). ss. }
-            { ss. }
-            ss.
-          }
-          { eapply IHtr.
-      -
+      - admit "hard - prove this! (diverge case)".
+      - admit "hard - prove this! (reacts case)".
+      - admit "hard - prove this!".
     }
     { (*** unsafe ***)
+      assert(NOTSAFE:
+               exists st_src1 thd thd_tgt,
+                 (<<B: behavior_prefix thd_tgt tr_tgt>>)
+                 /\ (<<MB: distill (List.map decompile_event thd_tgt) = (thd, true)>>)
+                 /\ (<<STAR: star L0 st_src0 thd st_src1>>)
+                 /\ (<<STUCK: ~NoStuck L0 st_src1>>)).
+      { unfold safe_along_trace in SAFE. Psimpl. des.
+        unfold safe_along_events in *. Psimpl. des.
+        Psimpl. des. Psimpl. des.
+        subst.
+        esplits; ss; et.
+        TTTTTTTTT
+        esplits; try apply SAFE1; ss; et.
+        r.
+      }
+                 
+  forall s b,
+  ~ safe_along_behavior s b ->
+  exists t, exists s',
+     behavior_prefix t b
+  /\ Star L1 s t s'
+  /\ Nostep L1 s'
+  /\ (forall r, ~(final_state L1 s' r)).
+
     }
     exists (transl_beh tr_tgt).
     { (rename H into STAR; rename s' into st_tgt1; rename H0 into STK0; rename H1 into STK1).
