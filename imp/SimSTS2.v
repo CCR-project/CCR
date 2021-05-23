@@ -714,54 +714,54 @@ Section SIM.
   (*   (* { admit "star_single". } *) *)
   (* Qed. *)
 
-  Lemma beh_of_state_star_progress_aux
-        r st_src0 st_src1 e0 tr1
-        (BEH: upaco2 (Beh._of_state L0) r st_src1 tr1)
-        (STAR: star L0 st_src0 [e0] st_src1)
-    :
-      <<BEH: paco2 (Beh._of_state L0) r st_src0 (Tr.app [e0] tr1)>>
-  .
-  Proof.
-    eapply star_single_exact in STAR. des.
-    replace (Tr.app [e0] tr1) with (Tr.app [] (Tr.app [e0] tr1)) by ss.
-    eapply beh_of_state_star; et.
-    clears st_src0. clear st_src0.
-    destruct (state_sort L0 st1) eqn:T.
-    { exploit wf_angelic; et. i; clarify. }
-    { exploit wf_demonic; et. i; clarify. }
-    { admit "ez - wf_final; final nostep". }
-    pfold; econs; ss; et.
-  Qed.
+  (* Lemma beh_of_state_star_progress_aux *)
+  (*       r st_src0 st_src1 e0 tr1 *)
+  (*       (BEH: upaco2 (Beh._of_state L0) r st_src1 tr1) *)
+  (*       (STAR: star L0 st_src0 [e0] st_src1) *)
+  (*   : *)
+  (*     <<BEH: paco2 (Beh._of_state L0) r st_src0 (Tr.app [e0] tr1)>> *)
+  (* . *)
+  (* Proof. *)
+  (*   eapply star_single_exact in STAR. des. *)
+  (*   replace (Tr.app [e0] tr1) with (Tr.app [] (Tr.app [e0] tr1)) by ss. *)
+  (*   eapply beh_of_state_star; et. *)
+  (*   clears st_src0. clear st_src0. *)
+  (*   destruct (state_sort L0 st1) eqn:T. *)
+  (*   { exploit wf_angelic; et. i; clarify. } *)
+  (*   { exploit wf_demonic; et. i; clarify. } *)
+  (*   { admit "ez - wf_final; final nostep". } *)
+  (*   pfold; econs; ss; et. *)
+  (* Qed. *)
 
-  Lemma beh_of_state_star_progress
-        r st_src0 st_src1 es0 tr1
-        (BEH: upaco2 (Beh._of_state L0) r st_src1 tr1)
-        (STAR: star L0 st_src0 es0 st_src1)
-        (PROG: es0 <> [])
-    :
-      <<BEH: paco2 (Beh._of_state L0) r st_src0 (Tr.app es0 tr1)>>
-  .
-  Proof.
-    revert BEH. revert tr1. revert PROG.
-    induction STAR using star_event_ind; ii; ss.
-    destruct (state_sort L0 st0) eqn:T.
-    - exploit wf_angelic; et. i; subst. ss.
-      eapply IHSTAR in BEH; ss. des.
-      eapply _beh_astep_rev'; et.
-    - exploit wf_demonic; et. i; subst. ss.
-      pfold. econs; ss; et. rr. esplits; ss; et. punfold U.
-    - admit "ez - wf_final; final nostep".
-    - destruct es0; ss; cycle 1.
-      { admit "ez - wf_vis; vis should always make some event". }
-      pfold; econs; ss; et.
-    (* revert BEH. revert tr1. revert PROG. *)
-    (* induction STAR using star_event_ind; ii; ss. *)
-    (* clear_tac. *)
-    (* destruct es; ss. *)
-    (* { admit "star_single". } *)
-    (* eapply IHSTAR1 in BEH; ss. des. *)
-    (* { admit "star_single". } *)
-  Qed.
+  (* Lemma beh_of_state_star_progress *)
+  (*       r st_src0 st_src1 es0 tr1 *)
+  (*       (BEH: upaco2 (Beh._of_state L0) r st_src1 tr1) *)
+  (*       (STAR: star L0 st_src0 es0 st_src1) *)
+  (*       (PROG: es0 <> []) *)
+  (*   : *)
+  (*     <<BEH: paco2 (Beh._of_state L0) r st_src0 (Tr.app es0 tr1)>> *)
+  (* . *)
+  (* Proof. *)
+  (*   revert BEH. revert tr1. revert PROG. *)
+  (*   induction STAR using star_event_ind; ii; ss. *)
+  (*   destruct (state_sort L0 st0) eqn:T. *)
+  (*   - exploit wf_angelic; et. i; subst. ss. *)
+  (*     eapply IHSTAR in BEH; ss. des. *)
+  (*     eapply _beh_astep_rev'; et. *)
+  (*   - exploit wf_demonic; et. i; subst. ss. *)
+  (*     pfold. econs; ss; et. rr. esplits; ss; et. punfold U. *)
+  (*   - admit "ez - wf_final; final nostep". *)
+  (*   - destruct es0; ss; cycle 1. *)
+  (*     { admit "ez - wf_vis; vis should always make some event". } *)
+  (*     pfold; econs; ss; et. *)
+  (*   (* revert BEH. revert tr1. revert PROG. *) *)
+  (*   (* induction STAR using star_event_ind; ii; ss. *) *)
+  (*   (* clear_tac. *) *)
+  (*   (* destruct es; ss. *) *)
+  (*   (* { admit "star_single". } *) *)
+  (*   (* eapply IHSTAR1 in BEH; ss. des. *) *)
+  (*   (* { admit "star_single". } *) *)
+  (* Qed. *)
 
   Lemma adequacy
         i0 st_src0 st_tgt0
@@ -837,6 +837,7 @@ Section SIM.
         esplits; et.
         + rename H into BEH. ss.
           ginit. { eapply cpn2_wcompat; eauto with paco. } revert_until WFSRC. gcofix CIH. i.
+          (* revert_until WFSRC. pcofix CIH. i. *)
           inv BEH.
           rename s2 into st_tgt1. rename t into tr_tgt. rename H into STAR.
           hexploit simulation_star; try apply STAR; et.
@@ -844,6 +845,43 @@ Section SIM.
           i; des.
 
           erewrite decompile_trinf_app; et.
+
+          exploit CIH; et.
+          { clear - SAFE MB STEP. r. i. eapply safe_along_events_star; et.
+            eapply SAFE. r in BEH. des. r. exists beh'. rewrite behavior_app_assoc.
+            rewrite <- BEH. ss. }
+          intro KNOWLEDGE.
+          assert(PROG: tr_src <> []).
+          { ii; subst; ss. destruct tr_tgt; ss. des_ifs. }
+          clear - WFSRC KNOWLEDGE PROG STEP.
+          induction STEP using star_event_ind; ss.
+          clear_tac. spc IHSTEP1.
+          eapply star_single_exact in STEP1. des.
+          change (Tr.cons e (Tr.app es (decompile_trinf T))) with
+              (Tr.app [] (Tr.cons e (Tr.app es (decompile_trinf T)))).
+          TTTTTTTTTTTTTTTTTTTTTTT pcofix , gcofix both problematic TTTTTTTTTTTTTTTTTTTTT
+          eapply beh_of_state_star; ss; et.
+          destruct (state_sort L0 st3) eqn:A.
+          { exploit wf_angelic; et. i; clarify. }
+          { exploit wf_demonic; et. i; clarify. }
+          { admit "ez - wf_final". }
+          pfold. econs; et. left.
+        eapply _beh_astep_rev; et.
+      - exploit wf_demonic; et. i; subst. ss.
+        pfold. econs; ss; et. rr. esplits; ss; et. punfold U.
+      - admit "ez - wf_final; final nostep".
+      - destruct es0; ss; cycle 1.
+        { admit "ez - wf_vis; vis should always make some event". }
+        pfold; econs; ss; et.
+
+
+
+          gstep. econs; et.
+          { ss.
+            dependent induction STEP; ii; ss.
+            gfinal.
+            right.
+          }
           gbase.
           eapply beh_of_state_star; ss; et.
           right.
