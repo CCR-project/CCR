@@ -8,47 +8,6 @@ Require Import Imp2Clight.
 
 Set Implicit Arguments.
 
-(******* TODO: move to Behavior.v && remove redundancy with SimSTS.v *********)
-Lemma spin_nofinal
-      L st0
-      (SPIN: Beh.state_spin L st0)
-  :
-    forall retv, <<NOFIN: L.(state_sort) st0 <> final retv>>
-.
-Proof.
-  punfold SPIN. inv SPIN; ii; rewrite H in *; ss.
-Qed.
-
-Lemma spin_novis
-      L st0
-      (SPIN: Beh.state_spin L st0)
-  :
-    <<NOFIN: L.(state_sort) st0 <> vis>>
-.
-Proof.
-  punfold SPIN. inv SPIN; ii; rewrite H in *; ss.
-Qed.
-
-Lemma spin_astep
-      L st0 ev st1
-      (SRT: L.(state_sort) st0 = angelic)
-      (STEP: _.(step) st0 ev st1)
-      (SPIN: Beh.state_spin _ st0)
-  :
-    <<SPIN: Beh.state_spin _ st1>>
-.
-Proof.
-  exploit wf_angelic; et. i; clarify.
-  punfold SPIN. inv SPIN; rewrite SRT in *; ss.
-  exploit STEP0; et. i; des. pclearbot. et.
-Qed.
-
-
-
-
-
-
-
 
 
 Definition single_events_at (L: Smallstep.semantics) (s:L.(Smallstep.state)) : Prop :=
