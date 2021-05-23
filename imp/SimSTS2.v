@@ -268,16 +268,56 @@ Section SIM.
     Inductive pstar: L.(state) -> list event -> L.(state) -> Prop :=
     | star_refl: forall st_src0 (P: P st_src0), pstar st_src0 [] st_src0
     | star_step: forall
-        st_src0 tr0 st_src1 tr1 st_src2
+        st_src0 es0 st_src1 es1 st_src2
         (P: P st_src0)
-        (HD: step L st_src0 tr0 st_src1)
-        (TL: pstar st_src1 tr1 st_src2)
+        (HD: step L st_src0 es0 st_src1)
+        (TL: pstar st_src1 es1 st_src2)
       ,
-        pstar st_src0 (tr0 ++ tr1) st_src2
+        pstar st_src0 (es0 ++ es1) st_src2
     .
   End STAR.
   Definition dstar L := pstar L (fun st_src0 => L.(state_sort) st_src0 = demonic).
   Definition star L := pstar L top1.
+
+  Lemma star_des
+        L
+        st0 e es st2
+        (STAR: star L st0 (e :: es) st2)
+    :
+      exists st1, <<HD: star L st0 [e] st1>> /\ <<TL: star L st1 es st2>>
+  .
+  Proof.
+    remember (e :: es) as x. revert Heqx. revert e es.
+    induction STAR; ii; ss.
+    destruct es0; ss.
+    - clarify. esplits; et. change [e] with ((option_to_list (Some e)) ++ []).
+      econs; ss; et. econs; ss; et.
+    - subst. exploit IHSTAR; et. i; des. esplits; et.
+      change [e] with ((@option_to_list event None) ++ [e]).
+      econs; ss; et.
+  Qed.
+
+  Lemma star_event_ind
+        L
+        (P: L.(state) -> list event -> L.(state) -> Prop)
+        (BASE: forall st0 st1, star L st0 [] st1 -> P st0 [] st1)
+        (SUCC: forall e es st0 st1 st2, star L st0 [e] st1 -> star L st1 es st2 ->
+                                        P st1 es st2 -> P st0 (e :: es) st2)
+    :
+      forall st0 es st1, star L st0 es st1 -> P st0 es st1
+  .
+  Proof.
+    fix IH 2.
+    i.
+    destruct es; ss.
+    - eapply BASE. ss.
+    - eapply star_des in H. des. rename st2 into st_mid.
+      eapply SUCC.
+      { et. }
+      { et. }
+      eapply IH.
+      eapply TL.
+  Qed.
 
   Definition NoStuck L (st_src0: state L): Prop :=
     L.(state_sort) st_src0 = angelic ->
@@ -403,9 +443,32 @@ Section SIM.
     { esplits; et. }
   Qed.
 
+  Lemma safe_along_events_star
+        st_src0 st_src1 es0_src es0 es1
+        (STAR: star L0 st_src0 es0_src st_src1)
+        (MB: distill (List.map decompile_event es0) = (es0_src, true))
+        (SAFE: safe_along_events st_src0 (es0 ++ es1))
+    :
+      <<SAFE: safe_along_events st_src1 es1>>
+  .
+  Proof.
+    revert_until STAR. revert es1. revert es0.
+    admit "hard - TODO: use star tail induction".
+  (*   induction STAR; i; ss. *)
+  (*   { destruct es0; ss. des_ifs. } *)
+  (*   destruct es0; ss. *)
+  (*   - eapply safe_along_events_step_some; et. *)
+  (*   - *)
+  (*   ii. des; clarify. eapply SAFE; ss. *)
+  (*   { econs; et. } *)
+  (*   { instantiate (1 := e0 :: _). ss. des_ifs. rewrite MB0 in *; clarify. } *)
+  (*   { esplits; et. ss. } *)
+  (* Qed. *)
+  Qed.
+
   Definition wf (L: semantics): Prop :=
     forall (st0: L.(state)) (ANG: L.(state_sort) st0 = angelic),
-    forall st1 st1' (STEP: step L st0 None st1) (STEP: step L st0 None st1), st1 = st1'
+    forall st1 st1' (STEP: step L st0 None st1) (STEP: step L st0 None st1'), st1 = st1'
   .
 
   Hypothesis WFSRC: wf L0.
@@ -506,6 +569,64 @@ Section SIM.
       econs; et.
   Qed.
 
+  (*** TODO: move to proper place? ***)
+  Lemma _beh_astep_rev
+        r tr st0 ev st1
+        (SRT: _.(state_sort) st0 = angelic)
+        (STEP: _.(step) st0 ev st1)
+        (BEH: paco2 (Beh._of_state L0) r st1 tr)
+    :
+      <<BEH: paco2 (Beh._of_state L0) r st0 tr>>
+  .
+  Proof.
+    exploit wf_angelic; et. i; clarify.
+    pfold. econsr; ss; et. rr. ii. exploit wf_angelic; et. i; des. subst.
+    exploit WFSRC; [..|apply STEP|apply STEP0|]; ss. i; subst. esplits; et.
+    punfold BEH.
+  Qed.
+
+  (* Lemma beh_of_state_star_aux *)
+  (*       st_src0 st_src1 tr1 *)
+  (*       (BEH: Beh.of_state L0 st_src1 tr1) *)
+  (*       (STAR: star L0 st_src0 [] st_src1) *)
+  (*   : *)
+  (*     <<BEH: Beh.of_state L0 st_src0 tr1>> *)
+  (* . *)
+  (* Proof. *)
+  (*   revert BEH. revert tr1. *)
+  (*   remember nil as x in STAR. revert Heqx. *)
+  (*   induction STAR; ii; ss. *)
+  (*   destruct es0; ss. subst. *)
+  (*   exploit IHSTAR; et. intro U; des. *)
+  (*   destruct (state_sort L0 st_src0) eqn:T. *)
+  (*   - eapply _beh_astep_rev; et. *)
+  (*   - pfold. econs; ss; et. rr. esplits; ss; et. punfold U. *)
+  (*   - admit "ez - wf_final; final nostep". *)
+  (*   - admit "ez - wf_vis; vis should always make some event". *)
+  (* Qed. *)
+
+  Lemma beh_of_state_star
+        st_src0 st_src1 es0 tr1
+        (BEH: Beh.of_state L0 st_src1 tr1)
+        (STAR: star L0 st_src0 es0 st_src1)
+    :
+      <<BEH: Beh.of_state L0 st_src0 (Tr.app es0 tr1)>>
+  .
+  Proof.
+    revert BEH. revert tr1.
+    induction STAR; ii; ss.
+    exploit IHSTAR; et. intro U; des.
+    destruct (state_sort L0 st_src0) eqn:T.
+    - exploit wf_angelic; et. i; subst. ss.
+      eapply _beh_astep_rev; et.
+    - exploit wf_demonic; et. i; subst. ss.
+      pfold. econs; ss; et. rr. esplits; ss; et. punfold U.
+    - admit "ez - wf_final; final nostep".
+    - destruct es0; ss; cycle 1.
+      { admit "ez - wf_vis; vis should always make some event". }
+      pfold; econs; ss; et.
+  Qed.
+
   Lemma adequacy_aux
         i0 st_src0 st_tgt0
         (SIM: sim i0 st_src0 st_tgt0)
@@ -531,19 +652,34 @@ Section SIM.
 
           (*** 1. Lemma: star + Beh.of_state -> Beh.of_state app ***)
           (*** 2. wf induction on i1 ***)
-
-
-          clears st_tgt0. clear st_tgt0.
-          revert SAFE. revert SIM0. revert i0.
-          induction STEP; ii; ss.
-          { admit "do reasoning...". }
-          subst. rename s1 into st_tgt0. rename s2 into st_tgt1. rename s3 into st_tgt2.
-          rename t1 into tr_tgt0. rename t2 into tr_tgt1.
-
-          punfold SIM0. inv SIM0; ss.
-          * admit "?".
+          eapply beh_of_state_star; ss; et.
+          (* assert(SAFE0: safe_along_trace st_src1 (Terminates tr r)). *)
+          assert(SAFE0: safe_along_events st_src1 []).
+          { clear - SAFE STEP MB.
+            r in SAFE. specialize (SAFE tr).
+            hexploit1 SAFE.
+            { eexists (Terminates nil _). ss. unfold Eapp. rewrite List.app_nil_r. ss. }
+            eapply safe_along_events_star; et.
+            rewrite List.app_nil_r. ss.
+          }
+          clear - SAFE0 WFSRC FIN WF SIM0.
+          revert_until i1. pattern i1. eapply well_founded_ind; et. clear i1. intros i0 IH.
+          i. punfold SIM0. inv SIM0.
+          * pfold. econs; ss; et. admit "ez".
           * des. admit "ez - final nostep".
-          *
+          * des. pclearbot.
+            exploit IH; et. { eapply safe_along_events_step_none; et. } intro U.
+            eapply Beh.beh_dstep; ss; et.
+          * des. admit "ez - final nostep".
+          * destruct (classic (exists ev st_src2, step L0 st_src1 ev st_src2)).
+            { des. exploit wf_angelic; et. i; subst. exploit SIM; et. i; des. pclearbot.
+              exploit IH; et. { eapply safe_along_events_step_none; et. } i; des.
+              eapply _beh_astep_rev; ss; et. }
+            contradict H. eapply SAFE0; et.
+            { econs; ss; et. }
+            { instantiate (1:=[]). ss. }
+            { esplits; ss. }
+          * des. admit "ez - final nostep".
         + ss.
           clear - SAFE SIM.
           clear.
