@@ -27,6 +27,34 @@ Record strict_determinate_at (L: Smallstep.semantics) (s:L.(Smallstep.state)) : 
       single_events_at L s
   }.
 
+Fixpoint sequence X (xs: list (option X)): option (list X) :=
+  match xs with
+  | nil => Some nil
+  | Some hd :: tl => do tl <- (sequence tl); Some (hd :: tl)
+  | None :: _ => None
+  end
+.
+
+(*** it is basically sequence with return type (Err (list X) (list X)). ***)
+(*** i.e., fails with information ***)
+Fixpoint squeeze X (es: list (option X)): ((list X) * bool) :=
+  match es with
+  | [] => ([], true)
+  | Some e :: tl => let '(es, succ) := squeeze tl in ((e :: es), succ)
+  | _ => ([], false)
+  end
+.
+
+Definition option_to_list X (x: option X): list X :=
+  match x with
+  | Some x => [x]
+  | _ => []
+  end
+.
+Coercion option_to_list: option >-> list.
+
+
+
 Section SIM.
 
   Variable L0: STS.semantics.
@@ -152,8 +180,6 @@ Section SIM.
     end
   .
 
-  Definition sequence X (xs: list (option X)): option (list X) := admit "ez".
-
   Definition decompile_event (ev: Events.event): option event :=
     match ev with
     | Event_syscall fn evs ev =>
@@ -173,53 +199,20 @@ Section SIM.
     end
   .
 
-  (* Definition transl_beh (p: program_behavior): option Tr.t := *)
-  (*   match p with *)
-  (*   | Terminates tr i => *)
-  (*     do es <- sequence (List.map decompile_event tr); *)
-  (*     Some (Tr.app es (Tr.done (Int.signed i))) *)
-  (*   | Diverges tr =>  *)
-  (*     do es <- sequence (List.map decompile_event tr); *)
-  (*     Some (Tr.app es (Tr.spin)) *)
-  (*   | Reacts tr => Some (decompile_trinf tr) *)
-  (*   | Goes_wrong tr => *)
-  (*     do es <- sequence (List.map decompile_event tr); *)
-  (*     Some (Tr.app es (Tr.ub)) *)
-  (*   end *)
-  (* . *)
-
-  Fixpoint distill (es: list (option event)): ((list event) * bool) :=
-    match es with
-    | [] => ([], true)
-    | Some e :: tl => let '(es, succ) := distill tl in ((e :: es), succ)
-    | _ => ([], false)
-    end
-  .
-
   Definition transl_beh (p: program_behavior): Tr.t :=
     match p with
     | Terminates tr i =>
-      let '(es, succ) := distill (List.map decompile_event tr) in
+      let '(es, succ) := squeeze (List.map decompile_event tr) in
       Tr.app es (if succ then (Tr.done (Int.signed i)) else Tr.ub)
-      (* let es := (filter_map decompile_event tr) in *)
-      (* (Tr.app es (Tr.done (Int.signed i))) *)
     | Diverges tr => 
-      let '(es, succ) := distill (List.map decompile_event tr) in
+      let '(es, succ) := squeeze (List.map decompile_event tr) in
       Tr.app es (if succ then (Tr.spin) else Tr.ub)
     | Reacts tr => (decompile_trinf tr)
     | Goes_wrong tr =>
-      let '(es, succ) := distill (List.map decompile_event tr) in
+      let '(es, succ) := squeeze (List.map decompile_event tr) in
       Tr.app es Tr.ub
     end
   .
-
-  Definition option_to_list X (x: option X): list X :=
-    match x with
-    | Some x => [x]
-    | _ => []
-    end
-  .
-  Coercion option_to_list: option >-> list.
 
   Section STAR.
     Variable L: semantics.
@@ -291,7 +284,7 @@ Section SIM.
       st_src1
       tx ty tx_src
       (STAR: star L0 st_src0 tx_src st_src1)
-      (MB: distill (List.map decompile_event tx) = (tx_src, true))
+      (MB: squeeze (List.map decompile_event tx) = (tx_src, true))
       (PRE: tx ++ ty = tr)
     ,
       <<SAFE: NoStuck L0 st_src1>>
@@ -404,7 +397,7 @@ Section SIM.
   Lemma safe_along_events_star
         st_src0 st_src1 es0_src es0 es1
         (STAR: star L0 st_src0 es0_src st_src1)
-        (MB: distill (List.map decompile_event es0) = (es0_src, true))
+        (MB: squeeze (List.map decompile_event es0) = (es0_src, true))
         (SAFE: safe_along_events st_src0 (es0 ++ es1))
     :
       <<SAFE: safe_along_events st_src1 es1>>
@@ -441,10 +434,10 @@ Section SIM.
     admit "ez".
   Qed.
 
-  Lemma match_event_distill
+  Lemma match_event_squeeze
         e_src e_tgt
     :
-      distill [decompile_event e_tgt] = ([e_src], true) <->
+      squeeze [decompile_event e_tgt] = ([e_src], true) <->
       match_event e_tgt e_src
   .
   Proof.
@@ -453,10 +446,10 @@ Section SIM.
     - eapply match_event_iff in H; et. ss. des_ifs.
   Qed.
 
-  Lemma match_events_distill
+  Lemma match_events_squeeze
         es_src es_tgt
     :
-      distill (List.map decompile_event es_tgt) = (es_src, true) <->
+      squeeze (List.map decompile_event es_tgt) = (es_src, true) <->
       Forall2 match_event es_tgt es_src
   .
   Proof.
@@ -471,7 +464,7 @@ Section SIM.
         (SAFE: safe_along_events st_src0 tr_tgt)
     :
       exists i1 st_src1 tr_src,
-        (<<MB: distill (List.map decompile_event tr_tgt) = (tr_src, true)>>) /\
+        (<<MB: squeeze (List.map decompile_event tr_tgt) = (tr_src, true)>>) /\
         (<<STEP: star L0 st_src0 tr_src st_src1>>) /\
         (<<SIM: sim i1 st_src1 st_tgt1>>)
   .
@@ -542,26 +535,6 @@ Section SIM.
     exploit WFSRC; [..|apply STEP|apply STEP0|]; ss. i; subst. esplits; et.
     punfold BEH.
   Qed.
-
-  (* Lemma beh_of_state_star_aux *)
-  (*       st_src0 st_src1 tr1 *)
-  (*       (BEH: Beh.of_state L0 st_src1 tr1) *)
-  (*       (STAR: star L0 st_src0 [] st_src1) *)
-  (*   : *)
-  (*     <<BEH: Beh.of_state L0 st_src0 tr1>> *)
-  (* . *)
-  (* Proof. *)
-  (*   revert BEH. revert tr1. *)
-  (*   remember nil as x in STAR. revert Heqx. *)
-  (*   induction STAR; ii; ss. *)
-  (*   destruct es0; ss. subst. *)
-  (*   exploit IHSTAR; et. intro U; des. *)
-  (*   destruct (state_sort L0 st_src0) eqn:T. *)
-  (*   - eapply _beh_astep_rev; et. *)
-  (*   - pfold. econs; ss; et. rr. esplits; ss; et. punfold U. *)
-  (*   - admit "ez - wf_final; final nostep". *)
-  (*   - admit "ez - wf_vis; vis should always make some event". *)
-  (* Qed. *)
 
   Lemma beh_of_state_star
         st_src0 st_src1 es0 tr1
@@ -659,7 +632,7 @@ Section SIM.
       assert(NOTSAFE:
                exists st_src1 thd thd_tgt,
                  (<<B: behavior_prefix thd_tgt tr_tgt>>)
-                 /\ (<<MB: distill (List.map decompile_event thd_tgt) = (thd, true)>>)
+                 /\ (<<MB: squeeze (List.map decompile_event thd_tgt) = (thd, true)>>)
                  /\ (<<STAR: star L0 st_src0 thd st_src1>>)
                  /\ (<<STUCK: ~NoStuck L0 st_src1>>)).
       { unfold safe_along_trace in SAFE. Psimpl. des.
