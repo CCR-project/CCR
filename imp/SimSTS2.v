@@ -168,7 +168,7 @@ Section SIM.
     | Econsinf ev tr =>
       match decompile_event ev with
       | Some ev => Tr.cons ev (decompile_trinf tr)
-      | _ => Tr.done 42 (*** ub? nb? spin? ***)
+      | _ => Tr.ub
       end
     end
   .
@@ -204,12 +204,12 @@ Section SIM.
       (* let es := (filter_map decompile_event tr) in *)
       (* (Tr.app es (Tr.done (Int.signed i))) *)
     | Diverges tr => 
-      let es := (filter_map decompile_event tr) in
-      (Tr.app es (Tr.spin))
+      let '(es, succ) := distill (List.map decompile_event tr) in
+      Tr.app es (if succ then (Tr.spin) else Tr.ub)
     | Reacts tr => (decompile_trinf tr)
     | Goes_wrong tr =>
-      let es := (filter_map decompile_event tr) in
-      (Tr.app es (Tr.ub))
+      let '(es, succ) := distill (List.map decompile_event tr) in
+      Tr.app es Tr.ub
     end
   .
 
