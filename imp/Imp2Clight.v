@@ -495,7 +495,7 @@ Section Beh.
   (*       map_trace tr [] = Some mtr -> *)
   (*       match_beh (Goes_wrong tr) (Tr.app mtr (Tr.ub)). *)
 
-  Variant _match_beh match_beh (tgtb : program_behavior) (srcb : Tr.t) : Prop :=
+  Variant _match_beh (match_beh: _ -> _ -> Prop) (tgtb : program_behavior) (srcb : Tr.t) : Prop :=
   | match_beh_Terminates
       tr mtr r
       (MT : Forall2 match_event tr mtr)
@@ -537,11 +537,10 @@ Section Beh.
     - econs 4; eauto.
   Qed.
 
-  Hint Constructors _match_beh.
-  Hint Unfold match_beh.
-  Hint Resolve match_beh_mon: paco.
-
 End Beh.
+Hint Constructors _match_beh.
+Hint Unfold match_beh.
+Hint Resolve match_beh_mon: paco.
 
 Section Sim.
 
