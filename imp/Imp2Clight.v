@@ -447,11 +447,7 @@ Section Beh.
   (*   | v :: t => do mv <- map_val v; map_vals t (acc ++ [mv]) *)
   (*   end. *)
 
-  Inductive match_vals : list eventval -> list val -> Prop :=
-  | match_vals_nil : match_vals [] []
-  | match_vals_cons :
-      forall v1 v2 l1 l2,
-        match_val v1 v2 -> match_vals l1 l2 -> match_vals (v1 :: l1) (v2 :: l2).
+  (* Definition match_vals : list eventval -> list val -> Prop := List.Forall2 match_val. *)
 
   (* Definition map_event (ev : Events.event) : option Universe.event := *)
   (*   match ev with *)
@@ -463,10 +459,13 @@ Section Beh.
   (*   end. *)
 
   Inductive match_event : Events.event -> Universe.event -> Prop :=
-  | match_event_intro :
-      forall name eargs uargs er ur,
-        match_vals eargs uargs -> match_val er ur ->
-        match_event (Event_syscall name eargs er) (event_sys name uargs ur).
+  | match_event_intro
+      name eargs uargs er ur
+      (MV: Forall2 match_val eargs uargs)
+      (MV: match_val er ur)
+    :
+      match_event (Event_syscall name eargs er) (event_sys name uargs ur)
+  .
 
   (* Fixpoint map_trace (tr : trace) acc : option (list Universe.event) := *)
   (*   match tr with *)
@@ -475,12 +474,7 @@ Section Beh.
   (*     do mev <- map_event ev; map_trace t (acc ++ [mev]) *)
   (*   end. *)
 
-  Inductive match_trace : trace -> list Universe.event -> Prop :=
-  | match_trace_nil : match_trace [] []
-  | match_trace_cons :
-      forall ee et ue ut,
-        match_event ee ue -> match_trace et ut ->
-        match_trace (ee :: et) (ue :: ut).
+  (* Definition match_trace : trace -> list Universe.event -> Prop := List.Forall2 match_event. *)
 
   (* Inductive match_beh : program_behavior -> Tr.t -> Prop := *)
   (* | match_beh_Terminates : *)
@@ -501,17 +495,17 @@ Section Beh.
   (*       map_trace tr [] = Some mtr -> *)
   (*       match_beh (Goes_wrong tr) (Tr.app mtr (Tr.ub)). *)
 
-  Variant _match_beh match_beh (tgtb : program_behavior) (srcb : Tr.t) : Prop :=
+  Variant _match_beh (match_beh: _ -> _ -> Prop) (tgtb : program_behavior) (srcb : Tr.t) : Prop :=
   | match_beh_Terminates
       tr mtr r
-      (MT : match_trace tr mtr)
+      (MT : Forall2 match_event tr mtr)
       (TB : tgtb = Terminates tr r)
-      (SB : srcb = Tr.done r.(intval))
+      (SB : srcb = Tr.app mtr (Tr.done r.(intval)))
     :
       _match_beh match_beh tgtb srcb
   | match_beh_Diverges
       tr mtr
-      (MT : match_trace tr mtr)
+      (MT : Forall2 match_event tr mtr)
       (TB : tgtb = Diverges tr)
       (SB : srcb = Tr.app mtr (Tr.spin))
     :
@@ -527,7 +521,7 @@ Section Beh.
   | match_beh_ub_trace
       mtr tr
       (SB : srcb = Tr.app mtr (Tr.ub))
-      (MT : match_trace tr mtr)
+      (MT : Forall2 match_event tr mtr)
       (TB : behavior_prefix tr tgtb)
     :
       _match_beh match_beh tgtb srcb.
@@ -543,11 +537,10 @@ Section Beh.
     - econs 4; eauto.
   Qed.
 
-  Hint Constructors _match_beh.
-  Hint Unfold match_beh.
-  Hint Resolve match_beh_mon: paco.
-
 End Beh.
+Hint Constructors _match_beh.
+Hint Unfold match_beh.
+Hint Resolve match_beh_mon: paco.
 
 Section Sim.
 
