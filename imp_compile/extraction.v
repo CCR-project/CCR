@@ -1,7 +1,7 @@
 From compcert Require
      Coqlib Wfsimpl AST Iteration Floats Compiler
      SelectLong Selection RTLgen Inlining ValueDomain Tailcall Allocation
-     Bounds Ctypes Csyntax Ctyping Clight Compiler Parser Initializers.
+     Bounds Ctypes Csyntax Ctyping Csharpminor Compiler Parser Initializers.
 
 Require Import ClassicalDescription.
 Require Coq.extraction.Extraction.
@@ -9,8 +9,8 @@ Require Import ExtrOcamlBasic.
 Require Import ExtrOcamlString.
 
 Require Import Imp ImpNotations.
-Require ImpNotations.
-Require Import Imp2Clight.
+(* Require ImpNotations. *)
+Require Import Imp2Csharpminor.
 
 Require Import ImpSimple.
 Require Import ImpFactorial.
@@ -161,8 +161,11 @@ Separate Extraction
    (* Parser.translation_unit_file *)
    (* For imp compilation *)
    Compiler.transf_clight_program
-   Imp.lift Imp2Clight.compile Imp2Clight.list_type_to_typelist
-   imp_factorial_prog imp_simple_prog
+   Imp2Csharpminor.ASMGEN.list_type_to_typelist
+   Imp2Csharpminor.ASMGEN.transf_csharpminor_program
+   Imp.lift Imp2Csharpminor.compile
+   imp_factorial_prog
+   imp_simple_prog
    imp_mutsumF_prog imp_mutsumG_prog imp_mutsumMain_prog
    imp_knot_prog
    imp_mem1_f imp_mem1_main

@@ -2,7 +2,7 @@ open Diagnostics
 open Driveraux
 open Compiler
 open Imp
-open Imp2Clight
+open Imp2Csharpminor
 open ImpSimple
 open ImpFactorial
 open ImpMutsum
@@ -36,7 +36,7 @@ let add_builtin p (name, (out, ins, b)) =
   let id = Camlcoq.intern_string name in
   let id' = Camlcoq.coqstring_of_camlstring name in
   let targs = List.map (C2C.convertTyp env) ins
-                |> Imp2Clight.list_type_to_typelist in
+                |> Imp2Csharpminor.ASMGEN.list_type_to_typelist in
   let tres = C2C.convertTyp env out in
   let sg = Ctypes.signature_of_type targs tres AST.cc_default in
   let ef =
@@ -56,18 +56,14 @@ let add_builtins p =
 
 (* Imp program compilations *)
 let compile_imp p ofile =
-  (* Prepare to dump Clight if requested *)
-  let set_dest dst ext =
-    dst := Some (output_filename ofile ".c" ext) in
-  set_dest PrintClight.destination ".light.c";
-  (* Convert Imp to Clight *)
-  let i2c = Imp2Clight.compile p in
+  (* Convert Imp to Csharpminor *)
+  let i2c = Imp2Csharpminor.compile p in
   match i2c with
-  | Errors.OK clight_out ->
-     let cl_built = add_builtins clight_out in
+  | Errors.OK csm_out ->
+     let cl_built = add_builtins csm_out in
      (* Convert to Asm *)
      (match Compiler.apply_partial
-              (Compiler.transf_clight_program cl_built)
+              (Imp2Csharpminor.ASMGEN.transf_csharpminor_program cl_built)
               Asmexpand.expand_program with
       | Errors.OK asm ->
          (* Print Asm in text form *)

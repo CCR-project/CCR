@@ -12,7 +12,12 @@ Require Import IMem0.
 Require Import Coq.Lists.SetoidList.
 
 From compcert Require Import
-     AST Integers Cminor Ctypes Csharpminor Globalenvs Linking Errors Cminorgen Behaviors Events.
+     Ctypes AST Integers Cminor Csharpminor Globalenvs Linking Errors Cminorgen Behaviors Events.
+
+From compcert Require Compiler.
+
+(* From compcert Require Import Cminor Cminortyping. *)
+(* Import RTLtypes. *)
 
 Import Int.
 
@@ -35,14 +40,6 @@ Section Compile.
   Definition ident_key {T} id l : option T :=
     SetoidList.findA (Pos.eqb id) l.
 
-  (* For builtins at compile time, ref: Velus, Generation.v *)
-  Fixpoint list_type_to_typelist (types: list type): typelist :=
-    match types with
-    | [] => Tnil
-    | h :: t => Tcons h (list_type_to_typelist t)
-    end
-  .
-
   (* Fixpoint args_to_typelist (args: list expr) : typelist := *)
   (*   match args with *)
   (*   | [] => Tnil *)
@@ -61,17 +58,17 @@ Section Compile.
       end
     | Plus a b =>
       match (compile_expr a), (compile_expr b) with
-      | Some ca, Some cb => Some (Ebinop Oadd ca cb)
+      | Some ca, Some cb => Some (Ebinop Oaddl ca cb)
       | _, _ => None
       end
     | Minus a b =>
       match (compile_expr a), (compile_expr b) with
-      | Some ca, Some cb => Some (Ebinop Osub ca cb)
+      | Some ca, Some cb => Some (Ebinop Osubl ca cb)
       | _, _ => None
       end
     | Mult a b =>
       match (compile_expr a), (compile_expr b) with
-      | Some ca, Some cb => Some (Ebinop Omul ca cb)
+      | Some ca, Some cb => Some (Ebinop Omull ca cb)
       | _, _ => None
       end
     end
@@ -80,8 +77,7 @@ Section Compile.
 
   Fixpoint compile_exprs (exprs: list Imp.expr) acc : option (list Csharpminor.expr) :=
     match exprs with
-    | h :: t =>
-      do hexp <- (compile_expr h); compile_exprs t (acc ++ [hexp])
+    | h :: t => do hexp <- (compile_expr h); compile_exprs t (acc ++ [hexp])
     | [] => Some acc
     end
   .
@@ -93,6 +89,9 @@ Section Compile.
   (*   end *)
   (* . *)
 
+  Definition make_signature n :=
+    mksignature (repeat Tlong n) (Tlong) (cc_default).
+
   Record gmap := mk_gmap {
     _ext_vars : list ident;
     _ext_funs : list (ident * signature);
@@ -100,13 +99,12 @@ Section Compile.
     _int_funs : list (ident * signature);
   }.
 
-  Let get_gmap_efuns :=
-    fun src =>
-      List.map (fun '(name, n) => (s2p name, Tfunction (make_arg_types n) Tlong0 cc_default)) src.
+  Let get_gmap_efuns : extFuns -> list (ident * signature) :=
+    fun src => List.map (fun '(name, n) => (s2p name, make_signature n)) src.
 
-  Let get_gmap_ifuns :=
+  Let get_gmap_ifuns : progFuns -> list (ident * signature) :=
     fun src =>
-      List.map (fun '(name, f) => (s2p name, Tfunction (make_arg_types (length f.(Imp.fn_params))) Tlong0 cc_default)) src.
+      List.map (fun '(name, f) => (s2p name, make_signature (length f.(Imp.fn_params)))) src.
 
   Definition get_gmap (src : Imp.programL) :=
     mk_gmap
@@ -119,15 +117,9 @@ Section Compile.
   (** memory accessing calls *)
   (** load, store, cmp are translated to non-function calls. *)
   (** register alloc and free in advance so can be properly called *)
-  Let malloc_args := (Tcons (Tptr0 Tlong0) Tnil).
-  Let malloc_ret := (Tptr0 Tlong0).
-  Let malloc_def : Ctypes.fundef function :=
-    External EF_malloc malloc_args malloc_ret cc_default.
+  Let malloc_def : fundef := External EF_malloc.
 
-  Let free_args := (Tcons (Tptr0 Tlong0) Tnil).
-  Let free_ret := Tvoid.
-  Let free_def : Ctypes.fundef function :=
-    External EF_free free_args free_ret cc_default.
+  Let free_def : fundef := External EF_free.
 
   Variable gm : gmap.
 
@@ -140,105 +132,87 @@ Section Compile.
     | Seq s1 s2 =>
       do cs1 <- (compile_stmt s1);
       do cs2 <- (compile_stmt s2);
-      Some (Ssequence cs1 cs2)
+      Some (Sseq cs1 cs2)
     | If cond sif selse =>
       do cc <- (compile_expr cond);
       do cif <- (compile_stmt sif);
       do celse <- (compile_stmt selse);
-      Some (Sifthenelse cc cif celse)
+      let bexp := Ebinop (Ocmplu Cne) cc (Econst (Olongconst Int64.zero)) in
+      Some (Sifthenelse bexp cif celse)
 
     | CallFun x f args =>
       let fdecls := gm.(_ext_funs) ++ gm.(_int_funs) in
       let id := s2p f in
-      do fty <- (ident_key id fdecls);
+      do fsig <- (ident_key id fdecls);
       do al <- (compile_exprs args []);
-      Some (Scall (Some (s2p x)) (Evar id fty) al)
+      Some (Scall (Some (s2p x)) fsig (Eaddrof id) al)
 
     (* only supports call by ptr with a variable (no other expr) *)
     | CallPtr x pe args =>
       match pe with
       | Var y =>
         do al <- (compile_exprs args []);
-        let atys := make_arg_types (length args) in
-        let fty := Tfunction atys Tlong0 cc_default in
-        let a := Etempvar (s2p y) (Tptr0 fty) in
-        Some (Scall (Some (s2p x)) a al)
+        let fsig := make_signature (length al) in
+        Some (Scall (Some (s2p x)) fsig (Evar (s2p y)) al)
       | _ => None
       end
 
     | CallSys x f args =>
       let fdecls := gm.(_ext_funs) in
       let id := s2p f in
-      do fty <- (ident_key id fdecls);
+      do fsig <- (ident_key id fdecls);
       do al <- (compile_exprs args []);
-      Some (Scall (Some (s2p x)) (Evar id fty) al)
+      Some (Scall (Some (s2p x)) fsig (Eaddrof id) al)
 
     | AddrOf x GN =>
       let id := s2p GN in
       let vdecls := gm.(_ext_vars) ++ gm.(_int_vars) in
       let fdecls := gm.(_ext_funs) ++ gm.(_int_funs) in
       if (existsb (fun p => Pos.eqb id p) vdecls)
-      then Some (Sset (s2p x) (Eaddrof (Evar id Tlong0) Tlong0))
+      then Some (Sset (s2p x) (Eaddrof id))
       else
         do fty <- (ident_key id fdecls);
-        Some (Sset (s2p x) (Eaddrof (Evar id fty) fty))
+        Some (Sset (s2p x) (Eaddrof id))
 
     | Malloc x se =>
       do a <- (compile_expr se);
-      let fty := (Tfunction malloc_args malloc_ret cc_default) in
-      Some (Scall (Some (s2p x)) (Evar (s2p "malloc") fty) [a])
+      Some (Scall (Some (s2p x)) (ef_sig EF_malloc) (Eaddrof (s2p "malloc")) [a])
     | Free pe =>
       do a <- (compile_expr pe);
-      let fty := (Tfunction free_args free_ret cc_default) in
-      Some (Scall None (Evar (s2p "free") fty) [a])
+      Some (Scall None (ef_sig EF_free) (Eaddrof (s2p "free")) [a])
     | Load x pe =>
-      do cpe <- (compile_expr pe); Some (Sset (s2p x) (Ederef cpe Tlong0))
+      do cpe <- (compile_expr pe);
+      Some (Sset (s2p x) (Eload Mint64 cpe))
     | Store pe ve =>
       do cpe <- (compile_expr pe);
       do cve <- (compile_expr ve);
-      Some (Sassign (Ederef cpe Tlong0) cve)
+      Some (Sstore Mint64 cpe cve)
     | Cmp x ae be =>
       do cae <- (compile_expr ae);
       do cbe <- (compile_expr be);
-      let cmpexpr := (Ebinop Cop.Oeq cae cbe Tlong0) in
+      let cmpexpr := (Ebinop (Ocmplu Ceq) cae cbe) in
       Some (Sset (s2p x) cmpexpr)
     end
   .
 
-  Let compile_eVars : extVars -> tgt_gdefs :=
-    let init_value := [] in
-    let gv := (mkglobvar Tlong0 init_value false false) in
-    fun src => List.map (fun name => (s2p name, Gvar gv)) src.
+  Definition compile_eVars src : tgt_gdefs :=
+    let gv := (mkglobvar () [] false false) in
+    List.map (fun id => (s2p id, Gvar gv)) src.
 
-  Let compile_iVars : progVars -> tgt_gdefs :=
-    let mapf :=
-        fun '(name, z) =>
-          let init_value := [Init_int64 (to_long z)] in
-          let gv := (mkglobvar Tlong0 init_value false false) in
-          (s2p name, Gvar gv) in
-    fun src => List.map mapf src.
+  Definition compile_iVars src : tgt_gdefs :=
+    List.map (fun '(id, z) => (s2p id, Gvar (mkglobvar () [Init_int64 (to_long z)] false false))) src.
 
-  Fixpoint compile_eFuns (src : extFuns) : tgt_gdefs :=
-    match src with
-    | [] => []
-    | (name, a) :: t =>
-      let tail := (compile_eFuns t) in
-      let tyargs := make_arg_types a in
-      let sg := mksignature (typlist_of_typelist tyargs) (Tret AST.Tlong) cc_default in
-      let fd := Gfun (External (EF_external name sg) tyargs Tlong0 cc_default) in 
-      ((s2p name, fd) :: tail)
-    end
-  .
+  Definition compile_eFuns (src : extFuns) : tgt_gdefs :=
+    List.map (fun '(id, a) => (s2p id, Gfun (External (EF_external id (make_signature a))))) src.
 
   Definition compile_function (f : Imp.function) : option function :=
     do fbody <- (compile_stmt f.(Imp.fn_body));
     let fdef := {|
-          fn_return := Tlong0;
-          fn_callconv := cc_default;
-          fn_params := (List.map (fun vn => (s2p vn, Tlong0)) f.(Imp.fn_params));
+          fn_sig := make_signature (List.length f.(Imp.fn_params));
+          fn_params := (List.map (fun vn => s2p vn) f.(Imp.fn_params));
           fn_vars := [];
-          fn_temps := (List.map (fun vn => (s2p vn, Tlong0)) f.(Imp.fn_vars)) ++ [(s2p "return", Tlong0); (s2p "_", Tlong0)];
-          fn_body := Ssequence fbody (Sreturn (Some (Etempvar (s2p "return") Tlong0)));
+          fn_temps := (List.map (fun vn => s2p vn) f.(Imp.fn_vars)) ++ [(s2p "return"); (s2p "_")];
+          fn_body := Sseq fbody (Sreturn (Some (Evar (s2p "return"))));
         |} in
     Some fdef.
 
@@ -256,7 +230,7 @@ Section Compile.
   Let init_g : tgt_gdefs :=
     [(s2p "malloc", Gfun malloc_def); (s2p "free", Gfun free_def)].
 
-  Let id_init := List.map fst init_g.
+  (* Let id_init := List.map fst init_g. *)
 
   Fixpoint NoDupB {A} decA (l : list A) : bool :=
     match l with
@@ -283,7 +257,7 @@ Section Compile.
     Some defs
   .
 
-  Definition _compile (src : Imp.programL) :=
+  Definition _compile (src : Imp.programL) : res program :=
     let optdefs := (compile_gdefs src) in
     match optdefs with
     | None => Error [MSG "Imp2clight compilation failed"]
@@ -291,7 +265,7 @@ Section Compile.
       if (@NoDupB _ positive_Dec (List.map fst _defs)) then
         let pdefs := Maps.PTree_Properties.of_list _defs in
         let defs := Maps.PTree.elements pdefs in
-        make_program [] defs (List.map s2p src.(publicL)) (s2p "main")
+        OK (mkprogram defs (List.map s2p src.(publicL)) (s2p "main"))
       else Error [MSG "Imp2clight compilation failed; duplicated declarations"]
     end
   .
@@ -300,6 +274,25 @@ End Compile.
 
 Definition compile (src : Imp.programL) :=
   _compile (get_gmap src) src.
+
+Module ASMGEN.
+
+  Import Compiler.
+
+  (* For builtins at compile time, ref: Velus, Generation.v *)
+  Fixpoint list_type_to_typelist (types: list type): typelist :=
+    match types with
+    | [] => Tnil
+    | h :: t => Tcons h (list_type_to_typelist t)
+    end
+  .
+
+  Definition transf_csharpminor_program (p: Csharpminor.program) : res Asm.program :=
+    OK p
+       @@@ time "Cminor generation" Cminorgen.transl_program
+       @@@ transf_cminor_program.
+
+End ASMGEN.
 
 Definition extFun_Dec : forall x y : (string * nat), {x = y} + {x <> y}.
 Proof.
@@ -572,10 +565,10 @@ Section Sim.
     rewrite! transl_all_bind; rewrite! EventsL.interp_Es_bind. grind.
   Qed.
 
-  Definition itree_of_cont_stmt (s : stmt) :=
+  Definition itree_of_cont_stmt (s : Imp.stmt) :=
     fun ge le ms mn rp => itree_of_imp_cont (denote_stmt s) ge le ms mn rp.
 
-  Definition itree_of_fun_body (fb : stmt) :=
+  Definition itree_of_fun_body (fb : Imp.stmt) :=
     fun ge le ms mn rp => itree_of_imp_fun (denote_stmt fb) ge le ms mn rp.
 
   Definition imp_state := itree eventE Any.t.
@@ -639,14 +632,14 @@ Section Sim.
     | _ => False
     end.
 
-  Fixpoint get_cont_stmts (cc: cont) : list Clight.statement :=
+  Fixpoint get_cont_stmts (cc: cont) : list Csharpminor.stmt :=
     match cc with
     | Kseq s k => s :: (get_cont_stmts k)
     | _ => []
     end
   .
 
-  Inductive match_code : imp_cont -> (list Clight.statement) -> Prop :=
+  Inductive match_code : imp_cont -> (list Csharpminor.stmt) -> Prop :=
   | match_code_nil
     :
       match_code idK []
@@ -659,14 +652,13 @@ Section Sim.
       match_code (fun x => (itr x >>= ktr)) (chead :: ctail)
   .
 
-  Inductive match_stack : imp_stack -> Clight.cont -> Prop :=
+  Inductive match_stack : imp_stack -> Csharpminor.cont -> Prop :=
   | match_stack_bottom
     :
       match_stack (fun '(r, p, x) => Ret x) Kstop
 
   | match_stack_cret
       ge tf ms mn le tle next stack tcont id tid glue tglue
-      (WF_RETF: tf.(fn_return) = Tlong0 \/ ((call_cont tcont = Kstop) /\ tf.(fn_return) = type_int32s))
       (MLE: match_le le tle)
       (MID: s2p id = tid)
 
@@ -681,12 +673,11 @@ Section Sim.
       match_stack (fun x => (y <- (glue x);; z <- next y;; (itree_of_imp_pop ms mn z) >>= stack)) (tglue)
   .
 
-  Variant match_states : imp_state -> Clight.state -> Prop :=
+  Variant match_states : imp_state -> Csharpminor.state -> Prop :=
   | match_states_intro
       ge gm tf rp ms mn le tle code itr tcode m tm next stack tcont
       (* function is only used to check return type, which compiled one always has Tlong0, except "main" which has *)
       (* (CF: compile_function gm f = Some tgtf) *)
-      (WF_RETF: tf.(fn_return) = Tlong0 \/ ((call_cont tcont = Kstop) /\ tf.(fn_return) = type_int32s))
       (CST: compile_stmt gm code = Some tcode)
       (ML: match_le le tle)
       (MM: match_mem m tm)
@@ -750,7 +741,7 @@ Section Proof.
     forall src1 src2 srcl tgt1 tgt2 tgtl,
       compile src1 = OK tgt1 -> compile src2 = OK tgt2 ->
       link_imp src1 src2 = Some srcl ->
-      link_program tgt1 tgt2 = Some tgtl ->
+      link_prog tgt1 tgt2 = Some tgtl ->
       compile srcl = OK tgtl.
   Proof.
   Admitted.
@@ -759,7 +750,7 @@ Section Proof.
     exists h t, program_list = h :: t.
 
   Inductive compile_list :
-    list programL -> list (Ctypes.program function) -> Prop :=
+    list programL -> list (Csharpminor.program) -> Prop :=
   | compile_nil :
       compile_list [] []
   | compile_head :
@@ -786,11 +777,11 @@ Section Proof.
       fold_left_option link_imp src_t (Some src_h)
     end.
 
-  Definition link_clight_list (tgt_list : list (Ctypes.program function)) :=
+  Definition link_clight_list (tgt_list : list (Csharpminor.program)) :=
     match tgt_list with
     | [] => None
     | tgt_h :: tgt_t =>
-      fold_left_option link_program tgt_t (Some tgt_h)
+      fold_left_option link_prog tgt_t (Some tgt_h)
     end.
 
   Lemma comm_link_imp_compile :
@@ -806,7 +797,7 @@ Section Proof.
     generalize dependent srcl. generalize dependent tgtl.
     generalize dependent p. generalize dependent p0.
     induction H7; i; ss; clarify.
-    destruct (link_program p0 tgt_h) eqn:LPt; ss; clarify.
+    destruct (link_prog p0 tgt_h) eqn:LPt; ss; clarify.
     2:{ rewrite fold_left_option_None in H1; clarify. }
     destruct (link_imp p src_h) eqn:LPs; ss; clarify.
     2:{ rewrite fold_left_option_None in H0; clarify. }
@@ -854,7 +845,7 @@ Section Proof.
   Lemma single_compile_behavior_improves :
     forall (src: Imp.program) tgt (beh: program_behavior),
       compile src = OK tgt ->
-      program_behaves (semantics2 tgt) beh ->
+      program_behaves (Csharpminor.semantics tgt) beh ->
       let srcM := ModL.add IMem (ImpMod.get_mod src) in
       exists mbeh,
         match_beh beh mbeh /\ Beh.of_program (ModL.compile srcM) mbeh.
@@ -868,7 +859,7 @@ Section Proof.
       let src_list_mod := List.map (fun src => ImpMod.get_mod src) src_list in
       Mod.add_list (IMem :: src_list_mod) = srclM ->
       link_clight_list tgt_list = Some tgtl ->
-      program_behaves (semantics2 tgtl) beh ->
+      program_behaves (Csharpminor.semantics tgtl) beh ->
       exists mbeh,
         match_beh beh mbeh /\ Beh.of_program (ModL.compile srclM) mbeh.
   Proof.

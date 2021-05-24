@@ -14,15 +14,15 @@ Section Example_Extract.
 
   Definition factorial : stmt :=
     "fptr" =#& "factorial" ;#
-    if# "input"
-    then# "output" =@* "fptr" ["input" - 1%Z] ;#
-          "output" =# "input" * "output"
+    if# "n"
+    then# "output" =@* "fptr" ["n" - 1%Z] ;#
+          "output" =# "n" * "output"
     else# "output" =# 1%Z
     fi#;#
     return# "output".
 
   Definition factorial_fundef : function := {|
-    fn_params := ["input"];
+    fn_params := ["n"];
     fn_vars := ["output"; "fptr"];
     fn_body := factorial
   |}.
