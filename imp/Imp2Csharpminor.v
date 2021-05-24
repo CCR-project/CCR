@@ -12,7 +12,7 @@ Require Import IMem0.
 Require Import Coq.Lists.SetoidList.
 
 From compcert Require Import
-     AST Integers Ctypes Clight Globalenvs Linking Errors Cshmgen Behaviors Events.
+     AST Integers Cminor Ctypes Csharpminor Globalenvs Linking Errors Cminorgen Behaviors Events.
 
 Import Int.
 
@@ -26,17 +26,16 @@ Section Compile.
 
   (* compile each program indiv,
      prove behavior refinement for whole (closed) prog after linking *)
-  Let tgt_gdef := globdef (Ctypes.fundef function) type.
+  Let tgt_gdef := globdef fundef ().
   Let tgt_gdefs := list (ident * tgt_gdef).
 
-  Definition Tlong0 := (Tlong Signed noattr).
-
-  Definition Tptr0 tgt_ty := (Tpointer tgt_ty noattr).
+  (* Definition Tlong0 := (Tlong Signed noattr). *)
+  (* Definition Tptr0 tgt_ty := (Tpointer tgt_ty noattr). *)
 
   Definition ident_key {T} id l : option T :=
     SetoidList.findA (Pos.eqb id) l.
 
-  (* ref: Velus, Generation.v *)
+  (* For builtins at compile time, ref: Velus, Generation.v *)
   Fixpoint list_type_to_typelist (types: list type): typelist :=
     match types with
     | [] => Tnil
@@ -44,45 +43,42 @@ Section Compile.
     end
   .
 
-  Fixpoint args_to_typelist (args: list expr) : typelist :=
-    match args with
-    | [] => Tnil
-    | h::t => Tcons Tlong0 (args_to_typelist t)
-    end
-  .
+  (* Fixpoint args_to_typelist (args: list expr) : typelist := *)
+  (*   match args with *)
+  (*   | [] => Tnil *)
+  (*   | h::t => Tcons Tlong0 (args_to_typelist t) *)
+  (*   end *)
+  (* . *)
 
-  Fixpoint compile_expr expr : option Clight.expr :=
+  Fixpoint compile_expr (expr: Imp.expr) : option Csharpminor.expr :=
     match expr with
     | Var x =>
-      Some (Etempvar (s2p x) Tlong0)
+      Some (Evar (s2p x))
     | Lit v =>
       match v with
-      | Vint z => Some (Econst_long (to_long z) Tlong0)
+      | Vint z => Some (Econst (Olongconst (to_long z)))
       | _ => None
       end
     | Plus a b =>
       match (compile_expr a), (compile_expr b) with
-      | Some ca, Some cb =>
-        Some (Ebinop Cop.Oadd ca cb Tlong0)
+      | Some ca, Some cb => Some (Ebinop Oadd ca cb)
       | _, _ => None
       end
     | Minus a b =>
       match (compile_expr a), (compile_expr b) with
-      | Some ca, Some cb =>
-        Some (Ebinop Cop.Osub ca cb Tlong0)
+      | Some ca, Some cb => Some (Ebinop Osub ca cb)
       | _, _ => None
       end
     | Mult a b =>
       match (compile_expr a), (compile_expr b) with
-      | Some ca, Some cb =>
-        Some (Ebinop Cop.Omul ca cb Tlong0)
+      | Some ca, Some cb => Some (Ebinop Omul ca cb)
       | _, _ => None
       end
     end
   .
   (** vsub, vmul may not agree with compcert's cop semantics *)
 
-  Fixpoint compile_exprs (exprs: list Imp.expr) acc : option (list Clight.expr) :=
+  Fixpoint compile_exprs (exprs: list Imp.expr) acc : option (list Csharpminor.expr) :=
     match exprs with
     | h :: t =>
       do hexp <- (compile_expr h); compile_exprs t (acc ++ [hexp])
@@ -90,18 +86,18 @@ Section Compile.
     end
   .
 
-  Fixpoint make_arg_types n :=
-    match n with
-    | O => Tnil
-    | S n' => Tcons Tlong0 (make_arg_types n')
-    end
-  .
+  (* Fixpoint make_arg_types n := *)
+  (*   match n with *)
+  (*   | O => Tnil *)
+  (*   | S n' => Tcons Tlong0 (make_arg_types n') *)
+  (*   end *)
+  (* . *)
 
   Record gmap := mk_gmap {
     _ext_vars : list ident;
-    _ext_funs : list (ident * type);
+    _ext_funs : list (ident * signature);
     _int_vars : list ident;
-    _int_funs : list (ident * type);
+    _int_funs : list (ident * signature);
   }.
 
   Let get_gmap_efuns :=
@@ -136,7 +132,7 @@ Section Compile.
   Variable gm : gmap.
 
   (* Imp has no type, value is either int64/ptr64 -> sem_cast can convert *)
-  Fixpoint compile_stmt stmt : option statement :=
+  Fixpoint compile_stmt (stmt: Imp.stmt) : option Csharpminor.stmt :=
     match stmt with
     | Skip => Some (Sskip)
     | Assign x e =>
