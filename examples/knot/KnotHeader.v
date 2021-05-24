@@ -7,7 +7,7 @@ Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
 Require Import TODOYJ.
-Require Import Logic YPM.
+Require Import ProofMode.
 Require Import HTactics.
 
 Set Implicit Arguments.

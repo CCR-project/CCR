@@ -17,7 +17,7 @@ From ExtLib Require Import
      Data.Map.FMapAList.
 Require Import TODOYJ.
 Require Import HTactics.
-Require Import Logic YPM.
+Require Import ProofMode.
 
 Set Implicit Arguments.
 
