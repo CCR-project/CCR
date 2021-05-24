@@ -16,7 +16,7 @@ From ExtLib Require Import
      Core.RelDec
      Structures.Maps
      Data.Map.FMapAList.
-Require Import HTactics TODOYJ YPM.
+Require Import HTactics TODOYJ ProofMode.
 
 Set Implicit Arguments.
 

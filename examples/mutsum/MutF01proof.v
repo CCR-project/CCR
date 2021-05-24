@@ -16,7 +16,7 @@ From ExtLib Require Import
      Structures.Maps
      Data.Map.FMapAList.
 
-Require Import HTactics Logic YPM.
+Require Import HTactics ProofMode.
 
 Set Implicit Arguments.
 

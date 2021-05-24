@@ -1,1 +1,1 @@
-Require Export IPM.
+Require Export ProofMode.

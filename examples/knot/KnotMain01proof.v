@@ -16,7 +16,7 @@ From ExtLib Require Import
      Structures.Maps
      Data.Map.FMapAList.
 
-Require Import HTactics Logic YPM TODOYJ.
+Require Import HTactics ProofMode TODOYJ.
 Require Import STB.
 
 Local Open Scope nat_scope.
