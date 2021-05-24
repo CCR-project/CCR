@@ -695,7 +695,7 @@ Section Sim.
       (ML: match_le le tle)
       (MM: match_mem m tm)
       (* (MG: match_ge ge tge) *)
-      (WFCONT: wf_ccont tcont)
+      (* (WFCONT: wf_ccont tcont) *)
       (MCS: match_code next (get_cont_stmts tcont))
       (MCN: match_stack stack (call_cont tcont))
       (ITR: itr = itree_of_cont_stmt code ge le ms mn rp)

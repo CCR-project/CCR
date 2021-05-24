@@ -159,8 +159,8 @@ Proof.
 Qed.
 
 Lemma angelic_step :
-  forall X (ktr next : itree eventE Any.t),
-    ModSemL.step (trigger (Take X);; ktr) None next -> next = ktr.
+  forall (X : Prop) (ktr next : itree eventE Any.t),
+    ModSemL.step (trigger (Take X);; ktr) None next -> (next = ktr /\ X).
 Proof.
   i. dependent destruction H; try (irw in x; clarify; fail).
   rewrite <- bind_trigger in x. apply unbind_trigger in x.
@@ -301,16 +301,9 @@ Section PROOF.
       destruct tcont; ss; clarify.
       + inv MCS. inv MCN; ss; clarify. unfold idK. sim_red.
         destruct rp. sim_red.
-        econs 3.
-        * admit "ez: determinate".
-        * eexists. eexists.
-          { eapply step_skip_call; ss. }
-          eexists; split; auto. eexists. left. pfold.
-          econs 1.
-          { admit "mid: retv int range". }
-          { ss. admit "wrong: should return Z". }
-          { ss. admit "wrong: should return Z". }
-          { i. admit "ez: unique final state". }
+        econs 4; ss; auto.
+        { unfold state_sort. ss. rewrite Any.upcast_downcast. ss. }
+        i. dependent destruction STEP.
       + inv MCS.
         admit "mid: skip".
       + admit "mid: skip".
