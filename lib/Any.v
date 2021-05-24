@@ -11,6 +11,7 @@ Module Type ANY.
   Parameter val: forall (a: t), (ty a).
   Parameter upcast: forall {T: Type}, T -> t.
   Parameter downcast: forall {T: Type}, t -> option T.
+  Parameter pair: t -> t -> t.
 
   Parameter upcast_inj: forall A B (a: A) (b: B) (EQ: upcast a = upcast b),
       <<EQ: A = B>> /\ <<EQ: a ~= b>>.
@@ -28,6 +29,10 @@ Module Type ANY.
   (* Parameter patmat: forall R (body: forall (T: Type), T -> R), t -> R. *)
   (* Parameter patmat_spec: forall R (body: forall (T: Type), T -> R) *)
   (*                               T (t: T), (patmat body (upcast t): R) = body _ t. *)
+
+  Parameter upcast_pair_downcast: forall A B (a: A) (b: B), downcast (pair (upcast a) (upcast b)) = Some (a, b).
+  Parameter pair_downcast: forall X Y (a0 a1: t) (x: X) (y: Y),
+      downcast (pair a0 a1) = Some (x, y) -> a0 = (upcast x) /\ a1 = (upcast y).
 
 End ANY.
 
@@ -54,6 +59,23 @@ Module _Any: ANY.
     | right _ => None
     end.
 
+(*   Definition downcast2 {T: Type} (a: t): option T. *)
+(*     destruct a. *)
+(*     destruct (excluded_middle_informative (ty0 = T)). *)
+(*     - subst. apply Some. assumption. *)
+(*     - apply None. *)
+(*   Defined. *)
+(* downcast2 =  *)
+(* fun (T : Type) (a : t) => *)
+(* match a with *)
+(* | {| ty := ty0; val := val0 |} => *)
+(*     let s := excluded_middle_informative (ty0 = T) in *)
+(*     match s with *)
+(*     | left e => eq_rect_r (fun ty1 : Type => ty1 -> option T) (fun val1 : T => Some val1) e val0 *)
+(*     | in_right => None *)
+(*     end *)
+(* end *)
+(*      : forall T : Type, t -> option T *)
   Lemma downcast_elim
         a T (v: T)
         (CAST: downcast a = Some v)
@@ -176,6 +198,40 @@ Module _Any: ANY.
   Lemma downcast_upcast: forall T (v: T) (a: t), downcast a = Some v -> <<CAST: upcast v = a>>.
   Proof.
     i. unfold upcast, downcast in *. des_ifs. destruct a; ss.
+  Qed.
+
+  (* Inductive myprod (A B: Type): Type := mypair: A -> B -> myprod A B. *)
+  (* Definition pair (a b: t): t := upcast (mypair (val a) (val b)). *)
+  Definition pair (a b: t): t := upcast ((val a), (val b)).
+
+  Lemma upcast_pair_downcast: forall A B (a: A) (b: B),
+      <<CAST: downcast (pair (upcast a) (upcast b)) = Some (a, b)>>.
+  Proof.
+    i. unfold downcast. des_ifs. ss. r. f_equal.
+    Local Set Printing Universes.
+    set (A: Type@{downcast.u1}) as AA. ss.
+    set (B: Type@{downcast.u1}) as BB. ss.
+    folder.
+    dependent destruction e.
+    ss.
+  Qed.
+
+  Lemma pair_downcast: forall X Y (a0 a1: t) (x: X) (y: Y),
+      downcast (pair a0 a1) = Some (x, y) -> a0 = (upcast x) /\ a1 = (upcast y).
+  Proof.
+    i.
+    unfold downcast in *.
+    des_ifs. ss. dependent destruction e. clarify.
+    unfold upcast. destruct a0, a1; ss.
+  Qed.
+  Require Import String.
+  Lemma pair_downcast: forall (a0 a1: t) (x: ty a0) (y: ty a1),
+      downcast (pair a0 a1) = Some (x, y) -> a0 = (upcast x) /\ a1 = (upcast y).
+  Proof.
+    i.
+    unfold downcast in *.
+    des_ifs. ss. dependent destruction e. clarify.
+    unfold upcast. destruct a0, a1; ss.
   Qed.
 
 End _Any.
