@@ -88,11 +88,11 @@ Section Denote.
   (** Denotation of expressions *)
   Fixpoint denote_expr (e : expr) : itree eff val :=
     match e with
-    | Var v     => u <- trigger (GetVar v) ;; assume (wf_val u) ;; Ret u
-    | Lit n     => assume (wf_val n) ;; Ret n
-    | Plus a b  => l <- denote_expr a ;; r <- denote_expr b ;; u <- (vadd l r)? ;; assume (wf_val u) ;; Ret u
-    | Minus a b => l <- denote_expr a ;; r <- denote_expr b ;; u <- (vsub l r)? ;; assume (wf_val u) ;; Ret u
-    | Mult a b  => l <- denote_expr a ;; r <- denote_expr b ;; u <- (vmul l r)? ;; assume (wf_val u) ;; Ret u
+    | Var v     => u <- trigger (GetVar v) ;; assume (wf_val u) ;;; Ret u
+    | Lit n     => assume (wf_val n) ;;; Ret n
+    | Plus a b  => l <- denote_expr a ;; r <- denote_expr b ;; u <- (vadd l r)? ;; assume (wf_val u) ;;; Ret u
+    | Minus a b => l <- denote_expr a ;; r <- denote_expr b ;; u <- (vsub l r)? ;; assume (wf_val u) ;;; Ret u
+    | Mult a b  => l <- denote_expr a ;; r <- denote_expr b ;; u <- (vmul l r)? ;; assume (wf_val u) ;;; Ret u
     end.
 
   (** Denotation of statements *)
@@ -168,14 +168,14 @@ Section Denote.
     | Expr e => v <- denote_expr e;; Ret v
 
     | AddrOf x X =>
-      v <- trigger (GetPtr X);; trigger (SetVar x v);; Ret Vundef
+      v <- trigger (GetPtr X);; trigger (SetVar x v);;; Ret Vundef
     | Malloc x se =>
       s <- denote_expr se;;
       v <- trigger (Call "alloc" ([s]↑));; v <- unwrapN(v↓);;
-      trigger (SetVar x v);; Ret Vundef
+      trigger (SetVar x v);;; Ret Vundef
     | Free pe =>
       p <- denote_expr pe;;
-      trigger (Call "free" ([p]↑));; Ret Vundef
+      trigger (Call "free" ([p]↑));;; Ret Vundef
     | Load x pe =>
       p <- denote_expr pe;;
       v <- trigger (Call "load" ([p]↑));; v <- unwrapN(v↓);;

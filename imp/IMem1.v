@@ -10,13 +10,11 @@ Require Import HoareDef.
 Require Import TODOYJ.
 Require Import Logic.
 
-Generalizable Variables E R A B C X Y Σ.
-
 Set Implicit Arguments.
 
 
 
-Let _memRA: URA.t := (block ==> Z ==> (Excl.t val))%ra.
+Let _memRA: URA.t := (mblock ==> Z ==> (Excl.t val))%ra.
 Compute (URA.car (t:=_memRA)).
 Instance memRA: URA.t := Auth.t _memRA.
 Compute (URA.car).
@@ -24,7 +22,7 @@ Compute (URA.car).
 Section PROOF.
   Context `{@GRA.inG memRA Σ}.
 
-  Definition _points_to (loc: block * Z) (vs: list val): _memRA :=
+  Definition _points_to (loc: mblock * Z) (vs: list val): _memRA :=
     let (b, ofs) := loc in
     (fun _b _ofs => if (dec _b b) && ((ofs <=? _ofs) && (_ofs <? (ofs + Z.of_nat (List.length vs))))%Z
                     then (List.nth_error vs (Z.to_nat (_ofs - ofs))) else ε)
@@ -39,7 +37,7 @@ Section PROOF.
   .
   Proof. refl. Qed.
 
-  Definition points_to (loc: block * Z) (vs: list val): memRA := Auth.white (_points_to loc vs).
+  Definition points_to (loc: mblock * Z) (vs: list val): memRA := Auth.white (_points_to loc vs).
 
   Lemma points_to_split
         blk ofs hd tl
@@ -47,6 +45,7 @@ Section PROOF.
       (points_to (blk, ofs) (hd :: tl)) = (points_to (blk, ofs) [hd]) ⋅ (points_to (blk, (ofs + 1)%Z) tl)
   .
   Proof.
+    Arguments Z.of_nat: simpl nomatch.
     ss. unfold points_to. unfold Auth.white. repeat (rewrite URA.unfold_add; ss).
     f_equal.
     repeat (apply func_ext; i).

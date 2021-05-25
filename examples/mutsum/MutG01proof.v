@@ -43,6 +43,8 @@ Section SIMMODSEM.
     des; clarify. unfold gF, ccall.
     apply Any.upcast_inj in PURE0. des; clarify.
     rewrite Any.upcast_downcast. steps. astart 10.
+    force_r.
+    { admit "Add range condition". } steps.
     destruct (dec (Z.of_nat x) 0%Z).
     - destruct x; ss. astop. force_l. eexists.
       hret _; ss.
