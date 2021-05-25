@@ -318,7 +318,7 @@ Section PROOF.
         grind. rewrite interp_imp_SetVar_Vundef.
         sim_tau. left; pfold. sim_tau. right.
         apply CIH.
-        rewrite transl_all_ret.
+        rewrite transl_all_ret. rewrite EventsL.interp_Es_ret. grind.
         eapply match_states_intro with (le1:=(alist_add id Vundef le0)) (code:= Skip); eauto.
         { econs. i. exists (map_val_opt sv); split; auto.
           admit "ez? alist & Maps.PTree". }
