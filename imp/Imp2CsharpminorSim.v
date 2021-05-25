@@ -265,10 +265,10 @@ Section PROOF.
   Theorem match_states_sim
           (src: Imp.program) tgt ist cst
           i0 j0
-          (COMP: Imp2Clight.compile src = OK tgt)
+          (COMP: Imp2Csharpminor.compile src = OK tgt)
           (MS: match_states mmem ist cst)
     :
-      <<SIM: sim (ModL.compile (Mod.add_list ([Mem] ++ [ImpMod.get_mod src]))) (semantics2 tgt) ordN i0 j0 ist cst>>.
+      <<SIM: sim (ModL.compile (Mod.add_list ([Mem] ++ [ImpMod.get_mod src]))) (semantics tgt) ordN i0 j0 ist cst>>.
   Proof.
     move COMP before tgt.
     revert_until COMP.
@@ -278,25 +278,61 @@ Section PROOF.
     destruct code.
     - ss. unfold itree_of_cont_stmt, itree_of_imp_cont.
       rewrite interp_imp_Skip. grind.
-      destruct tcont; ss; clarify.
-      + inv MCS. inv MCN; ss; clarify. unfold idK. sim_red.
-        destruct rp. sim_red.
-        econs 4; ss; auto.
+      destruct tcont eqn:TCONT; ss; clarify.
+      + inv MCS. inv MCN; ss; clarify. unfold idK. sim_red. destruct rp. sim_red.
+        econs 5; ss; auto.
         { unfold state_sort. ss. rewrite Any.upcast_downcast. ss. }
         i. dependent destruction STEP.
-      + inv MCS.
-        admit "mid: skip".
-      + admit "mid: skip".
+      + inv MCS; clarify.
+        sim_red.
+        econs 4; auto.
+        { admit "ez: strict_determinate_at". }
+        eexists. eexists.
+        { eapply step_skip_seq. }
+        eexists; split; auto. eexists.
+        right. eapply CIH.
+        eapply match_states_intro with (le0:=le) (gm0:=gm) (ge0:=ge) (rp0:=rp) (code0:=code); eauto.
+        erewrite ITR. destruct rp. auto.
+      + econs 4; auto.
+        { admit "ez: strict_determinate_at". }
+        eexists. eexists.
+        { eapply step_skip_block. }
+        eexists; split; auto. eexists.
+        right. eapply CIH.
+        eapply match_states_intro with (le0:=le) (gm0:=gm) (ge0:=ge) (rp0:=rp) (code:=Skip); eauto.
+        unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind.
+      + inv MCS. inv MCN; clarify. specialize GLUE with (ge:=ge); clarify.
+        unfold idK. sim_red. destruct rp. sim_red.
+        econs 4; auto.
+        { admit "ez: strict_determinate_at". }
+        eexists. eexists.
+        { eapply step_skip_call; ss; clarify; auto. }
+        eexists; split; auto. eexists. left; pfold.
+        econs 4; auto.
+        { admit "ez: strict_determinate_at". }
+        eexists. eexists.
+        { eapply step_return. }
+        eexists; split; auto. eexists. left; pfold.
+        rewrite Any.upcast_downcast.
+        unfold itree_of_imp_cont. ss. sim_red.
+        grind. rewrite interp_imp_SetVar_Vundef.
+        sim_tau. left; pfold. sim_tau. right.
+        apply CIH.
+        rewrite transl_all_ret.
+        eapply match_states_intro with (le1:=(alist_add id Vundef le0)) (code:= Skip); eauto.
+        { econs. i. exists (map_val_opt sv); split; auto.
+          admit "ez? alist & Maps.PTree". }
+        { unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
     - ss. unfold itree_of_cont_stmt, itree_of_imp_cont.
       rewrite interp_imp_Assign. sim_red. grind.
       destruct (compile_expr e) eqn:EXP; uo; ss. destruct rp. grind.
       eapply step_expr; eauto. i.
       repeat (sim_tau; left; pfold).
       rewrite transl_all_ret. rewrite EventsL.interp_Es_ret. grind.
-      econs 3.
+      econs 4.
       + admit "ez? strict_determinate_at".
       + eexists. eexists.
-        { eapply step_set. eapply H. }
+        { eapply step_set. eapply H0. }
         unfold ordN in *. eexists; split; eauto; auto.
         eexists. right. apply CIH.
         eapply match_states_intro with (le0:= alist_add x rv le) (gm0:= gm) (ge0:= ge) (rp:= (r0, p)) (code:= Skip); eauto.

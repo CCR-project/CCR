@@ -625,15 +625,16 @@ Section Sim.
 
   Variable match_mem : Mem.t -> Memory.Mem.mem -> Prop.
 
-  Definition wf_ccont (cc: cont) : Prop :=
-    match cc with
-    | Kstop | Kseq _ _ | Kcall _ _ _ _ _ => True
-    | _ => False
-    end.
+  (* Definition wf_ccont (cc: cont) : Prop := *)
+  (*   match cc with *)
+  (*   | Kstop | Kseq _ _ | Kcall _ _ _ _ _ => True *)
+  (*   | _ => False *)
+  (*   end. *)
 
   Fixpoint get_cont_stmts (cc: cont) : list Csharpminor.stmt :=
     match cc with
     | Kseq s k => s :: (get_cont_stmts k)
+    | Kblock k => get_cont_stmts k
     | _ => []
     end
   .
@@ -643,9 +644,9 @@ Section Sim.
     :
       match_code idK []
   | match_code_cons
-      code itr ktr chead ctail gm ge ms mn
-      (CST: compile_stmt gm code = Some chead)
-      (ITR: itr = fun '(r, p, (le, _)) => itree_of_cont_stmt code ge le ms mn (r, p))
+      code itr ktr chead ctail
+      (CST: forall gm, compile_stmt gm code = Some chead)
+      (ITR: forall ge ms mn, itr = fun '(r, p, (le, _)) => itree_of_cont_stmt code ge le ms mn (r, p))
       (MC: match_code ktr ctail)
     :
       match_code (fun x => (itr x >>= ktr)) (chead :: ctail)
@@ -657,13 +658,13 @@ Section Sim.
       match_stack (fun '(r, p, x) => Ret x) Kstop
 
   | match_stack_cret
-      ge tf ms mn le tle next stack tcont id tid glue tglue
+      tf ms mn le tle next stack tcont id tid glue tglue
       (MLE: match_le le tle)
       (MID: s2p id = tid)
 
-      (GLUE: glue = fun '(r, p, v) => itree_of_imp_cont (` v0 : val <- (v↓)?;; trigger (SetVar id v0);; Ret Vundef) ge le ms mn (r, p))
+      (GLUE: forall ge,
+          glue = fun '(r, p, v) => itree_of_imp_cont (` v0 : val <- (v↓)?;; trigger (SetVar id v0);; Ret Vundef) ge le ms mn (r, p))
 
-      (WFCONT: wf_ccont tcont)
       (MCONT: match_code next (get_cont_stmts tcont))
       (MSTACK: match_stack stack (call_cont tcont))
 
