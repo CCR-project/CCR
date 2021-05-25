@@ -157,6 +157,9 @@ Section PROOF.
   Ltac sim_red := Red.prw ltac:(_red_gen) 2 0.
   Ltac sim_tau := (try sim_red); econs 3; ss; clarify; eexists; exists (step_tau _); eexists; split; auto; eexists.
 
+  Ltac sim_triggerUB := ss; unfold triggerUB; (try sim_red); econs 5; i; ss; auto;
+                        dependent destruction STEP; try (irw in x; clarify; fail).
+
   Lemma map_val_vadd_comm
         a b v
         (VADD: vadd a b = Some v)
@@ -229,8 +232,7 @@ Section PROOF.
         sim_red. eapply SIM; auto.
         econs. inv MLE. specialize ML with (x:=v) (sv:=(Some v0)).
         hexploit ML; auto. i. des. ss. clarify.
-      + ss. unfold triggerUB. sim_red. econs 5; i; ss; auto.
-        dependent destruction STEP; try (irw in x; clarify; fail).
+      + sim_triggerUB.
     - rewrite interp_imp_expr_Lit.
       sim_red. unfold assume. grind. econs 5; auto. i. eapply angelic_step in STEP; des; clarify.
       eexists; split; auto. eexists. left; pfold.
@@ -247,8 +249,7 @@ Section PROOF.
         repeat (sim_tau; left; pfold).
         sim_red. specialize SIM with (rv:=v) (trv:= map_val v). apply SIM; auto.
         econs; eauto. ss. f_equal. apply map_val_vadd_comm; auto.
-      + ss. unfold triggerUB. sim_red. econs 5; i; ss; auto.
-        dependent destruction STEP; try (irw in x; clarify; fail).
+      + sim_triggerUB.
     -
   Admitted.
 
@@ -275,7 +276,10 @@ Section PROOF.
     pcofix CIH. i. pfold.
     inv MS.
     unfold ordN in *.
-    destruct code.
+    generalize dependent stack. generalize dependent next. generalize dependent CST.
+    generalize dependent tcont. generalize dependent tcode.
+    generalize dependent code.
+    induction code; i.
     - ss. unfold itree_of_cont_stmt, itree_of_imp_cont.
       rewrite interp_imp_Skip. grind.
       destruct tcont eqn:TCONT; ss; clarify.
@@ -346,9 +350,51 @@ Section PROOF.
           - inv ML. specialize ML0 with (x:=x0).
             admit "ez: alist_find & alist_add". }
         unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind.
-    - admit "ez?: Seq".
+    - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Seq. sim_red.
+      rewrite <- EventsL.interp_Es_bind.
+      ss. destruct (compile_stmt gm code1) eqn:CSC1; destruct (compile_stmt gm code2) eqn:CSC2; uo; clarify.
+      
+      eapply IHcode1.
+      econs 4.
+      { admit "ez?: strict_determinate_at". }
+      eexists. eexists.
+      { eapply step_seq. }
+      eexists. split; auto. eexists.
+      right. apply CIH.
+      eapply match_states_intro with (le0:=le) (gm0:=gm) (ge0:=ge) (rp0:=rp) (code:=code1); eauto.
+      admit "ez?: Seq".
     - admit "ez?: If".
-    - admit "hard: CallFun".
+    - ss. destruct (ident_key (s2p f)) eqn:IKF; clarify.
+      destruct (compile_exprs args []) eqn:CARGS; clarify. uo. inv CST.
+      unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_CallFun.
+      des_ifs; sim_red.
+      { sim_triggerUB. }
+      generalize dependent l. generalize dependent i0. generalize dependent j0.
+      assert (ACC:
+  forall (j0 i0 : nat) (l : list expr) acc1 acc2,
+  compile_exprs args acc1 = Some l ->
+  _sim (ModL.compile (Mod.add_list [Mem; ImpMod.get_mod src])) (semantics tgt) top2
+    (upaco4 (_sim (ModL.compile (Mod.add_list [Mem; ImpMod.get_mod src])) (semantics tgt) top2) r) i0 j0
+    (` r0 : r_state * p_state * (lenv * list val) <-
+     EventsL.interp_Es (prog ms) (transl_all mn (interp_imp_denote_exprs ge le args acc2)) rp;;
+     ` x0 : r_state * p_state * (alist var val * val) <-
+     (let (st1, v) := r0 in
+      EventsL.interp_Es (prog ms)
+        (transl_all mn
+           (let (le1, vs) := v in
+            ` v0 : Any.t <- trigger (Call f (Any.upcast vs));;
+            (tau;; tau;; ` v1 : val <- unwrapN (Any.downcast v0);; (tau;; tau;; Ret (alist_add x v1 le1, Vundef))))) st1);;
+     ` x1 : r_state * p_state * (lenv * val) <- (let (st1, v) := x0 in EventsL.interp_Es (prog ms) (transl_all mn (Ret v)) st1);;
+     ` y : r_state * p_state * (lenv * val) <- next x1;; ` x : _ <- itree_of_imp_pop ms mn y;; stack x)
+    (State tf (Scall (Some (s2p x)) s (Eaddrof (s2p f)) l) tcont empty_env tle tm)).
+      { generalize dependent args. induction args; ss; i; clarify.
+        { sim_red. destruct rp. rewrite EventsL.interp_Es_rE.
+          sim_red.
+          admit "ez? need wf_r_state". }
+        sim_red. destruct (compile_expr a) eqn:CEA; clarify. uo.
+        destruct rp. eapply step_expr; eauto. }
+      i. eapply (ACC j0 i0 l [] []). eauto.
+      (* admit "hard: CallFun". *)
     - admit "hard: CallPtr".
     - admit "mid: CallSys".
     - admit "hard: AddrOf".
