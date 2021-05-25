@@ -8,10 +8,9 @@ Require Import STS Behavior.
 Require Import Any.
 Require Import ModSem.
 Require Import Imp.
-Require Import Imp2Clight.
+Require Import Imp2Csharpminor.
 Require Import ImpProofs.
 Require Import Mem0.
-(* Require Import HoareDef. *)
 Require Import IRed.
 
 Set Implicit Arguments.
@@ -54,6 +53,18 @@ Section SIM.
     :
       _sim sim i0 j0 st_src0 st_tgt0
 
+  | sim_vis
+      (SRT: _.(state_sort) st_src0 = vis)
+      (SRT: exists _ev_tgt _st_tgt1, Step L1 st_tgt0 [_ev_tgt] _st_tgt1)
+      (SIM: forall ev_tgt st_tgt1
+          (STEP: Step L1 st_tgt0 ev_tgt st_tgt1)
+        ,
+          exists st_src1 ev_src (STEP: _.(step) st_src0 (Some ev_src) st_src1),
+            (<<MATCH: Forall2 match_event ev_tgt [ev_src]>>) /\
+            (<<SIM: exists i1 j1, sim i1 j1 st_src1 st_tgt1>>))
+    :
+      _sim sim i0 j0 st_src0 st_tgt0
+
   | sim_demonic_src
       (SRT: _.(state_sort) st_src0 = demonic)
       (SIM: exists st_src1
@@ -62,6 +73,7 @@ Section SIM.
           exists i1, <<ORD: ord i1 i0>> /\ <<SIM: exists j1, sim i1 j1 st_src1 st_tgt0>>)
     :
       _sim sim i0 j0 st_src0 st_tgt0
+
   | sim_demonic_tgt_dtm
       (*** WRONG DEF, Note: UB in tgt ***)
       (* (SIM: forall st_tgt1 *)
@@ -81,6 +93,7 @@ Section SIM.
       (* (SIM: sim i1 st_src0 st_tgt1) *)
     :
       _sim sim i0 j0 st_src0 st_tgt0
+
   | sim_angelic_src
       (SRT: _.(state_sort) st_src0 = angelic)
       (SIM: forall st_src1
@@ -89,28 +102,6 @@ Section SIM.
           exists i1, <<ORD: ord i1 i0>> /\ <<SIM: exists j1, sim i1 j1 st_src1 st_tgt0>>)
     :
       _sim sim i0 j0 st_src0 st_tgt0
-
-  (* | sim_vis *)
-  (*     (SRT: _.(state_sort) st_src0 = vis) *)
-  (*     (SRT: _.(state_sort) st_tgt0 = vis) *)
-  (*     (SIM: forall ev st_tgt1 *)
-  (*         (STEP: _.(step) st_tgt0 (Some ev) st_tgt1) *)
-  (*       , *)
-  (*         exists st_src1 (STEP: _.(step) st_src0 (Some ev) st_src1), *)
-  (*           <<SIM: exists i1, sim i1 st_src1 st_tgt1>>) *)
-  (*   : *)
-  (*     _sim sim i0 st_src0 st_tgt0 *)
-
-  (* | sim_demonic_both *)
-  (*     (SRT: _.(state_sort) st_src0 = demonic) *)
-  (*     (DTM: strict_determinate_at L1 st_tgt0) *)
-  (*     (SIM: exists st_tgt1 *)
-  (*         (STEP: Step L1 st_tgt0 E0 st_tgt1) *)
-  (*       , *)
-  (*         exists st_src1 (STEP: _.(step) st_src0 None st_src1), *)
-  (*           <<SIM: exists i1, sim i1 st_src1 st_tgt1>>) *)
-  (*   : *)
-  (*     _sim sim i0 st_src0 st_tgt0 *)
   .
 
   Definition sim: _ -> _ -> _ -> _ -> Prop := paco4 _sim bot4.
@@ -120,30 +111,17 @@ Section SIM.
     ii. inv IN.
 
     - econs 1; et.
-    - econs 2; et. des. esplits; et.
+    - econs 2; et. i. exploit SIM; et. i; des. esplits; et.
     - econs 3; et. des. esplits; et.
-    - econs 4; et. i. exploit SIM; et. i; des. esplits; et.
+    - econs 4; et. des. esplits; et.
+    - econs 5; et. i. exploit SIM; et. i; des. esplits; et.
   Qed.
 
-  Hint Constructors _sim.
-  Hint Unfold sim.
-  Hint Resolve sim_mon: paco.
-
-  Record simulation: Prop := mk_simulation {
-    sim_wf_ord: <<WF: well_founded ord>>;
-    sim_init: forall st_tgt0 (INITT: L1.(Smallstep.initial_state) st_tgt0),
-        exists i0 j0, (<<SIM: sim i0 j0 L0.(initial_state) st_tgt0>>);
-    (* sim_init: exists i0 st_tgt0, (<<SIM: sim i0 L0.(initial_state) st_tgt0>>) /\ *)
-    (*                              (<<INITT: L1.(Smallstep.initial_state) st_tgt0>>); *)
-    (* sim_dtm: True; *)
-  }
-  .
-
-  Hypothesis WF: well_founded ord.
-
-  Ltac pc H := rr in H; desH H; ss.
-
 End SIM.
+
+Hint Constructors _sim.
+Hint Unfold sim.
+Hint Resolve sim_mon: paco.
 
 Lemma unbind_trigger E:
   forall [X0 X1 A : Type] (ktr0 : X0 -> itree E A) (ktr1 : X1 -> itree E A) e0 e1,
@@ -167,9 +145,9 @@ Proof.
   des. clarify.
 Qed.
 
-(* Lemma idK_spec2: forall [E : Type -> Type] [R : Type] (i0 : itree E R), i0 = ` x : _ <- i0;; idK x *)
 Section PROOF.
 
+  From compcert Require Import Csharpminor.
   Import ModSemL.
 
   Context `{Σ: GRA.t}.
@@ -177,63 +155,64 @@ Section PROOF.
   Definition ordN : nat -> nat -> Prop := fun a b => True.
 
   Ltac sim_red := Red.prw ltac:(_red_gen) 2 0.
-  Ltac sim_tau := (try sim_red); econs 2; ss; clarify; eexists; exists (step_tau _); eexists; split; auto; eexists.
+  Ltac sim_tau := (try sim_red); econs 3; ss; clarify; eexists; exists (step_tau _); eexists; split; auto; eexists.
 
-  Lemma compile_expr_always_Tlong0 :
-    forall src tgt,
-      compile_expr src = Some tgt -> typeof tgt = Tlong0.
-  Proof.
-    i. destruct src; ss; clarify.
-    2,3,4: destruct (compile_expr src1); destruct (compile_expr src2); ss; clarify.
-    destruct v; ss; clarify.
-  Qed.
-
-  Lemma map_val_correct
-        tge tle tm srca ea srcb eb a b v
-        (CEA: compile_expr srca = Some ea)
-        (CEB: compile_expr srcb = Some eb)
+  Lemma map_val_vadd_comm
+        a b v
         (VADD: vadd a b = Some v)
-        (EVEA: eval_expr tge empty_env tle tm ea (map_val a))
-        (EVEB: eval_expr tge empty_env tle tm eb (map_val b))
+        (WFA: wf_val a)
+        (WFB: wf_val b)
+        (WFV: wf_val v)
     :
-      eval_expr tge empty_env tle tm (Ebinop Cop.Oadd ea eb Tlong0) (map_val v).
+      Values.Val.addl (map_val a) (map_val b) = map_val v.
   Proof.
-    assert (TYEA: typeof ea = Tlong0); eauto using compile_expr_always_Tlong0.
-    assert (TYEB: typeof eb = Tlong0); eauto using compile_expr_always_Tlong0.
-    destruct a; destruct b; ss; clarify.
-    - econs; eauto. rewrite TYEA. rewrite TYEB. ss.
-      unfold Cop.sem_add; ss. unfold Cop.sem_binarith; ss.
-      unfold Cop.sem_cast; ss. des_ifs. unfold to_long.
-      unfold Int64.add. unfold Int64.unsigned.
-      Local Transparent Int64.repr.
-      unfold Int64.repr. ss.
-      Local Opaque Int64.repr.
-      admit "ez? need to assume no overflow".
-    - econs; eauto. rewrite TYEA. rewrite TYEB. ss.
-      unfold Cop.sem_add; ss. unfold Cop.sem_binarith; ss.
-      unfold Cop.sem_cast; ss. des_ifs. unfold to_long.
-      admit "Wrong: need to properly handle pointer type".
-    - admit "Wrong: need to properly handle pointer type".
-  Admitted.
+    destruct a; destruct b; ss; clarify; unfold to_long; ss.
+    - unfold to_long. ss. repeat f_equal. unfold Int64.add. f_equal.
+      rewrite! Int64.unsigned_repr_eq.
+      unfold intrange_64 in *. unfold modulus_64 in *. unfold Int64.modulus.
+      unfold wordsize_64, Int64.wordsize in *. unfold Wordsize_64.wordsize.
+      rewrite! Z.mod_small; auto; try nia.
+    - des_ifs. unfold Ptrofs.add; ss.
+      unfold intrange_64 in *. unfold modulus_64 in *. unfold wordsize_64 in *.
+      repeat f_equal; try rewrite Ptrofs.unsigned_repr_eq.
+      + unfold Ptrofs.modulus. unfold Ptrofs.wordsize. unfold Wordsize_Ptrofs.wordsize.
+        des_ifs. rewrite Z.mod_small; auto. nia.
+      + unfold Ptrofs.of_int64.
+        rewrite Int64.unsigned_repr_eq. rewrite Ptrofs.unsigned_repr_eq.
+        unfold Ptrofs.modulus. unfold Ptrofs.wordsize. unfold Wordsize_Ptrofs.wordsize. des_ifs.
+        unfold Int64.modulus. unfold Int64.wordsize. unfold Wordsize_64.wordsize.
+        rewrite Z.mod_mod; try nia. rewrite Z.mod_small; try nia.
+    - des_ifs. unfold Ptrofs.add; ss.
+      unfold intrange_64 in *. unfold modulus_64 in *. unfold wordsize_64 in *.
+      repeat f_equal; try rewrite Ptrofs.unsigned_repr_eq.
+      + unfold Ptrofs.modulus. unfold Ptrofs.wordsize. unfold Wordsize_Ptrofs.wordsize.
+        des_ifs. rewrite Z.mod_small; auto. nia.
+      + unfold Ptrofs.of_int64.
+        rewrite Int64.unsigned_repr_eq. rewrite Ptrofs.unsigned_repr_eq.
+        unfold Ptrofs.modulus. unfold Ptrofs.wordsize. unfold Wordsize_Ptrofs.wordsize. des_ifs.
+        unfold Int64.modulus. unfold Int64.wordsize. unfold Wordsize_64.wordsize.
+        rewrite Z.mod_mod; try nia. rewrite Z.mod_small; try nia.
+  Qed.
 
   Lemma step_expr
         e te
-        tcode tf tcont tge tle tm (src: ModL.t) (tgt: Clight.program)
+        tcode tf tcont tge tle tm (src: ModL.t) (tgt: Csharpminor.program)
         r ms mn ge le rstate pstate ktr
         i0 j0 i1 j1
         (MLE: match_le le tle)
         (CEXP: compile_expr e = Some te)
         (SIM:
            forall rv trv,
+             wf_val rv ->
              eval_expr tge empty_env tle tm te trv ->
              trv = map_val rv ->
-             _sim (ModL.compile src) (semantics2 tgt) ordN
-                  (upaco4 (_sim (ModL.compile src) (semantics2 tgt) ordN) r) i1 j1
+             _sim (ModL.compile src) (semantics tgt) ordN
+                  (upaco4 (_sim (ModL.compile src) (semantics tgt) ordN) r) i1 j1
                   (ktr (rstate, pstate, (le, rv)))
                   (State tf tcode tcont empty_env tle tm))
     :
-      _sim (ModL.compile src) (semantics2 tgt) ordN
-           (upaco4 (_sim (ModL.compile src) (semantics2 tgt) ordN) r) i0 j0
+      _sim (ModL.compile src) (semantics tgt) ordN
+           (upaco4 (_sim (ModL.compile src) (semantics tgt) ordN) r) i0 j0
            (r0 <- EventsL.interp_Es (prog ms) (transl_all mn (interp_imp ge le (denote_expr e))) (rstate, pstate);; ktr r0)
            (State tf tcode tcont empty_env tle tm).
   Proof.
@@ -243,34 +222,35 @@ Section PROOF.
     generalize dependent e. Local Opaque Init.Nat.add. induction e; i; ss; des; clarify.
     - rewrite interp_imp_expr_Var. sim_red.
       destruct (alist_find v le) eqn:AFIND; try sim_red.
-      + repeat (sim_tau; left; pfold).
-        sim_red. unfold assume. grind. econs 4; auto. i. eapply angelic_step in STEP. clarify.
+      + repeat (sim_tau; left; pfold). sim_red.
+        unfold assume. grind. econs 5; ss; auto. i. eapply angelic_step in STEP; des; clarify.
         eexists; split; auto. eexists. left. pfold.
         repeat (sim_tau; left; pfold).
-        sim_red. eapply SIM.
-        { econs. inv MLE. specialize ML with (x:=v) (sv:=(Some v0)).
-          hexploit ML; auto. i. des. ss. clarify. apply H0. }
-        auto.
-      + ss. unfold triggerUB. sim_red. econs 4; i; ss; auto.
+        sim_red. eapply SIM; auto.
+        econs. inv MLE. specialize ML with (x:=v) (sv:=(Some v0)).
+        hexploit ML; auto. i. des. ss. clarify.
+      + ss. unfold triggerUB. sim_red. econs 5; i; ss; auto.
         dependent destruction STEP; try (irw in x; clarify; fail).
     - rewrite interp_imp_expr_Lit.
-      sim_red. unfold assume. grind. econs 4; auto. i. eapply angelic_step in STEP. clarify.
+      sim_red. unfold assume. grind. econs 5; auto. i. eapply angelic_step in STEP; des; clarify.
       eexists; split; auto. eexists. left; pfold.
       repeat (sim_tau; left; pfold).
-      sim_red. eapply SIM; eauto. econs.
+      sim_red. eapply SIM; eauto. econs. unfold map_val. ss.
     - rewrite interp_imp_expr_Plus.
       sim_red. destruct (compile_expr e1) eqn:EXP1; destruct (compile_expr e2) eqn:EXP2; ss; clarify.
       eapply IHe1; eauto; clear IHe1.
       i. sim_red. eapply IHe2; eauto; clear IHe2.
       i. sim_red.
       unfold unwrapU. destruct (vadd rv rv0) eqn:VADD; ss; clarify.
-      + sim_red. unfold assume. grind. econs 4; auto. i. eapply angelic_step in STEP. clarify.
+      + sim_red. unfold assume. grind. econs 5; auto. i. eapply angelic_step in STEP; des; clarify.
         eexists; split; auto. eexists. left; pfold.
         repeat (sim_tau; left; pfold).
-        sim_red. specialize SIM with (rv:=v) (trv:= map_val v).
+        sim_red. specialize SIM with (rv:=v) (trv:= map_val v). apply SIM; auto.
+        econs; eauto. ss. f_equal. apply map_val_vadd_comm; auto.
+      + ss. unfold triggerUB. sim_red. econs 5; i; ss; auto.
+        dependent destruction STEP; try (irw in x; clarify; fail).
+    -
   Admitted.
-
-
 
   Variable mmem : Mem.t -> Memory.Mem.mem -> Prop.
 

@@ -580,8 +580,7 @@ Section Sim.
     match v with
     | Vint z => Values.Vlong (to_long z)
     | Vptr blk ofs =>
-      let ofsv := to_long ofs in
-      Values.Vptr (Pos.of_nat (blk+1)) (Ptrofs.mkint ofsv.(Int64.intval) ofsv.(Int64.intrange))
+      Values.Vptr (Pos.of_nat (blk+1)) (Ptrofs.repr ofs)
     | Vundef => Values.Vundef
     end.
 
