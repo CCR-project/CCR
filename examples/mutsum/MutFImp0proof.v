@@ -52,16 +52,24 @@ Section SIMMODSEM.
     rewrite unfold_eval_imp.
     eapply Any.downcast_upcast in _UNWRAPN. des.
     unfold unint in *. destruct v; clarify; ss.
-    imp_steps. force_r. auto. inv _ASSUME.
+    imp_steps. force_r; auto.
     des_ifs.
-    - imp_steps.
-    - apply Z.eqb_eq in Heq. clarify.
+    - imp_steps. force_r; auto. steps.
     - unfold ccall.
+      imp_steps. replace (z =? 0)%Z with false.
+      2:{ symmetry. eapply Z.eqb_neq. auto. }
+      steps. imp_steps.
+      force_r; auto. imp_steps.
+      force_r; auto.
+      { econs; ss. }
       imp_steps.
-      gstep. econs; ss. i. des; subst. exists 100.
+      force_r; auto.
+      { inv _ASSUME1. econs; ss; lia. }
       imp_steps.
-      Local Transparent vadd.
-      destruct v; ss; clarify; imp_steps.
+      gstep. econs; ss. i. exists 100.
+      imp_steps.
+      force_r; auto. imp_steps.
+      admit "add wf_range assume after call".
   Qed.
 
 End SIMMODSEM.

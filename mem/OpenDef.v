@@ -14,14 +14,12 @@ Require Import TODO.
 Require Import HoareDef.
 Require Import IRed.
 
-Generalizable Variables E R A B C X Y Σ.
-
 Set Implicit Arguments.
 
 
 (* Definition dot {A B C} (g: B -> C) (f: A -> B): A -> C := g ∘ f. *)
 (* Notation "(∘)" := dot (at level 40, left associativity). *)
-Notation "(∘)" := (fun g f => g ∘ f) (at level 40, left associativity).
+Notation "(∘)" := (fun g f => g ∘ f) (at level 0, left associativity).
 
 (*** TODO: remove redundancy with SimModSemL && migrate related lemmas ***)
 Variant option_rel A B (P: A -> B -> Prop): option A -> option B -> Prop :=
@@ -45,12 +43,12 @@ Proof. admit "ez". Qed.
 
 Section AUX.
   Context `{Σ: GRA.t}.
-  Definition fspec_trivial: fspec := (mk_simple (fun (_: unit) => (fun _ o => ⌜o = ord_top⌝, fun _ => ⌜True⌝))).
+  Definition fspec_trivial: fspec := (mk_simple (fun (_: unit) => (fun _ o => (⌜o = ord_top⌝: iProp)%I, fun _ => (⌜True⌝: iProp)%I))).
 
   Definition fspec_trivial2: fspec :=
     @mk _ unit ((list val) * bool)%type (val)
-        (fun _ argh argl o => ⌜(Any.pair argl false↑)↓ = Some argh /\ o = ord_top⌝)
-        (fun _ reth retl => ⌜reth↑ = retl⌝)
+        (fun _ argh argl o => (⌜(Any.pair argl false↑)↓ = Some argh /\ o = ord_top⌝: iProp)%I)
+        (fun _ reth retl => (⌜reth↑ = retl⌝: iProp)%I)
   .
 
 End AUX.
@@ -246,7 +244,7 @@ Section UMODSEM.
     :
       (transl_itr (assume P))
       =
-      (assume P;; tau;; Ret tt)
+      (assume P;;; tau;; Ret tt)
   .
   Proof.
     unfold assume. rewrite transl_itr_bind. rewrite transl_itr_triggere. grind. eapply transl_itr_ret.
@@ -257,7 +255,7 @@ Section UMODSEM.
     :
       (transl_itr (guarantee P))
       =
-      (guarantee P;; tau;; Ret tt).
+      (guarantee P;;; tau;; Ret tt).
   Proof.
     unfold guarantee. rewrite transl_itr_bind. rewrite transl_itr_triggere. grind. eapply transl_itr_ret.
   Qed.
@@ -358,10 +356,10 @@ Section AUX.
 
   Definition disclose (fs: fspec): fspec :=
     @mk _ (option fs.(X)) (fs.(AA) * bool)%type (fs.(AR))
-        (fun ox '(argh, is_k) argl o => ⌜is_some ox = is_k⌝ **
-                                        ((Exists x, ⌜ox = Some x⌝ ** fs.(precond) x argh argl o ** ⌜is_pure o⌝) ∨
-                                         (⌜ox = None /\ argh↑ = argl /\ o = ord_top⌝)))
-        (fun ox reth retl => ((Exists x, ⌜ox = Some x⌝ ** fs.(postcond) x reth retl) ∨ (⌜ox = None /\ reth↑ = retl⌝)))
+        (fun ox '(argh, is_k) argl o => (⌜is_some ox = is_k⌝ **
+                                                           ((∃ x, ⌜ox = Some x⌝ ** (fs.(precond) x argh argl o: iProp) ** ⌜is_pure o⌝) ∨
+                                                            (⌜ox = None /\ argh↑ = argl /\ o = ord_top⌝)))%I)
+        (fun ox reth retl => ((∃ x, ⌜ox = Some x⌝ ** (fs.(postcond) x reth retl: iProp)) ∨ (⌜ox = None /\ reth↑ = retl⌝))%I)
   .
 
   Definition disclose_fsb (fsb: fspecbody): fspecbody :=
@@ -575,7 +573,7 @@ Section KMODSEM.
     :
       (transl_itr_tgt (assume P))
       =
-      (assume P;; tau;; Ret tt)
+      (assume P;;; tau;; Ret tt)
   .
   Proof.
     unfold assume. rewrite transl_itr_tgt_bind. rewrite transl_itr_tgt_triggere. grind. eapply transl_itr_tgt_ret.
@@ -586,7 +584,7 @@ Section KMODSEM.
     :
       (transl_itr_tgt (guarantee P))
       =
-      (guarantee P;; tau;; Ret tt).
+      (guarantee P;;; tau;; Ret tt).
   Proof.
     unfold guarantee. rewrite transl_itr_tgt_bind. rewrite transl_itr_tgt_triggere. grind. eapply transl_itr_tgt_ret.
   Qed.
@@ -796,7 +794,7 @@ Section KMODSEM.
     :
       (interp_hCallE_src (assume P))
       =
-      (assume P;; tau;; Ret tt)
+      (assume P;;; tau;; Ret tt)
   .
   Proof.
     unfold assume. rewrite interp_hCallE_src_bind. rewrite interp_hCallE_src_triggere. grind. eapply interp_hCallE_src_ret.
@@ -807,7 +805,7 @@ Section KMODSEM.
     :
       (interp_hCallE_src (guarantee P))
       =
-      (guarantee P;; tau;; Ret tt).
+      (guarantee P;;; tau;; Ret tt).
   Proof.
     unfold guarantee. rewrite interp_hCallE_src_bind. rewrite interp_hCallE_src_triggere. grind. eapply interp_hCallE_src_ret.
   Qed.
@@ -879,4 +877,3 @@ Section KMOD.
 
 End KMOD.
 End KMod.
-

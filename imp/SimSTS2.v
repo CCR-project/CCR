@@ -284,7 +284,7 @@ CoFixpoint decompile_trinf (tr: traceinf): Tr.t :=
 Lemma unfold_decompile_trinf
       tr
   :
-    (decompile_trinf tr) = 
+    (decompile_trinf tr) =
     (match tr with
      | Econsinf ev tr =>
        match decompile_event ev with
@@ -315,7 +315,7 @@ Definition transl_beh (p: program_behavior): Tr.t :=
   | Terminates tr i =>
     let '(es, succ) := squeeze (List.map decompile_event tr) in
     Tr.app es (if succ then (Tr.done (Int.signed i)) else Tr.ub)
-  | Diverges tr => 
+  | Diverges tr =>
     let '(es, succ) := squeeze (List.map decompile_event tr) in
     Tr.app es (if succ then (Tr.spin) else Tr.ub)
   | Reacts tr => (decompile_trinf tr)
@@ -595,7 +595,7 @@ Section SIM.
     ii. des; clarify. eapply SAFE; ss.
     { econs; et. }
     { instantiate (1 := e0 :: _). ss. des_ifs. rewrite MB0 in *; clarify. }
-    { esplits; et. ss. }
+    { esplits; et. }
   Qed.
 
   Lemma safe_along_events_step_none
@@ -681,7 +681,7 @@ Section SIM.
       exploit SAFE; try apply SRT.
       { econs; et. }
       { instantiate (1:=[]). ss. }
-      { esplits; et. rewrite app_nil_l. ss. }
+      { esplits; et. }
       i; des.
       exploit wf_angelic; et. i; subst.
       exploit SIM0; et. i; des. pclearbot.

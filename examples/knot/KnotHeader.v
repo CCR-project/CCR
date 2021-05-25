@@ -159,7 +159,7 @@ Ltac iarg :=
   ];
   let a := fresh "a" in
   intros a; i;
-  mDesSep PRE as PRE ARG;
+  mDesAndPureR PRE as PRE ARG;
   let EQ := fresh "EQ" in
   mPure ARG as EQ;
   try (destruct EQ);
@@ -220,12 +220,12 @@ Tactic Notation "icall_weaken" uconstr(ftsp) uconstr(o) uconstr(x) uconstr(a) "w
     intros ? ? ? ? ? ? [|[?mp_src ?mp_tgt]]; i; simpl;
     on_current ltac:(fun H => simpl in H);
     [mDesSep INV as "☃CLOSED" INV;
-     mDesSep POST as POST "☃TMP";
+     mDesAndPureR POST as POST "☃TMP";
      let EQ := fresh in
      mPure "☃TMP" as EQ; inversion EQ;
      mDesSep POST as "☃OPENER" POST
     |mDesSep INV as "☃CLOSED" INV;
-     mDesSep POST as POST "☃TMP";
+     mDesAndPureR POST as POST "☃TMP";
      mDesSep POST as "☃OPENER" POST;
      mAssertPure False; [iApply (inv_open_unique with "☃OPENER ☃CLOSED")|ss
     ]]

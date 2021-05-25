@@ -30,35 +30,35 @@ Section PROOFS.
         ge le0 v
     :
       interp_imp ge le0 (denote_expr (Var v)) =
-      interp_imp ge le0 (u <- trigger (GetVar v);; assume (wf_val u);; Ret u).
+      interp_imp ge le0 (u <- trigger (GetVar v);; assume (wf_val u);;; Ret u).
   Proof. reflexivity. Qed.
 
   Lemma denote_expr_Lit
         ge le0 n
     :
       interp_imp ge le0 (denote_expr (Lit n)) =
-      interp_imp ge le0 (assume (wf_val n);; Ret n).
+      interp_imp ge le0 (assume (wf_val n);;; Ret n).
   Proof. reflexivity. Qed.
 
   Lemma denote_expr_Plus
         ge le0 a b
     :
       interp_imp ge le0 (denote_expr (Plus a b)) =
-      interp_imp ge le0 (l <- denote_expr a;; r <- denote_expr b;; u <- unwrapU (vadd l r);; assume (wf_val u);; Ret u).
+      interp_imp ge le0 (l <- denote_expr a;; r <- denote_expr b;; u <- unwrapU (vadd l r);; assume (wf_val u);;; Ret u).
   Proof. reflexivity. Qed.
 
   Lemma denote_expr_Minus
         ge le0 a b
     :
       interp_imp ge le0 (denote_expr (Minus a b)) =
-      interp_imp ge le0 (l <- denote_expr a;; r <- denote_expr b;; u <- unwrapU (vsub l r);; assume (wf_val u);; Ret u).
+      interp_imp ge le0 (l <- denote_expr a;; r <- denote_expr b;; u <- unwrapU (vsub l r);; assume (wf_val u);;; Ret u).
   Proof. reflexivity. Qed.
 
   Lemma denote_expr_Mult
         ge le0 a b
     :
       interp_imp ge le0 (denote_expr (Mult a b)) =
-      interp_imp ge le0 (l <- denote_expr a;; r <- denote_expr b;; u <- unwrapU (vmul l r);; assume (wf_val u);; Ret u).
+      interp_imp ge le0 (l <- denote_expr a;; r <- denote_expr b;; u <- unwrapU (vmul l r);; assume (wf_val u);;; Ret u).
   Proof. reflexivity. Qed.
 
   (* stmt *)
@@ -111,7 +111,7 @@ Section PROOFS.
       interp_imp ge le0 (denote_stmt (Malloc x se)) =
       interp_imp ge le0 (s <- denote_expr se;;
       v <- trigger (Call "alloc" ([s]↑));; v <- unwrapN(v↓);;
-      trigger (SetVar x v);; Ret Vundef).
+      trigger (SetVar x v);;; Ret Vundef).
   Proof. reflexivity. Qed.
 
   Lemma denote_stmt_Free
@@ -119,7 +119,7 @@ Section PROOFS.
     :
       interp_imp ge le0 (denote_stmt (Free pe)) =
       interp_imp ge le0 (p <- denote_expr pe;;
-      trigger (Call "free" ([p]↑));; Ret Vundef).
+      trigger (Call "free" ([p]↑));;; Ret Vundef).
   Proof. reflexivity. Qed.
 
   Lemma denote_stmt_Load
@@ -382,7 +382,7 @@ Section PROOFS.
   Lemma interp_imp_assume_wf_val
         ge le0 x
     :
-      interp_imp ge le0 (assume (wf_val x);; Ret x) = assume (wf_val x);; tau;; tau;; Ret (le0, x).
+      interp_imp ge le0 (assume (wf_val x);;; Ret x) = assume (wf_val x);;; tau;; tau;; Ret (le0, x).
   Proof.
     unfold interp_imp, interp_GlobEnv, interp_ImpState. grind.
     unfold assume. grind. rewrite interp_trigger. grind.
@@ -393,7 +393,7 @@ Section PROOFS.
         ge le0 v
     :
       interp_imp ge le0 (denote_expr (Var v)) =
-      r <- unwrapU (alist_find v le0);; tau;; tau;; assume (wf_val r);; tau;; tau;; Ret (le0, r).
+      r <- unwrapU (alist_find v le0);; tau;; tau;; assume (wf_val r);;; tau;; tau;; Ret (le0, r).
   Proof.
     rewrite denote_expr_Var. rewrite interp_imp_bind. rewrite interp_imp_GetVar.
     grind. apply interp_imp_assume_wf_val.
@@ -403,7 +403,7 @@ Section PROOFS.
         ge le0 n
     :
       interp_imp ge le0 (denote_expr (Lit n)) =
-      assume (wf_val n);; tau;; tau;; Ret (le0, n).
+      assume (wf_val n);;; tau;; tau;; Ret (le0, n).
   Proof.
     rewrite denote_expr_Lit. apply interp_imp_assume_wf_val.
   Qed.
@@ -415,7 +415,7 @@ Section PROOFS.
       '(le1, l) <- interp_imp ge le0 (denote_expr a) ;;
       '(le2, r) <- interp_imp ge le1 (denote_expr b) ;;
       v <- (vadd l r)? ;;
-      assume (wf_val v);; tau;; tau;;
+      assume (wf_val v);;; tau;; tau;;
       Ret (le2, v)
   .
   Proof.
@@ -432,7 +432,7 @@ Section PROOFS.
       '(le1, l) <- interp_imp ge le0 (denote_expr a) ;;
       '(le2, r) <- interp_imp ge le1 (denote_expr b) ;;
       v <- (vsub l r)? ;;
-      assume (wf_val v);; tau;; tau;;
+      assume (wf_val v);;; tau;; tau;;
       Ret (le2, v)
   .
   Proof.
@@ -449,7 +449,7 @@ Section PROOFS.
       '(le1, l) <- interp_imp ge le0 (denote_expr a) ;;
       '(le2, r) <- interp_imp ge le1 (denote_expr b) ;;
       v <- (vmul l r)? ;;
-      assume (wf_val v);; tau;; tau;;
+      assume (wf_val v);;; tau;; tau;;
       Ret (le2, v)
   .
   Proof.
@@ -549,7 +549,7 @@ Section PROOFS.
     :
       interp_imp ge le0 (denote_stmt (Free pe)) =
       '(le1, p) <- interp_imp ge le0 (denote_expr pe);;
-      trigger (Call "free" ([p]↑));; tau;; tau;; Ret (le1, Vundef).
+      trigger (Call "free" ([p]↑));;; tau;; tau;; Ret (le1, Vundef).
   Proof.
     rewrite denote_stmt_Free. rewrite interp_imp_bind.
     grind. apply interp_imp_Call_only.
