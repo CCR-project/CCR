@@ -157,7 +157,7 @@ Section PROOF.
   Ltac sim_red := Red.prw ltac:(_red_gen) 2 0.
   Ltac sim_tau := (try sim_red); econs 3; ss; clarify; eexists; exists (step_tau _); eexists; split; auto; eexists.
 
-  Ltac sim_triggerUB := ss; unfold triggerUB; (try sim_red); econs 5; i; ss; auto;
+  Ltac sim_triggerUB := pfold; ss; unfold triggerUB; (try sim_red); econs 5; i; ss; auto;
                         dependent destruction STEP; try (irw in x; clarify; fail).
 
   Lemma map_val_vadd_comm
@@ -209,15 +209,13 @@ Section PROOF.
              wf_val rv ->
              eval_expr tge empty_env tle tm te trv ->
              trv = map_val rv ->
-             _sim (ModL.compile src) (semantics tgt) ordN
-                  (upaco4 (_sim (ModL.compile src) (semantics tgt) ordN) r) i1 j1
-                  (ktr (rstate, pstate, (le, rv)))
-                  (State tf tcode tcont empty_env tle tm))
+             paco4 (_sim (ModL.compile src) (semantics tgt) ordN) r i1 j1
+                   (ktr (rstate, pstate, (le, rv)))
+                   (State tf tcode tcont empty_env tle tm))
     :
-      _sim (ModL.compile src) (semantics tgt) ordN
-           (upaco4 (_sim (ModL.compile src) (semantics tgt) ordN) r) i0 j0
-           (r0 <- EventsL.interp_Es (prog ms) (transl_all mn (interp_imp ge le (denote_expr e))) (rstate, pstate);; ktr r0)
-           (State tf tcode tcont empty_env tle tm).
+      paco4 (_sim (ModL.compile src) (semantics tgt) ordN) r i0 j0
+            (r0 <- EventsL.interp_Es (prog ms) (transl_all mn (interp_imp ge le (denote_expr e))) (rstate, pstate);; ktr r0)
+            (State tf tcode tcont empty_env tle tm).
   Proof.
     unfold ordN in *.
     generalize dependent ktr. generalize dependent te.
@@ -225,18 +223,18 @@ Section PROOF.
     generalize dependent e. Local Opaque Init.Nat.add. induction e; i; ss; des; clarify.
     - rewrite interp_imp_expr_Var. sim_red.
       destruct (alist_find v le) eqn:AFIND; try sim_red.
-      + repeat (sim_tau; left; pfold). sim_red.
+      + pfold. repeat (sim_tau; left; pfold). sim_red.
         unfold assume. grind. econs 5; ss; auto. i. eapply angelic_step in STEP; des; clarify.
         eexists; split; auto. eexists. left. pfold.
-        repeat (sim_tau; left; pfold).
+        do 5 (sim_tau; left; pfold). sim_tau. left.
         sim_red. eapply SIM; auto.
         econs. inv MLE. specialize ML with (x:=v) (sv:=(Some v0)).
         hexploit ML; auto. i. des. ss. clarify.
       + sim_triggerUB.
     - rewrite interp_imp_expr_Lit.
-      sim_red. unfold assume. grind. econs 5; auto. i. eapply angelic_step in STEP; des; clarify.
+      sim_red. unfold assume. grind. pfold. econs 5; auto. i. eapply angelic_step in STEP; des; clarify.
       eexists; split; auto. eexists. left; pfold.
-      repeat (sim_tau; left; pfold).
+      do 5 (sim_tau; left; pfold). sim_tau. left.
       sim_red. eapply SIM; eauto. econs. unfold map_val. ss.
     - rewrite interp_imp_expr_Plus.
       sim_red. destruct (compile_expr e1) eqn:EXP1; destruct (compile_expr e2) eqn:EXP2; ss; clarify.
@@ -244,9 +242,9 @@ Section PROOF.
       i. sim_red. eapply IHe2; eauto; clear IHe2.
       i. sim_red.
       unfold unwrapU. destruct (vadd rv rv0) eqn:VADD; ss; clarify.
-      + sim_red. unfold assume. grind. econs 5; auto. i. eapply angelic_step in STEP; des; clarify.
+      + sim_red. unfold assume. grind. pfold. econs 5; auto. i. eapply angelic_step in STEP; des; clarify.
         eexists; split; auto. eexists. left; pfold.
-        repeat (sim_tau; left; pfold).
+        do 5 (sim_tau; left; pfold). sim_tau. left.
         sim_red. specialize SIM with (rv:=v) (trv:= map_val v). apply SIM; auto.
         econs; eauto. ss. f_equal. apply map_val_vadd_comm; auto.
       + sim_triggerUB.
@@ -264,18 +262,24 @@ Section PROOF.
 
 
   Theorem match_states_sim
-          (src: Imp.program) tgt ist cst
+          (src: Imp.program) tgt
+          gm ge ms
+          ist cst
           i0 j0
+          (GMAP: gm = get_gmap src)
+          (MODSEML: ms = (ImpMod.get_modL src).(ModL.enclose))
+          (GENV: ge = Sk.load_skenv (ImpMod.get_modL src).(ModL.sk))
           (COMP: Imp2Csharpminor.compile src = OK tgt)
-          (MS: match_states mmem ist cst)
+          (MS: match_states mmem gm ge ms ist cst)
     :
       <<SIM: sim (ModL.compile (Mod.add_list ([Mem] ++ [ImpMod.get_mod src]))) (semantics tgt) ordN i0 j0 ist cst>>.
   Proof.
-    move COMP before tgt.
+    move GMAP before ms. move MODSEML before GMAP. move GENV before MODSEML. move COMP before GENV.
     revert_until COMP.
-    pcofix CIH. i. pfold.
+    pcofix CIH. i.
     inv MS.
     unfold ordN in *.
+    generalize dependent i0. generalize dependent j0.
     generalize dependent stack. generalize dependent next. generalize dependent CST.
     generalize dependent tcont. generalize dependent tcode.
     generalize dependent code.
@@ -284,30 +288,29 @@ Section PROOF.
       rewrite interp_imp_Skip. grind.
       destruct tcont eqn:TCONT; ss; clarify.
       + inv MCS. inv MCN; ss; clarify. unfold idK. sim_red. destruct rp. sim_red.
-        econs 5; ss; auto.
+        pfold. econs 5; ss; auto.
         { unfold state_sort. ss. rewrite Any.upcast_downcast. ss. }
         i. dependent destruction STEP.
       + inv MCS; clarify.
-        sim_red.
+        sim_red. pfold.
         econs 4; auto.
         { admit "ez: strict_determinate_at". }
         eexists. eexists.
         { eapply step_skip_seq. }
         eexists; split; auto. eexists.
         right. eapply CIH.
-        eapply match_states_intro with (le0:=le) (gm0:=gm) (ge0:=ge) (rp0:=rp) (code0:=code); eauto.
-        erewrite ITR. destruct rp. auto.
-      + econs 4; auto.
+        eapply match_states_intro with (le0:=le) (rp0:=rp) (code0:=code); eauto.
+      + pfold. econs 4; auto.
         { admit "ez: strict_determinate_at". }
         eexists. eexists.
         { eapply step_skip_block. }
         eexists; split; auto. eexists.
         right. eapply CIH.
-        eapply match_states_intro with (le0:=le) (gm0:=gm) (ge0:=ge) (rp0:=rp) (code:=Skip); eauto.
+        eapply match_states_intro with (le0:=le) (rp0:=rp) (code:=Skip); eauto.
         unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind.
-      + inv MCS. inv MCN; clarify. specialize GLUE with (ge:=ge); clarify.
+      + inv MCS. inv MCN; clarify.
         unfold idK. sim_red. destruct rp. sim_red.
-        econs 4; auto.
+        pfold. econs 4; auto.
         { admit "ez: strict_determinate_at". }
         eexists. eexists.
         { eapply step_skip_call; ss; clarify; auto. }
@@ -331,7 +334,7 @@ Section PROOF.
       rewrite interp_imp_Assign. sim_red. grind.
       destruct (compile_expr e) eqn:EXP; uo; ss. destruct rp. grind.
       eapply step_expr; eauto. i.
-      repeat (sim_tau; left; pfold).
+      pfold. repeat (sim_tau; left; pfold).
       rewrite transl_all_ret. rewrite EventsL.interp_Es_ret. grind.
       econs 4.
       + admit "ez? strict_determinate_at".
@@ -339,7 +342,7 @@ Section PROOF.
         { eapply step_set. eapply H0. }
         unfold ordN in *. eexists; split; eauto; auto.
         eexists. right. apply CIH.
-        eapply match_states_intro with (le0:= alist_add x rv le) (gm0:= gm) (ge0:= ge) (rp:= (r0, p)) (code:= Skip); eauto.
+        eapply match_states_intro with (le0:= alist_add x rv le) (rp:= (r0, p)) (code:= Skip); eauto.
         { econs. i. destruct (classic (x = x0)).
           - clarify. exists (Some (map_val rv)). ss. split.
             2:{ des_ifs.
@@ -351,18 +354,52 @@ Section PROOF.
             admit "ez: alist_find & alist_add". }
         unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind.
     - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Seq. sim_red.
-      rewrite <- EventsL.interp_Es_bind.
-      ss. destruct (compile_stmt gm code1) eqn:CSC1; destruct (compile_stmt gm code2) eqn:CSC2; uo; clarify.
-      
-      eapply IHcode1.
-      econs 4.
-      { admit "ez?: strict_determinate_at". }
+      ss. destruct (compile_stmt (get_gmap src) code1) eqn:CSC1; destruct (compile_stmt (get_gmap src) code2) eqn:CSC2; uo; clarify.
+      set (next_seq:= 
+    (fun r0 : r_state * p_state * (lenv * val) =>
+     ` x : r_state * p_state * (lenv * val) <-
+     (let (st1, v) := r0 in
+      EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src))))
+        (transl_all mn (let (le1, _) := v in interp_imp (Sk.load_skenv (defs src)) le1 (denote_stmt code2))) st1);;
+     ` x0 : r_state * p_state * (lenv * val) <-
+     (let (st1, v) := x in EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src)))) (transl_all mn (Ret v)) st1);;
+     ` y : r_state * p_state * (lenv * val) <- next x0;; Ret y)).
+      replace
+    (` r0 : r_state * p_state * (lenv * val) <-
+            EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src))))
+                              (transl_all mn (interp_imp (Sk.load_skenv (defs src)) le (denote_stmt code1))) rp;;
+     ` x : r_state * p_state * (lenv * val) <-
+     (let (st1, v) := r0 in
+      EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src))))
+        (transl_all mn (let (le1, _) := v in interp_imp (Sk.load_skenv (defs src)) le1 (denote_stmt code2))) st1);;
+     ` x0 : r_state * p_state * (lenv * val) <-
+     (let (st1, v) := x in EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src)))) (transl_all mn (Ret v)) st1);;
+     ` y : r_state * p_state * (lenv * val) <- next x0;; ` x : _ <- itree_of_imp_pop (ImpMod.modsemL src (Sk.load_skenv (defs src))) mn y;; stack x)
+        with
+    (` r0 : r_state * p_state * (lenv * val) <-
+            EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src))))
+                              (transl_all mn (interp_imp (Sk.load_skenv (defs src)) le (denote_stmt code1))) rp;;
+     ` y : r_state * p_state * (lenv * val) <- next_seq r0;; ` x : _ <- itree_of_imp_pop (ImpMod.modsemL src (Sk.load_skenv (defs src))) mn y;; stack x).
+      2:{ subst next_seq; grind. }
+      unfold itree_of_cont_stmt, itree_of_imp_cont in *. irw in IHcode1.
+
+      pfold. econs 4.
+      { admit "ez: strict_determinate_at". }
       eexists. eexists.
       { eapply step_seq. }
-      eexists. split; auto. eexists.
-      right. apply CIH.
-      eapply match_states_intro with (le0:=le) (gm0:=gm) (ge0:=ge) (rp0:=rp) (code:=code1); eauto.
-      admit "ez?: Seq".
+      eexists; split; auto. eexists. left.
+      eapply IHcode1 with (tcode:=s) (tcont:=Kseq s0 tcont) (next:=next_seq) (stack:=stack); clear IHcode1; eauto.
+      ss. subst next_seq. econs 2; eauto.
+      { extensionality x. destruct x. destruct p. destruct p0. unfold itree_of_cont_stmt, itree_of_imp_cont. grind. }
+      replace  
+    (fun x : r_state * p_state * (lenv * val) =>
+     ` x0 : r_state * p_state * (lenv * val) <-
+     (let (st1, v) := x in EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src)))) (transl_all mn (Ret v)) st1);;
+            ` y : r_state * p_state * (lenv * val) <- next x0;; Ret y)
+        with
+          (next).
+      2:{ extensionality x. destruct x. Red.prw ltac:(_red_gen) 1 0. grind. }
+      auto.
     - admit "ez?: If".
     - ss. destruct (ident_key (s2p f)) eqn:IKF; clarify.
       destruct (compile_exprs args []) eqn:CARGS; clarify. uo. inv CST.

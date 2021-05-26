@@ -639,17 +639,23 @@ Section Sim.
     end
   .
 
-  Inductive match_code : imp_cont -> (list Csharpminor.stmt) -> Prop :=
+  (* global env is fixed when src program is fixed *)
+  Variable gm : gmap.
+  Variable ge : SkEnv.t.
+  (* ModSem should be fixed with src too *)
+  Variable ms : ModSemL.t.
+
+  Inductive match_code (mn: string) : imp_cont -> (list Csharpminor.stmt) -> Prop :=
   | match_code_nil
     :
-      match_code idK []
+      match_code mn idK []
   | match_code_cons
       code itr ktr chead ctail
-      (CST: forall gm, compile_stmt gm code = Some chead)
-      (ITR: forall ge ms mn, itr = fun '(r, p, (le, _)) => itree_of_cont_stmt code ge le ms mn (r, p))
-      (MC: match_code ktr ctail)
+      (CST: compile_stmt gm code = Some chead)
+      (ITR: itr = fun '(r, p, (le, _)) => itree_of_cont_stmt code ge le ms mn (r, p))
+      (MC: match_code mn ktr ctail)
     :
-      match_code (fun x => (itr x >>= ktr)) (chead :: ctail)
+      match_code mn (fun x => (itr x >>= ktr)) (chead :: ctail)
   .
 
   Inductive match_stack : imp_stack -> Csharpminor.cont -> Prop :=
@@ -658,14 +664,14 @@ Section Sim.
       match_stack (fun '(r, p, x) => Ret x) Kstop
 
   | match_stack_cret
-      tf ms mn le tle next stack tcont id tid glue tglue
+      tf mn le tle next stack tcont id tid glue tglue
       (MLE: match_le le tle)
       (MID: s2p id = tid)
 
-      (GLUE: forall ge,
-          glue = fun '(r, p, v) => itree_of_imp_cont (` v0 : val <- (v↓)?;; trigger (SetVar id v0);; Ret Vundef) ge le ms mn (r, p))
+      (GLUE: glue = fun '(r, p, v) =>
+                      itree_of_imp_cont (` v0 : val <- (v↓)?;; trigger (SetVar id v0);; Ret Vundef) ge le ms mn (r, p))
 
-      (MCONT: match_code next (get_cont_stmts tcont))
+      (MCONT: match_code mn next (get_cont_stmts tcont))
       (MSTACK: match_stack stack (call_cont tcont))
 
       (TGLUE: tglue = Kcall (Some tid) tf empty_env tle tcont)
@@ -675,7 +681,7 @@ Section Sim.
 
   Variant match_states : imp_state -> Csharpminor.state -> Prop :=
   | match_states_intro
-      ge gm tf rp ms mn le tle code itr tcode m tm next stack tcont
+      tf rp mn le tle code itr tcode m tm next stack tcont
       (* function is only used to check return type, which compiled one always has Tlong0, except "main" which has *)
       (* (CF: compile_function gm f = Some tgtf) *)
       (CST: compile_stmt gm code = Some tcode)
@@ -683,7 +689,7 @@ Section Sim.
       (MM: match_mem m tm)
       (* (MG: match_ge ge tge) *)
       (* (WFCONT: wf_ccont tcont) *)
-      (MCS: match_code next (get_cont_stmts tcont))
+      (MCS: match_code mn next (get_cont_stmts tcont))
       (MCN: match_stack stack (call_cont tcont))
       (ITR: itr = itree_of_cont_stmt code ge le ms mn rp)
     :
