@@ -98,11 +98,20 @@ Section Denote.
     | _ => None
     end.
 
-  Fixpoint denote_exprs (es : list expr) (acc : list val) : itree eff (list val) :=
+  Fixpoint denote_exprs_acc (es : list expr) (acc : list val) : itree eff (list val) :=
     match es with
     | [] => Ret acc
     | e :: s =>
-      v <- denote_expr e;; denote_exprs s (acc ++ [v])
+      v <- denote_expr e;; denote_exprs_acc s (acc ++ [v])
+    end.
+
+  Fixpoint denote_exprs (es : list expr) : itree eff (list val) :=
+    match es with
+    | [] => Ret []
+    | e :: s =>
+      v <- denote_expr e;;
+      vs <- denote_exprs s;;
+      Ret (v :: vs)
     end.
 
   Definition call_mem f :=
@@ -127,7 +136,7 @@ Section Denote.
       if (call_mem f)
       then triggerUB
       else
-        eval_args <- denote_exprs args [];;
+        eval_args <- denote_exprs args;;
         v <- trigger (Call f (eval_args↑));; v <- unwrapN (v↓);;
         trigger (SetVar x v);; Ret Vundef
 
@@ -136,12 +145,12 @@ Section Denote.
       if (call_mem f)
       then triggerUB
       else
-        eval_args <- denote_exprs args [];;
+        eval_args <- denote_exprs args;;
         v <- trigger (Call f (eval_args↑));; v <- unwrapN (v↓);;
         trigger (SetVar x v);; Ret Vundef
 
     | CallSys x f args =>
-      eval_args <- denote_exprs args [];;
+      eval_args <- denote_exprs args;;
       v <- trigger (Syscall f eval_args top1);;
       trigger (SetVar x v);; Ret Vundef
 

@@ -490,13 +490,59 @@ Section PROOF.
       { generalize dependent args. induction args; ss; i; clarify.
         - sim_red. destruct rp. rewrite EventsL.interp_Es_rE.
           sim_red.
-          admit "ez? need wf_r_state".
+          admit "hard? need wf_r_state, CallFun base case".
         - sim_red. destruct (compile_expr a) eqn:CEA; clarify. uo.
           destruct rp. eapply step_expr; eauto. }
       i. eapply (ACC j0 i0 l [] []). eauto.
       (* admit "hard: CallFun". *)
-    - admit "hard: CallPtr".
-    - admit "mid: CallSys".
+    - ss. destruct p eqn:PVAR; clarify. 
+      destruct (compile_exprs args []) eqn:CARGS; clarify. uo. inv CST.
+      unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_CallPtr.
+      sim_red. destruct rp. eapply step_expr; ss; eauto.
+      i. destruct rv eqn:RV; ss; clarify.
+      { sim_red. sim_triggerUB. }
+      destruct ofs eqn:OFS; ss; clarify.
+      2,3: (sim_red; sim_triggerUB).
+      destruct (SkEnv.blk2id (Sk.load_skenv (defs src)) blk) eqn:SKENV; clarify.
+      2: (sim_red; sim_triggerUB).
+      des_ifs.
+      { pfold. sim_tau. left. sim_triggerUB. }
+      pfold. sim_tau. left.
+      admit "hard: CallPtr, similar to CallFun.".
+    - ss. destruct (ident_key (s2p f) (List.map (fun '(name, n) => (s2p name, make_signature n)) (ext_funs src))) eqn:IDKEY;
+            destruct (compile_exprs args []) eqn:CEXPRS; uo; clarify.
+      unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_CallSys. sim_red.
+      generalize dependent l. generalize dependent i0. generalize dependent j0.
+      assert (ACC:
+  forall (j0 i0 : nat) (l : list expr) acc1 acc2,
+  compile_exprs args acc1 = Some l ->
+  paco4 (_sim (ModL.compile (Mod.add_list [Mem; ImpMod.get_mod src])) (semantics tgt) top2) r i0 j0
+    (` r0 : r_state * p_state * (lenv * list val) <-
+     EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src)))) (transl_all mn (interp_imp_denote_exprs (Sk.load_skenv (defs src)) le args acc2)) rp;;
+     ` x0 : r_state * p_state * (alist var val * val) <-
+     (let (st1, v) := r0 in
+      EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src))))
+        (transl_all mn
+           (let (le1, vs) := v in
+            ` v0 : val <- trigger (Syscall f vs top1);; (tau;; tau;; tau;; tau;; Ret (alist_add x v0 le1, Vundef)))) st1);;
+     ` x1 : r_state * p_state * (lenv * val) <-
+     (let (st1, v) := x0 in EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src)))) (transl_all mn (Ret v)) st1);;
+     ` y : r_state * p_state * (lenv * val) <- next x1;; ` x : _ <- itree_of_imp_pop (ImpMod.modsemL src (Sk.load_skenv (defs src))) mn y;; stack x)
+    (State tf (Scall (Some (s2p x)) s (Eaddrof (s2p f)) l) tcont empty_env tle tm)).
+      { generalize dependent args. induction args; i; clarify. ss. clarify.
+        - sim_red. pfold. econs 4.
+          { admit "ez: strict_determinate_at". }
+          eexists. eexists.
+          { eapply step_call.
+            - econs. econs 2.
+              + apply Maps.PTree.gempty.
+              + ss. admit "mid: finding from global env".
+            - 
+              
+
+
+
+      admit "mid: CallSys".
     - admit "hard: AddrOf".
     - admit "hard: Malloc".
     - admit "hard: free".

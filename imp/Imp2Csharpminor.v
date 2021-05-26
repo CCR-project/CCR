@@ -75,10 +75,20 @@ Section Compile.
   .
   (** vsub, vmul may not agree with compcert's cop semantics *)
 
-  Fixpoint compile_exprs (exprs: list Imp.expr) acc : option (list Csharpminor.expr) :=
+  Fixpoint compile_exprs_acc (exprs: list Imp.expr) acc : option (list Csharpminor.expr) :=
     match exprs with
-    | h :: t => do hexp <- (compile_expr h); compile_exprs t (acc ++ [hexp])
+    | h :: t => do hexp <- (compile_expr h); compile_exprs_acc t (acc ++ [hexp])
     | [] => Some acc
+    end
+  .
+
+  Fixpoint compile_exprs (exprs: list Imp.expr) : option (list Csharpminor.expr) :=
+    match exprs with
+    | h :: t =>
+      do hexp <- (compile_expr h);
+      do texps <- (compile_exprs t);
+      Some (hexp :: texps)
+    | [] => Some []
     end
   .
 
@@ -144,14 +154,14 @@ Section Compile.
       let fdecls := gm.(_ext_funs) ++ gm.(_int_funs) in
       let id := s2p f in
       do fsig <- (ident_key id fdecls);
-      do al <- (compile_exprs args []);
+      do al <- (compile_exprs args);
       Some (Scall (Some (s2p x)) fsig (Eaddrof id) al)
 
     (* only supports call by ptr with a variable (no other expr) *)
     | CallPtr x pe args =>
       match pe with
       | Var y =>
-        do al <- (compile_exprs args []);
+        do al <- (compile_exprs args);
         let fsig := make_signature (length al) in
         Some (Scall (Some (s2p x)) fsig (Evar (s2p y)) al)
       | _ => None
@@ -161,7 +171,7 @@ Section Compile.
       let fdecls := gm.(_ext_funs) in
       let id := s2p f in
       do fsig <- (ident_key id fdecls);
-      do al <- (compile_exprs args []);
+      do al <- (compile_exprs args);
       Some (Scall (Some (s2p x)) fsig (Eaddrof id) al)
 
     | AddrOf x GN =>
