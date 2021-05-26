@@ -214,8 +214,11 @@ Section Interp.
   Definition interp_ImpState {eff} `{eventE -< eff}: itree (ImpState +' eff) ~> stateT lenv (itree eff) :=
     State.interp_state (case_ handle_ImpState ModSem.pure_state).
 
-  Definition interp_imp ge le (itr : itree effs val) :=
-    interp_ImpState (interp_GlobEnv ge itr) le.
+  (* Definition interp_imp ge le (itr : itree effs val) := *)
+  (*   interp_ImpState (interp_GlobEnv ge itr) le. *)
+
+  Definition interp_imp ge : itree effs ~> stateT lenv (itree Es) :=
+    fun _ itr le => interp_ImpState (interp_GlobEnv ge itr) le.
 
   (* 'return' is a fixed register, holding the return value of this function. *)
   Fixpoint init_lenv xs : lenv :=
@@ -237,8 +240,7 @@ Section Interp.
   Definition eval_imp (ge: SkEnv.t) (f: function) (args: list val) : itree Es val :=
     match (init_args f.(fn_params) args []) with
     | Some iargs =>
-      '(_, retv) <- (interp_imp ge (iargs++(init_lenv f.(fn_vars)))
-                     (denote_stmt f.(fn_body) ;; retv <- (denote_expr (Var "return")) ;; Ret retv));; Ret retv
+      '(_, retv) <- (interp_imp ge (denote_stmt f.(fn_body) ;; retv <- (denote_expr (Var "return")) ;; Ret retv) ((init_lenv f.(fn_vars))++iargs));; Ret retv
     | None => triggerUB
     end
   .
