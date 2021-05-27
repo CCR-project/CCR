@@ -523,11 +523,11 @@ Section Sim.
 
   Definition itree_of_imp (itr: itree _ val) :=
     fun ge le ms mn rp =>
-      EventsL.interp_Es (ModSemL.prog ms) (transl_all mn (vret <- ('(_, retv) <- (interp_imp ge le (itr;; retv <- denote_expr (Var "return"%string);; Ret retv));; Ret retv);; Ret (vret↑))) rp.
+      EventsL.interp_Es (ModSemL.prog ms) (transl_all mn (vret <- ('(_, retv) <- (interp_imp ge (itr;; retv <- denote_expr (Var "return"%string);; Ret retv) le);; Ret retv);; Ret (vret↑))) rp.
 
-  Definition itree_of_imp_cont itr :=
+  Definition itree_of_imp_cont {T} (itr: itree _ T) :=
     fun ge le ms mn rp =>
-      EventsL.interp_Es (ModSemL.prog ms) (transl_all mn (lv <- (interp_imp ge le itr);; Ret (lv))) rp.
+      EventsL.interp_Es (ModSemL.prog ms) (transl_all mn (lv <- (interp_imp ge itr le);; Ret (lv))) rp.
 
   Definition itree_of_imp_ret :=
     fun ge le ms mn rp =>
@@ -538,7 +538,7 @@ Section Sim.
       itree_of_imp_cont (itr;; retv <- denote_expr (Var "return"%string);; Ret retv) ge le ms mn rp.
 
   Lemma itree_of_imp_cont_bind
-        ge le ms mn rp itr ktr
+        T R ge le ms mn rp (itr: itree _ T) (ktr: T -> itree _ R)
     :
       itree_of_imp_cont (x <- itr;; ktr x) ge le ms mn rp
       =
@@ -550,7 +550,7 @@ Section Sim.
   Qed.
 
   Lemma itree_of_imp_fun_splits
-        itr ge le ms mn rp
+        (itr: itree _ val) ge le ms mn rp
     :
       itree_of_imp_fun itr ge le ms mn rp
       =
@@ -582,7 +582,7 @@ Section Sim.
     fun ge le ms mn rp => itree_of_imp_fun (denote_stmt fb) ge le ms mn rp.
 
   Definition imp_state := itree eventE Any.t.
-  Definition imp_cont := (r_state * p_state * (lenv * val)) -> itree eventE (r_state * p_state * (lenv * val)).
+  Definition imp_cont {T} {R} := (r_state * p_state * (lenv * T)) -> itree eventE (r_state * p_state * (lenv * R)).
   Definition imp_stack := (r_state * p_state * Any.t) -> imp_state.
 
   (* Hypothesis archi_ptr64 : Archi.ptr64 = true. *)
@@ -635,12 +635,6 @@ Section Sim.
 
   Variable match_mem : Mem.t -> Memory.Mem.mem -> Prop.
 
-  (* Definition wf_ccont (cc: cont) : Prop := *)
-  (*   match cc with *)
-  (*   | Kstop | Kseq _ _ | Kcall _ _ _ _ _ => True *)
-  (*   | _ => False *)
-  (*   end. *)
-
   Fixpoint get_cont_stmts (cc: cont) : list Csharpminor.stmt :=
     match cc with
     | Kseq s k => s :: (get_cont_stmts k)
@@ -692,13 +686,10 @@ Section Sim.
   Variant match_states : imp_state -> Csharpminor.state -> Prop :=
   | match_states_intro
       tf rp mn le tle code itr tcode m tm next stack tcont
-      (* function is only used to check return type, which compiled one always has Tlong0, except "main" which has *)
-      (* (CF: compile_function gm f = Some tgtf) *)
       (CST: compile_stmt gm code = Some tcode)
       (ML: match_le le tle)
       (MM: match_mem m tm)
       (* (MG: match_ge ge tge) *)
-      (* (WFCONT: wf_ccont tcont) *)
       (MCS: match_code mn next (get_cont_stmts tcont))
       (MCN: match_stack stack (call_cont tcont))
       (ITR: itr = itree_of_cont_stmt code ge le ms mn rp)

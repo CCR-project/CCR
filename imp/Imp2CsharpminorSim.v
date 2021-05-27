@@ -214,7 +214,7 @@ Section PROOF.
                    (State tf tcode tcont empty_env tle tm))
     :
       paco4 (_sim (ModL.compile src) (semantics tgt) ordN) r i0 j0
-            (r0 <- EventsL.interp_Es (prog ms) (transl_all mn (interp_imp ge le (denote_expr e))) (rstate, pstate);; ktr r0)
+            (r0 <- EventsL.interp_Es (prog ms) (transl_all mn (interp_imp ge (denote_expr e) le)) (rstate, pstate);; ktr r0)
             (State tf tcode tcont empty_env tle tm).
   Proof.
     unfold ordN in *.
@@ -249,6 +249,47 @@ Section PROOF.
         econs; eauto. ss. f_equal. apply map_val_vadd_comm; auto.
       + sim_triggerUB.
     -
+  Admitted.
+
+  Variable EMI : nat.
+
+  Lemma step_exprs
+        es tes
+        tcode tf tcont tge tle tm (src: ModL.t) (tgt: Csharpminor.program)
+        r ms mn ge le rstate pstate ktr
+        i0 j0 i1 j1
+        (IDX1: i0 = (List.length es)*EMI + i1)
+        (IDX2: j0 = (List.length es)*EMI + j1)
+        (MLE: match_le le tle)
+        (CEXP: compile_exprs es = Some tes)
+        (SIM:
+           forall rvs trvs,
+             Forall wf_val rvs ->
+             eval_exprlist tge empty_env tle tm tes trvs ->
+             trvs = List.map map_val rvs ->
+             paco4 (_sim (ModL.compile src) (semantics tgt) ordN) r i1 j1
+                   (ktr (rstate, pstate, (le, rvs)))
+                   (State tf tcode tcont empty_env tle tm))
+    :
+      paco4 (_sim (ModL.compile src) (semantics tgt) ordN) r i0 j0
+            (r0 <- EventsL.interp_Es (prog ms) (transl_all mn (interp_imp ge (denote_exprs es) le)) (rstate, pstate);; ktr r0)
+            (State tf tcode tcont empty_env tle tm).
+  Proof.
+    unfold ordN in *.
+    generalize dependent ktr. generalize dependent tes.
+    move MLE before pstate. revert_until MLE.
+    generalize dependent es. induction es; i; ss; des; clarify.
+    - rewrite interp_imp_Ret. sim_red. eapply SIM; eauto.
+      econs.
+    - destruct (compile_expr a) eqn:CEA; destruct (compile_exprs es) eqn:CEES; uo; ss; clarify.
+      rewrite interp_imp_bind. sim_red. eapply step_expr; eauto.
+      i. unfold ordN in *. rewrite interp_imp_bind. sim_red.
+      eapply IHes.
+      { admit "mid: index". }
+      { admit "mid: index". }
+      { auto. }
+      i. rewrite interp_imp_Ret. sim_red. eapply SIM; eauto.
+      econs; ss; clarify; eauto.
   Admitted.
 
   Variable mmem : Mem.t -> Memory.Mem.mem -> Prop.
@@ -322,10 +363,12 @@ Section PROOF.
         eexists; split; auto. eexists. left; pfold.
         rewrite Any.upcast_downcast.
         unfold itree_of_imp_cont. ss. sim_red.
-        grind. rewrite interp_imp_SetVar_Vundef.
+        grind. rewrite interp_imp_bind. rewrite interp_imp_SetVar.
         sim_tau. left; pfold. sim_tau. right.
         apply CIH.
         rewrite transl_all_ret. rewrite EventsL.interp_Es_ret. grind.
+        rewrite interp_imp_Ret. rewrite transl_all_ret. rewrite EventsL.interp_Es_ret.
+        grind.
         eapply match_states_intro with (le1:=(alist_add id Vundef le0)) (code:= Skip); eauto.
         { econs. i. exists (map_val_opt sv); split; auto.
           admit "ez? alist & Maps.PTree". }
@@ -355,51 +398,39 @@ Section PROOF.
         unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind.
     - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Seq. sim_red.
       ss. destruct (compile_stmt (get_gmap src) code1) eqn:CSC1; destruct (compile_stmt (get_gmap src) code2) eqn:CSC2; uo; clarify.
+
       set (next_seq:= 
     (fun r0 : r_state * p_state * (lenv * val) =>
      ` x : r_state * p_state * (lenv * val) <-
      (let (st1, v) := r0 in
       EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src))))
-        (transl_all mn (let (le1, _) := v in interp_imp (Sk.load_skenv (defs src)) le1 (denote_stmt code2))) st1);;
+        (transl_all mn (let (le1, _) := v in interp_imp (Sk.load_skenv (defs src)) (denote_stmt code2) le1)) st1);;
      ` x0 : r_state * p_state * (lenv * val) <-
      (let (st1, v) := x in EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src)))) (transl_all mn (Ret v)) st1);;
-     ` y : r_state * p_state * (lenv * val) <- next x0;; Ret y)).
-      replace
-    (` r0 : r_state * p_state * (lenv * val) <-
-            EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src))))
-                              (transl_all mn (interp_imp (Sk.load_skenv (defs src)) le (denote_stmt code1))) rp;;
-     ` x : r_state * p_state * (lenv * val) <-
-     (let (st1, v) := r0 in
-      EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src))))
-        (transl_all mn (let (le1, _) := v in interp_imp (Sk.load_skenv (defs src)) le1 (denote_stmt code2))) st1);;
-     ` x0 : r_state * p_state * (lenv * val) <-
-     (let (st1, v) := x in EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src)))) (transl_all mn (Ret v)) st1);;
-     ` y : r_state * p_state * (lenv * val) <- next x0;; ` x : _ <- itree_of_imp_pop (ImpMod.modsemL src (Sk.load_skenv (defs src))) mn y;; stack x)
-        with
-    (` r0 : r_state * p_state * (lenv * val) <-
-            EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src))))
-                              (transl_all mn (interp_imp (Sk.load_skenv (defs src)) le (denote_stmt code1))) rp;;
-     ` y : r_state * p_state * (lenv * val) <- next_seq r0;; ` x : _ <- itree_of_imp_pop (ImpMod.modsemL src (Sk.load_skenv (defs src))) mn y;; stack x).
-      2:{ subst next_seq; grind. }
-      unfold itree_of_cont_stmt, itree_of_imp_cont in *. irw in IHcode1.
+            ` y : r_state * p_state * (lenv * val) <- next x0;; Ret y)).
 
+      unfold itree_of_cont_stmt, itree_of_imp_cont in *. irw in IHcode1.
       pfold. econs 4.
       { admit "ez: strict_determinate_at". }
       eexists. eexists.
       { eapply step_seq. }
       eexists; split; auto. eexists. left.
-      eapply IHcode1 with (tcode:=s) (tcont:=Kseq s0 tcont) (next:=next_seq) (stack:=stack); clear IHcode1; eauto.
-      ss. subst next_seq. econs 2; eauto.
-      { extensionality x. destruct x. destruct p. destruct p0. unfold itree_of_cont_stmt, itree_of_imp_cont. grind. }
-      replace  
-    (fun x : r_state * p_state * (lenv * val) =>
-     ` x0 : r_state * p_state * (lenv * val) <-
-     (let (st1, v) := x in EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src)))) (transl_all mn (Ret v)) st1);;
-            ` y : r_state * p_state * (lenv * val) <- next x0;; Ret y)
-        with
-          (next).
-      2:{ extensionality x. destruct x. Red.prw ltac:(_red_gen) 1 0. grind. }
-      auto.
+      hexploit IHcode1.
+      { auto. }
+      { instantiate (2:= next_seq). instantiate (1:= Kseq s0 tcont). ss.
+        econs 2; eauto.
+        - extensionality x. unfold itree_of_cont_stmt, itree_of_imp_cont. grind.
+        - match goal with
+          | [ |- match_code _ _ _ _ ?i _ ] => replace i with next; auto
+          end.
+          extensionality x. destruct x. Red.prw ltac:(_red_gen) 1 0. grind. }
+      { ss. apply MCN. }
+      i.
+      match goal with
+      | [ H: paco4 _ _ _ _ ?it0 _ |- paco4 _ _ _ _ ?it1 _ ] =>
+        replace it1 with it0; eauto
+      end.
+      subst next_seq. grind.
     - unfold itree_of_cont_stmt in *; unfold itree_of_imp_cont in *. rewrite interp_imp_If. sim_red. ss.
       destruct (compile_expr i) eqn:CEXPR; destruct (compile_stmt (get_gmap src) code1) eqn:CCODE1;
         destruct (compile_stmt (get_gmap src) code2) eqn:CCODE2; uo; clarify.
@@ -420,7 +451,7 @@ Section PROOF.
           replace
     (` x : r_state * p_state * (lenv * val) <-
            EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src))))
-                 (transl_all mn (interp_imp (Sk.load_skenv (defs src)) le (denote_stmt code2))) (r0, p);;
+                 (transl_all mn (interp_imp (Sk.load_skenv (defs src)) (denote_stmt code2) le)) (r0, p);;
      ` x0 : r_state * p_state * (lenv * val) <-
      (let (st1, v) := x in EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src)))) (transl_all mn (Ret v)) st1);;
             ` y : r_state * p_state * (lenv * val) <- next x0;;
@@ -428,7 +459,7 @@ Section PROOF.
             with
               (` x : r_state * p_state * (lenv * val) <-
                EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src))))
-                 (transl_all mn (interp_imp (Sk.load_skenv (defs src)) le (denote_stmt code2))) (r0, p);;
+                 (transl_all mn (interp_imp (Sk.load_skenv (defs src)) (denote_stmt code2) le)) (r0, p);;
                ` y : r_state * p_state * (lenv * val) <- next x;;
                      ` x : _ <- itree_of_imp_pop (ImpMod.modsemL src (Sk.load_skenv (defs src))) mn y;; stack x).
           2:{ grind. Red.prw ltac:(_red_gen) 1 0. grind. }
@@ -450,7 +481,7 @@ Section PROOF.
           replace
     (` x : r_state * p_state * (lenv * val) <-
            EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src))))
-                 (transl_all mn (interp_imp (Sk.load_skenv (defs src)) le (denote_stmt code1))) (r0, p);;
+                 (transl_all mn (interp_imp (Sk.load_skenv (defs src)) (denote_stmt code1) le)) (r0, p);;
      ` x0 : r_state * p_state * (lenv * val) <-
      (let (st1, v) := x in EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src)))) (transl_all mn (Ret v)) st1);;
             ` y : r_state * p_state * (lenv * val) <- next x0;;
@@ -458,35 +489,33 @@ Section PROOF.
             with
               (` x : r_state * p_state * (lenv * val) <-
                EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src))))
-                 (transl_all mn (interp_imp (Sk.load_skenv (defs src)) le (denote_stmt code1))) (r0, p);;
+                 (transl_all mn (interp_imp (Sk.load_skenv (defs src)) (denote_stmt code1) le)) (r0, p);;
                ` y : r_state * p_state * (lenv * val) <- next x;;
                      ` x : _ <- itree_of_imp_pop (ImpMod.modsemL src (Sk.load_skenv (defs src))) mn y;; stack x).
           2:{ grind. Red.prw ltac:(_red_gen) 1 0. grind. }
           eapply IHcode1; eauto. }
       + sim_triggerUB.
-    - ss. destruct (ident_key (s2p f)) eqn:IKF; clarify.
-      destruct (compile_exprs args []) eqn:CARGS; clarify. uo. inv CST.
+    - ss. uo; des_ifs.
       unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_CallFun.
       des_ifs; sim_red.
       { sim_triggerUB. }
-      generalize dependent l. generalize dependent i0. generalize dependent j0.
-      assert (ACC:
-  forall (j0 i0 : nat) (l : list expr) acc1 acc2,
-  compile_exprs args acc1 = Some l ->
-  paco4 (_sim (ModL.compile (Mod.add_list [Mem; ImpMod.get_mod src])) (semantics tgt) top2) r i0 j0
-    (` r0 : r_state * p_state * (lenv * list val) <-
-     EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src)))) (transl_all mn (interp_imp_denote_exprs (Sk.load_skenv (defs src)) le args acc2)) rp;;
-     ` x0 : r_state * p_state * (alist var val * val) <-
-     (let (st1, v) := r0 in
-      EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src))))
-        (transl_all mn
-           (let (le1, vs) := v in
-            ` v0 : Any.t <- trigger (Call f (Any.upcast vs));;
-            (tau;; tau;; ` v1 : val <- unwrapN (Any.downcast v0);; (tau;; tau;; Ret (alist_add x v1 le1, Vundef))))) st1);;
-     ` x1 : r_state * p_state * (lenv * val) <-
-     (let (st1, v) := x0 in EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src)))) (transl_all mn (Ret v)) st1);;
-     ` y : r_state * p_state * (lenv * val) <- next x1;; ` x : _ <- itree_of_imp_pop (ImpMod.modsemL src (Sk.load_skenv (defs src))) mn y;; stack x)
-    (State tf (Scall (Some (s2p x)) s (Eaddrof (s2p f)) l) tcont empty_env tle tm)).
+      destruct rp. eapply step_exprs; eauto.
+      { admit "mid: index". }
+      { admit "mid: index". }
+      i. sim_red. destruct r0. destruct l0.
+      { ss. admit "mod: r_state is nil". }
+      ss. grind.
+      pfold. sim_tau. left; pfold. sim_tau. left; pfold. sim_tau. left. sim_red.
+      match goal with
+      | [ |- paco4 _ _ _ _ (r0 <- unwrapU (?f);; _) _ ] => destruct f eqn:FSEM; ss
+      end.
+      2:{ sim_triggerUB. }
+      grind.
+      
+
+
+
+      
       { generalize dependent args. induction args; ss; i; clarify.
         - sim_red. destruct rp. rewrite EventsL.interp_Es_rE.
           sim_red.
