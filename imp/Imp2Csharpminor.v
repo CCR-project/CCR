@@ -510,6 +510,7 @@ Hint Resolve match_beh_mon: paco.
 
 Section Sim.
 
+
   Context `{Σ: GRA.t}.
 
   (* Variable src : Imp.program. *)
@@ -521,21 +522,21 @@ Section Sim.
 
   (* CC 'final_state' = the return state of "main", should return int32. *)
 
-  Definition itree_of_imp (itr: itree _ val) :=
-    fun ge le ms mn rp =>
-      EventsL.interp_Es (ModSemL.prog ms) (transl_all mn (vret <- ('(_, retv) <- (interp_imp ge (itr;; retv <- denote_expr (Var "return"%string);; Ret retv) le);; Ret retv);; Ret (vret↑))) rp.
+  (* Definition itree_of_imp (itr: itree _ val) := *)
+  (*   fun ge le ms mn rp => *)
+  (*     EventsL.interp_Es (ModSemL.prog ms) (transl_all mn (vret <- ('(_, retv) <- (interp_imp ge (itr;; retv <- denote_expr (Var "return"%string);; Ret retv) le);; Ret retv);; Ret (vret↑))) rp. *)
 
   Definition itree_of_imp_cont {T} (itr: itree _ T) :=
     fun ge le ms mn rp =>
-      EventsL.interp_Es (ModSemL.prog ms) (transl_all mn (lv <- (interp_imp ge itr le);; Ret (lv))) rp.
+      EventsL.interp_Es (ModSemL.prog ms) (transl_all mn (interp_imp ge itr le)) rp.
 
   Definition itree_of_imp_ret :=
     fun ge le ms mn rp =>
-      itree_of_imp_cont (retv <- denote_expr (Var "return"%string);; Ret retv) ge le ms mn rp.
+      itree_of_imp_cont (denote_expr (Var "return"%string)) ge le ms mn rp.
 
-  Definition itree_of_imp_fun (itr: itree _ val) :=
-    fun ge le ms mn rp =>
-      itree_of_imp_cont (itr;; retv <- denote_expr (Var "return"%string);; Ret retv) ge le ms mn rp.
+  (* Definition itree_of_imp_fun (itr: itree _ val) := *)
+  (*   fun ge le ms mn rp => *)
+  (*     itree_of_imp_cont (itr;; retv <- denote_expr (Var "return"%string);; Ret retv) ge le ms mn rp. *)
 
   Lemma itree_of_imp_cont_bind
         T R ge le ms mn rp (itr: itree _ T) (ktr: T -> itree _ R)
@@ -546,44 +547,54 @@ Section Sim.
   Proof.
     unfold itree_of_imp_cont. rewrite interp_imp_bind. grind.    
     rewrite! transl_all_bind; rewrite! EventsL.interp_Es_bind.
-    grind.
+    grind. destruct p0. grind.
   Qed.
 
-  Lemma itree_of_imp_fun_splits
-        (itr: itree _ val) ge le ms mn rp
-    :
-      itree_of_imp_fun itr ge le ms mn rp
-      =
-      '(r, p, (le2, v)) <- (itree_of_imp_cont itr ge le ms mn rp);; (itree_of_imp_ret ge le2 ms mn (r, p)).
-  Proof.
-    unfold itree_of_imp_fun, itree_of_imp_ret. rewrite itree_of_imp_cont_bind. reflexivity.
-  Qed.
+  (* Lemma itree_of_imp_fun_splits *)
+  (*       (itr: itree _ val) ge le ms mn rp *)
+  (*   : *)
+  (*     itree_of_imp_fun itr ge le ms mn rp *)
+  (*     = *)
+  (*     '(r, p, (le2, v)) <- (itree_of_imp_cont itr ge le ms mn rp);; (itree_of_imp_ret ge le2 ms mn (r, p)). *)
+  (* Proof. *)
+  (*   unfold itree_of_imp_fun, itree_of_imp_ret. rewrite itree_of_imp_cont_bind. reflexivity. *)
+  (* Qed. *)
 
   Definition itree_of_imp_pop :=
-    fun ms mn (x: _ * _ * (lenv * val)) =>
-      let '(r, p, (_, v)) := x in
-      EventsL.interp_Es (ModSemL.prog ms) (transl_all mn (Ret (v↑))) (r, p).
+    fun ge ms mn retmn (retx: var) (retle: lenv) (x: _ * _ * (lenv * val)) =>
+      let '(r, p, (le0, _)) := x in
+      '(r2, p2, rv) <- EventsL.interp_Es (ModSemL.prog ms) (transl_all mn ('(_, v) <- interp_imp ge (denote_expr (Var "return"%string)) le0;; Ret (v↑))) (r, p);;
+      '(r3, p3, rv) <- EventsL.interp_Es (ModSemL.prog ms) (trigger EventsL.PopFrame;; (tau;; Ret rv)) (r2, p2);;
+      pop <- EventsL.interp_Es (ModSemL.prog ms) (transl_all retmn (tau;; tau;; v0 <- unwrapN (rv↓);; (tau;; tau;; Ret (alist_add retx v0  retle, Vundef)))) (r3, p3);;
+      Ret pop.
 
-  Lemma itree_of_imp_split_cont_pop
-        ge le ms mn rp itr
-    :
-      itree_of_imp itr ge le ms mn rp
-      =
-      (x <- (itree_of_imp_fun itr ge le ms mn rp);; (itree_of_imp_pop ms mn x)).
-  Proof.
-    unfold itree_of_imp, itree_of_imp_fun, itree_of_imp_ret, itree_of_imp_cont, itree_of_imp_pop. grind.
-    rewrite! transl_all_bind; rewrite! EventsL.interp_Es_bind. grind.
-  Qed.
+  Definition itree_of_imp_pop_bottom :=
+    fun ge ms mn (x: _ * _ * (lenv * val)) =>
+      let '(r, p, (le0, _)) := x in
+      '(r2, p2, rv) <- EventsL.interp_Es (ModSemL.prog ms) (transl_all mn ('(_, v) <- interp_imp ge (denote_expr (Var "return"%string)) le0;; Ret (v↑))) (r, p);;
+      '(_, _, rv) <- EventsL.interp_Es (ModSemL.prog ms) (trigger EventsL.PopFrame;; (tau;; Ret rv)) (r2, p2);;
+      Ret rv.
+
+  (* Lemma itree_of_imp_split_cont_pop *)
+  (*       ge le ms mn rp itr *)
+  (*   : *)
+  (*     itree_of_imp itr ge le ms mn rp *)
+  (*     = *)
+  (*     (x <- (itree_of_imp_fun itr ge le ms mn rp);; (itree_of_imp_pop ms mn x)). *)
+  (* Proof. *)
+  (*   unfold itree_of_imp, itree_of_imp_fun, itree_of_imp_ret, itree_of_imp_cont, itree_of_imp_pop. grind. *)
+  (*   rewrite! transl_all_bind; rewrite! EventsL.interp_Es_bind. grind. *)
+  (* Qed. *)
 
   Definition itree_of_cont_stmt (s : Imp.stmt) :=
     fun ge le ms mn rp => itree_of_imp_cont (denote_stmt s) ge le ms mn rp.
 
-  Definition itree_of_fun_body (fb : Imp.stmt) :=
-    fun ge le ms mn rp => itree_of_imp_fun (denote_stmt fb) ge le ms mn rp.
+  (* Definition itree_of_fun_body (fb : Imp.stmt) := *)
+  (*   fun ge le ms mn rp => itree_of_imp_fun (denote_stmt fb) ge le ms mn rp. *)
 
   Definition imp_state := itree eventE Any.t.
   Definition imp_cont {T} {R} := (r_state * p_state * (lenv * T)) -> itree eventE (r_state * p_state * (lenv * R)).
-  Definition imp_stack := (r_state * p_state * Any.t) -> imp_state.
+  Definition imp_stack := (r_state * p_state * (lenv * val)) -> imp_state.
 
   (* Hypothesis archi_ptr64 : Archi.ptr64 = true. *)
   Definition map_val (v : Universe.val) : Values.val :=
@@ -648,53 +659,52 @@ Section Sim.
   Variable ge : SkEnv.t.
   (* ModSem should be fixed with src too *)
   Variable ms : ModSemL.t.
+  (* We only need one module name *)
+  Variable mn : string.
 
-  Inductive match_code (mn: string) : imp_cont -> (list Csharpminor.stmt) -> Prop :=
+  Inductive match_code : imp_cont -> (list Csharpminor.stmt) -> Prop :=
   | match_code_nil
     :
-      match_code mn idK []
+      match_code idK []
   | match_code_cons
       code itr ktr chead ctail
       (CST: compile_stmt gm code = Some chead)
       (ITR: itr = fun '(r, p, (le, _)) => itree_of_cont_stmt code ge le ms mn (r, p))
-      (MC: match_code mn ktr ctail)
+      (MCONT: match_code ktr ctail)
     :
-      match_code mn (fun x => (itr x >>= ktr)) (chead :: ctail)
+      match_code (fun x => (itr x >>= ktr)) (chead :: ctail)
   .
 
   Inductive match_stack : imp_stack -> Csharpminor.cont -> Prop :=
   | match_stack_bottom
     :
-      match_stack (fun '(r, p, x) => Ret x) Kstop
+      match_stack (fun x => itree_of_imp_pop_bottom ge ms mn x) Kstop
 
   | match_stack_cret
-      tf mn le tle next stack tcont id tid glue tglue
+      tf le tle next stack tcont id tid tpop
       (MLE: match_le le tle)
       (MID: s2p id = tid)
 
-      (GLUE: glue = fun '(r, p, v) =>
-                      itree_of_imp_cont (` v0 : val <- (v↓)?;; trigger (SetVar id v0);; Ret Vundef) ge le ms mn (r, p))
-
-      (MCONT: match_code mn next (get_cont_stmts tcont))
+      (MCONT: match_code next (get_cont_stmts tcont))
       (MSTACK: match_stack stack (call_cont tcont))
 
-      (TGLUE: tglue = Kcall (Some tid) tf empty_env tle tcont)
+      (TPOP: tpop = Kcall (Some tid) tf empty_env tle tcont)
     :
-      match_stack (fun x => (y <- (glue x);; z <- next y;; (itree_of_imp_pop ms mn z) >>= stack)) (tglue)
+      match_stack (fun x => (y <- (itree_of_imp_pop ge ms mn mn id le x);; next y >>= stack)) (tpop)
   .
 
   Variant match_states : imp_state -> Csharpminor.state -> Prop :=
   | match_states_intro
-      tf rp mn le tle code itr tcode m tm next stack tcont
+      tf rp le tle code itr tcode m tm next stack tcont
       (CST: compile_stmt gm code = Some tcode)
       (ML: match_le le tle)
       (MM: match_mem m tm)
       (* (MG: match_ge ge tge) *)
-      (MCS: match_code mn next (get_cont_stmts tcont))
-      (MCN: match_stack stack (call_cont tcont))
+      (MCONT: match_code next (get_cont_stmts tcont))
+      (MSTACK: match_stack stack (call_cont tcont))
       (ITR: itr = itree_of_cont_stmt code ge le ms mn rp)
     :
-      match_states (x <- itr;; y <- next x;; (itree_of_imp_pop ms mn y) >>= stack) (State tf tcode tcont empty_env tle tm)
+      match_states (x <- itr;; next x >>= stack) (State tf tcode tcont empty_env tle tm)
   .
 
   (* Definition alist_add_option optid v (le : lenv) := *)

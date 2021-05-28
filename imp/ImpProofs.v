@@ -677,6 +677,20 @@ Section PROOFS.
     unfold eval_imp. ss.
   Qed.
 
+  Lemma unfold_eval_imp_only
+        ge f args
+    :
+      eval_imp ge f args
+      =
+      match init_args (fn_params f) args [] with
+      | Some iargs =>
+        ` x_ : lenv * val <-
+               interp_imp ge (denote_stmt (fn_body f);; ` retv : val <- denote_expr (Var "return");; Ret retv) (init_lenv (fn_vars f) ++ iargs);;
+               (let (_, retv) := x_ in Ret retv)
+      | None => triggerUB
+      end.
+  Proof. ss. Qed.
+
 End PROOFS.
 
 (** tactics **)

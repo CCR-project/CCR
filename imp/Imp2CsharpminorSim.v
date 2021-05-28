@@ -304,19 +304,21 @@ Section PROOF.
 
   Theorem match_states_sim
           (src: Imp.program) tgt
-          gm ge ms
+          gm ge ms mn
           ist cst
           i0 j0
+          (MODNAME: mn = src.(name))
           (GMAP: gm = get_gmap src)
           (MODSEML: ms = (ImpMod.get_modL src).(ModL.enclose))
           (GENV: ge = Sk.load_skenv (ImpMod.get_modL src).(ModL.sk))
           (COMP: Imp2Csharpminor.compile src = OK tgt)
-          (MS: match_states mmem gm ge ms ist cst)
+          (MS: match_states mmem gm ge ms mn ist cst)
     :
       <<SIM: sim (ModL.compile (Mod.add_list ([Mem] ++ [ImpMod.get_mod src]))) (semantics tgt) ordN i0 j0 ist cst>>.
   Proof.
     move GMAP before ms. move MODSEML before GMAP. move GENV before MODSEML. move COMP before GENV.
-    revert_until COMP.
+    move MODNAME before COMP.
+    revert_until MODNAME.
     pcofix CIH. i.
     inv MS.
     unfold ordN in *.
@@ -328,11 +330,25 @@ Section PROOF.
     - ss. unfold itree_of_cont_stmt, itree_of_imp_cont.
       rewrite interp_imp_Skip. grind.
       destruct tcont eqn:TCONT; ss; clarify.
-      + inv MCS. inv MCN; ss; clarify. unfold idK. sim_red. destruct rp. sim_red.
-        pfold. econs 5; ss; auto.
-        { unfold state_sort. ss. rewrite Any.upcast_downcast. ss. }
-        i. dependent destruction STEP.
-      + inv MCS; clarify.
+      + inv MCONT. inv MSTACK; ss; clarify. unfold idK. sim_red. destruct rp. sim_red.
+        rewrite interp_imp_expr_Var. sim_red.
+        unfold unwrapU.
+        des_ifs; grind.
+        2:{ sim_triggerUB. }
+        repeat (pfold; sim_tau; left). sim_red. unfold assume.
+        pfold. econs 5; ss; auto. grind. eapply angelic_step in STEP; des; clarify.
+        eexists; split; auto. eexists. left.
+        repeat (pfold; sim_tau; left). sim_red.
+        destruct r0. ss. destruct l.
+        { admit "mid: need wf-r_state". }
+        grind. repeat (pfold; sim_tau; left). sim_red.
+        pfold. econs 4.
+        { admit "ez: strict_determinate_at". }
+        eexists. eexists.
+        { eapply step_skip_call; ss. }
+        eexists; split; auto. eexists.
+        admit "ez? sim final state".
+      + inv MCONT; clarify.
         sim_red. pfold.
         econs 4; auto.
         { admit "ez: strict_determinate_at". }
@@ -349,8 +365,23 @@ Section PROOF.
         right. eapply CIH.
         eapply match_states_intro with (le0:=le) (rp0:=rp) (code:=Skip); eauto.
         unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind.
-      + inv MCS. inv MCN; clarify.
+      + inv MCONT. inv MSTACK; clarify.
         unfold idK. sim_red. destruct rp. sim_red.
+
+        rewrite interp_imp_expr_Var. sim_red.
+        unfold unwrapU.
+        des_ifs; grind.
+        2:{ sim_triggerUB. }
+        repeat (pfold; sim_tau; left). sim_red. unfold assume.
+        pfold. econs 5; ss; auto. grind. eapply angelic_step in STEP; des; clarify.
+        eexists; split; auto. eexists. left.
+        repeat (pfold; sim_tau; left). sim_red.
+        destruct r0. ss. destruct l.
+        { admit "mid: need wf-r_state". }
+        grind. repeat (pfold; sim_tau; left). sim_red.
+
+        rewrite Any.upcast_downcast. ss. grind.
+        repeat (pfold; sim_tau; left). sim_red.
         pfold. econs 4; auto.
         { admit "ez: strict_determinate_at". }
         eexists. eexists.
@@ -360,19 +391,15 @@ Section PROOF.
         { admit "ez: strict_determinate_at". }
         eexists. eexists.
         { eapply step_return. }
-        eexists; split; auto. eexists. left; pfold.
-        rewrite Any.upcast_downcast.
-        unfold itree_of_imp_cont. ss. sim_red.
-        grind. rewrite interp_imp_bind. rewrite interp_imp_SetVar.
-        sim_tau. left; pfold. sim_tau. right.
+        eexists; split; auto. eexists. right.
         apply CIH.
-        rewrite transl_all_ret. rewrite EventsL.interp_Es_ret. grind.
-        rewrite interp_imp_Ret. rewrite transl_all_ret. rewrite EventsL.interp_Es_ret.
-        grind.
-        eapply match_states_intro with (le1:=(alist_add id Vundef le0)) (code:= Skip); eauto.
+        hexploit match_states_intro.
+        { instantiate (3:=get_gmap src). instantiate (2:=Skip). ss. }
+        2,3,4,5:eauto.
+        2:{ unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip.
+            rewrite transl_all_ret. rewrite EventsL.interp_Es_ret. grind. eapply H. }
         { econs. i. exists (map_val_opt sv); split; auto.
           admit "ez? alist & Maps.PTree". }
-        { unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
     - ss. unfold itree_of_cont_stmt, itree_of_imp_cont.
       rewrite interp_imp_Assign. sim_red. grind.
       destruct (compile_expr e) eqn:EXP; uo; ss. destruct rp. grind.
@@ -385,17 +412,13 @@ Section PROOF.
         { eapply step_set. eapply H0. }
         unfold ordN in *. eexists; split; eauto; auto.
         eexists. right. apply CIH.
-        eapply match_states_intro with (le0:= alist_add x rv le) (rp:= (r0, p)) (code:= Skip); eauto.
-        { econs. i. destruct (classic (x = x0)).
-          - clarify. exists (Some (map_val rv)). ss. split.
-            2:{ des_ifs.
-                assert (A: x0 ?[ eq ] x0 = true).
-                { unfold rel_dec. ss. apply String.string_dec_sound. auto. }
-                clarify. }
-            rewrite Maps.PTree.gss. auto.
-          - inv ML. specialize ML0 with (x:=x0).
-            admit "ez: alist_find & alist_add". }
-        unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind.
+        hexploit match_states_intro.
+        { instantiate (2:=Skip). instantiate (2:=get_gmap src). ss. }
+        2,3,4,5:eauto.
+        2:{ unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip.
+            rewrite transl_all_ret. rewrite EventsL.interp_Es_ret. grind. eapply H1. }
+        { econs. i. exists (map_val_opt sv); split; auto.
+          admit "ez? alist & Maps.PTree". }
     - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Seq. sim_red.
       ss. destruct (compile_stmt (get_gmap src) code1) eqn:CSC1; destruct (compile_stmt (get_gmap src) code2) eqn:CSC2; uo; clarify.
 
@@ -404,10 +427,7 @@ Section PROOF.
      ` x : r_state * p_state * (lenv * val) <-
      (let (st1, v) := r0 in
       EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src))))
-        (transl_all mn (let (le1, _) := v in interp_imp (Sk.load_skenv (defs src)) (denote_stmt code2) le1)) st1);;
-     ` x0 : r_state * p_state * (lenv * val) <-
-     (let (st1, v) := x in EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src)))) (transl_all mn (Ret v)) st1);;
-            ` y : r_state * p_state * (lenv * val) <- next x0;; Ret y)).
+        (transl_all (name src) (let (le1, _) := v in interp_imp (Sk.load_skenv (defs src)) (denote_stmt code2) le1)) st1);; next x)).
 
       unfold itree_of_cont_stmt, itree_of_imp_cont in *. irw in IHcode1.
       pfold. econs 4.
@@ -419,12 +439,8 @@ Section PROOF.
       { auto. }
       { instantiate (2:= next_seq). instantiate (1:= Kseq s0 tcont). ss.
         econs 2; eauto.
-        - extensionality x. unfold itree_of_cont_stmt, itree_of_imp_cont. grind.
-        - match goal with
-          | [ |- match_code _ _ _ _ ?i _ ] => replace i with next; auto
-          end.
-          extensionality x. destruct x. Red.prw ltac:(_red_gen) 1 0. grind. }
-      { ss. apply MCN. }
+        extensionality x. unfold itree_of_cont_stmt, itree_of_imp_cont. grind. destruct p0. grind. }
+      { ss. apply MSTACK. }
       i.
       match goal with
       | [ H: paco4 _ _ _ _ ?it0 _ |- paco4 _ _ _ _ ?it1 _ ] =>
@@ -432,69 +448,70 @@ Section PROOF.
       end.
       subst next_seq. grind.
     - unfold itree_of_cont_stmt in *; unfold itree_of_imp_cont in *. rewrite interp_imp_If. sim_red. ss.
-      destruct (compile_expr i) eqn:CEXPR; destruct (compile_stmt (get_gmap src) code1) eqn:CCODE1;
-        destruct (compile_stmt (get_gmap src) code2) eqn:CCODE2; uo; clarify.
-      destruct rp. eapply step_expr; eauto.
-      i. sim_red. destruct (is_true rv) eqn:COND; ss; clarify.
-      + sim_red. destruct rv; clarify. ss. destruct (n =? 0)%Z eqn:CZERO; ss; clarify.
-        { rewrite Z.eqb_eq in CZERO. clarify.
-          pfold. econs 4.
-          { admit "ez: strict_determinate_at". }
-          eexists. eexists.
-          { eapply step_ifthenelse.
-            - econs; eauto.
-              + econs. ss.
-              + ss.
-            - ss. }
-          unfold ordN. eexists; split; auto. eexists. left.
-          des_ifs. irw in IHcode2.
-          replace
-    (` x : r_state * p_state * (lenv * val) <-
-           EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src))))
-                 (transl_all mn (interp_imp (Sk.load_skenv (defs src)) (denote_stmt code2) le)) (r0, p);;
-     ` x0 : r_state * p_state * (lenv * val) <-
-     (let (st1, v) := x in EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src)))) (transl_all mn (Ret v)) st1);;
-            ` y : r_state * p_state * (lenv * val) <- next x0;;
-            ` x : _ <- itree_of_imp_pop (ImpMod.modsemL src (Sk.load_skenv (defs src))) mn y;; stack x)
-            with
-              (` x : r_state * p_state * (lenv * val) <-
-               EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src))))
-                 (transl_all mn (interp_imp (Sk.load_skenv (defs src)) (denote_stmt code2) le)) (r0, p);;
-               ` y : r_state * p_state * (lenv * val) <- next x;;
-                     ` x : _ <- itree_of_imp_pop (ImpMod.modsemL src (Sk.load_skenv (defs src))) mn y;; stack x).
-          2:{ grind. Red.prw ltac:(_red_gen) 1 0. grind. }
-          eapply IHcode2; eauto. }
-        { rewrite Z.eqb_neq in CZERO.
-          pfold. econs 4.
-          { admit "ez: strict_determinate_at". }
-          eexists. eexists.
-          { eapply step_ifthenelse.
-            - econs; eauto.
-              + econs. ss.
-              + ss.
-            - ss. destruct (negb (Int64.eq (to_long n) Int64.zero)) eqn:CONTRA; ss; clarify.
-              rewrite negb_false_iff in CONTRA. apply Int64.same_if_eq in CONTRA.
-              unfold to_long in CONTRA. unfold Int64.zero in CONTRA.
-              admit "ez: int64 extenttionality with wf-ed values". }
-          unfold ordN. eexists; split; auto. eexists. left.
-          des_ifs. irw in IHcode1.
-          replace
-    (` x : r_state * p_state * (lenv * val) <-
-           EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src))))
-                 (transl_all mn (interp_imp (Sk.load_skenv (defs src)) (denote_stmt code1) le)) (r0, p);;
-     ` x0 : r_state * p_state * (lenv * val) <-
-     (let (st1, v) := x in EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src)))) (transl_all mn (Ret v)) st1);;
-            ` y : r_state * p_state * (lenv * val) <- next x0;;
-            ` x : _ <- itree_of_imp_pop (ImpMod.modsemL src (Sk.load_skenv (defs src))) mn y;; stack x)
-            with
-              (` x : r_state * p_state * (lenv * val) <-
-               EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src))))
-                 (transl_all mn (interp_imp (Sk.load_skenv (defs src)) (denote_stmt code1) le)) (r0, p);;
-               ` y : r_state * p_state * (lenv * val) <- next x;;
-                     ` x : _ <- itree_of_imp_pop (ImpMod.modsemL src (Sk.load_skenv (defs src))) mn y;; stack x).
-          2:{ grind. Red.prw ltac:(_red_gen) 1 0. grind. }
-          eapply IHcode1; eauto. }
-      + sim_triggerUB.
+      admit "ez: ifthenelse".
+      (* destruct (compile_expr i) eqn:CEXPR; destruct (compile_stmt (get_gmap src) code1) eqn:CCODE1; *)
+      (*   destruct (compile_stmt (get_gmap src) code2) eqn:CCODE2; uo; clarify. *)
+      (* destruct rp. eapply step_expr; eauto. *)
+      (* i. sim_red. destruct (is_true rv) eqn:COND; ss; clarify. *)
+    (*   + sim_red. destruct rv; clarify. ss. destruct (n =? 0)%Z eqn:CZERO; ss; clarify. *)
+    (*     { rewrite Z.eqb_eq in CZERO. clarify. *)
+    (*       pfold. econs 4. *)
+    (*       { admit "ez: strict_determinate_at". } *)
+    (*       eexists. eexists. *)
+    (*       { eapply step_ifthenelse. *)
+    (*         - econs; eauto. *)
+    (*           + econs. ss. *)
+    (*           + ss. *)
+    (*         - ss. } *)
+    (*       unfold ordN. eexists; split; auto. eexists. left. *)
+    (*       des_ifs. irw in IHcode2. *)
+    (*       replace *)
+    (* (` x : r_state * p_state * (lenv * val) <- *)
+    (*        EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src)))) *)
+    (*              (transl_all mn (interp_imp (Sk.load_skenv (defs src)) (denote_stmt code2) le)) (r0, p);; *)
+    (*  ` x0 : r_state * p_state * (lenv * val) <- *)
+    (*  (let (st1, v) := x in EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src)))) (transl_all mn (Ret v)) st1);; *)
+    (*         ` y : r_state * p_state * (lenv * val) <- next x0;; *)
+    (*         ` x : _ <- itree_of_imp_pop (ImpMod.modsemL src (Sk.load_skenv (defs src))) mn y;; stack x) *)
+    (*         with *)
+    (*           (` x : r_state * p_state * (lenv * val) <- *)
+    (*            EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src)))) *)
+    (*              (transl_all mn (interp_imp (Sk.load_skenv (defs src)) (denote_stmt code2) le)) (r0, p);; *)
+    (*            ` y : r_state * p_state * (lenv * val) <- next x;; *)
+    (*                  ` x : _ <- itree_of_imp_pop (ImpMod.modsemL src (Sk.load_skenv (defs src))) mn y;; stack x). *)
+    (*       2:{ grind. Red.prw ltac:(_red_gen) 1 0. grind. } *)
+    (*       eapply IHcode2; eauto. } *)
+    (*     { rewrite Z.eqb_neq in CZERO. *)
+    (*       pfold. econs 4. *)
+    (*       { admit "ez: strict_determinate_at". } *)
+    (*       eexists. eexists. *)
+    (*       { eapply step_ifthenelse. *)
+    (*         - econs; eauto. *)
+    (*           + econs. ss. *)
+    (*           + ss. *)
+    (*         - ss. destruct (negb (Int64.eq (to_long n) Int64.zero)) eqn:CONTRA; ss; clarify. *)
+    (*           rewrite negb_false_iff in CONTRA. apply Int64.same_if_eq in CONTRA. *)
+    (*           unfold to_long in CONTRA. unfold Int64.zero in CONTRA. *)
+    (*           admit "ez: int64 extenttionality with wf-ed values". } *)
+    (*       unfold ordN. eexists; split; auto. eexists. left. *)
+    (*       des_ifs. irw in IHcode1. *)
+    (*       replace *)
+    (* (` x : r_state * p_state * (lenv * val) <- *)
+    (*        EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src)))) *)
+    (*              (transl_all mn (interp_imp (Sk.load_skenv (defs src)) (denote_stmt code1) le)) (r0, p);; *)
+    (*  ` x0 : r_state * p_state * (lenv * val) <- *)
+    (*  (let (st1, v) := x in EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src)))) (transl_all mn (Ret v)) st1);; *)
+    (*         ` y : r_state * p_state * (lenv * val) <- next x0;; *)
+    (*         ` x : _ <- itree_of_imp_pop (ImpMod.modsemL src (Sk.load_skenv (defs src))) mn y;; stack x) *)
+    (*         with *)
+    (*           (` x : r_state * p_state * (lenv * val) <- *)
+    (*            EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src)))) *)
+    (*              (transl_all mn (interp_imp (Sk.load_skenv (defs src)) (denote_stmt code1) le)) (r0, p);; *)
+    (*            ` y : r_state * p_state * (lenv * val) <- next x;; *)
+    (*                  ` x : _ <- itree_of_imp_pop (ImpMod.modsemL src (Sk.load_skenv (defs src))) mn y;; stack x). *)
+    (*       2:{ grind. Red.prw ltac:(_red_gen) 1 0. grind. } *)
+    (*       eapply IHcode1; eauto. } *)
+    (*   + sim_triggerub. *)
     - ss. uo; des_ifs.
       unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_CallFun.
       des_ifs; sim_red.
@@ -505,73 +522,81 @@ Section PROOF.
       i. sim_red. destruct r0. destruct l0.
       { ss. admit "mod: r_state is nil". }
       ss. grind.
-      pfold. sim_tau. left; pfold. sim_tau. left; pfold. sim_tau. left. sim_red.
+      repeat (pfold; sim_tau; left). sim_red.
       match goal with
       | [ |- paco4 _ _ _ _ (r0 <- unwrapU (?f);; _) _ ] => destruct f eqn:FSEM; ss
       end.
       2:{ sim_triggerUB. }
       grind.
-      
-
-
-
-      
-      { generalize dependent args. induction args; ss; i; clarify.
-        - sim_red. destruct rp. rewrite EventsL.interp_Es_rE.
-          sim_red.
-          admit "hard? need wf_r_state, CallFun base case".
-        - sim_red. destruct (compile_expr a) eqn:CEA; clarify. uo.
-          destruct rp. eapply step_expr; eauto. }
-      i. eapply (ACC j0 i0 l [] []). eauto.
-      (* admit "hard: CallFun". *)
+      rewrite find_map in FSEM.
+      match goal with
+      | [ FSEM: o_map (?a) _ = _ |- _ ] => destruct a eqn:FOUND; ss; clarify
+      end.
+      destruct p0. destruct p0. clarify.
+      rewrite find_map in FOUND.
+      match goal with
+      | [ FOUND: o_map (?a) _ = _ |- _ ] => destruct a eqn:FOUND2; ss; clarify
+      end.
+      unfold cfun. sim_red. rewrite Any.upcast_downcast. sim_red.
+      rewrite unfold_eval_imp_only.
+      destruct (init_args (Imp.fn_params f0) rvs []) eqn:ARGS; sim_red.
+      2:{ sim_triggerUB. }
+      rewrite interp_imp_bind. sim_red.
+      pfold. econs 4.
+      { admit "ez: strict_determinate_at". }
+      eexists. eexists.
+      { eapply step_call; eauto.
+        - econs. econs 2.
+          { apply Maps.PTree.gempty. }
+          admit "mid: genv, use ident_key (s2p f) _ = Some _".
+        - admit "mid: genv, need smth like injection, use FOUND".
+        - admit "ez: should follow from above two". }
+      unfold ordN in *. eexists; split; auto. eexists. left.
+      pfold. econs 4.
+      { admit "ez: strict_determinate_at". }
+      eexists. eexists.
+      { eapply step_internal_function; eauto.
+        - admit "ez: need wf condition for a Imp.program & lemmas".
+        - admit "ez: need wf condition for a Imp.program & lemmas".
+        - admit "ez: need wf condition for a Imp.program & lemmas".
+        - admit "ez: need wf condition for a Imp.program & lemmas, fn_vars == []".
+        - admit "ez: need wf condition for a Imp.program & lemmas". }
+      eexists; split; auto. eexists. grind. right.
+      eapply CIH.
+      set (ge:= Sk.load_skenv (defs src)).
+      set (ms:=ImpMod.modsemL src ge).
+      set (mn:=name src).
+      match goal with
+      | [ |- match_states _ _ _ _ _ (?i) _] =>
+        replace i with
+    (` r0 : r_state * p_state * (lenv * val) <-
+     EventsL.interp_Es (prog ms)
+       (transl_all mn (interp_imp ge (denote_stmt (Imp.fn_body f0)) (init_lenv (Imp.fn_vars f0) ++ l1)))
+       (c, ε :: c0 :: l0, p);; x4 <- itree_of_imp_pop ge ms mn mn x le r0;; ` x : _ <- next x4;; stack x)
+      end.
+      2:{ grind. Red.prw ltac:(_red_gen) 2 0. grind. Red.prw ltac:(_red_gen) 1 0.
+          Red.prw ltac:(_red_gen) 2 0. grind. Red.prw ltac:(_red_gen) 2 0. grind.
+          Red.prw ltac:(_red_gen) 1 0. grind. }
+      hexploit match_states_intro.
+      4:{ instantiate (1:=Kcall (Some (s2p x)) tf empty_env tle tcont). ss. econs 1. }
+      4:{ instantiate (1:= fun r0 =>
+                             ` x4 : r_state * p_state * (lenv * val) <- itree_of_imp_pop ge ms mn mn x le r0;;
+                                    ` x0 : r_state * p_state * (lenv * val) <- next x4;; stack x0).
+          instantiate (1:=mn). instantiate (1:=ms). instantiate (1:=ge). instantiate (1:=get_gmap src).
+          econs 2; ss; eauto. }
+      3:eauto.
+      4:{ instantiate (9:= EventsL.interp_Es (prog ms) (transl_all mn (interp_imp ge (denote_stmt (Imp.fn_body f0)) (init_lenv (Imp.fn_vars f0) ++ l1))) (c, ε :: c0 :: l0, p)). i.
+          match goal with
+          | [ H1: match_states _ _ _ _ _ ?i0 _ |- match_states _ _ _ _ _ ?i1 _] =>
+            replace i1 with i0; eauto
+          end.
+          unfold idK. grind. }
+      { instantiate (2:=f0.(Imp.fn_body)). admit "ez: fn_body is THE stmt we get by compiling". }
+      { instantiate (2:=(init_lenv (Imp.fn_vars f0) ++ l1)). admit "ez?: the initial lenv of function". }
+      { unfold itree_of_cont_stmt, itree_of_imp_cont. ss. }
     - ss. destruct p eqn:PVAR; clarify. 
-      destruct (compile_exprs args []) eqn:CARGS; clarify. uo. inv CST.
-      unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_CallPtr.
-      sim_red. destruct rp. eapply step_expr; ss; eauto.
-      i. destruct rv eqn:RV; ss; clarify.
-      { sim_red. sim_triggerUB. }
-      destruct ofs eqn:OFS; ss; clarify.
-      2,3: (sim_red; sim_triggerUB).
-      destruct (SkEnv.blk2id (Sk.load_skenv (defs src)) blk) eqn:SKENV; clarify.
-      2: (sim_red; sim_triggerUB).
-      des_ifs.
-      { pfold. sim_tau. left. sim_triggerUB. }
-      pfold. sim_tau. left.
-      admit "hard: CallPtr, similar to CallFun.".
-    - ss. destruct (ident_key (s2p f) (List.map (fun '(name, n) => (s2p name, make_signature n)) (ext_funs src))) eqn:IDKEY;
-            destruct (compile_exprs args []) eqn:CEXPRS; uo; clarify.
-      unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_CallSys. sim_red.
-      generalize dependent l. generalize dependent i0. generalize dependent j0.
-      assert (ACC:
-  forall (j0 i0 : nat) (l : list expr) acc1 acc2,
-  compile_exprs args acc1 = Some l ->
-  paco4 (_sim (ModL.compile (Mod.add_list [Mem; ImpMod.get_mod src])) (semantics tgt) top2) r i0 j0
-    (` r0 : r_state * p_state * (lenv * list val) <-
-     EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src)))) (transl_all mn (interp_imp_denote_exprs (Sk.load_skenv (defs src)) le args acc2)) rp;;
-     ` x0 : r_state * p_state * (alist var val * val) <-
-     (let (st1, v) := r0 in
-      EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src))))
-        (transl_all mn
-           (let (le1, vs) := v in
-            ` v0 : val <- trigger (Syscall f vs top1);; (tau;; tau;; tau;; tau;; Ret (alist_add x v0 le1, Vundef)))) st1);;
-     ` x1 : r_state * p_state * (lenv * val) <-
-     (let (st1, v) := x0 in EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src)))) (transl_all mn (Ret v)) st1);;
-     ` y : r_state * p_state * (lenv * val) <- next x1;; ` x : _ <- itree_of_imp_pop (ImpMod.modsemL src (Sk.load_skenv (defs src))) mn y;; stack x)
-    (State tf (Scall (Some (s2p x)) s (Eaddrof (s2p f)) l) tcont empty_env tle tm)).
-      { generalize dependent args. induction args; i; clarify. ss. clarify.
-        - sim_red. pfold. econs 4.
-          { admit "ez: strict_determinate_at". }
-          eexists. eexists.
-          { eapply step_call.
-            - econs. econs 2.
-              + apply Maps.PTree.gempty.
-              + ss. admit "mid: finding from global env".
-            - 
-              
-
-
-
-      admit "mid: CallSys".
+      admit "ez: CallPtr, similar to CallFun.".
+    - admit "mid: CallSys".
     - admit "hard: AddrOf".
     - admit "hard: Malloc".
     - admit "hard: free".
