@@ -357,7 +357,7 @@ Section ADQ.
       (SIM: forall rv, sim_body o1 (ktr0 rv) (ktr1 rv))
     :
       _sim_body sim_body o0 (trigger EventsL.PushFrame;; trigger (Call fn args↑) >>= ktr0)
-                (trigger EventsL.PushFrame;; trigger (Call fn (@inr unit (list val) args)↑) >>= ktr1)
+                (trigger EventsL.PushFrame;; trigger (Call fn (@inr unit _ args)↑) >>= ktr1)
   | sim_rE
       o0 o1
       T (re: EventsL.rE T) S (ktr0 ktr1: ktree _ _ S)
@@ -479,7 +479,7 @@ Section ADQ.
   Qed.
 
   Definition sim_fun T (f0 f1: (Any.t -> itree EventsL.Es T)): Prop :=
-    forall (args: list val), sim_body 100 (f0 args↑) (f1 (@inr unit (list val) args)↑)
+    forall (args: list val), sim_body 100 (f0 args↑) (f1 (@inr unit _ args)↑)
   .
 
   (* Definition sim_fun (f0: list val -> itree EventsL.Es val) *)
@@ -663,20 +663,20 @@ Section ADQ.
   Qed.
 
   Lemma my_lemma2_aux
-        fn args st0
+        fn (args: list val) st0
     :
         simg eq 200
              (* (EventsL.interp_Es p_src (trigger (Call fn args)) st0) *)
              (* (EventsL.interp_Es p_tgt (trigger (Call fn (Any.pair args false↑))) st0) *)
-             (EventsL.interp_Es p_src (p_src (Call fn args)) st0)
-             (EventsL.interp_Es p_tgt (p_tgt (Call fn (Any.pair args false↑))) st0)
+             (EventsL.interp_Es p_src (p_src (Call fn args↑)) st0)
+             (EventsL.interp_Es p_tgt (p_tgt (Call fn (@inr unit _ args)↑)) st0)
   .
   Proof.
     ginit. { eapply cpn5_wcompat; eauto with paco. } revert_until p_tgt. gcofix CIH. i.
     cbn. steps.
     generalize (find_sim fn). intro T. inv T; cbn; steps.
     des; subst. specialize (IN0 args).
-    abstr (i args) itr_src. abstr (i0 (Any.pair args (Any.upcast false))) itr_tgt. clear i i0 args H H0. clear_tac.
+    abstr (i args↑) itr_src. abstr (i0 (@inr unit _ args)↑) itr_tgt. clear i i0 args H H0. clear_tac.
     revert_until sk_link_eq3. gcofix CIH. i.
     guclo ordC_spec. econs.
     { instantiate (1:=(100 + 100)%ord). rewrite <- OrdArith.add_from_nat. cbn. refl. }
@@ -745,7 +745,7 @@ Section ADQ.
     esplits; et. { admit "ez - wf". } steps.
     instantiate (1:=(200 + 200)%ord).
     match goal with | [ |- gpaco5 _ _ _ _ _ _ _ ?src ?tgt ] => remember src as tmp end.
-    replace ([]↑) with (Any.pair ([]: list val)↑ false↑); cycle 1.
+    replace ([]↑) with ((@inr unit _ ([]: list val))↑); cycle 1.
     { admit "ez - parameterize initial argument && use transitivity of refinement". }
     subst.
     assert(STEQ: (ModSemL.initial_r_state ms_src, ModSemL.initial_p_state ms_src)

@@ -324,7 +324,7 @@ Section UMODSEM.
   (************************* SMOD ***************************)
 
   Definition transl_uCallE_smod: uCallE ~> hCallE :=
-    fun T '(uCall fn args) => hCall false fn (@inr unit (list val) args)↑
+    fun T '(uCall fn args) => hCall false fn (@inr unit _ args)↑
   .
 
   Definition transl_event_smod: (uCallE +' pE +' eventE) ~> (hCallE +' pE +' eventE) :=
