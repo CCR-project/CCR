@@ -353,40 +353,6 @@ End UMod.
 (********************************************* KNOWN ***********************************************)
 (********************************************* KNOWN ***********************************************)
 
-Section AUX.
-  Context `{Σ: GRA.t}.
-
-  Record ospecbody := mk_ospecbody {
-    osb_fspec:> ftspec unit val;
-    osb_body: list val -> itree (hCallE +' pE +' eventE) val;
-  }
-  .
-
-  Definition disclose (fs: ftspec unit val): fspec :=
-    @mk _ (option fs.(X)) (unit + list val)%type val
-        (fun ox argh argl o =>
-           match ox, argh with
-           | Some x, inl argh => fs.(precond) x argh argl o ** ⌜is_pure o⌝
-           | None, inr varg => ⌜varg↑ = argl /\ o = ord_top⌝
-           | _, _ => ⌜False⌝
-           end)
-        (fun ox reth retl =>
-           match ox with
-           | Some x => fs.(postcond) x reth retl
-           | None => ⌜reth↑ = retl⌝
-           end)
-  .
-
-  Definition disclose_osb (osb: ospecbody): fspecbody :=
-    mk_specbody (disclose osb)
-                (fun argh => match argh with
-                             | inl argh => trigger (Choose _)
-                             (*** YJ: We may generalize this to APC ***)
-                             (*** YJ: We may further generalize this to any pure itree without pE ***)
-                             | inr varg => (osb.(osb_body) varg)
-                             end)
-  .
-
   (* Definition disclose_smodsem (ms: SModSem.t): SModSem.t := {| *)
   (*   SModSem.fnsems     := List.map (map_snd disclose_fsb) ms.(SModSem.fnsems); *)
   (*   SModSem.mn         := ms.(SModSem.mn); *)
@@ -401,20 +367,27 @@ Section AUX.
   (* |} *)
   (* . *)
 
-End AUX.
-
-
-
-
-
 Module KModSem.
 Section KMODSEM.
 
   Context `{Σ: GRA.t}.
 
+  Variant kCallE: Type -> Type :=
+  | kCall (fn: gname) (varg: unit + list val): kCallE Any.t
+  .
+  (*** K -> K: unit; tbr == true ***)
+  (*** K -> U: list val; tbr == false ***)
+  (**** TODO: maybe "val" is more appropriate return type??? Check this later ****)
+
+  Record kspecbody := mk_kspecbody {
+    ksb_fspec:> ftspec unit val;                                (*** K -> K ***)
+    ksb_body: list val -> itree (kCallE +' pE +' eventE) val;   (*** U -> K ***)
+  }
+  .
+
   Record t: Type := mk {
     (* fnsems: list (gname * (list val -> itree (oCallE +' pE +' eventE) val)); *)
-    fnsems: list (gname * ospecbody);
+    fnsems: list (gname * kspecbody);
     mn: mname;
     initial_mr: Σ;
     initial_st: Any.t;
@@ -425,27 +398,52 @@ Section KMODSEM.
   (************************* TGT ***************************)
   (************************* TGT ***************************)
 
-  (*** N.B. tbr == is_k. i.e., known calls will always be removed ***)
-  Definition transl_hCallE_tgt: hCallE ~> hCallE :=
-    fun T '(hCall tbr fn args) => hCall tbr fn (Any.pair args tbr↑)
+  Definition disclose (fs: ftspec unit val): fspec :=
+    @HoareDef.mk _ (option fs.(X)) (unit + list val)%type val
+                 (fun ox argh argl o =>
+                    match ox, argh with
+                    | Some x, inl argh => fs.(precond) x argh argl o ** ⌜is_pure o⌝
+                    | None, inr varg => ⌜varg↑ = argl /\ o = ord_top⌝
+                    | _, _ => ⌜False⌝
+                    end)
+                 (fun ox reth retl =>
+                    match ox with
+                    | Some x => fs.(postcond) x reth retl
+                    | None => ⌜reth↑ = retl⌝
+                    end)
   .
 
-  Definition transl_event_tgt: (hCallE +' pE +' eventE) ~> (hCallE +' pE +' eventE) :=
-    (bimap transl_hCallE_tgt (bimap (id_ _) (id_ _)))
+  Definition transl_kCallE_tgt: kCallE ~> hCallE :=
+    fun T '(kCall fn args) => match args with
+                              | inl _ => hCall true fn tt↑
+                              | inr args => hCall false fn args↑
+                              end
   .
 
-  Definition transl_itr_tgt: itree (hCallE +' pE +' eventE) ~> itree (hCallE +' pE +' eventE) :=
+  Definition transl_event_tgt: (kCallE +' pE +' eventE) ~> (hCallE +' pE +' eventE) :=
+    (bimap transl_kCallE_tgt (bimap (id_ _) (id_ _)))
+  .
+
+  Definition transl_itr_tgt: itree (kCallE +' pE +' eventE) ~> itree (hCallE +' pE +' eventE) :=
     fun _ => interp (T:=_) (fun _ e => trigger (transl_event_tgt e))
   .
 
-  Definition transl_fsb (osb: ospecbody): fspecbody :=
-    mk_specbody osb (transl_itr_tgt (T:=_) ∘ osb.(osb_body))
+  Definition disclose_ksb (ksb: kspecbody): fspecbody :=
+    mk_specbody (disclose ksb)
+                (fun argh => match argh with
+                             (*** K -> K ***)
+                             (*** YJ: We may generalize this to APC ***)
+                             (*** YJ: We may further generalize this to any pure itree without pE ***)
+                             | inl argh => trigger (Choose _)
+                             (*** U -> K ***)
+                             | inr varg => transl_itr_tgt (ksb.(ksb_body) varg)
+                             end)
   .
 
-  Coercion transl_fsb: ospecbody >-> fspecbody.
+  Coercion disclose_ksb: kspecbody >-> fspecbody.
 
   Definition to_tgt (ms: t): SModSem.t := {|
-    SModSem.fnsems := List.map (map_snd transl_fsb) ms.(fnsems);
+    SModSem.fnsems := List.map (map_snd disclose_ksb) ms.(fnsems);
     SModSem.mn := ms.(mn);
     SModSem.initial_mr := ms.(initial_mr);
     SModSem.initial_st := ms.(initial_st);
@@ -513,13 +511,13 @@ Section KMODSEM.
     repeat rewrite interp_trigger. grind.
   Qed.
 
-  Lemma transl_itr_tgt_hcall
+  Lemma transl_itr_tgt_kcall
         (R: Type)
-        (i: hCallE R)
+        (i: kCallE R)
     :
       (transl_itr_tgt (trigger i))
       =
-      (trigger (transl_hCallE_tgt i) >>= (fun r => tau;; Ret r)).
+      (trigger (transl_kCallE_tgt i) >>= (fun r => tau;; Ret r)).
   Proof.
     unfold transl_itr_tgt in *.
     repeat rewrite interp_trigger. grind.
@@ -620,7 +618,7 @@ Section KMODSEM.
       (mk_box transl_itr_tgt_bind)
       (mk_box transl_itr_tgt_tau)
       (mk_box transl_itr_tgt_ret)
-      (mk_box transl_itr_tgt_hcall)
+      (mk_box transl_itr_tgt_kcall)
       (mk_box transl_itr_tgt_triggere)
       (mk_box transl_itr_tgt_triggerp)
       (mk_box True)
@@ -643,30 +641,31 @@ Section KMODSEM.
   (************************* SRC ***************************)
   (************************* SRC ***************************)
 
-  Definition handle_hCallE_src: hCallE ~> itree Es :=
-    fun T '(hCall tbr fn args) =>
-      match tbr with
-      | true => tau;; trigger (Choose _)
-      | false => trigger (Call fn args)
+  Definition handle_kCallE_src: kCallE ~> itree Es :=
+    fun T '(kCall fn args) =>
+      match args with
+      | inl _ => tau;; trigger (Choose _)
+      | inr args => trigger (Call fn args↑)
       end
   .
 
-  Notation Es' := (hCallE +' pE +' eventE).
-  Definition interp_hCallE_src: itree Es' ~> itree Es :=
-    interp (case_ (bif:=sum1) (handle_hCallE_src)
+  Notation Es' := (kCallE +' pE +' eventE).
+
+  Definition interp_kCallE_src: itree Es' ~> itree Es :=
+    interp (case_ (bif:=sum1) (handle_kCallE_src)
                   ((fun T X => trigger X): _ ~> itree Es))
   .
 
-  Definition body_to_src {AA AR} (body: AA -> itree (hCallE +' pE +' eventE) AR): AA -> itree Es AR :=
-    fun varg_src => interp_hCallE_src (body varg_src)
+  Definition body_to_src {AA AR} (body: AA -> itree (kCallE +' pE +' eventE) AR): AA -> itree Es AR :=
+    fun varg_src => interp_kCallE_src (body varg_src)
   .
 
-  Definition fun_to_src {AA AR} (body: AA -> itree (hCallE +' pE +' eventE) AR): (Any.t -> itree Es Any.t) :=
+  Definition fun_to_src {AA AR} (body: AA -> itree (kCallE +' pE +' eventE) AR): (Any.t -> itree Es Any.t) :=
     (cfun (body_to_src body))
   .
 
   Definition to_src (ms: t): ModSem.t := {|
-    ModSem.fnsems := List.map (map_snd (fun_to_src ∘ fsb_body)) ms.(fnsems);
+    ModSem.fnsems := List.map (map_snd (fun_to_src ∘ ksb_body)) ms.(fnsems);
     ModSem.mn := ms.(mn);
     ModSem.initial_mr := ε;
     ModSem.initial_st := ms.(initial_st);
@@ -677,184 +676,184 @@ Section KMODSEM.
   (****************** Reduction Lemmas *****************)
   (*****************************************************)
 
-  Lemma interp_hCallE_src_bind
+  Lemma interp_kCallE_src_bind
         (R S: Type)
         (s: itree _ R) (k : R -> itree _ S)
     :
-      (interp_hCallE_src (s >>= k))
+      (interp_kCallE_src (s >>= k))
       =
-      ((interp_hCallE_src s) >>= (fun r => interp_hCallE_src (k r))).
+      ((interp_kCallE_src s) >>= (fun r => interp_kCallE_src (k r))).
   Proof.
-    unfold interp_hCallE_src in *. grind.
+    unfold interp_kCallE_src in *. grind.
   Qed.
 
-  Lemma interp_hCallE_src_tau
+  Lemma interp_kCallE_src_tau
         (U: Type)
         (t : itree _ U)
     :
-      (interp_hCallE_src (Tau t))
+      (interp_kCallE_src (Tau t))
       =
-      (Tau (interp_hCallE_src t)).
+      (Tau (interp_kCallE_src t)).
   Proof.
-    unfold interp_hCallE_src in *. grind.
+    unfold interp_kCallE_src in *. grind.
   Qed.
 
-  Lemma interp_hCallE_src_ret
+  Lemma interp_kCallE_src_ret
         (U: Type)
         (t: U)
     :
-      ((interp_hCallE_src (Ret t)))
+      ((interp_kCallE_src (Ret t)))
       =
       Ret t.
   Proof.
-    unfold interp_hCallE_src in *. grind.
+    unfold interp_kCallE_src in *. grind.
   Qed.
 
-  Lemma interp_hCallE_src_triggerp
+  Lemma interp_kCallE_src_triggerp
         (R: Type)
         (i: pE R)
     :
-      (interp_hCallE_src (trigger i))
+      (interp_kCallE_src (trigger i))
       =
       (trigger i >>= (fun r => tau;; Ret r)).
   Proof.
-    unfold interp_hCallE_src in *.
+    unfold interp_kCallE_src in *.
     repeat rewrite interp_trigger. grind.
   Qed.
 
-  Lemma interp_hCallE_src_triggere
+  Lemma interp_kCallE_src_triggere
         (R: Type)
         (i: eventE R)
     :
-      (interp_hCallE_src (trigger i))
+      (interp_kCallE_src (trigger i))
       =
       (trigger i >>= (fun r => tau;; Ret r)).
   Proof.
-    unfold interp_hCallE_src in *.
+    unfold interp_kCallE_src in *.
     repeat rewrite interp_trigger. grind.
   Qed.
 
-  Lemma interp_hCallE_src_hcall
+  Lemma interp_kCallE_src_kcall
         (R: Type)
-        (i: hCallE R)
+        (i: kCallE R)
     :
-      (interp_hCallE_src (trigger i))
+      (interp_kCallE_src (trigger i))
       =
-      (handle_hCallE_src i >>= (fun r => tau;; Ret r)).
+      (handle_kCallE_src i >>= (fun r => tau;; Ret r)).
   Proof.
-    unfold interp_hCallE_src in *.
+    unfold interp_kCallE_src in *.
     repeat rewrite interp_trigger. grind.
   Qed.
 
-  Lemma interp_hCallE_src_triggerUB
+  Lemma interp_kCallE_src_triggerUB
         (R: Type)
     :
-      (interp_hCallE_src (triggerUB))
+      (interp_kCallE_src (triggerUB))
       =
       triggerUB (A:=R).
   Proof.
-    unfold interp_hCallE_src, triggerUB in *. rewrite unfold_interp. cbn. grind.
+    unfold interp_kCallE_src, triggerUB in *. rewrite unfold_interp. cbn. grind.
   Qed.
 
-  Lemma interp_hCallE_src_triggerNB
+  Lemma interp_kCallE_src_triggerNB
         (R: Type)
     :
-      (interp_hCallE_src (triggerNB))
+      (interp_kCallE_src (triggerNB))
       =
       triggerNB (A:=R).
   Proof.
-    unfold interp_hCallE_src, triggerNB in *. rewrite unfold_interp. cbn. grind.
+    unfold interp_kCallE_src, triggerNB in *. rewrite unfold_interp. cbn. grind.
   Qed.
 
-  Lemma interp_hCallE_src_unwrapU
+  Lemma interp_kCallE_src_unwrapU
         (R: Type)
         (i: option R)
     :
-      (interp_hCallE_src (unwrapU i))
+      (interp_kCallE_src (unwrapU i))
       =
       (unwrapU i).
   Proof.
-    unfold interp_hCallE_src, unwrapU in *. des_ifs.
+    unfold interp_kCallE_src, unwrapU in *. des_ifs.
     { etrans.
-      { eapply interp_hCallE_src_ret. }
+      { eapply interp_kCallE_src_ret. }
       { grind. }
     }
     { etrans.
-      { eapply interp_hCallE_src_triggerUB. }
+      { eapply interp_kCallE_src_triggerUB. }
       { unfold triggerUB. grind. }
     }
   Qed.
 
-  Lemma interp_hCallE_src_unwrapN
+  Lemma interp_kCallE_src_unwrapN
         (R: Type)
         (i: option R)
     :
-      (interp_hCallE_src (unwrapN i))
+      (interp_kCallE_src (unwrapN i))
       =
       (unwrapN i).
   Proof.
-    unfold interp_hCallE_src, unwrapN in *. des_ifs.
+    unfold interp_kCallE_src, unwrapN in *. des_ifs.
     { etrans.
-      { eapply interp_hCallE_src_ret. }
+      { eapply interp_kCallE_src_ret. }
       { grind. }
     }
     { etrans.
-      { eapply interp_hCallE_src_triggerNB. }
+      { eapply interp_kCallE_src_triggerNB. }
       { unfold triggerNB. grind. }
     }
   Qed.
 
-  Lemma interp_hCallE_src_assume
+  Lemma interp_kCallE_src_assume
         P
     :
-      (interp_hCallE_src (assume P))
+      (interp_kCallE_src (assume P))
       =
       (assume P;; tau;; Ret tt)
   .
   Proof.
-    unfold assume. rewrite interp_hCallE_src_bind. rewrite interp_hCallE_src_triggere. grind. eapply interp_hCallE_src_ret.
+    unfold assume. rewrite interp_kCallE_src_bind. rewrite interp_kCallE_src_triggere. grind. eapply interp_kCallE_src_ret.
   Qed.
 
-  Lemma interp_hCallE_src_guarantee
+  Lemma interp_kCallE_src_guarantee
         P
     :
-      (interp_hCallE_src (guarantee P))
+      (interp_kCallE_src (guarantee P))
       =
       (guarantee P;; tau;; Ret tt).
   Proof.
-    unfold guarantee. rewrite interp_hCallE_src_bind. rewrite interp_hCallE_src_triggere. grind. eapply interp_hCallE_src_ret.
+    unfold guarantee. rewrite interp_kCallE_src_bind. rewrite interp_kCallE_src_triggere. grind. eapply interp_kCallE_src_ret.
   Qed.
 
-  Lemma interp_hCallE_src_ext
+  Lemma interp_kCallE_src_ext
         R (itr0 itr1: itree _ R)
         (EQ: itr0 = itr1)
     :
-      (interp_hCallE_src itr0)
+      (interp_kCallE_src itr0)
       =
-      (interp_hCallE_src itr1)
+      (interp_kCallE_src itr1)
   .
   Proof. subst; et. Qed.
 
-  Global Program Instance interp_hCallE_src_rdb: red_database (mk_box (@interp_hCallE_src)) :=
+  Global Program Instance interp_kCallE_src_rdb: red_database (mk_box (@interp_kCallE_src)) :=
     mk_rdb
       0
-      (mk_box interp_hCallE_src_bind)
-      (mk_box interp_hCallE_src_tau)
-      (mk_box interp_hCallE_src_ret)
-      (mk_box interp_hCallE_src_hcall)
-      (mk_box interp_hCallE_src_triggere)
-      (mk_box interp_hCallE_src_triggerp)
+      (mk_box interp_kCallE_src_bind)
+      (mk_box interp_kCallE_src_tau)
+      (mk_box interp_kCallE_src_ret)
+      (mk_box interp_kCallE_src_kcall)
+      (mk_box interp_kCallE_src_triggere)
+      (mk_box interp_kCallE_src_triggerp)
       (mk_box True)
-      (mk_box interp_hCallE_src_triggerUB)
-      (mk_box interp_hCallE_src_triggerNB)
-      (mk_box interp_hCallE_src_unwrapU)
-      (mk_box interp_hCallE_src_unwrapN)
-      (mk_box interp_hCallE_src_assume)
-      (mk_box interp_hCallE_src_guarantee)
-      (mk_box interp_hCallE_src_ext)
+      (mk_box interp_kCallE_src_triggerUB)
+      (mk_box interp_kCallE_src_triggerNB)
+      (mk_box interp_kCallE_src_unwrapU)
+      (mk_box interp_kCallE_src_unwrapN)
+      (mk_box interp_kCallE_src_assume)
+      (mk_box interp_kCallE_src_guarantee)
+      (mk_box interp_kCallE_src_ext)
   .
 
-  Global Opaque interp_hCallE_src.
+  Global Opaque interp_kCallE_src.
 
 End KMODSEM.
 End KModSem.
