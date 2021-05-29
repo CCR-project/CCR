@@ -356,37 +356,50 @@ End UMod.
 Section AUX.
   Context `{Σ: GRA.t}.
 
-  Definition disclose (fs: fspec): fspec :=
-    @mk _ (option fs.(X)) (fs.(AA) * bool)%type (fs.(AR))
-        (fun ox '(argh, is_k) argl o => ⌜is_some ox = is_k⌝ **
-                                        ((Exists x, ⌜ox = Some x⌝ ** fs.(precond) x argh argl o ** ⌜is_pure o⌝) ∨
-                                         (⌜ox = None /\ argh↑ = argl /\ o = ord_top⌝)))
-        (fun ox reth retl => ((Exists x, ⌜ox = Some x⌝ ** fs.(postcond) x reth retl) ∨ (⌜ox = None /\ reth↑ = retl⌝)))
+  Record ospecbody := mk_ospecbody {
+    osb_fspec:> ftspec unit val;
+    osb_body: list val -> itree (hCallE +' pE +' eventE) val;
+  }
   .
 
-  Definition disclose_fsb (fsb: fspecbody): fspecbody :=
-    mk_specbody (disclose fsb) (fun '(argh, is_k) => if is_k
-                                                     then trigger (Choose _)
-                                                                  (*** YJ: We may generalize this to APC ***)
-                                                                  (*** YJ: We may further generalize this to any itree without pE ***)
-                                                     (* else interp transl_itr (fsb.(fsb_body) argh) *)
-                                                     else (fsb.(fsb_body) argh)
-                               )
+  Definition disclose (fs: ftspec unit val): fspec :=
+    @mk _ (option fs.(X)) (unit + list val)%type val
+        (fun ox argh argl o =>
+           match ox, argh with
+           | Some x, inl argh => fs.(precond) x argh argl o ** ⌜is_pure o⌝
+           | None, inr varg => ⌜varg↑ = argl /\ o = ord_top⌝
+           | _, _ => ⌜False⌝
+           end)
+        (fun ox reth retl =>
+           match ox with
+           | Some x => fs.(postcond) x reth retl
+           | None => ⌜reth↑ = retl⌝
+           end)
   .
 
-  Definition disclose_smodsem (ms: SModSem.t): SModSem.t := {|
-    SModSem.fnsems     := List.map (map_snd disclose_fsb) ms.(SModSem.fnsems);
-    SModSem.mn         := ms.(SModSem.mn);
-    SModSem.initial_mr := ms.(SModSem.initial_mr);
-    SModSem.initial_st := ms.(SModSem.initial_st);
-  |}
+  Definition disclose_osb (osb: ospecbody): fspecbody :=
+    mk_specbody (disclose osb)
+                (fun argh => match argh with
+                             | inl argh => trigger (Choose _)
+                             (*** YJ: We may generalize this to APC ***)
+                             (*** YJ: We may further generalize this to any pure itree without pE ***)
+                             | inr varg => (osb.(osb_body) varg)
+                             end)
   .
 
-  Definition disclose_smod (ms: SMod.t): SMod.t := {|
-    SMod.get_modsem := disclose_smodsem ∘ ms.(SMod.get_modsem);
-    SMod.sk := ms.(SMod.sk);
-  |}
-  .
+  (* Definition disclose_smodsem (ms: SModSem.t): SModSem.t := {| *)
+  (*   SModSem.fnsems     := List.map (map_snd disclose_fsb) ms.(SModSem.fnsems); *)
+  (*   SModSem.mn         := ms.(SModSem.mn); *)
+  (*   SModSem.initial_mr := ms.(SModSem.initial_mr); *)
+  (*   SModSem.initial_st := ms.(SModSem.initial_st); *)
+  (* |} *)
+  (* . *)
+
+  (* Definition disclose_smod (ms: SMod.t): SMod.t := {| *)
+  (*   SMod.get_modsem := disclose_smodsem ∘ ms.(SMod.get_modsem); *)
+  (*   SMod.sk := ms.(SMod.sk); *)
+  (* |} *)
+  (* . *)
 
 End AUX.
 
@@ -401,7 +414,7 @@ Section KMODSEM.
 
   Record t: Type := mk {
     (* fnsems: list (gname * (list val -> itree (oCallE +' pE +' eventE) val)); *)
-    fnsems: list (gname * fspecbody);
+    fnsems: list (gname * ospecbody);
     mn: mname;
     initial_mr: Σ;
     initial_st: Any.t;
@@ -425,11 +438,11 @@ Section KMODSEM.
     fun _ => interp (T:=_) (fun _ e => trigger (transl_event_tgt e))
   .
 
-  Definition transl_fsb (fsb: fspecbody): HoareDef.fspecbody :=
-    HoareDef.mk_specbody fsb (transl_itr_tgt (T:=_) ∘ fsb.(fsb_body))
+  Definition transl_fsb (osb: ospecbody): fspecbody :=
+    mk_specbody osb (transl_itr_tgt (T:=_) ∘ osb.(osb_body))
   .
 
-  Coercion transl_fsb: fspecbody >-> HoareDef.fspecbody.
+  Coercion transl_fsb: ospecbody >-> fspecbody.
 
   Definition to_tgt (ms: t): SModSem.t := {|
     SModSem.fnsems := List.map (map_snd transl_fsb) ms.(fnsems);
