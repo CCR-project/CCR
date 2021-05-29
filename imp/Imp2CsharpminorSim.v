@@ -322,13 +322,14 @@ Section PROOF.
     pcofix CIH. i.
     inv MS.
     unfold ordN in *.
-    generalize dependent i0. generalize dependent j0.
-    generalize dependent stack. generalize dependent next. generalize dependent CST.
-    generalize dependent tcont. generalize dependent tcode.
-    generalize dependent code.
-    induction code; i.
+    destruct code.
+    (* generalize dependent i0. generalize dependent j0. *)
+    (* generalize dependent stack. generalize dependent next. generalize dependent CST. *)
+    (* generalize dependent tcont. generalize dependent tcode. *)
+    (* generalize dependent code. *)
+    (* induction code; i. *)
     - ss. unfold itree_of_cont_stmt, itree_of_imp_cont.
-      rewrite interp_imp_Skip. grind.
+      rewrite interp_imp_Skip.
       destruct tcont eqn:TCONT; ss; clarify.
       + inv MCONT. inv MSTACK; ss; clarify. unfold idK. sim_red. destruct rp. sim_red.
         rewrite interp_imp_expr_Var. sim_red.
@@ -341,7 +342,9 @@ Section PROOF.
         repeat (pfold; sim_tau; left). sim_red.
         destruct r0. ss. destruct l.
         { admit "mid: need wf-r_state". }
-        grind. repeat (pfold; sim_tau; left). sim_red.
+        grind. do 2 (pfold; sim_tau; left).
+        (* tau point *)
+        sim_red.
         pfold. econs 4.
         { admit "ez: strict_determinate_at". }
         eexists. eexists.
@@ -349,7 +352,9 @@ Section PROOF.
         eexists; split; auto. eexists.
         admit "ez? sim final state".
       + inv MCONT; clarify.
-        sim_red. pfold.
+        sim_red.
+        (* tau point *)
+        pfold.
         econs 4; auto.
         { admit "ez: strict_determinate_at". }
         eexists. eexists.
@@ -357,14 +362,7 @@ Section PROOF.
         eexists; split; auto. eexists.
         right. eapply CIH.
         eapply match_states_intro with (le0:=le) (rp0:=rp) (code0:=code); eauto.
-      + pfold. econs 4; auto.
-        { admit "ez: strict_determinate_at". }
-        eexists. eexists.
-        { eapply step_skip_block. }
-        eexists; split; auto. eexists.
-        right. eapply CIH.
-        eapply match_states_intro with (le0:=le) (rp0:=rp) (code:=Skip); eauto.
-        unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind.
+      + admit "ez?: should not happen (Kblock should never appear)".
       + inv MCONT. inv MSTACK; clarify.
         unfold idK. sim_red. destruct rp. sim_red.
 
@@ -381,7 +379,8 @@ Section PROOF.
         grind. repeat (pfold; sim_tau; left). sim_red.
 
         rewrite Any.upcast_downcast. ss. grind.
-        repeat (pfold; sim_tau; left). sim_red.
+        do 2 (pfold; sim_tau; left). sim_red.
+        (* tau point *)
         pfold. econs 4; auto.
         { admit "ez: strict_determinate_at". }
         eexists. eexists.
@@ -404,21 +403,21 @@ Section PROOF.
       rewrite interp_imp_Assign. sim_red. grind.
       destruct (compile_expr e) eqn:EXP; uo; ss. destruct rp. grind.
       eapply step_expr; eauto. i.
-      pfold. repeat (sim_tau; left; pfold).
-      rewrite transl_all_ret. rewrite EventsL.interp_Es_ret. grind.
-      econs 4.
-      + admit "ez? strict_determinate_at".
-      + eexists. eexists.
-        { eapply step_set. eapply H0. }
-        unfold ordN in *. eexists; split; eauto; auto.
-        eexists. right. apply CIH.
-        hexploit match_states_intro.
-        { instantiate (2:=Skip). instantiate (2:=get_gmap src). ss. }
-        2,3,4,5:eauto.
-        2:{ unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip.
-            rewrite transl_all_ret. rewrite EventsL.interp_Es_ret. grind. eapply H1. }
-        { econs. i. exists (map_val_opt sv); split; auto.
-          admit "ez? alist & Maps.PTree". }
+      (* tau point *)
+      do 2 (pfold; sim_tau; left). sim_red.
+      pfold. econs 4; auto.
+      { admit "ez? strict_determinate_at". }
+      eexists. eexists.
+      { eapply step_set. eapply H0. }
+      unfold ordN in *. eexists; split; eauto; auto.
+      eexists. right. apply CIH.
+      hexploit match_states_intro.
+      { instantiate (2:=Skip). instantiate (2:=get_gmap src). ss. }
+      2,3,4,5:eauto.
+      2:{ unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip.
+          rewrite transl_all_ret. rewrite EventsL.interp_Es_ret. grind. eapply H1. }
+      { econs. i. exists (map_val_opt sv); split; auto.
+        admit "ez? alist & Maps.PTree". }
     - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Seq. sim_red.
       ss. destruct (compile_stmt (get_gmap src) code1) eqn:CSC1; destruct (compile_stmt (get_gmap src) code2) eqn:CSC2; uo; clarify.
 
@@ -429,89 +428,60 @@ Section PROOF.
       EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src))))
         (transl_all (name src) (let (le1, _) := v in interp_imp (Sk.load_skenv (defs src)) (denote_stmt code2) le1)) st1);; next x)).
 
-      unfold itree_of_cont_stmt, itree_of_imp_cont in *. irw in IHcode1.
+      (* tau point *)
       pfold. econs 4.
       { admit "ez: strict_determinate_at". }
       eexists. eexists.
       { eapply step_seq. }
-      eexists; split; auto. eexists. left.
-      hexploit IHcode1.
-      { auto. }
-      { instantiate (2:= next_seq). instantiate (1:= Kseq s0 tcont). ss.
-        econs 2; eauto.
-        extensionality x. unfold itree_of_cont_stmt, itree_of_imp_cont. grind. destruct p0. grind. }
-      { ss. apply MSTACK. }
+      eexists; split; auto. eexists. right. eapply CIH.
+      hexploit match_states_intro.
+      { eapply CSC1. }
+      1,2,5: eauto.
+      2:{ instantiate (1:=Kseq s0 tcont). eauto. }
+      { econs 2; eauto. clarify. }
       i.
       match goal with
-      | [ H: paco4 _ _ _ _ ?it0 _ |- paco4 _ _ _ _ ?it1 _ ] =>
+      | [ H: match_states _ _ _ _ _ ?it0 _ |- match_states _ _ _ _ _ ?it1 _ ] =>
         replace it1 with it0; eauto
       end.
-      subst next_seq. grind.
+      grind.
     - unfold itree_of_cont_stmt in *; unfold itree_of_imp_cont in *. rewrite interp_imp_If. sim_red. ss.
-      admit "ez: ifthenelse".
-      (* destruct (compile_expr i) eqn:CEXPR; destruct (compile_stmt (get_gmap src) code1) eqn:CCODE1; *)
-      (*   destruct (compile_stmt (get_gmap src) code2) eqn:CCODE2; uo; clarify. *)
-      (* destruct rp. eapply step_expr; eauto. *)
-      (* i. sim_red. destruct (is_true rv) eqn:COND; ss; clarify. *)
-    (*   + sim_red. destruct rv; clarify. ss. destruct (n =? 0)%Z eqn:CZERO; ss; clarify. *)
-    (*     { rewrite Z.eqb_eq in CZERO. clarify. *)
-    (*       pfold. econs 4. *)
-    (*       { admit "ez: strict_determinate_at". } *)
-    (*       eexists. eexists. *)
-    (*       { eapply step_ifthenelse. *)
-    (*         - econs; eauto. *)
-    (*           + econs. ss. *)
-    (*           + ss. *)
-    (*         - ss. } *)
-    (*       unfold ordN. eexists; split; auto. eexists. left. *)
-    (*       des_ifs. irw in IHcode2. *)
-    (*       replace *)
-    (* (` x : r_state * p_state * (lenv * val) <- *)
-    (*        EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src)))) *)
-    (*              (transl_all mn (interp_imp (Sk.load_skenv (defs src)) (denote_stmt code2) le)) (r0, p);; *)
-    (*  ` x0 : r_state * p_state * (lenv * val) <- *)
-    (*  (let (st1, v) := x in EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src)))) (transl_all mn (Ret v)) st1);; *)
-    (*         ` y : r_state * p_state * (lenv * val) <- next x0;; *)
-    (*         ` x : _ <- itree_of_imp_pop (ImpMod.modsemL src (Sk.load_skenv (defs src))) mn y;; stack x) *)
-    (*         with *)
-    (*           (` x : r_state * p_state * (lenv * val) <- *)
-    (*            EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src)))) *)
-    (*              (transl_all mn (interp_imp (Sk.load_skenv (defs src)) (denote_stmt code2) le)) (r0, p);; *)
-    (*            ` y : r_state * p_state * (lenv * val) <- next x;; *)
-    (*                  ` x : _ <- itree_of_imp_pop (ImpMod.modsemL src (Sk.load_skenv (defs src))) mn y;; stack x). *)
-    (*       2:{ grind. Red.prw ltac:(_red_gen) 1 0. grind. } *)
-    (*       eapply IHcode2; eauto. } *)
-    (*     { rewrite Z.eqb_neq in CZERO. *)
-    (*       pfold. econs 4. *)
-    (*       { admit "ez: strict_determinate_at". } *)
-    (*       eexists. eexists. *)
-    (*       { eapply step_ifthenelse. *)
-    (*         - econs; eauto. *)
-    (*           + econs. ss. *)
-    (*           + ss. *)
-    (*         - ss. destruct (negb (Int64.eq (to_long n) Int64.zero)) eqn:CONTRA; ss; clarify. *)
-    (*           rewrite negb_false_iff in CONTRA. apply Int64.same_if_eq in CONTRA. *)
-    (*           unfold to_long in CONTRA. unfold Int64.zero in CONTRA. *)
-    (*           admit "ez: int64 extenttionality with wf-ed values". } *)
-    (*       unfold ordN. eexists; split; auto. eexists. left. *)
-    (*       des_ifs. irw in IHcode1. *)
-    (*       replace *)
-    (* (` x : r_state * p_state * (lenv * val) <- *)
-    (*        EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src)))) *)
-    (*              (transl_all mn (interp_imp (Sk.load_skenv (defs src)) (denote_stmt code1) le)) (r0, p);; *)
-    (*  ` x0 : r_state * p_state * (lenv * val) <- *)
-    (*  (let (st1, v) := x in EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src)))) (transl_all mn (Ret v)) st1);; *)
-    (*         ` y : r_state * p_state * (lenv * val) <- next x0;; *)
-    (*         ` x : _ <- itree_of_imp_pop (ImpMod.modsemL src (Sk.load_skenv (defs src))) mn y;; stack x) *)
-    (*         with *)
-    (*           (` x : r_state * p_state * (lenv * val) <- *)
-    (*            EventsL.interp_Es (prog (ImpMod.modsemL src (Sk.load_skenv (defs src)))) *)
-    (*              (transl_all mn (interp_imp (Sk.load_skenv (defs src)) (denote_stmt code1) le)) (r0, p);; *)
-    (*            ` y : r_state * p_state * (lenv * val) <- next x;; *)
-    (*                  ` x : _ <- itree_of_imp_pop (ImpMod.modsemL src (Sk.load_skenv (defs src))) mn y;; stack x). *)
-    (*       2:{ grind. Red.prw ltac:(_red_gen) 1 0. grind. } *)
-    (*       eapply IHcode1; eauto. } *)
-    (*   + sim_triggerub. *)
+      destruct (compile_expr i) eqn:CEXPR; destruct (compile_stmt (get_gmap src) code1) eqn:CCODE1;
+        destruct (compile_stmt (get_gmap src) code2) eqn:CCODE2; uo; clarify.
+      destruct rp. eapply step_expr; eauto.
+      i. sim_red. destruct (is_true rv) eqn:COND; ss; clarify.
+      2:{ sim_triggerUB. }
+      sim_red. destruct rv; clarify. ss. destruct (n =? 0)%Z eqn:CZERO; ss; clarify.
+      { rewrite Z.eqb_eq in CZERO. clarify.
+        (* tau point *)
+        pfold. econs 4.
+        { admit "ez: strict_determinate_at". }
+        eexists. eexists.
+        { eapply step_ifthenelse; ss.
+          econs; eauto.
+          + econs. ss.
+          + ss. }
+        unfold ordN. eexists; split; auto. eexists.
+        des_ifs. right. eapply CIH.
+        hexploit match_states_intro; eauto. }
+      { rewrite Z.eqb_neq in CZERO.
+        (* tau point *)
+        pfold. econs 4.
+        { admit "ez: strict_determinate_at". }
+        eexists. eexists.
+        { eapply step_ifthenelse.
+          - econs; eauto.
+            + econs. ss.
+            + ss.
+          - ss. destruct (negb (Int64.eq (to_long n) Int64.zero)) eqn:CONTRA; ss; clarify.
+            rewrite negb_false_iff in CONTRA. apply Int64.same_if_eq in CONTRA.
+            unfold to_long in CONTRA. unfold Int64.zero in CONTRA.
+            admit "ez: int64 extenttionality with wf-ed values". }
+        unfold ordN. eexists; split; auto. eexists.
+        des_ifs. right. eapply CIH.
+        hexploit match_states_intro.
+        { eapply CCODE1. }
+        all: eauto. }
     - ss. uo; des_ifs.
       unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_CallFun.
       des_ifs; sim_red.
@@ -522,7 +492,7 @@ Section PROOF.
       i. sim_red. destruct r0. destruct l0.
       { ss. admit "mod: r_state is nil". }
       ss. grind.
-      repeat (pfold; sim_tau; left). sim_red.
+      do 3 (pfold; sim_tau; left). sim_red.
       match goal with
       | [ |- paco4 _ _ _ _ (r0 <- unwrapU (?f);; _) _ ] => destruct f eqn:FSEM; ss
       end.
@@ -541,6 +511,7 @@ Section PROOF.
       rewrite unfold_eval_imp_only.
       destruct (init_args (Imp.fn_params f0) rvs []) eqn:ARGS; sim_red.
       2:{ sim_triggerUB. }
+      (* tau point?? need a tau BEFORE denote_stmt(fn_body) *)
       rewrite interp_imp_bind. sim_red.
       pfold. econs 4.
       { admit "ez: strict_determinate_at". }
