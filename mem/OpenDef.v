@@ -337,18 +337,23 @@ Section UMODSEM.
     (* fun _ => translate (T:=_) transl_event  *)
   .
 
-  Definition transl_fun_smod: (list val -> itree (uCallE +' pE +' eventE) val) -> fspecbody :=
+  Definition transl_fun_smod (ktr: list val -> itree (uCallE +' pE +' eventE) val):
+    (unit + list val -> itree (hCallE +' pE +' eventE) val) :=
+    (fun vargs => match vargs with
+                  | inl _ => triggerNB
+                  | inr vargs => (transl_itr_smod (T:=_) (ktr vargs))
+                  end)
+  .
+
+  Definition transl_fsb_smod: (list val -> itree (uCallE +' pE +' eventE) val) -> fspecbody :=
     fun ktr =>
       (* mk_specbody fspec_trivial2 (fun '(vargs, _) => interp (T:=val) transl_itr (ktr vargs)) *)
       (* mk_specbody fspec_trivial2 (transl_itr_smod (T:=_) ∘ ktr) *)
-      mk_specbody fspec_trivial2 (fun vargs => match vargs with
-                                               | inl _ => triggerNB
-                                               | inr vargs => (transl_itr_smod (T:=_) (ktr vargs))
-                                               end)
+      mk_specbody fspec_trivial2 (transl_fun_smod ktr)
   .
 
   Definition to_smodsem (ms: t): SModSem.t := {|
-    SModSem.fnsems := List.map (map_snd transl_fun_smod) ms.(fnsems);
+    SModSem.fnsems := List.map (map_snd transl_fsb_smod) ms.(fnsems);
     SModSem.mn := ms.(mn);
     SModSem.initial_mr := ε;
     SModSem.initial_st := ms.(initial_st);
@@ -690,8 +695,8 @@ Section KMODSEM.
 
   Definition transl_kCallE_tgt: kCallE ~> hCallE :=
     fun T '(kCall fn args) => match args with
-                              | inl _ => hCall true fn tt↑
-                              | inr args => hCall false fn args↑
+                              | inl _ => hCall true fn args↑
+                              | inr _ => hCall false fn args↑
                               end
   .
 
@@ -703,16 +708,20 @@ Section KMODSEM.
     fun _ => interp (T:=_) (fun _ e => trigger (transl_event_tgt e))
   .
 
+  Definition transl_fun_src (ktr: list val -> itree (kCallE +' pE +' eventE) val):
+    (unit + list val) -> itree (hCallE +' pE +' eventE) val :=
+    (fun argh => match argh with
+                 (*** K -> K ***)
+                 (*** YJ: We may generalize this to APC ***)
+                 (*** YJ: We may further generalize this to any pure itree without pE ***)
+                 | inl _ => trigger (Choose _)
+                 (*** U -> K ***)
+                 | inr varg => transl_itr_tgt (ktr varg)
+                 end)
+  .
+
   Definition disclose_ksb (ksb: kspecbody): fspecbody :=
-    mk_specbody (disclose ksb)
-                (fun argh => match argh with
-                             (*** K -> K ***)
-                             (*** YJ: We may generalize this to APC ***)
-                             (*** YJ: We may further generalize this to any pure itree without pE ***)
-                             | inl argh => trigger (Choose _)
-                             (*** U -> K ***)
-                             | inr varg => transl_itr_tgt (ksb.(ksb_body) varg)
-                             end)
+    mk_specbody (disclose ksb) (transl_fun_src ksb.(ksb_body))
   .
 
   Coercion disclose_ksb: kspecbody >-> fspecbody.
@@ -886,25 +895,6 @@ Section KMODSEM.
       (transl_itr_tgt itr1)
   .
   Proof. subst; et. Qed.
-
-  Global Program Instance transl_itr_tgt_rdb: red_database (mk_box (@transl_itr_tgt)) :=
-    mk_rdb
-      0
-      (mk_box transl_itr_tgt_bind)
-      (mk_box transl_itr_tgt_tau)
-      (mk_box transl_itr_tgt_ret)
-      (mk_box transl_itr_tgt_kcall)
-      (mk_box transl_itr_tgt_triggere)
-      (mk_box transl_itr_tgt_triggerp)
-      (mk_box True)
-      (mk_box transl_itr_tgt_triggerUB)
-      (mk_box transl_itr_tgt_triggerNB)
-      (mk_box transl_itr_tgt_unwrapU)
-      (mk_box transl_itr_tgt_unwrapN)
-      (mk_box transl_itr_tgt_assume)
-      (mk_box transl_itr_tgt_guarantee)
-      (mk_box transl_itr_tgt_ext)
-  .
 
   Global Opaque transl_itr_tgt.
 
@@ -1114,29 +1104,55 @@ Section KMODSEM.
   .
   Proof. subst; et. Qed.
 
-  Global Program Instance interp_kCallE_src_rdb: red_database (mk_box (@interp_kCallE_src)) :=
-    mk_rdb
-      0
-      (mk_box interp_kCallE_src_bind)
-      (mk_box interp_kCallE_src_tau)
-      (mk_box interp_kCallE_src_ret)
-      (mk_box interp_kCallE_src_kcall)
-      (mk_box interp_kCallE_src_triggere)
-      (mk_box interp_kCallE_src_triggerp)
-      (mk_box True)
-      (mk_box interp_kCallE_src_triggerUB)
-      (mk_box interp_kCallE_src_triggerNB)
-      (mk_box interp_kCallE_src_unwrapU)
-      (mk_box interp_kCallE_src_unwrapN)
-      (mk_box interp_kCallE_src_assume)
-      (mk_box interp_kCallE_src_guarantee)
-      (mk_box interp_kCallE_src_ext)
-  .
-
   Global Opaque interp_kCallE_src.
 
 End KMODSEM.
 End KModSem.
+
+
+
+Section RDB.
+  Context `{Σ: GRA.t}.
+
+  Global Program Instance transl_itr_tgt_rdb: red_database (mk_box (@KModSem.transl_itr_tgt)) :=
+    mk_rdb
+      0
+      (mk_box KModSem.transl_itr_tgt_bind)
+      (mk_box KModSem.transl_itr_tgt_tau)
+      (mk_box KModSem.transl_itr_tgt_ret)
+      (mk_box KModSem.transl_itr_tgt_kcall)
+      (mk_box KModSem.transl_itr_tgt_triggere)
+      (mk_box KModSem.transl_itr_tgt_triggerp)
+      (mk_box True)
+      (mk_box KModSem.transl_itr_tgt_triggerUB)
+      (mk_box KModSem.transl_itr_tgt_triggerNB)
+      (mk_box KModSem.transl_itr_tgt_unwrapU)
+      (mk_box KModSem.transl_itr_tgt_unwrapN)
+      (mk_box KModSem.transl_itr_tgt_assume)
+      (mk_box KModSem.transl_itr_tgt_guarantee)
+      (mk_box KModSem.transl_itr_tgt_ext)
+  .
+
+  Global Program Instance interp_kCallE_src_rdb: red_database (mk_box (@KModSem.interp_kCallE_src)) :=
+    mk_rdb
+      0
+      (mk_box KModSem.interp_kCallE_src_bind)
+      (mk_box KModSem.interp_kCallE_src_tau)
+      (mk_box KModSem.interp_kCallE_src_ret)
+      (mk_box KModSem.interp_kCallE_src_kcall)
+      (mk_box KModSem.interp_kCallE_src_triggere)
+      (mk_box KModSem.interp_kCallE_src_triggerp)
+      (mk_box True)
+      (mk_box KModSem.interp_kCallE_src_triggerUB)
+      (mk_box KModSem.interp_kCallE_src_triggerNB)
+      (mk_box KModSem.interp_kCallE_src_unwrapU)
+      (mk_box KModSem.interp_kCallE_src_unwrapN)
+      (mk_box KModSem.interp_kCallE_src_assume)
+      (mk_box KModSem.interp_kCallE_src_guarantee)
+      (mk_box KModSem.interp_kCallE_src_ext)
+  .
+
+End RDB.
 
 
 

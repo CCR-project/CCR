@@ -196,7 +196,7 @@ Section ADQ.
         mrs ktr arg ske
     :
       sim_itree (fun '(x, y) => x = y) 100%nat
-                (mrs, ε, fun_to_tgt (_gstb ske) (UModSem.transl_fun_smod ktr) arg)
+                (mrs, ε, fun_to_tgt (_gstb ske) (UModSem.transl_fsb_smod ktr) arg)
                 (mrs, ε, (UModSem.transl_fun_mod ktr) arg)
   .
   Proof.
@@ -353,11 +353,11 @@ Section ADQ.
       _sim_body sim_body o0 (Ret t) (Ret t)
   | sim_body_call
       o0 o1
-      fn args T (ktr0 ktr1: ktree _ _ T)
+      fn (args: list val) T (ktr0 ktr1: ktree _ _ T)
       (SIM: forall rv, sim_body o1 (ktr0 rv) (ktr1 rv))
     :
-      _sim_body sim_body o0 (trigger EventsL.PushFrame;; trigger (Call fn args) >>= ktr0)
-                (trigger EventsL.PushFrame;; trigger (Call fn (Any.pair args false↑)) >>= ktr1)
+      _sim_body sim_body o0 (trigger EventsL.PushFrame;; trigger (Call fn args↑) >>= ktr0)
+                (trigger EventsL.PushFrame;; trigger (Call fn (@inr unit (list val) args)↑) >>= ktr1)
   | sim_rE
       o0 o1
       T (re: EventsL.rE T) S (ktr0 ktr1: ktree _ _ S)
@@ -479,8 +479,14 @@ Section ADQ.
   Qed.
 
   Definition sim_fun T (f0 f1: (Any.t -> itree EventsL.Es T)): Prop :=
-    forall args, sim_body 100 (f0 args) (f1 (Any.pair args false↑))
+    forall (args: list val), sim_body 100 (f0 args↑) (f1 (@inr unit (list val) args)↑)
   .
+
+  (* Definition sim_fun (f0: list val -> itree EventsL.Es val) *)
+  (*            (f1: (unit + list val) -> itree EventsL.Es val): Prop := *)
+  (*   forall args, sim_body 100 (f0 args) (f1 (inr args)) *)
+  (* . *)
+
 
 
 
@@ -488,7 +494,7 @@ Section ADQ.
   Lemma sim_known_aux
         T mn (itr: itree _ T)
     :
-      sim_body 100 (transl_all mn (KModSem.interp_hCallE_src itr))
+      sim_body 100 (transl_all mn (KModSem.interp_kCallE_src itr))
                (transl_all mn (interp_hCallE_src (KModSem.transl_itr_tgt itr)))
   .
   Proof.
@@ -498,7 +504,7 @@ Section ADQ.
     { steps. gbase. eapply CIH. }
     rewrite <- bind_trigger. resub.
     destruct e.
-    { destruct h.
+    { destruct k0.
       resub. steps.
       des_ifs.
       - steps. gbase. eapply CIH; et.
@@ -512,31 +518,17 @@ Section ADQ.
   Qed.
 
   Lemma sim_known
-        mn (f0: fspecbody)
+        mn (f0: KModSem.kspecbody)
     :
-      sim_fun (transl_all mn ∘ KModSem.fun_to_src (fsb_body f0))
-              (transl_all mn ∘ fun_to_src
-                          (fun pat => match pat with
-                                      | (_, true) => trigger (Choose _)
-                                      | (argh, false) => KModSem.transl_itr_tgt (fsb_body f0 argh)
-                                      end))
+      sim_fun (transl_all mn ∘ KModSem.fun_to_src (KModSem.ksb_body f0))
+              (transl_all mn ∘ fun_to_src (KModSem.transl_fun_src f0.(KModSem.ksb_body)))
   .
   Proof.
     ii.
     esplits.
     unfold fun_to_src. unfold body_to_src. unfold cfun.
     unfold KModSem.fun_to_src. unfold KModSem.body_to_src. unfold cfun.
-    steps.
-    destruct (args↓) eqn:A; cycle 1.
-    { cbn.
-      destruct ((Any.pair args false↑)↓) eqn:B.
-      { ss. destruct p. eapply pair_downcast_lemma2 in B. des. clarify. }
-      { ss. unfold triggerNB. ired.
-        ginit. { eapply cpn4_wcompat; eauto with paco. } gstep. econs; et. ii; ss.
-      }
-    }
-    cbn. erewrite <- Any.downcast_upcast with (a:=args); et. rewrite upcast_pair_downcast. ss. ired.
-    steps.
+    steps. rewrite ! Any.upcast_downcast. steps.
     replace (Ord.from_nat 100) with ((Ord.from_nat 0) + (Ord.from_nat 100))%ord; cycle 1.
     { admit "ez - ordC spec". }
     ginit. { eapply cpn4_wcompat; eauto with paco. } guclo bbindC_spec.
@@ -550,8 +542,8 @@ Section ADQ.
   Lemma sim_unknown_aux
         mn (itr: itree _ val)
     :
-      sim_body 100 (transl_all mn (resum_itr itr))
-               (transl_all mn (interp_hCallE_src (UModSem.transl_itr itr)))
+      sim_body 100 (transl_all mn (UModSem.transl_itr_mod itr))
+               (transl_all mn (interp_hCallE_src (UModSem.transl_itr_smod itr)))
   .
   Proof.
     ginit. { eapply cpn4_wcompat; eauto with paco. } revert itr. gcofix CIH. i.
@@ -560,7 +552,7 @@ Section ADQ.
     { steps. gbase. eapply CIH. }
     rewrite <- bind_trigger. resub.
     destruct e.
-    { destruct c. resub. ired_both. resub. ired_both. ired. gstep; econs; et. i. steps. gbase. eapply CIH; et. }
+    { destruct u. resub. ired_both. resub. ired_both. ired. gstep; econs; et. i. steps. gbase. eapply CIH; et. }
     destruct s.
     { resub. steps. resub. steps. gbase. eapply CIH; et. }
     { resub. steps. resub. steps. gbase. eapply CIH; et. }
@@ -571,25 +563,15 @@ Section ADQ.
   Lemma sim_unknown
         (ktr: list val -> itree _ val) mn
     :
-      sim_fun (fun args => transl_all mn (resum_itr (cfun ktr args)))
-              (transl_all mn ∘ fun_to_src (fun (x: list val * bool) => UModSem.transl_itr (ktr (fst x))))
+      sim_fun (transl_all mn ∘ (UModSem.transl_fun_mod ktr))
+              (transl_all mn ∘ (fun_to_src (UModSem.transl_fun_smod ktr)))
   .
   Proof.
     ii.
     esplits.
-    unfold fun_to_src. unfold body_to_src. unfold cfun.
+    unfold fun_to_src. unfold body_to_src. unfold UModSem.transl_fun_mod. unfold cfun.
     steps.
-    destruct (args↓) eqn:A; cycle 1.
-    { cbn.
-      destruct ((Any.pair args false↑)↓) eqn:B.
-      { ss. destruct p. eapply pair_downcast_lemma2 in B. des. clarify. }
-      { ss.
-        Fail rewrite transl_all_triggerNB. (******** WHY??? FIXME *********)
-        unfold triggerNB. steps.
-        ginit. { eapply cpn4_wcompat; eauto with paco. } gstep. econs; et. ii; ss.
-      }
-    }
-    cbn. erewrite <- Any.downcast_upcast with (a:=args); et. rewrite upcast_pair_downcast. ss. steps.
+    rewrite ! Any.upcast_downcast. steps.
     replace (Ord.from_nat 100) with ((Ord.from_nat 0) + (Ord.from_nat 100))%ord; cycle 1.
     { admit "ez - ordC spec". }
     ginit. { eapply cpn4_wcompat; eauto with paco. } guclo bbindC_spec.
@@ -621,7 +603,7 @@ Section ADQ.
           rewrite in_app_iff in *. des.
           { unfold kmds in U2. unfold kmds_top in T1. list_tac. subst. ss. list_tac. des_ifs. ss.
             assert(x = x1) by admit "ez - uniqueness"; subst.
-            assert(f = f0) by admit "ez - uniqueness"; subst.
+            assert(k = k0) by admit "ez - uniqueness"; subst.
             econs. split; ss.
             eapply sim_known.
           }
