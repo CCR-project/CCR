@@ -246,53 +246,29 @@ Section ADQ.
       { admit "MID -- need to trigger UB beforehand". }
       steps.
       rename _UNWRAPN into T.
-      assert(exists ft, f = mk_fspec (AA:=unit + list val)%type val ft).
-      { clear - T. eapply alist_find_some in T. unfold _gstb in T. list_tac.
-        rewrite in_app_iff in *. des; list_tac.
-        - des_ifs. unfold _kmss in T. list_tac. subst. unfold kmds in T0. list_tac. subst.
-          ss. list_tac. des_ifs. ss. unfold KModSem.disclose. unfold mk. esplits; et.
-        - des_ifs. unfold _umss in T. list_tac. subst. unfold fspec_trivial2. unfold mk.
-          esplits; et. }
-      des. subst. ss. rewrite Any.upcast_downcast. steps.
-      TTTTTTTTTTTTTTTTTTTTT
-
-      {
-        assert (GWF: ☀) by (split; [refl|exact _ASSUME]); clear _ASSUME.
-        iRefresh.
-        eapply alist_find_some in T. des; des_sumbool; subst. unfold _gstb in T. rewrite in_app_iff in *. des; ss.
-        - rewrite in_flat_map in *. des; ss. rewrite in_map_iff in *. des. unfold map_snd in T0. des_ifs.
-          unfold _kmss in T. rewrite in_map_iff in *. des. subst. unfold flip in T1.
-          unfold kmds in T0. rewrite in_map_iff in *. des. subst. ss. rewrite in_map_iff in *. des.
-          unfold map_snd in T1. des_ifs. ss.
-          destruct a. eapply pair_downcast_lemma2 in _UNWRAPN0. des. subst.
-          eapply hcall_clo with (fs:=disclose f); try refl.
-          { rewrite URA.unit_idl. refl. }
-          { eapply OrdArith.lt_from_nat. lia. }
-          { instantiate (1:=ord_top). instantiate(1:=None). cbn. iRefresh.
-            iSplitP; ss.
-            right; iRefresh. repeat split; ss. eapply Any.downcast_upcast; et. }
-          { ss. }
-          i. subst. ss. destruct mrs_tgt1. esplits; et. i.
-          clear GWF. assert(GWF: ☀) by (split; [refl|exact VALID]).
-          iRefresh.
-          destruct POST; iRefresh.
-          { iDestruct H. iDestruct H. iPure H. ss. }
-          iPure H. des; subst.
-          steps. gbase. eapply CIH0; et.
-        - rewrite in_flat_map in *. des; ss. rewrite in_map_iff in *. des. unfold map_snd in T0. des_ifs.
-          destruct a as [argl is_k].
-          eapply pair_downcast_lemma2 in _UNWRAPN0. des. subst.
-          eapply hcall_clo; try refl.
-          { rewrite URA.unit_idl. refl. }
-          { eapply OrdArith.lt_from_nat. lia. }
-          { instantiate (1:=ord_top). instantiate(1:=tt). cbn. split; ss. admit "should be ez". }
-          { ss. }
-          i. subst. ss. destruct mrs_tgt1. esplits; et. i.
-          clear GWF. assert(GWF: ☀) by (split; [refl|exact VALID]).
-          iRefresh.
-          destruct POST; iRefresh.
-          steps. gbase. eapply CIH0; et.
-      }
+      eapply alist_find_some in T. unfold _gstb in T. rewrite in_app_iff in *. des; ss.
+      + list_tac.
+        des_ifs. unfold _kmss in T. list_tac. subst. unfold kmds in T0. list_tac. subst.
+        ss. list_tac. des_ifs. ss.
+        rewrite Any.upcast_downcast. steps.
+        eapply hcall_clo with (fs:=(KModSem.disclose (KModSem.ksb_fspec k0))); try refl.
+        { rewrite URA.unit_idl. refl. }
+        { eapply OrdArith.lt_from_nat. lia. }
+        { instantiate (1:=ord_top). instantiate(1:=None). cbn. split; ss. }
+        { ss. }
+        i. subst. ss. destruct mrs_tgt1. esplits; et. i.
+        destruct POST. steps. gbase. eapply CIH0; et.
+      + list_tac.
+        des_ifs. unfold _umss in T. list_tac. subst.
+        rewrite Any.upcast_downcast. steps.
+        eapply hcall_clo with (fs:=fspec_trivial2); try refl.
+        { rewrite URA.unit_idl. refl. }
+        { eapply OrdArith.lt_from_nat. lia. }
+        { instantiate (1:=ord_top). instantiate(1:=tt). cbn. esplit; ss.
+          esplits; et. rewrite Any.upcast_downcast; ss. }
+        { ss. }
+        i. subst. ss. destruct mrs_tgt1. esplits; et. i.
+        destruct POST. steps. gbase. eapply CIH0; et.
   Unshelve.
     all: try (by apply Ord.O).
   Qed.
