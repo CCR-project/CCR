@@ -129,9 +129,13 @@ Section UMODSEM.
                            (interp (T:=_) (fun _ e => trigger (transl_event_mod e)) itr)
   .
 
+  Definition transl_fun_mod: (list val -> itree (uCallE +' pE +' eventE) val) -> (Any.t -> itree Es Any.t) :=
+    fun ktr => cfun (transl_itr_mod (T:=val) ∘ ktr)
+  .
+
   Definition to_modsem (ms: t): ModSem.t := {|
     (* ModSem.fnsems := List.map (map_snd (((∘)∘(∘)) (resum_itr (T:=Any.t)) cfun)) ms.(fnsems); *)
-    ModSem.fnsems := List.map (map_snd (fun ktr => cfun (transl_itr_mod (T:=val) ∘ ktr))) ms.(fnsems);
+    ModSem.fnsems := List.map (map_snd transl_fun_mod) ms.(fnsems);
     ModSem.mn := ms.(mn);
     ModSem.initial_mr := ε;
     ModSem.initial_st := ms.(initial_st);

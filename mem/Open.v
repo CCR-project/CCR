@@ -111,7 +111,7 @@ Section ADQ.
   Context `{Σ: GRA.t}.
 
   Variable _kmds: list KMod.t.
-  Let kmds: list SMod.t := List.map (disclose_smod ∘ KMod.to_tgt) _kmds.
+  Let kmds: list SMod.t := List.map (KMod.to_tgt) _kmds.
   Let kmds_top: list Mod.t := List.map KMod.to_src _kmds.
   Variable umds: list UMod.t.
 
@@ -156,8 +156,8 @@ Section ADQ.
         mrs ktr arg ske
     :
       sim_itree (fun '(x, y) => x = y) 100%nat
-                (mrs, ε, fun_to_tgt (_gstb ske) (UModSem.transl_fun ktr) arg)
-                (mrs, ε, resum_itr (cfun ktr arg))
+                (mrs, ε, fun_to_tgt (_gstb ske) (UModSem.transl_fun_smod ktr) arg)
+                (mrs, ε, (UModSem.transl_fun_mod ktr) arg)
   .
   Proof.
     destruct mrs as [mr st].
