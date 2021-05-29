@@ -49,18 +49,6 @@ Require Import HTactics YPM.
 
 
 
-Lemma pair_downcast_lemma2
-      T U (v0 v1: T) x (u: U)
-  :
-    (Any.pair x v0↑)↓ = Some (u, v1) -> v0 = v1 /\ x↓ = Some u
-.
-Proof.
-  admit "ez".
-Qed.
-
-
-
-
 Section LEMMA.
 
   Context `{Σ: GRA.t}.
@@ -152,42 +140,7 @@ Section ADQ.
   (* . *)
   (* Proof. refl. Qed. *)
 
-  Lemma my_lemma1_aux
-        mrs ktr arg ske
-    :
-      sim_itree (fun '(x, y) => x = y) 100%nat
-                (mrs, ε, fun_to_tgt (_gstb ske) (UModSem.transl_fun_smod ktr) arg)
-                (mrs, ε, (UModSem.transl_fun_mod ktr) arg)
-  .
-  Proof.
-    destruct mrs as [mr st].
-    ginit.
-    revert_until gstb. gcofix CIH. i.
-    unfold cfun. unfold UModSem.transl_fun. unfold fun_to_tgt. cbn.
-    unfold HoareFun, put, forge, checkWf, discard. ss.
-    steps.
-    r in _ASSUME0. des. subst. destruct x as [argl is_k]. apply pair_downcast_lemma2 in _ASSUME0. des. subst.
-    clarify.
-    guclo lordC_spec. econs.
-    { instantiate (1:=(45 + 45)%ord). rewrite <- OrdArith.add_from_nat. eapply OrdArith.le_from_nat. lia. }
-    guclo lbindC_spec. econs; cycle 1.
-    - instantiate (1:=fun '(mr0, st0, fr0) '(mr1, st1, fr1) y0 y1 => mr0 = mr1 /\ st0 = st1 /\ y0 = y1).
-      i. ss. des_ifs. des; subst.
-      steps.
-      force_l. esplits. force_l. eexists (_, _). steps. force_l. { refl. } steps.
-      force_l. esplits. force_l. { esplits; ss; et. } steps.
-      force_l. esplits. force_l. { rewrite URA.unit_id. refl. } steps.
-    - unfold body_to_tgt. steps.
-      abstr (ktr l) itr. clear arg _ASSUME1 l ktr.
-      (* clear _ASSUME0. *)
-      des_u. rewrite URA.unit_idl in *.
-      revert itr. revert st. revert_until CIH. gcofix CIH0. i.
-      ides itr.
-      { steps. }
-      { steps. gbase. eapply CIH0; et. }
-      rewrite <- bind_trigger.
-      destruct e; cycle 1.
-      {
+
   Ltac resub :=
     repeat multimatch goal with
            | |- context[ITree.trigger ?e] =>
@@ -210,6 +163,71 @@ Section ADQ.
            | |- context[ITree.trigger (@subevent _ ?F ?prf _ (resum ?a ?b ?e))] =>
              replace (ITree.trigger (@subevent _ F prf _ (resum a b e))) with (ITree.trigger (@subevent _ F _ _ e)) by refl
            end.
+
+  Lemma add_list_fnsems
+        mds ske
+    :
+      (ModSemL.fnsems (ModL.get_modsem (Mod.add_list mds) ske)) =
+      flat_map ModSemL.fnsems (List.map (flip ModL.get_modsem ske ∘ Mod.lift) mds)
+  .
+  Proof. induction mds; ss. f_equal. et. Qed.
+
+  Ltac _list_tac :=
+    match goal with
+    | [ H: find _ _ = Some _ |- _ ] => apply find_some in H; des; des_sumbool; subst
+    | [ H: context[ModL.enclose] |- _ ] => unfold ModL.enclose in H; try rewrite add_list_fnsems in H
+    | [ H: In _ (flat_map _ _) |- _ ] => apply in_flat_map in H; des
+    | [ H: In _ (List.map _ _) |- _ ] => apply in_map_iff in H; des
+    | [ H: ModSem.map_snd _ _ = _ |- _ ] => unfold ModSem.map_snd in H; ss
+    | [ H: map_snd _ _ = _ |- _ ] => unfold map_snd in H; ss
+    | [ H: flip _ _ _ = _ |- _ ] => unfold flip in H; ss
+
+    | [ |- context[ModL.enclose] ] => unfold ModL.enclose; try rewrite add_list_fnsems
+    | [ |- In _ (flat_map _ _) ] => apply in_flat_map; esplits; et
+    | [ |- In _ (List.map _ _) ] => apply in_map_iff; esplits; et
+    | [ |- ModSem.map_snd _ _ = _ ] => unfold ModSem.map_snd; ss
+    | [ |- map_snd _ _ = _ ] => unfold map_snd; ss
+    | [ |- flip _ _ _ = _ ] => unfold flip; ss
+    end
+  .
+  Ltac list_tac := repeat _list_tac.
+
+  Lemma my_lemma1_aux
+        mrs ktr arg ske
+    :
+      sim_itree (fun '(x, y) => x = y) 100%nat
+                (mrs, ε, fun_to_tgt (_gstb ske) (UModSem.transl_fun_smod ktr) arg)
+                (mrs, ε, (UModSem.transl_fun_mod ktr) arg)
+  .
+  Proof.
+    destruct mrs as [mr st].
+    ginit.
+    revert_until gstb. gcofix CIH. i.
+    unfold cfun. unfold UModSem.transl_fun_smod. unfold fun_to_tgt. cbn.
+    unfold HoareFun, put, forge, checkWf, discard. ss.
+    steps.
+    r in _ASSUME0. des. subst.
+    unfold UModSem.transl_fun_mod. unfold cfun. steps.
+    guclo lordC_spec. econs.
+    { instantiate (1:=(45 + 45)%ord). rewrite <- OrdArith.add_from_nat. eapply OrdArith.le_from_nat. lia. }
+    guclo lbindC_spec. econs; cycle 1.
+    - instantiate (1:=fun '(mr0, st0, fr0) '(mr1, st1, fr1) y0 y1 => mr0 = mr1 /\ st0 = st1 /\ y0 = y1).
+      i. ss. des_ifs. des; subst.
+      steps.
+      force_l. esplits. force_l. eexists (_, _). steps. force_l. { refl. } steps.
+      force_l. esplits. force_l. { esplits; ss; et. } steps.
+      force_l. esplits. force_l. { rewrite URA.unit_id. refl. } steps.
+    - unfold body_to_tgt. steps.
+      abstr (ktr vargs) itr. clear arg _UNWRAPN vargs ktr.
+      (* clear _ASSUME0. *)
+      des_u. rewrite URA.unit_idl in *.
+      revert itr. revert st. revert_until CIH. gcofix CIH0. i.
+      ides itr.
+      { steps. }
+      { steps. gbase. eapply CIH0; et. }
+      rewrite <- bind_trigger.
+      destruct e; cycle 1.
+      {
         destruct s; ss.
         { destruct p; ss.
           - resub. ired_both. resub. gstep. econs; et. steps. gbase. eapply CIH0; et.
@@ -222,14 +240,21 @@ Section ADQ.
         }
       }
       resub.
-      destruct c.
+      destruct u.
       steps. resub.
       force_l.
-      { admit "TODO". }
-      steps. force_l.
-      { admit "TODO". }
+      { admit "MID -- need to trigger UB beforehand". }
       steps.
       rename _UNWRAPN into T.
+      assert(exists ft, f = mk_fspec (AA:=unit + list val)%type val ft).
+      { clear - T. eapply alist_find_some in T. unfold _gstb in T. list_tac.
+        rewrite in_app_iff in *. des; list_tac.
+        - des_ifs. unfold _kmss in T. list_tac. subst. unfold kmds in T0. list_tac. subst.
+          ss. list_tac. des_ifs. ss. unfold KModSem.disclose. unfold mk. esplits; et.
+        - des_ifs. unfold _umss in T. list_tac. subst. unfold fspec_trivial2. unfold mk.
+          esplits; et. }
+      des. subst. ss. rewrite Any.upcast_downcast. steps.
+      TTTTTTTTTTTTTTTTTTTTT
 
       {
         assert (GWF: ☀) by (split; [refl|exact _ASSUME]); clear _ASSUME.
@@ -317,14 +342,6 @@ Section ADQ.
   Let p_src := (ModSemL.prog ms_src).
   Let ms_tgt := (ModL.enclose (Mod.add_list (List.map SMod.to_src (kmds ++ List.map UMod.to_smod umds)))).
   Let p_tgt := (ModSemL.prog ms_tgt).
-
-  Lemma add_list_fnsems
-        mds ske
-    :
-      (ModSemL.fnsems (ModL.get_modsem (Mod.add_list mds) ske)) =
-      flat_map ModSemL.fnsems (List.map (flip ModL.get_modsem ske ∘ Mod.lift) mds)
-  .
-  Proof. induction mds; ss. f_equal. et. Qed.
 
   Let sk_link_eq2: sk_link = (ModL.sk (Mod.add_list (List.map SMod.to_src (kmds ++ List.map UMod.to_smod umds)))).
   Proof. { rewrite sk_link_eq. unfold SMod.to_src. rewrite SMod.transl_sk. refl. } Qed.
@@ -616,26 +633,7 @@ Section ADQ.
   .
   Proof.
     destruct (find (fun fnsem => dec fn (fst fnsem)) (ModSemL.fnsems ms_src)) eqn:T.
-    - Ltac _list_tac :=
-        match goal with
-        | [ H: find _ _ = Some _ |- _ ] => apply find_some in H; des; des_sumbool; subst
-        | [ H: context[ModL.enclose] |- _ ] => unfold ModL.enclose in H; try rewrite add_list_fnsems in H
-        | [ H: In _ (flat_map _ _) |- _ ] => apply in_flat_map in H; des
-        | [ H: In _ (List.map _ _) |- _ ] => apply in_map_iff in H; des
-        | [ H: ModSem.map_snd _ _ = _ |- _ ] => unfold ModSem.map_snd in H; ss
-        | [ H: map_snd _ _ = _ |- _ ] => unfold map_snd in H; ss
-        | [ H: flip _ _ _ = _ |- _ ] => unfold flip in H; ss
-
-        | [ |- context[ModL.enclose] ] => unfold ModL.enclose; try rewrite add_list_fnsems
-        | [ |- In _ (flat_map _ _) ] => apply in_flat_map; esplits; et
-        | [ |- In _ (List.map _ _) ] => apply in_map_iff; esplits; et
-        | [ |- ModSem.map_snd _ _ = _ ] => unfold ModSem.map_snd; ss
-        | [ |- map_snd _ _ = _ ] => unfold map_snd; ss
-        | [ |- flip _ _ _ = _ ] => unfold flip; ss
-        end
-      .
-      Ltac list_tac := repeat _list_tac.
-      list_tac.
+    - list_tac.
       unfold ms_src in T.
       list_tac.
       rewrite <- sk_link_eq3 in *. folder. subst.

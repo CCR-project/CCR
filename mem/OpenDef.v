@@ -308,24 +308,6 @@ Section UMODSEM.
   .
   Proof. subst; et. Qed.
 
-  Global Program Instance transl_itr_mod_rdb: red_database (mk_box (@transl_itr_mod)) :=
-    mk_rdb
-      0
-      (mk_box transl_itr_mod_bind)
-      (mk_box transl_itr_mod_tau)
-      (mk_box transl_itr_mod_ret)
-      (mk_box transl_itr_mod_ucall)
-      (mk_box transl_itr_mod_triggere)
-      (mk_box transl_itr_mod_triggerp)
-      (mk_box True)
-      (mk_box transl_itr_mod_triggerUB)
-      (mk_box transl_itr_mod_triggerNB)
-      (mk_box transl_itr_mod_unwrapU)
-      (mk_box transl_itr_mod_unwrapN)
-      (mk_box transl_itr_mod_assume)
-      (mk_box transl_itr_mod_guarantee)
-      (mk_box transl_itr_mod_ext)
-  .
 
 
 
@@ -535,26 +517,50 @@ Section UMODSEM.
   .
   Proof. subst; et. Qed.
 
-  Global Program Instance transl_itr_smod_rdb: red_database (mk_box (@transl_itr_smod)) :=
-    mk_rdb
-      0
-      (mk_box transl_itr_smod_bind)
-      (mk_box transl_itr_smod_tau)
-      (mk_box transl_itr_smod_ret)
-      (mk_box transl_itr_smod_ucall)
-      (mk_box transl_itr_smod_triggere)
-      (mk_box transl_itr_smod_triggerp)
-      (mk_box True)
-      (mk_box transl_itr_smod_triggerUB)
-      (mk_box transl_itr_smod_triggerNB)
-      (mk_box transl_itr_smod_unwrapU)
-      (mk_box transl_itr_smod_unwrapN)
-      (mk_box transl_itr_smod_assume)
-      (mk_box transl_itr_smod_guarantee)
-      (mk_box transl_itr_smod_ext)
-  .
 End UMODSEM.
 End UModSem.
+
+Section RDB.
+  Context `{Σ: GRA.t}.
+
+  Global Program Instance transl_itr_mod_rdb: red_database (mk_box (@UModSem.transl_itr_mod)) :=
+    mk_rdb
+      0
+      (mk_box UModSem.transl_itr_mod_bind)
+      (mk_box UModSem.transl_itr_mod_tau)
+      (mk_box UModSem.transl_itr_mod_ret)
+      (mk_box UModSem.transl_itr_mod_ucall)
+      (mk_box UModSem.transl_itr_mod_triggere)
+      (mk_box UModSem.transl_itr_mod_triggerp)
+      (mk_box True)
+      (mk_box UModSem.transl_itr_mod_triggerUB)
+      (mk_box UModSem.transl_itr_mod_triggerNB)
+      (mk_box UModSem.transl_itr_mod_unwrapU)
+      (mk_box UModSem.transl_itr_mod_unwrapN)
+      (mk_box UModSem.transl_itr_mod_assume)
+      (mk_box UModSem.transl_itr_mod_guarantee)
+      (mk_box UModSem.transl_itr_mod_ext)
+  .
+
+  Global Program Instance transl_itr_smod_rdb: red_database (mk_box (@UModSem.transl_itr_smod)) :=
+    mk_rdb
+      0
+      (mk_box UModSem.transl_itr_smod_bind)
+      (mk_box UModSem.transl_itr_smod_tau)
+      (mk_box UModSem.transl_itr_smod_ret)
+      (mk_box UModSem.transl_itr_smod_ucall)
+      (mk_box UModSem.transl_itr_smod_triggere)
+      (mk_box UModSem.transl_itr_smod_triggerp)
+      (mk_box True)
+      (mk_box UModSem.transl_itr_smod_triggerUB)
+      (mk_box UModSem.transl_itr_smod_triggerNB)
+      (mk_box UModSem.transl_itr_smod_unwrapU)
+      (mk_box UModSem.transl_itr_smod_unwrapN)
+      (mk_box UModSem.transl_itr_smod_assume)
+      (mk_box UModSem.transl_itr_smod_guarantee)
+      (mk_box UModSem.transl_itr_smod_ext)
+  .
+End RDB.
 
 
 
