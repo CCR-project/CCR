@@ -16,42 +16,16 @@ From ExtLib Require Import
      Structures.Maps
      Data.Map.FMapAList.
 Require Import TODOYJ.
-Require Import HTactics Logic YPM.
+Require Import HTactics Logic IPM.
 Require Import Mem1.
-
-Generalizable Variables E R A B C X Y.
 
 Set Implicit Arguments.
 
 Local Open Scope nat_scope.
 
 
-Ltac hcall_tac x o MR_SRC1 FR_SRC1 RARG_SRC :=
-  let mr_src1 := r_gather MR_SRC1 in
-  let fr_src1 := r_gather FR_SRC1 in
-  let rarg_src := r_gather RARG_SRC in
-  let tac0 := try by (eapply URA.extends_updatable; r_equalize; r_solve) in
-  let tac1 := (on_gwf ltac:(fun H => clear H);
-               let WF := fresh "WF" in
-               let tmp := fresh "_tmp_" in
-               let GWF := fresh "GWF" in
-               let mr_src1 := fresh "mr_src1" in
-               let mp_src1 := fresh "mp_src1" in
-               let mr_tgt1 := fresh "mr_tgt1" in
-               let mp_tgt1 := fresh "mp_tgt1" in
-               intros ? [mr_src1 mp_src1] [mr_tgt1 mp_tgt1] ? WF; cbn in WF; desH WF; subst;
-               esplits; ss; et; intros tmp ?; assert(GWF: ☀) by (split; [refl|exact tmp]); clear tmp; iRefresh; iClears') in
-  prep;
-  (match x with
-   | ltac_wild =>
-     match o with
-     | ltac_wild => eapply (@hcall_clo _ mr_src1 fr_src1 rarg_src)
-     | _ => eapply (@hcall_clo _ mr_src1 fr_src1 rarg_src o)
-     end
-   | _ => eapply (@hcall_clo _ mr_src1 fr_src1 rarg_src o _ x)
-   end);
-  shelve_goal; [on_gwf ltac:(fun GWF => apply GWF)|tac0|eapply OrdArith.lt_from_nat; lia|..|tac1]
-.
+
+
 
 Section SIMMODSEM.
 
@@ -72,7 +46,7 @@ Section SIMMODSEM.
   Proof.
     econs; ss.
     econs; ss.
-    { unfold mainF. init. harg_tac. repeat rewrite URA.unit_idl in *. repeat rewrite URA.unit_id in *. iRefresh.
+    { unfold mainF. init. harg. repeat rewrite URA.unit_idl in *. repeat rewrite URA.unit_id in *. iRefresh.
       iDestruct PRE; subst. unfold mainBody. steps.
       astart 2.
       astep "alloc" ([Vint 1], true).

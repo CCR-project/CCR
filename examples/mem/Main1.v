@@ -39,28 +39,38 @@ Section PROOF.
         return y; ~~~> return 42;
    ***)
 
-  Definition mainBody: list val -> itree (hCallE +' pE +' eventE) val :=
+  Definition KPC: itree (kCallE +' pE +' eventE) unit :=
+    fn <- trigger (Choose _);; trigger (kCall fn (@inl unit (list val) tt));;; Ret tt
+  .
+
+  Definition mainBody: list val -> itree (kCallE +' pE +' eventE) val :=
     fun _ =>
-      APC;;;
-      trigger (hCall false "unknown_call" ([]: list val, false)↑);;;
-      APC;;;
+      KPC;;;
+      KPC;;;
+      trigger (kCall "unknown_call" (@inr unit (list val) []));;;
+      KPC;;;
       Ret (Vint 42)
   .
 
-  Definition main_spec: fspec := mk_simple (fun (_: unit) => ((fun _ o => (⌜o = ord_top⌝: iProp)%I), top2)).
+  Definition main_spec: ftspec unit unit :=
+    mk_ksimple (fun (_: unit) => ((fun _ o => (⌜o = ord_top⌝)%I), (fun _ => ⌜True⌝%I)))
+  .
 
   Definition MainStb: list (gname * fspec).
     eapply (Seal.sealing "stb").
-    apply [("main", main_spec)].
+    apply [("main", mk_fspec main_spec)].
   Defined.
 
-  Definition MainSbtb: list (gname * fspecbody) := [("main", mk_specbody main_spec mainBody)].
+  (* Definition MainSbtb: list (gname * fspecbody) := [("main", mk_specbody main_spec mainBody)]. *)
 
   Definition UnknownStb: list (gname * fspec) := [("unknown_call", fspec_trivial2)].
-  Definition SMain: SMod.t := SMod.main (fun _ o => (⌜o = ord_top⌝: iProp)%I) mainBody.
-  Definition Main: Mod.t := SMod.to_tgt (fun _ => MainStb) SMain.
+
+  TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
+  Definition KMainSem: KModSem.t := SModSem.main (fun _ o => (⌜o = ord_top⌝: iProp)%I) mainBody.
   Definition SMainSem: SModSem.t := SModSem.main (fun _ o => (⌜o = ord_top⌝: iProp)%I) mainBody.
   Definition MainSem: ModSem.t := SModSem.to_tgt MainStb SMainSem.
+  Definition SMain: SMod.t := SMod.main (fun _ o => (⌜o = ord_top⌝: iProp)%I) mainBody.
+  Definition Main: Mod.t := SMod.to_tgt (fun _ => MainStb) SMain.
 
 End PROOF.
 Global Hint Unfold MainStb: stb.

@@ -100,6 +100,12 @@ Section PROOF.
     ]
   .
 
+  Definition MemStb: list (gname * fspec).
+    eapply (Seal.sealing "stb").
+    apply [("alloc", mk_fspec alloc_spec) ; ("free", mk_fspec free_spec) ;
+           ("load", mk_fspec load_spec) ; ("store", mk_fspec store_spec) ; ("cmp", mk_fspec cmp_spec)].
+  Defined.
+
   Definition KMemSem (sk: Sk.t): KModSem.t := {|
     KModSem.fnsems := MemSbtb;
     KModSem.mn := "Mem";
