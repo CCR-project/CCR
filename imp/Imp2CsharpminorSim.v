@@ -639,7 +639,39 @@ Section PROOF.
     - ss. destruct p eqn:PVAR; clarify. 
       admit "ez: CallPtr, similar to CallFun.".
 
-    - admit "mid: CallSys".
+    - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_CallSys.
+      ss. uo; des_ifs; clarify. unfold ident_key in Heq0.
+      destruct rp. sim_red. eapply step_exprs; eauto.
+      { admit "ez: index". }
+      i. sim_red.
+      pfold. econs 4.
+      { admit "ez: strict_determinate_at". }
+      eexists. eexists.
+      { eapply step_call; eauto.
+        { econs. econs 2.
+          { eapply Maps.PTree.gempty. }
+          admit "ez: make lemma". }
+        { admit "ez: make lemma". }
+        { admit "ez: make lemma". } }
+      unfold ordN in *. eexists; split; auto. left.
+      pfold. econs 2; auto.
+      { eexists. eexists.
+        eapply step_external_function.
+        admit "ez: external function". }
+      i. eexists. eexists. eexists.
+      { hexploit step_syscall.
+        { admit "ez: syscall_sem". }
+        { instantiate (2:=top1). ss. }
+        i. ss.
+        match goal with
+        | [ H2: step ?i0 _ _ |- step ?i1 _ _ ] =>
+          replace i1 with i0; eauto
+        end.
+        rewrite bind_trigger. grind. }
+      split.
+      { admit "ez?: NEED strict_determinate_at". }
+      eexists.
+      admit "mid: CallSys".
 
     - admit "hard: AddrOf".
     - admit "hard: Malloc".
