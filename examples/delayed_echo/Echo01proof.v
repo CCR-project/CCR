@@ -234,22 +234,20 @@ Section SIMMODSEM.
       { iModIntro. iSplitL; ss.
         iRight. iExists _. iFrame. }
       { split; ss. }
-      mDesSep "POST". mDesEx "POST". mDesSep "POST".
-      mPure "A". mPure "POST". clarify.
+      mDesAll. clarify.
       eapply Any.upcast_inj in PURE0.
       rewrite Any.upcast_downcast. steps. des; clarify.
 
       acatch. hcall _ (_, _) _ with "- INV"; ss.
       { iModIntro. iSplitL "INV1"; ss. iSplitL; ss.
-        iExists _. iSplitL; ss. iSplitR "A3"; ss.
+        iExists _. iSplitL; ss. iSplitR "A"; ss.
         { iSplit; ss. instantiate (1:=Vint z :: (map Vint a0)). clear.
           rewrite unfold_is_list_cons. iExists _, _. iFrame; ss.
         }
         { iExists _. et. }
       }
       { split; ss. }
-      ss. steps. mDesSep "POST". mDesEx "POST". mDesSep "POST".
-      mDesSep "POST". mPure "A". mPure "POST". subst.
+      ss. steps. mDesAll. clarify.
       eapply Any.upcast_inj in PURE0. erewrite Any.upcast_downcast in *.
       des; clarify. mDesOr "INV2".
       { mAssertPure False; ss.
@@ -262,9 +260,9 @@ Section SIMMODSEM.
         instantiate (1:= echo_black v (z :: a0) ⋅ echo_white v (z :: a0)).
         eapply Auth.auth_update. rr. ii. des; ss. ur in FRAME. ur.
         destruct ctx2; ss; clarify. }
-      mUpd "A". mDesOwn "A".
+      mUpd "A2". mDesOwn "A2".
 
-      acatch. hcall _ (_, _, _) _ with "A1 A3"; ss.
+      acatch. hcall _ (_, _, _) _ with "A A3"; ss.
       { iModIntro. iSplitL "A3".
         { iRight. iExists _. iFrame. }
         { iSplit; ss. iSplit; ss. iSplit; ss. }
@@ -272,9 +270,9 @@ Section SIMMODSEM.
       { splits; ss. }
       steps. astop. steps.
       destruct (alist_find "putint" (StackStb ++ ClientStb ++ MemStb ++ EchoStb)) eqn:T; stb_tac; clarify.
-      mDesSep "POST". mDesSep "POST". mPure "A1". mPure "A3".
-      steps. eapply Any.upcast_inj in PURE0. des; clarify.
-      rewrite Any.upcast_downcast in *. clarify. steps.
+      mDesAll. clarify.
+      eapply Any.upcast_inj in PURE0. des; clarify.
+      steps. rewrite Any.upcast_downcast in *. clarify. steps.
 
       hcall _ _ _ with "INV"; ss.
       { iModIntro. iSplit; ss. }
@@ -282,21 +280,21 @@ Section SIMMODSEM.
       mDesAll. mDesOr "INV1".
       { mAssertPure False; ss.
         iDestruct "INV1" as (ns) "[INV1 _]".
-        iApply (echo_ra_black with "INV1 A"). }
+        iApply (echo_ra_black with "INV1 A2"). }
       mDesAll. mAssertPure _.
-      { iApply (echo_ra_merge with "A INV1"). }
+      { iApply (echo_ra_merge with "A2 INV1"). }
       des; subst. steps.
 
       destruct (alist_find "echo_finish" (StackStb ++ ClientStb ++ MemStb ++ EchoStb)) eqn:T; stb_tac; clarify.
       steps. rewrite Any.upcast_downcast. steps.
-      hcall _ (_, _) _ with "A A2 INV1"; ss.
-      { iCombine "A" "INV1" as "A".
+      hcall _ (_, _) _ with "A1 A2 INV1"; ss.
+      { iCombine "A2" "INV1" as "A".
         iPoseProof (OwnM_Upd with "A") as "A".
         { instantiate (1:= echo_black _ _ ⋅ echo_white _ _).
           eapply Auth.auth_update. rr. ii. des; ss. ur in FRAME. ur.
           destruct ctx4; ss; clarify. }
-        iMod "A". iDestruct "A" as "[A0 A1]". iModIntro.
-        iSplitR "A1".
+        iMod "A". iDestruct "A" as "[A0 A2]". iModIntro.
+        iSplitR "A2".
         { iLeft. iExists _. iSplitL "A0"; ss. }
         { iSplit; ss. iSplit; ss. }
       }
