@@ -23,8 +23,6 @@ Require Import Imp.
 Require Import ImpNotations.
 Require Import ImpProofs.
 
-Generalizable Variables E R A B C X Y.
-
 Set Implicit Arguments.
 
 Local Open Scope nat_scope.
@@ -53,6 +51,24 @@ Section SIMMODSEM.
     rewrite unfold_eval_imp.
     eapply Any.downcast_upcast in _UNWRAPN. des.
     unfold unint in *. destruct v; clarify; ss.
+    imp_steps. force_r; auto.
+    des_ifs.
+    - imp_steps. force_r; auto. steps.
+    - unfold ccall.
+      imp_steps. replace (z =? 0)%Z with false.
+      2:{ symmetry. eapply Z.eqb_neq. auto. }
+      steps. imp_steps.
+      force_r; auto. imp_steps.
+      force_r; auto.
+      { econs; ss. }
+      imp_steps.
+      force_r; auto.
+      { inv _ASSUME1. econs; ss; lia. }
+      imp_steps.
+      gstep. econs; ss. i. exists 100.
+      imp_steps.
+      force_r; auto. imp_steps.
+      admit "add wf_range assume after call".
   Admitted.
 
 End SIMMODSEM.

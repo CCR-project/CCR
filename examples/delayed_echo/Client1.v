@@ -5,11 +5,9 @@ Require Import Behavior.
 Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
-Require Import HoareDef.
+Require Import HoareDef Logic.
 Require Import Client0.
 Require Import TODOYJ.
-
-Generalizable Variables E R A B C X Y Σ.
 
 Set Implicit Arguments.
 
@@ -21,8 +19,8 @@ Section PROOF.
 
   Context `{Σ: GRA.t}.
 
-  Let getint_spec: fspec := (mk_simple (X:=unit) (fun _ => ((fun _ o _ => o = ord_top), top2))).
-  Let putint_spec: fspec := (mk_simple (X:=unit) (fun _ => ((fun _ o _ => o = ord_top), top2))).
+  Let getint_spec: fspec := (mk_simple (X:=unit) (fun _ => ((fun _ o => (⌜o = ord_top⌝: iProp)%I), top2))).
+  Let putint_spec: fspec := (mk_simple (X:=unit) (fun _ => ((fun _ o => (⌜o = ord_top⌝: iProp)%I), top2))).
 
   Definition ClientStb: list (gname * fspec).
     eapply (Seal.sealing "stb").

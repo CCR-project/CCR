@@ -374,7 +374,7 @@ Section RESUM.
     :
       (resum_itr (E:=E) (F:=F) (assume P))
       =
-      (assume P;; tau;; Ret tt)
+      (assume P;;; tau;; Ret tt)
   .
   Proof.
     unfold resum_itr, assume. grind. rewrite unfold_interp; cbn. grind.
@@ -385,7 +385,7 @@ Section RESUM.
     :
       (resum_itr (E:=E) (F:=F) (guarantee P))
       =
-      (guarantee P;; tau;; Ret tt).
+      (guarantee P;;; tau;; Ret tt).
   Proof.
     unfold resum_itr, guarantee. grind. rewrite unfold_interp; cbn. grind.
   Qed.
@@ -748,4 +748,3 @@ End TEST.
 (* End TEST. *)
 
 End TEST.
-

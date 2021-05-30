@@ -957,6 +957,20 @@ Module GRA.
     unfold cast_ra in *. unfold eq_rect, eq_sym in *. dependent destruction e. destruct inG_prf. ss.
   Qed.
 
+  Lemma wf_embed
+        A Σ
+        `{@GRA.inG A Σ}
+        (a: A)
+        (WF: URA.wf a)
+    :
+      <<WF: URA.wf (embed a)>>
+  .
+  Proof.
+    destruct H. subst. rewrite URA.unfold_wf.
+    r. ii. unfold embed. des_ifs.
+    eapply URA.wf_unit.
+  Qed.
+
   Lemma embed_add
         A Σ
         `{@GRA.inG A Σ}

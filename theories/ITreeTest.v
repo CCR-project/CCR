@@ -16,7 +16,7 @@ Set Implicit Arguments.
 From ITree Require Import Recursion.
 
 Definition infloop {E R S} (body: itree E R): itree E S :=
-  (rec (fun _ => resum_itr body;; trigger (Call tt)) tt).
+  (rec (fun _ => resum_itr body;;; trigger (Call tt)) tt).
 
 (* Set Printing All. *)
 (* eutt_interp *)

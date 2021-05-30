@@ -40,11 +40,11 @@ Section PROOF.
       m0 <- mp0↓?;;
       `sz: Z <- (allocF_parg varg)?;;
       let (blk, m1) := Mem.alloc m0 sz in
-      trigger (PPut m1↑);;
+      trigger (PPut m1↑);;;
       Ret (Vptr blk 0)
   .
 
-  Definition freeF_parg (args: list val): option (block * Z) :=
+  Definition freeF_parg (args: list val): option (mblock * Z) :=
     match args with
     | [Vptr b ofs] => Some (b, ofs)
     | _ => None
@@ -57,11 +57,11 @@ Section PROOF.
       m0 <- mp0↓?;;
       '(b, ofs) <- (freeF_parg varg)?;;
       m1 <- (Mem.free m0 b ofs)?;;
-      trigger (PPut m1↑);;
+      trigger (PPut m1↑);;;
       Ret (Vint 0)
   .
 
-  Definition loadF_parg (args: list val): option (block * Z) :=
+  Definition loadF_parg (args: list val): option (mblock * Z) :=
     match args with
     | [Vptr b ofs] => Some (b, ofs)
     | _ => None
@@ -77,7 +77,7 @@ Section PROOF.
       Ret v
   .
 
-  Definition storeF_parg (args: list val): option (block * Z * val) :=
+  Definition storeF_parg (args: list val): option (mblock * Z * val) :=
     match args with
     | [Vptr b ofs; v] => Some (b, ofs, v)
     | _ => None
@@ -90,7 +90,7 @@ Section PROOF.
       m0 <- mp0↓?;;
       '(b, ofs, v) <- (storeF_parg varg)?;;
       m1 <- (Mem.store m0 b ofs v)?;;
-      trigger (PPut m1↑);;
+      trigger (PPut m1↑);;;
       Ret (Vint 0)
   .
 

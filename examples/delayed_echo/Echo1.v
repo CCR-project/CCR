@@ -10,8 +10,6 @@ Require Import Stack1 Client1 Mem1.
 Require Import TODOYJ.
 Require Import Logic.
 
-Generalizable Variables E R A B C X Y Σ.
-
 Set Implicit Arguments.
 
 
@@ -51,10 +49,10 @@ Section PROOF.
       n <- trigger (hCall false "getint" ([]: list val)↑);;
       `n: val <- n↓?;; `n: Z <- (unint n)?;;
       if dec n (- 1)%Z
-      then trigger (hCall false "echo_finish" ns↑);; Ret tt
+      then trigger (hCall false "echo_finish" ns↑);;; Ret tt
       else
-        APC;;
-        trigger (hCall false "echo" (n :: ns)↑);;
+        APC;;;
+        trigger (hCall false "echo" (n :: ns)↑);;;
         Ret tt
   .
 
@@ -63,9 +61,9 @@ Section PROOF.
       match ns with
       | [] => Ret tt
       | hd :: tl =>
-        APC;;
-        trigger (hCall false "putint" [Vint hd]↑);;
-        trigger (hCall false "echo_finish" tl↑);;
+        APC;;;
+        trigger (hCall false "putint" [Vint hd]↑);;;
+        trigger (hCall false "echo_finish" tl↑);;;
         Ret tt
       end
   .
@@ -100,9 +98,9 @@ Section PROOF.
   (* . *)
 
   Let echo_spec:        fspec := (@mk _ (val * list Z) (list Z) unit
-                                      (fun '(hd, ns) varg_high _ o => Own(GRA.embed(echo_white hd ns)) ** ⌜o = ord_top⌝ ** ⌜varg_high = ns⌝) (top4)).
+                                      (fun '(hd, ns) varg_high _ o => OwnM (echo_white hd ns) ** ⌜o = ord_top⌝ ** ⌜varg_high = ns⌝) (fun _ _ _ => (True%I: iProp))).
   Let echo_finish_spec: fspec := (@mk _ (val * list Z) (list Z) unit
-                                      (fun '(hd, ns) varg_high _ o => Own(GRA.embed(echo_white hd ns)) ** ⌜o = ord_top⌝ ** ⌜varg_high = ns⌝) (top4)).
+                                      (fun '(hd, ns) varg_high _ o => OwnM(echo_white hd ns) ** ⌜o = ord_top⌝ ** ⌜varg_high = ns⌝) (fun _ _ _ => (True%I: iProp))).
   (* Let echo_spec:        fspec := (mk_simple "Echo" (X:=unit) (fun _ _ o _ => o = ord_top) (top3)). *)
   (* Let echo_finish_spec: fspec := (mk_simple "Echo" (X:=unit) (fun _ _ o _ => o = ord_top) (top3)). *)
 

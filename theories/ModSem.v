@@ -47,8 +47,8 @@ Section EVENTSCOMMON.
     | None => triggerUB
     end.
 
-  Definition assume {E} `{eventE -< E} (P: Prop): itree E unit := trigger (Take P) ;; Ret tt.
-  Definition guarantee {E} `{eventE -< E} (P: Prop): itree E unit := trigger (Choose P) ;; Ret tt.
+  Definition assume {E} `{eventE -< E} (P: Prop): itree E unit := trigger (Take P) ;;; Ret tt.
+  Definition guarantee {E} `{eventE -< E} (P: Prop): itree E unit := trigger (Choose P) ;;; Ret tt.
 
   (* Notation "'unint?'" := (unwrapA <*> unint) (at level 57, only parsing). *)
   (* Notation "'unint﹗'" := (unwrapG <*> unint) (at level 57, only parsing). *)
@@ -391,7 +391,7 @@ Section MODSEML.
                | None => tt↑
                end).
   Definition initial_itr: itree (eventE) Any.t :=
-    assume(<<WF: wf ms>>);;
+    assume(<<WF: wf ms>>);;;
     snd <$> interp_Es prog (prog (Call "main" (([]: list val)↑))) (initial_r_state, initial_p_state).
 
   Definition initial_itr_no_check: itree (eventE) Any.t :=
@@ -615,9 +615,9 @@ Section EVENTS.
 
   Definition handle_callE `{callE -< E} `{EventsL.rE -< E}: callE ~> itree E :=
     fun _ '(Call fn args) =>
-      trigger EventsL.PushFrame;;
+      trigger EventsL.PushFrame;;;
       r <- trigger (Call fn args);;
-      trigger EventsL.PopFrame;;
+      trigger EventsL.PopFrame;;;
       Ret r
   .
 
@@ -669,7 +669,7 @@ Section EVENTS.
         mn
         (e: callE Any.t)
     :
-      transl_all mn (trigger e) = trigger EventsL.PushFrame;; r <- (trigger e);; trigger EventsL.PopFrame;; tau;; Ret r
+      transl_all mn (trigger e) = trigger EventsL.PushFrame;;; r <- (trigger e);; trigger EventsL.PopFrame;;; tau;; Ret r
   .
   Proof. dependent destruction e; ss. unfold transl_all. rewrite unfold_interp. ss. grind. Qed.
 
@@ -713,8 +713,8 @@ Section EVENTS.
 
   Definition put E `{rE -< E} `{eventE -< E} (mr1: Σ) (fr1: Σ): itree E unit :=
     mr0 <- trigger (MGet);; fr0 <- trigger FGet;;
-    guarantee(URA.updatable (URA.add mr0 fr0) (URA.add mr1 fr1));;
-    trigger (FPut fr1);; trigger (MPut mr1)
+    guarantee(URA.updatable (URA.add mr0 fr0) (URA.add mr1 fr1));;;
+    trigger (FPut fr1);;; trigger (MPut mr1)
   .
 
   Definition forge E `{rE -< E} `{eventE -< E} (delta: Σ): itree E unit :=
@@ -725,7 +725,7 @@ Section EVENTS.
   Definition discard E `{rE -< E} `{eventE -< E} (fr1: Σ): itree E unit :=
     fr0 <- trigger FGet;;
     rest <- trigger (Choose _);;
-    guarantee(fr0 = URA.add fr1 rest);;
+    guarantee(fr0 = URA.add fr1 rest);;;
     trigger (FPut rest)
   .
 

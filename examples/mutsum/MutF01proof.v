@@ -16,18 +16,12 @@ From ExtLib Require Import
      Structures.Maps
      Data.Map.FMapAList.
 
-Require Import HTactics Logic YPM.
-
-Generalizable Variables E R A B C X Y.
+Require Import HTactics ProofMode.
 
 Set Implicit Arguments.
 
 Local Open Scope nat_scope.
 
-
-
-(* TODO: move to SimModSem & add cpn3_wcompat *)
-Hint Resolve sim_itree_mon: paco.
 
 
 Section SIMMODSEM.
@@ -37,19 +31,34 @@ Section SIMMODSEM.
   Let W: Type := (Σ * Any.t) * (Σ * Any.t).
 
   Let wf: W -> Prop :=
-    fun '(mrps_src0, mrps_tgt0) =>
-      (<<SRC: mrps_src0 = (ε, tt↑)>>) /\
-      (<<TGT: mrps_tgt0 = (ε, tt↑)>>)
-  .
+    mk_wf (fun (_: unit) _ _ => (True: iProp)%I) top4.
 
   Theorem correct: ModPair.sim MutF1.F MutF0.F.
   Proof.
     econs; ss; [|admit ""].
     i. eapply adequacy_lift.
-    econstructor 1 with (wf:=wf); et; ss.
-    econs; ss. init. unfold ccall.
-    harg_tac. iRefresh. iDestruct PRE. des; clarify. unfold fF, ccall. anytac. ss.
-    steps. astart 10. destruct (dec (Z.of_nat x) 0%Z).
-  Admitted.
+    econstructor 1 with (wf:=wf); et.
+    2: { econs; ss; red; uipropall. }
+    econs; ss. init. harg. mDesAll.
+    des; clarify. unfold fF, ccall.
+    apply Any.upcast_inj in PURE0. des; clarify.
+    rewrite Any.upcast_downcast. steps. astart 10.
+    force_r.
+    { admit "Add range condition". } steps.
+    destruct (dec (Z.of_nat x) 0%Z).
+    - destruct x; ss. astop. force_l. eexists.
+      hret _; ss.
+    - destruct x; [ss|]. rewrite Nat2Z.inj_succ. steps. acatch.
+      hcall _ _ _ with "*"; auto.
+      { iPureIntro. splits; eauto.
+        replace (Z.succ (Z.of_nat x) - 1)%Z with (Z.of_nat x) by lia. ss. }
+      { splits; ss; eauto with ord_step. }
+      i. mDesAll. des; clarify. eapply Any.upcast_inj in PURE2. des; clarify.
+      rewrite Any.upcast_downcast. steps. astop.
+      force_l. eexists.
+      hret _; ss. start_ipm_proof. iPureIntro. splits; ss.
+      f_equal. f_equal. lia.
+      Unshelve. all: ss.
+  Qed.
 
 End SIMMODSEM.

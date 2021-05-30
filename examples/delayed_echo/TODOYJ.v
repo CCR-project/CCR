@@ -8,8 +8,6 @@ Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
 
-Generalizable Variables E R A B C X Y Σ.
-
 Set Implicit Arguments.
 Set Typeclasses Depth 5.
 
@@ -43,7 +41,7 @@ Definition unrightN {E X Y} `{eventE -< E} (xy: X + Y): itree E Y :=
 Section UNPADDING.
 
   Definition unembed A {Σ} `{@GRA.inG A Σ} (a: URA.car (t:=Σ)): itree Es (URA.car (t:=A)) :=
-    assume(forall n (NEQ: n <> GRA.inG_id), a n = URA.unit);;
+    assume(forall n (NEQ: n <> GRA.inG_id), a n = URA.unit);;;
     Ret (eq_rect_r (@URA.car) (a GRA.inG_id) GRA.inG_prf)
   .
 
@@ -51,7 +49,7 @@ Section UNPADDING.
     n <- trigger (Choose _);;
     (if Nat.eq_dec GRA.inG_id n
      then Ret tt
-     else  assume (a n = URA.unit);; Ret tt);;
+     else  assume (a n = URA.unit);;; Ret tt);;;
     Ret (eq_rect_r (@URA.car) (a GRA.inG_id) GRA.inG_prf)
   .
 

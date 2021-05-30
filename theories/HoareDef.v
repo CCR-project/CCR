@@ -7,7 +7,6 @@ Require Import Skeleton.
 Require Import PCM.
 From Ordinal Require Export Ordinal Arithmetic Inaccessible.
 Require Import Any.
-Require Import Logic.
 Require Import IRed.
 
 From ExtLib Require Import
@@ -47,8 +46,6 @@ Set Implicit Arguments.
 
 
 Arguments transl_all {Σ} _%string_scope {T}%type_scope _%itree_scope. (*** TODO: move to ModSem ***)
-
-Notation "f ∘ g" := (fun x => (f (g x))). (*** TODO: move to Coqlib ***)
 
 Inductive ord: Type :=
 | ord_pure (n: Ord.t)
@@ -126,19 +123,19 @@ Section PROOF.
              (fsp: fspec):
     gname -> fsp.(AA) -> itree Es fsp.(AR) :=
     fun fn varg_src =>
-      '(marg, farg) <- trigger (Choose _);; put marg farg;; (*** updating resources in an abstract way ***)
-      rarg <- trigger (Choose Σ);; discard rarg;; (*** virtual resource passing ***)
+      '(marg, farg) <- trigger (Choose _);; put marg farg;;; (*** updating resources in an abstract way ***)
+      rarg <- trigger (Choose Σ);; discard rarg;;; (*** virtual resource passing ***)
       x <- trigger (Choose fsp.(X));; varg_tgt <- trigger (Choose Any_tgt);;
       ord_next <- trigger (Choose _);;
-      guarantee(fsp.(precond) x varg_src varg_tgt  ord_next rarg);; (*** precondition ***)
+      guarantee(fsp.(precond) x varg_src varg_tgt  ord_next rarg);;; (*** precondition ***)
 
-      guarantee(ord_lt ord_next ord_cur /\ (tbr = true -> is_pure ord_next) /\ (tbr = false -> ord_next = ord_top));;
+      guarantee(ord_lt ord_next ord_cur /\ (tbr = true -> is_pure ord_next) /\ (tbr = false -> ord_next = ord_top));;;
       vret_tgt <- trigger (Call fn varg_tgt);; (*** call ***)
 
-      rret <- trigger (Take Σ);; forge rret;; (*** virtual resource passing ***)
+      rret <- trigger (Take Σ);; forge rret;;; (*** virtual resource passing ***)
       vret_src <- trigger (Take fsp.(AR));;
-      checkWf;;
-      assume(fsp.(postcond) x vret_src vret_tgt rret);; (*** postcondition ***)
+      checkWf;;;
+      assume(fsp.(postcond) x vret_src vret_tgt rret);;; (*** postcondition ***)
 
       Ret vret_src (*** return to body ***)
   .
@@ -176,9 +173,9 @@ Program Fixpoint _APC (at_most: Ord.t) {wf Ord.lt at_most}: itree Es' unit :=
   then Ret tt
   else
     n <- trigger (Choose Ord.t);;
-    trigger (Choose (n < at_most)%ord);;
+    trigger (Choose (n < at_most)%ord);;;
     '(fn, varg) <- trigger (Choose _);;
-    trigger (hCall true fn varg);;
+    trigger (hCall true fn varg);;;
     _APC n.
 Next Obligation.
   eapply Ord.lt_well_founded.
@@ -186,7 +183,7 @@ Qed.
 
 Definition APC: itree Es' unit :=
   at_most <- trigger (Choose _);;
-  guarantee(at_most < kappa)%ord;;
+  guarantee(at_most < kappa)%ord;;;
   _APC at_most
 .
 
@@ -197,9 +194,9 @@ Lemma unfold_APC:
                   then Ret tt
                   else
                     n <- trigger (Choose Ord.t);;
-                    guarantee (n < at_most)%ord;;
+                    guarantee (n < at_most)%ord;;;
                     '(fn, varg) <- trigger (Choose _);;
-                    trigger (hCall true fn varg);;
+                    trigger (hCall true fn varg);;;
                     _APC n.
 Proof.
   i. unfold _APC. rewrite Fix_eq; eauto.
@@ -215,6 +212,7 @@ Global Opaque _APC.
 
 
 
+Require Import Logic.
 
 Section CANCEL.
 
@@ -238,7 +236,7 @@ Section CANCEL.
   (*   apply (val). *)
   (* Defined. *)
   Definition mk_tsimple {X: Type} (PQ: X -> ((Any_tgt -> ord -> Σ -> Prop) * (Any_tgt -> Σ -> Prop))): ftspec (list val) (val) :=
-    @mk_ftspec _ _ _ X (fun x y a o => (fst ∘ PQ) x a o ∧ ⌜y↑ = a⌝) (fun x z a => (snd ∘ PQ) x a ∧ ⌜z↑ = a⌝)
+    @mk_ftspec _ _ _ X (fun x y a o => (((fst ∘ PQ) x a o: iProp) ∧ ⌜y↑ = a⌝)%I) (fun x z a => (((snd ∘ PQ) x a: iProp) ∧ ⌜z↑ = a⌝)%I)
   .
 
   Definition mk_simple {X: Type} (PQ: X -> ((Any_tgt -> ord -> Σ -> Prop) * (Any_tgt -> Σ -> Prop))): fspec :=
@@ -289,7 +287,7 @@ Section CANCEL.
     fun _ '(hCall tbr fn varg_src) =>
       tau;;
       ord_next <- (if tbr then o0 <- trigger (Choose _);; Ret (ord_pure o0) else Ret ord_top);;
-      guarantee(ord_lt ord_next ord_cur);;
+      guarantee(ord_lt ord_next ord_cur);;;
       let varg_mid: Any_mid := (Any.pair ord_next↑ varg_src) in
       trigger (Call fn varg_mid)
   .
@@ -307,7 +305,7 @@ Section CANCEL.
     fun varg_mid =>
       '(ord_cur, varg_src) <- varg_mid↓ǃ;;
       vret_src <- (match ord_cur with
-                   | ord_pure n => (interp_hCallE_mid ord_cur APC);; trigger (Choose _)
+                   | ord_pure n => (interp_hCallE_mid ord_cur APC);;; trigger (Choose _)
                    | _ => (body_to_mid ord_cur body) varg_src
                    end);;
       Ret vret_src↑
@@ -342,22 +340,22 @@ Section CANCEL.
              (body: Y -> itree Es' Z): Any_tgt -> itree Es Any_tgt := fun varg_tgt =>
     varg_src <- trigger (Take Y);;
     x <- trigger (Take X);;
-    rarg <- trigger (Take Σ);; forge rarg;; (*** virtual resource passing ***)
-    (checkWf);;
+    rarg <- trigger (Take Σ);; forge rarg;;; (*** virtual resource passing ***)
+    (checkWf);;;
     ord_cur <- trigger (Take _);;
-    assume(P x varg_src varg_tgt  ord_cur rarg);; (*** precondition ***)
+    assume(P x varg_src varg_tgt  ord_cur rarg);;; (*** precondition ***)
 
 
     vret_src <- match ord_cur with
-                | ord_pure n => (interp_hCallE_tgt ord_cur APC);; trigger (Choose _)
+                | ord_pure n => (interp_hCallE_tgt ord_cur APC);;; trigger (Choose _)
                 | _ => (body_to_tgt ord_cur body) varg_src
                 end;;
     (* vret_src <- body ord_cur varg_src;; (*** "rudiment": we don't remove extcalls because of termination-sensitivity ***) *)
 
     vret_tgt <- trigger (Choose Any_tgt);;
-    '(mret, fret) <- trigger (Choose _);; put mret fret;; (*** updating resources in an abstract way ***)
-    rret <- trigger (Choose Σ);; guarantee(Q x vret_src vret_tgt rret);; (*** postcondition ***)
-    (discard rret);; (*** virtual resource passing ***)
+    '(mret, fret) <- trigger (Choose _);; put mret fret;;; (*** updating resources in an abstract way ***)
+    rret <- trigger (Choose Σ);; guarantee(Q x vret_src vret_tgt rret);;; (*** postcondition ***)
+    (discard rret);;; (*** virtual resource passing ***)
 
     Ret vret_tgt (*** return ***)
   .
@@ -513,7 +511,6 @@ Section SMOD.
 
 
 
-  Notation "(∘)" := (fun f g => f ∘ g) (at level 59).
 
   (* Definition l_bind A B (x: list A) (f: A -> list B): list B := List.flat_map f x. *)
   (* Definition l_ret A (a: A): list A := [a]. *)
@@ -731,11 +728,18 @@ End SMod.
 
   Require Import Red.
 
-  Ltac interp_red := rewrite interp_vis ||
-                             rewrite interp_ret ||
-                             rewrite interp_tau ||
-                             rewrite interp_trigger ||
-                             rewrite interp_bind.
+  Ltac interp_red := erewrite interp_vis ||
+                              erewrite interp_ret ||
+                              erewrite interp_tau ||
+                              erewrite interp_trigger ||
+                              erewrite interp_bind.
+
+  (* TODO: remove it *)
+  Ltac interp_red2 := rewrite interp_vis ||
+                              rewrite interp_ret ||
+                              rewrite interp_tau ||
+                              rewrite interp_trigger ||
+                              rewrite interp_bind.
 
   Ltac _red_itree f :=
     match goal with
@@ -782,7 +786,7 @@ End SMod.
         `{Σ: GRA.t}
         prog st0 (P: Prop)
     :
-      EventsL.interp_Es prog (assume P) st0 = assume P;; tau;; tau;; tau;; Ret (st0, tt)
+      EventsL.interp_Es prog (assume P) st0 = assume P;;; tau;; tau;; tau;; Ret (st0, tt)
   .
   Proof.
     unfold assume.
@@ -797,7 +801,7 @@ End SMod.
         `{Σ: GRA.t}
         prog st0 (P: Prop)
     :
-      EventsL.interp_Es prog (guarantee P) st0 = guarantee P;; tau;; tau;; tau;; Ret (st0, tt)
+      EventsL.interp_Es prog (guarantee P) st0 = guarantee P;;; tau;; tau;; tau;; Ret (st0, tt)
   .
   Proof.
     unfold guarantee.
@@ -865,7 +869,7 @@ Section AUX.
   Lemma transl_all_assume
         mn (P: Prop)
     :
-      transl_all mn (assume P) = assume P;; tau;; Ret (tt)
+      transl_all mn (assume P) = assume P;;; tau;; Ret (tt)
   .
   Proof.
     unfold assume.
@@ -879,7 +883,7 @@ Section AUX.
   Lemma transl_all_guarantee
         mn (P: Prop)
     :
-      transl_all mn (guarantee P) = guarantee P;; tau;; Ret (tt)
+      transl_all mn (guarantee P) = guarantee P;;; tau;; Ret (tt)
   .
   Proof.
     unfold guarantee.
@@ -1057,7 +1061,7 @@ Lemma interp_tgt_assume stb o
   :
     (interp_hCallE_tgt stb o (assume P))
     =
-    (assume P;; tau;; Ret tt)
+    (assume P;;; tau;; Ret tt)
 .
 Proof.
   unfold assume. rewrite interp_tgt_bind. rewrite interp_tgt_triggere. grind. eapply interp_tgt_ret.
@@ -1068,7 +1072,7 @@ Lemma interp_tgt_guarantee stb o
   :
     (interp_hCallE_tgt stb o (guarantee P))
     =
-    (guarantee P;; tau;; Ret tt).
+    (guarantee P;;; tau;; Ret tt).
 Proof.
   unfold guarantee. rewrite interp_tgt_bind. rewrite interp_tgt_triggere. grind. eapply interp_tgt_ret.
 Qed.
@@ -1243,7 +1247,7 @@ Lemma interp_mid_assume o
   :
     (interp_hCallE_mid o (assume P))
     =
-    (assume P;; tau;; Ret tt)
+    (assume P;;; tau;; Ret tt)
 .
 Proof.
   unfold assume. rewrite interp_mid_bind. rewrite interp_mid_triggere. grind. eapply interp_mid_ret.
@@ -1254,7 +1258,7 @@ Lemma interp_mid_guarantee o
   :
     (interp_hCallE_mid o (guarantee P))
     =
-    (guarantee P;; tau;; Ret tt).
+    (guarantee P;;; tau;; Ret tt).
 Proof.
   unfold guarantee. rewrite interp_mid_bind. rewrite interp_mid_triggere. grind. eapply interp_mid_ret.
 Qed.
@@ -1428,7 +1432,7 @@ Lemma interp_src_assume
   :
     (interp_hCallE_src (assume P))
     =
-    (assume P;; tau;; Ret tt)
+    (assume P;;; tau;; Ret tt)
 .
 Proof.
   unfold assume. rewrite interp_src_bind. rewrite interp_src_triggere. grind. eapply interp_src_ret.
@@ -1439,7 +1443,7 @@ Lemma interp_src_guarantee
   :
     (interp_hCallE_src (guarantee P))
     =
-    (guarantee P;; tau;; Ret tt).
+    (guarantee P;;; tau;; Ret tt).
 Proof.
   unfold guarantee. rewrite interp_src_bind. rewrite interp_src_triggere. grind. eapply interp_src_ret.
 Qed.
@@ -1504,19 +1508,19 @@ Ltac ired_both := ired_l; ired_r.
       unfold triggerNB; mred; _step; ss; fail
 
     (*** assume/guarantee ***)
-    | [ |- gpaco5 _ _ _ _ _ _ _ (assume ?P ;; _) _ ] =>
+    | [ |- gpaco5 _ _ _ _ _ _ _ (assume ?P ;;; _) _ ] =>
       let tvar := fresh "tmp" in
       let thyp := fresh "TMP" in
       remember (assume P) as tvar eqn:thyp; unfold assume in thyp; subst tvar
-    | [ |- gpaco5 _ _ _ _ _ _ _ (guarantee ?P ;; _) _ ] =>
+    | [ |- gpaco5 _ _ _ _ _ _ _ (guarantee ?P ;;; _) _ ] =>
       let tvar := fresh "tmp" in
       let thyp := fresh "TMP" in
       remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar
-    | [ |- gpaco5 _ _ _ _ _ _ _ _ (assume ?P ;; _) ] =>
+    | [ |- gpaco5 _ _ _ _ _ _ _ _ (assume ?P ;;; _) ] =>
       let tvar := fresh "tmp" in
       let thyp := fresh "TMP" in
       remember (assume P) as tvar eqn:thyp; unfold assume in thyp; subst tvar
-    | [ |- gpaco5 _ _ _ _ _ _ _ _ (guarantee ?P ;; _) ] =>
+    | [ |- gpaco5 _ _ _ _ _ _ _ _ (guarantee ?P ;;; _) ] =>
       let tvar := fresh "tmp" in
       let thyp := fresh "TMP" in
       remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar

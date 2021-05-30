@@ -24,7 +24,7 @@ Definition to_long := Int64.repr.
 
 Section Compile.
 
-  (* compile each program indiv, 
+  (* compile each program indiv,
      prove behavior refinement for whole (closed) prog after linking *)
   Let tgt_gdef := globdef (Ctypes.fundef function) type.
   Let tgt_gdefs := list (ident * tgt_gdef).
@@ -260,7 +260,7 @@ Section Compile.
       do tail <- (compile_eFuns t);
       let tyargs := make_arg_types a in
       let sg := mksignature (typlist_of_typelist tyargs) (Tret AST.Tlong) cc_default in
-      let fd := Gfun (External (EF_external name sg) tyargs Tlong0 cc_default) in 
+      let fd := Gfun (External (EF_external name sg) tyargs Tlong0 cc_default) in
       Some ((s2p name, fd) :: tail)
     end
   .
@@ -600,7 +600,7 @@ Section Sim.
       =
       '(r, p, (le2, v)) <- (itree_of_imp_cont itr ge le ms mn rp);; (itree_of_imp_cont (ktr v) ge le2 ms mn (r, p)).
   Proof.
-    unfold itree_of_imp_cont. rewrite interp_imp_bind. grind.    
+    unfold itree_of_imp_cont. rewrite interp_imp_bind. grind.
     rewrite! transl_all_bind; rewrite! EventsL.interp_Es_bind.
     grind.
   Qed.
@@ -652,7 +652,7 @@ Section Sim.
       (MLE: match_le le tle)
       (MID: s2p id = tid)
 
-      (GLUE: glue = fun v: Any.t => itree_of_imp_cont (` v0 : val <- (v↓)?;; trigger (SetVar id v0);; Ret Vundef) ge le ms mn rp)
+      (GLUE: glue = fun v: Any.t => itree_of_imp_cont (` v0 : val <- (v↓)?;; trigger (SetVar id v0);;; Ret Vundef) ge le ms mn rp)
 
       (MCONT: match_cont next (get_cont_stmts tcont))
       (MSTACK: match_stack stack (call_cont tcont))
@@ -757,7 +757,7 @@ Section Proof.
     eauto using compile_gdefs_then_wf.
   Qed.
 
-  (* Maps.PTree.elements_extensional 
+  (* Maps.PTree.elements_extensional
      we will rely on above theorem for commutation lemmas *)
   Lemma _comm_link_imp_compile :
     forall src1 src2 srcl tgt1 tgt2 tgtl,

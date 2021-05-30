@@ -7,10 +7,9 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
+Require Import Logic.
 Require Import TODOYJ.
 Require Import OpenDef Open.
-
-Generalizable Variables E R A B C X Y Σ.
 
 Set Implicit Arguments.
 
@@ -42,13 +41,13 @@ Section PROOF.
 
   Definition mainBody: list val -> itree (hCallE +' pE +' eventE) val :=
     fun _ =>
-      APC;;
-      trigger (hCall false "unknown_call" ([]: list val, false)↑);;
-      APC;;
+      APC;;;
+      trigger (hCall false "unknown_call" ([]: list val, false)↑);;;
+      APC;;;
       Ret (Vint 42)
   .
 
-  Definition main_spec: fspec := mk_simple (fun (_: unit) => ((fun _ o _ => o = ord_top), top2)).
+  Definition main_spec: fspec := mk_simple (fun (_: unit) => ((fun _ o => (⌜o = ord_top⌝: iProp)%I), top2)).
 
   Definition MainStb: list (gname * fspec).
     eapply (Seal.sealing "stb").
@@ -58,11 +57,10 @@ Section PROOF.
   Definition MainSbtb: list (gname * fspecbody) := [("main", mk_specbody main_spec mainBody)].
 
   Definition UnknownStb: list (gname * fspec) := [("unknown_call", fspec_trivial2)].
-
-  Definition SMain: SMod.t := SMod.main (fun _ o _ => o = ord_top) mainBody.
-  Definition Main: Mod.t := SMod.to_tgt (fun _ => MainStb ++ (List.map (map_snd disclose) MemStb) ++ UnknownStb) SMain.
-  Definition SMainSem: SModSem.t := SModSem.main (fun _ o _ => o = ord_top) mainBody.
-  Definition MainSem: ModSem.t := SModSem.to_tgt (MainStb ++ (List.map (map_snd disclose) MemStb) ++ UnknownStb) SMainSem.
+  Definition SMain: SMod.t := SMod.main (fun _ o => (⌜o = ord_top⌝: iProp)%I) mainBody.
+  Definition Main: Mod.t := SMod.to_tgt (fun _ => MainStb) SMain.
+  Definition SMainSem: SModSem.t := SModSem.main (fun _ o => (⌜o = ord_top⌝: iProp)%I) mainBody.
+  Definition MainSem: ModSem.t := SModSem.to_tgt MainStb SMainSem.
 
 End PROOF.
 Global Hint Unfold MainStb: stb.
