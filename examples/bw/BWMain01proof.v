@@ -4,7 +4,7 @@ Require Import Skeleton.
 Require Import PCM.
 Require Import ModSem Behavior.
 Require Import Relation_Definitions.
-Require Import HoareDef BWMain0 BWMain1 SimModSem.
+Require Import HoareDef BW1 BWMain0 BWMain1 SimModSem.
 
 (*** TODO: export these in Coqlib or Universe ***)
 Require Import Relation_Operators.
@@ -17,9 +17,7 @@ From ExtLib Require Import
      Data.Map.FMapAList.
 Require Import TODOYJ.
 Require Import HTactics.
-Require Import Logic YPM.
-
-Generalizable Variables E R A B C X Y.
+Require Import ProofMode.
 
 Set Implicit Arguments.
 
@@ -36,30 +34,74 @@ Section SIMMODSEM.
   Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
 
   Let wf: W -> Prop :=
-    fun '(mrps_src0, mrps_tgt0) =>
-      exists (mr: Σ) (n: Z),
-        (<<SRC: mrps_src0 = (mr, tt↑)>>) /\
-        (<<TGT: mrps_tgt0 = (ε, n↑)>>)
+    @mk_wf
+      _
+      unit
+      (fun _ _ _ => (True)%I)
+      top4
   .
-
-  Opaque URA.unit.
 
   Theorem correct: ModSemPair.sim BWMain1.MainSem BWMain0.MainSem.
   Proof.
     econstructor 1 with (wf:=wf); et; swap 2 3.
-    { ss. unfold alist_add; cbn. esplits; ss; eauto. }
+    { ss. red. econs; et; ss. red. uipropall. }
 
-    Opaque URA.add.
     econs; ss.
-    { unfold mainbody, mainF, ccall, hcall. init.
-      harg_tac. iRefresh. do 2 iDestruct PRE. iPure A. subst. rewrite Any.upcast_downcast. ss. steps.
-      destruct (alist_find "getbool" (ClientStb ++ MainStb)) eqn:T; stb_tac; clarify.
-      steps. rewrite Any.upcast_downcast. ss. steps.
-      hcall_tac tt ord_top (@URA.unit Σ) PRE (@URA.unit Σ); ss.
-      { esplits; eauto. }
-      des; clarify. steps. rewrite Any.upcast_downcast in *. ss. clarify. steps.
-      unfold TODO.unbool. des_ifs; ss.
-      { steps. astart 10.
-  Admitted.
+    { unfold mainbody, mainF, ccall, hcall. init. harg.
+      mDesAll. des; clarify.
+      steps. rewrite Any.upcast_downcast in *. clarify.
+      destruct (alist_find "getbool" (BWStb ++ ClientStb ++ MainStb)) eqn:T; stb_tac; clarify.
+      steps. rewrite Any.upcast_downcast. steps.
+      hcall _ _ _ with ""; ss.
+      { splits; ss. ss. }
+      mDesAll. clarify. steps.
+      rewrite Any.upcast_downcast in *. clarify.
+      steps. unfold TODO.unbool in *. astart 3.
+      (* TODO: use bind rule to reduce redundancy *)
+      des_ifs.
+      { steps. acatch.
+        hcall _ _ _ with "*"; auto.
+        { eauto with ord_step. }
+        mDesAll. clarify. steps.
+        rewrite Any.upcast_downcast in *. clarify. acatch.
+
+        hcall _ _ _ with "*"; auto.
+        { eauto with ord_step. }
+        mDesAll. clarify.
+        rewrite Any.upcast_downcast in *. clarify.
+        eapply Any.upcast_inj in PURE5. des; clarify. steps.
+        astop. steps. force_l. eexists. steps.
+        force_l; et. steps.
+        destruct (alist_find "putint" (BWStb ++ ClientStb ++ MainStb)) eqn:T; stb_tac; clarify.
+        steps. rewrite Any.upcast_downcast. steps.
+
+        hcall ord_top _ _ with ""; auto.
+        mDesAll. steps. rewrite Any.upcast_downcast in *. clarify.
+        steps. hret _; ss.
+        { iModIntro. iSplit; ss. iSplit; ss. iStopProof.
+          (* TODO: fix top1 => TRUE: iProp *)
+          red. uipropall. }
+      }
+      { steps. acatch.
+        hcall _ _ _ with "*"; auto.
+        { eauto with ord_step. }
+        mDesAll. clarify. steps.
+        rewrite Any.upcast_downcast in *. clarify. astop.
+        eapply Any.upcast_inj in PURE4. des; clarify.
+        steps. force_l. eexists. steps.
+        force_l; et. steps.
+        destruct (alist_find "putint" (BWStb ++ ClientStb ++ MainStb)) eqn:T; stb_tac; clarify.
+        steps. rewrite Any.upcast_downcast. steps.
+
+        hcall ord_top _ _ with ""; auto.
+        mDesAll. steps. rewrite Any.upcast_downcast in *. clarify.
+        steps. hret _; ss.
+        { iModIntro. iSplit; ss. iSplit; ss. iStopProof.
+          (* TODO: fix top1 => TRUE: iProp *)
+          red. uipropall. }
+      }
+    }
+    Unshelve. all: ss.
+  Qed.
 
 End SIMMODSEM.

@@ -199,8 +199,8 @@ Section SIM.
       (K: forall vret mrs_src1 mrs_tgt1 (WF: wf (mrs_src1, mrs_tgt1)),
           exists i1, sim_itree _ _ RR i1 ((mrs_src1, fr_src0), k_src vret) ((mrs_tgt1, fr_tgt0), k_tgt vret))
     :
-      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), (trigger PushFrame;; r <- trigger (Call fn varg);; trigger PopFrame;; tau;; k_src r))
-                 ((mrs_tgt0, fr_tgt0), (trigger PushFrame;; r <- trigger (Call fn varg);; trigger PopFrame;; tau;; k_tgt r))
+      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), (trigger PushFrame;;; r <- trigger (Call fn varg);; trigger PopFrame;;; tau;; k_src r))
+                 ((mrs_tgt0, fr_tgt0), (trigger PushFrame;;; r <- trigger (Call fn varg);; trigger PopFrame;;; tau;; k_tgt r))
   | sim_itree_syscall
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       fn varg k_src k_tgt rvs
@@ -595,11 +595,11 @@ Section SIM.
       eapply sim_itree_mon; eauto with paco.
     + rewrite ! bind_tau. econs; eauto.
       econs 2; eauto with paco. econs; eauto with paco.
-    + replace (x <- (trigger PushFrame;; r0 <- trigger (Call fn varg);; trigger PopFrame;; (tau;; k_src0 r0));; k_src x) with
-          (trigger PushFrame;; r <- trigger (Call fn varg);; trigger PopFrame;; tau;; (k_src0 >=> k_src) r); cycle 1.
+    + replace (x <- (trigger PushFrame;;; r0 <- trigger (Call fn varg);; trigger PopFrame;;; (tau;; k_src0 r0));; k_src x) with
+          (trigger PushFrame;;; r <- trigger (Call fn varg);; trigger PopFrame;;; tau;; (k_src0 >=> k_src) r); cycle 1.
       { grind. }
-      replace (x <- (trigger PushFrame;; r0 <- trigger (Call fn varg);; trigger PopFrame;; (tau;; k_tgt0 r0));; k_tgt x) with
-          (trigger PushFrame;; r <- trigger (Call fn varg);; trigger PopFrame;; tau;; (k_tgt0 >=> k_tgt) r); cycle 1.
+      replace (x <- (trigger PushFrame;;; r0 <- trigger (Call fn varg);; trigger PopFrame;;; (tau;; k_tgt0 r0));; k_tgt x) with
+          (trigger PushFrame;;; r <- trigger (Call fn varg);; trigger PopFrame;;; tau;; (k_tgt0 >=> k_tgt) r); cycle 1.
       { grind. }
       econs; eauto.
       i. exploit K; eauto. i. des. eexists.

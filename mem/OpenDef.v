@@ -14,14 +14,12 @@ Require Import TODO.
 Require Import HoareDef.
 Require Import Red IRed.
 
-Generalizable Variables E R A B C X Y Σ.
-
 Set Implicit Arguments.
 
 
 (* Definition dot {A B C} (g: B -> C) (f: A -> B): A -> C := g ∘ f. *)
 (* Notation "(∘)" := dot (at level 40, left associativity). *)
-Notation "(∘)" := (fun g f => g ∘ f) (at level 40, left associativity).
+Notation "(∘)" := (fun g f => g ∘ f) (at level 0, left associativity).
 
 (*** TODO: remove redundancy with SimModSemL && migrate related lemmas ***)
 Variant option_rel A B (P: A -> B -> Prop): option A -> option B -> Prop :=
@@ -45,13 +43,13 @@ Proof. admit "ez". Qed.
 
 Section AUX.
   Context `{Σ: GRA.t}.
-  Definition fspec_trivial: fspec := (mk_simple (fun (_: unit) => (fun _ o => ⌜o = ord_top⌝, fun _ => ⌜True⌝))).
+  Definition fspec_trivial: fspec := (mk_simple (fun (_: unit) => (fun _ o => (⌜o = ord_top⌝: iProp)%I, fun _ => (⌜True⌝: iProp)%I))).
 
   (*** U should always be called with "inr"; I use sum type just in order to unify type with KMod ***)
   Definition fspec_trivial2: fspec :=
     @mk _ unit (unit + list val)%type (val)
-        (fun _ argh argl o => ⌜exists vargs, argl↓ = Some vargs /\ argh = inr vargs /\ o = ord_top⌝)
-        (fun _ reth retl => ⌜reth↑ = retl⌝)
+        (fun _ argh argl o => (⌜exists vargs, argl↓ = Some vargs /\ argh = inr vargs /\ o = ord_top⌝: iProp)%I)
+        (fun _ reth retl => (⌜reth↑ = retl⌝: iProp)%I)
   .
 
 End AUX.
@@ -280,7 +278,7 @@ Section UMODSEM.
     :
       (transl_itr_mod (assume P))
       =
-      (assume P;; tau;; tau;; Ret tt)
+      (assume P;;; tau;; tau;; Ret tt)
   .
   Proof.
     unfold assume. rewrite transl_itr_mod_bind. rewrite transl_itr_mod_triggere.
@@ -293,7 +291,7 @@ Section UMODSEM.
     :
       (transl_itr_mod (guarantee P))
       =
-      (guarantee P;; tau;; tau;; Ret tt).
+      (guarantee P;;; tau;; tau;; Ret tt).
   Proof.
     unfold guarantee. rewrite transl_itr_mod_bind. rewrite transl_itr_mod_triggere.
     repeat (my_red_both; grind; resub).
@@ -498,7 +496,7 @@ Section UMODSEM.
     :
       (transl_itr_smod (assume P))
       =
-      (assume P;; tau;; Ret tt)
+      (assume P;;; tau;; Ret tt)
   .
   Proof.
     unfold assume. rewrite transl_itr_smod_bind. rewrite transl_itr_smod_triggere. grind. eapply transl_itr_smod_ret.
@@ -509,7 +507,7 @@ Section UMODSEM.
     :
       (transl_itr_smod (guarantee P))
       =
-      (guarantee P;; tau;; Ret tt).
+      (guarantee P;;; tau;; Ret tt).
   Proof.
     unfold guarantee. rewrite transl_itr_smod_bind. rewrite transl_itr_smod_triggere. grind. eapply transl_itr_smod_ret.
   Qed.
@@ -689,14 +687,14 @@ Section KMODSEM.
     @HoareDef.mk _ (option fs.(X)) (unit + list val)%type val
                  (fun ox argh argl o =>
                     match ox, argh with
-                    | Some x, inl argh => fs.(precond) x argh argl o ** ⌜is_pure o⌝
-                    | None, inr varg => ⌜varg↑ = argl /\ o = ord_top⌝
-                    | _, _ => ⌜False⌝
+                    | Some x, inl argh => ((fs.(precond) x argh argl o: iProp) ** ⌜is_pure o⌝)%I
+                    | None, inr varg => (⌜varg↑ = argl /\ o = ord_top⌝: iProp)%I
+                    | _, _ => (⌜False⌝: iProp)%I
                     end)
                  (fun ox reth retl =>
                     match ox with
                     | Some x => fs.(postcond) x tt retl
-                    | None => ⌜reth↑ = retl⌝
+                    | None => (⌜reth↑ = retl⌝: iProp)%I
                     end)
   .
 
@@ -877,7 +875,7 @@ Section KMODSEM.
     :
       (transl_itr_tgt (assume P))
       =
-      (assume P;; tau;; Ret tt)
+      (assume P;;; tau;; Ret tt)
   .
   Proof.
     unfold assume. rewrite transl_itr_tgt_bind. rewrite transl_itr_tgt_triggere. grind. eapply transl_itr_tgt_ret.
@@ -888,7 +886,7 @@ Section KMODSEM.
     :
       (transl_itr_tgt (guarantee P))
       =
-      (guarantee P;; tau;; Ret tt).
+      (guarantee P;;; tau;; Ret tt).
   Proof.
     unfold guarantee. rewrite transl_itr_tgt_bind. rewrite transl_itr_tgt_triggere. grind. eapply transl_itr_tgt_ret.
   Qed.
@@ -1085,7 +1083,7 @@ Section KMODSEM.
     :
       (interp_kCallE_src (assume P))
       =
-      (assume P;; tau;; Ret tt)
+      (assume P;;; tau;; Ret tt)
   .
   Proof.
     unfold assume. rewrite interp_kCallE_src_bind. rewrite interp_kCallE_src_triggere. grind. eapply interp_kCallE_src_ret.
@@ -1096,7 +1094,7 @@ Section KMODSEM.
     :
       (interp_kCallE_src (guarantee P))
       =
-      (guarantee P;; tau;; Ret tt).
+      (guarantee P;;; tau;; Ret tt).
   Proof.
     unfold guarantee. rewrite interp_kCallE_src_bind. rewrite interp_kCallE_src_triggere. grind. eapply interp_kCallE_src_ret.
   Qed.
@@ -1194,4 +1192,3 @@ Section KMOD.
 
 End KMOD.
 End KMod.
-

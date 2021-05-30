@@ -9,8 +9,6 @@ Require Import PCM.
 Require Import TODOYJ.
 Require Import TODO.
 
-Generalizable Variables E R A B C X Y Σ.
-
 Set Implicit Arguments.
 Set Typeclasses Depth 5.
 
@@ -43,7 +41,7 @@ Section PROOF.
         delta <- trigger (Choose _);;
         let m0': Mem.t := mem_pad m0 delta in
         let (blk, m1) := Mem.alloc m0' sz in
-        trigger (PPut m1↑);;
+        trigger (PPut m1↑);;;
         Ret (Vptr blk 0)
     .
 
@@ -53,7 +51,7 @@ Section PROOF.
         m0 <- mp0↓?;;
         '(b, ofs) <- (pargs [Tptr] varg)?;;
         m1 <- (Mem.free m0 b ofs)?;;
-        trigger (PPut m1↑);;
+        trigger (PPut m1↑);;;
         Ret (Vint 0)
     .
 
@@ -72,7 +70,7 @@ Section PROOF.
         m0 <- mp0↓?;;
         '(b, ofs, v) <- (pargs [Tptr; Tuntyped] varg)?;;
         m1 <- (Mem.store m0 b ofs v)?;;
-        trigger (PPut m1↑);;
+        trigger (PPut m1↑);;;
         Ret (Vint 0)
     .
 

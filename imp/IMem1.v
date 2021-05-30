@@ -10,13 +10,11 @@ Require Import HoareDef.
 Require Import TODOYJ.
 Require Import Logic.
 
-Generalizable Variables E R A B C X Y Σ.
-
 Set Implicit Arguments.
 
 
 
-Let _memRA: URA.t := (block ==> Z ==> (Excl.t val))%ra.
+Let _memRA: URA.t := (mblock ==> Z ==> (Excl.t val))%ra.
 Compute (URA.car (t:=_memRA)).
 Instance memRA: URA.t := Auth.t _memRA.
 Compute (URA.car).
@@ -24,7 +22,7 @@ Compute (URA.car).
 Section PROOF.
   Context `{@GRA.inG memRA Σ}.
 
-  Definition _points_to (loc: block * Z) (vs: list val): _memRA :=
+  Definition _points_to (loc: mblock * Z) (vs: list val): _memRA :=
     let (b, ofs) := loc in
     (fun _b _ofs => if (dec _b b) && ((ofs <=? _ofs) && (_ofs <? (ofs + Z.of_nat (List.length vs))))%Z
                     then (List.nth_error vs (Z.to_nat (_ofs - ofs))) else ε)
@@ -39,7 +37,7 @@ Section PROOF.
   .
   Proof. refl. Qed.
 
-  Definition points_to (loc: block * Z) (vs: list val): memRA := Auth.white (_points_to loc vs).
+  Definition points_to (loc: mblock * Z) (vs: list val): memRA := Auth.white (_points_to loc vs).
 
   Lemma points_to_split
         blk ofs hd tl
@@ -112,47 +110,52 @@ Section PROOF.
   Let GURA: URA.t := GRA.to_URA Σ.
   Local Existing Instance GURA.
 
-  Let alloc_spec: fspec := (mk_simple (fun sz => (
-                                           (fun varg o => ⌜varg = [Vint (Z.of_nat sz)]↑ /\ o = ord_pure 0⌝),
-                                           (fun vret => Exists b, ⌜vret = (Vptr b 0)↑⌝ **
-                                                                  Own(GRA.embed ((b, 0%Z) |-> (List.repeat (Vint 0) sz))))
-                           ))).
+  Let alloc_spec: fspec :=
+    (mk_simple (fun sz => (
+                    (fun varg o => (⌜varg = [Vint (Z.of_nat sz)]↑ /\ o = ord_pure 0⌝: iProp)%I),
+                    (fun vret => (∃ b, (⌜vret = (Vptr b 0)↑⌝)
+                                         ** OwnM ((b, 0%Z) |-> (List.repeat (Vint 0) sz))): iProp)%I
+    ))).
 
-  Let free_spec: fspec := (mk_simple (fun '(b, ofs) => (
-                                          (fun varg o => Exists v, ⌜varg = ([Vptr b ofs])↑⌝ **
-                                                                   Own(GRA.embed ((b, ofs) |-> [v])) **
-                                                                   ⌜o = ord_pure 0⌝),
-                                          top2
-                          ))).
+  Let free_spec: fspec :=
+    (mk_simple (fun '(b, ofs) => (
+                    (fun varg o => (∃ v, (⌜varg = ([Vptr b ofs])↑⌝)
+                                           ** OwnM ((b, ofs) |-> [v]))
+                                     ** ⌜o = ord_pure 0⌝),
+                    fun _ => (True: iProp)%I
+    ))).
 
-  Let load_spec: fspec := (mk_simple (fun '(b, ofs, v) => (
-                                          (fun varg o => ⌜varg = ([Vptr b ofs])↑⌝ **
-                                                                  Own(GRA.embed ((b, ofs) |-> [v])) **
-                                                                  ⌜o = ord_pure 0⌝),
-                                          (fun vret => Own(GRA.embed ((b, ofs) |-> [v])) ** ⌜vret = v↑⌝)
-                          ))).
+  Let load_spec: fspec :=
+    (mk_simple (fun '(b, ofs, v) => (
+                    (fun varg o => (⌜varg = ([Vptr b ofs])↑⌝)
+                                     ** OwnM(((b, ofs) |-> [v]))
+                                     ** (⌜o = ord_pure 0⌝)),
+                    (fun vret => OwnM((b, ofs) |-> [v]) ** ⌜vret = v↑⌝)
+    ))).
 
-  Let store_spec: fspec := (mk_simple
-                              (fun '(b, ofs, v_new) => (
-                                   (fun varg o => Exists v_old,
-                                     ⌜varg = ([Vptr b ofs ; v_new])↑⌝ ** Own(GRA.embed ((b, ofs) |-> [v_old])) ** ⌜o = ord_pure 0⌝),
-                                   (fun _ => Own(GRA.embed ((b, ofs) |-> [v_new])))
-                           ))).
+  Let store_spec: fspec :=
+    (mk_simple
+       (fun '(b, ofs, v_new) => (
+            (fun varg o => (∃ v_old,
+                               (⌜varg = ([Vptr b ofs ; v_new])↑⌝)
+                                 ** OwnM((b, ofs) |-> [v_old]))
+                             ** (⌜o = ord_pure 0⌝)%I),
+            (fun _ => OwnM((b, ofs) |-> [v_new])
+    )))).
 
   Let cmp_spec: fspec :=
     (mk_simple
        (fun '(result, resource) => (
-          (fun varg o =>
-          ((Exists b ofs v, ⌜varg = [Vptr b ofs; Vnullptr]↑⌝ ** ⌜resource = (GRA.embed ((b, ofs) |-> [v]))⌝ ** ⌜result = false⌝) ∨
-           (Exists b ofs v, ⌜varg = [Vnullptr; Vptr b ofs]↑⌝ ** ⌜resource = (GRA.embed ((b, ofs) |-> [v]))⌝ ** ⌜result = false⌝) ∨
-           (Exists b0 ofs0 v0 b1 ofs1 v1, ⌜varg = [Vptr b0 ofs0; Vptr b1 ofs1]↑⌝ **
-                     ⌜resource = (GRA.embed ((b0, ofs0) |-> [v0])) ⋅ (GRA.embed ((b1, ofs1) |-> [v1]))⌝ ** ⌜result = false⌝) ∨
-           (Exists b ofs v, ⌜varg = [Vptr b ofs; Vptr b  ofs]↑⌝ ** ⌜resource = (GRA.embed ((b, ofs) |-> [v]))⌝ ** ⌜result = true⌝) ∨
-           (⌜varg = [Vnullptr; Vnullptr]↑ /\ result = true⌝))
-            ** Own(resource)
-            ** ⌜o = ord_pure 0⌝
-          ),
-          (fun vret => Own(resource) ** ⌜vret = (if result then Vint 1 else Vint 0)↑⌝)
+            (fun varg o =>
+               ((∃ b ofs v, ⌜varg = [Vptr b ofs; Vnullptr]↑⌝ ** ⌜resource = ((b, ofs) |-> [v])⌝ ** ⌜result = false⌝) ∨
+                (∃ b ofs v, ⌜varg = [Vnullptr; Vptr b ofs]↑⌝ ** ⌜resource = ((b, ofs) |-> [v])⌝ ** ⌜result = false⌝) ∨
+                (∃ b0 ofs0 v0 b1 ofs1 v1, ⌜varg = [Vptr b0 ofs0; Vptr b1 ofs1]↑⌝ ** ⌜resource = (((b0, ofs0) |-> [v0])) ⋅ ((b1, ofs1) |-> [v1])⌝ ** ⌜result = false⌝) ∨
+                (∃ b ofs v, ⌜varg = [Vptr b ofs; Vptr b  ofs]↑⌝ ** ⌜resource = ((b, ofs) |-> [v])⌝ ** ⌜result = true⌝) ∨
+                (⌜varg = [Vnullptr; Vnullptr]↑ /\ result = true⌝))
+                 ** OwnM(resource)
+                 ** ⌜o = ord_pure 0⌝
+            ),
+            (fun vret => OwnM(resource) ** ⌜vret = (if result then Vint 1 else Vint 0)↑⌝)
     ))).
 
   Definition MemStb: list (gname * fspec).

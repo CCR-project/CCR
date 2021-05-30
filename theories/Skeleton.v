@@ -23,8 +23,8 @@ Notation "'do' ' X <- A ; B" := (o_bind A (fun _x => match _x with | X => B end)
 Module SkEnv.
 
   Record t: Type := mk {
-    blk2id: block -> option gname;
-    id2blk: gname -> option block;
+    blk2id: mblock -> option gname;
+    id2blk: gname -> option mblock;
   }
   .
 

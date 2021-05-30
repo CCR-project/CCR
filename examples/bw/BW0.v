@@ -5,11 +5,6 @@ Require Import Behavior.
 Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
-Require Import HoareDef.
-Require Import Stack1.
-Require Import TODOYJ.
-
-Generalizable Variables E R A B C X Y Σ.
 
 Set Implicit Arguments.
 
@@ -45,7 +40,7 @@ def flip(): Unit
     fun _ =>
       n <- trigger (PGet);; `n: Z <- n↓?;;
       let n := (n+1)%Z in
-      trigger (PPut n↑);;
+      trigger (PPut n↑);;;
       Ret Vundef
     .
 

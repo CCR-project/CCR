@@ -9,8 +9,6 @@ Require Import PCM.
 Require Import HoareDef.
 Require Import MutHeader.
 
-Generalizable Variables E R A B C X Y Σ.
-
 Set Implicit Arguments.
 
 

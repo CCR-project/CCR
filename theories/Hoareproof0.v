@@ -12,8 +12,6 @@ Require Import SimGlobal.
 From Ordinal Require Import Ordinal Arithmetic.
 Require Import Red IRed.
 
-Generalizable Variables E R A B C X Y Σ.
-
 Set Implicit Arguments.
 
 
@@ -755,7 +753,8 @@ we should know that stackframe is not popped (unary property)". }
         unfold forge, checkWf, assume. steps. des_ifs.
         { admit "we should use stronger RR, not eq;
 we should know that stackframe is not popped (unary property)". }
-        steps. rr in x2; des; ss.
+        steps. des; ss.
+        clear - x2. admit "ez".
     }
 
 
@@ -779,6 +778,7 @@ we should know that stackframe is not popped (unary property)". }
     revert WFR. i. (*** dummy action that keeps "WFR" as a requirement; TODO: remove it later ! ! ***)
     all: ss.
     all: try (by apply Ord.O).
+    all: admit "ez".
   Qed.
 
 End CANCEL.

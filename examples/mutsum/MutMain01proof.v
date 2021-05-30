@@ -16,18 +16,13 @@ From ExtLib Require Import
      Structures.Maps
      Data.Map.FMapAList.
 
-Require Import YPM HTactics.
-
-Generalizable Variables E R A B C X Y.
+Require Import HTactics Logic.
 
 Set Implicit Arguments.
 
 Local Open Scope nat_scope.
 
 
-
-(* TODO: move to SimModSem & add cpn3_wcompat *)
-Hint Resolve sim_itree_mon: paco.
 
 
 Section SIMMODSEM.
@@ -37,22 +32,25 @@ Section SIMMODSEM.
   Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
 
   Let wf: W -> Prop :=
-    fun '(mrps_src0, mrps_tgt0) =>
-      (<<SRC: mrps_src0 = (ε, tt↑)>>) /\
-      (<<TGT: mrps_tgt0 = (ε, tt↑)>>)
-  .
+    mk_wf (fun (_: unit) _ _ => (True: iProp)%I) top4.
 
   Theorem correct: ModPair.sim MutMain1.Main MutMain0.Main.
   Proof.
     econs; ss; [|admit ""].
     i. eapply adequacy_lift.
     econstructor 1 with (wf:=wf); et; ss.
+    2: { red. econs; ss. red. uipropall. }
     econs; ss. init.
-    unfold mainF, mainBody.
-    harg_tac. iRefresh. iDestruct PRE. des; clarify. steps. anytac. steps.
-    hcall_tac 10 (ord_pure 10) (@URA.unit (GRA.to_URA Σ)) rarg_src (@URA.unit (GRA.to_URA Σ)); splits; ss.
-    iDestruct POST. des; clarify. esplits; ss. i. des; clarify.
-    steps. hret_tac (@URA.unit (GRA.to_URA Σ)) (URA.add rarg_src rret); ss.
+    unfold mainF, mainBody. harg.
+    mDesAll. des; clarify. steps. rewrite Any.upcast_downcast. steps.
+    hcall _ _ tt with "*"; ss.
+    { iPureIntro. splits; eauto. instantiate (1:=10). ss. }
+    { splits; ss. }
+    mDesAll. des; clarify. eapply Any.upcast_inj in PURE2. des; clarify. steps.
+    hret tt; ss.
+    (* TODO: change top2 => pure top in SMod.main *)
+    iModIntro. repeat iSplit; ss.
+    iStopProof. red. uipropall.
   Qed.
 
 End SIMMODSEM.

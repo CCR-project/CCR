@@ -5,10 +5,7 @@ Require Import Behavior.
 Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
-Require Import HoareDef.
 Require Import TODOYJ.
-
-Generalizable Variables E R A B C X Y Σ.
 
 Set Implicit Arguments.
 
@@ -41,7 +38,7 @@ Definition getintF:  list val -> itree eventE val :=
 Definition putintF: list val -> itree eventE val :=
   fun varg =>
     `v: val <- (putint_parg varg)?;;
-    trigger (Syscall "printf" varg top1);;
+    trigger (Syscall "printf" varg top1);;;
     Ret Vundef
 .
 

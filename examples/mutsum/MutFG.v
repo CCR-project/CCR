@@ -13,8 +13,6 @@ Require Import MutFImp0proof MutGImp0proof MutF01proof MutG01proof MutMain01proo
 
 Require Import HTactics.
 
-Generalizable Variables E R A B C X Y Σ.
-
 Set Implicit Arguments.
 
 
@@ -84,9 +82,8 @@ Section PROOF.
         eapply adequacy_type; revgoals.
         { ss. left. refl. }
         { instantiate (1:=ε). unfold compose. ss. rewrite ! URA.unit_id. apply URA.wf_unit. }
-        { ss. }
       }
-      refl.
+      { simpl. admit "ez". }
     }
   Qed.
 
@@ -133,12 +130,9 @@ Then, we can just use SimModSem.adequacy_local_list. in this proof (FG23_correct
     ii.
     eapply ModSemLPair.mk with (wf:=top1) (le:=top2); ss.
     econs; [|econs; [|econs;ss]].
-    - init. unfold fun_to_src, cfun, body_to_src, mainBody, interp_hCallE_src, compose.
-      admit "ez; interp_red. steps. interp_red. steps. interp_red. steps".
-    - init. unfold fun_to_src, cfun, body_to_src, mainBody, interp_hCallE_src.
-      admit "ez; interp_red. steps. force_l. eexists. steps".
-    - init. unfold fun_to_src, cfun, body_to_src, mainBody, interp_hCallE_src.
-      admit "ez; interp_red. steps. force_l. eexists. steps".
+    - admit "SimModSemL".
+    - admit "SimModSemL".
+    - admit "SimModSemL".
   Qed.
 
   Theorem FG_correct:

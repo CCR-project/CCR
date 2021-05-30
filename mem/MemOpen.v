@@ -13,20 +13,18 @@ Require Import TODO.
 Require Import Mem0 Mem1.
 Require Import OpenDef Open.
 
-Generalizable Variables E R A B C X Y Σ.
-
 Set Implicit Arguments.
 
 
 
 
 
-Let _memRA: URA.t := (block ==> Z ==> (Excl.t val))%ra.
+Let _memRA: URA.t := (mblock ==> Z ==> (Excl.t val))%ra.
 
 
 Section AUX.
   Context `{Σ: GRA.t}.
-  Definition mk_ksimple {X: Type} (PQ: X -> ((Any.t -> ord -> Σ -> Prop) * (Any.t -> Σ -> Prop))):
+  Definition mk_ksimple {X: Type} (PQ: X -> ((Any.t -> ord -> iProp) * (Any.t -> iProp))):
     ftspec unit unit := @mk_ftspec _ _ _ X (fun x _ a o => (fst ∘ PQ) x a o) (fun x _ a => (snd ∘ PQ) x a)
   .
 End AUX.
@@ -38,49 +36,50 @@ Section PROOF.
 
   Definition alloc_spec: ftspec unit unit :=
     (mk_ksimple (fun sz => (
-                     (fun varg o => ⌜varg = [Vint (Z.of_nat sz)]↑ /\ o = ord_pure 0⌝),
-                     (fun vret => Exists b, ⌜vret = (Vptr b 0)↑⌝ **
-                                            Own(GRA.embed ((b, 0%Z) |-> (List.repeat (Vint 0) sz))))
+                     (fun varg o => (⌜varg = [Vint (Z.of_nat sz)]↑ /\ o = ord_pure 0⌝)%I),
+                     (fun vret => (∃ b, ⌜vret = (Vptr b 0)↑⌝ **
+                                        OwnM ((b, 0%Z) |-> (List.repeat (Vint 0) sz)))%I)
     ))).
 
   Definition free_spec: ftspec unit unit :=
     (mk_ksimple (fun '(b, ofs) => (
-                     (fun varg o => Exists v, ⌜varg = ([Vptr b ofs])↑⌝ **
-                                              Own(GRA.embed ((b, ofs) |-> [v])) **
-                                              ⌜o = ord_pure 0⌝),
-                     top2
+                     (fun varg o => (∃ v, ⌜varg = ([Vptr b ofs])↑⌝ **
+                                          OwnM ((b, ofs) |-> [v]) **
+                                          ⌜o = ord_pure 0⌝)%I),
+                     (fun _ => ⌜True⌝%I)
     ))).
 
   Definition load_spec: ftspec unit unit :=
     (mk_ksimple (fun '(b, ofs, v) => (
                      (fun varg o => ⌜varg = ([Vptr b ofs])↑⌝ **
-                                    Own(GRA.embed ((b, ofs) |-> [v])) **
+                                    OwnM ((b, ofs) |-> [v]) **
                                     ⌜o = ord_pure 0⌝),
-                     (fun vret => Own(GRA.embed ((b, ofs) |-> [v])) ** ⌜vret = v↑⌝)
+                     (fun vret => OwnM ((b, ofs) |-> [v]) ** ⌜vret = v↑⌝)
     ))).
 
   Definition store_spec: ftspec unit unit :=
     (mk_ksimple
        (fun '(b, ofs, v_new) => (
-            (fun varg o => Exists v_old,
-                           ⌜varg = ([Vptr b ofs ; v_new])↑⌝ ** Own(GRA.embed ((b, ofs) |-> [v_old])) ** ⌜o = ord_pure 0⌝),
-            (fun _ => Own(GRA.embed ((b, ofs) |-> [v_new])))
+            (fun varg o =>
+               (∃ v_old, ⌜varg = ([Vptr b ofs ; v_new])↑⌝ **
+                          OwnM ((b, ofs) |-> [v_old]) ** ⌜o = ord_pure 0⌝)%I),
+            (fun _ => OwnM ((b, ofs) |-> [v_new]))
     ))).
 
   Definition cmp_spec: ftspec unit unit :=
     (mk_ksimple
        (fun '(result, resource) => (
           (fun varg o =>
-          ((Exists b ofs v, ⌜varg = [Vptr b ofs; Vnullptr]↑⌝ ** ⌜resource = (GRA.embed ((b, ofs) |-> [v]))⌝ ** ⌜result = false⌝) ∨
-           (Exists b ofs v, ⌜varg = [Vnullptr; Vptr b ofs]↑⌝ ** ⌜resource = (GRA.embed ((b, ofs) |-> [v]))⌝ ** ⌜result = false⌝) ∨
-           (Exists b0 ofs0 v0 b1 ofs1 v1, ⌜varg = [Vptr b0 ofs0; Vptr b1 ofs1]↑⌝ **
-                     ⌜resource = (GRA.embed ((b0, ofs0) |-> [v0])) ⋅ (GRA.embed ((b1, ofs1) |-> [v1]))⌝ ** ⌜result = false⌝) ∨
-           (Exists b ofs v, ⌜varg = [Vptr b ofs; Vptr b  ofs]↑⌝ ** ⌜resource = (GRA.embed ((b, ofs) |-> [v]))⌝ ** ⌜result = true⌝) ∨
+          ((∃ b ofs v, ⌜varg = [Vptr b ofs; Vnullptr]↑⌝ ** ⌜resource = ((b, ofs) |-> [v])⌝ ** ⌜result = false⌝) ∨
+           (∃ b ofs v, ⌜varg = [Vnullptr; Vptr b ofs]↑⌝ ** ⌜resource = ((b, ofs) |-> [v])⌝ ** ⌜result = false⌝) ∨
+           (∃ b0 ofs0 v0 b1 ofs1 v1, ⌜varg = [Vptr b0 ofs0; Vptr b1 ofs1]↑⌝ **
+                     ⌜resource = ((b0, ofs0) |-> [v0]) ⋅ ((b1, ofs1) |-> [v1])⌝ ** ⌜result = false⌝) ∨
+           (∃ b ofs v, ⌜varg = [Vptr b ofs; Vptr b  ofs]↑⌝ ** ⌜resource = ((b, ofs) |-> [v])⌝ ** ⌜result = true⌝) ∨
            (⌜varg = [Vnullptr; Vnullptr]↑ /\ result = true⌝))
-            ** Own(resource)
+            ** OwnM(resource)
             ** ⌜o = ord_pure 0⌝
           ),
-          (fun vret => Own(resource) ** ⌜vret = (if result then Vint 1 else Vint 0)↑⌝)
+          (fun vret => OwnM(resource) ** ⌜vret = (if result then Vint 1 else Vint 0)↑⌝)
     ))).
 
 End PROOF.

@@ -15,8 +15,6 @@ Require Import HoareDef Hoare.
 Require Import OpenDef.
 Require Import IRed.
 
-Generalizable Variables E F R A B C X Y Σ.
-
 Set Implicit Arguments.
 
 
@@ -29,7 +27,7 @@ Next Obligation. induction x; ii; ss. econs; ss. Qed.
 
 Global Program Instance Forall2_Transitive `{Transitive A R}: Transitive (Forall2 R).
 Next Obligation.
-  revert_until x. induction x; ii; ss.
+  i. revert_until x. induction x; ii; ss.
   { inv H0. inv H1. ss. }
   inv H0. inv H1. econs; ss; et.
 Qed.
@@ -44,7 +42,7 @@ Global Program Instance Forall2_PreOrder `{PreOrder A R}: PreOrder (Forall2 R).
 
 Require Import SimModSem.
 Require Import Hoare.
-Require Import HTactics YPM.
+Require Import HTactics ProofMode.
 
 
 
@@ -56,7 +54,7 @@ Section LEMMA.
   Lemma hcall_clo
         (mr_src1 fr_src1 rarg_src: Σ)
         R0 R1
-        (o: ord) (fs: fspec) (x: __shelve__ fs.(X))
+        (o: ord) (fs: fspec) (x: shelve__ fs.(X))
         r rg (n: nat) mr_src0 mp_src0 fr_src0
         mrs_tgt frs_tgt k_tgt k_src
         fn tbr ord_cur varg_src varg_tgt
@@ -206,7 +204,7 @@ Section ADQ.
     unfold cfun. unfold UModSem.transl_fun_smod. unfold fun_to_tgt. cbn.
     unfold HoareFun, put, forge, checkWf, discard. ss.
     steps.
-    r in _ASSUME0. des. subst.
+    r in _ASSUME0. uipropall. des. subst.
     unfold UModSem.transl_fun_mod. unfold cfun. steps.
     guclo lordC_spec. econs.
     { instantiate (1:=(45 + 45)%ord). rewrite <- OrdArith.add_from_nat. eapply OrdArith.le_from_nat. lia. }
@@ -215,7 +213,7 @@ Section ADQ.
       i. ss. des_ifs. des; subst.
       steps.
       force_l. esplits. force_l. eexists (_, _). steps. force_l. { refl. } steps.
-      force_l. esplits. force_l. { esplits; ss; et. } steps.
+      force_l. esplits. force_l. { r. uipropall. } steps.
       force_l. esplits. force_l. { rewrite URA.unit_id. refl. } steps.
     - unfold body_to_tgt. steps.
       abstr (ktr vargs) itr. clear arg _UNWRAPN vargs ktr.
@@ -254,21 +252,21 @@ Section ADQ.
         eapply hcall_clo with (fs:=(KModSem.disclose (ksb_fspec k0))); try refl.
         { rewrite URA.unit_idl. refl. }
         { eapply OrdArith.lt_from_nat. lia. }
-        { instantiate (1:=ord_top). instantiate(1:=None). cbn. split; ss. }
+        { instantiate (1:=ord_top). instantiate(1:=None). cbn. r. uipropall. }
         { ss. }
         i. subst. ss. destruct mrs_tgt1. esplits; et. i.
-        destruct POST. steps. gbase. eapply CIH0; et.
+        r in POST. uipropall. subst. steps. gbase. eapply CIH0; et.
       + list_tac.
         des_ifs. unfold _umss in T. list_tac. subst.
         rewrite Any.upcast_downcast. steps.
         eapply hcall_clo with (fs:=fspec_trivial2); try refl.
         { rewrite URA.unit_idl. refl. }
         { eapply OrdArith.lt_from_nat. lia. }
-        { instantiate (1:=ord_top). instantiate(1:=tt). cbn. esplit; ss.
+        { instantiate (1:=ord_top). instantiate(1:=tt). cbn. r. uipropall. esplit; ss.
           esplits; et. rewrite Any.upcast_downcast; ss. }
         { ss. }
         i. subst. ss. destruct mrs_tgt1. esplits; et. i.
-        destruct POST. steps. gbase. eapply CIH0; et.
+        r in POST. uipropall. subst. steps. gbase. eapply CIH0; et.
   Unshelve.
     all: try (by apply Ord.O).
   Qed.
@@ -356,8 +354,8 @@ Section ADQ.
       fn (args: list val) T (ktr0 ktr1: ktree _ _ T)
       (SIM: forall rv, sim_body o1 (ktr0 rv) (ktr1 rv))
     :
-      _sim_body sim_body o0 (trigger EventsL.PushFrame;; trigger (Call fn args↑) >>= ktr0)
-                (trigger EventsL.PushFrame;; trigger (Call fn (@inr unit _ args)↑) >>= ktr1)
+      _sim_body sim_body o0 (trigger EventsL.PushFrame;;; trigger (Call fn args↑) >>= ktr0)
+                (trigger EventsL.PushFrame;;; trigger (Call fn (@inr unit _ args)↑) >>= ktr1)
   | sim_rE
       o0 o1
       T (re: EventsL.rE T) S (ktr0 ktr1: ktree _ _ S)
@@ -822,19 +820,20 @@ Section ADQ.
     }
     rewrite <- Mod.add_list_app.
     etrans.
-    { rewrite <- List.map_map with (f:=UMod.to_smod).
+    { erewrite <- List.map_map with (f:=UMod.to_smod).
       rewrite <- map_app.
       eapply adequacy_type2.
       - instantiate (1:=(kmds ++ List.map UMod.to_smod umds)).
-        rewrite <- List.map_id with (l:=(kmds ++ List.map UMod.to_smod umds)) at 1.
+        erewrite <- List.map_id with (l:=(kmds ++ List.map UMod.to_smod umds)) at 1.
         eapply Forall2_apply_Forall2.
         { instantiate (1:=eq). refl. }
         i. subst. exists _gstb. split; ss. r. intro ske. rewrite <- gstb_eq. refl.
-      - eauto.
       - ss. rewrite ! URA.unit_id. admit "should be ez".
       - rewrite in_app_iff. eauto.
     }
     eapply my_lemma2.
+  Unshelve.
+    all: ss.
   Qed.
 
 End ADQ.

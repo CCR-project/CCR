@@ -88,11 +88,11 @@ Section Denote.
   (** Denotation of expressions *)
   Fixpoint denote_expr (e : expr) : itree eff val :=
     match e with
-    | Var v     => u <- trigger (GetVar v) ;; assume (wf_val u) ;; Ret u
-    | Lit n     => assume (wf_val n) ;; Ret n
-    | Plus a b  => l <- denote_expr a ;; r <- denote_expr b ;; u <- (vadd l r)? ;; assume (wf_val u) ;; Ret u
-    | Minus a b => l <- denote_expr a ;; r <- denote_expr b ;; u <- (vsub l r)? ;; assume (wf_val u) ;; Ret u
-    | Mult a b  => l <- denote_expr a ;; r <- denote_expr b ;; u <- (vmul l r)? ;; assume (wf_val u) ;; Ret u
+    | Var v     => u <- trigger (GetVar v) ;; assume (wf_val u) ;;; Ret u
+    | Lit n     => assume (wf_val n) ;;; Ret n
+    | Plus a b  => l <- denote_expr a ;; r <- denote_expr b ;; u <- (vadd l r)? ;; assume (wf_val u) ;;; Ret u
+    | Minus a b => l <- denote_expr a ;; r <- denote_expr b ;; u <- (vsub l r)? ;; assume (wf_val u) ;;; Ret u
+    | Mult a b  => l <- denote_expr a ;; r <- denote_expr b ;; u <- (vmul l r)? ;; assume (wf_val u) ;;; Ret u
     end.
 
   (** Denotation of statements *)
@@ -115,13 +115,13 @@ Section Denote.
     || String.string_dec f "load"
     || String.string_dec f "store"
     || String.string_dec f "cmp".
-  
+
   Fixpoint denote_stmt (s : stmt) : itree eff val :=
     match s with
     | Assign x e =>
-      v <- denote_expr e;; trigger (SetVar x v);; Ret Vundef
+      v <- denote_expr e;; trigger (SetVar x v);;; Ret Vundef
     | Seq a b =>
-      denote_stmt a;; denote_stmt b
+      denote_stmt a;;; denote_stmt b
     | If i t e =>
       v <- denote_expr i;; `b: bool <- (is_true v)?;;
       if b then (denote_stmt t) else (denote_stmt e)
@@ -133,13 +133,13 @@ Section Denote.
       else
         eval_args <- denote_exprs args [];;
         v <- trigger (Call f (eval_args↑));; v <- unwrapN (v↓);;
-        trigger (SetVar x v);; Ret Vundef
+        trigger (SetVar x v);;; Ret Vundef
     | CallFun2 f args =>
       if (call_mem f)
       then triggerUB
       else
         eval_args <- denote_exprs args [];;
-        trigger (Call f (eval_args↑));; Ret Vundef
+        trigger (Call f (eval_args↑));;; Ret Vundef
 
     | CallPtr1 x e args =>
       p <- denote_expr e;; f <- trigger (GetName p);;
@@ -148,45 +148,45 @@ Section Denote.
       else
         eval_args <- denote_exprs args [];;
         v <- trigger (Call f (eval_args↑));; v <- unwrapN (v↓);;
-        trigger (SetVar x v);; Ret Vundef
+        trigger (SetVar x v);;; Ret Vundef
     | CallPtr2 e args =>
       p <- denote_expr e;; f <- trigger (GetName p);;
       if (call_mem f)
       then triggerUB
       else
         eval_args <- denote_exprs args [];;
-        trigger (Call f (eval_args↑));; Ret Vundef
+        trigger (Call f (eval_args↑));;; Ret Vundef
 
     | CallSys1 x f args =>
       eval_args <- denote_exprs args [];;
       v <- trigger (Syscall f eval_args top1);;
-      trigger (SetVar x v);; Ret Vundef
+      trigger (SetVar x v);;; Ret Vundef
     | CallSys2 f args =>
       eval_args <- denote_exprs args [];;
-      trigger (Syscall f eval_args top1);; Ret Vundef
+      trigger (Syscall f eval_args top1);;; Ret Vundef
 
     | Expr e => v <- denote_expr e;; Ret v
 
     | AddrOf x X =>
-      v <- trigger (GetPtr X);; trigger (SetVar x v);; Ret Vundef
+      v <- trigger (GetPtr X);; trigger (SetVar x v);;; Ret Vundef
     | Malloc x se =>
       s <- denote_expr se;;
       v <- trigger (Call "alloc" ([s]↑));; v <- unwrapN(v↓);;
-      trigger (SetVar x v);; Ret Vundef
+      trigger (SetVar x v);;; Ret Vundef
     | Free pe =>
       p <- denote_expr pe;;
-      trigger (Call "free" ([p]↑));; Ret Vundef
+      trigger (Call "free" ([p]↑));;; Ret Vundef
     | Load x pe =>
       p <- denote_expr pe;;
       v <- trigger (Call "load" ([p]↑));; v <- unwrapN(v↓);;
-      trigger (SetVar x v);; Ret Vundef
+      trigger (SetVar x v);;; Ret Vundef
     | Store pe ve =>
       p <- denote_expr pe;; v <- denote_expr ve;;
-      trigger (Call "store" ([p ; v]↑));; Ret Vundef
+      trigger (Call "store" ([p ; v]↑));;; Ret Vundef
     | Cmp x ae be =>
       a <- denote_expr ae;; b <- denote_expr be;;
       v <- trigger (Call "cmp" ([a ; b]↑));; v <- unwrapN (v↓);;
-      trigger (SetVar x v);; Ret Vundef
+      trigger (SetVar x v);;; Ret Vundef
 
     end.
 

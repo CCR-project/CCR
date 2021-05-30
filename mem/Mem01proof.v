@@ -16,9 +16,7 @@ From ExtLib Require Import
      Structures.Maps
      Data.Map.FMapAList.
 Require Import TODOYJ.
-Require Import HTactics Logic YPM.
-
-Generalizable Variables E R A B C X Y.
+Require Import HTactics ProofMode.
 
 Set Implicit Arguments.
 
@@ -126,33 +124,32 @@ Proof. ii. subst. unfold dec. destruct H; ss. Qed.
 (*   - *)
 (* Qed. *)
 
+
 Section SIMMODSEM.
 
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG Mem1.memRA Σ}.
 
-  Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
   (* Eval compute in (@RA.car (RA.excl Mem.t)). *)
   Eval compute in (@URA.car Mem1._memRA).
   Inductive sim_loc: option val -> URA.car (t:=(Excl.t _)) -> Prop :=
   | sim_loc_present v: sim_loc (Some v) (Some v)
   | sim_loc_absent: sim_loc None ε
   .
+  Hint Constructors sim_loc: core.
 
+  Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
   Let wf: W -> Prop :=
-    fun '(mrps_src0, mrps_tgt0) =>
-      exists mr_src (mem_tgt: Mem.t),
-        (<<SRC: mrps_src0 = (mr_src, tt↑)>>) /\
-        (<<TGT: mrps_tgt0 = (ε, mem_tgt↑)>>) /\
-        (<<SIM: iHyp (Exists mem_src, Own (GRA.embed ((Auth.black mem_src): URA.car (t:=Mem1.memRA))) **
-                                          (* (Forall b ofs, ⌜~(b = 0 /\ ofs = 0%Z)⌝ -* *)
-                                          (*                  match mem_tgt.(Mem.cnts) b ofs with *)
-                                          (*                  | Some v => Own (GRA.embed ((b, ofs) |-> [v])) *)
-                                          (*                  | None => ⌜True⌝ *)
-                                          (*                  end) *)
-                                          (⌜forall b ofs, sim_loc ((mem_tgt.(Mem.cnts)) b ofs) (mem_src b ofs)⌝)
-                     ) mr_src>>) /\
-        (<<WFTGT: forall b ofs v, mem_tgt.(Mem.cnts) b ofs = Some v -> <<NB: b < mem_tgt.(Mem.nb)>> >>)
+    @mk_wf
+      _
+      Mem.t
+      (fun mem_tgt _ mp_tgt => (∃ mem_src, (OwnM ((Auth.black mem_src): URA.car (t:=Mem1.memRA)))
+                                             **
+                                             (⌜forall b ofs, sim_loc ((mem_tgt.(Mem.cnts)) b ofs) (mem_src b ofs)⌝)
+                                             **
+                                             (⌜mp_tgt = mem_tgt↑ /\ forall b ofs v, mem_tgt.(Mem.cnts) b ofs = Some v -> <<NB: b < mem_tgt.(Mem.nb)>>⌝)
+                               )%I)
+      top4
   .
 
   Hint Resolve sim_itree_mon: paco.
