@@ -123,13 +123,13 @@ Section Denote.
 
   Fixpoint denote_stmt (s : stmt) : itree eff val :=
     match s with
-    | Skip => Ret Vundef
+    | Skip => tau;; Ret Vundef
     | Assign x e =>
-      v <- denote_expr e;; trigger (SetVar x v);;; Ret Vundef
+      v <- denote_expr e;; trigger (SetVar x v);; tau;; Ret Vundef
     | Seq a b =>
-      denote_stmt a;;; denote_stmt b
+      tau;; denote_stmt a;; denote_stmt b
     | If i t e =>
-      v <- denote_expr i;; `b: bool <- (is_true v)?;;
+      v <- denote_expr i;; `b: bool <- (is_true v)?;; tau;;
       if b then (denote_stmt t) else (denote_stmt e)
 
     | CallFun x f args =>
@@ -138,7 +138,7 @@ Section Denote.
       else
         eval_args <- denote_exprs args;;
         v <- trigger (Call f (eval_args↑));; v <- unwrapN (v↓);;
-        trigger (SetVar x v);; Ret Vundef
+        trigger (SetVar x v);; tau;; Ret Vundef
 
     | CallPtr x e args =>
       p <- denote_expr e;; f <- trigger (GetName p);;
@@ -147,33 +147,33 @@ Section Denote.
       else
         eval_args <- denote_exprs args;;
         v <- trigger (Call f (eval_args↑));; v <- unwrapN (v↓);;
-        trigger (SetVar x v);; Ret Vundef
+        trigger (SetVar x v);; tau;; Ret Vundef
 
     | CallSys x f args =>
       eval_args <- denote_exprs args;;
       v <- trigger (Syscall f eval_args top1);;
-      trigger (SetVar x v);; Ret Vundef
+      trigger (SetVar x v);; tau;; Ret Vundef
 
     | AddrOf x X =>
-      v <- trigger (GetPtr X);; trigger (SetVar x v);;; Ret Vundef
+      v <- trigger (GetPtr X);; trigger (SetVar x v);; tau;; Ret Vundef
     | Malloc x se =>
       s <- denote_expr se;;
       v <- trigger (Call "alloc" ([s]↑));; v <- unwrapN(v↓);;
-      trigger (SetVar x v);;; Ret Vundef
+      trigger (SetVar x v);; tau;; Ret Vundef
     | Free pe =>
       p <- denote_expr pe;;
-      trigger (Call "free" ([p]↑));;; Ret Vundef
+      trigger (Call "free" ([p]↑));; tau;; Ret Vundef
     | Load x pe =>
       p <- denote_expr pe;;
       v <- trigger (Call "load" ([p]↑));; v <- unwrapN(v↓);;
-      trigger (SetVar x v);;; Ret Vundef
+      trigger (SetVar x v);; tau;; Ret Vundef
     | Store pe ve =>
       p <- denote_expr pe;; v <- denote_expr ve;;
-      trigger (Call "store" ([p ; v]↑));;; Ret Vundef
+      trigger (Call "store" ([p ; v]↑));; tau;; Ret Vundef
     | Cmp x ae be =>
       a <- denote_expr ae;; b <- denote_expr be;;
       v <- trigger (Call "cmp" ([a ; b]↑));; v <- unwrapN (v↓);;
-      trigger (SetVar x v);;; Ret Vundef
+      trigger (SetVar x v);; tau;; Ret Vundef
 
     end.
 
@@ -240,7 +240,7 @@ Section Interp.
   Definition eval_imp (ge: SkEnv.t) (f: function) (args: list val) : itree Es val :=
     match (init_args f.(fn_params) args []) with
     | Some iargs =>
-      '(_, retv) <- (interp_imp ge (denote_stmt f.(fn_body) ;; retv <- (denote_expr (Var "return")) ;; Ret retv) ((init_lenv f.(fn_vars))++iargs));; Ret retv
+      '(_, retv) <- (interp_imp ge (tau;; denote_stmt f.(fn_body) ;; retv <- (denote_expr (Var "return")) ;; Ret retv) ((init_lenv f.(fn_vars))++iargs));; Ret retv
     | None => triggerUB
     end
   .

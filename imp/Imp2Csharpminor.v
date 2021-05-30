@@ -37,8 +37,7 @@ Section Compile.
   (* Definition Tlong0 := (Tlong Signed noattr). *)
   (* Definition Tptr0 tgt_ty := (Tpointer tgt_ty noattr). *)
 
-  Definition ident_key {T} id l : option T :=
-    SetoidList.findA (Pos.eqb id) l.
+  Definition ident_key {T} (id: ident) l : option T := alist_find id l.
 
   (* Fixpoint args_to_typelist (args: list expr) : typelist := *)
   (*   match args with *)
@@ -510,6 +509,59 @@ Hint Resolve match_beh_mon: paco.
 
 Section Sim.
 
+  Fixpoint get_cont_stmts (cc: cont) : list Csharpminor.stmt :=
+    match cc with
+    | Kseq s k =>
+      match s with
+      | Sreturn _ => []
+      | _ => s :: (get_cont_stmts k)
+      end
+    | _ => []
+    end
+  .
+
+  Fixpoint wf_ccont (k: cont) : Prop :=
+    match k with
+    | Kseq s k2 =>
+      match s with
+      | Sreturn _ =>
+        match k2 with
+        | Kstop => True
+        | Kcall _ _ _ _ k3 => wf_ccont k3
+        | _ => False
+        end
+      | _ => wf_ccont k2
+      end
+    | _ => False
+    end
+  .
+
+  Fixpoint get_cont_stack k : option cont :=
+    match k with
+    | Kseq s k2 =>
+      match s with
+      | Sreturn _ =>
+        match k2 with
+        | Kstop | Kcall _ _ _ _ _ => Some k
+        | _ => None
+        end
+      | _ => get_cont_stack k2
+      end
+    | _ => None
+    end
+  .
+
+  Lemma wf_cont_has_stack
+        k
+        (WFCCONT: wf_ccont k)
+    :
+      exists ks, get_cont_stack k = Some ks.
+  Proof.
+    revert_until k.
+    induction k; i; ss; clarify.
+    destruct s; ss; clarify; eauto.
+    destruct k; ss; clarify; eauto.
+  Qed.
 
   Context `{Σ: GRA.t}.
 
@@ -565,7 +617,7 @@ Section Sim.
       let '(r, p, (le0, _)) := x in
       '(r2, p2, rv) <- EventsL.interp_Es (ModSemL.prog ms) (transl_all mn ('(_, v) <- interp_imp ge (denote_expr (Var "return"%string)) le0;; Ret (v↑))) (r, p);;
       '(r3, p3, rv) <- EventsL.interp_Es (ModSemL.prog ms) (trigger EventsL.PopFrame;; (tau;; Ret rv)) (r2, p2);;
-      pop <- EventsL.interp_Es (ModSemL.prog ms) (transl_all retmn (tau;; tau;; v0 <- unwrapN (rv↓);; (tau;; tau;; Ret (alist_add retx v0  retle, Vundef)))) (r3, p3);;
+      pop <- EventsL.interp_Es (ModSemL.prog ms) (transl_all retmn (tau;; tau;; v0 <- unwrapN (rv↓);; (tau;; tau;; tau;; Ret (alist_add retx v0  retle, Vundef)))) (r3, p3);;
       Ret pop.
 
   Definition itree_of_imp_pop_bottom :=
@@ -646,14 +698,9 @@ Section Sim.
 
   Variable match_mem : Mem.t -> Memory.Mem.mem -> Prop.
 
-  Fixpoint get_cont_stmts (cc: cont) : list Csharpminor.stmt :=
-    match cc with
-    | Kseq s k => s :: (get_cont_stmts k)
-    | Kblock k => get_cont_stmts k
-    | _ => []
-    end
-  .
 
+  Definition ret_call_cont k :=
+    (Kseq (Sreturn (Some (Evar (s2p "return")))) (call_cont k)).
   (* global env is fixed when src program is fixed *)
   Variable gm : gmap.
   Variable ge : SkEnv.t.
@@ -675,22 +722,24 @@ Section Sim.
       match_code (fun x => (itr x >>= ktr)) (chead :: ctail)
   .
 
-  Inductive match_stack : imp_stack -> Csharpminor.cont -> Prop :=
+
+  Inductive match_stack : imp_stack -> option Csharpminor.cont -> Prop :=
   | match_stack_bottom
     :
-      match_stack (fun x => itree_of_imp_pop_bottom ge ms mn x) Kstop
+      match_stack (fun x => itree_of_imp_pop_bottom ge ms mn x) (Some (ret_call_cont Kstop))
 
   | match_stack_cret
       tf le tle next stack tcont id tid tpop
       (MLE: match_le le tle)
       (MID: s2p id = tid)
 
+      (WFCONT: wf_ccont tcont)
       (MCONT: match_code next (get_cont_stmts tcont))
-      (MSTACK: match_stack stack (call_cont tcont))
+      (MSTACK: match_stack stack (get_cont_stack tcont))
 
-      (TPOP: tpop = Kcall (Some tid) tf empty_env tle tcont)
+      (TPOP: tpop = ret_call_cont (Kcall (Some tid) tf empty_env tle tcont))
     :
-      match_stack (fun x => (y <- (itree_of_imp_pop ge ms mn mn id le x);; next y >>= stack)) (tpop)
+      match_stack (fun x => (y <- (itree_of_imp_pop ge ms mn mn id le x);; next y >>= stack)) (Some tpop)
   .
 
   Variant match_states : imp_state -> Csharpminor.state -> Prop :=
@@ -700,8 +749,9 @@ Section Sim.
       (ML: match_le le tle)
       (MM: match_mem m tm)
       (* (MG: match_ge ge tge) *)
+      (WFCONT: wf_ccont tcont)
       (MCONT: match_code next (get_cont_stmts tcont))
-      (MSTACK: match_stack stack (call_cont tcont))
+      (MSTACK: match_stack stack (get_cont_stack tcont))
       (ITR: itr = itree_of_cont_stmt code ge le ms mn rp)
     :
       match_states (x <- itr;; next x >>= stack) (State tf tcode tcont empty_env tle tm)

@@ -4,7 +4,7 @@ Require Import Universe.
 Require Import STS.
 Require Import Behavior.
 Require Import Imp.
-Require Import Imp2Clight.
+Require Import Imp2Csharpminor.
 
 Set Implicit Arguments.
 
