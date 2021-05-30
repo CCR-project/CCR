@@ -14,7 +14,7 @@ Set Implicit Arguments.
 From iris.bi Require Import derived_connectives updates.
 From iris.prelude Require Import options.
 From iris.proofmode Require Export tactics.
-Require Export UnableSsreflect.
+Require Export DisableSsreflect.
 Arguments Z.of_nat: simpl nomatch.
 
 Section IPM.
