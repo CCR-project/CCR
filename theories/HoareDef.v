@@ -329,10 +329,10 @@ Section CANCEL.
   Definition fun_to_mid {AA AR} (body: AA -> itree (hCallE +' pE +' eventE) AR): (Any_mid -> itree Es Any_src) :=
     fun varg_mid =>
       '(ord_cur, varg_src) <- varg_mid↓ǃ;;
-      vret_src <- match ord_cur with
-                  | ord_pure n => (interp_hCallE_mid ord_cur APC);;; trigger (Choose _)
-                  | _ => (body_to_mid ord_cur body) varg_src
-                  end;;
+      vret_src <- interp_hCallE_mid ord_cur (match ord_cur with
+                                             | ord_pure n => APC;;; trigger (Choose _)
+                                             | _ => body varg_src
+                                             end);;
       Ret vret_src↑
   .
 
