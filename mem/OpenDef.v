@@ -89,15 +89,17 @@ Ltac resub :=
 (******************************************* UNKNOWN ***********************************************)
 (******************************************* UNKNOWN ***********************************************)
 (******************************************* UNKNOWN ***********************************************)
+Section AUX.
+  Variant uCallE: Type -> Type :=
+  | uCall (fn: gname) (varg: list val): uCallE Any.t
+  .
+End AUX.
 
 Module UModSem.
 Section UMODSEM.
 
   Context `{Σ: GRA.t}.
 
-  Variant uCallE: Type -> Type :=
-  | uCall (fn: gname) (varg: list val): uCallE Any.t
-  .
   (**** TODO: maybe "val" is more appropriate return type??? Check this later ****)
   (**** TODO: maybe "val" is more appropriate return type??? Check this later ****)
   (**** TODO: maybe "val" is more appropriate return type??? Check this later ****)
@@ -641,14 +643,25 @@ End UMod.
   (* |} *)
   (* . *)
 
-Module KModSem.
-Section KMODSEM.
-
+Section AUX.
   Context `{Σ: GRA.t}.
 
   Variant kCallE: Type -> Type :=
   | kCall (fn: gname) (varg: unit + list val): kCallE Any.t
   .
+
+  Record kspecbody := mk_kspecbody {
+    ksb_fspec:> ftspec unit unit;                               (*** K -> K ***)
+    ksb_body: list val -> itree (kCallE +' pE +' eventE) val;   (*** U -> K ***)
+  }
+  .
+End AUX.
+
+Module KModSem.
+Section KMODSEM.
+
+  Context `{Σ: GRA.t}.
+
   (*** K -> K: unit; tbr == true ***)
   (*** K -> U: list val; tbr == false ***)
   (**** TODO: maybe "val" is more appropriate return type??? Check this later ****)
@@ -658,12 +671,6 @@ Section KMODSEM.
   (**** TODO: maybe "val" is more appropriate return type??? Check this later ****)
   (**** TODO: maybe "val" is more appropriate return type??? Check this later ****)
   (**** TODO: maybe "val" is more appropriate return type??? Check this later ****)
-
-  Record kspecbody := mk_kspecbody {
-    ksb_fspec:> ftspec unit val;                                (*** K -> K ***)
-    ksb_body: list val -> itree (kCallE +' pE +' eventE) val;   (*** U -> K ***)
-  }
-  .
 
   Record t: Type := mk {
     (* fnsems: list (gname * (list val -> itree (oCallE +' pE +' eventE) val)); *)
@@ -678,7 +685,7 @@ Section KMODSEM.
   (************************* TGT ***************************)
   (************************* TGT ***************************)
 
-  Definition disclose (fs: ftspec unit val): fspec :=
+  Definition disclose (fs: ftspec unit unit): fspec :=
     @HoareDef.mk _ (option fs.(X)) (unit + list val)%type val
                  (fun ox argh argl o =>
                     match ox, argh with
@@ -688,7 +695,7 @@ Section KMODSEM.
                     end)
                  (fun ox reth retl =>
                     match ox with
-                    | Some x => fs.(postcond) x reth retl
+                    | Some x => fs.(postcond) x tt retl
                     | None => ⌜reth↑ = retl⌝
                     end)
   .

@@ -251,7 +251,7 @@ Section ADQ.
         des_ifs. unfold _kmss in T. list_tac. subst. unfold kmds in T0. list_tac. subst.
         ss. list_tac. des_ifs. ss.
         rewrite Any.upcast_downcast. steps.
-        eapply hcall_clo with (fs:=(KModSem.disclose (KModSem.ksb_fspec k0))); try refl.
+        eapply hcall_clo with (fs:=(KModSem.disclose (ksb_fspec k0))); try refl.
         { rewrite URA.unit_idl. refl. }
         { eapply OrdArith.lt_from_nat. lia. }
         { instantiate (1:=ord_top). instantiate(1:=None). cbn. split; ss. }
@@ -518,10 +518,10 @@ Section ADQ.
   Qed.
 
   Lemma sim_known
-        mn (f0: KModSem.kspecbody)
+        mn (f0: kspecbody)
     :
-      sim_fun (transl_all mn ∘ KModSem.fun_to_src (KModSem.ksb_body f0))
-              (transl_all mn ∘ fun_to_src (KModSem.transl_fun_src f0.(KModSem.ksb_body)))
+      sim_fun (transl_all mn ∘ KModSem.fun_to_src (ksb_body f0))
+              (transl_all mn ∘ fun_to_src (KModSem.transl_fun_src f0.(ksb_body)))
   .
   Proof.
     ii.
