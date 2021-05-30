@@ -273,7 +273,7 @@ Proof Outline
   Definition __hide_mark A (a : A) : A := a.
   Lemma intro_hide_mark: forall A (a: A), a = __hide_mark a. refl. Qed.
 
-  Ltac hide_k := 
+  Ltac hide_k :=
     match goal with
     | [ |- (gpaco6 _ _ _ _ _ _ _ _ (_, ?isrc >>= ?ksrc) (_, ?itgt >>= ?ktgt)) ] =>
       erewrite intro_hide_mark with (a:=ksrc);
@@ -289,13 +289,6 @@ Proof Outline
     rewrite <- ! intro_hide_mark
   .
 
-  Ltac mRename A B :=
-    match goal with
-    | [H: current_iPropL _ ?iprops |- _ ] =>
-      match iprops with
-      | context[(A, ?x)] => mAssert x with A as B; [iApply A|]
-      end
-    end.
   Ltac mRefresh := on_current ltac:(fun H => move H at bottom).
 
   Variable sk: Sk.t.
@@ -326,7 +319,7 @@ Proof Outline
         set (blk := mem_tgt0.(Mem.nb) + x). 
 
         mRefresh.
-        mRename "A" "K".
+        mRename "A" into "K".
 
         mAssert _ with "K" as "K".
         { iApply (OwnM_Upd with "K").
@@ -344,7 +337,7 @@ Proof Outline
         }
         mUpd "K". mDesOwn "K".
 
-        force_l. eexists. hret _; ss. iModIntro. iSplitR "A"; cycle 1.
+        force_l. eexists. steps. hret _; ss. iModIntro. iSplitR "A"; cycle 1.
         { iExists _. iSplitR; ss. }
         iExists _, _, _. iSplitR; ss. iPureIntro. esplits; et.
         - i. destruct (mem_tgt0.(Mem.cnts) blk ofs) eqn:T.
@@ -395,7 +388,7 @@ Proof Outline
         steps. unhide_k. steps. astart 0. astop.
         rename a2 into memk_src0. rename a1 into mem_tgt0. rename a0 into memu_src0.
         rename a3 into v. rename WF into SIMWF.
-        mRename "A" "K". mCombine "K" "A1". mOwnWf "K".
+        mRename "A" into "K". mCombine "K" "A1". mOwnWf "K".
         assert(HIT: memk_src0 b ofs = (Some v)).
         { clear - WF.
           dup WF. eapply Auth.auth_included in WF. des. eapply pw_extends in WF. eapply pw_extends in WF.
@@ -439,7 +432,7 @@ Proof Outline
             bsimpl. des_ifs; bsimpl; des; des_sumbool; subst; Ztac; try lia; try rewrite URA.unit_idl; try refl.
         }
         mUpd "K".
-        steps. force_l. eexists. hret _; ss. iModIntro. iSplitL; cycle 1.
+        steps. force_l. eexists. steps. hret _; ss. iModIntro. iSplitL; cycle 1.
         { iPureIntro. ss. }
         iExists _, _, _. iSplitR "K"; et. iPureIntro. esplits; ss; et.
         - { i. unfold Mem.free in _UNWRAPU. des_ifs. ss.
@@ -491,7 +484,7 @@ Proof Outline
         des_ifs; mDesAll; ss. des; subst. clarify. rewrite Any.upcast_downcast in *. clarify.
         steps. unhide_k. steps. astart 0. astop.
         rename a2 into memk_src0. rename a1 into mem_tgt0. rename a0 into memu_src0.
-        mRename "A" "K". rename WF into SIMWF.
+        mRename "A" into "K". rename WF into SIMWF.
         mCombine "K" "A1". mOwnWf "K".
         assert(T: memk_src0 b ofs = (Some v)).
         { clear - WF.
@@ -502,7 +495,7 @@ Proof Outline
         }
         exploit SIM; et. intro U. rewrite T in U. inv U; ss. unfold Mem.load.
         mDesOwn "K".
-        force_r; ss. clarify. steps. force_l. esplits.
+        force_r; ss. clarify. steps. force_l. esplits. steps.
         hret _; ss. iModIntro. iSplitR "A"; cycle 1.
         { iSplitL; ss. }
         iExists _, _, _. iSplitR "K"; et.
@@ -532,7 +525,7 @@ Proof Outline
         rename a2 into memk_src0. rename a1 into mem_tgt0. rename a0 into memu_src0.
         rename a3 into v0. rename WF into SIMWF.
         rewrite Any.upcast_downcast in *. clarify. steps.
-        mRename "A" "K". mCombine "K" "A1". mOwnWf "K".
+        mRename "A" into "K". mCombine "K" "A1". mOwnWf "K".
         assert(T: memk_src0 b ofs = (Some v0)).
         { clear - WF.
           dup WF.
@@ -563,7 +556,7 @@ Proof Outline
         mUpd "K". mDesOwn "K".
 
         mEval ltac:(fold (points_to (b,ofs) [v1])) in "A".
-        force_l. eexists.
+        force_l. eexists. steps.
         hret _; ss. iModIntro. iSplitR "A"; ss.
         iExists _, _, _. iSplitR "K"; et. iPureIntro. esplits; ss; et.
         - ii. cbn. des_ifs.
@@ -620,17 +613,17 @@ Proof Outline
             eapply Excl.extends in WF; ss. do 2 eapply lookup_wf. eapply Auth.black_wf. eapply URA.wf_mon; et.
         }
         steps.
-        mRename "A" "K". mCombine "K" "A1". mOwnWf "K". Fail mDesOwn "K". (*** TODO: BUG!! FIXME ***)
+        mRename "A" into "K". mCombine "K" "A1". mOwnWf "K". Fail mDesOwn "K". (*** TODO: BUG!! FIXME ***)
 
         mDesOr "PRE".
         { mDesAll; subst. rewrite Any.upcast_downcast in *. clarify. steps.
           erewrite VALIDPTR; et. ss. steps.
-          force_l. eexists. hret _; ss. iModIntro. iDestruct "K" as "[K A]". iSplitR "A"; ss; et.
+          force_l. eexists. steps. hret _; ss. iModIntro. iDestruct "K" as "[K A]". iSplitR "A"; ss; et.
         }
         mDesOr "PRE".
         { mDesAll; subst. rewrite Any.upcast_downcast in *. clarify. steps.
           erewrite VALIDPTR; et. ss. steps.
-          force_l. eexists. hret _; ss. iModIntro. iDestruct "K" as "[K A]". iSplitR "A"; ss; et.
+          force_l. eexists. steps. hret _; ss. iModIntro. iDestruct "K" as "[K A]". iSplitR "A"; ss; et.
         }
         mDesOr "PRE".
         { mDesAll; subst. rewrite Any.upcast_downcast in *. clarify. steps.
@@ -645,15 +638,15 @@ Proof Outline
             exploit _points_to_disj; et. intro NEQ. des; try (by rewrite dec_false; ss).
             erewrite dec_false with (x0:=a1); ss. rewrite andb_false_r; ss.
           }
-          steps. force_l. eexists. hret _; ss. iModIntro. iDestruct "K" as "[K A]". iSplitR "A"; ss; et.
+          steps. force_l. eexists. steps. hret _; ss. iModIntro. iDestruct "K" as "[K A]". iSplitR "A"; ss; et.
         }
         mDesOr "PRE".
         { mDesAll; subst. rewrite Any.upcast_downcast in *. clarify. steps.
           erewrite VALIDPTR; et. ss. steps. rewrite ! dec_true; ss. steps.
-          force_l. eexists. hret _; ss. iModIntro. iDestruct "K" as "[K A]". iSplitR "A"; ss; et.
+          force_l. eexists. steps. hret _; ss. iModIntro. iDestruct "K" as "[K A]". iSplitR "A"; ss; et.
         }
         { mDesAll; subst. des; subst. rewrite Any.upcast_downcast in *. clarify. steps.
-          force_l. eexists. hret _; ss. iModIntro. iDestruct "K" as "[K A]". iSplitR "A"; ss; et.
+          force_l. eexists. steps. hret _; ss. iModIntro. iDestruct "K" as "[K A]". iSplitR "A"; ss; et.
         }
       }
       { mDesAll; ss. des; subst.
