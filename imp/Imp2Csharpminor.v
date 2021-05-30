@@ -511,11 +511,7 @@ Section Sim.
 
   Fixpoint get_cont_stmts (cc: cont) : list Csharpminor.stmt :=
     match cc with
-    | Kseq s k =>
-      match s with
-      | Sreturn _ => []
-      | _ => s :: (get_cont_stmts k)
-      end
+    | Kseq s k => s :: (get_cont_stmts k)
     | _ => []
     end
   .
@@ -527,7 +523,7 @@ Section Sim.
       | Sreturn _ =>
         match k2 with
         | Kstop => True
-        | Kcall _ _ _ _ k3 => wf_ccont k3
+        | Kcall _ _ env _ k3 => (env = empty_env /\ wf_ccont k3)
         | _ => False
         end
       | _ => wf_ccont k2
@@ -710,10 +706,10 @@ Section Sim.
   Variable mn : string.
 
   Inductive match_code : imp_cont -> (list Csharpminor.stmt) -> Prop :=
-  | match_code_nil
+  | match_code_return
     :
-      match_code idK []
-  | match_code_cons
+      match_code idK [Sreturn (Some (Evar (s2p "return")))]
+  | match_code_cont
       code itr ktr chead ctail
       (CST: compile_stmt gm code = Some chead)
       (ITR: itr = fun '(r, p, (le, _)) => itree_of_cont_stmt code ge le ms mn (r, p))

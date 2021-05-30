@@ -324,19 +324,87 @@ Section PROOF.
       (* revert_until ML. *)
       destruct tcont; ss; clarify.
       inv MCONT; clarify.
-      { destruct s; ss; clarify.
-        destruct tcont; clarify.
-        - inv MSTACK.
-          + 
+      { destruct rp. destruct tcont; inv MSTACK; ss; clarify.
+        - sim_red. pfold. econs 6; clarify.
+          { admit "ez: strict_determinate_at". }
+          eexists. eexists.
+          { eapply step_skip_seq. }
+          eexists. exists (step_tau _). eexists. unfold idK. sim_red. left.
 
+          rewrite interp_imp_expr_Var. sim_red.
+          unfold unwrapU. des_ifs.
+          2:{ sim_triggerUB. }
+          sim_red. pfold. econs 6; clarify.
+          { admit "ez: strict_determinate_at". }
+          eexists. eexists.
+          { eapply step_return_1; ss; eauto.
+            econs. inv ML; ss; clarify. hexploit ML0; i; eauto.
+            des. ss. clarify. eapply H0. }
+          eexists. exists (step_tau _). eexists. left.
+          do 1 (pfold; sim_tau; left).
+          sim_red. unfold assume. grind.
+          pfold. econs 5; ss; auto. i. eapply angelic_step in STEP; des; clarify.
+          eexists; split; auto. left.
+          do 6 (pfold; sim_tau; left). sim_red.
+          destruct r0. ss. destruct l.
+          { admit "ez: wf_rstate". }
+          do 3 (pfold; sim_tau; left). sim_red.
+          pfold. econs 1; eauto.
+          { admit "ez: main's wf_retval". }
+          { ss. unfold state_sort. ss. rewrite Any.upcast_downcast.
+            admit "ez: main's wf_retval". }
+          { ss. admit "ez: tgt main's wf_retval". }
 
-        sim_red. pfold. econs 6; clarify.
-        { admit "ez: strict_determinate_at". }
-        eexists. eexists.
-        { eapply step_skip_seq. }
+        - destruct WFCONT as [ENV WFCONT]; clarify.
+          unfold ret_call_cont in TPOP. clarify.
+          sim_red. pfold. econs 6; clarify.
+          { admit "ez: strict_determinate_at". }
+          eexists. eexists.
+          { eapply step_skip_seq. }
+          eexists. exists (step_tau _). eexists. unfold idK. sim_red. left.
 
+          rewrite interp_imp_expr_Var. sim_red.
+          unfold unwrapU. des_ifs.
+          2:{ sim_triggerUB. }
+          sim_red. pfold. econs 6; clarify.
+          { admit "ez: strict_determinate_at". }
+          eexists. eexists.
+          { eapply step_return_1; ss; eauto.
+            econs. inv ML; ss; clarify. hexploit ML0; i; eauto.
+            des. ss. clarify. eapply H0. }
+          eexists. exists (step_tau _). eexists. left.
+          do 1 (pfold; sim_tau; left).
+          sim_red. unfold assume. grind.
+          pfold. econs 5; ss; auto. i. eapply angelic_step in STEP; des; clarify.
+          eexists; split; auto. left.
+          do 6 (pfold; sim_tau; left). sim_red.
+          destruct r0. ss. destruct l.
+          { admit "ez: wf_rstate". }
+          do 5 (pfold; sim_tau; left).
+          rewrite Any.upcast_downcast. ss.
+          do 2 (pfold; sim_tau; left).
+          pfold. econs 4; eauto.
+          { admit "ez: strict_determinate_at". }
+          eexists. eexists.
+          { eapply step_return. }
+          eexists; split; auto. right. eapply CIH.
+          hexploit match_states_intro.
+          { instantiate (2:=Skip). ss. }
+          3:{ eapply WFCONT0. }
+          3:{ eapply MCONT. }
+          3:{ eapply MSTACK0. }
+          3:{ clarify. }
+          3:{ i.
+              match goal with
+              | [ H: match_states _ _ _ _ _ ?i0 _ |- match_states _ _ _ _ _ ?i1 _ ] =>
+                replace i1 with i0; eauto
+              end.
+              unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip.
+              grind. }
+          2:{ eauto. }
+          econs. i. exists (map_val_opt sv); split; auto.
+          admit "ez: local env match, use MLE and alist_find". }
 
-        }
       sim_red. pfold. econs 6; clarify.
       { admit "ez: strict_determinate_at". }
       eexists. eexists.
@@ -558,18 +626,21 @@ Section PROOF.
           econs 2; ss; eauto. }
       3: eauto.
       1:{ eapply Heq5. }
-      4:{ instantiate (9:= EventsL.interp_Es (prog ms) (transl_all mn (interp_imp ge (denote_stmt (Imp.fn_body f0)) (init_lenv (Imp.fn_vars f0) ++ l1))) (c, ε :: c0 :: l0, p)). i.
+      2:{ ss. econs 1. }
+      2:{ clarify. }
+      2:{ i.
           match goal with
-          | [ H1: match_states _ _ _ _ _ ?i0 _ |- match_states _ _ _ _ _ ?i1 _] =>
+          | [ H1: match_states _ _ _ _ _ ?i0 _ |- match_states _ _ _ _ _ ?i1 _ ] =>
             replace i1 with i0; eauto
           end.
-          unfold idK. grind. }
-      { instantiate (2:=f0.(Imp.fn_body)). admit "ez: fn_body is THE stmt we get by compiling". }
-      { instantiate (2:=(init_lenv (Imp.fn_vars f0) ++ l1)). admit "ez?: the initial lenv of function". }
-      { unfold itree_of_cont_stmt, itree_of_imp_cont. ss. }
+          unfold itree_of_cont_stmt, itree_of_imp_cont. unfold idK. grind. }
+      { admit "ez: should follow from above, the initial lenv". }
+
     - ss. destruct p eqn:PVAR; clarify. 
       admit "ez: CallPtr, similar to CallFun.".
+
     - admit "mid: CallSys".
+
     - admit "hard: AddrOf".
     - admit "hard: Malloc".
     - admit "hard: free".
