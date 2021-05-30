@@ -693,8 +693,8 @@ Section CANCEL.
     end
   .
 
-  Let wf: W -> W -> Prop := fun '(_, pst_src0) '(_, pst_tgt0) => pst_src0 = pst_tgt0.
-  Let wf': forall {X}, (W * X)%type -> (W * X)%type -> Prop := (fun _ '(st_src0, rv_src) '(st_tgt0, rv_tgt) => wf st_src0 st_tgt0 /\ rv_src = rv_tgt).
+  (* Let wf: W -> W -> Prop := eq. *)
+  (* Let wf': forall {X}, (W * X)%type -> (W * X)%type -> Prop := eq. *)
 
   Ltac resub :=
     repeat multimatch goal with
@@ -711,9 +711,9 @@ Section CANCEL.
     forall
       o0
       A (body: itree _ A) st_src0 st_tgt0 mn
-      (SIM: wf st_src0 st_tgt0)
+      (SIM: st_tgt0 = st_src0)
     ,
-      simg wf'
+      simg eq
            (formula o0 + 50)%ord
            (EventsL.interp_Es p_src (transl_all mn (interp_hCallE_src body)) st_src0)
            (EventsL.interp_Es p_mid (transl_all mn (interp_hCallE_mid stb o0 body)) st_tgt0)
@@ -728,7 +728,7 @@ Section CANCEL.
     destruct e; cycle 1.
     { rewrite <- bind_trigger. resub. steps.
       destruct s; ss.
-      { destruct st_src0 as [rst_src0 pst_src0]; ss. destruct st_tgt0 as [rst_tgt0 pst_tgt0]; ss.
+      { destruct st_src0 as [rst_src0 pst_src0]; ss.
         destruct p; ss.
         - steps. gbase. eapply CIH; ss; et.
         - steps. gbase. eapply CIH; ss; et.
@@ -741,16 +741,15 @@ Section CANCEL.
     }
     dependent destruction h.
     rewrite <- bind_trigger. resub.
-    destruct st_src0 as [rst_src0 pst_src0]; ss. destruct st_tgt0 as [rst_tgt0 pst_tgt0]; ss.
+    destruct st_src0 as [rst_src0 pst_src0]; ss.
     ired_both. destruct tbr.
-    (*
-PURE *)
+    (* PURE *)
     { seal_left. steps. destruct (alist_find fn stb) eqn:EQ.
       2: { steps. }
       steps. destruct (Any.downcast varg_src).
       2: { steps. }
       Local Opaque ord_lt. steps.
-      destruct rst_tgt0 as [mrs_tgt0 [|frs_tgt_hd frs_tgt_tl]]; ss.
+      destruct rst_src0 as [mrs_tgt0 [|frs_tgt_hd frs_tgt_tl]]; ss.
       { steps. }
       unseal_left. steps.
       unfold unwrapU. des_ifs; cycle 1.
@@ -779,269 +778,62 @@ PURE *)
     (* IMPURE *)
     { seal_left. steps. destruct (alist_find fn stb) eqn:EQ.
       2: { steps. }
-      steps. destruct (Any.downcast varg_src).
+      steps. destruct (Any.downcast varg_src) eqn:ARG.
       2: { steps. }
       Local Opaque ord_lt. steps.
-      destruct rst_tgt0 as [mrs_tgt0 [|frs_tgt_hd frs_tgt_tl]]; ss.
+      destruct rst_src0 as [mrs_tgt0 [|frs_tgt_hd frs_tgt_tl]]; ss.
       { steps. }
       unseal_left. steps.
-      unfold unwrapU. des_ifs; cycle 1.
-      { exfalso. hexploit (stb_find_iff fn). rewrite EQ. rewrite Heq. clear. intuition. }
-      steps.
+      destruct (find (fun fnsem => dec fn (fst fnsem)) (fnsems ms_src)) eqn:FINDSRC.
+      2:{ steps. }
 
-      unfold ms_mid, mds_mid, SMod.to_mid in Heq. rewrite SMod.transl_fnsems in Heq.
-      unfold SMod.load_fnsems in Heq. apply find_some in Heq. des; ss. des_sumbool; subst.
-      rewrite in_flat_map in Heq. des; ss. rewrite in_flat_map in Heq0. des; ss. des_ifs. ss; des; ss; clarify.
-      rename Heq0 into INF. rename Heq into IN.
-      rename x0 into md0. fold sk in INF. fold sk in INF.
-      unfold fun_to_mid. ss.
-      assert (f = f0).
-      { admit "uniqueness". }
-      subst. rewrite Any.upcast_downcast. steps.
-      guclo ordC_spec. econs.
-      { eapply OrdArith.add_base_l. }
-
-      rewrite idK_spec2 at 1.
-      guclo bindC_spec. econs.
-      { gfinal. right. eapply paco6_mon. { eapply adequacy_type_aux_APC. } ii; ss. }
-      i. steps. steps_strong. exists (Any.upcast x0). steps.
-      gbase. eapply CIH. ss.
-    }
-
-
-    }
-      { eapply OrdArith.add_base_l. instantiate (2:=formula o0). instantiate (1:=(100+C.myF x)%ord).
-        eapply OrdArith.add_base_l.
-
-
-        refl.
-
-
-      { instantiate (1:=_ + _). admit "". }
-      rewrite idK_spec2 at 1.
-      guclo bindC_spec. econs.
-      { gfinal. right. eapply paco6_mon. { eapply adequacy_type_aux_APC. } ii; ss. }
-      i. steps. steps_strong. exists (Any.upcast x0). steps.
-      gbase. eapply CIH. ss.
-    }
-
-      econs.
-      specialize (CIH0 o0 _ (k (Any.upcast x0)) (rst_src0, pst_tgt0) (mrs_tgt0, frs_tgt_hd :: frs_tgt_tl, pst_tgt0)).
-      instantiate (1:=Any.upcast x0).
-
-
-      eapply CIH0.
-
-      n
-
-      eapply adequacy_type_aux_APC.
-
-
-        unfold ms_mid, mds_mid, SMod.to_mid in Heq. rewrite SMod.transl_fnsems in Heq.
-        unfold SMod.load_fnsems in Heq. apply find_some in Heq. des; ss. des_sumbool; subst.
-        rewrite in_flat_map in Heq. des; ss. rewrite in_flat_map in Heq0. des; ss. des_ifs. ss; des; ss; clarify.
-        rename Heq0 into INF. rename Heq into IN.
-        rename x0 into md0. fold sk in INF. fold sk in INF.
-
-        unfold ms_src, mds_src, SMod.to_src in Heq0. rewrite SMod.transl_fnsems in Heq0.
-        unfold SMod.load_fnsems in Heq0. apply find_some in Heq0. des; ss. des_sumbool; subst.
-        rewrite in_flat_map in Heq0. des; ss. rewrite in_flat_map in Heq1. des; ss. des_ifs. ss; des; ss; clarify.
-        rename Heq1 into INF0. rename Heq0 into IN0.
+      assert (exists s md f0,
+                 (<<EQ: p =
+                         (s,
+                          transl_all
+                            (SModSem.mn
+                               (SMod.get_modsem md
+                                                (fold_right Sk.add Sk.unit (List.map SMod.sk mds))))
+                            ∘ fun_to_src (fsb_body f0))>>) /\
+                 (<<FINDTGT: find (fun fnsem => dec fn (fst fnsem)) (fnsems ms_mid) =
+                         Some (s,
+                               transl_all
+                                 (SModSem.mn
+                                    (SMod.get_modsem md
+                                                     (fold_right Sk.add Sk.unit (List.map SMod.sk mds))))
+                                 ∘ fun_to_mid stb (fsb_body f0))>>) /\
+                 (<<FSPEC: f = f0>>)).
+      { unfold ms_src, mds_src, SMod.to_src in FINDSRC. rewrite SMod.transl_fnsems in FINDSRC.
+        unfold SMod.load_fnsems in FINDSRC. apply find_some in FINDSRC. des; ss. des_sumbool; subst.
+        rewrite in_flat_map in FINDSRC. des; ss. rewrite in_flat_map in FINDSRC0. des; ss. des_ifs. ss; des; ss; clarify.
+        rename FINDSRC0 into INF0. rename FINDSRC into IN0.
         rename x0 into md1. fold sk in INF0. fold sk in INF0.
-
-
-
-
-  Let adequacy_type_aux:
-    forall
-      AA AR
-      (args: AA)
-      o0
-      body st_src0 st_tgt0 mn
-      (SIM: wf st_src0 st_tgt0)
-    ,
-      simg wf'
-           (formula o0 + 10)%ord
-           (EventsL.interp_Es p_src (transl_all mn (if is_pure o0 then trigger (Choose _) else ((fun_to_src (AA:=AA) (AR:=AR) body) args↑))) st_src0)
-           (EventsL.interp_Es p_mid (transl_all mn ((fun_to_mid stb body) (o0, args)↑)) st_tgt0)
-  .
-  Proof.
-    ginit.
-    { i. eapply cpn6_wcompat; eauto with paco. }
-    gcofix CIH. i.
-    unfold fun_to_src, fun_to_mid. steps.
-    rewrite Any.upcast_downcast. steps.
-    unfold body_to_src, cfun. rewrite Any.upcast_downcast. ss. steps.
-    destruct o0; ss.
-    - (*** PURE ***)
-      seal_left.
-      steps.
-      unseal_left.
-      erewrite idK_spec2 at 1.
-      guclo ordC_spec. econs.
-      { eapply OrdArith.add_base_l. }
-      guclo bindC_spec.
-      econs.
-      { gfinal. right. eapply paco6_mon. { eapply adequacy_type_aux_APC. } ii; ss. }
-      ii; ss. des_ifs. des_u.
-      steps_strong. esplits; eauto. steps.
-    - (*** IMPURE ***)
-      steps. unfold body_to_mid.
-      abstr (body args) itr. clear body args AA.
-
-      guclo ordC_spec. econs.
-      { instantiate (1:=(10 + 100)%ord). rewrite <- ! OrdArith.add_from_nat. ss. refl. }
-      (* { instantiate (1:=(1 + 99)%ord). rewrite <- OrdArith.add_from_nat. ss. refl. } *)
-      guclo bindC_spec. eapply bindR_intro with (RR:=wf'); cycle 1.
-      { ii. subst. des_ifs. steps. r in SIM0. des; subst; ss. }
-
-      revert_until CIH. gcofix CIH0. i.
-
-      ides itr.
-      { steps. }
-      { steps. gbase. eapply CIH0; ss. }
-      destruct e; cycle 1.
-      {
-        rewrite <- bind_trigger. resub. steps.
-        destruct s; ss.
-        {
-          destruct st_src0 as [rst_src0 pst_src0]; ss. destruct st_tgt0 as [rst_tgt0 pst_tgt0]; ss.
-          destruct p; ss.
-          - steps. instantiate (1:=100). gbase. eapply CIH0; ss; et.
-          - steps. instantiate (1:=100). gbase. eapply CIH0; ss; et.
-        }
-        { dependent destruction e.
-          - steps_strong. unshelve esplits; et. instantiate (1:=100). steps. gbase. eapply CIH0; ss; et.
-          - steps_strong. unshelve esplits; et. instantiate (1:=100). steps. gbase. eapply CIH0; ss; et.
-          - steps_strong. unshelve esplits; et. instantiate (1:=100). steps. gbase. eapply CIH0; ss; et.
-        }
+        esplits; et. ss.
+        - admit "uniqueness".
+        - admit "uniqueness".
       }
-      dependent destruction h.
-      rewrite <- bind_trigger. resub.
-      Opaque fun_to_src fun_to_mid.
+      des; subst. rewrite FINDTGT.
+      eapply Any.downcast_upcast in ARG. des; subst. steps.
 
-      destruct st_src0 as [rst_src0 pst_src0]; ss. destruct st_tgt0 as [rst_tgt0 pst_tgt0]; ss.
-      ired_both.
-      destruct tbr.
-      + (*** PURE CALL ***)
-        mred. steps.
+      unfold fun_to_src, cfun, fun_to_mid. steps.
+      rewrite Any.upcast_downcast. rewrite Any.upcast_downcast. steps.
 
-        (* seal_left. *)
-        (* Ltac step := (mred; try _step; des_ifs_safe). *)
-        (* step; try by eapply OrdArith.lt_from_nat. *)
-        (* step; try by eapply OrdArith.lt_from_nat. *)
-        (* unseal_left. *)
-        (* steps_strong. *)
-        (* set ((120 + formula (ord_pure x) + 100)%ord). *)
-        (* instantiate (1:=(120 + formula (ord_pure x) + 100)%ord). *)
-        (* seal_left. *)
+      guclo ordC_spec. econs; cycle 1.
+      { guclo bindC_spec. econs.
+        { gbase. eapply CIH. ss. }
+        i. subst. steps.
 
-        destruct (alist_find fn stb) eqn:EQ.
-        2:{ steps. }
+        destruct p as [[mrs_tgt1 [|frs_tgt_hd1 frs_tgt_tl1]] mp]; ss.
+        { seal_left. steps. }
         steps.
-        destruct (Any.downcast varg_src) eqn:ARG.
-        2:{ steps. }
-        steps.
-        destruct rst_tgt0 as [mrs_tgt0 [|frs_tgt_hd frs_tgt_tl]]; ss.
-        { steps. }
-        steps.
-        unfold unwrapU. des_ifs; cycle 1.
-        { admit "". }
-        steps_strong. eexists. steps.
-        unfold ms_mid, mds_mid, SMod.to_mid in Heq. rewrite SMod.transl_fnsems in Heq.
-        unfold SMod.load_fnsems in Heq. apply find_some in Heq. des; ss. des_sumbool; subst.
-        rewrite in_flat_map in Heq. des; ss. rewrite in_flat_map in Heq0. des; ss. des_ifs. ss; des; ss; clarify.
-        rename Heq0 into INF. rename Heq into IN.
-        rename x1 into md0. fold sk in INF. fold sk in INF.
-        mred.
-        guclo ordC_spec. econs.
-        {
-
-          admit "".
-          (* instantiate (1:=(120 + (10 + C.myF x + 10))%ord). *)
-          (* rewrite <- ! OrdArith.add_assoc. eapply add_le_le; try refl. eapply OrdArith.le_from_nat; ss. lia. *)
-
-        }
-        rename x into o1.
-        rewrite <- bind_bind.
-        rewrite <- bind_bind.
-        guclo bindC_spec. econs.
-        * (* guclo ordC_spec. econs. *)
-          (* { eapply OrdArith.add_base_r. } *)
-          (* gbase. eapply CIH; et. *)
-          gbase. hexploit CIH; et.
-          { instantiate (1:=(mrs_tgt0, ε :: frs_tgt_hd :: frs_tgt_tl, pst_tgt0)). instantiate (1:= (rst_src0, pst_tgt0)). ss. }
-          intro T. instantiate (2:=(ord_pure o1)) in T. ss.
-          mred.
-          (*** applying reduction in "T" begin ***)
-          (*** TODO: make prw "in" tactic ***)
-          revert T. pose (fun (x: Prop) (y: Prop) => (x -> y)) as myf.
-          match goal with | |- ?a -> ?b => replace (a -> b) with (myf a b) by refl end.
-          try Red.prw ltac:(IRed._red_gen) 2 2 0.
-          subst myf; cbn. intro T.
-          (*** applying reduction in "T" end ***)
-          eapply T.
-        * ii. des_ifs. destruct p, p0; ss. des; subst.
-          step; try by eapply OrdArith.lt_from_nat. steps.
-          destruct r1; ss.
-          des_ifs.
-          { unfold triggerNB. steps; try by eapply OrdArith.lt_from_nat. (*** TODO: fix tactic, don't unfold triggerNB ***) }
-          repeat (step; try by eapply OrdArith.lt_from_nat).
-          guclo ordC_spec. econs.
-          { instantiate (1:=100%ord). eapply OrdArith.le_from_nat; ss. lia. }
-          gbase. eapply CIH0. ss.
-      + (*** IMPURE CALL ***)
-        mred.
-        destruct rst_src0 as [mrs_src0 [|frs_src_hd frs_src_tl]]; ss.
-        { admit "SOMEHOW". }
-        mred. steps. instantiate (2:=(100 + (100 + 10) + 42)%ord). instantiate (1:=0%ord).
-        guclo ordC_spec. econs. { rewrite OrdArith.add_O_r. refl. }
-        destruct rst_tgt0 as [mrs_tgt0 [|frs_tgt_hd frs_tgt_tl]]; ss.
-        { steps. }
-        steps. unfold unwrapU at 2. des_ifs; cycle 1.
-        { admit "unwrapN!!!!!!!!!!!!!!!!!!". }
-        steps.
-        unfold unwrapU. des_ifs; cycle 1.
-        { steps. }
-        steps.
-
-        unfold ms_mid, mds_mid, SMod.to_mid in Heq. rewrite SMod.transl_fnsems in Heq.
-        unfold SMod.load_fnsems in Heq. apply find_some in Heq. des; ss. des_sumbool; subst.
-        rewrite in_flat_map in Heq. des; ss. rewrite in_flat_map in Heq1. des; ss. des_ifs. ss; des; ss; clarify.
-        rename Heq1 into INF. rename Heq into IN.
-        rename x0 into md0. fold sk in INF. fold sk in INF.
-
-        unfold ms_src, mds_src, SMod.to_src in Heq0. rewrite SMod.transl_fnsems in Heq0.
-        unfold SMod.load_fnsems in Heq0. apply find_some in Heq0. des; ss. des_sumbool; subst.
-        rewrite in_flat_map in Heq0. des; ss. rewrite in_flat_map in Heq1. des; ss. des_ifs. ss; des; ss; clarify.
-        rename Heq1 into INF0. rename Heq0 into IN0.
-        rename x0 into md1. fold sk in INF0. fold sk in INF0.
-
-        assert(md0 = md1); subst.
-        { admit "ez - uniqueness". }
-
-        assert(f = f0); subst.
-        { admit "ez - uniqueness". }
-
-        guclo ordC_spec. econs.
-        { eapply OrdArith.add_base_l. }
-        guclo bindC_spec.
-        econs.
-        * hexploit CIH; et; cycle 1.
-          { intro T. gbase. instantiate (3:=ord_top) in T. ss. eapply T. }
-          { ss. }
-        * ii; ss. des_ifs. steps. destruct p, p0; ss. des; subst.
-          steps. destruct r1; ss. des_ifs.
-          { unfold triggerNB. (step; try by eapply OrdArith.lt_from_nat). (*** TODO: fix tactic ***) }
-          destruct r0; ss. des_ifs. { admit "somehow". } steps.
-          instantiate (1:=100).
-          gbase. eapply CIH0 ;ss.
+        gbase. eapply CIH. ss.
+      }
+      { eapply OrdArith.add_base_l. }
+    }
   Unshelve.
-    all: try (by econs; et).
-    all: try (by exact Ord.O).
     all: ss.
-  Unshelve.
-    all: try (by exact unit).
+    all: try (by exact Ord.O).
+    all: try (by exact 0).
   Qed.
 
   Theorem adequacy_type_m2s: Beh.of_program (ModL.compile (Mod.add_list mds_mid)) <1=
@@ -1050,12 +842,15 @@ PURE *)
     eapply adequacy_global.
     exists (100)%ord. ss.
     ginit.
-    { eapply cpn5_wcompat; eauto with paco. }
+    { eapply cpn6_wcompat; eauto with paco. }
     unfold ModSemL.initial_itr. Local Opaque ModSemL.prog. ss.
-    unfold ITree.map.
-    unfold assume.
-    steps.
-    instantiate (1:=(10 + (100 + 10) + 42)%ord).
+    unfold ITree.map. steps.
+    { admit "?". }
+    Local Transparent ModSemL.prog.
+    unfold ModSemL.prog at 4.
+    unfold ModSemL.prog at 2.
+    Local Opaque ModSemL.prog.
+    ss. steps_strong.
     esplits; et. { admit "ez - wf". } steps.
     Local Transparent ModSemL.prog.
     unfold ModSemL.prog at 4.
