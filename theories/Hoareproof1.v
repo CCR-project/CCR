@@ -683,41 +683,45 @@ Section CANCEL.
                              Beh.of_program (ModL.compile (Mod.add_list mds_src)).
   Proof.
     eapply adequacy_global.
-    exists (100)%ord. ss.
+    exists (200)%ord. ss.
     ginit.
     { eapply cpn6_wcompat; eauto with paco. }
     unfold ModSemL.initial_itr. Local Opaque ModSemL.prog. ss.
     unfold ITree.map. steps.
-    { admit "?". }
-    Local Transparent ModSemL.prog.
-    unfold ModSemL.prog at 4.
-    unfold ModSemL.prog at 2.
-    Local Opaque ModSemL.prog.
-    ss. steps_strong.
-    esplits; et. { admit "ez - wf". } steps.
+    2: {
+      Local Transparent ModSemL.prog.
+      unfold ModSemL.prog at 4.
+      unfold ModSemL.prog at 2.
+      Local Opaque ModSemL.prog.
+      ss. steps_strong.
+      esplits; et. { admit "ez - wf". } steps.
 
-    (* stb main *)
-    hexploit (stb_find_iff "main"). i. des.
-    { unfold ms_src in FINDSRC. rewrite FINDSRC. steps. }
-    unfold stb in SOME.
-    rewrite alist_find_map in SOME. unfold o_map in SOME. des_ifs.
-    destruct f. ss. subst. ss.
+      (* stb main *)
+      hexploit (stb_find_iff "main"). i. des.
+      { unfold ms_src in FINDSRC. rewrite FINDSRC. steps. }
+      unfold stb in SOME.
+      rewrite alist_find_map in SOME. unfold o_map in SOME. des_ifs.
+      destruct f. ss. subst. ss.
 
-    fold ms_src. fold ms_mid.
-    rewrite FINDSRC. rewrite FINDMID. steps.
-    unfold fun_to_src, fun_to_mid, cfun. steps.
-    rewrite Any.upcast_downcast.
-    replace (Any.upcast []) with (Any.upcast (ord_top, []: list val)) by
-        admit "TODO - parametrize initial argument".
-    rewrite Any.upcast_downcast. steps.
+      fold ms_src. fold ms_mid.
+      rewrite FINDSRC. rewrite FINDMID. steps.
+      unfold fun_to_src, fun_to_mid, cfun. steps.
+      rewrite Any.upcast_downcast.
+      replace (Any.upcast []) with (Any.upcast (ord_top, []: list val)) by
+          admit "TODO - parametrize initial argument".
+      rewrite Any.upcast_downcast. steps.
 
-    guclo ordC_spec. econs.
-    { eapply OrdArith.add_base_l. }
-    guclo bindC_spec. econs.
-    { gfinal. right. eapply adequacy_type_aux. ss.
-      admit "same initial state".
+      guclo ordC_spec. econs.
+      { eapply OrdArith.add_base_l. }
+      guclo bindC_spec. econs.
+      { gfinal. right. eapply adequacy_type_aux. ss.
+        admit "ez - same initial state".
+      }
+      { i. subst. instantiate (1:=10). steps. }
     }
-    { i. subst. steps. }
+    { instantiate (1:=O).
+      ss. repeat (rewrite <- OrdArith.add_from_nat). ss.
+      eapply OrdArith.lt_from_nat. lia. }
     Unshelve.
     all: try (by exact Ord.O).
     all: try (by exact 0).
