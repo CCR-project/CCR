@@ -117,7 +117,7 @@ Section ADQ.
 
   Ltac _list_tac :=
     match goal with
-    | [ H: find _ _ = Some _ |- _ ] => apply find_some in H; des; des_sumbool; subst
+    | [ H: alist_find _ _ = Some _ |- _ ] => apply alist_find_some in H; des; des_sumbool; subst
     | [ H: context[ModL.enclose] |- _ ] => unfold ModL.enclose in H; try rewrite add_list_fnsems in H
     | [ H: In _ (flat_map _ _) |- _ ] => apply in_flat_map in H; des
     | [ H: In _ (List.map _ _) |- _ ] => apply in_map_iff in H; des
@@ -570,19 +570,19 @@ Section ADQ.
   Lemma find_sim
         fn
     :
-        option_rel (fun '(fn0, fsem0) '(fn1, fsem1) => fn0 = fn1 /\ sim_fun fsem0 fsem1)
-                   (find (fun fnsem => dec fn (fst fnsem)) (ModSemL.fnsems ms_src))
-                   (find (fun fnsem => dec fn (fst fnsem)) (ModSemL.fnsems ms_tgt))
+        option_rel (@sim_fun Any.t)
+                   (alist_find fn (ModSemL.fnsems ms_src))
+                   (alist_find fn (ModSemL.fnsems ms_tgt))
   .
   Proof.
-    destruct (find (fun fnsem => dec fn (fst fnsem)) (ModSemL.fnsems ms_src)) eqn:T.
+    destruct (alist_find fn (ModSemL.fnsems ms_src)) eqn:T.
     - list_tac.
       unfold ms_src in T.
       list_tac.
       rewrite <- sk_link_eq3 in *. folder. subst.
       ss. list_tac. subst. des_ifs. ss. subst. list_tac. des_ifs.
       rewrite in_app_iff in *. des.
-      + destruct (find (fun fnsem => dec s (fst fnsem)) (ModSemL.fnsems ms_tgt)) eqn:U.
+      + destruct (alist_find fn (ModSemL.fnsems ms_tgt)) eqn:U.
         * list_tac. unfold ms_tgt in U. list_tac. subst. ss. list_tac.
           des_ifs. ss. rewrite <- sk_link_eq2 in *. folder.
           rewrite in_app_iff in *. des.
@@ -594,56 +594,51 @@ Section ADQ.
           }
           { unfold kmds_top in *. list_tac. subst. exfalso. admit "ez - uniqueness". }
         * exfalso.
-          ss. list_tac. des_ifs. ss.
           unfold kmds_top in *. list_tac. subst. ss. list_tac. des_ifs.
-          eapply find_none in U; cycle 1.
-          { unfold ms_tgt. list_tac.
-            { rewrite in_app_iff. left. unfold kmds. list_tac. }
-            rewrite <- sk_link_eq2. folder.
-            unfold flip. ss.
-            list_tac.
-          }
-          ss. des_sumbool; ss.
-      + destruct (find (fun fnsem => dec s (fst fnsem)) (ModSemL.fnsems ms_tgt)) eqn:U.
-        * unfold ms_tgt in U. list_tac. subst. ss. list_tac. des_ifs. ss. econs. split; ss.
+          eapply alist_find_none in U.
+          eapply U. unfold ms_tgt. list_tac.
+          { rewrite in_app_iff. left. unfold kmds. list_tac. }
+          rewrite <- sk_link_eq2. folder.
+          unfold flip. ss.
+          list_tac. ss.
+      + destruct (alist_find fn (ModSemL.fnsems ms_tgt)) eqn:U.
+        * unfold ms_tgt in U. list_tac. subst. ss. list_tac. des_ifs. ss. econs.
           rewrite <- sk_link_eq2 in *. folder.
           rewrite in_app_iff in *. des.
           { exfalso. unfold kmds in U2. list_tac. subst. ss. list_tac. des_ifs. admit "ez - uniqueness". }
           list_tac. subst. ss. list_tac. des_ifs. ss.
           assert(x = x3) by admit "ez - uniqueness"; subst.
-          assert(i = i1) by admit "ez - uniqueness"; subst. clear_tac.
+          assert(i = i0) by admit "ez - uniqueness"; subst. clear_tac.
           eapply sim_unknown.
         * exfalso.
-          ss. list_tac. subst. ss. list_tac. des_ifs. ss.
-          eapply find_none in U; cycle 1.
-          { unfold ms_tgt. list_tac.
-            { rewrite in_app_iff. right. list_tac. }
-            rewrite <- sk_link_eq2. folder.
-            unfold flip. ss.
-            list_tac.
-          }
-          ss. des_sumbool; ss.
-    - destruct (find (fun fnsem => dec fn (fst fnsem)) (ModSemL.fnsems ms_tgt)) eqn:U.
+          ss. list_tac. subst. ss. list_tac. des_ifs.
+          eapply alist_find_none in U. eapply U.
+          unfold ms_tgt. list_tac.
+          { rewrite in_app_iff. right. list_tac. }
+          rewrite <- sk_link_eq2. folder.
+          unfold flip. ss.
+          list_tac. ss.
+    - destruct (alist_find fn (ModSemL.fnsems ms_tgt)) eqn:U.
       + exfalso.
         list_tac. unfold ms_tgt in U. list_tac. subst. ss. list_tac. des_ifs. ss.
         rewrite <- sk_link_eq2 in *. folder.
         rewrite in_app_iff in *. des.
         * unfold kmds in U2. list_tac. subst. ss. list_tac. des_ifs.
-          eapply find_none in T; cycle 1.
+          eapply alist_find_none in T. eapply T.
           { unfold ms_src. list_tac.
             { rewrite in_app_iff. left; et. unfold kmds_top. list_tac. }
-            ss. list_tac.
-            rewrite <- sk_link_eq3 in *. folder. et.
+            ss. list_tac; cycle 1.
+            { rewrite <- sk_link_eq3 in *. folder. et. }
+            ss.
           }
-          ss. des_sumbool; ss.
         * list_tac. subst. ss. list_tac. des_ifs.
-          eapply find_none in T; cycle 1.
+          eapply alist_find_none in T. eapply T.
           { unfold ms_src. list_tac.
             { rewrite in_app_iff. right; et. list_tac. }
-            ss. list_tac.
-            rewrite <- sk_link_eq3 in *. folder. et.
+            ss. list_tac; cycle 1.
+            { rewrite <- sk_link_eq3 in *. folder. et. }
+            ss.
           }
-          ss. des_sumbool; ss.
       + econs.
   Qed.
 
@@ -660,7 +655,7 @@ Section ADQ.
     ginit. revert_until p_tgt. gcofix CIH. i.
     cbn. steps.
     generalize (find_sim fn). intro T. inv T; cbn; steps.
-    des; subst. specialize (IN0 args).
+    specialize (IN args). rename a into i. rename b into i0.
     abstr (i args↑) itr_src. abstr (i0 (@inr unit _ args)↑) itr_tgt. clear i i0 args H H0. clear_tac.
     revert_until sk_link_eq3. gcofix CIH. i.
     guclo ordC_spec. econs.
@@ -669,8 +664,8 @@ Section ADQ.
     guclo bindC_spec. econs; cycle 1.
     { instantiate (1:=eq). ii. subst. des_ifs. steps. }
     revert_until CIH0. generalize (Ord.from_nat 100) as idx. gcofix CIH.
-    i. punfold IN0. destruct st0 as [rst0 pst0].  destruct rst0 as [mrs0 frs0].
-    dependent destruction IN0; pclearbot.
+    i. punfold IN. destruct st0 as [rst0 pst0].  destruct rst0 as [mrs0 frs0].
+    dependent destruction IN; pclearbot.
     - steps. gbase. eapply CIH1; et.
     - steps.
     - (*** call case ***)
@@ -722,7 +717,7 @@ Section ADQ.
   Proof.
     r. eapply adequacy_global. exists 100.
     ginit.
-    unfold ModSemL.initial_itr. Local Opaque ModSemL.prog. ss.
+    unfold ModSemL.initial_itr, ModSemL.initial_itr_arg. Local Opaque ModSemL.prog. ss.
     unfold ITree.map.
     unfold assume. folder.
     steps.
@@ -734,8 +729,8 @@ Section ADQ.
     subst.
     assert(STEQ: (ModSemL.initial_r_state ms_src, ModSemL.initial_p_state ms_src)
                  = (ModSemL.initial_r_state ms_tgt, ModSemL.initial_p_state ms_tgt)).
-    { assert(forall fn, find (fun mnr => dec fn (fst mnr)) (ModSemL.initial_mrs ms_src) =
-                        find (fun mnr => dec fn (fst mnr)) (ModSemL.initial_mrs ms_tgt)).
+    { assert(forall fn, alist_find fn (ModSemL.initial_mrs ms_src) =
+                        alist_find fn (ModSemL.initial_mrs ms_tgt)).
       { i. f_equal.
         unfold ms_src, ms_tgt. unfold ModL.enclose.
         rewrite ! add_list_initial_mrs.
