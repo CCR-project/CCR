@@ -303,7 +303,7 @@ Section PROOF.
           (MODSEML: ms = modl.(ModL.enclose))
           (GENV: ge = Sk.load_skenv modl.(ModL.sk))
           (COMP: Imp2Csharpminor.compile src = OK tgt)
-          (MS: match_states mmem gm ge ms mn ist cst)
+          (MS: match_states gm ge ms mn mmem ist cst)
     :
       <<SIM: sim (ModL.compile modl) (semantics tgt) ordN i0 ist cst>>.
   Proof.
@@ -319,13 +319,13 @@ Section PROOF.
     (* generalize dependent tcont. generalize dependent tcode. *)
     (* generalize dependent code. *)
     (* induction code; i. *)
-    - ss. unfold itree_of_cont_stmt, itree_of_imp_cont.
+    - unfold itree_of_cont_stmt, itree_of_imp_cont.
       rewrite interp_imp_Skip. ss; clarify.
       (* move MM before tm. move ML before MM. move tcont before ML. *)
       (* revert_until ML. *)
       destruct tcont; ss; clarify.
       inv MCONT; clarify.
-      { destruct rp. destruct tcont; inv MSTACK; ss; clarify.
+      { destruct tcont; inv MSTACK; ss; clarify.
         - sim_red. pfold. econs 6; clarify.
           { admit "ez: strict_determinate_at". }
           eexists. eexists.
@@ -347,7 +347,7 @@ Section PROOF.
           pfold. econs 5; ss; auto. i. eapply angelic_step in STEP; des; clarify.
           eexists; split; auto. left.
           do 6 (pfold; sim_tau; left). sim_red.
-          destruct r0. ss. destruct l.
+          destruct rstate. ss. destruct l.
           { admit "ez: wf_rstate". }
           do 3 (pfold; sim_tau; left). sim_red.
           pfold. econs 1; eauto.
@@ -379,7 +379,7 @@ Section PROOF.
           pfold. econs 5; ss; auto. i. eapply angelic_step in STEP; des; clarify.
           eexists; split; auto. left.
           do 6 (pfold; sim_tau; left). sim_red.
-          destruct r0. ss. destruct l.
+          destruct rstate. ss. destruct l.
           { admit "ez: wf_rstate". }
           do 5 (pfold; sim_tau; left).
           rewrite Any.upcast_downcast. ss.
@@ -391,18 +391,18 @@ Section PROOF.
           eexists; split; auto. right. eapply CIH.
           hexploit match_states_intro.
           { instantiate (2:=Skip). ss. }
-          3:{ eapply WFCONT0. }
-          3:{ eapply MCONT. }
-          3:{ eapply MSTACK0. }
-          3:{ clarify. }
-          3:{ i.
+          4:{ eapply WFCONT0. }
+          4:{ eapply MCONT. }
+          4:{ eapply MSTACK0. }
+          4:{ clarify. }
+          4:{ i.
               match goal with
               | [ H: match_states _ _ _ _ _ ?i0 _ |- match_states _ _ _ _ _ ?i1 _ ] =>
                 replace i1 with i0; eauto
               end.
               unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip.
               grind. }
-          2:{ eauto. }
+          2,3: eauto.
           econs. i. exists (map_val_opt sv); split; auto.
           admit "ez: local env match, use MLE and alist_find". }
 
@@ -410,16 +410,15 @@ Section PROOF.
       { admit "ez: strict_determinate_at". }
       eexists. eexists.
       { eapply step_skip_seq. }
-      eexists. eexists (step_tau _). eexists. sim_red. right.
-      destruct rp. eapply CIH.
+      eexists. eexists (step_tau _). eexists. sim_red. right. eapply CIH.
       hexploit match_states_intro; eauto.
       all: (destruct s; eauto).
       all: (generalize dependent tcont; induction tcont; i; ss; clarify; eauto).
       all: (eapply compile_stmt_no_Sreturn in CST; clarify).
 
-    - ss. unfold itree_of_cont_stmt, itree_of_imp_cont.
-      rewrite interp_imp_Assign. sim_red. grind.
-      destruct (compile_expr e) eqn:EXP; uo; ss. destruct rp. grind.
+    - unfold itree_of_cont_stmt, itree_of_imp_cont.
+      rewrite interp_imp_Assign. sim_red.
+      ss. destruct (compile_expr e) eqn:EXP; uo; ss.
       eapply step_expr; eauto. i.
       (* tau point *)
       unfold ordN in *.
@@ -433,8 +432,8 @@ Section PROOF.
       eexists. right. apply CIH.
       hexploit match_states_intro.
       { instantiate (2:=Skip). instantiate (2:=get_gmap src). ss. }
-      2,3,4,5,7:eauto.
-      2:{ unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. ss. }
+      2,3,4,5,6,7:eauto.
+      2:{ unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. eauto. }
       { econs. i. exists (map_val_opt sv); split; auto.
         admit "ez? alist & Maps.PTree". }
 
@@ -458,8 +457,8 @@ Section PROOF.
       eexists. right. eapply CIH.
       hexploit match_states_intro.
       { eapply CSC1. }
-      3:{ instantiate (1:=Kseq s0 tcont). ss. destruct s0; eauto. eapply compile_stmt_no_Sreturn in CSC2; clarify. }
-      3:{ econs 2; eauto. clarify. }
+      4:{ instantiate (1:=Kseq s0 tcont). ss. destruct s0; eauto. eapply compile_stmt_no_Sreturn in CSC2; clarify. }
+      4:{ econs 2; eauto. clarify. }
       all: eauto.
       { ss. destruct s0; eauto. eapply compile_stmt_no_Sreturn in CSC2; clarify. }
       i.
@@ -473,7 +472,7 @@ Section PROOF.
     - unfold itree_of_cont_stmt in *; unfold itree_of_imp_cont in *. rewrite interp_imp_If. sim_red. ss.
       destruct (compile_expr i) eqn:CEXPR; destruct (compile_stmt (get_gmap src) code1) eqn:CCODE1;
         destruct (compile_stmt (get_gmap src) code2) eqn:CCODE2; uo; clarify.
-      destruct rp. eapply step_expr; eauto.
+      eapply step_expr; eauto.
       i. sim_red. destruct (is_true rv) eqn:COND; ss; clarify.
       2:{ sim_triggerUB. }
       sim_red. destruct rv; clarify. ss. destruct (n =? 0)%Z eqn:CZERO; ss; clarify.
@@ -510,8 +509,8 @@ Section PROOF.
         { eapply CCODE1. }
         all: eauto. }
 
-    - ss. uo; des_ifs.
-      unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_CallFun.
+    - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_CallFun.
+      ss. uo; des_ifs.
       des_ifs; sim_red.
       { sim_triggerUB. }
       unfold Imp2Csharpminor.compile in COMP. unfold _compile in COMP. des_ifs.
@@ -520,9 +519,9 @@ Section PROOF.
       | [ |- paco3 (_sim _ (semantics ?tp) _) _ _ _ _ ] =>
         set (tgtp:=tp)
       end.
-      destruct rp. eapply step_exprs; eauto.
+      sim_red. eapply step_exprs; eauto.
       { admit "mid: index". }
-      i. sim_red. destruct r0. destruct l0.
+      i. sim_red. destruct rstate. destruct l1.
       { ss. admit "mid?: r_state is nil". }
       ss. grind. unfold ordN in *.
       do 3 (pfold; sim_tau; left). sim_red.
@@ -539,7 +538,7 @@ Section PROOF.
       match goal with
       | [ FOUND: o_map (?a) _ = _ |- _ ] => destruct a eqn:FOUND2; ss; clarify
       end.
-      destruct p1.
+      destruct p0.
 
       (* make lemma *)
       assert (COMPF: exists tf0, compile_function (get_gmap src) f0 = Some tf0).
@@ -547,7 +546,7 @@ Section PROOF.
       destruct COMPF as [tf0 COMPF].
       assert (SRCF: In (f, f0) (prog_funs src)).
       { admit "ez: trivial, use FOUND2". }
-      assert (TGTF: In (s2p f, AST.Gfun (AST.Internal tf0)) l1).
+      assert (TGTF: In (s2p f, AST.Gfun (AST.Internal tf0)) l0).
       { admit "ez: by definition". }
       assert (TGTFG: In (s2p f, AST.Gfun (AST.Internal tf0)) tgtp.(AST.prog_defs)).
       { admit "mid?: need to construct tgt's genv". }
@@ -562,7 +561,7 @@ Section PROOF.
       clarify.
 
       unfold compile_function in COMPF. uo; des_ifs. rename s into bodytf0.
-      assert (COMPFRET: forall tfd0 tf0, In tfd0 l1 -> snd tfd0 = AST.Gfun (AST.Internal tf0) ->
+      assert (COMPFRET: forall tfd0 tf0, In tfd0 l0 -> snd tfd0 = AST.Gfun (AST.Internal tf0) ->
                                     tf0.(fn_body) = Sseq (bodytf0) (Sreturn (Some (Evar (s2p "return"))))).
       { admit "ez: trivial by definition". }
 
@@ -612,7 +611,7 @@ Section PROOF.
     (` r0 : r_state * p_state * (lenv * val) <-
      EventsL.interp_Es (prog ms)
        (transl_all mn (interp_imp ge (denote_stmt (Imp.fn_body f0)) (init_lenv (Imp.fn_vars f0) ++ l2)))
-       (c, ε :: c0 :: l0, p);; x4 <- itree_of_imp_pop ge ms mn mn x le r0;; ` x : _ <- next x4;; stack x)
+       (c, ε :: c0 :: l1, pstate);; x4 <- itree_of_imp_pop ge ms mn mn x le r0;; ` x : _ <- next x4;; stack x)
       end.
       2:{ rewrite interp_imp_bind. Red.prw ltac:(_red_gen) 1 0. grind.
           Red.prw ltac:(_red_gen) 2 0. grind.
@@ -620,13 +619,13 @@ Section PROOF.
           Red.prw ltac:(_red_gen) 2 0. Red.prw ltac:(_red_gen) 1 0. grind. }
 
       hexploit match_states_intro.
-      4:{ instantiate (1:=Kseq (Sreturn (Some (Evar (s2p "return")))) (Kcall (Some (s2p x)) tf empty_env tle tcont)). ss. }
-      5:{ instantiate (1:= fun r0 =>
+      5:{ instantiate (1:=Kseq (Sreturn (Some (Evar (s2p "return")))) (Kcall (Some (s2p x)) tf empty_env tle tcont)). ss. }
+      6:{ instantiate (1:= fun r0 =>
                              ` x4 : r_state * p_state * (lenv * val) <- itree_of_imp_pop ge ms mn mn x le r0;;
                                     ` x0 : r_state * p_state * (lenv * val) <- next x4;; stack x0).
           instantiate (1:=mn). instantiate (1:=ms). instantiate (1:=ge). instantiate (1:=get_gmap src).
           econs 2; ss; eauto. }
-      3: eauto.
+      3,4: eauto.
       1:{ eapply Heq1. }
       2:{ ss. econs 1. }
       2:{ clarify. }
@@ -643,7 +642,7 @@ Section PROOF.
 
     - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_CallSys.
       ss. uo; des_ifs; clarify. unfold ident_key in Heq0.
-      destruct rp. sim_red. eapply step_exprs; eauto.
+      sim_red. eapply step_exprs; eauto.
       { admit "ez: index". }
       i. sim_red.
       pfold. econs 4.
@@ -682,11 +681,11 @@ Section PROOF.
       eexists; split; auto. right. eapply CIH.
       hexploit match_states_intro.
       { instantiate (2:=Skip). ss. }
-      3:{ eapply WFCONT. }
-      3:{ eapply MCONT. }
-      3:{ eapply MSTACK. }
-      3:{ clarify. }
-      3:{ i.
+      4:{ eapply WFCONT. }
+      4:{ eapply MCONT. }
+      4:{ eapply MSTACK. }
+      4:{ clarify. }
+      4:{ i.
           match goal with
           | [ H1: match_states _ _ _ _ _ ?i0 _ |- match_states _ _ _ _ _ ?i1 _ ] =>
             replace i1 with i0; eauto
@@ -694,6 +693,7 @@ Section PROOF.
           unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
       { econs. i. exists (map_val_opt sv). split; auto. ss.
         admit "ez: find from local env". }
+      { admit "ez? memory will not changed by our syscall". }
       { admit "ez?: match memory, need to enforce memory invariance for syscall sem". }
 
     - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_AddrOf.
@@ -710,7 +710,7 @@ Section PROOF.
         eexists. exists (step_tau _). eexists. right. eapply CIH.
         hexploit match_states_intro.
         { instantiate (2:=Skip). ss. }
-        2,3,4,5: eauto.
+        2,3,4,5,6: eauto.
         2:{ clarify. }
         2:{ i.
             match goal with
@@ -732,7 +732,7 @@ Section PROOF.
         eexists. exists (step_tau _). eexists. right. eapply CIH.
         hexploit match_states_intro.
         { instantiate (2:=Skip). ss. }
-        2,3,4,5: eauto.
+        2,3,4,5,6: eauto.
         2:{ clarify. }
         2:{ i.
             match goal with
@@ -743,11 +743,15 @@ Section PROOF.
         { econs. i. admit "ez?: need a translation of genv". }
 
     - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Malloc. sim_red.
-      ss. uo; des_ifs. destruct rp. eapply step_expr; eauto.
-      i. sim_red. destruct r0. ss. destruct l.
+      ss. uo; des_ifs. eapply step_expr; eauto.
+      i. sim_red. destruct rstate. ss. destruct l.
       { admit "ez: wf_r_state". }
       grind. unfold ordN in *. do 3 (pfold; sim_tau; left). sim_red.
-      
+      set (ge:= Sk.load_skenv (Sk.add (defs src) Sk.unit)).
+      set (ms:=(add (MemSem (Sk.add (defs src) Sk.unit)) (add (ImpMod.modsem src ge) {| fnsems := []; initial_mrs := [] |}))).
+      set (mn:=name src).
+      unfold cfun. rewrite Any.upcast_downcast. grind. unfold allocF. sim_red.
+      do 4 (pfold; sim_tau; left). sim_red. 
 
 
       admit "hard: Malloc".

@@ -692,9 +692,6 @@ Section Sim.
 
   (* Variable match_ge : SkEnv.t -> genv -> Prop. *)
 
-  Variable match_mem : Mem.t -> Memory.Mem.mem -> Prop.
-
-
   Definition ret_call_cont k :=
     (Kseq (Sreturn (Some (Evar (s2p "return")))) (call_cont k)).
   (* global env is fixed when src program is fixed *)
@@ -718,7 +715,6 @@ Section Sim.
       match_code (fun x => (itr x >>= ktr)) (chead :: ctail)
   .
 
-
   Inductive match_stack : imp_stack -> option Csharpminor.cont -> Prop :=
   | match_stack_bottom
     :
@@ -738,17 +734,21 @@ Section Sim.
       match_stack (fun x => (y <- (itree_of_imp_pop ge ms mn mn id le x);; next y >>= stack)) (Some tpop)
   .
 
+  Variable match_mem : Mem.t -> Memory.Mem.mem -> Prop.
+
   Variant match_states : imp_state -> Csharpminor.state -> Prop :=
   | match_states_intro
-      tf rp le tle code itr tcode m tm next stack tcont
+      tf rstate pstate le tle code itr tcode m tm next stack tcont
       (CST: compile_stmt gm code = Some tcode)
       (ML: match_le le tle)
+
+      (PSTATE: pstate "Mem"%string = m↑)
       (MM: match_mem m tm)
       (* (MG: match_ge ge tge) *)
       (WFCONT: wf_ccont tcont)
       (MCONT: match_code next (get_cont_stmts tcont))
       (MSTACK: match_stack stack (get_cont_stack tcont))
-      (ITR: itr = itree_of_cont_stmt code ge le ms mn rp)
+      (ITR: itr = itree_of_cont_stmt code ge le ms mn (rstate, pstate))
     :
       match_states (x <- itr;; next x >>= stack) (State tf tcode tcont empty_env tle tm)
   .
