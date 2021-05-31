@@ -492,15 +492,31 @@ Section MODSEML.
     - econs 6; et. ii. exploit STEP; et. i; des. clarify.
   Qed.
 
+  Lemma nodup_comm A (l0 l1: list A)
+        (NODUP: NoDup (l0 ++ l1))
+    :
+      NoDup (l1 ++ l0).
+  Proof.
+    revert l0 NODUP. induction l1; ss.
+    { i. rewrite List.app_nil_r in *. ss. }
+    i. hexploit NoDup_remove_2; et. i.
+    hexploit NoDup_remove_1; et. i.
+    econs; et. ii. eapply H. eapply in_app_iff.
+    eapply in_app_iff in H1. des; auto.
+  Qed.
+
   Lemma wf_comm
         ms0 ms1
     :
       <<EQ: wf (add ms0 ms1) = wf (add ms1 ms0)>>
   .
   Proof.
-    r. eapply prop_ext. split; i.
-    - admit "ez".
-    - admit "ez".
+    assert (forall ms0 ms1, wf (add ms0 ms1) -> wf (add ms1 ms0)).
+    { i. inv H. econs; ss.
+      { rewrite List.map_app in *. eapply nodup_comm; et. }
+      { rewrite List.map_app in *. eapply nodup_comm; et. }
+    }
+    r. eapply prop_ext. split; i; auto.
   Qed.
 
   Theorem add_comm
@@ -540,6 +556,15 @@ Section MODSEML.
     { eapply app_assoc. }
   Qed.
 
+  Lemma add_assoc_eq ms0 ms1 ms2
+    :
+      add ms0 (add ms1 ms2) = add (add ms0 ms1) ms2.
+  Proof.
+    unfold add. ss. f_equal.
+    { apply List.app_assoc. }
+    { apply List.app_assoc. }
+  Qed.
+
   Theorem add_assoc
           ms0 ms1 ms2
           (WF: wf (add ms0 (add ms1 ms2)))
@@ -548,7 +573,7 @@ Section MODSEML.
               Beh.of_program (compile (add (add ms0 ms1) ms2))>>
   .
   Proof.
-    admit "TODO".
+    rewrite add_assoc_eq. ss.
   Qed.
 
   Theorem add_assoc_rev
@@ -559,7 +584,7 @@ Section MODSEML.
               Beh.of_program (compile (add (add ms0 ms1) ms2))>>
   .
   Proof.
-    admit "TODO".
+    rewrite add_assoc_eq. ss.
   Qed.
 
 End MODSEML.
@@ -844,7 +869,17 @@ Section MODL.
               Beh.of_program (compile (add (add md0 md1) md2))>>
   .
   Proof.
-    admit "ez".
+    rewrite add_assoc'. ss.
+  Qed.
+
+  Theorem add_assoc_rev
+          md0 md1 md2
+    :
+      <<COMM: Beh.of_program (compile (add (add md0 md1) md2)) =
+              Beh.of_program (compile (add md0 (add md1 md2)))>>
+  .
+  Proof.
+    rewrite add_assoc'. ss.
   Qed.
 
   Definition empty: t := {|
