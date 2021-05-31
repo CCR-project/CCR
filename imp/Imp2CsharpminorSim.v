@@ -751,14 +751,240 @@ Section PROOF.
       set (ms:=(add (MemSem (Sk.add (defs src) Sk.unit)) (add (ImpMod.modsem src ge) {| fnsems := []; initial_mrs := [] |}))).
       set (mn:=name src).
       unfold cfun. rewrite Any.upcast_downcast. grind. unfold allocF. sim_red.
-      do 4 (pfold; sim_tau; left). sim_red. 
+      do 4 (pfold; sim_tau; left). sim_red.
+      rewrite PSTATE. rewrite Any.upcast_downcast. grind. unfold unint. des_ifs; sim_red.
+      2:{ sim_triggerUB. }
+      pfold. econs 6; clarify.
+      { admit "ez: strict_determinate_at". }
+      eexists. eexists.
+      { eapply step_call.
+        - econs. econs 2.
+          { eapply Maps.PTree.gempty. }
+          admit "ez: genv lookup".
+        - econs 2; eauto. econs 1.
+        - ss. des_ifs. admit "ez: genv lookup".
+        - admit "ez: genv lookup". }
+      eexists. eexists.
+      { rewrite bind_trigger. eapply (step_choose _ 0). }
+      eexists. left.
+      do 13 (pfold; sim_tau; left). sim_red.
+      rewrite Any.upcast_downcast. sim_red.
+      do 2 (pfold; sim_tau; left).
+      pfold. econs 4.
+      { admit "ez: strict_determinate_at". }
+      eexists. eexists.
+      { eapply step_external_function.
+        admit "ez: genv lookup & get malloc". }
+      eexists; split; auto. left.
+      pfold. econs 4.
+      { admit "ez: strict_determinate_at". }
+      eexists. eexists.
+      { eapply step_return. }
+      eexists; split; auto. right. eapply CIH.
+      hexploit match_states_intro.
+      { instantiate (2:=Skip). ss. }
+      4,5,6: eauto.
+      4:{ clarify. }
+      4:{ i.
+          match goal with
+          | [ H1: match_states _ _ _ _ _ ?i0 _ |- match_states _ _ _ _ _ ?i1 _ ] =>
+            replace i1 with i0; eauto
+          end.
+          unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
+      { econs. i. admit "ez: local env". }
+      { clarify. }
+      { admit "mid: match memory". }
+
+    - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Free. sim_red.
+      ss. uo; des_ifs. eapply step_expr; eauto.
+      i. sim_red. destruct rstate. ss. destruct l.
+      { admit "ez: wf_r_state". }
+      grind. unfold ordN in *. do 3 (pfold; sim_tau; left). sim_red.
+      set (ge:= Sk.load_skenv (Sk.add (defs src) Sk.unit)).
+      set (ms:=(add (MemSem (Sk.add (defs src) Sk.unit)) (add (ImpMod.modsem src ge) {| fnsems := []; initial_mrs := [] |}))).
+      set (mn:=name src).
+      unfold cfun. rewrite Any.upcast_downcast. grind. unfold freeF. sim_red.
+      do 4 (pfold; sim_tau; left). sim_red.
+      rewrite PSTATE. rewrite Any.upcast_downcast. grind. unfold unptr. des_ifs; sim_red.
+      1:{ sim_triggerUB. }
+      unfold Mem.free. des_ifs; ss.
+      2:{ sim_triggerUB. }
+      sim_red.
+      pfold. econs 6; clarify.
+      { admit "ez: strict_determinate_at". }
+      eexists. eexists.
+      { eapply step_call.
+        - econs. econs 2.
+          { eapply Maps.PTree.gempty. }
+          admit "ez: genv lookup".
+        - econs 2; eauto. econs 1.
+        - ss. des_ifs. admit "ez: genv lookup".
+        - admit "ez: genv lookup". }
+      eexists. eexists.
+      { eapply (step_tau _). }
+      eexists. left.
+      do 8 (pfold; sim_tau; left).
+      pfold. econs 4.
+      { admit "ez: strict_determinate_at". }
+      eexists. eexists.
+      { eapply step_external_function.
+        admit "ez: genv lookup & get malloc". }
+      eexists; split; auto. left.
+      pfold. econs 4.
+      { admit "ez: strict_determinate_at". }
+      eexists. eexists.
+      { eapply step_return. }
+      eexists; split; auto. right. eapply CIH.
+      hexploit match_states_intro.
+      { instantiate (2:=Skip). ss. }
+      4,5,6: eauto.
+      4:{ clarify. }
+      4:{ i.
+          match goal with
+          | [ H1: match_states _ _ _ _ _ ?i0 _ |- match_states _ _ _ _ _ ?i1 _ ] =>
+            replace i1 with i0; eauto
+          end.
+          unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
+      { ss. }
+      { clarify. }
+      admit "hard: free".
+
+    - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Load. sim_red.
+      ss. uo; des_ifs. eapply step_expr; eauto.
+      i. sim_red. destruct rstate. ss. destruct l.
+      { admit "ez: wf_r_state". }
+      grind. unfold ordN in *. do 3 (pfold; sim_tau; left). sim_red.
+      set (ge:= Sk.load_skenv (Sk.add (defs src) Sk.unit)).
+      set (ms:=(add (MemSem (Sk.add (defs src) Sk.unit)) (add (ImpMod.modsem src ge) {| fnsems := []; initial_mrs := [] |}))).
+      set (mn:=name src).
+      unfold cfun. rewrite Any.upcast_downcast. grind. unfold loadF. sim_red.
+      do 4 (pfold; sim_tau; left). sim_red.
+      rewrite PSTATE. rewrite Any.upcast_downcast. grind. unfold unptr. des_ifs; sim_red.
+      1:{ sim_triggerUB. }
+      unfold Mem.load. destruct (Mem.cnts m blk ofs) eqn:MEMCNT; ss.
+      2:{ sim_triggerUB. }
+      sim_red.
+      pfold. econs 6; clarify.
+      { admit "ez: strict_determinate_at". }
+      eexists. eexists.
+      { eapply step_set. econs; eauto. ss.
+        admit "mid: match_memory's contents". }
+      eexists. eexists.
+      { eapply (step_tau _). }
+      eexists. left.
+      do 4 (pfold; sim_tau; left). sim_red. rewrite Any.upcast_downcast. grind.
+      do 1 (pfold; sim_tau; left). pfold; sim_tau; right. eapply CIH.
+      hexploit match_states_intro.
+      { instantiate (2:=Skip). ss. }
+      2,3,4,5,6: eauto.
+      2: clarify.
+      2:{ i.
+          match goal with
+          | [ H1: match_states _ _ _ _ _ ?i0 _ |- match_states _ _ _ _ _ ?i1 _ ] =>
+            replace i1 with i0; eauto
+          end.
+          unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
+      { econs. i. admit "ez: match lenv". }
+
+    - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Store. sim_red.
+      set (ge:= Sk.load_skenv (Sk.add (defs src) Sk.unit)).
+      set (ms:=(add (MemSem (Sk.add (defs src) Sk.unit)) (add (ImpMod.modsem src ge) {| fnsems := []; initial_mrs := [] |}))).
+      set (mn:=name src).
+      ss. uo; des_ifs. eapply step_expr; eauto. i. sim_red.
+      eapply step_expr; eauto. i. sim_red.
+      destruct rstate. ss. destruct l.
+      { admit "ez: wf_r_state". }
+      grind. unfold ordN in *. do 3 (pfold; sim_tau; left). sim_red.
+      unfold cfun. rewrite Any.upcast_downcast. grind. unfold storeF. sim_red.
+      do 4 (pfold; sim_tau; left). sim_red.
+      rewrite PSTATE. rewrite Any.upcast_downcast. grind. unfold unptr. des_ifs; sim_red.
+      2:{ sim_triggerUB. }
+      unfold Mem.store. destruct (Mem.cnts m blk ofs) eqn:MEMCNT; ss.
+      2:{ sim_triggerUB. }
+      sim_red.
+      pfold. econs 6; clarify.
+      { admit "ez: strict_determinate_at". }
+      eexists. eexists.
+      { eapply step_store; eauto. ss.
+        admit "mid: match_memory's contents". }
+      eexists. eexists.
+      { eapply (step_tau _). }
+      eexists. left.
+      do 7 (pfold; sim_tau; left). sim_red. pfold; sim_tau; right. eapply CIH.
+      hexploit match_states_intro.
+      { instantiate (2:=Skip). ss. }
+      1,4,5,6: eauto.
+      3: clarify.
+      3:{ i.
+          match goal with
+          | [ H1: match_states _ _ _ _ _ ?i0 _ |- match_states _ _ _ _ _ ?i1 _ ] =>
+            replace i1 with i0; eauto
+          end.
+          unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
+      { ss. }
+      admit "mid: match memory".
+
+    - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Cmp. sim_red.
+      set (ge:= Sk.load_skenv (Sk.add (defs src) Sk.unit)).
+      set (ms:=(add (MemSem (Sk.add (defs src) Sk.unit)) (add (ImpMod.modsem src ge) {| fnsems := []; initial_mrs := [] |}))).
+      set (mn:=name src).
+      ss. uo; des_ifs. eapply step_expr; eauto. i. sim_red.
+      eapply step_expr; eauto. i. sim_red.
+      destruct rstate. ss. destruct l.
+      { admit "ez: wf_r_state". }
+      grind. unfold ordN in *. do 3 (pfold; sim_tau; left). sim_red.
+      unfold cfun. rewrite Any.upcast_downcast. grind. unfold cmpF. sim_red.
+      do 4 (pfold; sim_tau; left). sim_red.
+      rewrite PSTATE. rewrite Any.upcast_downcast. grind.
+      destruct (vcmp m rv rv0) eqn:VCMP; sim_red.
+      2:{ sim_triggerUB. }
+      des_ifs.
+      + sim_red.
+        pfold. econs 6; clarify.
+        { admit "ez: strict_determinate_at". }
+        eexists. eexists.
+        { eapply step_set. econs; eauto. ss.
+          admit "ez?: match value & comparison". }
+        eexists. eexists.
+        { eapply (step_tau _). }
+        eexists. left.
+        do 4 (pfold; sim_tau; left). sim_red. rewrite Any.upcast_downcast. grind.
+        do 1 (pfold; sim_tau; left). pfold; sim_tau; right. eapply CIH.
+        hexploit match_states_intro.
+        { instantiate (2:=Skip). ss. }
+        2,3,4,5,6: eauto.
+        2: clarify.
+        2:{ i.
+            match goal with
+            | [ H1: match_states _ _ _ _ _ ?i0 _ |- match_states _ _ _ _ _ ?i1 _ ] =>
+              replace i1 with i0; eauto
+            end.
+            unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
+        { econs. i. admit "ez: match lenv". }
+      + sim_red.
+        pfold. econs 6; clarify.
+        { admit "ez: strict_determinate_at". }
+        eexists. eexists.
+        { eapply step_set. econs; eauto. ss.
+          admit "ez?: match value & comparison". }
+        eexists. eexists.
+        { eapply (step_tau _). }
+        eexists. left.
+        do 4 (pfold; sim_tau; left). sim_red. rewrite Any.upcast_downcast. grind.
+        do 1 (pfold; sim_tau; left). pfold; sim_tau; right. eapply CIH.
+        hexploit match_states_intro.
+        { instantiate (2:=Skip). ss. }
+        2,3,4,5,6: eauto.
+        2: clarify.
+        2:{ i.
+            match goal with
+            | [ H1: match_states _ _ _ _ _ ?i0 _ |- match_states _ _ _ _ _ ?i1 _ ] =>
+              replace i1 with i0; eauto
+            end.
+            unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
+        { econs. i. admit "ez: match lenv". }
 
 
-      admit "hard: Malloc".
-    - admit "hard: free".
-    - admit "hard: Load".
-    - admit "hard: Store".
-    - admit "hard: Cmp".
   Admitted.
 
 End PROOF.
