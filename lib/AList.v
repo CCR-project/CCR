@@ -116,7 +116,8 @@ Section ALIST.
   :
     In (k, v) l.
   Proof.
-    admit "ez".
+    revert FIND. induction l; ss.
+    i. destruct a. ss. rewrite eq_rel_dec_correct in *. des_ifs; auto.
   Qed.
 
   Lemma alist_find_none K `{Dec K} V (k: K) (l: alist K V)
@@ -125,7 +126,9 @@ Section ALIST.
     :
       ~ In (k, v) l.
   Proof.
-    admit "ez".
+    revert FIND. induction l; ss.
+    i. destruct a. ss. rewrite eq_rel_dec_correct in *. des_ifs; auto.
+    ii. des; clarify. eapply IHl; et.
   Qed.
 
   Lemma alist_find_app K `{Dec K} V (k: K) (l0 l1: alist K V) (v: V)
@@ -133,21 +136,42 @@ Section ALIST.
     :
       alist_find k (l0 ++ l1) = Some v.
   Proof.
-    admit "ez".
+    revert FIND. induction l0; ss.
+    i. destruct a. ss. rewrite eq_rel_dec_correct in *. des_ifs; auto.
   Qed.
 
   Lemma alist_find_map K `{Dec K} V0 V1 (f: V0 -> V1) (k: K) (l: alist K V0)
     :
       alist_find k (List.map (fun '(k, v) => (k, f v)) l) = o_map (alist_find k l) f.
   Proof.
-    admit "ez".
+    induction l; ss. uo. destruct a. rewrite eq_rel_dec_correct in *.
+    des_ifs.
   Qed.
 
   Lemma alist_add_find_eq K `{Dec K} V (k: K) (l: alist K V) (v: V)
     :
       alist_find k (alist_add k v l) = Some v.
   Proof.
-    admit "ez".
+    ss. rewrite eq_rel_dec_correct. des_ifs.
+  Qed.
+
+  Lemma alist_remove_find_eq K `{Dec K} V (k: K) (l: alist K V)
+    :
+      alist_find k (alist_remove k l) = None.
+  Proof.
+    induction l; ss. rewrite eq_rel_dec_correct. des_ifs.
+    ss. destruct a. ss. rewrite eq_rel_dec_correct. des_ifs.
+  Qed.
+
+  Lemma alist_remove_find_neq K `{Dec K} V (k0 k1: K) (l: alist K V)
+        (NEQ: k0 <> k1)
+    :
+      alist_find k0 (alist_remove k1 l) = alist_find k0 l.
+  Proof.
+    induction l; ss.
+    destruct a. ss. rewrite ! eq_rel_dec_correct. des_ifs.
+    { ss. rewrite eq_rel_dec_correct. des_ifs. }
+    { ss. rewrite eq_rel_dec_correct. des_ifs. }
   Qed.
 
   Lemma alist_add_find_neq K `{Dec K} V (k0 k1: K) (l: alist K V) (v: V)
@@ -155,7 +179,8 @@ Section ALIST.
     :
       alist_find k0 (alist_add k1 v l) = alist_find k0 l.
   Proof.
-    admit "ez".
+    ss. rewrite eq_rel_dec_correct. des_ifs.
+    eapply alist_remove_find_neq; auto.
   Qed.
 
   Lemma alist_find_filter K `{Dec K} V (l: alist K V) (k: K) (v: V) (f: K -> bool)
