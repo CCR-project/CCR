@@ -105,16 +105,6 @@ Section PROOF.
   | SetCtx (ctx: Σ): ctxE unit
   .
 
-  Definition handle_ctxE {E}: ctxE ~> stateT Σ (itree E) :=
-    fun _ e ctx0 =>
-      match e with
-      | GetCtx => Ret (ctx0, ctx0)
-      | SetCtx ctx1 => Ret (ctx1, tt)
-      end.
-
-  Definition interp_ctxE {E}: itree (ctxE +' E) ~> stateT Σ (itree E) :=
-    State.interp_state (case_ handle_ctxE pure_state).
-
   Definition put E `{ctxE -< E} `{rE -< E} `{eventE -< E}
              (mr1: Σ) (fr1: Σ): itree E unit :=
     mr0 <- trigger (MGet);;
@@ -196,10 +186,10 @@ Variant hCallE: Type -> Type :=
 
 Notation Es' := (hCallE +' pE +' eventE).
 
-Program Fixpoint _APC (at_most: Ord.t) {wf Ord.lt at_most}: itree Es' unit :=
+Program Fixpoint _APC (at_most: Ord.t) {wf Ord.lt at_most}: itree Es' Any.t :=
   break <- trigger (Choose _);;
   if break: bool
-  then Ret tt
+  then trigger (Choose _)
   else
     n <- trigger (Choose Ord.t);;
     trigger (Choose (n < at_most)%ord);;;
@@ -210,7 +200,7 @@ Next Obligation.
   eapply Ord.lt_well_founded.
 Qed.
 
-Definition APC: itree Es' unit :=
+Definition APC: itree Es' Any.t :=
   at_most <- trigger (Choose _);;
   guarantee(at_most < kappa)%ord;;;
   _APC at_most
@@ -220,7 +210,7 @@ Lemma unfold_APC:
   forall at_most, _APC at_most =
                   break <- trigger (Choose _);;
                   if break: bool
-                  then Ret tt
+                  then trigger (Choose _)
                   else
                     n <- trigger (Choose Ord.t);;
                     guarantee (n < at_most)%ord;;;
@@ -347,21 +337,49 @@ Section CANCEL.
 
 
 
+  Definition handle_ctxE {E}: ctxE ~> stateT Σ (itree E) :=
+    fun _ e ctx0 =>
+      match e with
+      | GetCtx => Ret (ctx0, ctx0)
+      | SetCtx ctx1 => Ret (ctx1, tt)
+      end.
+
+  Definition interp_ctxE {E}: itree (ctxE +' E) ~> stateT Σ (itree E) :=
+    interp_state (case_ handle_ctxE pure_state).
+
+  Definition handle_hCallE_tgt (ord_cur: ord): hCallE ~> stateT Σ (ctxE +' Es) :=
+    fun _ e ctx0 =>
+      match e with
+      |
+      | GetCtx => Ret (ctx0, ctx0)
+      | SetCtx ctx1 => Ret (ctx1, tt)
+      end.
+
+
+    fun _ '(hCall tbr fn varg_src) =>
+      f <- (alist_find fn stb)ǃ;;
+      HoareCall tbr ord_cur f fn varg_src
+  .
+
   Definition handle_hCallE_tgt (ord_cur: ord): hCallE ~> itree (ctxE +' Es) :=
     fun _ '(hCall tbr fn varg_src) =>
       f <- (alist_find fn stb)ǃ;;
       HoareCall tbr ord_cur f fn varg_src
   .
 
-  Definition interp_hCallE_tgt (ord_cur: ord): itree Es' ~> itree (ctxE +' Es) :=
+  Definition interp_hCallE_tgt' (ord_cur: ord): itree Es' ~> itree (ctxE +' Es) :=
     interp (case_ (bif:=sum1) (handle_hCallE_tgt ord_cur)
                   ((fun T X => trigger X): _ ~> itree (ctxE +' Es)))
   .
 
+  Definition interp_hCallE_tgt (ord_cur: ord): itree Es' ~> stateT Σ (itree Es) :=
+    fun T => (interp_ctxE (T:=T)) ∘ (interp_hCallE_tgt' ord_cur (T:=T)).
+
   Definition body_to_tgt (ord_cur: ord)
-             (body: Any_src -> itree (hCallE +' pE +' eventE) Any_src): Any_src -> itree (ctxE +' Es) Any_src :=
+             (body: Any_src -> itree (hCallE +' pE +' eventE) Any_src): Any_src -> stateT Σ (itree Es) Any_src :=
     fun varg_tgt => interp_hCallE_tgt ord_cur (body varg_tgt)
   .
+
 
   Definition HoareFun'
              {X: Type}
@@ -377,8 +395,8 @@ Section CANCEL.
 
 
     vret_src <- match ord_cur with
-                | ord_pure n => (interp_hCallE_tgt ord_cur APC);;; trigger (Choose _)
-                | _ => (body_to_tgt ord_cur body) varg_src
+                | ord_pure n => (interp_hCallE_tgt' ord_cur (APC;;; trigger (Choose _))
+                | _ => (interp_hCallE_tgt' ord_cur (body varg_src))
                 end;;
     (* vret_src <- body ord_cur varg_src;; (*** "rudiment": we don't remove extcalls because of termination-sensitivity ***) *)
 
@@ -405,6 +423,7 @@ Section CANCEL.
     let fs: fspec := sb.(fsb_fspec) in
     (HoareFun (fs.(precond)) (fs.(postcond)) sb.(fsb_body))
   .
+
 
 
   Definition HoareFunArg'
@@ -455,10 +474,10 @@ Section CANCEL.
     :
       HoareFun P Q body varg_tgt =
       '(ctx, (x, varg_src, ord_cur)) <- HoareFunArg P varg_tgt;;
-      '(ctx, vret_src) <- interp_ctxE (match ord_cur with
-                                       | ord_pure n => (interp_hCallE_tgt ord_cur APC);;; trigger (Choose _)
-                                       | _ => (interp_hCallE_tgt ord_cur (body varg_src))
-                                       end) ctx;;
+      '(ctx, vret_src) <- interp_hCallE_tgt ord_cur (match ord_cur with
+                                                     | ord_pure n => APC;;; trigger (Choose _)
+                                                     | _ => body varg_src
+                                                     end) ctx;;
       HoareFunRet Q ctx x vret_src
   .
   Proof.
@@ -479,8 +498,26 @@ Section CANCEL.
     repeat rewrite ! interp_state_bind. repeat rewrite ! bind_bind. f_equal.
     extensionality x. destruct x as [x10 x11].
     repeat rewrite ! interp_state_bind. repeat rewrite ! bind_bind. ired. f_equal.
-    extensionality x. destruct x as [x12 x13].
+    { extensionality x. destruct x as [x12 x13].
+      repeat rewrite ! interp_state_bind. repeat rewrite ! bind_bind. f_equal. }
+    { destruct x9; ss. unfold interp_hCallE_tgt, interp_hCallE_tgt', interp_ctxE.
+      repeat rewrite ! interp_state_bind. repeat rewrite ! interp_bind.
+      repeat rewrite ! interp_state_bind. f_equal.
+      extensionality x. destruct x as [x12 x13]. ss. f_equal.
+      rewrite interp_trigger. cbn. rewrite mred. ired. red.
+
+      grind. rewrite interp_bind.
+
     repeat rewrite ! interp_state_bind. repeat rewrite ! bind_bind. f_equal.
+
+ f_equal.
+
+repeat rewrite ! interp_bind. f_equal.
+
+f_equal.
+
+f_equal. repeat rewrite ! bind_bind. f_equal.
+
   Qed.
 
 (*** NOTE:
