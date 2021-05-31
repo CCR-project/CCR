@@ -670,10 +670,76 @@ Section PROOF.
         rewrite bind_trigger. grind. }
       split.
       { admit "ez?: NEED strict_determinate_at". }
-      eexists.
-      admit "mid: CallSys".
+      inv STEP.
+      eexists. left.
+      do 8 (pfold; sim_tau; left).
+      pfold. econs 4.
+      { admit "ez: strict_determinate_at". }
+      eexists. eexists.
+      { eapply step_return. }
+      eexists; split; auto. right. eapply CIH.
+      hexploit match_states_intro.
+      { instantiate (2:=Skip). ss. }
+      3:{ eapply WFCONT. }
+      3:{ eapply MCONT. }
+      3:{ eapply MSTACK. }
+      3:{ clarify. }
+      3:{ i.
+          match goal with
+          | [ H1: match_states _ _ _ _ _ ?i0 _ |- match_states _ _ _ _ _ ?i1 _ ] =>
+            replace i1 with i0; eauto
+          end.
+          unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
+      { econs. i. exists (map_val_opt sv). split; auto. ss.
+        admit "ez: find from local env". }
+      { admit "ez?: match memory, need to enforce memory invariance for syscall sem". }
 
-    - admit "hard: AddrOf".
+    - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_AddrOf.
+      ss. des_ifs.
+      + unfold unwrapU. des_ifs.
+        2:{ sim_triggerUB. }
+        do 2 (pfold; sim_tau; left). sim_red.
+        pfold. econs 6; ss.
+        { admit "ez: strict_determinate_at". }
+        eexists. eexists.
+        { eapply step_set. econs. econs 2.
+          { eapply Maps.PTree.gempty. }
+          admit "ez? genv, use the fact that src already found". }
+        eexists. exists (step_tau _). eexists. right. eapply CIH.
+        hexploit match_states_intro.
+        { instantiate (2:=Skip). ss. }
+        2,3,4,5: eauto.
+        2:{ clarify. }
+        2:{ i.
+            match goal with
+            | [ H: match_states _ _ _ _ _ ?i0 _ |- match_states _ _ _ _ _ ?i1 _ ] =>
+              replace i1 with i0; eauto
+            end.
+            unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
+        { econs. i. admit "ez?: need a translation of genv". }
+      + uo; des_ifs. unfold ident_key in Heq1.
+        unfold unwrapU. des_ifs.
+        2:{ sim_triggerUB. }
+        do 2 (pfold; sim_tau; left). sim_red.
+        pfold. econs 6; ss.
+        { admit "ez: strict_determinate_at". }
+        eexists. eexists.
+        { eapply step_set. econs. econs 2.
+          { eapply Maps.PTree.gempty. }
+          admit "ez? genv, use the fact that src already found". }
+        eexists. exists (step_tau _). eexists. right. eapply CIH.
+        hexploit match_states_intro.
+        { instantiate (2:=Skip). ss. }
+        2,3,4,5: eauto.
+        2:{ clarify. }
+        2:{ i.
+            match goal with
+            | [ H: match_states _ _ _ _ _ ?i0 _ |- match_states _ _ _ _ _ ?i1 _ ] =>
+              replace i1 with i0; eauto
+            end.
+            unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
+        { econs. i. admit "ez?: need a translation of genv". }
+
     - admit "hard: Malloc".
     - admit "hard: free".
     - admit "hard: Load".
