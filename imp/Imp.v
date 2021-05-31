@@ -115,11 +115,7 @@ Section Denote.
     end.
 
   Definition call_mem f :=
-    String.string_dec f "alloc"
-    || String.string_dec f "free"
-    || String.string_dec f "load"
-    || String.string_dec f "store"
-    || String.string_dec f "cmp".
+    dec f "alloc" || dec f "free" || dec f "load" || dec f "store" || dec f "cmp".
 
   Fixpoint denote_stmt (s : stmt) : itree eff val :=
     match s with

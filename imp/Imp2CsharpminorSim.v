@@ -294,20 +294,21 @@ Section PROOF.
 
   Theorem match_states_sim
           (src: Imp.program) tgt
-          gm ge ms mn
+          (modl: ModL.t) gm ge ms mn
           ist cst
           i0
           (MODNAME: mn = src.(name))
           (GMAP: gm = get_gmap src)
-          (MODSEML: ms = (ImpMod.get_modL src).(ModL.enclose))
-          (GENV: ge = Sk.load_skenv (ImpMod.get_modL src).(ModL.sk))
+          (MODL: modl = (Mod.add_list ([Mem] ++ [ImpMod.get_mod src])))
+          (MODSEML: ms = modl.(ModL.enclose))
+          (GENV: ge = Sk.load_skenv modl.(ModL.sk))
           (COMP: Imp2Csharpminor.compile src = OK tgt)
           (MS: match_states mmem gm ge ms mn ist cst)
     :
-      <<SIM: sim (ModL.compile (Mod.add_list ([Mem] ++ [ImpMod.get_mod src]))) (semantics tgt) ordN i0 ist cst>>.
+      <<SIM: sim (ModL.compile modl) (semantics tgt) ordN i0 ist cst>>.
   Proof.
     move GMAP before ms. move MODSEML before GMAP. move GENV before MODSEML. move COMP before GENV.
-    move MODNAME before COMP.
+    move MODNAME before COMP. move MODL before COMP.
     revert_until MODNAME.
     pcofix CIH. i.
     inv MS.
@@ -529,16 +530,16 @@ Section PROOF.
       | [ |- paco3 _ _ _ (r0 <- unwrapU (?f);; _) _ ] => destruct f eqn:FSEM; ss
       end.
       2:{ sim_triggerUB. }
-      grind.
-      rewrite find_map in FSEM.
+      unfold call_mem in Heq. des_ifs; clarify. clear Heq1 Heq4 Heq5 Heq6 Heq7 Heq8 Heq.
+      grind. rewrite app_nil_r in FSEM. rewrite find_map in FSEM.
       match goal with
       | [ FSEM: o_map (?a) _ = _ |- _ ] => destruct a eqn:FOUND; ss; clarify
       end.
-      destruct p0. destruct p0. clarify.
       rewrite find_map in FOUND.
       match goal with
       | [ FOUND: o_map (?a) _ = _ |- _ ] => destruct a eqn:FOUND2; ss; clarify
       end.
+      destruct p1.
 
       (* make lemma *)
       assert (COMPF: exists tf0, compile_function (get_gmap src) f0 = Some tf0).
@@ -565,6 +566,7 @@ Section PROOF.
                                     tf0.(fn_body) = Sseq (bodytf0) (Sreturn (Some (Evar (s2p "return"))))).
       { admit "ez: trivial by definition". }
 
+      unfold ModSem.map_snd in H2. clarify.
       unfold cfun. sim_red. rewrite Any.upcast_downcast. sim_red.
       rewrite unfold_eval_imp_only.
       destruct (init_args (Imp.fn_params f0) rvs []) eqn:ARGS; sim_red.
@@ -601,8 +603,8 @@ Section PROOF.
       { eapply step_seq. }
       eexists; split; auto. right.
       eapply CIH.
-      set (ge:= Sk.load_skenv (defs src)).
-      set (ms:=ImpMod.modsemL src ge).
+      set (ge:= Sk.load_skenv (Sk.add (defs src) Sk.unit)).
+      set (ms:=(add (MemSem (Sk.add (defs src) Sk.unit)) (add (ImpMod.modsem src ge) {| fnsems := []; initial_mrs := [] |}))).
       set (mn:=name src).
       match goal with
       | [ |- match_states _ _ _ _ _ (?i) _] =>
@@ -625,7 +627,7 @@ Section PROOF.
           instantiate (1:=mn). instantiate (1:=ms). instantiate (1:=ge). instantiate (1:=get_gmap src).
           econs 2; ss; eauto. }
       3: eauto.
-      1:{ eapply Heq5. }
+      1:{ eapply Heq1. }
       2:{ ss. econs 1. }
       2:{ clarify. }
       2:{ i.
@@ -740,7 +742,15 @@ Section PROOF.
             unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
         { econs. i. admit "ez?: need a translation of genv". }
 
-    - admit "hard: Malloc".
+    - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Malloc. sim_red.
+      ss. uo; des_ifs. destruct rp. eapply step_expr; eauto.
+      i. sim_red. destruct r0. ss. destruct l.
+      { admit "ez: wf_r_state". }
+      grind. unfold ordN in *. do 3 (pfold; sim_tau; left). sim_red.
+      
+
+
+      admit "hard: Malloc".
     - admit "hard: free".
     - admit "hard: Load".
     - admit "hard: Store".
