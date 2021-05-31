@@ -115,6 +115,75 @@ Section PROOF.
   Let GURA: URA.t := GRA.to_URA Σ.
   Local Existing Instance GURA.
 
+  Variant ctxE : Type -> Type :=
+  | GetCtx : ctxE Σ
+  | SetCtx (ctx: Σ): ctxE unit
+  .
+
+  Definition handle_ctxE {E}: ctxE ~> stateT Σ (itree E) :=
+    fun _ e ctx0 =>
+      match e with
+      | GetCtx => Ret (ctx0, ctx0)
+      | SetCtx ctx1 => Ret (ctx1, tt)
+      end.
+
+  Definition put E `{rE -< E} `{eventE -< E} (mr1: Σ) (fr1: Σ): itree E unit :=
+    mr0 <- trigger (MGet);;
+    fr0 <- trigger FGet;;
+    guarantee(URA.updatable (URA.add mr0 fr0) (URA.add mr1 fr1));;;
+    trigger (FPut fr1);;; trigger (MPut mr1)
+  .
+
+  Definition forge E `{rE -< E} `{eventE -< E} (delta: Σ): itree E unit :=
+    fr0 <- trigger FGet;;
+    trigger (FPut (URA.add fr0 delta))
+  .
+
+  Definition discard E `{rE -< E} `{eventE -< E} (fr1: Σ): itree E unit :=
+    fr0 <- trigger FGet;;
+    rest <- trigger (Choose _);;
+    guarantee(fr0 = URA.add fr1 rest);;;
+    trigger (FPut rest)
+  .
+
+  Definition checkWf E `{rE -< E} `{eventE -< E}: itree E unit :=
+    mr0 <- trigger (MGet);; fr0 <- trigger FGet;;
+    assume(URA.wf (URA.add mr0 fr0))
+  .
+
+
+  Definition interp_ctxE {E}: itree (ctxE +' E) ~> stateT Σ (itree E) :=
+    State.interp_state (case_ handle_ctxE pure_state).
+
+
+
+  Definition HoareCall
+             (ctx: Σ)
+             (tbr: bool)
+             (ord_cur: ord)
+             (fsp: fspec):
+    gname -> fsp.(AA) -> itree (ctxE +' Es) fsp.(AR) :=
+    fun fn varg_src =>
+      '(marg, farg) <- trigger (Choose _);;
+      assume (
+
+      put marg farg;;; (*** updating resources in an abstract way ***)
+      rarg <- trigger (Choose Σ);; discard rarg;;; (*** virtual resource passing ***)
+      x <- trigger (Choose fsp.(X));; varg_tgt <- trigger (Choose Any_tgt);;
+      ord_next <- trigger (Choose _);;
+      guarantee(fsp.(precond) x varg_src varg_tgt  ord_next rarg);;; (*** precondition ***)
+
+      guarantee(ord_lt ord_next ord_cur /\ (tbr = true -> is_pure ord_next) /\ (tbr = false -> ord_next = ord_top));;;
+      vret_tgt <- trigger (Call fn varg_tgt);; (*** call ***)
+
+      rret <- trigger (Take Σ);; forge rret;;; (*** virtual resource passing ***)
+      vret_src <- trigger (Take fsp.(AR));;
+      checkWf;;;
+      assume(fsp.(postcond) x vret_src vret_tgt rret);;; (*** postcondition ***)
+
+      Ret vret_src (*** return to body ***)
+  .
+
   Definition HoareCall
              (tbr: bool)
              (ord_cur: ord)
