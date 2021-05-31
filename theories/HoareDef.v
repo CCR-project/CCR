@@ -100,16 +100,10 @@ Section PROOF.
   Let GURA: URA.t := GRA.to_URA Σ.
   Local Existing Instance GURA.
 
-  Variant ctxE : Type -> Type :=
-  | GetCtx : ctxE Σ
-  | SetCtx (ctx: Σ): ctxE unit
-  .
-
-  Definition put E `{ctxE -< E} `{rE -< E} `{eventE -< E}
-             (mr1: Σ) (fr1: Σ): itree E unit :=
+  Definition put E `{rE -< E} `{eventE -< E}
+             (ctx: Σ) (mr1: Σ) (fr1: Σ): itree E unit :=
     mr0 <- trigger (MGet);;
     fr0 <- trigger FGet;;
-    ctx <- trigger GetCtx;;
     guarantee(URA.wf (URA.add ctx (URA.add mr0 fr0)));;;
     trigger (FPut fr1);;; trigger (MPut mr1)
   .
@@ -127,8 +121,7 @@ Section PROOF.
     trigger (FPut rest)
   .
 
-  Definition checkWf E `{ctxE -< E} `{rE -< E} `{eventE -< E}: itree E unit :=
-    ctx <- trigger GetCtx;;
+  Definition checkWf E `{rE -< E} `{eventE -< E} (ctx: Σ): itree E unit :=
     mr0 <- trigger (MGet);; fr0 <- trigger FGet;;
     assume(URA.wf (URA.add ctx (URA.add mr0 fr0)))
   .
@@ -137,10 +130,10 @@ Section PROOF.
              (tbr: bool)
              (ord_cur: ord)
              (fsp: fspec):
-    gname -> Any_src -> itree (ctxE +' Es) Any_src :=
-    fun fn varg_src =>
+    gname -> Any_src -> stateT Σ (itree Es) Any_src :=
+    fun fn varg_src ctx =>
       '(marg, farg) <- trigger (Choose _);;
-      put marg farg;;; (*** updating resources in an abstract way ***)
+      put ctx marg farg;;; (*** updating resources in an abstract way ***)
       rarg <- trigger (Choose Σ);; discard rarg;;; (*** virtual resource passing ***)
       x <- trigger (Choose fsp.(X));; varg_tgt <- trigger (Choose Any_tgt);;
       ord_next <- trigger (Choose _);;
@@ -152,11 +145,10 @@ Section PROOF.
       rret <- trigger (Take Σ);; forge rret;;; (*** virtual resource passing ***)
       vret_src <- trigger (Take Any_src);;
       ctx <- trigger (Take _);;
-      trigger (SetCtx ctx);;;
-      checkWf;;;
+      checkWf ctx;;;
       assume(fsp.(postcond) x vret_src vret_tgt rret);;; (*** postcondition ***)
 
-      Ret vret_src (*** return to body ***)
+      Ret (ctx, vret_src) (*** return to body ***)
   .
 
 End PROOF.
@@ -337,43 +329,16 @@ Section CANCEL.
 
 
 
-  Definition handle_ctxE {E}: ctxE ~> stateT Σ (itree E) :=
-    fun _ e ctx0 =>
-      match e with
-      | GetCtx => Ret (ctx0, ctx0)
-      | SetCtx ctx1 => Ret (ctx1, tt)
-      end.
-
-  Definition interp_ctxE {E}: itree (ctxE +' E) ~> stateT Σ (itree E) :=
-    interp_state (case_ handle_ctxE pure_state).
-
-  Definition handle_hCallE_tgt (ord_cur: ord): hCallE ~> stateT Σ (ctxE +' Es) :=
-    fun _ e ctx0 =>
-      match e with
-      |
-      | GetCtx => Ret (ctx0, ctx0)
-      | SetCtx ctx1 => Ret (ctx1, tt)
-      end.
-
-
-    fun _ '(hCall tbr fn varg_src) =>
+  Definition handle_hCallE_tgt (ord_cur: ord): hCallE ~> stateT Σ (itree Es) :=
+    fun _ '(hCall tbr fn varg_src) ctx =>
       f <- (alist_find fn stb)ǃ;;
-      HoareCall tbr ord_cur f fn varg_src
-  .
-
-  Definition handle_hCallE_tgt (ord_cur: ord): hCallE ~> itree (ctxE +' Es) :=
-    fun _ '(hCall tbr fn varg_src) =>
-      f <- (alist_find fn stb)ǃ;;
-      HoareCall tbr ord_cur f fn varg_src
-  .
-
-  Definition interp_hCallE_tgt' (ord_cur: ord): itree Es' ~> itree (ctxE +' Es) :=
-    interp (case_ (bif:=sum1) (handle_hCallE_tgt ord_cur)
-                  ((fun T X => trigger X): _ ~> itree (ctxE +' Es)))
+      HoareCall tbr ord_cur f fn varg_src ctx
   .
 
   Definition interp_hCallE_tgt (ord_cur: ord): itree Es' ~> stateT Σ (itree Es) :=
-    fun T => (interp_ctxE (T:=T)) ∘ (interp_hCallE_tgt' ord_cur (T:=T)).
+    interp_state (case_ (bif:=sum1) (handle_hCallE_tgt ord_cur)
+                        ((fun T X s => x <- trigger X;; Ret (s, x)): _ ~> stateT Σ (itree Es)))
+  .
 
   Definition body_to_tgt (ord_cur: ord)
              (body: Any_src -> itree (hCallE +' pE +' eventE) Any_src): Any_src -> stateT Σ (itree Es) Any_src :=
