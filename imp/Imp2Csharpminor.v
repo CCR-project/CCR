@@ -7,7 +7,6 @@ Require Import Any.
 Require Import ModSem.
 Require Import Imp.
 Require Import ImpProofs.
-Require Import IMem0.
 
 Require Import Coq.Lists.SetoidList.
 
@@ -205,8 +204,7 @@ Section Compile.
   .
 
   Definition compile_eVars src : tgt_gdefs :=
-    let gv := (mkglobvar () [] false false) in
-    List.map (fun id => (s2p id, Gvar gv)) src.
+    let gv := (mkglobvar () [] false false) in List.map (fun id => (s2p id, Gvar gv)) src.
 
   Definition compile_iVars src : tgt_gdefs :=
     List.map (fun '(id, z) => (s2p id, Gvar (mkglobvar () [Init_int64 (to_long z)] false false))) src.
@@ -262,7 +260,7 @@ Section Compile.
     let ivars := compile_iVars src.(prog_varsL) in
     let efuns := compile_eFuns src.(ext_funsL) in
     do ifuns <- compile_iFuns (List.map snd src.(prog_funsL));
-    let defs := init_g ++ evars ++ efuns ++ ivars ++ ifuns in
+    let defs := efuns ++ evars ++ init_g ++ ifuns ++ ivars in
     Some defs
   .
 
@@ -279,10 +277,24 @@ Section Compile.
     end
   .
 
+  Definition _compile2 (src : Imp.programL) : res program :=
+    let optdefs := (compile_gdefs src) in
+    match optdefs with
+    | None => Error [MSG "Imp2clight compilation failed"]
+    | Some _defs =>
+      if (@NoDupB _ positive_Dec (List.map fst _defs)) then
+        OK (mkprogram _defs (List.map s2p src.(publicL)) (s2p "main"))
+      else Error [MSG "Imp2clight compilation failed; duplicated declarations"]
+    end
+  .
+
 End Compile.
 
 Definition compile (src : Imp.programL) :=
   _compile (get_gmap src) src.
+
+Definition compile2 (src : Imp.programL) :=
+  _compile2 (get_gmap src) src.
 
 Module ASMGEN.
 
@@ -506,426 +518,3 @@ End Beh.
 Hint Constructors _match_beh.
 Hint Unfold match_beh.
 Hint Resolve match_beh_mon: paco.
-
-Section Sim.
-
-  Fixpoint get_cont_stmts (cc: cont) : list Csharpminor.stmt :=
-    match cc with
-    | Kseq s k => s :: (get_cont_stmts k)
-    | _ => []
-    end
-  .
-
-  Fixpoint wf_ccont (k: cont) : Prop :=
-    match k with
-    | Kseq s k2 =>
-      match s with
-      | Sreturn _ =>
-        match k2 with
-        | Kstop => True
-        | Kcall _ _ env _ k3 => (env = empty_env /\ wf_ccont k3)
-        | _ => False
-        end
-      | _ => wf_ccont k2
-      end
-    | _ => False
-    end
-  .
-
-  Fixpoint get_cont_stack k : option cont :=
-    match k with
-    | Kseq s k2 =>
-      match s with
-      | Sreturn _ =>
-        match k2 with
-        | Kstop | Kcall _ _ _ _ _ => Some k
-        | _ => None
-        end
-      | _ => get_cont_stack k2
-      end
-    | _ => None
-    end
-  .
-
-  Lemma wf_cont_has_stack
-        k
-        (WFCCONT: wf_ccont k)
-    :
-      exists ks, get_cont_stack k = Some ks.
-  Proof.
-    revert_until k.
-    induction k; i; ss; clarify.
-    destruct s; ss; clarify; eauto.
-    destruct k; ss; clarify; eauto.
-  Qed.
-
-  Context `{Σ: GRA.t}.
-
-  (* Variable src : Imp.program. *)
-  (* Let src_mod := ImpMod.get_mod src. *)
-  (* Variable tgt : Ctypes.program function. *)
-
-  (* Let src_sem := ModL.compile (Mod.add_list ([src_mod] ++ [IMem])). *)
-  (* Let tgt_sem := semantics2 tgt. *)
-
-  (* CC 'final_state' = the return state of "main", should return int32. *)
-
-  (* Definition itree_of_imp (itr: itree _ val) := *)
-  (*   fun ge le ms mn rp => *)
-  (*     EventsL.interp_Es (ModSemL.prog ms) (transl_all mn (vret <- ('(_, retv) <- (interp_imp ge (itr;; retv <- denote_expr (Var "return"%string);; Ret retv) le);; Ret retv);; Ret (vret↑))) rp. *)
-
-  Definition itree_of_imp_cont {T} (itr: itree _ T) :=
-    fun ge le ms mn rp =>
-      EventsL.interp_Es (ModSemL.prog ms) (transl_all mn (interp_imp ge itr le)) rp.
-
-  Definition itree_of_imp_ret :=
-    fun ge le ms mn rp =>
-      itree_of_imp_cont (denote_expr (Var "return"%string)) ge le ms mn rp.
-
-  (* Definition itree_of_imp_fun (itr: itree _ val) := *)
-  (*   fun ge le ms mn rp => *)
-  (*     itree_of_imp_cont (itr;; retv <- denote_expr (Var "return"%string);; Ret retv) ge le ms mn rp. *)
-
-  Lemma itree_of_imp_cont_bind
-        T R ge le ms mn rp (itr: itree _ T) (ktr: T -> itree _ R)
-    :
-      itree_of_imp_cont (x <- itr;; ktr x) ge le ms mn rp
-      =
-      '(r, p, (le2, v)) <- (itree_of_imp_cont itr ge le ms mn rp);; (itree_of_imp_cont (ktr v) ge le2 ms mn (r, p)).
-  Proof.
-    unfold itree_of_imp_cont. rewrite interp_imp_bind. grind.    
-    rewrite! transl_all_bind; rewrite! EventsL.interp_Es_bind.
-    grind. destruct p0. grind.
-  Qed.
-
-  (* Lemma itree_of_imp_fun_splits *)
-  (*       (itr: itree _ val) ge le ms mn rp *)
-  (*   : *)
-  (*     itree_of_imp_fun itr ge le ms mn rp *)
-  (*     = *)
-  (*     '(r, p, (le2, v)) <- (itree_of_imp_cont itr ge le ms mn rp);; (itree_of_imp_ret ge le2 ms mn (r, p)). *)
-  (* Proof. *)
-  (*   unfold itree_of_imp_fun, itree_of_imp_ret. rewrite itree_of_imp_cont_bind. reflexivity. *)
-  (* Qed. *)
-
-  Definition itree_of_imp_pop :=
-    fun ge ms mn retmn (retx: var) (retle: lenv) (x: _ * _ * (lenv * val)) =>
-      let '(r, p, (le0, _)) := x in
-      '(r2, p2, rv) <- EventsL.interp_Es (ModSemL.prog ms) (transl_all mn ('(_, v) <- interp_imp ge (denote_expr (Var "return"%string)) le0;; Ret (v↑))) (r, p);;
-      '(r3, p3, rv) <- EventsL.interp_Es (ModSemL.prog ms) (trigger EventsL.PopFrame;; (tau;; Ret rv)) (r2, p2);;
-      pop <- EventsL.interp_Es (ModSemL.prog ms) (transl_all retmn (tau;; tau;; v0 <- unwrapN (rv↓);; (tau;; tau;; tau;; Ret (alist_add retx v0  retle, Vundef)))) (r3, p3);;
-      Ret pop.
-
-  Definition itree_of_imp_pop_bottom :=
-    fun ge ms mn (x: _ * _ * (lenv * val)) =>
-      let '(r, p, (le0, _)) := x in
-      '(r2, p2, rv) <- EventsL.interp_Es (ModSemL.prog ms) (transl_all mn ('(_, v) <- interp_imp ge (denote_expr (Var "return"%string)) le0;; Ret (v↑))) (r, p);;
-      '(_, _, rv) <- EventsL.interp_Es (ModSemL.prog ms) (trigger EventsL.PopFrame;; (tau;; Ret rv)) (r2, p2);;
-      Ret rv.
-
-  (* Lemma itree_of_imp_split_cont_pop *)
-  (*       ge le ms mn rp itr *)
-  (*   : *)
-  (*     itree_of_imp itr ge le ms mn rp *)
-  (*     = *)
-  (*     (x <- (itree_of_imp_fun itr ge le ms mn rp);; (itree_of_imp_pop ms mn x)). *)
-  (* Proof. *)
-  (*   unfold itree_of_imp, itree_of_imp_fun, itree_of_imp_ret, itree_of_imp_cont, itree_of_imp_pop. grind. *)
-  (*   rewrite! transl_all_bind; rewrite! EventsL.interp_Es_bind. grind. *)
-  (* Qed. *)
-
-  Definition itree_of_cont_stmt (s : Imp.stmt) :=
-    fun ge le ms mn rp => itree_of_imp_cont (denote_stmt s) ge le ms mn rp.
-
-  (* Definition itree_of_fun_body (fb : Imp.stmt) := *)
-  (*   fun ge le ms mn rp => itree_of_imp_fun (denote_stmt fb) ge le ms mn rp. *)
-
-  Definition imp_state := itree eventE Any.t.
-  Definition imp_cont {T} {R} := (r_state * p_state * (lenv * T)) -> itree eventE (r_state * p_state * (lenv * R)).
-  Definition imp_stack := (r_state * p_state * (lenv * val)) -> imp_state.
-
-  (* Hypothesis archi_ptr64 : Archi.ptr64 = true. *)
-  Definition map_val (v : Universe.val) : Values.val :=
-    match v with
-    | Vint z => Values.Vlong (to_long z)
-    | Vptr blk ofs =>
-      Values.Vptr (Pos.of_nat (blk+1)) (Ptrofs.repr ofs)
-    | Vundef => Values.Vundef
-    end.
-
-  Definition map_val_opt (optv : option Universe.val) : option Values.val :=
-    match optv with
-    | Some v => Some (map_val v)
-    | None => None
-    end.
-
-  Variant match_le : lenv -> temp_env -> Prop :=
-  | match_le_intro
-      sle tle
-      (ML: forall x sv,
-          (alist_find x sle = sv) ->
-          (exists tv, (Maps.PTree.get (s2p x) tle = tv) /\
-                 (tv = map_val_opt sv)))
-    :
-      match_le sle tle.
-
-  (* match_genv: ge = Sk.load_skenv imp.(defs), tgtge = globalenv (compile imp),
-                 need to show they match only at beginning *)
-
-  Definition id2blk_cgenv (src: Imp.program) (id: string) : option positive :=
-    match compile src with
-    | Error _ => None
-    | OK tgt =>
-      let tgenv := Genv.globalenv tgt in
-      Genv.find_symbol tgenv (s2p id)
-    end.
-
-  Lemma id2blk_cgenv_correct
-        (src: Imp.program) tgt tgenv id
-        (COMP: compile src = OK tgt)
-        (TGE: tgenv = Genv.globalenv tgt)
-    :
-      Genv.find_symbol tgenv (s2p id) = id2blk_cgenv src id.
-  Proof.
-    unfold id2blk_cgenv. clarify. rewrite COMP. auto.
-  Qed.
-
-  (* Variable match_ge : SkEnv.t -> genv -> Prop. *)
-
-  Definition ret_call_cont k :=
-    (Kseq (Sreturn (Some (Evar (s2p "return")))) (call_cont k)).
-  (* global env is fixed when src program is fixed *)
-  Variable gm : gmap.
-  Variable ge : SkEnv.t.
-  (* ModSem should be fixed with src too *)
-  Variable ms : ModSemL.t.
-  (* We only need one module name *)
-  Variable mn : string.
-
-  Inductive match_code : imp_cont -> (list Csharpminor.stmt) -> Prop :=
-  | match_code_return
-    :
-      match_code idK [Sreturn (Some (Evar (s2p "return")))]
-  | match_code_cont
-      code itr ktr chead ctail
-      (CST: compile_stmt gm code = Some chead)
-      (ITR: itr = fun '(r, p, (le, _)) => itree_of_cont_stmt code ge le ms mn (r, p))
-      (MCONT: match_code ktr ctail)
-    :
-      match_code (fun x => (itr x >>= ktr)) (chead :: ctail)
-  .
-
-  Inductive match_stack : imp_stack -> option Csharpminor.cont -> Prop :=
-  | match_stack_bottom
-    :
-      match_stack (fun x => itree_of_imp_pop_bottom ge ms mn x) (Some (ret_call_cont Kstop))
-
-  | match_stack_cret
-      tf le tle next stack tcont id tid tpop
-      (MLE: match_le le tle)
-      (MID: s2p id = tid)
-
-      (WFCONT: wf_ccont tcont)
-      (MCONT: match_code next (get_cont_stmts tcont))
-      (MSTACK: match_stack stack (get_cont_stack tcont))
-
-      (TPOP: tpop = ret_call_cont (Kcall (Some tid) tf empty_env tle tcont))
-    :
-      match_stack (fun x => (y <- (itree_of_imp_pop ge ms mn mn id le x);; next y >>= stack)) (Some tpop)
-  .
-
-  Variable match_mem : Mem.t -> Memory.Mem.mem -> Prop.
-
-  Variant match_states : imp_state -> Csharpminor.state -> Prop :=
-  | match_states_intro
-      tf rstate pstate le tle code itr tcode m tm next stack tcont
-      (CST: compile_stmt gm code = Some tcode)
-      (ML: match_le le tle)
-
-      (PSTATE: pstate "Mem"%string = m↑)
-      (MM: match_mem m tm)
-      (* (MG: match_ge ge tge) *)
-      (WFCONT: wf_ccont tcont)
-      (MCONT: match_code next (get_cont_stmts tcont))
-      (MSTACK: match_stack stack (get_cont_stack tcont))
-      (ITR: itr = itree_of_cont_stmt code ge le ms mn (rstate, pstate))
-    :
-      match_states (x <- itr;; next x >>= stack) (State tf tcode tcont empty_env tle tm)
-  .
-
-  (* Definition alist_add_option optid v (le : lenv) := *)
-  (*   match optid with *)
-  (*   | None => le *)
-  (*   | Some id => alist_add id v le *)
-  (*   end. *)
-
-  (* Variant match_id : option var -> option ident -> Prop := *)
-  (* | match_id_None *)
-  (*   : *)
-  (*     match_id None None *)
-  (* | match_id_Some *)
-  (*     v *)
-  (*   : *)
-  (*     match_id (Some v) (Some (s2p v)). *)
-
-End Sim.
-
-Section Proof.
-
-  Import Maps.PTree.
-
-  Lemma list_norepet_NoDupB {K} {decK} :
-    forall l, Coqlib.list_norepet l <-> @NoDupB K decK l = true.
-  Proof.
-    split; i.
-    - induction H; ss.
-      clarify.
-      destruct (in_dec decK hd tl); clarify.
-    - induction l; ss; clarify. constructor.
-      des_ifs. econs 2; auto.
-  Qed.
-
-  (* Definition wf_imp_prog (src : Imp.programL) := *)
-  (*   Coqlib.list_norepet (compile_gdefs (get_gmap src) src). *)
-
-  (* Lemma compile_then_wf : forall src tgt, *)
-  (*     compile src = OK tgt *)
-  (*     -> *)
-  (*     wf_imp_prog src. *)
-  (* Proof. *)
-  (*   unfold compile, _compile. i. *)
-  (*   destruct (compile_gdefs (get_gmap src) src) eqn:EQ; clarify. *)
-  (*   eauto using compile_gdefs_then_wf. *)
-  (* Qed. *)
-
-  (* Maps.PTree.elements_extensional
-     we will rely on above theorem for commutation lemmas *)
-  Lemma _comm_link_imp_compile :
-    forall src1 src2 srcl tgt1 tgt2 tgtl,
-      compile src1 = OK tgt1 -> compile src2 = OK tgt2 ->
-      link_imp src1 src2 = Some srcl ->
-      link_prog tgt1 tgt2 = Some tgtl ->
-      compile srcl = OK tgtl.
-  Proof.
-  Admitted.
-
-  Definition wf_link {T} (program_list : list T) :=
-    exists h t, program_list = h :: t.
-
-  Inductive compile_list :
-    list programL -> list (Csharpminor.program) -> Prop :=
-  | compile_nil :
-      compile_list [] []
-  | compile_head :
-      forall src_h src_t tgt_h tgt_t,
-        compile src_h = OK tgt_h ->
-        compile_list src_t tgt_t ->
-        compile_list (src_h :: src_t) (tgt_h :: tgt_t).
-
-  Definition fold_left_option {T} f (t : list T) (opth : option T) :=
-    fold_left
-      (fun opt s2 => match opt with | Some s1 => f s1 s2 | None => None end)
-      t opth.
-
-  Lemma fold_left_option_None {T} :
-    forall f (l : list T), fold_left_option f l None = None.
-  Proof.
-    intros f. induction l; ss; clarify.
-  Qed.
-
-  Definition link_imp_list src_list :=
-    match src_list with
-    | [] => None
-    | src_h :: src_t =>
-      fold_left_option link_imp src_t (Some src_h)
-    end.
-
-  Definition link_clight_list (tgt_list : list (Csharpminor.program)) :=
-    match tgt_list with
-    | [] => None
-    | tgt_h :: tgt_t =>
-      fold_left_option link_prog tgt_t (Some tgt_h)
-    end.
-
-  Lemma comm_link_imp_compile :
-    forall src_list srcl tgt_list tgtl,
-      compile_list src_list tgt_list ->
-      link_imp_list src_list = Some srcl ->
-      link_clight_list tgt_list = Some tgtl
-      ->
-      compile srcl = OK tgtl.
-  Proof.
-    i. destruct src_list; destruct tgt_list; ss; clarify.
-    inv H; clarify.
-    generalize dependent srcl. generalize dependent tgtl.
-    generalize dependent p. generalize dependent p0.
-    induction H7; i; ss; clarify.
-    destruct (link_prog p0 tgt_h) eqn:LPt; ss; clarify.
-    2:{ rewrite fold_left_option_None in H1; clarify. }
-    destruct (link_imp p src_h) eqn:LPs; ss; clarify.
-    2:{ rewrite fold_left_option_None in H0; clarify. }
-    eapply IHcompile_list.
-    2: apply H1.
-    2: apply H0.
-    eapply _comm_link_imp_compile.
-    3: apply LPs.
-    3: apply LPt.
-    auto. auto.
-  Qed.
-
-  Context `{Σ: GRA.t}.
-
-  Lemma _comm_link_imp_link_mod :
-    forall src1 src2 srcl tgt1 tgt2 tgtl (ctx : ModL.t),
-      ImpMod.get_modL src1 = tgt1 ->
-      ImpMod.get_modL src2 = tgt2 ->
-      link_imp src1 src2 = Some srcl ->
-      ImpMod.get_modL srcl = tgtl ->
-      ModL.add (ModL.add ctx tgt1) tgt2
-      =
-      ModL.add ctx tgtl.
-  Proof.
-  Admitted.
-
-  Lemma comm_link_imp_link_mod :
-    forall src_list srcl tgt_list tgtl ctx,
-      List.map (fun src => ImpMod.get_modL src) src_list = tgt_list ->
-      link_imp_list src_list = Some srcl ->
-      ImpMod.get_modL srcl = tgtl ->
-      fold_left ModL.add tgt_list ctx
-      =
-      ModL.add ctx tgtl.
-  Proof.
-    destruct src_list eqn:SL; i; ss; clarify.
-    move p after l.
-    revert_until Σ.
-    induction l; i; ss; clarify.
-    destruct (link_imp p a) eqn:LI; ss; clarify.
-    2:{ rewrite fold_left_option_None in H0; clarify. }
-    erewrite _comm_link_imp_link_mod; eauto.
-  Qed.
-
-  Lemma single_compile_behavior_improves :
-    forall (src: Imp.program) tgt (beh: program_behavior),
-      compile src = OK tgt ->
-      program_behaves (Csharpminor.semantics tgt) beh ->
-      let srcM := ModL.add IMem (ImpMod.get_mod src) in
-      exists mbeh,
-        match_beh beh mbeh /\ Beh.of_program (ModL.compile srcM) mbeh.
-  Proof.
-  Admitted.
-
-  Theorem compile_behavior_improves :
-    forall (src_list : list Imp.program) srclM tgt_list tgtl (beh : program_behavior),
-      let src_list_lift := List.map Imp.lift src_list in
-      compile_list src_list_lift tgt_list ->
-      let src_list_mod := List.map (fun src => ImpMod.get_mod src) src_list in
-      Mod.add_list (IMem :: src_list_mod) = srclM ->
-      link_clight_list tgt_list = Some tgtl ->
-      program_behaves (Csharpminor.semantics tgtl) beh ->
-      exists mbeh,
-        match_beh beh mbeh /\ Beh.of_program (ModL.compile srclM) mbeh.
-  Proof.
-  Admitted.
-
-End Proof.
