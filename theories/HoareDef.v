@@ -451,14 +451,6 @@ If this feature is needed; we can extend it then. At the moment, I will only all
 
 
 
-  Lemma interp_hCallE_src_bind
-        A B
-        (itr: itree Es' A) (ktr: A -> itree Es' B)
-    :
-      interp_hCallE_src (v <- itr ;; ktr v) = v <- interp_hCallE_src (itr);; interp_hCallE_src (ktr v)
-  .
-  Proof. unfold interp_hCallE_src. ired. grind. Qed.
-
 End CANCEL.
 
 End PSEUDOTYPING.
@@ -975,100 +967,97 @@ Context `{Σ: GRA.t}.
 Lemma interp_tgt_bind
       (R S: Type)
       (s : itree (hCallE +' pE +' eventE) R) (k : R -> itree (hCallE +' pE +' eventE) S)
-      stb o
+      stb o ctx
   :
-    (interp_hCallE_tgt stb o (s >>= k))
+    (interp_hCallE_tgt stb o (s >>= k)) ctx
     =
-    ((interp_hCallE_tgt stb o s) >>= (fun r => interp_hCallE_tgt stb o (k r))).
+    st <- interp_hCallE_tgt stb o s ctx;; interp_hCallE_tgt stb o (k st.2) st.1.
 Proof.
-  unfold interp_hCallE_tgt in *. grind.
+  unfold interp_hCallE_tgt in *. eapply interp_state_bind.
 Qed.
 
-Lemma interp_tgt_tau stb o
+Lemma interp_tgt_tau stb o ctx
       (U: Type)
       (t : itree _ U)
   :
-    (interp_hCallE_tgt stb o (Tau t))
+    (interp_hCallE_tgt stb o (Tau t) ctx)
     =
-    (Tau (interp_hCallE_tgt stb o t)).
+    (Tau (interp_hCallE_tgt stb o t ctx)).
 Proof.
-  unfold interp_hCallE_tgt in *. grind.
+  unfold interp_hCallE_tgt in *. eapply interp_state_tau.
 Qed.
 
-Lemma interp_tgt_ret stb o
+Lemma interp_tgt_ret stb o ctx
       (U: Type)
       (t: U)
   :
-    ((interp_hCallE_tgt stb o (Ret t)))
+    (interp_hCallE_tgt stb o (Ret t) ctx)
     =
-    Ret t.
+    Ret (ctx, t).
 Proof.
-  unfold interp_hCallE_tgt in *. grind.
+  unfold interp_hCallE_tgt in *. eapply interp_state_ret.
 Qed.
 
-Lemma interp_tgt_triggerp stb o
+Lemma interp_tgt_triggerp stb o ctx
       (R: Type)
       (i: pE R)
   :
-    (interp_hCallE_tgt stb o (trigger i))
+    (interp_hCallE_tgt stb o (trigger i) ctx)
     =
-    (trigger i >>= (fun r => tau;; Ret r)).
+    (trigger i >>= (fun r => tau;; Ret (ctx, r))).
 Proof.
-  unfold interp_hCallE_tgt in *.
-  repeat rewrite interp_trigger. grind.
+  unfold interp_hCallE_tgt. rewrite interp_state_trigger. cbn. grind.
 Qed.
 
-Lemma interp_tgt_triggere stb o
+Lemma interp_tgt_triggere stb o ctx
       (R: Type)
       (i: eventE R)
   :
-    (interp_hCallE_tgt stb o (trigger i))
+    (interp_hCallE_tgt stb o (trigger i) ctx)
     =
-    (trigger i >>= (fun r => tau;; Ret r)).
+    (trigger i >>= (fun r => tau;; Ret (ctx, r))).
 Proof.
-  unfold interp_hCallE_tgt in *.
-  repeat rewrite interp_trigger. grind.
+  unfold interp_hCallE_tgt. rewrite interp_state_trigger. cbn. grind.
 Qed.
 
-Lemma interp_tgt_hcall stb o
+Lemma interp_tgt_hcall stb o ctx
       (R: Type)
       (i: hCallE R)
   :
-    (interp_hCallE_tgt stb o (trigger i))
+    (interp_hCallE_tgt stb o (trigger i) ctx)
     =
-    ((handle_hCallE_tgt stb o i) >>= (fun r => tau;; Ret r)).
+    ((handle_hCallE_tgt stb o i ctx) >>= (fun r => tau;; Ret r)).
 Proof.
-  unfold interp_hCallE_tgt in *.
-  repeat rewrite interp_trigger. grind.
+  unfold interp_hCallE_tgt in *. rewrite interp_state_trigger. cbn. auto.
 Qed.
 
-Lemma interp_tgt_triggerUB stb o
+Lemma interp_tgt_triggerUB stb o ctx
       (R: Type)
   :
-    (interp_hCallE_tgt stb o (triggerUB))
+    (interp_hCallE_tgt stb o (triggerUB) ctx)
     =
-    triggerUB (A:=R).
+    triggerUB (A:=Σ*R).
 Proof.
-  unfold interp_hCallE_tgt, triggerUB in *. rewrite unfold_interp. cbn. grind.
+  unfold interp_hCallE_tgt, triggerUB in *. rewrite unfold_interp_state. cbn. grind.
 Qed.
 
-Lemma interp_tgt_triggerNB stb o
+Lemma interp_tgt_triggerNB stb o ctx
       (R: Type)
   :
-    (interp_hCallE_tgt stb o (triggerNB))
+    (interp_hCallE_tgt stb o (triggerNB) ctx)
     =
-    triggerNB (A:=R).
+    triggerNB (A:=Σ*R).
 Proof.
-  unfold interp_hCallE_tgt, triggerNB in *. rewrite unfold_interp. cbn. grind.
+  unfold interp_hCallE_tgt, triggerNB in *. rewrite unfold_interp_state. cbn. grind.
 Qed.
 
-Lemma interp_tgt_unwrapU stb o
+Lemma interp_tgt_unwrapU stb o ctx
       (R: Type)
       (i: option R)
   :
-    (interp_hCallE_tgt stb o (@unwrapU (hCallE +' pE +' eventE) _ _ i))
+    (interp_hCallE_tgt stb o (@unwrapU (hCallE +' pE +' eventE) _ _ i) ctx)
     =
-    (unwrapU i).
+    r <- (unwrapU i);; Ret (ctx, r).
 Proof.
   unfold interp_hCallE_tgt, unwrapU in *. des_ifs.
   { etrans.
@@ -1081,13 +1070,13 @@ Proof.
   }
 Qed.
 
-Lemma interp_tgt_unwrapN stb o
+Lemma interp_tgt_unwrapN stb o ctx
       (R: Type)
       (i: option R)
   :
-    (interp_hCallE_tgt stb o (@unwrapN (hCallE +' pE +' eventE) _ _ i))
+    (interp_hCallE_tgt stb o (@unwrapN (hCallE +' pE +' eventE) _ _ i) ctx)
     =
-    (unwrapN i).
+    r <- (unwrapN i);; Ret (ctx, r).
 Proof.
   unfold interp_hCallE_tgt, unwrapN in *. des_ifs.
   { etrans.
@@ -1100,34 +1089,34 @@ Proof.
   }
 Qed.
 
-Lemma interp_tgt_assume stb o
+Lemma interp_tgt_assume stb o ctx
       P
   :
-    (interp_hCallE_tgt stb o (assume P))
+    (interp_hCallE_tgt stb o (assume P) ctx)
     =
-    (assume P;;; tau;; Ret tt)
+    (assume P;;; tau;; Ret (ctx, tt))
 .
 Proof.
   unfold assume. rewrite interp_tgt_bind. rewrite interp_tgt_triggere. grind. eapply interp_tgt_ret.
 Qed.
 
-Lemma interp_tgt_guarantee stb o
+Lemma interp_tgt_guarantee stb o ctx
       P
   :
-    (interp_hCallE_tgt stb o (guarantee P))
+    (interp_hCallE_tgt stb o (guarantee P) ctx)
     =
-    (guarantee P;;; tau;; Ret tt).
+    (guarantee P;;; tau;; Ret (ctx, tt)).
 Proof.
   unfold guarantee. rewrite interp_tgt_bind. rewrite interp_tgt_triggere. grind. eapply interp_tgt_ret.
 Qed.
 
-Lemma interp_tgt_ext stb o
+Lemma interp_tgt_ext stb o ctx
       R (itr0 itr1: itree _ R)
       (EQ: itr0 = itr1)
   :
-    (interp_hCallE_tgt stb o itr0)
+    (interp_hCallE_tgt stb o itr0 ctx)
     =
-    (interp_hCallE_tgt stb o itr1)
+    (interp_hCallE_tgt stb o itr1 ctx)
 .
 Proof. subst; et. Qed.
 
