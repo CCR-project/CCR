@@ -97,7 +97,7 @@ Section FSPEC.
     @mk_fspec
       X
       (fun x arg_src arg_tgt o => (∃ (aa: AA), ⌜arg_src = aa↑⌝ ∧ precond x aa arg_tgt o)%I)
-      (fun x ret_src ret_tgt => (∃ (ar: AR), ⌜ret_tgt = ar↑⌝ ∧ postcond x ar ret_tgt)%I)
+      (fun x ret_src ret_tgt => (∃ (ar: AR), ⌜ret_src = ar↑⌝ ∧ postcond x ar ret_tgt)%I)
   .
 End FSPEC.
 
@@ -244,6 +244,16 @@ Section CANCEL.
     fsb_fspec:> fspec;
     fsb_body: Any.t -> itree (hCallE +' pE +' eventE) Any.t;
   }
+  .
+
+  Definition mk_tspecbody {X AA AR: Type}
+             (precond: X -> AA -> Any_tgt -> ord -> iProp)
+             (postcond: X -> AR -> Any_tgt -> iProp)
+             (body: AA -> itree (hCallE +' pE +' eventE) AR)
+    : fspecbody :=
+    mk_specbody
+      (mk precond postcond)
+      (cfun body)
   .
 
   (*** argument remains the same ***)
@@ -483,8 +493,8 @@ Section SMODSEM.
   Definition to_mid (stb: list (gname * fspec)) (ms: t): ModSem.t := transl (fun_to_mid stb ∘ fsb_body) (fun _ => ε) ms.
   Definition to_tgt (stb: list (gname * fspec)) (ms: t): ModSem.t := transl (fun_to_tgt stb) (initial_mr) ms.
 
-  Definition main (mainpre: Any.t -> ord -> Σ -> Prop) (mainbody: list val -> itree (hCallE +' pE +' eventE) val): t := {|
-      fnsems := [("main", (mk_specbody (mk_simple (fun (_: unit) => (mainpre, top2))) mainbody))];
+  Definition main (mainpre: Any.t -> ord -> iProp) (mainbody: Any.t -> itree (hCallE +' pE +' eventE) Any.t): t := {|
+      fnsems := [("main", (mk_specbody (mk_simple (fun (_: unit) => (mainpre, fun _ => (⌜True⌝: iProp)%I))) mainbody))];
       mn := "Main";
       initial_mr := ε;
       initial_st := tt↑;
@@ -717,7 +727,7 @@ Section SMOD.
     rewrite ! flat_map_assoc. eapply flat_map_ext. i. ss.
   Qed.
 
-  Definition main (mainpre: Any.t -> ord -> Σ -> Prop) (mainbody: list val -> itree (hCallE +' pE +' eventE) val): t := {|
+  Definition main (mainpre: Any.t -> ord -> Σ -> Prop) (mainbody: Any.t -> itree (hCallE +' pE +' eventE) Any.t): t := {|
     get_modsem := fun _ => (SModSem.main mainpre mainbody);
     sk := Sk.unit;
   |}

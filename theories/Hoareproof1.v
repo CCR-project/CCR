@@ -504,10 +504,9 @@ Section CANCEL.
     { rewrite NONE. steps. }
     rewrite SOME. steps.
     destruct rst_tgt0 as [mrs_tgt0 [|frs_hd frs_tl]]; ss.
-    { steps. destruct (Any.downcast t0); steps. }
-    steps. destruct (Any.downcast t0); ss.
-    2:{ steps. }
+    { steps. }
     steps. rewrite FINDMID. unfold fun_to_mid. steps.
+    rewrite Any.pair_split. steps.
     rewrite Any.upcast_downcast. steps.
     guclo ordC_spec. econs.
     { eapply OrdArith.add_base_l. }
@@ -617,34 +616,33 @@ Section CANCEL.
     { rewrite NONE. steps. }
     rewrite SOME. steps. destruct tbr.
     (* PURE *)
-    { seal_left. destruct (Any.downcast varg_src) eqn:ARG.
-      2: { steps. }
+    { seal_left.
       Local Opaque ord_lt. steps.
       destruct rst_src0 as [mrs_tgt0 [|frs_tgt_hd frs_tgt_tl]]; ss.
       { steps. }
       unseal_left. steps.
       rewrite FINDMID. unfold fun_to_mid. steps.
+      rewrite Any.pair_split. steps.
       rewrite Any.upcast_downcast. steps.
       guclo ordC_spec. econs.
       { eapply OrdArith.add_base_l. }
       rewrite idK_spec2 at 1.
       guclo bindC_spec. econs.
       { gfinal. right. eapply paco6_mon. { eapply adequacy_type_aux_APC. } ii; ss. }
-      i. steps. steps_strong. exists (Any.upcast x1). steps.
+      i. steps. steps_strong. exists x1. steps.
       gbase. eapply CIH. ss.
     }
 
     (* IMPURE *)
-    { seal_left. destruct (Any.downcast varg_src) eqn:ARG.
-      2: { steps. }
+    { seal_left.
       Local Opaque ord_lt. steps.
       destruct rst_src0 as [mrs_tgt0 [|frs_tgt_hd frs_tgt_tl]]; ss.
       { steps. }
       unseal_left. steps.
       rewrite FINDMID. rewrite FINDSRC.
-      eapply Any.downcast_upcast in ARG. des; subst.
       unfold fun_to_src, cfun, fun_to_mid. steps.
-      rewrite Any.upcast_downcast. rewrite Any.upcast_downcast. steps.
+      rewrite Any.pair_split. steps.
+      rewrite Any.upcast_downcast. steps.
       guclo ordC_spec. econs.
       { eapply OrdArith.add_base_l. }
       guclo bindC_spec. econs.
@@ -697,14 +695,15 @@ Section CANCEL.
   Qed.
 
   Variable mainpre: Any.t -> ord -> Σ -> Prop.
-  Variable (mainbody: list val -> itree (hCallE +' pE +' eventE) val).
+  Variable (mainbody: Any.t -> itree (hCallE +' pE +' eventE) Any.t).
+
+  Require Import Logic.
 
   Hypothesis MAINM:
-
-    alist_find "main" sbtb = Some (mk_specbody (mk_simple (fun _ : () => (mainpre, top2))) mainbody).
+    alist_find "main" sbtb = Some (mk_specbody (mk_simple (fun _ : () => (mainpre, fun _ => (⌜True⌝: iProp)%I))) mainbody).
 
   Theorem adequacy_type_m2s:
-    Beh.of_program (ModL.compile_arg (Mod.add_list mds_mid) (ord_top, []: list val)↑) <1=
+    Beh.of_program (ModL.compile_arg (Mod.add_list mds_mid) (Any.pair ord_top↑ ([]: list val)↑)) <1=
     Beh.of_program (ModL.compile (Mod.add_list mds_src)).
   Proof.
     eapply adequacy_global_itree.
@@ -738,7 +737,8 @@ Section CANCEL.
       rewrite FINDSRC. rewrite FINDMID. steps.
       unfold fun_to_src, fun_to_mid, cfun. steps.
 
-      rewrite Any.upcast_downcast. rewrite Any.upcast_downcast. steps.
+      rewrite Any.pair_split. steps.
+      rewrite Any.upcast_downcast. steps.
 
       guclo ordC_spec. econs.
       { eapply OrdArith.add_base_l. }
