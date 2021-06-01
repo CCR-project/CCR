@@ -342,46 +342,33 @@ Section CANCEL.
 
   Definition body_to_tgt (ord_cur: ord)
              (body: Any_src -> itree (hCallE +' pE +' eventE) Any_src): Any_src -> stateT Σ (itree Es) Any_src :=
-    fun varg_tgt => interp_hCallE_tgt ord_cur (body varg_tgt)
-  .
+    (@interp_hCallE_tgt ord_cur _) ∘ body.
 
-
-  Definition HoareFun'
-             {X: Type}
-             (P: X -> Any_src -> Any_tgt -> ord -> Σ -> Prop)
-             (Q: X -> Any_src -> Any_tgt -> Σ -> Prop)
-             (body: Any_src -> itree Es' Any_src): Any_tgt -> itree (ctxE +' Es) Any_tgt := fun varg_tgt =>
-    varg_src <- trigger (Take Any_src);;
-    x <- trigger (Take X);;
-    rarg <- trigger (Take Σ);; forge rarg;;; (*** virtual resource passing ***)
-    (checkWf);;;
-    ord_cur <- trigger (Take _);;
-    assume(P x varg_src varg_tgt  ord_cur rarg);;; (*** precondition ***)
-
-
-    vret_src <- match ord_cur with
-                | ord_pure n => (interp_hCallE_tgt' ord_cur (APC;;; trigger (Choose _))
-                | _ => (interp_hCallE_tgt' ord_cur (body varg_src))
-                end;;
-    (* vret_src <- body ord_cur varg_src;; (*** "rudiment": we don't remove extcalls because of termination-sensitivity ***) *)
-
-    vret_tgt <- trigger (Choose Any_tgt);;
-    '(mret, fret) <- trigger (Choose _);; put mret fret;;; (*** updating resources in an abstract way ***)
-    rret <- trigger (Choose Σ);; guarantee(Q x vret_src vret_tgt rret);;; (*** postcondition ***)
-    (discard rret);;; (*** virtual resource passing ***)
-
-    Ret vret_tgt (*** return ***)
-  .
 
   Definition HoareFun
              {X: Type}
              (P: X -> Any_src -> Any_tgt -> ord -> Σ -> Prop)
              (Q: X -> Any_src -> Any_tgt -> Σ -> Prop)
-             (body: Any_src -> itree Es' Any_src): Any_tgt -> itree Es Any_tgt :=
-    fun varg_tgt =>
-      ctx <- trigger (Take _);;
-      '(_, vret_tgt) <- interp_ctxE (HoareFun' P Q body varg_tgt) ctx;;
-      Ret vret_tgt
+             (body: Any_src -> itree Es' Any_src): Any_tgt -> itree Es Any_tgt := fun varg_tgt =>
+    ctx <- trigger (Take _);;
+    varg_src <- trigger (Take Any_src);;
+    x <- trigger (Take X);;
+    rarg <- trigger (Take Σ);; forge rarg;;; (*** virtual resource passing ***)
+    (checkWf ctx);;;
+    ord_cur <- trigger (Take _);;
+    assume(P x varg_src varg_tgt  ord_cur rarg);;; (*** precondition ***)
+
+    '(ctx, vret_src) <- interp_hCallE_tgt ord_cur (match ord_cur with
+                                                   | ord_pure n => APC;;; trigger (Choose _)
+                                                   | _ => body varg_src
+                                                   end) ctx;;
+
+    vret_tgt <- trigger (Choose Any_tgt);;
+    '(mret, fret) <- trigger (Choose _);; put ctx mret fret;;; (*** updating resources in an abstract way ***)
+    rret <- trigger (Choose Σ);; guarantee(Q x vret_src vret_tgt rret);;; (*** postcondition ***)
+    (discard rret);;; (*** virtual resource passing ***)
+
+    Ret vret_tgt (*** return ***)
   .
 
   Definition fun_to_tgt (sb: fspecbody): (Any_tgt -> itree Es Any_tgt) :=
@@ -389,45 +376,39 @@ Section CANCEL.
     (HoareFun (fs.(precond)) (fs.(postcond)) sb.(fsb_body))
   .
 
+(*** NOTE:
+body can execute eventE events.
+Notably, this implies it can also execute UB.
+With this flexibility, the client code can naturally be included in our "type-checking" framework.
+Also, note that body cannot execute "rE" on its own. This is intended.
 
+NOTE: we can allow normal "callE" in the body too, but we need to ensure that it does not call "HoareFun".
+If this feature is needed; we can extend it then. At the moment, I will only allow hCallE.
+***)
 
-  Definition HoareFunArg'
-             {X: Type}
-             (P: X -> Any_src -> Any_tgt -> ord -> Σ -> Prop): Any_tgt -> itree (ctxE +' Es) (X * Any_src * ord) := fun varg_tgt =>
-    varg_src <- trigger (Take Any_src);;
-    x <- trigger (Take X);;
-    rarg <- trigger (Take Σ);; forge rarg;;; (*** virtual resource passing ***)
-    (checkWf);;;
-    ord_cur <- trigger (Take _);;
-    assume(P x varg_src varg_tgt ord_cur rarg);;; (*** precondition ***)
-    Ret (x, varg_src, ord_cur)
-  .
 
   Definition HoareFunArg
              {X: Type}
-             (P: X -> Any_src -> Any_tgt -> ord -> Σ -> Prop): Any_tgt -> itree Es (Σ * (X * Any_src * ord)) :=
-    fun varg_tgt =>
-      ctx <- trigger (Take _);;
-      interp_ctxE (HoareFunArg' P varg_tgt) ctx
-  .
-
-  Definition HoareFunRet'
-             {X: Type}
-             (Q: X -> Any_src -> Any_tgt -> Σ -> Prop): X -> Any_src -> itree (ctxE +' Es) Any_tgt := fun x vret_src =>
-    vret_tgt <- trigger (Choose Any_tgt);;
-    '(mret, fret) <- trigger (Choose _);; put mret fret;;; (*** updating resources in an abstract way ***)
-    rret <- trigger (Choose Σ);; guarantee(Q x vret_src vret_tgt rret);;; (*** postcondition ***)
-    (discard rret);;; (*** virtual resource passing ***)
-
-    Ret vret_tgt (*** return ***)
+             (P: X -> Any_src -> Any_tgt -> ord -> Σ -> Prop): Any_tgt -> itree Es (Σ * (X * Any_src * ord)) := fun varg_tgt =>
+    ctx <- trigger (Take _);;
+    varg_src <- trigger (Take Any_src);;
+    x <- trigger (Take X);;
+    rarg <- trigger (Take Σ);; forge rarg;;; (*** virtual resource passing ***)
+    (checkWf ctx);;;
+    ord_cur <- trigger (Take _);;
+    assume(P x varg_src varg_tgt  ord_cur rarg);;; (*** precondition ***)
+    Ret (ctx, (x, varg_src, ord_cur))
   .
 
   Definition HoareFunRet
              {X: Type}
-             (Q: X -> Any_src -> Any_tgt -> Σ -> Prop): Σ -> X -> Any_src -> itree Es Any_tgt :=
-    fun ctx x vret_src =>
-      '(_, vret_tgt) <- interp_ctxE (HoareFunRet' Q x vret_src) ctx;;
-      Ret vret_tgt
+             (Q: X -> Any_src -> Any_tgt -> Σ -> Prop): X -> (Σ * Any_src) -> itree Es Any_tgt := fun x '(ctx, vret_src) =>
+    vret_tgt <- trigger (Choose Any_tgt);;
+    '(mret, fret) <- trigger (Choose _);; put ctx mret fret;;; (*** updating resources in an abstract way ***)
+    rret <- trigger (Choose Σ);; guarantee(Q x vret_src vret_tgt rret);;; (*** postcondition ***)
+    (discard rret);;; (*** virtual resource passing ***)
+
+    Ret vret_tgt (*** return ***)
   .
 
   Lemma HoareFun_parse
@@ -439,61 +420,13 @@ Section CANCEL.
     :
       HoareFun P Q body varg_tgt =
       '(ctx, (x, varg_src, ord_cur)) <- HoareFunArg P varg_tgt;;
-      '(ctx, vret_src) <- interp_hCallE_tgt ord_cur (match ord_cur with
-                                                     | ord_pure n => APC;;; trigger (Choose _)
-                                                     | _ => body varg_src
-                                                     end) ctx;;
-      HoareFunRet Q ctx x vret_src
-  .
+      interp_hCallE_tgt ord_cur (match ord_cur with
+                                 | ord_pure n => APC;;; trigger (Choose _)
+                                 | _ => body varg_src
+                                 end) ctx >>= HoareFunRet Q x.
   Proof.
-    unfold HoareFun, HoareFunArg, HoareFunRet, HoareFun', HoareFunArg', HoareFunRet', body_to_tgt, interp_ctxE.
-    ired. f_equal. extensionality ctx.
-    repeat rewrite ! interp_state_bind. repeat rewrite ! bind_bind. f_equal.
-    extensionality x. destruct x as [ctx1 arg_src].
-    repeat rewrite ! interp_state_bind. repeat rewrite ! bind_bind. f_equal.
-    extensionality x. destruct x as [x0 x1].
-    repeat rewrite ! interp_state_bind. repeat rewrite ! bind_bind. f_equal.
-    extensionality x. destruct x as [x2 x3].
-    repeat rewrite ! interp_state_bind. repeat rewrite ! bind_bind. f_equal.
-    extensionality x. destruct x as [x4 x5].
-    repeat rewrite ! interp_state_bind. repeat rewrite ! bind_bind. f_equal.
-    extensionality x. destruct x as [x6 x7].
-    repeat rewrite ! interp_state_bind. repeat rewrite ! bind_bind. f_equal.
-    extensionality x. destruct x as [x8 x9].
-    repeat rewrite ! interp_state_bind. repeat rewrite ! bind_bind. f_equal.
-    extensionality x. destruct x as [x10 x11].
-    repeat rewrite ! interp_state_bind. repeat rewrite ! bind_bind. ired. f_equal.
-    { extensionality x. destruct x as [x12 x13].
-      repeat rewrite ! interp_state_bind. repeat rewrite ! bind_bind. f_equal. }
-    { destruct x9; ss. unfold interp_hCallE_tgt, interp_hCallE_tgt', interp_ctxE.
-      repeat rewrite ! interp_state_bind. repeat rewrite ! interp_bind.
-      repeat rewrite ! interp_state_bind. f_equal.
-      extensionality x. destruct x as [x12 x13]. ss. f_equal.
-      rewrite interp_trigger. cbn. rewrite mred. ired. red.
-
-      grind. rewrite interp_bind.
-
-    repeat rewrite ! interp_state_bind. repeat rewrite ! bind_bind. f_equal.
-
- f_equal.
-
-repeat rewrite ! interp_bind. f_equal.
-
-f_equal.
-
-f_equal. repeat rewrite ! bind_bind. f_equal.
-
+    unfold HoareFun, HoareFunArg, HoareFunRet. grind.
   Qed.
-
-(*** NOTE:
-body can execute eventE events.
-Notably, this implies it can also execute UB.
-With this flexibility, the client code can naturally be included in our "type-checking" framework.
-Also, note that body cannot execute "rE" on its own. This is intended.
-
-NOTE: we can allow normal "callE" in the body too, but we need to ensure that it does not call "HoareFun".
-If this feature is needed; we can extend it then. At the moment, I will only allow hCallE.
-***)
 
   End INTERP.
 
@@ -525,15 +458,6 @@ If this feature is needed; we can extend it then. At the moment, I will only all
       interp_hCallE_src (v <- itr ;; ktr v) = v <- interp_hCallE_src (itr);; interp_hCallE_src (ktr v)
   .
   Proof. unfold interp_hCallE_src. ired. grind. Qed.
-
-  Lemma interp_hCallE_tgt_bind
-        A B
-        (itr: itree Es' A) (ktr: A -> itree Es' B)
-        stb0 cur
-    :
-      interp_hCallE_tgt stb0 cur (v <- itr ;; ktr v) = v <- interp_hCallE_tgt stb0 cur (itr);; interp_hCallE_tgt stb0 cur (ktr v)
-  .
-  Proof. unfold interp_hCallE_tgt. ired. grind. Qed.
 
 End CANCEL.
 
