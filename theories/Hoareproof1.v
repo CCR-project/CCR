@@ -535,21 +535,19 @@ Section CANCEL.
   Let p_src := ModSemL.prog ms_src.
   Let p_mid := ModSemL.prog ms_mid.
 
-  Let Any_pair_downcast: forall T0 T1 (v0: T0) (v1: T1), @Any.downcast (T0 * T1)%type (Any.pair v0↑ v1↑) = Some (v0, v1).
-    { admit "ez - add this to Any.v ------------------". }
-  Qed.
+  Ltac _ord_step := eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss].
 
-  Ltac _step :=
+  Ltac _step tac :=
     match goal with
     (*** terminal cases ***)
     | [ |- gpaco5 _ _ _ _ _ _ _ (triggerUB >>= _) _ ] =>
-      unfold triggerUB; mred; _step; ss; fail
+      unfold triggerUB; mred; _step tac; ss; fail
     | [ |- gpaco5 _ _ _ _ _ _ _ (triggerNB >>= _) _ ] =>
       exfalso
     | [ |- gpaco5 _ _ _ _ _ _ _ _ (triggerUB >>= _) ] =>
       exfalso
     | [ |- gpaco5 _ _ _ _ _ _ _ _ (triggerNB >>= _) ] =>
-      unfold triggerNB; mred; _step; ss; fail
+      unfold triggerNB; mred; _step tac; ss; fail
 
     (*** assume/guarantee ***)
     | [ |- gpaco5 _ _ _ _ _ _ _ (assume ?P ;;; _) _ ] =>
@@ -571,7 +569,7 @@ Section CANCEL.
 
     (*** default cases ***)
     | _ =>
-      (gstep; econs; eauto; try (eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss]);
+      (gstep; tac; econs; auto; try (_ord_step);
        (*** some post-processing ***)
        i;
        try match goal with
@@ -583,34 +581,32 @@ Section CANCEL.
     end
   .
 
-  Ltac steps := repeat (mred; try _step; des_ifs_safe).
+  Ltac steps := repeat (mred; try _step ltac:(eapply simg_safe_spec); des_ifs_safe).
+  Ltac steps_strong := repeat (mred; try (_step ltac:(idtac)); des_ifs_safe).
 
   Let adequacy_type_aux__APC:
     forall at_most o0 mn
            st_src0 st_tgt0
     ,
-      simg (* (fun '(st_src1, r_src) '(st_tgt1, r_tgt) => st_src1 = st_src0 /\ st_tgt1 = st_tgt0 /\ r_src = r_tgt) *)
-           (* (fun '(st_src1, _) '(st_tgt1, _) => st_src1 = st_src0 /\ st_tgt1 = st_tgt0) *)
-           (fun _ '(st_tgt1, _) => st_tgt1 = st_tgt0)
-           (C.myG o0 at_most + C.d)%ord (* (interp_Es p_src (trigger (Choose _)) st_src0) *) (Ret (st_src0, tt))
+      simg (fun st_src1 st_tgt1 => fst st_tgt1 = st_tgt0 /\ fst st_src1 = st_src0)
+           (C.myG o0 at_most + C.d)%ord
+           (Ret (st_src0, tt))
            (EventsL.interp_Es p_mid (transl_all mn (interp_hCallE_mid (ord_pure o0) (_APC at_most))) st_tgt0)
   .
   Proof.
     ginit.
     { i. eapply cpn5_wcompat; eauto with paco. }
+    (* induction *)
     intros ? ?. remember (mk_opair o0 at_most) as fuel. move fuel at top. revert at_most o0 Heqfuel.
     pattern fuel. eapply well_founded_induction. { eapply wf_opair_lt. } clear fuel.
-    intros fuel IH.
-    i. rewrite unfold_APC.
-    destruct st_tgt0 as [rst_tgt0 pst_tgt0]. destruct rst_tgt0 as [mrs_tgt0 [|frs_hd frs_tl]]; ss.
-    { admit "-----------------------------------it should not happen...". }
-    unfold C.d.
-    steps.
+    intros fuel IH. i.
+
+    rewrite unfold_APC. destruct st_tgt0 as [rst_tgt0 pst_tgt0]. steps.
     destruct x.
     { steps. }
-    steps.
-    (*************** TODO: define force_l/r *************)
-    unfold unwrapU. des_ifs; cycle 1.
+    steps. destruct rst_tgt0 as [mrs_tgt0 [|frs_hd frs_tl]]; ss.
+    { steps. }
+    steps. unfold unwrapU. des_ifs; cycle 1.
     { admit "-----------------------------------FINDF: make it to unwrapN". }
     steps.
     unfold ms_mid, mds_mid, SMod.to_mid in Heq. rewrite SMod.transl_fnsems in Heq.
@@ -619,16 +615,7 @@ Section CANCEL.
     rename Heq0 into INF. rename Heq into IN.
     rename x3 into md0. fold sk in INF. fold sk in INF.
     unfold fun_to_mid.
-    steps.
-    unfold unwrapN.
-    des_ifs; cycle 1.
-    { steps. }
-    steps.
-    des_ifs_safe.
-    eapply pair_downcast_lemma in Heq. des. subst.
-    des_ifs; ss.
-    steps.
-
+    steps. gstep. eapply simg_takeR; et; [_ord_step|]. eexists (ord_pure x1). steps.
     guclo ordC_spec. econs.
     { eapply OrdArith.add_base_l. }
     guclo ordC_spec. econs.
@@ -637,10 +624,7 @@ Section CANCEL.
     { rewrite OrdArith.add_assoc. refl. }
     rewrite idK_spec at 1.
     guclo bindC_spec. econs.
-    {
-      Local Transparent APC.
-      unfold APC.
-      steps.
+    { unfold APC. gstep. mred. eapply simg_chooseR; et; [_ord_step|]. i. steps.
       guclo ordC_spec. econs.
       { instantiate (1:=(C.myG x1 x3 + C.d)%ord).
         rewrite <- C.my_thm3; et.
@@ -651,22 +635,23 @@ Section CANCEL.
         - eapply Ord.lt_le in x4. rewrite <- x4. refl.
         - etrans; [|eapply OrdArith.add_base_l]. etrans; [|eapply OrdArith.add_base_l]. refl.
       }
-      eapply IH; et. econs; et.
+      eapply IH; auto. econs. left. auto.
     }
-    i. ss. des_ifs. destruct vret_src; ss. repeat des_u. unfold idK.
-    unfold C.f.
+
+    i. ss. destruct vret_tgt as [? []]. destruct vret_src as [? []]. ss. des; subst.
+    unfold idK. unfold C.f.
     guclo ordC_spec. econs.
     { rewrite <- OrdArith.add_assoc. refl. }
     steps.
-    guclo ordC_spec. econs; cycle 1.
-    { eapply IH; et. econs; et. right; split; et. refl. }
+    guclo ordC_spec. econs.
     { eapply OrdArith.add_base_l. }
+    { eapply IH; et. econs; et. right; split; et. refl. }
   Qed.
 
   Let adequacy_type_aux_APC:
     forall o0 st_src0 st_tgt0 mn
     ,
-      simg (fun _ '(st_tgt1, _) => st_tgt1 = st_tgt0)
+      simg (fun st_src1 st_tgt1 => fst st_tgt1 = st_tgt0 /\ fst st_src1 = st_src0)
            (C.myF o0)%ord (Ret (st_src0, tt))
            (EventsL.interp_Es p_mid (transl_all mn (interp_hCallE_mid (ord_pure o0) APC)) st_tgt0)
   .
@@ -697,8 +682,111 @@ Section CANCEL.
     end
   .
 
+  (*** TODO: remove redundancy with Hoareproof0 ***)
+  Ltac resub :=
+    repeat multimatch goal with
+           | |- context[ITree.trigger ?e] =>
+             match e with
+             | subevent _ _ => idtac
+             | _ => replace (ITree.trigger e) with (trigger e) by refl
+             end
+           | |- context[@subevent _ ?F ?prf _ (?e|)%sum] => replace (@subevent _ F prf _ (e|)%sum) with (@subevent _ F _ _ e) by refl
+           | |- context[@subevent _ ?F ?prf _ (|?e)%sum] => replace (@subevent _ F prf _ (|e)%sum) with (@subevent _ F _ _ e) by refl
+           end.
+
   Let wf: W -> W -> Prop := fun '(_, pst_src0) '(_, pst_tgt0) => pst_src0 = pst_tgt0.
   Let wf': forall {X}, (W * X)%type -> (W * X)%type -> Prop := (fun _ '(st_src0, rv_src) '(st_tgt0, rv_tgt) => wf st_src0 st_tgt0 /\ rv_src = rv_tgt).
+
+  Let adequacy_type_aux:
+    forall
+      o0
+      A (body: itree _ A) st_src0 st_tgt0 mn
+      (SIM: wf st_src0 st_tgt0)
+    ,
+      simg wf'
+           100%ord
+           (EventsL.interp_Es p_src (transl_all mn (interp_hCallE_src body)) st_src0)
+           (EventsL.interp_Es p_mid (transl_all mn (interp_hCallE_mid o0 body)) st_tgt0)
+  .
+  Proof.
+    ginit.
+    { i. eapply cpn5_wcompat; eauto with paco. }
+    gcofix CIH. i. ides body.
+    { steps. }
+    { steps. gbase. eapply CIH; ss. }
+
+    destruct e; cycle 1.
+    { rewrite <- bind_trigger. resub. steps.
+      destruct s; ss.
+      { destruct st_src0 as [rst_src0 pst_src0]; ss. destruct st_tgt0 as [rst_tgt0 pst_tgt0]; ss.
+        destruct p; ss.
+        - steps. gbase. eapply CIH; ss; et.
+        - steps. gbase. eapply CIH; ss; et.
+      }
+      { dependent destruction e.
+        - steps_strong. exists x_tgt. steps. gbase. eapply CIH; et.
+        - steps_strong. exists x_src. steps. gbase. eapply CIH; et.
+        - steps_strong. gbase. eapply CIH; et.
+      }
+    }
+    dependent destruction h.
+    rewrite <- bind_trigger. resub.
+    destruct st_src0 as [rst_src0 pst_src0]; ss. destruct st_tgt0 as [rst_tgt0 pst_tgt0]; ss.
+    ired_both. destruct tbr.
+    (* PURE *)
+    { steps_strong. eexists. steps.
+      destruct rst_tgt0 as [mrs_tgt0 [|frs_tgt_hd frs_tgt_tl]]; ss.
+      { steps. }
+      steps.
+      unfold unwrapU. des_ifs; cycle 1.
+      { admit "unwrapN!!!!!!!!!!!!!!!!!!!!!!!!!!". }
+      steps.
+
+
+
+
+ss.
+
+
+        - steps_strong. exists x_tgt. steps. gbase. eapply CIH; et.
+
+{
+
+admit "".
+          guclo ordC_spec. econs.
+          { admit "". }
+          gbase. eapply CIH; ss; et.
+
+unshelve esplits; et. instantiate (1:=100). steps. gbase. eapply CIH0; ss; et.
+        - steps. unshelve esplits; et. instantiate (1:=100). steps. gbase. eapply CIH0; ss; et.
+        - steps. unshelve esplits; et. instantiate (1:=100). steps. gbase. eapply CIH0; ss; et.
+      }
+    }
+    dependent destruction h.
+    rewrite <- bind_trigger. resub.
+    Opaque fun_to_src fun_to_mid.
+
+
+    { steps.
+
+unfold body_to_mid, body_to_src.
+
+
+  Let adequacy_type_aux:
+    forall
+      args
+      o0
+      body st_src0 st_tgt0 mn
+      (SIM: wf st_src0 st_tgt0)
+    ,
+      simg wf'
+           100
+          (* (if is_pure o0 then trigger (Choose _) else (interp_Es p_src ((fun_to_src (AA:=AA) (AR:=AR) body) args↑) st0)) *)
+           (EventsL.interp_Es p_src (transl_all mn (if is_pure o0 then trigger (Choose _) else ((fun_to_src body) args))) st_src0)
+           (EventsL.interp_Es p_mid (transl_all mn ((fun_to_mid body) (Any.pair o0↑ args))) st_tgt0)
+  .
+  Proof.
+
 
   Let adequacy_type_aux:
     forall
@@ -711,7 +799,7 @@ Section CANCEL.
       simg wf'
            (formula o0 + 10)%ord
            (* (if is_pure o0 then trigger (Choose _) else (interp_Es p_src ((fun_to_src (AA:=AA) (AR:=AR) body) args↑) st0)) *)
-           (EventsL.interp_Es p_src (transl_all mn (if is_pure o0 then trigger (Choose _) else ((fun_to_src (AA:=AA) (AR:=AR) body) args))) st_src0)
+           (EventsL.interp_Es p_src (transl_all mn (if is_pure o0 then trigger (Choose _) else ((fun_to_src body) args))) st_src0)
            (EventsL.interp_Es p_mid (transl_all mn ((fun_to_mid body) (Any.pair o0↑ args))) st_tgt0)
   .
   Proof.

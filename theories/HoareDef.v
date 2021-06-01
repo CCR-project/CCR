@@ -178,10 +178,10 @@ Variant hCallE: Type -> Type :=
 
 Notation Es' := (hCallE +' pE +' eventE).
 
-Program Fixpoint _APC (at_most: Ord.t) {wf Ord.lt at_most}: itree Es' Any.t :=
+Program Fixpoint _APC (at_most: Ord.t) {wf Ord.lt at_most}: itree Es' unit :=
   break <- trigger (Choose _);;
   if break: bool
-  then trigger (Choose _)
+  then Ret tt
   else
     n <- trigger (Choose Ord.t);;
     trigger (Choose (n < at_most)%ord);;;
@@ -192,7 +192,7 @@ Next Obligation.
   eapply Ord.lt_well_founded.
 Qed.
 
-Definition APC: itree Es' Any.t :=
+Definition APC: itree Es' unit :=
   at_most <- trigger (Choose _);;
   guarantee(at_most < kappa)%ord;;;
   _APC at_most
@@ -202,7 +202,7 @@ Lemma unfold_APC:
   forall at_most, _APC at_most =
                   break <- trigger (Choose _);;
                   if break: bool
-                  then trigger (Choose _)
+                  then Ret tt
                   else
                     n <- trigger (Choose Ord.t);;
                     guarantee (n < at_most)%ord;;;
