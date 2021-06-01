@@ -766,7 +766,7 @@ Tactic Notation "mDesAndPureL" constr(Hn_old) "as" constr(Hn_new0) constr(Hn_new
 
 Tactic Notation "mDesAndPureL" constr(Hn_old) :=
   let Hn_new1 := get_fresh_name_tac "A" in
-  mDesAndPureL' Hn_old Hn_old Hn_new1.
+  mDesAndPureL' Hn_old Hn_new1 Hn_old.
 
 Ltac mDesAndPureR' Hn_old Hn_new0 Hn_new1 :=
   on_current ltac:(fun H =>

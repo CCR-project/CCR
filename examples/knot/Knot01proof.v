@@ -202,13 +202,13 @@ Section SIMMODSEM.
         instantiate (1:= knot_full (Some x) ⋅ knot_frag (Some x)).
         eapply Auth.auth_update. rr. ii. des; ss. ur in FRAME. ur.
         destruct ctx0; ss; clarify. }
-      mUpd "A3". mDesOwn "A3".
+      mUpd "A1". mDesOwn "A1".
 
       (* ret *)
       force_l. eexists. steps. iret _; ss.
       iModIntro. iEval (unfold inv, var_points_to). rewrite FIND1.
-      iSplitL "A1 A3"; ss.
-      { iExists _, _. iSplitR "A1"; ss. iSplitR; ss.
+      iSplitL "A1 POST"; ss.
+      { iExists _, _. iSplitR "POST"; ss. iSplitR; ss.
         iPureIntro. i. clarify. esplits; eauto. }
       { iFrame. iExists _. iSplitR; ss.
         iSplit; ss. iPureIntro. esplits; et. econs.
