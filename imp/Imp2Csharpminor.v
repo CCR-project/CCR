@@ -203,6 +203,14 @@ Section Compile.
     end
   .
 
+  (* Fixpoint NoDupB {A} decA (l : list A) : bool := *)
+  (*   match l with *)
+  (*   | [] => true *)
+  (*   | h :: t => *)
+  (*     if in_dec decA h t then false else NoDupB decA t *)
+  (*   end *)
+  (* . *)
+(* Coqlib.list_norepet_dec *)
   Definition compile_eVars src : tgt_gdefs :=
     let gv := (mkglobvar () [] false false) in List.map (fun id => (s2p id, Gvar gv)) src.
 
@@ -213,15 +221,19 @@ Section Compile.
     List.map (fun '(id, a) => (s2p id, Gfun (External (EF_external id (make_signature a))))) src.
 
   Definition compile_function (f : Imp.function) : option function :=
-    do fbody <- (compile_stmt f.(Imp.fn_body));
-    let fdef := {|
-          fn_sig := make_signature (List.length f.(Imp.fn_params));
-          fn_params := (List.map (fun vn => s2p vn) f.(Imp.fn_params));
-          fn_vars := [];
-          fn_temps := (List.map (fun vn => s2p vn) f.(Imp.fn_vars)) ++ [(s2p "return"); (s2p "_")];
-          fn_body := Sseq fbody (Sreturn (Some (Evar (s2p "return"))));
-        |} in
-    Some fdef.
+    let params := (List.map (fun vn => s2p vn) f.(Imp.fn_params)) in
+    let temps := (List.map (fun vn => s2p vn) f.(Imp.fn_vars)) ++ [(s2p "return"); (s2p "_")] in
+    if (Coqlib.list_norepet_dec dec (params ++ temps)) then
+      do fbody <- (compile_stmt f.(Imp.fn_body));
+      let fdef := {|
+            fn_sig := make_signature (List.length params);
+            fn_params := params;
+            fn_vars := [];
+            fn_temps := temps;
+            fn_body := Sseq fbody (Sreturn (Some (Evar (s2p "return"))));
+          |} in
+      Some fdef
+    else None.
 
   Fixpoint compile_iFuns (src : progFuns) : option tgt_gdefs :=
     match src with
@@ -238,14 +250,6 @@ Section Compile.
     [(s2p "malloc", Gfun malloc_def); (s2p "free", Gfun free_def)].
 
   (* Let id_init := List.map fst init_g. *)
-
-  Fixpoint NoDupB {A} decA (l : list A) : bool :=
-    match l with
-    | [] => true
-    | h :: t =>
-      if in_dec decA h t then false else NoDupB decA t
-    end
-  .
 
   (* Definition imp_prog_ids (src : Imp.programL) := *)
   (*   let id_ev := List.map s2p src.(ext_varsL) in *)
@@ -269,7 +273,7 @@ Section Compile.
     match optdefs with
     | None => Error [MSG "Imp2clight compilation failed"]
     | Some _defs =>
-      if (@NoDupB _ positive_Dec (List.map fst _defs)) then
+      if (Coqlib.list_norepet_dec dec (List.map fst _defs)) then
         let pdefs := Maps.PTree_Properties.of_list _defs in
         let defs := Maps.PTree.elements pdefs in
         OK (mkprogram defs (List.map s2p src.(publicL)) (s2p "main"))
@@ -282,7 +286,7 @@ Section Compile.
     match optdefs with
     | None => Error [MSG "Imp2clight compilation failed"]
     | Some _defs =>
-      if (@NoDupB _ positive_Dec (List.map fst _defs)) then
+      if (Coqlib.list_norepet_dec dec (List.map fst _defs)) then
         OK (mkprogram _defs (List.map s2p src.(publicL)) (s2p "main"))
       else Error [MSG "Imp2clight compilation failed; duplicated declarations"]
     end
@@ -340,7 +344,7 @@ Section Link.
       (l1 : list (K * A)) (l2 : list (K * B)) :=
     let l1_k := List.map fst l1 in
     let l2_k := List.map fst l2 in
-    @NoDupB _ decK (l1_k ++ l2_k).
+    Coqlib.list_norepet_dec decK (l1_k ++ l2_k).
 
   (* check defined names are unique *)
   Definition link_imp_cond1 :=
@@ -349,7 +353,7 @@ Section Link.
   Let check_name_unique2 {K} {B} decK
       (l1 : list K) (l2 : list (K * B)) :=
     let l2_k := List.map fst l2 in
-    @NoDupB _ decK (l1 ++ l2_k).
+    Coqlib.list_norepet_dec decK (l1 ++ l2_k).
 
   (* check external decls are consistent *)
   Definition link_imp_cond2 :=

@@ -253,40 +253,74 @@ Section GENV.
   Context `{Σ: GRA.t}.
 
   Variable src : Imp.programL.
-  Let m : ModL.t := ImpMod.get_modL src.
-  Let ms := ModL.enclose m.
+  (* Let m : ModL.t := ImpMod.get_modL src. *)
+  (* Let ms := ModL.enclose m. *)
 
-  (* Lemma *)
+  Lemma found_imp_function
+        f mn fn impf
+        (FOUND : find
+                   (((fun fnsem : string * (Any.t -> itree EventsL.Es Any.t) => dec f (fst fnsem)) : _ -> bool) <*>
+                    (fun '(mn0, (fn0, f0)) => (fn0, fun a : Any.t => transl_all mn0 (cfun (eval_imp (Sk.load_skenv (defsL src)) f0) a)))) 
+                   (prog_funsL src) = Some (mn, (fn, impf)))
+    :
+      (fn = f) /\ (In (mn, (fn, impf)) (prog_funsL src)).
+  Proof.
+    apply find_some in FOUND. des. split; auto.
+    unfold compose in FOUND0. ss. des_sumbool. auto.
+  Qed.
 
-  (*   (find (fun fnsem : string * (Any.t -> itree EventsL.Es Any.t) => dec fn (fst fnsem)) (ModSemL.fnsems ms)) = Some f *)
-  (* <-> *)
-  
+  Lemma exists_compiled_function
+        cfs mn fn impf
 
-  (*     (* make lemma *) *)
-  (*     assert (COMPF: exists tf0, compile_function (get_gmap src) f0 = Some tf0). *)
-  (*     { admit "ez: use FOUND2". } *)
-  (*     destruct COMPF as [tf0 COMPF]. *)
-  (*     assert (SRCF: In (f, f0) (prog_funs src)). *)
-  (*     { admit "ez: trivial, use FOUND2". } *)
-  (*     assert (TGTF: In (s2p f, AST.Gfun (AST.Internal tf0)) l0). *)
-  (*     { admit "ez: by definition". } *)
-  (*     assert (TGTFG: In (s2p f, AST.Gfun (AST.Internal tf0)) tgtp.(AST.prog_defs)). *)
-  (*     { admit "mid?: need to construct tgt's genv". } *)
-  (*     eapply Globalenvs.Genv.find_symbol_exists in TGTFG. *)
-  (*     destruct TGTFG as [b TGTFG]. *)
-  (*     assert (TGTGFIND: Globalenvs.Genv.find_def (Globalenvs.Genv.globalenv tgtp) b = Some (Gfun (Internal tf0))). *)
-  (*     { admit "mid? from construction of tgt's genv". } *)
+        (COMP: compile_iFuns (get_gmap src) (List.map snd (prog_funsL src)) = Some cfs)
+        (INSRC: In (mn, (fn, impf)) (prog_funsL src))
+    :
+      exists cf, (compile_function (get_gmap src) impf = Some cf /\ In (s2p fn, Gfun (Internal cf)) cfs).
+  Proof.
+    revert_until src. set (prog_funsL src) as srcfs. induction srcfs; i; ss; clarify.
+    des; clarify; ss.
+    - uo; des_ifs. exists f; split; auto. econs 1. auto.
+    - destruct a. destruct p. uo; des_ifs. ss. clarify.
+      hexploit IHsrcfs.
+      { ss. }
+      { apply INSRC. }
+      i. des. exists cf. split; auto.
+  Qed.
 
-  (*     unfold ident_key in Heq0. *)
-  (*     assert (SIG: s = make_signature (Datatypes.length (Imp.fn_params f0))). *)
-  (*     { admit "ez: trivial, use FOUND2". } *)
-  (*     clarify. *)
+  Lemma in_tgt_prog_defs
+        tgt mn fn impf cf
+        (COMP: compile2 src = OK tgt)
+        (INSRC: In (mn, (fn, impf)) (prog_funsL src))
+        (COMPF: compile_function (get_gmap src) impf = Some cf)
+    :
+      In (s2p fn, Gfun (Internal cf)) tgt.(prog_defs).
+  Proof.
+    unfold compile2 in COMP. unfold _compile2 in COMP. des_ifs.
+    unfold compile_gdefs in Heq. uo; des_ifs.
+    hexploit exists_compiled_function; eauto.
+    i. des. clarify. ss. do 2 (apply in_or_app; right).
+    ss. do 2 right. apply in_or_app; left. auto.
+  Qed.
 
-  (*     unfold compile_function in COMPF. uo; des_ifs. rename s into bodytf0. *)
-  (*     assert (COMPFRET: forall tfd0 tf0, In tfd0 l0 -> snd tfd0 = AST.Gfun (AST.Internal tf0) -> *)
-  (*                                   tf0.(fn_body) = Sseq (bodytf0) (Sreturn (Some (Evar (s2p "return"))))). *)
-  (*     { admit "ez: trivial by definition". } *)
-
+  Lemma compiled_function_props
+        impf cf
+        (COMP: compile_function (get_gmap src) impf = Some cf)
+    :
+      (cf.(fn_sig) = make_signature (List.length impf.(Imp.fn_params))) /\
+      (exists tfbody, compile_stmt (get_gmap src) impf.(Imp.fn_body) = Some tfbody /\
+                 cf.(fn_body) = Sseq tfbody (Sreturn (Some (Evar (s2p "return"))))) /\
+      (cf.(fn_vars) = [] ) /\
+      (Coqlib.list_norepet (fn_params cf)) /\
+      (Coqlib.list_disjoint (fn_params cf) (fn_temps cf)).
+  Proof.
+    unfold compile_function in COMP. uo; des_ifs. ss. split; auto.
+    { f_equal. rewrite map_length. ss. }
+    split; auto.
+    { exists s; split; auto. }
+    split; auto. split; auto.
+    { apply Coqlib.list_norepet_append_left in l. auto. }
+    apply Coqlib.list_norepet_app in l. des; auto.
+  Qed.
 
 End GENV.
 
@@ -677,6 +711,7 @@ Section PROOF.
       ss. uo; des_ifs.
       des_ifs; sim_red.
       { sim_triggerUB. }
+      assert (COMP2: compile2 src = OK tgt); auto.
       unfold Imp2Csharpminor.compile2 in COMP. unfold _compile2 in COMP. des_ifs.
       unfold compile_gdefs in Heq0. uo; des_ifs; clarify.
       match goal with
@@ -704,25 +739,23 @@ Section PROOF.
       end.
       destruct p. destruct p. clarify.
 
-      (* make lemma *)
-      assert (FNAME: s0 = f).
-      { admit "ez: use FOUND". }
-      clarify.
-      assert (COMPF: exists tf0, compile_function (get_gmap src) f0 = Some tf0).
-      { admit "ez: use FOUND". }
-      destruct COMPF as [tf0 COMPF].
-      assert (SRCF: In (s1, (f, f0)) (prog_funsL src)).
-      { apply find_some in FOUND. des. auto. }
-      assert (TGTF: In (s2p f, AST.Gfun (AST.Internal tf0)) l1).
-      { admit "ez: by definition". }
-      assert (TGTFG: In (s2p f, AST.Gfun (AST.Internal tf0)) tgtp.(AST.prog_defs)).
-      { admit "mid?: need to construct tgt's genv". }
+      eapply found_imp_function in FOUND. des; clarify.
+      hexploit exists_compiled_function; eauto. i.
+      des. rename cf into tf0. rename H1 into COMPF.
+      hexploit in_tgt_prog_defs; eauto. i.
+      assert (TGTFG: In (s2p f, Gfun (Internal tf0)) tgtp.(prog_defs)); auto.
       eapply Globalenvs.Genv.find_symbol_exists in TGTFG.
       destruct TGTFG as [b TGTFG].
+
+      (* make lemma *)
       assert (TGTGFIND: Globalenvs.Genv.find_def (Globalenvs.Genv.globalenv tgtp) b = Some (Gfun (Internal tf0))).
       { admit "mid? from construction of tgt's genv". }
 
       unfold ident_key in Heq1.
+      hexploit compiled_function_props; eauto. i. des; clarify.
+      apply alist_find_some in Heq1. apply in_app_iff in Heq1.
+      assert (GMAP: compile_gdefs src = Some tdefs -> Coqlib.list_norepet tdefs -> Coqlib.list_norepet (get_gmap src)).
+
       assert (SIG: s = make_signature (Datatypes.length (Imp.fn_params f0))).
       { admit "ez: trivial, use FOUND". }
       clarify.
