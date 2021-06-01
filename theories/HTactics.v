@@ -873,14 +873,14 @@ Ltac _hret_tac mr_src1 rret_src := prep; eapply (@hret_clo _ mr_src1 rret_src); 
 Require Import TODOYJ.
 
 Ltac astep_full _fn _args _next _n1 :=
-  eapply (@APC_step_clo _ _fn _ _args _next _n1);
+  eapply (@APC_step_clo _ _fn _args _next _n1);
   [(try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; lia)]))|
    (try by (stb_tac; refl))|
    (eapply OrdArith.lt_from_nat; lia)|
   ].
 
 Ltac astep _fn _args :=
-  eapply (@APC_step_clo _ _fn _ _args);
+  eapply (@APC_step_clo _ _fn _args);
   [(try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r; eapply Nat.lt_succ_diag_r)]))|
    (try by (stb_tac; refl))|
    (eapply OrdArith.lt_from_nat; eapply Nat.lt_succ_diag_r)|
@@ -888,7 +888,7 @@ Ltac astep _fn _args :=
 
 Ltac acatch :=
   match goal with
-  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, _) (_, trigger (Call ?fn (Any.upcast ?args)) >>= _)) ] =>
+  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, _) (_, trigger (Call ?fn ?args) >>= _)) ] =>
     astep fn args
   end.
 

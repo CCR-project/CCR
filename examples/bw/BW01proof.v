@@ -74,11 +74,11 @@ Section SIMMODSEM.
       mDesAll. des; clarify.
       steps. rewrite Any.upcast_downcast in *. astart 0. astop.
       mAssertPure (x = Z.odd a); subst.
-      { iApply (bw_ra_merge with "INV PRE"). }
+      { iApply (bw_ra_merge with "INV A"). }
       steps. force_l. eexists. steps.
       hret _; ss.
       iModIntro. iFrame.
-      iPureIntro. split; ss. f_equal.
+      iPureIntro. esplits; ss. f_equal.
       rewrite <- Z.negb_odd. rewrite negb_if. des_ifs.
     }
     econs; ss.
@@ -86,10 +86,10 @@ Section SIMMODSEM.
       mDesAll. des; clarify.
       steps. rewrite Any.upcast_downcast in *. astart 0. astop.
       mAssertPure (x = Z.odd a); subst.
-      { iApply (bw_ra_merge with "INV PRE"). }
+      { iApply (bw_ra_merge with "INV A"). }
       steps. force_l. eexists. steps.
       hret _; ss.
-      iCombine "INV" "PRE" as "H".
+      iCombine "INV" "A" as "H".
       iPoseProof (OwnM_Upd with "H") as "H".
       { (* TODO: make lemma *)
         instantiate (1:= bw_full (Z.odd (a+1)) ⋅ bw_frag (Z.odd (a+1))).

@@ -65,28 +65,29 @@ Section SIMMODSEM.
       destruct x as [x INV]. mDesAll. ss. des. subst.
       eapply Any.upcast_inj in PURE0. des; clarify.
       rewrite Any.upcast_downcast. steps.
-      inv PURE3. rewrite FBLOCK. ss. steps.
+      inv PURE4. rewrite FBLOCK. ss. steps.
       des_ifs.
       { astart 0. astop. steps. force_l. eexists. steps.
         hret _; ss. iModIntro. iFrame; ss. iPureIntro.
-        split; eauto. f_equal. f_equal.
+        esplits; eauto. f_equal. f_equal.
         clear - l. destruct x; ss. destruct x; ss. lia.
       }
       steps. inv SPEC. astart 10. acatch.
       { eapply RecStb_incl. eauto. }
 
-      hcall_weaken _ _ _ _ with "A"; et.
-      { ss. iModIntro. iFrame; ss. iSplitR; ss. iSplitR; ss.
-        iPureIntro. instantiate (1:=(x - 1%nat)).
+      hcall_weaken _ _ _ _ with "A1"; et.
+      { ss. iModIntro. iFrame; ss. iExists _. iSplitR; ss.
+        iPureIntro. splits; et. instantiate (1:=(x - 1%nat)).
         repeat f_equal. lia.
       }
       { splits; ss. eauto with ord_step. }
       steps. ss. mDesAll. clarify.
-      eapply Any.upcast_inj in PURE2. des; clarify.
+      eapply Any.upcast_inj in PURE1. des; clarify.
       erewrite Any.upcast_downcast in *. clarify. steps. acatch.
       { eapply RecStb_incl. eauto. }
-      hcall_weaken _ _ _ _ with "A"; et.
-      { ss. iModIntro. iFrame; ss. iSplitR; ss. iSplitR; ss.
+      hcall_weaken _ _ _ _ with "A1"; et.
+      { ss. iModIntro. iFrame; ss. iExists _. iSplitR; ss.
+        iSplitR; ss. iSplitR; ss.
         iPureIntro. instantiate (1:=(x - 2%nat)).
         repeat f_equal. lia.
       }
@@ -96,7 +97,7 @@ Section SIMMODSEM.
       erewrite Any.upcast_downcast in *. clarify. steps.
 
       astop. force_l. eexists. steps. hret _; ss.
-      { ss. iModIntro. iFrame; ss. iSplitR; ss.
+      { ss. iModIntro. iFrame; ss. iExists _. iSplitR; ss. iSplitR; ss.
         iPureIntro. repeat f_equal. ss. destruct x; ss. destruct x; ss.
         remember (match x with
                   | 0 => 1
@@ -110,34 +111,43 @@ Section SIMMODSEM.
       specialize (GlobalStb_knot sk). inv GlobalStb_knot.
       acatch; eauto.
       hcall_weaken _ _ _ _ with "*"; et.
-      { ss. iModIntro. iFrame; ss. iSplitL; ss. iSplitR; ss.
+      { ss. iModIntro. iFrame; ss. iExists _. iSplitR; ss.
+        iSplitL; ss. iSplitR; ss.
         { iPureIntro. esplits; eauto. econs.
           { eapply SKWF. eauto. }
           eapply fn_has_spec_weaker; eauto. ii. ss.
           eexists (x_src, OwnM (knot_frag (Some Fib)) ** inv_opener).
           splits; ss.
-          { i. iIntros "[[OPENER [% H]] %]". iModIntro. iFrame; ss.
+          { i. iIntros "H".
+            iDestruct "H" as (aa) "[% [[OPENER [% H]] %]]".
+            iModIntro. iFrame; ss.
             iPureIntro. des. esplits; et.
             eapply fb_has_spec_weaker; eauto.
             ii. ss. exists (Fib, x_src0). splits; ss.
-            { i. iIntros "[[% [H0 H1]] %]". iModIntro. iFrame; ss. }
-            { i. iIntros "[[H0 [% H1]] %]". iModIntro. iFrame; ss. }
+            { i. iIntros "H".
+              iDestruct "H" as (aa0) "[% [[% [H0 H1]] %]]".
+              iModIntro. iExists _. iSplitR; ss. iFrame; ss. }
+            { i. iIntros "H".
+              iDestruct "H" as (ar) "[% [[H0 [% H1]] %]]".
+              iModIntro. iExists _. iSplitR; ss. iFrame; ss. }
           }
-          { i. iIntros "[[% [H0 H1]] %]". iModIntro. iFrame; ss. }
+          { i. iIntros "H".
+            iDestruct "H" as (ar) "[% [[% [H0 H1]] %]]".
+            iModIntro. iExists _. iSplitR; ss. iFrame; ss. }
         }
-        { iExists _. iExact "A1". }
+        { iExists _. iExact "A2". }
       }
       { splits; ss. }
       mDesAll. des; clarify. rewrite Any.upcast_downcast. steps.
-      eapply Any.upcast_inj in PURE2. des; clarify. steps.
-      inv PURE3. rewrite FBLOCK. inv SPEC. steps. acatch.
+      eapply Any.upcast_inj in PURE1. des; clarify. steps.
+      inv PURE4. rewrite FBLOCK. inv SPEC. steps. acatch.
       { eapply RecStb_incl. eauto. }
       hcall_weaken _ _ _ _ with "*"; et.
-      { ss. iModIntro. instantiate (2:=(_, 10)). ss. iFrame; ss. }
+      { ss. iModIntro. instantiate (2:=(_, 10)). ss. iFrame; ss. et. }
       { split; ss. }
       mDesAll. subst. eapply Any.upcast_inj in PURE3. des; subst.
       rewrite Any.upcast_downcast. steps.
-      astop. steps. hret _; ss.
+      astop. steps. hret _; ss. et.
     }
     Unshelve. all: ss.
   Qed.

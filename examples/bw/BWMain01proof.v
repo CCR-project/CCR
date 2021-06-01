@@ -51,8 +51,8 @@ Section SIMMODSEM.
       mDesAll. des; clarify.
       steps. rewrite Any.upcast_downcast in *. clarify.
       destruct (alist_find "getbool" (BWStb ++ ClientStb ++ MainStb)) eqn:T; stb_tac; clarify.
-      steps. rewrite Any.upcast_downcast. steps.
-      hcall _ _ _ with ""; ss.
+      steps. hcall _ _ _ with ""; ss.
+      { et. }
       { splits; ss. ss. }
       mDesAll. clarify. steps.
       rewrite Any.upcast_downcast in *. clarify.
@@ -61,11 +61,13 @@ Section SIMMODSEM.
       des_ifs.
       { steps. acatch.
         hcall _ _ _ with "*"; auto.
+        { iFrame. et. }
         { eauto with ord_step. }
         mDesAll. clarify. steps.
         rewrite Any.upcast_downcast in *. clarify. acatch.
 
         hcall _ _ _ with "*"; auto.
+        { iFrame. et. }
         { eauto with ord_step. }
         mDesAll. clarify.
         rewrite Any.upcast_downcast in *. clarify.
@@ -73,17 +75,16 @@ Section SIMMODSEM.
         astop. steps. force_l. eexists. steps.
         force_l; et. steps.
         destruct (alist_find "putint" (BWStb ++ ClientStb ++ MainStb)) eqn:T; stb_tac; clarify.
-        steps. rewrite Any.upcast_downcast. steps.
+        steps.
 
         hcall ord_top _ _ with ""; auto.
         mDesAll. steps. rewrite Any.upcast_downcast in *. clarify.
         steps. hret _; ss.
-        { iModIntro. iSplit; ss. iSplit; ss. iStopProof.
-          (* TODO: fix top1 => TRUE: iProp *)
-          red. uipropall. }
+        { iModIntro. iSplit; ss. iExists _. iSplitR; ss. }
       }
       { steps. acatch.
         hcall _ _ _ with "*"; auto.
+        { iFrame. et. }
         { eauto with ord_step. }
         mDesAll. clarify. steps.
         rewrite Any.upcast_downcast in *. clarify. astop.
@@ -91,14 +92,12 @@ Section SIMMODSEM.
         steps. force_l. eexists. steps.
         force_l; et. steps.
         destruct (alist_find "putint" (BWStb ++ ClientStb ++ MainStb)) eqn:T; stb_tac; clarify.
-        steps. rewrite Any.upcast_downcast. steps.
+        steps.
 
         hcall ord_top _ _ with ""; auto.
         mDesAll. steps. rewrite Any.upcast_downcast in *. clarify.
         steps. hret _; ss.
-        { iModIntro. iSplit; ss. iSplit; ss. iStopProof.
-          (* TODO: fix top1 => TRUE: iProp *)
-          red. uipropall. }
+        { iModIntro. iSplit; ss. iExists _. iSplitR; ss. }
       }
     }
     Unshelve. all: ss.

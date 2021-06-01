@@ -31,7 +31,7 @@ Section PROOF.
   Definition putint_body: list val -> itree (hCallE +' pE +' eventE) val := resum_ktr putintF.
 
   Definition ClientSbtb: list (gname * fspecbody) :=
-    [("getint", mk_specbody getint_spec getint_body); ("putint", mk_specbody putint_spec putint_body)]
+    [("getint", mk_specbody getint_spec (cfun getint_body)); ("putint", mk_specbody putint_spec (cfun putint_body))]
   .
 
   Definition SClientSem: SModSem.t := {|

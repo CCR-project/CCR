@@ -133,7 +133,8 @@ Section SIMMODSEM.
       (* call with the opened invariant *)
       icall_open _ (_, _, _) with "A1".
       { ss. }
-      { iModIntro. iSplitL; ss. iSplitL; ss. iSplitR; ss.
+      { iModIntro. iExists _. iSplitR; ss.
+        iSplitL; ss. iSplitL; ss. iSplitR; ss.
         iEval (unfold var_points_to) in "A1". rewrite FIND1. iFrame. }
       { split; ss. eauto with ord_step. }
 
@@ -165,7 +166,7 @@ Section SIMMODSEM.
       steps. astop. force_l. eexists. steps.
 
       (* ret *)
-      iret _; ss. iModIntro. iFrame. ss.
+      iret _; ss. iModIntro. iFrame. et.
     }
     { init. unfold knotF, ccall.
 
@@ -185,7 +186,8 @@ Section SIMMODSEM.
       (* call with the opened invariant *)
       icall_open _ (_, _, _) with "A1".
       { ss. }
-      { iModIntro. iSplitL; ss. iSplitL; ss. iExists _. iSplitR; ss.
+      { iModIntro. iExists _. iSplitR; ss.
+        iSplitL; ss. iSplitL; ss. iExists _. iSplitR; ss.
         iEval (unfold var_points_to) in "A1". rewrite FIND1. ss. }
       { split; ss. eauto with ord_step. }
       mDesAll. subst. rewrite Any.upcast_downcast. steps.
@@ -200,15 +202,16 @@ Section SIMMODSEM.
         instantiate (1:= knot_full (Some x) ⋅ knot_frag (Some x)).
         eapply Auth.auth_update. rr. ii. des; ss. ur in FRAME. ur.
         destruct ctx0; ss; clarify. }
-      mUpd "A1". mDesOwn "A1".
+      mUpd "A3". mDesOwn "A3".
 
       (* ret *)
       force_l. eexists. steps. iret _; ss.
       iModIntro. iEval (unfold inv, var_points_to). rewrite FIND1.
-      iSplitL "A1 POST"; ss.
-      { iExists _, _. iSplitR "POST"; ss. iSplitR; ss.
+      iSplitL "A1 A3"; ss.
+      { iExists _, _. iSplitR "A1"; ss. iSplitR; ss.
         iPureIntro. i. clarify. esplits; eauto. }
-      { iFrame. iSplit; ss. iPureIntro. esplits; et. econs.
+      { iFrame. iExists _. iSplitR; ss.
+        iSplit; ss. iPureIntro. esplits; et. econs.
         { eapply SKWF. et. }
         econs.
         { eapply RecStb_incl. ss. }

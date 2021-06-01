@@ -39,11 +39,11 @@ Section KNOT.
                          ),
                          (fun vret =>
                             (⌜vret = (Vint (Z.of_nat (f n)))↑⌝)
-                              ** (Own (GRA.embed (knot_frag (Some f))))
+                              ** (OwnM (knot_frag (Some f)))
                          )
                     )).
 
-    Definition fun_gen (f: nat -> nat): ftspec (list val) (val) :=
+    Definition fun_gen (f: nat -> nat): fspec :=
       mk_inv_simple (X:=nat)
                     (fun n => (
                          (fun varg o =>
@@ -125,13 +125,15 @@ Section WEAK.
   Context `{@GRA.inG invRA Σ}.
   Context `{@GRA.inG knotRA Σ}.
 
-  Lemma rec_spec_weaker f: ftspec_weaker (mrec_spec f (OwnM (knot_frag (Some f)) ** inv_opener)) rec_spec.
+  Lemma rec_spec_weaker f: fspec_weaker (mrec_spec f (OwnM (knot_frag (Some f)) ** inv_opener)) rec_spec.
   Proof.
     ii. ss. exists (f, x_src). split.
     { intros arg_src arg_tgt o. ss.
-      iIntros "[[H0 [H1 H2]] H3]". iModIntro. iFrame. }
+      iIntros "H". iDestruct "H" as (aa) "[% [[% [H0 H1]] %]]".
+      iModIntro. iExists _. iFrame. et. }
     { intros ret_src ret_tgt. ss.
-      iIntros "[[H0 [H1 H2]] H3]". iModIntro. iFrame. }
+      iIntros "H". iDestruct "H" as (ar) "[% [[H0 [% H1]] %]]".
+      iModIntro. iExists _. iFrame. et. }
   Qed.
 End WEAK.
 
@@ -143,16 +145,22 @@ Section WEAK.
   Variable RecStb: SkEnv.t -> list (gname * fspec).
   Variable FunStb: SkEnv.t -> list (gname * fspec).
 
-  Lemma knot_spec2_weaker skenv: ftspec_weaker (knot_spec2 RecStb FunStb skenv) (knot_spec RecStb FunStb skenv).
+  Lemma knot_spec2_weaker skenv: fspec_weaker (knot_spec2 RecStb FunStb skenv) (knot_spec RecStb FunStb skenv).
   Proof.
     ii. ss. exists x_src. split.
     { intros arg_src arg_tgt o.
-      iIntros "[[[H0 H1] H2] H3]". iModIntro.
-      iFrame. iExists (None: option (nat -> nat)). ss. }
+      iIntros "H". iDestruct "H" as (aa) "[% [[[% H0] H1] %]]".
+      des. subst. eapply Any.upcast_inj in H3. des; clarify.
+      iModIntro. iExists _. iSplitR; ss.
+      iFrame. iSplitL; ss. iSplitR; et.
+    }
     { intros ret_src ret_tgt.
-      iIntros "[[H0 [H1 H2]] H3]". iModIntro. iFrame.
+      iIntros "H". iDestruct "H" as (ar) "[% [[H0 [% H2]] %]]".
+      des. subst. eapply Any.upcast_inj in H3. des; clarify.
+      iModIntro. iExists _. iSplitR; ss.
+      iFrame. iSplitL; ss.
       iExists (OwnM (knot_frag (Some x_src)) ** inv_opener).
-      iFrame. iDestruct "H1" as "%". iPureIntro. des. eexists.
+      iFrame. iPureIntro. des. eexists.
       split; eauto. eapply fb_has_spec_weaker; eauto.
       eapply rec_spec_weaker.
     }

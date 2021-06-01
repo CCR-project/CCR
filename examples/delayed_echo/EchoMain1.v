@@ -33,12 +33,12 @@ Section PROOF.
   .
 
   Definition MainSbtb: list (gname * fspecbody) :=
-    [("main", mk_specbody main_spec main_body)]
+    [("main", mk_specbody main_spec (cfun main_body))]
   .
 
-  Definition SMain: SMod.t := SMod.main (fun _ o _ => o = ord_top) main_body.
+  Definition SMain: SMod.t := SMod.main (fun _ o _ => o = ord_top) (cfun main_body).
   Definition Main: Mod.t := SMod.to_tgt (fun _ => MainStb) SMain.
-  Definition SMainSem: SModSem.t := SModSem.main (fun _ o _ => o = ord_top) main_body.
+  Definition SMainSem: SModSem.t := SModSem.main (fun _ o _ => o = ord_top) (cfun main_body).
   Definition MainSem: ModSem.t := SModSem.to_tgt MainStb SMainSem.
 
 End PROOF.

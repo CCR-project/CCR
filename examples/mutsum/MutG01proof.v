@@ -47,16 +47,16 @@ Section SIMMODSEM.
     { admit "Add range condition". } steps.
     destruct (dec (Z.of_nat x) 0%Z).
     - destruct x; ss. astop. force_l. eexists. steps.
-      hret _; ss.
+      hret _; ss. et.
     - destruct x; [ss|]. rewrite Nat2Z.inj_succ. steps. acatch.
       hcall _ _ _ with "*"; auto.
-      { iPureIntro. splits; eauto.
+      { iPureIntro. esplits; eauto.
         replace (Z.succ (Z.of_nat x) - 1)%Z with (Z.of_nat x) by lia. ss. }
       { splits; ss; eauto with ord_step. }
-      i. mDesAll. des; clarify. eapply Any.upcast_inj in PURE2. des; clarify.
+      i. mDesAll. des; clarify. eapply Any.upcast_inj in PURE1. des; clarify.
       rewrite Any.upcast_downcast. steps. astop.
       force_l. eexists. steps.
-      hret _; ss. start_ipm_proof. iPureIntro. splits; ss.
+      hret _; ss. start_ipm_proof. iPureIntro. esplits; ss.
       f_equal. f_equal. lia.
       Unshelve. all: ss.
   Qed.

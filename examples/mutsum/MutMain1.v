@@ -24,9 +24,9 @@ Section PROOF.
       Ret (Vint 55)
   .
 
-  Definition mainsbtb := [("main", mk_specbody main_spec mainBody)].
+  Definition mainsbtb := [("main", mk_specbody main_spec (cfun mainBody))].
 
-  Definition SMain: SMod.t := SMod.main (fun _ o => (⌜o = ord_top⌝: iProp)%I) mainBody.
+  Definition SMain: SMod.t := SMod.main (fun _ o => (⌜o = ord_top⌝: iProp)%I) (cfun mainBody).
   Definition Main: Mod.t := SMod.to_tgt (fun _ => GlobalStb) SMain.
 
 End PROOF.
