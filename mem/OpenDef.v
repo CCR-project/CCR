@@ -729,8 +729,6 @@ Section KMODSEM.
     mk_specbody (disclose ksb) (transl_fun_tgt ksb.(ksb_body))
   .
 
-  Coercion disclose_ksb: kspecbody >-> fspecbody.
-
   Definition to_tgt (ms: t): SModSem.t := {|
     SModSem.fnsems := List.map (map_snd disclose_ksb) ms.(fnsems);
     SModSem.mn := ms.(mn);
@@ -1113,6 +1111,7 @@ Section KMODSEM.
 
 End KMODSEM.
 End KModSem.
+Coercion KModSem.disclose_ksb: kspecbody >-> fspecbody.
 
 
 

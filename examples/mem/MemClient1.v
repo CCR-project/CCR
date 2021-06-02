@@ -9,7 +9,7 @@ Require Import PCM.
 Require Import HoareDef.
 Require Import Logic.
 Require Import TODOYJ.
-Require Import OpenDef Open.
+Require Import OpenDef.
 
 Set Implicit Arguments.
 
@@ -56,17 +56,22 @@ Section PROOF.
     mk_ksimple (fun (_: unit) => ((fun _ o => (⌜o = ord_top⌝)%I), (fun _ => ⌜True⌝%I)))
   .
 
-  Definition ClientStb: list (gname * fspec).
-    eapply (Seal.sealing "stb").
-    apply [("client", mk_fspec client_spec)].
-  Defined.
-
   Definition ClientSbtb: list (gname * kspecbody) :=
     [("client", mk_kspecbody client_spec clientBody)
     ]
   .
 
-  Definition UnknownStb: list (gname * fspec) := [("unknown_call", fspec_trivial2)].
+  Definition ClientStb: list (gname * fspec).
+    eapply (Seal.sealing "stb").
+    let x := constr:(List.map (map_snd (fun ksb => (KModSem.disclose_ksb ksb): fspec)) ClientSbtb) in
+    let y := eval cbn in x in
+    eapply y.
+  Defined.
+
+  Definition UnknownStb: list (gname * fspec).
+   eapply (Seal.sealing "stb").
+   eapply [("unknown_call", fspec_trivial2)].
+  Defined.
 
   Definition KClientSem: KModSem.t := {|
     KModSem.fnsems := ClientSbtb;
@@ -78,7 +83,7 @@ Section PROOF.
 
   Definition SClientSem: SModSem.t := (KModSem.to_tgt) KClientSem.
 
-  Definition ClientSem: ModSem.t := (SModSem.to_tgt MemStb) SClientSem.
+  Definition ClientSem: ModSem.t := (SModSem.to_tgt (UnknownStb ++ MemStb)) SClientSem.
 
   Definition KClient: KMod.t := {|
     KMod.get_modsem := fun _ => KClientSem;
@@ -88,7 +93,8 @@ Section PROOF.
 
   Definition SClient: SMod.t := (KMod.to_tgt) KClient.
 
-  Definition Client: Mod.t := SMod.to_tgt (fun _ => MemStb) SClient.
+  Definition Client: Mod.t := SMod.to_tgt (fun _ => UnknownStb ++ MemStb) SClient.
 
 End PROOF.
 Global Hint Unfold ClientStb: stb.
+Global Hint Unfold UnknownStb: stb.

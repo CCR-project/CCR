@@ -11,7 +11,7 @@ Require Import TODOYJ.
 Require Import Logic.
 Require Import TODO.
 Require Import Mem0 Mem1.
-Require Import OpenDef Open.
+Require Import OpenDef.
 
 Set Implicit Arguments.
 
@@ -102,8 +102,9 @@ Section PROOF.
 
   Definition MemStb: list (gname * fspec).
     eapply (Seal.sealing "stb").
-    apply [("alloc", mk_fspec alloc_spec) ; ("free", mk_fspec free_spec) ;
-           ("load", mk_fspec load_spec) ; ("store", mk_fspec store_spec) ; ("cmp", mk_fspec cmp_spec)].
+    let x := constr:(List.map (map_snd (fun ksb => (KModSem.disclose_ksb ksb): fspec)) MemSbtb) in
+    let y := eval cbn in x in
+    eapply y.
   Defined.
 
   Definition KMemSem (sk: Sk.t): KModSem.t := {|

@@ -519,7 +519,7 @@ Section ADQ.
         mn (f0: kspecbody)
     :
       sim_fun (transl_all mn ∘ KModSem.fun_to_src (ksb_body f0))
-              (transl_all mn ∘ fun_to_src (KModSem.transl_fun_src f0.(ksb_body)))
+              (transl_all mn ∘ fun_to_src (KModSem.transl_fun_tgt f0.(ksb_body)))
   .
   Proof.
     ii.

@@ -69,46 +69,40 @@ Section SIMMODSEM.
       { ss. des_ifs; mDesAll; ss. }
       destruct x; mDesAll; ss. des; subst.
       unfold clientBody. steps. unfold KPC. steps.
-      force_l. exists "alloc". steps. force_l; stb_tac; clarify. steps.
-      rewrite Any.upcast_downcast.
-      TTTTTTTTTTTTTTTTTTTTTTT
-      iDestruct PRE; subst. unfold clientBody. steps.
-      astart 2.
-      astep "alloc" ([Vint 1], true).
 
-      hcall_tac __ (ord_pure 0) (@URA.unit Σ) (@URA.unit Σ) (@URA.unit Σ); ss; et.
-      { iRefresh. instantiate (1:=Some _). iSplitP; ss. left; iRefresh. iExists __. iSplitP; ss.
-        iSplitP; ss. iSplitP; ss. split; ss. instantiate (1:=1). ss. }
-      iDestruct POST; cycle 1. { iPure POST. des; ss. }
-      repeat iDestruct POST; ss. iPure POST. repeat iDestruct A. iPure A. clarify. apply Any.upcast_inj in A. des; clarify.
-      steps. rewrite Any.upcast_downcast in *. clarify.
-      rename x3 into blk.
-      astep "store" ([Vptr blk 0; Vint 42], true).
+      force_l. exists "alloc". steps. force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
+      hcall _ (Some _) _ with ""; ss; et.
+      { iModIntro. iSplitR; ss. iPureIntro. esplits; et. instantiate (1:=1%nat). ss. }
+      { ss. }
+      steps. mDesAll. subst. rewrite Any.upcast_downcast in *. clarify.
 
-      hcall_tac __ (ord_pure 0) (@URA.unit Σ) (@URA.unit Σ) A0; ss; et.
-      { iRefresh. instantiate (1:=Some _). repeat (iSplitP; ss). left. iExists __. instantiate (1:=(_, _, _)). cbn.
-        repeat iSplitP; ss. iExists __. repeat iSplitP; ss; et. }
-      iDestruct POST; cycle 1. { iPure POST. des; ss. }
-      repeat iDestruct POST; ss. iPure POST. repeat iDestruct A. iPure A. clarify. iRefresh.
-      steps. astop. steps. force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
+      force_l. exists "store". steps. force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
+      hcall _ (Some (_, _, _)) _ with "A"; ss; et.
+      { iModIntro. iSplitR; ss. iSplitL; ss.
+        - iExists _. iSplitL; ss. iSplitR; ss.
+        - ss.
+      }
+      { ss. }
+      steps.
 
-      hcall_tac __ ord_top (@URA.unit Σ) A (@URA.unit Σ); ss; et.
-      { rewrite OpenDef.upcast_pair_downcast. ss. }
-      iPure POST. subst. clarify. steps.
+      force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
+      hcall _ _ _ with ""; ss; et.
+      { iModIntro. iSplitR; ss. iPureIntro. esplits; et. rewrite Any.upcast_downcast. ss. }
+      { ss. }
+      steps. mDesAll. subst.
 
-      astart 1.
-      astep "load" ([Vptr blk 0], true).
+      force_l. exists "load". steps. force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
+      hcall _ (Some (_, _, _)) _ with "POST"; ss; et.
+      { iModIntro. iSplitR; ss. iSplitL; ss.
+        - iSplitL; ss. iSplitR; ss.
+        - ss.
+      }
+      { ss. }
+      steps. mDesAll. subst. rewrite Any.upcast_downcast in *. clarify.
 
-      hcall_tac __ (ord_pure 0) (@URA.unit Σ) (@URA.unit Σ) A; ss; et.
-      { iRefresh. instantiate (1:=Some _). iSplitP; ss. left; iRefresh. iExists __. repeat iSplitP; ss.
-        instantiate (1:=(_, _, _)). steps. iRefresh. repeat iSplitP; ss; et. }
-      iDestruct POST; cycle 1. { iPure POST. des; ss. }
-      repeat iDestruct POST; ss. iPure POST. repeat iDestruct A. iPure A. clarify. iRefresh.
-      steps. astop. steps. rewrite Any.upcast_downcast in *. clarify. iDestruct A. iPure A0.
-      apply Any.upcast_inj in A0. des; clarify.
-      hret_tac (@URA.unit Σ) (@URA.unit Σ); ss.
+      hret _; ss.
     }
-    Unshelve.
+  Unshelve.
     all: ss.
   Qed.
 
@@ -121,7 +115,7 @@ Section SIMMOD.
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG memRA Σ}.
 
-  Theorem correct: ModPair.sim Client1.Client Client0.Client.
+  Theorem correct: ModPair.sim MemClient1.Client MemClient0.Client.
   Proof.
     econs; ss.
     { ii. eapply adequacy_lift. eapply sim_modsem. }
