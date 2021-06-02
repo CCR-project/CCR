@@ -43,7 +43,7 @@ Section PROOF.
     fn <- trigger (Choose _);; trigger (kCall fn (@inl unit (list val) tt));;; Ret tt
   .
 
-  Definition mainBody: list val -> itree (kCallE +' pE +' eventE) val :=
+  Definition clientBody: list val -> itree (kCallE +' pE +' eventE) val :=
     fun _ =>
       KPC;;;
       KPC;;;
@@ -52,43 +52,43 @@ Section PROOF.
       Ret (Vint 42)
   .
 
-  Definition main_spec: ftspec unit unit :=
+  Definition client_spec: ftspec unit unit :=
     mk_ksimple (fun (_: unit) => ((fun _ o => (⌜o = ord_top⌝)%I), (fun _ => ⌜True⌝%I)))
   .
 
-  Definition MainStb: list (gname * fspec).
+  Definition ClientStb: list (gname * fspec).
     eapply (Seal.sealing "stb").
-    apply [("main", mk_fspec main_spec)].
+    apply [("client", mk_fspec client_spec)].
   Defined.
 
-  Definition MainSbtb: list (gname * kspecbody) :=
-    [("main", mk_kspecbody main_spec mainBody)
+  Definition ClientSbtb: list (gname * kspecbody) :=
+    [("client", mk_kspecbody client_spec clientBody)
     ]
   .
 
   Definition UnknownStb: list (gname * fspec) := [("unknown_call", fspec_trivial2)].
 
-  Definition KMainSem (sk: Sk.t): KModSem.t := {|
-    KModSem.fnsems := MainSbtb;
-    KModSem.mn := "Main";
+  Definition KClientSem: KModSem.t := {|
+    KModSem.fnsems := ClientSbtb;
+    KModSem.mn := "Client";
     KModSem.initial_mr := ε;
     KModSem.initial_st := tt↑;
   |}
   .
 
-  Definition SMainSem: Sk.t -> SModSem.t := (KModSem.to_tgt) ∘ KMainSem.
+  Definition SClientSem: SModSem.t := (KModSem.to_tgt) KClientSem.
 
-  Definition MainSem: Sk.t -> ModSem.t := (SModSem.to_tgt MemStb) ∘ SMainSem.
+  Definition ClientSem: ModSem.t := (SModSem.to_tgt MemStb) SClientSem.
 
-  Definition KMain: KMod.t := {|
-    KMod.get_modsem := KMainSem;
+  Definition KClient: KMod.t := {|
+    KMod.get_modsem := fun _ => KClientSem;
     KMod.sk := Sk.unit;
   |}
   .
 
-  Definition SMain: SMod.t := (KMod.to_tgt) KMain.
+  Definition SClient: SMod.t := (KMod.to_tgt) KClient.
 
-  Definition Main: Mod.t := SMod.to_tgt (fun _ => MemStb) SMain.
+  Definition Client: Mod.t := SMod.to_tgt (fun _ => MemStb) SClient.
 
 End PROOF.
-Global Hint Unfold MainStb: stb.
+Global Hint Unfold ClientStb: stb.

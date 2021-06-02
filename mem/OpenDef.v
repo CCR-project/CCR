@@ -713,7 +713,7 @@ Section KMODSEM.
     fun _ => interp (T:=_) (fun _ e => trigger (transl_event_tgt e))
   .
 
-  Definition transl_fun_src (ktr: list val -> itree (kCallE +' pE +' eventE) val):
+  Definition transl_fun_tgt (ktr: list val -> itree (kCallE +' pE +' eventE) val):
     (unit + list val) -> itree (hCallE +' pE +' eventE) val :=
     (fun argh => match argh with
                  (*** K -> K ***)
@@ -726,7 +726,7 @@ Section KMODSEM.
   .
 
   Definition disclose_ksb (ksb: kspecbody): fspecbody :=
-    mk_specbody (disclose ksb) (transl_fun_src ksb.(ksb_body))
+    mk_specbody (disclose ksb) (transl_fun_tgt ksb.(ksb_body))
   .
 
   Coercion disclose_ksb: kspecbody >-> fspecbody.

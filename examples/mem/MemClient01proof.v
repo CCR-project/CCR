@@ -1,4 +1,4 @@
-Require Import Main0 Main1 HoareDef SimModSem.
+Require Import MemClient0 MemClient1 HoareDef SimModSem.
 Require Import Coqlib.
 Require Import Universe.
 Require Import Skeleton.
@@ -17,6 +17,7 @@ From ExtLib Require Import
      Data.Map.FMapAList.
 Require Import TODOYJ.
 Require Import HTactics Logic IPM.
+Require Import OpenDef.
 Require Import Mem1.
 
 Set Implicit Arguments.
@@ -35,19 +36,43 @@ Section SIMMODSEM.
   Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
 
   (* Let wf: W -> Prop := top1. *)
-  Let wf: W -> Prop := fun '(mrps_src0, mrps_tgt0) =>
-                         exists mr_src0 mp_src0 mr_tgt0 mp_tgt0,
-                           (<<SRC: mrps_src0 = (mr_src0, mp_src0)>>)
-                           /\ (<<TGT: mrps_tgt0 = (mr_tgt0, mp_tgt0)>>)
-                           (* /\ (<<SIM: iHyp ⌜True⌝ mr_src0>>) *)
-  .
+  Let wf: W -> Prop := @mk_wf _ unit (fun _ _ _ => ⌜True⌝%I) (fun _ _ _ => ⌜True⌝%I).
 
-  Theorem sim_modsem: ModSemPair.sim Main1.MainSem Main0.MainSem.
+  (* Definition __hide_mark A (a : A) : A := a. *)
+  (* Lemma intro_hide_mark: forall A (a: A), a = __hide_mark a. refl. Qed. *)
+
+  (* Ltac hide_k :=  *)
+  (*   match goal with *)
+  (*   | [ |- (gpaco6 _ _ _ _ _ _ _ _ (_, ?isrc >>= ?ksrc) (_, ?itgt >>= ?ktgt)) ] => *)
+  (*     erewrite intro_hide_mark with (a:=ksrc); *)
+  (*     erewrite intro_hide_mark with (a:=ktgt); *)
+  (*     let name0 := fresh "__KSRC__" in set (__hide_mark ksrc) as name0; move name0 at top; *)
+  (*     let name0 := fresh "__KTGT__" in set (__hide_mark ktgt) as name0; move name0 at top *)
+  (*   end. *)
+
+  (* Ltac unhide_k := *)
+  (*   do 2 match goal with *)
+  (*   | [ H := __hide_mark _ |- _ ] => subst H *)
+  (*   end; *)
+  (*   rewrite <- ! intro_hide_mark *)
+  (* . *)
+
+  Theorem sim_modsem: ModSemPair.sim MemClient1.ClientSem MemClient0.ClientSem.
   Proof.
+    econstructor 1 with (wf:=wf); ss; et; swap 2 3.
+    { econs; ss.
+      - eapply to_semantic; cycle 1. { eapply URA.wf_unit. } iIntros "H". iPureIntro. ss.
+      - eapply to_semantic; cycle 1. { eapply URA.wf_unit. } iIntros "H". iPureIntro. ss.
+    }
     econs; ss.
-    econs; ss.
-    { unfold mainF. init. harg. repeat rewrite URA.unit_idl in *. repeat rewrite URA.unit_id in *. iRefresh.
-      iDestruct PRE; subst. unfold mainBody. steps.
+    { unfold clientF. init. harg. destruct varg_src.
+      { ss. des_ifs; mDesAll; ss. }
+      destruct x; mDesAll; ss. des; subst.
+      unfold clientBody. steps. unfold KPC. steps.
+      force_l. exists "alloc". steps. force_l; stb_tac; clarify. steps.
+      rewrite Any.upcast_downcast.
+      TTTTTTTTTTTTTTTTTTTTTTT
+      iDestruct PRE; subst. unfold clientBody. steps.
       astart 2.
       astep "alloc" ([Vint 1], true).
 
@@ -96,7 +121,7 @@ Section SIMMOD.
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG memRA Σ}.
 
-  Theorem correct: ModPair.sim Main1.Main Main0.Main.
+  Theorem correct: ModPair.sim Client1.Client Client0.Client.
   Proof.
     econs; ss.
     { ii. eapply adequacy_lift. eapply sim_modsem. }
