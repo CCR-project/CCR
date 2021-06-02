@@ -795,13 +795,19 @@ Section ADQ.
       eapply flat_map_ext. intro. unfold map_snd. des_ifs.
   Qed.
 
-  Variable entry_r: Σ.
-  Variable mainpre: Any.t -> ord -> Σ -> Prop.
-  Variable (mainbody: list val -> itree (hCallE +' pE +' eventE) val).
-  Hypothesis MAINPRE: mainpre ([]: list val)↑ ord_top entry_r.
+  Definition UMod_main (mainbody: list val -> itree (uCallE +' pE +' eventE) val): UMod.t := {|
+    UMod.get_modsem := fun _ => (UModSem.mk [("main", mainbody)] "Main" (tt↑));
+    UMod.sk := Sk.unit;
+  |}
+  .
 
-  Hypothesis WFR: URA.wf (entry_r ⋅ (List.fold_left (⋅) (List.map (SModSem.initial_mr) kmss) ε)).
-  Hypothesis MAINM: In (SMod.main mainpre mainbody) kmds.
+  Variable (mainbody: list val -> itree (uCallE +' pE +' eventE) val).
+  Hypothesis MAINU: In (UMod_main mainbody) umds.
+
+  Let mains: SMod.t := UMod.to_smod (UMod_main mainbody).
+
+  Hypothesis WFR: URA.wf (List.fold_left (⋅) (List.map (SModSem.initial_mr) kmss) ε).
+  (* Hypothesis MAINM: In (SMod.main mainpre mainbody) kmds. *)
 
   Theorem adequacy_open:
     refines_closed (Mod.add_list (List.map (SMod.to_tgt _gstb) kmds ++ List.map UMod.to_mod umds))
@@ -828,12 +834,16 @@ Section ADQ.
         eapply Forall2_apply_Forall2.
         { instantiate (1:=eq). refl. }
         i. subst. exists _gstb. split; ss. r. intro ske. rewrite <- gstb_eq. refl.
-      - ss. rewrite ! URA.unit_id. admit "should be ez".
-      - rewrite in_app_iff. eauto.
+      - ss. instantiate (1:=ε). rewrite ! URA.unit_id. rewrite ! URA.unit_idl. admit "should be ez".
+      - Check (UModSem.transl_fun_smod mainbody).
+        admit "mid - main argument parameterization".
+        (* instantiate (1:=UModSem.transl_fun_smod mainbody). rewrite in_app_iff. eauto. *)
     }
     eapply my_lemma2.
   Unshelve.
     all: ss.
+    { ii. apply True. }
+    { ii. apply ITree.spin. }
   Qed.
 
 End ADQ.

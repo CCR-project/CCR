@@ -61,16 +61,34 @@ Section PROOF.
     apply [("main", mk_fspec main_spec)].
   Defined.
 
-  (* Definition MainSbtb: list (gname * fspecbody) := [("main", mk_specbody main_spec mainBody)]. *)
+  Definition MainSbtb: list (gname * kspecbody) :=
+    [("main", mk_kspecbody main_spec mainBody)
+    ]
+  .
 
   Definition UnknownStb: list (gname * fspec) := [("unknown_call", fspec_trivial2)].
 
-  TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
-  Definition KMainSem: KModSem.t := SModSem.main (fun _ o => (⌜o = ord_top⌝: iProp)%I) mainBody.
-  Definition SMainSem: SModSem.t := SModSem.main (fun _ o => (⌜o = ord_top⌝: iProp)%I) mainBody.
-  Definition MainSem: ModSem.t := SModSem.to_tgt MainStb SMainSem.
-  Definition SMain: SMod.t := SMod.main (fun _ o => (⌜o = ord_top⌝: iProp)%I) mainBody.
-  Definition Main: Mod.t := SMod.to_tgt (fun _ => MainStb) SMain.
+  Definition KMainSem (sk: Sk.t): KModSem.t := {|
+    KModSem.fnsems := MainSbtb;
+    KModSem.mn := "Main";
+    KModSem.initial_mr := ε;
+    KModSem.initial_st := tt↑;
+  |}
+  .
+
+  Definition SMainSem: Sk.t -> SModSem.t := (KModSem.to_tgt) ∘ KMainSem.
+
+  Definition MainSem: Sk.t -> ModSem.t := (SModSem.to_tgt MemStb) ∘ SMainSem.
+
+  Definition KMain: KMod.t := {|
+    KMod.get_modsem := KMainSem;
+    KMod.sk := Sk.unit;
+  |}
+  .
+
+  Definition SMain: SMod.t := (KMod.to_tgt) KMain.
+
+  Definition Main: Mod.t := SMod.to_tgt (fun _ => MemStb) SMain.
 
 End PROOF.
 Global Hint Unfold MainStb: stb.
