@@ -26,6 +26,16 @@ Parameter s2p: string -> ident.
 
 Definition to_long := Int64.repr.
 
+Lemma option_dec {T} :
+  forall x : option T,
+    {match x with | Some _ => True | None => False end} +
+    {~ match x with | Some _ => True | None => False end}.
+Proof.
+  i. destruct x.
+  - left. auto.
+  - right. auto.
+Qed.
+
 Section Compile.
 
   (* compile each program indiv,
@@ -97,39 +107,106 @@ Section Compile.
   (*   end *)
   (* . *)
 
-  Definition make_signature n :=
-    mksignature (repeat Tlong n) (Tlong) (cc_default).
-
-  Record gmap := mk_gmap {
-    _ext_vars : list ident;
-    _ext_funs : list (ident * signature);
-    _int_vars : list ident;
-    _int_funs : list (ident * signature);
-  }.
-
-  Let get_gmap_efuns : extFuns -> list (ident * signature) :=
-    fun src => List.map (fun '(name, n) => (s2p name, make_signature n)) src.
-
-  Let get_gmap_ifuns : progFuns -> list (ident * signature) :=
-    fun src =>
-      List.map (fun '(name, f) => (s2p name, make_signature (length f.(Imp.fn_params)))) src.
-
-  Definition get_gmap (src : Imp.programL) :=
-    mk_gmap
-      (List.map s2p src.(ext_varsL))
-      (get_gmap_efuns src.(ext_funsL))
-      (List.map (fun '(s, z) => s2p s) src.(prog_varsL))
-      (get_gmap_ifuns (List.map snd src.(prog_funsL)))
-  .
-
   (** memory accessing calls *)
   (** load, store, cmp are translated to non-function calls. *)
   (** register alloc and free in advance so can be properly called *)
   Let malloc_def : fundef := External EF_malloc.
-
   Let free_def : fundef := External EF_free.
 
+  Record function2 := mk_function2 {
+    fn_sig2 : signature;
+    fn_params2 : list ident;
+    fn_vars2 : list (ident * Z);
+    fn_temps2 : list ident;
+    fn_body2 : Imp.stmt;
+  }.
+  Definition fundef2 := AST.fundef function2.
+
+  Let tgt_gdef2 := globdef fundef2 ().
+  Let tgt_gdefs2 := list (ident * tgt_gdef2).
+
+  Definition make_signature n :=
+    mksignature (repeat Tlong n) (Tlong) (cc_default).
+
+  Definition compile_eVars src : tgt_gdefs2 :=
+    let gv := (mkglobvar () [] false false) in List.map (fun id => (s2p id, Gvar gv)) src.
+
+  Definition compile_iVars src : tgt_gdefs2 :=
+    List.map (fun '(id, z) => (s2p id, Gvar (mkglobvar () [Init_int64 (to_long z)] false false))) src.
+
+  Definition compile_eFuns (src : extFuns) : tgt_gdefs2 :=
+    List.map (fun '(id, a) => (s2p id, Gfun (External (EF_external id (make_signature a))))) src.
+
+  Definition pre_compile_function (f : Imp.function) : option function2 :=
+    let params := (List.map (fun vn => s2p vn) f.(Imp.fn_params)) in
+    let temps := (List.map (fun vn => s2p vn) f.(Imp.fn_vars)) ++ [(s2p "return"); (s2p "_")] in
+    if (Coqlib.list_norepet_dec dec (params ++ temps)) then
+      let fdef := {|
+            fn_sig2 := make_signature (List.length params);
+            fn_params2 := params;
+            fn_vars2 := [];
+            fn_temps2 := temps;
+            fn_body2 := f.(Imp.fn_body);
+          |} in
+      Some fdef
+    else None.
+
+  (* Fixpoint pre_compile_iFuns (src : progFuns) : option tgt_gdefs2 := *)
+  (*   match src with *)
+  (*   | [] => Some [] *)
+  (*   | (name, f) :: t => *)
+  (*     do tail <- (pre_compile_iFuns t); *)
+  (*     do cf <- (pre_compile_function f); *)
+  (*     let gf := Internal cf in *)
+  (*     Some ((s2p name, Gfun gf) :: tail) *)
+  (*   end *)
+  (* . *)
+
+  Definition dummy_def : (ident * tgt_gdef) :=
+    (s2p ".neverused", Gfun (External (EF_debug 1%positive 1%positive []))).
+
+  Definition dummy_def2 : (ident * tgt_gdef2) :=
+    (s2p ".neverused", Gfun (External (EF_debug 1%positive 1%positive []))).
+
+  Definition pre_compile_iFuns (src : progFuns) : option tgt_gdefs2 :=
+    let pcfs :=
+        List.map
+          (fun '(fn, f) => match (pre_compile_function f) with
+                        | Some cf => Some (s2p fn, Gfun (Internal cf))
+                        | None => None
+                        end)
+          src in
+    if (Forall_dec (fun optf => match optf with | Some _ => True | None => False end) option_dec pcfs)
+    then Some (List.map (fun optf => match optf with | Some tf => tf | None => dummy_def2 end) pcfs)
+    else None.
+
+  Record gmap := mk_gmap {
+    _ext_vars : tgt_gdefs2;
+    _ext_funs : tgt_gdefs2;
+    _int_vars : tgt_gdefs2;
+    _int_funs : tgt_gdefs2;
+  }.
+
+  Definition get_gmap (src : Imp.programL) :=
+    do pre_ifuns <- (pre_compile_iFuns (List.map snd src.(prog_funsL)));
+    Some (mk_gmap
+            (compile_eVars src.(ext_varsL))
+            (compile_eFuns src.(ext_funsL))
+            (compile_iVars src.(prog_varsL))
+            (pre_ifuns))
+  .
+
   Variable gm : gmap.
+
+  Definition get_funsig (tf: tgt_gdef2) :=
+    match tf with
+    | Gfun fd2 =>
+      match fd2 with
+      | Internal f2 => Some (fn_sig2 f2)
+      | External ef => Some (ef_sig ef)
+      end
+    | _ => None
+    end.
 
   (* Imp has no type, value is either int64/ptr64 -> sem_cast can convert *)
   Fixpoint compile_stmt (stmt: Imp.stmt) : option Csharpminor.stmt :=
@@ -151,7 +228,8 @@ Section Compile.
     | CallFun x f args =>
       let fdecls := gm.(_ext_funs) ++ gm.(_int_funs) in
       let id := s2p f in
-      do fsig <- (ident_key id fdecls);
+      do tf <- (ident_key id fdecls);
+      do fsig <- (get_funsig tf);
       do al <- (compile_exprs args);
       Some (Scall (Some (s2p x)) fsig (Eaddrof id) al)
 
@@ -168,19 +246,16 @@ Section Compile.
     | CallSys x f args =>
       let fdecls := gm.(_ext_funs) in
       let id := s2p f in
-      do fsig <- (ident_key id fdecls);
+      do tf <- (ident_key id fdecls);
+      do fsig <- (get_funsig tf);
       do al <- (compile_exprs args);
       Some (Scall (Some (s2p x)) fsig (Eaddrof id) al)
 
     | AddrOf x GN =>
       let id := s2p GN in
-      let vdecls := gm.(_ext_vars) ++ gm.(_int_vars) in
-      let fdecls := gm.(_ext_funs) ++ gm.(_int_funs) in
-      if (existsb (fun p => Pos.eqb id p) vdecls)
-      then Some (Sset (s2p x) (Eaddrof id))
-      else
-        do fty <- (ident_key id fdecls);
-        Some (Sset (s2p x) (Eaddrof id))
+      let decls := gm.(_ext_vars) ++ gm.(_int_vars) ++ gm.(_ext_funs) ++ gm.(_int_funs) in
+      do found <- (ident_key id decls);
+      Some (Sset (s2p x) (Eaddrof id))
 
     | Malloc x se =>
       do a <- (compile_expr se);
@@ -210,60 +285,74 @@ Section Compile.
   (*     if in_dec decA h t then false else NoDupB decA t *)
   (*   end *)
   (* . *)
-(* Coqlib.list_norepet_dec *)
-  Definition compile_eVars src : tgt_gdefs :=
-    let gv := (mkglobvar () [] false false) in List.map (fun id => (s2p id, Gvar gv)) src.
+  (* Coqlib.list_norepet_dec *)
 
-  Definition compile_iVars src : tgt_gdefs :=
-    List.map (fun '(id, z) => (s2p id, Gvar (mkglobvar () [Init_int64 (to_long z)] false false))) src.
+  (* Definition compile_function (f : Imp.function) : option function := *)
+  (*   do prefun <- (pre_compile_function f); *)
+  (*   do fbody <- (compile_stmt f.(Imp.fn_body)); *)
+  (*   let fdef := {| *)
+  (*         fn_sig := prefun.(fn_sig); *)
+  (*         fn_params := prefun.(fn_params); *)
+  (*         fn_vars := prefun.(fn_vars); *)
+  (*         fn_temps := prefun.(fn_temps); *)
+  (*         fn_body := Sseq fbody (Sreturn (Some (Evar (s2p "return")))); *)
+  (*       |} in *)
+  (*   Some fdef. *)
 
-  Definition compile_eFuns (src : extFuns) : tgt_gdefs :=
-    List.map (fun '(id, a) => (s2p id, Gfun (External (EF_external id (make_signature a))))) src.
+  (* Fixpoint compile_iFuns (src : progFuns) : option tgt_gdefs := *)
+  (*   match src with *)
+  (*   | [] => Some [] *)
+  (*   | (name, f) :: t => *)
+  (*     do tail <- (compile_iFuns t); *)
+  (*     do cf <- (compile_function f); *)
+  (*     let gf := Internal cf in *)
+  (*     Some ((s2p name, Gfun gf) :: tail) *)
+  (*   end *)
+  (* . *)
 
-  Definition compile_function (f : Imp.function) : option function :=
-    let params := (List.map (fun vn => s2p vn) f.(Imp.fn_params)) in
-    let temps := (List.map (fun vn => s2p vn) f.(Imp.fn_vars)) ++ [(s2p "return"); (s2p "_")] in
-    if (Coqlib.list_norepet_dec dec (params ++ temps)) then
-      do fbody <- (compile_stmt f.(Imp.fn_body));
-      let fdef := {|
-            fn_sig := make_signature (List.length params);
-            fn_params := params;
-            fn_vars := [];
-            fn_temps := temps;
-            fn_body := Sseq fbody (Sreturn (Some (Evar (s2p "return"))));
-          |} in
-      Some fdef
-    else None.
-
-  Fixpoint compile_iFuns (src : progFuns) : option tgt_gdefs :=
-    match src with
-    | [] => Some []
-    | (name, f) :: t =>
-      do tail <- (compile_iFuns t);
-      do cf <- (compile_function f);
-      let gf := Internal cf in
-      Some ((s2p name, Gfun gf) :: tail)
+  Definition get_function (df2 : tgt_gdef2) : option tgt_gdef :=
+    match df2 with
+    | Gfun (Internal f2) =>
+      do _fbody <- (compile_stmt f2.(fn_body2));
+      let fbody := Sseq _fbody (Sreturn (Some (Evar (s2p "return")))) in
+      let f := mkfunction (fn_sig2 f2) (fn_params2 f2) (fn_vars2 f2) (fn_temps2 f2) (fbody) in
+      Some (Gfun (Internal f))
+    | _ => None
     end
   .
+
+  Definition lift_def (df2 : tgt_gdef2) : tgt_gdef :=
+    match df2 with
+    | Gfun (Internal _) =>
+      match (get_function df2) with
+      | Some df => df
+      | None => snd dummy_def
+      end
+    | Gfun (External ef) => Gfun (External ef)
+    | Gvar gv => Gvar gv
+    end.
+
+  Definition get_iFuns (pre : tgt_gdefs2) : option tgt_gdefs :=
+    let tfs :=
+        List.map
+          (fun '(fn, df2) => match (get_function df2) with
+                        | Some df => Some (fn, df)
+                        | None => None
+                          end)
+          pre in
+    if (Forall_dec (fun optf => match optf with | Some _ => True | None => False end) option_dec tfs)
+    then Some (List.map (fun optf => match optf with | Some tf => tf | None => dummy_def end) tfs)
+    else None.
 
   Let init_g : tgt_gdefs :=
     [(s2p "malloc", Gfun malloc_def); (s2p "free", Gfun free_def)].
 
-  (* Let id_init := List.map fst init_g. *)
-
-  (* Definition imp_prog_ids (src : Imp.programL) := *)
-  (*   let id_ev := List.map s2p src.(ext_varsL) in *)
-  (*   let id_ef := List.map (fun p => s2p (fst p)) src.(ext_funsL) in *)
-  (*   let id_iv := List.map (fun p => s2p (fst p)) src.(prog_varsL) in *)
-  (*   let id_if := List.map (fun p => s2p (fst (snd p))) src.(prog_funsL) in *)
-  (*   id_init ++ id_ev ++ id_ef ++ id_iv ++ id_if *)
-  (* . *)
-
   Definition compile_gdefs (src : Imp.programL) : option tgt_gdefs :=
-    let evars := compile_eVars src.(ext_varsL) in
-    let ivars := compile_iVars src.(prog_varsL) in
-    let efuns := compile_eFuns src.(ext_funsL) in
-    do ifuns <- compile_iFuns (List.map snd src.(prog_funsL));
+    let lift_all := fun '(n, d) => (n, lift_def d) in
+    let evars := List.map lift_all gm.(_ext_vars) in
+    let ivars := List.map lift_all gm.(_int_vars) in
+    let efuns := List.map lift_all gm.(_ext_funs) in
+    do ifuns <- get_iFuns gm.(_int_funs);
     let defs := efuns ++ evars ++ init_g ++ ifuns ++ ivars in
     Some defs
   .
@@ -271,34 +360,40 @@ Section Compile.
   Definition _compile (src : Imp.programL) : res program :=
     let optdefs := (compile_gdefs src) in
     match optdefs with
-    | None => Error [MSG "Imp2clight compilation failed"]
+    | None => Error [MSG "Imp2csharpminor compilation failed"]
     | Some _defs =>
       if (Coqlib.list_norepet_dec dec (List.map fst _defs)) then
         let pdefs := Maps.PTree_Properties.of_list _defs in
         let defs := Maps.PTree.elements pdefs in
         OK (mkprogram defs (List.map s2p src.(publicL)) (s2p "main"))
-      else Error [MSG "Imp2clight compilation failed; duplicated declarations"]
+      else Error [MSG "Imp2csharpminor compilation failed; duplicated declarations"]
     end
   .
 
   Definition _compile2 (src : Imp.programL) : res program :=
     let optdefs := (compile_gdefs src) in
     match optdefs with
-    | None => Error [MSG "Imp2clight compilation failed"]
+    | None => Error [MSG "Imp2csharpminor compilation failed"]
     | Some _defs =>
       if (Coqlib.list_norepet_dec dec (List.map fst _defs)) then
         OK (mkprogram _defs (List.map s2p src.(publicL)) (s2p "main"))
-      else Error [MSG "Imp2clight compilation failed; duplicated declarations"]
+      else Error [MSG "Imp2csharpminor compilation failed; duplicated declarations"]
     end
   .
 
 End Compile.
 
 Definition compile (src : Imp.programL) :=
-  _compile (get_gmap src) src.
+  match (get_gmap src) with
+  | Some gm => _compile gm src
+  | _ => Error [MSG "Imp2csharpminor compilation failed"]
+  end.
 
 Definition compile2 (src : Imp.programL) :=
-  _compile2 (get_gmap src) src.
+  match (get_gmap src) with
+  | Some gm => _compile2 gm src
+  | _ => Error [MSG "Imp2csharpminor compilation failed"]
+  end.
 
 Module ASMGEN.
 

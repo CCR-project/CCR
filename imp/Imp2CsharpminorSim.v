@@ -270,50 +270,53 @@ Section GENV.
   Qed.
 
   Lemma exists_compiled_function
-        cfs mn fn impf
-
-        (COMP: compile_iFuns (get_gmap src) (List.map snd (prog_funsL src)) = Some cfs)
+        gm cfs mn fn impf
+        (GMAP: get_gmap src = Some gm)
+        (COMP: compile_iFuns gm (List.map snd (prog_funsL src)) = Some cfs)
         (INSRC: In (mn, (fn, impf)) (prog_funsL src))
     :
-      exists cf, (compile_function (get_gmap src) impf = Some cf /\ In (s2p fn, Gfun (Internal cf)) cfs).
+      exists cf, (compile_function gm impf = Some cf /\ In (s2p fn, Gfun (Internal cf)) cfs).
   Proof.
     revert_until src. set (prog_funsL src) as srcfs. induction srcfs; i; ss; clarify.
     des; clarify; ss.
     - uo; des_ifs. exists f; split; auto. econs 1. auto.
     - destruct a. destruct p. uo; des_ifs. ss. clarify.
       hexploit IHsrcfs.
-      { ss. }
-      { apply INSRC. }
+      1,2,3: eauto.
       i. des. exists cf. split; auto.
   Qed.
 
   Lemma in_tgt_prog_defs
-        tgt mn fn impf cf
+        gm tgt mn fn impf cf
+        (GMAP: get_gmap src = Some gm)
         (COMP: compile2 src = OK tgt)
         (INSRC: In (mn, (fn, impf)) (prog_funsL src))
-        (COMPF: compile_function (get_gmap src) impf = Some cf)
+        (COMPF: compile_function gm impf = Some cf)
     :
       In (s2p fn, Gfun (Internal cf)) tgt.(prog_defs).
   Proof.
     unfold compile2 in COMP. unfold _compile2 in COMP. des_ifs.
-    unfold compile_gdefs in Heq. uo; des_ifs.
+    unfold compile_gdefs in Heq0. uo; des_ifs.
     hexploit exists_compiled_function; eauto.
     i. des. clarify. ss. do 2 (apply in_or_app; right).
     ss. do 2 right. apply in_or_app; left. auto.
   Qed.
 
   Lemma compiled_function_props
-        impf cf
-        (COMP: compile_function (get_gmap src) impf = Some cf)
+        gm impf cf
+        (GMAP: get_gmap src = Some gm)
+        (COMP: compile_function gm impf = Some cf)
     :
       (cf.(fn_sig) = make_signature (List.length impf.(Imp.fn_params))) /\
-      (exists tfbody, compile_stmt (get_gmap src) impf.(Imp.fn_body) = Some tfbody /\
+      (exists tfbody, compile_stmt gm impf.(Imp.fn_body) = Some tfbody /\
                  cf.(fn_body) = Sseq tfbody (Sreturn (Some (Evar (s2p "return"))))) /\
       (cf.(fn_vars) = [] ) /\
       (Coqlib.list_norepet (fn_params cf)) /\
       (Coqlib.list_disjoint (fn_params cf) (fn_temps cf)).
   Proof.
-    unfold compile_function in COMP. uo; des_ifs. ss. split; auto.
+    unfold compile_function in COMP. uo; des_ifs. ss.
+    unfold pre_compile_function in Heq0. des_ifs. ss.
+    split; auto.
     { f_equal. rewrite map_length. ss. }
     split; auto.
     { exists s; split; auto. }
@@ -513,7 +516,7 @@ Section PROOF.
           ist cst
           i0
           (TLOF: tlof = 3 + (List.length src.(ext_funsL)) + (List.length src.(ext_varsL)))
-          (GMAP: gm = get_gmap src)
+          (GMAP: get_gmap src = Some gm)
           (MODL: modl = (ModL.add (Mod.lift Mem) (ImpMod.get_modL src)))
           (MODSEML: ms = modl.(ModL.enclose))
           (GENV: ge = Sk.load_skenv modl.(ModL.sk))
@@ -528,7 +531,7 @@ Section PROOF.
     pcofix CIH. i.
     inv MS.
     unfold ordN in *.
-    set (gm:= get_gmap src) in *.
+    unfold compile2 in COMP. des_ifs. rename Heq into GMAP.
     set (tlof := 3 + (List.length src.(ext_funsL)) + (List.length src.(ext_varsL))) in *.
     destruct code.
     - unfold itree_of_cont_stmt, itree_of_imp_cont.
@@ -638,7 +641,7 @@ Section PROOF.
       { eapply step_tau. }
       eexists. right. apply CIH.
       hexploit match_states_intro.
-      { instantiate (2:=Skip). instantiate (2:=get_gmap src). ss. }
+      { instantiate (2:=Skip). ss. }
       2,3,4,5,6,7:eauto.
       2:{ unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. eauto. }
       { econs. i. admit "ez? alist & Maps.PTree". }
@@ -711,12 +714,13 @@ Section PROOF.
       ss. uo; des_ifs.
       des_ifs; sim_red.
       { sim_triggerUB. }
-      assert (COMP2: compile2 src = OK tgt); auto.
-      unfold Imp2Csharpminor.compile2 in COMP. unfold _compile2 in COMP. des_ifs.
+      assert (COMP2: compile2 src = OK tgt).
+      { unfold compile2. rewrite GMAP. auto. }
+      unfold _compile2 in COMP. des_ifs.
       unfold compile_gdefs in Heq0. uo; des_ifs; clarify.
       match goal with
       | [ |- paco3 (_sim _ (semantics ?tp) _) _ _ _ _ ] =>
-        set (tgtp:=tp)
+        set (tgtp:=tp) in *
       end.
       sim_red. eapply step_exprs; eauto.
       { admit "mid: index". }
@@ -754,7 +758,21 @@ Section PROOF.
       unfold ident_key in Heq1.
       hexploit compiled_function_props; eauto. i. des; clarify.
       apply alist_find_some in Heq1. apply in_app_iff in Heq1.
-      assert (GMAP: compile_gdefs src = Some tdefs -> Coqlib.list_norepet tdefs -> Coqlib.list_norepet (get_gmap src)).
+
+
+      unfold get_gmap in GMAP. uo; des_ifs; ss.
+
+      assert (TEMP: get_gmap src = Some gm ->
+                    pre_compile_iFuns 
+      assert (TEMP: get_gmap src = Some gm ->
+                    _compile gm src = OK tgt ->
+                    compile_iFuns gm (List.map snd (prog_funsL src)) = Some l2 ->
+                    In (s2p f, Gfun (Internal tf0)) l2 ->
+                    (forall g, not (In (s2p f, g) (_ext_funs gm))) /\
+                    (forall g, In (s2p f, g) (_int_funs gm) -> g = Gfun (Internal tf0))).
+      { unfold get_gmap in GMAP. uo; des_ifs. ss.
+      assert (GMAP: compile_gdefs src = 0Some tdefs -> Coqlib.list_norepet tdefs -> Coqlib.list_norepet (get_gmap src)).
+(* Coqlib.list_in_map_inv: *)
 
       assert (SIG: s = make_signature (Datatypes.length (Imp.fn_params f0))).
       { admit "ez: trivial, use FOUND". }
