@@ -272,26 +272,61 @@ Section GENV.
   Lemma exists_compiled_function
         gm cfs mn fn impf
         (GMAP: get_gmap src = Some gm)
-        (COMP: compile_iFuns gm (List.map snd (prog_funsL src)) = Some cfs)
+        (COMP: get_iFuns gm (_int_funs gm) = Some cfs)
         (INSRC: In (mn, (fn, impf)) (prog_funsL src))
     :
-      exists cf, (compile_function gm impf = Some cf /\ In (s2p fn, Gfun (Internal cf)) cfs).
+      exists precf cf,
+        (pre_compile_function impf = Some precf /\
+         get_function gm (Gfun (Internal precf)) = Some (Gfun (Internal cf)) /\
+         In (s2p fn, Gfun (Internal cf)) cfs).
   Proof.
-    revert_until src. set (prog_funsL src) as srcfs. induction srcfs; i; ss; clarify.
-    des; clarify; ss.
-    - uo; des_ifs. exists f; split; auto. econs 1. auto.
-    - destruct a. destruct p. uo; des_ifs. ss. clarify.
-      hexploit IHsrcfs.
-      1,2,3: eauto.
-      i. des. exists cf. split; auto.
+    Local Opaque get_function.
+    unfold get_gmap in GMAP. uo; des_ifs. ss.
+    match goal with
+    | [ COMP: get_iFuns ?_gm _ = Some _ |- _ ] =>
+      set (gm:=_gm) in *
+    end.
+    unfold pre_compile_iFuns in Heq0. des_ifs; ss.
+    rewrite List.Forall_map in f. rewrite List.Forall_map in f.
+    rewrite Forall_forall in f. hexploit f.
+    { apply INSRC. }
+    i. ss. des_ifs; ss; clarify. exists f0.
+    unfold get_iFuns in COMP. des_ifs; ss.
+    do 4 (rewrite List.Forall_map in f1). rewrite Forall_forall in f1.
+    hexploit f1.
+    { apply INSRC. }
+    i. ss. des_ifs; ss; clarify.
+    Local Transparent get_function.
+    assert (SAVED: get_function gm (Gfun (Internal f0)) = Some g0); auto.
+    unfold get_function in Heq2. uo. destruct (compile_stmt gm (fn_body2 f0)) eqn:CSF0.
+    2:{ clarify. }
+    match goal with
+    | [ Heq2: Some (Gfun (Internal ?_cf)) = Some _ |- _ ] =>
+      set (cf:=_cf)
+    end.
+    clarify.
+    Local Opaque get_function.
+    exists cf.
+    split; auto. split; auto.
+    do 4 (rewrite List.map_map).
+    match goal with
+    | [ |- In _ (List.map ?_mapf _) ] =>
+      set (mapf:=_mapf) in *
+    end.
+    apply (in_map mapf _ _) in INSRC.
+    assert (mapf (mn, (fn, impf)) = (s2p fn, Gfun (Internal cf))).
+    { subst mapf. ss. rewrite Heq1. rewrite SAVED. ss. }
+    rewrite <- H1. auto.
+    Local Transparent get_function.
   Qed.
 
   Lemma in_tgt_prog_defs
-        gm tgt mn fn impf cf
+        gm tgt mn fn impf precf cf
         (GMAP: get_gmap src = Some gm)
         (COMP: compile2 src = OK tgt)
         (INSRC: In (mn, (fn, impf)) (prog_funsL src))
-        (COMPF: compile_function gm impf = Some cf)
+        (PRECF: pre_compile_function impf = Some precf)
+        (COMPF: get_function gm (Gfun (Internal precf)) = Some (Gfun (Internal cf)))
     :
       In (s2p fn, Gfun (Internal cf)) tgt.(prog_defs).
   Proof.
@@ -303,21 +338,21 @@ Section GENV.
   Qed.
 
   Lemma compiled_function_props
-        gm impf cf
+        gm impf precf cf
         (GMAP: get_gmap src = Some gm)
-        (COMP: compile_function gm impf = Some cf)
+        (PRECF: pre_compile_function impf = Some precf)
+        (COMPF: get_function gm (Gfun (Internal precf)) = Some (Gfun (Internal cf)))
     :
-      (cf.(fn_sig) = make_signature (List.length impf.(Imp.fn_params))) /\
+      (cf.(fn_sig) = precf.(fn_sig2)) /\
       (exists tfbody, compile_stmt gm impf.(Imp.fn_body) = Some tfbody /\
                  cf.(fn_body) = Sseq tfbody (Sreturn (Some (Evar (s2p "return"))))) /\
       (cf.(fn_vars) = [] ) /\
       (Coqlib.list_norepet (fn_params cf)) /\
       (Coqlib.list_disjoint (fn_params cf) (fn_temps cf)).
   Proof.
-    unfold compile_function in COMP. uo; des_ifs. ss.
-    unfold pre_compile_function in Heq0. des_ifs. ss.
+    unfold pre_compile_function in PRECF. uo; des_ifs. ss.
+    uo; des_ifs. ss.
     split; auto.
-    { f_equal. rewrite map_length. ss. }
     split; auto.
     { exists s; split; auto. }
     split; auto. split; auto.
@@ -747,14 +782,9 @@ Section PROOF.
       hexploit exists_compiled_function; eauto. i.
       des. rename cf into tf0. rename H1 into COMPF.
       hexploit in_tgt_prog_defs; eauto. i.
-      assert (TGTFG: In (s2p f, Gfun (Internal tf0)) tgtp.(prog_defs)); auto.
-      eapply Globalenvs.Genv.find_symbol_exists in TGTFG.
-      destruct TGTFG as [b TGTFG].
-
-      (* make lemma *)
-      assert (TGTGFIND: Globalenvs.Genv.find_def (Globalenvs.Genv.globalenv tgtp) b = Some (Gfun (Internal tf0))).
-      { admit "mid? from construction of tgt's genv". }
-
+      (* assert (TGTFG: In (s2p f, Gfun (Internal tf0)) tgtp.(prog_defs)); auto. *)
+      eapply Globalenvs.Genv.find_symbol_exists in H1.
+      destruct H1 as [b TGTFG].
       unfold ident_key in Heq1.
       hexploit compiled_function_props; eauto. i. des; clarify.
       apply alist_find_some in Heq1. apply in_app_iff in Heq1.
@@ -762,26 +792,18 @@ Section PROOF.
 
       unfold get_gmap in GMAP. uo; des_ifs; ss.
 
-      assert (TEMP: get_gmap src = Some gm ->
-                    pre_compile_iFuns 
-      assert (TEMP: get_gmap src = Some gm ->
-                    _compile gm src = OK tgt ->
-                    compile_iFuns gm (List.map snd (prog_funsL src)) = Some l2 ->
-                    In (s2p f, Gfun (Internal tf0)) l2 ->
-                    (forall g, not (In (s2p f, g) (_ext_funs gm))) /\
-                    (forall g, In (s2p f, g) (_int_funs gm) -> g = Gfun (Internal tf0))).
-      { unfold get_gmap in GMAP. uo; des_ifs. ss.
-      assert (GMAP: compile_gdefs src = 0Some tdefs -> Coqlib.list_norepet tdefs -> Coqlib.list_norepet (get_gmap src)).
 (* Coqlib.list_in_map_inv: *)
 
       assert (SIG: s = make_signature (Datatypes.length (Imp.fn_params f0))).
       { admit "ez: trivial, use FOUND". }
       clarify.
 
-      unfold compile_function in COMPF. uo; des_ifs. rename s into bodytf0.
-      assert (COMPFRET: forall tfd0 tf0, In tfd0 l1 -> snd tfd0 = AST.Gfun (AST.Internal tf0) ->
-                                    tf0.(fn_body) = Sseq (bodytf0) (Sreturn (Some (Evar (s2p "return"))))).
-      { admit "ez: trivial by definition". }
+      (* make lemma *)
+      assert (TGTGFIND: Globalenvs.Genv.find_def (Globalenvs.Genv.globalenv tgtp) b = Some (Gfun (Internal tf0))).
+      { admit "mid? from construction of tgt's genv". }
+
+
+
 
       unfold cfun. sim_red. rewrite Any.upcast_downcast. sim_red.
       rewrite unfold_eval_imp_only.
