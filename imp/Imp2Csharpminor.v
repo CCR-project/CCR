@@ -188,12 +188,13 @@ Section Compile.
   }.
 
   Definition get_gmap (src : Imp.programL) :=
+    let cev := (compile_eVars src.(ext_varsL)) in
+    let cef := (compile_eFuns src.(ext_funsL)) in
+    let civ := (compile_iVars src.(prog_varsL)) in
     do pre_ifuns <- (pre_compile_iFuns (List.map snd src.(prog_funsL)));
-    Some (mk_gmap
-            (compile_eVars src.(ext_varsL))
-            (compile_eFuns src.(ext_funsL))
-            (compile_iVars src.(prog_varsL))
-            (pre_ifuns))
+    if (Coqlib.list_norepet_dec dec (List.map fst (pre_ifuns ++ cef ++ civ ++ cev)))
+    then Some (mk_gmap cev cef civ pre_ifuns)
+    else None
   .
 
   Variable gm : gmap.
