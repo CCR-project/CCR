@@ -520,7 +520,7 @@ Section CANCEL.
   Let stb: list (gname * fspec) := List.map (fun '(fn, fs) => (fn, fs.(fsb_fspec))) sbtb.
 
   Let mds_src: list Mod.t := List.map (SMod.to_src) mds.
-  Let mds_mid: list Mod.t := List.map (SMod.to_mid) mds.
+  Let mds_mid: list Mod.t := List.map (SMod.to_mid stb) mds.
 
 
 
@@ -584,6 +584,7 @@ Section CANCEL.
   Ltac steps := repeat (mred; try _step ltac:(eapply simg_safe_spec); des_ifs_safe).
   Ltac steps_strong := repeat (mred; try (_step ltac:(idtac)); des_ifs_safe).
 
+
   Let adequacy_type_aux__APC:
     forall at_most o0 mn
            st_src0 st_tgt0
@@ -591,7 +592,7 @@ Section CANCEL.
       simg (fun st_src1 st_tgt1 => fst st_tgt1 = st_tgt0 /\ fst st_src1 = st_src0)
            (C.myG o0 at_most + C.d)%ord
            (Ret (st_src0, tt))
-           (EventsL.interp_Es p_mid (transl_all mn (interp_hCallE_mid (ord_pure o0) (_APC at_most))) st_tgt0)
+           (EventsL.interp_Es p_mid (transl_all mn (interp_hCallE_mid stb (ord_pure o0) (_APC at_most))) st_tgt0)
   .
   Proof.
     ginit.
@@ -604,8 +605,10 @@ Section CANCEL.
     rewrite unfold_APC. destruct st_tgt0 as [rst_tgt0 pst_tgt0]. steps.
     destruct x.
     { steps. }
-    steps. destruct rst_tgt0 as [mrs_tgt0 [|frs_hd frs_tl]]; ss.
-    { steps. }
+    steps. destruct (alist_find s stb); ss.
+    2: { steps. }
+    destruct rst_tgt0 as [mrs_tgt0 [|frs_hd frs_tl]]; ss.
+    { destruct (alist_find s stb); ss; steps. }
     steps. unfold unwrapU. des_ifs; cycle 1.
     { admit "-----------------------------------FINDF: make it to unwrapN". }
     steps.
@@ -653,7 +656,7 @@ Section CANCEL.
     ,
       simg (fun st_src1 st_tgt1 => fst st_tgt1 = st_tgt0 /\ fst st_src1 = st_src0)
            (C.myF o0)%ord (Ret (st_src0, tt))
-           (EventsL.interp_Es p_mid (transl_all mn (interp_hCallE_mid (ord_pure o0) APC)) st_tgt0)
+           (EventsL.interp_Es p_mid (transl_all mn (interp_hCallE_mid stb (ord_pure o0) APC)) st_tgt0)
   .
   Proof.
     ginit.
@@ -697,6 +700,13 @@ Section CANCEL.
   Let wf: W -> W -> Prop := fun '(_, pst_src0) '(_, pst_tgt0) => pst_src0 = pst_tgt0.
   Let wf': forall {X}, (W * X)%type -> (W * X)%type -> Prop := (fun _ '(st_src0, rv_src) '(st_tgt0, rv_tgt) => wf st_src0 st_tgt0 /\ rv_src = rv_tgt).
 
+  Lemma stb_find_iff fn
+    :
+      is_some (alist_find fn stb) <-> is_some (find (fun fnsem => dec fn (fst fnsem)) (fnsems ms_mid)).
+  Proof.
+    admit "in stb <-> in fnsems".
+  Qed.
+
   Let adequacy_type_aux:
     forall
       o0
@@ -706,7 +716,7 @@ Section CANCEL.
       simg wf'
            100%ord
            (EventsL.interp_Es p_src (transl_all mn (interp_hCallE_src body)) st_src0)
-           (EventsL.interp_Es p_mid (transl_all mn (interp_hCallE_mid o0 body)) st_tgt0)
+           (EventsL.interp_Es p_mid (transl_all mn (interp_hCallE_mid stb o0 body)) st_tgt0)
   .
   Proof.
     ginit.
@@ -734,12 +744,36 @@ Section CANCEL.
     destruct st_src0 as [rst_src0 pst_src0]; ss. destruct st_tgt0 as [rst_tgt0 pst_tgt0]; ss.
     ired_both. destruct tbr.
     (* PURE *)
-    { steps_strong. eexists. steps.
+    { steps_strong.
+      { admit "". }
+      eexists. steps. destruct (alist_find fn stb) eqn:EQ.
+      2: { steps. }
       destruct rst_tgt0 as [mrs_tgt0 [|frs_tgt_hd frs_tgt_tl]]; ss.
       { steps. }
+      steps. clear x0. unfold unwrapU. des_ifs; cycle 1.
+      { exfalso. hexploit (stb_find_iff fn). rewrite EQ. rewrite Heq. clear. intuition. }
       steps.
-      unfold unwrapU. des_ifs; cycle 1.
-      { admit "unwrapN!!!!!!!!!!!!!!!!!!!!!!!!!!". }
+
+      guclo ordC_spec. econs.
+      { instantiate (1:=_ + _). admit "". }
+      rewrite idK_spec2 at 1.
+      guclo bindC_spec. econs.
+      {
+
+
+      rewrite idk
+
+
+      {
+
+        i.
+        eapply H.
+
+i. ss. ss.
+
+
+is_some
+admit "unwrapN!!!!!!!!!!!!!!!!!!!!!!!!!!". }
       steps.
 
 

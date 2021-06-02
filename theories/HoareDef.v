@@ -302,7 +302,7 @@ Section CANCEL.
   Definition handle_hCallE_mid (ord_cur: ord): hCallE ~> itree Es :=
     fun _ '(hCall tbr fn varg_src) =>
       tau;;
-      ord_next <- (if tbr then o0 <- trigger (Choose _);; Ret (ord_pure o0) else Ret ord_top);;
+      ord_next <- (if tbr then (alist_find fn stb)ǃ;;; o0 <- trigger (Choose _);; Ret (ord_pure o0) else Ret ord_top);;
       guarantee(ord_lt ord_next ord_cur);;;
       trigger (Call fn varg_src)
   .
@@ -483,7 +483,7 @@ Section SMODSEM.
   .
 
   Definition to_src (ms: t): ModSem.t := transl (fun_to_src ∘ fsb_body) (fun _ => ε) ms.
-  Definition to_mid (ms: t): ModSem.t := transl (fun_to_mid ∘ fsb_body) (fun _ => ε) ms.
+  Definition to_mid (stb: list (gname * fspec)) (ms: t): ModSem.t := transl (fun_to_mid stb ∘ fsb_body) (fun _ => ε) ms.
   Definition to_tgt (stb: list (gname * fspec)) (ms: t): ModSem.t := transl (fun_to_tgt stb) (initial_mr) ms.
 
   Definition main (mainpre: Any.t -> ord -> Σ -> Prop) (mainbody: Any.t -> itree (hCallE +' pE +' eventE) Any.t): t := {|
@@ -517,7 +517,7 @@ Section SMOD.
   .
 
   Definition to_src (md: t): Mod.t := transl (fun _ => fun_to_src ∘ fsb_body) (fun _ => ε) md.
-  Definition to_mid (md: t): Mod.t := transl (fun _ => fun_to_mid ∘ fsb_body) (fun _ => ε) md.
+  Definition to_mid (stb: list (gname * fspec)) (md: t): Mod.t := transl (fun _ => fun_to_mid stb ∘ fsb_body) (fun _ => ε) md.
   Definition to_tgt (stb: Sk.t -> list (gname * fspec)) (md: t): Mod.t := transl (fun_to_tgt ∘ stb) SModSem.initial_mr md.
 
   (* Definition transl (tr: SModSem.t -> ModSem.t) (md: t): Mod.t := {| *)
@@ -532,8 +532,8 @@ Section SMOD.
   Lemma to_src_comm: forall sk smd,
       (SModSem.to_src) (get_modsem smd sk) = (to_src smd).(Mod.get_modsem) sk.
   Proof. refl. Qed.
-  Lemma to_mid_comm: forall sk smd,
-      (SModSem.to_mid) (get_modsem smd sk) = (to_mid smd).(Mod.get_modsem) sk.
+  Lemma to_mid_comm: forall sk stb smd,
+      (SModSem.to_mid stb) (get_modsem smd sk) = (to_mid stb smd).(Mod.get_modsem) sk.
   Proof. refl. Qed.
   Lemma to_tgt_comm: forall sk stb smd,
       (SModSem.to_tgt (stb sk)) (get_modsem smd sk) = (to_tgt stb smd).(Mod.get_modsem) sk.
@@ -1146,15 +1146,16 @@ End AUX.
 Section AUX.
 
 Context `{Σ: GRA.t}.
+Variable stb: list (gname * fspec).
 (* itree reduction *)
 Lemma interp_mid_bind
       (R S: Type)
       (s : itree (hCallE +' pE +' eventE) R) (k : R -> itree (hCallE +' pE +' eventE) S)
       o
   :
-    (interp_hCallE_mid o (s >>= k))
+    (interp_hCallE_mid stb o (s >>= k))
     =
-    ((interp_hCallE_mid o s) >>= (fun r => interp_hCallE_mid o (k r))).
+    ((interp_hCallE_mid stb o s) >>= (fun r => interp_hCallE_mid stb o (k r))).
 Proof.
   unfold interp_hCallE_mid in *. grind.
 Qed.
@@ -1163,9 +1164,9 @@ Lemma interp_mid_tau o
       (U: Type)
       (t : itree _ U)
   :
-    (interp_hCallE_mid o (Tau t))
+    (interp_hCallE_mid stb o (Tau t))
     =
-    (Tau (interp_hCallE_mid o t)).
+    (Tau (interp_hCallE_mid stb o t)).
 Proof.
   unfold interp_hCallE_mid in *. grind.
 Qed.
@@ -1174,7 +1175,7 @@ Lemma interp_mid_ret o
       (U: Type)
       (t: U)
   :
-    ((interp_hCallE_mid o (Ret t)))
+    ((interp_hCallE_mid stb o (Ret t)))
     =
     Ret t.
 Proof.
@@ -1185,7 +1186,7 @@ Lemma interp_mid_triggerp o
       (R: Type)
       (i: pE R)
   :
-    (interp_hCallE_mid o (trigger i))
+    (interp_hCallE_mid stb o (trigger i))
     =
     (trigger i >>= (fun r => tau;; Ret r)).
 Proof.
@@ -1197,7 +1198,7 @@ Lemma interp_mid_triggere o
       (R: Type)
       (i: eventE R)
   :
-    (interp_hCallE_mid o (trigger i))
+    (interp_hCallE_mid stb o (trigger i))
     =
     (trigger i >>= (fun r => tau;; Ret r)).
 Proof.
@@ -1209,9 +1210,9 @@ Lemma interp_mid_hcall o
       (R: Type)
       (i: hCallE R)
   :
-    (interp_hCallE_mid o (trigger i))
+    (interp_hCallE_mid stb o (trigger i))
     =
-    ((handle_hCallE_mid o i) >>= (fun r => tau;; Ret r)).
+    ((handle_hCallE_mid stb o i) >>= (fun r => tau;; Ret r)).
 Proof.
   unfold interp_hCallE_mid in *.
   repeat rewrite interp_trigger. grind.
@@ -1220,7 +1221,7 @@ Qed.
 Lemma interp_mid_triggerUB o
       (R: Type)
   :
-    (interp_hCallE_mid o (triggerUB))
+    (interp_hCallE_mid stb o (triggerUB))
     =
     triggerUB (A:=R).
 Proof.
@@ -1230,7 +1231,7 @@ Qed.
 Lemma interp_mid_triggerNB o
       (R: Type)
   :
-    (interp_hCallE_mid o (triggerNB))
+    (interp_hCallE_mid stb o (triggerNB))
     =
     triggerNB (A:=R).
 Proof.
@@ -1241,7 +1242,7 @@ Lemma interp_mid_unwrapU o
       (R: Type)
       (i: option R)
   :
-    (interp_hCallE_mid o (@unwrapU (hCallE +' pE +' eventE) _ _ i))
+    (interp_hCallE_mid stb o (@unwrapU (hCallE +' pE +' eventE) _ _ i))
     =
     (unwrapU i).
 Proof.
@@ -1260,7 +1261,7 @@ Lemma interp_mid_unwrapN o
       (R: Type)
       (i: option R)
   :
-    (interp_hCallE_mid o (@unwrapN (hCallE +' pE +' eventE) _ _ i))
+    (interp_hCallE_mid stb o (@unwrapN (hCallE +' pE +' eventE) _ _ i))
     =
     (unwrapN i).
 Proof.
@@ -1278,7 +1279,7 @@ Qed.
 Lemma interp_mid_assume o
       P
   :
-    (interp_hCallE_mid o (assume P))
+    (interp_hCallE_mid stb o (assume P))
     =
     (assume P;;; tau;; Ret tt)
 .
@@ -1289,7 +1290,7 @@ Qed.
 Lemma interp_mid_guarantee o
       P
   :
-    (interp_hCallE_mid o (guarantee P))
+    (interp_hCallE_mid stb o (guarantee P))
     =
     (guarantee P;;; tau;; Ret tt).
 Proof.
@@ -1300,13 +1301,16 @@ Lemma interp_mid_ext o
       R (itr0 itr1: itree _ R)
       (EQ: itr0 = itr1)
   :
-    (interp_hCallE_mid o itr0)
+    (interp_hCallE_mid stb o itr0)
     =
-    (interp_hCallE_mid o itr1)
+    (interp_hCallE_mid stb o itr1)
 .
 Proof. subst; et. Qed.
 
-Global Program Instance interp_hCallE_mid_rdb: red_database (mk_box (@interp_hCallE_mid)) :=
+End AUX.
+
+
+Global Program Instance interp_hCallE_mid_rdb `{Σ: GRA.t}: red_database (mk_box (@interp_hCallE_mid)) :=
   mk_rdb
     0
     (mk_box interp_mid_bind)
@@ -1324,8 +1328,6 @@ Global Program Instance interp_hCallE_mid_rdb: red_database (mk_box (@interp_hCa
     (mk_box interp_mid_guarantee)
     (mk_box interp_mid_ext)
 .
-
-End AUX.
 
 
 
