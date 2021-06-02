@@ -584,14 +584,19 @@ Section CANCEL.
   Ltac steps := repeat (mred; try _step ltac:(eapply simg_safe_spec); des_ifs_safe).
   Ltac steps_strong := repeat (mred; try (_step ltac:(idtac)); des_ifs_safe).
 
+  Lemma stb_find_iff fn
+    :
+      is_some (alist_find fn stb) <-> is_some (find (fun fnsem => dec fn (fst fnsem)) (fnsems ms_mid)).
+  Proof.
+    admit "in stb <-> in fnsems".
+  Qed.
 
   Let adequacy_type_aux__APC:
     forall at_most o0 mn
            st_src0 st_tgt0
     ,
-      simg (fun st_src1 st_tgt1 => fst st_tgt1 = st_tgt0 /\ fst st_src1 = st_src0)
-           (C.myG o0 at_most + C.d)%ord
-           (Ret (st_src0, tt))
+      simg (fun _ '(st_tgt1, _) => st_tgt1 = st_tgt0)
+           (C.myG o0 at_most + C.d)%ord (Ret (st_src0, tt))
            (EventsL.interp_Es p_mid (transl_all mn (interp_hCallE_mid stb (ord_pure o0) (_APC at_most))) st_tgt0)
   .
   Proof.
@@ -605,20 +610,23 @@ Section CANCEL.
     rewrite unfold_APC. destruct st_tgt0 as [rst_tgt0 pst_tgt0]. steps.
     destruct x.
     { steps. }
-    steps. destruct (alist_find s stb); ss.
+    steps. destruct (alist_find s stb) eqn:EQ; ss.
     2: { steps. }
     destruct rst_tgt0 as [mrs_tgt0 [|frs_hd frs_tl]]; ss.
-    { destruct (alist_find s stb); ss; steps. }
+    { steps. destruct (Any.downcast t0); steps. }
+    steps. destruct (Any.downcast t0); ss.
+    2:{ steps. }
     steps. unfold unwrapU. des_ifs; cycle 1.
-    { admit "-----------------------------------FINDF: make it to unwrapN". }
-    steps.
+    { exfalso. hexploit (stb_find_iff s). rewrite EQ. rewrite Heq. clear. intuition. }
     unfold ms_mid, mds_mid, SMod.to_mid in Heq. rewrite SMod.transl_fnsems in Heq.
     unfold SMod.load_fnsems in Heq. apply find_some in Heq. des; ss. des_sumbool; subst.
     rewrite in_flat_map in Heq. des; ss. rewrite in_flat_map in Heq0. des; ss. des_ifs. ss; des; ss; clarify.
     rename Heq0 into INF. rename Heq into IN.
     rename x3 into md0. fold sk in INF. fold sk in INF.
     unfold fun_to_mid.
-    steps. gstep. eapply simg_takeR; et; [_ord_step|]. eexists (ord_pure x1). steps.
+    steps. assert (f0.(fsb_fspec) = f).
+    { admit "fspec table". }
+    subst. rewrite Any.upcast_downcast. steps.
     guclo ordC_spec. econs.
     { eapply OrdArith.add_base_l. }
     guclo ordC_spec. econs.
@@ -654,7 +662,7 @@ Section CANCEL.
   Let adequacy_type_aux_APC:
     forall o0 st_src0 st_tgt0 mn
     ,
-      simg (fun st_src1 st_tgt1 => fst st_tgt1 = st_tgt0 /\ fst st_src1 = st_src0)
+      simg (fun _ '(st_tgt1, _) => st_tgt1 = st_tgt0)
            (C.myF o0)%ord (Ret (st_src0, tt))
            (EventsL.interp_Es p_mid (transl_all mn (interp_hCallE_mid stb (ord_pure o0) APC)) st_tgt0)
   .
@@ -685,6 +693,9 @@ Section CANCEL.
     end
   .
 
+  Let wf: W -> W -> Prop := fun '(_, pst_src0) '(_, pst_tgt0) => pst_src0 = pst_tgt0.
+  Let wf': forall {X}, (W * X)%type -> (W * X)%type -> Prop := (fun _ '(st_src0, rv_src) '(st_tgt0, rv_tgt) => wf st_src0 st_tgt0 /\ rv_src = rv_tgt).
+
   (*** TODO: remove redundancy with Hoareproof0 ***)
   Ltac resub :=
     repeat multimatch goal with
@@ -696,16 +707,6 @@ Section CANCEL.
            | |- context[@subevent _ ?F ?prf _ (?e|)%sum] => replace (@subevent _ F prf _ (e|)%sum) with (@subevent _ F _ _ e) by refl
            | |- context[@subevent _ ?F ?prf _ (|?e)%sum] => replace (@subevent _ F prf _ (|e)%sum) with (@subevent _ F _ _ e) by refl
            end.
-
-  Let wf: W -> W -> Prop := fun '(_, pst_src0) '(_, pst_tgt0) => pst_src0 = pst_tgt0.
-  Let wf': forall {X}, (W * X)%type -> (W * X)%type -> Prop := (fun _ '(st_src0, rv_src) '(st_tgt0, rv_tgt) => wf st_src0 st_tgt0 /\ rv_src = rv_tgt).
-
-  Lemma stb_find_iff fn
-    :
-      is_some (alist_find fn stb) <-> is_some (find (fun fnsem => dec fn (fst fnsem)) (fnsems ms_mid)).
-  Proof.
-    admit "in stb <-> in fnsems".
-  Qed.
 
   Let adequacy_type_aux:
     forall
@@ -748,7 +749,9 @@ Section CANCEL.
       { admit "". }
       eexists. steps. destruct (alist_find fn stb) eqn:EQ.
       2: { steps. }
-      destruct rst_tgt0 as [mrs_tgt0 [|frs_tgt_hd frs_tgt_tl]]; ss.
+      steps. destruct (Any.downcast varg_src).
+      2: { steps. }
+      steps. destruct rst_tgt0 as [mrs_tgt0 [|frs_tgt_hd frs_tgt_tl]]; ss.
       { steps. }
       steps. clear x0. unfold unwrapU. des_ifs; cycle 1.
       { exfalso. hexploit (stb_find_iff fn). rewrite EQ. rewrite Heq. clear. intuition. }
@@ -759,67 +762,6 @@ Section CANCEL.
       rewrite idK_spec2 at 1.
       guclo bindC_spec. econs.
       {
-
-
-      rewrite idk
-
-
-      {
-
-        i.
-        eapply H.
-
-i. ss. ss.
-
-
-is_some
-admit "unwrapN!!!!!!!!!!!!!!!!!!!!!!!!!!". }
-      steps.
-
-
-
-
-ss.
-
-
-        - steps_strong. exists x_tgt. steps. gbase. eapply CIH; et.
-
-{
-
-admit "".
-          guclo ordC_spec. econs.
-          { admit "". }
-          gbase. eapply CIH; ss; et.
-
-unshelve esplits; et. instantiate (1:=100). steps. gbase. eapply CIH0; ss; et.
-        - steps. unshelve esplits; et. instantiate (1:=100). steps. gbase. eapply CIH0; ss; et.
-        - steps. unshelve esplits; et. instantiate (1:=100). steps. gbase. eapply CIH0; ss; et.
-      }
-    }
-    dependent destruction h.
-    rewrite <- bind_trigger. resub.
-    Opaque fun_to_src fun_to_mid.
-
-
-    { steps.
-
-unfold body_to_mid, body_to_src.
-
-
-  Let adequacy_type_aux:
-    forall
-      args
-      o0
-      body st_src0 st_tgt0 mn
-      (SIM: wf st_src0 st_tgt0)
-    ,
-      simg wf'
-           100
-          (* (if is_pure o0 then trigger (Choose _) else (interp_Es p_src ((fun_to_src (AA:=AA) (AR:=AR) body) args↑) st0)) *)
-           (EventsL.interp_Es p_src (transl_all mn (if is_pure o0 then trigger (Choose _) else ((fun_to_src body) args))) st_src0)
-           (EventsL.interp_Es p_mid (transl_all mn ((fun_to_mid body) (Any.pair o0↑ args))) st_tgt0)
-  .
-  Proof.
 
 
   Let adequacy_type_aux:
@@ -833,8 +775,8 @@ unfold body_to_mid, body_to_src.
       simg wf'
            (formula o0 + 10)%ord
            (* (if is_pure o0 then trigger (Choose _) else (interp_Es p_src ((fun_to_src (AA:=AA) (AR:=AR) body) args↑) st0)) *)
-           (EventsL.interp_Es p_src (transl_all mn (if is_pure o0 then trigger (Choose _) else ((fun_to_src body) args))) st_src0)
-           (EventsL.interp_Es p_mid (transl_all mn ((fun_to_mid body) (Any.pair o0↑ args))) st_tgt0)
+           (EventsL.interp_Es p_src (transl_all mn (if is_pure o0 then trigger (Choose _) else ((fun_to_src (AA:=AA) (AR:=AR) body) args))) st_src0)
+           (EventsL.interp_Es p_mid (transl_all mn ((fun_to_mid stb body) (Any.pair o0↑ args))) st_tgt0)
   .
   Proof.
     ginit.
@@ -858,7 +800,14 @@ unfold body_to_mid, body_to_src.
       econs.
       { gfinal. right. eapply paco5_mon. { eapply adequacy_type_aux_APC. } ii; ss. }
       ii; ss. des_ifs. des_u.
-      steps. esplits; eauto. steps.
+      steps_strong. eexists. steps.
+    -
+
+      { admit "". }
+      esplits; eauto.
+
+      ste
+ steps.
     - (*** IMPURE ***)
       steps. unfold body_to_mid.
       abstr (body a) itr. clear body a AA.
