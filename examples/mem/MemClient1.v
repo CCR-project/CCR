@@ -83,7 +83,8 @@ Section PROOF.
 
   Definition SClientSem: SModSem.t := (KModSem.to_tgt) KClientSem.
 
-  Definition ClientSem: ModSem.t := (SModSem.to_tgt (UnknownStb ++ MemStb)) SClientSem.
+  Definition ClientSem (stb: list (string * fspec)): ModSem.t :=
+    (SModSem.to_tgt stb) SClientSem.
 
   Definition KClient: KMod.t := {|
     KMod.get_modsem := fun _ => KClientSem;
@@ -93,7 +94,8 @@ Section PROOF.
 
   Definition SClient: SMod.t := (KMod.to_tgt) KClient.
 
-  Definition Client: Mod.t := SMod.to_tgt (fun _ => UnknownStb ++ MemStb) SClient.
+  Definition Client (stb: Sk.t -> list (string * fspec)): Mod.t :=
+    SMod.to_tgt stb SClient.
 
 End PROOF.
 Global Hint Unfold ClientStb: stb.

@@ -300,7 +300,7 @@ Proof Outline
 
   Variable sk: Sk.t.
 
-  Theorem correct: ModSemPair.sim (MemOpen.MemSem sk) (Mem0.MemSem sk).
+  Theorem correct: ModSemPair.sim (MemOpen.MemSem [] sk) (Mem0.MemSem sk).
   Proof.
    econstructor 1 with (wf:=wf); et; swap 2 3.
     { ss. econs; ss. eapply to_semantic; cycle 1.

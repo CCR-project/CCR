@@ -134,52 +134,6 @@ End CANCEL.
 
 
 Require Import Weakening.
-
-Section AUX.
-
-  Context `{Σ: GRA.t}.
-
-  Definition stb_weaker (stb0 stb1: list (gname * fspec)): Prop :=
-    forall fn fsp0 (FINDTGT: alist_find fn stb0 = Some fsp0),
-    exists fsp1,
-      (<<FINDSRC: alist_find fn stb1 = Some fsp1>>) /\
-      (<<WEAKER: fspec_weaker fsp0 fsp1>>)
-  .
-
-  Global Program Instance stb_weaker_PreOrder: PreOrder stb_weaker.
-  Next Obligation. ii. esplits; eauto. refl. Qed.
-  Next Obligation.
-    ii. r in H. r in H0. exploit H; et. intro T; des.
-    exploit H0; et. intro U; des. esplits; eauto. etrans; et.
-  Qed.
-
-  Theorem incl_weaker: forall stb0 stb1 (NODUP: NoDup (List.map fst stb1)) (INCL: incl stb0 stb1), stb_weaker stb0 stb1.
-  Proof.
-    ii. eapply alist_find_some in FINDTGT.
-    destruct (alist_find fn stb1) eqn:T.
-    { eapply alist_find_some in T.
-      eapply INCL in FINDTGT.
-      destruct (classic (fsp0 = f)).
-      { subst. esplits; et. refl. }
-      exfalso.
-      eapply NoDup_inj_aux in NODUP; revgoals.
-      { eapply T. }
-      { eapply FINDTGT. }
-      { ii; clarify. }
-      ss.
-    }
-    eapply alist_find_none in T; et. exfalso. et.
-  Qed.
-
-  Lemma app_weaker: forall stb0 stb1, stb_weaker stb0 (stb0 ++ stb1).
-  Proof.
-    ii. eapply alist_find_app in FINDTGT. esplits; eauto. refl.
-  Qed.
-
-End AUX.
-
-
-
 Require Import ClassicalChoice.
 
 Section CANCEL.
@@ -405,30 +359,7 @@ Section CANCEL.
     des; subst. rename l into ll. econs; cycle 1.
     { eapply IHf. ss. }
 
-    clear - WEAK.
-    econs; cycle 1.
-    { unfold SMod.to_tgt. cbn. eauto. }
-    { i. admit "ez - wf". }
-    i. specialize (WEAK sk). r. eapply adequacy_lift. econs.
-    { instantiate (1:=fun '(x, y) => x = y).
-      unfold SMod.to_tgt.
-      unfold SMod.transl. ss.
-      rename x into md.
-      abstr (SModSem.fnsems (SMod.get_modsem md sk)) fnsems.
-      induction fnsems; ss.
-      econs; et. destruct a. cbn. split; cbn.
-      { rr. cbn. ss. }
-      r. cbn.
-      destruct f.
-      replace (fun '(x, y) => x = y) with
-          (fun '(mrps_src0, mrps_tgt0) => exists (mr: Σ) (mp: Any.t), (<<SRC: mrps_src0 = (mr, mp)>>)
-                                                                      /\ <<TGT: mrps_tgt0 = (mr, mp)>>); cycle 1.
-      { apply func_ext. i. des_ifs. apply prop_ext. split; i; des; subst; et. destruct p0. esplits; et. }
-      eapply weakening_fn; ss.
-      refl.
-    }
-    { ss. }
-    { ss. }
+    eapply adequacy_weaken; et.
   Qed.
 
 End CANCEL.

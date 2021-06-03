@@ -18,7 +18,7 @@ From ExtLib Require Import
 Require Import TODOYJ.
 Require Import HTactics Logic IPM.
 Require Import OpenDef.
-Require Import Mem1.
+Require Import Mem1 MemOpen.
 
 Set Implicit Arguments.
 
@@ -57,7 +57,7 @@ Section SIMMODSEM.
   (*   rewrite <- ! intro_hide_mark *)
   (* . *)
 
-  Theorem sim_modsem: ModSemPair.sim MemClient1.ClientSem MemClient0.ClientSem.
+  Theorem sim_modsem: ModSemPair.sim (MemClient1.ClientSem (UnknownStb ++ ClientStb ++ MemStb)) MemClient0.ClientSem.
   Proof.
     econstructor 1 with (wf:=wf); ss; et; swap 2 3.
     { econs; ss.
@@ -115,7 +115,8 @@ Section SIMMOD.
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG memRA Σ}.
 
-  Theorem correct: ModPair.sim MemClient1.Client MemClient0.Client.
+  Theorem correct: ModPair.sim (MemClient1.Client (fun _ => (UnknownStb ++ ClientStb ++ MemStb)))
+                               MemClient0.Client.
   Proof.
     econs; ss.
     { ii. eapply adequacy_lift. eapply sim_modsem. }
