@@ -3,8 +3,6 @@ Require Import Coqlib.
 Require Import ITreelib.
 Require Import ModSem.
 
-Generalizable Variables E F.
-
 Local Open Scope nat_scope.
 
 Set Implicit Arguments.

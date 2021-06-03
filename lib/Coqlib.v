@@ -25,6 +25,7 @@ Set Implicit Arguments.
 
 
 
+Global Generalizable All Variables.
 (* Global Unset Transparent Obligations. *)
 Add Search Blacklist "_obligation_".
 

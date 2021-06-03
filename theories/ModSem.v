@@ -5,8 +5,6 @@ Require Import PCM.
 Require Import STS Behavior.
 Require Import Any.
 
-Generalizable Variables E R A B C X Y.
-
 Set Implicit Arguments.
 
 

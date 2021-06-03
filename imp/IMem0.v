@@ -7,8 +7,6 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 
-Generalizable Variables E R A B C X Y Σ.
-
 Set Implicit Arguments.
 Set Typeclasses Depth 5.
 

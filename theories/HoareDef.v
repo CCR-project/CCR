@@ -14,8 +14,6 @@ From ExtLib Require Import
      Structures.Maps
      Data.Map.FMapAList.
 
-Generalizable Variables E R A B C X Y Σ.
-
 Set Implicit Arguments.
 
 (* Section sealing. *)

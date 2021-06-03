@@ -10,8 +10,6 @@ Require Import Coq.Relations.Relation_Definitions.
 Require Import Relation_Operators.
 Require Import RelationPairs.
 
-Generalizable Variables E R A B C X Y Σ.
-
 Set Implicit Arguments.
 From ITree Require Import Recursion.
 

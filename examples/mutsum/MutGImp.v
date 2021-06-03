@@ -9,8 +9,6 @@ Require Import PCM.
 Require Import Imp.
 Require Import ImpNotations.
 
-Generalizable Variables E R A B C X Y Σ.
-
 Set Implicit Arguments.
 
 

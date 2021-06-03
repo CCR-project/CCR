@@ -11,8 +11,6 @@ Require Import Relation_Operators.
 Require Import RelationPairs.
 From Ordinal Require Import Ordinal Arithmetic.
 
-Generalizable Variables E R A B C X Y Σ.
-
 Set Implicit Arguments.
 
 

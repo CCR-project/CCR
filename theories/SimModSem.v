@@ -20,8 +20,6 @@ Require Import Any.
 
 From Ordinal Require Import Ordinal Arithmetic.
 
-Generalizable Variables E R A B C X Y.
-
 Set Implicit Arguments.
 
 Local Open Scope nat_scope.
