@@ -359,7 +359,7 @@ Section GENV.
     Local Transparent get_function.
   Qed.
 
-  Lemma in_tgt_prog_defs
+  Lemma in_tgt_prog_defs_ifuns
         gm tgt mn fn impf precf cf
         (GMAP: get_gmap src = Some gm)
         (COMP: compile2 src = OK tgt)
@@ -374,6 +374,31 @@ Section GENV.
     hexploit exists_compiled_function; eauto.
     i. des. clarify. ss. do 2 (apply in_or_app; right).
     ss. do 2 right. apply in_or_app; left. auto.
+  Qed.
+
+  Lemma in_tgt_prog_defs_efuns
+        gm tgt fn sig
+        (GMAP: get_gmap src = Some gm)
+        (COMP: compile2 src = OK tgt)
+        (INSRC: In (fn, sig) (ext_funsL src))
+    :
+      In (s2p fn, Gfun (External (EF_external fn (make_signature sig)))) tgt.(prog_defs).
+  Proof.
+    unfold compile2 in COMP. unfold _compile2 in COMP. des_ifs.
+    unfold compile_gdefs in Heq0. uo; des_ifs. ss.
+    apply in_or_app. left. 
+    clear Heq0 l0 l1.
+    unfold get_gmap in Heq. uo; des_ifs; ss; clarify.
+    unfold compile_eFuns. rewrite List.map_map.
+    match goal with
+    | [ |- In _ (List.map ?_mapf _) ] =>
+      set (mapf:=_mapf) in *
+    end.
+    apply (in_map mapf _ _) in INSRC.
+    match goal with
+    | [ INSRC: In ?p0 _ |- In ?p1 _ ] =>
+      replace p1 with p0; auto
+    end.
   Qed.
 
   Lemma compiled_function_props
@@ -912,7 +937,7 @@ Section PROOF.
       eapply found_imp_function in FOUND. des; clarify.
       hexploit exists_compiled_function; eauto. i.
       des. rename cf into tf0. rename H1 into COMPF.
-      hexploit in_tgt_prog_defs; eauto. i.
+      hexploit in_tgt_prog_defs_ifuns; eauto. i.
       (* assert (TGTFG: In (s2p f, Gfun (Internal tf0)) tgtp.(prog_defs)); auto. *)
       assert (INTGT: In (s2p f, Gfun (Internal tf0)) (prog_defs tgtp)); auto.
       eapply Globalenvs.Genv.find_symbol_exists in H1.
@@ -963,10 +988,7 @@ Section PROOF.
         | [ |- bind_parameters _ _ ?_tle0 = Some _ ] =>
           set (tle0:=_tle0) in *
         end.
-        (*** TODO: initializing lenv ***)
-        
-
-        admit "ez: need wf condition for a Imp.program & lemmas". }
+        admit "ez: use induction?". }
       eexists; split; auto. grind. left.
 
       pfold. econs 4.
@@ -988,7 +1010,7 @@ Section PROOF.
         replace i with
     (` r0 : r_state * p_state * (lenv * val) <-
      EventsL.interp_Es (prog ms)
-       (transl_all s1 (interp_imp ge (denote_stmt (Imp.fn_body f0)) (init_lenv (Imp.fn_vars f0) ++ l2)))
+       (transl_all s1 (interp_imp ge (denote_stmt (Imp.fn_body f0)) (init_lenv (Imp.fn_vars f0) ++ l3)))
        (c, ε :: c0 :: l0, pstate);; x4 <- itree_of_imp_pop ge ms s1 mn x le r0;; ` x : _ <- next x4;; stack x)
       end.
       2:{ rewrite interp_imp_bind. Red.prw ltac:(_red_gen) 1 0. grind.
@@ -1004,7 +1026,7 @@ Section PROOF.
           instantiate (1:=s1). instantiate (1:=ms). instantiate (1:=ge). instantiate (1:=gm).
           econs 2; ss; eauto. }
       3,4: eauto.
-      1:{ eapply Heq4. }
+      1:{ eapply H5. }
       2:{ ss. econs 1. }
       2:{ clarify. }
       2:{ i.
@@ -1020,6 +1042,36 @@ Section PROOF.
 
     - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_CallSys.
       ss. uo; des_ifs; clarify. unfold ident_key in Heq0.
+      rename Heq0 into FOUND. apply alist_find_some in FOUND.
+      assert (COMP2: compile2 src = OK tgt).
+      { unfold compile2. rewrite GMAP. auto. }
+      assert (GMAP2: get_gmap src = Some gm).
+      { auto. }
+      unfold get_gmap in GMAP. uo; des_ifs; ss.
+      match goal with
+      | [ COMP: _compile2 ?_gm _ = OK _ |- _ ] =>
+        set (gm:=_gm) in *
+      end.
+      unfold compile_eFuns in FOUND.
+      rewrite in_map_iff in FOUND. des. destruct x0. ss; clarify.
+      assert (S2PBI: forall x y, s2p x = s2p y <-> x = y).
+      { admit "ez: make such s2p". }
+      apply S2PBI in H1. clear S2PBI; clarify.
+      unfold get_funsig in Heq1. clarify.
+
+      unfold _compile2 in COMP. des_ifs; ss; clarify.
+      unfold compile_gdefs in Heq. uo; des_ifs; ss; clarify.
+      match goal with
+      | [ |- paco3 (_sim _ (semantics ?_tgtp) _) _ _ _ _ ] =>
+        set (tgtp:=_tgtp) in *
+      end.
+      hexploit in_tgt_prog_defs_efuns; eauto.
+      i. rename H into INTGT.
+      hexploit Genv.find_symbol_exists; eauto.
+      i. des. rename H into FINDSYM.
+      hexploit tgt_genv_find_def_by_blk; eauto.
+      i. rename H into FINDDEF.
+
       sim_red. eapply step_exprs; eauto.
       { admit "ez: index". }
       i. sim_red.
@@ -1027,29 +1079,54 @@ Section PROOF.
       { admit "ez: strict_determinate_at". }
       eexists. eexists.
       { eapply step_call; eauto.
-        { econs. econs 2.
+        - econs. econs 2.
           { eapply Maps.PTree.gempty. }
-          admit "ez: make lemma". }
-        { admit "ez: make lemma". }
-        { admit "ez: make lemma". } }
+          simpl. apply FINDSYM.
+        - simpl. des_ifs. unfold Genv.find_funct_ptr.
+          rewrite FINDDEF. ss.
+        - ss. }
       unfold ordN in *. eexists; split; auto. left.
+
+      (* System call semantics *)
+      assert (TGTSYSSEM: exists tgt_ev tgt_rv,
+                 external_functions_sem f (make_signature n) (Genv.globalenv tgtp) trvs tm [tgt_ev] tgt_rv tm).
+      { admit "ez: tgt syscall sem". }
+      des.
+      assert (SRCSYSSEM: exists sysrv, syscall_sem (event_sys f rvs sysrv)).
+      { admit "ez: src syscall sem". }
+      des.
+      assert (MATCHSYSSEM: match_event tgt_ev (event_sys f rvs sysrv)).
+      { admit "ez: src syscall sem matching tgt". }
+      inv MATCHSYSSEM.
+
       pfold. econs 2; auto.
       { eexists. eexists.
-        eapply step_external_function.
-        admit "ez: external function". }
+        eapply step_external_function. ss.
+        apply TGTSYSSEM. }
       i. eexists. eexists. eexists.
       { hexploit step_syscall.
-        { admit "ez: syscall_sem". }
-        { instantiate (2:=top1). ss. }
-        i. ss.
+        { apply SRCSYSSEM. }
+        { instantiate (1:=top1). ss. }
+        i. ss. rename H1 into SYSSTEP.
         match goal with
-        | [ H2: step ?i0 _ _ |- step ?i1 _ _ ] =>
+        | [ SYSSTEP: step ?i0 _ _ |- step ?i1 _ _ ] =>
           replace i1 with i0; eauto
         end.
         rewrite bind_trigger. grind. }
+
+      inv STEP. ss. rename H7 into TGTSYSSEM2.
+      assert (TGTSYSSEM_UNIQUE: forall tfn tfsig tgenv targs tm tev1 trv1 tm1 tev2 trv2 tm2,
+                 external_functions_sem tfn tfsig tgenv targs tm tev1 trv1 tm1 ->
+                 external_functions_sem tfn tfsig tgenv targs tm tev2 trv2 tm2 ->
+                 (tev1 = tev2) /\ (trv1 = trv2) /\ (tm1 = tm2)).
+      { admit "ez?: tgt syscall determinate". }
+      hexploit TGTSYSSEM_UNIQUE.
+      { apply TGTSYSSEM. }
+      { apply TGTSYSSEM2. }
+      i. des. clarify. clear TGTSYSSEM_UNIQUE.
+
       split.
-      { admit "ez?: NEED strict_determinate_at". }
-      inv STEP.
+      { unfold NW. econs; auto. econs; eauto. }
       eexists. left.
       do 8 (pfold; sim_tau; left).
       pfold. econs 4.
@@ -1059,10 +1136,8 @@ Section PROOF.
       eexists; split; auto. right. eapply CIH.
       hexploit match_states_intro.
       { instantiate (2:=Skip). ss. }
-      4:{ eapply WFCONT. }
-      4:{ eapply MCONT. }
-      4:{ eapply MSTACK. }
-      4:{ clarify. }
+      4,5,6: eauto.
+      4: clarify.
       4:{ i.
           match goal with
           | [ H1: match_states _ _ _ _ _ ?i0 _ |- match_states _ _ _ _ _ ?i1 _ ] =>
@@ -1071,8 +1146,9 @@ Section PROOF.
           unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
       { econs. i. ss.
         admit "ez: find from local env". }
-      { admit "ez? memory will not changed by our syscall". }
-      { admit "ez?: match memory, need to enforce memory invariance for syscall sem". }
+      all: eauto.
+
+      (*** TODO: ADDR, MEM ***)
 
     - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_AddrOf.
       ss. des_ifs.
