@@ -14,6 +14,7 @@ Set Implicit Arguments.
 
 
 Require Import Mem0 Mem1 MemOpen Mem0Openproof MemClient0 MemClient1 MemClient01proof.
+Require Import Logic TODOYJ.
 
 
 
@@ -34,37 +35,99 @@ Arguments rel_dec_eq_true [T] eqt {r} {rc}.
 (* Arguments rel_dec_eq_true [T]%type_scope [eqt]%function_scope [r] _ _ _ _ *)
 
 
-Section WEAKENINGAUX.
-  Context `{Σ: GRA.t}.
+Section AUX.
+  Lemma map_snd_map_snd A B0 B1 B2 (f0: B0 -> B1) (f1: B1 -> B2):
+    (map_snd (A:=A) f1) ∘ (map_snd f0) = map_snd (f1 ∘ f0).
+  Proof. apply func_ext. i. destruct x; ss. Qed.
 
-  Definition stb_le (stb0 stb1: list (string * fspec)) :=
-    forall fn fsp0 (FINDTGT: alist_find fn stb0 = Some (fsp0)),
-    exists fsp1,
-      (<<FINDSRC: alist_find fn stb1 = Some (fsp1)>>) /\
-      (<<WEAKER: fspec_weaker fsp0 fsp1>>)
-  .
-
-  Variable md: (Sk.t -> list (string * fspec)) -> Mod.t.
-  Variable _stb0 _stb1: (Sk.t -> list (string * fspec)).
-  Hypothesis WEAKEN: forall sk, stb_le (_stb0 sk) (_stb1 sk).
-
-  Theorem adequacy_weaken
-          sk
+  Lemma find_alist_find
+        `{Dec K} V (k: K) (kvs: list (K * V))
     :
-      <<SIM: ModSemPair.sim (Mod.get_modsem (md _stb0) sk) (Mod.get_modsem (md _stb1) sk)>>
+      alist_find k kvs = o_map (find (fun '(k0, _) => dec k k0) kvs) snd
   .
   Proof.
-    TTTTTTTTTTTTTTTTTTTTTTTTTTTT
+    ginduction kvs; ii; ss. des_ifs; rewrite eq_rel_dec_correct in *; des_sumbool; des_ifs.
   Qed.
 
-End WEAKENINGAUX.
+  (* Lemma alist_find_concat *)
+  (*       `{RelDec K} V (x: K) (xss: list (list (K * V))) *)
+  (*       xs v *)
+  (*       (FIND0: find (fun xs => is_some (alist_find x xs)) xss = Some xs) *)
+  (*       (FIND1: alist_find x xs = Some v) *)
+  (*   : *)
+  (*     alist_find x (concat xss) = Some v *)
+  (* . *)
+  (* Proof. *)
+  (*   admit "ez". *)
+  (* Qed. *)
+
+  Lemma alist_find_app2 K `{Dec K} V (k: K) (l0 l1: alist K V) (v: V)
+        (FIND0: alist_find k l0 = None)
+        (FIND1: alist_find k l1 = Some v)
+    :
+      alist_find k (l0 ++ l1) = Some v.
+  Proof.
+    ginduction l0; ii; ss. des_ifs; try rewrite eq_rel_dec_correct in *; des_sumbool; des_ifs.
+    eapply IHl0; et.
+  Qed.
+
+  Lemma alist_find_flat_map
+        `{Dec K} V0 V1 (k: K) (f: V0 -> alist K V1) (l: list V0)
+
+        kvs v
+        (FIND0: find (is_some ∘ alist_find k) (map f l) = Some kvs)
+        (FIND1: alist_find k kvs = Some v)
+    :
+      alist_find k (flat_map f l) = Some v
+  .
+  Proof.
+    ginduction l; ii; ss. des_ifs; try rewrite eq_rel_dec_correct in *; des_sumbool; des_ifs.
+    - erewrite alist_find_app; et.
+    - erewrite alist_find_app2; et. unfold is_some in Heq. des_ifs.
+  Qed.
+
+  Lemma in_alist_find
+        `{Dec K} V kv kvs
+        (IN: In kv kvs)
+    :
+      exists (v: V), alist_find (fst kv) kvs = Some v
+  .
+  Proof.
+    ginduction kvs; ii; ss. des; subst.
+    - des_ifs; try rewrite eq_rel_dec_correct in *; des_sumbool; des_ifs; et.
+    - des_ifs; try rewrite eq_rel_dec_correct in *; des_sumbool; des_ifs; et.
+  Qed.
+
+  Lemma alist_find_flat_map_const
+        `{Dec K} V0 V1 V2 (k: K) (f: V0 -> alist K V1) (l: list V0)
+
+        (c: V2)
+        (IN: In k (concat (map (map fst ∘ f) l)))
+        (* (FIND0: find (is_some ∘ alist_find k) (map f l) = Some kvs) *)
+    :
+      alist_find k (flat_map (map (map_snd (fun _ => c)) ∘ f) l) = Some c
+  .
+  Proof.
+    ginduction l; ii; ss.
+    rewrite in_app_iff in *; des.
+    - rewrite in_map_iff in *. des; subst.
+      erewrite alist_find_app; et. unfold map_snd. erewrite alist_find_map.
+      exploit in_alist_find; et. intro T; des. rewrite T. ss.
+    - destruct (alist_find k (map (map_snd (λ _ : V1, c)) (f a))) eqn:T.
+      + erewrite alist_find_app; et. unfold map_snd. erewrite alist_find_map.
+        dup T. eapply alist_find_some in T0. rewrite in_map_iff in *. des; subst. destruct x; ss; clarify.
+        eapply in_alist_find in T1. des. ss. rewrite T1. ss.
+      + erewrite alist_find_app2; et.
+  Qed.
+
+End AUX.
+
+
 
 Section WEAKENING.
 
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG memRA Σ}.
-
-  Require Import Logic TODOYJ.
 
 
   Let weaken: forall (fn : string) (fsp_tgt : fspec),
@@ -185,12 +248,46 @@ Section PROOF.
 
   Let _kmds: list KMod.t := [KMem; KClient].
 
-  Lemma map_snd_map_snd A B0 B1 B2 (f0: B0 -> B1) (f1: B1 -> B2):
-    (map_snd (A:=A) f1) ∘ (map_snd f0) = map_snd (f1 ∘ f0).
-  Proof. apply func_ext. i. destruct x; ss. Qed.
+  Hypothesis HASNAME:
+    forall sk, In "unknown_call"
+                  (concat (map (map fst ∘ UModSem.fnsems) (map (flip UMod.get_modsem sk) _ctxs))).
 
   Let correct12: refines_closed MemClient1 MemClient2.
   Proof.
+    eapply refines_close.
+    unfold MemClient1, MemClient2.
+    rewrite ! Mod.add_list_app.
+    eapply (SimModSem.refines_proper_r).
+    apply adequacy_local_list.
+    econs.
+    { eapply adequacy_weaken. ii. ss. }
+    econs.
+    { eapply adequacy_weaken. ii. ss. unfold global_stb. stb_tac.
+      autounfold with stb; autorewrite with stb; simpl. (*** TODO: FIX STB TAC ***)
+      des_ifs.
+      - rewrite eq_rel_dec_correct in *; des_ifs; try (by esplits; et; refl).
+      - rewrite eq_rel_dec_correct in *; des_ifs; try (by esplits; et; refl).
+      - rewrite eq_rel_dec_correct in *; des_ifs; try (by esplits; et; refl).
+      - rewrite eq_rel_dec_correct in *; des_ifs; try (by esplits; et; refl).
+      - rewrite eq_rel_dec_correct in *; des_ifs; try (by esplits; et; refl).
+      - rewrite eq_rel_dec_correct in *; des_ifs; try (by esplits; et; refl).
+      - rewrite eq_rel_dec_correct in *; des_ifs; try (by esplits; et; refl).
+      - rewrite eq_rel_dec_correct in *; des_ifs; try (by esplits; et; refl).
+      - rewrite eq_rel_dec_correct in *; des_ifs; try (by esplits; et; refl).
+      - rewrite eq_rel_dec_correct in *; des_ifs; try (by esplits; et; refl).
+      - rewrite eq_rel_dec_correct in *; des_ifs; try (by esplits; et; refl).
+      - rewrite eq_rel_dec_correct in *; des_ifs; try (by esplits; et; refl).
+      - rewrite eq_rel_dec_correct in *; des_ifs; try (by esplits; et; refl).
+      - rewrite eq_rel_dec_correct in *; des_ifs; try (by esplits; et; refl).
+      - rewrite eq_rel_dec_correct in *; des_ifs; try (by esplits; et; refl).
+      - rewrite eq_rel_dec_correct in *; des_ifs; try (by esplits; et; refl).
+      - rewrite eq_rel_dec_correct in *; des_ifs; try (by esplits; et; refl).
+      - rewrite eq_rel_dec_correct in *; des_ifs.
+        erewrite alist_find_flat_map_const.
+        { esplits; et. refl. }
+        et.
+    }
+    econs.
   Qed.
 
   Let correct23: refines_closed MemClient2 MemClient3.
@@ -216,6 +313,14 @@ Section PROOF.
         rewrite <- client_sbtb_stb. rewrite <- List.app_assoc. repeat f_equal. }
       f_equal.
     }
+  Qed.
+
+  Theorem correct: refines_closed MemClient0 MemClient3.
+  Proof.
+    etrans; [eapply correct01|].
+    etrans; [eapply correct12|].
+    etrans; [eapply correct23|].
+    refl.
   Qed.
 
 End PROOF.

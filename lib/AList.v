@@ -108,7 +108,7 @@ Proof.
 Qed.
 
 Section ALIST.
-  Lemma alist_find_some V (k: string) (l: alist string V) (v: V)
+  Lemma alist_find_some K `{Dec K} V (k: K) (l: alist K V) (v: V)
         (FIND: alist_find k l = Some v)
   :
     In (k, v) l.
