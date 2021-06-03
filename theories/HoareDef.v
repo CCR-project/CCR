@@ -119,7 +119,7 @@ Section PROOF.
              (ctx: Σ) (mr1: Σ) (fr1: Σ): itree E unit :=
     mr0 <- trigger (MGet);;
     fr0 <- trigger FGet;;
-    guarantee(URA.wf (URA.add ctx (URA.add mr0 fr0)));;;
+    guarantee(URA.wf (URA.add ctx (URA.add mr1 fr1)));;;
     trigger (FPut fr1);;; trigger (MPut mr1)
   .
 
@@ -308,6 +308,7 @@ Section CANCEL.
 
   Definition handle_hCallE_mid (ord_cur: ord): hCallE ~> itree Es :=
     fun _ '(hCall tbr fn varg_src) =>
+      tau;;
       f <- (alist_find fn stb)ǃ;;
       'varg_src <- varg_src↓ǃ;;
       ord_next <- (if tbr then o0 <- trigger (Choose _);; Ret (ord_pure o0) else Ret ord_top);;
@@ -1134,7 +1135,7 @@ Proof. subst; et. Qed.
 
 Global Program Instance interp_hCallE_tgt_rdb: red_database (mk_box (@interp_hCallE_tgt)) :=
   mk_rdb
-    0
+    1
     (mk_box interp_tgt_bind)
     (mk_box interp_tgt_tau)
     (mk_box interp_tgt_ret)
@@ -1545,29 +1546,29 @@ Ltac ired_both := ired_l; ired_r.
   Ltac _step :=
     match goal with
     (*** terminal cases ***)
-    | [ |- gpaco5 _ _ _ _ _ _ _ (triggerUB >>= _) _ ] =>
+    | [ |- gpaco6 _ _ _ _ _ _ _ _ (triggerUB >>= _) _ ] =>
       unfold triggerUB; mred; _step; ss; fail
-    | [ |- gpaco5 _ _ _ _ _ _ _ (triggerNB >>= _) _ ] =>
+    | [ |- gpaco6 _ _ _ _ _ _ _ _ (triggerNB >>= _) _ ] =>
       exfalso
-    | [ |- gpaco5 _ _ _ _ _ _ _ _ (triggerUB >>= _) ] =>
+    | [ |- gpaco6 _ _ _ _ _ _ _ _ _ (triggerUB >>= _) ] =>
       exfalso
-    | [ |- gpaco5 _ _ _ _ _ _ _ _ (triggerNB >>= _) ] =>
+    | [ |- gpaco6 _ _ _ _ _ _ _ _ _ (triggerNB >>= _) ] =>
       unfold triggerNB; mred; _step; ss; fail
 
     (*** assume/guarantee ***)
-    | [ |- gpaco5 _ _ _ _ _ _ _ (assume ?P ;;; _) _ ] =>
+    | [ |- gpaco6 _ _ _ _ _ _ _ _ (assume ?P ;;; _) _ ] =>
       let tvar := fresh "tmp" in
       let thyp := fresh "TMP" in
       remember (assume P) as tvar eqn:thyp; unfold assume in thyp; subst tvar
-    | [ |- gpaco5 _ _ _ _ _ _ _ (guarantee ?P ;;; _) _ ] =>
+    | [ |- gpaco6 _ _ _ _ _ _ _ _ (guarantee ?P ;;; _) _ ] =>
       let tvar := fresh "tmp" in
       let thyp := fresh "TMP" in
       remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar
-    | [ |- gpaco5 _ _ _ _ _ _ _ _ (assume ?P ;;; _) ] =>
+    | [ |- gpaco6 _ _ _ _ _ _ _ _ _ (assume ?P ;;; _) ] =>
       let tvar := fresh "tmp" in
       let thyp := fresh "TMP" in
       remember (assume P) as tvar eqn:thyp; unfold assume in thyp; subst tvar
-    | [ |- gpaco5 _ _ _ _ _ _ _ _ (guarantee ?P ;;; _) ] =>
+    | [ |- gpaco6 _ _ _ _ _ _ _ _ _ (guarantee ?P ;;; _) ] =>
       let tvar := fresh "tmp" in
       let thyp := fresh "TMP" in
       remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar
@@ -1588,19 +1589,19 @@ Ltac ired_both := ired_l; ired_r.
   Ltac steps := repeat (mred; try _step; des_ifs_safe).
   Ltac seal_left :=
     match goal with
-    | [ |- gpaco5 _ _ _ _ _ _ _ ?i_src ?i_tgt ] => seal i_src
+    | [ |- gpaco6 _ _ _ _ _ _ _ _ ?i_src ?i_tgt ] => seal i_src
     end.
   Ltac seal_right :=
     match goal with
-    | [ |- gpaco5 _ _ _ _ _ _ _ ?i_src ?i_tgt ] => seal i_tgt
+    | [ |- gpaco6 _ _ _ _ _ _ _ _ ?i_src ?i_tgt ] => seal i_tgt
     end.
   Ltac unseal_left :=
     match goal with
-    | [ |- gpaco5 _ _ _ _ _ _ _ (@Seal.sealing _ _ ?i_src) ?i_tgt ] => unseal i_src
+    | [ |- gpaco6 _ _ _ _ _ _ _ _ (@Seal.sealing _ _ ?i_src) ?i_tgt ] => unseal i_src
     end.
   Ltac unseal_right :=
     match goal with
-    | [ |- gpaco5 _ _ _ _ _ _ _ ?i_src (@Seal.sealing _ _ ?i_tgt) ] => unseal i_tgt
+    | [ |- gpaco6 _ _ _ _ _ _ _ _ ?i_src (@Seal.sealing _ _ ?i_tgt) ] => unseal i_tgt
     end.
   Ltac force_l := seal_right; _step; unseal_right.
   Ltac force_r := seal_left; _step; unseal_left.
