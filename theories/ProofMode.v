@@ -567,10 +567,11 @@ Ltac mDesOr Hn := on_current ltac:(fun H =>
                                      destruct H as [H|H];
                                      asimpl in H).
 
-Ltac mDesSep' Hn_old Hn_new0 Hn_new1 := on_current ltac:(fun H =>
-                                                           eapply (@current_iPropL_destruct_sep _ Hn_old Hn_new0 Hn_new1) in H;
-                                                           [|asimpl; reflexivity];
-                                                           asimpl in H).
+Ltac mDesSep' Hn_old Hn_new0 Hn_new1 :=
+  on_current ltac:(fun H =>
+                     eapply (@current_iPropL_destruct_sep _ Hn_old Hn_new0 Hn_new1) in H;
+                     [|asimpl; reflexivity];
+                     asimpl in H).
 
 Tactic Notation "mDesSep" constr(Hn_old) "as" constr(Hn_new0) constr(Hn_new1) :=
   mDesSep' Hn_old Hn_new0 Hn_new1.
@@ -672,10 +673,11 @@ Ltac mDesAndR Hn := on_current ltac:(fun H =>
                                        [|asimpl; reflexivity];
                                        asimpl in H).
 
-Ltac mDesAndPureL' Hn_old Hn_new0 Hn_new1 := on_current ltac:(fun H =>
-                                                                eapply (@current_iPropL_destruct_and_pure_l _ Hn_old Hn_new0 Hn_new1) in H;
-                                                                [|asimpl; reflexivity];
-                                                                asimpl in H).
+Ltac mDesAndPureL' Hn_old Hn_new0 Hn_new1 :=
+  on_current ltac:(fun H =>
+                     eapply (@current_iPropL_destruct_and_pure_l _ Hn_old Hn_new0 Hn_new1) in H;
+                     [|asimpl; reflexivity];
+                     asimpl in H).
 
 Tactic Notation "mDesAndPureL" constr(Hn_old) "as" constr(Hn_new0) constr(Hn_new1) :=
   mDesAndPureL' Hn_old Hn_new0 Hn_new1.
@@ -684,10 +686,11 @@ Tactic Notation "mDesAndPureL" constr(Hn_old) :=
   let Hn_new1 := get_fresh_name_tac "A" in
   mDesAndPureL' Hn_old Hn_old Hn_new1.
 
-Ltac mDesAndPureR' Hn_old Hn_new0 Hn_new1 := on_current ltac:(fun H =>
-                                                                eapply (@current_iPropL_destruct_and_pure_r _ Hn_old Hn_new0 Hn_new1) in H;
-                                                                [|asimpl; reflexivity];
-                                                                asimpl in H).
+Ltac mDesAndPureR' Hn_old Hn_new0 Hn_new1 :=
+  on_current ltac:(fun H =>
+                     eapply (@current_iPropL_destruct_and_pure_r _ Hn_old Hn_new0 Hn_new1) in H;
+                     [|asimpl; reflexivity];
+                     asimpl in H).
 
 Tactic Notation "mDesAndPureR" constr(Hn_old) "as" constr(Hn_new0) constr(Hn_new1) :=
   mDesAndPureR' Hn_old Hn_new0 Hn_new1.
@@ -696,10 +699,11 @@ Tactic Notation "mDesAndPureR" constr(Hn_old) :=
   let Hn_new1 := get_fresh_name_tac "A" in
   mDesAndPureR' Hn_old Hn_old Hn_new1.
 
-Ltac mDesOwn' Hn_old Hn_new0 Hn_new1 := on_current ltac:(fun H =>
-                                                           eapply (@current_iPropL_destruct_own _ Hn_old Hn_new0 Hn_new1) in H;
-                                                           [|asimpl; reflexivity];
-                                                           asimpl in H).
+Ltac mDesOwn' Hn_old Hn_new0 Hn_new1 :=
+  on_current ltac:(fun H =>
+                     eapply (@current_iPropL_destruct_own _ Hn_old Hn_new0 Hn_new1) in H;
+                     [|asimpl; reflexivity];
+                     asimpl in H).
 
 Tactic Notation "mDesOwn" constr(Hn_old) "as" constr(Hn_new0) constr(Hn_new1) :=
   mDesOwn' Hn_old Hn_new0 Hn_new1.

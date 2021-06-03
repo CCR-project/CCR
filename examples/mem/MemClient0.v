@@ -23,7 +23,7 @@ Section PROOF.
         y = *x;
         return y;
    ***)
-  Definition mainF: Any.t -> itree Es Any.t :=
+  Definition clientF: Any.t -> itree Es Any.t :=
     fun _ =>
       (* x <- ((↓) <$> trigger (Call "alloc" [Vint 1]↑)) >>= (ǃ);; *)
       x <- trigger (Call "alloc" [Vint 1]↑);;
@@ -36,18 +36,16 @@ Section PROOF.
       Ret y↑
   .
 
-  Definition MainSem: ModSem.t := {|
-    ModSem.fnsems := [("main", mainF)];
-    ModSem.mn := "Main";
+  Definition ClientSem: ModSem.t := {|
+    ModSem.fnsems := [("client", clientF)];
+    ModSem.mn := "Client";
     ModSem.initial_mr := ε;
     ModSem.initial_st := tt↑;
   |}
   .
 
-  Definition Main: Mod.t := {|
-    Mod.get_modsem := fun _ => MainSem;
-    (* Mod.sk := Sk.unit; *)
-    (* Mod.sk := [("main", Sk.Gfun)]; *)
+  Definition Client: Mod.t := {|
+    Mod.get_modsem := fun _ => ClientSem;
     Mod.sk := Sk.unit;
   |}
   .

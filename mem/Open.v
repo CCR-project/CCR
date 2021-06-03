@@ -15,8 +15,6 @@ Require Import HoareDef Hoare.
 Require Import OpenDef.
 Require Import IRed.
 
-Generalizable Variables E F R A B C X Y Σ.
-
 Set Implicit Arguments.
 
 
@@ -29,7 +27,7 @@ Next Obligation. induction x; ii; ss. econs; ss. Qed.
 
 Global Program Instance Forall2_Transitive `{Transitive A R}: Transitive (Forall2 R).
 Next Obligation.
-  revert_until x. induction x; ii; ss.
+  i. revert_until x. induction x; ii; ss.
   { inv H0. inv H1. ss. }
   inv H0. inv H1. econs; ss; et.
 Qed.
@@ -44,19 +42,7 @@ Global Program Instance Forall2_PreOrder `{PreOrder A R}: PreOrder (Forall2 R).
 
 Require Import SimModSem.
 Require Import Hoare.
-Require Import HTactics YPM.
-
-
-
-
-Lemma pair_downcast_lemma2
-      T U (v0 v1: T) x (u: U)
-  :
-    (Any.pair x v0↑)↓ = Some (u, v1) -> v0 = v1 /\ x↓ = Some u
-.
-Proof.
-  admit "ez".
-Qed.
+Require Import HTactics ProofMode.
 
 
 
@@ -68,7 +54,7 @@ Section LEMMA.
   Lemma hcall_clo
         (mr_src1 fr_src1 rarg_src: Σ)
         R0 R1
-        (o: ord) (fs: fspec) (x: __shelve__ fs.(X))
+        (o: ord) (fs: fspec) (x: shelve__ fs.(X))
         r rg (n: nat) mr_src0 mp_src0 fr_src0
         mrs_tgt frs_tgt k_tgt k_src
         fn tbr ord_cur varg_src varg_tgt
@@ -111,7 +97,7 @@ Section ADQ.
   Context `{Σ: GRA.t}.
 
   Variable _kmds: list KMod.t.
-  Let kmds: list SMod.t := List.map (disclose_smod ∘ KMod.to_tgt) _kmds.
+  Let kmds: list SMod.t := List.map (KMod.to_tgt) _kmds.
   Let kmds_top: list Mod.t := List.map KMod.to_src _kmds.
   Variable umds: list UMod.t.
 
@@ -152,42 +138,7 @@ Section ADQ.
   (* . *)
   (* Proof. refl. Qed. *)
 
-  Lemma my_lemma1_aux
-        mrs ktr arg ske
-    :
-      sim_itree (fun '(x, y) => x = y) 100%nat
-                (mrs, ε, fun_to_tgt (_gstb ske) (UModSem.transl_fun ktr) arg)
-                (mrs, ε, resum_itr (cfun ktr arg))
-  .
-  Proof.
-    destruct mrs as [mr st].
-    ginit.
-    revert_until gstb. gcofix CIH. i.
-    unfold cfun. unfold UModSem.transl_fun. unfold fun_to_tgt. cbn.
-    unfold HoareFun, put, forge, checkWf, discard. ss.
-    steps.
-    r in _ASSUME0. des. subst. destruct x as [argl is_k]. apply pair_downcast_lemma2 in _ASSUME0. des. subst.
-    clarify.
-    guclo lordC_spec. econs.
-    { instantiate (1:=(45 + 45)%ord). rewrite <- OrdArith.add_from_nat. eapply OrdArith.le_from_nat. lia. }
-    guclo lbindC_spec. econs; cycle 1.
-    - instantiate (1:=fun '(mr0, st0, fr0) '(mr1, st1, fr1) y0 y1 => mr0 = mr1 /\ st0 = st1 /\ y0 = y1).
-      i. ss. des_ifs. des; subst.
-      steps.
-      force_l. esplits. force_l. eexists (_, _). steps. force_l. { refl. } steps.
-      force_l. esplits. force_l. { esplits; ss; et. } steps.
-      force_l. esplits. force_l. { rewrite URA.unit_id. refl. } steps.
-    - unfold body_to_tgt. steps.
-      abstr (ktr l) itr. clear arg _ASSUME1 l ktr.
-      (* clear _ASSUME0. *)
-      des_u. rewrite URA.unit_idl in *.
-      revert itr. revert st. revert_until CIH. gcofix CIH0. i.
-      ides itr.
-      { steps. }
-      { steps. gbase. eapply CIH0; et. }
-      rewrite <- bind_trigger.
-      destruct e; cycle 1.
-      {
+
   Ltac resub :=
     repeat multimatch goal with
            | |- context[ITree.trigger ?e] =>
@@ -210,6 +161,71 @@ Section ADQ.
            | |- context[ITree.trigger (@subevent _ ?F ?prf _ (resum ?a ?b ?e))] =>
              replace (ITree.trigger (@subevent _ F prf _ (resum a b e))) with (ITree.trigger (@subevent _ F _ _ e)) by refl
            end.
+
+  Lemma add_list_fnsems
+        mds ske
+    :
+      (ModSemL.fnsems (ModL.get_modsem (Mod.add_list mds) ske)) =
+      flat_map ModSemL.fnsems (List.map (flip ModL.get_modsem ske ∘ Mod.lift) mds)
+  .
+  Proof. induction mds; ss. f_equal. et. Qed.
+
+  Ltac _list_tac :=
+    match goal with
+    | [ H: find _ _ = Some _ |- _ ] => apply find_some in H; des; des_sumbool; subst
+    | [ H: context[ModL.enclose] |- _ ] => unfold ModL.enclose in H; try rewrite add_list_fnsems in H
+    | [ H: In _ (flat_map _ _) |- _ ] => apply in_flat_map in H; des
+    | [ H: In _ (List.map _ _) |- _ ] => apply in_map_iff in H; des
+    | [ H: ModSem.map_snd _ _ = _ |- _ ] => unfold ModSem.map_snd in H; ss
+    | [ H: map_snd _ _ = _ |- _ ] => unfold map_snd in H; ss
+    | [ H: flip _ _ _ = _ |- _ ] => unfold flip in H; ss
+
+    | [ |- context[ModL.enclose] ] => unfold ModL.enclose; try rewrite add_list_fnsems
+    | [ |- In _ (flat_map _ _) ] => apply in_flat_map; esplits; et
+    | [ |- In _ (List.map _ _) ] => apply in_map_iff; esplits; et
+    | [ |- ModSem.map_snd _ _ = _ ] => unfold ModSem.map_snd; ss
+    | [ |- map_snd _ _ = _ ] => unfold map_snd; ss
+    | [ |- flip _ _ _ = _ ] => unfold flip; ss
+    end
+  .
+  Ltac list_tac := repeat _list_tac.
+
+  Lemma my_lemma1_aux
+        mrs ktr arg ske
+    :
+      sim_itree (fun '(x, y) => x = y) 100%nat
+                (mrs, ε, fun_to_tgt (_gstb ske) (UModSem.transl_fsb_smod ktr) arg)
+                (mrs, ε, (UModSem.transl_fun_mod ktr) arg)
+  .
+  Proof.
+    destruct mrs as [mr st].
+    ginit.
+    revert_until gstb. gcofix CIH. i.
+    unfold cfun. unfold UModSem.transl_fun_smod. unfold fun_to_tgt. cbn.
+    unfold HoareFun, put, forge, checkWf, discard. ss.
+    steps.
+    r in _ASSUME0. uipropall. des. subst.
+    unfold UModSem.transl_fun_mod. unfold cfun. steps.
+    guclo lordC_spec. econs.
+    { instantiate (1:=(45 + 45)%ord). rewrite <- OrdArith.add_from_nat. eapply OrdArith.le_from_nat. lia. }
+    guclo lbindC_spec. econs; cycle 1.
+    - instantiate (1:=fun '(mr0, st0, fr0) '(mr1, st1, fr1) y0 y1 => mr0 = mr1 /\ st0 = st1 /\ y0 = y1).
+      i. ss. des_ifs. des; subst.
+      steps.
+      force_l. esplits. force_l. eexists (_, _). steps. force_l. { refl. } steps.
+      force_l. esplits. force_l. { r. uipropall. } steps.
+      force_l. esplits. force_l. { rewrite URA.unit_id. refl. } steps.
+    - unfold body_to_tgt. steps.
+      abstr (ktr vargs) itr. clear arg _UNWRAPN vargs ktr.
+      (* clear _ASSUME0. *)
+      des_u. rewrite URA.unit_idl in *.
+      revert itr. revert st. revert_until CIH. gcofix CIH0. i.
+      ides itr.
+      { steps. }
+      { steps. gbase. eapply CIH0; et. }
+      rewrite <- bind_trigger.
+      destruct e; cycle 1.
+      {
         destruct s; ss.
         { destruct p; ss.
           - resub. ired_both. resub. gstep. econs; et. steps. gbase. eapply CIH0; et.
@@ -222,52 +238,35 @@ Section ADQ.
         }
       }
       resub.
-      destruct c.
+      destruct u.
       steps. resub.
       force_l.
-      { admit "TODO". }
-      steps. force_l.
-      { admit "TODO". }
+      { admit "MID -- need to trigger UB beforehand". }
       steps.
       rename _UNWRAPN into T.
-
-      {
-        assert (GWF: ☀) by (split; [refl|exact _ASSUME]); clear _ASSUME.
-        iRefresh.
-        eapply alist_find_some in T. des; des_sumbool; subst. unfold _gstb in T. rewrite in_app_iff in *. des; ss.
-        - rewrite in_flat_map in *. des; ss. rewrite in_map_iff in *. des. unfold map_snd in T0. des_ifs.
-          unfold _kmss in T. rewrite in_map_iff in *. des. subst. unfold flip in T1.
-          unfold kmds in T0. rewrite in_map_iff in *. des. subst. ss. rewrite in_map_iff in *. des.
-          unfold map_snd in T1. des_ifs. ss.
-          destruct a. eapply pair_downcast_lemma2 in _UNWRAPN0. des. subst.
-          eapply hcall_clo with (fs:=disclose f); try refl.
-          { rewrite URA.unit_idl. refl. }
-          { eapply OrdArith.lt_from_nat. lia. }
-          { instantiate (1:=ord_top). instantiate(1:=None). cbn. iRefresh.
-            iSplitP; ss.
-            right; iRefresh. repeat split; ss. eapply Any.downcast_upcast; et. }
-          { ss. }
-          i. subst. ss. destruct mrs_tgt1. esplits; et. i.
-          clear GWF. assert(GWF: ☀) by (split; [refl|exact VALID]).
-          iRefresh.
-          destruct POST; iRefresh.
-          { iDestruct H. iDestruct H. iPure H. ss. }
-          iPure H. des; subst.
-          steps. gbase. eapply CIH0; et.
-        - rewrite in_flat_map in *. des; ss. rewrite in_map_iff in *. des. unfold map_snd in T0. des_ifs.
-          destruct a as [argl is_k].
-          eapply pair_downcast_lemma2 in _UNWRAPN0. des. subst.
-          eapply hcall_clo; try refl.
-          { rewrite URA.unit_idl. refl. }
-          { eapply OrdArith.lt_from_nat. lia. }
-          { instantiate (1:=ord_top). instantiate(1:=tt). cbn. split; ss. admit "should be ez". }
-          { ss. }
-          i. subst. ss. destruct mrs_tgt1. esplits; et. i.
-          clear GWF. assert(GWF: ☀) by (split; [refl|exact VALID]).
-          iRefresh.
-          destruct POST; iRefresh.
-          steps. gbase. eapply CIH0; et.
-      }
+      eapply alist_find_some in T. unfold _gstb in T. rewrite in_app_iff in *. des; ss.
+      + list_tac.
+        des_ifs. unfold _kmss in T. list_tac. subst. unfold kmds in T0. list_tac. subst.
+        ss. list_tac. des_ifs. ss.
+        rewrite Any.upcast_downcast. steps.
+        eapply hcall_clo with (fs:=(KModSem.disclose (ksb_fspec k0))); try refl.
+        { rewrite URA.unit_idl. refl. }
+        { eapply OrdArith.lt_from_nat. lia. }
+        { instantiate (1:=ord_top). instantiate(1:=None). cbn. r. uipropall. }
+        { ss. }
+        i. subst. ss. destruct mrs_tgt1. esplits; et. i.
+        r in POST. uipropall. subst. steps. gbase. eapply CIH0; et.
+      + list_tac.
+        des_ifs. unfold _umss in T. list_tac. subst.
+        rewrite Any.upcast_downcast. steps.
+        eapply hcall_clo with (fs:=fspec_trivial2); try refl.
+        { rewrite URA.unit_idl. refl. }
+        { eapply OrdArith.lt_from_nat. lia. }
+        { instantiate (1:=ord_top). instantiate(1:=tt). cbn. r. uipropall. esplit; ss.
+          esplits; et. rewrite Any.upcast_downcast; ss. }
+        { ss. }
+        i. subst. ss. destruct mrs_tgt1. esplits; et. i.
+        r in POST. uipropall. subst. steps. gbase. eapply CIH0; et.
   Unshelve.
     all: try (by apply Ord.O).
   Qed.
@@ -318,14 +317,6 @@ Section ADQ.
   Let ms_tgt := (ModL.enclose (Mod.add_list (List.map SMod.to_src (kmds ++ List.map UMod.to_smod umds)))).
   Let p_tgt := (ModSemL.prog ms_tgt).
 
-  Lemma add_list_fnsems
-        mds ske
-    :
-      (ModSemL.fnsems (ModL.get_modsem (Mod.add_list mds) ske)) =
-      flat_map ModSemL.fnsems (List.map (flip ModL.get_modsem ske ∘ Mod.lift) mds)
-  .
-  Proof. induction mds; ss. f_equal. et. Qed.
-
   Let sk_link_eq2: sk_link = (ModL.sk (Mod.add_list (List.map SMod.to_src (kmds ++ List.map UMod.to_smod umds)))).
   Proof. { rewrite sk_link_eq. unfold SMod.to_src. rewrite SMod.transl_sk. refl. } Qed.
 
@@ -360,11 +351,11 @@ Section ADQ.
       _sim_body sim_body o0 (Ret t) (Ret t)
   | sim_body_call
       o0 o1
-      fn args T (ktr0 ktr1: ktree _ _ T)
+      fn (args: list val) T (ktr0 ktr1: ktree _ _ T)
       (SIM: forall rv, sim_body o1 (ktr0 rv) (ktr1 rv))
     :
-      _sim_body sim_body o0 (trigger EventsL.PushFrame;; trigger (Call fn args) >>= ktr0)
-                (trigger EventsL.PushFrame;; trigger (Call fn (Any.pair args false↑)) >>= ktr1)
+      _sim_body sim_body o0 (trigger EventsL.PushFrame;;; trigger (Call fn args↑) >>= ktr0)
+                (trigger EventsL.PushFrame;;; trigger (Call fn (@inr unit _ args)↑) >>= ktr1)
   | sim_rE
       o0 o1
       T (re: EventsL.rE T) S (ktr0 ktr1: ktree _ _ S)
@@ -486,8 +477,14 @@ Section ADQ.
   Qed.
 
   Definition sim_fun T (f0 f1: (Any.t -> itree EventsL.Es T)): Prop :=
-    forall args, sim_body 100 (f0 args) (f1 (Any.pair args false↑))
+    forall (args: list val), sim_body 100 (f0 args↑) (f1 (@inr unit _ args)↑)
   .
+
+  (* Definition sim_fun (f0: list val -> itree EventsL.Es val) *)
+  (*            (f1: (unit + list val) -> itree EventsL.Es val): Prop := *)
+  (*   forall args, sim_body 100 (f0 args) (f1 (inr args)) *)
+  (* . *)
+
 
 
 
@@ -495,7 +492,7 @@ Section ADQ.
   Lemma sim_known_aux
         T mn (itr: itree _ T)
     :
-      sim_body 100 (transl_all mn (KModSem.interp_hCallE_src itr))
+      sim_body 100 (transl_all mn (KModSem.interp_kCallE_src itr))
                (transl_all mn (interp_hCallE_src (KModSem.transl_itr_tgt itr)))
   .
   Proof.
@@ -505,7 +502,7 @@ Section ADQ.
     { steps. gbase. eapply CIH. }
     rewrite <- bind_trigger. resub.
     destruct e.
-    { destruct h.
+    { destruct k0.
       resub. steps.
       des_ifs.
       - steps. gbase. eapply CIH; et.
@@ -519,31 +516,17 @@ Section ADQ.
   Qed.
 
   Lemma sim_known
-        mn (f0: fspecbody)
+        mn (f0: kspecbody)
     :
-      sim_fun (transl_all mn ∘ KModSem.fun_to_src (fsb_body f0))
-              (transl_all mn ∘ fun_to_src
-                          (fun pat => match pat with
-                                      | (_, true) => trigger (Choose _)
-                                      | (argh, false) => KModSem.transl_itr_tgt (fsb_body f0 argh)
-                                      end))
+      sim_fun (transl_all mn ∘ KModSem.fun_to_src (ksb_body f0))
+              (transl_all mn ∘ fun_to_src (KModSem.transl_fun_tgt f0.(ksb_body)))
   .
   Proof.
     ii.
     esplits.
     unfold fun_to_src. unfold body_to_src. unfold cfun.
     unfold KModSem.fun_to_src. unfold KModSem.body_to_src. unfold cfun.
-    steps.
-    destruct (args↓) eqn:A; cycle 1.
-    { cbn.
-      destruct ((Any.pair args false↑)↓) eqn:B.
-      { ss. destruct p. eapply pair_downcast_lemma2 in B. des. clarify. }
-      { ss. unfold triggerNB. ired.
-        ginit. { eapply cpn4_wcompat; eauto with paco. } gstep. econs; et. ii; ss.
-      }
-    }
-    cbn. erewrite <- Any.downcast_upcast with (a:=args); et. rewrite upcast_pair_downcast. ss. ired.
-    steps.
+    steps. rewrite ! Any.upcast_downcast. steps.
     replace (Ord.from_nat 100) with ((Ord.from_nat 0) + (Ord.from_nat 100))%ord; cycle 1.
     { admit "ez - ordC spec". }
     ginit. { eapply cpn4_wcompat; eauto with paco. } guclo bbindC_spec.
@@ -557,8 +540,8 @@ Section ADQ.
   Lemma sim_unknown_aux
         mn (itr: itree _ val)
     :
-      sim_body 100 (transl_all mn (resum_itr itr))
-               (transl_all mn (interp_hCallE_src (UModSem.transl_itr itr)))
+      sim_body 100 (transl_all mn (UModSem.transl_itr_mod itr))
+               (transl_all mn (interp_hCallE_src (UModSem.transl_itr_smod itr)))
   .
   Proof.
     ginit. { eapply cpn4_wcompat; eauto with paco. } revert itr. gcofix CIH. i.
@@ -567,7 +550,7 @@ Section ADQ.
     { steps. gbase. eapply CIH. }
     rewrite <- bind_trigger. resub.
     destruct e.
-    { destruct c. resub. ired_both. resub. ired_both. ired. gstep; econs; et. i. steps. gbase. eapply CIH; et. }
+    { destruct u. resub. ired_both. resub. ired_both. ired. gstep; econs; et. i. steps. gbase. eapply CIH; et. }
     destruct s.
     { resub. steps. resub. steps. gbase. eapply CIH; et. }
     { resub. steps. resub. steps. gbase. eapply CIH; et. }
@@ -578,25 +561,15 @@ Section ADQ.
   Lemma sim_unknown
         (ktr: list val -> itree _ val) mn
     :
-      sim_fun (fun args => transl_all mn (resum_itr (cfun ktr args)))
-              (transl_all mn ∘ fun_to_src (fun (x: list val * bool) => UModSem.transl_itr (ktr (fst x))))
+      sim_fun (transl_all mn ∘ (UModSem.transl_fun_mod ktr))
+              (transl_all mn ∘ (fun_to_src (UModSem.transl_fun_smod ktr)))
   .
   Proof.
     ii.
     esplits.
-    unfold fun_to_src. unfold body_to_src. unfold cfun.
+    unfold fun_to_src. unfold body_to_src. unfold UModSem.transl_fun_mod. unfold cfun.
     steps.
-    destruct (args↓) eqn:A; cycle 1.
-    { cbn.
-      destruct ((Any.pair args false↑)↓) eqn:B.
-      { ss. destruct p. eapply pair_downcast_lemma2 in B. des. clarify. }
-      { ss.
-        Fail rewrite transl_all_triggerNB. (******** WHY??? FIXME *********)
-        unfold triggerNB. steps.
-        ginit. { eapply cpn4_wcompat; eauto with paco. } gstep. econs; et. ii; ss.
-      }
-    }
-    cbn. erewrite <- Any.downcast_upcast with (a:=args); et. rewrite upcast_pair_downcast. ss. steps.
+    rewrite ! Any.upcast_downcast. steps.
     replace (Ord.from_nat 100) with ((Ord.from_nat 0) + (Ord.from_nat 100))%ord; cycle 1.
     { admit "ez - ordC spec". }
     ginit. { eapply cpn4_wcompat; eauto with paco. } guclo bbindC_spec.
@@ -616,26 +589,7 @@ Section ADQ.
   .
   Proof.
     destruct (find (fun fnsem => dec fn (fst fnsem)) (ModSemL.fnsems ms_src)) eqn:T.
-    - Ltac _list_tac :=
-        match goal with
-        | [ H: find _ _ = Some _ |- _ ] => apply find_some in H; des; des_sumbool; subst
-        | [ H: context[ModL.enclose] |- _ ] => unfold ModL.enclose in H; try rewrite add_list_fnsems in H
-        | [ H: In _ (flat_map _ _) |- _ ] => apply in_flat_map in H; des
-        | [ H: In _ (List.map _ _) |- _ ] => apply in_map_iff in H; des
-        | [ H: ModSem.map_snd _ _ = _ |- _ ] => unfold ModSem.map_snd in H; ss
-        | [ H: map_snd _ _ = _ |- _ ] => unfold map_snd in H; ss
-        | [ H: flip _ _ _ = _ |- _ ] => unfold flip in H; ss
-
-        | [ |- context[ModL.enclose] ] => unfold ModL.enclose; try rewrite add_list_fnsems
-        | [ |- In _ (flat_map _ _) ] => apply in_flat_map; esplits; et
-        | [ |- In _ (List.map _ _) ] => apply in_map_iff; esplits; et
-        | [ |- ModSem.map_snd _ _ = _ ] => unfold ModSem.map_snd; ss
-        | [ |- map_snd _ _ = _ ] => unfold map_snd; ss
-        | [ |- flip _ _ _ = _ ] => unfold flip; ss
-        end
-      .
-      Ltac list_tac := repeat _list_tac.
-      list_tac.
+    - list_tac.
       unfold ms_src in T.
       list_tac.
       rewrite <- sk_link_eq3 in *. folder. subst.
@@ -647,7 +601,7 @@ Section ADQ.
           rewrite in_app_iff in *. des.
           { unfold kmds in U2. unfold kmds_top in T1. list_tac. subst. ss. list_tac. des_ifs. ss.
             assert(x = x1) by admit "ez - uniqueness"; subst.
-            assert(f = f0) by admit "ez - uniqueness"; subst.
+            assert(k = k0) by admit "ez - uniqueness"; subst.
             econs. split; ss.
             eapply sim_known.
           }
@@ -707,20 +661,20 @@ Section ADQ.
   Qed.
 
   Lemma my_lemma2_aux
-        fn args st0
+        fn (args: list val) st0
     :
         simg eq 200
              (* (EventsL.interp_Es p_src (trigger (Call fn args)) st0) *)
              (* (EventsL.interp_Es p_tgt (trigger (Call fn (Any.pair args false↑))) st0) *)
-             (EventsL.interp_Es p_src (p_src (Call fn args)) st0)
-             (EventsL.interp_Es p_tgt (p_tgt (Call fn (Any.pair args false↑))) st0)
+             (EventsL.interp_Es p_src (p_src (Call fn args↑)) st0)
+             (EventsL.interp_Es p_tgt (p_tgt (Call fn (@inr unit _ args)↑)) st0)
   .
   Proof.
     ginit. { eapply cpn5_wcompat; eauto with paco. } revert_until p_tgt. gcofix CIH. i.
     cbn. steps.
     generalize (find_sim fn). intro T. inv T; cbn; steps.
     des; subst. specialize (IN0 args).
-    abstr (i args) itr_src. abstr (i0 (Any.pair args (Any.upcast false))) itr_tgt. clear i i0 args H H0. clear_tac.
+    abstr (i args↑) itr_src. abstr (i0 (@inr unit _ args)↑) itr_tgt. clear i i0 args H H0. clear_tac.
     revert_until sk_link_eq3. gcofix CIH. i.
     guclo ordC_spec. econs.
     { instantiate (1:=(100 + 100)%ord). rewrite <- OrdArith.add_from_nat. cbn. refl. }
@@ -789,7 +743,7 @@ Section ADQ.
     esplits; et. { admit "ez - wf". } steps.
     instantiate (1:=(200 + 200)%ord).
     match goal with | [ |- gpaco5 _ _ _ _ _ _ _ ?src ?tgt ] => remember src as tmp end.
-    replace ([]↑) with (Any.pair ([]: list val)↑ false↑); cycle 1.
+    replace ([]↑) with ((@inr unit _ ([]: list val))↑); cycle 1.
     { admit "ez - parameterize initial argument && use transitivity of refinement". }
     subst.
     assert(STEQ: (ModSemL.initial_r_state ms_src, ModSemL.initial_p_state ms_src)
@@ -841,13 +795,19 @@ Section ADQ.
       eapply flat_map_ext. intro. unfold map_snd. des_ifs.
   Qed.
 
-  Variable entry_r: Σ.
-  Variable mainpre: Any.t -> ord -> Σ -> Prop.
-  Variable (mainbody: list val -> itree (hCallE +' pE +' eventE) val).
-  Hypothesis MAINPRE: mainpre ([]: list val)↑ ord_top entry_r.
+  Definition UMod_main (mainbody: list val -> itree (uCallE +' pE +' eventE) val): UMod.t := {|
+    UMod.get_modsem := fun _ => (UModSem.mk [("main", mainbody)] "Main" (tt↑));
+    UMod.sk := Sk.unit;
+  |}
+  .
 
-  Hypothesis WFR: URA.wf (entry_r ⋅ (List.fold_left (⋅) (List.map (SModSem.initial_mr) kmss) ε)).
-  Hypothesis MAINM: In (SMod.main mainpre mainbody) kmds.
+  Variable (mainbody: list val -> itree (uCallE +' pE +' eventE) val).
+  Hypothesis MAINU: In (UMod_main mainbody) umds.
+
+  Let mains: SMod.t := UMod.to_smod (UMod_main mainbody).
+
+  Hypothesis WFR: URA.wf (List.fold_left (⋅) (List.map (SModSem.initial_mr) kmss) ε).
+  (* Hypothesis MAINM: In (SMod.main mainpre mainbody) kmds. *)
 
   Theorem adequacy_open:
     refines_closed (Mod.add_list (List.map (SMod.to_tgt _gstb) kmds ++ List.map UMod.to_mod umds))
@@ -866,19 +826,24 @@ Section ADQ.
     }
     rewrite <- Mod.add_list_app.
     etrans.
-    { rewrite <- List.map_map with (f:=UMod.to_smod).
+    { erewrite <- List.map_map with (f:=UMod.to_smod).
       rewrite <- map_app.
       eapply adequacy_type2.
       - instantiate (1:=(kmds ++ List.map UMod.to_smod umds)).
-        rewrite <- List.map_id with (l:=(kmds ++ List.map UMod.to_smod umds)) at 1.
+        erewrite <- List.map_id with (l:=(kmds ++ List.map UMod.to_smod umds)) at 1.
         eapply Forall2_apply_Forall2.
         { instantiate (1:=eq). refl. }
         i. subst. exists _gstb. split; ss. r. intro ske. rewrite <- gstb_eq. refl.
-      - eauto.
-      - ss. rewrite ! URA.unit_id. admit "should be ez".
-      - rewrite in_app_iff. eauto.
+      - ss. instantiate (1:=ε). rewrite ! URA.unit_id. rewrite ! URA.unit_idl. admit "should be ez".
+      - Check (UModSem.transl_fun_smod mainbody).
+        admit "mid - main argument parameterization".
+        (* instantiate (1:=UModSem.transl_fun_smod mainbody). rewrite in_app_iff. eauto. *)
     }
     eapply my_lemma2.
+  Unshelve.
+    all: ss.
+    { ii. apply True. }
+    { ii. apply ITree.spin. }
   Qed.
 
 End ADQ.
