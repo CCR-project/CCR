@@ -653,6 +653,52 @@ Section AUX.
     ksb_body: list val -> itree (kCallE +' pE +' eventE) val;   (*** U -> K ***)
   }
   .
+
+  Definition mk_ksimple {X: Type} (PQ: X -> ((Any.t -> ord -> iProp) * (Any.t -> iProp))):
+    ftspec unit unit := @mk_ftspec _ _ _ X (fun x _ a o => (fst ∘ PQ) x a o) (fun x _ a => (snd ∘ PQ) x a)
+  .
+
+  Program Fixpoint _APCK (at_most: Ord.t) {wf Ord.lt at_most}: itree (kCallE +' pE +' eventE) unit :=
+    break <- trigger (Choose _);;
+    if break: bool
+    then Ret tt
+    else
+      n <- trigger (Choose Ord.t);;
+      trigger (Choose (n < at_most)%ord);;;
+      fn <- trigger (Choose _);;
+      trigger (kCall fn (inl tt));;;
+      _APCK n.
+  Next Obligation. ss. Qed.
+  Next Obligation. eapply Ord.lt_well_founded. Qed.
+
+  Definition APCK: itree (kCallE +' pE +' eventE) unit :=
+    at_most <- trigger (Choose _);;
+    guarantee(at_most < kappa)%ord;;;
+    _APCK at_most
+  .
+
+  Lemma unfold_APCK:
+    forall at_most, _APCK at_most =
+                    break <- trigger (Choose _);;
+                    if break: bool
+                    then Ret tt
+                    else
+                      n <- trigger (Choose Ord.t);;
+                      guarantee (n < at_most)%ord;;;
+                      fn <- trigger (Choose _);;
+                      trigger (kCall fn (inl tt));;;
+                      _APCK n.
+  Proof.
+    i. unfold _APCK. rewrite Fix_eq; eauto.
+    { repeat f_equal. extensionality break. destruct break; ss.
+      repeat f_equal. extensionality n.
+      unfold guarantee. rewrite bind_bind.
+      repeat f_equal. extensionality p.
+      rewrite bind_ret_l. repeat f_equal. }
+    { i. replace g with f; auto. extensionality o. eapply H. }
+  Qed.
+  Global Opaque _APCK.
+
 End AUX.
 
 Module KModSem.

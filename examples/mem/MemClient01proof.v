@@ -70,6 +70,8 @@ Section SIMMODSEM.
       destruct x; mDesAll; ss. des; subst.
       unfold clientBody. steps. unfold KPC. steps.
 
+      TODO: add kstart/kcatch/kstop blah tactic
+
       force_l. exists "alloc". steps. force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
       hcall _ (Some _) _ with ""; ss; et.
       { iModIntro. iSplitR; ss. iPureIntro. esplits; et. instantiate (1:=1%nat). ss. }

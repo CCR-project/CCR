@@ -39,16 +39,11 @@ Section PROOF.
         return y; ~~~> return 42;
    ***)
 
-  Definition KPC: itree (kCallE +' pE +' eventE) unit :=
-    fn <- trigger (Choose _);; trigger (kCall fn (@inl unit (list val) tt));;; Ret tt
-  .
-
   Definition clientBody: list val -> itree (kCallE +' pE +' eventE) val :=
     fun _ =>
-      KPC;;;
-      KPC;;;
-      trigger (kCall "unknown_call" (@inr unit (list val) []));;;
-      KPC;;;
+      APCK;;;
+      trigger (kCall "unknown_call" (inr []));;;
+      APCK;;;
       Ret (Vint 42)
   .
 
