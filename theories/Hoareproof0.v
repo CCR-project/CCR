@@ -291,29 +291,6 @@ Section CANCEL.
   .
   Proof. refl. Qed.
 
-  Ltac r_first rs :=
-    match rs with
-    | (?rs0 ⋅ ?rs1) =>
-      let tmp0 := r_first rs0 in
-      constr:(tmp0)
-    | ?r => constr:(r)
-    end
-  .
-
-  Ltac r_solve :=
-    repeat rewrite URA.add_assoc;
-    repeat (try rewrite URA.unit_id; try rewrite URA.unit_idl);
-    match goal with
-    | [|- ?lhs = (_ ⋅ _) ] =>
-      let a := r_first lhs in
-      try rewrite <- (URA.add_comm a);
-      repeat rewrite <- URA.add_assoc;
-      f_equal;
-      r_solve
-    | _ => reflexivity
-    end
-  .
-
 
   (*** TODO: move to ITreelib ***)
   (*** it inserts "subevent" ***)

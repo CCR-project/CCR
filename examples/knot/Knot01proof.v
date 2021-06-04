@@ -162,7 +162,7 @@ Section SIMMODSEM.
       }
       { split; ss. eauto with ord_step. }
       mDesAll. subst. rewrite Any.upcast_downcast.
-      steps. astop. force_l. eexists.
+      steps. astop. force_l. eexists. steps.
 
       (* ret *)
       iret _; ss. iModIntro. iFrame. ss.
@@ -203,7 +203,7 @@ Section SIMMODSEM.
       mUpd "A1". mDesOwn "A1".
 
       (* ret *)
-      force_l. eexists. iret _; ss.
+      force_l. eexists. steps. iret _; ss.
       iModIntro. iEval (unfold inv, var_points_to). rewrite FIND1.
       iSplitL "A1 POST"; ss.
       { iExists _, _. iSplitR "POST"; ss. iSplitR; ss.

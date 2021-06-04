@@ -67,7 +67,7 @@ Section SIMMODSEM.
       rewrite Any.upcast_downcast. steps.
       inv PURE3. rewrite FBLOCK. ss. steps.
       des_ifs.
-      { astart 0. astop. steps. force_l. eexists.
+      { astart 0. astop. steps. force_l. eexists. steps.
         hret _; ss. iModIntro. iFrame; ss. iPureIntro.
         split; eauto. f_equal. f_equal.
         clear - l. destruct x; ss. destruct x; ss. lia.
@@ -95,7 +95,7 @@ Section SIMMODSEM.
       eapply Any.upcast_inj in PURE3. des; clarify.
       erewrite Any.upcast_downcast in *. clarify. steps.
 
-      astop. force_l. eexists. hret _; ss.
+      astop. force_l. eexists. steps. hret _; ss.
       { ss. iModIntro. iFrame; ss. iSplitR; ss.
         iPureIntro. repeat f_equal. ss. destruct x; ss. destruct x; ss.
         remember (match x with
