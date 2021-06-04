@@ -1,4 +1,4 @@
-From compcert Require Import Globalenvs Smallstep AST Integers Events Behaviors Errors.
+From compcert Require Import Globalenvs Smallstep AST Integers Events Behaviors Errors Memory.
 Require Import Coqlib.
 Require Import ITreelib.
 Require Import Universe.
@@ -119,11 +119,14 @@ Section MATCH.
 
   Variable tlof : nat.
 
+  Definition map_blk (blk : nat) : Values.block := Pos.of_nat (tlof + blk).
+  Definition map_ofs (ofs : Z) : Z := 8*ofs.
+
   Definition map_val (v : Universe.val) : Values.val :=
     match v with
     | Vint z => Values.Vlong (to_long z)
     | Vptr blk ofs =>
-      Values.Vptr (Pos.of_nat (tlof + blk)) (Ptrofs.repr ofs)
+      Values.Vptr (map_blk blk) (Ptrofs.repr (map_ofs ofs))
     | Vundef => Values.Vundef
     end.
 
@@ -148,27 +151,9 @@ Section MATCH.
       sge tge
       (MG: forall symb blk,
           (sge.(SkEnv.id2blk) symb = Some blk) ->
-          (Maps.PTree.get (s2p symb) tge.(Genv.genv_symb) = Some (Pos.of_nat (tlof + blk))))
+          (Genv.find_symbol tge (s2p symb) = Some (Pos.of_nat (tlof + blk))))
     :
       match_ge sge tge.
-
-  Definition id2blk_cgenv (src: Imp.program) (id: string) : option positive :=
-    match compile src with
-    | Error _ => None
-    | OK tgt =>
-      let tgenv := Genv.globalenv tgt in
-      Genv.find_symbol tgenv (s2p id)
-    end.
-
-  Lemma id2blk_cgenv_correct
-        (src: Imp.program) tgt tgenv id
-        (COMP: compile src = OK tgt)
-        (TGE: tgenv = Genv.globalenv tgt)
-    :
-      Genv.find_symbol tgenv (s2p id) = id2blk_cgenv src id.
-  Proof.
-    unfold id2blk_cgenv. clarify. rewrite COMP. auto.
-  Qed.
 
   Definition ret_call_cont k :=
     (Kseq (Sreturn (Some (Evar (s2p "return")))) (call_cont k)).
@@ -212,7 +197,16 @@ Section MATCH.
       match_stack mn (fun x => (y <- (itree_of_imp_pop ge ms mn retmn id le x);; next y >>= stack)) (Some tpop)
   .
 
-  Variable match_mem : Mem.t -> Memory.Mem.mem -> Prop.
+  Variant match_mem : Mem.t -> Memory.Mem.mem -> Prop :=
+  | match_mem_intro
+      m tm
+      (MMEM: forall blk ofs v,
+          (m.(Mem.cnts) blk ofs = Some v) ->
+          (Memory.Mem.load Mint64 tm (map_blk blk) (map_ofs ofs) = Some (map_val v)) /\
+          (Mem.valid_access tm Mint64 (map_blk blk) (map_ofs ofs) Writable))
+    :
+      match_mem m tm
+  .
 
   Variant match_states : imp_state -> Csharpminor.state -> Prop :=
   | match_states_intro
@@ -711,13 +705,14 @@ Section PROOF.
           (MODL: modl = (ModL.add (Mod.lift Mem) (ImpMod.get_modL src)))
           (MODSEML: ms = modl.(ModL.enclose))
           (GENV: ge = Sk.load_skenv modl.(ModL.sk))
+          (MGENV: match_ge tlof ge (Genv.globalenv tgt))
           (COMP: Imp2Csharpminor.compile2 src = OK tgt)
           (MS: match_states tlof gm ge ms mmem ist cst)
     :
       <<SIM: sim (ModL.compile modl) (semantics tgt) ordN i0 ist cst>>.
   Proof.
     move GMAP before ms. move MODSEML before GMAP. move GENV before MODSEML. move COMP before GENV.
-    move TLOF before COMP. move MODL before COMP.
+    move TLOF before COMP. move MODL before COMP. move MGENV before COMP.
     revert_until TLOF.
     pcofix CIH. i.
     inv MS.
@@ -1148,57 +1143,36 @@ Section PROOF.
         admit "ez: find from local env". }
       all: eauto.
 
-      (*** TODO: ADDR, MEM ***)
-
     - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_AddrOf.
-      ss. des_ifs.
-      + unfold unwrapU. des_ifs.
-        2:{ sim_triggerUB. }
-        do 2 (pfold; sim_tau; left). sim_red.
-        pfold. econs 6; ss.
-        { admit "ez: strict_determinate_at". }
-        eexists. eexists.
-        { eapply step_set. econs. econs 2.
-          { eapply Maps.PTree.gempty. }
-          admit "ez? genv, use the fact that src already found". }
-        eexists. exists (step_tau _). eexists. right. eapply CIH.
-        hexploit match_states_intro.
-        { instantiate (2:=Skip). ss. }
-        2,3,4,5,6: eauto.
-        2:{ clarify. }
-        2:{ i.
-            match goal with
-            | [ H: match_states _ _ _ _ _ ?i0 _ |- match_states _ _ _ _ _ ?i1 _ ] =>
-              replace i1 with i0; eauto
-            end.
-            unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
-        { econs. i. admit "ez?: need a translation of genv". }
-      + uo; des_ifs. unfold ident_key in Heq1.
-        unfold unwrapU. des_ifs.
-        2:{ sim_triggerUB. }
-        do 2 (pfold; sim_tau; left). sim_red.
-        pfold. econs 6; ss.
-        { admit "ez: strict_determinate_at". }
-        eexists. eexists.
-        { eapply step_set. econs. econs 2.
-          { eapply Maps.PTree.gempty. }
-          admit "ez? genv, use the fact that src already found". }
-        eexists. exists (step_tau _). eexists. right. eapply CIH.
-        hexploit match_states_intro.
-        { instantiate (2:=Skip). ss. }
-        2,3,4,5,6: eauto.
-        2:{ clarify. }
-        2:{ i.
-            match goal with
-            | [ H: match_states _ _ _ _ _ ?i0 _ |- match_states _ _ _ _ _ ?i1 _ ] =>
-              replace i1 with i0; eauto
-            end.
-            unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
-        { econs. i. admit "ez?: need a translation of genv". }
+      ss. uo; des_ifs. rename Heq0 into FOUND. unfold ident_key in FOUND.
+      apply alist_find_some in FOUND.
+      unfold unwrapU. des_ifs.
+      2:{ sim_triggerUB. }
+      rename n into blk. rename Heq into SRCBLK.
+      do 2 (pfold; sim_tau; left). sim_red.
+      pfold. econs 6; ss.
+      { admit "ez: strict_determinate_at". }
+      eexists. eexists.
+      { eapply step_set. econs. econs 2.
+        { apply Maps.PTree.gempty. }
+        inv MGENV. specialize MG with (symb:=X) (blk:=blk). apply MG. auto. }
+      eexists. exists (step_tau _). eexists. right. apply CIH.
+      hexploit match_states_intro.
+      { instantiate (2:=Skip). ss. }
+      2,3,4,5,6: eauto.
+      2: clarify.
+      2:{ i.
+          match goal with
+          | [ H: match_states _ _ _ _ _ ?i0 _ |- match_states _ _ _ _ _ ?i1 _ ] =>
+            replace i1 with i0; eauto
+          end.
+          unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
+      { econs. i. ss.
+        admit "ez: genv". }
 
     - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Malloc. sim_red.
-      ss. uo; des_ifs. eapply step_expr; eauto.
-      i. sim_red. destruct rstate. ss. destruct l.
+      ss. uo; des_ifs. eapply step_expr; eauto. i. rename H0 into TGTEXPR. rename H1 into MAPVAL.
+      sim_red. destruct rstate. ss. destruct l.
       { admit "ez: wf_r_state". }
       grind. unfold ordN in *. do 3 (pfold; sim_tau; left). sim_red.
       match goal with
@@ -1213,16 +1187,36 @@ Section PROOF.
       do 4 (pfold; sim_tau; left). sim_red.
       rewrite PSTATE. rewrite Any.upcast_downcast. grind. unfold unint. des_ifs; sim_red.
       2:{ sim_triggerUB. }
+
+      assert (TGTDEFS: In (s2p "malloc", Gfun (External EF_malloc)) (prog_defs tgt)).
+      { unfold _compile2 in COMP. des_ifs; ss. rename Heq into CGDEFS.
+        unfold compile_gdefs in CGDEFS. uo; des_ifs; ss; clarify.
+        rewrite app_assoc. apply in_or_app. right. econs. ss. }
+
+      assert (TGTMALLOC: exists blk, Genv.find_symbol (globalenv (semantics tgt)) (s2p "malloc") = Some blk).
+      { unfold _compile2 in COMP. des_ifs; ss. rename Heq into CGDEFS.
+        unfold compile_gdefs in CGDEFS. uo; des_ifs; ss; clarify.
+        (* match goal with *)
+        (* | [ |- exists _, Genv.find_symbol (Genv.globalenv ?_tgtp) _ = _ ] => *)
+        (*   set (tgtp:=_tgtp) in * *)
+        (* end. *)
+        hexploit Genv.find_symbol_exists; eauto. ss. eauto. }
+      des.
+
+      assert (COMP2: compile2 src = OK tgt).
+      { unfold compile2. rewrite GMAP. auto. }
+      hexploit tgt_genv_find_def_by_blk; eauto. i. rename H0 into TGTFINDDEF.
+
       pfold. econs 6; clarify.
       { admit "ez: strict_determinate_at". }
       eexists. eexists.
       { eapply step_call.
         - econs. econs 2.
           { eapply Maps.PTree.gempty. }
-          admit "ez: genv lookup".
+          apply TGTMALLOC.
         - econs 2; eauto. econs 1.
-        - ss. des_ifs. admit "ez: genv lookup".
-        - admit "ez: genv lookup". }
+        - ss. des_ifs. unfold Genv.find_funct_ptr. rewrite TGTFINDDEF. ss.
+        - ss. }
       eexists. eexists.
       { rewrite bind_trigger. eapply (step_choose _ 0). }
       eexists. left.
@@ -1232,8 +1226,11 @@ Section PROOF.
       pfold. econs 4.
       { admit "ez: strict_determinate_at". }
       eexists. eexists.
-      { eapply step_external_function.
+      { eapply step_external_function. ss.
         admit "ez: genv lookup & get malloc". }
+        (* hexploit extcall_malloc_sem_intro. *)
+        (* - instantiate (3:=(Ptrofs.repr n)). instantiate (3:=tm). *)
+        (*   (* Local Transparent Memory.Mem.alloc. *) *)
       eexists; split; auto. left.
       pfold. econs 4.
       { admit "ez: strict_determinate_at". }
@@ -1281,6 +1278,9 @@ Section PROOF.
       { admit "ez: strict_determinate_at". }
       eexists. eexists.
       { eapply step_set. econs; eauto. ss.
+
+
+        
         admit "mid: match_memory's contents". }
       eexists. eexists.
       { eapply (step_tau _). }

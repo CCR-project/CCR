@@ -262,8 +262,7 @@ Section Compile.
       do a <- (compile_expr se);
       Some (Scall (Some (s2p x)) (ef_sig EF_malloc) (Eaddrof (s2p "malloc")) [a])
     | Free pe =>
-      do a <- (compile_expr pe);
-      Some (Scall None (ef_sig EF_free) (Eaddrof (s2p "free")) [a])
+      Some (Sseq Sskip Sskip)
     | Load x pe =>
       do cpe <- (compile_expr pe);
       Some (Sset (s2p x) (Eload Mint64 cpe))

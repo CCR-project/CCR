@@ -23,10 +23,11 @@ Inductive val: Type :=
 Definition wordsize_64 := 64.
 Definition modulus_64 := two_power_nat wordsize_64.
 Definition intrange_64 : Z -> Prop := fun z => ((- 1) < z < modulus_64)%Z.
+Definition scale_ofs (ofs : Z) := (8*ofs)%Z.
 Definition wf_val (v : val) :=
   match v with
   | Vint z => intrange_64 z
-  | Vptr _ z => intrange_64 z
+  | Vptr _ z => intrange_64 (scale_ofs z)
   | Vundef => False
   end.
 
@@ -34,12 +35,16 @@ Definition wf_val (v : val) :=
 
 Definition Vnullptr := Vint 0.
 
+Definition scale_int (n : Z) : option Z :=
+  if (Zdivide_dec 8 n) then Some (Z.div n 8) else None.
+
 Definition vadd (x y: val): option val :=
   match x, y with
   | Vint n, Vint m => Some (Vint (Z.add n m))
-  | Vptr blk ofs, Vint n => Some (Vptr blk (Z.add ofs n))
-  | Vint n, Vptr blk ofs => Some (Vptr blk (Z.add ofs n))
-  (* | Vptr _ _, Vptr _ _ => None *)
+  | Vptr blk ofs, Vint n =>
+    do scaled_n <- scale_int n; Some (Vptr blk (Z.add ofs scaled_n))
+  | Vint n, Vptr blk ofs =>
+    do scaled_n <- scale_int n; Some (Vptr blk (Z.add ofs scaled_n))
   | _, _ => None
   end
 .
@@ -47,9 +52,10 @@ Definition vadd (x y: val): option val :=
 Definition vsub (x y: val): option val :=
   match x, y with
   | Vint n, Vint m => Some (Vint (Z.sub n m))
-  | Vptr blk ofs, Vint n => Some (Vptr blk (Z.sub ofs n))
-  | Vint n, Vptr blk ofs => Some (Vptr blk (Z.sub ofs n))
-  (* | Vptr _ _, Vptr _ _ => None *)
+  | Vptr blk ofs, Vint n =>
+    do scaled_n <- scale_int n; Some (Vptr blk (Z.sub ofs scaled_n))
+  | Vptr blk1 ofs1, Vptr blk2 ofs2 =>
+    if (Nat.eqb blk1 blk2) then Some (Vint (scale_ofs (ofs1 - ofs2))) else None
   | _, _ => None
   end
 .
@@ -57,9 +63,6 @@ Definition vsub (x y: val): option val :=
 Definition vmul (x y: val): option val :=
   match x, y with
   | Vint n, Vint m => Some (Vint (Z.mul n m))
-  | Vptr blk ofs, Vint n => Some (Vptr blk (Z.mul ofs n))
-  | Vint n, Vptr blk ofs => Some (Vptr blk (Z.mul ofs n))
-  (* | Vptr _ _, Vptr _ _ => None *)
   | _, _ => None
   end
 .
