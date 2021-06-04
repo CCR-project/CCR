@@ -116,7 +116,6 @@ Section MATCH.
 
   (* tlof will be 1 + number of external symbols *)
   (* Hypothesis archi_ptr64 : Archi.ptr64 = true. *)
-
   Variable tlof : nat.
 
   Definition map_blk (blk : nat) : Values.block := Pos.of_nat (tlof + blk).
@@ -162,8 +161,6 @@ Section MATCH.
   Variable ge : SkEnv.t.
   (* ModSem should be fixed with src too *)
   Variable ms : ModSemL.t.
-  (* (* Current function's module name *) *)
-  (* Variable mn : mname. *)
 
   Inductive match_code (mn: mname) : imp_cont -> (list Csharpminor.stmt) -> Prop :=
   | match_code_return
@@ -213,10 +210,8 @@ Section MATCH.
       tf rstate pstate le tle code itr tcode m tm next stack tcont mn
       (CST: compile_stmt gm code = Some tcode)
       (ML: match_le le tle)
-
       (PSTATE: pstate "Mem"%string = m↑)
       (MM: match_mem m tm)
-      (* (MG: match_ge ge tge) *)
       (WFCONT: wf_ccont tcont)
       (MCONT: match_code mn next (get_cont_stmts tcont))
       (MSTACK: match_stack mn stack (get_cont_stack tcont))
@@ -241,6 +236,10 @@ Section MATCH.
   (*     match_id (Some v) (Some (s2p v)). *)
 
 End MATCH.
+
+
+
+
 
 Section GENV.
 
@@ -512,6 +511,11 @@ Section GENV.
 
 End GENV.
 
+
+
+
+
+
 Lemma unbind_trigger E:
   forall [X0 X1 A : Type] (ktr0 : X0 -> itree E A) (ktr1 : X1 -> itree E A) e0 e1,
     (x <- trigger e0;; ktr0 x = x <- trigger e1;; ktr1 x) -> (X0 = X1 /\ e0 ~= e1 /\ ktr0 ~= ktr1).
@@ -533,6 +537,11 @@ Proof.
   rewrite <- bind_trigger in x. apply unbind_trigger in x.
   des. clarify.
 Qed.
+
+
+
+
+
 
 Section PROOF.
 
@@ -557,26 +566,24 @@ Section PROOF.
       unfold intrange_64 in *. unfold modulus_64 in *. unfold Int64.modulus.
       unfold wordsize_64, Int64.wordsize in *. unfold Wordsize_64.wordsize.
       rewrite! Z.mod_small; auto; try nia.
-    - des_ifs. unfold Ptrofs.add; ss.
+    - uo; des_ifs. unfold scale_int in *. des_ifs. ss. unfold Ptrofs.add; ss.
+      unfold map_ofs in *. unfold map_blk in *.
       unfold intrange_64 in *. unfold modulus_64 in *. unfold wordsize_64 in *.
-      repeat f_equal; try rewrite Ptrofs.unsigned_repr_eq.
-      + unfold Ptrofs.modulus. unfold Ptrofs.wordsize. unfold Wordsize_Ptrofs.wordsize.
-        des_ifs. rewrite Z.mod_small; auto. nia.
-      + unfold Ptrofs.of_int64.
-        rewrite Int64.unsigned_repr_eq. rewrite Ptrofs.unsigned_repr_eq.
-        unfold Ptrofs.modulus. unfold Ptrofs.wordsize. unfold Wordsize_Ptrofs.wordsize. des_ifs.
-        unfold Int64.modulus. unfold Int64.wordsize. unfold Wordsize_64.wordsize.
-        rewrite Z.mod_mod; try nia. rewrite Z.mod_small; try nia.
-    - des_ifs. unfold Ptrofs.add; ss.
+      do 2 f_equal. unfold Ptrofs.of_int64. rewrite Int64.unsigned_repr_eq. rewrite! Ptrofs.unsigned_repr_eq.
+      unfold Ptrofs.modulus. unfold Ptrofs.wordsize. unfold Wordsize_Ptrofs.wordsize. des_ifs.
+      unfold Int64.modulus. unfold Int64.wordsize. unfold Wordsize_64.wordsize.
+      rewrite Z.mod_mod; try nia. rewrite Z.mod_small.
+      + rewrite Z.mod_small; try nia. unfold Z.divide in d. des; clarify; ss. rewrite Z_div_mult; nia.
+      + unfold scale_ofs in *. nia.
+    - uo; des_ifs. unfold scale_int in *. des_ifs. ss. unfold Ptrofs.add; ss.
+      unfold map_ofs in *. unfold map_blk in *.
       unfold intrange_64 in *. unfold modulus_64 in *. unfold wordsize_64 in *.
-      repeat f_equal; try rewrite Ptrofs.unsigned_repr_eq.
-      + unfold Ptrofs.modulus. unfold Ptrofs.wordsize. unfold Wordsize_Ptrofs.wordsize.
-        des_ifs. rewrite Z.mod_small; auto. nia.
-      + unfold Ptrofs.of_int64.
-        rewrite Int64.unsigned_repr_eq. rewrite Ptrofs.unsigned_repr_eq.
-        unfold Ptrofs.modulus. unfold Ptrofs.wordsize. unfold Wordsize_Ptrofs.wordsize. des_ifs.
-        unfold Int64.modulus. unfold Int64.wordsize. unfold Wordsize_64.wordsize.
-        rewrite Z.mod_mod; try nia. rewrite Z.mod_small; try nia.
+      do 2 f_equal. unfold Ptrofs.of_int64. rewrite Int64.unsigned_repr_eq. rewrite! Ptrofs.unsigned_repr_eq.
+      unfold Ptrofs.modulus. unfold Ptrofs.wordsize. unfold Wordsize_Ptrofs.wordsize. des_ifs.
+      unfold Int64.modulus. unfold Int64.wordsize. unfold Wordsize_64.wordsize.
+      rewrite Z.mod_mod; try nia. rewrite Z.mod_small.
+      + rewrite Z.mod_small; try nia. unfold Z.divide in d. des; clarify; ss. rewrite Z_div_mult; nia.
+      + unfold scale_ofs in *. nia.
   Qed.
 
   Ltac sim_red := Red.prw ltac:(_red_gen) 2 0.
@@ -679,21 +686,42 @@ Section PROOF.
       econs; ss; clarify; eauto.
   Admitted.
 
-  Variable mmem : Mem.t -> Memory.Mem.mem -> Prop.
-
-  (* Variable src : Imp.program. *)
-  (* Let src_mod := ImpMod.get_mod src. *)
-  (* Variable tgt : Ctypes.program Clight.function. *)
-
-  (* Let src_sem := ModL.compile (Mod.add_list ([src_mod] ++ [Mem])). *)
-  (* Let tgt_sem := semantics2 tgt. *)
-
   Lemma compile_stmt_no_Sreturn
         gm src e
         (CSTMT: compile_stmt gm src = Some (Sreturn e))
     :
       False.
   Proof. destruct src; ss; uo; des_ifs; clarify. Qed.
+
+
+  (**** At the moment, it suffices to support integer IO in our scenario,
+        and we simplify all the other aspects.
+        e.g., the system calls that we are aware of
+        (1) behaves irrelevant from Senv.t,
+        (2) does not allow arguments/return values other than integers,
+        (3) produces exactly one event (already in CompCert; see: ec_trace_length),
+        (4) does not change memory,
+        (5) always returns without stuck,
+        and (6) we also assume that it refines our notion of system call.
+   ****)
+  Axiom syscall_exists: forall fn sg se args_tgt m0, exists tr ret_tgt m1,
+        <<TGT: external_functions_sem fn sg se args_tgt m0 tr ret_tgt m1>>
+  .
+  Axiom syscall_refines:
+    forall fn sg args_tgt ret_tgt
+           se m0 tr m1
+           (TGT: external_functions_sem fn sg se args_tgt m0 tr ret_tgt m1)
+    ,
+      exists args_int ret_int ev,
+        (<<ARGS: args_tgt = (List.map Values.Vlong args_int)>>) /\
+        (<<RET: ret_tgt = (Values.Vlong ret_int)>>) /\
+        let args_src := List.map (Vint ∘ Int64.unsigned) args_int in
+        let ret_src := (Vint ∘ Int64.unsigned) ret_int in
+        (<<EV: tr = [ev] /\ decompile_event ev = Some (event_sys fn args_src ret_src)>>)
+        /\ (<<SRC: syscall_sem (event_sys fn args_src ret_src)>>)
+        /\ (<<MEM: m0 = m1>>)
+  .
+
 
   Theorem match_states_sim
           (src: Imp.programL) tgt
@@ -707,13 +735,14 @@ Section PROOF.
           (GENV: ge = Sk.load_skenv modl.(ModL.sk))
           (MGENV: match_ge tlof ge (Genv.globalenv tgt))
           (COMP: Imp2Csharpminor.compile2 src = OK tgt)
-          (MS: match_states tlof gm ge ms mmem ist cst)
+          (MS: match_states tlof gm ge ms ist cst)
     :
       <<SIM: sim (ModL.compile modl) (semantics tgt) ordN i0 ist cst>>.
   Proof.
-    move GMAP before ms. move MODSEML before GMAP. move GENV before MODSEML. move COMP before GENV.
-    move TLOF before COMP. move MODL before COMP. move MGENV before COMP.
-    revert_until TLOF.
+    (* move GMAP before ms. move MODSEML before GMAP. move GENV before MODSEML. move COMP before GENV. *)
+    (* move TLOF before COMP. move MODL before COMP. move MGENV before COMP. *)
+    (* revert_until TLOF. *)
+    depgen i0. depgen ist. depgen cst.
     pcofix CIH. i.
     inv MS.
     unfold ordN in *.
@@ -737,11 +766,9 @@ Section PROOF.
           sim_red. pfold. econs 6; clarify.
           { admit "ez: strict_determinate_at". }
           eexists. eexists.
-          { eapply step_return_1; ss; eauto.
-            econs. inv ML; ss; clarify. hexploit ML0; i; eauto. }
+          { eapply step_return_1; ss; eauto. econs. inv ML; ss; clarify. hexploit ML0; i; eauto. }
           eexists. exists (step_tau _). eexists. left.
-          do 1 (pfold; sim_tau; left).
-          sim_red. unfold assume. grind.
+          do 1 (pfold; sim_tau; left). sim_red. unfold assume. grind.
           pfold. econs 5; ss; auto. i. eapply angelic_step in STEP; des; clarify.
           eexists; split; auto. left.
           do 6 (pfold; sim_tau; left). sim_red.
@@ -750,8 +777,7 @@ Section PROOF.
           do 3 (pfold; sim_tau; left). sim_red.
           pfold. econs 1; eauto.
           { admit "ez: main's wf_retval". }
-          { ss. unfold state_sort. ss. rewrite Any.upcast_downcast.
-            admit "ez: main's wf_retval". }
+          { ss. unfold state_sort. ss. rewrite Any.upcast_downcast. admit "ez: main's wf_retval". }
           { ss. admit "ez: tgt main's wf_retval". }
 
         - destruct WFCONT as [ENV WFCONT]; clarify.
@@ -762,14 +788,12 @@ Section PROOF.
           { eapply step_skip_seq. }
           eexists. exists (step_tau _). eexists. unfold idK. sim_red. left.
 
-          rewrite interp_imp_expr_Var. sim_red.
-          unfold unwrapU. des_ifs.
+          rewrite interp_imp_expr_Var. sim_red. unfold unwrapU. des_ifs.
           2:{ sim_triggerUB. }
           sim_red. pfold. econs 6; clarify.
           { admit "ez: strict_determinate_at". }
           eexists. eexists.
-          { eapply step_return_1; ss; eauto.
-            econs. inv ML; ss; clarify. hexploit ML0; i; eauto. }
+          { eapply step_return_1; ss; eauto. econs. inv ML; ss; clarify. hexploit ML0; i; eauto. }
           eexists. exists (step_tau _). eexists. left.
           do 1 (pfold; sim_tau; left).
           sim_red. unfold assume. grind.
@@ -778,15 +802,12 @@ Section PROOF.
           do 6 (pfold; sim_tau; left). sim_red.
           destruct rstate. ss. destruct l.
           { admit "ez: wf_rstate". }
-          do 5 (pfold; sim_tau; left).
-          rewrite Any.upcast_downcast. ss.
-          do 2 (pfold; sim_tau; left).
+          do 5 (pfold; sim_tau; left). rewrite Any.upcast_downcast. ss. do 2 (pfold; sim_tau; left).
           pfold. econs 4; eauto.
           { admit "ez: strict_determinate_at". }
           eexists. eexists.
           { eapply step_return. }
-          eexists; split; auto. right. eapply CIH.
-          hexploit match_states_intro.
+          eexists; split; auto. right. eapply CIH. hexploit match_states_intro.
           { instantiate (2:=Skip). ss. }
           4:{ eapply WFCONT0. }
           4:{ eapply MCONT. }
@@ -794,7 +815,7 @@ Section PROOF.
           4:{ clarify. }
           4:{ i.
               match goal with
-              | [ H: match_states _ _ _ _ _ ?i0 _ |- match_states _ _ _ _ _ ?i1 _ ] =>
+              | [ H: match_states _ _ _ _ ?i0 _ |- match_states _ _ _ _ ?i1 _ ] =>
                 replace i1 with i0; eauto
               end.
               unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
@@ -806,27 +827,22 @@ Section PROOF.
       { admit "ez: strict_determinate_at". }
       eexists. eexists.
       { eapply step_skip_seq. }
-      eexists. eexists (step_tau _). eexists. sim_red. right. eapply CIH.
-      hexploit match_states_intro; eauto.
+      eexists. eexists (step_tau _). eexists. sim_red. right. eapply CIH. hexploit match_states_intro; eauto.
       all: (destruct s; eauto).
       all: (generalize dependent tcont; induction tcont; i; ss; clarify; eauto).
       all: (eapply compile_stmt_no_Sreturn in CST; clarify).
 
-    - unfold itree_of_cont_stmt, itree_of_imp_cont.
-      rewrite interp_imp_Assign. sim_red.
-      ss. destruct (compile_expr e) eqn:EXP; uo; ss.
-      eapply step_expr; eauto. i.
+    - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Assign. sim_red.
+      ss. destruct (compile_expr e) eqn:EXP; uo; ss. eapply step_expr; eauto. i.
       (* tau point *)
-      unfold ordN in *.
-      do 1 (pfold; sim_tau; left). sim_red.
+      unfold ordN in *. do 1 (pfold; sim_tau; left). sim_red.
       pfold. econs 6; auto.
       { admit "ez? strict_determinate_at". }
       eexists. eexists.
       { eapply step_set. eapply H0. }
       eexists. eexists.
       { eapply step_tau. }
-      eexists. right. apply CIH.
-      hexploit match_states_intro.
+      eexists. right. apply CIH. hexploit match_states_intro.
       { instantiate (2:=Skip). ss. }
       2,3,4,5,6,7:eauto.
       2:{ unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. eauto. }
@@ -841,8 +857,7 @@ Section PROOF.
       { eapply step_seq. }
       eexists. eexists.
       { eapply step_tau. }
-      eexists. right. eapply CIH.
-      hexploit match_states_intro.
+      eexists. right. eapply CIH. hexploit match_states_intro.
       { eapply CSC1. }
       4:{ instantiate (1:=Kseq s0 tcont). ss. destruct s0; eauto. eapply compile_stmt_no_Sreturn in CSC2; clarify. }
       4:{ econs 2; eauto. clarify. }
@@ -850,11 +865,10 @@ Section PROOF.
       { ss. destruct s0; eauto. eapply compile_stmt_no_Sreturn in CSC2; clarify. }
       i.
       match goal with
-      | [ H: match_states _ _ _ _ _ ?it0 _ |- match_states _ _ _ _ _ ?it1 _ ] =>
+      | [ H: match_states _ _ _ _ ?it0 _ |- match_states _ _ _ _ ?it1 _ ] =>
         replace it1 with it0; eauto
       end.
-      unfold itree_of_cont_stmt, itree_of_imp_cont.
-      Red.prw ltac:(_red_gen) 1 0. grind.
+      unfold itree_of_cont_stmt, itree_of_imp_cont. Red.prw ltac:(_red_gen) 1 0. grind.
 
     - unfold itree_of_cont_stmt in *; unfold itree_of_imp_cont in *. rewrite interp_imp_If. sim_red. ss.
       destruct (compile_expr i) eqn:CEXPR; destruct (compile_stmt gm code1) eqn:CCODE1;
@@ -868,14 +882,12 @@ Section PROOF.
         pfold. econs 6; ss.
         { admit "ez: strict_determinate_at". }
         eexists. eexists.
-        { eapply step_ifthenelse; ss.
-          econs; eauto.
+        { eapply step_ifthenelse; ss. econs; eauto.
           + econs. ss.
           + ss. }
         eexists. eexists.
         { eapply step_tau. }
-        eexists. des_ifs. right. eapply CIH.
-        hexploit match_states_intro; eauto. }
+        eexists. des_ifs. right. eapply CIH. hexploit match_states_intro; eauto. }
       { rewrite Z.eqb_neq in CZERO.
         (* tau point *)
         pfold. econs 6; ss.
@@ -888,17 +900,19 @@ Section PROOF.
           - ss. destruct (negb (Int64.eq (to_long n) Int64.zero)) eqn:CONTRA; ss; clarify.
             rewrite negb_false_iff in CONTRA. apply Int64.same_if_eq in CONTRA.
             unfold to_long in CONTRA. unfold Int64.zero in CONTRA.
-            admit "ez: int64 extenttionality with wf-ed values". }
-        eexists. eexists.
-        { eapply step_tau. }
-        eexists. des_ifs. right. eapply CIH.
-        hexploit match_states_intro.
+            unfold intrange_64 in *. unfold modulus_64 in *. unfold wordsize_64 in *.
+            hexploit Int64.unsigned_repr.
+            { unfold Int64.max_unsigned. unfold Int64.modulus, Int64.wordsize, Wordsize_64.wordsize. instantiate (1:=n). nia. }
+            i. rewrite CONTRA in H1. rewrite Int64.unsigned_repr_eq in H1.
+            unfold Int64.modulus, Int64.wordsize, Wordsize_64.wordsize in *.
+            rewrite Zmod_0_l in H1. clarify. }
+        eexists. exists (step_tau _).
+        eexists. des_ifs. right. eapply CIH. hexploit match_states_intro.
         { eapply CCODE1. }
         all: eauto. }
 
     - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_CallFun.
-      ss. uo; des_ifs.
-      des_ifs; sim_red.
+      ss. uo; des_ifs; sim_red.
       { sim_triggerUB. }
       assert (COMP2: compile2 src = OK tgt).
       { unfold compile2. rewrite GMAP. auto. }
@@ -908,12 +922,11 @@ Section PROOF.
       | [ |- paco3 (_sim _ (semantics ?tp) _) _ _ _ _ ] =>
         set (tgtp:=tp) in *
       end.
-      sim_red. eapply step_exprs; eauto.
+      eapply step_exprs; eauto.
       { admit "mid: index". }
       i. sim_red. destruct rstate. destruct l0.
       { ss. admit "mid?: r_state is nil". }
-      ss. grind. unfold ordN in *.
-      do 3 (pfold; sim_tau; left). sim_red.
+      ss. grind. unfold ordN in *. do 3 (pfold; sim_tau; left). sim_red.
       match goal with
       | [ |- paco3 _ _ _ (r0 <- unwrapU (?f);; _) _ ] => destruct f eqn:FSEM; ss
       end.
@@ -971,8 +984,7 @@ Section PROOF.
           rewrite Globalenvs.Genv.find_funct_ptr_iff. ss. eapply TGTGFIND.
         - ss. }
 
-      eexists. exists (step_tau _).
-      eexists. left.
+      eexists. exists (step_tau _). eexists. left.
       pfold. econs 4.
       { admit "ez: strict_determinate_at". }
 
@@ -990,18 +1002,17 @@ Section PROOF.
       { admit "ez: strict_determinate_at". }
       eexists. eexists.
       { eapply step_seq. }
-      eexists; split; auto. right.
-      eapply CIH.
+      eexists; split; auto. right. eapply CIH.
       match goal with
-      | [ |- match_states _ _ ?_ge _ _ _ _ ] =>
+      | [ |- match_states _ _ ?_ge _ _ _ ] =>
         set (ge:=_ge) in *
       end.
       match goal with
-      | [ |- match_states _ _ _ ?_ms _ _ _ ] =>
+      | [ |- match_states _ _ _ ?_ms _ _ ] =>
         set (ms:=_ms) in *
       end.
       match goal with
-      | [ |- match_states _ _ _ _ _ (?i) _] =>
+      | [ |- match_states _ _ _ _ (?i) _] =>
         replace i with
     (` r0 : r_state * p_state * (lenv * val) <-
      EventsL.interp_Es (prog ms)
@@ -1026,7 +1037,7 @@ Section PROOF.
       2:{ clarify. }
       2:{ i.
           match goal with
-          | [ H1: match_states _ _ _ _ _ ?i0 _ |- match_states _ _ _ _ _ ?i1 _ ] =>
+          | [ H1: match_states _ _ _ _ ?i0 _ |- match_states _ _ _ _ ?i1 _ ] =>
             replace i1 with i0; eauto
           end.
           unfold itree_of_cont_stmt, itree_of_imp_cont. unfold idK. grind. }
@@ -1060,12 +1071,9 @@ Section PROOF.
       | [ |- paco3 (_sim _ (semantics ?_tgtp) _) _ _ _ _ ] =>
         set (tgtp:=_tgtp) in *
       end.
-      hexploit in_tgt_prog_defs_efuns; eauto.
-      i. rename H into INTGT.
-      hexploit Genv.find_symbol_exists; eauto.
-      i. des. rename H into FINDSYM.
-      hexploit tgt_genv_find_def_by_blk; eauto.
-      i. rename H into FINDDEF.
+      hexploit in_tgt_prog_defs_efuns; eauto. i. rename H into INTGT.
+      hexploit Genv.find_symbol_exists; eauto. i. des. rename H into FINDSYM.
+      hexploit tgt_genv_find_def_by_blk; eauto. i. rename H into FINDDEF.
 
       sim_red. eapply step_exprs; eauto.
       { admit "ez: index". }
@@ -1083,31 +1091,38 @@ Section PROOF.
       unfold ordN in *. eexists; split; auto. left.
 
       (* System call semantics *)
-      assert (TGTSYSSEM: exists tgt_ev tgt_rv,
-                 external_functions_sem f (make_signature n) (Genv.globalenv tgtp) trvs tm [tgt_ev] tgt_rv tm).
-      { admit "ez: tgt syscall sem". }
-      des.
-      assert (SRCSYSSEM: exists sysrv, syscall_sem (event_sys f rvs sysrv)).
-      { admit "ez: src syscall sem". }
-      des.
-      assert (MATCHSYSSEM: match_event tgt_ev (event_sys f rvs sysrv)).
-      { admit "ez: src syscall sem matching tgt". }
-      inv MATCHSYSSEM.
+      pose (syscall_exists f (make_signature n) (Genv.globalenv tgtp) trvs tm) as TGTSYSSEM. des.
+      hexploit syscall_refines; eauto. i. ss. des. clarify.
+      (* assert (SRCSYSSEM: exists sysrv, syscall_sem (event_sys f rvs sysrv)). *)
+      (* { admit "ez: src syscall sem". } *)
+      (* des. *)
+      (* assert (MATCHSYSSEM: match_event tgt_ev (event_sys f rvs sysrv)). *)
+      (* { admit "ez: src syscall sem matching tgt". } *)
+      (* inv MATCHSYSSEM. *)
+
+      assert (SRCARGS: rvs = (List.map (Vint <*> Int64.unsigned) args_int)).
+      { depgen ARGS. depgen H. clear. depgen rvs. induction args_int; i; ss; clarify.
+        - apply map_eq_nil in ARGS. auto.
+        - destruct rvs; ss; clarify. inv H. f_equal; ss; eauto.
+          unfold map_val in H2. des_ifs. unfold to_long. unfold compose.
+          f_equal. hexploit Int64.unsigned_repr; eauto.
+          unfold wf_val in H4. unfold intrange_64 in H4. unfold modulus_64 in H4. unfold wordsize_64 in H4.
+          unfold Int64.max_unsigned. unfold Int64.modulus. unfold Int64.wordsize. unfold Wordsize_64.wordsize. nia. }
 
       pfold. econs 2; auto.
-      { eexists. eexists.
-        eapply step_external_function. ss.
-        apply TGTSYSSEM. }
+      { eexists. eexists. eapply step_external_function. ss. eauto. }
       i. eexists. eexists. eexists.
       { hexploit step_syscall.
-        { apply SRCSYSSEM. }
+        { eauto. }
         { instantiate (1:=top1). ss. }
         i. ss. rename H1 into SYSSTEP.
         match goal with
         | [ SYSSTEP: step ?i0 _ _ |- step ?i1 _ _ ] =>
           replace i1 with i0; eauto
         end.
-        rewrite bind_trigger. grind. }
+        rewrite bind_trigger.
+        ss.
+        grind. }
 
       inv STEP. ss. rename H7 into TGTSYSSEM2.
       assert (TGTSYSSEM_UNIQUE: forall tfn tfsig tgenv targs tm tev1 trv1 tm1 tev2 trv2 tm2,
