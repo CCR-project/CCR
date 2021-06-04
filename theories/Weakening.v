@@ -80,21 +80,21 @@ Section PROOF.
                              end. (* why? *)
     inv fsp_weaker. ss. subst.
 
-    assert (SELFSIM: forall R o fr st_src st_tgt
+    assert (SELFSIM: forall R o fr st_src st_tgt ctx
                             (itr: itree (hCallE +' pE +' eventE) R)
                             (WF: wf (st_src, st_tgt))
                             (GWF: @URA.wf (GRA.to_URA Σ) (@URA.add (GRA.to_URA Σ) (fst st_src) fr)),
-               gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) bot6 bot6 R R (liftRR eq) 1 (st_src, fr, interp_hCallE_tgt stb_src o itr) (st_tgt, fr, interp_hCallE_tgt stb_tgt o itr)).
+               gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) bot6 bot6 _ _ (liftRR eq) 1 (st_src, fr, interp_hCallE_tgt stb_src o itr ctx) (st_tgt, fr, interp_hCallE_tgt stb_tgt o itr ctx)).
     { Local Transparent interp_hCallE_tgt.
       unfold interp_hCallE_tgt. gcofix CIH. i. ides itr.
       { repeat interp_red2.
-        mstep. eapply sim_itree_ret; ss. }
+        mstep. ired. eapply sim_itree_ret; ss. }
       { repeat interp_red.
-        mstep. eapply sim_itree_tau; ss.
+        mstep. ired. eapply sim_itree_tau; ss.
         gbase. eapply CIH; eauto. }
       rewrite <- bind_trigger. destruct e as [|[|]]; ss.
-      { destruct h. repeat interp_red2. cbn.
-        unfold unwrapN, triggerNB. rewrite ! bind_bind.
+      { destruct h. repeat interp_red2. ired. cbn.
+        unfold unwrapN, triggerNB.
         destruct (alist_find fn0 stb_tgt) eqn:EQ.
         { eapply stb_stronger in EQ. des. inv WEAKER.
           rewrite FINDSRC. rewrite ! bind_ret_l. rewrite ! bind_bind.
@@ -109,9 +109,7 @@ Section PROOF.
               intros (mr0, fr0). exists (mr0, fr0). exists 0.
               rewrite ! bind_bind.
               mstep. eapply sim_itree_mget_both.
-              rewrite ! bind_bind.
               mstep. eapply sim_itree_fget_both.
-              rewrite ! bind_bind.
               mstep. eapply sim_itree_choose_both. i. split; ss. exists 0.
               rewrite ! bind_ret_l.
               mstep. eapply sim_itree_fput_both.
@@ -157,6 +155,7 @@ Section PROOF.
               mstep. eapply sim_itree_fget_both.
               mstep. eapply sim_itree_fput_both.
               mstep. eapply sim_itree_take_both. i. exists x_src1. exists 0.
+              mstep. eapply sim_itree_take_both. i. exists x_src2. exists 0.
               rewrite ! bind_bind.
               mstep. eapply sim_itree_mget_both.
               rewrite ! bind_bind.
@@ -165,7 +164,9 @@ Section PROOF.
               mstep. eapply sim_itree_take_both. i. split; auto. exists 0.
               rewrite ! bind_ret_l.
               mstep. eapply sim_itree_take_both. i. split; eauto.
-              { admit "fix it after changin hcall".
+              {  eauto.
+
+admit "fix it after changin hcall".
                 (* exploit POST; eauto. *)
                 (* { erewrite URA.unit_idl. *)
                 (*   erewrite URA.add_comm in x_src2. eapply URA.wf_mon in x_src2. *)
