@@ -859,20 +859,21 @@ Section CANCEL.
         (x0 <- EventsL.interp_Es (ModSemL.prog ms_mid) (transl_all "Main" (interp_hCallE_mid stb ord_top (trigger (hCall false "main" ([]: list val)↑)))) st_midr0;;
          Ret (snd x0)); cycle 1.
     { admit "hard -- by transitivity". }
-    replace (x <- EventsL.interp_Es (ModSemL.prog ms_tgt) (ModSemL.prog ms_tgt (Call "main" (Any.upcast []))) st_tgt0;; Ret (snd x))
-      with
-        (x0 <- EventsL.interp_Es (ModSemL.prog ms_tgt) (transl_all "Main" (interp_hCallE_tgt stb ord_top (trigger (hCall false "main" ([]: list val)↑))))
-                         st_tgtl0;; Ret (snd x0)); cycle 1.
-    { admit "hard -- by transitivity". }
-    guclo bindC_spec.
-    eapply bindR_intro.
-    - gfinal. right. fold simg. eapply adequacy_type_aux; ss.
-    - ii. ss. des_ifs. des; ss. clarify. steps.
-  Unshelve.
-    revert WFR. i. (*** dummy action that keeps "WFR" as a requirement; TODO: remove it later ! ! ***)
-    all: ss.
+    admit "".
+  (*   replace (x <- EventsL.interp_Es (ModSemL.prog ms_tgt) (ModSemL.prog ms_tgt (Call "main" (Any.upcast []))) st_tgt0;; Ret (snd x)) *)
+  (*     with *)
+  (*       (x0 <- EventsL.interp_Es (ModSemL.prog ms_tgt) (transl_all "Main" (interp_hCallE_tgt stb ord_top (trigger (hCall false "main" ([]: list val)↑)))) *)
+  (*                        st_tgtl0;; Ret (snd x0)); cycle 1. *)
+  (*   { admit "hard -- by transitivity". } *)
+  (*   guclo bindC_spec. *)
+  (*   eapply bindR_intro. *)
+  (*   - gfinal. right. fold simg. eapply adequacy_type_aux; ss. *)
+  (*   - ii. ss. des_ifs. des; ss. clarify. steps. *)
+  (* Unshelve. *)
+  (*   revert WFR. i. (*** dummy action that keeps "WFR" as a requirement; TODO: remove it later ! ! ***) *)
+  (*   all: ss. *)
     all: try (by apply Ord.O).
     all: admit "ez".
-  Qed.
+  Admitted.
 
 End CANCEL.
