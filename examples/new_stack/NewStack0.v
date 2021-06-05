@@ -19,64 +19,72 @@ Section PROOF.
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG memRA Σ}.
 
-(***
-(Replaced asterisk with # because of coq-mode's parsing)
-int pop(struct Node## llref) {
-  if(#llref) {
-    int v = (#llref)->val;
-    struct Node* next = (#llref)->next;
-    free(#llref);
-    (#llref) = next;
-    return v;
-  }
-  return -1;
-}
-***)
+  (* def new(): Ptr *)
+  (*   Ptr stk = alloc(1); *)
+  (*   return stk *)
+
+  Definition newF: list val -> itree Es val :=
+    fun varg =>
+      _ <- (pargs [] varg)?;;
+      (ccall "alloc" 1)
+  .
+
+  (* def pop(Ptr stk): Int64 *)
+  (*   let hd := load(stk, 0); *)
+  (*   if(ptrcmp(hd, NULL) != 0) { *)
+  (*     let v    := load(hd, 0); *)
+  (*     let next := load(hd, 1); *)
+  (*     free(hd, 2); *)
+  (*     store(stk, 0, next); *)
+  (*     debug(false, v); *)
+  (*     return v *)
+  (*   } *)
+  (*   debug(false, -1); *)
+  (*   return -1 *)
 
   Definition popF: list val -> itree Es val :=
     fun varg =>
-      `llref: val <- (pargs [Tuntyped] varg)?;;
-      `ll: val    <- (ccall "load" [llref]);;
-      `b: val     <- (ccall "cmp"  [ll; Vnullptr]);;
+      `stk: val <- (pargs [Tuntyped] varg)?;;
+      `hd: val  <- (ccall "load" [stk]);;
+      `b: val   <- (ccall "cmp"  [hd; Vnullptr]);;
       if is_zero b
       then (
-          '(blk, ofs) <- (parg Tptr ll)?;;
-          let addr_val  := Vptr blk ofs in
-          let addr_next := Vptr blk (ofs + 1) in
-          `v: val    <- (ccall "load"  [addr_val]);;
-          (* `_: val    <- (ccall "debug" [v]);; *)
-          `next: val <- (ccall "load"  [addr_next]);;
-          `_: val    <- (ccall "free"  [addr_val]);;
-          `_: val    <- (ccall "free"  [addr_next]);; (*** change "free"s specification ***)
-          `_: val    <- (ccall "store" [llref; next]);;
+          let addr_val    := hd in
+          `addr_next: val <- (vadd hd (Vint 1))?;;
+          `v: val         <- (ccall "load"  [addr_val]);;
+          `next: val      <- (ccall "load"  [addr_next]);;
+          `_: val         <- (ccall "free"  [addr_val]);;
+          `_: val         <- (ccall "free"  [addr_next]);;
+          `_: val         <- (ccall "store" [stk; next]);;
+          `_: val         <- (ccall "debug" [Vint 0; v]);;
           Ret v
         )
       else Ret (Vint (- 1))
   .
 
-(* struct Node* push(struct Node* ll, int x) { *)
-(*   struct Node* new_node = malloc(sizeof(struct Node)); *)
-(*   new_node->val = x; *)
-(*   new_node->next = ll; *)
-(*   printf("[DEBUG]: "); *)
-(*   print_all(new_node); *)
-(*   return new_node; *)
-(* } *)
+  (* def push(Ptr stk, Int64 n): Unit *)
+  (*   let new_node := alloc(2); *)
+  (*   store(new_node, 0, n); *)
+  (*   let hd := load(stk, 0); *)
+  (*   store(new_node, 1, hd); *)
+  (*   store(stk, 0, new_node); *)
+  (*   debug(true, n); *)
+  (*   return () *)
 
   Definition pushF: list val -> itree Es val :=
     fun varg =>
-      '(node, v)     <- (pargs [Tuntyped; Tuntyped] varg)?;;
-      `_: val        <- (ccall "debug" [v]);;
+      '(stk, v)      <- (pargs [Tuntyped; Tuntyped] varg)?;;
       `new_node: val <- (ccall "alloc" [Vint 2]);;
-      addr_v         <- (vadd new_node (Vint 0))?;;
+      let addr_val   := new_node in
       addr_next      <- (vadd new_node (Vint 1))?;;
-      `_: val        <- (ccall "store" [addr_v;    v]);;
-      `vret: val     <- (ccall "store" [addr_next; node]);;
-      Ret addr_v
+      `_: val        <- (ccall "store" [addr_val;    v]);;
+      `vret: val     <- (ccall "store" [addr_next; stk]);;
+      `_: val        <- (ccall "debug" [v]);;
+      Ret addr_val
   .
 
   Definition StackSem: ModSem.t := {|
-    ModSem.fnsems := [("pop", cfun popF); ("push", cfun pushF)];
+    ModSem.fnsems := [("new", cfun popF); ("pop", cfun popF); ("push", cfun pushF)];
     ModSem.mn := "Stack";
     ModSem.initial_mr := ε;
     ModSem.initial_st := tt↑;
