@@ -73,13 +73,13 @@ Section AUX.
         stb itr_tgt
 
         (FUEL: (n1 + 11 < n0)%ord)
-        (ftsp: ftspec (unit + list val) val)
-        (FIND: alist_find fn stb = Some (mk_fspec ftsp))
+        (ftsp: ftspec unit unit)
+        (FIND: alist_find fn stb = Some (KModSem.disclose ftsp))
         (NEXT: (next < at_most)%ord)
 
         (POST: gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ eqr n1
                       (mr_src0, mp_src0, fr_src0,
-                       (HoareCall true o (mk_fspec ftsp) fn (inl tt));;;
+                       (HoareCall true o (KModSem.disclose ftsp) fn (inl tt));;;
                                  tau;; tau;; (interp_hCallE_tgt stb o (KModSem.transl_itr_tgt (_APCK next)))
                                                >>= k_src)
                       ((mrs_tgt, frs_tgt),
@@ -112,6 +112,37 @@ Section AUX.
     f_equal. grind. ired_both. grind. ired_both. grind.
   Qed.
 
+  Lemma APCK_stop_clo
+        (n1: Ord.t)
+
+        (o: ord)
+        r rg (n0: Ord.t) mr_src0 mp_src0 fr_src0
+        mrs_tgt frs_tgt k_src
+        (at_most: Ord.t)
+        (wf: (Σ * Any.t) * (Σ * Any.t) -> Prop)
+        (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
+        stb itr_tgt
+
+        (FUEL: (n1 + 2 < n0)%ord)
+
+        (POST: gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ eqr n1
+                      (mr_src0, mp_src0, fr_src0, k_src ())
+                      ((mrs_tgt, frs_tgt),
+                       itr_tgt))
+    :
+      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ eqr n0
+              (mr_src0, mp_src0, fr_src0,
+              (interp_hCallE_tgt stb o (KModSem.transl_itr_tgt (_APCK at_most))) >>= k_src)
+             ((mrs_tgt, frs_tgt),
+              itr_tgt).
+  Proof.
+    rewrite unfold_APCK. steps. force_l. exists true.
+    ired_both; _step; [by eauto with ord_step|].
+    ired_both; _step; [by eauto with ord_step|].
+    steps.
+    guclo lordC_spec. econs; et. { rewrite OrdArith.add_O_r. refl. }
+  Qed.
+
 End AUX.
 
 Ltac kstart _at_most :=
@@ -133,6 +164,10 @@ Ltac kcatch :=
   | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, _) (_, trigger (Call ?fn _) >>= _)) ] =>
     kstep fn
   end.
+
+Ltac kstop :=
+  eapply APCK_stop_clo;
+  [(try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r; eapply Nat.lt_succ_diag_r)]))|].
 
 
 
@@ -176,30 +211,20 @@ Section SIMMODSEM.
     { unfold clientF. init. harg. destruct varg_src.
       { ss. des_ifs; mDesAll; ss. }
       destruct x; mDesAll; ss. des; subst.
-      unfold clientBody. steps. kstart 1.
+      unfold clientBody. steps. kstart 2.
 
-  eapply (@APCK_step_clo _ "alloc");
-  [(try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r; eapply Nat.lt_succ_diag_r)]))|
-   |
-   (eapply OrdArith.lt_from_nat; eapply Nat.lt_succ_diag_r)|
-  ].
-  { stb_tac. refl. }
-      kcatch.
-
-      force_l. exists "alloc". steps. force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
-      hcall _ (Some _) _ with ""; ss; et.
+      kcatch. hcall _ (Some _) _ with ""; ss; et.
       { iModIntro. iSplitR; ss. iPureIntro. esplits; et. instantiate (1:=1%nat). ss. }
       { ss. }
       steps. mDesAll. subst. rewrite Any.upcast_downcast in *. clarify.
 
-      force_l. exists "store". steps. force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
-      hcall _ (Some (_, _, _)) _ with "A"; ss; et.
+      kcatch. hcall _ (Some (_, _, _)) _ with "A"; ss; et.
       { iModIntro. iSplitR; ss. iSplitL; ss.
         - iExists _. iSplitL; ss. iSplitR; ss.
         - ss.
       }
       { ss. }
-      steps.
+      steps. kstop.
 
       force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
       hcall _ _ _ with ""; ss; et.
@@ -207,14 +232,14 @@ Section SIMMODSEM.
       { ss. }
       steps. mDesAll. subst.
 
-      force_l. exists "load". steps. force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
-      hcall _ (Some (_, _, _)) _ with "POST"; ss; et.
+      kstart 1.
+      kcatch. hcall _ (Some (_, _, _)) _ with "POST"; ss; et.
       { iModIntro. iSplitR; ss. iSplitL; ss.
         - iSplitL; ss. iSplitR; ss.
         - ss.
       }
       { ss. }
-      steps. mDesAll. subst. rewrite Any.upcast_downcast in *. clarify.
+      steps. kstop. mDesAll. subst. rewrite Any.upcast_downcast in *. clarify. steps.
 
       hret _; ss.
     }
