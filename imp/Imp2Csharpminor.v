@@ -24,8 +24,6 @@ Set Implicit Arguments.
 
 Parameter s2p: string -> ident.
 
-Definition to_long := Int64.repr.
-
 Lemma option_dec {T} :
   forall x : option T,
     {match x with | Some _ => True | None => False end} +
@@ -61,7 +59,7 @@ Section Compile.
       Some (Evar (s2p x))
     | Lit v =>
       match v with
-      | Vint z => Some (Econst (Olongconst (to_long z)))
+      | Vint z => Some (Econst (Olongconst (Int64.repr z)))
       | _ => None
       end
     | Plus a b =>
@@ -132,7 +130,7 @@ Section Compile.
     let gv := (mkglobvar () [] false false) in List.map (fun id => (s2p id, Gvar gv)) src.
 
   Definition compile_iVars src : tgt_gdefs2 :=
-    List.map (fun '(id, z) => (s2p id, Gvar (mkglobvar () [Init_int64 (to_long z)] false false))) src.
+    List.map (fun '(id, z) => (s2p id, Gvar (mkglobvar () [Init_int64 (Int64.repr z)] false false))) src.
 
   Definition compile_eFuns (src : extFuns) : tgt_gdefs2 :=
     List.map (fun '(id, a) => (s2p id, Gfun (External (EF_external id (make_signature a))))) src.
@@ -515,7 +513,7 @@ Section Beh.
 
   Inductive match_val : eventval -> val -> Prop :=
   | match_val_intro :
-      forall v, match_val (EVlong v) (Vint v.(Int64.intval)).
+      forall v, match_val (EVlong v) (Vint (Int64.signed v)).
 
   (* Fixpoint map_vals (vlist : list eventval) acc : option (list val) := *)
   (*   match vlist with *)

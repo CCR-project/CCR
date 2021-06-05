@@ -123,9 +123,9 @@ Section MATCH.
 
   Definition map_val (v : Universe.val) : Values.val :=
     match v with
-    | Vint z => Values.Vlong (to_long z)
+    | Vint z => Values.Vlong (Int64.repr z)
     | Vptr blk ofs =>
-      Values.Vptr (map_blk blk) (Ptrofs.repr (map_ofs ofs))
+      Values.Vptr (map_blk blk) (Ptrofs.of_int64 (Int64.repr (map_ofs ofs)))
     | Vundef => Values.Vundef
     end.
 
@@ -547,9 +547,37 @@ Section PROOF.
 
   Import ModSemL.
 
-  Context `{Σ: GRA.t}.
+  Definition modrange_63 (n: Z) := (- 1 < n < two_power_nat 63)%Z.
 
-  Definition ordN : nat -> nat -> Prop := fun a b => True.
+  Lemma int_to_mod_range
+        (n : Z)
+    :
+      intrange_64 n -> modrange_64 (n mod modulus_64).
+  Proof.
+    i. unfold_intrange_64. unfold_modrange_64. set (two_power_nat 64) as P in *. des. split.
+    - hexploit Z.mod_pos_bound.
+      { instantiate (1:=P). subst P. pose (Coqlib.two_power_nat_pos 64). nia. }
+      instantiate (1:=n). i. nia.
+    - destruct (Z_lt_le_dec n 0).
+      + clear H0. rewrite <- Z.opp_pos_neg in l. rewrite <- Z.opp_involutive in H. rewrite <- (Z.opp_involutive n).
+        apply Zaux.Zopp_le_cancel in H. remember (- n)%Z as m. clear Heqm. clear n.
+        assert (GTZERO: (m mod P > 0)%Z).
+        { rewrite Z.mod_small; try nia. split; try nia.
+          subst P. rewrite two_power_nat_S in *. remember (two_power_nat 63) as P. clear HeqP.
+          assert (2 * P / 2 = P)%Z.
+          { replace (2 * P)%Z with (P * 2)%Z by nia. eapply Z_div_mult. nia. }
+          rewrite H0 in H. nia. }
+        rewrite Z_mod_nz_opp_full.
+        { rewrite <- Z.lt_sub_pos. nia. }
+        nia.
+      + clear H. apply Z.mod_pos_bound. pose (Coqlib.two_power_nat_pos 64). nia.
+  Qed.
+
+  Ltac unfold_Int64_modulus := unfold Int64.modulus, Int64.wordsize, Wordsize_64.wordsize in *.
+  Ltac unfold_Int64_max_signed := unfold Int64.max_signed, Int64.half_modulus in *; unfold_Int64_modulus.
+  Ltac unfold_Int64_min_signed := unfold Int64.min_signed, Int64.half_modulus in *; unfold_Int64_modulus.
+  Ltac unfold_Ptrofs_modulus := unfold Ptrofs.modulus, Ptrofs.wordsize, Wordsize_Ptrofs.wordsize in *.
+  Ltac unfold_Ptrofs_half_modulus := unfold Ptrofs.half_modulus in *; unfold_Ptrofs_modulus.
 
   Lemma map_val_vadd_comm
         tlof a b v
@@ -560,19 +588,76 @@ Section PROOF.
     :
       Values.Val.addl (map_val tlof a) (map_val tlof b) = map_val tlof v.
   Proof.
-    destruct a; destruct b; ss; clarify; unfold to_long; ss.
-    - unfold to_long. ss. repeat f_equal. unfold Int64.add. f_equal.
-      rewrite! Int64.unsigned_repr_eq.
-      unfold intrange_64 in *. unfold modulus_64 in *. unfold Int64.modulus.
-      unfold wordsize_64, Int64.wordsize in *. unfold Wordsize_64.wordsize.
-      rewrite! Z.mod_small; auto; try nia.
-    - uo; des_ifs. unfold scale_int in *. des_ifs. ss. unfold Ptrofs.add; ss.
-      unfold map_ofs in *. unfold map_blk in *.
-      unfold intrange_64 in *. unfold modulus_64 in *. unfold wordsize_64 in *.
-      do 2 f_equal. unfold Ptrofs.of_int64. rewrite Int64.unsigned_repr_eq. rewrite! Ptrofs.unsigned_repr_eq.
-      unfold Ptrofs.modulus. unfold Ptrofs.wordsize. unfold Wordsize_Ptrofs.wordsize. des_ifs.
-      unfold Int64.modulus. unfold Int64.wordsize. unfold Wordsize_64.wordsize.
-      rewrite Z.mod_mod; try nia. rewrite Z.mod_small.
+    destruct a; destruct b; ss; clarify.
+    - ss. repeat f_equal. rewrite Int64.add_signed. f_equal. unfold_intrange_64.
+      rewrite Int64.signed_repr; try (rewrite Int64.signed_repr); unfold_Int64_max_signed; unfold_Int64_min_signed; try nia.
+    - uo; des_ifs. unfold scale_int in *. des_ifs. ss. unfold Ptrofs.of_int64 in *.
+      apply int_to_mod_range in WFA. apply int_to_mod_range in WFB. apply int_to_mod_range in WFV.
+      unfold map_ofs in *. unfold map_blk in *. unfold_modrange_64. unfold scale_ofs in *.
+      rewrite Ptrofs.add_unsigned. do 2 f_equal.
+      rewrite Ptrofs.unsigned_repr.
+      2:{ unfold Ptrofs.max_unsigned. unfold_Ptrofs_modulus. des_ifs.
+          pose (Int64.unsigned_range). unfold_Int64_modulus. specialize a with (i:=(Int64.repr (8 * ofs))). nia. }
+      rewrite Ptrofs.unsigned_repr.
+      2:{ unfold Ptrofs.max_unsigned. unfold_Ptrofs_modulus. des_ifs.
+          pose (Int64.unsigned_range). unfold_Int64_modulus. specialize a with (i:=(Int64.repr n)). nia. }
+      rewrite! Int64.unsigned_repr_eq. unfold_Int64_modulus.
+      rewrite Z.mul_add_distr_l. rewrite Zplus_mod. rewrite Z.add_mod. rewrite! Z.mod_mod.
+      2,3,4: unfold two_power_nat; nia.
+      unfold Z.divide in d. des. clarify. rewrite Z_div_mult in *; try nia.
+      assert ((8 * z)%Z = (z * 8)%Z); try nia. rewrite <- H in *; clear H.
+      sym. rewrite Z.mod_small; try nia. unfold_Int64_modulus.
+      rewrite Z.mul_add_distr_l in WFV0. split.
+      + apply Ztac.add_le.
+        * hexploit Z.mod_pos_bound.
+          { instantiate (1:=(two_power_nat 64)). pose (Coqlib.two_power_nat_pos 64). nia. }
+          i. eapply H.
+        * hexploit Z.mod_pos_bound.
+          { instantiate (1:=(two_power_nat 64)). pose (Coqlib.two_power_nat_pos 64). nia. }
+          i. eapply H.
+      + match goal with
+          | [ |- ?a + _ < ?c ] => assert (a < 
+
+
+Z.mod_opp_opp: forall a b : Z, b <> 0%Z -> (- a mod - b)%Z = (- (a mod b))%Z
+Z_mod_nz_opp_full: forall a b : Z, (a mod b)%Z <> 0%Z -> (- a mod b)%Z = (b - a mod b)%Z
+Z_mod_nz_opp_r: forall a b : Z, (a mod b)%Z <> 0%Z -> (a mod - b)%Z = (a mod b - b)%Z
+
+
+
+
+
+
+
+
+                                        
+        * 
+Z.mod_pos_bound
+      Z.add_mod
+      Z.mod_mod  
+      2:{ unfold Ptrofs.max_unsigned. unfold_Ptrofs_modulus. des_ifs. nia. }
+      rewrite Ptrofs.unsigned_repr.
+      2:{ unfold Ptrofs.max_unsigned. unfold_Ptrofs_modulus. des_ifs.
+          pose (Int64.unsigned_range). unfold_Int64_modulus. specialize a with (i:=(Int64.repr n)). nia. }
+      pose (Int64.unsigned_signed) as IUS. specialize IUS with (n:=(Int64.repr n)).
+      des_ifs.
+      + rewrite IUS. clear IUS. unfold Int64.lt in Heq0. des_ifs.
+        
+          rewrite Int64.unsigned_repr_eq. 
+      
+
+Z.mod_small_iff: forall a b : Z, b <> 0%Z -> (a mod b)%Z = a <-> (0 <= a < b)%Z \/ (b < a <= 0)%Z
+
+      do 2 f_equal. unfold Ptrofs.of_int64. rewrite Int64.unsigned_repr_eq. rewrite Ptrofs.signed_repr_eq.
+      unfold_Ptrofs_modulus. des_ifs; unfold_Int64_modulus.
+      + unfold_Ptrofs_half_modulus. des_ifs. rewrite Ptrofs.signed_repr.
+        * rewrite Z.mod_small; try nia. rewrite Z.mod_small.
+          { unfold Z.divide in d. des; clarify; ss. rewrite Z_div_mult; nia. }
+          
+
+
+
+        rewrite Z.mod_mod; try nia. rewrite Z.mod_small.
       + rewrite Z.mod_small; try nia. unfold Z.divide in d. des; clarify; ss. rewrite Z_div_mult; nia.
       + unfold scale_ofs in *. nia.
     - uo; des_ifs. unfold scale_int in *. des_ifs. ss. unfold Ptrofs.add; ss.
@@ -586,11 +671,15 @@ Section PROOF.
       + unfold scale_ofs in *. nia.
   Qed.
 
+  Context `{Σ: GRA.t}.
+
   Ltac sim_red := Red.prw ltac:(_red_gen) 2 0.
   Ltac sim_tau := (try sim_red); econs 3; ss; clarify; eexists; exists (step_tau _); eexists; split; auto.
 
   Ltac sim_triggerUB := pfold; ss; unfold triggerUB; (try sim_red); econs 5; i; ss; auto;
                         dependent destruction STEP; try (irw in x; clarify; fail).
+
+  Definition ordN : nat -> nat -> Prop := fun a b => True.
 
   Lemma step_expr
         e te tlof
@@ -715,8 +804,8 @@ Section PROOF.
       exists args_int ret_int ev,
         (<<ARGS: args_tgt = (List.map Values.Vlong args_int)>>) /\
         (<<RET: ret_tgt = (Values.Vlong ret_int)>>) /\
-        let args_src := List.map (Vint ∘ Int64.unsigned) args_int in
-        let ret_src := (Vint ∘ Int64.unsigned) ret_int in
+        let args_src := List.map (Vint ∘ Int64.signed) args_int in
+        let ret_src := (Vint ∘ Int64.signed) ret_int in
         (<<EV: tr = [ev] /\ decompile_event ev = Some (event_sys fn args_src ret_src)>>)
         /\ (<<SRC: syscall_sem (event_sys fn args_src ret_src)>>)
         /\ (<<MEM: m0 = m1>>)
@@ -1100,43 +1189,57 @@ Section PROOF.
       (* { admit "ez: src syscall sem matching tgt". } *)
       (* inv MATCHSYSSEM. *)
 
-      assert (SRCARGS: rvs = (List.map (Vint <*> Int64.unsigned) args_int)).
-      { depgen ARGS. depgen H. clear. depgen rvs. induction args_int; i; ss; clarify.
-        - apply map_eq_nil in ARGS. auto.
-        - destruct rvs; ss; clarify. inv H. f_equal; ss; eauto.
-          unfold map_val in H2. des_ifs. unfold to_long. unfold compose.
-          f_equal. hexploit Int64.unsigned_repr; eauto.
-          unfold wf_val in H4. unfold intrange_64 in H4. unfold modulus_64 in H4. unfold wordsize_64 in H4.
-          unfold Int64.max_unsigned. unfold Int64.modulus. unfold Int64.wordsize. unfold Wordsize_64.wordsize. nia. }
+      (* assert (SRCARGS: rvs = (List.map (Vint <*> Int64.unsigned) args_int)). *)
+      (* { depgen ARGS. depgen H. clear. depgen rvs. induction args_int; i; ss; clarify. *)
+      (*   - apply map_eq_nil in ARGS. auto. *)
+      (*   - destruct rvs; ss; clarify. inv H. f_equal; ss; eauto. *)
+      (*     unfold map_val in H2. des_ifs. unfold to_long. unfold compose. *)
+      (*     f_equal. hexploit Int64.unsigned_repr; eauto. *)
+      (*     unfold wf_val in H4. unfold intrange_64 in H4. unfold modulus_64 in H4. unfold wordsize_64 in H4. *)
+      (*     unfold Int64.max_unsigned. unfold Int64.modulus. unfold Int64.wordsize. unfold Wordsize_64.wordsize. nia. } *)
 
       pfold. econs 2; auto.
       { eexists. eexists. eapply step_external_function. ss. eauto. }
-      i. eexists. eexists. eexists.
+      clear TGT EV0 SRC ARGS ev ret_int args_int. rename H into WFARGS. rename H0 into TGTARGS.
+      i. inv STEP. ss. rename H5 into TGT.
+      hexploit syscall_refines; eauto. i; ss; des; clarify.
+
+      assert (SRCARGS: rvs = (List.map (Vint <*> Int64.signed) args_int)).
+      { depgen ARGS. depgen WFARGS. clear. depgen rvs. induction args_int; i; ss; clarify.
+        - apply map_eq_nil in ARGS. auto.
+        - destruct rvs; ss; clarify. inv WFARGS. f_equal; ss; eauto.
+          unfold map_val in H1. des_ifs. unfold to_long. unfold compose.
+          f_equal. hexploit Int64.signed_repr; eauto.
+          unfold wf_val in H3. unfold intrange_64 in H3. unfold modulus_64 in H3. unfold wordsize_64 in H3.
+          unfold Int64.max_unsigned. unfold Int64.modulus. unfold Int64.wordsize. unfold Wordsize_64.wordsize. nia. }
+
+      eexists. eexists. eexists.
       { hexploit step_syscall.
         { eauto. }
         { instantiate (1:=top1). ss. }
-        i. ss. rename H1 into SYSSTEP.
+        i. rename H into SYSSTEP.
         match goal with
         | [ SYSSTEP: step ?i0 _ _ |- step ?i1 _ _ ] =>
           replace i1 with i0; eauto
         end.
-        rewrite bind_trigger.
-        ss.
-        grind. }
+        rewrite bind_trigger. ss. grind. }
 
-      inv STEP. ss. rename H7 into TGTSYSSEM2.
-      assert (TGTSYSSEM_UNIQUE: forall tfn tfsig tgenv targs tm tev1 trv1 tm1 tev2 trv2 tm2,
-                 external_functions_sem tfn tfsig tgenv targs tm tev1 trv1 tm1 ->
-                 external_functions_sem tfn tfsig tgenv targs tm tev2 trv2 tm2 ->
-                 (tev1 = tev2) /\ (trv1 = trv2) /\ (tm1 = tm2)).
-      { admit "ez?: tgt syscall determinate". }
-      hexploit TGTSYSSEM_UNIQUE.
-      { apply TGTSYSSEM. }
-      { apply TGTSYSSEM2. }
-      i. des. clarify. clear TGTSYSSEM_UNIQUE.
+      (* inv STEP. ss. rename H7 into TGT2. *)
+      (* assert (TGTSYSSEM_UNIQUE: forall tfn tfsig tgenv targs tm tev1 trv1 tm1 tev2 trv2 tm2, *)
+      (*            external_functions_sem tfn tfsig tgenv targs tm tev1 trv1 tm1 -> *)
+      (*            external_functions_sem tfn tfsig tgenv targs tm tev2 trv2 tm2 -> *)
+      (*            (tev1 = tev2) /\ (trv1 = trv2) /\ (tm1 = tm2)). *)
+      (* { admit "ez?: tgt syscall determinate". } *)
+      (* hexploit TGTSYSSEM_UNIQUE. *)
+      (* { apply TGTSYSSEM. } *)
+      (* { apply TGTSYSSEM2. } *)
+      (* i. des. clarify. clear TGTSYSSEM_UNIQUE. *)
 
       split.
-      { unfold NW. econs; auto. econs; eauto. }
+      { unfold decompile_event in EV0. des_ifs. uo; des_ifs; ss; clarify.
+        unfold decompile_eval in Heq4. des_ifs; ss; clarify. econs; auto. econs.
+        2:{ unfold compose. econs.
+        unfold NW. econs; auto. econs; eauto. }
       eexists. left.
       do 8 (pfold; sim_tau; left).
       pfold. econs 4.
