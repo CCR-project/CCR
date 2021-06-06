@@ -200,9 +200,10 @@ Section SIMMODSEM.
   Let wf: W -> Prop :=
     @mk_wf _ unit
            (fun _ _stk_mgr0 _ =>
-              #=> (∃ (stk_mgr0: list (mblock * (list Z))),
+              #=> (∃ (stk_mgr0: gmap mblock (list Z)),
                       (⌜<<CAST: _stk_mgr0 = stk_mgr0↑>>⌝) ∧
-                      ([∗ list] hstk ∈ stk_mgr0, is_list (Vptr (hstk.1) 0) (map Vint (hstk.2))))%I)
+                      ([∗ map] handle ↦ stk ∈ stk_mgr0,
+                       (∃ hd, OwnM ((handle, 0%Z) |-> [hd]) ** is_list hd (map Vint stk))))%I)
            (fun _ _ _ => ⌜True⌝%I)
   .
 
@@ -270,48 +271,36 @@ Section SIMMODSEM.
       { ss. }
       steps. mUpd "INV". mDesAll. des; clarify. rewrite Any.upcast_downcast in *. clarify. kstop. steps.
       rename a3 into handle. force_l. exists handle. steps. rewrite Any.upcast_downcast. steps.
-      rename a2 into stk_mgr0. destruct (Maps.lookup handle stk_mgr0) eqn:T.
-      { mAssertPure False; ss. iSpecialize ("A" $! _ _ T). iDestruct "A" as (x) "[A B]".
+      rename a2 into stk_mgr0. destruct (stk_mgr0 !! handle) eqn:T.
+      { mAssertPure False; ss.
+        (*** IEXPLOIT *) iDestruct (big_sepM_lookup_acc with "A") as "[B C]"; et. iDestruct "B" as (x) "[A B]".
         iApply (points_to_disj with "A A1"); et.
       }
       force_l; ss. steps.
 
       hret _; ss.
-      { iModIntro. iSplitL; ss. iExists _. iSplit; ss. iIntros. des_ifs.
-        - des; clarify. et.
-        - iClear "A1". des; clarify. iSpecialize ("A" $! _ _ H0). et.
+      { iModIntro. iSplitL; ss. iModIntro. iExists _. iSplit; ss.
+        iApply big_sepM_insert; ss. iSplitL "A1"; ss; et.
+        (*** ISPECIALIZE SYNTAX: iSpecialize ("A" $! _ _ H0). et. *)
       }
     }
     econs; ss.
     { unfold popF. init. harg. destruct varg_src.
       { ss. des_ifs; mDesAll; ss. }
-      destruct x; mDesAll; ss. des; subst.
+      destruct x; mDesAll; ss. mUpd "INV". mDesAll; ss. des; subst.
       unfold pop_body, ccall. steps. rewrite Any.upcast_downcast in *; clarify. steps. kstart 7.
 
       hide_k. destruct v; ss. des_ifs.
       rename n into handle. rename a0 into stk_mgr0. rename l into stk. rename _UNWRAPU0 into T.
-      mAssert _ with "".
-      { Ltac mRamify A P B :=
-          match goal with
-          | [H: current_iPropL _ ?iprops |- _ ] =>
-            match iprops with
-            | context[(A, ?x)] => mAssert (P ** (P -* x)) with A as B
-            end
-          end.
-        mRamify "A" (((∃ hd : val, OwnM ((handle, 0%Z) |-> [hd]) ** is_list hd (map Vint stk)))%I) "B".
-        {
+      mAssert _ with "A".
+      { iDestruct (big_sepM_lookup_acc with "A") as "[B C]"; et.
+        instantiate (1:=_ ** _). iSplitL "B". { iExact "B". } iExact "C". }
+      mDesAll; ss.
 
-        match goal with
-        instantiate (1:=((∀ (handle : nat) (stk : list Z),
-             ⌜<<ABS: stk_mgr0 handle = Some stk >>⌝ -*
-             (∃ hd : val, OwnM ((handle, 0%Z) |-> [hd]) ** is_list hd (map Vint stk)))%I)).
-
-      mSpcUniv "A" with handle. mSpcUniv "A" with stk.
-      mAssert _ with "". { instantiate (1:=(⌜_⌝%I)). iPureIntro. exact T. } mSpcWand "A" with "A1".
-      mDesAll. rename a0 into hd. unhide_k.
-
-      kcatch. { eapply STBINCL. stb_tac; ss. } hcall _ (Some _) _ with "A"; ss; et.
-      { iModIntro. iSplitL; ss; et. iPureIntro. esplits; et. instantiate (1:=1%nat). ss. }
+      kcatch. { eapply STBINCL. stb_tac; ss. } hcall _ (Some (_, _, _)) _ with "A1 A"; ss; et.
+      { iModIntro. iSplitR "A1"; ss; et. iModIntro.
+        iExists (delete handle stk_mgr0). iSplit; ss.
+        esplits; et. instantiate (1:=1%nat). ss. }
       { ss. }
       steps. mDesAll. des; clarify. rewrite Any.upcast_downcast in *. clarify. kstop. steps.
       rename a3 into handle. force_l. exists handle. steps. rewrite Any.upcast_downcast. steps.

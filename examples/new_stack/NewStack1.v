@@ -42,7 +42,7 @@ Section PROOF.
   Definition pop_spec: ftspec unit unit := trivial_bottom_spec.
   Definition push_spec: ftspec unit unit := trivial_bottom_spec.
 
-  Notation pget := (p0 <- trigger PGet;; `p0: (list (mblock * (list Z))) <- p0↓ǃ;; Ret p0) (only parsing).
+  Notation pget := (p0 <- trigger PGet;; `p0: (gmap mblock (list Z)) <- p0↓ǃ;; Ret p0) (only parsing).
   Notation pput p0 := (trigger (PPut p0↑)) (only parsing).
 
   (* def new(): Ptr *)
@@ -57,8 +57,8 @@ Section PROOF.
       APCK;;;
       handle <- trigger (Choose _);;
       stk_mgr0 <- pget;;
-      guarantee(Maps.lookup handle stk_mgr0 = None);;;
-      let stk_mgr1 := Maps.add handle [] stk_mgr0 in
+      guarantee(stk_mgr0 !! handle = None);;;
+      let stk_mgr1 := <[handle:=[]]> stk_mgr0 in
       pput stk_mgr1;;;
       Ret (Vptr handle 0)
   .
@@ -75,13 +75,13 @@ Section PROOF.
 
   Definition pop_body: list val -> itree (kCallE +' pE +' eventE) val :=
     fun args =>
-      blk <- (pargs [Tblk] args)?;;
+      handle <- (pargs [Tblk] args)?;;
       stk_mgr0 <- pget;;
-      stk0 <- (Maps.lookup blk stk_mgr0)?;;
+      stk0 <- (stk_mgr0 !! handle)?;;
       APCK;;;
       match stk0 with
       | x :: stk1 =>
-        pput (add blk stk1 stk_mgr0);;;
+        pput (<[handle:=stk1]> stk_mgr0);;;
         trigger (kCall "debug" (inr [Vint 0; Vint x]));;;
         Ret (Vint x)
       | _ => Ret (Vint (- 1))
@@ -96,11 +96,11 @@ Section PROOF.
 
   Definition push_body: list val -> itree (kCallE +' pE +' eventE) val :=
     fun args =>
-      '(blk, x) <- (pargs [Tblk; Tint] args)?;;
+      '(handle, x) <- (pargs [Tblk; Tint] args)?;;
       stk_mgr0 <- pget;;
       APCK;;;
-      stk0 <- (Maps.lookup blk stk_mgr0)?;;
-      pput (add blk (x :: stk0) stk_mgr0);;;
+      stk0 <- (stk_mgr0 !! handle)?;;
+      pput (<[handle:=(x :: stk0)]> stk_mgr0);;;
       trigger (kCall "debug" (inr [Vint 1; Vint x]));;;
       Ret Vundef
   .
@@ -127,7 +127,7 @@ Section PROOF.
     KModSem.fnsems := StackSbtb;
     KModSem.mn := "Stack";
     KModSem.initial_mr := ε;
-    KModSem.initial_st := (Maps.empty: list (mblock * (list Z)))↑;
+    KModSem.initial_st := (gmap_empty: gmap mblock (list Z))↑;
   |}
   .
 
