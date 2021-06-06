@@ -10,6 +10,7 @@ Require Import Logic.
 Require Import Mem1.
 Require Import TODO TODOYJ.
 Require Import AList.
+Require Import KnotHeader.
 
 Set Implicit Arguments.
 
@@ -31,11 +32,26 @@ Section PROOF.
 
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG memRA Σ}.
+  Context `{@GRA.inG invRA Σ}.
 
   (*** TODO: move to OpenDef; align it with trivial_fspec2 ***)
+  Definition mk_inv_ksimple {X: Type} (PQ: X -> ((Any.t -> ord -> iProp) * (Any.t -> iProp))):
+    ftspec unit unit :=
+    mk_ksimple
+      (fun (x: X) =>
+         ((fun varg o =>
+             inv_opener
+               **
+               (fst (PQ x) varg o)),
+          (fun vret =>
+             inv_opener
+               **
+               (snd (PQ x) vret)))
+      ).
+
   Definition trivial_bottom_spec: ftspec unit unit :=
-    (mk_ksimple (fun (_: unit) => ((fun _ _ => (⌜False⌝: iProp)%I),
-                                   (fun _ => (⌜True⌝: iProp)%I))))
+    (mk_inv_ksimple (fun (_: unit) => ((fun _ _ => (⌜False⌝: iProp)%I),
+                                       (fun _ => (⌜True⌝: iProp)%I))))
   .
 
   Definition new_spec: ftspec unit unit := trivial_bottom_spec.
@@ -126,7 +142,7 @@ Section PROOF.
   Definition KStackSem: KModSem.t := {|
     KModSem.fnsems := StackSbtb;
     KModSem.mn := "Stack";
-    KModSem.initial_mr := ε;
+    KModSem.initial_mr := (GRA.embed (inv_black (gmap_empty: gmap mblock (list Z))↑ tt↑));
     KModSem.initial_st := (gmap_empty: gmap mblock (list Z))↑;
   |}
   .
