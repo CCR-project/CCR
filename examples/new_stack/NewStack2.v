@@ -43,7 +43,7 @@ Section PROOF.
   Definition push_spec: ftspec unit unit := trivial_bottom_spec.
 
   Notation pget := (p0 <- trigger PGet;; `p0: (gmap mblock (list Z)) <- p0↓ǃ;; Ret p0) (only parsing).
-  Notation pput p0 := (trigger (PPut (p0: (gmap mblock (list Z)))↑)) (only parsing).
+  Notation pput p0 := (trigger (PPut p0↑)) (only parsing).
 
   (* def new(): Ptr *)
   (*   let handle := Choose(Ptr); *)
@@ -78,17 +78,13 @@ Section PROOF.
       handle <- (pargs [Tblk] args)?;;
       stk_mgr0 <- pget;;
       stk0 <- (stk_mgr0 !! handle)?;;
-      let stk_mgr1 := delete handle stk_mgr0 in
-      pput stk_mgr1;;;
       APCK;;;
       match stk0 with
       | x :: stk1 =>
-        stk_mgr2 <- pget;; pput (<[handle:=stk1]> stk_mgr2);;;
+        pput (<[handle:=stk1]> stk_mgr0);;;
         trigger (kCall "debug" (inr [Vint 0; Vint x]));;;
         Ret (Vint x)
-      | _ =>
-        stk_mgr2 <- pget;; pput (<[handle:=[]]> stk_mgr2);;;
-        Ret (Vint (- 1))
+      | _ => Ret (Vint (- 1))
       end
   .
 
@@ -102,9 +98,9 @@ Section PROOF.
     fun args =>
       '(handle, x) <- (pargs [Tblk; Tint] args)?;;
       stk_mgr0 <- pget;;
-      stk0 <- (stk_mgr0 !! handle)?;;
       APCK;;;
-      stk_mgr1 <- pget;; pput (<[handle:=(x :: stk0)]> stk_mgr0);;;
+      stk0 <- (stk_mgr0 !! handle)?;;
+      pput (<[handle:=(x :: stk0)]> stk_mgr0);;;
       trigger (kCall "debug" (inr [Vint 1; Vint x]));;;
       Ret Vundef
   .
