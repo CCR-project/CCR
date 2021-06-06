@@ -42,7 +42,8 @@ Section PROOF.
   Definition pop_spec: ftspec unit unit := trivial_bottom_spec.
   Definition push_spec: ftspec unit unit := trivial_bottom_spec.
 
-  Notation pget := (p0 <- trigger PGet;; `p0: (mblock -> option (list val)) <- p0↓ǃ;; Ret p0) (only parsing).
+  Notation pget := (p0 <- trigger PGet;; `p0: (mblock -> option (list Z)) <- p0↓ǃ;; Ret p0) (only parsing).
+  Notation pput p0 := (trigger (PPut p0↑)) (only parsing).
 
   (* def new(): Ptr *)
   (*   let handle := Choose(Ptr); *)
@@ -52,29 +53,62 @@ Section PROOF.
 
   Definition new_body: list val -> itree (kCallE +' pE +' eventE) val :=
     fun args =>
+      _ <- (pargs [] args)?;;
+      APCK;;;
       handle <- trigger (Choose _);;
       stk_mgr0 <- pget;;
       guarantee(stk_mgr0 handle = None);;;
       let stk_mgr1 := Maps.add handle [] stk_mgr0 in
+      pput stk_mgr1;;;
       Ret (Vptr handle 0)
   .
+
+  (* def pop(handle: Ptr): Int64 *)
+  (*   let stk := unwrap(stk_mgr(handle)); *)
+  (*   match stk with *)
+  (*   | x :: stk' =>  *)
+  (*     stk_mgr(handle) := Some stk'; *)
+  (*     debug(false, x); *)
+  (*     return x *)
+  (*   | [] => return -1 *)
+  (*   end *)
 
   Definition pop_body: list val -> itree (kCallE +' pE +' eventE) val :=
     fun args =>
       blk <- (pargs [Tblk] args)?;;
+      stk_mgr0 <- pget;;
+      stk0 <- (stk_mgr0 blk)?;;
       APCK;;;
-      p0 <- trigger PGet;; `p0: (mblock -> option (list val)) <- p0↓ǃ;;
-      l0 <- (p0 blk)?;;
-      match l0 with
-      | v :: l1 => trigger (PPut (add blk l1 p0)↑);;; Ret v
-      | _ => triggerUB
+      match stk0 with
+      | x :: stk1 =>
+        pput (add blk stk1 stk_mgr0);;;
+        trigger (kCall "debug" (inr [Vint 0; Vint x]));;;
+        Ret (Vint x)
+      | _ => Ret (Vint (- 1))
       end
   .
 
+  (* def push(handle: Ptr, x: Int64): Unit *)
+  (*   let stk := unwrap(stk_mgr(handle)); *)
+  (*   stk_mgr(handle) := Some (x :: stk); *)
+  (*   debug(true, x); *)
+  (*   () *)
+
+  Definition push_body: list val -> itree (kCallE +' pE +' eventE) val :=
+    fun args =>
+      '(blk, x) <- (pargs [Tblk; Tint] args)?;;
+      stk_mgr0 <- pget;;
+      APCK;;;
+      stk0 <- (stk_mgr0 blk)?;;
+      pput (add blk (x :: stk0) stk_mgr0);;;
+      trigger (kCall "debug" (inr [Vint 1; Vint x]));;;
+      Ret Vundef
+  .
+
   Definition StackSbtb: list (gname * kspecbody) :=
-    [("pop", mk_kspecbody pop_spec
-                          (fun args => trigger (kCall "debug" (inr args));;; APCK;;; trigger (Choose _)));
-    ("push",   mk_kspecbody push_spec (fun _ => APCK;;; trigger (Choose _)))
+    [("new", mk_kspecbody new_spec new_body);
+    ("pop", mk_kspecbody pop_spec pop_body);
+    ("push",   mk_kspecbody push_spec push_body)
     ].
 
   Definition StackStb: list (gname * fspec).
@@ -93,7 +127,7 @@ Section PROOF.
     KModSem.fnsems := StackSbtb;
     KModSem.mn := "Stack";
     KModSem.initial_mr := ε;
-    KModSem.initial_st := tt↑;
+    KModSem.initial_st := ((fun _ => None): mblock -> option (list Z))↑;
   |}
   .
 

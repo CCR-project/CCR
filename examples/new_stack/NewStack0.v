@@ -24,9 +24,9 @@ Section PROOF.
   (*   return stk *)
 
   Definition newF: list val -> itree Es val :=
-    fun varg =>
-      _ <- (pargs [] varg)?;;
-      (ccall "alloc" 1)
+    fun args =>
+      _ <- (pargs [] args)?;;
+      (ccall "alloc" [Vint 1])
   .
 
   (* def pop(Ptr stk): Int64 *)
@@ -39,12 +39,11 @@ Section PROOF.
   (*     debug(false, v); *)
   (*     return v *)
   (*   } *)
-  (*   debug(false, -1); *)
   (*   return -1 *)
 
   Definition popF: list val -> itree Es val :=
-    fun varg =>
-      `stk: val <- (pargs [Tuntyped] varg)?;;
+    fun args =>
+      `stk: val <- (pargs [Tuntyped] args)?;;
       `hd: val  <- (ccall "load" [stk]);;
       `b: val   <- (ccall "cmp"  [hd; Vnullptr]);;
       if is_zero b
@@ -72,8 +71,8 @@ Section PROOF.
   (*   return () *)
 
   Definition pushF: list val -> itree Es val :=
-    fun varg =>
-      '(stk, v)      <- (pargs [Tuntyped; Tuntyped] varg)?;;
+    fun args =>
+      '(stk, v)      <- (pargs [Tuntyped; Tuntyped] args)?;;
       `new_node: val <- (ccall "alloc" [Vint 2]);;
       let addr_val   := new_node in
       addr_next      <- (vadd new_node (Vint 1))?;;
@@ -84,7 +83,7 @@ Section PROOF.
   .
 
   Definition StackSem: ModSem.t := {|
-    ModSem.fnsems := [("new", cfun popF); ("pop", cfun popF); ("push", cfun pushF)];
+    ModSem.fnsems := [("new", cfun newF); ("pop", cfun popF); ("push", cfun pushF)];
     ModSem.mn := "Stack";
     ModSem.initial_mr := ε;
     ModSem.initial_st := tt↑;
