@@ -172,37 +172,6 @@ Ltac kstop :=
 
 
 
-Section AUX.
-
-  Context `{Σ: GRA.t}.
-
-  Lemma forall_sep_commute
-        X
-        (P Q: X -> iProp')
-    :
-      (∀ x, P x ** Q x) -∗ (∀ x, P x) ** (∀ x, Q x)
-  .
-  Proof.
-    uipropall. ii. rr in H. uipropall.
-    hexploit (@ClassicalChoice.choice X (Σ * Σ) (fun x '(a, b) => P x a /\ Q x b)).
-    { intro x. spc H. uipropall. des. subst. exists (a, b). et. }
-    i. des.
-    ...?
-  Qed.
-
-  Lemma forall_split
-        X (xcond: X -> bool)
-        (P: X -> iProp')
-    :
-      (∀ x, P x) -∗ (∀ x, ⌜xcond x⌝ -* P x) ** (∀ x, ⌜~xcond x⌝ -* P x)
-  .
-  Proof.
-  Qed.
-
-End AUX.
-
-
-
 
 Section SIMMODSEM.
 
@@ -221,12 +190,19 @@ Section SIMMODSEM.
     end
   .
 
+  From iris.algebra Require Import big_op.
+  From iris.bi Require Import big_op.
+
+  (*** TODO: How about supporting "pattern" on x? Ask Iris people ***)
+  (* Notation "'[∗' 'list]' x ∈ l , P" := *)
+  (*   (big_opL bi_sep (λ _ x, P%I) l) : bi_scope. *)
+
   Let wf: W -> Prop :=
     @mk_wf _ unit
            (fun _ _stk_mgr0 _ =>
-              (∃ stk_mgr0, (⌜<<CAST: _stk_mgr0 = stk_mgr0↑>>⌝) ∧
-                           (∀ handle stk, (⌜<<ABS: stk_mgr0 handle = Some stk>>⌝) -*
-                                    (∃ hd, OwnM ((handle, 0%Z) |-> [hd]) ** is_list hd (map Vint stk))))%I)
+              #=> (∃ (stk_mgr0: list (mblock * (list Z))),
+                      (⌜<<CAST: _stk_mgr0 = stk_mgr0↑>>⌝) ∧
+                      ([∗ list] hstk ∈ stk_mgr0, is_list (Vptr (hstk.1) 0) (map Vint (hstk.2))))%I)
            (fun _ _ _ => ⌜True⌝%I)
   .
 
@@ -279,21 +255,22 @@ Section SIMMODSEM.
   Proof.
     econstructor 1 with (wf:=wf); ss; et; swap 2 3.
     { econs; ss.
-      - eapply to_semantic; cycle 1. { eapply URA.wf_unit. } iIntros "H". iExists _. iSplit; ss. iIntros; ss.
+      - eapply to_semantic; cycle 1. { eapply URA.wf_unit. } iIntros "H". iClear "H". iModIntro.
+        iExists _. iSplit; ss.
       - eapply to_semantic; cycle 1. { eapply URA.wf_unit. } iIntros "H". iPureIntro. ss.
     }
     econs; ss.
     { unfold newF. init. harg. destruct varg_src.
       { ss. des_ifs; mDesAll; ss. }
-      destruct x; mDesAll; ss. des; subst.
+      destruct x; mDesAll; ss. mUpd "INV". mDesAll; ss. des; subst.
       unfold new_body, ccall. steps. rewrite Any.upcast_downcast in *; clarify. steps. kstart 1.
 
       kcatch. { eapply STBINCL. stb_tac; ss. } hcall _ (Some _) _ with "A"; ss; et.
       { iModIntro. iSplitL; ss; et. iPureIntro. esplits; et. instantiate (1:=1%nat). ss. }
       { ss. }
-      steps. mDesAll. des; clarify. rewrite Any.upcast_downcast in *. clarify. kstop. steps.
+      steps. mUpd "INV". mDesAll. des; clarify. rewrite Any.upcast_downcast in *. clarify. kstop. steps.
       rename a3 into handle. force_l. exists handle. steps. rewrite Any.upcast_downcast. steps.
-      rename a2 into stk_mgr0. destruct (stk_mgr0 handle) eqn:T.
+      rename a2 into stk_mgr0. destruct (Maps.lookup handle stk_mgr0) eqn:T.
       { mAssertPure False; ss. iSpecialize ("A" $! _ _ T). iDestruct "A" as (x) "[A B]".
         iApply (points_to_disj with "A A1"); et.
       }
