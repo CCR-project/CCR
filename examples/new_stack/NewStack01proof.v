@@ -19,7 +19,6 @@ Require Import TODOYJ.
 Require Import HTactics Logic IPM.
 Require Import OpenDef.
 Require Import Mem1 MemOpen STB.
-Require Import KnotHeader.
 
 Set Implicit Arguments.
 
@@ -178,7 +177,6 @@ Section SIMMODSEM.
 
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG memRA Σ}.
-  Context `{@GRA.inG invRA Σ}.
 
   Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
 
@@ -200,13 +198,13 @@ Section SIMMODSEM.
   (*   (big_opL bi_sep (λ _ x, P%I) l) : bi_scope. *)
 
   Let wf: W -> Prop :=
-    @inv_wf _ _ unit
-            (fun _ _stk_mgr0 _ =>
-               (∃ (stk_mgr0: gmap mblock (list Z)),
-                   (⌜<<CAST: _stk_mgr0 = stk_mgr0↑>>⌝) ∧
-                   ([∗ map] handle ↦ stk ∈ stk_mgr0,
-                    (∃ hd, OwnM ((handle, 0%Z) |-> [hd]) ** is_list hd (map Vint stk))))%I)
-            (fun _ _ _ => ⌜True⌝%I)
+    @mk_wf _ unit
+           (fun _ _stk_mgr0 _ =>
+              #=> (∃ (stk_mgr0: gmap mblock (list Z)),
+                      (⌜<<CAST: _stk_mgr0 = stk_mgr0↑>>⌝) ∧
+                      ([∗ map] handle ↦ stk ∈ stk_mgr0,
+                       (∃ hd, OwnM ((handle, 0%Z) |-> [hd]) ** is_list hd (map Vint stk))))%I)
+           (fun _ _ _ => ⌜True⌝%I)
   .
 
   (*** TODO: remove redundancy with Mem0OpenProof ***)
@@ -258,44 +256,14 @@ Section SIMMODSEM.
   Proof.
     econstructor 1 with (wf:=wf); ss; et; swap 2 3.
     { econs; ss.
-      - instantiate (1:=inl tt). cbn.
-        eapply to_semantic; cycle 1.
-        { eapply GRA.wf_embed. admit "ez". } iIntros "H". iSplitL. { iExists _, _. et. }
+      - eapply to_semantic; cycle 1. { eapply URA.wf_unit. } iIntros "H". iClear "H". iModIntro.
         iExists _. iSplit; ss.
       - eapply to_semantic; cycle 1. { eapply URA.wf_unit. } iIntros "H". iPureIntro. ss.
     }
     econs; ss.
-    { unfold newF. init.
-
-  let PRE := constr:("PRE") in
-  let INV := constr:("INV") in
-  let OPENER := constr:("☃OPENER") in
-  let CLOSED := constr:("☃CLOSED") in
-  let ARG := constr:("ARG") in
-  eapply (@harg_clo _ PRE INV);
-  [eassumption
-  |
-  ];
-  let a := fresh "a" in
-  intros a; i;
-    idtac.
-  (* mDesAndPureR PRE as PRE ARG; *)
-  (* let EQ := fresh "EQ" in *)
-  (* mPure ARG as EQ; *)
-  (* try (destruct EQ); *)
-  (* mDesSep PRE as OPENER PRE; *)
-  (* destruct a as [?|[?mp_src ?mp_tgt]]; simpl; *)
-  (* [mDesSep INV as CLOSED INV *)
-  (* |mAssertPure False; ss; iDestruct "INV" as "[INV _]"; iApply (inv_open_unique with "☃OPENER INV")]. *)
-
-
-
-
-
-
-      iarg. destruct varg_src.
+    { unfold newF. init. harg. destruct varg_src.
       { ss. des_ifs; mDesAll; ss. }
-      destruct x; mDesAll; ss. mDesAll; ss. des; subst.
+      destruct x; mDesAll; ss. mUpd "INV". mDesAll; ss. des; subst.
       unfold new_body, ccall. steps. rewrite Any.upcast_downcast in *; clarify. steps. kstart 1.
 
       kcatch. { eapply STBINCL. stb_tac; ss. } hcall _ (Some _) _ with "A"; ss; et.
