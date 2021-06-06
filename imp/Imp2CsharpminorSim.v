@@ -949,15 +949,12 @@ Section PROOF.
           - econs; eauto.
             + econs. ss.
             + ss.
-          - ss. destruct (negb (Int64.eq (to_long n) Int64.zero)) eqn:CONTRA; ss; clarify.
+          - ss. destruct (negb (Int64.eq (Int64.repr n) Int64.zero)) eqn:CONTRA; ss; clarify.
             rewrite negb_false_iff in CONTRA. apply Int64.same_if_eq in CONTRA.
-            unfold to_long in CONTRA. unfold Int64.zero in CONTRA.
-            unfold intrange_64 in *. unfold modulus_64 in *. unfold wordsize_64 in *.
-            hexploit Int64.unsigned_repr.
-            { unfold Int64.max_unsigned. unfold Int64.modulus, Int64.wordsize, Wordsize_64.wordsize. instantiate (1:=n). nia. }
-            i. rewrite CONTRA in H1. rewrite Int64.unsigned_repr_eq in H1.
-            unfold Int64.modulus, Int64.wordsize, Wordsize_64.wordsize in *.
-            rewrite Zmod_0_l in H1. clarify. }
+            unfold Int64.zero in CONTRA. unfold_intrange_64.
+            hexploit Int64.signed_repr.
+            { unfold_Int64_max_signed. unfold_Int64_min_signed. instantiate (1:=n). nia. }
+            i. rewrite CONTRA in H1. rewrite Int64.signed_repr_eq in H1. des_ifs. }
         eexists. exists (step_tau _).
         eexists. des_ifs. right. eapply CIH. hexploit match_states_intro.
         { eapply CCODE1. }
@@ -1171,10 +1168,8 @@ Section PROOF.
       { depgen ARGS. depgen WFARGS. clear. depgen rvs. induction args_int; i; ss; clarify.
         - apply map_eq_nil in ARGS. auto.
         - destruct rvs; ss; clarify. inv WFARGS. f_equal; ss; eauto.
-          unfold map_val in H1. des_ifs. unfold to_long. unfold compose.
-          f_equal. hexploit Int64.signed_repr; eauto.
-          unfold wf_val in H3. unfold intrange_64 in H3. unfold modulus_64 in H3. unfold wordsize_64 in H3.
-          unfold Int64.max_unsigned. unfold Int64.modulus. unfold Int64.wordsize. unfold Wordsize_64.wordsize. nia. }
+          unfold map_val in H1. des_ifs. unfold compose.
+          f_equal. hexploit Int64.signed_repr; eauto. }
 
       eexists. eexists. eexists.
       { hexploit step_syscall.
@@ -1201,8 +1196,13 @@ Section PROOF.
       split.
       { unfold decompile_event in EV0. des_ifs. uo; des_ifs; ss; clarify.
         unfold decompile_eval in Heq4. des_ifs; ss; clarify. econs; auto. econs.
-        2:{ unfold compose. econs.
-        unfold NW. econs; auto. econs; eauto. }
+        2:{ unfold compose. rewrite <- H0. econs. }
+        generalize dependent Heq3. clear. generalize dependent args_int. unfold compose.
+        induction l2; i; ss; clarify.
+        { destruct args_int; ss; clarify. }
+        des_ifs. uo; des_ifs; ss. destruct args_int; ss; clarify.
+        econs; eauto. unfold decompile_eval in Heq. des_ifs. rewrite <- H0. econs. }
+
       eexists. left.
       do 8 (pfold; sim_tau; left).
       pfold. econs 4.
@@ -1212,17 +1212,15 @@ Section PROOF.
       eexists; split; auto. right. eapply CIH.
       hexploit match_states_intro.
       { instantiate (2:=Skip). ss. }
-      4,5,6: eauto.
-      4: clarify.
-      4:{ i.
+      2,3,4,5,6: eauto.
+      2: clarify.
+      2:{ i.
           match goal with
-          | [ H1: match_states _ _ _ _ _ ?i0 _ |- match_states _ _ _ _ _ ?i1 _ ] =>
+          | [ H1: match_states _ _ _ _ ?i0 _ |- match_states _ _ _ _ ?i1 _ ] =>
             replace i1 with i0; eauto
           end.
           unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
-      { econs. i. ss.
-        admit "ez: find from local env". }
-      all: eauto.
+      { econs. i. ss. admit "ez: find from local env". }
 
     - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_AddrOf.
       ss. uo; des_ifs. rename Heq0 into FOUND. unfold ident_key in FOUND.
@@ -1244,12 +1242,11 @@ Section PROOF.
       2: clarify.
       2:{ i.
           match goal with
-          | [ H: match_states _ _ _ _ _ ?i0 _ |- match_states _ _ _ _ _ ?i1 _ ] =>
+          | [ H: match_states _ _ _ _ ?i0 _ |- match_states _ _ _ _ ?i1 _ ] =>
             replace i1 with i0; eauto
           end.
           unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
-      { econs. i. ss.
-        admit "ez: genv". }
+      { econs. i. ss. admit "ez: genv". }
 
     - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Malloc. sim_red.
       ss. uo; des_ifs. eapply step_expr; eauto. i. rename H0 into TGTEXPR. rename H1 into MAPVAL.
