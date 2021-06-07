@@ -365,8 +365,61 @@ Section SIMMODSEM.
         hret _; ss. iModIntro. iSplitL; ss.
     }
     econs; ss.
-    {
-      admit "ez - TODO".
+    { unfold pushF. init. harg. destruct varg_src.
+      { ss. des_ifs; mDesAll; ss. }
+      destruct x; mDesAll; ss. des; subst.
+      unfold push_body, ccall. steps. rewrite Any.upcast_downcast in *; clarify. steps. kstart 7.
+
+      hide_k. destruct v, v0; ss. des_ifs. des_u. clear_tac.
+      rename n into handle. rename a0 into stk_mgr0. rename l into stk. rename _UNWRAPU into T.
+      mAssert _ with "A1".
+      { iDestruct (big_sepM_delete with "A1") as "[B C]"; et. (* big_sepM_lookup_acc *)
+        instantiate (1:=_ ** _). iSplitL "B". { iExact "B". } iExact "C". }
+      mDesAll; ss. rename a into hd. mRename "A1" "INV".
+
+      kcatch. { eapply STBINCL. stb_tac; ss. } hcall (ord_pure 0) (Some _) _ with "INV"; ss; et.
+      { iModIntro. iSplitL "INV"; et. iSplit; ss; et. iSplit; ss; et. instantiate (1:=2). ss. }
+      steps. mDesAll. des; clarify. unhide_k. steps. rewrite Any.upcast_downcast in *. clarify.
+      rename a into stk_mgr1. rename a0 into node. mRename "A3" "INV". steps.
+      rewrite points_to_split in ACC. mDesOwn "A1". rewrite Z.add_0_l in *.
+
+      kcatch. { eapply STBINCL. stb_tac; ss. } hcall (ord_pure 0) (Some (_, _, _)) _ with "A INV"; ss; et.
+      { iModIntro. iSplitL "INV"; et. }
+      steps. mDesAll. des; clarify. rename a into stk_mgr2. des_u. mRename "A4" "INV".
+
+      kcatch. { eapply STBINCL. stb_tac; ss. } hcall (ord_pure 0) (Some (_, _, _)) _ with "A1 INV"; ss; et.
+      { iModIntro. iSplitL "INV"; et. }
+      steps. mDesAll. des; clarify. rename a into stk_mgr3. des_u. mRename "A1" "INV".
+      rewrite Any.upcast_downcast in *. clarify.
+
+      kcatch. { eapply STBINCL. stb_tac; ss. } hcall (ord_pure 0) (Some (_, _, _)) _ with "A3 INV"; ss; et.
+      { iModIntro. iSplitL "INV"; et. }
+      steps. mDesAll. des; clarify. clear_tac. rename a into stk_mgr1. mRename "A1" "INV".
+
+      kcatch. { eapply STBINCL. stb_tac; ss. } hcall (ord_pure 0) (Some (_, _, _)) _ with "POST INV"; ss; et.
+      { iModIntro. iSplitL "INV"; et. }
+      steps. mDesAll. des; clarify. clear_tac. rename a into stk_mgr1. mRename "A1" "INV". kstop. steps.
+      rewrite Any.upcast_downcast. steps.
+
+      destruct (alist_find "debug" (DebugStb ++ StackStb ++ MemStb)) eqn:U; cycle 1.
+      { exfalso. stb_tac. ss. }
+      dup U. revert U. stb_tac. clarify. i.
+      apply STBINCL in U. rewrite U. steps. rewrite Any.upcast_downcast. steps.
+
+      destruct (stk_mgr1 !! handle) eqn:V.
+      { mAssertPure False; ss. iDestruct (big_sepM_lookup_acc with "INV") as "[B C]"; et.
+        iDestruct "B" as (y) "[INV B]". iApply (points_to_disj with "POST3 INV"). }
+
+      hcall _ _ _ with "-"; ss; et.
+      { iModIntro. iSplitL; ss; et.
+        - iSplit; ss. iExists _; ss. iSplit; ss. iApply big_sepM_insert; ss. iFrame. iExists _; ss. iFrame.
+          iExists _, _. iFrame. iSplit; ss. erewrite points_to_split with (hd:=Vint z) (tl:=[v]).
+          iSplitL "POST1"; et.
+        - iPureIntro. esplits; et. rewrite Any.upcast_downcast; ss. }
+      { ss. }
+      steps.
+
+      hret _; ss. iModIntro. iSplitL; ss.
     }
   Unshelve.
     all: ss.

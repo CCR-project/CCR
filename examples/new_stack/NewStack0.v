@@ -76,10 +76,12 @@ Section PROOF.
       `new_node: val <- (ccall "alloc" [Vint 2]);;
       let addr_val   := new_node in
       addr_next      <- (vadd new_node (Vint 1))?;;
-      `_: val        <- (ccall "store" [addr_val;    v]);;
-      `vret: val     <- (ccall "store" [addr_next; stk]);;
-      `_: val        <- (ccall "debug" [v]);;
-      Ret addr_val
+      `hd: val       <- (ccall "load"  [stk]);;
+      `_: val        <- (ccall "store" [addr_val;   v]);;
+      `_: val        <- (ccall "store" [addr_next; hd]);;
+      `_: val        <- (ccall "store" [stk; new_node]);;
+      `_: val        <- (ccall "debug" [Vint 1; v]);;
+      Ret Vundef
   .
 
   Definition StackSem: ModSem.t := {|

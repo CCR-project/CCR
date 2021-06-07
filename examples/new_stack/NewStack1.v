@@ -78,8 +78,7 @@ Section PROOF.
       handle <- (pargs [Tblk] args)?;;
       stk_mgr0 <- pget;;
       stk0 <- (stk_mgr0 !! handle)?;;
-      let stk_mgr1 := delete handle stk_mgr0 in
-      pput stk_mgr1;;;
+      let stk_mgr1 := delete handle stk_mgr0 in pput stk_mgr1;;;
       APCK;;;
       match stk0 with
       | x :: stk1 =>
@@ -103,8 +102,9 @@ Section PROOF.
       '(handle, x) <- (pargs [Tblk; Tint] args)?;;
       stk_mgr0 <- pget;;
       stk0 <- (stk_mgr0 !! handle)?;;
+      let stk_mgr1 := delete handle stk_mgr0 in pput stk_mgr1;;;
       APCK;;;
-      stk_mgr1 <- pget;; pput (<[handle:=(x :: stk0)]> stk_mgr0);;;
+      stk_mgr2 <- pget;; pput (<[handle:=(x :: stk0)]> stk_mgr2);;;
       trigger (kCall "debug" (inr [Vint 1; Vint x]));;;
       Ret Vundef
   .
