@@ -111,6 +111,55 @@ Notation "loc |-> vs" := (points_to loc vs) (at level 20).
 
 
 
+Section AUX.
+  Context `{@GRA.inG memRA Σ}.
+
+  Lemma points_to_disj
+        ptr x0 x1
+    :
+      (OwnM (ptr |-> [x0]) -∗ OwnM (ptr |-> [x1]) -* ⌜False⌝)
+  .
+  Proof.
+    destruct ptr as [blk ofs].
+    iIntros "A B". iCombine "A B" as "A". iOwnWf "A" as WF0.
+    unfold points_to in WF0. rewrite ! unfold_points_to in *. repeat (ur in WF0); ss.
+    specialize (WF0 blk ofs). des_ifs; bsimpl; des; des_sumbool; zsimpl; ss; try lia.
+  Qed.
+
+  Fixpoint is_list (ll: val) (xs: list val): iProp :=
+    match xs with
+    | [] => (⌜ll = Vnullptr⌝: iProp)%I
+    | xhd :: xtl =>
+      (∃ lhd ltl, ⌜ll = Vptr lhd 0⌝ ** (OwnM ((lhd,0%Z) |-> [xhd; ltl]))
+                             ** is_list ltl xtl: iProp)%I
+    end
+  .
+
+  Lemma unfold_is_list: forall ll xs,
+      is_list ll xs =
+      match xs with
+      | [] => (⌜ll = Vnullptr⌝: iProp)%I
+      | xhd :: xtl =>
+        (∃ lhd ltl, ⌜ll = Vptr lhd 0⌝ ** (OwnM ((lhd,0%Z) |-> [xhd; ltl]))
+                               ** is_list ltl xtl: iProp)%I
+      end
+  .
+  Proof.
+    i. destruct xs; auto.
+  Qed.
+
+  Lemma unfold_is_list_cons: forall ll xhd xtl,
+      is_list ll (xhd :: xtl) =
+      (∃ lhd ltl, ⌜ll = Vptr lhd 0⌝ ** (OwnM ((lhd,0%Z) |-> [xhd; ltl]))
+                             ** is_list ltl xtl: iProp)%I.
+  Proof.
+    i. eapply unfold_is_list.
+  Qed.
+
+  (* Global Opaque is_list. *)
+End AUX.
+
+
 
 
 

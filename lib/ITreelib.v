@@ -593,3 +593,26 @@ Qed.
 (* From iris.bi Require Import derived_connectives updates internal_eq plainly. *)
 (* From iris.base_logic Require Import upred. *)
 (* From iris.prelude Require Import options. *)
+
+Ltac resub :=
+  repeat multimatch goal with
+         | |- context[ITree.trigger ?e] =>
+           match e with
+           | subevent _ _ => idtac
+           | _ => replace (ITree.trigger e) with (trigger e) by refl
+           end
+         | |- context[@subevent _ ?F ?prf _ (?e|)%sum] =>
+           let my_tac := ltac:(fun H => replace (@subevent _ F prf _ (e|)%sum) with (@subevent _ F _ _ e) by H) in
+           match (type of e) with
+           | (_ +' _) _ => my_tac ltac:(destruct e; refl)
+           | _ => my_tac ltac:(refl)
+           end
+         | |- context[@subevent _ ?F ?prf _ (|?e)%sum] =>
+           let my_tac := ltac:(fun H => replace (@subevent _ F prf _ (|e)%sum) with (@subevent _ F _ _ e) by H) in
+           match (type of e) with
+           | (_ +' _) _ => my_tac ltac:(destruct e; refl)
+           | _ => my_tac ltac:(refl)
+           end
+         | |- context[ITree.trigger (@subevent _ ?F ?prf _ (resum ?a ?b ?e))] =>
+           replace (ITree.trigger (@subevent _ F prf _ (resum a b e))) with (ITree.trigger (@subevent _ F _ _ e)) by refl
+         end.

@@ -58,30 +58,6 @@ End AUX.
 (*** TODO: remove redundancy ***)
 Ltac my_red_both := try (prw _red_gen 2 0); try (prw _red_gen 1 0).
 
-(*** TODO: remove redundancy ***)
-Ltac resub :=
-  repeat multimatch goal with
-         | |- context[ITree.trigger ?e] =>
-           match e with
-           | subevent _ _ => idtac
-           | _ => replace (ITree.trigger e) with (trigger e) by refl
-           end
-         | |- context[@subevent _ ?F ?prf _ (?e|)%sum] =>
-           let my_tac := ltac:(fun H => replace (@subevent _ F prf _ (e|)%sum) with (@subevent _ F _ _ e) by H) in
-           match (type of e) with
-           | (_ +' _) _ => my_tac ltac:(destruct e; refl)
-           | _ => my_tac ltac:(refl)
-           end
-         | |- context[@subevent _ ?F ?prf _ (|?e)%sum] =>
-           let my_tac := ltac:(fun H => replace (@subevent _ F prf _ (|e)%sum) with (@subevent _ F _ _ e) by H) in
-           match (type of e) with
-           | (_ +' _) _ => my_tac ltac:(destruct e; refl)
-           | _ => my_tac ltac:(refl)
-           end
-         | |- context[ITree.trigger (@subevent _ ?F ?prf _ (resum ?a ?b ?e))] =>
-           replace (ITree.trigger (@subevent _ F prf _ (resum a b e))) with (ITree.trigger (@subevent _ F _ _ e)) by refl
-         end.
-
 
 
 (******************************************* UNKNOWN ***********************************************)
@@ -1221,20 +1197,20 @@ Section KTACTICS.
         mrs_tgt frs_tgt k_src
         (wf: (Σ * Any.t) * (Σ * Any.t) -> Prop)
         (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
-        stb itr_tgt
+        stb itr_tgt ctx
 
         (ATMOST: (at_most < kappa)%ord)
         (FUEL: (n1 + 5 < n0)%ord)
 
         (POST: gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ eqr n1
                        (mr_src0, mp_src0, fr_src0,
-                       (interp_hCallE_tgt stb o (KModSem.transl_itr_tgt (_APCK at_most))) >>= k_src)
+                       (interp_hCallE_tgt stb o (KModSem.transl_itr_tgt (_APCK at_most)) ctx) >>= k_src)
                       ((mrs_tgt, frs_tgt),
                        itr_tgt))
     :
       gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ eqr n0
               (mr_src0, mp_src0, fr_src0,
-              (interp_hCallE_tgt stb o (KModSem.transl_itr_tgt APCK)) >>= k_src)
+              (interp_hCallE_tgt stb o (KModSem.transl_itr_tgt APCK) ctx) >>= k_src)
              ((mrs_tgt, frs_tgt),
               itr_tgt).
   Proof.
@@ -1254,7 +1230,7 @@ Section KTACTICS.
         (at_most: Ord.t)
         (wf: (Σ * Any.t) * (Σ * Any.t) -> Prop)
         (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
-        stb itr_tgt
+        stb itr_tgt ctx0
 
         (FUEL: (n1 + 11 < n0)%ord)
         (ftsp: ftspec unit unit)
@@ -1263,15 +1239,15 @@ Section KTACTICS.
 
         (POST: gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ eqr n1
                       (mr_src0, mp_src0, fr_src0,
-                       (HoareCall true o (KModSem.disclose ftsp) fn (inl tt));;;
-                                 tau;; tau;; (interp_hCallE_tgt stb o (KModSem.transl_itr_tgt (_APCK next)))
-                                               >>= k_src)
+                       '(ctx1, _) <- (HoareCall true o (KModSem.disclose ftsp) fn (inl tt) ctx0);;
+                       tau;; tau;; (interp_hCallE_tgt stb o (KModSem.transl_itr_tgt (_APCK next)) ctx1)
+                                     >>= k_src)
                       ((mrs_tgt, frs_tgt),
                        itr_tgt))
     :
       gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ eqr n0
-             (mr_src0, mp_src0, fr_src0, (interp_hCallE_tgt stb o (KModSem.transl_itr_tgt (_APCK at_most)))
-                                           >>= k_src)
+             (mr_src0, mp_src0, fr_src0,
+              (interp_hCallE_tgt stb o (KModSem.transl_itr_tgt (_APCK at_most)) ctx0) >>= k_src)
              ((mrs_tgt, frs_tgt),
               itr_tgt).
   Proof.
@@ -1305,18 +1281,18 @@ Section KTACTICS.
         (at_most: Ord.t)
         (wf: (Σ * Any.t) * (Σ * Any.t) -> Prop)
         (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
-        stb itr_tgt
+        stb itr_tgt ctx
 
         (FUEL: (n1 + 2 < n0)%ord)
 
         (POST: gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ eqr n1
-                      (mr_src0, mp_src0, fr_src0, k_src ())
+                      (mr_src0, mp_src0, fr_src0, k_src (ctx, ()))
                       ((mrs_tgt, frs_tgt),
                        itr_tgt))
     :
       gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ eqr n0
               (mr_src0, mp_src0, fr_src0,
-              (interp_hCallE_tgt stb o (KModSem.transl_itr_tgt (_APCK at_most))) >>= k_src)
+              (interp_hCallE_tgt stb o (KModSem.transl_itr_tgt (_APCK at_most)) ctx) >>= k_src)
              ((mrs_tgt, frs_tgt),
               itr_tgt).
   Proof.

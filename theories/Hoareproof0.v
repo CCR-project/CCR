@@ -342,17 +342,6 @@ Section CANCEL.
   (*   forall [E : Type -> Type] [R U : Type] (e : E U) (k : U -> itree E R), ` x : U <- trigger e;; k x = Vis e (fun x : U => k x). *)
   (* Proof. i. eapply bind_trigger. Qed. *)
 
-  Ltac resub :=
-    repeat multimatch goal with
-           | |- context[ITree.trigger ?e] =>
-             match e with
-             | subevent _ _ => idtac
-             | _ => replace (ITree.trigger e) with (trigger e) by refl
-             end
-           | |- context[@subevent _ ?F ?prf _ (?e|)%sum] => replace (@subevent _ F prf _ (e|)%sum) with (@subevent _ F _ _ e) by refl
-           | |- context[@subevent _ ?F ?prf _ (|?e)%sum] => replace (@subevent _ F prf _ (|e)%sum) with (@subevent _ F _ _ e) by refl
-           end.
-
   Let adequacy_type_aux:
     forall RT
            st_src0 st_tgt0 (SIM: wf st_src0 st_tgt0) (i0: itree (hCallE +' pE +' eventE) RT)

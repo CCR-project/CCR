@@ -33,16 +33,6 @@ Section SIMMODSEM.
 
   Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
 
-  (*** TODO: remove redundancy with Stack1.v ***)
-  Fixpoint is_list (ll: val) (xs: list val): iProp :=
-    match xs with
-    | [] => (⌜ll = Vnullptr⌝: iProp)%I
-    | xhd :: xtl =>
-      (∃ lhd ltl, ⌜ll = Vptr lhd 0⌝ ** (OwnM ((lhd,0%Z) |-> [xhd; ltl]))
-                             ** is_list ltl xtl: iProp)%I
-    end
-  .
-
   From iris.algebra Require Import big_op.
   From iris.bi Require Import big_op.
 
@@ -59,48 +49,6 @@ Section SIMMODSEM.
                              (∃ hd, OwnM ((handle, 0%Z) |-> [hd]) ** is_list hd (map Vint stk))))%I)
            (fun _ _ _ => ⌜True⌝%I)
   .
-
-  (*** TODO: remove redundancy with Mem0OpenProof ***)
-  Definition __hide_mark A (a : A) : A := a.
-  Lemma intro_hide_mark: forall A (a: A), a = __hide_mark a. refl. Qed.
-
-  Ltac hide_k := 
-    match goal with
-    | [ |- (gpaco6 _ _ _ _ _ _ _ _ (_, ?isrc >>= ?ksrc) (_, ?itgt >>= ?ktgt)) ] =>
-      erewrite intro_hide_mark with (a:=ksrc);
-      erewrite intro_hide_mark with (a:=ktgt);
-      let name0 := fresh "__KSRC__" in set (__hide_mark ksrc) as name0; move name0 at top;
-      let name0 := fresh "__KTGT__" in set (__hide_mark ktgt) as name0; move name0 at top
-    end.
-
-  Ltac unhide_k :=
-    do 2 match goal with
-    | [ H := __hide_mark _ |- _ ] => subst H
-    end;
-    rewrite <- ! intro_hide_mark
-  .
-
-  Ltac mRename A B :=
-    match goal with
-    | [H: current_iPropL _ ?iprops |- _ ] =>
-      match iprops with
-      | context[(A, ?x)] => mAssert x with A as B; [iApply A|]
-      end
-    end.
-  Ltac mRefresh := on_current ltac:(fun H => move H at bottom).
-
-  (*** TODO: move to Mem1.v ***)
-  Lemma points_to_disj
-        ptr x0 x1
-    :
-      (OwnM (ptr |-> [x0]) -∗ OwnM (ptr |-> [x1]) -* ⌜False⌝)
-  .
-  Proof.
-    destruct ptr as [blk ofs].
-    iIntros "A B". iCombine "A B" as "A". iOwnWf "A" as WF0.
-    unfold points_to in WF0. rewrite ! unfold_points_to in *. repeat (ur in WF0); ss.
-    specialize (WF0 blk ofs). des_ifs; bsimpl; des; des_sumbool; zsimpl; ss; try lia.
-  Qed.
 
   Variable global_stb: list (string * fspec).
   Hypothesis STBINCL: stb_incl (DebugStb ++ StackStb ++ MemStb) global_stb.
@@ -148,13 +96,13 @@ Section SIMMODSEM.
       mAssert _ with "A1".
       { iDestruct (big_sepM_delete with "A1") as "[B C]"; et. (* big_sepM_lookup_acc *)
         instantiate (1:=_ ** _). iSplitL "B". { iExact "B". } iExact "C". }
-      mDesAll; ss. rename a0 into hd. mRename "A1" "INV".
+      mDesAll; ss. rename a0 into hd. mRename "A1" into "INV".
 
       kcatch. { eapply STBINCL. stb_tac; ss. } hcall _ (Some (_, _, _)) _ with "INV A"; ss; et.
       { iModIntro. iFrame; ss; et. }
       { ss. }
       steps. mDesAll. des; clarify. unhide_k. steps. rewrite Any.upcast_downcast in *. clarify.
-      hide_k. rename a0 into stk_mgr1. mRename "A1" "INV".
+      hide_k. rename a0 into stk_mgr1. mRename "A1" into "INV".
 
       destruct stk as [|x stk1]; ss.
       - mDesAll. subst.
@@ -162,7 +110,7 @@ Section SIMMODSEM.
         { iModIntro. iSplitL "INV"; ss. { et. } iSplit; ss. iSplit; ss. iSplit; ss. repeat iRight. et. }
         steps. mDesAll. des; clarify. unhide_k. steps. rewrite Any.upcast_downcast in *. clarify.
         hide_k. rename a2 into stk_mgr2. des_u. ss. steps. unhide_k. kstop. steps.
-        rewrite Any.upcast_downcast. steps. mRename "A1" "INV".
+        rewrite Any.upcast_downcast. steps. mRename "A1" into "INV".
 
         hret _; ss. iModIntro. iSplitL; ss. iSplit; ss. iExists _. iSplit; ss.
         destruct (stk_mgr2 !! handle) eqn:U.
@@ -175,27 +123,27 @@ Section SIMMODSEM.
         kcatch. { eapply STBINCL. stb_tac; ss. } hcall (ord_pure 0) (Some (_, _)) _ with "INV A1"; ss.
         { iModIntro. iSplitL "INV"; ss. { et. } iSplit; ss. iSplit; ss. iSplit; ss. iLeft; et. }
         mDesAll; des; subst. des_u; ss. rename a2 into stk_mgr2. steps. unhide_k.
-        rewrite Any.upcast_downcast. steps. mRename "A3" "INV".
+        rewrite Any.upcast_downcast. steps. mRename "A3" into "INV".
 
         kcatch. { eapply STBINCL. stb_tac; ss. } hcall (ord_pure 0) (Some (_, _, _)) _ with "INV POST1"; ss.
         { iModIntro. iSplitL "INV"; ss; et. }
-        steps. mDesAll. des; subst. mRename "A3" "INV". rewrite Any.upcast_downcast in *. clarify.
+        steps. mDesAll. des; subst. mRename "A3" into "INV". rewrite Any.upcast_downcast in *. clarify.
 
         kcatch. { eapply STBINCL. stb_tac; ss. } hcall (ord_pure 0) (Some (_, _, _)) _ with "INV A2"; ss.
         { iModIntro. iSplitL "INV"; ss; et. }
-        steps. mDesAll. des; subst. mRename "A2" "INV". rewrite Any.upcast_downcast in *. clarify.
+        steps. mDesAll. des; subst. mRename "A2" into "INV". rewrite Any.upcast_downcast in *. clarify.
 
         kcatch. { eapply STBINCL. stb_tac; ss. } hcall (ord_pure 0) (Some (_, _)) _ with "INV POST2"; ss.
         { iModIntro. iSplitL "INV"; ss; et. }
-        steps. mDesAll. des; subst. mRename "A2" "INV".
+        steps. mDesAll. des; subst. mRename "A2" into "INV".
 
         kcatch. { eapply STBINCL. stb_tac; ss. } hcall (ord_pure 0) (Some (_, _)) _ with "INV POST1"; ss.
         { iModIntro. iSplitL "INV"; ss; et. }
-        steps. mDesAll. des; subst. mRename "A2" "INV".
+        steps. mDesAll. des; subst. mRename "A2" into "INV".
 
         kcatch. { eapply STBINCL. stb_tac; ss. } hcall (ord_pure 0) (Some (_, _, _)) _ with "INV POST"; ss.
         { iModIntro. iSplitL "INV"; ss; et. }
-        steps. mDesAll. des; subst. mRename "A2" "INV".
+        steps. mDesAll. des; subst. mRename "A2" into "INV".
 
         kstop. steps. rewrite Any.upcast_downcast. steps. rename a10 into stk_mgr3.
         destruct (alist_find "debug" (DebugStb ++ StackStb ++ MemStb)) eqn:U; cycle 1.
@@ -228,30 +176,30 @@ Section SIMMODSEM.
       mAssert _ with "A1".
       { iDestruct (big_sepM_delete with "A1") as "[B C]"; et. (* big_sepM_lookup_acc *)
         instantiate (1:=_ ** _). iSplitL "B". { iExact "B". } iExact "C". }
-      mDesAll; ss. rename a into hd. mRename "A1" "INV".
+      mDesAll; ss. rename a into hd. mRename "A1" into "INV".
 
       kcatch. { eapply STBINCL. stb_tac; ss. } hcall (ord_pure 0) (Some _) _ with "INV"; ss; et.
       { iModIntro. iSplitL "INV"; et. iSplit; ss; et. iSplit; ss; et. instantiate (1:=2). ss. }
       steps. mDesAll. des; clarify. unhide_k. steps. rewrite Any.upcast_downcast in *. clarify.
-      rename a into stk_mgr1. rename a0 into node. mRename "A3" "INV". steps.
+      rename a into stk_mgr1. rename a0 into node. mRename "A3" into "INV". steps.
       rewrite points_to_split in ACC. mDesOwn "A1". rewrite Z.add_0_l in *.
 
       kcatch. { eapply STBINCL. stb_tac; ss. } hcall (ord_pure 0) (Some (_, _, _)) _ with "A INV"; ss; et.
       { iModIntro. iSplitL "INV"; et. }
-      steps. mDesAll. des; clarify. rename a into stk_mgr2. des_u. mRename "A4" "INV".
+      steps. mDesAll. des; clarify. rename a into stk_mgr2. des_u. mRename "A4" into "INV".
 
       kcatch. { eapply STBINCL. stb_tac; ss. } hcall (ord_pure 0) (Some (_, _, _)) _ with "A1 INV"; ss; et.
       { iModIntro. iSplitL "INV"; et. }
-      steps. mDesAll. des; clarify. rename a into stk_mgr3. des_u. mRename "A1" "INV".
+      steps. mDesAll. des; clarify. rename a into stk_mgr3. des_u. mRename "A1" into "INV".
       rewrite Any.upcast_downcast in *. clarify.
 
       kcatch. { eapply STBINCL. stb_tac; ss. } hcall (ord_pure 0) (Some (_, _, _)) _ with "A3 INV"; ss; et.
       { iModIntro. iSplitL "INV"; et. }
-      steps. mDesAll. des; clarify. clear_tac. rename a into stk_mgr1. mRename "A1" "INV".
+      steps. mDesAll. des; clarify. clear_tac. rename a into stk_mgr1. mRename "A1" into "INV".
 
       kcatch. { eapply STBINCL. stb_tac; ss. } hcall (ord_pure 0) (Some (_, _, _)) _ with "POST INV"; ss; et.
       { iModIntro. iSplitL "INV"; et. }
-      steps. mDesAll. des; clarify. clear_tac. rename a into stk_mgr1. mRename "A1" "INV". kstop. steps.
+      steps. mDesAll. des; clarify. clear_tac. rename a into stk_mgr1. mRename "A1" into "INV". kstop. steps.
       rewrite Any.upcast_downcast. steps.
 
       destruct (alist_find "debug" (DebugStb ++ StackStb ++ MemStb)) eqn:U; cycle 1.

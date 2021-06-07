@@ -578,17 +578,6 @@ Section CANCEL.
   (* Let wf: W -> W -> Prop := eq. *)
   (* Let wf': forall {X}, (W * X)%type -> (W * X)%type -> Prop := eq. *)
 
-  Ltac resub :=
-    repeat multimatch goal with
-           | |- context[ITree.trigger ?e] =>
-             match e with
-             | subevent _ _ => idtac
-             | _ => replace (ITree.trigger e) with (trigger e) by refl
-             end
-           | |- context[@subevent _ ?F ?prf _ (?e|)%sum] => replace (@subevent _ F prf _ (e|)%sum) with (@subevent _ F _ _ e) by refl
-           | |- context[@subevent _ ?F ?prf _ (|?e)%sum] => replace (@subevent _ F prf _ (|e)%sum) with (@subevent _ F _ _ e) by refl
-           end.
-
   Let adequacy_type_aux:
     forall
       o0
@@ -611,11 +600,11 @@ Section CANCEL.
     { rewrite <- bind_trigger. resub. steps.
       destruct s; ss.
       { destruct st_src0 as [rst_src0 pst_src0]; ss.
-        destruct p; ss.
+        destruct p; resub; ss.
         - steps. gbase. eapply CIH; ss; et.
         - steps. gbase. eapply CIH; ss; et.
       }
-      { dependent destruction e.
+      { dependent destruction e; resub; ss.
         - steps_strong. exists x_tgt. steps. gbase. eapply CIH; et.
         - steps_strong. exists x_src. steps. gbase. eapply CIH; et.
         - steps_strong. gbase. eapply CIH; et.
