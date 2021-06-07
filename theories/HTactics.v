@@ -15,7 +15,7 @@ From ExtLib Require Import
      Data.Map.FMapAList.
 From Ordinal Require Export Ordinal Arithmetic.
 Require Import Red IRed.
-Require Import Logic.
+Require Import ProofMode.
 
 Set Implicit Arguments.
 
@@ -378,13 +378,6 @@ Section HLEMMAS.
     esplits; cycle 2; et.
   Qed.
 
-  Lemma from_iPropL_alist_pops l Hns
-    :
-      from_iPropL l ⊢ from_iPropL (fst (alist_pops Hns l)) ** from_iPropL (snd (alist_pops Hns l)).
-  Proof.
-    admit "from_iPropL alist_pops".
-  Qed.
-
   Lemma hcall_clo_ord_weaken
         Hns Rn Invn
         (o_new: Ord.t)
@@ -431,7 +424,7 @@ Section HLEMMAS.
     eapply hcall_clo_ord_weaken'; et.
     { instantiate (2:=from_iPropL (snd (alist_pops Hns l))).
       etrans.
-      { eapply from_iPropL_alist_pops. }
+      { eapply iPropL_alist_pops. }
       iIntros "[H0 H1]".
       iPoseProof (UPDATABLE with "H0") as "> [H0 H2]".
       iModIntro. iFrame.

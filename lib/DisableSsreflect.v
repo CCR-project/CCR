@@ -63,31 +63,31 @@ Module REWRITETEST.
     Goal forall (a b c: nat) (EQ0: a = b) (EQ1: a = c) (EQ2: c = b) (EQ3: x = y),
         a + b + y = c + c + x.
     Proof.
-      intros.
-      rewrite EQ0 in *. Undo.
-      rewrite EQ1 in EQ0. Undo.
-      rewrite EQ0. Undo.
-      rewrite <- EQ0 in *. Undo.
-      rewrite <- EQ2 in EQ0. Undo.
-      rewrite <- EQ2. Undo.
-      rewrite ! EQ0 in *. Undo.
-      rewrite ! EQ1 in EQ0. Undo.
-      rewrite ! EQ0. Undo.
-      rewrite <- ! EQ0 in *. Undo.
-      rewrite <- ! EQ2 in EQ0. Undo.
-      rewrite <- ! EQ2. Undo.
-      rewrite XY in *. Undo.
-      rewrite XY in EQ3. Undo.
-      rewrite XY. Undo.
-      rewrite <- XY in *. Undo.
-      rewrite <- XY in EQ3. Undo.
-      rewrite <- XY. Undo.
-      rewrite ! XY in *. Undo.
-      rewrite ! XY in EQ3. Undo.
-      rewrite ! XY. Undo.
-      rewrite <- ! XY in *. Undo.
-      rewrite <- ! XY in EQ3. Undo.
-      rewrite <- ! XY. Undo.
+      (* intros. *)
+      (* rewrite EQ0 in *. Undo. *)
+      (* rewrite EQ1 in EQ0. Undo. *)
+      (* rewrite EQ0. Undo. *)
+      (* rewrite <- EQ0 in *. Undo. *)
+      (* rewrite <- EQ2 in EQ0. Undo. *)
+      (* rewrite <- EQ2. Undo. *)
+      (* rewrite ! EQ0 in *. Undo. *)
+      (* rewrite ! EQ1 in EQ0. Undo. *)
+      (* rewrite ! EQ0. Undo. *)
+      (* rewrite <- ! EQ0 in *. Undo. *)
+      (* rewrite <- ! EQ2 in EQ0. Undo. *)
+      (* rewrite <- ! EQ2. Undo. *)
+      (* rewrite XY in *. Undo. *)
+      (* rewrite XY in EQ3. Undo. *)
+      (* rewrite XY. Undo. *)
+      (* rewrite <- XY in *. Undo. *)
+      (* rewrite <- XY in EQ3. Undo. *)
+      (* rewrite <- XY. Undo. *)
+      (* rewrite ! XY in *. Undo. *)
+      (* rewrite ! XY in EQ3. Undo. *)
+      (* rewrite ! XY. Undo. *)
+      (* rewrite <- ! XY in *. Undo. *)
+      (* rewrite <- ! XY in EQ3. Undo. *)
+      (* rewrite <- ! XY. Undo. *)
     Abort.
   End TEST.
 End REWRITETEST.
