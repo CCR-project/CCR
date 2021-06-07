@@ -1321,7 +1321,7 @@ Section SIMMOD.
        forall skenv (WF: ModSemL.wf (md_src.(ModL.get_modsem) skenv)), <<WF: ModSemL.wf (md_tgt.(ModL.get_modsem) skenv)>>;
    }.
 
-   Hint Resolve cpn5_wcompat: paco.
+   Hint Resolve cpn6_wcompat: paco.
 
    Definition eqv (mrsl: alist string (Σ * Any.t)) (mrs: string -> Σ) (mps: string -> Any.t): Prop :=
      forall mn mn' mr mp
@@ -1509,7 +1509,7 @@ Section SIMMOD.
        gstep. econs; et.
        gstep. econs; et.
        instantiate (1:=(20 + (arith n0 4 4))%ord).
-       gclo. eapply wrespect5_companion; auto with paco.
+       gclo. eapply wrespect6_companion; auto with paco.
        { eapply bindC_wrespectful. }
        econs.
        + gbase. eapply CIH; eauto. ss.

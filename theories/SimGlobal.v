@@ -25,8 +25,8 @@ Context `{Σ: GRA.t}.
 
 Section TY.
 (* Context `{R: Type}. *)
-Inductive _simg (simg: forall R (RR: R -> R -> Prop), Ord.t -> (itree eventE R) -> (itree eventE R) -> Prop)
-          {R} (RR: R -> R -> Prop) (i0: Ord.t): (itree eventE R) -> (itree eventE R) -> Prop :=
+Inductive _simg (simg: forall R0 R1 (RR: R0 -> R1 -> Prop), Ord.t -> (itree eventE R0) -> (itree eventE R1) -> Prop)
+          {R0 R1} (RR: R0 -> R1 -> Prop) (i0: Ord.t): (itree eventE R0) -> (itree eventE R1) -> Prop :=
 | simg_ret
     r_src r_tgt
     (SIM: RR r_src r_tgt)
@@ -34,7 +34,7 @@ Inductive _simg (simg: forall R (RR: R -> R -> Prop), Ord.t -> (itree eventE R) 
     _simg simg RR i0 (Ret r_src) (Ret r_tgt)
 | simg_syscall
     i1 ktr_src0 ktr_tgt0 fn varg rvs
-    (SIM: (eq ==> simg _ RR i1)%signature ktr_src0 ktr_tgt0)
+    (SIM: forall x_src x_tgt (EQ: x_src = x_tgt), simg _ _ RR i1 (ktr_src0 x_src) (ktr_tgt0 x_tgt))
   :
     _simg simg RR i0 (trigger (Syscall fn varg rvs) >>= ktr_src0) (trigger (Syscall fn varg rvs) >>= ktr_tgt0)
 
@@ -44,21 +44,21 @@ Inductive _simg (simg: forall R (RR: R -> R -> Prop), Ord.t -> (itree eventE R) 
     i1 itr_src0 itr_tgt0
     (TAUBOTH: True)
     (* (ORD: Ordinal.le i1 i0) *)
-    (SIM: simg _ RR i1 itr_src0 itr_tgt0)
+    (SIM: simg _ _ RR i1 itr_src0 itr_tgt0)
   :
     _simg simg RR i0 (tau;; itr_src0) (tau;; itr_tgt0)
 | simg_tauL
     i1 itr_src0 itr_tgt0
     (TAUL: True)
     (ORD: Ord.lt i1 i0)
-    (SIM: simg _ RR i1 itr_src0 itr_tgt0)
+    (SIM: simg _ _ RR i1 itr_src0 itr_tgt0)
   :
     _simg simg RR i0 (tau;; itr_src0) (itr_tgt0)
 | simg_tauR
     i1 itr_src0 itr_tgt0
     (TAUR: True)
     (ORD: Ord.lt i1 i0)
-    (SIM: simg _ RR i1 itr_src0 itr_tgt0)
+    (SIM: simg _ _ RR i1 itr_src0 itr_tgt0)
   :
     _simg simg RR i0 (itr_src0) (tau;; itr_tgt0)
 
@@ -68,21 +68,21 @@ Inductive _simg (simg: forall R (RR: R -> R -> Prop), Ord.t -> (itree eventE R) 
     i1 X_src X_tgt ktr_src0 ktr_tgt0
     (CHOOSEBOTH: True)
     (* (ORD: Ordinal.le i1 i0) *)
-    (SIM: forall x_tgt, exists x_src, simg _ RR i1 (ktr_src0 x_src) (ktr_tgt0 x_tgt))
+    (SIM: forall x_tgt, exists x_src, simg _ _ RR i1 (ktr_src0 x_src) (ktr_tgt0 x_tgt))
   :
     _simg simg RR i0 (trigger (Choose X_src) >>= ktr_src0) (trigger (Choose X_tgt) >>= ktr_tgt0)
 | simg_chooseL
     i1 X ktr_src0 itr_tgt0
     (CHOOSEL: True)
     (ORD: Ord.lt i1 i0)
-    (SIM: exists x, simg _ RR i1 (ktr_src0 x) itr_tgt0)
+    (SIM: exists x, simg _ _ RR i1 (ktr_src0 x) itr_tgt0)
   :
     _simg simg RR i0 (trigger (Choose X) >>= ktr_src0) (itr_tgt0)
 | simg_chooseR
     i1 X itr_src0 ktr_tgt0
     (CHOOSER: True)
     (ORD: Ord.lt i1 i0)
-    (SIM: forall x, simg _ RR i1 itr_src0 (ktr_tgt0 x))
+    (SIM: forall x, simg _ _ RR i1 itr_src0 (ktr_tgt0 x))
   :
     _simg simg RR i0 (itr_src0) (trigger (Choose X) >>= ktr_tgt0)
 
@@ -92,21 +92,21 @@ Inductive _simg (simg: forall R (RR: R -> R -> Prop), Ord.t -> (itree eventE R) 
     i1 X_src X_tgt ktr_src0 ktr_tgt0
     (TAKEBOTH: True)
     (* (ORD: Ordinal.le i1 i0) *)
-    (SIM: forall x_src, exists x_tgt, simg _ RR i1 (ktr_src0 x_src) (ktr_tgt0 x_tgt))
+    (SIM: forall x_src, exists x_tgt, simg _ _ RR i1 (ktr_src0 x_src) (ktr_tgt0 x_tgt))
   :
     _simg simg RR i0 (trigger (Take X_src) >>= ktr_src0) (trigger (Take X_tgt) >>= ktr_tgt0)
 | simg_takeL
     i1 X ktr_src0 itr_tgt0
     (TAKEL: True)
     (ORD: Ord.lt i1 i0)
-    (SIM: forall x, simg _ RR i1 (ktr_src0 x) itr_tgt0)
+    (SIM: forall x, simg _ _ RR i1 (ktr_src0 x) itr_tgt0)
   :
     _simg simg RR i0 (trigger (Take X) >>= ktr_src0) (itr_tgt0)
 | simg_takeR
     i1 X itr_src0 ktr_tgt0
     (TAKER: True)
     (ORD: Ord.lt i1 i0)
-    (SIM: exists x, simg _ RR i1 itr_src0 (ktr_tgt0 x))
+    (SIM: exists x, simg _ _ RR i1 itr_src0 (ktr_tgt0 x))
   :
     _simg simg RR i0 (itr_src0) (trigger (Take X) >>= ktr_tgt0)
 
@@ -120,12 +120,11 @@ Inductive _simg (simg: forall R (RR: R -> R -> Prop), Ord.t -> (itree eventE R) 
 (*     _simg simg RR i0 itr_src itr_tgt *)
 .
 
-Definition simg: forall R (RR: R -> R -> Prop), Ord.t -> (itree eventE R) -> (itree eventE R) -> Prop := paco5 _simg bot5.
+Definition simg: forall R0 R1 (RR: R0 -> R1 -> Prop), Ord.t -> (itree eventE R0) -> (itree eventE R1) -> Prop := paco6 _simg bot6.
 
-Lemma simg_mon: monotone5 _simg.
+Lemma simg_mon: monotone6 _simg.
 Proof.
   ii. inv IN; try (by econs; et).
-  - econs; et. ii. eapply LE; et.
   - econs; et. ii. hexploit SIM; et. i; des. esplits; et.
   - des. econs; et.
   - econs; et. ii. hexploit SIM; et. i; des. esplits; et.
@@ -141,7 +140,7 @@ Qed.
 (*   - *)
 (* Qed. *)
 
-Lemma simg_mon_ord r S SS i0 i1 (ORD: Ord.le i0 i1): @_simg r S SS i0 <2= @_simg r S SS i1.
+Lemma simg_mon_ord r S0 S1 SS i0 i1 (ORD: Ord.le i0 i1): @_simg r S0 S1 SS i0 <2= @_simg r S0 S1 SS i1.
 Proof.
   ii. inv PR; try (by econs; et).
   (* - econs; try apply SIM; et. etrans; et. *)
@@ -197,8 +196,10 @@ Hint Resolve simg_mon: paco.
 
 
 
-Global Program Instance _simg_refl r R RR `{Reflexive _ RR} (REFL: forall R RR `{Reflexive _ RR} o0, Reflexive (r R RR o0)) o0:
-  Reflexive (@_simg r R RR o0).
+Global Program Instance _simg_refl
+       (r : forall R0 R1, (R0 -> R1 -> Prop) -> Ord.t -> itree eventE R0 -> itree eventE R1 -> Prop)
+       R RR `{Reflexive _ RR} (REFL: forall R RR `{Reflexive _ RR} o0, Reflexive (r R R RR o0)) o0:
+  Reflexive (@_simg r R R RR o0).
 Next Obligation.
   ides x.
   - econs; et.
@@ -211,19 +212,19 @@ Unshelve.
   all: ss.
 Qed.
 
-Global Program Instance simg_paco_refl r R RR `{Reflexive _ RR} o0: Reflexive (paco5 _simg r R RR o0).
+Global Program Instance simg_paco_refl r R RR `{Reflexive _ RR} o0: Reflexive (paco6 _simg r R R RR o0).
 Next Obligation.
   revert_until Σ.
   pcofix CIH.
   i. pfold. eapply _simg_refl; et.
 Qed.
 
-Global Program Instance simg_gpaco_refl r R RR `{Reflexive _ RR} rg o0: Reflexive (gpaco5 _simg (cpn5 _simg) r rg R RR o0).
+Global Program Instance simg_gpaco_refl r R RR `{Reflexive _ RR} rg o0: Reflexive (gpaco6 _simg (cpn6 _simg) r rg R R RR o0).
 Next Obligation.
   gfinal. right. eapply simg_paco_refl; et.
 Qed.
 
-Global Program Instance simg_refl R RR `{Reflexive _ RR} o0: Reflexive (@simg R RR o0).
+Global Program Instance simg_refl R RR `{Reflexive _ RR} o0: Reflexive (@simg R R RR o0).
 Next Obligation.
   eapply simg_paco_refl. ss.
 Qed.
@@ -249,12 +250,12 @@ Qed.
 
 
 
-Variant ordC (r: forall S (SS: S -> S -> Prop), Ord.t -> (itree eventE S) -> (itree eventE S) -> Prop):
-  forall S (SS: S -> S -> Prop), Ord.t -> (itree eventE S) -> (itree eventE S) -> Prop :=
+Variant ordC (r: forall S0 S1 (SS: S0 -> S1 -> Prop), Ord.t -> (itree eventE S0) -> (itree eventE S1) -> Prop):
+  forall S0 S1 (SS: S0 -> S1 -> Prop), Ord.t -> (itree eventE S0) -> (itree eventE S1) -> Prop :=
 | ordC_intro
-    o0 o1 R (RR: R -> R -> Prop) itr_src itr_tgt
+    o0 o1 R0 R1 (RR: R0 -> R1 -> Prop) itr_src itr_tgt
     (ORD: Ord.le o0 o1)
-    (SIM: r _ RR o0 itr_src itr_tgt)
+    (SIM: r _ _ RR o0 itr_src itr_tgt)
   :
     ordC r RR o1 itr_src itr_tgt
 .
@@ -263,9 +264,9 @@ Hint Constructors ordC: core.
 
 Lemma ordC_mon
       r1 r2
-      (LE: r1 <5= r2)
+      (LE: r1 <6= r2)
   :
-    ordC r1 <5= ordC r2
+    ordC r1 <6= ordC r2
 .
 Proof. ii. destruct PR; econs; et. Qed.
 
@@ -310,13 +311,13 @@ Hint Resolve ordC_mon: paco.
 (*   - econs; eauto. { eapply Ord.lt_le_lt; et. } des. esplits; et. econs; et. refl. *)
 (* Qed. *)
 
-Lemma ordC_prespectful: prespectful5 (_simg) ordC.
+Lemma ordC_prespectful: prespectful6 (_simg) ordC.
 Proof.
   econs; eauto with paco.
   ii. inv PR. csc.
   rename x2 into o1. apply GF in SIM. pfold. inv SIM.
   - econs; eauto.
-  - econs; eauto. ii. right. left. eapply SIM0; et.
+  - econs; eauto.
   - econs; eauto.
   - econs; eauto. { eapply Ord.lt_le_lt; et. }
   - econs; eauto. { eapply Ord.lt_le_lt; et. }
@@ -329,8 +330,8 @@ Proof.
   (* - econs. { eapply Ord.lt_le_lt; et. } right. left. et. *)
 Qed.
 
-Lemma ordC_spec: ordC <6= gupaco5 (_simg) (cpn5 _simg).
-Proof. intros. eapply prespect5_uclo; eauto with paco. eapply ordC_prespectful. Qed.
+Lemma ordC_spec: ordC <7= gupaco6 (_simg) (cpn6 _simg).
+Proof. intros. eapply prespect6_uclo; eauto with paco. eapply ordC_prespectful. Qed.
 (* Lemma ordC_spec2: ordC <6= gupaco5 (_simg) (cpn5 _simg). *)
 (* Proof. intros. gclo. econs. { apply ordC_compatible. } eapply ordC_mon; try apply PR. ii. gbase. ss. Qed. *)
 
@@ -344,18 +345,18 @@ Proof. intros. eapply prespect5_uclo; eauto with paco. eapply ordC_prespectful. 
 
 
 
-Variant bindR (r s: forall S (SS: S -> S -> Prop), Ord.t -> (itree eventE S) -> (itree eventE S) -> Prop):
-  forall S (SS: S -> S -> Prop), Ord.t -> (itree eventE S) -> (itree eventE S) -> Prop :=
+Variant bindR (r s: forall S0 S1 (SS: S0 -> S1 -> Prop), Ord.t -> (itree eventE S0) -> (itree eventE S1) -> Prop):
+  forall S0 S1 (SS: S0 -> S1 -> Prop), Ord.t -> (itree eventE S0) -> (itree eventE S1) -> Prop :=
 | bindR_intro
     o0 o1
 
-    R RR
-    (i_src i_tgt: itree eventE R)
-    (SIM: r _ RR o0 i_src i_tgt)
+    R0 R1 RR
+    (i_src: itree eventE R0) (i_tgt: itree eventE R1)
+    (SIM: r _ _ RR o0 i_src i_tgt)
 
-    S SS
-    (k_src k_tgt: ktree eventE R S)
-    (SIMK: forall vret_src vret_tgt (SIM: RR vret_src vret_tgt), s _ SS o1 (k_src vret_src) (k_tgt vret_tgt))
+    S0 S1 SS
+    (k_src: ktree eventE R0 S0) (k_tgt: ktree eventE R1 S1)
+    (SIMK: forall vret_src vret_tgt (SIM: RR vret_src vret_tgt), s _ _ SS o1 (k_src vret_src) (k_tgt vret_tgt))
   :
     (* bindR r s (Ordinal.add o0 o1) (ITree.bind i_src k_src) (ITree.bind i_tgt k_tgt) *)
     bindR r s SS (OrdArith.add o1 o0) (ITree.bind i_src k_src) (ITree.bind i_tgt k_tgt)
@@ -365,9 +366,9 @@ Hint Constructors bindR: core.
 
 Lemma bindR_mon
       r1 r2 s1 s2
-      (LEr: r1 <5= r2) (LEs: s1 <5= s2)
+      (LEr: r1 <6= r2) (LEs: s1 <6= s2)
   :
-    bindR r1 s1 <5= bindR r2 s2
+    bindR r1 s1 <6= bindR r2 s2
 .
 Proof. ii. destruct PR; econs; et. Qed.
 
@@ -380,7 +381,7 @@ Hint Unfold bindC: core.
 (* Hint Resolve Ordinal.le_lt_lt: ord. *)
 
 (* Lemma bindC_wrespectful: prespectful5 (_simg) bindC. *)
-Lemma bindC_wrespectful: wrespectful5 (_simg) bindC.
+Lemma bindC_wrespectful: wrespectful6 (_simg) bindC.
 Proof.
   econstructor; repeat intro.
   { eapply bindR_mon; eauto. }
@@ -430,24 +431,24 @@ Proof.
     des. esplits; et. econs 2; eauto with paco. econs; eauto with paco.
 Qed.
 
-Lemma bindC_spec: bindC <6= gupaco5 (_simg) (cpn5 (_simg)).
+Lemma bindC_spec: bindC <7= gupaco6 (_simg) (cpn6 (_simg)).
 Proof.
-  intros. eapply wrespect5_uclo; eauto with paco. eapply bindC_wrespectful.
+  intros. eapply wrespect6_uclo; eauto with paco. eapply bindC_wrespectful.
 Qed.
 
 Theorem simg_bind
-        R S
+        R0 R1 S0 S1
         RR SS
-        o0 (itr_src itr_tgt: itree eventE R)
+        o0 (itr_src: itree eventE R0) (itr_tgt: itree eventE R1)
         (SIM: simg RR o0 itr_src itr_tgt)
-        o1 (ktr_src ktr_tgt: ktree eventE R S)
+        o1 (ktr_src: ktree eventE R0 S0) (ktr_tgt: ktree eventE R1 S1)
         (SIMK: forall vret_src vret_tgt (SIM: RR vret_src vret_tgt), simg SS o1 (ktr_src vret_src) (ktr_tgt vret_tgt))
   :
     simg SS (OrdArith.add o1 o0) (itr_src >>= ktr_src) (itr_tgt >>= ktr_tgt)
 .
 Proof.
   ginit.
-  { eapply cpn5_wcompat; eauto with paco. }
+  { eapply cpn6_wcompat; eauto with paco. }
   guclo bindC_spec. econs.
   - eauto with paco.
   - ii. exploit SIMK; eauto with paco.

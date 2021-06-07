@@ -75,7 +75,7 @@ Section SIMMODSEM.
       steps. rewrite Any.upcast_downcast in *. astart 0. astop.
       mAssertPure (x = Z.odd a); subst.
       { iApply (bw_ra_merge with "INV PRE"). }
-      steps. force_l. eexists.
+      steps. force_l. eexists. steps.
       hret _; ss.
       iModIntro. iFrame.
       iPureIntro. split; ss. f_equal.
@@ -87,7 +87,7 @@ Section SIMMODSEM.
       steps. rewrite Any.upcast_downcast in *. astart 0. astop.
       mAssertPure (x = Z.odd a); subst.
       { iApply (bw_ra_merge with "INV PRE"). }
-      steps. force_l. eexists.
+      steps. force_l. eexists. steps.
       hret _; ss.
       iCombine "INV" "PRE" as "H".
       iPoseProof (OwnM_Upd with "H") as "H".

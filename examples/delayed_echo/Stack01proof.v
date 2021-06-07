@@ -79,7 +79,7 @@ Section SIMMODSEM.
         steps. erewrite Any.upcast_downcast in *. steps.
 
         (* ret *)
-        astop. force_l. eexists. hret _; ss.
+        astop. force_l. eexists. steps. hret _; ss.
       }
 
       (* l = lhd :: ltl *)
@@ -134,7 +134,7 @@ Section SIMMODSEM.
       steps. erewrite Any.upcast_downcast in *. clarify.
 
       (* ret *)
-      astop. force_l. eexists. hret _; ss.
+      astop. force_l. eexists. steps. hret _; ss.
       iModIntro. iSplitR; ss. iSplitL; ss. iSplitR; ss.
       iExists _. iFrame.
     }
@@ -160,7 +160,7 @@ Section SIMMODSEM.
         steps. erewrite Any.upcast_downcast in *. steps.
 
         (* ret *)
-        astop. force_l. eexists. hret _; ss.
+        astop. force_l. eexists. steps. hret _; ss.
       }
 
       (* l = lhd :: ltl *)
@@ -215,7 +215,7 @@ Section SIMMODSEM.
       steps. erewrite Any.upcast_downcast in *. clarify.
 
       (* ret *)
-      astop. force_l. eexists. hret _; ss.
+      astop. force_l. eexists. steps. hret _; ss.
       iModIntro. iSplitR; ss. iSplitL; ss.
       iExists _. iFrame. ss.
     }
@@ -252,7 +252,7 @@ Section SIMMODSEM.
       (* ret *)
       mCombine "POST" "POST1".
       rewrite <- points_to_split in ACC.
-      astop. force_l. eexists. hret _; ss.
+      astop. force_l. eexists. steps. hret _; ss.
       iModIntro. iSplitR; ss. iSplitL; ss.
       iExists _. iSplitL; ss. iExists _, _. iSplitR "A"; ss.
       iSplitR; ss.

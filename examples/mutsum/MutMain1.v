@@ -28,7 +28,5 @@ Section PROOF.
 
   Definition SMain: SMod.t := SMod.main (fun _ o => (⌜o = ord_top⌝: iProp)%I) mainBody.
   Definition Main: Mod.t := SMod.to_tgt (fun _ => GlobalStb) SMain.
-  Definition SMainSem: SModSem.t := SModSem.main (fun _ o => (⌜o = ord_top⌝: iProp)%I) mainBody.
-  Definition MainSem: ModSem.t := SModSem.to_tgt GlobalStb SMainSem.
 
 End PROOF.

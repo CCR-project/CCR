@@ -752,6 +752,8 @@ Tactic Notation "mEval" tactic(tac) "in" constr(Hn) :=
                       |tac; refl];
                      asimpl in H).
 
+Tactic Notation "mRename" constr(Hn_old) "into" constr(Hn_new) :=
+  mAssert _ with Hn_old as Hn_new; [iExact Hn_old|].
 
 Ltac mDes' l :=
   match l with
@@ -1014,6 +1016,23 @@ Section TEST.
     i. mAssertPure _.
     { iClear "B". iApply "H0". iApply "A". }
   Abort.
+
+  (* mEval *)
+  Goal forall ctx X Y
+              (ACC: current_iPropL ctx [("A", X); ("H0", (X -∗ ⌜(6 + 6 = 12)%nat⌝)%I); ("B", Y)]),
+      False.
+  Proof.
+    i. mEval ltac:(simpl) in "H0". (* simpl, rewrite, unfold, and fold ... anything *)
+  Abort.
+
+  (* mRename *)
+  Goal forall ctx P X Y
+              (ACC: current_iPropL ctx [("A", X); ("H0", (X -∗ ⌜P⌝)%I); ("B", Y)]),
+      False.
+  Proof.
+    i. mRename "H0" into "H".
+  Abort.
+
 End TEST.
 
 

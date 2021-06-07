@@ -51,38 +51,6 @@ Section LEMMA.
 
   Context `{Σ: GRA.t}.
 
-  Lemma hcall_clo
-        (mr_src1 fr_src1 rarg_src: Σ)
-        R0 R1
-        (o: ord) (fs: fspec) (x: shelve__ fs.(X))
-        r rg (n: nat) mr_src0 mp_src0 fr_src0
-        mrs_tgt frs_tgt k_tgt k_src
-        fn tbr ord_cur varg_src varg_tgt
-        (wf: (Σ * Any.t) * (Σ * Any.t) -> Prop)
-
-        (UPDATABLE: URA.updatable (URA.add mr_src0 fr_src0) (URA.add mr_src1 (URA.add rarg_src fr_src1)))
-        (FUEL: (15 < n)%ord)
-        (PRE: fs.(precond) x varg_src varg_tgt o rarg_src)
-        (PURE: ord_lt o ord_cur /\
-               (tbr = true -> is_pure o) /\ (tbr = false -> o = ord_top))
-        (WF: wf ((mr_src1, mp_src0), mrs_tgt))
-        (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> R0 -> R1 -> Prop)
-        (POST: forall (vret_tgt : Any.t) (mrs_src1 mrs_tgt1 : (Σ * Any.t))
-                      (rret: Σ) vret_src
-                      (WF: wf (mrs_src1, mrs_tgt1)),
-            exists (mr_src2: Σ) (mp_src2: Any.t),
-              (<<LOOKUP: mrs_src1 = (mr_src2, mp_src2)>>) /\
-              forall (VALID: URA.wf (URA.add mr_src2 (URA.add fr_src1 rret)))
-                     (POST: fs.(postcond) x vret_src vret_tgt rret),
-                gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ eqr 100
-                       (mrs_src1, URA.add fr_src1 rret, k_src vret_src) (mrs_tgt1, frs_tgt, k_tgt vret_tgt))
-    :
-      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ eqr n
-             (mr_src0, mp_src0, fr_src0, (HoareCall tbr ord_cur fs fn varg_src) >>= k_src)
-             (mrs_tgt, frs_tgt, trigger (Call fn varg_tgt) >>= k_tgt).
-  Proof.
-  Admitted.
-
 End LEMMA.
 
 
@@ -190,6 +158,99 @@ Section ADQ.
   .
   Ltac list_tac := repeat _list_tac.
 
+
+  Lemma my_lemma1_aux'
+        (ske: Sk.t) mrs (A: Type) (itr: itree (uCallE +' pE +' eventE) A) (ctx: Σ) (WF: URA.wf (ctx ⋅ fst mrs)) fr
+    :
+      paco6
+        (_sim_itree (fun '(st_src, st_tgt) => st_src = st_tgt))
+        bot6
+        (Σ * A)%type A
+        (fun '(mrs_src, fr_src) '(mrs_tgt, fr_tgt) '(ctx, r_src) r_tgt => mrs_src = mrs_tgt /\ r_src = r_tgt /\ URA.wf (ctx ⋅ fst mrs_src))
+        40%nat
+        (mrs, fr, interp_hCallE_tgt (_gstb ske) ord_top (UModSem.transl_itr_smod itr) ctx)
+        (mrs, ε, UModSem.transl_itr_mod (T:=A) itr)
+  .
+  Proof.
+    ginit. revert mrs A itr ctx WF fr. gcofix CIH. i. ides itr.
+    { steps. }
+    { steps. gbase. eapply CIH; et. }
+    rewrite <- bind_trigger.
+    destruct e; cycle 1.
+    {
+      destruct s; ss.
+      { destruct p; ss.
+        - resub. ired_both. destruct mrs. gstep. econs; et. steps. gbase. eapply CIH; et.
+        - resub. ired_both. destruct mrs. gstep. econs; et. steps. gbase. eapply CIH; et.
+      }
+      { destruct e; ss.
+        - resub. ired_both. destruct mrs. gstep. econs; et.
+          i. exists x_tgt. eexists. steps. gbase. eapply CIH; et.
+        - resub. ired_both. destruct mrs. gstep. econs; et.
+          i. exists x_src. eexists. steps. gbase. eapply CIH; et.
+        - resub. ired_both. destruct mrs. gstep. econs; et.
+          i. eexists. steps. gbase. eapply CIH; et.
+      }
+    }
+    destruct u. resub. ired_both. force_l.
+    { admit "MID -- need to trigger UB beforehand". }
+    steps.
+    rename _UNWRAPN into T.
+    eapply alist_find_some in T. unfold _gstb in T. rewrite in_app_iff in *. des; ss.
+    - list_tac.
+      des_ifs. unfold _kmss in T. list_tac. subst. unfold kmds in T0. list_tac. subst.
+      ss. list_tac. des_ifs. ss.
+      rewrite Any.upcast_downcast. steps.
+      unfold HoareCall, discard, forge, put, checkWf. steps.
+      destruct mrs.
+      force_l. exists (c, ε). steps.
+      force_l.
+      { rewrite ! URA.unit_id. auto. }
+      steps. force_l. exists ε. steps.
+      force_l. exists ε. steps. force_l.
+      { rewrite URA.unit_id. auto. }
+      steps. force_l. exists None. steps.
+      force_l. exists (Any.upcast varg). steps.
+      force_l. exists ord_top. steps.
+      force_l.
+      { red. uipropall. }
+      steps. force_l.
+      { split; et. }
+      steps. gstep. econs; et. i. subst. destruct mrs_tgt1. eexists. steps.
+      red in _ASSUME0. uipropall. subst.
+      gbase. eapply CIH. ss.
+      eapply URA.wf_mon. instantiate (1:=x0).
+      replace (x2 ⋅ c0 ⋅ x0) with (x2 ⋅ (c0 ⋅ (ε ⋅ x0))); auto. r_solve.
+    - list_tac.
+      des_ifs. unfold _umss in T. list_tac. subst.
+      rewrite Any.upcast_downcast. steps.
+      unfold HoareCall, discard, forge, put, checkWf. steps.
+      destruct mrs.
+      force_l. exists (c, ε). steps.
+      force_l.
+      { rewrite ! URA.unit_id. auto. }
+      steps. force_l. exists ε. steps.
+      force_l. exists ε. steps. force_l.
+      { rewrite URA.unit_id. auto. }
+      steps. force_l. exists tt. steps.
+      force_l. exists (Any.upcast varg). steps.
+      force_l. exists ord_top. steps.
+      force_l.
+      { red. uipropall. esplits; et. rewrite Any.upcast_downcast. ss. }
+      steps. force_l.
+      { split; et. }
+      steps. gstep. econs; et. i. subst. destruct mrs_tgt1. eexists. steps.
+      red in _ASSUME0. uipropall. subst.
+      gbase. eapply CIH. ss.
+      eapply URA.wf_mon. instantiate (1:=x).
+      replace (x2 ⋅ c0 ⋅ x) with (x2 ⋅ (c0 ⋅ (ε ⋅ x))); auto. r_solve.
+    Unshelve.
+    all: try (exact Ord.O).
+    all: try (exact 0%nat).
+  Qed.
+
+  Ltac r_wf H := eapply prop_ext_rev; [eapply f_equal|]; [|eapply H]; r_solve.
+
   Lemma my_lemma1_aux
         mrs ktr arg ske
     :
@@ -199,77 +260,26 @@ Section ADQ.
   .
   Proof.
     destruct mrs as [mr st].
-    ginit.
-    revert_until gstb. gcofix CIH. i.
-    unfold cfun. unfold UModSem.transl_fun_smod. unfold fun_to_tgt. cbn.
-    unfold HoareFun, put, forge, checkWf, discard. ss.
-    steps.
-    r in _ASSUME0. uipropall. des. subst.
-    unfold UModSem.transl_fun_mod. unfold cfun. steps.
+    unfold fun_to_tgt, UModSem.transl_fun_mod, HoareFun, discard, forge, checkWf, put, cfun.
+    ginit. steps. red in _ASSUME0. uipropall. des. clarify.
+    unfold UModSem.transl_fun_smod.
     guclo lordC_spec. econs.
-    { instantiate (1:=(45 + 45)%ord). rewrite <- OrdArith.add_from_nat. eapply OrdArith.le_from_nat. lia. }
-    guclo lbindC_spec. econs; cycle 1.
-    - instantiate (1:=fun '(mr0, st0, fr0) '(mr1, st1, fr1) y0 y1 => mr0 = mr1 /\ st0 = st1 /\ y0 = y1).
-      i. ss. des_ifs. des; subst.
-      steps.
-      force_l. esplits. force_l. eexists (_, _). steps. force_l. { refl. } steps.
-      force_l. esplits. force_l. { r. uipropall. } steps.
-      force_l. esplits. force_l. { rewrite URA.unit_id. refl. } steps.
-    - unfold body_to_tgt. steps.
-      abstr (ktr vargs) itr. clear arg _UNWRAPN vargs ktr.
-      (* clear _ASSUME0. *)
-      des_u. rewrite URA.unit_idl in *.
-      revert itr. revert st. revert_until CIH. gcofix CIH0. i.
-      ides itr.
-      { steps. }
-      { steps. gbase. eapply CIH0; et. }
-      rewrite <- bind_trigger.
-      destruct e; cycle 1.
-      {
-        destruct s; ss.
-        { destruct p; ss.
-          - resub. ired_both. resub. gstep. econs; et. steps. gbase. eapply CIH0; et.
-          - resub. ired_both. resub. gstep. econs; et. steps. gbase. eapply CIH0; et.
-        }
-        { destruct e.
-          - resub. ired_both. resub. gstep. econs; et. i. esplits. steps. gbase. eapply CIH0; et.
-          - resub. ired_both. resub. gstep. econs; et. i. esplits. steps. gbase. eapply CIH0; et.
-          - resub. ired_both. resub. gstep. econs; et. i. esplits. steps. gbase. eapply CIH0; et.
-        }
-      }
-      resub.
-      destruct u.
-      steps. resub.
-      force_l.
-      { admit "MID -- need to trigger UB beforehand". }
-      steps.
-      rename _UNWRAPN into T.
-      eapply alist_find_some in T. unfold _gstb in T. rewrite in_app_iff in *. des; ss.
-      + list_tac.
-        des_ifs. unfold _kmss in T. list_tac. subst. unfold kmds in T0. list_tac. subst.
-        ss. list_tac. des_ifs. ss.
-        rewrite Any.upcast_downcast. steps.
-        eapply hcall_clo with (fs:=(KModSem.disclose (ksb_fspec k0))); try refl.
-        { rewrite URA.unit_idl. refl. }
-        { eapply OrdArith.lt_from_nat. lia. }
-        { instantiate (1:=ord_top). instantiate(1:=None). cbn. r. uipropall. }
-        { ss. }
-        i. subst. ss. destruct mrs_tgt1. esplits; et. i.
-        r in POST. uipropall. subst. steps. gbase. eapply CIH0; et.
-      + list_tac.
-        des_ifs. unfold _umss in T. list_tac. subst.
-        rewrite Any.upcast_downcast. steps.
-        eapply hcall_clo with (fs:=fspec_trivial2); try refl.
-        { rewrite URA.unit_idl. refl. }
-        { eapply OrdArith.lt_from_nat. lia. }
-        { instantiate (1:=ord_top). instantiate(1:=tt). cbn. r. uipropall. esplit; ss.
-          esplits; et. rewrite Any.upcast_downcast; ss. }
-        { ss. }
-        i. subst. ss. destruct mrs_tgt1. esplits; et. i.
-        r in POST. uipropall. subst. steps. gbase. eapply CIH0; et.
-  Unshelve.
-    all: try (by apply Ord.O).
-  Qed.
+    { instantiate (1:=(49 + 40)%ord). rewrite <- OrdArith.add_from_nat. eapply OrdArith.le_from_nat. lia. }
+   guclo lbindC_spec. econs.
+    { gfinal. right. eapply my_lemma1_aux'.
+      eapply URA.wf_mon. instantiate (1:=x2). r_wf _ASSUME. }
+    i. destruct st_src1, st_tgt1. destruct vret_src. ss. des; subst. destruct p0.
+    force_l. eexists. force_l. eexists (_, _). steps.
+    force_l.
+    { instantiate (1:=ε). instantiate (1:=c2). r_wf SIM1. }
+    steps. force_l. eexists.
+    force_l.
+    { red. uipropall. }
+    steps. force_l. eexists. force_l.
+    { instantiate (1:=ε). instantiate (1:=ε). rewrite URA.unit_id. auto. }
+    steps.
+    (* can not Qed bcz of Coq bug... *)
+  Admitted.
 
   Lemma my_lemma1
         umd
@@ -670,7 +680,7 @@ Section ADQ.
              (EventsL.interp_Es p_tgt (p_tgt (Call fn (@inr unit _ args)↑)) st0)
   .
   Proof.
-    ginit. { eapply cpn5_wcompat; eauto with paco. } revert_until p_tgt. gcofix CIH. i.
+    ginit. revert_until p_tgt. gcofix CIH. i.
     cbn. steps.
     generalize (find_sim fn). intro T. inv T; cbn; steps.
     des; subst. specialize (IN0 args).
@@ -735,14 +745,13 @@ Section ADQ.
   Proof.
     r. eapply adequacy_global. exists 100.
     ginit.
-    { eapply cpn5_wcompat; eauto with paco. }
     unfold ModSemL.initial_itr. Local Opaque ModSemL.prog. ss.
     unfold ITree.map.
     unfold assume. folder.
     steps.
     esplits; et. { admit "ez - wf". } steps.
     instantiate (1:=(200 + 200)%ord).
-    match goal with | [ |- gpaco5 _ _ _ _ _ _ _ ?src ?tgt ] => remember src as tmp end.
+    match goal with | [ |- gpaco6 _ _ _ _ _ _ _ _ ?src ?tgt ] => remember src as tmp end.
     replace ([]↑) with ((@inr unit _ ([]: list val))↑); cycle 1.
     { admit "ez - parameterize initial argument && use transitivity of refinement". }
     subst.
@@ -834,6 +843,7 @@ Section ADQ.
         eapply Forall2_apply_Forall2.
         { instantiate (1:=eq). refl. }
         i. subst. exists _gstb. split; ss. r. intro ske. rewrite <- gstb_eq. refl.
+      - admit "main pre".
       - ss. instantiate (1:=ε). rewrite ! URA.unit_id. rewrite ! URA.unit_idl. admit "should be ez".
       - Check (UModSem.transl_fun_smod mainbody).
         admit "mid - main argument parameterization".
