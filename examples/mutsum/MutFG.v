@@ -72,6 +72,8 @@ Section PROOF.
     - eapply MutG01proof.correct.
   Qed.
 
+  Require Import ProofMode.
+
   Lemma FG12_correct:
     refines_closed (FG1) (FG2).
   Proof.
@@ -82,8 +84,9 @@ Section PROOF.
         eapply adequacy_type; revgoals.
         { ss. left. refl. }
         { instantiate (1:=ε). unfold compose. ss. rewrite ! URA.unit_id. apply URA.wf_unit. }
+        { uipropall. red. uipropall. }
       }
-      { simpl. admit "ez". }
+      { admit "TODO - change SMain". }
     }
   Qed.
 

@@ -126,7 +126,13 @@ Section CANCEL.
   Hypothesis MAINM: In (SMod.main mainpre mainbody) mds.
 
   Theorem adequacy_type: refines_closed (Mod.add_list mds_tgt) (Mod.add_list mds_src).
-  Proof. ii. eapply adequacy_type_m2s. eapply adequacy_type_t2m; et. Qed.
+  Proof.
+    ii. eapply adequacy_type_m2s.
+    { admit "main". }
+    eapply adequacy_type_t2m; et.
+    Unshelve.
+    all:ss.
+  Qed.
 
 End CANCEL.
 

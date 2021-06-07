@@ -46,7 +46,7 @@ Section SIMMODSEM.
     force_r.
     { admit "Add range condition". } steps.
     destruct (dec (Z.of_nat x) 0%Z).
-    - destruct x; ss. astop. force_l. eexists.
+    - destruct x; ss. astop. force_l. eexists. steps.
       hret _; ss.
     - destruct x; [ss|]. rewrite Nat2Z.inj_succ. steps. acatch.
       hcall _ _ _ with "*"; auto.
@@ -55,7 +55,7 @@ Section SIMMODSEM.
       { splits; ss; eauto with ord_step. }
       i. mDesAll. des; clarify. eapply Any.upcast_inj in PURE2. des; clarify.
       rewrite Any.upcast_downcast. steps. astop.
-      force_l. eexists.
+      force_l. eexists. steps.
       hret _; ss. start_ipm_proof. iPureIntro. splits; ss.
       f_equal. f_equal. lia.
       Unshelve. all: ss.
