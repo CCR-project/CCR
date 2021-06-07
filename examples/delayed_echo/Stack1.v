@@ -21,15 +21,6 @@ Section PROOF.
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG memRA Σ}.
 
-  Fixpoint is_list (ll: val) (xs: list val): iProp :=
-    match xs with
-    | [] => (⌜ll = Vnullptr⌝: iProp)%I
-    | xhd :: xtl =>
-      (∃ lhd ltl, ⌜ll = Vptr lhd 0⌝ ** (OwnM ((lhd,0%Z) |-> [xhd; ltl]))
-                             ** is_list ltl xtl: iProp)%I
-    end
-  .
-
   Let pop_spec: fspec := (mk_simple (fun '(llref, xs) => (
                                          (fun varg o =>
                                             (∃ ll, ⌜varg = [Vptr llref 0%Z]↑⌝ ** OwnM ((llref,0%Z) |-> [ll])

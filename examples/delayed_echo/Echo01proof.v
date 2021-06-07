@@ -31,27 +31,6 @@ Section AUX.
   Context `{Σ: GRA.t}.
 
   Context `{@GRA.inG Mem1.memRA Σ}.
-  Lemma unfold_is_list: forall ll xs,
-      is_list ll xs =
-      match xs with
-      | [] => (⌜ll = Vnullptr⌝: iProp)%I
-      | xhd :: xtl =>
-        (∃ lhd ltl, ⌜ll = Vptr lhd 0⌝ ** (OwnM ((lhd,0%Z) |-> [xhd; ltl]))
-                               ** is_list ltl xtl: iProp)%I
-      end
-  .
-  Proof.
-    i. destruct xs; auto.
-  Qed.
-
-  Lemma unfold_is_list_cons: forall ll xhd xtl,
-      is_list ll (xhd :: xtl) =
-      (∃ lhd ltl, ⌜ll = Vptr lhd 0⌝ ** (OwnM ((lhd,0%Z) |-> [xhd; ltl]))
-                             ** is_list ltl xtl: iProp)%I.
-  Proof.
-    i. eapply unfold_is_list.
-  Qed.
-
   Context `{@GRA.inG Echo1.echoRA Σ}.
 
   Lemma echo_ra_merge

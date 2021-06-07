@@ -22,12 +22,6 @@ Set Implicit Arguments.
 Let _memRA: URA.t := (mblock ==> Z ==> (Excl.t val))%ra.
 
 
-Section AUX.
-  Context `{Σ: GRA.t}.
-  Definition mk_ksimple {X: Type} (PQ: X -> ((Any.t -> ord -> iProp) * (Any.t -> iProp))):
-    ftspec unit unit := @mk_ftspec _ _ _ X (fun x _ a o => (fst ∘ PQ) x a o) (fun x _ a => (snd ∘ PQ) x a)
-  .
-End AUX.
 
 
 

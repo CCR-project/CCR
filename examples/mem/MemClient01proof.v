@@ -26,8 +26,6 @@ Local Open Scope nat_scope.
 
 
 
-
-
 Section SIMMODSEM.
 
   Context `{Σ: GRA.t}.
@@ -68,22 +66,20 @@ Section SIMMODSEM.
     { unfold clientF. init. harg. destruct varg_src.
       { ss. des_ifs; mDesAll; ss. }
       destruct x; mDesAll; ss. des; subst.
-      unfold clientBody. steps. unfold KPC. steps.
+      unfold clientBody. steps. kstart 2.
 
-      force_l. exists "alloc". steps. force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
-      hcall _ (Some _) _ with ""; ss; et.
+      kcatch. hcall _ (Some _) _ with ""; ss; et.
       { iModIntro. iSplitR; ss. iPureIntro. esplits; et. instantiate (1:=1%nat). ss. }
       { ss. }
       steps. mDesAll. subst. rewrite Any.upcast_downcast in *. clarify.
 
-      force_l. exists "store". steps. force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
-      hcall _ (Some (_, _, _)) _ with "A"; ss; et.
+      kcatch. hcall _ (Some (_, _, _)) _ with "A"; ss; et.
       { iModIntro. iSplitR; ss. iSplitL; ss.
         - iExists _. iSplitL; ss. iSplitR; ss.
         - ss.
       }
       { ss. }
-      steps.
+      steps. kstop.
 
       force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
       hcall _ _ _ with ""; ss; et.
@@ -91,14 +87,14 @@ Section SIMMODSEM.
       { ss. }
       steps. mDesAll. subst.
 
-      force_l. exists "load". steps. force_l; stb_tac; clarify. steps. rewrite Any.upcast_downcast. steps.
-      hcall _ (Some (_, _, _)) _ with "POST"; ss; et.
+      kstart 1.
+      kcatch. hcall _ (Some (_, _, _)) _ with "POST"; ss; et.
       { iModIntro. iSplitR; ss. iSplitL; ss.
         - iSplitL; ss. iSplitR; ss.
         - ss.
       }
       { ss. }
-      steps. mDesAll. subst. rewrite Any.upcast_downcast in *. clarify.
+      steps. kstop. mDesAll. subst. rewrite Any.upcast_downcast in *. clarify. steps.
 
       hret _; ss.
     }

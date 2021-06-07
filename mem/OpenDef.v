@@ -58,30 +58,6 @@ End AUX.
 (*** TODO: remove redundancy ***)
 Ltac my_red_both := try (prw _red_gen 2 0); try (prw _red_gen 1 0).
 
-(*** TODO: remove redundancy ***)
-Ltac resub :=
-  repeat multimatch goal with
-         | |- context[ITree.trigger ?e] =>
-           match e with
-           | subevent _ _ => idtac
-           | _ => replace (ITree.trigger e) with (trigger e) by refl
-           end
-         | |- context[@subevent _ ?F ?prf _ (?e|)%sum] =>
-           let my_tac := ltac:(fun H => replace (@subevent _ F prf _ (e|)%sum) with (@subevent _ F _ _ e) by H) in
-           match (type of e) with
-           | (_ +' _) _ => my_tac ltac:(destruct e; refl)
-           | _ => my_tac ltac:(refl)
-           end
-         | |- context[@subevent _ ?F ?prf _ (|?e)%sum] =>
-           let my_tac := ltac:(fun H => replace (@subevent _ F prf _ (|e)%sum) with (@subevent _ F _ _ e) by H) in
-           match (type of e) with
-           | (_ +' _) _ => my_tac ltac:(destruct e; refl)
-           | _ => my_tac ltac:(refl)
-           end
-         | |- context[ITree.trigger (@subevent _ ?F ?prf _ (resum ?a ?b ?e))] =>
-           replace (ITree.trigger (@subevent _ F prf _ (resum a b e))) with (ITree.trigger (@subevent _ F _ _ e)) by refl
-         end.
-
 
 
 (******************************************* UNKNOWN ***********************************************)
@@ -653,6 +629,57 @@ Section AUX.
     ksb_body: list val -> itree (kCallE +' pE +' eventE) val;   (*** U -> K ***)
   }
   .
+
+  Definition mk_ksimple {X: Type} (PQ: X -> ((Any.t -> ord -> iProp) * (Any.t -> iProp))):
+    ftspec unit unit := @mk_ftspec _ _ _ X (fun x _ a o => (fst ∘ PQ) x a o) (fun x _ a => (snd ∘ PQ) x a)
+  .
+
+  Definition kspec_trivial_bottom: ftspec unit unit :=
+    (mk_ksimple (fun (_: unit) => ((fun _ _ => (⌜False⌝: iProp)%I),
+                                   (fun _ => (⌜True⌝: iProp)%I))))
+  .
+
+  Program Fixpoint _APCK (at_most: Ord.t) {wf Ord.lt at_most}: itree (kCallE +' pE +' eventE) unit :=
+    break <- trigger (Choose _);;
+    if break: bool
+    then Ret tt
+    else
+      n <- trigger (Choose Ord.t);;
+      trigger (Choose (n < at_most)%ord);;;
+      fn <- trigger (Choose _);;
+      trigger (kCall fn (inl tt));;;
+      _APCK n.
+  Next Obligation. ss. Qed.
+  Next Obligation. eapply Ord.lt_well_founded. Qed.
+
+  Definition APCK: itree (kCallE +' pE +' eventE) unit :=
+    at_most <- trigger (Choose _);;
+    guarantee(at_most < kappa)%ord;;;
+    _APCK at_most
+  .
+
+  Lemma unfold_APCK:
+    forall at_most, _APCK at_most =
+                    break <- trigger (Choose _);;
+                    if break: bool
+                    then Ret tt
+                    else
+                      n <- trigger (Choose Ord.t);;
+                      guarantee (n < at_most)%ord;;;
+                      fn <- trigger (Choose _);;
+                      trigger (kCall fn (inl tt));;;
+                      _APCK n.
+  Proof.
+    i. unfold _APCK. rewrite Fix_eq; eauto.
+    { repeat f_equal. extensionality break. destruct break; ss.
+      repeat f_equal. extensionality n.
+      unfold guarantee. rewrite bind_bind.
+      repeat f_equal. extensionality p.
+      rewrite bind_ret_l. repeat f_equal. }
+    { i. replace g with f; auto. extensionality o. eapply H. }
+  Qed.
+  Global Opaque _APCK.
+
 End AUX.
 
 Module KModSem.
@@ -1157,6 +1184,150 @@ Section RDB.
   .
 
 End RDB.
+
+Require Import SimModSem HTactics.
+Section KTACTICS.
+
+  Context `{Σ: GRA.t}.
+
+  Lemma APCK_start_clo
+        (at_most: Ord.t) (n1: Ord.t)
+        (o: ord)
+        r rg (n0: Ord.t) mr_src0 mp_src0 fr_src0
+        mrs_tgt frs_tgt k_src
+        (wf: (Σ * Any.t) * (Σ * Any.t) -> Prop)
+        (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
+        stb itr_tgt ctx
+
+        (ATMOST: (at_most < kappa)%ord)
+        (FUEL: (n1 + 5 < n0)%ord)
+
+        (POST: gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ eqr n1
+                       (mr_src0, mp_src0, fr_src0,
+                       (interp_hCallE_tgt stb o (KModSem.transl_itr_tgt (_APCK at_most)) ctx) >>= k_src)
+                      ((mrs_tgt, frs_tgt),
+                       itr_tgt))
+    :
+      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ eqr n0
+              (mr_src0, mp_src0, fr_src0,
+              (interp_hCallE_tgt stb o (KModSem.transl_itr_tgt APCK) ctx) >>= k_src)
+             ((mrs_tgt, frs_tgt),
+              itr_tgt).
+  Proof.
+    unfold APCK. steps. force_l.
+    exists at_most. ired_l.  _step; [by eauto with ord_step|]. steps; [by eauto with ord_step|].
+    unfold guarantee. ired_both. force_l. esplits; et.
+    ired_both. _step; [by eauto with ord_step|]. steps; [by eauto with ord_step|]. ss.
+    guclo lordC_spec. econs; et. rewrite OrdArith.add_O_r. refl.
+  Qed.
+
+  Lemma APCK_step_clo
+        (fn: gname) (next: Ord.t) (n1: Ord.t)
+
+        (o: ord)
+        r rg (n0: Ord.t) mr_src0 mp_src0 fr_src0
+        mrs_tgt frs_tgt k_src
+        (at_most: Ord.t)
+        (wf: (Σ * Any.t) * (Σ * Any.t) -> Prop)
+        (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
+        stb itr_tgt ctx0
+
+        (FUEL: (n1 + 11 < n0)%ord)
+        (ftsp: ftspec unit unit)
+        (FIND: alist_find fn stb = Some (KModSem.disclose ftsp))
+        (NEXT: (next < at_most)%ord)
+
+        (POST: gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ eqr n1
+                      (mr_src0, mp_src0, fr_src0,
+                       '(ctx1, _) <- (HoareCall true o (KModSem.disclose ftsp) fn (inl tt) ctx0);;
+                       tau;; tau;; (interp_hCallE_tgt stb o (KModSem.transl_itr_tgt (_APCK next)) ctx1)
+                                     >>= k_src)
+                      ((mrs_tgt, frs_tgt),
+                       itr_tgt))
+    :
+      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ eqr n0
+             (mr_src0, mp_src0, fr_src0,
+              (interp_hCallE_tgt stb o (KModSem.transl_itr_tgt (_APCK at_most)) ctx0) >>= k_src)
+             ((mrs_tgt, frs_tgt),
+              itr_tgt).
+  Proof.
+    rewrite unfold_APCK. steps. force_l. exists false. ired_both.
+    _step; [by eauto with ord_step|].
+    steps; [by eauto with ord_step|].
+    force_l. esplits; et.
+    ired_both; _step; [by eauto with ord_step|].
+    steps; [by eauto with ord_step|].
+    force_l; et.
+    ired_both; _step; [by eauto with ord_step|].
+    steps; [by eauto with ord_step|].
+    force_l. esplits; et.
+    ired_both; _step; [by eauto with ord_step|].
+    steps; [by eauto with ord_step|].
+    rewrite FIND. ired_both. rewrite Any.upcast_downcast. ired_both.
+    guclo lordC_spec. econs; et. { rewrite OrdArith.add_O_r. refl. }
+    match goal with
+    | [SIM: gpaco6 _ _ _ _ _ _ _ _ ?i0 _ |- gpaco6 _ _ _ _ _ _ _ _ ?i1 _] =>
+      replace i1 with i0; auto
+    end.
+    f_equal. grind. ired_both. grind. ired_both. grind.
+  Qed.
+
+  Lemma APCK_stop_clo
+        (n1: Ord.t)
+
+        (o: ord)
+        r rg (n0: Ord.t) mr_src0 mp_src0 fr_src0
+        mrs_tgt frs_tgt k_src
+        (at_most: Ord.t)
+        (wf: (Σ * Any.t) * (Σ * Any.t) -> Prop)
+        (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
+        stb itr_tgt ctx
+
+        (FUEL: (n1 + 2 < n0)%ord)
+
+        (POST: gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ eqr n1
+                      (mr_src0, mp_src0, fr_src0, k_src (ctx, ()))
+                      ((mrs_tgt, frs_tgt),
+                       itr_tgt))
+    :
+      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ eqr n0
+              (mr_src0, mp_src0, fr_src0,
+              (interp_hCallE_tgt stb o (KModSem.transl_itr_tgt (_APCK at_most)) ctx) >>= k_src)
+             ((mrs_tgt, frs_tgt),
+              itr_tgt).
+  Proof.
+    rewrite unfold_APCK. steps. force_l. exists true.
+    ired_both; _step; [by eauto with ord_step|].
+    ired_both; _step; [by eauto with ord_step|].
+    steps.
+    guclo lordC_spec. econs; et. { rewrite OrdArith.add_O_r. refl. }
+  Qed.
+
+End KTACTICS.
+
+Ltac kstart _at_most :=
+  eapply (APCK_start_clo) with (at_most := _at_most);
+  [eauto with ord_kappa|
+   (try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r; eapply Nat.lt_succ_diag_r)]))|
+  ]
+.
+
+Ltac kstep _fn :=
+  eapply (@APCK_step_clo _ _fn);
+  [(try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r; eapply Nat.lt_succ_diag_r)]))|
+   (try by (stb_tac; refl))|
+   (eapply OrdArith.lt_from_nat; eapply Nat.lt_succ_diag_r)|
+  ].
+
+Ltac kcatch :=
+  match goal with
+  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, _) (_, trigger (Call ?fn _) >>= _)) ] =>
+    kstep fn
+  end.
+
+Ltac kstop :=
+  eapply APCK_stop_clo;
+  [(try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r; eapply Nat.lt_succ_diag_r)]))|].
 
 
 

@@ -34,7 +34,7 @@ Definition update K `{Dec K} V (f: K -> V) (k: K) (v: V): K -> V :=
 (************ temporary buffer before putting it in Coqlib ***********)
 
 
-Global Instance function_Map (K V: Type) (dec: forall k0 k1, {k0=k1} + {k0<>k1}): (Map K V (K -> option V)) :=
+Global Instance function_Map `{Dec K} V: (Map K V (K -> option V)) :=
   Build_Map
     (fun _ => None)
     (fun k0 v m => fun k1 => if dec k0 k1 then Some v else m k1)

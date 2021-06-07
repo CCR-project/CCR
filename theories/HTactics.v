@@ -1042,3 +1042,22 @@ Tactic Notation "hcall_weaken" uconstr(ftsp) uconstr(o) uconstr(x) uconstr(a) "w
 Global Opaque _APC APC interp interp_hCallE_tgt.
 
 Global Opaque HoareFunArg HoareFunRet.
+
+Definition __hide_mark A (a : A) : A := a.
+Lemma intro_hide_mark: forall A (a: A), a = __hide_mark a. refl. Qed.
+
+Ltac hide_k := 
+  match goal with
+  | [ |- (gpaco6 _ _ _ _ _ _ _ _ (_, ?isrc >>= ?ksrc) (_, ?itgt >>= ?ktgt)) ] =>
+    erewrite intro_hide_mark with (a:=ksrc);
+    erewrite intro_hide_mark with (a:=ktgt);
+    let name0 := fresh "__KSRC__" in set (__hide_mark ksrc) as name0; move name0 at top;
+    let name0 := fresh "__KTGT__" in set (__hide_mark ktgt) as name0; move name0 at top
+  end.
+
+Ltac unhide_k :=
+  do 2 match goal with
+  | [ H := __hide_mark _ |- _ ] => subst H
+  end;
+  rewrite <- ! intro_hide_mark
+.
