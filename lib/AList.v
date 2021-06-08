@@ -92,6 +92,9 @@ Fixpoint alist_replace (K : Type) (R : K -> K -> Prop) (RD_K : RelDec R) (V : Ty
     else (k', v') :: alist_replace _ k v ms
   end.
 
+Definition alist_filter K `{Dec K} V (f: K -> bool) (l: alist K V) :=
+  List.filter (f ∘ fst) l.
+
 Arguments alist_replace [K R] {RD_K} [V].
 Arguments alist_find [K R] {RD_K} [V].
 Arguments alist_add [K R] {RD_K} [V].
@@ -139,6 +142,93 @@ Section ALIST.
   Proof.
     admit "ez".
   Qed.
+
+  Lemma alist_add_find_eq K `{Dec K} V (k: K) (l: alist K V) (v: V)
+    :
+      alist_find k (alist_add k v l) = Some v.
+  Proof.
+    admit "ez".
+  Qed.
+
+  Lemma alist_add_find_neq K `{Dec K} V (k0 k1: K) (l: alist K V) (v: V)
+        (NEQ: k0 <> k1)
+    :
+      alist_find k0 (alist_add k1 v l) = alist_find k0 l.
+  Proof.
+    admit "ez".
+  Qed.
+
+  Lemma alist_find_filter K `{Dec K} V (l: alist K V) (k: K) (v: V) (f: K -> bool)
+        (FIND: alist_find k (alist_filter f l) = Some v)
+        (ND: NoDup (List.map fst l))
+    :
+      alist_find k l = Some v.
+  Proof.
+    revert FIND ND. induction l; ss. i.
+    destruct a. erewrite eq_rel_dec_correct. ss. inv ND. des_ifs.
+    - ss. rewrite eq_rel_dec_correct in *. des_ifs.
+    - exfalso. hexploit IHl; et. i. eapply H2.
+      eapply alist_find_some in H0. eapply (in_map fst) in H0. ss.
+    - ss. rewrite eq_rel_dec_correct in *. des_ifs.
+      eapply IHl; et.
+    - eapply IHl; et.
+  Qed.
+
+  Lemma alist_add_nodup K `{Dec K} V (l: alist K V) k v
+        (ND: NoDup (List.map fst l))
+    :
+      NoDup (List.map fst (alist_add k v l)).
+  Proof.
+    revert ND. induction l; ss.
+    { i. econs; et. }
+    i. inv ND. spc IHl. destruct a. ss.
+    rewrite eq_rel_dec_correct in *. des_ifs.
+    inv IHl. ss. econs; et.
+    { ii. ss. des; clarify. }
+    { econs; et. ii. eapply H2.
+      eapply in_map_iff in H0. eapply in_map_iff.
+      des. subst. esplits; et.
+      unfold alist_remove in H1.
+      eapply filter_In in H1. des; auto. }
+  Qed.
+
+  Lemma alist_remove_filter K `{Dec K} V (l: alist K V) k f
+    :
+      alist_filter f (alist_remove k l) =
+      alist_remove k (alist_filter f l).
+  Proof.
+    induction l; ss. destruct a. ss.
+    rewrite eq_rel_dec_correct. des_ifs; ss.
+    { rewrite Heq0. rewrite eq_rel_dec_correct. des_ifs. f_equal; et. }
+    { rewrite Heq0. et. }
+    { rewrite eq_rel_dec_correct. des_ifs. }
+  Qed.
+
+  Lemma alist_add_filter K `{Dec K} V (l: alist K V) k v f
+        (IN: f k = true)
+    :
+      alist_filter f (alist_add k v l) =
+      alist_add k v (alist_filter f l).
+  Proof.
+    unfold alist_add in *. ss. des_ifs.
+    f_equal. eapply alist_remove_filter.
+  Qed.
+
+  Lemma alist_add_other_filter K `{Dec K} V f (l: alist K V) k v
+        (NIN: f k = false)
+    :
+      alist_filter f (alist_add k v l) =
+      alist_filter f l.
+  Proof.
+    induction l; ss.
+    { i. rewrite NIN. ss. }
+    { i. destruct a. ss. rewrite NIN in *.
+      rewrite eq_rel_dec_correct. des_ifs; ss.
+      { rewrite Heq0. f_equal. auto. }
+      { rewrite Heq0. auto. }
+    }
+  Qed.
+
 End ALIST.
 
 

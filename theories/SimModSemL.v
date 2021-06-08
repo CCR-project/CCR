@@ -228,10 +228,10 @@ Section SIM.
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       i1 k_src k_tgt
       mn mr_src0 mr_tgt0 mp_src1 mp_tgt1 mrs_src1 mrs_tgt1 mp_src0 mp_tgt0
-      (MRSRC: Maps.lookup mn mrs_src0 = Some (mr_src0, mp_src0))
-      (MRTGT: Maps.lookup mn mrs_tgt0 = Some (mr_tgt0, mp_tgt0))
-      (EQSRC: mrs_src1 = Maps.add mn (mr_src0, mp_src1) mrs_src0)
-      (EQTGT: mrs_tgt1 = Maps.add mn (mr_tgt0, mp_tgt1) mrs_tgt0)
+      (MRSRC: alist_find mn mrs_src0 = Some (mr_src0, mp_src0))
+      (MRTGT: alist_find mn mrs_tgt0 = Some (mr_tgt0, mp_tgt0))
+      (EQSRC: mrs_src1 = alist_add mn (mr_src0, mp_src1) mrs_src0)
+      (EQTGT: mrs_tgt1 = alist_add mn (mr_tgt0, mp_tgt1) mrs_tgt0)
       (K: sim_itree _ _ RR i1 ((mrs_src1, fr_src0), k_src tt) ((mrs_tgt1, fr_tgt0), k_tgt tt))
     :
       _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), trigger (PPut mn mp_src1) >>= k_src)
@@ -240,10 +240,10 @@ Section SIM.
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       i1 k_src k_tgt
       mn mr_src0 mr_tgt0 mr_src1 mr_tgt1 mrs_src1 mrs_tgt1 mp_src0 mp_tgt0
-      (MRSRC: Maps.lookup mn mrs_src0 = Some (mr_src0, mp_src0))
-      (MRTGT: Maps.lookup mn mrs_tgt0 = Some (mr_tgt0, mp_tgt0))
-      (EQSRC: mrs_src1 = Maps.add mn (mr_src1, mp_src0) mrs_src0)
-      (EQSRC: mrs_tgt1 = Maps.add mn (mr_tgt1, mp_tgt0) mrs_tgt0)
+      (MRSRC: alist_find mn mrs_src0 = Some (mr_src0, mp_src0))
+      (MRTGT: alist_find mn mrs_tgt0 = Some (mr_tgt0, mp_tgt0))
+      (EQSRC: mrs_src1 = alist_add mn (mr_src1, mp_src0) mrs_src0)
+      (EQSRC: mrs_tgt1 = alist_add mn (mr_tgt1, mp_tgt0) mrs_tgt0)
       (K: sim_itree _ _ RR i1 ((mrs_src1, fr_src0), k_src tt) ((mrs_tgt1, fr_tgt0), k_tgt tt))
     :
       _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), trigger (MPut mn mr_src1) >>= k_src)
@@ -260,8 +260,8 @@ Section SIM.
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       i1 k_src k_tgt
       mn mr_src0 mp_src0 mr_tgt0 mp_tgt0
-      (MRSRC: Maps.lookup mn mrs_src0 = Some (mr_src0, mp_src0))
-      (MRTGT: Maps.lookup mn mrs_tgt0 = Some (mr_tgt0, mp_tgt0))
+      (MRSRC: alist_find mn mrs_src0 = Some (mr_src0, mp_src0))
+      (MRTGT: alist_find mn mrs_tgt0 = Some (mr_tgt0, mp_tgt0))
       (K: sim_itree _ _ RR i1 ((mrs_src0, fr_src0), k_src mp_src0) ((mrs_tgt0, fr_tgt0), k_tgt mp_tgt0))
     :
       _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), trigger (PGet mn) >>= k_src)
@@ -270,8 +270,8 @@ Section SIM.
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       i1 k_src k_tgt
       mn mr_src0 mp_src0 mr_tgt0 mp_tgt0
-      (MRSRC: Maps.lookup mn mrs_src0 = Some (mr_src0, mp_src0))
-      (MRTGT: Maps.lookup mn mrs_tgt0 = Some (mr_tgt0, mp_tgt0))
+      (MRSRC: alist_find mn mrs_src0 = Some (mr_src0, mp_src0))
+      (MRTGT: alist_find mn mrs_tgt0 = Some (mr_tgt0, mp_tgt0))
       (K: sim_itree _ _ RR i1 ((mrs_src0, fr_src0), k_src mr_src0) ((mrs_tgt0, fr_tgt0), k_tgt mr_tgt0))
     :
       _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), trigger (MGet mn) >>= k_src)
@@ -315,8 +315,8 @@ Section SIM.
       i1 k_src i_tgt
       (ORD: Ord.lt i1 i0)
       mn mr0 mp1 mrs_src1 mp0
-      (MR0: Maps.lookup mn mrs_src0 = Some (mr0, mp0))
-      (EQ: mrs_src1 = Maps.add mn (mr0, mp1) mrs_src0)
+      (MR0: alist_find mn mrs_src0 = Some (mr0, mp0))
+      (EQ: mrs_src1 = alist_add mn (mr0, mp1) mrs_src0)
       (K: sim_itree _ _ RR i1 ((mrs_src1, fr_src0), k_src tt) ((mrs_tgt0, fr_tgt0), i_tgt))
     :
       _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), trigger (PPut mn mp1) >>= k_src)
@@ -326,8 +326,8 @@ Section SIM.
       i1 k_src i_tgt
       (ORD: Ord.lt i1 i0)
       mn mr0 mr1 mrs_src1 mp0
-      (MR0: Maps.lookup mn mrs_src0 = Some (mr0, mp0))
-      (EQ: mrs_src1 = Maps.add mn (mr1, mp0) mrs_src0)
+      (MR0: alist_find mn mrs_src0 = Some (mr0, mp0))
+      (EQ: mrs_src1 = alist_add mn (mr1, mp0) mrs_src0)
       (K: sim_itree _ _ RR i1 ((mrs_src1, fr_src0), k_src tt) ((mrs_tgt0, fr_tgt0), i_tgt))
     :
       _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), trigger (MPut mn mr1) >>= k_src)
@@ -347,7 +347,7 @@ Section SIM.
       i1 k_src i_tgt
       (ORD: Ord.lt i1 i0)
       mn mr0 mp0
-      (MR0: Maps.lookup mn mrs_src0 = Some (mr0, mp0))
+      (MR0: alist_find mn mrs_src0 = Some (mr0, mp0))
       (K: sim_itree _ _ RR i1 ((mrs_src0, fr_src0), k_src mp0) ((mrs_tgt0, fr_tgt0), i_tgt))
     :
       _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), trigger (PGet mn) >>= k_src)
@@ -357,7 +357,7 @@ Section SIM.
       i1 k_src i_tgt
       (ORD: Ord.lt i1 i0)
       mn mr0 mp0
-      (MR0: Maps.lookup mn mrs_src0 = Some (mr0, mp0))
+      (MR0: alist_find mn mrs_src0 = Some (mr0, mp0))
       (K: sim_itree _ _ RR i1 ((mrs_src0, fr_src0), k_src mr0) ((mrs_tgt0, fr_tgt0), i_tgt))
     :
       _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), trigger (MGet mn) >>= k_src)
@@ -405,8 +405,8 @@ Section SIM.
       i1 i_src k_tgt
       (ORD: Ord.lt i1 i0)
       mn mr0 mp1 mrs_tgt1 mp0
-      (MR0: Maps.lookup mn mrs_tgt0 = Some (mr0, mp0))
-      (EQ: mrs_tgt1 = Maps.add mn (mr0, mp1) mrs_tgt0)
+      (MR0: alist_find mn mrs_tgt0 = Some (mr0, mp0))
+      (EQ: mrs_tgt1 = alist_add mn (mr0, mp1) mrs_tgt0)
       (K: sim_itree _ _ RR i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt1, fr_tgt0), k_tgt tt))
     :
       _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), i_src)
@@ -416,8 +416,8 @@ Section SIM.
       i1 i_src k_tgt
       (ORD: Ord.lt i1 i0)
       mn mr0 mr1 mrs_tgt1 mp0
-      (MR0: Maps.lookup mn mrs_tgt0 = Some (mr0, mp0))
-      (EQ: mrs_tgt1 = Maps.add mn (mr1, mp0) mrs_tgt0)
+      (MR0: alist_find mn mrs_tgt0 = Some (mr0, mp0))
+      (EQ: mrs_tgt1 = alist_add mn (mr1, mp0) mrs_tgt0)
       (K: sim_itree _ _ RR i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt1, fr_tgt0), k_tgt tt))
     :
       _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), i_src)
@@ -437,7 +437,7 @@ Section SIM.
       i1 i_src k_tgt
       (ORD: Ord.lt i1 i0)
       mn mr0 mp0
-      (MR0: Maps.lookup mn mrs_tgt0 = Some (mr0, mp0))
+      (MR0: alist_find mn mrs_tgt0 = Some (mr0, mp0))
       (K: sim_itree _ _ RR i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt0), k_tgt mp0))
     :
       _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), i_src)
@@ -447,7 +447,7 @@ Section SIM.
       i1 i_src k_tgt
       (ORD: Ord.lt i1 i0)
       mn mr0 mp0
-      (MR0: Maps.lookup mn mrs_tgt0 = Some (mr0, mp0))
+      (MR0: alist_find mn mrs_tgt0 = Some (mr0, mp0))
       (K: sim_itree _ _ RR i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt0), k_tgt mr0))
     :
       _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), i_src)
@@ -776,19 +776,17 @@ Qed.
 
 Definition wf_mrs `{Σ: GRA.t} (ms: list mname) (mrs: alist mname (Σ * Any.t)): Prop :=
   forall mn (IN: List.In mn ms),
-  exists mr mp, <<FIND: Maps.lookup mn mrs = Some (mr, mp)>>.
+  exists mr mp, <<FIND: alist_find mn mrs = Some (mr, mp)>>.
 
 Lemma wf_mrs_add `{Σ: GRA.t} (ms: list mname) (mrs: alist mname (Σ * Any.t))
       (WF: wf_mrs ms mrs)
       mn mr:
-  wf_mrs ms (Maps.add mn mr mrs).
+  wf_mrs ms (alist_add mn mr mrs).
 Proof.
   ii. destruct (string_Dec mn mn0).
-  - subst. destruct mr as [mr mp]. exists mr, mp. eapply mapsto_lookup.
-    eapply mapsto_add_eq.
+  - subst. destruct mr as [mr mp]. exists mr, mp. eapply alist_add_find_eq.
   - hexploit (WF mn0); auto. i. des.
-    exists mr0, mp. eapply mapsto_lookup.
-    erewrite <- mapsto_add_neq; eauto.
+    exists mr0, mp. rewrite alist_add_find_neq; auto.
 Qed.
 
 Lemma self_sim_itree `{Σ: GRA.t} (ms: list mname):
@@ -871,7 +869,11 @@ Lemma self_sim_mod `{Σ: GRA.t} (ms: ModSemL.t) (WF: wf_mod ms):
 Proof.
   eapply mk with (wf:=fun p => fst p = snd p /\ wf_mrs (List.map fst ms.(ModSemL.initial_mrs)) (fst p)) (le:=top2); ss.
   2: {
-    split; auto. ii. eapply in_map_iff in IN. des. subst. admit "ez".
+    split; auto. ii. eapply in_map_iff in IN. des. subst.
+    destruct (alist_find (fst x) (ModSemL.initial_mrs ms)) eqn:EQ.
+    - destruct p. et.
+    - destruct x. eapply alist_find_none in EQ.
+      exfalso. ss. eapply EQ; et.
   }
   unfold wf_mod in *. des.
   revert WFFUN. generalize (ModSemL.fnsems ms).
@@ -881,6 +883,85 @@ Proof.
 Qed.
 
 Section ADD.
+
+  Lemma alist_add_disjoint_filter K `{Dec K} V f0 f1 (l: alist K V) k v v0
+        (FIND: alist_find k (alist_filter f0 l) = Some v0)
+        (ND: forall k' v0' v1'
+                    (IN0: alist_find k' (alist_filter f0 l) = Some v0')
+                    (IN1: alist_find k' (alist_filter f1 l) = Some v1'),
+            False)
+    :
+      alist_filter f1 (alist_add k v l) =
+      alist_filter f1 l.
+  Proof.
+    eapply alist_add_other_filter.
+    destruct (f1 k) eqn:EQ1; auto.
+    exfalso. eapply (ND k v0 v0); et.
+    assert (EQ0: f0 k = true).
+    { clear - FIND. eapply alist_find_some in FIND.
+      eapply filter_In in FIND. des. auto. }
+    clear v ND. rewrite <- FIND. clear FIND.
+    induction l; ss. destruct a. ss. des_ifs.
+    { ss. rewrite eq_rel_dec_correct in *. des_ifs; auto. }
+    { ss. rewrite eq_rel_dec_correct in *. des_ifs; auto. }
+    { ss. rewrite eq_rel_dec_correct in *. des_ifs; auto. }
+  Qed.
+
+  Lemma alist_find_add_filter K `{Dec K} V (l: alist K V) k v0 v1 f
+        (FIND: alist_find k (alist_filter f l) = Some v0)
+    :
+      alist_filter f (alist_add k v1 l) =
+      alist_add k v1 (alist_filter f l).
+  Proof.
+    eapply alist_add_filter.
+    eapply alist_find_some in FIND.
+    unfold alist_filter in FIND. eapply filter_In in FIND. des. ss.
+  Qed.
+
+  Lemma alist_disjoint_find K `{Dec K} V f0 f1 (l: alist K V)
+        (DISJOINT: forall k (IN0: f0 k = true) (IN1: f1 k = true), False)
+    :
+      forall k v0 v1
+             (IN0: alist_find k (alist_filter f0 l) = Some v0)
+             (IN1: alist_find k (alist_filter f1 l) = Some v1),
+        False.
+  Proof.
+    i. eapply alist_find_some in IN0. eapply alist_find_some in IN1.
+    unfold alist_filter in *. eapply filter_In in IN0. eapply filter_In in IN1.
+    des. ss. et.
+  Qed.
+
+  Lemma all_true_filter A (l: list A) f
+        (TRUE: List.Forall (fun a => f a = true) l)
+    :
+      List.filter f l = l.
+  Proof.
+    revert TRUE. induction l; ss; i.
+    inv TRUE. rewrite H1. f_equal. auto.
+  Qed.
+
+  Lemma all_false_filter A (l: list A) f
+        (FALSE: List.Forall (fun a => f a = false) l)
+    :
+      List.filter f l = [].
+  Proof.
+    revert FALSE. induction l; ss; i.
+    inv FALSE. rewrite H1. et.
+  Qed.
+
+  Lemma app_nodup A (l0 l1: list A) (ND: NoDup (l0 ++ l1))
+    :
+      forall a
+             (IN0: In a l0)
+             (IN1: In a l1),
+        False.
+  Proof.
+    revert l0 ND. induction l0; ss. i. inv ND. des; subst.
+    { eapply H1. eapply in_or_app. auto. }
+    { eapply IHl0; eauto. }
+  Qed.
+
+
   Context `{Σ: GRA.t}.
 
   Let W: Type := (alist mname (Σ * Any.t)) * (alist mname (Σ * Any.t)).
@@ -891,10 +972,10 @@ Section ADD.
     W -> Prop :=
   | add_wf_intro
       mrs_src mrs_tgt
-      (WF0: wf0 (filter _ (fun mn _ => in_dec string_Dec mn ms_src0) mrs_src,
-                 filter _ (fun mn _ => in_dec string_Dec mn ms_tgt0) mrs_tgt))
-      (WF1: wf1 (filter _ (fun mn _ => in_dec string_Dec mn ms_src1) mrs_src,
-                 filter _ (fun mn _ => in_dec string_Dec mn ms_tgt1) mrs_tgt))
+      (WF0: wf0 (alist_filter (fun mn => in_dec string_Dec mn ms_src0) mrs_src,
+                 alist_filter (fun mn => in_dec string_Dec mn ms_tgt0) mrs_tgt))
+      (WF1: wf1 (alist_filter (fun mn => in_dec string_Dec mn ms_src1) mrs_src,
+                 alist_filter (fun mn => in_dec string_Dec mn ms_tgt1) mrs_tgt))
       (NDSRC: NoDup (List.map fst mrs_src))
       (NDTGT: NoDup (List.map fst mrs_tgt))
     :
@@ -957,104 +1038,25 @@ Section ADD.
     - econs 30; eauto.
   Qed.
 
-  Lemma lookup_filter ms (mrs: alist mname (Σ * Any.t)) mn mr
-        (LOOK: lookup mn (filter _ (fun mn _ => in_dec string_Dec mn ms) mrs) = Some mr)
-        (ND: NoDup (List.map fst mrs))
-    :
-      lookup mn mrs = Some mr.
-  Proof.
-  Admitted.
-
-  Lemma add_filter ms (mrs: alist mname (Σ * Any.t)) mn mr0 mr
-        (LOOK: lookup mn (filter _ (fun mn _ => in_dec string_Dec mn ms) mrs) = Some mr0)
-        (ND: NoDup (List.map fst mrs))
-    :
-      filter _ (fun mn _ => in_dec string_Dec mn ms) (add mn mr mrs) =
-      add mn mr (filter _ (fun mn _ => in_dec string_Dec mn ms) mrs).
-  Proof.
-  Admitted.
-
-  Lemma add_other_filter ms0 ms1 (mrs: alist mname (Σ * Any.t)) mn mr mr0
-        (LOOK: lookup mn (filter _ (fun mn _ => in_dec string_Dec mn ms0) mrs) = Some mr0)
-        (ND: forall mn' mr0' mr1'
-                    (IN0: lookup mn' (filter _ (fun mn _ => in_dec string_Dec mn ms0) mrs) = Some mr0')
-                    (IN1: lookup mn' (filter _ (fun mn _ => in_dec string_Dec mn ms1) mrs) = Some mr1'),
-            False)
-    :
-      filter _ (fun mn _ => in_dec string_Dec mn ms1) (add mn mr mrs) =
-      filter _ (fun mn _ => in_dec string_Dec mn ms1) mrs.
-  Proof.
-  Admitted.
-
-  Lemma nodup_add (mrs: alist mname (Σ * Any.t)) mn mr0 mr1
-        (ND: NoDup (List.map fst mrs))
-        (FIND: lookup mn mrs = Some mr0)
-    :
-      NoDup (List.map fst (add mn mr1 mrs)).
-  Proof.
-  Admitted.
-
-  Lemma nodup_disjoint ms0 ms1 (mrs: alist mname (Σ * Any.t))
-        (DISJOINT: forall mn (IN0: List.In mn ms0) (IN1: List.In mn ms1), False)
-    :
-      forall mn mr0 mr1
-             (IN0: lookup mn (filter _ (fun mn _ => in_dec string_Dec mn ms0) mrs) = Some mr0)
-             (IN1: lookup mn (filter _ (fun mn _ => in_dec string_Dec mn ms1) mrs) = Some mr1),
-        False.
-  Proof.
-  Admitted.
-
-  Lemma app_nodup A (l0 l1: list A) (ND: NoDup (l0 ++ l1))
-    :
-      forall a
-             (IN0: In a l0)
-             (IN1: In a l1),
-        False.
-  Proof.
-    revert l0 ND. induction l0; ss. i. inv ND. des; subst.
-    { eapply H1. eapply in_or_app. auto. }
-    { eapply IHl0; eauto. }
-  Qed.
-
-  Lemma disjoint_filter_l (mrs0 mrs1: alist mname (Σ * Any.t))
-        (DISJSRC: forall mn
-                         (IN0: In mn (List.map fst mrs0))
-                         (IN1: In mn (List.map fst mrs1)),
-            False)
-    :
-      filter _ (fun mn _ => in_dec string_Dec mn (List.map fst mrs0)) (mrs0 ++ mrs1) = mrs0.
-  Proof.
-  Admitted.
-
-  Lemma disjoint_filter_r (mrs0 mrs1: alist mname (Σ * Any.t))
-        (DISJSRC: forall mn
-                         (IN0: In mn (List.map fst mrs0))
-                         (IN1: In mn (List.map fst mrs1)),
-            False)
-    :
-      filter _ (fun mn _ => in_dec string_Dec mn (List.map fst mrs1)) (mrs0 ++ mrs1) = mrs1.
-  Proof.
-  Admitted.
-
   Lemma add_sim_itree ms_src0 ms_src1 ms_tgt0 ms_tgt1 (wf0 wf1: W -> Prop)
         (DISJSRC: forall mn
-                         (IN0: In mn ms_src1)
-                         (IN1: In mn ms_src0),
+                         (IN0: (in_dec string_Dec mn ms_src1: bool) = true)
+                         (IN1: (in_dec string_Dec mn ms_src0: bool) = true),
             False)
         (DISJTGT: forall mn
-                         (IN0: In mn ms_tgt1)
-                         (IN1: In mn ms_tgt0),
+                         (IN0: (in_dec string_Dec mn ms_tgt1: bool) = true)
+                         (IN1: (in_dec string_Dec mn ms_tgt0: bool) = true),
             False)
     : forall st_src st_tgt fr_src fr_tgt mrs_src mrs_tgt n
              (SIM: sim_itree wf1 n
-                             (filter _ (fun mn _ => in_dec string_Dec mn ms_src1)
-                                     mrs_src, fr_src, st_src)
-                             (filter _ (fun mn _ => in_dec string_Dec mn ms_tgt1)
-                                     mrs_tgt, fr_tgt, st_tgt))
-             (WF: wf0 (filter _ (fun mn _ => in_dec string_Dec mn ms_src0)
-                              mrs_src,
-                       filter _ (fun mn _ => in_dec string_Dec mn ms_tgt0)
-                              mrs_tgt))
+                             (alist_filter (fun mn => in_dec string_Dec mn ms_src1)
+                                           mrs_src, fr_src, st_src)
+                             (alist_filter (fun mn => in_dec string_Dec mn ms_tgt1)
+                                           mrs_tgt, fr_tgt, st_tgt))
+             (WF: wf0 (alist_filter (fun mn => in_dec string_Dec mn ms_src0)
+                                    mrs_src,
+                       alist_filter (fun mn => in_dec string_Dec mn ms_tgt0)
+                                    mrs_tgt))
              (NDSRC: NoDup (List.map fst mrs_src))
              (NDTGT: NoDup (List.map fst mrs_tgt)),
       sim_itree
@@ -1076,36 +1078,36 @@ Section ADD.
     * econs 6; eauto.
       i. hexploit K; eauto. i. des. pclearbot. esplits; eauto.
     * econs 7; eauto.
-      { eapply lookup_filter; eauto. }
-      { eapply lookup_filter; eauto. }
+      { eapply alist_find_filter; eauto. }
+      { eapply alist_find_filter; eauto. }
       { right. eapply CIH; eauto.
-        { repeat erewrite add_filter; eauto. }
-        { repeat erewrite add_other_filter; eauto.
-          { eapply nodup_disjoint; eauto. }
-          { eapply nodup_disjoint; eauto. }
+        { repeat erewrite alist_find_add_filter; eauto. }
+        { repeat erewrite alist_add_disjoint_filter; eauto.
+          { eapply alist_disjoint_find; eauto. }
+          { eapply alist_disjoint_find; eauto. }
         }
-        { eapply nodup_add; eauto. eapply lookup_filter; eauto. }
-        { eapply nodup_add; eauto. eapply lookup_filter; eauto. }
+        { eapply alist_add_nodup; eauto. }
+        { eapply alist_add_nodup; eauto. }
       }
     * econs 8; eauto.
-      { eapply lookup_filter; eauto. }
-      { eapply lookup_filter; eauto. }
+      { eapply alist_find_filter; eauto. }
+      { eapply alist_find_filter; eauto. }
       { right. eapply CIH; eauto.
-        { repeat erewrite add_filter; eauto. }
-        { repeat erewrite add_other_filter; eauto.
-          { eapply nodup_disjoint; eauto. }
-          { eapply nodup_disjoint; eauto. }
+        { repeat erewrite alist_find_add_filter; eauto. }
+        { repeat erewrite alist_add_disjoint_filter; eauto.
+          { eapply alist_disjoint_find; eauto. }
+          { eapply alist_disjoint_find; eauto. }
         }
-        { eapply nodup_add; eauto. eapply lookup_filter; eauto. }
-        { eapply nodup_add; eauto. eapply lookup_filter; eauto. }
+        { eapply alist_add_nodup; eauto. }
+        { eapply alist_add_nodup; eauto. }
       }
     * econs 9; eauto.
     * econs 10; eauto.
-      { eapply lookup_filter; eauto. }
-      { eapply lookup_filter; eauto. }
+      { eapply alist_find_filter; eauto. }
+      { eapply alist_find_filter; eauto. }
     * econs 11; eauto.
-      { eapply lookup_filter; eauto. }
-      { eapply lookup_filter; eauto. }
+      { eapply alist_find_filter; eauto. }
+      { eapply alist_find_filter; eauto. }
     * econs 12; eauto.
     * econs 13; eauto.
     * econs 14; eauto.
@@ -1113,26 +1115,26 @@ Section ADD.
     * econs 15; eauto.
       i. hexploit K; eauto.
     * econs 16; eauto.
-      { eapply lookup_filter; eauto. }
+      { eapply alist_find_filter; eauto. }
       right. eapply CIH; eauto.
-      { repeat erewrite add_filter; eauto. }
-      { repeat erewrite add_other_filter; eauto.
-        { eapply nodup_disjoint; eauto. }
+      { repeat erewrite alist_find_add_filter; eauto. }
+      { repeat erewrite alist_add_disjoint_filter; eauto.
+        { eapply alist_disjoint_find; eauto. }
       }
-      { eapply nodup_add; eauto. eapply lookup_filter; eauto. }
+      { eapply alist_add_nodup; eauto. }
     * econs 17; eauto.
-      { eapply lookup_filter; eauto. }
+      { eapply alist_find_filter; eauto. }
       right. eapply CIH; eauto.
-      { repeat erewrite add_filter; eauto. }
-      { repeat erewrite add_other_filter; eauto.
-        { eapply nodup_disjoint; eauto. }
+      { repeat erewrite alist_find_add_filter; eauto. }
+      { repeat erewrite alist_add_disjoint_filter; eauto.
+        { eapply alist_disjoint_find; eauto. }
       }
-      { eapply nodup_add; eauto. eapply lookup_filter; eauto. }
+      { eapply alist_add_nodup; eauto. }
     * econs 18; eauto.
     * econs 19; eauto.
-      { eapply lookup_filter; eauto. }
+      { eapply alist_find_filter; eauto. }
     * econs 20; eauto.
-      { eapply lookup_filter; eauto. }
+      { eapply alist_find_filter; eauto. }
     * econs 21; eauto.
     * econs 22; eauto.
     * econs 23; eauto.
@@ -1140,26 +1142,26 @@ Section ADD.
     * econs 24; eauto.
       i. hexploit K; eauto. i. des. pclearbot. esplits; eauto.
     * econs 25; eauto.
-      { eapply lookup_filter; eauto. }
+      { eapply alist_find_filter; eauto. }
       right. eapply CIH; eauto.
-      { repeat erewrite add_filter; eauto. }
-      { repeat erewrite add_other_filter; eauto.
-        { eapply nodup_disjoint; eauto. }
+      { repeat erewrite alist_find_add_filter; eauto. }
+      { repeat erewrite alist_add_disjoint_filter; eauto.
+        { eapply alist_disjoint_find; eauto. }
       }
-      { eapply nodup_add; eauto. eapply lookup_filter; eauto. }
+      { eapply alist_add_nodup; eauto. }
     * econs 26; eauto.
-      { eapply lookup_filter; eauto. }
+      { eapply alist_find_filter; eauto. }
       right. eapply CIH; eauto.
-      { repeat erewrite add_filter; eauto. }
-      { repeat erewrite add_other_filter; eauto.
-        { eapply nodup_disjoint; eauto. }
+      { repeat erewrite alist_find_add_filter; eauto. }
+      { repeat erewrite alist_add_disjoint_filter; eauto.
+        { eapply alist_disjoint_find; eauto. }
       }
-      { eapply nodup_add; eauto. eapply lookup_filter; eauto. }
+      { eapply alist_add_nodup; eauto. }
     * econs 27; eauto.
     * econs 28; eauto.
-      { eapply lookup_filter; eauto. }
+      { eapply alist_find_filter; eauto. }
     * econs 29; eauto.
-      { eapply lookup_filter; eauto. }
+      { eapply alist_find_filter; eauto. }
     * econs 30; eauto.
   Qed.
 
@@ -1172,17 +1174,17 @@ Section ADD.
       sim (ModSemL.add ms_src0 ms_src1) (ModSemL.add ms_tgt0 ms_tgt1).
   Proof.
     assert (DISJSRC: forall mn
-                            (IN0: In mn (List.map fst (ModSemL.initial_mrs ms_src1)))
-                            (IN1: In mn (List.map fst (ModSemL.initial_mrs ms_src0))),
+                            (IN0: (in_dec string_Dec mn (List.map fst (ModSemL.initial_mrs ms_src1)): bool) = true)
+                            (IN1: (in_dec string_Dec mn (List.map fst (ModSemL.initial_mrs ms_src0)): bool) = true),
                False).
     { inv WFSRC. ss. rewrite map_app in *.
-      i. eapply app_nodup in wf_initial_mrs; eauto. }
+      i. des_sumbool. eapply app_nodup in wf_initial_mrs; eauto. }
     assert (DISJTGT: forall mn
-                            (IN0: In mn (List.map fst (ModSemL.initial_mrs ms_tgt1)))
-                            (IN1: In mn (List.map fst (ModSemL.initial_mrs ms_tgt0))),
+                            (IN0: (in_dec string_Dec mn (List.map fst (ModSemL.initial_mrs ms_tgt1)): bool) = true)
+                            (IN1: (in_dec string_Dec mn (List.map fst (ModSemL.initial_mrs ms_tgt0)): bool) = true),
                False).
     { inv WFTGT. ss. rewrite map_app in *.
-      i. eapply app_nodup in wf_initial_mrs; eauto. }
+      i. des_sumbool. eapply app_nodup in wf_initial_mrs; eauto. }
     destruct SIM0 as [wf0 le0 le_PreOrder0 sim_fnsems0 sim_initial_mrs0].
     destruct SIM1 as [wf1 le1 le_PreOrder1 sim_fnsems1 sim_initial_mrs1].
     eapply mk with (wf:=add_wf (List.map fst ms_src0.(ModSemL.initial_mrs))
@@ -1207,10 +1209,38 @@ Section ADD.
         { inv SIMMRS. eapply WF1. } i. des. exists n.
         inv SIMMRS. eapply add_sim_itree; eauto.
     - inv WFSRC. inv WFTGT. econs; eauto.
-      + rewrite disjoint_filter_l; eauto.
-        rewrite disjoint_filter_l; eauto.
-      + rewrite disjoint_filter_r; eauto.
-        rewrite disjoint_filter_r; eauto.
+      + unfold alist_filter. rewrite ! List.filter_app.
+        rewrite (@all_true_filter _ (ModSemL.initial_mrs ms_src0)).
+        2: { eapply List.Forall_forall. i. des_sumbool. eapply in_map. auto. }
+        rewrite (@all_true_filter _ (ModSemL.initial_mrs ms_tgt0)).
+        2: { eapply List.Forall_forall. i. des_sumbool. eapply in_map. auto. }
+        rewrite (@all_false_filter _ (ModSemL.initial_mrs ms_src1)).
+        2: {
+          eapply List.Forall_forall. i. des_sumbool. ii.
+          eapply DISJSRC; des_sumbool; et. eapply in_map; et.
+        }
+        rewrite (@all_false_filter _ (ModSemL.initial_mrs ms_tgt1)).
+        2: {
+          eapply List.Forall_forall. i. des_sumbool. ii.
+          eapply DISJTGT; des_sumbool; et. eapply in_map; et.
+        }
+        rewrite ! List.app_nil_r. auto.
+      + unfold alist_filter. rewrite ! List.filter_app.
+        rewrite (@all_true_filter _ (ModSemL.initial_mrs ms_src1)).
+        2: { eapply List.Forall_forall. i. des_sumbool. eapply in_map. auto. }
+        rewrite (@all_true_filter _ (ModSemL.initial_mrs ms_tgt1)).
+        2: { eapply List.Forall_forall. i. des_sumbool. eapply in_map. auto. }
+        rewrite (@all_false_filter _ (ModSemL.initial_mrs ms_src0)).
+        2: {
+          eapply List.Forall_forall. i. des_sumbool. ii.
+          eapply DISJSRC; des_sumbool; et. eapply in_map; et.
+        }
+        rewrite (@all_false_filter _ (ModSemL.initial_mrs ms_tgt0)).
+        2: {
+          eapply List.Forall_forall. i. des_sumbool. ii.
+          eapply DISJTGT; des_sumbool; et. eapply in_map; et.
+        }
+        auto.
   Qed.
 
 End ADD.
@@ -1324,89 +1354,52 @@ Section SIMMOD.
    Hint Resolve cpn6_wcompat: paco.
 
    Definition eqv (mrsl: alist string (Σ * Any.t)) (mrs: string -> Σ) (mps: string -> Any.t): Prop :=
-     forall mn mn' mr mp
-            (FIND: find (fun mnr : string * (Σ * Any.t) => dec mn (fst mnr)) mrsl = Some (mn', (mr, mp))),
+     forall mn mr mp
+            (FIND: alist_find mn mrsl = Some (mr, mp)),
        mrs mn = mr /\ mps mn = mp.
-
-   Lemma lookup_find (mrsl: alist string (Σ * Any.t)) mn mr
-         (LOOKUP: Maps.lookup mn mrsl = Some mr)
-     :
-       find (fun mnr : string * (Σ * Any.t) => dec mn (fst mnr)) mrsl = Some (mn, mr).
-   Proof.
-     induction mrsl; ss. unfold sumbool_to_bool. des_ifs; ss; eauto.
-     { eapply neg_rel_dec_correct in Heq0. ss. }
-     { rewrite rel_dec_correct in Heq0. ss. }
-   Qed.
-
-   Lemma find_lookup (mrsl: alist string (Σ * Any.t)) mn0 mn1 mr
-         (FIND: find (fun mnr : string * (Σ * Any.t) => dec mn0 (fst mnr)) mrsl = Some (mn1, mr))
-     :
-       mn0 = mn1 /\ Maps.lookup mn0 mrsl = Some mr.
-   Proof.
-     induction mrsl; ss.
-     unfold sumbool_to_bool in *. des_ifs; auto.
-     { rewrite rel_dec_correct in Heq. ss. }
-     { eapply neg_rel_dec_correct in Heq. ss. }
-   Qed.
 
    Lemma eqv_lookup_mr mrsl mrs mps (EQV: eqv mrsl mrs mps)
          mn mr mp
-         (LOOKUP: Maps.lookup mn mrsl = Some (mr, mp))
+         (LOOKUP: alist_find mn mrsl = Some (mr, mp))
      :
        mrs mn = mr.
    Proof.
-     eapply lookup_find in LOOKUP.
      eapply EQV in LOOKUP. des; auto.
    Qed.
 
    Lemma eqv_lookup_mp mrsl mrs mps (EQV: eqv mrsl mrs mps)
          mn mr mp
-         (LOOKUP: Maps.lookup mn mrsl = Some (mr, mp))
+         (LOOKUP: alist_find mn mrsl = Some (mr, mp))
      :
        mps mn = mp.
    Proof.
-     eapply lookup_find in LOOKUP.
      eapply EQV in LOOKUP. des; auto.
    Qed.
 
    Lemma eqv_add_mr mrsl mrs mps (EQV: eqv mrsl mrs mps)
          mn mr0 mr1 mp0
-         (LOOKUP: Maps.lookup mn mrsl = Some (mr0, mp0))
+         (LOOKUP: alist_find mn mrsl = Some (mr0, mp0))
      :
-       eqv (Maps.add mn (mr1, mp0) mrsl) (update mrs mn mr1) mps.
+       eqv (alist_add mn (mr1, mp0) mrsl) (update mrs mn mr1) mps.
    Proof.
-     ii. eapply find_lookup in FIND. des; subst.
-     simpl. unfold update. des_ifs.
-     { assert (lookup mn' (add mn' (mr1, mp0) mrsl) = Some (mr1, mp0)).
-       { eapply mapsto_lookup. eapply mapsto_add_eq. }
-       clarify. split; auto. eapply eqv_lookup_mp in LOOKUP; eauto.
+     ii. unfold update. des_ifs.
+     { erewrite alist_add_find_eq in FIND. clarify. split; auto.
+       eapply eqv_lookup_mp in LOOKUP; eauto.
      }
-     { split.
-       { eapply eqv_lookup_mr; eauto. eapply mapsto_lookup in FIND0.
-         eapply mapsto_lookup. eapply mapsto_add_neq; eauto. }
-       { eapply eqv_lookup_mp; eauto. eapply mapsto_lookup in FIND0.
-         eapply mapsto_lookup. eapply mapsto_add_neq; eauto. }
-     }
+     { erewrite alist_add_find_neq in FIND; auto. }
    Qed.
 
    Lemma eqv_add_ms mrsl mrs mps (EQV: eqv mrsl mrs mps)
          mn mr0 mp0 mp1
-         (LOOKUP: Maps.lookup mn mrsl = Some (mr0, mp0))
+         (LOOKUP: alist_find mn mrsl = Some (mr0, mp0))
      :
-       eqv (Maps.add mn (mr0, mp1) mrsl) mrs (update mps mn mp1).
+       eqv (alist_add mn (mr0, mp1) mrsl) mrs (update mps mn mp1).
    Proof.
-     ii. eapply find_lookup in FIND. des; subst.
-     simpl. unfold update. des_ifs.
-     { assert (lookup mn' (add mn' (mr0, mp1) mrsl) = Some (mr0, mp1)).
-       { eapply mapsto_lookup. eapply mapsto_add_eq. }
-       clarify. split; auto. eapply eqv_lookup_mr in LOOKUP; eauto.
+     ii. unfold update. des_ifs.
+     { erewrite alist_add_find_eq in FIND. clarify. split; auto.
+       eapply eqv_lookup_mr in LOOKUP; eauto.
      }
-     { split.
-       { eapply eqv_lookup_mr; eauto. eapply mapsto_lookup in FIND0.
-         eapply mapsto_lookup. eapply mapsto_add_neq; eauto. }
-       { eapply eqv_lookup_mp; eauto. eapply mapsto_lookup in FIND0.
-         eapply mapsto_lookup. eapply mapsto_add_neq; eauto. }
-     }
+     { erewrite alist_add_find_neq in FIND; auto. }
    Qed.
 
    Variant lift_wf (wf: alist string (Σ * Any.t) * alist string (Σ * Any.t) -> Prop)
@@ -1456,11 +1449,9 @@ Section SIMMOD.
    Lemma lift_sim ms_src ms_tgt
          (wf: alist string (Σ * Any.t) * alist string (Σ * Any.t) -> Prop)
          (FNS: forall fn : string,
-             option_rel (sim_fnsem wf)
-                        (find (fun fnsem : string * (Any.t -> itree Es Any.t) => dec fn (fst fnsem))
-                              (ModSemL.fnsems ms_src))
-                        (find (fun fnsem : string * (Any.t -> itree Es Any.t) => dec fn (fst fnsem))
-                              (ModSemL.fnsems ms_tgt)))
+             option_rel (sim_fsem wf)
+                        (alist_find fn (ModSemL.fnsems ms_src))
+                        (alist_find fn (ModSemL.fnsems ms_tgt)))
      :
        forall n mrsl_src fr_src f_src mrsl_tgt fr_tgt f_tgt
               (* (WF: wf (mrsl_src, mrsl_tgt)) *)
@@ -1795,18 +1786,6 @@ Section SIMMOD.
      }
      Unshelve. all: exact Ord.O.
    Qed.
-
-   (* Theorem adequacy_local *)
-   (*         (SIM: sim) *)
-   (*         (*** You will need some wf conditions for ctx ***) *)
-   (*   : *)
-   (*     <<CR: forall ctx, Beh.of_program (Mod.compile (Mod.add ctx md_tgt)) <1= *)
-   (*                       Beh.of_program (Mod.compile (Mod.add ctx md_src))>> *)
-   (* . *)
-   (* Proof. *)
-   (*   ii. eapply adequacy_global; et. exists Ordinal.O. *)
-   (*   admit "TODO". *)
-   (* Qed. *)
 
 End SIMMOD.
 
