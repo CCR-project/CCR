@@ -877,7 +877,7 @@ Proof.
   }
   unfold wf_mod in *. des.
   revert WFFUN. generalize (ModSemL.fnsems ms).
-  induction l; i; ss. inv WFFUN. destruct a. econs; eauto.
+  induction a; i; ss. inv WFFUN. destruct a. econs; eauto.
   econs; ss. ii. subst. ss. des. subst.
   exists 0. eapply self_sim_itree; eauto.
 Qed.
@@ -1485,17 +1485,16 @@ Section SIMMOD.
        mgo. ss. mgo.
 
        generalize (FNS fn). i. inv H; cycle 1.
-       { unfold ModSemL.prog at 3. mgo. unfold unwrapU. des_ifs_safe. mgo. unfold triggerUB. mgo.
+       { unfold ModSemL.prog at 3.
+         rewrite <- H1. unfold unwrapU, triggerUB. mgo.
          econs; ss; et.
          gstep. econs; ss; et.
          gstep. econs; ss; et.
          gstep. econs; ss; et.
          instantiate (1:=1). instantiate (1:=0). eapply OrdArith.lt_from_nat; ss.
        }
-       mgo.
-       destruct a as [fn_src f_src]. destruct b as [fn_tgt f_tgt].
-       inv IN. inv H. simpl in H1. clarify.
-       exploit H0; eauto. instantiate (2:=varg). i. des.
+       mgo. rename a into f_src. rename b into f_tgt.
+       exploit IN; eauto. instantiate (2:=varg). i. des.
        econs; et.
        gstep. econs; et.
        gstep. econs; et.
@@ -1739,21 +1738,20 @@ Section SIMMOD.
      inv sim_modsem0. red in sim_sk0.
 
      eapply adequacy_global; et. exists (OrdArith.add Ord.O Ord.O).
-     unfold ModSemL.initial_itr, ModL.enclose.
+     unfold ModSemL.initial_itr, ModSemL.initial_itr_arg, ModL.enclose.
 
      assert (FNS: forall fn : string,
-                option_rel (sim_fnsem wf)
-                           (find (fun fnsem : string * (Any.t -> itree Es Any.t) => dec fn (fst fnsem))
-                                 (ModSemL.fnsems (ModL.get_modsem md_src (ModL.sk md_src))))
-                           (find (fun fnsem : string * (Any.t -> itree Es Any.t) => dec fn (fst fnsem))
-                                 (ModSemL.fnsems (ModL.get_modsem md_tgt (ModL.sk md_tgt))))).
+                option_rel (sim_fsem wf)
+                           (alist_find fn
+                                       (ModSemL.fnsems (ModL.get_modsem md_src (ModL.sk md_src))))
+                           (alist_find fn
+                                       (ModSemL.fnsems (ModL.get_modsem md_tgt (ModL.sk md_tgt))))).
      { rewrite <- sim_sk0 in *.
        remember (ModSemL.fnsems (ModL.get_modsem md_src (ModL.sk md_src))).
        remember (ModSemL.fnsems (ModL.get_modsem md_tgt (ModL.sk md_src))).
        clear - sim_fnsems. induction sim_fnsems; ss.
-       i. unfold sumbool_to_bool. des_ifs; eauto.
-       - inv H. ss.
-       - inv H. exfalso. eapply n. ss.
+       i. inv H. destruct x, y. inv H0. ss. subst.
+       rewrite ! eq_rel_dec_correct. des_ifs; eauto.
      }
 
      ginit. unfold assume. mgo.
@@ -1763,8 +1761,7 @@ Section SIMMOD.
        ss. unfold ITree.map, unwrapU, triggerUB. mgo.
        des_ifs_safe.
        mgo. gstep. econs; eauto. ss. }
-     destruct a, b. inv IN. mgo.
-     exploit H0; eauto. i. des.
+     exploit IN; eauto. i. des.
 
 
      gstep. econs; eauto. i. esplits; eauto.

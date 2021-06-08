@@ -341,8 +341,8 @@ Section MODSEML.
 
   Record t: Type := mk {
     (* initial_ld: mname -> GRA; *)
-    fnsems: list (gname * (Any.t -> itree Es Any.t));
-    initial_mrs: list (mname * (Σ * Any.t));
+    fnsems: alist gname (Any.t -> itree Es Any.t);
+    initial_mrs: alist mname (Σ * Any.t);
   }
   .
 
@@ -371,7 +371,7 @@ Section MODSEML.
 
   Definition prog: callE ~> itree Es :=
     fun _ '(Call fn args) =>
-      '(_, sem) <- (List.find (fun fnsem => dec fn (fst fnsem)) ms.(fnsems))?;;
+      sem <- (alist_find fn ms.(fnsems))?;;
       rv <- (sem args);;
       Ret rv
   .
@@ -379,18 +379,22 @@ Section MODSEML.
 
 
   Definition initial_r_state: r_state :=
-    (fun mn => match List.find (fun mnr => dec mn (fst mnr)) ms.(initial_mrs) with
-               | Some r => fst (snd r)
+    (fun mn => match alist_find mn ms.(initial_mrs) with
+               | Some r => fst r
                | None => ε
                end, [ε; ε]).
   Definition initial_p_state: p_state :=
-    (fun mn => match List.find (fun mnr => dec mn (fst mnr)) ms.(initial_mrs) with
-               | Some r => (snd (snd r))
+    (fun mn => match alist_find mn ms.(initial_mrs) with
+               | Some r => (snd r)
                | None => tt↑
                end).
-  Definition initial_itr: itree (eventE) Any.t :=
+
+  Definition initial_itr_arg (arg: Any.t): itree (eventE) Any.t :=
     assume(<<WF: wf ms>>);;;
-    snd <$> interp_Es prog (prog (Call "main" (([]: list val)↑))) (initial_r_state, initial_p_state).
+    snd <$> interp_Es prog (prog (Call "main" arg)) (initial_r_state, initial_p_state).
+
+  Definition initial_itr: itree (eventE) Any.t :=
+    initial_itr_arg ([]: list val)↑.
 
   Definition initial_itr_no_check: itree (eventE) Any.t :=
     snd <$> interp_Es prog (prog (Call "main" (([]: list val)↑))) (initial_r_state, initial_p_state).
@@ -507,7 +511,7 @@ Section MODSEML.
   .
   Proof.
     destruct (classic (wf (add ms1 ms0))); cycle 1.
-    { ii. clear PR. eapply Beh.ub_top. pfold. econsr; ss; et. rr. ii; ss. unfold initial_itr, assume in *.
+    { ii. clear PR. eapply Beh.ub_top. pfold. econsr; ss; et. rr. ii; ss. unfold initial_itr, initial_itr_arg, assume in *.
       inv STEP; ss; irw in H1; (* clarify <- TODO: BUG, runs infloop. *) inv H1; simpl_depind; subst.
       clarify.
     }
@@ -752,7 +756,7 @@ Section MODSEM.
 
   Definition prog (ms: t): callE ~> itree Es :=
     fun _ '(Call fn args) =>
-      '(_, sem) <- (List.find (fun fnsem => dec fn (fst fnsem)) ms.(fnsems))?;;
+      sem <- (alist_find fn ms.(fnsems))?;;
       (sem args)
   .
 

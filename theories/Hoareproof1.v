@@ -462,21 +462,21 @@ Section CANCEL.
   Lemma stb_find_iff fn
     :
       ((<<NONE: alist_find fn stb = None>>) /\
-       (<<FINDSRC: find (fun fnsem => dec fn (fst fnsem)) (fnsems ms_src) = None>>) /\
-       (<<FINDMID: find (fun fnsem => dec fn (fst fnsem)) (fnsems ms_mid) = None>>)) \/
+       (<<FINDSRC: alist_find fn (fnsems ms_src) = None>>) /\
+       (<<FINDMID: alist_find fn (fnsems ms_mid) = None>>)) \/
 
       (exists md (f: fspecbody),
           (<<SOME: alist_find fn stb = Some (f: fspec)>>) /\
-          (<<FINDSRC: find (fun fnsem => dec fn (fst fnsem)) (fnsems ms_src) =
-                      Some (fn, transl_all
-                                  (SModSem.mn
-                                     (SMod.get_modsem md sk))
-                                  ∘ fun_to_src (fsb_body f))>>) /\
-          (<<FINDMID: find (fun fnsem => dec fn (fst fnsem)) (fnsems ms_mid) =
-                      Some (fn, transl_all
-                                  (SModSem.mn
-                                     (SMod.get_modsem md sk))
-                                  ∘ fun_to_mid stb (fsb_body f))>>)).
+          (<<FINDSRC: alist_find fn (fnsems ms_src) =
+                      Some (transl_all
+                              (SModSem.mn
+                                 (SMod.get_modsem md sk))
+                              ∘ fun_to_src (fsb_body f))>>) /\
+          (<<FINDMID: alist_find fn (fnsems ms_mid) =
+                      Some (transl_all
+                              (SModSem.mn
+                                 (SMod.get_modsem md sk))
+                              ∘ fun_to_mid stb (fsb_body f))>>)).
   Proof.
     admit "stb find".
   Qed.
@@ -675,7 +675,7 @@ Section CANCEL.
     exists (200)%ord. ss.
     ginit.
     { eapply cpn6_wcompat; eauto with paco. }
-    unfold ModSemL.initial_itr. Local Opaque ModSemL.prog. ss.
+    unfold ModSemL.initial_itr, ModSemL.initial_itr_arg. Local Opaque ModSemL.prog. ss.
     unfold ITree.map. steps.
     2: {
       Local Transparent ModSemL.prog.

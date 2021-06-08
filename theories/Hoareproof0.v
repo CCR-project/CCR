@@ -197,21 +197,21 @@ Section CANCEL.
   Lemma stb_find_iff fn
     :
       ((<<NONE: alist_find fn stb = None>>) /\
-       (<<FINDMID: find (fun fnsem => dec fn (fst fnsem)) (ModSemL.fnsems ms_mid) = None>>) /\
-       (<<FINDTGT: find (fun fnsem => dec fn (fst fnsem)) (ModSemL.fnsems ms_tgt) = None>>)) \/
+       (<<FINDMID: alist_find fn (ModSemL.fnsems ms_mid) = None>>) /\
+       (<<FINDTGT: alist_find fn (ModSemL.fnsems ms_tgt) = None>>)) \/
 
       (exists md (f: fspecbody),
           (<<SOME: alist_find fn stb = Some (f: fspec)>>) /\
-          (<<FINDMID: find (fun fnsem => dec fn (fst fnsem)) (ModSemL.fnsems ms_mid) =
-                      Some (fn, transl_all
-                                  (SModSem.mn
-                                     (SMod.get_modsem md sk))
-                                  ∘ fun_to_mid stb (fsb_body f))>>) /\
-          (<<FINDTGT: find (fun fnsem => dec fn (fst fnsem)) (ModSemL.fnsems ms_tgt) =
-                      Some (fn, transl_all
-                                  (SModSem.mn
-                                     (SMod.get_modsem md sk))
-                                  ∘ fun_to_tgt stb f)>>)).
+          (<<FINDMID: alist_find fn (ModSemL.fnsems ms_mid) =
+                      Some (transl_all
+                              (SModSem.mn
+                                 (SMod.get_modsem md sk))
+                              ∘ fun_to_mid stb (fsb_body f))>>) /\
+          (<<FINDTGT: alist_find fn (ModSemL.fnsems ms_tgt) =
+                      Some (transl_all
+                              (SModSem.mn
+                                 (SMod.get_modsem md sk))
+                              ∘ fun_to_tgt stb f)>>)).
   Proof.
     admit "stb find".
   Qed.
@@ -434,20 +434,19 @@ Section CANCEL.
     (* destruct vret_tgt as [[[mrs0 frs0] mps0] ord_cur]. *)
     destruct tbr.
     { des; et. Opaque ord_lt. destruct x4; ss; cycle 1. { exfalso. exploit x7; et. } steps. esplits; eauto. steps. unshelve esplits; eauto. steps. unfold unwrapU.
-      destruct (find (fun fnsem => dec fn (fst fnsem)) (ModSemL.fnsems ms_mid)) eqn:FINDFS; cycle 1.
+      destruct (alist_find fn (ModSemL.fnsems ms_mid)) eqn:FINDFS; cycle 1.
       { steps. }
-      destruct (find (fun fnsem => dec fn (fst fnsem)) (ModSemL.fnsems ms_tgt)) eqn:FINDFT0; cycle 1.
+      destruct (alist_find fn (ModSemL.fnsems ms_tgt)) eqn:FINDFT0; cycle 1.
       { steps.
-        apply find_some in FINDFS. des. des_sumbool. subst. destruct p as [fn fsem]; ss.
+        apply alist_find_some in FINDFS.
         assert(IN: In fn (List.map fst ms_mid.(ModSemL.fnsems))).
         { rewrite in_map_iff. esplits; et. ss. }
         unfold ms_mid in IN. unfold mds_mid in IN. unfold SMod.to_mid in IN.
         erewrite SMod.transl_fnsems_stable with (tr1:=(fun_to_tgt ∘ _stb)) (mr1:=SModSem.initial_mr) in IN.
         replace (SMod.transl (fun_to_tgt ∘ _stb) SModSem.initial_mr) with (SMod.to_tgt _stb) in IN by refl.
         fold mds_tgt in IN. fold ms_tgt in IN.
-        rewrite in_map_iff in IN. des. subst.
-        eapply find_none in FINDFT0; et.
-        des_sumbool. ss.
+        eapply in_map_iff in IN. des; subst. destruct x4. ss.
+        eapply alist_find_none in FINDFT0; et.
       }
       (* { steps. *)
       (*   rewrite WTY in *. ss. clear - FINDFS FINDFT0. *)
@@ -477,8 +476,8 @@ Section CANCEL.
                              (<<POST: fs.(postcond) x2 vret_src' vret_tgt rret>>) /\
                              (<<PHYS: mps_src = mps_tgt>>)
                     ).
-        apply find_some in FINDFT0. des.
-        apply find_some in FINDFS. des. ss. des_sumbool. clarify.
+        apply alist_find_some in FINDFT0.
+        apply alist_find_some in FINDFS.
         unfold ms_mid, mds_mid, SMod.to_mid in FINDFS. rewrite SMod.transl_fnsems in FINDFS. unfold SMod.load_fnsems in FINDFS. ss.
         eapply in_flat_map in FINDFS; des. eapply in_flat_map in FINDFS0; des. des_ifs. ss. des; ss. clarify. fold sk in FINDFS0.
         unfold ms_tgt, mds_tgt, SMod.to_tgt in FINDFT0. rewrite SMod.transl_fnsems in FINDFT0. unfold SMod.load_fnsems in FINDFT0. ss.
@@ -566,20 +565,19 @@ Section CANCEL.
     }
     { des. clear x7. exploit x8; et. i; clarify. clear x8.
       steps. esplits; eauto. steps. esplits; eauto. steps. unfold unwrapU.
-      destruct (find (fun fnsem => dec fn (fst fnsem)) (ModSemL.fnsems ms_mid)) eqn:FINDFS; cycle 1.
+      destruct (alist_find fn (ModSemL.fnsems ms_mid)) eqn:FINDFS; cycle 1.
       { steps. }
-      destruct (find (fun fnsem => dec fn (fst fnsem)) (ModSemL.fnsems ms_tgt)) eqn:FINDFT0; cycle 1.
+      destruct (alist_find fn (ModSemL.fnsems ms_tgt)) eqn:FINDFT0; cycle 1.
       { steps.
-        apply find_some in FINDFS. des. des_sumbool. subst. destruct p as [fn fsem]; ss.
+        apply alist_find_some in FINDFS.
         assert(IN: In fn (List.map fst ms_mid.(ModSemL.fnsems))).
         { rewrite in_map_iff. esplits; et. ss. }
         unfold ms_mid in IN. unfold mds_mid in IN. unfold SMod.to_mid in IN.
         erewrite SMod.transl_fnsems_stable with (tr1:=(fun_to_tgt ∘ _stb)) (mr1:=SModSem.initial_mr) in IN.
         replace (SMod.transl (fun_to_tgt ∘ _stb) SModSem.initial_mr) with (SMod.to_tgt _stb) in IN by refl.
         fold mds_tgt in IN. fold ms_tgt in IN.
-        rewrite in_map_iff in IN. des. subst.
-        eapply find_none in FINDFT0; et.
-        des_sumbool. ss.
+        eapply in_map_iff in IN. des; subst. destruct x4. ss.
+        eapply alist_find_none in FINDFT0; et.
       }
       mred. des_ifs. mred.
       rename i into i_src.
@@ -601,8 +599,8 @@ Section CANCEL.
                              (<<POST: fs.(postcond) x2 vret_src' vret_tgt rret>>) /\
                              (<<PHYS: mps_src = mps_tgt>>)
                     ).
-        apply find_some in FINDFT0. des.
-        apply find_some in FINDFS. des. ss. des_sumbool. clarify.
+        apply alist_find_some in FINDFT0.
+        apply alist_find_some in FINDFS.
         unfold ms_mid, mds_mid, SMod.to_mid in FINDFS. rewrite SMod.transl_fnsems in FINDFS. unfold SMod.load_fnsems in FINDFS. ss.
         eapply in_flat_map in FINDFS; des. eapply in_flat_map in FINDFS0; des. des_ifs. ss. des; ss. clarify. fold sk in FINDFS0.
         unfold ms_tgt, mds_tgt, SMod.to_tgt in FINDFT0. rewrite SMod.transl_fnsems in FINDFT0. unfold SMod.load_fnsems in FINDFT0. ss.
@@ -726,8 +724,8 @@ Section CANCEL.
   Qed.
 
   Let initial_r_state ms entry_r: r_state :=
-    (fun mn => match List.find (fun mnr => dec mn (fst mnr)) ms.(ModSemL.initial_mrs) with
-               | Some r => fst (snd r)
+    (fun mn => match alist_find mn ms.(ModSemL.initial_mrs) with
+               | Some r => fst r
                | None => ε
                end, [entry_r]). (*** we have a dummy-stack here ***)
 
@@ -742,7 +740,7 @@ Section CANCEL.
     exists (Ord.from_nat 100%nat). ss.
     ginit.
     { eapply cpn6_wcompat; eauto with paco. }
-    unfold ModSemL.initial_itr. Local Opaque ModSemL.prog. ss.
+    unfold ModSemL.initial_itr, ModSemL.initial_itr_arg. Local Opaque ModSemL.prog. ss.
     unfold ITree.map.
     unfold assume.
     steps.
@@ -760,15 +758,17 @@ Section CANCEL.
       unfold ms_tgt, mds_tgt, SMod.to_tgt, mds_mid, SMod.to_mid. rewrite ! SMod.transl_initial_mrs. folder.
       des_ifs; ss; apply_all_once find_some; des; ss; des_sumbool; clarify;
         unfold SMod.load_initial_mrs in *; apply_all_once in_flat_map; des; ss; des; ss; clarify; ss.
-      - assert(x = x0).
+      - assert(p = p0).
         { admit "uniqueness of mn". }
         subst; ss.
-      - eapply find_none in Heq0; cycle 1.
-        { rewrite in_flat_map. esplits; et. ss; et. }
-        ss. des_sumbool; ss.
-      - eapply find_none in Heq; cycle 1.
-        { rewrite in_flat_map. esplits; et. ss; et. }
-        ss. des_sumbool; ss.
+      - eapply alist_find_some in Heq. eapply in_flat_map in Heq.
+        des. ss. des; clarify. ss.
+        exfalso. eapply alist_find_none in Heq0; cycle 1.
+        rewrite in_flat_map in Heq0. eapply Heq0. ss. esplits; et.
+      - eapply alist_find_some in Heq0. eapply in_flat_map in Heq0.
+        des. ss. des; clarify. ss.
+        exfalso. eapply alist_find_none in Heq; cycle 1.
+        rewrite in_flat_map in Heq. eapply Heq. ss. esplits; et.
     }
     unfold mrec.
 
