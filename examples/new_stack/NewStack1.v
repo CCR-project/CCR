@@ -113,7 +113,7 @@ Section PROOF.
     KModSem.fnsems := StackSbtb;
     KModSem.mn := "Stack";
     KModSem.initial_mr := ε;
-    KModSem.initial_st := (gmap_empty: gmap mblock (list Z))↑;
+    KModSem.initial_st := (∅: gmap mblock (list Z))↑;
   |}
   .
 

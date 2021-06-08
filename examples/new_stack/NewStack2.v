@@ -84,7 +84,7 @@ Section PROOF.
     ModSem.fnsems := [("new", cfun new_body); ("pop", cfun pop_body); ("push", cfun push_body)];
     ModSem.mn := "Stack";
     ModSem.initial_mr := ε;
-    ModSem.initial_st := tt↑;
+    ModSem.initial_st := (∅: gmap mblock (list Z))↑;
   |}
   .
 

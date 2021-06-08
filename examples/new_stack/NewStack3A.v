@@ -15,83 +15,75 @@ Set Implicit Arguments.
 
 
 
+Definition _stkRA: URA.t := (mblock ==> (Excl.t (list Z)))%ra.
+Instance stkRA: URA.t := Auth.t _stkRA.
+
 Section PROOF.
 
   Context `{Σ: GRA.t}.
-  Context `{@GRA.inG memRA Σ}.
+  Context `{@GRA.inG stkRA Σ}.
 
-  Notation pget := (p0 <- trigger PGet;; `p0: (gmap mblock (list Z)) <- p0↓ǃ;; Ret p0) (only parsing).
-  Notation pput p0 := (trigger (PPut p0↑)) (only parsing).
-
-  (* def new(): Ptr *)
-  (*   let handle := Choose(Ptr); *)
-  (*   guarantee(stk_mgr(handle) = None); *)
-  (*   stk_mgr(handle) := Some []; *)
-  (*   return handle *)
-
-  Definition new_body: list val -> itree Es val :=
-    fun args =>
-      _ <- (pargs [] args)?;;
-      handle <- trigger (Choose _);;
-      stk_mgr0 <- pget;;
-      guarantee(stk_mgr0 !! handle = None);;;
-      let stk_mgr1 := <[handle:=[]]> stk_mgr0 in
-      pput stk_mgr1;;;
-      Ret (Vptr handle 0)
+  Compute (URA.car (t:=_stkRA)).
+  Definition _is_stack (h: mblock) (stk: list Z): _stkRA :=
+    (fun _h => if (dec _h h) then Some stk else ε)
   .
 
-  (* def pop(handle: Ptr): Int64 *)
-  (*   let stk := unwrap(stk_mgr(handle)); *)
-  (*   match stk with *)
-  (*   | x :: stk' =>  *)
-  (*     stk_mgr(handle) := Some stk'; *)
-  (*     debug(false, x); *)
-  (*     return x *)
-  (*   | [] => return -1 *)
-  (*   end *)
+  Definition is_stack (h: mblock) (stk: list Z): stkRA := Auth.white (_is_stack h stk).
 
-  Definition pop_body: list val -> itree Es val :=
-    fun args =>
-      handle <- (pargs [Tblk] args)?;;
-      stk_mgr0 <- pget;;
-      stk0 <- (stk_mgr0 !! handle)?;;
-      match stk0 with
-      | x :: stk1 =>
-        pput (<[handle:=stk1]> stk_mgr0);;;
-        trigger (Call "debug" ([Vint 0; Vint x])↑);;;
-        Ret (Vint x)
-      | _ => Ret (Vint (- 1))
-      end
-  .
+  Let new_spec: fspec :=
+    (mk_simple (X:=unit)
+               (fun _ => (
+                    (fun varg o => (⌜varg = ([]: list val)↑ /\ o = ord_pure 0⌝: iProp)%I),
+                    (fun vret => (∃ h, ⌜vret = (Vptr h 0)↑⌝ ** OwnM (is_stack h []): iProp)%I)
+    ))).
 
-  (* def push(handle: Ptr, x: Int64): Unit *)
-  (*   let stk := unwrap(stk_mgr(handle)); *)
-  (*   stk_mgr(handle) := Some (x :: stk); *)
-  (*   debug(true, x); *)
-  (*   () *)
+  Let pop_spec: fspec :=
+    (mk_simple (fun '(h, stk0) => (
+                    (fun varg o => (⌜varg = ([Vptr h 0%Z]: list val)↑ /\ o = ord_pure 0⌝ **
+                                    OwnM (is_stack h stk0): iProp)%I),
+                    (fun vret => (match stk0 with
+                                  | [] => ⌜vret = (Vint (- 1))↑⌝ ** OwnM (is_stack h [])
+                                  | x :: stk1 => ⌜vret = x↑⌝ ** OwnM (is_stack h stk1)
+                                  end: iProp)%I)
+    ))).
 
-  Definition push_body: list val -> itree Es val :=
-    fun args =>
-      '(handle, x) <- (pargs [Tblk; Tint] args)?;;
-      stk_mgr0 <- pget;;
-      stk0 <- (stk_mgr0 !! handle)?;;
-      pput (<[handle:=(x :: stk0)]> stk_mgr0);;;
-      trigger (Call "debug" ([Vint 1; Vint x]↑));;;
-      Ret Vundef
-  .
+  Let push_spec: fspec :=
+    (mk_simple (fun '(h, x, stk0) => (
+                    (fun varg o => (⌜varg = ([Vptr h 0%Z; Vint x]: list val)↑ /\ o = ord_pure 0⌝ **
+                                    OwnM (is_stack h stk0): iProp)%I),
+                    (fun vret => (OwnM (is_stack h (x :: stk0)): iProp)%I)
+    ))).
 
-  Definition StackSem: ModSem.t := {|
-    ModSem.fnsems := [("new", cfun new_body); ("pop", cfun pop_body); ("push", cfun push_body)];
-    ModSem.mn := "Stack";
-    ModSem.initial_mr := ε;
-    ModSem.initial_st := tt↑;
+  Definition StackSbtb: list (gname * fspecbody) :=
+    [("new", mk_specbody new_spec (fun _ => APC;;; trigger (Choose _)));
+    ("pop",  mk_specbody pop_spec (fun _ => APC;;; trigger (Choose _)));
+    ("push", mk_specbody push_spec (fun _ => APC;;; trigger (Choose _)))
+    ].
+
+  Definition StackStb: list (gname * fspec).
+    eapply (Seal.sealing "stb").
+    let x := constr:(List.map (map_snd fsb_fspec) StackSbtb) in
+    let y := eval cbn in x in
+    eapply y.
+  Defined.
+
+  Definition SStackSem: SModSem.t := {|
+    SModSem.fnsems := StackSbtb;
+    SModSem.mn := "Stack";
+    SModSem.initial_mr := (GRA.embed (Auth.black (M:=_stkRA) (fun _ => ε)));
+    SModSem.initial_st := tt↑;
   |}
   .
 
-  Definition Stack: Mod.t := {|
-    Mod.get_modsem := fun _ => StackSem;
-    Mod.sk := Sk.unit;
+  Definition StackSem: ModSem.t := (SModSem.to_tgt (StackStb)) SStackSem.
+
+  Definition SStack: SMod.t := {|
+    SMod.get_modsem := fun _ => SStackSem;
+    SMod.sk := Sk.unit;
   |}
   .
+
+  Definition Stack: Mod.t := (SMod.to_tgt (fun _ => StackStb)) SStack.
 
 End PROOF.
+Global Hint Unfold StackStb: stb.
