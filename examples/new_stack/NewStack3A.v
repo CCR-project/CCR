@@ -10,6 +10,7 @@ Require Import Logic.
 Require Import Mem1.
 Require Import TODO TODOYJ.
 Require Import AList.
+Require Import NewStackHeader.
 
 Set Implicit Arguments.
 
@@ -30,33 +31,40 @@ Section PROOF.
 
   Definition is_stack (h: mblock) (stk: list Z): stkRA := Auth.white (_is_stack h stk).
 
-  Let new_spec: fspec :=
+  Definition new_spec: fspec :=
     (mk_simple (X:=unit)
                (fun _ => (
                     (fun varg o => (⌜varg = ([]: list val)↑ /\ o = ord_pure 0⌝: iProp)%I),
                     (fun vret => (∃ h, ⌜vret = (Vptr h 0)↑⌝ ** OwnM (is_stack h []): iProp)%I)
     ))).
 
-  Let pop_spec: fspec :=
-    (mk_simple (fun '(h, stk0) => (
-                    (fun varg o => (⌜varg = ([Vptr h 0%Z]: list val)↑ /\ o = ord_pure 0⌝ **
-                                    OwnM (is_stack h stk0): iProp)%I),
-                    (fun vret => (match stk0 with
-                                  | [] => ⌜vret = (Vint (- 1))↑⌝ ** OwnM (is_stack h [])
-                                  | x :: stk1 => ⌜vret = x↑⌝ ** OwnM (is_stack h stk1)
-                                  end: iProp)%I)
-    ))).
+  Definition pop_spec: fspec :=
+    (* (X:=(mblock * list Z)) (AA:=list Z) (AR:=Z * list Z) *)
+    mk (fun '(h, stk0) _stk0 varg o =>
+          (⌜stk0 = _stk0 /\ varg = ([Vptr h 0%Z]: list val)↑ /\ o = ord_top⌝
+            ** OwnM (is_stack h stk0): iProp)%I)
+       (fun '(h, stk0) '(x, stk1) vret =>
+          (match stk0 with
+           | [] => ⌜x = (- 1)%Z /\ (stk1 = [])⌝ ** OwnM (is_stack h stk1)
+           | hd :: tl => ⌜x = hd /\ (stk1 = tl)⌝ ** OwnM (is_stack h stk1)
+           end: iProp)%I)
+  .
 
-  Let push_spec: fspec :=
+  Definition push_spec: fspec :=
     (mk_simple (fun '(h, x, stk0) => (
-                    (fun varg o => (⌜varg = ([Vptr h 0%Z; Vint x]: list val)↑ /\ o = ord_pure 0⌝ **
+                    (fun varg o => (⌜varg = ([Vptr h 0%Z; Vint x]: list val)↑ /\ o = ord_top⌝ **
                                     OwnM (is_stack h stk0): iProp)%I),
                     (fun vret => (OwnM (is_stack h (x :: stk0)): iProp)%I)
     ))).
 
   Definition StackSbtb: list (gname * fspecbody) :=
     [("new", mk_specbody new_spec (fun _ => APC;;; trigger (Choose _)));
-    ("pop",  mk_specbody pop_spec (fun _ => APC;;; trigger (Choose _)));
+    ("pop",  mk_specbody pop_spec (fun (stk0: list Z) =>
+                                     APC;;; match stk0 with
+                                            | [] => Ret ((- 1)%Z, [])
+                                            | x :: stk1 =>
+                                              trigger (hCall false "debug" [Vint 0; Vint x]↑);;; Ret (x, stk1)
+                                            end));
     ("push", mk_specbody push_spec (fun _ => APC;;; trigger (Choose _)))
     ].
 
@@ -75,7 +83,7 @@ Section PROOF.
   |}
   .
 
-  Definition StackSem: ModSem.t := (SModSem.to_tgt (StackStb)) SStackSem.
+  Definition StackSem (stb: list (string * fspec)): ModSem.t := (SModSem.to_tgt stb) SStackSem.
 
   Definition SStack: SMod.t := {|
     SMod.get_modsem := fun _ => SStackSem;
@@ -83,7 +91,7 @@ Section PROOF.
   |}
   .
 
-  Definition Stack: Mod.t := (SMod.to_tgt (fun _ => StackStb)) SStack.
+  Definition Stack (stb: Sk.t -> list (string * fspec)): Mod.t := (SMod.to_tgt stb) SStack.
 
 End PROOF.
 Global Hint Unfold StackStb: stb.

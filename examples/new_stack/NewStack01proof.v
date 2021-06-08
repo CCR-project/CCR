@@ -26,6 +26,21 @@ Local Open Scope nat_scope.
 
 
 
+
+Section PROOF.
+
+  Context `{Σ: GRA.t}.
+
+  Definition TODO_REMOVE_THIS_DebugStb: list (gname * fspec).
+   eapply (Seal.sealing "stb").
+   eapply [("debug", fspec_trivial2)].
+  Defined.
+
+End PROOF.
+
+Global Hint Unfold TODO_REMOVE_THIS_DebugStb: stb.
+
+
 Section SIMMODSEM.
 
   Context `{Σ: GRA.t}.
@@ -51,7 +66,7 @@ Section SIMMODSEM.
   .
 
   Variable global_stb: list (string * fspec).
-  Hypothesis STBINCL: stb_incl (DebugStb ++ StackStb ++ MemStb) global_stb.
+  Hypothesis STBINCL: stb_incl (TODO_REMOVE_THIS_DebugStb ++ StackStb ++ MemStb) global_stb.
 
   Theorem sim_modsem: ModSemPair.sim (NewStack1.StackSem global_stb) NewStack0.StackSem.
   Proof.
@@ -146,7 +161,7 @@ Section SIMMODSEM.
         steps. mDesAll. des; subst. mRename "A2" into "INV".
 
         kstop. steps. rewrite Any.upcast_downcast. steps. rename a10 into stk_mgr3.
-        destruct (alist_find "debug" (DebugStb ++ StackStb ++ MemStb)) eqn:U; cycle 1.
+        destruct (alist_find "debug" (TODO_REMOVE_THIS_DebugStb ++ StackStb ++ MemStb)) eqn:U; cycle 1.
         { exfalso. stb_tac. ss. }
         dup U. revert U. stb_tac. clarify. i.
         apply STBINCL in U. rewrite U. steps. rewrite Any.upcast_downcast. steps.
@@ -202,7 +217,7 @@ Section SIMMODSEM.
       steps. mDesAll. des; clarify. clear_tac. rename a into stk_mgr1. mRename "A1" into "INV". kstop. steps.
       rewrite Any.upcast_downcast. steps.
 
-      destruct (alist_find "debug" (DebugStb ++ StackStb ++ MemStb)) eqn:U; cycle 1.
+      destruct (alist_find "debug" (TODO_REMOVE_THIS_DebugStb ++ StackStb ++ MemStb)) eqn:U; cycle 1.
       { exfalso. stb_tac. ss. }
       dup U. revert U. stb_tac. clarify. i.
       apply STBINCL in U. rewrite U. steps. rewrite Any.upcast_downcast. steps.
@@ -236,7 +251,7 @@ Section SIMMOD.
   Context `{@GRA.inG memRA Σ}.
 
   Variable global_stb: Sk.t -> list (string * fspec).
-  Hypothesis STBINCL: forall sk, stb_incl (DebugStb ++ StackStb ++ MemStb) (global_stb sk).
+  Hypothesis STBINCL: forall sk, stb_incl (TODO_REMOVE_THIS_DebugStb ++ StackStb ++ MemStb) (global_stb sk).
 
   Theorem correct: ModPair.sim (NewStack1.Stack global_stb) NewStack0.Stack.
   Proof.

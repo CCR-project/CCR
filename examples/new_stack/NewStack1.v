@@ -104,11 +104,6 @@ Section PROOF.
     eapply y.
   Defined.
 
-  Definition DebugStb: list (gname * fspec).
-   eapply (Seal.sealing "stb").
-   eapply [("debug", fspec_trivial2)].
-  Defined.
-
   Definition KStackSem: KModSem.t := {|
     KModSem.fnsems := StackSbtb;
     KModSem.mn := "Stack";
@@ -135,4 +130,3 @@ Section PROOF.
 
 End PROOF.
 Global Hint Unfold StackStb: stb.
-Global Hint Unfold DebugStb: stb.
