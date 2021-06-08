@@ -19,6 +19,24 @@ Notation "'do' ' X <- A ; B" := (o_bind A (fun _x => match _x with | X => B end)
                                   (at level 200, X pattern, A at level 100, B at level 200)
                                 : o_monad_scope.
 
+Lemma find_idx_red {A} (f: A -> bool) (l: list A):
+  find_idx f l =
+  match l with
+  | [] => None
+  | hd :: tl =>
+    if (f hd)
+    then Some (0, hd)
+    else
+      do (n, a) <- find_idx f tl;
+      Some (S n, a)
+  end.
+Proof.
+  unfold find_idx. generalize 0. induction l; ss.
+  i. des_ifs; ss.
+  - rewrite Heq0. ss.
+  - rewrite Heq0. specialize (IHl (S n)). rewrite Heq0 in IHl. ss.
+Qed.
+
 
 Module SkEnv.
 
@@ -169,11 +187,24 @@ Module Sk.
     r in WF.
     rr. split; i; ss.
     - uo; des_ifs.
-      + admit "ez".
-      + admit "ez".
-    - uo; des_ifs_safe. des_ifs.
-      + destruct p0; ss. repeat f_equal. admit "ez".
-      + admit "ez".
+      + f_equal. ginduction sk; ss. i. inv WF.
+        rewrite find_idx_red in Heq1. des_ifs; ss.
+        { des_sumbool. subst. ss. clarify. }
+        des_sumbool. uo. des_ifs. destruct p. ss.
+        hexploit IHsk; et.
+      + exfalso. ginduction sk; ss. i. inv WF.
+        rewrite find_idx_red in Heq2. des_ifs; ss.
+        des_sumbool. uo. des_ifs. destruct p. ss.
+        hexploit IHsk; et.
+    - ginduction sk; ss.
+      { i. uo. ss. destruct blk; ss. }
+      i. destruct a. inv WF. uo. destruct blk; ss; clarify.
+      {  rewrite find_idx_red. uo. des_ifs; des_sumbool; ss. }
+      hexploit IHsk; et. i.
+      rewrite find_idx_red. uo. des_ifs; des_sumbool; ss. exfalso.
+      subst. clear - Heq1 H2. ginduction sk; ss. i.
+      rewrite find_idx_red in Heq1. des_ifs; des_sumbool; ss; et.
+      uo. des_ifs. destruct p. eapply IHsk; et.
   Qed.
 
   Definition incl (sk0 sk1: Sk.t): Prop :=
@@ -189,7 +220,13 @@ Module Sk.
     :
       incl_env sk0 (load_skenv sk1).
   Proof.
-  Admitted.
+    ii. exploit INCL; et. i. ss. uo. des_ifs; et.
+    exfalso. clear - x Heq0. ginduction sk1; et.
+    i. ss. rewrite find_idx_red in Heq0. des_ifs.
+    des_sumbool. uo.  des_ifs. des; clarify.
+    eapply IHsk1; et.
+  Qed.
+
 End Sk.
 
 Coercion Sk.load_skenv: Sk.t >-> SkEnv.t.
