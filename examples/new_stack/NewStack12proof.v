@@ -47,9 +47,9 @@ Section SIMMODSEM.
     }
     econs; ss.
     { unfold NewStack1.new_body, NewStack2.new_body, KModSem.fun_to_src,KModSem.body_to_src, cfun. init. steps.
-      admit "mid - somehow".
+      admit "mid - somehow; bruteforce way is to prove it here (by making some lemma) but without any change in meta-theory. we may use kappa * 5(?) ordinal ".
     }
-    admit "mid - somehow".
+    admit "mid - ditto".
   Unshelve.
     all: ss.
   Qed.
