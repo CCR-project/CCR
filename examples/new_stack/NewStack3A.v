@@ -38,10 +38,11 @@ Section PROOF.
                     (fun vret => (∃ h, ⌜vret = (Vptr h 0)↑⌝ ** OwnM (is_stack h []): iProp)%I)
     ))).
 
+  (*** varg stands for (physical) value arguments... bad naming and will be changed later ***)
   Definition pop_spec: fspec :=
     (* (X:=(mblock * list Z)) (AA:=list Z) (AR:=Z * list Z) *)
-    mk (fun '(h, stk0) _stk0 varg o =>
-          (⌜stk0 = _stk0 /\ varg = ([Vptr h 0%Z]: list val)↑ /\ o = ord_top⌝
+    mk (fun '(h, stk0) virtual_arg varg o =>
+          (⌜stk0 = virtual_arg /\ varg = ([Vptr h 0%Z]: list val)↑ /\ o = ord_top⌝
             ** OwnM (is_stack h stk0): iProp)%I)
        (fun '(h, stk0) '(x, stk1) vret =>
           (match stk0 with
@@ -51,11 +52,11 @@ Section PROOF.
   .
 
   Definition push_spec: fspec :=
-    (mk_simple (fun '(h, x, stk0) => (
-                    (fun varg o => (⌜varg = ([Vptr h 0%Z; Vint x]: list val)↑ /\ o = ord_top⌝ **
-                                    OwnM (is_stack h stk0): iProp)%I),
-                    (fun vret => (OwnM (is_stack h (x :: stk0)): iProp)%I)
-    ))).
+    mk (fun '(h, x, stk0) virtual_arg varg o =>
+          (⌜(x, stk0) = virtual_arg /\ varg = ([Vptr h 0%Z; Vint x]: list val)↑ /\ o = ord_top⌝
+            ** OwnM (is_stack h stk0): iProp)%I)
+       (fun '(h, x, stk0) stk1 vret => (⌜stk1 = x :: stk0⌝ ** OwnM (is_stack h stk1): iProp)%I)
+  .
 
   Definition StackSbtb: list (gname * fspecbody) :=
     [("new", mk_specbody new_spec (fun _ => APC;;; trigger (Choose _)));
@@ -65,7 +66,9 @@ Section PROOF.
                                             | x :: stk1 =>
                                               trigger (hCall false "debug" [Vint 0; Vint x]↑);;; Ret (x, stk1)
                                             end));
-    ("push", mk_specbody push_spec (fun _ => APC;;; trigger (Choose _)))
+    ("push", mk_specbody push_spec (fun '(x, stk0) =>
+                                      APC;;; trigger (hCall false "debug" [Vint 1; Vint x]↑);;;
+                                         Ret (x :: stk0)))
     ].
 
   Definition StackStb: list (gname * fspec).

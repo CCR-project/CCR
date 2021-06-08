@@ -198,6 +198,60 @@ Section SIMMODSEM.
         hret _; ss.
         iModIntro. iFrame. iSplit; ss. iExists _, _; ss; et.
     }
+    econs; ss.
+    { unfold NewStack2.push_body, cfun. init. harg. fold wf. des_ifs_safe. mDesAll. des; clarify.
+      steps. rewrite Any.upcast_downcast in *. clarify. steps.
+      astart 0. astop. steps. rewrite Any.upcast_downcast in *. clarify.
+      rename g into stk_mgr0. rename n into h. rename a1 into stk_res0. rename l into stk0. rename z into x.
+      mCombine "A1" "A".
+      mOwnWf "A1".
+      assert(A: forall k, URA.wf ((stk_res0 k): URA.car (t:=Excl.t _))).
+      { eapply URA.wf_mon in WF0.
+        eapply Auth.black_wf in WF0. eapply pw_wf in WF0. des. ii. specialize (WF0 k). ss. }
+      assert(B: stk_res0 h = Some stk0).
+      { dup WF0.
+        eapply Auth.auth_included in WF0. des. unfold _is_stack in WF0. eapply pw_extends in WF0. des.
+        spc WF0. des_ifs. ss. eapply Excl.extends in WF0; ss. }
+      assert(C:=B). eapply SIM in C. rewrite C. steps.
+
+      destruct (alist_find "debug" (DebugStb ++ StackStb)) eqn:U; cycle 1.
+      { exfalso. stb_tac. ss. }
+      dup U. revert U. stb_tac. clarify. i.
+      apply STBINCL in U. rewrite U. steps. rewrite Any.upcast_downcast. steps.
+
+      set (stk_res1:=<[h:=Excl.just (x::stk0)]>stk_res0).
+      assert(WF1: URA.wf (stk_res1: URA.car (t:=_stkRA))).
+      { subst stk_res1. eapply (@pw_insert_wf _ (Excl.t (list Z))); et.
+        { eapply URA.wf_mon in WF0. eapply Auth.black_wf in WF0. ss. }
+        ur; ss.
+      }
+
+      mAssert _ with "A1".
+      { iApply (OwnM_Upd with "A1").
+        eapply Auth.auth_update with (a':=stk_res1) (b':=_is_stack h (x::stk0)).
+        bar. ii. ss. des. clarify. esplits; et.
+        assert(D: ctx0 h = Excl.unit).
+        { clear - B. repeat ur in B. unfold _is_stack in *. des_ifs. }
+        extensionality h0. subst stk_res1. unfold insert, fn_insert. des_ifs. 
+        - ur. rewrite D. unfold _is_stack. ur. des_ifs.
+        - unfold _is_stack. ur. des_ifs.
+      }
+      mUpd "A". mDesOwn "A".
+
+      assert(SIM0: ∀ h0 stk, <[h:=Excl.just (x::stk0)]> stk_res0 h0 = Excl.just stk ↔
+                             <[h:=(x::stk0)]> stk_mgr0 !! h0 = Some stk).
+      { ii. destruct (dec h h0).
+        - subst. erewrite ! lookup_insert. unfold insert, fn_insert. des_ifs. split; i; clarify.
+        - erewrite ! lookup_insert_ne; ss. unfold insert, fn_insert. des_ifs. }
+
+      hcall _ _ _ with "A"; ss; et.
+      { iModIntro. iSplit; ss. iExists _, stk_res1. iSplit; ss; et. }
+      { ss. }
+      steps. mDesAll. subst. des; clarify.
+
+      hret _; ss.
+      iModIntro. iFrame. iSplit; ss. iExists _, _; ss; et.
+    }
   Unshelve.
     all: ss.
   Qed.
@@ -209,9 +263,12 @@ End SIMMODSEM.
 Section SIMMOD.
 
   Context `{Σ: GRA.t}.
-  Context `{@GRA.inG memRA Σ}.
+  Context `{@GRA.inG stkRA Σ}.
 
-  Theorem correct: ModPair.sim (NewStack2.Stack) (KMod.to_src NewStack1.KStack).
+  Variable global_stb: Sk.t -> list (string * fspec).
+  Hypothesis STBINCL: forall sk, stb_incl (DebugStb ++ StackStb) (global_stb sk).
+
+  Theorem correct: ModPair.sim (NewStack3A.Stack global_stb) (NewStack2.Stack).
   Proof.
     econs; ss.
     { ii. eapply adequacy_lift. eapply sim_modsem; ss. }
