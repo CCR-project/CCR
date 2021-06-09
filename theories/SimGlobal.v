@@ -457,26 +457,6 @@ Qed.
 
 
 
-
-Variable md_src md_tgt: ModL.t.
-Let ms_src: ModSemL.t := md_src.(ModL.enclose).
-Let ms_tgt: ModSemL.t := md_tgt.(ModL.enclose).
-(* Let sim_fnsem: relation (string * (list val -> itree Es val)) := *)
-(*   fun '(fn_src, fsem_src) '(fn_tgt, fsem_tgt) => *)
-(*     (<<NAME: fn_src = fn_tgt>>) /\ *)
-(*     (<<SEM: forall varg, exists itr_src itr_tgt, *)
-(*           (<<SRC: fsem_src varg = resum_itr itr_src>>) /\ *)
-(*           (<<TGT: fsem_tgt varg = resum_itr itr_tgt>>) /\ *)
-(*           (<<SIM: exists i0, simg i0 itr_src itr_tgt>>)>>) *)
-(* . *)
-(* Hypothesis (SIM: Forall2 sim_fnsem ms_src.(ModSemL.fnsems) ms_tgt.(ModSemL.fnsems)). *)
-
-Hypothesis (SIM: exists o0, simg eq o0 (ModSemL.initial_itr ms_src) (ModSemL.initial_itr ms_tgt)).
-
-
-Local Hint Resolve cpn3_wcompat: paco.
-
-
 Lemma step_trigger_choose_iff X k itr e
       (STEP: ModSemL.step (trigger (Choose X) >>= k) e itr)
   :
@@ -599,17 +579,19 @@ Proof.
   econs.
 Qed.
 
-
-Theorem adequacy_global: Beh.of_program (ModL.compile md_tgt) <1= Beh.of_program (ModL.compile md_src).
+Theorem adequacy_global_itree itr_src itr_tgt
+        (SIM: exists o0, simg eq o0 itr_src itr_tgt)
+  :
+    Beh.of_program (ModSemL.compile_itree itr_tgt)
+    <1=
+    Beh.of_program (ModSemL.compile_itree itr_src).
 Proof.
   unfold Beh.of_program. ss.
-  unfold ms_src, ms_tgt in *.
-  revert SIM.
-  generalize (ModSemL.initial_itr (ModL.enclose md_src)) as itr_src.
-  generalize (ModSemL.initial_itr (ModL.enclose md_tgt)) as itr_tgt.
   i. destruct SIM as [o SIMG]. eapply adequacy_aux; et.
   { eapply Ord.lt_well_founded. }
-  instantiate (1:=o). clear x0 PR SIM.
+  instantiate (1:=o). clear x0 PR.
+  generalize itr_tgt at 1 as md_tgt.
+  generalize itr_src at 1 as md_src. i.
   revert o itr_src itr_tgt SIMG. pcofix CIH.
   i. punfold SIMG. inv SIMG; pfold.
   { destruct (classic (exists rv, @Any.downcast val r_tgt = Some (Vint rv))).
@@ -688,6 +670,31 @@ Proof.
     { et. }
     { right. eapply CIH. destruct H; ss. apply p. }
   }
+Qed.
+
+
+Variable md_src md_tgt: ModL.t.
+Let ms_src: ModSemL.t := md_src.(ModL.enclose).
+Let ms_tgt: ModSemL.t := md_tgt.(ModL.enclose).
+(* Let sim_fnsem: relation (string * (list val -> itree Es val)) := *)
+(*   fun '(fn_src, fsem_src) '(fn_tgt, fsem_tgt) => *)
+(*     (<<NAME: fn_src = fn_tgt>>) /\ *)
+(*     (<<SEM: forall varg, exists itr_src itr_tgt, *)
+(*           (<<SRC: fsem_src varg = resum_itr itr_src>>) /\ *)
+(*           (<<TGT: fsem_tgt varg = resum_itr itr_tgt>>) /\ *)
+(*           (<<SIM: exists i0, simg i0 itr_src itr_tgt>>)>>) *)
+(* . *)
+(* Hypothesis (SIM: Forall2 sim_fnsem ms_src.(ModSemL.fnsems) ms_tgt.(ModSemL.fnsems)). *)
+
+Hypothesis (SIM: exists o0, simg eq o0 (ModSemL.initial_itr ms_src) (ModSemL.initial_itr ms_tgt)).
+
+
+Local Hint Resolve cpn3_wcompat: paco.
+
+
+Theorem adequacy_global: Beh.of_program (ModL.compile md_tgt) <1= Beh.of_program (ModL.compile md_src).
+Proof.
+  eapply adequacy_global_itree. eapply SIM.
 Qed.
 
 End SIM.

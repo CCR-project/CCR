@@ -824,6 +824,15 @@ Section MODL.
   }
   .
 
+  Definition compile_arg (md: t) (arg: Any.t): semantics :=
+    ModSemL.compile_itree (ModSemL.initial_itr_arg md.(enclose) arg).
+
+  Lemma compile_compile_arg_nil md:
+    compile md = compile_arg md ([]: list val)↑.
+  Proof.
+    refl.
+  Qed.
+
   (* Record wf (md: t): Prop := mk_wf { *)
   (*   wf_sk: Sk.wf md.(sk); *)
   (* } *)
@@ -966,6 +975,38 @@ Section MOD.
      - cbn. rewrite ModL.add_empty_l. refl.
      - rewrite ! add_list_cons. rewrite <- ModL.add_assoc'. f_equal. eapply IHxs; ss.
    Qed.
+
+   Lemma add_list_sk (mdl: list t)
+     :
+       ModL.sk (add_list mdl)
+       =
+       fold_right Sk.add Sk.unit (List.map sk mdl).
+   Proof.
+     induction mdl; ss. rewrite <- IHmdl. auto.
+   Qed.
+
+   Lemma add_list_initial_mrs (mdl: list t) (ske: Sk.t)
+     :
+       ModSemL.initial_mrs (ModL.get_modsem (add_list mdl) ske)
+       =
+       fold_right (@app _) [] (List.map (fun md => ModSemL.initial_mrs (get_modsem md ske)) mdl).
+   Proof.
+     induction mdl; ss. rewrite <- IHmdl. auto.
+   Qed.
+
+   Lemma add_list_fns (mdl: list t) (ske: Sk.t)
+     :
+       List.map fst (ModSemL.fnsems (ModL.get_modsem (add_list mdl) ske))
+       =
+       fold_right (@app _) [] (List.map (fun md => List.map fst (ModSemL.fnsems (get_modsem md ske))) mdl).
+   Proof.
+     induction mdl.
+     { auto. }
+     transitivity ((List.map fst (ModSemL.fnsems (get_modsem a ske)))++(fold_right (@app _) [] (List.map (fun md => List.map fst (ModSemL.fnsems (get_modsem md ske))) mdl))); auto.
+     rewrite <- IHmdl. clear.
+     ss. rewrite map_app. auto.
+   Qed.
+
 End MOD.
 End Mod.
 

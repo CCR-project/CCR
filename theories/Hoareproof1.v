@@ -661,6 +661,41 @@ Section CANCEL.
     all: try (by exact 0).
   Qed.
 
+  Lemma sk_eq:
+    ModL.sk (Mod.add_list mds_mid) = ModL.sk (Mod.add_list mds_src).
+  Proof.
+    unfold ms_mid, ms_src, mds_src, mds_mid, ModL.enclose.
+    rewrite ! Mod.add_list_sk. f_equal.
+    generalize mds. clear. i. induction mds0; ss.
+    rewrite IHmds0. auto.
+  Qed.
+
+  Lemma initial_mrs_eq:
+    initial_mrs ms_mid = initial_mrs ms_src.
+  Proof.
+    pose proof sk_eq.
+    unfold ms_mid, ms_src, mds_src, mds_mid, ModL.enclose.
+    unfold mds_src, mds_mid in H. rewrite H.
+    generalize (ModL.sk (Mod.add_list (List.map SMod.to_src mds))). i.
+    rewrite ! Mod.add_list_initial_mrs.
+    generalize mds. clear. i. induction mds0; auto.
+    ss. rewrite IHmds0. auto.
+  Qed.
+
+  Lemma fns_eq:
+    (List.map fst (fnsems (ModL.enclose (Mod.add_list mds_mid))))
+    =
+    (List.map fst (fnsems (ModL.enclose (Mod.add_list mds_src)))).
+  Proof.
+    pose proof sk_eq. unfold ModL.enclose.
+    unfold mds_src, mds_mid, ModL.enclose.
+    unfold mds_src, mds_mid in H. rewrite H.
+    generalize (ModL.sk (Mod.add_list (List.map SMod.to_src mds))). i.
+    rewrite ! Mod.add_list_fns. rewrite ! List.map_map. f_equal.
+    f_equal. extensionality sm. ss. rewrite ! List.map_map. f_equal.
+    extensionality fnsb. destruct fnsb as [fn sb]. ss.
+  Qed.
+
   Variable mainpre: Any.t -> ord -> Σ -> Prop.
   Variable (mainbody: list val -> itree (hCallE +' pE +' eventE) val).
 
@@ -668,11 +703,12 @@ Section CANCEL.
 
     alist_find "main" sbtb = Some (mk_specbody (mk_simple (fun _ : () => (mainpre, top2))) mainbody).
 
-  Theorem adequacy_type_m2s: Beh.of_program (ModL.compile (Mod.add_list mds_mid)) <1=
-                             Beh.of_program (ModL.compile (Mod.add_list mds_src)).
+  Theorem adequacy_type_m2s:
+    Beh.of_program (ModL.compile_arg (Mod.add_list mds_mid) (ord_top, []: list val)↑) <1=
+    Beh.of_program (ModL.compile (Mod.add_list mds_src)).
   Proof.
-    eapply adequacy_global.
-    exists (200)%ord. ss.
+    eapply adequacy_global_itree.
+    exists (200)%ord.
     ginit.
     { eapply cpn6_wcompat; eauto with paco. }
     unfold ModSemL.initial_itr, ModSemL.initial_itr_arg. Local Opaque ModSemL.prog. ss.
@@ -683,7 +719,13 @@ Section CANCEL.
       unfold ModSemL.prog at 2.
       Local Opaque ModSemL.prog.
       ss. steps_strong.
-      esplits; et. { admit "ez - wf". } steps.
+      esplits; et.
+      { inv x. econs.
+        { rewrite fns_eq. auto. }
+        { pose proof initial_mrs_eq. unfold ms_mid, ms_src in H.
+          rewrite H. auto. }
+      }
+      steps.
 
       (* stb main *)
       hexploit (stb_find_iff "main"). i. des.
@@ -695,17 +737,15 @@ Section CANCEL.
       fold ms_src. fold ms_mid.
       rewrite FINDSRC. rewrite FINDMID. steps.
       unfold fun_to_src, fun_to_mid, cfun. steps.
-      rewrite Any.upcast_downcast.
-      replace (Any.upcast []) with (Any.upcast (ord_top, []: list val)) by
-          admit "TODO - parametrize initial argument".
-      rewrite Any.upcast_downcast. steps.
+
+      rewrite Any.upcast_downcast. rewrite Any.upcast_downcast. steps.
 
       guclo ordC_spec. econs.
       { eapply OrdArith.add_base_l. }
       guclo bindC_spec. econs.
       { gfinal. right. eapply adequacy_type_aux. ss.
-        admit "ez - same initial state".
-      }
+        unfold initial_r_state, initial_p_state.
+        rewrite initial_mrs_eq. auto. }
       { i. subst. instantiate (1:=10). steps. }
     }
     { instantiate (1:=O).
