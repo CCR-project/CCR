@@ -33,13 +33,6 @@ Variant option_rel A B (P: A -> B -> Prop): option A -> option B -> Prop :=
 .
 Hint Constructors option_rel: core.
 
-Lemma upcast_pair_downcast
-      A B (a: A) (b: B)
-  :
-    (Any.pair a↑ b↑)↓ = Some (a, b)
-.
-Proof. admit "ez". Qed.
-
 
 Section AUX.
   Context `{Σ: GRA.t}.

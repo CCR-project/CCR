@@ -1137,22 +1137,23 @@ Module PARSE.
       | @iProp_tree_kop A op k => op (fun a => from_iProp_tree (k a))
       end.
 
-    Definition hole (A: Type): A. Admitted.
+    Definition holeT: Type := forall A, A.
 
-    Ltac parse_iProp_tree p :=
+    (* To use it, declare Variable hole: forall A, A. *)
+    Ltac parse_iProp_tree hole p :=
       match p with
       | ?op (?P0: iProp) (?P1: iProp) =>
-        let tr0 := parse_iProp_tree P0 in
-        let tr1 := parse_iProp_tree P1 in
+        let tr0 := parse_iProp_tree hole P0 in
+        let tr1 := parse_iProp_tree hole P1 in
         constr:(iProp_tree_binop op tr0 tr1)
       | ?op (?P: iProp) =>
-        let tr := parse_iProp_tree P in
+        let tr := parse_iProp_tree hole P in
         constr:(iProp_tree_unop op tr)
       | ?op ?k =>
         match type of k with
         | ?A -> bi_car iProp =>
           let khole := (eval cbn beta in (k (@hole A))) in
-          let tr := parse_iProp_tree khole in
+          let tr := parse_iProp_tree hole khole in
           let fhole := (eval pattern (@hole A) in tr) in
           match fhole with
           | ?f (@hole A) => constr:(@iProp_tree_kop A op f)
@@ -1161,9 +1162,19 @@ Module PARSE.
       | ?P => constr:(iProp_tree_base P)
       end.
 
-    Definition iProp_list := alist string iProp_tree.
+    (* demo *)
+    Variable hole: holeT. (* absurd axiom but will not appear in the final proof *)
 
-    Definition from_iProp_list (l: iProp_list): iProp :=
-      fold_alist (fun _ tr acc => from_iProp_tree tr ** acc) (emp)%I l.
+    Goal forall (Q0: bool -> iProp) (Q1: iProp) r,
+        (∃ (n: nat), (((∀ (b: bool), Q0 b)%I) ∧ Q1) ** #=> ⌜(n = 2 * n - 1)%nat⌝)%I r.
+    Proof.
+      intros Q0 Q1 r.
+      match goal with
+      | |- ?P0 r =>
+        let P1 := (parse_iProp_tree hole P0) in
+        change P0 with (from_iProp_tree P1)
+      end.
+    Abort.
+
   End PARSE.
 End PARSE.
