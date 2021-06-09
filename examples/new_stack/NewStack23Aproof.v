@@ -33,12 +33,14 @@ Section SIMMODSEM.
 
   Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
 
+  Notation sim stk_res0 stk_mgr0 := (∀ h stk, (stk_res0: URA.car (t:=_stkRA)) h = Some stk <->
+                                              (stk_mgr0: gmap mblock (list Z)) !! h = Some stk).
+
   Let wf: W -> Prop :=
     @mk_wf _ unit
            (fun _ _ _stk_mgr0 =>
-              (∃ (stk_mgr0: gmap mblock (list Z)) (stk_res0: URA.car (t:=_stkRA)),
-                  (⌜(<<PHYS: _stk_mgr0 = stk_mgr0↑>>) /\
-                   (<<SIM: forall h stk, stk_res0 h = Some stk <-> stk_mgr0 !! h = Some stk>>)⌝)
+              (∃ stk_mgr0 stk_res0,
+                  (⌜(<<PHYS: _stk_mgr0 = stk_mgr0↑>>) /\ (<<SIM: sim stk_res0 stk_mgr0>>)⌝)
                   ∧ (OwnM ((Auth.black stk_res0): URA.car (t:=stkRA)))
               )%I)
            (fun _ _ _ => ⌜True⌝%I)
@@ -86,6 +88,23 @@ Section SIMMODSEM.
   .
   Proof. ur. ur. i. unfold _is_stack. des_ifs; ur; ss. Qed.
 
+  Lemma sim_update
+        stk_res0 stk_mgr0
+        (SIM: sim stk_res0 stk_mgr0)
+        h stk
+        (DISJ: stk_res0 h = ε)
+    :
+      <<SIM: sim (stk_res0 ⋅ _is_stack h stk) (<[h:=stk]> stk_mgr0)>>
+  .
+  Proof.
+    ii.
+    destruct (dec h h0).
+    - subst. rewrite lookup_insert.
+      ur. ur. unfold _is_stack. des_ifs_safe. ss. clarify. split; i; clarify.
+    - rewrite lookup_insert_ne; ss.
+      ur. ur. unfold _is_stack. des_ifs_safe. ss. erewrite <- SIM. split; i; des_ifs.
+  Qed.
+
   Theorem sim_modsem: ModSemPair.sim (NewStack3A.StackSem global_stb) (NewStack2.StackSem).
   Proof.
     econstructor 1 with (wf:=wf); ss; et; swap 2 3.
@@ -120,12 +139,7 @@ Section SIMMODSEM.
           - rewrite SIM in T. rewrite T in *. ss.
           - exploit WF1; et; ss.
         }
-        clear - SIM WF1 B.
-        destruct (dec h h0).
-        - subst. rewrite lookup_insert.
-          ur. ur. unfold _is_stack. des_ifs_safe. ss. clarify. split; i; clarify.
-        - rewrite lookup_insert_ne; ss.
-          ur. ur. unfold _is_stack. des_ifs_safe. ss. erewrite <- SIM. split; i; des_ifs.
+        eapply sim_update; et.
       }
     }
     econs; ss.
@@ -170,6 +184,7 @@ Section SIMMODSEM.
         }
         mUpd "A". mDesOwn "A".
 
+        (* assert(SIM0: sim (<[h:=Excl.just stk1]> stk_res0) (<[h:=stk1]> stk_mgr0)). *)TTTTTTTTTTTTT
         assert(SIM0: ∀ h0 stk,
                   <[h:=Excl.just stk1]> stk_res0 h0 = Excl.just stk ↔ <[h:=stk1]> stk_mgr0 !! h0 = Some stk).
         { ii. destruct (dec h h0).
@@ -178,7 +193,7 @@ Section SIMMODSEM.
 
         hcall _ _ _ with "A"; ss; et.
         { iModIntro. iSplit; ss. iExists _, stk_res1. iSplit; ss; et. }
-        { ss. }
+        { ss. admit "this will be removed in open setting; it should be ord_top". }
         steps. mDesAll. subst. des; clarify.
 
         hret _; ss.
