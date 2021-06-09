@@ -733,10 +733,58 @@ Section CANCEL.
 
   Require Import ProofMode.
 
-  Theorem adequacy_type_t2m: Beh.of_program (ModL.compile (Mod.add_list mds_tgt)) <1=
-                             Beh.of_program (ModL.compile (Mod.add_list mds_mid)).
+  Lemma sk_eq:
+    ModL.sk (Mod.add_list mds_tgt) = ModL.sk (Mod.add_list mds_mid).
   Proof.
-    eapply adequacy_global.
+    unfold ms_tgt, ms_mid, mds_mid, mds_tgt, ModL.enclose.
+    rewrite ! Mod.add_list_sk. f_equal.
+    generalize mds. clear. i. induction mds0; ss.
+    rewrite IHmds0. auto.
+  Qed.
+
+  Lemma fst_initial_mrs_eq:
+    List.map fst (ModSemL.initial_mrs ms_tgt) = List.map fst (ModSemL.initial_mrs ms_mid).
+  Proof.
+    pose proof sk_eq.
+    unfold ms_tgt, ms_mid, mds_tgt, mds_mid, ModL.enclose.
+    unfold mds_mid, mds_tgt in H. rewrite H.
+    generalize (ModL.sk (Mod.add_list (List.map (SMod.to_mid stb) mds))). i.
+    rewrite ! Mod.add_list_initial_mrs.
+    generalize mds. clear. i. induction mds0; auto.
+    ss. rewrite IHmds0. auto.
+  Qed.
+
+  Lemma initial_p_eq:
+    ModSemL.initial_p_state ms_tgt = ModSemL.initial_p_state ms_mid.
+  Proof.
+    unfold ModSemL.initial_p_state. extensionality mn.
+    pose proof sk_eq.
+    unfold ms_tgt, ms_mid, mds_tgt, mds_mid, ModL.enclose.
+    unfold mds_mid, mds_tgt in H. rewrite H.
+    generalize (ModL.sk (Mod.add_list (List.map (SMod.to_mid stb) mds))). i.
+    rewrite ! Mod.add_list_initial_mrs.
+    generalize mds. clear. i. induction mds0; auto.
+    ss. rewrite eq_rel_dec_correct in *. des_ifs.
+  Qed.
+
+  Lemma fns_eq:
+    (List.map fst (ModSemL.fnsems (ModL.enclose (Mod.add_list mds_tgt))))
+    =
+    (List.map fst (ModSemL.fnsems (ModL.enclose (Mod.add_list mds_mid)))).
+  Proof.
+    pose proof sk_eq. unfold ModL.enclose.
+    unfold mds_mid, mds_tgt, ModL.enclose.
+    unfold mds_mid, mds_tgt in H. rewrite H.
+    generalize (ModL.sk (Mod.add_list (List.map (SMod.to_mid stb) mds))). i.
+    rewrite ! Mod.add_list_fns. rewrite ! List.map_map. f_equal.
+    f_equal. extensionality sm. ss. rewrite ! List.map_map. f_equal.
+    extensionality fnsb. destruct fnsb as [fn sb]. ss.
+  Qed.
+
+  Theorem adequacy_type_t2m: Beh.of_program (ModL.compile (Mod.add_list mds_tgt)) <1=
+                             Beh.of_program (ModL.compile_arg (Mod.add_list mds_mid) (ord_top, []: list val)↑).
+  Proof.
+    eapply adequacy_global_itree.
     exists (Ord.from_nat 100%nat). ss.
     ginit.
     { eapply cpn6_wcompat; eauto with paco. }
@@ -745,7 +793,11 @@ Section CANCEL.
     unfold assume.
     steps.
     esplits; et.
-    { admit "ez - wf". }
+    { inv x_src. econs.
+      { rewrite fns_eq. auto. }
+      { pose proof fst_initial_mrs_eq. unfold ms_tgt, ms_mid in H.
+        rewrite H. auto. }
+    }
     steps. folder.
     set (st_mid0 := ((ModSemL.initial_r_state ms_mid), (ModSemL.initial_p_state ms_mid))).
     set (st_midr0 := ((initial_r_state ms_mid ε), (ModSemL.initial_p_state ms_mid))).
@@ -753,22 +805,9 @@ Section CANCEL.
     set (st_tgt0 := (ModSemL.initial_r_state ms_tgt, (ModSemL.initial_p_state ms_tgt))).
     (* Local Opaque URA.add. *)
     assert(SIM: wf st_midr0 st_tgtl0).
-    { r. ss. esplits; ss; et. { admit "ez". } unfold ms_mid. unfold ModSemL.initial_p_state. ss.
-      apply func_ext. clear. i.
-      unfold ms_tgt, mds_tgt, SMod.to_tgt, mds_mid, SMod.to_mid. rewrite ! SMod.transl_initial_mrs. folder.
-      des_ifs; ss; apply_all_once find_some; des; ss; des_sumbool; clarify;
-        unfold SMod.load_initial_mrs in *; apply_all_once in_flat_map; des; ss; des; ss; clarify; ss.
-      - assert(p = p0).
-        { admit "uniqueness of mn". }
-        subst; ss.
-      - eapply alist_find_some in Heq. eapply in_flat_map in Heq.
-        des. ss. des; clarify. ss.
-        exfalso. eapply alist_find_none in Heq0; cycle 1.
-        rewrite in_flat_map in Heq0. eapply Heq0. ss. esplits; et.
-      - eapply alist_find_some in Heq0. eapply in_flat_map in Heq0.
-        des. ss. des; clarify. ss.
-        exfalso. eapply alist_find_none in Heq; cycle 1.
-        rewrite in_flat_map in Heq. eapply Heq. ss. esplits; et.
+    { r. ss. esplits; ss; et.
+      { admit "resourve wf". }
+      rewrite initial_p_eq. auto.
     }
     unfold mrec.
 
@@ -788,8 +827,6 @@ Section CANCEL.
       { red. uipropall. }
     }
     steps.
-    replace (Any.upcast []) with (Any.upcast (ord_top, []: list val))
-      by admit "parametrize initial argument".
     rewrite Any.upcast_downcast. steps.
 
     guclo ordC_spec. econs.
@@ -801,7 +838,7 @@ Section CANCEL.
       { gfinal. right. fold simg.
         eapply adequacy_type_aux; ss. splits; ss.
         { admit "initial_r_state wf". }
-        { admit "initial p state". }
+        { rewrite initial_p_eq. auto. }
       }
       i. ss.
       destruct vret_src as [[[mrs_src fr_src] mps_src] v_src].
