@@ -33,6 +33,7 @@ Section SIMMODSEM.
 
   Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
 
+  (* Notation sim stk_res0 stk_mgr0 := (∀ h stk, (stk_res0) h = Some stk <-> (stk_mgr0) !! h = Some stk). *)
   Notation sim stk_res0 stk_mgr0 := (∀ h stk, (stk_res0: URA.car (t:=_stkRA)) h = Some stk <->
                                               (stk_mgr0: gmap mblock (list Z)) !! h = Some stk).
 
@@ -89,20 +90,30 @@ Section SIMMODSEM.
   Proof. ur. ur. i. unfold _is_stack. des_ifs; ur; ss. Qed.
 
   Lemma sim_update
-        stk_res0 stk_mgr0
+        stk_res0
+        stk_mgr0
         (SIM: sim stk_res0 stk_mgr0)
-        h stk
-        (DISJ: stk_res0 h = ε)
+        (h: mblock) (stk: (list Z))
     :
-      <<SIM: sim (stk_res0 ⋅ _is_stack h stk) (<[h:=stk]> stk_mgr0)>>
+      <<SIM: sim (<[h:=Excl.just stk]>stk_res0) (<[h:=stk]> stk_mgr0)>>
   .
   Proof.
     ii.
     destruct (dec h h0).
-    - subst. rewrite lookup_insert.
-      ur. ur. unfold _is_stack. des_ifs_safe. ss. clarify. split; i; clarify.
-    - rewrite lookup_insert_ne; ss.
-      ur. ur. unfold _is_stack. des_ifs_safe. ss. erewrite <- SIM. split; i; des_ifs.
+    - subst. rewrite ! lookup_insert. unfold insert, fn_insert. des_ifs. ss. split; i; clarify.
+    - rewrite lookup_insert_ne; ss. unfold insert, fn_insert. des_ifs.
+  Qed.
+
+  Lemma add_disj_insert
+        (stk_res0: _stkRA) h stk
+        (DISJ: stk_res0 h = ε)
+    :
+        (stk_res0 ⋅ _is_stack h stk) = <[h:=Excl.just stk]>stk_res0
+  .
+  Proof.
+    unfold insert, fn_insert. extensionality b. ur. unfold _is_stack. des_ifs.
+    - rewrite DISJ. rewrite URA.unit_idl. ss.
+    - rewrite URA.unit_id. ss.
   Qed.
 
   Theorem sim_modsem: ModSemPair.sim (NewStack3A.StackSem global_stb) (NewStack2.StackSem).
@@ -125,11 +136,12 @@ Section SIMMODSEM.
       hret _; ss.
       { iPoseProof (OwnM_Upd with "A") as "A".
         { eapply Auth.auth_alloc2. instantiate (1:=(_is_stack h [])).
-          eapply pw_add_disj_wf; et.
-          { eapply Auth.black_wf; et. }
-          { eapply _is_stack_wf. }
-          i. ss. specialize (WF1 k). unfold _is_stack. des_ifs; ss; et.
-          left. destruct (stk_res0 h) eqn:T; ss; et.
+          rewrite add_disj_insert; ss.
+          { eapply (@pw_insert_wf); et.
+            { eapply Auth.black_wf; et. }
+            { ur; ss. }
+          }
+          specialize (WF1 h). destruct (stk_res0 h) eqn:T; ss; et.
           { rewrite SIM in T. clarify. }
         }
         iMod "A". iDestruct "A" as "[A B]". iModIntro. iSplitL "A"; et.
@@ -139,7 +151,7 @@ Section SIMMODSEM.
           - rewrite SIM in T. rewrite T in *. ss.
           - exploit WF1; et; ss.
         }
-        eapply sim_update; et.
+        rewrite add_disj_insert; ss. eapply sim_update; et.
       }
     }
     econs; ss.
@@ -167,7 +179,7 @@ Section SIMMODSEM.
 
         set (stk_res1:=<[h:=Excl.just stk1]>stk_res0).
         assert(WF1: URA.wf (stk_res1: URA.car (t:=_stkRA))).
-        { subst stk_res1. eapply (@pw_insert_wf _ (Excl.t (list Z))); et.
+        { subst stk_res1. eapply (@pw_insert_wf); et.
           { eapply URA.wf_mon in WF0. eapply Auth.black_wf in WF0. ss. }
           ur; ss.
         }
@@ -184,12 +196,8 @@ Section SIMMODSEM.
         }
         mUpd "A". mDesOwn "A".
 
-        (* assert(SIM0: sim (<[h:=Excl.just stk1]> stk_res0) (<[h:=stk1]> stk_mgr0)). *)TTTTTTTTTTTTT
-        assert(SIM0: ∀ h0 stk,
-                  <[h:=Excl.just stk1]> stk_res0 h0 = Excl.just stk ↔ <[h:=stk1]> stk_mgr0 !! h0 = Some stk).
-        { ii. destruct (dec h h0).
-          - subst. erewrite ! lookup_insert. unfold insert, fn_insert. des_ifs. split; i; clarify.
-          - erewrite ! lookup_insert_ne; ss. unfold insert, fn_insert. des_ifs. }
+        assert(SIM0: sim (<[h:=Excl.just stk1]> stk_res0) (<[h:=stk1]> stk_mgr0)).
+        { eapply sim_update; et. }
 
         hcall _ _ _ with "A"; ss; et.
         { iModIntro. iSplit; ss. iExists _, stk_res1. iSplit; ss; et. }
@@ -222,7 +230,7 @@ Section SIMMODSEM.
 
       set (stk_res1:=<[h:=Excl.just (x::stk0)]>stk_res0).
       assert(WF1: URA.wf (stk_res1: URA.car (t:=_stkRA))).
-      { subst stk_res1. eapply (@pw_insert_wf _ (Excl.t (list Z))); et.
+      { subst stk_res1. eapply (@pw_insert_wf); et.
         { eapply URA.wf_mon in WF0. eapply Auth.black_wf in WF0. ss. }
         ur; ss.
       }
@@ -241,13 +249,11 @@ Section SIMMODSEM.
 
       assert(SIM0: ∀ h0 stk, <[h:=Excl.just (x::stk0)]> stk_res0 h0 = Excl.just stk ↔
                              <[h:=(x::stk0)]> stk_mgr0 !! h0 = Some stk).
-      { ii. destruct (dec h h0).
-        - subst. erewrite ! lookup_insert. unfold insert, fn_insert. des_ifs. split; i; clarify.
-        - erewrite ! lookup_insert_ne; ss. unfold insert, fn_insert. des_ifs. }
+      { eapply sim_update; et. }
 
       hcall _ _ _ with "A"; ss; et.
       { iModIntro. iSplit; ss. iExists _, stk_res1. iSplit; ss; et. }
-      { ss. }
+      { ss. admit "ditto". }
       steps. mDesAll. subst. des; clarify.
 
       hret _; ss.
