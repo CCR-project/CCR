@@ -60,23 +60,35 @@ Next Obligation. unfold _wf, _add in *. i. unseal "ra". des_ifs. i. eapply H; et
 
 Definition ag (x: X): t := bag (fun x0 => x0 = x).
 
-Theorem duplicable_aux
+(*** duplicable **)
+(* Theorem dup_aux *)
+(*         ag0 *)
+(*   : *)
+(*     <<UPD: URA.updatable ag0 (ag0 ⋅ ag0)>> *)
+(* . *)
+(* Proof. *)
+(*   rr. unfold URA.wf, URA.add in *. unseal "ra". ss. ii. r in H. r. des_ifs. *)
+(*   unfold _add in *. des_ifs. *)
+(*   i. eapply H; tauto. *)
+(* Qed. *)
+
+Theorem dup_aux
         ag0
+        (WF: URA.wf ag0)
   :
-    <<UPD: URA.updatable ag0 (ag0 ⋅ ag0)>>
+    <<UPD: ag0 = (ag0 ⋅ ag0)>>
 .
 Proof.
-  rr. unfold URA.wf, URA.add in *. unseal "ra". ss. ii. r in H. r. des_ifs.
-  unfold _add in *. des_ifs.
-  i. eapply H; tauto.
+  rr. unfold URA.wf, URA.add in *. unseal "ra". ss. destruct ag0. ss. f_equal. extensionality x.
+  eapply Axioms.prop_ext. tauto.
 Qed.
 
-Theorem duplicable
-        x
-  :
-    <<UPD: URA.updatable (ag x) ((ag x) ⋅ (ag x))>>
-.
-Proof. eapply duplicable_aux. Qed.
+(* Theorem dup *)
+(*         x *)
+(*   : *)
+(*     <<UPD: URA.updatable (ag x) ((ag x) ⋅ (ag x))>> *)
+(* . *)
+(* Proof. eapply dup_aux. Qed. *)
 
 Theorem wf
         x
@@ -84,6 +96,13 @@ Theorem wf
     <<UPD: URA.wf (ag x)>>
 .
 Proof. ur. ii. subst. refl. Qed.
+
+Theorem dup
+        x
+  :
+    <<UPD: (ag x) = ((ag x) ⋅ (ag x))>>
+.
+Proof. eapply dup_aux. eapply wf. Qed.
 
 Theorem agree
         x y
@@ -147,47 +166,45 @@ Section PROOF.
 
   Definition is_stack (h: mblock) (P: Z -> Prop): stkRA := Auth.white (_is_stack h P).
 
+  Theorem is_stack_dup
+          h P
+    :
+      <<UPD: URA.updatable (is_stack h P) ((is_stack h P) ⋅ (is_stack h P))>>
+  .
+  Proof.
+    unfold is_stack. eapply Auth.auth_dup_white. unfold _is_stack.
+    extensionality _h. ss. ur. des_ifs.
+    - erewrite <- Ag.dup; ss.
+    - erewrite <- Ag.dup_aux; ss. change (Ag.bag bot1) with (@URA.unit (Ag.t (Z -> Prop))). eapply URA.wf_unit.
+  Qed.
+
   Definition new_spec: fspec :=
-    (mk_simple (X:=Z -> Prop)
-               (fun P => (
+    (mk_simple (fun P => (
                     (fun varg o => (⌜varg = ([]: list val)↑ /\ o = ord_pure 0⌝: iProp)%I),
                     (fun vret => (∃ h, ⌜vret = (Vptr h 0)↑⌝ ** OwnM (is_stack h P): iProp)%I)
     ))).
 
-  (*** varg stands for (physical) value arguments... bad naming and will be changed later ***)
   Definition pop_spec: fspec :=
-    (* (X:=(mblock * list Z)) (AA:=list Z) (AR:=Z * list Z) *)
-    mk (fun '(h, P) virtual_arg varg o =>
-          (⌜P = virtual_arg /\ varg = ([Vptr h 0%Z]: list val)↑ /\ o = ord_top⌝
-            ** OwnM (is_stack h P): iProp)%I)
-       (fun '(h, P) '(x, virtual_ret) vret =>
-          (((OwnM (is_stack h P) ** ⌜virtual_ret = P ∧ (x = (- 1)%Z ∨ P x)⌝): iProp)%I))
+    mk_simple (fun '(h, P) => (
+                 (fun varg o => (⌜varg = ([Vptr h 0%Z]: list val)↑ /\ o = ord_pure 1⌝
+                                  ** OwnM (is_stack h P): iProp)%I),
+                 (fun vret =>
+                    (((OwnM (is_stack h P) ** ∃ x, ⌜(x = (- 1)%Z ∨ P x) ∧ vret = (Vint x)↑⌝): iProp)%I))
+              ))
   .
 
   Definition push_spec: fspec :=
-    mk (fun '(h, x, P) virtual_arg varg o =>
-          (⌜(x, P) = virtual_arg ∧ varg = ([Vptr h 0%Z; Vint x]: list val)↑ ∧ P x ∧ o = ord_top⌝
-            ** OwnM (is_stack h P): iProp)%I)
-       (fun '(h, x, P) virtual_ret vret => (⌜virtual_ret = P⌝ ** OwnM (is_stack h P): iProp)%I)
+    mk_simple (fun '(h, P) => (
+                   (fun varg o => (OwnM (is_stack h P)
+                        ** ∃ x, ⌜varg = ([Vptr h 0%Z; Vint x]: list val)↑ ∧ P x ∧ o = ord_pure 1⌝: iProp)%I),
+                   (fun vret => (((OwnM (is_stack h P)): iProp)%I))
+              ))
   .
 
   Definition StackSbtb: list (gname * fspecbody) :=
     [("new", mk_specbody new_spec (fun _ => APC;;; trigger (Choose _)));
-    ("pop",  mk_specbody pop_spec (fun (P: Z -> Prop) =>
-                                     APC;;;
-                                        b <- trigger (Choose _);;
-                                     if b: bool
-                                     then x <- trigger (Choose _);;
-                                          guarantee(P x);;;
-                                          trigger (hCall false "debug" [Vint 0; Vint x]↑);;;
-                                          Ret (x, P)
-                                     else Ret ((- 1)%Z, P)
-                                  ));
-    ("push", mk_specbody push_spec (fun '(x, P) =>
-                                      APC;;;
-                                      guarantee(P x);;;
-                                      trigger (hCall false "debug" [Vint 1; Vint x]↑);;;
-                                      Ret P))
+    ("pop",  mk_specbody pop_spec (fun _ => APC;;; trigger (Choose _)));
+    ("push", mk_specbody push_spec (fun _ => APC;;; trigger (Choose _)))
     ].
 
   Definition StackStb: list (gname * fspec).

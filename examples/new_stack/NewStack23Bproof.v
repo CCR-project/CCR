@@ -1,4 +1,4 @@
-Require Import NewStackHeader NewStack2 NewStack3A HoareDef SimModSem.
+Require Import NewStackHeader NewStack2 NewStack3B HoareDef SimModSem.
 Require Import Coqlib.
 Require Import Universe.
 Require Import Skeleton.
@@ -54,20 +54,6 @@ Section SIMMODSEM.
     Lemma pw_wf: forall (f: K -> M) (WF: URA.wf (f: @URA.car RA)), <<WF: forall k, URA.wf (f k)>>.
     Proof. ii; ss. rewrite URA.unfold_wf in WF. ss. Qed.
 
-    Lemma pw_add_disj_wf
-          (f g: K -> M)
-          (WF0: URA.wf (f: @URA.car RA))
-          (WF1: URA.wf (g: @URA.car RA))
-          (DISJ: forall k, <<DISJ: f k = ε \/ g k = ε>>)
-      :
-        <<WF: URA.wf ((f: RA) ⋅ g)>>
-    .
-    Proof.
-      ii; ss. ur. i. ur in WF0. ur in WF1. spc DISJ. des; rewrite DISJ.
-      - rewrite URA.unit_idl; et.
-      - rewrite URA.unit_id; et.
-    Qed.
-
     Lemma pw_insert_wf: forall `{EqDecision K} (f: K -> M) k v (WF: URA.wf (f: @URA.car RA)) (WFV: URA.wf v),
         <<WF: URA.wf (<[k:=v]> f: @URA.car RA)>>.
     Proof.
@@ -78,13 +64,6 @@ Section SIMMODSEM.
 
   Variable global_stb: list (string * fspec).
   Hypothesis STBINCL: stb_incl (DebugStb ++ StackStb) global_stb.
-
-  Lemma _is_stack_wf
-        h stk
-    :
-      <<WF: URA.wf (_is_stack h stk)>>
-  .
-  Proof. ur. ur. i. unfold _is_stack. des_ifs; ur; ss. Qed.
 
   Theorem sim_modsem: ModSemPair.sim (NewStack3A.StackSem global_stb) (NewStack2.StackSem).
   Proof.
@@ -100,18 +79,22 @@ Section SIMMODSEM.
       rename g into stk_mgr0. rename x0 into h. rename a1 into stk_res0. force_l. exists (Vptr h 0). steps.
       mOwnWf "A".
       assert(WF1: forall k, stk_res0 k <> Excl.boom).
-      { eapply Auth.black_wf in WF0. eapply pw_wf in WF0. des. ii. specialize (WF0 k).
-        destruct (stk_res0 k); ss. ur in WF0; ss. }
+      { eapply Auth.black_wf in WF0. eapply pw_wf in WF0. des. ii. specialize (WF0 k). rewrite H0 in WF0.
+        ur in WF0. ss. }
 
       hret _; ss.
       { iPoseProof (OwnM_Upd with "A") as "A".
         { eapply Auth.auth_alloc2. instantiate (1:=(_is_stack h [])).
-          eapply pw_add_disj_wf; et.
-          { eapply Auth.black_wf; et. }
-          { eapply _is_stack_wf. }
-          i. ss. specialize (WF1 k). unfold _is_stack. des_ifs; ss; et.
-          left. destruct (stk_res0 h) eqn:T; ss; et.
-          { rewrite SIM in T. clarify. }
+          ur. i. specialize (WF1 k).
+          destruct (dec k h).
+          - subst. ur.
+            destruct (stk_res0 h) eqn:T; ss.
+            + erewrite SIM in T. clarify.
+            + unfold _is_stack. des_ifs.
+          - ur.
+            destruct (stk_res0 k) eqn:T; ss.
+            + unfold _is_stack. des_ifs.
+            + unfold _is_stack. des_ifs.
         }
         iMod "A". iDestruct "A" as "[A B]". iModIntro. iSplitL "A"; et.
         iExists _, _. iSplit; ss; et. iSplit; ss; et. iPureIntro. ii.
