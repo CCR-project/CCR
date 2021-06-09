@@ -39,6 +39,12 @@ Definition wf_val (v : val) :=
   | Vundef => False
   end.
 
+Definition wf_pos_size (v : val) :=
+  match v with
+  | Vint z => modrange_64 z
+  | _ => False
+  end.
+
 (* Notation ofs0 := 0%Z. *)
 
 Definition Vnullptr := Vint 0.
