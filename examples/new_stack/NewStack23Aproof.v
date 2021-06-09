@@ -33,7 +33,6 @@ Section SIMMODSEM.
 
   Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
 
-  (* Notation sim stk_res0 stk_mgr0 := (∀ h stk, (stk_res0) h = Some stk <-> (stk_mgr0) !! h = Some stk). *)
   Notation sim stk_res0 stk_mgr0 := (∀ h stk, (stk_res0: URA.car (t:=_stkRA)) h = Some stk <->
                                               (stk_mgr0: gmap mblock (list Z)) !! h = Some stk).
 

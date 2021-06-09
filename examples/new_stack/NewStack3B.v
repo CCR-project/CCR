@@ -34,6 +34,9 @@ Section Ag.
 Context {X: Type}.
 
 Variant car: Type := | bag (P: X -> Prop).
+(*** We follow Iris style ***)
+(*** - just/unit/boom --> need Dec or excluded_middle_informative ***)
+(*** - list A (just like Iris) --> need equiv class but we don't have ***)
 
 Let _add := fun '(bag xs0) '(bag xs1) => bag (xs0 \1/ xs1).
 Let _wf := fun '(bag xs0) => forall x0 x1 (IN0: xs0 x0) (IN1: xs0 x1), x0 = x1.
@@ -118,40 +121,50 @@ End Ag.
 Arguments Ag.t: clear implicits.
 
 
-(* Module Ag. *)
-(* Section Ag. *)
-
-(* Context `{X: Type}. *)
-
-(* (* Inductive car: Type := *) *)
-(* (* | just (x: list X) *) *)
-(* (* | unit *) *)
-(* (* | boom *) *)
-(* (* . *) *)
-
-(* Let _wf := fun (xs: list X) => forall x0 x1 (IN0: In x0 xs) (IN1: In x1 xs), x0 = x1. *)
-
-(* Program Instance t: URA.t := { *)
-(*   URA.car := list X; *)
-(*   URA._add := app; *)
-(*   URA._wf := _wf; *)
-(*   URA.unit := nil; *)
-(* } *)
-(* . *)
-(* Next Obligation. *)
-(* Abort. *)
-
-(*** just/unit/boom --> need Dec ***)
-(*** list A (just like Iris) --> need equiv class but we don't have ***)
 
 
 
+Module Opt.
+Section Opt.
+
+Context {M: URA.t}.
+
+Let _add := fun (x y: option M) => match x, y with
+                                   | Some x, Some y => Some (x ⋅ y)
+                                   | Some x, _ => Some x
+                                   | _, Some y => Some y
+                                   | _, _ => None
+                                   end.
+Let _wf := fun (x: option M) => match x with | Some x => URA.wf x | _ => True end.
+
+Program Instance t: URA.t := {
+  URA.car := option M;
+  URA._add := _add;
+  URA._wf := _wf;
+  URA.unit := None;
+}
+.
+Next Obligation.
+  unfold _wf, _add in *. i. des_ifs. f_equal. rewrite URA.add_comm. ss.
+Qed.
+Next Obligation.
+  unfold _wf, _add in *. i. des_ifs. f_equal. rewrite URA.add_assoc. ss.
+Qed.
+Next Obligation. unfold _wf, _add in *. i. unseal "ra". des_ifs. Qed.
+Next Obligation. unfold _wf, _add in *. i. unseal "ra". des_ifs. Qed.
+Next Obligation. unfold _wf, _add in *. i. unseal "ra". des_ifs. eapply URA.wf_mon; et. Qed.
+
+End Opt.
+End Opt.
+
+Arguments Opt.t: clear implicits.
 
 
 
 
 
-Definition _stkRA: URA.t := (mblock ==> (Ag.t (Z -> Prop)))%ra.
+
+Definition _stkRA: URA.t := (mblock ==> (Opt.t (Ag.t (Z -> Prop))))%ra.
 Instance stkRA: URA.t := Auth.t _stkRA.
 
 Section PROOF.
@@ -161,7 +174,7 @@ Section PROOF.
 
   Compute (URA.car (t:=_stkRA)).
   Definition _is_stack (h: mblock) (P: Z -> Prop): _stkRA :=
-    (fun _h => if (dec _h h) then (Ag.ag P) else ε)
+    (fun _h => if (dec _h h) then Some (Ag.ag P) else ε)
   .
 
   Definition is_stack (h: mblock) (P: Z -> Prop): stkRA := Auth.white (_is_stack h P).
@@ -174,8 +187,8 @@ Section PROOF.
   Proof.
     unfold is_stack. eapply Auth.auth_dup_white. unfold _is_stack.
     extensionality _h. ss. ur. des_ifs.
-    - erewrite <- Ag.dup; ss.
-    - erewrite <- Ag.dup_aux; ss. change (Ag.bag bot1) with (@URA.unit (Ag.t (Z -> Prop))). eapply URA.wf_unit.
+    - ur. erewrite <- Ag.dup; ss.
+    - ur. ss.
   Qed.
 
   Definition new_spec: fspec :=
