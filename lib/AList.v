@@ -253,7 +253,6 @@ Section ALIST.
       { rewrite Heq0. auto. }
     }
   Qed.
-
 End ALIST.
 
 
@@ -265,3 +264,82 @@ Tactic Notation "asimpl" "in" "*" :=
 
 Tactic Notation "asimpl" :=
   (try unfold alist_remove, alist_add); simpl.
+
+
+Require Import List Setoid Permutation Sorted Orders.
+
+Definition ascii_le (c0 c1: Ascii.ascii): bool :=
+  (Ascii.nat_of_ascii c0 <=? Ascii.nat_of_ascii c1)%nat.
+
+Lemma ascii_le_antisym c0 c1
+      (EQ0: ascii_le c0 c1 = true)
+      (EQ1: ascii_le c1 c0 = true)
+  :
+    c0 = c1.
+Proof.
+  unfold ascii_le in *.
+  eapply leb_complete in EQ0.
+  eapply leb_complete in EQ1.
+  rewrite <- (Ascii.ascii_nat_embedding c0).
+  rewrite <- (Ascii.ascii_nat_embedding c1). f_equal. lia.
+Qed.
+
+Fixpoint string_le (s0 s1: string): bool :=
+  match s0, s1 with
+  | EmptyString, _ => true
+  | _, EmptyString => false
+  | String hd0 tl0, String hd1 tl1 =>
+    if (Ascii.eqb hd0 hd1)
+    then string_le tl0 tl1
+    else ascii_le hd0 hd1
+  end.
+
+Module AsciiOrder <: TotalTransitiveLeBool'.
+  Definition t := Ascii.ascii.
+  Definition leb := ascii_le.
+  Lemma leb_total : forall x y : t, leb x y = true \/ leb y x = true.
+  Proof.
+    i. unfold leb, ascii_le.
+    assert (Ascii.nat_of_ascii x <= Ascii.nat_of_ascii y \/ Ascii.nat_of_ascii y <= Ascii.nat_of_ascii x)%nat by lia.
+    des.
+    { left. eapply leb_correct. auto. }
+    { right. eapply leb_correct. auto. }
+  Qed.
+
+  Lemma leb_trans : Transitive leb.
+  Proof.
+    ii. unfold leb, ascii_le in *. unfold is_true in *.
+    eapply leb_complete in H. eapply leb_complete in H0.
+    eapply leb_correct. auto. etrans; et.
+  Qed.
+End AsciiOrder.
+
+Module StringOrder <: TotalTransitiveLeBool'.
+  Definition t := string.
+  Definition leb := string_le.
+  Lemma leb_total : forall x y : t, leb x y = true \/ leb y x = true.
+  Proof.
+    i. unfold leb. revert y. induction x; ss; auto.
+    i. des_ifs; ss; auto.
+    { eapply Ascii.eqb_eq in Heq. subst.
+      rewrite Ascii.eqb_refl. auto. }
+    { rewrite Ascii.eqb_sym. rewrite Heq.
+      eapply AsciiOrder.leb_total. }
+  Qed.
+
+  Lemma leb_trans : Transitive leb.
+  Proof.
+    ii. unfold leb in *. revert y z H H0.
+    induction x; ss. i. destruct y, z; ss.
+    destruct (Ascii.eqb a a0) eqn:EQ0.
+    { eapply Ascii.eqb_eq in EQ0. subst. des_ifs. et. }
+    destruct (Ascii.eqb a0 a1) eqn:EQ1.
+    { eapply Ascii.eqb_eq in EQ1. subst. des_ifs. }
+    destruct (Ascii.eqb a a1) eqn:EQ2.
+    { eapply Ascii.eqb_eq in EQ2. subst. replace a0 with a1 in *.
+      { rewrite Ascii.eqb_refl in EQ0. ss. }
+      { eapply ascii_le_antisym; et. }
+    }
+    { eapply AsciiOrder.leb_trans; et. }
+  Qed.
+End StringOrder.

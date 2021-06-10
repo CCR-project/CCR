@@ -86,13 +86,28 @@ Module Sk.
 
   Inductive gdef: Type := Gfun | Gvar (gv: Z).
 
-  Definition t: Type := list (gname * gdef).
+  Definition t: Type := alist gname gdef.
 
   Definition unit: t := nil.
 
   Definition add: t -> t -> t := @List.app _.
 
   Definition wf (sk: t): Prop := @List.NoDup _ (List.map fst sk).
+
+  Definition sort: t -> t.
+  Admitted.
+
+  Definition sort_add_comm sk0 sk1:
+    sort (add sk0 sk1) = sort (add sk1 sk0).
+  Proof.
+    admit "sort spec".
+  Qed.
+
+  Definition sort_wf sk (WF: wf sk):
+    wf (sort sk).
+  Proof.
+    admit "sort spec".
+  Qed.
 
   (*** TODO: It might be nice if Sk.t also constitutes a resource algebra ***)
   (*** At the moment, List.app is not assoc/commutative. We need to equip RA with custom equiv. ***)
@@ -158,6 +173,30 @@ Module Sk.
   Definition incl (sk0 sk1: Sk.t): Prop :=
     forall gn gd (IN: List.In (gn, gd) sk0),
       List.In (gn, gd) sk1.
+
+  Program Instance incl_PreOrder: PreOrder incl.
+  Next Obligation.
+  Proof.
+    ii. ss.
+  Qed.
+  Next Obligation.
+  Proof.
+    ii. eapply H0. eapply H. ss.
+  Qed.
+
+  Lemma sort_incl sk
+    :
+      incl sk (sort sk).
+  Proof.
+    admit "sort spec".
+  Qed.
+
+  Lemma sort_incl_rev sk
+    :
+      incl (sort sk) sk.
+  Proof.
+    admit "sort spec".
+  Qed.
 
   Definition incl_env (sk0: Sk.t) (skenv: SkEnv.t): Prop :=
     forall gn gd (IN: List.In (gn, gd) sk0),
