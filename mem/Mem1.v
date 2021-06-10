@@ -170,9 +170,9 @@ Section PROOF.
 
   Let alloc_spec: fspec :=
     (mk_simple (fun sz => (
-                    (fun varg o => (⌜varg = [Vint (Z.of_nat sz)]↑ /\ o = ord_pure 0⌝: iProp)%I),
-                    (fun vret => (∃ b, (⌜vret = (Vptr b 0)↑⌝)
-                                         ** OwnM ((b, 0%Z) |-> (List.repeat (Vint 0) sz))): iProp)%I
+                    (fun varg o => ⌜varg = [Vint (Z.of_nat sz)]↑ /\ o = ord_pure 0⌝),
+                    (fun vret => Exists b, ⌜vret = (Vptr b 0)↑⌝ **
+                                                             Own(GRA.embed ((b, 0%Z) |-> (List.repeat (Vundef) sz))))
     ))).
 
   Let free_spec: fspec :=

@@ -111,7 +111,7 @@ Module Mem.
   Definition alloc (m0: Mem.t) (sz: Z): (mblock * Mem.t) :=
     ((m0.(nb)),
      Mem.mk (update (m0.(cnts)) (m0.(nb))
-                    (fun ofs => if (0 <=? ofs)%Z && (ofs <? sz)%Z then Some (Vint 0) else None))
+                    (fun ofs => if (0 <=? ofs)%Z && (ofs <? sz)%Z then Some (Vundef) else None))
             (S m0.(nb))
     )
   .

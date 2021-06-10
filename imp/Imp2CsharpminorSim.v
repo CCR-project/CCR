@@ -521,17 +521,18 @@ Section MEM.
   Context {MM: match_mem tlof m tm}.
 
   Lemma match_mem_alloc
-        n m2 blk
-        (SBLK: blk = fst (Mem.alloc m n))
-        (SRCM2: m2 = snd (Mem.alloc m n))
+        n m2 blk tm2 tblk
+        (SMEM: (blk, m2) = Mem.alloc m n)
+        (TMEM: (tm2, tblk) = Memory.Mem.alloc tm (- size_chunk Mptr) n)
     :
-      exists tm2 tblk,
-      (<<TGTM2: Memory.Mem.alloc tm (- size_chunk Mptr) (Ptrofs.unsigned (Ptrofs.repr n)) = (tm2, tblk)>>) /\
-      (<<TBLK: tblk = map_blk tlof blk>>) /\
       (<<MM2: match_mem tlof m2 tm2>>).
   Proof.
-    eexists. eexists. split.
-    Admitted.
+    split; i. split.
+    - inv MM. inv SMEM. rename H into SMEM. ss.
+      (* hexploit Mem.load_alloc_ *)
+
+      (* inv TMEM. ss. *)
+      Admitted.
 
 End MEM.
 
