@@ -96,7 +96,7 @@ Section MATCH.
     fun ge ms mn retmn (retx: var) (retle: lenv) (x: _ * _ * (lenv * val)) =>
       let '(r, p, (le0, _)) := x in
       '(r2, p2, rv) <- EventsL.interp_Es (ModSemL.prog ms) (transl_all mn ('(_, v) <- interp_imp ge (denote_expr (Var "return"%string)) le0;; Ret (v↑))) (r, p);;
-      '(r3, p3, rv) <- EventsL.interp_Es (ModSemL.prog ms) (trigger EventsL.PopFrame;; (tau;; Ret rv)) (r2, p2);;
+      '(r3, p3, rv) <- EventsL.interp_Es (ModSemL.prog ms) (trigger EventsL.PopFrame;;; (tau;; Ret rv)) (r2, p2);;
       pop <- EventsL.interp_Es (ModSemL.prog ms) (transl_all retmn (tau;; tau;; v0 <- unwrapN (rv↓);; (tau;; tau;; tau;; Ret (alist_add retx v0  retle, Vundef)))) (r3, p3);;
       Ret pop.
 
@@ -104,7 +104,7 @@ Section MATCH.
     fun ge ms mn (x: _ * _ * (lenv * val)) =>
       let '(r, p, (le0, _)) := x in
       '(r2, p2, rv) <- EventsL.interp_Es (ModSemL.prog ms) (transl_all mn ('(_, v) <- interp_imp ge (denote_expr (Var "return"%string)) le0;; Ret (v↑))) (r, p);;
-      '(_, _, rv) <- EventsL.interp_Es (ModSemL.prog ms) (trigger EventsL.PopFrame;; (tau;; Ret rv)) (r2, p2);;
+      '(_, _, rv) <- EventsL.interp_Es (ModSemL.prog ms) (trigger EventsL.PopFrame;;; (tau;; Ret rv)) (r2, p2);;
       Ret rv.
 
   Definition itree_of_cont_stmt (s : Imp.stmt) :=
@@ -555,7 +555,7 @@ Qed.
 
 Lemma angelic_step :
   forall (X : Prop) (ktr next : itree eventE Any.t),
-    ModSemL.step (trigger (Take X);; ktr) None next -> (next = ktr /\ X).
+    ModSemL.step (trigger (Take X);;; ktr) None next -> (next = ktr /\ X).
 Proof.
   i. dependent destruction H; try (irw in x; clarify; fail).
   rewrite <- bind_trigger in x. apply unbind_trigger in x.
@@ -936,7 +936,7 @@ Section PROOF.
       eexists. right. eapply CIH. hexploit match_states_intro.
       { eapply CSC1. }
       4:{ instantiate (1:=Kseq s0 tcont). ss. destruct s0; eauto. eapply compile_stmt_no_Sreturn in CSC2; clarify. }
-      4:{ econs 2; eauto. clarify. }
+      4:{ econs 2; eauto. }
       all: eauto.
       { ss. destruct s0; eauto. eapply compile_stmt_no_Sreturn in CSC2; clarify. }
       i.
@@ -1370,7 +1370,7 @@ Section PROOF.
       2: clarify.
       2:{ i.
           match goal with
-          | [ H1: match_states _ _ _ _ _ ?i0 _ |- match_states _ _ _ _ _ ?i1 _ ] =>
+          | [ H1: match_states _ _ _ _ ?i0 _ |- match_states _ _ _ _ ?i1 _ ] =>
             replace i1 with i0; eauto
           end.
           unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
@@ -1412,7 +1412,7 @@ Section PROOF.
       3: clarify.
       3:{ i.
           match goal with
-          | [ H1: match_states _ _ _ _ _ ?i0 _ |- match_states _ _ _ _ _ ?i1 _ ] =>
+          | [ H1: match_states _ _ _ _ ?i0 _ |- match_states _ _ _ _ ?i1 _ ] =>
             replace i1 with i0; eauto
           end.
           unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
@@ -1456,7 +1456,7 @@ Section PROOF.
         2: clarify.
         2:{ i.
             match goal with
-            | [ H1: match_states _ _ _ _ _ ?i0 _ |- match_states _ _ _ _ _ ?i1 _ ] =>
+            | [ H1: match_states _ _ _ _ ?i0 _ |- match_states _ _ _ _ ?i1 _ ] =>
               replace i1 with i0; eauto
             end.
             unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
@@ -1478,7 +1478,7 @@ Section PROOF.
         2: clarify.
         2:{ i.
             match goal with
-            | [ H1: match_states _ _ _ _ _ ?i0 _ |- match_states _ _ _ _ _ ?i1 _ ] =>
+            | [ H1: match_states _ _ _ _ ?i0 _ |- match_states _ _ _ _ ?i1 _ ] =>
               replace i1 with i0; eauto
             end.
             unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
@@ -1494,16 +1494,16 @@ Section PROOFALL.
   From compcert Require Import Linking.
   Import Maps.PTree.
 
-  Lemma list_norepet_NoDupB {K} {decK} :
-    forall l, Coqlib.list_norepet l <-> @NoDupB K decK l = true.
-  Proof.
-    split; i.
-    - induction H; ss.
-      clarify.
-      destruct (in_dec decK hd tl); clarify.
-    - induction l; ss; clarify. constructor.
-      des_ifs. econs 2; auto.
-  Qed.
+  (* Lemma list_norepet_NoDupB {K} {decK} : *)
+  (*   forall l, Coqlib.list_norepet l <-> @NoDupB K decK l = true. *)
+  (* Proof. *)
+  (*   split; i. *)
+  (*   - induction H; ss. *)
+  (*     clarify. *)
+  (*     destruct (in_dec decK hd tl); clarify. *)
+  (*   - induction l; ss; clarify. constructor. *)
+  (*     des_ifs. econs 2; auto. *)
+  (* Qed. *)
 
   (* Definition wf_imp_prog (src : Imp.programL) := *)
   (*   Coqlib.list_norepet (compile_gdefs (get_gmap src) src). *)
