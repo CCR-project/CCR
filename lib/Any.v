@@ -117,6 +117,12 @@ End _Any.
 
 Module Any.
   Include _Any.
+  Lemma pair_inj: forall a b c d, Any.pair a b = Any.pair c d -> <<EQ: a = c /\ b = d>>.
+  Proof.
+    i. destruct (split (pair a b)) eqn:T.
+    - dup T. rewrite H in T0. rewrite <- T0 in T. rewrite ! pair_split in *. clarify.
+    - dup T. rewrite H in T0. rewrite <- T0 in T. rewrite ! pair_split in *. clarify.
+  Qed.
 End Any.
 
 (* Notation "↑ a" := (Any.upcast a) (at level 60, only parsing). *)

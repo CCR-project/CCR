@@ -170,7 +170,14 @@ Section ADQ.
       }
     }
     destruct u. resub. ired_both. force_l.
-    { admit "MID -- need to trigger UB beforehand". }
+    { admit "MID -- need to trigger UB beforehand
+ANOTHER IDEA -- SOLVING TWO PROBLEM AT ONCE --
+In HoareDef, instead of unwrapN
+```
+      f <- (alist_find fn stb)ǃ;;
+```
+match it and use trivial spec in case of None
+". }
     steps.
     rename _UNWRAPN into T.
     eapply alist_find_some in T. unfold _gstb in T. rewrite in_app_iff in *. des; ss.

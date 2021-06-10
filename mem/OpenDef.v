@@ -36,14 +36,8 @@ Hint Constructors option_rel: core.
 
 Section AUX.
   Context `{Σ: GRA.t}.
-  Definition fspec_trivial: fspec := (mk_simple (fun (_: unit) => (fun _ o => (⌜o = ord_top⌝: iProp)%I, fun _ => (⌜True⌝: iProp)%I))).
-
-  (*** U should always be called with "inr"; I use sum type just in order to unify type with KMod ***)
-  Definition fspec_trivial2: fspec :=
-    @mk _ unit (unit + list val)%type (val)
-        (fun _ argh argl o => (⌜exists vargs, argl↓ = Some vargs /\ argh = inr vargs /\ o = ord_top⌝: iProp)%I)
-        (fun _ reth retl => (⌜reth↑ = retl⌝: iProp)%I)
-  .
+  Definition fspec_trivial: fspec :=
+    (mk_simple (fun (_: unit) => (fun _ o => (⌜o = ord_top⌝: iProp)%I, fun _ => (⌜True⌝: iProp)%I))).
 
 End AUX.
 
@@ -58,8 +52,9 @@ Ltac my_red_both := try (prw _red_gen 2 0); try (prw _red_gen 1 0).
 (******************************************* UNKNOWN ***********************************************)
 Section AUX.
   Variant uCallE: Type -> Type :=
-  | uCall (fn: gname) (varg: list val): uCallE Any.t
+  | uCall (fn: gname) {X} (args: X): uCallE Any.t
   .
+  Constraint uCallE.u1 < Any.t.u0.
 End AUX.
 
 Module UModSem.
@@ -67,15 +62,8 @@ Section UMODSEM.
 
   Context `{Σ: GRA.t}.
 
-  (**** TODO: maybe "val" is more appropriate return type??? Check this later ****)
-  (**** TODO: maybe "val" is more appropriate return type??? Check this later ****)
-  (**** TODO: maybe "val" is more appropriate return type??? Check this later ****)
-  (**** TODO: maybe "val" is more appropriate return type??? Check this later ****)
-  (**** TODO: maybe "val" is more appropriate return type??? Check this later ****)
-  (**** TODO: maybe "val" is more appropriate return type??? Check this later ****)
-
   Record t: Type := mk {
-    fnsems: list (gname * (list val -> itree (uCallE +' pE +' eventE) val));
+    fnsems: list (gname * (Any.t -> itree (uCallE +' pE +' eventE) Any.t));
     mn: mname;
     initial_st: Any.t;
   }
@@ -98,8 +86,8 @@ Section UMODSEM.
                            (interp (T:=_) (fun _ e => trigger (transl_event_mod e)) itr)
   .
 
-  Definition transl_fun_mod: (list val -> itree (uCallE +' pE +' eventE) val) -> (Any.t -> itree Es Any.t) :=
-    fun ktr => cfun (transl_itr_mod (T:=val) ∘ ktr)
+  Definition transl_fun_mod: (Any.t -> itree (uCallE +' pE +' eventE) Any.t) -> (Any.t -> itree Es Any.t) :=
+    fun ktr => (transl_itr_mod (T:=_) ∘ ktr)
   .
 
   Definition to_modsem (ms: t): ModSem.t := {|
@@ -293,7 +281,7 @@ Section UMODSEM.
   (************************* SMOD ***************************)
 
   Definition transl_uCallE_smod: uCallE ~> hCallE :=
-    fun T '(uCall fn args) => hCall false fn (@inr unit _ args)↑
+    fun T '(uCall fn args) => hCall false fn (args↑)
   .
 
   Definition transl_event_smod: (uCallE +' pE +' eventE) ~> (hCallE +' pE +' eventE) :=
@@ -306,19 +294,13 @@ Section UMODSEM.
     (* fun _ => translate (T:=_) transl_event  *)
   .
 
-  Definition transl_fun_smod (ktr: list val -> itree (uCallE +' pE +' eventE) val):
-    (unit + list val -> itree (hCallE +' pE +' eventE) val) :=
-    (fun vargs => match vargs with
-                  | inl _ => triggerNB
-                  | inr vargs => (transl_itr_smod (T:=_) (ktr vargs))
-                  end)
+  Definition transl_fun_smod (ktr: Any.t -> itree (uCallE +' pE +' eventE) Any.t):
+    (Any.t -> itree (hCallE +' pE +' eventE) Any.t) :=
+    (transl_itr_smod (T:=_) ∘ ktr)
   .
 
-  Definition transl_fsb_smod: (list val -> itree (uCallE +' pE +' eventE) val) -> fspecbody :=
-    fun ktr =>
-      (* mk_specbody fspec_trivial2 (fun '(vargs, _) => interp (T:=val) transl_itr (ktr vargs)) *)
-      (* mk_specbody fspec_trivial2 (transl_itr_smod (T:=_) ∘ ktr) *)
-      mk_specbody fspec_trivial2 (transl_fun_smod ktr)
+  Definition transl_fsb_smod: (Any.t -> itree (uCallE +' pE +' eventE) Any.t) -> fspecbody :=
+    fun ktr => mk_specbody fspec_trivial (transl_fun_smod ktr)
   .
 
   Definition to_smodsem (ms: t): SModSem.t := {|
@@ -614,23 +596,26 @@ Section AUX.
   Context `{Σ: GRA.t}.
 
   Variant kCallE: Type -> Type :=
-  | kCall (fn: gname) (varg: unit + list val): kCallE Any.t
+  | kCall (is_known: bool) (tbr: bool) (fn: gname) (varg: Any.t): kCallE Any.t
   .
 
   Record kspecbody := mk_kspecbody {
-    ksb_fspec:> ftspec unit unit;                               (*** K -> K ***)
-    ksb_body: list val -> itree (kCallE +' pE +' eventE) val;   (*** U -> K ***)
+    ksb_fspec:> fspec;                                            (*** K -> K ***)
+    ksb_ubody: Any.t -> itree (kCallE +' pE +' eventE) Any.t;     (*** U -> K ***)
+    ksb_kbody: Any.t -> itree (kCallE +' pE +' eventE) Any.t;     (*** K -> K ***)
   }
   .
 
-  Definition mk_ksimple {X: Type} (PQ: X -> ((Any.t -> ord -> iProp) * (Any.t -> iProp))):
-    ftspec unit unit := @mk_ftspec _ _ _ X (fun x _ a o => (fst ∘ PQ) x a o) (fun x _ a => (snd ∘ PQ) x a)
-  .
+(* ∀ (Σ : GRA.t) (meta : Type), (meta → Any.t → Any.t → ord → Σ → Prop) → *)
+(*                              (meta → Any.t → Any.t → Σ → Prop) → fspec *)
+  (* Definition mk_ksimple {X: Type} (PQ: X -> ((Any.t -> ord -> iProp) * (Any.t -> iProp))): *)
+  (*   ftspec unit unit := @mk_ftspec _ _ _ X (fun x _ a o => (fst ∘ PQ) x a o) (fun x _ a => (snd ∘ PQ) x a) *)
+  (* . *)
 
-  Definition kspec_trivial_bottom: ftspec unit unit :=
-    (mk_ksimple (fun (_: unit) => ((fun _ _ => (⌜False⌝: iProp)%I),
-                                   (fun _ => (⌜True⌝: iProp)%I))))
-  .
+  (* Definition kspec_trivial_bottom: ftspec unit unit := *)
+  (*   (mk_ksimple (fun (_: unit) => ((fun _ _ => (⌜False⌝: iProp)%I), *)
+  (*                                  (fun _ => (⌜True⌝: iProp)%I)))) *)
+  (* . *)
 
   Program Fixpoint _APCK (at_most: Ord.t) {wf Ord.lt at_most}: itree (kCallE +' pE +' eventE) unit :=
     break <- trigger (Choose _);;
@@ -639,8 +624,8 @@ Section AUX.
     else
       n <- trigger (Choose Ord.t);;
       trigger (Choose (n < at_most)%ord);;;
-      fn <- trigger (Choose _);;
-      trigger (kCall fn (inl tt));;;
+      '(fn, varg) <- trigger (Choose _);;
+      trigger (kCall true true fn varg);;;
       _APCK n.
   Next Obligation. ss. Qed.
   Next Obligation. eapply Ord.lt_well_founded. Qed.
@@ -659,8 +644,8 @@ Section AUX.
                     else
                       n <- trigger (Choose Ord.t);;
                       guarantee (n < at_most)%ord;;;
-                      fn <- trigger (Choose _);;
-                      trigger (kCall fn (inl tt));;;
+                      '(fn, varg) <- trigger (Choose _);;
+                      trigger (kCall true true fn varg);;;
                       _APCK n.
   Proof.
     i. unfold _APCK. rewrite Fix_eq; eauto.
@@ -668,7 +653,8 @@ Section AUX.
       repeat f_equal. extensionality n.
       unfold guarantee. rewrite bind_bind.
       repeat f_equal. extensionality p.
-      rewrite bind_ret_l. repeat f_equal. }
+      rewrite bind_ret_l.
+      repeat f_equal. extensionality x. des_ifs. }
     { i. replace g with f; auto. extensionality o. eapply H. }
   Qed.
   Global Opaque _APCK.
@@ -703,26 +689,10 @@ Section KMODSEM.
   (************************* TGT ***************************)
   (************************* TGT ***************************)
 
-  Definition disclose (fs: ftspec unit unit): fspec :=
-    @HoareDef.mk _ (option fs.(X)) (unit + list val)%type val
-                 (fun ox argh argl o =>
-                    match ox, argh with
-                    | Some x, inl argh => ((fs.(precond) x argh argl o: iProp) ** ⌜is_pure o⌝)%I
-                    | None, inr varg => (⌜varg↑ = argl /\ o = ord_top⌝: iProp)%I
-                    | _, _ => (⌜False⌝: iProp)%I
-                    end)
-                 (fun ox reth retl =>
-                    match ox with
-                    | Some x => fs.(postcond) x tt retl
-                    | None => (⌜reth↑ = retl⌝: iProp)%I
-                    end)
-  .
-
   Definition transl_kCallE_tgt: kCallE ~> hCallE :=
-    fun T '(kCall fn args) => match args with
-                              | inl _ => hCall true fn args↑
-                              | inr _ => hCall false fn args↑
-                              end
+    fun _ '(kCall isk tbr fn args) => if isk
+                                      then hCall tbr fn (Any.pair tt↑ args)
+                                      else hCall false (** tbr is ignored **) fn args
   .
 
   Definition transl_event_tgt: (kCallE +' pE +' eventE) ~> (hCallE +' pE +' eventE) :=
@@ -733,20 +703,33 @@ Section KMODSEM.
     fun _ => interp (T:=_) (fun _ e => trigger (transl_event_tgt e))
   .
 
-  Definition transl_fun_tgt (ktr: list val -> itree (kCallE +' pE +' eventE) val):
-    (unit + list val) -> itree (hCallE +' pE +' eventE) val :=
-    (fun argh => match argh with
-                 (*** K -> K ***)
-                 (*** YJ: We may generalize this to APC ***)
-                 (*** YJ: We may further generalize this to any pure itree without pE ***)
-                 | inl _ => trigger (Choose _)
-                 (*** U -> K ***)
-                 | inr varg => transl_itr_tgt (ktr varg)
-                 end)
+  Definition transl_fun_tgt (ktr: Any.t -> itree (kCallE +' pE +' eventE) Any.t):
+    Any.t -> itree (hCallE +' pE +' eventE) Any.t :=
+    (transl_itr_tgt (T:=_)) ∘ ktr
+  .
+
+  Definition disclose (fs: fspec): fspec :=
+    mk_fspec (meta:=option fs.(meta))
+             (fun ox argh argl o =>
+                match ox, Any.split argh with
+                | Some x, Some (_, argh) => (fs.(precond) x argh argl o)
+                | None, None => ((⌜argh = argl /\ o = ord_top⌝): iProp)%I
+                | _, _ => (⌜False⌝: iProp)%I
+                end)
+             (fun ox reth retl =>
+                match ox with
+                | Some x => (fs.(postcond) x reth retl)
+                | None => (⌜reth = retl⌝: iProp)%I
+                end)
   .
 
   Definition disclose_ksb (ksb: kspecbody): fspecbody :=
-    mk_specbody (disclose ksb) (transl_fun_tgt ksb.(ksb_body))
+    mk_specbody (disclose ksb)
+                (fun argh =>
+                   match Any.split argh with
+                   | Some (_, argh) => (transl_fun_tgt ksb.(ksb_kbody)) argh
+                   | None => (transl_fun_tgt ksb.(ksb_ubody)) argh
+                   end)
   .
 
   Definition to_tgt (ms: t): SModSem.t := {|
@@ -934,11 +917,11 @@ Section KMODSEM.
   (************************* SRC ***************************)
   (************************* SRC ***************************)
 
-  Definition handle_kCallE_src: kCallE ~> itree Es :=
-    fun T '(kCall fn args) =>
-      match args with
-      | inl _ => tau;; trigger (Choose _)
-      | inr args => trigger (Call fn args↑)
+  Definition handle_kCallE_src: kCallE ~> itree Es:=
+    fun _ '(kCall isk tbr fn args) =>
+      match isk, tbr with
+      | true, true => tau;; trigger (Choose _)
+      | _, _ => trigger (Call fn args)
       end
   .
 
@@ -949,16 +932,16 @@ Section KMODSEM.
                   ((fun T X => trigger X): _ ~> itree Es))
   .
 
-  Definition body_to_src {AA AR} (body: AA -> itree (kCallE +' pE +' eventE) AR): AA -> itree Es AR :=
-    fun varg_src => interp_kCallE_src (body varg_src)
-  .
-
-  Definition fun_to_src {AA AR} (body: AA -> itree (kCallE +' pE +' eventE) AR): (Any.t -> itree Es Any.t) :=
-    (cfun (body_to_src body))
+  Definition fun_to_src (ksb: kspecbody): (Any.t -> itree Es Any.t) :=
+    (fun argh =>
+       match Any.split argh with
+       | Some (_, argh) => (interp_kCallE_src (ksb.(ksb_kbody) argh))
+       | None => (interp_kCallE_src (ksb.(ksb_ubody) argh))
+       end)
   .
 
   Definition to_src (ms: t): ModSem.t := {|
-    ModSem.fnsems := List.map (map_snd (fun_to_src ∘ ksb_body)) ms.(fnsems);
+    ModSem.fnsems := List.map (map_snd fun_to_src) ms.(fnsems);
     ModSem.mn := ms.(mn);
     ModSem.initial_mr := ε;
     ModSem.initial_st := ms.(initial_st);
@@ -1215,7 +1198,7 @@ Section KTACTICS.
   Qed.
 
   Lemma APCK_step_clo
-        (fn: gname) (next: Ord.t) (n1: Ord.t)
+        (fn: gname) (args: Any.t) (next: Ord.t) (n1: Ord.t)
 
         (o: ord)
         r rg (n0: Ord.t) mr_src0 mp_src0 fr_src0
@@ -1226,13 +1209,13 @@ Section KTACTICS.
         stb itr_tgt ctx0
 
         (FUEL: (n1 + 11 < n0)%ord)
-        (ftsp: ftspec unit unit)
+        (ftsp: fspec)
         (FIND: alist_find fn stb = Some (KModSem.disclose ftsp))
         (NEXT: (next < at_most)%ord)
 
         (POST: gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ eqr n1
                       (mr_src0, mp_src0, fr_src0,
-                       '(ctx1, _) <- (HoareCall true o (KModSem.disclose ftsp) fn (inl tt) ctx0);;
+                       '(ctx1, _) <- (HoareCall true o (KModSem.disclose ftsp) fn (Any.pair tt↑ args) ctx0);;
                        tau;; tau;; (interp_hCallE_tgt stb o (KModSem.transl_itr_tgt (_APCK next)) ctx1)
                                      >>= k_src)
                       ((mrs_tgt, frs_tgt),
@@ -1253,10 +1236,10 @@ Section KTACTICS.
     force_l; et.
     ired_both; _step; [by eauto with ord_step|].
     steps; [by eauto with ord_step|].
-    force_l. esplits; et.
+    force_l. exists (fn, args). esplits; et.
     ired_both; _step; [by eauto with ord_step|].
     steps; [by eauto with ord_step|].
-    rewrite FIND. ired_both. rewrite Any.upcast_downcast. ired_both.
+    rewrite FIND. ired_both.
     guclo lordC_spec. econs; et. { rewrite OrdArith.add_O_r. refl. }
     match goal with
     | [SIM: gpaco6 _ _ _ _ _ _ _ _ ?i0 _ |- gpaco6 _ _ _ _ _ _ _ _ ?i1 _] =>
@@ -1305,8 +1288,8 @@ Ltac kstart _at_most :=
   ]
 .
 
-Ltac kstep _fn :=
-  eapply (@APCK_step_clo _ _fn);
+Ltac kstep _fn _args :=
+  eapply (@APCK_step_clo _ _fn _args);
   [(try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r; eapply Nat.lt_succ_diag_r)]))|
    (try by (stb_tac; refl))|
    (eapply OrdArith.lt_from_nat; eapply Nat.lt_succ_diag_r)|
@@ -1314,8 +1297,8 @@ Ltac kstep _fn :=
 
 Ltac kcatch :=
   match goal with
-  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, _) (_, trigger (Call ?fn _) >>= _)) ] =>
-    kstep fn
+  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, _) (_, trigger (Call ?fn ?args) >>= _)) ] =>
+    kstep fn args
   end.
 
 Ltac kstop :=
