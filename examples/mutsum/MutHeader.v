@@ -62,7 +62,9 @@ Section PROOF.
 
   Context `{Σ: GRA.t}.
 
-  Definition main_spec: fspec := mk_simple (fun (_: unit) => ((fun _ o => (⌜o = ord_top⌝: iProp)%I), fun _ => (True: iProp)%I)).
+  Definition main_spec: fspec :=
+    mk_simple (fun (_: unit) => ((fun varg o => (⌜varg = ([]: list val)↑ ∧ o = ord_top⌝: iProp)%I),
+                                 fun _ => (True: iProp)%I)).
   Definition f_spec:    fspec := mk_simple (fun (n: nat) =>
                                               ((fun varg o => (⌜varg = [Vint (Z.of_nat n)]↑ /\ o = ord_pure n /\ n < mut_max⌝: iProp)%I),
                                                (fun vret => (⌜vret = (Vint (Z.of_nat (sum n)))↑⌝: iProp)%I))).

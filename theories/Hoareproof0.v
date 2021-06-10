@@ -816,12 +816,7 @@ Section CANCEL.
     eexists. steps. unshelve esplits.
     { admit "resource wf". }
     steps. exists ord_top. steps. unshelve esplits.
-    { red. uipropall. eexists. uipropall. split; et.
-      { red. uipropall. }
-      split.
-      { eapply MAINPRE. }
-      { red. uipropall. }
-    }
+    { red. uipropall. esplits; et. r. uipropall. }
     steps. rewrite Any.pair_split. steps.
     rewrite Any.upcast_downcast. steps.
 
@@ -842,8 +837,7 @@ Section CANCEL.
       ss. des; subst. steps.
       destruct fr_tgt; ss.
       { steps. }
-      steps. red in x2. uipropall. des. uipropall. des.
-      red in x2. red in x6. uipropall. subst. auto.
+      steps. red in x2. uipropall. des. red in x4. uipropall.
     }
     Unshelve.
     all: try (by apply Ord.O).

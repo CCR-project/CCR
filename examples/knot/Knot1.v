@@ -129,11 +129,11 @@ Section WEAK.
   Proof.
     ii. ss. exists (f, x_src). split.
     { intros arg_src arg_tgt o. ss.
-      iIntros "H". iDestruct "H" as (aa) "[% [[% [H0 H1]] %]]".
-      iModIntro. iExists _. iFrame. et. }
+      iIntros "H". iDestruct "H" as "[[% [H0 H1]] %]".
+      iModIntro. iFrame. et. }
     { intros ret_src ret_tgt. ss.
-      iIntros "H". iDestruct "H" as (ar) "[% [[H0 [% H1]] %]]".
-      iModIntro. iExists _. iFrame. et. }
+      iIntros "H". iDestruct "H" as "[[H0 [% H1]] %]".
+      iModIntro. iFrame. et. }
   Qed.
 End WEAK.
 
@@ -149,16 +149,13 @@ Section WEAK.
   Proof.
     ii. ss. exists x_src. split.
     { intros arg_src arg_tgt o.
-      iIntros "H". iDestruct "H" as (aa) "[% [[[% H0] H1] %]]".
-      des. subst. eapply Any.upcast_inj in H3. des; clarify.
-      iModIntro. iExists _. iSplitR; ss.
-      iFrame. iSplitL; ss. iSplitR; et.
+      iIntros "H". iDestruct "H" as "[[[% H0] H1] %]".
+      des. subst. iModIntro. iSplitL; ss. iFrame. iSplitR; ss; et.
     }
     { intros ret_src ret_tgt.
-      iIntros "H". iDestruct "H" as (ar) "[% [[H0 [% H2]] %]]".
-      des. subst. eapply Any.upcast_inj in H3. des; clarify.
-      iModIntro. iExists _. iSplitR; ss.
-      iFrame. iSplitL; ss.
+      iIntros "H". iDestruct "H" as "[[H0 [% H2]] %]".
+      des. subst.
+      iModIntro. iSplitL; ss.
       iExists (OwnM (knot_frag (Some x_src)) ** inv_opener).
       iFrame. iPureIntro. des. eexists.
       split; eauto. eapply fb_has_spec_weaker; eauto.

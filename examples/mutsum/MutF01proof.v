@@ -42,20 +42,19 @@ Section SIMMODSEM.
     2: { econs; ss; red; uipropall. }
     econs; ss. init. harg. mDesAll.
     des; clarify. unfold fF, ccall.
-    apply Any.upcast_inj in PURE0. des; clarify.
     rewrite Any.upcast_downcast. steps. astart 10.
     force_r.
     { eapply mut_max_intrange. auto. } steps.
     destruct (dec (Z.of_nat x) 0%Z).
     - destruct x; ss. astop. force_l. eexists. steps.
-      hret _; ss. et.
+      hret _; ss.
     - destruct x; [ss|]. rewrite Nat2Z.inj_succ. steps. acatch.
       hcall _ _ _ with "*"; auto.
       { iPureIntro.
         replace (Z.succ (Z.of_nat x) - 1)%Z with (Z.of_nat x) by lia.
         esplits; et. lia. }
       { splits; ss; eauto with ord_step. }
-      i. mDesAll. des; clarify. eapply Any.upcast_inj in PURE1. des; clarify.
+      i. mDesAll. des; clarify.
       rewrite Any.upcast_downcast. steps. astop.
       force_l. eexists. steps. force_r.
       { eapply mut_max_sum_intrange. lia. } steps.

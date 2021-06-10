@@ -120,7 +120,6 @@ Section SIMMODSEM.
 
       (* arg *)
       iarg. destruct x as [f n]. ss. mDesAll. des. clarify.
-      eapply Any.upcast_inj in PURE. des; clarify.
       rewrite Any.upcast_downcast. steps. astart 2.
 
       (* open invariant *)
@@ -134,13 +133,11 @@ Section SIMMODSEM.
       (* call with the opened invariant *)
       icall_open _ (_, _, _) with "A1".
       { ss. }
-      { iModIntro. iExists _. iSplitR; ss.
-        iSplitL; ss. iSplitL; ss. iSplitR; ss.
+      { iModIntro. iSplitL; ss. iSplitL; ss. iSplitR; ss.
         iEval (unfold var_points_to) in "A1". rewrite FIND1. iFrame. }
       { split; ss. eauto with ord_step. }
 
-      mDesAll. subst. eapply Any.upcast_inj in PURE1. des; subst.
-      rewrite Any.upcast_downcast. steps.
+      mDesAll. subst. rewrite Any.upcast_downcast. steps.
       hexploit PURE; auto. i. des; clarify. inv FN. inv SPEC. ss. steps.
       rewrite FBLOCK. steps. rewrite FIND0. steps. acatch.
       { eapply FunStb_incl. eapply FIND. }

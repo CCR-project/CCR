@@ -266,8 +266,9 @@ Section CANCEL.
   (*   apply (list val). *)
   (*   apply (val). *)
   (* Defined. *)
-  Definition mk_simple {X: Type} (PQ: X -> ((Any_tgt -> ord -> Σ -> Prop) * (Any_tgt -> Σ -> Prop))): fspec :=
-    @mk _ X (list val) val (fun x y a o => (((fst ∘ PQ) x a o: iProp) ∧ ⌜y↑ = a⌝)%I) (fun x z a => (((snd ∘ PQ) x a: iProp) ∧ ⌜z↑ = a⌝)%I)
+  Definition mk_simple {X: Type} (PQ: X -> ((Any_tgt -> ord -> iProp) * (Any_tgt -> iProp))): fspec :=
+    mk_fspec (fun x y a o => (((fst ∘ PQ) x a o: iProp) ∧ ⌜y = a⌝)%I)
+             (fun x z a => (((snd ∘ PQ) x a: iProp) ∧ ⌜z = a⌝)%I)
   .
 
   Section INTERP.

@@ -161,10 +161,6 @@ Ltac iarg :=
   let a := fresh "a" in
   intros a; i;
   let aa := fresh "aa" in
-  mDesEx PRE as aa;
-  mDesAndPureL PRE as TMP PRE;
-  let EQ := fresh "EQ" in
-  mPure TMP as EQ; symmetry in EQ; destruct EQ;
   mDesAndPureR PRE as PRE ARG;
   let EQ := fresh "EQ" in
   mPure ARG as EQ;

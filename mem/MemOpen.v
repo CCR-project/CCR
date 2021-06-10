@@ -28,8 +28,8 @@ Let _memRA: URA.t := (mblock ==> Z ==> (Excl.t val))%ra.
 Section PROOF.
   Context `{@GRA.inG memRA Σ}.
 
-  Definition alloc_spec: ftspec unit unit :=
-    (mk_ksimple (fun sz => (
+  Definition alloc_spec: fspec :=
+    (mk_simple (fun sz => (
                      (fun varg o => (⌜varg = [Vint (Z.of_nat sz)]↑ /\ o = ord_pure 0⌝)%I),
                      (fun vret => (∃ b, ⌜vret = (Vptr b 0)↑⌝ **
                                         OwnM ((b, 0%Z) |-> (List.repeat (Vint 0) sz)))%I)

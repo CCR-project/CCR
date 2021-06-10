@@ -122,7 +122,6 @@ Section SIMMODSEM.
 
       destruct (alist_find "getint" (StackStb ++ ClientStb ++ MemStb ++ EchoStb)) eqn:T; stb_tac; clarify.
       steps. hcall _ _ _ with "PRE"; et.
-      { iModIntro. iSplitL; ss; et. }
       { split; ss. }
       mDesAll. clarify. steps.
       mDesOr "INV1".
@@ -132,7 +131,6 @@ Section SIMMODSEM.
       mAssertPure _.
       { iApply (echo_ra_merge with "INV INV1"). }
       des; subst.
-      rewrite Any.upcast_downcast in *. clarify.
 
       unfold unint in *. des_ifs; ss.
       { steps.
@@ -154,12 +152,10 @@ Section SIMMODSEM.
         hcall _ (_, _) _ with "- INV"; ss.
         { iModIntro. iSplitL "INV1"; ss.
           { iRight. iExists _. iFrame. }
-          { iExists _. iSplitR; ss.
-            iSplitL; ss. iExists _. iSplitL; ss. iSplitR "A"; ss. }
+          { iSplitL; ss. iExists _. iSplitL; ss. iSplitR "A"; ss. }
         }
         { split; ss. }
         steps. mDesAll. subst.
-        eapply Any.upcast_inj in PURE0. des; clarify.
         rewrite Any.upcast_downcast in *. clarify.
         mDesOr "INV2".
         { mDesAll. mAssertPure False; ss.
@@ -212,20 +208,17 @@ Section SIMMODSEM.
       { iModIntro. iSplitL; ss; et. }
       { split; ss. }
       mDesAll. clarify.
-      eapply Any.upcast_inj in PURE0.
       rewrite Any.upcast_downcast. steps. des; clarify.
 
       acatch. hcall _ (_, _) _ with "- INV"; ss.
-      { iModIntro. iSplitL "INV1"; ss. iExists _. iSplitR; ss. iSplitL; ss.
-        iExists _. iSplitL; ss. iSplitR "A3"; ss.
+      { iModIntro. iSplitL "INV1"; ss. iSplitL; ss.
+        iExists _. iSplitL; ss. iSplitR "A"; ss; et.
         { iSplit; ss. instantiate (1:=Vint z :: (map Vint a0)). clear.
           rewrite unfold_is_list_cons. iExists _, _. iFrame; ss.
         }
-        { iExists _. et. }
       }
       { split; ss. }
       ss. steps. mDesAll. clarify.
-      eapply Any.upcast_inj in PURE0. erewrite Any.upcast_downcast in *.
       des; clarify. mDesOr "INV2".
       { mAssertPure False; ss.
         iDestruct "INV2" as (ns) "[INV2 _]".
@@ -237,40 +230,39 @@ Section SIMMODSEM.
         instantiate (1:= echo_black v (z :: a0) ⋅ echo_white v (z :: a0)).
         eapply Auth.auth_update. rr. ii. des; ss. ur in FRAME. ur.
         destruct ctx2; ss; clarify. }
-      mUpd "A". mDesOwn "A".
+      mUpd "A2". mDesOwn "A2".
 
-      acatch. hcall _ (_, _, _) _ with "A1 A3"; ss.
+      acatch. hcall _ (_, _, _) _ with "A A3"; ss.
       { iModIntro. iSplitL "A3".
         { iRight. iExists _. iFrame. }
-        { iExists _. iSplitR; ss. iSplit; ss. iSplit; ss. iSplit; ss. }
+        { iSplit; ss. iSplit; ss. iSplit; ss. }
       }
       { splits; ss. }
       steps. astop. steps.
       destruct (alist_find "putint" (StackStb ++ ClientStb ++ MemStb ++ EchoStb)) eqn:T; stb_tac; clarify.
       mDesAll. clarify.
-      eapply Any.upcast_inj in PURE0. des; clarify.
       steps. rewrite Any.upcast_downcast in *. clarify. steps.
 
       hcall _ _ _ with "INV"; ss.
-      { iModIntro. iSplit; ss. et. }
+      { iModIntro. iSplit; ss; et. }
       { split; ss. }
       mDesAll. mDesOr "INV1".
       { mAssertPure False; ss.
         iDestruct "INV1" as (ns) "[INV1 _]".
-        iApply (echo_ra_black with "INV1 A"). }
+        iApply (echo_ra_black with "INV1 A2"). }
       mDesAll. mAssertPure _.
-      { iApply (echo_ra_merge with "A INV1"). }
+      { iApply (echo_ra_merge with "A2 INV1"). }
       des; subst. steps.
 
       destruct (alist_find "echo_finish" (StackStb ++ ClientStb ++ MemStb ++ EchoStb)) eqn:T; stb_tac; clarify.
-      steps. hcall _ (_, _) _ with "A2 A INV1"; ss.
-      { iCombine "A" "INV1" as "A".
+      steps. hcall _ (_, _) _ with "A2 A1 INV1"; ss.
+      { iCombine "A2" "INV1" as "A".
         iPoseProof (OwnM_Upd with "A") as "A".
         { instantiate (1:= echo_black _ _ ⋅ echo_white _ _).
           eapply Auth.auth_update. rr. ii. des; ss. ur in FRAME. ur.
           destruct ctx4; ss; clarify. }
-        iMod "A". iDestruct "A" as "[A0 A1]". iModIntro.
-        iSplitR "A1".
+        iMod "A". iDestruct "A" as "[A0 A]". iModIntro.
+        iSplitR "A".
         { iLeft. iExists _. iFrame. }
         { iExists _. iSplitR; ss. iSplit; ss. iSplit; ss. }
       }
