@@ -56,7 +56,8 @@ Section SIMMODSEM.
 
   Theorem correct: ModPair.sim (KnotMain1.Main RecStb GlobalStb) KnotMain0.Main.
   Proof.
-    econs; ss; [|admit ""].
+    econs; ss.
+    2: { i. inv WF. econs; ss. }
     i. eapply adequacy_lift.
     econstructor 1 with (wf:=wf); ss; et.
     2: { econs; ss. red. uipropall. }

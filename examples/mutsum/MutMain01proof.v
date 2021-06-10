@@ -36,7 +36,8 @@ Section SIMMODSEM.
 
   Theorem correct: ModPair.sim MutMain1.Main MutMain0.Main.
   Proof.
-    econs; ss; [|admit ""].
+    econs; ss.
+    2: { i. inv WF. econs; ss. }
     i. eapply adequacy_lift.
     econstructor 1 with (wf:=wf); et; ss.
     2: { red. econs; ss. red. uipropall. }
@@ -48,7 +49,6 @@ Section SIMMODSEM.
     { splits; ss. }
     mDesAll. des; clarify. eapply Any.upcast_inj in PURE1. des; clarify. steps.
     hret tt; ss.
-    (* TODO: change top2 => pure top in SMod.main *)
     iModIntro. et.
   Qed.
 
