@@ -68,8 +68,8 @@ Section SIMMODSEM.
       imp_steps.
       gstep. econs; ss. i. exists 100.
       imp_steps.
-      force_r; auto. imp_steps.
-      admit "add wf_range assume after call".
+      force_r; auto. imp_steps. force_r; auto. steps.
+      rewrite _UNWRAPU. steps. force_r; auto. steps.
   Qed.
 
 End SIMMODSEM.

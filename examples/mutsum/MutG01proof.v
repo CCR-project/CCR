@@ -45,19 +45,26 @@ Section SIMMODSEM.
     apply Any.upcast_inj in PURE0. des; clarify.
     rewrite Any.upcast_downcast. steps. astart 10.
     force_r.
-    { admit "Add range condition". } steps.
+    { eapply mut_max_intrange. auto. } steps.
     destruct (dec (Z.of_nat x) 0%Z).
     - destruct x; ss. astop. force_l. eexists. steps.
       hret _; ss. et.
     - destruct x; [ss|]. rewrite Nat2Z.inj_succ. steps. acatch.
       hcall _ _ _ with "*"; auto.
-      { iPureIntro. esplits; eauto.
-        replace (Z.succ (Z.of_nat x) - 1)%Z with (Z.of_nat x) by lia. ss. }
+      { iPureIntro.
+        replace (Z.succ (Z.of_nat x) - 1)%Z with (Z.of_nat x) by lia.
+        esplits; et. lia. }
       { splits; ss; eauto with ord_step. }
       i. mDesAll. des; clarify. eapply Any.upcast_inj in PURE1. des; clarify.
       rewrite Any.upcast_downcast. steps. astop.
-      force_l. eexists. steps.
-      hret _; ss. start_ipm_proof. iPureIntro. esplits; ss.
+      force_l. eexists. steps. force_r.
+      { eapply mut_max_sum_intrange. lia. } steps.
+      force_r.
+      { replace (Z.succ x + sum x)%Z with ((sum (S x)): Z).
+        { eapply mut_max_sum_intrange. lia. }
+        { ss. lia. }
+      } steps.
+      hret _; ss. iPureIntro. esplits; ss.
       f_equal. f_equal. lia.
       Unshelve. all: ss.
   Qed.

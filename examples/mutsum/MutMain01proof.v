@@ -45,7 +45,10 @@ Section SIMMODSEM.
     unfold mainF, mainBody. harg.
     mDesAll. des; clarify. steps. rewrite Any.upcast_downcast. steps.
     hcall _ _ tt with "*"; ss.
-    { iPureIntro. esplits; eauto. instantiate (1:=10). ss. }
+    { iPureIntro. esplits; eauto.
+      { instantiate (1:=10). ss. }
+      { unfold mut_max. lia. }
+    }
     { splits; ss. }
     mDesAll. des; clarify. eapply Any.upcast_inj in PURE1. des; clarify. steps.
     hret tt; ss.

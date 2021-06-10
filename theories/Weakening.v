@@ -30,19 +30,6 @@ Section PROOF.
 
   Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
 
-  (* Variant lupdC (r: forall (R_src R_tgt: Type)  *)
-  (*                          (RR: Σ * Any.t * Σ -> Σ * Any.t * Σ -> R_src -> R_tgt -> Prop),  *)
-  (*                   Ord.t -> Σ * Any.t * Σ * itree Es R_src -> Σ * Any.t * Σ * itree Es R_tgt -> Prop) *)
-  (*         {R_src R_tgt} (RR: Σ * Any.t * Σ -> Σ * Any.t * Σ -> R_src -> R_tgt -> Prop) *)
-  (*   : Ord.t -> Σ * Any.t * Σ * itree Es R_src -> Σ * Any.t * Σ * itree Es R_tgt -> Prop := *)
-  (* | lupeC_intro *)
-  (*     o st_src st_tgt *)
-  (*     (SIM: r _ _ RR o0 st_src st_tgt) *)
-  (*   : *)
-  (*     lupdC r RR o1 st_src st_tgt *)
-  (* . *)
-  (* Hint Constructors lordC: core. *)
-
 
   Variable stb_src stb_tgt: list (gname * fspec).
   Hypothesis stb_stronger:
@@ -418,7 +405,14 @@ Section PROOF.
   Proof.
     econs; cycle 1.
     { unfold SMod.to_tgt. cbn. eauto. }
-    { i. admit "ez - wf". }
+    { i. inv WF. econs; [|ss].
+      replace (map fst (ModSemL.fnsems (Mod.get_modsem (SMod.to_tgt stb0 md) sk))) with
+          (map fst (ModSemL.fnsems (Mod.get_modsem (SMod.to_tgt stb1 md) sk))).
+      { auto. }
+      unfold SMod.to_tgt. unfold SMod.transl. simpl. rewrite ! List.map_map.
+      eapply equal_f. eapply f_equal. simpl. extensionality fnsb.
+      destruct fnsb as [fn sb]. simpl. auto.
+    }
     i. specialize (WEAK sk). r. eapply adequacy_lift. econs.
     { instantiate (1:=fun '(x, y) => x = y).
       unfold SMod.to_tgt.

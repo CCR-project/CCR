@@ -43,7 +43,7 @@ Section SIMMODSEM.
     econs; ss; [|econs; ss].
     { init. unfold getint_body, getintF. harg.
       mDesAll. clarify. rewrite Any.upcast_downcast. steps.
-      admit "ez". }
+      admit "ez - add syscall reduction rule". }
     { admit "ez". }
   Qed.
 
