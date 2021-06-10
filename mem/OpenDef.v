@@ -37,7 +37,9 @@ Hint Constructors option_rel: core.
 Section AUX.
   Context `{Σ: GRA.t}.
   Definition fspec_trivial: fspec :=
-    (mk_simple (fun (_: unit) => (fun _ o => (⌜o = ord_top⌝: iProp)%I, fun _ => (⌜True⌝: iProp)%I))).
+    mk_fspec (meta:=unit) (fun _ argh argl o => (⌜argh = argl ∧ o = ord_top⌝: iProp)%I)
+             (fun _ reth retl => (⌜reth = retl⌝: iProp)%I)
+  .
 
 End AUX.
 

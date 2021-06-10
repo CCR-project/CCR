@@ -47,20 +47,6 @@ Require Import HTactics ProofMode.
 
 
 
-Section LEMMA.
-
-  Context `{Σ: GRA.t}.
-
-End LEMMA.
-
-
-
-
-
-
-
-
-
 Section ADQ.
   Context `{Σ: GRA.t}.
 
@@ -76,7 +62,7 @@ Section ADQ.
   Let _umss: Sk.t -> list UModSem.t := fun ske => List.map (flip UMod.get_modsem ske) umds.
   Let _gstb: Sk.t -> list (gname * fspec) := fun ske =>
     (flat_map (List.map (map_snd fsb_fspec) ∘ SModSem.fnsems) (_kmss ske))
-      ++ (flat_map (List.map (map_snd (fun _ => fspec_trivial2)) ∘ UModSem.fnsems) (_umss ske)).
+      ++ (flat_map (List.map (map_snd (fun _ => fspec_trivial)) ∘ UModSem.fnsems) (_umss ske)).
 
   Let kmss: list SModSem.t := Eval red in (_kmss sk_link).
   Let umss: list UModSem.t := Eval red in (_umss sk_link).
@@ -137,13 +123,15 @@ Section ADQ.
 
 
   Lemma my_lemma1_aux'
-        (ske: Sk.t) mrs (A: Type) (itr: itree (uCallE +' pE +' eventE) A) (ctx: Σ) (WF: URA.wf (ctx ⋅ fst mrs)) fr
+        (ske: Sk.t) mrs (A: Type) (itr: itree (uCallE +' pE +' eventE) A) (ctx: Σ)
+        (WF: URA.wf (ctx ⋅ fst mrs)) fr
     :
       paco6
         (_sim_itree (fun '(st_src, st_tgt) => st_src = st_tgt))
         bot6
         (Σ * A)%type A
-        (fun '(mrs_src, fr_src) '(mrs_tgt, fr_tgt) '(ctx, r_src) r_tgt => mrs_src = mrs_tgt /\ r_src = r_tgt /\ URA.wf (ctx ⋅ fst mrs_src))
+        (fun '(mrs_src, fr_src) '(mrs_tgt, fr_tgt) '(ctx, r_src) r_tgt => mrs_src = mrs_tgt /\ r_src = r_tgt
+                                                                          /\ URA.wf (ctx ⋅ fst mrs_src))
         40%nat
         (mrs, fr, interp_hCallE_tgt (_gstb ske) ord_top (UModSem.transl_itr_smod itr) ctx)
         (mrs, ε, UModSem.transl_itr_mod (T:=A) itr)
@@ -184,7 +172,6 @@ match it and use trivial spec in case of None
     - list_tac.
       des_ifs. unfold _kmss in T. list_tac. subst. unfold kmds in T0. list_tac. subst.
       ss. list_tac. des_ifs. ss.
-      rewrite Any.upcast_downcast. steps.
       unfold HoareCall, discard, forge, put, checkWf. steps.
       destruct mrs.
       force_l. exists (c, ε). steps.
@@ -194,10 +181,10 @@ match it and use trivial spec in case of None
       force_l. exists ε. steps. force_l.
       { rewrite URA.unit_id. auto. }
       steps. force_l. exists None. steps.
-      force_l. exists (Any.upcast varg). steps.
+      force_l. exists (args↑). steps.
       force_l. exists ord_top. steps.
       force_l.
-      { red. uipropall. }
+      { rewrite Any.upcast_split. eapply to_semantic; [|eapply URA.wf_unit]. iIntros. iPureIntro. esplits; et. }
       steps. force_l.
       { split; et. }
       steps. gstep. econs; et. i. subst. destruct mrs_tgt1. eexists. steps.
@@ -207,7 +194,6 @@ match it and use trivial spec in case of None
       replace (x2 ⋅ c0 ⋅ x0) with (x2 ⋅ (c0 ⋅ (ε ⋅ x0))); auto. r_solve.
     - list_tac.
       des_ifs. unfold _umss in T. list_tac. subst.
-      rewrite Any.upcast_downcast. steps.
       unfold HoareCall, discard, forge, put, checkWf. steps.
       destruct mrs.
       force_l. exists (c, ε). steps.
@@ -217,10 +203,10 @@ match it and use trivial spec in case of None
       force_l. exists ε. steps. force_l.
       { rewrite URA.unit_id. auto. }
       steps. force_l. exists tt. steps.
-      force_l. exists (Any.upcast varg). steps.
+      force_l. exists (args↑). steps.
       force_l. exists ord_top. steps.
       force_l.
-      { red. uipropall. esplits; et. rewrite Any.upcast_downcast. ss. }
+      { eapply to_semantic; [|eapply URA.wf_unit]. iIntros. iPureIntro. esplits; et. }
       steps. force_l.
       { split; et. }
       steps. gstep. econs; et. i. subst. destruct mrs_tgt1. eexists. steps.
@@ -249,7 +235,8 @@ match it and use trivial spec in case of None
     unfold UModSem.transl_fun_smod.
     guclo lordC_spec. econs.
     { instantiate (1:=(49 + 40)%ord). rewrite <- OrdArith.add_from_nat. eapply OrdArith.le_from_nat. lia. }
-   guclo lbindC_spec. econs.
+    erewrite idK_spec with (i0:=UModSem.transl_itr_mod (ktr arg)).
+    guclo lbindC_spec. econs.
     { gfinal. right. eapply my_lemma1_aux'.
       eapply URA.wf_mon. instantiate (1:=x2). r_wf _ASSUME. }
     i. destruct st_src1, st_tgt1. destruct vret_src. ss. des; subst. destruct p0.
@@ -287,6 +274,150 @@ match it and use trivial spec in case of None
     { ss. }
     { ss. }
   Qed.
+
+  Lemma my_lemma2_aux
+        mrs ktr arg
+    :
+      sim_itree (fun '(x, y) => x = y) 100%nat
+                (mrs, ε, (UModSem.transl_fun_mod ktr) arg)
+                (mrs, ε, fun_to_src (fsb_body (UModSem.transl_fsb_smod ktr)) arg)
+  .
+  Proof.
+    destruct mrs as [mr st]. ss.
+    unfold fun_to_src, UModSem.transl_fun_mod, UModSem.transl_fun_smod, UModSem.transl_fun_smod, body_to_src.
+    ginit. abstr (ktr arg) itr. clear ktr arg. revert_until gstb. gcofix CIH. i.
+    ides itr.
+    { steps. }
+    { steps. gbase. eapply CIH; et. }
+    rewrite <- bind_trigger.
+    destruct e; cycle 1.
+    {
+      destruct s; ss.
+      { destruct p; ss.
+        - resub. ired_both. gstep; econs; eauto. steps. gbase. eapply CIH; et.
+        - resub. ired_both. gstep; econs; eauto. steps. gbase. eapply CIH; et.
+      }
+      { destruct e; ss.
+        - resub. ired_both. gstep; econs; et. i. esplits; et. steps. gbase. eapply CIH; et.
+        - resub. ired_both. gstep; econs; et. i. esplits; et. steps. gbase. eapply CIH; et.
+        - resub. ired_both. gstep; econs; et. i. esplits; et. steps. gbase. eapply CIH; et.
+      }
+    }
+    destruct u. resub. ired_both. gstep; econs; eauto. i. subst. destruct mrs_tgt1. esplits. steps.
+    gbase. eapply CIH.
+  Unshelve.
+    all: try (exact Ord.O).
+  Qed.
+
+  Lemma my_lemma2
+        umd
+        (IN: In umd umds)
+    :
+      ModPair.sim (UMod.to_mod umd) (SMod.to_src (UMod.to_smod umd))
+  .
+  Proof.
+    econs; ss; cycle 1.
+    { admit "ez - wf". }
+    i. r. eapply adequacy_lift.
+    econs.
+    { instantiate (1:=fun '(x, y) => x = y). ss.
+      set (ums:=UMod.get_modsem umd sk) in *.
+      rewrite ! List.map_map.
+      eapply Forall2_apply_Forall2.
+      { refl. }
+      i. subst. unfold map_snd. des_ifs.
+      rr. split; ss. r. ii. subst. ss. esplits; et. eapply my_lemma2_aux.
+    }
+    { ss. }
+    { ss. }
+  Qed.
+
+
+
+  Declare Scope l_monad_scope.
+  Local Open Scope l_monad_scope.
+  Notation "'do' X <- A ; B" := (List.flat_map (fun X => B) A) : l_monad_scope.
+  Notation "'do' ' X <- A ; B" := (List.flat_map (fun _x => match _x with | X => B end) A) : l_monad_scope.
+  Notation "'ret'" := (fun X => [X]) (at level 60) : l_monad_scope.
+
+  Lemma gstb_eq: forall ske,
+    _gstb ske =
+    (List.map (fun '(fn, fs) => (fn, fs.(fsb_fspec)))
+       (flat_map SModSem.fnsems
+          (List.map
+             (flip SMod.get_modsem ske)
+             (kmds ++ List.map UMod.to_smod umds))))
+  .
+  Proof.
+    i. unfold _gstb.
+    unfold _kmss, _umss.
+    rewrite map_app. rewrite flat_map_app. rewrite map_app.
+    f_equal.
+    - rewrite <- ! SMod.red_do_ret. erewrite ! SMod.flat_map_assoc. ss.
+    - rewrite <- ! SMod.red_do_ret. erewrite ! SMod.flat_map_assoc.
+      eapply flat_map_ext. intro umd. unfold flip. ss.
+      rewrite <- ! SMod.red_do_ret. erewrite ! SMod.flat_map_assoc. rewrite ! List.app_nil_r.
+      eapply flat_map_ext. intro. unfold map_snd. des_ifs.
+  Qed.
+
+  Definition UMod_main (mainbody: Any.t -> itree (uCallE +' pE +' eventE) Any.t): UMod.t := {|
+    UMod.get_modsem := fun _ => (UModSem.mk [("main", mainbody)] "Main" (tt↑));
+    UMod.sk := Sk.unit;
+  |}
+  .
+
+  Variable (mainbody: Any.t -> itree (uCallE +' pE +' eventE) Any.t).
+  Hypothesis MAINU: In (UMod_main mainbody) umds.
+
+  Let mains: SMod.t := UMod.to_smod (UMod_main mainbody).
+
+  Hypothesis WFR: URA.wf (List.fold_left (⋅) (List.map (SModSem.initial_mr) kmss) ε).
+  (* Hypothesis MAINM: In (SMod.main mainpre mainbody) kmds. *)
+
+  Theorem adequacy_open:
+    refines_closed (Mod.add_list (List.map (SMod.to_tgt _gstb) kmds ++ List.map UMod.to_mod umds))
+                   (Mod.add_list (kmds_top ++ List.map UMod.to_mod umds))
+  .
+  Proof.
+    etrans.
+    { eapply refines_close.
+      rewrite Mod.add_list_app.
+      eapply refines_proper_l.
+      eapply adequacy_local_list.
+      instantiate (1:=(List.map (SMod.to_tgt _gstb ∘ UMod.to_smod) umds)).
+      eapply Forall2_apply_Forall2.
+      { instantiate (1:=eq). refl. }
+      i. subst. eapply my_lemma1; ss.
+    }
+    rewrite <- Mod.add_list_app.
+    etrans.
+    { erewrite <- List.map_map with (f:=UMod.to_smod).
+      rewrite <- map_app.
+      eapply adequacy_type2.
+      - instantiate (1:=(kmds ++ List.map UMod.to_smod umds)).
+        erewrite <- List.map_id with (l:=(kmds ++ List.map UMod.to_smod umds)) at 1.
+        eapply Forall2_apply_Forall2.
+        { instantiate (1:=eq). refl. }
+        i. subst. exists _gstb. split; ss. r. intro ske. rewrite <- gstb_eq. refl.
+      - admit "main pre".
+      - ss. instantiate (1:=ε). rewrite ! URA.unit_id. rewrite ! URA.unit_idl. admit "should be ez".
+      - Check (UModSem.transl_fun_smod mainbody).
+        admit "mid - main argument parameterization".
+        (* instantiate (1:=UModSem.transl_fun_smod mainbody). rewrite in_app_iff. eauto. *)
+    }
+    eapply my_lemma2.
+  Unshelve.
+    all: ss.
+    { ii. apply True. }
+    { ii. apply ITree.spin. }
+  Qed.
+
+
+
+
+
+
+
 
   Lemma sk_link_eq: sk_link = (fold_right Sk.add Sk.unit (List.map SMod.sk
                                           (kmds ++ List.map UMod.to_smod umds))).
@@ -329,6 +460,7 @@ match it and use trivial spec in case of None
       rewrite List.map_map. eapply Forall2_apply_Forall2. { refl. } i. subst. ss.
     - rewrite List.map_map. eapply Forall2_apply_Forall2. { refl. } i. subst. ss.
   Qed.
+  TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
 
   Inductive _sim_body (sim_body: forall [T], Ord.t -> itree EventsL.Es T -> itree EventsL.Es T -> Prop):
     forall [T], Ord.t -> itree EventsL.Es T -> itree EventsL.Es T -> Prop :=
@@ -345,11 +477,11 @@ match it and use trivial spec in case of None
       _sim_body sim_body o0 (Ret t) (Ret t)
   | sim_body_call
       o0 o1
-      fn (args: list val) T (ktr0 ktr1: ktree _ _ T)
+      fn (args: Any.t) T (ktr0 ktr1: ktree _ _ T)
       (SIM: forall rv, sim_body o1 (ktr0 rv) (ktr1 rv))
     :
-      _sim_body sim_body o0 (trigger EventsL.PushFrame;;; trigger (Call fn args↑) >>= ktr0)
-                (trigger EventsL.PushFrame;;; trigger (Call fn (@inr unit _ args)↑) >>= ktr1)
+      _sim_body sim_body o0 (trigger EventsL.PushFrame;;; trigger (Call fn args) >>= ktr0)
+                (trigger EventsL.PushFrame;;; trigger (Call fn (Any.pair tt↑ args)) >>= ktr1)
   | sim_rE
       o0 o1
       T (re: EventsL.rE T) S (ktr0 ktr1: ktree _ _ S)
