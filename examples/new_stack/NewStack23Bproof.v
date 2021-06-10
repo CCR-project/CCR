@@ -172,10 +172,13 @@ Section SIMMODSEM.
       (* assert(A: forall k, URA.wf ((stk_res0 k): URA.car (t:=Excl.t _))). *)
       (* { eapply URA.wf_mon in WF0. *)
       (*   eapply Auth.black_wf in WF0. eapply pw_wf in WF0. des. ii. specialize (WF0 k). ss. } *)
+      assert(D: URA.wf ((stk_res0: @URA.car _stkRA) h)).
+      { eapply URA.wf_mon in WF0. eapply Auth.black_wf in WF0. des. eapply pw_wf in WF0. ss. }
       assert(B: stk_res0 h = Some (Ag.ag P)).
       { dup WF0.
         eapply Auth.auth_included in WF0. des. unfold _is_stack in WF0. eapply pw_extends in WF0. des.
-        spc WF0. des_ifs. TTTTTTTTTTTTTTTTTT ss. eapply Excl.extends in WF0; ss. }
+        spc WF0. des_ifs. eapply Opt.extends in WF0; ss. des; subst. eapply Ag.extends in EXT; subst; ss.
+        rewrite WF0 in D. ur in D. ss. }
       assert(C:=B). eapply SIM in C. rewrite C. steps.
       destruct stk0 as [|x stk1].
       - steps. hret _; ss. iDestruct "A1" as "[A B]". iModIntro. iFrame. iSplit; ss; et.

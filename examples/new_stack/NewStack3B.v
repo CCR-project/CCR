@@ -115,6 +115,18 @@ Theorem agree
 .
 Proof. ur in WF. eapply WF; et. Qed.
 
+Theorem extends
+        x y
+        (WF: URA.wf y)
+        (EXT: URA.extends (ag x) y)
+  :
+    y = ag x
+.
+Proof.
+  ur in WF. r in EXT. des; clarify. ur. ur in WF. des_ifs; ss. unfold ag. f_equal.
+  extensionality x0. apply Axioms.prop_ext. split; i; et.
+Qed.
+
 End Ag.
 End Ag.
 
@@ -154,10 +166,129 @@ Next Obligation. unfold _wf, _add in *. i. unseal "ra". des_ifs. Qed.
 Next Obligation. unfold _wf, _add in *. i. unseal "ra". des_ifs. Qed.
 Next Obligation. unfold _wf, _add in *. i. unseal "ra". des_ifs. eapply URA.wf_mon; et. Qed.
 
+Theorem extends
+        x0 m
+        (WF: URA.wf m)
+        (EXT: URA.extends (Some x0) m)
+  :
+    exists x1, m = Some x1 ∧ <<EXT: URA.extends x0 x1>>
+.
+Proof.
+  r in EXT. des; clarify. ur. ss. ur in WF. des_ifs; ss.
+  - esplits; et. r. esplits; et.
+  - esplits; et. refl.
+Qed.
+
 End Opt.
 End Opt.
 
 Arguments Opt.t: clear implicits.
+
+
+
+
+
+
+
+Module Ag2.
+Section Ag2.
+
+Context {X: Type}.
+
+Variant car: Type := ag (x: X) | unit | boom.
+
+Let _add := fun x y => match x, y with
+                       | ag x, ag y => if excluded_middle_informative (x = y) then ag x else boom
+                       | _, unit => x | unit, _ => y | _, _ => boom
+                       end.
+Let _wf := fun a => a <> boom.
+
+Program Instance t: URA.t := {
+  URA.car := car;
+  URA._add := _add;
+  URA._wf := _wf;
+  URA.unit := unit;
+}
+.
+Next Obligation.
+  unfold _wf, _add in *. i. des_ifs.
+Qed.
+Next Obligation.
+  unfold _wf, _add in *. i. des_ifs.
+Qed.
+Next Obligation.
+  unfold _wf, _add in *. i. unseal "ra". des_ifs.
+Qed.
+Next Obligation. unfold _wf, _add in *. i. unseal "ra". des_ifs. Qed.
+Next Obligation. unfold _wf, _add in *. i. unseal "ra". des_ifs. Qed.
+
+(* Definition ag (x: X): t := just x. *)
+
+(*** duplicable **)
+(* Theorem dup_aux *)
+(*         ag0 *)
+(*   : *)
+(*     <<UPD: URA.updatable ag0 (ag0 ⋅ ag0)>> *)
+(* . *)
+(* Proof. *)
+(*   rr. unfold URA.wf, URA.add in *. unseal "ra". ss. ii. r in H. r. des_ifs. *)
+(*   unfold _add in *. des_ifs. *)
+(*   i. eapply H; tauto. *)
+(* Qed. *)
+
+Theorem dup_aux
+        ag0
+        (WF: URA.wf ag0)
+  :
+    <<UPD: ag0 = (ag0 ⋅ ag0)>>
+.
+Proof. rr. unfold URA.wf, URA.add in *. unseal "ra". ss. destruct ag0; ss. des_ifs. Qed.
+
+(* Theorem dup *)
+(*         x *)
+(*   : *)
+(*     <<UPD: URA.updatable (ag x) ((ag x) ⋅ (ag x))>> *)
+(* . *)
+(* Proof. eapply dup_aux. Qed. *)
+
+Theorem wf
+        x
+  :
+    <<UPD: URA.wf (ag x)>>
+.
+Proof. ur. ss. Qed.
+
+Theorem dup
+        x
+  :
+    <<UPD: (ag x) = ((ag x) ⋅ (ag x))>>
+.
+Proof. eapply dup_aux. eapply wf. Qed.
+
+Theorem agree
+        x y
+        (WF: URA.wf ((ag x) ⋅ (ag y)))
+  :
+    x = y
+.
+Proof. ur in WF. des_ifs. Qed.
+
+Theorem extends
+        x y
+        (WF: URA.wf y)
+        (EXT: URA.extends (ag x) y)
+  :
+    y = ag x
+.
+Proof. ur in WF. r in EXT. des; clarify. ur. ur in WF. des_ifs; ss. Qed.
+
+End Ag2.
+End Ag2.
+
+Arguments Ag2.t: clear implicits.
+
+
+
 
 
 
