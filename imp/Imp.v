@@ -153,7 +153,7 @@ Section Denote.
     | AddrOf x X =>
       v <- trigger (GetPtr X);; trigger (SetVar x v);;; tau;; Ret Vundef
     | Malloc x se =>
-      s <- denote_expr se;; assume (wf_pos_size s);;;
+      s <- denote_expr se;; assume (wf_ofs_size s);;;
       v <- trigger (Call "alloc" ([s]↑));; v <- unwrapN(v↓);;
       trigger (SetVar x v);;; tau;; Ret Vundef
     | Free pe =>

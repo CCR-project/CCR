@@ -258,7 +258,8 @@ Section Compile.
 
     | Malloc x se =>
       do a <- (compile_expr se);
-      Some (Scall (Some (s2p x)) (ef_sig EF_malloc) (Eaddrof (s2p "malloc")) [a])
+      let adjofs := Ebinop Omull (Econst (Olongconst (Int64.repr 8))) a in
+      Some (Scall (Some (s2p x)) (ef_sig EF_malloc) (Eaddrof (s2p "malloc")) [adjofs])
     | Free pe =>
       Some (Sseq Sskip Sskip)
     | Load x pe =>

@@ -103,7 +103,7 @@ Section PROOFS.
         ge le0 x se
     :
       interp_imp ge (denote_stmt (Malloc x se)) le0 =
-      interp_imp ge (s <- denote_expr se;; assume (wf_pos_size s);;;
+      interp_imp ge (s <- denote_expr se;; assume (wf_ofs_size s);;;
       v <- trigger (Call "alloc" ([s]↑));; v <- unwrapN(v↓);;
       trigger (SetVar x v);;; tau;; Ret Vundef) le0.
   Proof. reflexivity. Qed.
@@ -494,7 +494,7 @@ Section PROOFS.
     :
       interp_imp ge (denote_stmt (Malloc x se)) le0 =
       '(le1, s) <- interp_imp ge (denote_expr se) le0;;
-      assume (wf_pos_size s);;; tau;; tau;;
+      assume (wf_ofs_size s);;; tau;; tau;;
       v <- trigger (Call "alloc" ([s]↑));;
       tau;; tau;; v <- unwrapN (v↓);;
       tau;; tau;; tau;; Ret (alist_add x v le1, Vundef).

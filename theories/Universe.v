@@ -31,7 +31,7 @@ Definition modrange_64 : Z -> Prop := fun z => (- 1 < z < modulus_64)%Z.
 Ltac unfold_intrange_64 := unfold intrange_64, min_64, max_64 in *; unfold modulus_64_half, modulus_64, wordsize_64 in *.
 Ltac unfold_modrange_64 := unfold modrange_64, modulus_64, wordsize_64 in *.
 
-Definition scale_ofs (ofs : Z) := (8*ofs)%Z.
+Definition scale_ofs (ofs : Z) := (8 * ofs)%Z.
 Definition wf_val (v : val) :=
   match v with
   | Vint z => intrange_64 z
@@ -39,9 +39,9 @@ Definition wf_val (v : val) :=
   | Vundef => False
   end.
 
-Definition wf_pos_size (v : val) :=
+Definition wf_ofs_size (v : val) :=
   match v with
-  | Vint z => modrange_64 z
+  | Vint z => modrange_64 (scale_ofs z)
   | _ => False
   end.
 
