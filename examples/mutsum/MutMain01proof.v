@@ -50,9 +50,8 @@ Section SIMMODSEM.
       { unfold mut_max. lia. }
     }
     { splits; ss. }
-    mDesAll. des; clarify. eapply Any.upcast_inj in PURE1. des; clarify. steps.
+    mDesAll. des; clarify. steps.
     hret tt; ss.
-    iModIntro. et.
   Qed.
 
 End SIMMODSEM.

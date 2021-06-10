@@ -26,7 +26,8 @@ Section PROOF.
 
   Definition mainsbtb := [("main", mk_specbody main_spec (cfun mainBody))].
 
-  Definition SMain: SMod.t := SMod.main (fun _ o => (⌜o = ord_top⌝: iProp)%I) (cfun mainBody).
+  Definition SMain: SMod.t := SMod.main (fun varg o => (⌜varg = ([]: list val)↑ ∧ o = ord_top⌝: iProp)%I)
+                                        (cfun mainBody).
   Definition Main: Mod.t := SMod.to_tgt (fun _ => GlobalStb) SMain.
 
 End PROOF.

@@ -52,52 +52,43 @@ Section SIMMODSEM.
       steps. rewrite Any.upcast_downcast in *. clarify.
       destruct (alist_find "getbool" (BWStb ++ ClientStb ++ MainStb)) eqn:T; stb_tac; clarify.
       steps. hcall _ _ _ with ""; ss.
-      { et. }
       { splits; ss. ss. }
       mDesAll. clarify. steps.
-      rewrite Any.upcast_downcast in *. clarify.
-      steps. unfold TODO.unbool in *. astart 3.
+      steps. unfold TODO.unbool in *. rewrite _UNWRAPN. steps. astart 3.
       (* TODO: use bind rule to reduce redundancy *)
       des_ifs.
       { steps. acatch.
         hcall _ _ _ with "*"; auto.
-        { iFrame. et. }
         { eauto with ord_step. }
         mDesAll. clarify. steps.
-        rewrite Any.upcast_downcast in *. clarify. acatch.
+        acatch.
 
         hcall _ _ _ with "*"; auto.
-        { iFrame. et. }
         { eauto with ord_step. }
         mDesAll. clarify.
-        rewrite Any.upcast_downcast in *. clarify.
-        eapply Any.upcast_inj in PURE5. des; clarify. steps.
+        rewrite Any.upcast_downcast in *. clarify. steps.
         astop. steps. force_l. eexists. steps.
         force_l; et. steps.
         destruct (alist_find "putint" (BWStb ++ ClientStb ++ MainStb)) eqn:T; stb_tac; clarify.
         steps.
 
         hcall ord_top _ _ with ""; auto.
-        mDesAll. steps. rewrite Any.upcast_downcast in *. clarify.
+        mDesAll. steps. rewrite _UNWRAPN1. steps.
         steps. hret _; ss.
-        { iModIntro. iSplit; ss. iExists _. iSplitR; ss. }
       }
       { steps. acatch.
         hcall _ _ _ with "*"; auto.
-        { iFrame. et. }
         { eauto with ord_step. }
         mDesAll. clarify. steps.
         rewrite Any.upcast_downcast in *. clarify. astop.
-        eapply Any.upcast_inj in PURE4. des; clarify.
         steps. force_l. eexists. steps.
         force_l; et. steps.
         destruct (alist_find "putint" (BWStb ++ ClientStb ++ MainStb)) eqn:T; stb_tac; clarify.
         steps.
 
         hcall ord_top _ _ with ""; auto.
-        mDesAll. steps. rewrite Any.upcast_downcast in *. clarify.
+        mDesAll. subst. steps. rewrite _UNWRAPN0. steps.
         steps. hret _; ss.
-        { iModIntro. iSplit; ss. iExists _. iSplitR; ss. }
       }
     }
     Unshelve. all: ss.

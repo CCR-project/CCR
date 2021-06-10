@@ -26,7 +26,7 @@ Section MAIN.
   Definition ClientStb: list (gname * fspec) :=
     Seal.sealing "stb" [("getbool", getbool_spec) ; ("putint", putint_spec)].
 
-  Let mainpre: Any.t -> ord -> Σ -> Prop := (fun _ o => (OwnM (bw_frag true) ** ⌜o = ord_top⌝)).
+  Let mainpre: Any.t -> ord -> Σ -> Prop := (fun varg o => (OwnM (bw_frag true) ** ⌜varg = ([]: list val)↑ ∧ o = ord_top⌝)).
   Let main_spec: fspec := mk_simple (fun (_: unit) => (mainpre, fun _ => ⌜True⌝: iProp)%I).
 
   Definition mainbody: list val -> itree (hCallE +' pE +' eventE) val :=
