@@ -558,13 +558,13 @@ Section MEM.
   Corollary match_mem_malloc
             n m2 blk tm2
             (SMEM: (blk, m2) = Mem.alloc m n)
-            (TMEM : Memory.Mem.store Mptr (fst (Memory.Mem.alloc tm (- size_chunk Mptr) (8 * n)))
-                                     (snd (Memory.Mem.alloc tm (- size_chunk Mptr) (8 * n))) (- size_chunk Mptr)
-                                     (Values.Vlong (Int64.repr (8 * n))) = Some tm2)
+            (TMEM : Memory.Mem.store Mptr (fst (Memory.Mem.alloc tm (- size_chunk Mptr) (map_ofs n)))
+                                     (snd (Memory.Mem.alloc tm (- size_chunk Mptr) (map_ofs n))) (- size_chunk Mptr)
+                                     (Values.Vlong (Int64.repr (map_ofs n))) = Some tm2)
     :
       <<MM2: match_mem tlof m2 tm2>>.
   Proof.
-    remember (Memory.Mem.alloc tm (- size_chunk Mptr) (8 * n)) as tm1. destruct tm1 as [tm1 tblk].
+    unfold map_ofs in *. remember (Memory.Mem.alloc tm (- size_chunk Mptr) (8 * n)) as tm1. destruct tm1 as [tm1 tblk].
     hexploit match_mem_alloc; eauto. i. inv H.
     split; i; try split.
     - rewrite <- NBLK. eapply Mem.nextblock_store; eauto.
@@ -580,6 +580,16 @@ Section MEM.
           unfold Mem.alloc in SMEM. inv SMEM. ss. inv MM. rewrite NBLK0. depgen n0. clear. i.
           unfold map_blk in *. nia.
     - eapply Mem.store_valid_access_1; eauto. apply MMEM in H. des; auto.
+  Qed.
+
+  Lemma match_mem_free
+        blk ofs m2
+        (SMEM: Mem.free m blk ofs = Some m2)
+    :
+      (<<MM2: match_mem tlof m2 tm>>).
+  Proof.
+    inv MM. unfold Mem.free in SMEM. des_ifs. apply MMEM in Heq. des.
+    split; i; eauto. ss. unfold update in H. des_ifs; eauto.
   Qed.
 
 End MEM.
@@ -1394,7 +1404,49 @@ Section PROOF.
       eapply match_mem_malloc; eauto. unfold Mem.alloc; ss. f_equal. rewrite! Nat.add_0_r. ss.
 
     - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Free. sim_red.
-      admit "hard: free".
+      ss. uo; des_ifs. eapply step_expr; eauto.
+      i. sim_red. destruct rstate. ss. destruct l.
+      { admit "ez: wf_r_state". }
+      grind. unfold ordN in *. do 3 (pfold; sim_tau; left). sim_red.
+      match goal with
+      | [ MCONT: match_code _ ?_ge _ _ _ _ |- _ ] =>
+        set (ge:=_ge) in *
+      end.
+      match goal with
+      | [ MCONT: match_code _ _ ?_ms _ _ _ |- _ ] =>
+        set (ms:=_ms) in *
+      end.
+      unfold cfun. rewrite Any.upcast_downcast. grind. unfold freeF. sim_red.
+      do 4 (pfold; sim_tau; left). sim_red.
+      rewrite PSTATE. rewrite Any.upcast_downcast. grind. unfold unptr. des_ifs; sim_red.
+      1:{ sim_triggerUB. }
+      unfold Mem.free. destruct (Mem.cnts m blk ofs) eqn:MEMCNT; ss.
+      2:{ sim_triggerUB. }
+      sim_red.
+      pfold. econs 6; clarify.
+      { admit "ez: strict_determinate_at". }
+      eexists. eexists.
+      { econs. }
+      eexists. exists (step_tau _).
+      eexists. left. do 7 (pfold; sim_tau; left). sim_red.
+      pfold. econs 6; clarify.
+      { admit "ez: strict_determinate_at". }
+      eexists. eexists.
+      { econs. }
+      eexists. exists (step_tau _). eexists. right. eapply CIH.
+      hexploit match_states_intro.
+      { instantiate (2:=Skip). ss. }
+      1,4,5,6: eauto.
+      3:{ clarify. }
+      3:{ i.
+          match goal with
+          | [ H1: match_states _ _ _ _ ?i0 _ |- match_states _ _ _ _ ?i1 _ ] =>
+            replace i1 with i0; eauto
+          end.
+          unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
+      { ss. }
+      eapply match_mem_free; eauto.
+      instantiate (1:=ofs). instantiate (1:=blk). unfold Mem.free. rewrite MEMCNT. ss.
 
     - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Load. sim_red.
       ss. uo; des_ifs. eapply step_expr; eauto.
@@ -1419,7 +1471,10 @@ Section PROOF.
       pfold. econs 6; clarify.
       { admit "ez: strict_determinate_at". }
       eexists. eexists.
-      { eapply step_set. econs; eauto. ss.
+      { eapply step_set. econs; eauto. ss. inv MM. apply MMEM in MEMCNT. des. unfold Ptrofs.of_int64.
+        assert (POSSIZE: Ptrofs.unsigned (Ptrofs.repr (8 * n)) = (8 * n)%Z).
+        { unfold_modrange_64. rewrite Ptrofs.unsigned_repr; auto. unfold Ptrofs.max_unsigned. unfold_Ptrofs_modulus.
+          unfold scale_ofs in *. des_ifs. nia. }
 
 
         
