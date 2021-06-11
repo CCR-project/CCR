@@ -160,8 +160,8 @@ Section SIMMODSEM.
         }
       }
       { split; ss. eauto with ord_step. }
-      mDesAll. subst. rewrite Any.upcast_downcast.
-      steps. astop. force_l. eexists. steps.
+      mDesAll. subst. rewrite Any.upcast_downcast. steps.
+      astop. steps. force_l. eexists. steps.
 
       (* ret *)
       iret _; ss. iModIntro. iFrame. et.
@@ -170,7 +170,6 @@ Section SIMMODSEM.
 
       (* arg *)
       iarg. mDesAll. des. clarify.
-      eapply Any.upcast_inj in PURE. des; clarify.
       rewrite Any.upcast_downcast. steps. astart 1.
 
       (* open invariant *)
@@ -184,12 +183,11 @@ Section SIMMODSEM.
       (* call with the opened invariant *)
       icall_open _ (_, _, _) with "A1".
       { ss. }
-      { iModIntro. iExists _. iSplitR; ss.
-        iSplitL; ss. iSplitL; ss. iExists _. iSplitR; ss.
+      { iModIntro. iSplitL; ss.
+        iSplitL; ss. iExists _. iSplitR; ss.
         iEval (unfold var_points_to) in "A1". rewrite FIND1. ss. }
       { split; ss. eauto with ord_step. }
-      mDesAll. subst. rewrite Any.upcast_downcast. steps.
-      rewrite FIND0. steps. astop.
+      mDesAll. subst. steps. rewrite FIND0. steps. astop.
 
       (* close invariant *)
       close_inv.
@@ -208,8 +206,7 @@ Section SIMMODSEM.
       iSplitL "A1 POST"; ss.
       { iExists _, _. iSplitR "POST"; ss. iSplitR; ss.
         iPureIntro. i. clarify. esplits; eauto. }
-      { iFrame. iExists _. iSplitR; ss.
-        iSplit; ss. iPureIntro. esplits; et. econs.
+      { iFrame. iSplit; ss. iPureIntro. esplits; et. econs.
         { eapply SKWF. et. }
         econs.
         { eapply RecStb_incl. ss. }

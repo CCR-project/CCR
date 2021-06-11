@@ -216,33 +216,20 @@ Tactic Notation "icall_weaken" uconstr(ftsp) uconstr(o) uconstr(x) uconstr(a) "w
    |
    |start_ipm_proof
     ; iFrame "☃CLOSED ☃OPENER"
-   (* ; iSplitR; [ss|] *)
    |eauto with ord_step
    |
    |on_current ltac:(fun H => try clear H);
     intros ? ? ? ? ? ? [|[?mp_src ?mp_tgt]]; i; simpl;
-    on_current ltac:(fun H => simpl in H)
-    ;
+    on_current ltac:(fun H => simpl in H);
     [mDesSep INV as "☃CLOSED" INV;
-     let ar := fresh "ar" in
-     mDesEx POST as ar;
-     mDesAndPureL POST as TMP POST;
-     let EQ0 := fresh "EQ" in
-     mPure TMP as EQ0; symmetry in EQ0; destruct EQ0;
      mDesAndPureR POST as POST "☃TMP";
-     let EQ := fresh in
-     mPure "☃TMP" as EQ; inversion EQ;
+     let EQ := fresh "EQ" in
+     mPure "☃TMP" as EQ; try (symmetry in EQ; destruct EQ);
      mDesSep POST as "☃OPENER" POST
-    |
-    mDesSep INV as "☃CLOSED" INV;
-    let ar := fresh "ar" in
-    mDesEx POST as ar;
-    mDesAndPureL POST as TMP POST;
-    let EQ0 := fresh "EQ" in
-    mPure TMP as EQ0; symmetry in EQ0; destruct EQ0;
-    mDesAndPureR POST as POST "☃TMP";
-    mDesSep POST as "☃OPENER" POST;
-    mAssertPure False; [iApply (inv_open_unique with "☃OPENER ☃CLOSED")|ss]
+    |mDesSep INV as "☃CLOSED" INV;
+     mDesAndPureR POST as POST "☃TMP";
+     mDesSep POST as "☃OPENER" POST;
+     mAssertPure False; [iApply (inv_open_unique with "☃OPENER ☃CLOSED")|ss]
     ]
   ].
 
