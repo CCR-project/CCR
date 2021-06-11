@@ -37,11 +37,13 @@ Section PROOF.
         mp0 <- trigger (PGet);;
         m0 <- mp0↓?;;
         `sz: Z <- (pargs [Tint] varg)?;;
-        delta <- trigger (Choose _);;
-        let m0': Mem.t := mem_pad m0 delta in
-        let (blk, m1) := Mem.alloc m0' sz in
-        trigger (PPut m1↑);;;
-        Ret (Vptr blk 0)
+        if (Z_le_gt_dec 0 sz && Z_lt_ge_dec (8 * sz) modulus_64)
+        then (delta <- trigger (Choose _);;
+              let m0': Mem.t := mem_pad m0 delta in
+              let (blk, m1) := Mem.alloc m0' sz in
+              trigger (PPut m1↑);;;
+              Ret (Vptr blk 0))
+        else triggerUB
     .
 
     Definition freeF: list val -> itree Es val :=

@@ -201,7 +201,8 @@ Section MATCH.
       (MMEM: forall blk ofs v,
           (<<SMCNT: m.(Mem.cnts) blk ofs = Some v>>) ->
           ((<<TMCNT: Memory.Mem.load Mint64 tm (map_blk blk) (map_ofs ofs) = Some (map_val v)>>) /\
-           (<<TVALID: Mem.valid_access tm Mint64 (map_blk blk) (map_ofs ofs) Writable>>)))
+           (<<TVALID: Mem.valid_access tm Mint64 (map_blk blk) (map_ofs ofs) Writable>>) /\
+           (<<WFOFS: (0 < ofs)%Z>>)))
     :
       match_mem m tm
   .
