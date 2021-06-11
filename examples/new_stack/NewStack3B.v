@@ -127,6 +127,16 @@ Proof.
   extensionality x0. apply Axioms.prop_ext. split; i; et.
 Qed.
 
+Lemma ag_inj
+      (x0 x1: X)
+      (EQ: ag x0 = ag x1)
+  :
+    x0 = x1
+.
+Proof.
+  clarify. eapply func_ext_rev with (a:=x0) in H0. eapply prop_ext_rev in H0. des; et.
+Qed.
+
 End Ag.
 End Ag.
 
@@ -165,6 +175,17 @@ Qed.
 Next Obligation. unfold _wf, _add in *. i. unseal "ra". des_ifs. Qed.
 Next Obligation. unfold _wf, _add in *. i. unseal "ra". des_ifs. Qed.
 Next Obligation. unfold _wf, _add in *. i. unseal "ra". des_ifs. eapply URA.wf_mon; et. Qed.
+
+Theorem wf
+        m
+  :
+    (<<WF: URA.wf (Some m)>>) <-> <<WF: URA.wf m>>
+.
+Proof.
+  split; i.
+  - ur in H; ss.
+  - ur; ss.
+Qed.
 
 Theorem extends
         x0 m

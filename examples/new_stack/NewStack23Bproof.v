@@ -165,7 +165,7 @@ Section SIMMODSEM.
     econs; ss.
     { unfold NewStack2.pop_body, cfun. init. harg. fold wf. des_ifs_safe. mDesAll. des; clarify.
       steps. rewrite Any.upcast_downcast in *. clarify. steps.
-      astart 0. astop. steps. apply Any.upcast_inj in PURE0. des; clarify.
+      astart 1. steps. apply Any.upcast_inj in PURE0. des; clarify.
       rename a0 into stk_mgr0. rename n into h. rename a1 into stk_res0.
       mCombine "A1" "A".
       mOwnWf "A1".
@@ -179,347 +179,59 @@ Section SIMMODSEM.
         eapply Auth.auth_included in WF0. des. unfold _is_stack in WF0. eapply pw_extends in WF0. des.
         spc WF0. des_ifs. eapply Opt.extends in WF0; ss. des; subst. eapply Ag.extends in EXT; subst; ss.
         rewrite WF0 in D. ur in D. ss. }
-      assert(C:=B). eapply SIM in C. rewrite C. steps.
-      destruct stk0 as [|x stk1].
-      - steps. hret _; ss. iDestruct "A1" as "[A B]". iModIntro. iFrame. iSplit; ss; et.
+      hexploit (SIM h); et. intro T; des; [|by clarify]. rewrite B in *.
+      apply some_injective in SRC. eapply (@Ag.ag_inj _ P P0) in SRC. subst. ss. steps.
+      rewrite Any.upcast_downcast in *. sym in _UNWRAPN. clarify. rewrite TGT. steps.
+      destruct stk as [|x stk1].
+      - astop. steps. force_l. esplits. steps. hret _; ss. iDestruct "A1" as "[A B]". iModIntro. iFrame.
+        repeat iSplit; ss; et.
       - steps.
-        destruct (alist_find "debug" (DebugStb ++ StackStb)) eqn:U; cycle 1.
-        { exfalso. stb_tac. ss. }
-        dup U. revert U. stb_tac. clarify. i.
-        apply STBINCL in U. rewrite U. steps. rewrite Any.upcast_downcast. steps.
-
-        set (stk_res1:=<[h:=Excl.just stk1]>stk_res0).
-        assert(WF1: URA.wf (stk_res1: URA.car (t:=_stkRA))).
-        { subst stk_res1. eapply (@pw_insert_wf); et.
-          { eapply URA.wf_mon in WF0. eapply Auth.black_wf in WF0. ss. }
-          ur; ss.
+        assert(SIM0: sim (stk_res0) (<[h:=stk1]> stk_mgr0)).
+        { replace stk_res0 with (<[h:=Some (Ag.ag P0)]>stk_res0); cycle 1.
+          { extensionality h0. unfold insert, fn_insert. des_ifs. }
+          eapply sim_update; et. inv PR; ss.
         }
 
-        mAssert _ with "A1".
-        { iApply (OwnM_Upd with "A1").
-          eapply Auth.auth_update with (a':=stk_res1) (b':=_is_stack h (stk1)).
-          bar. ii. ss. des. clarify. esplits; et.
-          assert(D: ctx0 h = Excl.unit).
-          { clear - B. repeat ur in B. unfold _is_stack in *. des_ifs. }
-          extensionality h0. subst stk_res1. unfold insert, fn_insert. des_ifs. 
-          - ur. rewrite D. unfold _is_stack. ur. des_ifs.
-          - unfold _is_stack. ur. des_ifs.
-        }
-        mUpd "A". mDesOwn "A".
-
-        assert(SIM0: sim (<[h:=Excl.just stk1]> stk_res0) (<[h:=stk1]> stk_mgr0)).
-        { eapply sim_update; et. }
-
-        hcall _ _ _ with "A"; ss; et.
-        { iModIntro. iSplit; ss. iExists _, stk_res1. iSplit; ss; et. }
-        { ss. admit "this will be removed in open setting; it should be ord_top". }
-        steps. mDesAll. subst. des; clarify.
-
-        hret _; ss.
-        iModIntro. iFrame. iSplit; ss. iExists _, _; ss; et.
+        mDesOwn "A1".
+        acatch.
+        { eapply STBINCL. stb_tac; ss. }
+        steps. hcall _ _ _ with "A1"; auto.
+        { iModIntro. iSplitL; ss; et. }
+        { esplits; ss; et. eauto with ord_step. }
+        fold wf. steps. astop. steps. force_l. esplits. steps. hret _; ss.
+        { iModIntro. iDestruct "POST" as "[% %]". subst. iFrame; ss; et. repeat iSplit; ss; et.
+          iExists _. iPureIntro. esplits; ss; et. right. inv PR;ss. }
     }
     econs; ss.
     { unfold NewStack2.push_body, cfun. init. harg. fold wf. des_ifs_safe. mDesAll. des; clarify.
-      steps. rewrite Any.upcast_downcast in *. clarify. steps.
-      astart 0. astop. steps. rewrite Any.upcast_downcast in *. clarify.
-      rename g into stk_mgr0. rename n into h. rename a1 into stk_res0. rename l into stk0. rename z into x.
-      mCombine "A1" "A".
-      mOwnWf "A1".
-      assert(A: forall k, URA.wf ((stk_res0 k): URA.car (t:=Excl.t _))).
-      { eapply URA.wf_mon in WF0.
-        eapply Auth.black_wf in WF0. eapply pw_wf in WF0. des. ii. specialize (WF0 k). ss. }
-      assert(B: stk_res0 h = Some stk0).
-      { dup WF0.
-        eapply Auth.auth_included in WF0. des. unfold _is_stack in WF0. eapply pw_extends in WF0. des.
-        spc WF0. des_ifs. ss. eapply Excl.extends in WF0; ss. }
-      assert(C:=B). eapply SIM in C. rewrite C. steps.
-
-      destruct (alist_find "debug" (DebugStb ++ StackStb)) eqn:U; cycle 1.
-      { exfalso. stb_tac. ss. }
-      dup U. revert U. stb_tac. clarify. i.
-      apply STBINCL in U. rewrite U. steps. rewrite Any.upcast_downcast. steps.
-
-      set (stk_res1:=<[h:=Excl.just (x::stk0)]>stk_res0).
-      assert(WF1: URA.wf (stk_res1: URA.car (t:=_stkRA))).
-      { subst stk_res1. eapply (@pw_insert_wf); et.
-        { eapply URA.wf_mon in WF0. eapply Auth.black_wf in WF0. ss. }
-        ur; ss.
-      }
-
-      mAssert _ with "A1".
-      { iApply (OwnM_Upd with "A1").
-        eapply Auth.auth_update with (a':=stk_res1) (b':=_is_stack h (x::stk0)).
-        bar. ii. ss. des. clarify. esplits; et.
-        assert(D: ctx0 h = Excl.unit).
-        { clear - B. repeat ur in B. unfold _is_stack in *. des_ifs. }
-        extensionality h0. subst stk_res1. unfold insert, fn_insert. des_ifs. 
-        - ur. rewrite D. unfold _is_stack. ur. des_ifs.
-        - unfold _is_stack. ur. des_ifs.
-      }
-      mUpd "A". mDesOwn "A".
-
-      assert(SIM0: ∀ h0 stk, <[h:=Excl.just (x::stk0)]> stk_res0 h0 = Excl.just stk ↔
-                             <[h:=(x::stk0)]> stk_mgr0 !! h0 = Some stk).
-      { eapply sim_update; et. }
-
-      hcall _ _ _ with "A"; ss; et.
-      { iModIntro. iSplit; ss. iExists _, stk_res1. iSplit; ss; et. }
-      { ss. admit "ditto". }
-      steps. mDesAll. subst. des; clarify.
-
-      hret _; ss.
-      iModIntro. iFrame. iSplit; ss. iExists _, _; ss; et.
-    }
-  Unshelve.
-    all: ss.
-  Qed.
-
-End SIMMODSEM.
-
-
-
-Section SIMMOD.
-
-  Context `{Σ: GRA.t}.
-  Context `{@GRA.inG stkRA Σ}.
-
-  Variable global_stb: Sk.t -> list (string * fspec).
-  Hypothesis STBINCL: forall sk, stb_incl (DebugStb ++ StackStb) (global_stb sk).
-
-  Theorem correct: ModPair.sim (NewStack3A.Stack global_stb) (NewStack2.Stack).
-  Proof.
-    econs; ss.
-    { ii. eapply adequacy_lift. eapply sim_modsem; ss. }
-    ii; ss. repeat (Psimpl; econs; ss).
-  Qed.
-
-End SIMMOD.
-
-
-
-
-Require Import NewStackHeader NewStack2 NewStack3B HoareDef SimModSem.
-Require Import Coqlib.
-Require Import Universe.
-Require Import Skeleton.
-Require Import PCM.
-Require Import ModSem Behavior.
-Require Import Relation_Definitions.
-
-(*** TODO: export these in Coqlib or Universe ***)
-Require Import Relation_Operators.
-Require Import RelationPairs.
-From ITree Require Import
-     Events.MapDefault.
-From ExtLib Require Import
-     Core.RelDec
-     Structures.Maps
-     Data.Map.FMapAList.
-Require Import TODOYJ.
-Require Import HTactics Logic IPM.
-Require Import OpenDef STB.
-Require Import TODO.
-
-Set Implicit Arguments.
-
-Local Open Scope nat_scope.
-
-
-
-Section SIMMODSEM.
-
-  Context `{Σ: GRA.t}.
-  Context `{@GRA.inG stkRA Σ}.
-
-  Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
-
-  Let wf: W -> Prop :=
-    @mk_wf _ unit
-           (fun _ _ _stk_mgr0 =>
-              (∃ (stk_mgr0: gmap mblock (list Z)) (stk_res0: URA.car (t:=_stkRA)),
-                  (⌜(<<PHYS: _stk_mgr0 = stk_mgr0↑>>) /\
-                   (<<SIM: forall h stk, stk_res0 h = Some stk <-> stk_mgr0 !! h = Some stk>>)⌝)
-                  ∧ (OwnM ((Auth.black stk_res0): URA.car (t:=stkRA)))
-              )%I)
-           (fun _ _ _ => ⌜True⌝%I)
-  .
-
-  Section AUX.
-    Context {K: Type} `{M: URA.t}.
-    Let RA := URA.pointwise K M.
-
-    Lemma pw_extends (f0 f1: K -> M) (EXT: @URA.extends RA f0 f1): <<EXT: forall k, URA.extends (f0 k) (f1 k)>>.
-    Proof. ii. r in EXT. des. subst. ur. ss. eexists; et. Qed.
-
-    Lemma pw_wf: forall (f: K -> M) (WF: URA.wf (f: @URA.car RA)), <<WF: forall k, URA.wf (f k)>>.
-    Proof. ii; ss. rewrite URA.unfold_wf in WF. ss. Qed.
-
-    Lemma pw_insert_wf: forall `{EqDecision K} (f: K -> M) k v (WF: URA.wf (f: @URA.car RA)) (WFV: URA.wf v),
-        <<WF: URA.wf (<[k:=v]> f: @URA.car RA)>>.
-    Proof.
-      i. unfold insert, fn_insert. ur. ii. des_ifs. ur in WF. eapply WF.
-    Qed.
-
-  End AUX.
-
-  Variable global_stb: list (string * fspec).
-  Hypothesis STBINCL: stb_incl (DebugStb ++ StackStb) global_stb.
-
-  Theorem sim_modsem: ModSemPair.sim (NewStack3A.StackSem global_stb) (NewStack2.StackSem).
-  Proof.
-    econstructor 1 with (wf:=wf); ss; et; swap 2 3.
-    { econs; ss.
-      - eapply to_semantic; cycle 1. { admit "ez - wf". } iIntros "H". iExists _, _. iSplit; ss; et.
-      - eapply to_semantic; cycle 1. { eapply URA.wf_unit. } iIntros "H". iPureIntro. ss.
-    }
-    econs; ss.
-    { unfold NewStack2.new_body, cfun. init. harg. fold wf. mDesAll. des; clarify.
-      apply Any.upcast_inj in PURE0. des; clarify. steps. rewrite Any.upcast_downcast in *. clarify. steps.
-      astart 0. astop. steps. rewrite Any.upcast_downcast in *. clarify.
-      rename g into stk_mgr0. rename x0 into h. rename a1 into stk_res0. force_l. exists (Vptr h 0). steps.
+      steps. rewrite Any.upcast_downcast in *. apply Any.upcast_inj in PURE0. des; clarify. steps.
+      rename g into stk_mgr0. rename n into h. rename a2 into stk_res0. rename a0 into x.
+      rewrite Any.upcast_downcast in *. clarify.
+      mCombine "A" "PRE".
       mOwnWf "A".
-      assert(WF1: forall k, stk_res0 k <> Excl.boom).
-      { eapply Auth.black_wf in WF0. eapply pw_wf in WF0. des. ii. specialize (WF0 k). rewrite H0 in WF0.
-        ur in WF0. ss. }
-
-      hret _; ss.
-      { iPoseProof (OwnM_Upd with "A") as "A".
-        { eapply Auth.auth_alloc2. instantiate (1:=(_is_stack h [])).
-          ur. i. specialize (WF1 k).
-          destruct (dec k h).
-          - subst. ur.
-            destruct (stk_res0 h) eqn:T; ss.
-            + erewrite SIM in T. clarify.
-            + unfold _is_stack. des_ifs.
-          - ur.
-            destruct (stk_res0 k) eqn:T; ss.
-            + unfold _is_stack. des_ifs.
-            + unfold _is_stack. des_ifs.
-        }
-        iMod "A". iDestruct "A" as "[A B]". iModIntro. iSplitL "A"; et.
-        iExists _, _. iSplit; ss; et. iSplit; ss; et. iPureIntro. ii.
-        assert(B: stk_res0 h = Excl.unit).
-        { destruct (stk_res0 h) eqn:T; ss.
-          - rewrite SIM in T. rewrite T in *. ss.
-          - exploit WF1; et; ss.
-        }
-        clear - SIM WF1 B.
-        destruct (dec h h0).
-        - subst. rewrite lookup_insert.
-          ur. ur. unfold _is_stack. des_ifs_safe. ss. clarify. split; i; clarify.
-        - rewrite lookup_insert_ne; ss.
-          ur. ur. unfold _is_stack. des_ifs_safe. ss. erewrite <- SIM. split; i; des_ifs.
-      }
-    }
-    econs; ss.
-    { unfold NewStack2.pop_body, cfun. init. harg. fold wf. des_ifs_safe. mDesAll. des; clarify.
-      steps. rewrite Any.upcast_downcast in *. clarify. steps.
-      astart 0. astop. steps. rewrite Any.upcast_downcast in *. clarify.
-      rename g into stk_mgr0. rename n into h. rename a1 into stk_res0. rename varg_src into stk0.
-      mCombine "A1" "A".
-      mOwnWf "A1".
-      assert(A: forall k, URA.wf ((stk_res0 k): URA.car (t:=Excl.t _))).
+      assert(A: forall k, URA.wf ((stk_res0 k): URA.car (t:=Opt.t (Ag.t _)))).
       { eapply URA.wf_mon in WF0.
-        eapply Auth.black_wf in WF0. eapply pw_wf in WF0. des. ii. specialize (WF0 k). ss. }
-      assert(B: stk_res0 h = Some stk0).
+        eapply Auth.black_wf in WF0. eapply pw_wf in WF0. des. ii. specialize (WF0 k). apply WF0. }
+      assert(B: stk_res0 h = Some (Ag.ag P)).
       { dup WF0.
         eapply Auth.auth_included in WF0. des. unfold _is_stack in WF0. eapply pw_extends in WF0. des.
-        spc WF0. des_ifs. ss. eapply Excl.extends in WF0; ss. }
-      assert(C:=B). eapply SIM in C. rewrite C. steps.
-      destruct stk0 as [|x stk1].
-      - steps. hret _; ss. iDestruct "A1" as "[A B]". iModIntro. iFrame. iSplit; ss; et.
-      - steps.
-        destruct (alist_find "debug" (DebugStb ++ StackStb)) eqn:U; cycle 1.
-        { exfalso. stb_tac. ss. }
-        dup U. revert U. stb_tac. clarify. i.
-        apply STBINCL in U. rewrite U. steps. rewrite Any.upcast_downcast. steps.
-
-        set (stk_res1:=<[h:=Excl.just stk1]>stk_res0).
-        assert(WF1: URA.wf (stk_res1: URA.car (t:=_stkRA))).
-        { subst stk_res1. eapply (@pw_insert_wf _ (Excl.t (list Z))); et.
-          { eapply URA.wf_mon in WF0. eapply Auth.black_wf in WF0. ss. }
-          ur; ss.
-        }
-
-        mAssert _ with "A1".
-        { iApply (OwnM_Upd with "A1").
-          eapply Auth.auth_update with (a':=stk_res1) (b':=_is_stack h (stk1)).
-          bar. ii. ss. des. clarify. esplits; et.
-          assert(D: ctx0 h = Excl.unit).
-          { clear - B. repeat ur in B. unfold _is_stack in *. des_ifs. }
-          extensionality h0. subst stk_res1. unfold insert, fn_insert. des_ifs. 
-          - ur. rewrite D. unfold _is_stack. ur. des_ifs.
-          - unfold _is_stack. ur. des_ifs.
-        }
-        mUpd "A". mDesOwn "A".
-
-        assert(SIM0: ∀ h0 stk,
-                  <[h:=Excl.just stk1]> stk_res0 h0 = Excl.just stk ↔ <[h:=stk1]> stk_mgr0 !! h0 = Some stk).
-        { ii. destruct (dec h h0).
-          - subst. erewrite ! lookup_insert. unfold insert, fn_insert. des_ifs. split; i; clarify.
-          - erewrite ! lookup_insert_ne; ss. unfold insert, fn_insert. des_ifs. }
-
-        hcall _ _ _ with "A"; ss; et.
-        { iModIntro. iSplit; ss. iExists _, stk_res1. iSplit; ss; et. }
-        { ss. }
-        steps. mDesAll. subst. des; clarify.
-
-        hret _; ss.
-        iModIntro. iFrame. iSplit; ss. iExists _, _; ss; et.
-    }
-    econs; ss.
-    { unfold NewStack2.push_body, cfun. init. harg. fold wf. des_ifs_safe. mDesAll. des; clarify.
-      steps. rewrite Any.upcast_downcast in *. clarify. steps.
-      astart 0. astop. steps. rewrite Any.upcast_downcast in *. clarify.
-      rename g into stk_mgr0. rename n into h. rename a1 into stk_res0. rename l into stk0. rename z into x.
-      mCombine "A1" "A".
-      mOwnWf "A1".
-      assert(A: forall k, URA.wf ((stk_res0 k): URA.car (t:=Excl.t _))).
-      { eapply URA.wf_mon in WF0.
-        eapply Auth.black_wf in WF0. eapply pw_wf in WF0. des. ii. specialize (WF0 k). ss. }
-      assert(B: stk_res0 h = Some stk0).
-      { dup WF0.
-        eapply Auth.auth_included in WF0. des. unfold _is_stack in WF0. eapply pw_extends in WF0. des.
-        spc WF0. des_ifs. ss. eapply Excl.extends in WF0; ss. }
-      assert(C:=B). eapply SIM in C. rewrite C. steps.
-
-      destruct (alist_find "debug" (DebugStb ++ StackStb)) eqn:U; cycle 1.
-      { exfalso. stb_tac. ss. }
-      dup U. revert U. stb_tac. clarify. i.
-      apply STBINCL in U. rewrite U. steps. rewrite Any.upcast_downcast. steps.
-
-      set (stk_res1:=<[h:=Excl.just (x::stk0)]>stk_res0).
-      assert(WF1: URA.wf (stk_res1: URA.car (t:=_stkRA))).
-      { subst stk_res1. eapply (@pw_insert_wf _ (Excl.t (list Z))); et.
-        { eapply URA.wf_mon in WF0. eapply Auth.black_wf in WF0. ss. }
-        ur; ss.
+        spc WF0. des_ifs. eapply Opt.extends in WF0; et. des; subst. ss.
+        eapply Ag.extends in EXT; subst; et. eapply Opt.wf; ss; et. rewrite <- WF0; et. }
+      hexploit (SIM h); et. intro T; des; [|by clarify]. rewrite B in *.
+      apply some_injective in SRC. apply (@Ag.ag_inj _ P P0) in SRC. subst. ss. rewrite TGT. steps.
+      astart 1. acatch; ss.
+      { eapply STBINCL. stb_tac; ss. }
+      assert(SIM0: sim (stk_res0) (<[h:=x :: stk]> stk_mgr0)).
+      { replace stk_res0 with (<[h:=Some (Ag.ag P0)]>stk_res0); cycle 1.
+        { extensionality h0. unfold insert, fn_insert. des_ifs. }
+        eapply sim_update; et.
       }
-
-      mAssert _ with "A1".
-      { iApply (OwnM_Upd with "A1").
-        eapply Auth.auth_update with (a':=stk_res1) (b':=_is_stack h (x::stk0)).
-        bar. ii. ss. des. clarify. esplits; et.
-        assert(D: ctx0 h = Excl.unit).
-        { clear - B. repeat ur in B. unfold _is_stack in *. des_ifs. }
-        extensionality h0. subst stk_res1. unfold insert, fn_insert. des_ifs. 
-        - ur. rewrite D. unfold _is_stack. ur. des_ifs.
-        - unfold _is_stack. ur. des_ifs.
-      }
-      mUpd "A". mDesOwn "A".
-
-      assert(SIM0: ∀ h0 stk, <[h:=Excl.just (x::stk0)]> stk_res0 h0 = Excl.just stk ↔
-                             <[h:=(x::stk0)]> stk_mgr0 !! h0 = Some stk).
-      { ii. destruct (dec h h0).
-        - subst. erewrite ! lookup_insert. unfold insert, fn_insert. des_ifs. split; i; clarify.
-        - erewrite ! lookup_insert_ne; ss. unfold insert, fn_insert. des_ifs. }
-
-      hcall _ _ _ with "A"; ss; et.
-      { iModIntro. iSplit; ss. iExists _, stk_res1. iSplit; ss; et. }
-      { ss. }
-      steps. mDesAll. subst. des; clarify.
-
-      hret _; ss.
-      iModIntro. iFrame. iSplit; ss. iExists _, _; ss; et.
+      mDesOwn "A".
+      steps. hcall _ _ _ with "A"; auto.
+      { iModIntro. iSplitL; ss; et. }
+      { esplits; ss; et. eauto with ord_step. }
+      fold wf. steps. astop. steps. force_l. esplits. steps. hret _; ss.
+      { iModIntro. iDestruct "POST" as "[% %]". subst. iFrame; ss; et. }
     }
   Unshelve.
     all: ss.
@@ -537,7 +249,7 @@ Section SIMMOD.
   Variable global_stb: Sk.t -> list (string * fspec).
   Hypothesis STBINCL: forall sk, stb_incl (DebugStb ++ StackStb) (global_stb sk).
 
-  Theorem correct: ModPair.sim (NewStack3A.Stack global_stb) (NewStack2.Stack).
+  Theorem correct: ModPair.sim (NewStack3B.Stack global_stb) (NewStack2.Stack).
   Proof.
     econs; ss.
     { ii. eapply adequacy_lift. eapply sim_modsem; ss. }
