@@ -62,7 +62,67 @@ Section SIMMODSEM.
       - eapply to_semantic; cycle 1. { eapply URA.wf_unit. } iIntros "H". iPureIntro. ss.
     }
     econs; ss.
-    { unfold newF. init. harg. destruct varg_src.
+    { unfold newF. init. harg.
+
+
+
+      {
+        assert(ord_cur = ord_top); subst.
+        { des_ifs; mDesAll; des; ss. }
+        Ltac same_body_tac :=
+          match goal with
+          | |- context[map_or_else (Any.split ?v) ?l (KModSem.transl_fun_tgt ?body ?varg_src)] =>
+            let r := constr:(KModSem.transl_fun_tgt body varg_src) in
+            let varg := match goal with | [H: context[varg_src = ?varg] |- _] => varg end in
+            replace (map_or_else (Any.split v) l r) with (KModSem.transl_fun_tgt body varg);
+            [|on_current ltac:(fun ACC => clear - ACC); mClear "INV"; des_ifs; mDesAll; ss; des; subst; ss; fail]
+          end.
+        same_body_tac.
+        rename x into xx.
+        destruct x; [|mAssertPure False; ss]. mClear "-INV". des_ifs. mDesAll; des; subst; ss.
+        f_equal.
+        destruct p as [dummy argh]. mPure "PRE".
+        { unfold map_or_else.
+        replace (match Any.split varg_src with
+                 | Some (_, argh) =>
+                   KModSem.transl_fun_tgt
+                     (λ varg0 : Any.t,
+                                ` varg1 : list val <- unwrapN (Any.downcast varg0);;
+                                          ` vret : val <- new_body varg1;; Ret (Any.upcast vret)) argh
+                 | None =>
+                   KModSem.transl_fun_tgt
+                     (λ varg0 : Any.t,
+                                ` varg1 : list val <- unwrapN (Any.downcast varg0);;
+                                          ` vret : val <- new_body varg1;; Ret (Any.upcast vret)) varg_src
+                 end) with
+            (KModSem.transl_fun_tgt
+               (λ varg0 : Any.t,
+                          ` varg1 : list val <- unwrapN (Any.downcast varg0);;
+                                    ` vret : val <- new_body varg1;; Ret (Any.upcast vret)) varg); cycle 1.
+        { des_ifs; mDesAll; des; clarify; ss. }
+        match goal with
+        | |- context[match Any.split ?x with | _ => _ end] => idtac x
+        end. TTTTTTTTTTT
+        
+        destruct x.
+        - destruct (Any.split varg_src) eqn:T; cycle 1.
+          { mAssertPure False; ss. }
+          destruct p as [_dummy argh].
+        (*   [("PRE", ⌜argh = varg ∧ ord_cur = ord_top⌝%I); *)
+        (* KModSem.transl_fun_tgt *)
+        (*   (λ varg0 : Any.t, *)
+        (*      ` varg1 : list val <- unwrapN (Any.downcast varg0);; *)
+        (*      ` vret : val <- new_body varg1;; Ret (Any.upcast vret)) argh *)
+          admit "".
+        - destruct (Any.split varg_src) eqn:T.
+          { mAssertPure False; ss. }
+          rename varg_src into argh.
+      }
+
+
+
+
+      destruct varg_src.
       { ss. des_ifs; mDesAll; ss. }
       destruct x; mDesAll; ss. des; subst.
       unfold new_body, ccall. steps. rewrite Any.upcast_downcast in *; clarify. steps. kstart 1.

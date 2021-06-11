@@ -20,9 +20,9 @@ Section PROOF.
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG memRA Σ}.
 
-  Definition new_spec: ftspec unit unit := kspec_trivial_bottom.
-  Definition pop_spec: ftspec unit unit := kspec_trivial_bottom.
-  Definition push_spec: ftspec unit unit := kspec_trivial_bottom.
+  Definition new_spec: fspec := fspec_trivial.
+  Definition pop_spec: fspec := fspec_trivial.
+  Definition push_spec: fspec := fspec_trivial.
 
   Notation pget := (p0 <- trigger PGet;; `p0: (gmap mblock (list Z)) <- p0↓ǃ;; Ret p0) (only parsing).
   Notation pput p0 := (trigger (PPut (p0: (gmap mblock (list Z)))↑)) (only parsing).
@@ -65,7 +65,7 @@ Section PROOF.
       match stk0 with
       | x :: stk1 =>
         stk_mgr2 <- pget;; pput (<[handle:=stk1]> stk_mgr2);;;
-        trigger (kCall "debug" (inr [Vint 0; Vint x]));;;
+        trigger (kCall false false "debug" ([Vint 0; Vint x]↑));;;
         Ret (Vint x)
       | _ =>
         stk_mgr2 <- pget;; pput (<[handle:=[]]> stk_mgr2);;;
@@ -87,14 +87,14 @@ Section PROOF.
       let stk_mgr1 := delete handle stk_mgr0 in pput stk_mgr1;;;
       APCK;;;
       stk_mgr2 <- pget;; pput (<[handle:=(x :: stk0)]> stk_mgr2);;;
-      trigger (kCall "debug" (inr [Vint 1; Vint x]));;;
+      trigger (kCall false false "debug" ([Vint 1; Vint x]↑));;;
       Ret Vundef
   .
 
   Definition StackSbtb: list (gname * kspecbody) :=
-    [("new", mk_kspecbody new_spec new_body);
-    ("pop", mk_kspecbody pop_spec pop_body);
-    ("push",   mk_kspecbody push_spec push_body)
+    [("new", mk_kspecbody new_spec (cfun new_body) (cfun new_body));
+    ("pop", mk_kspecbody pop_spec (cfun new_body) (cfun pop_body));
+    ("push",   mk_kspecbody push_spec (cfun new_body) (cfun push_body))
     ].
 
   Definition StackStb: list (gname * fspec).
@@ -106,7 +106,7 @@ Section PROOF.
 
   Definition DebugStb: list (gname * fspec).
    eapply (Seal.sealing "stb").
-   eapply [("debug", fspec_trivial2)].
+   eapply [("debug", fspec_trivial)].
   Defined.
 
   Definition KStackSem: KModSem.t := {|

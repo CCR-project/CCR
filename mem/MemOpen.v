@@ -35,24 +35,24 @@ Section PROOF.
                                         OwnM ((b, 0%Z) |-> (List.repeat (Vint 0) sz)))%I)
     ))).
 
-  Definition free_spec: ftspec unit unit :=
-    (mk_ksimple (fun '(b, ofs) => (
+  Definition free_spec: fspec :=
+    (mk_simple (fun '(b, ofs) => (
                      (fun varg o => (∃ v, ⌜varg = ([Vptr b ofs])↑⌝ **
                                           OwnM ((b, ofs) |-> [v]) **
                                           ⌜o = ord_pure 0⌝)%I),
                      (fun _ => ⌜True⌝%I)
     ))).
 
-  Definition load_spec: ftspec unit unit :=
-    (mk_ksimple (fun '(b, ofs, v) => (
+  Definition load_spec: fspec :=
+    (mk_simple (fun '(b, ofs, v) => (
                      (fun varg o => ⌜varg = ([Vptr b ofs])↑⌝ **
                                     OwnM ((b, ofs) |-> [v]) **
                                     ⌜o = ord_pure 0⌝),
                      (fun vret => OwnM ((b, ofs) |-> [v]) ** ⌜vret = v↑⌝)
     ))).
 
-  Definition store_spec: ftspec unit unit :=
-    (mk_ksimple
+  Definition store_spec: fspec :=
+    (mk_simple
        (fun '(b, ofs, v_new) => (
             (fun varg o =>
                (∃ v_old, ⌜varg = ([Vptr b ofs ; v_new])↑⌝ **
@@ -60,8 +60,8 @@ Section PROOF.
             (fun _ => OwnM ((b, ofs) |-> [v_new]))
     ))).
 
-  Definition cmp_spec: ftspec unit unit :=
-    (mk_ksimple
+  Definition cmp_spec: fspec :=
+    (mk_simple
        (fun '(result, resource) => (
           (fun varg o =>
           ((∃ b ofs v, ⌜varg = [Vptr b ofs; Vnullptr]↑⌝ ** ⌜resource = ((b, ofs) |-> [v])⌝ ** ⌜result = false⌝) ∨
@@ -86,11 +86,11 @@ Section PROOF.
   Local Existing Instance GURA.
 
   Definition MemSbtb: list (gname * kspecbody) :=
-    [("alloc", mk_kspecbody alloc_spec allocF);
-    ("free",   mk_kspecbody free_spec freeF);
-    ("load",   mk_kspecbody load_spec loadF);
-    ("store",  mk_kspecbody store_spec storeF);
-    ("cmp",    mk_kspecbody cmp_spec cmpF)
+    [("alloc", mk_kspecbody alloc_spec (cfun allocF) (fun _ => trigger (Choose _)));
+    ("free",   mk_kspecbody free_spec  (cfun freeF)  (fun _ => trigger (Choose _)));
+    ("load",   mk_kspecbody load_spec  (cfun loadF)  (fun _ => trigger (Choose _)));
+    ("store",  mk_kspecbody store_spec (cfun storeF) (fun _ => trigger (Choose _)));
+    ("cmp",    mk_kspecbody cmp_spec   (cfun cmpF)   (fun _ => trigger (Choose _)))
     ]
   .
 

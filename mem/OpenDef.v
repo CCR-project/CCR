@@ -19,6 +19,7 @@ Set Implicit Arguments.
 
 (* Definition dot {A B C} (g: B -> C) (f: A -> B): A -> C := g ∘ f. *)
 (* Notation "(∘)" := dot (at level 40, left associativity). *)
+(*** TODO: move to Coqlib ***)
 Notation "(∘)" := (fun g f => g ∘ f) (at level 0, left associativity).
 
 (*** TODO: remove redundancy with SimModSemL && migrate related lemmas ***)
@@ -32,6 +33,10 @@ Variant option_rel A B (P: A -> B -> Prop): option A -> option B -> Prop :=
     option_rel P None None
 .
 Hint Constructors option_rel: core.
+
+Definition map_or_else X Y (ox: option X) (f: X -> Y) (d: Y) :=
+  match ox with | Some x => f x | None => d end.
+
 
 
 Section AUX.
@@ -728,10 +733,8 @@ Section KMODSEM.
   Definition disclose_ksb (ksb: kspecbody): fspecbody :=
     mk_specbody (disclose ksb)
                 (fun argh =>
-                   match Any.split argh with
-                   | Some (_, argh) => (transl_fun_tgt ksb.(ksb_kbody)) argh
-                   | None => (transl_fun_tgt ksb.(ksb_ubody)) argh
-                   end)
+                   map_or_else (Any.split argh) (fun '(_, argh) => (transl_fun_tgt ksb.(ksb_kbody)) argh)
+                               ((transl_fun_tgt ksb.(ksb_ubody)) argh))
   .
 
   Definition to_tgt (ms: t): SModSem.t := {|
