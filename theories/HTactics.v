@@ -825,6 +825,8 @@ Ltac _step :=
   match goal with
   (*** blacklisting ***)
   (* | [ |- (gpaco5 (_sim_itree wf) _ _ _ _ (_, trigger (Choose _) >>= _) (_, ?i_tgt)) ] => idtac *)
+  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, triggerUB >>= _) (_, _)) ] =>
+    unfold triggerUB; ired_l; _step; done
   | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, unwrapU ?ox >>= _) (_, _)) ] =>
     let tvar := fresh "tmp" in
     let thyp := fresh "TMP" in
@@ -840,6 +842,8 @@ Ltac _step :=
 
   (*** blacklisting ***)
   (* | [ |- (gpaco5 (_sim_itree wf) _ _ _ _ (_, _) (_, trigger (Take _) >>= _)) ] => idtac *)
+  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, triggerNB >>= _) (_, _)) ] =>
+    unfold triggerNB; ired_r; _step; done
   | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, _) (_, unwrapN ?ox >>= _)) ] =>
     let tvar := fresh "tmp" in
     let thyp := fresh "TMP" in
@@ -871,6 +875,27 @@ Notation "wf n '----------------------------------------------------------------
     (gpaco6 (_sim_itree wf) _ _ _ _ _ _ n ((src0, src1), src2) ((tgt0, tgt1), tgt2))
       (at level 60,
        format "wf  n '//' '------------------------------------------------------------------' '//' src0 '//' tgt0 '//' '------------------------------------------------------------------' '//' src1 '//' tgt1 '//' '------------------------------------------------------------------' '//' src2 '//' '//' '//' tgt2 '//' ").
+
+Section TEST.
+  Context `{Σ: GRA.t}.
+  Let wf := (mk_wf (fun (_ : unit) (_ _ : Any.t) => bi_pure True)
+                                                   (fun (_ : unit) (_ _ : Any.t) (_ : Σ) => True)).
+  Variable (srcs0 tgts0: Σ * Any.t).
+  Variable (srcs1 tgts1: Σ).
+
+  Goal gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) bot6 bot6 Any.t Any.t (fun _ _ => eq) 100
+       ((srcs0, srcs1), triggerUB >>= idK) ((tgts0, tgts1), triggerUB >>= idK).
+    i.
+    steps.
+  Qed.
+
+  Goal gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) bot6 bot6 Any.t Any.t (fun _ _ => eq) 100
+       ((srcs0, srcs1), triggerNB >>= idK) ((tgts0, tgts1), triggerNB >>= idK).
+    i.
+    steps.
+  Qed.
+
+End TEST.
 
 Ltac _harg_tac := prep; eapply harg_clo; i.
 
