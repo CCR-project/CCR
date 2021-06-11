@@ -662,6 +662,27 @@ Section PROOF.
   Ltac unfold_Ptrofs_modulus := unfold Ptrofs.modulus, Ptrofs.wordsize, Wordsize_Ptrofs.wordsize in *.
   Ltac unfold_Ptrofs_half_modulus := unfold Ptrofs.half_modulus in *; unfold_Ptrofs_modulus.
 
+  Lemma unwrap_Ptrofs_Int64_z
+        (z: Z)
+        (LB: (0 <= z)%Z)
+        (UB: intrange_64 z)
+    :
+      (Ptrofs.unsigned (Ptrofs.of_int64 (Int64.repr (z)))) = z.
+  Proof.
+    unfold_intrange_64. unfold Ptrofs.of_int64.
+    hexploit (Int64.unsigned_repr z).
+    { unfold Int64.max_unsigned. unfold_Int64_modulus. split; try nia. rewrite two_power_nat_equiv in *. ss. des.
+      match goal with
+      | [ UPB: (z <= ?_pow2 - 1)%Z |- _ ] => replace _pow2 with (2 ^ 63)%Z in *; ss; try nia
+      end. }
+    i. rewrite H. clear H.
+    apply (Ptrofs.unsigned_repr z).
+    unfold Ptrofs.max_unsigned. unfold_Ptrofs_modulus. des_ifs. split; try nia. rewrite two_power_nat_equiv in *. ss. des.
+    match goal with
+    | [ UPB: (z <= ?_pow2 - 1)%Z |- _ ] => replace _pow2 with (2 ^ 63)%Z in *; ss; try nia
+    end.
+  Qed.
+
   Lemma map_val_vadd_comm
         tlof a b v
         (VADD: vadd a b = Some v)
@@ -1479,6 +1500,7 @@ Section PROOF.
         match goal with
           [ |- Memory.Mem.load _ _ _ ?_ofs = Some _ ] => assert (_ofs = (8 * ofs)%Z)
         end.
+        (Ptrofs.unsigned (Ptrofs.of_int64 (Int64.repr (z)))) = z
         { depgen WFOFS. des. depgen H1. clear. i. rename H1 into UPB.
           hexploit (Int64.unsigned_repr (8 * ofs)).
           { assert (LOB: (0 <= 8 * ofs)%Z); try nia. clear WFOFS.
@@ -1536,7 +1558,10 @@ Section PROOF.
       pfold. econs 6; clarify.
       { admit "ez: strict_determinate_at". }
       eexists. eexists.
-      { eapply step_store; eauto. ss.
+      { eapply step_store; eauto. ss. inv MM.
+
+        
+Mem.valid_access_store tm Mint64 (map_blk tlof blk) (8 * ofs)%Z (map_val tlof rv0) :
         admit "mid: match_memory's contents". }
       eexists. eexists.
       { eapply (step_tau _). }
