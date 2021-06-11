@@ -202,7 +202,7 @@ Section MATCH.
           (<<SMCNT: m.(Mem.cnts) blk ofs = Some v>>) ->
           ((<<TMCNT: Memory.Mem.load Mint64 tm (map_blk blk) (map_ofs ofs) = Some (map_val v)>>) /\
            (<<TVALID: Mem.valid_access tm Mint64 (map_blk blk) (map_ofs ofs) Writable>>) /\
-           (<<WFOFS: (0 < ofs)%Z>>)))
+           (<<WFOFS: (0 <= ofs)%Z>>)))
     :
       match_mem m tm
   .
@@ -580,7 +580,7 @@ Section MEM.
         * left. sym in Heqtm1. apply Mem.alloc_result in Heqtm1. clarify. ss.
           unfold Mem.alloc in SMEM. inv SMEM. ss. inv MM. rewrite NBLK0. depgen n0. clear. i.
           unfold map_blk in *. nia.
-    - eapply Mem.store_valid_access_1; eauto. apply MMEM in H. des; auto.
+    - apply MMEM in H; des. hexploit Mem.store_valid_access_1; eauto. 
   Qed.
 
   Lemma match_mem_free
@@ -1307,11 +1307,9 @@ Section PROOF.
 
     - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Malloc. sim_red.
       ss. uo; des_ifs. eapply step_expr; eauto. i. rename H0 into TGTEXPR. rename H1 into MAPRV. sim_red.
-      unfold assume; grind. pfold. econs 5; auto. i. eapply angelic_step in STEP. des; clarify.
-      rename STEP0 into SRCSIZE. unfold ordN in *. esplits; auto. left.
-      do 6 (pfold; sim_tau; left). sim_red. destruct rstate. ss. destruct l.
+      destruct rstate. ss. destruct l.
       { admit "ez: wf_r_state". }
-      do 3 (pfold; sim_tau; left). sim_red.
+      unfold ordN in *. do 3 (pfold; sim_tau; left). sim_red.
       match goal with
       | [ MCONT: match_code _ ?_ge _ _ _ _ |- _ ] =>
         set (ge:=_ge) in *
@@ -1323,6 +1321,10 @@ Section PROOF.
       unfold cfun. rewrite Any.upcast_downcast. grind. unfold allocF. sim_red.
       do 4 (pfold; sim_tau; left). sim_red.
       rewrite PSTATE. rewrite Any.upcast_downcast. grind. unfold unint. des_ifs; sim_red.
+      des_ifs; sim_red.
+      2,3: sim_triggerUB.
+      bsimpl. des. rename Heq into NRANGE1. apply sumbool_to_bool_true in NRANGE1.
+      rename Heq1 into NRANGE2. apply sumbool_to_bool_true in NRANGE2.
 
       assert (TGTDEFS: In (s2p "malloc", Gfun (External EF_malloc)) (prog_defs tgt)).
       { unfold _compile2 in COMP. des_ifs; ss. rename Heq into CGDEFS.
@@ -1473,17 +1475,28 @@ Section PROOF.
       { admit "ez: strict_determinate_at". }
       eexists. eexists.
       { eapply step_set. econs; eauto. ss. inv MM. apply MMEM in MEMCNT. des. unfold_intrange_64. unfold scale_ofs in *.
-        unfold map_ofs in *.
-        unfold Ptrofs.of_int64.
-        assert (POSSIZE: Ptrofs.unsigned (Ptrofs.repr (8 * n)) = (8 * n)%Z).
-        { unfold_modrange_64. rewrite Ptrofs.unsigned_repr; auto. unfold Ptrofs.max_unsigned. unfold_Ptrofs_modulus.
-          unfold scale_ofs in *. des_ifs. nia. }
-
-
-        
-        admit "mid: match_memory's contents". }
-      eexists. eexists.
-      { eapply (step_tau _). }
+        unfold map_ofs in *. unfold Ptrofs.of_int64.
+        match goal with
+          [ |- Memory.Mem.load _ _ _ ?_ofs = Some _ ] => assert (_ofs = (8 * ofs)%Z)
+        end.
+        { depgen WFOFS. des. depgen H1. clear. i. rename H1 into UPB.
+          hexploit (Int64.unsigned_repr (8 * ofs)).
+          { assert (LOB: (0 <= 8 * ofs)%Z); try nia. clear WFOFS.
+            unfold Int64.max_unsigned. unfold_Int64_modulus. split; try nia. rewrite two_power_nat_equiv in *. ss.
+            remember (8 * ofs)%Z as a. clear Heqa.
+            match goal with
+            | [ UPB: (a <= ?_pow2 - 1)%Z |- _ ] => replace _pow2 with (2 ^ 63)%Z in *; ss; try nia
+            end. }
+          i. rewrite H. clear H.
+          apply (Ptrofs.unsigned_repr (8 * ofs)).
+          assert (LOB: (0 <= 8 * ofs)%Z); try nia. clear WFOFS.
+          unfold Ptrofs.max_unsigned. unfold_Ptrofs_modulus. des_ifs. split; try nia. rewrite two_power_nat_equiv in *. ss.
+          remember (8 * ofs)%Z as a. clear Heqa.
+          match goal with
+          | [ UPB: (a <= ?_pow2 - 1)%Z |- _ ] => replace _pow2 with (2 ^ 63)%Z in *; ss; try nia
+          end. }
+        rewrite H1; clear H1. eauto. }
+      eexists. exists (step_tau _).
       eexists. left.
       do 4 (pfold; sim_tau; left). sim_red. rewrite Any.upcast_downcast. grind.
       do 1 (pfold; sim_tau; left). pfold; sim_tau; right. eapply CIH.

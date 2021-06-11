@@ -103,7 +103,7 @@ Section PROOFS.
         ge le0 x se
     :
       interp_imp ge (denote_stmt (Malloc x se)) le0 =
-      interp_imp ge (s <- denote_expr se;; assume (wf_ofs_size s);;;
+      interp_imp ge (s <- denote_expr se;;
       v <- trigger (Call "alloc" ([s]↑));; v <- unwrapN(v↓);;
       trigger (SetVar x v);;; tau;; Ret Vundef) le0.
   Proof. reflexivity. Qed.
@@ -494,13 +494,11 @@ Section PROOFS.
     :
       interp_imp ge (denote_stmt (Malloc x se)) le0 =
       '(le1, s) <- interp_imp ge (denote_expr se) le0;;
-      assume (wf_ofs_size s);;; tau;; tau;;
       v <- trigger (Call "alloc" ([s]↑));;
       tau;; tau;; v <- unwrapN (v↓);;
       tau;; tau;; tau;; Ret (alist_add x v le1, Vundef).
   Proof.
     rewrite denote_stmt_Malloc. rewrite interp_imp_bind. grind.
-    rewrite interp_imp_bind. rewrite interp_imp_assume. grind.
     rewrite interp_imp_bind. rewrite interp_imp_Call. grind.
     rewrite interp_imp_bind. rewrite interp_imp_unwrapN. grind.
     rewrite interp_imp_bind. rewrite interp_imp_SetVar. grind.
