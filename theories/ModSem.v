@@ -4,11 +4,21 @@ Require Import Skeleton.
 Require Import PCM.
 Require Import STS Behavior.
 Require Import Any.
+Require Import Permutation.
 
 Set Implicit Arguments.
 
 
 
+(* TODO: move it to Coqlib *)
+Lemma nodup_comm A (l0 l1: list A)
+      (NODUP: NoDup (l0 ++ l1))
+  :
+    NoDup (l1 ++ l0).
+Proof.
+  eapply Permutation_NoDup; [|et].
+  eapply Permutation_app_comm.
+Qed.
 
 Section EVENTSCOMMON.
 
@@ -389,15 +399,15 @@ Section MODSEML.
                | None => tt↑
                end).
 
-  Definition initial_itr_arg (arg: Any.t): itree (eventE) Any.t :=
-    assume(<<WF: wf ms>>);;;
+  Definition initial_itr_arg (P: option Prop) (arg: Any.t): itree (eventE) Any.t :=
+    match P with
+    | None => Ret tt
+    | Some P' => assume (<<WF: P'>>)
+    end;;;
     snd <$> interp_Es prog (prog (Call "main" arg)) (initial_r_state, initial_p_state).
 
-  Definition initial_itr: itree (eventE) Any.t :=
-    initial_itr_arg ([]: list val)↑.
-
-  Definition initial_itr_no_check: itree (eventE) Any.t :=
-    snd <$> interp_Es prog (prog (Call "main" (([]: list val)↑))) (initial_r_state, initial_p_state).
+  Definition initial_itr (P: option Prop): itree (eventE) Any.t :=
+    initial_itr_arg P ([]: list val)↑.
 
 
   Let state: Type := itree eventE Any.t.
@@ -566,25 +576,25 @@ Section MODSEML.
   Next Obligation. inv STEP; ss. Qed.
   Next Obligation. inv STEP; ss. Qed.
 
-  Definition compile: semantics :=
-    compile_itree initial_itr.
+  Definition compile P: semantics :=
+    compile_itree (initial_itr P).
 
-  Lemma initial_itr_arg_not_wf arg
-        (WF: ~ wf ms)
+  Lemma initial_itr_arg_not_wf P arg
+        (WF: ~ P)
         tr
     :
-      Beh.of_program (compile_itree (initial_itr_arg arg)) tr.
+      Beh.of_program (compile_itree (initial_itr_arg (Some P) arg)) tr.
   Proof.
     eapply Beh.ub_top. pfold. econsr; ss; et. rr. ii; ss.
     unfold initial_itr_arg, assume in *. rewrite bind_bind in STEP.
     eapply step_trigger_take_iff in STEP. des. subst. ss.
   Qed.
 
-  Lemma compile_not_wf
-        (WF: ~ wf ms)
+  Lemma compile_not_wf P
+        (WF: ~ P)
         tr
     :
-      Beh.of_program compile tr.
+      Beh.of_program (compile (Some P)) tr.
   Proof.
     eapply initial_itr_arg_not_wf; et.
   Qed.
@@ -607,18 +617,19 @@ Section MODSEML.
 
   Let add_comm_aux
       ms0 ms1 stl0 str0
+      P
       (SIM: stl0 = str0)
     :
-      <<COMM: Beh.of_state (compile (add ms0 ms1)) stl0 <1= Beh.of_state (compile (add ms1 ms0)) str0>>
+      <<COMM: Beh.of_state (compile (add ms0 ms1) P) stl0
+              <1=
+              Beh.of_state (compile (add ms1 ms0) P) str0>>
   .
   Proof.
-    revert_until ms1.
-    pcofix CIH. i. pfold.
-    clarify.
+    subst. revert str0. pcofix CIH. i. pfold.
     punfold PR. induction PR using Beh.of_state_ind; ss.
     - econs 1; et.
     - econs 2; et.
-      clear CIH. clear_tac. revert_until ms1.
+      clear CIH. clear_tac. revert st0 H.
       pcofix CIH. i. punfold H0. pfold.
       inv H0.
       + econs 1; eauto. ii. ss. exploit STEP; et. i; des. right. eapply CIH; et. pclearbot. ss.
@@ -626,19 +637,6 @@ Section MODSEML.
     - econs 4; et. pclearbot. right. eapply CIH; et.
     - econs 5; et. rr in STEP. des. rr. esplits; et.
     - econs 6; et. ii. exploit STEP; et. i; des. clarify.
-  Qed.
-
-  Lemma nodup_comm A (l0 l1: list A)
-        (NODUP: NoDup (l0 ++ l1))
-    :
-      NoDup (l1 ++ l0).
-  Proof.
-    revert l0 NODUP. induction l1; ss.
-    { i. rewrite List.app_nil_r in *. ss. }
-    i. hexploit NoDup_remove_2; et. i.
-    hexploit NoDup_remove_1; et. i.
-    econs; et. ii. eapply H. eapply in_app_iff.
-    eapply in_app_iff in H1. des; auto.
   Qed.
 
   Lemma wf_comm
@@ -649,13 +647,14 @@ Section MODSEML.
   Proof.
     assert (forall ms0 ms1, wf (add ms0 ms1) -> wf (add ms1 ms0)).
     { i. inv H. econs; ss.
-      { rewrite List.map_app in *. eapply nodup_comm; et. }
-      { rewrite List.map_app in *. eapply nodup_comm; et. }
+      { rewrite List.map_app in *.
+        eapply nodup_comm; et. }
+      { rewrite List.map_app in *.
+        eapply nodup_comm; et. }
     }
     r. eapply prop_ext. split; i; auto.
   Qed.
 
-  Require Import Permutation.
 
   Lemma alist_permutation_find K `{Dec K} V (l0 l1: alist K V)
         (ND: NoDup (List.map fst l0))
@@ -698,14 +697,16 @@ Section MODSEML.
            end.
 
   Theorem add_comm
-          ms0 ms1
+          ms0 ms1 (P0 P1: Prop) (IMPL: P1 -> P0)
+          (WF: wf (add ms1 ms0))
     :
-      <<COMM: Beh.of_program (compile (add ms0 ms1)) <1= Beh.of_program (compile (add ms1 ms0))>>
+      <<COMM: Beh.of_program (compile (add ms0 ms1) (Some P0)) <1= Beh.of_program (compile (add ms1 ms0) (Some P1))>>
   .
   Proof.
-    destruct (classic (wf (add ms1 ms0))); cycle 1.
+    destruct (classic (P1)); cycle 1.
     { ii. eapply compile_not_wf; et. }
-    rename H into WF.
+    replace P0 with P1.
+    2: { eapply prop_ext. split; auto. }
     ii. ss. r in PR. r. eapply add_comm_aux; et.
     rp; et. clear PR. ss. cbn. unfold initial_itr, initial_itr_arg. f_equal.
     { extensionality u. destruct u. f_equal.
@@ -733,11 +734,6 @@ Section MODSEML.
       { inv WF. ss. }
       { eapply Permutation_app_comm. }
     }
-    { f_equal. eapply prop_ext. split; auto. intros _.
-      inv WF. econs; ss.
-      { rewrite map_app in *. eapply nodup_comm. et. }
-      { rewrite map_app in *. eapply nodup_comm. et. }
-    }
   Qed.
 
   Lemma add_assoc' ms0 ms1 ms2:
@@ -758,22 +754,20 @@ Section MODSEML.
   Qed.
 
   Theorem add_assoc
-          ms0 ms1 ms2
-          (WF: wf (add ms0 (add ms1 ms2)))
+          ms0 ms1 ms2 P
     :
-      <<COMM: Beh.of_program (compile (add ms0 (add ms1 ms2))) <1=
-              Beh.of_program (compile (add (add ms0 ms1) ms2))>>
+      <<COMM: Beh.of_program (compile (add ms0 (add ms1 ms2)) P) <1=
+              Beh.of_program (compile (add (add ms0 ms1) ms2) P)>>
   .
   Proof.
     rewrite add_assoc_eq. ss.
   Qed.
 
   Theorem add_assoc_rev
-          ms0 ms1 ms2
-          (WF: wf (add ms0 (add ms1 ms2)))
+          ms0 ms1 ms2 P
     :
-      <<COMM: Beh.of_program (compile (add ms0 (add ms1 ms2))) <1=
-              Beh.of_program (compile (add (add ms0 ms1) ms2))>>
+      <<COMM: Beh.of_program (compile (add ms0 (add ms1 ms2)) P) <1=
+              Beh.of_program (compile (add (add ms0 ms1) ms2) P)>>
   .
   Proof.
     rewrite add_assoc_eq. ss.
@@ -991,9 +985,9 @@ Section MODSEM.
   .
   Coercion lift: t >-> ModSemL.t.
 
-  Definition compile (ms: t): semantics := ModSemL.compile (lift ms).
-
   Definition wf (ms: t): Prop := ModSemL.wf (lift ms).
+
+  Definition compile (ms: t) P: semantics := ModSemL.compile (lift ms) P.
 
 End MODSEM.
 End ModSem.
@@ -1012,12 +1006,16 @@ Section MODL.
     get_modsem: Sk.t -> ModSemL.t;
     sk: Sk.t;
     enclose: ModSemL.t := (get_modsem (Sk.sort sk));
-    compile: semantics := ModSemL.compile enclose;
+    compile: semantics :=
+      ModSemL.compile enclose
+                      (Some (<<WF: ModSemL.wf enclose>> /\ <<SK: Sk.wf sk>>));
   }
   .
 
+  Definition wf (md: t): Prop := (<<WF: ModSemL.wf md.(enclose)>> /\ <<SK: Sk.wf md.(sk)>>).
+
   Definition compile_arg (md: t) (arg: Any.t): semantics :=
-    ModSemL.compile_itree (ModSemL.initial_itr_arg md.(enclose) arg).
+    ModSemL.compile_itree (ModSemL.initial_itr_arg md.(enclose) (Some (wf md)) arg).
 
   Lemma compile_compile_arg_nil md:
     compile md = compile_arg md ([]: list val)↑.
@@ -1029,7 +1027,6 @@ Section MODL.
   (*   wf_sk: Sk.wf md.(sk); *)
   (* } *)
   (* . *)
-  Definition wf (md: t): Prop := <<WF: Sk.wf md.(sk)>>.
   (*** wf about modsem is enforced in the semantics ***)
 
   Definition add (md0 md1: t): t := {|
@@ -1046,13 +1043,19 @@ Section MODL.
   .
   Proof.
     ii. unfold compile in *.
-    destruct (classic (ModSemL.wf (enclose (add md1 md0)))).
+    destruct (classic (ModSemL.wf (enclose (add md1 md0)) /\ Sk.wf (sk (add md1 md0)))).
     2: { eapply ModSemL.compile_not_wf. ss. }
-    ss. rewrite Sk.sort_add_comm.
-    2:{ inv H. ss. inv
-
-admit "". }
-    eapply ModSemL.add_comm; et.
+    ss. des. assert (SK: Sk.wf (Sk.add (sk md0) (sk md1))).
+    { unfold Sk.wf, Sk.add. rewrite List.map_app.
+      eapply nodup_comm; et. rewrite <- List.map_app. auto. }
+    rewrite Sk.sort_add_comm; et.
+    eapply ModSemL.add_comm; [| |et].
+    { i. split; auto. des. rewrite Sk.sort_add_comm; et.
+      inv H. econs; ss.
+      { rewrite List.map_app in *. eapply nodup_comm; et. }
+      { rewrite List.map_app in *. eapply nodup_comm; et. }
+    }
+    { rewrite Sk.sort_add_comm; et. }
   Qed.
 
   Lemma add_assoc' ms0 ms1 ms2:

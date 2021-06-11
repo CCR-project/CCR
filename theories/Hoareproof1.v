@@ -719,10 +719,13 @@ Section CANCEL.
       Local Opaque ModSemL.prog.
       ss. steps_strong.
       esplits; et.
-      { inv x. econs.
-        { rewrite fns_eq. auto. }
-        { pose proof initial_mrs_eq. unfold ms_mid, ms_src in H.
-          rewrite H. auto. }
+      { des. split.
+        { inv WF. econs.
+          { rewrite fns_eq. auto. }
+          { pose proof initial_mrs_eq. unfold ms_mid, ms_src in H.
+            rewrite H. auto. }
+        }
+        { ss. rewrite sk_eq. auto. }
       }
       steps.
 

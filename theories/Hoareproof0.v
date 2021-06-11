@@ -785,13 +785,14 @@ Section CANCEL.
     unfold ModSemL.initial_itr, ModSemL.initial_itr_arg. Local Opaque ModSemL.prog. ss.
     unfold ITree.map.
     unfold assume.
-    steps.
+    steps. unfold ModL.wf in *. des.
     esplits; et.
-    { inv x_src. econs.
+    { inv WF. econs.
       { rewrite fns_eq. auto. }
       { pose proof fst_initial_mrs_eq. unfold ms_tgt, ms_mid in H.
         rewrite H. auto. }
     }
+    { rewrite sk_eq. auto. }
     steps. folder.
     set (st_mid0 := ((ModSemL.initial_r_state ms_mid), (ModSemL.initial_p_state ms_mid))).
     set (st_midr0 := ((initial_r_state ms_mid ε), (ModSemL.initial_p_state ms_mid))).

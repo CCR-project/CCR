@@ -1734,7 +1734,7 @@ Section SIMMOD.
        Beh.of_program (ModL.compile md_src)
    .
    Proof.
-     inv SIM. specialize (sim_modsem0 (ModL.sk md_src)).
+     inv SIM. specialize (sim_modsem0 (Sk.sort (ModL.sk md_src))).
      inv sim_modsem0. red in sim_sk0.
 
      eapply adequacy_global; et. exists (OrdArith.add Ord.O Ord.O).
@@ -1743,12 +1743,12 @@ Section SIMMOD.
      assert (FNS: forall fn : string,
                 option_rel (sim_fsem wf)
                            (alist_find fn
-                                       (ModSemL.fnsems (ModL.get_modsem md_src (ModL.sk md_src))))
+                                       (ModSemL.fnsems (ModL.get_modsem md_src (Sk.sort (ModL.sk md_src)))))
                            (alist_find fn
-                                       (ModSemL.fnsems (ModL.get_modsem md_tgt (ModL.sk md_tgt))))).
+                                       (ModSemL.fnsems (ModL.get_modsem md_tgt (Sk.sort (ModL.sk md_tgt)))))).
      { rewrite <- sim_sk0 in *.
-       remember (ModSemL.fnsems (ModL.get_modsem md_src (ModL.sk md_src))).
-       remember (ModSemL.fnsems (ModL.get_modsem md_tgt (ModL.sk md_src))).
+       remember (ModSemL.fnsems (ModL.get_modsem md_src (Sk.sort (ModL.sk md_src)))).
+       remember (ModSemL.fnsems (ModL.get_modsem md_tgt (Sk.sort (ModL.sk md_src)))).
        clear - sim_fnsems. induction sim_fnsems; ss.
        i. inv H. destruct x, y. inv H0. ss. subst.
        rewrite ! eq_rel_dec_correct. des_ifs; eauto.
@@ -1757,15 +1757,16 @@ Section SIMMOD.
      ginit. unfold assume. mgo.
      generalize (FNS "main"). i. inv H; cycle 1.
      { gstep. econs; eauto. i. esplits; eauto.
-       { eapply sim_wf0. rewrite sim_sk0 in *. ss. } clear x_src.
-       ss. unfold ITree.map, unwrapU, triggerUB. mgo.
+       { inv x_src. red. unfold ModL.enclose. rewrite <- sim_sk0. split; et. } clear x_src.
+       ss. unfold ITree.map, unwrapU, triggerUB.
+       mgo. rewrite <- H1. mgo.
        des_ifs_safe.
        mgo. gstep. econs; eauto. ss. }
      exploit IN; eauto. i. des.
 
 
      gstep. econs; eauto. i. esplits; eauto.
-     { eapply sim_wf0. rewrite sim_sk0 in *. ss. } clear x_src.
+     { inv x_src. red. unfold ModL.enclose. rewrite <- sim_sk0. split; et. } clear x_src.
      ss. unfold ITree.map, unwrapU, triggerUB. mgo.
      des_ifs_safe. ss. mgo.
      guclo bindC_spec. econs.

@@ -54,7 +54,7 @@ Module ImpNotations.
 
   Notation "'skip#'" :=
     (Skip) (at level 100): stmt_scope.
- 
+
   (* Different methods for function calls *)
   Notation "x '=@' f args" :=
     (CallFun1 x f args)
@@ -146,9 +146,9 @@ Section Example_Extract.
     prog_vars := [];
     prog_funs := [("factorial", factorial_fundef); ("main", main_fundef)];
   |}.
-  
+
   Definition ex_prog: Mod.t := ImpMod.get_mod ex_extract.
 
-  Definition imp_ex := ModSemL.initial_itr_no_check (ModL.enclose ex_prog).
+  Definition imp_ex := ModSemL.initial_itr (ModL.enclose ex_prog) None.
 
 End Example_Extract.

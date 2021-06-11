@@ -686,7 +686,7 @@ Let ms_tgt: ModSemL.t := md_tgt.(ModL.enclose).
 (* . *)
 (* Hypothesis (SIM: Forall2 sim_fnsem ms_src.(ModSemL.fnsems) ms_tgt.(ModSemL.fnsems)). *)
 
-Hypothesis (SIM: exists o0, simg eq o0 (ModSemL.initial_itr ms_src) (ModSemL.initial_itr ms_tgt)).
+Hypothesis (SIM: exists o0, simg eq o0 (ModSemL.initial_itr ms_src (Some (ModL.wf md_src))) (ModSemL.initial_itr ms_tgt (Some (ModL.wf md_tgt)))).
 
 
 Local Hint Resolve cpn3_wcompat: paco.

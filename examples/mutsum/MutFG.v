@@ -86,7 +86,7 @@ Section PROOF.
         { instantiate (1:=ε). unfold compose. ss. rewrite ! URA.unit_id. apply URA.wf_unit. }
         { uipropall. red. uipropall. }
       }
-      { admit "TODO - change SMain". }
+      { ss. }
     }
   Qed.
 
@@ -154,5 +154,5 @@ Then, we can just use SimModSem.adequacy_local_list. in this proof (FG23_correct
 
 End PROOF.
 
-Definition mutsum_imp := ModSemL.initial_itr_no_check (ModL.enclose FGImp).
-Definition mutsum := ModSemL.initial_itr_no_check (ModL.enclose FG3).
+Definition mutsum_imp := ModSemL.initial_itr (ModL.enclose FGImp) None.
+Definition mutsum := ModSemL.initial_itr (ModL.enclose FG3) None.
