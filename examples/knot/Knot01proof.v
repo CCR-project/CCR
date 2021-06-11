@@ -108,10 +108,9 @@ Section SIMMODSEM.
   Theorem correct: ModPair.sim (Knot1.Knot RecStb FunStb GlobalStb) Knot0.Knot.
   Proof.
     econs; ss.
-    2: { i. inv WF. econs; ss. }
-    i. eapply adequacy_lift.
-    econstructor 1 with (wf:=wf (Sk.load_skenv sk)); et; ss.
+    i. econstructor 1 with (wf:=wf (Sk.load_skenv sk)); et; ss.
     2: { admit "initial". }
+    eapply Sk.incl_incl_env in SKINCL. eapply Sk.load_skenv_wf in SKWF.
     hexploit (SKINCL "rec"); ss; eauto. intros [blk0 FIND0].
     hexploit (SKINCL "_f"); ss; eauto. intros [blk1 FIND1].
 

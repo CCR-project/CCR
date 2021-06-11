@@ -735,6 +735,14 @@ Variant _wf_function `{Σ: GRA.t} (ms: list mname)
     k
     (VIS: st0 = trigger (FGet) >>= k)
     (WF: forall x, wf_function (k x))
+| wf_function_call
+    fn varg k
+    (CALL: st0 = trigger PushFrame;;; r <- trigger (Call fn varg);; trigger PopFrame;;; tau;; k r)
+    (WF: forall x, wf_function (k x))
+| wf_function_syscall
+    fn varg rvs k
+    (CALL: st0 = trigger (Syscall fn varg rvs) >>= k)
+    (WF: forall x, wf_function (k x))
 .
 
 Lemma wf_function_gen_mon `{Σ: GRA.t} (ms: list mname):
@@ -751,6 +759,8 @@ Proof.
   - econs 8; eauto.
   - econs 9; eauto.
   - econs 10; eauto.
+  - econs 11; eauto.
+  - econs 12; eauto.
 Qed.
 Hint Resolve wf_function_gen_mon: paco.
 
@@ -772,6 +782,8 @@ Proof.
   - econs 8; eauto. i. right. eapply CIH. eapply WF.
   - econs 9; eauto. i. right. eapply CIH. eapply WF.
   - econs 10; eauto. i. right. eapply CIH. eapply WF.
+  - econs 11; eauto. i. right. eapply CIH. eapply WF.
+  - econs 12; eauto. i. right. eapply CIH. eapply WF.
 Qed.
 
 Definition wf_mrs `{Σ: GRA.t} (ms: list mname) (mrs: alist mname (Σ * Any.t)): Prop :=
@@ -817,6 +829,10 @@ Proof.
     eapply sim_itree_mget_both; eauto. right. eapply CIH; ss.
   - eapply sim_itree_fget_both; eauto. right. eapply CIH; ss.
     Unshelve. all: exact 0.
+  - eapply sim_itree_call; eauto. i. exists 0.
+    ss. des; subst. right. eapply CIH; ss.
+  - eapply sim_itree_syscall; eauto. i. exists 0.
+    ss. des; subst. right. eapply CIH; ss.
 Qed.
 
 
@@ -1348,7 +1364,7 @@ Section SIMMOD.
        <<SIM: ModSemLPair.sim (md_src.(ModL.enclose)) (md_tgt.(ModL.enclose))>>;
      sim_sk: <<SIM: md_src.(ModL.sk) = md_tgt.(ModL.sk)>>;
      sim_wf:
-       forall skenv (WF: ModSemL.wf (md_src.(ModL.get_modsem) skenv)), <<WF: ModSemL.wf (md_tgt.(ModL.get_modsem) skenv)>>;
+       forall sk (INCL: Sk.incl md_src.(ModL.sk) sk) (SKWF: Sk.wf sk) (WF: ModSemL.wf (md_src.(ModL.get_modsem) sk)), <<WF: ModSemL.wf (md_tgt.(ModL.get_modsem) sk)>>;
    }.
 
    Hint Resolve cpn6_wcompat: paco.
@@ -1757,16 +1773,17 @@ Section SIMMOD.
      ginit. unfold assume. mgo.
      generalize (FNS "main"). i. inv H; cycle 1.
      { gstep. econs; eauto. i. esplits; eauto.
-       { inv x_src. red. unfold ModL.enclose. rewrite <- sim_sk0. split; et. } clear x_src.
+       { inv x_src. red. unfold ModL.enclose in *. rewrite <- sim_sk0.
+         split; et. eapply sim_wf0; et. eapply Sk.sort_incl. } clear x_src.
        ss. unfold ITree.map, unwrapU, triggerUB.
        mgo. rewrite <- H1. mgo.
        des_ifs_safe.
        mgo. gstep. econs; eauto. ss. }
      exploit IN; eauto. i. des.
 
-
      gstep. econs; eauto. i. esplits; eauto.
-     { inv x_src. red. unfold ModL.enclose. rewrite <- sim_sk0. split; et. } clear x_src.
+     { inv x_src. red. unfold ModL.enclose in *. rewrite <- sim_sk0.
+       split; et. eapply sim_wf0; et. eapply Sk.sort_incl. } clear x_src.
      ss. unfold ITree.map, unwrapU, triggerUB. mgo.
      des_ifs_safe. ss. mgo.
      guclo bindC_spec. econs.
@@ -1787,41 +1804,4 @@ Section SIMMOD.
 
 End SIMMOD.
 
-(* Section SIMMOD. *)
-(*    Context `{Σ: GRA.t}. *)
-
-(*    Theorem adequacy_local md_src md_tgt *)
-(*            (SIM: sim md_src md_tgt) *)
-(*      (*** You will need some wf conditions for ctx ***) *)
-(*      : *)
-(*        <<CR: forall ctx, Beh.of_program (ModL.compile (ModL.add ctx md_tgt)) <1= *)
-(*                          Beh.of_program (ModL.compile (ModL.add ctx md_src))>> *)
-(*    . *)
-(*    Proof. *)
-(*      ii. destruct (classic (ModL.wf (ModL.add ctx md_src))). *)
-(*      2: { unfold ModL.compile. eapply ModSemL.compile_not_wf; et. } *)
-(*      assert (SK: Sk.add (ModL.sk ctx) (ModL.sk md_src) = *)
-(*                  Sk.add (ModL.sk ctx) (ModL.sk md_tgt)). *)
-(*      { inv SIM. rewrite sim_sk0. auto. } *)
-(*      unfold ModL.wf in *. des. *)
-(*      eapply adequacy_local_closed; eauto. econs. *)
-(*      { ss. red. eapply ModSemLPair.add_modsempair. *)
-(*        { eapply WF. } *)
-(*        { rewrite SK in *. inv WF. econs; ss. *)
-(*          { rewrite List.map_app in *. admit "". } *)
-(*          { admit "". } *)
-(*        } *)
-(*        { rewrite SK. eapply ModSemLPair.self_sim_mod. admit "ModSemL wf". } *)
-(*        { eapply SIM. } *)
-(*      } *)
-(*      { ss. red. f_equal. eapply SIM. } *)
-(*      { ii. red. ss. admit "ModSemL wf". } *)
-(*    Qed. *)
-(* End SIMMOD. *)
-
 End ModLPair.
-
-(* TODO: prove sim *)
-(* TODO: write client *)
-(* TODO: show cancellation *)
-(* TODO: meta-level (no forge -> checkwf always succeeds) *)

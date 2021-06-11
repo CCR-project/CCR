@@ -36,9 +36,7 @@ Section SIMMODSEM.
   Theorem correct: ModPair.sim MutG1.G MutG0.G.
   Proof.
     econs; ss.
-    2: { i. inv WF. econs; ss. }
-    i. eapply adequacy_lift.
-    econstructor 1 with (wf:=wf); et.
+    i. econstructor 1 with (wf:=wf); et.
     2: { econs; ss; red; uipropall. }
     econs; ss. init. harg. mDesAll.
     des; clarify. unfold gF, ccall.

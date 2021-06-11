@@ -405,15 +405,7 @@ Section PROOF.
   Proof.
     econs; cycle 1.
     { unfold SMod.to_tgt. cbn. eauto. }
-    { i. inv WF. econs; [|ss].
-      replace (map fst (ModSemL.fnsems (Mod.get_modsem (SMod.to_tgt stb0 md) sk))) with
-          (map fst (ModSemL.fnsems (Mod.get_modsem (SMod.to_tgt stb1 md) sk))).
-      { auto. }
-      unfold SMod.to_tgt. unfold SMod.transl. simpl. rewrite ! List.map_map.
-      eapply equal_f. eapply f_equal. simpl. extensionality fnsb.
-      destruct fnsb as [fn sb]. simpl. auto.
-    }
-    i. specialize (WEAK sk). r. eapply adequacy_lift. econs.
+    i. specialize (WEAK sk). r. econs.
     { instantiate (1:=fun '(x, y) => x = y).
       unfold SMod.to_tgt.
       unfold SMod.transl. ss.
