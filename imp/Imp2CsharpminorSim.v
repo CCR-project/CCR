@@ -1471,7 +1471,9 @@ Section PROOF.
       pfold. econs 6; clarify.
       { admit "ez: strict_determinate_at". }
       eexists. eexists.
-      { eapply step_set. econs; eauto. ss. inv MM. apply MMEM in MEMCNT. des. unfold Ptrofs.of_int64.
+      { eapply step_set. econs; eauto. ss. inv MM. apply MMEM in MEMCNT. des. unfold_intrange_64. unfold scale_ofs in *.
+        unfold map_ofs in *.
+        unfold Ptrofs.of_int64.
         assert (POSSIZE: Ptrofs.unsigned (Ptrofs.repr (8 * n)) = (8 * n)%Z).
         { unfold_modrange_64. rewrite Ptrofs.unsigned_repr; auto. unfold Ptrofs.max_unsigned. unfold_Ptrofs_modulus.
           unfold scale_ofs in *. des_ifs. nia. }
