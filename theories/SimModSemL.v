@@ -1345,7 +1345,7 @@ Section SIMMOD.
    Variable (md_src md_tgt: ModL.t).
    Inductive sim: Prop := mk {
      sim_modsem:
-       forall sk, <<SIM: ModSemLPair.sim (md_src.(ModL.get_modsem) sk) (md_tgt.(ModL.get_modsem) sk)>>;
+       <<SIM: ModSemLPair.sim (md_src.(ModL.enclose)) (md_tgt.(ModL.enclose))>>;
      sim_sk: <<SIM: md_src.(ModL.sk) = md_tgt.(ModL.sk)>>;
      sim_wf:
        forall skenv (WF: ModSemL.wf (md_src.(ModL.get_modsem) skenv)), <<WF: ModSemL.wf (md_tgt.(ModL.get_modsem) skenv)>>;
@@ -1734,8 +1734,8 @@ Section SIMMOD.
        Beh.of_program (ModL.compile md_src)
    .
    Proof.
-     inv SIM. specialize (sim_modsem0 (Sk.sort (ModL.sk md_src))).
-     inv sim_modsem0. red in sim_sk0.
+     inv SIM. inv sim_modsem0. red in sim_sk0.
+     unfold ModL.enclose in *.
 
      eapply adequacy_global; et. exists (OrdArith.add Ord.O Ord.O).
      unfold ModSemL.initial_itr, ModSemL.initial_itr_arg, ModL.enclose.
@@ -1787,28 +1787,37 @@ Section SIMMOD.
 
 End SIMMOD.
 
-Section SIMMOD.
-   Context `{Σ: GRA.t}.
+(* Section SIMMOD. *)
+(*    Context `{Σ: GRA.t}. *)
 
-   Theorem adequacy_local md_src md_tgt
-           (SIM: sim md_src md_tgt)
-     (*** You will need some wf conditions for ctx ***)
-     :
-       <<CR: forall ctx, Beh.of_program (ModL.compile (ModL.add ctx md_tgt)) <1=
-                         Beh.of_program (ModL.compile (ModL.add ctx md_src))>>
-   .
-   Proof.
-     ii. eapply adequacy_local_closed; eauto. econs.
-     { ss. red. ii. eapply ModSemLPair.add_modsempair.
-       { admit "ModSemL wf". }
-       { admit "ModSemL wf". }
-       { eapply ModSemLPair.self_sim_mod. admit "ModSemL wf". }
-       { eapply SIM. }
-     }
-     { ss. red. f_equal. eapply SIM. }
-     { ii. red. ss. admit "ModSemL wf". }
-   Qed.
-End SIMMOD.
+(*    Theorem adequacy_local md_src md_tgt *)
+(*            (SIM: sim md_src md_tgt) *)
+(*      (*** You will need some wf conditions for ctx ***) *)
+(*      : *)
+(*        <<CR: forall ctx, Beh.of_program (ModL.compile (ModL.add ctx md_tgt)) <1= *)
+(*                          Beh.of_program (ModL.compile (ModL.add ctx md_src))>> *)
+(*    . *)
+(*    Proof. *)
+(*      ii. destruct (classic (ModL.wf (ModL.add ctx md_src))). *)
+(*      2: { unfold ModL.compile. eapply ModSemL.compile_not_wf; et. } *)
+(*      assert (SK: Sk.add (ModL.sk ctx) (ModL.sk md_src) = *)
+(*                  Sk.add (ModL.sk ctx) (ModL.sk md_tgt)). *)
+(*      { inv SIM. rewrite sim_sk0. auto. } *)
+(*      unfold ModL.wf in *. des. *)
+(*      eapply adequacy_local_closed; eauto. econs. *)
+(*      { ss. red. eapply ModSemLPair.add_modsempair. *)
+(*        { eapply WF. } *)
+(*        { rewrite SK in *. inv WF. econs; ss. *)
+(*          { rewrite List.map_app in *. admit "". } *)
+(*          { admit "". } *)
+(*        } *)
+(*        { rewrite SK. eapply ModSemLPair.self_sim_mod. admit "ModSemL wf". } *)
+(*        { eapply SIM. } *)
+(*      } *)
+(*      { ss. red. f_equal. eapply SIM. } *)
+(*      { ii. red. ss. admit "ModSemL wf". } *)
+(*    Qed. *)
+(* End SIMMOD. *)
 
 End ModLPair.
 

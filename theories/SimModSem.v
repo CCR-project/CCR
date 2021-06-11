@@ -1033,28 +1033,10 @@ Section SIMMOD.
               (SKINCL: Sk.incl_env md_tgt.(Mod.sk) (Sk.load_skenv sk))
               (SKWF: SkEnv.wf (Sk.load_skenv sk)), <<SIM: ModSemLPair.sim (md_src.(Mod.get_modsem) sk) (md_tgt.(Mod.get_modsem) sk)>>;
      sim_sk: <<SIM: md_src.(Mod.sk) = md_tgt.(Mod.sk)>>;
-     sim_wf:
-       forall sk (WF: ModSemL.wf (md_src.(Mod.get_modsem) sk)), <<WF: ModSemL.wf (md_tgt.(Mod.get_modsem) sk)>>;
    }.
 
 End SIMMOD.
 End ModPair.
-
-Section ADQ.
-  Context `{Σ: GRA.t}.
-  Variable md_src md_tgt: Mod.t.
-  Theorem adequacy_lift_mod
-          (SIM: ModPair.sim md_src md_tgt)
-    :
-      <<SIM: ModLPair.sim md_src md_tgt>>
-  .
-  Proof.
-    inv SIM.
-    econs; eauto.
-    admit "Fix ModSemLPair".
-  Qed.
-
-End ADQ.
 
 
 
@@ -1201,6 +1183,28 @@ ys + (xs + src)
      ii.
    Abort.
 
+   Lemma Forall2_eq_eq A (l0 l1: list A)
+         (FORALL: Forall2 eq l0 l1)
+     :
+       l0 = l1.
+   Proof.
+     revert l1 FORALL. induction l0; ss.
+     { i. inv FORALL. ss. }
+     { i. inv FORALL. f_equal; auto. }
+   Qed.
+
+   Lemma nodup_app A (l0 l1: list A)
+         (ND: NoDup (l0 ++ l1))
+     :
+       NoDup l0 /\ NoDup l1.
+   Proof.
+     revert l0 ND. induction l0; ss.
+     { i. split; auto. econs. }
+     { i. inv ND. hexploit IHl0; et. i. des. split; auto.
+       econs; et. ii. eapply H1.
+       eapply in_or_app; et. }
+   Qed.
+
    Theorem adequacy_local md_src md_tgt
            (SIM: ModPair.sim md_src md_tgt)
      (*** You will need some wf conditions for ctx ***)
@@ -1208,19 +1212,148 @@ ys + (xs + src)
        <<CR: (refines md_tgt md_src)>>
    .
    Proof.
-     ii. eapply ModLPair.adequacy_local_closed; eauto. econs.
-     { ss. red. ii. eapply ModSemLPair.add_modsempair.
-       { admit "ModSemL wf". }
-       { admit "ModSemL wf". }
-       { clear - ctx. induction ctx.
+     ii. destruct (classic (ModL.wf (ModL.add (Mod.add_list ctx) md_src))).
+     2: { unfold ModL.compile. eapply ModSemL.compile_not_wf. auto. }
+     rename H into WFSRC.
+     assert (SKEQ: Sk.add (ModL.sk (Mod.add_list ctx)) (Mod.sk md_src)
+                   =
+                   Sk.add (ModL.sk (Mod.add_list ctx)) (Mod.sk md_tgt)).
+     {  f_equal. inv SIM. ss. }
+
+     hexploit SIM.(ModPair.sim_modsem).
+     { instantiate (1:=Sk.sort (Sk.add (ModL.sk (Mod.add_list ctx)) (Mod.sk md_tgt))).
+       eapply Sk.incl_incl_env. etrans.
+       2: { eapply Sk.sort_incl. }
+       ii. eapply in_or_app. et.
+     }
+     { eapply Sk.load_skenv_wf.
+       eapply Sk.sort_wf. rewrite <- SKEQ. eapply WFSRC. }
+     intros SIMSEM.
+
+     assert (WFTGT: ModL.wf (ModL.add (Mod.add_list ctx) md_tgt)).
+     { red in WFSRC. red. unfold ModL.enclose in *. ss. des.
+       rewrite SKEQ in *. split; auto. inv WF.
+       Local Opaque ModSem.lift. econs.
+       { clear wf_initial_mrs.
+         ss. rewrite List.map_app in *.
+         match goal with
+         | H: NoDup (_ ++ ?l0) |- NoDup (_ ++ ?l1) => replace l1 with l0
+         end; auto.
+         inv SIMSEM.
+         eapply (Forall2_apply_Forall2 fst fst) in sim_fnsems.
+         { instantiate (1:=eq) in sim_fnsems.
+           eapply Forall2_eq_eq; et. }
+         { i. inv H. ss. }
+       }
+       { ss. clear wf_fnsems. rewrite List.map_app in *.
+         match goal with
+         | H: NoDup (_ ++ ?l0) |- NoDup (_ ++ ?l1) => replace l1 with l0
+         end; auto.
+         Local Transparent ModSem.lift. ss.
+         remember (Sk.sort (Sk.add (ModL.sk (Mod.add_list ctx)) (Mod.sk md_tgt))).
+         admit "module name".
+       }
+     }
+
+     eapply ModLPair.adequacy_local_closed; eauto. econs.
+     { ss. red.
+
+       eapply ModSemLPair.add_modsempair.
+       { eapply WFSRC. }
+       { eapply WFTGT. }
+       { rewrite SKEQ. eapply ModSemLPair.self_sim_mod. split.
+         { inv WFTGT. clear - H. unfold ModL.enclose in *.
+           remember (Mod.add_list ctx). clear Heqt. ss. inv H. ss.
+           rewrite List.map_app in *.
+           eapply nodup_app in wf_initial_mrs. des. auto.
+         }
+         { admit "wf_function". }
+       }
+       { rewrite SKEQ. eapply SIM; et.
+         { eapply Sk.incl_incl_env. etrans.
+           2: { eapply Sk.sort_incl. }
+           ii. eapply in_or_app. et.
+         }
+         { inv WFTGT. ss.
+           eapply Sk.load_skenv_wf.
+           eapply Sk.sort_wf. auto. }
+       }
+     }
+     { ss. }
+     { i. inv WF. econs.
+       { ss. rewrite List.map_app in *.
+         rewrite List.map_map in *. clear wf_initial_mrs.
+         match goal with
+         | H: NoDup (_ ++ ?l0) |- NoDup (_ ++ ?l1) => replace l1 with l0
+         end; auto.
+         admit "".
+       }
+       { admit "". }
+     }
+
+
+
+         inv SIM. ss.
+
+         unfold ModSem.map_snd. ss.
+
+
+ rewrite
+
+red in WF.
+
+rewrite SKEQ. P
+
+eapply Sk.
+
+
+unfold ModL.wf, ModL.enclose in *. ss. des.
+         rewrite SKEQ in *.
+         remember (Sk.sort (Sk.add (ModL.sk (Mod.add_list ctx)) (Mod.sk md_tgt))) as sk.
+         assert (SKWF: Sk.wf sk).
+         { subst. eapply Sk.sort_wf. auto. }
+         eapply SIM; et.
+         eapply ModSemLPair.self_sim_mod.
+         admit "wf mod".
+       }
+       {
+         unfold ModL.wf, ModL.enclose in *. ss. des.
+         rewrite SKEQ in *.
+         remember (Sk.sort (Sk.add (ModL.sk (Mod.add_list ctx)) (Mod.sk md_tgt))) as sk.
+         assert (SKWF: Sk.wf sk).
+         { subst. eapply Sk.sort_wf. auto. }
+         clear Heqsk SKEQ SK SK0.
+
+
+
+         admi
+
+
+admit "". }
+
+
+         rewrite SKEQ. ss. rewrite <- Heqsk in WF.
+
+rewir
+         clear Heqsk.
+
+revert WFSRC WFTGT. clear - ctx. induction ctx.
          - ss. econs; et.
            + instantiate (1:=top2). typeclasses eauto.
            + econs.
            + ss.
-         - ss. eapply ModSemLPair.add_modsempair; et.
+         - ss. i. eapply ModSemLPair.add_modsempair; et.
+           + ss. inv WFSRC. unfold ModL.src
+
+
+eapply WFSRC.
+
+eapply admit "ModSemL wf".
            + admit "ModSemL wf".
-           + admit "ModSemL wf".
-           + eapply adequacy_lift. eapply ModSemPair.self_sim_mod. r. admit "ModSemL wf". }
+           + eapply adequacy_lift.
+             admit "".
+           + admit "".
+       }
        { eapply SIM.
          admit "ModLPair.adequacy_local_closed".
          admit "ModLPair.adequacy_local_closed". }
