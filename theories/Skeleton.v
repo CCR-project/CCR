@@ -94,11 +94,13 @@ Module Sk.
 
   Definition wf (sk: t): Prop := @List.NoDup _ (List.map fst sk).
 
-  Definition sort: t -> t.
-  Admitted.
+  Definition sort: t -> t := id.
+  Global Opaque sort.
 
-  Definition sort_add_comm sk0 sk1:
-    sort (add sk0 sk1) = sort (add sk1 sk0).
+  Definition sort_add_comm sk0 sk1
+             (WF: wf (add sk0 sk1))
+    :
+      sort (add sk0 sk1) = sort (add sk1 sk0).
   Proof.
     admit "sort spec".
   Qed.

@@ -343,3 +343,15 @@ Module StringOrder <: TotalTransitiveLeBool'.
     { eapply AsciiOrder.leb_trans; et. }
   Qed.
 End StringOrder.
+
+Module ProdFstOrder (A: TotalTransitiveLeBool') (B: Typ) <: TotalTransitiveLeBool'.
+  Definition t := (A.t * B.t)%type.
+  Definition leb := fun (x y: t) => A.leb (fst x) (fst y).
+  Lemma leb_total : forall x y : t, leb x y = true \/ leb y x = true.
+  Proof. i. eapply A.leb_total. Qed.
+
+  Lemma leb_trans : Transitive leb.
+  Proof. ii. eapply A.leb_trans; et. Qed.
+End ProdFstOrder.
+
+Require Import Sorting.Mergesort.

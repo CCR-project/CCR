@@ -238,9 +238,9 @@ Section EVENTSL.
   Proof. unfold interp_Es, interp_rE, interp_pE. des_ifs. grind. Qed.
 
   Lemma interp_Es_callE
-        p st0
+        p st0 T
         (* (e: Es Σ) *)
-        (e: callE Any.t)
+        (e: callE T)
     :
       interp_Es p (trigger e) st0 = tau;; (interp_Es p (p _ e) st0)
   .
@@ -437,6 +437,122 @@ Section MODSEML.
       step (Vis (subevent _ (Syscall fn args rvs)) k) (Some (event_sys fn args rv)) (k rv)
   .
 
+  Lemma step_trigger_choose_iff X k itr e
+        (STEP: step (trigger (Choose X) >>= k) e itr)
+    :
+      exists x,
+        e = None /\ itr = k x.
+  Proof.
+    inv STEP.
+    { eapply f_equal with (f:=observe) in H0. ss. }
+    { eapply f_equal with (f:=observe) in H0. ss.
+      unfold trigger in H0. ss. cbn in H0.
+      dependent destruction H0. ired. et.  }
+    { eapply f_equal with (f:=observe) in H0. ss. }
+    { eapply f_equal with (f:=observe) in H0. ss. }
+  Qed.
+
+  Lemma step_trigger_take_iff X k itr e
+        (STEP: step (trigger (Take X) >>= k) e itr)
+    :
+      exists x,
+        e = None /\ itr = k x.
+  Proof.
+    inv STEP.
+    { eapply f_equal with (f:=observe) in H0. ss. }
+    { eapply f_equal with (f:=observe) in H0. ss. }
+    { eapply f_equal with (f:=observe) in H0. ss.
+      unfold trigger in H0. ss. cbn in H0.
+      dependent destruction H0. ired. et.  }
+    { eapply f_equal with (f:=observe) in H0. ss. }
+  Qed.
+
+  Lemma step_tau_iff itr0 itr1 e
+        (STEP: step (Tau itr0) e itr1)
+    :
+      e = None /\ itr0 = itr1.
+  Proof.
+    inv STEP. et.
+  Qed.
+
+  Lemma step_ret_iff rv itr e
+        (STEP: step (Ret rv) e itr)
+    :
+      False.
+  Proof.
+    inv STEP.
+  Qed.
+
+  Lemma step_trigger_syscall_iff fn args rvs k e itr
+        (STEP: step (trigger (Syscall fn args rvs) >>= k) e itr)
+    :
+      exists rv, itr = k rv /\ e = Some (event_sys fn args rv)
+                 /\ <<RV: rvs rv>> /\ <<SYS: syscall_sem (event_sys fn args rv)>>.
+  Proof.
+    inv STEP.
+    { eapply f_equal with (f:=observe) in H0. ss. }
+    { eapply f_equal with (f:=observe) in H0. ss. }
+    { eapply f_equal with (f:=observe) in H0. ss. }
+    { eapply f_equal with (f:=observe) in H0. ss.
+      unfold trigger in H0. ss. cbn in H0.
+      dependent destruction H0. ired. et. }
+  Qed.
+
+
+  Let itree_eta E R (itr0 itr1: itree E R)
+      (OBSERVE: observe itr0 = observe itr1)
+    :
+      itr0 = itr1.
+  Proof.
+    rewrite (itree_eta_ itr0).
+    rewrite (itree_eta_ itr1).
+    rewrite OBSERVE. auto.
+  Qed.
+
+  Lemma step_trigger_choose X k x
+    :
+      step (trigger (Choose X) >>= k) None (k x).
+  Proof.
+    unfold trigger. ss.
+    match goal with
+    | [ |- step ?itr _ _] =>
+      replace itr with (Subevent.vis (Choose X) k)
+    end; ss.
+    { econs. }
+    { eapply itree_eta. ss. cbv. f_equal.
+      extensionality x0. eapply itree_eta. ss. }
+  Qed.
+
+  Lemma step_trigger_take X k x
+    :
+      step (trigger (Take X) >>= k) None (k x).
+  Proof.
+    unfold trigger. ss.
+    match goal with
+    | [ |- step ?itr _ _] =>
+      replace itr with (Subevent.vis (Take X) k)
+    end; ss.
+    { econs. }
+    { eapply itree_eta. ss. cbv. f_equal.
+      extensionality x0. eapply itree_eta. ss. }
+  Qed.
+
+  Lemma step_trigger_syscall fn args (rvs: val -> Prop) k rv
+        (RV: rvs rv) (SYS: syscall_sem (event_sys fn args rv))
+    :
+      step (trigger (Syscall fn args rvs) >>= k) (Some (event_sys fn args rv)) (k rv).
+  Proof.
+    unfold trigger. ss.
+    match goal with
+    | [ |- step ?itr _ _] =>
+      replace itr with (Subevent.vis (Syscall fn args rvs) k)
+    end; ss.
+    { econs; et. }
+    { eapply itree_eta. ss. cbv. f_equal.
+      extensionality x0. eapply itree_eta. ss. }
+  Qed.
+
+
   Program Definition compile_itree: itree eventE Any.t -> semantics :=
     fun itr =>
       {|
@@ -452,6 +568,26 @@ Section MODSEML.
 
   Definition compile: semantics :=
     compile_itree initial_itr.
+
+  Lemma initial_itr_arg_not_wf arg
+        (WF: ~ wf ms)
+        tr
+    :
+      Beh.of_program (compile_itree (initial_itr_arg arg)) tr.
+  Proof.
+    eapply Beh.ub_top. pfold. econsr; ss; et. rr. ii; ss.
+    unfold initial_itr_arg, assume in *. rewrite bind_bind in STEP.
+    eapply step_trigger_take_iff in STEP. des. subst. ss.
+  Qed.
+
+  Lemma compile_not_wf
+        (WF: ~ wf ms)
+        tr
+    :
+      Beh.of_program compile tr.
+  Proof.
+    eapply initial_itr_arg_not_wf; et.
+  Qed.
 
   (* Program Definition interp_no_forge: semantics := {| *)
   (*   STS.state := state; *)
@@ -519,33 +655,89 @@ Section MODSEML.
     r. eapply prop_ext. split; i; auto.
   Qed.
 
+  Require Import Permutation.
+
+  Lemma alist_permutation_find K `{Dec K} V (l0 l1: alist K V)
+        (ND: NoDup (List.map fst l0))
+        (PERM: Permutation l0 l1)
+        k
+    :
+      alist_find k l0 = alist_find k l1.
+  Proof.
+    revert ND k. induction PERM; ss.
+    { i. inv ND. destruct x. rewrite eq_rel_dec_correct. des_ifs. et. }
+    { i. inv ND. inv H3. destruct x, y. rewrite eq_rel_dec_correct. des_ifs.
+      rewrite eq_rel_dec_correct in *. des_ifs. f_equal. exfalso. eapply H2. ss. auto. }
+    { i. rewrite IHPERM1; auto. rewrite IHPERM2; auto.
+      eapply Permutation_NoDup; [|apply ND].
+      eapply Permutation_map. auto.
+    }
+  Qed.
+
+  Ltac resub :=
+    repeat multimatch goal with
+           | |- context[@ITree.trigger ?E ?R ?e] =>
+             match e with
+             | subevent _ _ => idtac
+             | _ => replace (@ITree.trigger E R e) with (trigger e) by refl
+             end
+           | |- context[@subevent _ ?F ?prf _ (?e|)%sum] =>
+             let my_tac := ltac:(fun H => replace (@subevent _ F prf _ (e|)%sum) with (@subevent _ F _ _ e) by H) in
+             match (type of e) with
+             | (_ +' _) _ => my_tac ltac:(destruct e; refl)
+             | _ => my_tac ltac:(refl)
+             end
+           | |- context[@subevent _ ?F ?prf _ (|?e)%sum] =>
+             let my_tac := ltac:(fun H => replace (@subevent _ F prf _ (|e)%sum) with (@subevent _ F _ _ e) by H) in
+             match (type of e) with
+             | (_ +' _) _ => my_tac ltac:(destruct e; refl)
+             | _ => my_tac ltac:(refl)
+             end
+           | |- context[ITree.trigger (@subevent _ ?F ?prf _ (resum ?a ?b ?e))] =>
+             replace (ITree.trigger (@subevent _ F prf _ (resum a b e))) with (ITree.trigger (@subevent _ F _ _ e)) by refl
+           end.
+
   Theorem add_comm
           ms0 ms1
-          (* (WF: wf (add ms0 ms1)) *)
     :
       <<COMM: Beh.of_program (compile (add ms0 ms1)) <1= Beh.of_program (compile (add ms1 ms0))>>
   .
   Proof.
     destruct (classic (wf (add ms1 ms0))); cycle 1.
-    { ii. clear PR. eapply Beh.ub_top. pfold. econsr; ss; et. rr. ii; ss. unfold initial_itr, initial_itr_arg, assume in *.
-      inv STEP; ss; irw in H1; (* clarify <- TODO: BUG, runs infloop. *) inv H1; simpl_depind; subst.
-      clarify.
-    }
+    { ii. eapply compile_not_wf; et. }
     rename H into WF.
-    (* ii. ss. r in PR. r. eapply add_comm_aux; et. *)
-    (* rp; et. clear PR. cbn. do 1 f_equal; cycle 1. *)
-    (* { unfold assume. rewrite wf_comm. ss. } *)
-    (* apply func_ext; ii. *)
-    (* f_equiv. *)
-    (* f_equal; cycle 1. *)
-    (* - unfold initial_r_state. f_equal. apply func_ext. intros fn. ss. des_ifs. *)
-    (*   + admit "ez: wf". *)
-    (*   + admit "ez: wf". *)
-    (*   + admit "ez: wf". *)
-    (* - repeat f_equal. apply func_ext_dep. intro T. apply func_ext. intro c. destruct c. *)
-    (*   repeat f_equal. apply func_ext. i. f_equal. ss. do 2 f_equal. *)
-    (*   admit "ez: wf". *)
-    admit "TODO".
+    ii. ss. r in PR. r. eapply add_comm_aux; et.
+    rp; et. clear PR. ss. cbn. unfold initial_itr, initial_itr_arg. f_equal.
+    { extensionality u. destruct u. f_equal.
+      replace (@interp_Es Σ Any.t (prog (add ms1 ms0))) with (@interp_Es Σ Any.t (prog (add ms0 ms1))).
+      { f_equal.
+        { ss. f_equal. f_equal. eapply alist_permutation_find.
+          { inv WF. et. }
+          { eapply Permutation_app_comm. }
+        }
+        f_equal.
+        { unfold initial_r_state. f_equal. extensionality mn. ss.
+          erewrite alist_permutation_find; et.
+          { inv WF. ss. }
+          { eapply Permutation_app_comm. }
+        }
+        { unfold initial_p_state. extensionality mn. ss.
+          erewrite alist_permutation_find; et.
+          { inv WF. ss. }
+          { eapply Permutation_app_comm. }
+        }
+      }
+      f_equal. unfold prog. extensionality T. extensionality e. destruct e.
+      f_equal. f_equal. symmetry.
+      eapply alist_permutation_find; et.
+      { inv WF. ss. }
+      { eapply Permutation_app_comm. }
+    }
+    { f_equal. eapply prop_ext. split; auto. intros _.
+      inv WF. econs; ss.
+      { rewrite map_app in *. eapply nodup_comm. et. }
+      { rewrite map_app in *. eapply nodup_comm. et. }
+    }
   Qed.
 
   Lemma add_assoc' ms0 ms1 ms2:
@@ -819,7 +1011,7 @@ Section MODL.
   Record t: Type := mk {
     get_modsem: Sk.t -> ModSemL.t;
     sk: Sk.t;
-    enclose: ModSemL.t := (get_modsem sk);
+    enclose: ModSemL.t := (get_modsem (Sk.sort sk));
     compile: semantics := ModSemL.compile enclose;
   }
   .
@@ -853,14 +1045,14 @@ Section MODL.
       <<COMM: Beh.of_program (compile (add md0 md1)) <1= Beh.of_program (compile (add md1 md0))>>
   .
   Proof.
-    ii.
-    unfold compile in *. ss.
+    ii. unfold compile in *.
+    destruct (classic (ModSemL.wf (enclose (add md1 md0)))).
+    2: { eapply ModSemL.compile_not_wf. ss. }
+    ss. rewrite Sk.sort_add_comm.
+    2:{ inv H. ss. inv
+
+admit "". }
     eapply ModSemL.add_comm; et.
-    rp; et. do 4 f_equal.
-    - admit "TODO: maybe the easy way is to 'canonicalize' the list by sorting.".
-    - admit "TODO: maybe the easy way is to 'canonicalize' the list by sorting.".
-    - admit "TODO: maybe the easy way is to 'canonicalize' the list by sorting.".
-    - admit "TODO: maybe the easy way is to 'canonicalize' the list by sorting.".
   Qed.
 
   Lemma add_assoc' ms0 ms1 ms2:
