@@ -36,31 +36,10 @@ Section SIMMODSEM.
   From iris.algebra Require Import big_op.
   From iris.bi Require Import big_op.
 
-  (*** TODO: How about supporting "pattern" on x? Ask Iris people ***)
-  (* Notation "'[∗' 'list]' x ∈ l , P" := *)
-  (*   (big_opL bi_sep (λ _ x, P%I) l) : bi_scope. *)
-
-  (* Notation "<< x : t >>" := (NW (fun x => (t))) (at level 80, x name, no associativity). *)
-  (* Definition iNW A (name: string) (P: A): A := P. *)
+  (*** TODO: move to proper place ***)
   Definition iNW (name: string) (P: iProp'): iProp' := P.
   Hint Unfold iNW.
   Notation "'<<' x ';' t '>>'" := (iNW x t) (at level 80, no associativity).
-  (* Notation "<< x : t >>" := (iNW x t) (at level 80, no associativity): bi_scope. *)
-
-  Let wf: W -> Prop :=
-    @mk_wf _ unit
-           (fun _ _stk_mgr0 _ =>
-              ⌜True⌝ ** (∃ (stk_mgr0: gmap mblock (list Z)),
-                            (⌜_stk_mgr0 = stk_mgr0↑⌝) ∧
-                            (<<"SIM"; ([∗ map] handle ↦ stk ∈ stk_mgr0,
-                                       (∃ hd, OwnM ((handle, 0%Z) |-> [hd]) ** is_list hd (map Vint stk)))>>)
-                        ))
-           (* (fun _ _ _ => ⌜True⌝%I) *)
-           top4
-  .
-
-  Variable global_stb: list (string * fspec).
-  Hypothesis STBINCL: stb_incl (DebugStb ++ StackStb ++ MemStb) global_stb.
 
   Lemma map_or_else_same: forall X Y (ox: option X) (d: Y), map_or_else ox (fun _ => d) d = d.
     i. destruct ox; ss.
@@ -196,14 +175,36 @@ Section SIMMODSEM.
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  Let wf: W -> Prop :=
+    @mk_wf _ unit
+           (fun _ _stk_mgr0 _ =>
+              ⌜True⌝ ** (∃ (stk_mgr0: gmap mblock (list Z)),
+                            (⌜_stk_mgr0 = stk_mgr0↑⌝) ∧
+                            (<<"SIM"; ([∗ map] handle ↦ stk ∈ stk_mgr0,
+                                       (∃ hd, OwnM ((handle, 0%Z) |-> [hd]) ** is_list hd (map Vint stk)))>>)
+                        ))
+           (* (fun _ _ _ => ⌜True⌝%I) *)
+           top4
+  .
+
+  Variable global_stb: list (string * fspec).
+  Hypothesis STBINCL: stb_incl (DebugStb ++ StackStb ++ MemStb) global_stb.
+
   Ltac renamer :=
-    (* match goal with *)
-    (* | |- gpaco6 _ _ _ _ _ _ _ _ (?mr_src, (?mp_src)↑, _, _) (?mr_tgt, ?mp_tgt, _, _) => *)
-    (*   let tmp := fresh "_tmp_" in *)
-    (*   rename mp_src into tmp; *)
-    (*   let name := fresh "stk_mgr0" in *)
-    (*   rename tmp into name *)
-    (* end *)
     match goal with
     | [mp_src: gmap nat (list Z) |- _ ] =>
       let tmp := fresh "_tmp_" in
