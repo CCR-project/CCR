@@ -172,7 +172,7 @@ Section CANCEL.
 
   Variable mds: list SMod.t.
 
-  Let sk: Sk.t := fold_right Sk.add Sk.unit (List.map SMod.sk mds).
+  Let sk: Sk.t := Sk.sort (fold_right Sk.add Sk.unit (List.map SMod.sk mds)).
   (* Let skenv: SkEnv.t := Sk.load_skenv sk. *)
 
   Let _mss: Sk.t -> list SModSem.t := fun sk => (List.map ((flip SMod.get_modsem) sk) mds).
@@ -197,21 +197,21 @@ Section CANCEL.
   Lemma stb_find_iff fn
     :
       ((<<NONE: alist_find fn stb = None>>) /\
-       (<<FINDMID: find (fun fnsem => dec fn (fst fnsem)) (ModSemL.fnsems ms_mid) = None>>) /\
-       (<<FINDTGT: find (fun fnsem => dec fn (fst fnsem)) (ModSemL.fnsems ms_tgt) = None>>)) \/
+       (<<FINDMID: alist_find fn (ModSemL.fnsems ms_mid) = None>>) /\
+       (<<FINDTGT: alist_find fn (ModSemL.fnsems ms_tgt) = None>>)) \/
 
       (exists md (f: fspecbody),
           (<<SOME: alist_find fn stb = Some (f: fspec)>>) /\
-          (<<FINDMID: find (fun fnsem => dec fn (fst fnsem)) (ModSemL.fnsems ms_mid) =
-                      Some (fn, transl_all
-                                  (SModSem.mn
-                                     (SMod.get_modsem md sk))
-                                  ∘ fun_to_mid stb (fsb_body f))>>) /\
-          (<<FINDTGT: find (fun fnsem => dec fn (fst fnsem)) (ModSemL.fnsems ms_tgt) =
-                      Some (fn, transl_all
-                                  (SModSem.mn
-                                     (SMod.get_modsem md sk))
-                                  ∘ fun_to_tgt stb f)>>)).
+          (<<FINDMID: alist_find fn (ModSemL.fnsems ms_mid) =
+                      Some (transl_all
+                              (SModSem.mn
+                                 (SMod.get_modsem md sk))
+                              ∘ fun_to_mid stb (fsb_body f))>>) /\
+          (<<FINDTGT: alist_find fn (ModSemL.fnsems ms_tgt) =
+                      Some (transl_all
+                              (SModSem.mn
+                                 (SMod.get_modsem md sk))
+                              ∘ fun_to_tgt stb f)>>)).
   Proof.
     admit "stb find".
   Qed.
@@ -399,8 +399,6 @@ Section CANCEL.
     steps. unfold put, guarantee. steps.
     destruct st_tgt0 as [rst_tgt0 pst_tgt0]. destruct st_src0 as [rst_src0 pst_src0].
     (* Opaque interp_Es. (*** TODO: move to ModSemL ***) *)
-    destruct (varg_src↓) eqn:CAST; cycle 1.
-    { steps. }
     steps. unfold handle_rE. destruct rst_tgt0 as [mrs_tgt0 [|frs_tgt_hd frs_tgt_tl]] eqn:T; ss.
     { rr in SIM. des_ifs_safe. des; ss. destruct l; ss. }
 
@@ -409,7 +407,7 @@ Section CANCEL.
     (*** exploiting both_tau ***)
     unseal_left. ired_both. destruct (alist_find fn stb) eqn:STBFIND.
     2:{ steps. }
-    ss. steps. rewrite CAST.
+    ss. steps.
 
 
     unfold discard. steps.
@@ -434,20 +432,19 @@ Section CANCEL.
     (* destruct vret_tgt as [[[mrs0 frs0] mps0] ord_cur]. *)
     destruct tbr.
     { des; et. Opaque ord_lt. destruct x4; ss; cycle 1. { exfalso. exploit x7; et. } steps. esplits; eauto. steps. unshelve esplits; eauto. steps. unfold unwrapU.
-      destruct (find (fun fnsem => dec fn (fst fnsem)) (ModSemL.fnsems ms_mid)) eqn:FINDFS; cycle 1.
+      destruct (alist_find fn (ModSemL.fnsems ms_mid)) eqn:FINDFS; cycle 1.
       { steps. }
-      destruct (find (fun fnsem => dec fn (fst fnsem)) (ModSemL.fnsems ms_tgt)) eqn:FINDFT0; cycle 1.
+      destruct (alist_find fn (ModSemL.fnsems ms_tgt)) eqn:FINDFT0; cycle 1.
       { steps.
-        apply find_some in FINDFS. des. des_sumbool. subst. destruct p as [fn fsem]; ss.
+        apply alist_find_some in FINDFS.
         assert(IN: In fn (List.map fst ms_mid.(ModSemL.fnsems))).
         { rewrite in_map_iff. esplits; et. ss. }
         unfold ms_mid in IN. unfold mds_mid in IN. unfold SMod.to_mid in IN.
         erewrite SMod.transl_fnsems_stable with (tr1:=(fun_to_tgt ∘ _stb)) (mr1:=SModSem.initial_mr) in IN.
         replace (SMod.transl (fun_to_tgt ∘ _stb) SModSem.initial_mr) with (SMod.to_tgt _stb) in IN by refl.
         fold mds_tgt in IN. fold ms_tgt in IN.
-        rewrite in_map_iff in IN. des. subst.
-        eapply find_none in FINDFT0; et.
-        des_sumbool. ss.
+        eapply in_map_iff in IN. des; subst. destruct x4. ss.
+        eapply alist_find_none in FINDFT0; et.
       }
       (* { steps. *)
       (*   rewrite WTY in *. ss. clear - FINDFS FINDFT0. *)
@@ -468,17 +465,16 @@ Section CANCEL.
       econs.
       - instantiate (1:= fun '((((mrs_src, frs_src), mps_src), vret_src): (r_state * p_state * Any_src))
                              '((((mrs_tgt, frs_tgt), mps_tgt), vret_tgt): (r_state * p_state * Any_tgt)) =>
-                           exists (rret: Σ) (vret_src': fs.(AR)),
+                           exists (rret: Σ),
                              (<<ST: (List.length frs_src) = (List.length frs_tgt) /\
                                     frs_src <> [] /\
                                     URA.wf (rsum (mrs_tgt, rret :: frs_tgt))>>) /\
                              (* (<<VAL: vret_src = vret_tgt>>) /\ *)
-                             (<<CAST: vret_src↓ = Some vret_src'>>) /\
-                             (<<POST: fs.(postcond) x2 vret_src' vret_tgt rret>>) /\
+                             (<<POST: fs.(postcond) x2 vret_src vret_tgt rret>>) /\
                              (<<PHYS: mps_src = mps_tgt>>)
                     ).
-        apply find_some in FINDFT0. des.
-        apply find_some in FINDFS. des. ss. des_sumbool. clarify.
+        apply alist_find_some in FINDFT0.
+        apply alist_find_some in FINDFS.
         unfold ms_mid, mds_mid, SMod.to_mid in FINDFS. rewrite SMod.transl_fnsems in FINDFS. unfold SMod.load_fnsems in FINDFS. ss.
         eapply in_flat_map in FINDFS; des. eapply in_flat_map in FINDFS0; des. des_ifs. ss. des; ss. clarify. fold sk in FINDFS0.
         unfold ms_tgt, mds_tgt, SMod.to_tgt in FINDFT0. rewrite SMod.transl_fnsems in FINDFT0. unfold SMod.load_fnsems in FINDFT0. ss.
@@ -493,11 +489,11 @@ Section CANCEL.
         { clear - FINDFT0 FINDFS0. admit "ez - no function name duplication". }
         subst.
         fold sk. fold sk. set (mn0:=(SModSem.mn (SMod.get_modsem md0 sk))) in *.
-        fold Any_tgt in x3.
+        fold Any_tgt in x5.
         unfold fun_to_src, fun_to_tgt, compose. des_ifs. unfold HoareFun.
-        rename x3 into PRECOND. rename x0 into rarg.
+        rename x5 into PRECOND. rename x0 into rarg.
         steps. exists (rsum_minus mn0 (update mrs_tgt0 mn c, ε ⋅ rarg :: x1 :: frs_tgt_tl)).
-        steps. exists a.
+        steps. exists varg_src.
         steps. esplits; et. steps. exists rarg.
         steps. unfold forge, checkWf, assume, guarantee.
         steps.
@@ -513,8 +509,7 @@ Section CANCEL.
         }
         steps. esplits; eauto. steps. unshelve esplits; eauto. steps.
         unfold fun_to_mid.
-        assert(CAST0: varg_src = Any.upcast a).
-        { erewrite Any.downcast_upcast; et. }
+        rewrite Any.pair_split. ss. steps.
         rewrite Any.upcast_downcast. steps.
         guclo bindC_spec.
         replace (Ord.from_nat 153) with (OrdArith.add (Ord.from_nat 53) (Ord.from_nat 100)); cycle 1.
@@ -535,9 +530,10 @@ Section CANCEL.
           steps.
           unfold discard.
           steps.
-          unfold guarantee. steps. r in SIM. des; ss. rewrite Any.upcast_downcast. esplits; ss; eauto.
-          { rewrite rsum_minus_spec in x3. rewrite URA.add_assoc in x3.
-            rewrite <- rsum_update in x3.
+          unfold guarantee. steps. r in SIM. des; ss.
+          esplits; ss; eauto.
+          { rewrite rsum_minus_spec in x4. rewrite URA.add_assoc in x4.
+            rewrite <- rsum_update in x4.
             rewrite rsum_cons. rewrite URA.add_comm.
             rewrite rsum_cons. rewrite <- URA.add_assoc.
             rewrite URA.add_comm. rewrite <- URA.add_assoc. auto.
@@ -545,7 +541,8 @@ Section CANCEL.
       - ii. ss. des_ifs_safe. des. (* rr in SIM0. des; ss. unfold RelationPairs.RelCompFun in *. ss. *)
         (* r in SIM0. des_ifs. des; ss. *)
         unfold checkWf, assume; steps. clear_tac. esplits. steps.
-        unfold forge; steps. des_ifs; ss. { steps. } steps. exists vret_src'. instantiate (1:=rret). esplits; et.
+        unfold forge; steps. des_ifs; ss. { steps. } steps.
+        eexists. instantiate (2:=rret). esplits; et.
         steps. exists (rsum_minus mn (c3, c0 ⋅ rret :: l1)).
         steps. unshelve esplits; eauto.
         { rewrite rsum_minus_spec. rewrite URA.add_assoc.
@@ -556,7 +553,7 @@ Section CANCEL.
           r_solve.
         }
         steps. unshelve esplits; eauto. steps.
-        gbase. eapply Any.downcast_upcast in CAST0. des. subst. eapply CIH; ss.
+        gbase. eapply CIH; ss.
         rr. esplits; et. { destruct l2; ss. } clear - ST1.
         { eapply URA.wf_mon. instantiate (1:=c5).
           rewrite ! rsum_cons. rewrite ! rsum_cons in ST1.
@@ -566,20 +563,19 @@ Section CANCEL.
     }
     { des. clear x7. exploit x8; et. i; clarify. clear x8.
       steps. esplits; eauto. steps. esplits; eauto. steps. unfold unwrapU.
-      destruct (find (fun fnsem => dec fn (fst fnsem)) (ModSemL.fnsems ms_mid)) eqn:FINDFS; cycle 1.
+      destruct (alist_find fn (ModSemL.fnsems ms_mid)) eqn:FINDFS; cycle 1.
       { steps. }
-      destruct (find (fun fnsem => dec fn (fst fnsem)) (ModSemL.fnsems ms_tgt)) eqn:FINDFT0; cycle 1.
+      destruct (alist_find fn (ModSemL.fnsems ms_tgt)) eqn:FINDFT0; cycle 1.
       { steps.
-        apply find_some in FINDFS. des. des_sumbool. subst. destruct p as [fn fsem]; ss.
+        apply alist_find_some in FINDFS.
         assert(IN: In fn (List.map fst ms_mid.(ModSemL.fnsems))).
         { rewrite in_map_iff. esplits; et. ss. }
         unfold ms_mid in IN. unfold mds_mid in IN. unfold SMod.to_mid in IN.
         erewrite SMod.transl_fnsems_stable with (tr1:=(fun_to_tgt ∘ _stb)) (mr1:=SModSem.initial_mr) in IN.
         replace (SMod.transl (fun_to_tgt ∘ _stb) SModSem.initial_mr) with (SMod.to_tgt _stb) in IN by refl.
         fold mds_tgt in IN. fold ms_tgt in IN.
-        rewrite in_map_iff in IN. des. subst.
-        eapply find_none in FINDFT0; et.
-        des_sumbool. ss.
+        eapply in_map_iff in IN. des; subst. destruct x4. ss.
+        eapply alist_find_none in FINDFT0; et.
       }
       mred. des_ifs. mred.
       rename i into i_src.
@@ -592,17 +588,16 @@ Section CANCEL.
       econs.
       - instantiate (1:= fun '((((mrs_src, frs_src), mps_src), vret_src): (r_state * p_state * Any_src))
                              '((((mrs_tgt, frs_tgt), mps_tgt), vret_tgt): (r_state * p_state * Any_tgt)) =>
-                           exists (rret: Σ) (vret_src': fs.(AR)),
+                           exists (rret: Σ),
                              (<<ST: (List.length frs_src) = (List.length frs_tgt) /\
                                     frs_src <> [] /\
                                     URA.wf (rsum (mrs_tgt, rret :: frs_tgt))>>) /\
                              (* (<<VAL: vret_src = vret_tgt>>) /\ *)
-                             (<<CAST: vret_src↓ = Some vret_src'>>) /\
-                             (<<POST: fs.(postcond) x2 vret_src' vret_tgt rret>>) /\
+                             (<<POST: fs.(postcond) x2 vret_src vret_tgt rret>>) /\
                              (<<PHYS: mps_src = mps_tgt>>)
                     ).
-        apply find_some in FINDFT0. des.
-        apply find_some in FINDFS. des. ss. des_sumbool. clarify.
+        apply alist_find_some in FINDFT0.
+        apply alist_find_some in FINDFS.
         unfold ms_mid, mds_mid, SMod.to_mid in FINDFS. rewrite SMod.transl_fnsems in FINDFS. unfold SMod.load_fnsems in FINDFS. ss.
         eapply in_flat_map in FINDFS; des. eapply in_flat_map in FINDFS0; des. des_ifs. ss. des; ss. clarify. fold sk in FINDFS0.
         unfold ms_tgt, mds_tgt, SMod.to_tgt in FINDFT0. rewrite SMod.transl_fnsems in FINDFT0. unfold SMod.load_fnsems in FINDFT0. ss.
@@ -617,11 +612,11 @@ Section CANCEL.
         { clear - FINDFT0 FINDFS0. admit "ez - no function name duplication". }
         subst.
         fold sk. fold sk. set (mn0:=(SModSem.mn (SMod.get_modsem md0 sk))) in *.
-        fold Any_tgt in x3.
+        fold Any_tgt in x5.
         unfold fun_to_src, fun_to_tgt, compose. des_ifs. unfold HoareFun.
-        rename x3 into PRECOND. rename x0 into rarg.
+        rename x5 into PRECOND. rename x0 into rarg.
         steps. exists (rsum_minus mn0 (update mrs_tgt0 mn c, ε ⋅ rarg :: x1 :: frs_tgt_tl)).
-        steps. exists a.
+        steps. exists varg_src.
         steps. esplits; et. steps. exists rarg.
         steps. unfold forge, checkWf, assume, guarantee.
         steps. unshelve esplits; eauto.
@@ -637,11 +632,12 @@ Section CANCEL.
         }
         steps. esplits; eauto. steps. unfold cfun. steps. unshelve esplits; eauto. steps.
         unfold fun_to_mid.
-        rewrite Any.upcast_downcast.
-        steps.
+        rewrite Any.pair_split. steps.
+        rewrite Any.upcast_downcast. steps.
         guclo bindC_spec.
         replace (Ord.from_nat 153) with (OrdArith.add (Ord.from_nat 53) (Ord.from_nat 100)); cycle 1.
         { admit "ez - ordinal nat add". }
+        rewrite idK_spec at 1.
         econs.
         + gbase. unfold body_to_tgt, body_to_mid. eapply CIH; ss.
           rr. esplits; ss; et. rewrite URA.unit_idl. clear - WFTGT x.
@@ -652,17 +648,11 @@ Section CANCEL.
           rewrite URA.add_comm. rewrite <- URA.add_assoc. auto.
         + ii. ss. des_ifs_safe. des; ss. clarify.
           steps. esplits; eauto. steps. unfold put. steps. destruct p0; ss. steps.
-          unfold handle_rE. destruct r0; ss. destruct l; ss.
+          des_ifs.
           { steps. }
-          steps.
-          unfold guarantee.
-          steps.
-          unfold discard.
-          steps.
-          unfold guarantee. steps. r in SIM. des; ss. rewrite Any.upcast_downcast. esplits; ss; eauto.
-          clear - x3 WFTGT0.
-          rewrite rsum_minus_spec in x3. rewrite URA.add_assoc in x3.
-          rewrite <- rsum_update in x3.
+          steps. unfold discard. steps. des. esplits; et.
+          rewrite rsum_minus_spec in x4. rewrite URA.add_assoc in x4.
+          rewrite <- rsum_update in x4.
           rewrite rsum_cons. rewrite URA.add_comm.
           rewrite rsum_cons. rewrite <- URA.add_assoc.
           rewrite URA.add_comm. rewrite <- URA.add_assoc. auto.
@@ -672,7 +662,7 @@ Section CANCEL.
         unfold forge, checkWf, assume; steps.
         des_ifs; ss.
         { steps. }
-        steps. esplits. steps. instantiate (1:= rret). instantiate (1:=vret_src').
+        steps. esplits. steps. instantiate (1:= rret).
         exists (rsum_minus mn (c3, c0 ⋅ rret :: l1)). steps.
         unshelve esplits; eauto.
         { clear - ST1. rewrite rsum_minus_spec.
@@ -684,7 +674,7 @@ Section CANCEL.
         }
         steps. unshelve esplits; eauto.
         steps.
-        gbase. eapply Any.downcast_upcast in CAST0. des. subst. eapply CIH; ss.
+        gbase. eapply CIH; ss.
         rr. esplits; et. { destruct l2; ss. } clear - ST1.
         eapply URA.wf_mon. instantiate (1:=c5).
         rewrite ! rsum_cons. rewrite ! rsum_cons in ST1.
@@ -699,19 +689,21 @@ Section CANCEL.
 
   Variable entry_r: Σ.
   Variable mainpre: Any.t -> ord -> Σ -> Prop.
-  Variable (mainbody: list val -> itree (hCallE +' pE +' eventE) val).
+  Variable (mainbody: Any.t -> itree (hCallE +' pE +' eventE) Any.t).
   Hypothesis MAINPRE: mainpre ([]: list val)↑ ord_top entry_r.
 
   Hypothesis WFR: URA.wf (entry_r ⋅ rsum (ModSemL.initial_r_state ms_tgt)).
 
   Hypothesis MAINM: In (SMod.main mainpre mainbody) mds.
 
-  Let MAINF: @alist_find _ _ (@Dec_RelDec string string_Dec) _  "main" stb = Some (mk_simple (fun (_: unit) => (mainpre, top2))).
+  Require Import Logic.
+
+  Let MAINF: @alist_find _ _ (@Dec_RelDec string string_Dec) _  "main" stb = Some (mk_simple (fun (_: unit) => (mainpre, fun _ => (⌜True⌝: iProp)%I))).
   Proof.
     unfold stb, _stb.
     rewrite alist_find_map. uo. unfold compose. des_ifs.
     - eapply alist_find_some in Heq. des. des_sumbool. subst. repeat f_equal.
-      assert(In ("main", (mk_specbody (mk_simple (fun (_: unit) => (mainpre, top2))) mainbody)) sbtb).
+      assert(In ("main", (mk_specbody (mk_simple (fun (_: unit) => (mainpre, fun _ => (⌜True⌝: iProp)%I))) mainbody)) sbtb).
       { unfold sbtb, _sbtb, mss, _mss. eapply in_flat_map. esplits; et.
         { rewrite in_map_iff. esplits; et. }
         ss. et.
@@ -726,8 +718,8 @@ Section CANCEL.
   Qed.
 
   Let initial_r_state ms entry_r: r_state :=
-    (fun mn => match List.find (fun mnr => dec mn (fst mnr)) ms.(ModSemL.initial_mrs) with
-               | Some r => fst (snd r)
+    (fun mn => match alist_find mn ms.(ModSemL.initial_mrs) with
+               | Some r => fst r
                | None => ε
                end, [entry_r]). (*** we have a dummy-stack here ***)
 
@@ -735,19 +727,72 @@ Section CANCEL.
 
   Require Import ProofMode.
 
-  Theorem adequacy_type_t2m: Beh.of_program (ModL.compile (Mod.add_list mds_tgt)) <1=
-                             Beh.of_program (ModL.compile (Mod.add_list mds_mid)).
+  Lemma sk_eq:
+    ModL.sk (Mod.add_list mds_tgt) = ModL.sk (Mod.add_list mds_mid).
   Proof.
-    eapply adequacy_global.
+    unfold ms_tgt, ms_mid, mds_mid, mds_tgt, ModL.enclose.
+    rewrite ! Mod.add_list_sk. f_equal.
+    generalize mds. clear. i. induction mds0; ss.
+    rewrite IHmds0. auto.
+  Qed.
+
+  Lemma fst_initial_mrs_eq:
+    List.map fst (ModSemL.initial_mrs ms_tgt) = List.map fst (ModSemL.initial_mrs ms_mid).
+  Proof.
+    pose proof sk_eq.
+    unfold ms_tgt, ms_mid, mds_tgt, mds_mid, ModL.enclose.
+    unfold mds_mid, mds_tgt in H. rewrite H.
+    generalize (ModL.sk (Mod.add_list (List.map (SMod.to_mid stb) mds))). i.
+    rewrite ! Mod.add_list_initial_mrs.
+    generalize mds. clear. i. induction mds0; auto.
+    ss. rewrite IHmds0. auto.
+  Qed.
+
+  Lemma initial_p_eq:
+    ModSemL.initial_p_state ms_tgt = ModSemL.initial_p_state ms_mid.
+  Proof.
+    unfold ModSemL.initial_p_state. extensionality mn.
+    pose proof sk_eq.
+    unfold ms_tgt, ms_mid, mds_tgt, mds_mid, ModL.enclose.
+    unfold mds_mid, mds_tgt in H. rewrite H.
+    generalize (ModL.sk (Mod.add_list (List.map (SMod.to_mid stb) mds))). i.
+    rewrite ! Mod.add_list_initial_mrs.
+    generalize mds. clear. i. induction mds0; auto.
+    ss. rewrite eq_rel_dec_correct in *. des_ifs.
+  Qed.
+
+  Lemma fns_eq:
+    (List.map fst (ModSemL.fnsems (ModL.enclose (Mod.add_list mds_tgt))))
+    =
+    (List.map fst (ModSemL.fnsems (ModL.enclose (Mod.add_list mds_mid)))).
+  Proof.
+    pose proof sk_eq. unfold ModL.enclose.
+    unfold mds_mid, mds_tgt, ModL.enclose.
+    unfold mds_mid, mds_tgt in H. rewrite H.
+    generalize (ModL.sk (Mod.add_list (List.map (SMod.to_mid stb) mds))). i.
+    rewrite ! Mod.add_list_fns. rewrite ! List.map_map. f_equal.
+    f_equal. extensionality sm. ss. rewrite ! List.map_map. f_equal.
+    extensionality fnsb. destruct fnsb as [fn sb]. ss.
+  Qed.
+
+  Theorem adequacy_type_t2m: Beh.of_program (ModL.compile (Mod.add_list mds_tgt)) <1=
+                             Beh.of_program (ModL.compile_arg (Mod.add_list mds_mid) (Any.pair ord_top↑ ([]: list val)↑)).
+  Proof.
+    eapply adequacy_global_itree.
     exists (Ord.from_nat 100%nat). ss.
     ginit.
     { eapply cpn6_wcompat; eauto with paco. }
-    unfold ModSemL.initial_itr. Local Opaque ModSemL.prog. ss.
+    unfold ModSemL.initial_itr, ModSemL.initial_itr_arg. Local Opaque ModSemL.prog. ss.
     unfold ITree.map.
     unfold assume.
-    steps.
+    steps. unfold ModL.wf in *. des.
     esplits; et.
-    { admit "ez - wf". }
+    { inv WF. econs.
+      { rewrite fns_eq. auto. }
+      { pose proof fst_initial_mrs_eq. unfold ms_tgt, ms_mid in H.
+        rewrite H. auto. }
+    }
+    { rewrite sk_eq. auto. }
     steps. folder.
     set (st_mid0 := ((ModSemL.initial_r_state ms_mid), (ModSemL.initial_p_state ms_mid))).
     set (st_midr0 := ((initial_r_state ms_mid ε), (ModSemL.initial_p_state ms_mid))).
@@ -755,20 +800,9 @@ Section CANCEL.
     set (st_tgt0 := (ModSemL.initial_r_state ms_tgt, (ModSemL.initial_p_state ms_tgt))).
     (* Local Opaque URA.add. *)
     assert(SIM: wf st_midr0 st_tgtl0).
-    { r. ss. esplits; ss; et. { admit "ez". } unfold ms_mid. unfold ModSemL.initial_p_state. ss.
-      apply func_ext. clear. i.
-      unfold ms_tgt, mds_tgt, SMod.to_tgt, mds_mid, SMod.to_mid. rewrite ! SMod.transl_initial_mrs. folder.
-      des_ifs; ss; apply_all_once find_some; des; ss; des_sumbool; clarify;
-        unfold SMod.load_initial_mrs in *; apply_all_once in_flat_map; des; ss; des; ss; clarify; ss.
-      - assert(x = x0).
-        { admit "uniqueness of mn". }
-        subst; ss.
-      - eapply find_none in Heq0; cycle 1.
-        { rewrite in_flat_map. esplits; et. ss; et. }
-        ss. des_sumbool; ss.
-      - eapply find_none in Heq; cycle 1.
-        { rewrite in_flat_map. esplits; et. ss; et. }
-        ss. des_sumbool; ss.
+    { r. ss. esplits; ss; et.
+      { admit "resourve wf". }
+      rewrite initial_p_eq. auto.
     }
     unfold mrec.
 
@@ -779,17 +813,12 @@ Section CANCEL.
     unfold HoareFun. steps.
 
     unfold forge, put, checkWf, discard.
-    eexists. steps. exists []. steps. exists tt. steps.
+    eexists. steps. eexists. steps. exists tt. steps.
     eexists. steps. unshelve esplits.
     { admit "resource wf". }
     steps. exists ord_top. steps. unshelve esplits.
-    { red. uipropall. split.
-      { eapply MAINPRE. }
-      { red. uipropall. }
-    }
-    steps.
-    replace (Any.upcast []) with (Any.upcast (ord_top, []: list val))
-      by admit "parametrize initial argument".
+    { red. uipropall. esplits; et. r. uipropall. }
+    steps. rewrite Any.pair_split. steps.
     rewrite Any.upcast_downcast. steps.
 
     guclo ordC_spec. econs.
@@ -801,7 +830,7 @@ Section CANCEL.
       { gfinal. right. fold simg.
         eapply adequacy_type_aux; ss. splits; ss.
         { admit "initial_r_state wf". }
-        { admit "initial p state". }
+        { rewrite initial_p_eq. auto. }
       }
       i. ss.
       destruct vret_src as [[[mrs_src fr_src] mps_src] v_src].
@@ -809,7 +838,7 @@ Section CANCEL.
       ss. des; subst. steps.
       destruct fr_tgt; ss.
       { steps. }
-      steps. uipropall. des. red in x4. uipropall.
+      steps. red in x2. uipropall. des. red in x4. uipropall.
     }
     Unshelve.
     all: try (by apply Ord.O).

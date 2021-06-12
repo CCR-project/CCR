@@ -92,6 +92,9 @@ Fixpoint alist_replace (K : Type) (R : K -> K -> Prop) (RD_K : RelDec R) (V : Ty
     else (k', v') :: alist_replace _ k v ms
   end.
 
+Definition alist_filter K `{Dec K} V (f: K -> bool) (l: alist K V) :=
+  List.filter (f ∘ fst) l.
+
 Arguments alist_replace [K R] {RD_K} [V].
 Arguments alist_find [K R] {RD_K} [V].
 Arguments alist_add [K R] {RD_K} [V].
@@ -107,13 +110,16 @@ Proof.
   des_ifs.
 Qed.
 
+Require Import List Setoid Permutation Sorted Orders.
+
 Section ALIST.
   Lemma alist_find_some K `{Dec K} V (k: K) (l: alist K V) (v: V)
         (FIND: alist_find k l = Some v)
   :
     In (k, v) l.
   Proof.
-    admit "ez".
+    revert FIND. induction l; ss.
+    i. destruct a. ss. rewrite eq_rel_dec_correct in *. des_ifs; auto.
   Qed.
 
   Lemma alist_find_none K `{Dec K} V (k: K) (l: alist K V)
@@ -122,7 +128,9 @@ Section ALIST.
     :
       ~ In (k, v) l.
   Proof.
-    admit "ez".
+    revert FIND. induction l; ss.
+    i. destruct a. ss. rewrite eq_rel_dec_correct in *. des_ifs; auto.
+    ii. des; clarify. eapply IHl; et.
   Qed.
 
   Lemma alist_find_app K `{Dec K} V (k: K) (l0 l1: alist K V) (v: V)
@@ -130,14 +138,139 @@ Section ALIST.
     :
       alist_find k (l0 ++ l1) = Some v.
   Proof.
-    admit "ez".
+    revert FIND. induction l0; ss.
+    i. destruct a. ss. rewrite eq_rel_dec_correct in *. des_ifs; auto.
   Qed.
 
   Lemma alist_find_map K `{Dec K} V0 V1 (f: V0 -> V1) (k: K) (l: alist K V0)
     :
       alist_find k (List.map (fun '(k, v) => (k, f v)) l) = o_map (alist_find k l) f.
   Proof.
-    admit "ez".
+    induction l; ss. uo. destruct a. rewrite eq_rel_dec_correct in *.
+    des_ifs.
+  Qed.
+
+  Lemma alist_add_find_eq K `{Dec K} V (k: K) (l: alist K V) (v: V)
+    :
+      alist_find k (alist_add k v l) = Some v.
+  Proof.
+    ss. rewrite eq_rel_dec_correct. des_ifs.
+  Qed.
+
+  Lemma alist_remove_find_eq K `{Dec K} V (k: K) (l: alist K V)
+    :
+      alist_find k (alist_remove k l) = None.
+  Proof.
+    induction l; ss. rewrite eq_rel_dec_correct. des_ifs.
+    ss. destruct a. ss. rewrite eq_rel_dec_correct. des_ifs.
+  Qed.
+
+  Lemma alist_remove_find_neq K `{Dec K} V (k0 k1: K) (l: alist K V)
+        (NEQ: k0 <> k1)
+    :
+      alist_find k0 (alist_remove k1 l) = alist_find k0 l.
+  Proof.
+    induction l; ss.
+    destruct a. ss. rewrite ! eq_rel_dec_correct. des_ifs.
+    { ss. rewrite eq_rel_dec_correct. des_ifs. }
+    { ss. rewrite eq_rel_dec_correct. des_ifs. }
+  Qed.
+
+  Lemma alist_add_find_neq K `{Dec K} V (k0 k1: K) (l: alist K V) (v: V)
+        (NEQ: k0 <> k1)
+    :
+      alist_find k0 (alist_add k1 v l) = alist_find k0 l.
+  Proof.
+    ss. rewrite eq_rel_dec_correct. des_ifs.
+    eapply alist_remove_find_neq; auto.
+  Qed.
+
+  Lemma alist_find_filter K `{Dec K} V (l: alist K V) (k: K) (v: V) (f: K -> bool)
+        (FIND: alist_find k (alist_filter f l) = Some v)
+        (ND: NoDup (List.map fst l))
+    :
+      alist_find k l = Some v.
+  Proof.
+    revert FIND ND. induction l; ss. i.
+    destruct a. erewrite eq_rel_dec_correct. ss. inv ND. des_ifs.
+    - ss. rewrite eq_rel_dec_correct in *. des_ifs.
+    - exfalso. hexploit IHl; et. i. eapply H2.
+      eapply alist_find_some in H0. eapply (in_map fst) in H0. ss.
+    - ss. rewrite eq_rel_dec_correct in *. des_ifs.
+      eapply IHl; et.
+    - eapply IHl; et.
+  Qed.
+
+  Lemma alist_add_nodup K `{Dec K} V (l: alist K V) k v
+        (ND: NoDup (List.map fst l))
+    :
+      NoDup (List.map fst (alist_add k v l)).
+  Proof.
+    revert ND. induction l; ss.
+    { i. econs; et. }
+    i. inv ND. spc IHl. destruct a. ss.
+    rewrite eq_rel_dec_correct in *. des_ifs.
+    inv IHl. ss. econs; et.
+    { ii. ss. des; clarify. }
+    { econs; et. ii. eapply H2.
+      eapply in_map_iff in H0. eapply in_map_iff.
+      des. subst. esplits; et.
+      unfold alist_remove in H1.
+      eapply filter_In in H1. des; auto. }
+  Qed.
+
+  Lemma alist_remove_filter K `{Dec K} V (l: alist K V) k f
+    :
+      alist_filter f (alist_remove k l) =
+      alist_remove k (alist_filter f l).
+  Proof.
+    induction l; ss. destruct a. ss.
+    rewrite eq_rel_dec_correct. des_ifs; ss.
+    { rewrite Heq0. rewrite eq_rel_dec_correct. des_ifs. f_equal; et. }
+    { rewrite Heq0. et. }
+    { rewrite eq_rel_dec_correct. des_ifs. }
+  Qed.
+
+  Lemma alist_add_filter K `{Dec K} V (l: alist K V) k v f
+        (IN: f k = true)
+    :
+      alist_filter f (alist_add k v l) =
+      alist_add k v (alist_filter f l).
+  Proof.
+    unfold alist_add in *. ss. des_ifs.
+    f_equal. eapply alist_remove_filter.
+  Qed.
+
+  Lemma alist_add_other_filter K `{Dec K} V f (l: alist K V) k v
+        (NIN: f k = false)
+    :
+      alist_filter f (alist_add k v l) =
+      alist_filter f l.
+  Proof.
+    induction l; ss.
+    { i. rewrite NIN. ss. }
+    { i. destruct a. ss. rewrite NIN in *.
+      rewrite eq_rel_dec_correct. des_ifs; ss.
+      { rewrite Heq0. f_equal. auto. }
+      { rewrite Heq0. auto. }
+    }
+  Qed.
+
+  Lemma alist_permutation_find K `{Dec K} V (l0 l1: alist K V)
+        (ND: NoDup (List.map fst l0))
+        (PERM: Permutation l0 l1)
+        k
+    :
+      alist_find k l0 = alist_find k l1.
+  Proof.
+    revert ND k. induction PERM; ss.
+    { i. inv ND. destruct x. rewrite eq_rel_dec_correct. des_ifs. et. }
+    { i. inv ND. inv H3. destruct x, y. rewrite eq_rel_dec_correct. des_ifs.
+      rewrite eq_rel_dec_correct in *. des_ifs. f_equal. exfalso. eapply H2. ss. auto. }
+    { i. rewrite IHPERM1; auto. rewrite IHPERM2; auto.
+      eapply Permutation_NoDup; [|apply ND].
+      eapply Permutation_map. auto.
+    }
   Qed.
 End ALIST.
 
@@ -150,3 +283,116 @@ Tactic Notation "asimpl" "in" "*" :=
 
 Tactic Notation "asimpl" :=
   (try unfold alist_remove, alist_add); simpl.
+
+
+Definition ascii_le (c0 c1: Ascii.ascii): bool :=
+  (Ascii.nat_of_ascii c0 <=? Ascii.nat_of_ascii c1)%nat.
+
+Lemma ascii_le_antisym c0 c1
+      (EQ0: ascii_le c0 c1 = true)
+      (EQ1: ascii_le c1 c0 = true)
+  :
+    c0 = c1.
+Proof.
+  unfold ascii_le in *.
+  eapply leb_complete in EQ0.
+  eapply leb_complete in EQ1.
+  rewrite <- (Ascii.ascii_nat_embedding c0).
+  rewrite <- (Ascii.ascii_nat_embedding c1). f_equal. lia.
+Qed.
+
+Fixpoint string_le (s0 s1: string): bool :=
+  match s0, s1 with
+  | EmptyString, _ => true
+  | _, EmptyString => false
+  | String hd0 tl0, String hd1 tl1 =>
+    if (Ascii.eqb hd0 hd1)
+    then string_le tl0 tl1
+    else ascii_le hd0 hd1
+  end.
+
+Module AsciiOrder <: TotalTransitiveLeBool'.
+  Definition t := Ascii.ascii.
+  Definition leb := ascii_le.
+  Lemma leb_total : forall x y : t, leb x y = true \/ leb y x = true.
+  Proof.
+    i. unfold leb, ascii_le.
+    assert (Ascii.nat_of_ascii x <= Ascii.nat_of_ascii y \/ Ascii.nat_of_ascii y <= Ascii.nat_of_ascii x)%nat by lia.
+    des.
+    { left. eapply leb_correct. auto. }
+    { right. eapply leb_correct. auto. }
+  Qed.
+
+  Lemma leb_trans : Transitive leb.
+  Proof.
+    ii. unfold leb, ascii_le in *. unfold is_true in *.
+    eapply leb_complete in H. eapply leb_complete in H0.
+    eapply leb_correct. auto. etrans; et.
+  Qed.
+End AsciiOrder.
+
+Module StringOrder <: TotalTransitiveLeBool'.
+  Definition t := string.
+  Definition leb := string_le.
+  Lemma leb_total : forall x y : t, leb x y = true \/ leb y x = true.
+  Proof.
+    i. unfold leb. revert y. induction x; ss; auto.
+    i. des_ifs; ss; auto.
+    { eapply Ascii.eqb_eq in Heq. subst.
+      rewrite Ascii.eqb_refl. auto. }
+    { rewrite Ascii.eqb_sym. rewrite Heq.
+      eapply AsciiOrder.leb_total. }
+  Qed.
+
+  Lemma leb_trans : Transitive leb.
+  Proof.
+    ii. unfold leb in *. revert y z H H0.
+    induction x; ss. i. destruct y, z; ss.
+    destruct (Ascii.eqb a a0) eqn:EQ0.
+    { eapply Ascii.eqb_eq in EQ0. subst. des_ifs. et. }
+    destruct (Ascii.eqb a0 a1) eqn:EQ1.
+    { eapply Ascii.eqb_eq in EQ1. subst. des_ifs. }
+    destruct (Ascii.eqb a a1) eqn:EQ2.
+    { eapply Ascii.eqb_eq in EQ2. subst. replace a0 with a1 in *.
+      { rewrite Ascii.eqb_refl in EQ0. ss. }
+      { eapply ascii_le_antisym; et. }
+    }
+    { eapply AsciiOrder.leb_trans; et. }
+  Qed.
+End StringOrder.
+
+Module ProdFstOrder (A: TotalTransitiveLeBool') (B: Typ) <: TotalTransitiveLeBool'.
+  Definition t := (A.t * B.t)%type.
+  Definition leb := fun (x y: t) => A.leb (fst x) (fst y).
+  Lemma leb_total : forall x y : t, leb x y = true \/ leb y x = true.
+  Proof. i. eapply A.leb_total. Qed.
+
+  Lemma leb_trans : Transitive leb.
+  Proof. ii. eapply A.leb_trans; et. Qed.
+End ProdFstOrder.
+
+Require Import Sorting.Mergesort.
+Require Import Sorting.Sorted.
+
+Module AListSort (V: Typ).
+  Module _Order := ProdFstOrder StringOrder V.
+  Module Sorting := Sort _Order.
+  Include Sorting.
+
+  Definition t := alist string V.t.
+
+  Lemma sort_permutation (l: t)
+    :
+      Permutation l (sort l).
+  Proof.
+    eapply Sorting.Permuted_sort.
+  Qed.
+
+  Lemma sort_add_comm (l0 l1: t)
+        (ND: NoDup (List.map fst (l0 ++ l1)))
+    :
+      sort (l0 ++ l1) = sort (l1 ++ l0).
+  Proof.
+    admit "sorting commutative".
+  Qed.
+End AListSort.

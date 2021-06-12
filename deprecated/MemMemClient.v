@@ -36,6 +36,7 @@ Arguments rel_dec_eq_true [T] eqt {r} {rc}.
 
 
 Section AUX.
+  (* TODO: move to AList.v *)
   Lemma map_snd_map_snd A B0 B1 B2 (f0: B0 -> B1) (f1: B1 -> B2):
     (map_snd (A:=A) f1) ∘ (map_snd f0) = map_snd (f1 ∘ f0).
   Proof. apply func_ext. i. destruct x; ss. Qed.
@@ -48,18 +49,6 @@ Section AUX.
   Proof.
     ginduction kvs; ii; ss. des_ifs; rewrite eq_rel_dec_correct in *; des_sumbool; des_ifs.
   Qed.
-
-  (* Lemma alist_find_concat *)
-  (*       `{RelDec K} V (x: K) (xss: list (list (K * V))) *)
-  (*       xs v *)
-  (*       (FIND0: find (fun xs => is_some (alist_find x xs)) xss = Some xs) *)
-  (*       (FIND1: alist_find x xs = Some v) *)
-  (*   : *)
-  (*     alist_find x (concat xss) = Some v *)
-  (* . *)
-  (* Proof. *)
-  (*   admit "ez". *)
-  (* Qed. *)
 
   Lemma alist_find_app2 K `{Dec K} V (k: K) (l0 l1: alist K V) (v: V)
         (FIND0: alist_find k l0 = None)

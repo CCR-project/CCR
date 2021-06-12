@@ -42,17 +42,17 @@ Section PROOF.
   Definition clientBody: list val -> itree (kCallE +' pE +' eventE) val :=
     fun _ =>
       APCK;;;
-      trigger (kCall "unknown_call" (inr []));;;
+      trigger (kCall false false "unknown_call" (([]: list val)↑));;;
       APCK;;;
       Ret (Vint 42)
   .
 
-  Definition client_spec: ftspec unit unit :=
-    mk_ksimple (fun (_: unit) => ((fun _ o => (⌜o = ord_top⌝)%I), (fun _ => ⌜True⌝%I)))
+  Definition client_spec: fspec :=
+    mk_simple (fun (_: unit) => ((fun _ o => (⌜o = ord_top⌝)%I), (fun _ => ⌜True⌝%I)))
   .
 
   Definition ClientSbtb: list (gname * kspecbody) :=
-    [("client", mk_kspecbody client_spec clientBody)
+    [("client", mk_kspecbody client_spec (cfun clientBody) (cfun clientBody))
     ]
   .
 
@@ -65,7 +65,7 @@ Section PROOF.
 
   Definition UnknownStb: list (gname * fspec).
    eapply (Seal.sealing "stb").
-   eapply [("unknown_call", fspec_trivial2)].
+   eapply [("unknown_call", fspec_trivial)].
   Defined.
 
   Definition KClientSem: KModSem.t := {|

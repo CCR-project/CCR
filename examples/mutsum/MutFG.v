@@ -37,30 +37,13 @@ Section PROOF.
         SMod.to_src MutG1.SG
       ].
 
-  Definition FG3: ModL.t := {|
-    ModL.get_modsem := fun _ => {|
-        ModSemL.fnsems :=
-          [("main", fun _ => Ret (Vint 55)↑) ;
-          ("f", fun _ => trigger (Choose _)) ;
-          ("g", fun _ => trigger (Choose _))];
-        ModSemL.initial_mrs := [("Main", (ε, tt↑)) ; ("F", (ε, tt↑)) ; ("G", (ε, tt↑))];
-      |};
-    ModL.sk := [("f", Sk.Gfun)] ++ [("g", Sk.Gfun)];
-  |}
-  .
-
   Lemma FGImp0_correct:
     SimModSem.refines FGImp FG0.
   Proof.
     eapply SimModSem.adequacy_local_list. econs; [|econs; [|econs; ss]].
-    - econs; ss.
-      i. eapply SimModSem.adequacy_lift. eapply SimModSem.ModSemPair.self_sim_mod. ss. repeat (econs; ss).
-    - split; auto.
-      + ii. ss. eapply SimModSem.adequacy_lift. eapply MutFImp0proof.correct.
-      + i. ss. split; ss; repeat econs; eauto.
-    - split; auto.
-      + ii. ss. eapply SimModSem.adequacy_lift. eapply MutGImp0proof.correct.
-      + i. ss. split; ss; repeat econs; eauto.
+    - econs; ss. ii. eapply SimModSem.ModSemPair.self_sim_mod. ss. repeat (econs; ss).
+    - split; auto. ii. ss. eapply MutFImp0proof.correct.
+    - split; auto. ii. ss. eapply MutGImp0proof.correct.
   Qed.
 
   Lemma FG01_correct:
@@ -86,56 +69,59 @@ Section PROOF.
         { instantiate (1:=ε). unfold compose. ss. rewrite ! URA.unit_id. apply URA.wf_unit. }
         { uipropall. red. uipropall. }
       }
-      { admit "TODO - change SMain". }
+      { ss. }
     }
   Qed.
 
-  (* Definition F3: Mod.t := {| *)
-  (*   Mod.get_modsem := fun _ => {| *)
-  (*     ModSem.fnsems := [("f", fun _ => trigger (Choose _))]; *)
-  (*     ModSem.mn := "F"; *)
-  (*     ModSem.initial_mr := ε; *)
-  (*     ModSem.initial_st := tt↑; *)
-  (*   |}; *)
-  (*   Mod.sk := Sk.unit; *)
-  (* |} *)
-  (* . *)
+  Definition F3: Mod.t := {|
+    Mod.get_modsem := fun _ => {|
+      ModSem.fnsems := [("f", fun _ => trigger (Choose _))];
+      ModSem.mn := "F";
+      ModSem.initial_mr := ε;
+      ModSem.initial_st := tt↑;
+    |};
+    Mod.sk := [("f", Sk.Gfun)];
+  |}
+  .
 
-  (* Definition G3: Mod.t := {| *)
-  (*   Mod.get_modsem := fun _ => {| *)
-  (*     ModSem.fnsems := [("g", fun _ => trigger (Choose _))]; *)
-  (*     ModSem.mn := "G"; *)
-  (*     ModSem.initial_mr := ε; *)
-  (*     ModSem.initial_st := tt↑; *)
-  (*   |}; *)
-  (*   Mod.sk := Sk.unit; *)
-  (* |} *)
-  (* . *)
+  Definition G3: Mod.t := {|
+    Mod.get_modsem := fun _ => {|
+      ModSem.fnsems := [("g", fun _ => trigger (Choose _))];
+      ModSem.mn := "G";
+      ModSem.initial_mr := ε;
+      ModSem.initial_st := tt↑;
+    |};
+    Mod.sk := [("g", Sk.Gfun)];
+  |}
+  .
 
-  (* Definition Main3: Mod.t := {| *)
-  (*   Mod.get_modsem := fun _ => {| *)
-  (*     ModSem.fnsems := [("main", fun _ => trigger (Choose _))]; *)
-  (*     ModSem.mn := "Main"; *)
-  (*     ModSem.initial_mr := ε; *)
-  (*     ModSem.initial_st := tt↑; *)
-  (*   |}; *)
-  (*   Mod.sk := Sk.unit; *)
-  (* |} *)
-  (* . *)
+  Definition Main3: Mod.t := {|
+    Mod.get_modsem := fun _ => {|
+      ModSem.fnsems := [("main", fun _ => trigger (Choose _))];
+      ModSem.mn := "Main";
+      ModSem.initial_mr := ε;
+      ModSem.initial_st := tt↑;
+    |};
+    Mod.sk := Sk.unit;
+  |}
+  .
 
-  (*** TODO: we can generalize adequacy_type, so that FG2 is defined as a summation of Mod.t, NOT ModL.t.
-Then, we can just use SimModSem.adequacy_local_list. in this proof (FG23_correct).
-   ***)
+  Definition FG3: ModL.t := Mod.add_list [Main3;F3;G3].
+
   Lemma FG23_correct: refines_closed (FG2) (FG3).
   Proof.
-    r. eapply ModLPair.adequacy_local_closed. econs; auto.
-    2: { i. ss. split; ss; repeat (econs; eauto; ii; ss; des; clarify). }
-    ii.
-    eapply ModSemLPair.mk with (wf:=top1) (le:=top2); ss.
-    econs; [|econs; [|econs;ss]].
-    - admit "SimModSemL".
-    - admit "SimModSemL".
-    - admit "SimModSemL".
+    eapply refines_close.
+    eapply SimModSem.adequacy_local_list. econs; [|econs; [|econs; ss]].
+    - econs; ss. ii. econstructor 1 with (wf:=top1); ss. econs; et.
+      init. unfold cfun, fun_to_src, body_to_src, mainBody. steps.
+      eapply Any.downcast_upcast in _UNWRAPN. des. subst.
+      force_l. eexists. steps.
+    - econs; ss. ii. econstructor 1 with (wf:=top1); ss. econs; et.
+      init. unfold cfun, fun_to_src, body_to_src, mainBody. steps.
+      force_l. eexists. steps.
+    - econs; ss. ii. econstructor 1 with (wf:=top1); ss. econs; et.
+      init. unfold cfun, fun_to_src, body_to_src, mainBody. steps.
+      force_l. eexists. steps.
   Qed.
 
   Theorem FG_correct:
@@ -154,5 +140,5 @@ Then, we can just use SimModSem.adequacy_local_list. in this proof (FG23_correct
 
 End PROOF.
 
-Definition mutsum_imp := ModSemL.initial_itr_no_check (ModL.enclose FGImp).
-Definition mutsum := ModSemL.initial_itr_no_check (ModL.enclose FG3).
+Definition mutsum_imp := ModSemL.initial_itr (ModL.enclose FGImp) None.
+Definition mutsum := ModSemL.initial_itr (ModL.enclose FG3) None.

@@ -16,7 +16,7 @@ From ExtLib Require Import
      Structures.Maps
      Data.Map.FMapAList.
 Require Import TODOYJ.
-Require Import HTactics Logic IPM.
+Require Import OpenDef HTactics Logic IPM.
 
 Set Implicit Arguments.
 
@@ -313,19 +313,17 @@ Proof Outline
     { unfold allocF. init.
       harg. fold wf. steps. hide_k. destruct x as [sz|].
       { mDesAll; ss. des; subst.
-        des_ifs; mDesAll; ss. des; subst. clarify. rewrite Any.upcast_downcast in *. clarify.
+        des_ifs_safe (mDesAll; ss). des; subst. clarify. rewrite Any.upcast_downcast in *. clarify.
         steps. unhide_k. steps. astart 0. astop.
         rename a2 into memk_src0. rename a1 into mem_tgt0. rename a0 into memu_src0.
         set (blk := mem_tgt0.(Mem.nb) + x). 
 
         mRefresh.
-        mRename "A" into "K".
-
-        mAssert _ with "K" as "K".
-        { iApply (OwnM_Upd with "K").
+        mAssert _ with "INV" as "INV".
+        { iApply (OwnM_Upd with "INV").
           eapply Auth.auth_alloc2.
           instantiate (1:=(_points_to (blk, 0%Z) (repeat (Vint 0) sz))).
-          mOwnWf "K". mRefresh.
+          mOwnWf "INV". mRefresh.
           clear - WF0 WFTGT SIM.
           ss. do 2 ur. ii. rewrite unfold_points_to. des_ifs.
           - bsimpl. des. des_sumbool. subst. hexploit (SIM blk k0); et. intro T.
@@ -335,10 +333,10 @@ Proof Outline
             + rewrite URA.unit_idl. Ztac. rewrite repeat_length in *. rewrite Z.sub_0_r. rewrite repeat_nth_some; [|lia]. ur. ss.
           - rewrite URA.unit_id. do 2 eapply lookup_wf. eapply Auth.black_wf; et.
         }
-        mUpd "K". mDesOwn "K".
+        mUpd "INV". mDesOwn "INV".
 
         force_l. eexists. steps. hret _; ss. iModIntro. iSplitR "A"; cycle 1.
-        { iExists _. iSplitR; ss. }
+        { iSplitL; ss. iExists _. iSplitR; ss. }
         iExists _, _, _. iSplitR; ss. iPureIntro. esplits; et.
         - i. destruct (mem_tgt0.(Mem.cnts) blk ofs) eqn:T.
           { exfalso. exploit WFTGT; et. i; des. lia. }
@@ -353,14 +351,16 @@ Proof Outline
         - cbn. lia.
         - clear - WFTGT. ii. ss. unfold update in *. des_ifs. exploit WFTGT; et. i; des. r. lia.
       }
-      { mDesAll; ss. des; subst.
-        destruct varg_src; mDesAll; ss. des; subst. rewrite Any.upcast_downcast in *. clarify. unhide_k. steps.
+      { unfold KModSem.transl_fun_tgt. des_ifs_safe (mDesAll; ss). des; subst.
+        rewrite Any.upcast_downcast in *. apply Any.downcast_upcast in _UNWRAPN. des; clarify. unhide_k. steps.
         rename a2 into memk_src0. rename a1 into mem_tgt0. rename a0 into memu_src0.
+        rewrite Any.upcast_downcast. steps.
+
         set (blk := mem_tgt0.(Mem.nb) + x). destruct v; ss. clarify. rename z into sz.
         rewrite Any.upcast_downcast in *. sym in _UNWRAPU. clarify.
         force_l. exists (mem_tgt0.(Mem.nb) - memu_src0.(Mem.nb) + x). steps.
         replace (Mem.nb memu_src0 + (Mem.nb mem_tgt0 - Mem.nb memu_src0 + x)) with (Mem.nb mem_tgt0 + x) by lia.
-        hret _; ss. iModIntro. iSplitL "A"; ss.
+        hret _; ss. iModIntro. iSplitL "INV"; ss.
         iExists _, _, _. iSplitR; ss. iPureIntro. esplits; et; cbn.
         - ii.
           destruct (dec b blk); subst.
@@ -383,12 +383,12 @@ Proof Outline
     econs; ss.
     { unfold freeF. init.
       harg. fold wf. steps. hide_k. destruct x as [[b ofs]|].
-      { mDesAll; ss. des; subst.
+      { des_ifs_safe (mDesAll; ss). des; subst.
         des_ifs; mDesAll; ss. des; subst. clarify. rewrite Any.upcast_downcast in *. clarify.
         steps. unhide_k. steps. astart 0. astop.
         rename a2 into memk_src0. rename a1 into mem_tgt0. rename a0 into memu_src0.
         rename a3 into v. rename WF into SIMWF.
-        mRename "A" into "K". mCombine "K" "A1". mOwnWf "K".
+        mCombine "INV" "A". mOwnWf "INV".
         assert(HIT: memk_src0 b ofs = (Some v)).
         { clear - WF.
           dup WF. eapply Auth.auth_included in WF. des. eapply pw_extends in WF. eapply pw_extends in WF.
@@ -408,8 +408,8 @@ Proof Outline
         { unfold Mem.free in *. des_ifs. }
         rename t into mem_tgt1.
 
-        mAssert _ with "K" as "K".
-        { iApply (OwnM_Upd with "K").
+        mAssert _ with "INV" as "INV".
+        { iApply (OwnM_Upd with "INV").
           Local Transparent points_to.
           eapply Auth.auth_dealloc.
           instantiate (1:=memk_src1).
@@ -431,10 +431,10 @@ Proof Outline
           - rewrite unfold_points_to in *. do 2 ur. do 2 ur in H0.
             bsimpl. des_ifs; bsimpl; des; des_sumbool; subst; Ztac; try lia; try rewrite URA.unit_idl; try refl.
         }
-        mUpd "K".
+        mUpd "INV".
         steps. force_l. eexists. steps. hret _; ss. iModIntro. iSplitL; cycle 1.
         { iPureIntro. ss. }
-        iExists _, _, _. iSplitR "K"; et. iPureIntro. esplits; ss; et.
+        iExists _, _, _. iSplitR "INV"; et. iPureIntro. esplits; ss; et.
         - { i. unfold Mem.free in _UNWRAPU. des_ifs. ss.
             subst memk_src1. ss.
             destruct (classic (b = b0 /\ ofs = ofs0)); des; clarify.
@@ -450,22 +450,23 @@ Proof Outline
         - clear - _UNWRAPU WFTGT. ii. unfold Mem.free in *. des_ifs. ss.
           unfold update in *. des_ifs; eapply WFTGT; et.
       }
-      { mDesAll; ss. des; subst.
-        destruct varg_src; mDesAll; ss. des; subst. rewrite Any.upcast_downcast in *. clarify. unhide_k. steps.
+      { unfold KModSem.transl_fun_tgt. des_ifs_safe (mDesAll; ss). des; subst.
+        rewrite Any.upcast_downcast in *. apply Any.downcast_upcast in _UNWRAPN. des; clarify. unhide_k. steps.
         rename a2 into memk_src0. rename a1 into mem_tgt0. rename a0 into memu_src0.
+        rewrite Any.upcast_downcast. steps.
         destruct v; ss. clarify. rename t0 into memu_src1. rename n into b. rename z into ofs.
         rewrite Any.upcast_downcast in *. sym in _UNWRAPU. clarify.
         force_r.
         { unfold Mem.free in *. des_ifs. hexploit (SIM b ofs); et. intro T.
-          rewrite Heq in *. rewrite Heq0 in *. inv T.
+          rewrite Heq0 in *. rewrite Heq1 in *. inv T.
         }
         rename t into mem_tgt1.
         steps.
-        hret _; ss. iModIntro. iSplitL "A"; ss.
+        hret _; ss. iModIntro. iSplitL; ss.
         iExists _, _, _. iSplitR; ss. iPureIntro. esplits; et; cbn.
         - ii. unfold Mem.free in *. des_ifs. ss. unfold update. des_ifs.
           replace (memk_src0 b0 ofs0) with (@URA.unit (Excl.t val)); cycle 1.
-          { hexploit (SIM b0 ofs0); et. intro T. rewrite Heq in *. rewrite Heq0 in *. inv T; ss. }
+          { hexploit (SIM b0 ofs0); et. intro T. rewrite Heq0 in *. rewrite Heq1 in *. inv T; ss. }
           econs.
         - unfold Mem.free in *. des_ifs.
         - rr in WFSRC. rr. ii. unfold Mem.free in *. des_ifs. ss. unfold update in *. des_ifs; et.
@@ -480,12 +481,11 @@ Proof Outline
     econs; ss.
     { unfold loadF. init.
       harg. fold wf. steps. hide_k. destruct x as [[[b ofs] v]|].
-      { mDesAll; ss. des; subst.
-        des_ifs; mDesAll; ss. des; subst. clarify. rewrite Any.upcast_downcast in *. clarify.
+      { des_ifs_safe (mDesAll; ss). des; subst. clarify. rewrite Any.upcast_downcast in *. clarify.
         steps. unhide_k. steps. astart 0. astop.
         rename a2 into memk_src0. rename a1 into mem_tgt0. rename a0 into memu_src0.
-        mRename "A" into "K". rename WF into SIMWF.
-        mCombine "K" "A1". mOwnWf "K".
+        rename WF into SIMWF.
+        mCombine "INV" "A". mOwnWf "INV".
         assert(T: memk_src0 b ofs = (Some v)).
         { clear - WF.
           dup WF.
@@ -494,22 +494,20 @@ Proof Outline
           eapply Excl.extends in WF; ss. do 2 eapply lookup_wf. eapply Auth.black_wf. eapply URA.wf_mon; et.
         }
         exploit SIM; et. intro U. rewrite T in U. inv U; ss. unfold Mem.load.
-        mDesOwn "K".
+        mDesOwn "INV".
         force_r; ss. clarify. steps. force_l. esplits. steps.
-        hret _; ss. iModIntro. iSplitR "A"; cycle 1.
-        { iSplitL; ss. }
-        iExists _, _, _. iSplitR "K"; et.
+        hret _; ss. iModIntro. iFrame. iSplitL; et.
       }
-      { mDesAll; ss. des; subst.
-        destruct varg_src; mDesAll; ss. des; subst. rewrite Any.upcast_downcast in *. clarify. unhide_k. steps.
+      { unfold KModSem.transl_fun_tgt. des_ifs_safe (mDesAll; ss). des; subst.
+        rewrite Any.upcast_downcast in *. apply Any.downcast_upcast in _UNWRAPN. des; clarify. unhide_k. steps.
         rename a2 into memk_src0. rename a1 into mem_tgt0. rename a0 into memu_src0.
+        rewrite Any.upcast_downcast. steps.
         destruct v; ss. clarify. rename n into b. rename z into ofs.
         rewrite Any.upcast_downcast in *. sym in _UNWRAPU. clarify.
 
         hexploit (SIM b ofs); et. intro T. unfold Mem.load in *. rewrite _UNWRAPU1 in T. inv T.
         steps.
-        hret _; ss. iModIntro. iSplitL "A"; ss.
-        iExists _, _, _. iSplitR; ss.
+        hret _; ss. iModIntro. iSplitL; ss; et.
       }
     }
 
@@ -520,12 +518,12 @@ Proof Outline
     econs; ss.
     { unfold storeF. init.
       harg. fold wf. steps. hide_k. destruct x as [[[b ofs] v1]|].
-      { mDesAll; ss. des; subst. destruct varg_src; mDesAll; ss. des_ifs. ss. mDesAll. subst.
+      { des_ifs_safe (mDesAll; ss). des; subst. clarify. rewrite Any.upcast_downcast in *. clarify.
         steps. unhide_k. steps. astart 0. astop.
         rename a2 into memk_src0. rename a1 into mem_tgt0. rename a0 into memu_src0.
         rename a3 into v0. rename WF into SIMWF.
-        rewrite Any.upcast_downcast in *. clarify. steps.
-        mRename "A" into "K". mCombine "K" "A1". mOwnWf "K".
+        steps.
+        mCombine "INV" "A". mOwnWf "INV".
         assert(T: memk_src0 b ofs = (Some v0)).
         { clear - WF.
           dup WF.
@@ -542,8 +540,8 @@ Proof Outline
           - bsimpl; des; des_sumbool; subst. ur; ss.
           - do 2 eapply lookup_wf; et.
         }
-        mAssert _ with "K" as "K".
-        { iApply (OwnM_Upd with "K").
+        mAssert _ with "INV" as "INV".
+        { iApply (OwnM_Upd with "INV").
           eapply Auth.auth_update with (a':=memk_src1) (b':=_points_to (b, ofs) [v1]); et.
           clear - wf WF'. ii. des. subst. esplits; et.
           do 2 ur in WF'. do 2 spc WF'.
@@ -553,14 +551,14 @@ Proof Outline
             do 2 ur in WF. do 2 spc WF. rewrite _points_to_hit in WF. eapply Excl.wf in WF. rewrite WF. ur; ss.
           - bsimpl; des; des_sumbool; rewrite ! _points_to_miss; et.
         }
-        mUpd "K". mDesOwn "K".
+        mUpd "INV". mDesOwn "INV".
 
         mEval ltac:(fold (points_to (b,ofs) [v1])) in "A".
         force_l. eexists. steps.
-        hret _; ss. iModIntro. iSplitR "A"; ss.
-        iExists _, _, _. iSplitR "K"; et. iPureIntro. esplits; ss; et.
+        hret _; ss. iModIntro. iFrame. iSplitL; ss; et.
+        iExists _, _, _. iSplitR "INV"; et. iPureIntro. esplits; ss; et.
         - ii. cbn. des_ifs.
-          + bsimpl; des; des_sumbool; subst. do 2 spc SIM. rewrite Heq in *. rewrite T in *. inv SIM.
+          + bsimpl; des; des_sumbool; subst. do 2 spc SIM. rewrite Heq0 in *. rewrite T in *. inv SIM.
             unfold memk_src1. rewrite ! dec_true; ss. econs.
           + replace (memk_src1 b0 ofs0) with (memk_src0 b0 ofs0); et.
             unfold memk_src1. des_ifs; bsimpl; des; des_sumbool; clarify; ss.
@@ -568,9 +566,10 @@ Proof Outline
           + bsimpl; des; des_sumbool; subst. eapply WFTGT; et.
           + eapply WFTGT; et.
       }
-      { mDesAll; ss. des; subst.
-        destruct varg_src; mDesAll; ss. des; subst. rewrite Any.upcast_downcast in *. clarify. unhide_k. steps.
+      { unfold KModSem.transl_fun_tgt. des_ifs_safe (mDesAll; ss). des; subst.
+        rewrite Any.upcast_downcast in *. apply Any.downcast_upcast in _UNWRAPN. des; clarify. unhide_k. steps.
         rename a2 into memk_src0. rename a1 into mem_tgt0. rename a0 into memu_src0.
+        rewrite Any.upcast_downcast in *. steps.
         destruct v; ss. clarify. rename n into b. rename z into ofs.
         rewrite Any.upcast_downcast in *. sym in _UNWRAPU. clarify.
 
@@ -580,7 +579,7 @@ Proof Outline
         hret _; ss. iModIntro. iSplitL; ss. iExists _, _, _; ss. iSplitR; ss. iPureIntro.
         esplits; ss; et.
         - ii. unfold Mem.store in *. des_ifs. ss. des_ifs. bsimpl; des; des_sumbool; subst.
-          hexploit (SIM b0 ofs0); et. intro T. rewrite Heq in *. rewrite Heq0 in *. inv T. econs.
+          hexploit (SIM b0 ofs0); et. intro T. rewrite Heq0 in *. rewrite Heq1 in *. inv T. econs.
         - unfold Mem.store in *. des_ifs.
         - clear - _UNWRAPU0 WFSRC. ii. unfold Mem.store in *. des_ifs; ss. des_ifs; et.
           + bsimpl; des; des_sumbool; subst. et.
@@ -596,10 +595,9 @@ Proof Outline
     econs; ss.
     { unfold cmpF. init.
       harg. fold wf. steps. hide_k. destruct x as [[result resource]|].
-      { mDesAll; ss. des; subst. destruct varg_src; mDesAll; ss. des_ifs. ss. mDesAll. subst.
+      { des_ifs_safe (mDesAll; ss). des; subst. clarify. rewrite Any.upcast_downcast in *. clarify.
         steps. unhide_k. steps. astart 0. astop.
         rename a2 into memk_src0. rename a1 into mem_tgt0. rename a0 into memu_src0. rename WF into SIMWF.
-        rewrite Any.upcast_downcast in *. clarify. steps.
         assert (VALIDPTR: forall b ofs v (WF: URA.wf ((Auth.black (memk_src0: URA.car (t:=Mem1._memRA))) ⋅ ((b, ofs) |-> [v]))),
                    Mem.valid_ptr mem_tgt0 b ofs = true).
         { clear - SIM. i. cut (memk_src0 b ofs = Some v).
@@ -613,17 +611,17 @@ Proof Outline
             eapply Excl.extends in WF; ss. do 2 eapply lookup_wf. eapply Auth.black_wf. eapply URA.wf_mon; et.
         }
         steps.
-        mRename "A" into "K". mCombine "K" "A1". mOwnWf "K". Fail mDesOwn "K". (*** TODO: BUG!! FIXME ***)
+        mCombine "INV" "A". mOwnWf "INV". Fail mDesOwn "INV". (*** TODO: BUG!! FIXME ***)
 
         mDesOr "PRE".
         { mDesAll; subst. rewrite Any.upcast_downcast in *. clarify. steps.
           erewrite VALIDPTR; et. ss. steps.
-          force_l. eexists. steps. hret _; ss. iModIntro. iDestruct "K" as "[K A]". iSplitR "A"; ss; et.
+          force_l. eexists. steps. hret _; ss. iModIntro. iDestruct "INV" as "[INV A]". iSplitR "A"; ss; et.
         }
         mDesOr "PRE".
         { mDesAll; subst. rewrite Any.upcast_downcast in *. clarify. steps.
           erewrite VALIDPTR; et. ss. steps.
-          force_l. eexists. steps. hret _; ss. iModIntro. iDestruct "K" as "[K A]". iSplitR "A"; ss; et.
+          force_l. eexists. steps. hret _; ss. iModIntro. iDestruct "INV" as "[INV A]". iSplitR "A"; ss; et.
         }
         mDesOr "PRE".
         { mDesAll; subst. rewrite Any.upcast_downcast in *. clarify. steps.
@@ -638,20 +636,21 @@ Proof Outline
             exploit _points_to_disj; et. intro NEQ. des; try (by rewrite dec_false; ss).
             erewrite dec_false with (x0:=a1); ss. rewrite andb_false_r; ss.
           }
-          steps. force_l. eexists. steps. hret _; ss. iModIntro. iDestruct "K" as "[K A]". iSplitR "A"; ss; et.
+          steps. force_l. eexists. steps. hret _; ss. iModIntro. iDestruct "INV" as "[INV A]". iSplitR "A"; ss; et.
         }
         mDesOr "PRE".
         { mDesAll; subst. rewrite Any.upcast_downcast in *. clarify. steps.
           erewrite VALIDPTR; et. ss. steps. rewrite ! dec_true; ss. steps.
-          force_l. eexists. steps. hret _; ss. iModIntro. iDestruct "K" as "[K A]". iSplitR "A"; ss; et.
+          force_l. eexists. steps. hret _; ss. iModIntro. iDestruct "INV" as "[INV A]". iSplitR "A"; ss; et.
         }
         { mDesAll; subst. des; subst. rewrite Any.upcast_downcast in *. clarify. steps.
-          force_l. eexists. steps. hret _; ss. iModIntro. iDestruct "K" as "[K A]". iSplitR "A"; ss; et.
+          force_l. eexists. steps. hret _; ss. iModIntro. iDestruct "INV" as "[INV A]". iSplitR "A"; ss; et.
         }
       }
-      { mDesAll; ss. des; subst.
-        destruct varg_src; mDesAll; ss. des; subst. rewrite Any.upcast_downcast in *. clarify. unhide_k. steps.
+      { unfold KModSem.transl_fun_tgt. des_ifs_safe (mDesAll; ss). des; subst.
+        rewrite Any.upcast_downcast in *. apply Any.downcast_upcast in _UNWRAPN. des; clarify. unhide_k. steps.
         rename a2 into memk_src0. rename a1 into mem_tgt0. rename a0 into memu_src0.
+        rewrite Any.upcast_downcast in *. steps.
         sym in _UNWRAPU. rewrite Any.upcast_downcast in *. clarify.
         assert(T: forall b ofs, Mem.valid_ptr memu_src0 b ofs -> Mem.valid_ptr mem_tgt0 b ofs).
         { clear - SIM. i. unfold Mem.valid_ptr in *.

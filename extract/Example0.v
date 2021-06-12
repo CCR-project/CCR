@@ -30,4 +30,4 @@ Definition Ex0: ModL.t := {|
                         |}
 .
 
-Definition ex0 := ModSemL.initial_itr_no_check (ModL.enclose Ex0).
+Definition ex0 := ModSemL.initial_itr (ModL.enclose Ex0) None.

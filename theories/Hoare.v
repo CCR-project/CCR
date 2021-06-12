@@ -86,7 +86,7 @@ Section CANCEL.
 
   Variable mds: list SMod.t.
 
-  Let sk: Sk.t := fold_right Sk.add Sk.unit (List.map SMod.sk mds).
+  Let sk: Sk.t := Sk.sort (fold_right Sk.add Sk.unit (List.map SMod.sk mds)).
   (* Let skenv: SkEnv.t := Sk.load_skenv sk. *)
 
   Let _mss: Sk.t -> list SModSem.t := fun sk => (List.map ((flip SMod.get_modsem) sk) mds).
@@ -118,7 +118,7 @@ Section CANCEL.
 
   Variable entry_r: Σ.
   Variable mainpre: Any.t -> ord -> Σ -> Prop.
-  Variable (mainbody: list val -> itree (hCallE +' pE +' eventE) val).
+  Variable (mainbody: Any.t -> itree (hCallE +' pE +' eventE) Any.t).
   Hypothesis MAINPRE: mainpre ([]: list val)↑ ord_top entry_r.
 
   Hypothesis WFR: URA.wf (entry_r ⋅ rsum (ModSemL.initial_r_state ms_tgt)).
@@ -149,7 +149,7 @@ Section CANCEL.
   Variable mds: list SMod.t.
 
 
-  Let sk: Sk.t := fold_right Sk.add Sk.unit (List.map SMod.sk mds).
+  Let sk: Sk.t := Sk.sort (fold_right Sk.add Sk.unit (List.map SMod.sk mds)).
   (* Let skenv: SkEnv.t := Sk.load_skenv sk. *)
 
   Let _mss: Sk.t -> list SModSem.t := fun sk => (List.map ((flip SMod.get_modsem) sk) mds).
@@ -183,7 +183,7 @@ Section CANCEL.
 
   Variable entry_r: Σ.
   Variable mainpre: Any.t -> ord -> Σ -> Prop.
-  Variable (mainbody: list val -> itree (hCallE +' pE +' eventE) val).
+  Variable (mainbody: Any.t -> itree (hCallE +' pE +' eventE) Any.t).
   Hypothesis MAINPRE: mainpre ([]: list val)↑ ord_top entry_r.
 
   Hypothesis WFR: URA.wf (entry_r ⋅ rsum (ModSemL.initial_r_state ms_tgt)).

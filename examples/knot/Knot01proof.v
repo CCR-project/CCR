@@ -107,10 +107,10 @@ Section SIMMODSEM.
 
   Theorem correct: ModPair.sim (Knot1.Knot RecStb FunStb GlobalStb) Knot0.Knot.
   Proof.
-    econs; ss; [|admit ""].
-    i. eapply adequacy_lift.
-    econstructor 1 with (wf:=wf (Sk.load_skenv sk)); et; ss.
+    econs; ss.
+    i. econstructor 1 with (wf:=wf (Sk.load_skenv sk)); et; ss.
     2: { admit "initial". }
+    eapply Sk.incl_incl_env in SKINCL. eapply Sk.load_skenv_wf in SKWF.
     hexploit (SKINCL "rec"); ss; eauto. intros [blk0 FIND0].
     hexploit (SKINCL "_f"); ss; eauto. intros [blk1 FIND1].
 
@@ -119,7 +119,6 @@ Section SIMMODSEM.
 
       (* arg *)
       iarg. destruct x as [f n]. ss. mDesAll. des. clarify.
-      eapply Any.upcast_inj in PURE. des; clarify.
       rewrite Any.upcast_downcast. steps. astart 2.
 
       (* open invariant *)
@@ -137,8 +136,7 @@ Section SIMMODSEM.
         iEval (unfold var_points_to) in "A1". rewrite FIND1. iFrame. }
       { split; ss. eauto with ord_step. }
 
-      mDesAll. subst. eapply Any.upcast_inj in PURE1. des; subst.
-      rewrite Any.upcast_downcast. steps.
+      mDesAll. subst. rewrite Any.upcast_downcast. steps.
       hexploit PURE; auto. i. des; clarify. inv FN. inv SPEC. ss. steps.
       rewrite FBLOCK. steps. rewrite FIND0. steps. acatch.
       { eapply FunStb_incl. eapply FIND. }
@@ -161,17 +159,16 @@ Section SIMMODSEM.
         }
       }
       { split; ss. eauto with ord_step. }
-      mDesAll. subst. rewrite Any.upcast_downcast.
-      steps. astop. force_l. eexists. steps.
+      mDesAll. subst. rewrite Any.upcast_downcast. steps.
+      astop. steps. force_l. eexists. steps.
 
       (* ret *)
-      iret _; ss. iModIntro. iFrame. ss.
+      iret _; ss. iModIntro. iFrame. et.
     }
     { init. unfold knotF, ccall.
 
       (* arg *)
       iarg. mDesAll. des. clarify.
-      eapply Any.upcast_inj in PURE. des; clarify.
       rewrite Any.upcast_downcast. steps. astart 1.
 
       (* open invariant *)
@@ -185,11 +182,11 @@ Section SIMMODSEM.
       (* call with the opened invariant *)
       icall_open _ (_, _, _) with "A1".
       { ss. }
-      { iModIntro. iSplitL; ss. iSplitL; ss. iExists _. iSplitR; ss.
+      { iModIntro. iSplitL; ss.
+        iSplitL; ss. iExists _. iSplitR; ss.
         iEval (unfold var_points_to) in "A1". rewrite FIND1. ss. }
       { split; ss. eauto with ord_step. }
-      mDesAll. subst. rewrite Any.upcast_downcast. steps.
-      rewrite FIND0. steps. astop.
+      mDesAll. subst. steps. rewrite FIND0. steps. astop.
 
       (* close invariant *)
       close_inv.

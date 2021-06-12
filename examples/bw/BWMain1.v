@@ -26,7 +26,7 @@ Section MAIN.
   Definition ClientStb: list (gname * fspec) :=
     Seal.sealing "stb" [("getbool", getbool_spec) ; ("putint", putint_spec)].
 
-  Let mainpre: Any.t -> ord -> Σ -> Prop := (fun _ o => (OwnM (bw_frag true) ** ⌜o = ord_top⌝)).
+  Let mainpre: Any.t -> ord -> Σ -> Prop := (fun varg o => (OwnM (bw_frag true) ** ⌜varg = ([]: list val)↑ ∧ o = ord_top⌝)).
   Let main_spec: fspec := mk_simple (fun (_: unit) => (mainpre, fun _ => ⌜True⌝: iProp)%I).
 
   Definition mainbody: list val -> itree (hCallE +' pE +' eventE) val :=
@@ -43,13 +43,13 @@ Section MAIN.
     Seal.sealing "stb" [("main", main_spec)].
 
   Definition MainSbtb: list (gname * fspecbody) :=
-    [("main", mk_specbody main_spec mainbody)
+    [("main", mk_specbody main_spec (cfun mainbody))
     ]
   .
 
-  Definition SMain: SMod.t := SMod.main mainpre mainbody.
+  Definition SMain: SMod.t := SMod.main mainpre (cfun mainbody).
   Definition Main: Mod.t := SMod.to_tgt (fun _ => BWStb++ClientStb++MainStb) SMain.
-  Definition SMainSem: SModSem.t := SModSem.main mainpre mainbody.
+  Definition SMainSem: SModSem.t := SModSem.main mainpre (cfun mainbody).
   Definition MainSem: ModSem.t := SModSem.to_tgt (BWStb++ClientStb++MainStb) SMainSem.
 
 End MAIN.

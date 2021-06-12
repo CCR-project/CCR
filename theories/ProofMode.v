@@ -75,7 +75,27 @@ Section ILIST.
     :
       from_iPropL l -∗ #=> from_iPropL (alist_remove Hn l).
   Proof.
-    admit "".
+    induction l; ss.
+    { iIntros "H". iModIntro. iFrame. }
+    { destruct a. iIntros "[H0 H1]". rewrite eq_rel_dec_correct. des_ifs; ss.
+      { iPoseProof (IHl with "H1") as "> H1".
+        iModIntro. iFrame. }
+      { iPoseProof (IHl with "H1") as "> H1".
+        iClear "H0". iModIntro. iFrame. }
+    }
+  Qed.
+
+  Lemma iPropL_find_remove (Hn: string) (l: iPropL) P
+        (FIND: alist_find Hn l = Some P)
+    :
+      from_iPropL l -∗ #=> (P ** from_iPropL (alist_remove Hn l)).
+  Proof.
+    revert P FIND. induction l; ss. i.
+    destruct a. iIntros "[H0 H1]".
+    rewrite eq_rel_dec_correct in *. des_ifs; ss.
+    { iPoseProof (IHl with "H1") as "> H1"; et.
+      iModIntro. iFrame. iFrame. }
+    { iFrame. iApply iPropL_clear. iFrame. }
   Qed.
 
   Lemma iPropL_one Hn (l: iPropL) (P: iProp)
@@ -83,7 +103,29 @@ Section ILIST.
     :
       from_iPropL l -∗ #=> P.
   Proof.
-    admit "".
+    iIntros "H". iPoseProof (iPropL_find_remove with "H") as "> [H0 H1]"; et.
+  Qed.
+
+  Lemma iPropL_init (Hn: string) (P: iProp)
+    :
+      P -∗ from_iPropL [(Hn, P)].
+  Proof.
+    ss. iIntros "H". iFrame.
+  Qed.
+
+  Lemma iPropL_uentail Hn (l: iPropL) (P0 P1: iProp)
+        (FIND: alist_find Hn l = Some P0)
+        (ENTAIL: P0 -∗ #=> P1)
+    :
+      from_iPropL l -∗ #=> from_iPropL (alist_add Hn P1 l).
+  Proof.
+    revert P0 P1 FIND ENTAIL. induction l; ss. i.
+    destruct a. iIntros "[H0 H1]".
+    rewrite eq_rel_dec_correct in *. des_ifs.
+    { ss. iPoseProof (IHl with "H1") as "H1"; et. repeat iFrame. }
+    { ss. iPoseProof (ENTAIL with "H0") as "> H0".
+      iPoseProof (iPropL_clear with "H1") as "> H1".
+      iModIntro. iFrame. }
   Qed.
 
   Lemma iPropL_entail Hn (l: iPropL) (P0 P1: iProp)
@@ -92,7 +134,16 @@ Section ILIST.
     :
       from_iPropL l -∗ #=> from_iPropL (alist_add Hn P1 l).
   Proof.
-    admit "".
+    eapply iPropL_uentail; et. iIntros "H".
+    iPoseProof (ENTAIL with "H") as "H". iModIntro. iFrame.
+  Qed.
+
+  Lemma iPropL_upd Hn (l: iPropL) (P: iProp)
+        (FIND: alist_find Hn l = Some (#=> P))
+    :
+      from_iPropL l -∗ #=> from_iPropL (alist_add Hn P l).
+  Proof.
+    hexploit (@iPropL_uentail Hn l (#=> P) P); et.
   Qed.
 
   Lemma iPropL_destruct_ex Hn (l: iPropL) A (P: A -> iProp)
@@ -100,53 +151,84 @@ Section ILIST.
     :
       from_iPropL l -∗ ∃ (a: A), #=> from_iPropL (alist_add Hn (P a) l).
   Proof.
-    admit "".
+    revert FIND. induction l; ss. i.
+    destruct a. iIntros "[H0 H1]".
+    rewrite eq_rel_dec_correct in *. des_ifs; ss.
+    { iPoseProof (IHl with "H1") as (a) "H1"; et.
+      iExists a. repeat iFrame. }
+    { iDestruct "H0" as (a) "H0". iExists a.
+      iFrame. iApply iPropL_clear. iFrame. }
   Qed.
-
 
   Lemma iPropL_destruct_or Hn (l: iPropL) (P0 P1: iProp)
         (FIND: alist_find Hn l = Some (P0 ∨ P1)%I)
     :
       from_iPropL l -∗ (#=> from_iPropL (alist_add Hn P0 l)) ∨ #=> from_iPropL (alist_add Hn P1 l).
   Proof.
-    admit "".
+    revert FIND. induction l; ss. i.
+    destruct a. iIntros "[H0 H1]".
+    rewrite eq_rel_dec_correct in *. des_ifs; ss.
+    { iPoseProof (IHl with "H1") as "[H1|H1]"; et.
+      { iLeft. repeat iFrame. }
+      { iRight. repeat iFrame. }
+    }
+    { iDestruct "H0" as "[H0|H0]".
+      { iLeft. iFrame. iApply iPropL_clear. iFrame. }
+      { iRight. iFrame. iApply iPropL_clear. iFrame. }
+    }
   Qed.
 
+  Lemma iPropL_add (Hn: string) (l: iPropL) P
+    :
+      P ** from_iPropL l -∗ #=> (from_iPropL (alist_add Hn P l)).
+  Proof.
+    unfold alist_add. ss. iIntros "[H0 H1]".
+    iFrame. iApply iPropL_clear. iFrame.
+  Qed.
 
   Lemma iPropL_destruct_sep Hn_old Hn_new0 Hn_new1 (l: iPropL) (P0 P1: iProp)
         (FIND: alist_find Hn_old l = Some (P0 ** P1))
     :
       from_iPropL l -∗ #=> from_iPropL (alist_add Hn_new1 P1 (alist_add Hn_new0 P0 (alist_remove Hn_old l))).
   Proof.
-    admit "".
+    iIntros "H".
+    iPoseProof (iPropL_find_remove with "H") as "> [H0 H1]"; et.
+    iDestruct "H0" as "[H0 H2]". iCombine "H0 H1" as "H0".
+    iPoseProof (iPropL_add with "H0") as "> H".
+    iApply iPropL_add. iFrame.
   Qed.
 
-
-  Lemma iPropL_upd Hn (l: iPropL) (P: iProp)
-        (FIND: alist_find Hn l = Some (#=> P))
+  Lemma iPropL_alist_pop Hn P (l0 l1: iPropL)
+        (FIND: alist_pop Hn l0 = Some (P, l1))
     :
-      from_iPropL l -∗ #=> from_iPropL (alist_add Hn P l).
+      from_iPropL l0 ⊢ P ** from_iPropL l1.
   Proof.
-    admit "".
+    revert P l1 FIND. induction l0; ss. i.
+    destruct a. rewrite eq_rel_dec_correct in *. des_ifs.
+    ss. hexploit IHl0; et. i.
+    iIntros "[H0 H1]". iFrame. iApply H. iFrame.
   Qed.
 
+  Lemma iPropL_alist_pops l Hns
+    :
+      from_iPropL l ⊢ from_iPropL (fst (alist_pops Hns l)) ** from_iPropL (snd (alist_pops Hns l)).
+  Proof.
+    induction Hns. ss.
+    { iIntros "H0". iFrame. }
+    { ss. des_ifs. ss. etrans; et.
+      iIntros "[H0 H1]". iFrame.
+      iApply iPropL_alist_pop; et. }
+  Qed.
 
   Lemma iPropL_assert (Hns: list string) (Hn_new: string) (l: iPropL) (P: iProp)
         (FIND: from_iPropL (fst (alist_pops Hns l)) -∗ P)
     :
       from_iPropL l -∗ #=> from_iPropL (alist_add Hn_new P (snd (alist_pops Hns l))).
   Proof.
-    admit "".
+    iIntros "H". iPoseProof (iPropL_alist_pops with "H") as "[H0 H1]".
+    iPoseProof (FIND with "H0") as "H0".
+    iApply iPropL_add. iFrame.
   Qed.
-
-
-  Lemma iPropL_init (Hn: string) (P: iProp)
-    :
-      P -∗ from_iPropL [(Hn, P)].
-  Proof.
-    admit "".
-  Qed.
-
 
   Fixpoint parse_hyps (b: bool) (k: string -> string) (Hns: string): list string :=
     match Hns with
@@ -684,7 +766,7 @@ Tactic Notation "mDesAndPureL" constr(Hn_old) "as" constr(Hn_new0) constr(Hn_new
 
 Tactic Notation "mDesAndPureL" constr(Hn_old) :=
   let Hn_new1 := get_fresh_name_tac "A" in
-  mDesAndPureL' Hn_old Hn_old Hn_new1.
+  mDesAndPureL' Hn_old Hn_new1 Hn_old.
 
 Ltac mDesAndPureR' Hn_old Hn_new0 Hn_new1 :=
   on_current ltac:(fun H =>
@@ -1055,22 +1137,23 @@ Module PARSE.
       | @iProp_tree_kop A op k => op (fun a => from_iProp_tree (k a))
       end.
 
-    Definition hole (A: Type): A. Admitted.
+    Definition holeT: Type := forall A, A.
 
-    Ltac parse_iProp_tree p :=
+    (* To use it, declare Variable hole: forall A, A. *)
+    Ltac parse_iProp_tree hole p :=
       match p with
       | ?op (?P0: iProp) (?P1: iProp) =>
-        let tr0 := parse_iProp_tree P0 in
-        let tr1 := parse_iProp_tree P1 in
+        let tr0 := parse_iProp_tree hole P0 in
+        let tr1 := parse_iProp_tree hole P1 in
         constr:(iProp_tree_binop op tr0 tr1)
       | ?op (?P: iProp) =>
-        let tr := parse_iProp_tree P in
+        let tr := parse_iProp_tree hole P in
         constr:(iProp_tree_unop op tr)
       | ?op ?k =>
         match type of k with
         | ?A -> bi_car iProp =>
           let khole := (eval cbn beta in (k (@hole A))) in
-          let tr := parse_iProp_tree khole in
+          let tr := parse_iProp_tree hole khole in
           let fhole := (eval pattern (@hole A) in tr) in
           match fhole with
           | ?f (@hole A) => constr:(@iProp_tree_kop A op f)
@@ -1079,9 +1162,19 @@ Module PARSE.
       | ?P => constr:(iProp_tree_base P)
       end.
 
-    Definition iProp_list := alist string iProp_tree.
+    (* demo *)
+    Variable hole: holeT. (* absurd axiom but will not appear in the final proof *)
 
-    Definition from_iProp_list (l: iProp_list): iProp :=
-      fold_alist (fun _ tr acc => from_iProp_tree tr ** acc) (emp)%I l.
+    Goal forall (Q0: bool -> iProp) (Q1: iProp) r,
+        (∃ (n: nat), (((∀ (b: bool), Q0 b)%I) ∧ Q1) ** #=> ⌜(n = 2 * n - 1)%nat⌝)%I r.
+    Proof.
+      intros Q0 Q1 r.
+      match goal with
+      | |- ?P0 r =>
+        let P1 := (parse_iProp_tree hole P0) in
+        change P0 with (from_iProp_tree P1)
+      end.
+    Abort.
+
   End PARSE.
 End PARSE.

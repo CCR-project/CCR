@@ -19,6 +19,24 @@ Notation "'do' ' X <- A ; B" := (o_bind A (fun _x => match _x with | X => B end)
                                   (at level 200, X pattern, A at level 100, B at level 200)
                                 : o_monad_scope.
 
+Lemma find_idx_red {A} (f: A -> bool) (l: list A):
+  find_idx f l =
+  match l with
+  | [] => None
+  | hd :: tl =>
+    if (f hd)
+    then Some (0, hd)
+    else
+      do (n, a) <- find_idx f tl;
+      Some (S n, a)
+  end.
+Proof.
+  unfold find_idx. generalize 0. induction l; ss.
+  i. des_ifs; ss.
+  - rewrite Heq0. ss.
+  - rewrite Heq0. specialize (IHl (S n)). rewrite Heq0 in IHl. ss.
+Qed.
+
 
 Module SkEnv.
 
@@ -30,58 +48,6 @@ Module SkEnv.
 
   Definition wf (ske: t): Prop :=
     forall id blk, ske.(id2blk) id = Some blk <-> ske.(blk2id) blk = Some id.
-
-  (* Definition project: t -> Sk.t -> t := admit "". *)
-    (* t: Type := Genv.t (fundef signature) unit; *)
-    (* wf: t -> Prop; *)
-    (* wf_mem: t -> Sk.t -> mem -> Prop; *)
-    (* to_senv: t -> Senv.t := Genv.to_senv; *)
-    (* project: t -> Sk.t -> t; *)
-    (* project_spec: t -> Sk.t -> t -> Prop; *)
-    (* includes: t -> Sk.t -> Prop; *)
-    (* project_impl_spec: forall skenv sk (INCL: includes skenv sk), *)
-    (*     (<<PROJ: project_spec skenv sk (project skenv sk)>>); *)
-    (* linkorder_includes: forall *)
-    (*     (sk0 sk1: Sk.t) *)
-    (*     (LO: linkorder sk0 sk1) *)
-    (*   , *)
-    (*     (<<INCL: includes (Sk.load_skenv sk1) sk0>>); *)
-    (* empty: t; *)
-    (* load_skenv_wf: forall *)
-    (*     sk *)
-    (*     (WF: Sk.wf sk) *)
-    (*   , *)
-    (*     (<<WF: wf (Sk.load_skenv sk)>>) *)
-    (* ; *)
-    (* load_skenv_wf_mem: forall *)
-    (*     sk_link m_init *)
-    (*     (WF: Sk.wf sk_link) *)
-    (*     (LOADM: Sk.load_mem sk_link = Some m_init) *)
-    (*   , *)
-    (*     let skenv_link := Sk.load_skenv sk_link in *)
-    (*     <<WFM: forall sk (WF: Sk.wf sk) (LO: linkorder sk sk_link), wf_mem skenv_link sk m_init>> *)
-    (* ; *)
-    (* disj (ske0 ske1: t): Prop := forall *)
-    (*   fptr f0 f1 *)
-    (*   (FINDF: Genv.find_funct ske0 fptr = Some (Internal f0)) *)
-    (*   (FINDF: Genv.find_funct ske1 fptr = Some (Internal f1)) *)
-    (* , *)
-    (*   False; *)
-    (* project_respects_disj: forall *)
-    (*     sk0 sk1 ske0 ske1 ske_link *)
-    (*     (DISJ: Sk.disj sk0 sk1) *)
-    (*     (LOAD0: project ske_link sk0 = ske0) *)
-    (*     (LOAD1: project ske_link sk1 = ske1) *)
-    (*   , *)
-    (*     (<<DISJ: disj ske0 ske1>>) *)
-    (* ; *)
-    (* project_linkorder: forall *)
-    (*     skenv_link fptr sk ef fd *)
-    (*     (FINDF0: Genv.find_funct skenv_link fptr = Some (External ef)) *)
-    (*     (FINDF1: Genv.find_funct (project skenv_link sk) fptr = Some (Internal fd)) *)
-    (*   , *)
-    (*     False *)
-    (* ; *)
 
 End SkEnv.
 
@@ -115,18 +81,40 @@ End SkEnv.
 
 
 
+Require Import Orders.
 
 Module Sk.
 
   Inductive gdef: Type := Gfun | Gvar (gv: Z).
 
-  Definition t: Type := list (gname * gdef).
+  Definition t: Type := alist gname gdef.
 
   Definition unit: t := nil.
 
   Definition add: t -> t -> t := @List.app _.
 
   Definition wf (sk: t): Prop := @List.NoDup _ (List.map fst sk).
+
+  Module GDef <: Typ. Definition t := gdef. End GDef.
+  Module SkSort := AListSort GDef.
+
+  Definition sort: t -> t := SkSort.sort.
+
+  Definition sort_add_comm sk0 sk1
+             (WF: wf (add sk0 sk1))
+    :
+      sort (add sk0 sk1) = sort (add sk1 sk0).
+  Proof.
+    eapply SkSort.sort_add_comm. eapply WF.
+  Qed.
+
+  Definition sort_wf sk (WF: wf sk):
+    wf (sort sk).
+  Proof.
+    eapply Permutation.Permutation_NoDup; [|apply WF].
+    eapply Permutation.Permutation_map.
+    eapply SkSort.sort_permutation.
+  Qed.
 
   (*** TODO: It might be nice if Sk.t also constitutes a resource algebra ***)
   (*** At the moment, List.app is not assoc/commutative. We need to equip RA with custom equiv. ***)
@@ -169,16 +157,55 @@ Module Sk.
     r in WF.
     rr. split; i; ss.
     - uo; des_ifs.
-      + admit "ez".
-      + admit "ez".
-    - uo; des_ifs_safe. des_ifs.
-      + destruct p0; ss. repeat f_equal. admit "ez".
-      + admit "ez".
+      + f_equal. ginduction sk; ss. i. inv WF.
+        rewrite find_idx_red in Heq1. des_ifs; ss.
+        { des_sumbool. subst. ss. clarify. }
+        des_sumbool. uo. des_ifs. destruct p. ss.
+        hexploit IHsk; et.
+      + exfalso. ginduction sk; ss. i. inv WF.
+        rewrite find_idx_red in Heq2. des_ifs; ss.
+        des_sumbool. uo. des_ifs. destruct p. ss.
+        hexploit IHsk; et.
+    - ginduction sk; ss.
+      { i. uo. ss. destruct blk; ss. }
+      i. destruct a. inv WF. uo. destruct blk; ss; clarify.
+      {  rewrite find_idx_red. uo. des_ifs; des_sumbool; ss. }
+      hexploit IHsk; et. i.
+      rewrite find_idx_red. uo. des_ifs; des_sumbool; ss. exfalso.
+      subst. clear - Heq1 H2. ginduction sk; ss. i.
+      rewrite find_idx_red in Heq1. des_ifs; des_sumbool; ss; et.
+      uo. des_ifs. destruct p. eapply IHsk; et.
   Qed.
 
   Definition incl (sk0 sk1: Sk.t): Prop :=
     forall gn gd (IN: List.In (gn, gd) sk0),
       List.In (gn, gd) sk1.
+
+  Program Instance incl_PreOrder: PreOrder incl.
+  Next Obligation.
+  Proof.
+    ii. ss.
+  Qed.
+  Next Obligation.
+  Proof.
+    ii. eapply H0. eapply H. ss.
+  Qed.
+
+  Lemma sort_incl sk
+    :
+      incl sk (sort sk).
+  Proof.
+    ii. eapply Permutation.Permutation_in; [|apply IN].
+    eapply SkSort.sort_permutation.
+  Qed.
+
+  Lemma sort_incl_rev sk
+    :
+      incl (sort sk) sk.
+  Proof.
+    ii. eapply Permutation.Permutation_in; [|apply IN].
+    symmetry. eapply SkSort.sort_permutation.
+  Qed.
 
   Definition incl_env (sk0: Sk.t) (skenv: SkEnv.t): Prop :=
     forall gn gd (IN: List.In (gn, gd) sk0),
@@ -189,7 +216,13 @@ Module Sk.
     :
       incl_env sk0 (load_skenv sk1).
   Proof.
-  Admitted.
+    ii. exploit INCL; et. i. ss. uo. des_ifs; et.
+    exfalso. clear - x Heq0. ginduction sk1; et.
+    i. ss. rewrite find_idx_red in Heq0. des_ifs.
+    des_sumbool. uo.  des_ifs. des; clarify.
+    eapply IHsk1; et.
+  Qed.
+
 End Sk.
 
 Coercion Sk.load_skenv: Sk.t >-> SkEnv.t.

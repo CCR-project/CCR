@@ -596,10 +596,10 @@ Qed.
 
 Ltac resub :=
   repeat multimatch goal with
-         | |- context[ITree.trigger ?e] =>
+         | |- context[@ITree.trigger ?E ?R ?e] =>
            match e with
            | subevent _ _ => idtac
-           | _ => replace (ITree.trigger e) with (trigger e) by refl
+           | _ => replace (@ITree.trigger E R e) with (trigger e) by refl
            end
          | |- context[@subevent _ ?F ?prf _ (?e|)%sum] =>
            let my_tac := ltac:(fun H => replace (@subevent _ F prf _ (e|)%sum) with (@subevent _ F _ _ e) by H) in

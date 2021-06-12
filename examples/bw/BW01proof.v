@@ -78,7 +78,7 @@ Section SIMMODSEM.
       steps. force_l. eexists. steps.
       hret _; ss.
       iModIntro. iFrame.
-      iPureIntro. split; ss. f_equal.
+      iPureIntro. esplits; ss. f_equal.
       rewrite <- Z.negb_odd. rewrite negb_if. des_ifs.
     }
     econs; ss.
