@@ -51,7 +51,7 @@ Section ADQ.
   Context `{Σ: GRA.t}.
 
   Variable _kmds: list KMod.t.
-  Let kmds: list SMod.t := List.map (KMod.to_tgt) _kmds.
+  Let kmds: list SMod.t := List.map (KMod.transl) _kmds.
   Variable umds: list UMod.t.
 
   Let sk_link: Sk.t := fold_right Sk.add Sk.unit ((List.map SMod.sk kmds) ++ (List.map UMod.sk umds)).
@@ -132,8 +132,8 @@ Section ADQ.
         (fun '(mrs_src, fr_src) '(mrs_tgt, fr_tgt) '(ctx, r_src) r_tgt => mrs_src = mrs_tgt /\ r_src = r_tgt
                                                                           /\ URA.wf (ctx ⋅ fst mrs_src))
         40%nat
-        (mrs, fr, interp_hCallE_tgt (_gstb ske) ord_top (UModSem.transl_itr_smod itr) ctx)
-        (mrs, ε, UModSem.transl_itr_mod (T:=A) itr)
+        (mrs, fr, interp_hCallE_tgt (_gstb ske) ord_top (UModSem.massage_itr itr) ctx)
+        (mrs, ε, UModSem.transl_itr (T:=A) itr)
   .
   Proof.
     ginit. revert mrs A itr ctx WF fr. gcofix CIH. i. ides itr.
@@ -224,17 +224,17 @@ match it and use trivial spec in case of None
         mrs ktr arg ske
     :
       sim_itree (fun '(x, y) => x = y) 100%nat
-                (mrs, ε, fun_to_tgt (_gstb ske) (UModSem.transl_fsb_smod ktr) arg)
-                (mrs, ε, (UModSem.transl_fun_mod ktr) arg)
+                (mrs, ε, fun_to_tgt (_gstb ske) (UModSem.massage_fsb ktr) arg)
+                (mrs, ε, (UModSem.transl_fun ktr) arg)
   .
   Proof.
     destruct mrs as [mr st].
-    unfold fun_to_tgt, UModSem.transl_fun_mod, HoareFun, discard, forge, checkWf, put, cfun.
+    unfold fun_to_tgt, UModSem.transl_fun, HoareFun, discard, forge, checkWf, put, cfun.
     ginit. steps. red in _ASSUME0. uipropall. des. clarify.
-    unfold UModSem.transl_fun_smod.
+    unfold UModSem.massage_fun.
     guclo lordC_spec. econs.
     { instantiate (1:=(49 + 40)%ord). rewrite <- OrdArith.add_from_nat. eapply OrdArith.le_from_nat. lia. }
-    erewrite idK_spec with (i0:=UModSem.transl_itr_mod (ktr arg)).
+    erewrite idK_spec with (i0:=UModSem.transl_itr (ktr arg)).
     guclo lbindC_spec. econs.
     { gfinal. right. eapply my_lemma1_aux'.
       eapply URA.wf_mon. instantiate (1:=x2). r_wf _ASSUME. }
@@ -255,7 +255,7 @@ match it and use trivial spec in case of None
         umd
         (IN: In umd umds)
     :
-      ModPair.sim (SMod.to_tgt _gstb (UMod.to_smod umd)) (UMod.to_mod umd)
+      ModPair.sim (SMod.to_tgt _gstb (UMod.massage umd)) (UMod.transl umd)
   .
   Proof.
     econs; ss; cycle 1.
@@ -278,12 +278,12 @@ match it and use trivial spec in case of None
         mrs ktr arg
     :
       sim_itree (fun '(x, y) => x = y) 100%nat
-                (mrs, ε, (UModSem.transl_fun_mod ktr) arg)
-                (mrs, ε, fun_to_src (fsb_body (UModSem.transl_fsb_smod ktr)) arg)
+                (mrs, ε, (UModSem.transl_fun ktr) arg)
+                (mrs, ε, fun_to_src (fsb_body (UModSem.massage_fsb ktr)) arg)
   .
   Proof.
     destruct mrs as [mr st]. ss.
-    unfold fun_to_src, UModSem.transl_fun_mod, UModSem.transl_fun_smod, UModSem.transl_fun_smod, body_to_src.
+    unfold fun_to_src, UModSem.transl_fun, UModSem.massage_fun, body_to_src.
     ginit. abstr (ktr arg) itr. clear ktr arg. revert_until gstb. gcofix CIH. i.
     ides itr.
     { steps. }
@@ -312,7 +312,7 @@ match it and use trivial spec in case of None
         umd
         (IN: In umd umds)
     :
-      ModPair.sim (UMod.to_mod umd) (SMod.to_src (UMod.to_smod umd))
+      ModPair.sim (UMod.transl umd) (SMod.to_src (UMod.massage umd))
   .
   Proof.
     econs; ss; cycle 1.
@@ -345,7 +345,7 @@ match it and use trivial spec in case of None
        (flat_map SModSem.fnsems
           (List.map
              (flip SMod.get_modsem ske)
-             (kmds ++ List.map UMod.to_smod umds))))
+             (kmds ++ List.map UMod.massage umds))))
   .
   Proof.
     i. unfold _gstb.
@@ -368,14 +368,14 @@ match it and use trivial spec in case of None
   Variable (mainbody: Any.t -> itree (uCallE +' pE +' eventE) Any.t).
   Hypothesis MAINU: In (UMod_main mainbody) umds.
 
-  Let mains: SMod.t := UMod.to_smod (UMod_main mainbody).
+  Let mains: SMod.t := UMod.massage (UMod_main mainbody).
 
   Hypothesis WFR: URA.wf (List.fold_left (⋅) (List.map (SModSem.initial_mr) kmss) ε).
   (* Hypothesis MAINM: In (SMod.main mainpre mainbody) kmds. *)
 
   Theorem adequacy_open:
-    refines_closed (Mod.add_list (List.map (SMod.to_tgt _gstb) kmds ++ List.map UMod.to_mod umds))
-                   (Mod.add_list (List.map (SMod.to_src) kmds ++ List.map UMod.to_mod umds))
+    refines_closed (Mod.add_list (List.map (SMod.to_tgt _gstb) kmds ++ List.map UMod.transl umds))
+                   (Mod.add_list (List.map (SMod.to_src) kmds ++ List.map UMod.transl umds))
   .
   Proof.
     etrans.
@@ -383,24 +383,24 @@ match it and use trivial spec in case of None
       rewrite Mod.add_list_app.
       eapply refines_proper_l.
       eapply adequacy_local_list.
-      instantiate (1:=(List.map (SMod.to_tgt _gstb ∘ UMod.to_smod) umds)).
+      instantiate (1:=(List.map (SMod.to_tgt _gstb ∘ UMod.massage) umds)).
       eapply Forall2_apply_Forall2.
       { instantiate (1:=eq). refl. }
       i. subst. eapply my_lemma1; ss.
     }
     rewrite <- Mod.add_list_app.
     etrans.
-    { erewrite <- List.map_map with (f:=UMod.to_smod).
+    { erewrite <- List.map_map with (f:=UMod.massage).
       rewrite <- map_app.
       eapply adequacy_type2.
-      - instantiate (1:=(kmds ++ List.map UMod.to_smod umds)).
-        erewrite <- List.map_id with (l:=(kmds ++ List.map UMod.to_smod umds)) at 1.
+      - instantiate (1:=(kmds ++ List.map UMod.massage umds)).
+        erewrite <- List.map_id with (l:=(kmds ++ List.map UMod.massage umds)) at 1.
         eapply Forall2_apply_Forall2.
         { instantiate (1:=eq). refl. }
         i. subst. exists _gstb. split; ss. r. intro ske. rewrite <- gstb_eq. refl.
       - admit "main pre".
       - ss. instantiate (1:=ε). rewrite ! URA.unit_id. rewrite ! URA.unit_idl. admit "should be ez".
-      - Check (UModSem.transl_fun_smod mainbody).
+      - Check (UModSem.massage_fun mainbody).
         admit "mid - main argument parameterization".
         (* instantiate (1:=UModSem.transl_fun_smod mainbody). rewrite in_app_iff. eauto. *)
     }
@@ -409,7 +409,7 @@ match it and use trivial spec in case of None
       rewrite map_app. rewrite Mod.add_list_app.
       eapply refines_proper_l.
       eapply adequacy_local_list.
-      instantiate (1:=(List.map (UMod.to_mod) umds)). rewrite map_map.
+      instantiate (1:=(List.map (UMod.transl) umds)). rewrite map_map.
       eapply Forall2_apply_Forall2.
       { instantiate (1:=eq). refl. }
       i. subst. eapply my_lemma2; ss.
