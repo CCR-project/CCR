@@ -60,8 +60,8 @@ Section PROOF.
                                           (fun vret => (∃ ll', is_list ll' (x :: xs) ** ⌜vret = ll'↑⌝)%I)
                           ))).
 
-  Definition StackStb: list (gname * fspec).
-    eapply (Seal.sealing "stb").
+  Definition StackStb: Stb.
+    apply mk_stb.
     apply [("pop", pop_spec) ; ("pop2", pop2_spec) ; ("push", push_spec)].
   Defined.
 

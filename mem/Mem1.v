@@ -216,8 +216,8 @@ Section PROOF.
             (fun vret => OwnM(resource) ** ⌜vret = (if result then Vint 1 else Vint 0)↑⌝)
     ))).
 
-  Definition MemStb: list (gname * fspec).
-    eapply (Seal.sealing "stb").
+  Definition MemStb: Stb.
+    apply mk_stb.
     apply [("alloc", alloc_spec) ; ("free", free_spec) ; ("load", load_spec) ; ("store", store_spec) ; ("cmp", cmp_spec)].
   Defined.
 

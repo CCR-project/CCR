@@ -71,6 +71,6 @@ Section PROOF.
   Definition g_spec:    fspec := mk_simple (fun (n: nat) =>
                                               ((fun varg o => (⌜varg = [Vint (Z.of_nat n)]↑ /\ o = ord_pure n /\ n < mut_max⌝: iProp)%I),
                                                (fun vret => (⌜vret = (Vint (Z.of_nat (sum n)))↑⌝: iProp)%I))).
-  Definition GlobalStb: list (gname * fspec) := [("main", main_spec); ("f", f_spec); ("g", g_spec)].
+  Definition GlobalStb: Stb := mk_stb [("main", main_spec); ("f", f_spec); ("g", g_spec)].
 
 End PROOF.

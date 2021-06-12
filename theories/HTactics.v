@@ -695,7 +695,7 @@ Section HLEMMAS.
         (at_most: Ord.t)
         (wf: (Σ * Any.t) * (Σ * Any.t) -> Prop)
         (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
-        stb itr_tgt
+        (stb: Stb) itr_tgt
 
         (FUEL: (n1 + 7 < n0)%ord)
         (fsp: fspec)

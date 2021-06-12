@@ -109,9 +109,20 @@ Section FSPEC.
   Definition fspec_absurd: fspec := mk_fspec (meta:=unit) (bot5) (top4).
 
   Record Stb: Type := _mk_stb { stb_stb:> list (gname * fspec); stb_d: fspec }.
-  Definition mk_stb (stb: list (gname * fspec)): Stb := _mk_stb stb fspec_trivial.
+  Definition mk_stb (stb: list (gname * fspec)): Stb := _mk_stb (Seal.sealing "stb" stb) fspec_trivial.
+  Definition app_Stb (stb0 stb1: Stb): Stb := mk_stb (stb0 ++ stb1).
+  (*** TODO: make "Stb" namespace as a module; I think it deserves one ***)
 
 End FSPEC.
+
+Notation "x ++ y" := (app_Stb x y).
+
+Section AUX.
+  Context `{Σ: GRA.t}.
+  Lemma app_Stb_spec: forall (stb0 stb1: Stb), (stb0 ++ stb1) = mk_stb (stb0 ++ stb1).
+  Proof. i. refl. Qed.
+End AUX.
+
 
 
 Section PROOF.

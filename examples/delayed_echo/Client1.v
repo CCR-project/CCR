@@ -22,8 +22,8 @@ Section PROOF.
   Let getint_spec: fspec := (mk_simple (X:=unit) (fun _ => ((fun _ o => (⌜o = ord_top⌝: iProp)%I), top2))).
   Let putint_spec: fspec := (mk_simple (X:=unit) (fun _ => ((fun _ o => (⌜o = ord_top⌝: iProp)%I), top2))).
 
-  Definition ClientStb: list (gname * fspec).
-    eapply (Seal.sealing "stb").
+  Definition ClientStb: Stb.
+    apply mk_stb.
     apply [("getint", getint_spec) ; ("putint", putint_spec)].
   Defined.
 

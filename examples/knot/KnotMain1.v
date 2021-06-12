@@ -34,7 +34,7 @@ Section MAIN.
   Context `{@GRA.inG knotRA Σ}.
 
   Variable RecStb: SkEnv.t -> list (gname * fspec).
-  Variable GlobalStb: SkEnv.t -> list (gname * fspec).
+  Variable GlobalStb: SkEnv.t -> Stb.
 
   Section SKENV.
     Variable skenv: SkEnv.t.

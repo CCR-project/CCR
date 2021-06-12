@@ -25,7 +25,7 @@ Section KNOT.
 
   Variable RecStb: SkEnv.t -> list (gname * fspec).
   Variable FunStb: SkEnv.t -> list (gname * fspec).
-  Variable GlobalStb: SkEnv.t -> list (gname * fspec).
+  Variable GlobalStb: SkEnv.t -> Stb.
 
   Section SKENV.
     Variable skenv: SkEnv.t.
