@@ -897,7 +897,7 @@ Section PROOF.
         pfold. econs 6; clarify.
         { admit "ez: strict_determinate_at". }
         eexists. eexists.
-        { eapply step_set. econs; eauto. ss. eapply match_mem_cmp in VCMP; eauto. }
+        { eapply step_set. econs; eauto. econs; eauto; ss. eapply match_mem_cmp in VCMP; eauto. }
         eexists. exists (step_tau _).
         eexists. left.
         do 4 (pfold; sim_tau; left). sim_red. rewrite Any.upcast_downcast. grind.
@@ -912,12 +912,14 @@ Section PROOF.
               replace i1 with i0; eauto
             end.
             unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
-        { econs. i. admit "ez: update match lenv to handle Vfalse/Vtrue". }
+        { econs. i. unfold Int.one. rewrite Int.signed_repr.
+          2:{ unfold_Int_max_signed; unfold_Int_min_signed. ss. }
+          admit "ez: match le". }
       + sim_red.
         pfold. econs 6; clarify.
         { admit "ez: strict_determinate_at". }
         eexists. eexists.
-        { eapply step_set. econs; eauto. ss. eapply match_mem_cmp in VCMP; eauto. }
+        { eapply step_set. econs; eauto. econs; eauto; ss. eapply match_mem_cmp in VCMP; eauto. }
         eexists. exists (step_tau _).
         eexists. left.
         do 4 (pfold; sim_tau; left). sim_red. rewrite Any.upcast_downcast. grind.
@@ -932,7 +934,9 @@ Section PROOF.
               replace i1 with i0; eauto
             end.
             unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
-        { econs. i. admit "ez: update match lenv to handle Vfalse/Vtrue". }
+        { econs. i. unfold Int.zero. rewrite Int.signed_repr.
+          2:{ unfold_Int_max_signed; unfold_Int_min_signed. ss. }
+          admit "ez: match le". }
 
   Admitted.
 

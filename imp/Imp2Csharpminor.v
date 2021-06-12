@@ -273,7 +273,7 @@ Section Compile.
     | Cmp x ae be =>
       do cae <- (compile_expr ae);
       do cbe <- (compile_expr be);
-      let cmpexpr := (Ebinop (Ocmplu Ceq) cae cbe) in
+      let cmpexpr := Eunop Olongofint (Ebinop (Ocmplu Ceq) cae cbe) in
       Some (Sset (s2p x) cmpexpr)
     end
   .
