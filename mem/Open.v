@@ -258,10 +258,8 @@ match it and use trivial spec in case of None
       ModPair.sim (SMod.to_tgt _gstb (UMod.massage umd)) (UMod.transl umd)
   .
   Proof.
-    econs; ss; cycle 1.
-    { admit "ez - wf". }
-    i. r. eapply adequacy_lift.
-    econs.
+    econs; ss.
+    i. r. econs.
     { instantiate (1:=fun '(x, y) => x = y). ss.
       set (ums:=UMod.get_modsem umd sk) in *.
       rewrite ! List.map_map.
@@ -315,10 +313,8 @@ match it and use trivial spec in case of None
       ModPair.sim (UMod.transl umd) (SMod.to_src (UMod.massage umd))
   .
   Proof.
-    econs; ss; cycle 1.
-    { admit "ez - wf". }
-    i. r. eapply adequacy_lift.
-    econs.
+    econs; ss.
+    i. r. econs.
     { instantiate (1:=fun '(x, y) => x = y). ss.
       set (ums:=UMod.get_modsem umd sk) in *.
       rewrite ! List.map_map.

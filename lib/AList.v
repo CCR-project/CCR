@@ -110,6 +110,8 @@ Proof.
   des_ifs.
 Qed.
 
+Require Import List Setoid Permutation Sorted Orders.
+
 Section ALIST.
   Lemma alist_find_some K `{Dec K} V (k: K) (l: alist K V) (v: V)
         (FIND: alist_find k l = Some v)
@@ -253,6 +255,23 @@ Section ALIST.
       { rewrite Heq0. auto. }
     }
   Qed.
+
+  Lemma alist_permutation_find K `{Dec K} V (l0 l1: alist K V)
+        (ND: NoDup (List.map fst l0))
+        (PERM: Permutation l0 l1)
+        k
+    :
+      alist_find k l0 = alist_find k l1.
+  Proof.
+    revert ND k. induction PERM; ss.
+    { i. inv ND. destruct x. rewrite eq_rel_dec_correct. des_ifs. et. }
+    { i. inv ND. inv H3. destruct x, y. rewrite eq_rel_dec_correct. des_ifs.
+      rewrite eq_rel_dec_correct in *. des_ifs. f_equal. exfalso. eapply H2. ss. auto. }
+    { i. rewrite IHPERM1; auto. rewrite IHPERM2; auto.
+      eapply Permutation_NoDup; [|apply ND].
+      eapply Permutation_map. auto.
+    }
+  Qed.
 End ALIST.
 
 
@@ -265,8 +284,6 @@ Tactic Notation "asimpl" "in" "*" :=
 Tactic Notation "asimpl" :=
   (try unfold alist_remove, alist_add); simpl.
 
-
-Require Import List Setoid Permutation Sorted Orders.
 
 Definition ascii_le (c0 c1: Ascii.ascii): bool :=
   (Ascii.nat_of_ascii c0 <=? Ascii.nat_of_ascii c1)%nat.
@@ -355,3 +372,27 @@ Module ProdFstOrder (A: TotalTransitiveLeBool') (B: Typ) <: TotalTransitiveLeBoo
 End ProdFstOrder.
 
 Require Import Sorting.Mergesort.
+Require Import Sorting.Sorted.
+
+Module AListSort (V: Typ).
+  Module _Order := ProdFstOrder StringOrder V.
+  Module Sorting := Sort _Order.
+  Include Sorting.
+
+  Definition t := alist string V.t.
+
+  Lemma sort_permutation (l: t)
+    :
+      Permutation l (sort l).
+  Proof.
+    eapply Sorting.Permuted_sort.
+  Qed.
+
+  Lemma sort_add_comm (l0 l1: t)
+        (ND: NoDup (List.map fst (l0 ++ l1)))
+    :
+      sort (l0 ++ l1) = sort (l1 ++ l0).
+  Proof.
+    admit "sorting commutative".
+  Qed.
+End AListSort.

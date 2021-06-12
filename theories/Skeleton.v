@@ -81,6 +81,7 @@ End SkEnv.
 
 
 
+Require Import Orders.
 
 Module Sk.
 
@@ -94,21 +95,25 @@ Module Sk.
 
   Definition wf (sk: t): Prop := @List.NoDup _ (List.map fst sk).
 
-  Definition sort: t -> t := id.
-  Global Opaque sort.
+  Module GDef <: Typ. Definition t := gdef. End GDef.
+  Module SkSort := AListSort GDef.
+
+  Definition sort: t -> t := SkSort.sort.
 
   Definition sort_add_comm sk0 sk1
              (WF: wf (add sk0 sk1))
     :
       sort (add sk0 sk1) = sort (add sk1 sk0).
   Proof.
-    admit "sort spec".
+    eapply SkSort.sort_add_comm. eapply WF.
   Qed.
 
   Definition sort_wf sk (WF: wf sk):
     wf (sort sk).
   Proof.
-    admit "sort spec".
+    eapply Permutation.Permutation_NoDup; [|apply WF].
+    eapply Permutation.Permutation_map.
+    eapply SkSort.sort_permutation.
   Qed.
 
   (*** TODO: It might be nice if Sk.t also constitutes a resource algebra ***)
@@ -190,14 +195,16 @@ Module Sk.
     :
       incl sk (sort sk).
   Proof.
-    admit "sort spec".
+    ii. eapply Permutation.Permutation_in; [|apply IN].
+    eapply SkSort.sort_permutation.
   Qed.
 
   Lemma sort_incl_rev sk
     :
       incl (sort sk) sk.
   Proof.
-    admit "sort spec".
+    ii. eapply Permutation.Permutation_in; [|apply IN].
+    symmetry. eapply SkSort.sort_permutation.
   Qed.
 
   Definition incl_env (sk0: Sk.t) (skenv: SkEnv.t): Prop :=
