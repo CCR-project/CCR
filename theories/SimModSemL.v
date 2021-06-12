@@ -18,6 +18,7 @@ From ExtLib Require Import
      Structures.Maps
      Data.Map.FMapAList.
 Require Import Any.
+Require Import TODOYJ.
 
 From Ordinal Require Import Ordinal Arithmetic.
 
@@ -1343,16 +1344,6 @@ Require Import SimGlobal.
 
 
 
-  Variant option_rel A B (P: A -> B -> Prop): option A -> option B -> Prop :=
-  | option_rel_some
-      a b (IN: P a b)
-    :
-      option_rel P (Some a) (Some b)
-  | option_rel_none
-    :
-      option_rel P None None
-  .
-  Hint Constructors option_rel: core.
 
 
 Module ModLPair.

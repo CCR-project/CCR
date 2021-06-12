@@ -6,7 +6,6 @@ Require Import Behavior.
 Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
-Require Import HoareDef.
 Require Import TODOYJ.
 Require Import Logic.
 Require Import TODO.
@@ -17,36 +16,7 @@ Require Import Red IRed.
 Set Implicit Arguments.
 
 
-(* Definition dot {A B C} (g: B -> C) (f: A -> B): A -> C := g ∘ f. *)
-(* Notation "(∘)" := dot (at level 40, left associativity). *)
-(*** TODO: move to Coqlib ***)
-Notation "(∘)" := (fun g f => g ∘ f) (at level 0, left associativity).
 
-(*** TODO: remove redundancy with SimModSemL && migrate related lemmas ***)
-Variant option_rel A B (P: A -> B -> Prop): option A -> option B -> Prop :=
-| option_rel_some
-    a b (IN: P a b)
-  :
-    option_rel P (Some a) (Some b)
-| option_rel_none
-  :
-    option_rel P None None
-.
-Hint Constructors option_rel: core.
-
-Definition map_or_else X Y (ox: option X) (f: X -> Y) (d: Y) :=
-  match ox with | Some x => f x | None => d end.
-
-
-
-Section AUX.
-  Context `{Σ: GRA.t}.
-  Definition fspec_trivial: fspec :=
-    mk_fspec (meta:=unit) (fun _ argh argl o => (⌜argh = argl ∧ o = ord_top⌝: iProp)%I)
-             (fun _ reth retl => (⌜reth = retl⌝: iProp)%I)
-  .
-
-End AUX.
 
 
 (*** TODO: remove redundancy ***)

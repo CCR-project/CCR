@@ -8,6 +8,7 @@ Require Import PCM.
 From Ordinal Require Export Ordinal Arithmetic Inaccessible.
 Require Import Any.
 Require Import IRed.
+Require Import TODOYJ.
 
 From ExtLib Require Import
      Core.RelDec
@@ -99,6 +100,17 @@ Section FSPEC.
       (fun x arg_src arg_tgt o => (∃ (aa: AA), ⌜arg_src = aa↑⌝ ∧ precond x aa arg_tgt o)%I)
       (fun x ret_src ret_tgt => (∃ (ar: AR), ⌜ret_src = ar↑⌝ ∧ postcond x ar ret_tgt)%I)
   .
+
+  Definition fspec_trivial: fspec :=
+    mk_fspec (meta:=unit) (fun _ argh argl o => (⌜argh = argl ∧ o = ord_top⌝: iProp)%I)
+             (fun _ reth retl => (⌜reth = retl⌝: iProp)%I)
+  .
+
+  Definition fspec_absurd: fspec := mk_fspec (meta:=unit) (bot5) (top4).
+
+  Record Stb: Type := _mk_stb { stb_stb:> list (gname * fspec); stb_d: fspec }.
+  Definition mk_stb (stb: list (gname * fspec)): Stb := _mk_stb stb fspec_trivial.
+
 End FSPEC.
 
 
@@ -283,7 +295,7 @@ Section CANCEL.
  ***)
   (*** TODO: try above idea; if it fails, document it; and refactor below with alist ***)
 
-  Variable stb: list (gname * fspec).
+  Variable stb: Stb.
 
   Definition handle_hCallE_src: hCallE ~> itree Es :=
     fun _ '(hCall tbr fn varg_src) =>
@@ -312,7 +324,6 @@ Section CANCEL.
   Definition handle_hCallE_mid (ord_cur: ord): hCallE ~> itree Es :=
     fun _ '(hCall tbr fn varg_src) =>
       tau;;
-      f <- (alist_find fn stb)ǃ;;
       ord_next <- (if tbr then o0 <- trigger (Choose _);; Ret (ord_pure o0) else Ret ord_top);;
       guarantee(ord_lt ord_next ord_cur);;;
       let varg_mid: Any_mid := Any.pair ord_next↑ varg_src in
@@ -338,7 +349,7 @@ Section CANCEL.
 
   Definition handle_hCallE_tgt (ord_cur: ord): hCallE ~> stateT Σ (itree Es) :=
     fun _ '(hCall tbr fn varg_src) ctx =>
-      f <- (alist_find fn stb)ǃ;;
+      let f := or_else (alist_find fn stb) stb.(stb_d) in
       '(ctx, vret_src) <- (HoareCall tbr ord_cur f fn varg_src ctx);;
       Ret (ctx, vret_src)
   .
@@ -491,8 +502,8 @@ Section SMODSEM.
   .
 
   Definition to_src (ms: t): ModSem.t := transl (fun_to_src ∘ fsb_body) (fun _ => ε) ms.
-  Definition to_mid (stb: list (gname * fspec)) (ms: t): ModSem.t := transl (fun_to_mid stb ∘ fsb_body) (fun _ => ε) ms.
-  Definition to_tgt (stb: list (gname * fspec)) (ms: t): ModSem.t := transl (fun_to_tgt stb) (initial_mr) ms.
+  Definition to_mid (ms: t): ModSem.t := transl (fun_to_mid ∘ fsb_body) (fun _ => ε) ms.
+  Definition to_tgt (stb: Stb) (ms: t): ModSem.t := transl (fun_to_tgt stb) (initial_mr) ms.
 
   Definition main (mainpre: Any.t -> ord -> iProp) (mainbody: Any.t -> itree (hCallE +' pE +' eventE) Any.t): t := {|
       fnsems := [("main", (mk_specbody (mk_simple (fun (_: unit) => (mainpre, fun _ => (⌜True⌝: iProp)%I))) mainbody))];
@@ -525,8 +536,8 @@ Section SMOD.
   .
 
   Definition to_src (md: t): Mod.t := transl (fun _ => fun_to_src ∘ fsb_body) (fun _ => ε) md.
-  Definition to_mid (stb: list (gname * fspec)) (md: t): Mod.t := transl (fun _ => fun_to_mid stb ∘ fsb_body) (fun _ => ε) md.
-  Definition to_tgt (stb: Sk.t -> list (gname * fspec)) (md: t): Mod.t := transl (fun_to_tgt ∘ stb) SModSem.initial_mr md.
+  Definition to_mid (md: t): Mod.t := transl (fun _ => fun_to_mid ∘ fsb_body) (fun _ => ε) md.
+  Definition to_tgt (stb: Sk.t -> Stb) (md: t): Mod.t := transl (fun_to_tgt ∘ stb) SModSem.initial_mr md.
 
   (* Definition transl (tr: SModSem.t -> ModSem.t) (md: t): Mod.t := {| *)
   (*   Mod.get_modsem := (SModSem.transl tr) ∘ md.(get_modsem); *)
@@ -540,8 +551,8 @@ Section SMOD.
   Lemma to_src_comm: forall sk smd,
       (SModSem.to_src) (get_modsem smd sk) = (to_src smd).(Mod.get_modsem) sk.
   Proof. refl. Qed.
-  Lemma to_mid_comm: forall sk stb smd,
-      (SModSem.to_mid stb) (get_modsem smd sk) = (to_mid stb smd).(Mod.get_modsem) sk.
+  Lemma to_mid_comm: forall sk smd,
+      (SModSem.to_mid) (get_modsem smd sk) = (to_mid smd).(Mod.get_modsem) sk.
   Proof. refl. Qed.
   Lemma to_tgt_comm: forall sk stb smd,
       (SModSem.to_tgt (stb sk)) (get_modsem smd sk) = (to_tgt stb smd).(Mod.get_modsem) sk.
@@ -1154,16 +1165,15 @@ End AUX.
 Section AUX.
 
 Context `{Σ: GRA.t}.
-Variable stb: list (gname * fspec).
 (* itree reduction *)
 Lemma interp_mid_bind
       (R S: Type)
       (s : itree (hCallE +' pE +' eventE) R) (k : R -> itree (hCallE +' pE +' eventE) S)
       o
   :
-    (interp_hCallE_mid stb o (s >>= k))
+    (interp_hCallE_mid o (s >>= k))
     =
-    ((interp_hCallE_mid stb o s) >>= (fun r => interp_hCallE_mid stb o (k r))).
+    ((interp_hCallE_mid o s) >>= (fun r => interp_hCallE_mid o (k r))).
 Proof.
   unfold interp_hCallE_mid in *. grind.
 Qed.
@@ -1172,9 +1182,9 @@ Lemma interp_mid_tau o
       (U: Type)
       (t : itree _ U)
   :
-    (interp_hCallE_mid stb o (Tau t))
+    (interp_hCallE_mid o (Tau t))
     =
-    (Tau (interp_hCallE_mid stb o t)).
+    (Tau (interp_hCallE_mid o t)).
 Proof.
   unfold interp_hCallE_mid in *. grind.
 Qed.
@@ -1183,7 +1193,7 @@ Lemma interp_mid_ret o
       (U: Type)
       (t: U)
   :
-    ((interp_hCallE_mid stb o (Ret t)))
+    ((interp_hCallE_mid o (Ret t)))
     =
     Ret t.
 Proof.
@@ -1194,7 +1204,7 @@ Lemma interp_mid_triggerp o
       (R: Type)
       (i: pE R)
   :
-    (interp_hCallE_mid stb o (trigger i))
+    (interp_hCallE_mid o (trigger i))
     =
     (trigger i >>= (fun r => tau;; Ret r)).
 Proof.
@@ -1206,7 +1216,7 @@ Lemma interp_mid_triggere o
       (R: Type)
       (i: eventE R)
   :
-    (interp_hCallE_mid stb o (trigger i))
+    (interp_hCallE_mid o (trigger i))
     =
     (trigger i >>= (fun r => tau;; Ret r)).
 Proof.
@@ -1218,9 +1228,9 @@ Lemma interp_mid_hcall o
       (R: Type)
       (i: hCallE R)
   :
-    (interp_hCallE_mid stb o (trigger i))
+    (interp_hCallE_mid o (trigger i))
     =
-    ((handle_hCallE_mid stb o i) >>= (fun r => tau;; Ret r)).
+    ((handle_hCallE_mid o i) >>= (fun r => tau;; Ret r)).
 Proof.
   unfold interp_hCallE_mid in *.
   repeat rewrite interp_trigger. grind.
@@ -1229,7 +1239,7 @@ Qed.
 Lemma interp_mid_triggerUB o
       (R: Type)
   :
-    (interp_hCallE_mid stb o (triggerUB))
+    (interp_hCallE_mid o (triggerUB))
     =
     triggerUB (A:=R).
 Proof.
@@ -1239,7 +1249,7 @@ Qed.
 Lemma interp_mid_triggerNB o
       (R: Type)
   :
-    (interp_hCallE_mid stb o (triggerNB))
+    (interp_hCallE_mid o (triggerNB))
     =
     triggerNB (A:=R).
 Proof.
@@ -1250,7 +1260,7 @@ Lemma interp_mid_unwrapU o
       (R: Type)
       (i: option R)
   :
-    (interp_hCallE_mid stb o (@unwrapU (hCallE +' pE +' eventE) _ _ i))
+    (interp_hCallE_mid o (@unwrapU (hCallE +' pE +' eventE) _ _ i))
     =
     (unwrapU i).
 Proof.
@@ -1269,7 +1279,7 @@ Lemma interp_mid_unwrapN o
       (R: Type)
       (i: option R)
   :
-    (interp_hCallE_mid stb o (@unwrapN (hCallE +' pE +' eventE) _ _ i))
+    (interp_hCallE_mid o (@unwrapN (hCallE +' pE +' eventE) _ _ i))
     =
     (unwrapN i).
 Proof.
@@ -1287,7 +1297,7 @@ Qed.
 Lemma interp_mid_assume o
       P
   :
-    (interp_hCallE_mid stb o (assume P))
+    (interp_hCallE_mid o (assume P))
     =
     (assume P;;; tau;; Ret tt)
 .
@@ -1298,7 +1308,7 @@ Qed.
 Lemma interp_mid_guarantee o
       P
   :
-    (interp_hCallE_mid stb o (guarantee P))
+    (interp_hCallE_mid o (guarantee P))
     =
     (guarantee P;;; tau;; Ret tt).
 Proof.
@@ -1309,9 +1319,9 @@ Lemma interp_mid_ext o
       R (itr0 itr1: itree _ R)
       (EQ: itr0 = itr1)
   :
-    (interp_hCallE_mid stb o itr0)
+    (interp_hCallE_mid o itr0)
     =
-    (interp_hCallE_mid stb o itr1)
+    (interp_hCallE_mid o itr1)
 .
 Proof. subst; et. Qed.
 
@@ -1610,3 +1620,22 @@ Ltac ired_both := ired_l; ired_r.
     split; ss; ii; clarify; rename y into varg; eexists 100%nat; ss; des; clarify;
     ginit; []; unfold alist_add, alist_remove; ss;
     unfold fun_to_tgt, cfun, HoareFun; ss.
+
+
+
+Create HintDb stb.
+Hint Rewrite (Seal.sealing_eq "stb"): stb.
+
+Ltac stb_tac :=
+  match goal with
+  | [ |- alist_find _ ?xs = _ ] =>
+    match type of xs with
+    | (list (string * fspec)) =>
+      autounfold with stb; autorewrite with stb; simpl
+    end
+  | [H: alist_find _ ?xs = _ |- _ ] =>
+    match type of xs with
+    | (list (string * fspec)) =>
+      autounfold with stb in H; autorewrite with stb in H; simpl in H
+    end
+  end.

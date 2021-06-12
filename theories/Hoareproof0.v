@@ -11,148 +11,9 @@ Require Import SimSTS.
 Require Import SimGlobal.
 From Ordinal Require Import Ordinal Arithmetic.
 Require Import Red IRed.
+Require Import TODOYJ.
 
 Set Implicit Arguments.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  (* Ltac ired_l := *)
-  (*   cbn; *)
-  (*   match goal with *)
-  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ (_ >>= _ >>= _) _) ] => *)
-  (*     prw ltac:(rrw bind_bind _continue) 2 0 *)
-  (*     (* apply simg_l_bind_bind; ired_l *) *)
-  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ ((tau;; _) >>= _) _) ] => *)
-  (*     apply simg_l_bind_tau *)
-  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ ((Ret _) >>= _) _) ] => *)
-  (*     apply simg_l_bind_ret_l; ired_l *)
-  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ (trigger _) _) ] => *)
-  (*     apply simg_l_trigger_ret_rev *)
-  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp _ _) _) ] => *)
-  (*     ((interp_red; ired_l) || idtac) *)
-  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp _ _) >>= _) _) ] => *)
-  (*     ((interp_red; ired_l) || idtac) *)
-
-  (*   (**************************** interp_Es ******************************) *)
-  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ (_ >>= _) _) _) ] => *)
-  (*     apply simg_l_interp_Es_bind; ired_l *)
-  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ (tau;; _) _) _) ] => *)
-  (*     apply simg_l_interp_Es_tau *)
-  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ (Ret _) _) _) ] => *)
-  (*     apply simg_l_interp_Es_ret *)
-  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ (trigger ?e) _) _) ] => *)
-  (*     match (type of e) with *)
-  (*     | context[rE] => apply simg_l_interp_Es_rE *)
-  (*     | context[eventE] => apply simg_l_interp_Es_eventE *)
-  (*     | context[pE] => apply simg_l_interp_Es_pE *)
-  (*     | context[callE] => apply simg_l_interp_Es_callE *)
-  (*     | _ => fail 2 *)
-  (*     end *)
-  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ triggerNB _) _) ] => *)
-  (*     apply simg_l_interp_Es_triggerNB *)
-  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ (interp_Es _ triggerUB _) _) ] => *)
-  (*     apply simg_l_interp_Es_triggerUB *)
-
-  (*   (**************************** interp_Es2 ******************************) *)
-  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ (_ >>= _) _) >>= _) _) ] => *)
-  (*     apply simg_l_interp_Es_bind2; ired_l *)
-  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ (tau;; _) _) >>= _) _) ] => *)
-  (*     apply simg_l_interp_Es_tau2 *)
-  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ (Ret _) _) >>= _) _) ] => *)
-  (*     apply simg_l_interp_Es_ret2; ired_l *)
-  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ (trigger ?e) _) >>= _) _) ] => *)
-  (*     match (type of e) with *)
-  (*     | context[rE] => apply simg_l_interp_Es_rE2 *)
-  (*     | context[eventE] => apply simg_l_interp_Es_eventE2 *)
-  (*     | context[pE] => apply simg_l_interp_Es_pE2 *)
-  (*     | context[callE] => apply simg_l_interp_Es_callE2 *)
-  (*     | _ => fail 2 *)
-  (*     end *)
-  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ triggerNB _) >>= _) _) ] => *)
-  (*     apply simg_l_interp_Es_triggerNB2 *)
-  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ ((interp_Es _ triggerUB _) >>= _) _) ] => *)
-  (*     apply simg_l_interp_Es_triggerUB2 *)
-
-  (*   | _ => idtac *)
-  (*   end. *)
-
-  (* Ltac ired_r := *)
-  (*   cbn; *)
-  (*   match goal with *)
-  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (_ >>= _ >>= _)) ] => *)
-  (*     apply simg_r_bind_bind; ired_r *)
-  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((tau;; _) >>= _)) ] => *)
-  (*     apply simg_r_bind_tau *)
-  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((Ret _) >>= _)) ] => *)
-  (*     apply simg_r_bind_ret_l; ired_r *)
-  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (trigger _)) ] => *)
-  (*     apply simg_r_trigger_ret_rev *)
-  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp _ _)) ] => *)
-  (*     ((interp_red; ired_r) || idtac) *)
-  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp _ _) >>= _)) ] => *)
-  (*     ((interp_red; ired_r) || idtac) *)
-
-  (*   (**************************** interp_Es ******************************) *)
-  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ (_ >>= _) _)) ] => *)
-  (*     apply simg_r_interp_Es_bind; ired_l *)
-  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ (tau;; _) _)) ] => *)
-  (*     apply simg_r_interp_Es_tau *)
-  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ (Ret _) _)) ] => *)
-  (*     apply simg_r_interp_Es_ret *)
-  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ (trigger ?e) _)) ] => *)
-  (*     match (type of e) with *)
-  (*     | context[rE] => apply simg_r_interp_Es_rE *)
-  (*     | context[eventE] => apply simg_r_interp_Es_eventE *)
-  (*     | context[pE] => apply simg_r_interp_Es_pE *)
-  (*     | context[callE] => apply simg_r_interp_Es_callE *)
-  (*     | _ => fail 2 *)
-  (*     end *)
-  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ triggerNB _)) ] => *)
-  (*     apply simg_r_interp_Es_triggerNB *)
-  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ (interp_Es _ triggerUB _)) ] => *)
-  (*     apply simg_r_interp_Es_triggerUB *)
-
-  (*   (**************************** interp_Es2 ******************************) *)
-  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ (_ >>= _) _) >>= _)) ] => *)
-  (*     apply simg_r_interp_Es_bind2; ired_l *)
-  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ (tau;; _) _) >>= _)) ] => *)
-  (*     apply simg_r_interp_Es_tau2 *)
-  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ (Ret _) _) >>= _)) ] => *)
-  (*     apply simg_r_interp_Es_ret2; ired_l *)
-  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ (trigger ?e) _) >>= _)) ] => *)
-  (*     match (type of e) with *)
-  (*     | context[rE] => apply simg_r_interp_Es_rE2 *)
-  (*     | context[eventE] => apply simg_r_interp_Es_eventE2 *)
-  (*     | context[pE] => apply simg_r_interp_Es_pE2 *)
-  (*     | context[callE] => apply simg_r_interp_Es_callE2 *)
-  (*     | _ => fail 2 *)
-  (*     end *)
-  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ triggerNB _) >>= _)) ] => *)
-  (*     apply simg_r_interp_Es_triggerNB2 *)
-  (*   | [ |- (gpaco5 _simg _ _ _ _ _ _ _ ((interp_Es _ triggerUB _) >>= _)) ] => *)
-  (*     apply simg_r_interp_Es_triggerUB2 *)
-
-  (*   | _ => idtac *)
-  (*   end. *)
-
-  (* Ltac ired_all := ired_l; ired_r. *)
-
-
 
 
 
@@ -177,17 +38,18 @@ Section CANCEL.
 
   Let _mss: Sk.t -> list SModSem.t := fun sk => (List.map ((flip SMod.get_modsem) sk) mds).
   Let _sbtb: Sk.t -> list (gname * fspecbody) := fun sk => (List.flat_map (SModSem.fnsems) (_mss sk)).
-  Let _stb: Sk.t -> list (gname * fspec) := fun sk => List.map (fun '(fn, fs) => (fn, fs.(fsb_fspec))) (_sbtb sk).
+  Let _stb: Sk.t -> Stb :=
+    fun sk => _mk_stb (List.map (fun '(fn, fs) => (fn, fs.(fsb_fspec))) (_sbtb sk)) fspec_absurd.
 
   Let mss: list SModSem.t := _mss sk.
   Let sbtb: list (gname * fspecbody) := _sbtb sk.
-  Let stb: list (gname * fspec) := _stb sk.
+  Let stb: Stb := (_stb sk).
 
   (* Let mss: list SModSem.t := (List.map ((flip SMod.get_modsem) sk) mds). *)
   (* Let sbtb: list (gname * fspecbody) := (List.flat_map (SModSem.fnsems) mss). *)
   (* Let stb: list (gname * fspec) := List.map (fun '(fn, fs) => (fn, fs.(fsb_fspec))) sbtb. *)
 
-  Let mds_mid: list Mod.t := List.map (SMod.to_mid stb) mds.
+  Let mds_mid: list Mod.t := List.map (SMod.to_mid) mds.
   Let mds_tgt: list Mod.t := List.map (SMod.to_tgt _stb) mds.
 
   Let ms_mid: ModSemL.t := ModL.enclose (Mod.add_list mds_mid).
@@ -206,7 +68,7 @@ Section CANCEL.
                       Some (transl_all
                               (SModSem.mn
                                  (SMod.get_modsem md sk))
-                              ∘ fun_to_mid stb (fsb_body f))>>) /\
+                              ∘ fun_to_mid (fsb_body f))>>) /\
           (<<FINDTGT: alist_find fn (ModSemL.fnsems ms_tgt) =
                       Some (transl_all
                               (SModSem.mn
@@ -282,7 +144,7 @@ Section CANCEL.
   Local Opaque rsum rsum_minus.
 
   Let WF0: List.map fst sbtb = List.map fst stb.
-  Proof. unfold stb, _stb. rewrite List.map_map. apply List.map_ext. i. des_ifs. Qed.
+  Proof. unfold stb, _stb. cbn. rewrite List.map_map. apply List.map_ext. i. des_ifs. Qed.
 
 
 
@@ -350,7 +212,7 @@ Section CANCEL.
     ,
       simg (fun '((rs_src, v_src)) '((rs_tgt, v_tgt)) => wf rs_src rs_tgt /\ (v_src: RT) = snd v_tgt /\ (rsum_minus mn (fst rs_tgt)) = fst v_tgt)
            (Ord.from_nat 100%nat)
-           (EventsL.interp_Es (ModSemL.prog ms_mid) (transl_all mn (interp_hCallE_mid stb cur i0)) st_src0)
+           (EventsL.interp_Es (ModSemL.prog ms_mid) (transl_all mn (interp_hCallE_mid cur i0)) st_src0)
            (EventsL.interp_Es (ModSemL.prog ms_tgt) (transl_all mn (interp_hCallE_tgt stb cur i0 (rsum_minus mn rst))) st_tgt0)
   .
   Proof.
@@ -392,11 +254,19 @@ Section CANCEL.
     (*   end. *)
     (* hide_left. *)
     steps.
+    change (List.map (fun '(fn0, fs) => (fn0, fs.(fsb_fspec))) (_sbtb sk)) with (stb: list (string * fspec)).
     destruct (alist_find fn stb) eqn:FINDFT; cycle 1.
-    { steps. }
+    { (*** absurd case; mostly copied from below ***)
+      steps. unfold HoareCall, put, discard. steps.
+      destruct st_tgt0 as [rst_tgt0 pst_tgt0]. destruct st_src0 as [rst_src0 pst_src0].
+      steps.
+      destruct rst_tgt0 as [mrs_tgt0 [|frs_tgt_hd frs_tgt_tl]] eqn:T; ss.
+      { rr in SIM. des_ifs_safe. des; ss. destruct l; ss. }
+      steps.
+    }
     (* unfold ModSemL.prog at 2. steps. *)
     unfold HoareCall.
-    steps. unfold put, guarantee. steps.
+    steps. unfold put. steps.
     destruct st_tgt0 as [rst_tgt0 pst_tgt0]. destruct st_src0 as [rst_src0 pst_src0].
     (* Opaque interp_Es. (*** TODO: move to ModSemL ***) *)
     steps. unfold handle_rE. destruct rst_tgt0 as [mrs_tgt0 [|frs_tgt_hd frs_tgt_tl]] eqn:T; ss.
@@ -405,13 +275,10 @@ Section CANCEL.
 
 
     (*** exploiting both_tau ***)
-    unseal_left. ired_both. destruct (alist_find fn stb) eqn:STBFIND.
-    2:{ steps. }
-    ss. steps.
+    unseal_left. ired_both. ss. steps.
 
 
     unfold discard. steps.
-    unfold guarantee. steps. (*** TODO: remove: unfold guarantee ***)
     (* do 2 (mred; try _step; des_ifs_safe). *)
     (* unseal_left. *)
     (* seal_right. _step. exists (x2↑). mred. unseal_right. *)
@@ -701,7 +568,7 @@ Section CANCEL.
   Let MAINF: @alist_find _ _ (@Dec_RelDec string string_Dec) _  "main" stb = Some (mk_simple (fun (_: unit) => (mainpre, fun _ => (⌜True⌝: iProp)%I))).
   Proof.
     unfold stb, _stb.
-    rewrite alist_find_map. uo. unfold compose. des_ifs.
+    cbn. rewrite alist_find_map. uo. unfold compose. des_ifs.
     - eapply alist_find_some in Heq. des. des_sumbool. subst. repeat f_equal.
       assert(In ("main", (mk_specbody (mk_simple (fun (_: unit) => (mainpre, fun _ => (⌜True⌝: iProp)%I))) mainbody)) sbtb).
       { unfold sbtb, _sbtb, mss, _mss. eapply in_flat_map. esplits; et.
@@ -742,7 +609,7 @@ Section CANCEL.
     pose proof sk_eq.
     unfold ms_tgt, ms_mid, mds_tgt, mds_mid, ModL.enclose.
     unfold mds_mid, mds_tgt in H. rewrite H.
-    generalize (ModL.sk (Mod.add_list (List.map (SMod.to_mid stb) mds))). i.
+    generalize (ModL.sk (Mod.add_list (List.map (SMod.to_mid) mds))). i.
     rewrite ! Mod.add_list_initial_mrs.
     generalize mds. clear. i. induction mds0; auto.
     ss. rewrite IHmds0. auto.
@@ -755,7 +622,7 @@ Section CANCEL.
     pose proof sk_eq.
     unfold ms_tgt, ms_mid, mds_tgt, mds_mid, ModL.enclose.
     unfold mds_mid, mds_tgt in H. rewrite H.
-    generalize (ModL.sk (Mod.add_list (List.map (SMod.to_mid stb) mds))). i.
+    generalize (ModL.sk (Mod.add_list (List.map (SMod.to_mid) mds))). i.
     rewrite ! Mod.add_list_initial_mrs.
     generalize mds. clear. i. induction mds0; auto.
     ss. rewrite eq_rel_dec_correct in *. des_ifs.
@@ -769,7 +636,7 @@ Section CANCEL.
     pose proof sk_eq. unfold ModL.enclose.
     unfold mds_mid, mds_tgt, ModL.enclose.
     unfold mds_mid, mds_tgt in H. rewrite H.
-    generalize (ModL.sk (Mod.add_list (List.map (SMod.to_mid stb) mds))). i.
+    generalize (ModL.sk (Mod.add_list (List.map (SMod.to_mid) mds))). i.
     rewrite ! Mod.add_list_fns. rewrite ! List.map_map. f_equal.
     f_equal. extensionality sm. ss. rewrite ! List.map_map. f_equal.
     extensionality fnsb. destruct fnsb as [fn sb]. ss.
@@ -806,6 +673,7 @@ Section CANCEL.
     }
     unfold mrec.
 
+    change (map (fun '(fn0, fs) => (fn0, fs.(fsb_fspec))) sbtb) with (stb: list (string * fspec)) in MAINF.
     hexploit (stb_find_iff "main"). i. des; clarify. destruct f. ss. subst.
     Local Transparent ModSemL.prog. ss.
     rewrite FINDTGT. rewrite FINDMID. steps.
