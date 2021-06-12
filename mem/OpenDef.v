@@ -724,10 +724,7 @@ Section KMODSEM.
                 | _, _ => (⌜False⌝: iProp)%I
                 end)
              (fun ox reth retl =>
-                match ox with
-                | Some x => (fs.(postcond) x reth retl)
-                | None => (⌜reth = retl⌝: iProp)%I
-                end)
+                map_or_else ox (fun x => (fs.(postcond) x reth retl)) (⌜reth = retl⌝: iProp)%I)
   .
 
   Definition disclose_ksb (ksb: kspecbody): fspecbody :=

@@ -93,8 +93,8 @@ Section PROOF.
 
   Definition StackSbtb: list (gname * kspecbody) :=
     [("new", mk_kspecbody new_spec (cfun new_body) (cfun new_body));
-    ("pop", mk_kspecbody pop_spec (cfun new_body) (cfun pop_body));
-    ("push",   mk_kspecbody push_spec (cfun new_body) (cfun push_body))
+    ("pop", mk_kspecbody pop_spec (cfun pop_body) (cfun pop_body));
+    ("push",   mk_kspecbody push_spec (cfun push_body) (cfun push_body))
     ].
 
   Definition StackStb: list (gname * fspec).
