@@ -648,7 +648,7 @@ Section SMOD.
         tr0 mr0 mds
     :
       (ModSemL.fnsems (ModL.enclose (Mod.add_list (List.map (transl tr0 mr0) mds)))) =
-      (load_fnsems (List.fold_right Sk.add Sk.unit (List.map sk mds)) mds (tr0 (List.fold_right Sk.add Sk.unit (List.map sk mds))))
+      (load_fnsems (Sk.sort (List.fold_right Sk.add Sk.unit (List.map sk mds))) mds (tr0 (Sk.sort (List.fold_right Sk.add Sk.unit (List.map sk mds)))))
   .
   Proof.
     unfold ModL.enclose.
@@ -710,7 +710,7 @@ Section SMOD.
         tr0 mr0 mds
     :
       (ModSemL.initial_mrs (ModL.enclose (Mod.add_list (List.map (transl tr0 mr0) mds)))) =
-      (load_initial_mrs (List.fold_right Sk.add Sk.unit (List.map sk mds)) mds mr0)
+      (load_initial_mrs (Sk.sort (List.fold_right Sk.add Sk.unit (List.map sk mds))) mds mr0)
   .
   Proof.
     unfold ModL.enclose.

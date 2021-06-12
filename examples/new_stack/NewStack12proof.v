@@ -61,9 +61,7 @@ Section SIMMOD.
 
   Theorem correct: ModPair.sim (NewStack2.Stack) (SMod.to_src NewStack1.SStack).
   Proof.
-    econs; ss.
-    { ii. eapply adequacy_lift. eapply sim_modsem; ss. }
-    ii; ss. repeat (Psimpl; econs; ss).
+    econs; ss. ii. eapply sim_modsem; ss.
   Qed.
 
 End SIMMOD.

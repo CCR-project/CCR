@@ -388,7 +388,7 @@ Section CANCEL.
 
   Variable mds: list SMod.t.
 
-  Let sk: Sk.t := fold_right Sk.add Sk.unit (List.map SMod.sk mds).
+  Let sk: Sk.t := Sk.sort (fold_right Sk.add Sk.unit (List.map SMod.sk mds)).
   (* Let skenv: SkEnv.t := Sk.load_skenv sk. *)
   Let mss: list SModSem.t := (List.map ((flip SMod.get_modsem) sk) mds).
   Let sbtb: list (gname * fspecbody) := (List.flat_map (SModSem.fnsems) mss).

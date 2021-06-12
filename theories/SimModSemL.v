@@ -1774,7 +1774,8 @@ Section SIMMOD.
      generalize (FNS "main"). i. inv H; cycle 1.
      { gstep. econs; eauto. i. esplits; eauto.
        { inv x_src. red. unfold ModL.enclose in *. rewrite <- sim_sk0.
-         split; et. eapply sim_wf0; et. eapply Sk.sort_incl. } clear x_src.
+         split; et. eapply sim_wf0; et.
+         eapply Sk.sort_incl. eapply Sk.sort_wf. assumption. } clear x_src.
        ss. unfold ITree.map, unwrapU, triggerUB.
        mgo. rewrite <- H1. mgo.
        des_ifs_safe.
@@ -1783,7 +1784,8 @@ Section SIMMOD.
 
      gstep. econs; eauto. i. esplits; eauto.
      { inv x_src. red. unfold ModL.enclose in *. rewrite <- sim_sk0.
-       split; et. eapply sim_wf0; et. eapply Sk.sort_incl. } clear x_src.
+       split; et. eapply sim_wf0; et. eapply Sk.sort_incl.
+       eapply Sk.sort_wf. assumption. } clear x_src.
      ss. unfold ITree.map, unwrapU, triggerUB. mgo.
      des_ifs_safe. ss. mgo.
      guclo bindC_spec. econs.
