@@ -89,7 +89,7 @@ Section SIMMODSEM.
   End AUX.
 
   Variable global_stb: list (string * fspec).
-  Hypothesis STBINCL: stb_incl (DebugStb ++ StackStb) global_stb.
+  Hypothesis STBINCL: stb_incl (KDebugStb ++ StackStb) global_stb.
 
   Lemma _is_stack_wf
         h stk
@@ -247,7 +247,7 @@ Section SIMMOD.
   Context `{@GRA.inG stkRA Σ}.
 
   Variable global_stb: Sk.t -> list (string * fspec).
-  Hypothesis STBINCL: forall sk, stb_incl (DebugStb ++ StackStb) (global_stb sk).
+  Hypothesis STBINCL: forall sk, stb_incl (KDebugStb ++ StackStb) (global_stb sk).
 
   Theorem correct: ModPair.sim (NewStack3B.Stack global_stb) (NewStack2.Stack).
   Proof.

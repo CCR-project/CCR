@@ -10,6 +10,7 @@ Require Import Logic.
 Require Import Mem1.
 Require Import TODO TODOYJ.
 Require Import AList.
+Require Import NewStackHeader.
 
 Set Implicit Arguments.
 
@@ -98,11 +99,6 @@ Section PROOF.
     let x := constr:(List.map (map_snd (fun ksb => (KModSem.disclose_ksb ksb): fspec)) StackSbtb) in
     let y := eval cbn in x in
     eapply y.
-  Defined.
-
-  Definition DebugStb: list (gname * fspec).
-   eapply (Seal.sealing "stb").
-   eapply [("debug", fspec_trivial)].
   Defined.
 
   Definition KStackSem: KModSem.t := {|

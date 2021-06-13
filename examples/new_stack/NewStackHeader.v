@@ -22,6 +22,11 @@ Section PROOF.
 
   Definition DebugStb: list (gname * fspec).
    eapply (Seal.sealing "stb").
+   eapply [("debug", fspec_trivial)].
+  Defined.
+
+  Definition KDebugStb: list (gname * fspec).
+   eapply (Seal.sealing "stb").
    eapply [("debug", (mk_simple (X:=unit) (fun _ => ((fun _ o => (⌜o = ord_pure 0⌝: iProp)%I),
                                                      (fun _ => (⌜True⌝: iProp)%I)))))].
   Defined.
@@ -29,3 +34,4 @@ Section PROOF.
 End PROOF.
 
 Global Hint Unfold DebugStb: stb.
+Global Hint Unfold KDebugStb: stb.
