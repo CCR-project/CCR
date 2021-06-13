@@ -417,7 +417,10 @@ Section MODSEML.
     | TauF _ => demonic
     | RetF rv =>
       match rv↓ with
-      | Some (Vint rv) => final rv
+      | Some (Vint rv) =>
+        if (0 <=? rv)%Z && (rv <? two_power_nat 32)%Z
+        then final rv
+        else angelic
       | _ => angelic
       end
     | VisF (Choose X) k => demonic
