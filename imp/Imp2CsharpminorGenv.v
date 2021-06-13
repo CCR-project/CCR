@@ -1,4 +1,5 @@
 From compcert Require Import Globalenvs Smallstep AST Integers Events Behaviors Errors Memory.
+From ExtLib Require Import Data.List.
 Require Import Coqlib.
 Require Import ITreelib.
 Require Import Universe.
@@ -9,6 +10,7 @@ Require Import Any.
 Require Import ModSem.
 Require Import Imp.
 Require Import Imp2Csharpminor.
+Require Import AList.
 
 Require Import Imp2CsharpminorMatch.
 
@@ -25,14 +27,18 @@ Section GENV.
   Lemma found_imp_function
         f mn fn impf
         (FOUND : find
-                   (((fun fnsem : string * (Any.t -> itree EventsL.Es Any.t) => dec f (fst fnsem)) : _ -> bool) <*>
-                    (fun '(mn0, (fn0, f0)) => (fn0, fun a : Any.t => transl_all mn0 (cfun (eval_imp (Sk.load_skenv (defsL src)) f0) a)))) 
-                   (prog_funsL src) = Some (mn, (fn, impf)))
+                   ((fun '(k2, _) => f ?[ eq ] k2) <*>
+                    (fun '(mn, (fn, f)) => (fn, transl_all mn ∘ cfun (eval_imp (Sk.sort (defsL src)) f)))) (prog_funsL src) =
+                 Some (mn, (fn, impf)))
+    (* (FOUND : find *)
+    (*            (((fun fnsem : string * (Any.t -> itree EventsL.Es Any.t) => dec f (fst fnsem)) : _ -> bool) <*> *)
+    (*             (fun '(mn0, (fn0, f0)) => (fn0, fun a : Any.t => transl_all mn0 (cfun (eval_imp (Sk.load_skenv (defsL src)) f0) a))))  *)
+    (*            (prog_funsL src) = Some (mn, (fn, impf))) *)
     :
       (fn = f) /\ (In (mn, (fn, impf)) (prog_funsL src)).
   Proof.
     apply find_some in FOUND. des. split; auto.
-    unfold compose in FOUND0. ss. des_sumbool. auto.
+    unfold compose in FOUND0. rewrite eq_rel_dec_correct in FOUND0. des_ifs.
   Qed.
 
   Lemma gm_int_fun_exists

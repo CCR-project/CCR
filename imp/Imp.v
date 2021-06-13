@@ -1,14 +1,5 @@
 (** * The Imp language  *)
 
-From ExtLib Require Import
-     Data.String
-     Structures.Monad
-     Structures.Traversable
-     Data.List
-     Core.RelDec
-     Structures.Maps
-     Data.Map.FMapAList.
-
 Require Import Coqlib.
 Require Import ITreelib.
 Require Import Universe.
@@ -17,6 +8,7 @@ Require Import PCM.
 Require Import STS Behavior.
 Require Import Any.
 Require Import ModSem.
+Require Import AList.
 
 Set Implicit Arguments.
 
@@ -115,7 +107,7 @@ Section Denote.
     end.
 
   Definition call_mem f :=
-    dec f "alloc" || dec f "free" || dec f "load" || dec f "store" || dec f "cmp".
+    rel_dec f "alloc" || rel_dec f "free" || rel_dec f "load" || rel_dec f "store" || rel_dec f "cmp".
 
   Fixpoint denote_stmt (s : stmt) : itree eff val :=
     match s with

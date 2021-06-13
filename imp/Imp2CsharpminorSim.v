@@ -200,7 +200,7 @@ Section PROOF.
           (GMAP: get_gmap src = Some gm)
           (MODL: modl = (ModL.add (Mod.lift Mem) (ImpMod.get_modL src)))
           (MODSEML: ms = modl.(ModL.enclose))
-          (GENV: ge = Sk.load_skenv modl.(ModL.sk))
+          (GENV: ge = Sk.load_skenv (Sk.sort modl.(ModL.sk)))
           (MGENV: match_ge tlof ge (Genv.globalenv tgt))
           (COMP: Imp2Csharpminor.compile2 src = OK tgt)
           (MS: match_states tlof gm ge ms ist cst)
@@ -396,18 +396,15 @@ Section PROOF.
       | [ |- paco3 _ _ _ (r0 <- unwrapU (?f);; _) _ ] => destruct f eqn:FSEM; ss
       end.
       2:{ sim_triggerUB. }
-      unfold call_mem in Heq. des_ifs; clarify.
+      unfold call_mem in Heq. bsimpl; des. des_ifs; clarify.
       repeat match goal with
-      | [ H: _ = false |- _ ] =>
-        clear H
+      | [ Heq: _ = false |- _ ] => clear Heq
       end.
-      grind. rewrite find_map in FSEM.
+      grind. rewrite alist_find_find_some in FSEM. rewrite find_map in FSEM.
       match goal with
       | [ FSEM: o_map (?a) _ = _ |- _ ] => destruct a eqn:FOUND; ss; clarify
       end.
-      destruct p. destruct p. clarify.
-
-      eapply found_imp_function in FOUND. des; clarify.
+      destruct p. destruct p. clarify. eapply found_imp_function in FOUND. des; clarify.
       hexploit exists_compiled_function; eauto. i.
       des. rename cf into tf0. rename H1 into COMPF.
       hexploit in_tgt_prog_defs_ifuns; eauto. i.
@@ -481,8 +478,8 @@ Section PROOF.
         replace i with
     (` r0 : r_state * p_state * (lenv * val) <-
      EventsL.interp_Es (prog ms)
-       (transl_all s1 (interp_imp ge (denote_stmt (Imp.fn_body f0)) (init_lenv (Imp.fn_vars f0) ++ l3)))
-       (c, ε :: c0 :: l0, pstate);; x4 <- itree_of_imp_pop ge ms s1 mn x le r0;; ` x : _ <- next x4;; stack x)
+       (transl_all s0 (interp_imp ge (denote_stmt (Imp.fn_body f0)) (init_lenv (Imp.fn_vars f0) ++ l3)))
+       (c, ε :: c0 :: l0, pstate);; x4 <- itree_of_imp_pop ge ms s0 mn x le r0;; ` x : _ <- next x4;; stack x)
       end.
       2:{ rewrite interp_imp_bind. Red.prw ltac:(_red_gen) 1 0. grind.
           Red.prw ltac:(_red_gen) 2 0. grind.
@@ -492,9 +489,9 @@ Section PROOF.
       hexploit match_states_intro.
       5:{ instantiate (1:=Kseq (Sreturn (Some (Evar (s2p "return")))) (Kcall (Some (s2p x)) tf empty_env tle tcont)). ss. }
       6:{ instantiate (1:= fun r0 =>
-                             ` x4 : r_state * p_state * (lenv * val) <- itree_of_imp_pop ge ms s1 mn x le r0;;
+                             ` x4 : r_state * p_state * (lenv * val) <- itree_of_imp_pop ge ms s0 mn x le r0;;
                                     ` x0 : r_state * p_state * (lenv * val) <- next x4;; stack x0).
-          instantiate (1:=s1). instantiate (1:=ms). instantiate (1:=ge). instantiate (1:=gm).
+          instantiate (1:=s0). instantiate (1:=ms). instantiate (1:=ge). instantiate (1:=gm).
           econs 2; ss; eauto. }
       3,4: eauto.
       1:{ eapply H5. }

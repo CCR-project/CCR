@@ -1,12 +1,3 @@
-From ExtLib Require Import
-     Data.String
-     Structures.Monad
-     Structures.Traversable
-     Data.List
-     Core.RelDec
-     Structures.Maps
-     Data.Map.FMapAList.
-
 Require Import Coqlib.
 Require Import ITreelib.
 Require Import Universe.
@@ -16,6 +7,7 @@ Require Import STS Behavior.
 Require Import Any.
 Require Import ModSem.
 Require Import Imp.
+Require Import AList.
 
 Set Implicit Arguments.
 
