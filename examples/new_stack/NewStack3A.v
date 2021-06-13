@@ -58,43 +58,91 @@ Section PROOF.
        (fun '(h, x, stk0) stk1 vret => (⌜stk1 = x :: stk0⌝ ** OwnM (is_stack h stk1): iProp)%I)
   .
 
-  Definition StackSbtb: list (gname * fspecbody) :=
-    [("new", mk_specbody new_spec (fun _ => APC;;; trigger (Choose _)));
-    ("pop",  mk_specbody pop_spec (fun (stk0: list Z) =>
-                                     APC;;; match stk0 with
-                                            | [] => Ret ((- 1)%Z, [])
-                                            | x :: stk1 =>
-                                              trigger (hCall false "debug" [Vint 0; Vint x]↑);;; Ret (x, stk1)
-                                            end));
-    ("push", mk_specbody push_spec (fun '(x, stk0) =>
-                                      APC;;; trigger (hCall false "debug" [Vint 1; Vint x]↑);;;
-                                         Ret (x :: stk0)))
-    ].
+
+  (*** TODO: remove redundancy with NewStack2 ***)
+  Notation pget := (p0 <- trigger PGet;; `p0: (gmap mblock (list Z)) <- p0↓ǃ;; Ret p0) (only parsing).
+  Notation pput p0 := (trigger (PPut (p0: (gmap mblock (list Z)))↑)) (only parsing).
+
+  Definition new_body: list val -> itree (kCallE +' pE +' eventE) val :=
+    fun args =>
+      _ <- (pargs [] args)?;;
+      handle <- trigger (Choose _);;
+      stk_mgr0 <- pget;;
+      guarantee(stk_mgr0 !! handle = None);;;
+      let stk_mgr1 := <[handle:=[]]> stk_mgr0 in
+      pput stk_mgr1;;;
+      Ret (Vptr handle 0)
+  .
+
+  Definition pop_body: list val -> itree (kCallE +' pE +' eventE) val :=
+    fun args =>
+      handle <- (pargs [Tblk] args)?;;
+      stk_mgr0 <- pget;;
+      stk0 <- (stk_mgr0 !! handle)?;;
+      match stk0 with
+      | x :: stk1 =>
+        pput (<[handle:=stk1]> stk_mgr0);;;
+        trigger (kCall unknown "debug" ([Vint 0; Vint x])↑);;;
+        Ret (Vint x)
+      | _ => Ret (Vint (- 1))
+      end
+  .
+
+  Definition push_body: list val -> itree (kCallE +' pE +' eventE) val :=
+    fun args =>
+      '(handle, x) <- (pargs [Tblk; Tint] args)?;;
+      stk_mgr0 <- pget;;
+      stk0 <- (stk_mgr0 !! handle)?;;
+      pput (<[handle:=(x :: stk0)]> stk_mgr0);;;
+      trigger (kCall unknown "debug" ([Vint 1; Vint x]↑));;;
+      Ret Vundef
+  .
+
+
+  Definition StackSbtb: list (gname * kspecbody) :=
+    [("new", mk_kspecbody new_spec (cfun new_body) (fun _ => trigger (Choose _)));
+    ("pop",  mk_kspecbody pop_spec (cfun pop_body)
+                          (cfun (fun (stk0: list Z) =>
+                                   match stk0 with
+                                   | [] => Ret ((- 1)%Z, [])
+                                   | x :: stk1 =>
+                                     trigger (kCall unknown "debug" [Vint 0; Vint x]↑);;; Ret (x, stk1)
+                                   end)));
+    ("push", mk_kspecbody push_spec (cfun push_body)
+                          (cfun (fun '(x, stk0) =>
+                                   trigger (kCall unknown "debug" [Vint 1; Vint x]↑);;;
+                                           Ret (x :: stk0))))
+    ]
+  .
 
   Definition StackStb: list (gname * fspec).
     eapply (Seal.sealing "stb").
-    let x := constr:(List.map (map_snd fsb_fspec) StackSbtb) in
+    let x := constr:(List.map (map_snd (fun ksb => (KModSem.disclose_ksb ksb): fspec)) StackSbtb) in
     let y := eval cbn in x in
     eapply y.
   Defined.
 
-  Definition SStackSem: SModSem.t := {|
-    SModSem.fnsems := StackSbtb;
-    SModSem.mn := "Stack";
-    SModSem.initial_mr := (GRA.embed (Auth.black (M:=_stkRA) (fun _ => ε)));
-    SModSem.initial_st := tt↑;
+  Definition KStackSem: KModSem.t := {|
+    KModSem.fnsems := StackSbtb;
+    KModSem.mn := "Stack";
+    KModSem.initial_mr := ε;
+    KModSem.initial_st := (∅: gmap mblock (list Z))↑;
   |}
   .
+  Definition SStackSem: SModSem.t := KStackSem.
+  Definition StackSem (stb: list (string * fspec)): ModSem.t :=
+    (SModSem.to_tgt stb) SStackSem.
 
-  Definition StackSem (stb: list (string * fspec)): ModSem.t := (SModSem.to_tgt stb) SStackSem.
 
-  Definition SStack: SMod.t := {|
-    SMod.get_modsem := fun _ => SStackSem;
-    SMod.sk := Sk.unit;
+
+  Definition KStack: KMod.t := {|
+    KMod.get_modsem := fun _ => KStackSem;
+    KMod.sk := Sk.unit;
   |}
   .
-
-  Definition Stack (stb: Sk.t -> list (string * fspec)): Mod.t := (SMod.to_tgt stb) SStack.
+  Definition SStack: SMod.t := KStack.
+  Definition Stack (stb: Sk.t -> list (string * fspec)): Mod.t :=
+    SMod.to_tgt stb SStack.
 
 End PROOF.
 Global Hint Unfold StackStb: stb.
