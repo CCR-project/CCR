@@ -33,17 +33,24 @@ Section SIMMODSEM.
 
   Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
 
-  Notation sim stk_res0 stk_mgr0 := (∀ h stk, (stk_res0: URA.car (t:=_stkRA)) h = Some stk <->
-                                              (stk_mgr0: gmap mblock (list Z)) !! h = Some stk).
+  Inductive sim_loc: URA.car (t:=(Excl.t _)) -> option (list Z) -> option (list Z) -> Prop :=
+  | sim_loc_k stk0: sim_loc (Some stk0) None (Some stk0)
+  | sim_loc_u stk0: sim_loc ε (Some stk0) (Some stk0)
+  | sim_loc_absent: sim_loc ε None None
+  .
+
+  (* Notation sim stk_res0 stk_mgr0 := (∀ h stk, (stk_res0: URA.car (t:=_stkRA)) h = Some stk <-> *)
+  (*                                             (stk_mgr0: gmap mblock (list Z)) !! h = Some stk). *)
 
   Let wf: W -> Prop :=
     @mk_wf _ unit
-           (fun _ _ _stk_mgr0 =>
-              (∃ stk_mgr0 stk_res0,
-                  (⌜(<<PHYS: _stk_mgr0 = stk_mgr0↑>>) /\ (<<SIM: sim stk_res0 stk_mgr0>>)⌝)
-                  ∧ (OwnM ((Auth.black stk_res0): URA.car (t:=stkRA)))
+           (fun _ _mgr_src0 _mgr_tgt0 =>
+              (∃ mgr_src0 mgr_tgt0 (res0: URA.car (t:=_stkRA)),
+                  (⌜(<<SRC: _mgr_src0 = mgr_src0↑>>) /\ (<<TGT: _mgr_tgt0 = mgr_tgt0↑>>) /\
+                   (<<SIM: forall h, sim_loc (res0 h) (mgr_src0 h) (mgr_tgt0 h)>>)⌝)
+                  ∧ (OwnM ((Auth.black res0): URA.car (t:=stkRA)))
               )%I)
-           (fun _ _ _ => ⌜True⌝%I)
+           top4
   .
 
   Section AUX.
