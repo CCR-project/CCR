@@ -101,27 +101,23 @@ Section FSPEC.
       (fun x ret_src ret_tgt => (∃ (ar: AR), ⌜ret_src = ar↑⌝ ∧ postcond x ar ret_tgt)%I)
   .
 
-  Definition fspec_trivial: fspec :=
+  Definition fspec_unknown: fspec :=
     mk_fspec (meta:=unit) (fun _ argh argl o => (⌜argh = argl ∧ o = ord_top⌝: iProp)%I)
              (fun _ reth retl => (⌜reth = retl⌝: iProp)%I)
   .
 
-  Definition fspec_absurd: fspec := mk_fspec (meta:=unit) (bot5) (top4).
+  Definition fspec_absurd: fspec := mk_fspec (meta:=void) (bot5) (top4).
 
   Record Stb: Type := _mk_stb { stb_stb:> list (gname * fspec); stb_d: fspec }.
-  Definition mk_stb (stb: list (gname * fspec)): Stb := _mk_stb (Seal.sealing "stb" stb) fspec_trivial.
+  Definition mk_stb (stb: list (gname * fspec)): Stb := _mk_stb (Seal.sealing "stb" stb) fspec_absurd.
   Definition app_Stb (stb0 stb1: Stb): Stb := mk_stb (stb0 ++ stb1).
   (*** TODO: make "Stb" namespace as a module; I think it deserves one ***)
 
+  Lemma app_Stb_spec: forall (stb0 stb1: Stb), (app_Stb stb0 stb1) = mk_stb (stb0 ++ stb1).
+  Proof. i. refl. Qed.
+
 End FSPEC.
 
-Notation "x ++ y" := (app_Stb x y).
-
-Section AUX.
-  Context `{Σ: GRA.t}.
-  Lemma app_Stb_spec: forall (stb0 stb1: Stb), (stb0 ++ stb1) = mk_stb (stb0 ++ stb1).
-  Proof. i. refl. Qed.
-End AUX.
 
 
 
@@ -1634,6 +1630,10 @@ Ltac ired_both := ired_l; ired_r.
 
 
 
+Declare Scope stb_scope.
+Delimit Scope stb_scope with stb.
+Bind Scope stb_scope with Stb.
+Notation "x ++ y" := (app_Stb x y) : stb_scope.
 Create HintDb stb.
 Hint Rewrite (Seal.sealing_eq "stb"): stb.
 

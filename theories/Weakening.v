@@ -11,6 +11,7 @@ Require Import SimModSem.
 
 Require Import HTactics.
 Require Import Logic.
+Require Import TODOYJ.
 
 From ITree Require Import
      Events.MapDefault.
@@ -25,19 +26,101 @@ Set Implicit Arguments.
 
 
 Section PROOF.
+  Context `{Σ: GRA.t}.
+
+  Definition stb_weaker (stb0 stb1: Stb): Prop := forall fn,
+      fspec_weaker (or_else (alist_find fn stb0) (stb0.(stb_d))) (or_else (alist_find fn stb1) (stb1.(stb_d)))
+  .
+
+  Definition stb_weaker_closed (stb0 stb1: list (gname * fspec)): Prop :=
+    forall fn fsp0 (FINDTGT: alist_find fn stb0 = Some fsp0),
+    exists fsp1,
+      (<<FINDSRC: alist_find fn stb1 = Some fsp1>>) /\
+      (<<WEAKER: fspec_weaker fsp0 fsp1>>)
+  .
+
+  Lemma fspec_weaker_absurd: forall fs, fspec_weaker fspec_absurd fs.
+  Proof. ii. ss. Qed.
+
+  Lemma stb_weaker_closed_spec
+        stb0 stb1
+        (WEAKER: stb_weaker_closed stb0 stb1)
+    :
+      <<WEAKER: stb_weaker (mk_stb stb0) (mk_stb stb1)>>
+  .
+  Proof.
+    r. r. i. destruct (alist_find fn (mk_stb stb0)) eqn:T.
+    - ss. unseal "stb". exploit WEAKER; et. i; des. rewrite FINDSRC. ss.
+    - ss.
+  Qed.
+
+  Definition stb_weaker_open (stb0 stb1: list (gname * fspec)): Prop :=
+    forall fn fsp1 (FINDSRC: alist_find fn stb1 = Some fsp1),
+    exists fsp0,
+      (<<FINDTGT: alist_find fn stb0 = Some fsp0>>) /\
+      (<<WEAKER: fspec_weaker fsp0 fsp1>>)
+  .
+  TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTt
+
+  Lemma stb_weaker_open
+        stb0 stb1
+        (WEAKER: _stb_weaker stb0 stb1)
+    :
+      <<WEAKER: stb_weaker (_mk_stb stb0 fspec_unknown) (_mk_stb stb1 fspec_unknown)>>
+  .
+  Proof.
+    r. r. i. destruct (alist_find fn (mk_stb stb0)) eqn:T.
+    - ss. unseal "stb". exploit WEAKER; et. i; des. rewrite FINDSRC. ss.
+    - ss.
+  Qed.
+
+  Global Program Instance stb_weaker_PreOrder: PreOrder stb_weaker.
+  Next Obligation. ii. r. esplits; eauto; try refl. esplits; et. refl. Qed.
+  Next Obligation.
+    ii. r in H. r in H0. des. r. esplits; et.
+    - ii. exploit STB0; et. intro T; des. exploit STB; et. intro U; des. esplits; eauto. etrans; et.
+    - etrans; et.
+  Qed.
+
+  Theorem incl_weaker: forall stb0 stb1 (NODUP: List.NoDup (List.map fst stb1)) (INCL: incl stb0 stb1),
+      stb_weaker (mk_stb stb0) (mk_stb stb1).
+  Proof.
+    ii. rr. esplits; ss; et; try refl. i. eapply alist_find_some in FINDTGT.
+    unseal "stb".
+    destruct (alist_find fn stb1) eqn:T.
+    { eapply alist_find_some in T.
+      eapply INCL in FINDTGT.
+      destruct (classic (fsp0 = f)).
+      { subst. esplits; et. refl. }
+      exfalso.
+      eapply NoDup_inj_aux in NODUP; revgoals.
+      { eapply T. }
+      { eapply FINDTGT. }
+      { ii; clarify. }
+      ss.
+    }
+    eapply alist_find_none in T; et. exfalso. et.
+  Qed.
+
+  Lemma app_weaker: forall (stb0 stb1: list (gname * fspec)),
+      stb_weaker (mk_stb stb0) ((mk_stb stb0) ++ (mk_stb stb1)).
+  Proof.
+    ii. rr. esplits; ss; et.
+    - i. unseal "stb". eapply alist_find_app in FINDTGT. esplits; eauto. refl.
+    - refl.
+  Qed.
+End PROOF.
+
+
+Section PROOF.
 
   Context `{Σ: GRA.t}.
 
   Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
 
 
-  Variable stb_src stb_tgt: list (gname * fspec).
-  Hypothesis stb_stronger:
-    forall fn fsp_tgt (FINDTGT: alist_find fn stb_tgt = Some (fsp_tgt)),
-    exists fsp_src,
-      (<<FINDSRC: alist_find fn stb_src = Some (fsp_src)>>) /\
-      (<<WEAKER: fspec_weaker fsp_tgt fsp_src>>)
-  .
+  Variable stb_src stb_tgt: Stb.
+  Hypothesis stb_stronger: stb_weaker stb_tgt stb_src.
 
   Variable m: mname.
 
@@ -100,7 +183,7 @@ Section PROOF.
         unfold unwrapN, triggerNB. des; subst.
         destruct (alist_find fn0 stb_tgt) eqn:EQ.
         { eapply stb_stronger in EQ. des.
-          rewrite FINDSRC. rewrite ! bind_ret_l. rewrite ! bind_bind.
+          rewrite FINDSRC. cbn.
           { muclo lordC_spec. econs.
             { instantiate (1:=(100+100)%ord). rewrite <- OrdArith.add_from_nat; et. refl. }
             muclo lbindC_spec. econs.
@@ -124,6 +207,7 @@ Section PROOF.
               mstep. eapply sim_itree_choose_tgt; eauto with ord_step. intros o0.
               mstep. eapply sim_itree_choose_tgt; eauto with ord_step. intros PRE.
 
+              rename fsp1 into fsp_src0.
               specialize (WEAKER x_src). des.
               assert (exists rarg_src,
                          (<<PRE: precond fsp_src0 x_tgt varg_src varg_tgt o0 rarg_src>>) /\
@@ -357,44 +441,6 @@ End PROOF.
 Section PROOF.
 
   Context `{Σ: GRA.t}.
-
-  Definition stb_weaker (stb0 stb1: list (gname * fspec)): Prop :=
-    forall fn fsp0 (FINDTGT: alist_find fn stb0 = Some fsp0),
-    exists fsp1,
-      (<<FINDSRC: alist_find fn stb1 = Some fsp1>>) /\
-      (<<WEAKER: fspec_weaker fsp0 fsp1>>)
-  .
-
-  Global Program Instance stb_weaker_PreOrder: PreOrder stb_weaker.
-  Next Obligation. ii. esplits; eauto. refl. Qed.
-  Next Obligation.
-    ii. r in H. r in H0. exploit H; et. intro T; des.
-    exploit H0; et. intro U; des. esplits; eauto. etrans; et.
-  Qed.
-
-  Theorem incl_weaker: forall stb0 stb1 (NODUP: List.NoDup (List.map fst stb1)) (INCL: incl stb0 stb1), stb_weaker stb0 stb1.
-  Proof.
-    ii. eapply alist_find_some in FINDTGT.
-    destruct (alist_find fn stb1) eqn:T.
-    { eapply alist_find_some in T.
-      eapply INCL in FINDTGT.
-      destruct (classic (fsp0 = f)).
-      { subst. esplits; et. refl. }
-      exfalso.
-      eapply NoDup_inj_aux in NODUP; revgoals.
-      { eapply T. }
-      { eapply FINDTGT. }
-      { ii; clarify. }
-      ss.
-    }
-    eapply alist_find_none in T; et. exfalso. et.
-  Qed.
-
-  Lemma app_weaker: forall stb0 stb1, stb_weaker stb0 (stb0 ++ stb1).
-  Proof.
-    ii. eapply alist_find_app in FINDTGT. esplits; eauto. refl.
-  Qed.
-
   Theorem adequacy_weaken
           stb0 stb1
           md
