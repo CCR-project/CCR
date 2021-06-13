@@ -739,6 +739,9 @@ Ltac imp_red :=
   | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ _ (_, ITree.bind' _ (interp_imp _ (tau;; _) _))) ] =>
     rewrite interp_imp_tau
 
+  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ _ (_, ITree.bind' _ (interp_imp _ (Ret _) _))) ] =>
+    rewrite interp_imp_Ret
+
   | _ => idtac
   end.
 
