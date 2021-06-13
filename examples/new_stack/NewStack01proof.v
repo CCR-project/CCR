@@ -1,4 +1,4 @@
-Require Import NewStack0 NewStack1 HoareDef SimModSem.
+Require Import NewStackHeader NewStack0 NewStack1 HoareDef SimModSem.
 Require Import Coqlib.
 Require Import Universe.
 Require Import Skeleton.
@@ -42,8 +42,8 @@ Section SIMMODSEM.
            (fun _ _stk_mgr0 _ =>
               ⌜True⌝ ** (∃ (stk_mgr0: gmap mblock (list Z)),
                             (⌜_stk_mgr0 = stk_mgr0↑⌝) ∧
-                            (<<"SIM"; ([∗ map] handle ↦ stk ∈ stk_mgr0,
-                                       (∃ hd, OwnM ((handle, 0%Z) |-> [hd]) ** is_list hd (map Vint stk)))>>)
+                            ({{"SIM": ([∗ map] handle ↦ stk ∈ stk_mgr0,
+                                       (∃ hd, OwnM ((handle, 0%Z) |-> [hd]) ** is_list hd (map Vint stk)))}})
                         ))
            (* (fun _ _ _ => ⌜True⌝%I) *)
            top4

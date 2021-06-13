@@ -51,7 +51,7 @@ Section SIMMODSEM.
            (fun _ _ _stk_mgr0 =>
               (∃ stk_mgr0 (stk_res0: URA.car (t:=_stkRA)),
                   (⌜(<<PHYS: _stk_mgr0 = stk_mgr0↑>>) /\ (<<SIM: sim stk_res0 stk_mgr0>>)⌝)
-                  ∧ (OwnM ((Auth.black stk_res0): URA.car (t:=stkRA)))
+                  ∧ ({{"O": OwnM ((Auth.black stk_res0): URA.car (t:=stkRA))}})
               )%I)
            (fun _ _ _ => ⌜True⌝%I)
   .
@@ -136,17 +136,17 @@ Section SIMMODSEM.
     }
     econs; ss.
     { unfold NewStack2.new_body, cfun. init. harg. fold wf. mDesAll. des; clarify.
-      apply Any.upcast_inj in PURE0. des; clarify. steps. rewrite Any.upcast_downcast in *. clarify. steps.
+      steps. rewrite Any.upcast_downcast in *. clarify. steps.
       astart 0. astop. steps. rewrite Any.upcast_downcast in *. clarify.
       rename g into stk_mgr0. rename x0 into h. rename a1 into stk_res0. rename x into P. des_u.
-      force_l. exists (Vptr h 0). steps.
-      mOwnWf "A".
+      force_l. exists ((Vptr h 0)↑). steps.
+      mOwnWf "O".
       (* assert(WF1: forall k, stk_res0 k <> Excl.boom). *)
       (* { eapply Auth.black_wf in WF0. eapply pw_wf in WF0. des. ii. specialize (WF0 k). *)
       (*   destruct (stk_res0 k); ss. ur in WF0; ss. } *)
 
       hret _; ss.
-      { iPoseProof (OwnM_Upd with "A") as "A".
+      { iPoseProof (OwnM_Upd with "O") as "O".
         { eapply Auth.auth_alloc2. instantiate (1:=(_is_stack h P)).
           rewrite add_disj_insert; ss.
           { eapply (@pw_insert_wf); et.
@@ -155,7 +155,7 @@ Section SIMMODSEM.
           }
           specialize (SIM h). des; clarify.
         }
-        iMod "A". iDestruct "A" as "[A B]". iModIntro. iSplitL "A"; et.
+        iMod "O". iDestruct "O" as "[A B]". iModIntro. iSplitL "A"; et.
         iExists _, _. iSplit; ss; et. iSplit; ss; et. iPureIntro. ii.
         assert(B: stk_res0 h = None).
         { destruct (stk_res0 h) eqn:T; ss. specialize (SIM h). des; clarify. }
@@ -165,10 +165,10 @@ Section SIMMODSEM.
     econs; ss.
     { unfold NewStack2.pop_body, cfun. init. harg. fold wf. des_ifs_safe. mDesAll. des; clarify.
       steps. rewrite Any.upcast_downcast in *. clarify. steps.
-      astart 1. steps. apply Any.upcast_inj in PURE0. des; clarify.
+      astart 1. steps.
       rename a0 into stk_mgr0. rename n into h. rename a1 into stk_res0.
-      mCombine "A1" "A".
-      mOwnWf "A1".
+      mCombine "O" "A".
+      mOwnWf "O".
       (* assert(A: forall k, URA.wf ((stk_res0 k): URA.car (t:=Excl.t _))). *)
       (* { eapply URA.wf_mon in WF0. *)
       (*   eapply Auth.black_wf in WF0. eapply pw_wf in WF0. des. ii. specialize (WF0 k). ss. } *)
@@ -183,7 +183,7 @@ Section SIMMODSEM.
       apply some_injective in SRC. eapply (@Ag.ag_inj _ P P0) in SRC. subst. ss. steps.
       rewrite Any.upcast_downcast in *. sym in _UNWRAPN. clarify. rewrite TGT. steps.
       destruct stk as [|x stk1].
-      - astop. steps. force_l. esplits. steps. hret _; ss. iDestruct "A1" as "[A B]". iModIntro. iFrame.
+      - astop. steps. force_l. esplits. steps. hret _; ss. iDestruct "O" as "[A B]". iModIntro. iFrame.
         repeat iSplit; ss; et.
       - steps.
         assert(SIM0: sim (stk_res0) (<[h:=stk1]> stk_mgr0)).
@@ -192,10 +192,10 @@ Section SIMMODSEM.
           eapply sim_update; et. inv PR; ss.
         }
 
-        mDesOwn "A1".
+        mDesOwn "O".
         acatch.
         { eapply STBINCL. stb_tac; ss. }
-        steps. hcall _ _ _ with "A1"; auto.
+        steps. hcall _ _ _ with "O"; auto.
         { iModIntro. iSplitL; ss; et. }
         { esplits; ss; et. eauto with ord_step. }
         fold wf. steps. astop. steps. force_l. esplits. steps. hret _; ss.
@@ -204,11 +204,11 @@ Section SIMMODSEM.
     }
     econs; ss.
     { unfold NewStack2.push_body, cfun. init. harg. fold wf. des_ifs_safe. mDesAll. des; clarify.
-      steps. rewrite Any.upcast_downcast in *. apply Any.upcast_inj in PURE0. des; clarify. steps.
-      rename g into stk_mgr0. rename n into h. rename a2 into stk_res0. rename a0 into x.
-      rewrite Any.upcast_downcast in *. clarify.
-      mCombine "A" "PRE".
-      mOwnWf "A".
+      steps. rewrite Any.upcast_downcast in *. steps.  ss. clarify.
+      rename a1 into stk_mgr0. rename n0 into h. rename a2 into stk_res0. rename z into x.
+      rewrite Any.upcast_downcast in *. sym in _UNWRAPN. clarify.
+      mCombine "O" "PRE".
+      mOwnWf "O".
       assert(A: forall k, URA.wf ((stk_res0 k): URA.car (t:=Opt.t (Ag.t _)))).
       { eapply URA.wf_mon in WF0.
         eapply Auth.black_wf in WF0. eapply pw_wf in WF0. des. ii. specialize (WF0 k). apply WF0. }
@@ -226,8 +226,8 @@ Section SIMMODSEM.
         { extensionality h0. unfold insert, fn_insert. des_ifs. }
         eapply sim_update; et.
       }
-      mDesOwn "A".
-      steps. hcall _ _ _ with "A"; auto.
+      mDesOwn "O".
+      steps. hcall _ _ _ with "O"; auto.
       { iModIntro. iSplitL; ss; et. }
       { esplits; ss; et. eauto with ord_step. }
       fold wf. steps. astop. steps. force_l. esplits. steps. hret _; ss.
@@ -252,8 +252,7 @@ Section SIMMOD.
   Theorem correct: ModPair.sim (NewStack3B.Stack global_stb) (NewStack2.Stack).
   Proof.
     econs; ss.
-    { ii. eapply adequacy_lift. eapply sim_modsem; ss. }
-    ii; ss. repeat (Psimpl; econs; ss).
+    { ii. eapply sim_modsem; ss. }
   Qed.
 
 End SIMMOD.
