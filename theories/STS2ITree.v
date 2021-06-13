@@ -144,6 +144,15 @@ Section PROOF.
     inv H0. eapply wf_syscall0; eauto.
   Qed.
 
+  Hypothesis wf_final0:
+    forall st0 rv, state_sort0 st0 = final rv -> (0 <=? rv)%Z && (rv <? two_power_nat 32)%Z.
+
+  Lemma wf_final:
+    forall st0 rv, state_sort st0 = final rv -> (0 <=? rv)%Z && (rv <? two_power_nat 32)%Z.
+  Proof.
+    i. unfold state_sort, norm_state_sort in H. des_ifs. eapply wf_final0; et.
+  Qed.
+
 (**
 of_state = 
 fun L1 : semantics => paco2 (_of_state L1) bot2
@@ -185,7 +194,7 @@ paco2 has 'fixed' semantics -> needs fixed semantics to do pcofix
     - eapply sim_fin; eauto.
       ss. rewrite unfold_decompile_STS. rewrite SRT.
       unfold ModSemL.state_sort. ss.
-      rewrite Any.upcast_downcast. reflexivity.
+      rewrite Any.upcast_downcast. erewrite wf_final; et.
     - eapply sim_demonic_tgt; ss; clarify.
       + rewrite unfold_decompile_STS. rewrite SRT. ss.
       + i. rewrite unfold_decompile_STS in STEP. rewrite SRT in STEP.
@@ -240,7 +249,7 @@ paco2 has 'fixed' semantics -> needs fixed semantics to do pcofix
     - econs; ss.
       + rewrite unfold_decompile_STS. rewrite SRT.
         unfold ModSemL.state_sort. ss.
-        rewrite Any.upcast_downcast. reflexivity.
+        rewrite Any.upcast_downcast. erewrite wf_final; et.
       + auto.
     - assert (CASE: (forall ev st1, not (step st0 (Some ev) st1)) \/ (exists ev st1, (step st0 (Some ev) st1))).
       { destruct (classic (exists ev st1, step st0 (Some ev) st1)); eauto.

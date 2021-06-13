@@ -594,14 +594,15 @@ Proof.
   generalize itr_src at 1 as md_src. i.
   revert o itr_src itr_tgt SIMG. pcofix CIH.
   i. punfold SIMG. inv SIMG; pfold.
-  { destruct (classic (exists rv, @Any.downcast val r_tgt = Some (Vint rv))).
+  { destruct (classic (exists rv, @Any.downcast val r_tgt = Some (Vint rv) /\
+                                  (0 <=? rv)%Z && (rv <? two_power_nat 32)%Z)).
     { des. eapply sim_fin; ss.
-      { cbv. rewrite H. ss. }
-      { cbv. rewrite H. ss. }
+      { cbn. rewrite H. rewrite H0. ss. }
+      { cbn. rewrite H. rewrite H0. ss. }
     }
     { eapply sim_angelic_both.
-      { cbv. des_ifs. exfalso. eapply H. et. }
-      { cbv. des_ifs. exfalso. eapply H. et. }
+      { cbn. des_ifs. exfalso. eapply H. et. }
+      { cbn. des_ifs. exfalso. eapply H. et. }
       i. exfalso. inv STEP.
     }
   }
