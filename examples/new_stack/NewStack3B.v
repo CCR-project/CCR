@@ -345,13 +345,13 @@ Section PROOF.
 
   Definition new_spec: fspec :=
     (mk_simple (fun P => (
-                    (fun varg o => (⌜varg = ([]: list val)↑ /\ o = ord_pure 0⌝: iProp)%I),
+                    (fun varg o => (⌜varg = (Any.pair tt↑ ([]: list val)↑) /\ o = ord_pure 0⌝: iProp)%I),
                     (fun vret => (∃ h, ⌜vret = (Vptr h 0)↑⌝ ** OwnM (is_stack h P): iProp)%I)
     ))).
 
   Definition pop_spec: fspec :=
     mk_simple (fun '(h, P) => (
-                 (fun varg o => (⌜varg = ([Vptr h 0%Z]: list val)↑ /\ o = ord_pure 1⌝
+                 (fun varg o => (⌜varg = (Any.pair tt↑ ([Vptr h 0%Z]: list val)↑) /\ o = ord_pure 1⌝
                                   ** OwnM (is_stack h P): iProp)%I),
                  (fun vret =>
                     (((OwnM (is_stack h P) ** ∃ x, ⌜(x = (- 1)%Z ∨ P x) ∧ vret = (Vint x)↑⌝): iProp)%I))
@@ -361,15 +361,15 @@ Section PROOF.
   Definition push_spec: fspec :=
     mk_simple (fun '(h, P) => (
                    (fun varg o => (OwnM (is_stack h P)
-                        ** ∃ x, ⌜varg = ([Vptr h 0%Z; Vint x]: list val)↑ ∧ P x ∧ o = ord_pure 1⌝: iProp)%I),
+                        ** ∃ x, ⌜varg = (Any.pair tt↑ ([Vptr h 0%Z; Vint x]: list val)↑) ∧ P x ∧ o = ord_pure 1⌝: iProp)%I),
                    (fun vret => (((OwnM (is_stack h P)): iProp)%I))
               ))
   .
 
   Definition StackSbtb: list (gname * fspecbody) :=
-    [("new", mk_specbody new_spec (fun _ => APC;;; trigger (Choose _)));
-    ("pop",  mk_specbody pop_spec (fun _ => APC;;; trigger (Choose _)));
-    ("push", mk_specbody push_spec (fun _ => APC;;; trigger (Choose _)))
+    [("new", mk_specbody new_spec (fun _ => trigger (Choose _)));
+    ("pop",  mk_specbody pop_spec (fun _ => trigger (Choose _)));
+    ("push", mk_specbody push_spec (fun _ => trigger (Choose _)))
     ].
 
   Definition StackStb: list (gname * fspec).

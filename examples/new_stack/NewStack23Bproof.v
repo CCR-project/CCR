@@ -135,8 +135,8 @@ Section SIMMODSEM.
       - eapply to_semantic; cycle 1. { eapply URA.wf_unit. } iIntros "H". iPureIntro. ss.
     }
     econs; ss.
-    { unfold NewStack2.new_body, cfun. init. harg. fold wf. mDesAll. des; clarify.
-      steps. rewrite Any.upcast_downcast in *. clarify. steps.
+    { unfold NewStack2.new_body, cfun2, cfun. init. harg. fold wf. mDesAll. des; clarify.
+      steps. rewrite Any.pair_split. cbn. rewrite Any.upcast_downcast in *. clarify. steps.
       astart 0. astop. steps. rewrite Any.upcast_downcast in *. clarify.
       rename g into stk_mgr0. rename x0 into h. rename a1 into stk_res0. rename x into P. des_u.
       force_l. exists ((Vptr h 0)↑). steps.
@@ -163,8 +163,8 @@ Section SIMMODSEM.
       }
     }
     econs; ss.
-    { unfold NewStack2.pop_body, cfun. init. harg. fold wf. des_ifs_safe. mDesAll. des; clarify.
-      steps. rewrite Any.upcast_downcast in *. clarify. steps.
+    { unfold NewStack2.pop_body, cfun2, cfun. init. harg. fold wf. des_ifs_safe. mDesAll. des; clarify.
+      steps. rewrite Any.pair_split. cbn. rewrite Any.upcast_downcast in *. clarify. steps.
       astart 1. steps.
       rename a0 into stk_mgr0. rename n into h. rename a1 into stk_res0.
       mCombine "O" "A".
@@ -203,9 +203,9 @@ Section SIMMODSEM.
           iExists _. iPureIntro. esplits; ss; et. right. inv PR;ss. }
     }
     econs; ss.
-    { unfold NewStack2.push_body, cfun. init. harg. fold wf. des_ifs_safe. mDesAll. des; clarify.
-      steps. rewrite Any.upcast_downcast in *. steps.  ss. clarify.
-      rename a1 into stk_mgr0. rename n0 into h. rename a2 into stk_res0. rename z into x.
+    { unfold NewStack2.push_body, cfun2, cfun. init. harg. fold wf. des_ifs_safe. mDesAll. des; clarify.
+      steps. rewrite Any.pair_split. cbn. rewrite Any.upcast_downcast in *. steps.
+      rename a1 into stk_mgr0. rename n into h. rename a2 into stk_res0. rename a0 into x.
       rewrite Any.upcast_downcast in *. sym in _UNWRAPN. clarify.
       mCombine "O" "PRE".
       mOwnWf "O".
