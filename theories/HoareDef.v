@@ -1610,3 +1610,21 @@ Ltac ired_both := ired_l; ired_r.
     split; ss; ii; clarify; rename y into varg; eexists 100%nat; ss; des; clarify;
     ginit; []; unfold alist_add, alist_remove; ss;
     unfold fun_to_tgt, cfun, HoareFun; ss.
+
+
+Create HintDb stb.
+Hint Rewrite (Seal.sealing_eq "stb"): stb.
+
+Ltac stb_tac :=
+  match goal with
+  | [ |- alist_find _ ?xs = _ ] =>
+    match type of xs with
+    | (list (string * fspec)) =>
+      autounfold with stb; autorewrite with stb; simpl
+    end
+  | [H: alist_find _ ?xs = _ |- _ ] =>
+    match type of xs with
+    | (list (string * fspec)) =>
+      autounfold with stb in H; autorewrite with stb in H; simpl in H
+    end
+  end.

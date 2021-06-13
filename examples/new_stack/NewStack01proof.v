@@ -41,10 +41,6 @@ Section SIMMODSEM.
   Hint Unfold iNW.
   Notation "'<<' x ';' t '>>'" := (iNW x t) (at level 80, no associativity).
 
-  Lemma map_or_else_same: forall X Y (ox: option X) (d: Y), map_or_else ox (fun _ => d) d = d.
-    i. destruct ox; ss.
-  Qed.
-
   Lemma trivial_init_clo
         A
         (R_src: A -> Any.t -> Any.t -> iProp) (R_tgt: A -> Any.t -> Any.t -> iProp)
