@@ -36,21 +36,20 @@ Section SIMMODSEM.
 
   Theorem correct: ModPair.sim MutMain1.Main MutMain0.Main.
   Proof.
-    econs; ss; [|admit ""].
-    i. eapply adequacy_lift.
-    econstructor 1 with (wf:=wf); et; ss.
+    econs; ss.
+    i. econstructor 1 with (wf:=wf); et.
     2: { red. econs; ss. red. uipropall. }
     econs; ss. init.
     unfold mainF, mainBody. harg.
     mDesAll. des; clarify. steps. rewrite Any.upcast_downcast. steps.
     hcall _ _ tt with "*"; ss.
-    { iPureIntro. splits; eauto. instantiate (1:=10). ss. }
+    { iPureIntro. esplits; eauto.
+      { instantiate (1:=10). ss. }
+      { unfold mut_max. lia. }
+    }
     { splits; ss. }
-    mDesAll. des; clarify. eapply Any.upcast_inj in PURE2. des; clarify. steps.
+    mDesAll. des; clarify. steps.
     hret tt; ss.
-    (* TODO: change top2 => pure top in SMod.main *)
-    iModIntro. repeat iSplit; ss.
-    iStopProof. red. uipropall.
   Qed.
 
 End SIMMODSEM.

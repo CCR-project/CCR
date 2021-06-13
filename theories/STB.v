@@ -17,16 +17,16 @@ Section HEADER.
 
   Context `{Σ: GRA.t}.
 
-  Definition ftspec_weaker Y Z (fsp_src fsp_tgt: ftspec Y Z): Prop :=
-    forall (x_src: fsp_src.(X)),
-    exists (x_tgt: fsp_tgt.(X)),
+  Definition fspec_weaker (fsp_src fsp_tgt: fspec): Prop :=
+    forall x_src,
+    exists x_tgt,
       (<<PRE: forall arg_src arg_tgt o,
           (fsp_src.(precond) x_src arg_src arg_tgt o) ⊢ #=> (fsp_tgt.(precond) x_tgt arg_src arg_tgt o)>>) /\
       (<<POST: forall ret_src ret_tgt,
           (fsp_tgt.(postcond) x_tgt ret_src ret_tgt) ⊢ #=> (fsp_src.(postcond) x_src ret_src ret_tgt)>>)
   .
 
-  Global Program Instance ftspec_weaker_PreOrder Y Z: PreOrder (@ftspec_weaker Y Z).
+  Global Program Instance fspec_weaker_PreOrder: PreOrder fspec_weaker.
   Next Obligation.
   Proof.
     ii. exists x_src. esplits; ii.
@@ -45,38 +45,19 @@ Section HEADER.
       iApply bupd_idemp. iApply POST0. iApply "H". }
   Qed.
 
-  Variant fspec_weaker (fsp_src fsp_tgt: fspec): Prop :=
-  | fspec_weaker_intro
-      Y Z ftsp_src ftsp_tgt
-      (FSPEC0: fsp_src = @mk_fspec _ Y Z ftsp_src)
-      (FSPEC1: fsp_tgt = @mk_fspec _ Y Z ftsp_tgt)
-      (WEAK: ftspec_weaker ftsp_src ftsp_tgt)
-  .
-
-  Global Program Instance fspec_weaker_PreOrder: PreOrder fspec_weaker.
-  Next Obligation.
-  Proof.
-    ii. destruct x. econs; eauto. refl.
-  Qed.
-  Next Obligation.
-  Proof.
-    ii. inv H; inv H0. dependent destruction FSPEC0.
-    econs; eauto. etrans; eauto.
-  Qed.
-
-  Variant fn_has_spec (stb: list (gname * fspec)) (fn: gname) Y Z (ftsp: ftspec Y Z): Prop :=
+  Variant fn_has_spec (stb: list (gname * fspec)) (fn: gname) (fsp: fspec): Prop :=
   | fn_has_spec_intro
-      ftsp1
-      (FIND: alist_find fn stb = Some (mk_fspec ftsp1))
-      (WEAL: ftspec_weaker ftsp ftsp1)
+      fsp1
+      (FIND: alist_find fn stb = Some fsp1)
+      (WEAL: fspec_weaker fsp fsp1)
   .
   Hint Constructors fn_has_spec: core.
 
-  Lemma fn_has_spec_weaker (stb: list (gname * fspec)) (fn: gname) Y Z (ftsp0 ftsp1: ftspec Y Z)
-        (SPEC: fn_has_spec stb fn ftsp1)
-        (WEAK: ftspec_weaker ftsp0 ftsp1)
+  Lemma fn_has_spec_weaker (stb: list (gname * fspec)) (fn: gname) (fsp0 fsp1: fspec)
+        (SPEC: fn_has_spec stb fn fsp1)
+        (WEAK: fspec_weaker fsp0 fsp1)
     :
-      fn_has_spec stb fn ftsp0.
+      fn_has_spec stb fn fsp0.
   Proof.
     inv SPEC. econs; eauto. etrans; eauto.
   Qed.
@@ -97,18 +78,18 @@ Section HEADER.
 
   Variable skenv: SkEnv.t.
 
-  Variant fb_has_spec (stb: list (gname * fspec)) (fb: mblock) Y Z (ftsp: ftspec Y Z): Prop :=
+  Variant fb_has_spec (stb: list (gname * fspec)) (fb: mblock) (fsp: fspec): Prop :=
   | fb_has_spec_intro
       fn
       (FBLOCK: skenv.(SkEnv.blk2id) fb = Some fn)
-      (SPEC: fn_has_spec stb fn ftsp)
+      (SPEC: fn_has_spec stb fn fsp)
   .
 
-  Lemma fb_has_spec_weaker (stb: list (gname * fspec)) (fb: mblock) Y Z (ftsp0 ftsp1: ftspec Y Z)
-        (SPEC: fb_has_spec stb fb ftsp1)
-        (WEAK: ftspec_weaker ftsp0 ftsp1)
+  Lemma fb_has_spec_weaker (stb: list (gname * fspec)) (fb: mblock) (fsp0 fsp1: fspec)
+        (SPEC: fb_has_spec stb fb fsp1)
+        (WEAK: fspec_weaker fsp0 fsp1)
     :
-      fb_has_spec stb fb ftsp0.
+      fb_has_spec stb fb fsp0.
   Proof.
     inv SPEC. econs; eauto.
     eapply fn_has_spec_weaker; eauto.

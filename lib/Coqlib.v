@@ -725,7 +725,7 @@ Lemma f_hequal A (B : A -> Type) (f : forall a, B a)
     f a1 ~= f a2.
 Proof. destruct EQ. econs. Qed.
 
-Ltac uo := unfold o_bind, o_map, o_join in *.
+Ltac uo := unfold o_bind, o_bind2, o_map, o_join in *.
 
 Lemma some_injective
       X (x0 x1: X)

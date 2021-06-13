@@ -60,20 +60,6 @@ Qed.
 
 Goal (infloop (E:=void1) (S:=void) (Ret 1)) ≈ (infloop (tau;; Ret 1)).
 Proof.
-  unfold infloop.
-  rewrite ! RecursionFacts.rec_as_interp.
-  unfold resum_itr. repeat (try rewrite ! interp_ret; try rewrite ! interp_tau). irw.
-  eapply InterpFacts.eutt_interp.
-  - ii. destruct a; ss. destruct c; ss. destruct u; ss.
-    rewrite ! RecursionFacts.rec_as_interp.
-    repeat (try rewrite ! interp_ret; try rewrite ! interp_tau); irw.
-    rewrite tau_eutt.
-    admit "idk".
-  - rewrite tau_eutt. refl.
-Qed.
-
-Goal (infloop (E:=void1) (S:=void) (Ret 1)) ≈ (infloop (tau;; Ret 1)).
-Proof.
   unfold infloop. f_equiv. ii.
   unfold resum_itr. repeat (try rewrite ! interp_ret; try rewrite ! interp_tau). irw.
   rewrite tau_eutt. refl.

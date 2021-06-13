@@ -38,18 +38,14 @@ Section SIMMODSEM.
            (fun _ _ _ => ⌜True⌝%I)
   .
 
-  Theorem sim_modsem: ModSemPair.sim (NewStack2.StackSem) (KModSem.to_src NewStack1.KStackSem).
+  Theorem sim_modsem: ModSemPair.sim (NewStack2.StackSem) (SModSem.to_src NewStack1.SStackSem).
   Proof.
     econstructor 1 with (wf:=wf); ss; et; swap 2 3.
     { econs; ss.
       - eapply to_semantic; cycle 1. { eapply URA.wf_unit. } iIntros "H". iPureIntro. ss.
       - eapply to_semantic; cycle 1. { eapply URA.wf_unit. } iIntros "H". iPureIntro. ss.
     }
-    econs; ss.
-    { unfold NewStack1.new_body, NewStack2.new_body, KModSem.fun_to_src,KModSem.body_to_src, cfun. init. steps.
-      admit "mid - somehow; bruteforce way is to prove it here (by making some lemma) but without any change in meta-theory. we may use kappa * 5(?) ordinal ".
-    }
-    admit "mid - ditto".
+    admit "mid - somehow".
   Unshelve.
     all: ss.
   Qed.
@@ -63,11 +59,9 @@ Section SIMMOD.
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG memRA Σ}.
 
-  Theorem correct: ModPair.sim (NewStack2.Stack) (KMod.to_src NewStack1.KStack).
+  Theorem correct: ModPair.sim (NewStack2.Stack) (SMod.to_src NewStack1.SStack).
   Proof.
-    econs; ss.
-    { ii. eapply adequacy_lift. eapply sim_modsem; ss. }
-    ii; ss. repeat (Psimpl; econs; ss).
+    econs; ss. ii. eapply sim_modsem; ss.
   Qed.
 
 End SIMMOD.

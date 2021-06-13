@@ -10,6 +10,7 @@ Require Import Coq.Relations.Relation_Definitions.
 Require Import Relation_Operators.
 Require Import RelationPairs.
 From Ordinal Require Import Ordinal Arithmetic.
+Require Import SimSTS.
 
 Set Implicit Arguments.
 
@@ -456,6 +457,222 @@ Qed.
 
 
 
+Lemma step_trigger_choose_iff X k itr e
+      (STEP: ModSemL.step (trigger (Choose X) >>= k) e itr)
+  :
+    exists x,
+      e = None /\ itr = k x.
+Proof.
+  inv STEP.
+  { eapply f_equal with (f:=observe) in H0. ss. }
+  { eapply f_equal with (f:=observe) in H0. ss.
+    unfold trigger in H0. ss. cbn in H0.
+    dependent destruction H0. ired. et.  }
+  { eapply f_equal with (f:=observe) in H0. ss. }
+  { eapply f_equal with (f:=observe) in H0. ss. }
+Qed.
+
+Lemma step_trigger_take_iff X k itr e
+      (STEP: ModSemL.step (trigger (Take X) >>= k) e itr)
+  :
+    exists x,
+      e = None /\ itr = k x.
+Proof.
+  inv STEP.
+  { eapply f_equal with (f:=observe) in H0. ss. }
+  { eapply f_equal with (f:=observe) in H0. ss. }
+  { eapply f_equal with (f:=observe) in H0. ss.
+    unfold trigger in H0. ss. cbn in H0.
+    dependent destruction H0. ired. et.  }
+  { eapply f_equal with (f:=observe) in H0. ss. }
+Qed.
+
+Lemma step_tau_iff itr0 itr1 e
+      (STEP: ModSemL.step (Tau itr0) e itr1)
+  :
+    e = None /\ itr0 = itr1.
+Proof.
+  inv STEP. et.
+Qed.
+
+Lemma step_ret_iff rv itr e
+      (STEP: ModSemL.step (Ret rv) e itr)
+  :
+    False.
+Proof.
+  inv STEP.
+Qed.
+
+Lemma step_trigger_syscall_iff fn args rvs k e itr
+      (STEP: ModSemL.step (trigger (Syscall fn args rvs) >>= k) e itr)
+  :
+    exists rv, itr = k rv /\ e = Some (event_sys fn args rv)
+               /\ <<RV: rvs rv>> /\ <<SYS: syscall_sem (event_sys fn args rv)>>.
+Proof.
+  inv STEP.
+  { eapply f_equal with (f:=observe) in H0. ss. }
+  { eapply f_equal with (f:=observe) in H0. ss. }
+  { eapply f_equal with (f:=observe) in H0. ss. }
+  { eapply f_equal with (f:=observe) in H0. ss.
+    unfold trigger in H0. ss. cbn in H0.
+    dependent destruction H0. ired. et. }
+Qed.
+
+
+Let itree_eta E R (itr0 itr1: itree E R)
+    (OBSERVE: observe itr0 = observe itr1)
+  :
+    itr0 = itr1.
+Proof.
+  rewrite (itree_eta_ itr0).
+  rewrite (itree_eta_ itr1).
+  rewrite OBSERVE. auto.
+Qed.
+
+Lemma step_trigger_choose X k x
+  :
+    ModSemL.step (trigger (Choose X) >>= k) None (k x).
+Proof.
+  unfold trigger. ss.
+  match goal with
+  | [ |- ModSemL.step ?itr _ _] =>
+    replace itr with (Subevent.vis (Choose X) k)
+  end; ss.
+  { econs. }
+  { eapply itree_eta. ss. cbv. f_equal.
+    extensionality x0. eapply itree_eta. ss. }
+Qed.
+
+Lemma step_trigger_take X k x
+  :
+    ModSemL.step (trigger (Take X) >>= k) None (k x).
+Proof.
+  unfold trigger. ss.
+  match goal with
+  | [ |- ModSemL.step ?itr _ _] =>
+    replace itr with (Subevent.vis (Take X) k)
+  end; ss.
+  { econs. }
+  { eapply itree_eta. ss. cbv. f_equal.
+    extensionality x0. eapply itree_eta. ss. }
+Qed.
+
+Lemma step_trigger_syscall fn args (rvs: val -> Prop) k rv
+      (RV: rvs rv) (SYS: syscall_sem (event_sys fn args rv))
+  :
+    ModSemL.step (trigger (Syscall fn args rvs) >>= k) (Some (event_sys fn args rv)) (k rv).
+Proof.
+  unfold trigger. ss.
+  match goal with
+  | [ |- ModSemL.step ?itr _ _] =>
+    replace itr with (Subevent.vis (Syscall fn args rvs) k)
+  end; ss.
+  { econs; et. }
+  { eapply itree_eta. ss. cbv. f_equal.
+    extensionality x0. eapply itree_eta. ss. }
+Qed.
+
+Lemma step_tau itr
+  :
+    ModSemL.step (Tau itr) None itr.
+Proof.
+  econs.
+Qed.
+
+Theorem adequacy_global_itree itr_src itr_tgt
+        (SIM: exists o0, simg eq o0 itr_src itr_tgt)
+  :
+    Beh.of_program (ModSemL.compile_itree itr_tgt)
+    <1=
+    Beh.of_program (ModSemL.compile_itree itr_src).
+Proof.
+  unfold Beh.of_program. ss.
+  i. destruct SIM as [o SIMG]. eapply adequacy_aux; et.
+  { eapply Ord.lt_well_founded. }
+  instantiate (1:=o). clear x0 PR.
+  generalize itr_tgt at 1 as md_tgt.
+  generalize itr_src at 1 as md_src. i.
+  revert o itr_src itr_tgt SIMG. pcofix CIH.
+  i. punfold SIMG. inv SIMG; pfold.
+  { destruct (classic (exists rv, @Any.downcast val r_tgt = Some (Vint rv) /\
+                                  (0 <=? rv)%Z && (rv <? two_power_nat 32)%Z)).
+    { des. eapply sim_fin; ss.
+      { cbn. rewrite H. rewrite H0. ss. }
+      { cbn. rewrite H. rewrite H0. ss. }
+    }
+    { eapply sim_angelic_both.
+      { cbn. des_ifs. exfalso. eapply H. et. }
+      { cbn. des_ifs. exfalso. eapply H. et. }
+      i. exfalso. inv STEP.
+    }
+  }
+  { eapply sim_vis; ss. i.
+    eapply step_trigger_syscall_iff in STEP. des. clarify.
+    esplits.
+    { eapply step_trigger_syscall; et. }
+    { right. eapply CIH.
+      hexploit SIM; et. i. pclearbot. eapply H. }
+  }
+  { eapply sim_demonic_both; ss. i.
+    eapply step_tau_iff in STEP. des. clarify.
+    esplits.
+    { eapply step_tau; et. }
+    { right. eapply CIH. destruct SIM; ss. apply p. }
+  }
+  { eapply sim_demonic_src; ss.
+    esplits.
+    { eapply step_tau; et. }
+    { et. }
+    { right. eapply CIH. destruct SIM; ss. }
+  }
+  { eapply sim_demonic_tgt; ss. i.
+    eapply step_tau_iff in STEP. des. clarify.
+    esplits.
+    { et. }
+    { right. eapply CIH. destruct SIM; ss. }
+  }
+  { eapply sim_demonic_both; ss. i.
+    eapply step_trigger_choose_iff in STEP. des. clarify.
+    hexploit (SIM x); et. i. des.
+    esplits.
+    { eapply step_trigger_choose; et. }
+    { right. eapply CIH. destruct H; ss. apply p. }
+  }
+  { eapply sim_demonic_src; ss. destruct SIM.
+    esplits.
+    { eapply step_trigger_choose; et. }
+    { et. }
+    { right. eapply CIH. destruct H; ss. apply p. }
+  }
+  { eapply sim_demonic_tgt; ss. i.
+    eapply step_trigger_choose_iff in STEP. des. clarify.
+    hexploit (SIM x); et. i. des.
+    esplits.
+    { et. }
+    { right. eapply CIH. destruct H; ss. }
+  }
+  { eapply sim_angelic_both; ss. i.
+    eapply step_trigger_take_iff in STEP. des. clarify.
+    hexploit (SIM x); et. i. des.
+    esplits.
+    { eapply step_trigger_take; et. }
+    { right. eapply CIH. destruct H; ss. apply p. }
+  }
+  { eapply sim_angelic_src; ss. i.
+    eapply step_trigger_take_iff in STEP. des. clarify.
+    hexploit (SIM x); et. i. des.
+    esplits.
+    { et. }
+    { right. eapply CIH. destruct H; ss. }
+  }
+  { eapply sim_angelic_tgt; ss. destruct SIM.
+    esplits.
+    { eapply step_trigger_take; et. }
+    { et. }
+    { right. eapply CIH. destruct H; ss. apply p. }
+  }
+Qed.
+
 
 Variable md_src md_tgt: ModL.t.
 Let ms_src: ModSemL.t := md_src.(ModL.enclose).
@@ -470,12 +687,15 @@ Let ms_tgt: ModSemL.t := md_tgt.(ModL.enclose).
 (* . *)
 (* Hypothesis (SIM: Forall2 sim_fnsem ms_src.(ModSemL.fnsems) ms_tgt.(ModSemL.fnsems)). *)
 
-Hypothesis (SIM: exists o0, simg eq o0 (ModSemL.initial_itr ms_src) (ModSemL.initial_itr ms_tgt)).
+Hypothesis (SIM: exists o0, simg eq o0 (ModSemL.initial_itr ms_src (Some (ModL.wf md_src))) (ModSemL.initial_itr ms_tgt (Some (ModL.wf md_tgt)))).
+
+
+Local Hint Resolve cpn3_wcompat: paco.
+
 
 Theorem adequacy_global: Beh.of_program (ModL.compile md_tgt) <1= Beh.of_program (ModL.compile md_src).
 Proof.
-  revert SIM. i.
-  admit "TODO".
+  eapply adequacy_global_itree. eapply SIM.
 Qed.
 
 End SIM.

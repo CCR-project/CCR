@@ -56,15 +56,13 @@ Section SIMMODSEM.
     { (* arg *)
       unfold popF. init. harg. destruct x.
       mDesAll. clarify. rewrite Any.upcast_downcast. steps.
-      eapply Any.upcast_inj in PURE1. des; clarify. steps.
       unfold ccall. steps. astart 10.
 
       (* load *)
       acatch. hcall _ (n, 0%Z, a0) _ with "A1"; auto.
       { iModIntro. iFrame. iSplit; ss. }
       { splits; ss. eauto with ord_step. }
-      mDesAll. clarify. eapply Any.upcast_inj in PURE1. des; clarify.
-      steps. erewrite Any.upcast_downcast in *. steps.
+      mDesAll. clarify. erewrite Any.upcast_downcast in *. steps.
 
       destruct l; ss.
       (* l = [] *)
@@ -72,14 +70,14 @@ Section SIMMODSEM.
         (* cmp *)
         steps. acatch. hcall _ _ _ with "POST"; auto.
         { instantiate (2:=(true,_)). ss. iModIntro.
-          iSplitR; ss. iSplitL; ss. iSplitL; ss. iSplitR; ss.
-          iRight. iRight. iRight. iRight. iPureIntro. ss. }
+          iSplitR; ss. iSplitL; ss. iSplitL; ss.
+          iSplitR; ss. iRight. iRight. iRight. iRight. iPureIntro. ss. }
         { split; ss. eauto with ord_step. }
-        mDesAll. clarify. eapply Any.upcast_inj in PURE3. des; clarify.
+        mDesAll. clarify.
         steps. erewrite Any.upcast_downcast in *. steps.
 
         (* ret *)
-        astop. force_l. eexists. steps. hret _; ss.
+        astop. force_l. eexists. steps. hret _; ss; et.
       }
 
       (* l = lhd :: ltl *)
@@ -92,46 +90,37 @@ Section SIMMODSEM.
         iSplitR; ss. iSplitL; ss. iSplitL; ss.
         iSplitR; ss. iLeft. iExists _, _, _. iSplit; ss. }
       { split; ss. eauto with ord_step. }
-      ss. mDesAll. clarify. eapply Any.upcast_inj in PURE3. des; clarify.
-      steps. erewrite Any.upcast_downcast in *. steps.
+      ss. mDesAll. clarify. erewrite Any.upcast_downcast in *. steps.
 
       (* load *)
-      steps. acatch. hcall _ (a0, 0%Z, v0) _ with "POST1"; auto.
+      steps. acatch. hcall _ (_, 0%Z, _) _ with "POST1"; auto.
       { iModIntro. iSplitR; ss. iSplitL; ss. iSplitL; ss. iSplitR; ss. }
       { split; ss. eauto with ord_step. }
-      ss. mDesAll. clarify. eapply Any.upcast_inj in PURE4. des; clarify.
-      steps. erewrite Any.upcast_downcast in *. clarify.
+      ss. mDesAll. clarify. erewrite Any.upcast_downcast in *. clarify. steps. 
 
       (* load *)
-      steps. acatch. hcall _ (a0, (0+1)%Z, a2) _ with "A"; auto.
+      steps. acatch. hcall _ (_, (0+1)%Z, _) _ with "A"; auto.
       { iModIntro. iSplitR; ss. iSplitL; ss. iSplitL; ss. iSplitR; ss. }
       { split; ss. eauto with ord_step. }
-      ss. mDesAll. clarify. eapply Any.upcast_inj in PURE5. des; clarify.
-      steps. erewrite Any.upcast_downcast in *. clarify.
+      ss. mDesAll. clarify. erewrite Any.upcast_downcast in *. clarify. steps. 
 
       (* free *)
-      steps. acatch. hcall _ (a0, 0%Z) _ with "POST2"; auto.
-      { iModIntro. iSplitR; ss. iSplitL; ss. iSplitL; ss.
-        iExists _. iSplitR; ss. }
+      steps. acatch. hcall _ (_, 0%Z) _ with "POST2"; auto.
+      { iModIntro. iSplitR; ss. iSplitL; ss. iSplitL; ss. iExists _. iSplitR; ss. }
       { split; ss. eauto with ord_step. }
-      ss. mDesAll. clarify. des; clarify.
-      steps. erewrite Any.upcast_downcast in *. clarify.
+      ss. mDesAll. clarify. des; clarify. steps.
 
       (* free *)
-      steps. acatch. hcall _ (a0, (0+1)%Z) _ with "POST1"; auto.
-      { iModIntro. iSplitR; ss. iSplitL; ss. iSplitL; ss.
-        iExists _. iSplitR; ss. }
+      steps. acatch. hcall _ (_, (0+1)%Z) _ with "POST1"; auto.
+      { iModIntro. iSplitR; ss. iSplitL; ss. iSplitL; ss. iExists _. iSplitR; ss. }
       { split; ss. eauto with ord_step. }
-      ss. mDesAll. clarify. des; clarify.
-      steps. erewrite Any.upcast_downcast in *. clarify.
+      ss. mDesAll. clarify. des; clarify. steps.
 
       (* store *)
-      steps. acatch. hcall _ (n, 0%Z, v0) _ with "POST"; auto.
-      { iModIntro. iSplitR; ss. iSplitL; ss. iSplitL; ss.
-        iExists _. iSplitR; ss. }
+      steps. acatch. hcall _ (_, 0%Z, _) _ with "POST"; auto.
+      { iModIntro. iSplitR; ss. iSplitL; ss. iSplitL; ss. iExists _. iSplitR; ss. }
       { split; ss. eauto with ord_step. }
-      ss. mDesAll. clarify. des; clarify.
-      steps. erewrite Any.upcast_downcast in *. clarify.
+      ss. mDesAll. clarify. des; clarify. steps.
 
       (* ret *)
       astop. force_l. eexists. steps. hret _; ss.
@@ -144,7 +133,6 @@ Section SIMMODSEM.
     { (* arg *)
       unfold pop2F. init. harg. destruct x.
       mDesAll. clarify. rewrite Any.upcast_downcast. steps.
-      eapply Any.upcast_inj in PURE1. des; clarify. steps.
       unfold ccall. steps. astart 10.
 
       destruct l; ss.
@@ -156,11 +144,10 @@ Section SIMMODSEM.
           iSplitR; ss. iSplitL; ss. iSplitL; ss. iSplitR; ss.
           iRight. iRight. iRight. iRight. iPureIntro. ss. }
         { split; ss. eauto with ord_step. }
-        mDesAll. clarify. eapply Any.upcast_inj in PURE1. des; clarify.
-        steps. erewrite Any.upcast_downcast in *. steps.
+        mDesAll. clarify. erewrite Any.upcast_downcast in *. steps.
 
         (* ret *)
-        astop. force_l. eexists. steps. hret _; ss.
+        astop. force_l. eexists. steps. hret _; ss; et.
       }
 
       (* l = lhd :: ltl *)
@@ -173,51 +160,42 @@ Section SIMMODSEM.
         iSplitR; ss. iSplitL; ss. iSplitL; ss.
         iSplitR; ss. iLeft. iExists _, _, _. iSplit; ss. }
       { split; ss. eauto with ord_step. }
-      ss. mDesAll. clarify. eapply Any.upcast_inj in PURE1. des; clarify.
-      steps. erewrite Any.upcast_downcast in *. steps.
+      ss. mDesAll. clarify. erewrite Any.upcast_downcast in *. steps.
 
       (* load *)
-      steps. acatch. hcall _ (a2, 0%Z, v) _ with "POST"; auto.
+      steps. acatch. hcall _ (_, 0%Z, _) _ with "POST"; auto.
       { iModIntro. iSplitR; ss. iSplitL; ss. iSplitL; ss. iSplitR; ss. }
       { split; ss. eauto with ord_step. }
-      ss. mDesAll. clarify. eapply Any.upcast_inj in PURE3. des; clarify.
-      steps. erewrite Any.upcast_downcast in *. clarify.
+      ss. mDesAll. clarify. erewrite Any.upcast_downcast in *. clarify. steps. 
 
       (* load *)
-      steps. acatch. hcall _ (a2, (0+1)%Z, a3) _ with "A1"; auto.
+      steps. acatch. hcall _ (_, (0+1)%Z, _) _ with "A1"; auto.
       { iModIntro. iSplitR; ss. iSplitL; ss. iSplitL; ss. iSplitR; ss. }
       { split; ss. eauto with ord_step. }
-      ss. mDesAll. clarify. eapply Any.upcast_inj in PURE4. des; clarify.
-      steps. erewrite Any.upcast_downcast in *. clarify.
+      ss. mDesAll. clarify. erewrite Any.upcast_downcast in *. clarify. steps.
 
       (* free *)
-      steps. acatch. hcall _ (a2, 0%Z) _ with "POST1"; auto.
-      { iModIntro. iSplitR; ss. iSplitL; ss. iSplitL; ss.
-        iExists _. iSplitR; ss. }
+      steps. acatch. hcall _ (_, 0%Z) _ with "POST1"; auto.
+      { iModIntro. iSplitR; ss. iSplitL; ss. iSplitL; ss. iExists _. iSplitR; ss. }
       { split; ss. eauto with ord_step. }
-      ss. mDesAll. clarify. des; clarify.
-      steps. erewrite Any.upcast_downcast in *. clarify.
+      ss. mDesAll. clarify. des; clarify. steps. 
 
       (* free *)
-      steps. acatch. hcall _ (a2, (0+1)%Z) _ with "POST"; auto.
-      { iModIntro. iSplitR; ss. iSplitL; ss. iSplitL; ss.
-        iExists _. iSplitR; ss. }
+      steps. acatch. hcall _ (_, (0+1)%Z) _ with "POST"; auto.
+      { iModIntro. iSplitR; ss. iSplitL; ss. iSplitL; ss. iExists _. iSplitR; ss. }
       { split; ss. eauto with ord_step. }
-      ss. mDesAll. clarify. des; clarify.
-      steps. erewrite Any.upcast_downcast in *. clarify.
+      ss. mDesAll. clarify. des; clarify. steps.
 
       (* store *)
-      steps. acatch. hcall _ (n, 0%Z, v0) _ with "A"; auto.
-      { iModIntro. iSplitR; ss. iSplitL; ss. iSplitL; ss.
-        iExists _. iSplitR; ss. }
+      steps. acatch. hcall _ (_, 0%Z, _) _ with "A"; auto.
+      { iModIntro. iSplitR; ss. iSplitL; ss. iSplitL; ss. iExists _. iSplitR; ss. }
       { split; ss. eauto with ord_step. }
-      ss. mDesAll. clarify. des; clarify.
-      steps. erewrite Any.upcast_downcast in *. clarify.
+      ss. mDesAll. clarify. des; clarify. steps. 
 
       (* ret *)
       astop. force_l. eexists. steps. hret _; ss.
       iModIntro. iSplitR; ss. iSplitL; ss.
-      iExists _. iFrame. ss.
+      iExists _. iFrame; ss.
     }
 
     econs; ss.
@@ -225,29 +203,25 @@ Section SIMMODSEM.
     { (* arg *)
       unfold pushF. init. harg. destruct x.
       mDesAll. clarify. rewrite Any.upcast_downcast. steps.
-      eapply Any.upcast_inj in PURE1. des; clarify. steps.
       unfold ccall. steps. astart 10.
 
       (* alloc *)
       steps. acatch. hcall _ 2 _ with ""; auto.
       { split; ss. eauto with ord_step. }
-      mDesAll. clarify. eapply Any.upcast_inj in PURE1. des; clarify.
-      steps. erewrite Any.upcast_downcast in *. steps.
+      mDesAll. clarify. erewrite Any.upcast_downcast in *. steps.
       rewrite points_to_split in ACC. mDesOwn "A1".
 
       (* store *)
-      steps. acatch. hcall _ (a2, 0%Z, v) _ with "A1"; auto.
-      { rewrite Z.add_0_l. iModIntro. iSplitR; ss. iSplitL; ss.
-        iSplitL; ss. iExists _. iFrame. et. }
+      steps. acatch. hcall _ (_, 0%Z, _) _ with "A1"; auto.
+      { rewrite Z.add_0_l. iModIntro. iSplitR; ss. iSplitL; ss. iSplitL; ss. iExists _. iFrame. et. }
       { split; ss. eauto with ord_step. }
-      mDesAll. clarify. erewrite Any.upcast_downcast in *. steps.
+      mDesAll. clarify. steps.
 
       (* store *)
-      steps. acatch. hcall _ (a2, (0+1)%Z, a0) _ with "A2"; auto.
-      { iModIntro. iSplitR; ss. iSplitL; ss.
-        iSplitL; ss. iExists _. iFrame. et. }
+      steps. acatch. hcall _ (_, (0+1)%Z, _) _ with "A2"; auto.
+      { iModIntro. iSplitR; ss. iSplitL; ss. iSplitL; ss. iExists _. iFrame. et. }
       { split; ss. eauto with ord_step. }
-      mDesAll. clarify. erewrite Any.upcast_downcast in *. steps.
+      mDesAll. clarify. steps.
 
       (* ret *)
       mCombine "POST" "POST1".

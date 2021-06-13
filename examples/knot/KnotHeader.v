@@ -152,6 +152,7 @@ Ltac iarg :=
   let INV := constr:("INV") in
   let OPENER := constr:("☃OPENER") in
   let CLOSED := constr:("☃CLOSED") in
+  let TMP := constr:("☃TMP") in
   let ARG := constr:("ARG") in
   eapply (@harg_clo _ PRE INV);
   [eassumption
@@ -159,6 +160,7 @@ Ltac iarg :=
   ];
   let a := fresh "a" in
   intros a; i;
+  let aa := fresh "aa" in
   mDesAndPureR PRE as PRE ARG;
   let EQ := fresh "EQ" in
   mPure ARG as EQ;
@@ -203,17 +205,17 @@ Tactic Notation "icall_weaken" uconstr(ftsp) uconstr(o) uconstr(x) uconstr(a) "w
   let POST := get_fresh_name_tac "POST" in
   let INV := get_fresh_name_tac "INV" in
   let CLOSED := constr:("☃CLOSED") in
+  let TMP := constr:("☃TMP") in
   let OPENER := constr:("☃OPENER") in
   let Hns := select_ihyps Hns in
   let Hns := constr:("☃CLOSED"::"☃OPENER"::Hns) in
-  eapply (@hcall_clo_weaken _ Hns POST INV _ _ ftsp o x _ (inl a));
+  eapply (@hcall_clo_weaken _ Hns POST INV ftsp o x _ (inl a));
   unshelve_goal;
   [|
    eassumption
    |
    |start_ipm_proof
     ; iFrame "☃CLOSED ☃OPENER"
-   (* ; iSplitR; [ss|] *)
    |eauto with ord_step
    |
    |on_current ltac:(fun H => try clear H);
@@ -221,14 +223,14 @@ Tactic Notation "icall_weaken" uconstr(ftsp) uconstr(o) uconstr(x) uconstr(a) "w
     on_current ltac:(fun H => simpl in H);
     [mDesSep INV as "☃CLOSED" INV;
      mDesAndPureR POST as POST "☃TMP";
-     let EQ := fresh in
-     mPure "☃TMP" as EQ; inversion EQ;
+     let EQ := fresh "EQ" in
+     mPure "☃TMP" as EQ; try (symmetry in EQ; destruct EQ);
      mDesSep POST as "☃OPENER" POST
     |mDesSep INV as "☃CLOSED" INV;
      mDesAndPureR POST as POST "☃TMP";
      mDesSep POST as "☃OPENER" POST;
-     mAssertPure False; [iApply (inv_open_unique with "☃OPENER ☃CLOSED")|ss
-    ]]
+     mAssertPure False; [iApply (inv_open_unique with "☃OPENER ☃CLOSED")|ss]
+    ]
   ].
 
 Tactic Notation "iret" uconstr(a) :=
@@ -251,7 +253,7 @@ Definition knot_init: (@URA.car knotRA) := knot_frag None.
 Section REC.
   Context `{Σ: GRA.t}.
 
-  Definition mrec_spec (f: nat -> nat) (INV: iProp): ftspec (list val) val :=
+  Definition mrec_spec (f: nat -> nat) (INV: iProp): fspec :=
     mk_simple (X:=nat)
               (fun n => (
                    (fun varg o =>

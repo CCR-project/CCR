@@ -380,7 +380,7 @@ Section ILEMMAS.
   .
   Proof.
     iStartProof. iIntros "H".
-    iAssert (bupd (∃ b, bi_pure ((eq r2) b) ** (Own b)))%I with "[H]" as "H".
+    iAssert (#=> (∃ b, ⌜((eq r2) b)⌝ ** (Own b)))%I with "[H]" as "H".
     { iApply Own_Upd_set; [|iFrame].
       red. red in UPD. i. hexploit UPD; et. }
     iMod "H". iDestruct "H" as (b) "[#H0 H1]".
@@ -404,7 +404,36 @@ Section ILEMMAS.
       (OwnM r1) ⊢ (#=> (∃ b, ⌜B b⌝ ** (OwnM b)))
   .
   Proof.
-    admit "ez".
+    assert (UPDM: URA.updatable_set
+                    (GRA.embed r1)
+                    (fun r => exists m, r = GRA.embed m /\ B m)).
+    { red. i. red in UPD.
+      unshelve hexploit UPD.
+      { eapply (@eq_rect URA.t (Σ (@GRA.inG_id _ _ H)) (@URA.car)).
+        { eapply (ctx (@GRA.inG_id _ _ H)). }
+        { symmetry. eapply (@GRA.inG_prf _ _ H). }
+      }
+      Local Transparent GRA.to_URA.
+      { ur in WF. ss. specialize (WF GRA.inG_id).
+        destruct H. subst. ss.
+        unfold GRA.embed in WF. ss.
+        replace (PeanoNat.Nat.eq_dec inG_id inG_id)
+          with (@left (inG_id = inG_id) (inG_id <> inG_id) eq_refl) in WF; ss.
+        { des_ifs. repeat f_equal. eapply proof_irrelevance. }
+      }
+      i. des. exists (GRA.embed b). esplits; et.
+      ur. Local Transparent GRA.to_URA. ss.
+      i. unfold GRA.embed. des_ifs.
+      { ss. unfold PCM.GRA.cast_ra. destruct  H. subst. ss. }
+      { ur in WF. specialize (WF k). rewrite URA.unit_idl.
+        eapply URA.wf_mon. rewrite URA.add_comm. et.
+      }
+    }
+    iIntros "H".
+    iPoseProof (Own_Upd_set with "H") as "> H".
+    { eapply UPDM. }
+    iDestruct "H" as (b) "[% H1]". des. subst.
+    iModIntro. iExists m. iFrame. ss.
   Qed.
 
   Lemma OwnM_Upd (M: URA.t) `{@GRA.inG M Σ}
@@ -414,7 +443,12 @@ Section ILEMMAS.
       (OwnM r1) ⊢ (#=> (OwnM r2))
   .
   Proof.
-    admit "ez".
+    iStartProof. iIntros "H".
+    iAssert (#=> (∃ b, ⌜((eq r2) b)⌝ ** (OwnM b)))%I with "[H]" as "H".
+    { iApply OwnM_Upd_set; [|iFrame].
+      red. red in UPD. i. hexploit UPD; et. }
+    iMod "H". iDestruct "H" as (b) "[#H0 H1]".
+    iPure "H0" as Hs. subst. iApply "H1".
   Qed.
 
   Lemma OwnM_extends (M: URA.t) `{@GRA.inG M Σ}
@@ -424,7 +458,9 @@ Section ILEMMAS.
       OwnM b ⊢ OwnM a
   .
   Proof.
-    admit "ez".
+    red. unfold OwnM. uipropall. i. unfold URA.extends in *.
+    des. subst. rewrite <- GRA.embed_add.
+    rewrite <- URA.add_assoc. et.
   Qed.
 
 End ILEMMAS.

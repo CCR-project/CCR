@@ -58,7 +58,7 @@ Section PROOF.
   Defined.
 
   Definition EchoSbtb: list (gname * fspecbody) :=
-    [("echo", mk_specbody echo_spec echo_body); ("echo_finish", mk_specbody echo_finish_spec echo_finish_body)]
+    [("echo", mk_specbody echo_spec (cfun echo_body)); ("echo_finish", mk_specbody echo_finish_spec (cfun echo_finish_body))]
   .
 
   Definition SEchoSem: SModSem.t := {|
