@@ -272,6 +272,17 @@ Section ALIST.
       eapply Permutation_map. auto.
     }
   Qed.
+
+  Lemma alist_find_app_o K `{Dec K} V k (l0 l1: alist K V)
+    :
+      alist_find k (l0 ++ l1) =
+      match (alist_find k l0) with
+      | Some v => Some v
+      | _ => alist_find k l1
+      end.
+  Proof.
+    induction l0; ss. destruct a. rewrite eq_rel_dec_correct. des_ifs.
+  Qed.
 End ALIST.
 
 

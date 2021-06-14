@@ -584,6 +584,15 @@ Section SMOD.
     rewrite unconcat. ss.
   Qed.
 
+  Lemma red_do_ret2 A0 A1 B (xs: list (A0 * A1)) (f: A0 -> A1 -> B)
+    :
+      (do '(x0, x1) <- xs; ret (f x0 x1)) = List.map (fun '(x0, x1) => f x0 x1) xs
+  .
+  Proof.
+    induction xs; ss. rewrite IHxs. destruct a; ss.
+  Qed.
+
+
 
 
 

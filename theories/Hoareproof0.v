@@ -71,6 +71,54 @@ Section CANCEL.
   Let ms_tgt: ModSemL.t := ModL.enclose (Mod.add_list mds_tgt).
 
 
+  Lemma sk_eq:
+    ModL.sk (Mod.add_list mds_tgt) = ModL.sk (Mod.add_list mds_mid).
+  Proof.
+    unfold ms_tgt, ms_mid, mds_mid, mds_tgt, ModL.enclose.
+    rewrite ! Mod.add_list_sk. f_equal.
+    generalize mds. clear. i. induction mds0; ss.
+    rewrite IHmds0. auto.
+  Qed.
+
+  Lemma fst_initial_mrs_eq:
+    List.map fst (ModSemL.initial_mrs ms_tgt) = List.map fst (ModSemL.initial_mrs ms_mid).
+  Proof.
+    pose proof sk_eq.
+    unfold ms_tgt, ms_mid, mds_tgt, mds_mid, ModL.enclose.
+    unfold mds_mid, mds_tgt in H. rewrite H.
+    generalize (ModL.sk (Mod.add_list (List.map (SMod.to_mid stb) mds))). i.
+    rewrite ! Mod.add_list_initial_mrs.
+    generalize mds. clear. i. induction mds0; auto.
+    ss. rewrite IHmds0. auto.
+  Qed.
+
+  Lemma initial_p_eq:
+    ModSemL.initial_p_state ms_tgt = ModSemL.initial_p_state ms_mid.
+  Proof.
+    unfold ModSemL.initial_p_state. extensionality mn.
+    pose proof sk_eq.
+    unfold ms_tgt, ms_mid, mds_tgt, mds_mid, ModL.enclose.
+    unfold mds_mid, mds_tgt in H. rewrite H.
+    generalize (ModL.sk (Mod.add_list (List.map (SMod.to_mid stb) mds))). i.
+    rewrite ! Mod.add_list_initial_mrs.
+    generalize mds. clear. i. induction mds0; auto.
+    ss. rewrite eq_rel_dec_correct in *. des_ifs.
+  Qed.
+
+  Lemma fns_eq:
+    (List.map fst (ModSemL.fnsems (ModL.enclose (Mod.add_list mds_tgt))))
+    =
+    (List.map fst (ModSemL.fnsems (ModL.enclose (Mod.add_list mds_mid)))).
+  Proof.
+    pose proof sk_eq. unfold ModL.enclose.
+    unfold mds_mid, mds_tgt, ModL.enclose.
+    unfold mds_mid, mds_tgt in H. rewrite H.
+    generalize (ModL.sk (Mod.add_list (List.map (SMod.to_mid stb) mds))). i.
+    rewrite ! Mod.add_list_fns. rewrite ! List.map_map. f_equal.
+    f_equal. extensionality sm. ss. rewrite ! List.map_map. f_equal.
+    extensionality fnsb. destruct fnsb as [fn sb]. ss.
+  Qed.
+
   Lemma stb_find_iff fn
     :
       ((<<NONE: alist_find fn stb = None>>) /\
@@ -91,7 +139,16 @@ Section CANCEL.
                               ∘ fun_to_tgt stb f)>>) /\
           (<<MIN: List.In (SModSem.mn (SMod.get_modsem md sk)) (List.map fst ms_tgt.(ModSemL.initial_mrs))>>)).
   Proof.
-    admit "stb find".
+    unfold ms_mid, ms_tgt, mds_tgt, mds_mid, SMod.to_mid, mds_tgt, SMod.to_tgt.
+    rewrite SMod.transl_fnsems. rewrite SMod.transl_fnsems. rewrite SMod.transl_initial_mrs. fold sk.
+    unfold stb at 1 3, _stb at 1 3. unfold sbtb, _sbtb, _mss. rewrite alist_find_map.
+    generalize mds. induction mds0; ss; auto. rewrite ! alist_find_app_o.
+    erewrite ! SMod.red_do_ret2. rewrite ! alist_find_map. uo.
+    destruct (alist_find fn (SModSem.fnsems (SMod.get_modsem a sk))) eqn:FIND.
+    { right. esplits; et. }
+    des.
+    { left. esplits; et. }
+    { right. esplits; et. }
   Qed.
 
   Let W: Type := (r_state * p_state).
@@ -431,54 +488,6 @@ Section CANCEL.
   Opaque EventsL.interp_Es.
 
   Require Import ProofMode.
-
-  Lemma sk_eq:
-    ModL.sk (Mod.add_list mds_tgt) = ModL.sk (Mod.add_list mds_mid).
-  Proof.
-    unfold ms_tgt, ms_mid, mds_mid, mds_tgt, ModL.enclose.
-    rewrite ! Mod.add_list_sk. f_equal.
-    generalize mds. clear. i. induction mds0; ss.
-    rewrite IHmds0. auto.
-  Qed.
-
-  Lemma fst_initial_mrs_eq:
-    List.map fst (ModSemL.initial_mrs ms_tgt) = List.map fst (ModSemL.initial_mrs ms_mid).
-  Proof.
-    pose proof sk_eq.
-    unfold ms_tgt, ms_mid, mds_tgt, mds_mid, ModL.enclose.
-    unfold mds_mid, mds_tgt in H. rewrite H.
-    generalize (ModL.sk (Mod.add_list (List.map (SMod.to_mid stb) mds))). i.
-    rewrite ! Mod.add_list_initial_mrs.
-    generalize mds. clear. i. induction mds0; auto.
-    ss. rewrite IHmds0. auto.
-  Qed.
-
-  Lemma initial_p_eq:
-    ModSemL.initial_p_state ms_tgt = ModSemL.initial_p_state ms_mid.
-  Proof.
-    unfold ModSemL.initial_p_state. extensionality mn.
-    pose proof sk_eq.
-    unfold ms_tgt, ms_mid, mds_tgt, mds_mid, ModL.enclose.
-    unfold mds_mid, mds_tgt in H. rewrite H.
-    generalize (ModL.sk (Mod.add_list (List.map (SMod.to_mid stb) mds))). i.
-    rewrite ! Mod.add_list_initial_mrs.
-    generalize mds. clear. i. induction mds0; auto.
-    ss. rewrite eq_rel_dec_correct in *. des_ifs.
-  Qed.
-
-  Lemma fns_eq:
-    (List.map fst (ModSemL.fnsems (ModL.enclose (Mod.add_list mds_tgt))))
-    =
-    (List.map fst (ModSemL.fnsems (ModL.enclose (Mod.add_list mds_mid)))).
-  Proof.
-    pose proof sk_eq. unfold ModL.enclose.
-    unfold mds_mid, mds_tgt, ModL.enclose.
-    unfold mds_mid, mds_tgt in H. rewrite H.
-    generalize (ModL.sk (Mod.add_list (List.map (SMod.to_mid stb) mds))). i.
-    rewrite ! Mod.add_list_fns. rewrite ! List.map_map. f_equal.
-    f_equal. extensionality sm. ss. rewrite ! List.map_map. f_equal.
-    extensionality fnsb. destruct fnsb as [fn sb]. ss.
-  Qed.
 
   Theorem adequacy_type_t2m: Beh.of_program (ModL.compile (Mod.add_list mds_tgt)) <1=
                              Beh.of_program (ModL.compile_arg (Mod.add_list mds_mid) (Any.pair ord_top↑ ([]: list val)↑)).
