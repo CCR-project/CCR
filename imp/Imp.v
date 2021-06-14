@@ -107,7 +107,7 @@ Section Denote.
     end.
 
   Definition call_mem f :=
-    rel_dec f "alloc" || rel_dec f "free" || rel_dec f "load" || rel_dec f "store" || rel_dec f "cmp".
+    rel_dec f "alloc" || rel_dec f "free" || rel_dec f "load" || rel_dec f "store" || rel_dec f "cmp" || rel_dec f "main".
 
   Fixpoint denote_stmt (s : stmt) : itree eff val :=
     match s with

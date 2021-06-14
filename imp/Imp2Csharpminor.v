@@ -23,6 +23,7 @@ Import Int.
 Set Implicit Arguments.
 
 Parameter s2p: string -> ident.
+Parameter s2p_inj: forall x y, (s2p x) = (s2p y) -> x = y.
 
 Lemma option_dec {T} :
   forall x : option T,
@@ -98,13 +99,6 @@ Section Compile.
     end
   .
 
-  (* Fixpoint make_arg_types n := *)
-  (*   match n with *)
-  (*   | O => Tnil *)
-  (*   | S n' => Tcons Tlong0 (make_arg_types n') *)
-  (*   end *)
-  (* . *)
-
   (** memory accessing calls *)
   (** load, store, cmp are translated to non-function calls. *)
   (** register alloc and free in advance so can be properly called *)
@@ -123,8 +117,7 @@ Section Compile.
   Let tgt_gdef2 := globdef fundef2 ().
   Let tgt_gdefs2 := list (ident * tgt_gdef2).
 
-  Definition make_signature n :=
-    mksignature (repeat Tlong n) (Tlong) (cc_default).
+  Definition make_signature n := mksignature (repeat Tlong n) (Tlong) (cc_default).
 
   Definition compile_eVars src : tgt_gdefs2 :=
     let gv := (mkglobvar () [] false false) in List.map (fun id => (s2p id, Gvar gv)) src.
@@ -135,12 +128,13 @@ Section Compile.
   Definition compile_eFuns (src : extFuns) : tgt_gdefs2 :=
     List.map (fun '(id, a) => (s2p id, Gfun (External (EF_external id (make_signature a))))) src.
 
-  Definition pre_compile_function (f : Imp.function) : option function2 :=
+  Definition pre_compile_function (fn : string) (f : Imp.function) : option function2 :=
     let params := (List.map (fun vn => s2p vn) f.(Imp.fn_params)) in
     let temps := (List.map (fun vn => s2p vn) f.(Imp.fn_vars)) ++ [(s2p "return"); (s2p "_")] in
+    let sig := if (rel_dec fn "main"%string) then signature_main else (make_signature (List.length params)) in
     if (Coqlib.list_norepet_dec dec (params ++ temps)) then
       let fdef := {|
-            fn_sig2 := make_signature (List.length params);
+            fn_sig2 := sig;
             fn_params2 := params;
             fn_vars2 := [];
             fn_temps2 := temps;
@@ -148,17 +142,6 @@ Section Compile.
           |} in
       Some fdef
     else None.
-
-  (* Fixpoint pre_compile_iFuns (src : progFuns) : option tgt_gdefs2 := *)
-  (*   match src with *)
-  (*   | [] => Some [] *)
-  (*   | (name, f) :: t => *)
-  (*     do tail <- (pre_compile_iFuns t); *)
-  (*     do cf <- (pre_compile_function f); *)
-  (*     let gf := Internal cf in *)
-  (*     Some ((s2p name, Gfun gf) :: tail) *)
-  (*   end *)
-  (* . *)
 
   Definition dummy_def : (ident * tgt_gdef) :=
     (s2p ".neverused", Gfun (External (EF_debug 1%positive 1%positive []))).
@@ -169,7 +152,7 @@ Section Compile.
   Definition pre_compile_iFuns (src : progFuns) : option tgt_gdefs2 :=
     let pcfs :=
         List.map
-          (fun '(fn, f) => match (pre_compile_function f) with
+          (fun '(fn, f) => match (pre_compile_function fn f) with
                         | Some cf => Some (s2p fn, Gfun (Internal cf))
                         | None => None
                         end)
@@ -287,44 +270,24 @@ Section Compile.
   (* . *)
   (* Coqlib.list_norepet_dec *)
 
-  (* Definition compile_function (f : Imp.function) : option function := *)
-  (*   do prefun <- (pre_compile_function f); *)
-  (*   do fbody <- (compile_stmt f.(Imp.fn_body)); *)
-  (*   let fdef := {| *)
-  (*         fn_sig := prefun.(fn_sig); *)
-  (*         fn_params := prefun.(fn_params); *)
-  (*         fn_vars := prefun.(fn_vars); *)
-  (*         fn_temps := prefun.(fn_temps); *)
-  (*         fn_body := Sseq fbody (Sreturn (Some (Evar (s2p "return")))); *)
-  (*       |} in *)
-  (*   Some fdef. *)
-
-  (* Fixpoint compile_iFuns (src : progFuns) : option tgt_gdefs := *)
-  (*   match src with *)
-  (*   | [] => Some [] *)
-  (*   | (name, f) :: t => *)
-  (*     do tail <- (compile_iFuns t); *)
-  (*     do cf <- (compile_function f); *)
-  (*     let gf := Internal cf in *)
-  (*     Some ((s2p name, Gfun gf) :: tail) *)
-  (*   end *)
-  (* . *)
-
-  Definition get_function (df2 : tgt_gdef2) : option tgt_gdef :=
+  Definition get_function (id : ident) (df2 : tgt_gdef2) : option tgt_gdef :=
     match df2 with
     | Gfun (Internal f2) =>
       do _fbody <- (compile_stmt f2.(fn_body2));
-      let fbody := Sseq _fbody (Sreturn (Some (Evar (s2p "return")))) in
+      let fbody :=
+          if (rel_dec id (s2p "main"))
+          then Sseq _fbody (Sreturn (Some (Eunop Ointoflong (Evar (s2p "return")))))
+          else Sseq _fbody (Sreturn (Some (Evar (s2p "return")))) in
       let f := mkfunction (fn_sig2 f2) (fn_params2 f2) (fn_vars2 f2) (fn_temps2 f2) (fbody) in
       Some (Gfun (Internal f))
     | _ => None
     end
   .
 
-  Definition lift_def (df2 : tgt_gdef2) : tgt_gdef :=
+  Definition lift_def (id : ident) (df2 : tgt_gdef2) : tgt_gdef :=
     match df2 with
     | Gfun (Internal _) =>
-      match (get_function df2) with
+      match (get_function id df2) with
       | Some df => df
       | None => snd dummy_def
       end
@@ -335,7 +298,7 @@ Section Compile.
   Definition get_iFuns (pre : tgt_gdefs2) : option tgt_gdefs :=
     let tfs :=
         List.map
-          (fun '(fn, df2) => match (get_function df2) with
+          (fun '(fn, df2) => match (get_function fn df2) with
                         | Some df => Some (fn, df)
                         | None => None
                           end)
@@ -348,7 +311,7 @@ Section Compile.
     [(s2p "malloc", Gfun malloc_def); (s2p "free", Gfun free_def)].
 
   Definition compile_gdefs (src : Imp.programL) : option tgt_gdefs :=
-    let lift_all := fun '(n, d) => (n, lift_def d) in
+    let lift_all := fun '(n, d) => (n, lift_def n d) in
     let evars := List.map lift_all gm.(_ext_vars) in
     let ivars := List.map lift_all gm.(_int_vars) in
     let efuns := List.map lift_all gm.(_ext_funs) in

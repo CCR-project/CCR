@@ -77,9 +77,9 @@ Section GENV.
         (INSRC: In (mn, (fn, impf)) (prog_funsL src))
     :
       exists precf cf,
-        (pre_compile_function impf = Some precf /\
+        (pre_compile_function fn impf = Some precf /\
          In (s2p fn, Gfun (Internal precf)) (_int_funs gm) /\
-         get_function gm (Gfun (Internal precf)) = Some (Gfun (Internal cf)) /\
+         get_function gm (s2p fn) (Gfun (Internal precf)) = Some (Gfun (Internal cf)) /\
          In (s2p fn, Gfun (Internal cf)) cfs).
   Proof.
     Local Opaque get_function.
@@ -99,7 +99,7 @@ Section GENV.
     { apply INSRC. }
     i. ss. des_ifs; ss; clarify.
     Local Transparent get_function.
-    assert (SAVED: get_function gm (Gfun (Internal f0)) = Some g0); auto.
+    assert (SAVED: get_function gm (s2p fn) (Gfun (Internal f0)) = Some g0); auto.
     unfold get_function in Heq2. uo. destruct (compile_stmt gm (fn_body2 f0)) eqn:CSF0.
     2:{ clarify. }
     match goal with
@@ -136,8 +136,8 @@ Section GENV.
         (GMAP: get_gmap src = Some gm)
         (COMP: compile2 src = OK tgt)
         (INSRC: In (mn, (fn, impf)) (prog_funsL src))
-        (PRECF: pre_compile_function impf = Some precf)
-        (COMPF: get_function gm (Gfun (Internal precf)) = Some (Gfun (Internal cf)))
+        (PRECF: pre_compile_function fn impf = Some precf)
+        (COMPF: get_function gm (s2p fn) (Gfun (Internal precf)) = Some (Gfun (Internal cf)))
     :
       In (s2p fn, Gfun (Internal cf)) tgt.(prog_defs).
   Proof.
@@ -174,10 +174,11 @@ Section GENV.
   Qed.
 
   Lemma compiled_function_props
-        gm impf precf cf
+        gm fn impf precf cf
+        (NOMAIN: fn <> "main")
         (GMAP: get_gmap src = Some gm)
-        (PRECF: pre_compile_function impf = Some precf)
-        (COMPF: get_function gm (Gfun (Internal precf)) = Some (Gfun (Internal cf)))
+        (PRECF: pre_compile_function fn impf = Some precf)
+        (COMPF: get_function gm (s2p fn) (Gfun (Internal precf)) = Some (Gfun (Internal cf)))
     :
       (cf.(fn_sig) = precf.(fn_sig2)) /\
       (exists tfbody, compile_stmt gm impf.(Imp.fn_body) = Some tfbody /\
@@ -186,14 +187,15 @@ Section GENV.
       (Coqlib.list_norepet (fn_params cf)) /\
       (Coqlib.list_disjoint (fn_params cf) (fn_temps cf)).
   Proof.
-    unfold pre_compile_function in PRECF. uo; des_ifs. ss.
-    uo; des_ifs. ss.
-    split; auto.
-    split; auto.
-    { exists s; split; auto. }
-    split; auto. split; auto.
-    { apply Coqlib.list_norepet_append_left in l. auto. }
-    apply Coqlib.list_norepet_app in l. des; auto.
+    unfold pre_compile_function in PRECF. uo; des_ifs.
+    - apply rel_dec_correct in Heq. clarify.
+    - ss. uo; des_ifs; ss.
+      { depgen fn. clear. i. apply rel_dec_correct in Heq0. apply s2p_inj in Heq0. clarify. }
+      split; auto. split; auto.
+      { exists s; split; auto. }
+      split; auto. split; auto.
+      { apply Coqlib.list_norepet_append_left in l. auto. }
+      apply Coqlib.list_norepet_app in l. des; auto.
   Qed.
 
   Lemma gm_funs_disjoint

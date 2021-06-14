@@ -396,7 +396,7 @@ Section PROOF.
       | [ |- paco3 _ _ _ (r0 <- unwrapU (?f);; _) _ ] => destruct f eqn:FSEM; ss
       end.
       2:{ sim_triggerUB. }
-      unfold call_mem in Heq. bsimpl; des. des_ifs; clarify.
+      unfold call_mem in Heq. bsimpl; des. des_ifs; clarify. apply neg_rel_dec_correct in Heq4. rename Heq4 into NOTMAIN.
       repeat match goal with
       | [ Heq: _ = false |- _ ] => clear Heq
       end.
@@ -450,7 +450,8 @@ Section PROOF.
       pfold. econs 4.
       { admit "ez: strict_determinate_at". }
 
-      unfold pre_compile_function in COMPF. des_ifs. uo; des_ifs. ss.
+      unfold pre_compile_function in COMPF. des_ifs; clarify; uo; des_ifs; ss.
+      { rewrite rel_dec_correct in Heq2. clarify. }
       eexists. eexists.
       { eapply step_internal_function; ss; eauto; try econs.
         match goal with
