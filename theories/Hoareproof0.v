@@ -88,7 +88,8 @@ Section CANCEL.
                       Some (transl_all
                               (SModSem.mn
                                  (SMod.get_modsem md sk))
-                              ∘ fun_to_tgt stb f)>>)).
+                              ∘ fun_to_tgt stb f)>>) /\
+          (<<MIN: List.In (SModSem.mn (SMod.get_modsem md sk)) (List.map fst ms_tgt.(ModSemL.initial_mrs))>>)).
   Proof.
     admit "stb find".
   Qed.
@@ -114,14 +115,54 @@ Section CANCEL.
     :
       rsum_minus mn (mrs, fhd::ftl) = rsum (update mrs mn ε, ftl).
   Proof.
-    admit "list induction".
+    unfold rsum_minus, rsum. ss.
+  Qed.
+
+  Lemma fold_left_add (r: Σ) rs
+    :
+      fold_left URA.add rs r = (fold_left URA.add rs ε) ⋅ r.
+  Proof.
+    revert r. induction rs; ss.
+    { i. rewrite URA.unit_idl. auto. }
+    i. rewrite IHrs. rewrite (IHrs (ε ⋅ a)). r_solve.
   Qed.
 
   Lemma rsum_update mn mrs frs r
+        (NODUP: NoDup (List.map fst ms_tgt.(ModSemL.initial_mrs)))
+        (IN: List.In mn (List.map fst ms_tgt.(ModSemL.initial_mrs)))
     :
       rsum (update mrs mn r, frs) = rsum (update mrs mn ε, frs) ⋅ r.
   Proof.
-    admit "list induction".
+    unfold rsum. rewrite <- URA.add_assoc. rewrite (URA.add_comm _ r).
+    rewrite URA.add_assoc. f_equal. unfold compose.
+    rewrite <- (List.map_map fst). rewrite <- (List.map_map fst). revert IN NODUP.
+    generalize (List.map fst (ModSemL.initial_mrs ms_tgt)) as mds0. i.
+    cut (forall r0 r1, fold_left URA.add (List.map (update mrs mn r0) mds0) ε ⋅ r1
+                       =
+                       fold_left URA.add (List.map (update mrs mn r1) mds0) ε ⋅ r0).
+    { i. specialize (H r ε). rewrite URA.unit_id in H. auto. }
+    i. revert mn r0 r1 IN NODUP. induction mds0; ss. i.
+    destruct (classic (In mn mds0)).
+    { clear IN. rewrite (fold_left_add (ε ⋅ update mrs mn r0 a)).
+      rewrite (fold_left_add (ε ⋅ update mrs mn r1 a)).
+      rewrite ! URA.unit_idl. rewrite <- URA.add_assoc. rewrite <- URA.add_assoc.
+      rewrite (URA.add_comm _ r1). rewrite (URA.add_comm _ r0).
+      rewrite URA.add_assoc. rewrite URA.add_assoc.
+      inv NODUP. rewrite IHmds0; ss.
+      f_equal. unfold update. des_ifs.
+    }
+    { des; ss. rewrite (fold_left_add (ε ⋅ update mrs mn r0 a)).
+      rewrite (fold_left_add (ε ⋅ update mrs mn r1 a)). subst.
+      unfold update at 2 4. des_ifs.
+      rewrite ! URA.unit_idl. rewrite <- URA.add_assoc. rewrite <- URA.add_assoc. f_equal.
+      { revert H. clear IHmds0 NODUP. induction mds0; ss. i.
+        rewrite (fold_left_add (ε ⋅ update mrs mn r0 a)).
+        rewrite (fold_left_add (ε ⋅ update mrs mn r1 a)).
+        rewrite IHmds0; auto. f_equal. f_equal.
+        unfold update. des_ifs; ss. exfalso. eapply H; auto.
+      }
+      { eapply URA.add_comm. }
+    }
   Qed.
 
   Lemma update_same A (mrs: string -> A) mn
@@ -187,6 +228,8 @@ Section CANCEL.
            st_src0 st_tgt0 (SIM: wf st_src0 st_tgt0) (i0: itree (hCallE +' pE +' eventE) RT)
            mn cur
            rst (EQ: rst = fst st_tgt0)
+           (MIN: List.In mn (List.map fst ms_tgt.(ModSemL.initial_mrs)))
+           (NODUP: NoDup (List.map fst ms_tgt.(ModSemL.initial_mrs)))
     ,
       simg (fun '((rs_src, v_src)) '((rs_tgt, v_tgt)) => wf rs_src rs_tgt /\ (v_src: RT) = snd v_tgt /\ (rsum_minus mn (fst rs_tgt)) = fst v_tgt)
            (Ord.from_nat 100%nat)
@@ -279,10 +322,10 @@ Section CANCEL.
       steps. unfold forge, checkWf, assume, guarantee.
       steps.
       unshelve esplits; eauto.
-      { clear - rsum x.
-        rewrite rsum_minus_spec. rewrite rsum_minus_spec in *.
-        rewrite URA.add_assoc. rewrite <- rsum_update.
-        erewrite update_same. rewrite rsum_update.
+      { clear - rsum x MIN MIN0 NODUP.
+        rewrite rsum_minus_spec; auto. rewrite rsum_minus_spec in *; auto.
+        rewrite URA.add_assoc. rewrite <- rsum_update; auto.
+        erewrite update_same. rewrite rsum_update; auto.
         rewrite rsum_cons.
         replace (x1 ⋅ rsum (update mrs_tgt0 mn ε, frs_tgt_tl) ⋅ c0 ⋅ (ε ⋅ rarg))
           with (rsum (update mrs_tgt0 mn ε, frs_tgt_tl) ⋅ (c0 ⋅ (rarg ⋅ x1))); auto.
@@ -296,15 +339,13 @@ Section CANCEL.
       { instantiate (1:=(53+100)%ord). rewrite <- OrdArith.add_from_nat. refl. }
       rewrite idK_spec at 1.
       guclo bindC_spec. econs.
-      { gbase. eapply CIH; ss. rr. esplits; ss; et. rewrite URA.unit_idl. clear - WFTGT x.
-        rewrite rsum_minus_spec in x. rewrite URA.add_assoc in x.
-        rewrite <- rsum_update in x.
+      { gbase. eapply CIH; ss. rr. esplits; ss; et. rewrite URA.unit_idl. clear - WFTGT x MIN MIN0 NODUP.
+        rewrite rsum_minus_spec in x; auto. rewrite URA.add_assoc in x.
+        rewrite <- rsum_update in x; auto.
         rewrite rsum_cons. rewrite URA.add_comm.
         rewrite rsum_cons. rewrite <- URA.add_assoc.
         rewrite URA.add_comm. rewrite <- URA.add_assoc. auto. }
-      {
-
-        ii. ss. des_ifs_safe. des; ss. clarify. destruct p, p0.
+      { ii. ss. des_ifs_safe. des; ss. clarify. destruct p, p0.
         steps. esplits; eauto. steps. unfold put. steps. steps.
         unfold handle_rE. destruct r0; ss. destruct l; ss.
         { steps. }
@@ -314,8 +355,8 @@ Section CANCEL.
         unfold discard.
         steps. des. clarify.
         esplits; ss; eauto.
-        { rewrite rsum_minus_spec in x5. rewrite URA.add_assoc in x5.
-          rewrite <- rsum_update in x5.
+        { rewrite rsum_minus_spec in x5; auto. rewrite URA.add_assoc in x5.
+          rewrite <- rsum_update in x5; auto.
           rewrite rsum_cons. rewrite URA.add_comm.
           rewrite rsum_cons. rewrite <- URA.add_assoc.
           rewrite URA.add_comm. rewrite <- URA.add_assoc. auto.
@@ -330,8 +371,8 @@ Section CANCEL.
       steps. esplits. steps. instantiate (1:= rret).
       exists (rsum_minus mn (c3, c6 ⋅ rret :: l1)). steps.
       unshelve esplits; eauto.
-      { clear - ST1. rewrite rsum_minus_spec.
-        rewrite URA.add_assoc. rewrite <- rsum_update.
+      { clear - ST1 MIN MIN0 NODUP. rewrite rsum_minus_spec; auto.
+        rewrite URA.add_assoc. rewrite <- rsum_update; auto.
         rewrite update_same. eapply URA.wf_mon. instantiate (1:=c5).
         rewrite ! rsum_cons in ST1.
         replace (rsum (c3, l1) ⋅ (c6 ⋅ rret) ⋅ c5) with (rret ⋅ (c5 ⋅ (c6 ⋅ rsum (c3, l1)))); auto.
@@ -456,12 +497,10 @@ Section CANCEL.
     unfold ITree.map.
     unfold assume.
     steps. unfold ModL.wf in *. des.
+    assert (NODUP: List.NoDup (map fst ms_tgt.(ModSemL.initial_mrs))).
+    { inv WF. rewrite fst_initial_mrs_eq. unfold ms_mid. auto. }
     esplits; et.
-    { inv WF. econs.
-      { rewrite fns_eq. auto. }
-      { pose proof fst_initial_mrs_eq. unfold ms_tgt, ms_mid in H.
-        rewrite H. auto. }
-    }
+    { inv WF. econs; auto. rewrite fns_eq. auto. }
     { rewrite sk_eq. auto. }
     steps. folder.
     set (st_mid0 := ((ModSemL.initial_r_state ms_mid), (ModSemL.initial_p_state ms_mid))).
@@ -491,9 +530,9 @@ Section CANCEL.
                                             | Some r => r.1
                                             | None => ε
                                             end, [ε ⋅ entry_r; ε])).
-      clear - WFR. rewrite URA.unit_idl. rewrite URA.add_assoc.
-      rewrite rsum_minus_spec. unfold ModSemL.initial_r_state in WFR.
-      erewrite <- rsum_update. erewrite update_same. rewrite ! rsum_cons in *.
+      clear - WFR MIN NODUP. rewrite URA.unit_idl. rewrite URA.add_assoc.
+      rewrite rsum_minus_spec; auto. unfold ModSemL.initial_r_state in WFR.
+      erewrite <- rsum_update; auto. erewrite update_same. rewrite ! rsum_cons in *.
       match goal with
       | H: URA.wf ?r0 |- URA.wf ?r1 => replace r1 with r0; [apply H|r_solve]
       end.
