@@ -17,7 +17,7 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
-Require Import TODO TODOYJ.
+Require Import TODOYJ.
 
 Set Implicit Arguments.
 

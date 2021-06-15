@@ -15,16 +15,6 @@ Set Implicit Arguments.
 Definition resum_ktr A E F `{E -< F}: ktree E A ~> ktree F A := fun _ ktr a => interp (fun _ e => trigger e) (ktr a).
 
 
-
-Definition putint_parg: list val -> option val :=
-  fun varg =>
-    match varg with
-    | [v] => Some v
-    | _ => None
-    end
-.
-
-
 (* Parameter inF: list val -> itree eventE val. *)
 (* Parameter putintF: list val -> itree eventE val. *)
 
@@ -32,12 +22,12 @@ Definition putint_parg: list val -> option val :=
 (* Extract Constant putintF => "___MINKI_DOTHIS___?????????". *)
 
 
-Definition getintF:  list val -> itree eventE val :=
+Definition getintF {E} `{eventE -< E}:  list val -> itree E val :=
   fun _ => trigger (Syscall "scanf" [] top1).
 
-Definition putintF: list val -> itree eventE val :=
+Definition putintF {E} `{eventE -< E}: list val -> itree E val :=
   fun varg =>
-    `v: val <- (putint_parg varg)?;;
+    `v: val <- (pargs [Tuntyped] varg)?;;
     trigger (Syscall "printf" varg top1);;;
     Ret Vundef
 .
@@ -48,7 +38,7 @@ Section PROOF.
   Context `{Σ: GRA.t}.
 
   Definition ClientSem: ModSem.t := {|
-    ModSem.fnsems := [("getint", cfun (resum_ktr getintF)); ("putint", cfun (resum_ktr putintF))];
+    ModSem.fnsems := [("getint", cfun getintF); ("putint", cfun putintF)];
     ModSem.mn := "Client";
     ModSem.initial_mr := ε;
     ModSem.initial_st := tt↑;

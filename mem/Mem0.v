@@ -7,7 +7,6 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import TODOYJ.
-Require Import TODO.
 
 Set Implicit Arguments.
 Set Typeclasses Depth 5.

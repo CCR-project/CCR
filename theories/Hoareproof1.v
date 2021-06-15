@@ -478,7 +478,16 @@ Section CANCEL.
                                  (SMod.get_modsem md sk))
                               ∘ fun_to_mid stb (fsb_body f))>>)).
   Proof.
-    admit "stb find".
+    unfold ms_src, ms_mid, mds_mid, mds_src, SMod.to_src, SMod.to_mid.
+    rewrite SMod.transl_fnsems. rewrite SMod.transl_fnsems. fold sk.
+    unfold stb at 1 3. unfold sbtb, mss. rewrite alist_find_map.
+    generalize mds. induction mds0; ss; auto. rewrite ! alist_find_app_o.
+    erewrite ! SMod.red_do_ret2. rewrite ! alist_find_map. uo.
+    destruct (alist_find fn (SModSem.fnsems (SMod.get_modsem a sk))) eqn:FIND.
+    { right. esplits; et. }
+    des.
+    { left. esplits; et. }
+    { right. esplits; et. }
   Qed.
 
   Let adequacy_type_aux__APC:

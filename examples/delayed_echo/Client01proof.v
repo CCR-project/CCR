@@ -43,8 +43,13 @@ Section SIMMODSEM.
     econs; ss; [|econs; ss].
     { init. unfold getint_body, getintF. harg.
       mDesAll. clarify. steps.
-      admit "ez - add syscall reduction rule". }
-    { admit "ez". }
+      gstep. econs. i. eexists. steps. hret _; auto.
+    }
+    { init. unfold putint_body, putintF. harg.
+      mDesAll. clarify. steps.
+      gstep. econs. i. eexists. steps. hret _; auto.
+    }
+    Unshelve. all: ss.
   Qed.
 
 End SIMMODSEM.

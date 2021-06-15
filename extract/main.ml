@@ -89,8 +89,4 @@ let main =
   print_endline "-----------------------------------";
   print_endline "- Mutual Sum"; run (mutsum);
   print_endline "-----------------------------------";
-  print_endline "- Imp factorial"; run (imp_ex);
-  print_endline "-----------------------------------";
-  print_endline "- Imp Mutual Sum"; run (mutsum_imp);
-  print_endline "-----------------------------------";
   print_endline "- Delayed Echo"; run (echo_prog);

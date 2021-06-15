@@ -65,7 +65,7 @@ Section PROOF.
     { erewrite f_equal with (x:=[Main; F; G]).
       {
         eapply adequacy_type; revgoals.
-        { ss. left. refl. }
+        { ss. }
         { instantiate (1:=ε). unfold compose. ss. rewrite ! URA.unit_id. apply URA.wf_unit. }
         { uipropall. red. uipropall. }
       }
@@ -97,7 +97,7 @@ Section PROOF.
 
   Definition Main3: Mod.t := {|
     Mod.get_modsem := fun _ => {|
-      ModSem.fnsems := [("main", fun _ => trigger (Choose _))];
+      ModSem.fnsems := [("main", fun _ => Ret (Vint 55)↑)];
       ModSem.mn := "Main";
       ModSem.initial_mr := ε;
       ModSem.initial_st := tt↑;
@@ -114,8 +114,6 @@ Section PROOF.
     eapply SimModSem.adequacy_local_list. econs; [|econs; [|econs; ss]].
     - econs; ss. ii. econstructor 1 with (wf:=top1); ss. econs; et.
       init. unfold cfun, fun_to_src, body_to_src, mainBody. steps.
-      eapply Any.downcast_upcast in _UNWRAPN. des. subst.
-      force_l. eexists. steps.
     - econs; ss. ii. econstructor 1 with (wf:=top1); ss. econs; et.
       init. unfold cfun, fun_to_src, body_to_src, mainBody. steps.
       force_l. eexists. steps.

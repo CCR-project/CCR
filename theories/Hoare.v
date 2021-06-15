@@ -8,7 +8,7 @@ Require Import PCM.
 Require Import Any.
 Require Export HoareDef STB.
 Require Import Hoareproof0 Hoareproof1.
-Require Import SimModSem.
+Require Import SimModSem Logic.
 
 Set Implicit Arguments.
 
@@ -123,12 +123,11 @@ Section CANCEL.
 
   Hypothesis WFR: URA.wf (entry_r ⋅ rsum (ModSemL.initial_r_state ms_tgt)).
 
-  Hypothesis MAINM: In (SMod.main mainpre mainbody) mds.
+  Hypothesis MAINM: alist_find "main" sbtb = Some (mk_specbody (mk_simple (fun _ : () => (mainpre, fun _ => (⌜True⌝: iProp)%I))) mainbody).
 
   Theorem adequacy_type: refines_closed (Mod.add_list mds_tgt) (Mod.add_list mds_src).
   Proof.
-    ii. eapply adequacy_type_m2s.
-    { admit "main". }
+    ii. eapply adequacy_type_m2s; et.
     eapply adequacy_type_t2m; et.
     Unshelve.
     all:ss.
@@ -188,7 +187,7 @@ Section CANCEL.
 
   Hypothesis WFR: URA.wf (entry_r ⋅ rsum (ModSemL.initial_r_state ms_tgt)).
 
-  Hypothesis MAINM: In (SMod.main mainpre mainbody) mds.
+  Hypothesis MAINM: alist_find "main" sbtb = Some (mk_specbody (mk_simple (fun _ : () => (mainpre, fun _ => (⌜True⌝: iProp)%I))) mainbody).
 
   Let initial_mrs_eq_aux
       sk0
@@ -207,7 +206,7 @@ Section CANCEL.
     induction WEAKEN; ss.
     des; subst. ss.
     f_equal; ss.
-    eapply IHn.
+    eapply IHf.
     inv WEAKEN; ss.
   Qed.
 
@@ -218,7 +217,7 @@ Section CANCEL.
     { instantiate (1:=(fun md md_tgt => exists stb0, (<<MD: md_tgt = SMod.to_tgt stb0 md>>))).
       ii. ss. des. subst. eauto. }
     induction WEAKEN; ss. des; subst. ss.
-    f_equal. erewrite IHn; ss.
+    f_equal. erewrite IHf; ss.
   Qed.
 
   (* Lemma sk_fold_comm *)
@@ -344,7 +343,7 @@ Section CANCEL.
       (* | None => ε *)
       (* end). *)
       repeat match goal with
-      | |- context[List.map (?gg <*> ?ff) _] => rewrite <- List.map_map with (f:=ff) (g:=gg)
+      | |- context[List.map (?gg <*> ?ff) _] => erewrite <- List.map_map with (f:=ff) (g:=gg)
       end.
       erewrite initial_mrs_eq2.
       assert(T: (SMod.load_initial_mrs sk mds SModSem.initial_mr) = (ModSemL.initial_mrs ms_tgt)).
