@@ -111,7 +111,7 @@ int pop(struct Node## llref) {
       '(node, v)     <- (pushF_parg varg)?;;
       `new_node: val <- (ccall "alloc" [Vint 2]);;
       addr_v         <- (vadd new_node (Vint 0))?;;
-      addr_next      <- (vadd new_node (Vint 1))?;;
+      addr_next      <- (vadd new_node (Vint 8))?;;
       `_: val        <- (ccall "store" [addr_v;    v]);;
       `vret: val     <- (ccall "store" [addr_next; node]);;
       (* `_: val        <- (ccall "print_all" [new_node]);; *)

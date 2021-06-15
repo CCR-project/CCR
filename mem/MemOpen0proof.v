@@ -55,8 +55,10 @@ Section SIMMODSEM.
       { cbn. steps. }
       steps. inv WF. rr in RTGT. uipropall. clarify. clear_fast.
       apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
-      force_l. esplits; et. steps.
-      rr. econs; ss. rr. uipropall.
+      des_ifs.
+      { steps. force_l. esplits; et. steps.
+        rr. econs; ss. rr. uipropall. }
+      { steps. }
     }
     econs; ss.
     { unfold freeF, fun_to_src, body_to_src, cfun, KModSem.transl_fun_tgt. init.

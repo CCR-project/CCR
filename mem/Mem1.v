@@ -172,7 +172,7 @@ Section PROOF.
     (mk_simple (fun sz => (
                     (fun varg o => (⌜varg = [Vint (Z.of_nat sz)]↑ /\ (8 * (Z.of_nat sz) < modulus_64)%Z /\ o = ord_pure 0⌝: iProp)%I),
                     (fun vret => (∃ b, (⌜vret = (Vptr b 0)↑⌝)
-                                         ** OwnM ((b, 0%Z) |-> (List.repeat (Vint 0) sz))): iProp)%I
+                                         ** OwnM ((b, 0%Z) |-> (List.repeat Vundef sz))): iProp)%I
     ))).
 
   Let free_spec: fspec :=

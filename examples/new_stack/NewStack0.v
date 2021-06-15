@@ -26,7 +26,9 @@ Section PROOF.
   Definition newF: list val -> itree Es val :=
     fun args =>
       _ <- (pargs [] args)?;;
-      (ccall "alloc" [Vint 1])
+      `new_node: val  <- (ccall "alloc" [Vint 1]);;
+      `_: val         <- (ccall "store" [new_node; Vnullptr]);;
+      Ret new_node
   .
 
   (* def pop(Ptr stk): Int64 *)
@@ -49,7 +51,7 @@ Section PROOF.
       if is_zero b
       then (
           let addr_val    := hd in
-          `addr_next: val <- (vadd hd (Vint 1))?;;
+          `addr_next: val <- (vadd hd (Vint 8))?;;
           `v: val         <- (ccall "load"  [addr_val]);;
           `next: val      <- (ccall "load"  [addr_next]);;
           `_: val         <- (ccall "free"  [addr_val]);;
@@ -75,7 +77,7 @@ Section PROOF.
       '(stk, v)      <- (pargs [Tuntyped; Tuntyped] args)?;;
       `new_node: val <- (ccall "alloc" [Vint 2]);;
       let addr_val   := new_node in
-      addr_next      <- (vadd new_node (Vint 1))?;;
+      addr_next      <- (vadd new_node (Vint 8))?;;
       `hd: val       <- (ccall "load"  [stk]);;
       `_: val        <- (ccall "store" [addr_val;   v]);;
       `_: val        <- (ccall "store" [addr_next; hd]);;
