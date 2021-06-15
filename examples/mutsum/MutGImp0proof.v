@@ -17,7 +17,6 @@ From ExtLib Require Import
      Data.Map.FMapAList.
 
 Require Import HTactics.
-Require Import TODO.
 
 Require Import Imp.
 Require Import ImpNotations.

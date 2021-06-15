@@ -54,7 +54,7 @@ Section SIMMODSEM.
       steps. hcall _ _ _ with ""; ss.
       { splits; ss. ss. }
       mDesAll. clarify. steps.
-      steps. unfold TODO.unbool in *. rewrite _UNWRAPN. steps. astart 3.
+      steps. unfold unbool in *. rewrite _UNWRAPN. steps. astart 3.
       (* TODO: use bind rule to reduce redundancy *)
       des_ifs.
       { steps. acatch.

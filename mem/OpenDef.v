@@ -9,7 +9,6 @@ Require Import PCM.
 Require Import HoareDef.
 Require Import TODOYJ.
 Require Import Logic.
-Require Import TODO.
 (* Require Import Mem0 MemOpen. *)
 Require Import HoareDef.
 Require Import Red IRed.

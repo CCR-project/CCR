@@ -18,7 +18,6 @@ From ExtLib Require Import
 Require Import TODOYJ.
 Require Import HTactics Logic IPM.
 Require Import OpenDef.
-Require Import TODO.
 
 Set Implicit Arguments.
 
