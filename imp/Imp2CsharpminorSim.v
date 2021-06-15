@@ -52,6 +52,8 @@ Section PROOF.
 
   Context `{Σ: GRA.t}.
 
+  Variable srcprog : Imp.programL.
+
   Ltac sim_red := Red.prw ltac:(_red_gen) 2 0.
   Ltac sim_tau := (try sim_red); econs 3; ss; clarify; eexists; exists (step_tau _); eexists; split; auto.
 
@@ -61,17 +63,17 @@ Section PROOF.
   Definition ordN : nat -> nat -> Prop := fun a b => True.
 
   Lemma step_expr
-        e te tlof
+        e te
         tcode tf tcont tge tle tm (src: ModL.t) (tgt: Csharpminor.program)
         r ms mn ge le rstate pstate ktr
         i0 i1
-        (MLE: match_le tlof le tle)
+        (MLE: @match_le srcprog le tle)
         (CEXP: compile_expr e = Some te)
         (SIM:
            forall rv trv,
              wf_val rv ->
              eval_expr tge empty_env tle tm te trv ->
-             trv = map_val tlof rv ->
+             trv = @map_val srcprog rv ->
              paco3 (_sim (ModL.compile src) (semantics tgt) ordN) r i1
                    (ktr (rstate, pstate, (le, rv)))
                    (State tf tcode tcont empty_env tle tm))
@@ -109,7 +111,7 @@ Section PROOF.
       + sim_red. unfold assume. grind. pfold. econs 5; auto. i. eapply angelic_step in STEP; des; clarify.
         eexists; split; auto. left.
         do 6 (pfold; sim_tau; left).
-        sim_red. specialize SIM with (rv:=v) (trv:= map_val tlof v). apply SIM; auto.
+        sim_red. specialize SIM with (rv:=v) (trv:= @map_val srcprog v). apply SIM; auto.
         econs; eauto. ss. f_equal. apply map_val_vadd_comm; auto.
       + sim_triggerUB.
     -
@@ -118,18 +120,18 @@ Section PROOF.
   Variable EMI : nat.
 
   Lemma step_exprs
-        es tes tlof
+        es tes
         tcode tf tcont tge tle tm (src: ModL.t) (tgt: Csharpminor.program)
         r ms mn ge le rstate pstate ktr
         i0 i1
         (IDX: i0 = (List.length es)*EMI + i1)
-        (MLE: match_le tlof le tle)
+        (MLE: @match_le srcprog le tle)
         (CEXP: compile_exprs es = Some tes)
         (SIM:
            forall rvs trvs,
              Forall wf_val rvs ->
              eval_exprlist tge empty_env tle tm tes trvs ->
-             trvs = List.map (map_val tlof) rvs ->
+             trvs = List.map (@map_val srcprog) rvs ->
              paco3 (_sim (ModL.compile src) (semantics tgt) ordN) r i1
                    (ktr (rstate, pstate, (le, rvs)))
                    (State tf tcode tcont empty_env tle tm))
@@ -191,31 +193,34 @@ Section PROOF.
   .
 
 
+  Hypothesis map_blk_after_init :
+    forall src blk (ALLOCED : blk >= (src_init_nb src)),
+      (<<ALLOCMAP: (map_blk src blk) = Pos.of_succ_nat (2 + (ext_len src) + blk)>>).
+
+  Hypothesis map_blk_inj : forall src b1 b2, map_blk src b1 = map_blk src b2 -> b1 = b2.
+
+
   Theorem match_states_sim
-          (src: Imp.programL) tgt
+          tgt
           (modl: ModL.t) gm ge ms tlof
           ist cst
           i0
-          (TLOF: tlof = 2 + (List.length src.(ext_funsL)) + (List.length src.(ext_varsL)))
-          (GMAP: get_gmap src = Some gm)
-          (MODL: modl = (ModL.add (Mod.lift Mem) (ImpMod.get_modL src)))
+          (TLOF: tlof = 2 + (List.length srcprog.(ext_funsL)) + (List.length srcprog.(ext_varsL)))
+          (GMAP: get_gmap srcprog = Some gm)
+          (MODL: modl = (ModL.add (Mod.lift Mem) (ImpMod.get_modL srcprog)))
           (MODSEML: ms = modl.(ModL.enclose))
           (GENV: ge = Sk.load_skenv (Sk.sort modl.(ModL.sk)))
-          (MGENV: match_ge tlof ge (Genv.globalenv tgt))
-          (COMP: Imp2Csharpminor.compile2 src = OK tgt)
-          (MS: match_states tlof gm ge ms ist cst)
+          (MGENV: @match_ge srcprog ge (Genv.globalenv tgt))
+          (COMP: Imp2Csharpminor.compile srcprog = OK tgt)
+          (MS: match_states gm ge ms srcprog ist cst)
     :
       <<SIM: sim (ModL.compile modl) (semantics tgt) ordN i0 ist cst>>.
   Proof.
     (* move GMAP before ms. move MODSEML before GMAP. move GENV before MODSEML. move COMP before GENV. *)
     (* move TLOF before COMP. move MODL before COMP. move MGENV before COMP. *)
     (* revert_until TLOF. *)
-    depgen i0. depgen ist. depgen cst.
-    pcofix CIH. i.
-    inv MS.
-    unfold ordN in *.
-    unfold compile2 in COMP. des_ifs. rename Heq into GMAP.
-    set (tlof := 2 + (List.length src.(ext_funsL)) + (List.length src.(ext_varsL))) in *.
+    depgen i0. depgen ist. depgen cst. pcofix CIH. i.
+    inv MS. unfold ordN in *. unfold Imp2Csharpminor.compile in COMP. des_ifs. rename Heq into GMAP.
     destruct code.
     - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. ss; clarify.
       destruct tcont; ss; clarify. inv MCONT; clarify.
@@ -388,9 +393,9 @@ Section PROOF.
     - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_CallFun.
       ss. uo; des_ifs; sim_red.
       { sim_triggerUB. }
-      assert (COMP2: compile2 src = OK tgt).
-      { unfold compile2. rewrite GMAP. auto. }
-      unfold _compile2 in COMP. des_ifs.
+      assert (COMP2: Imp2Csharpminor.compile srcprog = OK tgt).
+      { unfold Imp2Csharpminor.compile. rewrite GMAP. auto. }
+      unfold _compile in COMP. des_ifs.
       unfold compile_gdefs in Heq0. uo; des_ifs; clarify.
       match goal with
       | [ |- paco3 (_sim _ (semantics ?tp) _) _ _ _ _ ] =>
@@ -476,11 +481,11 @@ Section PROOF.
       { eapply step_seq. }
       eexists; split; auto. right. eapply CIH.
       match goal with
-      | [ |- match_states _ _ ?_ge _ _ _ ] =>
+      | [ |- match_states _ ?_ge _ _ _ _ ] =>
         set (ge:=_ge) in *
       end.
       match goal with
-      | [ |- match_states _ _ _ ?_ms _ _ ] =>
+      | [ |- match_states _ _ ?_ms _ _ _ ] =>
         set (ms:=_ms) in *
       end.
       match goal with
@@ -501,7 +506,7 @@ Section PROOF.
       6:{ instantiate (1:= fun r0 =>
                              ` x4 : r_state * p_state * (lenv * val) <- itree_of_imp_pop ge ms s0 mn x le r0;;
                                     ` x0 : r_state * p_state * (lenv * val) <- next x4;; stack x0).
-          instantiate (1:=s0). instantiate (1:=ms). instantiate (1:=ge). instantiate (1:=gm).
+          instantiate (1:=s0). instantiate (1:=srcprog). instantiate (1:=ms). instantiate (1:=ge). instantiate (1:=gm).
           econs 2; ss; eauto. }
       3,4: eauto.
       1:{ eapply H5. }
@@ -521,13 +526,13 @@ Section PROOF.
     - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_CallSys.
       ss. uo; des_ifs; clarify. unfold ident_key in Heq0.
       rename Heq0 into FOUND. apply alist_find_some in FOUND.
-      assert (COMP2: compile2 src = OK tgt).
-      { unfold compile2. rewrite GMAP. auto. }
-      assert (GMAP2: get_gmap src = Some gm).
+      assert (COMP2: Imp2Csharpminor.compile srcprog = OK tgt).
+      { unfold Imp2Csharpminor.compile. rewrite GMAP. auto. }
+      assert (GMAP2: get_gmap srcprog = Some gm).
       { auto. }
       unfold get_gmap in GMAP. uo; des_ifs; ss.
       match goal with
-      | [ COMP: _compile2 ?_gm _ = OK _ |- _ ] =>
+      | [ COMP: _compile ?_gm _ = OK _ |- _ ] =>
         set (gm:=_gm) in *
       end.
       unfold compile_eFuns in FOUND.
@@ -537,7 +542,7 @@ Section PROOF.
       apply S2PBI in H1. clear S2PBI; clarify.
       unfold get_funsig in Heq1. clarify.
 
-      unfold _compile2 in COMP. des_ifs; ss; clarify.
+      unfold _compile in COMP. des_ifs; ss; clarify.
       unfold compile_gdefs in Heq. uo; des_ifs; ss; clarify.
       match goal with
       | [ |- paco3 (_sim _ (semantics ?_tgtp) _) _ _ _ _ ] =>
@@ -667,18 +672,20 @@ Section PROOF.
       rename Heq1 into NRANGE2. apply sumbool_to_bool_true in NRANGE2.
 
       assert (TGTDEFS: In (s2p "malloc", Gfun (External EF_malloc)) (prog_defs tgt)).
-      { unfold _compile2 in COMP. des_ifs; ss. rename Heq into CGDEFS.
+      { unfold _compile in COMP. des_ifs; ss. rename Heq into CGDEFS.
         unfold compile_gdefs in CGDEFS. uo; des_ifs; ss; clarify.
+        rename l1 into NOREPET. eapply Maps.PTree_Properties.of_list_norepet in NOREPET.
+        { eapply Maps.PTree.elements_correct. eapply NOREPET. }
         rewrite app_assoc. apply in_or_app. right. econs. ss. }
 
       assert (TGTMALLOC: exists blk, Genv.find_symbol (globalenv (semantics tgt)) (s2p "malloc") = Some blk).
-      { unfold _compile2 in COMP. des_ifs; ss. rename Heq into CGDEFS.
+      { unfold _compile in COMP. des_ifs; ss. rename Heq into CGDEFS.
         unfold compile_gdefs in CGDEFS. uo; des_ifs; ss; clarify.
         hexploit Genv.find_symbol_exists; eauto. ss. eauto. }
       des.
 
-      assert (COMP2: compile2 src = OK tgt).
-      { unfold compile2. rewrite GMAP. auto. }
+      assert (COMP2: Imp2Csharpminor.compile srcprog = OK tgt).
+      { unfold Imp2Csharpminor.compile. rewrite GMAP. auto. }
       hexploit tgt_genv_find_def_by_blk; eauto. i. rename H0 into TGTFINDDEF.
 
       pfold. econs 6; clarify.
@@ -948,164 +955,3 @@ Section PROOF.
   Admitted.
 
 End PROOF.
-
-Section PROOFALL.
-
-  From compcert Require Import Linking.
-  Import Maps.PTree.
-
-  (* Lemma list_norepet_NoDupB {K} {decK} : *)
-  (*   forall l, Coqlib.list_norepet l <-> @NoDupB K decK l = true. *)
-  (* Proof. *)
-  (*   split; i. *)
-  (*   - induction H; ss. *)
-  (*     clarify. *)
-  (*     destruct (in_dec decK hd tl); clarify. *)
-  (*   - induction l; ss; clarify. constructor. *)
-  (*     des_ifs. econs 2; auto. *)
-  (* Qed. *)
-
-  (* Definition wf_imp_prog (src : Imp.programL) := *)
-  (*   Coqlib.list_norepet (compile_gdefs (get_gmap src) src). *)
-
-  (* Lemma compile_then_wf : forall src tgt, *)
-  (*     compile src = OK tgt *)
-  (*     -> *)
-  (*     wf_imp_prog src. *)
-  (* Proof. *)
-  (*   unfold compile, _compile. i. *)
-  (*   destruct (compile_gdefs (get_gmap src) src) eqn:EQ; clarify. *)
-  (*   eauto using compile_gdefs_then_wf. *)
-  (* Qed. *)
-
-  (* Maps.PTree.elements_extensional 
-     we will rely on above theorem for commutation lemmas *)
-  Lemma _comm_link_imp_compile :
-    forall src1 src2 srcl tgt1 tgt2 tgtl,
-      compile src1 = OK tgt1 -> compile src2 = OK tgt2 ->
-      link_imp src1 src2 = Some srcl ->
-      link_prog tgt1 tgt2 = Some tgtl ->
-      compile srcl = OK tgtl.
-  Proof.
-  Admitted.
-
-  Definition wf_link {T} (program_list : list T) :=
-    exists h t, program_list = h :: t.
-
-  Inductive compile_list :
-    list programL -> list (Csharpminor.program) -> Prop :=
-  | compile_nil :
-      compile_list [] []
-  | compile_head :
-      forall src_h src_t tgt_h tgt_t,
-        compile src_h = OK tgt_h ->
-        compile_list src_t tgt_t ->
-        compile_list (src_h :: src_t) (tgt_h :: tgt_t).
-
-  Definition fold_left_option {T} f (t : list T) (opth : option T) :=
-    fold_left
-      (fun opt s2 => match opt with | Some s1 => f s1 s2 | None => None end)
-      t opth.
-
-  Lemma fold_left_option_None {T} :
-    forall f (l : list T), fold_left_option f l None = None.
-  Proof.
-    intros f. induction l; ss; clarify.
-  Qed.
-
-  Definition link_imp_list src_list :=
-    match src_list with
-    | [] => None
-    | src_h :: src_t =>
-      fold_left_option link_imp src_t (Some src_h)
-    end.
-
-  Definition link_clight_list (tgt_list : list (Csharpminor.program)) :=
-    match tgt_list with
-    | [] => None
-    | tgt_h :: tgt_t =>
-      fold_left_option link_prog tgt_t (Some tgt_h)
-    end.
-
-  Lemma comm_link_imp_compile :
-    forall src_list srcl tgt_list tgtl,
-      compile_list src_list tgt_list ->
-      link_imp_list src_list = Some srcl ->
-      link_clight_list tgt_list = Some tgtl
-      ->
-      compile srcl = OK tgtl.
-  Proof.
-    i. destruct src_list; destruct tgt_list; ss; clarify.
-    inv H; clarify.
-    generalize dependent srcl. generalize dependent tgtl.
-    generalize dependent p. generalize dependent p0.
-    induction H7; i; ss; clarify.
-    destruct (link_prog p0 tgt_h) eqn:LPt; ss; clarify.
-    2:{ rewrite fold_left_option_None in H1; clarify. }
-    destruct (link_imp p src_h) eqn:LPs; ss; clarify.
-    2:{ rewrite fold_left_option_None in H0; clarify. }
-    eapply IHcompile_list.
-    2: apply H1.
-    2: apply H0.
-    eapply _comm_link_imp_compile.
-    3: apply LPs.
-    3: apply LPt.
-    auto. auto.
-  Qed.
-
-  Context `{Σ: GRA.t}.
-
-  Lemma _comm_link_imp_link_mod :
-    forall src1 src2 srcl tgt1 tgt2 tgtl (ctx : ModL.t),
-      ImpMod.get_modL src1 = tgt1 ->
-      ImpMod.get_modL src2 = tgt2 ->
-      link_imp src1 src2 = Some srcl ->
-      ImpMod.get_modL srcl = tgtl ->
-      ModL.add (ModL.add ctx tgt1) tgt2
-      =
-      ModL.add ctx tgtl.
-  Proof.
-  Admitted.
-
-  Lemma comm_link_imp_link_mod :
-    forall src_list srcl tgt_list tgtl ctx,
-      List.map (fun src => ImpMod.get_modL src) src_list = tgt_list ->
-      link_imp_list src_list = Some srcl ->
-      ImpMod.get_modL srcl = tgtl ->
-      fold_left ModL.add tgt_list ctx
-      =
-      ModL.add ctx tgtl.
-  Proof.
-    destruct src_list eqn:SL; i; ss; clarify.
-    move p after l.
-    revert_until Σ.
-    induction l; i; ss; clarify.
-    destruct (link_imp p a) eqn:LI; ss; clarify.
-    2:{ rewrite fold_left_option_None in H0; clarify. }
-    erewrite _comm_link_imp_link_mod; eauto.
-  Qed.
-
-  Lemma single_compile_behavior_improves :
-    forall (src: Imp.program) tgt (beh: program_behavior),
-      compile src = OK tgt ->
-      program_behaves (Csharpminor.semantics tgt) beh ->
-      let srcM := ModL.add Mem (ImpMod.get_mod src) in
-      exists mbeh,
-        match_beh beh mbeh /\ Beh.of_program (ModL.compile srcM) mbeh.
-  Proof.
-  Admitted.
-
-  Theorem compile_behavior_improves :
-    forall (src_list : list Imp.program) srclM tgt_list tgtl (beh : program_behavior),
-      let src_list_lift := List.map Imp.lift src_list in
-      compile_list src_list_lift tgt_list ->
-      let src_list_mod := List.map (fun src => ImpMod.get_mod src) src_list in
-      Mod.add_list (Mem :: src_list_mod) = srclM ->
-      link_clight_list tgt_list = Some tgtl ->
-      program_behaves (Csharpminor.semantics tgtl) beh ->
-      exists mbeh,
-        match_beh beh mbeh /\ Beh.of_program (ModL.compile srclM) mbeh.
-  Proof.
-  Admitted.
-
-End PROOFALL.

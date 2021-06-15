@@ -73,13 +73,13 @@ Section ARITH.
   Qed.
 
   Lemma map_val_vadd_comm
-        tlof a b v
+        src a b v
         (VADD: vadd a b = Some v)
         (WFA: wf_val a)
         (WFB: wf_val b)
         (WFV: wf_val v)
     :
-      Values.Val.addl (map_val tlof a) (map_val tlof b) = map_val tlof v.
+      Values.Val.addl (@map_val src a) (@map_val src b) = @map_val src v.
   Proof.
     destruct a; destruct b; ss; clarify.
     - ss. repeat f_equal.
@@ -90,7 +90,7 @@ Section ARITH.
       unfold Z.divide in d. des. clarify. rewrite Z_div_mult in *; try nia.
       assert ((8 * z)%Z = (z * 8)%Z); try nia. rewrite <- H in *; clear H.
       rewrite Z.mul_add_distr_l in *. remember (8 * z)%Z as b. remember (8 * ofs)%Z as a.
-      clear Heqb Heqa ofs z tlof blk. move a before b.
+      clear Heqb Heqa ofs z blk. move a before b.
       pose (Ptrofs.agree64_repr Heq (Int64.unsigned (Int64.repr a))) as aInt.
       pose (Ptrofs.agree64_repr Heq (Int64.unsigned (Int64.repr b))) as bInt.
       hexploit Ptrofs.agree64_add; auto.
@@ -110,7 +110,7 @@ Section ARITH.
       unfold Z.divide in d. des. clarify. rewrite Z_div_mult in *; try nia.
       assert ((8 * z)%Z = (z * 8)%Z); try nia. rewrite <- H in *; clear H.
       rewrite Z.mul_add_distr_l in *. remember (8 * z)%Z as b. remember (8 * ofs)%Z as a.
-      clear Heqb Heqa ofs z tlof blk. move a before b.
+      clear Heqb Heqa ofs z blk. move a before b.
       pose (Ptrofs.agree64_repr Heq (Int64.unsigned (Int64.repr a))) as aInt.
       pose (Ptrofs.agree64_repr Heq (Int64.unsigned (Int64.repr b))) as bInt.
       hexploit Ptrofs.agree64_add; auto.

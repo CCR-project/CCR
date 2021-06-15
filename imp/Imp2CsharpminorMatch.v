@@ -112,45 +112,45 @@ Section MATCH.
   Definition imp_cont {T} {R} := (r_state * p_state * (lenv * T)) -> itree eventE (r_state * p_state * (lenv * R)).
   Definition imp_stack := (r_state * p_state * (lenv * val)) -> imp_state.
 
-  (* tlof will be the number of external symbols *)
   (* Hypothesis archi_ptr64 : Archi.ptr64 = true. *)
-  Variable tlof : nat.
+  Parameter map_blk : Imp.programL -> nat -> Values.block.
+  Definition ext_len : Imp.programL -> nat := fun src => List.length (src.(ext_varsL)) + List.length (src.(ext_funsL)).
+  Definition int_len : Imp.programL -> nat := fun src => List.length src.(defsL).
+  (* next block of src's initialized genv *)
+  Definition src_init_nb : Imp.programL -> nat := fun src => int_len src.
+  (* next block of tgt's initialized genv *)
+  Definition tgt_init_nb : Imp.programL -> Values.block := fun src => Pos.of_succ_nat (2 + (ext_len src) + (int_len src)).
 
-  Definition map_blk (blk : nat) : Values.block := Pos.of_nat (S(tlof + blk)).
-  Definition map_ofs (ofs : Z) : Z := 8*ofs.
+  (* Variable tlof : nat. *)
+  (* Definition map_blk (blk : nat) : Values.block := Pos.of_nat (S(tlof + blk)). *)
 
-  Definition map_val (v : Universe.val) : Values.val :=
+  Definition map_ofs (ofs : Z) : Z := 8 * ofs.
+
+  Definition map_val (src : Imp.programL) (v : Universe.val) : Values.val :=
     match v with
     | Vint z => Values.Vlong (Int64.repr z)
     | Vptr blk ofs =>
-      Values.Vptr (map_blk blk) (Ptrofs.of_int64 (Int64.repr (map_ofs ofs)))
+      Values.Vptr (map_blk src blk) (Ptrofs.of_int64 (Int64.repr (map_ofs ofs)))
     | Vundef => Values.Vundef
     end.
 
-  (* Definition map_val_opt (optv : option Universe.val) : option Values.val := *)
-  (*   match optv with *)
-  (*   | Some v => Some (map_val v) *)
-  (*   | None => None *)
-  (*   end. *)
-
-  Variant match_le : lenv -> temp_env -> Prop :=
+  Variant match_le (src : Imp.programL) : lenv -> temp_env -> Prop :=
   | match_le_intro
       sle tle
       (ML: forall x sv,
           (alist_find x sle = Some sv) ->
-          (Maps.PTree.get (s2p x) tle = Some (map_val sv)))
+          (Maps.PTree.get (s2p x) tle = Some (@map_val src sv)))
     :
-      match_le sle tle.
+      match_le src sle tle.
 
-  (* prog_defs has offset of 1 + length(efuns ++ evars ++ init_g) = 1 + tlof than Imp.defs *)
-  Variant match_ge : SkEnv.t -> (Genv.t fundef ()) -> Prop :=
+  Variant match_ge (src : Imp.programL) : SkEnv.t -> (Genv.t fundef ()) -> Prop :=
   | match_ge_intro
       sge tge
       (MG: forall symb blk,
           (sge.(SkEnv.id2blk) symb = Some blk) ->
-          (Genv.find_symbol tge (s2p symb) = Some (Pos.of_nat (S(tlof + blk)))))
+          (Genv.find_symbol tge (s2p symb) = Some (map_blk src blk)))
     :
-      match_ge sge tge.
+      match_ge src sge tge.
 
   Definition return_stmt := Sreturn (Some (Evar (s2p "return"))).
   Definition ret_call_cont k := Kseq return_stmt (call_cont k).
@@ -180,51 +180,52 @@ Section MATCH.
       match_code mn (fun x => (itr x >>= ktr)) (chead :: ctail)
   .
 
-  Inductive match_stack (mn: mname) : imp_stack -> option Csharpminor.cont -> Prop :=
+  Inductive match_stack (src: Imp.programL) (mn: mname) : imp_stack -> option Csharpminor.cont -> Prop :=
   | match_stack_bottom
     :
-      match_stack mn (fun x => itree_of_imp_pop_bottom ge ms mn x) (Some ret_call_main)
+      match_stack src mn (fun x => itree_of_imp_pop_bottom ge ms mn x) (Some ret_call_main)
 
   | match_stack_cret
       tf le tle next stack tcont id tid tpop retmn
-      (MLE: match_le le tle)
+      (MLE: @match_le src le tle)
       (MID: s2p id = tid)
 
       (WFCONT: wf_ccont tcont)
       (MCONT: match_code retmn next (get_cont_stmts tcont))
-      (MSTACK: match_stack retmn stack (get_cont_stack tcont))
+      (MSTACK: match_stack src retmn stack (get_cont_stack tcont))
 
       (TPOP: tpop = ret_call_cont (Kcall (Some tid) tf empty_env tle tcont))
     :
-      match_stack mn (fun x => (y <- (itree_of_imp_pop ge ms mn retmn id le x);; next y >>= stack)) (Some tpop)
+      match_stack src mn (fun x => (y <- (itree_of_imp_pop ge ms mn retmn id le x);; next y >>= stack)) (Some tpop)
   .
 
-  Variant match_mem : Mem.t -> Memory.Mem.mem -> Prop :=
+  Variant match_mem src : Mem.t -> Memory.Mem.mem -> Prop :=
   | match_mem_intro
       m tm
-      (NBLK: tm.(Mem.nextblock) = map_blk (m.(Mem.nb)))
+      (INITIALIZED: m.(Mem.nb) >= (src_init_nb src))
+      (NBLK: tm.(Mem.nextblock) = map_blk src (m.(Mem.nb)))
       (MMEM: forall blk ofs v,
           (<<SMCNT: m.(Mem.cnts) blk ofs = Some v>>) ->
-          ((<<TMCNT: Memory.Mem.load Mint64 tm (map_blk blk) (map_ofs ofs) = Some (map_val v)>>) /\
-           (<<TVALID: Mem.valid_access tm Mint64 (map_blk blk) (map_ofs ofs) Writable>>) /\
+          ((<<TMCNT: Memory.Mem.load Mint64 tm (map_blk src blk) (map_ofs ofs) = Some (@map_val src v)>>) /\
+           (<<TVALID: Mem.valid_access tm Mint64 (map_blk src blk) (map_ofs ofs) Writable>>) /\
            (<<WFOFS: (0 <= ofs)%Z>>)))
     :
-      match_mem m tm
+      match_mem src m tm
   .
 
-  Variant match_states : imp_state -> Csharpminor.state -> Prop :=
+  Variant match_states src : imp_state -> Csharpminor.state -> Prop :=
   | match_states_intro
       tf rstate pstate le tle code itr tcode m tm next stack tcont mn
       (CST: compile_stmt gm code = Some tcode)
-      (ML: match_le le tle)
+      (ML: @match_le src le tle)
       (PSTATE: pstate "Mem"%string = m↑)
-      (MM: match_mem m tm)
+      (MM: @match_mem src m tm)
       (WFCONT: wf_ccont tcont)
       (MCONT: match_code mn next (get_cont_stmts tcont))
-      (MSTACK: match_stack mn stack (get_cont_stack tcont))
+      (MSTACK: @match_stack src mn stack (get_cont_stack tcont))
       (ITR: itr = itree_of_cont_stmt code ge le ms mn (rstate, pstate))
     :
-      match_states (x <- itr;; next x >>= stack) (State tf tcode tcont empty_env tle tm)
+      match_states src (x <- itr;; next x >>= stack) (State tf tcode tcont empty_env tle tm)
   .
 
 End MATCH.

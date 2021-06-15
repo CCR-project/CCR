@@ -134,32 +134,37 @@ Section GENV.
   Lemma in_tgt_prog_defs_ifuns
         gm tgt mn fn impf precf cf
         (GMAP: get_gmap src = Some gm)
-        (COMP: compile2 src = OK tgt)
+        (COMP: compile src = OK tgt)
         (INSRC: In (mn, (fn, impf)) (prog_funsL src))
         (PRECF: pre_compile_function fn impf = Some precf)
         (COMPF: get_function gm (s2p fn) (Gfun (Internal precf)) = Some (Gfun (Internal cf)))
     :
       In (s2p fn, Gfun (Internal cf)) tgt.(prog_defs).
   Proof.
-    unfold compile2 in COMP. unfold _compile2 in COMP. des_ifs.
+    unfold compile in COMP. unfold _compile in COMP. des_ifs.
     unfold compile_gdefs in Heq0. uo; des_ifs.
-    hexploit exists_compiled_function; eauto.
-    i. des. clarify. ss. do 2 (apply in_or_app; right).
-    ss. do 2 right. apply in_or_app; left. auto.
+    hexploit exists_compiled_function; eauto. i. des. clarify. ss.
+    match goal with
+    | [ |- In _ (Maps.PTree.elements (Maps.PTree_Properties.of_list ?_deflist)) ] => set (deflist:=_deflist) in *
+    end.
+    rename l0 into NOREPET. eapply Maps.PTree_Properties.of_list_norepet in NOREPET.
+    { eapply Maps.PTree.elements_correct. eapply NOREPET. }
+    subst deflist. do 2 (apply in_or_app; right). ss. do 2 right. apply in_or_app; left. auto.
   Qed.
 
   Lemma in_tgt_prog_defs_efuns
         gm tgt fn sig
         (GMAP: get_gmap src = Some gm)
-        (COMP: compile2 src = OK tgt)
+        (COMP: compile src = OK tgt)
         (INSRC: In (fn, sig) (ext_funsL src))
     :
       In (s2p fn, Gfun (External (EF_external fn (make_signature sig)))) tgt.(prog_defs).
   Proof.
-    unfold compile2 in COMP. unfold _compile2 in COMP. des_ifs.
+    unfold compile in COMP. unfold _compile in COMP. des_ifs.
     unfold compile_gdefs in Heq0. uo; des_ifs. ss.
-    apply in_or_app. left. 
-    clear Heq0 l0 l1.
+    rename l0 into NOREPET. eapply Maps.PTree_Properties.of_list_norepet in NOREPET.
+    { eapply Maps.PTree.elements_correct. eapply NOREPET. }
+    apply in_or_app. left. depgen fn. depgen Heq. clear; i.
     unfold get_gmap in Heq. uo; des_ifs; ss; clarify.
     unfold compile_eFuns. rewrite List.map_map.
     match goal with
@@ -249,43 +254,43 @@ Section GENV.
 
   Lemma tgt_genv_match_symb_def
         tgt name b gd1 gd2
-        (COMP: compile2 src = OK tgt)
+        (COMP: compile src = OK tgt)
         (GFSYM: Genv.find_symbol (Genv.globalenv tgt) (s2p name) = Some b)
         (GFDEF: Genv.find_def (Genv.globalenv tgt) b = Some gd1)
         (INTGT: In (s2p name, gd2) (prog_defs tgt))
     :
       gd1 = gd2.
   Proof.
-    unfold compile2 in COMP. des_ifs. rename Heq into GMAP. rename g into gm.
-    unfold _compile2 in COMP. des_ifs. rename Heq into CGDEFS. rename l into cgdefs.
+    unfold compile in COMP. des_ifs. rename Heq into GMAP. rename g into gm.
+    unfold _compile in COMP. des_ifs. rename Heq into CGDEFS. rename l into cgdefs.
     rename l0 into WFCGDEFS.
     match goal with
     | [ INTGT: In _ (prog_defs ?_tgt) |- _ ] =>
       remember _tgt as tgt
     end.
     hexploit prog_defmap_norepet.
-    { unfold prog_defs_names. instantiate (1:=tgt). rewrite Heqtgt. ss. }
+    { unfold prog_defs_names. instantiate (1:=tgt). rewrite Heqtgt. ss. eapply Maps.PTree.elements_keys_norepet. }
     { eapply INTGT. }
     i. apply Genv.find_def_symbol in H. des. clarify.
   Qed.
 
   Lemma tgt_genv_find_def_by_blk
         tgt name b gd
-        (COMP: compile2 src = OK tgt)
+        (COMP: compile src = OK tgt)
         (GFSYM: Genv.find_symbol (Genv.globalenv tgt) (s2p name) = Some b)
         (INTGT: In (s2p name, gd) (prog_defs tgt))
     :
       Genv.find_def (Genv.globalenv tgt) b = Some gd.
   Proof.
-    unfold compile2 in COMP. des_ifs. rename Heq into GMAP. rename g into gm.
-    unfold _compile2 in COMP. des_ifs. rename Heq into CGDEFS. rename l into cgdefs.
+    unfold compile in COMP. des_ifs. rename Heq into GMAP. rename g into gm.
+    unfold _compile in COMP. des_ifs. rename Heq into CGDEFS. rename l into cgdefs.
     rename l0 into WFCGDEFS.
     match goal with
     | [ INTGT: In _ (prog_defs ?_tgt) |- _ ] =>
       remember _tgt as tgt
     end.
     hexploit prog_defmap_norepet.
-    { unfold prog_defs_names. instantiate (1:=tgt). rewrite Heqtgt. ss. }
+    { unfold prog_defs_names. instantiate (1:=tgt). rewrite Heqtgt. ss. eapply Maps.PTree.elements_keys_norepet. }
     { eapply INTGT. }
     i. apply Genv.find_def_symbol in H. des. clarify.
   Qed.

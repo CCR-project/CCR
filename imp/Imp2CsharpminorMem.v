@@ -17,23 +17,35 @@ From compcert Require Import Csharpminor.
 
 Set Implicit Arguments.
 
+
 Section MEM.
 
-  Variable tlof : nat.
+  Hypothesis map_blk_after_init :
+    forall src blk (ALLOCED : blk >= (src_init_nb src)),
+      (<<ALLOCMAP: (map_blk src blk) = Pos.of_succ_nat (2 + (ext_len src) + blk)>>).
+
+  Hypothesis map_blk_inj : forall src b1 b2, map_blk src b1 = map_blk src b2 -> b1 = b2.
+
+  Variable src : Imp.programL.
   Variable m : Mem.t.
   Variable tm : Mem.mem.
-  Context {MM: match_mem tlof m tm}.
+  Context {MM: @match_mem src m tm}.
 
   Lemma match_mem_alloc
         n m2 blk tm2 tblk
         (SMEM: (blk, m2) = Mem.alloc m n)
         (TMEM: (tm2, tblk) = Memory.Mem.alloc tm (- size_chunk Mptr) (map_ofs n))
     :
-      (<<MM2: match_mem tlof m2 tm2>>).
+      (<<MM2: @match_mem src m2 tm2>>).
   Proof.
     inv MM. inv SMEM. split; i; ss; try split.
-    - hexploit Mem.nextblock_alloc; eauto. i. rewrite H. rewrite NBLK. unfold map_blk.
-      rewrite Nat.add_succ_r. sym; rewrite <- Pos.of_nat_succ; sym. rewrite Pos.succ_of_nat; ss.
+    - lia.
+    - hexploit Mem.nextblock_alloc; eauto. i. rewrite H. rewrite NBLK.
+      hexploit map_blk_after_init.
+      { instantiate (2:= Mem.nb m). instantiate (1:=src). lia. }
+      hexploit map_blk_after_init.
+      { instantiate (2:= S (Mem.nb m)). instantiate (1:=src). lia. }
+      i. rewrite H1. rewrite H0. lia.
     - rename H into SMEM. pose (NPeano.Nat.eq_dec (Mem.nb m) blk) as BLK. destruct BLK.
       + clarify; ss. unfold update in SMEM. des_ifs. clear e. des. clarify. ss. rewrite <- NBLK.
         rewrite andb_true_iff in Heq. des. rewrite Z.leb_le in Heq. rewrite Z.ltb_lt in Heq0.
@@ -58,17 +70,18 @@ Section MEM.
         hexploit Mem.valid_access_alloc_other; eauto.
   Qed.
 
-  Corollary match_mem_malloc
-            n m2 blk tm2
-            (SMEM: (blk, m2) = Mem.alloc m n)
-            (TMEM : Memory.Mem.store Mptr (fst (Memory.Mem.alloc tm (- size_chunk Mptr) (map_ofs n)))
-                                     (snd (Memory.Mem.alloc tm (- size_chunk Mptr) (map_ofs n))) (- size_chunk Mptr)
-                                     (Values.Vlong (Int64.repr (map_ofs n))) = Some tm2)
+  Lemma match_mem_malloc
+        n m2 blk tm2
+        (SMEM: (blk, m2) = Mem.alloc m n)
+        (TMEM : Memory.Mem.store Mptr (fst (Memory.Mem.alloc tm (- size_chunk Mptr) (map_ofs n)))
+                                 (snd (Memory.Mem.alloc tm (- size_chunk Mptr) (map_ofs n))) (- size_chunk Mptr)
+                                 (Values.Vlong (Int64.repr (map_ofs n))) = Some tm2)
     :
-      <<MM2: match_mem tlof m2 tm2>>.
+      <<MM2: @match_mem src m2 tm2>>.
   Proof.
     unfold map_ofs in *. remember (Memory.Mem.alloc tm (- size_chunk Mptr) (8 * n)) as tm1. destruct tm1 as [tm1 tblk].
     hexploit match_mem_alloc; eauto. i. inv H. split; i; try split.
+    - lia.
     - rewrite <- NBLK. eapply Mem.nextblock_store; eauto.
     - rename H into SRCM. pose (NPeano.Nat.eq_dec blk blk0) as BLK. destruct BLK.
       + clarify; ss. unfold map_ofs in *. unfold size_chunk in *. des_ifs; ss.
@@ -79,8 +92,8 @@ Section MEM.
       + erewrite Mem.load_store_other; eauto.
         * apply MMEM in SRCM. des; eauto.
         * left. sym in Heqtm1. apply Mem.alloc_result in Heqtm1. clarify. ss.
-          unfold Mem.alloc in SMEM. inv SMEM. ss. inv MM. rewrite NBLK0. depgen n0. clear. i.
-          unfold map_blk in *. nia.
+          unfold Mem.alloc in SMEM. inv SMEM. ss. inv MM. rewrite NBLK0. depgen n0. depgen map_blk_inj.
+          clear; ii. apply map_blk_inj in H. clarify.
     - apply MMEM in H; des. hexploit Mem.store_valid_access_1; eauto. 
   Qed.
 
@@ -88,7 +101,7 @@ Section MEM.
         blk ofs m2
         (SMEM: Mem.free m blk ofs = Some m2)
     :
-      (<<MM2: match_mem tlof m2 tm>>).
+      (<<MM2: @match_mem src m2 tm>>).
   Proof.
     inv MM. unfold Mem.free in SMEM. des_ifs. apply MMEM in Heq. des.
     split; i; eauto. ss. unfold update in H. des_ifs; eauto.
@@ -99,11 +112,11 @@ Section MEM.
         (SMEM: Mem.store m blk ofs v = Some m2)
     :
       exists tm2,
-        ((<<TMEM: Memory.Mem.store Mint64 tm (map_blk tlof blk) (map_ofs ofs) (map_val tlof v) = Some tm2>>) /\
-        (<<MM2: match_mem tlof m2 tm2>>)).
+        ((<<TMEM: Memory.Mem.store Mint64 tm (map_blk src blk) (map_ofs ofs) (@map_val src v) = Some tm2>>) /\
+        (<<MM2: @match_mem src m2 tm2>>)).
   Proof.
     inv MM. unfold Mem.store in SMEM. des_ifs. hexploit MMEM; eauto. i; des.
-    hexploit (Mem.valid_access_store tm Mint64 (map_blk tlof blk) (map_ofs ofs) (map_val tlof v)); eauto.
+    hexploit (Mem.valid_access_store tm Mint64 (map_blk src blk) (map_ofs ofs) (@map_val src v)); eauto.
     i. dependent destruction X. rename x into tm2. rename e into TGTM2. exists tm2. split; auto. try split; i; try split; ss; eauto.
     - erewrite Mem.nextblock_store; eauto.
     - des_ifs.
@@ -111,8 +124,6 @@ Section MEM.
         erewrite Mem.load_store_same; eauto. unfold map_val. ss. des_ifs.
       + bsimpl. des.
         * apply sumbool_to_bool_false in Heq0. hexploit Mem.load_store_other; eauto.
-          { left. instantiate (1:=map_blk tlof blk0). ii. unfold map_blk in H0.
-            do 2 (rewrite <- Pos.of_nat_succ in H0). apply SuccNat2Pos.inj in H0. lia. }
           i. erewrite H0. apply MMEM in H. des. eauto.
         * apply sumbool_to_bool_false in Heq0. hexploit Mem.load_store_other; eauto.
           2:{ i. erewrite H0. apply MMEM in H. des. eauto. }
@@ -129,7 +140,7 @@ Section MEM.
         blk ofs
         (WFOFS: intrange_64 (scale_ofs ofs))
         (SRC: Mem.valid_ptr m blk ofs = true)
-        (TGT: Mem.valid_pointer tm (map_blk tlof blk) (Ptrofs.unsigned (Ptrofs.of_int64 (Int64.repr (map_ofs ofs)))) = false)
+        (TGT: Mem.valid_pointer tm (map_blk src blk) (Ptrofs.unsigned (Ptrofs.of_int64 (Int64.repr (map_ofs ofs)))) = false)
     :
       False.
   Proof.
@@ -157,7 +168,7 @@ Section MEM.
         (WFB: wf_val b)
         (SRCCMP: vcmp m a b = Some tf)
     :
-      Values.Val.cmplu (Mem.valid_pointer tm) Ceq (map_val tlof a) (map_val tlof b) =
+      Values.Val.cmplu (Mem.valid_pointer tm) Ceq (@map_val src a) (@map_val src b) =
       if (tf) then Some (Values.Vtrue) else Some (Values.Vfalse).
   Proof.
     destruct a eqn:DESA; destruct b eqn:DESB; destruct tf; clarify; unfold vcmp in SRCCMP; des_ifs.
@@ -178,13 +189,13 @@ Section MEM.
       all: exfalso; eapply valid_ptr_contra; eauto.
     - bsimpl; des.
       + apply sumbool_to_bool_false in H0. rename H0 into BLK. unfold Values.Val.cmplu. ss. des_ifs.
-        1,2: unfold map_blk in *; do 2 rewrite <- Pos.of_nat_succ in e; apply SuccNat2Pos.inj in e; lia.
+        1,2: apply map_blk_inj in e; clarify.
         bsimpl. des.
         { pose (valid_ptr_contra _ _ WFA Heq Heq2). clarify. }
         { pose (valid_ptr_contra _ _ WFB Heq0 Heq2). clarify. }
       + apply sumbool_to_bool_false in H0. rename H0 into OFS. unfold Values.Val.cmplu. ss. des_ifs.
-        { unfold map_blk in *. do 2 rewrite <- Pos.of_nat_succ in e; apply SuccNat2Pos.inj in e. apply Nat.add_cancel_l in e.
-          clarify. ss. unfold Ptrofs.eq. hexploit (valid_ptr_wf_ofs _ _ Heq); i. hexploit (valid_ptr_wf_ofs _ _ Heq0); i.
+        { apply map_blk_inj in e; clarify. ss.
+          unfold Ptrofs.eq. hexploit (valid_ptr_wf_ofs _ _ Heq); i. hexploit (valid_ptr_wf_ofs _ _ Heq0); i.
           unfold map_ofs in *. rewrite! unwrap_Ptrofs_Int64_z; try nia; eauto. erewrite Coqlib.zeq_false; try lia. ss. }
         { bsimpl; des.
           - pose (valid_ptr_contra _ _ WFA Heq Heq2). clarify.
