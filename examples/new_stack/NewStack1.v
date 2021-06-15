@@ -10,6 +10,7 @@ Require Import Logic.
 Require Import Mem1.
 Require Import TODOYJ.
 Require Import AList.
+Require Import NewStackHeader.
 
 Set Implicit Arguments.
 
@@ -100,16 +101,11 @@ Section PROOF.
     eapply y.
   Defined.
 
-  Definition DebugStb: list (gname * fspec).
-   eapply (Seal.sealing "stb").
-   eapply [("debug", fspec_trivial)].
-  Defined.
-
   Definition KStackSem: KModSem.t := {|
     KModSem.fnsems := StackSbtb;
     KModSem.mn := "Stack";
     KModSem.initial_mr := ε;
-    KModSem.initial_st := (gmap_empty: gmap mblock (list Z))↑;
+    KModSem.initial_st := (∅: gmap mblock (list Z))↑;
   |}
   .
   Definition SStackSem: SModSem.t := KStackSem.
@@ -129,4 +125,3 @@ Section PROOF.
 
 End PROOF.
 Global Hint Unfold StackStb: stb.
-Global Hint Unfold DebugStb: stb.

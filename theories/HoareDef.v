@@ -80,7 +80,7 @@ Let Any_src := Any.t. (*** src argument (e.g., List nat) ***)
 Let Any_mid := Any.t. (*** src argument (e.g., List nat) ***)
 Let Any_tgt := Any.t. (*** tgt argument (i.e., list val) ***)
 
-Require Import Logic.
+Require Import IPM.
 
 Section FSPEC.
   Context `{Σ: GRA.t}.

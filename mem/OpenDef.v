@@ -1037,6 +1037,54 @@ Section KTACTICS.
     guclo lordC_spec. econs; et. { rewrite OrdArith.add_O_r. refl. }
   Qed.
 
+  Lemma trivial_init_clo
+        A
+        (R_src: A -> Any.t -> Any.t -> iProp) (R_tgt: A -> Any.t -> Any.t -> iProp)
+        fn f_tgt gstb body
+        (POST: forall a mp_src mp_tgt mr_src mr_tgt fr_src ctx varg
+                      (RTGT: R_tgt a mp_src mp_tgt mr_tgt)
+                      (ACC: current_iPropL ctx [("INV", R_src a mp_src mp_tgt)])
+          ,
+            gpaco6 (_sim_itree (mk_wf R_src R_tgt)) (cpn6 (_sim_itree (mk_wf R_src R_tgt))) bot6 bot6
+                   _ _
+                   (fun _ _ => eq)
+                   89
+                   (((mr_src, mp_src), fr_src),
+                    ((interp_hCallE_tgt gstb ord_top (KModSem.transl_fun_tgt body varg) ctx)
+                      >>= (HoareFunRet (fun (_: unit) (reth retl: Any.t) => (⌜reth = retl⌝%I): iProp) tt))
+                   )
+                   (((mr_tgt, mp_tgt), ε), (f_tgt varg))
+        )
+    :
+      sim_fnsem (mk_wf R_src R_tgt) (fn, fun_to_tgt gstb (mk_kspecbody fspec_trivial body body)) (fn, f_tgt)
+  .
+  Proof.
+    init. harg. rename a into aa.
+    Ltac dull_tac :=
+      match goal with
+      | ord_cur: ord |- _ =>
+        assert(ord_cur = ord_top) by (on_current ltac:(fun ACC => clear - ACC); mClear "INV";
+                                      des_ifs; mDesAll; des; ss);
+        subst
+      end;
+      match goal with
+      | |- context[map_or_else (Any.split ?v) ?l (KModSem.transl_fun_tgt ?body ?varg_src)] =>
+        let r := constr:(KModSem.transl_fun_tgt body varg_src) in
+        let varg := match goal with | [H: context[varg_src = ?varg] |- _] => varg end in
+        replace (map_or_else (Any.split v) l r) with (KModSem.transl_fun_tgt body varg);
+        [|on_current ltac:(fun ACC => clear - ACC); mClear "INV"; des_ifs; mDesAll; ss; des; subst; ss; fail]
+      end;
+      mClear "PRE"; rename x into _unused.
+    dull_tac.
+    exploit POST; et. intro SIM.
+    match goal with
+    | [SIM: gpaco6 _ _ _ _ _ _ _ _ ?i0 _ |- gpaco6 _ _ _ _ _ _ _ _ ?i1 _] =>
+      replace i1 with i0; eauto
+    end.
+    repeat f_equal. Local Transparent HoareFunRet. unfold HoareFunRet. Local Opaque HoareFunRet.
+    extensionality x. des_ifs. grind. rewrite map_or_else_same. ss.
+  Qed.
+
 End KTACTICS.
 
 Ltac kstart _at_most :=
@@ -1062,6 +1110,8 @@ Ltac kcatch :=
 Ltac kstop :=
   eapply APCK_stop_clo;
   [(try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r; eapply Nat.lt_succ_diag_r)]))|].
+
+Ltac trivial_init := eapply trivial_init_clo; i; des_u.
 
 
 

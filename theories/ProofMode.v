@@ -579,6 +579,11 @@ Section TACTICS.
 End TACTICS.
 Arguments current_iPropL: simpl never.
 
+Section INW.
+  Context `{Σ: GRA.t}.
+  Definition iNW (name: string) (P: iProp'): iProp' := P.
+End INW.
+Hint Unfold iNW.
 
 Notation "☀----IPROPS----☀ ctx" := (@current_iPropL _ ctx)
                                  (at level 2,
@@ -847,6 +852,11 @@ Ltac mDes' l :=
     | @bi_sep _ _ _ => mDesSep Hn
     | @bi_and _ _ (@bi_pure _ _) => mDesAndPureR Hn
     | @bi_and _ (@bi_pure _ _) _ => mDesAndPureL Hn
+    | @iNW _ ?Hn' ?x =>
+      match Hn' with
+      | Hn => idtac
+      | _ => let Hn' := get_fresh_name_tac Hn' in mRename Hn into Hn'
+      end; on_current ltac:(fun H => unfold iNW in H at 1)
     | _ => mDes' tl
     end
   end.
@@ -859,10 +869,33 @@ Ltac mDes :=
 Ltac mDesAll :=
   repeat mDes.
 
+Goal <<A: True>>. ss. Abort.
+Notation "{{ x : t }}" := (@iNW _ x t) (at level 80, x at next level, t at next level, no associativity).
+Goal <<A: True>>. ss. Abort.
+
 Section TEST.
   Context {Σ: GRA.t}.
   Context {M: URA.t}.
   Context `{@GRA.inG M Σ}.
+
+  Variable ctx: Σ.
+
+  Notation "Hns 'TO' Hns'" := ((current_iPropL ctx Hns) -> (current_iPropL ctx Hns')) (at level 60).
+  Ltac check := erewrite f_equal; [eassumption|refl].
+
+  (* check tactic *)
+  Goal ∀ X, [("A", X)] TO [("B", X)].
+  Proof. i. mDesAll. Fail check. Abort.
+
+  (* iNW *)
+  (* Goal ∀ X, [("A", {{ "A" ; X }} )] TO [("A", X)]. *)
+  Goal ∀ X, [("A", {{ "A" : X }} )] TO [("A", X)].
+  Proof. i. mDesAll. check. Qed.
+
+  Goal ∀ P Q X Y, [("A", {{"A": X}}); ("H", {{"B": P}} ** {{"C": Q}}); ("B", {{"D": Y}})]
+                    TO
+                    [("D", Y); ("B1", P); ("C", Q); ("A", X)].
+  Proof. i. mDesAll. check. Qed.
 
   (* mDesSep *)
   Goal forall ctx P Q X Y
@@ -1178,3 +1211,31 @@ Module PARSE.
 
   End PARSE.
 End PARSE.
+
+
+
+Ltac clear_fast :=
+  repeat multimatch goal with
+         | a:unit |- _ => destruct a
+         | H:True |- _ => clear H
+         | H:(True)%I _ |- _ => clear H
+         | H: _ |- _ =>
+           (*** unused definitions ***)
+           tryif (is_prop H)
+           then idtac
+           else clear H
+         end
+.
+
+Ltac iSplits :=
+  intros; unfold NW, iNW;
+  repeat match goal with
+         | [ |- @ex _ _ ] => eexists
+         | [ |- _ /\ _ ] => split
+         | [ |- @sig _ _ ] => eexists
+         | [ |- @sigT _ _ ] => eexists
+         | [ |- @prod _  _ ] => split
+         | |- environments.envs_entails _ (@bi_exist _ _ _) => iExists _
+         | _ => iSplit
+         end
+.
