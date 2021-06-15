@@ -7,7 +7,7 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import Hoare.
-Require Import STB KnotHeader SimModSemL.
+Require Import STB KnotHeader SimModSem.
 Require Import KnotMain0 KnotMain1 Knot0 Knot1 Mem0 Mem1.
 Require Import KnotMain01proof Knot01proof Mem01proof.
 
@@ -17,23 +17,6 @@ Set Implicit Arguments.
 
 
 
-
-Section AUX.
-
-  Context `{Σ: GRA.t}.
-
-  Definition refines_closed (md_tgt md_src: ModL.t): Prop :=
-    Beh.of_program (ModL.compile md_tgt) <1= Beh.of_program (ModL.compile md_src)
-  .
-
-  Lemma refines_close: SimModSem.refines <2= refines_closed.
-  Proof. ii. specialize (PR nil). ss. unfold Mod.add_list in *. ss. rewrite ! ModL.add_empty_l in PR. eauto. Qed.
-
-  Definition add_list (ms: list ModL.t): ModL.t := fold_right ModL.add ModL.empty ms.
-
-  Global Program Instance refines_closed_PreOrder: PreOrder refines_closed.
-
-End AUX.
 
 Section PROOF.
 
@@ -72,9 +55,9 @@ Section PROOF.
   Definition KnotAll1: ModL.t := Mod.add_list [KnotMain1.Main RecStb GlobalStb; Knot1.Knot RecStb FunStb GlobalStb; Mem1.Mem].
 
   Lemma KnotAll01_correct:
-    SimModSem.refines KnotAll0 KnotAll1.
+    refines KnotAll0 KnotAll1.
   Proof.
-    eapply SimModSem.adequacy_local_list. econs; [|econs; [|econs; ss]].
+    eapply adequacy_local_list. econs; [|econs; [|econs; ss]].
     - eapply KnotMain01proof.correct with (RecStb0:=RecStb) (FunStb0:=FunStb) (GlobalStb0:=GlobalStb).
       + ii. ss. rewrite ! eq_rel_dec_correct in *. des_ifs.
       + ii. econs; ss. refl.

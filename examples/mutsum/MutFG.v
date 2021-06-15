@@ -7,7 +7,7 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import Hoare.
-Require Import MutHeader SimModSemL.
+Require Import MutHeader SimModSem.
 Require Import MutFImp MutGImp MutF0 MutG0 MutMain0 MutF1 MutG1 MutMain1.
 Require Import MutFImp0proof MutGImp0proof MutF01proof MutG01proof MutMain01proof.
 
@@ -38,18 +38,18 @@ Section PROOF.
       ].
 
   Lemma FGImp0_correct:
-    SimModSem.refines FGImp FG0.
+    refines FGImp FG0.
   Proof.
-    eapply SimModSem.adequacy_local_list. econs; [|econs; [|econs; ss]].
-    - econs; ss. ii. eapply SimModSem.ModSemPair.self_sim_mod. ss. repeat (econs; ss).
+    eapply adequacy_local_list. econs; [|econs; [|econs; ss]].
+    - econs; ss. ii. eapply ModSemPair.self_sim.
     - split; auto. ii. ss. eapply MutFImp0proof.correct.
     - split; auto. ii. ss. eapply MutGImp0proof.correct.
   Qed.
 
   Lemma FG01_correct:
-    SimModSem.refines FG0 FG1.
+    refines FG0 FG1.
   Proof.
-    eapply SimModSem.adequacy_local_list. econs; [|econs; [|econs; ss]].
+    eapply adequacy_local_list. econs; [|econs; [|econs; ss]].
     - eapply MutMain01proof.correct.
     - eapply MutF01proof.correct.
     - eapply MutG01proof.correct.
@@ -111,7 +111,7 @@ Section PROOF.
   Lemma FG23_correct: refines_closed (FG2) (FG3).
   Proof.
     eapply refines_close.
-    eapply SimModSem.adequacy_local_list. econs; [|econs; [|econs; ss]].
+    eapply adequacy_local_list. econs; [|econs; [|econs; ss]].
     - econs; ss. ii. econstructor 1 with (wf:=top1); ss. econs; et.
       init. unfold cfun, fun_to_src, body_to_src, mainBody. steps.
     - econs; ss. ii. econstructor 1 with (wf:=top1); ss. econs; et.
