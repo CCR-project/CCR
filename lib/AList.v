@@ -296,6 +296,19 @@ Tactic Notation "asimpl" :=
   (try unfold alist_remove, alist_add); simpl.
 
 
+
+
+
+Module Type TotalOrderBool <: TotalTransitiveLeBool'.
+  Parameter t : Type.
+  Parameter leb : t -> t -> bool.
+  Parameter leb_total : forall x y : t, leb x y = true \/ leb y x = true.
+  Parameter leb_trans : Transitive leb.
+
+  Parameter eqA : t -> t -> Prop.
+  Parameter eqb_eq : forall x y : t, eqA x y <-> leb x y = true /\ leb y x.
+End TotalOrderBool.
+
 Definition ascii_le (c0 c1: Ascii.ascii): bool :=
   (Ascii.nat_of_ascii c0 <=? Ascii.nat_of_ascii c1)%nat.
 
@@ -322,7 +335,27 @@ Fixpoint string_le (s0 s1: string): bool :=
     else ascii_le hd0 hd1
   end.
 
-Module AsciiOrder <: TotalTransitiveLeBool'.
+Lemma string_le_antisym s0 s1
+      (EQ0: string_le s0 s1 = true)
+      (EQ1: string_le s1 s0 = true)
+  :
+    s0 = s1.
+Proof.
+  revert s1 EQ0 EQ1. induction s0; ss.
+  { i. destruct s1; ss. }
+  i. destruct s1; ss. des_ifs.
+  { eapply Ascii.eqb_eq in Heq0. eapply Ascii.eqb_eq in Heq. subst.
+    f_equal; auto. }
+  { eapply Ascii.eqb_eq in Heq. subst. rewrite Ascii.eqb_refl in Heq0. ss. }
+  { eapply Ascii.eqb_eq in Heq0. subst. rewrite Ascii.eqb_refl in Heq. ss. }
+  { hexploit ascii_le_antisym.
+    { eapply EQ0. }
+    { eapply EQ1. }
+    i. subst. rewrite Ascii.eqb_refl in Heq. ss.
+  }
+Qed.
+
+Module AsciiOrder <: TotalOrderBool.
   Definition t := Ascii.ascii.
   Definition leb := ascii_le.
   Lemma leb_total : forall x y : t, leb x y = true \/ leb y x = true.
@@ -340,9 +373,18 @@ Module AsciiOrder <: TotalTransitiveLeBool'.
     eapply leb_complete in H. eapply leb_complete in H0.
     eapply leb_correct. auto. etrans; et.
   Qed.
+
+  Definition eqA: t -> t -> Prop := eq.
+
+  Lemma eqb_eq : forall x y : t, eqA x y <-> leb x y = true /\ leb y x.
+  Proof.
+    i. split.
+    { i. inv H. destruct (leb_total y y); auto. }
+    { i. des. eapply ascii_le_antisym; auto. }
+  Qed.
 End AsciiOrder.
 
-Module StringOrder <: TotalTransitiveLeBool'.
+Module StringOrder <: TotalOrderBool.
   Definition t := string.
   Definition leb := string_le.
   Lemma leb_total : forall x y : t, leb x y = true \/ leb y x = true.
@@ -370,9 +412,18 @@ Module StringOrder <: TotalTransitiveLeBool'.
     }
     { eapply AsciiOrder.leb_trans; et. }
   Qed.
+
+  Definition eqA: t -> t -> Prop := eq.
+
+  Lemma eqb_eq : forall x y : t, eqA x y <-> leb x y = true /\ leb y x.
+  Proof.
+    i. split.
+    { i. inv H. destruct (leb_total y y); auto. }
+    { i. des. apply string_le_antisym; auto. }
+  Qed.
 End StringOrder.
 
-Module ProdFstOrder (A: TotalTransitiveLeBool') (B: Typ) <: TotalTransitiveLeBool'.
+Module ProdFstOrder (A: TotalOrderBool) (B: Typ) <: TotalOrderBool.
   Definition t := (A.t * B.t)%type.
   Definition leb := fun (x y: t) => A.leb (fst x) (fst y).
   Lemma leb_total : forall x y : t, leb x y = true \/ leb y x = true.
@@ -380,15 +431,103 @@ Module ProdFstOrder (A: TotalTransitiveLeBool') (B: Typ) <: TotalTransitiveLeBoo
 
   Lemma leb_trans : Transitive leb.
   Proof. ii. eapply A.leb_trans; et. Qed.
+
+  Definition eqA (x y: t) := A.eqA (fst x) (fst y).
+
+  Lemma eqb_eq : forall x y : t, eqA x y <-> leb x y = true /\ leb y x.
+  Proof.
+    i. split.
+    { i. destruct x, y. unfold eqA, leb in *. ss.
+      eapply A.eqb_eq; auto. }
+    { i. destruct x, y. unfold eqA, leb in *. ss.
+      eapply A.eqb_eq; auto. }
+  Qed.
 End ProdFstOrder.
 
 Require Import Sorting.Mergesort.
 Require Import Sorting.Sorted.
 
+Inductive NoDupA A (eqA: A -> A -> Prop) : list A -> Prop :=
+| NoDupA_nil : NoDupA eqA []
+| NoDupA_cons
+    x l
+    (HD: Forall (fun a => ~ eqA x a) l)
+    (TL: NoDupA eqA l)
+  :
+    NoDupA eqA (x :: l)
+.
+
+Lemma NoDupA_eq_Nodup A (l: list A)
+  :
+    NoDupA eq l <-> NoDup l.
+Proof.
+  induction l.
+  { split; i; econs. }
+  split; i.
+  { inv H. econs; et.
+    { ii. eapply Forall_forall in HD; et. }
+    { eapply IHl; et. }
+  }
+  { inv H. econs; et.
+    { eapply Forall_forall. ii. subst. ss. }
+    { eapply IHl; et. }
+  }
+Qed.
+
+Lemma NoDupA_permutation A eqA
+      (SYMM: Symmetric eqA)
+      (l0 l1: list A)
+      (PERM: Permutation l0 l1)
+      (NODUP: NoDupA eqA l0)
+  :
+    NoDupA eqA l1.
+Proof.
+  induction PERM; et.
+  { inv NODUP. econs; et.
+    eapply Permutation_Forall; et. }
+  { inv NODUP. inv TL. inv HD. econs; et.
+    econs; et. }
+Qed.
+
+Lemma NoDupA_impl A eqA eqA'
+      (IMPL: eqA' <2= eqA)
+      (l: list A)
+      (NODUP: NoDupA eqA l)
+  :
+    NoDupA eqA' l.
+Proof.
+  induction l; et.
+  { econs. }
+  { inv NODUP. econs; et. eapply Forall_impl; et.
+    ii. eapply H; et. }
+Qed.
+
+Module OrderSort (A: TotalOrderBool).
+  Include (Sort A).
+
+  Lemma permutation_sorted_unique (l0 l1: list A.t)
+        (PERMUTATION: Permutation l0 l1)
+        (NODUP: NoDupA A.eqA l0)
+        (SORTED0: StronglySorted A.leb l0)
+        (SORTED1: StronglySorted A.leb l1)
+    :
+      l0 = l1.
+  Proof.
+    admit "?? help me".
+  Qed.
+
+  Lemma sort_StronglySorted (l: list A.t)
+    :
+      StronglySorted A.leb (sort l).
+  Proof.
+    eapply StronglySorted_sort.
+    eapply A.leb_trans.
+  Qed.
+End OrderSort.
+
 Module AListSort (V: Typ).
   Module _Order := ProdFstOrder StringOrder V.
-  Module Sorting := Sort _Order.
-  Include Sorting.
+  Include (OrderSort _Order).
 
   Definition t := alist string V.t.
 
@@ -396,7 +535,7 @@ Module AListSort (V: Typ).
     :
       Permutation l (sort l).
   Proof.
-    eapply Sorting.Permuted_sort.
+    eapply Permuted_sort.
   Qed.
 
   Lemma sort_add_comm (l0 l1: t)
@@ -404,6 +543,25 @@ Module AListSort (V: Typ).
     :
       sort (l0 ++ l1) = sort (l1 ++ l0).
   Proof.
-    admit "sorting commutative".
+    eapply permutation_sorted_unique.
+    { etrans.
+      { symmetry. eapply sort_permutation. }
+      etrans.
+      { eapply Permutation_app_comm. }
+      { eapply sort_permutation. }
+    }
+    { eapply NoDupA_permutation.
+      { ii. eapply _Order.eqb_eq. eapply _Order.eqb_eq in H. des. auto. }
+      { eapply sort_permutation. }
+      revert ND. generalize (l0 ++ l1). clear. induction l.
+      { i. econs. }
+      { i. ss. inv ND. econs; et.
+        eapply Forall_forall. ii. eapply H1.
+        replace (fst a) with (fst x).
+        eapply in_map. ss.
+      }
+    }
+    { eapply sort_StronglySorted. }
+    { eapply sort_StronglySorted. }
   Qed.
 End AListSort.
