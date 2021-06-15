@@ -86,11 +86,11 @@ Section PROOF.
   Local Existing Instance GURA.
 
   Definition MemSbtb: list (gname * kspecbody) :=
-    [("alloc", mk_kspecbody alloc_spec (cfun allocF) (fun _ => trigger (Choose _)));
-    ("free",   mk_kspecbody free_spec  (cfun freeF)  (fun _ => trigger (Choose _)));
-    ("load",   mk_kspecbody load_spec  (cfun loadF)  (fun _ => trigger (Choose _)));
-    ("store",  mk_kspecbody store_spec (cfun storeF) (fun _ => trigger (Choose _)));
-    ("cmp",    mk_kspecbody cmp_spec   (cfun cmpF)   (fun _ => trigger (Choose _)))
+    [("alloc", mk_kspecbody alloc_spec (cfun allocF) (fun _ => triggerNB));
+    ("free",   mk_kspecbody free_spec  (cfun freeF)  (fun _ => triggerNB));
+    ("load",   mk_kspecbody load_spec  (cfun loadF)  (fun _ => triggerNB));
+    ("store",  mk_kspecbody store_spec (cfun storeF) (fun _ => triggerNB));
+    ("cmp",    mk_kspecbody cmp_spec   (cfun cmpF)   (fun _ => triggerNB))
     ]
   .
 
