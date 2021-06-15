@@ -39,16 +39,17 @@ Section SIMMODSEM.
   | sim_loc_absent: sim_loc ε None None
   .
 
-  (* Notation sim stk_res0 stk_mgr0 := (∀ h stk, (stk_res0: URA.car (t:=_stkRA)) h = Some stk <-> *)
-  (*                                             (stk_mgr0: gmap mblock (list Z)) !! h = Some stk). *)
+  Notation sim res0 mgr_src0 mgr_tgt0 :=
+    (∀ h, sim_loc ((res0: URA.car (t:=_stkRA)) h)
+                  ((mgr_src0: gmap mblock (list Z)) !! h) ((mgr_tgt0: gmap mblock (list Z)) !! h)).
 
   Let wf: W -> Prop :=
     @mk_wf _ unit
            (fun _ _mgr_src0 _mgr_tgt0 =>
               (∃ mgr_src0 mgr_tgt0 (res0: URA.car (t:=_stkRA)),
                   (⌜(<<SRC: _mgr_src0 = mgr_src0↑>>) /\ (<<TGT: _mgr_tgt0 = mgr_tgt0↑>>) /\
-                   (<<SIM: forall h, sim_loc (res0 h) (mgr_src0 h) (mgr_tgt0 h)>>)⌝)
-                  ∧ (OwnM ((Auth.black res0): URA.car (t:=stkRA)))
+                   (<<SIM: sim res0 mgr_src0 mgr_tgt0>>)⌝)
+                  ∧ ({{"O": OwnM ((Auth.black res0): URA.car (t:=stkRA))}})
               )%I)
            top4
   .
@@ -95,19 +96,41 @@ Section SIMMODSEM.
   .
   Proof. ur. ur. i. unfold _is_stack. des_ifs; ur; ss. Qed.
 
-  Lemma sim_update
-        stk_res0
-        stk_mgr0
-        (SIM: sim stk_res0 stk_mgr0)
+  Hint Constructors sim_loc.
+  Lemma sim_fresh_k
+        res0 mgr_src0 mgr_tgt0
+        (SIM: sim res0 mgr_src0 mgr_tgt0)
         (h: mblock) (stk: (list Z))
+        (FRESH: mgr_tgt0 !! h = None)
     :
-      <<SIM: sim (<[h:=Excl.just stk]>stk_res0) (<[h:=stk]> stk_mgr0)>>
+      <<SIM: sim (<[h:=Excl.just stk]>res0) mgr_src0 (<[h:=stk]> mgr_tgt0)>>
   .
   Proof.
     ii.
     destruct (dec h h0).
-    - subst. rewrite ! lookup_insert. unfold insert, fn_insert. des_ifs. ss. split; i; clarify.
+    - subst. rewrite ! lookup_insert. unfold insert, fn_insert. des_ifs. ss.
+      specialize (SIM h0). inv SIM; ss; et.
+      { econs; ss; et. }
+      { rewrite FRESH in *. clarify. }
+      { econs; ss; et. }
     - rewrite lookup_insert_ne; ss. unfold insert, fn_insert. des_ifs.
+  Qed.
+
+  Lemma sim_fresh_u
+        res0 mgr_src0 mgr_tgt0
+        (SIM: sim res0 mgr_src0 mgr_tgt0)
+        (h: mblock) (stk: (list Z))
+        (FRESH: mgr_tgt0 !! h = None)
+    :
+      <<SIM: sim res0 (<[h:=stk]>mgr_src0) (<[h:=stk]> mgr_tgt0)>>
+  .
+  Proof.
+    ii.
+    destruct (dec h h0).
+    - subst. rewrite ! lookup_insert. unfold insert, fn_insert. des_ifs. ss.
+      specialize (SIM h0). inv SIM; ss; et.
+      { rewrite FRESH in *. clarify. }
+    - rewrite ! lookup_insert_ne; ss.
   Qed.
 
   Lemma add_disj_insert
@@ -122,44 +145,113 @@ Section SIMMODSEM.
     - rewrite URA.unit_id. ss.
   Qed.
 
+  (* Ltac renamer := *)
+  (*   match goal with *)
+  (*   | [mp_src: gmap nat (list Z) |- _ ] => *)
+  (*     let tmp := fresh "_tmp_" in *)
+  (*     rename mp_src into tmp; *)
+  (*     let name := fresh "stk_mgr0" in *)
+  (*     rename tmp into name *)
+  (*   end; *)
+  (*   match goal with *)
+  (*   | [ACC: current_iPropL _ ?Hns |- _ ] => *)
+  (*     match Hns with *)
+  (*     | context[(?name, ([∗ map] _↦_ ∈ _, _))%I] => mRename name into "SIM" *)
+  (*     end *)
+  (*   end *)
+  (* . *)
+
+  Ltac renamer :=
+    let tmp := fresh "_tmp_" in
+
+    match goal with
+    | H: context[OwnM (Auth.black ?x)] |- _ =>
+      rename x into tmp; let name := fresh "res0" in rename tmp into name
+    end;
+
+    match goal with
+    | |- gpaco6 _ _ _ _ _ _ _ _ (?mr_src, (?mp_src↑), _, _) (?mr_tgt, (?mp_tgt↑), _, _) =>
+
+      (* rename mr_src into tmp; let name := fresh "res0" in rename tmp into name *)
+      (* ; *)
+      (* try match goal with *)
+      (*     | H: _stkRA |- _ => rename H into tmp; let name := fresh "res0" in rename tmp into name *)
+      (*     end *)
+      (* ; *)
+
+      repeat multimatch mp_src with
+             | context[?g] =>
+               match (type of g) with
+               | gmap mblock (list Z) =>
+                 rename g into tmp; let name := fresh "mgr_src0" in rename tmp into name
+               | _ => fail
+               end
+             end
+      ;
+
+      repeat multimatch mp_tgt with
+             | context[?g] =>
+               match (type of g) with
+               | gmap mblock (list Z) =>
+                 rename g into tmp; let name := fresh "mgr_tgt0" in rename tmp into name
+               | _ => fail
+               end
+             end
+    end
+  .
+  Ltac post_call :=
+    fold wf; clear_fast; mDesAll; des_safe; subst; try rewrite Any.upcast_downcast in *; clarify; renamer.
+
   Theorem sim_modsem: ModSemPair.sim (NewStack3A.StackSem global_stb) (NewStack2.StackSem).
   Proof.
     econstructor 1 with (wf:=wf); ss; et; swap 2 3.
     { econs; ss.
-      - eapply to_semantic; cycle 1. { admit "ez - wf". } iIntros "H". iExists _, _. iSplit; ss; et.
-      - eapply to_semantic; cycle 1. { eapply URA.wf_unit. } iIntros "H". iPureIntro. ss.
+      - eapply to_semantic; cycle 1. { admit "ez - wf". } iIntros "H". iExists _, _, _. iSplits; ss; et.
+        { iPureIntro. i. instantiate (1:=fun _ => Excl.unit). econs; ss; et. }
+        { admit "ez - wf". }
     }
     econs; ss.
-    { unfold NewStack2.new_body, cfun. init. harg. fold wf. mDesAll. des; clarify.
-      apply Any.upcast_inj in PURE0. des; clarify. steps. rewrite Any.upcast_downcast in *. clarify. steps.
-      astart 0. astop. steps. rewrite Any.upcast_downcast in *. clarify.
-      rename g into stk_mgr0. rename x0 into h. rename a1 into stk_res0. force_l. exists (Vptr h 0). steps.
-      mOwnWf "A".
-      assert(WF1: forall k, stk_res0 k <> Excl.boom).
-      { eapply Auth.black_wf in WF0. eapply pw_wf in WF0. des. ii. specialize (WF0 k).
-        destruct (stk_res0 k); ss. ur in WF0; ss. }
+    { unfold NewStack2.new_body, cfun, cfun2. init. harg. post_call.
+      destruct x; destruct (Any.split varg_src) eqn:T; des_ifs_safe; mDesAll; ss; des; subst.
+      - rewrite Any.upcast_split. cbn. steps. rewrite Any.upcast_downcast in *. clarify. steps.
+        rewrite Any.upcast_downcast in *. clarify.
+        post_call.
+        rename x into h.
+        astart 0. astop. steps. force_l. exists (([]: list val)↑). steps.
 
-      hret _; ss.
-      { iPoseProof (OwnM_Upd with "A") as "A".
-        { eapply Auth.auth_alloc2. instantiate (1:=(_is_stack h [])).
-          rewrite add_disj_insert; ss.
-          { eapply (@pw_insert_wf); et.
-            { eapply Auth.black_wf; et. }
-            { ur; ss. }
+        mOwnWf "O".
+        assert(WF1: forall k, res0 k <> Excl.boom).
+        { eapply Auth.black_wf in WF0. eapply pw_wf in WF0. des. ii. specialize (WF0 k).
+          destruct (res0 k); ss. ur in WF0; ss. }
+
+        hret _; ss.
+        { iPoseProof (OwnM_Upd with "O") as "O".
+          { eapply Auth.auth_alloc2. instantiate (1:=(_is_stack h [])).
+            rewrite add_disj_insert; ss.
+            { eapply (@pw_insert_wf); et.
+              { eapply Auth.black_wf; et. }
+              { ur; ss. }
+            }
+            specialize (WF1 h). destruct (res0 h) eqn:U; ss; et.
+            { spc SIM. rewrite U in *. inv SIM. rewrite _GUARANTEE in *. ss. }
           }
-          specialize (WF1 h). destruct (stk_res0 h) eqn:T; ss; et.
-          { rewrite SIM in T. clarify. }
+          iMod "O". iDestruct "O" as "[A B]". iModIntro. iSplitL "A"; ss; et.
+          iSplits; ss; et. iPureIntro. ii.
+          assert(B: res0 h = Excl.unit).
+          { destruct (res0 h) eqn:V; ss.
+            - specialize (SIM h). rewrite V in SIM. inv SIM. rewrite _GUARANTEE in *. ss.
+            - exploit WF1; et; ss.
+          }
+          rewrite add_disj_insert; ss. eapply sim_fresh_k; et.
         }
-        iMod "A". iDestruct "A" as "[A B]". iModIntro. iSplitL "A"; et.
-        iExists _, _. iSplit; ss; et. iSplit; ss; et. iPureIntro. ii.
-        assert(B: stk_res0 h = Excl.unit).
-        { destruct (stk_res0 h) eqn:T; ss.
-          - rewrite SIM in T. rewrite T in *. ss.
-          - exploit WF1; et; ss.
-        }
-        rewrite add_disj_insert; ss. eapply sim_update; et.
-      }
+      - unfold KModSem.transl_fun_tgt, new_body. rewrite T. cbn. steps. post_call.
+        rename x into h. force_l. exists h. steps. rewrite Any.upcast_downcast. steps.
+        assert(S:=SIM h). rewrite _GUARANTEE in *. inv S; ss. force_l; ss. steps.
+
+        hret _; ss.
+        iModIntro. iSplits; ss; et. iPureIntro. eapply sim_fresh_u; et.
     }
+
     econs; ss.
     { unfold NewStack2.pop_body, cfun. init. harg. fold wf. des_ifs_safe. mDesAll. des; clarify.
       steps. rewrite Any.upcast_downcast in *. clarify. steps.

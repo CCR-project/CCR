@@ -32,11 +32,17 @@ Section PROOF.
   Definition is_stack (h: mblock) (stk: list Z): stkRA := Auth.white (_is_stack h stk).
 
   Definition new_spec: fspec :=
-    (mk_simple (X:=unit)
-               (fun _ => (
-                    (fun varg o => (⌜varg = ([]: list val)↑ /\ o = ord_pure 0⌝: iProp)%I),
-                    (fun vret => (∃ h, ⌜vret = (Vptr h 0)↑⌝ ** OwnM (is_stack h []): iProp)%I)
-    ))).
+    (* (mk_simple (X:=unit) *)
+    (*            (fun _ => ( *)
+    (*                 (fun varg o => (⌜varg = ([]: list val)↑ /\ o = ord_pure 0⌝: iProp)%I), *)
+    (*                 (fun vret => (∃ h, ⌜vret = (Vptr h 0)↑⌝ ** OwnM (is_stack h []): iProp)%I) *)
+    (* ))) *)
+    (mk_fspec
+       (fun (_: unit) _ varg o => (⌜varg = ([]: list val)↑ ∧ o = ord_pure 0⌝: iProp)%I)
+       (fun (_: unit) virtual_ret vret =>
+          (∃ h, ⌜virtual_ret = ([]: list val)↑ ∧ vret = (Vptr h 0)↑⌝ ** OwnM(is_stack h []): iProp)%I)
+    )
+  .
 
   (*** varg stands for (physical) value arguments... bad naming and will be changed later ***)
   Definition pop_spec: fspec :=
