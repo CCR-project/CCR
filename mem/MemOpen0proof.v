@@ -34,8 +34,8 @@ Section SIMMODSEM.
   Let wf: W -> Prop :=
     @mk_wf
       _ unit
-      (fun _ _mem_src0 _mem_tgt0 => ⌜_mem_src0 = _mem_tgt0⌝)%I
       top4
+      (fun _ _mem_src0 _mem_tgt0 => ⌜_mem_src0 = _mem_tgt0⌝)%I
   .
 
   Variable sk: Sk.t.
@@ -43,10 +43,7 @@ Section SIMMODSEM.
   Theorem correct: ModSemPair.sim (Mem0.MemSem sk) (SModSem.to_src (MemOpen.SMemSem sk)).
   Proof.
    econstructor 1 with (wf:=wf); et; swap 2 3.
-    { ss. econs; ss. eapply to_semantic; cycle 1.
-      { eapply URA.wf_unit; ss. }
-      iIntros "H". iPureIntro; ss.
-    }
+    { ss. econs; ss. red. uipropall. }
 
 
 
@@ -56,7 +53,7 @@ Section SIMMODSEM.
     { unfold allocF, fun_to_src, body_to_src, cfun, KModSem.transl_fun_tgt. init.
       destruct (Any.split varg) eqn:T.
       { cbn. steps. }
-      steps. inv WF. rr in RSRC. uipropall. clarify. clear_fast.
+      steps. inv WF. rr in RTGT. uipropall. clarify. clear_fast.
       apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
       force_l. esplits; et. steps.
       rr. econs; ss. rr. uipropall.
@@ -65,7 +62,7 @@ Section SIMMODSEM.
     { unfold freeF, fun_to_src, body_to_src, cfun, KModSem.transl_fun_tgt. init.
       destruct (Any.split varg) eqn:T.
       { cbn. steps. }
-      steps. inv WF. rr in RSRC. uipropall. clarify. clear_fast.
+      steps. inv WF. rr in RTGT. uipropall. clarify. clear_fast.
       apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
       force_r; ss. steps.
       rr. econs; ss. rr. uipropall.
@@ -74,7 +71,7 @@ Section SIMMODSEM.
     { unfold loadF, fun_to_src, body_to_src, cfun, KModSem.transl_fun_tgt. init.
       destruct (Any.split varg) eqn:T.
       { cbn. steps. }
-      steps. inv WF. rr in RSRC. uipropall. clarify. clear_fast.
+      steps. inv WF. rr in RTGT. uipropall. clarify. clear_fast.
       apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
       force_r; ss. steps.
       rr. econs; ss. rr. uipropall.
@@ -83,7 +80,7 @@ Section SIMMODSEM.
     { unfold storeF, fun_to_src, body_to_src, cfun, KModSem.transl_fun_tgt. init.
       destruct (Any.split varg) eqn:T.
       { cbn. steps. }
-      steps. inv WF. rr in RSRC. uipropall. clarify. clear_fast.
+      steps. inv WF. rr in RTGT. uipropall. clarify. clear_fast.
       apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
       force_r; ss. steps.
       rr. econs; ss. rr. uipropall.
@@ -92,7 +89,7 @@ Section SIMMODSEM.
     { unfold cmpF, fun_to_src, body_to_src, cfun, KModSem.transl_fun_tgt. init.
       destruct (Any.split varg) eqn:T.
       { cbn. steps. }
-      steps. inv WF. rr in RSRC. uipropall. clarify. clear_fast.
+      steps. inv WF. rr in RTGT. uipropall. clarify. clear_fast.
       apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
       force_r; ss. steps.
       des_ifs; steps.

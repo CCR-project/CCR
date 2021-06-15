@@ -241,7 +241,7 @@ Section SIMMODSEM.
   Proof.
     econstructor 1 with (wf:=wf); ss; et; swap 2 3.
     { econs; ss.
-      - eapply to_semantic; cycle 1. { admit "ez - wf". } iIntros "H". iExists _, _, _. iSplits; ss; et.
+      - eapply to_semantic. iIntros "H". iExists _, _, _. iSplits; ss; et.
         { iPureIntro. i. instantiate (1:=fun _ => Excl.unit). econs; ss; et. }
         { admit "ez - wf". }
     }
@@ -326,7 +326,7 @@ Section SIMMODSEM.
             bar. ii. ss. des. clarify. esplits; et.
             assert(D: ctx0 h = Excl.unit).
             { clear - B. repeat ur in B. unfold _is_stack in *. des_ifs. }
-            extensionality h0. subst res1. unfold insert, fn_insert. des_ifs. 
+            extensionality h0. subst res1. unfold insert, fn_insert. des_ifs.
             - ur. rewrite D. unfold _is_stack. ur. des_ifs.
             - unfold _is_stack. ur. des_ifs.
           }
@@ -397,7 +397,7 @@ Section SIMMODSEM.
           bar. ii. ss. des. clarify. esplits; et.
           assert(D: ctx0 h = Excl.unit).
           { clear - B. repeat ur in B. unfold _is_stack in *. des_ifs. }
-          extensionality h0. subst res1. unfold insert, fn_insert. des_ifs. 
+          extensionality h0. subst res1. unfold insert, fn_insert. des_ifs.
           - ur. rewrite D. unfold _is_stack. ur. des_ifs.
           - unfold _is_stack. ur. des_ifs.
         }

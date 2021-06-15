@@ -33,20 +33,20 @@ Section SIMMODSEM.
 
   Let wf: W -> Prop :=
     @mk_wf _ unit
-           (fun _ mp_src mp_tgt => ⌜mp_src = mp_tgt⌝%I)
            top4
+           (fun _ mp_src mp_tgt => ⌜mp_src = mp_tgt⌝%I)
   .
 
   Theorem sim_modsem: ModSemPair.sim (NewStack2.StackSem) (SModSem.to_src NewStack1.SStackSem).
   Proof.
     econstructor 1 with (wf:=wf); ss; et; swap 2 3.
     { econs; ss.
-      - eapply to_semantic. iIntros "H". iPureIntro. ss.
+      - red. uipropall.
     }
     assert(BDOOR: interp_hCallE_src (KModSem.transl_itr_tgt APCK) = Ret tt).
     { admit "mid - BDOOR". }
     econs; ss.
-    { init. inv WF. rr in RSRC. uipropall. subst. clear_fast.
+    { init. inv WF. rr in RTGT. uipropall. subst. clear_fast.
       unfold cfun2, fun_to_src, body_to_src, KModSem.transl_fun_tgt, cfun, new_body, NewStack1.new_body.
       steps.
       destruct (Any.split varg) eqn:T.
@@ -58,7 +58,7 @@ Section SIMMODSEM.
         econs; ss; et. rr. uipropall; ss.
     }
     econs; ss.
-    { init. inv WF. rr in RSRC. uipropall. subst. clear_fast.
+    { init. inv WF. rr in RTGT. uipropall. subst. clear_fast.
       unfold cfun2, fun_to_src, body_to_src, KModSem.transl_fun_tgt, cfun, pop_body, NewStack1.pop_body.
       steps.
       destruct (Any.split varg) eqn:T.

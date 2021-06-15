@@ -129,9 +129,9 @@ Section SIMMODSEM.
   Proof.
     econstructor 1 with (wf:=wf); ss; et; swap 2 3.
     { econs; ss.
-      - eapply to_semantic; cycle 1. { admit "ez - wf". } iIntros "H". iExists _, _. iSplit; ss; et.
+      - eapply to_semantic. iIntros "H". iExists _, _. iSplit; ss; et.
         iSplit; ss; et.
-      - eapply to_semantic; cycle 1. { eapply URA.wf_unit. } iIntros "H". iPureIntro. ss.
+      - red. uipropall.
     }
     econs; ss.
     { unfold NewStack2.new_body, cfun2, cfun. init. harg. fold wf. mDesAll. des; clarify.
