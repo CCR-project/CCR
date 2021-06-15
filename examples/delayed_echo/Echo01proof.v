@@ -100,13 +100,8 @@ Section SIMMODSEM.
   Proof.
     econstructor 1 with (wf:=wf); et; swap 2 3.
     { ss. econs; et. eapply to_semantic.
-      { iIntros "H". iLeft. iExists _. iSplitL; ss.
-        ss. rewrite unfold_is_list. iPureIntro. auto. }
-      { eapply GRA.wf_embed. ur. split.
-        { eexists (Excl.just (Vnullptr, [])). ur. auto. }
-        { ur. ss. }
-      }
-    }
+      iIntros "H". iLeft. iExists _. iSplitL; ss.
+      ss. rewrite unfold_is_list. iPureIntro. auto. }
 
     econs; ss.
     { (* arg *)

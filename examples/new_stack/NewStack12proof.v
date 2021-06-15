@@ -41,7 +41,7 @@ Section SIMMODSEM.
   Proof.
     econstructor 1 with (wf:=wf); ss; et; swap 2 3.
     { econs; ss.
-      - eapply to_semantic; cycle 1. { eapply URA.wf_unit. } iIntros "H". iPureIntro. ss.
+      - eapply to_semantic. iIntros "H". iPureIntro. ss.
     }
     assert(BDOOR: interp_hCallE_src (KModSem.transl_itr_tgt APCK) = Ret tt).
     { admit "mid - BDOOR". }

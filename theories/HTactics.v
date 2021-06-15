@@ -272,7 +272,7 @@ Section HLEMMAS.
   | mk_wf_intro
       a
       mr_src mp_src mr_tgt mp_tgt
-      (RSRC: R_src a mp_src mp_tgt mr_src)
+      (RSRC: URA.wf mr_src -> R_src a mp_src mp_tgt mr_src)
       (RTGT: R_tgt a mp_src mp_tgt mr_tgt)
     :
       mk_wf R_src R_tgt ((mr_src, mp_src), (mr_tgt, mp_tgt))
@@ -375,7 +375,10 @@ Section HLEMMAS.
     { instantiate (1:=fr_src0' ⋅ c ⋅ r1).
       replace (fr_src0' ⋅ c ⋅ r1 ⋅ x2) with (r1 ⋅ (x2 ⋅ c ⋅ fr_src0')); auto.
       r_solve. }
-    esplits; cycle 2; et.
+    esplits; cycle 2; et. eapply RSRC0.
+    eapply URA.wf_mon. instantiate (1:=(r1 ⋅ (x2 ⋅ fr_src0'))).
+    replace (c ⋅ (r1 ⋅ (x2 ⋅ fr_src0'))) with (r1 ⋅ (x2 ⋅ c ⋅ fr_src0')); auto.
+    r_solve.
   Qed.
 
   Lemma hcall_clo_ord_weaken
@@ -564,6 +567,9 @@ Section HLEMMAS.
     }
     { ss. red. uipropall. esplits; et.
       { rewrite URA.unit_id. et. }
+      { eapply RSRC; et. eapply URA.wf_mon. instantiate (1:=(varg_src ⋅ (fr_src ⋅ VALID))).
+        replace (mr_src ⋅ (varg_src ⋅ (fr_src ⋅ VALID))) with (varg_src ⋅ (mr_src ⋅ (fr_src ⋅ VALID))); auto.
+        r_solve. }
       { red. uipropall. }
     }
   Qed.

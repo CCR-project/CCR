@@ -71,7 +71,7 @@ Section SIMMODSEM.
   Theorem sim_modsem: ModSemPair.sim (NewStack1.StackSem global_stb) NewStack0.StackSem.
   Proof.
     econstructor 1 with (wf:=wf); ss; et; swap 2 3.
-    { econs; ss. eapply to_semantic; cycle 1. { eapply URA.wf_unit. } iIntros "H". iClear "H". iSplits; ss. }
+    { econs; ss. eapply to_semantic. iIntros "H". iClear "H". iSplits; ss. }
     econs; ss.
     { unfold newF. trivial_init. fold wf. mDesAll; des; subst. ss.
       unfold new_body, KModSem.transl_fun_tgt, ccall, cfun. steps.

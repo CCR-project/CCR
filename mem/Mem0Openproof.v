@@ -296,8 +296,7 @@ Proof Outline
   Theorem correct: ModSemPair.sim (MemOpen.MemSem [] sk) (Mem0.MemSem sk).
   Proof.
    econstructor 1 with (wf:=wf); et; swap 2 3.
-    { ss. econs; ss. eapply to_semantic; cycle 1.
-      { eapply GRA.wf_embed. ur. split; try refl. eapply URA.wf_unit. }
+    { ss. econs; ss. eapply to_semantic.
       iIntros "H". iExists _, _, _.
       repeat (iSplit; eauto).
       { iPureIntro. ii. destruct (Mem.cnts (Sk.load_mem sk) b ofs) eqn:T; econs. }
@@ -316,7 +315,7 @@ Proof Outline
         des_ifs_safe (mDesAll; ss). des; subst. clarify. rewrite Any.upcast_downcast in *. clarify.
         steps. unhide_k. steps. astart 0. astop.
         rename a2 into memk_src0. rename a1 into mem_tgt0. rename a0 into memu_src0.
-        set (blk := mem_tgt0.(Mem.nb) + x). 
+        set (blk := mem_tgt0.(Mem.nb) + x).
 
         mRefresh.
         mAssert _ with "INV" as "INV".

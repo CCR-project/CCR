@@ -108,8 +108,15 @@ Section SIMMODSEM.
   Theorem correct: ModPair.sim (Knot1.Knot RecStb FunStb GlobalStb) Knot0.Knot.
   Proof.
     econs; ss.
-    i. econstructor 1 with (wf:=wf (Sk.load_skenv sk)); et; ss.
-    2: { admit "initial". }
+    i. econstructor 1 with (wf:=wf (Sk.load_skenv sk)); et; ss; cycle 1.
+    { red. econs.
+      { eapply to_semantic. instantiate (1:=inl tt). ss.
+        iIntros "[[H0 H1] H2]". iSplitL "H0".
+        { unfold inv_closed. iExists _, _. iFrame. }
+        { unfold inv. iExists None, _. iFrame. iPureIntro. ss. }
+      }
+      { ss. }
+    }
     eapply Sk.incl_incl_env in SKINCL. eapply Sk.load_skenv_wf in SKWF.
     hexploit (SKINCL "rec"); ss; eauto. intros [blk0 FIND0].
     hexploit (SKINCL "_f"); ss; eauto. intros [blk1 FIND1].
