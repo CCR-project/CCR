@@ -65,7 +65,7 @@ Section PROOF.
     { erewrite f_equal with (x:=[Main; F; G]).
       {
         eapply adequacy_type; revgoals.
-        { ss. left. refl. }
+        { ss. }
         { instantiate (1:=ε). unfold compose. ss. rewrite ! URA.unit_id. apply URA.wf_unit. }
         { uipropall. red. uipropall. }
       }

@@ -127,6 +127,7 @@ Section CANCEL.
 
       (exists md (f: fspecbody),
           (<<SOME: alist_find fn stb = Some (f: fspec)>>) /\
+          (<<SBTB: alist_find fn sbtb = Some f>>) /\
           (<<FINDMID: alist_find fn (ModSemL.fnsems ms_mid) =
                       Some (transl_all
                               (SModSem.mn
@@ -455,29 +456,9 @@ Section CANCEL.
 
   Hypothesis WFR: URA.wf (entry_r ⋅ rsum (ModSemL.initial_r_state ms_tgt)).
 
-  Hypothesis MAINM: In (SMod.main mainpre mainbody) mds.
-
   Require Import Logic.
 
-  Let MAINF: @alist_find _ _ (@Dec_RelDec string string_Dec) _  "main" stb =
-             Some (mk_simple (fun (_: unit) => (mainpre, fun _ => (⌜True⌝: iProp)%I))).
-  Proof.
-    unfold stb, _stb.
-    rewrite alist_find_map. uo. unfold compose. des_ifs.
-    - eapply alist_find_some in Heq. des. des_sumbool. subst. repeat f_equal.
-      assert(In ("main", (mk_specbody (mk_simple (fun (_: unit) => (mainpre, fun _ => (⌜True⌝: iProp)%I))) mainbody)) sbtb).
-      { unfold sbtb, _sbtb, mss, _mss. eapply in_flat_map. esplits; et.
-        { rewrite in_map_iff. esplits; et. }
-        ss. et.
-      }
-      admit "ez - uniqueness of fname".
-    - eapply alist_find_none in Heq.
-      { exfalso. eapply Heq.
-        unfold sbtb, _sbtb, mss, _mss. eapply in_flat_map. esplits; et.
-        { rewrite in_map_iff. esplits; et. }
-        ss. et.
-      }
-  Qed.
+  Hypothesis MAINM: alist_find "main" sbtb = Some (mk_specbody (mk_simple (fun _ : () => (mainpre, fun _ => (⌜True⌝: iProp)%I))) mainbody).
 
   Let initial_r_state ms entry_r: r_state :=
     (fun mn => match alist_find mn ms.(ModSemL.initial_mrs) with
@@ -486,8 +467,6 @@ Section CANCEL.
                end, [entry_r]). (*** we have a dummy-stack here ***)
 
   Opaque EventsL.interp_Es.
-
-  Require Import ProofMode.
 
   Theorem adequacy_type_t2m: Beh.of_program (ModL.compile (Mod.add_list mds_tgt)) <1=
                              Beh.of_program (ModL.compile_arg (Mod.add_list mds_mid) (Any.pair ord_top↑ ([]: list val)↑)).
@@ -522,7 +501,11 @@ Section CANCEL.
       rewrite initial_p_eq. auto. }
     unfold mrec.
 
-    hexploit (stb_find_iff "main"). i. des; clarify. destruct f. ss. subst.
+    hexploit (stb_find_iff "main"). i. des; clarify.
+    { clear - NONE MAINM. unfold stb, _stb in NONE.
+      rewrite alist_find_map in NONE. uo.
+      unfold sbtb in MAINM. rewrite MAINM in NONE. ss. }
+
     Local Transparent ModSemL.prog. ss.
     rewrite FINDTGT. rewrite FINDMID. steps.
     unfold fun_to_mid, fun_to_tgt. ss.
