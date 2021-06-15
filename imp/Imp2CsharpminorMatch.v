@@ -152,8 +152,12 @@ Section MATCH.
     :
       match_ge sge tge.
 
-  Definition ret_call_cont k :=
-    (Kseq (Sreturn (Some (Evar (s2p "return")))) (call_cont k)).
+  Definition return_stmt := Sreturn (Some (Evar (s2p "return"))).
+  Definition ret_call_cont k := Kseq return_stmt (call_cont k).
+
+  Definition exit_stmt := Sreturn (Some (Eunop Cminor.Ointoflong (Evar (s2p "return")))).
+  Definition ret_call_main := Kseq exit_stmt Kstop.
+
   (* global env is fixed when src program is fixed *)
   Variable gm : gmap.
   Variable ge : SkEnv.t.
@@ -161,9 +165,12 @@ Section MATCH.
   Variable ms : ModSemL.t.
 
   Inductive match_code (mn: mname) : imp_cont -> (list Csharpminor.stmt) -> Prop :=
+  | match_code_exit
+    :
+      match_code mn idK [exit_stmt]
   | match_code_return
     :
-      match_code mn idK [Sreturn (Some (Evar (s2p "return")))]
+      match_code mn idK [return_stmt]
   | match_code_cont
       code itr ktr chead ctail
       (CST: compile_stmt gm code = Some chead)
@@ -176,7 +183,7 @@ Section MATCH.
   Inductive match_stack (mn: mname) : imp_stack -> option Csharpminor.cont -> Prop :=
   | match_stack_bottom
     :
-      match_stack mn (fun x => itree_of_imp_pop_bottom ge ms mn x) (Some (ret_call_cont Kstop))
+      match_stack mn (fun x => itree_of_imp_pop_bottom ge ms mn x) (Some ret_call_main)
 
   | match_stack_cret
       tf le tle next stack tcont id tid tpop retmn

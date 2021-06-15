@@ -217,79 +217,90 @@ Section PROOF.
     unfold compile2 in COMP. des_ifs. rename Heq into GMAP.
     set (tlof := 2 + (List.length src.(ext_funsL)) + (List.length src.(ext_varsL))) in *.
     destruct code.
-    - unfold itree_of_cont_stmt, itree_of_imp_cont.
-      rewrite interp_imp_Skip. ss; clarify.
-      destruct tcont; ss; clarify.
-      inv MCONT; clarify.
-      { destruct tcont; inv MSTACK; ss; clarify.
-        - sim_red. pfold. econs 6; clarify.
-          { admit "ez: strict_determinate_at". }
-          eexists. eexists.
-          { eapply step_skip_seq. }
-          eexists. exists (step_tau _). eexists. unfold idK. sim_red. left.
+    - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. ss; clarify.
+      destruct tcont; ss; clarify. inv MCONT; clarify.
+      { unfold exit_stmt in *; ss; clarify. destruct tcont; inv MSTACK; ss; clarify.
+        sim_red. pfold. econs 6; clarify.
+        { admit "ez: strict_determinate_at". }
+        eexists. eexists.
+        { eapply step_skip_seq. }
+        eexists. exists (step_tau _). eexists. unfold idK. sim_red. left.
 
-          rewrite interp_imp_expr_Var. sim_red.
-          unfold unwrapU. des_ifs.
-          2:{ sim_triggerUB. }
-          sim_red. pfold. econs 6; clarify.
-          { admit "ez: strict_determinate_at". }
-          eexists. eexists.
-          { eapply step_return_1; ss; eauto. econs. inv ML; ss; clarify. hexploit ML0; i; eauto. }
-          eexists. exists (step_tau _). eexists. left.
-          do 1 (pfold; sim_tau; left). sim_red. unfold assume. grind.
-          pfold. econs 5; ss; auto. i. eapply angelic_step in STEP; des; clarify.
-          eexists; split; auto. left.
-          do 6 (pfold; sim_tau; left). sim_red.
-          destruct rstate. ss. destruct l.
-          { admit "ez: wf_rstate". }
-          do 3 (pfold; sim_tau; left). sim_red.
-          pfold. econs 1; eauto.
-          { admit "ez: main's wf_retval". }
-          { ss. unfold state_sort. ss. rewrite Any.upcast_downcast. admit "ez: main's wf_retval". }
-          { ss. admit "ez: tgt main's wf_retval". }
+        rewrite interp_imp_expr_Var. sim_red.
+        unfold unwrapU. des_ifs.
+        2:{ sim_triggerUB. }
+        sim_red. pfold. econs 6; clarify.
+        { admit "ez: strict_determinate_at". }
+        eexists. eexists.
+        { eapply step_return_1; ss; eauto. econs; ss. econs; ss. inv ML; ss; clarify. hexploit ML0; i; eauto. }
+        eexists. exists (step_tau _). eexists. left.
+        do 1 (pfold; sim_tau; left). sim_red. unfold assume. grind.
+        pfold. econs 5; ss; auto. i. eapply angelic_step in STEP; des; clarify.
+        eexists; split; auto. left.
+        do 6 (pfold; sim_tau; left). sim_red.
+        destruct rstate. ss. destruct l.
+        { admit "ez: wf_rstate". }
+        do 3 (pfold; sim_tau; left). sim_red.
+        destruct v.
+        - destruct ((0 <=? n)%Z && (n <? two_power_nat 32)%Z) eqn:INT32; bsimpl; des.
+          + pfold. econs 1; eauto.
+            { unfold Int.max_unsigned. unfold_Int_modulus. instantiate (1:=n). lia. }
+            { ss. unfold state_sort; ss. rewrite Any.upcast_downcast. des_ifs. }
+            ss. unfold Int64.loword. rewrite Int64.unsigned_repr.
+            2:{ unfold Int64.max_unsigned. unfold_Int64_modulus. unfold two_power_nat in *. ss. lia. }
+            econs.
+          + pfold. econs 5; ss; eauto.
+            { unfold state_sort; ss. rewrite Any.upcast_downcast. des_ifs. }
+            i. inv STEP.
+          + pfold. econs 5; ss; eauto.
+            { unfold state_sort; ss. rewrite Any.upcast_downcast. des_ifs. bsimpl. clarify. }
+            i. inv STEP.
 
-        - destruct WFCONT as [ENV WFCONT]; clarify.
-          unfold ret_call_cont in TPOP. clarify.
-          sim_red. pfold. econs 6; clarify.
-          { admit "ez: strict_determinate_at". }
-          eexists. eexists.
-          { eapply step_skip_seq. }
-          eexists. exists (step_tau _). eexists. unfold idK. sim_red. left.
+        - pfold. econs 5; ss; eauto.
+          { unfold state_sort; ss. rewrite Any.upcast_downcast. des_ifs. }
+          i. inv STEP.
+        - pfold. econs 5; ss; eauto. }
 
-          rewrite interp_imp_expr_Var. sim_red. unfold unwrapU. des_ifs.
-          2:{ sim_triggerUB. }
-          sim_red. pfold. econs 6; clarify.
-          { admit "ez: strict_determinate_at". }
-          eexists. eexists.
-          { eapply step_return_1; ss; eauto. econs. inv ML; ss; clarify. hexploit ML0; i; eauto. }
-          eexists. exists (step_tau _). eexists. left.
-          do 1 (pfold; sim_tau; left).
-          sim_red. unfold assume. grind.
-          pfold. econs 5; ss; auto. i. eapply angelic_step in STEP; des; clarify.
-          eexists; split; auto. left.
-          do 6 (pfold; sim_tau; left). sim_red.
-          destruct rstate. ss. destruct l.
-          { admit "ez: wf_rstate". }
-          do 5 (pfold; sim_tau; left). rewrite Any.upcast_downcast. ss. do 2 (pfold; sim_tau; left).
-          pfold. econs 4; eauto.
-          { admit "ez: strict_determinate_at". }
-          eexists. eexists.
-          { eapply step_return. }
-          eexists; split; auto. right. eapply CIH. hexploit match_states_intro.
-          { instantiate (2:=Skip). ss. }
-          4:{ eapply WFCONT0. }
-          4:{ eapply MCONT. }
-          4:{ eapply MSTACK0. }
-          4:{ clarify. }
-          4:{ i.
-              match goal with
-              | [ H: match_states _ _ _ _ ?i0 _ |- match_states _ _ _ _ ?i1 _ ] =>
-                replace i1 with i0; eauto
-              end.
-              unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
-          2,3: eauto.
-          econs. i.
-          admit "ez: local env match, use MLE and alist_find". }
+      { unfold return_stmt in *; ss; clarify. destruct tcont; inv MSTACK; ss; clarify.
+        sim_red. pfold. econs 6; clarify.
+        { admit "ez: strict_determinate_at". }
+        eexists. eexists.
+        { eapply step_skip_seq. }
+        eexists. exists (step_tau _). eexists. unfold idK. sim_red. left.
+
+        rewrite interp_imp_expr_Var. sim_red.
+        unfold unwrapU. des_ifs.
+        2:{ sim_triggerUB. }
+        sim_red. pfold. econs 6; clarify.
+        { admit "ez: strict_determinate_at". }
+        eexists. eexists.
+        { eapply step_return_1; ss; eauto. econs; ss. inv ML; ss; clarify. hexploit ML0; i; eauto. }
+        eexists. exists (step_tau _). eexists. left.
+        do 1 (pfold; sim_tau; left). sim_red. unfold assume. grind.
+        pfold. econs 5; ss; auto. i. eapply angelic_step in STEP; des; clarify.
+        eexists; split; auto. left.
+        do 6 (pfold; sim_tau; left). sim_red.
+        destruct rstate. ss. destruct l.
+        { admit "ez: wf_rstate". }
+        do 3 (pfold; sim_tau; left). sim_red.
+        pfold. econs 6; clarify.
+        { admit "ez: strict_determinate_at". }
+        eexists. eexists.
+        { eapply step_return. }
+        eexists. exists (step_tau _). eexists. left. do 1 (pfold; sim_tau; left). sim_red.
+        rewrite Any.upcast_downcast. grind. do 1 (pfold; sim_tau; left). pfold; sim_tau; right. apply CIH.
+        unfold ret_call_cont in TPOP. unfold return_stmt in TPOP. ss; clarify.
+        hexploit match_states_intro.
+        { instantiate (2:=Skip). ss. }
+        2,3,4,5,6: eauto.
+        2: clarify.
+        2:{ i.
+            match goal with
+            | [ H : match_states _ _ _ _ ?i0 _ |- match_states _ _ _ _ ?i1 _ ] =>
+              replace i1 with i0; eauto
+            end.
+            unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
+        econs. i. ss. admit "ez: find in lenv". }
 
       sim_red. pfold. econs 6; clarify.
       { admit "ez: strict_determinate_at". }
@@ -323,12 +334,10 @@ Section PROOF.
       { admit "ez: strict_determinate_at". }
       eexists. eexists.
       { eapply step_seq. }
-      eexists. eexists.
-      { eapply step_tau. }
-      eexists. right. eapply CIH. hexploit match_states_intro.
+      eexists. exists (step_tau _). eexists. right. eapply CIH. hexploit match_states_intro.
       { eapply CSC1. }
       4:{ instantiate (1:=Kseq s0 tcont). ss. destruct s0; eauto. eapply compile_stmt_no_Sreturn in CSC2; clarify. }
-      4:{ econs 2; eauto. }
+      4:{ econs 3; eauto. }
       all: eauto.
       { ss. destruct s0; eauto. eapply compile_stmt_no_Sreturn in CSC2; clarify. }
       i.
@@ -496,7 +505,7 @@ Section PROOF.
           econs 2; ss; eauto. }
       3,4: eauto.
       1:{ eapply H5. }
-      2:{ ss. econs 1. }
+      2:{ ss. econs 2. }
       2:{ clarify. }
       2:{ i.
           match goal with
