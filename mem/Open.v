@@ -127,7 +127,9 @@ Qed.
 
 
 
-Require Import SimModSem.
+
+Require Import SimModSemL.
+Require Import SimModSemHint.
 Require Import Hoare.
 Require Import HTactics ProofMode.
 
@@ -350,60 +352,67 @@ Section ADQ.
     { ss. }
   Qed.
 
-  (* Lemma my_lemma2_aux *)
-  (*       mrs ktr arg *)
-  (*   : *)
-  (*     sim_itree (fun '(x, y) => x = y) 100%nat *)
-  (*               (mrs, ε, (UModSem.transl_fun ktr) arg) *)
-  (*               (mrs, ε, fun_to_src (fsb_body (UModSem.massage_fsb gstb ktr)) arg) *)
-  (* . *)
-  (* Proof. *)
-  (*   destruct mrs as [mr st]. ss. *)
-  (*   unfold fun_to_src, UModSem.transl_fun, UModSem.massage_fun, body_to_src. *)
-  (*   ginit. abstr (ktr arg) itr. clear ktr arg. revert_until gstb. gcofix CIH. i. *)
-  (*   ides itr. *)
-  (*   { steps. } *)
-  (*   { steps. gbase. eapply CIH; et. } *)
-  (*   rewrite <- bind_trigger. *)
-  (*   destruct e; cycle 1. *)
-  (*   { *)
-  (*     destruct s; ss. *)
-  (*     { destruct p; ss. *)
-  (*       - resub. ired_both. gstep; econs; eauto. steps. gbase. eapply CIH; et. *)
-  (*       - resub. ired_both. gstep; econs; eauto. steps. gbase. eapply CIH; et. *)
-  (*     } *)
-  (*     { destruct e; ss. *)
-  (*       - resub. ired_both. gstep; econs; et. i. esplits; et. steps. gbase. eapply CIH; et. *)
-  (*       - resub. ired_both. gstep; econs; et. i. esplits; et. steps. gbase. eapply CIH; et. *)
-  (*       - resub. ired_both. gstep; econs; et. i. esplits; et. steps. gbase. eapply CIH; et. *)
-  (*     } *)
-  (*   } *)
-  (*   destruct u. resub. ired_both. gstep; econs; eauto. i. subst. destruct mrs_tgt1. esplits. steps. *)
-  (*   gbase. eapply CIH. *)
-  (* Unshelve. *)
-  (*   all: try (exact Ord.O). *)
-  (* Qed. *)
+  Let ns: gnames.
+  Admitted.
 
-  (* Lemma my_lemma2 *)
-  (*       umd *)
-  (*       (IN: In umd umds) *)
-  (*   : *)
-  (*     ModPair.sim (UMod.transl umd) (SMod.to_src (UMod.massage umd)) *)
-  (* . *)
-  (* Proof. *)
-  (*   econs; ss. *)
-  (*   i. r. econs. *)
-  (*   { instantiate (1:=fun '(x, y) => x = y). ss. *)
-  (*     set (ums:=UMod.get_modsem umd sk) in *. *)
-  (*     rewrite ! List.map_map. *)
-  (*     eapply Forall2_apply_Forall2. *)
-  (*     { refl. } *)
-  (*     i. subst. unfold map_snd. des_ifs. *)
-  (*     rr. split; ss. r. ii. subst. ss. esplits; et. eapply my_lemma2_aux. *)
-  (*   } *)
-  (*   { ss. } *)
-  (*   { ss. } *)
-  (* Qed. *)
+  Local Existing Instances ns.
+
+
+  Lemma my_lemma2_aux
+        mrs ktr arg
+    :
+      sim_itree (fun '(x, y) => x = y) 100%nat
+                (mrs, ε, (UModSem.transl_fun ktr) arg)
+
+  (mrs, ε, fun_to_src (fsb_body (UModSem.massage_fsb gstb ktr)) arg)
+  .
+  Proof.
+    destruct mrs as [mr st]. ss.
+    unfold fun_to_src, UModSem.transl_fun, UModSem.massage_fun, body_to_src.
+    ginit. abstr (ktr arg) itr. clear ktr arg. revert_until gstb. gcofix CIH. i.
+    ides itr.
+    { steps. gstep. econs. ss. auto. }
+    { steps. gbase. eapply CIH; et. }
+    rewrite <- bind_trigger.
+    destruct e; cycle 1.
+    {
+      destruct s; ss.
+      { destruct p; ss.
+        - resub. ired_both. gstep; econs; eauto. steps. gbase. eapply CIH; et.
+        - resub. ired_both. gstep; econs; eauto. steps. gbase. eapply CIH; et.
+      }
+      { destruct e; ss.
+        - resub. ired_both. gstep; econs; et. i. esplits; et. steps. gbase. eapply CIH; et.
+        - resub. ired_both. gstep; econs; et. i. esplits; et. steps. gbase. eapply CIH; et.
+        - resub. ired_both. gstep; econs; et. i. esplits; et. steps. gbase. eapply CIH; et.
+      }
+    }
+    destruct u. resub. ired_both. gstep; econs; eauto. i. subst. destruct mrs_tgt1. esplits. steps.
+    gbase. eapply CIH.
+  Unshelve.
+    all: try (exact Ord.O).
+  Qed.
+
+  Lemma my_lemma2
+        umd
+        (IN: In umd umds)
+    :
+      ModPair.sim (UMod.transl umd) (SMod.to_src (UMod.massage umd))
+  .
+  Proof.
+    econs; ss.
+    i. r. econs.
+    { instantiate (1:=fun '(x, y) => x = y). ss.
+      set (ums:=UMod.get_modsem umd sk) in *.
+      rewrite ! List.map_map.
+      eapply Forall2_apply_Forall2.
+      { refl. }
+      i. subst. unfold map_snd. des_ifs.
+      rr. split; ss. r. ii. subst. ss. esplits; et. eapply my_lemma2_aux.
+    }
+    { ss. }
+    { ss. }
+  Qed.
 
   (* refines_closed (Mod.add_list (map SMod.to_src (kmds ++ map (Σ _gstb) umds))) *)
   (*   (Mod.add_list (map SMod.to_src kmds ++ map Σ umds)) *)
@@ -501,21 +510,10 @@ Section ADQ.
   Let tgt_ms := (ModL.enclose (Mod.add_list (map SMod.to_src kmds ++ map SMod.to_src
                                                  (map (UMod.massage _gstb) umds)))).
 
-  Section PACO.
-    Variable R: Type.
-    Variable f: (R -> Prop) -> (R -> Prop).
-    Hypothesis f_mon: monotone1 f. Hint Resolve f_mon: paco.
-
-    Variable g1 g2 r1 r2: R -> Prop.
-
-    Hypothesis G1: g1 <1= paco1 f r1.
-    Hypothesis G2: g2 <1= paco1 f r2.
-
-    Hypothesis R1: r1 <1= r \1/ paco1 f r1.
-    Hypothesis R2: r2 <1= paco1 f r2.
+  Let ns: gnames := Build_gnames (fun fn => (Mod.add_list ((map SMod.to_src kmds) ++ (map SMod.to_src (map (UMod.massage _gstb) umds))))
 
 
-  Require Import SimGlobal.
+  (* Require Import SimGlobal. *)
   Lemma my_lemma2
     :
       refines_closed
@@ -523,6 +521,9 @@ Section ADQ.
         (Mod.add_list ((map SMod.to_src kmds) ++ (map (UMod.transl) umds)))
   .
   Proof.
+    eapply adequacy_hint.
+
+
     rewrite List.map_map.
     r. i. eapply SimGlobal.adequacy_global_itree; et.
     exists 100.

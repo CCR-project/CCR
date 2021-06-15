@@ -6,7 +6,7 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import Any.
-Require Import HoareDef STB SimModSem.
+Require Import HoareDef STB SimModSemL SimModSemHint.
 
 Require Import Relation_Definitions.
 Require Import Relation_Operators.
@@ -57,7 +57,7 @@ Ltac ired_both := ired_l; ired_r.
 (* "safe" simulation constructors *)
 Section SIM.
 
-  Context `{Σ: GRA.t}.
+  Context `{Σ: GRA.t} `{ns: gnames}.
 
   Let st_local: Type := (Σ * Any.t * Σ).
   Let W: Type := (Σ * Any.t) * (Σ * Any.t).
@@ -262,7 +262,7 @@ End SIM.
 
 
 Section HLEMMAS.
-  Context `{Σ: GRA.t}.
+  Context `{Σ: GRA.t} `{ns: gnames}.
   Local Opaque GRA.to_URA.
 
   Variant mk_wf (A: Type)
@@ -875,7 +875,7 @@ Notation "wf n '----------------------------------------------------------------
        format "wf  n '//' '------------------------------------------------------------------' '//' src0 '//' tgt0 '//' '------------------------------------------------------------------' '//' src1 '//' tgt1 '//' '------------------------------------------------------------------' '//' src2 '//' '//' '//' tgt2 '//' ").
 
 Section TEST.
-  Context `{Σ: GRA.t}.
+  Context `{Σ: GRA.t} `{ns: gnames}.
   Let wf := (mk_wf (fun (_ : unit) (_ _ : Any.t) => bi_pure True)
                                                    (fun (_ : unit) (_ _ : Any.t) (_ : Σ) => True)).
   Variable (srcs0 tgts0: Σ * Any.t).
