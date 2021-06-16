@@ -231,7 +231,21 @@ Module Sk.
   Proof.
     admit "ez".
   Qed.
-  
+
+  Lemma env_range_some :
+    forall sk blk
+      (BLKRANGE : blk < Datatypes.length sk),
+      <<FOUND : exists symb, SkEnv.blk2id (Sk.load_skenv sk) blk = Some symb>>.
+  Proof.
+    i. depgen sk. induction blk; i; ss; clarify.
+    { destruct sk; ss; clarify.
+      { lia. }
+      uo. destruct p. exists s. ss. }
+    destruct sk; ss; clarify.
+    { lia. }
+    apply lt_S_n in BLKRANGE. eapply IHblk; eauto.
+  Qed.
+
 End Sk.
 
 Coercion Sk.load_skenv: Sk.t >-> SkEnv.t.

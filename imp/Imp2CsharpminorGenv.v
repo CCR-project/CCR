@@ -131,6 +131,23 @@ Section GENV.
     Local Transparent get_function.
   Qed.
 
+  Lemma exists_compiled_variable
+        gm gn v
+        (GMAP: get_gmap src = Some gm)
+        (INSRC: In (gn, v) (prog_varsL src))
+    :
+      exists cv, In (s2p gn, Gvar cv) (_int_vars gm).
+  Proof.
+    Local Opaque get_function.
+    unfold get_gmap in GMAP. uo; des_ifs. ss. clear Heq0.
+    unfold compile_iVars.
+    match goal with
+    | [ |- exists _, In _ (List.map ?_mapf _) ] => set (mapf:=_mapf) in *
+    end.
+    apply (in_map mapf _ _) in INSRC. ss. eexists. eapply INSRC.
+    Local Transparent get_function.
+  Qed.
+
   Lemma in_tgt_prog_defs_ifuns
         gm tgt mn fn impf precf cf
         (GMAP: get_gmap src = Some gm)
