@@ -29,30 +29,30 @@ Section PROOFALL.
 
   Context `{Σ: GRA.t}.
 
-  Definition get_sge (src : Imp.programL) := Sk.load_skenv (Sk.sort (ImpMod.get_modL src).(ModL.sk)).
-  Definition get_tge (tgt : Csharpminor.program) := Genv.globalenv tgt.
+  (* Definition get_sge (src : Imp.programL) := Sk.load_skenv (Sk.sort (ImpMod.get_modL src).(ModL.sk)). *)
+  (* Definition get_tge (tgt : Csharpminor.program) := Genv.globalenv tgt. *)
 
-  Definition dummy_blk : positive := 1%positive.
+  (* Definition dummy_blk : positive := 1%positive. *)
 
-  Definition map_blk : programL -> nat -> Values.block :=
-    fun src blk =>
-      match (compile src) with
-      | OK tgt =>
-        if (ge_dec blk (src_init_nb src)) then Pos.of_succ_nat (2 + (ext_len src) + blk)
-        else
-          let sg := get_sge src in
-          let tg := get_tge tgt in
-          match sg.(SkEnv.blk2id) blk with
-          | Some name =>
-            match Genv.find_symbol tg (s2p name) with
-            | Some tblk => tblk
-            | None => dummy_blk
-            end
-          | None => dummy_blk
-          end
-      | _ => dummy_blk
-      end
-  .
+  (* Definition map_blk : programL -> nat -> Values.block := *)
+  (*   fun src blk => *)
+  (*     match (compile src) with *)
+  (*     | OK tgt => *)
+  (*       if (ge_dec blk (src_init_nb src)) then Pos.of_succ_nat (2 + (ext_len src) + blk) *)
+  (*       else *)
+  (*         let sg := get_sge src in *)
+  (*         let tg := get_tge tgt in *)
+  (*         match sg.(SkEnv.blk2id) blk with *)
+  (*         | Some name => *)
+  (*           match Genv.find_symbol tg (s2p name) with *)
+  (*           | Some tblk => tblk *)
+  (*           | None => dummy_blk *)
+  (*           end *)
+  (*         | None => dummy_blk *)
+  (*         end *)
+  (*     | _ => dummy_blk *)
+  (*     end *)
+  (* . *)
 
   Lemma map_blk_after_init :
     forall src blk
@@ -228,6 +228,12 @@ Section PROOFALL.
     eapply Genv.find_symbol_exists. ss. eapply H.
   Qed.
 
+  Lemma sksort_same_len :
+    forall l, <<LEN: Datatypes.length l = Datatypes.length (Sk.sort l)>>.
+  Proof.
+    i. pose (Sk.SkSort.Permuted_sort l) as SORTED. apply Permutation.Permutation_length in SORTED. eauto.
+  Qed.
+
   Lemma map_blk_neq :
     forall src b1 b2
       (COMP : exists tgt, Imp2Csharpminor.compile src = OK tgt)
@@ -245,20 +251,45 @@ Section PROOFALL.
     - clear g n. unfold get_sge, get_tge in *. hexploit found_in_src_in_tgt; eauto. i; des. unfold get_tge in H; clarify.
     - clear g n. unfold get_sge in Heq0. apply not_ge in BLK2. rename Heq0 into NOTFOUND. simpl in NOTFOUND.
       unfold src_init_nb in BLK2. unfold int_len in BLK2.
-      Admitted.
+      assert (SORTED: b2 < Datatypes.length (Sk.sort (defsL src))).
+      { rewrite <- sksort_same_len. ss. }
+      eapply Sk.env_range_some in SORTED. des. setoid_rewrite SORTED in NOTFOUND. clarify.
+    - des. clarify.
+  Qed.
 
   Lemma map_blk_inj :
     forall src b1 b2
       (COMP : exists tgt, Imp2Csharpminor.compile src = OK tgt)
       (WFPROG: Permutation.Permutation
                  ((List.map fst src.(prog_varsL)) ++ (List.map (compose fst snd) src.(prog_funsL)))
-                 (List.map fst src.(defsL))),
+                 (List.map fst src.(defsL)) /\ Sk.wf src.(defsL)),
       <<INJ: map_blk src b1 = map_blk src b2 -> b1 = b2>>.
   Proof.
-    i. des. unfold map_blk. rewrite! COMP. unfold get_sge, get_tge. ii. rename H into MAP.
-  Admitted.
-
-
+    i. des. destruct (ge_dec b1 (src_init_nb src)) eqn:BRANGE1; destruct (ge_dec b2 (src_init_nb src)) eqn:BRANGE2.
+    { unfold map_blk. des_ifs. ii. lia. }
+    { hexploit map_blk_neq; eauto; ii; clarify. }
+    { hexploit map_blk_neq; eauto; ii. sym in H0. clarify. }
+    unfold map_blk. unfold src_init_nb in *. unfold int_len in *. unfold get_sge in *.
+    rewrite BRANGE1. rewrite BRANGE2. clear BRANGE1 BRANGE2.
+    rename n into BLK1. apply not_ge in BLK1. rename n0 into BLK2. apply not_ge in BLK2.
+    assert (SBLK1: b1 < Datatypes.length (Sk.sort (defsL src))).
+    { rewrite <- sksort_same_len; ss. }
+    assert (SBLK2: b2 < Datatypes.length (Sk.sort (defsL src))).
+    { rewrite <- sksort_same_len; ss. }
+    eapply Sk.env_range_some in SBLK1. eapply Sk.env_range_some in SBLK2. des.
+    ss. rewrite SBLK1. rewrite SBLK2. rewrite COMP. ii.
+    hexploit found_in_src_in_tgt.
+    1,2: eauto.
+    { unfold get_sge. ss. eapply SBLK1. }
+    hexploit found_in_src_in_tgt.
+    1,2: eauto.
+    { unfold get_sge. ss. eapply SBLK2. }
+    i. des. rewrite H0 in H. rewrite H1 in H. clarify.
+    apply Genv.find_invert_symbol in H0. apply Genv.find_invert_symbol in H1.
+    rewrite H1 in H0. clear H1. clarify. apply s2p_inj in H0. clarify.
+    apply Sk.sort_wf in WFPROG0. apply Sk.load_skenv_wf in WFPROG0. des.
+    apply WFPROG0 in SBLK1. apply WFPROG0 in SBLK2. rewrite SBLK1 in SBLK2. clarify.
+  Qed.
 
 
 

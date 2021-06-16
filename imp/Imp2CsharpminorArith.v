@@ -72,6 +72,8 @@ Section ARITH.
     end.
   Qed.
 
+  Context `{Σ: GRA.t}.
+
   Lemma map_val_vadd_comm
         src a b v
         (VADD: vadd a b = Some v)
@@ -79,7 +81,7 @@ Section ARITH.
         (WFB: wf_val b)
         (WFV: wf_val v)
     :
-      Values.Val.addl (@map_val src a) (@map_val src b) = @map_val src v.
+      Values.Val.addl (map_val src a) (map_val src b) = map_val src v.
   Proof.
     destruct a; destruct b; ss; clarify.
     - ss. repeat f_equal.
@@ -128,5 +130,3 @@ Section ARITH.
   Qed.
 
 End ARITH.
-
-
