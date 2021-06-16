@@ -6,7 +6,7 @@
 - coq-extlib (>= *0.11.1*)
 - coq-paco (>= *4.1.1*)
 - coq-itree (= *3.2.0*)
-- [coq-ordinal](https://github.com/minkiminki/Ordinal) (>= *dev 27a2fb*) (See [sf-opam-coq-archive](https://github.com/snu-sf/sf-opam-coq-archive) for installation)
+- coq-ordinal (>= *0.5.0*)
 
 - coq-stdpp (= *1.5.0*)
 - coq-iris (= *3.4.0*)
@@ -19,4 +19,4 @@
 - ocamlbuild (>= *0.14.0*)
 
 
-All packages except coq-ordinal can be installed from [OPAM archive for Coq](https://github.com/coq/opam-coq-archive)
+All packages can be installed from [OPAM archive for Coq](https://github.com/coq/opam-coq-archive)
