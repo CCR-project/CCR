@@ -223,6 +223,15 @@ Module Sk.
     eapply IHsk1; et.
   Qed.
 
+  Lemma in_env_in_sk :
+    forall sk blk symb,
+      (<<FOUND: SkEnv.blk2id (Sk.load_skenv sk) blk = Some symb>>
+       <->
+       <<IN: exists def, In (symb, def) sk>>).
+  Proof.
+    admit "ez".
+  Qed.
+  
 End Sk.
 
 Coercion Sk.load_skenv: Sk.t >-> SkEnv.t.
