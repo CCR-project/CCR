@@ -239,7 +239,6 @@ Section PROOF.
       destruct tcont; ss; clarify. inv MCONT; clarify.
       { unfold exit_stmt in *; ss; clarify. destruct tcont; inv MSTACK; ss; clarify.
         sim_red. pfold. econs 6; clarify.
-        { admit "ez: strict_determinate_at". }
         eexists. eexists.
         { eapply step_skip_seq. }
         eexists. exists (step_tau _). eexists. unfold idK. sim_red. left.
@@ -248,7 +247,6 @@ Section PROOF.
         unfold unwrapU. des_ifs.
         2:{ sim_triggerUB. }
         sim_red. pfold. econs 6; clarify.
-        { admit "ez: strict_determinate_at". }
         eexists. eexists.
         { eapply step_return_1; ss; eauto. econs; ss. econs; ss. inv ML; ss; clarify. hexploit ML0; i; eauto. }
         eexists. exists (step_tau _). eexists. left.
@@ -281,7 +279,6 @@ Section PROOF.
 
       { unfold return_stmt in *; ss; clarify. destruct tcont; inv MSTACK; ss; clarify.
         sim_red. pfold. econs 6; clarify.
-        { admit "ez: strict_determinate_at". }
         eexists. eexists.
         { eapply step_skip_seq. }
         eexists. exists (step_tau _). eexists. unfold idK. sim_red. left.
@@ -290,7 +287,6 @@ Section PROOF.
         unfold unwrapU. des_ifs.
         2:{ sim_triggerUB. }
         sim_red. pfold. econs 6; clarify.
-        { admit "ez: strict_determinate_at". }
         eexists. eexists.
         { eapply step_return_1; ss; eauto. econs; ss. inv ML; ss; clarify. hexploit ML0; i; eauto. }
         eexists. exists (step_tau _). eexists. left.
@@ -302,7 +298,6 @@ Section PROOF.
         { admit "ez: wf_rstate". }
         do 3 (pfold; sim_tau; left). sim_red.
         pfold. econs 6; clarify.
-        { admit "ez: strict_determinate_at". }
         eexists. eexists.
         { eapply step_return. }
         eexists. exists (step_tau _). eexists. left. do 1 (pfold; sim_tau; left). sim_red.
@@ -321,7 +316,6 @@ Section PROOF.
         econs. i. ss. admit "ez: find in lenv". }
 
       sim_red. pfold. econs 6; clarify.
-      { admit "ez: strict_determinate_at". }
       eexists. eexists.
       { eapply step_skip_seq. }
       eexists. eexists (step_tau _). eexists. sim_red. right. eapply CIH. hexploit match_states_intro; eauto.
@@ -334,7 +328,6 @@ Section PROOF.
       (* tau point *)
       unfold ordN in *. do 1 (pfold; sim_tau; left). sim_red.
       pfold. econs 6; auto.
-      { admit "ez? strict_determinate_at". }
       eexists. eexists.
       { eapply step_set. eapply H0. }
       eexists. eexists.
@@ -349,7 +342,6 @@ Section PROOF.
       ss. destruct (compile_stmt gm code1) eqn:CSC1; destruct (compile_stmt gm code2) eqn:CSC2; uo; clarify.
       (* tau point *)
       pfold. econs 6; ss; clarify.
-      { admit "ez: strict_determinate_at". }
       eexists. eexists.
       { eapply step_seq. }
       eexists. exists (step_tau _). eexists. right. eapply CIH. hexploit match_states_intro.
@@ -375,7 +367,6 @@ Section PROOF.
       { rewrite Z.eqb_eq in CZERO. clarify.
         (* tau point *)
         pfold. econs 6; ss.
-        { admit "ez: strict_determinate_at". }
         eexists. eexists.
         { eapply step_ifthenelse; ss. econs; eauto.
           + econs. ss.
@@ -386,7 +377,6 @@ Section PROOF.
       { rewrite Z.eqb_neq in CZERO.
         (* tau point *)
         pfold. econs 6; ss.
-        { admit "ez: strict_determinate_at". }
         eexists. eexists.
         { eapply step_ifthenelse.
           - econs; eauto.
@@ -463,7 +453,6 @@ Section PROOF.
       (* tau point?? need a tau BEFORE denote_stmt(fn_body) *)
       rewrite interp_imp_tau. sim_red.
       pfold. econs 6; auto.
-      { admit "ez: strict_determinate_at". }
       eexists. eexists.
       { eapply step_call; eauto.
         - econs. econs 2.
@@ -475,7 +464,6 @@ Section PROOF.
 
       eexists. exists (step_tau _). eexists. left.
       pfold. econs 4.
-      { admit "ez: strict_determinate_at". }
 
       unfold pre_compile_function in COMPF. des_ifs; clarify; uo; des_ifs; ss.
       { rewrite rel_dec_correct in Heq2. clarify. }
@@ -489,7 +477,6 @@ Section PROOF.
       eexists; split; auto. grind. left.
 
       pfold. econs 4.
-      { admit "ez: strict_determinate_at". }
       eexists. eexists.
       { eapply step_seq. }
       eexists; split; auto. right. eapply CIH.
@@ -533,7 +520,7 @@ Section PROOF.
           unfold itree_of_cont_stmt, itree_of_imp_cont. unfold idK. grind. }
       { admit "ez: should follow from above, the initial lenv". }
 
-    - ss. destruct p eqn:PVAR; clarify. 
+    - ss. destruct p eqn:PVAR; clarify.
       admit "ez: CallPtr, similar to CallFun.".
 
     - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_CallSys.
@@ -569,7 +556,6 @@ Section PROOF.
       { admit "ez: index". }
       i. sim_red.
       pfold. econs 4.
-      { admit "ez: strict_determinate_at". }
       eexists. eexists.
       { eapply step_call; eauto.
         - econs. econs 2.
@@ -621,7 +607,6 @@ Section PROOF.
       eexists. left.
       do 8 (pfold; sim_tau; left).
       pfold. econs 4.
-      { admit "ez: strict_determinate_at". }
       eexists. eexists.
       { eapply step_return. }
       eexists; split; auto. right. eapply CIH.
@@ -645,7 +630,6 @@ Section PROOF.
       rename n into blk. rename Heq into SRCBLK.
       do 2 (pfold; sim_tau; left). sim_red.
       pfold. econs 6; ss.
-      { admit "ez: strict_determinate_at". }
       eexists. eexists.
       { eapply step_set. econs. econs 2.
         { apply Maps.PTree.gempty. }
@@ -702,7 +686,6 @@ Section PROOF.
       hexploit tgt_genv_find_def_by_blk; eauto. i. rename H0 into TGTFINDDEF.
 
       pfold. econs 6; clarify.
-      { admit "ez: strict_determinate_at". }
       eexists. eexists.
       { eapply step_call.
         - econs. econs 2.
@@ -736,7 +719,6 @@ Section PROOF.
       apply TGTM2 in VACCESS. clear TGTM2. dependent destruction VACCESS. rename x0 into tm2. rename e0 into TGTM2.
 
       pfold. econs 4.
-      { admit "ez: strict_determinate_at". }
       eexists. eexists.
       { eapply step_external_function. ss.
         assert (POSSIZE: Ptrofs.unsigned (Ptrofs.repr (8 * n)) = (8 * n)%Z).
@@ -750,7 +732,6 @@ Section PROOF.
 
       eexists; split; auto. left.
       pfold. econs 4.
-      { admit "ez: strict_determinate_at". }
       eexists. eexists.
       { eapply step_return. }
       eexists; split; auto. right. eapply CIH.
@@ -789,13 +770,11 @@ Section PROOF.
       2:{ sim_triggerUB. }
       sim_red.
       pfold. econs 6; clarify.
-      { admit "ez: strict_determinate_at". }
       eexists. eexists.
       { econs. }
       eexists. exists (step_tau _).
       eexists. left. do 7 (pfold; sim_tau; left). sim_red.
       pfold. econs 6; clarify.
-      { admit "ez: strict_determinate_at". }
       eexists. eexists.
       { econs. }
       eexists. exists (step_tau _). eexists. right. eapply CIH.
@@ -834,7 +813,6 @@ Section PROOF.
       2:{ sim_triggerUB. }
       sim_red.
       pfold. econs 6; clarify.
-      { admit "ez: strict_determinate_at". }
       eexists. eexists.
       { eapply step_set. econs; eauto. ss. inv MM. apply MMEM in MEMCNT. des.
         unfold scale_ofs in *. unfold map_ofs in *. rewrite unwrap_Ptrofs_Int64_z; try nia; eauto. }
@@ -881,7 +859,6 @@ Section PROOF.
       i. des.
 
       pfold. econs 6; clarify.
-      { admit "ez: strict_determinate_at". }
       eexists. eexists.
       { eapply step_store; eauto. ss. inv MM. unfold scale_ofs in *; unfold map_ofs in *.
         hexploit MMEM; eauto. i; des. rewrite unwrap_Ptrofs_Int64_z; try nia; eauto. }
@@ -922,7 +899,6 @@ Section PROOF.
       des_ifs.
       + sim_red.
         pfold. econs 6; clarify.
-        { admit "ez: strict_determinate_at". }
         eexists. eexists.
         { eapply step_set. econs; eauto. econs; eauto; ss. eapply match_mem_cmp in VCMP; eauto. }
         eexists. exists (step_tau _).
@@ -944,7 +920,6 @@ Section PROOF.
           admit "ez: match le". }
       + sim_red.
         pfold. econs 6; clarify.
-        { admit "ez: strict_determinate_at". }
         eexists. eexists.
         { eapply step_set. econs; eauto. econs; eauto; ss. eapply match_mem_cmp in VCMP; eauto. }
         eexists. exists (step_tau _).
