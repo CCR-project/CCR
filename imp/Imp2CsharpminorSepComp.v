@@ -29,31 +29,6 @@ Section PROOFALL.
 
   Context `{Σ: GRA.t}.
 
-  (* Definition get_sge (src : Imp.programL) := Sk.load_skenv (Sk.sort (ImpMod.get_modL src).(ModL.sk)). *)
-  (* Definition get_tge (tgt : Csharpminor.program) := Genv.globalenv tgt. *)
-
-  (* Definition dummy_blk : positive := 1%positive. *)
-
-  (* Definition map_blk : programL -> nat -> Values.block := *)
-  (*   fun src blk => *)
-  (*     match (compile src) with *)
-  (*     | OK tgt => *)
-  (*       if (ge_dec blk (src_init_nb src)) then Pos.of_succ_nat (2 + (ext_len src) + blk) *)
-  (*       else *)
-  (*         let sg := get_sge src in *)
-  (*         let tg := get_tge tgt in *)
-  (*         match sg.(SkEnv.blk2id) blk with *)
-  (*         | Some name => *)
-  (*           match Genv.find_symbol tg (s2p name) with *)
-  (*           | Some tblk => tblk *)
-  (*           | None => dummy_blk *)
-  (*           end *)
-  (*         | None => dummy_blk *)
-  (*         end *)
-  (*     | _ => dummy_blk *)
-  (*     end *)
-  (* . *)
-
   Lemma map_blk_after_init :
     forall src blk
       (COMP : exists tgt, Imp2Csharpminor.compile src = OK tgt)
@@ -294,6 +269,29 @@ Section PROOFALL.
 
 
 
+
+  Definition imp_initial_state (src : Imp.programL) :=
+    (ModL.compile (ImpMod.get_modL src)).(initial_state).
+
+  Lemma single_compile_behavior_improves
+        (src: Imp.programL) (tgt: Csharpminor.program) srcst tgtst
+        (WFPROG: Permutation.Permutation
+                   ((List.map fst src.(prog_varsL)) ++ (List.map (compose fst snd) src.(prog_funsL)))
+                   (List.map fst src.(defsL)) /\ Sk.wf src.(defsL))
+        (COMP: compile src = OK tgt)
+        (SINIT: srcst = imp_initial_state src)
+        (TINIT: Csharpminor.initial_state tgt tgtst)
+    :
+      <<IMPROVES: @improves2 _ (Csharpminor.semantics tgt) srcst tgtst>>.
+  Proof.
+    eapply adequacy; eauto.
+    { apply Ordinal.Ord.lt_well_founded. }
+    { apply Csharpminor_wf_semantics. }
+    { admit "ez? wf imp". }
+    
+  Admitted.
+
+
   (* Lemma list_norepet_NoDupB {K} {decK} : *)
   (*   forall l, Coqlib.list_norepet l <-> @NoDupB K decK l = true. *)
   (* Proof. *)
@@ -423,19 +421,6 @@ Section PROOFALL.
     2:{ rewrite fold_left_option_None in LINKIMP; clarify. }
     erewrite _comm_link_imp_link_mod; eauto.
   Qed.
-
-  Definition imp_initial_state (src : Imp.programL) :=
-    (ModL.compile (ImpMod.get_modL src)).(initial_state).
-
-  Lemma single_compile_behavior_improves
-        (src: Imp.programL) (tgt: Csharpminor.program) srcst tgtst
-        (COMP: compile src = OK tgt)
-        (SINIT: srcst = imp_initial_state src)
-        (TINIT: Csharpminor.initial_state tgt tgtst)
-    :
-      <<IMPROVES: @improves2 _ (Csharpminor.semantics tgt) srcst tgtst>>.
-  Proof.
-  Admitted.
 
   Definition src_initial_state (src : ModL.t) :=
     (ModL.compile src).(initial_state).
