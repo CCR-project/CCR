@@ -265,18 +265,20 @@ Section UMODSEM.
   (************************* SMOD ***************************)
   (************************* SMOD ***************************)
 
-  Definition massage_uCallE: uCallE ~> hCallE :=
-    fun T '(uCall fn args) => hCall false fn (args↑)
+  Variable stb: (list (string * fspec)).
+
+  Definition massage_uCallE: uCallE ~> itree (hCallE +' pE +' eventE) :=
+    fun T '(uCall fn args) => _ <- (alist_find fn stb)?;; trigger (hCall false fn (args↑))
   .
 
-  Definition massage_event: (uCallE +' pE +' eventE) ~> (hCallE +' pE +' eventE) :=
-    (bimap massage_uCallE (bimap (id_ _) (id_ _)))
-  .
+  (* Definition massage_event: (uCallE +' pE +' eventE) ~> itree (hCallE +' pE +' eventE) := *)
+  (*   (case_ (bif:=sum1) (massage_uCallE) *)
+  (*          ((fun T X => trigger X): _ ~> itree (hCallE +' pE +' eventE))) *)
+  (* . *)
 
   Definition massage_itr: itree (uCallE +' pE +' eventE) ~> itree (hCallE +' pE +' eventE) :=
-    (* embed ∘ massage_event *) (*** <- it works but it is not handy ***)
-    fun _ => interp (T:=_) (fun _ e => trigger (massage_event e))
-    (* fun _ => massageate (T:=_) massage_event  *)
+    interp (case_ (bif:=sum1) (massage_uCallE)
+                  ((fun T X => trigger X): _ ~> itree (hCallE +' pE +' eventE)))
   .
 
   Definition massage_fun (ktr: Any.t -> itree (uCallE +' pE +' eventE) Any.t):
@@ -363,7 +365,7 @@ Section UMODSEM.
     :
       (massage_itr (trigger i))
       =
-      (trigger (massage_uCallE i) >>= (fun r => tau;; Ret r)).
+      massage_uCallE i >>= (fun r => tau;; Ret r).
   Proof.
     unfold massage_itr in *.
     repeat rewrite interp_trigger. grind.
@@ -530,14 +532,14 @@ Section UMOD.
   Proof. i. refl. Qed.
 
 
-  Definition massage (md: t): SMod.t := {|
-    SMod.get_modsem := UModSem.massage ∘ md.(get_modsem);
+  Definition massage (stb: Sk.t -> list (gname * fspec)) (md: t): SMod.t := {|
+    SMod.get_modsem := (fun sk => (UModSem.massage (stb sk) (md.(get_modsem) sk)));
     SMod.sk := md.(sk);
   |}
   .
 
-  Lemma to_smod_comm: forall md skenv, UModSem.massage (md.(get_modsem) skenv) = (massage md).(SMod.get_modsem) skenv.
-  Proof. i. refl. Qed.
+  (* Lemma to_smod_comm: forall stb md skenv, UModSem.massage stb (md.(get_modsem) skenv) = (massage stb md).(SMod.get_modsem) skenv. *)
+  (* Proof. i. refl. Qed. *)
 
 End UMOD.
 End UMod.
