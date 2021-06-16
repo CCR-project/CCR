@@ -578,6 +578,8 @@ Section MODSEML.
   Next Obligation. inv STEP; inv STEP0; ss. csc. Qed.
   Next Obligation. inv STEP; ss. Qed.
   Next Obligation. inv STEP; ss. Qed.
+  Next Obligation. inv STEP; ss. Qed.
+  Next Obligation. inv STEP; ss. Qed.
 
   Definition compile P: semantics :=
     compile_itree (initial_itr P).

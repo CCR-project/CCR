@@ -196,9 +196,9 @@ Proof.
     eapply _beh_astep_rev; et.
   - exploit wf_demonic; et. i; subst. ss.
     pfold. econs; ss; et. rr. esplits; ss; et. punfold U.
-  - admit "ez - wf_final; final nostep".
+  - exploit wf_final; et. ss.
   - destruct es0; ss; cycle 1.
-    { admit "ez - wf_vis; vis should always make some event". }
+    { exploit wf_vis_event; et. ss. }
     pfold; econs; ss; et.
 Qed.
 
@@ -325,6 +325,25 @@ Definition transl_beh (p: program_behavior): Tr.t :=
   end
 .
 
+Lemma decompile_match_val v0 v1
+      (SEQ: decompile_eval v0 = Some v1)
+  :
+    match_val v0 v1.
+Proof.
+  unfold decompile_eval in *. des_ifs.
+Qed.
+
+Lemma decompile_match_vals l0 l1
+      (SEQ: sequence (List.map decompile_eval l0) = Some l1)
+  :
+    Forall2 match_val l0 l1.
+Proof.
+  revert l1 SEQ. induction l0; ss.
+  { i. clarify. }
+  { i. uo. des_ifs. econs; et.
+    eapply decompile_match_val; et. }
+Qed.
+
 Lemma decompile_match_event
       e0 e1
       (D: decompile_event e0 = Some e1)
@@ -332,8 +351,33 @@ Lemma decompile_match_event
     <<M: match_event e0 e1>>
 .
 Proof.
-  destruct e0; ss. uo. des_ifs.
-  admit "ez".
+  destruct e0; ss. uo. des_ifs. econs.
+  { eapply decompile_match_vals; et. }
+  { eapply decompile_match_val; et. }
+Qed.
+
+Lemma match_val_iff v0 v1
+  :
+    decompile_eval v0 = Some v1 <->
+    match_val v0 v1.
+Proof.
+  split.
+  { eapply decompile_match_val. }
+  i. inv H. ss.
+Qed.
+
+Lemma match_vals_iff l0 l1
+  :
+    sequence (List.map decompile_eval l0) = Some l1 <->
+    Forall2 match_val l0 l1.
+Proof.
+  split.
+  { eapply decompile_match_vals. }
+  revert l1. induction l0; ss.
+  { i. inv H. ss. }
+  { i. inv H. hexploit IHl0; et. i.
+    uo. rewrite H.
+    eapply match_val_iff in H2. rewrite H2. ss. }
 Qed.
 
 Lemma match_event_iff
@@ -343,7 +387,11 @@ Lemma match_event_iff
     match_event e_tgt e_src
 .
 Proof.
-  admit "ez".
+  split.
+  { eapply decompile_match_event. }
+  i. inv H. ss. uo.
+  eapply match_vals_iff in MV. rewrite MV.
+  eapply match_val_iff in MV0. rewrite MV0. ss.
 Qed.
 
 Lemma match_event_squeeze
@@ -365,7 +413,22 @@ Lemma match_events_squeeze
     Forall2 match_event es_tgt es_src
 .
 Proof.
-  admit "ez - remove match_event and just use decompile_event?".
+  revert es_tgt. induction es_src; ss.
+  { i. split.
+    { destruct es_tgt; ss. des_ifs. }
+    { i. inv H. ss. }
+  }
+  { i. split.
+    { i. destruct es_tgt; ss. des_ifs.
+      hexploit IHes_src; et. i. econs.
+      { eapply match_event_squeeze. ss. rewrite Heq. ss. }
+      { eapply H. et. }
+    }
+    { i. inv H. eapply IHes_src in H4. ss.
+      eapply match_event_iff in H3. rewrite H3.
+      rewrite H4. ss.
+    }
+  }
 Qed.
 
 Theorem decompile_trinf_spec
