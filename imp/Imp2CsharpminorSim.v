@@ -202,14 +202,14 @@ Section PROOF.
   Hypothesis map_blk_inj :
     forall src b1 b2
       (COMP : exists tgt, Imp2Csharpminor.compile src = OK tgt)
-      (WFPROG: (Coqlib.list_norepet src.(defsL)) /\
-               (forall x, In x ((List.map fst src.(prog_varsL)) ++ (List.map fst src.(prog_funsL)))
-                     <-> In x (List.map fst src.(defsL)))),
+      (WFPROG: Permutation.Permutation
+                 ((List.map fst src.(prog_varsL)) ++ (List.map fst src.(prog_funsL)))
+                 (List.map fst src.(defsL))),
       <<INJ: map_blk src b1 = map_blk src b2 -> b1 = b2>>.
 
-  Context {WFPROG: (Coqlib.list_norepet srcprog.(defsL)) /\
-               (forall x, In x ((List.map fst srcprog.(prog_varsL)) ++ (List.map fst srcprog.(prog_funsL)))
-                     <-> In x (List.map fst srcprog.(defsL)))}.
+  Context {WFPROG: Permutation.Permutation
+                     ((List.map fst srcprog.(prog_varsL)) ++ (List.map fst srcprog.(prog_funsL)))
+                     (List.map fst srcprog.(defsL))}.
 
 
   Theorem match_states_sim

@@ -133,22 +133,22 @@ Section PROOFALL.
   Qed.
 
   Lemma wfprog_defsL_length :
-    forall src tgt
-      (COMP : Imp2Csharpminor.compile src = OK tgt)
-      (WFPROG: forall x, In x ((List.map fst src.(prog_varsL)) ++ (List.map fst src.(prog_funsL)))
-                    <-> In x (List.map fst src.(defsL))),
+    forall src
+      (WFPROG: Permutation.Permutation
+                 ((List.map fst src.(prog_varsL)) ++ (List.map fst src.(prog_funsL)))
+                 (List.map fst src.(defsL))),
       <<DEFSL: List.length src.(defsL) = List.length src.(prog_varsL) + List.length src.(prog_funsL)>>.
   Proof.
-    i. unfold compile, _compile in COMP. des_ifs. unfold compile_gdefs in Heq0. uo; des_ifs; ss.
-    do 3 rewrite <- (map_length fst). rewrite <- app_length.
-    eapply Permutation.Permutation_length. eapply perm_elements_PTree_norepeat. auto.
-    
+    i. do 3 rewrite <- (map_length fst). rewrite <- app_length.
+    eapply Permutation.Permutation_length. apply Permutation.Permutation_sym. auto.
+  Qed.
 
   Lemma map_blk_init_range :
     forall src tgt id b
       (COMP : Imp2Csharpminor.compile src = OK tgt)
-      (WFPROG: forall x, In x ((List.map fst src.(prog_varsL)) ++ (List.map fst src.(prog_funsL)))
-                    <-> In x (List.map fst src.(defsL)))
+      (WFPROG: Permutation.Permutation
+                 ((List.map fst src.(prog_varsL)) ++ (List.map fst src.(prog_funsL)))
+                 (List.map fst src.(defsL)))
       (TGT: Genv.find_symbol (get_tge tgt) id = Some b),
       <<RANGE: (b < (tgt_init_nb src))%positive>>.
   Proof.
@@ -157,68 +157,56 @@ Section PROOFALL.
     unfold Genv.globalenv in TGT. ss. rewrite Genv.genv_next_add_globals in TGT. ss.
     unfold tgt_init_nb. unfold ext_len, int_len. hexploit gmap_preserves_length; eauto. i; des.
     rewrite Genv_advance_next_length in TGT. rewrite length_elements_PTree_norepet in TGT; eauto.
-    
- 
+    rewrite wfprog_defsL_length; auto. repeat rewrite app_length in TGT. ss. rewrite app_length in TGT.
+    eapply get_iFuns_length in Heq0. rewrite <- Heq0 in TGT.
+    repeat rewrite map_length in TGT.
+    rewrite EVL in TGT; rewrite EFL in TGT; rewrite IVL in TGT; rewrite IFL in TGT.
+    depgen TGT. clear. i. unfold NW.
+    match goal with
+    | [ TGT: Coqlib.Plt _ ?l1 |- (_ < ?l2)%positive ] => replace l2 with l1; eauto
+    end.
+    lia.
+  Qed.
+
+  Lemma found_in_src_in_tgt :
+    forall src tgt blk symb
+      (COMP: compile src = OK tgt)
+      (WFPROG: Permutation.Permutation
+                 ((List.map fst src.(prog_varsL)) ++ (List.map fst src.(prog_funsL)))
+                 (List.map fst src.(defsL)))
+      (SRC: SkEnv.blk2id (get_sge src) blk = Some symb),
+      <<TGTFOUND: exists tb, Genv.find_symbol (get_tge tgt) (s2p symb) = Some tb>>.
+  Proof.
+    i. unfold compile, _compile in COMP. des_ifs. unfold get_sge, get_tge in *. ss.
   Admitted.
 
-
-    
-  TGT : Coqlib.Plt b
-          (Pos.of_nat
-             (Datatypes.length
-                (List.map (fun '(n, d) => (n, lift_def g n d)) (_ext_funs g) ++
-                 List.map (fun '(n, d) => (n, lift_def g n d)) (_ext_vars g) ++
-                 (s2p "malloc", Gfun (External EF_malloc))
-                 :: (s2p "free", Gfun (External EF_free)) :: l1 ++ List.map (fun '(n, d) => (n, lift_def g n d)) (_int_vars g)) +
-              Pos.to_nat 1))
-  EVL : Datatypes.length (_ext_vars g) = Datatypes.length (ext_varsL src)
-  EFL : Datatypes.length (_ext_funs g) = Datatypes.length (ext_funsL src)
-  IVL : Datatypes.length (_int_vars g) = Datatypes.length (prog_varsL src)
-  IFL : Datatypes.length (_int_funs g) = Datatypes.length (prog_funsL src)
-  ============================
-  <<
-  (b < Pos.of_succ_nat (2 + (Datatypes.length (ext_varsL src) + Datatypes.length (ext_funsL src)) + Datatypes.length (defsL src)))%positive >>
-
-    eapply Genv.find_symbol_inversion in TGT. unfold prog_defs_names in TGT. ss.
   Lemma map_blk_neq :
     forall src b1 b2
       (COMP : exists tgt, Imp2Csharpminor.compile src = OK tgt)
-      (WFPROG: forall x, In x ((List.map fst src.(prog_varsL)) ++ (List.map fst src.(prog_funsL)))
-                    <-> In x (List.map fst src.(defsL)))
+      (WFPROG: Permutation.Permutation
+                 ((List.map fst src.(prog_varsL)) ++ (List.map fst src.(prog_funsL)))
+                 (List.map fst src.(defsL)))
       (BLK1: b1 >= (src_init_nb src))
       (BLK2: ~ (b2 >= (src_init_nb src))),
       map_blk src b1 <> map_blk src b2.
   Proof.
     i. unfold map_blk. des_ifs; ii; rename H into CONTRA.
-    - clear g n.
-    
+    - clear g n. assert (RANGE: (b < (tgt_init_nb src))%positive).
+      { eapply map_blk_init_range; eauto. }
+      unfold tgt_init_nb in RANGE. unfold src_init_nb in *. lia.
+    - clear g n. unfold get_sge, get_tge in *.
+      Admitted.
 
   Lemma map_blk_inj :
     forall src b1 b2
       (COMP : exists tgt, Imp2Csharpminor.compile src = OK tgt)
-      (WFPROG: forall x, In x ((List.map fst src.(prog_varsL)) ++ (List.map fst src.(prog_funsL)))
-                    <-> In x (List.map fst src.(defsL))),
+      (WFPROG: Permutation.Permutation
+                 ((List.map fst src.(prog_varsL)) ++ (List.map fst src.(prog_funsL)))
+                 (List.map fst src.(defsL))),
       <<INJ: map_blk src b1 = map_blk src b2 -> b1 = b2>>.
   Proof.
     i. des. unfold map_blk. rewrite! COMP. unfold get_sge, get_tge. ii. rename H into MAP.
-
-
-
-
-    des_ifs; ss; eauto.
-    - do 2 (apply Pos.succ_inj in MAP). rewrite SuccNat2Pos.inj_iff in MAP; lia.
-    - 
-
-
-
-
-
-
-
-
-
-
-
+  Admitted.
 
 
 

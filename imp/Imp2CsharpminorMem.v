@@ -30,18 +30,18 @@ Section MEM.
   Hypothesis map_blk_inj :
     forall src b1 b2
       (COMP : exists tgt, compile src = OK tgt)
-      (WFPROG: (Coqlib.list_norepet src.(defsL)) /\
-               (forall x, In x ((List.map fst src.(prog_varsL)) ++ (List.map fst src.(prog_funsL)))
-                     <-> In x (List.map fst src.(defsL)))),
+      (WFPROG: Permutation.Permutation
+                 ((List.map fst src.(prog_varsL)) ++ (List.map fst src.(prog_funsL)))
+                 (List.map fst src.(defsL))),
       <<INJ: map_blk src b1 = map_blk src b2 -> b1 = b2>>.
 
   Variable src : Imp.programL.
   Variable m : Mem.t.
   Variable tm : Mem.mem.
   Context {MM: @match_mem src m tm}.
-  Context {WFPROG: (Coqlib.list_norepet src.(defsL)) /\
-                   (forall x, In x ((List.map fst src.(prog_varsL)) ++ (List.map fst src.(prog_funsL)))
-                         <-> In x (List.map fst src.(defsL)))}.
+  Context {WFPROG: Permutation.Permutation
+                     ((List.map fst src.(prog_varsL)) ++ (List.map fst src.(prog_funsL)))
+                     (List.map fst src.(defsL))}.
   Context {COMP : exists tgt, compile src = OK tgt}.
 
   Lemma match_mem_alloc
