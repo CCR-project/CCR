@@ -228,6 +228,12 @@ Section PROOFALL.
     eapply Genv.find_symbol_exists. ss. eapply H.
   Qed.
 
+  Lemma sksort_same_len :
+    forall l, <<LEN: Datatypes.length l = Datatypes.length (Sk.sort l)>>.
+  Proof.
+    i. pose (Sk.SkSort.Permuted_sort l) as SORTED. apply Permutation.Permutation_length in SORTED. eauto.
+  Qed.
+
   Lemma map_blk_neq :
     forall src b1 b2
       (COMP : exists tgt, Imp2Csharpminor.compile src = OK tgt)
@@ -245,7 +251,11 @@ Section PROOFALL.
     - clear g n. unfold get_sge, get_tge in *. hexploit found_in_src_in_tgt; eauto. i; des. unfold get_tge in H; clarify.
     - clear g n. unfold get_sge in Heq0. apply not_ge in BLK2. rename Heq0 into NOTFOUND. simpl in NOTFOUND.
       unfold src_init_nb in BLK2. unfold int_len in BLK2.
-      Admitted.
+      assert (SORTED: b2 < Datatypes.length (Sk.sort (defsL src))).
+      { rewrite <- sksort_same_len. ss. }
+      eapply Sk.env_range_some in SORTED. des. setoid_rewrite SORTED in NOTFOUND. clarify.
+    - des. clarify.
+  Qed.
 
   Lemma map_blk_inj :
     forall src b1 b2
@@ -255,7 +265,32 @@ Section PROOFALL.
                  (List.map fst src.(defsL))),
       <<INJ: map_blk src b1 = map_blk src b2 -> b1 = b2>>.
   Proof.
-    i. des. unfold map_blk. rewrite! COMP. unfold get_sge, get_tge. ii. rename H into MAP.
+    i. des. destruct (ge_dec b1 (src_init_nb src)) eqn:BRANGE1; destruct (ge_dec b2 (src_init_nb src)) eqn:BRANGE2.
+    { unfold map_blk. des_ifs. ii. lia. }
+    { hexploit map_blk_neq; eauto; ii; clarify. }
+    { hexploit map_blk_neq; eauto; ii. sym in H0. clarify. }
+    unfold map_blk. unfold src_init_nb in *. unfold int_len in *. unfold get_sge in *.
+    rewrite BRANGE1. rewrite BRANGE2. clear BRANGE1 BRANGE2.
+    rename n into BLK1. apply not_ge in BLK1. rename n0 into BLK2. apply not_ge in BLK2.
+    assert (SBLK1: b1 < Datatypes.length (Sk.sort (defsL src))).
+    { rewrite <- sksort_same_len; ss. }
+    assert (SBLK2: b2 < Datatypes.length (Sk.sort (defsL src))).
+    { rewrite <- sksort_same_len; ss. }
+    eapply Sk.env_range_some in SBLK1. eapply Sk.env_range_some in SBLK2. des.
+    ss. rewrite SBLK1. rewrite SBLK2. rewrite COMP. ii.
+    hexploit found_in_src_in_tgt.
+    1,2: eauto.
+    { unfold get_sge. ss. eapply SBLK1. }
+    hexploit found_in_src_in_tgt.
+    1,2: eauto.
+    { unfold get_sge. ss. eapply SBLK2. }
+    i. des. rewrite H0 in H. rewrite H1 in H. clarify.
+    apply Genv.find_invert_symbol in H0. apply Genv.find_invert_symbol in H1.
+    rewrite H1 in H0. clear H1. clarify. apply s2p_inj in H0. clarify.
+    
+    { eauto. }
+
+
   Admitted.
 
 

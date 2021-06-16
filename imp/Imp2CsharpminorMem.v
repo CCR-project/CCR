@@ -32,7 +32,7 @@ Section MEM.
       (COMP : exists tgt, compile src = OK tgt)
       (WFPROG: Permutation.Permutation
                  ((List.map fst src.(prog_varsL)) ++ (List.map (compose fst snd) src.(prog_funsL)))
-                 (List.map fst src.(defsL))),
+                 (List.map fst src.(defsL)) /\ Sk.wf src.(defsL)),
       <<INJ: map_blk src b1 = map_blk src b2 -> b1 = b2>>.
 
   Variable src : Imp.programL.
@@ -41,7 +41,7 @@ Section MEM.
   Context {MM: @match_mem src m tm}.
   Context {WFPROG: Permutation.Permutation
                      ((List.map fst src.(prog_varsL)) ++ (List.map (compose fst snd) src.(prog_funsL)))
-                     (List.map fst src.(defsL))}.
+                     (List.map fst src.(defsL)) /\ Sk.wf src.(defsL)}.
   Context {COMP : exists tgt, compile src = OK tgt}.
 
   Lemma match_mem_alloc

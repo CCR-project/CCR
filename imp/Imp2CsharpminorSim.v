@@ -267,12 +267,12 @@ Section PROOF.
       (COMP : exists tgt, Imp2Csharpminor.compile src = OK tgt)
       (WFPROG: Permutation.Permutation
                  ((List.map fst src.(prog_varsL)) ++ (List.map (compose fst snd) src.(prog_funsL)))
-                 (List.map fst src.(defsL))),
+                 (List.map fst src.(defsL)) /\ Sk.wf src.(defsL)),
       <<INJ: map_blk src b1 = map_blk src b2 -> b1 = b2>>.
 
   Context {WFPROG: Permutation.Permutation
                      ((List.map fst srcprog.(prog_varsL)) ++ (List.map (compose fst snd) srcprog.(prog_funsL)))
-                     (List.map fst srcprog.(defsL))}.
+                     (List.map fst srcprog.(defsL)) /\ Sk.wf srcprog.(defsL)}.
 
   Definition max_fuel := (Ord.omega * Ord.omega)%ord.
 
