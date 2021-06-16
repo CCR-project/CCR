@@ -168,6 +168,13 @@ Section PROOFALL.
     lia.
   Qed.
 
+  Lemma skenv_found_then_in :
+    forall ge blk symb
+    (FOUND: SkEnv.blk2id (Sk.load_skenv ge) blk = Some symb),
+    exists def, In (symb, def) ge.
+  Proof.
+    Admitted.
+
   Lemma found_in_src_in_tgt :
     forall src tgt blk symb
       (COMP: compile src = OK tgt)
@@ -179,6 +186,7 @@ Section PROOFALL.
   Proof.
     i. unfold compile, _compile in COMP. des_ifs. unfold get_sge, get_tge in *. ss.
   Admitted.
+
 
   Lemma map_blk_neq :
     forall src b1 b2
