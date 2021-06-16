@@ -10,6 +10,7 @@ Require Import ModSem.
 Require Import Imp.
 Require Import Mem0.
 
+Require Import Imp2Csharpminor.
 Require Import Imp2CsharpminorMatch.
 Require Import Imp2CsharpminorArith.
 
@@ -21,15 +22,27 @@ Set Implicit Arguments.
 Section MEM.
 
   Hypothesis map_blk_after_init :
-    forall src blk (ALLOCED : blk >= (src_init_nb src)),
+    forall src blk
+      (COMP : exists tgt, compile src = OK tgt)
+      (ALLOCED : blk >= (src_init_nb src)),
       (<<ALLOCMAP: (map_blk src blk) = Pos.of_succ_nat (2 + (ext_len src) + blk)>>).
 
-  Hypothesis map_blk_inj : forall src b1 b2, map_blk src b1 = map_blk src b2 -> b1 = b2.
+  Hypothesis map_blk_inj :
+    forall src b1 b2
+      (COMP : exists tgt, compile src = OK tgt)
+      (WFPROG: (Coqlib.list_norepet src.(defsL)) /\
+               (forall x, In x ((List.map fst src.(prog_varsL)) ++ (List.map fst src.(prog_funsL)))
+                     <-> In x (List.map fst src.(defsL)))),
+      <<INJ: map_blk src b1 = map_blk src b2 -> b1 = b2>>.
 
   Variable src : Imp.programL.
   Variable m : Mem.t.
   Variable tm : Mem.mem.
   Context {MM: @match_mem src m tm}.
+  Context {WFPROG: (Coqlib.list_norepet src.(defsL)) /\
+                   (forall x, In x ((List.map fst src.(prog_varsL)) ++ (List.map fst src.(prog_funsL)))
+                         <-> In x (List.map fst src.(defsL)))}.
+  Context {COMP : exists tgt, compile src = OK tgt}.
 
   Lemma match_mem_alloc
         n m2 blk tm2 tblk
@@ -42,9 +55,11 @@ Section MEM.
     - lia.
     - hexploit Mem.nextblock_alloc; eauto. i. rewrite H. rewrite NBLK.
       hexploit map_blk_after_init.
-      { instantiate (2:= Mem.nb m). instantiate (1:=src). lia. }
+      { eauto. }
+      { instantiate (1:= Mem.nb m). lia. }
       hexploit map_blk_after_init.
-      { instantiate (2:= S (Mem.nb m)). instantiate (1:=src). lia. }
+      { eauto. }
+      { instantiate (1:= S (Mem.nb m)). lia. }
       i. rewrite H1. rewrite H0. lia.
     - rename H into SMEM. pose (NPeano.Nat.eq_dec (Mem.nb m) blk) as BLK. destruct BLK.
       + clarify; ss. unfold update in SMEM. des_ifs. clear e. des. clarify. ss. rewrite <- NBLK.
@@ -93,7 +108,7 @@ Section MEM.
         * apply MMEM in SRCM. des; eauto.
         * left. sym in Heqtm1. apply Mem.alloc_result in Heqtm1. clarify. ss.
           unfold Mem.alloc in SMEM. inv SMEM. ss. inv MM. rewrite NBLK0. depgen n0. depgen map_blk_inj.
-          clear; ii. apply map_blk_inj in H. clarify.
+          ii. apply map_blk_inj in H; eauto. 
     - apply MMEM in H; des. hexploit Mem.store_valid_access_1; eauto. 
   Qed.
 
@@ -124,6 +139,7 @@ Section MEM.
         erewrite Mem.load_store_same; eauto. unfold map_val. ss. des_ifs.
       + bsimpl. des.
         * apply sumbool_to_bool_false in Heq0. hexploit Mem.load_store_other; eauto.
+          { left. instantiate (1:= map_blk src blk0). ii. apply map_blk_inj in H0; eauto. }
           i. erewrite H0. apply MMEM in H. des. eauto.
         * apply sumbool_to_bool_false in Heq0. hexploit Mem.load_store_other; eauto.
           2:{ i. erewrite H0. apply MMEM in H. des. eauto. }

@@ -194,10 +194,22 @@ Section PROOF.
 
 
   Hypothesis map_blk_after_init :
-    forall src blk (ALLOCED : blk >= (src_init_nb src)),
+    forall src blk
+      (COMP : exists tgt, Imp2Csharpminor.compile src = OK tgt)
+      (ALLOCED : blk >= (src_init_nb src)),
       (<<ALLOCMAP: (map_blk src blk) = Pos.of_succ_nat (2 + (ext_len src) + blk)>>).
 
-  Hypothesis map_blk_inj : forall src b1 b2, map_blk src b1 = map_blk src b2 -> b1 = b2.
+  Hypothesis map_blk_inj :
+    forall src b1 b2
+      (COMP : exists tgt, Imp2Csharpminor.compile src = OK tgt)
+      (WFPROG: (Coqlib.list_norepet src.(defsL)) /\
+               (forall x, In x ((List.map fst src.(prog_varsL)) ++ (List.map fst src.(prog_funsL)))
+                     <-> In x (List.map fst src.(defsL)))),
+      <<INJ: map_blk src b1 = map_blk src b2 -> b1 = b2>>.
+
+  Context {WFPROG: (Coqlib.list_norepet srcprog.(defsL)) /\
+               (forall x, In x ((List.map fst srcprog.(prog_varsL)) ++ (List.map fst srcprog.(prog_funsL)))
+                     <-> In x (List.map fst srcprog.(defsL)))}.
 
 
   Theorem match_states_sim
@@ -220,6 +232,7 @@ Section PROOF.
     (* move TLOF before COMP. move MODL before COMP. move MGENV before COMP. *)
     (* revert_until TLOF. *)
     depgen i0. depgen ist. depgen cst. pcofix CIH. i.
+    assert (EXISTSCOMP: exists tgt, Imp2Csharpminor.compile srcprog = OK tgt); eauto.
     inv MS. unfold ordN in *. unfold Imp2Csharpminor.compile in COMP. des_ifs. rename Heq into GMAP.
     destruct code.
     - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. ss; clarify.
