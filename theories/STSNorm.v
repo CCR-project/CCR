@@ -35,7 +35,7 @@ Section VISNORM.
       (STEP: step st0 (Some ev) st1)
     :
       norm_step state_sort step (st0, None) None (st0, Some ev)
-                
+
   | step_vis_after
       st0 ev st1
       (VIS: state_sort st0 = vis)
@@ -43,7 +43,7 @@ Section VISNORM.
       (HALF: norm_step state_sort step (st0, None) None (st0, Some ev))
     :
       norm_step state_sort step (st0, Some ev) (Some ev) (st1, None)
-                
+
   | step_else
       st0 st1
       (NOVIS: state_sort st0 <> vis)
@@ -67,6 +67,11 @@ Section VISNORM.
     - destruct (state_sort L s1); ss; clarify.
   Qed.
   Next Obligation.
+    inv VIS. destruct o0; clarify.
+    - inv STEP; ss; clarify.
+    - destruct (state_sort L s0); ss; clarify.
+  Qed.
+  Next Obligation.
     inv VIS. destruct o0; clarify. destruct (state_sort L s0) eqn:EQ; ss; clarify.
     inv STEP; ss; clarify.
   Qed.
@@ -74,10 +79,15 @@ Section VISNORM.
     inv VIS. destruct o0; clarify.
     destruct (state_sort L s0) eqn:EQ; ss; clarify; inv STEP; ss; clarify.
   Qed.
+  Next Obligation.
+    inv FIN. destruct o0; clarify. des_ifs.
+    inv STEP; ss; rewrite Heq in *; clarify.
+    hexploit L.(wf_final); et.
+  Qed.
 
   Definition vis_normalized (L: semantics) :=
     exists L', L = vis_normalize L'.
-  
+
   Lemma wf_vis_norm :
     forall (L: semantics) st0 ev0 ev1 st1 st2,
       vis_normalized L ->
@@ -137,7 +147,7 @@ Section PROOF.
             ss. }
         inv H; ss.
   Qed.
-  
+
   Theorem beh_preserved_dir:
     forall (L: semantics) st0 tr,
       of_state (vis_normalize L) (norm_state st0) tr ->
@@ -167,7 +177,7 @@ Section PROOF.
         inv STEP0; ss; clarify.
         econs; eauto. right. apply CIH. inv TL0; clarify.
     - ss. destruct (state_sort L st1) eqn:EQ; clarify; clear SRT.
-      econs 6; auto. 
+      econs 6; auto.
       unfold inter in *. i. split.
       { exploit wf_angelic; eauto. }
       assert (ev = None).
@@ -178,7 +188,7 @@ Section PROOF.
       + econs; auto. unfold not. i. rewrite H in EQ. clarify.
       + i. des. clear HD. eauto.
   Qed.
-  
+
   Lemma beh_preserved_inv_spin:
     forall (L: semantics) st0,
       state_spin L st0 ->
@@ -201,7 +211,7 @@ Section PROOF.
         unfold not; i. rewrite H in SRT; clarify. }
       right. apply CIH. inv TL; clarify.
   Qed.
-  
+
   Theorem beh_preserved_inv:
     forall (L: semantics) st0 tr,
       of_state L st0 tr ->
@@ -234,7 +244,7 @@ Section PROOF.
       exploit STEP; eauto. i. des.
       eapply IH; eauto.
   Qed.
-  
+
   Theorem beh_preserved:
     forall (L: semantics) st0 tr,
       of_state L st0 tr <->

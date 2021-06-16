@@ -135,19 +135,19 @@ Section PROOFALL.
   Lemma wfprog_defsL_length :
     forall src
       (WFPROG: Permutation.Permutation
-                 ((List.map fst src.(prog_varsL)) ++ (List.map fst src.(prog_funsL)))
+                 ((List.map fst src.(prog_varsL)) ++ (List.map (compose fst snd) src.(prog_funsL)))
                  (List.map fst src.(defsL))),
       <<DEFSL: List.length src.(defsL) = List.length src.(prog_varsL) + List.length src.(prog_funsL)>>.
   Proof.
-    i. do 3 rewrite <- (map_length fst). rewrite <- app_length.
-    eapply Permutation.Permutation_length. apply Permutation.Permutation_sym. auto.
+    i. unfold compose in *. do 2 rewrite <- (map_length fst). rewrite <- (map_length (compose fst snd)).
+    rewrite <- app_length. eapply Permutation.Permutation_length. apply Permutation.Permutation_sym. auto.
   Qed.
 
   Lemma map_blk_init_range :
     forall src tgt id b
       (COMP : Imp2Csharpminor.compile src = OK tgt)
       (WFPROG: Permutation.Permutation
-                 ((List.map fst src.(prog_varsL)) ++ (List.map fst src.(prog_funsL)))
+                 ((List.map fst src.(prog_varsL)) ++ (List.map (compose fst snd) src.(prog_funsL)))
                  (List.map fst src.(defsL)))
       (TGT: Genv.find_symbol (get_tge tgt) id = Some b),
       <<RANGE: (b < (tgt_init_nb src))%positive>>.
@@ -168,31 +168,71 @@ Section PROOFALL.
     lia.
   Qed.
 
-  Lemma skenv_found_then_in :
-    forall ge blk symb
-    (FOUND: SkEnv.blk2id (Sk.load_skenv ge) blk = Some symb),
-    exists def, In (symb, def) ge.
+  Lemma compiled_then_exists:
+    forall src gm l symb  
+      (GMAP: get_gmap src = Some gm)
+      (COMP : compile_gdefs gm src = Some l)
+      (NOREPET : Coqlib.list_norepet (List.map fst l))
+      (WFPROG : In symb (List.map fst (prog_varsL src) ++ List.map (compose fst snd) (prog_funsL src))),
+    exists gd : globdef fundef (), In (s2p symb, gd) l.
   Proof.
-    Admitted.
+    i. apply in_app_or in WFPROG. des.
+    - apply Coqlib.list_in_map_inv in WFPROG. des. destruct x as [vn v].
+      unfold compile_gdefs in COMP. uo; des_ifs; ss.
+      hexploit exists_compiled_variable; eauto. i; des. exists (Gvar cv).
+      apply in_or_app. right. apply in_or_app. right. ss. do 2 right. apply in_or_app; right.
+      clear WFPROG0.
+      match goal with
+      | [ H : In ?y _ |- (In ?x (List.map ?f _)) ] => set (mapf:=f) in *; replace x with (mapf y)
+      end.
+      2:{ subst mapf. unfold lift_def. ss. }
+      apply in_map. auto.
+    - apply Coqlib.list_in_map_inv in WFPROG. des. destruct x as [mn [fn impf]].
+      unfold compile_gdefs in COMP. uo; des_ifs; ss.
+      hexploit exists_compiled_function; eauto. i; des. exists (Gfun (Internal cf)).
+      apply in_or_app. right. apply in_or_app. right. ss. do 2 right. apply in_or_app; left; eauto.
+  Qed.
+
+  Lemma in_src_in_tgt :
+    forall src gm (l: list (ident * globdef fundef ())) symb
+      (GMAP: get_gmap src = Some gm)
+      (COMP: compile_gdefs gm src = Some l)
+      (NOREPET: Coqlib.list_norepet (List.map fst l))
+      (WFPROG : In symb (List.map fst (prog_varsL src) ++ List.map (compose fst snd) (prog_funsL src))),
+      <<EXISTSIN: exists gd, In (s2p symb, gd) (elements (Maps.PTree_Properties.of_list l))>>.
+  Proof.
+    i. unfold get_gmap in GMAP. uo; des_ifs; ss.
+    assert (NOREPET2: Coqlib.list_norepet (List.map fst l)); auto.
+    apply perm_elements_PTree_norepeat in NOREPET. apply Permutation.Permutation_sym in NOREPET.
+    assert (IN1: exists gd, In (s2p symb, gd) l).
+    { eapply compiled_then_exists; eauto. unfold get_gmap. uo; des_ifs; ss. }
+    des. exists gd. 
+    eapply Permutation.Permutation_in; eauto.
+  Qed.
 
   Lemma found_in_src_in_tgt :
     forall src tgt blk symb
       (COMP: compile src = OK tgt)
       (WFPROG: Permutation.Permutation
-                 ((List.map fst src.(prog_varsL)) ++ (List.map fst src.(prog_funsL)))
+                 ((List.map fst src.(prog_varsL)) ++ (List.map (compose fst snd) src.(prog_funsL)))
                  (List.map fst src.(defsL)))
       (SRC: SkEnv.blk2id (get_sge src) blk = Some symb),
       <<TGTFOUND: exists tb, Genv.find_symbol (get_tge tgt) (s2p symb) = Some tb>>.
   Proof.
     i. unfold compile, _compile in COMP. des_ifs. unfold get_sge, get_tge in *. ss.
-  Admitted.
-
+    eapply Sk.in_env_in_sk in SRC. des. eapply Sk.sort_incl_rev in SRC.
+    apply Permutation.Permutation_sym in WFPROG. apply (in_map fst) in SRC. ss.
+    eapply Permutation.Permutation_in in WFPROG; eauto. clear SRC def.
+    rename Heq into GMAP. rename Heq0 into COMPGDEFS. rename l0 into NOREPET.
+    hexploit in_src_in_tgt; eauto. i. des.
+    eapply Genv.find_symbol_exists. ss. eapply H.
+  Qed.
 
   Lemma map_blk_neq :
     forall src b1 b2
       (COMP : exists tgt, Imp2Csharpminor.compile src = OK tgt)
       (WFPROG: Permutation.Permutation
-                 ((List.map fst src.(prog_varsL)) ++ (List.map fst src.(prog_funsL)))
+                 ((List.map fst src.(prog_varsL)) ++ (List.map (compose fst snd) src.(prog_funsL)))
                  (List.map fst src.(defsL)))
       (BLK1: b1 >= (src_init_nb src))
       (BLK2: ~ (b2 >= (src_init_nb src))),
@@ -202,14 +242,16 @@ Section PROOFALL.
     - clear g n. assert (RANGE: (b < (tgt_init_nb src))%positive).
       { eapply map_blk_init_range; eauto. }
       unfold tgt_init_nb in RANGE. unfold src_init_nb in *. lia.
-    - clear g n. unfold get_sge, get_tge in *.
+    - clear g n. unfold get_sge, get_tge in *. hexploit found_in_src_in_tgt; eauto. i; des. unfold get_tge in H; clarify.
+    - clear g n. unfold get_sge in Heq0. apply not_ge in BLK2. rename Heq0 into NOTFOUND. simpl in NOTFOUND.
+      unfold src_init_nb in BLK2. unfold int_len in BLK2.
       Admitted.
 
   Lemma map_blk_inj :
     forall src b1 b2
       (COMP : exists tgt, Imp2Csharpminor.compile src = OK tgt)
       (WFPROG: Permutation.Permutation
-                 ((List.map fst src.(prog_varsL)) ++ (List.map fst src.(prog_funsL)))
+                 ((List.map fst src.(prog_varsL)) ++ (List.map (compose fst snd) src.(prog_funsL)))
                  (List.map fst src.(defsL))),
       <<INJ: map_blk src b1 = map_blk src b2 -> b1 = b2>>.
   Proof.

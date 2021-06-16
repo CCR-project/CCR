@@ -31,7 +31,7 @@ Section MEM.
     forall src b1 b2
       (COMP : exists tgt, compile src = OK tgt)
       (WFPROG: Permutation.Permutation
-                 ((List.map fst src.(prog_varsL)) ++ (List.map fst src.(prog_funsL)))
+                 ((List.map fst src.(prog_varsL)) ++ (List.map (compose fst snd) src.(prog_funsL)))
                  (List.map fst src.(defsL))),
       <<INJ: map_blk src b1 = map_blk src b2 -> b1 = b2>>.
 
@@ -40,7 +40,7 @@ Section MEM.
   Variable tm : Mem.mem.
   Context {MM: @match_mem src m tm}.
   Context {WFPROG: Permutation.Permutation
-                     ((List.map fst src.(prog_varsL)) ++ (List.map fst src.(prog_funsL)))
+                     ((List.map fst src.(prog_varsL)) ++ (List.map (compose fst snd) src.(prog_funsL)))
                      (List.map fst src.(defsL))}.
   Context {COMP : exists tgt, compile src = OK tgt}.
 

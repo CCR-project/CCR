@@ -27,6 +27,13 @@ Record semantics : Type := Semantics_gen {
       (STEP: step st0 ev1 st2)
     ,
       (ev0 = ev1 -> st1 = st2);
+  wf_vis_event: forall
+      st0 ev0 st1
+      (VIS: state_sort st0 = vis)
+      (STEP: step st0 ev0 st1)
+    ,
+      ev0 <> None;
   wf_angelic: forall st0 ev st1 (VIS: state_sort st0 = angelic) (STEP: step st0 ev st1), ev = None;
   wf_demonic: forall st0 ev st1 (VIS: state_sort st0 = demonic) (STEP: step st0 ev st1), ev = None;
+  wf_final: forall st0 ev st1 r (FIN: state_sort st0 = final r) (STEP: step st0 ev st1), False;
 }.
