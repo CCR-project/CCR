@@ -26,8 +26,8 @@ Section F.
       ["g_ret"]
       (if# "n"
        then# "g_ret" =@ "g" ["n" - 1%Z : expr] ;#
-             "n" + "g_ret"
-       else# 0%Z
+             return# ("n" + "g_ret")
+       else# return# 0%Z
        fi#).
 
   Definition f_prog : program :=

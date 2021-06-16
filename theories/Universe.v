@@ -22,24 +22,43 @@ Inductive val: Type :=
 
 Definition wordsize_64 := 64.
 Definition modulus_64 := two_power_nat wordsize_64.
-Definition intrange_64 : Z -> Prop := fun z => ((- 1) < z < modulus_64)%Z.
+Definition modulus_64_half := (modulus_64 / 2)%Z.
+Definition max_64 := (modulus_64_half - 1)%Z.
+Definition min_64 := (- modulus_64_half)%Z.
+Definition intrange_64 : Z -> Prop := fun z => (min_64 <= z <= max_64)%Z.
+Definition modrange_64 : Z -> Prop := fun z => (- 1 < z < modulus_64)%Z.
+
+Ltac unfold_intrange_64 := unfold intrange_64, min_64, max_64 in *; unfold modulus_64_half, modulus_64, wordsize_64 in *.
+Ltac unfold_modrange_64 := unfold modrange_64, modulus_64, wordsize_64 in *.
+
+Definition scale_ofs (ofs : Z) := (8 * ofs)%Z.
 Definition wf_val (v : val) :=
   match v with
   | Vint z => intrange_64 z
-  | Vptr _ z => intrange_64 z
-  | Vundef => True
+  | Vptr _ z => intrange_64 (scale_ofs z)
+  | Vundef => False
+  end.
+
+Definition wf_ofs_size (v : val) :=
+  match v with
+  | Vint z => modrange_64 (scale_ofs z)
+  | _ => False
   end.
 
 (* Notation ofs0 := 0%Z. *)
 
 Definition Vnullptr := Vint 0.
 
+Definition scale_int (n : Z) : option Z :=
+  if (Zdivide_dec 8 n) then Some (Z.div n 8) else None.
+
 Definition vadd (x y: val): option val :=
   match x, y with
   | Vint n, Vint m => Some (Vint (Z.add n m))
-  | Vptr blk ofs, Vint n => Some (Vptr blk (Z.add ofs n))
-  | Vint n, Vptr blk ofs => Some (Vptr blk (Z.add ofs n))
-  (* | Vptr _ _, Vptr _ _ => None *)
+  | Vptr blk ofs, Vint n =>
+    do scaled_n <- scale_int n; Some (Vptr blk (Z.add ofs scaled_n))
+  | Vint n, Vptr blk ofs =>
+    do scaled_n <- scale_int n; Some (Vptr blk (Z.add ofs scaled_n))
   | _, _ => None
   end
 .
@@ -47,9 +66,10 @@ Definition vadd (x y: val): option val :=
 Definition vsub (x y: val): option val :=
   match x, y with
   | Vint n, Vint m => Some (Vint (Z.sub n m))
-  | Vptr blk ofs, Vint n => Some (Vptr blk (Z.sub ofs n))
-  | Vint n, Vptr blk ofs => Some (Vptr blk (Z.sub ofs n))
-  (* | Vptr _ _, Vptr _ _ => None *)
+  | Vptr blk ofs, Vint n =>
+    do scaled_n <- scale_int n; Some (Vptr blk (Z.sub ofs scaled_n))
+  | Vptr blk1 ofs1, Vptr blk2 ofs2 =>
+    if (Nat.eqb blk1 blk2) then Some (Vint (scale_ofs (ofs1 - ofs2))) else None
   | _, _ => None
   end
 .
@@ -57,9 +77,6 @@ Definition vsub (x y: val): option val :=
 Definition vmul (x y: val): option val :=
   match x, y with
   | Vint n, Vint m => Some (Vint (Z.mul n m))
-  | Vptr blk ofs, Vint n => Some (Vptr blk (Z.mul ofs n))
-  | Vint n, Vptr blk ofs => Some (Vptr blk (Z.mul ofs n))
-  (* | Vptr _ _, Vptr _ _ => None *)
   | _, _ => None
   end
 .
@@ -94,7 +111,7 @@ Module Mem.
   Definition alloc (m0: Mem.t) (sz: Z): (mblock * Mem.t) :=
     ((m0.(nb)),
      Mem.mk (update (m0.(cnts)) (m0.(nb))
-                    (fun ofs => if (0 <=? ofs)%Z && (ofs <? sz)%Z then Some (Vint 0) else None))
+                    (fun ofs => if (0 <=? ofs)%Z && (ofs <? sz)%Z then Some (Vundef) else None))
             (S m0.(nb))
     )
   .

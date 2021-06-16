@@ -31,7 +31,7 @@ Section Mem2.
       "a" =#* "ptr" ;#
       "b" =#* "ptr" + 8%Z ;#
       free# ("ptr" : expr) ;#
-      "a" + "b"
+      return# ("a" + "b")
   |}.
 
   Definition imp_mem2_prog : program := {|

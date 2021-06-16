@@ -76,20 +76,32 @@ Section SIMMODSEM.
     { unfold newF. trivial_init. fold wf. mDesAll; des; subst. ss.
       unfold new_body, KModSem.transl_fun_tgt, ccall, cfun. steps.
 
-      kstart 1.
+      kstart 2.
       kcatch. { eapply STBINCL. stb_tac; ss. } hcall _ (Some _) _ with "SIM"; ss; et.
-      { iModIntro. rewrite Any.pair_split. iSplits; ss; et. instantiate (1:=1%nat). ss. }
+      { iModIntro. rewrite Any.pair_split. iSplits; ss; et.
+        { instantiate (1:=1%nat). ss. }
+        { iPureIntro. unfold_modrange_64. ss. }
+      }
       { ss. }
       Ltac post_call :=
         fold wf; clear_fast; mDesAll; des_safe; subst; try rewrite Any.upcast_downcast in *; clarify; renamer.
       post_call. rename a0 into handle.
-      steps. kstop. steps.
+      steps.
+
+      kcatch. { eapply STBINCL. stb_tac; ss. } hcall _ (Some (_, _, _)) _ with "SIM A"; ss; et.
+      { iModIntro. rewrite Any.pair_split. iSplitL "SIM"; ss.
+        { iSplit; ss. iExists _. iSplit; ss. }
+        { iSplit; ss. iExists _. iSplitL; ss. iSplitR; ss. }
+      }
+      { ss. }
+      post_call. steps. eapply Any.downcast_upcast in _UNWRAPN0. des. clarify.
+      kstop. steps.
 
       force_l. exists handle. steps. rewrite Any.upcast_downcast. steps.
       destruct (stk_mgr0 !! handle) eqn:T.
       { mAssertPure False; ss.
         (*** IEXPLOIT*) iDestruct (big_sepM_lookup_acc with "SIM") as "[B C]"; et. iDestruct "B" as (x) "[B D]".
-        iApply (points_to_disj with "A B"); et.
+        iApply (points_to_disj with "POST B"); et.
       }
       force_l; ss. steps.
 
@@ -136,6 +148,7 @@ Section SIMMODSEM.
         { iModIntro. rewrite Any.pair_split. iSplitL "SIM"; ss. { et. } iSplits; ss; et. }
         post_call. unhide_k. steps. rewrite Any.upcast_downcast in *. clarify. steps.
 
+        unfold scale_int. uo. steps.
         kcatch. { eapply STBINCL. stb_tac; ss. } hcall (ord_pure 0) (Some (_, _, _)) _ with "SIM POST1"; ss.
         { iModIntro. rewrite Any.pair_split. iSplitL "SIM"; ss; et. }
         post_call. steps.
@@ -188,11 +201,15 @@ Section SIMMODSEM.
       mDesAll; ss. renamer. rename a into hd.
 
       kcatch. { eapply STBINCL. stb_tac; ss. } hcall (ord_pure 0) (Some _) _ with "SIM"; ss; et.
-      { iModIntro. rewrite Any.pair_split. iSplitL "SIM"; et. iSplits; ss; et. instantiate (1:=2). ss. }
+      { iModIntro. rewrite Any.pair_split. iSplitL "SIM"; et. iSplits; ss; et.
+        { instantiate (1:=2). ss. }
+        { iPureIntro. ss. }
+      }
       post_call. rename a0 into node. unhide_k. steps. rewrite Any.upcast_downcast in *. clarify. steps.
 
       rewrite points_to_split in ACC. mDesOwn "A1". rewrite Z.add_0_l in *. clear_fast.
 
+      unfold scale_int. uo. steps.
       kcatch. { eapply STBINCL. stb_tac; ss. } hcall (ord_pure 0) (Some (_, _, _)) _ with "A SIM"; ss; et.
       { iModIntro. rewrite Any.pair_split. iSplitL "SIM"; et. }
       post_call. steps.

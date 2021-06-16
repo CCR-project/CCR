@@ -150,6 +150,21 @@ Section ALIST.
     des_ifs.
   Qed.
 
+  Lemma alist_find_find_some K `{Dec K} V (k: K) (l: alist K V) v
+    :
+      alist_find k l = Some v <-> find (fun '(k2, _) => rel_dec k k2) l = Some (k, v).
+  Proof.
+    induction l; ss. destruct a. rewrite eq_rel_dec_correct in *. des_ifs.
+    split; i; clarify.
+  Qed.
+
+  Lemma alist_find_find_none K `{Dec K} V (k: K) (l: alist K V)
+    :
+      alist_find k l = None <-> find (fun '(k2, _) => rel_dec k k2) l = None.
+  Proof.
+    induction l; ss. destruct a. rewrite eq_rel_dec_correct in *. des_ifs.
+  Qed.
+
   Lemma alist_add_find_eq K `{Dec K} V (k: K) (l: alist K V) (v: V)
     :
       alist_find k (alist_add k v l) = Some v.

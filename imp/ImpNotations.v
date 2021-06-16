@@ -16,11 +16,9 @@ Set Implicit Arguments.
 Module ImpNotations.
 
   (** A few notations for convenience.  *)
-  Definition Expr_coerce: expr -> stmt := Expr.
   Definition Var_coerce: string -> expr := Var.
   Definition Lit_coerce: val -> expr := Lit.
   Definition Vint_coerce: Z -> val := Vint.
-  Coercion Expr_coerce: expr >-> stmt.
   Coercion Var_coerce: string >-> expr.
   Coercion Lit_coerce: val >-> expr.
   Coercion Vint_coerce: Z >-> val.
@@ -34,6 +32,9 @@ Module ImpNotations.
 
   Declare Scope stmt_scope.
   Bind Scope stmt_scope with stmt.
+
+  (* Control statements, 'return' name is the register holding return value,
+     a function returns a value through 'return' register. *)
 
   Notation "x '=#' e" :=
     (Assign x e) (at level 60, e at level 50): stmt_scope.
@@ -55,29 +56,32 @@ Module ImpNotations.
   Notation "'skip#'" :=
     (Skip) (at level 100): stmt_scope.
 
-  (* Different methods for function calls *)
+  Notation "'return#' e" :=
+    (Assign "return" e) (at level 60, e at level 50): stmt_scope.
+ 
+  (* Different methods for function calls, '_' name is a garbage register *)
   Notation "x '=@' f args" :=
-    (CallFun1 x f args)
+    (CallFun x f args)
       (at level 60, f at level 9): stmt_scope.
 
   Notation "'@' f args" :=
-    (CallFun2 f args)
+    (CallFun "_" f args)
       (at level 60, f at level 9): stmt_scope.
 
   Notation "x '=@*' fp args" :=
-    (CallPtr1 x fp args)
+    (CallPtr x fp args)
       (at level 60, fp at level 9): stmt_scope.
 
   Notation "'@*' fp args" :=
-    (CallPtr2 fp args)
+    (CallPtr "_" fp args)
       (at level 60, fp at level 9): stmt_scope.
 
   Notation "x '=@!' f args" :=
-    (CallSys1 x f args)
+    (CallSys x f args)
       (at level 60, f at level 9): stmt_scope.
 
   Notation "'@!' f args" :=
-    (CallSys2 f args)
+    (CallSys "_" f args)
       (at level 60, f at level 9): stmt_scope.
 
   (* interaction with the memory module *)
@@ -106,8 +110,9 @@ End ImpNotations.
 Section Example_Extract.
 
   Import ImpNotations.
-  Let Σ: GRA.t := fun _ => of_RA.t RA.empty.
-  Local Existing Instance Σ.
+  (* Let Σ: GRA.t := fun _ => of_RA.t RA.empty. *)
+  (* Local Existing Instance Σ. *)
+  Context `{Σ: GRA.t}.
 
   Local Open Scope expr_scope.
   Local Open Scope stmt_scope.
@@ -119,7 +124,7 @@ Section Example_Extract.
           "output" =# "input" * "output"
     else# "output" =# 1%Z
     fi#;#
-    "output".
+    return# "output".
 
   Definition factorial_fundef : function := {|
     fn_params := ["input"];
@@ -131,7 +136,7 @@ Section Example_Extract.
     "in" =@! "scanf" [] ;#
     "result" =@ "factorial" ["in": expr] ;#
     @! "printf" ["in": expr] ;#
-    "result".
+    return# "result".
 
   Definition main_fundef : function := {|
     fn_params := [];

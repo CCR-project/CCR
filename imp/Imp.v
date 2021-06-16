@@ -1,14 +1,5 @@
 (** * The Imp language  *)
 
-From ExtLib Require Import
-     Data.String
-     Structures.Monad
-     Structures.Traversable
-     Data.List
-     Core.RelDec
-     Structures.Maps
-     Data.Map.FMapAList.
-
 Require Import Coqlib.
 Require Import ITreelib.
 Require Import Universe.
@@ -17,6 +8,7 @@ Require Import PCM.
 Require Import STS Behavior.
 Require Import Any.
 Require Import ModSem.
+Require Import AList.
 
 Set Implicit Arguments.
 
@@ -37,17 +29,13 @@ Inductive expr : Type :=
 
 (** function call exists only as a statement *)
 Inductive stmt : Type :=
+| Skip                           (* ; *)
 | Assign (x : var) (e : expr)    (* x = e *)
 | Seq    (a b : stmt)            (* a ; b *)
 | If     (i : expr) (t e : stmt) (* if (i) then { t } else { e } *)
-| Skip                           (* ; *)
-| CallFun1 (x : var) (f : gname) (args : list expr) (* x = f(args), call by name *)
-| CallFun2 (f : gname) (args : list expr)           (* f(args) *)
-| CallPtr1 (x : var) (p : expr) (args : list expr)  (* x = f(args), by pointer*)
-| CallPtr2 (p : expr) (args : list expr)            (* f(args) *)
-| CallSys1 (x : var) (f : gname) (args : list expr) (* x = f(args), system call *)
-| CallSys2 (f : gname) (args : list expr)           (* f(args) *)
-| Expr (e : expr)                                   (* expression e *)
+| CallFun (x : var) (f : gname) (args : list expr) (* x = f(args), call by name *)
+| CallPtr (x : var) (p : expr) (args : list expr)  (* x = f(args), by pointer*)
+| CallSys (x : var) (f : gname) (args : list expr) (* x = f(args), system call *)
 | AddrOf (x : var) (X : gname)         (* x = &X *)
 | Malloc (x : var) (s : expr)          (* x = malloc(s) *)
 | Free (p : expr)                      (* free(p) *)
@@ -102,91 +90,78 @@ Section Denote.
     | _ => None
     end.
 
-  Fixpoint denote_exprs (es : list expr) (acc : list val) : itree eff (list val) :=
+  Fixpoint denote_exprs_acc (es : list expr) (acc : list val) : itree eff (list val) :=
     match es with
     | [] => Ret acc
     | e :: s =>
-      v <- denote_expr e;; denote_exprs s (acc ++ [v])
+      v <- denote_expr e;; denote_exprs_acc s (acc ++ [v])
+    end.
+
+  Fixpoint denote_exprs (es : list expr) : itree eff (list val) :=
+    match es with
+    | [] => Ret []
+    | e :: s =>
+      v <- denote_expr e;;
+      vs <- denote_exprs s;;
+      Ret (v :: vs)
     end.
 
   Definition call_mem f :=
-    String.string_dec f "alloc"
-    || String.string_dec f "free"
-    || String.string_dec f "load"
-    || String.string_dec f "store"
-    || String.string_dec f "cmp".
+    rel_dec f "alloc" || rel_dec f "free" || rel_dec f "load" || rel_dec f "store" || rel_dec f "cmp" || rel_dec f "main".
 
   Fixpoint denote_stmt (s : stmt) : itree eff val :=
     match s with
+    | Skip => tau;; Ret Vundef
     | Assign x e =>
-      v <- denote_expr e;; trigger (SetVar x v);;; Ret Vundef
+      v <- denote_expr e;; trigger (SetVar x v);;; tau;; Ret Vundef
     | Seq a b =>
-      denote_stmt a;;; denote_stmt b
+      tau;; denote_stmt a;;; denote_stmt b
     | If i t e =>
-      v <- denote_expr i;; `b: bool <- (is_true v)?;;
+      v <- denote_expr i;; `b: bool <- (is_true v)?;; tau;;
       if b then (denote_stmt t) else (denote_stmt e)
-    | Skip => Ret Vundef
 
-    | CallFun1 x f args =>
+    | CallFun x f args =>
       if (call_mem f)
       then triggerUB
       else
-        eval_args <- denote_exprs args [];;
+        eval_args <- denote_exprs args;;
         v <- trigger (Call f (eval_args↑));; v <- unwrapN (v↓);;
-        trigger (SetVar x v);;; Ret Vundef
-    | CallFun2 f args =>
-      if (call_mem f)
-      then triggerUB
-      else
-        eval_args <- denote_exprs args [];;
-        trigger (Call f (eval_args↑));;; Ret Vundef
+        trigger (SetVar x v);;; tau;; Ret Vundef
 
-    | CallPtr1 x e args =>
+    | CallPtr x e args =>
       p <- denote_expr e;; f <- trigger (GetName p);;
       if (call_mem f)
       then triggerUB
       else
-        eval_args <- denote_exprs args [];;
+        eval_args <- denote_exprs args;;
         v <- trigger (Call f (eval_args↑));; v <- unwrapN (v↓);;
-        trigger (SetVar x v);;; Ret Vundef
-    | CallPtr2 e args =>
-      p <- denote_expr e;; f <- trigger (GetName p);;
-      if (call_mem f)
-      then triggerUB
-      else
-        eval_args <- denote_exprs args [];;
-        trigger (Call f (eval_args↑));;; Ret Vundef
+        trigger (SetVar x v);;; tau;; Ret Vundef
 
-    | CallSys1 x f args =>
-      eval_args <- denote_exprs args [];;
+    | CallSys x f args =>
+      eval_args <- denote_exprs args;;
       v <- trigger (Syscall f eval_args top1);;
-      trigger (SetVar x v);;; Ret Vundef
-    | CallSys2 f args =>
-      eval_args <- denote_exprs args [];;
-      trigger (Syscall f eval_args top1);;; Ret Vundef
-
-    | Expr e => v <- denote_expr e;; Ret v
+      trigger (SetVar x v);;; tau;; Ret Vundef
 
     | AddrOf x X =>
-      v <- trigger (GetPtr X);; trigger (SetVar x v);;; Ret Vundef
+      v <- trigger (GetPtr X);; trigger (SetVar x v);;; tau;; Ret Vundef
     | Malloc x se =>
       s <- denote_expr se;;
       v <- trigger (Call "alloc" ([s]↑));; v <- unwrapN(v↓);;
-      trigger (SetVar x v);;; Ret Vundef
+      trigger (SetVar x v);;; tau;; Ret Vundef
     | Free pe =>
       p <- denote_expr pe;;
-      trigger (Call "free" ([p]↑));;; Ret Vundef
+      trigger (Call "free" ([p]↑));;; tau;; Ret Vundef
     | Load x pe =>
       p <- denote_expr pe;;
       v <- trigger (Call "load" ([p]↑));; v <- unwrapN(v↓);;
-      trigger (SetVar x v);;; Ret Vundef
+      trigger (SetVar x v);;; tau;; Ret Vundef
     | Store pe ve =>
       p <- denote_expr pe;; v <- denote_expr ve;;
-      trigger (Call "store" ([p ; v]↑));;; Ret Vundef
+      trigger (Call "store" ([p ; v]↑));;; tau;; Ret Vundef
     | Cmp x ae be =>
       a <- denote_expr ae;; b <- denote_expr be;;
       v <- trigger (Call "cmp" ([a ; b]↑));; v <- unwrapN (v↓);;
-      trigger (SetVar x v);;; Ret Vundef
+      trigger (SetVar x v);;; tau;; Ret Vundef
 
     end.
 
@@ -227,12 +202,16 @@ Section Interp.
   Definition interp_ImpState {eff} `{eventE -< eff}: itree (ImpState +' eff) ~> stateT lenv (itree eff) :=
     State.interp_state (case_ handle_ImpState ModSem.pure_state).
 
-  Definition interp_imp ge le (itr : itree effs val) :=
-    interp_ImpState (interp_GlobEnv ge itr) le.
+  (* Definition interp_imp ge le (itr : itree effs val) := *)
+  (*   interp_ImpState (interp_GlobEnv ge itr) le. *)
 
+  Definition interp_imp ge : itree effs ~> stateT lenv (itree Es) :=
+    fun _ itr le => interp_ImpState (interp_GlobEnv ge itr) le.
+
+  (* 'return' is a fixed register, holding the return value of this function. *)
   Fixpoint init_lenv xs : lenv :=
     match xs with
-    | [] => []
+    | [] => [("return", Vundef); ("_", Vundef)]
     | x :: t => (x, Vundef) :: (init_lenv t)
     end
   .
@@ -249,7 +228,7 @@ Section Interp.
   Definition eval_imp (ge: SkEnv.t) (f: function) (args: list val) : itree Es val :=
     match (init_args f.(fn_params) args []) with
     | Some iargs =>
-      '(_, retv) <- (interp_imp ge (iargs++(init_lenv f.(fn_vars))) (denote_stmt f.(fn_body)));; Ret retv
+      '(_, retv) <- (interp_imp ge (tau;; denote_stmt f.(fn_body) ;;; retv <- (denote_expr (Var "return")) ;; Ret retv) ((init_lenv f.(fn_vars))++iargs));; Ret retv
     | None => triggerUB
     end
   .
@@ -293,9 +272,9 @@ Record program : Type := mk_program {
     let ifs := List.map (fun p => fst p) prog_funs in
     ["malloc"; "free"] ++ evs ++ efs ++ ivs ++ ifs;
   defs : list (gname * Sk.gdef) :=
-    let vs := (List.map (fun '(vn, vv) => (vn, Sk.Gvar vv)) prog_vars) in
     let fs := (List.map (fun '(fn, _) => (fn, Sk.Gfun)) prog_funs) in
-    vs ++ fs;
+    let vs := (List.map (fun '(vn, vv) => (vn, Sk.Gvar vv)) prog_vars) in
+    fs ++ vs;
 }.
 
 Definition lift (p : program) : programL :=

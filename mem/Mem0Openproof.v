@@ -313,7 +313,9 @@ Proof Outline
       harg. fold wf. steps. hide_k. destruct x as [sz|].
       { mDesAll; ss. des; subst.
         des_ifs_safe (mDesAll; ss). des; subst. clarify. rewrite Any.upcast_downcast in *. clarify.
-        steps. unhide_k. steps. astart 0. astop.
+        steps. unhide_k. steps. des_ifs; clarify.
+        2:{ bsimpl; des; ss; apply sumbool_to_bool_false in Heq0; try lia. }
+        steps. astart 0. astop.
         rename a2 into memk_src0. rename a1 into mem_tgt0. rename a0 into memu_src0.
         set (blk := mem_tgt0.(Mem.nb) + x).
 
@@ -321,7 +323,7 @@ Proof Outline
         mAssert _ with "INV" as "INV".
         { iApply (OwnM_Upd with "INV").
           eapply Auth.auth_alloc2.
-          instantiate (1:=(_points_to (blk, 0%Z) (repeat (Vint 0) sz))).
+          instantiate (1:=(_points_to (blk, 0%Z) (repeat (Vundef) sz))).
           mOwnWf "INV". mRefresh.
           clear - WF0 WFTGT SIM.
           ss. do 2 ur. ii. rewrite unfold_points_to. des_ifs.
@@ -353,7 +355,7 @@ Proof Outline
       { unfold KModSem.transl_fun_tgt. des_ifs_safe (mDesAll; ss). des; subst.
         rewrite Any.upcast_downcast in *. apply Any.downcast_upcast in _UNWRAPN. des; clarify. unhide_k. steps.
         rename a2 into memk_src0. rename a1 into mem_tgt0. rename a0 into memu_src0.
-        rewrite Any.upcast_downcast. steps.
+        rewrite Any.upcast_downcast. steps. des_ifs; steps.
 
         set (blk := mem_tgt0.(Mem.nb) + x). destruct v; ss. clarify. rename z into sz.
         rewrite Any.upcast_downcast in *. sym in _UNWRAPU. clarify.

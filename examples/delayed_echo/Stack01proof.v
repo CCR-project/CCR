@@ -96,13 +96,13 @@ Section SIMMODSEM.
       steps. acatch. hcall _ (_, 0%Z, _) _ with "POST1"; auto.
       { iModIntro. iSplitR; ss. iSplitL; ss. iSplitL; ss. iSplitR; ss. }
       { split; ss. eauto with ord_step. }
-      ss. mDesAll. clarify. erewrite Any.upcast_downcast in *. clarify. steps. 
+      ss. mDesAll. clarify. erewrite Any.upcast_downcast in *. clarify. steps.
 
       (* load *)
       steps. acatch. hcall _ (_, (0+1)%Z, _) _ with "A"; auto.
       { iModIntro. iSplitR; ss. iSplitL; ss. iSplitL; ss. iSplitR; ss. }
       { split; ss. eauto with ord_step. }
-      ss. mDesAll. clarify. erewrite Any.upcast_downcast in *. clarify. steps. 
+      ss. mDesAll. clarify. erewrite Any.upcast_downcast in *. clarify. steps.
 
       (* free *)
       steps. acatch. hcall _ (_, 0%Z) _ with "POST2"; auto.
@@ -166,7 +166,7 @@ Section SIMMODSEM.
       steps. acatch. hcall _ (_, 0%Z, _) _ with "POST"; auto.
       { iModIntro. iSplitR; ss. iSplitL; ss. iSplitL; ss. iSplitR; ss. }
       { split; ss. eauto with ord_step. }
-      ss. mDesAll. clarify. erewrite Any.upcast_downcast in *. clarify. steps. 
+      ss. mDesAll. clarify. erewrite Any.upcast_downcast in *. clarify. steps.
 
       (* load *)
       steps. acatch. hcall _ (_, (0+1)%Z, _) _ with "A1"; auto.
@@ -178,7 +178,7 @@ Section SIMMODSEM.
       steps. acatch. hcall _ (_, 0%Z) _ with "POST1"; auto.
       { iModIntro. iSplitR; ss. iSplitL; ss. iSplitL; ss. iExists _. iSplitR; ss. }
       { split; ss. eauto with ord_step. }
-      ss. mDesAll. clarify. des; clarify. steps. 
+      ss. mDesAll. clarify. des; clarify. steps.
 
       (* free *)
       steps. acatch. hcall _ (_, (0+1)%Z) _ with "POST"; auto.
@@ -190,7 +190,7 @@ Section SIMMODSEM.
       steps. acatch. hcall _ (_, 0%Z, _) _ with "A"; auto.
       { iModIntro. iSplitR; ss. iSplitL; ss. iSplitL; ss. iExists _. iSplitR; ss. }
       { split; ss. eauto with ord_step. }
-      ss. mDesAll. clarify. des; clarify. steps. 
+      ss. mDesAll. clarify. des; clarify. steps.
 
       (* ret *)
       astop. force_l. eexists. steps. hret _; ss.
@@ -212,7 +212,7 @@ Section SIMMODSEM.
       rewrite points_to_split in ACC. mDesOwn "A1".
 
       (* store *)
-      steps. acatch. hcall _ (_, 0%Z, _) _ with "A1"; auto.
+      unfold scale_int. uo. steps. acatch. hcall _ (_, 0%Z, _) _ with "A1"; auto.
       { rewrite Z.add_0_l. iModIntro. iSplitR; ss. iSplitL; ss. iSplitL; ss. iExists _. iFrame. et. }
       { split; ss. eauto with ord_step. }
       mDesAll. clarify. steps.
