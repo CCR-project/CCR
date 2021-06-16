@@ -224,12 +224,23 @@ Module Sk.
   Qed.
 
   Lemma in_env_in_sk :
-    forall sk blk symb,
-      (<<FOUND: SkEnv.blk2id (Sk.load_skenv sk) blk = Some symb>>
-       <->
-       <<IN: exists def, In (symb, def) sk>>).
+    forall sk blk symb
+      (FIND: SkEnv.blk2id (Sk.load_skenv sk) blk = Some symb),
+    exists def, In (symb, def) sk.
   Proof.
-    admit "ez".
+    i. unfold SkEnv.blk2id. ss.
+    uo. des_ifs. des; clarify.
+    eapply nth_error_In in Heq0. et.
+  Qed.
+
+  Lemma in_sk_in_env :
+    forall sk def symb
+           (IN: In (symb, def) sk),
+    exists blk, SkEnv.blk2id (Sk.load_skenv sk) blk = Some symb.
+  Proof.
+    i. unfold SkEnv.blk2id. ss.
+    uo. eapply In_nth_error in IN. des.
+    eexists. rewrite IN. et.
   Qed.
 
   Lemma env_range_some :
@@ -245,7 +256,6 @@ Module Sk.
     { lia. }
     apply lt_S_n in BLKRANGE. eapply IHblk; eauto.
   Qed.
-
 End Sk.
 
 Coercion Sk.load_skenv: Sk.t >-> SkEnv.t.
