@@ -82,8 +82,6 @@ Record wf_at (L: Smallstep.semantics) (s:L.(Smallstep.state)) : Prop :=
                (FINAL0: Smallstep.final_state L s retv0)
                (FINAL1: Smallstep.final_state L s retv1),
           (<<EQ: retv0 = retv1>>);
-      wf_at_traces:
-        single_events_at L s
     }.
 
 Definition wf_semantics (L: Smallstep.semantics) : Prop :=
@@ -854,7 +852,6 @@ Section SIM.
       econs; et.
     - (* dtgt *)
       des. pclearbot. exploit wf_at_determ;[apply WFSEM|apply STEP0|apply H|]. i; des. subst.
-      exploit wf_at_traces; [eapply WFSEM|apply H|]. i; subst. clear_tac.
       exploit IHSTEP; et.
     - (* asrc *)
       exploit SAFE; try apply SRT.
@@ -872,7 +869,6 @@ Section SIM.
     - (* dboth *)
       des. pclearbot.
       exploit wf_at_determ;[apply WFSEM|apply STEP0|apply H|]. i; des. subst.
-      exploit wf_at_traces; [eapply WFSEM|apply H|]. i; subst. clear_tac.
       exploit IHSTEP; et. { eapply safe_along_events_step_none; et. } i; des.
       esplits; et. rewrite <- (app_nil_l tr_src).
       change [] with (@option_to_list event None).

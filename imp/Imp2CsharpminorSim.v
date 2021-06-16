@@ -942,4 +942,78 @@ Section PROOF.
 
   Admitted.
 
+  Ltac rewriter :=
+    try match goal with
+        | H: _ = _ |- _ => rewrite H in *; clarify
+        end.
+
+  Lemma Csharpminor_eval_expr_determ a
+    :
+      forall v0 v1 ge e le m
+             (EXPR0: eval_expr ge e le m a v0)
+             (EXPR1: eval_expr ge e le m a v1),
+        v0 = v1.
+  Proof.
+    induction a; i; inv EXPR0; inv EXPR1; rewriter.
+    { inv H0; inv H1; rewriter. }
+    { exploit (IHa v2 v3); et. i. subst. rewriter. }
+    { exploit (IHa1 v2 v4); et. i. subst.
+      exploit (IHa2 v3 v5); et. i. subst. rewriter. }
+    { exploit (IHa v2 v3); et. i. subst. rewriter. }
+  Qed.
+
+  Lemma Csharpminor_eval_exprlist_determ a
+    :
+      forall v0 v1 ge e le m
+             (EXPR0: eval_exprlist ge e le m a v0)
+             (EXPR1: eval_exprlist ge e le m a v1),
+        v0 = v1.
+  Proof.
+    induction a; ss.
+    { i. inv EXPR0. inv EXPR1. auto. }
+    { i. inv EXPR0. inv EXPR1.
+      hexploit (@Csharpminor_eval_expr_determ a v2 v0); et. i.
+      hexploit (IHa vl vl0); et. i. clarify. }
+  Qed.
+
+  Lemma alloc_variables_determ vars
+    :
+      forall e0 e1 ee m m0 m1
+             (ALLOC0: alloc_variables ee m vars e0 m0)
+             (ALLOC1: alloc_variables ee m vars e1 m1),
+        e0 = e1 /\ m0 = m1.
+  Proof.
+    induction vars; et.
+    { i. inv ALLOC0; inv ALLOC1; auto. }
+    { i. inv ALLOC0; inv ALLOC1; auto. rewriter.
+      eapply IHvars; et. }
+  Qed.
+
+  Lemma Csharpminor_wf_semantics prog
+    :
+      wf_semantics (Csharpminor.semantics prog).
+  Proof.
+    econs.
+    { i. inv STEP0; inv STEP1; ss; rewriter.
+      { hexploit (@Csharpminor_eval_expr_determ a v v0); et. i. rewriter. }
+      { hexploit (@Csharpminor_eval_expr_determ addr vaddr vaddr0); et. i. rewriter.
+        hexploit (@Csharpminor_eval_expr_determ a v v0); et. i. rewriter. }
+      { hexploit (@Csharpminor_eval_expr_determ a vf vf0); et. i. rewriter.
+        hexploit (@Csharpminor_eval_exprlist_determ bl vargs vargs0); et. i. rewriter. }
+      { hexploit (@Csharpminor_eval_exprlist_determ bl vargs vargs0); et. i. rewriter.
+        hexploit external_call_determ; [eapply H0|eapply H12|..]. i. des.
+        inv H1. hexploit H2; et. i. des. clarify. }
+      { hexploit (@Csharpminor_eval_expr_determ a v v0); et. i. rewriter.
+        inv H0; inv H12; auto. }
+      { hexploit (@Csharpminor_eval_expr_determ a v v0); et. i. rewriter.
+        inv H0; inv H12; et. }
+      { hexploit (@Csharpminor_eval_expr_determ a v v0); et. i. rewriter. }
+      { hexploit (@alloc_variables_determ (fn_vars f) e e0); et. i. des; clarify. }
+      { hexploit external_call_determ; [eapply H|eapply H6|..]. i. des.
+        inv H0. hexploit H1; et. i. des. clarify. }
+    }
+    { i. inv FINAL. inv STEP. }
+    { i. inv FINAL0. inv FINAL1. ss. }
+  Qed.
+
 End PROOF.
