@@ -5,6 +5,7 @@ Require Import STS.
 Require Import Behavior.
 Require Import Imp.
 Require Import Imp2Csharpminor.
+From Ordinal Require Import Ordinal.
 
 Set Implicit Arguments.
 
@@ -579,8 +580,8 @@ Section SIM.
 
   Variable L0: STS.semantics.
   Variable L1: Smallstep.semantics.
-  Variable idx: Type.
-  Variable ord: idx -> idx -> Prop.
+  Let idx := Ord.t.
+  Let ord := Ord.lt.
 
   Local Open Scope smallstep_scope.
 
@@ -672,8 +673,48 @@ Section SIM.
   Hint Unfold sim.
   Hint Resolve sim_mon: paco.
 
+
+  Variant ordC (r: idx -> L0.(STS.state) -> L1.(Smallstep.state) -> Prop):
+    idx -> L0.(STS.state) -> L1.(Smallstep.state) -> Prop :=
+  | ordC_intro
+      o0 o1 st_src st_tgt
+      (ORD: Ord.le o0 o1)
+      (SIM: r o0 st_src st_tgt)
+    :
+      ordC r o1 st_src st_tgt
+  .
+
+  Lemma ordC_mon
+        r1 r2
+        (LE: r1 <3= r2)
+    :
+      ordC r1 <3= ordC r2
+  .
+  Proof. ii. destruct PR; econs; et. Qed.
+
+  Hint Resolve ordC_mon: paco.
+
+  Lemma ordC_compatible: compatible3 (_sim) ordC.
+  Proof.
+    econs; eauto with paco.
+    ii. inv PR. rename x0 into o1. rename x1 into st_src. rename x2 into st_tgt. inv SIM.
+    - econs 1; eauto.
+    - econs 2; eauto. i. hexploit SIM0; et. i. des. esplits; et. econs; [|et]. refl.
+    - econs 3; eauto. des. esplits; et. { eapply Ord.lt_le_lt; et. } econs; et. refl.
+    - econs 4; eauto. des. esplits; et. { eapply Ord.lt_le_lt; et. } econs; et. refl.
+    - econs 5; eauto. i. hexploit SIM0; et. i. des. esplits; et.
+      { eapply Ord.lt_le_lt; et. } econs; et. refl.
+    - econs 6; eauto. des. esplits; et. econs; [|et]. refl.
+  Qed.
+
+  Lemma ordC_spec: ordC <4= gupaco3 (_sim) (cpn3 _sim).
+  Proof.
+    intros. gclo. econs.
+    { eapply ordC_compatible. }
+    eapply ordC_mon; [|et]. i. gbase. auto.
+  Qed.
+
   Record simulation: Prop := mk_simulation {
-    sim_wf_ord: <<WF: well_founded ord>>;
     sim_init: forall st_tgt0 (INITT: L1.(Smallstep.initial_state) st_tgt0),
         exists i0, (<<SIM: sim i0 L0.(initial_state) st_tgt0>>);
     (* sim_init: exists i0 st_tgt0, (<<SIM: sim i0 L0.(initial_state) st_tgt0>>) /\ *)
