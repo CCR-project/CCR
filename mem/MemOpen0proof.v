@@ -50,7 +50,7 @@ Section SIMMODSEM.
 
 
     econs; ss.
-    { unfold allocF, fun_to_src, body_to_src, cfun, KModSem.transl_fun_tgt. init.
+    { unfold allocF, fun_to_src, body_to_src, cfun, KModSem.transl_fun. init.
       destruct (Any.split varg) eqn:T.
       { cbn. steps. }
       steps. inv WF. rr in RTGT. uipropall. clarify. clear_fast.
@@ -59,7 +59,7 @@ Section SIMMODSEM.
       rr. econs; ss. rr. uipropall.
     }
     econs; ss.
-    { unfold freeF, fun_to_src, body_to_src, cfun, KModSem.transl_fun_tgt. init.
+    { unfold freeF, fun_to_src, body_to_src, cfun, KModSem.transl_fun. init.
       destruct (Any.split varg) eqn:T.
       { cbn. steps. }
       steps. inv WF. rr in RTGT. uipropall. clarify. clear_fast.
@@ -68,7 +68,7 @@ Section SIMMODSEM.
       rr. econs; ss. rr. uipropall.
     }
     econs; ss.
-    { unfold loadF, fun_to_src, body_to_src, cfun, KModSem.transl_fun_tgt. init.
+    { unfold loadF, fun_to_src, body_to_src, cfun, KModSem.transl_fun. init.
       destruct (Any.split varg) eqn:T.
       { cbn. steps. }
       steps. inv WF. rr in RTGT. uipropall. clarify. clear_fast.
@@ -77,7 +77,7 @@ Section SIMMODSEM.
       rr. econs; ss. rr. uipropall.
     }
     econs; ss.
-    { unfold storeF, fun_to_src, body_to_src, cfun, KModSem.transl_fun_tgt. init.
+    { unfold storeF, fun_to_src, body_to_src, cfun, KModSem.transl_fun. init.
       destruct (Any.split varg) eqn:T.
       { cbn. steps. }
       steps. inv WF. rr in RTGT. uipropall. clarify. clear_fast.
@@ -86,7 +86,7 @@ Section SIMMODSEM.
       rr. econs; ss. rr. uipropall.
     }
     econs; ss.
-    { unfold cmpF, fun_to_src, body_to_src, cfun, KModSem.transl_fun_tgt. init.
+    { unfold cmpF, fun_to_src, body_to_src, cfun, KModSem.transl_fun. init.
       destruct (Any.split varg) eqn:T.
       { cbn. steps. }
       steps. inv WF. rr in RTGT. uipropall. clarify. clear_fast.

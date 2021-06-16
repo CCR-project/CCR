@@ -279,7 +279,7 @@ Section SIMMODSEM.
           }
           rewrite add_disj_insert; ss. eapply sim_fresh_k; et.
         }
-      - unfold KModSem.transl_fun_tgt, new_body. rewrite X. cbn. steps. post_call.
+      - unfold KModSem.transl_fun, new_body. rewrite X. cbn. steps. post_call.
         rename x into h. force_l. exists h. steps. rewrite Any.upcast_downcast. steps.
         assert(S:=SIM h). rewrite _GUARANTEE in *. inv S; ss. force_l; ss. steps.
 
@@ -290,7 +290,7 @@ Section SIMMODSEM.
     econs; ss.
     { unfold NewStack2.pop_body, cfun, cfun2. init. harg. post_call.
       destruct x; destruct (Any.split varg_src) eqn:X; des_ifs_safe; mDesAll; ss; des; subst.
-      - unfold KModSem.transl_fun_tgt. steps.
+      - unfold KModSem.transl_fun. steps.
         rewrite Any.upcast_split. cbn. steps. rewrite Any.upcast_downcast in *. clarify. steps.
         rewrite Any.upcast_downcast in *. clarify. steps. renamer. rename n into h. rename a into stk0.
 
@@ -342,7 +342,7 @@ Section SIMMODSEM.
 
           hret _; ss.
           iModIntro. iFrame. iSplitL "O"; ss; et. iSplits; ss; et. cbn. iSplits; ss; et.
-      - unfold KModSem.transl_fun_tgt, pop_body. rewrite X. cbn. steps. post_call. steps.
+      - unfold KModSem.transl_fun, pop_body. rewrite X. cbn. steps. post_call. steps.
         rename n into h. rename l into stk0. destruct v; ss. des_ifs_safe.
         assert(S:=SIM h). rewrite _UNWRAPU0 in *. inv S; ss. steps.
         destruct stk0 as [|x stk1].
@@ -364,7 +364,7 @@ Section SIMMODSEM.
     econs; ss.
     { unfold NewStack2.push_body, cfun, cfun2. init. harg. post_call.
       destruct x; destruct (Any.split varg_src) eqn:X; des_ifs_safe; mDesAll; ss; des; subst.
-      - unfold KModSem.transl_fun_tgt. steps.
+      - unfold KModSem.transl_fun. steps.
         rewrite Any.upcast_split. cbn. steps. rewrite Any.upcast_downcast in *. clarify. steps.
         rewrite Any.upcast_downcast in *. clarify. renamer. steps.
         rename n into h. rename l into stk0. rename z into x.
@@ -413,7 +413,7 @@ Section SIMMODSEM.
 
         hret _; ss.
         iModIntro. iFrame. iSplitL "O"; ss; et.
-      - unfold KModSem.transl_fun_tgt, push_body. rewrite X. cbn. steps. post_call. steps.
+      - unfold KModSem.transl_fun, push_body. rewrite X. cbn. steps. post_call. steps.
         rename n into h. rename l into stk0. destruct v; ss. des_ifs_safe.
         assert(S:=SIM h). rewrite _UNWRAPU in *. inv S; ss. steps.
         steps.
