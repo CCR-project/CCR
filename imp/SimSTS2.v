@@ -34,6 +34,22 @@ Fixpoint squeeze X (es: list (option X)): ((list X) * bool) :=
   end
 .
 
+Lemma squeeze_app X (l0 l1: list (option X))
+  :
+    squeeze (l0 ++ l1) =
+    let '(l0', b0) := squeeze l0 in
+    if b0
+    then let '(l1', b1) := squeeze l1 in (l0'++l1', b1)
+    else (l0', false).
+Proof.
+  revert l1. induction l0; ss.
+  { i. des_ifs. }
+  { i. des_ifs.
+    { rewrite IHl0 in Heq. rewrite Heq1 in *. clarify. }
+    { rewrite IHl0 in Heq. clarify. }
+  }
+Qed.
+
 Definition option_to_list X (x: option X): list X :=
   match x with
   | Some x => [x]
@@ -95,7 +111,7 @@ Section STAR.
   Variable L: semantics.
   Variable P: L.(state) -> Prop.
   Inductive pstar: L.(state) -> list event -> L.(state) -> Prop :=
-  | star_refl: forall st_src0 (P: P st_src0), pstar st_src0 [] st_src0
+  | star_refl: forall st_src0, pstar st_src0 [] st_src0
   | star_step: forall
       st_src0 es0 st_src1 es1 st_src2
       (P: P st_src0)
@@ -108,6 +124,19 @@ End STAR.
 Hint Constructors pstar.
 Definition dstar L := pstar L (fun st_src0 => L.(state_sort) st_src0 = demonic).
 Definition star L := pstar L top1.
+
+Lemma star_trans
+      L
+      st0 st1 st2 es0 es1
+      (STEPS0: star L st0 es0 st1)
+      (STEPS1: star L st1 es1 st2)
+  :
+    star L st0 (es0 ++ es1) st2.
+Proof.
+  revert es1 st2 STEPS1. induction STEPS0; et.
+  i. rewrite <- List.app_assoc.
+  econs; et. eapply IHSTEPS0. et.
+Qed.
 
 Lemma star_des
       L
@@ -160,11 +189,11 @@ Lemma star_single_exact
 Proof.
   dependent induction STAR; ii; ss.
   destruct es0; ss.
-  { destruct es1; ss. clarify. esplits; ss; et. econs; ss; et. }
+  { destruct es1; ss. clarify. esplits; et. econs. }
   clarify.
   exploit IHSTAR; et. i; des. esplits; try apply VIS; et.
   replace [] with ((@option_to_list event None) ++ []) by ss.
-  econs; ss; et.
+  econs; et.
 Qed.
 
 Definition NoStuck L (st_src0: state L): Prop :=
@@ -253,7 +282,7 @@ Proof.
   ii. rename x0 into st0. rename x1 into tr.
   inv PR. rename st2 into st1.
   apply GF in SIM.
-  { change tr with (Tr.app [] tr). eapply beh_of_state_star; ss; et. pfold.
+  { change tr with (Tr.app [] tr). eapply beh_of_state_star; et. pfold.
     eapply Beh.of_state_mon; et.
   }
 Qed.
@@ -341,6 +370,31 @@ CoFixpoint decompile_trinf (tr: traceinf): Tr.t :=
   end
 .
 
+Variant _Tr: Type :=
+| _Tr_done (retv: Z)
+| _Tr_spin
+| _Tr_ub
+| _Tr_nb
+| _Tr_cons (hd: event) (tl: Tr.t)
+.
+
+Definition match_Tr (tr: Tr.t) :=
+  match tr with
+  | Tr.done retv => _Tr_done retv
+  | Tr.spin => _Tr_spin
+  | Tr.ub => _Tr_ub
+  | Tr.nb => _Tr_nb
+  | Tr.cons hd tl => _Tr_cons hd tl
+  end.
+
+Lemma Tr_eta (tr0 tr1: Tr.t)
+      (EQ: match_Tr tr0 = match_Tr tr1)
+  :
+    tr0 = tr1.
+Proof.
+  destruct tr0, tr1; ss; clarify.
+Qed.
+
 Lemma unfold_decompile_trinf
       tr
   :
@@ -354,7 +408,7 @@ Lemma unfold_decompile_trinf
      end)
 .
 Proof.
-  admit "mid - define bisim on Tr.t and add axiom: bisim -> eq".
+  destruct tr. eapply Tr_eta. ss.
 Qed.
 
 Lemma decompile_trinf_app
@@ -743,18 +797,20 @@ Section SIM.
       <<SAFE: safe_along_events st_src1 es1>>
   .
   Proof.
-    revert_until STAR. revert es1. revert es0.
-    admit "mid - TODO: use star tail induction".
-  (*   induction STAR; i; ss. *)
-  (*   { destruct es0; ss. des_ifs. } *)
-  (*   destruct es0; ss. *)
-  (*   - eapply safe_along_events_step_some; et. *)
-  (*   - *)
-  (*   ii. des; clarify. eapply SAFE; ss. *)
-  (*   { econs; et. } *)
-  (*   { instantiate (1 := e0 :: _). ss. des_ifs. rewrite MB0 in *; clarify. } *)
-  (*   { esplits; et. ss. } *)
-  (* Qed. *)
+    revert st_src0 st_src1 es0_src es1 STAR MB SAFE. induction es0; ss.
+    { i. clarify. ii. subst. exploit SAFE; [..|et|et].
+      { instantiate (1:=tx_src).
+        change tx_src with ([] ++ tx_src). eapply star_trans; et. }
+      { et. }
+      { et. }
+    }
+    { i. des_ifs. ii. subst. exploit SAFE; [..|et|et].
+      { instantiate (1:=_ ++ _). eapply star_trans; et. }
+      { instantiate (1:=a :: es0 ++ tx). ss. rewrite Heq.
+        rewrite List.map_app. rewrite squeeze_app.
+        rewrite MB. des_ifs. }
+      { instantiate (1:=ty). ss. rewrite ! List.app_assoc. auto. }
+    }
   Qed.
 
   Hypothesis WFSRC: wf L0.
@@ -823,6 +879,64 @@ Section SIM.
       econs; et.
   Qed.
 
+  Lemma sim_forever_silent
+        i st_src st_tgt
+        (SIM: sim i st_src st_tgt)
+        (SILENT: Forever_silent L1 st_tgt)
+    :
+      Beh.state_spin L0 st_src.
+  Proof.
+    revert i st_src st_tgt SIM SILENT. pcofix CIH.
+    intros i. induction (WF i). rename x into i. rename H0 into IH. clear H.
+    i. inv SILENT. punfold SIM. inv SIM.
+    { exploit wf_at_final; [apply WFSEM|..]; et. ss. }
+    { des. hexploit wf_at_determ; [apply WFSEM|apply H|apply SRT0|]. i. des. clarify. }
+    { des. inv SIM; ss. pfold. econs 2; et. esplits; et. right.
+      eapply CIH; et. econs; et. }
+    { des. inv SIM; ss. eapply IH; et.
+      hexploit wf_at_determ; [apply WFSEM|apply STEP|apply H|]. i. des. clarify. }
+    { pfold. econs 1; et. i.
+      hexploit wf_angelic; et. i. subst.
+      hexploit SIM0; et. i. des. inv SIM; ss. right. eapply CIH; et. econs; et. }
+    { pfold. des. inv SIM; ss.
+      hexploit wf_at_determ; [apply WFSEM|apply STEP|apply H|]. i. des. clarify.
+      econs 2; et. esplits; et. }
+  Qed.
+
+  Lemma sim_goes_wrong
+        i st_src st_tgt
+        (SIM: sim i st_src st_tgt)
+        (NOSTEP: Nostep L1 st_tgt)
+        (NOFINAL: forall r, ~ L1.(Smallstep.final_state) st_tgt r)
+    :
+      Beh.of_state L0 st_src Tr.ub.
+  Proof.
+    ginit.
+    { eapply cpn2_wcompat. eapply Beh.of_state_mon. }
+    revert st_src st_tgt SIM NOSTEP NOFINAL.
+    induction (WF i). rename x into i. rename H0 into IH. clear H.
+    i. punfold SIM. inv SIM; ss.
+    { exfalso. eapply NOFINAL; et. }
+    { des. exfalso. eapply NOSTEP; et. }
+    { des. inv SIM; ss.
+      guclo starC_spec. econs.
+      { instantiate (1:=st_src1).
+        change ([]: list event) with (None ++ []: list event). econs; et. }
+      { eapply IH; et. }
+    }
+    { des. exfalso. eapply NOSTEP; et. }
+    { destruct (classic (exists ev st_src1, step L0 st_src ev st_src1)).
+      { des. exploit wf_angelic; et. i; subst. exploit SIM0; et. i; des. inv SIM; ss.
+      guclo starC_spec. econs.
+      { instantiate (1:=st_src1).
+        change ([]: list event) with (None ++ []: list event). econs; et. }
+      { eapply IH; et. }
+      }
+      { gstep. econs 6; et. ii. exfalso. eapply H. et. }
+    }
+    { des. exfalso. eapply NOSTEP; et. }
+  Qed.
+
   Lemma adequacy
         i0 st_src0 st_tgt0
         (SIM: sim i0 st_src0 st_tgt0)
@@ -881,9 +995,7 @@ Section SIM.
             { instantiate (1:=[]). ss. }
             { esplits; ss. }
           * des. exploit wf_at_final; [apply WFSEM|..]; et. ss.
-        + ss.
-          clear - SAFE SIM.
-          clear.
+        + ss. clear.
           induction tr; ii; ss.
           { pfold. econs; ss; et. }
           destruct (decompile_event a) eqn:T.
@@ -896,68 +1008,31 @@ Section SIM.
             rewrite behavior_app_E0; et.
 
       - (* diverge *)
+        (rename t into tr).
         esplits; et.
         + rename H0 into BEH. ss.
           ginit. { eapply cpn2_wcompat; eauto with paco. } revert_until WFSRC. gcofix CIH. i.
-          (* revert_until WFSRC. pcofix CIH. i. *)
           inv BEH.
-          rename s2 into st_tgt1. rename t into tr_tgt. rename H into STAR.
+          rename s2 into st_tgt1. rename tr into tr_tgt. rename H into STAR.
           hexploit simulation_star; try apply STAR; et.
           { eapply SAFE. exists (Diverges []). ss. rewrite E0_right. auto. }
           i; des.
-
           rewrite MB.
+          guclo starC2_spec. econs; et.
+          gfinal. right. pfold. econs 2.
+          eapply sim_forever_silent; et. econs; et.
+        + ss. clear.
+          induction tr; ii; ss.
+          { pfold. econs 2; ss; et. }
+          destruct (decompile_event a) eqn:T.
+          * des_ifs_safe.
+            eapply match_beh_cons; ss.
+            { instantiate (1:=Diverges tr). instantiate (1:=a). ss. }
+            { ss. }
+            { eapply decompile_match_event; ss. }
+          * des_ifs_safe. ss. pfold; econsr; et; ss. r. esplits; et.
+            rewrite behavior_app_E0; et.
 
-          exploit CIH; et.
-          { clear - SAFE MB STEP. r. i. eapply safe_along_events_star; et.
-            eapply SAFE. r in BEH. des. r. exists beh'. rewrite behavior_app_assoc.
-            rewrite <- BEH. ss. instantiate (1:=[]). rewrite E0_right. ss. }
-          { eapply star_one. et. }
-          intro KNOWLEDGE. ss.
-
-          induction STEP using star_event_ind; ss.
-          {
-          clear_tac. spc IHSTEP1.
-          eapply star_single_exact in STEP1. des.
-          guclo starC_spec. econs; et.
-          gstep. econs; et.
-          { destruct (state_sort L0 st3) eqn:SORT; auto.
-            - exfalso. hexploit wf_angelic; et; ss.
-            - exfalso. hexploit wf_demonic; et; ss.
-            - exfalso. hexploit wf_final; et; ss.
-          }
-
-
-          guclo starC2_spec. econs; et. gfinal.
-          destruct es; ss.
-          * guclo starC_spec. econs; et. gbase. et.
-          * exploit IHSTEP1; ss; et. intro U. eapply gpaco2_mon; et. ii; ss.
-
-
-          eapply beh_of_state_star.
-
-          assert(PROG: tr_src <> []).
-          { ii; subst; ss. destruct tr_tgt; ss. des_ifs. }
-          clear - WFSRC KNOWLEDGE PROG STEP.
-          induction STEP using star_event_ind; ss.
-          clear_tac. spc IHSTEP1.
-          eapply star_single_exact in STEP1. des.
-          guclo starC_spec. econs; et.
-          gstep. econs; et.
-          { destruct (state_sort L0 st3) eqn:SORT; auto.
-            - exfalso. hexploit wf_angelic; et; ss.
-            - exfalso. hexploit wf_demonic; et; ss.
-            - exfalso. hexploit wf_final; et; ss.
-          }
-          guclo starC_spec. econs; et.
-          destruct es; ss.
-          * guclo starC_spec. econs; et. gbase. et.
-          * exploit IHSTEP1; ss; et. intro U. eapply gpaco2_mon; et. ii; ss.
-        + eapply decompile_trinf_spec.
-
-
-
-      - admit "mid - prove this! (diverge case)".
       - (* forever_reactive *)
         (rename T into tr).
         esplits; et.
@@ -995,7 +1070,31 @@ Section SIM.
           * guclo starC_spec. econs; et. gbase. et.
           * exploit IHSTEP1; ss; et. intro U. eapply gpaco2_mon; et. ii; ss.
         + eapply decompile_trinf_spec.
-      - ss. admit "mid - prove this! (goes_wrong case)".
+
+      - (* goes wrong *)
+        (rename t into tr).
+        esplits; et.
+        + rename H0 into BEH. ss.
+          ginit. { eapply cpn2_wcompat; eauto with paco. } revert_until WFSRC. gcofix CIH. i.
+          hexploit simulation_star; try apply STAR; et.
+          { eapply SAFE. exists (Goes_wrong []). ss. rewrite E0_right. auto. }
+          i; des.
+          rewrite MB.
+          guclo starC2_spec. econs; et.
+          gfinal. right. eapply paco2_mon.
+          { eapply sim_goes_wrong; et. }
+          { ss. }
+        + ss. clear.
+          induction tr; ii; ss.
+          { pfold. econs 4; ss; et. ss. exists (Goes_wrong []). ss. }
+          destruct (decompile_event a) eqn:T.
+          * des_ifs_safe.
+            eapply match_beh_cons; ss.
+            { instantiate (1:=Goes_wrong tr). instantiate (1:=a). ss. }
+            { ss. }
+            { eapply decompile_match_event; ss. }
+          * des_ifs_safe. ss. pfold; econsr; et; ss. r. esplits; et.
+            rewrite behavior_app_E0; et.
     }
     { (*** unsafe ***)
       assert(NOTSAFE:
