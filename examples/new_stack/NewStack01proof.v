@@ -74,7 +74,7 @@ Section SIMMODSEM.
     { econs; ss. eapply to_semantic. iIntros "H". iClear "H". iSplits; ss. }
     econs; ss.
     { unfold newF. trivial_init. fold wf. mDesAll; des; subst. ss.
-      unfold new_body, KModSem.transl_fun_tgt, ccall, cfun. steps.
+      unfold new_body, KModSem.transl_fun, ccall, cfun. steps.
 
       kstart 2.
       kcatch. { eapply STBINCL. stb_tac; ss. } hcall _ (Some _) _ with "SIM"; ss; et.
@@ -111,7 +111,7 @@ Section SIMMODSEM.
     }
     econs; ss.
     { unfold popF. trivial_init. fold wf. mDesAll; des; subst. ss.
-      unfold pop_body, KModSem.transl_fun_tgt, ccall, cfun. steps.
+      unfold pop_body, KModSem.transl_fun, ccall, cfun. steps.
 
       rewrite Any.upcast_downcast in *. steps. kstart 7.
 
@@ -181,7 +181,7 @@ Section SIMMODSEM.
     }
     econs; ss.
     { unfold pushF. trivial_init. fold wf. mDesAll; des; subst. ss.
-      unfold push_body, KModSem.transl_fun_tgt, ccall, cfun. steps.
+      unfold push_body, KModSem.transl_fun, ccall, cfun. steps.
 
       rewrite Any.upcast_downcast in *; clarify. steps. kstart 7.
 
