@@ -493,12 +493,15 @@ Section ADQ.
         rewrite alist_find_app_o in *. des_ifs.
         (* rewrite Mod.add_list_fns in *. rewrite ! List.map_map. f_equal. *)
         rewrite add_list_fnsems in *. ss.
-        esplits; et.
-    -
-    subst src_fns tgt_fns. ss.
-    destruct src_fns.
+        admit "ez".
+    - left. esplits; ss. admit "ez".
   Qed.
 
+  Let src_ms := (ModL.enclose (Mod.add_list (map SMod.to_src kmds ++ map (UMod.transl) umds))).
+  Let tgt_ms := (ModL.enclose (Mod.add_list (map SMod.to_src kmds ++ map SMod.to_src
+                                                 (map (UMod.massage _gstb) umds)))).
+
+  Require Import SimGlobal.
   Lemma my_lemma2
     :
       refines_closed
@@ -519,7 +522,33 @@ Section ADQ.
     unfold ModSemL.prog at 4.
     unfold ModSemL.prog at 2.
     Local Opaque ModSemL.prog.
-    steps.
+    steps. instantiate (1:=300).
+
+    fold src_fns tgt_fns src_ms tgt_ms.
+    hexploit (alist_find_iff "main"). intro T; des.
+    { rewrite NONE. ss. steps. }
+    - rewrite CTX. rewrite CTX0. steps.
+      rewrite <- ! bind_bind.
+      guclo ordC_spec. econs.
+      { instantiate (1:=OrdArith.add 200 100). rewrite <- OrdArith.add_from_nat. ss. refl. }
+      guclo bindC_spec. econs.
+      { refl. instantiate (1:=eq).
+      { grind. }
+      { grind. }
+      { instantiate (1:=50). instantiate (1:=50). Set Printing All.
+      {[econs| |].
+      
+      erewrite f_equal2; revgoals.
+      { rewrite <- ! bind_bind. refl.
+        
+      match goal with
+      | |- gpaco6 _ _ _ _ _ _ _ _ ?src _ => idtac src
+      end.
+      guclo bindC_spec. econs.
+      { gfinal. right. eapply adequacy_type_aux. ss.
+        unfold initial_r_state, initial_p_state.
+        rewrite initial_mrs_eq. auto. }
+      { i. subst. instantiate (1:=10). steps. }
 
     2: {
       Local Transparent ModSemL.prog.
