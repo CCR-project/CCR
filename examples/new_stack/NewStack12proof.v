@@ -43,11 +43,11 @@ Section SIMMODSEM.
     { econs; ss.
       - red. uipropall.
     }
-    assert(BDOOR: interp_hCallE_src (KModSem.transl_itr_tgt APCK) = Ret tt).
+    assert(BDOOR: interp_hCallE_src (KModSem.transl_itr APCK) = Ret tt).
     { admit "mid - BDOOR". }
     econs; ss.
     { init. inv WF. rr in RTGT. uipropall. subst. clear_fast.
-      unfold cfun2, fun_to_src, body_to_src, KModSem.transl_fun_tgt, cfun, new_body, NewStack1.new_body.
+      unfold cfun2, fun_to_src, body_to_src, KModSem.transl_fun, cfun, new_body, NewStack1.new_body.
       steps.
       destruct (Any.split varg) eqn:T.
       - cbn. des_ifs. steps. rewrite BDOOR. steps.
@@ -59,7 +59,7 @@ Section SIMMODSEM.
     }
     econs; ss.
     { init. inv WF. rr in RTGT. uipropall. subst. clear_fast.
-      unfold cfun2, fun_to_src, body_to_src, KModSem.transl_fun_tgt, cfun, pop_body, NewStack1.pop_body.
+      unfold cfun2, fun_to_src, body_to_src, KModSem.transl_fun, cfun, pop_body, NewStack1.pop_body.
       steps.
       destruct (Any.split varg) eqn:T.
       - cbn. des_ifs. steps. rewrite BDOOR. steps.
