@@ -29,30 +29,30 @@ Section PROOFALL.
 
   Context `{Σ: GRA.t}.
 
-  Definition get_sge (src : Imp.programL) := Sk.load_skenv (Sk.sort (ImpMod.get_modL src).(ModL.sk)).
-  Definition get_tge (tgt : Csharpminor.program) := Genv.globalenv tgt.
+  (* Definition get_sge (src : Imp.programL) := Sk.load_skenv (Sk.sort (ImpMod.get_modL src).(ModL.sk)). *)
+  (* Definition get_tge (tgt : Csharpminor.program) := Genv.globalenv tgt. *)
 
-  Definition dummy_blk : positive := 1%positive.
+  (* Definition dummy_blk : positive := 1%positive. *)
 
-  Definition map_blk : programL -> nat -> Values.block :=
-    fun src blk =>
-      match (compile src) with
-      | OK tgt =>
-        if (ge_dec blk (src_init_nb src)) then Pos.of_succ_nat (2 + (ext_len src) + blk)
-        else
-          let sg := get_sge src in
-          let tg := get_tge tgt in
-          match sg.(SkEnv.blk2id) blk with
-          | Some name =>
-            match Genv.find_symbol tg (s2p name) with
-            | Some tblk => tblk
-            | None => dummy_blk
-            end
-          | None => dummy_blk
-          end
-      | _ => dummy_blk
-      end
-  .
+  (* Definition map_blk : programL -> nat -> Values.block := *)
+  (*   fun src blk => *)
+  (*     match (compile src) with *)
+  (*     | OK tgt => *)
+  (*       if (ge_dec blk (src_init_nb src)) then Pos.of_succ_nat (2 + (ext_len src) + blk) *)
+  (*       else *)
+  (*         let sg := get_sge src in *)
+  (*         let tg := get_tge tgt in *)
+  (*         match sg.(SkEnv.blk2id) blk with *)
+  (*         | Some name => *)
+  (*           match Genv.find_symbol tg (s2p name) with *)
+  (*           | Some tblk => tblk *)
+  (*           | None => dummy_blk *)
+  (*           end *)
+  (*         | None => dummy_blk *)
+  (*         end *)
+  (*     | _ => dummy_blk *)
+  (*     end *)
+  (* . *)
 
   Lemma map_blk_after_init :
     forall src blk
@@ -262,7 +262,7 @@ Section PROOFALL.
       (COMP : exists tgt, Imp2Csharpminor.compile src = OK tgt)
       (WFPROG: Permutation.Permutation
                  ((List.map fst src.(prog_varsL)) ++ (List.map (compose fst snd) src.(prog_funsL)))
-                 (List.map fst src.(defsL))),
+                 (List.map fst src.(defsL)) /\ Sk.wf src.(defsL)),
       <<INJ: map_blk src b1 = map_blk src b2 -> b1 = b2>>.
   Proof.
     i. des. destruct (ge_dec b1 (src_init_nb src)) eqn:BRANGE1; destruct (ge_dec b2 (src_init_nb src)) eqn:BRANGE2.
@@ -287,13 +287,9 @@ Section PROOFALL.
     i. des. rewrite H0 in H. rewrite H1 in H. clarify.
     apply Genv.find_invert_symbol in H0. apply Genv.find_invert_symbol in H1.
     rewrite H1 in H0. clear H1. clarify. apply s2p_inj in H0. clarify.
-    
-    { eauto. }
-
-
-  Admitted.
-
-
+    apply Sk.sort_wf in WFPROG0. apply Sk.load_skenv_wf in WFPROG0. des.
+    apply WFPROG0 in SBLK1. apply WFPROG0 in SBLK2. rewrite SBLK1 in SBLK2. clarify.
+  Qed.
 
 
 

@@ -113,7 +113,6 @@ Section MATCH.
   Definition imp_stack := (r_state * p_state * (lenv * val)) -> imp_state.
 
   (* Hypothesis archi_ptr64 : Archi.ptr64 = true. *)
-  Parameter map_blk : Imp.programL -> nat -> Values.block.
   Definition ext_len : Imp.programL -> nat := fun src => List.length (src.(ext_varsL)) + List.length (src.(ext_funsL)).
   Definition int_len : Imp.programL -> nat := fun src => List.length src.(defsL).
   (* next block of src's initialized genv *)
@@ -121,8 +120,31 @@ Section MATCH.
   (* next block of tgt's initialized genv *)
   Definition tgt_init_nb : Imp.programL -> Values.block := fun src => Pos.of_succ_nat (2 + (ext_len src) + (int_len src)).
 
-  (* Variable tlof : nat. *)
-  (* Definition map_blk (blk : nat) : Values.block := Pos.of_nat (S(tlof + blk)). *)
+  Definition get_sge (src : Imp.programL) := Sk.load_skenv (Sk.sort (ImpMod.get_modL src).(ModL.sk)).
+  Definition get_tge (tgt : Csharpminor.program) := Genv.globalenv tgt.
+
+  (* should never appear *)
+  Definition dummy_blk : positive := 1%positive.
+
+  Definition map_blk : programL -> nat -> Values.block :=
+    fun src blk =>
+      match (compile src) with
+      | OK tgt =>
+        if (ge_dec blk (src_init_nb src)) then Pos.of_succ_nat (2 + (ext_len src) + blk)
+        else
+          let sg := get_sge src in
+          let tg := get_tge tgt in
+          match sg.(SkEnv.blk2id) blk with
+          | Some name =>
+            match Genv.find_symbol tg (s2p name) with
+            | Some tblk => tblk
+            | None => dummy_blk
+            end
+          | None => dummy_blk
+          end
+      | _ => dummy_blk
+      end
+  .
 
   Definition map_ofs (ofs : Z) : Z := 8 * ofs.
 

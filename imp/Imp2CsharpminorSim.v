@@ -109,13 +109,13 @@ Section PROOF.
         tcode tf tcont tge tle tm
         r rg ms mn ge le rstate pstate ktr
         i1
-        (MLE: @match_le srcprog le tle)
+        (MLE: match_le srcprog le tle)
         (CEXP: compile_expr e = Some te)
         (SIM:
            forall rv trv,
              wf_val rv ->
              eval_expr tge empty_env tle tm te trv ->
-             trv = @map_val srcprog rv ->
+             trv = map_val srcprog rv ->
              gpaco3 (_sim (ModL.compile src) (semantics tgt))
                     (cpn3 (_sim (ModL.compile src) (semantics tgt))) rg rg i1
                     (ktr (rstate, pstate, (le, rv)))
@@ -165,7 +165,7 @@ Section PROOF.
       + sim_red. unfold assume. grind. gstep. econs 5; auto. i. eapply angelic_step in STEP; des; clarify.
         eexists; split; [ord_step2|].
         do 6 (gstep; sim_tau). red.
-        sim_red. specialize SIM with (rv:=v) (trv:= @map_val srcprog v).
+        sim_red. specialize SIM with (rv:=v) (trv:= @map_val Σ srcprog v).
         sim_ord.
         { eapply OrdArith.add_base_l. }
         apply SIM; auto.
@@ -180,13 +180,13 @@ Section PROOF.
         tcode tf tcont tge tle tm
         r rg ms mn ge le rstate pstate ktr
         i1
-        (MLE: @match_le srcprog le tle)
+        (MLE: match_le srcprog le tle)
         (CEXP: compile_exprs es = Some tes)
         (SIM:
            forall rvs trvs,
              Forall wf_val rvs ->
              eval_exprlist tge empty_env tle tm tes trvs ->
-             trvs = List.map (@map_val srcprog) rvs ->
+             trvs = List.map (map_val srcprog) rvs ->
              gpaco3 (_sim (ModL.compile src) (semantics tgt)) (cpn3 (_sim (ModL.compile src) (semantics tgt))) r rg i1
                    (ktr (rstate, pstate, (le, rvs)))
                    (State tf tcode tcont empty_env tle tm))
@@ -324,7 +324,7 @@ Section PROOF.
           (MODL: modl = (ModL.add (Mod.lift Mem) (ImpMod.get_modL srcprog)))
           (MODSEML: ms = modl.(ModL.enclose))
           (GENV: ge = Sk.load_skenv (Sk.sort modl.(ModL.sk)))
-          (MGENV: @match_ge srcprog ge (Genv.globalenv tgt))
+          (MGENV: match_ge srcprog ge (Genv.globalenv tgt))
           (COMP: Imp2Csharpminor.compile srcprog = OK tgt)
           (MS: match_states gm ge ms srcprog ist cst)
     :

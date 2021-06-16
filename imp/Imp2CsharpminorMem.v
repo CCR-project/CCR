@@ -21,6 +21,8 @@ Set Implicit Arguments.
 
 Section MEM.
 
+  Context `{Σ: GRA.t}.
+
   Hypothesis map_blk_after_init :
     forall src blk
       (COMP : exists tgt, compile src = OK tgt)
@@ -38,7 +40,7 @@ Section MEM.
   Variable src : Imp.programL.
   Variable m : Mem.t.
   Variable tm : Mem.mem.
-  Context {MM: @match_mem src m tm}.
+  Context {MM: match_mem src m tm}.
   Context {WFPROG: Permutation.Permutation
                      ((List.map fst src.(prog_varsL)) ++ (List.map (compose fst snd) src.(prog_funsL)))
                      (List.map fst src.(defsL)) /\ Sk.wf src.(defsL)}.
@@ -49,7 +51,7 @@ Section MEM.
         (SMEM: (blk, m2) = Mem.alloc m n)
         (TMEM: (tm2, tblk) = Memory.Mem.alloc tm (- size_chunk Mptr) (map_ofs n))
     :
-      (<<MM2: @match_mem src m2 tm2>>).
+      (<<MM2: match_mem src m2 tm2>>).
   Proof.
     inv MM. inv SMEM. split; i; ss; try split.
     - lia.
@@ -92,7 +94,7 @@ Section MEM.
                                  (snd (Memory.Mem.alloc tm (- size_chunk Mptr) (map_ofs n))) (- size_chunk Mptr)
                                  (Values.Vlong (Int64.repr (map_ofs n))) = Some tm2)
     :
-      <<MM2: @match_mem src m2 tm2>>.
+      <<MM2: match_mem src m2 tm2>>.
   Proof.
     unfold map_ofs in *. remember (Memory.Mem.alloc tm (- size_chunk Mptr) (8 * n)) as tm1. destruct tm1 as [tm1 tblk].
     hexploit match_mem_alloc; eauto. i. inv H. split; i; try split.
@@ -116,7 +118,7 @@ Section MEM.
         blk ofs m2
         (SMEM: Mem.free m blk ofs = Some m2)
     :
-      (<<MM2: @match_mem src m2 tm>>).
+      (<<MM2: match_mem src m2 tm>>).
   Proof.
     inv MM. unfold Mem.free in SMEM. des_ifs. apply MMEM in Heq. des.
     split; i; eauto. ss. unfold update in H. des_ifs; eauto.
@@ -127,11 +129,11 @@ Section MEM.
         (SMEM: Mem.store m blk ofs v = Some m2)
     :
       exists tm2,
-        ((<<TMEM: Memory.Mem.store Mint64 tm (map_blk src blk) (map_ofs ofs) (@map_val src v) = Some tm2>>) /\
-        (<<MM2: @match_mem src m2 tm2>>)).
+        ((<<TMEM: Memory.Mem.store Mint64 tm (map_blk src blk) (map_ofs ofs) (map_val src v) = Some tm2>>) /\
+        (<<MM2: match_mem src m2 tm2>>)).
   Proof.
     inv MM. unfold Mem.store in SMEM. des_ifs. hexploit MMEM; eauto. i; des.
-    hexploit (Mem.valid_access_store tm Mint64 (map_blk src blk) (map_ofs ofs) (@map_val src v)); eauto.
+    hexploit (Mem.valid_access_store tm Mint64 (map_blk src blk) (map_ofs ofs) (map_val src v)); eauto.
     i. dependent destruction X. rename x into tm2. rename e into TGTM2. exists tm2. split; auto. try split; i; try split; ss; eauto.
     - erewrite Mem.nextblock_store; eauto.
     - des_ifs.
@@ -184,7 +186,7 @@ Section MEM.
         (WFB: wf_val b)
         (SRCCMP: vcmp m a b = Some tf)
     :
-      Values.Val.cmplu (Mem.valid_pointer tm) Ceq (@map_val src a) (@map_val src b) =
+      Values.Val.cmplu (Mem.valid_pointer tm) Ceq (map_val src a) (map_val src b) =
       if (tf) then Some (Values.Vtrue) else Some (Values.Vfalse).
   Proof.
     destruct a eqn:DESA; destruct b eqn:DESB; destruct tf; clarify; unfold vcmp in SRCCMP; des_ifs.
