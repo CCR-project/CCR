@@ -234,7 +234,7 @@ Proof Outline
   Ltac post_call :=
     fold wf; clear_fast; mDesAll; des_safe; subst; try rewrite Any.upcast_downcast in *; clarify; renamer.
 
-  Ltac mRefresh := on_current ltac:(fun H => move H at bottom).
+  (* Ltac mRefresh := on_current ltac:(fun H => move H at bottom). *)
 
   Variable sk: Sk.t.
 
@@ -261,15 +261,14 @@ Proof Outline
         steps. unhide_k. steps. des_ifs; clarify.
         2:{ bsimpl; des; ss; apply sumbool_to_bool_false in Heq0; try lia. }
         steps. astart 0. astop.
-        rename a2 into memk_src0. rename a1 into mem_tgt0. rename a0 into memu_src0.
+        renamer.
         set (blk := mem_tgt0.(Mem.nb) + x).
 
-        mRefresh.
         mAssert _ with "INV" as "INV".
         { iApply (OwnM_Upd with "INV").
           eapply Auth.auth_alloc2.
           instantiate (1:=(_points_to (blk, 0%Z) (repeat (Vundef) sz))).
-          mOwnWf "INV". mRefresh.
+          mOwnWf "INV".
           clear - WF0 WFTGT SIM.
           ss. do 2 ur. ii. rewrite unfold_points_to. des_ifs.
           - bsimpl. des. des_sumbool. subst. hexploit (SIM blk k0); et. intro T.
@@ -332,7 +331,7 @@ Proof Outline
       { des_ifs_safe (mDesAll; ss). des; subst.
         des_ifs; mDesAll; ss. des; subst. clarify. rewrite Any.upcast_downcast in *. clarify.
         steps. unhide_k. steps. astart 0. astop.
-        rename a2 into memk_src0. rename a1 into mem_tgt0. rename a0 into memu_src0.
+        renamer.
         rename a3 into v. rename WF into SIMWF.
         mCombine "INV" "A". mOwnWf "INV".
         assert(HIT: memk_src0 b ofs = (Some v)).
@@ -429,7 +428,7 @@ Proof Outline
       harg. fold wf. steps. hide_k. destruct x as [[[b ofs] v]|].
       { des_ifs_safe (mDesAll; ss). des; subst. clarify. rewrite Any.upcast_downcast in *. clarify.
         steps. unhide_k. steps. astart 0. astop.
-        rename a2 into memk_src0. rename a1 into mem_tgt0. rename a0 into memu_src0.
+        renamer.
         rename WF into SIMWF.
         mCombine "INV" "A". mOwnWf "INV".
         assert(T: memk_src0 b ofs = (Some v)).
@@ -466,7 +465,7 @@ Proof Outline
       harg. fold wf. steps. hide_k. destruct x as [[[b ofs] v1]|].
       { des_ifs_safe (mDesAll; ss). des; subst. clarify. rewrite Any.upcast_downcast in *. clarify.
         steps. unhide_k. steps. astart 0. astop.
-        rename a2 into memk_src0. rename a1 into mem_tgt0. rename a0 into memu_src0.
+        renamer.
         rename a3 into v0. rename WF into SIMWF.
         steps.
         mCombine "INV" "A". mOwnWf "INV".
@@ -543,7 +542,8 @@ Proof Outline
       harg. fold wf. steps. hide_k. destruct x as [[result resource]|].
       { des_ifs_safe (mDesAll; ss). des; subst. clarify. rewrite Any.upcast_downcast in *. clarify.
         steps. unhide_k. steps. astart 0. astop.
-        rename a2 into memk_src0. rename a1 into mem_tgt0. rename a0 into memu_src0. rename WF into SIMWF.
+        renamer.
+        rename WF into SIMWF.
         assert (VALIDPTR: forall b ofs v (WF: URA.wf ((Auth.black (memk_src0: URA.car (t:=Mem1._memRA))) ⋅ ((b, ofs) |-> [v]))),
                    Mem.valid_ptr mem_tgt0 b ofs = true).
         { clear - SIM. i. cut (memk_src0 b ofs = Some v).
