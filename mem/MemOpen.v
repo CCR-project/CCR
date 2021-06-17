@@ -81,8 +81,6 @@ End PROOF.
 
 Section PROOF.
   Context `{@GRA.inG memRA Σ}.
-  Let GURA: URA.t := GRA.to_URA Σ.
-  Local Existing Instance GURA.
 
   Definition MemSbtb: list (gname * kspecbody) :=
     [("alloc", mk_kspecbody alloc_spec (cfun allocF) (fun _ => triggerNB));

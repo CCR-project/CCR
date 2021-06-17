@@ -121,4 +121,6 @@ Section AUX.
     i. unfold insert, fn_insert. ur. ii. des_ifs. ur in WF. eapply WF.
   Qed.
 
+  Lemma lookup_wf: forall (f: @URA.car RA) k (WF: URA.wf f), URA.wf (f k).
+  Proof. ii; ss. rewrite URA.unfold_wf in WF. ss. Qed.
 End AUX.

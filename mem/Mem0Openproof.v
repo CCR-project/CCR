@@ -71,33 +71,6 @@ Qed.
 
 
 
-Section AUX.
-  Context {K: Type} `{M: URA.t}.
-  Let RA := URA.pointwise K M.
-
-  Lemma pw_extends (f0 f1: K -> M) (EXT: @URA.extends RA f0 f1): forall k, <<EXT: URA.extends (f0 k) (f1 k)>>.
-  Proof. ii. r in EXT. des. subst. ur. ss. eexists; et. Qed.
-  (* Lemma pw_unfold_wf (f: K -> M): (forall k, URA.wf (f k)) -> @URA.wf RA f. Proof. i. ss. Qed. *)
-
-  (* Lemma empty_wf: forall k, URA.wf ((@URA.unit RA) k). *)
-  (* Proof. ii; ss. eapply URA.wf_unit. Qed. *)
-
-  (* Lemma update_wf: forall `{Dec K} (f: @URA.car RA) k v (WF: URA.wf f) (WF: URA.wf v), URA.wf (update f k v: (@URA.car RA)). *)
-  (* Proof. ii. unfold update. des_ifs; ss. Qed. *)
-
-  Lemma lookup_wf: forall (f: @URA.car RA) k (WF: URA.wf f), URA.wf (f k).
-  Proof. ii; ss. rewrite URA.unfold_wf in WF. ss. Qed.
-
-End AUX.
-
-(* Section AUX. *)
-(*   Context `{Σ: GRA.t}. *)
-(*   Definition Univ {X: Type} (P: X -> iProp): iProp := fun r => forall x, P x r. *)
-(* End AUX. *)
-(* Notation "'Forall' x .. y , p" := (Univ (fun x => .. (Univ (fun y => p)) ..)) *)
-(*                                     (at level 200, x binder, right associativity, *)
-(*                                      format "'[' 'Forall'  '/  ' x  ..  y ,  '/  ' p ']'"). *)
-
 Ltac Ztac := all_once_fast ltac:(fun H => first[apply Z.leb_le in H|apply Z.ltb_lt in H|apply Z.leb_gt in H|apply Z.ltb_ge in H|idtac]).
 
 Lemma _points_to_hit: forall b ofs v, (_points_to (b, ofs) [v] b ofs) = (Some v).
@@ -365,7 +338,7 @@ Proof Outline
         assert(HIT: memk_src0 b ofs = (Some v)).
         { clear - WF.
           dup WF. eapply Auth.auth_included in WF. des. eapply pw_extends in WF. eapply pw_extends in WF.
-          rewrite _points_to_hit in WF.
+          spc WF. rewrite _points_to_hit in WF.
           eapply Excl.extends in WF; ss. do 2 eapply lookup_wf. eapply Auth.black_wf. eapply URA.wf_mon; et.
         }
         set (memk_src1 := fun _b _ofs => if dec _b b && dec _ofs ofs
@@ -463,7 +436,7 @@ Proof Outline
         { clear - WF.
           dup WF.
           eapply Auth.auth_included in WF. des.
-          eapply pw_extends in WF. eapply pw_extends in WF. rewrite _points_to_hit in WF. des; ss.
+          eapply pw_extends in WF. eapply pw_extends in WF. spc WF. rewrite _points_to_hit in WF. des; ss.
           eapply Excl.extends in WF; ss. do 2 eapply lookup_wf. eapply Auth.black_wf. eapply URA.wf_mon; et.
         }
         exploit SIM; et. intro U. rewrite T in U. inv U; ss. unfold Mem.load.
@@ -501,7 +474,7 @@ Proof Outline
         { clear - WF.
           dup WF.
           eapply Auth.auth_included in WF. des.
-          eapply pw_extends in WF. eapply pw_extends in WF. rewrite _points_to_hit in WF.
+          eapply pw_extends in WF. eapply pw_extends in WF. spc WF. rewrite _points_to_hit in WF.
           des; ss.
           eapply Excl.extends in WF; ss. do 2 eapply lookup_wf. eapply Auth.black_wf. eapply URA.wf_mon; et.
         }
@@ -579,7 +552,7 @@ Proof Outline
           - clear - WF.
             dup WF.
             eapply Auth.auth_included in WF. des.
-            eapply pw_extends in WF. eapply pw_extends in WF. rewrite _points_to_hit in WF.
+            eapply pw_extends in WF. eapply pw_extends in WF. spc WF. rewrite _points_to_hit in WF.
             des; ss.
             eapply Excl.extends in WF; ss. do 2 eapply lookup_wf. eapply Auth.black_wf. eapply URA.wf_mon; et.
         }

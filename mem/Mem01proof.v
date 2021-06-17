@@ -72,25 +72,6 @@ Qed.
 
 
 
-Section AUX.
-  Context {K: Type} `{M: URA.t}.
-  Let RA := URA.pointwise K M.
-
-  Lemma pw_extends (f0 f1: K -> M) (EXT: @URA.extends RA f0 f1): forall k, <<EXT: URA.extends (f0 k) (f1 k)>>.
-  Proof. ii. r in EXT. des. subst. ur. ss. eexists; et. Qed.
-  (* Lemma pw_unfold_wf (f: K -> M): (forall k, URA.wf (f k)) -> @URA.wf RA f. Proof. i. ss. Qed. *)
-
-  (* Lemma empty_wf: forall k, URA.wf ((@URA.unit RA) k). *)
-  (* Proof. ii; ss. eapply URA.wf_unit. Qed. *)
-
-  (* Lemma update_wf: forall `{Dec K} (f: @URA.car RA) k v (WF: URA.wf f) (WF: URA.wf v), URA.wf (update f k v: (@URA.car RA)). *)
-  (* Proof. ii. unfold update. des_ifs; ss. Qed. *)
-
-  Lemma lookup_wf: forall (f: @URA.car RA) k (WF: URA.wf f), URA.wf (f k).
-  Proof. ii; ss. rewrite URA.unfold_wf in WF. ss. Qed.
-
-End AUX.
-
 Ltac Ztac := all_once_fast ltac:(fun H => first[apply Z.leb_le in H|apply Z.ltb_lt in H|apply Z.leb_gt in H|apply Z.ltb_ge in H|idtac]).
 
 Lemma _points_to_hit: forall b ofs v, (_points_to (b, ofs) [v] b ofs) = (Some v).
@@ -132,39 +113,54 @@ Section SIMMODSEM.
 
   (* Eval compute in (@RA.car (RA.excl Mem.t)). *)
   Eval compute in (@URA.car Mem1._memRA).
-  Inductive sim_loc: option val -> URA.car (t:=(Excl.t _)) -> Prop :=
+  Inductive sim_loc: URA.car (t:=(Excl.t _)) -> option val -> Prop :=
   | sim_loc_present v: sim_loc (Some v) (Some v)
-  | sim_loc_absent: sim_loc None ε
+  | sim_loc_absent: sim_loc ε None
   .
-  Hint Constructors sim_loc: core.
 
   Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
+  (* Let wf: W -> Prop := *)
+  (*   @mk_wf *)
+  (*     _ *)
+  (*     Mem.t *)
+  (*     (fun mem_tgt _ mp_tgt => (∃ mem_src, (OwnM ((Auth.black mem_src): URA.car (t:=Mem1.memRA))) *)
+  (*                                            ** *)
+  (*                                            (⌜forall b ofs, sim_loc ((mem_tgt.(Mem.cnts)) b ofs) (mem_src b ofs)⌝) *)
+  (*                                            ** *)
+  (*                                            (⌜mp_tgt = mem_tgt↑ /\ forall b ofs v, mem_tgt.(Mem.cnts) b ofs = Some v -> <<NB: b < mem_tgt.(Mem.nb)>>⌝) *)
+  (*                              )%I) *)
+  (*     top4 *)
+  (* . *)
+
+  Definition mem_wf (m0: Mem.t): Prop :=
+    forall b ofs v, m0.(Mem.cnts) b ofs = Some v -> <<NB: b < m0.(Mem.nb)>>
+  .
+
   Let wf: W -> Prop :=
     @mk_wf
-      _
-      Mem.t
-      (fun mem_tgt _ mp_tgt => (∃ mem_src, (OwnM ((Auth.black mem_src): URA.car (t:=Mem1.memRA)))
-                                             **
-                                             (⌜forall b ofs, sim_loc ((mem_tgt.(Mem.cnts)) b ofs) (mem_src b ofs)⌝)
-                                             **
-                                             (⌜mp_tgt = mem_tgt↑ /\ forall b ofs v, mem_tgt.(Mem.cnts) b ofs = Some v -> <<NB: b < mem_tgt.(Mem.nb)>>⌝)
-                               )%I)
+      _ unit
+      (fun _ _ _mem_tgt0 =>
+         (∃ (mem_tgt0: Mem.t) (memk_src0: URA.car (t:=Mem1._memRA)),
+             (⌜(<<TGT: _mem_tgt0 = mem_tgt0↑>>) /\
+              (<<SIM: forall b ofs, sim_loc (memk_src0 b ofs) (mem_tgt0.(Mem.cnts) b ofs)>>) /\
+              (<<WFTGT: mem_wf mem_tgt0>>)⌝) ∧ (*** TODO: put it inside Mem.t? ***)
+             (OwnM ((Auth.black memk_src0): URA.car (t:=Mem1.memRA)))
+         )%I)
       top4
   .
 
   Hint Resolve sim_itree_mon: paco.
 
-  (* Lemma just_wf `{M: RA.t}: forall (x: @RA.car M), RA.wf x -> @URA.wf (of_RA.t M) (URA.of_RA.just x). *)
-  (* Proof. i; ss. Qed. *)
-
-  (* Opaque of_RA.t. *)
-  (* Opaque URA.auth. *)
-  (* Opaque URA.pointwise. *)
   Opaque URA.unit.
+
+  Theorem correct_modsem: forall sk, ModSemPair.sim (SModSem.to_tgt [] (Mem1.SMemSem sk)) (Mem0.MemSem sk).
+  Proof.
+    admit "".
+  Qed.
 
   Theorem correct: ModPair.sim Mem1.Mem Mem0.Mem.
   Proof.
-    admit "TODO: replace it with Mem0Openproof".
+    econs; ss; et. i. eapply correct_modsem.
   Qed.
 
 End SIMMODSEM.
