@@ -501,6 +501,20 @@ Section ADQ.
   Let tgt_ms := (ModL.enclose (Mod.add_list (map SMod.to_src kmds ++ map SMod.to_src
                                                  (map (UMod.massage _gstb) umds)))).
 
+  Section PACO.
+    Variable R: Type.
+    Variable f: (R -> Prop) -> (R -> Prop).
+    Hypothesis f_mon: monotone1 f. Hint Resolve f_mon: paco.
+
+    Variable g1 g2 r1 r2: R -> Prop.
+
+    Hypothesis G1: g1 <1= paco1 f r1.
+    Hypothesis G2: g2 <1= paco1 f r2.
+
+    Hypothesis R1: r1 <1= r \1/ paco1 f r1.
+    Hypothesis R2: r2 <1= paco1 f r2.
+
+
   Require Import SimGlobal.
   Lemma my_lemma2
     :
@@ -509,6 +523,7 @@ Section ADQ.
         (Mod.add_list ((map SMod.to_src kmds) ++ (map (UMod.transl) umds)))
   .
   Proof.
+    rewrite List.map_map.
     r. i. eapply SimGlobal.adequacy_global_itree; et.
     exists 100.
     ginit.
@@ -537,10 +552,10 @@ Section ADQ.
       { grind. }
       { instantiate (1:=50). instantiate (1:=50). Set Printing All.
       {[econs| |].
-      
+
       erewrite f_equal2; revgoals.
       { rewrite <- ! bind_bind. refl.
-        
+
       match goal with
       | |- gpaco6 _ _ _ _ _ _ _ _ ?src _ => idtac src
       end.

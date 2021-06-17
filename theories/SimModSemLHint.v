@@ -161,6 +161,8 @@ End W.
 
 
 
+Class gnames := { gnames_contents :> gname -> Prop }.
+Coercion gnames_contents: gnames >-> Funclass.
 
 Section SIM.
 
@@ -175,7 +177,7 @@ Section SIM.
   Variable le: relation W.
   Hypothesis le_PreOrder: PreOrder le.
 
-  Variable namespace: gname -> Prop.
+  Context `{ns: gnames}.
 
   Variant _sim_itree (sim_itree: forall (R_src R_tgt: Type) (RR: st_local -> st_local -> R_src -> R_tgt -> Prop), Ord.t -> st_local * itree Es R_src -> st_local * itree Es R_tgt -> Prop)
           {R_src R_tgt} (RR: st_local -> st_local -> R_src -> R_tgt -> Prop)
@@ -472,16 +474,14 @@ Section SIM.
   (*   : *)
   (*     _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), (trigger PushFrame;;; r <- trigger (Call fn varg);; trigger PopFrame;;; tau;; k_src r)) *)
   (*                ((mrs_tgt0, fr_tgt0), i_tgt) *)
-  | sim_itree_hint2
+  | sim_itree_call_fail
       i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       fn varg k_src i_tgt
-      (K: forall (HINT: namespace fn), exists i1,
-          sim_itree _ _ RR i1 ((mrs_src0, fr_src0), (trigger PushFrame;;; r <- trigger (Call fn varg);;
-                                    trigger PopFrame;;; tau;; k_src r)) ((mrs_tgt0, fr_tgt0), i_tgt))
+      (FAIL: ~ ns fn)
     :
-      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), (tau;; trigger PushFrame;;; r <- trigger (Call fn varg);;
+      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), (trigger PushFrame;;; r <- trigger (Call fn varg);;
                                                         trigger PopFrame;;; tau;; k_src r))
-                 ((mrs_tgt0, fr_tgt0), tau;; i_tgt)
+                 ((mrs_tgt0, fr_tgt0), i_tgt)
   .
 
   Program Definition sim_itree: _ -> relation _ :=
@@ -494,7 +494,6 @@ Section SIM.
     - econs; ss; et. ii. exploit K; et. i; des. esplits; et.
     - econs; ss; et. ii. exploit K; et. i; des. esplits; et.
     - econs; ss; et. ii. exploit K; et. i; des. esplits; et.
-    - eapply sim_itree_hint2. ii. exploit K; et. i; des. esplits; et.
   Qed.
 
   Hint Constructors _sim_itree.
@@ -702,20 +701,10 @@ Section SIM.
     + rewrite ! bind_bind. econs; eauto.
       { eapply OrdArith.lt_add_r; eauto. }
       eapply rclo6_clo_base. econs; eauto.
-    + erewrite f_equal2; [eapply sim_itree_hint2| |]; cycle 1.
+    + erewrite f_equal2; [eapply sim_itree_call_fail| |]; cycle 1.
       { f_equal. instantiate (3:=k_src0 >=> k_src). grind. }
-      { f_equal. grind. }
-      i. exploit K; et. i; des. esplits; et.
-      (* Require Import Red IRed. *)
-      (* Ltac my_red_both := try (prw _red_gen 2 1 0); try (prw _red_gen 1 1 0). *)
-      (* my_red_both. *)
-      eapply rclo6_clo_base.
-      replace (trigger PushFrame;;; r0 <- trigger (Call fn varg);; trigger PopFrame;;;
-                                                                           (tau;; (k_src0 >=> k_src) r0)) with
-          ((trigger PushFrame;;; r0 <- trigger (Call fn varg);; trigger PopFrame;;;
-                                                                        (tau;; k_src0 r0)) >>= k_src); cycle 1.
-      { grind. }
-      econs; eauto.
+      { ss. }
+      { auto. }
   Qed.
 
   Lemma lbindC_spec: lbindC <7= gupaco6 (_sim_itree) (cpn6 (_sim_itree)).
@@ -838,11 +827,11 @@ Proof.
     exists mr0, mp. rewrite alist_add_find_neq; auto.
 Qed.
 
-Lemma self_sim_itree `{Σ: GRA.t} (ms: list mname):
+Lemma self_sim_itree `{Σ: GRA.t} `{ns: gnames} (ms: list mname):
   forall n mrs fr st
          (WF: wf_function ms st)
          (MRS: wf_mrs ms mrs),
-    @sim_itree _ (fun p => fst p = snd p /\ wf_mrs ms (fst p)) top1
+    @sim_itree _ (fun p => fst p = snd p /\ wf_mrs ms (fst p)) ns
                n ((mrs, fr), st) ((mrs, fr), st).
 Proof.
   pcofix CIH. i. pfold. punfold WF. inv WF; pclearbot.
@@ -903,6 +892,7 @@ Module ModSemLPair.
 Section SIMMODSEML.
 
   Context `{Σ: GRA.t}.
+  Context `{ns: gnames}.
   Variable (ms_src ms_tgt: ModSemL.t).
 
   Let W: Type := (alist mname (Σ * Any.t)) * (alist mname (Σ * Any.t)).
@@ -911,13 +901,13 @@ Section SIMMODSEML.
     le: W -> W -> Prop;
     le_PreOrder: PreOrder le;
     (*** TODO: incorporate le properly ***)
-    sim_fnsems: Forall2 (sim_fnsem wf top1) ms_src.(ModSemL.fnsems) ms_tgt.(ModSemL.fnsems);
+    sim_fnsems: Forall2 (sim_fnsem wf) ms_src.(ModSemL.fnsems) ms_tgt.(ModSemL.fnsems);
     sim_initial_mrs: wf (ms_src.(ModSemL.initial_mrs), ms_tgt.(ModSemL.initial_mrs));
   }.
 
 End SIMMODSEML.
 
-Lemma self_sim_mod `{Σ: GRA.t} (ms: ModSemL.t) (WF: wf_mod ms):
+Lemma self_sim_mod `{Σ: GRA.t} `{ns: gnames} (ms: ModSemL.t) (WF: wf_mod ms):
   sim ms ms.
 Proof.
   eapply mk with (wf:=fun p => fst p = snd p /\ wf_mrs (List.map fst ms.(ModSemL.initial_mrs)) (fst p)) (le:=top2); ss.
@@ -1016,6 +1006,7 @@ Section ADD.
 
 
   Context `{Σ: GRA.t}.
+  Context `{ns: gnames}.
 
   Let W: Type := (alist mname (Σ * Any.t)) * (alist mname (Σ * Any.t)).
 
@@ -1044,17 +1035,17 @@ Section ADD.
   Qed.
 
   Lemma sim_itree_sym wf0 wf1 (EQV: forall w, wf0 w <-> wf1 w)
-        n ns ms_src ms_tgt
-        (SIM: sim_itree wf0 n ns ms_src ms_tgt)
+        n ms_src ms_tgt
+        (SIM: sim_itree wf0 n ms_src ms_tgt)
     :
-      sim_itree wf1 n ns ms_src ms_tgt.
+      sim_itree wf1 n ms_src ms_tgt.
   Proof.
     assert(wf0 = wf1).
     { extensionality x. apply prop_ext; ss. }
     subst; ss.
   Qed.
 
-  Lemma add_sim_itree ms_src0 ms_src1 ms_tgt0 ms_tgt1 (wf0 wf1: W -> Prop) ns
+  Lemma add_sim_itree ms_src0 ms_src1 ms_tgt0 ms_tgt1 (wf0 wf1: W -> Prop)
         (DISJSRC: forall mn
                          (IN0: (in_dec string_Dec mn ms_src1: bool) = true)
                          (IN1: (in_dec string_Dec mn ms_src0: bool) = true),
@@ -1064,7 +1055,7 @@ Section ADD.
                          (IN1: (in_dec string_Dec mn ms_tgt0: bool) = true),
             False)
     : forall st_src st_tgt fr_src fr_tgt mrs_src mrs_tgt n
-             (SIM: sim_itree wf1 ns n
+             (SIM: sim_itree wf1 n
                              (alist_filter (fun mn => in_dec string_Dec mn ms_src1)
                                            mrs_src, fr_src, st_src)
                              (alist_filter (fun mn => in_dec string_Dec mn ms_tgt1)
@@ -1076,7 +1067,7 @@ Section ADD.
              (NDSRC: NoDup (List.map fst mrs_src))
              (NDTGT: NoDup (List.map fst mrs_tgt)),
       sim_itree
-        (add_wf ms_src0 ms_src1 ms_tgt0 ms_tgt1 wf0 wf1) ns n
+        (add_wf ms_src0 ms_src1 ms_tgt0 ms_tgt1 wf0 wf1) n
         (mrs_src, fr_src, st_src) (mrs_tgt, fr_tgt, st_tgt).
   Proof.
     i. ginit. { eapply cpn6_wcompat; eauto with paco. } revert_until DISJTGT. gcofix CIH. i.
@@ -1180,7 +1171,6 @@ Section ADD.
       { eapply alist_find_filter; eauto. }
     * econs 30; eauto with paco.
     * econs 31; eauto.
-      { i. exploit K; eauto. i. des. pclearbot. esplits. gbase. eapply CIH; eauto. }
   Qed.
 
   Lemma add_modsempair (ms_src0 ms_src1 ms_tgt0 ms_tgt1: ModSemL.t)
@@ -1348,14 +1338,6 @@ Require Import SimGlobal.
 Module ModLPair.
 Section SIMMOD.
    Context `{Σ: GRA.t}.
-   Variable (md_src md_tgt: ModL.t).
-   Inductive sim: Prop := mk {
-     sim_modsem:
-       <<SIM: ModSemLPair.sim (md_src.(ModL.enclose)) (md_tgt.(ModL.enclose))>>;
-     sim_sk: <<SIM: md_src.(ModL.sk) = md_tgt.(ModL.sk)>>;
-     sim_wf:
-       forall sk (INCL: Sk.incl md_src.(ModL.sk) sk) (SKWF: Sk.wf sk) (WF: ModSemL.wf (md_src.(ModL.get_modsem) sk)), <<WF: ModSemL.wf (md_tgt.(ModL.get_modsem) sk)>>;
-   }.
 
    Hint Resolve cpn6_wcompat: paco.
 
@@ -1452,18 +1434,20 @@ Section SIMMOD.
      eapply OrdArith.lt_add_r. eapply OrdArith.lt_from_nat. eauto.
    Qed.
 
-   Lemma lift_sim ms_src ms_tgt (ns: gname -> Prop)
+   Context `{ns: gnames}.
+
+   Lemma lift_sim ms_src ms_tgt
          (* (NAMESPACE: forall fn arg (IN: ~ns fn), (ModSemL.prog ms_src) _ (Call fn arg) = triggerUB) *)
          (NAMESPACE: forall fn (SOME: is_some (alist_find fn (ModSemL.fnsems ms_src))), ns fn)
          (wf: alist string (Σ * Any.t) * alist string (Σ * Any.t) -> Prop)
          (FNS: forall fn : string,
-             option_rel (sim_fsem wf ns)
+             option_rel (sim_fsem wf)
                         (alist_find fn (ModSemL.fnsems ms_src))
                         (alist_find fn (ModSemL.fnsems ms_tgt)))
      :
        forall n mrsl_src fr_src f_src mrsl_tgt fr_tgt f_tgt
               (* (WF: wf (mrsl_src, mrsl_tgt)) *)
-              (SIM: sim_itree wf ns n (mrsl_src, fr_src, f_src) (mrsl_tgt, fr_tgt, f_tgt))
+              (SIM: sim_itree wf n (mrsl_src, fr_src, f_src) (mrsl_tgt, fr_tgt, f_tgt))
               mrs_src mrs_tgt mps_src mps_tgt
               (EQVSRC: eqv mrsl_src mrs_src mps_src)
               (EQVTGT: eqv mrsl_tgt mrs_tgt mps_tgt)
@@ -1732,31 +1716,30 @@ Section SIMMOD.
        { eapply arith_lt_2 with (n1:=4); auto. }
        gbase. eapply CIH; eauto.
        Unshelve. all: exact O.
-     - destruct (alist_find fn (ModSemL.fnsems ms_src)) eqn:T.
-       + exploit NAMESPACE; et. { rewrite T; ss. } intro U.
-         exploit K; et. i; des. pclearbot. econs; eauto. gbase.
-         match goal with
-         | |- r _ _ _ _ ?src _ =>
-           replace src with (interp_Es (ModSemL.prog ms_src)
-                                       ((trigger PushFrame);;; r0 <- trigger (Call fn varg);;
-                                        (trigger PopFrame);;; (tau;; k_src r0)) (mrs_src, fr_src :: frs_src, mps_src))
-         end.
-         { eapply CIH; et. }
-         rewrite interp_Es_bind. grind.
-       + econs; eauto. instantiate (1:=100).
-         erewrite interp_Es_rE with (rst0:=(mrs_src, fr_src :: frs_src)). ss. mgo.
-         gstep; econs; eauto.
-         { eapply OrdArith.lt_from_nat; ss. }
-         gstep; econs; eauto.
-         { eapply OrdArith.lt_from_nat; ss. }
-         gstep; econs; eauto.
-         { eapply OrdArith.lt_from_nat; ss. }
-         cbn. rewrite T. cbn. mgo. unfold triggerUB. mgo.
-         gstep; econs; eauto.
-         { eapply OrdArith.lt_from_nat; ss. }
-         i; ss.
+     - erewrite interp_Es_rE with (rst0:=(mrs_src, fr_src :: frs_src)). ss. mgo.
+       econs; eauto.
+       { eapply arith_lt_2 with (n1:=3); auto. }
+       gstep. econs; eauto.
+       { eapply arith_lt_2 with (n1:=2); auto. }
+       gstep. econs; eauto.
+       { eapply arith_lt_2 with (n1:=1); auto. }
+       cbn. unfold unwrapU, triggerUB. des_ifs.
+       { exfalso. eapply FAIL. eapply NAMESPACE. rewrite Heq. ss. }
+       mgo. gstep. econs; ss.
+       { eapply arith_lt_2 with (n1:=0); auto. }
    Qed.
 
+   Variable (md_src md_tgt: ModL.t).
+
+   Inductive sim: Prop := mk {
+     sim_modsem:
+       <<SIM: ModSemLPair.sim (md_src.(ModL.enclose)) (md_tgt.(ModL.enclose))>>;
+     sim_sk: <<SIM: md_src.(ModL.sk) = md_tgt.(ModL.sk)>>;
+     sim_wf:
+       forall sk (INCL: Sk.incl md_src.(ModL.sk) sk) (SKWF: Sk.wf sk) (WF: ModSemL.wf (md_src.(ModL.get_modsem) sk)), <<WF: ModSemL.wf (md_tgt.(ModL.get_modsem) sk)>>;
+   }.
+
+   Hypothesis NAMESPACE: forall fn (SOME: is_some (alist_find fn (ModSemL.fnsems (ModL.get_modsem md_src (Sk.sort (ModL.sk md_src)))))), ns fn.
 
    Theorem adequacy_local_closed
            (SIM: sim)
@@ -1765,59 +1748,59 @@ Section SIMMOD.
        Beh.of_program (ModL.compile md_src)
    .
    Proof.
-     (* inv SIM. inv sim_modsem0. red in sim_sk0. *)
-     (* unfold ModL.enclose in *. *)
+     inv SIM. inv sim_modsem0. red in sim_sk0.
+     unfold ModL.enclose in *.
 
-     (* eapply adequacy_global; et. exists (OrdArith.add Ord.O Ord.O). *)
-     (* unfold ModSemL.initial_itr, ModSemL.initial_itr_arg, ModL.enclose. *)
+     eapply adequacy_global; et. exists (OrdArith.add Ord.O Ord.O).
+     unfold ModSemL.initial_itr, ModSemL.initial_itr_arg, ModL.enclose.
 
-     (* assert (FNS: forall fn : string, *)
-     (*            option_rel (sim_fsem wf) *)
-     (*                       (alist_find fn *)
-     (*                                   (ModSemL.fnsems (ModL.get_modsem md_src (Sk.sort (ModL.sk md_src))))) *)
-     (*                       (alist_find fn *)
-     (*                                   (ModSemL.fnsems (ModL.get_modsem md_tgt (Sk.sort (ModL.sk md_tgt)))))). *)
-     (* { rewrite <- sim_sk0 in *. *)
-     (*   remember (ModSemL.fnsems (ModL.get_modsem md_src (Sk.sort (ModL.sk md_src)))). *)
-     (*   remember (ModSemL.fnsems (ModL.get_modsem md_tgt (Sk.sort (ModL.sk md_src)))). *)
-     (*   clear - sim_fnsems. induction sim_fnsems; ss. *)
-     (*   i. inv H. destruct x, y. inv H0. ss. subst. *)
-     (*   rewrite ! eq_rel_dec_correct. des_ifs; eauto. *)
-     (* } *)
+     assert (FNS: forall fn : string,
+                option_rel (sim_fsem wf)
+                           (alist_find fn
+                                       (ModSemL.fnsems (ModL.get_modsem md_src (Sk.sort (ModL.sk md_src)))))
+                           (alist_find fn
+                                       (ModSemL.fnsems (ModL.get_modsem md_tgt (Sk.sort (ModL.sk md_tgt)))))).
+     { rewrite <- sim_sk0 in *.
+       remember (ModSemL.fnsems (ModL.get_modsem md_src (Sk.sort (ModL.sk md_src)))).
+       remember (ModSemL.fnsems (ModL.get_modsem md_tgt (Sk.sort (ModL.sk md_src)))).
+       clear - sim_fnsems. induction sim_fnsems; ss.
+       i. inv H. destruct x, y. inv H0. ss. subst.
+       rewrite ! eq_rel_dec_correct. des_ifs; eauto.
+     }
 
-     (* ginit. unfold assume. mgo. *)
-     (* generalize (FNS "main"). i. inv H; cycle 1. *)
-     (* { gstep. econs; eauto. i. esplits; eauto. *)
-     (*   { inv x_src. red. unfold ModL.enclose in *. rewrite <- sim_sk0. *)
-     (*     split; et. eapply sim_wf0; et. *)
-     (*     eapply Sk.sort_incl. eapply Sk.sort_wf. assumption. } clear x_src. *)
-     (*   ss. unfold ITree.map, unwrapU, triggerUB. *)
-     (*   mgo. rewrite <- H1. mgo. *)
-     (*   des_ifs_safe. *)
-     (*   mgo. gstep. econs; eauto. ss. } *)
-     (* exploit IN; eauto. i. des. *)
+     ginit. unfold assume. mgo.
+     generalize (FNS "main"). i. inv H; cycle 1.
+     { gstep. econs; eauto. i. esplits; eauto.
+       { inv x_src. red. unfold ModL.enclose in *. rewrite <- sim_sk0.
+         split; et. eapply sim_wf0; et.
+         eapply Sk.sort_incl. eapply Sk.sort_wf. assumption. } clear x_src.
+       ss. unfold ITree.map, unwrapU, triggerUB.
+       mgo. rewrite <- H1. mgo.
+       des_ifs_safe.
+       mgo. gstep. econs; eauto. ss. }
+     exploit IN; eauto. i. des.
 
-     (* gstep. econs; eauto. i. esplits; eauto. *)
-     (* { inv x_src. red. unfold ModL.enclose in *. rewrite <- sim_sk0. *)
-     (*   split; et. eapply sim_wf0; et. eapply Sk.sort_incl. *)
-     (*   eapply Sk.sort_wf. assumption. } clear x_src. *)
-     (* ss. unfold ITree.map, unwrapU, triggerUB. mgo. *)
-     (* des_ifs_safe. ss. mgo. *)
-     (* guclo bindC_spec. econs. *)
-     (* { gfinal. right. eapply lift_sim. *)
-     (*   { eapply FNS. } *)
-     (*   { eapply x. } *)
-     (*   { ii. unfold ModSemL.initial_p_state. des_ifs. } *)
-     (*   { ii. rewrite sim_sk0 in *. unfold ModSemL.initial_p_state. des_ifs. } *)
-     (* } *)
-     (* { i. ss. des. *)
-     (*   destruct vret_src as [[[mrs_src frs_src] p_src] v_src]. *)
-     (*   destruct vret_tgt as [[[mrs_tgt frs_tgt] p_tgt] v_tgt]. ss. subst. *)
-     (*   mgo. ss. mgo. *)
-     (*   gstep. econs; eauto. *)
-     (* } *)
-     (* Unshelve. all: exact Ord.O. *)
-     admit "".
+     gstep. econs; eauto. i. esplits; eauto.
+     { inv x_src. red. unfold ModL.enclose in *. rewrite <- sim_sk0.
+       split; et. eapply sim_wf0; et. eapply Sk.sort_incl.
+       eapply Sk.sort_wf. assumption. } clear x_src.
+     ss. unfold ITree.map, unwrapU, triggerUB. mgo.
+     des_ifs_safe. ss. mgo.
+     guclo bindC_spec. econs.
+     { gfinal. right. eapply lift_sim.
+       { et. }
+       { eapply FNS. }
+       { eapply x. }
+       { ii. unfold ModSemL.initial_p_state. des_ifs. }
+       { ii. rewrite sim_sk0 in *. unfold ModSemL.initial_p_state. des_ifs. }
+     }
+     { i. ss. des.
+       destruct vret_src as [[[mrs_src frs_src] p_src] v_src].
+       destruct vret_tgt as [[[mrs_tgt frs_tgt] p_tgt] v_tgt]. ss. subst.
+       mgo. ss. mgo.
+       gstep. econs; eauto.
+     }
+     Unshelve. all: exact Ord.O.
    Qed.
 
 End SIMMOD.
