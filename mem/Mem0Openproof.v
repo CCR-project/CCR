@@ -71,33 +71,6 @@ Qed.
 
 
 
-Section AUX.
-  Context {K: Type} `{M: URA.t}.
-  Let RA := URA.pointwise K M.
-
-  Lemma pw_extends (f0 f1: K -> M) (EXT: @URA.extends RA f0 f1): forall k, <<EXT: URA.extends (f0 k) (f1 k)>>.
-  Proof. ii. r in EXT. des. subst. ur. ss. eexists; et. Qed.
-  (* Lemma pw_unfold_wf (f: K -> M): (forall k, URA.wf (f k)) -> @URA.wf RA f. Proof. i. ss. Qed. *)
-
-  (* Lemma empty_wf: forall k, URA.wf ((@URA.unit RA) k). *)
-  (* Proof. ii; ss. eapply URA.wf_unit. Qed. *)
-
-  (* Lemma update_wf: forall `{Dec K} (f: @URA.car RA) k v (WF: URA.wf f) (WF: URA.wf v), URA.wf (update f k v: (@URA.car RA)). *)
-  (* Proof. ii. unfold update. des_ifs; ss. Qed. *)
-
-  Lemma lookup_wf: forall (f: @URA.car RA) k (WF: URA.wf f), URA.wf (f k).
-  Proof. ii; ss. rewrite URA.unfold_wf in WF. ss. Qed.
-
-End AUX.
-
-(* Section AUX. *)
-(*   Context `{Σ: GRA.t}. *)
-(*   Definition Univ {X: Type} (P: X -> iProp): iProp := fun r => forall x, P x r. *)
-(* End AUX. *)
-(* Notation "'Forall' x .. y , p" := (Univ (fun x => .. (Univ (fun y => p)) ..)) *)
-(*                                     (at level 200, x binder, right associativity, *)
-(*                                      format "'[' 'Forall'  '/  ' x  ..  y ,  '/  ' p ']'"). *)
-
 Ltac Ztac := all_once_fast ltac:(fun H => first[apply Z.leb_le in H|apply Z.ltb_lt in H|apply Z.leb_gt in H|apply Z.ltb_ge in H|idtac]).
 
 Lemma _points_to_hit: forall b ofs v, (_points_to (b, ofs) [v] b ofs) = (Some v).
@@ -140,35 +113,18 @@ Section SIMMODSEM.
   (* Eval compute in (@RA.car (RA.excl Mem.t)). *)
   Eval compute in (@URA.car Mem1._memRA).
 
-  Inductive mem_extends (m0 m1: Mem.t): Prop :=
-  | mem_extends_intro
-      (NB: m0.(Mem.nb) <= m1.(Mem.nb))
-      (CNTS: forall b ofs, (m0.(Mem.cnts) b ofs) = None \/ (m0.(Mem.cnts) b ofs) = (m1.(Mem.cnts) b ofs))
-  .
+  (* Definition o_combine X (f: X -> X -> option X) (x0 x1: option X): option X := *)
+  (*   match x0, x1 with *)
+  (*   | Some x0, Some x1 => do x <- (f x0 x1); Some x *)
+  (*   | Some x0, _ => Some x0 *)
+  (*   | _, Some x1 => Some x1 *)
+  (*   | _, _ => None *)
+  (*   end *)
+  (* . *)
 
-  Global Program Instance mem_extends_PreOrder: PreOrder mem_extends.
-  Next Obligation.
-    ii. econs; et.
-  Qed.
-  Next Obligation.
-    ii. inv H0; inv H1. econs; et; try lia. ii. repeat spc CNTS. des; et. repeat spc CNTS0. des; eauto with congruence.
-  Qed.
-
-  Search (option _ -> option _ -> option _).
-  SearchPattern (option _ -> option _ -> option _).
-
-  Definition o_combine X (f: X -> X -> option X) (x0 x1: option X): option X :=
-    match x0, x1 with
-    | Some x0, Some x1 => do x <- (f x0 x1); Some x
-    | Some x0, _ => Some x0
-    | _, Some x1 => Some x1
-    | _, _ => None
-    end
-  .
-
-  Definition o_xor X (x0 x1: option X): option X :=
-    Eval red in (o_combine (fun _ _ => None) x0 x1)
-  .
+  (* Definition o_xor X (x0 x1: option X): option X := *)
+  (*   Eval red in (o_combine (fun _ _ => None) x0 x1) *)
+  (* . *)
 
   (*** memk_src -> memu_src -> mem_tgt ***)
   Inductive sim_loc: URA.car (t:=(Excl.t _)) -> option val -> option val -> Prop :=
@@ -177,39 +133,9 @@ Section SIMMODSEM.
   | sim_loc_absent: sim_loc ε None None
   .
 
-  (* Let wf: W -> Prop := *)
-  (*   fun '((mr_src, memu_src), (mr_tgt, mem_tgt)) => *)
-  (*     exists memk_src, *)
-  (*     (<<SRC: iHyp (Own (GRA.embed ((Auth.black memk_src): URA.car (t:=Mem1.memRA)))) mr_src>>) /\ *)
-  (*     (<<TGT: mr_tgt = ε>>) /\ *)
-  (*     (<<SIM: forall b ofs, sim_loc (memk_src b ofs) (memu_src.(Mem.cnts) b ofs) *)
-  (*                                   (mem_tgt.(Mem.cnts) b ofs)>>) *)
-  (* . *)
-
   Definition mem_wf (m0: Mem.t): Prop :=
     forall b ofs v, m0.(Mem.cnts) b ofs = Some v -> <<NB: b < m0.(Mem.nb)>>
   .
-
-  (* Let wf: W -> Prop := *)
-  (*   @mk_wf *)
-  (*     _ unit *)
-  (*     (fun _ _memu_src0 _mem_tgt0 => *)
-  (*        (∃ (memu_src0: Mem.t) (mem_tgt0: Mem.t) (memk_src0: URA.car (t:=Mem1._memRA)), *)
-  (*            (* (⌜<<SRC: _memu_src0↓ = Some memu_src0>>⌝) ∧ *) *)
-  (*            (* (⌜<<TGT: _mem_tgt0↓ = Some mem_tgt0>>⌝) ∧ *) *)
-  (*            (⌜<<SRC: _memu_src0 = memu_src0↑>>⌝) ∧ *)
-  (*            (⌜<<TGT: _mem_tgt0 = mem_tgt0↑>>⌝) ∧ *)
-  (*            (* (⌜<<SRC: memu_src0↑ = _memu_src0>>⌝) ∧ *) *)
-  (*            (* (⌜<<TGT: mem_tgt0↑ = _mem_tgt0>>⌝) ∧ *) *)
-  (*            (OwnM ((Auth.black memk_src0): URA.car (t:=Mem1.memRA))) ∧ *)
-  (*            (⌜<<SIM: forall b ofs, sim_loc (memk_src0 b ofs) (memu_src0.(Mem.cnts) b ofs) *)
-  (*                                           (mem_tgt0.(Mem.cnts) b ofs)>>⌝) ∧ *)
-  (*            (⌜<<NB: memu_src0.(Mem.nb) <= mem_tgt0.(Mem.nb)>>⌝) ∧ *)
-  (*            (⌜<<WFSRC: mem_wf memu_src0>>⌝) ∧ (*** TODO: put it inside Mem.t? ***) *)
-  (*            (⌜<<WFSRC: mem_wf mem_tgt0>>⌝) (*** TODO: put it inside Mem.t? ***) *)
-  (*        )%I) *)
-  (*     top4 *)
-  (* . *)
 
   Let wf: W -> Prop :=
     @mk_wf
@@ -267,29 +193,48 @@ Proof Outline
   (* Opaque URA.pointwise. *)
   Opaque URA.unit.
 
-  (* Definition __NEVER_USE_THIS___KSRC__ := "__KSRC__". *)
-  (* Definition __NEVER_USE_THIS___KTGT__ := "__KTGT__". *)
+  Ltac renamer :=
+    let tmp := fresh "_tmp_" in
 
-  Definition __hide_mark A (a : A) : A := a.
-  Lemma intro_hide_mark: forall A (a: A), a = __hide_mark a. refl. Qed.
-
-  Ltac hide_k :=
     match goal with
-    | [ |- (gpaco6 _ _ _ _ _ _ _ _ (_, ?isrc >>= ?ksrc) (_, ?itgt >>= ?ktgt)) ] =>
-      erewrite intro_hide_mark with (a:=ksrc);
-      erewrite intro_hide_mark with (a:=ktgt);
-      let name0 := fresh "__KSRC__" in set (__hide_mark ksrc) as name0; move name0 at top;
-      let name0 := fresh "__KTGT__" in set (__hide_mark ktgt) as name0; move name0 at top
-    end.
-
-  Ltac unhide_k :=
-    do 2 match goal with
-    | [ H := __hide_mark _ |- _ ] => subst H
+    | H: context[OwnM (Auth.black ?x)] |- _ =>
+      rename x into tmp; let name := fresh "memk_src0" in rename tmp into name
     end;
-    rewrite <- ! intro_hide_mark
-  .
 
-  Ltac mRefresh := on_current ltac:(fun H => move H at bottom).
+    match goal with
+    | |- gpaco6 _ _ _ _ _ _ _ _ (?mr_src, (?mp_src↑), _, _) (?mr_tgt, (?mp_tgt↑), _, _) =>
+
+      (* rename mr_src into tmp; let name := fresh "res0" in rename tmp into name *)
+      (* ; *)
+      (* try match goal with *)
+      (*     | H: _stkRA |- _ => rename H into tmp; let name := fresh "res0" in rename tmp into name *)
+      (*     end *)
+      (* ; *)
+
+      repeat multimatch mp_src with
+             | context[?g] =>
+               match (type of g) with
+               | Mem.t =>
+                 rename g into tmp; let name := fresh "memu_src0" in rename tmp into name
+               | _ => fail
+               end
+             end
+      ;
+
+      repeat multimatch mp_tgt with
+             | context[?g] =>
+               match (type of g) with
+               | Mem.t =>
+                 rename g into tmp; let name := fresh "mem_tgt0" in rename tmp into name
+               | _ => fail
+               end
+             end
+    end
+  .
+  Ltac post_call :=
+    fold wf; clear_fast; mDesAll; des_safe; subst; try rewrite Any.upcast_downcast in *; clarify; renamer.
+
+  (* Ltac mRefresh := on_current ltac:(fun H => move H at bottom). *)
 
   Variable sk: Sk.t.
 
@@ -316,15 +261,14 @@ Proof Outline
         steps. unhide_k. steps. des_ifs; clarify.
         2:{ bsimpl; des; ss; apply sumbool_to_bool_false in Heq0; try lia. }
         steps. astart 0. astop.
-        rename a2 into memk_src0. rename a1 into mem_tgt0. rename a0 into memu_src0.
+        renamer.
         set (blk := mem_tgt0.(Mem.nb) + x).
 
-        mRefresh.
         mAssert _ with "INV" as "INV".
         { iApply (OwnM_Upd with "INV").
           eapply Auth.auth_alloc2.
           instantiate (1:=(_points_to (blk, 0%Z) (repeat (Vundef) sz))).
-          mOwnWf "INV". mRefresh.
+          mOwnWf "INV".
           clear - WF0 WFTGT SIM.
           ss. do 2 ur. ii. rewrite unfold_points_to. des_ifs.
           - bsimpl. des. des_sumbool. subst. hexploit (SIM blk k0); et. intro T.
@@ -387,13 +331,13 @@ Proof Outline
       { des_ifs_safe (mDesAll; ss). des; subst.
         des_ifs; mDesAll; ss. des; subst. clarify. rewrite Any.upcast_downcast in *. clarify.
         steps. unhide_k. steps. astart 0. astop.
-        rename a2 into memk_src0. rename a1 into mem_tgt0. rename a0 into memu_src0.
+        renamer.
         rename a3 into v. rename WF into SIMWF.
         mCombine "INV" "A". mOwnWf "INV".
         assert(HIT: memk_src0 b ofs = (Some v)).
         { clear - WF.
           dup WF. eapply Auth.auth_included in WF. des. eapply pw_extends in WF. eapply pw_extends in WF.
-          rewrite _points_to_hit in WF.
+          spc WF. rewrite _points_to_hit in WF.
           eapply Excl.extends in WF; ss. do 2 eapply lookup_wf. eapply Auth.black_wf. eapply URA.wf_mon; et.
         }
         set (memk_src1 := fun _b _ofs => if dec _b b && dec _ofs ofs
@@ -484,14 +428,14 @@ Proof Outline
       harg. fold wf. steps. hide_k. destruct x as [[[b ofs] v]|].
       { des_ifs_safe (mDesAll; ss). des; subst. clarify. rewrite Any.upcast_downcast in *. clarify.
         steps. unhide_k. steps. astart 0. astop.
-        rename a2 into memk_src0. rename a1 into mem_tgt0. rename a0 into memu_src0.
+        renamer.
         rename WF into SIMWF.
         mCombine "INV" "A". mOwnWf "INV".
         assert(T: memk_src0 b ofs = (Some v)).
         { clear - WF.
           dup WF.
           eapply Auth.auth_included in WF. des.
-          eapply pw_extends in WF. eapply pw_extends in WF. rewrite _points_to_hit in WF. des; ss.
+          eapply pw_extends in WF. eapply pw_extends in WF. spc WF. rewrite _points_to_hit in WF. des; ss.
           eapply Excl.extends in WF; ss. do 2 eapply lookup_wf. eapply Auth.black_wf. eapply URA.wf_mon; et.
         }
         exploit SIM; et. intro U. rewrite T in U. inv U; ss. unfold Mem.load.
@@ -521,7 +465,7 @@ Proof Outline
       harg. fold wf. steps. hide_k. destruct x as [[[b ofs] v1]|].
       { des_ifs_safe (mDesAll; ss). des; subst. clarify. rewrite Any.upcast_downcast in *. clarify.
         steps. unhide_k. steps. astart 0. astop.
-        rename a2 into memk_src0. rename a1 into mem_tgt0. rename a0 into memu_src0.
+        renamer.
         rename a3 into v0. rename WF into SIMWF.
         steps.
         mCombine "INV" "A". mOwnWf "INV".
@@ -529,7 +473,7 @@ Proof Outline
         { clear - WF.
           dup WF.
           eapply Auth.auth_included in WF. des.
-          eapply pw_extends in WF. eapply pw_extends in WF. rewrite _points_to_hit in WF.
+          eapply pw_extends in WF. eapply pw_extends in WF. spc WF. rewrite _points_to_hit in WF.
           des; ss.
           eapply Excl.extends in WF; ss. do 2 eapply lookup_wf. eapply Auth.black_wf. eapply URA.wf_mon; et.
         }
@@ -598,7 +542,8 @@ Proof Outline
       harg. fold wf. steps. hide_k. destruct x as [[result resource]|].
       { des_ifs_safe (mDesAll; ss). des; subst. clarify. rewrite Any.upcast_downcast in *. clarify.
         steps. unhide_k. steps. astart 0. astop.
-        rename a2 into memk_src0. rename a1 into mem_tgt0. rename a0 into memu_src0. rename WF into SIMWF.
+        renamer.
+        rename WF into SIMWF.
         assert (VALIDPTR: forall b ofs v (WF: URA.wf ((Auth.black (memk_src0: URA.car (t:=Mem1._memRA))) ⋅ ((b, ofs) |-> [v]))),
                    Mem.valid_ptr mem_tgt0 b ofs = true).
         { clear - SIM. i. cut (memk_src0 b ofs = Some v).
@@ -607,7 +552,7 @@ Proof Outline
           - clear - WF.
             dup WF.
             eapply Auth.auth_included in WF. des.
-            eapply pw_extends in WF. eapply pw_extends in WF. rewrite _points_to_hit in WF.
+            eapply pw_extends in WF. eapply pw_extends in WF. spc WF. rewrite _points_to_hit in WF.
             des; ss.
             eapply Excl.extends in WF; ss. do 2 eapply lookup_wf. eapply Auth.black_wf. eapply URA.wf_mon; et.
         }

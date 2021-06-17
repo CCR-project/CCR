@@ -165,17 +165,15 @@ End AUX.
 
 Section PROOF.
   Context `{@GRA.inG memRA Σ}.
-  Let GURA: URA.t := GRA.to_URA Σ.
-  Local Existing Instance GURA.
 
-  Let alloc_spec: fspec :=
+  Definition alloc_spec: fspec :=
     (mk_simple (fun sz => (
                     (fun varg o => (⌜varg = [Vint (Z.of_nat sz)]↑ /\ (8 * (Z.of_nat sz) < modulus_64)%Z /\ o = ord_pure 0⌝: iProp)%I),
                     (fun vret => (∃ b, (⌜vret = (Vptr b 0)↑⌝)
                                          ** OwnM ((b, 0%Z) |-> (List.repeat Vundef sz))): iProp)%I
     ))).
 
-  Let free_spec: fspec :=
+  Definition free_spec: fspec :=
     (mk_simple (fun '(b, ofs) => (
                     (fun varg o => (∃ v, (⌜varg = ([Vptr b ofs])↑⌝)
                                            ** OwnM ((b, ofs) |-> [v]))
@@ -183,7 +181,7 @@ Section PROOF.
                     fun _ => (True: iProp)%I
     ))).
 
-  Let load_spec: fspec :=
+  Definition load_spec: fspec :=
     (mk_simple (fun '(b, ofs, v) => (
                     (fun varg o => (⌜varg = ([Vptr b ofs])↑⌝)
                                      ** OwnM(((b, ofs) |-> [v]))
@@ -191,7 +189,7 @@ Section PROOF.
                     (fun vret => OwnM((b, ofs) |-> [v]) ** ⌜vret = v↑⌝)
     ))).
 
-  Let store_spec: fspec :=
+  Definition store_spec: fspec :=
     (mk_simple
        (fun '(b, ofs, v_new) => (
             (fun varg o => (∃ v_old,
@@ -201,7 +199,7 @@ Section PROOF.
             (fun _ => OwnM((b, ofs) |-> [v_new])
     )))).
 
-  Let cmp_spec: fspec :=
+  Definition cmp_spec: fspec :=
     (mk_simple
        (fun '(result, resource) => (
             (fun varg o =>
@@ -255,7 +253,7 @@ Section PROOF.
   |}
   .
 
-  Definition Mem: Mod.t := (SMod.to_tgt (fun _ => MemStb)) SMem.
+  Definition Mem: Mod.t := (SMod.to_tgt (fun _ => [])) SMem.
 
 End PROOF.
 Global Hint Unfold MemStb: stb.
