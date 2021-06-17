@@ -14,23 +14,6 @@ Set Implicit Arguments.
 
 
 
-Section AUX________REMOVEME_____REDUNDANT.
-
-  Context `{Σ: GRA.t}.
-
-  Definition refines_closed (md_tgt md_src: ModL.t): Prop :=
-    Beh.of_program (ModL.compile md_tgt) <1= Beh.of_program (ModL.compile md_src)
-  .
-
-  Global Program Instance refines_closed_PreOrder: PreOrder refines_closed.
-  Next Obligation. ii; ss. Qed.
-  Next Obligation. ii; ss. r in H. r in H0. eauto. Qed.
-
-  Lemma refines_close: SimModSem.refines <2= refines_closed.
-  Proof. ii. specialize (PR nil). ss. unfold Mod.add_list in *. ss. rewrite ! ModL.add_empty_l in PR. eauto. Qed.
-
-End AUX________REMOVEME_____REDUNDANT.
-
 Lemma fold_right_map
       XS XI YS YI
       (xs: XS) (xi: list XI)

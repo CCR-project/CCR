@@ -1262,3 +1262,150 @@ pqrname :=
   (*   end *)
   (* . *)
 End Equisatisfiability.
+
+
+Section REFINE.
+   Context `{Σ: GRA.t}.
+
+   Definition refines (md_tgt md_src: ModL.t): Prop :=
+     (* forall (ctx: list Mod.t), Beh.of_program (ModL.compile (add_list (md_tgt :: ctx))) <1= *)
+     (*                           Beh.of_program (ModL.compile (add_list (md_src :: ctx))) *)
+     forall (ctx: list Mod.t), Beh.of_program (ModL.compile (ModL.add (Mod.add_list ctx) md_tgt)) <1=
+                               Beh.of_program (ModL.compile (ModL.add (Mod.add_list ctx) md_src))
+   .
+
+   (*** vertical composition ***)
+   Global Program Instance refines_PreOrder: PreOrder refines.
+   Next Obligation. ii. ss. Qed.
+   Next Obligation. ii. eapply H0. eapply H. ss. Qed.
+
+   (*** horizontal composition ***)
+   Theorem refines_add
+         (md0_src md0_tgt md1_src md1_tgt: Mod.t)
+         (SIM0: refines md0_tgt md0_src)
+         (SIM1: refines md1_tgt md1_src)
+     :
+       <<SIM: refines (ModL.add md0_tgt md1_tgt) (ModL.add md0_src md1_src)>>
+   .
+   Proof.
+     ii. r in SIM0. r in SIM1.
+     (***
+ctx (a0 b0)
+(ctx a0) b0
+(ctx a0) b1
+      ***)
+     rewrite ModL.add_assoc in PR.
+     specialize (SIM1 (snoc ctx md0_tgt)). spc SIM1. rewrite Mod.add_list_snoc in SIM1. eapply SIM1 in PR.
+     (***
+ctx (a0 b1)
+(a0 b1) ctx
+a0 (b1 ctx)
+(b1 ctx) a0
+      ***)
+     rewrite <- ModL.add_assoc' in PR.
+     eapply ModL.add_comm in PR.
+     rewrite <- ModL.add_assoc' in PR.
+     eapply ModL.add_comm in PR.
+     (***
+(b1 ctx) a1
+a1 (b1 ctx)
+(a1 b1) ctx
+ctx (a1 b1)
+      ***)
+     specialize (SIM0 (cons md1_src ctx)). spc SIM0. rewrite Mod.add_list_cons in SIM0. eapply SIM0 in PR.
+     eapply ModL.add_comm in PR.
+     rewrite ModL.add_assoc' in PR.
+     eapply ModL.add_comm in PR.
+     ss.
+   Qed.
+
+(*    Theorem refines_proper_r *)
+(*          (md0_src md0_tgt: Mod.t) (ctx: list Mod.t) *)
+(*          (SIM0: refines md0_tgt md0_src) *)
+(*      : *)
+(*        <<SIM: refines (ModL.add md0_tgt (add_list ctx)) (ModL.add md0_src (add_list ctx))>> *)
+(*    . *)
+(*    Proof. *)
+(*      ii. r in SIM0. rename ctx into xs. rename ctx0 into ys. *)
+(*      (*** *)
+(* ys + (tgt + xs) *)
+(* (tgt + xs) + ys *)
+(* tgt + (xs + ys) *)
+(* (xs + ys) + tgt *)
+(*       ***) *)
+(*      eapply ModL.add_comm in PR. *)
+(*      rewrite <- ModL.add_assoc' in PR. *)
+(*      eapply ModL.add_comm in PR. *)
+(*      (*** *)
+(* (xs + ys) + src *)
+(* src + (xs + ys) *)
+(* (src + xs) + ys *)
+(* ys + (src + xs) *)
+(*       ***) *)
+(*      specialize (SIM0 (xs ++ ys)). spc SIM0. rewrite add_list_app in SIM0. eapply SIM0 in PR. *)
+(*      eapply ModL.add_comm in PR. *)
+(*      rewrite ModL.add_assoc' in PR. *)
+(*      eapply ModL.add_comm in PR. *)
+(*      ss. *)
+(*    Qed. *)
+   Theorem refines_proper_r
+         (mds0_src mds0_tgt: list Mod.t) (ctx: list Mod.t)
+         (SIM0: refines (Mod.add_list mds0_tgt) (Mod.add_list mds0_src))
+     :
+       <<SIM: refines (ModL.add (Mod.add_list mds0_tgt) (Mod.add_list ctx)) (ModL.add (Mod.add_list mds0_src) (Mod.add_list ctx))>>
+   .
+   Proof.
+     ii. r in SIM0. rename ctx into xs. rename ctx0 into ys.
+     (***
+ys + (tgt + xs)
+(tgt + xs) + ys
+tgt + (xs + ys)
+(xs + ys) + tgt
+      ***)
+     eapply ModL.add_comm in PR.
+     rewrite <- ModL.add_assoc' in PR.
+     eapply ModL.add_comm in PR.
+     (***
+(xs + ys) + src
+src + (xs + ys)
+(src + xs) + ys
+ys + (src + xs)
+      ***)
+     specialize (SIM0 (xs ++ ys)). spc SIM0. rewrite Mod.add_list_app in SIM0. eapply SIM0 in PR.
+     eapply ModL.add_comm in PR.
+     rewrite ModL.add_assoc' in PR.
+     eapply ModL.add_comm in PR.
+     ss.
+   Qed.
+
+   Theorem refines_proper_l
+         (mds0_src mds0_tgt: list Mod.t) (ctx: list Mod.t)
+         (SIM0: refines (Mod.add_list mds0_tgt) (Mod.add_list mds0_src))
+     :
+       <<SIM: refines (ModL.add (Mod.add_list ctx) (Mod.add_list mds0_tgt)) (ModL.add (Mod.add_list ctx) (Mod.add_list mds0_src))>>
+   .
+   Proof.
+     ii. r in SIM0. rename ctx into xs. rename ctx0 into ys.
+     (***
+ys + (xs + tgt)
+(ys + xs) + tgt
+(ys + xs) + src
+ys + (xs + src)
+      ***)
+     rewrite ModL.add_assoc' in PR.
+     specialize (SIM0 (ys ++ xs)). spc SIM0. rewrite Mod.add_list_app in SIM0. eapply SIM0 in PR.
+     rewrite <- ModL.add_assoc' in PR.
+     ss.
+   Qed.
+
+   Definition refines_closed (md_tgt md_src: ModL.t): Prop :=
+     Beh.of_program (ModL.compile md_tgt) <1= Beh.of_program (ModL.compile md_src)
+   .
+
+   Global Program Instance refines_closed_PreOrder: PreOrder refines_closed.
+   Next Obligation. ii; ss. Qed.
+   Next Obligation. ii; ss. r in H. r in H0. eauto. Qed.
+
+   Lemma refines_close: refines <2= refines_closed.
+   Proof. ii. specialize (PR nil). ss. unfold Mod.add_list in *. ss. rewrite ! ModL.add_empty_l in PR. eauto. Qed.
+End REFINE.
