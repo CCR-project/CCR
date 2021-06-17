@@ -101,9 +101,7 @@ Section MATCH.
   Definition itree_of_imp_pop_bottom :=
     fun ge ms mn (x: _ * _ * (lenv * val)) =>
       let '(r, p, (le0, _)) := x in
-      '(r2, p2, rv) <- EventsL.interp_Es (ModSemL.prog ms) (transl_all mn ('(_, v) <- interp_imp ge (denote_expr (Var "return"%string)) le0;; Ret (v↑))) (r, p);;
-      '(_, _, rv) <- EventsL.interp_Es (ModSemL.prog ms) (trigger EventsL.PopFrame;;; (tau;; Ret rv)) (r2, p2);;
-      Ret rv.
+      '(_, _, rv) <- EventsL.interp_Es (ModSemL.prog ms) (transl_all mn ('(_, v) <- interp_imp ge (denote_expr (Var "return"%string)) le0;; Ret (v↑))) (r, p);; Ret rv.
 
   Definition itree_of_cont_stmt (s : Imp.stmt) :=
     fun ge le ms mn rp => itree_of_imp_cont (denote_stmt s) ge le ms mn rp.

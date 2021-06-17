@@ -13,6 +13,7 @@ Require Import ImpProofs.
 Require Import SimSTS2.
 Require Import Mem0.
 Require Import IRed.
+From Ordinal Require Import Ordinal Arithmetic.
 
 Require Import Imp2CsharpminorMatch.
 Require Import Imp2CsharpminorArith.
@@ -269,16 +270,35 @@ Section PROOFALL.
 
 
 
+  Create HintDb ord_step2.
+  Hint Resolve Nat.lt_succ_diag_r OrdArith.lt_from_nat OrdArith.lt_add_r: ord_step2.
+  Hint Extern 1000 => lia: ord_step2.
+  Ltac ord_step2 := eauto with ord_step2.
+
+  (* Import ModSemL. *)
+
+  (* Let _sim_mon := Eval simpl in (fun (src: ModL.t) (tgt: Csharpminor.program) => @sim_mon (ModL.compile src) (semantics tgt)). *)
+  (* Hint Resolve _sim_mon: paco. *)
+
+  (* Let _ordC_spec := *)
+  (*   Eval simpl in (fun (src: ModL.t) (tgt: Csharpminor.program) => @ordC_spec (ModL.compile src) (Csharpminor.semantics tgt)). *)
+
+  Ltac sim_red := try red; Red.prw ltac:(_red_gen) 2 0.
+  Ltac sim_tau := (try sim_red); econs 3; ss; clarify; eexists; exists (ModSemL.step_tau _); eexists; split; [ord_step2|auto].
+  (* Ltac sim_ord := guclo _ordC_spec; econs. *)
+
+  Ltac sim_triggerUB := unfold triggerUB; (try sim_red); econs 5; i; ss; auto;
+                        dependent destruction STEP; try (irw in x; clarify; fail).
 
   Definition imp_initial_state (src : Imp.programL) :=
-    (ModL.compile (ImpMod.get_modL src)).(initial_state).
+    (ModL.compile (ModL.add (Mod.lift Mem) (ImpMod.get_modL src))).(initial_state).
 
   Lemma single_compile_behavior_improves
         (src: Imp.programL) (tgt: Csharpminor.program) srcst tgtst
         (WFPROG: Permutation.Permutation
                    ((List.map fst src.(prog_varsL)) ++ (List.map (compose fst snd) src.(prog_funsL)))
                    (List.map fst src.(defsL)) /\ Sk.wf src.(defsL))
-        (COMP: compile src = OK tgt)
+        (COMP: Imp2Csharpminor.compile src = OK tgt)
         (SINIT: srcst = imp_initial_state src)
         (TINIT: Csharpminor.initial_state tgt tgtst)
     :
@@ -288,7 +308,58 @@ Section PROOFALL.
     { apply Ordinal.Ord.lt_well_founded. }
     { apply Csharpminor_wf_semantics. }
     { admit "ez? wf imp". }
-    
+    instantiate (1:= ((100 + max_fuel) + 120)%ord). red. unfold imp_initial_state in *. ss; clarify. inv TINIT.
+    rename m0 into tm, ge into tge, H into TMINIT, H0 into TMAIN1, H1 into TMAIN2, H2 into TSIGMAIN, b into tb, f into tmain.
+    assert (COMP0: Imp2Csharpminor.compile src = OK tgt); auto. move COMP0 before tgt.
+    unfold compile in COMP. des_ifs. rename g into gm, Heq into GMAP.
+    unfold _compile in COMP. des_ifs. rename Heq into COMPGDEFS, l0 into NOREPET. ss; clarify.
+    match goal with | [ COMP0 : compile _ = OK ?_tgt |- _ ] => set (tgt:=_tgt) in * end.
+    unfold ModSemL.initial_itr. unfold ModSemL.initial_itr_arg.
+    pfold. econs 5; eauto. unfold assume. ss. grind. eapply angelic_step in STEP. des; clarify. eexists; split; [ord_step2|auto].
+    left. unfold ITree.map. sim_red. set (sge:=Sk.load_skenv (Sk.sort (defsL src))) in *.
+    destruct (alist_find "main" (List.map (fun '(mn, (fn, f)) => (fn, transl_all mn ∘ cfun (eval_imp sge f))) (prog_funsL src)))
+             eqn:FOUNDMAIN; ss; grind.
+    2:{ pfold. sim_triggerUB. }
+    rewrite alist_find_find_some in FOUNDMAIN. rewrite find_map in FOUNDMAIN. uo; des_ifs; ss.
+    rename s into mn, f into smain, Heq into SFOUND. apply find_some in SFOUND. des. ss. clear SFOUND0.
+    assert (COMPGDEFS0 : compile_gdefs gm src = Some l); auto.
+    unfold compile_gdefs in COMPGDEFS. uo; des_ifs. ss. rename l0 into cfs.
+    match goal with | [ H: Coqlib.list_norepet (List.map fst ?_l) |- _ ] => set (tgds:=_l) in * end.
+    hexploit exists_compiled_function; eauto. i; des. rename H into PCMAIN, H0 into INPMAIN, H1 into CFMAIN, H2 into INFMAIN.
+    hexploit in_tgt_prog_defs_ifuns; eauto. i. rename H into INFMAINTGT.
+    hexploit tgt_genv_find_def_by_blk; eauto. i. rename H into TGTMAIN. ss; clarify. uo; des_ifs; ss; clarify.
+    2:{ rewrite eq_rel_dec_correct in Heq; des_ifs. }
+    match goal with [H: Genv.find_def _ _ = Some (Gfun (Internal ?tf)) |- _ ] => set (tmainf:=tf) in * end.
+    unfold Genv.find_funct_ptr in TMAIN2. des_ifs. rename Heq2 into TMAIN2.
+    hexploit tgt_genv_match_symb_def.
+    1,2,4: eauto.
+    1: eapply TMAIN2.
+    i; clarify. clear Heq. unfold pre_compile_function in PCMAIN. des_ifs; ss. clear INPMAIN.
+    rename Heq1 into CMAINstmt, l into WF_MAIN, s into mstmt.
+    unfold cfun. rewrite Any.upcast_downcast. grind. rewrite unfold_eval_imp_only. des_ifs; grind; sim_red.
+    2:{ pfold. sim_triggerUB. }
+    assert (MAINPARAM: fn_params smain = []).
+    { depgen Heq. clear. i. remember (fn_params smain) as m. clear Heqm. depgen l. induction m; i; ss; clarify. }
+    clear Heq. rewrite interp_imp_tau. sim_red.
+    pfold. econs 6; ss; eauto. eexists. eexists.
+    { apply Coqlib.list_norepet_app in WF_MAIN; des. subst tmainf.
+      eapply step_internal_function; ss; eauto; try econs;
+        match goal with [H: Genv.find_def _ _ = Some (Gfun (Internal ?tf)) |- _ ] => set (tmainf:=tf) in * end.
+      rewrite MAINPARAM. ss. }
+    eexists. exists (ModSemL.step_tau _). exists ((100 + max_fuel) + 100)%ord. left.
+    rewrite interp_imp_bind. grind. sim_red. rename l into sle. 
+    eapply match_states_sim; eauto.
+    { i. 
+
+
+
+
+
+
+
+
+
+
   Admitted.
 
 

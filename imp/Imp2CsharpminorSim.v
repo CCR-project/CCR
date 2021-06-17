@@ -331,9 +331,6 @@ Section PROOF.
       <<SIM: sim (ModL.compile modl) (semantics tgt) ((100 + max_fuel) + 100)%ord ist cst>>.
   Proof.
     red. red. ginit.
-    (* move GMAP before ms. move MODSEML before GMAP. move GENV before MODSEML. move COMP before GENV. *)
-    (* move TLOF before COMP. move MODL before COMP. move MGENV before COMP. *)
-    (* revert_until TLOF. *)
     depgen ist. depgen cst. gcofix CIH. i.
     assert (EXISTSCOMP: exists tgt, Imp2Csharpminor.compile srcprog = OK tgt); eauto.
     inv MS. unfold Imp2Csharpminor.compile in COMP. des_ifs. rename Heq into GMAP.
@@ -357,9 +354,6 @@ Section PROOF.
         gstep. econs 5; ss; auto. i. eapply angelic_step in STEP; des; clarify.
         eexists; split; [ord_step2|].
         do 6 (gstep; sim_tau). red. sim_red.
-        destruct rstate. ss. destruct l.
-        { admit "ez: wf_rstate". }
-        do 3 (gstep; sim_tau). red. sim_red.
         destruct v.
         - destruct ((0 <=? n)%Z && (n <? two_power_nat 32)%Z) eqn:INT32; bsimpl; des.
           + gstep. econs 1; eauto.
