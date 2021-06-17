@@ -166,8 +166,7 @@ Section GENV.
   Qed.
 
   Lemma in_tgt_prog_defs_efuns
-        gm tgt fn sig
-        (GMAP: get_gmap src = Some gm)
+        tgt fn sig
         (COMP: compile src = OK tgt)
         (INSRC: In (fn, sig) (ext_funsL src))
     :
@@ -180,6 +179,32 @@ Section GENV.
     apply in_or_app. left. depgen fn. depgen Heq. clear; i.
     unfold get_gmap in Heq. uo; des_ifs; ss; clarify.
     unfold compile_eFuns. rewrite List.map_map.
+    match goal with
+    | [ |- In _ (List.map ?_mapf _) ] =>
+      set (mapf:=_mapf) in *
+    end.
+    apply (in_map mapf _ _) in INSRC.
+    match goal with
+    | [ INSRC: In ?p0 _ |- In ?p1 _ ] =>
+      replace p1 with p0; auto
+    end.
+  Qed.
+
+  Lemma in_tgt_prog_defs_ivars
+        tgt gn gv
+        (COMP: compile src = OK tgt)
+        (INSRC: In (gn, gv) (prog_varsL src))
+    :
+      In (s2p gn, Gvar (mkglobvar () [Init_int64 (Int64.repr gv)] false false)) tgt.(prog_defs).
+  Proof.
+    unfold compile in COMP. unfold _compile in COMP. des_ifs.
+    unfold compile_gdefs in Heq0. uo; des_ifs. ss.
+    rename l0 into NOREPET. eapply Maps.PTree_Properties.of_list_norepet in NOREPET.
+    { eapply Maps.PTree.elements_correct. eapply NOREPET. }
+    do 2 (apply in_or_app; right). ss. do 2 right. apply in_or_app; right.
+    depgen gn. depgen Heq. clear; i.
+    unfold get_gmap in Heq. uo; des_ifs; ss; clarify.
+    unfold compile_iVars. rewrite List.map_map.
     match goal with
     | [ |- In _ (List.map ?_mapf _) ] =>
       set (mapf:=_mapf) in *
@@ -317,6 +342,7 @@ End GENV.
 Section MAPBLK.
 
   Import Maps.PTree.
+  Import Permutation.
 
   Context `{Σ: GRA.t}.
 
@@ -382,6 +408,20 @@ Section MAPBLK.
         { eapply NOREPET. }
         { eapply H. }
         i. eapply Maps.PTree_Properties.in_of_list. rewrite Maps.PTree_Properties.of_list_elements. auto.
+  Qed.
+
+  Lemma perm_elements_PTree_norepeat_in_in :
+    forall A (l : list (elt * A))
+      (NOREPET: Coqlib.list_norepet (List.map fst l)),
+      <<IN: forall x, In x (elements (Maps.PTree_Properties.of_list l)) <-> In x l>>.
+  Proof.
+    ii. split; i.
+    - eapply Permutation_in.
+      2:{ eauto. }
+      apply perm_elements_PTree_norepeat. auto.
+    - eapply Permutation_in.
+      2:{ eauto. }
+      apply Permutation_sym. apply perm_elements_PTree_norepeat. auto.
   Qed.
 
   Lemma length_elements_PTree_norepet :
@@ -556,13 +596,49 @@ Section MAPBLK.
     apply Sk.sort_wf in WFPROG0. apply Sk.load_skenv_wf in WFPROG0. des.
     apply WFPROG0 in SBLK1. apply WFPROG0 in SBLK2. rewrite SBLK1 in SBLK2. clarify.
   Qed.
-  (* MATCHGE : match_ge src (Sk.sort (defsL src)) (Genv.globalenv tgt) *)
-  (* blk : nat *)
-  (* gn : string *)
-  (* gv : Z *)
-  (* SGENV : nth_error (Sk.sort (defsL src)) blk = Some (gn, Sk.Gvar gv) *)
-  (* tblk := map_blk src blk : Values.block *)
-  (* Genv.find_var_info (Genv.globalenv p) tblk = Some gv -> *)
 
+  Lemma found_gvar_in_src_then_tgt :
+    forall src tgt blk gn gv
+      (COMP : Imp2Csharpminor.compile src = OK tgt)
+      (WFSK : Sk.wf src.(defsL))
+      (WFPROG2 : forall gn gv, In (gn, Sk.Gvar gv) (Sk.sort (defsL src)) -> In (gn, gv) (prog_varsL src))
+      (MATCHGE : match_ge src (Sk.load_skenv (Sk.sort (defsL src))) (Genv.globalenv tgt))
+      (SGENV : nth_error (Sk.sort (defsL src)) blk = Some (gn, Sk.Gvar gv)),
+      <<FOUNDTGT: exists tgv, (Genv.find_def (Genv.globalenv tgt) (map_blk src blk) = Some (Gvar tgv))>>.
+  Proof.
+    i. apply Sk.sort_wf in WFSK. set (sge:= Sk.sort (defsL src)) in *. set (tge:= Genv.globalenv tgt) in *.
+    assert (SFOUND: SkEnv.blk2id sge blk = Some gn).
+    { Local Transparent Sk.load_skenv. unfold Sk.load_skenv. ss. rewrite SGENV. uo; ss. Local Opaque Sk.load_skenv. }
+    apply Sk.load_skenv_wf in WFSK. apply WFSK in SFOUND. apply nth_error_In in SGENV.
+    assert (INTDEFS: exists cv, In (s2p gn, Gvar cv) (prog_defs tgt)).
+    { unfold compile in COMP. des_ifs. rename g into gm, Heq into GMAP. apply WFPROG2 in SGENV.
+      unfold _compile in COMP. des_ifs. ss. rename l0 into NOREPET.
+      hexploit exists_compiled_variable; eauto. i. des. exists cv.
+      apply Permutation_in with (l:=l).
+      { apply Permutation_sym. apply perm_elements_PTree_norepeat. auto. }
+      depgen l. depgen H. clear. i. unfold compile_gdefs in Heq. uo; des_ifs.
+      do 2 (apply in_or_app; right). ss. do 2 right. apply in_or_app; right. depgen H. clear. i.
+      match goal with | [ |- In _ (List.map ?_mapf _) ] => set (mapf:=_mapf) end.
+      replace (s2p gn, Gvar cv) with (mapf (s2p gn, Gvar cv)).
+      2:{ subst mapf. ss. }
+      apply in_map. auto. }
+    des.
+    hexploit tgt_genv_find_def_by_blk; eauto.
+    inv MATCHGE. eapply MG. clear MG. eauto.
+  Qed.
+
+  Lemma compiled_gvar_props :
+    forall src tgt gn gv tblk tgv
+      (COMP : compile src = OK tgt)
+      (INSRC : In (gn, gv) (prog_varsL src))
+      (FOUNDSYM : Genv.find_symbol (Genv.globalenv tgt) (s2p gn) = Some (tblk))
+      (FOUNDTGV : Genv.find_def (Genv.globalenv tgt) (tblk) = Some (Gvar tgv)),
+      <<GVARP: (gvar_info tgv = ()) /\ (gvar_init tgv = [Init_int64 (Int64.repr gv)]) /\
+               (gvar_readonly tgv = false) /\ (gvar_volatile tgv = false)>>.
+  Proof.
+    i. hexploit in_tgt_prog_defs_ivars; eauto. i.
+    hexploit Genv.find_def_inversion; eauto. i. des.
+    hexploit tgt_genv_match_symb_def; eauto. i. clarify.
+  Qed.
 
 End MAPBLK.

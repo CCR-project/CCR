@@ -58,6 +58,7 @@ Section PROOFALL.
         (WFPROG: Permutation.Permutation
                    ((List.map fst src.(prog_varsL)) ++ (List.map (compose fst snd) src.(prog_funsL)))
                    (List.map fst src.(defsL)))
+        (WFPROG2 : forall gn gv, In (gn, Sk.Gvar gv) (Sk.sort (defsL src)) -> In (gn, gv) (prog_varsL src))
         (COMP: Imp2Csharpminor.compile src = OK tgt)
         (SINIT: srcst = imp_initial_state src)
         (TINIT: Csharpminor.initial_state tgt tgtst)
@@ -144,19 +145,18 @@ Section PROOFALL.
         apply gmap_preserves_length in GMAP. des. rewrite EVL; rewrite EFL; rewrite IVL; rewrite IFL. lia. }
       i. uo; des_ifs. unfold NW in H. clarify. rename s into gn, Heq1 into SGENV.
       set (tblk:=map_blk src blk) in *. unfold map_ofs in *. rewrite! Z.mul_0_r.
-      
-
-
-(* Genv.init_mem_characterization: *)
-(*   forall [F V : Type] (p : AST.program F V) (b : Values.block) [gv : globvar V] [m : mem], *)
-(*   Genv.find_var_info (Genv.globalenv p) b = Some gv -> *)
-(*   Genv.init_mem p = Some m -> *)
-(*   Mem.range_perm m b 0 (init_data_list_size (gvar_init gv)) Cur (Genv.perm_globvar gv) /\ *)
-(*   (forall (ofs : Z) (k : perm_kind) (p0 : permission), *)
-(*    Mem.perm m b ofs k p0 -> (0 <= ofs < init_data_list_size (gvar_init gv))%Z /\ perm_order (Genv.perm_globvar gv) p0) /\ *)
-(*   (gvar_volatile gv = false -> Genv.load_store_init_data (Genv.globalenv p) m b 0 (gvar_init gv)) /\ *)
-(*   (gvar_volatile gv = false -> *)
-(*    Mem.loadbytes m b 0 (init_data_list_size (gvar_init gv)) = Some (Genv.bytes_of_init_data_list (Genv.globalenv p) (gvar_init gv))) *)
+      hexploit found_gvar_in_src_then_tgt; eauto. i. des. rename H into FOUNDTGV.
+      hexploit Genv.init_mem_characterization; eauto.
+      { unfold Genv.find_var_info. rewrite FOUNDTGV. clarify. }
+      i. des. rename H into TMPERM, H0 into TMPERM0, H1 into TMLSID, H2 into TMLB.
+      subst tblk. inv MATCHGE.
+      assert (SKFOUND: SkEnv.blk2id sge blk = Some gn).
+      { subst sge. Local Transparent Sk.load_skenv. unfold Sk.load_skenv. ss. rewrite SGENV. uo; ss. Local Opaque Sk.load_skenv. }
+      assert (WFSKENV: Sk.wf (defsL src)); auto.
+      apply Sk.sort_wf in WFSKENV. apply Sk.load_skenv_wf in WFSKENV. apply WFSKENV in SKFOUND. clear WFSKENV.
+      apply MG in SKFOUND.
+      (* apply WFPROG2 in SGENV. *)
+      (* apply nth_error_In in SGENV. *)
 
 (* Mem.load_store_same: *)
 (*   forall (chunk : memory_chunk) (m1 : mem) (b : Values.block) (ofs : Z) (v : Values.val) (m2 : mem), *)
