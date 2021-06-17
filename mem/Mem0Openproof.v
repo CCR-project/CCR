@@ -140,35 +140,18 @@ Section SIMMODSEM.
   (* Eval compute in (@RA.car (RA.excl Mem.t)). *)
   Eval compute in (@URA.car Mem1._memRA).
 
-  Inductive mem_extends (m0 m1: Mem.t): Prop :=
-  | mem_extends_intro
-      (NB: m0.(Mem.nb) <= m1.(Mem.nb))
-      (CNTS: forall b ofs, (m0.(Mem.cnts) b ofs) = None \/ (m0.(Mem.cnts) b ofs) = (m1.(Mem.cnts) b ofs))
-  .
+  (* Definition o_combine X (f: X -> X -> option X) (x0 x1: option X): option X := *)
+  (*   match x0, x1 with *)
+  (*   | Some x0, Some x1 => do x <- (f x0 x1); Some x *)
+  (*   | Some x0, _ => Some x0 *)
+  (*   | _, Some x1 => Some x1 *)
+  (*   | _, _ => None *)
+  (*   end *)
+  (* . *)
 
-  Global Program Instance mem_extends_PreOrder: PreOrder mem_extends.
-  Next Obligation.
-    ii. econs; et.
-  Qed.
-  Next Obligation.
-    ii. inv H0; inv H1. econs; et; try lia. ii. repeat spc CNTS. des; et. repeat spc CNTS0. des; eauto with congruence.
-  Qed.
-
-  Search (option _ -> option _ -> option _).
-  SearchPattern (option _ -> option _ -> option _).
-
-  Definition o_combine X (f: X -> X -> option X) (x0 x1: option X): option X :=
-    match x0, x1 with
-    | Some x0, Some x1 => do x <- (f x0 x1); Some x
-    | Some x0, _ => Some x0
-    | _, Some x1 => Some x1
-    | _, _ => None
-    end
-  .
-
-  Definition o_xor X (x0 x1: option X): option X :=
-    Eval red in (o_combine (fun _ _ => None) x0 x1)
-  .
+  (* Definition o_xor X (x0 x1: option X): option X := *)
+  (*   Eval red in (o_combine (fun _ _ => None) x0 x1) *)
+  (* . *)
 
   (*** memk_src -> memu_src -> mem_tgt ***)
   Inductive sim_loc: URA.car (t:=(Excl.t _)) -> option val -> option val -> Prop :=
@@ -177,39 +160,9 @@ Section SIMMODSEM.
   | sim_loc_absent: sim_loc ε None None
   .
 
-  (* Let wf: W -> Prop := *)
-  (*   fun '((mr_src, memu_src), (mr_tgt, mem_tgt)) => *)
-  (*     exists memk_src, *)
-  (*     (<<SRC: iHyp (Own (GRA.embed ((Auth.black memk_src): URA.car (t:=Mem1.memRA)))) mr_src>>) /\ *)
-  (*     (<<TGT: mr_tgt = ε>>) /\ *)
-  (*     (<<SIM: forall b ofs, sim_loc (memk_src b ofs) (memu_src.(Mem.cnts) b ofs) *)
-  (*                                   (mem_tgt.(Mem.cnts) b ofs)>>) *)
-  (* . *)
-
   Definition mem_wf (m0: Mem.t): Prop :=
     forall b ofs v, m0.(Mem.cnts) b ofs = Some v -> <<NB: b < m0.(Mem.nb)>>
   .
-
-  (* Let wf: W -> Prop := *)
-  (*   @mk_wf *)
-  (*     _ unit *)
-  (*     (fun _ _memu_src0 _mem_tgt0 => *)
-  (*        (∃ (memu_src0: Mem.t) (mem_tgt0: Mem.t) (memk_src0: URA.car (t:=Mem1._memRA)), *)
-  (*            (* (⌜<<SRC: _memu_src0↓ = Some memu_src0>>⌝) ∧ *) *)
-  (*            (* (⌜<<TGT: _mem_tgt0↓ = Some mem_tgt0>>⌝) ∧ *) *)
-  (*            (⌜<<SRC: _memu_src0 = memu_src0↑>>⌝) ∧ *)
-  (*            (⌜<<TGT: _mem_tgt0 = mem_tgt0↑>>⌝) ∧ *)
-  (*            (* (⌜<<SRC: memu_src0↑ = _memu_src0>>⌝) ∧ *) *)
-  (*            (* (⌜<<TGT: mem_tgt0↑ = _mem_tgt0>>⌝) ∧ *) *)
-  (*            (OwnM ((Auth.black memk_src0): URA.car (t:=Mem1.memRA))) ∧ *)
-  (*            (⌜<<SIM: forall b ofs, sim_loc (memk_src0 b ofs) (memu_src0.(Mem.cnts) b ofs) *)
-  (*                                           (mem_tgt0.(Mem.cnts) b ofs)>>⌝) ∧ *)
-  (*            (⌜<<NB: memu_src0.(Mem.nb) <= mem_tgt0.(Mem.nb)>>⌝) ∧ *)
-  (*            (⌜<<WFSRC: mem_wf memu_src0>>⌝) ∧ (*** TODO: put it inside Mem.t? ***) *)
-  (*            (⌜<<WFSRC: mem_wf mem_tgt0>>⌝) (*** TODO: put it inside Mem.t? ***) *)
-  (*        )%I) *)
-  (*     top4 *)
-  (* . *)
 
   Let wf: W -> Prop :=
     @mk_wf
@@ -267,27 +220,46 @@ Proof Outline
   (* Opaque URA.pointwise. *)
   Opaque URA.unit.
 
-  (* Definition __NEVER_USE_THIS___KSRC__ := "__KSRC__". *)
-  (* Definition __NEVER_USE_THIS___KTGT__ := "__KTGT__". *)
+  Ltac renamer :=
+    let tmp := fresh "_tmp_" in
 
-  Definition __hide_mark A (a : A) : A := a.
-  Lemma intro_hide_mark: forall A (a: A), a = __hide_mark a. refl. Qed.
-
-  Ltac hide_k :=
     match goal with
-    | [ |- (gpaco6 _ _ _ _ _ _ _ _ (_, ?isrc >>= ?ksrc) (_, ?itgt >>= ?ktgt)) ] =>
-      erewrite intro_hide_mark with (a:=ksrc);
-      erewrite intro_hide_mark with (a:=ktgt);
-      let name0 := fresh "__KSRC__" in set (__hide_mark ksrc) as name0; move name0 at top;
-      let name0 := fresh "__KTGT__" in set (__hide_mark ktgt) as name0; move name0 at top
-    end.
-
-  Ltac unhide_k :=
-    do 2 match goal with
-    | [ H := __hide_mark _ |- _ ] => subst H
+    | H: context[OwnM (Auth.black ?x)] |- _ =>
+      rename x into tmp; let name := fresh "memk_src0" in rename tmp into name
     end;
-    rewrite <- ! intro_hide_mark
+
+    match goal with
+    | |- gpaco6 _ _ _ _ _ _ _ _ (?mr_src, (?mp_src↑), _, _) (?mr_tgt, (?mp_tgt↑), _, _) =>
+
+      (* rename mr_src into tmp; let name := fresh "res0" in rename tmp into name *)
+      (* ; *)
+      (* try match goal with *)
+      (*     | H: _stkRA |- _ => rename H into tmp; let name := fresh "res0" in rename tmp into name *)
+      (*     end *)
+      (* ; *)
+
+      repeat multimatch mp_src with
+             | context[?g] =>
+               match (type of g) with
+               | Mem.t =>
+                 rename g into tmp; let name := fresh "memu_src0" in rename tmp into name
+               | _ => fail
+               end
+             end
+      ;
+
+      repeat multimatch mp_tgt with
+             | context[?g] =>
+               match (type of g) with
+               | Mem.t =>
+                 rename g into tmp; let name := fresh "mem_tgt0" in rename tmp into name
+               | _ => fail
+               end
+             end
+    end
   .
+  Ltac post_call :=
+    fold wf; clear_fast; mDesAll; des_safe; subst; try rewrite Any.upcast_downcast in *; clarify; renamer.
 
   Ltac mRefresh := on_current ltac:(fun H => move H at bottom).
 

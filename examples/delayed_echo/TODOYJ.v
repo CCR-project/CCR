@@ -6,6 +6,7 @@ Require Import Behavior.
 Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
+Require Import ProofMode.
 
 Set Implicit Arguments.
 Set Typeclasses Depth 5.
@@ -86,3 +87,38 @@ Qed.
 Definition or_else X (ox: option X) (d: X) := match ox with | Some x => x | None => d end.
 
 Lemma map_or_else_id: forall X ox (d: X), map_or_else ox id d = or_else ox d. refl. Qed.
+
+
+
+
+Section AUX.
+  Context {K: Type} `{M: URA.t}.
+  Let RA := URA.pointwise K M.
+
+  Lemma pw_extends (f0 f1: K -> M) (EXT: @URA.extends RA f0 f1): <<EXT: forall k, URA.extends (f0 k) (f1 k)>>.
+  Proof. ii. r in EXT. des. subst. ur. ss. eexists; et. Qed.
+
+  Lemma pw_wf: forall (f: K -> M) (WF: URA.wf (f: @URA.car RA)), <<WF: forall k, URA.wf (f k)>>.
+  Proof. ii; ss. rewrite URA.unfold_wf in WF. ss. Qed.
+
+  Lemma pw_add_disj_wf
+        (f g: K -> M)
+        (WF0: URA.wf (f: @URA.car RA))
+        (WF1: URA.wf (g: @URA.car RA))
+        (DISJ: forall k, <<DISJ: f k = ε \/ g k = ε>>)
+    :
+      <<WF: URA.wf ((f: RA) ⋅ g)>>
+  .
+  Proof.
+    ii; ss. ur. i. ur in WF0. ur in WF1. spc DISJ. des; rewrite DISJ.
+    - rewrite URA.unit_idl; et.
+    - rewrite URA.unit_id; et.
+  Qed.
+
+  Lemma pw_insert_wf: forall `{EqDecision K} (f: K -> M) k v (WF: URA.wf (f: @URA.car RA)) (WFV: URA.wf v),
+      <<WF: URA.wf (<[k:=v]> f: @URA.car RA)>>.
+  Proof.
+    i. unfold insert, fn_insert. ur. ii. des_ifs. ur in WF. eapply WF.
+  Qed.
+
+End AUX.
