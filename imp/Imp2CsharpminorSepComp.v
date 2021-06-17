@@ -154,15 +154,14 @@ Section PROOFALL.
       { subst sge. Local Transparent Sk.load_skenv. unfold Sk.load_skenv. ss. rewrite SGENV. uo; ss. Local Opaque Sk.load_skenv. }
       assert (WFSKENV: Sk.wf (defsL src)); auto.
       apply Sk.sort_wf in WFSKENV. apply Sk.load_skenv_wf in WFSKENV. apply WFSKENV in SKFOUND. clear WFSKENV.
-      apply MG in SKFOUND.
-      (* apply WFPROG2 in SGENV. *)
-      (* apply nth_error_In in SGENV. *)
-
-(* Mem.load_store_same: *)
-(*   forall (chunk : memory_chunk) (m1 : mem) (b : Values.block) (ofs : Z) (v : Values.val) (m2 : mem), *)
-(*   Memory.Mem.store chunk m1 b ofs v = Some m2 -> Memory.Mem.load chunk m2 b ofs = Some (Values.Val.load_result chunk v) *)
-
-      admit "mid: match init mem". }
+      apply MG in SKFOUND. apply nth_error_In in SGENV. apply WFPROG2 in SGENV.
+      hexploit compiled_gvar_props; eauto. i. des. clarify.
+      assert (TMLSID0: false = false); auto. apply TMLSID in TMLSID0; clear TMLSID.
+      assert (TMLB0: false = false); auto. apply TMLB in TMLB0; clear TMLB.
+      rewrite H0 in *. ss. des. clear TMLSID1. split; auto.
+      unfold Genv.perm_globvar in TMPERM. des_ifs. split.
+      2:{ unfold NW. lia. }
+      split; eauto. ss. apply Z.divide_0_r. }
     { ss. }
     { ss.
       match goal with
