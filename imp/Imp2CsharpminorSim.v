@@ -337,23 +337,22 @@ Section PROOF.
     destruct code.
     - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. ss; clarify.
       destruct tcont; ss; clarify. inv MCONT; clarify.
-      { unfold exit_stmt in *; ss; clarify. destruct tcont; inv MSTACK; ss; clarify.
-        sim_red. gstep. econs 6; clarify.
+      { unfold itree_of_imp_ret, itree_of_imp_cont. unfold exit_stmt in *; ss; clarify.
+        destruct tcont; inv MSTACK; ss; clarify. sim_red. gstep. econs 6; clarify.
         eexists. eexists.
         { eapply step_skip_seq. }
-        eexists. exists (step_tau _). eexists. unfold idK. sim_red.
+        eexists. exists (step_tau _). eexists. sim_red.
 
-        rewrite interp_imp_expr_Var. sim_red.
-        unfold unwrapU. des_ifs.
+        rewrite interp_imp_expr_Var. sim_red. unfold unwrapU. des_ifs.
         2:{ sim_triggerUB. }
         sim_red. gstep. econs 6; clarify.
         eexists. eexists.
         { eapply step_return_1; ss; eauto. econs; ss. econs; ss. inv ML; ss; clarify. hexploit ML0; i; eauto. }
         eexists. exists (step_tau _). eexists.
+        (* Local Opaque itree_of_imp_pop_bottom. *)
         do 1 (gstep; sim_tau). red. sim_red. unfold assume. grind.
-        gstep. econs 5; ss; auto. i. eapply angelic_step in STEP; des; clarify.
-        eexists; split; [ord_step2|].
-        do 6 (gstep; sim_tau). red. sim_red.
+        gstep. econs 5; ss; auto. i. eapply angelic_step in STEP; des; clarify. eexists; split; [ord_step2|].
+        do 6 (gstep; sim_tau). sim_red. unfold itree_of_imp_pop_bottom. sim_red.
         destruct v.
         - destruct ((0 <=? n)%Z && (n <? two_power_nat 32)%Z) eqn:INT32; bsimpl; des.
           + gstep. econs 1; eauto.

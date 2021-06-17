@@ -99,9 +99,11 @@ Section MATCH.
       Ret pop.
 
   Definition itree_of_imp_pop_bottom :=
-    fun ge ms mn (x: _ * _ * (lenv * val)) =>
-      let '(r, p, (le0, _)) := x in
-      '(_, _, rv) <- EventsL.interp_Es (ModSemL.prog ms) (transl_all mn ('(_, v) <- interp_imp ge (denote_expr (Var "return"%string)) le0;; Ret (v↑))) (r, p);; Ret rv.
+    fun ms mn (x : r_state * p_state * (lenv * val)) =>
+      ` x0 : r_state * p_state * Any.t <-
+      (let (st1, v) := x in
+      EventsL.interp_Es (ModSemL.prog ms)
+                        (transl_all mn (` x0 : val <- (let (_, retv) := v in Ret retv);; Ret (Any.upcast x0))) st1);; Ret (snd x0).
 
   Definition itree_of_cont_stmt (s : Imp.stmt) :=
     fun ge le ms mn rp => itree_of_imp_cont (denote_stmt s) ge le ms mn rp.
@@ -187,7 +189,7 @@ Section MATCH.
   Inductive match_code (mn: mname) : imp_cont -> (list Csharpminor.stmt) -> Prop :=
   | match_code_exit
     :
-      match_code mn idK [exit_stmt]
+      match_code mn (fun '(r, p, (le, _)) => itree_of_imp_ret ge le ms mn (r, p)) [exit_stmt]
   | match_code_return
     :
       match_code mn idK [return_stmt]
@@ -203,7 +205,7 @@ Section MATCH.
   Inductive match_stack (src: Imp.programL) (mn: mname) : imp_stack -> option Csharpminor.cont -> Prop :=
   | match_stack_bottom
     :
-      match_stack src mn (fun x => itree_of_imp_pop_bottom ge ms mn x) (Some ret_call_main)
+      match_stack src mn (itree_of_imp_pop_bottom ms mn) (Some ret_call_main)
 
   | match_stack_cret
       tf le tle next stack tcont id tid tpop retmn

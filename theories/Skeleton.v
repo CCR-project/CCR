@@ -256,6 +256,21 @@ Module Sk.
     { lia. }
     apply lt_S_n in BLKRANGE. eapply IHblk; eauto.
   Qed.
+
+  Lemma env_found_range :
+    forall sk symb blk
+      (FOUND : SkEnv.id2blk (Sk.load_skenv sk) symb = Some blk),
+      <<BLKRANGE : blk < Datatypes.length sk>>.
+  Proof.
+    induction sk; i; ss; clarify.
+    uo; des_ifs. destruct p0. rewrite find_idx_red in Heq0. des_ifs.
+    { apply Nat.lt_0_succ. }
+    destruct blk.
+    { apply Nat.lt_0_succ. }
+    uo. des_ifs. destruct p. ss. clarify. apply lt_n_S. eapply IHsk; eauto.
+    instantiate (1:=symb). rewrite Heq0. ss.
+  Qed.
+
 End Sk.
 
 Coercion Sk.load_skenv: Sk.t >-> SkEnv.t.

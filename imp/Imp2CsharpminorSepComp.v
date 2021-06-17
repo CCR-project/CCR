@@ -30,246 +30,6 @@ Section PROOFALL.
 
   Context `{Σ: GRA.t}.
 
-  Lemma map_blk_after_init :
-    forall src blk
-      (COMP : exists tgt, Imp2Csharpminor.compile src = OK tgt)
-      (ALLOCED : blk >= (src_init_nb src)),
-      (<<ALLOCMAP: (map_blk src blk) = Pos.of_succ_nat (2 + (ext_len src) + blk)>>).
-  Proof.
-    i. unfold map_blk. des. des_ifs.
-  Qed.
-
-  Lemma gmap_preserves_length :
-    forall src gm
-      (GAMP: get_gmap src = Some gm),
-      (<<EVL: List.length gm.(_ext_vars) = List.length src.(ext_varsL)>>) /\
-      (<<EFL: List.length gm.(_ext_funs) = List.length src.(ext_funsL)>>) /\
-      (<<IVL: List.length gm.(_int_vars) = List.length src.(prog_varsL)>>) /\
-      (<<IFL: List.length gm.(_int_funs) = List.length src.(prog_funsL)>>).
-  Proof.
-    unfold get_gmap. i. uo; des_ifs; ss. repeat split.
-    - unfold compile_eVars. eapply map_length.
-    - unfold compile_eFuns. eapply map_length.
-    - unfold compile_iVars. eapply map_length.
-    - unfold pre_compile_iFuns in Heq0. des_ifs. do 2 (rewrite List.map_map). eapply map_length.
-  Qed.
-
-  Lemma Genv_advance_next_length :
-    forall (l : list (ident * globdef fundef ())) p,
-      <<LEN: Genv.advance_next l p = Pos.of_nat ((List.length l) + (Pos.to_nat p))>>.
-  Proof.
-    i. depgen p. induction l; i; ss; clarify.
-    - sym; apply Pos2Nat.id.
-    - rewrite IHl. rewrite Pos2Nat.inj_succ. rewrite <- plus_n_Sm. ss.
-  Qed.
-
-  Lemma NoDup_norepeat :
-    forall A (l : list A), <<NOREPET: Coqlib.list_norepet l>> <-> NoDup l.
-  Proof.
-    split; induction l; i; ss; eauto.
-    - econs.
-    - inv H. econs; eauto.
-    - econs.
-    - inv H. econs; eauto. eapply IHl; eauto.
-  Qed.
-
-  Lemma perm_elements_PTree_norepeat :
-    forall A (l : list (elt * A))
-      (NOREPET: Coqlib.list_norepet (List.map fst l)),
-      <<LEN: Permutation.Permutation (elements (Maps.PTree_Properties.of_list l)) l>>.
-  Proof.
-    i. eapply Permutation.NoDup_Permutation.
-    - apply NoDup_map_inv with (f:= fst). apply NoDup_norepeat. eapply elements_keys_norepet.
-    - apply NoDup_map_inv with (f:= fst). apply NoDup_norepeat. auto.
-    - i. assert (NOREPET2: Coqlib.list_norepet (List.map fst (elements (Maps.PTree_Properties.of_list l)))).
-      { eapply elements_keys_norepet. }
-      destruct x as [ID NODE]. split; i.
-      + hexploit Maps.PTree_Properties.of_list_norepet.
-        { eapply NOREPET2. }
-        { eapply H. }
-        i. rewrite Maps.PTree_Properties.of_list_elements in H0. eapply Maps.PTree_Properties.in_of_list in H0. auto.
-      + hexploit Maps.PTree_Properties.of_list_norepet.
-        { eapply NOREPET. }
-        { eapply H. }
-        i. eapply Maps.PTree_Properties.in_of_list. rewrite Maps.PTree_Properties.of_list_elements. auto.
-  Qed.
-
-  Lemma length_elements_PTree_norepet :
-    forall A (l : list (elt * A))
-      (NOREPET: Coqlib.list_norepet (List.map fst l)),
-      <<LEN: List.length (elements (Maps.PTree_Properties.of_list l)) = List.length l>>.
-  Proof.
-    i. eapply Permutation.Permutation_length. eapply perm_elements_PTree_norepeat. auto.
-  Qed.
-
-  Lemma get_iFuns_length :
-    forall g l1 l2 (GET: get_iFuns g l1 = Some l2), List.length l1 = List.length l2.
-  Proof.
-    i. unfold get_iFuns in GET. des_ifs. rewrite List.map_map. sym; eapply map_length.
-  Qed.
-
-  Lemma wfprog_defsL_length :
-    forall src
-      (WFPROG: Permutation.Permutation
-                 ((List.map fst src.(prog_varsL)) ++ (List.map (compose fst snd) src.(prog_funsL)))
-                 (List.map fst src.(defsL))),
-      <<DEFSL: List.length src.(defsL) = List.length src.(prog_varsL) + List.length src.(prog_funsL)>>.
-  Proof.
-    i. unfold compose in *. do 2 rewrite <- (map_length fst). rewrite <- (map_length (compose fst snd)).
-    rewrite <- app_length. eapply Permutation.Permutation_length. apply Permutation.Permutation_sym. auto.
-  Qed.
-
-  Lemma map_blk_init_range :
-    forall src tgt id b
-      (COMP : Imp2Csharpminor.compile src = OK tgt)
-      (WFPROG: Permutation.Permutation
-                 ((List.map fst src.(prog_varsL)) ++ (List.map (compose fst snd) src.(prog_funsL)))
-                 (List.map fst src.(defsL)))
-      (TGT: Genv.find_symbol (get_tge tgt) id = Some b),
-      <<RANGE: (b < (tgt_init_nb src))%positive>>.
-  Proof.
-    i. unfold get_tge in *. unfold compile, _compile in COMP. des_ifs. unfold compile_gdefs in Heq0.
-    uo; des_ifs; ss. unfold Genv.find_symbol in TGT. apply Genv.genv_symb_range in TGT.
-    unfold Genv.globalenv in TGT. ss. rewrite Genv.genv_next_add_globals in TGT. ss.
-    unfold tgt_init_nb. unfold ext_len, int_len. hexploit gmap_preserves_length; eauto. i; des.
-    rewrite Genv_advance_next_length in TGT. rewrite length_elements_PTree_norepet in TGT; eauto.
-    rewrite wfprog_defsL_length; auto. repeat rewrite app_length in TGT. ss. rewrite app_length in TGT.
-    eapply get_iFuns_length in Heq0. rewrite <- Heq0 in TGT.
-    repeat rewrite map_length in TGT.
-    rewrite EVL in TGT; rewrite EFL in TGT; rewrite IVL in TGT; rewrite IFL in TGT.
-    depgen TGT. clear. i. unfold NW.
-    match goal with
-    | [ TGT: Coqlib.Plt _ ?l1 |- (_ < ?l2)%positive ] => replace l2 with l1; eauto
-    end.
-    lia.
-  Qed.
-
-  Lemma compiled_then_exists:
-    forall src gm l symb  
-      (GMAP: get_gmap src = Some gm)
-      (COMP : compile_gdefs gm src = Some l)
-      (NOREPET : Coqlib.list_norepet (List.map fst l))
-      (WFPROG : In symb (List.map fst (prog_varsL src) ++ List.map (compose fst snd) (prog_funsL src))),
-    exists gd : globdef fundef (), In (s2p symb, gd) l.
-  Proof.
-    i. apply in_app_or in WFPROG. des.
-    - apply Coqlib.list_in_map_inv in WFPROG. des. destruct x as [vn v].
-      unfold compile_gdefs in COMP. uo; des_ifs; ss.
-      hexploit exists_compiled_variable; eauto. i; des. exists (Gvar cv).
-      apply in_or_app. right. apply in_or_app. right. ss. do 2 right. apply in_or_app; right.
-      clear WFPROG0.
-      match goal with
-      | [ H : In ?y _ |- (In ?x (List.map ?f _)) ] => set (mapf:=f) in *; replace x with (mapf y)
-      end.
-      2:{ subst mapf. unfold lift_def. ss. }
-      apply in_map. auto.
-    - apply Coqlib.list_in_map_inv in WFPROG. des. destruct x as [mn [fn impf]].
-      unfold compile_gdefs in COMP. uo; des_ifs; ss.
-      hexploit exists_compiled_function; eauto. i; des. exists (Gfun (Internal cf)).
-      apply in_or_app. right. apply in_or_app. right. ss. do 2 right. apply in_or_app; left; eauto.
-  Qed.
-
-  Lemma in_src_in_tgt :
-    forall src gm (l: list (ident * globdef fundef ())) symb
-      (GMAP: get_gmap src = Some gm)
-      (COMP: compile_gdefs gm src = Some l)
-      (NOREPET: Coqlib.list_norepet (List.map fst l))
-      (WFPROG : In symb (List.map fst (prog_varsL src) ++ List.map (compose fst snd) (prog_funsL src))),
-      <<EXISTSIN: exists gd, In (s2p symb, gd) (elements (Maps.PTree_Properties.of_list l))>>.
-  Proof.
-    i. unfold get_gmap in GMAP. uo; des_ifs; ss.
-    assert (NOREPET2: Coqlib.list_norepet (List.map fst l)); auto.
-    apply perm_elements_PTree_norepeat in NOREPET. apply Permutation.Permutation_sym in NOREPET.
-    assert (IN1: exists gd, In (s2p symb, gd) l).
-    { eapply compiled_then_exists; eauto. unfold get_gmap. uo; des_ifs; ss. }
-    des. exists gd. 
-    eapply Permutation.Permutation_in; eauto.
-  Qed.
-
-  Lemma found_in_src_in_tgt :
-    forall src tgt blk symb
-      (COMP: compile src = OK tgt)
-      (WFPROG: Permutation.Permutation
-                 ((List.map fst src.(prog_varsL)) ++ (List.map (compose fst snd) src.(prog_funsL)))
-                 (List.map fst src.(defsL)))
-      (SRC: SkEnv.blk2id (get_sge src) blk = Some symb),
-      <<TGTFOUND: exists tb, Genv.find_symbol (get_tge tgt) (s2p symb) = Some tb>>.
-  Proof.
-    i. unfold compile, _compile in COMP. des_ifs. unfold get_sge, get_tge in *. ss.
-    eapply Sk.in_env_in_sk in SRC. des. eapply Sk.sort_incl_rev in SRC.
-    apply Permutation.Permutation_sym in WFPROG. apply (in_map fst) in SRC. ss.
-    eapply Permutation.Permutation_in in WFPROG; eauto. clear SRC def.
-    rename Heq into GMAP. rename Heq0 into COMPGDEFS. rename l0 into NOREPET.
-    hexploit in_src_in_tgt; eauto. i. des.
-    eapply Genv.find_symbol_exists. ss. eapply H.
-  Qed.
-
-  Lemma sksort_same_len :
-    forall l, <<LEN: Datatypes.length l = Datatypes.length (Sk.sort l)>>.
-  Proof.
-    i. pose (Sk.SkSort.Permuted_sort l) as SORTED. apply Permutation.Permutation_length in SORTED. eauto.
-  Qed.
-
-  Lemma map_blk_neq :
-    forall src b1 b2
-      (COMP : exists tgt, Imp2Csharpminor.compile src = OK tgt)
-      (WFPROG: Permutation.Permutation
-                 ((List.map fst src.(prog_varsL)) ++ (List.map (compose fst snd) src.(prog_funsL)))
-                 (List.map fst src.(defsL)))
-      (BLK1: b1 >= (src_init_nb src))
-      (BLK2: ~ (b2 >= (src_init_nb src))),
-      map_blk src b1 <> map_blk src b2.
-  Proof.
-    i. unfold map_blk. des_ifs; ii; rename H into CONTRA.
-    - clear g n. assert (RANGE: (b < (tgt_init_nb src))%positive).
-      { eapply map_blk_init_range; eauto. }
-      unfold tgt_init_nb in RANGE. unfold src_init_nb in *. lia.
-    - clear g n. unfold get_sge, get_tge in *. hexploit found_in_src_in_tgt; eauto. i; des. unfold get_tge in H; clarify.
-    - clear g n. unfold get_sge in Heq0. apply not_ge in BLK2. rename Heq0 into NOTFOUND. simpl in NOTFOUND.
-      unfold src_init_nb in BLK2. unfold int_len in BLK2.
-      assert (SORTED: b2 < Datatypes.length (Sk.sort (defsL src))).
-      { rewrite <- sksort_same_len. ss. }
-      eapply Sk.env_range_some in SORTED. des. setoid_rewrite SORTED in NOTFOUND. clarify.
-    - des. clarify.
-  Qed.
-
-  Lemma map_blk_inj :
-    forall src b1 b2
-      (COMP : exists tgt, Imp2Csharpminor.compile src = OK tgt)
-      (WFPROG: Permutation.Permutation
-                 ((List.map fst src.(prog_varsL)) ++ (List.map (compose fst snd) src.(prog_funsL)))
-                 (List.map fst src.(defsL)) /\ Sk.wf src.(defsL)),
-      <<INJ: map_blk src b1 = map_blk src b2 -> b1 = b2>>.
-  Proof.
-    i. des. destruct (ge_dec b1 (src_init_nb src)) eqn:BRANGE1; destruct (ge_dec b2 (src_init_nb src)) eqn:BRANGE2.
-    { unfold map_blk. des_ifs. ii. lia. }
-    { hexploit map_blk_neq; eauto; ii; clarify. }
-    { hexploit map_blk_neq; eauto; ii. sym in H0. clarify. }
-    unfold map_blk. unfold src_init_nb in *. unfold int_len in *. unfold get_sge in *.
-    rewrite BRANGE1. rewrite BRANGE2. clear BRANGE1 BRANGE2.
-    rename n into BLK1. apply not_ge in BLK1. rename n0 into BLK2. apply not_ge in BLK2.
-    assert (SBLK1: b1 < Datatypes.length (Sk.sort (defsL src))).
-    { rewrite <- sksort_same_len; ss. }
-    assert (SBLK2: b2 < Datatypes.length (Sk.sort (defsL src))).
-    { rewrite <- sksort_same_len; ss. }
-    eapply Sk.env_range_some in SBLK1. eapply Sk.env_range_some in SBLK2. des.
-    ss. rewrite SBLK1. rewrite SBLK2. rewrite COMP. ii.
-    hexploit found_in_src_in_tgt.
-    1,2: eauto.
-    { unfold get_sge. ss. eapply SBLK1. }
-    hexploit found_in_src_in_tgt.
-    1,2: eauto.
-    { unfold get_sge. ss. eapply SBLK2. }
-    i. des. rewrite H0 in H. rewrite H1 in H. clarify.
-    apply Genv.find_invert_symbol in H0. apply Genv.find_invert_symbol in H1.
-    rewrite H1 in H0. clear H1. clarify. apply s2p_inj in H0. clarify.
-    apply Sk.sort_wf in WFPROG0. apply Sk.load_skenv_wf in WFPROG0. des.
-    apply WFPROG0 in SBLK1. apply WFPROG0 in SBLK2. rewrite SBLK1 in SBLK2. clarify.
-  Qed.
-
-
-
-
   Create HintDb ord_step2.
   Hint Resolve Nat.lt_succ_diag_r OrdArith.lt_from_nat OrdArith.lt_add_r: ord_step2.
   Hint Extern 1000 => lia: ord_step2.
@@ -297,7 +57,7 @@ Section PROOFALL.
         (src: Imp.programL) (tgt: Csharpminor.program) srcst tgtst
         (WFPROG: Permutation.Permutation
                    ((List.map fst src.(prog_varsL)) ++ (List.map (compose fst snd) src.(prog_funsL)))
-                   (List.map fst src.(defsL)) /\ Sk.wf src.(defsL))
+                   (List.map fst src.(defsL)))
         (COMP: Imp2Csharpminor.compile src = OK tgt)
         (SINIT: srcst = imp_initial_state src)
         (TINIT: Csharpminor.initial_state tgt tgtst)
@@ -341,26 +101,85 @@ Section PROOFALL.
     assert (MAINPARAM: fn_params smain = []).
     { depgen Heq. clear. i. remember (fn_params smain) as m. clear Heqm. depgen l. induction m; i; ss; clarify. }
     clear Heq. rewrite interp_imp_tau. sim_red.
-    pfold. econs 6; ss; eauto. eexists. eexists.
+
+    pfold. econs 4; ss. eexists. eexists.
     { apply Coqlib.list_norepet_app in WF_MAIN; des. subst tmainf.
       eapply step_internal_function; ss; eauto; try econs;
         match goal with [H: Genv.find_def _ _ = Some (Gfun (Internal ?tf)) |- _ ] => set (tmainf:=tf) in * end.
       rewrite MAINPARAM. ss. }
+    eexists; split; [ord_step2|auto]. left. ss.
+
+    pfold. econs 6; ss; eauto. eexists. eexists.
+    { eapply step_seq. }
     eexists. exists (ModSemL.step_tau _). exists ((100 + max_fuel) + 100)%ord. left.
-    rewrite interp_imp_bind. grind. sim_red. rename l into sle. 
+    rewrite interp_imp_bind. grind. sim_red. rename l into sle.
+    assert (MATCHGE: match_ge src (Sk.sort (ModL.sk (ModL.add Mem (ImpMod.get_modL src)))) (Genv.globalenv tgt)).
+    { econs. i. unfold map_blk. rewrite COMP0. hexploit Sk.env_found_range; eauto. i. unfold src_init_nb, int_len.
+      rewrite <- sksort_same_len in H0. ss. des_ifs; unfold NW in *; try lia.
+      - unfold get_sge in *. ss. apply Sk.sort_wf in SK.
+        hexploit Sk.load_skenv_wf; eauto. i. apply H1 in H. rewrite H in Heq. clarify.
+      - unfold get_sge in *. ss. apply Sk.sort_wf in SK.
+        hexploit Sk.load_skenv_wf; eauto. i. apply H1 in H. rewrite H in Heq. clarify.
+        hexploit found_in_src_in_tgt; eauto. i. des. rewrite Heq1 in H2. clarify.
+      - unfold get_sge in *. ss. apply Sk.sort_wf in SK.
+        hexploit Sk.load_skenv_wf; eauto. i. apply H1 in H. rewrite H in Heq. clarify. }
     eapply match_states_sim; eauto.
-    { i. 
+    { apply map_blk_after_init. }
+    { apply map_blk_inj. }
+    match goal with
+    | [ |- match_states _ ?_ge ?_ms _ _ _ ] => replace _ge with sge; auto; set (ms:=_ms) in *
+    end.
+    econs; eauto.
+    { admit "ez?: match initial le". }
+    { clarify. }
+    { econs; ss.
+      { unfold src_init_nb, int_len. rewrite <- sksort_same_len. lia. }
+      { apply Genv.init_mem_genv_next in TMINIT. rewrite <- TMINIT. unfold Genv.globalenv. ss.
+        rewrite Genv.genv_next_add_globals. ss. rewrite Genv_advance_next_length. ss.
+        rewrite length_elements_PTree_norepet; eauto. rewrite map_blk_after_init; eauto.
+        2:{ unfold src_init_nb, int_len. rewrite <- sksort_same_len. lia. }
+        unfold ext_len. subst tgds. repeat rewrite app_length. ss.
+        rewrite <- sksort_same_len. rewrite wfprog_defsL_length; eauto.
+        rewrite app_length. repeat rewrite map_length. apply get_iFuns_length in Heq0. rewrite <- Heq0.
+        apply gmap_preserves_length in GMAP. des. rewrite EVL; rewrite EFL; rewrite IVL; rewrite IFL. lia. }
+      i. uo; des_ifs. unfold NW in H. clarify. rename s into gn, Heq1 into SGENV.
+      set (tblk:=map_blk src blk) in *. unfold map_ofs in *. rewrite! Z.mul_0_r.
+      
 
 
+(* Genv.init_mem_characterization: *)
+(*   forall [F V : Type] (p : AST.program F V) (b : Values.block) [gv : globvar V] [m : mem], *)
+(*   Genv.find_var_info (Genv.globalenv p) b = Some gv -> *)
+(*   Genv.init_mem p = Some m -> *)
+(*   Mem.range_perm m b 0 (init_data_list_size (gvar_init gv)) Cur (Genv.perm_globvar gv) /\ *)
+(*   (forall (ofs : Z) (k : perm_kind) (p0 : permission), *)
+(*    Mem.perm m b ofs k p0 -> (0 <= ofs < init_data_list_size (gvar_init gv))%Z /\ perm_order (Genv.perm_globvar gv) p0) /\ *)
+(*   (gvar_volatile gv = false -> Genv.load_store_init_data (Genv.globalenv p) m b 0 (gvar_init gv)) /\ *)
+(*   (gvar_volatile gv = false -> *)
+(*    Mem.loadbytes m b 0 (init_data_list_size (gvar_init gv)) = Some (Genv.bytes_of_init_data_list (Genv.globalenv p) (gvar_init gv))) *)
 
+(* Mem.load_store_same: *)
+(*   forall (chunk : memory_chunk) (m1 : mem) (b : Values.block) (ofs : Z) (v : Values.val) (m2 : mem), *)
+(*   Memory.Mem.store chunk m1 b ofs v = Some m2 -> Memory.Mem.load chunk m2 b ofs = Some (Values.Val.load_result chunk v) *)
 
-
-
-
-
-
-
-  Admitted.
+      admit "mid: match init mem". }
+    { ss. }
+    { ss.
+      match goal with
+      | [ |- match_code _ _ _ _ ?i0 ?s0 ] =>
+        replace i0 with ((fun '(r, p, (le, _)) => itree_of_imp_ret sge le ms mn (r, p)) : (_ * _ * (lenv * val)) -> _);
+          replace s0 with [exit_stmt]; eauto
+      end.
+      { econs 1. }
+      extensionality x. unfold itree_of_imp_ret, itree_of_imp_cont. grind. destruct p0. rewrite interp_imp_expr_Var. grind. }
+    { ss.
+      match goal with
+      | [ |- match_stack _ _ _ _ _ ?i0 ?s0 ] =>
+        replace i0 with ((itree_of_imp_pop_bottom ms mn) : (_ * _ * (lenv * val)) -> _);
+          replace s0 with (Some ret_call_main); eauto
+      end.
+      { econs 1. } }
+  Qed.
 
 
   (* Lemma list_norepet_NoDupB {K} {decK} : *)
