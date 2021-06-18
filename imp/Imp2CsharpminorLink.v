@@ -166,6 +166,14 @@ Section PROOF.
       + apply Coqlib.list_in_map_inv in H. des. destruct x. clarify.
   Qed.
 
+  Lemma linked_two_wf :
+    forall (src1 src2: Imp.program) srcl
+      (LINKED: link_imp src1 src2 = Some srcl),
+      <<L2WF: wf_prog srcl>>.
+  Proof.
+    i. unfold link_imp in LINKED. des_ifs. bsimpl. des.
+    Admitted.
+
 
 
 End PROOF.
