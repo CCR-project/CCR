@@ -447,16 +447,22 @@ Section CANCEL.
     all: try (by apply Ord.O).
   Qed.
 
-  Variable entry_r: Σ.
-  Variable mainpre: Any.t -> ord -> Σ -> Prop.
-  Variable (mainbody: (option mname * Any.t) -> itree (hCallE +' pE +' eventE) Any.t).
-  Hypothesis MAINPRE: mainpre ([]: list val)↑ ord_top entry_r.
+  Variable main_fsb: fspecbody.
+  Hypothesis MAINM: alist_find "main" sbtb = Some main_fsb.
 
-  Hypothesis WFR: URA.wf (entry_r ⋅ rsum (ModSemL.initial_r_state ms_tgt)).
+  Variable main_arg_tgt: Any.t.
+  Variable main_arg_src: Any.t.
+
+  Hypothesis MAINPRE:
+    exists (x: main_fsb.(meta)) (entry_r: Σ),
+      (<<PRE: main_fsb.(precond) None x main_arg_src main_arg_tgt ord_top entry_r>>) /\
+      (<<WFR: URA.wf (entry_r ⋅ rsum (ModSemL.initial_r_state ms_tgt))>>) /\
+      (<<RET: forall ret_src ret_tgt r
+                     (POST: main_fsb.(postcond) None x ret_src ret_tgt r),
+          ret_src = ret_tgt>>)
+  .
 
   Require Import Logic.
-
-  Hypothesis MAINM: alist_find "main" sbtb = Some (mk_specbody (mk_simple (fun _ : () => (mainpre, fun _ => (⌜True⌝: iProp)%I))) mainbody).
 
   Let initial_r_state ms entry_r: r_state :=
     (fun mn => match alist_find mn ms.(ModSemL.initial_mrs) with
@@ -466,9 +472,11 @@ Section CANCEL.
 
   Opaque EventsL.interp_Es.
 
-  Theorem adequacy_type_t2m: Beh.of_program (ModL.compile (Mod.add_list mds_tgt)) <1=
-                             Beh.of_program (ModL.compile_arg (Mod.add_list mds_mid) (Any.pair ord_top↑ ([]: list val)↑)).
+  Theorem adequacy_type_t2m: Beh.of_program (ModL.compile_arg (Mod.add_list mds_tgt) main_arg_tgt) <1=
+                             Beh.of_program (ModL.compile_arg (Mod.add_list mds_mid) (Any.pair ord_top↑ main_arg_src)).
   Proof.
+    destruct MAINPRE. rename x into metav. des.
+    
     assert (IWF: URA.wf (entry_r ⋅ rsum (fun mn => match alist_find mn (ModSemL.initial_mrs ms_tgt) with
                                                    | Some r => fst r
                                                    | None => ε
@@ -506,7 +514,7 @@ Section CANCEL.
 
     Local Transparent ModSemL.prog. ss.
     rewrite FINDTGT. rewrite FINDMID. steps.
-    eexists. steps. eexists. steps. exists tt. steps.
+    eexists. steps. eexists. steps. exists metav. steps.
     eexists. steps.
     unfold forge, put, checkWf, discard.
     rewrite Any.pair_split. steps.
@@ -527,7 +535,7 @@ Section CANCEL.
       end.
     }
     steps. exists ord_top. steps. unshelve esplits.
-    { red. uipropall. esplits; et. r. uipropall. }
+    { red. uipropall. esplits; et. }
     steps.
 
     guclo ordC_spec. econs.
@@ -547,7 +555,7 @@ Section CANCEL.
       ss. des; subst. steps.
       destruct fr_tgt; ss.
       { steps. }
-      steps. red in x2. uipropall. des. red in x4. uipropall.
+      steps.
     }
     Unshelve.
     all: try (by apply Ord.O).

@@ -703,17 +703,14 @@ Section CANCEL.
     extensionality fnsb. destruct fnsb as [fn sb]. ss.
   Qed.
 
-  Variable mainpre: Any.t -> ord -> Σ -> Prop.
-  Variable (mainbody: (option mname * Any.t) -> itree (hCallE +' pE +' eventE) Any.t).
+  Variable main_fsb: fspecbody.
+  Hypothesis MAINM: alist_find "main" sbtb = Some main_fsb.
 
-  Require Import Logic.
-
-  Hypothesis MAINM:
-    alist_find "main" sbtb = Some (mk_specbody (mk_simple (fun _ : () => (mainpre, fun _ => (⌜True⌝: iProp)%I))) mainbody).
+  Variable main_arg: Any.t.
 
   Theorem adequacy_type_m2s:
-    Beh.of_program (ModL.compile_arg (Mod.add_list mds_mid) (Any.pair ord_top↑ ([]: list val)↑)) <1=
-    Beh.of_program (ModL.compile (Mod.add_list mds_src)).
+    Beh.of_program (ModL.compile_arg (Mod.add_list mds_mid) (Any.pair ord_top↑ main_arg)) <1=
+    Beh.of_program (ModL.compile_arg (Mod.add_list mds_src) main_arg).
   Proof.
     eapply adequacy_global_itree.
     exists (200)%ord.
@@ -728,8 +725,8 @@ Section CANCEL.
       Local Opaque ModSemL.prog.
       ss. steps_strong.
       esplits; et.
-      { des. split.
-        { inv WF. econs.
+      { des. inv x. split.
+        { inv H. econs.
           { rewrite fns_eq. auto. }
           { pose proof initial_mrs_eq. unfold ms_mid, ms_src in H.
             rewrite H. auto. }
