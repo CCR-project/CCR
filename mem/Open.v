@@ -352,19 +352,17 @@ Section ADQ.
     { ss. }
   Qed.
 
-  Let ns: gnames.
-  Admitted.
+  Let ns := mk_sk_gnames (fun sk => mk_gnames (fun fn => is_some (alist_find fn (_gstb sk)))).
 
   Local Existing Instances ns.
 
-
   Lemma my_lemma2_aux
-        mrs ktr arg
+        sk mrs ktr arg
     :
-      sim_itree (fun '(x, y) => x = y) 100%nat
+      sim_itree (ns:= sk_gnames_contents sk) (fun '(x, y) => x = y) 100%nat
                 (mrs, ε, (UModSem.transl_fun ktr) arg)
 
-  (mrs, ε, fun_to_src (fsb_body (UModSem.massage_fsb gstb ktr)) arg)
+  (mrs, ε, fun_to_src (fsb_body (UModSem.massage_fsb (_gstb sk) ktr)) arg)
   .
   Proof.
     destruct mrs as [mr st]. ss.
@@ -390,7 +388,7 @@ Section ADQ.
     destruct u. resub. ired_both. unfold unwrapU. des_ifs.
     { steps. gstep. econs; ss. i. subst. destruct mrs_tgt1. esplits. steps.
       gbase. eapply CIH. }
-    { gstep; econs; eauto. admit "TODO : define ns well". }
+    { gstep; econs; eauto. ss. ii. rewrite Heq in *. ss. }
   Unshelve.
     all: try (exact Ord.O).
   Qed.
@@ -411,9 +409,7 @@ Section ADQ.
       { refl. }
       i. subst. unfold map_snd. des_ifs.
       rr. split; ss. r. ii. subst. ss. esplits; et.
-      replace (_gstb sk) with gstb.
-      { eapply my_lemma2_aux. }
-      { admit "TT fix it". }
+      eapply my_lemma2_aux.
     }
     { ss. }
     { ss. }
@@ -590,7 +586,9 @@ Section ADQ.
     }
     etrans.
     { instantiate (1:=Mod.add_list ((map SMod.to_src kmds) ++ (List.map (UMod.transl) umds))). eapply adequacy_hint.
-      { admit "". }
+      { clear. i. unfold ns. ss. unfold _gstb.
+        rewrite Mod.add_list_app in SOME. ss.
+        rewrite ! add_list_fnsems in SOME. admit "alist flat_map ...". }
       rewrite ! List.map_app. eapply Forall2_app.
       { eapply Forall2_apply_Forall2.
         { instantiate (1:=eq). refl. }
