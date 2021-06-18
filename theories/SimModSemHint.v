@@ -1023,7 +1023,7 @@ Section ADQ.
   .
   Proof.
     inv SIM.
-    econs; eauto.
+    right. econs; eauto.
     { instantiate (1:=top2). ss. }
     { instantiate (1:=wf_lift wf).
       ss.
@@ -1032,7 +1032,8 @@ Section ADQ.
       split; ss. r. ss.
       eapply adequacy_lift_fsem; et.
     }
-    ss. esplits; ss; et.
+    { ss. esplits; ss; et. }
+    { ss. rewrite sim_mn. auto. }
   Qed.
 
 End ADQ.
@@ -1261,8 +1262,6 @@ Section SIMMOD.
      eapply ModLPair.adequacy_local_closed; eauto. econs.
      { ss. red.
        eapply ModSemLPair.add_modsempair.
-       { eapply WFSRC. }
-       { eapply WFTGT. }
        { rewrite SKEQ. eapply ModSemLPair.self_sim_mod. split.
          { inv WFTGT. clear - H. unfold ModL.enclose in *.
            remember (Mod.add_list ctx). clear Heqt. ss. inv H. ss.
@@ -1319,6 +1318,54 @@ Section SIMMOD.
      ss.
    Qed.
 
+   Lemma Mod_list_incl_sk (mds: list Mod.t) md
+         (IN: In md mds)
+     :
+       Sk.incl (Mod.sk md) (ModL.sk (Mod.add_list mds)).
+   Proof.
+     rewrite Mod.add_list_sk. revert IN. induction mds; ss.
+     i. des; clarify.
+     { ii. eapply in_or_app. auto. }
+     { ii. eapply in_or_app. right. eapply IHmds; et. }
+   Qed.
+
+   Lemma Mod_add_list_get_modsem (mds: list Mod.t) sk
+     :
+       ModL.get_modsem (Mod.add_list mds) sk
+       =
+       fold_right ModSemL.add {| ModSemL.fnsems := []; ModSemL.initial_mrs := [] |}
+                  (List.map (fun (md: Mod.t) => ModL.get_modsem md sk) mds).
+   Proof.
+     induction mds; ss. f_equal. rewrite <- IHmds. ss.
+   Qed.
+
+   Lemma fold_right_app_flat_map A B (f: A -> list B) l
+     :
+       flat_map f l
+       =
+       fold_right (@app _) [] (List.map f l).
+   Proof.
+     induction l; ss. f_equal. auto.
+   Qed.
+
+   Lemma map_flat_map A B C (f: A -> list B) (g: B -> C) (l: list A)
+     :
+       List.map g (flat_map f l)
+       =
+       flat_map (List.map g) (List.map f l).
+   Proof.
+     induction l; ss. rewrite List.map_app. f_equal; auto.
+   Qed.
+
+   Lemma flat_map_single A B (f: A -> B) (l: list A)
+     :
+       flat_map (fun a => [f a]) l
+       =
+       List.map f l.
+   Proof.
+     induction l; ss.
+   Qed.
+
    Theorem adequacy_hint `{ns: sk_gnames} mds_src mds_tgt
           (NAMESPACE:
              forall sk fn
@@ -1331,6 +1378,11 @@ Section SIMMOD.
      ii. destruct (classic (ModSemL.wf (ModL.enclose (Mod.add_list mds_src)) /\ Sk.wf (ModL.sk (Mod.add_list mds_src)))).
      2: { unfold ModL.compile. eapply ModSemL.compile_not_wf. et. }
      rename H into WF.
+
+     assert (SKEQ: ModL.sk (Mod.add_list mds_tgt) = ModL.sk (Mod.add_list mds_src)).
+     { rewrite ! Mod.add_list_sk. f_equal. symmetry.
+       eapply Forall2_eq_eq. eapply Forall2_apply_Forall2; et.
+       i. inv H. ss. }
 
      eapply ModLPair.adequacy_local_closed; et.
      unfold ModL.enclose in WF.
@@ -1350,7 +1402,7 @@ Section SIMMOD.
          eapply Forall2_eq_eq.
          eapply Forall2_apply_Forall2; et.
          i. inv H. hexploit sim_modsem; et.
-         { admit "ez". }
+         { etrans; et. rewrite <- SKEQ. eapply Mod_list_incl_sk; et. }
          i. inv H. ss. rewrite ! List.map_map.
          eapply Forall2_eq_eq. eapply Forall2_apply_Forall2; et.
          i. inv H. destruct a0, b0. ss.
@@ -1360,42 +1412,38 @@ Section SIMMOD.
          | H: NoDup ?l0 |- NoDup ?l1 => replace l1 with l0
          end; auto.
          rewrite ! Mod.add_list_initial_mrs.
-         admit "".
+         rewrite <- ! fold_right_app_flat_map.
+         ss. rewrite ! flat_map_single. rewrite ! List.map_map.
+         eapply Forall2_eq_eq.
+         eapply Forall2_apply_Forall2; et.
+         i. ss. inv H. hexploit sim_modsem; et.
+         { etrans; et. rewrite <- SKEQ. eapply Mod_list_incl_sk; et. }
+         i. inv H. ss.
        }
      }
-     { clear - SIM. unfold ModL.enclose.
+     { des. clear - SIM WF0 SKEQ. unfold ModL.enclose.
        remember (Sk.sort (ModL.sk (Mod.add_list mds_src))) as sk.
-       assert (Sk.sort (ModL.sk (Mod.add_list mds_tgt)) = sk).
-       { admit "ez". }
-       rewrite H.
-
-       replace (ModL.get_modsem (Mod.add_list mds_src) sk) with
-           (fold_right ModSemL.add (ModSemL.mk [] []) (List.map (fun md => (Mod.lift md).(ModL.get_modsem) sk) mds_src)).
-       2:{ admit "ez". }
-
-       replace (ModL.get_modsem (Mod.add_list mds_tgt) sk) with
-           (fold_right ModSemL.add (ModSemL.mk [] []) (List.map (fun md => (Mod.lift md).(ModL.get_modsem) sk) mds_tgt)).
-       2:{ admit "ez". }
-
+       rewrite ! Mod_add_list_get_modsem.
        eapply Forall2_apply_Forall2 with
            (f := (fun md => (Mod.lift md).(ModL.get_modsem) sk))
            (g := (fun md => (Mod.lift md).(ModL.get_modsem) sk))
            (Q:= ModSemLPair.sim)
          in SIM.
-       2: { i. inv H0. ss. eapply adequacy_lift.
-            eapply sim_modsem. admit "ez". admit "ez". }
-       try rewrite <- Heqsk in *. try rewrite H in *. clear Heqsk H.
+       2: {
+         i. inv H. ss. eapply adequacy_lift. eapply sim_modsem.
+         { etrans; [|eapply Sk.sort_incl]. rewrite <- SKEQ. eapply Mod_list_incl_sk; et. }
+         { eapply Sk.sort_wf. auto. }
+       }
 
+       rewrite SKEQ in *. rewrite <- Heqsk in *. clear Heqsk.
        induction SIM; ss.
-       { econs.
+       { right. econs.
          { instantiate (1:=top2). ss. }
          { ss. }
          { instantiate (1:=top1). ss. }
+         { ss. }
        }
-       { eapply ModSemLPair.add_modsempair; ss.
-         admit "".
-         admit "".
-       }
+       { eapply ModSemLPair.add_modsempair; ss. }
      }
    Qed.
 

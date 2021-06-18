@@ -62,105 +62,6 @@ End W.
 
 
 
-
-(* Section PLAYGROUND. *)
-(*   Variable A B: Type. *)
-(*   Variable left: A -> A -> Prop. *)
-(*   Variable right: B -> B -> Prop. *)
-(*   Inductive _sim (sim: nat -> A -> B -> Prop): nat -> A -> B -> Prop := *)
-(*   | go_left *)
-(*       i0 a0 b0 a1 *)
-(*       i1 *)
-(*       (*** can't choose i1 depending on a1 ***) *)
-(*       (ORD: i1 < i0) *)
-(*       (GO: left a0 a1) *)
-(*       (K: sim i1 a1 b0) *)
-(*     : *)
-(*       _sim sim i0 a0 b0 *)
-(*   | go_right *)
-(*       i0 a0 b0 b1 *)
-(*       i1 *)
-(*       (ORD: i1 < i0) *)
-(*       (GO: right b0 b1) *)
-(*       (K: sim i1 a0 b1) *)
-(*     : *)
-(*       _sim sim i0 a0 b0 *)
-(*   | go_both *)
-(*       i0 a0 b0 i1 a1 b1 *)
-(*       (GO: left a0 a1) *)
-(*       (GO: right b0 b1) *)
-(*       (K: sim i1 a1 b1) *)
-(*     : *)
-(*       _sim sim i0 a1 b1 *)
-(*   . *)
-(* End PLAYGROUND. *)
-(* Reset PLAYGROUND. *)
-(* (*** i1 can't depend on a1, or the internal choices inside "left" ***) *)
-
-
-(* Section PLAYGROUND. *)
-(*   Variable A B: Type. *)
-(*   Variable left: nat -> A -> nat -> A -> Prop. *)
-(*   Variable right: nat -> B -> nat -> B -> Prop. *)
-(*   Variable both: (nat -> A -> B -> Prop) -> (nat -> A -> B -> Prop). *)
-(*   Inductive _sim (sim: nat -> A -> B -> Prop): nat -> A -> B -> Prop := *)
-(*   | go_left *)
-(*       i0 a0 b0 a1 *)
-(*       i1 *)
-(*       (* (ORD: i1 < i0) *) *)
-(*       (GO: left i0 a0 i1 a1) *)
-(*       (K: sim i1 a1 b0) *)
-(*     : *)
-(*       _sim sim i0 a0 b0 *)
-(*   | go_right *)
-(*       i0 a0 b0 b1 *)
-(*       i1 *)
-(*       (* (ORD: i1 < i0) *) *)
-(*       (GO: right i0 b0 i1 b1) *)
-(*       (K: sim i1 a0 b1) *)
-(*     : *)
-(*       _sim sim i0 a0 b0 *)
-(*   | go_left_right *)
-(*       i0 a0 b0 _unused0_ _unused1_ i1 a1 b1 *)
-(*       (GO: left i0 a0 _unused0_ a1) *)
-(*       (GO: right i0 b0 _unused1_ b1) *)
-(*       (K: sim i1 a1 b1) *)
-(*     : *)
-(*       _sim sim i0 a1 b1 *)
-(*   | go_both *)
-(*       i0 a0 b0 *)
-(*       (GO: both sim i0 a0 b0) *)
-(*     : *)
-(*       _sim sim i0 a0 b0 *)
-(*   . *)
-
-(*   Definition sim: _ -> _ -> _ -> Prop := paco3 _sim bot3. *)
-
-(*   Lemma sim_mon (MON: monotone3 both): monotone3 _sim. *)
-(*   Proof. *)
-(*     ii. inv IN. *)
-(*     - econs 1; eauto. *)
-(*     - econs 2; eauto. *)
-(*     - econs 3; eauto. *)
-(*     - econs 4; eauto. *)
-(*   Qed. *)
-
-(* End PLAYGROUND. *)
-
-(* Hint Constructors _sim. *)
-(* Hint Unfold sim. *)
-(* Hint Resolve sim_mon: paco. *)
-
-
-
-
-
-
-
-
-
-
-
 Section SIM.
 
   Context `{Σ: GRA.t}.
@@ -893,20 +794,24 @@ Section SIMMODSEML.
   Variable (ms_src ms_tgt: ModSemL.t).
 
   Let W: Type := (alist mname (Σ * Any.t)) * (alist mname (Σ * Any.t)).
-  Inductive sim: Prop := mk {
+  Inductive _sim: Prop := mk {
     wf: W -> Prop;
     le: W -> W -> Prop;
     le_PreOrder: PreOrder le;
     (*** TODO: incorporate le properly ***)
     sim_fnsems: Forall2 (sim_fnsem wf) ms_src.(ModSemL.fnsems) ms_tgt.(ModSemL.fnsems);
     sim_initial_mrs: wf (ms_src.(ModSemL.initial_mrs), ms_tgt.(ModSemL.initial_mrs));
+    sim_initial_mrs_names: List.map fst ms_src.(ModSemL.initial_mrs) = List.map fst ms_tgt.(ModSemL.initial_mrs);
   }.
+
+  Definition sim: Prop := (~ ModSemL.wf ms_src) \/ _sim.
 
 End SIMMODSEML.
 
 Lemma self_sim_mod `{Σ: GRA.t} `{ns: gnames} (ms: ModSemL.t) (WF: wf_mod ms):
   sim ms ms.
 Proof.
+  right.
   eapply mk with (wf:=fun p => fst p = snd p /\ wf_mrs (List.map fst ms.(ModSemL.initial_mrs)) (fst p)) (le:=top2); ss.
   2: {
     split; auto. ii. eapply in_map_iff in IN. des. subst.
@@ -1170,14 +1075,64 @@ Section ADD.
     * econs 31; eauto.
   Qed.
 
+  (* TODO: Coqlib? *)
+  Lemma nodup_app_l A (l0 l1: list A)
+        (ND: NoDup (l0 ++ l1))
+    :
+      NoDup l0.
+  Proof.
+    induction l0.
+    { econs. }
+    ss. inv ND. econs; et.
+    ii. eapply H1. eapply List.in_or_app. auto.
+  Qed.
+
+  Lemma nodup_app_r A (l0 l1: list A)
+        (ND: NoDup (l0 ++ l1))
+    :
+      NoDup l1.
+  Proof.
+    induction l0; ss. inv ND. auto.
+  Qed.
+
   Lemma add_modsempair (ms_src0 ms_src1 ms_tgt0 ms_tgt1: ModSemL.t)
-        (WFSRC: ModSemL.wf (ModSemL.add ms_src0 ms_src1))
-        (WFTGT: ModSemL.wf (ModSemL.add ms_tgt0 ms_tgt1))
         (SIM0: sim ms_src0 ms_tgt0)
         (SIM1: sim ms_src1 ms_tgt1)
     :
       sim (ModSemL.add ms_src0 ms_src1) (ModSemL.add ms_tgt0 ms_tgt1).
   Proof.
+    destruct SIM0 as [SIM0|SIM0].
+    { left. ii. eapply SIM0. inv H. ss. rewrite ! List.map_app in *.
+      eapply nodup_app_l in wf_fnsems. eapply nodup_app_l in wf_initial_mrs.
+      econs; auto.
+    }
+    destruct SIM1 as [SIM1|SIM1].
+    { left. ii. eapply SIM1. inv H. ss. rewrite ! List.map_app in *.
+      eapply nodup_app_r in wf_fnsems. eapply nodup_app_r in wf_initial_mrs.
+      econs; auto.
+    }
+    destruct (classic (ModSemL.wf (ModSemL.add ms_src0 ms_src1))).
+    2: { left. auto. }
+    rename H into WFSRC.
+    assert (WFTGT: ModSemL.wf (ModSemL.add ms_tgt0 ms_tgt1)).
+    { inv WFSRC. econs.
+      { ss. rewrite List.map_app in *. clear wf_initial_mrs.
+        match goal with
+        | H: NoDup ?l0 |- NoDup ?l1 => replace l1 with l0
+        end; auto. f_equal.
+        { inv SIM0. clear - sim_fnsems. induction sim_fnsems; ss.
+          destruct x, y. inv H. ss. f_equal; ss. }
+        { inv SIM1. clear - sim_fnsems. induction sim_fnsems; ss.
+          destruct x, y. inv H. ss. f_equal; ss. }
+      }
+      { ss. rewrite List.map_app in *. clear wf_fnsems.
+        match goal with
+        | H: NoDup ?l0 |- NoDup ?l1 => replace l1 with l0
+        end; auto.
+        inv SIM0. inv SIM1. f_equal; auto.
+      }
+    }
+    right.
     assert (DISJSRC: forall mn
                             (IN0: (in_dec string_Dec mn (List.map fst (ModSemL.initial_mrs ms_src1)): bool) = true)
                             (IN1: (in_dec string_Dec mn (List.map fst (ModSemL.initial_mrs ms_src0)): bool) = true),
@@ -1246,6 +1201,7 @@ Section ADD.
           eapply DISJTGT; des_sumbool; et. eapply in_map; et.
         }
         auto.
+    - rewrite ! List.map_app. f_equal; auto.
   Qed.
 
 End ADD.
@@ -1745,7 +1701,9 @@ Section SIMMOD.
        Beh.of_program (ModL.compile md_src)
    .
    Proof.
-     inv SIM. inv sim_modsem0. red in sim_sk0.
+     inv SIM. inv sim_modsem0.
+     { i. unfold ModL.compile. eapply ModSemL.compile_not_wf. ii. des; et. }
+     inv H. red in sim_sk0.
      unfold ModL.enclose in *.
 
      eapply adequacy_global; et. exists (OrdArith.add Ord.O Ord.O).
