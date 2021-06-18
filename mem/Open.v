@@ -371,7 +371,7 @@ Section ADQ.
     unfold fun_to_src, UModSem.transl_fun, UModSem.massage_fun, body_to_src.
     ginit. abstr (ktr arg) itr. clear ktr arg. revert_until gstb. gcofix CIH. i.
     ides itr.
-    { steps. gstep. econs. ss. auto. }
+    { steps. }
     { steps. gbase. eapply CIH; et. }
     rewrite <- bind_trigger.
     destruct e; cycle 1.
@@ -387,17 +387,19 @@ Section ADQ.
         - resub. ired_both. gstep; econs; et. i. esplits; et. steps. gbase. eapply CIH; et.
       }
     }
-    destruct u. resub. ired_both. gstep; econs; eauto. i. subst. destruct mrs_tgt1. esplits. steps.
-    gbase. eapply CIH.
+    destruct u. resub. ired_both. unfold unwrapU. des_ifs.
+    { steps. gstep. econs; ss. i. subst. destruct mrs_tgt1. esplits. steps.
+      gbase. eapply CIH. }
+    { gstep; econs; eauto. admit "TODO : define ns well". }
   Unshelve.
     all: try (exact Ord.O).
   Qed.
 
   Lemma my_lemma2
-        umd
+        (umd: UMod.t)
         (IN: In umd umds)
     :
-      ModPair.sim (UMod.transl umd) (SMod.to_src (UMod.massage umd))
+      ModPair.sim (UMod.transl umd) (SMod.to_src (UMod.massage _gstb umd))
   .
   Proof.
     econs; ss.
@@ -408,7 +410,10 @@ Section ADQ.
       eapply Forall2_apply_Forall2.
       { refl. }
       i. subst. unfold map_snd. des_ifs.
-      rr. split; ss. r. ii. subst. ss. esplits; et. eapply my_lemma2_aux.
+      rr. split; ss. r. ii. subst. ss. esplits; et.
+      replace (_gstb sk) with gstb.
+      { eapply my_lemma2_aux. }
+      { admit "TT fix it". }
     }
     { ss. }
     { ss. }
@@ -510,109 +515,6 @@ Section ADQ.
   Let tgt_ms := (ModL.enclose (Mod.add_list (map SMod.to_src kmds ++ map SMod.to_src
                                                  (map (UMod.massage _gstb) umds)))).
 
-  Let ns: gnames := Build_gnames (fun fn => (Mod.add_list ((map SMod.to_src kmds) ++ (map SMod.to_src (map (UMod.massage _gstb) umds))))
-
-
-  (* Require Import SimGlobal. *)
-  Lemma my_lemma2
-    :
-      refines_closed
-        (Mod.add_list ((map SMod.to_src kmds) ++ (map SMod.to_src (map (UMod.massage _gstb) umds))))
-        (Mod.add_list ((map SMod.to_src kmds) ++ (map (UMod.transl) umds)))
-  .
-  Proof.
-    eapply adequacy_hint.
-
-
-    rewrite List.map_map.
-    r. i. eapply SimGlobal.adequacy_global_itree; et.
-    exists 100.
-    ginit.
-    unfold ModSemL.initial_itr, ModSemL.initial_itr_arg. Local Opaque ModSemL.prog. ss.
-    unfold ITree.map. steps.
-    des. esplits; et.
-    { admit "ez". }
-    { admit "ez". }
-    steps.
-    Local Transparent ModSemL.prog.
-    unfold ModSemL.prog at 4.
-    unfold ModSemL.prog at 2.
-    Local Opaque ModSemL.prog.
-    steps. instantiate (1:=300).
-
-    fold src_fns tgt_fns src_ms tgt_ms.
-    hexploit (alist_find_iff "main"). intro T; des.
-    { rewrite NONE. ss. steps. }
-    - rewrite CTX. rewrite CTX0. steps.
-      rewrite <- ! bind_bind.
-      guclo ordC_spec. econs.
-      { instantiate (1:=OrdArith.add 200 100). rewrite <- OrdArith.add_from_nat. ss. refl. }
-      guclo bindC_spec. econs.
-      { refl. instantiate (1:=eq).
-      { grind. }
-      { grind. }
-      { instantiate (1:=50). instantiate (1:=50). Set Printing All.
-      {[econs| |].
-
-      erewrite f_equal2; revgoals.
-      { rewrite <- ! bind_bind. refl.
-
-      match goal with
-      | |- gpaco6 _ _ _ _ _ _ _ _ ?src _ => idtac src
-      end.
-      guclo bindC_spec. econs.
-      { gfinal. right. eapply adequacy_type_aux. ss.
-        unfold initial_r_state, initial_p_state.
-        rewrite initial_mrs_eq. auto. }
-      { i. subst. instantiate (1:=10). steps. }
-
-    2: {
-      Local Transparent ModSemL.prog.
-      unfold ModSemL.prog at 4.
-      unfold ModSemL.prog at 2.
-      Local Opaque ModSemL.prog.
-      ss. steps_strong.
-      esplits; et.
-      { des. split.
-        { inv WF. econs.
-          { rewrite fns_eq. auto. }
-          { pose proof initial_mrs_eq. unfold ms_mid, ms_src in H.
-            rewrite H. auto. }
-        }
-        { ss. rewrite sk_eq. auto. }
-      }
-      steps.
-
-      (* stb main *)
-      hexploit (stb_find_iff "main"). i. des.
-      { unfold ms_src in FINDSRC. rewrite FINDSRC. steps. }
-      unfold stb in SOME.
-      rewrite alist_find_map in SOME. unfold o_map in SOME. des_ifs.
-      destruct f. ss. subst. ss.
-
-      fold ms_src. fold ms_mid.
-      rewrite FINDSRC. rewrite FINDMID. steps.
-      unfold fun_to_src, fun_to_mid, cfun. steps.
-
-      rewrite Any.pair_split. steps.
-      rewrite Any.upcast_downcast. steps.
-
-      guclo ordC_spec. econs.
-      { eapply OrdArith.add_base_l. }
-      guclo bindC_spec. econs.
-      { gfinal. right. eapply adequacy_type_aux. ss.
-        unfold initial_r_state, initial_p_state.
-        rewrite initial_mrs_eq. auto. }
-      { i. subst. instantiate (1:=10). steps. }
-    }
-    { instantiate (1:=O).
-      ss. repeat (rewrite <- OrdArith.add_from_nat). ss.
-      eapply OrdArith.lt_from_nat. lia. }
-    Unshelve.
-    all: try (by exact Ord.O).
-    all: try (by exact 0).
-  Qed.
-
 
 
   Declare Scope l_monad_scope.
@@ -687,10 +589,17 @@ Section ADQ.
         (* instantiate (1:=UModSem.transl_fun_smod mainbody). rewrite in_app_iff. eauto. *)
     }
     etrans.
-    { instantiate (1:=Mod.add_list ((map SMod.to_src kmds) ++ (List.map (UMod.transl) umds))).
-      assert(G:=my_lemma2).
-      r in G. specialize (G (map SMod.to_src kmds)). rewrite <- ! Mod.add_list_app in G.
-      rewrite map_app. et.
+    { instantiate (1:=Mod.add_list ((map SMod.to_src kmds) ++ (List.map (UMod.transl) umds))). eapply adequacy_hint.
+      { admit "". }
+      rewrite ! List.map_app. eapply Forall2_app.
+      { eapply Forall2_apply_Forall2.
+        { instantiate (1:=eq). refl. }
+        { i. subst. eapply ModPair.self_sim. }
+      }
+      { rewrite List.map_map. eapply Forall2_apply_Forall2.
+        { instantiate (1:=eq). refl. }
+        { i. subst. eapply my_lemma2. auto. }
+      }
     }
     rewrite Mod.add_list_app. refl.
   Unshelve.
