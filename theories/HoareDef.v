@@ -193,7 +193,8 @@ Variant hCallE: Type -> Type :=
 
 Definition hEs := (hAPCE +' hCallE +' pE +' eventE).
 
-Definition APC := (trigger hAPC: itree hEs unit).
+(* Definition APC := (trigger hAPC: itree hEs unit). *)
+Notation APC := (trigger hAPC: itree hEs unit).
 (*** TODO: for backward compat. remove this later; ***)
 
 (*** TODO: rename into _hAPC? ***)
@@ -501,6 +502,7 @@ End CANCEL.
 
 End PSEUDOTYPING.
 
+Notation APC := (trigger hAPC: itree hEs unit).
 
 
 
@@ -1211,7 +1213,7 @@ Global Program Instance interp_hAPCE_rdb: red_database (mk_box (@interp_hAPCE)) 
     (mk_box interp_hAPCE_hcall)
     (mk_box interp_hAPCE_triggere)
     (mk_box interp_hAPCE_triggerp)
-    (mk_box interp_hAPCE_triggerp)
+    (mk_box interp_hAPCE_apc)
     (mk_box interp_hAPCE_triggerUB)
     (mk_box interp_hAPCE_triggerNB)
     (mk_box interp_hAPCE_unwrapU)

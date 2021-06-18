@@ -322,7 +322,7 @@ Module MyParam <: PARAM.
   Definition d: Ord.t := 50%ord.
   Definition c: Ord.t := (d + 30)%ord.
   Definition e: Ord.t := 50%ord.
-  Definition f: Ord.t := (d + 10)%ord.
+  Definition f: Ord.t := (d + 20)%ord.
 End MyParam.
 
 Module C := (Construction MyParam).
@@ -517,6 +517,7 @@ Section CANCEL.
     steps. rewrite FINDMID. unfold fun_to_mid. steps.
     rewrite Any.pair_split. steps.
     rewrite Any.upcast_downcast. steps.
+    unfold interp_hEs_mid. steps.
     guclo ordC_spec. econs.
     { eapply OrdArith.add_base_l. }
     guclo ordC_spec. econs.
@@ -525,8 +526,7 @@ Section CANCEL.
     { rewrite OrdArith.add_assoc. refl. }
     rewrite idK_spec at 1.
     guclo bindC_spec. econs.
-    { unfold APC. gstep. mred. eapply simg_chooseR; et; [_ord_step|]. i. steps.
-      guclo ordC_spec. econs.
+    { guclo ordC_spec. econs.
       { instantiate (1:=(C.myG x1 x3 + C.d)%ord).
         rewrite <- C.my_thm3; et.
         rewrite <- C.my_thm1; et.
@@ -554,18 +554,18 @@ Section CANCEL.
     ,
       simg (fun (st_src1: r_state * p_state * unit) '(st_tgt1, _) => st_tgt1 = st_tgt0)
            (C.myF o0)%ord (Ret (st_src0, tt))
-           (EventsL.interp_Es p_mid (transl_all mn (interp_hCallE_mid stb (ord_pure o0) APC)) st_tgt0)
+           (EventsL.interp_Es p_mid (transl_all mn (interp_hEs_mid stb (ord_pure o0) APC)) st_tgt0)
   .
   Proof.
     ginit.
     { i. eapply cpn6_wcompat; eauto with paco. }
-    i. unfold APC.
+    i.
     guclo ordC_spec. econs.
     { rewrite <- C.my_thm1. refl. }
     unfold C.c.
     guclo ordC_spec. econs.
     { rewrite <- OrdArith.add_assoc. refl. }
-    steps.
+    unfold interp_hEs_mid. steps.
     guclo ordC_spec. econs.
     { etrans; [|eapply OrdArith.add_base_l]. eapply add_le_le; [|refl].
       instantiate (1:=C.myG o0 x).
