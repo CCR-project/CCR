@@ -33,6 +33,22 @@ Qed.
 
 Global Program Instance Forall2_PreOrder `{PreOrder A R}: PreOrder (Forall2 R).
 
+Lemma flat_map_map A B C (f: A -> B) (g: B -> list C) (l: list A)
+  :
+    flat_map g (map f l) = flat_map (g ∘ f) l.
+Proof.
+  induction l; ss. f_equal; auto.
+Qed.
+
+Lemma alist_find_map_snd K R `{RD_K: @RelDec K R} A B (f: A -> B) (l: alist K A) k
+  :
+    alist_find k (map (map_snd f) l)
+    =
+    o_map (alist_find k l) f.
+Proof.
+  induction l; ss. destruct a. ss. uo. des_ifs.
+Qed.
+
 
 
 
@@ -65,31 +81,6 @@ Section ADQ.
   Let kmss: list SModSem.t := Eval red in (_kmss sk_link).
   Let umss: list UModSem.t := Eval red in (_umss sk_link).
   Let gstb: list (gname * fspec) := Eval red in (_gstb sk_link).
-  (* Let gstb: list (gname * fspec) := *)
-  (*   (flat_map (List.map (map_snd fsb_fspec) ∘ SModSem.fnsems) kmss) *)
-  (*     ++ (flat_map (List.map (map_snd (fun _ => fspec_trivial2)) ∘ UModSem.fnsems) umss). *)
-
-  (* Lemma resub_l *)
-  (*       (E1 E2: Type -> Type) *)
-  (*       `{E1 -< E} *)
-  (*       `{E2 -< E} *)
-  (*       T (e: E1 T) *)
-  (*   : *)
-  (*     subevent (F:=E) _ (@inl1 E1 E2 _ e)%sum = subevent _ e *)
-  (* . *)
-  (* Proof. refl. Qed. *)
-
-  (* Lemma resub_r *)
-  (*       (E1 E2: Type -> Type) *)
-  (*       `{E1 -< E} *)
-  (*       `{E2 -< E} *)
-  (*       T (e: E2 T) *)
-  (*   : *)
-  (*     (* subevent (F:=E) _ (@inr1 E1 E2 _ e)%sum = subevent _ e *) *)
-  (*     subevent _ (@inr1 E1 E2 _ e)%sum = subevent _ e *)
-  (* . *)
-  (* Proof. refl. Qed. *)
-
 
   Lemma add_list_fnsems
         mds ske
@@ -263,7 +254,6 @@ Section ADQ.
   Qed.
 
   Let ns := mk_sk_gnames (fun sk => mk_gnames (fun fn => is_some (alist_find fn (_gstb sk)))).
-
   Local Existing Instances ns.
 
   Lemma my_lemma2_aux
@@ -328,29 +318,6 @@ Section ADQ.
   Ltac steps := HoareDef.steps.
 
 
-  Lemma flat_map_map A B C (f: A -> B) (g: B -> list C) (l: list A)
-    :
-      flat_map g (map f l) = flat_map (g ∘ f) l.
-  Proof.
-    induction l; ss. f_equal; auto.
-  Qed.
-
-  (* Let sk_eq *)
-  (*   : *)
-  (*     (ModL.sk (Mod.add_list (map SMod.to_src kmds ++ map UMod.transl umds))) *)
-  (*     = *)
-  (*     (ModL.sk *)
-  (*        (Mod.add_list *)
-  (*           (map SMod.to_src kmds ++ map SMod.to_src (map (UMod.massage _gstb) umds)))). *)
-  (* Proof. *)
-  (*   rewrite ! Mod.add_list_sk. unfold Sk.add, Sk.unit. *)
-  (*   rewrite <- ! (@fold_right_app_flat_map _ _ (Mod.sk)). *)
-  (*   rewrite ! flat_map_app. f_equal. clear. *)
-  (*   rewrite ! flat_map_map. eapply flat_map_ext. i. ss. *)
-  (* Qed. *)
-
-
-
   Declare Scope l_monad_scope.
   Local Open Scope l_monad_scope.
   Notation "'do' X <- A ; B" := (List.flat_map (fun X => B) A) : l_monad_scope.
@@ -390,15 +357,6 @@ Section ADQ.
 
   Hypothesis WFR: URA.wf (List.fold_left (⋅) (List.map (SModSem.initial_mr) kmss) ε).
   (* Hypothesis MAINM: In (SMod.main mainpre mainbody) kmds. *)
-
-  Lemma alist_find_map_snd A B (f: A -> B) l (k: string)
-    :
-      alist_find k (map (map_snd f) l)
-      =
-      o_map (alist_find k l) f.
-  Proof.
-    induction l; ss. destruct a. ss. uo. des_ifs.
-  Qed.
 
   Theorem adequacy_open:
     refines_closed (Mod.add_list (List.map (SMod.to_tgt _gstb) kmds ++ List.map UMod.transl umds))
