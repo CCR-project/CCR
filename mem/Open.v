@@ -588,7 +588,8 @@ Section ADQ.
     { instantiate (1:=Mod.add_list ((map SMod.to_src kmds) ++ (List.map (UMod.transl) umds))). eapply adequacy_hint.
       { clear. i. unfold ns. ss. unfold _gstb.
         rewrite Mod.add_list_app in SOME. ss.
-        rewrite ! add_list_fnsems in SOME. admit "alist flat_map ...". }
+        unfold _kmss, _umss. clear - SOME.
+        admit "alist flat_map ...". }
       rewrite ! List.map_app. eapply Forall2_app.
       { eapply Forall2_apply_Forall2.
         { instantiate (1:=eq). refl. }
