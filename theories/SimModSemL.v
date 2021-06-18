@@ -161,9 +161,6 @@ End W.
 
 
 
-Class gnames := { gnames_contents :> gname -> Prop }.
-Coercion gnames_contents: gnames >-> Funclass.
-
 Section SIM.
 
   Context `{Σ: GRA.t}.

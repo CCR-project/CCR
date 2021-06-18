@@ -37,8 +37,6 @@ Local Open Scope nat_scope.
 
 Require Import SimModSemL.
 
-Definition top_gnames := Build_gnames top1.
-
 Section SIM.
 
   Context `{Σ: GRA.t}.
@@ -1045,20 +1043,20 @@ End ADQ.
 Module ModPair.
 Section SIMMOD.
    Context `{Σ: GRA.t}.
-   Context `{ns: gnames}.
+   Context `{ns: sk_gnames}.
    Variable (md_src md_tgt: Mod.t).
    Inductive sim: Prop := mk {
      sim_modsem:
        forall sk
               (SKINCL: Sk.incl md_tgt.(Mod.sk) sk)
               (SKWF: Sk.wf sk),
-         <<SIM: ModSemPair.sim (md_src.(Mod.get_modsem) sk) (md_tgt.(Mod.get_modsem) sk)>>;
+         <<SIM: ModSemPair.sim (ns:=sk_gnames_contents sk) (md_src.(Mod.get_modsem) sk) (md_tgt.(Mod.get_modsem) sk)>>;
      sim_sk: <<SIM: md_src.(Mod.sk) = md_tgt.(Mod.sk)>>;
    }.
 
 End SIMMOD.
 
-Lemma self_sim `{Σ: GRA.t} `{ns: gnames} (md: Mod.t):
+Lemma self_sim `{Σ: GRA.t} `{ns: sk_gnames} (md: Mod.t):
   sim md md.
 Proof.
   econs; et. i.
@@ -1205,11 +1203,11 @@ Section SIMMOD.
     i. ss. des; ss; auto.
   Qed.
 
-  Theorem adequacy_hint_aux `{ns: gnames} (md_src md_tgt: Mod.t) ctx
+  Theorem adequacy_hint_aux `{ns: sk_gnames} (md_src md_tgt: Mod.t) ctx
           (NAMESPACE:
-             forall fn
-                    (SOME: is_some (alist_find fn (ModSemL.fnsems (ModL.get_modsem (ModL.add (Mod.add_list ctx) md_src) (Sk.sort (ModL.sk (ModL.add (Mod.add_list ctx) md_src))))))),
-               ns fn)
+             forall sk fn
+                    (SOME: is_some (alist_find fn (ModSemL.fnsems (ModL.get_modsem (ModL.add (Mod.add_list ctx) md_src) sk)))),
+               sk_gnames_contents sk fn)
            (SIM: ModPair.sim md_src md_tgt)
      :
        refines_closed (ModL.add (Mod.add_list ctx) md_tgt) (ModL.add (Mod.add_list ctx) md_src)
@@ -1321,11 +1319,11 @@ Section SIMMOD.
      ss.
    Qed.
 
-   Theorem adequacy_hint `{ns: gnames} mds_src mds_tgt
-           (NAMESPACE:
-              forall md fn
-                     (IN: List.In md mds_src)
-                     (SOME: is_some (alist_find fn (ModSem.fnsems (Mod.get_modsem md (Sk.sort (ModL.sk (Mod.add_list mds_src))))))), ns fn)
+   Theorem adequacy_hint `{ns: sk_gnames} mds_src mds_tgt
+          (NAMESPACE:
+             forall sk fn
+                    (SOME: is_some (alist_find fn (ModSemL.fnsems (ModL.get_modsem (Mod.add_list mds_src) sk)))),
+               sk_gnames_contents sk fn)
            (SIM: List.Forall2 ModPair.sim mds_src mds_tgt)
      :
        refines_closed (Mod.add_list mds_tgt) (Mod.add_list mds_src).
@@ -1355,7 +1353,7 @@ Section SIMMOD.
      { admit "". }
    Admitted.
 
-   Local Existing Instances top_gnames.
+   Local Existing Instances top_sk_gnames.
 
    Theorem adequacy_local md_src md_tgt
            (SIM: ModPair.sim md_src md_tgt)

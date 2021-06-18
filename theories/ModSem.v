@@ -1409,3 +1409,13 @@ ys + (xs + src)
    Lemma refines_close: refines <2= refines_closed.
    Proof. ii. specialize (PR nil). ss. unfold Mod.add_list in *. ss. rewrite ! ModL.add_empty_l in PR. eauto. Qed.
 End REFINE.
+
+Class gnames := mk_gnames { gnames_contents :> gname -> Prop }.
+Coercion gnames_contents: gnames >-> Funclass.
+
+Definition top_gnames := mk_gnames top1.
+
+Class sk_gnames := mk_sk_gnames { sk_gnames_contents :> Sk.t -> gnames }.
+Coercion sk_gnames_contents: Sk.t >-> gnames.
+
+Definition top_sk_gnames := mk_sk_gnames (fun _ => top_gnames).
