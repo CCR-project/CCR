@@ -646,17 +646,30 @@ Section CANCEL.
     ,
       simg eq
            (formula o0 + 50)%ord
-           (EventsL.interp_Es p_src (transl_all mn (interp_hCallE_src body)) st_src0)
-           (EventsL.interp_Es p_mid (transl_all mn (interp_hCallE_mid stb o0 body)) st_tgt0)
+           (EventsL.interp_Es p_src (transl_all mn (interp_hEs_src body)) st_src0)
+           (EventsL.interp_Es p_mid (transl_all mn (interp_hEs_mid stb o0 body)) st_tgt0)
   .
   Proof.
     ginit.
     { i. eapply cpn6_wcompat; eauto with paco. }
-    gcofix CIH. i. ides body.
+    gcofix CIH. i. unfold interp_hEs_mid.
+    ides body.
     { steps. }
     { steps. gbase. eapply CIH; ss. }
 
-    destruct e; cycle 1.
+    destruct e.
+    { rewrite <- bind_trigger. resub. ired_both. unfold handle_hAPCE_src. ired_both.
+      seal_left. destruct h. ired_both. (_step ltac:(idtac)). unseal_left.
+      destruct o0; cbn; cycle 1.
+      - steps. steps_strong. exists tt. steps. rewrite idK_spec2 at 1.
+        guclo bindC_spec. econs.
+        { gfinal. right. eapply paco6_mon. { eapply adequacy_type_aux__APC. } ii; ss. }
+      - steps. steps_strong. exists tt. steps. rewrite idK_spec2 at 1.
+        guclo bindC_spec. econs.
+        { gfinal. right. eapply paco6_mon. { eapply adequacy_type_aux__APC. } ii; ss. }
+        {
+    }
+    destruct s; cycle 1.
     { rewrite <- bind_trigger. resub. steps.
       destruct s; ss.
       { destruct st_src0 as [rst_src0 pst_src0]; ss.
@@ -685,6 +698,7 @@ Section CANCEL.
       rewrite FINDMID. unfold fun_to_mid. steps.
       rewrite Any.pair_split. steps.
       rewrite Any.upcast_downcast. steps.
+      unfold interp_hEs_mid. set (trigger hAPC) as tmp. steps.
       guclo ordC_spec. econs.
       { eapply OrdArith.add_base_l. }
       rewrite idK_spec2 at 1.

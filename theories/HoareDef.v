@@ -1681,6 +1681,18 @@ Proof.
   repeat rewrite interp_trigger. grind.
 Qed.
 
+Lemma interp_src_hapc
+      (R: Type)
+      (i: hAPCE R)
+  :
+    (interp_hEs_src (trigger i))
+    =
+    ((handle_hAPCE_src i) >>= (fun r => tau;; Ret r)).
+Proof.
+  unfold interp_hEs_src in *.
+  repeat rewrite interp_trigger. grind.
+Qed.
+
 Lemma interp_src_triggerUB
       (R: Type)
   :
@@ -1779,7 +1791,7 @@ Global Program Instance interp_hEs_src_rdb: red_database (mk_box (@interp_hEs_sr
     (mk_box interp_src_hcall)
     (mk_box interp_src_triggere)
     (mk_box interp_src_triggerp)
-    (mk_box interp_src_triggerp)
+    (mk_box interp_src_hapc)
     (mk_box interp_src_triggerUB)
     (mk_box interp_src_triggerNB)
     (mk_box interp_src_unwrapU)
