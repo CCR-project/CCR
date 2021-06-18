@@ -897,21 +897,21 @@ End TEST.
 
 Ltac _harg_tac := prep; eapply harg_clo; i.
 
-Ltac _hcall_tac x o mr_src1 fr_src1 rarg_src := prep; eapply (@hcall_clo _ mr_src1 fr_src1 rarg_src o _ x); [|eapply OrdArith.lt_from_nat; lia|..].
+Ltac _hcall_tac x o mr_src1 fr_src1 rarg_src := prep; eapply (@hcall_clo _ _ mr_src1 fr_src1 rarg_src o _ x); [|eapply OrdArith.lt_from_nat; lia|..].
 
-Ltac _hret_tac mr_src1 rret_src := prep; eapply (@hret_clo _ mr_src1 rret_src); [eapply OrdArith.lt_from_nat; lia|..].
+Ltac _hret_tac mr_src1 rret_src := prep; eapply (@hret_clo _ _ mr_src1 rret_src); [eapply OrdArith.lt_from_nat; lia|..].
 
 Require Import TODOYJ.
 
 Ltac astep_full _fn _args _next _n1 :=
-  eapply (@APC_step_clo _ _fn _args _next _n1);
+  eapply (@APC_step_clo _ _ _fn _args _next _n1);
   [(try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; lia)]))|
    (try by (stb_tac; refl))|
    (eapply OrdArith.lt_from_nat; lia)|
   ].
 
 Ltac astep _fn _args :=
-  eapply (@APC_step_clo _ _fn _args);
+  eapply (@APC_step_clo _ _ _fn _args);
   [(try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r; eapply Nat.lt_succ_diag_r)]))|
    (try by (stb_tac; refl))|
    (eapply OrdArith.lt_from_nat; eapply Nat.lt_succ_diag_r)|
@@ -928,7 +928,7 @@ Ltac astop :=
   [(try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r; eapply Nat.lt_succ_diag_r)]))|].
 
 Ltac astart _at_most :=
-  eapply (@APC_start_clo _ _at_most);
+  eapply (@APC_start_clo _ _ _at_most);
   [eauto with ord_kappa|
    (try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r; eapply Nat.lt_succ_diag_r)]))|
   ]
@@ -1019,13 +1019,13 @@ Ltac init :=
 Ltac harg :=
   let PRE := constr:("PRE") in
   let INV := constr:("INV") in
-  eapply (@harg_clo _ PRE INV);
+  eapply (@harg_clo _ _ PRE INV);
   [eassumption
   |
   ]; i.
 
 Tactic Notation "hret" uconstr(a) :=
-  eapply (@hret_clo _ _ a); unshelve_goal;
+  eapply (@hret_clo _ _ _ a); unshelve_goal;
   [eauto with ord_step
   |eassumption
   |
@@ -1037,7 +1037,7 @@ Tactic Notation "hcall" uconstr(o) uconstr(x) uconstr(a) "with" constr(Hns) :=
   let POST := get_fresh_name_tac "POST" in
   let INV := get_fresh_name_tac "INV" in
   let Hns := select_ihyps Hns in
-  eapply (@hcall_clo _ Hns POST INV o _ x _ a);
+  eapply (@hcall_clo _ _ Hns POST INV o _ x _ a);
   unshelve_goal;
   [eassumption
   |
@@ -1051,7 +1051,7 @@ Tactic Notation "hcall_weaken" uconstr(fsp) uconstr(o) uconstr(x) uconstr(a) "wi
   let POST := get_fresh_name_tac "POST" in
   let INV := get_fresh_name_tac "INV" in
   let Hns := select_ihyps Hns in
-  eapply (@hcall_clo_weaken _ Hns POST INV _ _ fsp o _ x _ a);
+  eapply (@hcall_clo_weaken _ _ Hns POST INV _ _ fsp o _ x _ a);
   unshelve_goal;
   [
   |eassumption
