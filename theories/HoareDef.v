@@ -41,6 +41,9 @@ Set Implicit Arguments.
 (* Notation "☃ y" := (@contents_of _ y _) (at level 60, only printing). (** ☁☞ **) *)
 (* Goal forall x, 5 + 5 = x. i. hide 5. cbn. hide_with MYNAME x. unhide x. unhide _SEAL. cbn. Abort. *)
 
+(*** TODO: move to ITreelib, and replace raw definitions with this ***)
+Definition trivial_Handler `{E -< F}: Handler E F := fun T X => trigger X.
+
 
 
 Arguments transl_all {Σ} _%string_scope {T}%type_scope _%itree_scope. (*** TODO: move to ModSem ***)
@@ -179,14 +182,21 @@ End PROOF.
 (* Definition map_fst A0 A1 B (f: A0 -> A1): (A0 * B) -> (A1 * B) := fun '(a, b) => (f a, b). *)
 (* Definition map_snd A B0 B1 (f: B0 -> B1): (A * B0) -> (A * B1) := fun '(a, b) => (a, f b). *)
 
+Variant hAPCE: Type -> Type :=
+| hAPC: hAPCE unit
+.
+
 Variant hCallE: Type -> Type :=
 | hCall (tbr: bool) (fn: gname) (varg_src: Any_src): hCallE Any_src
 (*** tbr == to be removed ***)
 .
 
-Notation Es' := (hCallE +' pE +' eventE).
+Definition Esh := (hAPCE +' hCallE +' pE +' eventE).
 
-Program Fixpoint _APC (at_most: Ord.t) {wf Ord.lt at_most}: itree Es' unit :=
+Definition APC := (trigger hAPC: itree Esh unit).
+(*** TODO: for backward compat. remove this later; ***)
+
+Program Fixpoint _APC (at_most: Ord.t) {wf Ord.lt at_most}: itree (hCallE +' pE +' eventE) unit :=
   break <- trigger (Choose _);;
   if break: bool
   then Ret tt
@@ -202,12 +212,6 @@ Qed.
 Next Obligation.
   eapply Ord.lt_well_founded.
 Qed.
-
-Definition APC: itree Es' unit :=
-  at_most <- trigger (Choose _);;
-  guarantee(at_most < kappa)%ord;;;
-  _APC at_most
-.
 
 Lemma unfold_APC:
   forall at_most, _APC at_most =
@@ -242,14 +246,14 @@ Section CANCEL.
 
   Record fspecbody: Type := mk_specbody {
     fsb_fspec:> fspec;
-    fsb_body: Any.t -> itree (hCallE +' pE +' eventE) Any.t;
+    fsb_body: Any.t -> itree Esh Any.t;
   }
   .
 
   Definition mk_tspecbody {X AA AR: Type}
              (precond: X -> AA -> Any_tgt -> ord -> iProp)
              (postcond: X -> AR -> Any_tgt -> iProp)
-             (body: AA -> itree (hCallE +' pE +' eventE) AR)
+             (body: AA -> itree Esh AR)
     : fspecbody :=
     mk_specbody
       (mk precond postcond)
@@ -284,6 +288,10 @@ Section CANCEL.
   (*** TODO: try above idea; if it fails, document it; and refactor below with alist ***)
 
   Variable stb: list (gname * fspec).
+
+  Definition handle_hAPCE_src: hAPCE ~> itree Es :=
+    fun _ hAPC => tau;; trigger (Choose _)
+  .
 
   Definition handle_hCallE_src: hCallE ~> itree Es :=
     fun _ '(hCall tbr fn varg_src) =>
