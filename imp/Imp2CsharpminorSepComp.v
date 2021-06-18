@@ -211,24 +211,6 @@ Section PROOFALL.
     :
       <<COMPLIST: compile_list (src_h :: src_t) (tgt_h :: tgt_t)>>.
 
-  Definition fold_left_option {T} f (t : list T) (opth : option T) :=
-    fold_left
-      (fun opt s2 => match opt with | Some s1 => f s1 s2 | None => None end)
-      t opth.
-
-  Lemma fold_left_option_None {T} :
-    forall f (l : list T), fold_left_option f l None = None.
-  Proof.
-    intros f. induction l; ss; clarify.
-  Qed.
-
-  Definition link_imp_list src_list :=
-    match src_list with
-    | [] => None
-    | src_h :: src_t =>
-      fold_left_option link_imp src_t (Some src_h)
-    end.
-
   Definition link_csm_list (tgt_list : list (Csharpminor.program)) :=
     match tgt_list with
     | [] => None

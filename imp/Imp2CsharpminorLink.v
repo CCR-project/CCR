@@ -20,7 +20,7 @@ Proof.
   all: right; intros p; apply pair_equal_spec in p; destruct p; clarify.
 Qed.
 
-Section Link.
+Section LINK.
 
   Variable src1 : Imp.programL.
   Variable src2 : Imp.programL.
@@ -100,4 +100,72 @@ Section Link.
     else None
   .
 
-End Link.
+End LINK.
+
+
+
+Section LINKLIST.
+
+  Definition fold_left_option {T} f (t : list T) (opth : option T) :=
+    fold_left
+      (fun opt s2 => match opt with | Some s1 => f s1 s2 | None => None end)
+      t opth.
+
+  Lemma fold_left_option_None {T} :
+    forall f (l : list T), fold_left_option f l None = None.
+  Proof.
+    intros f. induction l; ss; clarify.
+  Qed.
+
+  Definition link_imp_list src_list :=
+    match src_list with
+    | [] => None
+    | src_h :: src_t =>
+      fold_left_option link_imp src_t (Some src_h)
+    end.
+
+End LINKLIST.
+
+
+
+
+
+Section PROOF.
+
+  Import Permutation.
+
+  Definition wf_prog_perm (src: Imp.programL) :=
+    <<WFPROG: Permutation
+                ((List.map fst src.(prog_varsL)) ++ (List.map (compose fst snd) src.(prog_funsL)))
+                (List.map fst src.(defsL))>>.
+
+  Definition wf_prog_gvar (src: Imp.programL) :=
+    <<WFPROG2 : forall gn gv, In (gn, Sk.Gvar gv) (Sk.sort (defsL src)) -> In (gn, gv) (prog_varsL src)>>.
+
+  Definition wf_prog src := wf_prog_perm src /\ wf_prog_gvar src.
+
+  Lemma lifted_then_wf :
+    forall (src: Imp.program), <<LIFTWF: wf_prog (lift src)>>.
+  Proof.
+    i. unfold lift. split.
+    - unfold wf_prog_perm. ss. unfold defs. rewrite map_app. rewrite! List.map_map. red. unfold compose. ss.
+      match goal with
+      | [ |- Permutation (?lv1 ++ ?lf1) (?lf2 ++ ?lv2)] => assert (FUNS: lf1 = lf2)
+      end.
+      { remember (prog_funs src) as l. clear Heql src. induction l; ss; clarify.
+        rewrite IHl. f_equal. destruct a. ss. }
+      match goal with
+      | [ |- Permutation (?lv1 ++ ?lf1) (?lf2 ++ ?lv2)] => assert (VARS: lv1 = lv2)
+      end.
+      { remember (prog_vars src) as l. clear Heql FUNS src. induction l; ss; clarify.
+        rewrite IHl. f_equal. destruct a. ss. }
+      rewrite FUNS; clear FUNS. rewrite VARS; clear VARS. apply Permutation_app_comm.
+    - unfold wf_prog_gvar. ss. red. unfold defs. i. apply Sk.sort_incl_rev in H.
+      apply in_app_or in H. des.
+      + apply Coqlib.list_in_map_inv in H. des. destruct x. ss.
+      + apply Coqlib.list_in_map_inv in H. des. destruct x. clarify.
+  Qed.
+
+
+
+End PROOF.
