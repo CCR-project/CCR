@@ -1,4 +1,4 @@
-Require Import NewStackHeader NewStack2 NewStack3B HoareDef SimModSem.
+Require Import NewStack2 NewStack3B HoareDef SimModSem.
 Require Import Coqlib.
 Require Import Universe.
 Require Import Skeleton.
@@ -56,7 +56,7 @@ Section SIMMODSEM.
   .
 
   Variable global_stb: list (string * fspec).
-  Hypothesis STBINCL: stb_incl (KDebugStb ++ StackStb) global_stb.
+  Hypothesis STBINCL: stb_incl (StackStb) global_stb.
 
   Lemma _is_stack_wf
         h stk
@@ -160,14 +160,8 @@ Section SIMMODSEM.
         }
 
         mDesOwn "O".
-        acatch.
-        { eapply STBINCL. stb_tac; ss. }
-        steps. hcall _ _ _ with "O"; auto.
-        { iModIntro. iSplitL; ss; et. }
-        { esplits; ss; et. eauto with ord_step. }
-        fold wf. steps. astop. steps. force_l. esplits. steps. hret _; ss.
-        { iModIntro. iDestruct "POST" as "[% %]". subst. iFrame; ss; et. repeat iSplit; ss; et.
-          iExists _. iPureIntro. esplits; ss; et. right. inv PR;ss. }
+        astop. steps. force_l. esplits. steps. hret _; ss.
+        { iModIntro. iFrame; ss; et. iSplits; ss; et. iPureIntro. right. inv PR; ss. }
     }
     econs; ss.
     { unfold NewStack2.push_body, cfun2, cfun. init. harg. fold wf. des_ifs_safe. mDesAll. des; clarify.
@@ -186,19 +180,15 @@ Section SIMMODSEM.
         eapply Ag.extends in EXT; subst; et. eapply Opt.wf; ss; et. rewrite <- WF0; et. }
       hexploit (SIM h); et. intro T; des; [|by clarify]. rewrite B in *.
       apply some_injective in SRC. apply (@Ag.ag_inj _ P P0) in SRC. subst. ss. rewrite TGT. steps.
-      astart 1. acatch; ss.
-      { eapply STBINCL. stb_tac; ss. }
+      astart 1. astop.
       assert(SIM0: sim (stk_res0) (<[h:=x :: stk]> stk_mgr0)).
       { replace stk_res0 with (<[h:=Some (Ag.ag P0)]>stk_res0); cycle 1.
         { extensionality h0. unfold insert, fn_insert. des_ifs. }
         eapply sim_update; et.
       }
       mDesOwn "O".
-      steps. hcall _ _ _ with "O"; auto.
-      { iModIntro. iSplitL; ss; et. }
-      { esplits; ss; et. eauto with ord_step. }
-      fold wf. steps. astop. steps. force_l. esplits. steps. hret _; ss.
-      { iModIntro. iDestruct "POST" as "[% %]". subst. iFrame; ss; et. }
+      steps. force_l. esplits. steps. hret _; ss.
+      { iModIntro. iFrame; ss; et. }
     }
   Unshelve.
     all: ss.
@@ -214,7 +204,7 @@ Section SIMMOD.
   Context `{@GRA.inG stkRA Σ}.
 
   Variable global_stb: Sk.t -> list (string * fspec).
-  Hypothesis STBINCL: forall sk, stb_incl (KDebugStb ++ StackStb) (global_stb sk).
+  Hypothesis STBINCL: forall sk, stb_incl (StackStb) (global_stb sk).
 
   Theorem correct: ModPair.sim (NewStack3B.Stack global_stb) (NewStack2.Stack).
   Proof.

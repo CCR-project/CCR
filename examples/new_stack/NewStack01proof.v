@@ -1,4 +1,4 @@
-Require Import NewStackHeader NewStack0 NewStack1 HoareDef SimModSem.
+Require Import NewStack0 NewStack1 HoareDef SimModSem.
 Require Import Coqlib.
 Require Import Universe.
 Require Import Skeleton.
@@ -50,7 +50,7 @@ Section SIMMODSEM.
   .
 
   Variable global_stb: list (string * fspec).
-  Hypothesis STBINCL: stb_incl (DebugStb ++ StackStb ++ MemStb) global_stb.
+  Hypothesis STBINCL: stb_incl (StackStb ++ MemStb) global_stb.
 
   Ltac renamer :=
     match goal with
@@ -170,22 +170,14 @@ Section SIMMODSEM.
         post_call. steps.
 
         kstop. steps. rewrite Any.upcast_downcast. steps. renamer.
-        destruct (alist_find "debug" (DebugStb ++ StackStb ++ MemStb)) eqn:U; cycle 1.
-        { exfalso. stb_tac. ss. }
-        dup U. revert U. stb_tac. clarify. i.
-        apply STBINCL in U. rewrite U. steps.
 
         destruct (stk_mgr1 !! handle) eqn:V.
         { mAssertPure False; ss. iDestruct (big_sepM_lookup_acc with "SIM") as "[B C]"; et.
           iDestruct "B" as (y) "[SIM B]".
           iApply (points_to_disj with "POST1 SIM"). }
-
-        hcall _ _ _ with "SIM POST1 A"; ss; et.
+        
+        hret _; ss.
         { iModIntro. iSplits; ss; et. iApply big_sepM_insert; ss. iFrame. iExists _; ss. iFrame. }
-        { ss. }
-        steps.
-
-        hret _; ss. iModIntro. iSplitL; ss.
     }
     econs; ss.
     { unfold pushF. trivial_init. fold wf. mDesAll; des; subst. ss.
@@ -228,25 +220,16 @@ Section SIMMODSEM.
 
       kstop. steps. rewrite Any.upcast_downcast. steps.
 
-      destruct (alist_find "debug" (DebugStb ++ StackStb ++ MemStb)) eqn:U; cycle 1.
-      { exfalso. stb_tac. ss. }
-      dup U. revert U. stb_tac. clarify. i.
-      apply STBINCL in U. rewrite U. steps.
-
       destruct (stk_mgr1 !! handle) eqn:V.
       { mAssertPure False; ss. iDestruct (big_sepM_lookup_acc with "SIM") as "[B C]"; et.
         iDestruct "B" as (y) "[SIM B]". iApply (points_to_disj with "POST3 SIM"). }
 
-      hcall _ _ _ with "-"; ss; et.
+      hret _; ss.
       { iModIntro. iSplits; ss; et.
         iApply big_sepM_insert; ss. iFrame. iExists _; ss. iFrame.
         iExists _, _. iFrame. iSplit; ss. erewrite points_to_split with (hd:=Vint z) (tl:=[hd]).
         iSplitL "POST1"; et.
       }
-      { ss. }
-      steps.
-
-      hret _; ss. iModIntro. iSplitL; ss.
     }
   Unshelve.
     all: ss.
@@ -262,7 +245,7 @@ Section SIMMOD.
   Context `{@GRA.inG memRA Σ}.
 
   Variable global_stb: Sk.t -> list (string * fspec).
-  Hypothesis STBINCL: forall sk, stb_incl (DebugStb ++ StackStb ++ MemStb) (global_stb sk).
+  Hypothesis STBINCL: forall sk, stb_incl (StackStb ++ MemStb) (global_stb sk).
 
   Theorem correct: ModPair.sim (NewStack1.Stack global_stb) NewStack0.Stack.
   Proof.

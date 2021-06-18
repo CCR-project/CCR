@@ -45,7 +45,6 @@ Section PROOF.
   (*   match stk with *)
   (*   | x :: stk' =>  *)
   (*     stk_mgr(handle) := Some stk'; *)
-  (*     debug(false, x); *)
   (*     return x *)
   (*   | [] => return -1 *)
   (*   end *)
@@ -58,7 +57,6 @@ Section PROOF.
       match stk0 with
       | x :: stk1 =>
         pput (<[handle:=stk1]> stk_mgr0);;;
-        trigger (Call "debug" ([Vint 0; Vint x])↑);;;
         Ret (Vint x)
       | _ => Ret (Vint (- 1))
       end
@@ -67,7 +65,6 @@ Section PROOF.
   (* def push(handle: Ptr, x: Int64): Unit *)
   (*   let stk := unwrap(stk_mgr(handle)); *)
   (*   stk_mgr(handle) := Some (x :: stk); *)
-  (*   debug(true, x); *)
   (*   () *)
 
   Definition push_body: list val -> itree Es val :=
@@ -76,7 +73,6 @@ Section PROOF.
       stk_mgr0 <- pget;;
       stk0 <- (stk_mgr0 !! handle)?;;
       pput (<[handle:=(x :: stk0)]> stk_mgr0);;;
-      trigger (Call "debug" ([Vint 1; Vint x]↑));;;
       Ret Vundef
   .
 

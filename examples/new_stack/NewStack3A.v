@@ -10,7 +10,6 @@ Require Import Logic.
 Require Import Mem1.
 Require Import TODOYJ.
 Require Import AList.
-Require Import NewStackHeader.
 
 Set Implicit Arguments.
 
@@ -88,7 +87,6 @@ Section PROOF.
       match stk0 with
       | x :: stk1 =>
         pput (<[handle:=stk1]> stk_mgr0);;;
-        trigger (kCall unknown "debug" ([Vint 0; Vint x])↑);;;
         Ret (Vint x)
       | _ => Ret (Vint (- 1))
       end
@@ -100,24 +98,14 @@ Section PROOF.
       stk_mgr0 <- pget;;
       stk0 <- (stk_mgr0 !! handle)?;;
       pput (<[handle:=(x :: stk0)]> stk_mgr0);;;
-      trigger (kCall unknown "debug" ([Vint 1; Vint x]↑));;;
       Ret Vundef
   .
 
 
   Definition StackSbtb: list (gname * kspecbody) :=
     [("new", mk_kspecbody new_spec (cfun new_body) (fun _ => trigger (Choose _)));
-    ("pop",  mk_kspecbody pop_spec (cfun pop_body)
-                          (cfun (fun (stk0: list Z) =>
-                                   match stk0 with
-                                   | [] => Ret ((- 1)%Z, [])
-                                   | x :: stk1 =>
-                                     trigger (kCall unknown "debug" [Vint 0; Vint x]↑);;; Ret (x, stk1)
-                                   end)));
-    ("push", mk_kspecbody push_spec (cfun push_body)
-                          (cfun (fun '(x, stk0) =>
-                                   trigger (kCall unknown "debug" [Vint 1; Vint x]↑);;;
-                                           Ret (x :: stk0))))
+    ("pop",  mk_kspecbody pop_spec (cfun pop_body) (fun _ => trigger (Choose _)));
+    ("push", mk_kspecbody push_spec (cfun push_body) (fun _ => trigger (Choose _)))
     ]
   .
 

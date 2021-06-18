@@ -1,4 +1,4 @@
-Require Import NewStackHeader NewStack2 NewStack3A HoareDef SimModSem.
+Require Import NewStack2 NewStack3A HoareDef SimModSem.
 Require Import Coqlib.
 Require Import Universe.
 Require Import Skeleton.
@@ -54,7 +54,7 @@ Section SIMMODSEM.
   .
 
   Variable global_stb: list (string * fspec).
-  Hypothesis STBINCL: stb_incl (DebugStb ++ StackStb) global_stb.
+  Hypothesis STBINCL: stb_incl (StackStb) global_stb.
 
   Lemma _is_stack_wf
         h stk
@@ -273,13 +273,9 @@ Section SIMMODSEM.
           spc WF0. des_ifs. ss. eapply Excl.extends in WF0; ss. }
         assert(S:=SIM h). rewrite B in *. inv S; ss. steps.
         destruct stk0 as [|x stk1].
-        + steps. hret _; ss. iDestruct "O" as "[A B]". iModIntro. iFrame. iSplitL "A"; ss; et.
-          iSplits; ss; et. cbn. iSplits; ss; et.
+        + steps. force_l. esplits. steps. hret _; ss.
+          iDestruct "O" as "[A B]". iModIntro. iFrame. iSplitL "A"; ss; et. iExists (_, _). iSplits; ss; et.
         + steps.
-          destruct (alist_find "debug" (DebugStb ++ StackStb)) eqn:U; cycle 1.
-          { exfalso. stb_tac. ss. }
-          dup U. revert U. stb_tac. clarify. i.
-          apply STBINCL in U. rewrite U. steps.
 
           set (res1:=<[h:=Excl.just stk1]>res0).
           assert(WF1: URA.wf (res1: URA.car (t:=_stkRA))).
@@ -303,30 +299,17 @@ Section SIMMODSEM.
           assert(SIM0: sim res1 mgr_src0 (<[h:=stk1]> mgr_tgt0)).
           { eapply sim_update_k; et. }
 
-          hcall _ _ _ with "A"; ss; et.
-          { iModIntro. iSplits; ss; et. }
-          { ss. }
-          steps. mDesAll. subst. des; clarify.
-
-          hret _; ss.
-          iModIntro. iFrame. iSplitL "O"; ss; et. iSplits; ss; et. cbn. iSplits; ss; et.
+          force_l. esplits. steps. hret _; ss.
+          iModIntro. iFrame. iSplitL "A"; ss; et. iExists (_, _). iSplits; ss; et.
       - unfold KModSem.transl_fun_tgt, pop_body. rewrite X. cbn. steps. post_call. steps.
         rename n into h. rename l into stk0. destruct v; ss. des_ifs_safe.
         assert(S:=SIM h). rewrite _UNWRAPU0 in *. inv S; ss. steps.
         destruct stk0 as [|x stk1].
         + steps. hret _; ss. iModIntro. iSplits; ss; et.
         + steps.
-          destruct (alist_find "debug" (DebugStb ++ StackStb)) eqn:U; cycle 1.
-          { exfalso. stb_tac. ss. }
-          dup U. revert U. stb_tac. clarify. i.
-          apply STBINCL in U. rewrite U. steps.
 
-          hcall _ _ _ with "-"; ss; et.
-          { iModIntro. iSplits; ss; et. iPureIntro. eapply sim_update_u; et. }
-          { ss. }
-          post_call. steps.
           hret _; ss.
-          { iModIntro. iSplits; ss; et. }
+          { iModIntro. iSplits; ss; et. iPureIntro. eapply sim_update_u; et. }
     }
 
     econs; ss.
@@ -346,11 +329,6 @@ Section SIMMODSEM.
           eapply Auth.auth_included in WF0. des. unfold _is_stack in WF0. eapply pw_extends in WF0. des.
           spc WF0. des_ifs. ss. eapply Excl.extends in WF0; ss. }
         assert(S:=SIM h). rewrite B in *. inv S; ss. steps.
-
-        destruct (alist_find "debug" (DebugStb ++ StackStb)) eqn:U; cycle 1.
-        { exfalso. stb_tac. ss. }
-        dup U. revert U. stb_tac. clarify. i.
-        apply STBINCL in U. rewrite U. steps.
 
         set (res1:=<[h:=Excl.just (x::stk0)]>res0).
         assert(WF1: URA.wf (res1: URA.car (t:=_stkRA))).
@@ -374,28 +352,15 @@ Section SIMMODSEM.
         assert(SIM0: sim res1 mgr_src0 (<[h:=x::stk0]> mgr_tgt0)).
         { eapply sim_update_k; et. }
 
-        hcall _ _ _ with "A"; ss; et.
-        { iModIntro. iSplit; ss. iExists _, _, _. iSplits; ss; et. }
-        { ss. }
-        steps. mDesAll. subst. des; clarify.
-
-        hret _; ss.
-        iModIntro. iFrame. iSplitL "O"; ss; et.
+        force_l. esplits. steps. hret _; ss.
+        iModIntro. iFrame. iSplitL "A"; ss; et.
       - unfold KModSem.transl_fun_tgt, push_body. rewrite X. cbn. steps. post_call. steps.
         rename n into h. rename l into stk0. destruct v; ss. des_ifs_safe.
         assert(S:=SIM h). rewrite _UNWRAPU in *. inv S; ss. steps.
         steps.
-        destruct (alist_find "debug" (DebugStb ++ StackStb)) eqn:U; cycle 1.
-        { exfalso. stb_tac. ss. }
-        dup U. revert U. stb_tac. clarify. i.
-        apply STBINCL in U. rewrite U. steps.
 
-        hcall _ _ _ with "-"; ss; et.
-        { iModIntro. iSplits; ss; et. iPureIntro. eapply sim_update_u; et. }
-        { ss. }
-        post_call. steps.
         hret _; ss.
-        { iModIntro. iSplits; ss; et. }
+        { iModIntro. iSplits; ss; et. iPureIntro. eapply sim_update_u; et. }
     }
   Unshelve.
     all: ss.
@@ -411,7 +376,7 @@ Section SIMMOD.
   Context `{@GRA.inG stkRA Σ}.
 
   Variable global_stb: Sk.t -> list (string * fspec).
-  Hypothesis STBINCL: forall sk, stb_incl (DebugStb ++ StackStb) (global_stb sk).
+  Hypothesis STBINCL: forall sk, stb_incl (StackStb) (global_stb sk).
 
   Theorem correct: ModPair.sim (NewStack3A.Stack global_stb) (NewStack2.Stack).
   Proof.

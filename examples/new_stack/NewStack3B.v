@@ -10,7 +10,6 @@ Require Import Logic.
 Require Import Mem1.
 Require Import TODOYJ.
 Require Import AList.
-Require Import NewStackHeader.
 
 Set Implicit Arguments.
 
