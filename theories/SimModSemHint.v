@@ -1328,30 +1328,76 @@ Section SIMMOD.
      :
        refines_closed (Mod.add_list mds_tgt) (Mod.add_list mds_src).
    Proof.
-     cut (forall mds_src1 mds_tgt1
-                 (SIM: List.Forall2 ModPair.sim mds_src1 mds_tgt1)
-                 mds_src0 mds_tgt0
-                 (EQ0: mds_src = mds_src0 ++ mds_src1)
-                 (EQ1: mds_tgt = mds_tgt0 ++ mds_tgt1),
-             refines_closed (Mod.add_list (mds_src0 ++ mds_tgt1)) (Mod.add_list (mds_src0 ++ mds_src1))).
-     { i. hexploit (H mds_src mds_tgt SIM [] []); ss. }
-     intros mds_src1 mds_tgt1 SIM0. induction SIM0; i; clarify.
+     ii. destruct (classic (ModSemL.wf (ModL.enclose (Mod.add_list mds_src)) /\ Sk.wf (ModL.sk (Mod.add_list mds_src)))).
+     2: { unfold ModL.compile. eapply ModSemL.compile_not_wf. et. }
+     rename H into WF.
 
-     ii. hexploit IHSIM0.
-     { rewrite cons_app. rewrite <- List.app_assoc. et. }
-     { rewrite cons_app. rewrite <- List.app_assoc. et. }
-     i. rewrite <- ! List.app_assoc in H0. ss. eapply H0. clear H0.
+     eapply ModLPair.adequacy_local_closed; et.
+     unfold ModL.enclose in WF.
 
-     cut (Beh.of_program (ModL.compile (ModL.add (Mod.add_list (mds_src0 ++ l')) y))
-          <1=
-          Beh.of_program (ModL.compile (ModL.add (Mod.add_list (mds_src0 ++ l')) x))).
-     { admit "". }
+     econs.
+     2:{
+       rewrite ! Mod.add_list_sk. red. f_equal.
+       clear - SIM. induction SIM; ss. inv H. f_equal; auto. }
+     2: {
+       i. inv WF0. econs.
+       { clear wf_initial_mrs.
+         match goal with
+         | H: NoDup ?l0 |- NoDup ?l1 => replace l1 with l0
+         end; auto.
 
-     ss. eapply adequacy_hint_aux; auto.
-     assert (SKEQ: (Sk.sort (ModL.sk (ModL.add (Mod.add_list (mds_src0 ++ l')) x))) =
-                   (Sk.sort (ModL.sk (Mod.add_list (mds_src0 ++ x :: l))))).
-     { admit "". }
-   Admitted.
+         rewrite ! Mod.add_list_fns. f_equal.
+         eapply Forall2_eq_eq.
+         eapply Forall2_apply_Forall2; et.
+         i. inv H. hexploit sim_modsem; et.
+         { admit "ez". }
+         i. inv H. ss. rewrite ! List.map_map.
+         eapply Forall2_eq_eq. eapply Forall2_apply_Forall2; et.
+         i. inv H. destruct a0, b0. ss.
+       }
+       { clear wf_fnsems.
+         match goal with
+         | H: NoDup ?l0 |- NoDup ?l1 => replace l1 with l0
+         end; auto.
+         rewrite ! Mod.add_list_initial_mrs.
+         admit "".
+       }
+     }
+     { clear - SIM. unfold ModL.enclose.
+       remember (Sk.sort (ModL.sk (Mod.add_list mds_src))) as sk.
+       assert (Sk.sort (ModL.sk (Mod.add_list mds_tgt)) = sk).
+       { admit "ez". }
+       rewrite H.
+
+       replace (ModL.get_modsem (Mod.add_list mds_src) sk) with
+           (fold_right ModSemL.add (ModSemL.mk [] []) (List.map (fun md => (Mod.lift md).(ModL.get_modsem) sk) mds_src)).
+       2:{ admit "ez". }
+
+       replace (ModL.get_modsem (Mod.add_list mds_tgt) sk) with
+           (fold_right ModSemL.add (ModSemL.mk [] []) (List.map (fun md => (Mod.lift md).(ModL.get_modsem) sk) mds_tgt)).
+       2:{ admit "ez". }
+
+       eapply Forall2_apply_Forall2 with
+           (f := (fun md => (Mod.lift md).(ModL.get_modsem) sk))
+           (g := (fun md => (Mod.lift md).(ModL.get_modsem) sk))
+           (Q:= ModSemLPair.sim)
+         in SIM.
+       2: { i. inv H0. ss. eapply adequacy_lift.
+            eapply sim_modsem. admit "ez". admit "ez". }
+       try rewrite <- Heqsk in *. try rewrite H in *. clear Heqsk H.
+
+       induction SIM; ss.
+       { econs.
+         { instantiate (1:=top2). ss. }
+         { ss. }
+         { instantiate (1:=top1). ss. }
+       }
+       { eapply ModSemLPair.add_modsempair; ss.
+         admit "".
+         admit "".
+       }
+     }
+   Qed.
 
    Local Existing Instances top_sk_gnames.
 
