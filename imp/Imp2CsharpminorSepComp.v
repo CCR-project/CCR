@@ -124,6 +124,7 @@ Section PROOFALL.
         hexploit found_in_src_in_tgt; eauto. i. des. rewrite Heq1 in H2. clarify.
       - unfold get_sge in *. ss. apply Sk.sort_wf in SK.
         hexploit Sk.load_skenv_wf; eauto. i. apply H1 in H. rewrite H in Heq. clarify. }
+
     eapply match_states_sim; eauto.
     { apply map_blk_after_init. }
     { apply map_blk_inj. }
@@ -131,6 +132,7 @@ Section PROOFALL.
     | [ |- match_states _ ?_ge ?_ms _ _ _ ] => replace _ge with sge; auto; set (ms:=_ms) in *
     end.
     econs; eauto.
+    { ss. }
     { admit "ez?: match initial le". }
     { clarify. }
     { econs; ss.
@@ -173,37 +175,14 @@ Section PROOFALL.
       extensionality x. unfold itree_of_imp_ret, itree_of_imp_cont. grind. destruct p0. rewrite interp_imp_expr_Var. grind. }
     { ss.
       match goal with
-      | [ |- match_stack _ _ _ _ _ ?i0 ?s0 ] =>
+      | [ |- match_stack _ _ _ _ _ _ ?i0 ?s0 ] =>
         replace i0 with ((itree_of_imp_pop_bottom ms mn) : (_ * _ * (lenv * val)) -> _);
           replace s0 with (Some ret_call_main); eauto
       end.
-      { econs 1. } }
+      { econs 1. ss. } }
   Qed.
 
 
-  (* Lemma list_norepet_NoDupB {K} {decK} : *)
-  (*   forall l, Coqlib.list_norepet l <-> @NoDupB K decK l = true. *)
-  (* Proof. *)
-  (*   split; i. *)
-  (*   - induction H; ss. *)
-  (*     clarify. *)
-  (*     destruct (in_dec decK hd tl); clarify. *)
-  (*   - induction l; ss; clarify. constructor. *)
-  (*     des_ifs. econs 2; auto. *)
-  (* Qed. *)
-
-  (* Definition wf_imp_prog (src : Imp.programL) := *)
-  (*   Coqlib.list_norepet (compile_gdefs (get_gmap src) src). *)
-
-  (* Lemma compile_then_wf : forall src tgt, *)
-  (*     compile src = OK tgt *)
-  (*     -> *)
-  (*     wf_imp_prog src. *)
-  (* Proof. *)
-  (*   unfold compile, _compile. i. *)
-  (*   destruct (compile_gdefs (get_gmap src) src) eqn:EQ; clarify. *)
-  (*   eauto using compile_gdefs_then_wf. *)
-  (* Qed. *)
 
   (* Maps.PTree.elements_extensional 
      we will rely on above theorem for commutation lemmas *)

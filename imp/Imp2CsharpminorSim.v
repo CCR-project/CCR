@@ -390,8 +390,7 @@ Section PROOF.
         gstep. econs 5; ss; auto. i. eapply angelic_step in STEP; des; clarify.
         eexists; split; [ord_step2|].
         do 6 (gstep; sim_tau). red. sim_red.
-        destruct rstate. ss. destruct l.
-        { admit "ez: wf_rstate". }
+        destruct rstate. ss. des_ifs.
         do 3 (gstep; sim_tau). red. sim_red.
         gstep. econs 6; clarify.
         eexists. eexists.
@@ -404,6 +403,7 @@ Section PROOF.
         unfold ret_call_cont in TPOP. unfold return_stmt in TPOP. ss; clarify.
         hexploit match_states_intro.
         { instantiate (2:=Skip). ss. }
+        { instantiate (2:=(c, l0)). ss. eapply H0. }
         2,3,4,5,6: eauto.
         2: clarify.
         2:{ i.
@@ -436,7 +436,7 @@ Section PROOF.
       { eapply step_tau. }
       eexists. gbase. apply CIH. hexploit match_states_intro.
       { instantiate (2:=Skip). ss. }
-      2,3,4,5,6,7:eauto.
+      1,3,4,5,6,7,8:eauto.
       2:{ unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. eauto. }
       { econs. i. admit "ez? alist & Maps.PTree". }
 
@@ -448,8 +448,8 @@ Section PROOF.
       { eapply step_seq. }
       eexists. exists (step_tau _). eexists. gbase. eapply CIH. hexploit match_states_intro.
       { eapply CSC1. }
-      4:{ instantiate (1:=Kseq s0 tcont). ss. destruct s0; eauto. eapply compile_stmt_no_Sreturn in CSC2; clarify. }
-      4:{ econs 3; eauto. }
+      5:{ instantiate (1:=Kseq s0 tcont). ss. destruct s0; eauto. eapply compile_stmt_no_Sreturn in CSC2; clarify. }
+      5:{ econs 3; eauto. }
       all: eauto.
       { ss. destruct s0; eauto. eapply compile_stmt_no_Sreturn in CSC2; clarify. }
       i.
@@ -512,9 +512,8 @@ Section PROOF.
       sim_ord.
       { eapply max_fuel_spec3. }
       eapply step_exprs; eauto.
-      i. sim_red. destruct rstate. destruct l0.
-      { ss. admit "mid?: r_state is nil". }
-      ss. grind. do 3 (gstep; sim_tau). sim_red.
+      i. sim_red. destruct rstate. destruct l0; ss; clarify.
+      grind. do 3 (gstep; sim_tau). sim_red.
       match goal with
       | [ |- gpaco3 _ _ _ _ _ (r0 <- unwrapU (?f);; _) _ ] => destruct f eqn:FSEM; ss
       end.
@@ -611,6 +610,7 @@ Section PROOF.
           Red.prw ltac:(_red_gen) 2 0. Red.prw ltac:(_red_gen) 1 0. grind. }
 
       hexploit match_states_intro.
+      2:{ instantiate (2:=(c, ε :: c0 :: l0)). ss. }
       5:{ instantiate (1:=Kseq (Sreturn (Some (Evar (s2p "return")))) (Kcall (Some (s2p x)) tf empty_env tle tcont)). ss. }
       6:{ instantiate (1:= fun r0 =>
                              ` x4 : r_state * p_state * (lenv * val) <- itree_of_imp_pop ge ms s0 mn x le r0;;
@@ -726,7 +726,7 @@ Section PROOF.
       gbase. eapply CIH.
       hexploit match_states_intro.
       { instantiate (2:=Skip). ss. }
-      2,3,4,5,6: eauto.
+      1,3,4,5,6,7: eauto.
       2: clarify.
       2:{ i.
           match goal with
@@ -751,7 +751,7 @@ Section PROOF.
       eexists. exists (step_tau _). eexists. gbase. apply CIH.
       hexploit match_states_intro.
       { instantiate (2:=Skip). ss. }
-      2,3,4,5,6: eauto.
+      1,3,4,5,6,7: eauto.
       2: clarify.
       2:{ i.
           match goal with
@@ -766,8 +766,7 @@ Section PROOF.
       sim_ord.
       { eapply max_fuel_spec1. }
       eapply step_expr; eauto. i. rename H0 into TGTEXPR. rename H1 into MAPRV. sim_red.
-      destruct rstate. ss. destruct l.
-      { admit "ez: wf_r_state". }
+      destruct rstate. ss. destruct l; clarify.
       do 3 (gstep; sim_tau). sim_red.
       match goal with
       | [ MCONT: match_code _ ?_ge _ _ _ _ |- _ ] =>
@@ -857,6 +856,7 @@ Section PROOF.
       gbase. apply CIH.
       hexploit match_states_intro.
       { instantiate (2:=Skip). ss. }
+      { instantiate (2:= (c, c0 :: l)). ss. }
       4,5,6: eauto.
       4:{ clarify. }
       4:{ i.
@@ -874,8 +874,7 @@ Section PROOF.
       sim_ord.
       { eapply max_fuel_spec1. }
       eapply step_expr; eauto.
-      i. sim_red. destruct rstate. ss. destruct l.
-      { admit "ez: wf_r_state". }
+      i. sim_red. destruct rstate. ss. destruct l; clarify.
       grind. do 3 (gstep; sim_tau). sim_red.
       match goal with
       | [ MCONT: match_code _ ?_ge _ _ _ _ |- _ ] =>
@@ -903,6 +902,7 @@ Section PROOF.
       eexists. exists (step_tau _). eexists. gbase. eapply CIH.
       hexploit match_states_intro.
       { instantiate (2:=Skip). ss. }
+      { instantiate (2:= (c, c0 :: l)). ss. }
       1,4,5,6: eauto.
       3:{ clarify. }
       3:{ i.
@@ -920,8 +920,7 @@ Section PROOF.
       sim_ord.
       { eapply max_fuel_spec1. }
       eapply step_expr; eauto.
-      i. sim_red. destruct rstate. ss. destruct l.
-      { admit "ez: wf_r_state". }
+      i. sim_red. destruct rstate. ss. destruct l; clarify.
       grind. do 3 (gstep; sim_tau). sim_red.
       match goal with
       | [ MCONT: match_code _ ?_ge _ _ _ _ |- _ ] =>
@@ -951,6 +950,7 @@ Section PROOF.
       gbase. eapply CIH.
       hexploit match_states_intro.
       { instantiate (2:=Skip). ss. }
+      { instantiate (2:= (c, c0 :: l)). ss. }
       2,3,4,5,6: eauto.
       2: clarify.
       2:{ i.
@@ -975,8 +975,7 @@ Section PROOF.
       { eapply max_fuel_spec2. }
       eapply step_expr; eauto. i. sim_red.
       eapply step_expr; eauto. i. sim_red.
-      destruct rstate. ss. destruct l.
-      { admit "ez: wf_r_state". }
+      destruct rstate. ss. destruct l; clarify.
       grind. do 3 (gstep; sim_tau). sim_red.
       unfold cfun. rewrite Any.upcast_downcast. grind. unfold storeF. sim_red.
       do 4 (gstep; sim_tau). sim_red.
@@ -1001,6 +1000,7 @@ Section PROOF.
       gbase. eapply CIH.
       hexploit match_states_intro.
       { instantiate (2:=Skip). ss. }
+      { instantiate (2:= (c, c0 :: l)). ss. }
       1,4,5,6: eauto.
       3: clarify.
       3:{ i.
@@ -1026,8 +1026,7 @@ Section PROOF.
       { eapply max_fuel_spec2. }
       eapply step_expr; eauto. i. sim_red.
       eapply step_expr; eauto. i. sim_red.
-      destruct rstate. ss. destruct l.
-      { admit "ez: wf_r_state". }
+      destruct rstate. ss. destruct l; clarify.
       grind. do 3 (gstep; sim_tau). sim_red.
       unfold cfun. rewrite Any.upcast_downcast. grind. unfold cmpF. sim_red.
       do 4 (gstep; sim_tau). sim_red.
@@ -1048,6 +1047,7 @@ Section PROOF.
         gbase. eapply CIH.
         hexploit match_states_intro.
         { instantiate (2:=Skip). ss. }
+        { instantiate (2:= (c, c0 :: l)). ss. }
         2,3,4,5,6: eauto.
         2: clarify.
         2:{ i.
@@ -1071,6 +1071,7 @@ Section PROOF.
         { eapply OrdArith.add_base_l. } gbase. eapply CIH.
         hexploit match_states_intro.
         { instantiate (2:=Skip). ss. }
+        { instantiate (2:= (c, c0 :: l)). ss. }
         2,3,4,5,6: eauto.
         2: clarify.
         2:{ i.
