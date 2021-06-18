@@ -153,6 +153,24 @@ Proof.
   eapply Ord.S_supremum; et.
 Qed.
 
+Lemma expn_nzero
+      b o
+      (NZ0: (1 <= o)%ord)
+      (NZ1: (1 <= b)%ord)
+  :
+    (b <= b ^ o)%ord
+.
+Proof.
+  etrans.
+  { eapply OrdArith.expn_1_r.
+    eapply Ord.lt_le_lt.
+    { instantiate (1:=1). rewrite <- Ord.from_nat_O. eapply OrdArith.lt_from_nat. lia. }
+    ss.
+  }
+  eapply OrdArith.le_expn_r.
+  rewrite <- Ord.from_nat_O. rewrite <- Ord.from_nat_S. ss.
+Qed.
+
 
 
 
@@ -163,6 +181,7 @@ Module Type PARAM.
   Parameter d: Ord.t.
   Parameter e: Ord.t.
   Parameter f: Ord.t.
+  Parameter g: Ord.t.
 End PARAM.
 
 Module Construction (P: PARAM).
@@ -170,12 +189,13 @@ Module Construction (P: PARAM).
 
   Section CONSTRUCTION.
 
-  Let alpha := (f + 3 + d + e)%ord.
+  Let alpha := (g + f + 3 + d + e + 1)%ord.
   (* Let alpha_d: ((1 + d) <= alpha)%ord. *)
   (* Proof. unfold alpha. rewrite <- OrdArith.add_O_r at 1. eapply add_le_le; try refl. eapply Ord.O_is_O. Qed. *)
-  Let alpha_e: (e <= alpha)%ord.
+  Let alpha_e: (e + 1 <= alpha)%ord.
   Proof.
     unfold alpha.
+    rewrite OrdArith.add_assoc.
     eapply OrdArith.add_base_r.
     (* etrans; [eapply OrdArith.add_base_l|]. *)
     (* etrans; [eapply OrdArith.add_base_r|]. *)
@@ -185,16 +205,14 @@ Module Construction (P: PARAM).
   Let alpha_d: (f + 3 + d <= alpha)%ord.
   Proof.
     unfold alpha.
-    eapply OrdArith.add_base_l.
-    (* etrans; [eapply OrdArith.add_base_l|]. *)
-    (* etrans; [eapply OrdArith.add_base_r|]. *)
-    (* rewrite <- OrdArith.add_assoc. *)
-    (* eapply add_le_le; try refl. *)
-    (* rewrite <- OrdArith.add_assoc. *)
-    (* refl. *)
+    rewrite <- OrdArith.add_O_r; eapply add_le_le; [|eapply Ord.O_is_O].
+    rewrite <- OrdArith.add_O_r; eapply add_le_le; [|eapply Ord.O_is_O].
+    rewrite <- OrdArith.add_O_l; rewrite <- ! OrdArith.add_assoc.
+    repeat (eapply add_le_le; try refl).
+    eapply Ord.O_is_O.
   Qed.
 
-  Definition myF (o0: Ord.t): Ord.t := ((alpha * kappa + c) ^ (o0 + 1))%ord.
+  Definition myF (o0: Ord.t): Ord.t := (g + (alpha * kappa + c) ^ (o0 + 1))%ord.
   Definition myG (o0 m0: Ord.t): Ord.t := ((alpha * kappa + c) ^ (o0) * alpha * m0)%ord.
   Definition myH (o0: Ord.t): Ord.t := ((alpha * kappa + c) ^ (o0) * 3)%ord.
 
@@ -206,28 +224,27 @@ Module Construction (P: PARAM).
 
   Let NZERO: (Ord.O < alpha * kappa + c)%ord.
   Proof.
-    unfold alpha.
-
-    assert(T: (1 < f + 3 + d + e)%ord).
-    { assert(U: (1 + 1 <= (Ord.from_nat 3))%ord).
+    assert(T: (1 < alpha)%ord).
+    { unfold alpha.
+      assert(U: (1 + 1 <= (Ord.from_nat 3))%ord).
       { rewrite <- OrdArith.add_from_nat. ss. eapply OrdArith.le_from_nat; et. }
       eapply Ord.lt_le_lt; cycle 1.
-      { rewrite <- U. refl. }
-      rewrite ! OrdArith.add_assoc.
-      eapply Ord.lt_le_lt; cycle 1.
-      { eapply OrdArith.add_base_r. }
-      eapply OrdArith.add_lt_l.
-      rewrite Ord.from_nat_S at 1.
-      eapply Ord.lt_le_lt.
-      { instantiate (1:=1%ord). rewrite Ord.from_nat_S. eapply Ord.S_pos. }
-      { rewrite Ord.from_nat_S. eapply OrdArith.add_base_l. }
+      { instantiate (1:=(3 + 1)%ord).
+        eapply add_le_le; try refl.
+        rewrite <- OrdArith.add_O_r at 1; eapply add_le_le; [|eapply Ord.O_is_O].
+        rewrite <- OrdArith.add_O_r at 1; eapply add_le_le; [|eapply Ord.O_is_O].
+        rewrite <- OrdArith.add_O_l at 1.
+        eapply add_le_le; try eapply Ord.O_is_O. refl.
+      }
+      rewrite <- OrdArith.add_from_nat. cbn.
+      eapply OrdArith.lt_from_nat; lia.
     }
 
     eapply Ord.lt_le_lt; cycle 1.
     { eapply OrdArith.add_base_l. }
     rewrite <- OrdArith.mult_1_r.
     eapply Ord.le_lt_lt; cycle 1.
-    { instantiate (1:=((f + 3 + d + e) * 1)%ord).
+    { instantiate (1:=(alpha * 1)%ord). fold alpha.
       eapply OrdArith.lt_mult_r.
       - eauto with ord_kappa.
       - rewrite <- T. replace (Ord.from_nat 1) with (Ord.S Ord.O) by ss. eapply Ord.S_pos. }
@@ -245,12 +262,15 @@ Module Construction (P: PARAM).
     rewrite <- H. refl.
   Qed.
 
-  Theorem my_thm1: forall o0, (myG o0 kappa + c <= myF o0)%ord.
+  Theorem my_thm1: forall o0, (g + myG o0 kappa + c <= myF o0)%ord.
   Proof.
     i. unfold myF, myG, myH.
     rewrite OrdArith.expn_add; et.
     rewrite OrdArith.expn_1_r; et.
     rewrite OrdArith.mult_dist.
+    rewrite OrdArith.add_assoc.
+    eapply add_le_le.
+    { refl. }
     eapply add_le_le.
     - rewrite <- OrdArith.mult_assoc. refl.
     - rewrite <- (OrdArith.mult_1_l) at 1. eapply mult_le_le; try refl. eapply expn_pos.
@@ -269,23 +289,47 @@ Module Construction (P: PARAM).
     unfold myF, myG, myH.
     eapply add_one_lt in O.
     rewrite <- O.
-    rewrite OrdArith.expn_add; et.
-    rewrite OrdArith.expn_1_r; et.
-    assert(T: (1 + 1 <= 3)%ord).
-    { rewrite <- OrdArith.add_from_nat. ss. eapply OrdArith.le_from_nat; et. }
+    set (o1 + 1)%ord as o.
+    {
+    assert(T: (1 + 1 + 1 <= 3)%ord).
+    { rewrite <- OrdArith.add_from_nat. ss. rewrite <- OrdArith.add_from_nat. ss. refl. }
     rewrite <- T.
     rewrite OrdArith.mult_dist with (o2:=1).
     rewrite OrdArith.mult_1_r.
     eapply add_le_le; try refl.
-    rewrite <- (OrdArith.mult_1_l) at 1.
-    eapply mult_le_le.
-    { eapply expn_pos. }
-    rewrite <- alpha_e.
-    etrans; [|eapply OrdArith.add_base_l].
-    rewrite <- (OrdArith.mult_1_r) at 1.
-    eapply mult_le_le; try refl.
-    eapply Ord.lt_le.
-    eauto with ord_kappa.
+    - rewrite OrdArith.mult_dist.
+      rewrite (OrdArith.mult_1_r).
+      eapply add_le_le; try refl.
+      subst o.
+      rewrite <- expn_nzero; cycle 1.
+      { eapply OrdArith.add_base_r. }
+      { eapply Ord.S_supremum in NZERO. etrans; et. refl. }
+      erewrite <- OrdArith.add_base_l.
+      erewrite <- OrdArith.mult_le_l.
+      { unfold alpha.
+        repeat (rewrite <- OrdArith.add_O_r at 1; eapply add_le_le; [|eapply Ord.O_is_O]). refl. }
+      eapply kappa_inaccessible_O.
+    - subst o.
+      rewrite OrdArith.expn_add; et.
+      rewrite <- (OrdArith.mult_1_l) at 1.
+      eapply mult_le_le.
+      { eapply expn_pos. }
+      rewrite <- alpha_e.
+      rewrite OrdArith.expn_1_r; cycle 1.
+      { eapply Ord.lt_le_lt.
+        { eapply kappa_inaccessible_O. }
+        rewrite <- OrdArith.add_base_l.
+        rewrite <- OrdArith.mult_1_l at 1.
+        eapply OrdArith.le_mult_l.
+        eapply OrdArith.add_base_r.
+      }
+      etrans; [|eapply OrdArith.add_base_l].
+      rewrite <- (OrdArith.mult_1_r) at 1.
+      eapply mult_le_le; try refl.
+      { eapply OrdArith.add_base_l. }
+      eapply Ord.lt_le.
+      eauto with ord_kappa.
+    }
   Qed.
 
   Theorem my_thm2
@@ -323,9 +367,11 @@ Module MyParam <: PARAM.
   Definition c: Ord.t := (d + 30)%ord.
   Definition e: Ord.t := 50%ord.
   Definition f: Ord.t := (d + 20)%ord.
+  Definition g: Ord.t := (10)%ord.
 End MyParam.
 
 Module C := (Construction MyParam).
+
 
 
 
@@ -533,7 +579,7 @@ Section CANCEL.
         rewrite OrdArith.add_assoc.
         rewrite OrdArith.add_assoc.
         eapply add_le_le.
-        - eapply Ord.lt_le in x4. rewrite <- x4. refl.
+        - eapply Ord.lt_le in x4. rewrite <- x4. rewrite <- OrdArith.add_base_r. refl.
         - etrans; [|eapply OrdArith.add_base_l]. etrans; [|eapply OrdArith.add_base_l]. refl.
       }
       eapply IH; auto. econs. left. auto.
@@ -566,6 +612,12 @@ Section CANCEL.
     guclo ordC_spec. econs.
     { rewrite <- OrdArith.add_assoc. refl. }
     unfold interp_hEs_mid. steps.
+    guclo ordC_spec. econs.
+    { instantiate (1:=(C.g + (C.myG o0 kappa + MyParam.d + 18))%ord). rewrite <- ! OrdArith.add_assoc. refl. }
+    rewrite idK_spec at 1. guclo bindC_spec. econs; cycle 1.
+    { instantiate (1:=(fun (_ : r_state * p_state * ()) '(st_tgt1, _) => st_tgt1 = st_tgt0)). i. ss. des_ifs.
+      unfold idK. unfold C.g. steps. instantiate (1:=9). eapply OrdArith.lt_from_nat. lia.
+    }
     guclo ordC_spec. econs.
     { etrans; [|eapply OrdArith.add_base_l]. eapply add_le_le; [|refl].
       instantiate (1:=C.myG o0 x).
