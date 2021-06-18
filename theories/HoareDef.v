@@ -301,35 +301,21 @@ Section CANCEL.
       end
   .
 
-  Definition interp_hCallE_src: itree Esh ~> itree Es :=
-    interp (case_ (bif:=sum1)
-                  (handle_hAPCE_src)
-                  (case_ (bif:=sum1)
-                         (handle_hCallE_src)
-                         ((fun T X => trigger X): _ ~> itree Es)))
+  Definition interp_hCallE_src: itree Es' ~> itree Es :=
+    interp (case_ (bif:=sum1) (handle_hCallE_src)
+                  ((fun T X => trigger X): _ ~> itree Es))
   .
 
-  Definition body_to_src (body: Any.t -> itree Esh Any.t): Any.t -> itree Es Any.t :=
+  Definition body_to_src (body: Any.t -> itree (hCallE +' pE +' eventE) Any.t): Any.t -> itree Es Any.t :=
     fun varg_src => interp_hCallE_src (body varg_src)
   .
 
-  Definition fun_to_src (body: Any.t -> itree Esh Any.t): (Any_src -> itree Es Any_src) :=
+  Definition fun_to_src (body: Any.t -> itree (hCallE +' pE +' eventE) Any.t): (Any_src -> itree Es Any_src) :=
     (body_to_src body)
   .
 
 
 
-  Definition handle_hAPCE_tgt: hAPCE ~> itree (hCallE +' pE +' eventE) :=
-    fun _ '(hAPC) =>
-    at_most <- trigger (Choose _);;
-    guarantee(at_most < kappa)%ord;;;
-    _APC at_most
-  .
-  (* Definition handle_hAPCE_tgt: itree (hCallE +' pE +' eventE) unit := *)
-  (*   at_most <- trigger (Choose _);; *)
-  (*   guarantee(at_most < kappa)%ord;;; *)
-  (*   _APC at_most *)
-  (* . *)
 
   Definition handle_hCallE_mid (ord_cur: ord): hCallE ~> itree Es :=
     fun _ '(hCall tbr fn varg_src) =>
@@ -341,18 +327,16 @@ Section CANCEL.
       trigger (Call fn varg_mid)
   .
 
-  Definition interp_hCallE_mid (ord_cur: ord): itree Esh ~> itree Es :=
-    fun _ itr =>
-      let itr0 := (interp (case_ handle_hAPCE_tgt trivial_Handler) itr) in
-      interp (case_ (bif:=sum1) (handle_hCallE_mid ord_cur)
-                    ((fun T X => trigger X): _ ~> itree Es)) itr0
+  Definition interp_hCallE_mid (ord_cur: ord): itree Es' ~> itree Es :=
+    interp (case_ (bif:=sum1) (handle_hCallE_mid ord_cur)
+                  ((fun T X => trigger X): _ ~> itree Es))
   .
 
-  Definition body_to_mid (ord_cur: ord) (body: Any.t -> itree Esh Any.t): Any.t -> itree Es Any.t :=
+  Definition body_to_mid (ord_cur: ord) (body: Any.t -> itree (hCallE +' pE +' eventE) Any.t): Any.t -> itree Es Any.t :=
     fun varg_mid => interp_hCallE_mid ord_cur (body varg_mid)
   .
 
-  Definition fun_to_mid (body: Any.t -> itree Esh Any.t): (Any_mid -> itree Es Any_src) :=
+  Definition fun_to_mid (body: Any.t -> itree (hCallE +' pE +' eventE) Any.t): (Any_mid -> itree Es Any_src) :=
     fun varg_mid =>
       '(ord_cur, varg_src) <- (Any.split varg_mid)ǃ;; ord_cur <- ord_cur↓ǃ;;
       interp_hCallE_mid ord_cur (match ord_cur with
@@ -367,15 +351,13 @@ Section CANCEL.
       Ret (ctx, vret_src)
   .
 
-  Definition interp_hCallE_tgt (ord_cur: ord): itree Esh ~> stateT Σ (itree Es) :=
-    fun _ itr =>
-      let itr0 := (interp (case_ handle_hAPCE_tgt trivial_Handler) itr) in
-      interp_state (case_ (bif:=sum1) (handle_hCallE_tgt ord_cur)
-                          ((fun T X s => x <- trigger X;; Ret (s, x)): _ ~> stateT Σ (itree Es))) itr0
+  Definition interp_hCallE_tgt (ord_cur: ord): itree Es' ~> stateT Σ (itree Es) :=
+    interp_state (case_ (bif:=sum1) (handle_hCallE_tgt ord_cur)
+                        ((fun T X s => x <- trigger X;; Ret (s, x)): _ ~> stateT Σ (itree Es)))
   .
 
   Definition body_to_tgt (ord_cur: ord)
-             (body: Any_src -> itree Esh Any_src): Any_src -> stateT Σ (itree Es) Any_src :=
+             (body: Any_src -> itree (hCallE +' pE +' eventE) Any_src): Any_src -> stateT Σ (itree Es) Any_src :=
     (@interp_hCallE_tgt ord_cur _) ∘ body.
 
 
@@ -383,7 +365,7 @@ Section CANCEL.
              {X: Type}
              (P: X -> Any.t -> Any_tgt -> ord -> Σ -> Prop)
              (Q: X -> Any.t -> Any_tgt -> Σ -> Prop)
-             (body: Any.t -> itree Esh Any.t): Any_tgt -> itree Es Any_tgt := fun varg_tgt =>
+             (body: Any.t -> itree Es' Any.t): Any_tgt -> itree Es Any_tgt := fun varg_tgt =>
     ctx <- trigger (Take _);;
     varg_src <- trigger (Take _);;
     x <- trigger (Take X);;
@@ -449,7 +431,7 @@ If this feature is needed; we can extend it then. At the moment, I will only all
         {X: Type}
         (P: X -> Any.t -> Any_tgt -> ord -> Σ -> Prop)
         (Q: X -> Any.t -> Any_tgt -> Σ -> Prop)
-        (body: Any.t -> itree Esh Any.t)
+        (body: Any.t -> itree Es' Any.t)
         (varg_tgt: Any_tgt)
     :
       HoareFun P Q body varg_tgt =
@@ -520,7 +502,7 @@ Section SMODSEM.
   Definition to_mid (stb: list (gname * fspec)) (ms: t): ModSem.t := transl (fun_to_mid stb ∘ fsb_body) (fun _ => ε) ms.
   Definition to_tgt (stb: list (gname * fspec)) (ms: t): ModSem.t := transl (fun_to_tgt stb) (initial_mr) ms.
 
-  Definition main (mainpre: Any.t -> ord -> iProp) (mainbody: Any.t -> itree Esh Any.t): t := {|
+  Definition main (mainpre: Any.t -> ord -> iProp) (mainbody: Any.t -> itree (hCallE +' pE +' eventE) Any.t): t := {|
       fnsems := [("main", (mk_specbody (mk_simple (fun (_: unit) => (mainpre, fun _ => (⌜True⌝: iProp)%I))) mainbody))];
       mn := "Main";
       initial_mr := ε;
@@ -763,7 +745,7 @@ Section SMOD.
     rewrite ! flat_map_assoc. eapply flat_map_ext. i. ss.
   Qed.
 
-  Definition main (mainpre: Any.t -> ord -> Σ -> Prop) (mainbody: Any.t -> itree Esh Any.t): t := {|
+  Definition main (mainpre: Any.t -> ord -> Σ -> Prop) (mainbody: Any.t -> itree (hCallE +' pE +' eventE) Any.t): t := {|
     get_modsem := fun _ => (SModSem.main mainpre mainbody);
     sk := Sk.unit;
   |}
@@ -1003,21 +985,20 @@ End AUX.
 
 
 
-
 Section AUX.
 
 Context `{Σ: GRA.t}.
 (* itree reduction *)
 Lemma interp_tgt_bind
       (R S: Type)
-      (s : itree Esh R) (k : R -> itree Esh S)
+      (s : itree (hCallE +' pE +' eventE) R) (k : R -> itree (hCallE +' pE +' eventE) S)
       stb o ctx
   :
     (interp_hCallE_tgt stb o (s >>= k)) ctx
     =
     st <- interp_hCallE_tgt stb o s ctx;; interp_hCallE_tgt stb o (k st.2) st.1.
 Proof.
-  unfold interp_hCallE_tgt in *. grind.
+  unfold interp_hCallE_tgt in *. eapply interp_state_bind.
 Qed.
 
 Lemma interp_tgt_tau stb o ctx
@@ -1028,7 +1009,7 @@ Lemma interp_tgt_tau stb o ctx
     =
     (Tau (interp_hCallE_tgt stb o t ctx)).
 Proof.
-  unfold interp_hCallE_tgt in *. grind.
+  unfold interp_hCallE_tgt in *. eapply interp_state_tau.
 Qed.
 
 Lemma interp_tgt_ret stb o ctx
@@ -1039,7 +1020,7 @@ Lemma interp_tgt_ret stb o ctx
     =
     Ret (ctx, t).
 Proof.
-  unfold interp_hCallE_tgt in *. grind.
+  unfold interp_hCallE_tgt in *. eapply interp_state_ret.
 Qed.
 
 Lemma interp_tgt_triggerp stb o ctx
@@ -1048,9 +1029,9 @@ Lemma interp_tgt_triggerp stb o ctx
   :
     (interp_hCallE_tgt stb o (trigger i) ctx)
     =
-    (trigger i >>= (fun r => tau;; tau;; Ret (ctx, r))).
+    (trigger i >>= (fun r => tau;; Ret (ctx, r))).
 Proof.
-  unfold interp_hCallE_tgt. rewrite unfold_interp. cbn. unfold trivial_Handler. grind.
+  unfold interp_hCallE_tgt. rewrite interp_state_trigger. cbn. grind.
 Qed.
 
 Lemma interp_tgt_triggere stb o ctx
@@ -1059,9 +1040,9 @@ Lemma interp_tgt_triggere stb o ctx
   :
     (interp_hCallE_tgt stb o (trigger i) ctx)
     =
-    (trigger i >>= (fun r => tau;; tau;; Ret (ctx, r))).
+    (trigger i >>= (fun r => tau;; Ret (ctx, r))).
 Proof.
-  unfold interp_hCallE_tgt. rewrite unfold_interp. cbn. unfold trivial_Handler. grind.
+  unfold interp_hCallE_tgt. rewrite interp_state_trigger. cbn. grind.
 Qed.
 
 Lemma interp_tgt_hcall stb o ctx
@@ -1070,21 +1051,9 @@ Lemma interp_tgt_hcall stb o ctx
   :
     (interp_hCallE_tgt stb o (trigger i) ctx)
     =
-    ((handle_hCallE_tgt stb o i ctx) >>= (fun r => tau;; tau;; Ret r)).
+    ((handle_hCallE_tgt stb o i ctx) >>= (fun r => tau;; Ret r)).
 Proof.
-  unfold interp_hCallE_tgt in *. rewrite unfold_interp. cbn. unfold trivial_Handler. grind. destruct x; ss.
-Qed.
-
-Lemma interp_tgt_hAPC stb o ctx
-      (R: Type)
-      (i: hAPCE R)
-  :
-    (interp_hCallE_tgt stb o (trigger i) ctx)
-    =
-    ((interp_hCallE_tgt stb o (handle_hAPCE_tgt i) ctx) >>= (fun r => tau;; tau;; Ret r)).
-    triggerUB.
-Proof.
-  unfold interp_hCallE_tgt in *. rewrite unfold_interp. cbn. unfold trivial_Handler. grind. destruct x; ss.
+  unfold interp_hCallE_tgt in *. rewrite interp_state_trigger. cbn. auto.
 Qed.
 
 Lemma interp_tgt_triggerUB stb o ctx
