@@ -34,96 +34,6 @@ Qed.
 Global Program Instance Forall2_PreOrder `{PreOrder A R}: PreOrder (Forall2 R).
 
 
-Section AUX.
-  (* TODO: move to AList.v *)
-  Lemma map_snd_map_snd A B0 B1 B2 (f0: B0 -> B1) (f1: B1 -> B2):
-    (map_snd (A:=A) f1) ∘ (map_snd f0) = map_snd (f1 ∘ f0).
-  Proof. apply func_ext. i. destruct x; ss. Qed.
-
-  Lemma find_alist_find
-        `{Dec K} V (k: K) (kvs: list (K * V))
-    :
-      alist_find k kvs = o_map (find (fun '(k0, _) => dec k k0) kvs) snd
-  .
-  Proof.
-    ginduction kvs; ii; ss. des_ifs; rewrite eq_rel_dec_correct in *; des_sumbool; des_ifs.
-  Qed.
-
-  Lemma alist_find_app2 K `{Dec K} V (k: K) (l0 l1: alist K V) (v: V)
-        (FIND0: alist_find k l0 = None)
-        (FIND1: alist_find k l1 = Some v)
-    :
-      alist_find k (l0 ++ l1) = Some v.
-  Proof.
-    ginduction l0; ii; ss. des_ifs; try rewrite eq_rel_dec_correct in *; des_sumbool; des_ifs.
-    eapply IHl0; et.
-  Qed.
-
-  Lemma alist_find_flat_map
-        `{Dec K} V0 V1 (k: K) (f: V0 -> alist K V1) (l: list V0)
-
-        kvs v
-        (FIND0: find (is_some ∘ alist_find k) (map f l) = Some kvs)
-        (FIND1: alist_find k kvs = Some v)
-    :
-      alist_find k (flat_map f l) = Some v
-  .
-  Proof.
-    ginduction l; ii; ss. des_ifs; try rewrite eq_rel_dec_correct in *; des_sumbool; des_ifs.
-    - erewrite alist_find_app; et.
-    - erewrite alist_find_app2; et. unfold is_some in Heq. des_ifs.
-  Qed.
-
-  Lemma in_alist_find
-        `{Dec K} V kv kvs
-        (IN: In kv kvs)
-    :
-      exists (v: V), alist_find (fst kv) kvs = Some v
-  .
-  Proof.
-    ginduction kvs; ii; ss. des; subst.
-    - des_ifs; try rewrite eq_rel_dec_correct in *; des_sumbool; des_ifs; et.
-    - des_ifs; try rewrite eq_rel_dec_correct in *; des_sumbool; des_ifs; et.
-  Qed.
-
-  Lemma alist_find_flat_map_const
-        `{Dec K} V0 V1 V2 (k: K) (f: V0 -> alist K V1) (l: list V0)
-
-        (c: V2)
-        (IN: In k (concat (map (map fst ∘ f) l)))
-        (* (FIND0: find (is_some ∘ alist_find k) (map f l) = Some kvs) *)
-    :
-      alist_find k (flat_map (map (map_snd (fun _ => c)) ∘ f) l) = Some c
-  .
-  Proof.
-    ginduction l; ii; ss.
-    rewrite in_app_iff in *; des.
-    - rewrite in_map_iff in *. des; subst.
-      erewrite alist_find_app; et. unfold map_snd. erewrite alist_find_map.
-      exploit in_alist_find; et. intro T; des. rewrite T. ss.
-    - destruct (alist_find k (map (map_snd (λ _ : V1, c)) (f a))) eqn:T.
-      + erewrite alist_find_app; et. unfold map_snd. erewrite alist_find_map.
-        dup T. eapply alist_find_some in T0. rewrite in_map_iff in *. des; subst. destruct x; ss; clarify.
-        eapply in_alist_find in T1. des. ss. rewrite T1. ss.
-      + erewrite alist_find_app2; et.
-  Qed.
-
-End AUX.
-
-Lemma fold_right_add
-      X (add: X -> X -> X) zero xs ys
-      (ZERO: forall x, add zero x = x)
-      (ASSOC: forall x y z, add (add x y) z = add x (add y z))
-  (* (COMM: forall x y, add x y = add y x) *)
-  :
-    add (foldr add zero xs) (foldr add zero ys) = foldr add zero (xs ++ ys)
-.
-Proof.
-  revert ys. induction xs; ii; ss.
-  rewrite fold_right_app. rewrite ASSOC. f_equal. rewrite IHxs. rewrite fold_right_app. ss.
-Qed.
-
-
 
 
 
@@ -415,101 +325,29 @@ Section ADQ.
     { ss. }
   Qed.
 
-  (* refines_closed (Mod.add_list (map SMod.to_src (kmds ++ map (Σ _gstb) umds))) *)
-  (*   (Mod.add_list (map SMod.to_src kmds ++ map Σ umds)) *)
-
   Ltac steps := HoareDef.steps.
 
-  (* Lemma stb_find_iff fn *)
-  (*   : *)
-  (*     ((<<NONE: alist_find fn stb = None>>) /\ *)
-  (*      (<<FINDSRC: alist_find fn (fnsems ms_src) = None>>) /\ *)
-  (*      (<<FINDMID: alist_find fn (fnsems ms_mid) = None>>)) \/ *)
 
-  (*     (exists md (f: fspecbody), *)
-  (*         (<<SOME: alist_find fn stb = Some (f: fspec)>>) /\ *)
-  (*         (<<FINDSRC: alist_find fn (fnsems ms_src) = *)
-  (*                     Some (transl_all *)
-  (*                             (SModSem.mn *)
-  (*                                (SMod.get_modsem md sk)) *)
-  (*                             ∘ fun_to_src (fsb_body f))>>) /\ *)
-  (*         (<<FINDMID: alist_find fn (fnsems ms_mid) = *)
-  (*                     Some (transl_all *)
-  (*                             (SModSem.mn *)
-  (*                                (SMod.get_modsem md sk)) *)
-  (*                             ∘ fun_to_mid stb (fsb_body f))>>)). *)
-  (* Proof. *)
-  (*   unfold ms_src, ms_mid, mds_mid, mds_src, SMod.to_src, SMod.to_mid. *)
-  (*   rewrite SMod.transl_fnsems. rewrite SMod.transl_fnsems. fold sk. *)
-  (*   unfold stb at 1 3. unfold sbtb, mss. rewrite alist_find_map. *)
-  (*   generalize mds. induction mds0; ss; auto. rewrite ! alist_find_app_o. *)
-  (*   erewrite ! SMod.red_do_ret2. rewrite ! alist_find_map. uo. *)
-  (*   destruct (alist_find fn (SModSem.fnsems (SMod.get_modsem a sk))) eqn:FIND. *)
-  (*   { right. esplits; et. } *)
-  (*   des. *)
-  (*   { left. esplits; et. } *)
-  (*   { right. esplits; et. } *)
-  (* Qed. *)
-
-  Let src_fns :=
-    (ModSemL.fnsems (ModL.enclose (Mod.add_list (map SMod.to_src kmds ++ map UMod.transl umds)))).
-  Let tgt_fns :=
-    (ModSemL.fnsems (ModL.enclose (Mod.add_list (map SMod.to_src kmds ++
-                                                     map SMod.to_src (map (UMod.massage _gstb) umds))))).
-
-  Let sk_link0 := (Sk.sort
-                     (Sk.add (ModL.sk (Mod.add_list (map SMod.to_src kmds)))
-                             (ModL.sk (Mod.add_list (map SMod.to_src (map (UMod.massage _gstb) umds)))))).
-  Let sk_link1 := (Sk.sort
-                   (Sk.add (ModL.sk (Mod.add_list (map SMod.to_src kmds)))
-                           (ModL.sk (Mod.add_list (map UMod.transl umds))))).
-
-  Lemma sk_link0_eq: sk_link0 = sk_link.
-  Proof.
-    unfold sk_link, sk_link0.
-    f_equal. rewrite ! Mod.add_list_sk. rewrite fold_right_add; ss; cycle 1.
-    { i. unfold Sk.add. rewrite List.app_assoc. ss. }
-    f_equal. rewrite ! map_map. ss.
-  Qed.
-
-  Lemma sk_link1_eq: sk_link1 = sk_link.
-  Proof.
-    unfold sk_link, sk_link1.
-    f_equal. rewrite ! Mod.add_list_sk. rewrite fold_right_add; ss; cycle 1.
-    { i. unfold Sk.add. rewrite List.app_assoc. ss. }
-    f_equal. rewrite ! map_map. ss.
-  Qed.
-
-  Lemma alist_find_iff
-        fn
+  Lemma flat_map_map A B C (f: A -> B) (g: B -> list C) (l: list A)
     :
-      (<<NONE: (alist_find fn src_fns) = None /\ (alist_find fn tgt_fns) = None>>) \/
-      (<<CTX: exists fsem, (alist_find fn src_fns) = Some fsem /\
-                           (alist_find fn tgt_fns) = Some fsem>>) \/
-      (<<HIT: exists mn fsem,
-          (alist_find fn src_fns) = Some (transl_all mn ∘ (UModSem.transl_fun fsem)) /\
-          (alist_find fn tgt_fns) = Some (transl_all mn ∘ (fun_to_src (fsb_body (UModSem.massage_fsb gstb fsem)
-                                         )))>>)
-  .
+      flat_map g (map f l) = flat_map (g ∘ f) l.
   Proof.
-    destruct (alist_find fn src_fns) eqn:T.
-    - right. ss. unfold src_fns in T. rewrite Mod.add_list_app in T. ss.
-      rewrite alist_find_app_o in *. des_ifs.
-      + left. esplits; et. unfold tgt_fns. rewrite Mod.add_list_app. ss.
-        folder; rewrite sk_link0_eq in *; rewrite sk_link1_eq in *.
-        rewrite alist_find_app_o in *. des_ifs.
-      + right. unfold tgt_fns. rewrite Mod.add_list_app. ss.
-        folder; rewrite sk_link0_eq in *; rewrite sk_link1_eq in *.
-        rewrite alist_find_app_o in *. des_ifs.
-        (* rewrite Mod.add_list_fns in *. rewrite ! List.map_map. f_equal. *)
-        rewrite add_list_fnsems in *. ss.
-        admit "ez".
-    - left. esplits; ss. admit "ez".
+    induction l; ss. f_equal; auto.
   Qed.
 
-  Let src_ms := (ModL.enclose (Mod.add_list (map SMod.to_src kmds ++ map (UMod.transl) umds))).
-  Let tgt_ms := (ModL.enclose (Mod.add_list (map SMod.to_src kmds ++ map SMod.to_src
-                                                 (map (UMod.massage _gstb) umds)))).
+  (* Let sk_eq *)
+  (*   : *)
+  (*     (ModL.sk (Mod.add_list (map SMod.to_src kmds ++ map UMod.transl umds))) *)
+  (*     = *)
+  (*     (ModL.sk *)
+  (*        (Mod.add_list *)
+  (*           (map SMod.to_src kmds ++ map SMod.to_src (map (UMod.massage _gstb) umds)))). *)
+  (* Proof. *)
+  (*   rewrite ! Mod.add_list_sk. unfold Sk.add, Sk.unit. *)
+  (*   rewrite <- ! (@fold_right_app_flat_map _ _ (Mod.sk)). *)
+  (*   rewrite ! flat_map_app. f_equal. clear. *)
+  (*   rewrite ! flat_map_map. eapply flat_map_ext. i. ss. *)
+  (* Qed. *)
 
 
 
@@ -553,6 +391,15 @@ Section ADQ.
   Hypothesis WFR: URA.wf (List.fold_left (⋅) (List.map (SModSem.initial_mr) kmss) ε).
   (* Hypothesis MAINM: In (SMod.main mainpre mainbody) kmds. *)
 
+  Lemma alist_find_map_snd A B (f: A -> B) l (k: string)
+    :
+      alist_find k (map (map_snd f) l)
+      =
+      o_map (alist_find k l) f.
+  Proof.
+    induction l; ss. destruct a. ss. uo. des_ifs.
+  Qed.
+
   Theorem adequacy_open:
     refines_closed (Mod.add_list (List.map (SMod.to_tgt _gstb) kmds ++ List.map UMod.transl umds))
                    (Mod.add_list (List.map (SMod.to_src) kmds ++ List.map UMod.transl umds))
@@ -589,7 +436,28 @@ Section ADQ.
       { clear. i. unfold ns. ss. unfold _gstb.
         rewrite Mod.add_list_app in SOME. ss.
         unfold _kmss, _umss. clear - SOME.
-        admit "alist flat_map ...". }
+        rewrite add_list_fnsems in *. rewrite List.map_map in *.
+        assert (is_some (alist_find fn ((do X <- map (fun x => flip ModL.get_modsem sk (SMod.to_src x)) kmds; ModSemL.fnsems X)))
+                ->
+                is_some (alist_find fn ((do x <- map (flip SMod.get_modsem sk) kmds; map (map_snd fsb_fspec) (SModSem.fnsems x))))).
+        { clear. generalize kmds.
+          induction kmds0; ss.
+          change ModSem.map_snd with map_snd.
+          rewrite ! alist_find_app_o in *. rewrite ! alist_find_map_snd in *.
+          change (fun '(fn0, sb) => (fn0, fun_to_src (fsb_body sb))) with (@map_snd string _ _ (fun_to_src ∘ fsb_body)).
+          uo. des_ifs. rewrite alist_find_map_snd in Heq2.
+          rewrite Heq1 in *. ss.
+        }
+        assert (is_some (alist_find fn (ModSemL.fnsems (ModL.get_modsem (Mod.add_list (map UMod.transl umds)) sk)))
+                ->
+                is_some (alist_find fn (do x <- map (flip UMod.get_modsem sk) umds;
+                                           map (map_snd (fun _ => fspec_trivial)) (UModSem.fnsems x)))).
+        { clear. generalize umds.
+          induction umds0; ss.
+          change ModSem.map_snd with map_snd.
+          rewrite ! alist_find_app_o in *. rewrite ! alist_find_map_snd in *. uo. des_ifs. }
+        rewrite ! alist_find_app_o in *. des_ifs; et. exfalso. ss. intuition.
+      }
       rewrite ! List.map_app. eapply Forall2_app.
       { eapply Forall2_apply_Forall2.
         { instantiate (1:=eq). refl. }
