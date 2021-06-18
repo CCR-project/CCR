@@ -24,12 +24,6 @@ Section PROOF.
 
   Context `{Σ: GRA.t}.
 
-  Definition is_minus_one (v: val): bool :=
-    match v with
-    | Vint i => dec i (- 1)%Z
-    | _ => false
-    end
-  .
   (* void echo() { *)
   (*   void* h = Stack.new(); *)
   (*   input(h); *)
