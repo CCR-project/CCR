@@ -7,16 +7,12 @@ Require Import Skeleton.
 Require Import PCM.
 Require Import Mem1.
 Require Import TODOYJ.
+Require Import NewEchoHeader.
 
 Set Implicit Arguments.
 
 
 
-(*** TODO: move to Universe ***)
-Global Program Instance val_dec: Dec val.
-Next Obligation.
-  repeat (decide equality).
-Defined.
 
 
 
@@ -50,7 +46,7 @@ Section PROOF.
     fun args =>
       h <- (pargs [Tuntyped] args)?;;
       `n: val    <- (ccall "getint" ([]: list val));;
-      if (dec n (Vint min_64))
+      if (dec n (Vint INT_MIN))
       then Ret Vundef
       else
         `_: val    <- (ccall "push" ([h; n]: list val));;
@@ -69,7 +65,7 @@ Section PROOF.
     fun args =>
       h <- (pargs [Tuntyped] args)?;;
       `n: val    <- (ccall "pop" ([h]: list val));;
-      if (dec n (Vint min_64))
+      if (dec n (Vint INT_MIN))
       then Ret Vundef
       else
         `_: val    <- (ccall "putint" ([n]: list val));;
