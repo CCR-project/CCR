@@ -124,6 +124,8 @@ Section LINKLIST.
       fold_left_option link_imp src_t (Some src_h)
     end.
 
+  Definition link_imps (src_list: list Imp.program) := link_imp_list (List.map lift src_list).
+
 End LINKLIST.
 
 
@@ -145,7 +147,7 @@ Section PROOF.
   Definition wf_prog src := wf_prog_perm src /\ wf_prog_gvar src.
 
   Lemma lifted_then_wf :
-    forall (src: Imp.program), <<LIFTWF: wf_prog (lift src)>>.
+    forall (src: Imp.program), <<WFLIFT: wf_prog (lift src)>>.
   Proof.
     i. unfold lift. split.
     - unfold wf_prog_perm. ss. unfold defs. rewrite map_app. rewrite! List.map_map. red. unfold compose. ss.
@@ -167,13 +169,49 @@ Section PROOF.
   Qed.
 
   Lemma linked_two_wf :
-    forall (src1 src2: Imp.program) srcl
+    forall (src1 src2: Imp.programL) srcl
+      (WF1: wf_prog src1)
+      (WF2: wf_prog src2)
       (LINKED: link_imp src1 src2 = Some srcl),
-      <<L2WF: wf_prog srcl>>.
+      <<WFLINK: wf_prog srcl>>.
   Proof.
-    i. unfold link_imp in LINKED. des_ifs. bsimpl. des.
-    Admitted.
+    i. unfold wf_prog in *. des. unfold link_imp in LINKED. des_ifs. split.
+    - unfold wf_prog_perm in *; ss. rewrite! map_app. red. rewrite <- app_assoc.
+      match goal with
+      | [ |- Permutation (?l1 ++ ?l2 ++ ?l3 ++ ?l4) _ ] =>
+        cut (Permutation (l1 ++ l2 ++ l3 ++ l4) ((l1 ++ l3) ++ l2 ++ l4))
+      end.
+      { i. eapply Permutation_trans; eauto. apply Permutation_app; eauto. }
+      clear. rewrite <- app_assoc. apply Permutation_app_head.
+      rewrite! app_assoc. apply Permutation_app_tail. apply Permutation_app_comm.
+    - unfold wf_prog_gvar in *; ss. ii. apply Sk.sort_incl_rev in H. apply in_or_app. apply in_app_or in H. des.
+      + left; apply WF3. apply Sk.sort_incl. auto.
+      + right; apply WF0. apply Sk.sort_incl. auto.
+  Qed.
 
+  Lemma linked_list_wf :
+    forall (src_list: list Imp.programL) srcl
+      (WFPROGS: Forall wf_prog src_list)
+      (LINKED: link_imp_list src_list = Some srcl),
+      <<WFLINK: wf_prog srcl>>.
+  Proof.
+    destruct src_list as [| src0 src_list]; i; ss; clarify. depgen src0. depgen srcl.
+    induction src_list; i; ss; clarify.
+    - inv WFPROGS. ss.
+    - rename a into src1. inv WFPROGS. inv H2. destruct (link_imp src0 src1) eqn:SRC01.
+      2:{ rewrite fold_left_option_None in LINKED. clarify. }
+      rename p into src01. hexploit (linked_two_wf H1 H3 SRC01); eauto.
+  Qed.
+
+  Lemma linked_list_wf_lift :
+    forall (src_list: list Imp.program) srcl
+      (LINKED: link_imps src_list = Some srcl),
+      <<WFLINK: wf_prog srcl>>.
+  Proof.
+    i. unfold link_imps in LINKED. assert (WFPROGS: Forall wf_prog (List.map lift src_list)).
+    { clear LINKED. clear srcl. induction src_list; ss; clarify. econs; auto. apply lifted_then_wf. }
+    hexploit linked_list_wf; eauto.
+  Qed.
 
 
 End PROOF.
