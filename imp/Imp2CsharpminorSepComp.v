@@ -188,10 +188,7 @@ End PROOFSINGLE.
 
 
 
-Section PROOFLINK.
-
-  Import Maps.PTree.
-  Import Permutation.
+Section PROOFLEFT.
 
   Context `{Σ: GRA.t}.
 
@@ -252,7 +249,77 @@ Section PROOFLINK.
     rewrite MODLIST. ss.
   Qed.
 
+End PROOFLEFT.
+
+
+
+
+
+Section PROOFRIGHT.
+
+  Import Maps.PTree.
+  Import Permutation.
+
+  Context `{Σ: GRA.t}.
+
   (* Proving the right arrow of the diagram *)
+
+  Lemma link_then_some_gmap
+        src1 gm1 src2 gm2 srcl
+        (GMAP1 : get_gmap src1 = Some gm1)
+        (GMAP2 : get_gmap src2 = Some gm2)
+        (LINK : link_imp src1 src2 = Some srcl)
+    :
+      <<GMAPL: exists gml, get_gmap srcl = Some gml>>.
+  Proof.
+    unfold link_imp in LINK. des_ifs.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  (* Maps.PTree.elements_extensional 
+     we will rely on above theorem for commutation lemmas *)
+  Lemma _comm_link_imp_compile
+        src1 src2 srcl tgt1 tgt2 tgtl
+        (COMP1: compile src1 = OK tgt1)
+        (COMP2: compile src2 = OK tgt2)
+        (LINKSRC: link_imp src1 src2 = Some srcl)
+        (LINKTGT: link_prog tgt1 tgt2 = Some tgtl)
+    :
+      <<COMPL: compile srcl = OK tgtl>>.
+  Proof.
+    unfold compile in *. des_ifs.
+    2:{
+
+      
+    unfold link_imp in LINKSRC. des_ifs. bsimpl; des. rename Heq into COND1, Heq1 into COND2, Heq0 into COND3.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  Admitted.
+
   Fixpoint compile_imps (src_list : list Imp.programL) :=
     match src_list with
     | [] => Some []
@@ -277,20 +344,6 @@ Section PROOFLINK.
   (*     (COMPT: compile_list src_t tgt_t) *)
   (*   : *)
   (*     <<COMPLIST: compile_list (src_h :: src_t) (tgt_h :: tgt_t)>>. *)
-
-  (* Maps.PTree.elements_extensional 
-     we will rely on above theorem for commutation lemmas *)
-  Lemma _comm_link_imp_compile
-        src1 src2 srcl tgt1 tgt2 tgtl
-        (COMP1: compile src1 = OK tgt1)
-        (COMP2: compile src2 = OK tgt2)
-        (LINKSRC: link_imp src1 src2 = Some srcl)
-        (LINKTGT: link_prog tgt1 tgt2 = Some tgtl)
-    :
-      <<COMPL: compile srcl = OK tgtl>>.
-  Proof.
-  Admitted.
-
   Definition link_csm_list (tgt_list : list (Csharpminor.program)) :=
     match tgt_list with
     | [] => None
@@ -324,8 +377,15 @@ Section PROOFLINK.
     auto. auto.
   Qed.
 
-  Definition src_initial_state (src : ModL.t) :=
-    (ModL.compile src).(initial_state).
+End PROOFRIGHT.
+
+
+
+
+Section PROOFLINK.
+
+  (* Definition src_initial_state (src : ModL.t) := *)
+  (*   (ModL.compile src).(initial_state). *)
 
   Theorem compile_behavior_improves
           (src_list : list Imp.program) srcl tgt_list tgtl srcst tgtst

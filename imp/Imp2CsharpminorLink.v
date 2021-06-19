@@ -25,12 +25,12 @@ Section LINK.
   Variable src1 : Imp.programL.
   Variable src2 : Imp.programL.
 
-  Let l_nameL := src1.(nameL) ++ src2.(nameL).
-  Let l_prog_varsL := src1.(prog_varsL) ++ src2.(prog_varsL).
-  Let l_prog_funsLM := src1.(prog_funsL) ++ src2.(prog_funsL).
+  Definition l_nameL := src1.(nameL) ++ src2.(nameL).
+  Definition l_prog_varsL := src1.(prog_varsL) ++ src2.(prog_varsL).
+  Definition l_prog_funsLM := src1.(prog_funsL) ++ src2.(prog_funsL).
   Let l_prog_funsL := List.map snd l_prog_funsLM.
-  Let l_publicL := src1.(publicL) ++ src2.(publicL).
-  Let l_defsL := src1.(defsL) ++ src2.(defsL).
+  Definition l_publicL := src1.(publicL) ++ src2.(publicL).
+  Definition l_defsL := src1.(defsL) ++ src2.(defsL).
 
   Let check_name_unique1 {K} {A} {B} decK
       (l1 : list (K * A)) (l2 : list (K * B)) :=
@@ -80,18 +80,16 @@ Section LINK.
     _link_imp_cond3 (src1.(ext_funsL) ++ src2.(ext_funsL)).
 
   (* merge external decls; vars is simple, funs assumes cond3 is passed *)
-  Let l_ext_vars0 := nodup string_Dec (src1.(ext_varsL) ++ src2.(ext_varsL)).
-
-  Let l_ext_funs0 := nodup extFun_Dec (src1.(ext_funsL) ++ src2.(ext_funsL)).
-
   (* link external decls; need to remove defined names *)
-  Let l_ext_vars :=
-    let l_prog_varsL' := List.map fst l_prog_varsL in
-    List.filter (fun s => negb (in_dec string_Dec s l_prog_varsL')) l_ext_vars0.
+  Definition l_ext_vars :=
+    let l_ext_vars0 := nodup string_Dec (src1.(ext_varsL) ++ src2.(ext_varsL)) in
+    let l_prog_varsLf := List.map fst l_prog_varsL in
+    List.filter (fun s => negb (in_dec string_Dec s l_prog_varsLf)) l_ext_vars0.
 
-  Let l_ext_funs :=
-    let l_prog_funsL' := List.map fst l_prog_funsL in
-    List.filter (fun sn => negb (in_dec string_Dec (fst sn) l_prog_funsL')) l_ext_funs0.
+  Definition l_ext_funs :=
+    let l_ext_funs0 := nodup extFun_Dec (src1.(ext_funsL) ++ src2.(ext_funsL)) in
+    let l_prog_funsLf := List.map fst l_prog_funsL in
+    List.filter (fun sn => negb (in_dec string_Dec (fst sn) l_prog_funsLf)) l_ext_funs0.
 
   (* Linker for Imp programs, follows Clight's link_prog as possible *)
   Definition link_imp : option Imp.programL :=
@@ -191,7 +189,8 @@ Section PROOF.
       <<WFLINK: wf_prog srcl>>.
   Proof.
     i. unfold wf_prog in *. des. unfold link_imp in LINKED. des_ifs. split.
-    - unfold wf_prog_perm in *; ss. rewrite! map_app. red. rewrite <- app_assoc.
+    - unfold wf_prog_perm in *; ss. unfold l_prog_varsL; unfold l_prog_funsLM; unfold l_defsL.
+      rewrite! map_app. red. rewrite <- app_assoc.
       match goal with
       | [ |- Permutation (?l1 ++ ?l2 ++ ?l3 ++ ?l4) _ ] =>
         cut (Permutation (l1 ++ l2 ++ l3 ++ l4) ((l1 ++ l3) ++ l2 ++ l4))
