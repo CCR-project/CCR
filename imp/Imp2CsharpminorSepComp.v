@@ -24,7 +24,7 @@ Require Import Imp2CsharpminorSim.
 
 Set Implicit Arguments.
 
-Section PROOFALL.
+Section PROOFSINGLE.
 
   Import Maps.PTree.
 
@@ -182,7 +182,91 @@ Section PROOFALL.
       { econs 1. ss. } }
   Qed.
 
+End PROOFSINGLE.
 
+
+
+
+
+Section PROOFLINK.
+
+  Import Maps.PTree.
+  Import Permutation.
+
+  Context `{Σ: GRA.t}.
+
+  (* Proving the left arrow of the diagram *)
+  Lemma _comm_link_imp_link_mod
+        src1 src2 srcl tgt1 tgt2 tgtl (ctx : ModL.t)
+        (MOD1: ImpMod.get_modL src1 = tgt1)
+        (MOD2: ImpMod.get_modL src2 = tgt2)
+        (LINKIMP: link_imp src1 src2 = Some srcl)
+        (MODL: ImpMod.get_modL srcl = tgtl)
+    :
+      <<LINKMOD: ModL.add ctx (ModL.add tgt1 tgt2) = ModL.add ctx tgtl>>.
+  Proof.
+    unfold link_imp in LINKIMP. des_ifs; ss. unfold ImpMod.get_modL; ss. unfold ModL.add. ss. red. f_equal.
+    extensionality sk. unfold ModSemL.add; ss. f_equal.
+    - f_equal. rewrite <- map_app. ss.
+    - f_equal. rewrite <- map_app. ss.
+  Qed.
+
+  Lemma comm_link_imp_link_mod
+        src_list srcl tgt_list tgtl ctx
+        (MODLIST: List.map ImpMod.get_modL src_list = tgt_list)
+        (LINKIMP: link_imp_list src_list = Some srcl)
+        (MODL: ImpMod.get_modL srcl = tgtl)
+    :
+      <<LINKMOD: fold_right ModL.add ModL.empty (ctx :: tgt_list) = ModL.add ctx tgtl>>.
+  Proof.
+    revert_until Σ. induction src_list; i; ss; clarify. ss. des_ifs. rename a into src0, p into src1. red.
+    hexploit _comm_link_imp_link_mod.
+    5:{ i. eapply H. }
+    4:{ clarify. }
+    3:{ eapply LINKIMP. }
+    all: eauto.
+    specialize IHsrc_list with (ctx:=ModL.empty). rewrite <- ModL.add_empty_l. sym; rewrite <- ModL.add_empty_l.
+    eapply IHsrc_list; eauto.
+  Qed.
+
+  Theorem left_arrow
+          (src_list: list Imp.program) srcl (tgt_list: list Mod.t) tgtl (ctx: Mod.t)
+          (MODLIST: List.map ImpMod.get_mod src_list = tgt_list)
+          (LINKIMP: link_imps src_list = Some srcl)
+          (MODL: ImpMod.get_modL srcl = tgtl)
+    :
+      <<LINKMOD: Mod.add_list (ctx :: tgt_list) = ModL.add (Mod.lift ctx) tgtl>>.
+  Proof.
+    red. unfold Mod.add_list. ss. eapply comm_link_imp_link_mod; eauto. rewrite List.map_map.
+    pose ImpMod.comm_imp_mod_lift. unfold compose in e. rewrite e; clear e. rewrite <- List.map_map.
+    rewrite MODLIST. ss.
+  Qed.
+
+  (* Proving the right arrow of the diagram *)
+  Fixpoint compile_imps (src_list : list Imp.programL) :=
+    match src_list with
+    | [] => Some []
+    | src :: srcs =>
+      match compile src with
+      | OK tgt =>
+        match compile_imps srcs with
+        | Some tgts => Some (tgt :: tgts)
+        | _ => None
+        end
+      | _ => None
+      end
+    end.
+
+  (* Inductive compile_list : *)
+  (*   list programL -> list (Csharpminor.program) -> Prop := *)
+  (* | compile_nil : *)
+  (*     compile_list [] [] *)
+  (* | compile_head *)
+  (*     src_h src_t tgt_h tgt_t *)
+  (*     (COMPH: compile src_h = OK tgt_h) *)
+  (*     (COMPT: compile_list src_t tgt_t) *)
+  (*   : *)
+  (*     <<COMPLIST: compile_list (src_h :: src_t) (tgt_h :: tgt_t)>>. *)
 
   (* Maps.PTree.elements_extensional 
      we will rely on above theorem for commutation lemmas *)
@@ -196,20 +280,6 @@ Section PROOFALL.
       <<COMPL: compile srcl = OK tgtl>>.
   Proof.
   Admitted.
-
-  Definition wf_link {T} (program_list : list T) :=
-    exists h t, program_list = h :: t.
-
-  Inductive compile_list :
-    list programL -> list (Csharpminor.program) -> Prop :=
-  | compile_nil :
-      compile_list [] []
-  | compile_head
-      src_h src_t tgt_h tgt_t
-      (COMPH: compile src_h = OK tgt_h)
-      (COMPT: compile_list src_t tgt_t)
-    :
-      <<COMPLIST: compile_list (src_h :: src_t) (tgt_h :: tgt_t)>>.
 
   Definition link_csm_list (tgt_list : list (Csharpminor.program)) :=
     match tgt_list with
@@ -244,34 +314,6 @@ Section PROOFALL.
     auto. auto.
   Qed.
 
-  Lemma _comm_link_imp_link_mod
-        src1 src2 srcl tgt1 tgt2 tgtl (ctx : ModL.t)
-        (MOD1: ImpMod.get_modL src1 = tgt1)
-        (MOD2: ImpMod.get_modL src2 = tgt2)
-        (LINKIMP: link_imp src1 src2 = Some srcl)
-        (MODL: ImpMod.get_modL srcl = tgtl)
-    :
-      <<LINKMOD: ModL.add (ModL.add ctx tgt1) tgt2 = ModL.add ctx tgtl>>.
-  Proof.
-  Admitted.
-
-  Lemma comm_link_imp_link_mod
-        src_list srcl tgt_list tgtl ctx
-        (MODLIST: List.map (fun src => ImpMod.get_modL src) src_list = tgt_list)
-        (LINKIMP: link_imp_list src_list = Some srcl)
-        (MODL: ImpMod.get_modL srcl = tgtl)
-    :
-      <<LINKMOD: fold_left ModL.add tgt_list ctx = ModL.add ctx tgtl>>.
-  Proof.
-    destruct src_list eqn:SL; i; ss; clarify.
-    move p after l.
-    revert_until Σ.
-    induction l; i; ss; clarify.
-    destruct (link_imp p a) eqn:LI; ss; clarify.
-    2:{ rewrite fold_left_option_None in LINKIMP; clarify. }
-    erewrite _comm_link_imp_link_mod; eauto.
-  Qed.
-
   Definition src_initial_state (src : ModL.t) :=
     (ModL.compile src).(initial_state).
 
@@ -289,4 +331,4 @@ Section PROOFALL.
   Proof.
   Admitted.
 
-End PROOFALL.
+End PROOFLINK.

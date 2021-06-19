@@ -107,9 +107,7 @@ End LINK.
 Section LINKLIST.
 
   Definition fold_left_option {T} f (t : list T) (opth : option T) :=
-    fold_left
-      (fun opt s2 => match opt with | Some s1 => f s1 s2 | None => None end)
-      t opth.
+    fold_left (fun opt s2 => match opt with | Some s1 => f s1 s2 | None => None end) t opth.
 
   Lemma fold_left_option_None {T} :
     forall f (l : list T), fold_left_option f l None = None.
@@ -117,11 +115,27 @@ Section LINKLIST.
     intros f. induction l; ss; clarify.
   Qed.
 
-  Definition link_imp_list src_list :=
+  Definition fold_right_option {T} f (opt : option T) (l : list T) :=
+    fold_right (fun s2 o => match o with | Some s1 => f s2 o | None => None end) opt l.
+
+  Definition fold_right_option_None {T} :
+    forall f (l : list T), fold_right_option f None l = None.
+  Proof.
+    intros f. induction l; ss; clarify. rewrite IHl; ss.
+  Qed.
+
+  (* Definition link_imp_list src_list := *)
+  (*   match src_list with *)
+  (*   | [] => None *)
+  (*   | src_h :: src_t => *)
+  (*     fold_left_option link_imp src_t (Some src_h) *)
+  (*   end. *)
+
+  Fixpoint link_imp_list src_list :=
     match src_list with
     | [] => None
-    | src_h :: src_t =>
-      fold_left_option link_imp src_t (Some src_h)
+    | a :: l =>
+      match link_imp_list l with None => None | Some b => link_imp a b end
     end.
 
   Definition link_imps (src_list: list Imp.program) := link_imp_list (List.map lift src_list).
@@ -195,12 +209,9 @@ Section PROOF.
       (LINKED: link_imp_list src_list = Some srcl),
       <<WFLINK: wf_prog srcl>>.
   Proof.
-    destruct src_list as [| src0 src_list]; i; ss; clarify. depgen src0. depgen srcl.
     induction src_list; i; ss; clarify.
-    - inv WFPROGS. ss.
-    - rename a into src1. inv WFPROGS. inv H2. destruct (link_imp src0 src1) eqn:SRC01.
-      2:{ rewrite fold_left_option_None in LINKED. clarify. }
-      rename p into src01. hexploit (linked_two_wf H1 H3 SRC01); eauto.
+    rename a into src0. des_ifs. specialize IHsrc_list with p. inv WFPROGS. apply IHsrc_list in H2; ss.
+    eapply (linked_two_wf H1 H2 LINKED).
   Qed.
 
   Lemma linked_list_wf_lift :

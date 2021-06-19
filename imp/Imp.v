@@ -321,10 +321,9 @@ Section MODSEM.
   |}.
 
   Lemma comm_imp_mod_lift :
-    forall (p : program),
-      get_modL (lift p) = Mod.lift (get_mod p).
+      (compose get_modL lift) = (compose Mod.lift get_mod).
   Proof.
-    i. unfold lift. unfold Mod.lift. unfold get_modL, get_mod.
+    unfold compose. extensionality p. unfold lift. unfold Mod.lift. unfold get_modL, get_mod.
     f_equal. unfold modsemL, modsem. ss. unfold ModSem.lift.
     ss. extensionality sk. f_equal.
     revert sk. induction (prog_funs p); i; ss; clarify.
