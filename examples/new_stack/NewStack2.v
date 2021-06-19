@@ -76,12 +76,6 @@ Section PROOF.
       Ret Vundef
   .
 
-  Definition cfun2 X Y (f: X -> itree Es Y): Any.t -> itree Es Any.t :=
-    fun args => map_or_else (Any.split args)
-                            (fun '(_, args) => args <- unwrapN args↓;; ret <- f args;; Ret (ret↑))
-                            (args <- unwrapN args↓;; ret <- f args;; Ret (ret↑))
-  .
-
   Definition StackSem: ModSem.t := {|
     ModSem.fnsems := [("new", cfun2 new_body); ("pop", cfun2 pop_body); ("push", cfun2 push_body)];
     ModSem.mn := "Stack";

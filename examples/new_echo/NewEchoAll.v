@@ -8,8 +8,9 @@ Require Import Skeleton.
 Require Import PCM.
 Require Import Hoare.
 Require Import MutHeader SimModSem.
+Require Import OpenDef.
 (* Require Import Mem1 Stack1 Echo2 EchoMain1 Client1. *)
-Require Import Mem0 NewStack0 NewEcho0 EchoMain0 Client0.
+Require Import Mem0 NewStack0 NewEcho0 NewEchoMain0 NewClient0.
 
 Require Import TODOYJ.
 
@@ -27,7 +28,7 @@ Section ECHOIMPL.
   Local Existing Instance Σ.
 
   Definition echo_impl: ModL.t :=
-    Mod.add_list [Mem; Main; Stack; Echo; Client].
+    Mod.add_list [Mem; Main; Stack; Echo; (UMod.transl Client)].
 
 End ECHOIMPL.
 
