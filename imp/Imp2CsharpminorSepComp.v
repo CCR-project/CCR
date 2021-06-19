@@ -219,7 +219,17 @@ Section PROOFLINK.
     :
       <<LINKMOD: fold_right ModL.add ModL.empty (ctx :: tgt_list) = ModL.add ctx tgtl>>.
   Proof.
-    revert_until Σ. induction src_list; i; ss; clarify. ss. des_ifs. rename a into src0, p into src1. red.
+    destruct src_list as [ | src0 src_liat ]; ss; clarify. des_ifs; ss; clarify.
+    { rewrite ModL.add_empty_r. ss. }
+    rename p into src1, p0 into srct, l into src_list, Heq into LINK. move src_list before Σ.
+    revert_until Σ. induction src_list; i; ss; clarify.
+    { rewrite ModL.add_empty_r. eapply _comm_link_imp_link_mod; eauto. }
+    red. des_ifs; ss; clarify.
+    { rewrite ModL.add_empty_r. eapply _comm_link_imp_link_mod; eauto.
+      specialize IHsrc_list with (ctx:=ModL.empty). rewrite <- ModL.add_empty_l. sym; rewrite <- ModL.add_empty_l.
+      replace (ImpMod.get_modL p) with (ModL.add (ImpMod.get_modL p) ModL.empty).
+      2:{ apply ModL.add_empty_r. }
+      eapply IHsrc_list; eauto. }
     hexploit _comm_link_imp_link_mod.
     5:{ i. eapply H. }
     4:{ clarify. }

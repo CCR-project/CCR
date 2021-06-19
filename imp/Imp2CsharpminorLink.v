@@ -134,6 +134,7 @@ Section LINKLIST.
   Fixpoint link_imp_list src_list :=
     match src_list with
     | [] => None
+    | [a] => Some a
     | a :: l =>
       match link_imp_list l with None => None | Some b => link_imp a b end
     end.
@@ -209,9 +210,15 @@ Section PROOF.
       (LINKED: link_imp_list src_list = Some srcl),
       <<WFLINK: wf_prog srcl>>.
   Proof.
-    induction src_list; i; ss; clarify.
-    rename a into src0. des_ifs. specialize IHsrc_list with p. inv WFPROGS. apply IHsrc_list in H2; ss.
-    eapply (linked_two_wf H1 H2 LINKED).
+    i. destruct src_list as [| src0 src_list]; ss; clarify.
+    depgen src0. depgen srcl. induction src_list; i; ss; clarify.
+    { inv WFPROGS. ss. }
+    rename a into src1. des_ifs; ss; clarify.
+    { inv WFPROGS. eapply IHsrc_list; ss; clarify; eauto. econs; eauto. inv H2. eapply (linked_two_wf H1 H3 LINKED). }
+    rename l into src_list, p1 into src2, p into srct. des_ifs.
+    { specialize IHsrc_list with srct src1. inv WFPROGS. apply IHsrc_list in H2; ss. eapply (linked_two_wf H1 H2 LINKED). }
+    rename l into src_list. specialize IHsrc_list with srct src1. inv WFPROGS. hexploit IHsrc_list; eauto. i.
+    eapply (linked_two_wf H1 H LINKED).
   Qed.
 
   Lemma linked_list_wf_lift :
@@ -223,6 +230,5 @@ Section PROOF.
     { clear LINKED. clear srcl. induction src_list; ss; clarify. econs; auto. apply lifted_then_wf. }
     hexploit linked_list_wf; eauto.
   Qed.
-
 
 End PROOF.
