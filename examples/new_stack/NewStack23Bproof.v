@@ -35,14 +35,14 @@ Section SIMMODSEM.
   Notation sim stk_res0 stk_mgr0 :=
     (∀ h,
         (∃ P stk, <<SRC: (stk_res0: URA.car (t:=_stkRA)) h = Some (Ag.ag P)>> ∧
-                         <<TGT: (stk_mgr0: gmap mblock (list Z)) !! h = Some stk>> ∧ <<PR: Forall P stk>>) ∨
+                         <<TGT: (stk_mgr0: gmap mblock (list val)) !! h = Some stk>> ∧ <<PR: Forall P stk>>) ∨
         (<<SRC: (stk_res0: URA.car (t:=_stkRA)) h = None>> ∧
-                <<TGT: (stk_mgr0: gmap mblock (list Z)) !! h = None>>)
+                <<TGT: (stk_mgr0: gmap mblock (list val)) !! h = None>>)
     )
   .
 (*   match (stk_res0: URA.car (t:=_stkRA)) h with *)
-(*   | Some P => ∃ stk, <<TGT: (stk_mgr0: gmap mblock (list Z)) !! h = Some stk>> ∧ <<PR: Forall P stk>> *)
-(*   | None => <<TGT: (stk_mgr0: gmap mblock (list Z)) !! h = None>> *)
+(*   | Some P => ∃ stk, <<TGT: (stk_mgr0: gmap mblock (list val)) !! h = Some stk>> ∧ <<PR: Forall P stk>> *)
+(*   | None => <<TGT: (stk_mgr0: gmap mblock (list val)) !! h = None>> *)
 (*   end) *)
 
   Let wf: W -> Prop :=
@@ -69,7 +69,7 @@ Section SIMMODSEM.
         stk_res0
         stk_mgr0
         (SIM: sim stk_res0 stk_mgr0)
-        (h: mblock) P (stk: (list Z))
+        (h: mblock) P (stk: (list val))
         (PR: Forall P stk)
     :
       <<SIM: sim (<[h:=Some (Ag.ag P)]>stk_res0) (<[h:=stk]> stk_mgr0)>>

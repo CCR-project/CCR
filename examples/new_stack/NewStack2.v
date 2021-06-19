@@ -20,7 +20,7 @@ Section PROOF.
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG memRA Σ}.
 
-  Notation pget := (p0 <- trigger PGet;; `p0: (gmap mblock (list Z)) <- p0↓ǃ;; Ret p0) (only parsing).
+  Notation pget := (p0 <- trigger PGet;; `p0: (gmap mblock (list val)) <- p0↓ǃ;; Ret p0) (only parsing).
   Notation pput p0 := (trigger (PPut p0↑)) (only parsing).
 
   (* def new(): Ptr *)
@@ -57,7 +57,7 @@ Section PROOF.
       match stk0 with
       | x :: stk1 =>
         pput (<[handle:=stk1]> stk_mgr0);;;
-        Ret (Vint x)
+        Ret x
       | _ => Ret (Vint (- 1))
       end
   .
@@ -69,7 +69,7 @@ Section PROOF.
 
   Definition push_body: list val -> itree Es val :=
     fun args =>
-      '(handle, x) <- (pargs [Tblk; Tint] args)?;;
+      '(handle, x) <- (pargs [Tblk; Tuntyped] args)?;;
       stk_mgr0 <- pget;;
       stk0 <- (stk_mgr0 !! handle)?;;
       pput (<[handle:=(x :: stk0)]> stk_mgr0);;;
@@ -80,7 +80,7 @@ Section PROOF.
     ModSem.fnsems := [("new", cfun2 new_body); ("pop", cfun2 pop_body); ("push", cfun2 push_body)];
     ModSem.mn := "Stack";
     ModSem.initial_mr := ε;
-    ModSem.initial_st := (∅: gmap mblock (list Z))↑;
+    ModSem.initial_st := (∅: gmap mblock (list val))↑;
   |}
   .
 

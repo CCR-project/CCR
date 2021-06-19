@@ -32,7 +32,7 @@ Section SIMMODSEM.
 
   Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
 
-  Inductive sim_loc: URA.car (t:=(Excl.t _)) -> option (list Z) -> option (list Z) -> Prop :=
+  Inductive sim_loc: URA.car (t:=(Excl.t _)) -> option (list val) -> option (list val) -> Prop :=
   | sim_loc_k stk0: sim_loc (Some stk0) None (Some stk0)
   | sim_loc_u stk0: sim_loc ε (Some stk0) (Some stk0)
   | sim_loc_absent: sim_loc ε None None
@@ -40,7 +40,7 @@ Section SIMMODSEM.
 
   Notation sim res0 mgr_src0 mgr_tgt0 :=
     (∀ h, sim_loc ((res0: URA.car (t:=_stkRA)) h)
-                  ((mgr_src0: gmap mblock (list Z)) !! h) ((mgr_tgt0: gmap mblock (list Z)) !! h)).
+                  ((mgr_src0: gmap mblock (list val)) !! h) ((mgr_tgt0: gmap mblock (list val)) !! h)).
 
   Let wf: W -> Prop :=
     @mk_wf _ unit
@@ -67,7 +67,7 @@ Section SIMMODSEM.
   Lemma sim_fresh_k
         res0 mgr_src0 mgr_tgt0
         (SIM: sim res0 mgr_src0 mgr_tgt0)
-        (h: mblock) (stk: (list Z))
+        (h: mblock) (stk: (list val))
         (FRESH: mgr_tgt0 !! h = None)
     :
       <<SIM: sim (<[h:=Excl.just stk]>res0) mgr_src0 (<[h:=stk]> mgr_tgt0)>>
@@ -86,7 +86,7 @@ Section SIMMODSEM.
   Lemma sim_update_k
         res0 mgr_src0 mgr_tgt0
         (SIM: sim res0 mgr_src0 mgr_tgt0)
-        (h: mblock) (stk: (list Z))
+        (h: mblock) (stk: (list val))
         (FRESH: mgr_src0 !! h = None)
     :
       <<SIM: sim (<[h:=Excl.just stk]>res0) mgr_src0 (<[h:=stk]> mgr_tgt0)>>
@@ -105,7 +105,7 @@ Section SIMMODSEM.
   Lemma sim_fresh_u
         res0 mgr_src0 mgr_tgt0
         (SIM: sim res0 mgr_src0 mgr_tgt0)
-        (h: mblock) (stk: (list Z))
+        (h: mblock) (stk: (list val))
         (FRESH: mgr_tgt0 !! h = None)
     :
       <<SIM: sim res0 (<[h:=stk]>mgr_src0) (<[h:=stk]> mgr_tgt0)>>
@@ -122,7 +122,7 @@ Section SIMMODSEM.
   Lemma sim_update_u
         res0 mgr_src0 mgr_tgt0
         (SIM: sim res0 mgr_src0 mgr_tgt0)
-        (h: mblock) (stk: (list Z))
+        (h: mblock) (stk: (list val))
         (FRESH: res0 h = ε)
     :
       <<SIM: sim res0 (<[h:=stk]> mgr_src0) (<[h:=stk]> mgr_tgt0)>>
@@ -150,7 +150,7 @@ Section SIMMODSEM.
 
   (* Ltac renamer := *)
   (*   match goal with *)
-  (*   | [mp_src: gmap nat (list Z) |- _ ] => *)
+  (*   | [mp_src: gmap nat (list val) |- _ ] => *)
   (*     let tmp := fresh "_tmp_" in *)
   (*     rename mp_src into tmp; *)
   (*     let name := fresh "stk_mgr0" in *)
@@ -185,7 +185,7 @@ Section SIMMODSEM.
       repeat multimatch mp_src with
              | context[?g] =>
                match (type of g) with
-               | gmap mblock (list Z) =>
+               | gmap mblock (list val) =>
                  rename g into tmp; let name := fresh "mgr_src0" in rename tmp into name
                | _ => fail
                end
@@ -195,7 +195,7 @@ Section SIMMODSEM.
       repeat multimatch mp_tgt with
              | context[?g] =>
                match (type of g) with
-               | gmap mblock (list Z) =>
+               | gmap mblock (list val) =>
                  rename g into tmp; let name := fresh "mgr_tgt0" in rename tmp into name
                | _ => fail
                end
@@ -318,7 +318,7 @@ Section SIMMODSEM.
       - unfold KModSem.transl_fun_tgt. steps.
         rewrite Any.upcast_split. cbn. steps. rewrite Any.upcast_downcast in *. clarify. steps.
         rewrite Any.upcast_downcast in *. clarify. renamer. steps.
-        rename n into h. rename l into stk0. rename z into x.
+        rename n into h. rename l into stk0. rename v into x.
         mCombine "O" "A1".
         mOwnWf "O".
         assert(A: forall k, URA.wf ((res0 k): URA.car (t:=Excl.t _))).

@@ -40,10 +40,10 @@ Section SIMMODSEM.
   Let wf: W -> Prop :=
     @mk_wf _ unit
            (fun _ _stk_mgr0 _ =>
-              ⌜True⌝ ** (∃ (stk_mgr0: gmap mblock (list Z)),
+              ⌜True⌝ ** (∃ (stk_mgr0: gmap mblock (list val)),
                             (⌜_stk_mgr0 = stk_mgr0↑⌝) ∧
                             ({{"SIM": ([∗ map] handle ↦ stk ∈ stk_mgr0,
-                                       (∃ hd, OwnM ((handle, 0%Z) |-> [hd]) ** is_list hd (map Vint stk)))}})
+                                       (∃ hd, OwnM ((handle, 0%Z) |-> [hd]) ** is_list hd stk))}})
                         ))
            (* (fun _ _ _ => ⌜True⌝%I) *)
            top4
@@ -54,7 +54,7 @@ Section SIMMODSEM.
 
   Ltac renamer :=
     match goal with
-    | [mp_src: gmap nat (list Z) |- _ ] =>
+    | [mp_src: gmap nat (list val) |- _ ] =>
       let tmp := fresh "_tmp_" in
       rename mp_src into tmp;
       let name := fresh "stk_mgr0" in
@@ -185,7 +185,7 @@ Section SIMMODSEM.
 
       rewrite Any.upcast_downcast in *; clarify. steps. kstart 7.
 
-      hide_k. destruct v, v0; ss. des_ifs. clear_tac.
+      hide_k. destruct v; ss. des_ifs. clear_tac.
       rename n into handle. renamer. rename l into stk. rename _UNWRAPU into T.
       mAssert _ with "SIM".
       { iDestruct (big_sepM_delete with "SIM") as "[B C]"; et. (* big_sepM_lookup_acc *)
@@ -227,7 +227,7 @@ Section SIMMODSEM.
       hret _; ss.
       { iModIntro. iSplits; ss; et.
         iApply big_sepM_insert; ss. iFrame. iExists _; ss. iFrame.
-        iExists _, _. iFrame. iSplit; ss. erewrite points_to_split with (hd:=Vint z) (tl:=[hd]).
+        iExists _, _. iFrame. iSplit; ss. erewrite points_to_split with (hd:=v0) (tl:=[hd]).
         iSplitL "POST1"; et.
       }
     }

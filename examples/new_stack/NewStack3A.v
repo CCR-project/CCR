@@ -15,7 +15,7 @@ Set Implicit Arguments.
 
 
 
-Definition _stkRA: URA.t := (mblock ==> (Excl.t (list Z)))%ra.
+Definition _stkRA: URA.t := (mblock ==> (Excl.t (list val)))%ra.
 Instance stkRA: URA.t := Auth.t _stkRA.
 
 Section PROOF.
@@ -24,11 +24,11 @@ Section PROOF.
   Context `{@GRA.inG stkRA Σ}.
 
   Compute (URA.car (t:=_stkRA)).
-  Definition _is_stack (h: mblock) (stk: list Z): _stkRA :=
+  Definition _is_stack (h: mblock) (stk: list val): _stkRA :=
     (fun _h => if (dec _h h) then Some stk else ε)
   .
 
-  Definition is_stack (h: mblock) (stk: list Z): stkRA := Auth.white (_is_stack h stk).
+  Definition is_stack (h: mblock) (stk: list val): stkRA := Auth.white (_is_stack h stk).
 
   Definition new_spec: fspec :=
     (* (mk_simple (X:=unit) *)
@@ -51,22 +51,22 @@ Section PROOF.
             ** OwnM (is_stack h stk0): iProp)%I)
        (fun '(h, stk0) '(x, stk1) vret =>
           (match stk0 with
-           | [] => ⌜x = (- 1)%Z /\ (stk1 = [])⌝ ** OwnM (is_stack h stk1)
+           | [] => ⌜x = Vint (- 1) /\ (stk1 = [])⌝ ** OwnM (is_stack h stk1)
            | hd :: tl => ⌜x = hd /\ (stk1 = tl)⌝ ** OwnM (is_stack h stk1)
            end: iProp)%I)
   .
 
   Definition push_spec: fspec :=
     mk (fun '(h, x, stk0) virtual_arg varg o =>
-          (⌜(x, stk0) = virtual_arg /\ varg = ([Vptr h 0%Z; Vint x]: list val)↑ /\ o = ord_top⌝
+          (⌜(x, stk0) = virtual_arg /\ varg = ([Vptr h 0%Z; x]: list val)↑ /\ o = ord_top⌝
             ** OwnM (is_stack h stk0): iProp)%I)
        (fun '(h, x, stk0) stk1 vret => (⌜stk1 = x :: stk0⌝ ** OwnM (is_stack h stk1): iProp)%I)
   .
 
 
   (*** TODO: remove redundancy with NewStack2 ***)
-  Notation pget := (p0 <- trigger PGet;; `p0: (gmap mblock (list Z)) <- p0↓ǃ;; Ret p0) (only parsing).
-  Notation pput p0 := (trigger (PPut (p0: (gmap mblock (list Z)))↑)) (only parsing).
+  Notation pget := (p0 <- trigger PGet;; `p0: (gmap mblock (list val)) <- p0↓ǃ;; Ret p0) (only parsing).
+  Notation pput p0 := (trigger (PPut (p0: (gmap mblock (list val)))↑)) (only parsing).
 
   Definition new_body: list val -> itree (kCallE +' pE +' eventE) val :=
     fun args =>
@@ -87,14 +87,14 @@ Section PROOF.
       match stk0 with
       | x :: stk1 =>
         pput (<[handle:=stk1]> stk_mgr0);;;
-        Ret (Vint x)
+        Ret x
       | _ => Ret (Vint (- 1))
       end
   .
 
   Definition push_body: list val -> itree (kCallE +' pE +' eventE) val :=
     fun args =>
-      '(handle, x) <- (pargs [Tblk; Tint] args)?;;
+      '(handle, x) <- (pargs [Tblk; Tuntyped] args)?;;
       stk_mgr0 <- pget;;
       stk0 <- (stk_mgr0 !! handle)?;;
       pput (<[handle:=(x :: stk0)]> stk_mgr0);;;
@@ -120,7 +120,7 @@ Section PROOF.
     KModSem.fnsems := StackSbtb;
     KModSem.mn := "Stack";
     KModSem.initial_mr := ε;
-    KModSem.initial_st := (∅: gmap mblock (list Z))↑;
+    KModSem.initial_st := (∅: gmap mblock (list val))↑;
   |}
   .
   Definition SStackSem: SModSem.t := KStackSem.
