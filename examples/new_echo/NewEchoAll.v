@@ -24,7 +24,7 @@ Set Implicit Arguments.
 
 Section ECHOIMPL.
 
-  Definition Σ: GRA.t := GRA.of_list [].
+  Let Σ: GRA.t := GRA.of_list [].
   Local Existing Instance Σ.
 
   Definition echo_impl: ModL.t :=
@@ -34,32 +34,38 @@ End ECHOIMPL.
 
 Definition echo_impl_itr := ModSemL.initial_itr (ModL.enclose echo_impl) None.
 
-(* Section ECHOSPEC. *)
 
-(*   Definition Σ: GRA.t := GRA.of_list [Mem1.memRA; Echo1.echoRA]. *)
-(*   Local Existing Instance Σ. *)
 
-(*   Let memRA_inG: @GRA.inG Mem1.memRA Σ. *)
-(*   Proof. *)
-(*     exists 0. ss. *)
-(*   Qed. *)
-(*   Local Existing Instance memRA_inG. *)
 
-(*   Let echoRA_inG: @GRA.inG Echo1.echoRA Σ. *)
-(*   Proof. *)
-(*     exists 1. ss. *)
-(*   Qed. *)
-(*   Local Existing Instance echoRA_inG. *)
 
-(*   Definition echo_spec: ModL.t := *)
-(*     Mod.add_list [ *)
-(*         SMod.to_src SMem; *)
-(*       SMod.to_src SMain; *)
-(*       SMod.to_src SStack; *)
-(*       SMod.to_src SEcho; *)
-(*       SMod.to_src SClient *)
-(*       ]. *)
+Require Import MemOpen NewStack3A NewEcho1 NewEchoMain0 NewClient0.
 
-(* End ECHOSPEC. *)
+Section ECHOSPEC.
 
-(* Definition echo_prog := ModSemL.initial_itr (ModL.enclose echo_spec) None. *)
+  Let Σ: GRA.t := GRA.of_list [Mem1.memRA; stkRA].
+  Local Existing Instance Σ.
+
+  Let memRA_inG: @GRA.inG Mem1.memRA Σ.
+  Proof.
+    exists 0. ss.
+  Qed.
+  Local Existing Instance memRA_inG.
+
+  Let stkRA_inG: @GRA.inG stkRA Σ.
+  Proof.
+    exists 1. ss.
+  Qed.
+  Local Existing Instance stkRA_inG.
+
+  (* Definition echo_spec: ModL.t := *)
+  (*   Mod.add_list [ *)
+  (*       SMod.to_src SMem; *)
+  (*     SMod.to_src SMain; *)
+  (*     SMod.to_src SStack; *)
+  (*     SMod.to_src SEcho; *)
+  (*     SMod.to_src SClient *)
+  (*     ]. *)
+
+End ECHOSPEC.
+
+(* Definition echo_spec := ModSemL.initial_itr (ModL.enclose echo_spec_itr) None. *)
