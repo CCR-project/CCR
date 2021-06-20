@@ -603,6 +603,18 @@ Section AUX.
     mk_kspecbody fspec_trivial body body
   .
 
+  Section AUX.
+    Context `{HasEventE: eventE -< E}.
+    Definition cfun2 X Y (f: X -> itree Es Y): Any.t -> itree Es Any.t :=
+      fun args => map_or_else (Any.split args)
+                              (fun '(_, args) => args <- unwrapN args↓;; ret <- f args;; Ret (ret↑))
+                              (args <- unwrapN args↓;; ret <- f args;; Ret (ret↑))
+    .
+    Context `{HaskCallE: kCallE -< E}.
+    Definition ckcall {X Y} (kf: kflag) (fn: gname) (varg: X): itree E Y :=
+      vret <- trigger (kCall kf fn varg↑);; vret <- vret↓ǃ;; Ret vret.
+  End AUX.
+
   Program Fixpoint _APCK (at_most: Ord.t) {wf Ord.lt at_most}: itree (kCallE +' pE +' eventE) unit :=
     break <- trigger (Choose _);;
     if break: bool

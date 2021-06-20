@@ -20,7 +20,7 @@ Section PROOF.
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG memRA Σ}.
 
-  Notation pget := (p0 <- trigger PGet;; `p0: (gmap mblock (list Z)) <- p0↓ǃ;; Ret p0) (only parsing).
+  Notation pget := (p0 <- trigger PGet;; `p0: (gmap mblock (list val)) <- p0↓ǃ;; Ret p0) (only parsing).
   Notation pput p0 := (trigger (PPut p0↑)) (only parsing).
 
   (* def new(): Ptr *)
@@ -45,7 +45,6 @@ Section PROOF.
   (*   match stk with *)
   (*   | x :: stk' =>  *)
   (*     stk_mgr(handle) := Some stk'; *)
-  (*     debug(false, x); *)
   (*     return x *)
   (*   | [] => return -1 *)
   (*   end *)
@@ -58,8 +57,7 @@ Section PROOF.
       match stk0 with
       | x :: stk1 =>
         pput (<[handle:=stk1]> stk_mgr0);;;
-        trigger (Call "debug" ([Vint 0; Vint x])↑);;;
-        Ret (Vint x)
+        Ret x
       | _ => Ret (Vint (- 1))
       end
   .
@@ -67,30 +65,22 @@ Section PROOF.
   (* def push(handle: Ptr, x: Int64): Unit *)
   (*   let stk := unwrap(stk_mgr(handle)); *)
   (*   stk_mgr(handle) := Some (x :: stk); *)
-  (*   debug(true, x); *)
   (*   () *)
 
   Definition push_body: list val -> itree Es val :=
     fun args =>
-      '(handle, x) <- (pargs [Tblk; Tint] args)?;;
+      '(handle, x) <- (pargs [Tblk; Tuntyped] args)?;;
       stk_mgr0 <- pget;;
       stk0 <- (stk_mgr0 !! handle)?;;
       pput (<[handle:=(x :: stk0)]> stk_mgr0);;;
-      trigger (Call "debug" ([Vint 1; Vint x]↑));;;
       Ret Vundef
-  .
-
-  Definition cfun2 X Y (f: X -> itree Es Y): Any.t -> itree Es Any.t :=
-    fun args => map_or_else (Any.split args)
-                            (fun '(_, args) => args <- unwrapN args↓;; ret <- f args;; Ret (ret↑))
-                            (args <- unwrapN args↓;; ret <- f args;; Ret (ret↑))
   .
 
   Definition StackSem: ModSem.t := {|
     ModSem.fnsems := [("new", cfun2 new_body); ("pop", cfun2 pop_body); ("push", cfun2 push_body)];
     ModSem.mn := "Stack";
     ModSem.initial_mr := ε;
-    ModSem.initial_st := (∅: gmap mblock (list Z))↑;
+    ModSem.initial_st := (∅: gmap mblock (list val))↑;
   |}
   .
 

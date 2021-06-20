@@ -10,7 +10,6 @@ Require Import Logic.
 Require Import Mem1.
 Require Import TODOYJ.
 Require Import AList.
-Require Import NewStackHeader.
 
 Set Implicit Arguments.
 
@@ -316,7 +315,7 @@ Arguments Ag2.t: clear implicits.
 
 
 
-Definition _stkRA: URA.t := (mblock ==> (Opt.t (Ag.t (Z -> Prop))))%ra.
+Definition _stkRA: URA.t := (mblock ==> (Opt.t (Ag.t (val -> Prop))))%ra.
 Instance stkRA: URA.t := Auth.t _stkRA.
 
 Section PROOF.
@@ -325,11 +324,11 @@ Section PROOF.
   Context `{@GRA.inG stkRA Σ}.
 
   Compute (URA.car (t:=_stkRA)).
-  Definition _is_stack (h: mblock) (P: Z -> Prop): _stkRA :=
+  Definition _is_stack (h: mblock) (P: val -> Prop): _stkRA :=
     (fun _h => if (dec _h h) then Some (Ag.ag P) else ε)
   .
 
-  Definition is_stack (h: mblock) (P: Z -> Prop): stkRA := Auth.white (_is_stack h P).
+  Definition is_stack (h: mblock) (P: val -> Prop): stkRA := Auth.white (_is_stack h P).
 
   Theorem is_stack_dup
           h P
@@ -354,14 +353,14 @@ Section PROOF.
                  (fun varg o => (⌜varg = (Any.pair tt↑ ([Vptr h 0%Z]: list val)↑) /\ o = ord_pure 1⌝
                                   ** OwnM (is_stack h P): iProp)%I),
                  (fun vret =>
-                    (((OwnM (is_stack h P) ** ∃ x, ⌜(x = (- 1)%Z ∨ P x) ∧ vret = (Vint x)↑⌝): iProp)%I))
+                    (((OwnM (is_stack h P) ** ∃ x, ⌜(x = Vint (- 1)%Z ∨ P x) ∧ vret = x↑⌝): iProp)%I))
               ))
   .
 
   Definition push_spec: fspec :=
     mk_simple (fun '(h, P) => (
                    (fun varg o => (OwnM (is_stack h P)
-                        ** ∃ x, ⌜varg = (Any.pair tt↑ ([Vptr h 0%Z; Vint x]: list val)↑) ∧ P x ∧ o = ord_pure 1⌝: iProp)%I),
+                        ** ∃ x, ⌜varg = (Any.pair tt↑ ([Vptr h 0%Z; x]: list val)↑) ∧ P x ∧ o = ord_pure 1⌝: iProp)%I),
                    (fun vret => (((OwnM (is_stack h P)): iProp)%I))
               ))
   .

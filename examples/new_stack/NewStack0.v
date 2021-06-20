@@ -38,7 +38,6 @@ Section PROOF.
   (*     let next := load(hd, 1); *)
   (*     free(hd, 2); *)
   (*     store(stk, 0, next); *)
-  (*     debug(false, v); *)
   (*     return v *)
   (*   } *)
   (*   return -1 *)
@@ -57,7 +56,6 @@ Section PROOF.
           `_: val         <- (ccall "free"  [addr_val]);;
           `_: val         <- (ccall "free"  [addr_next]);;
           `_: val         <- (ccall "store" [stk; next]);;
-          `_: val         <- (ccall "debug" [Vint 0; v]);;
           Ret v
         )
       else Ret (Vint (- 1))
@@ -69,7 +67,6 @@ Section PROOF.
   (*   let hd := load(stk, 0); *)
   (*   store(new_node, 1, hd); *)
   (*   store(stk, 0, new_node); *)
-  (*   debug(true, n); *)
   (*   return () *)
 
   Definition pushF: list val -> itree Es val :=
@@ -82,7 +79,6 @@ Section PROOF.
       `_: val        <- (ccall "store" [addr_val;   v]);;
       `_: val        <- (ccall "store" [addr_next; hd]);;
       `_: val        <- (ccall "store" [stk; new_node]);;
-      `_: val        <- (ccall "debug" [Vint 1; v]);;
       Ret Vundef
   .
 

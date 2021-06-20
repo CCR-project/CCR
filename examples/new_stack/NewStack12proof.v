@@ -67,19 +67,17 @@ Section SIMMODSEM.
         { steps. econs; ss; et. rr. uipropall; ss. rewrite Any.upcast_downcast in *. clarify.
           rewrite insert_delete. rewrite insert_id; ss. sym. eapply Any.downcast_upcast; ss.
         }
-        steps. gstep; econs; ss; et.
+        steps.
         { econs; ss; et. rr. uipropall; ss. rewrite Any.upcast_downcast in *. clarify.
           f_equal. rewrite insert_delete; ss. }
-        ii. exists 100. steps.
       - cbn. des_ifs. steps. rewrite BDOOR. steps.
         des_ifs.
         { steps. econs; ss; et. rr. uipropall; ss. rewrite Any.upcast_downcast in *. clarify.
           rewrite insert_delete. rewrite insert_id; ss. sym. eapply Any.downcast_upcast; ss.
         }
-        steps. gstep; econs; ss; et.
+        steps.
         { econs; ss; et. rr. uipropall; ss. rewrite Any.upcast_downcast in *. clarify.
           f_equal. rewrite insert_delete; ss. }
-        ii. exists 100. steps.
     }
     admit "ez; TODO: make something like trivial tactic".
   Unshelve.
