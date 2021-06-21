@@ -130,14 +130,12 @@ Section CANCEL.
           (<<SBTB: alist_find fn sbtb = Some f>>) /\
           (<<FINDMID: alist_find fn (ModSemL.fnsems ms_mid) =
                       Some (transl_all
-                              (SModSem.mn
-                                 (SMod.get_modsem md sk))
+                              (SModSem.mn (SMod.get_modsem md sk))
                               ∘ fun_to_mid stb (fsb_body f))>>) /\
           (<<FINDTGT: alist_find fn (ModSemL.fnsems ms_tgt) =
                       Some (transl_all
-                              (SModSem.mn
-                                 (SMod.get_modsem md sk))
-                              ∘ fun_to_tgt stb f)>>) /\
+                              (SModSem.mn (SMod.get_modsem md sk))
+                              ∘ fun_to_tgt (SModSem.mn (SMod.get_modsem md sk)) stb f)>>) /\
           (<<MIN: List.In (SModSem.mn (SMod.get_modsem md sk)) (List.map fst ms_tgt.(ModSemL.initial_mrs))>>)).
   Proof.
     unfold ms_mid, ms_tgt, mds_tgt, mds_mid, SMod.to_mid, mds_tgt, SMod.to_tgt.
@@ -292,7 +290,7 @@ Section CANCEL.
       simg (fun '((rs_src, v_src)) '((rs_tgt, v_tgt)) => wf rs_src rs_tgt /\ (v_src: RT) = snd v_tgt /\ (rsum_minus mn (fst rs_tgt)) = fst v_tgt)
            (Ord.from_nat 100%nat)
            (EventsL.interp_Es (ModSemL.prog ms_mid) (transl_all mn (interp_hCallE_mid stb cur i0)) st_src0)
-           (EventsL.interp_Es (ModSemL.prog ms_tgt) (transl_all mn (interp_hCallE_tgt stb cur i0 (rsum_minus mn rst))) st_tgt0)
+           (EventsL.interp_Es (ModSemL.prog ms_tgt) (transl_all mn (interp_hCallE_tgt mn stb cur i0 (rsum_minus mn rst))) st_tgt0)
   .
   Proof.
     Opaque subevent.
@@ -367,13 +365,15 @@ Section CANCEL.
                            (<<ST: (List.length frs_src) = (List.length frs_tgt) /\
                                   frs_src <> [] /\
                                   URA.wf (rsum (mrs_tgt, rret :: frs_tgt))>>) /\
-                           (<<POST: fs.(postcond) x2 vret_src vret_tgt rret>>) /\
+                           (<<POST: fs.(postcond) mn x2 vret_src vret_tgt rret>>) /\
                            (<<PHYS: mps_src = mps_tgt>>)
                   ).
       fold sk. fold sk. set (mn0:=SModSem.mn (SMod.get_modsem md sk)) in *.
       fold Any_tgt in x5.
       unfold fun_to_src, fun_to_tgt, compose. des_ifs. unfold HoareFun.
       rename x5 into PRECOND. rename x0 into rarg.
+      steps. rewrite Any.pair_split.
+      steps. rewrite Any.upcast_downcast.
       steps. exists (rsum_minus mn0 (update mrs_tgt0 mn c0, ε ⋅ rarg :: x1 :: frs_tgt_tl)).
       steps. exists varg_src.
       steps. esplits; et. steps. exists rarg.
@@ -391,6 +391,8 @@ Section CANCEL.
       }
       steps. esplits; eauto. steps. unshelve esplits; eauto. steps.
       unfold fun_to_mid.
+      rewrite Any.pair_split. ss. steps.
+      rewrite Any.upcast_downcast. steps.
       rewrite Any.pair_split. ss. steps.
       rewrite Any.upcast_downcast. steps.
       guclo ordC_spec. econs.
@@ -451,7 +453,7 @@ Section CANCEL.
 
   Variable entry_r: Σ.
   Variable mainpre: Any.t -> ord -> Σ -> Prop.
-  Variable (mainbody: Any.t -> itree (hCallE +' pE +' eventE) Any.t).
+  Variable (mainbody: (mname * Any.t) -> itree (hCallE +' pE +' eventE) Any.t).
   Hypothesis MAINPRE: mainpre ([]: list val)↑ ord_top entry_r.
 
   Hypothesis WFR: URA.wf (entry_r ⋅ rsum (ModSemL.initial_r_state ms_tgt)).
@@ -469,7 +471,7 @@ Section CANCEL.
   Opaque EventsL.interp_Es.
 
   Theorem adequacy_type_t2m: Beh.of_program (ModL.compile (Mod.add_list mds_tgt)) <1=
-                             Beh.of_program (ModL.compile_arg (Mod.add_list mds_mid) (Any.pair ord_top↑ ([]: list val)↑)).
+                             Beh.of_program (ModL.compile_arg (Mod.add_list mds_mid) (Any.pair ""↑ (Any.pair ord_top↑ ([]: list val)↑))).
   Proof.
     assert (IWF: URA.wf (entry_r ⋅ rsum (fun mn => match alist_find mn (ModSemL.initial_mrs ms_tgt) with
                                                    | Some r => fst r
@@ -512,6 +514,13 @@ Section CANCEL.
     unfold HoareFun. steps.
 
     unfold forge, put, checkWf, discard.
+    rewrite Any.pair_split. steps.
+    rewrite Any.upcast_downcast. steps.
+    rewrite Any.pair_split. steps.
+    rewrite Any.upcast_downcast. steps.
+    rewrite Any.pair_split. steps.
+    rewrite Any.upcast_downcast. steps.
+
     eexists. steps. eexists. steps. exists tt. steps.
     eexists. steps.
 
@@ -531,8 +540,7 @@ Section CANCEL.
     }
     steps. exists ord_top. steps. unshelve esplits.
     { red. uipropall. esplits; et. r. uipropall. }
-    steps. rewrite Any.pair_split. steps.
-    rewrite Any.upcast_downcast. steps.
+    steps.
 
     guclo ordC_spec. econs.
     { instantiate (2:=(_ + _)%ord).

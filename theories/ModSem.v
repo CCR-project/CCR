@@ -88,8 +88,8 @@ Section EVENTSCOMMON.
   Context `{HasCallE: callE -< E}.
   Context `{HasEventE: eventE -< E}.
   Definition ccall {X Y} (fn: gname) (varg: X): itree E Y := vret <- trigger (Call fn varg↑);; vret <- vret↓ǃ;; Ret vret.
-  Definition cfun {X Y} (body: X -> itree E Y): Any.t -> itree E Any.t :=
-    fun varg => varg <- varg↓ǃ;; vret <- body varg;; Ret vret↑.
+  Definition cfun {X Y} (body: X -> itree E Y): (mname * Any.t) -> itree E Any.t :=
+    fun '(_, varg) => varg <- varg↓ǃ;; vret <- body varg;; Ret vret↑.
 
 End EVENTSCOMMON.
 
@@ -407,7 +407,7 @@ Section MODSEML.
     snd <$> interp_Es prog (prog (Call "main" arg)) (initial_r_state, initial_p_state).
 
   Definition initial_itr (P: option Prop): itree (eventE) Any.t :=
-    initial_itr_arg P ([]: list val)↑.
+    initial_itr_arg P (Any.pair ""↑ ([]: list val)↑).
 
 
   Let state: Type := itree eventE Any.t.
@@ -984,7 +984,7 @@ Section MODL.
     ModSemL.compile_itree (ModSemL.initial_itr_arg md.(enclose) (Some (wf md)) arg).
 
   Lemma compile_compile_arg_nil md:
-    compile md = compile_arg md ([]: list val)↑.
+    compile md = compile_arg md (Any.pair ""↑ ([]: list val)↑).
   Proof.
     refl.
   Qed.

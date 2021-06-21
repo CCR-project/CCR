@@ -284,7 +284,7 @@ Section HLEMMAS.
 
         A (a0: shelve__ A) FR
 
-        r rg (n: nat) mr_src0 mp_src0 fr_src0
+        mn r rg (n: nat) mr_src0 mp_src0 fr_src0
         (fsp0: fspec)
         mr_tgt0 mp_tgt0 frs_tgt k_tgt k_src
         fn tbr ord_cur varg_src varg_tgt
@@ -299,7 +299,7 @@ Section HLEMMAS.
         (RTGT: R_tgt a0 mp_src0 mp_tgt0 mr_tgt0)
 
         (UPDATABLE:
-           I ⊢ #=> (FR ** R_src a0 mp_src0 mp_tgt0 ** (fsp1.(precond) x varg_src varg_tgt o: iProp)))
+           I ⊢ #=> (FR ** R_src a0 mp_src0 mp_tgt0 ** (fsp1.(precond) mn x varg_src varg_tgt o: iProp)))
 
         (FUEL: (15 < n)%ord)
         (PURE: ord_lt o ord_cur /\
@@ -309,13 +309,13 @@ Section HLEMMAS.
                       (vret_src: Any.t)
                       (RTGT: R_tgt a1 mp_src1 mp_tgt1 mr_tgt1)
                       ctx1
-                      (ACC: current_iProp ctx1 (FR ** R_src a1 mp_src1 mp_tgt1 ** fsp1.(postcond) x vret_src vret_tgt))
+                      (ACC: current_iProp ctx1 (FR ** R_src a1 mp_src1 mp_tgt1 ** fsp1.(postcond) mn x vret_src vret_tgt))
           ,
                 gpaco6 (_sim_itree (mk_wf R_src R_tgt)) (cpn6 (_sim_itree (mk_wf R_src R_tgt))) rg rg _ _ eqr o_new
                        (mr_src1, mp_src1, fr_src1, k_src (ctx1, vret_src)) (mr_tgt1, mp_tgt1, frs_tgt, k_tgt vret_tgt))
     :
       gpaco6 (_sim_itree (mk_wf R_src R_tgt)) (cpn6 (_sim_itree (mk_wf R_src R_tgt))) r rg _ _ eqr n
-             (mr_src0, mp_src0, fr_src0, (HoareCall tbr ord_cur fsp0 fn varg_src) ctx0 >>= k_src)
+             (mr_src0, mp_src0, fr_src0, (HoareCall mn tbr ord_cur fsp0 fn varg_src) ctx0 >>= k_src)
              (mr_tgt0, mp_tgt0, frs_tgt, trigger (Call fn varg_tgt) >>= k_tgt)
   .
   Proof.
@@ -326,7 +326,7 @@ Section HLEMMAS.
                (<<UPDATABLE: URA.wf (ctx0 ⋅ (mr_src0' ⋅ (rarg_src ⋅ fr_src0')))>>) /\
                (<<RSRC: R_src a0 mp_src0 mp_tgt0 mr_src0'>>) /\
                (<<FRS: FR fr_src0'>>) /\
-               (<<PRE: fsp0.(precond) x_tgt varg_src varg_tgt o rarg_src>>)).
+               (<<PRE: fsp0.(precond) mn x_tgt varg_src varg_tgt o rarg_src>>)).
     { inv ACC. uipropall. hexploit UPDATABLE.
       { eapply URA.wf_mon. eapply GWF. }
       { eapply IPROP. }
@@ -389,7 +389,7 @@ Section HLEMMAS.
 
         A (a0: shelve__ A)
 
-        r rg (n: nat) mr_src0 mp_src0 fr_src0
+        mn r rg (n: nat) mr_src0 mp_src0 fr_src0
         (fsp0: fspec)
         mr_tgt0 mp_tgt0 frs_tgt k_tgt k_src
         fn tbr ord_cur varg_src varg_tgt
@@ -404,7 +404,7 @@ Section HLEMMAS.
         (RTGT: R_tgt a0 mp_src0 mp_tgt0 mr_tgt0)
 
         (UPDATABLE:
-           from_iPropL (fst (alist_pops Hns l)) ⊢ #=> (R_src a0 mp_src0 mp_tgt0 ** (fsp1.(precond) x varg_src varg_tgt o: iProp)))
+           from_iPropL (fst (alist_pops Hns l)) ⊢ #=> (R_src a0 mp_src0 mp_tgt0 ** (fsp1.(precond) mn x varg_src varg_tgt o: iProp)))
 
         (FUEL: (15 < n)%ord)
         (PURE: ord_lt o ord_cur /\
@@ -414,13 +414,13 @@ Section HLEMMAS.
                       (vret_src: Any.t)
                       (RTGT: R_tgt a1 mp_src1 mp_tgt1 mr_tgt1)
                       ctx1
-                      (ACC: current_iPropL ctx1 ((Invn, R_src a1 mp_src1 mp_tgt1) :: (Rn, fsp1.(postcond) x vret_src vret_tgt) :: snd (alist_pops Hns l)))
+                      (ACC: current_iPropL ctx1 ((Invn, R_src a1 mp_src1 mp_tgt1) :: (Rn, fsp1.(postcond) mn x vret_src vret_tgt) :: snd (alist_pops Hns l)))
           ,
             gpaco6 (_sim_itree (mk_wf R_src R_tgt)) (cpn6 (_sim_itree (mk_wf R_src R_tgt))) rg rg _ _ eqr o_new
                    (mr_src1, mp_src1, fr_src1, k_src (ctx1, vret_src)) (mr_tgt1, mp_tgt1, frs_tgt, k_tgt vret_tgt))
     :
       gpaco6 (_sim_itree (mk_wf R_src R_tgt)) (cpn6 (_sim_itree (mk_wf R_src R_tgt))) r rg _ _ eqr n
-             (mr_src0, mp_src0, fr_src0, (HoareCall tbr ord_cur fsp0 fn varg_src) ctx0 >>= k_src)
+             (mr_src0, mp_src0, fr_src0, (HoareCall mn tbr ord_cur fsp0 fn varg_src) ctx0 >>= k_src)
              (mr_tgt0, mp_tgt0, frs_tgt, trigger (Call fn varg_tgt) >>= k_tgt)
   .
   Proof.
@@ -444,7 +444,7 @@ Section HLEMMAS.
 
         A (a0: shelve__ A)
 
-        r rg (n: nat) mr_src0 mp_src0 fr_src0
+        mn r rg (n: nat) mr_src0 mp_src0 fr_src0
         (fsp0: fspec)
         mr_tgt0 mp_tgt0 frs_tgt k_tgt k_src
         fn tbr ord_cur varg_src varg_tgt
@@ -459,7 +459,7 @@ Section HLEMMAS.
         (RTGT: R_tgt a0 mp_src0 mp_tgt0 mr_tgt0)
 
         (UPDATABLE:
-           from_iPropL (fst (alist_pops Hns l)) ⊢ #=> (R_src a0 mp_src0 mp_tgt0 ** (fsp1.(precond) x varg_src varg_tgt o: iProp)))
+           from_iPropL (fst (alist_pops Hns l)) ⊢ #=> (R_src a0 mp_src0 mp_tgt0 ** (fsp1.(precond) mn x varg_src varg_tgt o: iProp)))
 
         (FUEL: (15 < n)%ord)
         (PURE: ord_lt o ord_cur /\
@@ -469,13 +469,13 @@ Section HLEMMAS.
                       (vret_src: Any.t)
                       (RTGT: R_tgt a1 mp_src1 mp_tgt1 mr_tgt1)
                       ctx1
-                      (ACC: current_iPropL ctx1 (@cons (prod string (bi_car iProp)) (Invn, R_src a1 mp_src1 mp_tgt1) (@cons (prod string (bi_car iProp)) (Rn, fsp1.(postcond) x vret_src vret_tgt) (snd (alist_pops Hns l)))))
+                      (ACC: current_iPropL ctx1 (@cons (prod string (bi_car iProp)) (Invn, R_src a1 mp_src1 mp_tgt1) (@cons (prod string (bi_car iProp)) (Rn, fsp1.(postcond) mn x vret_src vret_tgt) (snd (alist_pops Hns l)))))
           ,
                 gpaco6 (_sim_itree (mk_wf R_src R_tgt)) (cpn6 (_sim_itree (mk_wf R_src R_tgt))) rg rg _ _ eqr 100
                        (mr_src1, mp_src1, fr_src1, k_src (ctx1, vret_src)) (mr_tgt1, mp_tgt1, frs_tgt, k_tgt vret_tgt))
     :
       gpaco6 (_sim_itree (mk_wf R_src R_tgt)) (cpn6 (_sim_itree (mk_wf R_src R_tgt))) r rg _ _ eqr n
-             (mr_src0, mp_src0, fr_src0, (HoareCall tbr ord_cur fsp0 fn varg_src) ctx0 >>= k_src)
+             (mr_src0, mp_src0, fr_src0, (HoareCall mn tbr ord_cur fsp0 fn varg_src) ctx0 >>= k_src)
              (mr_tgt0, mp_tgt0, frs_tgt, trigger (Call fn varg_tgt) >>= k_tgt)
   .
   Proof.
@@ -487,9 +487,9 @@ Section HLEMMAS.
         (o: ord) X (x: shelve__ X)
         A (a0: shelve__ A)
 
-        (P: X -> Any.t -> Any.t -> ord -> Σ -> Prop)
-        (Q: X -> Any.t -> Any.t -> Σ -> Prop)
-        r rg (n: nat) mr_src0 mp_src0 fr_src0
+        (P: mname -> X -> Any.t -> Any.t -> ord -> Σ -> Prop)
+        (Q: mname -> X -> Any.t -> Any.t -> Σ -> Prop)
+        mn r rg (n: nat) mr_src0 mp_src0 fr_src0
         mr_tgt0 mp_tgt0 frs_tgt k_tgt k_src
         fn tbr ord_cur varg_src varg_tgt
         (R_src: A -> Any.t -> Any.t -> iProp) (R_tgt: A -> Any.t -> Any.t -> iProp)
@@ -501,7 +501,7 @@ Section HLEMMAS.
         (RTGT: R_tgt a0 mp_src0 mp_tgt0 mr_tgt0)
 
         (UPDATABLE:
-           from_iPropL (fst (alist_pops Hns l)) ⊢ #=> (R_src a0 mp_src0 mp_tgt0 ** (P x varg_src varg_tgt o: iProp)))
+           from_iPropL (fst (alist_pops Hns l)) ⊢ #=> (R_src a0 mp_src0 mp_tgt0 ** (P mn x varg_src varg_tgt o: iProp)))
 
         (FUEL: (15 < n)%ord)
         (PURE: ord_lt o ord_cur /\
@@ -511,13 +511,13 @@ Section HLEMMAS.
                       (vret_src: Any.t)
                       (RTGT: R_tgt a1 mp_src1 mp_tgt1 mr_tgt1)
                       ctx1
-                      (ACC: current_iPropL ctx1 (@cons (prod string (bi_car iProp)) (Invn, R_src a1 mp_src1 mp_tgt1) (@cons (prod string (bi_car iProp)) (Rn, Q x vret_src vret_tgt) (snd (alist_pops Hns l)))))
+                      (ACC: current_iPropL ctx1 (@cons (prod string (bi_car iProp)) (Invn, R_src a1 mp_src1 mp_tgt1) (@cons (prod string (bi_car iProp)) (Rn, Q mn x vret_src vret_tgt) (snd (alist_pops Hns l)))))
           ,
                 gpaco6 (_sim_itree (mk_wf R_src R_tgt)) (cpn6 (_sim_itree (mk_wf R_src R_tgt))) rg rg _ _ eqr 100
                        (mr_src1, mp_src1, fr_src1, k_src (ctx1, vret_src)) (mr_tgt1, mp_tgt1, frs_tgt, k_tgt vret_tgt))
     :
       gpaco6 (_sim_itree (mk_wf R_src R_tgt)) (cpn6 (_sim_itree (mk_wf R_src R_tgt))) r rg _ _ eqr n
-             (mr_src0, mp_src0, fr_src0, (HoareCall tbr ord_cur (mk_fspec P Q) fn varg_src) ctx0 >>= k_src)
+             (mr_src0, mp_src0, fr_src0, (HoareCall mn tbr ord_cur (mk_fspec P Q) fn varg_src) ctx0 >>= k_src)
              (mr_tgt0, mp_tgt0, frs_tgt, trigger (Call fn varg_tgt) >>= k_tgt)
   .
   Proof.
@@ -530,27 +530,32 @@ Section HLEMMAS.
   Lemma harg_clo
         Rn Invn
         r rg
-        X (P: X -> Any.t -> Any.t -> ord -> Σ -> Prop) varg_tgt
+        X (P: mname -> X -> Any.t -> Any.t -> ord -> Σ -> Prop) varg
         mr_src mp_src mr_tgt mp_tgt fr_src fr_tgt f_tgt k_src
         A
         (R_src: A -> Any.t -> Any.t -> iProp) (R_tgt: A -> Any.t -> Any.t -> iProp)
         (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
         (WF: mk_wf R_src R_tgt ((mr_src, mp_src), (mr_tgt, mp_tgt)))
         (ARG:
-           forall a x varg_src ord_cur fr_src
+           forall a mn x varg_tgt varg_src ord_cur fr_src
                   (RTGT: R_tgt a mp_src mp_tgt mr_tgt)
                   ctx
-                  (ACC: current_iPropL ctx (@cons (prod string (bi_car iProp)) (Rn, P x varg_src varg_tgt ord_cur) (@cons (prod string (bi_car iProp)) (Invn, R_src a mp_src mp_tgt) (@nil (prod string (bi_car iProp)))))),
+                  (ACC: current_iPropL ctx (@cons (prod string (bi_car iProp)) (Rn, P mn x varg_src varg_tgt ord_cur) (@cons (prod string (bi_car iProp)) (Invn, R_src a mp_src mp_tgt) (@nil (prod string (bi_car iProp)))))),
              gpaco6 (_sim_itree (mk_wf R_src R_tgt)) (cpn6 (_sim_itree (mk_wf R_src R_tgt))) rg rg _ _ eqr 89
-                    (mr_src, mp_src, fr_src, k_src (ctx, (x, varg_src, ord_cur)))
+                    (mr_src, mp_src, fr_src, k_src (ctx, ((mn, x), varg_src, ord_cur)))
                     (mr_tgt, mp_tgt, fr_tgt, f_tgt))
     :
       gpaco6 (_sim_itree (mk_wf R_src R_tgt)) (cpn6 (_sim_itree (mk_wf R_src R_tgt))) r rg _ _ eqr 100
-             (mr_src, mp_src, fr_src, (HoareFunArg P varg_tgt >>= k_src))
+             (mr_src, mp_src, fr_src, (HoareFunArg P varg >>= k_src))
              (mr_tgt, mp_tgt, fr_tgt, f_tgt)
   .
   Proof.
     unfold HoareFunArg, put, discard, forge, checkWf, assume, guarantee.
+    destruct (Any.split varg) eqn:ANY.
+    2: { steps. unfold triggerUB. ired_both. gstep. econs; eauto with ord_step. ss. }
+    ired_both. destruct p as [mn varg_tgt]. destruct (Any.downcast mn) eqn:MN.
+    2: { steps. unfold triggerUB. ired_both. gstep. econs; eauto with ord_step. ss. }
+    repeat (ired_both; gstep; econs; eauto with ord_step). intro ctx.
     repeat (ired_both; gstep; econs; eauto with ord_step). intro varg_src.
     repeat (ired_both; gstep; econs; eauto with ord_step). intro x.
     repeat (ired_both; gstep; econs; eauto with ord_step). intro rarg_src.
@@ -560,15 +565,15 @@ Section HLEMMAS.
     repeat (ired_both; gstep; econs; eauto with ord_step). i.
     ired_both. inv WF. eapply ARG; et.
     red. econs.
-    { instantiate (1:=VALID ⋅ mr_src).
+    { instantiate (1:=rarg_src ⋅ mr_src).
       eapply URA.wf_mon. instantiate (1:=fr_src).
-      replace (VALID ⋅ mr_src ⋅ varg_src ⋅ fr_src) with (varg_src ⋅ (mr_src ⋅ (fr_src ⋅ VALID))); et.
+      replace (rarg_src ⋅ mr_src ⋅ ctx ⋅ fr_src) with (ctx ⋅ (mr_src ⋅ (fr_src ⋅ rarg_src))); et.
       r_solve.
     }
     { ss. red. uipropall. esplits; et.
       { rewrite URA.unit_id. et. }
-      { eapply RSRC; et. eapply URA.wf_mon. instantiate (1:=(varg_src ⋅ (fr_src ⋅ VALID))).
-        replace (mr_src ⋅ (varg_src ⋅ (fr_src ⋅ VALID))) with (varg_src ⋅ (mr_src ⋅ (fr_src ⋅ VALID))); auto.
+      { eapply RSRC; et. eapply URA.wf_mon. instantiate (1:=(ctx ⋅ (fr_src ⋅ rarg_src))).
+        replace (mr_src ⋅ (ctx ⋅ (fr_src ⋅ rarg_src))) with (ctx ⋅ (mr_src ⋅ (fr_src ⋅ rarg_src))); auto.
         r_solve. }
       { red. uipropall. }
     }
@@ -576,8 +581,8 @@ Section HLEMMAS.
 
   Lemma hret_clo
         A (a: shelve__ A)
-        r rg n mr_src mp_src fr_src
-        X (Q: X -> Any.t -> Any.t -> Σ -> Prop)
+        mn r rg n mr_src mp_src fr_src
+        X (Q: mname -> X -> Any.t -> Any.t -> Σ -> Prop)
         x vret_src vret_tgt
         mr_tgt mp_tgt fr_tgt
         (R_src: A -> Any.t -> Any.t -> iProp) (R_tgt: A -> Any.t -> Any.t -> iProp)
@@ -590,13 +595,13 @@ Section HLEMMAS.
         (RTGT: R_tgt a mp_src mp_tgt mr_tgt)
 
         (UPDATABLE:
-           (from_iPropL l) ⊢ #=> (R_src a mp_src mp_tgt ** (Q x vret_src vret_tgt: iProp)))
+           (from_iPropL l) ⊢ #=> (R_src a mp_src mp_tgt ** (Q mn x vret_src vret_tgt: iProp)))
 
         (EQ: forall mr_src1 (SAT: R_src a mp_src mp_tgt mr_src1),
             eqr (mr_src1, mp_src, ε) (mr_tgt, mp_tgt, fr_tgt) vret_tgt vret_tgt)
     :
       gpaco6 (_sim_itree (mk_wf R_src R_tgt)) (cpn6 (_sim_itree (mk_wf R_src R_tgt))) r rg _ _ eqr n
-             (mr_src, mp_src, fr_src, (HoareFunRet Q x (ctx, vret_src)))
+             (mr_src, mp_src, fr_src, (HoareFunRet Q mn x (ctx, vret_src)))
              (mr_tgt, mp_tgt, fr_tgt, (Ret vret_tgt))
   .
   Proof.
@@ -606,7 +611,7 @@ Section HLEMMAS.
     assert (exists mr_src1 rret_src,
                (<<UPDATABLE: URA.wf (ctx ⋅ (mr_src1 ⋅ rret_src))>>) /\
                (<<RSRC: R_src a mp_src mp_tgt mr_src1>>) /\
-               (<<PRE: Q x vret_src vret_tgt rret_src>>)).
+               (<<PRE: Q mn x vret_src vret_tgt rret_src>>)).
     { red in ACC. inv ACC. uipropall.
       hexploit (UPDATABLE r0); et.
       { eapply URA.wf_mon; et. }
@@ -628,7 +633,7 @@ Section HLEMMAS.
   Lemma APC_start_clo
         (at_most: Ord.t) (n1: Ord.t)
         (o: ord)
-        r rg (n0: Ord.t) mr_src0 mp_src0 fr_src0
+        mn r rg (n0: Ord.t) mr_src0 mp_src0 fr_src0
         mrs_tgt frs_tgt k_src
         (wf: (Σ * Any.t) * (Σ * Any.t) -> Prop)
         (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
@@ -639,13 +644,13 @@ Section HLEMMAS.
 
         (POST: gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ eqr n1
                        (mr_src0, mp_src0, fr_src0,
-                       (interp_hCallE_tgt stb o (_APC at_most) ctx)>>= k_src)
+                       (interp_hCallE_tgt mn stb o (_APC at_most) ctx)>>= k_src)
                       ((mrs_tgt, frs_tgt),
                        itr_tgt))
     :
       gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ eqr n0
               (mr_src0, mp_src0, fr_src0,
-              (interp_hCallE_tgt stb o APC ctx) >>= k_src)
+              (interp_hCallE_tgt mn stb o APC ctx) >>= k_src)
              ((mrs_tgt, frs_tgt),
               itr_tgt).
   Proof.
@@ -665,7 +670,7 @@ Section HLEMMAS.
         (n1: Ord.t)
 
         (o: ord)
-        r rg (n0: Ord.t) mr_src0 mp_src0 fr_src0
+        mn r rg (n0: Ord.t) mr_src0 mp_src0 fr_src0
         mrs_tgt frs_tgt k_src
         (at_most: Ord.t)
         (wf: (Σ * Any.t) * (Σ * Any.t) -> Prop)
@@ -681,7 +686,7 @@ Section HLEMMAS.
     :
       gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ eqr n0
               (mr_src0, mp_src0, fr_src0,
-              (interp_hCallE_tgt stb o (_APC at_most) ctx) >>= k_src)
+              (interp_hCallE_tgt mn stb o (_APC at_most) ctx) >>= k_src)
              ((mrs_tgt, frs_tgt),
               itr_tgt).
   Proof.
@@ -696,7 +701,7 @@ Section HLEMMAS.
         (fn: gname) (args: Any.t) (next: Ord.t) (n1: Ord.t)
 
         (o: ord)
-        r rg (n0: Ord.t) mr_src0 mp_src0 fr_src0
+        mn r rg (n0: Ord.t) mr_src0 mp_src0 fr_src0
         mrs_tgt frs_tgt k_src ctx0
         (at_most: Ord.t)
         (wf: (Σ * Any.t) * (Σ * Any.t) -> Prop)
@@ -710,13 +715,13 @@ Section HLEMMAS.
 
         (POST: gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ eqr n1
                       (mr_src0, mp_src0, fr_src0,
-                       ('(ctx1, _) <- (HoareCall true o fsp fn args ctx0);;
-                        Tau (ITree.bind (interp_hCallE_tgt stb o (_APC next) ctx1) k_src)))
+                       ('(ctx1, _) <- (HoareCall mn true o fsp fn args ctx0);;
+                        Tau (ITree.bind (interp_hCallE_tgt mn stb o (_APC next) ctx1) k_src)))
                       ((mrs_tgt, frs_tgt),
                        itr_tgt))
     :
       gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ eqr n0
-             (mr_src0, mp_src0, fr_src0, (interp_hCallE_tgt stb o (_APC at_most) ctx0) >>= k_src)
+             (mr_src0, mp_src0, fr_src0, (interp_hCallE_tgt mn stb o (_APC at_most) ctx0) >>= k_src)
              ((mrs_tgt, frs_tgt),
               itr_tgt).
   Proof.
