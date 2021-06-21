@@ -301,7 +301,7 @@ Section SIMMODSEM.
 
           force_l. esplits. steps. hret _; ss.
           iModIntro. iFrame. iSplitL "A"; ss; et. iExists (_, _). iSplits; ss; et.
-      - unfold KModSem.transl_fun_tgt, pop_body. rewrite X. cbn. steps. post_call. steps.
+      - unfold KModSem.transl_fun, pop_body. rewrite X. cbn. steps. post_call. steps.
         rename n into h. rename l into stk0. destruct v; ss. des_ifs_safe.
         assert(S:=SIM h). rewrite _UNWRAPU0 in *. inv S; ss. steps.
         destruct stk0 as [|x stk1].
@@ -354,7 +354,7 @@ Section SIMMODSEM.
 
         force_l. esplits. steps. hret _; ss.
         iModIntro. iFrame. iSplitL "A"; ss; et.
-      - unfold KModSem.transl_fun_tgt, push_body. rewrite X. cbn. steps. post_call. steps.
+      - unfold KModSem.transl_fun, push_body. rewrite X. cbn. steps. post_call. steps.
         rename n into h. rename l into stk0. destruct v; ss. des_ifs_safe.
         assert(S:=SIM h). rewrite _UNWRAPU in *. inv S; ss. steps.
         steps.
