@@ -293,13 +293,14 @@ Section PROOFRIGHT.
         (* repeat match goal with *)
         (*        | [H: (PTree_Properties.of_list _) ! _ = _ |- _ ] => apply PTree_Properties.in_of_list in H *)
         (*        end. *)
-      - admit "symbol resolution".
-      - admit "contra: PTree_Properties.of_list_dom".
-      - admit "declared in a".
-      - admit "contra: PTree_Properties.of_list_dom".
-      - admit "declared in b".
-      - admit "contra: PTree_Properties.of_list_dom".
-      - admit "contra: must be in a or b". }
+      - admit "symbol resolution, use LINKTGT0".
+      - admit "contra: PTree_Properties.of_list_dom, use LINKTGT0".
+      - apply PTree_Properties.in_of_list in AK. apply PTree_Properties.in_of_list in LK.
+        admit "declared in a, use LINKSRC, classic on (In (k, ?) pb)".
+      - admit "contra: PTree_Properties.of_list_dom, use LINKSRC".
+      - admit "declared in b, use LINKSRC".
+      - admit "contra: PTree_Properties.of_list_dom, use LINKSRC".
+      - admit "contra: must be in a or b, use LINKSRC". }
   Admitted.
 
 
@@ -313,13 +314,21 @@ Section PROOFRIGHT.
         (LINKSRC: link_imp src1 src2 = Some srcl)
         
     :
-      (exists tgtl, <<LINKTGT: link_prog tgt1 tgt2 = Some tgtl>>).
+      (exists tgtl, <<LINKTGT: link tgt1 tgt2 = Some tgtl>>).
   Proof.
     hexploit (link_prog_succeeds tgt1 tgt2).
     { admit "ez". }
-    { i. admit "". }
+    { i. apply PTree_Properties.in_of_list in H. apply PTree_Properties.in_of_list in H0. rename H into IN1, H0 into IN2.
+      admit "case analysis: 4*4 = 16, use LINKSRC & norepet, disjoint list". }
     i. erewrite H. eauto.
   Qed.
+
+  (* link_def *)
+  (* link_fundef *)
+  (* link_vardef *)
+  (* link_varinit *)
+(* PTree_Properties.in_of_list: *)
+(*   forall [A : Type] (l : list (PTree.elt * A)) [k : PTree.elt] [v : A], (PTree_Properties.of_list l) ! k = Some v -> In (k, v) l *)
 
   Lemma _comm_link_imp_compile_exists
         src1 src2 srcl tgt1 tgt2
@@ -328,7 +337,7 @@ Section PROOFRIGHT.
         (LINKSRC: link_imp src1 src2 = Some srcl)
         
     :
-      (exists tgtl, (<<LINKTGT: link_prog tgt1 tgt2 = Some tgtl>>) /\ (<<COMP: compile srcl = OK tgtl>>)).
+      (exists tgtl, (<<LINKTGT: link tgt1 tgt2 = Some tgtl>>) /\ (<<COMP: compile srcl = OK tgtl>>)).
   Proof.
     hexploit _comm_link_imp_compile_exists_link.
     3: eapply LINKSRC.

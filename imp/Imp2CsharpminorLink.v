@@ -138,8 +138,6 @@ Section LINK.
     let l_pvsn := name1 l_pvs in
     List.filter (fun s => negb (in_dec string_Dec s l_pvsn)) l_evs0.
 
-  (* Lemma l_ext_vars_prop : *)
-
   Definition l_efs :=
     let l_efs0 := nodup extFun_Dec (src1.(ext_funsL) ++ src2.(ext_funsL)) in
     let l_pfsn := name2 l_pfs in
