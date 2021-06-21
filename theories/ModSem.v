@@ -790,17 +790,17 @@ Section EVENTS.
       end
   .
 
-  Definition handle_callE `{callE -< E} `{EventsL.rE -< E}: callE ~> itree E :=
+  Definition handle_callE (mn: mname) `{callE -< E} `{EventsL.rE -< E}: callE ~> itree E :=
     fun _ '(Call fn args) =>
       trigger EventsL.PushFrame;;;
-      r <- trigger (Call fn args);;
+      r <- trigger (Call fn (Any.pair mn↑ args));;
       trigger EventsL.PopFrame;;;
       Ret r
   .
 
   Definition handle_all (mn: mname): Es ~> itree EventsL.Es.
     i. destruct X.
-    { apply handle_callE; assumption. }
+    { apply (handle_callE mn); assumption. }
     destruct s.
     { exact (trigger (handle_rE mn r)). }
     destruct s.
@@ -844,11 +844,13 @@ Section EVENTS.
 
   Lemma transl_all_callE
         mn
-        (e: callE Any.t)
+        fn args
     :
-      transl_all mn (trigger e) = trigger EventsL.PushFrame;;; r <- (trigger e);; trigger EventsL.PopFrame;;; tau;; Ret r
+      transl_all mn (trigger (Call fn args)) =
+      trigger EventsL.PushFrame;;; r <- (trigger (Call fn (Any.pair mn↑ args)));;
+      trigger EventsL.PopFrame;;; tau;; Ret r
   .
-  Proof. dependent destruction e; ss. unfold transl_all. rewrite unfold_interp. ss. grind. Qed.
+  Proof. unfold transl_all. rewrite unfold_interp. ss. grind. Qed.
 
   Lemma transl_all_rE
         mn
