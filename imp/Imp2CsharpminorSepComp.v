@@ -26,8 +26,6 @@ Set Implicit Arguments.
 
 Section PROOFSINGLE.
 
-  Import Maps.PTree.
-
   Context `{Σ: GRA.t}.
 
   Create HintDb ord_step2.
@@ -257,7 +255,7 @@ End PROOFLEFT.
 
 Section PROOFRIGHT.
 
-  Import Maps.PTree.
+  Import Maps.
   Import Permutation.
 
   Context `{Σ: GRA.t}.
@@ -329,32 +327,6 @@ Section PROOFRIGHT.
     des_ifs. ss. destruct x. ss. destruct p. clarify.
   Qed.
 
-  src1 : programL
-  pcs1 : list (ident * globdef fundef2 ())
-  src2 : programL
-  pcs2 : list (ident * globdef fundef2 ())
-  PCS1 : pre_compile_iFuns (List.map snd (prog_funsL src1)) = Some pcs1
-  PCS2 : pre_compile_iFuns (List.map snd (prog_funsL src2)) = Some pcs2
-  LC1 : Coqlib.list_norepet (List.map fst (l_prog_varsL src1 src2) ++ List.map fst (List.map snd (l_prog_funsLM src1 src2)))
-  LC2 : Coqlib.list_norepet (ext_varsL src1 ++ List.map fst (List.map snd (l_prog_funsLM src1 src2)))
-  LC5 : Coqlib.list_norepet (ext_varsL src2 ++ List.map fst (List.map snd (l_prog_funsLM src1 src2)))
-  LC4 : Coqlib.list_norepet (List.map fst (ext_funsL src1) ++ List.map fst (l_prog_varsL src1 src2))
-  LC0 : Coqlib.list_norepet (List.map fst (ext_funsL src2) ++ List.map fst (l_prog_varsL src1 src2))
-  LC3 : link_imp_cond3 src1 src2 = true
-  NOREPET1 : Coqlib.list_norepet
-               (List.map fst
-                  (pcs2 ++ compile_eFuns (ext_funsL src2) ++ compile_iVars (prog_varsL src2) ++ compile_eVars (ext_varsL src2)))
-  NOREPET2 : Coqlib.list_norepet
-               (List.map fst
-                  (pcs1 ++ compile_eFuns (ext_funsL src1) ++ compile_iVars (prog_varsL src1) ++ compile_eVars (ext_varsL src1)))
-  ============================
-  Coqlib.list_norepet
-    (List.map fst
-       ((pcs1 ++ pcs2) ++
-        compile_eFuns (l_ext_funs src1 src2) ++ compile_iVars (l_prog_varsL src1 src2) ++ compile_eVars (l_ext_vars src1 src2)))
-
-
-
 
 
 
@@ -364,6 +336,8 @@ Section PROOFRIGHT.
 
   (* Maps.PTree.elements_extensional 
      we will rely on above theorem for commutation lemmas *)
+  Variable P: Imp2Csharpminor.gmap -> Imp2Csharpminor.gmap -> Imp2Csharpminor.gmap -> Prop.
+  Variable Q: list (ident * globdef fundef ()) -> list (ident * globdef fundef ()) -> list (ident * globdef fundef ()) -> Prop.
   Lemma _comm_link_imp_compile
         src1 src2 srcl tgt1 tgt2 tgtl
         (COMP1: compile src1 = OK tgt1)
@@ -373,27 +347,31 @@ Section PROOFRIGHT.
     :
       <<COMPL: compile srcl = OK tgtl>>.
   Proof.
-    unfold compile in *. des_ifs.
-    2:{
-
-      
-    unfold link_imp in LINKSRC. des_ifs. bsimpl; des. rename Heq into COND1, Heq1 into COND2, Heq0 into COND3.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    unfold compile, _compile in *. des_ifs_safe.
+    rename l1 into pa. rename l into pb.
+    rename g0 into ga. rename g into gb.
+    assert(exists gml, get_gmap srcl = Some gml /\ <<PROP: P ga gb gml>>).
+    { admit "". }
+    des. des_ifs_safe.
+    assert(exists pl, compile_gdefs gml srcl = Some pl /\ Q pa pb pl).
+    { unfold compile_gdefs in *. uo. des_ifs_safe.
+      admit "somehow". }
+    des. des_ifs_safe.
+    assert(forall k, get k (combine link_prog_merge (Maps.PTree_Properties.of_list pa)
+                                    (Maps.PTree_Properties.of_list pb)) =
+                     get k (Maps.PTree_Properties.of_list pl)).
+    { i. erewrite gcombine; ss.
+      erewrite ! Maps.PTree_Properties.of_list_norepet; ss; et. admit "". }
   Admitted.
+
+
+
+
+
+
+
+
+
 
   Fixpoint compile_imps (src_list : list Imp.programL) :=
     match src_list with
