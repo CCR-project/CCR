@@ -655,14 +655,14 @@ Section ADQ.
     - unfold transl_all. rewrite ! unfold_interp. ss. gstep. econs; eauto.
       pclearbot. gbase. eapply CIH; et.
     - unfold transl_all. rewrite ! interp_bind. rewrite ! unfold_interp. ss. rewrite ! bind_bind.
-      replace (trigger EventsL.PushFrame;;; r1 <- trigger (Call fn varg);; x <- (trigger EventsL.PopFrame;;; Ret r1);;
+      replace (trigger EventsL.PushFrame;;; r1 <- trigger (Call fn (Any.pair (Any.upcast (ModSem.mn ms_src)) varg));; x <- (trigger EventsL.PopFrame;;; Ret r1);;
                x0 <- (tau;; interp (handle_all (ModSem.mn ms_src)) (Ret x));; interp (handle_all (ModSem.mn ms_src)) (k_src x0)) with
-          (trigger EventsL.PushFrame;;; r <- trigger (Call fn varg);; trigger EventsL.PopFrame;;; tau;; (interp (handle_all (ModSem.mn ms_src)) (k_src r))); cycle 1.
+          (trigger EventsL.PushFrame;;; r <- trigger (Call fn (Any.pair (Any.upcast (ModSem.mn ms_src)) varg));; trigger EventsL.PopFrame;;; tau;; (interp (handle_all (ModSem.mn ms_src)) (k_src r))); cycle 1.
       { grind. }
-      replace (trigger EventsL.PushFrame;;; r1 <- trigger (Call fn varg);; x <- (trigger EventsL.PopFrame;;; Ret r1);;
+      replace (trigger EventsL.PushFrame;;; r1 <- trigger (Call fn (Any.pair (Any.upcast (ModSem.mn ms_tgt)) varg));; x <- (trigger EventsL.PopFrame;;; Ret r1);;
                x0 <- (tau;; interp (handle_all (ModSem.mn ms_tgt)) (Ret x));; interp (handle_all (ModSem.mn ms_tgt)) (k_tgt x0)) with
-          (trigger EventsL.PushFrame;;; r <- trigger (Call fn varg);; trigger EventsL.PopFrame;;; tau;; (interp (handle_all (ModSem.mn ms_tgt)) (k_tgt r))); cycle 1.
-      { grind. }
+          (trigger EventsL.PushFrame;;; r <- trigger (Call fn (Any.pair (Any.upcast (ModSem.mn ms_src)) varg));; trigger EventsL.PopFrame;;; tau;; (interp (handle_all (ModSem.mn ms_tgt)) (k_tgt r))); cycle 1.
+      { rewrite MN. grind. }
       gstep. econs; eauto.
       { rr. esplits; ss. }
       ii. ss. des; ss. subst. unfold alist_add. ss.
@@ -991,9 +991,9 @@ Section ADQ.
       { eapply OrdArith.add_lt_l. rewrite <- Ord.from_nat_O. eapply OrdArith.lt_from_nat. lia. }
       ired. gbase. eapply CIH; et.
     - unfold transl_all. rewrite ! interp_bind. rewrite ! unfold_interp. ss. rewrite ! bind_bind.
-      replace (trigger EventsL.PushFrame;;; r1 <- trigger (Call fn varg);; x <- (trigger EventsL.PopFrame;;; Ret r1);;
+      replace (trigger EventsL.PushFrame;;; r1 <- trigger (Call fn (Any.pair (Any.upcast (ModSem.mn ms_src)) varg));; x <- (trigger EventsL.PopFrame;;; Ret r1);;
                x0 <- (tau;; interp (handle_all (ModSem.mn ms_src)) (Ret x));; interp (handle_all (ModSem.mn ms_src)) (k_src x0)) with
-          (trigger EventsL.PushFrame;;; r <- trigger (Call fn varg);; trigger EventsL.PopFrame;;; tau;; (interp (handle_all (ModSem.mn ms_src)) (k_src r))); cycle 1.
+          (trigger EventsL.PushFrame;;; r <- trigger (Call fn (Any.pair (Any.upcast (ModSem.mn ms_src)) varg));; trigger EventsL.PopFrame;;; tau;; (interp (handle_all (ModSem.mn ms_src)) (k_src r))); cycle 1.
       { grind. }
       gstep. econs. auto.
       Unshelve.

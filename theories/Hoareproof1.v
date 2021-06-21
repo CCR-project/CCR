@@ -521,6 +521,8 @@ Section CANCEL.
     { eapply OrdArith.add_base_l. }
     guclo ordC_spec. econs.
     { eapply C.my_thm2; et. }
+    rewrite Any.pair_split. steps.
+    rewrite Any.upcast_downcast. steps.
     guclo ordC_spec. econs.
     { rewrite OrdArith.add_assoc. refl. }
     rewrite idK_spec at 1.
@@ -633,6 +635,8 @@ Section CANCEL.
       rewrite FINDMID. unfold fun_to_mid. steps.
       rewrite Any.pair_split. steps.
       rewrite Any.upcast_downcast. steps.
+      rewrite Any.pair_split. steps.
+      rewrite Any.upcast_downcast. steps.
       guclo ordC_spec. econs.
       { eapply OrdArith.add_base_l. }
       rewrite idK_spec2 at 1.
@@ -650,6 +654,10 @@ Section CANCEL.
       unseal_left. steps.
       rewrite FINDMID. rewrite FINDSRC.
       unfold fun_to_src, cfun, fun_to_mid. steps.
+      rewrite Any.pair_split. steps.
+      rewrite Any.upcast_downcast. steps.
+      rewrite Any.pair_split. steps.
+      rewrite Any.upcast_downcast. steps.
       rewrite Any.pair_split. steps.
       rewrite Any.upcast_downcast. steps.
       guclo ordC_spec. econs.
@@ -704,7 +712,7 @@ Section CANCEL.
   Qed.
 
   Variable mainpre: Any.t -> ord -> Σ -> Prop.
-  Variable (mainbody: Any.t -> itree (hCallE +' pE +' eventE) Any.t).
+  Variable (mainbody: (mname * Any.t) -> itree (hCallE +' pE +' eventE) Any.t).
 
   Require Import Logic.
 
@@ -712,7 +720,7 @@ Section CANCEL.
     alist_find "main" sbtb = Some (mk_specbody (mk_simple (fun _ : () => (mainpre, fun _ => (⌜True⌝: iProp)%I))) mainbody).
 
   Theorem adequacy_type_m2s:
-    Beh.of_program (ModL.compile_arg (Mod.add_list mds_mid) (Any.pair ord_top↑ ([]: list val)↑)) <1=
+    Beh.of_program (ModL.compile_arg (Mod.add_list mds_mid) (Any.pair ""↑ (Any.pair ord_top↑ ([]: list val)↑))) <1=
     Beh.of_program (ModL.compile (Mod.add_list mds_src)).
   Proof.
     eapply adequacy_global_itree.
@@ -749,6 +757,10 @@ Section CANCEL.
       rewrite FINDSRC. rewrite FINDMID. steps.
       unfold fun_to_src, fun_to_mid, cfun. steps.
 
+      rewrite Any.pair_split. steps.
+      rewrite Any.upcast_downcast. steps.
+      rewrite Any.pair_split. steps.
+      rewrite Any.upcast_downcast. steps.
       rewrite Any.pair_split. steps.
       rewrite Any.upcast_downcast. steps.
 

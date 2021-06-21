@@ -39,14 +39,13 @@ Section PROOF.
       (<<WEAKER: fspec_weaker fsp_tgt fsp_src>>)
   .
 
-  Variable m: mname.
-
+  Variable mn: mname.
   Variable fn: gname.
 
   Variable fsp_src fsp_tgt: fspec.
   Hypothesis fsp_weaker: fspec_weaker fsp_src fsp_tgt.
 
-  Variable body: Any.t -> itree (hCallE +' pE +' eventE) Any.t.
+  Variable body: (mname * Any.t) -> itree (hCallE +' pE +' eventE) Any.t.
 
   Let wf: W -> Prop :=
     fun '(mrps_src0, mrps_tgt0) =>
@@ -68,8 +67,8 @@ Section PROOF.
 
   Lemma weakening_fn:
     sim_fsem wf
-             (fun_to_tgt stb_src (mk_specbody fsp_src body))
-             (fun_to_tgt stb_tgt (mk_specbody fsp_tgt body)).
+             (fun_to_tgt mn stb_src (mk_specbody fsp_src body))
+             (fun_to_tgt mn stb_tgt (mk_specbody fsp_tgt body)).
   Proof.
     Ltac mstep := ired_both; gstep; match goal with
                                     | [|- monotone6 (_sim_itree wf)] => eapply sim_itree_mon
@@ -86,7 +85,7 @@ Section PROOF.
                             (FRSRC: URA.wf (ctx ⋅ (fst (st_src)) ⋅ fr_src))
                             (FRTGT: URA.wf (ctx ⋅ (fst (st_tgt)) ⋅ fr_tgt))
                             (* (GWF: @URA.wf (GRA.to_URA Σ) (@URA.add (GRA.to_URA Σ) (fst st_src) fr)) *),
-               gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) bot6 bot6 _ _ (liftRR eq) 200 (st_src, fr_src, interp_hCallE_tgt stb_src o itr ctx) (st_tgt, fr_tgt, interp_hCallE_tgt stb_tgt o itr ctx)).
+               gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) bot6 bot6 _ _ (liftRR eq) 200 (st_src, fr_src, interp_hCallE_tgt mn stb_src o itr ctx) (st_tgt, fr_tgt, interp_hCallE_tgt mn stb_tgt o itr ctx)).
     { Local Transparent interp_hCallE_tgt.
       unfold interp_hCallE_tgt. gcofix CIH. i. ides itr.
       { mstep. ired. red in WF. des; subst. eapply sim_itree_ret; et.
@@ -124,9 +123,9 @@ Section PROOF.
               mstep. eapply sim_itree_choose_tgt; eauto with ord_step. intros o0.
               mstep. eapply sim_itree_choose_tgt; eauto with ord_step. intros PRE.
 
-              specialize (WEAKER x_src). des.
+              specialize (WEAKER x_src mn). des.
               assert (exists rarg_src,
-                         (<<PRE: precond fsp_src0 x_tgt varg_src varg_tgt o0 rarg_src>>) /\
+                         (<<PRE: precond fsp_src0 mn x_tgt varg_src varg_tgt o0 rarg_src>>) /\
                          (<<VALID: URA.wf (ctx ⋅ (mr0 ⋅ (rarg_src ⋅ rrest)))>>)
                      ).
               { hexploit PRE0. i. uipropall. hexploit (H rarg_tgt); et.
@@ -178,7 +177,7 @@ Section PROOF.
               mstep. eapply sim_itree_take_src; eauto with ord_step. intros POSTSRC.
 
               assert (exists rret_tgt,
-                         (<<POSTTGT: postcond f x_src vret_src vret rret_tgt>>) /\
+                         (<<POSTTGT: postcond f mn x_src vret_src vret rret_tgt>>) /\
                          (<<VALIDTGT: URA.wf (ctx0 ⋅ (mr1 ⋅ (rrest ⋅ rret_tgt)))>>)
                      ).
               { hexploit POST. i. uipropall. hexploit (H rret_src); et.
@@ -252,6 +251,12 @@ Section PROOF.
 
       (* source argument *)
       red in SIMMRS. des; subst.
+      destruct (Any.split y).
+      2: { steps. }
+      cbn. rewrite ! bind_ret_l. destruct p.
+      destruct (Any.downcast t).
+      2: { steps. }
+      cbn. rewrite ! bind_ret_l.
       mstep. eapply sim_itree_take_src; eauto with ord_step. intros ctx.
       mstep. eapply sim_itree_take_src; eauto with ord_step. intros varg_src.
       mstep. eapply sim_itree_take_src; eauto with ord_step. intros x_src.
@@ -264,9 +269,9 @@ Section PROOF.
       mstep. eapply sim_itree_take_src; eauto with ord_step. intros o.
       mstep. eapply sim_itree_take_src; eauto with ord_step. intros PRESRC.
 
-      hexploit (fsp_weaker x_src). i. des.
+      hexploit (fsp_weaker x_src s). i. des.
       assert (exists rarg_tgt,
-                 (<<PRETGT: precond fsp_tgt x_tgt varg_src y o rarg_tgt>>) /\
+                 (<<PRETGT: precond fsp_tgt s x_tgt varg_src t0 o rarg_tgt>>) /\
                  (<<VALIDTGT: URA.wf (ctx ⋅ (mr ⋅ (ε ⋅ rarg_tgt)))>>)).
       { hexploit PRE; et. i. uipropall. hexploit (H rarg_src); et.
         { eapply URA.wf_mon. instantiate (1:=ctx ⋅ mr).
@@ -319,7 +324,7 @@ Section PROOF.
       mstep. eapply sim_itree_fput_tgt; eauto with ord_step.
 
       assert (exists rret_src,
-                 (<<POSTSRC: postcond fsp_src x_src t0 ret_tgt rret_src>>) /\
+                 (<<POSTSRC: postcond fsp_src s x_src t2 ret_tgt rret_src>>) /\
                  (<<VALIDSRC: URA.wf (c2 ⋅ (mr_tgt ⋅ (rret_src ⋅ rrest)))>>)
              ).
       { hexploit POST; et. i. uipropall. hexploit (H rret_tgt); et.
