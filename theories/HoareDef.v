@@ -330,10 +330,11 @@ Section CANCEL.
 
   Definition fun_to_mid (body: Any.t -> itree (hCallE +' pE +' eventE) Any.t): (Any_mid -> itree Es Any_src) :=
     fun varg_mid =>
-      '(ord_cur, varg_src) <- (Any.split varg_mid)ǃ;; ord_cur <- ord_cur↓ǃ;;
+      '(mn, varg_src) <- (Any.split varg_mid)ǃ;;
+      '(ord_cur, varg_src_) <- (Any.split varg_src)ǃ;; ord_cur <- ord_cur↓ǃ;; (** varg_src without mn **)
       interp_hCallE_mid ord_cur (match ord_cur with
                                  | ord_pure n => APC;;; trigger (Choose _)
-                                 | _ => body varg_src
+                                 | _ => body (Any.pair mn varg_src_)
                                  end).
 
   Definition handle_hCallE_tgt (ord_cur: ord): hCallE ~> stateT Σ (itree Es) :=
