@@ -299,7 +299,7 @@ Section CANCEL.
   .
 
   Definition body_to_src (body: Any.t -> itree (hCallE +' pE +' eventE) Any.t): Any.t -> itree Es Any.t :=
-    fun varg_src => interp_hCallE_src (body varg_src)
+    fun varg_src_mn => interp_hCallE_src (body varg_src_mn)
   .
 
   Definition fun_to_src (body: Any.t -> itree (hCallE +' pE +' eventE) Any.t): (Any_src -> itree Es Any_src) :=
@@ -329,12 +329,12 @@ Section CANCEL.
   .
 
   Definition fun_to_mid (body: Any.t -> itree (hCallE +' pE +' eventE) Any.t): (Any_mid -> itree Es Any_src) :=
-    fun varg_mid =>
-      '(mn, varg_src) <- (Any.split varg_mid)ǃ;;
-      '(ord_cur, varg_src_) <- (Any.split varg_src)ǃ;; ord_cur <- ord_cur↓ǃ;; (** varg_src without mn **)
+    fun varg_mid_mn =>
+      '(mn, ord_varg_src) <- (Any.split varg_mid_mn)ǃ;;
+      '(ord_cur, varg_src) <- (Any.split ord_varg_src)ǃ;; ord_cur <- ord_cur↓ǃ;;
       interp_hCallE_mid ord_cur (match ord_cur with
                                  | ord_pure n => APC;;; trigger (Choose _)
-                                 | _ => body (Any.pair mn varg_src_)
+                                 | _ => body (Any.pair mn varg_src)
                                  end).
 
   Definition handle_hCallE_tgt (ord_cur: ord): hCallE ~> stateT Σ (itree Es) :=
@@ -358,7 +358,8 @@ Section CANCEL.
              {X: Type}
              (P: X -> Any.t -> Any_tgt -> ord -> Σ -> Prop)
              (Q: X -> Any.t -> Any_tgt -> Σ -> Prop)
-             (body: Any.t -> itree Es' Any.t): Any_tgt -> itree Es Any_tgt := fun varg_tgt =>
+             (body: Any.t -> itree Es' Any.t): Any_tgt -> itree Es Any_tgt := fun varg_tgt_mn =>
+    '(mn, varg_tgt) <- (Any.split varg_tgt_mn)ǃ;;
     ctx <- trigger (Take _);;
     varg_src <- trigger (Take _);;
     x <- trigger (Take X);;
@@ -369,7 +370,7 @@ Section CANCEL.
 
     '(ctx, vret_src) <- interp_hCallE_tgt ord_cur (match ord_cur with
                                                    | ord_pure n => APC;;; trigger (Choose _)
-                                                   | _ => body varg_src
+                                                   | _ => body (Any.pair mn varg_src)
                                                    end) ctx;;
 
     vret_tgt <- trigger (Choose Any_tgt);;
@@ -398,7 +399,8 @@ If this feature is needed; we can extend it then. At the moment, I will only all
 
   Definition HoareFunArg
              {X: Type}
-             (P: X -> Any.t -> Any_tgt -> ord -> Σ -> Prop): Any_tgt -> itree Es (Σ * (X * Any.t * ord)) := fun varg_tgt =>
+             (P: X -> Any.t -> Any_tgt -> ord -> Σ -> Prop): Any_tgt -> itree Es (Σ * (Any.t * X * Any.t * ord)) := fun varg_tgt_mn =>
+    '(mn, varg_tgt) <- (Any.split varg_tgt_mn)ǃ;;
     ctx <- trigger (Take _);;
     varg_src <- trigger (Take _);;
     x <- trigger (Take X);;
@@ -406,7 +408,7 @@ If this feature is needed; we can extend it then. At the moment, I will only all
     (checkWf ctx);;;
     ord_cur <- trigger (Take _);;
     assume(P x varg_src varg_tgt  ord_cur rarg);;; (*** precondition ***)
-    Ret (ctx, (x, varg_src, ord_cur))
+    Ret (ctx, (mn, x, varg_src, ord_cur))
   .
 
   Definition HoareFunRet
@@ -428,10 +430,10 @@ If this feature is needed; we can extend it then. At the moment, I will only all
         (varg_tgt: Any_tgt)
     :
       HoareFun P Q body varg_tgt =
-      '(ctx, (x, varg_src, ord_cur)) <- HoareFunArg P varg_tgt;;
+      '(ctx, (mn, x, varg_src, ord_cur)) <- HoareFunArg P varg_tgt;;
       interp_hCallE_tgt ord_cur (match ord_cur with
                                  | ord_pure n => APC;;; trigger (Choose _)
-                                 | _ => body varg_src
+                                 | _ => body (Any.pair mn varg_src)
                                  end) ctx >>= HoareFunRet Q x.
   Proof.
     unfold HoareFun, HoareFunArg, HoareFunRet. grind.
