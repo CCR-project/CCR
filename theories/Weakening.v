@@ -246,17 +246,12 @@ Section PROOF.
         }
       }
     }
-    { unfold fun_to_tgt, fun_to_src, HoareFun, forge, checkWf, discard, put, assume, guarantee. ss.
+    { Local Transparent HoareFun.
+      unfold fun_to_tgt, fun_to_src, HoareFun, forge, checkWf, discard, put, assume, guarantee. ss.
       ii. exists 400. ginit.
 
       (* source argument *)
-      red in SIMMRS. des; subst.
-      destruct (Any.split y).
-      2: { steps. }
-      cbn. rewrite ! bind_ret_l. destruct p.
-      destruct (Any.downcast t).
-      2: { steps. }
-      cbn. rewrite ! bind_ret_l.
+      red in SIMMRS. des; subst. destruct y as [mn_caller varg].
       mstep. eapply sim_itree_take_src; eauto with ord_step. intros ctx.
       mstep. eapply sim_itree_take_src; eauto with ord_step. intros varg_src.
       mstep. eapply sim_itree_take_src; eauto with ord_step. intros x_src.
@@ -269,9 +264,9 @@ Section PROOF.
       mstep. eapply sim_itree_take_src; eauto with ord_step. intros o.
       mstep. eapply sim_itree_take_src; eauto with ord_step. intros PRESRC.
 
-      hexploit (fsp_weaker x_src s). i. des.
+      hexploit (fsp_weaker x_src mn_caller). i. des.
       assert (exists rarg_tgt,
-                 (<<PRETGT: precond fsp_tgt s x_tgt varg_src t0 o rarg_tgt>>) /\
+                 (<<PRETGT: precond fsp_tgt mn_caller x_tgt varg_src varg o rarg_tgt>>) /\
                  (<<VALIDTGT: URA.wf (ctx ⋅ (mr ⋅ (ε ⋅ rarg_tgt)))>>)).
       { hexploit PRE; et. i. uipropall. hexploit (H rarg_src); et.
         { eapply URA.wf_mon. instantiate (1:=ctx ⋅ mr).
@@ -324,7 +319,7 @@ Section PROOF.
       mstep. eapply sim_itree_fput_tgt; eauto with ord_step.
 
       assert (exists rret_src,
-                 (<<POSTSRC: postcond fsp_src s x_src t2 ret_tgt rret_src>>) /\
+                 (<<POSTSRC: postcond fsp_src mn_caller x_src t0 ret_tgt rret_src>>) /\
                  (<<VALIDSRC: URA.wf (c2 ⋅ (mr_tgt ⋅ (rret_src ⋅ rrest)))>>)
              ).
       { hexploit POST; et. i. uipropall. hexploit (H rret_tgt); et.

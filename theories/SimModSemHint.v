@@ -360,13 +360,13 @@ Section SIM.
     - econs; try apply SIM; et. eapply Ord.lt_le_lt; et.
   Qed.
 
-  Definition sim_fsem: relation (Any.t -> itree Es Any.t) :=
+  Definition sim_fsem: relation (mname * Any.t -> itree Es Any.t) :=
     (eq ==> (fun it_src it_tgt => forall mrs_src mrs_tgt (SIMMRS: wf (mrs_src, mrs_tgt)),
                  exists n, sim_itree n ((mrs_src, URA.unit), it_src)
                                      ((mrs_tgt, URA.unit), it_tgt)))%signature
   .
 
-  Definition sim_fnsem: relation (string * (Any.t -> itree Es Any.t)) := RelProd eq sim_fsem.
+  Definition sim_fnsem: relation (string * (mname * Any.t -> itree Es Any.t)) := RelProd eq sim_fsem.
 
 
   Variant lordC (r: forall (R_src R_tgt: Type) (RR: st_local -> st_local -> R_src -> R_tgt -> Prop), Ord.t -> st_local * itree Es R_src -> st_local * itree Es R_tgt -> Prop)

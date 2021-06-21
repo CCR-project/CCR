@@ -529,7 +529,7 @@ Section HLEMMAS.
 
   Lemma harg_clo
         Rn Invn
-        r rg
+        mn r rg
         X (P: mname -> X -> Any.t -> Any.t -> ord -> Σ -> Prop) varg
         mr_src mp_src mr_tgt mp_tgt fr_src fr_tgt f_tgt k_src
         A
@@ -537,24 +537,20 @@ Section HLEMMAS.
         (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
         (WF: mk_wf R_src R_tgt ((mr_src, mp_src), (mr_tgt, mp_tgt)))
         (ARG:
-           forall a mn x varg_tgt varg_src ord_cur fr_src
+           forall a x varg_src ord_cur fr_src
                   (RTGT: R_tgt a mp_src mp_tgt mr_tgt)
                   ctx
-                  (ACC: current_iPropL ctx (@cons (prod string (bi_car iProp)) (Rn, P mn x varg_src varg_tgt ord_cur) (@cons (prod string (bi_car iProp)) (Invn, R_src a mp_src mp_tgt) (@nil (prod string (bi_car iProp)))))),
+                  (ACC: current_iPropL ctx (@cons (prod string (bi_car iProp)) (Rn, P mn x varg_src varg ord_cur) (@cons (prod string (bi_car iProp)) (Invn, R_src a mp_src mp_tgt) (@nil (prod string (bi_car iProp)))))),
              gpaco6 (_sim_itree (mk_wf R_src R_tgt)) (cpn6 (_sim_itree (mk_wf R_src R_tgt))) rg rg _ _ eqr 89
                     (mr_src, mp_src, fr_src, k_src (ctx, ((mn, x), varg_src, ord_cur)))
                     (mr_tgt, mp_tgt, fr_tgt, f_tgt))
     :
       gpaco6 (_sim_itree (mk_wf R_src R_tgt)) (cpn6 (_sim_itree (mk_wf R_src R_tgt))) r rg _ _ eqr 100
-             (mr_src, mp_src, fr_src, (HoareFunArg P varg >>= k_src))
+             (mr_src, mp_src, fr_src, (HoareFunArg P (mn, varg) >>= k_src))
              (mr_tgt, mp_tgt, fr_tgt, f_tgt)
   .
   Proof.
     unfold HoareFunArg, put, discard, forge, checkWf, assume, guarantee.
-    destruct (Any.split varg) eqn:ANY.
-    2: { steps. unfold triggerUB. ired_both. gstep. econs; eauto with ord_step. ss. }
-    ired_both. destruct p as [mn varg_tgt]. destruct (Any.downcast mn) eqn:MN.
-    2: { steps. unfold triggerUB. ired_both. gstep. econs; eauto with ord_step. ss. }
     repeat (ired_both; gstep; econs; eauto with ord_step). intro ctx.
     repeat (ired_both; gstep; econs; eauto with ord_step). intro varg_src.
     repeat (ired_both; gstep; econs; eauto with ord_step). intro x.
@@ -1009,6 +1005,7 @@ Ltac astart _at_most :=
 
 Ltac init :=
   let varg_src := fresh "varg_src" in
+  let mn := fresh "mn" in
   let varg := fresh "varg" in
   let EQ := fresh "EQ" in
   let mr_src := fresh "mr_src" in
@@ -1016,7 +1013,7 @@ Ltac init :=
   let mr_tgt := fresh "mr_tgt" in
   let mp_tgt := fresh "mp_tgt" in
   let WF := fresh "WF" in
-  split; ss; intros varg_src varg EQ [mr_src mp_src] [mr_tgt mp_tgt] WF;
+  split; ss; intros varg_src [mn varg] EQ [mr_src mp_src] [mr_tgt mp_tgt] WF;
   (try subst varg_src); exists 100; cbn;
   ginit;
   try (unfold fun_to_tgt, cfun; rewrite HoareFun_parse); simpl.
@@ -1069,7 +1066,7 @@ Tactic Notation "hcall_weaken" uconstr(fsp) uconstr(o) uconstr(x) uconstr(a) "wi
 
 Global Opaque _APC APC interp interp_hCallE_tgt.
 
-Global Opaque HoareFunArg HoareFunRet.
+Global Opaque HoareFun HoareFunArg HoareFunRet.
 
 Definition __hide_mark A (a : A) : A := a.
 Lemma intro_hide_mark: forall A (a: A), a = __hide_mark a. refl. Qed.

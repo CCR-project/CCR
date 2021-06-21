@@ -422,13 +422,13 @@ Section SIM.
     - econs; try apply SIM; et. eapply Ord.lt_le_lt; et.
   Qed.
 
-  Definition sim_fsem: relation (Any.t -> itree Es Any.t) :=
+  Definition sim_fsem: relation ((mname * Any.t) -> itree Es Any.t) :=
     (eq ==> (fun it_src it_tgt => forall mrs_src mrs_tgt (SIMMRS: wf (mrs_src, mrs_tgt)),
                  exists n, sim_itree n ((mrs_src, URA.unit), it_src)
                                      ((mrs_tgt, URA.unit), it_tgt)))%signature
   .
 
-  Definition sim_fnsem: relation (string * (Any.t -> itree Es Any.t)) := RelProd eq sim_fsem.
+  Definition sim_fnsem: relation (string * ((mname * Any.t) -> itree Es Any.t)) := RelProd eq sim_fsem.
 
 
   Variant lordC (r: forall (R_src R_tgt: Type) (RR: st_local -> st_local -> R_src -> R_tgt -> Prop), Ord.t -> st_local * itree Es R_src -> st_local * itree Es R_tgt -> Prop)
@@ -1429,26 +1429,26 @@ Section SIMMOD.
        rewrite interp_Es_rE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)).
        mgo. ss. mgo.
 
-       generalize (FNS fn). i. inv H; cycle 1.
-       { unfold ModSemL.prog at 3.
-         rewrite <- H1. unfold unwrapU, triggerUB. mgo.
-         econs; ss; et.
-         gstep. econs; ss; et.
-         gstep. econs; ss; et.
-         gstep. econs; ss; et.
-         instantiate (1:=1). instantiate (1:=0). eapply OrdArith.lt_from_nat; ss.
-       }
+       econs; ss; et.
+       gstep. econs; ss; et.
+
+       mgo. generalize (FNS fn). i. inv H; cycle 1.
+       { unfold ModSemL.prog at 3. unfold unwrapU, triggerUB. mgo.
+         gstep. econs; ss. gstep. econs; ss. }
+
+       mgo. destruct (Any.split varg) as [[mn varg0]|].
+       2: { cbn. unfold triggerNB. mgo. gstep. econs; ss. gstep. econs; ss. }
+       cbn. mgo. destruct (Any.downcast mn) as [mn0|].
+       2: { cbn. unfold triggerNB. mgo. gstep. econs; ss. gstep. econs; ss. }
+
        mgo. rename a into f_src. rename b into f_tgt.
-       exploit IN; eauto. instantiate (2:=varg). i. des.
-       econs; et.
-       gstep. econs; et.
-       gstep. econs; et.
-       instantiate (1:=(20 + (arith n0 4 4))%ord).
+       exploit IN; eauto. instantiate (2:=(mn0, varg0)). i. des.
+       cbn. mgo. gstep. econs; ss.
+       instantiate (1:=(20+(arith n0 4 4))%ord).
        gclo. eapply wrespect6_companion; auto with paco.
        { eapply bindC_wrespectful. }
        econs.
-       + gbase. eapply CIH; eauto. ss.
-         unfold unwrapU. des_ifs. mgo. ss.
+       + gbase. eapply CIH; eauto.
        + i. ss. des.
          destruct vret_src as [[mrs_src' frs_src'] val_src].
          destruct vret_tgt as [[mrs_tgt' frs_tgt'] val_tgt].
@@ -1741,6 +1741,7 @@ Section SIMMOD.
        eapply Sk.sort_wf. assumption. } clear x_src.
      ss. unfold ITree.map, unwrapU, triggerUB. mgo.
      des_ifs_safe. ss. mgo.
+     rewrite Any.pair_split. cbn. mgo. rewrite Any.upcast_downcast. cbn. mgo.
      guclo bindC_spec. econs.
      { gfinal. right. eapply lift_sim.
        { et. }
