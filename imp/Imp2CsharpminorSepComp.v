@@ -1,4 +1,4 @@
-From compcert Require Import Globalenvs Smallstep AST Integers Events Behaviors Errors Memory Csharpminor Linking.
+From compcert Require Import Maps Globalenvs Smallstep AST Integers Events Behaviors Errors Memory Csharpminor Linking.
 Require Import Coqlib.
 Require Import ITreelib.
 Require Import Universe.
@@ -255,84 +255,11 @@ End PROOFLEFT.
 
 Section PROOFRIGHT.
 
-  Import Maps.
   Import Permutation.
 
   Context `{Σ: GRA.t}.
 
   (* Proving the right arrow of the diagram *)
-
-  Lemma pre_comp_link_two
-        src1 src2 pcs1 pcs2
-        (PCS1: pre_compile_iFuns (List.map snd (prog_funsL src1)) = Some pcs1)
-        (PCS2: pre_compile_iFuns (List.map snd (prog_funsL src2)) = Some pcs2)
-    :
-      <<PCS12: pre_compile_iFuns (List.map snd (l_prog_funsLM src1 src2)) = Some (pcs1 ++ pcs2)>>.
-  Proof.
-    unfold l_prog_funsLM. rewrite map_app. red.
-    match goal with
-    | [ |- pre_compile_iFuns (?_fs1 ++ ?_fs2) = _ ] => set (fs1:=_fs1) in *; set (fs2:=_fs2) in *
-    end.
-    unfold pre_compile_iFuns in *. des_ifs; ss; clarify.
-    { repeat f_equal. rewrite map_app. rewrite map_app. ss. }
-    exfalso. apply n. clear n. rewrite map_app. apply Forall_app; eauto.
-  Qed.
-
-  Lemma link_then_some_gmap
-        src1 pcs1 gm1 src2 pcs2 gm2 srcl
-        (PCS1: pre_compile_iFuns (List.map snd (prog_funsL src1)) = Some pcs1)
-        (GMAP1 : get_gmap src1 = Some gm1)
-        (PCS2: pre_compile_iFuns (List.map snd (prog_funsL src2)) = Some pcs2)
-        (GMAP2 : get_gmap src2 = Some gm2)
-        (LINK : link_imp src1 src2 = Some srcl)
-    :
-      <<GMAPL: get_gmap srcl =
-               Some (mk_gmap (compile_eVars (l_ext_vars src1 src2))
-                             (compile_eFuns (l_ext_funs src1 src2))
-                             (compile_iVars (l_prog_varsL src1 src2))
-                             (pcs1 ++ pcs2))>>.
-  Proof.
-    unfold link_imp in LINK. des_ifs. unfold get_gmap; ss. erewrite pre_comp_link_two; eauto.
-    uo; ss. unfold get_gmap in *. des_ifs; ss. uo; des_ifs; ss; clarify. exfalso. apply n; clear n.
-    rename l into NOREPET1, l0 into NOREPET2, Heq2 into PCS1, Heq1 into PCS2.
-    bsimpl; des. rename Heq into LC1, Heq1 into LC2, Heq0 into LC3. unfold link_imp_cond2 in LC2. bsimpl; des.
-    repeat match goal with | [ H: _ = true |- _ ] => apply sumbool_to_bool_true in H end.
-  Admitted.
-
-  Lemma ext_vars_names :
-    forall src, <<EVN: List.map fst (compile_eVars (ext_varsL src)) = List.map s2p (ext_varsL src)>>.
-  Proof.
-    i. unfold compile_eVars. rewrite List.map_map. apply List.map_ext. i. ss.
-  Qed.
-
-  Lemma ext_funs_names :
-    forall src, <<EFN: List.map fst (compile_eFuns (ext_funsL src)) = List.map (compose s2p fst) (ext_funsL src)>>.
-  Proof.
-    i. unfold compile_eFuns. rewrite List.map_map. apply List.map_ext. i. destruct a. ss.
-  Qed.
-
-  Lemma int_vars_names :
-    forall src, <<IVN: List.map fst (compile_iVars (prog_varsL src)) = List.map (compose s2p fst) (prog_varsL src)>>.
-  Proof.
-    i. unfold compile_iVars. rewrite List.map_map. apply List.map_ext. i. destruct a; ss.
-  Qed.
-
-  Lemma int_funs_names :
-    forall src pcs
-      (PCS : pre_compile_iFuns (List.map snd (prog_funsL src)) = Some pcs),
-      <<IFN: List.map fst pcs = List.map (compose s2p (compose fst snd)) (prog_funsL src)>>.
-  Proof.
-    i. unfold pre_compile_iFuns in PCS. des_ifs. rewrite List.map_map in f. do 3 rewrite List.map_map. red.
-    apply map_ext_strong. i. apply List.Forall_map in f. rewrite Forall_forall in f. apply f in IN.
-    des_ifs. ss. destruct x. ss. destruct p. clarify.
-  Qed.
-
-
-
-
-
-
-
 
   (* Maps.PTree.elements_extensional 
      we will rely on above theorem for commutation lemmas *)
@@ -343,33 +270,73 @@ Section PROOFRIGHT.
         (COMP1: compile src1 = OK tgt1)
         (COMP2: compile src2 = OK tgt2)
         (LINKSRC: link_imp src1 src2 = Some srcl)
-        (LINKTGT: link_prog tgt1 tgt2 = Some tgtl)
+        (LINKTGT: link tgt1 tgt2 = Some tgtl)
     :
       <<COMPL: compile srcl = OK tgtl>>.
   Proof.
+    apply link_prog_inv in LINKTGT. unfold prog_defmap in *; ss.
     unfold compile, _compile in *. des_ifs_safe.
-    rename l1 into pa. rename l into pb.
-    rename g0 into ga. rename g into gb.
+    rename l1 into pa. rename l into pb. rename g0 into ga. rename g into gb.
     assert(exists gml, get_gmap srcl = Some gml /\ <<PROP: P ga gb gml>>).
     { admit "". }
-    des. des_ifs_safe.
+    des. des_ifs_safe. ss.
     assert(exists pl, compile_gdefs gml srcl = Some pl /\ Q pa pb pl).
-    { unfold compile_gdefs in *. uo. des_ifs_safe.
-      admit "somehow". }
+    { unfold compile_gdefs in *. uo. des_ifs_safe. admit "somehow". }
     des. des_ifs_safe.
-    assert(forall k, get k (combine link_prog_merge (Maps.PTree_Properties.of_list pa)
-                                    (Maps.PTree_Properties.of_list pb)) =
-                     get k (Maps.PTree_Properties.of_list pl)).
-    { i. erewrite gcombine; ss.
-      erewrite ! Maps.PTree_Properties.of_list_norepet; ss; et. admit "". }
+    assert(forall k, PTree.get k (PTree.combine link_prog_merge (PTree_Properties.of_list pa) (PTree_Properties.of_list pb)) =
+                PTree.get k (PTree_Properties.of_list pl)).
+    { i. erewrite PTree.gcombine; ss.
+      (* erewrite ! PTree_Properties.of_list_norepet in *; ss; et. *)
+      match goal with
+      | [ |- link_prog_merge ?ak ?bk = ?lk ] => destruct ak eqn:AK; destruct bk eqn:BK; destruct lk eqn:LK; ss; clarify; eauto
+      end.
+        (* repeat match goal with *)
+        (*        | [H: (PTree_Properties.of_list _) ! _ = _ |- _ ] => apply PTree_Properties.in_of_list in H *)
+        (*        end. *)
+      - admit "symbol resolution".
+      - admit "contra: PTree_Properties.of_list_dom".
+      - admit "declared in a".
+      - admit "contra: PTree_Properties.of_list_dom".
+      - admit "declared in b".
+      - admit "contra: PTree_Properties.of_list_dom".
+      - admit "contra: must be in a or b". }
   Admitted.
 
 
 
 
 
+  Lemma _comm_link_imp_compile_exists_link
+        src1 src2 srcl tgt1 tgt2
+        (COMP1: compile src1 = OK tgt1)
+        (COMP2: compile src2 = OK tgt2)
+        (LINKSRC: link_imp src1 src2 = Some srcl)
+        
+    :
+      (exists tgtl, <<LINKTGT: link_prog tgt1 tgt2 = Some tgtl>>).
+  Proof.
+    hexploit (link_prog_succeeds tgt1 tgt2).
+    { admit "ez". }
+    { i. admit "". }
+    i. erewrite H. eauto.
+  Qed.
 
-
+  Lemma _comm_link_imp_compile_exists
+        src1 src2 srcl tgt1 tgt2
+        (COMP1: compile src1 = OK tgt1)
+        (COMP2: compile src2 = OK tgt2)
+        (LINKSRC: link_imp src1 src2 = Some srcl)
+        
+    :
+      (exists tgtl, (<<LINKTGT: link_prog tgt1 tgt2 = Some tgtl>>) /\ (<<COMP: compile srcl = OK tgtl>>)).
+  Proof.
+    hexploit _comm_link_imp_compile_exists_link.
+    3: eapply LINKSRC.
+    1,2: eauto.
+    i. des. exists tgtl. split; auto. eapply _comm_link_imp_compile.
+    3,4: eauto.
+    1,2: eauto.
+  Qed.
 
 
 
@@ -404,31 +371,31 @@ Section PROOFRIGHT.
       fold_left_option link_prog tgt_t (Some tgt_h)
     end.
 
-  Lemma comm_link_imp_compile
-        src_list srcl tgt_list tgtl
-        (COMPL: compile_list src_list tgt_list)
-        (LINKSRC: link_imp_list src_list = Some srcl)
-        (LINKTGT: link_csm_list tgt_list = Some tgtl)
-    :
-      compile srcl = OK tgtl.
-  Proof.
-    i. destruct src_list; destruct tgt_list; ss; clarify.
-    inv COMPL; clarify.
-    generalize dependent srcl. generalize dependent tgtl.
-    generalize dependent p. generalize dependent p0.
-    induction COMPT; i; ss; clarify.
-    destruct (link_prog p0 tgt_h) eqn:LPt; ss; clarify.
-    2:{ rewrite fold_left_option_None in LINKTGT; clarify. }
-    destruct (link_imp p src_h) eqn:LPs; ss; clarify.
-    2:{ rewrite fold_left_option_None in LINKSRC; clarify. }
-    eapply IHCOMPT.
-    2: apply LINKTGT.
-    2: apply LINKSRC.
-    eapply _comm_link_imp_compile.
-    3: apply LPs.
-    3: apply LPt.
-    auto. auto.
-  Qed.
+  (* Lemma comm_link_imp_compile *)
+  (*       src_list srcl tgt_list tgtl *)
+  (*       (COMPL: compile_list src_list tgt_list) *)
+  (*       (LINKSRC: link_imp_list src_list = Some srcl) *)
+  (*       (LINKTGT: link_csm_list tgt_list = Some tgtl) *)
+  (*   : *)
+  (*     compile srcl = OK tgtl. *)
+  (* Proof. *)
+  (*   i. destruct src_list; destruct tgt_list; ss; clarify. *)
+  (*   inv COMPL; clarify. *)
+  (*   generalize dependent srcl. generalize dependent tgtl. *)
+  (*   generalize dependent p. generalize dependent p0. *)
+  (*   induction COMPT; i; ss; clarify. *)
+  (*   destruct (link_prog p0 tgt_h) eqn:LPt; ss; clarify. *)
+  (*   2:{ rewrite fold_left_option_None in LINKTGT; clarify. } *)
+  (*   destruct (link_imp p src_h) eqn:LPs; ss; clarify. *)
+  (*   2:{ rewrite fold_left_option_None in LINKSRC; clarify. } *)
+  (*   eapply IHCOMPT. *)
+  (*   2: apply LINKTGT. *)
+  (*   2: apply LINKSRC. *)
+  (*   eapply _comm_link_imp_compile. *)
+  (*   3: apply LPs. *)
+  (*   3: apply LPt. *)
+  (*   auto. auto. *)
+  (* Qed. *)
 
 End PROOFRIGHT.
 
@@ -440,18 +407,18 @@ Section PROOFLINK.
   (* Definition src_initial_state (src : ModL.t) := *)
   (*   (ModL.compile src).(initial_state). *)
 
-  Theorem compile_behavior_improves
-          (src_list : list Imp.program) srcl tgt_list tgtl srcst tgtst
-          (COMP: let src_list_lift := List.map Imp.lift src_list in
-                 compile_list src_list_lift tgt_list)
-          (LINKSRC: let src_list_mod := List.map ImpMod.get_mod src_list in
-                    Mod.add_list (Mem :: src_list_mod) = srcl)
-          (LINKTGT: link_csm_list tgt_list = Some tgtl)
-          (SINIT: srcst = src_initial_state srcl)
-          (TINIT: Csharpminor.initial_state tgtl tgtst)
-    :
-      <<IMPROVES: @improves2 _ (Csharpminor.semantics tgtl) srcst tgtst>>.
-  Proof.
-  Admitted.
+  (* Theorem compile_behavior_improves *)
+  (*         (src_list : list Imp.program) srcl tgt_list tgtl srcst tgtst *)
+  (*         (COMP: let src_list_lift := List.map Imp.lift src_list in *)
+  (*                compile_list src_list_lift tgt_list) *)
+  (*         (LINKSRC: let src_list_mod := List.map ImpMod.get_mod src_list in *)
+  (*                   Mod.add_list (Mem :: src_list_mod) = srcl) *)
+  (*         (LINKTGT: link_csm_list tgt_list = Some tgtl) *)
+  (*         (SINIT: srcst = src_initial_state srcl) *)
+  (*         (TINIT: Csharpminor.initial_state tgtl tgtst) *)
+  (*   : *)
+  (*     <<IMPROVES: @improves2 _ (Csharpminor.semantics tgtl) srcst tgtst>>. *)
+  (* Proof. *)
+  (* Admitted. *)
 
 End PROOFLINK.

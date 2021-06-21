@@ -6,6 +6,8 @@ Require Import STS Behavior.
 Require Import Any.
 Require Import ModSem.
 Require Import Imp.
+Require Import Imp2Csharpminor.
+Require Import Imp2CsharpminorGenv.
 
 From compcert Require Import AST Csharpminor Globalenvs Linking.
 
@@ -26,79 +28,327 @@ Section LINK.
   Variable src2 : Imp.programL.
 
   Definition l_nameL := src1.(nameL) ++ src2.(nameL).
-  Definition l_prog_varsL := src1.(prog_varsL) ++ src2.(prog_varsL).
-  Definition l_prog_funsLM := src1.(prog_funsL) ++ src2.(prog_funsL).
-  Let l_prog_funsL := List.map snd l_prog_funsLM.
+  Definition l_pvs := src1.(prog_varsL) ++ src2.(prog_varsL).
+  Definition l_pfs := src1.(prog_funsL) ++ src2.(prog_funsL).
+  Let l_pfsN := List.map snd l_pfs.
   Definition l_publicL := src1.(publicL) ++ src2.(publicL).
   Definition l_defsL := src1.(defsL) ++ src2.(defsL).
 
-  Let check_name_unique1 {K} {A} {B} decK
+  Definition check_name_unique1 {K} {A} {B} decK
       (l1 : list (K * A)) (l2 : list (K * B)) :=
     let l1_k := List.map fst l1 in
     let l2_k := List.map fst l2 in
     Coqlib.list_norepet_dec decK (l1_k ++ l2_k).
 
-  (* check defined names are unique *)
-  Definition link_imp_cond1 :=
-    check_name_unique1 string_Dec l_prog_varsL l_prog_funsL.
+  Lemma check_name_unique1_prop {K} {A} {B} decK :
+    forall (l1 : list (K * A)) (l2 : list (K * B))
+      (_CNU1: (check_name_unique1 decK l1 l2)),
+      <<CNU1: Coqlib.list_norepet ((List.map fst l1) ++ (List.map fst l2))>>.
+  Proof.
+    i. unfold check_name_unique1 in *. apply sumbool_to_bool_true in _CNU1. ss.
+  Qed.
 
-  Let check_name_unique2 {K} {B} decK
+  (* check defined names are unique *)
+  Definition link_imp_cond1 := check_name_unique1 string_Dec l_pvs l_pfs.
+
+  Lemma link_imp_cond1_prop :
+    forall (_LIC1: link_imp_cond1),
+      <<LIC1: Coqlib.list_norepet ((List.map fst l_pvs) ++ (List.map fst l_pfs))>>.
+  Proof.
+    i. unfold link_imp_cond1 in *. apply check_name_unique1_prop in _LIC1. ss.
+  Qed.
+
+  Definition check_name_unique2 {K} {B} decK
       (l1 : list K) (l2 : list (K * B)) :=
     let l2_k := List.map fst l2 in
     Coqlib.list_norepet_dec decK (l1 ++ l2_k).
 
+  Lemma check_name_unique2_prop {K} {B} decK :
+    forall (l1 : list K) (l2 : list (K * B))
+      (_CNU2: (check_name_unique2 decK l1 l2)),
+      <<CNU2: Coqlib.list_norepet (l1 ++ (List.map fst l2))>>.
+  Proof.
+    i. unfold check_name_unique2 in *. apply sumbool_to_bool_true in _CNU2. ss.
+  Qed.
+
   (* check external decls are consistent *)
   Definition link_imp_cond2 :=
     let sd := string_Dec in
-    let c1 := check_name_unique2 sd src1.(ext_varsL) l_prog_funsL in
-    let c2 := check_name_unique2 sd src2.(ext_varsL) l_prog_funsL in
-    let c3 := check_name_unique1 sd src1.(ext_funsL) l_prog_varsL in
-    let c4 := check_name_unique1 sd src2.(ext_funsL) l_prog_varsL in
+    let c1 := check_name_unique2 sd src1.(ext_varsL) l_pfs in
+    let c2 := check_name_unique2 sd src2.(ext_varsL) l_pfs in
+    let c3 := check_name_unique1 sd src1.(ext_funsL) l_pvs in
+    let c4 := check_name_unique1 sd src2.(ext_funsL) l_pvs in
     c1 && c2 && c3 && c4.
 
+  Lemma link_imp_cond2_prop :
+    forall (_LIC2: link_imp_cond2 = true),
+      (<<EV1: Coqlib.list_norepet (src1.(ext_varsL) ++ (List.map fst l_pfs))>>) /\
+      (<<EV2: Coqlib.list_norepet (src2.(ext_varsL) ++ (List.map fst l_pfs))>>) /\
+      (<<EF1: Coqlib.list_norepet ((List.map fst src1.(ext_funsL)) ++ (List.map fst l_pvs))>>) /\
+      (<<EF2: Coqlib.list_norepet ((List.map fst src2.(ext_funsL)) ++ (List.map fst l_pvs))>>).
+  Proof.
+    i. unfold link_imp_cond2 in _LIC2. bsimpl. des.
+    apply check_name_unique1_prop in _LIC1. apply check_name_unique1_prop in _LIC0.
+    apply check_name_unique2_prop in _LIC2. apply check_name_unique2_prop in _LIC3.
+    eauto.
+  Qed.
+
   (* check external fun decls' sig *)
-  Fixpoint _link_imp_cond3' (p : string * nat) (l : extFuns) :=
+  Fixpoint __link_imp_cond3 (p : string * nat) (l : extFuns) :=
     let '(name, n) := p in
     match l with
     | [] => true
     | (name2, n2) :: t =>
       if (eqb name name2 && negb (n =? n2)%nat) then false
-      else _link_imp_cond3' p t
+      else __link_imp_cond3 p t
     end
   .
+
+  Lemma __link_imp_cond3_prop :
+    forall p (l : list (string * nat))
+      (__LIC3: __link_imp_cond3 p l = true),
+      <<__LIC3: forall a, ((In a l) /\ (fst a = fst p)) -> (snd a = snd p)>>.
+  Proof.
+    i. red. depgen p. depgen l. clear. induction l; ii; ss; clarify.
+    { des. clarify. }
+    des; clarify; ss.
+    { destruct p; ss. destruct a0; ss. clarify. des_ifs. bsimpl. des; bsimpl; ss; clarify.
+      { rewrite eqb_refl in Heq. clarify. }
+      rewrite Nat.eqb_eq in Heq. ss. }
+    destruct p. destruct a0. ss; clarify. destruct a. ss; clarify. des_ifs. bsimpl. des.
+    { set (k0:=(s, n0)) in *. set (k:=(s, n)) in *. eapply IHl in __LIC3.
+      { instantiate (1:=k0) in __LIC3. subst k; subst k0; ss; clarify. }
+      split; auto. }
+    rewrite Nat.eqb_eq in Heq. clarify. eapply IHl in __LIC3.
+    { instantiate (1:= (s, n0)) in __LIC3. ss; clarify. }
+    split; ss; eauto.
+  Qed.
 
   Fixpoint _link_imp_cond3 l :=
     match l with
     | [] => true
     | h :: t =>
-      if (_link_imp_cond3' h t) then _link_imp_cond3 t
+      if (__link_imp_cond3 h t) then _link_imp_cond3 t
       else false
     end
   .
 
-  Definition link_imp_cond3 :=
-    _link_imp_cond3 (src1.(ext_funsL) ++ src2.(ext_funsL)).
+  Lemma _link_imp_cond3_prop :
+    forall (l : list (string * nat))
+      (_LIC3: _link_imp_cond3 l = true),
+      <<_LIC3: forall a b, ((In a l) /\ (In b l) /\ (fst a = fst b)) -> (snd a = snd b)>>.
+  Proof.
+    i. red. depgen l. clear. induction l; i; ss; clarify.
+    { des; clarify. }
+    des; ss; clarify.
+    - des_ifs. eapply __link_imp_cond3_prop in Heq. eapply Heq; eauto.
+    - des_ifs. eapply __link_imp_cond3_prop in Heq. sym; eapply Heq; eauto.
+    - des_ifs. assert (TRUE: true = true); auto.
+  Qed.
+
+  Definition link_imp_cond3 := _link_imp_cond3 (src1.(ext_funsL) ++ src2.(ext_funsL)).
+
+  Lemma link_imp_cond3_prop :
+    forall (LIC3: link_imp_cond3 = true),
+      <<LIC3P: forall a b, ((In a (src1.(ext_funsL) ++ src2.(ext_funsL))) /\ (In b (src1.(ext_funsL) ++ src2.(ext_funsL)))
+                       /\ (fst a = fst b)) -> (snd a = snd b)>>.
+  Proof.
+    i. unfold link_imp_cond3 in LIC3. eapply _link_imp_cond3_prop in LIC3. auto.
+  Qed.
 
   (* merge external decls; vars is simple, funs assumes cond3 is passed *)
   (* link external decls; need to remove defined names *)
-  Definition l_ext_vars :=
-    let l_ext_vars0 := nodup string_Dec (src1.(ext_varsL) ++ src2.(ext_varsL)) in
-    let l_prog_varsLf := List.map fst l_prog_varsL in
-    List.filter (fun s => negb (in_dec string_Dec s l_prog_varsLf)) l_ext_vars0.
+  Definition l_evs :=
+    let l_evs0 := nodup string_Dec (src1.(ext_varsL) ++ src2.(ext_varsL)) in
+    let l_pvsn := List.map fst l_pvs in
+    List.filter (fun s => negb (in_dec string_Dec s l_pvsn)) l_evs0.
 
-  Definition l_ext_funs :=
-    let l_ext_funs0 := nodup extFun_Dec (src1.(ext_funsL) ++ src2.(ext_funsL)) in
-    let l_prog_funsLf := List.map fst l_prog_funsL in
-    List.filter (fun sn => negb (in_dec string_Dec (fst sn) l_prog_funsLf)) l_ext_funs0.
+  (* Lemma l_ext_vars_prop : *)
+    
+
+  Definition l_efs :=
+    let l_efs0 := nodup extFun_Dec (src1.(ext_funsL) ++ src2.(ext_funsL)) in
+    let l_pfsn := List.map fst l_pfs in
+    List.filter (fun sn => negb (in_dec string_Dec (fst sn) l_pfsn)) l_efs0.
 
   (* Linker for Imp programs, follows Clight's link_prog as possible *)
   Definition link_imp : option Imp.programL :=
     if (link_imp_cond1 && link_imp_cond2 && link_imp_cond3)
-    then Some (mk_programL l_nameL l_ext_vars l_ext_funs l_prog_varsL l_prog_funsLM l_publicL l_defsL)
+        (* (Coqlib.list_norepet_dec dec (List.map fst (l_ext_vars)))) *)
+    then Some (mk_programL l_nameL l_evs l_efs l_pvs l_pfs l_publicL l_defsL)
     else None
   .
 
 End LINK.
+
+
+
+Section LINKPROPS.
+
+
+  Lemma pre_compile_iFuns_props
+        src pcs
+        (PCS: pre_compile_iFuns src = Some pcs)
+  :
+    <<PCSDEFS: Forall2 (fun a b =>
+                          let fn := fst a in
+                          let f := snd a in
+                          (s2p fn = fst b) /\
+                          (exists cf, (pre_compile_function fn f = Some cf) /\ (Gfun (Internal cf) = snd b)))
+                       src pcs>>.
+  Proof.
+    depgen pcs. induction src; i; ss; clarify.
+    { unfold pre_compile_iFuns in PCS. des_ifs. }
+    destruct pcs.
+    { clear IHsrc. unfold pre_compile_iFuns in PCS. des_ifs. }
+    rename a into src0, p into pcs0. econs 2.
+    - unfold pre_compile_iFuns in PCS. des_ifs_safe. ss. inv f. des_ifs_safe. ss. split; auto.
+      exists f. split; auto.
+    - apply IHsrc. unfold pre_compile_iFuns in PCS. des_ifs_safe. inv f.
+      unfold pre_compile_iFuns. des_ifs.
+  Qed.
+
+  Lemma pre_compile_iFuns_props2
+        src pcs
+        (PCSDEFS: Forall2 (fun a b =>
+                             let fn := fst a in
+                             let f := snd a in
+                             (s2p fn = fst b) /\
+                             (exists cf, (pre_compile_function fn f = Some cf) /\ (Gfun (Internal cf) = snd b)))
+                          src pcs)
+    :
+      <<PCS: pre_compile_iFuns src = Some pcs>>.
+  Proof.
+    depgen pcs. induction src; i; ss; clarify.
+    { inv PCSDEFS. ss. }
+    destruct pcs.
+    { inv PCSDEFS. }
+    rename a into src0, p into pcs0. inv PCSDEFS. des. rename H0 into CF, H1 into GD, H2 into ID, H4 into FA2.
+    unfold pre_compile_iFuns in *. des_ifs.
+    - red. f_equal. rewrite List.map_map. ss. f_equal.
+      2:{ apply IHsrc in FA2. inv FA2. rewrite List.map_map. ss. }
+      destruct src0. ss. rewrite CF. destruct pcs0; ss; clarify.
+    - exfalso. apply n. clear n. inv f; auto.
+    - exfalso. apply n. clear n. econs 2; eauto. destruct src0; ss. rewrite CF. ss.
+    - apply IHsrc in FA2. clarify.
+  Qed.
+
+  Lemma pre_compile_iFuns_cons
+        s src p pcs
+        (PCSCONS : pre_compile_iFuns (s :: src) = Some (p :: pcs))
+  :
+    (<<PCS: pre_compile_iFuns src = Some pcs>>).
+  Proof.
+    apply pre_compile_iFuns_props in PCSCONS. inv PCSCONS. apply pre_compile_iFuns_props2 in H4. auto.
+  Qed.
+
+  Lemma pre_compile_iFuns_names
+        src pcs
+        (PCS: pre_compile_iFuns src = Some pcs)
+  :
+    <<PCSNAMES: List.map (compose s2p fst) src = List.map fst pcs>>.
+  Proof.
+    hexploit pre_compile_iFuns_props; eauto. i. induction H; ss; eauto.
+    red. des. f_equal; eauto. apply IHForall2. apply pre_compile_iFuns_props2 in H0. auto.
+  Qed.
+
+  Lemma pre_compile_link_two
+        src1 src2 pcs1 pcs2
+        (PCS1: pre_compile_iFuns (List.map snd (prog_funsL src1)) = Some pcs1)
+        (PCS2: pre_compile_iFuns (List.map snd (prog_funsL src2)) = Some pcs2)
+    :
+      <<PCS12: pre_compile_iFuns (List.map snd (l_pfs src1 src2)) = Some (pcs1 ++ pcs2)>>.
+  Proof.
+    unfold l_pfs. rewrite map_app. red.
+    match goal with
+    | [ |- pre_compile_iFuns (?_fs1 ++ ?_fs2) = _ ] => set (fs1:=_fs1) in *; set (fs2:=_fs2) in *
+    end.
+    unfold pre_compile_iFuns in *. des_ifs; ss; clarify.
+    { repeat f_equal. rewrite map_app. rewrite map_app. ss. }
+    exfalso. apply n. clear n. rewrite map_app. apply Forall_app; eauto.
+  Qed.
+
+  Lemma link_then_unique_ids
+        src1 pcs1 src2 pcs2
+        (PCS1: pre_compile_iFuns (List.map snd (prog_funsL src1)) = Some pcs1)
+        (PCS2: pre_compile_iFuns (List.map snd (prog_funsL src2)) = Some pcs2)
+        (LINK : link_imp_cond1 src1 src2 && link_imp_cond2 src1 src2 && link_imp_cond3 src1 src2 = true)
+        (NOREPET1 : Coqlib.list_norepet
+                      (List.map fst (pcs2 ++ compile_eFuns (ext_funsL src2) ++
+                                     compile_iVars (prog_varsL src2) ++ compile_eVars (ext_varsL src2))))
+        (NOREPET2 : Coqlib.list_norepet
+                      (List.map fst (pcs1 ++ compile_eFuns (ext_funsL src1) ++
+                                     compile_iVars (prog_varsL src1) ++ compile_eVars (ext_varsL src1))))
+    :
+      (<<NPREPETL: Coqlib.list_norepet
+                     (List.map fst
+                               ((pcs1 ++ pcs2) ++
+                                (compile_eFuns (l_efs src1 src2)) ++
+                                (compile_iVars (l_pvs src1 src2)) ++
+                                (compile_eVars (l_evs src1 src2))))>>).
+  Proof.
+  Admitted.
+
+  Lemma link_then_some_gmap
+        src1 pcs1 gm1 src2 pcs2 gm2 srcl
+        (PCS1: pre_compile_iFuns (List.map snd (prog_funsL src1)) = Some pcs1)
+        (GMAP1 : get_gmap src1 = Some gm1)
+        (PCS2: pre_compile_iFuns (List.map snd (prog_funsL src2)) = Some pcs2)
+        (GMAP2 : get_gmap src2 = Some gm2)
+        (LINK : link_imp src1 src2 = Some srcl)
+    :
+      (<<GMAPL: get_gmap srcl =
+                Some (mk_gmap (compile_eVars (l_evs src1 src2))
+                              (compile_eFuns (l_efs src1 src2))
+                              (compile_iVars (l_pvs src1 src2))
+                              (pcs1 ++ pcs2))>>) /\
+      (<<NPREPETL: Coqlib.list_norepet
+                     (List.map fst
+                               ((pcs1 ++ pcs2) ++
+                                (compile_eFuns (l_efs src1 src2)) ++
+                                (compile_iVars (l_pvs src1 src2)) ++
+                                (compile_eVars (l_evs src1 src2))))>>).
+  Proof.
+    unfold link_imp in LINK. des_ifs. unfold get_gmap; ss. erewrite pre_compile_link_two; eauto.
+    uo; ss. unfold get_gmap in *. des_ifs; ss.
+    uo; des_ifs; ss; clarify. split.
+    { exfalso. apply n; clear n. apply link_then_unique_ids; eauto. }
+    apply link_then_unique_ids; eauto.
+  Qed.
+
+  Lemma ext_vars_names :
+    forall src, <<EVN: List.map fst (compile_eVars (ext_varsL src)) = List.map s2p (ext_varsL src)>>.
+  Proof.
+    i. unfold compile_eVars. rewrite List.map_map. apply List.map_ext. i. ss.
+  Qed.
+
+  Lemma ext_funs_names :
+    forall src, <<EFN: List.map fst (compile_eFuns (ext_funsL src)) = List.map (compose s2p fst) (ext_funsL src)>>.
+  Proof.
+    i. unfold compile_eFuns. rewrite List.map_map. apply List.map_ext. i. destruct a. ss.
+  Qed.
+
+  Lemma int_vars_names :
+    forall src, <<IVN: List.map fst (compile_iVars (prog_varsL src)) = List.map (compose s2p fst) (prog_varsL src)>>.
+  Proof.
+    i. unfold compile_iVars. rewrite List.map_map. apply List.map_ext. i. destruct a; ss.
+  Qed.
+
+  Lemma int_funs_names :
+    forall src pcs
+      (PCS : pre_compile_iFuns (List.map snd (prog_funsL src)) = Some pcs),
+      <<IFN: List.map fst pcs = List.map (compose s2p (compose fst snd)) (prog_funsL src)>>.
+  Proof.
+    i. unfold pre_compile_iFuns in PCS. des_ifs. rewrite List.map_map in f. do 3 rewrite List.map_map. red.
+    apply map_ext_strong. i. apply List.Forall_map in f. rewrite Forall_forall in f. apply f in IN.
+    des_ifs. ss. destruct x. ss. destruct p. clarify.
+  Qed.
+
+
+
+End LINKPROPS.
+
+
 
 
 
@@ -189,7 +439,7 @@ Section PROOF.
       <<WFLINK: wf_prog srcl>>.
   Proof.
     i. unfold wf_prog in *. des. unfold link_imp in LINKED. des_ifs. split.
-    - unfold wf_prog_perm in *; ss. unfold l_prog_varsL; unfold l_prog_funsLM; unfold l_defsL.
+    - unfold wf_prog_perm in *; ss. unfold l_pvs; unfold l_pfs; unfold l_defsL.
       rewrite! map_app. red. rewrite <- app_assoc.
       match goal with
       | [ |- Permutation (?l1 ++ ?l2 ++ ?l3 ++ ?l4) _ ] =>
