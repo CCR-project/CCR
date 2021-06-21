@@ -353,10 +353,19 @@ Section CANCEL.
     i. destruct vret_src, vret_tgt. des; subst.
 
     steps. esplits; eauto. steps. unshelve esplits; eauto. steps. unfold unwrapU.
-    rewrite FINDMID. rewrite FINDTGT. steps.
+    rewrite FINDMID. rewrite FINDTGT. rewrite ! bind_ret_l.
+
+    Local Opaque fun_to_mid fun_to_tgt.
+    rewrite Any.pair_split. cbn. rewrite ! bind_ret_l.
+    rewrite Any.upcast_downcast. cbn. rewrite ! bind_ret_l.
+    rewrite Any.pair_split. cbn. rewrite ! bind_ret_l.
+    rewrite Any.upcast_downcast. cbn. rewrite ! bind_ret_l.
+    steps.
+    Local Transparent fun_to_mid fun_to_tgt.
+
     guclo ordC_spec. econs.
     { instantiate (1:=(192+200)%ord). rewrite <- OrdArith.add_from_nat. refl. }
-    rename f into fs. mred.
+    rename f into fs.
     guclo bindC_spec. econs.
 
     { instantiate (1:= fun '((((mrs_src, frs_src), mps_src), vret_src): (r_state * p_state * Any_src))
@@ -372,8 +381,6 @@ Section CANCEL.
       fold Any_tgt in x5.
       unfold fun_to_src, fun_to_tgt, compose. des_ifs. unfold HoareFun.
       rename x5 into PRECOND. rename x0 into rarg.
-      steps. rewrite Any.pair_split.
-      steps. rewrite Any.upcast_downcast.
       steps. exists (rsum_minus mn0 (update mrs_tgt0 mn c0, ε ⋅ rarg :: x1 :: frs_tgt_tl)).
       steps. exists varg_src.
       steps. esplits; et. steps. exists rarg.
@@ -391,8 +398,6 @@ Section CANCEL.
       }
       steps. esplits; eauto. steps. unshelve esplits; eauto. steps.
       unfold fun_to_mid.
-      rewrite Any.pair_split. ss. steps.
-      rewrite Any.upcast_downcast. steps.
       rewrite Any.pair_split. ss. steps.
       rewrite Any.upcast_downcast. steps.
       guclo ordC_spec. econs.

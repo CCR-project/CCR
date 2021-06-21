@@ -18,8 +18,8 @@ Section PROOF.
   (***
     main() := return f(10)
   ***)
-  Definition mainF: Any.t -> itree Es Any.t :=
-    fun varg =>
+  Definition mainF: mname * Any.t -> itree Es Any.t :=
+    fun '(_, varg) =>
       r <- trigger (Call "f" [Vint 10]↑);;
       Ret r.
 

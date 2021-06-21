@@ -304,10 +304,9 @@ Section CANCEL.
     (@interp_hCallE_src _) ∘ body
   .
 
-  Definition fun_to_src (body: (mname * Any.t) -> itree (hCallE +' pE +' eventE) Any.t): (Any_src -> itree Es Any_src) :=
+  Definition fun_to_src (body: (mname * Any.t) -> itree (hCallE +' pE +' eventE) Any.t): (mname * Any_src -> itree Es Any_src) :=
     fun varg_src_mn =>
-      '(mn, varg_src) <- (Any.split varg_src_mn)?;; mn <- mn↓?;;
-      body_to_src body (mn, varg_src)
+      body_to_src body varg_src_mn
   .
 
 
@@ -332,9 +331,8 @@ Section CANCEL.
     fun varg_mid => interp_hCallE_mid ord_cur (body varg_mid)
   .
 
-  Definition fun_to_mid (body: (mname * Any.t) -> itree (hCallE +' pE +' eventE) Any.t): (Any_mid -> itree Es Any_src) :=
-    fun varg_mid_mn =>
-      '(mn, ord_varg_src) <- (Any.split varg_mid_mn)?;; mn <- mn↓?;;
+  Definition fun_to_mid (body: (mname * Any.t) -> itree (hCallE +' pE +' eventE) Any.t): (mname * Any_mid -> itree Es Any_src) :=
+    fun '(mn, ord_varg_src) =>
       '(ord_cur, varg_src) <- (Any.split ord_varg_src)ǃ;; ord_cur <- ord_cur↓ǃ;;
       interp_hCallE_mid ord_cur (match ord_cur with
                                  | ord_pure n => APC;;; trigger (Choose _)
@@ -362,8 +360,7 @@ Section CANCEL.
              {X: Type}
              (P: mname -> X -> Any.t -> Any_tgt -> ord -> Σ -> Prop)
              (Q: mname -> X -> Any.t -> Any_tgt -> Σ -> Prop)
-             (body: (mname * Any.t) -> itree Es' Any.t): Any_tgt -> itree Es Any_tgt := fun varg_tgt_mn =>
-    '(mn_caller, varg_tgt) <- (Any.split varg_tgt_mn)?;; mn_caller <- (mn_caller↓)?;;
+             (body: (mname * Any.t) -> itree Es' Any.t): mname * Any_tgt -> itree Es Any_tgt := fun '(mn_caller, varg_tgt) =>
     ctx <- trigger (Take _);;
     varg_src <- trigger (Take _);;
     x <- trigger (Take X);;
@@ -385,7 +382,7 @@ Section CANCEL.
     Ret vret_tgt (*** return ***)
   .
 
-  Definition fun_to_tgt (sb: fspecbody): (Any_tgt -> itree Es Any_tgt) :=
+  Definition fun_to_tgt (sb: fspecbody): (mname * Any_tgt -> itree Es Any_tgt) :=
     let fs: fspec := sb.(fsb_fspec) in
     (HoareFun (fs.(precond)) (fs.(postcond)) sb.(fsb_body))
   .
@@ -404,16 +401,15 @@ If this feature is needed; we can extend it then. At the moment, I will only all
   Definition HoareFunArg
              {X: Type}
              (P: mname -> X -> Any.t -> Any_tgt -> ord -> Σ -> Prop):
-    Any_tgt -> itree Es (Σ * (mname * X * Any.t * ord)) := fun varg_tgt_mn =>
-    '(mn, varg_tgt) <- (Any.split varg_tgt_mn)?;; mn <- (mn↓)?;;
+    mname * Any_tgt -> itree Es (Σ * (mname * X * Any.t * ord)) := fun '(mn_caller, varg_tgt) =>
     ctx <- trigger (Take _);;
     varg_src <- trigger (Take _);;
     x <- trigger (Take X);;
     rarg <- trigger (Take Σ);; forge rarg;;; (*** virtual resource passing ***)
     (checkWf ctx);;;
     ord_cur <- trigger (Take _);;
-    assume(P mn x varg_src varg_tgt  ord_cur rarg);;; (*** precondition ***)
-    Ret (ctx, (mn, x, varg_src, ord_cur))
+    assume(P mn_caller x varg_src varg_tgt  ord_cur rarg);;; (*** precondition ***)
+    Ret (ctx, (mn_caller, x, varg_src, ord_cur))
   .
 
   Definition HoareFunRet
@@ -433,7 +429,7 @@ If this feature is needed; we can extend it then. At the moment, I will only all
         (P: mname -> X -> Any.t -> Any_tgt -> ord -> Σ -> Prop)
         (Q: mname -> X -> Any.t -> Any_tgt -> Σ -> Prop)
         (body: (mname * Any.t) -> itree Es' Any.t)
-        (varg_tgt: Any_tgt)
+        (varg_tgt: mname * Any_tgt)
     :
       HoareFun P Q body varg_tgt =
       '(ctx, (mn_caller, x, varg_src, ord_cur)) <- HoareFunArg P varg_tgt;;
@@ -491,7 +487,7 @@ Section SMODSEM.
   }
   .
 
-  Definition transl (tr: mname -> fspecbody -> (Any.t -> itree Es Any.t)) (mr: t -> Σ) (ms: t): ModSem.t := {|
+  Definition transl (tr: mname -> fspecbody -> (mname * Any.t -> itree Es Any.t)) (mr: t -> Σ) (ms: t): ModSem.t := {|
     ModSem.fnsems := List.map (fun '(fn, sb) => (fn, tr ms.(mn) sb)) ms.(fnsems);
     ModSem.mn := ms.(mn);
     ModSem.initial_mr := mr ms;
@@ -527,7 +523,7 @@ Section SMOD.
   }
   .
 
-  Definition transl (tr: Sk.t -> mname -> fspecbody -> (Any.t -> itree Es Any.t)) (mr: SModSem.t -> Σ) (md: t): Mod.t := {|
+  Definition transl (tr: Sk.t -> mname -> fspecbody -> (mname * Any.t -> itree Es Any.t)) (mr: SModSem.t -> Σ) (md: t): Mod.t := {|
     Mod.get_modsem := fun sk => SModSem.transl (tr sk) mr (md.(get_modsem) sk);
     Mod.sk := md.(sk);
   |}
@@ -633,7 +629,7 @@ Section SMOD.
   .
   Proof. rewrite ! transl_sk. ss. Qed.
 
-  Definition load_fnsems (sk: Sk.t) (mds: list t) (tr0: mname -> fspecbody -> Any.t -> itree Es Any.t) :=
+  Definition load_fnsems (sk: Sk.t) (mds: list t) (tr0: mname -> fspecbody -> mname * Any.t -> itree Es Any.t) :=
     do md <- mds;
     let ms := (get_modsem md sk) in
       (do '(fn, fsb) <- ms.(SModSem.fnsems);

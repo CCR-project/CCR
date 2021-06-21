@@ -351,7 +351,7 @@ Section MODSEML.
 
   Record t: Type := mk {
     (* initial_ld: mname -> GRA; *)
-    fnsems: alist gname (Any.t -> itree Es Any.t);
+    fnsems: alist gname ((mname * Any.t) -> itree Es Any.t);
     initial_mrs: alist mname (Σ * Any.t);
   }
   .
@@ -382,7 +382,8 @@ Section MODSEML.
   Definition prog: callE ~> itree Es :=
     fun _ '(Call fn args) =>
       sem <- (alist_find fn ms.(fnsems))?;;
-      rv <- (sem args);;
+      '(mn, args) <- (Any.split args)ǃ;; mn <- mn↓ǃ;;
+      rv <- (sem (mn, args));;
       Ret rv
   .
 
@@ -693,8 +694,7 @@ Section MODSEML.
         }
       }
       f_equal. unfold prog. extensionality T. extensionality e. destruct e.
-      f_equal. f_equal. symmetry.
-      eapply alist_permutation_find; et.
+      f_equal. f_equal. symmetry. eapply alist_permutation_find; et.
       { inv WF. ss. }
       { eapply Permutation_app_comm. }
     }
@@ -924,7 +924,7 @@ Section MODSEM.
   Context `{Σ: GRA.t}.
 
   Record t: Type := mk {
-    fnsems: list (gname * (Any.t -> itree Es Any.t));
+    fnsems: list (gname * ((mname * Any.t) -> itree Es Any.t));
     mn: mname;
     initial_mr: Σ;
     initial_st: Any.t;
@@ -934,7 +934,8 @@ Section MODSEM.
   Definition prog (ms: t): callE ~> itree Es :=
     fun _ '(Call fn args) =>
       sem <- (alist_find fn ms.(fnsems))?;;
-      (sem args)
+      '(mn, args) <- (Any.split args)ǃ;; mn <- mn↓ǃ;;
+      (sem (mn, args))
   .
 
   (*** TODO: move to CoqlibC ***)
