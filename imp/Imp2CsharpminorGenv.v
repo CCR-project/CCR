@@ -28,7 +28,7 @@ Section GENV.
         f mn fn impf
         (FOUND : find
                    ((fun '(k2, _) => f ?[ eq ] k2) <*>
-                    (fun '(mn, (fn, f)) => (fn, transl_all mn ∘ cfun (eval_imp (Sk.sort (defsL src)) f)))) (prog_funsL src) =
+                    (fun '(mn, (fn, f)) => (fn, transl_all mn (T:=_) ∘ cfun (eval_imp (Sk.sort (defsL src)) f)))) (prog_funsL src) =
                  Some (mn, (fn, impf)))
     (* (FOUND : find *)
     (*            (((fun fnsem : string * (Any.t -> itree EventsL.Es Any.t) => dec f (fst fnsem)) : _ -> bool) <*> *)

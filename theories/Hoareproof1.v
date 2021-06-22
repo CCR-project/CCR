@@ -468,12 +468,12 @@ Section CANCEL.
       (exists md (f: fspecbody),
           (<<SOME: alist_find fn stb = Some (f: fspec)>>) /\
           (<<FINDSRC: alist_find fn (fnsems ms_src) =
-                      Some (transl_all
+                      Some (transl_all (T:=_)
                               (SModSem.mn
                                  (SMod.get_modsem md sk))
                               ∘ fun_to_src (fsb_body f))>>) /\
           (<<FINDMID: alist_find fn (fnsems ms_mid) =
-                      Some (transl_all
+                      Some (transl_all (T:=_)
                               (SModSem.mn
                                  (SMod.get_modsem md sk))
                               ∘ fun_to_mid stb (fsb_body f))>>)).
