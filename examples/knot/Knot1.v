@@ -10,6 +10,7 @@ Require Import Mem1.
 Require Import TODOYJ.
 Require Import ProofMode.
 Require Import KnotHeader.
+Require Import Invariant.
 Require Import STB.
 
 Set Implicit Arguments.
@@ -31,51 +32,54 @@ Section KNOT.
     Variable skenv: SkEnv.t.
 
     Definition rec_spec:    fspec :=
-      mk_inv_simple (X:=(nat -> nat) * nat)
-                    (fun '(f, n) => (
-                         (fun varg o =>
-                            (⌜varg = [Vint (Z.of_nat n)]↑ /\ o = ord_pure (2 * n + 1)%nat⌝)
-                              ** (OwnM (knot_frag (Some f)))
-                         ),
-                         (fun vret =>
-                            (⌜vret = (Vint (Z.of_nat (f n)))↑⌝)
-                              ** (OwnM (knot_frag (Some f)))
-                         )
-                    )).
+      mk_fspec_inv
+        (mk_simple (X:=(nat -> nat) * nat)
+                   (fun '(f, n) => (
+                        (fun varg o =>
+                           (⌜varg = [Vint (Z.of_nat n)]↑ /\ o = ord_pure (2 * n + 1)%nat⌝)
+                             ** (OwnM (knot_frag (Some f)))
+                        ),
+                        (fun vret =>
+                           (⌜vret = (Vint (Z.of_nat (f n)))↑⌝)
+                             ** (OwnM (knot_frag (Some f)))
+                        )
+                   ))).
 
     Definition fun_gen (f: nat -> nat): fspec :=
-      mk_inv_simple (X:=nat)
-                    (fun n => (
-                         (fun varg o =>
-                            (⌜exists fb,
-                                  varg = [Vptr fb 0; Vint (Z.of_nat n)]↑ /\ o = ord_pure (2 * n)%nat /\
-                                  fb_has_spec skenv (RecStb skenv) fb rec_spec⌝)
-                              ** OwnM (knot_frag (Some f))
-                         ),
-                         (fun vret =>
-                            (⌜vret = (Vint (Z.of_nat (f n)))↑⌝)
-                              ** OwnM (knot_frag (Some f))
-                         )
-                    )).
+      mk_fspec_inv
+        (mk_simple (X:=nat)
+                   (fun n => (
+                        (fun varg o =>
+                           (⌜exists fb,
+                                 varg = [Vptr fb 0; Vint (Z.of_nat n)]↑ /\ o = ord_pure (2 * n)%nat /\
+                                 fb_has_spec skenv (RecStb skenv) fb rec_spec⌝)
+                             ** OwnM (knot_frag (Some f))
+                        ),
+                        (fun vret =>
+                           (⌜vret = (Vint (Z.of_nat (f n)))↑⌝)
+                             ** OwnM (knot_frag (Some f))
+                        )
+                   ))).
 
     Definition KnotRecStb: list (gname * fspec) := [("rec", rec_spec)].
 
     Definition knot_spec:    fspec :=
-      mk_inv_simple (X:=(nat -> nat))
-                    (fun f => (
-                         (fun varg o =>
-                            (⌜exists fb,
-                                  varg = [Vptr fb 0]↑ /\ o = ord_pure 1 /\
-                                  fb_has_spec skenv (FunStb skenv) fb (fun_gen f)⌝)
-                              ** (∃ old, OwnM (knot_frag old))
-                         ),
-                         (fun vret =>
-                            (⌜exists fb,
-                                  vret = (Vptr fb 0)↑ /\
-                                  fb_has_spec skenv (RecStb skenv) fb rec_spec⌝)
-                              ** OwnM (knot_frag (Some f))
-                         )
-                    )).
+      mk_fspec_inv
+        (mk_simple (X:=(nat -> nat))
+                   (fun f => (
+                        (fun varg o =>
+                           (⌜exists fb,
+                                 varg = [Vptr fb 0]↑ /\ o = ord_pure 1 /\
+                                 fb_has_spec skenv (FunStb skenv) fb (fun_gen f)⌝)
+                             ** (∃ old, OwnM (knot_frag old))
+                        ),
+                        (fun vret =>
+                           (⌜exists fb,
+                                 vret = (Vptr fb 0)↑ /\
+                                 fb_has_spec skenv (RecStb skenv) fb rec_spec⌝)
+                             ** OwnM (knot_frag (Some f))
+                        )
+                   ))).
 
     Definition knot_spec2:    fspec :=
       mk_simple (X:=(nat -> nat))
@@ -85,7 +89,7 @@ Section KNOT.
                               varg = [Vptr fb 0]↑ /\ o = ord_pure 1 /\
                               fb_has_spec skenv (FunStb skenv) fb (fun_gen f)⌝)
                           ** OwnM (knot_init)
-                          ** inv_open
+                          ** inv_closed
                      ),
                      (fun vret =>
                         (∃ INV,
@@ -104,7 +108,7 @@ Section KNOT.
     Definition SKnotSem: SModSem.t := {|
       SModSem.fnsems := KnotSbtb;
       SModSem.mn := "Knot";
-      SModSem.initial_mr := (GRA.embed inv_black) ⋅ (GRA.embed (var_points_to skenv "_f" Vundef)) ⋅ (GRA.embed (knot_full None)) ;
+      SModSem.initial_mr := (GRA.embed (var_points_to skenv "_f" Vundef)) ⋅ (GRA.embed (knot_full None)) ;
       SModSem.initial_st := tt↑;
     |}
     .
@@ -125,14 +129,14 @@ Section WEAK.
   Context `{@GRA.inG invRA Σ}.
   Context `{@GRA.inG knotRA Σ}.
 
-  Lemma rec_spec_weaker f: fspec_weaker (mrec_spec f (OwnM (knot_frag (Some f)) ** inv_open)) rec_spec.
+  Lemma rec_spec_weaker f: fspec_weaker (mrec_spec f (OwnM (knot_frag (Some f)) ** inv_closed)) rec_spec.
   Proof.
     ii. ss. exists (f, x_src). split.
     { intros arg_src arg_tgt o. ss.
       iIntros "H". iDestruct "H" as "[[% [H0 H1]] %]".
       iModIntro. iFrame. et. }
     { intros ret_src ret_tgt. ss.
-      iIntros "H". iDestruct "H" as "[[H0 [% H1]] %]".
+      iIntros "H". iDestruct "H" as "[H0 [[% H2] %]]".
       iModIntro. iFrame. et. }
   Qed.
 End WEAK.
@@ -150,13 +154,13 @@ Section WEAK.
     ii. ss. exists x_src. split.
     { intros arg_src arg_tgt o.
       iIntros "H". iDestruct "H" as "[[[% H0] H1] %]".
-      des. subst. iModIntro. iSplitL; ss. iFrame. iSplitR; ss; et.
+      des. subst. iModIntro. iSplitL "H1"; ss. iSplitL; ss; et. iSplitR; et.
     }
     { intros ret_src ret_tgt.
-      iIntros "H". iDestruct "H" as "[[H0 [% H2]] %]".
+      iIntros "H". iDestruct "H" as "[H0 [[% H1] %]]".
       des. subst.
       iModIntro. iSplitL; ss.
-      iExists (OwnM (knot_frag (Some x_src)) ** inv_open).
+      iExists (OwnM (knot_frag (Some x_src)) ** inv_closed).
       iFrame. iPureIntro. des. eexists.
       split; eauto. eapply fb_has_spec_weaker; eauto.
       eapply rec_spec_weaker.
