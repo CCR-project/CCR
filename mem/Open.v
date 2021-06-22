@@ -52,6 +52,303 @@ Qed.
 
 
 
+Module Massage.
+Section MASSAGE.
+
+  Context `{Σ: GRA.t}.
+
+  Variant frE: Type -> Type :=
+  | FPut' (fr0: Σ): frE unit
+  | FGet': frE Σ
+  .
+
+  Definition transl_callE: callE ~> itree (frE +' Es') :=
+    fun T '(Call fn args) => trigger (hCall false fn args)
+  .
+
+  Definition transl_rE: rE ~> itree (frE +' Es') :=
+    fun T re =>
+      match re with
+      | FPut fr0 => trigger (FPut' fr0)
+      | FGet => trigger FGet'
+      | MPut mr0 =>
+        stmr0 <- trigger (PGet);;
+        '(st0, _) <- (Any.split stmr0)ǃ;;
+        trigger (PPut (Any.pair st0 mr0↑))
+      | MGet =>
+        stmr0 <- trigger (PGet);;
+        '(_, mr0) <- (Any.split stmr0)ǃ;;
+        `mr0: Σ <- mr0↓ǃ;;
+        Ret mr0
+      end
+  .
+
+  Definition transl_pE: pE ~> itree (frE +' Es') :=
+    fun T pe =>
+      match pe with
+      | PPut st0 =>
+        stmr0 <- trigger (PGet);;
+        '(_, mr0) <- (Any.split stmr0)ǃ;;
+        trigger (PPut (Any.pair st0 mr0))
+      | PGet =>
+        stmr0 <- trigger (PGet);;
+        '(st0, _) <- (Any.split stmr0)ǃ;;
+        Ret st0
+      end
+  .
+
+  Definition transl_itr: itree Es ~> itree (frE +' Es') :=
+    interp (case_ (transl_callE)
+                  (case_ (transl_rE)
+                         (case_ (transl_pE) trivial_Handler)))
+  .
+
+  Definition handle_frE {E}: frE ~> stateT Σ (itree E) :=
+    fun _ fre fr0 =>
+      match fre with
+      | FPut' fr1 => Ret (fr1, tt)
+      | FGet' => Ret (fr0, fr0)
+      end
+  .
+
+  Definition massage_itr: itree Es ~> stateT Σ (itree Es') :=
+    fun _ =>
+      (interp_state (T:=_) (case_ (bif:=sum1) handle_frE
+                          ((fun T X s => x <- trigger X;; Ret (s, x)): _ ~> _)))
+        ∘ transl_itr(T:=_)
+  .
+
+  Definition massage_fun (ktr: (mname * Any.t) -> itree Es Any.t): ((mname * Any.t) -> itree Es' Any.t) :=
+    fun args => '(_, rv) <- massage_itr (ktr args) ε;; Ret rv
+  .
+
+  Definition massage_fsb: ((mname * Any.t) -> itree Es Any.t) -> fspecbody :=
+    fun ktr => mk_specbody fspec_trivial (massage_fun ktr)
+  .
+
+  Definition massage (ms: ModSem.t): SModSem.t := {|
+    SModSem.fnsems := List.map (map_snd massage_fsb) ms.(ModSem.fnsems);
+    SModSem.mn := ms.(ModSem.mn);
+    SModSem.initial_mr := ε;
+    SModSem.initial_st := Any.pair (ms.(ModSem.initial_st)) (ε: Σ)↑;
+  |}
+  .
+
+  (*****************************************************)
+  (****************** Reduction Lemmas *****************)
+  (*****************************************************)
+
+  Lemma massage_itr_bind
+        (R S: Type)
+        fr0 (s: itree _ R) (k : R -> itree _ S)
+    :
+      (massage_itr (s >>= k)) fr0
+      =
+      ((massage_itr s fr0) >>= (fun '(fr1, r) => massage_itr (k r) fr1)).
+  Proof.
+    unfold massage_itr in *. unfold transl_itr. grind. des_ifs.
+  Qed.
+
+  Lemma massage_itr_tau
+        (U: Type)
+        (t : itree _ U) fr0
+    :
+      (massage_itr (tau;; t) fr0)
+      =
+      (tau;; (massage_itr t) fr0).
+  Proof.
+    unfold massage_itr in *. unfold transl_itr. grind.
+  Qed.
+
+  Lemma massage_itr_ret
+        (U: Type)
+        (t: U) fr0
+    :
+      ((massage_itr (Ret t)) fr0)
+      =
+      Ret (fr0, t).
+  Proof.
+    unfold massage_itr in *. unfold transl_itr. grind.
+  Qed.
+
+  Lemma massage_itr_triggerp
+        (R: Type)
+        (i: pE R) fr0
+    :
+      (massage_itr (trigger i) fr0)
+      =
+      (trigger i >>= (fun r => tau;; Ret (fr0, r))).
+  Proof.
+    unfold massage_itr in *. unfold transl_itr.
+    repeat rewrite interp_trigger. grind.
+    destruct i.
+    - cbn. grind. resub.
+  Qed.
+
+  Lemma massage_itr_triggere
+        (R: Type)
+        (i: eventE R)
+    :
+      (massage_itr (trigger i))
+      =
+      (trigger i >>= (fun r => tau;; Ret r)).
+  Proof.
+    unfold massage_itr in *.
+    repeat rewrite interp_trigger. grind.
+  Qed.
+
+  Lemma massage_itr_ucall
+        (R: Type)
+        (i: uCallE R)
+    :
+      (massage_itr (trigger i))
+      =
+      (trigger (massage_uCallE i) >>= (fun r => tau;; Ret r)).
+  Proof.
+    unfold massage_itr in *.
+    repeat rewrite interp_trigger. grind.
+  Qed.
+
+  Lemma massage_itr_triggerUB
+        (R: Type)
+    :
+      (massage_itr (triggerUB))
+      =
+      triggerUB (A:=R).
+  Proof.
+    unfold massage_itr, triggerUB in *. rewrite unfold_interp. cbn. grind.
+  Qed.
+
+  Lemma massage_itr_triggerNB
+        (R: Type)
+    :
+      (massage_itr (triggerNB))
+      =
+      triggerNB (A:=R).
+  Proof.
+    unfold massage_itr, triggerNB in *. rewrite unfold_interp. cbn. grind.
+  Qed.
+
+  Lemma massage_itr_unwrapU
+        (R: Type)
+        (i: option R)
+    :
+      (massage_itr (unwrapU i))
+      =
+      (unwrapU i).
+  Proof.
+    unfold massage_itr, unwrapU in *. des_ifs.
+    { etrans.
+      { eapply massage_itr_ret. }
+      { grind. }
+    }
+    { etrans.
+      { eapply massage_itr_triggerUB. }
+      { unfold triggerUB. grind. }
+    }
+  Qed.
+
+  Lemma massage_itr_unwrapN
+        (R: Type)
+        (i: option R)
+    :
+      (massage_itr (unwrapN i))
+      =
+      (unwrapN i).
+  Proof.
+    unfold massage_itr, unwrapN in *. des_ifs.
+    { etrans.
+      { eapply massage_itr_ret. }
+      { grind. }
+    }
+    { etrans.
+      { eapply massage_itr_triggerNB. }
+      { unfold triggerNB. grind. }
+    }
+  Qed.
+
+  Lemma massage_itr_assume
+        P
+    :
+      (massage_itr (assume P))
+      =
+      (assume P;;; tau;; Ret tt)
+  .
+  Proof.
+    unfold assume. rewrite massage_itr_bind. rewrite massage_itr_triggere. grind. eapply massage_itr_ret.
+  Qed.
+
+  Lemma massage_itr_guarantee
+        P
+    :
+      (massage_itr (guarantee P))
+      =
+      (guarantee P;;; tau;; Ret tt).
+  Proof.
+    unfold guarantee. rewrite massage_itr_bind. rewrite massage_itr_triggere. grind. eapply massage_itr_ret.
+  Qed.
+
+  Lemma massage_itr_ext
+        R (itr0 itr1: itree _ R)
+        (EQ: itr0 = itr1)
+    :
+      (massage_itr itr0)
+      =
+      (massage_itr itr1)
+  .
+  Proof. subst; et. Qed.
+
+End UMODSEM.
+End UModSem.
+
+Coercion UModSem.transl: UModSem.t >-> ModSem.t.
+Coercion UModSem.massage: UModSem.t >-> SModSem.t.
+
+Section RDB.
+  Context `{Σ: GRA.t}.
+
+  Global Program Instance transl_itr_rdb: red_database (mk_box (@UModSem.transl_itr)) :=
+    mk_rdb
+      0
+      (mk_box UModSem.transl_itr_bind)
+      (mk_box UModSem.transl_itr_tau)
+      (mk_box UModSem.transl_itr_ret)
+      (mk_box UModSem.transl_itr_ucall)
+      (mk_box UModSem.transl_itr_triggere)
+      (mk_box UModSem.transl_itr_triggerp)
+      (mk_box True)
+      (mk_box UModSem.transl_itr_triggerUB)
+      (mk_box UModSem.transl_itr_triggerNB)
+      (mk_box UModSem.transl_itr_unwrapU)
+      (mk_box UModSem.transl_itr_unwrapN)
+      (mk_box UModSem.transl_itr_assume)
+      (mk_box UModSem.transl_itr_guarantee)
+      (mk_box UModSem.transl_itr_ext)
+  .
+
+  Global Program Instance massage_itr_rdb: red_database (mk_box (@UModSem.massage_itr)) :=
+    mk_rdb
+      0
+      (mk_box UModSem.massage_itr_bind)
+      (mk_box UModSem.massage_itr_tau)
+      (mk_box UModSem.massage_itr_ret)
+      (mk_box UModSem.massage_itr_ucall)
+      (mk_box UModSem.massage_itr_triggere)
+      (mk_box UModSem.massage_itr_triggerp)
+      (mk_box True)
+      (mk_box UModSem.massage_itr_triggerUB)
+      (mk_box UModSem.massage_itr_triggerNB)
+      (mk_box UModSem.massage_itr_unwrapU)
+      (mk_box UModSem.massage_itr_unwrapN)
+      (mk_box UModSem.massage_itr_assume)
+      (mk_box UModSem.massage_itr_guarantee)
+      (mk_box UModSem.massage_itr_ext)
+  .
+End RDB.
+
+
+End Massage.
+
 
 
 Require Import SimModSemL.
@@ -65,21 +362,22 @@ Require Import HTactics ProofMode.
 Section ADQ.
   Context `{Σ: GRA.t}.
 
+  Variable frds: list mname.
   Variable _kmds: list KMod.t.
-  Let kmds: list SMod.t := List.map (KMod.transl) _kmds.
-  Variable umds: list UMod.t.
+  Let kmds: list SMod.t := List.map (KMod.transl frds) _kmds.
+  Variable umds: list Mod.t.
 
-  Let sk_link: Sk.t := Sk.sort (fold_right Sk.add Sk.unit ((List.map SMod.sk kmds) ++ (List.map UMod.sk umds))).
+  Let sk_link: Sk.t := Sk.sort (fold_right Sk.add Sk.unit ((List.map SMod.sk kmds) ++ (List.map Mod.sk umds))).
   Let skenv: SkEnv.t := Sk.load_skenv sk_link.
 
   Let _kmss: Sk.t -> list SModSem.t := fun ske => List.map (flip SMod.get_modsem ske) kmds.
-  Let _umss: Sk.t -> list UModSem.t := fun ske => List.map (flip UMod.get_modsem ske) umds.
+  Let _umss: Sk.t -> list ModSem.t := fun ske => List.map (flip Mod.get_modsem ske) umds.
   Let _gstb: Sk.t -> list (gname * fspec) := fun ske =>
     (flat_map (List.map (map_snd fsb_fspec) ∘ SModSem.fnsems) (_kmss ske))
-      ++ (flat_map (List.map (map_snd (fun _ => fspec_trivial)) ∘ UModSem.fnsems) (_umss ske)).
+      ++ (flat_map (List.map (map_snd (fun _ => fspec_trivial)) ∘ ModSem.fnsems) (_umss ske)).
 
   Let kmss: list SModSem.t := Eval red in (_kmss sk_link).
-  Let umss: list UModSem.t := Eval red in (_umss sk_link).
+  Let umss: list ModSem.t := Eval red in (_umss sk_link).
   Let gstb: list (gname * fspec) := Eval red in (_gstb sk_link).
 
   Lemma add_list_fnsems
@@ -112,7 +410,7 @@ Section ADQ.
 
 
   Lemma my_lemma1_aux'
-        (ske: Sk.t) mrs (A: Type) (itr: itree (uCallE +' pE +' eventE) A) (ctx: Σ)
+        (ske: Sk.t) mrs (A: Type) (itr: itree Es A) (ctx: Σ)
         (WF: URA.wf (ctx ⋅ fst mrs)) fr
     :
       paco6
