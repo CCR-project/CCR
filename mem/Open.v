@@ -49,9 +49,217 @@ Proof.
   induction l; ss. destruct a. ss. uo. des_ifs.
 Qed.
 
+
 (*** TODO: move ***)
-Definition trivial_state_Handler `{E -< F} {S}: E ~> (stateT S (itree F)) :=
-  fun T X s => x <- trigger X;; Ret (s, x).
+Section ITREEAUX.
+  Definition trivial_state_Handler `{E -< F} {S}: E ~> (stateT S (itree F)) :=
+    fun T X s => x <- trigger X;; Ret (s, x).
+
+  Definition addtau `{eventE -< E}: itree E ~> itree E := interp (fun _ (e: E _) => tau;; trigger e).
+  Definition addtau_ktr `{eventE -< E} {R}: ktree E R ~> ktree E R := fun _ ktr => addtau(T:=_) ∘ ktr.
+
+  Section ADDTAU.
+
+  (*****************************************************)
+  (****************** Reduction Lemmas *****************)
+  (*****************************************************)
+  Context `{eventE -< E}.
+
+  Lemma addtau_bind
+        (R S: Type)
+        (s: itree E R) (k : R -> itree E S)
+    :
+      (addtau (s >>= k))
+      =
+      ((addtau (E:=E) s) >>= (fun r => addtau (k r))).
+  Proof.
+    unfold addtau in *. grind.
+  Qed.
+
+
+  Lemma addtau_tau
+        (U: Type)
+        (t : itree _ U)
+    :
+      (addtau (E:=E) (Tau t))
+      =
+      (Tau (addtau t)).
+  Proof.
+    unfold addtau in *. grind.
+  Qed.
+
+  Lemma addtau_ret
+        (U: Type)
+        (t: U)
+    :
+      ((addtau (E:=E) (Ret t)))
+      =
+      Ret t.
+  Proof.
+    unfold addtau in *. grind.
+  Qed.
+
+  Lemma addtau_event
+        (R: Type)
+        (i: E R)
+    :
+      (addtau (E:=E) (trigger i))
+      =
+      tau;; (trigger i >>= (fun r => tau;; Ret r)).
+  Proof.
+    unfold addtau in *.
+    repeat rewrite interp_trigger. grind.
+  Qed.
+
+  Lemma addtau_triggerUB
+        (R: Type)
+    :
+      (addtau (E:=E) (triggerUB))
+      =
+      tau;; triggerUB (A:=R).
+  Proof.
+    unfold addtau, triggerUB in *. rewrite unfold_interp. cbn. grind.
+  Qed.
+
+  Lemma addtau_triggerNB
+        (R: Type)
+    :
+      (addtau (E:=E) (triggerNB))
+      =
+      tau;; triggerNB (A:=R).
+  Proof.
+    unfold addtau, triggerNB in *. rewrite unfold_interp. cbn. grind.
+  Qed.
+
+  Lemma addtau_unwrapU
+        (R: Type)
+        (i: option R)
+    :
+      (addtau (E:=E) (unwrapU i))
+      =
+      match i with
+      | Some r => Ret r
+      | _ => tau;; triggerUB
+      end.
+  Proof.
+    unfold addtau. unfold unwrapU. des_ifs; grind. eapply addtau_triggerUB.
+  Qed.
+
+  Lemma addtau_unwrapN
+        (R: Type)
+        (i: option R)
+    :
+      (addtau (E:=E) (unwrapN i))
+      =
+      match i with
+      | Some r => Ret r
+      | _ => tau;; triggerNB
+      end.
+  Proof.
+    unfold addtau. unfold unwrapN. des_ifs; grind. eapply addtau_triggerNB.
+  Qed.
+
+  Lemma addtau_assume
+        P
+    :
+      (addtau (E:=E) (assume P))
+      =
+      (tau;; assume P;;; tau;; Ret tt)
+  .
+  Proof.
+    unfold addtau, assume. grind. rewrite unfold_interp; cbn. grind.
+  Qed.
+
+  Lemma addtau_guarantee
+        P
+    :
+      (addtau (E:=E) (guarantee P))
+      =
+      (tau;; guarantee P;;; tau;; Ret tt).
+  Proof.
+    unfold addtau, guarantee. grind. rewrite unfold_interp; cbn. grind.
+  Qed.
+
+  Lemma addtau_ext
+        R (itr0 itr1: itree _ R)
+        (EQ: itr0 = itr1)
+    :
+      (addtau (E:=E) itr0)
+      =
+      (addtau itr1)
+  .
+  Proof. subst; et. Qed.
+
+  Global Program Instance addtau_rdb: red_database (mk_box (@addtau E H)) :=
+    mk_rdb
+      0
+      (mk_box addtau_bind)
+      (mk_box addtau_tau)
+      (mk_box addtau_ret)
+      (mk_box addtau_event)
+      (mk_box True)
+      (mk_box True)
+      (mk_box True)
+      (mk_box addtau_triggerUB)
+      (mk_box addtau_triggerNB)
+      (mk_box addtau_unwrapU)
+      (mk_box addtau_unwrapN)
+      (mk_box addtau_assume)
+      (mk_box addtau_guarantee)
+      (mk_box addtau_ext)
+  .
+
+  Global Opaque addtau.
+
+End ADDTAU.
+End ITREEAUX.
+
+Goal forall `{eventE -< E} X, (addtau (E:=E) (T:=X) triggerUB) = tau;; triggerUB.
+Proof. i. my_red_both. refl. Qed.
+
+
+
+
+
+Section MODAUX.
+  Context `{Σ: GRA.t}.
+
+  Definition addtau_modsem (ms: ModSem.t): ModSem.t := {|
+    ModSem.fnsems := map (map_snd (addtau_ktr(T:=_))) ms.(ModSem.fnsems);
+    ModSem.mn := ms.(ModSem.mn);
+    ModSem.initial_mr := ms.(ModSem.initial_mr);
+    ModSem.initial_st := ms.(ModSem.initial_st);
+  |}
+  .
+
+  Definition addtau_mod (md: Mod.t): Mod.t := {|
+    Mod.get_modsem := addtau_modsem ∘ md.(Mod.get_modsem);
+    Mod.sk := md.(Mod.sk);
+  |}
+  .
+
+  Theorem adequacy_addtau
+          (md: Mod.t)
+    :
+      refines md (addtau_mod md)
+  .
+  Proof.
+    admit "ez".
+  Qed.
+
+  Theorem adequacy_rmtau
+          md
+    :
+      refines (addtau_mod md) md
+  .
+  Proof.
+    admit "ez".
+  Qed.
+
+End MODAUX.
+
+
+
 
 
 
@@ -76,13 +284,13 @@ Section MASSAGE.
       | FPut fr1 => Ret (fr1, tt)
       | FGet => Ret (fr0, fr0)
       | MPut mr0 =>
-        stmr0 <- trigger (PGet);;
-        '(st0, _) <- (Any.split stmr0)ǃ;;
-        trigger (PPut (Any.pair st0 mr0↑));;;
+        mrst0 <- trigger (PGet);;
+        '(_, st0) <- (Any.split mrst0)ǃ;;
+        trigger (PPut (Any.pair mr0↑ st0));;;
         Ret (fr0, tt)
       | MGet =>
-        stmr0 <- trigger (PGet);;
-        '(_, mr0) <- (Any.split stmr0)ǃ;;
+        mrst0 <- trigger (PGet);;
+        '(mr0, _) <- (Any.split mrst0)ǃ;;
         `mr0: Σ <- mr0↓ǃ;;
         Ret (fr0, mr0)
       end
@@ -92,13 +300,13 @@ Section MASSAGE.
     fun T pe fr0 =>
       match pe with
       | PPut st0 =>
-        stmr0 <- trigger (PGet);;
-        '(_, mr0) <- (Any.split stmr0)ǃ;;
-        trigger (PPut (Any.pair st0 mr0));;;
+        mrst0 <- trigger (PGet);;
+        '(mr0, _) <- (Any.split mrst0)ǃ;;
+        trigger (PPut (Any.pair mr0 st0 ));;;
         Ret (fr0, tt)
       | PGet =>
-        stmr0 <- trigger (PGet);;
-        '(st0, _) <- (Any.split stmr0)ǃ;;
+        mrst0 <- trigger (PGet);;
+        '(_, st0) <- (Any.split mrst0)ǃ;;
         Ret (fr0, st0)
       end
   .
@@ -386,21 +594,27 @@ Section ADQ.
 
 
   Lemma my_lemma1_aux''
-        (ske: Sk.t) mrs (A: Type) (itr: itree Es A) (ctx: Σ)
-        (WF: URA.wf (ctx ⋅ fst mrs)) mn fr fr_trash
+        (ske: Sk.t) mr0 st0 (A: Type) (itr: itree Es A) (ctx: Σ)
+        mn fr0 fr_trash mr_trash
+        (* (WF: URA.wf (ctx ⋅ mr0)) *)
+        (WF: URA.wf (ctx ⋅ mr_trash))
     :
       paco6
-        (_sim_itree (fun '(st_src, st_tgt) => st_src = st_tgt))
+        (_sim_itree (fun '((mr_src, st_src), (mr_tgt, st_tgt)) => st_src = (Any.pair mr_tgt↑ st_tgt)))
         bot6
         (Σ * (Σ * A))%type A
-        (fun '(mrs_src, fr_src) '(mrs_tgt, fr_tgt) '(ctx, (_, r_src)) r_tgt =>
-           mrs_src = mrs_tgt /\ r_src = r_tgt /\ URA.wf (ctx ⋅ fst mrs_src))
+        (fun '((mr_src, st_src), fr_src) '((mr_tgt, st_tgt), fr_tgt) '(ctx, (_, r_src)) r_tgt =>
+           st_src = (Any.pair mr_tgt↑ st_tgt) /\ r_src = r_tgt
+           (* /\ URA.wf (ctx ⋅ mr_tgt) *)
+           /\ URA.wf (ctx ⋅ mr_trash)
+        )
         40%nat
-        (mrs, fr_trash, (interp_hCallE_tgt mn (_gstb ske) ord_top (massage_itr (_gstb ske) itr fr) ctx))
-        (mrs, ε, itr)
+        (mr_trash, (Any.pair mr0↑ st0), fr_trash, (interp_hCallE_tgt mn (_gstb ske) ord_top
+                                                                (massage_itr (_gstb ske) itr fr0) ctx))
+        (mr0, st0, fr0, addtau itr)
   .
   Proof.
-    ginit. revert mrs A itr ctx WF fr fr_trash mn. gcofix CIH. i. ides itr.
+    ginit. revert_until ske. gcofix CIH. i. ides itr.
     { steps. }
     { steps. gbase. eapply CIH; et. }
     rewrite <- bind_trigger.
@@ -408,23 +622,35 @@ Section ADQ.
     {
       destruct s; ss.
       { destruct r0; ss.
-        - resub. ired_both. destruct mrs. gstep. econs; et. steps. gbase. eapply CIH; et.
-        - resub. ired_both. destruct mrs. gstep. econs; et. steps. gbase. eapply CIH; et.
+        - resub. ired_both. steps.
+          rewrite Any.pair_split. steps. gbase. eapply CIH; et.
+        - resub. ired_both. resub.
+          steps. gbase. eapply CIH; et.
+        - resub. ired_both. steps.
+          rewrite Any.pair_split. steps. rewrite Any.upcast_downcast. steps. gbase. eapply CIH; et.
+        - resub. ired_both. steps. gbase. eapply CIH; et.
       }
+      destruct s.
       { destruct p; ss.
-        - resub. ired_both. destruct mrs. gstep. econs; et. steps. gbase. eapply CIH; et.
-        - resub. ired_both. destruct mrs. gstep. econs; et. steps. gbase. eapply CIH; et.
+        - resub. ired_both. resub. steps. rewrite Any.pair_split. steps. gbase. eapply CIH; et.
+        - resub. ired_both. resub. steps. rewrite Any.pair_split. steps. gbase. eapply CIH; et.
       }
       { destruct e; ss.
-        - resub. ired_both. destruct mrs. gstep. econs; et.
-          i. exists x_tgt. eexists. steps. gbase. eapply CIH; et.
-        - resub. ired_both. destruct mrs. gstep. econs; et.
-          i. exists x_src. eexists. steps. gbase. eapply CIH; et.
-        - resub. ired_both. destruct mrs. gstep. econs; et.
-          i. eexists. steps. gbase. eapply CIH; et.
+        - resub. ired_both. resub.
+          gstep. eapply sim_itree_tau_tgt; et.
+          { instantiate (1:=39). eapply OrdArith.lt_from_nat. lia. }
+          ired_both. gstep; econs; et. i. esplits; et. steps. gbase. eapply CIH; et.
+        - resub. ired_both. resub.
+          gstep. eapply sim_itree_tau_tgt; et.
+          { instantiate (1:=39). eapply OrdArith.lt_from_nat. lia. }
+          ired_both. gstep; econs; et. i. esplits; et. steps. gbase. eapply CIH; et.
+        - resub. ired_both. resub.
+          gstep. eapply sim_itree_tau_tgt; et.
+          { instantiate (1:=39). eapply OrdArith.lt_from_nat. lia. }
+          ired_both. gstep; econs; et. i. esplits; et. steps. gbase. eapply CIH; et.
       }
     }
-    destruct u. resub. ired_both. steps. rewrite _UNWRAPU. steps.
+    destruct c. resub. ired_both. steps. rewrite _UNWRAPU. steps.
     rename _UNWRAPU into T.
     eapply alist_find_some in T. unfold _gstb in T. rewrite in_app_iff in *. des; ss.
     - list_tac.
