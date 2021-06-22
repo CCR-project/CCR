@@ -17,7 +17,7 @@ From ExtLib Require Import
      Structures.Maps
      Data.Map.FMapAList.
 
-Require Import HTactics ProofMode TODOYJ.
+Require Import HTactics ProofMode Invariant TODOYJ.
 
 Set Implicit Arguments.
 
@@ -111,10 +111,7 @@ Section SIMMODSEM.
     i. econstructor 1 with (wf:=wf (Sk.load_skenv sk)) (le:=inv_le top2); et; ss; cycle 2.
     { eexists (inl _). red. econs.
       { eapply to_semantic. ss.
-        iIntros "[[H0 H1] H2]". iSplitL "H0".
-        { unfold inv_closed. iFrame. }
-        { unfold inv. iExists None, _. iFrame. iPureIntro. ss. }
-      }
+        iIntros "[H0 H1]". unfold inv. iExists None, _. iFrame. iPureIntro. ss. }
       { ss. }
     }
     { eapply inv_le_PreOrder. ss. }

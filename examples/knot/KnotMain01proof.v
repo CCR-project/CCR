@@ -16,7 +16,7 @@ From ExtLib Require Import
      Structures.Maps
      Data.Map.FMapAList.
 
-Require Import HTactics ProofMode TODOYJ.
+Require Import HTactics ProofMode Invariant TODOYJ.
 Require Import STB.
 
 Local Open Scope nat_scope.
@@ -112,7 +112,7 @@ Section SIMMODSEM.
         { iPureIntro. esplits; eauto. econs.
           { eapply SKWF. eauto. }
           eapply fn_has_spec_weaker; eauto. ii. ss.
-          eexists (x_src, OwnM (knot_frag (Some Fib)) ** inv_open).
+          eexists (x_src, OwnM (knot_frag (Some Fib)) ** inv_closed).
           splits; ss.
           { i. iIntros "[[OPENER [% H]] %]".
             iModIntro. iFrame; ss.
