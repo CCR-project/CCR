@@ -16,34 +16,7 @@ From ExtLib Require Import
 
 Set Implicit Arguments.
 
-(* Section sealing. *)
-(*   (* Local Set Primitive Projections. *) *)
-(*   Record sealing X (x: X) := (* mk_sealing *) { contents_of: X; sealing_prf: contents_of = x }. *)
-(* End sealing. *)
-(* Ltac hide_with NAME term := *)
-(*   eassert(NAME: sealing term) by (econs; eauto); *)
-(*   rewrite <- sealing_prf with (s:=NAME) in * *)
-(* . *)
-(* Ltac hide term := *)
-(*   let NAME := fresh "_SEAL" in *)
-(*   hide_with NAME term *)
-(* . *)
-(* Ltac unhide_term term := rewrite sealing_prf with (x:=term) in *; *)
-(*                     match goal with *)
-(*                     | [ H: sealing term |- _ ] => clear H *)
-(*                     end. *)
-(* Ltac unhide_name NAME := rewrite sealing_prf with (s:=NAME) in *; clear NAME. *)
-(* Ltac unhide x := *)
-(*   match (type of x) with *)
-(*   | sealing _ => unhide_name x *)
-(*   | _ => unhide_term x *)
-(*   end. *)
-(* Notation "☃ y" := (@contents_of _ y _) (at level 60, only printing). (** ☁☞ **) *)
-(* Goal forall x, 5 + 5 = x. i. hide 5. cbn. hide_with MYNAME x. unhide x. unhide _SEAL. cbn. Abort. *)
 
-
-
-Arguments transl_all {Σ} _%string_scope {T}%type_scope _%itree_scope. (*** TODO: move to ModSem ***)
 
 Inductive ord: Type :=
 | ord_pure (n: Ord.t)
