@@ -194,7 +194,12 @@ Section CANCEL.
               end.
 
   Let rsum_minus (mn: mname): r_state -> Σ :=
+    fun mrs_tgt => (fold_left (⋅) (List.map ((update mrs_tgt mn ε) <*> fst) ms_tgt.(ModSemL.initial_mrs)) ε).
+
+  Let rsum: r_state -> Σ :=
     fun mrs_tgt => (fold_left (⋅) (List.map (mrs_tgt <*> fst) ms_tgt.(ModSemL.initial_mrs)) ε).
+
+
 
   Lemma fold_left_radd (r0 r1: Σ) rl
     :
@@ -212,13 +217,6 @@ Section CANCEL.
     { i. rewrite URA.unit_idl. auto. }
     i. rewrite IHrs. rewrite (IHrs (ε ⋅ a)). r_solve.
   Qed.
-
-  (* Lemma rsum_minus_spec mn mrs fhd ftl *)
-  (*   : *)
-  (*     rsum_minus mn (mrs, fhd::ftl) = rsum (update mrs mn ε, ftl). *)
-  (* Proof. *)
-  (*   unfold rsum_minus, rsum. ss. *)
-  (* Qed. *)
 
   (* Lemma rsum_update mn mrs frs r *)
   (*       (NODUP: NoDup (List.map fst ms_tgt.(ModSemL.initial_mrs))) *)
@@ -287,7 +285,7 @@ Section CANCEL.
     fun mps_src mps_tgt mrs_tgt =>
       mps_src = zip_state mps_tgt mrs_tgt
   .
-  Local Opaque rsum_minus.
+  Local Opaque rsum rsum_minus.
 
 
 
@@ -468,15 +466,16 @@ Section CANCEL.
       steps. erewrite ! zip_state_mput; et.
       erewrite zip_state_get; et.
       rewrite Any.pair_split. steps. rewrite Any.upcast_downcast. steps.
-      unshelve esplits; eauto.
+
+      assert (RWF0: URA.wf (rarg ⋅ (c1 ⋅ (frs ⋅ rsum_minus mn0 (update mrs0 mn c))) ⋅ update mrs0 mn c mn0)).
       { admit "ez". }
+      unshelve esplits; eauto.
       steps. esplits; eauto. steps. unshelve esplits; eauto. steps.
       guclo ordC_spec. econs.
       { instantiate (1:=(73+100)%ord). rewrite <- OrdArith.add_from_nat. refl. }
       guclo bindC_spec. econs.
       { gbase. eapply CIH; ss.
         { instantiate (1:=c1 ⋅ frs). r_solve. }
-        { admit "ez". }
       }
       { ii. ss. des_ifs_safe. des; ss. clarify.
         steps. rewrite zip_state_get; et.
@@ -490,9 +489,16 @@ Section CANCEL.
       rewrite zip_state_get; et.
       rewrite Any.pair_split. steps. rewrite Any.upcast_downcast. steps.
       unshelve esplits; et.
-      { admit "ez". }
+      { rewrite ! URA.add_assoc. rewrite ! URA.add_assoc in RWF0. et. }
       steps. exists t. steps. unshelve esplits; et.
       steps. gbase. eapply CIH; et.
+      { eapply URA.wf_mon.
+        { instantiate (1:=rret).
+          r_wf RWF0.
+
+          wf_tac. _solve.
+
+      { rewrite ! URA.add_assoc. rewrite ! URA.add_assoc in RWF0. et. }
       { admit "ez". }
     }
   Unshelve.
@@ -549,17 +555,6 @@ Section CANCEL.
     { inv WF. econs; auto. rewrite fns_eq. auto. }
     { rewrite sk_eq. auto. }
     steps. folder.
-    (* set (st_mid0 := (ModSemL.initial_p_state ms_mid)). *)
-    (* set (st_tgt0 := (ModSemL.initial_p_state ms_tgt)). *)
-    (* , (ModSemL.initial_p_state ms_tgt))). *)
-
-    (* set (st_midr0 := ((initial_r_state ms_mid ε), (ModSemL.initial_p_state ms_mid))). *)
-    (* set (st_tgtl0 := ((initial_r_state ms_tgt entry_r), (ModSemL.initial_p_state ms_tgt))). *)
-    (* set (st_tgt0 := (ModSemL.initial_r_state ms_tgt, (ModSemL.initial_p_state ms_tgt))). *)
-    (* assert(SIM: wf st_midr0 st_tgtl0). *)
-    (* { r. ss. esplits; ss; et. *)
-    (*   { rewrite rsum_cons. auto. } *)
-    (*   rewrite initial_p_eq. auto. } *)
     unfold mrec. rewrite <- initial_p_zip.
 
     Local Transparent ModSemL.prog. ss.

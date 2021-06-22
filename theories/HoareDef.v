@@ -135,7 +135,7 @@ Section PROOF.
       vret_src <- trigger (Take Any.t);;
       assume(fsp.(postcond) (Some mn) x vret_src vret_tgt rret);;; (*** postcondition ***)
 
-      Ret (ctx, fr, vret_src) (*** return to body ***)
+      Ret (ctx, fr ⋅ rret, vret_src) (*** return to body ***)
   .
 
 End PROOF.
