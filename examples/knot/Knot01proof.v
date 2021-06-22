@@ -88,7 +88,7 @@ Section SIMMODSEM.
           ** (OwnM (knot_full f'))
           ** (OwnM (var_points_to skenv "_f" fb')))%I.
 
-  Let wf (skenv: SkEnv.t): W -> Prop :=
+  Let wf (skenv: SkEnv.t): _ -> W -> Prop :=
     @inv_wf
       _ _
       unit
@@ -108,15 +108,16 @@ Section SIMMODSEM.
   Theorem correct: ModPair.sim (Knot1.Knot RecStb FunStb GlobalStb) Knot0.Knot.
   Proof.
     econs; ss.
-    i. econstructor 1 with (wf:=wf (Sk.load_skenv sk)); et; ss; cycle 1.
-    { red. econs.
-      { eapply to_semantic. instantiate (1:=inl tt). ss.
+    i. econstructor 1 with (wf:=wf (Sk.load_skenv sk)) (le:=inv_le top2); et; ss; cycle 2.
+    { eexists (inl _). red. econs.
+      { eapply to_semantic. ss.
         iIntros "[[H0 H1] H2]". iSplitL "H0".
-        { unfold inv_closed. iExists _, _. iFrame. }
+        { unfold inv_closed. iFrame. }
         { unfold inv. iExists None, _. iFrame. iPureIntro. ss. }
       }
       { ss. }
     }
+    { eapply inv_le_PreOrder. ss. }
     eapply Sk.incl_incl_env in SKINCL. eapply Sk.load_skenv_wf in SKWF.
     hexploit (SKINCL "rec"); ss; eauto. intros [blk0 FIND0].
     hexploit (SKINCL "_f"); ss; eauto. intros [blk1 FIND1].
@@ -129,7 +130,6 @@ Section SIMMODSEM.
       rewrite Any.upcast_downcast. steps. astart 2.
 
       (* open invariant *)
-      open_inv.
       mUnfold inv in "INV". mDesAll.
       mAssertPure _.
       { iApply (knot_ra_merge with "A2 A"). } subst.
@@ -149,7 +149,6 @@ Section SIMMODSEM.
       { eapply FunStb_incl. eapply FIND. }
 
       (* close invariant *)
-      close_inv.
 
       (* call with the closed invariant *)
       icall_weaken (fun_gen RecStb sk f) (ord_pure (2 * n)) _ _ with "*".
@@ -179,7 +178,6 @@ Section SIMMODSEM.
       rewrite Any.upcast_downcast. steps. astart 1.
 
       (* open invariant *)
-      open_inv.
       mUnfold inv in "INV". mDesAll.
       mAssertPure _.
       { iApply (knot_ra_merge with "A2 A"). } subst.
@@ -196,7 +194,6 @@ Section SIMMODSEM.
       mDesAll. subst. steps. rewrite FIND0. steps. astop.
 
       (* close invariant *)
-      close_inv.
 
       (* update resource *)
       mAssert _ with "A A2".

@@ -38,7 +38,7 @@ Section SIMMODSEM.
   Variable FunStb: SkEnv.t -> list (gname * fspec).
   Variable GlobalStb: SkEnv.t -> list (gname * fspec).
 
-  Let wf: W -> Prop :=
+  Let wf: _ -> W -> Prop :=
     @mk_wf
       _ unit
       (fun _ _ _=> True%I)
@@ -56,8 +56,8 @@ Section SIMMODSEM.
 
   Theorem correct: ModPair.sim (KnotMain1.Main RecStb GlobalStb) KnotMain0.Main.
   Proof.
-    econs; ss. i. econstructor 1 with (wf:=wf); ss; et.
-    2: { econs; ss. red. uipropall. }
+    econs; ss. i. econstructor 1 with (wf:=wf) (le:=top2); ss; et.
+    2: { eexists. econs; ss. red. uipropall. }
     eapply Sk.incl_incl_env in SKINCL. eapply Sk.load_skenv_wf in SKWF.
     econs; ss; [|econs; ss].
     { init. unfold fibF, ccall. harg.
@@ -112,7 +112,7 @@ Section SIMMODSEM.
         { iPureIntro. esplits; eauto. econs.
           { eapply SKWF. eauto. }
           eapply fn_has_spec_weaker; eauto. ii. ss.
-          eexists (x_src, OwnM (knot_frag (Some Fib)) ** inv_opener).
+          eexists (x_src, OwnM (knot_frag (Some Fib)) ** inv_open).
           splits; ss.
           { i. iIntros "[[OPENER [% H]] %]".
             iModIntro. iFrame; ss.

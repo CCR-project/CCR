@@ -85,7 +85,7 @@ Section KNOT.
                               varg = [Vptr fb 0]↑ /\ o = ord_pure 1 /\
                               fb_has_spec skenv (FunStb skenv) fb (fun_gen f)⌝)
                           ** OwnM (knot_init)
-                          ** inv_opener
+                          ** inv_open
                      ),
                      (fun vret =>
                         (∃ INV,
@@ -104,7 +104,7 @@ Section KNOT.
     Definition SKnotSem: SModSem.t := {|
       SModSem.fnsems := KnotSbtb;
       SModSem.mn := "Knot";
-      SModSem.initial_mr := (GRA.embed (inv_black tt↑ tt ↑)) ⋅ (GRA.embed (var_points_to skenv "_f" Vundef)) ⋅ (GRA.embed (knot_full None)) ;
+      SModSem.initial_mr := (GRA.embed inv_black) ⋅ (GRA.embed (var_points_to skenv "_f" Vundef)) ⋅ (GRA.embed (knot_full None)) ;
       SModSem.initial_st := tt↑;
     |}
     .
@@ -125,7 +125,7 @@ Section WEAK.
   Context `{@GRA.inG invRA Σ}.
   Context `{@GRA.inG knotRA Σ}.
 
-  Lemma rec_spec_weaker f: fspec_weaker (mrec_spec f (OwnM (knot_frag (Some f)) ** inv_opener)) rec_spec.
+  Lemma rec_spec_weaker f: fspec_weaker (mrec_spec f (OwnM (knot_frag (Some f)) ** inv_open)) rec_spec.
   Proof.
     ii. ss. exists (f, x_src). split.
     { intros arg_src arg_tgt o. ss.
@@ -156,7 +156,7 @@ Section WEAK.
       iIntros "H". iDestruct "H" as "[[H0 [% H2]] %]".
       des. subst.
       iModIntro. iSplitL; ss.
-      iExists (OwnM (knot_frag (Some x_src)) ** inv_opener).
+      iExists (OwnM (knot_frag (Some x_src)) ** inv_open).
       iFrame. iPureIntro. des. eexists.
       split; eauto. eapply fb_has_spec_weaker; eauto.
       eapply rec_spec_weaker.
