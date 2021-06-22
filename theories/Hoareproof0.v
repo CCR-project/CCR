@@ -129,11 +129,11 @@ Section CANCEL.
           (<<SOME: alist_find fn stb = Some (f: fspec)>>) /\
           (<<SBTB: alist_find fn sbtb = Some f>>) /\
           (<<FINDMID: alist_find fn (ModSemL.fnsems ms_mid) =
-                      Some (transl_all
+                      Some (transl_all (T:=_)
                               (SModSem.mn (SMod.get_modsem md sk))
                               ∘ fun_to_mid stb (fsb_body f))>>) /\
           (<<FINDTGT: alist_find fn (ModSemL.fnsems ms_tgt) =
-                      Some (transl_all
+                      Some (transl_all (T:=_)
                               (SModSem.mn (SMod.get_modsem md sk))
                               ∘ fun_to_tgt (SModSem.mn (SMod.get_modsem md sk)) stb f)>>) /\
           (<<MIN: List.In (SModSem.mn (SMod.get_modsem md sk)) (List.map fst ms_tgt.(ModSemL.initial_mrs))>>)).

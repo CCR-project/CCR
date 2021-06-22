@@ -916,7 +916,7 @@ Section EVENTS.
 End EVENTS.
 (* End Events. *)
 
-Arguments transl_all {Σ} _%string_scope {T}%type_scope _%itree_scope. (*** TODO: move to ModSem ***)
+(* Arguments transl_all {Σ} _%string_scope {T}%type_scope _%itree_scope. *)
 
 
 

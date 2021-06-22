@@ -158,6 +158,9 @@ Variant hCallE: Type -> Type :=
 (*** tbr == to be removed ***)
 .
 
+Definition hcall {X Y} (fn: gname) (varg: X): itree (hCallE +' pE +' eventE) Y :=
+  vret <- trigger (hCall false fn varg↑);; vret <- vret↓ǃ;; Ret vret.
+
 Notation Es' := (hCallE +' pE +' eventE).
 
 Program Fixpoint _APC (at_most: Ord.t) {wf Ord.lt at_most}: itree Es' unit :=
@@ -607,7 +610,7 @@ Section SMOD.
     let ms := (get_modsem md sk) in
       (do '(fn, fsb) <- ms.(SModSem.fnsems);
        let fsem := tr0 ms.(SModSem.mn) fsb in
-       ret (fn, transl_all ms.(SModSem.mn) ∘ fsem))
+       ret (fn, transl_all (T:=_) ms.(SModSem.mn) ∘ fsem))
   .
 
   Let transl_fnsems_aux
@@ -623,8 +626,8 @@ Section SMOD.
     rewrite ! List.map_map.
 
     rewrite flat_map_concat_map.
-    replace (fun _x: string * fspecbody => let (fn, fsb) := _x in [(fn, transl_all (SModSem.mn (get_modsem a sk)) ∘ (tr0 sk (get_modsem a sk).(SModSem.mn) fsb))]) with
-        (ret ∘ (fun _x: string * fspecbody => let (fn, fsb) := _x in (fn, transl_all (SModSem.mn (get_modsem a sk)) ∘ (tr0 sk (get_modsem a sk).(SModSem.mn) fsb))));
+    replace (fun _x: string * fspecbody => let (fn, fsb) := _x in [(fn, transl_all (T:=_) (SModSem.mn (get_modsem a sk)) ∘ (tr0 sk (get_modsem a sk).(SModSem.mn) fsb))]) with
+        (ret ∘ (fun _x: string * fspecbody => let (fn, fsb) := _x in (fn, transl_all (T:=_) (SModSem.mn (get_modsem a sk)) ∘ (tr0 sk (get_modsem a sk).(SModSem.mn) fsb))));
       cycle 1.
     { apply func_ext. i. des_ifs. }
     erewrite <- List.map_map with (g:=ret).
@@ -1616,3 +1619,5 @@ Ltac stb_tac :=
       autounfold with stb in H; autorewrite with stb in H; simpl in H
     end
   end.
+
+Notation Es' := (hCallE +' pE +' eventE).
