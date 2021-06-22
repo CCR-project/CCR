@@ -33,7 +33,7 @@ Section SIMMODSEM.
 
   Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
 
-  Let wf: W -> Prop :=
+  Let wf: _ -> W -> Prop :=
     @mk_wf
       _
       unit
@@ -43,8 +43,9 @@ Section SIMMODSEM.
 
   Theorem correct: ModSemPair.sim BWMain1.MainSem BWMain0.MainSem.
   Proof.
-    econstructor 1 with (wf:=wf); et; swap 2 3.
-    { ss. red. econs; et; ss. red. uipropall. }
+    econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
+    { ss. }
+    { exists tt. ss. red. econs; et; ss. red. uipropall. }
 
     econs; ss.
     { unfold mainbody, mainF, ccall, hcall. init. harg.

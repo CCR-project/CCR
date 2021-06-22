@@ -33,8 +33,8 @@ Section SIMMODSEM.
 
   Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
 
-  Let wf: W -> Prop :=
-    fun '(mrps_src0, mrps_tgt0) =>
+  Let wf: unit -> W -> Prop :=
+    fun _ '(mrps_src0, mrps_tgt0) =>
       (<<SRC: mrps_src0 = (ε, tt↑)>>) /\
       (<<TGT: mrps_tgt0 = (ε, tt↑)>>)
   .
@@ -42,7 +42,7 @@ Section SIMMODSEM.
   Theorem correct:
     forall ge, ModSemPair.sim MutF0.FSem (MutFImp.FSem ge).
   Proof.
-    econstructor 1 with (wf:=wf); et; ss.
+    econstructor 1 with (wf:=wf) (le:=top2); et; ss.
     econs; ss. init. unfold cfun.
     unfold fF.
     unfold MutFImp.fF.
@@ -68,6 +68,7 @@ Section SIMMODSEM.
       imp_steps.
       force_r; auto. imp_steps. force_r; auto. steps.
       rewrite _UNWRAPU. steps. force_r; auto. imp_steps. force_r; auto. imp_steps.
+    Unshelve. all: ss.
   Qed.
 
 End SIMMODSEM.

@@ -47,8 +47,8 @@ Section PROOF.
 
   Variable body: (mname * Any.t) -> itree (hCallE +' pE +' eventE) Any.t.
 
-  Let wf: W -> Prop :=
-    fun '(mrps_src0, mrps_tgt0) =>
+  Let wf: unit -> W -> Prop :=
+    fun _ '(mrps_src0, mrps_tgt0) =>
       exists (mr: Σ) (mp: Any.t),
         (<<SRC: mrps_src0 = (mr, mp)>>) /\
         (<<TGT: mrps_tgt0 = (mr, mp)>>)
@@ -59,33 +59,33 @@ Section PROOF.
       (Σ * R_src) -> (Σ * R_tgt) -> Prop :=
     fun R_src R_tgt RR '(w_src, fr_src) '(w_tgt, fr_tgt) '(ctx_src, r_src) '(ctx_tgt, r_tgt) =>
       (<<CTX: ctx_src = ctx_tgt>>) /\
-      (<<WF: wf (w_src, w_tgt)>>) /\
+      (<<WF: wf tt (w_src, w_tgt)>>) /\
       (<<FRSRC: URA.wf (ctx_src ⋅ (fst w_src) ⋅ fr_src)>>) /\
       (<<FRTGT: URA.wf (ctx_tgt ⋅ (fst w_tgt) ⋅ fr_tgt)>>) /\
       (* (<<GWF: @URA.wf (GRA.to_URA Σ) (@URA.add (GRA.to_URA Σ) (fst w_src) fr_src)>>) /\ *)
       RR r_src r_tgt.
 
   Lemma weakening_fn:
-    sim_fsem wf
+    sim_fsem wf top2
              (fun_to_tgt mn stb_src (mk_specbody fsp_src body))
              (fun_to_tgt mn stb_tgt (mk_specbody fsp_tgt body)).
   Proof.
     Ltac mstep := ired_both; gstep; match goal with
-                                    | [|- monotone6 (_sim_itree wf)] => eapply sim_itree_mon
+                                    | [|- monotone7 (_sim_itree wf _)] => eapply sim_itree_mon
                                     | _ => idtac
                                     end. (* why? *)
     Ltac muclo H := guclo H; match goal with
-                             | [|- monotone6 (_sim_itree wf)] => eapply sim_itree_mon
+                             | [|- monotone7 (_sim_itree wf _)] => eapply sim_itree_mon
                              | _ => idtac
                              end. (* why? *)
 
     assert (SELFSIM: forall R o fr_src fr_tgt st_src st_tgt ctx
                             (itr: itree (hCallE +' pE +' eventE) R)
-                            (WF: wf (st_src, st_tgt))
+                            (WF: wf tt (st_src, st_tgt))
                             (FRSRC: URA.wf (ctx ⋅ (fst (st_src)) ⋅ fr_src))
                             (FRTGT: URA.wf (ctx ⋅ (fst (st_tgt)) ⋅ fr_tgt))
                             (* (GWF: @URA.wf (GRA.to_URA Σ) (@URA.add (GRA.to_URA Σ) (fst st_src) fr)) *),
-               gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) bot6 bot6 _ _ (liftRR eq) 200 (st_src, fr_src, interp_hCallE_tgt mn stb_src o itr ctx) (st_tgt, fr_tgt, interp_hCallE_tgt mn stb_tgt o itr ctx)).
+               gpaco7 (_sim_itree wf top2) (cpn7 (_sim_itree wf top2)) bot7 bot7 _ _ (liftRR eq) 200 tt (st_src, fr_src, interp_hCallE_tgt mn stb_src o itr ctx) (st_tgt, fr_tgt, interp_hCallE_tgt mn stb_tgt o itr ctx)).
     { Local Transparent interp_hCallE_tgt.
       unfold interp_hCallE_tgt. gcofix CIH. i. ides itr.
       { mstep. ired. red in WF. des; subst. eapply sim_itree_ret; et.
@@ -103,7 +103,7 @@ Section PROOF.
           { muclo lordC_spec. econs.
             { instantiate (1:=(100+100)%ord). rewrite <- OrdArith.add_from_nat; et. refl. }
             muclo lbindC_spec. econs.
-            { instantiate (1:=liftRR eq).
+            { instantiate (2:=liftRR eq).
               unfold HoareCall, put, discard, forge, checkWf, assume, guarantee.
 
               (* target arguments *)
@@ -205,6 +205,7 @@ Section PROOF.
               mstep. eapply sim_itree_take_tgt; eauto with ord_step. unshelve esplit; et.
               mstep. eapply sim_itree_ret.
               { red. esplits; et. }
+              { ss. }
               { econs.
                 { esplits; et. }
                 { esplits; et; ss.
@@ -349,7 +350,7 @@ Section PROOF.
       mstep. eapply sim_itree_ret; et.
       red. esplits; et.
     }
-    Unshelve. all: try (exact Ord.O).
+    Unshelve. all: try (exact Ord.O). all: try (exact tt).
   Qed.
 
 End PROOF.
@@ -406,7 +407,8 @@ Section PROOF.
     econs; cycle 1.
     { unfold SMod.to_tgt. cbn. eauto. }
     i. specialize (WEAK sk). r. econs.
-    { instantiate (1:=fun '(x, y) => x = y).
+    { instantiate (1:=fun (_ _: unit) => True). ss. }
+    { instantiate (1:=fun _ '(x, y) => x = y).
       unfold SMod.to_tgt.
       unfold SMod.transl. ss.
       abstr (SModSem.fnsems (SMod.get_modsem md sk)) fnsems.

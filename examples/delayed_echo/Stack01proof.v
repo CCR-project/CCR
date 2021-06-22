@@ -37,7 +37,7 @@ Section SIMMODSEM.
   Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
   Eval compute in (@URA.car Mem1._memRA).
 
-  Let wf: W -> Prop :=
+  Let wf: _ -> W -> Prop :=
     mk_wf (fun (_: unit) _ _ => (True: iProp)%I) top4.
 
   Local Opaque points_to.
@@ -48,8 +48,9 @@ Section SIMMODSEM.
 
   Theorem correct: ModSemPair.sim Stack1.StackSem Stack0.StackSem.
   Proof.
-    econstructor 1 with (wf:=wf); et; swap 2 3.
-    { red. econs; ss. red. uipropall. }
+    econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
+    { ss. }
+    { exists tt. red. econs; ss. red. uipropall. }
 
     econs; ss.
     (* pop *)
@@ -59,7 +60,7 @@ Section SIMMODSEM.
       unfold ccall. steps. astart 10.
 
       (* load *)
-      acatch. hcall _ (n, 0%Z, a0) _ with "A1"; auto.
+      acatch. hcall _ (n, 0%Z, a) _ with "A1"; auto.
       { iModIntro. iFrame. iSplit; ss. }
       { splits; ss. eauto with ord_step. }
       mDesAll. clarify. erewrite Any.upcast_downcast in *. steps.

@@ -28,7 +28,7 @@ Section SIMMODSEM.
 
   Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
 
-  Let wf: W -> Prop :=
+  Let wf: _ -> W -> Prop :=
     mk_wf (fun (_: unit) _ _ => (True: iProp)%I) top4.
 
   Hint Resolve sim_itree_mon: paco.
@@ -38,8 +38,9 @@ Section SIMMODSEM.
 
   Theorem correct: ModSemPair.sim Client1.ClientSem Client0.ClientSem.
   Proof.
-    econstructor 1 with (wf:=wf); et; swap 2 3.
-    { econs; ss. red. uipropall. }
+    econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
+    { ss. }
+    { exists tt. econs; ss. red. uipropall. }
     econs; ss; [|econs; ss].
     { init. unfold getint_body, getintF. harg.
       mDesAll. clarify. steps.

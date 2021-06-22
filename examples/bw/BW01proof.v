@@ -54,7 +54,7 @@ Section SIMMODSEM.
   Context `{@GRA.inG BW1.bwRA Σ}.
 
   Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
-  Let wf: W -> Prop :=
+  Let wf: _ -> W -> Prop :=
     @mk_wf
       _
       Z
@@ -66,14 +66,15 @@ Section SIMMODSEM.
 
   Theorem correct: ModSemPair.sim BW1.BWSem BW0.BWSem.
   Proof.
-    econstructor 1 with (wf:=wf); et; swap 2 3.
-    { ss. red. econs; et. red. red. uipropall.
+    econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
+    { ss. }
+    { ss. eexists. red. econs; et. red. red. uipropall.
       exists ε. rewrite URA.unit_id; ss. }
     econs; ss.
     { unfold getF. init. harg.
       mDesAll. des; clarify.
       steps. rewrite Any.upcast_downcast in *. astart 0. astop.
-      mAssertPure (x = Z.odd a); subst.
+      mAssertPure (x = Z.odd w); subst.
       { iApply (bw_ra_merge with "INV PRE"). }
       steps. force_l. eexists. steps.
       hret _; ss.
@@ -85,18 +86,18 @@ Section SIMMODSEM.
     { unfold flipF. init. harg.
       mDesAll. des; clarify.
       steps. rewrite Any.upcast_downcast in *. astart 0. astop.
-      mAssertPure (x = Z.odd a); subst.
+      mAssertPure (x = Z.odd w); subst.
       { iApply (bw_ra_merge with "INV PRE"). }
       steps. force_l. eexists. steps.
       hret _; ss.
       iCombine "INV" "PRE" as "H".
       iPoseProof (OwnM_Upd with "H") as "H".
       { (* TODO: make lemma *)
-        instantiate (1:= bw_full (Z.odd (a+1)) ⋅ bw_frag (Z.odd (a+1))).
+        instantiate (1:= bw_full (Z.odd (w+1)) ⋅ bw_frag (Z.odd (w+1))).
         eapply Auth.auth_update. rr. ii. des; ss. ur in FRAME. ur. destruct ctx0; ss; clarify.
       }
       iMod "H". iDestruct "H" as "[H0 H1]". iModIntro.
-      replace (negb (Z.odd a)) with (Z.odd (a+1)); [iFrame; et|].
+      replace (negb (Z.odd w)) with (Z.odd (w+1)); [iFrame; et|].
       rewrite Z.odd_add. ss.
     }
   Qed.

@@ -30,14 +30,15 @@ Section SIMMODSEM.
 
   Let W: Type := (Σ * Any.t) * (Σ * Any.t).
 
-  Let wf: W -> Prop :=
+  Let wf: _ -> W -> Prop :=
     mk_wf (fun (_: unit) _ _ => (True: iProp)%I) top4.
 
   Theorem correct: ModPair.sim MutG1.G MutG0.G.
   Proof.
     econs; ss.
-    i. econstructor 1 with (wf:=wf); et.
-    2: { econs; ss; red; uipropall. }
+    i. econstructor 1 with (wf:=wf) (le:=top2); et.
+    { ss. }
+    2: { exists tt. econs; ss; red; uipropall. }
     econs; ss. init. harg. mDesAll.
     des; clarify. unfold gF, ccall.
     rewrite Any.upcast_downcast. steps. astart 10.
