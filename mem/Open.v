@@ -597,21 +597,21 @@ Section ADQ.
         (ske: Sk.t) mr0 st0 (A: Type) (itr: itree Es A) (ctx: Σ)
         mn
         (UNKNOWN: ~In mn (frds ske))
-        fr0 fr_trash mr_trash
+        fr0 fr_trash
         (* (WF: URA.wf (ctx ⋅ mr0)) *)
-        (WF: URA.wf (ctx ⋅ mr_trash))
+        (WF: URA.wf ctx)
     :
       paco6
-        (_sim_itree (fun '((mr_src, st_src), (mr_tgt, st_tgt)) => st_src = (Any.pair mr_tgt↑ st_tgt)))
+        (_sim_itree (fun '((mr_src, st_src), (mr_tgt, st_tgt)) =>
+                       mr_src = ε /\ st_src = (Any.pair mr_tgt↑ st_tgt)))
         bot6
         (Σ * (Σ * A))%type A
         (fun '((mr_src, st_src), fr_src) '((mr_tgt, st_tgt), fr_tgt) '(ctx, (_, r_src)) r_tgt =>
            st_src = (Any.pair mr_tgt↑ st_tgt) /\ r_src = r_tgt
-           (* /\ URA.wf (ctx ⋅ mr_tgt) *)
-           /\ URA.wf (ctx ⋅ mr_trash)
+           /\ URA.wf ctx
         )
         40%nat
-        (mr_trash, (Any.pair mr0↑ st0), fr_trash, (interp_hCallE_tgt mn (_gstb ske) ord_top
+        (ε, (Any.pair mr0↑ st0), fr_trash, (interp_hCallE_tgt mn (_gstb ske) ord_top
                                                                 (massage_itr (_gstb ske) itr fr0) ctx))
         (mr0, st0, fr0, addtau itr)
   .
@@ -659,7 +659,7 @@ Section ADQ.
       des_ifs. unfold _kmss in T. list_tac. subst. unfold kmds in T0. list_tac. subst.
       ss. list_tac. des_ifs. ss.
       unfold HoareCall, discard, forge, put, checkWf. steps.
-      force_l. exists (mr_trash, ε). steps.
+      force_l. exists (ε, ε). steps.
       force_l.
       { rewrite ! URA.unit_id. auto. }
       steps. force_l. exists ε. steps.
@@ -672,68 +672,48 @@ Section ADQ.
       { eapply to_semantic; [|eapply URA.wf_unit]. iIntros. iPureIntro. esplits; et. }
       steps. force_l.
       { split; et. }
-      steps. gstep. econs; et. i. subst. destruct mrs_tgt1. eexists. steps.
+      steps. gstep. econs; et. i. des_ifs. des; subst. eexists. steps.
       red in _ASSUME0. uipropall. subst.
-      erewrite f_equal2; [gbase; eapply CIH| |].
-      { et. }
-      {
-      gbase. eapply CIH. ss.
-      eapply URA.wf_mon. instantiate (1:=x0).
-      replace (x2 ⋅ c0 ⋅ x0) with (x2 ⋅ (c0 ⋅ (ε ⋅ x0))); auto. r_solve.
+      gbase. eapply CIH; et.
+      eapply URA.wf_mon; et.
     - list_tac.
       des_ifs. unfold _umss in T. list_tac. subst.
       unfold HoareCall, discard, forge, put, checkWf. steps.
-      destruct mrs.
-      force_l. exists (c, ε). steps.
+      force_l. exists (ε, ε). steps.
       force_l.
       { rewrite ! URA.unit_id. auto. }
       steps. force_l. exists ε. steps.
       force_l. exists ε. steps. force_l.
       { rewrite URA.unit_id. auto. }
       steps. force_l. exists tt. steps.
-      force_l. exists (args↑). steps.
+      force_l. exists (args). steps.
       force_l. exists ord_top. steps.
       force_l.
       { eapply to_semantic; [|eapply URA.wf_unit]. iIntros. iPureIntro. esplits; et. }
       steps. force_l.
       { split; et. }
-      steps. gstep. econs; et. i. subst. destruct mrs_tgt1. eexists. steps.
+      steps. gstep. econs; et. i. des_ifs. des; subst. eexists. steps.
       red in _ASSUME0. uipropall. subst.
-      gbase. eapply CIH. ss.
-      eapply URA.wf_mon. instantiate (1:=x).
-      replace (x2 ⋅ c0 ⋅ x) with (x2 ⋅ (c0 ⋅ (ε ⋅ x))); auto. r_solve.
+      gbase. eapply CIH; ss.
+      eapply URA.wf_mon; et.
     Unshelve.
     all: try (exact Ord.O).
     all: try (exact 0%nat).
   Qed.
 
-  Lemma my_lemma1_aux'
-        (ske: Sk.t) mrs (A: Type) (itr: itree Es A) (ctx: Σ)
-        (WF: URA.wf (ctx ⋅ fst mrs)) mn fr fr_trash
-    :
-      paco6
-        (_sim_itree (fun '(st_src, st_tgt) => st_src = st_tgt))
-        bot6
-        (Σ * A)%type A
-        (fun '(mrs_src, fr_src) '(mrs_tgt, fr_tgt) '(ctx, r_src) r_tgt =>
-           mrs_src = mrs_tgt /\ r_src = r_tgt /\ URA.wf (ctx ⋅ fst mrs_src))
-        40%nat
-        (mrs, fr_trash, (interp_hCallE_tgt mn (_gstb ske) ord_top
-                                           ('(_, r) <- massage_itr (_gstb ske) itr fr;; Ret r) ctx))
-        (mrs, ε, itr)
-  .
-
   Ltac r_wf H := eapply prop_ext_rev; [eapply f_equal|]; [|eapply H]; r_solve.
 
   Lemma my_lemma1_aux
-        mrs ktr arg ske mn
+        mn ske
+        (UNKNOWN: ~In mn (frds ske))
+        ktr arg mr0 st0
     :
-      sim_itree (fun '(x, y) => x = y) 100%nat
-                (mrs, ε, fun_to_tgt mn (_gstb ske) (massage_fsb (_gstb ske) ktr) arg)
-                (mrs, ε, ktr arg)
+      sim_itree (fun '((mr_src, st_src), (mr_tgt, st_tgt)) =>
+                       mr_src = ε /\ st_src = (Any.pair mr_tgt↑ st_tgt)) 100%nat
+                (ε, (Any.pair mr0↑ st0), ε, fun_to_tgt mn (_gstb ske) (massage_fsb (_gstb ske) ktr) arg)
+                (mr0, st0, ε, addtau (ktr arg))
   .
   Proof.
-    destruct mrs as [mr st].
     Local Transparent HoareFun.
     unfold fun_to_tgt, HoareFun, discard, forge, checkWf, put, cfun.
     Local Opaque HoareFun.
@@ -741,12 +721,26 @@ Section ADQ.
     (* do 5 (prep; try _step; unfold alist_add; simpl; des_ifs_safe). *)
     unfold massage_fun.
     guclo lordC_spec. econs.
-    { instantiate (1:=(49 + 40)%ord). rewrite <- OrdArith.add_from_nat. eapply OrdArith.le_from_nat. lia. }
-    erewrite idK_spec with (i0:=(ktr (s, t))). unfold idK at 1.
+    { instantiate (1:=(29 + (20 + 40))%ord). rewrite <- ! OrdArith.add_from_nat; cbn. eapply OrdArith.le_from_nat. lia. }
+    erewrite idK_spec with (i0:=(addtau (ktr (s, t)))).
     guclo lbindC_spec. econs.
-    { gfinal. right. erewrite f_equal2; [eapply my_lemma1_aux'| |]; et; cycle 1.
-      { f_equal. grind. }
-      eapply URA.wf_mon. instantiate (1:=x2). r_wf _ASSUME. }
+    { ired_both. erewrite idK_spec with (i0:=(addtau (ktr (s, t)))).
+      guclo lbindC_spec. econs.
+      - instantiate (1:=(fun '((mr_src, st_src), fr_src) '((mr_tgt, st_tgt), fr_tgt) '(ctx, (_, r_src)) r_tgt =>
+           st_src = (Any.pair mr_tgt↑ st_tgt) /\ r_src = r_tgt
+           /\ URA.wf ctx
+        )).
+        gfinal. right. eapply my_lemma1_aux''; et.
+        { eapply URA.wf_mon; et. }
+      - i. des_ifs. ss. des_ifs. ss. des; clarify. unfold idK. steps.
+        {
+        { my_red_both. 
+        grind.
+        { et. }
+        eapply my_lemma1_aux''.
+        erewrite f_equal2; [eapply my_lemma1_aux''| |]; et; cycle 1.
+        { f_equal. grind. }
+        eapply URA.wf_mon. instantiate (1:=x2). r_wf _ASSUME. }
     i. destruct st_src1, st_tgt1. destruct vret_src. ss. des; subst. destruct p0.
     force_l. eexists. force_l. eexists (_, _). steps.
     force_l.
