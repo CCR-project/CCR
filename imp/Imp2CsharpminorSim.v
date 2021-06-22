@@ -46,6 +46,14 @@ Proof.
   des. clarify.
 Qed.
 
+Lemma eval_exprlist_length :
+  forall a b c d l1 l2
+    (EE: eval_exprlist a b c d l1 l2),
+    <<EELEN: List.length l1 = List.length l2>>.
+Proof.
+  i. induction EE; ss; clarify; eauto.
+Qed.
+
 
 
 Section PROOF.
@@ -110,7 +118,7 @@ Section PROOF.
         r rg ms mn ge le rstate pstate ktr
         i1
         (MLE: match_le srcprog le tle)
-        (CEXP: compile_expr e = Some te)
+        (CEXP: compile_expr e = te)
         (SIM:
            forall rv trv,
              wf_val rv ->
@@ -150,7 +158,7 @@ Section PROOF.
       { eapply OrdArith.add_base_l. }
       eapply SIM; eauto. econs. unfold map_val. ss.
     - rewrite interp_imp_expr_Plus.
-      sim_red. destruct (compile_expr e1) eqn:EXP1; destruct (compile_expr e2) eqn:EXP2; ss; clarify.
+      sim_red.
       sim_ord.
       { instantiate (1:=((i1 + 20 + expr_ord e2 + 20) + expr_ord e1)%ord).
         rewrite <- ! OrdArith.add_assoc. eapply OrdArith.add_base_l. }
@@ -181,7 +189,7 @@ Section PROOF.
         r rg ms mn ge le rstate pstate ktr
         i1
         (MLE: match_le srcprog le tle)
-        (CEXP: compile_exprs es = Some tes)
+        (CEXP: compile_exprs es = tes)
         (SIM:
            forall rvs trvs,
              Forall wf_val rvs ->
@@ -204,7 +212,6 @@ Section PROOF.
       { eapply OrdArith.add_base_l. }
       eapply SIM; eauto. econs.
     - eapply gpaco3_gen_guard.
-      destruct (compile_expr a) eqn:CEA; destruct (compile_exprs es) eqn:CEES; uo; ss; clarify.
       rewrite interp_imp_bind. sim_red.
       sim_ord.
       { instantiate (1:=((i1 + (Ord.omega * Datatypes.length es)) + expr_ord a)%ord).
@@ -216,12 +223,12 @@ Section PROOF.
       eapply IHes; auto.
       i. rewrite interp_imp_Ret. sim_red.
       eapply gpaco3_mon; [eapply SIM|..]; auto.
-      econs; ss; clarify; eauto.
+      unfold compile_exprs in H3. econs; ss; clarify; eauto.
   Qed.
 
   Lemma compile_stmt_no_Sreturn
-        gm src e
-        (CSTMT: compile_stmt gm src = Some (Sreturn e))
+        src e
+        (CSTMT: compile_stmt src = (Sreturn e))
     :
       False.
   Proof. destruct src; ss; uo; des_ifs; clarify. Qed.
@@ -305,8 +312,8 @@ Section PROOF.
     Unshelve. all: exact e.
   Qed.
 
-  Lemma max_fuel_spec3 (args: list Imp.expr):
-    (100 + Ord.omega * Datatypes.length args <= 100 + max_fuel + 100)%ord.
+  Lemma max_fuel_spec3 (args: list Imp.expr) (n: Ord.t) :
+    (100 + Ord.omega * Datatypes.length args <= 100 + max_fuel + n)%ord.
   Proof.
     rewrite ! OrdArith.add_assoc. eapply OrdArith.le_add_r.
     etrans.
@@ -315,25 +322,29 @@ Section PROOF.
     eapply Ord.lt_le. eapply Ord.omega_upperbound.
   Qed.
 
+
+
   Theorem match_states_sim
           tgt
-          (modl: ModL.t) gm ge ms tlof
+          (modl: ModL.t) ge ms
           ist cst
-          (TLOF: tlof = 2 + (List.length srcprog.(ext_funsL)) + (List.length srcprog.(ext_varsL)))
-          (GMAP: get_gmap srcprog = Some gm)
+          (* tlof *)
+          (* (TLOF: tlof = 2 + (List.length srcprog.(ext_funsL)) + (List.length srcprog.(ext_varsL))) *)
           (MODL: modl = (ModL.add (Mod.lift Mem) (ImpMod.get_modL srcprog)))
           (MODSEML: ms = modl.(ModL.enclose))
           (GENV: ge = Sk.load_skenv (Sk.sort modl.(ModL.sk)))
           (MGENV: match_ge srcprog ge (Genv.globalenv tgt))
           (COMP: Imp2Csharpminor.compile srcprog = OK tgt)
-          (MS: match_states gm ge ms srcprog ist cst)
+          (MS: match_states (ext_funsL srcprog) ge ms srcprog ist cst)
     :
       <<SIM: sim (ModL.compile modl) (semantics tgt) ((100 + max_fuel) + 100)%ord ist cst>>.
   Proof.
+    set (efs:=ext_funsL srcprog) in *.
     red. red. ginit.
     depgen ist. depgen cst. gcofix CIH. i.
     assert (EXISTSCOMP: exists tgt, Imp2Csharpminor.compile srcprog = OK tgt); eauto.
-    inv MS. unfold Imp2Csharpminor.compile in COMP. des_ifs. rename Heq into GMAP.
+    inv MS. unfold Imp2Csharpminor.compile in COMP. des_ifs_safe.
+    match goal with | [ MGENV: match_ge _ _ (Genv.globalenv ?_tgt) |- _ ] => set (tgt:=_tgt) in * end.
     destruct code.
     - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. ss; clarify.
       destruct tcont; ss; clarify. inv MCONT; clarify.
@@ -403,7 +414,7 @@ Section PROOF.
         unfold ret_call_cont in TPOP. unfold return_stmt in TPOP. ss; clarify.
         hexploit match_states_intro.
         { instantiate (2:=Skip). ss. }
-        { instantiate (2:=(c, l0)). ss. eapply H0. }
+        { instantiate (2:=(c, l1)). ss. eapply H0. }
         2,3,4,5,6: eauto.
         2: clarify.
         2:{ i.
@@ -418,12 +429,9 @@ Section PROOF.
       eexists. eexists.
       { eapply step_skip_seq. }
       eexists. eexists (step_tau _). eexists. sim_red. gbase. eapply CIH. hexploit match_states_intro; eauto.
-      all: (destruct s; eauto).
-      all: (generalize dependent tcont; induction tcont; i; ss; clarify; eauto).
-      all: (eapply compile_stmt_no_Sreturn in CST; clarify).
+      all: (destruct (compile_stmt code) eqn: CST; eauto; apply compile_stmt_no_Sreturn in CST; clarify).
 
-    - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Assign. sim_red.
-      ss. destruct (compile_expr e) eqn:EXP; uo; ss.
+    - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Assign. sim_red. ss.
       sim_ord.
       { eapply max_fuel_spec1. }
       eapply step_expr; eauto. i.
@@ -440,18 +448,18 @@ Section PROOF.
       2:{ unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. eauto. }
       { econs. i. admit "ez? alist & Maps.PTree". }
 
-    - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Seq. sim_red.
-      ss. destruct (compile_stmt gm code1) eqn:CSC1; destruct (compile_stmt gm code2) eqn:CSC2; uo; clarify.
+    - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Seq. sim_red. ss.
       (* tau point *)
       gstep. econs 6; ss; clarify.
       eexists. eexists.
       { eapply step_seq. }
       eexists. exists (step_tau _). eexists. gbase. eapply CIH. hexploit match_states_intro.
-      { eapply CSC1. }
-      5:{ instantiate (1:=Kseq s0 tcont). ss. destruct s0; eauto. eapply compile_stmt_no_Sreturn in CSC2; clarify. }
+      { instantiate (2:=code1). ss. }
+      5:{ instantiate (1:=Kseq (compile_stmt code2) tcont). ss. destruct (compile_stmt code2) eqn:CSC2; eauto.
+          eapply compile_stmt_no_Sreturn in CSC2; clarify. }
       5:{ econs 3; eauto. }
       all: eauto.
-      { ss. destruct s0; eauto. eapply compile_stmt_no_Sreturn in CSC2; clarify. }
+      { ss. destruct (compile_stmt code2) eqn:CSC2; eauto. eapply compile_stmt_no_Sreturn in CSC2; clarify. }
       i.
       match goal with
       | [ H: match_states _ _ _ _ ?it0 _ |- match_states _ _ _ _ ?it1 _ ] =>
@@ -460,9 +468,6 @@ Section PROOF.
       unfold itree_of_cont_stmt, itree_of_imp_cont. Red.prw ltac:(_red_gen) 1 0. grind.
 
     - unfold itree_of_cont_stmt in *; unfold itree_of_imp_cont in *. rewrite interp_imp_If. sim_red. ss.
-      destruct (compile_expr i) eqn:CEXPR; destruct (compile_stmt gm code1) eqn:CCODE1;
-        destruct (compile_stmt gm code2) eqn:CCODE2; uo; clarify.
-
       sim_ord.
       { eapply max_fuel_spec1. }
       eapply step_expr; eauto.
@@ -494,21 +499,13 @@ Section PROOF.
             { unfold_Int64_max_signed. unfold_Int64_min_signed. instantiate (1:=n). nia. }
             i. rewrite CONTRA in H1. rewrite Int64.signed_repr_eq in H1. des_ifs. }
         eexists. exists (step_tau _).
-        eexists. des_ifs. gbase. eapply CIH. hexploit match_states_intro.
-        { eapply CCODE1. }
-        all: eauto. }
+        eexists. des_ifs. gbase. eapply CIH. hexploit match_states_intro; eauto. }
 
     - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_CallFun.
-      ss. uo; des_ifs; sim_red.
+      ss. des_ifs; sim_red.
       { sim_triggerUB. }
       assert (COMP2: Imp2Csharpminor.compile srcprog = OK tgt).
-      { unfold Imp2Csharpminor.compile. rewrite GMAP. auto. }
-      unfold _compile in COMP. des_ifs.
-      unfold compile_gdefs in Heq0. uo; des_ifs; clarify.
-      match goal with
-      | [ |- gpaco3 (_sim _ (semantics ?tp)) _ _ _ _ _ _ ] =>
-        set (tgtp:=tp) in *
-      end.
+      { unfold Imp2Csharpminor.compile. des_ifs; auto. }
       sim_ord.
       { eapply max_fuel_spec3. }
       eapply step_exprs; eauto.
@@ -518,7 +515,8 @@ Section PROOF.
       | [ |- gpaco3 _ _ _ _ _ (r0 <- unwrapU (?f);; _) _ ] => destruct f eqn:FSEM; ss
       end.
       2:{ sim_triggerUB. }
-      unfold call_mem in Heq. bsimpl; des. des_ifs; clarify. apply neg_rel_dec_correct in Heq4. rename Heq4 into NOTMAIN.
+      unfold call_ban in Heq. bsimpl; des. des_ifs; clarify.
+      rename Heq0 into NOTMAIN. apply neg_rel_dec_correct in NOTMAIN.
       repeat match goal with
       | [ Heq: _ = false |- _ ] => clear Heq
       end.
@@ -527,36 +525,30 @@ Section PROOF.
       | [ FSEM: o_map (?a) _ = _ |- _ ] => destruct a eqn:FOUND; ss; clarify
       end.
       destruct p. destruct p. clarify. eapply found_imp_function in FOUND. des; clarify.
-      hexploit exists_compiled_function; eauto. i.
-      des. rename cf into tf0. rename H1 into COMPF.
       hexploit in_tgt_prog_defs_ifuns; eauto. i.
-      (* assert (TGTFG: In (s2p f, Gfun (Internal tf0)) tgtp.(prog_defs)); auto. *)
-      assert (INTGT: In (s2p f, Gfun (Internal tf0)) (prog_defs tgtp)); auto.
-      eapply Globalenvs.Genv.find_symbol_exists in H1.
-      destruct H1 as [b TGTFG].
-      unfold ident_key in Heq1.
-      hexploit compiled_function_props; eauto. i. des; clarify.
-      apply alist_find_some in Heq1. apply in_app_iff in Heq1.
-      hexploit gm_funs_disjoint; eauto. i.
-      (* hexploit gm_int_fun_exists; eauto. i. *)
-      des.
-      { apply (in_map fst _ _) in Heq1. apply (in_map fst _ _) in H2.
-        unfold Coqlib.list_disjoint in H10. hexploit H10; eauto. i. ss. }
-      hexploit gm_unique_intfun.
-      { eauto. }
-      { eapply Heq1. }
-      { eapply H2. }
-      i. clarify. ss. clarify.
+      des. rename H1 into COMPF.
+      (* assert (INTGT: In (s2p f, Gfun (Internal tf0)) (prog_defs tgtp)); auto. *)
+      rename s into mn2, f into fn, f0 into impf.
+      assert (COMPF2: In (compile_iFun (mn2, (fn, impf))) (prog_defs tgt)); auto.
+      eapply Globalenvs.Genv.find_symbol_exists in COMPF.
+      destruct COMPF as [b TGTFG].
       (* Coqlib.list_in_map_inv: *)
-      assert (TGTGFIND: Globalenvs.Genv.find_def (Globalenvs.Genv.globalenv tgtp) b = Some (Gfun (Internal tf0))).
+      assert (TGTGFIND: Globalenvs.Genv.find_def (Globalenvs.Genv.globalenv tgt) b = Some (snd (compile_iFun (mn2, (fn, impf))))).
       { hexploit tgt_genv_find_def_by_blk; eauto. }
 
       unfold cfun. sim_red. rewrite Any.upcast_downcast. sim_red.
-      rewrite unfold_eval_imp_only.
-      destruct (init_args (Imp.fn_params f0) rvs []) eqn:ARGS; sim_red.
+      rewrite unfold_eval_imp_only. sim_red.
+      unfold assume. sim_red. gstep. econs 5; ss; auto. i. eapply angelic_step in STEP; des; clarify.
+      eexists; split; [ord_step2|auto].
+      rename STEP0 into WFFUN. sim_red.
+      do 4 (gstep; sim_tau). sim_red.
+      
+      destruct (init_args (Imp.fn_params impf) rvs []) eqn:ARGS; sim_red.
       2:{ sim_triggerUB. }
       (* tau point?? need a tau BEFORE denote_stmt(fn_body) *)
-      rewrite interp_imp_tau. sim_red.
+      rewrite interp_imp_tau. sim_red. des_ifs.
+      { rewrite rel_dec_correct in Heq; clarify. }
+      clear Heq.
       gstep. econs 6; auto.
       eexists. eexists.
       { eapply step_call; eauto.
@@ -565,21 +557,33 @@ Section PROOF.
           eapply TGTFG.
         - rewrite Globalenvs.Genv.find_funct_find_funct_ptr.
           rewrite Globalenvs.Genv.find_funct_ptr_iff. ss. eapply TGTGFIND.
-        - ss. }
-
+        - ss. apply init_args_prop in ARGS. rewrite map_length. des. setoid_rewrite ARGS. depgen H0. clear. i.
+          apply eval_exprlist_length in H0. des. unfold compile_exprs in H0. rewrite ! map_length in H0.
+          rewrite H0. ss.
+      }
       eexists. exists (step_tau _). eexists.
       gstep. econs 4.
 
-      unfold pre_compile_function in COMPF. des_ifs; clarify; uo; des_ifs; ss.
-      { rewrite rel_dec_correct in Heq2. clarify. }
       eexists. eexists.
-      { eapply step_internal_function; ss; eauto; try econs.
+      { rewrite <- NoDup_norepeat in WFFUN. apply Coqlib.list_norepet_app in WFFUN. des.
+        eapply step_internal_function; ss; eauto; try econs.
+        { apply Coqlib.list_map_norepet; eauto. i. ii. apply H3. apply s2p_inj; auto. }
+        { unfold Coqlib.list_disjoint in *. depgen WFFUN1. clear. i.
+          apply Coqlib.list_in_map_inv in H. apply in_app_or in H0. des.
+          - apply Coqlib.list_in_map_inv in H0. des. clarify.
+            ii. apply s2p_inj in H. hexploit WFFUN1; eauto. apply in_or_app. left; auto.
+          - ii. clarify. hexploit WFFUN1; eauto. apply in_or_app. right; auto.
+            match goal with
+            | [ H0: In _ ?ml |- In _ ?ll ] => replace ml with (List.map s2p ll) end; ss; des; eauto.
+            apply s2p_inj in H0; auto. apply s2p_inj in H0; auto.
+        }
         match goal with
         | [ |- bind_parameters _ _ ?_tle0 = Some _ ] =>
           set (tle0:=_tle0) in *
         end.
-        admit "ez: use induction?". }
-      eexists; split; [ord_step2|]. grind.
+        admit "mid: use induction?, need existence & tle suffices MLE with (init_lenv (Imp.fn_vars impf ++ ['return'; '_']) ++ l1)".
+      }
+      eexists; split; [ord_step2|].
 
       gstep. econs 4.
       eexists. eexists.
@@ -601,8 +605,9 @@ Section PROOF.
         replace i with
     (` r0 : r_state * p_state * (lenv * val) <-
      EventsL.interp_Es (prog ms)
-       (transl_all s0 (interp_imp ge (denote_stmt (Imp.fn_body f0)) (init_lenv (Imp.fn_vars f0) ++ l3)))
-       (c, ε :: c0 :: l0, pstate);; x4 <- itree_of_imp_pop ge ms s0 mn x le r0;; ` x : _ <- next x4;; stack x)
+                       (transl_all mn2 (interp_imp ge (denote_stmt (ext_funsL srcprog) (Imp.fn_body impf))
+                                                   (init_lenv (Imp.fn_vars impf ++ ["return"; "_"]) ++ l1)))
+       (c, ε :: c0 :: l0, pstate);; x4 <- itree_of_imp_pop ge ms mn2 mn x le r0;; ` x : _ <- next x4;; stack x)
       end.
       2:{ rewrite interp_imp_bind. Red.prw ltac:(_red_gen) 1 0. grind.
           Red.prw ltac:(_red_gen) 2 0. grind.
@@ -613,12 +618,12 @@ Section PROOF.
       2:{ instantiate (2:=(c, ε :: c0 :: l0)). ss. }
       5:{ instantiate (1:=Kseq (Sreturn (Some (Evar (s2p "return")))) (Kcall (Some (s2p x)) tf empty_env tle tcont)). ss. }
       6:{ instantiate (1:= fun r0 =>
-                             ` x4 : r_state * p_state * (lenv * val) <- itree_of_imp_pop ge ms s0 mn x le r0;;
+                             ` x4 : r_state * p_state * (lenv * val) <- itree_of_imp_pop ge ms mn2 mn x le r0;;
                                     ` x0 : r_state * p_state * (lenv * val) <- next x4;; stack x0).
-          instantiate (1:=s0). instantiate (1:=srcprog). instantiate (1:=ms). instantiate (1:=ge). instantiate (1:=gm).
+          instantiate (1:=mn2). instantiate (1:=srcprog). instantiate (1:=ms). instantiate (1:=ge).
           econs 2; ss; eauto. }
       3,4: eauto.
-      1:{ eapply H5. }
+      1:{ instantiate (2:= (Imp.fn_body impf)). ss. }
       2:{ ss. econs 2. }
       2:{ clarify. }
       2:{ i.
@@ -629,38 +634,34 @@ Section PROOF.
           unfold itree_of_cont_stmt, itree_of_imp_cont. unfold idK. grind. }
       { admit "ez: should follow from above, the initial lenv". }
 
-    - ss. destruct p eqn:PVAR; clarify.
-      admit "ez: CallPtr, similar to CallFun.".
+    - admit "ez: CallPtr, similar to CallFun.".
 
     - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_CallSys.
-      ss. uo; des_ifs; clarify. unfold ident_key in Heq0.
-      rename Heq0 into FOUND. apply alist_find_some in FOUND.
-      assert (COMP2: Imp2Csharpminor.compile srcprog = OK tgt).
-      { unfold Imp2Csharpminor.compile. rewrite GMAP. auto. }
-      assert (GMAP2: get_gmap srcprog = Some gm).
-      { auto. }
-      unfold get_gmap in GMAP. uo; des_ifs; ss.
-      match goal with
-      | [ COMP: _compile ?_gm _ = OK _ |- _ ] =>
-        set (gm:=_gm) in *
-      end.
-      unfold compile_eFuns in FOUND.
-      rewrite in_map_iff in FOUND. des. destruct x0. ss; clarify.
-      assert (S2PBI: forall x y, s2p x = s2p y <-> x = y).
-      { admit "ez: make such s2p". }
-      apply S2PBI in H1. clear S2PBI; clarify.
-      unfold get_funsig in Heq1. clarify.
+      ss. sim_red. unfold unwrapU. des_ifs.
+      2:{ sim_triggerUB. }
+      rename Heq into FOUND.
+      sim_red. unfold assume. grind. gstep. econs 5; auto. i. eapply angelic_step in STEP; des; clarify.
+      eexists; split; [ord_step2|].
 
-      unfold _compile in COMP. des_ifs; ss; clarify.
-      unfold compile_gdefs in Heq. uo; des_ifs; ss; clarify.
-      match goal with
-      | [ |- gpaco3 (_sim _ (semantics ?_tgtp)) _ _ _ _ _ _ ] =>
-        set (tgtp:=_tgtp) in *
-      end.
+      apply alist_find_some in FOUND.
+      assert (COMP2: Imp2Csharpminor.compile srcprog = OK tgt).
+      { unfold Imp2Csharpminor.compile. des_ifs; ss; auto. }
+      (* rewrite in_map_iff in FOUND. des. destruct x0. ss; clarify. *)
+      (* assert (S2PBI: forall x y, s2p x = s2p y <-> x = y). *)
+      (* { admit "ez: make such s2p". } *)
+      (* apply S2PBI in H1. clear S2PBI; clarify. *)
+      (* unfold get_funsig in Heq1. clarify. *)
+
+      (* unfold compile_gdefs in Heq. uo; des_ifs; ss; clarify. *)
+      (* match goal with *)
+      (* | [ |- gpaco3 (_sim _ (semantics ?_tgtp)) _ _ _ _ _ _ ] => *)
+      (*   set (tgtp:=_tgtp) in * *)
+      (* end. *)
       hexploit in_tgt_prog_defs_efuns; eauto. i. rename H into INTGT.
       hexploit Genv.find_symbol_exists; eauto. i. des. rename H into FINDSYM.
       hexploit tgt_genv_find_def_by_blk; eauto. i. rename H into FINDDEF.
 
+      do 6 (gstep; sim_tau).
       sim_red.
       sim_ord.
       { eapply max_fuel_spec3. }
@@ -678,7 +679,7 @@ Section PROOF.
       eexists; split; [ord_step2|].
 
       (* System call semantics *)
-      pose (syscall_exists f (make_signature n) (Genv.globalenv tgtp) trvs tm) as TGTSYSSEM. des.
+      pose (syscall_exists f (make_signature (List.length args)) (Genv.globalenv tgt) trvs tm) as TGTSYSSEM. des.
       hexploit syscall_refines; eauto. i. ss. des. clarify.
 
       gstep. econs 2; auto.
@@ -707,10 +708,10 @@ Section PROOF.
 
       split.
       { unfold decompile_event in EV0. des_ifs. uo; des_ifs; ss; clarify.
-        unfold decompile_eval in Heq4. des_ifs; ss; clarify. econs; auto. econs.
+        unfold decompile_eval in Heq1. des_ifs; ss; clarify. econs; auto. econs.
         2:{ unfold compose. rewrite <- H0. econs. }
-        generalize dependent Heq3. clear. generalize dependent args_int. unfold compose.
-        induction l2; i; ss; clarify.
+        generalize dependent Heq0. clear. generalize dependent args_int.
+        induction l0; i; ss; clarify.
         { destruct args_int; ss; clarify. }
         des_ifs. uo; des_ifs; ss. destruct args_int; ss; clarify.
         econs; eauto. unfold decompile_eval in Heq. des_ifs. rewrite <- H0. econs. }
@@ -737,11 +738,9 @@ Section PROOF.
       { econs. i. ss. admit "ez: find from local env". }
 
     - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_AddrOf.
-      ss. uo; des_ifs. rename Heq0 into FOUND. unfold ident_key in FOUND.
-      apply alist_find_some in FOUND.
-      unfold unwrapU. des_ifs.
+      ss. unfold unwrapU. des_ifs.
       2:{ sim_triggerUB. }
-      rename n into blk. rename Heq into SRCBLK.
+      rename n into blk, Heq into SRCBLK.
       do 2 (gstep; sim_tau). sim_red.
       gstep. econs 6; ss.
       eexists. eexists.
@@ -762,11 +761,11 @@ Section PROOF.
       { econs. i. ss. admit "ez: alist, PTree". }
 
     - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Malloc. sim_red.
-      ss. uo; des_ifs.
+      ss.
       sim_ord.
       { eapply max_fuel_spec1. }
       eapply step_expr; eauto. i. rename H0 into TGTEXPR. rename H1 into MAPRV. sim_red.
-      destruct rstate. ss. destruct l; clarify.
+      destruct rstate. ss. destruct l0; clarify.
       do 3 (gstep; sim_tau). sim_red.
       match goal with
       | [ MCONT: match_code _ ?_ge _ _ _ _ |- _ ] =>
@@ -781,24 +780,22 @@ Section PROOF.
       rewrite PSTATE. rewrite Any.upcast_downcast. grind. unfold unint. des_ifs; sim_red.
       des_ifs; sim_red.
       2,3: sim_triggerUB.
-      bsimpl. des. rename Heq into NRANGE1. apply sumbool_to_bool_true in NRANGE1.
-      rename Heq1 into NRANGE2. apply sumbool_to_bool_true in NRANGE2.
+      bsimpl. des.
+      rename Heq into NRANGE1. apply sumbool_to_bool_true in NRANGE1.
+      rename Heq0 into NRANGE2. apply sumbool_to_bool_true in NRANGE2.
 
       assert (TGTDEFS: In (s2p "malloc", Gfun (External EF_malloc)) (prog_defs tgt)).
-      { unfold _compile in COMP. des_ifs; ss. rename Heq into CGDEFS.
-        unfold compile_gdefs in CGDEFS. uo; des_ifs; ss; clarify.
-        rename l1 into NOREPET. eapply Maps.PTree_Properties.of_list_norepet in NOREPET.
+      { subst tgt. ss. rename l into NOREPET.
+        eapply Maps.PTree_Properties.of_list_norepet in NOREPET.
         { eapply Maps.PTree.elements_correct. eapply NOREPET. }
-        rewrite app_assoc. apply in_or_app. right. econs. ss. }
+        unfold compile_gdefs. do 2 (apply in_or_app; right). ss. left; ss. }
 
       assert (TGTMALLOC: exists blk, Genv.find_symbol (globalenv (semantics tgt)) (s2p "malloc") = Some blk).
-      { unfold _compile in COMP. des_ifs; ss. rename Heq into CGDEFS.
-        unfold compile_gdefs in CGDEFS. uo; des_ifs; ss; clarify.
-        hexploit Genv.find_symbol_exists; eauto. ss. eauto. }
+      { hexploit Genv.find_symbol_exists; eauto. }
       des.
 
       assert (COMP2: Imp2Csharpminor.compile srcprog = OK tgt).
-      { unfold Imp2Csharpminor.compile. rewrite GMAP. auto. }
+      { unfold Imp2Csharpminor.compile. des_ifs. }
       hexploit tgt_genv_find_def_by_blk; eauto. i. rename H0 into TGTFINDDEF.
 
       gstep. econs 6; clarify.
@@ -832,7 +829,7 @@ Section PROOF.
       end.
       { eapply Mem.valid_access_freeable_any. unfold_modrange_64. unfold scale_ofs in *.
         eapply Mem.valid_access_alloc_same; eauto; try nia. unfold align_chunk, size_chunk. des_ifs. exists (- 1)%Z. lia. }
-      apply TGTM2 in VACCESS. clear TGTM2. dependent destruction VACCESS. rename x0 into tm2. rename e0 into TGTM2.
+      apply TGTM2 in VACCESS. clear TGTM2. dependent destruction VACCESS. rename x0 into tm2. rename e into TGTM2.
 
       gstep. econs 4.
       eexists. eexists.
@@ -856,7 +853,7 @@ Section PROOF.
       gbase. apply CIH.
       hexploit match_states_intro.
       { instantiate (2:=Skip). ss. }
-      { instantiate (2:= (c, c0 :: l)). ss. }
+      { instantiate (2:= (c, c0 :: l0)). ss. }
       4,5,6: eauto.
       4:{ clarify. }
       4:{ i.
@@ -865,16 +862,18 @@ Section PROOF.
             replace i1 with i0; eauto
           end.
           unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
-      { econs. i. ss. admit "ez: local env". }
+      { econs. i. ss. specialize TGTALLOC with tm (- size_chunk Mptr)%Z (8 * n)%Z. apply Mem.alloc_result in TGTALLOC.
+        rewrite TGTALLOC. inv MM. rewrite NBLK. rename H0 into LENV. depgen LENV. depgen ML. clear; i.
+        admit "ez: local env". }
       { clarify. }
       eapply match_mem_malloc; eauto. unfold Mem.alloc; ss. f_equal. rewrite! Nat.add_0_r. ss.
 
     - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Free. sim_red.
-      ss. uo; des_ifs.
+      ss.
       sim_ord.
       { eapply max_fuel_spec1. }
       eapply step_expr; eauto.
-      i. sim_red. destruct rstate. ss. destruct l; clarify.
+      i. sim_red. destruct rstate. ss. destruct l0; clarify.
       grind. do 3 (gstep; sim_tau). sim_red.
       match goal with
       | [ MCONT: match_code _ ?_ge _ _ _ _ |- _ ] =>
@@ -902,7 +901,7 @@ Section PROOF.
       eexists. exists (step_tau _). eexists. gbase. eapply CIH.
       hexploit match_states_intro.
       { instantiate (2:=Skip). ss. }
-      { instantiate (2:= (c, c0 :: l)). ss. }
+      { instantiate (2:= (c, c0 :: l0)). ss. }
       1,4,5,6: eauto.
       3:{ clarify. }
       3:{ i.
@@ -916,11 +915,11 @@ Section PROOF.
       instantiate (1:=ofs). instantiate (1:=blk). unfold Mem.free. rewrite MEMCNT. ss.
 
     - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Load. sim_red.
-      ss. uo; des_ifs.
+      ss.
       sim_ord.
       { eapply max_fuel_spec1. }
       eapply step_expr; eauto.
-      i. sim_red. destruct rstate. ss. destruct l; clarify.
+      i. sim_red. destruct rstate. ss. destruct l0; clarify.
       grind. do 3 (gstep; sim_tau). sim_red.
       match goal with
       | [ MCONT: match_code _ ?_ge _ _ _ _ |- _ ] =>
@@ -950,7 +949,7 @@ Section PROOF.
       gbase. eapply CIH.
       hexploit match_states_intro.
       { instantiate (2:=Skip). ss. }
-      { instantiate (2:= (c, c0 :: l)). ss. }
+      { instantiate (2:= (c, c0 :: l0)). ss. }
       2,3,4,5,6: eauto.
       2: clarify.
       2:{ i.
@@ -970,12 +969,12 @@ Section PROOF.
       | [ MCONT: match_code _ _ ?_ms _ _ _ |- _ ] =>
         set (ms:=_ms) in *
       end.
-      ss. uo; des_ifs.
+      ss.
       sim_ord.
       { eapply max_fuel_spec2. }
       eapply step_expr; eauto. i. sim_red.
       eapply step_expr; eauto. i. sim_red.
-      destruct rstate. ss. destruct l; clarify.
+      destruct rstate. ss. destruct l0; clarify.
       grind. do 3 (gstep; sim_tau). sim_red.
       unfold cfun. rewrite Any.upcast_downcast. grind. unfold storeF. sim_red.
       do 4 (gstep; sim_tau). sim_red.
@@ -1000,7 +999,7 @@ Section PROOF.
       gbase. eapply CIH.
       hexploit match_states_intro.
       { instantiate (2:=Skip). ss. }
-      { instantiate (2:= (c, c0 :: l)). ss. }
+      { instantiate (2:= (c, c0 :: l0)). ss. }
       1,4,5,6: eauto.
       3: clarify.
       3:{ i.
@@ -1021,12 +1020,12 @@ Section PROOF.
       | [ MCONT: match_code _ _ ?_ms _ _ _ |- _ ] =>
         set (ms:=_ms) in *
       end.
-      ss. uo; des_ifs.
+      ss.
       sim_ord.
       { eapply max_fuel_spec2. }
       eapply step_expr; eauto. i. sim_red.
       eapply step_expr; eauto. i. sim_red.
-      destruct rstate. ss. destruct l; clarify.
+      destruct rstate. ss. destruct l0; clarify.
       grind. do 3 (gstep; sim_tau). sim_red.
       unfold cfun. rewrite Any.upcast_downcast. grind. unfold cmpF. sim_red.
       do 4 (gstep; sim_tau). sim_red.
@@ -1047,7 +1046,7 @@ Section PROOF.
         gbase. eapply CIH.
         hexploit match_states_intro.
         { instantiate (2:=Skip). ss. }
-        { instantiate (2:= (c, c0 :: l)). ss. }
+        { instantiate (2:= (c, c0 :: l0)). ss. }
         2,3,4,5,6: eauto.
         2: clarify.
         2:{ i.
@@ -1071,7 +1070,7 @@ Section PROOF.
         { eapply OrdArith.add_base_l. } gbase. eapply CIH.
         hexploit match_states_intro.
         { instantiate (2:=Skip). ss. }
-        { instantiate (2:= (c, c0 :: l)). ss. }
+        { instantiate (2:= (c, c0 :: l0)). ss. }
         2,3,4,5,6: eauto.
         2: clarify.
         2:{ i.

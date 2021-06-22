@@ -54,7 +54,7 @@ Section Compile.
     end
   .
 
-  Fixpoint compile_exprs (exprs: list Imp.expr) : list Csharpminor.expr := List.map (compile_expr) exprs.
+  Definition compile_exprs (exprs: list Imp.expr) : list Csharpminor.expr := List.map (compile_expr) exprs.
 
   Definition make_signature n := mksignature (repeat Tlong n) (Tlong) (cc_default).
 
@@ -153,7 +153,11 @@ Section Compile.
       let params := (List.map (fun vn => s2p vn) f.(Imp.fn_params)) in
       let temps := (List.map (fun vn => s2p vn) f.(Imp.fn_vars)) ++ [(s2p "return"); (s2p "_")] in
       let sig := if (rel_dec fn "main"%string) then signature_main else (make_signature (List.length params)) in
-      let body := compile_stmt f.(Imp.fn_body) in
+      let _body := compile_stmt f.(Imp.fn_body) in
+      let body :=
+          if (rel_dec fn "main"%string)
+          then (Sseq _body (Sreturn (Some (Eunop Ointoflong (Evar (s2p "return"))))))
+          else (Sseq _body (Sreturn (Some (Evar (s2p "return"))))) in
       let fdef := {|
             fn_sig := sig;
             fn_params := params;
