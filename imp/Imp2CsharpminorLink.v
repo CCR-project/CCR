@@ -70,11 +70,11 @@ Section LINK.
 
   (* check external fun decls' sig *)
   Fixpoint __link_imp_cond3 (p : string * nat) (l : extFuns) :=
-    let '(name, n) := p in
+    let '(id, n) := p in
     match l with
     | [] => true
-    | (name2, n2) :: t =>
-      if (eqb name name2 && negb (n =? n2)%nat) then false
+    | (id2, n2) :: t =>
+      if (eqb id id2 && negb (n =? n2)%nat) then false
       else __link_imp_cond3 p t
     end
   .
@@ -157,137 +157,6 @@ End LINK.
 
 Section LINKPROPS.
 
-
-  Lemma pre_compile_iFuns_props
-        src pcs
-        (PCS: pre_compile_iFuns src = Some pcs)
-  :
-    <<PCSDEFS: Forall2 (fun a b =>
-                          let fn := fst a in
-                          let f := snd a in
-                          (s2p fn = fst b) /\
-                          (exists cf, (pre_compile_function fn f = Some cf) /\ (Gfun (Internal cf) = snd b)))
-                       src pcs>>.
-  Proof.
-    depgen pcs. induction src; i; ss; clarify.
-    { unfold pre_compile_iFuns in PCS. des_ifs. }
-    destruct pcs.
-    { clear IHsrc. unfold pre_compile_iFuns in PCS. des_ifs. }
-    rename a into src0, p into pcs0. econs 2.
-    - unfold pre_compile_iFuns in PCS. des_ifs_safe. ss. inv f. des_ifs_safe. ss. split; auto.
-      exists f. split; auto.
-    - apply IHsrc. unfold pre_compile_iFuns in PCS. des_ifs_safe. inv f.
-      unfold pre_compile_iFuns. des_ifs.
-  Qed.
-
-  Lemma pre_compile_iFuns_props2
-        src pcs
-        (PCSDEFS: Forall2 (fun a b =>
-                             let fn := fst a in
-                             let f := snd a in
-                             (s2p fn = fst b) /\
-                             (exists cf, (pre_compile_function fn f = Some cf) /\ (Gfun (Internal cf) = snd b)))
-                          src pcs)
-    :
-      <<PCS: pre_compile_iFuns src = Some pcs>>.
-  Proof.
-    depgen pcs. induction src; i; ss; clarify.
-    { inv PCSDEFS. ss. }
-    destruct pcs.
-    { inv PCSDEFS. }
-    rename a into src0, p into pcs0. inv PCSDEFS. des. rename H0 into CF, H1 into GD, H2 into ID, H4 into FA2.
-    unfold pre_compile_iFuns in *. des_ifs.
-    - red. f_equal. rewrite List.map_map. ss. f_equal.
-      2:{ apply IHsrc in FA2. inv FA2. rewrite List.map_map. ss. }
-      destruct src0. ss. rewrite CF. destruct pcs0; ss; clarify.
-    - exfalso. apply n. clear n. inv f; auto.
-    - exfalso. apply n. clear n. econs 2; eauto. destruct src0; ss. rewrite CF. ss.
-    - apply IHsrc in FA2. clarify.
-  Qed.
-
-  Lemma pre_compile_iFuns_cons
-        s src p pcs
-        (PCSCONS : pre_compile_iFuns (s :: src) = Some (p :: pcs))
-  :
-    (<<PCS: pre_compile_iFuns src = Some pcs>>).
-  Proof.
-    apply pre_compile_iFuns_props in PCSCONS. inv PCSCONS. apply pre_compile_iFuns_props2 in H4. auto.
-  Qed.
-
-  Lemma pre_compile_iFuns_names
-        src pcs
-        (PCS: pre_compile_iFuns src = Some pcs)
-  :
-    <<PCSNAMES: List.map (compose s2p fst) src = List.map fst pcs>>.
-  Proof.
-    hexploit pre_compile_iFuns_props; eauto. i. induction H; ss; eauto.
-    red. des. f_equal; eauto. apply IHForall2. apply pre_compile_iFuns_props2 in H0. auto.
-  Qed.
-
-  Lemma pre_compile_link_two
-        src1 src2 pcs1 pcs2
-        (PCS1: pre_compile_iFuns (List.map snd (prog_funsL src1)) = Some pcs1)
-        (PCS2: pre_compile_iFuns (List.map snd (prog_funsL src2)) = Some pcs2)
-    :
-      <<PCS12: pre_compile_iFuns (List.map snd (l_pfs src1 src2)) = Some (pcs1 ++ pcs2)>>.
-  Proof.
-    unfold l_pfs. rewrite map_app. red.
-    match goal with
-    | [ |- pre_compile_iFuns (?_fs1 ++ ?_fs2) = _ ] => set (fs1:=_fs1) in *; set (fs2:=_fs2) in *
-    end.
-    unfold pre_compile_iFuns in *. des_ifs; ss; clarify.
-    { repeat f_equal. rewrite map_app. rewrite map_app. ss. }
-    exfalso. apply n. clear n. rewrite map_app. apply Forall_app; eauto.
-  Qed.
-
-  Lemma link_then_unique_ids
-        src1 pcs1 src2 pcs2
-        (PCS1: pre_compile_iFuns (List.map snd (prog_funsL src1)) = Some pcs1)
-        (PCS2: pre_compile_iFuns (List.map snd (prog_funsL src2)) = Some pcs2)
-        (LINK : link_imp_cond1 src1 src2 && link_imp_cond2 src1 src2 && link_imp_cond3 src1 src2 = true)
-        (NOREPET1 : Coqlib.list_norepet
-                      (List.map fst (pcs2 ++ compile_eFuns (ext_funsL src2) ++
-                                     compile_iVars (prog_varsL src2) ++ compile_eVars (ext_varsL src2))))
-        (NOREPET2 : Coqlib.list_norepet
-                      (List.map fst (pcs1 ++ compile_eFuns (ext_funsL src1) ++
-                                     compile_iVars (prog_varsL src1) ++ compile_eVars (ext_varsL src1))))
-    :
-      (<<NPREPETL: Coqlib.list_norepet
-                     (List.map fst
-                               ((pcs1 ++ pcs2) ++
-                                (compile_eFuns (l_efs src1 src2)) ++
-                                (compile_iVars (l_pvs src1 src2)) ++
-                                (compile_eVars (l_evs src1 src2))))>>).
-  Proof.
-  Admitted.
-
-  Lemma link_then_some_gmap
-        src1 pcs1 gm1 src2 pcs2 gm2 srcl
-        (PCS1: pre_compile_iFuns (List.map snd (prog_funsL src1)) = Some pcs1)
-        (GMAP1 : get_gmap src1 = Some gm1)
-        (PCS2: pre_compile_iFuns (List.map snd (prog_funsL src2)) = Some pcs2)
-        (GMAP2 : get_gmap src2 = Some gm2)
-        (LINK : link_imp src1 src2 = Some srcl)
-    :
-      (<<GMAPL: get_gmap srcl =
-                Some (mk_gmap (compile_eVars (l_evs src1 src2))
-                              (compile_eFuns (l_efs src1 src2))
-                              (compile_iVars (l_pvs src1 src2))
-                              (pcs1 ++ pcs2))>>) /\
-      (<<NPREPETL: Coqlib.list_norepet
-                     (List.map fst
-                               ((pcs1 ++ pcs2) ++
-                                (compile_eFuns (l_efs src1 src2)) ++
-                                (compile_iVars (l_pvs src1 src2)) ++
-                                (compile_eVars (l_evs src1 src2))))>>).
-  Proof.
-    unfold link_imp in LINK. des_ifs. unfold get_gmap; ss. erewrite pre_compile_link_two; eauto.
-    uo; ss. unfold get_gmap in *. des_ifs; ss.
-    uo; des_ifs; ss; clarify. split.
-    { exfalso. apply n; clear n. apply link_then_unique_ids; eauto. depgen Heq. clear. i. bsimpl. des. eauto. }
-    apply link_then_unique_ids; eauto. depgen Heq; clear; i. bsimpl; des; eauto.
-  Qed.
-
   Lemma ext_vars_names :
     forall src, <<EVN: List.map fst (compile_eVars (ext_varsL src)) = List.map s2p (ext_varsL src)>>.
   Proof.
@@ -295,28 +164,44 @@ Section LINKPROPS.
   Qed.
 
   Lemma ext_funs_names :
-    forall src, <<EFN: List.map fst (compile_eFuns (ext_funsL src)) = List.map (compose s2p fst) (ext_funsL src)>>.
+    forall src, <<EFN: List.map fst (compile_eFuns (ext_funsL src)) = List.map (s2p ∘ fst) (ext_funsL src)>>.
   Proof.
     i. unfold compile_eFuns. rewrite List.map_map. apply List.map_ext. i. destruct a. ss.
   Qed.
 
   Lemma int_vars_names :
-    forall src, <<IVN: List.map fst (compile_iVars (prog_varsL src)) = List.map (compose s2p fst) (prog_varsL src)>>.
+    forall src, <<IVN: List.map fst (compile_iVars (prog_varsL src)) = List.map (s2p ∘ fst) (prog_varsL src)>>.
   Proof.
     i. unfold compile_iVars. rewrite List.map_map. apply List.map_ext. i. destruct a; ss.
   Qed.
 
   Lemma int_funs_names :
-    forall src pcs
-      (PCS : pre_compile_iFuns (List.map snd (prog_funsL src)) = Some pcs),
-      <<IFN: List.map fst pcs = List.map (compose s2p (compose fst snd)) (prog_funsL src)>>.
+    forall src, <<IFN: List.map fst (compile_iFuns (prog_funsL src)) = List.map (s2p ∘ (fst ∘ snd)) (prog_funsL src)>>.
   Proof.
-    i. unfold pre_compile_iFuns in PCS. des_ifs. rewrite List.map_map in f. do 3 rewrite List.map_map. red.
-    apply map_ext_strong. i. apply List.Forall_map in f. rewrite Forall_forall in f. apply f in IN.
-    des_ifs. ss. destruct x. ss. destruct p. clarify.
+    i. unfold compile_iFuns. rewrite List.map_map. apply List.map_ext. i. destruct a. destruct p. ss.
   Qed.
 
+  Lemma compile_gdefs_preserves_names :
+    forall src,
+      <<NAMES:
+        List.map s2p
+         ((name1 src.(ext_funsL)) ++ src.(ext_varsL) ++ (["malloc"; "free"]) ++ (name2 src.(prog_funsL)) ++ (name1 src.(prog_varsL)))
+        =
+        name1 (compile_gdefs src)>>.
+  Proof.
+  Admitted.
 
+  Lemma link_then_unique_ids
+        src1 src2 srcl
+        (UIDS1 : Coqlib.list_norepet (name1 (compile_gdefs src1)))
+        (UIDS2 : Coqlib.list_norepet (name1 (compile_gdefs src2)))
+        (LINK : link_imp src1 src2 = Some srcl)
+    :
+      <<UIDS : Coqlib.list_norepet (name1 (compile_gdefs srcl))>>.
+  Proof.
+    unfold link_imp in LINK. des_ifs. bsimpl. des. rename Heq0 into NOREPET. apply sumbool_to_bool_true in NOREPET.
+    rewrite <- compile_gdefs_preserves_names. ss.
+  Admitted.
 
 End LINKPROPS.
 

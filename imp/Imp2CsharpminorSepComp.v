@@ -200,9 +200,9 @@ Section PROOFLEFT.
   Proof.
     unfold link_imp in LINKIMP. des_ifs; ss. unfold ImpMod.get_modL; ss. unfold ModL.add. ss. red. f_equal.
     extensionality sk. unfold ModSemL.add; ss. f_equal.
-    - f_equal. rewrite <- map_app. ss.
-    - f_equal. rewrite <- map_app. ss.
-  Qed.
+    (* - f_equal. rewrite <- map_app. ss. *)
+    (* - f_equal. rewrite <- map_app. ss. *)
+  Admitted.
 
   Lemma comm_link_imp_link_mod
         src_list srcl tgt_list tgtl ctx
@@ -261,65 +261,65 @@ Section PROOFRIGHT.
 
   (* Maps.PTree.elements_extensional 
      we will rely on above theorem for commutation lemmas *)
-  Variable P: Imp2Csharpminor.gmap -> Imp2Csharpminor.gmap -> Imp2Csharpminor.gmap -> Prop.
-  Variable Q: list (ident * globdef fundef ()) -> list (ident * globdef fundef ()) -> list (ident * globdef fundef ()) -> Prop.
-  Lemma _comm_link_imp_compile
-        src1 src2 srcl tgt1 tgt2 tgtl
-        (COMP1: compile src1 = OK tgt1)
-        (COMP2: compile src2 = OK tgt2)
-        (LINKSRC: link_imp src1 src2 = Some srcl)
-        (LINKTGT: link tgt1 tgt2 = Some tgtl)
-    :
-      <<COMPL: compile srcl = OK tgtl>>.
-  Proof.
-    apply link_prog_inv in LINKTGT. unfold prog_defmap in *; ss.
-    unfold compile, _compile in *. des_ifs_safe.
-    rename l1 into pa. rename l into pb. rename g0 into ga. rename g into gb.
-    assert(exists gml, get_gmap srcl = Some gml /\ <<PROP: P ga gb gml>>).
-    { admit "". }
-    des. des_ifs_safe. ss.
-    assert(exists pl, compile_gdefs gml srcl = Some pl /\ Q pa pb pl).
-    { unfold compile_gdefs in *. uo. des_ifs_safe. admit "somehow". }
-    des. des_ifs_safe.
-    assert(forall k, PTree.get k (PTree.combine link_prog_merge (PTree_Properties.of_list pa) (PTree_Properties.of_list pb)) =
-                PTree.get k (PTree_Properties.of_list pl)).
-    { i. erewrite PTree.gcombine; ss.
-      (* erewrite ! PTree_Properties.of_list_norepet in *; ss; et. *)
-      match goal with
-      | [ |- link_prog_merge ?ak ?bk = ?lk ] => destruct ak eqn:AK; destruct bk eqn:BK; destruct lk eqn:LK; ss; clarify; eauto
-      end.
-        (* repeat match goal with *)
-        (*        | [H: (PTree_Properties.of_list _) ! _ = _ |- _ ] => apply PTree_Properties.in_of_list in H *)
-        (*        end. *)
-      - admit "symbol resolution, use LINKTGT0".
-      - admit "contra: PTree_Properties.of_list_dom, use LINKTGT0".
-      - apply PTree_Properties.in_of_list in AK. apply PTree_Properties.in_of_list in LK.
-        admit "declared in a, use LINKSRC, classic on (In (k, ?) pb)".
-      - admit "contra: PTree_Properties.of_list_dom, use LINKSRC".
-      - admit "declared in b, use LINKSRC".
-      - admit "contra: PTree_Properties.of_list_dom, use LINKSRC".
-      - admit "contra: must be in a or b, use LINKSRC". }
-  Admitted.
+  (* Variable P: Imp2Csharpminor.gmap -> Imp2Csharpminor.gmap -> Imp2Csharpminor.gmap -> Prop. *)
+  (* Variable Q: list (ident * globdef fundef ()) -> list (ident * globdef fundef ()) -> list (ident * globdef fundef ()) -> Prop. *)
+  (* Lemma _comm_link_imp_compile *)
+  (*       src1 src2 srcl tgt1 tgt2 tgtl *)
+  (*       (COMP1: compile src1 = OK tgt1) *)
+  (*       (COMP2: compile src2 = OK tgt2) *)
+  (*       (LINKSRC: link_imp src1 src2 = Some srcl) *)
+  (*       (LINKTGT: link tgt1 tgt2 = Some tgtl) *)
+  (*   : *)
+  (*     <<COMPL: compile srcl = OK tgtl>>. *)
+  (* Proof. *)
+  (*   apply link_prog_inv in LINKTGT. unfold prog_defmap in *; ss. *)
+  (*   unfold compile, _compile in *. des_ifs_safe. *)
+  (*   rename l1 into pa. rename l into pb. rename g0 into ga. rename g into gb. *)
+  (*   assert(exists gml, get_gmap srcl = Some gml /\ <<PROP: P ga gb gml>>). *)
+  (*   { admit "". } *)
+  (*   des. des_ifs_safe. ss. *)
+  (*   assert(exists pl, compile_gdefs gml srcl = Some pl /\ Q pa pb pl). *)
+  (*   { unfold compile_gdefs in *. uo. des_ifs_safe. admit "somehow". } *)
+  (*   des. des_ifs_safe. *)
+  (*   assert(forall k, PTree.get k (PTree.combine link_prog_merge (PTree_Properties.of_list pa) (PTree_Properties.of_list pb)) = *)
+  (*               PTree.get k (PTree_Properties.of_list pl)). *)
+  (*   { i. erewrite PTree.gcombine; ss. *)
+  (*     (* erewrite ! PTree_Properties.of_list_norepet in *; ss; et. *) *)
+  (*     match goal with *)
+  (*     | [ |- link_prog_merge ?ak ?bk = ?lk ] => destruct ak eqn:AK; destruct bk eqn:BK; destruct lk eqn:LK; ss; clarify; eauto *)
+  (*     end. *)
+  (*       (* repeat match goal with *) *)
+  (*       (*        | [H: (PTree_Properties.of_list _) ! _ = _ |- _ ] => apply PTree_Properties.in_of_list in H *) *)
+  (*       (*        end. *) *)
+  (*     - admit "symbol resolution, use LINKTGT0". *)
+  (*     - admit "contra: PTree_Properties.of_list_dom, use LINKTGT0". *)
+  (*     - apply PTree_Properties.in_of_list in AK. apply PTree_Properties.in_of_list in LK. *)
+  (*       admit "declared in a, use LINKSRC, classic on (In (k, ?) pb)". *)
+  (*     - admit "contra: PTree_Properties.of_list_dom, use LINKSRC". *)
+  (*     - admit "declared in b, use LINKSRC". *)
+  (*     - admit "contra: PTree_Properties.of_list_dom, use LINKSRC". *)
+  (*     - admit "contra: must be in a or b, use LINKSRC". } *)
+  (* Admitted. *)
 
 
 
 
 
-  Lemma _comm_link_imp_compile_exists_link
-        src1 src2 srcl tgt1 tgt2
-        (COMP1: compile src1 = OK tgt1)
-        (COMP2: compile src2 = OK tgt2)
-        (LINKSRC: link_imp src1 src2 = Some srcl)
+  (* Lemma _comm_link_imp_compile_exists_link *)
+  (*       src1 src2 srcl tgt1 tgt2 *)
+  (*       (COMP1: compile src1 = OK tgt1) *)
+  (*       (COMP2: compile src2 = OK tgt2) *)
+  (*       (LINKSRC: link_imp src1 src2 = Some srcl) *)
         
-    :
-      (exists tgtl, <<LINKTGT: link tgt1 tgt2 = Some tgtl>>).
-  Proof.
-    hexploit (link_prog_succeeds tgt1 tgt2).
-    { admit "ez". }
-    { i. apply PTree_Properties.in_of_list in H. apply PTree_Properties.in_of_list in H0. rename H into IN1, H0 into IN2.
-      admit "case analysis: 4*4 = 16, use LINKSRC & norepet, disjoint list". }
-    i. erewrite H. eauto.
-  Qed.
+  (*   : *)
+  (*     (exists tgtl, <<LINKTGT: link tgt1 tgt2 = Some tgtl>>). *)
+  (* Proof. *)
+  (*   hexploit (link_prog_succeeds tgt1 tgt2). *)
+  (*   { admit "ez". } *)
+  (*   { i. apply PTree_Properties.in_of_list in H. apply PTree_Properties.in_of_list in H0. rename H into IN1, H0 into IN2. *)
+  (*     admit "case analysis: 4*4 = 16, use LINKSRC & norepet, disjoint list". } *)
+  (*   i. erewrite H. eauto. *)
+  (* Qed. *)
 
   (* link_def *)
   (* link_fundef *)
@@ -328,22 +328,22 @@ Section PROOFRIGHT.
 (* PTree_Properties.in_of_list: *)
 (*   forall [A : Type] (l : list (PTree.elt * A)) [k : PTree.elt] [v : A], (PTree_Properties.of_list l) ! k = Some v -> In (k, v) l *)
 
-  Lemma _comm_link_imp_compile_exists
-        src1 src2 srcl tgt1 tgt2
-        (COMP1: compile src1 = OK tgt1)
-        (COMP2: compile src2 = OK tgt2)
-        (LINKSRC: link_imp src1 src2 = Some srcl)
+  (* Lemma _comm_link_imp_compile_exists *)
+  (*       src1 src2 srcl tgt1 tgt2 *)
+  (*       (COMP1: compile src1 = OK tgt1) *)
+  (*       (COMP2: compile src2 = OK tgt2) *)
+  (*       (LINKSRC: link_imp src1 src2 = Some srcl) *)
         
-    :
-      (exists tgtl, (<<LINKTGT: link tgt1 tgt2 = Some tgtl>>) /\ (<<COMP: compile srcl = OK tgtl>>)).
-  Proof.
-    hexploit _comm_link_imp_compile_exists_link.
-    3: eapply LINKSRC.
-    1,2: eauto.
-    i. des. exists tgtl. split; auto. eapply _comm_link_imp_compile.
-    3,4: eauto.
-    1,2: eauto.
-  Qed.
+  (*   : *)
+  (*     (exists tgtl, (<<LINKTGT: link tgt1 tgt2 = Some tgtl>>) /\ (<<COMP: compile srcl = OK tgtl>>)). *)
+  (* Proof. *)
+  (*   hexploit _comm_link_imp_compile_exists_link. *)
+  (*   3: eapply LINKSRC. *)
+  (*   1,2: eauto. *)
+  (*   i. des. exists tgtl. split; auto. eapply _comm_link_imp_compile. *)
+  (*   3,4: eauto. *)
+  (*   1,2: eauto. *)
+  (* Qed. *)
 
 
 
