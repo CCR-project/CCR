@@ -64,8 +64,10 @@ Section MASSAGE.
   (* | FPut' (fr0: Σ): frE unit *)
   (* | FGet': frE Σ *)
   (* . *)
+  Variable stb: (list (string * fspec)).
+
   Definition massage_callE: callE ~> stateT Σ (itree Es') :=
-    fun T '(Call fn args) fr0 => r <- trigger (hCall false fn args);; Ret (fr0, r)
+    fun T '(Call fn args) fr0 => _ <- (alist_find fn stb)?;; r <- trigger (hCall false fn args);; Ret (fr0, r)
   .
 
   Definition massage_rE: rE ~> stateT Σ (itree Es') :=
@@ -159,7 +161,7 @@ Section MASSAGE.
     unfold massage_itr in *. rewrite interp_state_ret. grind.
   Qed.
 
-  Lemma massage_itr_triggerp
+  Lemma massage_itr_pe
         (R: Type)
         (i: pE R) fr0
     :
@@ -170,15 +172,15 @@ Section MASSAGE.
     unfold massage_itr in *. rewrite interp_state_trigger. grind.
   Qed.
 
-  Lemma massage_itr_triggere
+  Lemma massage_itr_re
         (R: Type)
-        (i: eventE R) fr0
+        (i: rE R) fr0
     :
       (massage_itr (trigger i) fr0)
       =
-      (trigger i >>= (fun r => tau;; Ret (fr0, r))).
+      (massage_rE i fr0 >>= (fun r => tau;; Ret r)).
   Proof.
-    unfold massage_itr in *. rewrite interp_state_trigger. grind. unfold trivial_state_Handler. grind.
+    unfold massage_itr in *. rewrite interp_state_trigger. grind.
   Qed.
 
   Lemma massage_itr_calle
@@ -271,7 +273,7 @@ Section MASSAGE.
       (assume P;;; tau;; Ret (fr0, tt))
   .
   Proof.
-    unfold assume. rewrite massage_itr_bind. rewrite massage_itr_triggere. grind. eapply massage_itr_ret.
+    unfold assume. rewrite massage_itr_bind. rewrite massage_itr_evente. grind. eapply massage_itr_ret.
   Qed.
 
   Lemma massage_itr_guarantee
@@ -281,7 +283,7 @@ Section MASSAGE.
       =
       (guarantee P;;; tau;; Ret (fr0, tt)).
   Proof.
-    unfold guarantee. rewrite massage_itr_bind. rewrite massage_itr_triggere. grind. eapply massage_itr_ret.
+    unfold guarantee. rewrite massage_itr_bind. rewrite massage_itr_evente. grind. eapply massage_itr_ret.
   Qed.
 
   Lemma massage_itr_ext
@@ -303,13 +305,13 @@ Section RDB.
 
   Global Program Instance transl_itr_rdb: red_database (mk_box (@massage_itr)) :=
     mk_rdb
-      0
+      1
       (mk_box massage_itr_bind)
       (mk_box massage_itr_tau)
       (mk_box massage_itr_ret)
       (mk_box massage_itr_calle)
-      (mk_box massage_itr_triggere)
-      (mk_box massage_itr_triggerp)
+      (mk_box massage_itr_re)
+      (mk_box massage_itr_pe)
       (mk_box massage_itr_evente)
       (mk_box massage_itr_triggerUB)
       (mk_box massage_itr_triggerNB)
@@ -383,28 +385,32 @@ Section ADQ.
   Ltac list_tac := repeat _list_tac.
 
 
-  Lemma my_lemma1_aux'
+  Lemma my_lemma1_aux''
         (ske: Sk.t) mrs (A: Type) (itr: itree Es A) (ctx: Σ)
-        (WF: URA.wf (ctx ⋅ fst mrs)) fr
+        (WF: URA.wf (ctx ⋅ fst mrs)) mn fr fr_trash
     :
       paco6
         (_sim_itree (fun '(st_src, st_tgt) => st_src = st_tgt))
         bot6
-        (Σ * A)%type A
-        (fun '(mrs_src, fr_src) '(mrs_tgt, fr_tgt) '(ctx, r_src) r_tgt => mrs_src = mrs_tgt /\ r_src = r_tgt
-                                                                          /\ URA.wf (ctx ⋅ fst mrs_src))
+        (Σ * (Σ * A))%type A
+        (fun '(mrs_src, fr_src) '(mrs_tgt, fr_tgt) '(ctx, (_, r_src)) r_tgt =>
+           mrs_src = mrs_tgt /\ r_src = r_tgt /\ URA.wf (ctx ⋅ fst mrs_src))
         40%nat
-        (mrs, fr, interp_hCallE_tgt (_gstb ske) ord_top (UModSem.massage_itr (_gstb ske) itr) ctx)
-        (mrs, ε, UModSem.transl_itr (T:=A) itr)
+        (mrs, fr_trash, (interp_hCallE_tgt mn (_gstb ske) ord_top (massage_itr (_gstb ske) itr fr) ctx))
+        (mrs, ε, itr)
   .
   Proof.
-    ginit. revert mrs A itr ctx WF fr. gcofix CIH. i. ides itr.
+    ginit. revert mrs A itr ctx WF fr fr_trash mn. gcofix CIH. i. ides itr.
     { steps. }
     { steps. gbase. eapply CIH; et. }
     rewrite <- bind_trigger.
     destruct e; cycle 1.
     {
       destruct s; ss.
+      { destruct r0; ss.
+        - resub. ired_both. destruct mrs. gstep. econs; et. steps. gbase. eapply CIH; et.
+        - resub. ired_both. destruct mrs. gstep. econs; et. steps. gbase. eapply CIH; et.
+      }
       { destruct p; ss.
         - resub. ired_both. destruct mrs. gstep. econs; et. steps. gbase. eapply CIH; et.
         - resub. ired_both. destruct mrs. gstep. econs; et. steps. gbase. eapply CIH; et.
@@ -471,25 +477,45 @@ Section ADQ.
     all: try (exact 0%nat).
   Qed.
 
+  Lemma my_lemma1_aux'
+        (ske: Sk.t) mrs (A: Type) (itr: itree Es A) (ctx: Σ)
+        (WF: URA.wf (ctx ⋅ fst mrs)) mn fr fr_trash
+    :
+      paco6
+        (_sim_itree (fun '(st_src, st_tgt) => st_src = st_tgt))
+        bot6
+        (Σ * A)%type A
+        (fun '(mrs_src, fr_src) '(mrs_tgt, fr_tgt) '(ctx, r_src) r_tgt =>
+           mrs_src = mrs_tgt /\ r_src = r_tgt /\ URA.wf (ctx ⋅ fst mrs_src))
+        40%nat
+        (mrs, fr_trash, (interp_hCallE_tgt mn (_gstb ske) ord_top
+                                           ('(_, r) <- massage_itr (_gstb ske) itr fr;; Ret r) ctx))
+        (mrs, ε, itr)
+  .
+
   Ltac r_wf H := eapply prop_ext_rev; [eapply f_equal|]; [|eapply H]; r_solve.
 
   Lemma my_lemma1_aux
-        mrs ktr arg ske
+        mrs ktr arg ske mn
     :
       sim_itree (fun '(x, y) => x = y) 100%nat
-                (mrs, ε, fun_to_tgt (_gstb ske) (UModSem.massage_fsb (_gstb ske) ktr) arg)
-                (mrs, ε, (UModSem.transl_fun ktr) arg)
+                (mrs, ε, fun_to_tgt mn (_gstb ske) (massage_fsb (_gstb ske) ktr) arg)
+                (mrs, ε, ktr arg)
   .
   Proof.
     destruct mrs as [mr st].
-    unfold fun_to_tgt, UModSem.transl_fun, HoareFun, discard, forge, checkWf, put, cfun.
+    Local Transparent HoareFun.
+    unfold fun_to_tgt, HoareFun, discard, forge, checkWf, put, cfun.
+    Local Opaque HoareFun.
     ginit. steps. red in _ASSUME0. uipropall. des. clarify.
-    unfold UModSem.massage_fun.
+    (* do 5 (prep; try _step; unfold alist_add; simpl; des_ifs_safe). *)
+    unfold massage_fun.
     guclo lordC_spec. econs.
     { instantiate (1:=(49 + 40)%ord). rewrite <- OrdArith.add_from_nat. eapply OrdArith.le_from_nat. lia. }
-    erewrite idK_spec with (i0:=UModSem.transl_itr (ktr arg)).
+    erewrite idK_spec with (i0:=(ktr (s, t))). unfold idK at 1.
     guclo lbindC_spec. econs.
-    { gfinal. right. eapply my_lemma1_aux'.
+    { gfinal. right. erewrite f_equal2; [eapply my_lemma1_aux'| |]; et; cycle 1.
+      { f_equal. grind. }
       eapply URA.wf_mon. instantiate (1:=x2). r_wf _ASSUME. }
     i. destruct st_src1, st_tgt1. destruct vret_src. ss. des; subst. destruct p0.
     force_l. eexists. force_l. eexists (_, _). steps.
