@@ -44,188 +44,192 @@ Section SIM.
 
   Let st_local: Type := (Σ * Any.t * Σ).
 
+  Variable world: Type.
+
   Let W: Type := (Σ * Any.t) * (Σ * Any.t).
-  Variable wf: W -> Prop.
+  Variable wf: world -> W -> Prop.
+  Variable le: relation world.
 
 
-  Variant _sim_itree (sim_itree: forall (R_src R_tgt: Type) (RR: st_local -> st_local -> R_src -> R_tgt -> Prop), Ord.t -> st_local * itree Es R_src -> st_local * itree Es R_tgt -> Prop)
+  Variant _sim_itree (sim_itree: forall (R_src R_tgt: Type) (RR: st_local -> st_local -> R_src -> R_tgt -> Prop), Ord.t -> world -> st_local * itree Es R_src -> st_local * itree Es R_tgt -> Prop)
           {R_src R_tgt} (RR: st_local -> st_local -> R_src -> R_tgt -> Prop)
-    : Ord.t -> st_local * itree Es R_src -> st_local * itree Es R_tgt -> Prop :=
+    : Ord.t -> world -> st_local * itree Es R_src -> st_local * itree Es R_tgt -> Prop :=
   | sim_itree_ret
-      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
-      (WF: wf (mrs_src0, mrs_tgt0))
+      i0 w0 w1 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      (WF: wf w1 (mrs_src0, mrs_tgt0))
+      (WLE: le w0 w1)
       v_src v_tgt
       (RET: RR (mrs_src0, fr_src0) (mrs_tgt0, fr_tgt0) v_src v_tgt)
     :
-      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), (Ret v_src)) ((mrs_tgt0, fr_tgt0), (Ret v_tgt))
+      _sim_itree sim_itree RR i0 w0 ((mrs_src0, fr_src0), (Ret v_src)) ((mrs_tgt0, fr_tgt0), (Ret v_tgt))
   | sim_itree_tau
-      i0 st_src0 st_tgt0
+      i0 w0 st_src0 st_tgt0
       i1 i_src i_tgt
-      (K: sim_itree _ _ RR i1 (st_src0, i_src) (st_tgt0, i_tgt))
+      (K: sim_itree _ _ RR i1 w0 (st_src0, i_src) (st_tgt0, i_tgt))
     :
-      _sim_itree sim_itree RR i0 (st_src0, tau;; i_src) (st_tgt0, tau;; i_tgt)
+      _sim_itree sim_itree RR i0 w0 (st_src0, tau;; i_src) (st_tgt0, tau;; i_tgt)
   | sim_itree_call
-      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i0 w w0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       fn varg k_src k_tgt
-      (WF: wf (mrs_src0, mrs_tgt0))
-      (K: forall vret mrs_src1 mrs_tgt1 (WF: wf (mrs_src1, mrs_tgt1)),
-          exists i1, sim_itree _ _ RR i1 ((mrs_src1, fr_src0), k_src vret) ((mrs_tgt1, fr_tgt0), k_tgt vret))
+      (WF: wf w0 (mrs_src0, mrs_tgt0))
+      (K: forall w1 vret mrs_src1 mrs_tgt1 (WLE: le w0 w1) (WF: wf w1 (mrs_src1, mrs_tgt1)),
+          exists i1, sim_itree _ _ RR i1 w ((mrs_src1, fr_src0), k_src vret) ((mrs_tgt1, fr_tgt0), k_tgt vret))
     :
-      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), trigger (Call fn varg) >>= k_src)
+      _sim_itree sim_itree RR i0 w ((mrs_src0, fr_src0), trigger (Call fn varg) >>= k_src)
                  ((mrs_tgt0, fr_tgt0), trigger (Call fn varg) >>= k_tgt)
   | sim_itree_syscall
-      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i0 w0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       fn varg rvs k_src k_tgt
       (K: forall vret,
-          exists i1, sim_itree _ _ RR i1 ((mrs_src0, fr_src0), k_src vret) ((mrs_tgt0, fr_tgt0), k_tgt vret))
+          exists i1, sim_itree _ _ RR i1 w0 ((mrs_src0, fr_src0), k_src vret) ((mrs_tgt0, fr_tgt0), k_tgt vret))
     :
-      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), trigger (Syscall fn varg rvs) >>= k_src)
+      _sim_itree sim_itree RR i0 w0 ((mrs_src0, fr_src0), trigger (Syscall fn varg rvs) >>= k_src)
                  ((mrs_tgt0, fr_tgt0), trigger (Syscall fn varg rvs) >>= k_tgt)
   (*** TODO: sim_syscall is nontrivial; it should accept "injected" memory... ***)
   (*** TODO: simplify the model: Syscall: list val -> val ***)
 
   | sim_itree_choose_both
-      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i0 w0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       X_src X_tgt k_src k_tgt
-      (K: forall (x_tgt: X_tgt), exists (x_src: X_src) i1, sim_itree _ _ RR i1 ((mrs_src0, fr_src0), k_src x_src) ((mrs_tgt0, fr_tgt0), k_tgt x_tgt))
+      (K: forall (x_tgt: X_tgt), exists (x_src: X_src) i1, sim_itree _ _ RR i1 w0 ((mrs_src0, fr_src0), k_src x_src) ((mrs_tgt0, fr_tgt0), k_tgt x_tgt))
     :
-      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), trigger (Choose X_src) >>= k_src)
+      _sim_itree sim_itree RR i0 w0 ((mrs_src0, fr_src0), trigger (Choose X_src) >>= k_src)
                  ((mrs_tgt0, fr_tgt0), trigger (Choose X_tgt) >>= k_tgt)
   | sim_itree_take_both
-      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i0 w0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       X_src X_tgt k_src k_tgt
-      (K: forall (x_src: X_src), exists (x_tgt: X_tgt) i1, sim_itree _ _ RR i1 ((mrs_src0, fr_src0), k_src x_src) ((mrs_tgt0, fr_tgt0), k_tgt x_tgt))
+      (K: forall (x_src: X_src), exists (x_tgt: X_tgt) i1, sim_itree _ _ RR i1 w0 ((mrs_src0, fr_src0), k_src x_src) ((mrs_tgt0, fr_tgt0), k_tgt x_tgt))
     :
-      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), trigger (Take X_src) >>= k_src)
+      _sim_itree sim_itree RR i0 w0 ((mrs_src0, fr_src0), trigger (Take X_src) >>= k_src)
                  ((mrs_tgt0, fr_tgt0), trigger (Take X_tgt) >>= k_tgt)
   | sim_itree_pput_both
-      i0 fr_src0 fr_tgt0
+      i0 w0 fr_src0 fr_tgt0
       i1 k_src k_tgt
       mr_src0 mr_tgt0 mp_src1 mp_tgt1 mp_src0 mp_tgt0
-      (K: sim_itree _ _ RR i1 ((mr_src0, mp_src1, fr_src0), k_src tt) ((mr_tgt0, mp_tgt1, fr_tgt0), k_tgt tt))
+      (K: sim_itree _ _ RR i1 w0 ((mr_src0, mp_src1, fr_src0), k_src tt) ((mr_tgt0, mp_tgt1, fr_tgt0), k_tgt tt))
     :
-      _sim_itree sim_itree RR i0 ((mr_src0, mp_src0, fr_src0), trigger (PPut mp_src1) >>= k_src)
+      _sim_itree sim_itree RR i0 w0 ((mr_src0, mp_src0, fr_src0), trigger (PPut mp_src1) >>= k_src)
                  ((mr_tgt0, mp_tgt0, fr_tgt0), trigger (PPut mp_tgt1) >>= k_tgt)
   | sim_itree_mput_both
-      i0 fr_src0 fr_tgt0
+      i0 w0 fr_src0 fr_tgt0
       i1 k_src k_tgt
       mr_src0 mr_tgt0 mr_src1 mr_tgt1 mp_src0 mp_tgt0
-      (K: sim_itree _ _ RR i1 ((mr_src1, mp_src0, fr_src0), k_src tt) ((mr_tgt1, mp_tgt0, fr_tgt0), k_tgt tt))
+      (K: sim_itree _ _ RR i1 w0 ((mr_src1, mp_src0, fr_src0), k_src tt) ((mr_tgt1, mp_tgt0, fr_tgt0), k_tgt tt))
     :
-      _sim_itree sim_itree RR i0 ((mr_src0, mp_src0, fr_src0), trigger (MPut mr_src1) >>= k_src)
+      _sim_itree sim_itree RR i0 w0 ((mr_src0, mp_src0, fr_src0), trigger (MPut mr_src1) >>= k_src)
                  ((mr_tgt0, mp_tgt0, fr_tgt0), trigger (MPut mr_tgt1) >>= k_tgt)
   | sim_itree_fput_both
-      i0 fr_src0 fr_tgt0
+      i0 w0 fr_src0 fr_tgt0
       i1 k_src k_tgt
       mr_src0 mr_tgt0 fr_src1 fr_tgt1 mp_src0 mp_tgt0
-      (K: sim_itree _ _ RR i1 ((mr_src0, mp_src0, fr_src1), k_src tt) ((mr_tgt0, mp_tgt0, fr_tgt1), k_tgt tt))
+      (K: sim_itree _ _ RR i1 w0 ((mr_src0, mp_src0, fr_src1), k_src tt) ((mr_tgt0, mp_tgt0, fr_tgt1), k_tgt tt))
     :
-      _sim_itree sim_itree RR i0 ((mr_src0, mp_src0, fr_src0), trigger (FPut fr_src1) >>= k_src)
+      _sim_itree sim_itree RR i0 w0 ((mr_src0, mp_src0, fr_src0), trigger (FPut fr_src1) >>= k_src)
                  ((mr_tgt0, mp_tgt0, fr_tgt0), trigger (FPut fr_tgt1) >>= k_tgt)
   | sim_itree_pget_both
-      i0 fr_src0 fr_tgt0
+      i0 w0 fr_src0 fr_tgt0
       i1 k_src k_tgt
       mr_src0 mr_tgt0 mp_src0 mp_tgt0
-      (K: sim_itree _ _ RR i1 ((mr_src0, mp_src0, fr_src0), k_src mp_src0) ((mr_tgt0, mp_tgt0, fr_tgt0), k_tgt mp_tgt0))
+      (K: sim_itree _ _ RR i1 w0 ((mr_src0, mp_src0, fr_src0), k_src mp_src0) ((mr_tgt0, mp_tgt0, fr_tgt0), k_tgt mp_tgt0))
     :
-      _sim_itree sim_itree RR i0 ((mr_src0, mp_src0, fr_src0), trigger (PGet) >>= k_src)
+      _sim_itree sim_itree RR i0 w0 ((mr_src0, mp_src0, fr_src0), trigger (PGet) >>= k_src)
                  ((mr_tgt0, mp_tgt0, fr_tgt0), trigger (PGet) >>= k_tgt)
   | sim_itree_mget_both
-      i0 fr_src0 fr_tgt0
+      i0 w0 fr_src0 fr_tgt0
       i1 k_src k_tgt
       mr_src0 mr_tgt0 mp_src0 mp_tgt0
-      (K: sim_itree _ _ RR i1 ((mr_src0, mp_src0, fr_src0), k_src mr_src0) ((mr_tgt0, mp_tgt0, fr_tgt0), k_tgt mr_tgt0))
+      (K: sim_itree _ _ RR i1 w0 ((mr_src0, mp_src0, fr_src0), k_src mr_src0) ((mr_tgt0, mp_tgt0, fr_tgt0), k_tgt mr_tgt0))
     :
-      _sim_itree sim_itree RR i0 ((mr_src0, mp_src0, fr_src0), trigger (MGet) >>= k_src)
+      _sim_itree sim_itree RR i0 w0 ((mr_src0, mp_src0, fr_src0), trigger (MGet) >>= k_src)
                  ((mr_tgt0, mp_tgt0, fr_tgt0), trigger (MGet) >>= k_tgt)
   | sim_itree_fget_both
-      i0 fr_src0 fr_tgt0
+      i0 w0 fr_src0 fr_tgt0
       i1 k_src k_tgt
       mr_src0 mr_tgt0 mp_src0 mp_tgt0
-      (K: sim_itree _ _ RR i1 ((mr_src0, mp_src0, fr_src0), k_src fr_src0) ((mr_tgt0, mp_tgt0, fr_tgt0), k_tgt fr_tgt0))
+      (K: sim_itree _ _ RR i1 w0 ((mr_src0, mp_src0, fr_src0), k_src fr_src0) ((mr_tgt0, mp_tgt0, fr_tgt0), k_tgt fr_tgt0))
     :
-      _sim_itree sim_itree RR i0 ((mr_src0, mp_src0, fr_src0), trigger (FGet) >>= k_src)
+      _sim_itree sim_itree RR i0 w0 ((mr_src0, mp_src0, fr_src0), trigger (FGet) >>= k_src)
                  ((mr_tgt0, mp_tgt0, fr_tgt0), trigger (FGet) >>= k_tgt)
 
 
 
   | sim_itree_tau_src
-      i0 st_src0 st_tgt0
+      i0 w0 st_src0 st_tgt0
       i1 i_src i_tgt
       (ORD: Ord.lt i1 i0)
-      (K: sim_itree _ _ RR i1 (st_src0, i_src) (st_tgt0, i_tgt))
+      (K: sim_itree _ _ RR i1 w0 (st_src0, i_src) (st_tgt0, i_tgt))
     :
-      _sim_itree sim_itree RR i0 (st_src0, tau;; i_src) (st_tgt0, i_tgt)
+      _sim_itree sim_itree RR i0 w0 (st_src0, tau;; i_src) (st_tgt0, i_tgt)
   | sim_itree_choose_src
-      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i0 w0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       i1 X k_src i_tgt
       (ORD: Ord.lt i1 i0)
-      (K: exists (x: X), sim_itree _ _ RR i1 ((mrs_src0, fr_src0), k_src x) ((mrs_tgt0, fr_tgt0), i_tgt))
+      (K: exists (x: X), sim_itree _ _ RR i1 w0 ((mrs_src0, fr_src0), k_src x) ((mrs_tgt0, fr_tgt0), i_tgt))
     :
-      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), trigger (Choose X) >>= k_src)
+      _sim_itree sim_itree RR i0 w0 ((mrs_src0, fr_src0), trigger (Choose X) >>= k_src)
                  ((mrs_tgt0, fr_tgt0), i_tgt)
   | sim_itree_take_src
-      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i0 w0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       i1 X k_src i_tgt
       (ORD: Ord.lt i1 i0)
-      (K: forall (x: X), sim_itree _ _ RR i1 ((mrs_src0, fr_src0), k_src x) ((mrs_tgt0, fr_tgt0), i_tgt))
+      (K: forall (x: X), sim_itree _ _ RR i1 w0 ((mrs_src0, fr_src0), k_src x) ((mrs_tgt0, fr_tgt0), i_tgt))
     :
-      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), trigger (Take X) >>= k_src)
+      _sim_itree sim_itree RR i0 w0 ((mrs_src0, fr_src0), trigger (Take X) >>= k_src)
                  ((mrs_tgt0, fr_tgt0), i_tgt)
 
   | sim_itree_pput_src
-      i0 st_tgt0 fr_src0
+      i0 w0 st_tgt0 fr_src0
       i1 k_src i_tgt
       (ORD: Ord.lt i1 i0)
       mr0 mp1 mp0
-      (K: sim_itree _ _ RR i1 ((mr0, mp1, fr_src0), k_src tt) (st_tgt0, i_tgt))
+      (K: sim_itree _ _ RR i1 w0 ((mr0, mp1, fr_src0), k_src tt) (st_tgt0, i_tgt))
     :
-      _sim_itree sim_itree RR i0 ((mr0, mp0, fr_src0), trigger (PPut mp1) >>= k_src)
+      _sim_itree sim_itree RR i0 w0 ((mr0, mp0, fr_src0), trigger (PPut mp1) >>= k_src)
                  (st_tgt0, i_tgt)
   | sim_itree_mput_src
-      i0 st_tgt0 fr_src0
+      i0 w0 st_tgt0 fr_src0
       i1 k_src i_tgt
       (ORD: Ord.lt i1 i0)
       mr0 mr1 mp0
-      (K: sim_itree _ _ RR i1 ((mr1, mp0, fr_src0), k_src tt) (st_tgt0, i_tgt))
+      (K: sim_itree _ _ RR i1 w0 ((mr1, mp0, fr_src0), k_src tt) (st_tgt0, i_tgt))
     :
-      _sim_itree sim_itree RR i0 ((mr0, mp0, fr_src0), trigger (MPut mr1) >>= k_src)
+      _sim_itree sim_itree RR i0 w0 ((mr0, mp0, fr_src0), trigger (MPut mr1) >>= k_src)
                  (st_tgt0, i_tgt)
   | sim_itree_fput_src
-      i0 mrs_src0 st_tgt0 fr_src0
+      i0 w0 mrs_src0 st_tgt0 fr_src0
       i1 k_src i_tgt
       (ORD: Ord.lt i1 i0)
       fr_src1
-      (K: sim_itree _ _ RR i1 ((mrs_src0, fr_src1), k_src tt) (st_tgt0, i_tgt))
+      (K: sim_itree _ _ RR i1 w0 ((mrs_src0, fr_src1), k_src tt) (st_tgt0, i_tgt))
     :
-      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), trigger (FPut fr_src1) >>= k_src)
+      _sim_itree sim_itree RR i0 w0 ((mrs_src0, fr_src0), trigger (FPut fr_src1) >>= k_src)
                  (st_tgt0, i_tgt)
 
   | sim_itree_pget_src
-      i0 st_tgt0 fr_src0
+      i0 w0 st_tgt0 fr_src0
       i1 k_src i_tgt
       (ORD: Ord.lt i1 i0)
       mr0 mp0
-      (K: sim_itree _ _ RR i1 ((mr0, mp0, fr_src0), k_src mp0) (st_tgt0, i_tgt))
+      (K: sim_itree _ _ RR i1 w0 ((mr0, mp0, fr_src0), k_src mp0) (st_tgt0, i_tgt))
     :
-      _sim_itree sim_itree RR i0 ((mr0, mp0, fr_src0), trigger (PGet) >>= k_src)
+      _sim_itree sim_itree RR i0 w0 ((mr0, mp0, fr_src0), trigger (PGet) >>= k_src)
                  (st_tgt0, i_tgt)
   | sim_itree_mget_src
-      i0 fr_src0 st_tgt0
+      i0 w0 fr_src0 st_tgt0
       i1 k_src i_tgt
       (ORD: Ord.lt i1 i0)
       mr0 mp0
-      (K: sim_itree _ _ RR i1 ((mr0, mp0, fr_src0), k_src mr0) (st_tgt0, i_tgt))
+      (K: sim_itree _ _ RR i1 w0 ((mr0, mp0, fr_src0), k_src mr0) (st_tgt0, i_tgt))
     :
-      _sim_itree sim_itree RR i0 ((mr0, mp0, fr_src0), trigger (MGet) >>= k_src)
+      _sim_itree sim_itree RR i0 w0 ((mr0, mp0, fr_src0), trigger (MGet) >>= k_src)
                  (st_tgt0, i_tgt)
   | sim_itree_fget_src
-      i0 mrs_src0 st_tgt0 fr_src0
+      i0 w0 mrs_src0 st_tgt0 fr_src0
       i1 k_src i_tgt
       (ORD: Ord.lt i1 i0)
-      (K: sim_itree _ _ RR i1 ((mrs_src0, fr_src0), k_src fr_src0) ((st_tgt0), i_tgt))
+      (K: sim_itree _ _ RR i1 w0 ((mrs_src0, fr_src0), k_src fr_src0) ((st_tgt0), i_tgt))
     :
-      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), trigger (FGet) >>= k_src)
+      _sim_itree sim_itree RR i0 w0 ((mrs_src0, fr_src0), trigger (FGet) >>= k_src)
                  (st_tgt0, i_tgt)
 
 
@@ -234,96 +238,96 @@ Section SIM.
 
 
   | sim_itree_tau_tgt
-      i0 st_src0 st_tgt0
+      i0 w0 st_src0 st_tgt0
       i1 i_src i_tgt
       (ORD: Ord.lt i1 i0)
-      (K: sim_itree _ _ RR i1 (st_src0, i_src) (st_tgt0, i_tgt))
+      (K: sim_itree _ _ RR i1 w0 (st_src0, i_src) (st_tgt0, i_tgt))
     :
-      _sim_itree sim_itree RR i0 (st_src0, i_src) (st_tgt0, tau;; i_tgt)
+      _sim_itree sim_itree RR i0 w0 (st_src0, i_src) (st_tgt0, tau;; i_tgt)
   | sim_itree_choose_tgt
-      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i0 w0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       i1 X i_src k_tgt
       (ORD: Ord.lt i1 i0)
-      (K: forall (x: X), sim_itree _ _ RR i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt0), k_tgt x))
+      (K: forall (x: X), sim_itree _ _ RR i1 w0 ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt0), k_tgt x))
     :
-      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), i_src)
+      _sim_itree sim_itree RR i0 w0 ((mrs_src0, fr_src0), i_src)
                  ((mrs_tgt0, fr_tgt0), trigger (Choose X) >>= k_tgt)
   | sim_itree_take_tgt
-      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i0 w0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       i1 X i_src k_tgt
       (ORD: Ord.lt i1 i0)
-      (K: exists (x: X), sim_itree _ _ RR i1 ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt0), k_tgt x))
+      (K: exists (x: X), sim_itree _ _ RR i1 w0 ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt0), k_tgt x))
     :
-      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), i_src)
+      _sim_itree sim_itree RR i0 w0 ((mrs_src0, fr_src0), i_src)
                  ((mrs_tgt0, fr_tgt0), trigger (Take X) >>= k_tgt)
 
   | sim_itree_pput_tgt
-      i0 st_src0 fr_tgt0
+      i0 w0 st_src0 fr_tgt0
       i1 k_tgt i_src
       (ORD: Ord.lt i1 i0)
       mr0 mp1 mp0
-      (K: sim_itree _ _ RR i1 (st_src0, i_src) ((mr0, mp1, fr_tgt0), k_tgt tt))
+      (K: sim_itree _ _ RR i1 w0 (st_src0, i_src) ((mr0, mp1, fr_tgt0), k_tgt tt))
     :
-      _sim_itree sim_itree RR i0 (st_src0, i_src)
+      _sim_itree sim_itree RR i0 w0 (st_src0, i_src)
                  ((mr0, mp0, fr_tgt0), trigger (PPut mp1) >>= k_tgt)
   | sim_itree_mput_tgt
-      i0 st_src0 fr_tgt0
+      i0 w0 st_src0 fr_tgt0
       i1 k_tgt i_src
       (ORD: Ord.lt i1 i0)
       mr0 mr1 mp0
-      (K: sim_itree _ _ RR i1 (st_src0, i_src) ((mr1, mp0, fr_tgt0), k_tgt tt))
+      (K: sim_itree _ _ RR i1 w0 (st_src0, i_src) ((mr1, mp0, fr_tgt0), k_tgt tt))
     :
-      _sim_itree sim_itree RR i0 (st_src0, i_src)
+      _sim_itree sim_itree RR i0 w0 (st_src0, i_src)
                  ((mr0, mp0, fr_tgt0), trigger (MPut mr1) >>= k_tgt)
   | sim_itree_fput_tgt
-      i0 mrs_tgt0 st_src0 fr_tgt0
+      i0 w0 mrs_tgt0 st_src0 fr_tgt0
       i1 k_tgt i_src
       (ORD: Ord.lt i1 i0)
       fr_tgt1
-      (K: sim_itree _ _ RR i1 (st_src0, i_src) ((mrs_tgt0, fr_tgt1), k_tgt tt))
+      (K: sim_itree _ _ RR i1 w0 (st_src0, i_src) ((mrs_tgt0, fr_tgt1), k_tgt tt))
     :
-      _sim_itree sim_itree RR i0 (st_src0, i_src)
+      _sim_itree sim_itree RR i0 w0 (st_src0, i_src)
                  ((mrs_tgt0, fr_tgt0), trigger (FPut fr_tgt1) >>= k_tgt)
 
   | sim_itree_pget_tgt
-      i0 st_src0 fr_tgt0
+      i0 w0 st_src0 fr_tgt0
       i1 k_tgt i_src
       (ORD: Ord.lt i1 i0)
       mr0 mp0
-      (K: sim_itree _ _ RR i1 (st_src0, i_src) ((mr0, mp0, fr_tgt0), k_tgt mp0))
+      (K: sim_itree _ _ RR i1 w0 (st_src0, i_src) ((mr0, mp0, fr_tgt0), k_tgt mp0))
     :
-      _sim_itree sim_itree RR i0 (st_src0, i_src)
+      _sim_itree sim_itree RR i0 w0 (st_src0, i_src)
                  ((mr0, mp0, fr_tgt0), trigger (PGet) >>= k_tgt)
   | sim_itree_mget_tgt
-      i0 fr_tgt0 st_src0
+      i0 w0 fr_tgt0 st_src0
       i1 k_tgt i_src
       (ORD: Ord.lt i1 i0)
       mr0 mp0
-      (K: sim_itree _ _ RR i1 (st_src0, i_src) ((mr0, mp0, fr_tgt0), k_tgt mr0))
+      (K: sim_itree _ _ RR i1 w0 (st_src0, i_src) ((mr0, mp0, fr_tgt0), k_tgt mr0))
     :
-      _sim_itree sim_itree RR i0 (st_src0, i_src)
+      _sim_itree sim_itree RR i0 w0 (st_src0, i_src)
                  ((mr0, mp0, fr_tgt0), trigger (MGet) >>= k_tgt)
   | sim_itree_fget_tgt
-      i0 mrs_tgt0 st_src0 fr_tgt0
+      i0 w0 mrs_tgt0 st_src0 fr_tgt0
       i1 k_tgt i_src
       (ORD: Ord.lt i1 i0)
-      (K: sim_itree _ _ RR i1 ((st_src0), i_src) ((mrs_tgt0, fr_tgt0), k_tgt fr_tgt0))
+      (K: sim_itree _ _ RR i1 w0 ((st_src0), i_src) ((mrs_tgt0, fr_tgt0), k_tgt fr_tgt0))
     :
-      _sim_itree sim_itree RR i0 (st_src0, i_src)
+      _sim_itree sim_itree RR i0 w0 (st_src0, i_src)
                  ((mrs_tgt0, fr_tgt0), trigger (FGet) >>= k_tgt)
   | sim_itree_call_fail
-      i0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i0 w0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       fn varg k_src i_tgt
       (FAIL: ~ ns fn)
     :
-      _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), trigger (Call fn varg) >>= k_src)
+      _sim_itree sim_itree RR i0 w0 ((mrs_src0, fr_src0), trigger (Call fn varg) >>= k_src)
                  ((mrs_tgt0, fr_tgt0), i_tgt)
   .
 
-  Definition sim_itree: _ -> relation _ :=
-    paco6 _sim_itree bot6 _ _ (fun _ _ => @eq Any.t).
+  Definition sim_itree: _ -> _ -> relation _ :=
+    paco7 _sim_itree bot7 _ _ (fun _ _ => @eq Any.t).
 
-  Lemma sim_itree_mon: monotone6 _sim_itree.
+  Lemma sim_itree_mon: monotone7 _sim_itree.
   Proof.
     ii. inv IN; try (by des; econs; ss; et).
     - econs; ss; et. ii. exploit K; et. i; des. esplits; et.
@@ -336,7 +340,7 @@ Section SIM.
   Hint Unfold sim_itree.
   Hint Resolve sim_itree_mon: paco.
 
-  Lemma sim_itree_mon_ord r S_src S_tgt SS i0 i1 (ORD: (i0 <= i1)%ord): @_sim_itree r S_src S_tgt SS i0 <2= @_sim_itree r S_src S_tgt SS i1.
+  Lemma sim_itree_mon_ord r S_src S_tgt SS i0 i1 (ORD: (i0 <= i1)%ord): @_sim_itree r S_src S_tgt SS i0 <3= @_sim_itree r S_src S_tgt SS i1.
   Proof.
     ii. inv PR; try (by econs; et).
     (* - econs; try apply SIM; et. etrans; et. *)
@@ -361,37 +365,37 @@ Section SIM.
   Qed.
 
   Definition sim_fsem: relation (mname * Any.t -> itree Es Any.t) :=
-    (eq ==> (fun it_src it_tgt => forall mrs_src mrs_tgt (SIMMRS: wf (mrs_src, mrs_tgt)),
-                 exists n, sim_itree n ((mrs_src, URA.unit), it_src)
+    (eq ==> (fun it_src it_tgt => forall w mrs_src mrs_tgt (SIMMRS: wf w (mrs_src, mrs_tgt)),
+                 exists n, sim_itree n w ((mrs_src, URA.unit), it_src)
                                      ((mrs_tgt, URA.unit), it_tgt)))%signature
   .
 
   Definition sim_fnsem: relation (string * (mname * Any.t -> itree Es Any.t)) := RelProd eq sim_fsem.
 
 
-  Variant lordC (r: forall (R_src R_tgt: Type) (RR: st_local -> st_local -> R_src -> R_tgt -> Prop), Ord.t -> st_local * itree Es R_src -> st_local * itree Es R_tgt -> Prop)
+  Variant lordC (r: forall (R_src R_tgt: Type) (RR: st_local -> st_local -> R_src -> R_tgt -> Prop), Ord.t -> world -> st_local * itree Es R_src -> st_local * itree Es R_tgt -> Prop)
           {R_src R_tgt} (RR: st_local -> st_local -> R_src -> R_tgt -> Prop)
-    : Ord.t -> st_local * itree Es R_src -> st_local * itree Es R_tgt -> Prop :=
+    : Ord.t -> world -> st_local * itree Es R_src -> st_local * itree Es R_tgt -> Prop :=
   | lordC_intro
-      o0 o1 st_src st_tgt
+      o0 o1 w st_src st_tgt
       (ORD: Ord.le o0 o1)
-      (SIM: r _ _ RR o0 st_src st_tgt)
+      (SIM: r _ _ RR o0 w st_src st_tgt)
     :
-      lordC r RR o1 st_src st_tgt
+      lordC r RR o1 w st_src st_tgt
   .
   Hint Constructors lordC: core.
 
   Lemma lordC_mon
         r1 r2
-        (LE: r1 <6= r2)
+        (LE: r1 <7= r2)
     :
-      @lordC r1 <6= @lordC r2
+      @lordC r1 <7= @lordC r2
   .
   Proof. ii. destruct PR; econs; et. Qed.
 
   Hint Resolve lordC_mon: paco.
 
-  Lemma lordC_compatible: compatible6 (_sim_itree) lordC.
+  Lemma lordC_compatible: compatible7 (_sim_itree) lordC.
   Proof.
     econs; eauto with paco.
     ii. inv PR. eapply sim_itree_mon_ord; eauto.
@@ -399,44 +403,44 @@ Section SIM.
     i. econs; eauto. refl.
   Qed.
 
-  Lemma lordC_spec: lordC <7= gupaco6 (_sim_itree) (cpn6 _sim_itree).
+  Lemma lordC_spec: lordC <8= gupaco7 (_sim_itree) (cpn7 _sim_itree).
   Proof.
     intros. gclo. econs.
     { eapply lordC_compatible. }
     ss. eapply lordC_mon; [|eauto]. i. gbase. auto.
   Qed.
 
-  Variant lbindR (r s: forall S_src S_tgt (SS: st_local -> st_local -> S_src -> S_tgt -> Prop), Ord.t -> st_local * itree Es S_src -> st_local * itree Es S_tgt -> Prop):
-    forall S_src S_tgt (SS: st_local -> st_local -> S_src -> S_tgt -> Prop), Ord.t -> st_local * itree Es S_src -> st_local * itree Es S_tgt -> Prop :=
+  Variant lbindR (r s: forall S_src S_tgt (SS: st_local -> st_local -> S_src -> S_tgt -> Prop), Ord.t -> world -> st_local * itree Es S_src -> st_local * itree Es S_tgt -> Prop):
+    forall S_src S_tgt (SS: st_local -> st_local -> S_src -> S_tgt -> Prop), Ord.t -> world -> st_local * itree Es S_src -> st_local * itree Es S_tgt -> Prop :=
   | lbindR_intro
-      o0 o1
+      o0 o1 w0 w1
 
       R_src R_tgt RR
       (st_src0 st_tgt0: st_local)
       (i_src: itree Es R_src) (i_tgt: itree Es R_tgt)
-      (SIM: r _ _ RR o0 (st_src0, i_src) (st_tgt0, i_tgt))
+      (SIM: r _ _ RR o0 w0 (st_src0, i_src) (st_tgt0, i_tgt))
 
       S_src S_tgt SS
       (k_src: ktree Es R_src S_src) (k_tgt: ktree Es R_tgt S_tgt)
-      (SIMK: forall st_src1 st_tgt1 vret_src vret_tgt (SIM: RR st_src1 st_tgt1 vret_src vret_tgt), s _ _ SS o1 (st_src1, k_src vret_src) (st_tgt1, k_tgt vret_tgt))
+      (SIMK: forall st_src1 st_tgt1 vret_src vret_tgt (SIM: RR st_src1 st_tgt1 vret_src vret_tgt), s _ _ SS o1 w1 (st_src1, k_src vret_src) (st_tgt1, k_tgt vret_tgt))
     :
-      lbindR r s SS (OrdArith.add o1 o0) (st_src0, ITree.bind i_src k_src) (st_tgt0, ITree.bind i_tgt k_tgt)
+      lbindR r s SS (OrdArith.add o1 o0) w1 (st_src0, ITree.bind i_src k_src) (st_tgt0, ITree.bind i_tgt k_tgt)
   .
 
   Hint Constructors lbindR: core.
 
   Lemma lbindR_mon
         r1 r2 s1 s2
-        (LEr: r1 <6= r2) (LEs: s1 <6= s2)
+        (LEr: r1 <7= r2) (LEs: s1 <7= s2)
     :
-      lbindR r1 s1 <6= lbindR r2 s2
+      lbindR r1 s1 <7= lbindR r2 s2
   .
   Proof. ii. destruct PR; econs; et. Qed.
 
   Definition lbindC r := lbindR r r.
   Hint Unfold lbindC: core.
 
-  Lemma lbindC_wrespectful: wrespectful6 (_sim_itree) lbindC.
+  Lemma lbindC_wrespectful: wrespectful7 (_sim_itree) lbindC.
   Proof.
     econstructor; repeat intro.
     { eapply lbindR_mon; eauto. }
@@ -451,92 +455,93 @@ Section SIM.
       eapply sim_itree_mon; eauto with paco.
     + rewrite ! bind_tau. econs; eauto.
       econs 2; eauto with paco. econs; eauto with paco.
+    + rewrite ! bind_bind.
+      econs; eauto.
+      i. exploit K; eauto. i. des. eexists.
+      eapply rclo7_clo_base. econs; eauto.
     + rewrite ! bind_bind. econs; eauto.
       i. exploit K; eauto. i. des. eexists.
-      eapply rclo6_clo_base. econs; eauto.
-    + rewrite ! bind_bind. econs; eauto.
-      i. exploit K; eauto. i. des. eexists.
-      eapply rclo6_clo_base. econs; eauto.
+      eapply rclo7_clo_base. econs; eauto.
     + rewrite ! bind_bind. econs; eauto.
       i. exploit K; eauto. i. des. esplits.
-      eapply rclo6_clo_base. econs; eauto.
+      eapply rclo7_clo_base. econs; eauto.
     + rewrite ! bind_bind. econs; eauto.
       i. exploit K; eauto. i. des. esplits.
-      eapply rclo6_clo_base. econs; eauto.
+      eapply rclo7_clo_base. econs; eauto.
     + rewrite ! bind_bind. econs; eauto.
-      eapply rclo6_clo_base. econs; eauto.
+      eapply rclo7_clo_base. econs; eauto.
     + rewrite ! bind_bind. econs; eauto.
-      eapply rclo6_clo_base. econs; eauto.
+      eapply rclo7_clo_base. econs; eauto.
     + rewrite ! bind_bind. econs; eauto.
-      eapply rclo6_clo_base. econs; eauto.
+      eapply rclo7_clo_base. econs; eauto.
     + rewrite ! bind_bind. econs; eauto.
-      eapply rclo6_clo_base. econs; eauto.
+      eapply rclo7_clo_base. econs; eauto.
     + rewrite ! bind_bind. econs; eauto.
-      eapply rclo6_clo_base. econs; eauto.
+      eapply rclo7_clo_base. econs; eauto.
     + rewrite ! bind_bind. econs; eauto.
-      eapply rclo6_clo_base. econs; eauto.
+      eapply rclo7_clo_base. econs; eauto.
     + rewrite ! bind_tau. econs; eauto.
       { eapply OrdArith.lt_add_r; eauto. }
       econs 2; eauto with paco. econs; eauto with paco.
     + rewrite ! bind_bind. des. econs; eauto.
       { eapply OrdArith.lt_add_r; eauto. }
-      eexists. eapply rclo6_clo_base. econs; eauto.
+      eexists. eapply rclo7_clo_base. econs; eauto.
     + rewrite ! bind_bind. econs; eauto.
       { eapply OrdArith.lt_add_r; eauto. }
       i. hexploit K; eauto. i.
-      eapply rclo6_clo_base. econs; eauto.
+      eapply rclo7_clo_base. econs; eauto.
     + rewrite ! bind_bind. econs; eauto.
       { eapply OrdArith.lt_add_r; eauto. }
-      eapply rclo6_clo_base. econs; eauto.
+      eapply rclo7_clo_base. econs; eauto.
     + rewrite ! bind_bind. econs; eauto.
       { eapply OrdArith.lt_add_r; eauto. }
-      eapply rclo6_clo_base. econs; eauto.
+      eapply rclo7_clo_base. econs; eauto.
     + rewrite ! bind_bind. econs; eauto.
       { eapply OrdArith.lt_add_r; eauto. }
-      eapply rclo6_clo_base. econs; eauto.
+      eapply rclo7_clo_base. econs; eauto.
     + rewrite ! bind_bind. econs; eauto.
       { eapply OrdArith.lt_add_r; eauto. }
-      eapply rclo6_clo_base. econs; eauto.
+      eapply rclo7_clo_base. econs; eauto.
     + rewrite ! bind_bind. econs; eauto.
       { eapply OrdArith.lt_add_r; eauto. }
-      eapply rclo6_clo_base. econs; eauto.
+      eapply rclo7_clo_base. econs; eauto.
     + rewrite ! bind_bind. econs; eauto.
       { eapply OrdArith.lt_add_r; eauto. }
-      eapply rclo6_clo_base. econs; eauto.
+      eapply rclo7_clo_base. econs; eauto.
     + rewrite ! bind_tau. econs; eauto.
       { eapply OrdArith.lt_add_r; eauto. }
       econs 2; eauto with paco. econs; eauto with paco.
     + rewrite ! bind_bind. econs; eauto.
       { eapply OrdArith.lt_add_r; eauto. }
       i. hexploit K; eauto. i.
-      eapply rclo6_clo_base. econs; eauto.
+      eapply rclo7_clo_base. econs; eauto.
     + rewrite ! bind_bind. des. econs; eauto.
       { eapply OrdArith.lt_add_r; eauto. }
-      eexists. eapply rclo6_clo_base. econs; eauto.
+      eexists. eapply rclo7_clo_base. econs; eauto.
     + rewrite ! bind_bind. econs; eauto.
       { eapply OrdArith.lt_add_r; eauto. }
-      eapply rclo6_clo_base. econs; eauto.
+      eapply rclo7_clo_base. econs; eauto.
     + rewrite ! bind_bind. econs; eauto.
       { eapply OrdArith.lt_add_r; eauto. }
-      eapply rclo6_clo_base. econs; eauto.
+      eapply rclo7_clo_base. econs; eauto.
     + rewrite ! bind_bind. econs; eauto.
       { eapply OrdArith.lt_add_r; eauto. }
-      eapply rclo6_clo_base. econs; eauto.
+      eapply rclo7_clo_base. econs; eauto.
     + rewrite ! bind_bind. econs; eauto.
       { eapply OrdArith.lt_add_r; eauto. }
-      eapply rclo6_clo_base. econs; eauto.
+      eapply rclo7_clo_base. econs; eauto.
     + rewrite ! bind_bind. econs; eauto.
       { eapply OrdArith.lt_add_r; eauto. }
-      eapply rclo6_clo_base. econs; eauto.
+      eapply rclo7_clo_base. econs; eauto.
     + rewrite ! bind_bind. econs; eauto.
       { eapply OrdArith.lt_add_r; eauto. }
-      eapply rclo6_clo_base. econs; eauto.
+      eapply rclo7_clo_base. econs; eauto.
     + rewrite ! bind_bind. econs; eauto.
   Qed.
 
-  Lemma lbindC_spec: lbindC <7= gupaco6 (_sim_itree) (cpn6 (_sim_itree)).
+  Lemma lbindC_spec: lbindC <8= gupaco7 (_sim_itree) (cpn7 (_sim_itree)).
   Proof.
-    intros. eapply wrespect6_uclo; eauto with paco. eapply lbindC_wrespectful.
+    intros. eapply wrespect7_uclo; eauto with paco. eapply lbindC_wrespectful.
   Qed.
 
 End SIM.
@@ -545,7 +550,7 @@ Hint Resolve sim_itree_mon: paco.
 
 Lemma self_sim_itree `{Σ: GRA.t} `{ns: gnames}:
   forall n mr st fr itr,
-    sim_itree (fun '(src, tgt) => src = tgt) n (mr, st, fr, itr) (mr, st, fr, itr).
+    sim_itree (fun _ '(src, tgt) => src = tgt) top2 n tt (mr, st, fr, itr) (mr, st, fr, itr).
 Proof.
   pcofix CIH. i. pfold. ides itr.
   { eapply sim_itree_ret; ss. }
@@ -593,10 +598,13 @@ Section SIMMODSEM.
 
   Let W: Type := (Σ * Any.t) * (Σ * Any.t).
   Inductive sim: Prop := mk {
-    wf: W -> Prop;
-    sim_fnsems: Forall2 (sim_fnsem wf) ms_src.(ModSem.fnsems) ms_tgt.(ModSem.fnsems);
+    world: Type;
+    wf: world -> W -> Prop;
+    le: world -> world -> Prop;
+    le_PreOrder: PreOrder le;
+    sim_fnsems: Forall2 (sim_fnsem wf le) ms_src.(ModSem.fnsems) ms_tgt.(ModSem.fnsems);
     sim_mn: ms_src.(ModSem.mn) = ms_tgt.(ModSem.mn);
-    sim_initial: wf ((ms_src.(ModSem.initial_mr), ms_src.(ModSem.initial_st)), (ms_tgt.(ModSem.initial_mr), ms_tgt.(ModSem.initial_st)));
+    sim_initial: exists w_init, wf w_init ((ms_src.(ModSem.initial_mr), ms_src.(ModSem.initial_st)), (ms_tgt.(ModSem.initial_mr), ms_tgt.(ModSem.initial_st)));
   }.
 
 End SIMMODSEM.
@@ -605,10 +613,12 @@ Lemma self_sim `{Σ: GRA.t} `{ns: gnames} (ms: ModSem.t):
   sim ms ms.
 Proof.
   econs; et.
-  - instantiate (1:=(fun '(src, tgt) => src = tgt)). (* fun p => fst p = snd p *)
+  - instantiate (1:=fun (_ _: unit) => True). ss.
+  - instantiate (1:=(fun (_: unit) '(src, tgt) => src = tgt)). (* fun p => fst p = snd p *)
     generalize (ModSem.fnsems ms).
     induction l; ii; ss.
-    econs; eauto. econs; ss. ii; clarify. destruct mrs_tgt. exploit self_sim_itree; et.
+    econs; eauto. econs; ss. ii; clarify.
+    destruct w. destruct mrs_tgt. exploit self_sim_itree; et.
   - ss.
 Unshelve.
 all: try (exact 0).
@@ -627,27 +637,28 @@ Section ADQ.
 
   Variable ms_src ms_tgt: ModSem.t.
 
-  Let wf_lift (wf: ((Σ * Any.t) * (Σ * Any.t) -> Prop)): (alist string (Σ * Any.t) * alist string (Σ * Any.t) -> Prop) :=
-    (fun '(mrs_src, mrs_tgt) =>
+  Let wf_lift world (wf: (world -> (Σ * Any.t) * (Σ * Any.t) -> Prop)): world -> (alist string (Σ * Any.t) * alist string (Σ * Any.t) -> Prop) :=
+    (fun w '(mrs_src, mrs_tgt) =>
        exists mr_src mp_src mr_tgt mp_tgt,
          (<<SRC: mrs_src = Maps.add ms_src.(ModSem.mn) (mr_src, mp_src) Maps.empty>>) /\
          (<<TGT: mrs_tgt = Maps.add ms_tgt.(ModSem.mn) (mr_tgt, mp_tgt) Maps.empty>>) /\
-         (<<WF: wf ((mr_src, mp_src), (mr_tgt, mp_tgt))>>)
+         (<<WF: wf w ((mr_src, mp_src), (mr_tgt, mp_tgt))>>)
     )
   .
 
   Lemma adequacy_lift_itree
-        (wf: ((Σ * Any.t) * (Σ * Any.t) -> Prop))
-        n mr_src0 mp_src0 fr_src0 i_src0 mr_tgt0 mp_tgt0 fr_tgt0 i_tgt0
+        world (wf: world -> ((Σ * Any.t) * (Σ * Any.t) -> Prop))
+        (le: world -> world -> Prop)
+        n w mr_src0 mp_src0 fr_src0 i_src0 mr_tgt0 mp_tgt0 fr_tgt0 i_tgt0
         (MN: ms_src.(ModSem.mn) = ms_tgt.(ModSem.mn))
-        (SIM: sim_itree wf n (mr_src0, mp_src0, fr_src0, i_src0) (mr_tgt0, mp_tgt0, fr_tgt0, i_tgt0))
+        (SIM: sim_itree wf le n w (mr_src0, mp_src0, fr_src0, i_src0) (mr_tgt0, mp_tgt0, fr_tgt0, i_tgt0))
     :
-      <<SIM: SimModSemL.sim_itree (wf_lift wf) (2 * n)%ord ([(ModSem.mn ms_src, (mr_src0, mp_src0))], fr_src0, transl_all (ModSem.mn ms_src) i_src0)
+      <<SIM: SimModSemL.sim_itree (wf_lift wf) le (2 * n)%ord w ([(ModSem.mn ms_src, (mr_src0, mp_src0))], fr_src0, transl_all (ModSem.mn ms_src) i_src0)
                        ([(ModSem.mn ms_tgt, (mr_tgt0, mp_tgt0))], fr_tgt0, transl_all (ModSem.mn ms_tgt) i_tgt0)>>
   .
   Proof.
     r. ginit.
-    { eapply cpn6_wcompat. eauto with paco. }
+    { eapply cpn7_wcompat. eauto with paco. }
     revert_until wf. gcofix CIH. i.
     punfold SIM. dependent destruction SIM.
     - unfold transl_all. rewrite ! unfold_interp. ss. gstep. econs; eauto.
@@ -664,7 +675,7 @@ Section ADQ.
           (trigger EventsL.PushFrame;;; r <- trigger (Call fn (Any.pair (Any.upcast (ModSem.mn ms_src)) varg));; trigger EventsL.PopFrame;;; tau;; (interp (handle_all (ModSem.mn ms_tgt)) (k_tgt r))); cycle 1.
       { rewrite MN. grind. }
       gstep. econs; eauto.
-      { rr. esplits; ss. }
+      { rr. esplits; ss; et. }
       ii. ss. des; ss. subst. unfold alist_add. ss.
       exploit K; et. i; des. pclearbot. exists (2 * i1)%ord.
       replace (interp (handle_all (ModSem.mn ms_src))) with (transl_all (ModSem.mn ms_src)) by refl.
@@ -683,7 +694,7 @@ Section ADQ.
       unfold alist_add; ss. des_ifs.
       { bsimpl. unfold rel_dec in *. ss. des_sumbool; ss. }
       ired. gstep; econs; et. pclearbot. gbase.
-      match goal with | [ |- r _ _ _ _ ?x _ ] => remember x as tmp end.
+      match goal with | [ |- r _ _ _ _ _ ?x _ ] => remember x as tmp end.
       rewrite MN. subst tmp.
       eapply CIH; et.
     - unfold transl_all. rewrite ! unfold_interp. ired.
@@ -693,7 +704,7 @@ Section ADQ.
       unfold alist_add; ss. des_ifs.
       { bsimpl. unfold rel_dec in *. ss. des_sumbool; ss. }
       ired. gstep; econs; et. pclearbot. gbase.
-      match goal with | [ |- r _ _ _ _ ?x _ ] => remember x as tmp end.
+      match goal with | [ |- r _ _ _ _ _ ?x _ ] => remember x as tmp end.
       rewrite MN. subst tmp.
       eapply CIH; et.
     - unfold transl_all. rewrite ! unfold_interp. ired.
@@ -703,7 +714,7 @@ Section ADQ.
       { unfold rel_dec. ss. des_ifs. des_sumbool; ss. }
       { unfold rel_dec. ss. des_ifs. des_sumbool; ss. }
       ired. gstep; econs; et. pclearbot. gbase.
-      match goal with | [ |- r _ _ _ _ ?x _ ] => remember x as tmp end.
+      match goal with | [ |- r _ _ _ _ _ ?x _ ] => remember x as tmp end.
       rewrite MN. subst tmp.
       eapply CIH; et.
     - unfold transl_all. rewrite ! unfold_interp. ired.
@@ -711,7 +722,7 @@ Section ADQ.
       { unfold rel_dec. ss. des_ifs. des_sumbool; ss. }
       { unfold rel_dec. ss. des_ifs. des_sumbool; ss. }
       ired. gstep; econs; et. pclearbot. gbase.
-      match goal with | [ |- r _ _ _ _ ?x _ ] => remember x as tmp end.
+      match goal with | [ |- r _ _ _ _ _ ?x _ ] => remember x as tmp end.
       rewrite MN. subst tmp.
       eapply CIH; et.
     - unfold transl_all. rewrite ! unfold_interp. ired.
@@ -857,13 +868,13 @@ Section ADQ.
 
 
     (***** TGT *****)
-    - unfold transl_all. match goal with | [ |- gpaco6 _ _ _ _ _ _ _ _ ?x _ ] => remember x as tmp end.
+    - unfold transl_all. match goal with | [ |- gpaco7 _ _ _ _ _ _ _ _ _ ?x _ ] => remember x as tmp end.
       rewrite unfold_interp. ired. subst.
       gstep. econs; et.
       { eapply OrdArith.lt_mult_r; et. rewrite <- Ord.from_nat_O. eapply OrdArith.lt_from_nat. lia. }
       pclearbot.
       gbase. eapply CIH; et.
-    - unfold transl_all. match goal with | [ |- gpaco6 _ _ _ _ _ _ _ _ ?x _ ] => remember x as tmp end.
+    - unfold transl_all. match goal with | [ |- gpaco7 _ _ _ _ _ _ _ _ _ ?x _ ] => remember x as tmp end.
       rewrite unfold_interp. ired. subst.
       gstep. econs; et.
       { instantiate (1:=(2 * i1 + 1)%ord). eapply Ord.S_is_S in ORD. eapply Ord.lt_le_lt; cycle 1.
@@ -878,7 +889,7 @@ Section ADQ.
       esplits. ired. gstep; econs; et.
       { eapply OrdArith.add_lt_l. rewrite <- Ord.from_nat_O. eapply OrdArith.lt_from_nat. lia. }
       gbase. eapply CIH; et.
-    - unfold transl_all. match goal with | [ |- gpaco6 _ _ _ _ _ _ _ _ ?x _ ] => remember x as tmp end.
+    - unfold transl_all. match goal with | [ |- gpaco7 _ _ _ _ _ _ _ _ _ ?x _ ] => remember x as tmp end.
       rewrite unfold_interp. ired. subst.
       des. pclearbot. gstep. econs; et.
       { instantiate (1:=(2 * i1 + 1)%ord). eapply Ord.S_is_S in ORD. eapply Ord.lt_le_lt; cycle 1.
@@ -892,7 +903,7 @@ Section ADQ.
       esplits. ired. gstep; econs; et.
       { eapply OrdArith.add_lt_l. rewrite <- Ord.from_nat_O. eapply OrdArith.lt_from_nat. lia. }
       gbase. eapply CIH; et.
-    - unfold transl_all. match goal with | [ |- gpaco6 _ _ _ _ _ _ _ _ ?x _ ] => remember x as tmp end.
+    - unfold transl_all. match goal with | [ |- gpaco7 _ _ _ _ _ _ _ _ _ ?x _ ] => remember x as tmp end.
       rewrite unfold_interp. ired. subst.
       pclearbot.
       gstep. econs; ss; et.
@@ -910,7 +921,7 @@ Section ADQ.
       unfold alist_add. ss. unfold rel_dec. ss. des_ifs.
       { bsimpl. des_sumbool; ss. }
       ired. gbase. eapply CIH; et.
-    - unfold transl_all. match goal with | [ |- gpaco6 _ _ _ _ _ _ _ _ ?x _ ] => remember x as tmp end.
+    - unfold transl_all. match goal with | [ |- gpaco7 _ _ _ _ _ _ _ _ _ ?x _ ] => remember x as tmp end.
       rewrite unfold_interp. ired. subst.
       pclearbot.
       gstep. econs; ss; et.
@@ -928,7 +939,7 @@ Section ADQ.
       unfold alist_add. ss. unfold rel_dec. ss. des_ifs.
       { bsimpl. des_sumbool; ss. }
       ired. gbase. eapply CIH; et.
-    - unfold transl_all. match goal with | [ |- gpaco6 _ _ _ _ _ _ _ _ ?x _ ] => remember x as tmp end.
+    - unfold transl_all. match goal with | [ |- gpaco7 _ _ _ _ _ _ _ _ _ ?x _ ] => remember x as tmp end.
       rewrite unfold_interp. ired. subst.
       pclearbot.
       gstep. econs; ss; et.
@@ -943,23 +954,7 @@ Section ADQ.
       gstep. econs; ss; et.
       { eapply OrdArith.add_lt_l. rewrite <- Ord.from_nat_O. eapply OrdArith.lt_from_nat. lia. }
       ired. gbase. eapply CIH; et.
-    - unfold transl_all. match goal with | [ |- gpaco6 _ _ _ _ _ _ _ _ ?x _ ] => remember x as tmp end.
-      rewrite unfold_interp. ired. subst.
-      pclearbot.
-      gstep. econs; ss; et.
-      { instantiate (1:=(2 * i1 + 1)%ord). eapply Ord.S_is_S in ORD. eapply Ord.lt_le_lt; cycle 1.
-        { rewrite <- ORD. refl. }
-        assert(T: ((Ord.S i1) == (i1 + 1))%ord).
-        { rewrite Ord.from_nat_S. rewrite OrdArith.add_S. ss. rewrite OrdArith.add_O_r. refl. }
-        rewrite T. rewrite OrdArith.mult_dist.
-        rewrite OrdArith.mult_1_r.
-        eapply OrdArith.lt_add_r. eapply OrdArith.lt_from_nat. lia.
-      }
-      { unfold rel_dec. ss. des_ifs. des_sumbool; ss. }
-      gstep. econs; ss; et.
-      { eapply OrdArith.add_lt_l. rewrite <- Ord.from_nat_O. eapply OrdArith.lt_from_nat. lia. }
-      ired. gbase. eapply CIH; et.
-    - unfold transl_all. match goal with | [ |- gpaco6 _ _ _ _ _ _ _ _ ?x _ ] => remember x as tmp end.
+    - unfold transl_all. match goal with | [ |- gpaco7 _ _ _ _ _ _ _ _ _ ?x _ ] => remember x as tmp end.
       rewrite unfold_interp. ired. subst.
       pclearbot.
       gstep. econs; ss; et.
@@ -975,7 +970,23 @@ Section ADQ.
       gstep. econs; ss; et.
       { eapply OrdArith.add_lt_l. rewrite <- Ord.from_nat_O. eapply OrdArith.lt_from_nat. lia. }
       ired. gbase. eapply CIH; et.
-    - unfold transl_all. match goal with | [ |- gpaco6 _ _ _ _ _ _ _ _ ?x _ ] => remember x as tmp end.
+    - unfold transl_all. match goal with | [ |- gpaco7 _ _ _ _ _ _ _ _ _ ?x _ ] => remember x as tmp end.
+      rewrite unfold_interp. ired. subst.
+      pclearbot.
+      gstep. econs; ss; et.
+      { instantiate (1:=(2 * i1 + 1)%ord). eapply Ord.S_is_S in ORD. eapply Ord.lt_le_lt; cycle 1.
+        { rewrite <- ORD. refl. }
+        assert(T: ((Ord.S i1) == (i1 + 1))%ord).
+        { rewrite Ord.from_nat_S. rewrite OrdArith.add_S. ss. rewrite OrdArith.add_O_r. refl. }
+        rewrite T. rewrite OrdArith.mult_dist.
+        rewrite OrdArith.mult_1_r.
+        eapply OrdArith.lt_add_r. eapply OrdArith.lt_from_nat. lia.
+      }
+      { unfold rel_dec. ss. des_ifs. des_sumbool; ss. }
+      gstep. econs; ss; et.
+      { eapply OrdArith.add_lt_l. rewrite <- Ord.from_nat_O. eapply OrdArith.lt_from_nat. lia. }
+      ired. gbase. eapply CIH; et.
+    - unfold transl_all. match goal with | [ |- gpaco7 _ _ _ _ _ _ _ _ _ ?x _ ] => remember x as tmp end.
       rewrite unfold_interp. ired. subst.
       pclearbot.
       gstep. econs; ss; et.
@@ -1001,17 +1012,17 @@ Section ADQ.
   Qed.
 
   Lemma adequacy_lift_fsem
-        wf f_src f_tgt
+        world wf (le: world -> world -> Prop) f_src f_tgt
         (MN: ms_src.(ModSem.mn) = ms_tgt.(ModSem.mn))
-        (SIM: sim_fsem wf f_src f_tgt)
+        (SIM: sim_fsem wf le f_src f_tgt)
     :
-      SimModSemL.sim_fsem (wf_lift wf) (fun args => transl_all ms_src.(ModSem.mn) (f_src args))
-               (fun args => transl_all ms_tgt.(ModSem.mn) (f_tgt args))
+      SimModSemL.sim_fsem (wf_lift wf) le (fun args => transl_all ms_src.(ModSem.mn) (f_src args))
+                          (fun args => transl_all ms_tgt.(ModSem.mn) (f_tgt args))
   .
   Proof.
     ii. clarify. rr in SIM. specialize (SIM y y eq_refl).
     r in SIMMRS. des. ss. subst. unfold alist_add in *. ss. clarify.
-    specialize (SIM (mr_src, mp_src) (mr_tgt, mp_tgt)).
+    specialize (SIM w (mr_src, mp_src) (mr_tgt, mp_tgt)).
     exploit SIM; et. i; des.
     esplits. eapply adequacy_lift_itree; ss; et.
   Qed.
@@ -1023,8 +1034,8 @@ Section ADQ.
   .
   Proof.
     inv SIM.
-    right. econs; eauto.
-    { instantiate (1:=top2). ss. }
+    right. econs.
+    { eapply le_PreOrder. }
     { instantiate (1:=wf_lift wf).
       ss.
       eapply Forall2_apply_Forall2; et.
@@ -1032,7 +1043,7 @@ Section ADQ.
       split; ss. r. ss.
       eapply adequacy_lift_fsem; et.
     }
-    { ss. esplits; ss; et. }
+    { des. ss. esplits; ss; et. }
     { ss. rewrite sim_mn. auto. }
   Qed.
 
@@ -1435,7 +1446,7 @@ Section SIMMOD.
        { right. econs.
          { instantiate (1:=top2). ss. }
          { ss. }
-         { instantiate (1:=top1). ss. }
+         { exists tt. instantiate (1:=top2). ss. }
          { ss. }
        }
        { eapply ModSemLPair.add_modsempair; ss. }
