@@ -53,6 +53,12 @@ Record function : Type := mk_function {
 
 
 
+(** ** Supported System Calls by Imp *)
+Definition syscalls : list (string * nat) :=
+  [("print", 1); ("scan", 1)].
+
+
+
 (** ** Program *)
 
 (** program components *)
@@ -165,16 +171,16 @@ Section Denote.
   Definition call_ban f :=
     rel_dec f "alloc" || rel_dec f "free" || rel_dec f "load" || rel_dec f "store" || rel_dec f "cmp" || rel_dec f "main".
 
-  Fixpoint denote_stmt (efs : extFuns) (s : stmt) : itree eff val :=
+  Fixpoint denote_stmt (s : stmt) : itree eff val :=
     match s with
     | Skip => tau;; Ret Vundef
     | Assign x e =>
       v <- denote_expr e;; trigger (SetVar x v);;; tau;; Ret Vundef
     | Seq a b =>
-      tau;; denote_stmt efs a;;; denote_stmt efs b
+      tau;; denote_stmt a;;; denote_stmt b
     | If i t e =>
       v <- denote_expr i;; `b: bool <- (is_true v)?;; tau;;
-      if b then (denote_stmt efs t) else (denote_stmt efs e)
+      if b then (denote_stmt t) else (denote_stmt e)
 
     | CallFun x f args =>
       if (call_ban f)
@@ -195,7 +201,7 @@ Section Denote.
         trigger (SetVar x v);;; tau;; Ret Vundef
 
     | CallSys x f args =>
-      sig <- (alist_find f efs)? ;; assume (sig = List.length args);;;
+      sig <- (alist_find f syscalls)? ;; assume (sig = List.length args);;;
       eval_args <- denote_exprs args;;
       v <- trigger (Syscall f eval_args top1);;
       trigger (SetVar x v);;; tau;; Ret Vundef
@@ -298,13 +304,13 @@ Section Interp.
 
   (* 'return' is a fixed register, holding the return value of this function. *)
   (* '_' is a black hole register, holding garbage *)
-  Definition eval_imp (ge: SkEnv.t) (efs: extFuns) (f: function) (args: list val) : itree Es val :=
+  Definition eval_imp (ge: SkEnv.t) (f: function) (args: list val) : itree Es val :=
     let vars := f.(fn_vars) ++ ["return"; "_"] in
     let params := f.(fn_params) in
     assume (NoDup (params ++ vars));;;
     match (init_args params args []) with
     | Some iargs =>
-      '(_, retv) <- (interp_imp ge (tau;; (denote_stmt efs f.(fn_body));;; retv <- (denote_expr (Var "return")) ;; Ret retv)
+      '(_, retv) <- (interp_imp ge (tau;; (denote_stmt f.(fn_body));;; retv <- (denote_expr (Var "return")) ;; Ret retv)
                                     ((init_lenv vars) ++ iargs));; Ret retv
     | None => triggerUB
     end.
@@ -326,7 +332,7 @@ Section MODSEM.
   (* Instance Initial_void1 : @Initial (Type -> Type) IFun void1 := @elim_void1. (*** TODO: move to ITreelib ***) *)
 
   Definition modsem (m : program) (ge: SkEnv.t) : ModSem.t := {|
-    ModSem.fnsems := List.map (fun '(fn, f) => (fn, cfun (eval_imp ge m.(ext_funs) f))) m.(prog_funs);
+    ModSem.fnsems := List.map (fun '(fn, f) => (fn, cfun (eval_imp ge f))) m.(prog_funs);
     ModSem.mn := m.(name);
     ModSem.initial_mr := ε;
     ModSem.initial_st := tt↑;
@@ -339,7 +345,7 @@ Section MODSEM.
 
   Definition modsemL (mL : programL) (ge: SkEnv.t) : ModSemL.t := {|
     ModSemL.fnsems :=
-      List.map (fun '(mn, (fn, f)) => (fn, fun a => transl_all mn (cfun (eval_imp ge mL.(ext_funsL) f) a))) mL.(prog_funsL);
+      List.map (fun '(mn, (fn, f)) => (fn, fun a => transl_all mn (cfun (eval_imp ge f) a))) mL.(prog_funsL);
     ModSemL.initial_mrs :=
       List.map (fun name => (name, (ε, tt↑))) mL.(nameL);
   |}.
