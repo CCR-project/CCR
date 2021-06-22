@@ -324,11 +324,17 @@ Section MASSAGE.
     fun ktr => mk_specbody fspec_trivial (massage_fun ktr)
   .
 
-  Definition massage (ms: ModSem.t): SModSem.t := {|
+  Definition massage_ms (ms: ModSem.t): SModSem.t := {|
     SModSem.fnsems := List.map (map_snd massage_fsb) ms.(ModSem.fnsems);
     SModSem.mn := ms.(ModSem.mn);
     SModSem.initial_mr := ε;
     SModSem.initial_st := Any.pair (ms.(ModSem.initial_st)) (ε: Σ)↑;
+  |}
+  .
+
+  Definition massage_md (md: Mod.t): SMod.t := {|
+    SMod.get_modsem := fun sk => massage_ms (Mod.get_modsem md sk);
+    SMod.sk := md.(Mod.sk);
   |}
   .
 
@@ -607,7 +613,7 @@ Section ADQ.
         bot6
         (Σ * (Σ * A))%type A
         (fun '((mr_src, st_src), fr_src) '((mr_tgt, st_tgt), fr_tgt) '(ctx, (_, r_src)) r_tgt =>
-           st_src = (Any.pair mr_tgt↑ st_tgt) /\ r_src = r_tgt
+           mr_src = ε /\ st_src = (Any.pair mr_tgt↑ st_tgt) /\ r_src = r_tgt
            /\ URA.wf ctx
         )
         40%nat
@@ -727,24 +733,21 @@ Section ADQ.
     { ired_both. erewrite idK_spec with (i0:=(addtau (ktr (s, t)))).
       guclo lbindC_spec. econs.
       - instantiate (1:=(fun '((mr_src, st_src), fr_src) '((mr_tgt, st_tgt), fr_tgt) '(ctx, (_, r_src)) r_tgt =>
-           st_src = (Any.pair mr_tgt↑ st_tgt) /\ r_src = r_tgt
-           /\ URA.wf ctx
-        )).
+           mr_src = ε /\ st_src = (Any.pair mr_tgt↑ st_tgt) /\ r_src = r_tgt
+           /\ URA.wf ctx)).
         gfinal. right. eapply my_lemma1_aux''; et.
         { eapply URA.wf_mon; et. }
       - i. des_ifs. ss. des_ifs. ss. des; clarify. unfold idK. steps.
-        {
-        { my_red_both. 
-        grind.
-        { et. }
-        eapply my_lemma1_aux''.
-        erewrite f_equal2; [eapply my_lemma1_aux''| |]; et; cycle 1.
-        { f_equal. grind. }
-        eapply URA.wf_mon. instantiate (1:=x2). r_wf _ASSUME. }
-    i. destruct st_src1, st_tgt1. destruct vret_src. ss. des; subst. destruct p0.
+        { instantiate (1:=(fun '((mr_src, st_src), fr_src) '((mr_tgt, st_tgt), fr_tgt) '(ctx, r_src) r_tgt =>
+           mr_src = ε /\ st_src = (Any.pair mr_tgt↑ st_tgt) /\ r_src = r_tgt
+           /\ URA.wf ctx)).
+          ss.
+        }
+    }
+    i. des_ifs. des; subst.
     force_l. eexists. force_l. eexists (_, _). steps.
     force_l.
-    { instantiate (1:=ε). instantiate (1:=c2). r_wf SIM1. }
+    { instantiate (1:=ε). instantiate (1:=ε). rewrite ! URA.unit_id; ss. }
     steps. force_l. eexists.
     force_l.
     { red. uipropall. }
@@ -758,7 +761,7 @@ Section ADQ.
         umd
         (IN: In umd umds)
     :
-      ModPair.sim (SMod.to_tgt _gstb (UMod.massage _gstb umd)) (UMod.transl umd)
+      ModPair.sim (SMod.to_tgt _gstb (massage _gstb umd)) umd
   .
   Proof.
     econs; ss.
