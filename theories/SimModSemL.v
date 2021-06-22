@@ -953,7 +953,47 @@ Section ADD.
     :
       sim_itree wf1 (RelProd le1 le0) n (w1, w0) ms_src ms_tgt.
   Proof.
-    admit "ez".
+    revert n w0 w1 ms_src ms_tgt SIM. pcofix CIH.
+    i. punfold SIM. pfold. inv SIM.
+    - destruct w3. econs; et.
+      { eapply EQV. et. }
+      { inv WLE. split; ss. }
+    - econs. right. eapply CIH. pclearbot. et.
+    - destruct w2. econs.
+      { eapply EQV. et. }
+      { i. destruct w3. inv WLE. hexploit K.
+        { instantiate (1:=(_, _)). split; et. }
+        { eapply EQV. et. }
+        i. des. esplits. right. eapply CIH. pclearbot. et.
+      }
+    - econs. i. hexploit K. i. des. esplits. right. eapply CIH. pclearbot. et.
+    - econs. i. hexploit K. i. des. esplits. right. eapply CIH. pclearbot. et.
+    - econs. i. hexploit K. i. des. esplits. right. eapply CIH. pclearbot. et.
+    - econs; et. pclearbot. et.
+    - econs; et. pclearbot. et.
+    - econs; et. pclearbot. et.
+    - econs; et. pclearbot. et.
+    - econs; et. pclearbot. et.
+    - econs; et. pclearbot. et.
+    - econs; et. pclearbot. et.
+    - econs; et. des. pclearbot. et.
+    - econs; et. i. hexploit K. i. des. esplits. right. eapply CIH. pclearbot. et.
+    - econs; et. i. hexploit K. i. des. esplits. right. eapply CIH. pclearbot. et.
+    - econs; et. i. hexploit K. i. des. esplits. right. eapply CIH. pclearbot. et.
+    - econs; et. i. hexploit K. i. des. esplits. right. eapply CIH. pclearbot. et.
+    - econs; et. i. hexploit K. i. des. esplits. right. eapply CIH. pclearbot. et.
+    - econs; et. i. hexploit K. i. des. esplits. right. eapply CIH. pclearbot. et.
+    - econs; et. i. hexploit K. i. des. esplits. right. eapply CIH. pclearbot. et.
+    - econs; et. i. hexploit K. i. des. esplits. right. eapply CIH. pclearbot. et.
+    - econs; et. i. hexploit K. i. des. esplits. right. eapply CIH. pclearbot. et.
+    - econs; et. i. hexploit K. i. des. esplits. right. eapply CIH. pclearbot. et.
+    - econs; et. i. hexploit K. i. des. esplits. right. eapply CIH. pclearbot. et.
+    - econs; et. i. hexploit K. i. des. esplits. right. eapply CIH. pclearbot. et.
+    - econs; et. i. hexploit K. i. des. esplits. right. eapply CIH. pclearbot. et.
+    - econs; et. i. hexploit K. i. des. esplits. right. eapply CIH. pclearbot. et.
+    - econs; et. i. hexploit K. i. des. esplits. right. eapply CIH. pclearbot. et.
+    - econs; et. i. hexploit K. i. des. esplits. right. eapply CIH. pclearbot. et.
+    - econs; et.
   Qed.
 
   Lemma add_sim_itree world0 world1
