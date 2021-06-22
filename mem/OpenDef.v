@@ -561,13 +561,14 @@ Section KMOD.
   }
   .
 
-  Definition transl (frds: list mname) (md: t): SMod.t := {|
-    SMod.get_modsem := fun skenv => KModSem.transl frds (md.(get_modsem) skenv);
+  Definition transl (frds: Sk.t -> list mname) (md: t): SMod.t := {|
+    SMod.get_modsem := fun sk => KModSem.transl (frds sk) (md.(get_modsem) sk);
     SMod.sk := md.(sk);
   |}
   .
 
-  Lemma transl_comm: forall md frds skenv, KModSem.transl frds (md.(get_modsem) skenv) = (transl frds md).(SMod.get_modsem) skenv.
+  Lemma transl_comm: forall md frds sk, KModSem.transl (frds sk) (md.(get_modsem) sk) =
+                                        (transl frds md).(SMod.get_modsem) sk.
   Proof. i. refl. Qed.
 
 End KMOD.
