@@ -595,7 +595,9 @@ Section ADQ.
 
   Lemma my_lemma1_aux''
         (ske: Sk.t) mr0 st0 (A: Type) (itr: itree Es A) (ctx: Σ)
-        mn fr0 fr_trash mr_trash
+        mn
+        (UNKNOWN: ~In mn (frds ske))
+        fr0 fr_trash mr_trash
         (* (WF: URA.wf (ctx ⋅ mr0)) *)
         (WF: URA.wf (ctx ⋅ mr_trash))
     :
@@ -650,29 +652,31 @@ Section ADQ.
           ired_both. gstep; econs; et. i. esplits; et. steps. gbase. eapply CIH; et.
       }
     }
-    destruct c. resub. ired_both. steps. rewrite _UNWRAPU. steps.
+    destruct c. resub. ired_both. resub. steps. rewrite _UNWRAPU. steps.
     rename _UNWRAPU into T.
     eapply alist_find_some in T. unfold _gstb in T. rewrite in_app_iff in *. des; ss.
     - list_tac.
       des_ifs. unfold _kmss in T. list_tac. subst. unfold kmds in T0. list_tac. subst.
       ss. list_tac. des_ifs. ss.
       unfold HoareCall, discard, forge, put, checkWf. steps.
-      destruct mrs.
-      force_l. exists (c, ε). steps.
+      force_l. exists (mr_trash, ε). steps.
       force_l.
       { rewrite ! URA.unit_id. auto. }
       steps. force_l. exists ε. steps.
       force_l. exists ε. steps. force_l.
       { rewrite URA.unit_id. auto. }
       steps. force_l. exists None. steps.
-      force_l. exists (args↑). steps.
+      force_l. exists (args). steps.
       force_l. exists ord_top. steps.
       force_l.
-      { rewrite Any.upcast_split. eapply to_semantic; [|eapply URA.wf_unit]. iIntros. iPureIntro. esplits; et. }
+      { eapply to_semantic; [|eapply URA.wf_unit]. iIntros. iPureIntro. esplits; et. }
       steps. force_l.
       { split; et. }
       steps. gstep. econs; et. i. subst. destruct mrs_tgt1. eexists. steps.
       red in _ASSUME0. uipropall. subst.
+      erewrite f_equal2; [gbase; eapply CIH| |].
+      { et. }
+      {
       gbase. eapply CIH. ss.
       eapply URA.wf_mon. instantiate (1:=x0).
       replace (x2 ⋅ c0 ⋅ x0) with (x2 ⋅ (c0 ⋅ (ε ⋅ x0))); auto. r_solve.
