@@ -105,8 +105,8 @@ Section MATCH.
       EventsL.interp_Es (ModSemL.prog ms)
                         (transl_all mn (` x0 : val <- (let (_, retv) := v in Ret retv);; Ret (Any.upcast x0))) st1);; Ret (snd x0).
 
-  Definition itree_of_cont_stmt (s : Imp.stmt) :=
-    fun ge le ms mn rp => itree_of_imp_cont (denote_stmt s) ge le ms mn rp.
+  Definition itree_of_cont_stmt efs (s : Imp.stmt) :=
+    fun ge le ms mn rp => itree_of_imp_cont (denote_stmt efs s) ge le ms mn rp.
 
   Definition imp_state := itree eventE Any.t.
   Definition imp_cont {T} {R} := (r_state * p_state * (lenv * T)) -> itree eventE (r_state * p_state * (lenv * R)).
@@ -181,7 +181,7 @@ Section MATCH.
   Definition ret_call_main := Kseq exit_stmt Kstop.
 
   (* global env is fixed when src program is fixed *)
-  Variable gm : gmap.
+  Variable efs : extFuns.
   Variable ge : SkEnv.t.
   (* ModSem should be fixed with src too *)
   Variable ms : ModSemL.t.
@@ -195,8 +195,8 @@ Section MATCH.
       match_code mn idK [return_stmt]
   | match_code_cont
       code itr ktr chead ctail
-      (CST: compile_stmt gm code = Some chead)
-      (ITR: itr = fun '(r, p, (le, _)) => itree_of_cont_stmt code ge le ms mn (r, p))
+      (CST: compile_stmt code = chead)
+      (ITR: itr = fun '(r, p, (le, _)) => itree_of_cont_stmt efs code ge le ms mn (r, p))
       (MCONT: match_code mn ktr ctail)
     :
       match_code mn (fun x => (itr x >>= ktr)) (chead :: ctail)
@@ -240,7 +240,7 @@ Section MATCH.
   Variant match_states src : imp_state -> Csharpminor.state -> Prop :=
   | match_states_intro
       tf rstate pstate le tle code itr tcode m tm next stack tcont mn sz
-      (CST: compile_stmt gm code = Some tcode)
+      (CST: compile_stmt code = tcode)
       (WFRSTATE: List.length (snd rstate) = S sz)
       (ML: @match_le src le tle)
       (PSTATE: pstate "Mem"%string = m↑)
@@ -248,7 +248,7 @@ Section MATCH.
       (WFCONT: wf_ccont tcont)
       (MCONT: match_code mn next (get_cont_stmts tcont))
       (MSTACK: @match_stack sz src mn stack (get_cont_stack tcont))
-      (ITR: itr = itree_of_cont_stmt code ge le ms mn (rstate, pstate))
+      (ITR: itr = itree_of_cont_stmt efs code ge le ms mn (rstate, pstate))
     :
       match_states src (x <- itr;; next x >>= stack) (State tf tcode tcont empty_env tle tm)
   .
