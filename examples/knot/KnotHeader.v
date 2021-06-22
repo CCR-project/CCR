@@ -19,112 +19,77 @@ Set Implicit Arguments.
 
 
 Section AUX.
-  Definition invRA: URA.t := Auth.t (Excl.t (Any.t * Any.t)).
-  Definition inv_black (mp_src mp_tgt: Any.t): (@URA.car invRA)
-    := Auth.black (M:=(Excl.t _)) (Some (mp_src, mp_tgt)).
-  Definition inv_white (mp_src mp_tgt: Any.t): (@URA.car invRA)
-    := Auth.white (M:=(Excl.t _)) (Some (mp_src, mp_tgt)).
+  Definition invRA: URA.t := Auth.t (Excl.t unit).
+
+  Definition inv_black: (@URA.car invRA)
+    := Auth.black (M:=(Excl.t _)) (Some tt).
+  Definition inv_white: (@URA.car invRA)
+    := Auth.white (M:=(Excl.t _)) (Some tt).
 
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG invRA Σ}.
 
-  Definition inv_opener: iProp :=
-    (∃ mp_src mp_tgt, OwnM (inv_white mp_src mp_tgt))%I.
-  Definition inv_closed: iProp :=
-    (∃ mp_src mp_tgt, OwnM (inv_black mp_src mp_tgt))%I.
-  Definition inv_closer (mp_src mp_tgt: Any.t): iProp :=
-    OwnM (inv_black mp_src mp_tgt)%I.
-  Definition inv_open (mp_src mp_tgt: Any.t): iProp :=
-    OwnM (inv_white mp_src mp_tgt)%I.
+  Definition inv_closed: iProp := OwnM inv_black%I.
+  Definition inv_open: iProp := OwnM inv_white%I.
 
-
-
-  Lemma inv_opening mp_src mp_tgt
+  Lemma inv_open_unique
     :
-      inv_opener -∗ inv_closed -∗ #=> (inv_closer mp_src mp_tgt ** inv_open mp_src mp_tgt).
-  Proof.
-    unfold inv_opener, inv_closed, inv_open, inv_closer, inv_white, inv_black.
-    iIntros "H0 H1".
-    iDestruct "H0" as (mp_src0 mp_tgt0) "H0".
-    iDestruct "H1" as (mp_src1 mp_tgt1) "H1".
-    iCombine "H1 H0" as "H".
-    iPoseProof (OwnM_Upd with "H") as "H".
-    { instantiate (1:=Auth.black (Some (mp_src, mp_tgt): Excl.t _) ⋅ Auth.white (Some (mp_src, mp_tgt): Excl.t _)).
-      eapply Auth.auth_update. ii. des. split.
-      { ur. ss. }
-      { ur. ur in FRAME. des_ifs. }
-    }
-    { iMod "H". iModIntro. iDestruct "H" as "[H0 H1]". iFrame. }
-  Qed.
-
-  Lemma inv_closing mp_src0 mp_tgt0 mp_src1 mp_tgt1
-    :
-      inv_closer mp_src0 mp_tgt0 -∗ inv_open mp_src1 mp_tgt1 -∗ #=> (inv_opener ** inv_closed).
-  Proof.
-    unfold inv_opener, inv_closed, inv_open, inv_closer, inv_white, inv_black.
-    iIntros "H0 H1".
-    iCombine "H0 H1" as "H".
-    iPoseProof (OwnM_Upd with "H") as "H".
-    { instantiate (1:=Auth.black (Some (mp_src0, mp_tgt0): Excl.t _) ⋅ Auth.white (Some (mp_src0, mp_tgt0): Excl.t _)).
-      eapply Auth.auth_update. ii. des. split.
-      { ur. ss. }
-      { ur. ur in FRAME. des_ifs. }
-    }
-    { iMod "H". iDestruct "H" as "[H0 H1]".
-      iModIntro. iSplitL "H1".
-      { iExists _, _. ss. }
-      { iExists _, _. ss. }
-    }
-  Qed.
-
-  Lemma inv_open_unique mp_src mp_tgt
-    :
-      inv_opener -∗ inv_open mp_src mp_tgt -∗ False
+      inv_open -∗ inv_open -∗ False
   .
   Proof.
-    unfold inv_opener, inv_closed, inv_open, inv_closer, inv_white, inv_black.
-    iIntros "H0 H1". iDestruct "H0" as (mp_src0 mp_tgt0) "H0".
+    unfold inv_open, inv_closed, inv_white, inv_black.
+    iIntros "H0 H1".
     iCombine "H0 H1" as "H". iOwnWf "H" as WF. exfalso.
     repeat ur in WF. ss.
   Qed.
 
-  Lemma inv_close_unique mp_src mp_tgt
+  Lemma inv_closed_unique
     :
-      inv_closer mp_src mp_tgt -∗ inv_closed -∗ False
+      inv_closed -∗ inv_closed -∗ False
   .
   Proof.
-    unfold inv_opener, inv_closed, inv_open, inv_closer, inv_white, inv_black.
-    iIntros "H0 H1". iDestruct "H1" as (mp_src0 mp_tgt0) "H1".
+    unfold inv_open, inv_closed, inv_white, inv_black.
+    iIntros "H0 H1".
     iCombine "H0 H1" as "H". iOwnWf "H" as WF. exfalso.
     repeat ur in WF. ss.
   Qed.
 
-  Lemma inv_merge mp_src0 mp_tgt0 mp_src1 mp_tgt1
+  Definition inv_le
+             A (le: A -> A -> Prop)
     :
-      inv_closer mp_src0 mp_tgt0 -∗ inv_open mp_src1 mp_tgt1 -∗ ⌜mp_src1 = mp_src0 /\ mp_tgt1 = mp_tgt0⌝
-  .
+      (A + Any.t * Any.t) -> (A + Any.t * Any.t) -> Prop :=
+    fun x0 x1 =>
+      match x0, x1 with
+      | inl a0, inl a1 => le a0 a1
+      | inr st0, inr st1 => st0 = st1
+      | _, _ => False
+      end.
+
+  Lemma inv_le_PreOrder A (le: A -> A -> Prop)
+        (PREORDER: PreOrder le)
+    :
+      PreOrder (inv_le le).
   Proof.
-    unfold inv_opener, inv_closed, inv_open, inv_closer, inv_white, inv_black.
-    iIntros "H0 H1".
-    iCombine "H0 H1" as "H". iOwnWf "H" as WF. iPureIntro.
-    eapply Auth.auth_included in WF. des.
-    eapply Excl.extends in WF; ss.
-    - des; clarify.
-    - ur; ss.
+    econs.
+    { ii. destruct x; ss. refl. }
+    { ii. destruct x, y, z; ss.
+      { etrans; et. }
+      { subst. auto. }
+    }
   Qed.
 
   Definition inv_wf
              A
              (R_src: A -> Any.t -> Any.t -> iProp)
              (R_tgt: A -> Any.t -> Any.t -> iProp)
-    : (((Σ * Any.t)) * ((Σ * Any.t)) -> Prop) :=
+    : _ -> (((Σ * Any.t)) * ((Σ * Any.t)) -> Prop) :=
     @mk_wf
       _
       (A + Any.t * Any.t)
       (fun a' mp_src mp_tgt =>
          match a' with
          | inl a => inv_closed ** R_src a mp_src mp_tgt
-         | inr (mp_src1, mp_tgt1) => inv_open mp_src1 mp_tgt1 ** ⌜mp_src1 = mp_src /\ mp_tgt1 = mp_tgt⌝
+         | inr (mp_src1, mp_tgt1) => inv_open ** ⌜mp_src1 = mp_src /\ mp_tgt1 = mp_tgt⌝
          end)%I
       (fun a' mp_src mp_tgt =>
          match a' with
@@ -137,11 +102,11 @@ Section AUX.
     mk_simple
       (fun (x: X) =>
          ((fun varg o =>
-             inv_opener
+             inv_open
                **
                (fst (PQ x) varg o)),
           (fun vret =>
-             inv_opener
+             inv_open
                **
                (snd (PQ x) vret)))
       ).
@@ -154,50 +119,43 @@ Ltac iarg :=
   let CLOSED := constr:("☃CLOSED") in
   let TMP := constr:("☃TMP") in
   let ARG := constr:("ARG") in
-  eapply (@harg_clo _ _ PRE INV);
+  eapply (@harg_clo _ _ _ PRE INV);
   [eassumption
   |
   ];
-  let a := fresh "a" in
-  intros a; i;
+  i;
   let aa := fresh "aa" in
   mDesAndPureR PRE as PRE ARG;
   let EQ := fresh "EQ" in
   mPure ARG as EQ;
   try (destruct EQ);
   mDesSep PRE as OPENER PRE;
-  destruct a as [?|[?mp_src ?mp_tgt]]; simpl;
-  [mDesSep INV as CLOSED INV
-  |mAssertPure False; ss; iDestruct "INV" as "[INV _]"; iApply (inv_open_unique with "☃OPENER INV")].
-
-Ltac open_inv :=
-  mAssert _ with "☃OPENER ☃CLOSED" as "☃TMP";
-  [ iApply (inv_opening with "☃OPENER ☃CLOSED"); fail
-   |mUpd "☃TMP"; mDesSep "☃TMP" as "☃CLOSER" "☃OPEN"].
-
-Ltac close_inv :=
-  mAssert _ with "☃CLOSER ☃OPEN" as "☃TMP";
-  [ iApply (inv_closing with "☃CLOSER ☃OPEN"); fail
-   |mUpd "☃TMP"; mDesSep "☃TMP" as "☃OPENER" "☃CLOSED"].
+  match goal with
+  | [ |- (gpaco7 _ _ _ _ _ _ _ _ ?w _ _)] =>
+    destruct w as [?|[?mp_src ?mp_tgt]]; simpl;
+    [mDesSep INV as CLOSED INV
+    |mAssertPure False; ss; iDestruct "INV" as "[INV _]"; iApply (inv_open_unique with "☃OPENER INV")
+    ]
+  end.
 
 Tactic Notation "icall_open" uconstr(o) uconstr(x) "with" constr(Hns) :=
   let POST := get_fresh_name_tac "POST" in
-  let INV := constr:("☃OPEN") in
+  let INV := constr:("☃OPENER") in
   let Hns := select_ihyps Hns in
-  let Hns := constr:("☃OPEN"::Hns) in
+  let Hns := constr:("☃OPENER"::Hns) in
   eapply (@hcall_clo _ _ Hns POST INV o _ x _ (inr (_, _)));
   unshelve_goal;
   [eassumption
   |
-  |start_ipm_proof; iFrame "☃OPEN"; iSplitR; [ss|]
+  |start_ipm_proof; iSplitL "☃OPENER"; [iModIntro; iFrame; ss|]
   |eauto with ord_step
   |
   |on_current ltac:(fun H => try clear H);
    intros ? ? ? ? ? ? [|[?mp_src ?mp_tgt]]; i; simpl;
    on_current ltac:(fun H => simpl in H);
-   [mDesSep "☃OPEN" as "☃CLOSED" "☃TMP";
-    mAssertPure False; ss; iApply (inv_close_unique with "☃CLOSER ☃CLOSED")
-   |mDesSep "☃OPEN" as "☃OPEN" "☃TMP"; mPure "☃TMP" as [[] []]
+   [mDesSep "☃OPENER" as "☃OPENER" "☃TMP";
+    mAssertPure False; ss; iApply (inv_closed_unique with "☃OPENER ☃CLOSED")
+   |mDesSep "☃OPENER" as "☃OPENER" "☃TMP"; mPure "☃TMP" as [[] []]
    ]
   ].
 
@@ -237,6 +195,7 @@ Tactic Notation "iret" uconstr(a) :=
   eapply (@hret_clo _ _ _ (inl a)); unshelve_goal;
   [eauto with ord_step
   |eassumption
+  |
   |
   |start_ipm_proof; iFrame "☃CLOSED ☃OPENER"
   |

@@ -60,7 +60,7 @@ Section MAIN.
                      (fun varg o =>
                         (⌜o = ord_top⌝)
                           ** OwnM (knot_init)
-                          ** inv_opener: iProp
+                          ** inv_open: iProp
                      ),
                      (fun vret =>
                         (⌜vret = (Vint (Z.of_nat (Fib 10)))↑⌝: iProp)%I)
