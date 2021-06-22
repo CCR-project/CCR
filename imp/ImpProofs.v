@@ -705,7 +705,7 @@ Ltac imp_red :=
   cbn; try (rewrite interp_imp_bind);
   match goal with
   (** denote_stmt *)
-  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ _ (_, ITree.bind' _ (interp_imp _ (denote_stmt (?stmt)) _))) ] =>
+  | [ |- (gpaco7 (_sim_itree _ _) _ _ _ _ _ _ _ _ _ (_, ITree.bind' _ (interp_imp _ (denote_stmt (?stmt)) _))) ] =>
     match stmt with
     | Skip => rewrite interp_imp_Skip
     | Assign _ _ => rewrite interp_imp_Assign
@@ -724,7 +724,7 @@ Ltac imp_red :=
     end
 
       (** denote_expr *)
-  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ _ (_, ITree.bind' _ (interp_imp _ (denote_expr (?expr)) _))) ] =>
+  | [ |- (gpaco7 (_sim_itree _ _) _ _ _ _ _ _ _ _ _ (_, ITree.bind' _ (interp_imp _ (denote_expr (?expr)) _))) ] =>
     match expr with
     | Var _ => rewrite interp_imp_expr_Var
     | Lit _ => rewrite interp_imp_expr_Lit
@@ -736,10 +736,10 @@ Ltac imp_red :=
     | _ => fail
     end
 
-  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ _ (_, ITree.bind' _ (interp_imp _ (tau;; _) _))) ] =>
+  | [ |- (gpaco7 (_sim_itree _ _) _ _ _ _ _ _ _ _ _ (_, ITree.bind' _ (interp_imp _ (tau;; _) _))) ] =>
     rewrite interp_imp_tau
 
-  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ _ (_, ITree.bind' _ (interp_imp _ (Ret _) _))) ] =>
+  | [ |- (gpaco7 (_sim_itree _ _) _ _ _ _ _ _ _ _ _ (_, ITree.bind' _ (interp_imp _ (Ret _) _))) ] =>
     rewrite interp_imp_Ret
 
   | _ => idtac

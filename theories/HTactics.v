@@ -1016,12 +1016,13 @@ Ltac init :=
   let mn := fresh "mn" in
   let varg := fresh "varg" in
   let EQ := fresh "EQ" in
+  let w := fresh "w" in
   let mr_src := fresh "mr_src" in
   let mp_src := fresh "mp_src" in
   let mr_tgt := fresh "mr_tgt" in
   let mp_tgt := fresh "mp_tgt" in
   let WF := fresh "WF" in
-  split; ss; intros varg_src [mn varg] EQ [mr_src mp_src] [mr_tgt mp_tgt] WF;
+  split; ss; intros varg_src [mn varg] EQ w [mr_src mp_src] [mr_tgt mp_tgt] WF;
   (try subst varg_src); exists 100; cbn;
   ginit;
   try (unfold fun_to_tgt, cfun; rewrite HoareFun_parse); simpl.
@@ -1029,7 +1030,7 @@ Ltac init :=
 Ltac harg :=
   let PRE := constr:("PRE") in
   let INV := constr:("INV") in
-  eapply (@harg_clo _ _ PRE INV);
+  eapply (@harg_clo _ _ _ PRE INV);
   [eassumption
   |
   ]; i.
@@ -1038,6 +1039,7 @@ Tactic Notation "hret" uconstr(a) :=
   eapply (@hret_clo _ _ _ a); unshelve_goal;
   [eauto with ord_step
   |eassumption
+  |
   |
   |start_ipm_proof
   |

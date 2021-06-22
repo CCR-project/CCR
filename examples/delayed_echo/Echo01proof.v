@@ -85,7 +85,7 @@ Section SIMMODSEM.
   Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
   Eval compute in (@URA.car Mem1._memRA).
 
-  Let wf: W -> Prop :=
+  Let wf: _ -> W -> Prop :=
     @mk_wf
       _
       val
@@ -98,8 +98,9 @@ Section SIMMODSEM.
 
   Theorem correct: ModSemPair.sim Echo1.EchoSem Echo0.EchoSem.
   Proof.
-    econstructor 1 with (wf:=wf); et; swap 2 3.
-    { ss. econs; et. eapply to_semantic.
+    econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
+    { ss. }
+    { ss. eexists. econs; et. eapply to_semantic.
       iIntros "H". iLeft. iExists _. iSplitL; ss.
       ss. rewrite unfold_is_list. iPureIntro. auto. }
 
@@ -162,7 +163,7 @@ Section SIMMODSEM.
 
         mAssert _ with "INV INV2".
         { iCombine "INV" "INV2" as "INV". iApply (OwnM_Upd with "INV").
-          instantiate (1:= echo_black v (z :: a0) ⋅ echo_white v (z :: a0)).
+          instantiate (1:= echo_black v (z :: a) ⋅ echo_white v (z :: a)).
           eapply Auth.auth_update. rr. ii. des; ss. ur in FRAME. ur.
           destruct ctx2; ss; clarify. }
         mUpd "A". mDesOwn "A".
@@ -190,7 +191,7 @@ Section SIMMODSEM.
       { iApply (echo_ra_merge with "INV PRE"). }
       des; subst.
 
-      rewrite Any.upcast_downcast. steps. destruct a0.
+      rewrite Any.upcast_downcast. steps. destruct a.
       { rewrite unfold_is_list in ACC. ss.
         mPure "A". subst. ss.
         steps. rewrite Any.upcast_downcast. steps. hret _; ss.
@@ -208,7 +209,7 @@ Section SIMMODSEM.
       acatch. hcall _ (_, _) _ with "- INV"; ss.
       { iModIntro. iSplitL "INV1"; ss. iSplitL; ss.
         iExists _. iSplitL; ss. iSplitR "A"; ss; et.
-        { iSplit; ss. instantiate (1:=Vint z :: (map Vint a0)). clear.
+        { iSplit; ss. instantiate (1:=Vint z :: (map Vint a)). clear.
           rewrite unfold_is_list_cons. iExists _, _. iFrame; ss.
         }
       }
@@ -222,7 +223,7 @@ Section SIMMODSEM.
       mAssert _ with "INV INV2".
       { iDestruct "INV2" as (ns) "INV2". iCombine "INV" "INV2" as "INV".
         iApply (OwnM_Upd with "INV").
-        instantiate (1:= echo_black v (z :: a0) ⋅ echo_white v (z :: a0)).
+        instantiate (1:= echo_black v (z :: a) ⋅ echo_white v (z :: a)).
         eapply Auth.auth_update. rr. ii. des; ss. ur in FRAME. ur.
         destruct ctx2; ss; clarify. }
       mUpd "A2". mDesOwn "A2".
