@@ -114,14 +114,14 @@ Section SIMMODSEM.
           eapply fn_has_spec_weaker; eauto. ii. ss.
           eexists (x_src, OwnM (knot_frag (Some Fib)) ** inv_closed).
           splits; ss.
-          { i. iIntros "[[OPENER [% H]] %]".
+          { i. iIntros "[CLOSED [[% H] %]]".
             iModIntro. iFrame; ss.
             iPureIntro. des. esplits; et.
             eapply fb_has_spec_weaker; eauto.
             ii. ss. exists (Fib, x_src0). splits; ss.
             { i. iIntros "[[% [H0 H1]] %]".
               iModIntro. iFrame; ss. }
-            { i. iIntros "[[H0 [% H1]] %]".
+            { i. iIntros "[CLOSED [[% H] %]]".
               iModIntro. iFrame; ss. }
           }
           { i. iIntros "[[% [H0 H1]] %]".
