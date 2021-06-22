@@ -11,9 +11,6 @@ Require Import TODOYJ Logic.
 
 Set Implicit Arguments.
 
-Definition hcall {X Y} (fn: gname) (varg: X): itree (hCallE +' pE +' eventE) Y :=
-  vret <- trigger (hCall false fn varg↑);; vret <- vret↓ǃ;; Ret vret.
-
 Section MAIN.
 
   Context `{Σ: GRA.t}.

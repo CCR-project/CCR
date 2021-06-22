@@ -616,3 +616,6 @@ Ltac resub :=
          | |- context[ITree.trigger (@subevent _ ?F ?prf _ (resum ?a ?b ?e))] =>
            replace (ITree.trigger (@subevent _ F prf _ (resum a b e))) with (ITree.trigger (@subevent _ F _ _ e)) by refl
          end.
+
+Definition resum_ktr A E F `{E -< F}: ktree E A ~> ktree F A := fun _ ktr a => resum_itr (ktr a).
+Definition trivial_Handler `{E -< F}: Handler E F := fun T X => trigger X.

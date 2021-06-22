@@ -1117,13 +1117,8 @@ Section SIMMOD.
     destruct e.
     { ss. destruct c. ss. rewrite ! bind_bind.
       pfold. eapply wf_function_call.
-      { f_equal. extensionality u.
-        f_equal. extensionality a. rewrite bind_bind.
-        f_equal. extensionality u1.
-        rewrite bind_ret_l. rewrite bind_tau.
-        f_equal. ss.
-      }
-      i. right. rewrite bind_ret_l. eapply CIH.
+      { grind. }
+      i. right. grind. eapply CIH.
     }
     destruct s.
     { ss. destruct r0; ss.
