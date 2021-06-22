@@ -200,8 +200,8 @@ Section PROOFLEFT.
   Proof.
     unfold link_imp in LINKIMP. des_ifs; ss. unfold ImpMod.get_modL; ss. unfold ModL.add. ss. red. f_equal.
     extensionality sk. unfold ModSemL.add; ss. f_equal.
-    (* - f_equal. rewrite <- map_app. ss. *)
-    (* - f_equal. rewrite <- map_app. ss. *)
+    - f_equal. unfold l_pfs. rewrite map_app. ss.
+    - f_equal. rewrite <- map_app. ss.
   Admitted.
 
   Lemma comm_link_imp_link_mod

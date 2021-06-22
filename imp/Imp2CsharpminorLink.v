@@ -36,7 +36,13 @@ Section LINK.
   Definition l_publicL := src1.(publicL) ++ src2.(publicL).
   Definition l_defsL := src1.(defsL) ++ src2.(defsL).
 
+  (* (if/if) (if/iv) (if/ef) (if/ev) |
+     (iv/if) (iv/iv) (iv/ef) (iv/ev) |
+     (ef/if) (ef/iv) (ef/ef) (ef/ev) |
+     (ev/if) (ev/iv) (ev/ef) 16.(ev/ev) 
+  *)
   (* check defined names are unique *)
+  (* 1.if/if, 2.if/iv, 5.iv/if, 6.iv/iv *)
   Definition link_imp_cond1 := Coqlib.list_norepet_dec dec ((name1 l_pvs) ++ (name2 l_pfs)).
 
   Lemma link_imp_cond1_prop :
@@ -47,25 +53,31 @@ Section LINK.
   Qed.
 
   (* check external decls are consistent *)
+  (* 13.ev/if, 4.if/ev, 10.ef/iv, 7.iv/ef, 15.ev/ef, 12.ef/ev *)
   Definition link_imp_cond2 :=
     let sd := string_Dec in
     let c1 := Coqlib.list_norepet_dec dec (src1.(ext_varsL) ++ (name2 l_pfs)) in
     let c2 := Coqlib.list_norepet_dec dec (src2.(ext_varsL) ++ (name2 l_pfs)) in
     let c3 := Coqlib.list_norepet_dec dec ((name1 src1.(ext_funsL)) ++ (name1 l_pvs)) in
     let c4 := Coqlib.list_norepet_dec dec ((name1 src2.(ext_funsL)) ++ (name1 l_pvs)) in
-    c1 && c2 && c3 && c4.
+    let c5 := Coqlib.list_norepet_dec dec (src1.(ext_varsL) ++ (name1 src2.(ext_funsL))) in
+    let c6 := Coqlib.list_norepet_dec dec (src2.(ext_varsL) ++ (name1 src1.(ext_funsL))) in
+    c1 && c2 && c3 && c4 && c5 && c6.
 
   Lemma link_imp_cond2_prop :
     forall (_LIC2: link_imp_cond2 = true),
       (<<EV1: Coqlib.list_norepet (src1.(ext_varsL) ++ (name2 l_pfs))>>) /\
       (<<EV2: Coqlib.list_norepet (src2.(ext_varsL) ++ (name2 l_pfs))>>) /\
       (<<EF1: Coqlib.list_norepet ((name1 src1.(ext_funsL)) ++ (name1 l_pvs))>>) /\
-      (<<EF2: Coqlib.list_norepet ((name1 src2.(ext_funsL)) ++ (name1 l_pvs))>>).
+      (<<EF1: Coqlib.list_norepet ((name1 src2.(ext_funsL)) ++ (name1 l_pvs))>>) /\
+      (<<EVF1: Coqlib.list_norepet (src1.(ext_varsL) ++ (name1 src2.(ext_funsL)))>>) /\
+      (<<EVF2: Coqlib.list_norepet (src2.(ext_varsL) ++ (name1 src1.(ext_funsL)))>>).
   Proof.
     i. unfold link_imp_cond2 in _LIC2. bsimpl. des.
     apply sumbool_to_bool_true in _LIC2. apply sumbool_to_bool_true in _LIC3.
     apply sumbool_to_bool_true in _LIC1. apply sumbool_to_bool_true in _LIC0.
-    eauto.
+    apply sumbool_to_bool_true in _LIC5. apply sumbool_to_bool_true in _LIC4.
+    repeat split; eauto.
   Qed.
 
   (* check external fun decls' sig *)
@@ -121,6 +133,7 @@ Section LINK.
     - des_ifs. assert (TRUE: true = true); auto.
   Qed.
 
+  (* 11.ef/ef *)
   Definition link_imp_cond3 := _link_imp_cond3 (src1.(ext_funsL) ++ src2.(ext_funsL)).
 
   Lemma link_imp_cond3_prop :
@@ -133,11 +146,14 @@ Section LINK.
 
   (* merge external decls; vars is simple, funs assumes cond3 is passed *)
   (* link external decls; need to remove defined names *)
+
+  (* 8.iv/ev, 14.ev/iv *)
   Definition l_evs :=
     let l_evs0 := nodup string_Dec (src1.(ext_varsL) ++ src2.(ext_varsL)) in
     let l_pvsn := name1 l_pvs in
     List.filter (fun s => negb (in_dec string_Dec s l_pvsn)) l_evs0.
 
+  (* 3.if/ef, 9.ef/if *)
   Definition l_efs :=
     let l_efs0 := nodup extFun_Dec (src1.(ext_funsL) ++ src2.(ext_funsL)) in
     let l_pfsn := name2 l_pfs in
@@ -145,8 +161,7 @@ Section LINK.
 
   (* Linker for Imp programs, follows Clight's link_prog as possible *)
   Definition link_imp : option Imp.programL :=
-    if (link_imp_cond1 && link_imp_cond2 && link_imp_cond3 &&
-        (Coqlib.list_norepet_dec dec ((l_evs) ++ (name1 l_efs) ++ (name1 l_pvs) ++ (name2 l_pfs))))
+    if (link_imp_cond1 && link_imp_cond2 && link_imp_cond3)
     then Some (mk_programL l_nameL l_evs l_efs l_pvs l_pfs l_publicL l_defsL)
     else None
   .
@@ -199,7 +214,7 @@ Section LINKPROPS.
     :
       <<UIDS : Coqlib.list_norepet (name1 (compile_gdefs srcl))>>.
   Proof.
-    unfold link_imp in LINK. des_ifs. bsimpl. des. rename Heq0 into NOREPET. apply sumbool_to_bool_true in NOREPET.
+    unfold link_imp in LINK. des_ifs. bsimpl. des.
     rewrite <- compile_gdefs_preserves_names. ss.
   Admitted.
 
