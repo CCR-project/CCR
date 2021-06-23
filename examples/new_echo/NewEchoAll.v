@@ -57,15 +57,16 @@ Section ECHOSPEC.
   Qed.
   Local Existing Instance stkRA_inG.
 
-  (* Definition echo_spec: ModL.t := *)
-  (*   Mod.add_list [ *)
-  (*       SMod.to_src SMem; *)
-  (*     SMod.to_src SMain; *)
-  (*     SMod.to_src SStack; *)
-  (*     SMod.to_src SEcho; *)
-  (*     SMod.to_src SClient *)
-  (*     ]. *)
+  Let frds: list string := ["Mem"; "Stack"; "Echo"].
+  Definition echo_spec: ModL.t :=
+    Mod.add_list [
+      Mem0.Mem;
+      (KMod.transl_src (fun _ => frds) KStack);
+      (KMod.transl_src (fun _ => frds) KEcho);
+      Main;
+      Client
+      ].
 
 End ECHOSPEC.
 
-(* Definition echo_spec := ModSemL.initial_itr (ModL.enclose echo_spec_itr) None. *)
+Definition echo_spec_itr := ModSemL.initial_itr (ModL.enclose echo_spec) None.
