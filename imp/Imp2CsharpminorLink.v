@@ -289,6 +289,30 @@ Section DECOMP.
     Local Opaque init_g0. Local Opaque init_g.
   Qed.
 
+  Lemma norepet_unique {A} {B} :
+    forall (l : list (A * B)) id gd1 gd2
+      (NOREPET : Coqlib.list_norepet (List.map fst l))
+      (IN1: In (id, gd1) l)
+      (IN2: In (id, gd2) l),
+      gd1 = gd2.
+  Proof.
+    induction l; i; ss; clarify.
+    des; ss; clarify.
+    - inv NOREPET. apply (in_map fst) in IN1. ss.
+    - inv NOREPET. apply (in_map fst) in IN2. ss.
+    - inv NOREPET. destruct a; ss. eapply IHl; eauto.
+  Qed.
+
+  Lemma compile_gdefs_unique_defs :
+    forall src id gd1 gd2
+      (NOREPET : Coqlib.list_norepet (List.map fst (compile_gdefs src)))
+      (IN1: In (id, gd1) (compile_gdefs src))
+      (IN2: In (id, gd2) (compile_gdefs src)),
+      gd1 = gd2.
+  Proof. i. eapply norepet_unique; eauto. Qed.
+
+
+
 End DECOMP.
 
 
@@ -380,11 +404,94 @@ Section LINKPROPS.
     :
       exists gdl, (<<LINK: link gd1 gd2 = Some gdl>>) /\ (<<INL: In (id, gdl) (compile_gdefs srcl)>>).
   Proof.
+    Local Transparent Linker_def. Local Transparent Linker_fundef.
+    Local Transparent Linker_vardef. Local Transparent Linker_varinit.
+    hexploit link_then_unique_ids; eauto. i. des. rename H into NOREPETL.
     hexploit (decomp_gdefs IN1). i. rename H into SRC1.
     hexploit (decomp_gdefs IN2). i. rename H into SRC2.
-    destruct SRC1.
-    { clear SRC2. destruct H. clarify. unfold compile_gdefs in IN2.
+    destruct SRC1 as [SRC1 | SRC1].
+    { clear SRC2. destruct SRC1. clarify. unfold compile_gdefs in IN2. apply in_app_or in IN2. des.
+      - Local Transparent init_g. Local Transparent init_g0.
+        unfold init_g in IN2. unfold init_g0 in IN2.
+        Local Opaque init_g0. Local Opaque init_g.
+        ss. des; clarify.
+        + exists (Gfun (External EF_malloc)). split; ss; auto. apply has_malloc.
+        + apply s2p_inj in H1. clarify.
+      - apply malloc_unique in NOREPET2. eapply (in_map fst) in IN2. clarify. }
+    destruct SRC2 as [SRC2 | SRC2].
+    { clear SRC1. destruct SRC2. clarify. unfold compile_gdefs in IN1. apply in_app_or in IN1. des.
+      - Local Transparent init_g. Local Transparent init_g0.
+        unfold init_g in IN1. unfold init_g0 in IN1.
+        Local Opaque init_g0. Local Opaque init_g.
+        ss. des; clarify.
+        + exists (Gfun (External EF_malloc)). split; ss; auto. apply has_malloc.
+        + apply s2p_inj in H1. clarify.
+      - apply malloc_unique in NOREPET1. eapply (in_map fst) in IN1. clarify. }
+    destruct SRC1 as [SRC1 | SRC1].
+    { clear SRC2. destruct SRC1. clarify. unfold compile_gdefs in IN2. apply in_app_or in IN2. des.
+      - Local Transparent init_g. Local Transparent init_g0.
+        unfold init_g in IN2. unfold init_g0 in IN2.
+        Local Opaque init_g0. Local Opaque init_g.
+        ss. des; clarify.
+        + apply s2p_inj in H1. clarify.
+        + exists (Gfun (External EF_free)). split; ss; auto. apply has_free.
+      - apply free_unique in NOREPET2. eapply (in_map fst) in IN2. clarify. }
+    destruct SRC2 as [SRC2 | SRC2].
+    { clear SRC1. destruct SRC2. clarify. unfold compile_gdefs in IN1. apply in_app_or in IN1. des.
+      - Local Transparent init_g. Local Transparent init_g0.
+        unfold init_g in IN1. unfold init_g0 in IN1.
+        Local Opaque init_g0. Local Opaque init_g.
+        ss. des; clarify.
+        + apply s2p_inj in H1. clarify.
+        + exists (Gfun (External EF_free)). split; ss; auto. apply has_free.
+      - apply free_unique in NOREPET1. eapply (in_map fst) in IN1. clarify. }
+    destruct SRC1 as [SRC1 | SRC1].
+    { clear SRC2. des. clarify. unfold compile_gdefs in IN2.
+      apply in_app_or in IN2. des.
+      { apply (in_map (fst ∘ compile_eFun)) in SRC0. eapply syscalls_unique in NOREPET2.
+        2:{ unfold c_sys. eapply SRC0. }
+        clarify. exfalso. apply NOREPET2; clear NOREPET2. apply (in_map fst) in IN2. rewrite SRC1. ss. unfold name1.
+        rewrite map_app. rewrite in_app_iff. left; auto. }
+      apply in_app_or in IN2. des.
+      2:{ apply (in_map (fst ∘ compile_eFun)) in SRC0. eapply syscalls_unique in NOREPET2.
+          2:{ unfold c_sys. eapply SRC0. }
+          clarify. exfalso. apply NOREPET2; clear NOREPET2. apply (in_map fst) in IN2. rewrite SRC1. ss. unfold name1.
+          rewrite map_app. rewrite in_app_iff. right; auto. }
+      apply decomp_c_sys in IN2. des. ss; clarify. unfold compile_eFun in *. destruct fd; destruct fd0. ss; clarify.
+      apply s2p_inj in H1. clarify.
+      eapply (in_compile_gdefs_c_sys srcl) in IN0.
+      eapply (in_compile_gdefs_c_sys srcl) in SRC0.
+      unfold compile_eFun in *. hexploit (compile_gdefs_unique_defs NOREPETL IN0 SRC0); eauto.
+      i. eexists. split.
+      2:{ eapply IN0. }
+      rewrite H. red. clear. ss. des_ifs. }
+    destruct SRC2 as [SRC2 | SRC2].
+    { clear SRC1. des. clarify. unfold compile_gdefs in IN1.
+      apply in_app_or in IN1. des.
+      { apply (in_map (fst ∘ compile_eFun)) in SRC0. eapply syscalls_unique in NOREPET1.
+        2:{ unfold c_sys. eapply SRC0. }
+        clarify. exfalso. apply NOREPET1; clear NOREPET1. apply (in_map fst) in IN1. rewrite SRC2. ss. unfold name1.
+        rewrite map_app. rewrite in_app_iff. left; auto. }
+      apply in_app_or in IN1. des.
+      2:{ apply (in_map (fst ∘ compile_eFun)) in SRC0. eapply syscalls_unique in NOREPET1.
+          2:{ unfold c_sys. eapply SRC0. }
+          clarify. exfalso. apply NOREPET1; clear NOREPET1. apply (in_map fst) in IN1. rewrite SRC2. ss. unfold name1.
+          rewrite map_app. rewrite in_app_iff. right; auto. }
+      apply decomp_c_sys in IN1. des. ss; clarify. unfold compile_eFun in *. destruct fd; destruct fd0. ss; clarify.
+      apply s2p_inj in H1. clarify.
+      eapply (in_compile_gdefs_c_sys srcl) in IN0.
+      eapply (in_compile_gdefs_c_sys srcl) in SRC0.
+      unfold compile_eFun in *. hexploit (compile_gdefs_unique_defs NOREPETL IN0 SRC0); eauto.
+      i. eexists. split.
+      2:{ eapply IN0. }
+      rewrite H. red. clear. ss. des_ifs. }
     
+    
+    
+        
+
+    Local Opaque Linker_varinit. Local Opaque Linker_vardef.
+    Local Opaque Linker_fundef. Local Opaque Linker_def.
   Admitted.
 
 End LINKPROPS.
