@@ -363,8 +363,32 @@ Section SOLVEID.
 End SOLVEID.
 
 
-                             
+
 Section LINKPROPS.
+
+  Import Permutation.
+
+  Lemma link_imp_cond1_comm :
+    forall src1 src2,
+      <<LC1: link_imp_cond1 src1 src2 = true -> link_imp_cond1 src2 src1 = true>>.
+  Proof.
+    ii. apply link_imp_cond1_prop in H. des. unfold link_imp_cond1. bsimpl. repeat (try split).
+    all: apply sumbool_to_bool_is_true.
+    - depgen EV2; clear; i. unfold l_pfs in *. unfold name2 in *. rewrite map_app in *.
+      eapply Cminorgenproof.permutation_norepet. 2:{ eauto. }
+      apply Permutation_app_head. apply Permutation_app_comm.
+    - depgen EV1; clear; i. unfold l_pfs in *. unfold name2 in *. rewrite map_app in *.
+      eapply Cminorgenproof.permutation_norepet. 2:{ eauto. }
+      apply Permutation_app_head. apply Permutation_app_comm.
+    - depgen EF0; clear; i. unfold l_pvs in *. unfold name1 in *. rewrite map_app in *.
+      eapply Cminorgenproof.permutation_norepet. 2:{ eauto. }
+      apply Permutation_app_head. apply Permutation_app_comm.
+    - depgen EF1; clear; i. unfold l_pvs in *. unfold name1 in *. rewrite map_app in *.
+      eapply Cminorgenproof.permutation_norepet. 2:{ eauto. }
+      apply Permutation_app_head. apply Permutation_app_comm.
+    - depgen EVF2; clear; i. auto.
+    - depgen EVF1; clear; i. auto.
+  Qed.
 
   Lemma compile_gdefs_preserves_names :
     forall src,
@@ -409,6 +433,8 @@ Section LINKPROPS.
     hexploit link_then_unique_ids; eauto. i. des. rename H into NOREPETL.
     hexploit (decomp_gdefs IN1). i. rename H into SRC1.
     hexploit (decomp_gdefs IN2). i. rename H into SRC2.
+
+    (* malloc *)
     destruct SRC1 as [SRC1 | SRC1].
     { clear SRC2. destruct SRC1. clarify. unfold compile_gdefs in IN2. apply in_app_or in IN2. des.
       - Local Transparent init_g. Local Transparent init_g0.
@@ -427,6 +453,8 @@ Section LINKPROPS.
         + exists (Gfun (External EF_malloc)). split; ss; auto. apply has_malloc.
         + apply s2p_inj in H1. clarify.
       - apply malloc_unique in NOREPET1. eapply (in_map fst) in IN1. clarify. }
+
+    (* free *)
     destruct SRC1 as [SRC1 | SRC1].
     { clear SRC2. destruct SRC1. clarify. unfold compile_gdefs in IN2. apply in_app_or in IN2. des.
       - Local Transparent init_g. Local Transparent init_g0.
@@ -445,6 +473,8 @@ Section LINKPROPS.
         + apply s2p_inj in H1. clarify.
         + exists (Gfun (External EF_free)). split; ss; auto. apply has_free.
       - apply free_unique in NOREPET1. eapply (in_map fst) in IN1. clarify. }
+
+    (* syscalls *)
     destruct SRC1 as [SRC1 | SRC1].
     { clear SRC2. des. clarify. unfold compile_gdefs in IN2.
       apply in_app_or in IN2. des.
@@ -485,7 +515,12 @@ Section LINKPROPS.
       i. eexists. split.
       2:{ eapply IN0. }
       rewrite H. red. clear. ss. des_ifs. }
-    
+
+    (* ef/? *)
+    clear IN1 IN2. unfold link_imp in LINKSRC. des_ifs_safe. bsimpl. destruct Heq. destruct H.
+    rename H into LC1, H1 into LC2, H0 into LC3.
+    destruct SRC1 as [SRC1 | SRC1].
+    { 
     
     
         

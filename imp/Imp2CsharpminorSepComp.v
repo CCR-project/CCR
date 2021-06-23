@@ -112,7 +112,7 @@ Section PROOFRIGHT.
     unfold compile in *. des_ifs_safe; ss. des. clear LINKTGT. des_ifs_safe.
     rename l0 into NOREPET1, l into NOREPET2.
     assert (NOREPET: Coqlib.list_norepet (List.map fst (compile_gdefs srcl))).
-    { hexploit link_then_unique_ids. eapply NOREPET1. eapply NOREPET2. eauto. i. ss. }
+    { hexploit link_then_unique_ids; eauto. }
     des_ifs_safe. clear l.
     red. f_equal. f_equal; ss.
     2:{ unfold link_imp in LINKSRC. des_ifs_safe. ss. unfold l_publicL. apply map_app. }
