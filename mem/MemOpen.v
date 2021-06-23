@@ -93,7 +93,7 @@ Section PROOF.
 
   Definition MemStb: list (gname * fspec).
     eapply (Seal.sealing "stb").
-    let x := constr:(List.map (map_snd (fun ksb => (KModSem.disclose_ksb ksb): fspec)) MemSbtb) in
+    let x := constr:(List.map (map_snd (fun ksb => (KModSem.disclose_ksb_tgt ksb): fspec)) MemSbtb) in
     let y := eval cbn in x in
     eapply y.
   Defined.
