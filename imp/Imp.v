@@ -57,6 +57,7 @@ Record function : Type := mk_function {
 Definition syscalls : list (string * nat) :=
   [("print", 1); ("scan", 1)].
 
+Global Opaque syscalls.
 
 
 (** ** Program *)

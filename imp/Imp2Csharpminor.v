@@ -39,7 +39,7 @@ Section Compile.
   Let tgt_gdef := globdef fundef ().
   Let tgt_gdefs := list (ident * tgt_gdef).
 
-  Definition ident_key {T} (id: ident) l : option T := alist_find id l.
+  (* Definition ident_key {T} (id: ident) l : option T := alist_find id l. *)
 
   Fixpoint compile_expr (expr: Imp.expr) : Csharpminor.expr :=
     match expr with
@@ -170,15 +170,17 @@ Section Compile.
   Definition compile_iFuns (src : list (string * (string * Imp.function))) : tgt_gdefs := List.map compile_iFun src.
 
 
-  Let init_g : tgt_gdefs :=
+  Definition init_g : tgt_gdefs :=
     [(s2p "malloc", Gfun malloc_def); (s2p "free", Gfun free_def)].
+
+  Definition c_sys := List.map compile_eFun syscalls.
 
   Definition compile_gdefs (src : Imp.programL) : tgt_gdefs :=
     let evars := compile_eVars src.(ext_varsL) in
     let ivars := compile_iVars src.(prog_varsL) in
     let efuns := compile_eFuns src.(ext_funsL) in
     let ifuns := compile_iFuns src.(prog_funsL) in
-    let defs := efuns ++ evars ++ init_g ++ ifuns ++ ivars in
+    let defs := init_g ++ c_sys ++ efuns ++ evars ++ ifuns ++ ivars in
     defs.
 
 End Compile.
@@ -191,6 +193,8 @@ Definition compile (src : Imp.programL) : res program :=
     OK (mkprogram defs (List.map s2p src.(publicL)) (s2p "main"))
   else Error [MSG "Imp2csharpminor compilation failed; duplicated declarations"]
 .
+
+Global Opaque init_g.
 
 Module ASMGEN.
 

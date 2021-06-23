@@ -29,7 +29,7 @@ Section GENV.
         (FOUND : find
                    ((fun '(k2, _) => f ?[ eq ] k2) <*>
                      (fun '(mn, (fn, f)) =>
-                      (fn, transl_all mn ∘ cfun (eval_imp (Sk.sort (defsL src)) (ext_funsL src) f)))) (prog_funsL src) =
+                      (fn, transl_all mn ∘ cfun (eval_imp (Sk.sort (defsL src)) f)))) (prog_funsL src) =
                  Some (mn, (fn, impf)))
     :
       (fn = f) /\ (In (mn, (fn, impf)) (prog_funsL src)).
@@ -44,7 +44,7 @@ Section GENV.
     :
       <<INTGT: In (compile_iFun ifun) (compile_gdefs src)>>.
   Proof.
-    red. unfold compile_gdefs. do 2 (apply in_or_app; right). ss. do 2 right. apply in_or_app; left.
+    red. unfold compile_gdefs. do 4 (apply in_or_app; right). apply in_or_app; left.
     unfold compile_iFuns. apply in_map; auto.
   Qed.
 
@@ -54,7 +54,7 @@ Section GENV.
     :
       <<INTGT: In (compile_eFun efun) (compile_gdefs src)>>.
   Proof.
-    red. unfold compile_gdefs. apply in_or_app; left.
+    red. unfold compile_gdefs. do 2 (apply in_or_app; right). apply in_or_app; left.
     unfold compile_eFuns. apply in_map; auto.
   Qed.
 
@@ -64,7 +64,7 @@ Section GENV.
     :
       <<INTGT: In (compile_iVar ivar) (compile_gdefs src)>>.
   Proof.
-    red. unfold compile_gdefs. do 2 (apply in_or_app; right). ss. do 2 right. apply in_or_app; right.
+    red. unfold compile_gdefs. do 5 (apply in_or_app; right).
     unfold compile_iVars. apply in_map; auto.
   Qed.
 
@@ -74,8 +74,27 @@ Section GENV.
     :
       <<INTGT: In (compile_eVar evar) (compile_gdefs src)>>.
   Proof.
-    red. unfold compile_gdefs. do 1 (apply in_or_app; right). apply in_or_app; left.
+    red. unfold compile_gdefs. do 3 (apply in_or_app; right). apply in_or_app; left.
     unfold compile_eVars. apply in_map; auto.
+  Qed.
+
+  Lemma in_compile_gdefs_init_g
+        ig
+        (INSRC: In ig init_g)
+    :
+      <<INTGT: In ig (compile_gdefs src)>>.
+  Proof.
+    red. unfold compile_gdefs. do 1 (apply in_or_app; left). auto.
+  Qed.
+
+  Lemma in_compile_gdefs_c_sys
+        sc
+        (INSRC: In sc syscalls)
+    :
+      <<INTGT: In (compile_eFun sc) (compile_gdefs src)>>.
+  Proof.
+    red. unfold compile_gdefs. do 1 (apply in_or_app; right). apply in_or_app; left.
+    unfold c_sys. apply in_map; auto.
   Qed.
 
   Lemma in_tgt_prog_defs_ifuns
@@ -85,8 +104,8 @@ Section GENV.
     :
       <<INTGT: In (compile_iFun ifun) tgt.(prog_defs)>>.
   Proof.
-    unfold compile in COMP. des_ifs_safe. red. ss. apply in_compile_gdefs_ifuns in INSRC.
-    set (cf:= compile_iFun ifun) in *. destruct ifun. destruct p. unfold compile_iFun in cf; ss.
+    unfold compile in COMP. des_ifs_safe. red. simpl. apply in_compile_gdefs_ifuns in INSRC.
+    set (cf:= compile_iFun ifun) in *. destruct ifun. destruct p. unfold compile_iFun in cf; simpl.
     eapply (PTree_Properties.of_list_norepet _ (fst cf) (snd cf)) in l; eauto.
     eapply PTree.elements_correct. subst cf; ss.
   Qed.
@@ -98,8 +117,8 @@ Section GENV.
     :
       <<INTGT: In (compile_eFun efun) tgt.(prog_defs)>>.
   Proof.
-    unfold compile in COMP. des_ifs_safe. red. ss. apply in_compile_gdefs_efuns in INSRC.
-    set (cf:= compile_eFun efun) in *. destruct efun. unfold compile_eFun in cf; ss.
+    unfold compile in COMP. des_ifs_safe. red. simpl. apply in_compile_gdefs_efuns in INSRC.
+    set (cf:= compile_eFun efun) in *. destruct efun. unfold compile_eFun in cf. simpl.
     eapply (PTree_Properties.of_list_norepet _ (fst cf) (snd cf)) in l; eauto.
     eapply PTree.elements_correct. subst cf; ss.
   Qed.
@@ -126,6 +145,31 @@ Section GENV.
   Proof.
     unfold compile in COMP. des_ifs_safe. red. ss. apply in_compile_gdefs_evars in INSRC.
     set (cf:= compile_eVar evar) in *. unfold compile_eVar in cf; ss.
+    eapply (PTree_Properties.of_list_norepet _ (fst cf) (snd cf)) in l; eauto.
+    eapply PTree.elements_correct. subst cf; ss.
+  Qed.
+
+  Lemma in_tgt_prog_defs_init_g
+        tgt ig
+        (COMP: compile src = OK tgt)
+        (INSRC: In ig init_g)
+    :
+      <<INTGT: In ig tgt.(prog_defs)>>.
+  Proof.
+    unfold compile in COMP. des_ifs_safe. red. ss. apply in_compile_gdefs_init_g in INSRC.
+    destruct ig. eapply (PTree_Properties.of_list_norepet _ i g) in l; eauto.
+    eapply PTree.elements_correct. ss.
+  Qed.
+
+  Lemma in_tgt_prog_defs_c_sys
+        tgt sc
+        (COMP: compile src = OK tgt)
+        (INSRC: In sc syscalls)
+    :
+      <<INTGT: In (compile_eFun sc) tgt.(prog_defs)>>.
+  Proof.
+    unfold compile in COMP. des_ifs_safe. red. ss. apply in_compile_gdefs_c_sys in INSRC.
+    set (cf:= compile_eFun sc) in *. unfold compile_eFun in cf; ss. destruct sc; ss.
     eapply (PTree_Properties.of_list_norepet _ (fst cf) (snd cf)) in l; eauto.
     eapply PTree.elements_correct. subst cf; ss.
   Qed.
@@ -173,7 +217,7 @@ Section MAPBLK.
     forall src blk
       (COMP : exists tgt, Imp2Csharpminor.compile src = OK tgt)
       (ALLOCED : blk >= (src_init_nb src)),
-      (<<ALLOCMAP: (map_blk src blk) = Pos.of_succ_nat (2 + (ext_len src) + blk)>>).
+      (<<ALLOCMAP: (map_blk src blk) = Pos.of_succ_nat (tgt_init_len + (ext_len src) + blk)>>).
   Proof.
     i. unfold map_blk. des. des_ifs.
   Qed.
@@ -254,10 +298,11 @@ Section MAPBLK.
   Lemma gdefs_preserves_length :
         forall src,
           <<LEN: List.length (compile_gdefs src) =
-                 2 + (List.length (ext_varsL src) + List.length (ext_funsL src)) +
+                 tgt_init_len + (List.length (ext_varsL src) + List.length (ext_funsL src)) +
                  (List.length (prog_varsL src) + List.length (prog_funsL src)) >>.
   Proof.
-    i. red. unfold compile_gdefs. ss. repeat (rewrite app_length). ss. repeat (rewrite app_length).
+    i. red. unfold compile_gdefs. ss. repeat (rewrite app_length).
+    unfold tgt_init_len. ss. repeat (rewrite app_length).
     unfold compile_eFuns, compile_eVars, compile_iFuns, compile_iVars. rewrite! map_length. lia.
   Qed.
 
@@ -281,30 +326,6 @@ Section MAPBLK.
     end.
     lia.
   Qed.
-
-  (* Lemma compiled_then_exists: *)
-  (*   forall src l symb   *)
-  (*     (COMP : compile_gdefs gm src = Some l) *)
-  (*     (NOREPET : Coqlib.list_norepet (List.map fst l)) *)
-  (*     (WFPROG : In symb (List.map fst (prog_varsL src) ++ List.map (compose fst snd) (prog_funsL src))), *)
-  (*   exists gd : globdef fundef (), In (s2p symb, gd) l. *)
-  (* Proof. *)
-  (*   i. apply in_app_or in WFPROG. des. *)
-  (*   - apply Coqlib.list_in_map_inv in WFPROG. des. destruct x as [vn v]. *)
-  (*     unfold compile_gdefs in COMP. uo; des_ifs; ss. *)
-  (*     hexploit exists_compiled_variable; eauto. i; des. exists (Gvar cv). *)
-  (*     apply in_or_app. right. apply in_or_app. right. ss. do 2 right. apply in_or_app; right. *)
-  (*     clear WFPROG0. *)
-  (*     match goal with *)
-  (*     | [ H : In ?y _ |- (In ?x (List.map ?f _)) ] => set (mapf:=f) in *; replace x with (mapf y) *)
-  (*     end. *)
-  (*     2:{ subst mapf. unfold lift_def. ss. } *)
-  (*     apply in_map. auto. *)
-  (*   - apply Coqlib.list_in_map_inv in WFPROG. des. destruct x as [mn [fn impf]]. *)
-  (*     unfold compile_gdefs in COMP. uo; des_ifs; ss. *)
-  (*     hexploit exists_compiled_function; eauto. i; des. exists (Gfun (Internal cf)). *)
-  (*     apply in_or_app. right. apply in_or_app. right. ss. do 2 right. apply in_or_app; left; eauto. *)
-  (* Qed. *)
 
   Lemma in_src_in_tgt :
     forall src (l: list (ident * globdef fundef ())) symb

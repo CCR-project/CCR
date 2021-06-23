@@ -267,7 +267,7 @@ Section PROOF.
     forall src blk
       (COMP : exists tgt, Imp2Csharpminor.compile src = OK tgt)
       (ALLOCED : blk >= (src_init_nb src)),
-      (<<ALLOCMAP: (map_blk src blk) = Pos.of_succ_nat (2 + (ext_len src) + blk)>>).
+      (<<ALLOCMAP: (map_blk src blk) = Pos.of_succ_nat (tgt_init_len + (ext_len src) + blk)>>).
 
   Hypothesis map_blk_inj :
     forall src b1 b2
@@ -328,18 +328,15 @@ Section PROOF.
           tgt
           (modl: ModL.t) ge ms
           ist cst
-          (* tlof *)
-          (* (TLOF: tlof = 2 + (List.length srcprog.(ext_funsL)) + (List.length srcprog.(ext_varsL))) *)
           (MODL: modl = (ModL.add (Mod.lift Mem) (ImpMod.get_modL srcprog)))
           (MODSEML: ms = modl.(ModL.enclose))
           (GENV: ge = Sk.load_skenv (Sk.sort modl.(ModL.sk)))
           (MGENV: match_ge srcprog ge (Genv.globalenv tgt))
           (COMP: Imp2Csharpminor.compile srcprog = OK tgt)
-          (MS: match_states (ext_funsL srcprog) ge ms srcprog ist cst)
+          (MS: match_states ge ms srcprog ist cst)
     :
       <<SIM: sim (ModL.compile modl) (semantics tgt) ((100 + max_fuel) + 100)%ord ist cst>>.
   Proof.
-    set (efs:=ext_funsL srcprog) in *.
     red. red. ginit.
     depgen ist. depgen cst. gcofix CIH. i.
     assert (EXISTSCOMP: exists tgt, Imp2Csharpminor.compile srcprog = OK tgt); eauto.
@@ -419,7 +416,7 @@ Section PROOF.
         2: clarify.
         2:{ i.
             match goal with
-            | [ H : match_states _ _ _ _ ?i0 _ |- match_states _ _ _ _ ?i1 _ ] =>
+            | [ H : match_states _ _ _ ?i0 _ |- match_states _ _ _ ?i1 _ ] =>
               replace i1 with i0; eauto
             end.
             unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
@@ -462,7 +459,7 @@ Section PROOF.
       { ss. destruct (compile_stmt code2) eqn:CSC2; eauto. eapply compile_stmt_no_Sreturn in CSC2; clarify. }
       i.
       match goal with
-      | [ H: match_states _ _ _ _ ?it0 _ |- match_states _ _ _ _ ?it1 _ ] =>
+      | [ H: match_states _ _ _ ?it0 _ |- match_states _ _ _ ?it1 _ ] =>
         replace it1 with it0; eauto
       end.
       unfold itree_of_cont_stmt, itree_of_imp_cont. Red.prw ltac:(_red_gen) 1 0. grind.
@@ -593,19 +590,19 @@ Section PROOF.
       { eapply OrdArith.add_base_l. }
       gbase. eapply CIH.
       match goal with
-      | [ |- match_states _ ?_ge _ _ _ _ ] =>
+      | [ |- match_states ?_ge _ _ _ _ ] =>
         set (ge:=_ge) in *
       end.
       match goal with
-      | [ |- match_states _ _ ?_ms _ _ _ ] =>
+      | [ |- match_states _ ?_ms _ _ _ ] =>
         set (ms:=_ms) in *
       end.
       match goal with
-      | [ |- match_states _ _ _ _ (?i) _] =>
+      | [ |- match_states _ _ _ (?i) _] =>
         replace i with
     (` r0 : r_state * p_state * (lenv * val) <-
      EventsL.interp_Es (prog ms)
-                       (transl_all mn2 (interp_imp ge (denote_stmt (ext_funsL srcprog) (Imp.fn_body impf))
+                       (transl_all mn2 (interp_imp ge (denote_stmt (Imp.fn_body impf))
                                                    (init_lenv (Imp.fn_vars impf ++ ["return"; "_"]) ++ l1)))
        (c, ε :: c0 :: l0, pstate);; x4 <- itree_of_imp_pop ge ms mn2 mn x le r0;; ` x : _ <- next x4;; stack x)
       end.
@@ -628,7 +625,7 @@ Section PROOF.
       2:{ clarify. }
       2:{ i.
           match goal with
-          | [ H1: match_states _ _ _ _ ?i0 _ |- match_states _ _ _ _ ?i1 _ ] =>
+          | [ H1: match_states _ _ _ ?i0 _ |- match_states _ _ _ ?i1 _ ] =>
             replace i1 with i0; eauto
           end.
           unfold itree_of_cont_stmt, itree_of_imp_cont. unfold idK. grind. }
@@ -646,18 +643,7 @@ Section PROOF.
       apply alist_find_some in FOUND.
       assert (COMP2: Imp2Csharpminor.compile srcprog = OK tgt).
       { unfold Imp2Csharpminor.compile. des_ifs; ss; auto. }
-      (* rewrite in_map_iff in FOUND. des. destruct x0. ss; clarify. *)
-      (* assert (S2PBI: forall x y, s2p x = s2p y <-> x = y). *)
-      (* { admit "ez: make such s2p". } *)
-      (* apply S2PBI in H1. clear S2PBI; clarify. *)
-      (* unfold get_funsig in Heq1. clarify. *)
-
-      (* unfold compile_gdefs in Heq. uo; des_ifs; ss; clarify. *)
-      (* match goal with *)
-      (* | [ |- gpaco3 (_sim _ (semantics ?_tgtp)) _ _ _ _ _ _ ] => *)
-      (*   set (tgtp:=_tgtp) in * *)
-      (* end. *)
-      hexploit in_tgt_prog_defs_efuns; eauto. i. rename H into INTGT.
+      hexploit in_tgt_prog_defs_c_sys; eauto. i. rename H into INTGT.
       hexploit Genv.find_symbol_exists; eauto. i. des. rename H into FINDSYM.
       hexploit tgt_genv_find_def_by_blk; eauto. i. rename H into FINDDEF.
 
@@ -731,7 +717,7 @@ Section PROOF.
       2: clarify.
       2:{ i.
           match goal with
-          | [ H1: match_states _ _ _ _ ?i0 _ |- match_states _ _ _ _ ?i1 _ ] =>
+          | [ H1: match_states _ _ _ ?i0 _ |- match_states _ _ _ ?i1 _ ] =>
             replace i1 with i0; eauto
           end.
           unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
@@ -754,7 +740,7 @@ Section PROOF.
       2: clarify.
       2:{ i.
           match goal with
-          | [ H: match_states _ _ _ _ ?i0 _ |- match_states _ _ _ _ ?i1 _ ] =>
+          | [ H: match_states _ _ _ ?i0 _ |- match_states _ _ _ ?i1 _ ] =>
             replace i1 with i0; eauto
           end.
           unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
@@ -768,11 +754,11 @@ Section PROOF.
       destruct rstate. ss. destruct l0; clarify.
       do 3 (gstep; sim_tau). sim_red.
       match goal with
-      | [ MCONT: match_code _ ?_ge _ _ _ _ |- _ ] =>
+      | [ MCONT: match_code ?_ge _ _ _ _ |- _ ] =>
         set (ge:=_ge) in *
       end.
       match goal with
-      | [ MCONT: match_code _ _ ?_ms _ _ _ |- _ ] =>
+      | [ MCONT: match_code _ ?_ms _ _ _ |- _ ] =>
         set (ms:=_ms) in *
       end.
       unfold cfun. rewrite Any.upcast_downcast. grind. unfold allocF. sim_red.
@@ -784,18 +770,14 @@ Section PROOF.
       rename Heq into NRANGE1. apply sumbool_to_bool_true in NRANGE1.
       rename Heq0 into NRANGE2. apply sumbool_to_bool_true in NRANGE2.
 
+      assert (COMP2: Imp2Csharpminor.compile srcprog = OK tgt).
+      { unfold Imp2Csharpminor.compile. des_ifs; ss; auto. }
       assert (TGTDEFS: In (s2p "malloc", Gfun (External EF_malloc)) (prog_defs tgt)).
-      { subst tgt. ss. rename l into NOREPET.
-        eapply Maps.PTree_Properties.of_list_norepet in NOREPET.
-        { eapply Maps.PTree.elements_correct. eapply NOREPET. }
-        unfold compile_gdefs. do 2 (apply in_or_app; right). ss. left; ss. }
+      { eapply in_tgt_prog_defs_init_g; eauto. Local Transparent init_g. ss. left; auto. Local Opaque init_g. }
 
       assert (TGTMALLOC: exists blk, Genv.find_symbol (globalenv (semantics tgt)) (s2p "malloc") = Some blk).
       { hexploit Genv.find_symbol_exists; eauto. }
       des.
-
-      assert (COMP2: Imp2Csharpminor.compile srcprog = OK tgt).
-      { unfold Imp2Csharpminor.compile. des_ifs. }
       hexploit tgt_genv_find_def_by_blk; eauto. i. rename H0 into TGTFINDDEF.
 
       gstep. econs 6; clarify.
@@ -858,7 +840,7 @@ Section PROOF.
       4:{ clarify. }
       4:{ i.
           match goal with
-          | [ H1: match_states _ _ _ _ ?i0 _ |- match_states _ _ _ _ ?i1 _ ] =>
+          | [ H1: match_states _ _ _ ?i0 _ |- match_states _ _ _ ?i1 _ ] =>
             replace i1 with i0; eauto
           end.
           unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
@@ -876,11 +858,11 @@ Section PROOF.
       i. sim_red. destruct rstate. ss. destruct l0; clarify.
       grind. do 3 (gstep; sim_tau). sim_red.
       match goal with
-      | [ MCONT: match_code _ ?_ge _ _ _ _ |- _ ] =>
+      | [ MCONT: match_code ?_ge _ _ _ _ |- _ ] =>
         set (ge:=_ge) in *
       end.
       match goal with
-      | [ MCONT: match_code _ _ ?_ms _ _ _ |- _ ] =>
+      | [ MCONT: match_code _ ?_ms _ _ _ |- _ ] =>
         set (ms:=_ms) in *
       end.
       unfold cfun. rewrite Any.upcast_downcast. grind. unfold freeF. sim_red.
@@ -906,7 +888,7 @@ Section PROOF.
       3:{ clarify. }
       3:{ i.
           match goal with
-          | [ H1: match_states _ _ _ _ ?i0 _ |- match_states _ _ _ _ ?i1 _ ] =>
+          | [ H1: match_states _ _ _ ?i0 _ |- match_states _ _ _ ?i1 _ ] =>
             replace i1 with i0; eauto
           end.
           unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
@@ -922,11 +904,11 @@ Section PROOF.
       i. sim_red. destruct rstate. ss. destruct l0; clarify.
       grind. do 3 (gstep; sim_tau). sim_red.
       match goal with
-      | [ MCONT: match_code _ ?_ge _ _ _ _ |- _ ] =>
+      | [ MCONT: match_code ?_ge _ _ _ _ |- _ ] =>
         set (ge:=_ge) in *
       end.
       match goal with
-      | [ MCONT: match_code _ _ ?_ms _ _ _ |- _ ] =>
+      | [ MCONT: match_code _ ?_ms _ _ _ |- _ ] =>
         set (ms:=_ms) in *
       end.
       unfold cfun. rewrite Any.upcast_downcast. grind. unfold loadF. sim_red.
@@ -954,7 +936,7 @@ Section PROOF.
       2: clarify.
       2:{ i.
           match goal with
-          | [ H1: match_states _ _ _ _ ?i0 _ |- match_states _ _ _ _ ?i1 _ ] =>
+          | [ H1: match_states _ _ _ ?i0 _ |- match_states _ _ _ ?i1 _ ] =>
             replace i1 with i0; eauto
           end.
           unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
@@ -962,11 +944,11 @@ Section PROOF.
 
     - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Store. sim_red.
       match goal with
-      | [ MCONT: match_code _ ?_ge _ _ _ _ |- _ ] =>
+      | [ MCONT: match_code ?_ge _ _ _ _ |- _ ] =>
         set (ge:=_ge) in *
       end.
       match goal with
-      | [ MCONT: match_code _ _ ?_ms _ _ _ |- _ ] =>
+      | [ MCONT: match_code _ ?_ms _ _ _ |- _ ] =>
         set (ms:=_ms) in *
       end.
       ss.
@@ -1004,7 +986,7 @@ Section PROOF.
       3: clarify.
       3:{ i.
           match goal with
-          | [ H1: match_states _ _ _ _ ?i0 _ |- match_states _ _ _ _ ?i1 _ ] =>
+          | [ H1: match_states _ _ _ ?i0 _ |- match_states _ _ _ ?i1 _ ] =>
             replace i1 with i0; eauto
           end.
           unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
@@ -1013,11 +995,11 @@ Section PROOF.
 
     - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Cmp. sim_red.
       match goal with
-      | [ MCONT: match_code _ ?_ge _ _ _ _ |- _ ] =>
+      | [ MCONT: match_code ?_ge _ _ _ _ |- _ ] =>
         set (ge:=_ge) in *
       end.
       match goal with
-      | [ MCONT: match_code _ _ ?_ms _ _ _ |- _ ] =>
+      | [ MCONT: match_code _ ?_ms _ _ _ |- _ ] =>
         set (ms:=_ms) in *
       end.
       ss.
@@ -1051,7 +1033,7 @@ Section PROOF.
         2: clarify.
         2:{ i.
             match goal with
-            | [ H1: match_states _ _ _ _ ?i0 _ |- match_states _ _ _ _ ?i1 _ ] =>
+            | [ H1: match_states _ _ _ ?i0 _ |- match_states _ _ _ ?i1 _ ] =>
               replace i1 with i0; eauto
             end.
             unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
@@ -1075,7 +1057,7 @@ Section PROOF.
         2: clarify.
         2:{ i.
             match goal with
-            | [ H1: match_states _ _ _ _ ?i0 _ |- match_states _ _ _ _ ?i1 _ ] =>
+            | [ H1: match_states _ _ _ ?i0 _ |- match_states _ _ _ ?i1 _ ] =>
               replace i1 with i0; eauto
             end.
             unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }

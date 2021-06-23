@@ -27,7 +27,7 @@ Section MEM.
     forall src blk
       (COMP : exists tgt, compile src = OK tgt)
       (ALLOCED : blk >= (src_init_nb src)),
-      (<<ALLOCMAP: (map_blk src blk) = Pos.of_succ_nat (2 + (ext_len src) + blk)>>).
+      (<<ALLOCMAP: (map_blk src blk) = Pos.of_succ_nat (tgt_init_len + (ext_len src) + blk)>>).
 
   Hypothesis map_blk_inj :
     forall src b1 b2

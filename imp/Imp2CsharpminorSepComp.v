@@ -69,8 +69,8 @@ Section PROOFSINGLE.
     eexists; split; [ord_step2|auto].
 
     left. unfold ITree.map. sim_red.
-    set (sge:=Sk.load_skenv (Sk.sort (defsL src))) in *. set (efs:=(ext_funsL src)) in *.
-    destruct (alist_find "main" (List.map (fun '(mn, (fn, f)) => (fn, transl_all mn ∘ cfun (eval_imp sge efs f))) (prog_funsL src)))
+    set (sge:=Sk.load_skenv (Sk.sort (defsL src))) in *.
+    destruct (alist_find "main" (List.map (fun '(mn, (fn, f)) => (fn, transl_all mn ∘ cfun (eval_imp sge f))) (prog_funsL src)))
              eqn:FOUNDMAIN; ss; grind.
     2:{ pfold. sim_triggerUB. }
     rewrite alist_find_find_some in FOUNDMAIN. rewrite find_map in FOUNDMAIN. uo; des_ifs; ss.
@@ -121,10 +121,10 @@ Section PROOFSINGLE.
     { apply map_blk_inj. }
     ss.
     match goal with
-    | [ |- match_states ?_efs ?_ge ?_ms _ _ _ ] => replace _efs with efs; auto; replace _ge with sge; auto
+    | [ |- match_states ?_ge ?_ms _ _ _ ] => replace _ge with sge; auto
     end.
     match goal with
-    | [ |- match_states ?_efs ?_ge ?_ms _ _ _ ] => set (ms:=_ms) in *
+    | [ |- match_states ?_ge ?_ms _ _ _ ] => set (ms:=_ms) in *
     end.
     econs; eauto.
     { ss. }
@@ -161,7 +161,7 @@ Section PROOFSINGLE.
     { ss. }
     { ss.
       match goal with
-      | [ |- match_code _ _ _ _ ?i0 ?s0 ] =>
+      | [ |- match_code _ _ _ ?i0 ?s0 ] =>
         replace i0 with ((fun '(r, p, (le, _)) => itree_of_imp_ret sge le ms mn (r, p)) : (_ * _ * (lenv * val)) -> _);
           replace s0 with [exit_stmt]; eauto
       end.
@@ -169,7 +169,7 @@ Section PROOFSINGLE.
       extensionality x. unfold itree_of_imp_ret, itree_of_imp_cont. grind. destruct p0. rewrite interp_imp_expr_Var. grind. }
     { ss.
       match goal with
-      | [ |- match_stack _ _ _ _ _ _ ?i0 ?s0 ] =>
+      | [ |- match_stack _ _ _ _ _ ?i0 ?s0 ] =>
         replace i0 with ((itree_of_imp_pop_bottom ms mn) : (_ * _ * (lenv * val)) -> _);
           replace s0 with (Some ret_call_main); eauto
       end.
@@ -200,9 +200,9 @@ Section PROOFLEFT.
   Proof.
     unfold link_imp in LINKIMP. des_ifs; ss. unfold ImpMod.get_modL; ss. unfold ModL.add. ss. red. f_equal.
     extensionality sk. unfold ModSemL.add; ss. f_equal.
-    - f_equal. unfold l_pfs. rewrite map_app. ss.
     - f_equal. rewrite <- map_app. ss.
-  Admitted.
+    - f_equal. rewrite <- map_app. ss.
+  Qed.
 
   Lemma comm_link_imp_link_mod
         src_list srcl tgt_list tgtl ctx
