@@ -45,7 +45,7 @@ Section SIMMODSEM.
 (*   | None => <<TGT: (stk_mgr0: gmap mblock (list val)) !! h = None>> *)
 (*   end) *)
 
-  Let wf: W -> Prop :=
+  Let wf: _ -> W -> Prop :=
     @mk_wf _ unit
            (fun _ _ _stk_mgr0 =>
               (∃ stk_mgr0 (stk_res0: URA.car (t:=_stkRA)),
@@ -95,14 +95,14 @@ Section SIMMODSEM.
 
   Theorem sim_modsem: ModSemPair.sim (NewStack3B.StackSem global_stb) (NewStack2.StackSem).
   Proof.
-    econstructor 1 with (wf:=wf); ss; et; swap 2 3.
-    { econs; ss.
+    econstructor 1 with (wf:=wf) (le:=top2); ss; et; swap 2 3.
+    { esplits. econs; ss.
       - eapply to_semantic. iIntros "H". iExists _, _. iSplit; ss; et.
         iSplit; ss; et.
       - red. uipropall.
     }
     econs; ss.
-    { unfold NewStack2.new_body, cfun2, cfun. init. harg. fold wf. mDesAll. des; clarify.
+    { unfold NewStack2.new_body, cfun. init. harg. fold wf. mDesAll. des; clarify.
       steps. rewrite Any.pair_split. cbn. rewrite Any.upcast_downcast in *. clarify. steps.
       astart 0. astop. steps. rewrite Any.upcast_downcast in *. clarify.
       rename g into stk_mgr0. rename x0 into h. rename a1 into stk_res0. rename x into P. des_u.

@@ -37,8 +37,8 @@ Section PROOF.
     (*                 (fun vret => (∃ h, ⌜vret = (Vptr h 0)↑⌝ ** OwnM (is_stack h []): iProp)%I) *)
     (* ))) *)
     (mk_fspec
-       (fun (_: unit) _ varg o => (⌜varg = ([]: list val)↑ ∧ o = ord_pure 0⌝: iProp)%I)
-       (fun (_: unit) virtual_ret vret =>
+       (fun _ (_: unit) _ varg o => (⌜varg = ([]: list val)↑ ∧ o = ord_pure 0⌝: iProp)%I)
+       (fun _ (_: unit) virtual_ret vret =>
           (∃ h, ⌜virtual_ret = ([]: list val)↑ ∧ vret = (Vptr h 0)↑⌝ ** OwnM(is_stack h []): iProp)%I)
     )
   .
@@ -111,7 +111,7 @@ Section PROOF.
 
   Definition StackStb: list (gname * fspec).
     eapply (Seal.sealing "stb").
-    let x := constr:(List.map (map_snd (fun ksb => (KModSem.disclose_ksb ksb): fspec)) StackSbtb) in
+    let x := constr:(List.map (map_snd (fun ksb => (KModSem.disclose_ksb_tgt ksb): fspec)) StackSbtb) in
     let y := eval cbn in x in
     eapply y.
   Defined.
