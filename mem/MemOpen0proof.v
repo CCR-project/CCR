@@ -31,7 +31,7 @@ Section SIMMODSEM.
 
   Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
 
-  Let wf: W -> Prop :=
+  Let wf: _ -> W -> Prop :=
     @mk_wf
       _ unit
       top4
@@ -39,19 +39,21 @@ Section SIMMODSEM.
   .
 
   Variable sk: Sk.t.
+  Variable frds: list mname.
 
-  Theorem correct: ModSemPair.sim (Mem0.MemSem sk) (SModSem.to_src (MemOpen.SMemSem sk)).
+  Theorem correct: ModSemPair.sim (Mem0.MemSem sk) (KModSem.transl_src frds (MemOpen.KMemSem sk)).
   Proof.
-   econstructor 1 with (wf:=wf); et; swap 2 3.
-    { ss. econs; ss. red. uipropall. }
+   econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
+    { ss. }
+    { esplits. ss. econs; ss. red. uipropall. }
 
 
 
 
 
     econs; ss.
-    { unfold allocF, fun_to_src, body_to_src, cfun, KModSem.transl_fun. init.
-      destruct (Any.split varg) eqn:T.
+    { unfold allocF, fun_to_src, body_to_src, cfun, KModSem.disclose_ksb_src, KModSem.body_to_src. init.
+      match goal with | |- context[my_if ?b _ _] => destruct b eqn:T end.
       { cbn. steps. }
       steps. inv WF. rr in RTGT. uipropall. clarify. clear_fast.
       apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
@@ -61,8 +63,8 @@ Section SIMMODSEM.
       { steps. }
     }
     econs; ss.
-    { unfold freeF, fun_to_src, body_to_src, cfun, KModSem.transl_fun. init.
-      destruct (Any.split varg) eqn:T.
+    { unfold freeF, fun_to_src, body_to_src, cfun, KModSem.disclose_ksb_src, KModSem.body_to_src. init.
+      match goal with | |- context[my_if ?b _ _] => destruct b eqn:T end.
       { cbn. steps. }
       steps. inv WF. rr in RTGT. uipropall. clarify. clear_fast.
       apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
@@ -70,8 +72,8 @@ Section SIMMODSEM.
       rr. econs; ss. rr. uipropall.
     }
     econs; ss.
-    { unfold loadF, fun_to_src, body_to_src, cfun, KModSem.transl_fun. init.
-      destruct (Any.split varg) eqn:T.
+    { unfold loadF, fun_to_src, body_to_src, cfun, KModSem.disclose_ksb_src, KModSem.body_to_src. init.
+      match goal with | |- context[my_if ?b _ _] => destruct b eqn:T end.
       { cbn. steps. }
       steps. inv WF. rr in RTGT. uipropall. clarify. clear_fast.
       apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
@@ -79,8 +81,8 @@ Section SIMMODSEM.
       rr. econs; ss. rr. uipropall.
     }
     econs; ss.
-    { unfold storeF, fun_to_src, body_to_src, cfun, KModSem.transl_fun. init.
-      destruct (Any.split varg) eqn:T.
+    { unfold storeF, fun_to_src, body_to_src, cfun, KModSem.disclose_ksb_src, KModSem.body_to_src. init.
+      match goal with | |- context[my_if ?b _ _] => destruct b eqn:T end.
       { cbn. steps. }
       steps. inv WF. rr in RTGT. uipropall. clarify. clear_fast.
       apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
@@ -88,8 +90,8 @@ Section SIMMODSEM.
       rr. econs; ss. rr. uipropall.
     }
     econs; ss.
-    { unfold cmpF, fun_to_src, body_to_src, cfun, KModSem.transl_fun. init.
-      destruct (Any.split varg) eqn:T.
+    { unfold cmpF, fun_to_src, body_to_src, cfun, KModSem.disclose_ksb_src, KModSem.body_to_src. init.
+      match goal with | |- context[my_if ?b _ _] => destruct b eqn:T end.
       { cbn. steps. }
       steps. inv WF. rr in RTGT. uipropall. clarify. clear_fast.
       apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
@@ -98,6 +100,8 @@ Section SIMMODSEM.
       { rr. econs; ss. rr. uipropall. }
       { rr. econs; ss. rr. uipropall. }
     }
+  Unshelve.
+    all: ss.
   Qed.
 
 End SIMMODSEM.
