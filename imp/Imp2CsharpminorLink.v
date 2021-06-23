@@ -41,20 +41,10 @@ Section LINK.
      (ef/if) (ef/iv) (ef/ef) (ef/ev) |
      (ev/if) (ev/iv) (ev/ef) 16.(ev/ev) 
   *)
-  (* check defined names are unique *)
-  (* 1.if/if, 2.if/iv, 5.iv/if, 6.iv/iv *)
-  Definition link_imp_cond1 := Coqlib.list_norepet_dec dec ((name1 l_pvs) ++ (name2 l_pfs)).
-
-  Lemma link_imp_cond1_prop :
-    forall (_LIC1: link_imp_cond1),
-      <<LIC1: Coqlib.list_norepet ((name1 l_pvs) ++ (name2 l_pfs))>>.
-  Proof.
-    i. unfold link_imp_cond1 in *. apply sumbool_to_bool_true in _LIC1. ss.
-  Qed.
 
   (* check external decls are consistent *)
   (* 13.ev/if, 4.if/ev, 10.ef/iv, 7.iv/ef, 15.ev/ef, 12.ef/ev *)
-  Definition link_imp_cond2 :=
+  Definition link_imp_cond1 :=
     let sd := string_Dec in
     let c1 := Coqlib.list_norepet_dec dec (src1.(ext_varsL) ++ (name2 l_pfs)) in
     let c2 := Coqlib.list_norepet_dec dec (src2.(ext_varsL) ++ (name2 l_pfs)) in
@@ -64,8 +54,8 @@ Section LINK.
     let c6 := Coqlib.list_norepet_dec dec (src2.(ext_varsL) ++ (name1 src1.(ext_funsL))) in
     c1 && c2 && c3 && c4 && c5 && c6.
 
-  Lemma link_imp_cond2_prop :
-    forall (_LIC2: link_imp_cond2 = true),
+  Lemma link_imp_cond1_prop :
+    forall (_LIC2: link_imp_cond1 = true),
       (<<EV1: Coqlib.list_norepet (src1.(ext_varsL) ++ (name2 l_pfs))>>) /\
       (<<EV2: Coqlib.list_norepet (src2.(ext_varsL) ++ (name2 l_pfs))>>) /\
       (<<EF1: Coqlib.list_norepet ((name1 src1.(ext_funsL)) ++ (name1 l_pvs))>>) /\
@@ -73,7 +63,7 @@ Section LINK.
       (<<EVF1: Coqlib.list_norepet (src1.(ext_varsL) ++ (name1 src2.(ext_funsL)))>>) /\
       (<<EVF2: Coqlib.list_norepet (src2.(ext_varsL) ++ (name1 src1.(ext_funsL)))>>).
   Proof.
-    i. unfold link_imp_cond2 in _LIC2. bsimpl. des.
+    i. unfold link_imp_cond1 in _LIC2. bsimpl. des.
     apply sumbool_to_bool_true in _LIC2. apply sumbool_to_bool_true in _LIC3.
     apply sumbool_to_bool_true in _LIC1. apply sumbool_to_bool_true in _LIC0.
     apply sumbool_to_bool_true in _LIC5. apply sumbool_to_bool_true in _LIC4.
@@ -81,19 +71,19 @@ Section LINK.
   Qed.
 
   (* check external fun decls' sig *)
-  Fixpoint __link_imp_cond3 (p : string * nat) (l : extFuns) :=
+  Fixpoint __link_imp_cond2 (p : string * nat) (l : extFuns) :=
     let '(id, n) := p in
     match l with
     | [] => true
     | (id2, n2) :: t =>
       if (eqb id id2 && negb (n =? n2)%nat) then false
-      else __link_imp_cond3 p t
+      else __link_imp_cond2 p t
     end
   .
 
-  Lemma __link_imp_cond3_prop :
+  Lemma __link_imp_cond2_prop :
     forall p (l : list (string * nat))
-      (__LIC3: __link_imp_cond3 p l = true),
+      (__LIC3: __link_imp_cond2 p l = true),
       <<__LIC3: forall a, ((In a l) /\ (fst a = fst p)) -> (snd a = snd p)>>.
   Proof.
     i. red. depgen p. depgen l. clear. induction l; ii; ss; clarify.
@@ -111,40 +101,40 @@ Section LINK.
     split; ss; eauto.
   Qed.
 
-  Fixpoint _link_imp_cond3 l :=
+  Fixpoint _link_imp_cond2 l :=
     match l with
     | [] => true
     | h :: t =>
-      if (__link_imp_cond3 h t) then _link_imp_cond3 t
+      if (__link_imp_cond2 h t) then _link_imp_cond2 t
       else false
     end
   .
 
-  Lemma _link_imp_cond3_prop :
+  Lemma _link_imp_cond2_prop :
     forall (l : list (string * nat))
-      (_LIC3: _link_imp_cond3 l = true),
+      (_LIC3: _link_imp_cond2 l = true),
       <<_LIC3: forall a b, ((In a l) /\ (In b l) /\ (fst a = fst b)) -> (snd a = snd b)>>.
   Proof.
     i. red. depgen l. clear. induction l; i; ss; clarify.
     { des; clarify. }
     des; ss; clarify.
-    - des_ifs. eapply __link_imp_cond3_prop in Heq. eapply Heq; eauto.
-    - des_ifs. eapply __link_imp_cond3_prop in Heq. sym; eapply Heq; eauto.
+    - des_ifs. eapply __link_imp_cond2_prop in Heq. eapply Heq; eauto.
+    - des_ifs. eapply __link_imp_cond2_prop in Heq. sym; eapply Heq; eauto.
     - des_ifs. assert (TRUE: true = true); auto.
   Qed.
 
   (* 11.ef/ef *)
-  Definition link_imp_cond3 := _link_imp_cond3 (src1.(ext_funsL) ++ src2.(ext_funsL)).
+  Definition link_imp_cond2 := _link_imp_cond2 (src1.(ext_funsL) ++ src2.(ext_funsL)).
 
-  Lemma link_imp_cond3_prop :
-    forall (LIC3: link_imp_cond3 = true),
+  Lemma link_imp_cond2_prop :
+    forall (LIC3: link_imp_cond2 = true),
       <<LIC3P: forall a b, ((In a (src1.(ext_funsL) ++ src2.(ext_funsL))) /\ (In b (src1.(ext_funsL) ++ src2.(ext_funsL)))
                        /\ (fst a = fst b)) -> (snd a = snd b)>>.
   Proof.
-    i. unfold link_imp_cond3 in LIC3. eapply _link_imp_cond3_prop in LIC3. auto.
+    i. unfold link_imp_cond2 in LIC3. eapply _link_imp_cond2_prop in LIC3. auto.
   Qed.
 
-  (* merge external decls; vars is simple, funs assumes cond3 is passed *)
+  (* merge external decls; vars is simple, funs assumes cond2 is passed *)
   (* link external decls; need to remove defined names *)
 
   (* 8.iv/ev, 14.ev/iv *)
@@ -159,7 +149,21 @@ Section LINK.
     let l_pfsn := name2 l_pfs in
     List.filter (fun sn => negb (in_dec string_Dec (fst sn) l_pfsn)) l_efs0.
 
-  (* Linker for Imp programs, follows Clight's link_prog as possible *)
+  (* check names are unique *)
+  (* 1.if/if, 2.if/iv, 5.iv/if, 6.iv/iv *)
+  Definition link_imp_cond3 :=
+    Coqlib.list_norepet_dec dec ((name1 init_g0) ++ (name1 syscalls) ++
+                                 (name1 l_efs) ++ (l_evs) ++ (name2 l_pfs) ++ (name1 l_pvs)).
+
+  Lemma link_imp_cond3_prop :
+    forall (_LIC3: link_imp_cond3),
+    <<LIC3: Coqlib.list_norepet ((name1 init_g0) ++ (name1 syscalls) ++
+                                 (name1 l_efs) ++ (l_evs) ++ (name2 l_pfs) ++ (name1 l_pvs))>>.
+  Proof.
+    i. unfold link_imp_cond3 in *. apply sumbool_to_bool_true in _LIC3. ss.
+  Qed.
+
+  (* Linker for Imp programs *)
   Definition link_imp : option Imp.programL :=
     if (link_imp_cond1 && link_imp_cond2 && link_imp_cond3)
     then Some (mk_programL l_nameL l_evs l_efs l_pvs l_pfs l_publicL l_defsL)
@@ -173,15 +177,6 @@ End LINK.
 
 
 Section DECOMP.
-
-
-End DECOMP.
-
-
-
-
-
-Section LINKPROPS.
 
   Lemma ext_vars_names :
     forall src, <<EVN: List.map fst (compile_eVars (ext_varsL src)) = List.map s2p (ext_varsL src)>>.
@@ -207,26 +202,189 @@ Section LINKPROPS.
     i. unfold compile_iFuns. rewrite List.map_map. apply List.map_ext. i. destruct a. destruct p. ss.
   Qed.
 
+  Lemma decomp_init_g :
+    forall id gd (INTGT: In (id, gd) init_g),
+      (<<MALLOC: (id = s2p "malloc") /\ (gd = Gfun (External EF_malloc))>>) \/
+      (<<FREE: (id = s2p "free") /\ (gd = Gfun (External EF_free))>>).
+  Proof.
+    Local Transparent init_g. Local Transparent init_g0.
+    i. unfold init_g in INTGT. unfold init_g0 in INTGT. ss. des; clarify; eauto.
+    Local Opaque init_g0. Local Opaque init_g.
+  Qed.
+
+  Lemma decomp_c_sys :
+    forall id gd (INTGT: In (id, gd) c_sys),
+      (<<SYS: exists fd, (compile_eFun fd = (id, gd)) /\ (In fd syscalls)>>).
+  Proof.
+    i. unfold c_sys in INTGT. eapply Coqlib.list_in_map_inv in INTGT. des. exists x; eauto.
+  Qed.
+
+  Lemma decomp_efs :
+    forall src id gd (INTGT: In (id, gd) (compile_eFuns (ext_funsL src))),
+      (<<EFS: exists fd, (compile_eFun fd = (id, gd)) /\ (In fd (ext_funsL src))>>).
+  Proof.
+    i. unfold compile_eFuns in INTGT. eapply Coqlib.list_in_map_inv in INTGT. des. exists x; eauto.
+  Qed.
+
+  Lemma decomp_evs :
+    forall src id gd (INTGT: In (id, gd) (compile_eVars (ext_varsL src))),
+      (<<EVS: exists vd, (compile_eVar vd = (id, gd)) /\ (In vd (ext_varsL src))>>).
+  Proof.
+    i. unfold compile_eVars in INTGT. eapply Coqlib.list_in_map_inv in INTGT. des. exists x; eauto.
+  Qed.
+
+  Lemma decomp_ifs :
+    forall src id gd (INTGT: In (id, gd) (compile_iFuns (prog_funsL src))),
+      (<<IFS: exists fd, (compile_iFun fd = (id, gd)) /\ (In fd (prog_funsL src))>>).
+  Proof.
+    i. unfold compile_iFuns in INTGT. eapply Coqlib.list_in_map_inv in INTGT. des. exists x; eauto.
+  Qed.
+
+  Lemma decomp_ivs :
+    forall src id gd (INTGT: In (id, gd) (compile_iVars (prog_varsL src))),
+      (<<IVS: exists vd, (compile_iVar vd = (id, gd)) /\ (In vd (prog_varsL src))>>).
+  Proof.
+    i. unfold compile_iVars in INTGT. eapply Coqlib.list_in_map_inv in INTGT. des. exists x; eauto.
+  Qed.
+
+  Lemma decomp_gdefs :
+    forall src id gd (INTGT : In (id, gd) (compile_gdefs src)),
+      (<<MALLOC: (id = s2p "malloc") /\ (gd = Gfun (External EF_malloc))>>) \/
+      (<<FREE: (id = s2p "free") /\ (gd = Gfun (External EF_free))>>) \/
+      (<<SYS: exists fd, (compile_eFun fd = (id, gd)) /\ (In fd syscalls)>>) \/
+      (<<EFS: exists fd, (compile_eFun fd = (id, gd)) /\ (In fd (ext_funsL src))>>) \/
+      (<<EVS: exists vd, (compile_eVar vd = (id, gd)) /\ (In vd (ext_varsL src))>>) \/
+      (<<IFS: exists fd, (compile_iFun fd = (id, gd)) /\ (In fd (prog_funsL src))>>) \/
+      (<<IVS: exists vd, (compile_iVar vd = (id, gd)) /\ (In vd (prog_varsL src))>>).
+  Proof.
+    i. unfold compile_gdefs in INTGT.
+    apply in_app_or in INTGT. des.
+    { apply decomp_init_g in INTGT. des; auto. }
+    apply in_app_or in INTGT. des.
+    { apply decomp_c_sys in INTGT. auto. }
+    apply in_app_or in INTGT. des.
+    { apply decomp_efs in INTGT. auto. }
+    apply in_app_or in INTGT. des.
+    { apply decomp_evs in INTGT. do 4 right. left. auto. }
+    apply in_app_or in INTGT. des.
+    { apply decomp_ifs in INTGT. do 5 right. auto. }
+    apply decomp_ivs in INTGT. do 6 right. auto.
+  Qed.
+
+  Lemma has_malloc :
+    forall src, (<<MALLOC: In (s2p "malloc", Gfun (External EF_malloc)) (compile_gdefs src)>>).
+  Proof.
+    i. unfold compile_gdefs. apply in_or_app. left.
+    Local Transparent init_g. Local Transparent init_g0.
+    unfold init_g. unfold init_g0. ss. left; ss.
+    Local Opaque init_g0. Local Opaque init_g.
+  Qed.
+
+  Lemma has_free :
+    forall src, (<<FREE: In (s2p "free", Gfun (External EF_free)) (compile_gdefs src)>>).
+  Proof.
+    i. unfold compile_gdefs. apply in_or_app. left.
+    Local Transparent init_g. Local Transparent init_g0.
+    unfold init_g. unfold init_g0. ss. right; left; ss.
+    Local Opaque init_g0. Local Opaque init_g.
+  Qed.
+
+End DECOMP.
+
+
+
+Section SOLVEID.
+
+  Lemma malloc_unique :
+    forall src (NOREPET : Coqlib.list_norepet (List.map fst (compile_gdefs src))),
+      ~ In (s2p "malloc") (name1 (c_sys ++ (compile_eFuns (ext_funsL src)) ++ (compile_eVars (ext_varsL src) ++
+                                           (compile_iFuns (prog_funsL src)) ++ (compile_iVars (prog_varsL src))))).
+  Proof.
+    i. unfold compile_gdefs in NOREPET.
+    Local Transparent init_g. Local Transparent init_g0.
+    unfold init_g in NOREPET. unfold init_g0 in NOREPET. ss.
+    Local Opaque init_g0. Local Opaque init_g.
+    inv NOREPET. ss. eauto.
+  Qed.
+
+  Lemma free_unique :
+    forall src (NOREPET : Coqlib.list_norepet (List.map fst (compile_gdefs src))),
+      ~ In (s2p "free") (name1 (c_sys ++ (compile_eFuns (ext_funsL src)) ++ (compile_eVars (ext_varsL src) ++
+                                         (compile_iFuns (prog_funsL src)) ++ (compile_iVars (prog_varsL src))))).
+  Proof.
+    i. unfold compile_gdefs in NOREPET.
+    Local Transparent init_g. Local Transparent init_g0.
+    unfold init_g in NOREPET. unfold init_g0 in NOREPET. ss.
+    Local Opaque init_g0. Local Opaque init_g.
+    inv NOREPET. inv H2. ss.
+  Qed.
+
+  Lemma syscalls_unique :
+    forall src id
+      (NOREPET : Coqlib.list_norepet (List.map fst (compile_gdefs src)))
+      (SYS: In id (name1 c_sys)),
+      ~ In id (name1 (init_g ++ (compile_eFuns (ext_funsL src)) ++ (compile_eVars (ext_varsL src) ++
+                                (compile_iFuns (prog_funsL src)) ++ (compile_iVars (prog_varsL src))))).
+  Proof.
+    ii. unfold compile_gdefs in NOREPET.
+    rewrite map_app in NOREPET. apply Coqlib.list_norepet_app in NOREPET. des.
+    unfold name1 in H. rewrite map_app in H. apply in_app_or in H. des.
+    { unfold Coqlib.list_disjoint in NOREPET1. hexploit NOREPET1; eauto.
+      rewrite map_app. apply in_or_app. left; auto. }
+    clear NOREPET NOREPET1.
+    rewrite map_app in NOREPET0. apply Coqlib.list_norepet_app in NOREPET0. des. clear NOREPET0 NOREPET1.
+    unfold Coqlib.list_disjoint in NOREPET2. ii. hexploit NOREPET2; eauto.
+  Qed.
+
+End SOLVEID.
+
+
+                             
+Section LINKPROPS.
+
   Lemma compile_gdefs_preserves_names :
     forall src,
       <<NAMES:
         List.map s2p
-         ((name1 src.(ext_funsL)) ++ src.(ext_varsL) ++ (["malloc"; "free"]) ++ (name2 src.(prog_funsL)) ++ (name1 src.(prog_varsL)))
+          ((name1 init_g0) ++ (name1 syscalls) ++
+           (name1 src.(ext_funsL)) ++ src.(ext_varsL) ++ (name2 src.(prog_funsL)) ++ (name1 src.(prog_varsL)))
         =
         name1 (compile_gdefs src)>>.
   Proof.
-  Admitted.
+    i. unfold compile_gdefs. red. unfold name1. repeat rewrite map_app. repeat f_equal.
+    - sym. rewrite List.map_map. apply ext_funs_names.
+    - sym. apply ext_vars_names.
+    - sym. unfold name2. rewrite List.map_map. apply int_funs_names.
+    - sym. rewrite List.map_map. apply int_vars_names.
+  Qed.
 
   Lemma link_then_unique_ids
         src1 src2 srcl
-        (UIDS1 : Coqlib.list_norepet (name1 (compile_gdefs src1)))
-        (UIDS2 : Coqlib.list_norepet (name1 (compile_gdefs src2)))
         (LINK : link_imp src1 src2 = Some srcl)
     :
       <<UIDS : Coqlib.list_norepet (name1 (compile_gdefs srcl))>>.
   Proof.
     unfold link_imp in LINK. des_ifs. bsimpl. des.
-    rewrite <- compile_gdefs_preserves_names. ss.
+    rewrite <- compile_gdefs_preserves_names. ss. apply link_imp_cond3_prop in Heq0.
+    apply Coqlib.list_map_norepet; eauto.
+    i. ii. apply s2p_inj in H2. ss.
+  Qed.
+
+  Lemma link_then_exists_gd
+        src1 src2 srcl id gd1 gd2
+        (NOREPET1 : Coqlib.list_norepet (List.map fst (compile_gdefs src1)))
+        (NOREPET2 : Coqlib.list_norepet (List.map fst (compile_gdefs src2)))
+        (LINKSRC : link_imp src1 src2 = Some srcl)
+        (IN1 : In (id, gd1) (compile_gdefs src1))
+        (IN2 : In (id, gd2) (compile_gdefs src2))
+    :
+      exists gdl, (<<LINK: link gd1 gd2 = Some gdl>>) /\ (<<INL: In (id, gdl) (compile_gdefs srcl)>>).
+  Proof.
+    hexploit (decomp_gdefs IN1). i. rename H into SRC1.
+    hexploit (decomp_gdefs IN2). i. rename H into SRC2.
+    destruct SRC1.
+    { clear SRC2. destruct H. clarify. unfold compile_gdefs in IN2.
+    
   Admitted.
 
 End LINKPROPS.

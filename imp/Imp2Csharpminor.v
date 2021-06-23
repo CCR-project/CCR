@@ -170,8 +170,10 @@ Section Compile.
   Definition compile_iFuns (src : list (string * (string * Imp.function))) : tgt_gdefs := List.map compile_iFun src.
 
 
-  Definition init_g : tgt_gdefs :=
-    [(s2p "malloc", Gfun malloc_def); (s2p "free", Gfun free_def)].
+  Definition init_g0 : list (string * tgt_gdef) :=
+    [("malloc"%string, Gfun malloc_def); ("free"%string, Gfun free_def)].
+
+  Definition init_g : tgt_gdefs := List.map (fun '(name, fd) => (s2p name, fd)) init_g0.
 
   Definition c_sys := List.map compile_eFun syscalls.
 
@@ -194,6 +196,7 @@ Definition compile (src : Imp.programL) : res program :=
   else Error [MSG "Imp2csharpminor compilation failed; duplicated declarations"]
 .
 
+Global Opaque init_g0.
 Global Opaque init_g.
 
 Module ASMGEN.

@@ -111,9 +111,9 @@ Section PROOFRIGHT.
     apply link_prog_inv in LINKTGT. unfold prog_defmap in *; ss.
     unfold compile in *. des_ifs_safe; ss. des. clear LINKTGT. des_ifs_safe.
     rename l0 into NOREPET1, l into NOREPET2.
-    assert (NOREPET: Coqlib.list_norepet_dec dec (List.map fst (compile_gdefs srcl))).
-    { admit "ez". }
-    des_ifs_safe. clear NOREPET. rename l into NOREPET.
+    assert (NOREPET: Coqlib.list_norepet (List.map fst (compile_gdefs srcl))).
+    { hexploit link_then_unique_ids. eapply NOREPET1. eapply NOREPET2. eauto. i. ss. }
+    des_ifs_safe. clear l.
     red. f_equal. f_equal; ss.
     2:{ unfold link_imp in LINKSRC. des_ifs_safe. ss. unfold l_publicL. apply map_app. }
     apply PTree.elements_extensional. i.
@@ -138,10 +138,23 @@ Section PROOFRIGHT.
     - rename g into gd1, g0 into gd2, g1 into gdl. clear LINKTGTP.
       apply PTree_Properties.in_of_list in AK.
       apply PTree_Properties.in_of_list in BK.
-      apply PTree_Properties.in_of_list in LK.
+      (* apply PTree_Properties.in_of_list in LK. *)
+(* PTree_Properties.of_list_norepet: *)
+(*   forall [A : Type] (l : list (PTree.elt * A)) (k : PTree.elt) (v : A), *)
+(*   Coqlib.list_norepet (List.map fst l) -> In (k, v) l -> (PTree_Properties.of_list l) ! k = Some v *)
       admit "case analysis for each gd".
 
+(* Genv.in_norepet_unique: *)
+(*   forall [F V : Type] (id : ident) (g : globdef F V) (gl : list (ident * globdef F V)), *)
+(*   In (id, g) gl -> *)
+(*   Coqlib.list_norepet (List.map fst gl) -> *)
+(*   exists gl1 gl2 : list (ident * globdef F V), gl = gl1 ++ (id, g) :: gl2 /\ ~ In id (List.map fst gl2) *)
+
     - hexploit LINKTGTP; eauto. i; des. clear H H0.
+      destruct (classic (In id (List.map fst (compile_gdefs srcl)))).
+      { apply PTree_Properties.of_list_dom in H. des. clarify. }
+      clear LK; rename H into LK.
+      apply PTree_Properties.in_of_list in AK. apply PTree_Properties.in_of_list in BK.
       admit "case analysis for each gd, should be tied with above".
 
     - apply PTree_Properties.in_of_list in AK. apply PTree_Properties.in_of_list in LK.
