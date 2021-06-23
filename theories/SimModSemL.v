@@ -96,14 +96,14 @@ Section SIM.
     :
       _sim_itree sim_itree RR i0 w (st_src0, tau;; i_src) (st_tgt0, tau;; i_tgt)
   | sim_itree_call
-      i0 w w0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i0 w w0 mn mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       fn varg k_src k_tgt
       (WF: wf w0 (mrs_src0, mrs_tgt0))
       (K: forall w1 vret mrs_src1 mrs_tgt1 (WLE: le w0 w1) (WF: wf w1 (mrs_src1, mrs_tgt1)),
           exists i1, sim_itree _ _ RR i1 w ((mrs_src1, fr_src0), k_src vret) ((mrs_tgt1, fr_tgt0), k_tgt vret))
     :
-      _sim_itree sim_itree RR i0 w ((mrs_src0, fr_src0), (trigger PushFrame;;; r <- trigger (Call fn varg);; trigger PopFrame;;; tau;; k_src r))
-                 ((mrs_tgt0, fr_tgt0), (trigger PushFrame;;; r <- trigger (Call fn varg);; trigger PopFrame;;; tau;; k_tgt r))
+      _sim_itree sim_itree RR i0 w ((mrs_src0, fr_src0), (trigger PushFrame;;; r <- trigger (Call mn fn varg);; trigger PopFrame;;; tau;; k_src r))
+                 ((mrs_tgt0, fr_tgt0), (trigger PushFrame;;; r <- trigger (Call mn fn varg);; trigger PopFrame;;; tau;; k_tgt r))
   | sim_itree_syscall
       i0 w mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       fn varg k_src k_tgt rvs
@@ -375,11 +375,11 @@ Section SIM.
   (*     _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), (trigger PushFrame;;; r <- trigger (Call fn varg);; trigger PopFrame;;; tau;; k_src r)) *)
   (*                ((mrs_tgt0, fr_tgt0), i_tgt) *)
   | sim_itree_call_fail
-      i0 w mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i0 w mn mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       fn varg k_src i_tgt
       (FAIL: ~ ns fn)
     :
-      _sim_itree sim_itree RR i0 w ((mrs_src0, fr_src0), (trigger PushFrame;;; r <- trigger (Call fn varg);;
+      _sim_itree sim_itree RR i0 w ((mrs_src0, fr_src0), (trigger PushFrame;;; r <- trigger (Call mn fn varg);;
                                                           trigger PopFrame;;; tau;; k_src r))
                  ((mrs_tgt0, fr_tgt0), i_tgt)
   .
@@ -424,13 +424,13 @@ Section SIM.
     - econs; try apply SIM; et. eapply Ord.lt_le_lt; et.
   Qed.
 
-  Definition sim_fsem: relation ((mname * Any.t) -> itree Es Any.t) :=
+  Definition sim_fsem: relation ((option mname * Any.t) -> itree Es Any.t) :=
     (eq ==> (fun it_src it_tgt => forall mrs_src mrs_tgt w (SIMMRS: wf w (mrs_src, mrs_tgt)),
                  exists n, sim_itree n w ((mrs_src, URA.unit), it_src)
                                      ((mrs_tgt, URA.unit), it_tgt)))%signature
   .
 
-  Definition sim_fnsem: relation (string * ((mname * Any.t) -> itree Es Any.t)) := RelProd eq sim_fsem.
+  Definition sim_fnsem: relation (string * ((option mname * Any.t) -> itree Es Any.t)) := RelProd eq sim_fsem.
 
 
   Variant lordC (r: forall (R_src R_tgt: Type) (RR: st_local -> st_local -> R_src -> R_tgt -> Prop), Ord.t -> world -> st_local * itree Es R_src -> st_local * itree Es R_tgt -> Prop)
@@ -515,11 +515,11 @@ Section SIM.
       eapply sim_itree_mon; eauto with paco.
     + rewrite ! bind_tau. econs; eauto.
       econs 2; eauto with paco. econs; eauto with paco.
-    + replace (x <- (trigger PushFrame;;; r0 <- trigger (Call fn varg);; trigger PopFrame;;; (tau;; k_src0 r0));; k_src x) with
-          (trigger PushFrame;;; r <- trigger (Call fn varg);; trigger PopFrame;;; tau;; (k_src0 >=> k_src) r); cycle 1.
+    + replace (x <- (trigger PushFrame;;; r0 <- trigger (Call mn fn varg);; trigger PopFrame;;; (tau;; k_src0 r0));; k_src x) with
+          (trigger PushFrame;;; r <- trigger (Call mn fn varg);; trigger PopFrame;;; tau;; (k_src0 >=> k_src) r); cycle 1.
       { grind. }
-      replace (x <- (trigger PushFrame;;; r0 <- trigger (Call fn varg);; trigger PopFrame;;; (tau;; k_tgt0 r0));; k_tgt x) with
-          (trigger PushFrame;;; r <- trigger (Call fn varg);; trigger PopFrame;;; tau;; (k_tgt0 >=> k_tgt) r); cycle 1.
+      replace (x <- (trigger PushFrame;;; r0 <- trigger (Call mn fn varg);; trigger PopFrame;;; (tau;; k_tgt0 r0));; k_tgt x) with
+          (trigger PushFrame;;; r <- trigger (Call mn fn varg);; trigger PopFrame;;; tau;; (k_tgt0 >=> k_tgt) r); cycle 1.
       { grind. }
       econs; eauto.
       i. exploit K; eauto. i. des. eexists.
@@ -602,7 +602,7 @@ Section SIM.
       { eapply OrdArith.lt_add_r; eauto. }
       eapply rclo7_clo_base. econs; eauto.
     + erewrite f_equal2; [eapply sim_itree_call_fail| |]; cycle 1.
-      { f_equal. instantiate (3:=k_src0 >=> k_src). grind. }
+      { f_equal. instantiate (4:=k_src0 >=> k_src). grind. }
       { ss. }
       { auto. }
   Qed.
@@ -662,8 +662,9 @@ Variant _wf_function `{Σ: GRA.t} (ms: list mname)
     (VIS: st0 = trigger (FGet) >>= k)
     (WF: forall x, wf_function (k x))
 | wf_function_call
-    fn varg k
-    (CALL: st0 = trigger PushFrame;;; r <- trigger (Call fn varg);; trigger PopFrame;;; tau;; k r)
+    fn mn varg k
+    (CALL: st0 = trigger PushFrame;;; r <- trigger (Call (Some mn) fn varg);; trigger PopFrame;;; tau;; k r)
+    (MN: List.In mn ms)
     (WF: forall x, wf_function (k x))
 | wf_function_syscall
     fn varg rvs k
@@ -1507,13 +1508,8 @@ Section SIMMOD.
        { unfold ModSemL.prog at 3. unfold unwrapU, triggerUB. mgo.
          gstep. econs; ss. gstep. econs; ss. }
 
-       mgo. destruct (Any.split varg) as [[mn varg0]|].
-       2: { cbn. unfold triggerNB. mgo. gstep. econs; ss. gstep. econs; ss. }
-       cbn. mgo. destruct (Any.downcast mn) as [mn0|].
-       2: { cbn. unfold triggerNB. mgo. gstep. econs; ss. gstep. econs; ss. }
-
        mgo. rename a into f_src. rename b into f_tgt.
-       exploit IN; eauto. instantiate (2:=(mn0, varg0)). i. des.
+       exploit IN; eauto. i. des.
        cbn. mgo. gstep. econs; ss.
        instantiate (1:=(20+(arith n0 4 4))%ord).
        gclo. eapply wrespect6_companion; auto with paco.
@@ -1812,7 +1808,6 @@ Section SIMMOD.
        eapply Sk.sort_wf. assumption. } clear x_src.
      ss. unfold ITree.map, unwrapU, triggerUB. mgo.
      des_ifs_safe. ss. mgo.
-     rewrite Any.pair_split. cbn. mgo. rewrite Any.upcast_downcast. cbn. mgo.
      guclo bindC_spec. econs.
      { gfinal. right. eapply lift_sim.
        { et. }

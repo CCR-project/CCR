@@ -45,7 +45,7 @@ Section PROOF.
   Variable fsp_src fsp_tgt: fspec.
   Hypothesis fsp_weaker: fspec_weaker fsp_src fsp_tgt.
 
-  Variable body: (mname * Any.t) -> itree (hCallE +' pE +' eventE) Any.t.
+  Variable body: (option mname * Any.t) -> itree (hCallE +' pE +' eventE) Any.t.
 
   Let wf: unit -> W -> Prop :=
     fun _ '(mrps_src0, mrps_tgt0) =>
@@ -123,9 +123,9 @@ Section PROOF.
               mstep. eapply sim_itree_choose_tgt; eauto with ord_step. intros o0.
               mstep. eapply sim_itree_choose_tgt; eauto with ord_step. intros PRE.
 
-              specialize (WEAKER x_src mn). des.
+              specialize (WEAKER x_src (Some mn)). des.
               assert (exists rarg_src,
-                         (<<PRE: precond fsp_src0 mn x_tgt varg_src varg_tgt o0 rarg_src>>) /\
+                         (<<PRE: precond fsp_src0 (Some mn) x_tgt varg_src varg_tgt o0 rarg_src>>) /\
                          (<<VALID: URA.wf (ctx ⋅ (mr0 ⋅ (rarg_src ⋅ rrest)))>>)
                      ).
               { hexploit PRE0. i. uipropall. hexploit (H rarg_tgt); et.
@@ -177,7 +177,7 @@ Section PROOF.
               mstep. eapply sim_itree_take_src; eauto with ord_step. intros POSTSRC.
 
               assert (exists rret_tgt,
-                         (<<POSTTGT: postcond f mn x_src vret_src vret rret_tgt>>) /\
+                         (<<POSTTGT: postcond f (Some mn) x_src vret_src vret rret_tgt>>) /\
                          (<<VALIDTGT: URA.wf (ctx0 ⋅ (mr1 ⋅ (rrest ⋅ rret_tgt)))>>)
                      ).
               { hexploit POST. i. uipropall. hexploit (H rret_src); et.
