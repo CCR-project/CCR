@@ -176,10 +176,13 @@ Section PROOFRIGHT.
 
 
 
-
+  Definition wf_public (src: Imp.programL) :=
+    forall id, In id (name1 (compile_gdefs src)) -> In id (List.map s2p (publicL src)).
 
   Lemma _comm_link_imp_compile_exists_link
         src1 src2 srcl tgt1 tgt2
+        (WFP1: wf_public src1)
+        (WFP2: wf_public src2)
         (COMP1: compile src1 = OK tgt1)
         (COMP2: compile src2 = OK tgt2)
         (LINKSRC: link_imp src1 src2 = Some srcl)
@@ -190,21 +193,16 @@ Section PROOFRIGHT.
     hexploit (link_prog_succeeds tgt1 tgt2).
     { admit "ez". }
     { i. apply PTree_Properties.in_of_list in H. apply PTree_Properties.in_of_list in H0. rename H into IN1, H0 into IN2.
-      split.
-      { admit "true if lifted imp prog". }
-      split.
-      { admit "true if lifted". }
-      destruct gd1; destruct gd2.
-      - destruct f; destruct f0.
-        + admit "if/if, contra".
-        + admit "if/ef, init_g, c_sys case".
-        + admit "ef/if, init_g, c_sys case".
-        + admit "init_g, c_sys..., reverse from prog_def".
-
-      - admit "link fail, contra".
-
-      - admit "sym".
-
+      unfold compile in *. des_ifs. ss. rename l0 into NOREPET1, l into NOREPET2.
+      hexploit perm_elements_PTree_norepeat_in_in.
+      { eapply NOREPET1. }
+      i. apply H in IN1. clear H.
+      hexploit perm_elements_PTree_norepeat_in_in.
+      { eapply NOREPET2. }
+      i. apply H in IN2. clear H.
+      repeat split.
+      { unfold wf_public in WFP1. apply (in_map fst) in IN1. eauto. }
+      { unfold wf_public in WFP2. apply (in_map fst) in IN2. eauto. }
       - admit "reverse from prog_defs, & characterize int/ext".
     }
     i. match goal with | [H: link_prog _ _ = Some ?_tgtl |- _ ] => exists _tgtl end. ss.

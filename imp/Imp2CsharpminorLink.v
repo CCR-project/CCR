@@ -9,6 +9,8 @@ Require Import Imp.
 Require Import Imp2Csharpminor.
 Require Import Imp2CsharpminorGenv.
 
+Import Permutation.
+
 From compcert Require Import AST Csharpminor Globalenvs Linking.
 
 Set Implicit Arguments.
@@ -101,6 +103,18 @@ Section LINK.
     split; ss; eauto.
   Qed.
 
+  Lemma __link_imp_cond2_prop_perm :
+    forall p (l1 l2 : list (string * nat))
+      (PERM: Permutation l1 l2)
+      (__LIC3: __link_imp_cond2 p l1 = true),
+      <<_LIC3: __link_imp_cond2 p l2 = true>>.
+  Proof.
+    i. red. depgen PERM. depgen __LIC3. clear. i. depgen p. induction PERM; i; ss; clarify.
+    - destruct p; ss; clarify. destruct x; ss; clarify. des_ifs. eauto.
+    - destruct p; ss; clarify. destruct x; ss; clarify. destruct y; ss; clarify. des_ifs.
+    - eauto.
+  Qed.
+
   Fixpoint _link_imp_cond2 l :=
     match l with
     | [] => true
@@ -121,6 +135,22 @@ Section LINK.
     - des_ifs. eapply __link_imp_cond2_prop in Heq. eapply Heq; eauto.
     - des_ifs. eapply __link_imp_cond2_prop in Heq. sym; eapply Heq; eauto.
     - des_ifs. assert (TRUE: true = true); auto.
+  Qed.
+
+  Lemma _link_imp_cond2_prop_perm :
+    forall (l1 l2 : list (string * nat))
+      (PERM: Permutation l1 l2)
+      (_LIC3: _link_imp_cond2 l1 = true),
+      <<_LIC3: _link_imp_cond2 l2 = true>>.
+  Proof.
+    i. red. clear src1 src2. depgen _LIC3. induction PERM; i; ss; clarify.
+    - des_ifs.
+      + eauto.
+      + hexploit __link_imp_cond2_prop_perm; eauto.
+    - destruct x; destruct y; ss; clarify. des_ifs. bsimpl. des.
+      + rewrite eqb_eq in Heq0. rewrite eqb_neq in Heq3. clarify.
+      + rewrite Nat.eqb_eq in Heq3. rewrite Nat.eqb_neq in Heq4. clarify.
+    - eauto.
   Qed.
 
   (* 11.ef/ef *)
@@ -150,7 +180,6 @@ Section LINK.
     List.filter (fun sn => negb (in_dec string_Dec (fst sn) l_pfsn)) l_efs0.
 
   (* check names are unique *)
-  (* 1.if/if, 2.if/iv, 5.iv/if, 6.iv/iv *)
   Definition link_imp_cond3 :=
     Coqlib.list_norepet_dec dec ((name1 init_g0) ++ (name1 syscalls) ++
                                  (name1 l_efs) ++ (l_evs) ++ (name2 l_pfs) ++ (name1 l_pvs)).
@@ -161,6 +190,43 @@ Section LINK.
                                  (name1 l_efs) ++ (l_evs) ++ (name2 l_pfs) ++ (name1 l_pvs))>>.
   Proof.
     i. unfold link_imp_cond3 in *. apply sumbool_to_bool_true in _LIC3. ss.
+  Qed.
+
+  Lemma _link_imp_cond3_ints :
+    forall (_LIC3: link_imp_cond3),
+      <<INTS: Coqlib.list_norepet ((name2 (prog_funsL src1)) ++ (name2 (prog_funsL src2)) ++
+                                   (name1 (prog_varsL src1)) ++ (name1 (prog_varsL src2)))>>.
+  Proof.
+    ii. red. apply link_imp_cond3_prop in _LIC3. des.
+    do 4 (apply Coqlib.list_norepet_append_right in _LIC3).
+    unfold l_pfs in _LIC3; unfold l_pvs in _LIC3. unfold name2 in *; unfold name1 in *.
+    rewrite ! map_app in _LIC3. rewrite <- app_assoc in _LIC3. auto.
+  Qed.
+
+  (* 1.if/if, 2.if/iv, 5.iv/if, 6.iv/iv *)
+  Lemma link_imp_cond3_ints :
+    forall (_LIC3: link_imp_cond3),
+      (<<IFIF: Coqlib.list_disjoint (name2 (prog_funsL src1)) (name2 (prog_funsL src2))>>) /\
+      (<<IFIV: Coqlib.list_disjoint (name2 (prog_funsL src1)) (name1 (prog_varsL src2))>>) /\
+      (<<IVIF: Coqlib.list_disjoint (name1 (prog_varsL src1)) (name2 (prog_funsL src2))>>) /\
+      (<<IVIV: Coqlib.list_disjoint (name1 (prog_varsL src1)) (name1 (prog_varsL src2))>>).
+  Proof.
+    i. apply _link_imp_cond3_ints in _LIC3. des.
+    apply Coqlib.list_norepet_app in _LIC3. des.
+    repeat split.
+    { unfold Coqlib.list_disjoint in *. ii. hexploit _LIC1. eapply H.
+      { apply in_app_iff. left; eauto. }
+      ii. clarify. }
+    { unfold Coqlib.list_disjoint in *. ii. hexploit _LIC1. eapply H.
+      { apply in_app_iff. right. apply in_app_iff; right. eauto. }
+      ii. clarify. }
+    all: clear _LIC1 _LIC3.
+    all: apply Coqlib.list_norepet_app in _LIC0; des.
+    { clear _LIC0 _LIC1. unfold Coqlib.list_disjoint in *. ii. hexploit _LIC2. eapply H0.
+      { apply in_app_iff. left. eapply H. }
+      ii. clarify. }
+    clear _LIC0 _LIC2. apply Coqlib.list_norepet_app in _LIC1. des.
+    unfold Coqlib.list_disjoint in *. ii. hexploit _LIC2; eauto.
   Qed.
 
   (* Linker for Imp programs *)
@@ -311,13 +377,27 @@ Section DECOMP.
       gd1 = gd2.
   Proof. i. eapply norepet_unique; eauto. Qed.
 
-
-
 End DECOMP.
 
 
 
 Section SOLVEID.
+
+  Lemma compile_gdefs_preserves_names :
+    forall src,
+      <<NAMES:
+        List.map s2p
+          ((name1 init_g0) ++ (name1 syscalls) ++
+           (name1 src.(ext_funsL)) ++ src.(ext_varsL) ++ (name2 src.(prog_funsL)) ++ (name1 src.(prog_varsL)))
+        =
+        name1 (compile_gdefs src)>>.
+  Proof.
+    i. unfold compile_gdefs. red. unfold name1. repeat rewrite map_app. repeat f_equal.
+    - sym. rewrite List.map_map. apply ext_funs_names.
+    - sym. apply ext_vars_names.
+    - sym. unfold name2. rewrite List.map_map. apply int_funs_names.
+    - sym. rewrite List.map_map. apply int_vars_names.
+  Qed.
 
   Lemma malloc_unique :
     forall src (NOREPET : Coqlib.list_norepet (List.map fst (compile_gdefs src))),
@@ -366,8 +446,6 @@ End SOLVEID.
 
 Section LINKPROPS.
 
-  Import Permutation.
-
   Lemma link_imp_cond1_comm :
     forall src1 src2,
       <<LC1: link_imp_cond1 src1 src2 = true -> link_imp_cond1 src2 src1 = true>>.
@@ -390,20 +468,13 @@ Section LINKPROPS.
     - depgen EVF1; clear; i. auto.
   Qed.
 
-  Lemma compile_gdefs_preserves_names :
-    forall src,
-      <<NAMES:
-        List.map s2p
-          ((name1 init_g0) ++ (name1 syscalls) ++
-           (name1 src.(ext_funsL)) ++ src.(ext_varsL) ++ (name2 src.(prog_funsL)) ++ (name1 src.(prog_varsL)))
-        =
-        name1 (compile_gdefs src)>>.
+  Lemma link_imp_cond2_comm :
+    forall src1 src2,
+      <<LC2: link_imp_cond2 src1 src2 = true -> link_imp_cond2 src2 src1 = true>>.
   Proof.
-    i. unfold compile_gdefs. red. unfold name1. repeat rewrite map_app. repeat f_equal.
-    - sym. rewrite List.map_map. apply ext_funs_names.
-    - sym. apply ext_vars_names.
-    - sym. unfold name2. rewrite List.map_map. apply int_funs_names.
-    - sym. rewrite List.map_map. apply int_vars_names.
+    ii. unfold link_imp_cond2 in *. eapply _link_imp_cond2_prop_perm.
+    2:{ eapply H. }
+    apply Permutation_app_comm.
   Qed.
 
   Lemma link_then_unique_ids
@@ -516,18 +587,128 @@ Section LINKPROPS.
       2:{ eapply IN0. }
       rewrite H. red. clear. ss. des_ifs. }
 
-    (* ef/? *)
+    (* symbol resolution *)
     clear IN1 IN2. unfold link_imp in LINKSRC. des_ifs_safe. bsimpl. destruct Heq. destruct H.
     rename H into LC1, H1 into LC2, H0 into LC3.
-    destruct SRC1 as [SRC1 | SRC1].
-    { 
+    des.
     
-    
-        
+    - (* ef/ef *)
+      apply link_imp_cond2_prop in LC2.
+      assert (snd fd0 = snd fd).
+      { eapply LC2. repeat split.
+        - rewrite in_app_iff. left; auto.
+        - rewrite in_app_iff. right; auto.
+        - unfold compile_eFun in *; ss; clarify. destruct fd0; destruct fd; ss; clarify. apply s2p_inj in H1; ss.
+      }
+      unfold compile_eFun in *; ss; clarify. destruct fd0; destruct fd; ss; clarify. apply s2p_inj in H1; ss; clarify.
+      exists (snd (compile_eFun (s0, n0))). unfold compile_eFun. split.
+      { des_ifs. }
+      red. unfold compile_gdefs. ss. do 2 (apply in_app_iff; right). apply in_app_iff; left.
+      admit "l_efs prop".
 
-    Local Opaque Linker_varinit. Local Opaque Linker_vardef.
-    Local Opaque Linker_fundef. Local Opaque Linker_def.
-  Admitted.
+    - (* ev/ef *)
+      clear NOREPETL. exfalso. apply link_imp_cond1_prop in LC1. des.
+      apply Coqlib.list_norepet_app in EVF1. des. unfold Coqlib.list_disjoint in EVF3.
+      hexploit EVF3; eauto. unfold compile_eVar in *. ss; clarify. unfold compile_eFun in *. ss; clarify.
+      destruct fd; ss; clarify. apply s2p_inj in H1. clarify. apply (in_map fst) in EFS0. ss.
+
+    - (* if/ef *)
+      exists (snd (compile_iFun fd0)). split.
+      { destruct fd0 as [mn [fn impf]]. unfold compile_iFun in IFS. clarify; ss.
+        destruct fd as [efn sig]. unfold compile_eFun in EFS. clarify; ss. }
+      red. unfold compile_gdefs. ss. do 4 (rewrite in_app_iff; right). rewrite in_app_iff; left.
+      unfold l_pfs. unfold compile_iFuns. rewrite map_app. rewrite in_app_iff; left.
+      apply (in_map compile_iFun) in IFS0. rewrite IFS in *. ss.
+
+    - (* iv/ef *)
+      clear NOREPETL. exfalso. apply link_imp_cond1_prop in LC1. des.
+      apply Coqlib.list_norepet_app in EF0. des. unfold Coqlib.list_disjoint in EF3.
+      unfold name1 in EF3. apply (in_map fst) in EFS0. apply (in_map fst) in IVS0.
+      hexploit EF3; eauto. unfold l_pvs. rewrite map_app. apply in_app_iff; left.
+      destruct vd; destruct fd; ss. clarify. apply s2p_inj in H1; clarify; auto.
+
+    - (* ef/ev *)
+      clear NOREPETL. exfalso. apply link_imp_cond1_prop in LC1. des.
+      apply Coqlib.list_norepet_app in EVF2. des. unfold Coqlib.list_disjoint in EVF3.
+      hexploit EVF3; eauto. unfold compile_eVar in *. ss; clarify. unfold compile_eFun in *. ss; clarify.
+      destruct fd; ss; clarify. apply s2p_inj in H1. clarify. apply (in_map fst) in EFS0. ss.
+
+    - (* ev/ev *)
+      exists (snd (compile_eVar vd0)). split.
+      { unfold compile_eVar in *; ss; clarify. }
+      red. unfold compile_gdefs; ss. do 3 (apply in_app_iff; right). apply in_app_iff; left.
+      admit "l_evs prop".
+
+    - (* if/ev *)
+      clear NOREPETL. exfalso. apply link_imp_cond1_prop in LC1. des.
+      apply Coqlib.list_norepet_app in EV2. des. unfold Coqlib.list_disjoint in EV3.
+      unfold name2 in EV3. apply (in_map (fst ∘ snd)) in IFS0.
+      hexploit EV3; eauto. unfold l_pfs. rewrite map_app. apply in_app_iff; left.
+      destruct fd. destruct p. unfold compile_eVar in *; ss; clarify. apply s2p_inj in H1; clarify; auto.
+
+    - (* iv/ev *)
+      exists (snd (compile_iVar vd0)). split.
+      { destruct vd0. unfold compile_eVar in *. ss; clarify. }
+      red. unfold compile_gdefs; ss. do 5 (apply in_app_iff; right). unfold l_pvs.
+      unfold compile_iVars. rewrite map_app. apply in_app_iff; left.
+      apply (in_map compile_iVar) in IVS0. rewrite IVS in *. ss.
+
+    - (* ef/if *)
+      exists (snd (compile_iFun fd)). split.
+      { destruct fd as [mn [fn impf]]. unfold compile_iFun in *. clarify; ss.
+        destruct fd0 as [efn sig]. unfold compile_eFun in *. clarify; ss. }
+      red. unfold compile_gdefs. ss. do 4 (rewrite in_app_iff; right). rewrite in_app_iff; left.
+      unfold l_pfs. unfold compile_iFuns. rewrite map_app. rewrite in_app_iff; right.
+      apply (in_map compile_iFun) in IFS0. rewrite IFS in *. ss.
+
+    - (* ev/if *)
+      clear NOREPETL. exfalso. apply link_imp_cond1_prop in LC1. des.
+      apply Coqlib.list_norepet_app in EV1. des. unfold Coqlib.list_disjoint in EV3.
+      unfold name2 in EV3. apply (in_map (fst ∘ snd)) in IFS0.
+      hexploit EV3; eauto. unfold l_pfs. rewrite map_app. apply in_app_iff; right.
+      destruct fd. destruct p. unfold compile_eVar in *; ss; clarify. apply s2p_inj in H1; clarify; auto.
+
+    - (* if/if *)
+      clear NOREPETL. exfalso. apply link_imp_cond3_ints in LC3. des. unfold Coqlib.list_disjoint in IFIF.
+      unfold name2 in *. apply (in_map (fst ∘ snd)) in IFS2. apply (in_map (fst ∘ snd)) in IFS0.
+      hexploit IFIF; eauto. ii. destruct fd0 as [mn0 [fn0 ff0]]; destruct fd as [mn [fn ff]]. ss; clarify.
+      apply s2p_inj in H2; clarify.
+
+    - (* iv/if *)
+      clear NOREPETL. exfalso. apply link_imp_cond3_ints in LC3. des. unfold Coqlib.list_disjoint in IVIF.
+      unfold name2 in *. unfold name1 in *. apply (in_map (fst ∘ snd)) in IFS0. apply (in_map fst) in IVS0.
+      hexploit IVIF; eauto. ii. destruct vd; destruct fd as [mn [fn ff]]. ss; clarify.
+      apply s2p_inj in H2; clarify.
+
+    - (* ef/iv *)
+      clear NOREPETL. exfalso. apply link_imp_cond1_prop in LC1. des.
+      apply Coqlib.list_norepet_app in EF1. des. unfold Coqlib.list_disjoint in EF3.
+      unfold name1 in EF3. apply (in_map fst) in EFS0. apply (in_map fst) in IVS0.
+      hexploit EF3; eauto. unfold l_pvs. rewrite map_app. apply in_app_iff; right.
+      destruct vd; destruct fd; ss. clarify. apply s2p_inj in H1; clarify; auto.
+
+    - (* ev/iv *)
+      exists (snd (compile_iVar vd)). split.
+      { destruct vd. unfold compile_eVar in *. ss; clarify. }
+      red. unfold compile_gdefs; ss. do 5 (apply in_app_iff; right). unfold l_pvs.
+      unfold compile_iVars. rewrite map_app. apply in_app_iff; right.
+      apply (in_map compile_iVar) in IVS0. rewrite IVS in *. ss.
+
+    - (* if/iv *)
+      clear NOREPETL. exfalso. apply link_imp_cond3_ints in LC3. des. unfold Coqlib.list_disjoint in IFIV.
+      unfold name2 in *. unfold name1 in *. apply (in_map (fst ∘ snd)) in IFS0. apply (in_map fst) in IVS0.
+      hexploit IFIV; eauto. ii. destruct vd; destruct fd as [mn [fn ff]]. ss; clarify.
+      apply s2p_inj in H2; clarify.
+
+    - (* iv/iv *)
+      clear NOREPETL. exfalso. apply link_imp_cond3_ints in LC3. des. unfold Coqlib.list_disjoint in IVIV.
+      unfold name1 in *. apply (in_map fst) in IVS2. apply (in_map fst) in IVS0.
+      hexploit IVIV; eauto. ii. destruct vd0 as [vn0 vv0]; destruct vd as [vn vv]. ss; clarify.
+      apply s2p_inj in H2; clarify.
+
+      Local Opaque Linker_varinit. Local Opaque Linker_vardef.
+      Local Opaque Linker_fundef. Local Opaque Linker_def.
+  Qed.
 
 End LINKPROPS.
 
