@@ -46,7 +46,7 @@ Section PROOF.
     fun args =>
       h <- (pargs [Tuntyped] args)?;;
       `n: val    <- (ccall "getint" ([]: list val));;
-      if (dec n (Vint INT_MIN))
+      if (dec n (Vint (- 1)))
       then Ret Vundef
       else
         `_: val    <- (ccall "push" ([h; n]: list val));;
@@ -65,7 +65,7 @@ Section PROOF.
     fun args =>
       h <- (pargs [Tuntyped] args)?;;
       `n: val    <- (ccall "pop" ([h]: list val));;
-      if (dec n (Vint INT_MIN))
+      if (dec n (Vint (- 1)))
       then Ret Vundef
       else
         `_: val    <- (ccall "putint" ([n]: list val));;

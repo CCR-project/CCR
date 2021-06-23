@@ -27,16 +27,17 @@ Section PROOF.
 
   Context `{Σ: GRA.t}.
 
-  Definition ClientSem: UModSem.t := {|
-    UModSem.fnsems := [("getint", cfun getintF); ("putint", cfun putintF)];
-    UModSem.mn := "Client";
-    UModSem.initial_st := tt↑;
+  Definition ClientSem: ModSem.t := {|
+    ModSem.fnsems := [("getint", cfun getintF); ("putint", cfun putintF)];
+    ModSem.mn := "Client";
+    ModSem.initial_mr := ε;
+    ModSem.initial_st := tt↑;
   |}
   .
 
-  Definition Client: UMod.t := {|
-    UMod.get_modsem := fun _ => ClientSem;
-    UMod.sk := Sk.unit;
+  Definition Client: Mod.t := {|
+    Mod.get_modsem := fun _ => ClientSem;
+    Mod.sk := Sk.unit;
   |}
   .
 
