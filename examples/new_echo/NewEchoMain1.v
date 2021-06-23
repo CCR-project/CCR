@@ -20,7 +20,7 @@ Section PROOF.
   Context `{Σ: GRA.t}.
 
   Definition main_body: list val -> itree (kCallE +' pE +' eventE) val :=
-    fun _ => (ckcall impure "echo" ([]: list val))
+    fun _ => (kcall impure "echo" ([]: list val))
   .
 
   Definition MainSem: KModSem.t := {|

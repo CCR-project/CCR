@@ -50,6 +50,9 @@ Section AUX.
   | kCall (kf: kflag) (fn: gname) (varg: Any.t): kCallE Any.t
   .
 
+  Definition kcall {X Y} (kf: kflag) (fn: gname) (varg: X): itree (kCallE +' pE +' eventE) Y :=
+    vret <- trigger (kCall kf fn varg↑);; vret <- vret↓ǃ;; Ret vret.
+
   Record kspecbody := mk_kspecbody {
     ksb_fspec:> fspec;                                            (*** K -> K ***)
     ksb_ubody: (option mname * Any.t) -> itree (kCallE +' pE +' eventE) Any.t;     (*** U -> K ***)

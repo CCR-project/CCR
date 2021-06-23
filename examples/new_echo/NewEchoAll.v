@@ -28,7 +28,7 @@ Section ECHOIMPL.
   Local Existing Instance Σ.
 
   Definition echo_impl: ModL.t :=
-    Mod.add_list [Mem; Main; Stack; Echo; (UMod.transl Client)].
+    Mod.add_list [Mem; Main; Stack; Echo; Client].
 
 End ECHOIMPL.
 

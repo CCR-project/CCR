@@ -24,9 +24,9 @@ Section PROOF.
   Definition echo_body: list val -> itree (kCallE +' pE +' eventE) val :=
     fun args =>
       _ <- (pargs [] args)?;;
-      `h: val    <- (ckcall pure "new" ([]: list val));;
-      `_: val    <- (ckcall impure "input" ([h]: list val));;
-      `_: val    <- (ckcall impure "output" ([h]: list val));;
+      `h: val    <- (kcall pure "new" ([]: list val));;
+      `_: val    <- (kcall impure "input" ([h]: list val));;
+      `_: val    <- (kcall impure "output" ([h]: list val));;
       Ret Vundef
   .
 
@@ -35,20 +35,20 @@ Section PROOF.
 
 
   Definition input_spec: fspec :=
-    mk_fspec (fun h _argh _argl o =>
+    mk_fspec (fun _ h _argh _argl o =>
                 (∃ (argh: list val) (argl: list val),
                   ⌜_argh = argh↑ ∧ _argl = argl↑ ∧ argl = [Vptr h 0] ∧ o = ord_top⌝
                    ** OwnM (is_stack h argh))%I)
-             (fun h _reth _ => (∃ (reth: list val), ⌜_reth = reth↑⌝ ** OwnM(is_stack h reth))%I)
+             (fun _ h _reth _ => (∃ (reth: list val), ⌜_reth = reth↑⌝ ** OwnM(is_stack h reth))%I)
   .
 
   Definition input_body: list val -> itree (kCallE +' pE +' eventE) (list val) :=
     fun stk =>
-      n <- (ckcall unknown "getint" ([]: list val));;
-      if (dec n (Vint INT_MIN))
+      n <- (kcall impure "getint" ([]: list val));;
+      if (dec n (Vint (- 1)))
       then Ret stk
       else
-        (ckcall impure "input" (n :: stk))
+        (kcall impure "input" (n :: stk))
   .
 
 
@@ -56,18 +56,18 @@ Section PROOF.
 
 
   Definition output_spec: fspec :=
-    mk_fspec (fun h _argh _argl o =>
+    mk_fspec (fun _ h _argh _argl o =>
                 (∃ (argh: list val) (argl: list val),
                   ⌜_argh = argh↑ ∧ _argl = argl↑ ∧ argl = [Vptr h 0] ∧ o = ord_top⌝
                    ** OwnM (is_stack h argh))%I)
-             (fun h _reth _ => (∃ (reth: list val), ⌜_reth = reth↑⌝ ** OwnM(is_stack h reth))%I)
+             (fun _ h _reth _ => (∃ (reth: list val), ⌜_reth = reth↑⌝ ** OwnM(is_stack h reth))%I)
   .
 
   Definition output_body: list val -> itree (kCallE +' pE +' eventE) (list val) :=
     fun stk =>
       match stk with
       | [] => Ret []
-      | n :: stk' => `_: val <- (ckcall unknown "putint" ([n]: list val));; (ckcall impure "output" (stk'))
+      | n :: stk' => `_: val <- (kcall impure "putint" ([n]: list val));; (kcall impure "output" (stk'))
       end
   .
 
@@ -84,7 +84,7 @@ Section PROOF.
 
   Definition EchoStb: list (gname * fspec).
     eapply (Seal.sealing "stb").
-    let x := constr:(List.map (map_snd (fun ksb => (KModSem.disclose_ksb ksb): fspec)) EchoSbtb) in
+    let x := constr:(List.map (map_snd (fun ksb => (KModSem.disclose_ksb_tgt ksb): fspec)) EchoSbtb) in
     let y := eval cbn in x in
     eapply y.
   Defined.
