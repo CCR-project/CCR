@@ -28,10 +28,6 @@ Section EVENTSCOMMON.
   | Syscall (fn: gname) (args: list val) (rvs: val -> Prop): eventE val
   .
 
-  Inductive callE: Type -> Type :=
-  | Call (fn: gname) (args: Any.t): callE Any.t
-  .
-
   (* Notation "'Choose' X" := (trigger (Choose X)) (at level 50, only parsing). *)
   (* Notation "'Take' X" := (trigger (Take X)) (at level 50, only parsing). *)
 
@@ -72,27 +68,6 @@ Notation "(ǃ)" := (unwrapN) (only parsing).
 Goal (tt ↑↓?) = Ret tt. rewrite Any.upcast_downcast. ss. Qed.
 Goal (tt ↑↓ǃ) = Ret tt. rewrite Any.upcast_downcast. ss. Qed.
 
-Section EVENTSCOMMON.
-
-(*** casting call, fun ***)
-(* Definition ccallN {X Y} (fn: gname) (varg: X): itree Es Y := vret <- trigger (Call fn varg↑);; vret <- vret↓ǃ;; Ret vret. *)
-(* Definition ccallU {X Y} (fn: gname) (varg: X): itree Es Y := vret <- trigger (Call fn varg↑);; vret <- vret↓?;; Ret vret. *)
-(* Definition cfunN {X Y} (body: X -> itree Es Y): Any.t -> itree Es Any.t := *)
-(*   fun varg => varg <- varg↓ǃ;; vret <- body varg;; Ret vret↑. *)
-(* Definition cfunU {X Y} (body: X -> itree Es Y): Any.t -> itree Es Any.t := *)
-(*   fun varg => varg <- varg↓?;; vret <- body varg;; Ret vret↑. *)
-
-  (* Definition ccall {X Y} (fn: gname) (varg: X): itree Es Y := vret <- trigger (Call fn varg↑);; vret <- vret↓ǃ;; Ret vret. *)
-  (* Definition cfun {X Y} (body: X -> itree Es Y): Any.t -> itree Es Any.t := *)
-  (*   fun varg => varg <- varg↓ǃ;; vret <- body varg;; Ret vret↑. *)
-  Context `{HasCallE: callE -< E}.
-  Context `{HasEventE: eventE -< E}.
-  Definition ccall {X Y} (fn: gname) (varg: X): itree E Y := vret <- trigger (Call fn varg↑);; vret <- vret↓ǃ;; Ret vret.
-  Definition cfun {X Y} (body: X -> itree E Y): (mname * Any.t) -> itree E Any.t :=
-    fun '(_, varg) => varg <- varg↓ǃ;; vret <- body varg;; Ret vret↑.
-
-End EVENTSCOMMON.
-
 
 
 
@@ -126,6 +101,10 @@ Module EventsL.
 Section EVENTSL.
 
   Context `{Σ: GRA.t}.
+
+  Inductive callE: Type -> Type :=
+  | Call (mn: option mname) (fn: gname) (args: Any.t): callE Any.t
+  .
 
   Inductive pE: Type -> Type :=
   | PPut (mn: mname) (p: Any.t): pE unit
@@ -351,7 +330,7 @@ Section MODSEML.
 
   Record t: Type := mk {
     (* initial_ld: mname -> GRA; *)
-    fnsems: alist gname ((mname * Any.t) -> itree Es Any.t);
+    fnsems: alist gname ((option mname * Any.t) -> itree Es Any.t);
     initial_mrs: alist mname (Σ * Any.t);
   }
   .
@@ -380,9 +359,8 @@ Section MODSEML.
   Variable ms: t.
 
   Definition prog: callE ~> itree Es :=
-    fun _ '(Call fn args) =>
+    fun _ '(Call mn fn args) =>
       sem <- (alist_find fn ms.(fnsems))?;;
-      '(mn, args) <- (Any.split args)ǃ;; mn <- mn↓ǃ;;
       rv <- (sem (mn, args));;
       Ret rv
   .
@@ -405,10 +383,10 @@ Section MODSEML.
     | None => Ret tt
     | Some P' => assume (<<WF: P'>>)
     end;;;
-    snd <$> interp_Es prog (prog (Call "main" arg)) (initial_r_state, initial_p_state).
+    snd <$> interp_Es prog (prog (Call None "main" arg)) (initial_r_state, initial_p_state).
 
   Definition initial_itr (P: option Prop): itree (eventE) Any.t :=
-    initial_itr_arg P (Any.pair ""↑ ([]: list val)↑).
+    initial_itr_arg P ([]: list val)↑.
 
 
   Let state: Type := itree eventE Any.t.
@@ -759,6 +737,10 @@ End ModSemL.
 Section EVENTS.
   Context `{Σ: GRA.t}.
 
+  Inductive callE: Type -> Type :=
+  | Call (fn: gname) (args: Any.t): callE Any.t
+  .
+
   Inductive pE: Type -> Type :=
   | PPut (p: Any.t): pE unit
   | PGet: pE Any.t
@@ -790,10 +772,10 @@ Section EVENTS.
       end
   .
 
-  Definition handle_callE (mn: mname) `{callE -< E} `{EventsL.rE -< E}: callE ~> itree E :=
+  Definition handle_callE (mn: mname) `{EventsL.callE -< E} `{EventsL.rE -< E}: callE ~> itree E :=
     fun _ '(Call fn args) =>
       trigger EventsL.PushFrame;;;
-      r <- trigger (Call fn (Any.pair mn↑ args));;
+      r <- trigger (EventsL.Call (Some mn) fn args);;
       trigger EventsL.PopFrame;;;
       Ret r
   .
@@ -847,7 +829,7 @@ Section EVENTS.
         fn args
     :
       transl_all mn (trigger (Call fn args)) =
-      trigger EventsL.PushFrame;;; r <- (trigger (Call fn (Any.pair mn↑ args)));;
+      trigger EventsL.PushFrame;;; r <- (trigger (EventsL.Call (Some mn) fn args));;
       trigger EventsL.PopFrame;;; tau;; Ret r
   .
   Proof. unfold transl_all. rewrite unfold_interp. ss. grind. Qed.
@@ -916,7 +898,26 @@ Section EVENTS.
 End EVENTS.
 (* End Events. *)
 
-(* Arguments transl_all {Σ} _%string_scope {T}%type_scope _%itree_scope. *)
+Section EVENTSCOMMON.
+
+(*** casting call, fun ***)
+(* Definition ccallN {X Y} (fn: gname) (varg: X): itree Es Y := vret <- trigger (Call fn varg↑);; vret <- vret↓ǃ;; Ret vret. *)
+(* Definition ccallU {X Y} (fn: gname) (varg: X): itree Es Y := vret <- trigger (Call fn varg↑);; vret <- vret↓?;; Ret vret. *)
+(* Definition cfunN {X Y} (body: X -> itree Es Y): Any.t -> itree Es Any.t := *)
+(*   fun varg => varg <- varg↓ǃ;; vret <- body varg;; Ret vret↑. *)
+(* Definition cfunU {X Y} (body: X -> itree Es Y): Any.t -> itree Es Any.t := *)
+(*   fun varg => varg <- varg↓?;; vret <- body varg;; Ret vret↑. *)
+
+  (* Definition ccall {X Y} (fn: gname) (varg: X): itree Es Y := vret <- trigger (Call fn varg↑);; vret <- vret↓ǃ;; Ret vret. *)
+  (* Definition cfun {X Y} (body: X -> itree Es Y): Any.t -> itree Es Any.t := *)
+  (*   fun varg => varg <- varg↓ǃ;; vret <- body varg;; Ret vret↑. *)
+  Context `{HasCallE: callE -< E}.
+  Context `{HasEventE: eventE -< E}.
+  Definition ccall {X Y} (fn: gname) (varg: X): itree E Y := vret <- trigger (Call fn varg↑);; vret <- vret↓ǃ;; Ret vret.
+  Definition cfun {X Y} (body: X -> itree E Y): (option mname * Any.t) -> itree E Any.t :=
+    fun '(_, varg) => varg <- varg↓ǃ;; vret <- body varg;; Ret vret↑.
+
+End EVENTSCOMMON.
 
 
 
@@ -926,7 +927,7 @@ Section MODSEM.
   Context `{Σ: GRA.t}.
 
   Record t: Type := mk {
-    fnsems: list (gname * ((mname * Any.t) -> itree Es Any.t));
+    fnsems: list (gname * ((option mname * Any.t) -> itree Es Any.t));
     mn: mname;
     initial_mr: Σ;
     initial_st: Any.t;
@@ -987,7 +988,7 @@ Section MODL.
     ModSemL.compile_itree (ModSemL.initial_itr_arg md.(enclose) (Some (wf md)) arg).
 
   Lemma compile_compile_arg_nil md:
-    compile md = compile_arg md (Any.pair ""↑ ([]: list val)↑).
+    compile md = compile_arg md ([]: list val)↑.
   Proof.
     refl.
   Qed.

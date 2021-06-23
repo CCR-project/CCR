@@ -355,14 +355,6 @@ Section CANCEL.
     steps. esplits; eauto. steps. unshelve esplits; eauto. steps. unfold unwrapU.
     rewrite FINDMID. rewrite FINDTGT. rewrite ! bind_ret_l.
 
-    Local Opaque fun_to_mid fun_to_tgt.
-    rewrite Any.pair_split. cbn. rewrite ! bind_ret_l.
-    rewrite Any.upcast_downcast. cbn. rewrite ! bind_ret_l.
-    rewrite Any.pair_split. cbn. rewrite ! bind_ret_l.
-    rewrite Any.upcast_downcast. cbn. rewrite ! bind_ret_l.
-    steps.
-    Local Transparent fun_to_mid fun_to_tgt.
-
     guclo ordC_spec. econs.
     { instantiate (1:=(192+200)%ord). rewrite <- OrdArith.add_from_nat. refl. }
     rename f into fs.
@@ -374,7 +366,7 @@ Section CANCEL.
                            (<<ST: (List.length frs_src) = (List.length frs_tgt) /\
                                   frs_src <> [] /\
                                   URA.wf (rsum (mrs_tgt, rret :: frs_tgt))>>) /\
-                           (<<POST: fs.(postcond) mn x2 vret_src vret_tgt rret>>) /\
+                           (<<POST: fs.(postcond) (Some mn) x2 vret_src vret_tgt rret>>) /\
                            (<<PHYS: mps_src = mps_tgt>>)
                   ).
       fold sk. fold sk. set (mn0:=SModSem.mn (SMod.get_modsem md sk)) in *.
@@ -402,7 +394,6 @@ Section CANCEL.
       rewrite Any.upcast_downcast. steps.
       guclo ordC_spec. econs.
       { instantiate (1:=(53+100)%ord). rewrite <- OrdArith.add_from_nat. refl. }
-      rewrite idK_spec at 1.
       guclo bindC_spec. econs.
       { gbase. eapply CIH; ss. rr. esplits; ss; et. rewrite URA.unit_idl. clear - WFTGT x MIN MIN0 NODUP.
         rewrite rsum_minus_spec in x; auto. rewrite URA.add_assoc in x.
@@ -413,12 +404,12 @@ Section CANCEL.
       { ii. ss. des_ifs_safe. des; ss. clarify. destruct p, p0.
         steps. esplits; eauto. steps. unfold put. steps. steps.
         unfold handle_rE. destruct r0; ss. destruct l; ss.
-        { steps. }
+        { destruct r1. des; ss. }
         steps.
         unfold guarantee.
         steps.
         unfold discard.
-        steps. des. clarify.
+        steps. des. clarify. steps.
         esplits; ss; eauto.
         { rewrite rsum_minus_spec in x5; auto. rewrite URA.add_assoc in x5.
           rewrite <- rsum_update in x5; auto.
@@ -458,7 +449,7 @@ Section CANCEL.
 
   Variable entry_r: Σ.
   Variable mainpre: Any.t -> ord -> Σ -> Prop.
-  Variable (mainbody: (mname * Any.t) -> itree (hCallE +' pE +' eventE) Any.t).
+  Variable (mainbody: (option mname * Any.t) -> itree (hCallE +' pE +' eventE) Any.t).
   Hypothesis MAINPRE: mainpre ([]: list val)↑ ord_top entry_r.
 
   Hypothesis WFR: URA.wf (entry_r ⋅ rsum (ModSemL.initial_r_state ms_tgt)).
@@ -476,7 +467,7 @@ Section CANCEL.
   Opaque EventsL.interp_Es.
 
   Theorem adequacy_type_t2m: Beh.of_program (ModL.compile (Mod.add_list mds_tgt)) <1=
-                             Beh.of_program (ModL.compile_arg (Mod.add_list mds_mid) (Any.pair ""↑ (Any.pair ord_top↑ ([]: list val)↑))).
+                             Beh.of_program (ModL.compile_arg (Mod.add_list mds_mid) (Any.pair ord_top↑ ([]: list val)↑)).
   Proof.
     assert (IWF: URA.wf (entry_r ⋅ rsum (fun mn => match alist_find mn (ModSemL.initial_mrs ms_tgt) with
                                                    | Some r => fst r
@@ -515,19 +506,11 @@ Section CANCEL.
 
     Local Transparent ModSemL.prog. ss.
     rewrite FINDTGT. rewrite FINDMID. steps.
-    unfold fun_to_mid, fun_to_tgt. ss.
-    unfold HoareFun. steps.
-
-    unfold forge, put, checkWf, discard.
-    rewrite Any.pair_split. steps.
-    rewrite Any.upcast_downcast. steps.
-    rewrite Any.pair_split. steps.
-    rewrite Any.upcast_downcast. steps.
-    rewrite Any.pair_split. steps.
-    rewrite Any.upcast_downcast. steps.
-
     eexists. steps. eexists. steps. exists tt. steps.
     eexists. steps.
+    unfold forge, put, checkWf, discard.
+    rewrite Any.pair_split. steps.
+    rewrite Any.upcast_downcast.
 
     unshelve esplits.
     { instantiate (1:=entry_r).

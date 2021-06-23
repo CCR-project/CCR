@@ -947,8 +947,7 @@ Section PROOF.
         set (ms:=_ms) in *
       end.
       unfold cfun.
-      rewrite Any.pair_split. sim_red.
-      rewrite Any.upcast_downcast. rewrite Any.upcast_downcast. grind. unfold allocF. sim_red.
+      rewrite Any.upcast_downcast. grind. unfold allocF. sim_red.
       do 4 (gstep; sim_tau). sim_red.
       rewrite PSTATE. rewrite Any.upcast_downcast. grind. unfold unint. des_ifs; sim_red.
       des_ifs; sim_red.
@@ -1101,8 +1100,7 @@ Section PROOF.
         set (ms:=_ms) in *
       end.
       unfold cfun.
-      rewrite Any.pair_split. sim_red.
-      rewrite Any.upcast_downcast. rewrite Any.upcast_downcast. grind. unfold loadF. sim_red.
+      rewrite Any.upcast_downcast. grind. unfold loadF. sim_red.
       do 4 (gstep; sim_tau). sim_red.
       rewrite PSTATE. rewrite Any.upcast_downcast. grind. unfold unptr. des_ifs; sim_red.
       1:{ sim_triggerUB. }
@@ -1150,8 +1148,7 @@ Section PROOF.
       destruct rstate. ss. destruct l0; clarify.
       grind. do 3 (gstep; sim_tau). sim_red.
       unfold cfun.
-      rewrite Any.pair_split. sim_red.
-      rewrite Any.upcast_downcast. rewrite Any.upcast_downcast. grind. unfold storeF. sim_red.
+      rewrite Any.upcast_downcast. grind. unfold storeF. sim_red.
       do 4 (gstep; sim_tau). sim_red.
       rewrite PSTATE. rewrite Any.upcast_downcast. grind. unfold unptr. des_ifs; sim_red.
       2:{ sim_triggerUB. }
@@ -1203,8 +1200,7 @@ Section PROOF.
       destruct rstate. ss. destruct l0; clarify.
       grind. do 3 (gstep; sim_tau). sim_red.
       unfold cfun.
-      rewrite Any.pair_split. sim_red.
-      rewrite Any.upcast_downcast. rewrite Any.upcast_downcast. grind. unfold cmpF. sim_red.
+      rewrite Any.upcast_downcast. grind. unfold cmpF. sim_red.
       do 4 (gstep; sim_tau). sim_red.
       rewrite PSTATE. rewrite Any.upcast_downcast. grind.
       destruct (vcmp m rv rv0) eqn:VCMP; sim_red.

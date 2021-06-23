@@ -364,13 +364,13 @@ Section SIM.
     - econs; try apply SIM; et. eapply Ord.lt_le_lt; et.
   Qed.
 
-  Definition sim_fsem: relation (mname * Any.t -> itree Es Any.t) :=
+  Definition sim_fsem: relation (option mname * Any.t -> itree Es Any.t) :=
     (eq ==> (fun it_src it_tgt => forall w mrs_src mrs_tgt (SIMMRS: wf w (mrs_src, mrs_tgt)),
                  exists n, sim_itree n w ((mrs_src, URA.unit), it_src)
                                      ((mrs_tgt, URA.unit), it_tgt)))%signature
   .
 
-  Definition sim_fnsem: relation (string * (mname * Any.t -> itree Es Any.t)) := RelProd eq sim_fsem.
+  Definition sim_fnsem: relation (string * (option mname * Any.t -> itree Es Any.t)) := RelProd eq sim_fsem.
 
 
   Variant lordC (r: forall (R_src R_tgt: Type) (RR: st_local -> st_local -> R_src -> R_tgt -> Prop), Ord.t -> world -> st_local * itree Es R_src -> st_local * itree Es R_tgt -> Prop)
@@ -666,13 +666,13 @@ Section ADQ.
     - unfold transl_all. rewrite ! unfold_interp. ss. gstep. econs; eauto.
       pclearbot. gbase. eapply CIH; et.
     - unfold transl_all. rewrite ! interp_bind. rewrite ! unfold_interp. ss. rewrite ! bind_bind.
-      replace (trigger EventsL.PushFrame;;; r1 <- trigger (Call fn (Any.pair (Any.upcast (ModSem.mn ms_src)) varg));; x <- (trigger EventsL.PopFrame;;; Ret r1);;
+      replace (trigger EventsL.PushFrame;;; r1 <- trigger (EventsL.Call (Some (ModSem.mn ms_src)) fn varg);; x <- (trigger EventsL.PopFrame;;; Ret r1);;
                x0 <- (tau;; interp (handle_all (ModSem.mn ms_src)) (Ret x));; interp (handle_all (ModSem.mn ms_src)) (k_src x0)) with
-          (trigger EventsL.PushFrame;;; r <- trigger (Call fn (Any.pair (Any.upcast (ModSem.mn ms_src)) varg));; trigger EventsL.PopFrame;;; tau;; (interp (handle_all (ModSem.mn ms_src)) (k_src r))); cycle 1.
+          (trigger EventsL.PushFrame;;; r <- trigger (EventsL.Call (Some (ModSem.mn ms_src)) fn varg);; trigger EventsL.PopFrame;;; tau;; (interp (handle_all (ModSem.mn ms_src)) (k_src r))); cycle 1.
       { grind. }
-      replace (trigger EventsL.PushFrame;;; r1 <- trigger (Call fn (Any.pair (Any.upcast (ModSem.mn ms_tgt)) varg));; x <- (trigger EventsL.PopFrame;;; Ret r1);;
+      replace (trigger EventsL.PushFrame;;; r1 <- trigger (EventsL.Call (Some (ModSem.mn ms_tgt)) fn varg);; x <- (trigger EventsL.PopFrame;;; Ret r1);;
                x0 <- (tau;; interp (handle_all (ModSem.mn ms_tgt)) (Ret x));; interp (handle_all (ModSem.mn ms_tgt)) (k_tgt x0)) with
-          (trigger EventsL.PushFrame;;; r <- trigger (Call fn (Any.pair (Any.upcast (ModSem.mn ms_src)) varg));; trigger EventsL.PopFrame;;; tau;; (interp (handle_all (ModSem.mn ms_tgt)) (k_tgt r))); cycle 1.
+          (trigger EventsL.PushFrame;;; r <- trigger (EventsL.Call (Some (ModSem.mn ms_src)) fn varg);; trigger EventsL.PopFrame;;; tau;; (interp (handle_all (ModSem.mn ms_tgt)) (k_tgt r))); cycle 1.
       { rewrite MN. grind. }
       gstep. econs; eauto.
       { rr. esplits; ss; et. }
@@ -1002,13 +1002,13 @@ Section ADQ.
       { eapply OrdArith.add_lt_l. rewrite <- Ord.from_nat_O. eapply OrdArith.lt_from_nat. lia. }
       ired. gbase. eapply CIH; et.
     - unfold transl_all. rewrite ! interp_bind. rewrite ! unfold_interp. ss. rewrite ! bind_bind.
-      replace (trigger EventsL.PushFrame;;; r1 <- trigger (Call fn (Any.pair (Any.upcast (ModSem.mn ms_src)) varg));; x <- (trigger EventsL.PopFrame;;; Ret r1);;
+      replace (trigger EventsL.PushFrame;;; r1 <- trigger (EventsL.Call (Some (ModSem.mn ms_src)) fn varg);; x <- (trigger EventsL.PopFrame;;; Ret r1);;
                x0 <- (tau;; interp (handle_all (ModSem.mn ms_src)) (Ret x));; interp (handle_all (ModSem.mn ms_src)) (k_src x0)) with
-          (trigger EventsL.PushFrame;;; r <- trigger (Call fn (Any.pair (Any.upcast (ModSem.mn ms_src)) varg));; trigger EventsL.PopFrame;;; tau;; (interp (handle_all (ModSem.mn ms_src)) (k_src r))); cycle 1.
+          (trigger EventsL.PushFrame;;; r <- trigger (EventsL.Call (Some (ModSem.mn ms_src)) fn varg);; trigger EventsL.PopFrame;;; tau;; (interp (handle_all (ModSem.mn ms_src)) (k_src r))); cycle 1.
       { grind. }
       gstep. econs. auto.
       Unshelve.
-    all: exact 0.
+      all: exact 0.
   Qed.
 
   Lemma adequacy_lift_fsem
