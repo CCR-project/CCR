@@ -24,9 +24,10 @@ Section PROOF.
   Definition echo_body: list val -> itree (kCallE +' pE +' eventE) val :=
     fun args =>
       _ <- (pargs [] args)?;;
-      `h: val    <- (kcall pure "new" ([]: list val));;
-      `_: val    <- (kcall impure "input" ([h]: list val));;
-      `_: val    <- (kcall impure "output" ([h]: list val));;
+      (* APCK;;; *)
+      (* `_: list val <- (kcall pure "new" ([]: list val));; *)
+      `stk0: list val    <- (kcall impure "input" ([]: list val));;
+      `_: list val    <- (kcall impure "output" (stk0));;
       Ret Vundef
   .
 
