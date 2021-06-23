@@ -397,7 +397,7 @@ Section MASSAGE.
   Variable stb: (list (string * fspec)).
 
   Definition massage_callE: callE ~> stateT Σ (itree Es') :=
-    fun T '(Call fn args) fr0 => _ <- (alist_find fn stb)?;; r <- trigger (hCall false fn args);; Ret (fr0, r)
+    fun T '(Call fn args) fr0 => _ <- (alist_find fn stb)?;; r <- trigger (hCall false fn (Any.pair false↑ args));; Ret (fr0, r)
   .
 
   Definition massage_rE: rE ~> stateT Σ (itree Es') :=
@@ -439,11 +439,13 @@ Section MASSAGE.
   .
 
   Definition massage_fun (ktr: (option mname * Any.t) -> itree Es Any.t): ((option mname * Any.t) -> itree Es' Any.t) :=
-    fun args => '(_, rv) <- massage_itr (ktr args) ε;; Ret rv
+    fun '(mn, args) =>
+      '(_, args) <- (Any.split args)ǃ;;
+      '(_, rv) <- massage_itr (ktr (mn, args)) ε;; Ret rv
   .
 
   Definition massage_fsb: ((option mname * Any.t) -> itree Es Any.t) -> fspecbody :=
-    fun ktr => mk_specbody fspec_trivial (massage_fun ktr)
+    fun ktr => mk_specbody (KModSem.disclose_tgt fspec_trivial) (massage_fun ktr)
   .
 
   Definition massage_ms (ms: ModSem.t): SModSem.t := {|
@@ -680,7 +682,7 @@ Section ADQ.
 
   Variable _kmds: list KMod.t.
   Let frds: Sk.t -> list mname := fun sk => (map (KModSem.mn ∘ (flip KMod.get_modsem sk)) _kmds).
-  Let kmds: list SMod.t := List.map (KMod.transl frds) _kmds.
+  Let kmds: list SMod.t := List.map KMod.transl_tgt _kmds.
   Variable umds: list Mod.t.
 
   Let sk_link: Sk.t := Sk.sort (fold_right Sk.add Sk.unit ((List.map SMod.sk kmds) ++ (List.map Mod.sk umds))).
@@ -690,7 +692,7 @@ Section ADQ.
   Let _umss: Sk.t -> list ModSem.t := fun ske => List.map (flip Mod.get_modsem ske) umds.
   Let _gstb: Sk.t -> list (gname * fspec) := fun ske =>
     (flat_map (List.map (map_snd fsb_fspec) ∘ SModSem.fnsems) (_kmss ske))
-      ++ (flat_map (List.map (map_snd (fun _ => fspec_trivial)) ∘ ModSem.fnsems) (_umss ske)).
+      ++ (flat_map (List.map (map_snd (fun _ => KModSem.disclose_tgt fspec_trivial)) ∘ ModSem.fnsems) (_umss ske)).
 
   Let kmss: list SModSem.t := Eval red in (_kmss sk_link).
   Let umss: list ModSem.t := Eval red in (_umss sk_link).
@@ -728,7 +730,6 @@ Section ADQ.
   Lemma my_lemma1_aux''
         (ske: Sk.t) mr0 st0 (A: Type) (itr: itree Es A) (ctx: Σ)
         mn
-        (UNKNOWN: ~In mn (frds ske))
         fr0 fr_trash
         (* (WF: URA.wf (ctx ⋅ mr0)) *)
         (WF: URA.wf ctx)
@@ -744,7 +745,7 @@ Section ADQ.
         )
         40%nat tt
         (ε, (Any.pair mr0↑ st0), fr_trash, (interp_hCallE_tgt mn (_gstb ske) ord_top
-                                                                (massage_itr (_gstb ske) itr fr0) ctx))
+                                                              (massage_itr (_gstb ske) itr fr0) ctx))
         (mr0, st0, fr0, addtau itr)
   .
   Proof.
@@ -799,8 +800,7 @@ Section ADQ.
       force_l. exists ord_top. steps.
       force_l.
       { eapply to_semantic; [|eapply URA.wf_unit]. iIntros. iPureIntro.
-        esplits; et.  ii. des; ss.
-        eapply in_map_iff in H. des. clarify. }
+        esplits; et. }
       steps. force_l.
       { split; et. }
       steps. gstep. econs; et.
@@ -818,8 +818,8 @@ Section ADQ.
       steps. force_l. exists ε. steps.
       force_l. exists ε. steps. force_l.
       { rewrite URA.unit_id. auto. }
-      steps. force_l. exists tt. steps.
-      force_l. exists (args). steps.
+      steps. force_l. exists None. steps.
+      force_l. eexists (args). steps.
       force_l. exists ord_top. steps.
       force_l.
       { eapply to_semantic; [|eapply URA.wf_unit]. iIntros. iPureIntro. esplits; et. }
@@ -852,41 +852,40 @@ Section ADQ.
     Local Transparent HoareFun.
     unfold fun_to_tgt, HoareFun, discard, forge, checkWf, put, cfun.
     Local Opaque HoareFun.
-    ginit. steps. red in _ASSUME0. uipropall. des. clarify.
-    (* do 5 (prep; try _step; unfold alist_add; simpl; des_ifs_safe). *)
+    ginit. steps.
+    assert (x3 = ord_top /\ exists b, x0 = Any.pair b t).
+    { destruct x1; ss.
+      { red in _ASSUME0. uipropall. des. uipropall. des.
+        red in _ASSUME0. red in _ASSUME1. uipropall. des. subst. et. }
+      { uipropall. red in _ASSUME0. uipropall. des. clarify. et. }
+    }
+    des; clarify. clear _ASSUME0.
     unfold massage_fun.
+    rewrite Any.pair_split. steps.
     guclo lordC_spec. econs.
-    { instantiate (1:=(29 + (20 + 40))%ord). rewrite <- ! OrdArith.add_from_nat; cbn. eapply OrdArith.le_from_nat. lia. }
+    { instantiate (1:=(29 + (40))%ord). rewrite <- ! OrdArith.add_from_nat; cbn. eapply OrdArith.le_from_nat. lia. }
     erewrite idK_spec with (i0:=(addtau (ktr (o, t)))).
     guclo lbindC_spec. econs.
-    { ired_both. erewrite idK_spec with (i0:=(addtau (ktr (o, t)))).
-      guclo lbindC_spec. econs.
-      - instantiate (1:=tt).
-        instantiate (1:=(fun '((mr_src, st_src), fr_src) '((mr_tgt, st_tgt), fr_tgt) '(ctx, (_, r_src)) r_tgt =>
-           mr_src = ε /\ st_src = (Any.pair mr_tgt↑ st_tgt) /\ r_src = r_tgt
-           /\ URA.wf ctx)).
-        gfinal. right. eapply my_lemma1_aux''; et.
-        { eapply URA.wf_mon; et. }
-      - i. des_ifs. ss. des_ifs. ss. des; clarify. unfold idK. steps.
-        { instantiate (1:=(fun '((mr_src, st_src), fr_src) '((mr_tgt, st_tgt), fr_tgt) '(ctx, r_src) r_tgt =>
-           mr_src = ε /\ st_src = (Any.pair mr_tgt↑ st_tgt) /\ r_src = r_tgt
-           /\ URA.wf ctx)).
-          ss.
-        }
+    { instantiate (1:=tt).
+      instantiate (1:=(fun '((mr_src, st_src), fr_src) '((mr_tgt, st_tgt), fr_tgt) '(ctx, (_, r_src)) r_tgt =>
+                         mr_src = ε /\ st_src = (Any.pair mr_tgt↑ st_tgt) /\ r_src = r_tgt
+                         /\ URA.wf ctx)).
+      gfinal. right. eapply my_lemma1_aux''; et.
+      eapply URA.wf_mon; et.
     }
-    i. des_ifs. des; subst.
+    i. des_ifs. ss. des_ifs. ss. des; clarify. unfold idK. steps.
     force_l. eexists. force_l. eexists (_, _). steps.
     force_l.
     { instantiate (1:=ε). instantiate (1:=ε). rewrite ! URA.unit_id; ss. }
     steps. force_l. eexists.
     force_l.
-    { red. uipropall. }
+    { red. destruct x1; red; uipropall. }
     steps. force_l. eexists. force_l.
     { instantiate (1:=ε). instantiate (1:=ε). rewrite URA.unit_id. auto. }
     steps.
     (* can not Qed bcz of Coq bug... *)
     Unshelve. all: try exact tt.
-  Admitted.
+  Qed.
 
   Lemma my_lemma1
         umd
@@ -915,279 +914,291 @@ Section ADQ.
   Let ns := mk_sk_gnames (fun sk => mk_gnames (fun fn => is_some (alist_find fn (_gstb sk)))).
   Local Existing Instances ns.
 
-  Lemma my_lemma2_aux'
-        sk mr0 st0 (fr0: Σ) (A: Type) (itr: itree Es A)
-    :
-      paco7
-        (_sim_itree (ns:= sk_gnames_contents sk)
-                    (fun (_: unit) '((mr_src, st_src), (mr_tgt, st_tgt)) =>
-                       mr_tgt = ε /\ st_tgt = (Any.pair mr_src↑ st_src)) top2)
-        bot7
-        A (Σ * A)%type
-        (fun '((mr_src, st_src), fr_src) '((mr_tgt, st_tgt), fr_tgt) r_src '(_, r_tgt) =>
-           mr_tgt = ε /\ st_tgt = (Any.pair mr_src↑ st_src) /\ r_src = r_tgt)
-        50%nat tt
-        (mr0, st0, fr0, addtau itr)
-        (ε, (Any.pair mr0↑ st0), ε, interp_hCallE_src (massage_itr (_gstb sk) itr fr0))
-  .
-  Proof.
-    ginit. revert_until sk. gcofix CIH. i.
-    ides itr.
-    { steps. }
-    { steps. gbase. eapply CIH; et. }
-    rewrite <- bind_trigger.
-    destruct e; cycle 1.
-    {
-      destruct s; ss.
-      { destruct r0; ss.
-        - resub. ired_both. resub. gstep. eapply sim_itree_pget_tgt; eauto with ord_step.
-          ired_both. gstep; econs; eauto. instantiate (1:=55). steps.
-          rewrite Any.pair_split in *. clarify.
-          gbase. eapply CIH; et.
-        - resub. ired_both. resub. steps.
-          gbase. eapply CIH; et.
-        - resub. ired_both. resub. gstep. eapply sim_itree_pget_tgt; eauto with ord_step.
-          ired_both. gstep; econs; eauto. instantiate (1:=55). steps.
-          rewrite Any.pair_split in *. clarify. rewrite Any.upcast_downcast in *. clarify.
-          gbase. eapply CIH; et.
-        - resub. ired_both. resub.
-          steps. gbase. eapply CIH; et.
-      }
-      destruct s; ss.
-      { destruct p; ss.
-        - resub. ired_both. resub. gstep. eapply sim_itree_pget_tgt; eauto with ord_step.
-          ired_both. gstep; econs; eauto. instantiate (1:=55). steps.
-          rewrite Any.pair_split in *. clarify.
-          gbase. eapply CIH; et.
-        - resub. ired_both. resub. gstep. eapply sim_itree_pget_tgt; eauto with ord_step.
-          ired_both. gstep; econs; eauto. instantiate (1:=55). steps.
-          rewrite Any.pair_split in *. clarify.
-          gbase. eapply CIH; et.
-      }
-      { destruct e; ss.
-        - resub. ired_both. resub.
-          gstep. eapply sim_itree_tau_src; eauto with ord_step.
-          ired_both. gstep; econs; et. i. esplits; et. steps. gbase. eapply CIH; et.
-        - resub. ired_both. resub.
-          gstep. eapply sim_itree_tau_src; eauto with ord_step.
-          ired_both. gstep; econs; et. i. esplits; et. steps. gbase. eapply CIH; et.
-        - resub. ired_both. resub.
-          gstep. eapply sim_itree_tau_src; eauto with ord_step.
-          ired_both. gstep; econs; et. i. esplits; et. steps. gbase. eapply CIH; et.
-      }
-    }
-    destruct c. resub. ired_both. resub. unfold unwrapU. des_ifs.
-    { steps. gstep. econs; ss. i. des_ifs. des; clarify. esplits. steps.
-      gbase. eapply CIH. }
-    { steps. gstep; econs; eauto with ord_step. ss. ii. rewrite Heq in *. ss. }
-  Unshelve.
-    all: try (exact Ord.O).
-  Qed.
-
-  Lemma my_lemma2_aux
-        sk ktr arg mr0 st0
-    :
-      sim_itree (ns:= sk_gnames_contents sk)
-                (fun (_: unit) '((mr_src, st_src), (mr_tgt, st_tgt)) =>
-                   mr_tgt = ε /\ st_tgt = (Any.pair mr_src↑ st_src)) top2
-                100%ord tt
-                (mr0, st0, ε, addtau (ktr arg))
-                (ε, (Any.pair mr0↑ st0), ε, fun_to_src (massage_fun (_gstb sk) ktr) arg)
-  .
-  Proof.
-    unfold fun_to_src, massage_fsb, massage_fun, body_to_src. cbn.
-    {
-      ginit. abstr (ktr arg) itr. clear ktr arg. steps.
-      guclo (lordC_spec (ns:=sk_gnames_contents sk)). econs.
-      { instantiate (1:=(50 + 50)%ord). rewrite <- OrdArith.add_from_nat. eapply OrdArith.le_from_nat. lia. }
-      erewrite idK_spec with (i0:=(addtau itr)).
-      guclo (lbindC_spec (ns:= sk_gnames_contents sk)).
-      econs.
-      - gfinal. right. eapply my_lemma2_aux'.
-      - i. des_ifs. des; clarify. steps.
-    }
-  Unshelve.
-    all: try (exact Ord.O).
-  Qed.
-
-  Lemma my_lemma2
-        (umd: Mod.t)
-        (IN: In umd umds)
-    :
-      ModPair.sim (addtau_md umd) (SMod.to_src (massage_md _gstb umd))
-  .
-  Proof.
-    econs; ss.
-    i. r. econs.
-    { instantiate (1:=fun (_ _: unit) => True). ss. }
-    { instantiate (1:=(fun (_: unit) '((mr_src, st_src), (mr_tgt, st_tgt)) =>
-                   mr_tgt = ε /\ st_tgt = (Any.pair mr_src↑ st_src))). ss.
-      set (ums:=Mod.get_modsem umd sk) in *.
-      rewrite ! List.map_map.
-      eapply Forall2_apply_Forall2.
-      { refl. }
-      i. subst. unfold map_snd. des_ifs.
-      rr. split; ss. r. ii. destruct w. des_ifs. des; clarify. ss. esplits; et.
-      eapply my_lemma2_aux.
-    }
-    { ss. }
-    { ss. }
-  Qed.
-
-  Ltac steps := HoareDef.steps.
-
-
-  Declare Scope l_monad_scope.
-  Local Open Scope l_monad_scope.
-  Notation "'do' X <- A ; B" := (List.flat_map (fun X => B) A) : l_monad_scope.
-  Notation "'do' ' X <- A ; B" := (List.flat_map (fun _x => match _x with | X => B end) A) : l_monad_scope.
-  Notation "'ret'" := (fun X => [X]) (at level 60) : l_monad_scope.
-
-  Lemma gstb_eq: forall ske,
-    _gstb ske =
-    (List.map (fun '(fn, fs) => (fn, fs.(fsb_fspec)))
-       (flat_map SModSem.fnsems
-          (List.map
-             (flip SMod.get_modsem ske)
-             (kmds ++ List.map (massage_md _gstb) umds))))
-  .
-  Proof.
-    i. unfold _gstb.
-    unfold _kmss, _umss.
-    rewrite map_app. rewrite flat_map_app. rewrite map_app.
-    f_equal.
-    - rewrite <- ! SMod.red_do_ret. erewrite ! SMod.flat_map_assoc. ss.
-    - rewrite <- ! SMod.red_do_ret. erewrite ! SMod.flat_map_assoc.
-      eapply flat_map_ext. intro umd. unfold flip. ss.
-      rewrite <- ! SMod.red_do_ret. erewrite ! SMod.flat_map_assoc. rewrite ! List.app_nil_r.
-      eapply flat_map_ext. intro. unfold map_snd. des_ifs.
-  Qed.
-
-  (* Definition UMod_main (mainbody: Any.t -> itree (uCallE +' pE +' eventE) Any.t): UMod.t := {| *)
-  (*   UMod.get_modsem := fun _ => (UModSem.mk [("main", mainbody)] "Main" (tt↑)); *)
-  (*   UMod.sk := Sk.unit; *)
-  (* |} *)
-  (* . *)
-
-  (* Variable (mainbody: Any.t -> itree (uCallE +' pE +' eventE) Any.t). *)
-  (* Hypothesis MAINU: In (UMod_main mainbody) umds. *)
-
-  (* Let mains: SMod.t := UMod.massage _gstb (UMod_main mainbody). *)
-
   Hypothesis WFR: URA.wf (List.fold_left (⋅) (List.map (SModSem.initial_mr) kmss) ε).
   (* Hypothesis MAINM: In (SMod.main mainpre mainbody) kmds. *)
-
-  Lemma refines_list
-        (mds0 mds1: list Mod.t)
-        (REF: Forall2 (fun md0 md1 => refines (Mod.lift md0) (Mod.lift md1)) mds0 mds1)
-    :
-      refines (Mod.add_list mds0) (Mod.add_list mds1)
-  .
-  Proof.
-    induction REF.
-    { ss. }
-    rewrite ! Mod.add_list_cons.
-    etrans.
-    { rewrite <- Mod.add_list_single. eapply refines_proper_l; et. }
-    etrans.
-    { eapply refines_proper_r; et. rewrite ! Mod.add_list_single; et. }
-    rewrite ! Mod.add_list_single; et. refl.
-  Qed.
 
   Theorem adequacy_open:
     refines_closed (Mod.add_list (List.map (SMod.to_tgt _gstb) kmds ++ umds))
                    (Mod.add_list (List.map (SMod.to_src) kmds ++ umds))
   .
   Proof.
-    etrans.
-    { eapply refines_close.
-      rewrite Mod.add_list_app.
-      eapply refines_proper_l.
-      instantiate (1:=(List.map (SMod.to_tgt _gstb ∘ (massage_md _gstb)) umds)).
-      etrans.
-      { instantiate (1:=Mod.add_list (map addtau_md umds)).
-        eapply refines_list.
-        erewrite <- map_id at 1.
-        eapply Forall2_apply_Forall2.
-        { instantiate (1:=eq). refl. }
-        i. subst.
-        eapply adequacy_addtau. }
-      eapply adequacy_local_list.
-      eapply Forall2_apply_Forall2.
-      { instantiate (1:=eq). refl. }
-      i. subst. eapply my_lemma1; ss.
-    }
-    rewrite <- Mod.add_list_app.
-    etrans.
-    { erewrite <- List.map_map with (f:=massage_md _gstb).
-      rewrite <- map_app.
-      eapply adequacy_type2.
-      - instantiate (1:=(kmds ++ List.map (massage_md _gstb) umds)).
-        erewrite <- List.map_id with (l:=(kmds ++ List.map (massage_md _gstb) umds)) at 1.
-        eapply Forall2_apply_Forall2.
-        { instantiate (1:=eq). refl. }
-        i. subst. exists _gstb. split; ss. r. intro ske. rewrite <- gstb_eq. refl.
-      - admit "main pre".
-      - ss. instantiate (1:=ε). rewrite ! URA.unit_id. rewrite ! URA.unit_idl. admit "should be ez".
-      - admit "mid - main argument parameterization".
-        (* instantiate (1:=UModSem.transl_fun_smod mainbody). rewrite in_app_iff. eauto. *)
-    }
-    etrans.
-    { instantiate (1:=Mod.add_list ((map SMod.to_src kmds) ++ (List.map addtau_md umds))). eapply adequacy_hint.
-      { clear. i. unfold ns. ss. unfold _gstb.
-        rewrite Mod.add_list_app in SOME. ss.
-        unfold _kmss, _umss. clear - SOME.
-        rewrite add_list_fnsems in *. rewrite List.map_map in *.
-        assert (is_some (alist_find fn ((do X <- map (fun x => flip ModL.get_modsem sk (SMod.to_src x)) kmds; ModSemL.fnsems X)))
-                ->
-                is_some (alist_find fn ((do x <- map (flip SMod.get_modsem sk) kmds; map (map_snd fsb_fspec) (SModSem.fnsems x))))).
-        { clear. generalize kmds.
-          induction kmds0; ss.
-          change ModSem.map_snd with map_snd.
-          rewrite ! alist_find_app_o in *. rewrite ! alist_find_map_snd in *.
-          change (fun '(fn0, sb) => (fn0, fun_to_src (fsb_body sb))) with (@map_snd string _ _ (fun_to_src ∘ fsb_body)).
-          uo. des_ifs. rewrite alist_find_map_snd in Heq2.
-          rewrite Heq1 in *. ss.
-        }
-        assert (is_some (alist_find fn (ModSemL.fnsems (ModL.get_modsem (Mod.add_list (map addtau_md umds)) sk)))
-                ->
-                is_some (alist_find fn (do x <- map (flip Mod.get_modsem sk) umds;
-                                           map (map_snd (fun _ => fspec_trivial)) (ModSem.fnsems x)))).
-        { clear. generalize umds.
-          induction umds0; ss.
-          change ModSem.map_snd with map_snd.
-          rewrite ! alist_find_app_o in *. rewrite ! alist_find_map_snd in *. uo. des_ifs. ss.
-          i. eapply IHumds0; ss.
-          admit "ez".
-        }
-        rewrite ! alist_find_app_o in *. des_ifs; et. exfalso. ss. intuition.
-      }
-      rewrite ! List.map_app. eapply Forall2_app.
-      { eapply Forall2_apply_Forall2.
-        { instantiate (1:=eq). refl. }
-        { i. subst. eapply ModPair.self_sim. }
-      }
-      { rewrite List.map_map. eapply Forall2_apply_Forall2.
-        { instantiate (1:=eq). refl. }
-        { i. subst. eapply my_lemma2. auto. }
-      }
-    }
-    etrans.
-    { eapply refines_close.
-      rewrite Mod.add_list_app.
-      eapply refines_proper_l.
-      instantiate (1:=map id umds).
-      eapply refines_list.
-      eapply Forall2_apply_Forall2.
-      { instantiate (1:=eq). refl. }
-      i. subst.
-      eapply adequacy_rmtau.
-    }
-    rewrite Mod.add_list_app. rewrite map_id. refl.
-  Unshelve.
-    all: ss.
-    { ii. apply True. }
-    { ii. apply ITree.spin. }
+    admit "TODO".
   Qed.
+
+
+(*   Lemma my_lemma2_aux' *)
+(*         sk mr0 st0 (fr0: Σ) (A: Type) (itr: itree Es A) *)
+(*     : *)
+(*       paco7 *)
+(*         (_sim_itree (ns:= sk_gnames_contents sk) *)
+(*                     (fun (_: unit) '((mr_src, st_src), (mr_tgt, st_tgt)) => *)
+(*                        mr_tgt = ε /\ st_tgt = (Any.pair mr_src↑ st_src)) top2) *)
+(*         bot7 *)
+(*         A (Σ * A)%type *)
+(*         (fun '((mr_src, st_src), fr_src) '((mr_tgt, st_tgt), fr_tgt) r_src '(_, r_tgt) => *)
+(*            mr_tgt = ε /\ st_tgt = (Any.pair mr_src↑ st_src) /\ r_src = r_tgt) *)
+(*         50%nat tt *)
+(*         (mr0, st0, fr0, addtau itr) *)
+(*         (ε, (Any.pair mr0↑ st0), ε, interp_hCallE_src (massage_itr (_gstb sk) itr fr0)) *)
+(*   . *)
+(*   Proof. *)
+(*     ginit. revert_until sk. gcofix CIH. i. *)
+(*     ides itr. *)
+(*     { steps. } *)
+(*     { steps. gbase. eapply CIH; et. } *)
+(*     rewrite <- bind_trigger. *)
+(*     destruct e; cycle 1. *)
+(*     { *)
+(*       destruct s; ss. *)
+(*       { destruct r0; ss. *)
+(*         - resub. ired_both. resub. gstep. eapply sim_itree_pget_tgt; eauto with ord_step. *)
+(*           ired_both. gstep; econs; eauto. instantiate (1:=55). steps. *)
+(*           rewrite Any.pair_split in *. clarify. *)
+(*           gbase. eapply CIH; et. *)
+(*         - resub. ired_both. resub. steps. *)
+(*           gbase. eapply CIH; et. *)
+(*         - resub. ired_both. resub. gstep. eapply sim_itree_pget_tgt; eauto with ord_step. *)
+(*           ired_both. gstep; econs; eauto. instantiate (1:=55). steps. *)
+(*           rewrite Any.pair_split in *. clarify. rewrite Any.upcast_downcast in *. clarify. *)
+(*           gbase. eapply CIH; et. *)
+(*         - resub. ired_both. resub. *)
+(*           steps. gbase. eapply CIH; et. *)
+(*       } *)
+(*       destruct s; ss. *)
+(*       { destruct p; ss. *)
+(*         - resub. ired_both. resub. gstep. eapply sim_itree_pget_tgt; eauto with ord_step. *)
+(*           ired_both. gstep; econs; eauto. instantiate (1:=55). steps. *)
+(*           rewrite Any.pair_split in *. clarify. *)
+(*           gbase. eapply CIH; et. *)
+(*         - resub. ired_both. resub. gstep. eapply sim_itree_pget_tgt; eauto with ord_step. *)
+(*           ired_both. gstep; econs; eauto. instantiate (1:=55). steps. *)
+(*           rewrite Any.pair_split in *. clarify. *)
+(*           gbase. eapply CIH; et. *)
+(*       } *)
+(*       { destruct e; ss. *)
+(*         - resub. ired_both. resub. *)
+(*           gstep. eapply sim_itree_tau_src; eauto with ord_step. *)
+(*           ired_both. gstep; econs; et. i. esplits; et. steps. gbase. eapply CIH; et. *)
+(*         - resub. ired_both. resub. *)
+(*           gstep. eapply sim_itree_tau_src; eauto with ord_step. *)
+(*           ired_both. gstep; econs; et. i. esplits; et. steps. gbase. eapply CIH; et. *)
+(*         - resub. ired_both. resub. *)
+(*           gstep. eapply sim_itree_tau_src; eauto with ord_step. *)
+(*           ired_both. gstep; econs; et. i. esplits; et. steps. gbase. eapply CIH; et. *)
+(*       } *)
+(*     } *)
+(*     destruct c. resub. ired_both. resub. unfold unwrapU. des_ifs. *)
+(*     { steps. gstep. econs; ss. i. des_ifs. des; clarify. esplits. steps. *)
+(*       gbase. eapply CIH. } *)
+(*     { steps. gstep; econs; eauto with ord_step. ss. ii. rewrite Heq in *. ss. } *)
+(*   Unshelve. *)
+(*     all: try (exact Ord.O). *)
+(*   Qed. *)
+
+(*   Lemma my_lemma2_aux *)
+(*         sk ktr arg mr0 st0 *)
+(*     : *)
+(*       sim_itree (ns:= sk_gnames_contents sk) *)
+(*                 (fun (_: unit) '((mr_src, st_src), (mr_tgt, st_tgt)) => *)
+(*                    mr_tgt = ε /\ st_tgt = (Any.pair mr_src↑ st_src)) top2 *)
+(*                 100%ord tt *)
+(*                 (mr0, st0, ε, addtau (ktr arg)) *)
+(*                 (ε, (Any.pair mr0↑ st0), ε, fun_to_src (massage_fun (_gstb sk) ktr) arg) *)
+(*   . *)
+(*   Proof. *)
+(*     unfold fun_to_src, massage_fsb, massage_fun, body_to_src. cbn. *)
+(*     { *)
+(*       ginit. abstr (ktr arg) itr. clear ktr arg. steps. *)
+(*       guclo (lordC_spec (ns:=sk_gnames_contents sk)). econs. *)
+(*       { instantiate (1:=(50 + 50)%ord). rewrite <- OrdArith.add_from_nat. eapply OrdArith.le_from_nat. lia. } *)
+(*       erewrite idK_spec with (i0:=(addtau itr)). *)
+(*       guclo (lbindC_spec (ns:= sk_gnames_contents sk)). *)
+(*       econs. *)
+(*       - gfinal. right. eapply my_lemma2_aux'. *)
+(*       - i. des_ifs. des; clarify. steps. *)
+(*     } *)
+(*   Unshelve. *)
+(*     all: try (exact Ord.O). *)
+(*   Qed. *)
+
+(*   Lemma my_lemma2 *)
+(*         (umd: Mod.t) *)
+(*         (IN: In umd umds) *)
+(*     : *)
+(*       ModPair.sim (addtau_md umd) (SMod.to_src (massage_md _gstb umd)) *)
+(*   . *)
+(*   Proof. *)
+(*     econs; ss. *)
+(*     i. r. econs. *)
+(*     { instantiate (1:=fun (_ _: unit) => True). ss. } *)
+(*     { instantiate (1:=(fun (_: unit) '((mr_src, st_src), (mr_tgt, st_tgt)) => *)
+(*                    mr_tgt = ε /\ st_tgt = (Any.pair mr_src↑ st_src))). ss. *)
+(*       set (ums:=Mod.get_modsem umd sk) in *. *)
+(*       rewrite ! List.map_map. *)
+(*       eapply Forall2_apply_Forall2. *)
+(*       { refl. } *)
+(*       i. subst. unfold map_snd. des_ifs. *)
+(*       rr. split; ss. r. ii. destruct w. des_ifs. des; clarify. ss. esplits; et. *)
+(*       eapply my_lemma2_aux. *)
+(*     } *)
+(*     { ss. } *)
+(*     { ss. } *)
+(*   Qed. *)
+
+(*   Ltac steps := HoareDef.steps. *)
+
+
+(*   Declare Scope l_monad_scope. *)
+(*   Local Open Scope l_monad_scope. *)
+(*   Notation "'do' X <- A ; B" := (List.flat_map (fun X => B) A) : l_monad_scope. *)
+(*   Notation "'do' ' X <- A ; B" := (List.flat_map (fun _x => match _x with | X => B end) A) : l_monad_scope. *)
+(*   Notation "'ret'" := (fun X => [X]) (at level 60) : l_monad_scope. *)
+
+(*   Lemma gstb_eq: forall ske, *)
+(*     _gstb ske = *)
+(*     (List.map (fun '(fn, fs) => (fn, fs.(fsb_fspec))) *)
+(*        (flat_map SModSem.fnsems *)
+(*           (List.map *)
+(*              (flip SMod.get_modsem ske) *)
+(*              (kmds ++ List.map (massage_md _gstb) umds)))) *)
+(*   . *)
+(*   Proof. *)
+(*     i. unfold _gstb. *)
+(*     unfold _kmss, _umss. *)
+(*     rewrite map_app. rewrite flat_map_app. rewrite map_app. *)
+(*     f_equal. *)
+(*     - rewrite <- ! SMod.red_do_ret. erewrite ! SMod.flat_map_assoc. ss. *)
+(*     - rewrite <- ! SMod.red_do_ret. erewrite ! SMod.flat_map_assoc. *)
+(*       eapply flat_map_ext. intro umd. unfold flip. ss. *)
+(*       rewrite <- ! SMod.red_do_ret. erewrite ! SMod.flat_map_assoc. rewrite ! List.app_nil_r. *)
+(* cn      eapply flat_map_ext. intro. unfold map_snd. des_ifs. *)
+(*   Qed. *)
+
+(*   (* Definition UMod_main (mainbody: Any.t -> itree (uCallE +' pE +' eventE) Any.t): UMod.t := {| *) *)
+(*   (*   UMod.get_modsem := fun _ => (UModSem.mk [("main", mainbody)] "Main" (tt↑)); *) *)
+(*   (*   UMod.sk := Sk.unit; *) *)
+(*   (* |} *) *)
+(*   (* . *) *)
+
+(*   (* Variable (mainbody: Any.t -> itree (uCallE +' pE +' eventE) Any.t). *) *)
+(*   (* Hypothesis MAINU: In (UMod_main mainbody) umds. *) *)
+
+(*   (* Let mains: SMod.t := UMod.massage _gstb (UMod_main mainbody). *) *)
+
+(*   Hypothesis WFR: URA.wf (List.fold_left (⋅) (List.map (SModSem.initial_mr) kmss) ε). *)
+(*   (* Hypothesis MAINM: In (SMod.main mainpre mainbody) kmds. *) *)
+
+(*   Lemma refines_list *)
+(*         (mds0 mds1: list Mod.t) *)
+(*         (REF: Forall2 (fun md0 md1 => refines (Mod.lift md0) (Mod.lift md1)) mds0 mds1) *)
+(*     : *)
+(*       refines (Mod.add_list mds0) (Mod.add_list mds1) *)
+(*   . *)
+(*   Proof. *)
+(*     induction REF. *)
+(*     { ss. } *)
+(*     rewrite ! Mod.add_list_cons. *)
+(*     etrans. *)
+(*     { rewrite <- Mod.add_list_single. eapply refines_proper_l; et. } *)
+(*     etrans. *)
+(*     { eapply refines_proper_r; et. rewrite ! Mod.add_list_single; et. } *)
+(*     rewrite ! Mod.add_list_single; et. refl. *)
+(*   Qed. *)
+
+(*   Theorem adequacy_open: *)
+(*     refines_closed (Mod.add_list (List.map (SMod.to_tgt _gstb) kmds ++ umds)) *)
+(*                    (Mod.add_list (List.map (SMod.to_src) kmds ++ umds)) *)
+(*   . *)
+(*   Proof. *)
+(*     etrans. *)
+(*     { eapply refines_close. *)
+(*       rewrite Mod.add_list_app. *)
+(*       eapply refines_proper_l. *)
+(*       instantiate (1:=(List.map (SMod.to_tgt _gstb ∘ (massage_md _gstb)) umds)). *)
+(*       etrans. *)
+(*       { instantiate (1:=Mod.add_list (map addtau_md umds)). *)
+(*         eapply refines_list. *)
+(*         erewrite <- map_id at 1. *)
+(*         eapply Forall2_apply_Forall2. *)
+(*         { instantiate (1:=eq). refl. } *)
+(*         i. subst. *)
+(*         eapply adequacy_addtau. } *)
+(*       eapply adequacy_local_list. *)
+(*       eapply Forall2_apply_Forall2. *)
+(*       { instantiate (1:=eq). refl. } *)
+(*       i. subst. eapply my_lemma1; ss. *)
+(*     } *)
+(*     rewrite <- Mod.add_list_app. *)
+(*     etrans. *)
+(*     { erewrite <- List.map_map with (f:=massage_md _gstb). *)
+(*       rewrite <- map_app. *)
+(*       eapply adequacy_type2. *)
+(*       - instantiate (1:=(kmds ++ List.map (massage_md _gstb) umds)). *)
+(*         erewrite <- List.map_id with (l:=(kmds ++ List.map (massage_md _gstb) umds)) at 1. *)
+(*         eapply Forall2_apply_Forall2. *)
+(*         { instantiate (1:=eq). refl. } *)
+(*         i. subst. exists _gstb. split; ss. r. intro ske. rewrite <- gstb_eq. refl. *)
+(*       - admit "main pre". *)
+(*       - ss. instantiate (1:=ε). rewrite ! URA.unit_id. rewrite ! URA.unit_idl. admit "should be ez". *)
+(*       - admit "mid - main argument parameterization". *)
+(*         (* instantiate (1:=UModSem.transl_fun_smod mainbody). rewrite in_app_iff. eauto. *) *)
+(*     } *)
+(*     etrans. *)
+(*     { instantiate (1:=Mod.add_list ((map SMod.to_src kmds) ++ (List.map addtau_md umds))). eapply adequacy_hint. *)
+(*       { clear. i. unfold ns. ss. unfold _gstb. *)
+(*         rewrite Mod.add_list_app in SOME. ss. *)
+(*         unfold _kmss, _umss. clear - SOME. *)
+(*         rewrite add_list_fnsems in *. rewrite List.map_map in *. *)
+(*         assert (is_some (alist_find fn ((do X <- map (fun x => flip ModL.get_modsem sk (SMod.to_src x)) kmds; ModSemL.fnsems X))) *)
+(*                 -> *)
+(*                 is_some (alist_find fn ((do x <- map (flip SMod.get_modsem sk) kmds; map (map_snd fsb_fspec) (SModSem.fnsems x))))). *)
+(*         { clear. generalize kmds. *)
+(*           induction kmds0; ss. *)
+(*           change ModSem.map_snd with map_snd. *)
+(*           rewrite ! alist_find_app_o in *. rewrite ! alist_find_map_snd in *. *)
+(*           change (fun '(fn0, sb) => (fn0, fun_to_src (fsb_body sb))) with (@map_snd string _ _ (fun_to_src ∘ fsb_body)). *)
+(*           uo. des_ifs. rewrite alist_find_map_snd in Heq2. *)
+(*           rewrite Heq1 in *. ss. *)
+(*         } *)
+(*         assert (is_some (alist_find fn (ModSemL.fnsems (ModL.get_modsem (Mod.add_list (map addtau_md umds)) sk))) *)
+(*                 -> *)
+(*                 is_some (alist_find fn (do x <- map (flip Mod.get_modsem sk) umds; *)
+(*                                            map (map_snd (fun _ => fspec_trivial)) (ModSem.fnsems x)))). *)
+(*         { clear. generalize umds. *)
+(*           induction umds0; ss. *)
+(*           change ModSem.map_snd with map_snd. *)
+(*           rewrite ! alist_find_app_o in *. rewrite ! alist_find_map_snd in *. uo. des_ifs. ss. *)
+(*           i. eapply IHumds0; ss. *)
+(*           admit "ez". *)
+(*         } *)
+(*         rewrite ! alist_find_app_o in *. des_ifs; et. exfalso. ss. intuition. *)
+(*       } *)
+(*       rewrite ! List.map_app. eapply Forall2_app. *)
+(*       { eapply Forall2_apply_Forall2. *)
+(*         { instantiate (1:=eq). refl. } *)
+(*         { i. subst. eapply ModPair.self_sim. } *)
+(*       } *)
+(*       { rewrite List.map_map. eapply Forall2_apply_Forall2. *)
+(*         { instantiate (1:=eq). refl. } *)
+(*         { i. subst. eapply my_lemma2. auto. } *)
+(*       } *)
+(*     } *)
+(*     etrans. *)
+(*     { eapply refines_close. *)
+(*       rewrite Mod.add_list_app. *)
+(*       eapply refines_proper_l. *)
+(*       instantiate (1:=map id umds). *)
+(*       eapply refines_list. *)
+(*       eapply Forall2_apply_Forall2. *)
+(*       { instantiate (1:=eq). refl. } *)
+(*       i. subst. *)
+(*       eapply adequacy_rmtau. *)
+(*     } *)
+(*     rewrite Mod.add_list_app. rewrite map_id. refl. *)
+(*   Unshelve. *)
+(*     all: ss. *)
+(*     { ii. apply True. } *)
+(*     { ii. apply ITree.spin. } *)
+(*   Qed. *)
 
 End ADQ.
