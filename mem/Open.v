@@ -220,6 +220,10 @@ Proof. i. my_red_both. refl. Qed.
 
 
 
+Module AUX.
+  Ltac ord_tac := eapply OrdArith.lt_from_nat; eapply Nat.lt_succ_diag_r.
+End AUX.
+Import AUX.
 
 Section MODAUX.
   Context `{Σ: GRA.t}.
@@ -244,7 +248,66 @@ Section MODAUX.
       refines md (addtau_md md)
   .
   Proof.
-    admit "ez".
+    eapply SimModSemHint.adequacy_local. econs; ss. i. econs.
+    { instantiate (1:=fun (_ _: unit) => True). ss. }
+    { instantiate (1:=fun (_: unit) '(st_src, st_tgt) => st_src = st_tgt). ss.
+      rewrite <- map_id. eapply Forall2_fmap_2. eapply Forall2_impl.
+      { refl. }
+      i. subst. destruct y as [fn f]. econs; ss. ii. subst. ss. exists 10.
+      unfold addtau_ktr.
+      generalize (f y). generalize (@URA.unit (GRA.to_URA Σ)).
+      destruct mrs_tgt. revert w c t.
+      pcofix CIH. i. ides i.
+      { pfold. rewrite addtau_ret. econs; et. }
+      { pfold. rewrite addtau_tau. econs; et. }
+      { rewrite <- bind_trigger. resub.
+        rewrite addtau_bind. rewrite addtau_event.
+        rewrite bind_tau. rewrite bind_bind.
+        pfold. econs; [ord_tac|].
+        left. destruct e.
+        { destruct c1. resub. pfold. econs; et. i. subst.
+          esplits. left. rewrite bind_tau. pfold. econs; [ord_tac|].
+          right. rewrite bind_ret_l. destruct mrs_tgt1. eapply CIH.
+        }
+        destruct s.
+        { resub. destruct r0.
+          { pfold. econs; et. left. rewrite bind_tau. pfold. econs; [ord_tac|].
+            right. rewrite bind_ret_l. eapply CIH.
+          }
+          { pfold. econs; et. left. rewrite bind_tau. pfold. econs; [ord_tac|].
+            right. rewrite bind_ret_l. eapply CIH.
+          }
+          { pfold. econs; et. left. rewrite bind_tau. pfold. econs; [ord_tac|].
+            right. rewrite bind_ret_l. eapply CIH.
+          }
+          { pfold. econs; et. left. rewrite bind_tau. pfold. econs; [ord_tac|].
+            right. rewrite bind_ret_l. eapply CIH.
+          }
+        }
+        destruct s.
+        { resub. destruct p.
+          { pfold. econs; et. left. rewrite bind_tau. pfold. econs; [ord_tac|].
+            right. rewrite bind_ret_l. eapply CIH.
+          }
+          { pfold. econs; et. left. rewrite bind_tau. pfold. econs; [ord_tac|].
+            right. rewrite bind_ret_l. eapply CIH.
+          }
+        }
+        { resub. destruct e.
+          { pfold. econs; et. i. esplits. left. rewrite bind_tau. pfold. econs; [ord_tac|].
+            right. rewrite bind_ret_l. eapply CIH.
+          }
+          { pfold. econs; et. i. esplits. left. rewrite bind_tau. pfold. econs; [ord_tac|].
+            right. rewrite bind_ret_l. eapply CIH.
+          }
+          { pfold. econs; et. i. esplits. left. rewrite bind_tau. pfold. econs; [ord_tac|].
+            right. rewrite bind_ret_l. eapply CIH.
+          }
+        }
+      }
+    }
+    { ss. }
+    { exists tt. ss. }
   Qed.
 
   Theorem adequacy_rmtau
@@ -253,7 +316,66 @@ Section MODAUX.
       refines (addtau_md md) md
   .
   Proof.
-    admit "ez".
+    eapply SimModSemHint.adequacy_local. econs; ss. i. econs.
+    { instantiate (1:=fun (_ _: unit) => True). ss. }
+    { instantiate (1:=fun (_: unit) '(st_src, st_tgt) => st_src = st_tgt). ss.
+      erewrite <- map_id at 1. eapply Forall2_fmap_2. eapply Forall2_impl.
+      { refl. }
+      i. subst. destruct y as [fn f]. econs; ss. ii. subst. ss. exists 10.
+      unfold addtau_ktr.
+      generalize (f y). generalize (@URA.unit (GRA.to_URA Σ)).
+      destruct mrs_tgt. revert w c t.
+      pcofix CIH. i. ides i.
+      { pfold. rewrite addtau_ret. econs; et. }
+      { pfold. rewrite addtau_tau. econs; et. }
+      { rewrite <- bind_trigger. resub.
+        rewrite addtau_bind. rewrite addtau_event.
+        rewrite bind_tau. rewrite bind_bind.
+        pfold. econs; [ord_tac|].
+        left. destruct e.
+        { destruct c1. resub. pfold. econs; et. i. subst.
+          esplits. left. rewrite bind_tau. pfold. econs; [ord_tac|].
+          right. rewrite bind_ret_l. destruct mrs_tgt1. eapply CIH.
+        }
+        destruct s.
+        { resub. destruct r0.
+          { pfold. econs; et. left. rewrite bind_tau. pfold. econs; [ord_tac|].
+            right. rewrite bind_ret_l. eapply CIH.
+          }
+          { pfold. econs; et. left. rewrite bind_tau. pfold. econs; [ord_tac|].
+            right. rewrite bind_ret_l. eapply CIH.
+          }
+          { pfold. econs; et. left. rewrite bind_tau. pfold. econs; [ord_tac|].
+            right. rewrite bind_ret_l. eapply CIH.
+          }
+          { pfold. econs; et. left. rewrite bind_tau. pfold. econs; [ord_tac|].
+            right. rewrite bind_ret_l. eapply CIH.
+          }
+        }
+        destruct s.
+        { resub. destruct p.
+          { pfold. econs; et. left. rewrite bind_tau. pfold. econs; [ord_tac|].
+            right. rewrite bind_ret_l. eapply CIH.
+          }
+          { pfold. econs; et. left. rewrite bind_tau. pfold. econs; [ord_tac|].
+            right. rewrite bind_ret_l. eapply CIH.
+          }
+        }
+        { resub. destruct e.
+          { pfold. econs; et. i. esplits. left. rewrite bind_tau. pfold. econs; [ord_tac|].
+            right. rewrite bind_ret_l. eapply CIH.
+          }
+          { pfold. econs; et. i. esplits. left. rewrite bind_tau. pfold. econs; [ord_tac|].
+            right. rewrite bind_ret_l. eapply CIH.
+          }
+          { pfold. econs; et. i. esplits. left. rewrite bind_tau. pfold. econs; [ord_tac|].
+            right. rewrite bind_ret_l. eapply CIH.
+          }
+        }
+      }
+    }
+    { ss. }
+    { exists tt. ss. }
   Qed.
 
 End MODAUX.
