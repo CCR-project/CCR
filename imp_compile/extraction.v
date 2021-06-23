@@ -11,6 +11,7 @@ Require Import ExtrOcamlString.
 Require Import Imp ImpNotations.
 (* Require ImpNotations. *)
 Require Import Imp2Csharpminor.
+Require Import Imp2CsharpminorLink.
 
 Require Import ImpSimple.
 Require Import ImpFactorial.
@@ -18,6 +19,7 @@ Require Import ImpMutsum.
 Require Import ImpKnot.
 Require Import ImpMem1.
 Require Import ImpMem2.
+Require Import ImpLink.
 
 Extract Constant excluded_middle_informative => "true".
 
@@ -163,6 +165,7 @@ Separate Extraction
    Compiler.transf_clight_program
    Imp2Csharpminor.ASMGEN.list_type_to_typelist
    Imp2Csharpminor.ASMGEN.transf_csharpminor_program
+   Imp2CsharpminorLink.link_imps
    Imp.lift Imp2Csharpminor.compile
    imp_factorial_prog
    imp_simple_prog
@@ -170,6 +173,7 @@ Separate Extraction
    imp_knot_prog
    imp_mem1_f imp_mem1_main
    imp_mem2_prog
+   imp_linkF_prog imp_linkG_prog imp_linkMain_prog
 .
 
 Cd "..".
