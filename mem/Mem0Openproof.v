@@ -137,7 +137,7 @@ Section SIMMODSEM.
     forall b ofs v, m0.(Mem.cnts) b ofs = Some v -> <<NB: b < m0.(Mem.nb)>>
   .
 
-  Let wf: W -> Prop :=
+  Let wf: _ -> W -> Prop :=
     @mk_wf
       _ unit
       (fun _ _memu_src0 _mem_tgt0 =>
@@ -240,14 +240,15 @@ Proof Outline
 
   Theorem correct: ModSemPair.sim (MemOpen.MemSem [] sk) (Mem0.MemSem sk).
   Proof.
-   econstructor 1 with (wf:=wf); et; swap 2 3.
-    { ss. econs; ss. eapply to_semantic.
-      iIntros "H". iExists _, _, _.
-      repeat (iSplit; eauto).
-      { iPureIntro. ii. destruct (Mem.cnts (Sk.load_mem sk) b ofs) eqn:T; econs. }
-      { iPureIntro. admit "ez". }
-      { iPureIntro. admit "ez". }
-    }
+   econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
+   { ss. }
+   { esplits. ss. econs; ss. eapply to_semantic.
+     iIntros "H". iExists _, _, _.
+     repeat (iSplit; eauto).
+     { iPureIntro. ii. destruct (Mem.cnts (Sk.load_mem sk) b ofs) eqn:T; econs. }
+     { iPureIntro. admit "ez". }
+     { iPureIntro. admit "ez". }
+   }
 
 
 
