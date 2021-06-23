@@ -202,7 +202,7 @@ Proof Outline
     end;
 
     match goal with
-    | |- gpaco6 _ _ _ _ _ _ _ _ (?mr_src, (?mp_src↑), _, _) (?mr_tgt, (?mp_tgt↑), _, _) =>
+    | |- gpaco7 _  _ _ _ _ _ _ _ _ (?mr_src, (?mp_src↑), _, _) (?mr_tgt, (?mp_tgt↑), _, _) =>
 
       (* rename mr_src into tmp; let name := fresh "res0" in rename tmp into name *)
       (* ; *)
@@ -260,7 +260,7 @@ Proof Outline
       { mDesAll; ss. des; subst.
         des_ifs_safe (mDesAll; ss). des; subst. clarify. rewrite Any.upcast_downcast in *. clarify.
         steps. unhide_k. steps. des_ifs; clarify.
-        2:{ bsimpl; des; ss; apply sumbool_to_bool_false in Heq0; try lia. }
+        2:{ bsimpl; des; des_sumbool; ss; try lia. }
         steps. astart 0. astop.
         renamer.
         set (blk := mem_tgt0.(Mem.nb) + x).
@@ -297,10 +297,9 @@ Proof Outline
         - cbn. lia.
         - clear - WFTGT. ii. ss. unfold update in *. des_ifs. exploit WFTGT; et. i; des. r. lia.
       }
-      { unfold KModSem.transl_fun. des_ifs_safe (mDesAll; ss). des; subst.
+      { unfold KModSem.transl_fun_tgt. des_ifs_safe (mDesAll; ss). des; subst.
         rewrite Any.upcast_downcast in *. apply Any.downcast_upcast in _UNWRAPN. des; clarify. unhide_k. steps.
-        rename a2 into memk_src0. rename a1 into mem_tgt0. rename a0 into memu_src0.
-        rewrite Any.upcast_downcast. steps. des_ifs; steps.
+        renamer. rewrite Any.pair_split. steps. rewrite ! Any.upcast_downcast. steps. des_ifs; steps.
 
         set (blk := mem_tgt0.(Mem.nb) + x). destruct v; ss. clarify. rename z into sz.
         rewrite Any.upcast_downcast in *. sym in _UNWRAPU. clarify.
