@@ -1129,6 +1129,7 @@ Section SIMMOD.
     { ss. destruct c. ss. rewrite ! bind_bind.
       pfold. eapply wf_function_call.
       { grind. }
+      { ss. auto. }
       i. right. grind. eapply CIH.
     }
     destruct s.

@@ -316,11 +316,11 @@ Section MASSAGE.
     interp_state (case_ (massage_callE) (case_ (massage_rE) (case_ (massage_pE) trivial_state_Handler)))
   .
 
-  Definition massage_fun (ktr: (mname * Any.t) -> itree Es Any.t): ((mname * Any.t) -> itree Es' Any.t) :=
+  Definition massage_fun (ktr: (option mname * Any.t) -> itree Es Any.t): ((option mname * Any.t) -> itree Es' Any.t) :=
     fun args => '(_, rv) <- massage_itr (ktr args) ε;; Ret rv
   .
 
-  Definition massage_fsb: ((mname * Any.t) -> itree Es Any.t) -> fspecbody :=
+  Definition massage_fsb: ((option mname * Any.t) -> itree Es Any.t) -> fspecbody :=
     fun ktr => mk_specbody fspec_trivial (massage_fun ktr)
   .
 
@@ -611,16 +611,16 @@ Section ADQ.
         (* (WF: URA.wf (ctx ⋅ mr0)) *)
         (WF: URA.wf ctx)
     :
-      paco6
-        (_sim_itree (fun '((mr_src, st_src), (mr_tgt, st_tgt)) =>
-                       mr_src = ε /\ st_src = (Any.pair mr_tgt↑ st_tgt)))
-        bot6
+      paco7
+        (_sim_itree (fun (_: unit) '((mr_src, st_src), (mr_tgt, st_tgt)) =>
+                       mr_src = ε /\ st_src = (Any.pair mr_tgt↑ st_tgt)) top2)
+        bot7
         (Σ * (Σ * A))%type A
         (fun '((mr_src, st_src), fr_src) '((mr_tgt, st_tgt), fr_tgt) '(ctx, (_, r_src)) r_tgt =>
            mr_src = ε /\ st_src = (Any.pair mr_tgt↑ st_tgt) /\ r_src = r_tgt
            /\ URA.wf ctx
         )
-        40%nat
+        40%nat tt
         (ε, (Any.pair mr0↑ st0), fr_trash, (interp_hCallE_tgt mn (_gstb ske) ord_top
                                                                 (massage_itr (_gstb ske) itr fr0) ctx))
         (mr0, st0, fr0, addtau itr)
@@ -676,12 +676,16 @@ Section ADQ.
       force_l. exists (args). steps.
       force_l. exists ord_top. steps.
       force_l.
-      { eapply to_semantic; [|eapply URA.wf_unit]. iIntros. iPureIntro. esplits; et. }
+      { eapply to_semantic; [|eapply URA.wf_unit]. iIntros. iPureIntro.
+        esplits; et.  ii. des; ss.
+        eapply in_map_iff in H. des. clarify. }
       steps. force_l.
       { split; et. }
-      steps. gstep. econs; et. i. des_ifs. des; subst. eexists. steps.
+      steps. gstep. econs; et.
+      { exact tt. }
+      i. des_ifs. des; subst. eexists. steps.
       red in _ASSUME0. uipropall. subst.
-      gbase. eapply CIH; et.
+      destruct w1. gbase. eapply CIH; et.
       eapply URA.wf_mon; et.
     - list_tac.
       des_ifs. unfold _umss in T. list_tac. subst.
@@ -699,9 +703,11 @@ Section ADQ.
       { eapply to_semantic; [|eapply URA.wf_unit]. iIntros. iPureIntro. esplits; et. }
       steps. force_l.
       { split; et. }
-      steps. gstep. econs; et. i. des_ifs. des; subst. eexists. steps.
+      steps. gstep. econs; et.
+      { exact tt. }
+      i. des_ifs. des; subst. eexists. steps.
       red in _ASSUME0. uipropall. subst.
-      gbase. eapply CIH; ss.
+      destruct w1. gbase. eapply CIH; ss.
       eapply URA.wf_mon; et.
     Unshelve.
     all: try (exact Ord.O).
@@ -715,8 +721,8 @@ Section ADQ.
         (UNKNOWN: ~In mn (frds ske))
         ktr arg mr0 st0
     :
-      sim_itree (fun '((mr_src, st_src), (mr_tgt, st_tgt)) =>
-                       mr_src = ε /\ st_src = (Any.pair mr_tgt↑ st_tgt)) 100%nat
+      sim_itree (fun (_: unit) '((mr_src, st_src), (mr_tgt, st_tgt)) =>
+                       mr_src = ε /\ st_src = (Any.pair mr_tgt↑ st_tgt)) top2 100%nat tt
                 (ε, (Any.pair mr0↑ st0), ε, fun_to_tgt mn (_gstb ske) (massage_fsb (_gstb ske) ktr) arg)
                 (mr0, st0, ε, addtau (ktr arg))
   .
@@ -729,11 +735,12 @@ Section ADQ.
     unfold massage_fun.
     guclo lordC_spec. econs.
     { instantiate (1:=(29 + (20 + 40))%ord). rewrite <- ! OrdArith.add_from_nat; cbn. eapply OrdArith.le_from_nat. lia. }
-    erewrite idK_spec with (i0:=(addtau (ktr (s, t)))).
+    erewrite idK_spec with (i0:=(addtau (ktr (o, t)))).
     guclo lbindC_spec. econs.
-    { ired_both. erewrite idK_spec with (i0:=(addtau (ktr (s, t)))).
+    { ired_both. erewrite idK_spec with (i0:=(addtau (ktr (o, t)))).
       guclo lbindC_spec. econs.
-      - instantiate (1:=(fun '((mr_src, st_src), fr_src) '((mr_tgt, st_tgt), fr_tgt) '(ctx, (_, r_src)) r_tgt =>
+      - instantiate (1:=tt).
+        instantiate (1:=(fun '((mr_src, st_src), fr_src) '((mr_tgt, st_tgt), fr_tgt) '(ctx, (_, r_src)) r_tgt =>
            mr_src = ε /\ st_src = (Any.pair mr_tgt↑ st_tgt) /\ r_src = r_tgt
            /\ URA.wf ctx)).
         gfinal. right. eapply my_lemma1_aux''; et.
@@ -756,6 +763,7 @@ Section ADQ.
     { instantiate (1:=ε). instantiate (1:=ε). rewrite URA.unit_id. auto. }
     steps.
     (* can not Qed bcz of Coq bug... *)
+    Unshelve. all: try exact tt.
   Admitted.
 
   Lemma my_lemma1
@@ -767,14 +775,15 @@ Section ADQ.
   Proof.
     econs; ss.
     i. r. econs.
-    { instantiate (1:=(fun '((mr_src, st_src), (mr_tgt, st_tgt)) =>
+    { instantiate (1:=fun (_ _: unit) => True). ss. }
+    { instantiate (1:=(fun (_: unit) '((mr_src, st_src), (mr_tgt, st_tgt)) =>
                        mr_src = ε /\ st_src = (Any.pair mr_tgt↑ st_tgt))). ss.
       set (ums:=Mod.get_modsem umd sk) in *.
       rewrite ! List.map_map.
       eapply Forall2_apply_Forall2.
       { refl. }
       i. subst. unfold map_snd. des_ifs.
-      rr. split; ss. r. ii. des_ifs. des; subst. ss. esplits; et. eapply my_lemma1_aux.
+      rr. split; ss. r. ii. destruct w. des_ifs. des; subst. ss. esplits; et. eapply my_lemma1_aux.
       { admit "ez". }
     }
     { ss. }
@@ -787,15 +796,15 @@ Section ADQ.
   Lemma my_lemma2_aux'
         sk mr0 st0 (fr0: Σ) (A: Type) (itr: itree Es A)
     :
-      paco6
+      paco7
         (_sim_itree (ns:= sk_gnames_contents sk)
-                    (fun '((mr_src, st_src), (mr_tgt, st_tgt)) =>
-                       mr_tgt = ε /\ st_tgt = (Any.pair mr_src↑ st_src)))
-        bot6
+                    (fun (_: unit) '((mr_src, st_src), (mr_tgt, st_tgt)) =>
+                       mr_tgt = ε /\ st_tgt = (Any.pair mr_src↑ st_src)) top2)
+        bot7
         A (Σ * A)%type
         (fun '((mr_src, st_src), fr_src) '((mr_tgt, st_tgt), fr_tgt) r_src '(_, r_tgt) =>
            mr_tgt = ε /\ st_tgt = (Any.pair mr_src↑ st_src) /\ r_src = r_tgt)
-        50%nat
+        50%nat tt
         (mr0, st0, fr0, addtau itr)
         (ε, (Any.pair mr0↑ st0), ε, interp_hCallE_src (massage_itr (_gstb sk) itr fr0))
   .
@@ -857,9 +866,9 @@ Section ADQ.
         sk ktr arg mr0 st0
     :
       sim_itree (ns:= sk_gnames_contents sk)
-                (fun '((mr_src, st_src), (mr_tgt, st_tgt)) =>
-                   mr_tgt = ε /\ st_tgt = (Any.pair mr_src↑ st_src))
-                100%ord
+                (fun (_: unit) '((mr_src, st_src), (mr_tgt, st_tgt)) =>
+                   mr_tgt = ε /\ st_tgt = (Any.pair mr_src↑ st_src)) top2
+                100%ord tt
                 (mr0, st0, ε, addtau (ktr arg))
                 (ε, (Any.pair mr0↑ st0), ε, fun_to_src (massage_fun (_gstb sk) ktr) arg)
   .
@@ -888,14 +897,15 @@ Section ADQ.
   Proof.
     econs; ss.
     i. r. econs.
-    { instantiate (1:=(fun '((mr_src, st_src), (mr_tgt, st_tgt)) =>
+    { instantiate (1:=fun (_ _: unit) => True). ss. }
+    { instantiate (1:=(fun (_: unit) '((mr_src, st_src), (mr_tgt, st_tgt)) =>
                    mr_tgt = ε /\ st_tgt = (Any.pair mr_src↑ st_src))). ss.
       set (ums:=Mod.get_modsem umd sk) in *.
       rewrite ! List.map_map.
       eapply Forall2_apply_Forall2.
       { refl. }
       i. subst. unfold map_snd. des_ifs.
-      rr. split; ss. r. ii. des_ifs. des; clarify. ss. esplits; et.
+      rr. split; ss. r. ii. destruct w. des_ifs. des; clarify. ss. esplits; et.
       eapply my_lemma2_aux.
     }
     { ss. }
