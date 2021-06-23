@@ -162,7 +162,7 @@ Section KMODSEM.
     mk_fspec (meta:=option fs.(meta))
              (fun mn ox argh argl o =>
                 match ox with
-                | Some x => (∃ argh', ⌜argh = Any.pair true↑ argh' /\ o = ord_top⌝ ∧ (fs.(precond) mn x argh' argl o: iProp))%I
+                | Some x => (∃ argh', ⌜argh = Any.pair true↑ argh'⌝ ∧ (fs.(precond) mn x argh' argl o: iProp))%I
                 | None => ((⌜argh = Any.pair false↑ argl /\ o = ord_top⌝): iProp)%I
                 end)
              (fun mn ox reth retl =>
