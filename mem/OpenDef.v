@@ -52,12 +52,12 @@ Section AUX.
 
   Record kspecbody := mk_kspecbody {
     ksb_fspec:> fspec;                                            (*** K -> K ***)
-    ksb_ubody: (mname * Any.t) -> itree (kCallE +' pE +' eventE) Any.t;     (*** U -> K ***)
-    ksb_kbody: (mname * Any.t) -> itree (kCallE +' pE +' eventE) Any.t;     (*** K -> K ***)
+    ksb_ubody: (option mname * Any.t) -> itree (kCallE +' pE +' eventE) Any.t;     (*** U -> K ***)
+    ksb_kbody: (option mname * Any.t) -> itree (kCallE +' pE +' eventE) Any.t;     (*** K -> K ***)
   }
   .
 
-  Definition ksb_trivial (body: (mname * Any.t) -> itree (kCallE +' pE +' eventE) Any.t): kspecbody :=
+  Definition ksb_trivial (body: (option mname * Any.t) -> itree (kCallE +' pE +' eventE) Any.t): kspecbody :=
     mk_kspecbody fspec_trivial body body
   .
 
@@ -139,12 +139,13 @@ Section KMODSEM.
     fun _ => interp (T:=_) (fun _ e => trigger (transl_event e))
   .
 
-  Definition transl_fun (ktr: (mname * Any.t) -> itree (kCallE +' pE +' eventE) Any.t):
-    (mname * Any.t) -> itree (hCallE +' pE +' eventE) Any.t :=
+  Definition transl_fun (ktr: (option mname * Any.t) -> itree (kCallE +' pE +' eventE) Any.t):
+    (option mname * Any.t) -> itree (hCallE +' pE +' eventE) Any.t :=
     (transl_itr (T:=_)) ∘ ktr
   .
 
-  Variable (frds: list mname).
+  Variable (_frds: list mname).
+  Let frds: list (option mname) := None :: (List.map Some _frds).
 
   Definition disclose (fs: fspec): fspec :=
     mk_fspec (meta:=option fs.(meta))
@@ -156,6 +157,19 @@ Section KMODSEM.
              (fun mn ox reth retl =>
                 map_or_else ox (fun x => (fs.(postcond) mn x reth retl)) (⌜reth = retl⌝: iProp)%I)
   .
+
+  (* TODO: move it to somewhere *)
+  Global Program Instance option_Dec A `{Dec A}: Dec (option A).
+  Next Obligation.
+  Proof.
+    i. destruct a0, a1.
+    - destruct (H a a0).
+      + left. f_equal. apply e.
+      + right. ii. inversion H0. et.
+    - right. ss.
+    - right. ss.
+    - left. refl.
+  Defined.
 
   Definition disclose_ksb (ksb: kspecbody): fspecbody :=
     mk_specbody (disclose ksb)
@@ -376,23 +390,24 @@ Section KTACTICS.
   Lemma APCK_start_clo
         (at_most: Ord.t) (n1: Ord.t)
         (o: ord)
-        r rg (n0: Ord.t) mr_src0 mp_src0 fr_src0
+        world w r rg (n0: Ord.t) mr_src0 mp_src0 fr_src0
         mn mrs_tgt frs_tgt k_src
-        (wf: (Σ * Any.t) * (Σ * Any.t) -> Prop)
+        (wf: world -> (Σ * Any.t) * (Σ * Any.t) -> Prop)
+        (le: world -> world -> Prop)
         (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
         stb itr_tgt ctx
 
         (ATMOST: (at_most < kappa)%ord)
         (FUEL: (n1 + 5 < n0)%ord)
 
-        (POST: gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ eqr n1
-                       (mr_src0, mp_src0, fr_src0,
+        (POST: gpaco7 (_sim_itree wf le) (cpn7 (_sim_itree wf le)) rg rg _ _ eqr n1 w
+                      (mr_src0, mp_src0, fr_src0,
                        (interp_hCallE_tgt stb mn o (KModSem.transl_itr (_APCK at_most)) ctx) >>= k_src)
                       ((mrs_tgt, frs_tgt),
                        itr_tgt))
     :
-      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ eqr n0
-              (mr_src0, mp_src0, fr_src0,
+      gpaco7 (_sim_itree wf le) (cpn7 (_sim_itree wf le)) r rg _ _ eqr n0 w
+             (mr_src0, mp_src0, fr_src0,
               (interp_hCallE_tgt stb mn o (KModSem.transl_itr APCK) ctx) >>= k_src)
              ((mrs_tgt, frs_tgt),
               itr_tgt).
@@ -408,10 +423,11 @@ Section KTACTICS.
         (fn: gname) (args: Any.t) (next: Ord.t) (n1: Ord.t)
 
         (o: ord)
-        r rg (n0: Ord.t) mr_src0 mp_src0 fr_src0
+        world w r rg (n0: Ord.t) mr_src0 mp_src0 fr_src0
         frds mn mrs_tgt frs_tgt k_src
         (at_most: Ord.t)
-        (wf: (Σ * Any.t) * (Σ * Any.t) -> Prop)
+        (wf: world -> (Σ * Any.t) * (Σ * Any.t) -> Prop)
+        (le: world -> world -> Prop)
         (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
         stb itr_tgt ctx0
 
@@ -420,7 +436,7 @@ Section KTACTICS.
         (FIND: alist_find fn stb = Some (KModSem.disclose frds ftsp))
         (NEXT: (next < at_most)%ord)
 
-        (POST: gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ eqr n1
+        (POST: gpaco7 (_sim_itree wf le) (cpn7 (_sim_itree wf le)) rg rg _ _ eqr n1 w
                       (mr_src0, mp_src0, fr_src0,
                        '(ctx1, _) <- (HoareCall mn true o (KModSem.disclose frds ftsp) fn args ctx0);;
                        tau;; tau;; (interp_hCallE_tgt mn stb o (KModSem.transl_itr (_APCK next)) ctx1)
@@ -428,7 +444,7 @@ Section KTACTICS.
                       ((mrs_tgt, frs_tgt),
                        itr_tgt))
     :
-      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ eqr n0
+      gpaco7 (_sim_itree wf le) (cpn7 (_sim_itree wf le)) r rg _ _ eqr n0 w
              (mr_src0, mp_src0, fr_src0,
               (interp_hCallE_tgt mn stb o (KModSem.transl_itr (_APCK at_most)) ctx0) >>= k_src)
              ((mrs_tgt, frs_tgt),
@@ -448,10 +464,10 @@ Section KTACTICS.
     steps; [by eauto with ord_step|].
     rewrite FIND. ired_both.
     guclo lordC_spec. econs; et. { rewrite OrdArith.add_O_r. refl. }
-    match goal with
-    | [SIM: gpaco6 _ _ _ _ _ _ _ _ ?i0 _ |- gpaco6 _ _ _ _ _ _ _ _ ?i1 _] =>
-      replace i1 with i0; auto
-    end.
+                                 match goal with
+                                 | [SIM: gpaco7 _ _ _ _ _ _ _ _ _ ?i0 _ |- gpaco7 _ _ _ _ _ _ _ _ _ ?i1 _] =>
+                                   replace i1 with i0; auto
+                                 end.
     f_equal. grind. ired_both. grind. ired_both. grind.
   Qed.
 
@@ -459,22 +475,23 @@ Section KTACTICS.
         (n1: Ord.t)
 
         (o: ord)
-        r rg (n0: Ord.t) mr_src0 mp_src0 fr_src0
+        world w r rg (n0: Ord.t) mr_src0 mp_src0 fr_src0
         mn mrs_tgt frs_tgt k_src
         (at_most: Ord.t)
-        (wf: (Σ * Any.t) * (Σ * Any.t) -> Prop)
+        (wf: world -> (Σ * Any.t) * (Σ * Any.t) -> Prop)
+        (le: world -> world -> Prop)
         (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
         stb itr_tgt ctx
 
         (FUEL: (n1 + 2 < n0)%ord)
 
-        (POST: gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) rg rg _ _ eqr n1
+        (POST: gpaco7 (_sim_itree wf le) (cpn7 (_sim_itree wf le)) rg rg _ _ eqr n1 w
                       (mr_src0, mp_src0, fr_src0, k_src (ctx, ()))
                       ((mrs_tgt, frs_tgt),
                        itr_tgt))
     :
-      gpaco6 (_sim_itree wf) (cpn6 (_sim_itree wf)) r rg _ _ eqr n0
-              (mr_src0, mp_src0, fr_src0,
+      gpaco7 (_sim_itree wf le) (cpn7 (_sim_itree wf le)) r rg _ _ eqr n0 w
+             (mr_src0, mp_src0, fr_src0,
               (interp_hCallE_tgt stb mn o (KModSem.transl_itr (_APCK at_most)) ctx) >>= k_src)
              ((mrs_tgt, frs_tgt),
               itr_tgt).
@@ -488,34 +505,35 @@ Section KTACTICS.
 
   Lemma trivial_init_clo
         A
-        (R_src: A -> Any.t -> Any.t -> iProp) (R_tgt: A -> Any.t -> Any.t -> iProp)
-        mn frds fn f_tgt gstb body
+        (R_src: A -> Any.t -> Any.t -> iProp) (R_tgt: A -> Any.t -> Any.t -> iProp) (le: A -> A -> Prop)
+        (mn: string) frds fn f_tgt gstb body
         (POST: forall a mp_src mp_tgt mr_src mr_tgt fr_src ctx varg
                       (RTGT: R_tgt a mp_src mp_tgt mr_tgt)
                       (ACC: current_iPropL ctx [("INV", R_src a mp_src mp_tgt)])
           ,
-            gpaco6 (_sim_itree (mk_wf R_src R_tgt)) (cpn6 (_sim_itree (mk_wf R_src R_tgt))) bot6 bot6
+            gpaco7 (_sim_itree (mk_wf R_src R_tgt) le) (cpn7 (_sim_itree (mk_wf R_src R_tgt) le)) bot7 bot7
                    _ _
                    (fun _ _ => eq)
-                   89
+                   89 a
                    (((mr_src, mp_src), fr_src),
                     ((interp_hCallE_tgt mn gstb ord_top (KModSem.transl_fun body varg) ctx)
-                      >>= (HoareFunRet (fun (_: string) (_: unit) (reth retl: Any.t) =>
-                                          (⌜reth = retl⌝%I): iProp) mn tt))
+                       >>= (HoareFunRet (fun (_: option string) (_: unit) (reth retl: Any.t) =>
+                                           (⌜reth = retl⌝%I): iProp) (Some mn) tt))
                    )
                    (((mr_tgt, mp_tgt), ε), (f_tgt varg))
         )
     :
-      sim_fnsem (mk_wf R_src R_tgt)
+      sim_fnsem (mk_wf R_src R_tgt) le
                 (fn, fun_to_tgt mn gstb (KModSem.disclose_ksb frds (mk_kspecbody fspec_trivial body body)))
                 (fn, f_tgt)
   .
   Proof.
-    init. harg. rename a into aa.
+    init. harg. rename w into aa.
     assert(ord_cur = ord_top).
     { on_current ltac:(fun ACC => clear - ACC); mClear "INV"; des_ifs; mDesAll; des; ss. }
     subst. rewrite my_if_same.
     des_ifs; mDesAll; des; subst.
+    - exploit POST; et.
     - exploit POST; et.
     - exploit POST; et.
   Qed.
@@ -538,7 +556,7 @@ Ltac kstep _fn _args :=
 
 Ltac kcatch :=
   match goal with
-  | [ |- (gpaco6 (_sim_itree _) _ _ _ _ _ _ _ (_, _) (_, trigger (Call ?fn ?args) >>= _)) ] =>
+  | [ |- (gpaco7 (_sim_itree _ _) _ _ _ _ _ _ _ _ (_, _) (_, trigger (Call ?fn ?args) >>= _)) ] =>
     kstep fn args
   end.
 
