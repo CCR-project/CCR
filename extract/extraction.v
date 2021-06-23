@@ -16,6 +16,6 @@ Require Import MutFG Example0 EchoAll NewEchoAll Imp ImpNotations.
 
 Cd "extract".
 
-Separate Extraction Z.to_nat Z.opp mutsum_imp mutsum ex0 echo_impl_itr echo_prog.
+Separate Extraction Z.to_nat Z.opp mutsum_imp mutsum ex0 echo_impl_itr echo_spec_itr echo_prog.
 
 Cd "..".
