@@ -92,6 +92,6 @@ let main =
   print_endline "-----------------------------------";
   print_endline "- Delayed Echo"; run (echo_prog);
   print_endline "-----------------------------------";
-  print_endline "- New Echo Impl (choose is from Mem0.alloc)"; run (echo_impl_itr);
-  print_endline "-----------------------------------";
   print_endline "- New Echo Spec"; run (echo_spec_itr);
+  print_endline "-----------------------------------";
+  print_endline "- New Echo Impl (choose is from Mem0.alloc)"; run (echo_impl_itr);
