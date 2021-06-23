@@ -138,24 +138,25 @@ Section PROOFRIGHT.
     - rename g into gd1, g0 into gd2, g1 into gdl. clear LINKTGTP.
       apply PTree_Properties.in_of_list in AK.
       apply PTree_Properties.in_of_list in BK.
-      (* apply PTree_Properties.in_of_list in LK. *)
-(* PTree_Properties.of_list_norepet: *)
-(*   forall [A : Type] (l : list (PTree.elt * A)) (k : PTree.elt) (v : A), *)
-(*   Coqlib.list_norepet (List.map fst l) -> In (k, v) l -> (PTree_Properties.of_list l) ! k = Some v *)
-      admit "case analysis for each gd".
-
-(* Genv.in_norepet_unique: *)
-(*   forall [F V : Type] (id : ident) (g : globdef F V) (gl : list (ident * globdef F V)), *)
-(*   In (id, g) gl -> *)
-(*   Coqlib.list_norepet (List.map fst gl) -> *)
-(*   exists gl1 gl2 : list (ident * globdef F V), gl = gl1 ++ (id, g) :: gl2 /\ ~ In id (List.map fst gl2) *)
+      hexploit link_then_exists_gd.
+      3: eapply LINKSRC.
+      1,2,3,4: eauto.
+      i. des.
+      hexploit PTree_Properties.of_list_norepet.
+      { eapply NOREPET. }
+      { eapply INL. }
+      i. clarify.
 
     - hexploit LINKTGTP; eauto. i; des. clear H H0.
       destruct (classic (In id (List.map fst (compile_gdefs srcl)))).
       { apply PTree_Properties.of_list_dom in H. des. clarify. }
       clear LK; rename H into LK.
       apply PTree_Properties.in_of_list in AK. apply PTree_Properties.in_of_list in BK.
-      admit "case analysis for each gd, should be tied with above".
+      hexploit link_then_exists_gd.
+      3: eapply LINKSRC.
+      1,2,3,4: eauto.
+      i. des.
+      apply (in_map fst) in INL. ss.
 
     - apply PTree_Properties.in_of_list in AK. apply PTree_Properties.in_of_list in LK.
       destruct (classic (In id (List.map fst (compile_gdefs src2)))).
@@ -167,13 +168,39 @@ Section PROOFRIGHT.
       destruct (classic (In id (List.map fst (compile_gdefs src2)))).
       { apply PTree_Properties.of_list_dom in H. des. clarify. }
       clear BK; rename H into BK.
+      destruct (classic (In id (List.map fst (compile_gdefs srcl)))).
+      { apply PTree_Properties.of_list_dom in H. des. clarify. }
+      clear LK; rename H into LK.
+      exfalso.
       admit "name only in a, linked should have a's def".
 
-    - admit "sym".
-    - admit "sym".
-    - admit "should not exists".
-  Qed.
+    - apply PTree_Properties.in_of_list in BK. apply PTree_Properties.in_of_list in LK.
+      destruct (classic (In id (List.map fst (compile_gdefs src1)))).
+      { apply PTree_Properties.of_list_dom in H. des. clarify. }
+      clear AK; rename H into AK.
+      admit "name only in b".
 
+    - apply PTree_Properties.in_of_list in BK.
+      destruct (classic (In id (List.map fst (compile_gdefs src1)))).
+      { apply PTree_Properties.of_list_dom in H. des. clarify. }
+      clear AK; rename H into AK.
+      destruct (classic (In id (List.map fst (compile_gdefs srcl)))).
+      { apply PTree_Properties.of_list_dom in H. des. clarify. }
+      clear LK; rename H into LK.
+      exfalso.
+      admit "name only in b, linked should have b's def".
+
+    - apply PTree_Properties.in_of_list in LK.
+      destruct (classic (In id (List.map fst (compile_gdefs src1)))).
+      { apply PTree_Properties.of_list_dom in H. des. clarify. }
+      clear AK; rename H into AK.
+      destruct (classic (In id (List.map fst (compile_gdefs src2)))).
+      { apply PTree_Properties.of_list_dom in H. des. clarify. }
+      clear BK; rename H into BK.
+      exfalso.
+      admit "should not exists".
+
+  Qed.
 
 
   Definition wf_public (src: Imp.programL) :=
@@ -191,7 +218,7 @@ Section PROOFRIGHT.
       (exists tgtl, <<LINKTGT: link tgt1 tgt2 = Some tgtl>>).
   Proof.
     hexploit (link_prog_succeeds tgt1 tgt2).
-    { admit "ez". }
+    { unfold compile in *. des_ifs. }
     { i. apply PTree_Properties.in_of_list in H. apply PTree_Properties.in_of_list in H0. rename H into IN1, H0 into IN2.
       unfold compile in *. des_ifs. ss. rename l0 into NOREPET1, l into NOREPET2.
       hexploit perm_elements_PTree_norepeat_in_in.
@@ -203,18 +230,18 @@ Section PROOFRIGHT.
       repeat split.
       { unfold wf_public in WFP1. apply (in_map fst) in IN1. eauto. }
       { unfold wf_public in WFP2. apply (in_map fst) in IN2. eauto. }
-      - admit "reverse from prog_defs, & characterize int/ext".
+      hexploit link_then_exists_gd.
+      3: eapply LINKSRC.
+      all: eauto.
+      i. des. ii. clarify.
     }
     i. match goal with | [H: link_prog _ _ = Some ?_tgtl |- _ ] => exists _tgtl end. ss.
   Qed.
 
-  (* link_def *)
-  (* link_fundef *)
-  (* link_vardef *)
-  (* link_varinit *)
-
   Lemma _comm_link_imp_compile_exists
         src1 src2 srcl tgt1 tgt2
+        (WFP1: wf_public src1)
+        (WFP2: wf_public src2)
         (COMP1: compile src1 = OK tgt1)
         (COMP2: compile src2 = OK tgt2)
         (LINKSRC: link_imp src1 src2 = Some srcl)
@@ -223,8 +250,8 @@ Section PROOFRIGHT.
       (exists tgtl, (<<LINKTGT: link tgt1 tgt2 = Some tgtl>>) /\ (<<COMP: compile srcl = OK tgtl>>)).
   Proof.
     hexploit _comm_link_imp_compile_exists_link.
-    3: eapply LINKSRC.
-    1,2: eauto.
+    5: eapply LINKSRC.
+    1,2,3,4: eauto.
     i. des. exists tgtl. split; auto. eapply _comm_link_imp_compile.
     3,4: eauto.
     1,2: eauto.
