@@ -24,166 +24,6 @@ Require Import Imp2CsharpminorSim.
 
 Set Implicit Arguments.
 
-Section PROOFSINGLE.
-
-  Context `{Σ: GRA.t}.
-
-  Create HintDb ord_step2.
-  Hint Resolve Nat.lt_succ_diag_r OrdArith.lt_from_nat OrdArith.lt_add_r: ord_step2.
-  Hint Extern 1000 => lia: ord_step2.
-  Ltac ord_step2 := eauto with ord_step2.
-
-  Ltac sim_red := try red; Red.prw ltac:(_red_gen) 2 0.
-  Ltac sim_tau := (try sim_red); econs 3; ss; clarify; eexists; exists (ModSemL.step_tau _); eexists; split; [ord_step2|auto].
-
-  Ltac sim_triggerUB := unfold triggerUB; (try sim_red); econs 5; i; ss; auto;
-                        dependent destruction STEP; try (irw in x; clarify; fail).
-
-  Definition imp_initial_state (src : Imp.programL) :=
-    (ModL.compile (ModL.add (Mod.lift Mem) (ImpMod.get_modL src))).(initial_state).
-
-  Lemma single_compile_behavior_improves
-        (src: Imp.programL) (tgt: Csharpminor.program) srcst tgtst
-        (WFPROG: Permutation.Permutation
-                   ((List.map fst src.(prog_varsL)) ++ (List.map (compose fst snd) src.(prog_funsL)))
-                   (List.map fst src.(defsL)))
-        (WFPROG2 : forall gn gv, In (gn, Sk.Gvar gv) (Sk.sort (defsL src)) -> In (gn, gv) (prog_varsL src))
-        (COMP: Imp2Csharpminor.compile src = OK tgt)
-        (SINIT: srcst = imp_initial_state src)
-        (TINIT: Csharpminor.initial_state tgt tgtst)
-    :
-      <<IMPROVES: @improves2 _ (Csharpminor.semantics tgt) srcst tgtst>>.
-  Proof.
-    eapply adequacy; eauto.
-    { apply Ordinal.Ord.lt_well_founded. }
-    { apply Csharpminor_wf_semantics. }
-    { admit "ez? wf imp". }
-    instantiate (1:= ((100 + max_fuel) + 120)%ord). red. unfold imp_initial_state in *. ss; clarify. inv TINIT.
-    rename m0 into tm, ge into tge, H into TMINIT, H0 into TMAIN1, H1 into TMAIN2, H2 into TSIGMAIN, b into tb, f into tmain.
-    assert (COMP0: Imp2Csharpminor.compile src = OK tgt); auto. move COMP0 before tgt.
-    unfold compile in COMP. des_ifs.
-    match goal with | [ COMP0: compile _ = OK ?_tgt |- _ ] => set (tgt:=_tgt) in * end.
-    rename l into NOREPET.
-    unfold ModSemL.initial_itr. unfold ModSemL.initial_itr_arg.
-    pfold. econs 5; eauto. unfold assume. ss. grind. eapply angelic_step in STEP. des; clarify.
-    eexists; split; [ord_step2|auto].
-
-    left. unfold ITree.map. sim_red.
-    set (sge:=Sk.load_skenv (Sk.sort (defsL src))) in *.
-    destruct (alist_find "main" (List.map (fun '(mn, (fn, f)) => (fn, transl_all mn ∘ cfun (eval_imp sge f))) (prog_funsL src)))
-             eqn:FOUNDMAIN; ss; grind.
-    2:{ pfold. sim_triggerUB. }
-    rewrite alist_find_find_some in FOUNDMAIN. rewrite find_map in FOUNDMAIN. uo; des_ifs; ss.
-    rename s into mn, f into smain, Heq into SFOUND. apply find_some in SFOUND. des. ss. clear SFOUND0.
-
-    set (tgds:=compile_gdefs src) in *.
-    hexploit in_compile_gdefs_ifuns; eauto. i. rename H into INFMAIN.
-    hexploit in_tgt_prog_defs_ifuns; eauto. i. rename H into INFMAINTGT.
-    hexploit tgt_genv_find_def_by_blk; eauto. i. rename H into TGTMAIN. ss; clarify.
-    match goal with [H: Genv.find_def _ _ = Some (Gfun (Internal ?tf)) |- _ ] => set (tmainf:=tf) in * end.
-    unfold cfun. rewrite Any.upcast_downcast. grind. rewrite unfold_eval_imp_only.
-    sim_red. unfold assume. sim_red.
-    pfold. econs 5; ss; eauto. i. eapply angelic_step in STEP; des; clarify.
-    eexists; split; [ord_step2|auto]. left. rename STEP0 into WF_MAIN.
-    do 4 (pfold; sim_tau; left). sim_red.
-
-    des_ifs; grind; sim_red.
-    2:{ pfold. sim_triggerUB. }
-    assert (MAINPARAM: fn_params smain = []).
-    { depgen Heq. clear. i. remember (fn_params smain) as m. clear Heqm. depgen l. induction m; i; ss; clarify. }
-    rename l into sle, Heq into INITARGS. rewrite MAINPARAM in INITARGS. ss. clarify.
-    rewrite interp_imp_tau. sim_red.
-
-    unfold Genv.find_funct_ptr in TMAIN2. subst tge. rewrite TGTMAIN in TMAIN2. clarify.
-    set (tge:=Genv.globalenv tgt) in *.
-    pfold. econs 4; ss. eexists. eexists.
-    { rewrite <- NoDup_norepeat in WF_MAIN. apply Coqlib.list_norepet_app in WF_MAIN; des. subst tmainf.
-      rewrite MAINPARAM in *. eapply step_internal_function; ss; eauto; try econs. }
-    eexists; split; [ord_step2|auto]. left. ss.
-
-    pfold. econs 6; ss; eauto. eexists. eexists.
-    { eapply step_seq. }
-    eexists. exists (ModSemL.step_tau _). exists ((100 + max_fuel) + 100)%ord. left.
-    rewrite interp_imp_bind. grind. sim_red.
-    assert (MATCHGE: match_ge src (Sk.sort (ModL.sk (ModL.add Mem (ImpMod.get_modL src)))) (Genv.globalenv tgt)).
-    { econs. i. unfold map_blk. rewrite COMP0. hexploit Sk.env_found_range; eauto. i. unfold src_init_nb, int_len.
-      rewrite <- sksort_same_len in H0. ss. des_ifs; unfold NW in *; try lia.
-      - unfold get_sge in *. ss. apply Sk.sort_wf in SK.
-        hexploit Sk.load_skenv_wf; eauto. i. apply H1 in H. rewrite H in Heq. clarify.
-      - unfold get_sge in *. ss. apply Sk.sort_wf in SK.
-        hexploit Sk.load_skenv_wf; eauto. i. apply H1 in H. rewrite H in Heq. clarify.
-        hexploit found_in_src_in_tgt; eauto. i. des. rewrite Heq0 in H2. clarify.
-      - unfold get_sge in *. ss. apply Sk.sort_wf in SK.
-        hexploit Sk.load_skenv_wf; eauto. i. apply H1 in H. rewrite H in Heq. clarify. }
-
-    eapply match_states_sim; eauto.
-    { apply map_blk_after_init. }
-    { apply map_blk_inj. }
-    ss.
-    match goal with
-    | [ |- match_states ?_ge ?_ms _ _ _ ] => replace _ge with sge; auto
-    end.
-    match goal with
-    | [ |- match_states ?_ge ?_ms _ _ _ ] => set (ms:=_ms) in *
-    end.
-    econs; eauto.
-    { ss. }
-    { admit "ez?: match initial le". }
-    { clarify. }
-    { econs; ss.
-      { unfold src_init_nb, int_len. rewrite <- sksort_same_len. lia. }
-      { apply Genv.init_mem_genv_next in TMINIT. rewrite <- TMINIT. unfold Genv.globalenv. ss.
-        rewrite Genv.genv_next_add_globals. ss. rewrite Genv_advance_next_length. ss.
-        rewrite length_elements_PTree_norepet; eauto. rewrite map_blk_after_init; eauto.
-        2:{ unfold src_init_nb, int_len. rewrite <- sksort_same_len. lia. }
-        unfold ext_len. subst tgds. repeat rewrite app_length. ss.
-        rewrite <- sksort_same_len. rewrite wfprog_defsL_length; eauto.
-        rewrite gdefs_preserves_length. lia. }
-      i. uo; des_ifs. unfold NW in H. clarify. rename s into gn, Heq0 into SGENV.
-      set (tblk:=map_blk src blk) in *. unfold map_ofs in *. rewrite! Z.mul_0_r.
-      hexploit found_gvar_in_src_then_tgt; eauto. i. des. rename H into FOUNDTGV.
-      hexploit Genv.init_mem_characterization; eauto.
-      { unfold Genv.find_var_info. rewrite FOUNDTGV. clarify. }
-      i. des. rename H into TMPERM, H0 into TMPERM0, H1 into TMLSID, H2 into TMLB.
-      subst tblk. inv MATCHGE.
-      assert (SKFOUND: SkEnv.blk2id sge blk = Some gn).
-      { subst sge. Local Transparent Sk.load_skenv. unfold Sk.load_skenv. ss. rewrite SGENV. uo; ss. Local Opaque Sk.load_skenv. }
-      assert (WFSKENV: Sk.wf (defsL src)); auto.
-      apply Sk.sort_wf in WFSKENV. apply Sk.load_skenv_wf in WFSKENV. apply WFSKENV in SKFOUND. clear WFSKENV.
-      apply MG in SKFOUND. apply nth_error_In in SGENV. apply WFPROG2 in SGENV.
-      hexploit compiled_gvar_props; eauto. i. des. clarify.
-      assert (TMLSID0: false = false); auto. apply TMLSID in TMLSID0; clear TMLSID.
-      assert (TMLB0: false = false); auto. apply TMLB in TMLB0; clear TMLB.
-      rewrite H0 in *. ss. des. clear TMLSID1. split; auto.
-      unfold Genv.perm_globvar in TMPERM. des_ifs. split.
-      2:{ unfold NW. lia. }
-      split; eauto. ss. apply Z.divide_0_r. }
-    { ss. }
-    { ss.
-      match goal with
-      | [ |- match_code _ _ _ ?i0 ?s0 ] =>
-        replace i0 with ((fun '(r, p, (le, _)) => itree_of_imp_ret sge le ms mn (r, p)) : (_ * _ * (lenv * val)) -> _);
-          replace s0 with [exit_stmt]; eauto
-      end.
-      { econs 1. }
-      extensionality x. unfold itree_of_imp_ret, itree_of_imp_cont. grind. destruct p0. rewrite interp_imp_expr_Var. grind. }
-    { ss.
-      match goal with
-      | [ |- match_stack _ _ _ _ _ ?i0 ?s0 ] =>
-        replace i0 with ((itree_of_imp_pop_bottom ms mn) : (_ * _ * (lenv * val)) -> _);
-          replace s0 with (Some ret_call_main); eauto
-      end.
-      { econs 1. ss. }
-      extensionality x. unfold itree_of_imp_pop_bottom. grind. sim_red. Red.prw ltac:(_red_gen) 1 0. ss.
-    }
-  Qed.
-
-End PROOFSINGLE.
-
-
-
-
-
 Section PROOFLEFT.
 
   Context `{Σ: GRA.t}.
@@ -259,9 +99,6 @@ Section PROOFRIGHT.
 
   (* Proving the right arrow of the diagram *)
 
-  (* Maps.PTree.elements_extensional 
-     we will rely on above theorem for commutation lemmas *)
-  Variable Q: list (ident * globdef fundef ()) -> list (ident * globdef fundef ()) -> list (ident * globdef fundef ()) -> Prop.
   Lemma _comm_link_imp_compile
         src1 src2 srcl tgt1 tgt2 tgtl
         (COMP1: compile src1 = OK tgt1)
@@ -442,6 +279,167 @@ Section PROOFRIGHT.
   (* Qed. *)
 
 End PROOFRIGHT.
+
+
+
+
+
+Section PROOFSINGLE.
+
+  Context `{Σ: GRA.t}.
+
+  Create HintDb ord_step2.
+  Hint Resolve Nat.lt_succ_diag_r OrdArith.lt_from_nat OrdArith.lt_add_r: ord_step2.
+  Hint Extern 1000 => lia: ord_step2.
+  Ltac ord_step2 := eauto with ord_step2.
+
+  Ltac sim_red := try red; Red.prw ltac:(_red_gen) 2 0.
+  Ltac sim_tau := (try sim_red); econs 3; ss; clarify; eexists; exists (ModSemL.step_tau _); eexists; split; [ord_step2|auto].
+
+  Ltac sim_triggerUB := unfold triggerUB; (try sim_red); econs 5; i; ss; auto;
+                        dependent destruction STEP; try (irw in x; clarify; fail).
+
+  Definition imp_initial_state (src : Imp.programL) :=
+    (ModL.compile (ModL.add (Mod.lift Mem) (ImpMod.get_modL src))).(initial_state).
+
+  Lemma single_compile_behavior_improves
+        (src: Imp.programL) (tgt: Csharpminor.program) srcst tgtst
+        (WFPROG: Permutation.Permutation
+                   ((List.map fst src.(prog_varsL)) ++ (List.map (compose fst snd) src.(prog_funsL)))
+                   (List.map fst src.(defsL)))
+        (WFPROG2 : forall gn gv, In (gn, Sk.Gvar gv) (Sk.sort (defsL src)) -> In (gn, gv) (prog_varsL src))
+        (COMP: Imp2Csharpminor.compile src = OK tgt)
+        (SINIT: srcst = imp_initial_state src)
+        (TINIT: Csharpminor.initial_state tgt tgtst)
+    :
+      <<IMPROVES: @improves2 _ (Csharpminor.semantics tgt) srcst tgtst>>.
+  Proof.
+    eapply adequacy; eauto.
+    { apply Ordinal.Ord.lt_well_founded. }
+    { apply Csharpminor_wf_semantics. }
+    { admit "ez? wf imp". }
+    instantiate (1:= ((100 + max_fuel) + 120)%ord). red. unfold imp_initial_state in *. ss; clarify. inv TINIT.
+    rename m0 into tm, ge into tge, H into TMINIT, H0 into TMAIN1, H1 into TMAIN2, H2 into TSIGMAIN, b into tb, f into tmain.
+    assert (COMP0: Imp2Csharpminor.compile src = OK tgt); auto. move COMP0 before tgt.
+    unfold compile in COMP. des_ifs.
+    match goal with | [ COMP0: compile _ = OK ?_tgt |- _ ] => set (tgt:=_tgt) in * end.
+    rename l into NOREPET.
+    unfold ModSemL.initial_itr. unfold ModSemL.initial_itr_arg.
+    pfold. econs 5; eauto. unfold assume. ss. grind. eapply angelic_step in STEP. des; clarify.
+    eexists; split; [ord_step2|auto].
+
+    left. unfold ITree.map. sim_red.
+    set (sge:=Sk.load_skenv (Sk.sort (defsL src))) in *.
+    destruct (alist_find "main" (List.map (fun '(mn, (fn, f)) => (fn, transl_all mn ∘ cfun (eval_imp sge f))) (prog_funsL src)))
+             eqn:FOUNDMAIN; ss; grind.
+    2:{ pfold. sim_triggerUB. }
+    rewrite alist_find_find_some in FOUNDMAIN. rewrite find_map in FOUNDMAIN. uo; des_ifs; ss.
+    rename s into mn, f into smain, Heq into SFOUND. apply find_some in SFOUND. des. ss. clear SFOUND0.
+
+    set (tgds:=compile_gdefs src) in *.
+    hexploit in_compile_gdefs_ifuns; eauto. i. rename H into INFMAIN.
+    hexploit in_tgt_prog_defs_ifuns; eauto. i. rename H into INFMAINTGT.
+    hexploit tgt_genv_find_def_by_blk; eauto. i. rename H into TGTMAIN. ss; clarify.
+    match goal with [H: Genv.find_def _ _ = Some (Gfun (Internal ?tf)) |- _ ] => set (tmainf:=tf) in * end.
+    unfold cfun. rewrite Any.upcast_downcast. grind. rewrite unfold_eval_imp_only.
+    sim_red. unfold assume. sim_red.
+    pfold. econs 5; ss; eauto. i. eapply angelic_step in STEP; des; clarify.
+    eexists; split; [ord_step2|auto]. left. rename STEP0 into WF_MAIN.
+    do 4 (pfold; sim_tau; left). sim_red.
+
+    des_ifs; grind; sim_red.
+    2:{ pfold. sim_triggerUB. }
+    assert (MAINPARAM: fn_params smain = []).
+    { depgen Heq. clear. i. remember (fn_params smain) as m. clear Heqm. depgen l. induction m; i; ss; clarify. }
+    rename l into sle, Heq into INITARGS. rewrite MAINPARAM in INITARGS. ss. clarify.
+    rewrite interp_imp_tau. sim_red.
+
+    unfold Genv.find_funct_ptr in TMAIN2. subst tge. rewrite TGTMAIN in TMAIN2. clarify.
+    set (tge:=Genv.globalenv tgt) in *.
+    pfold. econs 4; ss. eexists. eexists.
+    { rewrite <- NoDup_norepeat in WF_MAIN. apply Coqlib.list_norepet_app in WF_MAIN; des. subst tmainf.
+      rewrite MAINPARAM in *. eapply step_internal_function; ss; eauto; try econs. }
+    eexists; split; [ord_step2|auto]. left. ss.
+
+    pfold. econs 6; ss; eauto. eexists. eexists.
+    { eapply step_seq. }
+    eexists. exists (ModSemL.step_tau _). exists ((100 + max_fuel) + 100)%ord. left.
+    rewrite interp_imp_bind. grind. sim_red.
+    assert (MATCHGE: match_ge src (Sk.sort (ModL.sk (ModL.add Mem (ImpMod.get_modL src)))) (Genv.globalenv tgt)).
+    { econs. i. unfold map_blk. rewrite COMP0. hexploit Sk.env_found_range; eauto. i. unfold src_init_nb, int_len.
+      rewrite <- sksort_same_len in H0. ss. des_ifs; unfold NW in *; try lia.
+      - unfold get_sge in *. ss. apply Sk.sort_wf in SK.
+        hexploit Sk.load_skenv_wf; eauto. i. apply H1 in H. rewrite H in Heq. clarify.
+      - unfold get_sge in *. ss. apply Sk.sort_wf in SK.
+        hexploit Sk.load_skenv_wf; eauto. i. apply H1 in H. rewrite H in Heq. clarify.
+        hexploit found_in_src_in_tgt; eauto. i. des. rewrite Heq0 in H2. clarify.
+      - unfold get_sge in *. ss. apply Sk.sort_wf in SK.
+        hexploit Sk.load_skenv_wf; eauto. i. apply H1 in H. rewrite H in Heq. clarify. }
+
+    eapply match_states_sim; eauto.
+    { apply map_blk_after_init. }
+    { apply map_blk_inj. }
+    ss.
+    match goal with
+    | [ |- match_states ?_ge ?_ms _ _ _ ] => replace _ge with sge; auto
+    end.
+    match goal with
+    | [ |- match_states ?_ge ?_ms _ _ _ ] => set (ms:=_ms) in *
+    end.
+    econs; eauto.
+    { ss. }
+    { admit "ez?: match initial le". }
+    { clarify. }
+    { econs; ss.
+      { unfold src_init_nb, int_len. rewrite <- sksort_same_len. lia. }
+      { apply Genv.init_mem_genv_next in TMINIT. rewrite <- TMINIT. unfold Genv.globalenv. ss.
+        rewrite Genv.genv_next_add_globals. ss. rewrite Genv_advance_next_length. ss.
+        rewrite length_elements_PTree_norepet; eauto. rewrite map_blk_after_init; eauto.
+        2:{ unfold src_init_nb, int_len. rewrite <- sksort_same_len. lia. }
+        unfold ext_len. subst tgds. repeat rewrite app_length. ss.
+        rewrite <- sksort_same_len. rewrite wfprog_defsL_length; eauto.
+        rewrite gdefs_preserves_length. lia. }
+      i. uo; des_ifs. unfold NW in H. clarify. rename s into gn, Heq0 into SGENV.
+      set (tblk:=map_blk src blk) in *. unfold map_ofs in *. rewrite! Z.mul_0_r.
+      hexploit found_gvar_in_src_then_tgt; eauto. i. des. rename H into FOUNDTGV.
+      hexploit Genv.init_mem_characterization; eauto.
+      { unfold Genv.find_var_info. rewrite FOUNDTGV. clarify. }
+      i. des. rename H into TMPERM, H0 into TMPERM0, H1 into TMLSID, H2 into TMLB.
+      subst tblk. inv MATCHGE.
+      assert (SKFOUND: SkEnv.blk2id sge blk = Some gn).
+      { subst sge. Local Transparent Sk.load_skenv. unfold Sk.load_skenv. ss. rewrite SGENV. uo; ss. Local Opaque Sk.load_skenv. }
+      assert (WFSKENV: Sk.wf (defsL src)); auto.
+      apply Sk.sort_wf in WFSKENV. apply Sk.load_skenv_wf in WFSKENV. apply WFSKENV in SKFOUND. clear WFSKENV.
+      apply MG in SKFOUND. apply nth_error_In in SGENV. apply WFPROG2 in SGENV.
+      hexploit compiled_gvar_props; eauto. i. des. clarify.
+      assert (TMLSID0: false = false); auto. apply TMLSID in TMLSID0; clear TMLSID.
+      assert (TMLB0: false = false); auto. apply TMLB in TMLB0; clear TMLB.
+      rewrite H0 in *. ss. des. clear TMLSID1. split; auto.
+      unfold Genv.perm_globvar in TMPERM. des_ifs. split.
+      2:{ unfold NW. lia. }
+      split; eauto. ss. apply Z.divide_0_r. }
+    { ss. }
+    { ss.
+      match goal with
+      | [ |- match_code _ _ _ ?i0 ?s0 ] =>
+        replace i0 with ((fun '(r, p, (le, _)) => itree_of_imp_ret sge le ms mn (r, p)) : (_ * _ * (lenv * val)) -> _);
+          replace s0 with [exit_stmt]; eauto
+      end.
+      { econs 1. }
+      extensionality x. unfold itree_of_imp_ret, itree_of_imp_cont. grind. destruct p0. rewrite interp_imp_expr_Var. grind. }
+    { ss.
+      match goal with
+      | [ |- match_stack _ _ _ _ _ ?i0 ?s0 ] =>
+        replace i0 with ((itree_of_imp_pop_bottom ms mn) : (_ * _ * (lenv * val)) -> _);
+          replace s0 with (Some ret_call_main); eauto
+      end.
+      { econs 1. ss. }
+      extensionality x. unfold itree_of_imp_pop_bottom. grind. sim_red. Red.prw ltac:(_red_gen) 1 0. ss.
+    }
+  Qed.
+
+End PROOFSINGLE.
+
 
 
 

@@ -170,6 +170,17 @@ End LINK.
 
 
 
+
+
+Section DECOMP.
+
+
+End DECOMP.
+
+
+
+
+
 Section LINKPROPS.
 
   Lemma ext_vars_names :
