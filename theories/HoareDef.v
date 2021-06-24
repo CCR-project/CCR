@@ -1534,12 +1534,12 @@ Ltac ired_both := ired_l; ired_r.
     (*** terminal cases ***)
     | [ |- gpaco6 _ _ _ _ _ _ _ _ (triggerUB >>= _) _ ] =>
       unfold triggerUB; mred; _step; ss; fail
+    | [ |- gpaco6 _ _ _ _ _ _ _ _ _ (triggerNB >>= _) ] =>
+      unfold triggerNB; mred; _step; ss; fail
     | [ |- gpaco6 _ _ _ _ _ _ _ _ (triggerNB >>= _) _ ] =>
       exfalso
     | [ |- gpaco6 _ _ _ _ _ _ _ _ _ (triggerUB >>= _) ] =>
       exfalso
-    | [ |- gpaco6 _ _ _ _ _ _ _ _ _ (triggerNB >>= _) ] =>
-      unfold triggerNB; mred; _step; ss; fail
 
     (*** assume/guarantee ***)
     | [ |- gpaco6 _ _ _ _ _ _ _ _ (assume ?P ;;; _) _ ] =>
