@@ -24,31 +24,35 @@ Section PROOF.
   Definition echo_body: list val -> itree (kCallE +' pE +' eventE) val :=
     fun args =>
       _ <- (pargs [] args)?;;
-      (* APCK;;; *)
-      (* `_: list val <- (kcall pure "new" ([]: list val));; *)
-      `stk0: list val    <- (kcall impure "input" ([]: list val));;
-      `_: list val    <- (kcall impure "output" (stk0));;
+      APCK;;;
+      `stk0: list Z    <- (kcall impure "input" ([]: list Z));;
+      `_: list Z    <- (kcall impure "output" (stk0));;
       Ret Vundef
   .
 
 
 
 
+  Let is_int_stack (h: mblock) (stk0: list Z): iProp :=
+    (OwnM (is_stack h (List.map Vint stk0)) ∧ ⌜Forall (fun z => z <> (- 1)%Z) stk0⌝)%I
+  .
 
   Definition input_spec: fspec :=
     mk_fspec (fun _ h _argh _argl o =>
-                (∃ (argh: list val) (argl: list val),
-                  ⌜_argh = argh↑ ∧ _argl = argl↑ ∧ argl = [Vptr h 0] ∧ o = ord_top⌝
-                   ** OwnM (is_stack h argh))%I)
-             (fun _ h _reth _ => (∃ (reth: list val), ⌜_reth = reth↑⌝ ** OwnM(is_stack h reth))%I)
+                (∃ (stk0: list Z) (argl: list val),
+                  ⌜_argh = stk0↑ ∧ _argl = argl↑ ∧ argl = [Vptr h 0] ∧ o = ord_top⌝
+                   ** (is_int_stack h stk0))%I)
+             (fun _ h _reth _ => (∃ (stk1: list Z), ⌜_reth = stk1↑⌝ ** is_int_stack h stk1)%I)
   .
 
-  Definition input_body: list val -> itree (kCallE +' pE +' eventE) (list val) :=
+  Definition input_body: list Z -> itree (kCallE +' pE +' eventE) (list Z) :=
     fun stk =>
       n <- (kcall impure "getint" ([]: list val));;
-      if (dec n (Vint (- 1)))
+      n <- (parg Tint n)?;;
+      if (dec n (- 1)%Z)
       then Ret stk
       else
+        APCK;;;
         (kcall impure "input" (n :: stk))
   .
 
@@ -58,17 +62,18 @@ Section PROOF.
 
   Definition output_spec: fspec :=
     mk_fspec (fun _ h _argh _argl o =>
-                (∃ (argh: list val) (argl: list val),
-                  ⌜_argh = argh↑ ∧ _argl = argl↑ ∧ argl = [Vptr h 0] ∧ o = ord_top⌝
-                   ** OwnM (is_stack h argh))%I)
-             (fun _ h _reth _ => (∃ (reth: list val), ⌜_reth = reth↑⌝ ** OwnM(is_stack h reth))%I)
+                (∃ (stk0: list Z) (argl: list val),
+                  ⌜_argh = stk0↑ ∧ _argl = argl↑ ∧ argl = [Vptr h 0] ∧ o = ord_top⌝
+                   ** is_int_stack h stk0)%I)
+             (fun _ h _reth _ => (∃ (stk1: list Z), ⌜_reth = stk1↑⌝ ** is_int_stack h stk1)%I)
   .
 
-  Definition output_body: list val -> itree (kCallE +' pE +' eventE) (list val) :=
+  Definition output_body: list Z -> itree (kCallE +' pE +' eventE) (list Z) :=
     fun stk =>
+      APCK;;;
       match stk with
       | [] => Ret []
-      | n :: stk' => `_: val <- (kcall impure "putint" ([n]: list val));; (kcall impure "output" (stk'))
+      | n :: stk' => `_: val <- (kcall impure "putint" ([Vint n]: list val));; (kcall impure "output" (stk'))
       end
   .
 
@@ -78,8 +83,8 @@ Section PROOF.
 
   Definition EchoSbtb: list (gname * kspecbody) :=
     [("echo", ksb_trivial (cfun echo_body));
-    ("input",  mk_kspecbody input_spec (cfun input_body) (fun _ => triggerUB));
-    ("output", mk_kspecbody output_spec (cfun output_body) (fun _ => triggerUB))
+    ("input",  mk_kspecbody input_spec (fun _ => triggerUB) (cfun input_body));
+    ("output", mk_kspecbody output_spec (fun _ => triggerUB) (cfun output_body))
     ]
   .
 
