@@ -229,7 +229,19 @@ Section PROOFRIGHT.
   Proof.
     i. red. unfold lift in *. unfold wf_public. ii; ss. apply Coqlib.list_in_map_inv in H. des. destruct x; ss; clarify.
     rename i into id, g into gd. apply decomp_gdefs in H0; ss. des; clarify; eauto.
-  Admitted.
+    - repeat rewrite map_app. repeat rewrite in_app_iff.
+      do 2 right; left. rewrite List.map_map. apply (in_map (s2p ∘ fst)) in SYS0. destruct fd; ss; clarify.
+    - repeat rewrite map_app. repeat rewrite in_app_iff.
+      do 4 right; left. rewrite List.map_map. apply (in_map (s2p ∘ fst)) in EFS0. destruct fd; ss; clarify.
+    - repeat rewrite map_app. repeat rewrite in_app_iff.
+      do 3 right; left. apply (in_map s2p) in EVS0. unfold compile_eVar in *. clarify.
+    - repeat rewrite map_app. repeat rewrite in_app_iff.
+      do 6 right. destruct fd as [mn [fn ff]]; ss; clarify. apply (in_map (s2p ∘ fst ∘ snd)) in IFS0; ss.
+      rewrite List.map_map in IFS0. ss. rewrite List.map_map. auto.
+    - repeat rewrite map_app. repeat rewrite in_app_iff.
+      do 5 right; left. destruct vd; ss; clarify. apply (in_map (s2p ∘ fst)) in IVS0. ss.
+      rewrite List.map_map. ss.
+  Qed.
 
   Lemma link_two_wf_public
         src1 src2 srcl
@@ -374,17 +386,11 @@ Section PROOFRIGHT.
     :
       (exists tgtl, (<<LINKTGT: link_list tgts = Some tgtl>>) /\ (<<COMP: compile srcl = OK tgtl>>)).  
   Proof.
-    
-
-
-
-    
-    red. unfold Mod.add_list. ss. eapply comm_link_imp_link_mod; eauto. rewrite List.map_map.
-    pose ImpMod.comm_imp_mod_lift. unfold compose in e. rewrite e; clear e. rewrite <- List.map_map.
-    rewrite MODLIST. ss.
+    eapply comm_link_imp_compile_exists.
+    3: eapply LINKSRC.
+    - clear. induction srcs; ss; clarify. econs; eauto. apply lifted_then_wf_public.
+    - depgen COMPS. clear. i. induction COMPS; ss; clarify. econs; eauto.
   Qed.
-
-
 
 End PROOFRIGHT.
 
@@ -560,6 +566,39 @@ Section PROOFLINK.
   Definition imps_init (srcs : list Imp.program) :=
     let srcs_mod := List.map ImpMod.get_mod srcs in src_initial_state (Mod.add_list (Mem :: srcs_mod)).
 
+  Lemma compile_behavior_improves_compile
+        (srcs : list Imp.program) (tgts : Coqlib.nlist Csharpminor.program)
+        srcl tgtl
+        (COMP: Forall2 (fun src tgt => compile (lift src) = OK tgt) srcs (nlist2list tgts))
+        (LINKSRC: link_imps srcs = Some srcl)
+        (LINKTGT: link_list tgts = Some tgtl)
+    :
+      (forall tgt_init, 
+          (Csharpminor.initial_state tgtl tgt_init) ->
+          (@improves2 _ (Csharpminor.semantics tgtl) (imps_init srcs) tgt_init)).
+  Proof.
+    i. unfold imps_init. unfold src_initial_state.
+    hexploit left_arrow; eauto.
+    i. instantiate (1:=Mem) in H0. rewrite H0; clear H0.
+    hexploit right_arrow; eauto.
+    i. des. clarify.
+    hexploit linked_list_wf_lift; eauto. i. des. unfold wf_prog in H0. des.
+    eapply single_compile_behavior_improves; eauto.
+  Qed.
+
+  Lemma compile_behavior_improves_compile_exists
+        (srcs : list Imp.program) (tgts : Coqlib.nlist Csharpminor.program)
+        srcl
+        (COMP: Forall2 (fun src tgt => compile (lift src) = OK tgt) srcs (nlist2list tgts))
+        (LINKSRC: link_imps srcs = Some srcl)
+    :
+      exists tgtl, (link_list tgts = Some tgtl).
+  Proof.
+    i.
+    hexploit right_arrow; eauto.
+    i. des. exists tgtl; eauto.
+  Qed.
+
   Theorem compile_behavior_improves
           (srcs : list Imp.program) (tgts : Coqlib.nlist Csharpminor.program)
           srcl
@@ -572,9 +611,8 @@ Section PROOFLINK.
              (Csharpminor.initial_state tgtl tgt_init) ->
              (@improves2 _ (Csharpminor.semantics tgtl) (imps_init srcs) tgt_init))).
   Proof.
-    unfold imps_init. unfold src_initial_state.
-    hexploit left_arrow; eauto.
-    i. instantiate (1:=Mem) in H. des. rewrite H. clear H.
-  Admitted.
+    hexploit compile_behavior_improves_compile_exists; eauto. i. des. exists tgtl. split; eauto.
+    eapply compile_behavior_improves_compile; eauto.
+  Qed.
 
 End PROOFLINK.
