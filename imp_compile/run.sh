@@ -1,22 +1,39 @@
 #!/bin/bash
-cc -o simple simple.s
-./simple
+
+mv simple.s bin/simple.s
+cc -o bin/simple bin/simple.s
+bin/simple
 echo $?
-cc -o factorial factorial.s
-./factorial
+
+mv factorial.s bin/factorial.s
+cc -o bin/factorial bin/factorial.s
+bin/factorial
 echo $?
-cc -o mutsum mutsumF.s mutsumG.s mutsumMain.s
-./mutsum
+
+mv mutsumF.s bin/mutsumF.s
+mv mutsumG.s bin/mutsumG.s
+mv mutsumMain.s bin/mutsumMain.s
+cc -o bin/mutsum bin/mutsumF.s bin/mutsumG.s bin/mutsumMain.s
+bin/mutsum
 echo $?
-cc -o knot knot.s
-./knot
+
+mv knot.s bin/knot.s
+cc -o bin/knot bin/knot.s
+bin/knot
 echo $?
-cc -o mem1 mem1F.s mem1Main.s
-./mem1
+
+mv mem1F.s bin/mem1F.s
+mv mem1Main.s bin/mem1Main.s
+cc -o bin/mem1 bin/mem1F.s bin/mem1Main.s
+bin/mem1
 echo $?
-cc -o mem2 mem2.s
-./mem2
+
+mv mem2.s bin/mem2.s
+cc -o bin/mem2 bin/mem2.s
+bin/mem2
 echo $?
-cc -o link link.s
-./link
+
+mv link.s bin/link.s
+gcc -no-pie -o bin/link bin/link.s bin/print.s bin/scan.s
+bin/link
 echo $?

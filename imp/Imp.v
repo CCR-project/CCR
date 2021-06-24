@@ -55,7 +55,7 @@ Record function : Type := mk_function {
 
 (** ** Supported System Calls by Imp *)
 Definition syscalls : list (string * nat) :=
-  [("print", 1); ("scan", 1)].
+  [("print", 1); ("scan", 0)].
 
 Global Opaque syscalls.
 
