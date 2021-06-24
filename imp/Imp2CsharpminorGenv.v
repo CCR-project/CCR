@@ -232,13 +232,13 @@ Section MAPBLK.
   Qed.
 
   Lemma NoDup_norepeat :
-    forall A (l : list A), <<NOREPET: Coqlib.list_norepet l>> <-> NoDup l.
+    forall A (l : list A), Coqlib.list_norepet l <-> NoDup l.
   Proof.
     split; induction l; i; ss; eauto.
     - econs.
     - inv H. econs; eauto.
     - econs.
-    - inv H. econs; eauto. eapply IHl; eauto.
+    - inv H. econs; eauto.
   Qed.
 
   Lemma perm_elements_PTree_norepeat :

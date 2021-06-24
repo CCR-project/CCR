@@ -399,6 +399,18 @@ Section SOLVEID.
     - sym. rewrite List.map_map. apply int_vars_names.
   Qed.
 
+  Lemma unique_gdefs_unique_name :
+    forall src
+      (NOREPET : Coqlib.list_norepet (name1 (compile_gdefs src))),
+      <<NOREPET: Coqlib.list_norepet ((name1 src.(ext_funsL)) ++ src.(ext_varsL) ++
+                                      (name2 src.(prog_funsL)) ++ (name1 src.(prog_varsL)))>>.
+  Proof.
+    i. rewrite <- compile_gdefs_preserves_names in NOREPET. repeat (rewrite map_app in NOREPET).
+    do 2 apply Coqlib.list_norepet_append_right in NOREPET. red.
+    rewrite NoDup_norepeat in *.
+    repeat (rewrite <- map_app in NOREPET). apply NoDup_map_inv in NOREPET. ss.
+  Qed.
+
   Lemma malloc_unique :
     forall src (NOREPET : Coqlib.list_norepet (List.map fst (compile_gdefs src))),
       ~ In (s2p "malloc") (name1 (c_sys ++ (compile_eFuns (ext_funsL src)) ++ (compile_eVars (ext_varsL src) ++
@@ -438,6 +450,65 @@ Section SOLVEID.
     clear NOREPET NOREPET1.
     rewrite map_app in NOREPET0. apply Coqlib.list_norepet_app in NOREPET0. des. clear NOREPET0 NOREPET1.
     unfold Coqlib.list_disjoint in NOREPET2. ii. hexploit NOREPET2; eauto.
+  Qed.
+
+  Lemma l_efs_prop :
+    forall src1 src2 name sig
+      (NOREPET1 : Coqlib.list_norepet (name1 (ext_funsL src1) ++ ext_varsL src1 ++
+                                       name2 (prog_funsL src1) ++ name1 (prog_varsL src1)))
+      (NOREPET2 : Coqlib.list_norepet (name1 (ext_funsL src2) ++ ext_varsL src2 ++
+                                       name2 (prog_funsL src2) ++ name1 (prog_varsL src2)))
+      (IN1 : In (name, sig) (ext_funsL src1))
+      (IN2 : In (name, sig) (ext_funsL src2)),
+      <<INLEFS: In (compile_eFun (name, sig)) (compile_eFuns (l_efs src1 src2))>>.
+  Proof.
+    ii. red. unfold l_efs, compile_eFuns. apply in_map. apply filter_In. split.
+    2:{ unfold name2, l_pfs. apply negb_true_iff. apply sumbool_to_bool_is_false. ii. ss.
+        rewrite map_app in H. apply in_app_iff in H. des.
+        - depgen src1. clear; i. apply (in_map fst) in IN1. ss. rewrite Coqlib.list_norepet_app in NOREPET1. des.
+          clear NOREPET1 NOREPET0. unfold Coqlib.list_disjoint in NOREPET2. hexploit NOREPET2.
+          { eauto. }
+          { rewrite in_app_iff. right. rewrite in_app_iff; left. eauto. }
+          ii. clarify.
+        - depgen src2. clear; i. apply (in_map fst) in IN2. ss. rewrite Coqlib.list_norepet_app in NOREPET2. des.
+          clear NOREPET2 NOREPET0. unfold Coqlib.list_disjoint in NOREPET1. hexploit NOREPET1.
+          { eauto. }
+          { rewrite in_app_iff. right. rewrite in_app_iff; left. eauto. }
+          ii. clarify.
+    }
+    set (ef:=(name, sig)) in *.
+    rewrite nodup_In. apply in_app_iff. auto.
+  Qed.
+
+  Lemma l_evs_prop :
+    forall src1 src2 name
+      (NOREPET1 : Coqlib.list_norepet (name1 (ext_funsL src1) ++ ext_varsL src1 ++
+                                       name2 (prog_funsL src1) ++ name1 (prog_varsL src1)))
+      (NOREPET2 : Coqlib.list_norepet (name1 (ext_funsL src2) ++ ext_varsL src2 ++
+                                       name2 (prog_funsL src2) ++ name1 (prog_varsL src2)))
+      (IN1 : In name (ext_varsL src1))
+      (IN2 : In name (ext_varsL src2)),
+      <<INLEVS: In (compile_eVar name) (compile_eVars (l_evs src1 src2))>>.
+  Proof.
+    ii. red. unfold l_evs, compile_eVars. apply in_map. apply filter_In. split.
+    2:{ unfold name1, l_pvs. apply negb_true_iff. apply sumbool_to_bool_is_false. ii. ss.
+        rewrite map_app in H. apply in_app_iff in H. des.
+        - depgen src1; clear; i.
+          rewrite Coqlib.list_norepet_app in NOREPET1. des. clear NOREPET1 NOREPET2.
+          rewrite Coqlib.list_norepet_app in NOREPET0. des. clear NOREPET1 NOREPET0.
+          unfold Coqlib.list_disjoint in NOREPET2. hexploit NOREPET2.
+          { eapply IN1. }
+          { rewrite in_app_iff; right. eauto. }
+          ii; clarify.
+        - depgen src2; clear; i.
+          rewrite Coqlib.list_norepet_app in NOREPET2. des. clear NOREPET1 NOREPET2.
+          rewrite Coqlib.list_norepet_app in NOREPET0. des. clear NOREPET1 NOREPET0.
+          unfold Coqlib.list_disjoint in NOREPET2. hexploit NOREPET2.
+          { eapply IN2. }
+          { rewrite in_app_iff; right. eauto. }
+          ii; clarify.
+    }
+    rewrite nodup_In. apply in_app_iff. auto.
   Qed.
 
 End SOLVEID.
@@ -604,7 +675,8 @@ Section LINKPROPS.
       exists (snd (compile_eFun (s0, n0))). unfold compile_eFun. split.
       { des_ifs. }
       red. unfold compile_gdefs. ss. do 2 (apply in_app_iff; right). apply in_app_iff; left.
-      admit "l_efs prop".
+      apply unique_gdefs_unique_name in NOREPET1. apply unique_gdefs_unique_name in NOREPET2.
+      eapply l_efs_prop; eauto.
 
     - (* ev/ef *)
       clear NOREPETL. exfalso. apply link_imp_cond1_prop in LC1. des.
@@ -637,7 +709,9 @@ Section LINKPROPS.
       exists (snd (compile_eVar vd0)). split.
       { unfold compile_eVar in *; ss; clarify. }
       red. unfold compile_gdefs; ss. do 3 (apply in_app_iff; right). apply in_app_iff; left.
-      admit "l_evs prop".
+      unfold compile_eVar in *; ss; clarify. apply s2p_inj in H1; clarify.
+      apply unique_gdefs_unique_name in NOREPET1. apply unique_gdefs_unique_name in NOREPET2.
+      eapply l_evs_prop; eauto.
 
     - (* if/ev *)
       clear NOREPETL. exfalso. apply link_imp_cond1_prop in LC1. des.
