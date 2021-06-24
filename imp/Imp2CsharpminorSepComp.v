@@ -432,7 +432,8 @@ Section PROOFSINGLE.
     { apply Ordinal.Ord.lt_well_founded. }
     { apply Csharpminor_wf_semantics. }
     { admit "ez? wf imp". }
-    instantiate (1:= ((100 + max_fuel) + 120)%ord). red. unfold imp_initial_state in *. ss; clarify. inv TINIT.
+    instantiate (1:= ((100 + max_fuel) + 100 + Ord.omega + 120)%ord).
+    red. unfold imp_initial_state in *. ss; clarify. inv TINIT.
     rename m0 into tm, ge into tge, H into TMINIT, H0 into TMAIN1, H1 into TMAIN2, H2 into TSIGMAIN, b into tb, f into tmain.
     assert (COMP0: Imp2Csharpminor.compile src = OK tgt); auto. move COMP0 before tgt.
     unfold compile in COMP. des_ifs.
@@ -477,7 +478,7 @@ Section PROOFSINGLE.
 
     pfold. econs 6; ss; eauto. eexists. eexists.
     { eapply step_seq. }
-    eexists. exists (ModSemL.step_tau _). exists ((100 + max_fuel) + 100)%ord. left.
+    eexists. exists (ModSemL.step_tau _). exists ((100 + max_fuel) + 100 + Ord.omega + 100)%ord. left.
     rewrite interp_imp_bind. grind. sim_red.
     assert (MATCHGE: match_ge src (Sk.sort (ModL.sk (ModL.add Mem (ImpMod.get_modL src)))) (Genv.globalenv tgt)).
     { econs. i. unfold map_blk. rewrite COMP0. hexploit Sk.env_found_range; eauto. i. unfold src_init_nb, int_len.
