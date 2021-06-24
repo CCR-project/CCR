@@ -219,7 +219,7 @@ Section SIMMODSEM.
       - steps. rewrite Any.upcast_downcast in *. clarify. steps. rewrite Any.upcast_downcast in *. clarify.
         post_call.
         rename x into h.
-        astart 0. astop. steps. force_l. exists (([]: list val)↑). steps.
+        astart 0. astop. steps. force_l. eexists. steps.
 
         mOwnWf "O".
         assert(WF1: forall k, res0 k <> Excl.boom).
@@ -260,11 +260,10 @@ Section SIMMODSEM.
     { unfold NewStack2.pop_body, cfun. init. harg. post_call.
       destruct x; des_ifs_safe; mDesAll; ss; des; subst.
       - unfold KModSem.transl_fun_tgt. steps.
-        rewrite Any.upcast_downcast in *. clarify. steps.
-        rewrite Any.pair_split. cbn. steps. rewrite ! Any.upcast_downcast in *. clarify. steps.
-        renamer. rename n into h. rename a0 into stk0.
+        rewrite Any.upcast_downcast in *. clarify. steps. rewrite Any.upcast_downcast in *. clarify.
+        renamer. rename n into h. rename l into stk0.
 
-        mCombine "O" "A2".
+        mCombine "O" "A1".
         mOwnWf "O".
         assert(A: forall k, URA.wf ((res0 k): URA.car (t:=Excl.t _))).
         { eapply URA.wf_mon in WF0.
@@ -274,9 +273,10 @@ Section SIMMODSEM.
           eapply Auth.auth_included in WF0. des. unfold _is_stack in WF0. eapply pw_extends in WF0. des.
           spc WF0. des_ifs. ss. eapply Excl.extends in WF0; ss. }
         assert(S:=SIM h). rewrite B in *. inv S; ss. steps.
+        astart 0. astop.
         destruct stk0 as [|x stk1].
         + steps. force_l. esplits. steps. hret _; ss.
-          iDestruct "O" as "[A B]". iModIntro. iFrame. iSplitL "A"; ss; et. iExists (_, _). iSplits; ss; et.
+          iDestruct "O" as "[A B]". iModIntro. iFrame. iSplitL "A"; ss; et.
         + steps.
 
           set (res1:=<[h:=Excl.just stk1]>res0).
@@ -302,7 +302,7 @@ Section SIMMODSEM.
           { eapply sim_update_k; et. }
 
           force_l. esplits. steps. hret _; ss.
-          iModIntro. iFrame. iSplitL "A"; ss; et. iExists (_, _). iSplits; ss; et.
+          iModIntro. iFrame. iSplitL "A"; ss; et.
       - unfold KModSem.transl_fun_tgt, pop_body. cbn. steps.
         rewrite Any.pair_split. steps. rewrite Any.upcast_downcast. steps. rewrite _UNWRAPN. steps.
         rewrite Any.upcast_downcast in *. clarify. steps.
@@ -320,10 +320,9 @@ Section SIMMODSEM.
     { unfold NewStack2.push_body, cfun. init. harg. post_call.
       destruct x; des_ifs_safe; mDesAll; ss; des; subst.
       - unfold KModSem.transl_fun_tgt. steps.
-        rewrite Any.upcast_downcast in *. clarify. steps.
-        rewrite Any.pair_split. cbn. steps. rewrite ! Any.upcast_downcast in *. clarify. steps.
+        rewrite Any.upcast_downcast in *. clarify. steps. rewrite ! Any.upcast_downcast in *. clarify. steps.
         renamer. rename n into h. rename l into stk0. rename v into x.
-        mCombine "O" "A2".
+        mCombine "O" "A1".
         mOwnWf "O".
         assert(A: forall k, URA.wf ((res0 k): URA.car (t:=Excl.t _))).
         { eapply URA.wf_mon in WF0.
@@ -356,6 +355,7 @@ Section SIMMODSEM.
         assert(SIM0: sim res1 mgr_src0 (<[h:=x::stk0]> mgr_tgt0)).
         { eapply sim_update_k; et. }
 
+        astart 0. astop.
         force_l. esplits. steps. hret _; ss.
         iModIntro. iFrame. iSplitL "A"; ss; et.
       - unfold KModSem.transl_fun_tgt, push_body. cbn. steps.

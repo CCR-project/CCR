@@ -31,36 +31,30 @@ Section PROOF.
   Definition is_stack (h: mblock) (stk: list val): stkRA := Auth.white (_is_stack h stk).
 
   Definition new_spec: fspec :=
-    (* (mk_simple (X:=unit) *)
-    (*            (fun _ => ( *)
-    (*                 (fun varg o => (⌜varg = ([]: list val)↑ /\ o = ord_pure 0⌝: iProp)%I), *)
-    (*                 (fun vret => (∃ h, ⌜vret = (Vptr h 0)↑⌝ ** OwnM (is_stack h []): iProp)%I) *)
-    (* ))) *)
-    (mk_fspec
-       (fun _ (_: unit) _ varg o => (⌜varg = ([]: list val)↑ ∧ o = ord_pure 0⌝: iProp)%I)
-       (fun _ (_: unit) virtual_ret vret =>
-          (∃ h, ⌜virtual_ret = ([]: list val)↑ ∧ vret = (Vptr h 0)↑⌝ ** OwnM(is_stack h []): iProp)%I)
-    )
+    (mk_simple (fun (_: unit) => (
+                    (fun varg o => (⌜varg = ([]: list val)↑ ∧ o = ord_pure 0⌝: iProp)%I),
+                    (fun vret => (∃ h, ⌜vret = (Vptr h 0)↑⌝ ** OwnM(is_stack h []): iProp)%I)
+    )))
   .
 
-  (*** varg stands for (physical) value arguments... bad naming and will be changed later ***)
   Definition pop_spec: fspec :=
-    (* (X:=(mblock * list Z)) (AA:=list Z) (AR:=Z * list Z) *)
-    mk (fun '(h, stk0) virtual_arg varg o =>
-          (⌜stk0 = virtual_arg /\ varg = ([Vptr h 0%Z]: list val)↑ /\ o = ord_top⌝
-            ** OwnM (is_stack h stk0): iProp)%I)
-       (fun '(h, stk0) '(x, stk1) vret =>
-          (match stk0 with
-           | [] => ⌜x = Vint (- 1) /\ (stk1 = [])⌝ ** OwnM (is_stack h stk1)
-           | hd :: tl => ⌜x = hd /\ (stk1 = tl)⌝ ** OwnM (is_stack h stk1)
-           end: iProp)%I)
+    mk_simple (fun '(h, stk0) => (
+                   (fun varg o => (⌜varg = ([Vptr h 0%Z]: list val)↑ /\ o = ord_pure 1⌝
+                                   ** OwnM (is_stack h stk0): iProp)%I),
+                   (fun vret =>
+                      (match stk0 with
+                       | [] => ⌜vret = (Vint (- 1))↑⌝ ** OwnM (is_stack h [])
+                       | hd :: tl => ⌜vret = hd↑⌝ ** OwnM (is_stack h tl)
+                       end: iProp)%I)
+              ))
   .
 
   Definition push_spec: fspec :=
-    mk (fun '(h, x, stk0) virtual_arg varg o =>
-          (⌜(x, stk0) = virtual_arg /\ varg = ([Vptr h 0%Z; x]: list val)↑ /\ o = ord_top⌝
-            ** OwnM (is_stack h stk0): iProp)%I)
-       (fun '(h, x, stk0) stk1 vret => (⌜stk1 = x :: stk0⌝ ** OwnM (is_stack h stk1): iProp)%I)
+    mk_simple (fun '(h, x, stk0) => (
+                   (fun varg o => (⌜varg = ([Vptr h 0%Z; x]: list val)↑ /\ o = ord_pure 1⌝
+                                   ** OwnM (is_stack h stk0): iProp)%I),
+                   (fun vret => (OwnM (is_stack h (x :: stk0)): iProp)%I)
+              ))
   .
 
 
