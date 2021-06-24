@@ -3,12 +3,14 @@ open Driveraux
 open Compiler
 open Imp
 open Imp2Csharpminor
+open Imp2CsharpminorLink
 open ImpSimple
 open ImpFactorial
 open ImpMutsum
 open ImpKnot
 open ImpMem1
 open ImpMem2
+open ImpLink
 
 (* Preprocessing clight programs *)
 (* ref: velus, veluslib.ml *)
@@ -88,4 +90,12 @@ let main =
   compile_imp (Imp.lift ImpMem1.imp_mem1_f) "mem1F.s";
   compile_imp (Imp.lift ImpMem1.imp_mem1_main) "mem1Main.s";
   compile_imp (Imp.lift ImpMem2.imp_mem2_prog) "mem2.s";
-  print_endline "Done."
+  let _link1 = (Imp2CsharpminorLink.link_imps [ImpLink.imp_linkMain_prog; ImpLink.imp_linkF_prog; ImpLink.imp_linkG_prog]) in
+  match _link1 with
+  | Some link1 ->
+     print_endline "link1 success";
+     compile_imp (link1) "link.s";
+     print_endline "Done."
+  | None ->
+     print_endline "link1 failed";
+     print_endline "Done."

@@ -17,10 +17,10 @@ Module ImpNotations.
 
   (** A few notations for convenience.  *)
   Definition Var_coerce: string -> expr := Var.
-  Definition Lit_coerce: val -> expr := Lit.
+  Definition Lit_coerce: Z -> expr := Lit.
   Definition Vint_coerce: Z -> val := Vint.
   Coercion Var_coerce: string >-> expr.
-  Coercion Lit_coerce: val >-> expr.
+  Coercion Lit_coerce: Z >-> expr.
   Coercion Vint_coerce: Z >-> val.
 
   Declare Scope expr_scope.

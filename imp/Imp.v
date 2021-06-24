@@ -21,7 +21,7 @@ Definition var : Set := string.
 (** Expressions are made of variables, constant literals, and arithmetic operations. *)
 Inductive expr : Type :=
 | Var (_ : var)
-| Lit (_ : val)
+| Lit (_ : Z)
 | Plus  (_ _ : expr)
 | Minus (_ _ : expr)
 | Mult  (_ _ : expr)
@@ -51,6 +51,70 @@ Record function : Type := mk_function {
   fn_body : stmt
 }.
 
+
+
+(** ** Supported System Calls by Imp *)
+Definition syscalls : list (string * nat) :=
+  [("print", 1); ("scan", 1)].
+
+Global Opaque syscalls.
+
+
+(** ** Program *)
+
+(** program components *)
+(* declared external global variables *)
+Definition extVars := list gname.
+(* declared external functions with arg nums*)
+Definition extFuns := list (gname * nat).
+(* defined global variables *)
+Definition progVars := list (gname * Z).
+(* defined internal functions *)
+Definition progFuns := list (gname * function).
+
+(** Imp program *)
+Record programL : Type := mk_programL {
+  nameL : list mname;
+  ext_varsL : extVars;
+  ext_funsL : extFuns;
+  prog_varsL : progVars;
+  prog_funsL : list (mname * (gname * function));
+  publicL : list gname;
+  defsL : list (gname * Sk.gdef);
+}.
+
+Record program : Type := mk_program {
+  name : mname;
+  ext_vars : extVars;
+  ext_funs : extFuns;
+  prog_vars : progVars;
+  prog_funs : progFuns;
+  public : list gname :=
+    let sys := List.map fst syscalls in
+    let evs := ext_vars in
+    let efs := List.map fst ext_funs in
+    let ivs := List.map fst prog_vars in
+    let ifs := List.map fst prog_funs in
+    ["malloc"; "free"] ++ sys ++ evs ++ efs ++ ivs ++ ifs;
+  defs : list (gname * Sk.gdef) :=
+    let fs := (List.map (fun '(fn, _) => (fn, Sk.Gfun)) prog_funs) in
+    let vs := (List.map (fun '(vn, vv) => (vn, Sk.Gvar vv)) prog_vars) in
+    fs ++ vs;
+}.
+
+Definition lift (p : program) : programL :=
+  mk_programL
+    [p.(name)]
+    p.(ext_vars) p.(ext_funs)
+    p.(prog_vars) (List.map (fun pf => (p.(name), pf)) p.(prog_funs))
+    p.(public) p.(defs).
+
+Coercion lift : program >-> programL.
+
+
+
+
+
 (* ========================================================================== *)
 (** ** Semantics *)
 
@@ -77,7 +141,7 @@ Section Denote.
   Fixpoint denote_expr (e : expr) : itree eff val :=
     match e with
     | Var v     => u <- trigger (GetVar v) ;; assume (wf_val u) ;;; Ret u
-    | Lit n     => assume (wf_val n) ;;; Ret n
+    | Lit n     => assume (wf_val (Vint n)) ;;; Ret (Vint n)
     | Plus a b  => l <- denote_expr a ;; r <- denote_expr b ;; u <- (vadd l r)? ;; assume (wf_val u) ;;; Ret u
     | Minus a b => l <- denote_expr a ;; r <- denote_expr b ;; u <- (vsub l r)? ;; assume (wf_val u) ;;; Ret u
     | Mult a b  => l <- denote_expr a ;; r <- denote_expr b ;; u <- (vmul l r)? ;; assume (wf_val u) ;;; Ret u
@@ -106,7 +170,7 @@ Section Denote.
       Ret (v :: vs)
     end.
 
-  Definition call_mem f :=
+  Definition call_ban f :=
     rel_dec f "alloc" || rel_dec f "free" || rel_dec f "load" || rel_dec f "store" || rel_dec f "cmp" || rel_dec f "main".
 
   Fixpoint denote_stmt (s : stmt) : itree eff val :=
@@ -121,7 +185,7 @@ Section Denote.
       if b then (denote_stmt t) else (denote_stmt e)
 
     | CallFun x f args =>
-      if (call_mem f)
+      if (call_ban f)
       then triggerUB
       else
         eval_args <- denote_exprs args;;
@@ -129,8 +193,9 @@ Section Denote.
         trigger (SetVar x v);;; tau;; Ret Vundef
 
     | CallPtr x e args =>
+      assume (match e with | Var _ => True | _ => False end);;;
       p <- denote_expr e;; f <- trigger (GetName p);;
-      if (call_mem f)
+      if (call_ban f)
       then triggerUB
       else
         eval_args <- denote_exprs args;;
@@ -138,6 +203,7 @@ Section Denote.
         trigger (SetVar x v);;; tau;; Ret Vundef
 
     | CallSys x f args =>
+      sig <- (alist_find f syscalls)? ;; assume (sig = List.length args);;;
       eval_args <- denote_exprs args;;
       v <- trigger (Syscall f eval_args top1);;
       trigger (SetVar x v);;; tau;; Ret Vundef
@@ -166,6 +232,10 @@ Section Denote.
     end.
 
 End Denote.
+
+
+
+
 
 (* ========================================================================== *)
 (** ** Interpretation *)
@@ -208,10 +278,9 @@ Section Interp.
   Definition interp_imp ge : itree effs ~> stateT lenv (itree Es) :=
     fun _ itr le => interp_ImpState (interp_GlobEnv ge itr) le.
 
-  (* 'return' is a fixed register, holding the return value of this function. *)
   Fixpoint init_lenv xs : lenv :=
     match xs with
-    | [] => [("return", Vundef); ("_", Vundef)]
+    | [] => []
     | x :: t => (x, Vundef) :: (init_lenv t)
     end
   .
@@ -225,68 +294,36 @@ Section Interp.
     end
   .
 
+  Lemma init_args_prop :
+    forall params args acc le
+      (INITSOME: init_args params args acc = Some le),
+      <<INITLEN: List.length params = List.length args>>.
+  Proof.
+    induction params; i; ss; clarify.
+    { destruct args; ss; clarify. }
+    destruct args; ss; clarify. apply IHparams in INITSOME. red. rewrite INITSOME. ss.
+  Qed.
+
+  (* 'return' is a fixed register, holding the return value of this function. *)
+  (* '_' is a black hole register, holding garbage *)
   Definition eval_imp (ge: SkEnv.t) (f: function) (args: list val) : itree Es val :=
-    match (init_args f.(fn_params) args []) with
+    let vars := f.(fn_vars) ++ ["return"; "_"] in
+    let params := f.(fn_params) in
+    assume (NoDup (params ++ vars));;;
+    match (init_args params args []) with
     | Some iargs =>
-      '(_, retv) <- (interp_imp ge (tau;; denote_stmt f.(fn_body) ;;; retv <- (denote_expr (Var "return")) ;; Ret retv) ((init_lenv f.(fn_vars))++iargs));; Ret retv
+      '(_, retv) <- (interp_imp ge (tau;; (denote_stmt f.(fn_body));;; retv <- (denote_expr (Var "return")) ;; Ret retv)
+                                    ((init_lenv vars) ++ iargs));; Ret retv
     | None => triggerUB
-    end
-  .
+    end.
 
 End Interp.
 
+
+
+
+
 (* ========================================================================== *)
-(** ** Program *)
-
-(** program components *)
-(* declared external global variables *)
-Definition extVars := list gname.
-(* declared external functions with arg nums*)
-Definition extFuns := list (gname * nat).
-(* defined global variables *)
-Definition progVars := list (gname * Z).
-(* defined internal functions *)
-Definition progFuns := list (gname * function).
-
-(** Imp program *)
-Record programL : Type := mk_programL {
-  nameL : list mname;
-  ext_varsL : extVars;
-  ext_funsL : extFuns;
-  prog_varsL : progVars;
-  prog_funsL : list (mname * (gname * function));
-  publicL : list gname;
-  defsL : list (gname * Sk.gdef);
-}.
-
-Record program : Type := mk_program {
-  name : mname;
-  ext_vars : extVars;
-  ext_funs : extFuns;
-  prog_vars : progVars;
-  prog_funs : progFuns;
-  public : list gname :=
-    let evs := ext_vars in
-    let efs := List.map (fun p => fst p) ext_funs in
-    let ivs := List.map (fun p => fst p) prog_vars in
-    let ifs := List.map (fun p => fst p) prog_funs in
-    ["malloc"; "free"] ++ evs ++ efs ++ ivs ++ ifs;
-  defs : list (gname * Sk.gdef) :=
-    let fs := (List.map (fun '(fn, _) => (fn, Sk.Gfun)) prog_funs) in
-    let vs := (List.map (fun '(vn, vv) => (vn, Sk.Gvar vv)) prog_vars) in
-    fs ++ vs;
-}.
-
-Definition lift (p : program) : programL :=
-  mk_programL
-    [p.(name)]
-    p.(ext_vars) p.(ext_funs)
-    p.(prog_vars) (List.map (fun pf => (p.(name), pf)) p.(prog_funs))
-    p.(public) p.(defs).
-
-Coercion lift : program >-> programL.
-(* Global Opaque imp_lift. *)
-
 (**** ModSem ****)
 Module ImpMod.
 Section MODSEM.
@@ -321,10 +358,9 @@ Section MODSEM.
   |}.
 
   Lemma comm_imp_mod_lift :
-    forall (p : program),
-      get_modL (lift p) = Mod.lift (get_mod p).
+      (compose get_modL lift) = (compose Mod.lift get_mod).
   Proof.
-    i. unfold lift. unfold Mod.lift. unfold get_modL, get_mod.
+    unfold compose. extensionality p. unfold lift. unfold Mod.lift. unfold get_modL, get_mod.
     f_equal. unfold modsemL, modsem. ss. unfold ModSem.lift.
     ss. extensionality sk. f_equal.
     revert sk. induction (prog_funs p); i; ss; clarify.

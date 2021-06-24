@@ -99,11 +99,11 @@ Section MATCH.
       Ret pop.
 
   Definition itree_of_imp_pop_bottom :=
-    fun ge ms mn (x: _ * _ * (lenv * val)) =>
-      let '(r, p, (le0, _)) := x in
-      '(r2, p2, rv) <- EventsL.interp_Es (ModSemL.prog ms) (transl_all mn ('(_, v) <- interp_imp ge (denote_expr (Var "return"%string)) le0;; Ret (v↑))) (r, p);;
-      '(_, _, rv) <- EventsL.interp_Es (ModSemL.prog ms) (trigger EventsL.PopFrame;;; (tau;; Ret rv)) (r2, p2);;
-      Ret rv.
+    fun ms mn (x : r_state * p_state * (lenv * val)) =>
+      ` x0 : r_state * p_state * Any.t <-
+      (let (st1, v) := x in
+      EventsL.interp_Es (ModSemL.prog ms)
+                        (transl_all mn (` x0 : val <- (let (_, retv) := v in Ret retv);; Ret (Any.upcast x0))) st1);; Ret (snd x0).
 
   Definition itree_of_cont_stmt (s : Imp.stmt) :=
     fun ge le ms mn rp => itree_of_imp_cont (denote_stmt s) ge le ms mn rp.
@@ -118,7 +118,8 @@ Section MATCH.
   (* next block of src's initialized genv *)
   Definition src_init_nb : Imp.programL -> nat := fun src => int_len src.
   (* next block of tgt's initialized genv *)
-  Definition tgt_init_nb : Imp.programL -> Values.block := fun src => Pos.of_succ_nat (2 + (ext_len src) + (int_len src)).
+  Definition tgt_init_len := List.length (init_g ++ c_sys).
+  Definition tgt_init_nb : Imp.programL -> Values.block := fun src => Pos.of_succ_nat (tgt_init_len + (ext_len src) + (int_len src)).
 
   Definition get_sge (src : Imp.programL) := Sk.load_skenv (Sk.sort (ImpMod.get_modL src).(ModL.sk)).
   Definition get_tge (tgt : Csharpminor.program) := Genv.globalenv tgt.
@@ -130,7 +131,7 @@ Section MATCH.
     fun src blk =>
       match (compile src) with
       | OK tgt =>
-        if (ge_dec blk (src_init_nb src)) then Pos.of_succ_nat (2 + (ext_len src) + blk)
+        if (ge_dec blk (src_init_nb src)) then Pos.of_succ_nat (tgt_init_len + (ext_len src) + blk)
         else
           let sg := get_sge src in
           let tg := get_tge tgt in
@@ -181,7 +182,6 @@ Section MATCH.
   Definition ret_call_main := Kseq exit_stmt Kstop.
 
   (* global env is fixed when src program is fixed *)
-  Variable gm : gmap.
   Variable ge : SkEnv.t.
   (* ModSem should be fixed with src too *)
   Variable ms : ModSemL.t.
@@ -189,36 +189,38 @@ Section MATCH.
   Inductive match_code (mn: mname) : imp_cont -> (list Csharpminor.stmt) -> Prop :=
   | match_code_exit
     :
-      match_code mn idK [exit_stmt]
+      match_code mn (fun '(r, p, (le, _)) => itree_of_imp_ret ge le ms mn (r, p)) [exit_stmt]
   | match_code_return
     :
       match_code mn idK [return_stmt]
   | match_code_cont
       code itr ktr chead ctail
-      (CST: compile_stmt gm code = Some chead)
+      (CST: compile_stmt code = chead)
       (ITR: itr = fun '(r, p, (le, _)) => itree_of_cont_stmt code ge le ms mn (r, p))
       (MCONT: match_code mn ktr ctail)
     :
       match_code mn (fun x => (itr x >>= ktr)) (chead :: ctail)
   .
 
-  Inductive match_stack (src: Imp.programL) (mn: mname) : imp_stack -> option Csharpminor.cont -> Prop :=
+  Inductive match_stack (size: nat) (src: Imp.programL) (mn: mname) : imp_stack -> option Csharpminor.cont -> Prop :=
   | match_stack_bottom
+      (SIZEEND: size = 1)
     :
-      match_stack src mn (fun x => itree_of_imp_pop_bottom ge ms mn x) (Some ret_call_main)
+      match_stack size src mn (itree_of_imp_pop_bottom ms mn) (Some ret_call_main)
 
   | match_stack_cret
-      tf le tle next stack tcont id tid tpop retmn
+      tf le tle next stack tcont id tid tpop retmn sz
       (MLE: @match_le src le tle)
       (MID: s2p id = tid)
 
       (WFCONT: wf_ccont tcont)
       (MCONT: match_code retmn next (get_cont_stmts tcont))
-      (MSTACK: match_stack src retmn stack (get_cont_stack tcont))
+      (MSTACK: match_stack sz src retmn stack (get_cont_stack tcont))
+      (SIZEUP: size = S sz)
 
       (TPOP: tpop = ret_call_cont (Kcall (Some tid) tf empty_env tle tcont))
     :
-      match_stack src mn (fun x => (y <- (itree_of_imp_pop ge ms mn retmn id le x);; next y >>= stack)) (Some tpop)
+      match_stack size src mn (fun x => (y <- (itree_of_imp_pop ge ms mn retmn id le x);; next y >>= stack)) (Some tpop)
   .
 
   Variant match_mem src : Mem.t -> Memory.Mem.mem -> Prop :=
@@ -237,14 +239,15 @@ Section MATCH.
 
   Variant match_states src : imp_state -> Csharpminor.state -> Prop :=
   | match_states_intro
-      tf rstate pstate le tle code itr tcode m tm next stack tcont mn
-      (CST: compile_stmt gm code = Some tcode)
+      tf rstate pstate le tle code itr tcode m tm next stack tcont mn sz
+      (CST: compile_stmt code = tcode)
+      (WFRSTATE: List.length (snd rstate) = S sz)
       (ML: @match_le src le tle)
       (PSTATE: pstate "Mem"%string = m↑)
       (MM: @match_mem src m tm)
       (WFCONT: wf_ccont tcont)
       (MCONT: match_code mn next (get_cont_stmts tcont))
-      (MSTACK: @match_stack src mn stack (get_cont_stack tcont))
+      (MSTACK: @match_stack sz src mn stack (get_cont_stack tcont))
       (ITR: itr = itree_of_cont_stmt code ge le ms mn (rstate, pstate))
     :
       match_states src (x <- itr;; next x >>= stack) (State tf tcode tcont empty_env tle tm)

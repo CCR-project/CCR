@@ -50,7 +50,7 @@ Section SIMMODSEM.
     steps.
     rewrite unfold_eval_imp.
     eapply Any.downcast_upcast in _UNWRAPN. des.
-    unfold unint in *. destruct v; clarify; ss.
+    unfold unint in *. destruct v; clarify; ss. force_r. solve_NoDup.
     imp_steps. force_r; auto.
     des_ifs.
     - imp_steps. force_r; auto. imp_steps. force_r; auto. imp_steps.

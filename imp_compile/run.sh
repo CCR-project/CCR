@@ -17,3 +17,6 @@ echo $?
 cc -o mem2 mem2.s
 ./mem2
 echo $?
+cc -o link link.s
+./link
+echo $?
