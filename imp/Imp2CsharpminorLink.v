@@ -515,6 +515,48 @@ End SOLVEID.
 
 
 
+Section UNLINK.
+
+  Lemma unlink_l_evs
+        vd src1 src2
+        (INL: In vd (l_evs src1 src2))
+  :
+    (<<IN1: In vd (ext_varsL src1)>>) \/ (<<IN2: In vd (ext_varsL src2)>>).
+  Proof.
+    unfold l_evs in INL. apply filter_In in INL. des. apply nodup_In in INL. apply in_app_iff in INL; auto.
+  Qed.
+
+  Lemma unlink_l_efs
+        fd src1 src2
+        (INL: In fd (l_efs src1 src2))
+  :
+    (<<IN1: In fd (ext_funsL src1)>>) \/ (<<IN2: In fd (ext_funsL src2)>>).
+  Proof.
+    unfold l_efs in INL. apply filter_In in INL. des. apply nodup_In in INL. apply in_app_iff in INL; auto.
+  Qed.
+
+  Lemma unlink_l_pvs
+        vd src1 src2
+        (INL: In vd (l_pvs src1 src2))
+  :
+    (<<IN1: In vd (prog_varsL src1)>>) \/ (<<IN2: In vd (prog_varsL src2)>>).
+  Proof.
+    unfold l_pvs in INL. apply in_app_iff in INL; auto.
+  Qed.
+
+  Lemma unlink_l_pfs
+        fd src1 src2
+        (INL: In fd (l_pfs src1 src2))
+  :
+    (<<IN1: In fd (prog_funsL src1)>>) \/ (<<IN2: In fd (prog_funsL src2)>>).
+  Proof.
+    unfold l_pfs in INL. apply in_app_iff in INL; auto.
+  Qed.
+
+End UNLINK.
+
+
+
 Section LINKPROPS.
 
   Lemma link_imp_cond1_comm :
@@ -784,6 +826,31 @@ Section LINKPROPS.
       Local Opaque Linker_fundef. Local Opaque Linker_def.
   Qed.
 
+  Lemma in_tgtl_then_in_some
+        src1 src2 srcl id gd
+        (LINKSRC : link_imp src1 src2 = Some srcl)
+        (INL : In (id, gd) (compile_gdefs srcl))
+    :
+      (<<IN1: In (id, gd) (compile_gdefs src1)>>) \/ (<<BK: In (id, gd) (compile_gdefs src2)>>).
+  Proof.
+    unfold link_imp in LINKSRC. des_ifs; ss. apply decomp_gdefs in INL; des; ss; clarify.
+    - left. red. eapply has_malloc.
+    - left. red. eapply has_free.
+    - left. red. rewrite <- SYS. apply in_compile_gdefs_c_sys. ss.
+    - apply unlink_l_efs in EFS0. des.
+      + left. rewrite <- EFS. apply in_compile_gdefs_efuns. ss.
+      + right. rewrite <- EFS. apply in_compile_gdefs_efuns. ss.
+    - apply unlink_l_evs in EVS0. des.
+      + left. rewrite <- EVS. apply in_compile_gdefs_evars. ss.
+      + right. rewrite <- EVS. apply in_compile_gdefs_evars. ss.
+    - apply unlink_l_pfs in IFS0. des.
+      + left. rewrite <- IFS. apply in_compile_gdefs_ifuns. ss.
+      + right. rewrite <- IFS. apply in_compile_gdefs_ifuns. ss.
+    - apply unlink_l_pvs in IVS0. des.
+      + left. rewrite <- IVS. apply in_compile_gdefs_ivars. ss.
+      + right. rewrite <- IVS. apply in_compile_gdefs_ivars. ss.
+  Qed.
+
 End LINKPROPS.
 
 
@@ -810,19 +877,66 @@ Section LINKLIST.
     intros f. induction l; ss; clarify. rewrite IHl; ss.
   Qed.
 
-  (* Definition link_imp_list src_list := *)
-  (*   match src_list with *)
-  (*   | [] => None *)
-  (*   | src_h :: src_t => *)
-  (*     fold_left_option link_imp src_t (Some src_h) *)
-  (*   end. *)
+  Fixpoint nlist2list {A} (nl : Coqlib.nlist A) : list A :=
+    match nl with
+    | Coqlib.nbase a => [a]
+    | Coqlib.ncons a nt => a :: (nlist2list nt)
+    end.
 
-  Fixpoint link_imp_list src_list :=
+  Fixpoint list2nlist {A} (a : A) (l : list A) : Coqlib.nlist A :=
+    match l with
+    | [] => Coqlib.nbase a
+    | h :: t => Coqlib.ncons a (list2nlist h t)
+    end.
+
+  Lemma n2l_not_nil {A} :
+    forall nl, @nlist2list A nl = [] -> False.
+  Proof.
+    i. induction nl; ss.
+  Qed.
+
+  Lemma n2l_cons_exists {A} :
+    forall nl a b t (CONS: @nlist2list A nl = a :: b :: t),
+      <<EXISTS: exists nt, (nlist2list nt = b :: t) /\ (nl = Coqlib.ncons a nt)>>.
+  Proof.
+    induction nl; i; ss; clarify.
+    destruct t; ss; clarify.
+    { exists nl. rewrite H0. ss. }
+    eapply IHnl in H0. des. exists nl. split; eauto.
+    rewrite H1. ss. rewrite H0. auto.
+  Qed.
+
+  Lemma n2l_l2n {A} :
+    forall nl,
+      (exists (h : A) t, (<<HT: nlist2list nl = h :: t>>) /\ (<<BACK: (list2nlist h t = nl)>>)).
+  Proof.
+    i. induction nl.
+    - exists a, []. ss.
+    - ss. des. exists a, (h :: t). ss. rewrite HT. split; ss. red. rewrite BACK. ss.
+  Qed.
+
+  Lemma l2n_n2l {A} :
+    forall (h : A) t,
+      (nlist2list (list2nlist h t)) = h :: t.
+  Proof.
+    i. depgen h. induction t; i; ss; clarify.
+    f_equal. auto.
+  Qed.
+
+  Fixpoint link_imp_nlist (src_list : Coqlib.nlist Imp.programL) :=
+    match src_list with
+    | Coqlib.nbase a => Some a
+    | Coqlib.ncons a l =>
+      match link_imp_nlist l with
+      | Some b => link_imp a b
+      | None => None
+      end
+    end.
+
+  Definition link_imp_list src_list :=
     match src_list with
     | [] => None
-    | [a] => Some a
-    | a :: l =>
-      match link_imp_list l with None => None | Some b => link_imp a b end
+    | h :: t => link_imp_nlist (list2nlist h t)
     end.
 
   Definition link_imps (src_list: list Imp.program) := link_imp_list (List.map lift src_list).
@@ -900,12 +1014,12 @@ Section PROOF.
     i. destruct src_list as [| src0 src_list]; ss; clarify.
     depgen src0. depgen srcl. induction src_list; i; ss; clarify.
     { inv WFPROGS. ss. }
-    rename a into src1. des_ifs; ss; clarify.
-    { inv WFPROGS. eapply IHsrc_list; ss; clarify; eauto. econs; eauto. inv H2. eapply (linked_two_wf H1 H3 LINKED). }
-    rename l into src_list, p1 into src2, p into srct. des_ifs.
-    { specialize IHsrc_list with srct src1. inv WFPROGS. apply IHsrc_list in H2; ss. eapply (linked_two_wf H1 H2 LINKED). }
-    rename l into src_list. specialize IHsrc_list with srct src1. inv WFPROGS. hexploit IHsrc_list; eauto. i.
-    eapply (linked_two_wf H1 H LINKED).
+    rename a into src1. des_ifs; ss; clarify. rename p into srct.
+    hexploit IHsrc_list.
+    2:{ eapply Heq. }
+    { inv WFPROGS. ss. }
+    i. red. eapply linked_two_wf with (src1:=src0) (src2:=srct); eauto.
+    inv WFPROGS. auto.
   Qed.
 
   Lemma linked_list_wf_lift :

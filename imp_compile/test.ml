@@ -93,6 +93,7 @@ let main =
   let _link1 = (Imp2CsharpminorLink.link_imps [ImpLink.imp_linkMain_prog; ImpLink.imp_linkF_prog; ImpLink.imp_linkG_prog]) in
   match _link1 with
   | Some link1 ->
+     print_endline "link1 success";
      compile_imp (link1) "link.s";
      print_endline "Done."
   | None ->

@@ -52,24 +52,13 @@ Section PROOFLEFT.
     :
       <<LINKMOD: fold_right ModL.add ModL.empty (ctx :: tgt_list) = ModL.add ctx tgtl>>.
   Proof.
-    destruct src_list as [ | src0 src_liat ]; ss; clarify. des_ifs; ss; clarify.
+    destruct src_list as [ | src0 src_list ]; ss; clarify.
+    move src_list before Σ. revert_until Σ. induction src_list; i; ss; clarify.
     { rewrite ModL.add_empty_r. ss. }
-    rename p into src1, p0 into srct, l into src_list, Heq into LINK. move src_list before Σ.
-    revert_until Σ. induction src_list; i; ss; clarify.
-    { rewrite ModL.add_empty_r. eapply _comm_link_imp_link_mod; eauto. }
     red. des_ifs; ss; clarify.
-    { rewrite ModL.add_empty_r. eapply _comm_link_imp_link_mod; eauto.
-      specialize IHsrc_list with (ctx:=ModL.empty). rewrite <- ModL.add_empty_l. sym; rewrite <- ModL.add_empty_l.
-      replace (ImpMod.get_modL p) with (ModL.add (ImpMod.get_modL p) ModL.empty).
-      2:{ apply ModL.add_empty_r. }
-      eapply IHsrc_list; eauto. }
-    hexploit _comm_link_imp_link_mod.
-    5:{ i. eapply H. }
-    4:{ clarify. }
-    3:{ eapply LINKIMP. }
-    all: eauto.
-    specialize IHsrc_list with (ctx:=ModL.empty). rewrite <- ModL.add_empty_l. sym; rewrite <- ModL.add_empty_l.
-    eapply IHsrc_list; eauto.
+    hexploit IHsrc_list.
+    { eapply Heq. }
+    i. erewrite H. clear H. eapply _comm_link_imp_link_mod; eauto.
   Qed.
 
   Theorem left_arrow
@@ -162,7 +151,9 @@ Section PROOFRIGHT.
       destruct (classic (In id (List.map fst (compile_gdefs src2)))).
       { apply PTree_Properties.of_list_dom in H. des. clarify. }
       clear BK; rename H into BK.
-      admit "name only in a".
+      eapply in_tgtl_then_in_some in LK; eauto. des.
+      + hexploit compile_gdefs_unique_defs. eapply NOREPET1. eapply AK. eapply IN1. i; clarify; ss.
+      + apply (in_map fst) in BK0. ss; clarify.
 
     - apply PTree_Properties.in_of_list in AK.
       destruct (classic (In id (List.map fst (compile_gdefs src2)))).
@@ -178,7 +169,9 @@ Section PROOFRIGHT.
       destruct (classic (In id (List.map fst (compile_gdefs src1)))).
       { apply PTree_Properties.of_list_dom in H. des. clarify. }
       clear AK; rename H into AK.
-      admit "name only in b".
+      eapply in_tgtl_then_in_some in LK; eauto. des.
+      + apply (in_map fst) in IN1. ss; clarify.
+      + hexploit compile_gdefs_unique_defs. eapply NOREPET2. eapply BK. eapply BK0. i; clarify; ss.
 
     - apply PTree_Properties.in_of_list in BK.
       destruct (classic (In id (List.map fst (compile_gdefs src1)))).
@@ -197,14 +190,80 @@ Section PROOFRIGHT.
       destruct (classic (In id (List.map fst (compile_gdefs src2)))).
       { apply PTree_Properties.of_list_dom in H. des. clarify. }
       clear BK; rename H into BK.
-      exfalso.
-      admit "should not exists".
+      exfalso. eapply in_tgtl_then_in_some in LK; eauto. des.
+      + apply (in_map fst) in IN1. ss.
+      + apply (in_map fst) in BK0. ss.
 
   Qed.
 
+  Lemma comm_link_imp_compile
+        (srcs: list Imp.programL) srcl
+        tgts tgtl
+        (COMPS: Forall2 (fun src tgt => compile src = OK tgt) srcs (nlist2list tgts))
+        (LINKSRC: link_imp_list srcs = Some srcl)
+        (LINKTGT: link_list tgts = Some tgtl)
+    :
+      compile srcl = OK tgtl.
+  Proof.
+    destruct srcs as [| src0 srcs]; ss; clarify.
+    inv COMPS; clarify. rename tgts into ntgts, y into tgt0, l' into tgts, H2 into COMP0, H3 into COMPS.
+    depgen srcl. depgen tgtl. depgen src0. depgen tgt0. depgen ntgts.
+    induction COMPS; i; ss; clarify.
+    { destruct ntgts; ss; clarify. sym in H0. apply n2l_not_nil in H0. clarify. }
+    rename l into srcs, l' into tgts. des_ifs. sym in H1. hexploit (n2l_cons_exists ntgts).
+    { eapply H1. }
+    i. des. rewrite H2 in LINKTGT. ss. des_ifs.
+    hexploit IHCOMPS.
+    4: eapply Heq.
+    2: eapply H.
+    1: sym; eapply H0.
+    1: eapply Heq0.
+    i. eapply _comm_link_imp_compile with (tgt1:=tgt0) (tgt2:=p0); eauto.
+  Qed.
 
   Definition wf_public (src: Imp.programL) :=
     forall id, In id (name1 (compile_gdefs src)) -> In id (List.map s2p (publicL src)).
+
+  Lemma lifted_then_wf_public :
+    forall (src: Imp.program), <<WFLIFT: wf_public (lift src)>>.
+  Proof.
+    i. red. unfold lift in *. unfold wf_public. ii; ss. apply Coqlib.list_in_map_inv in H. des. destruct x; ss; clarify.
+    rename i into id, g into gd. apply decomp_gdefs in H0; ss. des; clarify; eauto.
+  Admitted.
+
+  Lemma link_two_wf_public
+        src1 src2 srcl
+        (WFP1: wf_public src1)
+        (WFP2: wf_public src2)
+        (LINKSRC: link_imp src1 src2 = Some srcl)
+    :
+      <<WFPL: wf_public srcl>>.
+  Proof.
+    red. unfold wf_public in *. ii. apply Coqlib.list_in_map_inv in H. des. destruct x as [name def]; ss; clarify.
+    hexploit in_tgtl_then_in_some; eauto. i.
+    unfold link_imp in LINKSRC. des_ifs; ss. clear H0. unfold l_publicL. rewrite map_app. apply in_app_iff.
+    des.
+    { left. eapply WFP1. apply (in_map fst) in IN1. ss. }
+    { right. eapply WFP2. apply (in_map fst) in BK. ss. }
+  Qed.
+
+  Lemma linked_list_wf_public
+        (srcs: list Imp.programL) srcl
+        (WFPUBS: Forall wf_public srcs)
+        (LINKED: link_imp_list srcs = Some srcl)
+    :
+      <<WFLINK: wf_public srcl>>.
+  Proof.
+    red. destruct srcs as [| src0 srcs]; ss; clarify.
+    depgen src0. depgen srcl. induction srcs; i; ss; clarify.
+    { inv WFPUBS. ss. }
+    rename a into src1. des_ifs; ss; clarify.
+    hexploit IHsrcs.
+    2:{ eapply Heq. }
+    { inv WFPUBS. auto. }
+    i. eapply link_two_wf_public with (src1:=src0) (src2:=p); eauto.
+    inv WFPUBS; auto.
+  Qed.
 
   Lemma _comm_link_imp_compile_exists_link
         src1 src2 srcl tgt1 tgt2
@@ -213,7 +272,6 @@ Section PROOFRIGHT.
         (COMP1: compile src1 = OK tgt1)
         (COMP2: compile src2 = OK tgt2)
         (LINKSRC: link_imp src1 src2 = Some srcl)
-        
     :
       (exists tgtl, <<LINKTGT: link tgt1 tgt2 = Some tgtl>>).
   Proof.
@@ -238,6 +296,42 @@ Section PROOFRIGHT.
     i. match goal with | [H: link_prog _ _ = Some ?_tgtl |- _ ] => exists _tgtl end. ss.
   Qed.
 
+  Lemma comm_link_imp_compile_exists_link
+        (srcs: list Imp.programL) srcl
+        tgts
+        (WFPS: Forall wf_public srcs)
+        (COMPS: Forall2 (fun src tgt => compile src = OK tgt) srcs (nlist2list tgts))
+        (LINKSRC: link_imp_list srcs = Some srcl)
+    :
+      exists tgtl, <<LINKTGT: link_list tgts = Some tgtl>>.
+  Proof.
+    destruct srcs as [| src0 srcs]; ss; clarify.
+    inv COMPS; clarify. rename tgts into ntgts, y into tgt0, l' into tgts, H2 into COMP0, H3 into COMPS.
+    depgen srcl. depgen src0. depgen tgt0. depgen ntgts.
+    induction COMPS; i; ss; clarify.
+    { destruct ntgts; ss; clarify.
+      { exists p; auto. }
+      sym in H0. apply n2l_not_nil in H0; clarify. }
+    rename l into srcs, l' into tgts. des_ifs. sym in H1. hexploit (n2l_cons_exists ntgts).
+    { eapply H1. }
+    i. des.
+    hexploit IHCOMPS.
+    4: eapply Heq.
+    2:{ inv WFPS. auto. }
+    1: sym; eapply H0.
+    1: eapply H.
+    i. des. rewrite H2. ss. rewrite LINKTGT.
+    eapply _comm_link_imp_compile_exists_link with (tgt1:=tgt0) (tgt2:=tgtl); eauto.
+    { inv WFPS. auto. }
+    { rename p into src2. eapply linked_list_wf_public.
+      2:{ instantiate (1:= x :: srcs). ss. }
+      inv WFPS; auto. }
+    rename p into src2. eapply comm_link_imp_compile.
+    2:{ instantiate (1:= x :: srcs). ss. }
+    all: eauto.
+    rewrite H0. econs; eauto.
+  Qed.
+
   Lemma _comm_link_imp_compile_exists
         src1 src2 srcl tgt1 tgt2
         (WFP1: wf_public src1)
@@ -257,64 +351,40 @@ Section PROOFRIGHT.
     1,2: eauto.
   Qed.
 
+  Lemma comm_link_imp_compile_exists
+        (srcs: list Imp.programL) srcl
+        tgts
+        (WFPS: Forall wf_public srcs)
+        (COMPS: Forall2 (fun src tgt => compile src = OK tgt) srcs (nlist2list tgts))
+        (LINKSRC: link_imp_list srcs = Some srcl)
+    :
+      (exists tgtl, (<<LINKTGT: link_list tgts = Some tgtl>>) /\ (<<COMP: compile srcl = OK tgtl>>)).
+  Proof.
+    hexploit comm_link_imp_compile_exists_link.
+    3: eapply LINKSRC.
+    all: eauto.
+    i. des. exists tgtl. split; auto. eapply comm_link_imp_compile; eauto.
+  Qed.
+
+  Theorem right_arrow
+          (srcs: list Imp.program) srcl
+          tgts
+          (COMPS: Forall2 (fun src tgt => compile (lift src) = OK tgt) srcs (nlist2list tgts))
+          (LINKSRC: link_imps srcs = Some srcl)
+    :
+      (exists tgtl, (<<LINKTGT: link_list tgts = Some tgtl>>) /\ (<<COMP: compile srcl = OK tgtl>>)).  
+  Proof.
+    
 
 
-  Fixpoint compile_imps (src_list : list Imp.programL) :=
-    match src_list with
-    | [] => Some []
-    | src :: srcs =>
-      match compile src with
-      | OK tgt =>
-        match compile_imps srcs with
-        | Some tgts => Some (tgt :: tgts)
-        | _ => None
-        end
-      | _ => None
-      end
-    end.
 
-  (* Inductive compile_list : *)
-  (*   list programL -> list (Csharpminor.program) -> Prop := *)
-  (* | compile_nil : *)
-  (*     compile_list [] [] *)
-  (* | compile_head *)
-  (*     src_h src_t tgt_h tgt_t *)
-  (*     (COMPH: compile src_h = OK tgt_h) *)
-  (*     (COMPT: compile_list src_t tgt_t) *)
-  (*   : *)
-  (*     <<COMPLIST: compile_list (src_h :: src_t) (tgt_h :: tgt_t)>>. *)
-  Definition link_csm_list (tgt_list : list (Csharpminor.program)) :=
-    match tgt_list with
-    | [] => None
-    | tgt_h :: tgt_t =>
-      fold_left_option link_prog tgt_t (Some tgt_h)
-    end.
+    
+    red. unfold Mod.add_list. ss. eapply comm_link_imp_link_mod; eauto. rewrite List.map_map.
+    pose ImpMod.comm_imp_mod_lift. unfold compose in e. rewrite e; clear e. rewrite <- List.map_map.
+    rewrite MODLIST. ss.
+  Qed.
 
-  (* Lemma comm_link_imp_compile *)
-  (*       src_list srcl tgt_list tgtl *)
-  (*       (COMPL: compile_list src_list tgt_list) *)
-  (*       (LINKSRC: link_imp_list src_list = Some srcl) *)
-  (*       (LINKTGT: link_csm_list tgt_list = Some tgtl) *)
-  (*   : *)
-  (*     compile srcl = OK tgtl. *)
-  (* Proof. *)
-  (*   i. destruct src_list; destruct tgt_list; ss; clarify. *)
-  (*   inv COMPL; clarify. *)
-  (*   generalize dependent srcl. generalize dependent tgtl. *)
-  (*   generalize dependent p. generalize dependent p0. *)
-  (*   induction COMPT; i; ss; clarify. *)
-  (*   destruct (link_prog p0 tgt_h) eqn:LPt; ss; clarify. *)
-  (*   2:{ rewrite fold_left_option_None in LINKTGT; clarify. } *)
-  (*   destruct (link_imp p src_h) eqn:LPs; ss; clarify. *)
-  (*   2:{ rewrite fold_left_option_None in LINKSRC; clarify. } *)
-  (*   eapply IHCOMPT. *)
-  (*   2: apply LINKTGT. *)
-  (*   2: apply LINKSRC. *)
-  (*   eapply _comm_link_imp_compile. *)
-  (*   3: apply LPs. *)
-  (*   3: apply LPt. *)
-  (*   auto. auto. *)
-  (* Qed. *)
+
 
 End PROOFRIGHT.
 
@@ -484,21 +554,27 @@ End PROOFSINGLE.
 
 Section PROOFLINK.
 
-  (* Definition src_initial_state (src : ModL.t) := *)
-  (*   (ModL.compile src).(initial_state). *)
+  Context `{Σ: GRA.t}.
 
-  (* Theorem compile_behavior_improves *)
-  (*         (src_list : list Imp.program) srcl tgt_list tgtl srcst tgtst *)
-  (*         (COMP: let src_list_lift := List.map Imp.lift src_list in *)
-  (*                compile_list src_list_lift tgt_list) *)
-  (*         (LINKSRC: let src_list_mod := List.map ImpMod.get_mod src_list in *)
-  (*                   Mod.add_list (Mem :: src_list_mod) = srcl) *)
-  (*         (LINKTGT: link_csm_list tgt_list = Some tgtl) *)
-  (*         (SINIT: srcst = src_initial_state srcl) *)
-  (*         (TINIT: Csharpminor.initial_state tgtl tgtst) *)
-  (*   : *)
-  (*     <<IMPROVES: @improves2 _ (Csharpminor.semantics tgtl) srcst tgtst>>. *)
-  (* Proof. *)
-  (* Admitted. *)
+  Definition src_initial_state (src : ModL.t) := (ModL.compile src).(initial_state).
+  Definition imps_init (srcs : list Imp.program) :=
+    let srcs_mod := List.map ImpMod.get_mod srcs in src_initial_state (Mod.add_list (Mem :: srcs_mod)).
+
+  Theorem compile_behavior_improves
+          (srcs : list Imp.program) (tgts : Coqlib.nlist Csharpminor.program)
+          srcl
+          (COMP: Forall2 (fun src tgt => compile (lift src) = OK tgt) srcs (nlist2list tgts))
+          (LINKSRC: link_imps srcs = Some srcl)
+    :
+      exists tgtl,
+        ((link_list tgts = Some tgtl) /\
+         (forall tgt_init, 
+             (Csharpminor.initial_state tgtl tgt_init) ->
+             (@improves2 _ (Csharpminor.semantics tgtl) (imps_init srcs) tgt_init))).
+  Proof.
+    unfold imps_init. unfold src_initial_state.
+    hexploit left_arrow; eauto.
+    i. instantiate (1:=Mem) in H. des. rewrite H. clear H.
+  Admitted.
 
 End PROOFLINK.
