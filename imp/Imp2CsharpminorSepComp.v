@@ -163,7 +163,7 @@ Section PROOFRIGHT.
       { apply PTree_Properties.of_list_dom in H. des. clarify. }
       clear LK; rename H into LK.
       exfalso.
-      admit "name only in a, linked should have a's def".
+      hexploit in_left_in_link; eauto. i. apply (in_map fst) in H. ss.
 
     - apply PTree_Properties.in_of_list in BK. apply PTree_Properties.in_of_list in LK.
       destruct (classic (In id (List.map fst (compile_gdefs src1)))).
@@ -181,7 +181,7 @@ Section PROOFRIGHT.
       { apply PTree_Properties.of_list_dom in H. des. clarify. }
       clear LK; rename H into LK.
       exfalso.
-      admit "name only in b, linked should have b's def".
+      hexploit in_right_in_link; eauto. i. apply (in_map fst) in H. ss.
 
     - apply PTree_Properties.in_of_list in LK.
       destruct (classic (In id (List.map fst (compile_gdefs src1)))).

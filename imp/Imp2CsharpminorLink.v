@@ -851,6 +851,118 @@ Section LINKPROPS.
       + right. rewrite <- IVS. apply in_compile_gdefs_ivars. ss.
   Qed.
 
+  Lemma in_left_in_link
+        src1 src2 srcl id gd
+        (LINKSRC : link_imp src1 src2 = Some srcl)
+        (NOREPET1 : Coqlib.list_norepet (List.map fst (compile_gdefs src1)))
+        (NOREPET2 : Coqlib.list_norepet (List.map fst (compile_gdefs src2)))
+        (IN1: In (id, gd) (compile_gdefs src1))
+        (NOTIN2: ~ In id (List.map fst (compile_gdefs src2)))
+    :
+      In (id, gd) (compile_gdefs srcl).
+  Proof.
+    unfold link_imp in LINKSRC. des_ifs. clear Heq.
+    apply decomp_gdefs in IN1. des; ss; clarify.
+    - apply has_malloc.
+    - apply has_free.
+    - rewrite <- SYS. eapply in_compile_gdefs_c_sys; eauto.
+    - rewrite <- EFS. eapply in_compile_gdefs_efuns. ss. unfold l_efs.
+      rewrite filter_In. split.
+      { rewrite nodup_In. rewrite in_app_iff. left; auto. }
+      apply negb_true_iff. apply sumbool_to_bool_is_false. ii. apply NOTIN2; clear NOTIN2.
+      unfold l_pfs in *. unfold name2 in *. rewrite map_app in H. rewrite in_app_iff in H. des.
+      + depgen src1. depgen id. clear; i.
+        apply unique_gdefs_unique_name in NOREPET1. des.
+        apply Coqlib.list_norepet_app in NOREPET1. des. clear NOREPET1 NOREPET0.
+        unfold Coqlib.list_disjoint in NOREPET2.
+        destruct fd as [name sig]; ss; clarify. apply (in_map fst) in EFS0; ss.
+        hexploit NOREPET2; eauto.
+        { apply in_app_iff; right. apply in_app_iff; left. eapply H. }
+        ii; clarify.
+      + depgen src2. depgen id. clear; i.
+        apply Coqlib.list_in_map_inv in H. des. apply in_compile_gdefs_ifuns in H0. des.
+        apply (in_map fst) in H0. destruct fd; ss; clarify.
+        destruct x as [mn [fn ff]]; ss; clarify.
+    - rewrite <- EVS. eapply in_compile_gdefs_evars. ss. unfold l_evs.
+      rewrite filter_In. split.
+      { rewrite nodup_In. rewrite in_app_iff. left; auto. }
+      apply negb_true_iff. apply sumbool_to_bool_is_false. ii. apply NOTIN2; clear NOTIN2.
+      unfold l_pvs in *. unfold name1 in *. rewrite map_app in H. rewrite in_app_iff in H. des.
+      + depgen src1. depgen id. clear; i.
+        apply unique_gdefs_unique_name in NOREPET1. des.
+        apply Coqlib.list_norepet_app in NOREPET1. des. clear NOREPET1 NOREPET2.
+        apply Coqlib.list_norepet_app in NOREPET0. des. clear NOREPET1 NOREPET0.
+        unfold Coqlib.list_disjoint in NOREPET2.
+        unfold compile_eVar in *; ss; clarify.
+        hexploit NOREPET2; eauto.
+        { apply in_app_iff; right. eapply H. }
+        ii; clarify.
+      + depgen src2. depgen id. clear; i.
+        apply Coqlib.list_in_map_inv in H. des. apply in_compile_gdefs_ivars in H0. des.
+        apply (in_map fst) in H0. unfold compile_eVar in *; ss; clarify.
+        destruct x as [vn vv]; ss; clarify.
+    - rewrite <- IFS. eapply in_compile_gdefs_ifuns. ss. unfold l_pfs.
+      apply in_app_iff. left; auto.
+    - rewrite <- IVS. eapply in_compile_gdefs_ivars. ss. unfold l_pvs.
+      apply in_app_iff. left; auto.
+  Qed.
+
+  Lemma in_right_in_link
+        src1 src2 srcl id gd
+        (LINKSRC : link_imp src1 src2 = Some srcl)
+        (NOREPET1 : Coqlib.list_norepet (List.map fst (compile_gdefs src1)))
+        (NOREPET2 : Coqlib.list_norepet (List.map fst (compile_gdefs src2)))
+        (IN2: In (id, gd) (compile_gdefs src2))
+        (NOTIN1: ~ In id (List.map fst (compile_gdefs src1)))
+    :
+      In (id, gd) (compile_gdefs srcl).
+  Proof.
+    unfold link_imp in LINKSRC. des_ifs. clear Heq.
+    apply decomp_gdefs in IN2. des; ss; clarify.
+    - apply has_malloc.
+    - apply has_free.
+    - rewrite <- SYS. eapply in_compile_gdefs_c_sys; eauto.
+    - rewrite <- EFS. eapply in_compile_gdefs_efuns. ss. unfold l_efs.
+      rewrite filter_In. split.
+      { rewrite nodup_In. rewrite in_app_iff. right; auto. }
+      apply negb_true_iff. apply sumbool_to_bool_is_false. ii. apply NOTIN1; clear NOTIN1.
+      unfold l_pfs in *. unfold name2 in *. rewrite map_app in H. rewrite in_app_iff in H. des.
+      + depgen src1. depgen id. clear; i.
+        apply Coqlib.list_in_map_inv in H. des. apply in_compile_gdefs_ifuns in H0. des.
+        apply (in_map fst) in H0. destruct fd; ss; clarify.
+        destruct x as [mn [fn ff]]; ss; clarify.
+      + depgen src2. depgen id. clear; i.
+        apply unique_gdefs_unique_name in NOREPET2. des.
+        apply Coqlib.list_norepet_app in NOREPET2. des. clear NOREPET2 NOREPET0.
+        unfold Coqlib.list_disjoint in NOREPET1.
+        destruct fd as [name sig]; ss; clarify. apply (in_map fst) in EFS0; ss.
+        hexploit NOREPET1; eauto.
+        { apply in_app_iff; right. apply in_app_iff; left. eapply H. }
+        ii; clarify.
+    - rewrite <- EVS. eapply in_compile_gdefs_evars. ss. unfold l_evs.
+      rewrite filter_In. split.
+      { rewrite nodup_In. rewrite in_app_iff. right; auto. }
+      apply negb_true_iff. apply sumbool_to_bool_is_false. ii. apply NOTIN1; clear NOTIN1.
+      unfold l_pvs in *. unfold name1 in *. rewrite map_app in H. rewrite in_app_iff in H. des.
+      + depgen src1. depgen id. clear; i.
+        apply Coqlib.list_in_map_inv in H. des. apply in_compile_gdefs_ivars in H0. des.
+        apply (in_map fst) in H0. unfold compile_eVar in *; ss; clarify.
+        destruct x as [vn vv]; ss; clarify.
+      + depgen src2. depgen id. clear; i.
+        apply unique_gdefs_unique_name in NOREPET2. des.
+        apply Coqlib.list_norepet_app in NOREPET2. des. clear NOREPET1 NOREPET2.
+        apply Coqlib.list_norepet_app in NOREPET0. des. clear NOREPET1 NOREPET0.
+        unfold Coqlib.list_disjoint in NOREPET2.
+        unfold compile_eVar in *; ss; clarify.
+        hexploit NOREPET2; eauto.
+        { apply in_app_iff; right. eapply H. }
+        ii; clarify.
+    - rewrite <- IFS. eapply in_compile_gdefs_ifuns. ss. unfold l_pfs.
+      apply in_app_iff. right; auto.
+    - rewrite <- IVS. eapply in_compile_gdefs_ivars. ss. unfold l_pvs.
+      apply in_app_iff. right; auto.
+  Qed.
+
 End LINKPROPS.
 
 
