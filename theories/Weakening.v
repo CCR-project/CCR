@@ -89,7 +89,6 @@ Section PROOF.
     { Local Transparent interp_hCallE_tgt.
       unfold interp_hCallE_tgt. gcofix CIH. i. ides itr.
       { mstep. ired. red in WF. des; subst. eapply sim_itree_ret; et.
-        { red. esplits; et. }
         { red. ss. esplits; et. }
       }
       { mstep. ired. eapply sim_itree_tau; ss.
@@ -204,8 +203,6 @@ Section PROOF.
               mstep. eapply sim_itree_take_tgt; eauto with ord_step. unshelve esplit; et.
               mstep. eapply sim_itree_take_tgt; eauto with ord_step. unshelve esplit; et.
               mstep. eapply sim_itree_ret.
-              { red. esplits; et. }
-              { ss. }
               { econs.
                 { esplits; et. }
                 { esplits; et; ss.
@@ -348,7 +345,7 @@ Section PROOF.
       mstep. eapply sim_itree_choose_src; eauto with ord_step. unshelve esplit; et.
       mstep. eapply sim_itree_fput_src; eauto with ord_step.
       mstep. eapply sim_itree_ret; et.
-      red. esplits; et.
+      red. esplits; et. red. esplits; et.
     }
     Unshelve. all: try (exact Ord.O). all: try (exact tt).
   Qed.

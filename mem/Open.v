@@ -259,7 +259,7 @@ Section MODAUX.
       generalize (f y). generalize (@URA.unit (GRA.to_URA Σ)).
       destruct mrs_tgt. revert w c t.
       pcofix CIH. i. ides i.
-      { pfold. rewrite addtau_ret. econs; et. }
+      { pfold. rewrite addtau_ret. econs; et. red. esplits; et. }
       { pfold. rewrite addtau_tau. econs; et. }
       { rewrite <- bind_trigger. resub.
         rewrite addtau_bind. rewrite addtau_event.
@@ -327,7 +327,7 @@ Section MODAUX.
       generalize (f y). generalize (@URA.unit (GRA.to_URA Σ)).
       destruct mrs_tgt. revert w c t.
       pcofix CIH. i. ides i.
-      { pfold. rewrite addtau_ret. econs; et. }
+      { pfold. rewrite addtau_ret. econs; et. red. esplits; et. }
       { pfold. rewrite addtau_tau. econs; et. }
       { rewrite <- bind_trigger. resub.
         rewrite addtau_bind. rewrite addtau_event.

@@ -54,6 +54,7 @@ Section SIMMODSEM.
     imp_steps. force_r; auto.
     des_ifs.
     - imp_steps. force_r; auto. imp_steps. force_r; auto. imp_steps.
+      red. esplits; et.
     - unfold ccall.
       imp_steps. replace (z =? 0)%Z with false.
       2:{ symmetry. eapply Z.eqb_neq. auto. }
@@ -68,6 +69,7 @@ Section SIMMODSEM.
       imp_steps.
       force_r; auto. imp_steps. force_r; auto. steps.
       rewrite _UNWRAPU. steps. force_r; auto. imp_steps. force_r; auto. imp_steps.
+      red. esplits; et.
     Unshelve. all: ss.
   Qed.
 

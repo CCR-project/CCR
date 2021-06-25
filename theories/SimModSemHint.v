@@ -55,9 +55,7 @@ Section SIM.
           {R_src R_tgt} (RR: st_local -> st_local -> R_src -> R_tgt -> Prop)
     : Ord.t -> world -> st_local * itree Es R_src -> st_local * itree Es R_tgt -> Prop :=
   | sim_itree_ret
-      i0 w0 w1 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
-      (WF: wf w1 (mrs_src0, mrs_tgt0))
-      (WLE: le w0 w1)
+      i0 w0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       v_src v_tgt
       (RET: RR (mrs_src0, fr_src0) (mrs_tgt0, fr_tgt0) v_src v_tgt)
     :
@@ -324,8 +322,13 @@ Section SIM.
                  ((mrs_tgt0, fr_tgt0), i_tgt)
   .
 
-  Definition sim_itree: _ -> _ -> relation _ :=
-    paco7 _sim_itree bot7 _ _ (fun _ _ => @eq Any.t).
+  Definition lift_rel {R_src R_tgt} (w0: world) (RR: R_src -> R_tgt -> Prop)
+             (st_src st_tgt: st_local) (ret_src ret_tgt : Any.t) :=
+    exists w1 : world,
+      (<<WLE: le w0 w1 >> /\ <<WF: wf w1 (fst st_src, fst st_tgt) >> /\ <<RET: ret_src = ret_tgt >>).
+
+  Definition sim_itree o w0: relation _ :=
+    paco7 _sim_itree bot7 _ _ (lift_rel w0 (@eq Any.t)) o w0.
 
   Lemma sim_itree_mon: monotone7 _sim_itree.
   Proof.
@@ -662,7 +665,7 @@ Section ADQ.
     revert_until wf. gcofix CIH. i.
     punfold SIM. dependent destruction SIM.
     - unfold transl_all. rewrite ! unfold_interp. ss. gstep. econs; eauto.
-      ss. esplits; ss.
+      red in RET. ss. des. subst. esplits; et.
     - unfold transl_all. rewrite ! unfold_interp. ss. gstep. econs; eauto.
       pclearbot. gbase. eapply CIH; et.
     - unfold transl_all. rewrite ! interp_bind. rewrite ! unfold_interp. ss. rewrite ! bind_bind.
@@ -695,8 +698,7 @@ Section ADQ.
       { bsimpl. unfold rel_dec in *. ss. des_sumbool; ss. }
       ired. gstep; econs; et. pclearbot. gbase.
       match goal with | [ |- r _ _ _ _ _ ?x _ ] => remember x as tmp end.
-      rewrite MN. subst tmp.
-      eapply CIH; et.
+      subst tmp. rewrite MN in *. eapply CIH; et.
     - unfold transl_all. rewrite ! unfold_interp. ired.
       rewrite <- MN. gstep. econs; ss; et.
       { unfold rel_dec. ss. des_ifs. des_sumbool; ss. }
@@ -705,8 +707,7 @@ Section ADQ.
       { bsimpl. unfold rel_dec in *. ss. des_sumbool; ss. }
       ired. gstep; econs; et. pclearbot. gbase.
       match goal with | [ |- r _ _ _ _ _ ?x _ ] => remember x as tmp end.
-      rewrite MN. subst tmp.
-      eapply CIH; et.
+      subst tmp. rewrite MN in *. eapply CIH; et.
     - unfold transl_all. rewrite ! unfold_interp. ired.
       gstep. econs; et. pclearbot. ired. gstep. econs; et. gbase. eapply CIH; et.
     - unfold transl_all. rewrite ! unfold_interp. ired.
@@ -715,16 +716,14 @@ Section ADQ.
       { unfold rel_dec. ss. des_ifs. des_sumbool; ss. }
       ired. gstep; econs; et. pclearbot. gbase.
       match goal with | [ |- r _ _ _ _ _ ?x _ ] => remember x as tmp end.
-      rewrite MN. subst tmp.
-      eapply CIH; et.
+      subst tmp. rewrite MN in *. eapply CIH; et.
     - unfold transl_all. rewrite ! unfold_interp. ired.
       rewrite <- MN. gstep. econs; ss; et.
       { unfold rel_dec. ss. des_ifs. des_sumbool; ss. }
       { unfold rel_dec. ss. des_ifs. des_sumbool; ss. }
       ired. gstep; econs; et. pclearbot. gbase.
       match goal with | [ |- r _ _ _ _ _ ?x _ ] => remember x as tmp end.
-      rewrite MN. subst tmp.
-      eapply CIH; et.
+      subst tmp. rewrite MN in *. eapply CIH; et.
     - unfold transl_all. rewrite ! unfold_interp. ired.
       gstep. econs; et. pclearbot. ired. gstep. econs; et. gbase. eapply CIH; et.
     (* - unfold transl_all. ired. *)

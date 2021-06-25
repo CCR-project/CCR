@@ -8,7 +8,7 @@ Require Import PCM.
 Require Import HoareDef.
 Require Import TODOYJ.
 Require Import ProofMode.
-Require Import HTactics.
+Require Import SimModSem HTactics.
 Require Import STB.
 
 Set Implicit Arguments.
@@ -180,5 +180,5 @@ Tactic Notation "iret" uconstr(a) :=
   |
   |
   |start_ipm_proof; iFrame "☃CLOSED"
-  |
+  |try by (i; (try unfold lift_rel); esplits; et)
   ].

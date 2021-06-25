@@ -731,7 +731,7 @@ Section KTACTICS.
           ,
             gpaco7 (_sim_itree (mk_wf R_src R_tgt) le) (cpn7 (_sim_itree (mk_wf R_src R_tgt) le)) bot7 bot7
                    _ _
-                   (fun _ _ => eq)
+                   (lift_rel (mk_wf R_src R_tgt) le a (@eq Any.t))
                    89 a
                    (((mr_src, mp_src), fr_src),
                     ((interp_hCallE_tgt mn gstb ord_top (KModSem.transl_fun_tgt body varg) ctx)
