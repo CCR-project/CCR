@@ -575,8 +575,7 @@ Section PROOF.
       { hexploit tgt_genv_find_def_by_blk; eauto. }
 
       unfold cfun. sim_red.
-      rewrite Any.pair_split. sim_red.
-      rewrite Any.upcast_downcast. rewrite Any.upcast_downcast.  sim_red.
+      rewrite Any.upcast_downcast. sim_red.
       rewrite unfold_eval_imp_only. sim_red.
       unfold assume. sim_red. gstep. econs 5; ss; auto. i. eapply angelic_step in STEP; des; clarify.
       eexists; split; [ord_step2|auto].
@@ -1051,9 +1050,7 @@ Section PROOF.
       | [ MCONT: match_code _ ?_ms _ _ _ |- _ ] =>
         set (ms:=_ms) in *
       end.
-      unfold cfun.
-      rewrite Any.pair_split. sim_red.
-      rewrite Any.upcast_downcast. rewrite Any.upcast_downcast. grind. unfold freeF. sim_red.
+      unfold cfun. rewrite Any.upcast_downcast. grind. unfold freeF. sim_red.
       do 4 (gstep; sim_tau). sim_red.
       rewrite PSTATE. rewrite Any.upcast_downcast. grind. unfold unptr. des_ifs; sim_red.
       1:{ sim_triggerUB. }
