@@ -640,7 +640,7 @@ Section KTACTICS.
 
         (FUEL: (n1 + 11 < n0)%ord)
         (ftsp: fspec)
-        (FIND: alist_find fn stb = Some (KModSem.disclose_tgt ftsp))
+        (FIND: stb fn = Some (KModSem.disclose_tgt ftsp))
         (NEXT: (next < at_most)%ord)
 
         (POST: gpaco7 (_sim_itree wf le) (cpn7 (_sim_itree wf le)) rg rg _ _ eqr n1 w

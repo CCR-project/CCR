@@ -5,7 +5,7 @@ Require Import Behavior.
 Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
-Require Import HoareDef.
+Require Import HoareDef STB.
 Require Import TODOYJ.
 Require Import Logic.
 
@@ -55,9 +55,9 @@ Section BW.
   |}
   .
 
-  Definition BWSem: ModSem.t := SModSem.to_tgt BWStb SBWSem.
+  Definition BWSem: ModSem.t := SModSem.to_tgt (to_stb BWStb) SBWSem.
 
-  Definition BW: Mod.t := SMod.to_tgt (fun _ => BWStb) SBW.
+  Definition BW: Mod.t := SMod.to_tgt (fun _ => to_stb BWStb) SBW.
 
 End BW.
 Global Hint Unfold BWStb: stb.

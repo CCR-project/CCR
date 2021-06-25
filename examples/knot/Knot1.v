@@ -24,9 +24,9 @@ Section KNOT.
   Context `{@GRA.inG memRA Σ}.
   Context `{@GRA.inG knotRA Σ}.
 
-  Variable RecStb: SkEnv.t -> list (gname * fspec).
-  Variable FunStb: SkEnv.t -> list (gname * fspec).
-  Variable GlobalStb: SkEnv.t -> list (gname * fspec).
+  Variable RecStb: SkEnv.t -> gname -> option fspec.
+  Variable FunStb: SkEnv.t -> gname -> option fspec.
+  Variable GlobalStb: SkEnv.t -> gname -> option fspec.
 
   Section SKENV.
     Variable skenv: SkEnv.t.
@@ -146,8 +146,8 @@ Section WEAK.
   Context `{@GRA.inG invRA Σ}.
   Context `{@GRA.inG knotRA Σ}.
 
-  Variable RecStb: SkEnv.t -> list (gname * fspec).
-  Variable FunStb: SkEnv.t -> list (gname * fspec).
+  Variable RecStb: SkEnv.t -> gname -> option fspec.
+  Variable FunStb: SkEnv.t -> gname -> option fspec.
 
   Lemma knot_spec2_weaker skenv: fspec_weaker (knot_spec2 RecStb FunStb skenv) (knot_spec RecStb FunStb skenv).
   Proof.

@@ -5,7 +5,7 @@ Require Import Behavior.
 Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
-Require Import HoareDef.
+Require Import HoareDef STB.
 Require Import BW1.
 Require Import TODOYJ Logic.
 
@@ -45,9 +45,9 @@ Section MAIN.
   .
 
   Definition SMain: SMod.t := SMod.main mainpre (cfun mainbody).
-  Definition Main: Mod.t := SMod.to_tgt (fun _ => BWStb++ClientStb++MainStb) SMain.
+  Definition Main: Mod.t := SMod.to_tgt (fun _ => to_stb (BWStb++ClientStb++MainStb)) SMain.
   Definition SMainSem: SModSem.t := SModSem.main mainpre (cfun mainbody).
-  Definition MainSem: ModSem.t := SModSem.to_tgt (BWStb++ClientStb++MainStb) SMainSem.
+  Definition MainSem: ModSem.t := SModSem.to_tgt (to_stb (BWStb++ClientStb++MainStb)) SMainSem.
 
 End MAIN.
 Global Hint Unfold MainStb: stb.

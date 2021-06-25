@@ -6,7 +6,7 @@ Require Import Behavior.
 Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
-Require Import HoareDef.
+Require Import HoareDef STB.
 Require Import TODOYJ.
 Require Import Logic.
 
@@ -253,7 +253,7 @@ Section PROOF.
   |}
   .
 
-  Definition Mem: Mod.t := (SMod.to_tgt (fun _ => [])) SMem.
+  Definition Mem: Mod.t := (SMod.to_tgt (fun _ => to_stb [])) SMem.
 
 End PROOF.
 Global Hint Unfold MemStb: stb.

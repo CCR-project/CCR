@@ -103,7 +103,7 @@ Section PROOF.
   |}
   .
   Definition SEchoSem: SModSem.t := KEchoSem.
-  Definition EchoSem (stb: list (string * fspec)): ModSem.t :=
+  Definition EchoSem (stb: gname -> option fspec): ModSem.t :=
     (SModSem.to_tgt stb) SEchoSem.
 
 
@@ -114,9 +114,8 @@ Section PROOF.
   |}
   .
   Definition SEcho: SMod.t := KEcho.
-  Definition Echo (stb: Sk.t -> list (string * fspec)): Mod.t :=
+  Definition Echo (stb: Sk.t -> gname -> option fspec): Mod.t :=
     SMod.to_tgt stb SEcho.
 
 End PROOF.
 Global Hint Unfold EchoStb: stb.
-

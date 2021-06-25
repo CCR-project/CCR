@@ -399,7 +399,7 @@ Section CANCEL.
     forall fn fsp (FIND: alist_find fn _stb = Some fsp), stb fn = Some fsp.
   Hypothesis STBSOUND:
     forall fn (FIND: alist_find fn _stb = None),
-      (<<NONE: stb fn = None>>) \/ (<<TRIVIAL: stb fn = Some fspec_trivial>>).
+      (<<NONE: stb fn = None>>) \/ (exists fsp, <<FIND: stb fn = Some fsp>> /\ <<TRIVIAL: forall mn x arg_src arg_tgt o r (PRE: fsp.(precond) mn x arg_src arg_tgt o r), o = ord_top>>).
 
 
   Let mds_src: list Mod.t := List.map (SMod.to_src) mds.
@@ -500,7 +500,7 @@ Section CANCEL.
 
   Lemma stb_find_iff fn
     :
-      ((<<NONE: stb fn = None>> \/ <<TRIVIAL: stb fn = Some fspec_trivial>>) /\
+      ((<<NONE: stb fn = None>> \/ (exists fsp, <<FIND: stb fn = Some fsp>> /\ <<TRIVIAL: forall mn x arg_src arg_tgt o r (PRE: fsp.(precond) mn x arg_src arg_tgt o r), o = ord_top>>)) /\
        (<<FINDSRC: alist_find fn (fnsems ms_src) = None>>) /\
        (<<FINDMID: alist_find fn (fnsems ms_mid) = None>>)) \/
 
@@ -543,10 +543,7 @@ Section CANCEL.
     { steps. }
     steps. hexploit (stb_find_iff s). i. des.
     { rewrite NONE. steps. }
-    { rewrite TRIVIAL. steps. destruct rst_tgt0. steps.
-      destruct l; steps.
-      admit "".
-    }
+    { rewrite FIND. steps. exfalso. eapply x1; et. }
     rewrite STB. steps.
     destruct rst_tgt0 as [mrs_tgt0 [|frs_hd frs_tl]]; ss.
     { steps. }
@@ -563,13 +560,13 @@ Section CANCEL.
     guclo bindC_spec. econs.
     { unfold APC. gstep. mred. eapply simg_chooseR; et; [_ord_step|]. i. steps.
       guclo ordC_spec. econs.
-      { instantiate (1:=(C.myG x1 x3 + C.d)%ord).
+      { instantiate (1:=(C.myG x2 x4 + C.d)%ord).
         rewrite <- C.my_thm3; et.
         rewrite <- C.my_thm1; et.
         rewrite OrdArith.add_assoc.
         rewrite OrdArith.add_assoc.
         eapply add_le_le.
-        - eapply Ord.lt_le in x4. rewrite <- x4. refl.
+        - eapply Ord.lt_le in x5. rewrite <- x5. refl.
         - etrans; [|eapply OrdArith.add_base_l]. etrans; [|eapply OrdArith.add_base_l]. refl.
       }
       eapply IH; auto. econs. left. auto.
@@ -659,7 +656,12 @@ Section CANCEL.
     destruct st_src0 as [rst_src0 pst_src0]; ss.
     ired_both. hexploit (stb_find_iff fn). i. des.
     { rewrite NONE. steps. }
-    { rewrite TRIVIAL. admit "". }
+    { rewrite FIND. steps. destruct tbr.
+      { exfalso. eapply x; ss. }
+      steps. destruct rst_src0. steps. destruct l.
+      { seal_left. steps. }
+      steps. rewrite FINDSRC. steps.
+    }
     rewrite STB. steps. destruct tbr.
     (* PURE *)
     { seal_left.
@@ -675,7 +677,7 @@ Section CANCEL.
       rewrite idK_spec2 at 1.
       guclo bindC_spec. econs.
       { gfinal. right. eapply paco6_mon. { eapply adequacy_type_aux_APC. } ii; ss. }
-      i. steps. steps_strong. exists x1. steps.
+      i. steps. steps_strong. exists x2. steps.
       gbase. eapply CIH. ss.
     }
 

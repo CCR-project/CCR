@@ -296,7 +296,7 @@ Section CANCEL.
   Definition handle_hCallE_mid (ord_cur: ord): hCallE ~> itree Es :=
     fun _ '(hCall tbr fn varg_src) =>
       tau;;
-      f <- (stb fn)ǃ;;
+      f <- (stb fn)ǃ;; guarantee (tbr = true -> ~ (forall mn x arg_src arg_tgt o r (PRE: f.(precond) mn x arg_src arg_tgt o r), o = ord_top));;;
       ord_next <- (if tbr then o0 <- trigger (Choose _);; Ret (ord_pure o0) else Ret ord_top);;
       guarantee(ord_lt ord_next ord_cur);;;
       let varg_mid: Any_mid := Any.pair ord_next↑ varg_src in
@@ -1611,8 +1611,14 @@ Ltac ired_both := ired_l; ired_r.
 Create HintDb stb.
 Hint Rewrite (Seal.sealing_eq "stb"): stb.
 
+Definition to_stb`{Σ: GRA.t} (l: alist gname fspec): gname -> option fspec :=
+  fun fn => alist_find fn l.
+
 Ltac stb_tac :=
   match goal with
+  | [ |- to_stb ?xs _ = _ ] =>
+    unfold to_stb;
+    autounfold with stb; autorewrite with stb; simpl
   | [ |- alist_find _ ?xs = _ ] =>
     match type of xs with
     | (list (string * fspec)) =>
@@ -1623,6 +1629,9 @@ Ltac stb_tac :=
     | (list (string * fspec)) =>
       autounfold with stb in H; autorewrite with stb in H; simpl in H
     end
+  | [H: to_stb ?xs _ = _ |- _ ] =>
+    unfold to_stb in H;
+    autounfold with stb in H; autorewrite with stb in H; simpl in H
   end.
 
 Notation Es' := (hCallE +' pE +' eventE).

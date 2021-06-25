@@ -5,7 +5,7 @@ Require Import Behavior.
 Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
-Require Import HoareDef.
+Require Import HoareDef STB.
 Require Import Logic.
 Require Import Mem1.
 Require Import TODOYJ.
@@ -80,7 +80,7 @@ Section PROOF.
   |}
   .
 
-  Definition StackSem: ModSem.t := (SModSem.to_tgt (MemStb ++ StackStb)) SStackSem.
+  Definition StackSem: ModSem.t := (SModSem.to_tgt (to_stb (MemStb ++ StackStb))) SStackSem.
 
   Definition SStack: SMod.t := {|
     SMod.get_modsem := fun _ => SStackSem;
@@ -88,7 +88,7 @@ Section PROOF.
   |}
   .
 
-  Definition Stack: Mod.t := (SMod.to_tgt (fun _ => MemStb ++ StackStb)) SStack.
+  Definition Stack: Mod.t := (SMod.to_tgt (fun _ => to_stb (MemStb ++ StackStb))) SStack.
 
 End PROOF.
 Global Hint Unfold StackStb: stb.

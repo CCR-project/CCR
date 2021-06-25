@@ -5,7 +5,7 @@ Require Import Behavior.
 Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
-Require Import HoareDef.
+Require Import HoareDef STB.
 Require Import Echo1.
 Require Import TODOYJ Logic.
 
@@ -37,8 +37,8 @@ Section PROOF.
   .
 
   Definition SMain: SMod.t := SMod.main (fun _ o _ => o = ord_top) (cfun main_body).
-  Definition Main: Mod.t := SMod.to_tgt (fun _ => MainStb) SMain.
+  Definition Main: Mod.t := SMod.to_tgt (fun _ => to_stb MainStb) SMain.
   Definition SMainSem: SModSem.t := SModSem.main (fun _ o _ => o = ord_top) (cfun main_body).
-  Definition MainSem: ModSem.t := SModSem.to_tgt MainStb SMainSem.
+  Definition MainSem: ModSem.t := SModSem.to_tgt (to_stb MainStb) SMainSem.
 
 End PROOF.

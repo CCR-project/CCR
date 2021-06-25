@@ -104,7 +104,7 @@ Section PROOF.
   |}
   .
   Definition SStackSem: SModSem.t := KStackSem.
-  Definition StackSem (stb: list (string * fspec)): ModSem.t :=
+  Definition StackSem (stb: gname -> option fspec): ModSem.t :=
     (SModSem.to_tgt stb) SStackSem.
 
 
@@ -115,7 +115,7 @@ Section PROOF.
   |}
   .
   Definition SStack: SMod.t := KStack.
-  Definition Stack (stb: Sk.t -> list (string * fspec)): Mod.t :=
+  Definition Stack (stb: Sk.t -> gname -> option fspec): Mod.t :=
     SMod.to_tgt stb SStack.
 
 End PROOF.

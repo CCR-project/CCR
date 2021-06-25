@@ -75,9 +75,9 @@ Section SIMMODSEM.
 
   Let W: Type := (Σ * Any.t) * (Σ * Any.t).
 
-  Variable RecStb: SkEnv.t -> list (gname * fspec).
-  Variable FunStb: SkEnv.t -> list (gname * fspec).
-  Variable GlobalStb: SkEnv.t -> list (gname * fspec).
+  Variable RecStb: SkEnv.t -> gname -> option fspec.
+  Variable FunStb: SkEnv.t -> gname -> option fspec.
+  Variable GlobalStb: SkEnv.t -> gname -> option fspec.
 
   Definition inv (skenv: SkEnv.t): iProp :=
     (∃ (f': option (nat -> nat)) (fb': val),
@@ -96,13 +96,13 @@ Section SIMMODSEM.
       top4.
 
   Hypothesis RecStb_incl: forall skenv,
-      stb_incl KnotRecStb (RecStb skenv).
+      stb_incl (to_stb KnotRecStb) (RecStb skenv).
 
   Hypothesis FunStb_incl: forall skenv,
       stb_incl (FunStb skenv) (GlobalStb skenv).
 
   Variable MemStb_incl: forall skenv,
-      stb_incl MemStb (GlobalStb skenv).
+      stb_incl (to_stb MemStb) (GlobalStb skenv).
 
 
   Theorem correct: ModPair.sim (Knot1.Knot RecStb FunStb GlobalStb) Knot0.Knot.

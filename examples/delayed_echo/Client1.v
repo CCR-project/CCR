@@ -5,7 +5,7 @@ Require Import Behavior.
 Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
-Require Import HoareDef Logic.
+Require Import HoareDef STB Logic.
 Require Import Client0.
 Require Import TODOYJ.
 
@@ -42,7 +42,7 @@ Section PROOF.
   |}
   .
 
-  Definition ClientSem: ModSem.t := (SModSem.to_tgt ClientStb) SClientSem.
+  Definition ClientSem: ModSem.t := (SModSem.to_tgt (to_stb ClientStb)) SClientSem.
 
   Definition SClient: SMod.t := {|
     SMod.get_modsem := fun _ => SClientSem;
@@ -50,7 +50,7 @@ Section PROOF.
   |}
   .
 
-  Definition Client: Mod.t := (SMod.to_tgt (fun _ => ClientStb)) SClient.
+  Definition Client: Mod.t := (SMod.to_tgt (fun _ => to_stb ClientStb)) SClient.
 
 End PROOF.
 Global Hint Unfold ClientStb: stb.

@@ -21,7 +21,6 @@ Set Implicit Arguments.
 
 
 
-
 Global Program Instance Forall2_Reflexive `{Reflexive A R}: Reflexive (Forall2 R).
 Next Obligation. induction x; ii; ss. econs; ss. Qed.
 
@@ -33,7 +32,6 @@ Next Obligation.
 Qed.
 
 Global Program Instance Forall2_PreOrder `{PreOrder A R}: PreOrder (Forall2 R).
-
 Lemma flat_map_map A B C (f: A -> B) (g: B -> list C) (l: list A)
   :
     flat_map g (map f l) = flat_map (g ∘ f) l.
@@ -50,22 +48,17 @@ Proof.
   induction l; ss. destruct a. ss. uo. des_ifs.
 Qed.
 
-
 (*** TODO: move ***)
 Section ITREEAUX.
   Definition trivial_state_Handler `{E -< F} {S}: E ~> (stateT S (itree F)) :=
     fun T X s => x <- trigger X;; Ret (s, x).
-
   Definition addtau `{eventE -< E}: itree E ~> itree E := interp (fun _ (e: E _) => tau;; trigger e).
   Definition addtau_ktr `{eventE -< E} {R}: ktree E R ~> ktree E R := fun _ ktr => addtau(T:=_) ∘ ktr.
-
   Section ADDTAU.
-
   (*****************************************************)
   (****************** Reduction Lemmas *****************)
   (*****************************************************)
   Context `{eventE -< E}.
-
   Lemma addtau_bind
         (R S: Type)
         (s: itree E R) (k : R -> itree E S)
@@ -77,7 +70,6 @@ Section ITREEAUX.
     unfold addtau in *. grind.
   Qed.
 
-
   Lemma addtau_tau
         (U: Type)
         (t : itree _ U)
@@ -88,7 +80,6 @@ Section ITREEAUX.
   Proof.
     unfold addtau in *. grind.
   Qed.
-
   Lemma addtau_ret
         (U: Type)
         (t: U)
@@ -99,7 +90,6 @@ Section ITREEAUX.
   Proof.
     unfold addtau in *. grind.
   Qed.
-
   Lemma addtau_event
         (R: Type)
         (i: E R)
@@ -111,7 +101,6 @@ Section ITREEAUX.
     unfold addtau in *.
     repeat rewrite interp_trigger. grind.
   Qed.
-
   Lemma addtau_triggerUB
         (R: Type)
     :
@@ -121,7 +110,6 @@ Section ITREEAUX.
   Proof.
     unfold addtau, triggerUB in *. rewrite unfold_interp. cbn. grind.
   Qed.
-
   Lemma addtau_triggerNB
         (R: Type)
     :
@@ -131,7 +119,6 @@ Section ITREEAUX.
   Proof.
     unfold addtau, triggerNB in *. rewrite unfold_interp. cbn. grind.
   Qed.
-
   Lemma addtau_unwrapU
         (R: Type)
         (i: option R)
@@ -145,7 +132,6 @@ Section ITREEAUX.
   Proof.
     unfold addtau. unfold unwrapU. des_ifs; grind. eapply addtau_triggerUB.
   Qed.
-
   Lemma addtau_unwrapN
         (R: Type)
         (i: option R)
@@ -159,7 +145,6 @@ Section ITREEAUX.
   Proof.
     unfold addtau. unfold unwrapN. des_ifs; grind. eapply addtau_triggerNB.
   Qed.
-
   Lemma addtau_assume
         P
     :
@@ -170,7 +155,6 @@ Section ITREEAUX.
   Proof.
     unfold addtau, assume. grind. rewrite unfold_interp; cbn. grind.
   Qed.
-
   Lemma addtau_guarantee
         P
     :
@@ -180,7 +164,6 @@ Section ITREEAUX.
   Proof.
     unfold addtau, guarantee. grind. rewrite unfold_interp; cbn. grind.
   Qed.
-
   Lemma addtau_ext
         R (itr0 itr1: itree _ R)
         (EQ: itr0 = itr1)
@@ -190,7 +173,6 @@ Section ITREEAUX.
       (addtau itr1)
   .
   Proof. subst; et. Qed.
-
   Global Program Instance addtau_rdb: red_database (mk_box (@addtau E H)) :=
     mk_rdb
       0
@@ -209,15 +191,11 @@ Section ITREEAUX.
       (mk_box addtau_guarantee)
       (mk_box addtau_ext)
   .
-
   Global Opaque addtau.
-
 End ADDTAU.
 End ITREEAUX.
-
 Goal forall `{eventE -< E} X, (addtau (E:=E) (T:=X) triggerUB) = tau;; triggerUB.
 Proof. i. my_red_both. refl. Qed.
-
 
 
 
@@ -225,10 +203,8 @@ Module AUX.
   Ltac ord_tac := eapply OrdArith.lt_from_nat; eapply Nat.lt_succ_diag_r.
 End AUX.
 Import AUX.
-
 Section MODAUX.
   Context `{Σ: GRA.t}.
-
   Definition addtau_ms (ms: ModSem.t): ModSem.t := {|
     ModSem.fnsems := map (map_snd (addtau_ktr(T:=_))) ms.(ModSem.fnsems);
     ModSem.mn := ms.(ModSem.mn);
@@ -236,13 +212,11 @@ Section MODAUX.
     ModSem.initial_st := ms.(ModSem.initial_st);
   |}
   .
-
   Definition addtau_md (md: Mod.t): Mod.t := {|
     Mod.get_modsem := addtau_ms ∘ md.(Mod.get_modsem);
     Mod.sk := md.(Mod.sk);
   |}
   .
-
   Theorem adequacy_addtau
           (md: Mod.t)
     :
@@ -310,7 +284,6 @@ Section MODAUX.
     { ss. }
     { exists tt. ss. }
   Qed.
-
   Theorem adequacy_rmtau
           md
     :
@@ -378,9 +351,7 @@ Section MODAUX.
     { ss. }
     { exists tt. ss. }
   Qed.
-
 End MODAUX.
-
 
 
 
@@ -388,23 +359,18 @@ End MODAUX.
 
 Module Massage.
 Section MASSAGE.
-
   Context `{Σ: GRA.t}.
-
   (* Variant frE: Type -> Type := *)
   (* | FPut' (fr0: Σ): frE unit *)
   (* | FGet': frE Σ *)
   (* . *)
-  Variable stb: (list (string * fspec)).
-
   Definition massage_callE (b: bool): callE ~> stateT Σ (itree Es') :=
     if b
     then
-      fun T '(Call fn args) fr0 => _ <- (alist_find fn stb)?;; r <- trigger (hCall false fn (Any.pair false↑ args));; Ret (fr0, r)
+      fun T '(Call fn args) fr0 => r <- trigger (hCall false fn (Any.pair false↑ args));; Ret (fr0, r)
     else
       fun T '(Call fn args) fr0 => r <- trigger (hCall false fn args);; Ret (fr0, r)
   .
-
   Definition massage_rE: rE ~> stateT Σ (itree Es') :=
     fun T re fr0 =>
       match re with
@@ -422,7 +388,6 @@ Section MASSAGE.
         Ret (fr0, mr0)
       end
   .
-
   Definition massage_pE: pE ~> stateT Σ (itree Es') :=
     fun T pe fr0 =>
       match pe with
@@ -437,12 +402,10 @@ Section MASSAGE.
         Ret (fr0, st0)
       end
   .
-
   Definition massage_itr b: itree Es ~> stateT Σ (itree Es') :=
     (* interp (case_ (massage_callE) (case_ (massage_rE) (case_ (massage_pE) trivial_state_Handler))) *)
     interp_state (case_ (massage_callE b) (case_ (massage_rE) (case_ (massage_pE) trivial_state_Handler)))
   .
-
   Definition massage_fun (b: bool) (ktr: (option mname * Any.t) -> itree Es Any.t): ((option mname * Any.t) -> itree Es' Any.t) :=
     if b
     then
@@ -453,11 +416,9 @@ Section MASSAGE.
       fun '(mn, args) =>
         '(_, rv) <- massage_itr b (ktr (mn, args)) ε;; Ret rv
   .
-
   Definition massage_fsb b: ((option mname * Any.t) -> itree Es Any.t) -> fspecbody :=
     fun ktr => mk_specbody (KModSem.disclose_tgt fspec_trivial) (massage_fun b ktr)
   .
-
   Definition massage_ms b (ms: ModSem.t): SModSem.t := {|
     SModSem.fnsems := List.map (map_snd (massage_fsb b)) ms.(ModSem.fnsems);
     SModSem.mn := ms.(ModSem.mn);
@@ -467,11 +428,9 @@ Section MASSAGE.
   .
 
 
-
   (*****************************************************)
   (****************** Reduction Lemmas *****************)
   (*****************************************************)
-
   Lemma massage_itr_bind b
         (R S: Type)
         fr0 (s: itree _ R) (k : R -> itree _ S)
@@ -482,7 +441,6 @@ Section MASSAGE.
   Proof.
     unfold massage_itr in *. rewrite interp_state_bind. grind. des_ifs.
   Qed.
-
   Lemma massage_itr_tau b
         (U: Type)
         (t : itree _ U) fr0
@@ -493,7 +451,6 @@ Section MASSAGE.
   Proof.
     unfold massage_itr in *. rewrite interp_state_tau. grind.
   Qed.
-
   Lemma massage_itr_ret b
         (U: Type)
         (t: U) fr0
@@ -504,7 +461,6 @@ Section MASSAGE.
   Proof.
     unfold massage_itr in *. rewrite interp_state_ret. grind.
   Qed.
-
   Lemma massage_itr_pe b
         (R: Type)
         (i: pE R) fr0
@@ -515,7 +471,6 @@ Section MASSAGE.
   Proof.
     unfold massage_itr in *. rewrite interp_state_trigger. grind.
   Qed.
-
   Lemma massage_itr_re b
         (R: Type)
         (i: rE R) fr0
@@ -526,7 +481,6 @@ Section MASSAGE.
   Proof.
     unfold massage_itr in *. rewrite interp_state_trigger. grind.
   Qed.
-
   Lemma massage_itr_calle b
         (R: Type)
         (i: callE R) fr0
@@ -537,7 +491,6 @@ Section MASSAGE.
   Proof.
     unfold massage_itr in *. grind.
   Qed.
-
   Lemma massage_itr_evente b
         (R: Type)
         (i: eventE R) fr0
@@ -548,7 +501,6 @@ Section MASSAGE.
   Proof.
     unfold massage_itr in *. grind. unfold trivial_state_Handler. grind.
   Qed.
-
   Lemma massage_itr_triggerUB b
         (R: Type) fr0
     :
@@ -559,7 +511,6 @@ Section MASSAGE.
     unfold massage_itr, triggerUB in *. rewrite unfold_interp_state. cbn.
     unfold trivial_state_Handler. grind.
   Qed.
-
   Lemma massage_itr_triggerNB b
         (R: Type) fr0
     :
@@ -570,7 +521,6 @@ Section MASSAGE.
     unfold massage_itr, triggerNB in *. rewrite unfold_interp_state. cbn.
     unfold trivial_state_Handler. grind.
   Qed.
-
   Lemma massage_itr_unwrapU b
         (R: Type)
         (i: option R) fr0
@@ -589,7 +539,6 @@ Section MASSAGE.
       { unfold triggerUB. grind. }
     }
   Qed.
-
   Lemma massage_itr_unwrapN b
         (R: Type)
         (i: option R) fr0
@@ -608,7 +557,6 @@ Section MASSAGE.
       { unfold triggerNB. grind. }
     }
   Qed.
-
   Lemma massage_itr_assume b
         P fr0
     :
@@ -619,7 +567,6 @@ Section MASSAGE.
   Proof.
     unfold assume. rewrite massage_itr_bind. rewrite massage_itr_evente. grind. eapply massage_itr_ret.
   Qed.
-
   Lemma massage_itr_guarantee b
         P fr0
     :
@@ -629,7 +576,6 @@ Section MASSAGE.
   Proof.
     unfold guarantee. rewrite massage_itr_bind. rewrite massage_itr_evente. grind. eapply massage_itr_ret.
   Qed.
-
   Lemma massage_itr_ext b
         R (itr0 itr1: itree _ R)
         (EQ: itr0 = itr1)
@@ -639,22 +585,18 @@ Section MASSAGE.
       (massage_itr b itr1)
   .
   Proof. subst; et. Qed.
-
 End MASSAGE.
 End Massage.
 Import Massage.
 
 
-
 Section RDB.
   Context `{Σ: GRA.t}.
-
-  Definition massage_md (_stb: Sk.t -> (list (string * fspec))) b (md: Mod.t): SMod.t := {|
-    SMod.get_modsem := fun sk => massage_ms (_stb sk) b (Mod.get_modsem md sk);
+  Definition massage_md b (md: Mod.t): SMod.t := {|
+    SMod.get_modsem := fun sk => massage_ms b (Mod.get_modsem md sk);
     SMod.sk := md.(Mod.sk);
   |}
   .
-
   Global Program Instance transl_itr_rdb: red_database (mk_box (@massage_itr)) :=
     mk_rdb
       1
@@ -678,34 +620,33 @@ End RDB.
 
 
 
-
 Require Import Hoare.
 Require Import HTactics ProofMode.
 
 
 
-
 Section ADQ.
   Context `{Σ: GRA.t}.
-
   Variable _kmds: list KMod.t.
   Let frds: Sk.t -> list mname := fun sk => (map (KModSem.mn ∘ (flip KMod.get_modsem sk)) _kmds).
   Let kmds: list SMod.t := List.map KMod.transl_tgt _kmds.
+  Let _kmss: Sk.t -> list SModSem.t := fun ske => List.map (flip SMod.get_modsem ske) kmds.
+  Let _gstb: Sk.t -> list (gname * fspec) := fun ske =>
+    (flat_map (List.map (map_snd fsb_fspec) ∘ SModSem.fnsems) (_kmss ske)).
+  Let _stb: Sk.t -> gname -> option fspec :=
+    fun sk fn => match alist_find fn (_gstb sk) with
+                 | Some fsp => Some fsp
+                 | _ => Some (KModSem.disclose_tgt fspec_trivial)
+                 end.
+  Section UMDS.
   Variable umds: list Mod.t.
-
   Let sk_link: Sk.t := Sk.sort (fold_right Sk.add Sk.unit ((List.map SMod.sk kmds) ++ (List.map Mod.sk umds))).
   Let skenv: SkEnv.t := Sk.load_skenv sk_link.
-
-  Let _kmss: Sk.t -> list SModSem.t := fun ske => List.map (flip SMod.get_modsem ske) kmds.
   Let _umss: Sk.t -> list ModSem.t := fun ske => List.map (flip Mod.get_modsem ske) umds.
-  Let _gstb: Sk.t -> list (gname * fspec) := fun ske =>
-    (flat_map (List.map (map_snd fsb_fspec) ∘ SModSem.fnsems) (_kmss ske))
-      ++ (flat_map (List.map (map_snd (fun _ => KModSem.disclose_tgt fspec_trivial)) ∘ ModSem.fnsems) (_umss ske)).
-
   Let kmss: list SModSem.t := Eval red in (_kmss sk_link).
   Let umss: list ModSem.t := Eval red in (_umss sk_link).
   Let gstb: list (gname * fspec) := Eval red in (_gstb sk_link).
-
+  Let _frds: list (option mname) := (None :: (List.map Some (frds sk_link))).
   Lemma add_list_fnsems
         mds ske
     :
@@ -713,7 +654,6 @@ Section ADQ.
       flat_map ModSemL.fnsems (List.map (flip ModL.get_modsem ske ∘ Mod.lift) mds)
   .
   Proof. induction mds; ss. f_equal. et. Qed.
-
   Ltac _list_tac :=
     match goal with
     | [ H: alist_find _ _ = Some _ |- _ ] => apply alist_find_some in H; des; des_sumbool; subst
@@ -723,7 +663,6 @@ Section ADQ.
     | [ H: ModSem.map_snd _ _ = _ |- _ ] => unfold ModSem.map_snd in H; ss
     | [ H: map_snd _ _ = _ |- _ ] => unfold map_snd in H; ss
     | [ H: flip _ _ _ = _ |- _ ] => unfold flip in H; ss
-
     | [ |- context[ModL.enclose] ] => unfold ModL.enclose; try rewrite add_list_fnsems
     | [ |- In _ (flat_map _ _) ] => apply in_flat_map; esplits; et
     | [ |- In _ (List.map _ _) ] => apply in_map_iff; esplits; et
@@ -733,7 +672,6 @@ Section ADQ.
     end
   .
   Ltac list_tac := repeat _list_tac.
-
 
   Lemma my_lemma1_aux''
         (ske: Sk.t) mr0 st0 (A: Type) (itr: itree Es A) (ctx: Σ)
@@ -752,8 +690,8 @@ Section ADQ.
            /\ URA.wf ctx
         )
         40%nat tt
-        (ε, (Any.pair mr0↑ st0), fr_trash, (interp_hCallE_tgt mn (_gstb ske) ord_top
-                                                              (massage_itr (_gstb ske) true itr fr0) ctx))
+        (ε, (Any.pair mr0↑ st0), fr_trash, (interp_hCallE_tgt mn (_stb ske) ord_top
+                                                              (massage_itr true itr fr0) ctx))
         (mr0, st0, fr0, addtau itr)
   .
   Proof.
@@ -790,10 +728,13 @@ Section ADQ.
           ired_both. gstep; econs; et. i. esplits; et. steps. gbase. eapply CIH; et.
       }
     }
-    destruct c. resub. ired_both. resub. steps. rewrite _UNWRAPU. steps.
-    rename _UNWRAPU into T.
-    eapply alist_find_some in T. unfold _gstb in T. rewrite in_app_iff in *. des; ss.
-    - list_tac.
+    destruct c. resub. ired_both. resub. steps.
+    destruct (_stb ske fn) eqn:STB.
+    2: { unfold _stb in *. des_ifs. }
+    steps.
+    unfold _stb, _gstb in STB. des_ifs.
+    - rename Heq into T. eapply alist_find_some in T.
+      list_tac.
       des_ifs. unfold _kmss in T. list_tac. subst. unfold kmds in T0. list_tac. subst.
       ss. list_tac. des_ifs. ss.
       unfold HoareCall, discard, forge, put, checkWf. steps.
@@ -817,9 +758,7 @@ Section ADQ.
       red in _ASSUME0. uipropall. subst.
       destruct w1. gbase. eapply CIH; et.
       eapply URA.wf_mon; et.
-    - list_tac.
-      des_ifs. unfold _umss in T. list_tac. subst.
-      unfold HoareCall, discard, forge, put, checkWf. steps.
+    - unfold HoareCall, discard, forge, put, checkWf. steps.
       force_l. exists (ε, ε). steps.
       force_l.
       { rewrite ! URA.unit_id. auto. }
@@ -843,16 +782,14 @@ Section ADQ.
     all: try (exact Ord.O).
     all: try (exact 0%nat).
   Qed.
-
   Ltac r_wf H := eapply prop_ext_rev; [eapply f_equal|]; [|eapply H]; r_solve.
-
   Lemma my_lemma1_aux
         mn ske
         ktr arg mr0 st0
     :
       sim_itree (fun (_: unit) '((mr_src, st_src), (mr_tgt, st_tgt)) =>
                        mr_src = ε /\ st_src = (Any.pair mr_tgt↑ st_tgt)) top2 100%nat tt
-                (ε, (Any.pair mr0↑ st0), ε, fun_to_tgt mn (_gstb ske) (massage_fsb (_gstb ske) true ktr) arg)
+                (ε, (Any.pair mr0↑ st0), ε, fun_to_tgt mn (_stb ske) (massage_fsb true ktr) arg)
                 (mr0, st0, ε, addtau (ktr arg))
   .
   Proof.
@@ -892,12 +829,11 @@ Section ADQ.
     steps.
     Unshelve. all: try exact tt.
   Qed.
-
   Lemma my_lemma1
         umd
         (IN: In umd umds)
     :
-      ModPair.sim (SMod.to_tgt _gstb (massage_md _gstb true umd)) (addtau_md umd)
+      ModPair.sim (SMod.to_tgt _stb (massage_md true umd)) (addtau_md umd)
   .
   Proof.
     econs; ss.
@@ -915,61 +851,50 @@ Section ADQ.
     { ss. }
     { ss. }
   Qed.
-
-  Let kmns: Sk.t -> list mname := (List.map fst) ∘ _gstb.
-  Let _kmns: list (option mname) := (None :: (List.map Some (kmns sk_link))).
-
   Require Import SimGlobal.
-
-  Let prog_src := Mod.add_list (map (KMod.transl_src kmns) _kmds ++ umds).
-  Let prog_mid := Mod.add_list (map (KMod.transl_src kmns) _kmds ++ map (SMod.to_src ∘ massage_md _gstb false) umds).
-  Let prog_tgt := Mod.add_list (map SMod.to_src kmds ++ map (SMod.to_src ∘ massage_md _gstb true) umds).
-
+  Let prog_src := Mod.add_list (map (KMod.transl_src frds) _kmds ++ umds).
+  Let prog_mid := Mod.add_list (map (KMod.transl_src frds) _kmds ++ map (SMod.to_src ∘ massage_md false) umds).
+  Let prog_tgt := Mod.add_list (map SMod.to_src kmds ++ map (SMod.to_src ∘ massage_md true) umds).
   Lemma stb_find_iff_mid fn
     :
       ((<<SRC: alist_find fn (ModSemL.fnsems (ModL.enclose prog_mid)) = None>>) /\
        (<<TGT: alist_find fn (ModSemL.fnsems (ModL.enclose prog_tgt)) = None>>)) \/
       (exists mn ksb,
-          (<<SRC: alist_find fn (ModSemL.fnsems (ModL.enclose prog_mid)) = Some (transl_all (T:=_) mn ∘ KModSem.disclose_ksb_src (kmns sk_link) ksb)>>) /\
+          (<<SRC: alist_find fn (ModSemL.fnsems (ModL.enclose prog_mid)) = Some (transl_all (T:=_) mn ∘ KModSem.disclose_ksb_src (frds sk_link) ksb)>>) /\
           (<<TGT: alist_find fn (ModSemL.fnsems (ModL.enclose prog_tgt)) = Some (transl_all (T:=_) mn ∘ (fun_to_src (KModSem.disclose_ksb_tgt ksb).(fsb_body)))>>) /\
-          (<<MN: List.In (Some mn) _kmns>>)) \/
+          (<<MN: List.In (Some mn) _frds>>)) \/
       (exists mn uf,
-          (<<SRC: alist_find fn (ModSemL.fnsems (ModL.enclose prog_mid)) = Some (transl_all (T:=_) mn ∘ (fun_to_src (massage_fsb (_gstb sk_link) false uf).(fsb_body)))>>) /\
-          (<<TGT: alist_find fn (ModSemL.fnsems (ModL.enclose prog_tgt)) = Some (transl_all (T:=_) mn ∘ (fun_to_src (massage_fsb (_gstb sk_link) true uf).(fsb_body)))>>) /\
-          (<<MN: ~ List.In (Some mn) _kmns>>)).
+          (<<SRC: alist_find fn (ModSemL.fnsems (ModL.enclose prog_mid)) = Some (transl_all (T:=_) mn ∘ (fun_to_src (massage_fsb false uf).(fsb_body)))>>) /\
+          (<<TGT: alist_find fn (ModSemL.fnsems (ModL.enclose prog_tgt)) = Some (transl_all (T:=_) mn ∘ (fun_to_src (massage_fsb true uf).(fsb_body)))>>) /\
+          (<<MN: ~ List.In (Some mn) _frds>>)).
   Proof.
     admit "alist find".
   Qed.
-
   Variant my_lemma2_r1: forall R0 R1 (RR: R0 -> R1 -> Prop), Ord.t -> itree eventE R0 -> itree eventE R1 -> Prop :=
   | my_lemma2_r1_intro
       R mn (itr: itree _ R) st
-      (MN: List.In (Some mn) _kmns)
+      (MN: List.In (Some mn) _frds)
     :
       my_lemma2_r1 eq 200
                    (EventsL.interp_Es (ModSemL.prog (ModL.enclose prog_mid)) (transl_all mn (KModSem.interp_kCallE_src itr)) st)
                    (EventsL.interp_Es (ModSemL.prog (ModL.enclose prog_tgt)) (transl_all mn (interp_hCallE_src (KModSem.transl_itr_tgt itr))) st)
   .
-
   Variant my_lemma2_r2: forall R0 R1 (RR: R0 -> R1 -> Prop), Ord.t -> itree eventE R0 -> itree eventE R1 -> Prop :=
   | my_lemma2_r2_intro
       R mn (itr: itree _ R) st r
-      (MN: ~ List.In (Some mn) _kmns)
+      (MN: ~ List.In (Some mn) _frds)
     :
       my_lemma2_r2 eq 200
-                   (EventsL.interp_Es (ModSemL.prog (ModL.enclose prog_mid)) (transl_all mn (interp_hCallE_src (massage_itr (_gstb sk_link) false itr r))) st)
-                   (EventsL.interp_Es (ModSemL.prog (ModL.enclose prog_tgt)) (transl_all mn (interp_hCallE_src (massage_itr (_gstb sk_link) true itr r))) st)
+                   (EventsL.interp_Es (ModSemL.prog (ModL.enclose prog_mid)) (transl_all mn (interp_hCallE_src (massage_itr false itr r))) st)
+                   (EventsL.interp_Es (ModSemL.prog (ModL.enclose prog_tgt)) (transl_all mn (interp_hCallE_src (massage_itr true itr r))) st)
   .
-
   Let my_r := my_lemma2_r1 \6/ my_lemma2_r2.
-
   Ltac gsteps := HoareDef.steps.
-
   Lemma my_lemma2_aux
     :
       my_r <6= simg.
   Proof.
-    Local Opaque _kmns in_dec.
+    Local Opaque _frds in_dec.
     ginit.
     { i. eapply cpn6_wcompat; eauto with paco. }
     gcofix CIH. i. destruct PR.
@@ -1019,8 +944,6 @@ Section ADQ.
       { gsteps. gbase. eapply CIH. right. econs. auto. }
       rewrite <- bind_trigger. destruct e.
       { resub. destruct c. gsteps.
-        destruct (alist_find fn (_gstb sk_link)).
-        2: { admit "remove function existence checking in massage". }
         gsteps. destruct mr.
         { gsteps. }
         gsteps. hexploit (stb_find_iff_mid fn). i. des.
@@ -1111,8 +1034,8 @@ Section ADQ.
   Qed.
 
   Lemma my_lemma2 main_arg:
-    Beh.of_program (ModL.compile_arg (Mod.add_list (List.map SMod.to_src kmds ++ List.map (SMod.to_src ∘ massage_md _gstb true) umds)) (Any.pair true↑ main_arg)) <1=
-    Beh.of_program (ModL.compile_arg (Mod.add_list (List.map (KMod.transl_src kmns) _kmds ++ List.map (SMod.to_src ∘ massage_md _gstb false) umds)) main_arg).
+    Beh.of_program (ModL.compile_arg (Mod.add_list (List.map SMod.to_src kmds ++ List.map (SMod.to_src ∘ massage_md true) umds)) (Any.pair true↑ main_arg)) <1=
+    Beh.of_program (ModL.compile_arg (Mod.add_list (List.map (KMod.transl_src frds) _kmds ++ List.map (SMod.to_src ∘ massage_md false) umds)) main_arg).
   Proof.
     eapply adequacy_global_itree.
     exists (200)%ord.
@@ -1167,7 +1090,7 @@ Section ADQ.
 
   Lemma my_lemma3_aux md
     :
-      ModPair.sim (addtau_md md) (SMod.to_src (massage_md _gstb false md)).
+      ModPair.sim (addtau_md md) (SMod.to_src (massage_md false md)).
   Proof.
     econs; ss. i.
     eapply ModSemPair.mk with (wf:=fun (_: unit) '((mr_src, mp_src), (mr_tgt, mp_tgt)) =>
@@ -1250,11 +1173,11 @@ Section ADQ.
   Qed.
 
   Lemma my_lemma3:
-    Beh.of_program (ModL.compile (Mod.add_list (List.map (KMod.transl_src kmns) _kmds ++ List.map (SMod.to_src ∘ massage_md _gstb false) umds))) <1=
-    Beh.of_program (ModL.compile (Mod.add_list (List.map (KMod.transl_src kmns) _kmds ++ umds))).
+    Beh.of_program (ModL.compile (Mod.add_list (List.map (KMod.transl_src frds) _kmds ++ List.map (SMod.to_src ∘ massage_md false) umds))) <1=
+    Beh.of_program (ModL.compile (Mod.add_list (List.map (KMod.transl_src frds) _kmds ++ umds))).
   Proof.
     eapply refines_close.
-    transitivity (Mod.add_list (map (KMod.transl_src kmns) _kmds ++ map addtau_md umds)).
+    transitivity (Mod.add_list (map (KMod.transl_src frds) _kmds ++ map addtau_md umds)).
     { eapply adequacy_local_list. eapply Forall2_app.
       { eapply Forall2_impl.
         { refl. }
@@ -1277,14 +1200,14 @@ Section ADQ.
     }
   Qed.
 
-  Theorem adequacy_open:
-    refines_closed (Mod.add_list (List.map (SMod.to_tgt _gstb) kmds ++ umds))
-                   (Mod.add_list (List.map (KMod.transl_src kmns) _kmds ++ umds))
+  Theorem adequacy_open_aux:
+    refines_closed (Mod.add_list (List.map (SMod.to_tgt _stb) kmds ++ umds))
+                   (Mod.add_list (List.map (KMod.transl_src frds) _kmds ++ umds))
   .
   Proof.
-    transitivity (Mod.add_list (List.map (SMod.to_tgt _gstb) kmds ++ List.map (SMod.to_tgt _gstb ∘ massage_md _gstb true) umds)).
+    transitivity (Mod.add_list (List.map (SMod.to_tgt _stb) kmds ++ List.map (SMod.to_tgt _stb ∘ massage_md true) umds)).
     { eapply refines_close.
-      transitivity (Mod.add_list (map (SMod.to_tgt _gstb) kmds ++ map addtau_md umds)).
+      transitivity (Mod.add_list (map (SMod.to_tgt _stb) kmds ++ map addtau_md umds)).
       { eapply adequacy_local_list. eapply Forall2_app.
         { eapply Forall2_impl.
           { refl. }
@@ -1307,29 +1230,33 @@ Section ADQ.
       }
     }
     ii. eapply my_lemma3. eapply my_lemma2.
-    rewrite <- (map_map (massage_md _gstb true)). rewrite <- map_app.
+    rewrite <- (map_map (massage_md true)). rewrite <- map_app.
     eapply adequacy_type_arg.
-    { i. admit "main". }
+    { i. instantiate (1:=_stb). unfold _stb, _gstb, _kmss, map_snd. ss.
+      rewrite map_app in FIND. rewrite flat_map_app in FIND. rewrite map_app in FIND.
+      rewrite alist_find_app_o in FIND.
+      rewrite ! map_flat_map in FIND. rewrite flat_map_map in FIND. des_ifs.
+      clear - FIND. rewrite ! map_map in FIND. admit "ez". }
+    { i. right. admit "ez". }
+    { admit "main". }
     match goal with
     | H: Beh.of_program ?p0 x0 |- Beh.of_program ?p1 x0 => replace p1 with p0
     end.
     { auto. }
-    rewrite ModL.compile_compile_arg_nil. f_equal. f_equal.
-    match goal with
-    | |- _ = map (SMod.to_tgt ?gstb) _ => assert (_gstb = gstb)
-    end.
-    { unfold _gstb. extensionality sk.
-      rewrite map_app. rewrite flat_map_app. rewrite map_app.
-      f_equal.
-      { unfold _kmss. rewrite ! map_flat_map.
-        rewrite ! flat_map_map. f_equal. }
-      { unfold _umss. rewrite ! map_flat_map.
-        rewrite ! flat_map_map. f_equal. extensionality md.
-        ss. rewrite ! map_map. f_equal.
-        extensionality x. destruct x. ss.
-      }
-    }
-    rewrite <- H. rewrite map_app. rewrite map_map. ss.
+    rewrite ModL.compile_compile_arg_nil.
+    rewrite map_app. rewrite map_map. auto.
+  Qed.
+
+  End UMDS.
+
+  Theorem adequacy_open:
+    refines (Mod.add_list (List.map (SMod.to_tgt _stb) kmds))
+            (Mod.add_list (List.map (KMod.transl_src frds) _kmds))
+  .
+  Proof.
+    ii. eapply ModL.add_comm. eapply ModL.add_comm in PR.
+    rewrite <- Mod.add_list_app in *.
+    eapply adequacy_open_aux. auto.
   Qed.
 
 End ADQ.

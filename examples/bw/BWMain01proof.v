@@ -4,7 +4,7 @@ Require Import Skeleton.
 Require Import PCM.
 Require Import ModSem Behavior.
 Require Import Relation_Definitions.
-Require Import HoareDef BW1 BWMain0 BWMain1 SimModSem.
+Require Import HoareDef STB BW1 BWMain0 BWMain1 SimModSem.
 
 (*** TODO: export these in Coqlib or Universe ***)
 Require Import Relation_Operators.
@@ -51,7 +51,7 @@ Section SIMMODSEM.
     { unfold mainbody, mainF, ccall, hcall. init. harg.
       mDesAll. des; clarify.
       steps. rewrite Any.upcast_downcast in *. clarify.
-      destruct (alist_find "getbool" (BWStb ++ ClientStb ++ MainStb)) eqn:T; stb_tac; clarify.
+      destruct (to_stb (BWStb ++ ClientStb ++ MainStb) "getbool") eqn:T; unfold to_stb in T; stb_tac; clarify.
       steps. hcall _ _ _ with ""; ss.
       { splits; ss. ss. }
       mDesAll. clarify. steps.
@@ -70,7 +70,7 @@ Section SIMMODSEM.
         rewrite Any.upcast_downcast in *. clarify. steps.
         astop. steps. force_l. eexists. steps.
         force_l; et. steps.
-        destruct (alist_find "putint" (BWStb ++ ClientStb ++ MainStb)) eqn:T; stb_tac; clarify.
+        destruct (to_stb (BWStb ++ ClientStb ++ MainStb) "putint") eqn:T; stb_tac; clarify.
         steps.
 
         hcall ord_top _ _ with ""; auto.
@@ -84,7 +84,7 @@ Section SIMMODSEM.
         rewrite Any.upcast_downcast in *. clarify. astop.
         steps. force_l. eexists. steps.
         force_l; et. steps.
-        destruct (alist_find "putint" (BWStb ++ ClientStb ++ MainStb)) eqn:T; stb_tac; clarify.
+        destruct (to_stb (BWStb ++ ClientStb ++ MainStb) "putint") eqn:T; stb_tac; clarify.
         steps.
 
         hcall ord_top _ _ with ""; auto.

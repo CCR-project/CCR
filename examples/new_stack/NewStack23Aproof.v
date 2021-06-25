@@ -53,8 +53,8 @@ Section SIMMODSEM.
            top4
   .
 
-  Variable global_stb: list (string * fspec).
-  Hypothesis STBINCL: stb_incl (StackStb) global_stb.
+  Variable global_stb: gname -> option fspec.
+  Hypothesis STBINCL: stb_incl (to_stb StackStb) global_stb.
 
   Lemma _is_stack_wf
         h stk
@@ -381,8 +381,8 @@ Section SIMMOD.
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG stkRA Σ}.
 
-  Variable global_stb: Sk.t -> list (string * fspec).
-  Hypothesis STBINCL: forall sk, stb_incl (StackStb) (global_stb sk).
+  Variable global_stb: Sk.t -> gname -> option fspec.
+  Hypothesis STBINCL: forall sk, stb_incl (to_stb StackStb) (global_stb sk).
 
   Theorem correct: ModPair.sim (NewStack3A.Stack global_stb) (NewStack2.Stack).
   Proof.

@@ -717,7 +717,7 @@ Section HLEMMAS.
 
         (FUEL: (n1 + 7 < n0)%ord)
         (fsp: fspec)
-        (FIND: alist_find fn stb = Some fsp)
+        (FIND: stb fn = Some fsp)
         (NEXT: (next < at_most)%ord)
 
         (POST: gpaco7 (_sim_itree wf le) (cpn7 (_sim_itree wf le)) rg rg _ _ eqr n1 a
@@ -912,14 +912,14 @@ Require Import TODOYJ.
 Ltac astep_full _fn _args _next _n1 :=
   eapply (@APC_step_clo _ _ _fn _args _next _n1);
   [(try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; lia)]))|
-   (try by (stb_tac; refl))|
+   (try by ((try stb_tac); refl))|
    (eapply OrdArith.lt_from_nat; lia)|
   ].
 
 Ltac astep _fn _args :=
   eapply (@APC_step_clo _ _ _fn _args);
   [(try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r; eapply Nat.lt_succ_diag_r)]))|
-   (try by (stb_tac; refl))|
+   (try by ((try stb_tac); refl))|
    (eapply OrdArith.lt_from_nat; eapply Nat.lt_succ_diag_r)|
   ].
 

@@ -67,7 +67,7 @@ Section CANCEL.
     forall fn fsp (FIND: alist_find fn (_stb sk) = Some fsp), stb sk fn = Some fsp.
   Hypothesis STBSOUND:
     forall fn (FIND: alist_find fn (_stb sk) = None),
-      (<<NONE: stb sk fn = None>>) \/ (<<TRIVIAL: stb sk fn = Some fspec_trivial>>).
+      (<<NONE: stb sk fn = None>>) \/ (exists fsp, <<FIND: stb sk fn = Some fsp>> /\ <<TRIVIAL: forall mn x arg_src arg_tgt o r (PRE: fsp.(precond) mn x arg_src arg_tgt o r), o = ord_top>>).
 
   (* Let mss: list SModSem.t := (List.map ((flip SMod.get_modsem) sk) mds). *)
   (* Let sbtb: list (gname * fspecbody) := (List.flat_map (SModSem.fnsems) mss). *)
@@ -161,7 +161,7 @@ Section CANCEL.
 
   Lemma stb_find_iff fn
     :
-      ((<<NONE: stb sk fn = None>> \/ <<TRIVIAL: stb sk fn = Some fspec_trivial>>) /\
+      ((<<NONE: stb sk fn = None>> \/ (exists fsp, <<FIND: stb sk fn = Some fsp>> /\ <<TRIVIAL: forall mn x arg_src arg_tgt o r (PRE: fsp.(precond) mn x arg_src arg_tgt o r), o = ord_top>>)) /\
        (<<FINDMID: alist_find fn (ModSemL.fnsems ms_mid) = None>>) /\
        (<<FINDTGT: alist_find fn (ModSemL.fnsems ms_tgt) = None>>)) \/
 
@@ -354,13 +354,15 @@ Section CANCEL.
 
     steps. hexploit (stb_find_iff fn). i. des.
     { rewrite NONE. steps. }
-    { rewrite TRIVIAL. unfold HoareCall, put, discard.
+    { rewrite FIND. unfold HoareCall, put, discard.
       red in SIM. des_ifs. des. clarify. destruct l; ss.
       steps. des. red in x5. uipropall. des; clarify.
-      ss. destruct cur; ss. destruct tbr; ss.
-      { exfalso. hexploit x7; ss. }
-      seal_right. unseal_left. steps. rewrite TRIVIAL. steps. esplits; et.
-      steps.  rewrite FINDMID. steps.
+      ss. destruct tbr; ss.
+      { exfalso. hexploit TRIVIAL; et. i. subst. ss. hexploit x7; ss. }
+      seal_right. unseal_left. steps. rewrite FIND. steps. esplits; et.
+      steps. esplits; et.
+      { destruct cur; ss. hexploit x8; ss. i. subst. ss. }
+      steps. rewrite FINDMID. steps.
     }
     unfold HoareCall, put, guarantee, discard.
 
@@ -370,7 +372,13 @@ Section CANCEL.
 
     (*** exploiting both_tau ***)
     rewrite STB. ss. mred. force_r.
-    unseal_left. ired_both. rewrite STB. steps.
+    destruct (classic (tbr = true /\ forall mn x arg_src arg_tgt o r (PRE: f.(precond) mn x arg_src arg_tgt o r), o = ord_top)).
+    { des. subst. steps. des. destruct f. ss. subst.
+      ss. red in x5. uipropall. des; subst. ss. exfalso.
+      hexploit H0; et. i. subst. ss. hexploit x7; ss.  }
+    rename H into TRIVIAL.
+    unseal_left. ired_both. rewrite STB. steps. esplit.
+    { ii. subst. eapply TRIVIAL; ss. } steps.
 
     match goal with
     | |- _ ?i_tgt => replace i_tgt with (Ret tt;;; i_tgt)
@@ -483,6 +491,7 @@ Section CANCEL.
     }
   Unshelve.
     all: try (by apply Ord.O).
+    all: try (by apply 0).
   Qed.
 
   Let initial_r_state ms entry_r: r_state :=
