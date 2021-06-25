@@ -392,7 +392,15 @@ Section CANCEL.
   (* Let skenv: SkEnv.t := Sk.load_skenv sk. *)
   Let mss: list SModSem.t := (List.map ((flip SMod.get_modsem) sk) mds).
   Let sbtb: list (gname * fspecbody) := (List.flat_map (SModSem.fnsems) mss).
-  Let stb: list (gname * fspec) := List.map (fun '(fn, fs) => (fn, fs.(fsb_fspec))) sbtb.
+  Let _stb: list (gname * fspec) := List.map (fun '(fn, fs) => (fn, fs.(fsb_fspec))) sbtb.
+
+  Variable stb: gname -> option fspec.
+  Hypothesis STBCOMPLETE:
+    forall fn fsp (FIND: alist_find fn _stb = Some fsp), stb fn = Some fsp.
+  Hypothesis STBSOUND:
+    forall fn (FIND: alist_find fn _stb = None),
+      (<<NONE: stb fn = None>>) \/ (<<TRIVIAL: stb fn = Some fspec_trivial>>).
+
 
   Let mds_src: list Mod.t := List.map (SMod.to_src) mds.
   Let mds_mid: list Mod.t := List.map (SMod.to_mid stb) mds.
@@ -459,14 +467,14 @@ Section CANCEL.
   Ltac steps := repeat (mred; try _step ltac:(eapply simg_safe_spec); des_ifs_safe).
   Ltac steps_strong := repeat (mred; try (_step ltac:(idtac)); des_ifs_safe).
 
-  Lemma stb_find_iff fn
+  Lemma stb_find_iff_aux fn
     :
-      ((<<NONE: alist_find fn stb = None>>) /\
+      ((<<NONE: alist_find fn _stb = None>>) /\
        (<<FINDSRC: alist_find fn (fnsems ms_src) = None>>) /\
        (<<FINDMID: alist_find fn (fnsems ms_mid) = None>>)) \/
 
       (exists md (f: fspecbody),
-          (<<SOME: alist_find fn stb = Some (f: fspec)>>) /\
+          (<<SOME: alist_find fn _stb = Some (f: fspec)>>) /\
           (<<FINDSRC: alist_find fn (fnsems ms_src) =
                       Some (transl_all (T:=_)
                               (SModSem.mn
@@ -480,12 +488,36 @@ Section CANCEL.
   Proof.
     unfold ms_src, ms_mid, mds_mid, mds_src, SMod.to_src, SMod.to_mid.
     rewrite SMod.transl_fnsems. rewrite SMod.transl_fnsems. fold sk.
-    unfold stb at 1 3. unfold sbtb, mss. rewrite alist_find_map.
+    unfold _stb at 1 2. unfold sbtb, mss. rewrite alist_find_map.
     generalize mds. induction mds0; ss; auto. rewrite ! alist_find_app_o.
     erewrite ! SMod.red_do_ret2. rewrite ! alist_find_map. uo.
     destruct (alist_find fn (SModSem.fnsems (SMod.get_modsem a sk))) eqn:FIND.
     { right. esplits; et. }
     des.
+    { left. esplits; et. }
+    { right. esplits; et. }
+  Qed.
+
+  Lemma stb_find_iff fn
+    :
+      ((<<NONE: stb fn = None>> \/ <<TRIVIAL: stb fn = Some fspec_trivial>>) /\
+       (<<FINDSRC: alist_find fn (fnsems ms_src) = None>>) /\
+       (<<FINDMID: alist_find fn (fnsems ms_mid) = None>>)) \/
+
+      (exists md (f: fspecbody),
+          (<<STB: stb fn = Some (f: fspec)>>) /\
+          (<<FINDSRC: alist_find fn (fnsems ms_src) =
+                      Some (transl_all (T:=_)
+                              (SModSem.mn
+                                 (SMod.get_modsem md sk))
+                              ∘ fun_to_src (fsb_body f))>>) /\
+          (<<FINDMID: alist_find fn (fnsems ms_mid) =
+                      Some (transl_all (T:=_)
+                              (SModSem.mn
+                                 (SMod.get_modsem md sk))
+                              ∘ fun_to_mid stb (fsb_body f))>>)).
+  Proof.
+    hexploit (stb_find_iff_aux fn). i. des.
     { left. esplits; et. }
     { right. esplits; et. }
   Qed.
@@ -511,7 +543,11 @@ Section CANCEL.
     { steps. }
     steps. hexploit (stb_find_iff s). i. des.
     { rewrite NONE. steps. }
-    rewrite SOME. steps.
+    { rewrite TRIVIAL. steps. destruct rst_tgt0. steps.
+      destruct l; steps.
+      admit "".
+    }
+    rewrite STB. steps.
     destruct rst_tgt0 as [mrs_tgt0 [|frs_hd frs_tl]]; ss.
     { steps. }
     steps. rewrite FINDMID. unfold fun_to_mid. steps.
@@ -623,7 +659,8 @@ Section CANCEL.
     destruct st_src0 as [rst_src0 pst_src0]; ss.
     ired_both. hexploit (stb_find_iff fn). i. des.
     { rewrite NONE. steps. }
-    rewrite SOME. steps. destruct tbr.
+    { rewrite TRIVIAL. admit "". }
+    rewrite STB. steps. destruct tbr.
     (* PURE *)
     { seal_left.
       Local Opaque ord_lt. steps.
@@ -673,8 +710,8 @@ Section CANCEL.
   Proof.
     unfold ms_mid, ms_src, mds_src, mds_mid, ModL.enclose.
     rewrite ! Mod.add_list_sk. f_equal.
-    generalize mds. clear. i. induction mds0; ss.
-    rewrite IHmds0. auto.
+    generalize mds. clear. i. induction mds; ss.
+    rewrite IHl. auto.
   Qed.
 
   Lemma initial_mrs_eq:
@@ -685,8 +722,8 @@ Section CANCEL.
     unfold mds_src, mds_mid in H. rewrite H.
     generalize (ModL.sk (Mod.add_list (List.map SMod.to_src mds))). i.
     rewrite ! Mod.add_list_initial_mrs.
-    generalize mds. clear. i. induction mds0; auto.
-    ss. rewrite IHmds0. auto.
+    generalize mds. clear. i. induction mds; auto.
+    ss. rewrite IHl. auto.
   Qed.
 
   Lemma fns_eq:
@@ -733,9 +770,7 @@ Section CANCEL.
       (* stb main *)
       hexploit (stb_find_iff "main"). i. des.
       { unfold ms_src in FINDSRC. rewrite FINDSRC. steps. }
-      unfold stb in SOME.
-      rewrite alist_find_map in SOME. unfold o_map in SOME. des_ifs.
-      destruct f. ss. subst. ss.
+      { unfold ms_src in FINDSRC. rewrite FINDSRC. steps. }
 
       fold ms_src. fold ms_mid.
       rewrite FINDSRC. rewrite FINDMID. steps.

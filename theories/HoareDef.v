@@ -72,6 +72,11 @@ Section FSPEC.
       (fun _ x arg_src arg_tgt o => (∃ (aa: AA), ⌜arg_src = aa↑⌝ ∧ precond x aa arg_tgt o)%I)
       (fun _ x ret_src ret_tgt => (∃ (ar: AR), ⌜ret_src = ar↑⌝ ∧ postcond x ar ret_tgt)%I)
   .
+
+  Definition fspec_trivial: fspec :=
+    mk_fspec (meta:=unit) (fun _ _ argh argl o => (⌜argh = argl ∧ o = ord_top⌝: iProp)%I)
+             (fun _ _ reth retl => (⌜reth = retl⌝: iProp)%I)
+  .
 End FSPEC.
 
 
@@ -261,7 +266,7 @@ Section CANCEL.
   (*** TODO: try above idea; if it fails, document it; and refactor below with alist ***)
 
   Variable mn: mname.
-  Variable stb: list (gname * fspec).
+  Variable stb: gname -> option fspec.
 
   Definition handle_hCallE_src: hCallE ~> itree Es :=
     fun _ '(hCall tbr fn varg_src) =>
@@ -291,7 +296,7 @@ Section CANCEL.
   Definition handle_hCallE_mid (ord_cur: ord): hCallE ~> itree Es :=
     fun _ '(hCall tbr fn varg_src) =>
       tau;;
-      f <- (alist_find fn stb)ǃ;;
+      f <- (stb fn)ǃ;;
       ord_next <- (if tbr then o0 <- trigger (Choose _);; Ret (ord_pure o0) else Ret ord_top);;
       guarantee(ord_lt ord_next ord_cur);;;
       let varg_mid: Any_mid := Any.pair ord_next↑ varg_src in
@@ -317,7 +322,7 @@ Section CANCEL.
 
   Definition handle_hCallE_tgt (ord_cur: ord): hCallE ~> stateT Σ (itree Es) :=
     fun _ '(hCall tbr fn varg_src) ctx =>
-      f <- (alist_find fn stb)ǃ;;
+      f <- (stb fn)ǃ;;
       '(ctx, vret_src) <- (HoareCall mn tbr ord_cur f fn varg_src ctx);;
       Ret (ctx, vret_src)
   .
@@ -472,8 +477,8 @@ Section SMODSEM.
   .
 
   Definition to_src (ms: t): ModSem.t := transl (fun mn => fun_to_src ∘ fsb_body) (fun _ => ε) ms.
-  Definition to_mid (stb: list (gname * fspec)) (ms: t): ModSem.t := transl (fun mn => fun_to_mid stb ∘ fsb_body) (fun _ => ε) ms.
-  Definition to_tgt (stb: list (gname * fspec)) (ms: t): ModSem.t := transl (fun mn => fun_to_tgt mn stb) (initial_mr) ms.
+  Definition to_mid (stb: gname -> option fspec) (ms: t): ModSem.t := transl (fun mn => fun_to_mid stb ∘ fsb_body) (fun _ => ε) ms.
+  Definition to_tgt (stb: gname -> option fspec) (ms: t): ModSem.t := transl (fun mn => fun_to_tgt mn stb) (initial_mr) ms.
 
   Definition main (mainpre: Any.t -> ord -> iProp) (mainbody: (option mname * Any.t) -> itree (hCallE +' pE +' eventE) Any.t): t := {|
       fnsems := [("main", (mk_specbody (mk_simple (fun (_: unit) => (mainpre, fun _ => (⌜True⌝: iProp)%I))) mainbody))];
@@ -506,8 +511,8 @@ Section SMOD.
   .
 
   Definition to_src (md: t): Mod.t := transl (fun _ _ => fun_to_src ∘ fsb_body) (fun _ => ε) md.
-  Definition to_mid (stb: list (gname * fspec)) (md: t): Mod.t := transl (fun _ _ => fun_to_mid stb ∘ fsb_body) (fun _ => ε) md.
-  Definition to_tgt (stb: Sk.t -> list (gname * fspec)) (md: t): Mod.t :=
+  Definition to_mid (stb: gname -> option fspec) (md: t): Mod.t := transl (fun _ _ => fun_to_mid stb ∘ fsb_body) (fun _ => ε) md.
+  Definition to_tgt (stb: Sk.t -> gname -> option fspec) (md: t): Mod.t :=
     transl (fun sk mn => fun_to_tgt mn (stb sk)) SModSem.initial_mr md.
 
   (* Definition transl (tr: SModSem.t -> ModSem.t) (md: t): Mod.t := {| *)
@@ -1145,7 +1150,7 @@ End AUX.
 Section AUX.
 
 Context `{Σ: GRA.t}.
-Variable stb: list (gname * fspec).
+Variable stb: gname -> option fspec.
 (* itree reduction *)
 Lemma interp_mid_bind
       (R S: Type)

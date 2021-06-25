@@ -17,17 +17,6 @@ Set Implicit Arguments.
 
 
 
-Section AUX.
-  Context `{Σ: GRA.t}.
-  Definition fspec_trivial: fspec :=
-    mk_fspec (meta:=unit) (fun _ _ argh argl o => (⌜argh = argl ∧ o = ord_top⌝: iProp)%I)
-             (fun _ _ reth retl => (⌜reth = retl⌝: iProp)%I)
-  .
-
-End AUX.
-
-
-
 (*** TODO: remove redundancy ***)
 Ltac my_red_both := try (prw _red_gen 2 0); try (prw _red_gen 1 0).
 
