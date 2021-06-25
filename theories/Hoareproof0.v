@@ -447,21 +447,6 @@ Section CANCEL.
     all: try (by apply Ord.O).
   Qed.
 
-  Variable main_fsb: fspecbody.
-  Hypothesis MAINM: alist_find "main" sbtb = Some main_fsb.
-
-  Variable main_arg_tgt: Any.t.
-  Variable main_arg_src: Any.t.
-
-  Hypothesis MAINPRE:
-    exists (x: main_fsb.(meta)) (entry_r: Σ),
-      (<<PRE: main_fsb.(precond) None x main_arg_src main_arg_tgt ord_top entry_r>>) /\
-      (<<WFR: URA.wf (entry_r ⋅ rsum (ModSemL.initial_r_state ms_tgt))>>) /\
-      (<<RET: forall ret_src ret_tgt r
-                     (POST: main_fsb.(postcond) None x ret_src ret_tgt r),
-          ret_src = ret_tgt>>)
-  .
-
   Require Import Logic.
 
   Let initial_r_state ms entry_r: r_state :=
@@ -472,23 +457,39 @@ Section CANCEL.
 
   Opaque EventsL.interp_Es.
 
-  Theorem adequacy_type_t2m: Beh.of_program (ModL.compile_arg (Mod.add_list mds_tgt) main_arg_tgt) <1=
-                             Beh.of_program (ModL.compile_arg (Mod.add_list mds_mid) (Any.pair ord_top↑ main_arg_src)).
+  Theorem adequacy_type_t2m
+          main_arg_src main_arg_tgt
+          (MAINM:
+             forall (main_fsb: fspecbody) (MAIN: alist_find "main" sbtb = Some main_fsb),
+             exists (x: main_fsb.(meta)) entry_r,
+               (<<PRE: main_fsb.(precond) None x main_arg_src main_arg_tgt ord_top entry_r>>) /\
+               (<<WFR: URA.wf (entry_r ⋅ rsum (ModSemL.initial_r_state ms_tgt))>>) /\
+               (<<RET: forall ret_src ret_tgt r
+                              (POST: main_fsb.(postcond) None x ret_src ret_tgt r),
+                   ret_src = ret_tgt>>)): 
+    Beh.of_program (ModL.compile_arg (Mod.add_list mds_tgt) main_arg_tgt) <1=
+    Beh.of_program (ModL.compile_arg (Mod.add_list mds_mid) (Any.pair ord_top↑ main_arg_src)).
   Proof.
-    destruct MAINPRE. rename x into metav. des.
-    
-    assert (IWF: URA.wf (entry_r ⋅ rsum (fun mn => match alist_find mn (ModSemL.initial_mrs ms_tgt) with
-                                                   | Some r => fst r
-                                                   | None => ε
-                                                   end, []))).
-    { clear - WFR. unfold ModSemL.initial_r_state in WFR.
-      rewrite ! rsum_cons in WFR. rewrite ! URA.unit_idl in WFR. auto. }
     eapply adequacy_global_itree.
     exists (Ord.from_nat 100%nat). ss.
     ginit.
     { eapply cpn6_wcompat; eauto with paco. }
     unfold ModSemL.initial_itr, ModSemL.initial_itr_arg. Local Opaque ModSemL.prog. ss.
     unfold ITree.map.
+
+    destruct (alist_find "main" sbtb) eqn:MAIN; cycle 1.
+    { hexploit (stb_find_iff "main"). i. des; clarify.
+      Local Transparent ModSemL.prog.
+      seal_right. ss. unfold ms_mid in FINDMID. rewrite FINDMID. steps.
+      Local Opaque ModSemL.prog. }
+    rename f into main_fsb. hexploit MAINM; et. i. des. rename x into metav. 
+
+    assert (IWF: URA.wf (entry_r ⋅ rsum (fun mn => match alist_find mn (ModSemL.initial_mrs ms_tgt) with
+                                                   | Some r => fst r
+                                                   | None => ε
+                                                   end, []))).
+    { clear - WFR. unfold ModSemL.initial_r_state in WFR.
+      rewrite ! rsum_cons in WFR. rewrite ! URA.unit_idl in WFR. auto. }
     unfold assume.
     steps. unfold ModL.wf in *. des.
     assert (NODUP: List.NoDup (map fst ms_tgt.(ModSemL.initial_mrs))).
@@ -508,9 +509,9 @@ Section CANCEL.
     unfold mrec.
 
     hexploit (stb_find_iff "main"). i. des; clarify.
-    { clear - NONE MAINM. unfold stb, _stb in NONE.
+    { clear - NONE MAIN. unfold stb, _stb in NONE.
       rewrite alist_find_map in NONE. uo.
-      unfold sbtb in MAINM. rewrite MAINM in NONE. ss. }
+      unfold sbtb in MAIN. rewrite MAIN in NONE. ss. }
 
     Local Transparent ModSemL.prog. ss.
     rewrite FINDTGT. rewrite FINDMID. steps.

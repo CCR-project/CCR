@@ -703,12 +703,7 @@ Section CANCEL.
     extensionality fnsb. destruct fnsb as [fn sb]. ss.
   Qed.
 
-  Variable main_fsb: fspecbody.
-  Hypothesis MAINM: alist_find "main" sbtb = Some main_fsb.
-
-  Variable main_arg: Any.t.
-
-  Theorem adequacy_type_m2s:
+  Theorem adequacy_type_m2s main_arg:
     Beh.of_program (ModL.compile_arg (Mod.add_list mds_mid) (Any.pair ord_top↑ main_arg)) <1=
     Beh.of_program (ModL.compile_arg (Mod.add_list mds_src) main_arg).
   Proof.

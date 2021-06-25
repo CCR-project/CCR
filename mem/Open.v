@@ -13,6 +13,7 @@ Require Import Logic.
 Require Import HoareDef Hoare.
 Require Import OpenDef.
 Require Import IRed.
+Require Import SimModSem.
 
 Set Implicit Arguments.
 
@@ -245,10 +246,10 @@ Section MODAUX.
   Theorem adequacy_addtau
           (md: Mod.t)
     :
-      refines md (addtau_md md)
+      ModPair.sim (addtau_md md) md
   .
   Proof.
-    eapply SimModSemHint.adequacy_local. econs; ss. i. econs.
+    econs; ss. i. econs.
     { instantiate (1:=fun (_ _: unit) => True). ss. }
     { instantiate (1:=fun (_: unit) '(st_src, st_tgt) => st_src = st_tgt). ss.
       rewrite <- map_id. eapply Forall2_fmap_2. eapply Forall2_impl.
@@ -313,10 +314,10 @@ Section MODAUX.
   Theorem adequacy_rmtau
           md
     :
-      refines (addtau_md md) md
+      ModPair.sim md (addtau_md md)
   .
   Proof.
-    eapply SimModSemHint.adequacy_local. econs; ss. i. econs.
+    econs; ss. i. econs.
     { instantiate (1:=fun (_ _: unit) => True). ss. }
     { instantiate (1:=fun (_: unit) '(st_src, st_tgt) => st_src = st_tgt). ss.
       erewrite <- map_id at 1. eapply Forall2_fmap_2. eapply Forall2_impl.
@@ -678,8 +679,6 @@ End RDB.
 
 
 
-Require Import SimModSemL.
-Require Import SimModSemHint.
 Require Import Hoare.
 Require Import HTactics ProofMode.
 
@@ -892,7 +891,6 @@ Section ADQ.
     steps. force_l. eexists. force_l.
     { instantiate (1:=ε). instantiate (1:=ε). rewrite URA.unit_id. auto. }
     steps.
-    (* can not Qed bcz of Coq bug... *)
     Unshelve. all: try exact tt.
   Qed.
 
@@ -919,9 +917,6 @@ Section ADQ.
     { ss. }
     { ss. }
   Qed.
-
-  Let ns := mk_sk_gnames (fun sk => mk_gnames (fun fn => is_some (alist_find fn (_gstb sk)))).
-  Local Existing Instances ns.
 
   Hypothesis WFR: URA.wf (List.fold_left (⋅) (List.map (SModSem.initial_mr) kmss) ε).
   (* Hypothesis MAINM: In (SMod.main mainpre mainbody) kmds. *)
@@ -1177,45 +1172,116 @@ Section ADQ.
     Unshelve. all: try (exact Ord.O).
   Qed.
 
+  Lemma my_lemma3_aux md
+    :
+      ModPair.sim (addtau_md md) (SMod.to_src (massage_md _gstb false md)).
+  Proof.
+    econs; ss. i.
+    eapply ModSemPair.mk with (wf:=fun (_: unit) '((mr_src, mp_src), (mr_tgt, mp_tgt)) =>
+                                     mp_tgt = Any.pair mr_src↑ mp_src) (le:=top2).
+    { ss. }
+    { ss. rewrite ! map_map.
+      eapply Forall2_apply_Forall2.
+      { refl. }
+      i. subst. destruct b as [fn f]. ss. econs.
+      { ss. }
+      ii. subst.
+      destruct mrs_src as [mr_src mp_src]. destruct mrs_tgt as [mr_tgt mp_tgt]. subst.
+      exists 100. ginit. unfold fun_to_src, body_to_src. ss. destruct y.
+      rewrite interp_src_bind.
+      guclo @lordC_spec. econs.
+      { instantiate (1:=(50+50)%ord). rewrite <- OrdArith.add_from_nat. refl. }
+      unfold addtau_ktr. erewrite (idK_spec (addtau (f (o, t)))).
+      guclo @lbindC_spec. econs.
+      { instantiate (1:=tt).
+        instantiate (1:=fun '(mr_src, mp_src, fr_src) '(mr_tgt, mp_tgt, fr_tgt) ret_src ret_tgt => mp_tgt = Any.pair mr_src↑ mp_src /\ snd ret_tgt = ret_src).
+        generalize (f (o, t)). generalize (@URA.unit (GRA.to_URA Σ)) at 1 3.
+        revert mr_src mp_src mr_tgt.
+        gcofix CIH. i. ides i.
+        { steps. }
+        { steps. gbase. eapply CIH. }
+        rewrite <- bind_trigger. destruct e.
+        { resub. destruct c0. steps. gstep. econs; et. i.
+          exists 100. steps. gbase. destruct w1. eapply CIH.
+        }
+        destruct s.
+        { resub. destruct r0.
+          { ired_both. force_r. steps.
+            { instantiate (1:=100). shelve. }
+            rewrite Any.pair_split in *. clarify.
+            gbase. eapply CIH.
+          }
+          { ired_both. steps. gbase. eapply CIH. }
+          { ired_both. force_r. steps.
+            { instantiate (1:=100). shelve. }
+            rewrite Any.pair_split in *. clarify.
+            rewrite Any.upcast_downcast in *. clarify.
+            gbase. eapply CIH.
+          }
+          { ired_both. steps. gbase. eapply CIH. }
+        }
+        destruct s.
+        { resub. destruct p.
+          { ired_both. force_r. steps.
+            { instantiate (1:=100). shelve. }
+            steps. rewrite Any.pair_split in *. clarify.
+            gbase. eapply CIH. }
+          { ired_both. force_r. steps.
+            { instantiate (1:=100). shelve. }
+            rewrite Any.pair_split in *. clarify.
+            gbase. eapply CIH.
+          }
+        }
+        { resub. destruct e.
+          { ired_both. resub. force_r. i. steps. force_l. exists x. steps.
+            gbase. eapply CIH. }
+          { ired_both. resub. force_l. force_l. i.
+            force_r. exists x. steps. gbase. eapply CIH. }
+          { ired_both. resub. steps. gstep. econs. i. esplits.
+            steps. gbase. eapply CIH.
+          }
+        }
+      }
+      { i. unfold idK.
+        destruct vret_tgt. ss. destruct st_src1, st_tgt1. destruct p, p0.
+        ss. des. clarify. steps.
+      }
+    }
+    { ss. }
+    { exists tt. ss. }
+    Unshelve. all: try (exact 0).
+    { rewrite <- ! OrdArith.add_from_nat. eapply OrdArith.lt_from_nat. lia. }
+    { rewrite <- ! OrdArith.add_from_nat. eapply OrdArith.lt_from_nat. lia. }
+    { rewrite <- ! OrdArith.add_from_nat. eapply OrdArith.lt_from_nat. lia. }
+    { rewrite <- ! OrdArith.add_from_nat. eapply OrdArith.lt_from_nat. lia. }
+  Qed.
+
   Lemma my_lemma3:
     Beh.of_program (ModL.compile (Mod.add_list (List.map (KMod.transl_src kmns) _kmds ++ List.map (SMod.to_src ∘ massage_md _gstb false) umds))) <1=
     Beh.of_program (ModL.compile (Mod.add_list (List.map (KMod.transl_src kmns) _kmds ++ umds))).
   Proof.
-    eapply refines_close. eapply adequacy_local_list. eapply Forall2_app.
-    { eapply Forall2_impl.
-      { refl. }
-      i. subst. eapply ModPair.self_sim.
-    }
-    { erewrite <- (map_id umds) at 1. eapply Forall2_apply_Forall2.
-      { refl. }
-      i. subst. econs; ss. i.
-      eapply ModSemPair.mk with (wf:=fun (_: unit) '((mr_src, mp_src), (mr_tgt, mp_tgt)) =>
-                                       mp_tgt = Any.pair mr_src↑ mp_src) (le:=top2).
-      { ss. }
-      { ss. rewrite ! map_map.
-        erewrite <- (map_id (ModSem.fnsems (Mod.get_modsem b sk))) at 1.
-        eapply Forall2_apply_Forall2.
+    eapply refines_close.
+    transitivity (Mod.add_list (map (KMod.transl_src kmns) _kmds ++ map addtau_md umds)).
+    { eapply adequacy_local_list. eapply Forall2_app.
+      { eapply Forall2_impl.
         { refl. }
-        i. subst. destruct b0 as [fn f]. ss. econs.
-        { ss. }
-        ii. subst.
-        destruct mrs_src as [mr_src mp_src]. destruct mrs_tgt as [mr_tgt mp_tgt]. subst.
-        exists 100. ginit. unfold fun_to_src, body_to_src. ss. destruct y.
-        rewrite interp_src_bind.
-        guclo lordC_spec. econs.
-        { instantiate (1:=(50+50)%ord). rewrite <- OrdArith.add_from_nat. refl. }
-        erewrite (idK_spec (f (o, t))).
-        guclo lbindC_spec. econs.
-        { instantiate (1:=tt). rewrite <- idK_spec. generalize (f (o, t)).
-          admit "local sim".
-        }
-        i. unfold idK. gsteps. gstep.
-        admit "local sim".
+        i. subst. eapply ModPair.self_sim.
       }
-      { ss. }
-      { exists tt. ss. }
+      { eapply Forall2_apply_Forall2.
+        { refl. }
+        i. subst. eapply my_lemma3_aux.
+      }
     }
-    Unshelve. all: try (exact top4).
+    { eapply adequacy_local_list. eapply Forall2_app.
+      { eapply Forall2_impl.
+        { refl. }
+        i. subst. eapply ModPair.self_sim.
+      }
+      { erewrite <- (map_id umds) at 1. eapply Forall2_apply_Forall2.
+        { refl. }
+        i. subst. eapply adequacy_rmtau.
+      }
+    }
   Qed.
 
   Theorem adequacy_open:
@@ -1224,14 +1290,33 @@ Section ADQ.
   .
   Proof.
     transitivity (Mod.add_list (List.map (SMod.to_tgt _gstb) kmds ++ List.map (SMod.to_tgt _gstb ∘ massage_md _gstb true) umds)).
-    { admit "". }
+    { eapply refines_close.
+      transitivity (Mod.add_list (map (SMod.to_tgt _gstb) kmds ++ map addtau_md umds)).
+      { eapply adequacy_local_list. eapply Forall2_app.
+        { eapply Forall2_impl.
+          { refl. }
+          i. subst. eapply ModPair.self_sim.
+        }
+        { erewrite <- (map_id umds) at 2. eapply Forall2_apply_Forall2.
+          { refl. }
+          i. subst. eapply adequacy_addtau.
+        }
+      }
+      { eapply adequacy_local_list. eapply Forall2_app.
+        { eapply Forall2_impl.
+          { refl. }
+          i. subst. eapply ModPair.self_sim.
+        }
+        { eapply Forall2_apply_Forall2.
+          { refl. }
+          i. subst. eapply my_lemma1. auto.
+        }
+      }
+    }
     ii. eapply my_lemma3. eapply my_lemma2.
     rewrite <- (map_map (massage_md _gstb true)). rewrite <- map_app.
     eapply adequacy_type_arg.
-    { admit "main". }
-    { admit "main". }
-    { admit "initial resource". }
-    { admit "post". }
+    { i. admit "main". }
     match goal with
     | H: Beh.of_program ?p0 x0 |- Beh.of_program ?p1 x0 => replace p1 with p0
     end.
@@ -1252,7 +1337,6 @@ Section ADQ.
       }
     }
     rewrite <- H. rewrite map_app. rewrite map_map. ss.
-    Unshelve. all: admit "main".
   Qed.
 
 End ADQ.

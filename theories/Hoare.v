@@ -99,17 +99,19 @@ Section CANCEL.
   Let rsum: r_state -> Σ :=
     fun '(mrs_tgt, frs_tgt) => (fold_left (⋅) (List.map (mrs_tgt <*> fst) ms_tgt.(ModSemL.initial_mrs)) ε) ⋅ (fold_left (⋅) frs_tgt ε).
 
-  Theorem adequacy_type_arg (main_fsb: fspecbody) (x: main_fsb.(meta))
-          main_arg_tgt main_arg_src entry_r
-          (MAINM: alist_find "main" sbtb = Some main_fsb)
-          (PRE: main_fsb.(precond) None x main_arg_src main_arg_tgt ord_top entry_r)
-          (WFR: URA.wf (entry_r ⋅ rsum (ModSemL.initial_r_state ms_tgt)))
-          (RET: forall ret_src ret_tgt r
-                       (POST: main_fsb.(postcond) None x ret_src ret_tgt r),
-              ret_src = ret_tgt)
+  Theorem adequacy_type_arg
+          main_arg_tgt main_arg_src
+          (MAINM:
+             forall (main_fsb: fspecbody) (MAIN: alist_find "main" sbtb = Some main_fsb),
+             exists (x: main_fsb.(meta)) entry_r,
+               (<<PRE: main_fsb.(precond) None x main_arg_src main_arg_tgt ord_top entry_r>>) /\
+               (<<WFR: URA.wf (entry_r ⋅ rsum (ModSemL.initial_r_state ms_tgt))>>) /\
+               (<<RET: forall ret_src ret_tgt r
+                              (POST: main_fsb.(postcond) None x ret_src ret_tgt r),
+                   ret_src = ret_tgt>>))
     :
-    Beh.of_program (ModL.compile_arg (Mod.add_list mds_tgt) main_arg_tgt) <1=
-    Beh.of_program (ModL.compile_arg (Mod.add_list mds_src) main_arg_src).
+      Beh.of_program (ModL.compile_arg (Mod.add_list mds_tgt) main_arg_tgt) <1=
+      Beh.of_program (ModL.compile_arg (Mod.add_list mds_src) main_arg_src).
   Proof.
     ii. eapply adequacy_type_m2s; et.
     eapply adequacy_type_t2m; et.
@@ -130,6 +132,7 @@ Section CANCEL.
   Theorem adequacy_type: refines_closed (Mod.add_list mds_tgt) (Mod.add_list mds_src).
   Proof.
     ii. eapply adequacy_type_arg; et.
+    i. clarify. esplits; et.
     { ss. uipropall. split; auto. red. uipropall. }
     { i. ss. red in POST. uipropall. des. red in POST0. uipropall. }
     Unshelve. ss.
