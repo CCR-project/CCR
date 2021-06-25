@@ -602,7 +602,7 @@ Section PROOFLINK.
 
   Theorem compile_behavior_improves
           (srcs : list Imp.program) (tgts : Coqlib.nlist Csharpminor.program)
-          (COMP: Forall2 (fun src tgt => compile (lift src) = OK tgt) srcs tgts)
+          (COMP: Forall2 (fun src tgt => compile_imp src = OK tgt) srcs tgts)
           (LINKSRC: exists srcl, link_imps srcs = Some srcl)
     :
       exists tgtl, ((link_list tgts = Some tgtl) /\

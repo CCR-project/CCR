@@ -196,6 +196,8 @@ Definition compile (src : Imp.programL) : res program :=
   else Error [MSG "Imp2csharpminor compilation failed; duplicated declarations"]
 .
 
+Definition compile_imp p := compile (lift p).
+
 Global Opaque init_g0.
 Global Opaque init_g.
 

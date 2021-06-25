@@ -166,7 +166,8 @@ Separate Extraction
    Imp2Asm.ASMGEN.list_type_to_typelist
    Imp2Asm.ASMGEN.transf_csharpminor_program
    Imp2CsharpminorLink.link_imps
-   Imp.lift Imp2Csharpminor.compile
+   Imp2Csharpminor.compile
+   Imp2Csharpminor.compile_imp
    imp_factorial_prog
    imp_simple_prog
    imp_mutsumF_prog imp_mutsumG_prog imp_mutsumMain_prog

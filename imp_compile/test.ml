@@ -38,46 +38,65 @@ let add_builtins p =
   List.fold_left add_builtin p C2C.builtins_generic.builtin_functions
 
 
+(* Csharpminor program compilation *)
+let compile_csm p ofile =
+  let cl_built = add_builtins p in
+  (* Convert to Asm *)
+  (match Compiler.apply_partial
+           (Imp2Asm.ASMGEN.transf_csharpminor_program cl_built)
+           Asmexpand.expand_program with
+   | Errors.OK asm ->
+      (* Print Asm in text form *)
+      let oc = open_out ofile in
+      PrintAsm.print_program oc asm;
+      close_out oc
+   | Errors.Error msg ->
+      let loc = file_loc ofile in
+      fatal_error loc "%a"  print_error msg)
+
+
 (* Imp program compilations *)
 let compile_imp p ofile =
+  (* Convert Imp to Csharpminor *)
+  let i2c = Imp2Csharpminor.compile_imp p in
+  match i2c with
+  | Errors.OK csm_out ->
+     compile_csm csm_out ofile
+  | Errors.Error msg ->
+     let loc = file_loc ofile in
+     fatal_error loc "%a"  print_error msg
+
+
+(* Imp programL compilations for linked imps *)
+let compile_impL p ofile =
   (* Convert Imp to Csharpminor *)
   let i2c = Imp2Csharpminor.compile p in
   match i2c with
   | Errors.OK csm_out ->
-     let cl_built = add_builtins csm_out in
-     (* Convert to Asm *)
-     (match Compiler.apply_partial
-              (Imp2Asm.ASMGEN.transf_csharpminor_program cl_built)
-              Asmexpand.expand_program with
-      | Errors.OK asm ->
-         (* Print Asm in text form *)
-         let oc = open_out ofile in
-         PrintAsm.print_program oc asm;
-         close_out oc
-      | Errors.Error msg ->
-         let loc = file_loc ofile in
-         fatal_error loc "%a"  print_error msg)
+     compile_csm csm_out ofile
   | Errors.Error msg ->
-     print_endline "imp to clight failed"
+     let loc = file_loc ofile in
+     fatal_error loc "%a"  print_error msg
+
 
 
 let main =
   print_endline "Start Imp compilations...";
-  compile_imp (Imp.lift ImpSimple.imp_simple_prog) "simple.s";
-  compile_imp (Imp.lift ImpFactorial.imp_factorial_prog) "factorial.s";
-  compile_imp (Imp.lift ImpMutsum.imp_mutsumF_prog) "mutsumF.s";
-  compile_imp (Imp.lift ImpMutsum.imp_mutsumG_prog) "mutsumG.s";
-  compile_imp (Imp.lift ImpMutsum.imp_mutsumMain_prog) "mutsumMain.s";
-  compile_imp (Imp.lift ImpKnot.imp_knot_prog) "knot.s";
-  compile_imp (Imp.lift ImpMem1.imp_mem1_f) "mem1F.s";
-  compile_imp (Imp.lift ImpMem1.imp_mem1_main) "mem1Main.s";
-  compile_imp (Imp.lift ImpMem2.imp_mem2_prog) "mem2.s";
+  compile_imp (ImpSimple.imp_simple_prog) "simple.s";
+  compile_imp (ImpFactorial.imp_factorial_prog) "factorial.s";
+  compile_imp (ImpMutsum.imp_mutsumF_prog) "mutsumF.s";
+  compile_imp (ImpMutsum.imp_mutsumG_prog) "mutsumG.s";
+  compile_imp (ImpMutsum.imp_mutsumMain_prog) "mutsumMain.s";
+  compile_imp (ImpKnot.imp_knot_prog) "knot.s";
+  compile_imp (ImpMem1.imp_mem1_f) "mem1F.s";
+  compile_imp (ImpMem1.imp_mem1_main) "mem1Main.s";
+  compile_imp (ImpMem2.imp_mem2_prog) "mem2.s";
   let _link1 = (Imp2CsharpminorLink.link_imps [ImpLink.imp_linkMain_prog; ImpLink.imp_linkF_prog; ImpLink.imp_linkG_prog]) in
   match _link1 with
   | Some link1 ->
-     print_endline "link1 success";
-     compile_imp (link1) "link.s";
-     print_endline "Done."
+     print_endline "link1 succeed.";
+     compile_impL (link1) "link.s";
+     print_endline "Done!"
   | None ->
-     print_endline "link1 failed";
-     print_endline "Done."
+     print_endline "link1 failed.";
+     print_endline "Done!"
