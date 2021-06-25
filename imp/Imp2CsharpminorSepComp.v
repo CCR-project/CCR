@@ -426,7 +426,7 @@ Section PROOFSINGLE.
         (SINIT: srcst = imp_initial_state src)
         (TINIT: Csharpminor.initial_state tgt tgtst)
     :
-      <<IMPROVES: @improves2 _ (Csharpminor.semantics tgt) srcst tgtst>>.
+      <<IMPROVES: @improves_state2 _ (Csharpminor.semantics tgt) srcst tgtst>>.
   Proof.
     eapply adequacy; eauto.
     { apply Ordinal.Ord.lt_well_founded. }
@@ -563,9 +563,12 @@ Section PROOFLINK.
 
   Context `{Σ: GRA.t}.
 
-  Definition src_initial_state (src : ModL.t) := (ModL.compile src).(initial_state).
-  Definition imps_init (srcs : list Imp.program) :=
-    let srcs_mod := List.map ImpMod.get_mod srcs in src_initial_state (Mod.add_list (Mem :: srcs_mod)).
+  Definition imps_sem (srcs : list Imp.program) :=
+    let srcs_mod := List.map ImpMod.get_mod srcs in ModL.compile (Mod.add_list (Mem :: srcs_mod)).
+
+  (* Definition src_initial_state (src : ModL.t) := (ModL.compile src).(initial_state). *)
+  (* Definition imps_init (srcs : list Imp.program) := *)
+  (*   let srcs_mod := List.map ImpMod.get_mod srcs in src_initial_state (Mod.add_list (Mem :: srcs_mod)). *)
 
   Lemma compile_behavior_improves_compile
         (srcs : list Imp.program) (tgts : Coqlib.nlist Csharpminor.program)
@@ -576,9 +579,9 @@ Section PROOFLINK.
     :
       (forall tgt_init,
           (Csharpminor.initial_state tgtl tgt_init) ->
-          (@improves2 _ (Csharpminor.semantics tgtl) (imps_init srcs) tgt_init)).
+          (@improves_state2 _ (Csharpminor.semantics tgtl) (imps_sem srcs).(initial_state) tgt_init)).
   Proof.
-    i. unfold imps_init. unfold src_initial_state.
+    i. unfold imps_sem.
     hexploit left_arrow; eauto.
     i. instantiate (1:=Mem) in H0. rewrite H0; clear H0.
     hexploit right_arrow; eauto.
@@ -603,17 +606,14 @@ Section PROOFLINK.
   Theorem compile_behavior_improves
           (srcs : list Imp.program) (tgts : Coqlib.nlist Csharpminor.program)
           srcl
-          (COMP: Forall2 (fun src tgt => compile (lift src) = OK tgt) srcs (nlist2list tgts))
+          (COMP: Forall2 (fun src tgt => compile (lift src) = OK tgt) srcs tgts)
           (LINKSRC: link_imps srcs = Some srcl)
     :
-      exists tgtl,
-        ((link_list tgts = Some tgtl) /\
-         (forall tgt_init,
-             (Csharpminor.initial_state tgtl tgt_init) ->
-             (@improves2 _ (Csharpminor.semantics tgtl) (imps_init srcs) tgt_init))).
+      exists tgtl, ((link_list tgts = Some tgtl) /\
+               (improves2 (imps_sem srcs) (Csharpminor.semantics tgtl))).
   Proof.
     hexploit compile_behavior_improves_compile_exists; eauto. i. des. exists tgtl. split; eauto.
-    eapply compile_behavior_improves_compile; eauto.
+    unfold improves2. eapply compile_behavior_improves_compile; eauto.
   Qed.
 
 End PROOFLINK.

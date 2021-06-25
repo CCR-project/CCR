@@ -1057,6 +1057,8 @@ End LINKLIST.
 
 
 
+Coercion nlist2list : Coqlib.nlist >-> list.
+
 
 
 Section PROOF.
