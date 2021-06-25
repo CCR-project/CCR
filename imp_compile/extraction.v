@@ -162,11 +162,12 @@ Separate Extraction
    (* Parser.translation_unit_file *)
    (* For imp compilation *)
    Compiler.transf_clight_program
-   Imp2Asm.ASMGEN.list_type_to_typelist
-   Imp2Asm.ASMGEN.transf_csharpminor_program
-   Imp2Csharpminor.compile
-   Imp2Csharpminor.compile_imp
+   Imp2Asm.list_type_to_typelist
+   Imp2Asm.transf_csharpminor_program
+   Imp2Asm.compile
+   Imp2Asm.compile_imp
    Imp2Csharpminor.link_imps
+   (* test programs written in Imp *)
    imp_factorial_prog
    imp_simple_prog
    imp_mutsumF_prog imp_mutsumG_prog imp_mutsumMain_prog

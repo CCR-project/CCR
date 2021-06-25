@@ -12,6 +12,7 @@ Require Import Imp.
 Require Import Imp2Csharpminor.
 Require Import AList.
 
+Require Import Imp2Csharpminor.
 Require Import Imp2CsharpminorMatch.
 
 From compcert Require Import Csharpminor.
@@ -21,6 +22,7 @@ Set Implicit Arguments.
 Section GENV.
 
   Context `{Σ: GRA.t}.
+  Context `{builtins: builtinsTy}.
 
   Variable src : Imp.programL.
 
@@ -212,6 +214,7 @@ Section MAPBLK.
   Import Permutation.
 
   Context `{Σ: GRA.t}.
+  Context `{builtins: builtinsTy}.
 
   Lemma map_blk_after_init :
     forall src blk

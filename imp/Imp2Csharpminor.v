@@ -22,15 +22,7 @@ Set Implicit Arguments.
 Parameter s2p: string -> ident.
 Parameter s2p_inj: forall x y, (s2p x) = (s2p y) -> x = y.
 
-Lemma option2bool {T} :
-  forall x : option T,
-    {match x with | Some _ => True | None => False end} +
-    {~ match x with | Some _ => True | None => False end}.
-Proof.
-  i. destruct x.
-  - left. auto.
-  - right. auto.
-Qed.
+Class builtinsTy: Type := mk { bts:> list (string * (globdef fundef ())) }.
 
 Section Compile.
 
@@ -170,11 +162,12 @@ Section Compile.
   Definition compile_iFuns (src : list (string * (string * Imp.function))) : tgt_gdefs := List.map compile_iFun src.
 
 
-  (* Definition init_g0 : list (string * tgt_gdef) := *)
-  (*   [("malloc"%string, Gfun malloc_def); ("free"%string, Gfun free_def)]. *)
-  Definition init_g0 : list (string * tgt_gdef) := [].
+  Context `{builtins : builtinsTy}.
+  Definition init_g0 : list (string * tgt_gdef) :=
+    bts ++ [("malloc"%string, Gfun malloc_def); ("free"%string, Gfun free_def)].
 
   Definition init_g : tgt_gdefs := List.map (fun '(name, fd) => (s2p name, fd)) init_g0.
+
 
   Definition c_sys := List.map compile_eFun syscalls.
 
@@ -186,18 +179,19 @@ Section Compile.
     let defs := init_g ++ c_sys ++ efuns ++ evars ++ ifuns ++ ivars in
     defs.
 
+  Definition compile (src : Imp.programL) : res program :=
+    let _defs := (compile_gdefs src) in
+    if (Coqlib.list_norepet_dec dec (List.map fst _defs)) then
+      let pdefs := Maps.PTree_Properties.of_list _defs in
+      let defs := Maps.PTree.elements pdefs in
+      let pubs := (List.map (s2p ∘ fst) init_g0) ++ (List.map s2p src.(publicL)) in
+      OK (mkprogram defs pubs (s2p "main"))
+    else Error [MSG "Imp2csharpminor compilation failed; duplicated declarations"]
+  .
+
+  Definition compile_imp p := compile (lift p).
+
 End Compile.
-
-Definition compile (src : Imp.programL) : res program :=
-  let _defs := (compile_gdefs src) in
-  if (Coqlib.list_norepet_dec dec (List.map fst _defs)) then
-    let pdefs := Maps.PTree_Properties.of_list _defs in
-    let defs := Maps.PTree.elements pdefs in
-    OK (mkprogram defs (List.map s2p src.(publicL)) (s2p "main"))
-  else Error [MSG "Imp2csharpminor compilation failed; duplicated declarations"]
-.
-
-Definition compile_imp p := compile (lift p).
 
 Global Opaque init_g0.
 Global Opaque init_g.
@@ -206,18 +200,26 @@ Global Opaque init_g.
 
 
 
+Lemma option2bool {T} :
+  forall x : option T,
+    {match x with | Some _ => True | None => False end} +
+    {~ match x with | Some _ => True | None => False end}.
+Proof.
+  i. destruct x.
+  - left. auto.
+  - right. auto.
+Qed.
+
 Definition extFun_Dec : forall x y : (string * nat), {x = y} + {x <> y}.
 Proof.
-  i. destruct x, y.
-  assert (NC: {n = n0} + {n <> n0}); auto using nat_Dec.
-  assert (SC: {s = s0} + {s <> s0}); auto using string_Dec.
-  destruct NC; destruct SC; clarify; auto.
-  all: right; intros p; apply pair_equal_spec in p; destruct p; clarify.
+  repeat decide equality.
 Qed.
 
 Section LINK.
 
   Import Permutation.
+
+  Context `{builtins : builtinsTy}.
 
   Definition name1 {A} {B} (l: list (A * B)) := List.map fst l.
   Definition name2 {A} {B} {C} (l: list (A * (B * C))) := List.map (fst ∘ snd) l.
@@ -228,7 +230,7 @@ Section LINK.
   Definition l_nameL := src1.(nameL) ++ src2.(nameL).
   Definition l_pvs := src1.(prog_varsL) ++ src2.(prog_varsL).
   Definition l_pfs := src1.(prog_funsL) ++ src2.(prog_funsL).
-  Definition l_publicL := src1.(publicL) ++ src2.(publicL).
+  Definition l_publicL := src1.(publicL) ++ (List.map fst init_g0) ++ src2.(publicL).
   Definition l_defsL := src1.(defsL) ++ src2.(defsL).
 
   (* (if/if) (if/iv) (if/ef) (if/ev) |
@@ -372,6 +374,7 @@ Section LINK.
     let l_pfsn := name2 l_pfs in
     List.filter (fun sn => negb (in_dec string_Dec (fst sn) l_pfsn)) l_efs0.
 
+
   (* check names are unique *)
   Definition link_imp_cond3 :=
     Coqlib.list_norepet_dec dec ((name1 init_g0) ++ (name1 syscalls) ++
@@ -434,6 +437,8 @@ End LINK.
 
 
 Section LINKLIST.
+
+  Context `{builtins : builtinsTy}.
 
   Definition fold_left_option {T} f (t : list T) (opth : option T) :=
     fold_left (fun opt s2 => match opt with | Some s1 => f s1 s2 | None => None end) t opth.

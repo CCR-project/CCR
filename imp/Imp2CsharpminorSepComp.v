@@ -27,6 +27,7 @@ Set Implicit Arguments.
 Section PROOFLEFT.
 
   Context `{Σ: GRA.t}.
+  Context `{builtins : builtinsTy}.
 
   (* Proving the left arrow of the diagram *)
   Lemma _comm_link_imp_link_mod
@@ -53,7 +54,7 @@ Section PROOFLEFT.
       <<LINKMOD: fold_right ModL.add ModL.empty (ctx :: tgt_list) = ModL.add ctx tgtl>>.
   Proof.
     destruct src_list as [ | src0 src_list ]; ss; clarify.
-    move src_list before Σ. revert_until Σ. induction src_list; i; ss; clarify.
+    move src_list before builtins. revert_until builtins. induction src_list; i; ss; clarify.
     { rewrite ModL.add_empty_r. ss. }
     red. des_ifs; ss; clarify.
     hexploit IHsrc_list.
@@ -85,6 +86,7 @@ Section PROOFRIGHT.
   Import Permutation.
 
   Context `{Σ: GRA.t}.
+  Context `{builtins : builtinsTy}.
 
   (* Proving the right arrow of the diagram *)
 
@@ -104,15 +106,17 @@ Section PROOFRIGHT.
     { hexploit link_then_unique_ids; eauto. }
     des_ifs_safe. clear l.
     red. f_equal. f_equal; ss.
-    2:{ unfold link_imp in LINKSRC. des_ifs_safe. ss. unfold l_publicL. apply map_app. }
+    2:{ unfold link_imp in LINKSRC. des_ifs_safe. ss. unfold l_publicL. rewrite <- app_assoc. f_equal.
+        rewrite map_app. f_equal; ss. rewrite map_app. f_equal; ss. setoid_rewrite List.map_map. ss. }
     apply PTree.elements_extensional. i.
     erewrite PTree.gcombine; ss. rewrite ! PTree_Properties.of_list_elements.
 
     assert (LINKTGTP : forall (id : positive) (gd1 gd2 : globdef fundef ()),
                (PTree_Properties.of_list (compile_gdefs src1)) ! id = Some gd1 ->
                (PTree_Properties.of_list (compile_gdefs src2)) ! id = Some gd2 ->
-               In id (List.map s2p (publicL src1)) /\
-               In id (List.map s2p (publicL src2)) /\ (exists gd : globdef fundef (), link gd1 gd2 = Some gd)).
+               In id (List.map (s2p ∘ fst) init_g0 ++ List.map s2p (publicL src1)) /\
+               In id (List.map (s2p ∘ fst) init_g0 ++ List.map s2p (publicL src2)) /\
+               (exists gd : globdef fundef (), link gd1 gd2 = Some gd)).
     { i.
       rewrite <- PTree_Properties.of_list_elements in H.
       rewrite <- PTree_Properties.of_list_elements in H0.
@@ -221,25 +225,37 @@ Section PROOFRIGHT.
     i. eapply _comm_link_imp_compile with (tgt1:=tgt0) (tgt2:=p0); eauto.
   Qed.
 
+
   Definition wf_public (src: Imp.programL) :=
-    forall id, In id (name1 (compile_gdefs src)) -> In id (List.map s2p (publicL src)).
+    forall id, In id (name1 (compile_gdefs src)) -> In id (List.map (s2p ∘ fst) init_g0 ++ List.map s2p (publicL src)).
 
   Lemma lifted_then_wf_public :
     forall (src: Imp.program), <<WFLIFT: wf_public (lift src)>>.
   Proof.
     i. red. unfold lift in *. unfold wf_public. ii; ss. apply Coqlib.list_in_map_inv in H. des. destruct x; ss; clarify.
     rename i into id, g into gd. apply decomp_gdefs in H0; ss. des; clarify; eauto.
-    - repeat rewrite map_app. repeat rewrite in_app_iff.
-      do 2 right; left. rewrite List.map_map. apply (in_map (s2p ∘ fst)) in SYS0. destruct fd; ss; clarify.
-    - repeat rewrite map_app. repeat rewrite in_app_iff.
-      do 4 right; left. rewrite List.map_map. apply (in_map (s2p ∘ fst)) in EFS0. destruct fd; ss; clarify.
-    - repeat rewrite map_app. repeat rewrite in_app_iff.
-      do 3 right; left. apply (in_map s2p) in EVS0. unfold compile_eVar in *. clarify.
-    - repeat rewrite map_app. repeat rewrite in_app_iff.
-      do 6 right. destruct fd as [mn [fn ff]]; ss; clarify. apply (in_map (s2p ∘ fst ∘ snd)) in IFS0; ss.
+    - apply in_bts_in_init_g in BTS1. des.
+      Local Transparent init_g. unfold init_g in BTS1. Local Opaque init_g.
+      destruct fd; ss; clarify. rewrite in_app_iff; left. apply (in_map fst) in BTS1. ss.
+      rewrite List.map_map in BTS1.
+      match goal with
+      | [ BTS1: In _ ?l1 |- In _ ?l2 ] => replace l2 with l1; ss; auto end.
+      apply map_ext. i. destruct a; ss.
+    - Local Transparent init_g0. unfold init_g0. Local Opaque init_g0.
+      rewrite map_app. rewrite in_app_iff; left. apply in_app_iff; right. ss. eauto.
+    - Local Transparent init_g0. unfold init_g0. Local Opaque init_g0.
+      rewrite map_app. rewrite in_app_iff; left. apply in_app_iff; right. ss. eauto.
+    - rewrite in_app_iff; right. unfold public. repeat rewrite map_app. repeat rewrite in_app_iff.
+      left. rewrite List.map_map. apply (in_map (s2p ∘ fst)) in SYS0. destruct fd; ss; clarify.
+    - rewrite in_app_iff; right. unfold public. repeat rewrite map_app. repeat rewrite in_app_iff.
+      do 2 right; left. rewrite List.map_map. apply (in_map (s2p ∘ fst)) in EFS0. destruct fd; ss; clarify.
+    - rewrite in_app_iff; right. unfold public. repeat rewrite map_app. repeat rewrite in_app_iff.
+      do 1 right; left. apply (in_map s2p) in EVS0. unfold compile_eVar in *. clarify.
+    - rewrite in_app_iff; right. unfold public. repeat rewrite map_app. repeat rewrite in_app_iff.
+      do 4 right. destruct fd as [mn [fn ff]]; ss; clarify. apply (in_map (s2p ∘ fst ∘ snd)) in IFS0; ss.
       rewrite List.map_map in IFS0. ss. rewrite List.map_map. auto.
-    - repeat rewrite map_app. repeat rewrite in_app_iff.
-      do 5 right; left. destruct vd; ss; clarify. apply (in_map (s2p ∘ fst)) in IVS0. ss.
+    - rewrite in_app_iff; right. unfold public. repeat rewrite map_app. repeat rewrite in_app_iff.
+      do 3 right; left. destruct vd; ss; clarify. apply (in_map (s2p ∘ fst)) in IVS0. ss.
       rewrite List.map_map. ss.
   Qed.
 
@@ -253,10 +269,12 @@ Section PROOFRIGHT.
   Proof.
     red. unfold wf_public in *. ii. apply Coqlib.list_in_map_inv in H. des. destruct x as [name def]; ss; clarify.
     hexploit in_tgtl_then_in_some; eauto. i.
-    unfold link_imp in LINKSRC. des_ifs; ss. clear H0. unfold l_publicL. rewrite map_app. apply in_app_iff.
+    unfold link_imp in LINKSRC. des_ifs; ss. clear H0. unfold l_publicL.
+    rewrite map_app. rewrite app_assoc. apply in_app_iff.
     des.
-    { left. eapply WFP1. apply (in_map fst) in IN1. ss. }
-    { right. eapply WFP2. apply (in_map fst) in BK. ss. }
+    { left. apply (in_map fst) in IN1. ss. apply WFP1 in IN1. ss. }
+    { right. apply (in_map fst) in BK. ss. apply WFP2 in BK. rewrite <- List.map_map in BK.
+      rewrite <- map_app in BK. ss. }
   Qed.
 
   Lemma linked_list_wf_public
@@ -402,6 +420,7 @@ End PROOFRIGHT.
 Section PROOFSINGLE.
 
   Context `{Σ: GRA.t}.
+  Context `{builtins : builtinsTy}.
 
   Create HintDb ord_step2.
   Hint Resolve Nat.lt_succ_diag_r OrdArith.lt_from_nat OrdArith.lt_add_r: ord_step2.
@@ -563,6 +582,7 @@ End PROOFSINGLE.
 Section PROOFLINK.
 
   Context `{Σ: GRA.t}.
+  Context `{builtins : builtinsTy}.
 
   Definition imps_sem (srcs : list Imp.program) :=
     let srcs_mod := List.map ImpMod.get_mod srcs in ModL.compile (Mod.add_list (Mem :: srcs_mod)).

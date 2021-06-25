@@ -19,6 +19,8 @@ Set Implicit Arguments.
 
 Section DECOMP.
 
+  Context `{builtins: builtinsTy}.
+
   Lemma ext_vars_names :
     forall src, <<EVN: List.map fst (compile_eVars (ext_varsL src)) = List.map s2p (ext_varsL src)>>.
   Proof.
@@ -45,11 +47,15 @@ Section DECOMP.
 
   Lemma decomp_init_g :
     forall id gd (INTGT: In (id, gd) init_g),
+      (<<BTS: exists fd, (id = s2p (fst fd)) /\ (gd = snd fd) /\ (In fd bts)>>) \/
       (<<MALLOC: (id = s2p "malloc") /\ (gd = Gfun (External EF_malloc))>>) \/
       (<<FREE: (id = s2p "free") /\ (gd = Gfun (External EF_free))>>).
   Proof.
     Local Transparent init_g. Local Transparent init_g0.
-    i. unfold init_g in INTGT. unfold init_g0 in INTGT. ss. des; clarify; eauto.
+    i. unfold init_g in INTGT. unfold init_g0 in INTGT. rewrite map_app in INTGT.
+    rewrite in_app_iff in INTGT. des.
+    { left. apply Coqlib.list_in_map_inv in INTGT. des. exists x; auto. destruct x; ss; clarify; eauto. }
+    ss. des; clarify; eauto.
     Local Opaque init_g0. Local Opaque init_g.
   Qed.
 
@@ -90,6 +96,7 @@ Section DECOMP.
 
   Lemma decomp_gdefs :
     forall src id gd (INTGT : In (id, gd) (compile_gdefs src)),
+      (<<BTS: exists fd, (id = s2p (fst fd)) /\ (gd = snd fd) /\ (In fd bts)>>) \/
       (<<MALLOC: (id = s2p "malloc") /\ (gd = Gfun (External EF_malloc))>>) \/
       (<<FREE: (id = s2p "free") /\ (gd = Gfun (External EF_free))>>) \/
       (<<SYS: exists fd, (compile_eFun fd = (id, gd)) /\ (In fd syscalls)>>) \/
@@ -100,16 +107,52 @@ Section DECOMP.
   Proof.
     i. unfold compile_gdefs in INTGT.
     apply in_app_or in INTGT. des.
-    { apply decomp_init_g in INTGT. des; auto. }
+    { apply decomp_init_g in INTGT. des; auto.
+      - left; eauto.
+      - do 2 right; left; eauto. }
     apply in_app_or in INTGT. des.
     { apply decomp_c_sys in INTGT. auto. }
     apply in_app_or in INTGT. des.
-    { apply decomp_efs in INTGT. auto. }
+    { apply decomp_efs in INTGT. do 3 right. auto. }
     apply in_app_or in INTGT. des.
-    { apply decomp_evs in INTGT. do 4 right. left. auto. }
+    { apply decomp_evs in INTGT. do 4 right. auto. }
     apply in_app_or in INTGT. des.
     { apply decomp_ifs in INTGT. do 5 right. auto. }
     apply decomp_ivs in INTGT. do 6 right. auto.
+  Qed.
+
+  Lemma decomp_gdefs_split :
+    forall src id gd (INTGT : In (id, gd) (compile_gdefs src)),
+      ((<<INITG: In id (name1 init_g)>>) /\
+       ((<<BTS: exists fd, (id = s2p (fst fd)) /\ (gd = snd fd) /\ (In fd bts)>>) \/
+        (<<MALLOC: (id = s2p "malloc") /\ (gd = Gfun (External EF_malloc))>>) \/
+        (<<FREE: (id = s2p "free") /\ (gd = Gfun (External EF_free))>>)))
+      \/
+      (<<SYS: exists fd, (compile_eFun fd = (id, gd)) /\ (In fd syscalls)>>)
+      \/
+      (<<EFS: exists fd, (compile_eFun fd = (id, gd)) /\ (In fd (ext_funsL src))>>) \/
+      (<<EVS: exists vd, (compile_eVar vd = (id, gd)) /\ (In vd (ext_varsL src))>>) \/
+      (<<IFS: exists fd, (compile_iFun fd = (id, gd)) /\ (In fd (prog_funsL src))>>) \/
+      (<<IVS: exists vd, (compile_iVar vd = (id, gd)) /\ (In vd (prog_varsL src))>>).
+  Proof.
+    Local Transparent init_g. Local Transparent init_g0.
+    i. hexploit decomp_gdefs; eauto. i. des; eauto.
+    - left. split; eauto.
+      2:{ left. eauto. }
+      red. unfold init_g, init_g0. unfold name1; rewrite List.map_map.
+      repeat rewrite map_app. rewrite in_app_iff. left. destruct fd; clarify; ss.
+      match goal with
+      | [ BTS0: In _ bts |- In _ (List.map ?mapf _) ] => apply (in_map mapf) in BTS0; ss end.
+    - left. split; eauto. red. unfold init_g, init_g0. unfold name1; rewrite List.map_map.
+      repeat rewrite map_app. rewrite in_app_iff. right. ss. eauto.
+    - left. split; eauto. red. unfold init_g, init_g0. unfold name1; rewrite List.map_map.
+      repeat rewrite map_app. rewrite in_app_iff. right. ss. eauto.
+    - right. eauto.
+    - do 2 right. eauto.
+    - do 3 right. eauto.
+    - do 4 right. eauto.
+    - do 5 right. eauto.
+      Local Opaque init_g0. Local Opaque init_g.
   Qed.
 
   Lemma has_malloc :
@@ -117,7 +160,7 @@ Section DECOMP.
   Proof.
     i. unfold compile_gdefs. apply in_or_app. left.
     Local Transparent init_g. Local Transparent init_g0.
-    unfold init_g. unfold init_g0. ss. left; ss.
+    unfold init_g. unfold init_g0. rewrite map_app. rewrite in_app_iff. right. ss. left; ss.
     Local Opaque init_g0. Local Opaque init_g.
   Qed.
 
@@ -126,8 +169,31 @@ Section DECOMP.
   Proof.
     i. unfold compile_gdefs. apply in_or_app. left.
     Local Transparent init_g. Local Transparent init_g0.
-    unfold init_g. unfold init_g0. ss. right; left; ss.
+    unfold init_g. unfold init_g0. rewrite map_app. rewrite in_app_iff. right. ss. right; eauto.
     Local Opaque init_g0. Local Opaque init_g.
+  Qed.
+
+  Lemma has_bts :
+    forall src id bt, In (id, bt) bts -> In (s2p id, bt) (compile_gdefs src).
+  Proof.
+    i. unfold compile_gdefs. apply in_or_app. left.
+    Local Transparent init_g. Local Transparent init_g0.
+    unfold init_g. unfold init_g0. rewrite map_app. rewrite in_app_iff. left.
+    Local Opaque init_g0. Local Opaque init_g.
+    apply (in_map (fun '(name, fd) => (s2p name, fd))) in H; auto.
+  Qed.
+
+  Lemma in_bts_in_init_g
+        fd
+        (IN: In fd bts)
+    :
+      <<INITG: In (s2p (fst fd), snd fd) init_g>>.
+  Proof.
+    red. destruct fd; ss; clarify.
+    Local Transparent init_g. Local Transparent init_g0.
+    unfold init_g. unfold init_g0. rewrite map_app. rewrite in_app_iff. left.
+    Local Opaque init_g0. Local Opaque init_g.
+    apply (in_map (fun '(name, fd) => (s2p name, fd))) in IN; auto.
   Qed.
 
   Lemma norepet_unique {A} {B} :
@@ -158,6 +224,8 @@ End DECOMP.
 
 Section SOLVEID.
 
+  Context `{builtins: builtinsTy}.
+
   Lemma compile_gdefs_preserves_names :
     forall src,
       <<NAMES:
@@ -168,6 +236,9 @@ Section SOLVEID.
         name1 (compile_gdefs src)>>.
   Proof.
     i. unfold compile_gdefs. red. unfold name1. repeat rewrite map_app. repeat f_equal.
+    - Local Transparent init_g. Local Transparent init_g0.
+      unfold init_g. rewrite ! List.map_map. apply List.map_ext. i. destruct a; ss.
+      Local Opaque init_g0. Local Opaque init_g.
     - sym. rewrite List.map_map. apply ext_funs_names.
     - sym. apply ext_vars_names.
     - sym. unfold name2. rewrite List.map_map. apply int_funs_names.
@@ -188,26 +259,88 @@ Section SOLVEID.
 
   Lemma malloc_unique :
     forall src (NOREPET : Coqlib.list_norepet (List.map fst (compile_gdefs src))),
+      ~ In ("malloc") (name1 bts) /\
       ~ In (s2p "malloc") (name1 (c_sys ++ (compile_eFuns (ext_funsL src)) ++ (compile_eVars (ext_varsL src) ++
                                            (compile_iFuns (prog_funsL src)) ++ (compile_iVars (prog_varsL src))))).
   Proof.
-    i. unfold compile_gdefs in NOREPET.
     Local Transparent init_g. Local Transparent init_g0.
+    i. split.
+    { unfold compile_gdefs in NOREPET. rewrite map_app in NOREPET. apply Coqlib.list_norepet_app in NOREPET. des.
+      clear NOREPET0 NOREPET1. unfold init_g in NOREPET. unfold init_g0 in NOREPET.
+      repeat rewrite map_app in NOREPET. apply Coqlib.list_norepet_app in NOREPET. des.
+      unfold Coqlib.list_disjoint in NOREPET1. ii. hexploit NOREPET1.
+      { instantiate (1:= s2p "malloc"). rewrite List.map_map. apply (in_map s2p) in H. unfold name1 in H.
+        rewrite List.map_map in H. ss.
+        match goal with
+        | [H: In _ ?ff |- In _ ?gg ] => replace gg with ff end; eauto.
+        apply map_ext. i. destruct a. ss. }
+      { instantiate (1:= s2p "malloc"). ss. eauto. }
+      ii. apply H0; ss. }
+
+    unfold compile_gdefs in NOREPET.
     unfold init_g in NOREPET. unfold init_g0 in NOREPET. ss.
+    rewrite map_app in NOREPET. rewrite List.map_map in NOREPET. rewrite map_app in NOREPET. ss.
+    apply Coqlib.list_norepet_app in NOREPET. des; ss. unfold Coqlib.list_disjoint in NOREPET1. ii.
+    hexploit NOREPET1.
+    { instantiate (1:= s2p "malloc"). rewrite in_app_iff. right; ss. left; ss. }
+    { eapply H. }
+    ii. apply H0. ss.
     Local Opaque init_g0. Local Opaque init_g.
-    inv NOREPET. ss. eauto.
   Qed.
 
   Lemma free_unique :
     forall src (NOREPET : Coqlib.list_norepet (List.map fst (compile_gdefs src))),
+      ~ In ("free") (name1 bts) /\
       ~ In (s2p "free") (name1 (c_sys ++ (compile_eFuns (ext_funsL src)) ++ (compile_eVars (ext_varsL src) ++
                                          (compile_iFuns (prog_funsL src)) ++ (compile_iVars (prog_varsL src))))).
   Proof.
-    i. unfold compile_gdefs in NOREPET.
     Local Transparent init_g. Local Transparent init_g0.
+    i. split.
+    { unfold compile_gdefs in NOREPET. rewrite map_app in NOREPET. apply Coqlib.list_norepet_app in NOREPET. des.
+      clear NOREPET0 NOREPET1. unfold init_g in NOREPET. unfold init_g0 in NOREPET.
+      repeat rewrite map_app in NOREPET. apply Coqlib.list_norepet_app in NOREPET. des.
+      unfold Coqlib.list_disjoint in NOREPET1. ii. hexploit NOREPET1.
+      { instantiate (1:= s2p "free"). rewrite List.map_map. apply (in_map s2p) in H. unfold name1 in H.
+        rewrite List.map_map in H. ss.
+        match goal with
+        | [H: In _ ?ff |- In _ ?gg ] => replace gg with ff end; eauto.
+        apply map_ext. i. destruct a. ss. }
+      { instantiate (1:= s2p "free"). ss. eauto. }
+      ii. apply H0; ss. }
+
+    unfold compile_gdefs in NOREPET.
     unfold init_g in NOREPET. unfold init_g0 in NOREPET. ss.
+    rewrite map_app in NOREPET. rewrite List.map_map in NOREPET. rewrite map_app in NOREPET. ss.
+    apply Coqlib.list_norepet_app in NOREPET. des; ss. unfold Coqlib.list_disjoint in NOREPET1. ii.
+    hexploit NOREPET1.
+    { instantiate (1:= s2p "free"). rewrite in_app_iff. right; ss; eauto. }
+    { eapply H. }
+    ii. apply H0. ss.
     Local Opaque init_g0. Local Opaque init_g.
-    inv NOREPET. inv H2. ss.
+  Qed.
+
+  Lemma init_g_unique :
+    forall src id
+      (NOREPET : Coqlib.list_norepet (List.map fst (compile_gdefs src)))
+      (BTS: In id (name1 init_g)),
+      ~ In id (name1 (c_sys ++ (compile_eFuns (ext_funsL src)) ++ (compile_eVars (ext_varsL src) ++
+                               (compile_iFuns (prog_funsL src)) ++ (compile_iVars (prog_varsL src))))).
+  Proof.
+    ii. unfold compile_gdefs in NOREPET.
+    rewrite map_app in NOREPET. apply Coqlib.list_norepet_app in NOREPET. des.
+    unfold Coqlib.list_disjoint in NOREPET1. hexploit NOREPET1; eauto.
+  Qed.
+
+  Lemma init_g_unique_def :
+    forall src id fd1 fd2
+      (NOREPET : Coqlib.list_norepet (List.map fst (compile_gdefs src)))
+      (IN1: In (id, fd1) init_g)
+      (IN2: In (id, fd2) init_g),
+      fd1 = fd2.
+  Proof.
+    ii. unfold compile_gdefs in NOREPET.
+    rewrite map_app in NOREPET. apply Coqlib.list_norepet_app in NOREPET. des.
+    clear NOREPET0 NOREPET1. eapply norepet_unique; eauto.
   Qed.
 
   Lemma syscalls_unique :
@@ -292,6 +425,8 @@ End SOLVEID.
 
 Section UNLINK.
 
+  Context `{builtins: builtinsTy}.
+
   Lemma unlink_l_evs
         vd src1 src2
         (INL: In vd (l_evs src1 src2))
@@ -333,6 +468,8 @@ End UNLINK.
 
 
 Section LINKPROPS.
+
+  Context `{builtins: builtinsTy}.
 
   Lemma link_imp_cond1_comm :
     forall src1 src2,
@@ -377,6 +514,12 @@ Section LINKPROPS.
     i. ii. apply s2p_inj in H2. ss.
   Qed.
 
+  (* builtins is an OCaml list, satisfying this property *)
+  Hypothesis builtins_external :
+    forall name fd,
+      In (name, fd) bts ->
+      (match fd with | Gfun (External _) => True | _ => False end).
+
   Lemma link_then_exists_gd
         src1 src2 srcl id gd1 gd2
         (NOREPET1 : Coqlib.list_norepet (List.map fst (compile_gdefs src1)))
@@ -390,48 +533,54 @@ Section LINKPROPS.
     Local Transparent Linker_def. Local Transparent Linker_fundef.
     Local Transparent Linker_vardef. Local Transparent Linker_varinit.
     hexploit link_then_unique_ids; eauto. i. des. rename H into NOREPETL.
-    hexploit (decomp_gdefs IN1). i. rename H into SRC1.
-    hexploit (decomp_gdefs IN2). i. rename H into SRC2.
+    hexploit (decomp_gdefs_split src1 id gd1 IN1). i. rename H into SRC1.
+    hexploit (decomp_gdefs_split src2 id gd2 IN2). i. rename H into SRC2.
 
-    (* malloc *)
+    (* init_g *)
     destruct SRC1 as [SRC1 | SRC1].
-    { clear SRC2. destruct SRC1. clarify. unfold compile_gdefs in IN2. apply in_app_or in IN2. des.
-      - Local Transparent init_g. Local Transparent init_g0.
-        unfold init_g in IN2. unfold init_g0 in IN2.
-        Local Opaque init_g0. Local Opaque init_g.
-        ss. des; clarify.
-        + exists (Gfun (External EF_malloc)). split; ss; auto. apply has_malloc.
-        + apply s2p_inj in H1. clarify.
-      - apply malloc_unique in NOREPET2. eapply (in_map fst) in IN2. clarify. }
+    { admit "". }
     destruct SRC2 as [SRC2 | SRC2].
-    { clear SRC1. destruct SRC2. clarify. unfold compile_gdefs in IN1. apply in_app_or in IN1. des.
-      - Local Transparent init_g. Local Transparent init_g0.
-        unfold init_g in IN1. unfold init_g0 in IN1.
-        Local Opaque init_g0. Local Opaque init_g.
-        ss. des; clarify.
-        + exists (Gfun (External EF_malloc)). split; ss; auto. apply has_malloc.
-        + apply s2p_inj in H1. clarify.
-      - apply malloc_unique in NOREPET1. eapply (in_map fst) in IN1. clarify. }
+    { admit "". }
 
-    (* free *)
-    destruct SRC1 as [SRC1 | SRC1].
-    { clear SRC2. destruct SRC1. clarify. unfold compile_gdefs in IN2. apply in_app_or in IN2. des.
-      - Local Transparent init_g. Local Transparent init_g0.
-        unfold init_g in IN2. unfold init_g0 in IN2.
-        Local Opaque init_g0. Local Opaque init_g.
-        ss. des; clarify.
-        + apply s2p_inj in H1. clarify.
-        + exists (Gfun (External EF_free)). split; ss; auto. apply has_free.
-      - apply free_unique in NOREPET2. eapply (in_map fst) in IN2. clarify. }
-    destruct SRC2 as [SRC2 | SRC2].
-    { clear SRC1. destruct SRC2. clarify. unfold compile_gdefs in IN1. apply in_app_or in IN1. des.
-      - Local Transparent init_g. Local Transparent init_g0.
-        unfold init_g in IN1. unfold init_g0 in IN1.
-        Local Opaque init_g0. Local Opaque init_g.
-        ss. des; clarify.
-        + apply s2p_inj in H1. clarify.
-        + exists (Gfun (External EF_free)). split; ss; auto. apply has_free.
-      - apply free_unique in NOREPET1. eapply (in_map fst) in IN1. clarify. }
+    (* (* malloc *) *)
+    (* destruct SRC1 as [SRC1 | SRC1]. *)
+    (* { clear SRC2. destruct SRC1. clarify. unfold compile_gdefs in IN2. apply in_app_or in IN2. des. *)
+    (*   - Local Transparent init_g. Local Transparent init_g0. *)
+    (*     unfold init_g in IN2. unfold init_g0 in IN2. *)
+    (*     Local Opaque init_g0. Local Opaque init_g. *)
+    (*     ss. des; clarify. *)
+    (*     + exists (Gfun (External EF_malloc)). split; ss; auto. apply has_malloc. *)
+    (*     + apply s2p_inj in H1. clarify. *)
+    (*   - apply malloc_unique in NOREPET2. eapply (in_map fst) in IN2. clarify. } *)
+    (* destruct SRC2 as [SRC2 | SRC2]. *)
+    (* { clear SRC1. destruct SRC2. clarify. unfold compile_gdefs in IN1. apply in_app_or in IN1. des. *)
+    (*   - Local Transparent init_g. Local Transparent init_g0. *)
+    (*     unfold init_g in IN1. unfold init_g0 in IN1. *)
+    (*     Local Opaque init_g0. Local Opaque init_g. *)
+    (*     ss. des; clarify. *)
+    (*     + exists (Gfun (External EF_malloc)). split; ss; auto. apply has_malloc. *)
+    (*     + apply s2p_inj in H1. clarify. *)
+    (*   - apply malloc_unique in NOREPET1. eapply (in_map fst) in IN1. clarify. } *)
+
+    (* (* free *) *)
+    (* destruct SRC1 as [SRC1 | SRC1]. *)
+    (* { clear SRC2. destruct SRC1. clarify. unfold compile_gdefs in IN2. apply in_app_or in IN2. des. *)
+    (*   - Local Transparent init_g. Local Transparent init_g0. *)
+    (*     unfold init_g in IN2. unfold init_g0 in IN2. *)
+    (*     Local Opaque init_g0. Local Opaque init_g. *)
+    (*     ss. des; clarify. *)
+    (*     + apply s2p_inj in H1. clarify. *)
+    (*     + exists (Gfun (External EF_free)). split; ss; auto. apply has_free. *)
+    (*   - apply free_unique in NOREPET2. eapply (in_map fst) in IN2. clarify. } *)
+    (* destruct SRC2 as [SRC2 | SRC2]. *)
+    (* { clear SRC1. destruct SRC2. clarify. unfold compile_gdefs in IN1. apply in_app_or in IN1. des. *)
+    (*   - Local Transparent init_g. Local Transparent init_g0. *)
+    (*     unfold init_g in IN1. unfold init_g0 in IN1. *)
+    (*     Local Opaque init_g0. Local Opaque init_g. *)
+    (*     ss. des; clarify. *)
+    (*     + apply s2p_inj in H1. clarify. *)
+    (*     + exists (Gfun (External EF_free)). split; ss; auto. apply has_free. *)
+    (*   - apply free_unique in NOREPET1. eapply (in_map fst) in IN1. clarify. } *)
 
     (* syscalls *)
     destruct SRC1 as [SRC1 | SRC1].
@@ -450,7 +599,7 @@ Section LINKPROPS.
       apply s2p_inj in H1. clarify.
       eapply (in_compile_gdefs_c_sys srcl) in IN0.
       eapply (in_compile_gdefs_c_sys srcl) in SRC0.
-      unfold compile_eFun in *. hexploit (compile_gdefs_unique_defs NOREPETL IN0 SRC0); eauto.
+      unfold compile_eFun in *. hexploit (compile_gdefs_unique_defs srcl _ _ _ NOREPETL IN0 SRC0); eauto.
       i. eexists. split.
       2:{ eapply IN0. }
       rewrite H. red. clear. ss. des_ifs. }
@@ -470,7 +619,7 @@ Section LINKPROPS.
       apply s2p_inj in H1. clarify.
       eapply (in_compile_gdefs_c_sys srcl) in IN0.
       eapply (in_compile_gdefs_c_sys srcl) in SRC0.
-      unfold compile_eFun in *. hexploit (compile_gdefs_unique_defs NOREPETL IN0 SRC0); eauto.
+      unfold compile_eFun in *. hexploit (compile_gdefs_unique_defs srcl _ _ _ NOREPETL IN0 SRC0); eauto.
       i. eexists. split.
       2:{ eapply IN0. }
       rewrite H. red. clear. ss. des_ifs. }
@@ -479,7 +628,7 @@ Section LINKPROPS.
     clear IN1 IN2. unfold link_imp in LINKSRC. des_ifs_safe. bsimpl. destruct Heq. destruct H.
     rename H into LC1, H1 into LC2, H0 into LC3.
     des.
-    
+
     - (* ef/ef *)
       apply link_imp_cond2_prop in LC2.
       assert (snd fd0 = snd fd).
@@ -609,6 +758,7 @@ Section LINKPROPS.
       (<<IN1: In (id, gd) (compile_gdefs src1)>>) \/ (<<BK: In (id, gd) (compile_gdefs src2)>>).
   Proof.
     unfold link_imp in LINKSRC. des_ifs; ss. apply decomp_gdefs in INL; des; ss; clarify.
+    - left. red. eapply has_bts. destruct fd; eauto.
     - left. red. eapply has_malloc.
     - left. red. eapply has_free.
     - left. red. rewrite <- SYS. apply in_compile_gdefs_c_sys. ss.
@@ -638,6 +788,7 @@ Section LINKPROPS.
   Proof.
     unfold link_imp in LINKSRC. des_ifs. clear Heq.
     apply decomp_gdefs in IN1. des; ss; clarify.
+    - apply has_bts. destruct fd; ss.
     - apply has_malloc.
     - apply has_free.
     - rewrite <- SYS. eapply in_compile_gdefs_c_sys; eauto.
@@ -694,6 +845,7 @@ Section LINKPROPS.
   Proof.
     unfold link_imp in LINKSRC. des_ifs. clear Heq.
     apply decomp_gdefs in IN2. des; ss; clarify.
+    - apply has_bts. destruct fd; ss.
     - apply has_malloc.
     - apply has_free.
     - rewrite <- SYS. eapply in_compile_gdefs_c_sys; eauto.
@@ -745,6 +897,8 @@ End LINKPROPS.
 Section PROOF.
 
   Import Permutation.
+
+  Context `{builtins: builtinsTy}.
 
   Definition wf_prog_perm (src: Imp.programL) :=
     <<WFPROG: Permutation
