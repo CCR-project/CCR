@@ -9,7 +9,6 @@ Require Import ExtrOcamlBasic.
 Require Import ExtrOcamlString.
 
 Require Import Imp ImpNotations.
-(* Require ImpNotations. *)
 Require Import Imp2Csharpminor.
 Require Import Imp2CsharpminorLink.
 Require Import Imp2Asm.

@@ -1,20 +1,12 @@
 Require Import Coqlib.
 Require Import Universe.
-Require Import Skeleton.
-Require Import STS Behavior.
-Require Import ModSem.
 Require Import Imp2Csharpminor.
 
-From compcert Require Import
-     Ctypes AST Integers Cminor Csharpminor Globalenvs Linking Errors Cminorgen Behaviors Events.
-
-From compcert Require Compiler.
+From compcert Require Import Ctypes Errors Compiler.
 
 Set Implicit Arguments.
 
 Module ASMGEN.
-
-  Import Compiler.
 
   (* For builtins at compile time, ref: Velus, Generation.v *)
   Fixpoint list_type_to_typelist (types: list type): typelist :=
