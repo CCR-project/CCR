@@ -221,7 +221,7 @@ Section KMODSEM.
   Definition transl_src (ms: t): ModSem.t := {|
     ModSem.fnsems := List.map (map_snd disclose_ksb_src) ms.(fnsems);
     ModSem.mn := ms.(mn);
-    ModSem.initial_mr := ms.(initial_mr);
+    ModSem.initial_mr := ε;
     ModSem.initial_st := ms.(initial_st);
   |}
   .

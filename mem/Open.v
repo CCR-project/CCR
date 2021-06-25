@@ -848,7 +848,6 @@ Section ADQ.
 
   Lemma my_lemma1_aux
         mn ske
-        (UNKNOWN: ~In mn (frds ske))
         ktr arg mr0 st0
     :
       sim_itree (fun (_: unit) '((mr_src, st_src), (mr_tgt, st_tgt)) =>
@@ -912,14 +911,10 @@ Section ADQ.
       { refl. }
       i. subst. unfold map_snd. des_ifs.
       rr. split; ss. r. ii. destruct w. des_ifs. des; subst. ss. esplits; et. eapply my_lemma1_aux.
-      { admit "ez". }
     }
     { ss. }
     { ss. }
   Qed.
-
-  Hypothesis WFR: URA.wf (List.fold_left (⋅) (List.map (SModSem.initial_mr) kmss) ε).
-  (* Hypothesis MAINM: In (SMod.main mainpre mainbody) kmds. *)
 
   Let kmns: Sk.t -> list mname := (List.map fst) ∘ _gstb.
   Let _kmns: list (option mname) := (None :: (List.map Some (kmns sk_link))).
@@ -1099,9 +1094,7 @@ Section ADQ.
     rewrite <- ! fold_right_app_flat_map.
     rewrite ! flat_map_app. f_equal.
     { unfold kmds. rewrite map_map. rewrite ! flat_map_map.
-      eapply flat_map_ext. i. ss. f_equal. f_equal.
-      f_equal. admit "TODO: fix the definition".
-    }
+      eapply flat_map_ext. i. ss. }
     { rewrite ! flat_map_map.
       eapply flat_map_ext. i. ss. }
   Qed.
