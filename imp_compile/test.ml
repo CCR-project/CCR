@@ -4,7 +4,6 @@ open Driveraux
 open Compiler
 open Imp
 open Imp2Csharpminor
-open Imp2CsharpminorLink
 open Imp2Asm
 open ImpSimple
 open ImpFactorial

@@ -10,7 +10,6 @@ Require Import ExtrOcamlString.
 
 Require Import Imp ImpNotations.
 Require Import Imp2Csharpminor.
-Require Import Imp2CsharpminorLink.
 Require Import Imp2Asm.
 
 Require Import ImpSimple.
@@ -165,9 +164,9 @@ Separate Extraction
    Compiler.transf_clight_program
    Imp2Asm.ASMGEN.list_type_to_typelist
    Imp2Asm.ASMGEN.transf_csharpminor_program
-   Imp2CsharpminorLink.link_imps
    Imp2Csharpminor.compile
    Imp2Csharpminor.compile_imp
+   Imp2Csharpminor.link_imps
    imp_factorial_prog
    imp_simple_prog
    imp_mutsumF_prog imp_mutsumG_prog imp_mutsumMain_prog
