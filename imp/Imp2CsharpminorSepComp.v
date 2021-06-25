@@ -351,7 +351,7 @@ Section PROOFRIGHT.
         (COMP1: compile src1 = OK tgt1)
         (COMP2: compile src2 = OK tgt2)
         (LINKSRC: link_imp src1 src2 = Some srcl)
-        
+
     :
       (exists tgtl, (<<LINKTGT: link tgt1 tgt2 = Some tgtl>>) /\ (<<COMP: compile srcl = OK tgtl>>)).
   Proof.
@@ -384,7 +384,7 @@ Section PROOFRIGHT.
           (COMPS: Forall2 (fun src tgt => compile (lift src) = OK tgt) srcs (nlist2list tgts))
           (LINKSRC: link_imps srcs = Some srcl)
     :
-      (exists tgtl, (<<LINKTGT: link_list tgts = Some tgtl>>) /\ (<<COMP: compile srcl = OK tgtl>>)).  
+      (exists tgtl, (<<LINKTGT: link_list tgts = Some tgtl>>) /\ (<<COMP: compile srcl = OK tgtl>>)).
   Proof.
     eapply comm_link_imp_compile_exists.
     3: eapply LINKSRC.
@@ -445,7 +445,7 @@ Section PROOFSINGLE.
 
     left. unfold ITree.map. sim_red.
     set (sge:=Sk.load_skenv (Sk.sort (defsL src))) in *.
-    destruct (alist_find "main" (List.map (fun '(mn, (fn, f)) => (fn, transl_all mn ∘ cfun (eval_imp sge f))) (prog_funsL src)))
+    destruct (alist_find "main" (List.map (fun '(mn, (fn, f)) => (fn, transl_all mn (T:=_) ∘ cfun (eval_imp sge f))) (prog_funsL src)))
              eqn:FOUNDMAIN; ss; grind.
     2:{ pfold. sim_triggerUB. }
     rewrite alist_find_find_some in FOUNDMAIN. rewrite find_map in FOUNDMAIN. uo; des_ifs; ss.
@@ -574,7 +574,7 @@ Section PROOFLINK.
         (LINKSRC: link_imps srcs = Some srcl)
         (LINKTGT: link_list tgts = Some tgtl)
     :
-      (forall tgt_init, 
+      (forall tgt_init,
           (Csharpminor.initial_state tgtl tgt_init) ->
           (@improves2 _ (Csharpminor.semantics tgtl) (imps_init srcs) tgt_init)).
   Proof.
@@ -608,7 +608,7 @@ Section PROOFLINK.
     :
       exists tgtl,
         ((link_list tgts = Some tgtl) /\
-         (forall tgt_init, 
+         (forall tgt_init,
              (Csharpminor.initial_state tgtl tgt_init) ->
              (@improves2 _ (Csharpminor.semantics tgtl) (imps_init srcs) tgt_init))).
   Proof.

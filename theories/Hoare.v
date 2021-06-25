@@ -14,23 +14,6 @@ Set Implicit Arguments.
 
 
 
-Section AUX________REMOVEME_____REDUNDANT.
-
-  Context `{Σ: GRA.t}.
-
-  Definition refines_closed (md_tgt md_src: ModL.t): Prop :=
-    Beh.of_program (ModL.compile md_tgt) <1= Beh.of_program (ModL.compile md_src)
-  .
-
-  Global Program Instance refines_closed_PreOrder: PreOrder refines_closed.
-  Next Obligation. ii; ss. Qed.
-  Next Obligation. ii; ss. r in H. r in H0. eauto. Qed.
-
-  Lemma refines_close: SimModSem.refines <2= refines_closed.
-  Proof. ii. specialize (PR nil). ss. unfold Mod.add_list in *. ss. rewrite ! ModL.add_empty_l in PR. eauto. Qed.
-
-End AUX________REMOVEME_____REDUNDANT.
-
 Lemma fold_right_map
       XS XI YS YI
       (xs: XS) (xi: list XI)
@@ -116,9 +99,30 @@ Section CANCEL.
   Let rsum: r_state -> Σ :=
     fun '(mrs_tgt, frs_tgt) => (fold_left (⋅) (List.map (mrs_tgt <*> fst) ms_tgt.(ModSemL.initial_mrs)) ε) ⋅ (fold_left (⋅) frs_tgt ε).
 
+  Theorem adequacy_type_arg
+          main_arg_tgt main_arg_src
+          (MAINM:
+             forall (main_fsb: fspecbody) (MAIN: alist_find "main" sbtb = Some main_fsb),
+             exists (x: main_fsb.(meta)) entry_r,
+               (<<PRE: main_fsb.(precond) None x main_arg_src main_arg_tgt ord_top entry_r>>) /\
+               (<<WFR: URA.wf (entry_r ⋅ rsum (ModSemL.initial_r_state ms_tgt))>>) /\
+               (<<RET: forall ret_src ret_tgt r
+                              (POST: main_fsb.(postcond) None x ret_src ret_tgt r),
+                   ret_src = ret_tgt>>))
+    :
+      Beh.of_program (ModL.compile_arg (Mod.add_list mds_tgt) main_arg_tgt) <1=
+      Beh.of_program (ModL.compile_arg (Mod.add_list mds_src) main_arg_src).
+  Proof.
+    ii. eapply adequacy_type_m2s; et.
+    eapply adequacy_type_t2m; et.
+    Unshelve.
+    all:ss.
+  Qed.
+
+
   Variable entry_r: Σ.
   Variable mainpre: Any.t -> ord -> Σ -> Prop.
-  Variable (mainbody: Any.t -> itree (hCallE +' pE +' eventE) Any.t).
+  Variable (mainbody: (option mname * Any.t) -> itree (hCallE +' pE +' eventE) Any.t).
   Hypothesis MAINPRE: mainpre ([]: list val)↑ ord_top entry_r.
 
   Hypothesis WFR: URA.wf (entry_r ⋅ rsum (ModSemL.initial_r_state ms_tgt)).
@@ -127,10 +131,11 @@ Section CANCEL.
 
   Theorem adequacy_type: refines_closed (Mod.add_list mds_tgt) (Mod.add_list mds_src).
   Proof.
-    ii. eapply adequacy_type_m2s; et.
-    eapply adequacy_type_t2m; et.
-    Unshelve.
-    all:ss.
+    ii. eapply adequacy_type_arg; et.
+    i. clarify. esplits; et.
+    { ss. uipropall. split; auto. red. uipropall. }
+    { i. ss. red in POST. uipropall. des. red in POST0. uipropall. }
+    Unshelve. ss.
   Qed.
 
 End CANCEL.
@@ -182,7 +187,7 @@ Section CANCEL.
 
   Variable entry_r: Σ.
   Variable mainpre: Any.t -> ord -> Σ -> Prop.
-  Variable (mainbody: Any.t -> itree (hCallE +' pE +' eventE) Any.t).
+  Variable (mainbody: (option mname * Any.t) -> itree (hCallE +' pE +' eventE) Any.t).
   Hypothesis MAINPRE: mainpre ([]: list val)↑ ord_top entry_r.
 
   Hypothesis WFR: URA.wf (entry_r ⋅ rsum (ModSemL.initial_r_state ms_tgt)).

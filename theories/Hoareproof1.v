@@ -468,12 +468,12 @@ Section CANCEL.
       (exists md (f: fspecbody),
           (<<SOME: alist_find fn stb = Some (f: fspec)>>) /\
           (<<FINDSRC: alist_find fn (fnsems ms_src) =
-                      Some (transl_all
+                      Some (transl_all (T:=_)
                               (SModSem.mn
                                  (SMod.get_modsem md sk))
                               ∘ fun_to_src (fsb_body f))>>) /\
           (<<FINDMID: alist_find fn (fnsems ms_mid) =
-                      Some (transl_all
+                      Some (transl_all (T:=_)
                               (SModSem.mn
                                  (SMod.get_modsem md sk))
                               ∘ fun_to_mid stb (fsb_body f))>>)).
@@ -703,17 +703,9 @@ Section CANCEL.
     extensionality fnsb. destruct fnsb as [fn sb]. ss.
   Qed.
 
-  Variable mainpre: Any.t -> ord -> Σ -> Prop.
-  Variable (mainbody: Any.t -> itree (hCallE +' pE +' eventE) Any.t).
-
-  Require Import Logic.
-
-  Hypothesis MAINM:
-    alist_find "main" sbtb = Some (mk_specbody (mk_simple (fun _ : () => (mainpre, fun _ => (⌜True⌝: iProp)%I))) mainbody).
-
-  Theorem adequacy_type_m2s:
-    Beh.of_program (ModL.compile_arg (Mod.add_list mds_mid) (Any.pair ord_top↑ ([]: list val)↑)) <1=
-    Beh.of_program (ModL.compile (Mod.add_list mds_src)).
+  Theorem adequacy_type_m2s main_arg:
+    Beh.of_program (ModL.compile_arg (Mod.add_list mds_mid) (Any.pair ord_top↑ main_arg)) <1=
+    Beh.of_program (ModL.compile_arg (Mod.add_list mds_src) main_arg).
   Proof.
     eapply adequacy_global_itree.
     exists (200)%ord.
@@ -728,8 +720,8 @@ Section CANCEL.
       Local Opaque ModSemL.prog.
       ss. steps_strong.
       esplits; et.
-      { des. split.
-        { inv WF. econs.
+      { des. inv x. split.
+        { inv H. econs.
           { rewrite fns_eq. auto. }
           { pose proof initial_mrs_eq. unfold ms_mid, ms_src in H.
             rewrite H. auto. }

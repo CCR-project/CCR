@@ -9,6 +9,7 @@ Require Import HoareDef.
 Require Import TODOYJ.
 Require Import Logic.
 Require Import KnotHeader.
+Require Import Invariant.
 Require Import STB.
 
 Set Implicit Arguments.
@@ -60,7 +61,7 @@ Section MAIN.
                      (fun varg o =>
                         (⌜o = ord_top⌝)
                           ** OwnM (knot_init)
-                          ** inv_opener: iProp
+                          ** inv_closed: iProp
                      ),
                      (fun vret =>
                         (⌜vret = (Vint (Z.of_nat (Fib 10)))↑⌝: iProp)%I)

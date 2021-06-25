@@ -31,55 +31,41 @@ Section SIMMODSEM.
 
   Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
 
-  Let wf: W -> Prop :=
+  Let wf: _ -> W -> Prop :=
     @mk_wf _ unit
            top4
            (fun _ mp_src mp_tgt => ⌜mp_src = mp_tgt⌝%I)
   .
 
-  Theorem sim_modsem: ModSemPair.sim (NewStack2.StackSem) (SModSem.to_src NewStack1.SStackSem).
+  Variable frds: list mname.
+
+  Theorem sim_modsem: ModSemPair.sim (NewStack2.StackSem) (KModSem.transl_src frds NewStack1.KStackSem).
   Proof.
-    econstructor 1 with (wf:=wf); ss; et; swap 2 3.
-    { econs; ss.
+    econstructor 1 with (wf:=wf) (le:=top2); ss; et; swap 2 3.
+    { esplits. econs; ss.
       - red. uipropall.
     }
-    assert(BDOOR: interp_hCallE_src (KModSem.transl_itr_tgt APCK) = Ret tt).
+    assert(BDOOR: (KModSem.interp_kCallE_src APCK) = Ret tt).
     { admit "mid - BDOOR". }
     econs; ss.
-    { init. inv WF. rr in RTGT. uipropall. subst. clear_fast.
-      unfold cfun2, fun_to_src, body_to_src, KModSem.transl_fun_tgt, cfun, new_body, NewStack1.new_body.
-      steps.
-      destruct (Any.split varg) eqn:T.
-      - cbn. des_ifs. steps. rewrite BDOOR. steps.
-        force_l. esplits. steps. rewrite _UNWRAPN0. steps. rewrite _GUARANTEE. force_l; ss. steps.
-        econs; ss; et. rr. uipropall; ss.
-      - cbn. des_ifs. steps. rewrite BDOOR. steps.
-        force_l. esplits. steps. rewrite _UNWRAPN0. steps. rewrite _GUARANTEE. force_l; ss. steps.
-        econs; ss; et. rr. uipropall; ss.
+    { init. inv WF. rr in RTGT. rewrite Seal.sealing_eq in *. subst. clear_fast.
+      unfold fun_to_src, body_to_src, KModSem.body_to_src, cfun, new_body, NewStack1.new_body.
+      steps. rewrite my_if_same. steps.
+      rewrite BDOOR. steps.
+      force_l. esplits. steps. rewrite _UNWRAPN0. steps. rewrite _GUARANTEE. force_l; ss. steps.
+      econs; ss; et. rr. uipropall; ss.
     }
     econs; ss.
-    { init. inv WF. rr in RTGT. uipropall. subst. clear_fast.
-      unfold cfun2, fun_to_src, body_to_src, KModSem.transl_fun_tgt, cfun, pop_body, NewStack1.pop_body.
-      steps.
-      destruct (Any.split varg) eqn:T.
-      - cbn. des_ifs. steps. rewrite BDOOR. steps.
-        des_ifs.
-        { steps. econs; ss; et. rr. uipropall; ss. rewrite Any.upcast_downcast in *. clarify.
-          rewrite insert_delete. rewrite insert_id; ss. sym. eapply Any.downcast_upcast; ss.
-        }
-        steps.
-        { econs; ss; et. rr. uipropall; ss. rewrite Any.upcast_downcast in *. clarify.
-          f_equal. rewrite insert_delete; ss. }
-      - cbn. des_ifs. steps. rewrite BDOOR. steps.
-        des_ifs.
-        { steps. econs; ss; et. rr. uipropall; ss. rewrite Any.upcast_downcast in *. clarify.
-          rewrite insert_delete. rewrite insert_id; ss. sym. eapply Any.downcast_upcast; ss.
-        }
-        steps.
-        { econs; ss; et. rr. uipropall; ss. rewrite Any.upcast_downcast in *. clarify.
-          f_equal. rewrite insert_delete; ss. }
+    { init. inv WF. rr in RTGT. rewrite Seal.sealing_eq in *. uipropall. subst. clear_fast.
+      unfold fun_to_src, body_to_src, KModSem.body_to_src, cfun, pop_body, NewStack1.pop_body.
+      steps. rewrite my_if_same. steps.
+      rewrite BDOOR. steps. apply Any.downcast_upcast in _UNWRAPN0. des; subst. des_ifs; steps.
+      { rewrite Any.upcast_downcast in *. clarify. econs; ss; et. rr. uipropall; ss.
+        f_equal. rewrite insert_delete; ss. rewrite insert_id; ss. }
+      { rewrite Any.upcast_downcast in *. clarify. econs; ss; et. rr. uipropall; ss.
+        f_equal. rewrite insert_delete; ss. }
     }
-    admit "ez; TODO: make something like trivial tactic".
+    admit "ez".
   Unshelve.
     all: ss.
   Qed.
@@ -93,7 +79,9 @@ Section SIMMOD.
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG memRA Σ}.
 
-  Theorem correct: ModPair.sim (NewStack2.Stack) (SMod.to_src NewStack1.SStack).
+  Variable frds: Sk.t -> list mname.
+
+  Theorem correct: ModPair.sim (NewStack2.Stack) (KMod.transl_src frds NewStack1.KStack).
   Proof.
     econs; ss. ii. eapply sim_modsem; ss.
   Qed.

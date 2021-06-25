@@ -1137,3 +1137,11 @@ Ltac r_solve :=
   | _ => reflexivity
   end
 .
+
+Require Import Any.
+
+(* universe of GRA < universe of Any *)
+Module FOO.
+  Definition foo_ura (M: URA.t) (r: M): Any.t := r↑.
+  Definition foo_gra (Σ: GRA.t) (r: Σ): Any.t := r↑.
+End FOO.

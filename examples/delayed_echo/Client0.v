@@ -11,8 +11,6 @@ Set Implicit Arguments.
 
 
 
-(*** TODO: move to TODOYJ ***)
-Definition resum_ktr A E F `{E -< F}: ktree E A ~> ktree F A := fun _ ktr a => interp (fun _ e => trigger e) (ktr a).
 
 
 (* Parameter inF: list val -> itree eventE val. *)

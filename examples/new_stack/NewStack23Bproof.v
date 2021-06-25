@@ -45,7 +45,7 @@ Section SIMMODSEM.
 (*   | None => <<TGT: (stk_mgr0: gmap mblock (list val)) !! h = None>> *)
 (*   end) *)
 
-  Let wf: W -> Prop :=
+  Let wf: _ -> W -> Prop :=
     @mk_wf _ unit
            (fun _ _ _stk_mgr0 =>
               (∃ stk_mgr0 (stk_res0: URA.car (t:=_stkRA)),
@@ -95,17 +95,17 @@ Section SIMMODSEM.
 
   Theorem sim_modsem: ModSemPair.sim (NewStack3B.StackSem global_stb) (NewStack2.StackSem).
   Proof.
-    econstructor 1 with (wf:=wf); ss; et; swap 2 3.
-    { econs; ss.
+    econstructor 1 with (wf:=wf) (le:=top2); ss; et; swap 2 3.
+    { esplits. econs; ss.
       - eapply to_semantic. iIntros "H". iExists _, _. iSplit; ss; et.
         iSplit; ss; et.
       - red. uipropall.
     }
     econs; ss.
-    { unfold NewStack2.new_body, cfun2, cfun. init. harg. fold wf. mDesAll. des; clarify.
-      steps. rewrite Any.pair_split. cbn. rewrite Any.upcast_downcast in *. clarify. steps.
-      astart 0. astop. steps. rewrite Any.upcast_downcast in *. clarify.
-      rename g into stk_mgr0. rename x0 into h. rename a1 into stk_res0. rename x into P. des_u.
+    { unfold NewStack2.new_body, cfun. init. harg. fold wf. mDesAll. des; clarify.
+      rewrite Any.upcast_downcast in *. steps. rewrite Any.upcast_downcast in *. clarify.
+      astart 0. astop. steps.
+      rename g into stk_mgr0. rename x0 into h. rename a0 into stk_res0. rename x into P. des_u.
       force_l. exists ((Vptr h 0)↑). steps.
       mOwnWf "O".
       (* assert(WF1: forall k, stk_res0 k <> Excl.boom). *)
@@ -130,10 +130,10 @@ Section SIMMODSEM.
       }
     }
     econs; ss.
-    { unfold NewStack2.pop_body, cfun2, cfun. init. harg. fold wf. des_ifs_safe. mDesAll. des; clarify.
-      steps. rewrite Any.pair_split. cbn. rewrite Any.upcast_downcast in *. clarify. steps.
+    { unfold NewStack2.pop_body, cfun. init. harg. fold wf. des_ifs_safe. mDesAll. des; clarify.
+      rewrite Any.upcast_downcast in *. steps. rewrite Any.upcast_downcast in *. clarify.
       astart 1. steps.
-      rename a0 into stk_mgr0. rename n into h. rename a1 into stk_res0.
+      rename g into stk_mgr0. rename n into h. rename a0 into stk_res0.
       mCombine "O" "A".
       mOwnWf "O".
       (* assert(A: forall k, URA.wf ((stk_res0 k): URA.car (t:=Excl.t _))). *)
@@ -148,7 +148,7 @@ Section SIMMODSEM.
         rewrite WF0 in D. ur in D. ss. }
       hexploit (SIM h); et. intro T; des; [|by clarify]. rewrite B in *.
       apply some_injective in SRC. eapply (@Ag.ag_inj _ P P0) in SRC. subst. ss. steps.
-      rewrite Any.upcast_downcast in *. sym in _UNWRAPN. clarify. rewrite TGT. steps.
+      rewrite TGT. steps.
       destruct stk as [|x stk1].
       - astop. steps. force_l. esplits. steps. hret _; ss. iDestruct "O" as "[A B]". iModIntro. iFrame.
         repeat iSplit; ss; et.
@@ -164,10 +164,9 @@ Section SIMMODSEM.
         { iModIntro. iFrame; ss; et. iSplits; ss; et. iPureIntro. right. inv PR; ss. }
     }
     econs; ss.
-    { unfold NewStack2.push_body, cfun2, cfun. init. harg. fold wf. des_ifs_safe. mDesAll. des; clarify.
-      steps. rewrite Any.pair_split. cbn. rewrite Any.upcast_downcast in *. steps.
-      rename a1 into stk_mgr0. rename n into h. rename a2 into stk_res0. rename a0 into x.
-      rewrite Any.upcast_downcast in *. sym in _UNWRAPN. clarify.
+    { unfold NewStack2.push_body, cfun. init. harg. fold wf. des_ifs_safe. mDesAll. des; clarify.
+      rewrite Any.upcast_downcast in *. steps. rewrite Any.upcast_downcast in *. clarify.
+      rename g into stk_mgr0. rename n into h. rename a1 into stk_res0. rename a into x.
       mCombine "O" "PRE".
       mOwnWf "O".
       assert(A: forall k, URA.wf ((stk_res0 k): URA.car (t:=Opt.t (Ag.t _)))).

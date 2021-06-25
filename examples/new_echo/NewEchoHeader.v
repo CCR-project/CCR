@@ -13,4 +13,4 @@ Next Obligation.
   repeat (decide equality).
 Defined.
 
-Definition INT_MIN: Z := - 1.
+(* Definition INT_MIN: Z := - 1. *)

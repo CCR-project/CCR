@@ -28,10 +28,6 @@ Section EVENTSCOMMON.
   | Syscall (fn: gname) (args: list val) (rvs: val -> Prop): eventE val
   .
 
-  Inductive callE: Type -> Type :=
-  | Call (fn: gname) (args: Any.t): callE Any.t
-  .
-
   (* Notation "'Choose' X" := (trigger (Choose X)) (at level 50, only parsing). *)
   (* Notation "'Take' X" := (trigger (Take X)) (at level 50, only parsing). *)
 
@@ -72,27 +68,6 @@ Notation "(ǃ)" := (unwrapN) (only parsing).
 Goal (tt ↑↓?) = Ret tt. rewrite Any.upcast_downcast. ss. Qed.
 Goal (tt ↑↓ǃ) = Ret tt. rewrite Any.upcast_downcast. ss. Qed.
 
-Section EVENTSCOMMON.
-
-(*** casting call, fun ***)
-(* Definition ccallN {X Y} (fn: gname) (varg: X): itree Es Y := vret <- trigger (Call fn varg↑);; vret <- vret↓ǃ;; Ret vret. *)
-(* Definition ccallU {X Y} (fn: gname) (varg: X): itree Es Y := vret <- trigger (Call fn varg↑);; vret <- vret↓?;; Ret vret. *)
-(* Definition cfunN {X Y} (body: X -> itree Es Y): Any.t -> itree Es Any.t := *)
-(*   fun varg => varg <- varg↓ǃ;; vret <- body varg;; Ret vret↑. *)
-(* Definition cfunU {X Y} (body: X -> itree Es Y): Any.t -> itree Es Any.t := *)
-(*   fun varg => varg <- varg↓?;; vret <- body varg;; Ret vret↑. *)
-
-  (* Definition ccall {X Y} (fn: gname) (varg: X): itree Es Y := vret <- trigger (Call fn varg↑);; vret <- vret↓ǃ;; Ret vret. *)
-  (* Definition cfun {X Y} (body: X -> itree Es Y): Any.t -> itree Es Any.t := *)
-  (*   fun varg => varg <- varg↓ǃ;; vret <- body varg;; Ret vret↑. *)
-  Context `{HasCallE: callE -< E}.
-  Context `{HasEventE: eventE -< E}.
-  Definition ccall {X Y} (fn: gname) (varg: X): itree E Y := vret <- trigger (Call fn varg↑);; vret <- vret↓ǃ;; Ret vret.
-  Definition cfun {X Y} (body: X -> itree E Y): Any.t -> itree E Any.t :=
-    fun varg => varg <- varg↓ǃ;; vret <- body varg;; Ret vret↑.
-
-End EVENTSCOMMON.
-
 
 
 
@@ -126,6 +101,10 @@ Module EventsL.
 Section EVENTSL.
 
   Context `{Σ: GRA.t}.
+
+  Inductive callE: Type -> Type :=
+  | Call (mn: option mname) (fn: gname) (args: Any.t): callE Any.t
+  .
 
   Inductive pE: Type -> Type :=
   | PPut (mn: mname) (p: Any.t): pE unit
@@ -351,7 +330,7 @@ Section MODSEML.
 
   Record t: Type := mk {
     (* initial_ld: mname -> GRA; *)
-    fnsems: alist gname (Any.t -> itree Es Any.t);
+    fnsems: alist gname ((option mname * Any.t) -> itree Es Any.t);
     initial_mrs: alist mname (Σ * Any.t);
   }
   .
@@ -380,9 +359,9 @@ Section MODSEML.
   Variable ms: t.
 
   Definition prog: callE ~> itree Es :=
-    fun _ '(Call fn args) =>
+    fun _ '(Call mn fn args) =>
       sem <- (alist_find fn ms.(fnsems))?;;
-      rv <- (sem args);;
+      rv <- (sem (mn, args));;
       Ret rv
   .
 
@@ -404,7 +383,7 @@ Section MODSEML.
     | None => Ret tt
     | Some P' => assume (<<WF: P'>>)
     end;;;
-    snd <$> interp_Es prog (prog (Call "main" arg)) (initial_r_state, initial_p_state).
+    snd <$> interp_Es prog (prog (Call None "main" arg)) (initial_r_state, initial_p_state).
 
   Definition initial_itr (P: option Prop): itree (eventE) Any.t :=
     initial_itr_arg P ([]: list val)↑.
@@ -693,8 +672,7 @@ Section MODSEML.
         }
       }
       f_equal. unfold prog. extensionality T. extensionality e. destruct e.
-      f_equal. f_equal. symmetry.
-      eapply alist_permutation_find; et.
+      f_equal. f_equal. symmetry. eapply alist_permutation_find; et.
       { inv WF. ss. }
       { eapply Permutation_app_comm. }
     }
@@ -759,6 +737,10 @@ End ModSemL.
 Section EVENTS.
   Context `{Σ: GRA.t}.
 
+  Inductive callE: Type -> Type :=
+  | Call (fn: gname) (args: Any.t): callE Any.t
+  .
+
   Inductive pE: Type -> Type :=
   | PPut (p: Any.t): pE unit
   | PGet: pE Any.t
@@ -790,17 +772,17 @@ Section EVENTS.
       end
   .
 
-  Definition handle_callE `{callE -< E} `{EventsL.rE -< E}: callE ~> itree E :=
+  Definition handle_callE (mn: mname) `{EventsL.callE -< E} `{EventsL.rE -< E}: callE ~> itree E :=
     fun _ '(Call fn args) =>
       trigger EventsL.PushFrame;;;
-      r <- trigger (Call fn args);;
+      r <- trigger (EventsL.Call (Some mn) fn args);;
       trigger EventsL.PopFrame;;;
       Ret r
   .
 
   Definition handle_all (mn: mname): Es ~> itree EventsL.Es.
     i. destruct X.
-    { apply handle_callE; assumption. }
+    { apply (handle_callE mn); assumption. }
     destruct s.
     { exact (trigger (handle_rE mn r)). }
     destruct s.
@@ -844,11 +826,13 @@ Section EVENTS.
 
   Lemma transl_all_callE
         mn
-        (e: callE Any.t)
+        fn args
     :
-      transl_all mn (trigger e) = trigger EventsL.PushFrame;;; r <- (trigger e);; trigger EventsL.PopFrame;;; tau;; Ret r
+      transl_all mn (trigger (Call fn args)) =
+      trigger EventsL.PushFrame;;; r <- (trigger (EventsL.Call (Some mn) fn args));;
+      trigger EventsL.PopFrame;;; tau;; Ret r
   .
-  Proof. dependent destruction e; ss. unfold transl_all. rewrite unfold_interp. ss. grind. Qed.
+  Proof. unfold transl_all. rewrite unfold_interp. ss. grind. Qed.
 
   Lemma transl_all_rE
         mn
@@ -914,6 +898,27 @@ Section EVENTS.
 End EVENTS.
 (* End Events. *)
 
+Section EVENTSCOMMON.
+
+(*** casting call, fun ***)
+(* Definition ccallN {X Y} (fn: gname) (varg: X): itree Es Y := vret <- trigger (Call fn varg↑);; vret <- vret↓ǃ;; Ret vret. *)
+(* Definition ccallU {X Y} (fn: gname) (varg: X): itree Es Y := vret <- trigger (Call fn varg↑);; vret <- vret↓?;; Ret vret. *)
+(* Definition cfunN {X Y} (body: X -> itree Es Y): Any.t -> itree Es Any.t := *)
+(*   fun varg => varg <- varg↓ǃ;; vret <- body varg;; Ret vret↑. *)
+(* Definition cfunU {X Y} (body: X -> itree Es Y): Any.t -> itree Es Any.t := *)
+(*   fun varg => varg <- varg↓?;; vret <- body varg;; Ret vret↑. *)
+
+  (* Definition ccall {X Y} (fn: gname) (varg: X): itree Es Y := vret <- trigger (Call fn varg↑);; vret <- vret↓ǃ;; Ret vret. *)
+  (* Definition cfun {X Y} (body: X -> itree Es Y): Any.t -> itree Es Any.t := *)
+  (*   fun varg => varg <- varg↓ǃ;; vret <- body varg;; Ret vret↑. *)
+  Context `{HasCallE: callE -< E}.
+  Context `{HasEventE: eventE -< E}.
+  Definition ccall {X Y} (fn: gname) (varg: X): itree E Y := vret <- trigger (Call fn varg↑);; vret <- vret↓ǃ;; Ret vret.
+  Definition cfun {X Y} (body: X -> itree E Y): (option mname * Any.t) -> itree E Any.t :=
+    fun '(_, varg) => varg <- varg↓ǃ;; vret <- body varg;; Ret vret↑.
+
+End EVENTSCOMMON.
+
 
 
 Module ModSem.
@@ -922,7 +927,7 @@ Section MODSEM.
   Context `{Σ: GRA.t}.
 
   Record t: Type := mk {
-    fnsems: list (gname * (Any.t -> itree Es Any.t));
+    fnsems: list (gname * ((option mname * Any.t) -> itree Es Any.t));
     mn: mname;
     initial_mr: Σ;
     initial_st: Any.t;
@@ -932,7 +937,8 @@ Section MODSEM.
   Definition prog (ms: t): callE ~> itree Es :=
     fun _ '(Call fn args) =>
       sem <- (alist_find fn ms.(fnsems))?;;
-      (sem args)
+      '(mn, args) <- (Any.split args)ǃ;; mn <- mn↓ǃ;;
+      (sem (mn, args))
   .
 
   (*** TODO: move to CoqlibC ***)
@@ -1260,3 +1266,160 @@ pqrname :=
   (*   end *)
   (* . *)
 End Equisatisfiability.
+
+
+Section REFINE.
+   Context `{Σ: GRA.t}.
+
+   Definition refines (md_tgt md_src: ModL.t): Prop :=
+     (* forall (ctx: list Mod.t), Beh.of_program (ModL.compile (add_list (md_tgt :: ctx))) <1= *)
+     (*                           Beh.of_program (ModL.compile (add_list (md_src :: ctx))) *)
+     forall (ctx: list Mod.t), Beh.of_program (ModL.compile (ModL.add (Mod.add_list ctx) md_tgt)) <1=
+                               Beh.of_program (ModL.compile (ModL.add (Mod.add_list ctx) md_src))
+   .
+
+   (*** vertical composition ***)
+   Global Program Instance refines_PreOrder: PreOrder refines.
+   Next Obligation. ii. ss. Qed.
+   Next Obligation. ii. eapply H0. eapply H. ss. Qed.
+
+   (*** horizontal composition ***)
+   Theorem refines_add
+         (md0_src md0_tgt md1_src md1_tgt: Mod.t)
+         (SIM0: refines md0_tgt md0_src)
+         (SIM1: refines md1_tgt md1_src)
+     :
+       <<SIM: refines (ModL.add md0_tgt md1_tgt) (ModL.add md0_src md1_src)>>
+   .
+   Proof.
+     ii. r in SIM0. r in SIM1.
+     (***
+ctx (a0 b0)
+(ctx a0) b0
+(ctx a0) b1
+      ***)
+     rewrite ModL.add_assoc in PR.
+     specialize (SIM1 (snoc ctx md0_tgt)). spc SIM1. rewrite Mod.add_list_snoc in SIM1. eapply SIM1 in PR.
+     (***
+ctx (a0 b1)
+(a0 b1) ctx
+a0 (b1 ctx)
+(b1 ctx) a0
+      ***)
+     rewrite <- ModL.add_assoc' in PR.
+     eapply ModL.add_comm in PR.
+     rewrite <- ModL.add_assoc' in PR.
+     eapply ModL.add_comm in PR.
+     (***
+(b1 ctx) a1
+a1 (b1 ctx)
+(a1 b1) ctx
+ctx (a1 b1)
+      ***)
+     specialize (SIM0 (cons md1_src ctx)). spc SIM0. rewrite Mod.add_list_cons in SIM0. eapply SIM0 in PR.
+     eapply ModL.add_comm in PR.
+     rewrite ModL.add_assoc' in PR.
+     eapply ModL.add_comm in PR.
+     ss.
+   Qed.
+
+(*    Theorem refines_proper_r *)
+(*          (md0_src md0_tgt: Mod.t) (ctx: list Mod.t) *)
+(*          (SIM0: refines md0_tgt md0_src) *)
+(*      : *)
+(*        <<SIM: refines (ModL.add md0_tgt (add_list ctx)) (ModL.add md0_src (add_list ctx))>> *)
+(*    . *)
+(*    Proof. *)
+(*      ii. r in SIM0. rename ctx into xs. rename ctx0 into ys. *)
+(*      (*** *)
+(* ys + (tgt + xs) *)
+(* (tgt + xs) + ys *)
+(* tgt + (xs + ys) *)
+(* (xs + ys) + tgt *)
+(*       ***) *)
+(*      eapply ModL.add_comm in PR. *)
+(*      rewrite <- ModL.add_assoc' in PR. *)
+(*      eapply ModL.add_comm in PR. *)
+(*      (*** *)
+(* (xs + ys) + src *)
+(* src + (xs + ys) *)
+(* (src + xs) + ys *)
+(* ys + (src + xs) *)
+(*       ***) *)
+(*      specialize (SIM0 (xs ++ ys)). spc SIM0. rewrite add_list_app in SIM0. eapply SIM0 in PR. *)
+(*      eapply ModL.add_comm in PR. *)
+(*      rewrite ModL.add_assoc' in PR. *)
+(*      eapply ModL.add_comm in PR. *)
+(*      ss. *)
+(*    Qed. *)
+   Theorem refines_proper_r
+         (mds0_src mds0_tgt: list Mod.t) (ctx: list Mod.t)
+         (SIM0: refines (Mod.add_list mds0_tgt) (Mod.add_list mds0_src))
+     :
+       <<SIM: refines (ModL.add (Mod.add_list mds0_tgt) (Mod.add_list ctx)) (ModL.add (Mod.add_list mds0_src) (Mod.add_list ctx))>>
+   .
+   Proof.
+     ii. r in SIM0. rename ctx into xs. rename ctx0 into ys.
+     (***
+ys + (tgt + xs)
+(tgt + xs) + ys
+tgt + (xs + ys)
+(xs + ys) + tgt
+      ***)
+     eapply ModL.add_comm in PR.
+     rewrite <- ModL.add_assoc' in PR.
+     eapply ModL.add_comm in PR.
+     (***
+(xs + ys) + src
+src + (xs + ys)
+(src + xs) + ys
+ys + (src + xs)
+      ***)
+     specialize (SIM0 (xs ++ ys)). spc SIM0. rewrite Mod.add_list_app in SIM0. eapply SIM0 in PR.
+     eapply ModL.add_comm in PR.
+     rewrite ModL.add_assoc' in PR.
+     eapply ModL.add_comm in PR.
+     ss.
+   Qed.
+
+   Theorem refines_proper_l
+         (mds0_src mds0_tgt: list Mod.t) (ctx: list Mod.t)
+         (SIM0: refines (Mod.add_list mds0_tgt) (Mod.add_list mds0_src))
+     :
+       <<SIM: refines (ModL.add (Mod.add_list ctx) (Mod.add_list mds0_tgt)) (ModL.add (Mod.add_list ctx) (Mod.add_list mds0_src))>>
+   .
+   Proof.
+     ii. r in SIM0. rename ctx into xs. rename ctx0 into ys.
+     (***
+ys + (xs + tgt)
+(ys + xs) + tgt
+(ys + xs) + src
+ys + (xs + src)
+      ***)
+     rewrite ModL.add_assoc' in PR.
+     specialize (SIM0 (ys ++ xs)). spc SIM0. rewrite Mod.add_list_app in SIM0. eapply SIM0 in PR.
+     rewrite <- ModL.add_assoc' in PR.
+     ss.
+   Qed.
+
+   Definition refines_closed (md_tgt md_src: ModL.t): Prop :=
+     Beh.of_program (ModL.compile md_tgt) <1= Beh.of_program (ModL.compile md_src)
+   .
+
+   Global Program Instance refines_closed_PreOrder: PreOrder refines_closed.
+   Next Obligation. ii; ss. Qed.
+   Next Obligation. ii; ss. r in H. r in H0. eauto. Qed.
+
+   Lemma refines_close: refines <2= refines_closed.
+   Proof. ii. specialize (PR nil). ss. unfold Mod.add_list in *. ss. rewrite ! ModL.add_empty_l in PR. eauto. Qed.
+End REFINE.
+
+Class gnames := mk_gnames { gnames_contents :> gname -> Prop }.
+Coercion gnames_contents: gnames >-> Funclass.
+
+Definition top_gnames := mk_gnames top1.
+
+Class sk_gnames := mk_sk_gnames { sk_gnames_contents :> Sk.t -> gnames }.
+Coercion sk_gnames_contents: Sk.t >-> gnames.
+
+Definition top_sk_gnames := mk_sk_gnames (fun _ => top_gnames).

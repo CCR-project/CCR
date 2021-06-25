@@ -137,7 +137,7 @@ Section SIMMODSEM.
     forall b ofs v, m0.(Mem.cnts) b ofs = Some v -> <<NB: b < m0.(Mem.nb)>>
   .
 
-  Let wf: W -> Prop :=
+  Let wf: _ -> W -> Prop :=
     @mk_wf
       _ unit
       (fun _ _ _mem_tgt0 =>
@@ -163,7 +163,7 @@ Section SIMMODSEM.
     end;
 
     match goal with
-    | |- gpaco6 _ _ _ _ _ _ _ _ (?mr_src, _, _, _) (?mr_tgt, (?mp_tgt↑), _, _) =>
+    | |- gpaco7 _ _ _ _ _ _ _ _ _ (?mr_src, _, _, _) (?mr_tgt, (?mp_tgt↑), _, _) =>
 
       repeat multimatch mp_tgt with
              | context[?g] =>
@@ -178,8 +178,9 @@ Section SIMMODSEM.
 
   Theorem correct_modsem: forall sk, ModSemPair.sim (SModSem.to_tgt [] (Mem1.SMemSem sk)) (Mem0.MemSem sk).
   Proof.
-   econstructor 1 with (wf:=wf); et; swap 2 3.
-    { ss. econs; ss. eapply to_semantic.
+   econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
+   { ss. }
+    { ss. eexists. econs; ss. eapply to_semantic.
       iIntros "H". iSplits; ss; et.
       { iPureIntro. ii. unfold Sk.load_mem. cbn. uo. des_ifs; et. econs; et. }
       { iPureIntro. admit "ez". }
@@ -242,7 +243,7 @@ Section SIMMODSEM.
         des_ifs; mDesAll; ss. des; subst. clarify. rewrite Any.upcast_downcast in *. clarify.
         steps. unhide_k. steps. astart 0. astop.
         renamer. rename n into b. rename z into ofs.
-        rename a0 into v. rename WF into SIMWF.
+        rename a into v. rename WF into SIMWF.
         mCombine "INV" "A". mOwnWf "INV".
         assert(HIT: memk_src0 b ofs = (Some v)).
         { clear - WF.
@@ -342,8 +343,8 @@ Section SIMMODSEM.
       { des_ifs_safe (mDesAll; ss). des; subst. clarify. rewrite Any.upcast_downcast in *. clarify.
         steps. unhide_k. steps. astart 0. astop.
         renamer.
-        rename n into b. rename z into ofs. rename v into v1. 
-        rename a0 into v0. rename WF into SIMWF.
+        rename n into b. rename z into ofs. rename v into v1.
+        rename a into v0. rename WF into SIMWF.
         steps.
         mCombine "INV" "A". mOwnWf "INV".
         assert(T: memk_src0 b ofs = (Some v0)).
@@ -431,13 +432,13 @@ Section SIMMODSEM.
           erewrite VALIDPTR; et; cycle 1.
           { rewrite URA.add_assoc in WF. eapply URA.wf_mon in WF; et. }
           erewrite VALIDPTR; et; cycle 1.
-          { erewrite URA.add_comm with (a6:=(a0, a1) |-> [a2]) in WF.
+          { erewrite URA.add_comm with (a5:=(a, a0) |-> [a1]) in WF.
             rewrite URA.add_assoc in WF. eapply URA.wf_mon in WF; et. }
           rewrite URA.add_comm in WF. eapply URA.wf_mon in WF. ur in WF; ss. steps.
-          replace (dec a0 a3 && dec a1 a4 ) with false; cycle 1.
+          replace (dec a a2 && dec a0 a3 ) with false; cycle 1.
           { clear - WF.
             exploit _points_to_disj; et. intro NEQ. des; try (by rewrite dec_false; ss).
-            erewrite dec_false with (x0:=a1); ss. rewrite andb_false_r; ss.
+            erewrite dec_false with (x0:=a0); ss. rewrite andb_false_r; ss.
           }
           steps. force_l. eexists. steps. hret _; ss. iModIntro. iDestruct "INV" as "[INV A]". iSplitR "A"; ss; et.
         }
