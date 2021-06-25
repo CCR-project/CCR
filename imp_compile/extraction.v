@@ -12,6 +12,7 @@ Require Import Imp ImpNotations.
 (* Require ImpNotations. *)
 Require Import Imp2Csharpminor.
 Require Import Imp2CsharpminorLink.
+Require Import Imp2Asm.
 
 Require Import ImpSimple.
 Require Import ImpFactorial.
@@ -163,8 +164,8 @@ Separate Extraction
    (* Parser.translation_unit_file *)
    (* For imp compilation *)
    Compiler.transf_clight_program
-   Imp2Csharpminor.ASMGEN.list_type_to_typelist
-   Imp2Csharpminor.ASMGEN.transf_csharpminor_program
+   Imp2Asm.ASMGEN.list_type_to_typelist
+   Imp2Asm.ASMGEN.transf_csharpminor_program
    Imp2CsharpminorLink.link_imps
    Imp.lift Imp2Csharpminor.compile
    imp_factorial_prog
