@@ -30,8 +30,15 @@ Section PROOF.
   (* Proof. *)
   (*   i. depgen a. depgen t. clear. induction nl; i; ss; clarify. *)
   (* Admitted. *)
-  
 
+  Lemma n2l_one {A} :
+    forall (nl: @Coqlib.nlist A) (a: A)
+      (ONE: [a] = nlist2list nl),
+      nl = Coqlib.nbase a.
+  Proof.
+    i. depgen a. clear. induction nl; i; ss; clarify.
+    sym in H0; apply n2l_not_nil in H0. clarify.
+  Qed.
 
   Theorem compile_behavior_improves
           (imps : list Imp.program) (asms : Coqlib.nlist Asm.program)
@@ -55,19 +62,21 @@ Section PROOF.
     des. rename tgtl into csml, H into LINKCSM, H0 into IMP2.
 
     assert (C2A: Coqlib.nlist_forall2 (fun csm asm => transf_csharpminor_program csm = OK asm) csms asms).
-    { clear IMP2. depgen asms. depgen csms. clear. depgen csml. induction imps; i; ss; clarify.
-      { inv CSM; ss; clarify. sym in H; apply n2l_not_nil in H. clarify. }
-      inv CSM. inv COMP.
-      admit "". }
+    { clear IMP2. clear LINKCSM. depgen asms. depgen csms. clear. induction imps; i; ss; clarify.
+      { inv CSM; inv COMP. sym in H; apply n2l_not_nil in H. clarify. }
+      destruct csms as [| csm csms ].
+      { inv CSM. inv H4. inv COMP. inv H4. apply n2l_one in H1. clarify. econs; eauto.
+        unfold compile_imp, compile in H3. des_ifs.
+        unfold Imp2Csharpminor.compile_imp in H2. rewrite H2 in Heq. clarify. }
+      destruct asms as [| asm asms ].
+      { inv COMP. inv H4. inv CSM. inv H5. sym in H; apply n2l_not_nil in H. clarify. }
+      inv CSM; inv COMP. econs; eauto.
+      unfold compile_imp, compile in H3. des_ifs.
+      unfold Imp2Csharpminor.compile_imp in H2. rewrite H2 in Heq. clarify. }
+
+    move C2A after IMP2. unfold improves2 in *. unfold improves_state2 in *.
 
     
-
-
-      (* replace csms with (list2nlist y l'). *)
-      (* 2:{ hexploit (n2l_l2n csms). i. des. clarify. sym in H1. apply nlist_list_eq in H1. clarify. } *)
-      (* replace asms with (list2nlist y0 l'0). *)
-      (* 2:{ hexploit (n2l_l2n asms). i. des. clarify. sym in H4. apply nlist_list_eq in H4. clarify. } *)
-
 
       
 
