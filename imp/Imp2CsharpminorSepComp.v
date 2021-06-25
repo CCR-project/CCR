@@ -278,15 +278,16 @@ Section PROOFRIGHT.
   Qed.
 
   Lemma _comm_link_imp_compile_exists_link
-        src1 src2 srcl tgt1 tgt2
+        src1 src2 tgt1 tgt2
         (WFP1: wf_public src1)
         (WFP2: wf_public src2)
         (COMP1: compile src1 = OK tgt1)
         (COMP2: compile src2 = OK tgt2)
-        (LINKSRC: link_imp src1 src2 = Some srcl)
+        (LINKSRC: exists srcl, link_imp src1 src2 = Some srcl)
     :
       (exists tgtl, <<LINKTGT: link tgt1 tgt2 = Some tgtl>>).
   Proof.
+    des.
     hexploit (link_prog_succeeds tgt1 tgt2).
     { unfold compile in *. des_ifs. }
     { i. apply PTree_Properties.in_of_list in H. apply PTree_Properties.in_of_list in H0. rename H into IN1, H0 into IN2.
@@ -309,14 +310,14 @@ Section PROOFRIGHT.
   Qed.
 
   Lemma comm_link_imp_compile_exists_link
-        (srcs: list Imp.programL) srcl
-        tgts
+        (srcs: list Imp.programL) tgts
         (WFPS: Forall wf_public srcs)
         (COMPS: Forall2 (fun src tgt => compile src = OK tgt) srcs (nlist2list tgts))
-        (LINKSRC: link_imp_list srcs = Some srcl)
+        (LINKSRC: exists srcl, link_imp_list srcs = Some srcl)
     :
       exists tgtl, <<LINKTGT: link_list tgts = Some tgtl>>.
   Proof.
+    des.
     destruct srcs as [| src0 srcs]; ss; clarify.
     inv COMPS; clarify. rename tgts into ntgts, y into tgt0, l' into tgts, H2 into COMP0, H3 into COMPS.
     depgen srcl. depgen src0. depgen tgt0. depgen ntgts.
@@ -356,7 +357,7 @@ Section PROOFRIGHT.
       (exists tgtl, (<<LINKTGT: link tgt1 tgt2 = Some tgtl>>) /\ (<<COMP: compile srcl = OK tgtl>>)).
   Proof.
     hexploit _comm_link_imp_compile_exists_link.
-    5: eapply LINKSRC.
+    5:{ exists srcl. eapply LINKSRC. }
     1,2,3,4: eauto.
     i. des. exists tgtl. split; auto. eapply _comm_link_imp_compile.
     3,4: eauto.
@@ -373,7 +374,7 @@ Section PROOFRIGHT.
       (exists tgtl, (<<LINKTGT: link_list tgts = Some tgtl>>) /\ (<<COMP: compile srcl = OK tgtl>>)).
   Proof.
     hexploit comm_link_imp_compile_exists_link.
-    3: eapply LINKSRC.
+    3:{ exists srcl. eapply LINKSRC. }
     all: eauto.
     i. des. exists tgtl. split; auto. eapply comm_link_imp_compile; eauto.
   Qed.
@@ -416,15 +417,15 @@ Section PROOFSINGLE.
   Definition imp_initial_state (src : Imp.programL) :=
     (ModL.compile (ModL.add (Mod.lift Mem) (ImpMod.get_modL src))).(initial_state).
 
-  Lemma single_compile_behavior_improves
-        (src: Imp.programL) (tgt: Csharpminor.program) srcst tgtst
-        (WFPROG: Permutation.Permutation
-                   ((List.map fst src.(prog_varsL)) ++ (List.map (compose fst snd) src.(prog_funsL)))
-                   (List.map fst src.(defsL)))
-        (WFPROG2 : forall gn gv, In (gn, Sk.Gvar gv) (Sk.sort (defsL src)) -> In (gn, gv) (prog_varsL src))
-        (COMP: Imp2Csharpminor.compile src = OK tgt)
-        (SINIT: srcst = imp_initial_state src)
-        (TINIT: Csharpminor.initial_state tgt tgtst)
+  Theorem single_compile_behavior_improves
+          (src: Imp.programL) (tgt: Csharpminor.program) srcst tgtst
+          (WFPROG: Permutation.Permutation
+                     ((List.map fst src.(prog_varsL)) ++ (List.map (compose fst snd) src.(prog_funsL)))
+                     (List.map fst src.(defsL)))
+          (WFPROG2 : forall gn gv, In (gn, Sk.Gvar gv) (Sk.sort (defsL src)) -> In (gn, gv) (prog_varsL src))
+          (COMP: Imp2Csharpminor.compile src = OK tgt)
+          (SINIT: srcst = imp_initial_state src)
+          (TINIT: Csharpminor.initial_state tgt tgtst)
     :
       <<IMPROVES: @improves_state2 _ (Csharpminor.semantics tgt) srcst tgtst>>.
   Proof.
@@ -566,21 +567,18 @@ Section PROOFLINK.
   Definition imps_sem (srcs : list Imp.program) :=
     let srcs_mod := List.map ImpMod.get_mod srcs in ModL.compile (Mod.add_list (Mem :: srcs_mod)).
 
-  (* Definition src_initial_state (src : ModL.t) := (ModL.compile src).(initial_state). *)
-  (* Definition imps_init (srcs : list Imp.program) := *)
-  (*   let srcs_mod := List.map ImpMod.get_mod srcs in src_initial_state (Mod.add_list (Mem :: srcs_mod)). *)
-
   Lemma compile_behavior_improves_compile
         (srcs : list Imp.program) (tgts : Coqlib.nlist Csharpminor.program)
-        srcl tgtl
+        tgtl
         (COMP: Forall2 (fun src tgt => compile (lift src) = OK tgt) srcs (nlist2list tgts))
-        (LINKSRC: link_imps srcs = Some srcl)
+        (LINKSRC: exists srcl, link_imps srcs = Some srcl)
         (LINKTGT: link_list tgts = Some tgtl)
     :
       (forall tgt_init,
           (Csharpminor.initial_state tgtl tgt_init) ->
           (@improves_state2 _ (Csharpminor.semantics tgtl) (imps_sem srcs).(initial_state) tgt_init)).
   Proof.
+    des.
     i. unfold imps_sem.
     hexploit left_arrow; eauto.
     i. instantiate (1:=Mem) in H0. rewrite H0; clear H0.
@@ -592,22 +590,20 @@ Section PROOFLINK.
 
   Lemma compile_behavior_improves_compile_exists
         (srcs : list Imp.program) (tgts : Coqlib.nlist Csharpminor.program)
-        srcl
         (COMP: Forall2 (fun src tgt => compile (lift src) = OK tgt) srcs (nlist2list tgts))
-        (LINKSRC: link_imps srcs = Some srcl)
+        (LINKSRC: exists srcl, link_imps srcs = Some srcl)
     :
       exists tgtl, (link_list tgts = Some tgtl).
   Proof.
-    i.
+    des. i.
     hexploit right_arrow; eauto.
     i. des. exists tgtl; eauto.
   Qed.
 
   Theorem compile_behavior_improves
           (srcs : list Imp.program) (tgts : Coqlib.nlist Csharpminor.program)
-          srcl
           (COMP: Forall2 (fun src tgt => compile (lift src) = OK tgt) srcs tgts)
-          (LINKSRC: link_imps srcs = Some srcl)
+          (LINKSRC: exists srcl, link_imps srcs = Some srcl)
     :
       exists tgtl, ((link_list tgts = Some tgtl) /\
                (improves2 (imps_sem srcs) (Csharpminor.semantics tgtl))).
