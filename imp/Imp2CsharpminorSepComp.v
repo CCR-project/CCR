@@ -436,6 +436,34 @@ Section PROOFSINGLE.
   Definition imp_initial_state (src : Imp.programL) :=
     (ModL.compile (ModL.add (Mod.lift Mem) (ImpMod.get_modL src))).(initial_state).
 
+  Theorem single_compile_behavior_improves_exists
+          (src: Imp.programL) (tgt: Csharpminor.program) srcst
+          (WFPROG: Permutation.Permutation
+                     ((List.map fst src.(prog_varsL)) ++ (List.map (compose fst snd) src.(prog_funsL)))
+                     (List.map fst src.(defsL)))
+          (WFPROG2 : forall gn gv, In (gn, Sk.Gvar gv) (Sk.sort (defsL src)) -> In (gn, gv) (prog_varsL src))
+          (COMP: Imp2Csharpminor.compile src = OK tgt)
+          (SINIT: srcst = imp_initial_state src)
+    :
+      exists tgtst, (Csharpminor.initial_state tgt tgtst).
+  Proof.
+    unfold compile in COMP. des_ifs.
+    match goal with [|- exists _, Csharpminor.initial_state ?_tgt _ ] => set (tgt:=_tgt) end.
+    hexploit (Genv.init_mem_exists tgt); eauto.
+    { i. subst tgt; ss. hexploit perm_elements_PTree_norepeat_in_in; eauto.
+      i. apply H0 in H. clear H0. apply decomp_gdefs in H. des; ss; clarify; eauto.
+      { admit "hypothesis for bts". }
+      { destruct fd. unfold compile_eFun in SYS; ss; clarify. }
+      { destruct fd. unfold compile_eFun in EFS; ss; clarify. }
+      { admit "ez". }
+      { destruct fd as [mn [fn ff]]. unfold compile_iFun in IFS; ss; clarify. }
+      { admit "ez". }
+    }
+    i. des.
+    admit "if main do not exists, no initial state!".
+  Admitted.
+
+
   Theorem single_compile_behavior_improves
           (src: Imp.programL) (tgt: Csharpminor.program) srcst tgtst
           (WFPROG: Permutation.Permutation
