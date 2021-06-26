@@ -19,36 +19,6 @@ Require Import Imp2Asm.
 Set Implicit Arguments.
 
 
-
-Section CSMPROOF.
-
-  Lemma separate_transf_csm_program_preservation
-        (csms: Coqlib.nlist Csharpminor.program) csml
-        (asms: Coqlib.nlist Asm.program) asml
-        beh
-        (COMP: Coqlib.nlist_forall2 (fun csm asm => transf_csharpminor_program csm = OK asm) csms asms)
-        (CSMLINK: link_list csms = Some csml)
-        (ASMLINK: link_list asms = Some asml)
-        (ASMBEH: program_behaves (Asm.semantics asml) beh)
-    :
-      exists beh0, ((<<CSMBEH: program_behaves (Csharpminor.semantics csml) beh0>>) /\
-               (<<IMPC: behavior_improves beh0 beh>>)).
-  Proof.
-
-
-
-
-  Admitted.
-
-
-
-
-End CSMPROOF.
-
-
-
-
-
 Section PROOF.
 
   Context `{Σ: GRA.t}.
@@ -96,11 +66,12 @@ Section PROOF.
       unfold compile_imp, compile in H3. des_ifs.
       unfold Imp2Csharpminor.compile_imp in H2. rewrite H2 in Heq. clarify. }
 
-
-
-
-
-  Admitted.
+    destruct (link_list asms) eqn:E. 
+    - exists p; auto.
+    - exfalso. 
+      exploit separate_transf_csm_program_correct; eauto. intros (a & P & Q).
+      congruence.
+  Qed.
 
   Lemma compile_behavior_improves_if_exists
         (imps : list Imp.program) (asms : Coqlib.nlist Asm.program)
