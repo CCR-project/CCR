@@ -386,7 +386,7 @@ Section PROOF.
   |}
   .
 
-  Definition StackSem (stb: list (string * fspec)): ModSem.t := (SModSem.to_tgt stb) SStackSem.
+  Definition StackSem (stb: gname -> option fspec): ModSem.t := (SModSem.to_tgt stb) SStackSem.
 
   Definition SStack: SMod.t := {|
     SMod.get_modsem := fun _ => SStackSem;
@@ -394,7 +394,7 @@ Section PROOF.
   |}
   .
 
-  Definition Stack (stb: Sk.t -> list (string * fspec)): Mod.t := (SMod.to_tgt stb) SStack.
+  Definition Stack (stb: Sk.t -> gname -> option fspec): Mod.t := (SMod.to_tgt stb) SStack.
 
 End PROOF.
 Global Hint Unfold StackStb: stb.

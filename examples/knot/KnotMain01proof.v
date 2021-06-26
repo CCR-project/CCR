@@ -34,9 +34,9 @@ Section SIMMODSEM.
 
   Let W: Type := (Σ * Any.t) * (Σ * Any.t).
 
-  Variable RecStb: SkEnv.t -> list (gname * fspec).
-  Variable FunStb: SkEnv.t -> list (gname * fspec).
-  Variable GlobalStb: SkEnv.t -> list (gname * fspec).
+  Variable RecStb: SkEnv.t -> gname -> option fspec.
+  Variable FunStb: SkEnv.t -> gname -> option fspec.
+  Variable GlobalStb: SkEnv.t -> gname -> option fspec.
 
   Let wf: _ -> W -> Prop :=
     @mk_wf

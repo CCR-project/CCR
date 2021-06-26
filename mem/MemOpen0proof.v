@@ -59,7 +59,7 @@ Section SIMMODSEM.
       apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
       des_ifs.
       { steps. force_l. esplits; et. steps.
-        rr. econs; ss. rr. uipropall. }
+        red. esplits; et. rr. econs; ss. rr. uipropall. }
       { steps. }
     }
     econs; ss.
@@ -69,7 +69,7 @@ Section SIMMODSEM.
       steps. inv WF. rr in RTGT. uipropall. clarify. clear_fast.
       apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
       force_r; ss. steps.
-      rr. econs; ss. rr. uipropall.
+      red. esplits; et. rr. econs; ss. rr. uipropall.
     }
     econs; ss.
     { unfold loadF, fun_to_src, body_to_src, cfun, KModSem.disclose_ksb_src, KModSem.body_to_src. init.
@@ -78,7 +78,7 @@ Section SIMMODSEM.
       steps. inv WF. rr in RTGT. uipropall. clarify. clear_fast.
       apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
       force_r; ss. steps.
-      rr. econs; ss. rr. uipropall.
+      red. esplits; et. rr. econs; ss. rr. uipropall.
     }
     econs; ss.
     { unfold storeF, fun_to_src, body_to_src, cfun, KModSem.disclose_ksb_src, KModSem.body_to_src. init.
@@ -87,7 +87,7 @@ Section SIMMODSEM.
       steps. inv WF. rr in RTGT. uipropall. clarify. clear_fast.
       apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
       force_r; ss. steps.
-      rr. econs; ss. rr. uipropall.
+      red. esplits; et. rr. econs; ss. rr. uipropall.
     }
     econs; ss.
     { unfold cmpF, fun_to_src, body_to_src, cfun, KModSem.disclose_ksb_src, KModSem.body_to_src. init.
@@ -97,8 +97,8 @@ Section SIMMODSEM.
       apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
       force_r; ss. steps.
       des_ifs; steps.
-      { rr. econs; ss. rr. uipropall. }
-      { rr. econs; ss. rr. uipropall. }
+      { red. esplits; et. rr. econs; ss. rr. uipropall. }
+      { red. esplits; et. rr. econs; ss. rr. uipropall. }
     }
   Unshelve.
     all: ss.

@@ -6,7 +6,7 @@ Require Import Behavior.
 Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
-Require Import HoareDef.
+Require Import HoareDef STB.
 Require Import SimModSem.
 From ExtLib Require Import
      Core.RelDec
@@ -85,6 +85,6 @@ Section PROOF.
   Definition g_spec:    fspec := mk_simple (fun (n: nat) =>
                                               ((fun varg o => (⌜varg = [Vint (Z.of_nat n)]↑ /\ o = ord_pure n /\ n < mut_max⌝: iProp)%I),
                                                (fun vret => (⌜vret = (Vint (Z.of_nat (sum n)))↑⌝: iProp)%I))).
-  Definition GlobalStb: list (gname * fspec) := [("main", main_spec); ("f", f_spec); ("g", g_spec)].
+  Definition GlobalStb: gname -> option fspec := to_stb [("main", main_spec); ("f", f_spec); ("g", g_spec)].
 
 End PROOF.

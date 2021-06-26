@@ -1,4 +1,4 @@
-Require Import Mem0 Mem1 HoareDef SimModSem.
+Require Import Mem0 Mem1 HoareDef STB SimModSem.
 Require Import Coqlib.
 Require Import Universe.
 Require Import Skeleton.
@@ -176,7 +176,7 @@ Section SIMMODSEM.
     end
   .
 
-  Theorem correct_modsem: forall sk, ModSemPair.sim (SModSem.to_tgt [] (Mem1.SMemSem sk)) (Mem0.MemSem sk).
+  Theorem correct_modsem: forall sk, ModSemPair.sim (SModSem.to_tgt (to_stb []) (Mem1.SMemSem sk)) (Mem0.MemSem sk).
   Proof.
    econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
    { ss. }

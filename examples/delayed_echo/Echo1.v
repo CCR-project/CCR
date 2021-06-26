@@ -5,7 +5,7 @@ Require Import Behavior.
 Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
-Require Import HoareDef.
+Require Import HoareDef STB.
 Require Import Stack1 Client1 Mem1.
 Require Import TODOYJ.
 Require Import Logic.
@@ -121,7 +121,7 @@ Section PROOF.
   |}
   .
 
-  Definition EchoSem: ModSem.t := (SModSem.to_tgt (StackStb ++ ClientStb ++ MemStb ++ EchoStb)) SEchoSem.
+  Definition EchoSem: ModSem.t := (SModSem.to_tgt (to_stb (StackStb ++ ClientStb ++ MemStb ++ EchoStb))) SEchoSem.
 
   Definition SEcho: SMod.t := {|
     SMod.get_modsem := fun _ => SEchoSem;
@@ -129,7 +129,7 @@ Section PROOF.
   |}
   .
 
-  Definition Echo: Mod.t := (SMod.to_tgt (fun _ => MemStb ++ StackStb)) SEcho.
+  Definition Echo: Mod.t := (SMod.to_tgt (fun _ => to_stb (MemStb ++ StackStb))) SEcho.
 
 End PROOF.
 Global Hint Unfold EchoStb: stb.

@@ -72,9 +72,7 @@ Section SIM.
           {R_src R_tgt} (RR: st_local -> st_local -> R_src -> R_tgt -> Prop)
     : Ord.t -> world -> st_local * itree Es R_src -> st_local * itree Es R_tgt -> Prop :=
   | safe_safe_sim_itree_ret
-      i0 w0 w1 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
-      (WF: wf w1 (mrs_src0, mrs_tgt0))
-      (WLE: le w0 w1)
+      i0 w0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       v_src v_tgt
       (RET: RR (mrs_src0, fr_src0) (mrs_tgt0, fr_tgt0) v_src v_tgt)
     :
@@ -590,8 +588,8 @@ Section HLEMMAS.
         x vret_src vret_tgt
         mr_tgt mp_tgt fr_tgt
         (le: A -> A -> Prop)
-        (R_src: A -> Any.t -> Any.t -> iProp) (R_tgt: A -> Any.t -> Any.t -> iProp)
         (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
+        (R_src: A -> Any.t -> Any.t -> iProp) (R_tgt: A -> Any.t -> Any.t -> iProp)
         (FUEL: (14 < n)%ord)
 
         ctx l
@@ -603,7 +601,7 @@ Section HLEMMAS.
         (UPDATABLE:
            (from_iPropL l) ⊢ #=> (R_src a mp_src mp_tgt ** (Q mn x vret_src vret_tgt: iProp)))
 
-        (EQ: forall mr_src1 (SAT: R_src a mp_src mp_tgt mr_src1),
+        (EQ: forall mr_src1 (WLE: le a0 a) (WF: mk_wf R_src R_tgt a ((mr_src1, mp_src), (mr_tgt, mp_tgt))),
             eqr (mr_src1, mp_src, ε) (mr_tgt, mp_tgt, fr_tgt) vret_tgt vret_tgt)
     :
       gpaco7 (_sim_itree (mk_wf R_src R_tgt) le) (cpn7 (_sim_itree (mk_wf R_src R_tgt) le)) r rg _ _ eqr n a0
@@ -633,7 +631,7 @@ Section HLEMMAS.
     repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
     { rewrite URA.unit_id; ss. }
     repeat (ired_both; gstep; econs; eauto with ord_step).
-    { econs; et. }
+    eapply EQ; et. econs; et.
   Qed.
 
   Lemma APC_start_clo
@@ -719,7 +717,7 @@ Section HLEMMAS.
 
         (FUEL: (n1 + 7 < n0)%ord)
         (fsp: fspec)
-        (FIND: alist_find fn stb = Some fsp)
+        (FIND: stb fn = Some fsp)
         (NEXT: (next < at_most)%ord)
 
         (POST: gpaco7 (_sim_itree wf le) (cpn7 (_sim_itree wf le)) rg rg _ _ eqr n1 a
@@ -874,7 +872,6 @@ Ltac _step :=
   | _ => (*** default ***)
     gstep; eapply safe_sim_sim; econs; try (eapply OrdArith.lt_from_nat; apply Nat.lt_succ_diag_r); i
   end;
-  (* idtac *)
   match goal with
   | [ |- exists _, _ ] => fail 1
   | _ => idtac
@@ -915,14 +912,14 @@ Require Import TODOYJ.
 Ltac astep_full _fn _args _next _n1 :=
   eapply (@APC_step_clo _ _ _fn _args _next _n1);
   [(try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; lia)]))|
-   (try by (stb_tac; refl))|
+   (try by ((try stb_tac); refl))|
    (eapply OrdArith.lt_from_nat; lia)|
   ].
 
 Ltac astep _fn _args :=
   eapply (@APC_step_clo _ _ _fn _args);
   [(try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r; eapply Nat.lt_succ_diag_r)]))|
-   (try by (stb_tac; refl))|
+   (try by ((try stb_tac); refl))|
    (eapply OrdArith.lt_from_nat; eapply Nat.lt_succ_diag_r)|
   ].
 
@@ -1042,7 +1039,7 @@ Tactic Notation "hret" uconstr(a) :=
   |
   |
   |start_ipm_proof
-  |
+  |try by (i; (try unfold lift_rel); esplits; et)
   ].
 
 Tactic Notation "hcall" uconstr(o) uconstr(x) uconstr(a) "with" constr(Hns) :=

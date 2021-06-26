@@ -45,15 +45,15 @@ Section HEADER.
       iApply bupd_idemp. iApply POST0. iApply "H". }
   Qed.
 
-  Variant fn_has_spec (stb: list (gname * fspec)) (fn: gname) (fsp: fspec): Prop :=
+  Variant fn_has_spec (stb: gname -> option fspec) (fn: gname) (fsp: fspec): Prop :=
   | fn_has_spec_intro
       fsp1
-      (FIND: alist_find fn stb = Some fsp1)
+      (FIND: stb fn = Some fsp1)
       (WEAL: fspec_weaker fsp fsp1)
   .
   Hint Constructors fn_has_spec: core.
 
-  Lemma fn_has_spec_weaker (stb: list (gname * fspec)) (fn: gname) (fsp0 fsp1: fspec)
+  Lemma fn_has_spec_weaker (stb: gname -> option fspec) (fn: gname) (fsp0 fsp1: fspec)
         (SPEC: fn_has_spec stb fn fsp1)
         (WEAK: fspec_weaker fsp0 fsp1)
     :
@@ -62,8 +62,8 @@ Section HEADER.
     inv SPEC. econs; eauto. etrans; eauto.
   Qed.
 
-  Definition stb_incl (stb0 stb1: list (gname * fspec)): Prop :=
-    forall fn fsp (FIND: alist_find fn stb0 = Some fsp), alist_find fn stb1 = Some fsp.
+  Definition stb_incl (stb0 stb1: gname -> option fspec): Prop :=
+    forall fn fsp (FIND: stb0 fn = Some fsp), stb1 fn = Some fsp.
 
   Global Program Instance stb_incl_PreOrder: PreOrder stb_incl.
   Next Obligation.
@@ -78,14 +78,14 @@ Section HEADER.
 
   Variable skenv: SkEnv.t.
 
-  Variant fb_has_spec (stb: list (gname * fspec)) (fb: mblock) (fsp: fspec): Prop :=
+  Variant fb_has_spec (stb: gname -> option fspec) (fb: mblock) (fsp: fspec): Prop :=
   | fb_has_spec_intro
       fn
       (FBLOCK: skenv.(SkEnv.blk2id) fb = Some fn)
       (SPEC: fn_has_spec stb fn fsp)
   .
 
-  Lemma fb_has_spec_weaker (stb: list (gname * fspec)) (fb: mblock) (fsp0 fsp1: fspec)
+  Lemma fb_has_spec_weaker (stb: gname -> option fspec) (fb: mblock) (fsp0 fsp1: fspec)
         (SPEC: fb_has_spec stb fb fsp1)
         (WEAK: fspec_weaker fsp0 fsp1)
     :

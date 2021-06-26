@@ -116,7 +116,7 @@ Section SIMMODSEM.
       { iApply (echo_ra_merge with "INV PRE"). }
       des; subst. rewrite Any.upcast_downcast. steps.
 
-      destruct (alist_find "getint" (StackStb ++ ClientStb ++ MemStb ++ EchoStb)) eqn:T; stb_tac; clarify.
+      destruct ( to_stb (StackStb ++ ClientStb ++ MemStb ++ EchoStb) "getint") eqn:T; stb_tac; clarify.
       steps. hcall _ _ _ with "PRE"; et.
       { split; ss. }
       mDesAll. clarify. steps.
@@ -130,7 +130,7 @@ Section SIMMODSEM.
 
       unfold unint in *. des_ifs; ss.
       { steps.
-        destruct (alist_find "echo_finish" (StackStb ++ ClientStb ++ MemStb ++ EchoStb)) eqn:T; stb_tac; clarify.
+        destruct (to_stb (StackStb ++ ClientStb ++ MemStb ++ EchoStb) "echo_finish") eqn:T; stb_tac; clarify.
         steps. hcall _ (_, _) _ with "*"; et.
         { iModIntro. iSplitR "INV1".
           { iLeft. iExists _. iFrame. }
@@ -169,7 +169,7 @@ Section SIMMODSEM.
         mUpd "A". mDesOwn "A".
 
         astop. steps.
-        destruct (alist_find "echo" (StackStb ++ ClientStb ++ MemStb ++ EchoStb)) eqn:T; stb_tac; clarify.
+        destruct (to_stb (StackStb ++ ClientStb ++ MemStb ++ EchoStb) "echo") eqn:T; stb_tac; clarify.
         steps. hcall _ (_, _) _ with "*"; ss.
         { iModIntro. iSplitR "A1"; ss.
           { iLeft. iExists _. iSplitL "A"; ss. }
@@ -235,7 +235,7 @@ Section SIMMODSEM.
       }
       { splits; ss. }
       steps. astop. steps.
-      destruct (alist_find "putint" (StackStb ++ ClientStb ++ MemStb ++ EchoStb)) eqn:T; stb_tac; clarify.
+      destruct (to_stb (StackStb ++ ClientStb ++ MemStb ++ EchoStb) "putint") eqn:T; stb_tac; clarify.
       mDesAll. clarify.
       steps. rewrite Any.upcast_downcast in *. clarify. steps.
 
@@ -250,7 +250,7 @@ Section SIMMODSEM.
       { iApply (echo_ra_merge with "A2 INV1"). }
       des; subst. steps.
 
-      destruct (alist_find "echo_finish" (StackStb ++ ClientStb ++ MemStb ++ EchoStb)) eqn:T; stb_tac; clarify.
+      destruct (to_stb (StackStb ++ ClientStb ++ MemStb ++ EchoStb) "echo_finish") eqn:T; stb_tac; clarify.
       steps. hcall _ (_, _) _ with "A2 A1 INV1"; ss.
       { iCombine "A2" "INV1" as "A".
         iPoseProof (OwnM_Upd with "A") as "A".

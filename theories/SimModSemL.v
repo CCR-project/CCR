@@ -82,9 +82,7 @@ Section SIM.
           {R_src R_tgt} (RR: st_local -> st_local -> R_src -> R_tgt -> Prop)
     : Ord.t -> world -> st_local * itree Es R_src -> st_local * itree Es R_tgt -> Prop :=
   | sim_itree_ret
-      i0 w0 w1 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
-      (WF: wf w1 (mrs_src0, mrs_tgt0))
-      (WLE: le w0 w1)
+      i0 w0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
       v_src v_tgt
       (RET: RR (mrs_src0, fr_src0) (mrs_tgt0, fr_tgt0) v_src v_tgt)
     :
@@ -384,8 +382,9 @@ Section SIM.
                  ((mrs_tgt0, fr_tgt0), i_tgt)
   .
 
-  Program Definition sim_itree: _ -> _ -> relation _ :=
-    paco7 _sim_itree bot7 _ _ (fun _ _ => @eq Any.t).
+  Program Definition sim_itree o w0: relation _ :=
+    paco7 _sim_itree bot7 _ _ (fun st_src st_tgt (ret_src ret_tgt: Any.t) =>
+                                 exists w1, <<WLE: le w0 w1>> /\ <<WF: wf w1 (fst st_src, fst st_tgt)>> /\ <<RET: ret_src = ret_tgt>>) o w0.
 
   Lemma sim_itree_mon: monotone7 _sim_itree.
   Proof.
@@ -956,9 +955,9 @@ Section ADD.
   Proof.
     revert n w0 w1 ms_src ms_tgt SIM. pcofix CIH.
     i. punfold SIM. pfold. inv SIM.
-    - destruct w3. econs; et.
-      { eapply EQV. et. }
-      { inv WLE. split; ss. }
+    - des. subst. econs; et. inv WLE. destruct w2.
+      exists (w2, w). esplits; et.
+      eapply EQV. et.
     - econs. right. eapply CIH. pclearbot. et.
     - destruct w2. econs.
       { eapply EQV. et. }
@@ -1030,9 +1029,8 @@ Section ADD.
   Proof.
     i. ginit. { eapply cpn7_wcompat; eauto with paco. } revert_until DISJTGT. gcofix CIH. i.
     gstep. punfold SIM. inv SIM; pclearbot.
-    * unguard. des. econs 1; eauto.
+    * unguard. des. econs 1; eauto. eexists (_, _). esplits; et.
       { econs; eauto. }
-      { split; auto. }
     * econs 2. gbase. eapply CIH; eauto.
     * unguard. des. econs 3; eauto.
       { econs; eauto. }
@@ -1495,7 +1493,7 @@ Section SIMMOD.
      ginit. gcofix CIH. i.
      punfold SIM. gstep. Local Opaque interp_Es.
      inv SIM; pclearbot; ss; mgo; ss; mgo.
-     - econs; ss. esplits; et. econs; eauto.
+     - econs; ss. des. esplits; et. econs; eauto.
      - econs; ss. gbase. eapply CIH; eauto.
      - rewrite interp_Es_rE with (rst0:=(mrs_src, fr_src :: frs_src)).
        rewrite interp_Es_rE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)).

@@ -238,7 +238,7 @@ Proof Outline
 
   Variable sk: Sk.t.
 
-  Theorem correct: ModSemPair.sim (MemOpen.MemSem [] sk) (Mem0.MemSem sk).
+  Theorem correct: ModSemPair.sim (MemOpen.MemSem (to_stb []) sk) (Mem0.MemSem sk).
   Proof.
    econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
    { ss. }

@@ -106,7 +106,7 @@ Section PROOF.
   |}
   .
   Definition SMemSem: Sk.t -> SModSem.t := KMemSem.
-  Definition MemSem (stb: list (gname * fspec)): Sk.t -> ModSem.t := (SModSem.to_tgt stb) ∘ SMemSem.
+  Definition MemSem (stb: gname -> option fspec): Sk.t -> ModSem.t := (SModSem.to_tgt stb) ∘ SMemSem.
 
 
 
@@ -116,7 +116,7 @@ Section PROOF.
   |}
   .
   Definition SMem: SMod.t := KMem.
-  Definition Mem (stb: Sk.t -> list (gname * fspec)): Mod.t := SMod.to_tgt stb SMem.
+  Definition Mem (stb: Sk.t -> gname -> option fspec): Mod.t := SMod.to_tgt stb SMem.
 
 End PROOF.
 Global Hint Unfold MemStb: stb.

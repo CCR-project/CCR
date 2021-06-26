@@ -41,14 +41,14 @@ Section PROOF.
   Qed.
   Local Existing Instance memRA_inG.
 
-  Let RecStb: SkEnv.t -> list (gname * fspec) :=
-    fun skenv => KnotRecStb.
+  Let RecStb: SkEnv.t -> gname -> option fspec :=
+    fun skenv => to_stb KnotRecStb.
 
-  Let FunStb: SkEnv.t -> list (gname * fspec) :=
-    fun skenv => MainFunStb RecStb skenv.
+  Let FunStb: SkEnv.t -> gname -> option fspec :=
+    fun skenv => to_stb (MainFunStb RecStb skenv).
 
-  Let GlobalStb: SkEnv.t -> list (gname * fspec) :=
-    fun skenv => (MainStb RecStb skenv) ++ (KnotStb RecStb FunStb skenv) ++ MemStb.
+  Let GlobalStb: SkEnv.t -> gname -> option fspec :=
+    fun skenv => to_stb ((MainStb RecStb skenv) ++ (KnotStb RecStb FunStb skenv) ++ MemStb).
 
   Definition KnotAll0: ModL.t := Mod.add_list [KnotMain0.Main; Knot0.Knot; Mem0.Mem].
 
@@ -59,13 +59,16 @@ Section PROOF.
   Proof.
     eapply adequacy_local_list. econs; [|econs; [|econs; ss]].
     - eapply KnotMain01proof.correct with (RecStb0:=RecStb) (FunStb0:=FunStb) (GlobalStb0:=GlobalStb).
-      + ii. ss. rewrite ! eq_rel_dec_correct in *. des_ifs.
+      + ii. ss. unfold FunStb, RecStb, GlobalStb, to_stb in *. ss.
+        rewrite ! eq_rel_dec_correct in *. des_ifs.
       + ii. econs; ss. refl.
       + ii. econs; ss. refl.
     - eapply Knot01proof.correct with (RecStb0:=RecStb) (FunStb0:=FunStb) (GlobalStb0:=GlobalStb).
       + ii. ss.
-      + ii. ss. rewrite ! eq_rel_dec_correct in *. des_ifs.
-      + ii. ss. rewrite ! eq_rel_dec_correct in *. des_ifs; stb_tac; ss.
+      + ii. ss. unfold FunStb, RecStb, GlobalStb, to_stb in *. ss.
+        rewrite ! eq_rel_dec_correct in *. des_ifs.
+      + ii. ss. unfold FunStb, RecStb, GlobalStb, to_stb in *. ss.
+        rewrite ! eq_rel_dec_correct in *. des_ifs; stb_tac; ss.
     - eapply Mem01proof.correct.
   Qed.
 

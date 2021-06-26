@@ -17,17 +17,6 @@ Set Implicit Arguments.
 
 
 
-Section AUX.
-  Context `{Σ: GRA.t}.
-  Definition fspec_trivial: fspec :=
-    mk_fspec (meta:=unit) (fun _ _ argh argl o => (⌜argh = argl ∧ o = ord_top⌝: iProp)%I)
-             (fun _ _ reth retl => (⌜reth = retl⌝: iProp)%I)
-  .
-
-End AUX.
-
-
-
 (*** TODO: remove redundancy ***)
 Ltac my_red_both := try (prw _red_gen 2 0); try (prw _red_gen 1 0).
 
@@ -651,7 +640,7 @@ Section KTACTICS.
 
         (FUEL: (n1 + 11 < n0)%ord)
         (ftsp: fspec)
-        (FIND: alist_find fn stb = Some (KModSem.disclose_tgt ftsp))
+        (FIND: stb fn = Some (KModSem.disclose_tgt ftsp))
         (NEXT: (next < at_most)%ord)
 
         (POST: gpaco7 (_sim_itree wf le) (cpn7 (_sim_itree wf le)) rg rg _ _ eqr n1 w
@@ -731,7 +720,7 @@ Section KTACTICS.
           ,
             gpaco7 (_sim_itree (mk_wf R_src R_tgt) le) (cpn7 (_sim_itree (mk_wf R_src R_tgt) le)) bot7 bot7
                    _ _
-                   (fun _ _ => eq)
+                   (lift_rel (mk_wf R_src R_tgt) le a (@eq Any.t))
                    89 a
                    (((mr_src, mp_src), fr_src),
                     ((interp_hCallE_tgt mn gstb ord_top (KModSem.transl_fun_tgt body varg) ctx)

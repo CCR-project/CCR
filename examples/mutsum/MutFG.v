@@ -64,10 +64,14 @@ Section PROOF.
     replace [SMod.to_src SMain; SMod.to_src SF; SMod.to_src SG] with (List.map SMod.to_src [SMain; SF; SG]) by refl.
     { erewrite f_equal with (x:=[Main; F; G]).
       {
-        eapply adequacy_type; revgoals.
-        { ss. }
-        { instantiate (1:=ε). unfold compose. ss. rewrite ! URA.unit_id. apply URA.wf_unit. }
-        { uipropall. red. uipropall. }
+        eapply adequacy_type2; revgoals.
+        { i. ss. clarify. ss. esplits; et; ss.
+          { instantiate (1:=ε). red. uipropall. split; red; uipropall. }
+          { instantiate (1:=[MutMain1.Main ; MutF1.F ; MutG1.G]). ss.
+            rewrite ! URA.unit_id. apply URA.wf_unit. }
+          { i. red in POST. uipropall. des. red in POST0. uipropall. }
+        }
+        { admit "ez". }      
       }
       { ss. }
     }

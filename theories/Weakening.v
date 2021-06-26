@@ -31,11 +31,11 @@ Section PROOF.
   Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
 
 
-  Variable stb_src stb_tgt: list (gname * fspec).
+  Variable stb_src stb_tgt: gname -> option fspec.
   Hypothesis stb_stronger:
-    forall fn fsp_tgt (FINDTGT: alist_find fn stb_tgt = Some (fsp_tgt)),
+    forall fn fsp_tgt (FINDTGT: stb_tgt fn = Some (fsp_tgt)),
     exists fsp_src,
-      (<<FINDSRC: alist_find fn stb_src = Some (fsp_src)>>) /\
+      (<<FINDSRC: stb_src fn = Some (fsp_src)>>) /\
       (<<WEAKER: fspec_weaker fsp_tgt fsp_src>>)
   .
 
@@ -89,7 +89,6 @@ Section PROOF.
     { Local Transparent interp_hCallE_tgt.
       unfold interp_hCallE_tgt. gcofix CIH. i. ides itr.
       { mstep. ired. red in WF. des; subst. eapply sim_itree_ret; et.
-        { red. esplits; et. }
         { red. ss. esplits; et. }
       }
       { mstep. ired. eapply sim_itree_tau; ss.
@@ -97,7 +96,7 @@ Section PROOF.
       rewrite <- bind_trigger. destruct e as [|[|]]; ss.
       { destruct h. repeat interp_red2. ired. cbn.
         unfold unwrapN, triggerNB. des; subst.
-        destruct (alist_find fn0 stb_tgt) eqn:EQ.
+        destruct (stb_tgt fn0) eqn:EQ.
         { eapply stb_stronger in EQ. des.
           rewrite FINDSRC. rewrite ! bind_ret_l. rewrite ! bind_bind.
           { muclo lordC_spec. econs.
@@ -204,8 +203,6 @@ Section PROOF.
               mstep. eapply sim_itree_take_tgt; eauto with ord_step. unshelve esplit; et.
               mstep. eapply sim_itree_take_tgt; eauto with ord_step. unshelve esplit; et.
               mstep. eapply sim_itree_ret.
-              { red. esplits; et. }
-              { ss. }
               { econs.
                 { esplits; et. }
                 { esplits; et; ss.
@@ -348,7 +345,7 @@ Section PROOF.
       mstep. eapply sim_itree_choose_src; eauto with ord_step. unshelve esplit; et.
       mstep. eapply sim_itree_fput_src; eauto with ord_step.
       mstep. eapply sim_itree_ret; et.
-      red. esplits; et.
+      red. esplits; et. red. esplits; et.
     }
     Unshelve. all: try (exact Ord.O). all: try (exact tt).
   Qed.
@@ -359,10 +356,10 @@ Section PROOF.
 
   Context `{Σ: GRA.t}.
 
-  Definition stb_weaker (stb0 stb1: list (gname * fspec)): Prop :=
-    forall fn fsp0 (FINDTGT: alist_find fn stb0 = Some fsp0),
+  Definition stb_weaker (stb0 stb1: gname -> option fspec): Prop :=
+    forall fn fsp0 (FINDTGT: stb0 fn = Some fsp0),
     exists fsp1,
-      (<<FINDSRC: alist_find fn stb1 = Some fsp1>>) /\
+      (<<FINDSRC: stb1 fn = Some fsp1>>) /\
       (<<WEAKER: fspec_weaker fsp0 fsp1>>)
   .
 
@@ -373,8 +370,9 @@ Section PROOF.
     exploit H0; et. intro U; des. esplits; eauto. etrans; et.
   Qed.
 
-  Theorem incl_weaker: forall stb0 stb1 (NODUP: List.NoDup (List.map fst stb1)) (INCL: incl stb0 stb1), stb_weaker stb0 stb1.
+  Theorem incl_weaker: forall stb0 stb1 (NODUP: List.NoDup (List.map fst stb1)) (INCL: incl stb0 stb1), stb_weaker (to_stb stb0) (to_stb stb1).
   Proof.
+    unfold to_stb.
     ii. eapply alist_find_some in FINDTGT.
     destruct (alist_find fn stb1) eqn:T.
     { eapply alist_find_some in T.
@@ -391,8 +389,9 @@ Section PROOF.
     eapply alist_find_none in T; et. exfalso. et.
   Qed.
 
-  Lemma app_weaker: forall stb0 stb1, stb_weaker stb0 (stb0 ++ stb1).
+  Lemma app_weaker: forall stb0 stb1, stb_weaker (to_stb stb0) (to_stb (stb0 ++ stb1)).
   Proof.
+    unfold to_stb.
     ii. eapply alist_find_app in FINDTGT. esplits; eauto. refl.
   Qed.
 

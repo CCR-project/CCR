@@ -49,8 +49,8 @@ Section SIMMODSEM.
   (* Global Opaque ClientStb. *)
   Hint Unfold ClientStb: stb.
 
-  Variable global_stb: list (string * fspec).
-  Hypothesis STBINCL: stb_incl (ClientStb ++ EchoStb ++ StackStb) global_stb.
+  Variable global_stb: gname -> option fspec.
+  Hypothesis STBINCL: stb_incl (to_stb (ClientStb ++ EchoStb ++ StackStb)) global_stb.
 
   Ltac renamer := idtac.
   Ltac post_call :=
@@ -157,8 +157,8 @@ Section SIMMOD.
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG stkRA Σ}.
 
-  Variable global_stb: Sk.t -> list (string * fspec).
-  Hypothesis STBINCL: forall sk, stb_incl (ClientStb ++ EchoStb ++ StackStb) (global_stb sk).
+  Variable global_stb: Sk.t -> gname -> option fspec.
+  Hypothesis STBINCL: forall sk, stb_incl (to_stb (ClientStb ++ EchoStb ++ StackStb)) (global_stb sk).
 
   Theorem correct: ModPair.sim (NewEcho1.Echo global_stb) (NewEcho0.Echo).
   Proof.

@@ -49,8 +49,8 @@ Section SIMMODSEM.
            top4
   .
 
-  Variable global_stb: list (string * fspec).
-  Hypothesis STBINCL: stb_incl (StackStb ++ MemStb) global_stb.
+  Variable global_stb: gname -> option fspec.
+  Hypothesis STBINCL: stb_incl (to_stb (StackStb ++ MemStb)) global_stb.
 
   Ltac renamer :=
     match goal with
@@ -175,7 +175,7 @@ Section SIMMODSEM.
         { mAssertPure False; ss. iDestruct (big_sepM_lookup_acc with "SIM") as "[B C]"; et.
           iDestruct "B" as (y) "[SIM B]".
           iApply (points_to_disj with "POST1 SIM"). }
-        
+
         hret _; ss.
         { iModIntro. iSplits; ss; et. iApply big_sepM_insert; ss. iFrame. iExists _; ss. iFrame. }
     }
@@ -244,8 +244,8 @@ Section SIMMOD.
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG memRA Σ}.
 
-  Variable global_stb: Sk.t -> list (string * fspec).
-  Hypothesis STBINCL: forall sk, stb_incl (StackStb ++ MemStb) (global_stb sk).
+  Variable global_stb: Sk.t -> gname -> option fspec.
+  Hypothesis STBINCL: forall sk, stb_incl (to_stb (StackStb ++ MemStb)) (global_stb sk).
 
   Theorem correct: ModPair.sim (NewStack1.Stack global_stb) NewStack0.Stack.
   Proof.
