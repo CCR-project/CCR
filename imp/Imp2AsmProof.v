@@ -18,19 +18,9 @@ Require Import Imp2Asm.
 
 Set Implicit Arguments.
 
-Section PROOF.
 
-  Context `{Σ: GRA.t}.
-  Context `{builtins : builtinsTy}.
 
-  Lemma n2l_one {A} :
-    forall (nl: @Coqlib.nlist A) (a: A)
-      (ONE: [a] = nlist2list nl),
-      nl = Coqlib.nbase a.
-  Proof.
-    i. depgen a. clear. induction nl; i; ss; clarify.
-    sym in H0; apply n2l_not_nil in H0. clarify.
-  Qed.
+Section CSMPROOF.
 
   Lemma separate_transf_csm_program_preservation
         (csms: Coqlib.nlist Csharpminor.program) csml
@@ -44,7 +34,34 @@ Section PROOF.
       exists beh0, ((<<CSMBEH: program_behaves (Csharpminor.semantics csml) beh0>>) /\
                (<<IMPC: behavior_improves beh0 beh>>)).
   Proof.
+
+
+
+
   Admitted.
+
+
+
+
+End CSMPROOF.
+
+
+
+
+
+Section PROOF.
+
+  Context `{Σ: GRA.t}.
+  Context `{builtins : builtinsTy}.
+
+  Lemma n2l_one {A} :
+    forall (nl: @Coqlib.nlist A) (a: A)
+      (ONE: [a] = nlist2list nl),
+      nl = Coqlib.nbase a.
+  Proof.
+    i. depgen a. clear. induction nl; i; ss; clarify.
+    sym in H0; apply n2l_not_nil in H0. clarify.
+  Qed.
 
   Lemma compile_behavior_improves_exists
         (imps : list Imp.program) (asms : Coqlib.nlist Asm.program)
@@ -78,6 +95,11 @@ Section PROOF.
       inv CSM; inv COMP. econs; eauto.
       unfold compile_imp, compile in H3. des_ifs.
       unfold Imp2Csharpminor.compile_imp in H2. rewrite H2 in Heq. clarify. }
+
+
+
+
+
   Admitted.
 
   Lemma compile_behavior_improves_if_exists
@@ -121,26 +143,26 @@ Section PROOF.
     i. des.
     rename beh0 into beh_csm, tr_tgt into beh_asm. apply IMP2 in CSMBEH. des.
     rename tr_src into beh_imp, BEH into ASMBEH, BEH0 into IMPBEH. exists beh_imp. split; eauto.
+    red. depgen SIM. depgen IMPC. clear. i.
     unfold behavior_improves in IMPC. des; clarify.
-    red. depgen t. clear. depgen beh_asm. depgen beh_imp.
-    pcofix CIH. i.
 
-    punfold SIM. induction SIM; ss; clarify.
-    
+    punfold SIM. inv SIM; ss; clarify.
+    unfold behavior_prefix in *. des. ss; clarify.
 
-
-    induction beh_imp; eqn:BIMP.
-    - punfold SIM. inv SIM; ss; clarify. destruct mtr; ss; clarify.
-    - punfold SIM. inv SIM; ss; clarify. destruct mtr; ss; clarify.
-    - pfold. econs 4; ss; clarify. unfold behavior_prefix. exists beh_asm; ss. sym; apply behavior_app_E0.
-    - punfold SIM. inv SIM; ss; clarify. destruct mtr; ss; clarify.
-    - pfold. 
-      punfold SIM. inv SIM; ss; clarify. destruct mtr; ss; clarify.
-    - 
-    
-
-  Admitted.
-    
+    depgen beh'0. depgen t. depgen beh'. induction MT; i; ss; clarify.
+    { rewrite behavior_app_E0 in TB. clarify. pfold. econs 4; ss; ss.
+      unfold behavior_prefix. exists (behavior_app t beh'0). rewrite behavior_app_E0. ss. }
+    destruct beh'; ss; clarify.
+    match goal with
+    | [ |- match_beh ?_b0 _ ] => replace _b0 with (behavior_app [x] (behavior_app (l ** t0) beh'0)) end.
+    2:{ rewrite <- behavior_app_assoc. ss. }
+    match goal with
+    | [ |- match_beh _ ?_b1 ] => replace _b1 with (Tr.app [y] (Tr.app l' Tr.ub)) end.
+    2:{ rewrite <- Tr.fold_app. ss. }
+    eapply match_beh_cons; eauto.
+    eapply IHMT; eauto.
+    instantiate (1:= Goes_wrong t0). ss.
+  Qed.
 
   Theorem compile_behavior_improves
           (imps : list Imp.program) (asms : Coqlib.nlist Asm.program)
