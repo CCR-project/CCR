@@ -433,36 +433,9 @@ Section PROOFSINGLE.
   Ltac sim_triggerUB := unfold triggerUB; (try sim_red); econs 5; i; ss; auto;
                         dependent destruction STEP; try (irw in x; clarify; fail).
 
-  Definition imp_initial_state (src : Imp.programL) :=
-    (ModL.compile (ModL.add (Mod.lift Mem) (ImpMod.get_modL src))).(initial_state).
+  Definition imp_sem (src : Imp.programL) := ModL.compile (ModL.add (Mod.lift Mem) (ImpMod.get_modL src)).
 
-  Theorem single_compile_behavior_improves_exists
-          (src: Imp.programL) (tgt: Csharpminor.program) srcst
-          (WFPROG: Permutation.Permutation
-                     ((List.map fst src.(prog_varsL)) ++ (List.map (compose fst snd) src.(prog_funsL)))
-                     (List.map fst src.(defsL)))
-          (WFPROG2 : forall gn gv, In (gn, Sk.Gvar gv) (Sk.sort (defsL src)) -> In (gn, gv) (prog_varsL src))
-          (COMP: Imp2Csharpminor.compile src = OK tgt)
-          (SINIT: srcst = imp_initial_state src)
-    :
-      exists tgtst, (Csharpminor.initial_state tgt tgtst).
-  Proof.
-    unfold compile in COMP. des_ifs.
-    match goal with [|- exists _, Csharpminor.initial_state ?_tgt _ ] => set (tgt:=_tgt) end.
-    hexploit (Genv.init_mem_exists tgt); eauto.
-    { i. subst tgt; ss. hexploit perm_elements_PTree_norepeat_in_in; eauto.
-      i. apply H0 in H. clear H0. apply decomp_gdefs in H. des; ss; clarify; eauto.
-      { admit "hypothesis for bts". }
-      { destruct fd. unfold compile_eFun in SYS; ss; clarify. }
-      { destruct fd. unfold compile_eFun in EFS; ss; clarify. }
-      { admit "ez". }
-      { destruct fd as [mn [fn ff]]. unfold compile_iFun in IFS; ss; clarify. }
-      { admit "ez". }
-    }
-    i. des.
-    admit "if main do not exists, no initial state!".
-  Admitted.
-
+  Definition imp_initial_state (src : Imp.programL) := (imp_sem src).(initial_state).
 
   Theorem single_compile_behavior_improves
           (src: Imp.programL) (tgt: Csharpminor.program) srcst tgtst
@@ -539,6 +512,7 @@ Section PROOFSINGLE.
       - unfold get_sge in *. ss. apply Sk.sort_wf in SK.
         hexploit Sk.load_skenv_wf; eauto. i. apply H1 in H. rewrite H in Heq. clarify. }
 
+    unfold imp_sem in *.
     eapply match_states_sim; eauto.
     { apply map_blk_after_init. }
     { apply map_blk_inj. }
@@ -601,6 +575,73 @@ Section PROOFSINGLE.
     }
   Qed.
 
+  Theorem single_compile_program_improves
+          (src: Imp.programL) (tgt: Csharpminor.program)
+          (WFPROG: Permutation.Permutation
+                     ((List.map fst src.(prog_varsL)) ++ (List.map (compose fst snd) src.(prog_funsL)))
+                     (List.map fst src.(defsL)))
+          (WFPROG2 : forall gn gv, In (gn, Sk.Gvar gv) (Sk.sort (defsL src)) -> In (gn, gv) (prog_varsL src))
+          (COMP: Imp2Csharpminor.compile src = OK tgt)
+    :
+      <<IMPROVES: improves2 (imp_sem src) (Csharpminor.semantics tgt)>>.
+  Proof.
+    red. unfold improves2. i. inv BEH.
+    { eapply single_compile_behavior_improves; eauto. }
+    (* initiall wrong case, for us only when main is not found *)
+    exists (Tr.ub). split; red; eauto.
+    2:{ pfold. econs 4; eauto.
+        - ss.
+        - unfold behavior_prefix. exists (Goes_wrong E0). ss.
+    }
+    rename H into NOINIT.
+    unfold imp_sem in *. ss. unfold ModSemL.initial_itr. unfold ModSemL.initial_itr_arg.
+    pfold. econs 6; ss; eauto.
+    unfold Beh.inter. ss. unfold assume. grind.
+    apply ModSemL.step_trigger_take_iff in STEP. des. clarify. split; eauto.
+    red. unfold ITree.map; ss.
+    unfold unwrapU. des_ifs.
+    (* main do not exists, ub *)
+    2:{ sim_red. unfold triggerUB. grind. econs 6; ss. grind. ss. apply ModSemL.step_trigger_take_iff in STEP. des. clarify. }
+
+    (* found main, contradiction *)
+    exfalso.
+    rename Heq into FSEM.
+    grind. rewrite alist_find_find_some in FSEM. rewrite find_map in FSEM.
+    match goal with
+    | [ FSEM: o_map (?a) _ = _ |- _ ] => destruct a eqn:FOUND; ss; clarify
+    end.
+    destruct p as [mn [fn ff]]; ss; clarify. eapply found_imp_function in FOUND. des; clarify.
+    hexploit in_tgt_prog_defs_ifuns; eauto. i.
+    des. rename H into COMPF. clear FOUND.
+    assert (COMPF2: In (compile_iFun (mn, ("main", ff))) (prog_defs tgt)); auto.
+    eapply Globalenvs.Genv.find_symbol_exists in COMPF.
+    destruct COMPF as [b TGTFG].
+    assert (TGTGFIND: Globalenvs.Genv.find_def (Globalenvs.Genv.globalenv tgt) b = Some (snd (compile_iFun (mn, ("main", ff))))).
+    { hexploit tgt_genv_find_def_by_blk; eauto. }
+
+    unfold compile in COMP. des_ifs.
+    match goal with [ H: Genv.find_symbol (Genv.globalenv ?_tgt) _ = _ |- _ ] => set (tgt:=_tgt) in * end.
+    hexploit (Genv.init_mem_exists tgt); eauto.
+    { i. subst tgt; ss. hexploit perm_elements_PTree_norepeat_in_in; eauto.
+      i. apply H0 in H. clear H0. apply decomp_gdefs in H. des; ss; clarify; eauto.
+      { unfold bts in BTS1. apply Coqlib.list_in_map_inv in BTS1. des. destruct fd; ss; clarify. destruct x; ss; clarify. }
+      { destruct fd. unfold compile_eFun in SYS; ss; clarify. }
+      { destruct fd. unfold compile_eFun in EFS; ss; clarify. }
+      { depgen EVS. clear. i. unfold compile_eVar in EVS. ss; clarify. }
+      { depgen IFS. clear. i. destruct fd as [mn [fn ff]]. unfold compile_iFun in IFS; ss; clarify. }
+      { depgen IVS. clear. i. unfold compile_iVar in IVS. destruct vd; ss; clarify. split; ss; eauto.
+        - split; eauto. apply Z.divide_0_r.
+        - i. des; eauto; clarify. }
+    }
+    i. des. unfold compile_iFun in *; ss; clarify.
+    match goal with
+    | [ H: Genv.find_def _ _ = Some (Gfun ?_fdef) |- _ ] => set (fdef:=_fdef) in * end.
+    specialize NOINIT with (Callstate fdef [] Kstop m).
+    apply NOINIT.
+    econs; ss; eauto.
+    unfold Genv.find_funct_ptr. rewrite TGTGFIND. ss.
+  Qed.
+
 End PROOFSINGLE.
 
 
@@ -615,6 +656,27 @@ Section PROOFLINK.
   Definition imps_sem (srcs : list Imp.program) :=
     let srcs_mod := List.map ImpMod.get_mod srcs in ModL.compile (Mod.add_list (Mem :: srcs_mod)).
 
+  (* Lemma compile_behavior_improves_compile *)
+  (*       (srcs : list Imp.program) (tgts : Coqlib.nlist Csharpminor.program) *)
+  (*       tgtl *)
+  (*       (COMP: Forall2 (fun src tgt => compile (lift src) = OK tgt) srcs (nlist2list tgts)) *)
+  (*       (LINKSRC: exists srcl, link_imps srcs = Some srcl) *)
+  (*       (LINKTGT: link_list tgts = Some tgtl) *)
+  (*   : *)
+  (*     (forall tgt_init, *)
+  (*         (Csharpminor.initial_state tgtl tgt_init) -> *)
+  (*         (@improves_state2 _ (Csharpminor.semantics tgtl) (imps_sem srcs).(initial_state) tgt_init)). *)
+  (* Proof. *)
+  (*   des. *)
+  (*   i. unfold imps_sem. *)
+  (*   hexploit left_arrow; eauto. *)
+  (*   i. instantiate (1:=Mem) in H0. rewrite H0; clear H0. *)
+  (*   hexploit right_arrow; eauto. *)
+  (*   i. des. clarify. *)
+  (*   hexploit linked_list_wf_lift; eauto. i. des. unfold wf_prog in H0. des. *)
+  (*   eapply single_compile_behavior_improves; eauto. *)
+  (* Qed. *)
+
   Lemma compile_behavior_improves_compile
         (srcs : list Imp.program) (tgts : Coqlib.nlist Csharpminor.program)
         tgtl
@@ -622,18 +684,16 @@ Section PROOFLINK.
         (LINKSRC: exists srcl, link_imps srcs = Some srcl)
         (LINKTGT: link_list tgts = Some tgtl)
     :
-      (forall tgt_init,
-          (Csharpminor.initial_state tgtl tgt_init) ->
-          (@improves_state2 _ (Csharpminor.semantics tgtl) (imps_sem srcs).(initial_state) tgt_init)).
+      <<IMPROVES: improves2 (imps_sem srcs) (Csharpminor.semantics tgtl)>>.
   Proof.
     des.
     i. unfold imps_sem.
     hexploit left_arrow; eauto.
-    i. instantiate (1:=Mem) in H0. rewrite H0; clear H0.
+    i. instantiate (1:=Mem) in H. rewrite H; clear H.
     hexploit right_arrow; eauto.
     i. des. clarify.
-    hexploit linked_list_wf_lift; eauto. i. des. unfold wf_prog in H0. des.
-    eapply single_compile_behavior_improves; eauto.
+    hexploit linked_list_wf_lift; eauto. i. des. unfold wf_prog in H. des.
+    eapply single_compile_program_improves; eauto.
   Qed.
 
   Lemma compile_behavior_improves_compile_exists
@@ -657,7 +717,7 @@ Section PROOFLINK.
                (improves2 (imps_sem srcs) (Csharpminor.semantics tgtl))).
   Proof.
     hexploit compile_behavior_improves_compile_exists; eauto. i. des. exists tgtl. split; eauto.
-    unfold improves2. eapply compile_behavior_improves_compile; eauto.
+    eapply compile_behavior_improves_compile; eauto.
   Qed.
 
 End PROOFLINK.

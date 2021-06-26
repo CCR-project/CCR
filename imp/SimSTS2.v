@@ -575,7 +575,14 @@ Definition improves_state2 {L0 L1} (st_src0: L0.(STS.state)) (st_tgt0: L1.(Small
 .
 
 Definition improves2 (L0: STS.semantics) (L1: Smallstep.semantics) : Prop :=
-  forall tgt_init, (L1.(Smallstep.initial_state) tgt_init) -> (@improves_state2 L0 L1 L0.(initial_state) tgt_init).
+  forall tr_tgt (BEH: program_behaves L1 tr_tgt),
+  exists tr_src, (<<BEH: (Beh.of_state L0 L0.(initial_state)) tr_src>>) /\
+                 (<<SIM: match_beh tr_tgt tr_src>>)
+.
+
+
+(* Definition improves2 (L0: STS.semantics) (L1: Smallstep.semantics) : Prop := *)
+(*   forall tgt_init, (L1.(Smallstep.initial_state) tgt_init) -> (@improves_state2 L0 L1 L0.(initial_state) tgt_init). *)
 
 
 

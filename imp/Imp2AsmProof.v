@@ -23,14 +23,6 @@ Section PROOF.
   Context `{Σ: GRA.t}.
   Context `{builtins : builtinsTy}.
 
-  (* Lemma nlist_list_eq {A} : *)
-  (*   forall (nl: @Coqlib.nlist A) (a: A) t *)
-  (*     (NLIST: nlist2list nl = a :: t), *)
-  (*     (nl = list2nlist a t). *)
-  (* Proof. *)
-  (*   i. depgen a. depgen t. clear. induction nl; i; ss; clarify. *)
-  (* Admitted. *)
-
   Lemma n2l_one {A} :
     forall (nl: @Coqlib.nlist A) (a: A)
       (ONE: [a] = nlist2list nl),
@@ -39,6 +31,20 @@ Section PROOF.
     i. depgen a. clear. induction nl; i; ss; clarify.
     sym in H0; apply n2l_not_nil in H0. clarify.
   Qed.
+
+  Lemma separate_transf_csm_program_preservation
+        (csms: Coqlib.nlist Csharpminor.program) csml
+        (asms: Coqlib.nlist Asm.program) asml
+        beh
+        (COMP: Coqlib.nlist_forall2 (fun csm asm => transf_csharpminor_program csm = OK asm) csms asms)
+        (CSMLINK: link_list csms = Some csml)
+        (ASMLINK: link_list asms = Some asml)
+        (ASMBEH: program_behaves (Asm.semantics asml) beh)
+    :
+      exists beh0, ((<<CSMBEH: program_behaves (Csharpminor.semantics csml) beh0>>) /\
+               (<<IMPC: behavior_improves beh0 beh>>)).
+  Proof.
+  Admitted.
 
   Lemma compile_behavior_improves_exists
         (imps : list Imp.program) (asms : Coqlib.nlist Asm.program)
@@ -72,20 +78,6 @@ Section PROOF.
       inv CSM; inv COMP. econs; eauto.
       unfold compile_imp, compile in H3. des_ifs.
       unfold Imp2Csharpminor.compile_imp in H2. rewrite H2 in Heq. clarify. }
-  Admitted.
-
-  Lemma separate_transf_csm_program_preservation
-        (csms: Coqlib.nlist Csharpminor.program) csml
-        (asms: Coqlib.nlist Asm.program) asml
-        beh
-        (COMP: Coqlib.nlist_forall2 (fun csm asm => transf_csharpminor_program csm = OK asm) csms asms)
-        (CSMLINK: link_list csms = Some csml)
-        (ASMLINK: link_list asms = Some asml)
-        (ASMBEH: program_behaves (Asm.semantics asml) beh)
-    :
-      exists beh0, ((<<CSMBEH: program_behaves (Csharpminor.semantics csml) beh0>>) /\
-               (<<IMPC: behavior_improves beh0 beh>>)).
-  Proof.
   Admitted.
 
   Lemma compile_behavior_improves_if_exists
@@ -123,21 +115,32 @@ Section PROOF.
       unfold compile_imp, compile in H3. des_ifs.
       unfold Imp2Csharpminor.compile_imp in H2. rewrite H2 in Heq. clarify. }
 
-    move C2A after IMP2. unfold improves2 in *. unfold improves_state2 in *.
+    move C2A after IMP2. unfold improves2 in *.
     i.
     hexploit separate_transf_csm_program_preservation; eauto.
-    { econs 1; eauto. }
-    i. des. rename tgt_init into asm_init, H into ASMINT, tr_tgt into tr_asm.
-    rename beh0 into beh_csm.
-    inv CSMBEH.
-    { rename s into csm_init, H into CSMINIT, H0 into CSMBEH.
-      hexploit IMP2; eauto. i. des.
-      rename tr_src into tr_imp, BEH0 into IMPBEH.
-      unfold behavior_improves in IMPC. des.
-      - clarify. exists tr_imp; eauto.
-      - clarify. admit "csm stuck... imp should ub". }
-    admit "csm initially wrong".
-  Qed.
+    i. des.
+    rename beh0 into beh_csm, tr_tgt into beh_asm. apply IMP2 in CSMBEH. des.
+    rename tr_src into beh_imp, BEH into ASMBEH, BEH0 into IMPBEH. exists beh_imp. split; eauto.
+    unfold behavior_improves in IMPC. des; clarify.
+    red. depgen t. clear. depgen beh_asm. depgen beh_imp.
+    pcofix CIH. i.
+
+    punfold SIM. induction SIM; ss; clarify.
+    
+
+
+    induction beh_imp; eqn:BIMP.
+    - punfold SIM. inv SIM; ss; clarify. destruct mtr; ss; clarify.
+    - punfold SIM. inv SIM; ss; clarify. destruct mtr; ss; clarify.
+    - pfold. econs 4; ss; clarify. unfold behavior_prefix. exists beh_asm; ss. sym; apply behavior_app_E0.
+    - punfold SIM. inv SIM; ss; clarify. destruct mtr; ss; clarify.
+    - pfold. 
+      punfold SIM. inv SIM; ss; clarify. destruct mtr; ss; clarify.
+    - 
+    
+
+  Admitted.
+    
 
   Theorem compile_behavior_improves
           (imps : list Imp.program) (asms : Coqlib.nlist Asm.program)

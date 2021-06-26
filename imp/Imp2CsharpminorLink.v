@@ -514,12 +514,6 @@ Section LINKPROPS.
     i. ii. apply s2p_inj in H2. ss.
   Qed.
 
-  (* builtins is an OCaml list, satisfying this property *)
-  Hypothesis builtins_external :
-    forall name fd,
-      In (name, fd) bts ->
-      (match fd with | Gfun (External _) => True | _ => False end).
-
   Lemma link_then_exists_gd
         src1 src2 srcl id gd1 gd2
         (NOREPET1 : Coqlib.list_norepet (List.map fst (compile_gdefs src1)))

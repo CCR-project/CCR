@@ -22,7 +22,7 @@ Set Implicit Arguments.
 Parameter s2p: string -> ident.
 Parameter s2p_inj: forall x y, (s2p x) = (s2p y) -> x = y.
 
-Class builtinsTy: Type := mk { bts:> list (string * (globdef fundef ())) }.
+Class builtinsTy: Type := mk { bts0:> list (string * (external_function)) }.
 
 Section Compile.
 
@@ -163,6 +163,9 @@ Section Compile.
 
 
   Context `{builtins : builtinsTy}.
+
+  Definition bts : list (string * tgt_gdef) :=
+    List.map (fun '(name, ef) => (name, Gfun (External ef))) bts0.
   Definition init_g0 : list (string * tgt_gdef) :=
     bts ++ [("malloc"%string, Gfun malloc_def); ("free"%string, Gfun free_def)].
 
