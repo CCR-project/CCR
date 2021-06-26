@@ -532,49 +532,66 @@ Section LINKPROPS.
 
     (* init_g *)
     destruct SRC1 as [SRC1 | SRC1].
-    { admit "". }
+    { destruct SRC1 as [ING SRC1]. eapply init_g_unique in ING. 2:{ eapply NOREPET2. }
+      destruct SRC2 as [SRC2 | SRC2].
+      2:{ unfold name1 in ING. repeat rewrite map_app in ING. exfalso. apply ING. clear ING.
+          repeat rewrite in_app_iff. clear SRC1. des; eauto.
+          - left. destruct fd; ss; clarify. unfold c_sys. rewrite List.map_map.
+            apply (in_map (fst ∘ compile_eFun)) in SYS0. ss.
+          - right; left. destruct fd; ss; clarify. unfold compile_eFuns. rewrite List.map_map.
+            apply (in_map (fst ∘ compile_eFun)) in EFS0. ss.
+          - do 2 right; left. unfold compile_eVar in *. ss; clarify. unfold compile_eVars. rewrite List.map_map.
+            apply (in_map (fst ∘ compile_eVar)) in EVS0. ss.
+          - do 3 right; left. destruct fd as [mn [fn ff]]; ss; clarify. unfold compile_iFuns. rewrite List.map_map.
+            apply (in_map (fst ∘ compile_iFun)) in IFS0. ss.
+          - do 4 right. destruct vd; ss; clarify. unfold compile_iVars. rewrite List.map_map.
+            apply (in_map (fst ∘ compile_iVar)) in IVS0. ss.
+      }
+      clear ING. destruct SRC2 as [ING SRC2]. clear ING.
+      destruct SRC1 as [SRC1 | SRC1].
+      { destruct SRC2 as [SRC2 | SRC2].
+        { des. ss; clarify. destruct fd0; destruct fd; ss; clarify. apply s2p_inj in SRC2; clarify.
+          assert (EF: exists ef, g = Gfun (External ef)).
+          { unfold bts in SRC5. apply Coqlib.list_in_map_inv in SRC5. des. destruct x. ss; clarify. exists e; auto. }
+          apply in_bts_in_init_g in SRC5; apply in_bts_in_init_g in SRC3.
+          hexploit init_g_unique_def.
+          eapply NOREPET1. eapply SRC5. eapply SRC3. i. ss; clarify. exists g0; split; eauto.
+          2:{ eapply in_compile_gdefs_init_g; eauto. }
+          des. clarify. ss. des_ifs. }
+        des.
+        - hexploit malloc_unique; eauto. i. des. destruct fd; ss; clarify. apply s2p_inj in MALLOC. clarify.
+          apply (in_map fst) in SRC3. ss.
+        - hexploit free_unique; eauto. i. des. destruct fd; ss; clarify. apply s2p_inj in FREE. clarify.
+          apply (in_map fst) in SRC3. ss.
+      }
+      destruct SRC2 as [SRC2 | SRC2].
+      { des.
+        - hexploit malloc_unique; eauto. i. des. destruct fd; ss; clarify. apply s2p_inj in SRC2. clarify.
+          apply (in_map fst) in SRC3. ss.
+        - hexploit free_unique; eauto. i. des. destruct fd; ss; clarify. apply s2p_inj in SRC2. clarify.
+          apply (in_map fst) in SRC3. ss.
+      }
+      des; ss; clarify.
+      - exists (Gfun (External EF_malloc)). split; eauto. apply has_malloc.
+      - apply s2p_inj in MALLOC; clarify.
+      - apply s2p_inj in FREE; clarify.
+      - exists (Gfun (External EF_free)). split; eauto. apply has_free.
+    }
     destruct SRC2 as [SRC2 | SRC2].
-    { admit "". }
-
-    (* (* malloc *) *)
-    (* destruct SRC1 as [SRC1 | SRC1]. *)
-    (* { clear SRC2. destruct SRC1. clarify. unfold compile_gdefs in IN2. apply in_app_or in IN2. des. *)
-    (*   - Local Transparent init_g. Local Transparent init_g0. *)
-    (*     unfold init_g in IN2. unfold init_g0 in IN2. *)
-    (*     Local Opaque init_g0. Local Opaque init_g. *)
-    (*     ss. des; clarify. *)
-    (*     + exists (Gfun (External EF_malloc)). split; ss; auto. apply has_malloc. *)
-    (*     + apply s2p_inj in H1. clarify. *)
-    (*   - apply malloc_unique in NOREPET2. eapply (in_map fst) in IN2. clarify. } *)
-    (* destruct SRC2 as [SRC2 | SRC2]. *)
-    (* { clear SRC1. destruct SRC2. clarify. unfold compile_gdefs in IN1. apply in_app_or in IN1. des. *)
-    (*   - Local Transparent init_g. Local Transparent init_g0. *)
-    (*     unfold init_g in IN1. unfold init_g0 in IN1. *)
-    (*     Local Opaque init_g0. Local Opaque init_g. *)
-    (*     ss. des; clarify. *)
-    (*     + exists (Gfun (External EF_malloc)). split; ss; auto. apply has_malloc. *)
-    (*     + apply s2p_inj in H1. clarify. *)
-    (*   - apply malloc_unique in NOREPET1. eapply (in_map fst) in IN1. clarify. } *)
-
-    (* (* free *) *)
-    (* destruct SRC1 as [SRC1 | SRC1]. *)
-    (* { clear SRC2. destruct SRC1. clarify. unfold compile_gdefs in IN2. apply in_app_or in IN2. des. *)
-    (*   - Local Transparent init_g. Local Transparent init_g0. *)
-    (*     unfold init_g in IN2. unfold init_g0 in IN2. *)
-    (*     Local Opaque init_g0. Local Opaque init_g. *)
-    (*     ss. des; clarify. *)
-    (*     + apply s2p_inj in H1. clarify. *)
-    (*     + exists (Gfun (External EF_free)). split; ss; auto. apply has_free. *)
-    (*   - apply free_unique in NOREPET2. eapply (in_map fst) in IN2. clarify. } *)
-    (* destruct SRC2 as [SRC2 | SRC2]. *)
-    (* { clear SRC1. destruct SRC2. clarify. unfold compile_gdefs in IN1. apply in_app_or in IN1. des. *)
-    (*   - Local Transparent init_g. Local Transparent init_g0. *)
-    (*     unfold init_g in IN1. unfold init_g0 in IN1. *)
-    (*     Local Opaque init_g0. Local Opaque init_g. *)
-    (*     ss. des; clarify. *)
-    (*     + apply s2p_inj in H1. clarify. *)
-    (*     + exists (Gfun (External EF_free)). split; ss; auto. apply has_free. *)
-    (*   - apply free_unique in NOREPET1. eapply (in_map fst) in IN1. clarify. } *)
+    { destruct SRC2 as [ING SRC2]. eapply init_g_unique in ING. 2:{ eapply NOREPET1. }
+      unfold name1 in ING. repeat rewrite map_app in ING. exfalso. apply ING. clear ING.
+      repeat rewrite in_app_iff. clear SRC2. des; eauto.
+      - left. destruct fd; ss; clarify. unfold c_sys. rewrite List.map_map.
+        apply (in_map (fst ∘ compile_eFun)) in SYS0. ss.
+      - right; left. destruct fd; ss; clarify. unfold compile_eFuns. rewrite List.map_map.
+        apply (in_map (fst ∘ compile_eFun)) in EFS0. ss.
+      - do 2 right; left. unfold compile_eVar in *. ss; clarify. unfold compile_eVars. rewrite List.map_map.
+        apply (in_map (fst ∘ compile_eVar)) in EVS0. ss.
+      - do 3 right; left. destruct fd as [mn [fn ff]]; ss; clarify. unfold compile_iFuns. rewrite List.map_map.
+        apply (in_map (fst ∘ compile_iFun)) in IFS0. ss.
+      - do 4 right. destruct vd; ss; clarify. unfold compile_iVars. rewrite List.map_map.
+        apply (in_map (fst ∘ compile_iVar)) in IVS0. ss.
+    }
 
     (* syscalls *)
     destruct SRC1 as [SRC1 | SRC1].
@@ -596,7 +613,8 @@ Section LINKPROPS.
       unfold compile_eFun in *. hexploit (compile_gdefs_unique_defs srcl _ _ _ NOREPETL IN0 SRC0); eauto.
       i. eexists. split.
       2:{ eapply IN0. }
-      rewrite H. red. clear. ss. des_ifs. }
+      rewrite H. red. clear. ss. des_ifs.
+    }
     destruct SRC2 as [SRC2 | SRC2].
     { clear SRC1. des. clarify. unfold compile_gdefs in IN1.
       apply in_app_or in IN1. des.
@@ -616,7 +634,8 @@ Section LINKPROPS.
       unfold compile_eFun in *. hexploit (compile_gdefs_unique_defs srcl _ _ _ NOREPETL IN0 SRC0); eauto.
       i. eexists. split.
       2:{ eapply IN0. }
-      rewrite H. red. clear. ss. des_ifs. }
+      rewrite H. red. clear. ss. des_ifs.
+    }
 
     (* symbol resolution *)
     clear IN1 IN2. unfold link_imp in LINKSRC. des_ifs_safe. bsimpl. destruct Heq. destruct H.
