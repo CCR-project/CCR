@@ -1,7 +1,7 @@
 (** Libraries. *)
 Require Import String.
 From compcert Require Import
-     Coqlib Errors AST Linking Smallstep
+     Coqlib Errors AST Linking Smallstep Behaviors
      (** Languages (syntax and semantics). *)
      Ctypes Csyntax Csem Cstrategy Cexec
      Clight Csharpminor Cminor CminorSel RTL LTL Linear Mach Asm
@@ -26,6 +26,7 @@ From compcert Require Import
      Compiler Complements
 .
 
+Require Import Coqlib.
 Require Import Imp2Asm.
 
 Set Implicit Arguments.
@@ -62,7 +63,7 @@ Section CSMPROOF.
 
   Theorem transf_csm_program_match:
     forall p tp,
-      transf_csharpminor_program p = OK tp ->
+      transf_csharpminor_program p = Errors.OK tp ->
       match_csm_prog p tp.
   Proof.
     intros p tp T.
@@ -89,9 +90,6 @@ Section CSMPROOF.
     destruct (partial_if debug Debugvar.transf_program p18) as [p19|e] eqn:P19; simpl in T; try discriminate.
     destruct (Stacking.transf_program p19) as [p20|e] eqn:P20; simpl in T; try discriminate.
     unfold match_prog; simpl.
-    exists p1; split. apply SimplExprproof.transf_program_match; auto.
-    exists p2; split. apply SimplLocalsproof.match_transf_program; auto.
-    exists p3; split. apply Cshmgenproof.transf_program_match; auto.
     exists p4; split. apply Cminorgenproof.transf_program_match; auto.
     exists p5; split. apply Selectionproof.transf_program_match; auto.
     exists p6; split. apply RTLgenproof.transf_program_match; auto.
@@ -111,31 +109,110 @@ Section CSMPROOF.
     exists p20; split. apply Stackingproof.transf_program_match; auto.
     exists tp; split. apply Asmgenproof.transf_program_match; auto.
     reflexivity.
+  Qed.
 
+  (** CSM semantics is receptive to changes in events. *)
 
+  Lemma csm_semantics_receptive:
+    forall (p: Csharpminor.program), receptive (Csharpminor.semantics p).
+  Proof.
+    intros. constructor; simpl; intros.
+    (* receptiveness *)
+    assert (t1 = Events.E0 -> exists s2, Csharpminor.step (Globalenvs.Genv.globalenv p) s t2 s2).
+    intros. subst. inv H0. exists s1; auto.
+    inversion H; subst; auto.
+    exploit Events.external_call_receptive; eauto. intros [vres2 [m2 EC2]].
+    exists (Csharpminor.State f Csharpminor.Sskip k e (set_optvar optid vres2 le) m2). econstructor; eauto.
+    exploit Events.external_call_receptive; eauto. intros [vres2 [m2 EC2]].
+    exists (Csharpminor.Returnstate vres2 k m2). econstructor; eauto.
+    (* trace length *)
+    red; intros; inv H; simpl; try lia; eapply Events.external_call_trace_length; eauto.
+  Qed.
 
+  Theorem csm_semantic_preservation:
+    forall p tp,
+      match_csm_prog p tp ->
+      forward_simulation (Csharpminor.semantics p) (Asm.semantics tp)
+      /\ backward_simulation (Csharpminor.semantics p) (Asm.semantics tp).
+  Proof.
+    intros p tp M. unfold match_csm_prog, pass_match in M; simpl in M.
+    Ltac DestructM :=
+      match goal with
+        [ H: exists p, _ /\ _ |- _ ] =>
+        let p := fresh "p" in let M := fresh "M" in let MM := fresh "MM" in
+                                                    destruct H as (p & M & MM); clear H
+      end.
+    repeat DestructM. subst tp.
+    assert (F: forward_simulation (Csharpminor.semantics p) (Asm.semantics p18)).
+    {
+      eapply compose_forward_simulations.
+      eapply Cminorgenproof.transl_program_correct; eassumption.
+      eapply compose_forward_simulations.
+      eapply Selectionproof.transf_program_correct; eassumption.
+      eapply compose_forward_simulations.
+      eapply RTLgenproof.transf_program_correct; eassumption.
+      eapply compose_forward_simulations.
+      eapply match_if_simulation. eassumption. exact Tailcallproof.transf_program_correct.
+      eapply compose_forward_simulations.
+      eapply Inliningproof.transf_program_correct; eassumption.
+      eapply compose_forward_simulations. eapply Renumberproof.transf_program_correct; eassumption.
+      eapply compose_forward_simulations.
+      eapply match_if_simulation. eassumption. exact Constpropproof.transf_program_correct.
+      eapply compose_forward_simulations.
+      eapply match_if_simulation. eassumption. exact Renumberproof.transf_program_correct.
+      eapply compose_forward_simulations.
+      eapply match_if_simulation. eassumption. exact CSEproof.transf_program_correct.
+      eapply compose_forward_simulations.
+      eapply match_if_simulation. eassumption. exact Deadcodeproof.transf_program_correct; eassumption.
+      eapply compose_forward_simulations.
+      eapply Unusedglobproof.transf_program_correct; eassumption.
+      eapply compose_forward_simulations.
+      eapply Allocproof.transf_program_correct; eassumption.
+      eapply compose_forward_simulations.
+      eapply Tunnelingproof.transf_program_correct; eassumption.
+      eapply compose_forward_simulations.
+      eapply Linearizeproof.transf_program_correct; eassumption.
+      eapply compose_forward_simulations.
+      eapply CleanupLabelsproof.transf_program_correct; eassumption.
+      eapply compose_forward_simulations.
+      eapply match_if_simulation. eassumption. exact Debugvarproof.transf_program_correct.
+      eapply compose_forward_simulations.
+      eapply Stackingproof.transf_program_correct with (return_address_offset := Asmgenproof0.return_address_offset).
+      exact Asmgenproof.return_address_exists.
+      eassumption.
+      eapply Asmgenproof.transf_program_correct; eassumption.
+    }
+    split. auto.
+    apply forward_to_backward_simulation.
+    auto.
+    2:{ apply Asm.semantics_determinate. }
+    apply csm_semantics_receptive.
+  Qed.
 
-
-    
-  Admitted.
 
 
   Lemma separate_transf_csm_program_correct :
     forall (c_units : Coqlib.nlist Csharpminor.program) (asm_units : Coqlib.nlist Asm.program) (c_program : Csharpminor.program)
-      (COMPS: Coqlib.nlist_forall2 (fun cu tcu => transf_csharpminor_program cu = OK tcu) c_units asm_units)
+      (COMPS: Coqlib.nlist_forall2 (fun cu tcu => transf_csharpminor_program cu = Errors.OK tcu) c_units asm_units)
       (LINKCSM: link_list c_units = Some c_program),
     exists asm_program : Asm.program,
       (link_list asm_units = Some asm_program) /\ (backward_simulation (Csharpminor.semantics c_program) (Asm.semantics asm_program)).
   Proof.
-
-
-  Admitted.
+    intros.
+    assert (nlist_forall2 match_csm_prog c_units asm_units).
+    { eapply nlist_forall2_imply. eauto. simpl; intros. apply transf_csm_program_match; auto. }
+    assert (exists asm_program, link_list asm_units = Some asm_program /\ match_csm_prog c_program asm_program).
+    { eapply link_list_compose_passes; eauto. }
+    destruct H0 as (asm_program & P & Q).
+    exists asm_program; split; auto.
+    apply csm_semantic_preservation; auto.
+  Qed.
 
   Lemma separate_transf_csm_program_preservation
         (csms: Coqlib.nlist Csharpminor.program) csml
         (asms: Coqlib.nlist Asm.program) asml
         beh
-        (COMP: Coqlib.nlist_forall2 (fun csm asm => transf_csharpminor_program csm = OK asm) csms asms)
+        (COMP: Coqlib.nlist_forall2 (fun csm asm => transf_csharpminor_program csm = Errors.OK asm) csms asms)
         (CSMLINK: link_list csms = Some csml)
         (ASMLINK: link_list asms = Some asml)
         (ASMBEH: program_behaves (Asm.semantics asml) beh)
@@ -149,4 +226,3 @@ Section CSMPROOF.
   Qed.
 
 End CSMPROOF.
-

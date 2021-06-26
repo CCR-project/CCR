@@ -15,6 +15,7 @@ Require Import SimSTS2.
 Require Import Imp2CsharpminorLink.
 Require Import Imp2CsharpminorSepComp.
 Require Import Imp2Asm.
+Require Import CsmProofs.
 
 Set Implicit Arguments.
 
@@ -112,7 +113,7 @@ Section PROOF.
     i.
     hexploit separate_transf_csm_program_preservation; eauto.
     i. des.
-    rename beh0 into beh_csm, tr_tgt into beh_asm. apply IMP2 in CSMBEH. des.
+    rename beh' into beh_csm, tr_tgt into beh_asm. apply IMP2 in CSMBEH. des.
     rename tr_src into beh_imp, BEH into ASMBEH, BEH0 into IMPBEH. exists beh_imp. split; eauto.
     red. depgen SIM. depgen IMPC. clear. i.
     unfold behavior_improves in IMPC. des; clarify.
