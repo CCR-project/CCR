@@ -55,7 +55,7 @@ Record function : Type := mk_function {
 
 (** ** Supported System Calls by Imp *)
 Definition syscalls : list (string * nat) :=
-  [("print", 1); ("scan", 1)].
+  [("print", 1); ("scan", 0)].
 
 Global Opaque syscalls.
 
@@ -95,7 +95,7 @@ Record program : Type := mk_program {
     let efs := List.map fst ext_funs in
     let ivs := List.map fst prog_vars in
     let ifs := List.map fst prog_funs in
-    ["malloc"; "free"] ++ sys ++ evs ++ efs ++ ivs ++ ifs;
+    sys ++ evs ++ efs ++ ivs ++ ifs;
   defs : list (gname * Sk.gdef) :=
     let fs := (List.map (fun '(fn, _) => (fn, Sk.Gfun)) prog_funs) in
     let vs := (List.map (fun '(vn, vv) => (vn, Sk.Gvar vv)) prog_vars) in

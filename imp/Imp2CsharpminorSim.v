@@ -67,6 +67,7 @@ Section PROOF.
   Import ModSemL.
 
   Context `{Σ: GRA.t}.
+  Context `{builtins : builtinsTy}.
 
   Variable srcprog : Imp.programL.
 
@@ -173,7 +174,7 @@ Section PROOF.
       + sim_red. unfold assume. grind. gstep. econs 5; auto. i. eapply angelic_step in STEP; des; clarify.
         eexists; split; [ord_step2|].
         do 6 (gstep; sim_tau). red.
-        sim_red. specialize SIM with (rv:=v) (trv:= @map_val Σ srcprog v).
+        sim_red. specialize SIM with (rv:=v) (trv:= @map_val Σ builtins srcprog v).
         sim_ord.
         { eapply OrdArith.add_base_l. }
         apply SIM; auto.
@@ -958,7 +959,10 @@ Section PROOF.
       assert (COMP2: Imp2Csharpminor.compile srcprog = OK tgt).
       { unfold Imp2Csharpminor.compile. des_ifs; ss; auto. }
       assert (TGTDEFS: In (s2p "malloc", Gfun (External EF_malloc)) (prog_defs tgt)).
-      { eapply in_tgt_prog_defs_init_g; eauto. Local Transparent init_g. ss. left; auto. Local Opaque init_g. }
+      { eapply in_tgt_prog_defs_init_g; eauto.
+        Local Transparent init_g. Local Transparent init_g0.
+        unfold init_g, init_g0. rewrite map_app. rewrite in_app_iff. right. ss. eauto.
+        Local Opaque init_g. Local Opaque init_g0. }
 
       assert (TGTMALLOC: exists blk, Genv.find_symbol (globalenv (semantics tgt)) (s2p "malloc") = Some blk).
       { hexploit Genv.find_symbol_exists; eauto. }

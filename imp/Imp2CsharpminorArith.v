@@ -8,6 +8,7 @@ Require Import STS Behavior.
 Require Import Any.
 Require Import ModSem.
 
+Require Import Imp2Csharpminor.
 Require Import Imp2CsharpminorMatch.
 
 From compcert Require Import Csharpminor.
@@ -73,6 +74,7 @@ Section ARITH.
   Qed.
 
   Context `{Σ: GRA.t}.
+  Context `{builtins : builtinsTy}.
 
   Lemma map_val_vadd_comm
         src a b v
@@ -81,7 +83,7 @@ Section ARITH.
         (WFB: wf_val b)
         (WFV: wf_val v)
     :
-      Values.Val.addl (map_val src a) (map_val src b) = map_val src v.
+      Values.Val.addl (map_val src a) (map_val src b) = (map_val src v).
   Proof.
     destruct a; destruct b; ss; clarify.
     - ss. repeat f_equal.

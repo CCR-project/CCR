@@ -22,6 +22,7 @@ Set Implicit Arguments.
 Section MEM.
 
   Context `{Σ: GRA.t}.
+  Context `{builtins: builtinsTy}.
 
   Hypothesis map_blk_after_init :
     forall src blk
@@ -224,6 +225,3 @@ Section MEM.
   Qed.
 
 End MEM.
-
-
-

@@ -27,6 +27,7 @@ Set Implicit Arguments.
 Section PROOFLEFT.
 
   Context `{Σ: GRA.t}.
+  Context `{builtins : builtinsTy}.
 
   (* Proving the left arrow of the diagram *)
   Lemma _comm_link_imp_link_mod
@@ -53,7 +54,7 @@ Section PROOFLEFT.
       <<LINKMOD: fold_right ModL.add ModL.empty (ctx :: tgt_list) = ModL.add ctx tgtl>>.
   Proof.
     destruct src_list as [ | src0 src_list ]; ss; clarify.
-    move src_list before Σ. revert_until Σ. induction src_list; i; ss; clarify.
+    move src_list before builtins. revert_until builtins. induction src_list; i; ss; clarify.
     { rewrite ModL.add_empty_r. ss. }
     red. des_ifs; ss; clarify.
     hexploit IHsrc_list.
@@ -85,6 +86,7 @@ Section PROOFRIGHT.
   Import Permutation.
 
   Context `{Σ: GRA.t}.
+  Context `{builtins : builtinsTy}.
 
   (* Proving the right arrow of the diagram *)
 
@@ -104,15 +106,17 @@ Section PROOFRIGHT.
     { hexploit link_then_unique_ids; eauto. }
     des_ifs_safe. clear l.
     red. f_equal. f_equal; ss.
-    2:{ unfold link_imp in LINKSRC. des_ifs_safe. ss. unfold l_publicL. apply map_app. }
+    2:{ unfold link_imp in LINKSRC. des_ifs_safe. ss. unfold l_publicL. rewrite <- app_assoc. f_equal.
+        rewrite map_app. f_equal; ss. rewrite map_app. f_equal; ss. setoid_rewrite List.map_map. ss. }
     apply PTree.elements_extensional. i.
     erewrite PTree.gcombine; ss. rewrite ! PTree_Properties.of_list_elements.
 
     assert (LINKTGTP : forall (id : positive) (gd1 gd2 : globdef fundef ()),
                (PTree_Properties.of_list (compile_gdefs src1)) ! id = Some gd1 ->
                (PTree_Properties.of_list (compile_gdefs src2)) ! id = Some gd2 ->
-               In id (List.map s2p (publicL src1)) /\
-               In id (List.map s2p (publicL src2)) /\ (exists gd : globdef fundef (), link gd1 gd2 = Some gd)).
+               In id (List.map (s2p ∘ fst) init_g0 ++ List.map s2p (publicL src1)) /\
+               In id (List.map (s2p ∘ fst) init_g0 ++ List.map s2p (publicL src2)) /\
+               (exists gd : globdef fundef (), link gd1 gd2 = Some gd)).
     { i.
       rewrite <- PTree_Properties.of_list_elements in H.
       rewrite <- PTree_Properties.of_list_elements in H0.
@@ -221,25 +225,37 @@ Section PROOFRIGHT.
     i. eapply _comm_link_imp_compile with (tgt1:=tgt0) (tgt2:=p0); eauto.
   Qed.
 
+
   Definition wf_public (src: Imp.programL) :=
-    forall id, In id (name1 (compile_gdefs src)) -> In id (List.map s2p (publicL src)).
+    forall id, In id (name1 (compile_gdefs src)) -> In id (List.map (s2p ∘ fst) init_g0 ++ List.map s2p (publicL src)).
 
   Lemma lifted_then_wf_public :
     forall (src: Imp.program), <<WFLIFT: wf_public (lift src)>>.
   Proof.
     i. red. unfold lift in *. unfold wf_public. ii; ss. apply Coqlib.list_in_map_inv in H. des. destruct x; ss; clarify.
     rename i into id, g into gd. apply decomp_gdefs in H0; ss. des; clarify; eauto.
-    - repeat rewrite map_app. repeat rewrite in_app_iff.
-      do 2 right; left. rewrite List.map_map. apply (in_map (s2p ∘ fst)) in SYS0. destruct fd; ss; clarify.
-    - repeat rewrite map_app. repeat rewrite in_app_iff.
-      do 4 right; left. rewrite List.map_map. apply (in_map (s2p ∘ fst)) in EFS0. destruct fd; ss; clarify.
-    - repeat rewrite map_app. repeat rewrite in_app_iff.
-      do 3 right; left. apply (in_map s2p) in EVS0. unfold compile_eVar in *. clarify.
-    - repeat rewrite map_app. repeat rewrite in_app_iff.
-      do 6 right. destruct fd as [mn [fn ff]]; ss; clarify. apply (in_map (s2p ∘ fst ∘ snd)) in IFS0; ss.
+    - apply in_bts_in_init_g in BTS1. des.
+      Local Transparent init_g. unfold init_g in BTS1. Local Opaque init_g.
+      destruct fd; ss; clarify. rewrite in_app_iff; left. apply (in_map fst) in BTS1. ss.
+      rewrite List.map_map in BTS1.
+      match goal with
+      | [ BTS1: In _ ?l1 |- In _ ?l2 ] => replace l2 with l1; ss; auto end.
+      apply map_ext. i. destruct a; ss.
+    - Local Transparent init_g0. unfold init_g0. Local Opaque init_g0.
+      rewrite map_app. rewrite in_app_iff; left. apply in_app_iff; right. ss. eauto.
+    - Local Transparent init_g0. unfold init_g0. Local Opaque init_g0.
+      rewrite map_app. rewrite in_app_iff; left. apply in_app_iff; right. ss. eauto.
+    - rewrite in_app_iff; right. unfold public. repeat rewrite map_app. repeat rewrite in_app_iff.
+      left. rewrite List.map_map. apply (in_map (s2p ∘ fst)) in SYS0. destruct fd; ss; clarify.
+    - rewrite in_app_iff; right. unfold public. repeat rewrite map_app. repeat rewrite in_app_iff.
+      do 2 right; left. rewrite List.map_map. apply (in_map (s2p ∘ fst)) in EFS0. destruct fd; ss; clarify.
+    - rewrite in_app_iff; right. unfold public. repeat rewrite map_app. repeat rewrite in_app_iff.
+      do 1 right; left. apply (in_map s2p) in EVS0. unfold compile_eVar in *. clarify.
+    - rewrite in_app_iff; right. unfold public. repeat rewrite map_app. repeat rewrite in_app_iff.
+      do 4 right. destruct fd as [mn [fn ff]]; ss; clarify. apply (in_map (s2p ∘ fst ∘ snd)) in IFS0; ss.
       rewrite List.map_map in IFS0. ss. rewrite List.map_map. auto.
-    - repeat rewrite map_app. repeat rewrite in_app_iff.
-      do 5 right; left. destruct vd; ss; clarify. apply (in_map (s2p ∘ fst)) in IVS0. ss.
+    - rewrite in_app_iff; right. unfold public. repeat rewrite map_app. repeat rewrite in_app_iff.
+      do 3 right; left. destruct vd; ss; clarify. apply (in_map (s2p ∘ fst)) in IVS0. ss.
       rewrite List.map_map. ss.
   Qed.
 
@@ -253,10 +269,12 @@ Section PROOFRIGHT.
   Proof.
     red. unfold wf_public in *. ii. apply Coqlib.list_in_map_inv in H. des. destruct x as [name def]; ss; clarify.
     hexploit in_tgtl_then_in_some; eauto. i.
-    unfold link_imp in LINKSRC. des_ifs; ss. clear H0. unfold l_publicL. rewrite map_app. apply in_app_iff.
+    unfold link_imp in LINKSRC. des_ifs; ss. clear H0. unfold l_publicL.
+    rewrite map_app. rewrite app_assoc. apply in_app_iff.
     des.
-    { left. eapply WFP1. apply (in_map fst) in IN1. ss. }
-    { right. eapply WFP2. apply (in_map fst) in BK. ss. }
+    { left. apply (in_map fst) in IN1. ss. apply WFP1 in IN1. ss. }
+    { right. apply (in_map fst) in BK. ss. apply WFP2 in BK. rewrite <- List.map_map in BK.
+      rewrite <- map_app in BK. ss. }
   Qed.
 
   Lemma linked_list_wf_public
@@ -278,15 +296,16 @@ Section PROOFRIGHT.
   Qed.
 
   Lemma _comm_link_imp_compile_exists_link
-        src1 src2 srcl tgt1 tgt2
+        src1 src2 tgt1 tgt2
         (WFP1: wf_public src1)
         (WFP2: wf_public src2)
         (COMP1: compile src1 = OK tgt1)
         (COMP2: compile src2 = OK tgt2)
-        (LINKSRC: link_imp src1 src2 = Some srcl)
+        (LINKSRC: exists srcl, link_imp src1 src2 = Some srcl)
     :
       (exists tgtl, <<LINKTGT: link tgt1 tgt2 = Some tgtl>>).
   Proof.
+    des.
     hexploit (link_prog_succeeds tgt1 tgt2).
     { unfold compile in *. des_ifs. }
     { i. apply PTree_Properties.in_of_list in H. apply PTree_Properties.in_of_list in H0. rename H into IN1, H0 into IN2.
@@ -309,14 +328,14 @@ Section PROOFRIGHT.
   Qed.
 
   Lemma comm_link_imp_compile_exists_link
-        (srcs: list Imp.programL) srcl
-        tgts
+        (srcs: list Imp.programL) tgts
         (WFPS: Forall wf_public srcs)
         (COMPS: Forall2 (fun src tgt => compile src = OK tgt) srcs (nlist2list tgts))
-        (LINKSRC: link_imp_list srcs = Some srcl)
+        (LINKSRC: exists srcl, link_imp_list srcs = Some srcl)
     :
       exists tgtl, <<LINKTGT: link_list tgts = Some tgtl>>.
   Proof.
+    des.
     destruct srcs as [| src0 srcs]; ss; clarify.
     inv COMPS; clarify. rename tgts into ntgts, y into tgt0, l' into tgts, H2 into COMP0, H3 into COMPS.
     depgen srcl. depgen src0. depgen tgt0. depgen ntgts.
@@ -356,7 +375,7 @@ Section PROOFRIGHT.
       (exists tgtl, (<<LINKTGT: link tgt1 tgt2 = Some tgtl>>) /\ (<<COMP: compile srcl = OK tgtl>>)).
   Proof.
     hexploit _comm_link_imp_compile_exists_link.
-    5: eapply LINKSRC.
+    5:{ exists srcl. eapply LINKSRC. }
     1,2,3,4: eauto.
     i. des. exists tgtl. split; auto. eapply _comm_link_imp_compile.
     3,4: eauto.
@@ -373,7 +392,7 @@ Section PROOFRIGHT.
       (exists tgtl, (<<LINKTGT: link_list tgts = Some tgtl>>) /\ (<<COMP: compile srcl = OK tgtl>>)).
   Proof.
     hexploit comm_link_imp_compile_exists_link.
-    3: eapply LINKSRC.
+    3:{ exists srcl. eapply LINKSRC. }
     all: eauto.
     i. des. exists tgtl. split; auto. eapply comm_link_imp_compile; eauto.
   Qed.
@@ -401,6 +420,7 @@ End PROOFRIGHT.
 Section PROOFSINGLE.
 
   Context `{Σ: GRA.t}.
+  Context `{builtins : builtinsTy}.
 
   Create HintDb ord_step2.
   Hint Resolve Nat.lt_succ_diag_r OrdArith.lt_from_nat OrdArith.lt_add_r: ord_step2.
@@ -413,20 +433,21 @@ Section PROOFSINGLE.
   Ltac sim_triggerUB := unfold triggerUB; (try sim_red); econs 5; i; ss; auto;
                         dependent destruction STEP; try (irw in x; clarify; fail).
 
-  Definition imp_initial_state (src : Imp.programL) :=
-    (ModL.compile (ModL.add (Mod.lift Mem) (ImpMod.get_modL src))).(initial_state).
+  Definition imp_sem (src : Imp.programL) := ModL.compile (ModL.add (Mod.lift Mem) (ImpMod.get_modL src)).
 
-  Lemma single_compile_behavior_improves
-        (src: Imp.programL) (tgt: Csharpminor.program) srcst tgtst
-        (WFPROG: Permutation.Permutation
-                   ((List.map fst src.(prog_varsL)) ++ (List.map (compose fst snd) src.(prog_funsL)))
-                   (List.map fst src.(defsL)))
-        (WFPROG2 : forall gn gv, In (gn, Sk.Gvar gv) (Sk.sort (defsL src)) -> In (gn, gv) (prog_varsL src))
-        (COMP: Imp2Csharpminor.compile src = OK tgt)
-        (SINIT: srcst = imp_initial_state src)
-        (TINIT: Csharpminor.initial_state tgt tgtst)
+  Definition imp_initial_state (src : Imp.programL) := (imp_sem src).(initial_state).
+
+  Theorem single_compile_behavior_improves
+          (src: Imp.programL) (tgt: Csharpminor.program) srcst tgtst
+          (WFPROG: Permutation.Permutation
+                     ((List.map fst src.(prog_varsL)) ++ (List.map (compose fst snd) src.(prog_funsL)))
+                     (List.map fst src.(defsL)))
+          (WFPROG2 : forall gn gv, In (gn, Sk.Gvar gv) (Sk.sort (defsL src)) -> In (gn, gv) (prog_varsL src))
+          (COMP: Imp2Csharpminor.compile src = OK tgt)
+          (SINIT: srcst = imp_initial_state src)
+          (TINIT: Csharpminor.initial_state tgt tgtst)
     :
-      <<IMPROVES: @improves2 _ (Csharpminor.semantics tgt) srcst tgtst>>.
+      <<IMPROVES: @improves_state2 _ (Csharpminor.semantics tgt) srcst tgtst>>.
   Proof.
     eapply adequacy; eauto.
     { apply Ordinal.Ord.lt_well_founded. }
@@ -491,6 +512,7 @@ Section PROOFSINGLE.
       - unfold get_sge in *. ss. apply Sk.sort_wf in SK.
         hexploit Sk.load_skenv_wf; eauto. i. apply H1 in H. rewrite H in Heq. clarify. }
 
+    unfold imp_sem in *.
     eapply match_states_sim; eauto.
     { apply map_blk_after_init. }
     { apply map_blk_inj. }
@@ -553,6 +575,73 @@ Section PROOFSINGLE.
     }
   Qed.
 
+  Theorem single_compile_program_improves
+          (src: Imp.programL) (tgt: Csharpminor.program)
+          (WFPROG: Permutation.Permutation
+                     ((List.map fst src.(prog_varsL)) ++ (List.map (compose fst snd) src.(prog_funsL)))
+                     (List.map fst src.(defsL)))
+          (WFPROG2 : forall gn gv, In (gn, Sk.Gvar gv) (Sk.sort (defsL src)) -> In (gn, gv) (prog_varsL src))
+          (COMP: Imp2Csharpminor.compile src = OK tgt)
+    :
+      <<IMPROVES: improves2 (imp_sem src) (Csharpminor.semantics tgt)>>.
+  Proof.
+    red. unfold improves2. i. inv BEH.
+    { eapply single_compile_behavior_improves; eauto. }
+    (* initiall wrong case, for us only when main is not found *)
+    exists (Tr.ub). split; red; eauto.
+    2:{ pfold. econs 4; eauto.
+        - ss.
+        - unfold behavior_prefix. exists (Goes_wrong E0). ss.
+    }
+    rename H into NOINIT.
+    unfold imp_sem in *. ss. unfold ModSemL.initial_itr. unfold ModSemL.initial_itr_arg.
+    pfold. econs 6; ss; eauto.
+    unfold Beh.inter. ss. unfold assume. grind.
+    apply ModSemL.step_trigger_take_iff in STEP. des. clarify. split; eauto.
+    red. unfold ITree.map; ss.
+    unfold unwrapU. des_ifs.
+    (* main do not exists, ub *)
+    2:{ sim_red. unfold triggerUB. grind. econs 6; ss. grind. ss. apply ModSemL.step_trigger_take_iff in STEP. des. clarify. }
+
+    (* found main, contradiction *)
+    exfalso.
+    rename Heq into FSEM.
+    grind. rewrite alist_find_find_some in FSEM. rewrite find_map in FSEM.
+    match goal with
+    | [ FSEM: o_map (?a) _ = _ |- _ ] => destruct a eqn:FOUND; ss; clarify
+    end.
+    destruct p as [mn [fn ff]]; ss; clarify. eapply found_imp_function in FOUND. des; clarify.
+    hexploit in_tgt_prog_defs_ifuns; eauto. i.
+    des. rename H into COMPF. clear FOUND.
+    assert (COMPF2: In (compile_iFun (mn, ("main", ff))) (prog_defs tgt)); auto.
+    eapply Globalenvs.Genv.find_symbol_exists in COMPF.
+    destruct COMPF as [b TGTFG].
+    assert (TGTGFIND: Globalenvs.Genv.find_def (Globalenvs.Genv.globalenv tgt) b = Some (snd (compile_iFun (mn, ("main", ff))))).
+    { hexploit tgt_genv_find_def_by_blk; eauto. }
+
+    unfold compile in COMP. des_ifs.
+    match goal with [ H: Genv.find_symbol (Genv.globalenv ?_tgt) _ = _ |- _ ] => set (tgt:=_tgt) in * end.
+    hexploit (Genv.init_mem_exists tgt); eauto.
+    { i. subst tgt; ss. hexploit perm_elements_PTree_norepeat_in_in; eauto.
+      i. apply H0 in H. clear H0. apply decomp_gdefs in H. des; ss; clarify; eauto.
+      { unfold bts in BTS1. apply Coqlib.list_in_map_inv in BTS1. des. destruct fd; ss; clarify. destruct x; ss; clarify. }
+      { destruct fd. unfold compile_eFun in SYS; ss; clarify. }
+      { destruct fd. unfold compile_eFun in EFS; ss; clarify. }
+      { depgen EVS. clear. i. unfold compile_eVar in EVS. ss; clarify. }
+      { depgen IFS. clear. i. destruct fd as [mn [fn ff]]. unfold compile_iFun in IFS; ss; clarify. }
+      { depgen IVS. clear. i. unfold compile_iVar in IVS. destruct vd; ss; clarify. split; ss; eauto.
+        - split; eauto. apply Z.divide_0_r.
+        - i. des; eauto; clarify. }
+    }
+    i. des. unfold compile_iFun in *; ss; clarify.
+    match goal with
+    | [ H: Genv.find_def _ _ = Some (Gfun ?_fdef) |- _ ] => set (fdef:=_fdef) in * end.
+    specialize NOINIT with (Callstate fdef [] Kstop m).
+    apply NOINIT.
+    econs; ss; eauto.
+    unfold Genv.find_funct_ptr. rewrite TGTGFIND. ss.
+  Qed.
+
 End PROOFSINGLE.
 
 
@@ -562,55 +651,70 @@ End PROOFSINGLE.
 Section PROOFLINK.
 
   Context `{Σ: GRA.t}.
+  Context `{builtins : builtinsTy}.
 
-  Definition src_initial_state (src : ModL.t) := (ModL.compile src).(initial_state).
-  Definition imps_init (srcs : list Imp.program) :=
-    let srcs_mod := List.map ImpMod.get_mod srcs in src_initial_state (Mod.add_list (Mem :: srcs_mod)).
+  Definition imps_sem (srcs : list Imp.program) :=
+    let srcs_mod := List.map ImpMod.get_mod srcs in ModL.compile (Mod.add_list (Mem :: srcs_mod)).
+
+  (* Lemma compile_behavior_improves_compile *)
+  (*       (srcs : list Imp.program) (tgts : Coqlib.nlist Csharpminor.program) *)
+  (*       tgtl *)
+  (*       (COMP: Forall2 (fun src tgt => compile (lift src) = OK tgt) srcs (nlist2list tgts)) *)
+  (*       (LINKSRC: exists srcl, link_imps srcs = Some srcl) *)
+  (*       (LINKTGT: link_list tgts = Some tgtl) *)
+  (*   : *)
+  (*     (forall tgt_init, *)
+  (*         (Csharpminor.initial_state tgtl tgt_init) -> *)
+  (*         (@improves_state2 _ (Csharpminor.semantics tgtl) (imps_sem srcs).(initial_state) tgt_init)). *)
+  (* Proof. *)
+  (*   des. *)
+  (*   i. unfold imps_sem. *)
+  (*   hexploit left_arrow; eauto. *)
+  (*   i. instantiate (1:=Mem) in H0. rewrite H0; clear H0. *)
+  (*   hexploit right_arrow; eauto. *)
+  (*   i. des. clarify. *)
+  (*   hexploit linked_list_wf_lift; eauto. i. des. unfold wf_prog in H0. des. *)
+  (*   eapply single_compile_behavior_improves; eauto. *)
+  (* Qed. *)
 
   Lemma compile_behavior_improves_compile
         (srcs : list Imp.program) (tgts : Coqlib.nlist Csharpminor.program)
-        srcl tgtl
+        tgtl
         (COMP: Forall2 (fun src tgt => compile (lift src) = OK tgt) srcs (nlist2list tgts))
-        (LINKSRC: link_imps srcs = Some srcl)
+        (LINKSRC: exists srcl, link_imps srcs = Some srcl)
         (LINKTGT: link_list tgts = Some tgtl)
     :
-      (forall tgt_init,
-          (Csharpminor.initial_state tgtl tgt_init) ->
-          (@improves2 _ (Csharpminor.semantics tgtl) (imps_init srcs) tgt_init)).
+      <<IMPROVES: improves2 (imps_sem srcs) (Csharpminor.semantics tgtl)>>.
   Proof.
-    i. unfold imps_init. unfold src_initial_state.
+    des.
+    i. unfold imps_sem.
     hexploit left_arrow; eauto.
-    i. instantiate (1:=Mem) in H0. rewrite H0; clear H0.
+    i. instantiate (1:=Mem) in H. rewrite H; clear H.
     hexploit right_arrow; eauto.
     i. des. clarify.
-    hexploit linked_list_wf_lift; eauto. i. des. unfold wf_prog in H0. des.
-    eapply single_compile_behavior_improves; eauto.
+    hexploit linked_list_wf_lift; eauto. i. des. unfold wf_prog in H. des.
+    eapply single_compile_program_improves; eauto.
   Qed.
 
   Lemma compile_behavior_improves_compile_exists
         (srcs : list Imp.program) (tgts : Coqlib.nlist Csharpminor.program)
-        srcl
         (COMP: Forall2 (fun src tgt => compile (lift src) = OK tgt) srcs (nlist2list tgts))
-        (LINKSRC: link_imps srcs = Some srcl)
+        (LINKSRC: exists srcl, link_imps srcs = Some srcl)
     :
       exists tgtl, (link_list tgts = Some tgtl).
   Proof.
-    i.
+    des. i.
     hexploit right_arrow; eauto.
     i. des. exists tgtl; eauto.
   Qed.
 
   Theorem compile_behavior_improves
           (srcs : list Imp.program) (tgts : Coqlib.nlist Csharpminor.program)
-          srcl
-          (COMP: Forall2 (fun src tgt => compile (lift src) = OK tgt) srcs (nlist2list tgts))
-          (LINKSRC: link_imps srcs = Some srcl)
+          (COMP: Forall2 (fun src tgt => compile_imp src = OK tgt) srcs tgts)
+          (LINKSRC: exists srcl, link_imps srcs = Some srcl)
     :
-      exists tgtl,
-        ((link_list tgts = Some tgtl) /\
-         (forall tgt_init,
-             (Csharpminor.initial_state tgtl tgt_init) ->
-             (@improves2 _ (Csharpminor.semantics tgtl) (imps_init srcs) tgt_init))).
+      exists tgtl, ((link_list tgts = Some tgtl) /\
+               (improves2 (imps_sem srcs) (Csharpminor.semantics tgtl))).
   Proof.
     hexploit compile_behavior_improves_compile_exists; eauto. i. des. exists tgtl. split; eauto.
     eapply compile_behavior_improves_compile; eauto.

@@ -42,3 +42,9 @@ main.d.byte
 !/imp_compile/Makefile
 !/imp_compile/CompCert
 !/imp_compile/run.sh
+
+!/imp_compile/bin
+/imp_compile/bin/*
+!/imp_compile/bin/*.c
+
+/.vscode

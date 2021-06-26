@@ -1,9 +1,10 @@
 open Diagnostics
+open C
 open Driveraux
 open Compiler
 open Imp
 open Imp2Csharpminor
-open Imp2CsharpminorLink
+open Imp2Asm
 open ImpSimple
 open ImpFactorial
 open ImpMutsum
@@ -12,14 +13,13 @@ open ImpMem1
 open ImpMem2
 open ImpLink
 
-(* Preprocessing clight programs *)
-(* ref: velus, veluslib.ml *)
-(* let add_builtin p (name, (out, ins, b)) =
+
+
+(* let get_builtin (name, (out, ins, b)) =
  *   let env = Env.empty in
- *   let id = Camlcoq.intern_string name in
  *   let id' = Camlcoq.coqstring_of_camlstring name in
  *   let targs = List.map (C2C.convertTyp env) ins
- *                 |> Imp2Clight.list_type_to_typelist in
+ *                 |> Imp2Asm.list_type_to_typelist in
  *   let tres = C2C.convertTyp env out in
  *   let sg = Ctypes.signature_of_type targs tres AST.cc_default in
  *   let ef =
@@ -30,15 +30,14 @@ open ImpLink
  *     && List.mem_assoc name C2C.builtins.builtin_functions
  *     then AST.EF_builtin(id', sg)
  *     else AST.EF_external(id', sg) in
- *   let decl = (id, AST.Gfun (Ctypes.External (ef, targs, tres, AST.cc_default))) in
- *   { p with Ctypes.prog_defs = decl :: p.Ctypes.prog_defs } *)
+ *   let decl = (id', AST.Gfun (AST.External ef)) in
+ *   decl *)
 
-let add_builtin p (name, (out, ins, b)) =
+let get_builtin (name, (out, ins, b)) =
   let env = Env.empty in
-  let id = Camlcoq.intern_string name in
   let id' = Camlcoq.coqstring_of_camlstring name in
   let targs = List.map (C2C.convertTyp env) ins
-                |> Imp2Csharpminor.ASMGEN.list_type_to_typelist in
+                |> Imp2Asm.list_type_to_typelist in
   let tres = C2C.convertTyp env out in
   let sg = Ctypes.signature_of_type targs tres AST.cc_default in
   let ef =
@@ -49,53 +48,70 @@ let add_builtin p (name, (out, ins, b)) =
     && List.mem_assoc name C2C.builtins.builtin_functions
     then AST.EF_builtin(id', sg)
     else AST.EF_external(id', sg) in
-  let decl = (id, AST.Gfun (AST.External ef)) in
-  { p with AST.prog_defs = decl :: p.AST.prog_defs }
+  let decl = (id', ef) in
+  decl
 
-let add_builtins p =
-  List.fold_left add_builtin p C2C.builtins_generic.builtin_functions
+let builtins =
+  List.map get_builtin C2C.builtins_generic.builtin_functions
+
 
 
 (* Imp program compilations *)
 let compile_imp p ofile =
-  (* Convert Imp to Csharpminor *)
-  let i2c = Imp2Csharpminor.compile p in
-  match i2c with
-  | Errors.OK csm_out ->
-     let cl_built = add_builtins csm_out in
-     (* Convert to Asm *)
-     (match Compiler.apply_partial
-              (Imp2Csharpminor.ASMGEN.transf_csharpminor_program cl_built)
-              Asmexpand.expand_program with
-      | Errors.OK asm ->
-         (* Print Asm in text form *)
-         let oc = open_out ofile in
-         PrintAsm.print_program oc asm;
-         close_out oc
-      | Errors.Error msg ->
-         let loc = file_loc ofile in
-         fatal_error loc "%a"  print_error msg)
+  (* Convert Imp to Asm *)
+  let i2a =
+    (Compiler.apply_partial
+       (Imp2Asm.compile_imp builtins p)
+       Asmexpand.expand_program) in
+  match i2a with
+  | Errors.OK asm ->
+     (* Print Asm in text form *)
+     let oc = open_out ofile in
+     PrintAsm.print_program oc asm;
+     close_out oc
   | Errors.Error msg ->
-     print_endline "imp to clight failed"
+     let loc = file_loc ofile in
+     fatal_error loc "%a"  print_error msg
+
+
+(* Imp programL compilations for linked imps *)
+let compile_impL p ofile =
+  (* Convert Imp to Csharpminor *)
+  let i2a =
+    (Compiler.apply_partial
+       (Imp2Asm.compile builtins p)
+       Asmexpand.expand_program) in
+  match i2a with
+  | Errors.OK asm ->
+     (* Print Asm in text form *)
+     let oc = open_out ofile in
+     PrintAsm.print_program oc asm;
+     close_out oc
+  | Errors.Error msg ->
+     let loc = file_loc ofile in
+     fatal_error loc "%a"  print_error msg
+
 
 
 let main =
   print_endline "Start Imp compilations...";
-  compile_imp (Imp.lift ImpSimple.imp_simple_prog) "simple.s";
-  compile_imp (Imp.lift ImpFactorial.imp_factorial_prog) "factorial.s";
-  compile_imp (Imp.lift ImpMutsum.imp_mutsumF_prog) "mutsumF.s";
-  compile_imp (Imp.lift ImpMutsum.imp_mutsumG_prog) "mutsumG.s";
-  compile_imp (Imp.lift ImpMutsum.imp_mutsumMain_prog) "mutsumMain.s";
-  compile_imp (Imp.lift ImpKnot.imp_knot_prog) "knot.s";
-  compile_imp (Imp.lift ImpMem1.imp_mem1_f) "mem1F.s";
-  compile_imp (Imp.lift ImpMem1.imp_mem1_main) "mem1Main.s";
-  compile_imp (Imp.lift ImpMem2.imp_mem2_prog) "mem2.s";
-  let _link1 = (Imp2CsharpminorLink.link_imps [ImpLink.imp_linkMain_prog; ImpLink.imp_linkF_prog; ImpLink.imp_linkG_prog]) in
+  compile_imp (ImpSimple.imp_simple_prog) "simple.s";
+  compile_imp (ImpFactorial.imp_factorial_prog) "factorial.s";
+  compile_imp (ImpMutsum.imp_mutsumF_prog) "mutsumF.s";
+  compile_imp (ImpMutsum.imp_mutsumG_prog) "mutsumG.s";
+  compile_imp (ImpMutsum.imp_mutsumMain_prog) "mutsumMain.s";
+  compile_imp (ImpKnot.imp_knot_prog) "knot.s";
+  compile_imp (ImpMem1.imp_mem1_f) "mem1F.s";
+  compile_imp (ImpMem1.imp_mem1_main) "mem1Main.s";
+  compile_imp (ImpMem2.imp_mem2_prog) "mem2.s";
+  let _link1 =
+    (Imp2Csharpminor.link_imps builtins
+       [ImpLink.imp_linkMain_prog; ImpLink.imp_linkF_prog; ImpLink.imp_linkG_prog]) in
   match _link1 with
   | Some link1 ->
-     print_endline "link1 success";
-     compile_imp (link1) "link.s";
-     print_endline "Done."
+     print_endline "link1 succeed.";
+     compile_impL (link1) "link.s";
+     print_endline "Done!"
   | None ->
-     print_endline "link1 failed";
-     print_endline "Done."
+     print_endline "link1 failed.";
+     print_endline "Done!"
