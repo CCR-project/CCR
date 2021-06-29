@@ -89,7 +89,7 @@ Section PROOF.
 
   Definition mput E `{pE -< E} `{eventE -< E} (mr: Σ): itree E unit :=
     st <- trigger PGet;; '(mp, _) <- ((Any.split st)?);;
-    trigger (PPut (Any.pair st mr↑))
+    trigger (PPut (Any.pair mp mr↑))
   .
 
   Definition mget E `{pE -< E} `{eventE -< E}: itree E Σ :=
@@ -128,7 +128,7 @@ Section PROOF.
       guarantee(ord_lt ord_next ord_cur /\ (tbr = true -> is_pure ord_next) /\ (tbr = false -> ord_next = ord_top));;;
       vret_tgt <- trigger (Call fn varg_tgt);; (*** call ***)
 
-      '(rret, ctx) <- trigger (Choose (Σ * Σ));;
+      '(rret, ctx) <- trigger (Take (Σ * Σ));;
       mr <- mget;;
       assume(URA.wf (rret ⋅ fr ⋅ ctx ⋅ mr));;;
 
