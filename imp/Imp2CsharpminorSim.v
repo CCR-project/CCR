@@ -81,8 +81,14 @@ Section PROOF.
   Ltac sim_tau := (try sim_red); econs 3; ss; clarify; eexists; exists (step_tau _); eexists; split; [ord_step2|auto].
   Ltac sim_ord := guclo _ordC_spec; econs.
 
-  Ltac sim_triggerUB := gstep; ss; unfold triggerUB; (try sim_red); econs 5; i; ss; auto;
-                        dependent destruction STEP; try (irw in x; clarify; fail).
+  (* Ltac sim_triggerUB := gstep; ss; unfold triggerUB; (try sim_red); econs 5; i; ss; auto; *)
+  (*                       dependent destruction STEP; try (irw in x; clarify; fail). *)
+
+  Ltac solve_ub := des; irw in H; dependent destruction H; clarify.
+  Ltac sim_triggerUB := (try rename H into HH); gstep; ss; unfold triggerUB; try sim_red; econs 5; i; ss; auto;
+                        [solve_ub | dependent destruction STEP; try (irw in x; clarify; fail)].
+
+  Ltac dtm H H0 := eapply angelic_step in H; eapply angelic_step in H0; des; rewrite H; rewrite H0; ss.
 
   Fixpoint expr_ord (e: Imp.expr): Ord.t :=
     match e with
@@ -143,7 +149,9 @@ Section PROOF.
     - rewrite interp_imp_expr_Var. sim_red.
       destruct (alist_find v le) eqn:AFIND; try sim_red.
       + repeat (gstep; sim_tau). red. sim_red. unfold assume. grind.
-        gstep. econs 5; ss; auto. i. eapply angelic_step in STEP; des; clarify.
+        gstep. econs 5; ss; auto.
+        { i. dtm H H0. }
+        i. eapply angelic_step in STEP; des; clarify.
         eexists; split; [ord_step2|auto].
         do 6 (gstep; sim_tau). red.
         sim_red. sim_ord.
@@ -153,7 +161,9 @@ Section PROOF.
         hexploit ML; auto.
       + sim_triggerUB.
     - rewrite interp_imp_expr_Lit.
-      sim_red. unfold assume. grind. gstep. econs 5; auto. i. eapply angelic_step in STEP; des; clarify.
+      sim_red. unfold assume. grind. gstep. econs 5; auto; i.
+      { dtm H H0. }
+      eapply angelic_step in STEP; des; clarify.
       eexists; split; [ord_step2|].
       do 6 (gstep; sim_tau). red.
       sim_red. sim_ord.
@@ -172,7 +182,9 @@ Section PROOF.
       eapply IHe2; auto. clear IHe2.
       i. sim_red.
       unfold unwrapU. destruct (vadd rv rv0) eqn:VADD; ss; clarify.
-      + sim_red. unfold assume. grind. gstep. econs 5; auto. i. eapply angelic_step in STEP; des; clarify.
+      + sim_red. unfold assume. grind. gstep. econs 5; auto; i.
+        dtm H1 H4.
+        eapply angelic_step in STEP; des; clarify.
         eexists; split; [ord_step2|].
         do 6 (gstep; sim_tau). red.
         sim_red. specialize SIM with (rv:=v) (trv:= @map_val Σ builtins srcprog v).
@@ -194,7 +206,9 @@ Section PROOF.
       eapply IHe2; auto. clear IHe2.
       i. sim_red.
       unfold unwrapU. destruct (vsub rv rv0) eqn:VSUB; ss; clarify.
-      + sim_red. unfold assume. grind. gstep. econs 5; auto. i. eapply angelic_step in STEP; des; clarify.
+      + sim_red. unfold assume. grind. gstep. econs 5; auto; i.
+        dtm H1 H4.
+        eapply angelic_step in STEP; des; clarify.
         eexists; split; [ord_step2|].
         do 6 (gstep; sim_tau). red.
         sim_red. specialize SIM with (rv:=v) (trv:= @map_val Σ builtins srcprog v).
@@ -216,7 +230,9 @@ Section PROOF.
       eapply IHe2; auto. clear IHe2.
       i. sim_red.
       unfold unwrapU. destruct (vmul rv rv0) eqn:VMUL; ss; clarify.
-      + sim_red. unfold assume. grind. gstep. econs 5; auto. i. eapply angelic_step in STEP; des; clarify.
+      + sim_red. unfold assume. grind. gstep. econs 5; auto; i.
+        dtm H1 H4.
+        eapply angelic_step in STEP; des; clarify.
         eexists; split; [ord_step2|].
         do 6 (gstep; sim_tau). red.
         sim_red. specialize SIM with (rv:=v) (trv:= @map_val Σ builtins srcprog v).
@@ -445,7 +461,8 @@ Section PROOF.
         eexists. exists (step_tau _). eexists.
         (* Local Opaque itree_of_imp_pop_bottom. *)
         do 1 (gstep; sim_tau). red. sim_red. unfold assume. grind.
-        gstep. econs 5; ss; auto. i. eapply angelic_step in STEP; des; clarify. eexists; split; [ord_step2|].
+        gstep. econs 5; ss; auto; i. dtm H H0.
+        eapply angelic_step in STEP; des; clarify. eexists; split; [ord_step2|].
         do 6 (gstep; sim_tau). sim_red. unfold itree_of_imp_pop_bottom. sim_red.
         destruct v.
         - destruct ((0 <=? n)%Z && (n <? two_power_nat 32)%Z) eqn:INT32; bsimpl; des.
@@ -457,13 +474,16 @@ Section PROOF.
             econs.
           + gstep. econs 5; ss; eauto.
             { unfold state_sort; ss. rewrite Any.upcast_downcast. des_ifs. }
+            { i. inv H. }
             i. inv STEP.
           + gstep. econs 5; ss; eauto.
             { unfold state_sort; ss. rewrite Any.upcast_downcast. des_ifs. bsimpl. clarify. }
+            { i. inv H. }
             i. inv STEP.
 
         - gstep. econs 5; ss; eauto.
           { unfold state_sort; ss. rewrite Any.upcast_downcast. des_ifs. }
+          { i. inv H. }
           i. inv STEP.
         - gstep. econs 5; ss; eauto. }
 
@@ -481,7 +501,8 @@ Section PROOF.
         { eapply step_return_1; ss; eauto. econs; ss. inv ML; ss; clarify. hexploit ML0; i; eauto. }
         eexists. exists (step_tau _). eexists.
         do 1 (gstep; sim_tau). red. sim_red. unfold assume. grind.
-        gstep. econs 5; ss; auto. i. eapply angelic_step in STEP; des; clarify.
+        gstep. econs 5; ss; auto; i. dtm H H0.
+        eapply angelic_step in STEP; des; clarify.
         eexists; split; [ord_step2|].
         do 6 (gstep; sim_tau). red. sim_red.
         destruct rstate. ss. des_ifs.
@@ -622,7 +643,8 @@ Section PROOF.
       unfold cfun. sim_red.
       rewrite Any.upcast_downcast. sim_red.
       rewrite unfold_eval_imp_only. sim_red.
-      unfold assume. sim_red. gstep. econs 5; ss; auto. i. eapply angelic_step in STEP; des; clarify.
+      unfold assume. sim_red. gstep. econs 5; ss; auto; i. dtm H1 H2.
+      eapply angelic_step in STEP; des; clarify.
       eexists; split; [ord_step2|auto].
       rename STEP0 into WFFUN. sim_red.
       do 4 (gstep; sim_tau). sim_red.
@@ -715,7 +737,8 @@ Section PROOF.
       { eauto. }
 
     - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_CallPtr.
-      sim_red. unfold assume. sim_red. gstep. econs 5; ss; auto. i. eapply angelic_step in STEP; des; clarify.
+      sim_red. unfold assume. sim_red. gstep. econs 5; ss; auto; i. dtm H H0.
+      eapply angelic_step in STEP; des; clarify.
       eexists; split; [ord_step2|auto].
       des_ifs_safe. clear STEP0.
       grind. do 6 (gstep; sim_tau). sim_red.
@@ -759,7 +782,8 @@ Section PROOF.
 
       unfold cfun. sim_red. rewrite Any.upcast_downcast. sim_red.
       rewrite unfold_eval_imp_only. sim_red.
-      unfold assume. sim_red. gstep. econs 5; ss; auto. i. eapply angelic_step in STEP; des; clarify.
+      unfold assume. sim_red. gstep. econs 5; ss; auto; i. dtm H2 H3.
+      eapply angelic_step in STEP; des; clarify.
       eexists; split; [ord_step2|auto].
       rename STEP0 into WFFUN. sim_red.
       do 4 (gstep; sim_tau). sim_red.
@@ -856,7 +880,8 @@ Section PROOF.
       ss. sim_red. unfold unwrapU. des_ifs.
       2:{ sim_triggerUB. }
       rename Heq into FOUND.
-      sim_red. unfold assume. grind. gstep. econs 5; auto. i. eapply angelic_step in STEP; des; clarify.
+      sim_red. unfold assume. grind. gstep. econs 5; auto; i. dtm H H0.
+      eapply angelic_step in STEP; des; clarify.
       eexists; split; [ord_step2|].
 
       apply alist_find_some in FOUND.
