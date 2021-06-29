@@ -106,6 +106,15 @@ Definition wf_semantics (L: Smallstep.semantics) : Prop :=
 (************************ Src Aux ****************************)
 (************************ Src Aux ****************************)
 
+
+
+Definition wf (L: semantics) (st0: L.(state)): Prop :=
+  forall (ANG: L.(state_sort) st0 = angelic),
+  forall st1 st1' (STEP: step L st0 None st1) (STEP: step L st0 None st1'), st1 = st1'
+.
+
+
+
 Section STAR.
   Variable L: semantics.
   Variable P: L.(state) -> Prop.
@@ -122,7 +131,7 @@ Section STAR.
 End STAR.
 Hint Constructors pstar.
 Definition dstar L := pstar L (fun st_src0 => L.(state_sort) st_src0 = demonic).
-Definition star L := pstar L top1.
+Definition star L := pstar L (wf L).
 
 Lemma star_trans
       L
@@ -206,20 +215,23 @@ Definition NoStuck L (st_src0: state L): Prop :=
 
 
 
-Definition wf (L: semantics): Prop :=
-  forall (st0: L.(state)) (ANG: L.(state_sort) st0 = angelic),
-  forall st1 st1' (STEP: step L st0 None st1) (STEP: step L st0 None st1'), st1 = st1'
-.
+(* Definition wf (L: semantics): Prop := *)
+(*   forall (st0: L.(state)) (ANG: L.(state_sort) st0 = angelic), *)
+(*   forall st1 st1' (STEP: step L st0 None st1) (STEP: step L st0 None st1'), st1 = st1' *)
+(* . *)
+
 
 Section BEH.
 
 Variable L: semantics.
-Hypothesis WFSRC: wf L.
+(* Hypothesis WFSRC: wf L. *)
+(* Hypothesis WFSRC: forall st, (state_sort L st = angelic) -> wf L st. *)
 
 (*** TODO: move to proper place? ***)
 Lemma _beh_astep_rev
       r tr st0 ev st1
       (SRT: _.(state_sort) st0 = angelic)
+      (WFSRC: wf _ st0)
       (STEP: _.(step) st0 ev st1)
       (BEH: paco2 (Beh._of_state L) r st1 tr)
   :
@@ -242,7 +254,8 @@ Lemma beh_of_state_star
 Proof.
   revert BEH. revert tr1.
   induction STAR; ii; ss.
-  exploit IHSTAR; et. intro U; des.
+  exploit IHSTAR; et.
+  intro U; des.
   destruct (state_sort L st_src0) eqn:T.
   - exploit wf_angelic; et. i; subst. ss.
     eapply _beh_astep_rev; et.
@@ -605,7 +618,7 @@ Section SIM.
       (* (RANGE: (Int.min_signed <= retv <= Int.max_signed)%Z) *)
       (SRT: _.(state_sort) st_src0 = final retv)
       (SRT: _.(Smallstep.final_state) st_tgt0 (Int.repr retv))
-      (DTM: True) (*** TODO: copy-paste sd_final_determ in Smallstep.v ***)
+      (* (DTM: True) (*** TODO: copy-paste sd_final_determ in Smallstep.v ***) *)
     :
       _sim sim i0 st_src0 st_tgt0
 
@@ -649,6 +662,7 @@ Section SIM.
       _sim sim i0 st_src0 st_tgt0
   | sim_angelic_src
       (SRT: _.(state_sort) st_src0 = angelic)
+      (DTM: forall st1 st2, (<<DTM1: _.(step) st_src0 None st1>>) -> (<<DTM2: _.(step) st_src0 None st2>>) -> st1 = st2)
       (SIM: forall st_src1
           (STEP: _.(step) st_src0 None st_src1)
         ,
@@ -814,6 +828,7 @@ Section SIM.
 
   Lemma safe_along_events_step_some
         st_src0 st_src1 e_src e0 es0
+        (WFSRC: wf L0 st_src0)
         (STEP: step L0 st_src0 (Some e_src) st_src1)
         (MB: decompile_event e0 = Some e_src)
         (SAFE: safe_along_events st_src0 ([e0] ++ es0))
@@ -829,6 +844,7 @@ Section SIM.
 
   Lemma safe_along_events_step_none
         st_src0 st_src1 es0
+        (WFSRC: wf L0 st_src0)
         (STEP: step L0 st_src0 None st_src1)
         (SAFE: safe_along_events st_src0 es0)
     :
@@ -865,7 +881,7 @@ Section SIM.
     }
   Qed.
 
-  Hypothesis WFSRC: wf L0.
+  (* Hypothesis WFSRC: wf L0. *)
 
   Lemma simulation_star
         i0 st_src0 tr_tgt st_tgt1 st_tgt0
@@ -880,7 +896,7 @@ Section SIM.
         (<<SIM: sim i1 st_src1 st_tgt1>>)
   .
   Proof.
-    revert SAFE. revert SIM. revert st_src0. revert i0.
+    revert SAFE. revert SIM. depgen st_src0. revert i0.
     induction STEP; ii; ss.
     { esplits; et. econs; ss. }
     subst. rename s1 into st_tgt0. rename s2 into st_tgt1. rename s3 into st_tgt2.
@@ -894,16 +910,22 @@ Section SIM.
     - (* vis *)
       clear SRT0. exploit SIM0; et. i; des. pclearbot.
       inv MATCH; ss. inv H4; ss. rename H3 into MB. eapply match_event_iff in MB. des_ifs.
-      exploit IHSTEP; et. { eapply safe_along_events_step_some; et. } i; des. clarify.
+      exploit IHSTEP; et.
+      { eapply safe_along_events_step_some; et. unfold wf. i. rewrite ANG in SRT. ss. }
+      i; des. clarify.
       esplits; et. rewrite cons_app.
       change [ev_src] with (option_to_list (Some ev_src)).
       econs; et.
+      unfold wf. i. rewrite ANG in SRT. ss.
     - (* dsrc *)
-      des. pclearbot. exploit IH; et. { eapply safe_along_events_step_none; et. } i; des.
+      des. pclearbot. exploit IH; et.
+      { eapply safe_along_events_step_none; et. unfold wf. i. rewrite ANG in SRT. ss. }
+      i; des.
       esplits; et.
       rewrite <- (app_nil_l tr_src).
       change [] with (@option_to_list event None).
       econs; et.
+      unfold wf. i. rewrite ANG in SRT. ss. 
     - (* dtgt *)
       des. pclearbot. exploit wf_at_determ;[apply WFSEM|apply STEP0|apply H|]. i; des. subst.
       exploit IHSTEP; et.
@@ -915,18 +937,24 @@ Section SIM.
       i; des.
       exploit wf_angelic; et. i; subst.
       exploit SIM0; et. i; des. pclearbot.
-      exploit IH; et. { eapply safe_along_events_step_none; et. } i; des.
+      exploit IH; et.
+      { eapply safe_along_events_step_none; et. unfold wf. i. apply DTM; eauto. }
+      i; des.
       esplits; et.
       rewrite <- (app_nil_l tr_src).
       change [] with (@option_to_list event None).
       econs; et.
+      unfold wf. i. apply DTM; eauto.
     - (* dboth *)
       des. pclearbot.
       exploit wf_at_determ;[apply WFSEM|apply STEP0|apply H|]. i; des. subst.
-      exploit IHSTEP; et. { eapply safe_along_events_step_none; et. } i; des.
+      exploit IHSTEP; et.
+      { eapply safe_along_events_step_none; et. unfold wf. i. rewrite ANG in SRT. ss. }
+      i; des.
       esplits; et. rewrite <- (app_nil_l tr_src).
       change [] with (@option_to_list event None).
       econs; et.
+      unfold wf. i. rewrite ANG in SRT. ss.
   Qed.
 
   Lemma sim_forever_silent
@@ -971,7 +999,9 @@ Section SIM.
     { des. inv SIM; ss.
       guclo starC_spec. econs.
       { instantiate (1:=st_src1).
-        change ([]: list event) with (None ++ []: list event). econs; et. }
+        change ([]: list event) with (None ++ []: list event). econs; et.
+        unfold wf; i. rewrite ANG in SRT; ss.
+      }
       { eapply IH; et. }
     }
     { des. exfalso. eapply NOSTEP; et. }
@@ -979,7 +1009,9 @@ Section SIM.
       { des. exploit wf_angelic; et. i; subst. exploit SIM0; et. i; des. inv SIM; ss.
       guclo starC_spec. econs.
       { instantiate (1:=st_src1).
-        change ([]: list event) with (None ++ []: list event). econs; et. }
+        change ([]: list event) with (None ++ []: list event). econs; et.
+        unfold wf; i. eapply DTM; eauto.
+      }
       { eapply IH; et. }
       }
       { gstep. econs 6; et. ii. exfalso. eapply H. et. }
@@ -1023,7 +1055,7 @@ Section SIM.
             eapply safe_along_events_star; et.
             rewrite List.app_nil_r. ss.
           }
-          clear - SAFE0 WFSRC FIN WF SIM0 WFSEM.
+          clear - SAFE0 FIN WF SIM0 WFSEM.
           revert_until i1. pattern i1. eapply well_founded_ind; et. clear i1. intros i0 IH.
           i. punfold SIM0. inv SIM0.
           * pfold. econs; ss; et.
@@ -1032,14 +1064,18 @@ Section SIM.
             rewrite SRT. rewrite Int.unsigned_repr; auto.
           * des. exploit wf_at_final; [apply WFSEM|..]; et. ss.
           * des. pclearbot.
-            exploit IH; et. { eapply safe_along_events_step_none; et. } intro U.
+            exploit IH; et.
+            { eapply safe_along_events_step_none; et. unfold wf; i. rewrite ANG in SRT; ss. }
+            intro U.
             eapply Beh.beh_dstep; ss; et.
           * des. exploit wf_at_final; [apply WFSEM|..]; et. ss.
           * destruct (classic (exists ev st_src2, step L0 st_src1 ev st_src2)).
             { des. exploit wf_angelic; et. i; subst. exploit SIM; et. i; des.
               pclearbot.
-              exploit IH; et. { eapply safe_along_events_step_none; et. } i; des.
-              eapply _beh_astep_rev; ss; et. }
+              exploit IH; et.
+              { eapply safe_along_events_step_none; et. unfold wf; i. eapply DTM; eauto. }
+              i; des.
+              eapply _beh_astep_rev; ss; et. unfold wf; i. eapply DTM; eauto. }
             contradict H. eapply SAFE0; et.
             { econs; ss; et. }
             { instantiate (1:=[]). ss. }
@@ -1061,7 +1097,7 @@ Section SIM.
         (rename t into tr).
         esplits; et.
         + rename H0 into BEH. ss.
-          ginit. { eapply cpn2_wcompat; eauto with paco. } revert_until WFSRC. gcofix CIH. i.
+          ginit. { eapply cpn2_wcompat; eauto with paco. } revert_until WFSEM. gcofix CIH. i.
           inv BEH.
           rename s2 into st_tgt1. rename tr into tr_tgt. rename H into STAR.
           hexploit simulation_star; try apply STAR; et.
@@ -1087,7 +1123,7 @@ Section SIM.
         (rename T into tr).
         esplits; et.
         + rename H into BEH. ss.
-          ginit. { eapply cpn2_wcompat; eauto with paco. } revert_until WFSRC. gcofix CIH. i.
+          ginit. { eapply cpn2_wcompat; eauto with paco. } revert_until WFSEM. gcofix CIH. i.
           (* revert_until WFSRC. pcofix CIH. i. *)
           inv BEH.
           rename s2 into st_tgt1. rename t into tr_tgt. rename H into STAR.
@@ -1104,7 +1140,7 @@ Section SIM.
           intro KNOWLEDGE.
           assert(PROG: tr_src <> []).
           { ii; subst; ss. destruct tr_tgt; ss. des_ifs. }
-          clear - WFSRC KNOWLEDGE PROG STEP.
+          clear - KNOWLEDGE PROG STEP.
           induction STEP using star_event_ind; ss.
           clear_tac. spc IHSTEP1.
           eapply star_single_exact in STEP1. des.
@@ -1125,7 +1161,7 @@ Section SIM.
         (rename t into tr).
         esplits; et.
         + rename H0 into BEH. ss.
-          ginit. { eapply cpn2_wcompat; eauto with paco. } revert_until WFSRC. gcofix CIH. i.
+          ginit. { eapply cpn2_wcompat; eauto with paco. } revert_until WFSEM. gcofix CIH. i.
           hexploit simulation_star; try apply STAR; et.
           { eapply SAFE. exists (Goes_wrong []). ss. rewrite E0_right. auto. }
           i; des.
@@ -1164,7 +1200,7 @@ Section SIM.
       }
       des.
       exists (Tr.app thd Tr.ub). esplits; ss.
-      - clear - WFSRC STAR STUCK.
+      - clear - STAR STUCK.
         eapply beh_of_state_star; et. unfold NoStuck in *.
         repeat (Psimpl; des; unfold NW in *). clears st_src0. clear st_src0.
         pfold. econsr; ss; et. ii. exploit wf_angelic; ss; et. i; subst. exfalso.

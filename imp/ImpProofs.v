@@ -675,11 +675,11 @@ Section PROOFS.
                           let vars := fvars ++ ["return"; "_"] in
                           let params := fparams in
                           assume (NoDup (params ++ vars));;;
-                                 match init_args params args [] with
+                                 match init_args params args (init_lenv vars) with
                                  | Some iargs =>
                                    ` x_ : lenv * val <-
                                           interp_imp ge (tau;; denote_stmt fbody;;; ` retv : val <- denote_expr (Var "return");; Ret retv)
-                                                     (init_lenv vars ++ iargs);; (let (_, retv) := x_ in Ret retv)
+                                                     iargs;; (let (_, retv) := x_ in Ret retv)
                                  | None => triggerUB
                                  end);; Ret (vret↑).
   Proof.
@@ -694,11 +694,11 @@ Section PROOFS.
       let vars := fn_vars f ++ ["return"; "_"] in
       let params := fn_params f in
       assume (NoDup (params ++ vars));;;
-             match init_args params args [] with
+             match init_args params args (init_lenv vars) with
              | Some iargs =>
                ` x_ : lenv * val <-
                       interp_imp ge (tau;; denote_stmt (fn_body f);;; ` retv : val <- denote_expr (Var "return");; Ret retv)
-                                 (init_lenv vars ++ iargs);; (let (_, retv) := x_ in Ret retv)
+                                 iargs;; (let (_, retv) := x_ in Ret retv)
              | None => triggerUB
              end.
   Proof. ss. Qed.

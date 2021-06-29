@@ -18,6 +18,7 @@ From Ordinal Require Import Ordinal Arithmetic.
 Require Import Imp2CsharpminorMatch.
 Require Import Imp2CsharpminorArith.
 Require Import Imp2CsharpminorGenv.
+Require Import Imp2CsharpminorLenv.
 Require Import Imp2CsharpminorMem.
 Require Import Imp2CsharpminorLink.
 Require Import Imp2CsharpminorSim.
@@ -430,8 +431,13 @@ Section PROOFSINGLE.
   Ltac sim_red := try red; Red.prw ltac:(_red_gen) 2 0.
   Ltac sim_tau := (try sim_red); econs 3; ss; clarify; eexists; exists (ModSemL.step_tau _); eexists; split; [ord_step2|auto].
 
-  Ltac sim_triggerUB := unfold triggerUB; (try sim_red); econs 5; i; ss; auto;
-                        dependent destruction STEP; try (irw in x; clarify; fail).
+  (* Ltac sim_triggerUB := unfold triggerUB; (try sim_red); econs 5; i; ss; auto; *)
+  (*                       dependent destruction STEP; try (irw in x; clarify; fail). *)
+  Ltac solve_ub := des; irw in H; dependent destruction H; clarify.
+  Ltac sim_triggerUB := (try rename H into HH); pfold; ss; unfold triggerUB; try sim_red; econs 5; i; ss; auto;
+                        [solve_ub | dependent destruction STEP; try (irw in x; clarify; fail)].
+
+  Ltac dtm H H0 := eapply angelic_step in H; eapply angelic_step in H0; des; rewrite H; rewrite H0; ss.
 
   Definition imp_sem (src : Imp.programL) := ModL.compile (ModL.add (Mod.lift Mem) (ImpMod.get_modL src)).
 
@@ -452,7 +458,6 @@ Section PROOFSINGLE.
     eapply adequacy; eauto.
     { apply Ordinal.Ord.lt_well_founded. }
     { apply Csharpminor_wf_semantics. }
-    { admit "ez? wf imp". }
     instantiate (1:= ((100 + max_fuel) + 100 + Ord.omega + 120)%ord).
     red. unfold imp_initial_state in *. ss; clarify. inv TINIT.
     rename m0 into tm, ge into tge, H into TMINIT, H0 into TMAIN1, H1 into TMAIN2, H2 into TSIGMAIN, b into tb, f into tmain.
@@ -461,14 +466,17 @@ Section PROOFSINGLE.
     match goal with | [ COMP0: compile _ = OK ?_tgt |- _ ] => set (tgt:=_tgt) in * end.
     rename l into NOREPET.
     unfold ModSemL.initial_itr. unfold ModSemL.initial_itr_arg.
-    pfold. econs 5; eauto. unfold assume. ss. grind. eapply angelic_step in STEP. des; clarify.
+    pfold. econs 5; eauto. unfold assume. ss.
+    { grind. dtm H H0. }
+    unfold assume. grind. eapply angelic_step in STEP. des; clarify.
     eexists; split; [ord_step2|auto].
 
     left. unfold ITree.map. sim_red.
     set (sge:=Sk.load_skenv (Sk.sort (defsL src))) in *.
     destruct (alist_find "main" (List.map (fun '(mn, (fn, f)) => (fn, transl_all mn (T:=_) ∘ cfun (eval_imp sge f))) (prog_funsL src)))
              eqn:FOUNDMAIN; ss; grind.
-    2:{ pfold. sim_triggerUB. }
+    2:{ sim_triggerUB. }
+    repeat match goal with | [ H : false = false |- _ ] => clear H end.
     rewrite alist_find_find_some in FOUNDMAIN. rewrite find_map in FOUNDMAIN. uo; des_ifs; ss.
     rename s into mn, f into smain, Heq into SFOUND. apply find_some in SFOUND. des. ss. clear SFOUND0.
 
@@ -479,12 +487,13 @@ Section PROOFSINGLE.
     match goal with [H: Genv.find_def _ _ = Some (Gfun (Internal ?tf)) |- _ ] => set (tmainf:=tf) in * end.
     unfold cfun. rewrite Any.upcast_downcast. grind. rewrite unfold_eval_imp_only.
     sim_red. unfold assume. sim_red.
-    pfold. econs 5; ss; eauto. i. eapply angelic_step in STEP; des; clarify.
+    pfold. econs 5; ss; eauto; i. dtm H H0.
+    eapply angelic_step in STEP; des; clarify.
     eexists; split; [ord_step2|auto]. left. rename STEP0 into WF_MAIN.
     do 4 (pfold; sim_tau; left). sim_red.
 
     des_ifs; grind; sim_red.
-    2:{ pfold. sim_triggerUB. }
+    2:{ sim_triggerUB. }
     assert (MAINPARAM: fn_params smain = []).
     { depgen Heq. clear. i. remember (fn_params smain) as m. clear Heqm. depgen l. induction m; i; ss; clarify. }
     rename l into sle, Heq into INITARGS. rewrite MAINPARAM in INITARGS. ss. clarify.
@@ -525,7 +534,7 @@ Section PROOFSINGLE.
     end.
     econs; eauto.
     { ss. }
-    { admit "ez?: match initial le". }
+    { eapply init_lenv_match; eauto. rewrite map_app. ss. }
     { clarify. }
     { econs; ss.
       { unfold src_init_nb, int_len. rewrite <- sksort_same_len. lia. }

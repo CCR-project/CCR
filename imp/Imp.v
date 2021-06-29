@@ -310,10 +310,10 @@ Section Interp.
     let vars := f.(fn_vars) ++ ["return"; "_"] in
     let params := f.(fn_params) in
     assume (NoDup (params ++ vars));;;
-    match (init_args params args []) with
+    match (init_args params args (init_lenv vars)) with
     | Some iargs =>
       '(_, retv) <- (interp_imp ge (tau;; (denote_stmt f.(fn_body));;; retv <- (denote_expr (Var "return")) ;; Ret retv)
-                                    ((init_lenv vars) ++ iargs));; Ret retv
+                                    iargs);; Ret retv
     | None => triggerUB
     end.
 

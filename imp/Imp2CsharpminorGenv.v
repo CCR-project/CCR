@@ -9,7 +9,6 @@ Require Import STS Behavior.
 Require Import Any.
 Require Import ModSem.
 Require Import Imp.
-Require Import Imp2Csharpminor.
 Require Import AList.
 
 Require Import Imp2Csharpminor.

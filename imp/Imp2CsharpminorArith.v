@@ -10,6 +10,7 @@ Require Import ModSem.
 
 Require Import Imp2Csharpminor.
 Require Import Imp2CsharpminorMatch.
+Require Import Imp2CsharpminorGenv.
 
 From compcert Require Import Csharpminor.
 
@@ -129,6 +130,73 @@ Section ARITH.
       rewrite! Int64.repr_unsigned.
       rewrite Int64.add_signed. f_equal. unfold_intrange_64.
       rewrite Int64.signed_repr; try (rewrite Int64.signed_repr); unfold_Int64_max_signed; unfold_Int64_min_signed; try nia.
+  Qed.
+
+  Lemma map_val_vsub_comm
+        src a b v
+        (VSUB: vsub a b = Some v)
+        (WFA: wf_val a)
+        (WFB: wf_val b)
+        (WFV: wf_val v)
+    :
+      Values.Val.subl (map_val src a) (map_val src b) = map_val src v.
+  Proof.
+    destruct a; destruct b; ss; clarify.
+    - ss. repeat f_equal.
+      rewrite Int64.sub_signed. f_equal. unfold_intrange_64.
+      rewrite Int64.signed_repr; try (rewrite Int64.signed_repr); unfold_Int64_max_signed; unfold_Int64_min_signed; try nia.
+    - uo; des_ifs. unfold scale_int in *. des_ifs. ss. unfold Ptrofs.of_int64 in *.
+      f_equal. unfold map_ofs in *. unfold scale_ofs in *.
+      unfold Z.divide in d. des. clarify. rewrite Z_div_mult in *; try nia.
+      assert ((8 * z)%Z = (z * 8)%Z); try nia. rewrite <- H in *; clear H.
+      rewrite Z.mul_sub_distr_l in *. remember (8 * z)%Z as b. remember (8 * ofs)%Z as a.
+      clear Heqb Heqa ofs z blk. move a before b.
+      pose (Ptrofs.agree64_repr Heq (Int64.unsigned (Int64.repr a))) as aInt.
+      pose (Ptrofs.agree64_repr Heq (Int64.unsigned (Int64.repr b))) as bInt.
+      hexploit Ptrofs.agree64_sub; auto.
+      { eapply aInt. }
+      { eapply bInt. }
+      i. rename H into subInt.
+      pose (Ptrofs.agree64_repr Heq (Int64.unsigned (Int64.repr (a - b)))) as abInt.
+      rewrite <- Ptrofs.of_int64_to_int64 at 1; auto.
+      rewrite <- Ptrofs.of_int64_to_int64; auto. f_equal.
+      apply Ptrofs.agree64_to_int_eq in subInt. apply Ptrofs.agree64_to_int_eq in abInt.
+      rewrite subInt; clear subInt. rewrite abInt; clear abInt. clear aInt bInt Heq.
+      rewrite! Int64.repr_unsigned.
+      rewrite Int64.sub_signed. f_equal. unfold_intrange_64.
+      rewrite Int64.signed_repr; try (rewrite Int64.signed_repr); unfold_Int64_max_signed; unfold_Int64_min_signed; try nia.
+    - uo; des_ifs.
+      2:{ exfalso; apply n. f_equal. bsimpl. apply Nat.eqb_eq in Heq0. clarify. }
+      apply Nat.eqb_eq in Heq0. clarify; ss. repeat f_equal.
+      unfold Ptrofs.of_int64 in *. unfold map_ofs in *. unfold scale_ofs in *.
+      rewrite Z.mul_sub_distr_l in *. remember (8 * ofs0)%Z as b. remember (8 * ofs)%Z as a.
+      clear Heqb Heqa ofs ofs0 e blk0. move a before b.
+      bsimpl.
+      pose (Ptrofs.agree64_repr Heq (Int64.unsigned (Int64.repr a))) as aInt.
+      pose (Ptrofs.agree64_repr Heq (Int64.unsigned (Int64.repr b))) as bInt.
+      hexploit Ptrofs.agree64_sub; auto.
+      { eapply aInt. }
+      { eapply bInt. }
+      i. rename H into subInt.
+      apply Ptrofs.agree64_to_int_eq in subInt. rewrite subInt; clear subInt aInt bInt.
+      rewrite Int64.sub_signed. f_equal. rewrite ! Int64.repr_unsigned.
+      unfold_intrange_64.
+      rewrite Int64.signed_repr; try (rewrite Int64.signed_repr); unfold_Int64_max_signed; unfold_Int64_min_signed; try nia.
+  Qed.
+
+  Lemma map_val_vmul_comm
+        src a b v
+        (VMUL: vmul a b = Some v)
+        (WFA: wf_val a)
+        (WFB: wf_val b)
+        (WFV: wf_val v)
+    :
+      Values.Val.mull (map_val src a) (map_val src b) = map_val src v.
+  Proof.
+    destruct a; destruct b; ss; clarify.
+    ss. repeat f_equal.
+    rewrite Int64.mul_signed. f_equal. unfold_intrange_64.
+    rewrite Int64.signed_repr; try (rewrite Int64.signed_repr); unfold_Int64_max_signed; unfold_Int64_min_signed; try nia.
   Qed.
 
 End ARITH.
