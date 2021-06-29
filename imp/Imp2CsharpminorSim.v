@@ -18,6 +18,7 @@ From Ordinal Require Import Ordinal Arithmetic.
 Require Import Imp2CsharpminorMatch.
 Require Import Imp2CsharpminorArith.
 Require Import Imp2CsharpminorGenv.
+Require Import Imp2CsharpminorLenv.
 Require Import Imp2CsharpminorMem.
 
 From compcert Require Import Csharpminor.
@@ -180,8 +181,51 @@ Section PROOF.
         apply SIM; auto.
         econs; eauto. ss. f_equal. apply map_val_vadd_comm; auto.
       + sim_triggerUB.
-    -
-  Admitted.
+    - rewrite interp_imp_expr_Minus.
+      sim_red.
+      sim_ord.
+      { instantiate (1:=((i1 + 20 + expr_ord e2 + 20) + expr_ord e1)%ord).
+        rewrite <- ! OrdArith.add_assoc. eapply OrdArith.add_base_l. }
+      eapply IHe1; auto. clear IHe1.
+      i. sim_red.
+      sim_ord.
+      { instantiate (1:=(i1 + 20 + expr_ord e2)%ord).
+        eapply OrdArith.add_base_l. }
+      eapply IHe2; auto. clear IHe2.
+      i. sim_red.
+      unfold unwrapU. destruct (vsub rv rv0) eqn:VSUB; ss; clarify.
+      + sim_red. unfold assume. grind. gstep. econs 5; auto. i. eapply angelic_step in STEP; des; clarify.
+        eexists; split; [ord_step2|].
+        do 6 (gstep; sim_tau). red.
+        sim_red. specialize SIM with (rv:=v) (trv:= @map_val Σ builtins srcprog v).
+        sim_ord.
+        { eapply OrdArith.add_base_l. }
+        apply SIM; auto.
+        econs; eauto. ss. f_equal. apply map_val_vsub_comm; auto.
+      + sim_triggerUB.
+    - rewrite interp_imp_expr_Mult.
+      sim_red.
+      sim_ord.
+      { instantiate (1:=((i1 + 20 + expr_ord e2 + 20) + expr_ord e1)%ord).
+        rewrite <- ! OrdArith.add_assoc. eapply OrdArith.add_base_l. }
+      eapply IHe1; auto. clear IHe1.
+      i. sim_red.
+      sim_ord.
+      { instantiate (1:=(i1 + 20 + expr_ord e2)%ord).
+        eapply OrdArith.add_base_l. }
+      eapply IHe2; auto. clear IHe2.
+      i. sim_red.
+      unfold unwrapU. destruct (vmul rv rv0) eqn:VMUL; ss; clarify.
+      + sim_red. unfold assume. grind. gstep. econs 5; auto. i. eapply angelic_step in STEP; des; clarify.
+        eexists; split; [ord_step2|].
+        do 6 (gstep; sim_tau). red.
+        sim_red. specialize SIM with (rv:=v) (trv:= @map_val Σ builtins srcprog v).
+        sim_ord.
+        { eapply OrdArith.add_base_l. }
+        apply SIM; auto.
+        econs; eauto. ss. f_equal. apply map_val_vmul_comm; auto.
+      + sim_triggerUB.
+  Qed.
 
   Lemma step_exprs
         (src: ModL.t) (tgt: Csharpminor.program)
@@ -462,7 +506,7 @@ Section PROOF.
               replace i1 with i0; eauto
             end.
             unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
-        econs. i. ss. admit "ez: find in lenv". }
+        econs. i. eapply alist_update_le; eauto. }
 
       sim_red. gstep. econs 6; clarify.
       eexists. eexists.
@@ -485,7 +529,7 @@ Section PROOF.
       { instantiate (2:=Skip). ss. }
       1,3,4,5,6,7,8:eauto.
       2:{ unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. eauto. }
-      { econs. i. admit "ez? alist & Maps.PTree". }
+      { econs. i. eapply alist_update_le; eauto. }
 
     - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Seq. sim_red. ss.
       (* tau point *)
@@ -583,7 +627,7 @@ Section PROOF.
       rename STEP0 into WFFUN. sim_red.
       do 4 (gstep; sim_tau). sim_red.
 
-      destruct (init_args (Imp.fn_params impf) rvs []) eqn:ARGS; sim_red.
+      destruct (init_args (Imp.fn_params impf) rvs (init_lenv (Imp.fn_vars impf ++ ["return"; "_"]))) eqn:ARGS; sim_red.
       2:{ sim_triggerUB. }
       (* tau point?? need a tau BEFORE denote_stmt(fn_body) *)
       rewrite interp_imp_tau. sim_red. des_ifs.
@@ -602,8 +646,9 @@ Section PROOF.
           rewrite H0. ss.
       }
       eexists. exists (step_tau _). eexists.
-      gstep. econs 4.
 
+      hexploit initial_lenv_match; eauto. i. des; ss; clarify. instantiate (1:=srcprog) in MLINIT.
+      gstep. econs 4.
       eexists. eexists.
       { rewrite <- NoDup_norepeat in WFFUN. apply Coqlib.list_norepet_app in WFFUN. des.
         eapply step_internal_function; ss; eauto; try econs.
@@ -617,11 +662,7 @@ Section PROOF.
             | [ H0: In _ ?ml |- In _ ?ll ] => replace ml with (List.map s2p ll) end; ss; des; eauto.
             apply s2p_inj in H0; auto. apply s2p_inj in H0; auto.
         }
-        match goal with
-        | [ |- bind_parameters _ _ ?_tle0 = Some _ ] =>
-          set (tle0:=_tle0) in *
-        end.
-        admit "mid: use induction?, need existence & tle suffices MLE with (init_lenv (Imp.fn_vars impf ++ ['return'; '_']) ++ l1)".
+        rewrite map_app in BIND. ss. eapply BIND.
       }
       eexists; split; [ord_step2|].
 
@@ -645,8 +686,7 @@ Section PROOF.
         replace i with
     (` r0 : r_state * p_state * (lenv * val) <-
      EventsL.interp_Es (prog ms)
-                       (transl_all mn2 (interp_imp ge (denote_stmt (Imp.fn_body impf))
-                                                   (init_lenv (Imp.fn_vars impf ++ ["return"; "_"]) ++ l1)))
+                       (transl_all mn2 (interp_imp ge (denote_stmt (Imp.fn_body impf)) l1))
        (c, ε :: c0 :: l0, pstate);; x4 <- itree_of_imp_pop ge ms mn2 mn x le r0;; ` x : _ <- next x4;; stack x)
       end.
       2:{ rewrite interp_imp_bind. Red.prw ltac:(_red_gen) 1 0. grind.
@@ -672,7 +712,7 @@ Section PROOF.
             replace i1 with i0; eauto
           end.
           unfold itree_of_cont_stmt, itree_of_imp_cont. unfold idK. grind. }
-      { admit "ez: should follow from above, the initial lenv". }
+      { eauto. }
 
     - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_CallPtr.
       sim_red. unfold assume. sim_red. gstep. econs 5; ss; auto. i. eapply angelic_step in STEP; des; clarify.
@@ -728,7 +768,7 @@ Section PROOF.
       { apply Sk.load_skenv_wf in WFSK. apply WFSK in Heq. apply MG in Heq. clarify. }
       clarify.
 
-      destruct (init_args (Imp.fn_params impf) rvs []) eqn:ARGS; sim_red.
+      destruct (init_args (Imp.fn_params impf) rvs (init_lenv (Imp.fn_vars impf ++ ["return"; "_"]))) eqn:ARGS; sim_red.
       2:{ sim_triggerUB. }
       (* tau point?? need a tau BEFORE denote_stmt(fn_body) *)
       rewrite interp_imp_tau. sim_red. des_ifs.
@@ -737,9 +777,6 @@ Section PROOF.
       gstep. econs 6; auto.
       eexists. eexists.
       { eapply step_call; eauto.
-        (* - econs. econs 2. *)
-        (*   { apply Maps.PTree.gempty. } *)
-        (*   eapply TGTFG. *)
         - rewrite Globalenvs.Genv.find_funct_find_funct_ptr.
           rewrite Globalenvs.Genv.find_funct_ptr_iff. ss. eapply TGTGFIND.
         - ss. apply init_args_prop in ARGS. rewrite map_length. des. setoid_rewrite ARGS. depgen H1. clear. i.
@@ -748,6 +785,7 @@ Section PROOF.
       }
       eexists. exists (step_tau _). eexists.
 
+      hexploit initial_lenv_match; eauto. i. des; ss; clarify. instantiate (1:=srcprog) in MLINIT.
       gstep. econs 4.
       eexists. eexists.
       { rewrite <- NoDup_norepeat in WFFUN. apply Coqlib.list_norepet_app in WFFUN. des.
@@ -762,11 +800,7 @@ Section PROOF.
             | [ H0: In _ ?ml |- In _ ?ll ] => replace ml with (List.map s2p ll) end; ss; des; eauto.
             apply s2p_inj in H0; auto. apply s2p_inj in H0; auto.
         }
-        match goal with
-        | [ |- bind_parameters _ _ ?_tle0 = Some _ ] =>
-          set (tle0:=_tle0) in *
-        end.
-        admit "mid: use induction?, need existence & tle suffices MLE with (init_lenv (Imp.fn_vars impf ++ ['return'; '_']) ++ l1)".
+        rewrite map_app in BIND. ss. eapply BIND.
       }
       eexists; split; [ord_step2|].
 
@@ -790,8 +824,7 @@ Section PROOF.
         replace i with
     (` r0 : r_state * p_state * (lenv * val) <-
      EventsL.interp_Es (prog ms)
-                       (transl_all mn2 (interp_imp ge (denote_stmt (Imp.fn_body impf))
-                                                   (init_lenv (Imp.fn_vars impf ++ ["return"; "_"]) ++ l1)))
+                       (transl_all mn2 (interp_imp ge (denote_stmt (Imp.fn_body impf)) l1))
        (c, ε :: c0 :: l0, pstate);; x4 <- itree_of_imp_pop ge ms mn2 mn x le r0;; ` x : _ <- next x4;; stack x)
       end.
       2:{ rewrite interp_imp_bind. Red.prw ltac:(_red_gen) 1 0. grind.
@@ -817,7 +850,8 @@ Section PROOF.
             replace i1 with i0; eauto
           end.
           unfold itree_of_cont_stmt, itree_of_imp_cont. unfold idK. grind. }
-      { admit "ez: should follow from above, the initial lenv". }
+      { eauto. }
+
     - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_CallSys.
       ss. sim_red. unfold unwrapU. des_ifs.
       2:{ sim_triggerUB. }
@@ -906,7 +940,10 @@ Section PROOF.
             replace i1 with i0; eauto
           end.
           unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
-      { econs. i. ss. admit "ez: find from local env". }
+      { econs. i. simpl. set (vv:=Vint (Int64.signed ret_int)) in *.
+        replace (Values.Vlong ret_int) with (map_val srcprog vv).
+        2:{ ss. rewrite Int64.repr_signed; ss. }
+        eapply alist_update_le; eauto. }
 
     - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_AddrOf.
       ss. unfold unwrapU. des_ifs.
@@ -929,7 +966,10 @@ Section PROOF.
             replace i1 with i0; eauto
           end.
           unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
-      { econs. i. ss. admit "ez: alist, PTree". }
+      { econs. i. set (vv:=Vptr blk 0) in *.
+        replace (Values.Vptr (map_blk srcprog blk) Ptrofs.zero) with (map_val srcprog vv).
+        2:{ ss. }
+        eapply alist_update_le; eauto. }
 
     - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Malloc. sim_red.
       ss.
@@ -1033,9 +1073,13 @@ Section PROOF.
             replace i1 with i0; eauto
           end.
           unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
-      { econs. i. ss. specialize TGTALLOC with tm (- size_chunk Mptr)%Z (8 * n)%Z. apply Mem.alloc_result in TGTALLOC.
+      { econs. i.  specialize TGTALLOC with tm (- size_chunk Mptr)%Z (8 * n)%Z. apply Mem.alloc_result in TGTALLOC.
         rewrite TGTALLOC. inv MM. rewrite NBLK. rename H0 into LENV. depgen LENV. depgen ML. clear; i.
-        admit "ez: local env". }
+
+        set (vv:=Vptr (Mem.nb m + 0) 0) in *. simpl.
+        replace (Values.Vptr (map_blk srcprog (Mem.nb m)) Ptrofs.zero) with (map_val srcprog vv).
+        2:{ ss. repeat f_equal. lia. }
+        eapply alist_update_le; eauto. }
       { clarify. }
       eapply match_mem_malloc; eauto. unfold Mem.alloc; ss. f_equal. rewrite! Nat.add_0_r. ss.
 
@@ -1130,7 +1174,7 @@ Section PROOF.
             replace i1 with i0; eauto
           end.
           unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
-      { econs. i. admit "ez: match lenv". }
+      { econs. i. eapply alist_update_le; eauto. }
 
     - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Store. sim_red.
       match goal with
@@ -1231,8 +1275,11 @@ Section PROOF.
             unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
         { econs. i. unfold Int.one. rewrite Int.signed_repr.
           2:{ unfold_Int_max_signed; unfold_Int_min_signed. ss. }
-          admit "ez: match le". }
-      + sim_red.
+          set (vv:=Vint 1) in *.
+          replace (Values.Vlong (Int64.repr 1)) with (map_val srcprog vv).
+          2:{ ss. }
+          eapply alist_update_le; eauto. }
+    + sim_red.
         gstep. econs 6; clarify.
         eexists. eexists.
         { eapply step_set. econs; eauto. econs; eauto; ss. eapply match_mem_cmp in VCMP; eauto. }
@@ -1255,7 +1302,11 @@ Section PROOF.
             unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
         { econs. i. unfold Int.zero. rewrite Int.signed_repr.
           2:{ unfold_Int_max_signed; unfold_Int_min_signed. ss. }
-          admit "ez: match le". }
+          set (vv:=Vint 0) in *.
+          replace (Values.Vlong (Int64.repr 0)) with (map_val srcprog vv).
+          2:{ ss. }
+          eapply alist_update_le; eauto. }
+
         Unshelve. all: try (exact Ord.O). all: try (exact 0%nat). all: ss.
         { eapply (Genv.globalenv tgt). }
   Qed.

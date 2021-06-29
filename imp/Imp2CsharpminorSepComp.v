@@ -18,6 +18,7 @@ From Ordinal Require Import Ordinal Arithmetic.
 Require Import Imp2CsharpminorMatch.
 Require Import Imp2CsharpminorArith.
 Require Import Imp2CsharpminorGenv.
+Require Import Imp2CsharpminorLenv.
 Require Import Imp2CsharpminorMem.
 Require Import Imp2CsharpminorLink.
 Require Import Imp2CsharpminorSim.
@@ -525,7 +526,7 @@ Section PROOFSINGLE.
     end.
     econs; eauto.
     { ss. }
-    { admit "ez?: match initial le". }
+    { eapply init_lenv_match; eauto. rewrite map_app. ss. }
     { clarify. }
     { econs; ss.
       { unfold src_init_nb, int_len. rewrite <- sksort_same_len. lia. }
