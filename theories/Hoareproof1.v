@@ -407,7 +407,7 @@ Section CANCEL.
 
 
 
-  Let W: Type := (r_state * p_state).
+  Let W: Type := p_state.
   (* Let wf: Ord.t -> W -> W -> Prop := top3. *)
 
   Opaque EventsL.interp_Es.
@@ -526,7 +526,7 @@ Section CANCEL.
     forall at_most o0 mn
            st_src0 st_tgt0
     ,
-      simg (fun (st_src1: r_state * p_state * unit) '(st_tgt1, x) => st_tgt1 = st_tgt0)
+      simg (fun (st_src1: p_state * unit) '(st_tgt1, x) => st_tgt1 = st_tgt0)
            (C.myG o0 at_most + C.d)%ord (Ret (st_src0, tt))
            (EventsL.interp_Es p_mid (transl_all mn (interp_hCallE_mid stb (ord_pure o0) (_APC at_most))) st_tgt0)
   .
@@ -538,15 +538,13 @@ Section CANCEL.
     pattern fuel. eapply well_founded_induction. { eapply wf_opair_lt. } clear fuel.
     intros fuel IH. i.
 
-    rewrite unfold_APC. destruct st_tgt0 as [rst_tgt0 pst_tgt0]. steps.
+    rewrite unfold_APC. steps.
     destruct x.
     { steps. }
     steps. hexploit (stb_find_iff s). i. des.
     { rewrite NONE. steps. }
     { rewrite FIND. steps. exfalso. eapply x1; et. }
     rewrite STB. steps.
-    destruct rst_tgt0 as [mrs_tgt0 [|frs_hd frs_tl]]; ss.
-    { steps. }
     steps. rewrite FINDMID. unfold fun_to_mid. steps.
     rewrite Any.pair_split. steps.
     rewrite Any.upcast_downcast. steps.
@@ -585,7 +583,7 @@ Section CANCEL.
   Let adequacy_type_aux_APC:
     forall o0 st_src0 st_tgt0 mn
     ,
-      simg (fun (st_src1: r_state * p_state * unit) '(st_tgt1, _) => st_tgt1 = st_tgt0)
+      simg (fun (st_src1: p_state * unit) '(st_tgt1, _) => st_tgt1 = st_tgt0)
            (C.myF o0)%ord (Ret (st_src0, tt))
            (EventsL.interp_Es p_mid (transl_all mn (interp_hCallE_mid stb (ord_pure o0) APC)) st_tgt0)
   .
@@ -640,8 +638,7 @@ Section CANCEL.
     destruct e; cycle 1.
     { rewrite <- bind_trigger. resub. steps.
       destruct s; ss.
-      { destruct st_src0 as [rst_src0 pst_src0]; ss.
-        destruct p; resub; ss.
+      { destruct p; resub; ss.
         - steps. gbase. eapply CIH; ss; et.
         - steps. gbase. eapply CIH; ss; et.
       }
@@ -653,23 +650,20 @@ Section CANCEL.
     }
     dependent destruction h.
     rewrite <- bind_trigger. resub.
-    destruct st_src0 as [rst_src0 pst_src0]; ss.
     ired_both. hexploit (stb_find_iff fn). i. des.
     { rewrite NONE. steps. }
     { rewrite FIND. steps. destruct tbr.
       { exfalso. eapply x; ss. }
-      steps. destruct rst_src0. steps. destruct l.
-      { seal_left. steps. }
       steps. rewrite FINDSRC. steps.
     }
     rewrite STB. steps. destruct tbr.
     (* PURE *)
-    { seal_left.
-      Local Opaque ord_lt. steps.
-      destruct rst_src0 as [mrs_tgt0 [|frs_tgt_hd frs_tgt_tl]]; ss.
-      { steps. }
-      unseal_left. steps.
-      rewrite FINDMID. unfold fun_to_mid. steps.
+    { Local Opaque ord_lt.
+      ired_both. seal_left.
+      gstep. econs; et.
+      { _ord_step. }
+      i. ired_both. unseal_left. steps.
+      rewrite FINDMID. unfold fun_to_mid. ired_both. steps.
       rewrite Any.pair_split. steps.
       rewrite Any.upcast_downcast. steps.
       guclo ordC_spec. econs.
@@ -682,11 +676,11 @@ Section CANCEL.
     }
 
     (* IMPURE *)
-    { seal_left.
-      Local Opaque ord_lt. steps.
-      destruct rst_src0 as [mrs_tgt0 [|frs_tgt_hd frs_tgt_tl]]; ss.
-      { steps. }
-      unseal_left. steps.
+    { Local Opaque ord_lt. unfold guarantee. 
+      ired_both. seal_left.
+      gstep. econs; et.
+      { _ord_step. }
+      i. ired_both. unseal_left. steps.
       rewrite FINDMID. rewrite FINDSRC.
       unfold fun_to_src, cfun, fun_to_mid. steps.
       rewrite Any.pair_split. steps.
@@ -696,8 +690,6 @@ Section CANCEL.
       guclo bindC_spec. econs.
       { gbase. eapply CIH. ss. }
       i. subst. steps.
-      destruct p as [[mrs_tgt1 [|frs_tgt_hd1 frs_tgt_tl1]] mp]; ss.
-      { seal_left. steps. }
       steps.
       gbase. eapply CIH. ss.
     }
@@ -785,7 +777,7 @@ Section CANCEL.
       { eapply OrdArith.add_base_l. }
       guclo bindC_spec. econs.
       { gfinal. right. eapply adequacy_type_aux. ss.
-        unfold initial_r_state, initial_p_state.
+        unfold initial_p_state.
         rewrite initial_mrs_eq. auto. }
       { i. subst. instantiate (1:=10). steps. }
     }

@@ -2,7 +2,6 @@ Require Import Coqlib.
 Require Import ITreelib.
 Require Import Universe.
 Require Import Skeleton.
-Require Import PCM.
 Require Import ModSem.
 Require Import Behavior.
 Require Import Relation_Definitions.
