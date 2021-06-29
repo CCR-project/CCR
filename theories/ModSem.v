@@ -76,9 +76,6 @@ Goal (tt ↑↓ǃ) = Ret tt. rewrite Any.upcast_downcast. ss. Qed.
 
 Section EVENTSCOMMON.
 
-  Context `{Σ: GRA.t}.
-
-  Definition r_state: Type := ((mname -> Σ) * list Σ).
   Definition p_state: Type := (mname -> Any.t).
 
   (*** Same as State.pure_state, but does not use "Vis" directly ***)
@@ -100,8 +97,6 @@ End EVENTSCOMMON.
 Module EventsL.
 Section EVENTSL.
 
-  Context `{Σ: GRA.t}.
-
   Inductive callE: Type -> Type :=
   | Call (mn: option mname) (fn: gname) (args: Any.t): callE Any.t
   .
@@ -111,26 +106,11 @@ Section EVENTSL.
   | PGet (mn: mname): pE Any.t
   .
 
-  Inductive rE: Type -> Type :=
-  (* | MPut (mn: mname) (r: GRA): rE unit *)
-  (* | MGet (mn: mname): rE GRA *)
-  (* | FPut (r: GRA): rE unit *)
-  (* | FGet: rE GRA *)
-  | MPut (mn: mname) (mr: Σ): rE unit
-  | FPut (fr: Σ): rE unit
-  | MGet (mn: mname): rE Σ
-  | FGet: rE Σ
-  (* | Get (mn: mname): rE (GRA * GRA) *)
-
-  | PushFrame: rE unit
-  | PopFrame: rE unit
-  .
-
   (*** TODO: we don't want to require "mname" here ***)
   (*** use dummy mname? ***)
   (* Definition FPut E `{rE -< E} (mn: mname) (fr: GRA): itree E unit := *)
 
-  Definition Es: Type -> Type := (callE +' rE +' pE+' eventE).
+  Definition Es: Type -> Type := (callE +' pE +' eventE).
 
   (* Inductive mdE: Type -> Type := *)
   (* | MPut (mn: mname) (r: GRA): mdE unit *)
@@ -152,29 +132,6 @@ Section EVENTSL.
   (********************************************************************)
   (*************************** Interpretation *************************)
   (********************************************************************)
-  Definition handle_rE `{eventE -< E}: rE ~> stateT r_state (itree E) :=
-    fun _ e '(mrs, frs) =>
-      match frs with
-      | hd :: tl =>
-        match e with
-        (* | Put mn mr fr => Ret (((update mrs mn mr), fr :: tl), tt) *)
-        | MPut mn mr => Ret (((update mrs mn mr), hd :: tl), tt)
-        | FPut fr => Ret ((mrs, fr :: tl), tt)
-        | MGet mn => Ret ((mrs, frs), mrs mn)
-        | FGet => Ret ((mrs, frs), hd)
-        | PushFrame =>
-          Ret ((mrs, ε :: frs), tt)
-        | PopFrame =>
-          Ret ((mrs, tl), tt)
-        end
-      | _ => triggerNB
-      end.
-
-  (* Definition compose2 A B C R: (C -> R) -> (A -> B -> C) -> A -> B -> R := fun f g a b => f (g a b). *)
-  Definition interp_rE `{eventE -< E}: itree (rE +' E) ~> stateT r_state (itree E) :=
-    State.interp_state (case_ handle_rE pure_state).
-    (* State.interp_state (case_ ((fun _ e s0 => resum_itr (handle_rE e s0)): _ ~> stateT _ _) State.pure_state). *)
-    (* State.interp_state (case_ ((fun _ => compose2 (@resum_itr _ _ _ _) (@handle_rE _)): rE ~> stateT r_state (itree E)) State.pure_state). *)
 
   Definition handle_pE {E}: pE ~> stateT p_state (itree E) :=
     fun _ e mps =>
@@ -189,10 +146,9 @@ Section EVENTSL.
   (* Definition interp_Es A (prog: callE ~> itree Es) (itr0: itree Es A) (rst0: r_state) (pst0: p_state): itree eventE _ := *)
   (*   interp_pE (interp_rE (interp_mrec prog itr0) rst0) pst0 *)
   (* . *)
-  Definition interp_Es A (prog: callE ~> itree Es) (itr0: itree Es A) (st0: r_state * p_state): itree eventE ((r_state * p_state) * _)%type :=
-    let (rst0, pst0) := st0 in
-    '(pst1, (rst1, v)) <- interp_pE (interp_rE (interp_mrec prog itr0) rst0) pst0;;
-    Ret ((rst1, pst1), v)
+  Definition interp_Es A (prog: callE ~> itree Es) (itr0: itree Es A) (st0: p_state): itree eventE (p_state * _)%type :=
+    '(st1, v) <- interp_pE (interp_mrec prog itr0) st0;;
+    Ret (st1, v)
   .
 
 
@@ -206,7 +162,7 @@ Section EVENTSL.
       interp_Es prog (v <- itr ;; ktr v) st0 =
       '(st1, v) <- interp_Es prog (itr) st0 ;; interp_Es prog (ktr v) st1
   .
-  Proof. unfold interp_Es, interp_rE, interp_pE. des_ifs. grind. Qed.
+  Proof. unfold interp_Es, interp_pE. des_ifs. grind. Qed.
 
   Lemma interp_Es_tau
         (prog: callE ~> itree Es)
@@ -216,7 +172,7 @@ Section EVENTSL.
     :
       interp_Es prog (tau;; itr) st0 = tau;; interp_Es prog itr st0
   .
-  Proof. unfold interp_Es, interp_rE, interp_pE. des_ifs. grind. Qed.
+  Proof. unfold interp_Es, interp_pE. des_ifs. grind. Qed.
 
   Lemma interp_Es_ret
         T
@@ -224,7 +180,7 @@ Section EVENTSL.
     :
       interp_Es prog (Ret v) st0 = Ret (st0, v)
   .
-  Proof. unfold interp_Es, interp_rE, interp_pE. des_ifs. grind. Qed.
+  Proof. unfold interp_Es, interp_pE. des_ifs. grind. Qed.
 
   Lemma interp_Es_callE
         p st0 T
@@ -233,39 +189,21 @@ Section EVENTSL.
     :
       interp_Es p (trigger e) st0 = tau;; (interp_Es p (p _ e) st0)
   .
-  Proof. unfold interp_Es, interp_rE, interp_pE. des_ifs. grind. Qed.
-
-  Lemma interp_Es_rE
-        p rst0 pst0
-        (* (e: Es Σ) *)
-        T
-        (e: rE T)
-    :
-      interp_Es p (trigger e) (rst0, pst0) =
-      '(rst1, r) <- handle_rE e rst0;;
-      tau;; tau;;
-      Ret ((rst1, pst0), r)
-  .
-  Proof.
-    unfold interp_Es, interp_rE, interp_pE. grind.
-    destruct rst0; ss. unfold triggerNB, pure_state. destruct e; ss; des_ifs; grind.
-  Qed.
+  Proof. unfold interp_Es, interp_pE. des_ifs. grind. Qed.
 
   Lemma interp_Es_pE
-        p rst0 pst0
+        p st0
         (* (e: Es Σ) *)
         T
         (e: pE T)
     :
-      interp_Es p (trigger e) (rst0, pst0) =
-      '(pst1, r) <- handle_pE e pst0;;
-      tau;; tau;; tau;;
-      Ret ((rst0, pst1), r)
+      interp_Es p (trigger e) st0 =
+      '(st1, r) <- handle_pE e st0;;
+      tau;; tau;;
+      Ret (st1, r)
   .
   Proof.
-    unfold interp_Es, interp_rE, interp_pE. grind.
-    (* Ltac grind := repeat (ired; f; repeat (f_equiv; ii; des_ifs_safe); f). *)
-    destruct rst0; ss. unfold triggerNB, pure_state. destruct e; ss; des_ifs; grind.
+    unfold interp_Es, interp_pE. grind.
   Qed.
 
   Lemma interp_Es_eventE
@@ -274,10 +212,10 @@ Section EVENTSL.
         T
         (e: eventE T)
     :
-      interp_Es p (trigger e) st0 = r <- trigger e;; tau;; tau;; tau;; Ret (st0, r)
+      interp_Es p (trigger e) st0 = r <- trigger e;; tau;; tau;; Ret (st0, r)
   .
   Proof.
-    unfold interp_Es, interp_rE, interp_pE. grind.
+    unfold interp_Es, interp_pE. grind.
     unfold pure_state. grind.
   Qed.
 
@@ -289,7 +227,7 @@ Section EVENTSL.
       (interp_Es prog (triggerUB) st0: itree eventE (_ * A)) = triggerUB
   .
   Proof.
-    unfold interp_Es, interp_rE, interp_pE, pure_state, triggerUB. grind.
+    unfold interp_Es, interp_pE, pure_state, triggerUB. grind.
   Qed.
 
   Lemma interp_Es_triggerNB
@@ -300,7 +238,7 @@ Section EVENTSL.
       (interp_Es prog (triggerNB) st0: itree eventE (_ * A)) = triggerNB
   .
   Proof.
-    unfold interp_Es, interp_rE, interp_pE, pure_state, triggerNB. grind.
+    unfold interp_Es, interp_pE, pure_state, triggerNB. grind.
   Qed.
   Opaque interp_Es.
 End EVENTSL.
@@ -326,12 +264,10 @@ Section MODSEML.
   (* } *)
   (* . *)
 
-  Context `{Σ: GRA.t}.
-
   Record t: Type := mk {
     (* initial_ld: mname -> GRA; *)
     fnsems: alist gname ((option mname * Any.t) -> itree Es Any.t);
-    initial_mrs: alist mname (Σ * Any.t);
+    initial_mrs: alist mname Any.t;
   }
   .
 
@@ -367,14 +303,9 @@ Section MODSEML.
 
 
 
-  Definition initial_r_state: r_state :=
-    (fun mn => match alist_find mn ms.(initial_mrs) with
-               | Some r => fst r
-               | None => ε
-               end, [ε; ε]).
   Definition initial_p_state: p_state :=
     (fun mn => match alist_find mn ms.(initial_mrs) with
-               | Some r => (snd r)
+               | Some r => r
                | None => tt↑
                end).
 
@@ -383,7 +314,7 @@ Section MODSEML.
     | None => Ret tt
     | Some P' => assume (<<WF: P'>>)
     end;;;
-    snd <$> interp_Es prog (prog (Call None "main" arg)) (initial_r_state, initial_p_state).
+    snd <$> interp_Es prog (prog (Call None "main" arg)) (initial_p_state).
 
   Definition initial_itr (P: option Prop): itree (eventE) Any.t :=
     initial_itr_arg P ([]: list val)↑.
@@ -653,16 +584,10 @@ Section MODSEML.
     ii. ss. r in PR. r. eapply add_comm_aux; et.
     rp; et. clear PR. ss. cbn. unfold initial_itr, initial_itr_arg. f_equal.
     { extensionality u. destruct u. f_equal.
-      replace (@interp_Es Σ Any.t (prog (add ms1 ms0))) with (@interp_Es Σ Any.t (prog (add ms0 ms1))).
+      replace (@interp_Es Any.t (prog (add ms1 ms0))) with (@interp_Es Any.t (prog (add ms0 ms1))).
       { f_equal.
         { ss. f_equal. f_equal. eapply alist_permutation_find.
           { inv WF. et. }
-          { eapply Permutation_app_comm. }
-        }
-        f_equal.
-        { unfold initial_r_state. f_equal. extensionality mn. ss.
-          erewrite alist_permutation_find; et.
-          { inv WF. ss. }
           { eapply Permutation_app_comm. }
         }
         { unfold initial_p_state. extensionality mn. ss.
@@ -735,7 +660,6 @@ End ModSemL.
 
 (* Module Events. *)
 Section EVENTS.
-  Context `{Σ: GRA.t}.
 
   Inductive callE: Type -> Type :=
   | Call (fn: gname) (args: Any.t): callE Any.t
@@ -745,24 +669,8 @@ Section EVENTS.
   | PPut (p: Any.t): pE unit
   | PGet: pE Any.t
   .
-  Inductive rE: Type -> Type :=
-  | MPut (mr: Σ): rE unit
-  | FPut (fr: Σ): rE unit
-  | MGet: rE Σ
-  | FGet: rE Σ
-  .
 
-  Definition Es: Type -> Type := (callE +' rE +' pE+' eventE).
-
-  Definition handle_rE (mn: mname): rE ~> EventsL.rE :=
-    fun _ re =>
-      match re with
-      | MPut mr0 => (EventsL.MPut mn mr0)
-      | FPut fr0 => (EventsL.FPut fr0)
-      | MGet => (EventsL.MGet mn)
-      | FGet => (EventsL.FGet)
-      end
-  .
+  Definition Es: Type -> Type := (callE +' pE+' eventE).
 
   Definition handle_pE (mn: mname): pE ~> EventsL.pE :=
     fun _ pe =>
@@ -772,19 +680,15 @@ Section EVENTS.
       end
   .
 
-  Definition handle_callE (mn: mname) `{EventsL.callE -< E} `{EventsL.rE -< E}: callE ~> itree E :=
+  Definition handle_callE (mn: mname) `{EventsL.callE -< E}: callE ~> itree E :=
     fun _ '(Call fn args) =>
-      trigger EventsL.PushFrame;;;
       r <- trigger (EventsL.Call (Some mn) fn args);;
-      trigger EventsL.PopFrame;;;
       Ret r
   .
 
   Definition handle_all (mn: mname): Es ~> itree EventsL.Es.
     i. destruct X.
     { apply (handle_callE mn); assumption. }
-    destruct s.
-    { exact (trigger (handle_rE mn r)). }
     destruct s.
     { exact (trigger (handle_pE mn p)). }
     exact (trigger e).
@@ -829,18 +733,10 @@ Section EVENTS.
         fn args
     :
       transl_all mn (trigger (Call fn args)) =
-      trigger EventsL.PushFrame;;; r <- (trigger (EventsL.Call (Some mn) fn args));;
-      trigger EventsL.PopFrame;;; tau;; Ret r
+      r <- (trigger (EventsL.Call (Some mn) fn args));;
+      tau;; Ret r
   .
   Proof. unfold transl_all. rewrite unfold_interp. ss. grind. Qed.
-
-  Lemma transl_all_rE
-        mn
-        T (e: rE T)
-    :
-      transl_all mn (trigger e) = r <- trigger (handle_rE mn e);; tau;; Ret r
-  .
-  Proof. dependent destruction e; ss; unfold transl_all; rewrite unfold_interp; ss; grind. Qed.
 
   Lemma transl_all_pE
         mn
@@ -872,29 +768,6 @@ Section EVENTS.
   .
   Proof. unfold triggerNB. unfold transl_all; rewrite unfold_interp; ss; grind. Qed.
 
-  Definition put E `{rE -< E} `{eventE -< E} (mr1: Σ) (fr1: Σ): itree E unit :=
-    mr0 <- trigger (MGet);; fr0 <- trigger FGet;;
-    guarantee(URA.updatable (URA.add mr0 fr0) (URA.add mr1 fr1));;;
-    trigger (FPut fr1);;; trigger (MPut mr1)
-  .
-
-  Definition forge E `{rE -< E} `{eventE -< E} (delta: Σ): itree E unit :=
-    fr0 <- trigger FGet;;
-    trigger (FPut (URA.add fr0 delta))
-  .
-
-  Definition discard E `{rE -< E} `{eventE -< E} (fr1: Σ): itree E unit :=
-    fr0 <- trigger FGet;;
-    rest <- trigger (Choose _);;
-    guarantee(fr0 = URA.add fr1 rest);;;
-    trigger (FPut rest)
-  .
-
-  Definition checkWf E `{rE -< E} `{eventE -< E}: itree E unit :=
-    mr0 <- trigger (MGet);; fr0 <- trigger FGet;;
-    assume(URA.wf (URA.add mr0 fr0))
-  .
-
 End EVENTS.
 (* End Events. *)
 
@@ -924,12 +797,9 @@ End EVENTSCOMMON.
 Module ModSem.
 (* Import Events. *)
 Section MODSEM.
-  Context `{Σ: GRA.t}.
-
   Record t: Type := mk {
     fnsems: list (gname * ((option mname * Any.t) -> itree Es Any.t));
     mn: mname;
-    initial_mr: Σ;
     initial_st: Any.t;
   }
   .
@@ -950,7 +820,7 @@ Section MODSEM.
 
   Definition lift (ms: t): ModSemL.t := {|
     ModSemL.fnsems := List.map (map_snd (fun sem args => transl_all ms.(mn) (sem args))) ms.(fnsems);
-    ModSemL.initial_mrs := [(ms.(mn), (ms.(initial_mr), ms.(initial_st)))];
+    ModSemL.initial_mrs := [(ms.(mn), ms.(initial_st))];
   |}
   .
   Coercion lift: t >-> ModSemL.t.
@@ -969,8 +839,6 @@ Coercion ModSem.lift: ModSem.t >-> ModSemL.t.
 
 Module ModL.
 Section MODL.
-
-  Context `{Σ: GRA.t}.
 
   Record t: Type := mk {
     get_modsem: Sk.t -> ModSemL.t;
@@ -1085,8 +953,6 @@ End ModL.
 
 Module Mod.
 Section MOD.
-
-  Context `{Σ: GRA.t}.
 
   Record t: Type := mk {
     get_modsem: Sk.t -> ModSem.t;
@@ -1269,8 +1135,6 @@ End Equisatisfiability.
 
 
 Section REFINE.
-   Context `{Σ: GRA.t}.
-
    Definition refines (md_tgt md_src: ModL.t): Prop :=
      (* forall (ctx: list Mod.t), Beh.of_program (ModL.compile (add_list (md_tgt :: ctx))) <1= *)
      (*                           Beh.of_program (ModL.compile (add_list (md_src :: ctx))) *)

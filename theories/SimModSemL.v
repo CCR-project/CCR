@@ -40,38 +40,18 @@ Local Open Scope nat_scope.
 
 
 
-Module W.
-Section WORLD.
-
-  Context `{Σ: GRA.t}.
-
-  Class t := {
-    car: Type;
-    le: car -> car -> Prop;
-    wf: car -> Prop;
-    le_PreOrder: PreOrder le;
-    src: car -> alist mname Σ;
-    tgt: car -> alist mname Σ;
-  }
-  .
-
-End WORLD.
-End W.
-
 
 
 
 
 Section SIM.
 
-  Context `{Σ: GRA.t}.
-
   (* Let st_local: Type := (list (string * GRA) * GRA). *)
-  Let st_local: Type := ((alist mname (Σ * Any.t)) * Σ).
+  Let st_local: Type := (alist mname Any.t).
 
 
   Variable world: Type.
-  Let W: Type := (alist mname (Σ * Any.t)) * (alist mname (Σ * Any.t)).
+  Let W: Type := st_local * st_local.
   Variable wf: world -> W -> Prop.
   Variable le: relation world.
   Hypothesis le_PreOrder: PreOrder le.
@@ -82,11 +62,11 @@ Section SIM.
           {R_src R_tgt} (RR: st_local -> st_local -> R_src -> R_tgt -> Prop)
     : Ord.t -> world -> st_local * itree Es R_src -> st_local * itree Es R_tgt -> Prop :=
   | sim_itree_ret
-      i0 w0 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i0 w0 st_src0 st_tgt0
       v_src v_tgt
-      (RET: RR (mrs_src0, fr_src0) (mrs_tgt0, fr_tgt0) v_src v_tgt)
+      (RET: RR st_src0 st_tgt0 v_src v_tgt)
     :
-      _sim_itree sim_itree RR i0 w0 ((mrs_src0, fr_src0), (Ret v_src)) ((mrs_tgt0, fr_tgt0), (Ret v_tgt))
+      _sim_itree sim_itree RR i0 w0 (st_src0, (Ret v_src)) (st_tgt0, (Ret v_tgt))
   | sim_itree_tau
       i0 w st_src0 st_tgt0
       i1 i_src i_tgt
@@ -94,98 +74,61 @@ Section SIM.
     :
       _sim_itree sim_itree RR i0 w (st_src0, tau;; i_src) (st_tgt0, tau;; i_tgt)
   | sim_itree_call
-      i0 w w0 mn mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i0 w w0 mn st_src0 st_tgt0
       fn varg k_src k_tgt
-      (WF: wf w0 (mrs_src0, mrs_tgt0))
-      (K: forall w1 vret mrs_src1 mrs_tgt1 (WLE: le w0 w1) (WF: wf w1 (mrs_src1, mrs_tgt1)),
-          exists i1, sim_itree _ _ RR i1 w ((mrs_src1, fr_src0), k_src vret) ((mrs_tgt1, fr_tgt0), k_tgt vret))
+      (WF: wf w0 (st_src0, st_tgt0))
+      (K: forall w1 vret st_src1 st_tgt1 (WLE: le w0 w1) (WF: wf w1 (st_src1, st_tgt1)),
+          exists i1, sim_itree _ _ RR i1 w (st_src1, k_src vret) (st_tgt1, k_tgt vret))
     :
-      _sim_itree sim_itree RR i0 w ((mrs_src0, fr_src0), (trigger PushFrame;;; r <- trigger (Call mn fn varg);; trigger PopFrame;;; tau;; k_src r))
-                 ((mrs_tgt0, fr_tgt0), (trigger PushFrame;;; r <- trigger (Call mn fn varg);; trigger PopFrame;;; tau;; k_tgt r))
+      _sim_itree sim_itree RR i0 w (st_src0, (r <- trigger (Call mn fn varg);; tau;; k_src r))
+                 (st_tgt0, (r <- trigger (Call mn fn varg);; tau;; k_tgt r))
   | sim_itree_syscall
-      i0 w mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i0 w st_src0 st_tgt0
       fn varg k_src k_tgt rvs
       (K: forall vret,
-          exists i1, sim_itree _ _ RR i1 w ((mrs_src0, fr_src0), k_src vret) ((mrs_tgt0, fr_tgt0), k_tgt vret))
+          exists i1, sim_itree _ _ RR i1 w (st_src0, k_src vret) (st_tgt0, k_tgt vret))
     :
-      _sim_itree sim_itree RR i0 w ((mrs_src0, fr_src0), trigger (Syscall fn varg rvs) >>= k_src)
-                 ((mrs_tgt0, fr_tgt0), trigger (Syscall fn varg rvs) >>= k_tgt)
+      _sim_itree sim_itree RR i0 w (st_src0, trigger (Syscall fn varg rvs) >>= k_src)
+                 (st_tgt0, trigger (Syscall fn varg rvs) >>= k_tgt)
   (*** TODO: sim_syscall is nontrivial; it should accept "injected" memory... ***)
   (*** TODO: simplify the model: Syscall: list val -> val ***)
 
   | sim_itree_choose_both
-      i0 w mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i0 w st_src0 st_tgt0
       X_src X_tgt k_src k_tgt
-      (K: forall (x_tgt: X_tgt), exists (x_src: X_src) i1, sim_itree _ _ RR i1 w ((mrs_src0, fr_src0), k_src x_src) ((mrs_tgt0, fr_tgt0), k_tgt x_tgt))
+      (K: forall (x_tgt: X_tgt), exists (x_src: X_src) i1, sim_itree _ _ RR i1 w (st_src0, k_src x_src) (st_tgt0, k_tgt x_tgt))
     :
-      _sim_itree sim_itree RR i0 w ((mrs_src0, fr_src0), trigger (Choose X_src) >>= k_src)
-                 ((mrs_tgt0, fr_tgt0), trigger (Choose X_tgt) >>= k_tgt)
+      _sim_itree sim_itree RR i0 w (st_src0, trigger (Choose X_src) >>= k_src)
+                 (st_tgt0, trigger (Choose X_tgt) >>= k_tgt)
   | sim_itree_take_both
-      i0 w mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i0 w st_src0 st_tgt0
       X_src X_tgt k_src k_tgt
-      (K: forall (x_src: X_src), exists (x_tgt: X_tgt) i1, sim_itree _ _ RR i1 w ((mrs_src0, fr_src0), k_src x_src) ((mrs_tgt0, fr_tgt0), k_tgt x_tgt))
+      (K: forall (x_src: X_src), exists (x_tgt: X_tgt) i1, sim_itree _ _ RR i1 w (st_src0, k_src x_src) (st_tgt0, k_tgt x_tgt))
     :
-      _sim_itree sim_itree RR i0 w ((mrs_src0, fr_src0), trigger (Take X_src) >>= k_src)
-                 ((mrs_tgt0, fr_tgt0), trigger (Take X_tgt) >>= k_tgt)
+      _sim_itree sim_itree RR i0 w (st_src0, trigger (Take X_src) >>= k_src)
+                 (st_tgt0, trigger (Take X_tgt) >>= k_tgt)
   | sim_itree_pput_both
-      i0 w mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i0 w st_src0 st_tgt0
       i1 k_src k_tgt
-      mn mr_src0 mr_tgt0 mp_src1 mp_tgt1 mrs_src1 mrs_tgt1 mp_src0 mp_tgt0
-      (MRSRC: alist_find mn mrs_src0 = Some (mr_src0, mp_src0))
-      (MRTGT: alist_find mn mrs_tgt0 = Some (mr_tgt0, mp_tgt0))
-      (EQSRC: mrs_src1 = alist_add mn (mr_src0, mp_src1) mrs_src0)
-      (EQTGT: mrs_tgt1 = alist_add mn (mr_tgt0, mp_tgt1) mrs_tgt0)
-      (K: sim_itree _ _ RR i1 w ((mrs_src1, fr_src0), k_src tt) ((mrs_tgt1, fr_tgt0), k_tgt tt))
+      mn mp_src1 mp_tgt1 st_src1 st_tgt1 mp_src0 mp_tgt0
+      (MRSRC: alist_find mn st_src0 = Some mp_src0)
+      (MRTGT: alist_find mn st_tgt0 = Some mp_tgt0)
+      (EQSRC: st_src1 = alist_add mn mp_src1 st_src0)
+      (EQTGT: st_tgt1 = alist_add mn mp_tgt1 st_tgt0)
+      (K: sim_itree _ _ RR i1 w (st_src1, k_src tt) (st_tgt1, k_tgt tt))
     :
-      _sim_itree sim_itree RR i0 w ((mrs_src0, fr_src0), trigger (PPut mn mp_src1) >>= k_src)
-                 ((mrs_tgt0, fr_tgt0), trigger (PPut mn mp_tgt1) >>= k_tgt)
-  | sim_itree_mput_both
-      i0 w mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
-      i1 k_src k_tgt
-      mn mr_src0 mr_tgt0 mr_src1 mr_tgt1 mrs_src1 mrs_tgt1 mp_src0 mp_tgt0
-      (MRSRC: alist_find mn mrs_src0 = Some (mr_src0, mp_src0))
-      (MRTGT: alist_find mn mrs_tgt0 = Some (mr_tgt0, mp_tgt0))
-      (EQSRC: mrs_src1 = alist_add mn (mr_src1, mp_src0) mrs_src0)
-      (EQSRC: mrs_tgt1 = alist_add mn (mr_tgt1, mp_tgt0) mrs_tgt0)
-      (K: sim_itree _ _ RR i1 w ((mrs_src1, fr_src0), k_src tt) ((mrs_tgt1, fr_tgt0), k_tgt tt))
-    :
-      _sim_itree sim_itree RR i0 w ((mrs_src0, fr_src0), trigger (MPut mn mr_src1) >>= k_src)
-                 ((mrs_tgt0, fr_tgt0), trigger (MPut mn mr_tgt1) >>= k_tgt)
-  | sim_itree_fput_both
-      i0 w mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
-      i1 k_src k_tgt
-      fr_src1 fr_tgt1
-      (K: sim_itree _ _ RR i1 w ((mrs_src0, fr_src1), k_src tt) ((mrs_tgt0, fr_tgt1), k_tgt tt))
-    :
-      _sim_itree sim_itree RR i0 w ((mrs_src0, fr_src0), trigger (FPut fr_src1) >>= k_src)
-                 ((mrs_tgt0, fr_tgt0), trigger (FPut fr_tgt1) >>= k_tgt)
+      _sim_itree sim_itree RR i0 w (st_src0, trigger (PPut mn mp_src1) >>= k_src)
+                 (st_tgt0, trigger (PPut mn mp_tgt1) >>= k_tgt)
   | sim_itree_pget_both
-      i0 w mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i0 w st_src0 st_tgt0
       i1 k_src k_tgt
-      mn mr_src0 mp_src0 mr_tgt0 mp_tgt0
-      (MRSRC: alist_find mn mrs_src0 = Some (mr_src0, mp_src0))
-      (MRTGT: alist_find mn mrs_tgt0 = Some (mr_tgt0, mp_tgt0))
-      (K: sim_itree _ _ RR i1 w ((mrs_src0, fr_src0), k_src mp_src0) ((mrs_tgt0, fr_tgt0), k_tgt mp_tgt0))
+      mn mp_src0 mp_tgt0
+      (MRSRC: alist_find mn st_src0 = Some mp_src0)
+      (MRTGT: alist_find mn st_tgt0 = Some mp_tgt0)
+      (K: sim_itree _ _ RR i1 w (st_src0, k_src mp_src0) (st_tgt0, k_tgt mp_tgt0))
     :
-      _sim_itree sim_itree RR i0 w ((mrs_src0, fr_src0), trigger (PGet mn) >>= k_src)
-                 ((mrs_tgt0, fr_tgt0), trigger (PGet mn) >>= k_tgt)
-  | sim_itree_mget_both
-      i0 w mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
-      i1 k_src k_tgt
-      mn mr_src0 mp_src0 mr_tgt0 mp_tgt0
-      (MRSRC: alist_find mn mrs_src0 = Some (mr_src0, mp_src0))
-      (MRTGT: alist_find mn mrs_tgt0 = Some (mr_tgt0, mp_tgt0))
-      (K: sim_itree _ _ RR i1 w ((mrs_src0, fr_src0), k_src mr_src0) ((mrs_tgt0, fr_tgt0), k_tgt mr_tgt0))
-    :
-      _sim_itree sim_itree RR i0 w ((mrs_src0, fr_src0), trigger (MGet mn) >>= k_src)
-                 ((mrs_tgt0, fr_tgt0), trigger (MGet mn) >>= k_tgt)
-  | sim_itree_fget_both
-      i0 w mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
-      i1 k_src k_tgt
-      (K: sim_itree _ _ RR i1 w ((mrs_src0, fr_src0), k_src fr_src0) ((mrs_tgt0, fr_tgt0), k_tgt fr_tgt0))
-    :
-      _sim_itree sim_itree RR i0 w ((mrs_src0, fr_src0), trigger (FGet) >>= k_src)
-                 ((mrs_tgt0, fr_tgt0), trigger (FGet) >>= k_tgt)
+      _sim_itree sim_itree RR i0 w (st_src0, trigger (PGet mn) >>= k_src)
+                 (st_tgt0, trigger (PGet mn) >>= k_tgt)
 
 
 
@@ -197,82 +140,43 @@ Section SIM.
     :
       _sim_itree sim_itree RR i0 w (st_src0, tau;; i_src) (st_tgt0, i_tgt)
   | sim_itree_choose_src
-      i0 w mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i0 w st_src0 st_tgt0
       i1 X k_src i_tgt
       (ORD: Ord.lt i1 i0)
-      (K: exists (x: X), sim_itree _ _ RR i1 w ((mrs_src0, fr_src0), k_src x) ((mrs_tgt0, fr_tgt0), i_tgt))
+      (K: exists (x: X), sim_itree _ _ RR i1 w (st_src0, k_src x) (st_tgt0, i_tgt))
     :
-      _sim_itree sim_itree RR i0 w ((mrs_src0, fr_src0), trigger (Choose X) >>= k_src)
-                 ((mrs_tgt0, fr_tgt0), i_tgt)
+      _sim_itree sim_itree RR i0 w (st_src0, trigger (Choose X) >>= k_src)
+                 (st_tgt0, i_tgt)
   | sim_itree_take_src
-      i0 w mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i0 w st_src0 st_tgt0
       i1 X k_src i_tgt
       (ORD: Ord.lt i1 i0)
-      (K: forall (x: X), sim_itree _ _ RR i1 w ((mrs_src0, fr_src0), k_src x) ((mrs_tgt0, fr_tgt0), i_tgt))
+      (K: forall (x: X), sim_itree _ _ RR i1 w (st_src0, k_src x) (st_tgt0, i_tgt))
     :
-      _sim_itree sim_itree RR i0 w ((mrs_src0, fr_src0), trigger (Take X) >>= k_src)
-                 ((mrs_tgt0, fr_tgt0), i_tgt)
+      _sim_itree sim_itree RR i0 w (st_src0, trigger (Take X) >>= k_src)
+                 (st_tgt0, i_tgt)
 
   | sim_itree_pput_src
-      i0 w mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i0 w st_src0 st_tgt0
       i1 k_src i_tgt
       (ORD: Ord.lt i1 i0)
-      mn mr0 mp1 mrs_src1 mp0
-      (MR0: alist_find mn mrs_src0 = Some (mr0, mp0))
-      (EQ: mrs_src1 = alist_add mn (mr0, mp1) mrs_src0)
-      (K: sim_itree _ _ RR i1 w ((mrs_src1, fr_src0), k_src tt) ((mrs_tgt0, fr_tgt0), i_tgt))
+      mn mp1 st_src1 mp0
+      (MR0: alist_find mn st_src0 = Some mp0)
+      (EQ: st_src1 = alist_add mn mp1 st_src0)
+      (K: sim_itree _ _ RR i1 w (st_src1, k_src tt) (st_tgt0, i_tgt))
     :
-      _sim_itree sim_itree RR i0 w ((mrs_src0, fr_src0), trigger (PPut mn mp1) >>= k_src)
-                 ((mrs_tgt0, fr_tgt0), i_tgt)
-  | sim_itree_mput_src
-      i0 w mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
-      i1 k_src i_tgt
-      (ORD: Ord.lt i1 i0)
-      mn mr0 mr1 mrs_src1 mp0
-      (MR0: alist_find mn mrs_src0 = Some (mr0, mp0))
-      (EQ: mrs_src1 = alist_add mn (mr1, mp0) mrs_src0)
-      (K: sim_itree _ _ RR i1 w ((mrs_src1, fr_src0), k_src tt) ((mrs_tgt0, fr_tgt0), i_tgt))
-    :
-      _sim_itree sim_itree RR i0 w ((mrs_src0, fr_src0), trigger (MPut mn mr1) >>= k_src)
-                 ((mrs_tgt0, fr_tgt0), i_tgt)
-  | sim_itree_fput_src
-      i0 w mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
-      i1 k_src i_tgt
-      (ORD: Ord.lt i1 i0)
-      fr_src1
-      (K: sim_itree _ _ RR i1 w ((mrs_src0, fr_src1), k_src tt) ((mrs_tgt0, fr_tgt0), i_tgt))
-    :
-      _sim_itree sim_itree RR i0 w ((mrs_src0, fr_src0), trigger (FPut fr_src1) >>= k_src)
-                 ((mrs_tgt0, fr_tgt0), i_tgt)
-
+      _sim_itree sim_itree RR i0 w (st_src0, trigger (PPut mn mp1) >>= k_src)
+                 (st_tgt0, i_tgt)
   | sim_itree_pget_src
-      i0 w mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i0 w st_src0 st_tgt0
       i1 k_src i_tgt
       (ORD: Ord.lt i1 i0)
-      mn mr0 mp0
-      (MR0: alist_find mn mrs_src0 = Some (mr0, mp0))
-      (K: sim_itree _ _ RR i1 w ((mrs_src0, fr_src0), k_src mp0) ((mrs_tgt0, fr_tgt0), i_tgt))
+      mn mp0
+      (MR0: alist_find mn st_src0 = Some mp0)
+      (K: sim_itree _ _ RR i1 w (st_src0, k_src mp0) (st_tgt0, i_tgt))
     :
-      _sim_itree sim_itree RR i0 w ((mrs_src0, fr_src0), trigger (PGet mn) >>= k_src)
-                 ((mrs_tgt0, fr_tgt0), i_tgt)
-  | sim_itree_mget_src
-      i0 w mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
-      i1 k_src i_tgt
-      (ORD: Ord.lt i1 i0)
-      mn mr0 mp0
-      (MR0: alist_find mn mrs_src0 = Some (mr0, mp0))
-      (K: sim_itree _ _ RR i1 w ((mrs_src0, fr_src0), k_src mr0) ((mrs_tgt0, fr_tgt0), i_tgt))
-    :
-      _sim_itree sim_itree RR i0 w ((mrs_src0, fr_src0), trigger (MGet mn) >>= k_src)
-                 ((mrs_tgt0, fr_tgt0), i_tgt)
-  | sim_itree_fget_src
-      i0 w mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
-      i1 k_src i_tgt
-      (ORD: Ord.lt i1 i0)
-      (K: sim_itree _ _ RR i1 w ((mrs_src0, fr_src0), k_src fr_src0) ((mrs_tgt0, fr_tgt0), i_tgt))
-    :
-      _sim_itree sim_itree RR i0 w ((mrs_src0, fr_src0), trigger (FGet) >>= k_src)
-                 ((mrs_tgt0, fr_tgt0), i_tgt)
+      _sim_itree sim_itree RR i0 w (st_src0, trigger (PGet mn) >>= k_src)
+                 (st_tgt0, i_tgt)
 
 
 
@@ -287,104 +191,57 @@ Section SIM.
     :
       _sim_itree sim_itree RR i0 w (st_src0, i_src) (st_tgt0, tau;; i_tgt)
   | sim_itree_choose_tgt
-      i0 w mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i0 w st_src0 st_tgt0
       i1 X i_src k_tgt
       (ORD: Ord.lt i1 i0)
-      (K: forall (x: X), sim_itree _ _ RR i1 w ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt0), k_tgt x))
+      (K: forall (x: X), sim_itree _ _ RR i1 w (st_src0, i_src) (st_tgt0, k_tgt x))
     :
-      _sim_itree sim_itree RR i0 w ((mrs_src0, fr_src0), i_src)
-                 ((mrs_tgt0, fr_tgt0), trigger (Choose X) >>= k_tgt)
+      _sim_itree sim_itree RR i0 w (st_src0, i_src)
+                 (st_tgt0, trigger (Choose X) >>= k_tgt)
   | sim_itree_take_tgt
-      i0 w mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i0 w st_src0 st_tgt0
       i1 X i_src k_tgt
       (ORD: Ord.lt i1 i0)
-      (K: exists (x: X), sim_itree _ _ RR i1 w ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt0), k_tgt x))
+      (K: exists (x: X), sim_itree _ _ RR i1 w (st_src0, i_src) (st_tgt0, k_tgt x))
     :
-      _sim_itree sim_itree RR i0 w ((mrs_src0, fr_src0), i_src)
-                 ((mrs_tgt0, fr_tgt0), trigger (Take X) >>= k_tgt)
+      _sim_itree sim_itree RR i0 w (st_src0, i_src)
+                 (st_tgt0, trigger (Take X) >>= k_tgt)
 
   | sim_itree_pput_tgt
-      i0 w mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i0 w st_src0 st_tgt0
       i1 i_src k_tgt
       (ORD: Ord.lt i1 i0)
-      mn mr0 mp1 mrs_tgt1 mp0
-      (MR0: alist_find mn mrs_tgt0 = Some (mr0, mp0))
-      (EQ: mrs_tgt1 = alist_add mn (mr0, mp1) mrs_tgt0)
-      (K: sim_itree _ _ RR i1 w ((mrs_src0, fr_src0), i_src) ((mrs_tgt1, fr_tgt0), k_tgt tt))
+      mn mp1 st_tgt1 mp0
+      (MR0: alist_find mn st_tgt0 = Some mp0)
+      (EQ: st_tgt1 = alist_add mn mp1 st_tgt0)
+      (K: sim_itree _ _ RR i1 w (st_src0, i_src) (st_tgt1, k_tgt tt))
     :
-      _sim_itree sim_itree RR i0 w ((mrs_src0, fr_src0), i_src)
-                 ((mrs_tgt0, fr_tgt0), trigger (PPut mn mp1) >>= k_tgt)
-  | sim_itree_mput_tgt
-      i0 w mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
-      i1 i_src k_tgt
-      (ORD: Ord.lt i1 i0)
-      mn mr0 mr1 mrs_tgt1 mp0
-      (MR0: alist_find mn mrs_tgt0 = Some (mr0, mp0))
-      (EQ: mrs_tgt1 = alist_add mn (mr1, mp0) mrs_tgt0)
-      (K: sim_itree _ _ RR i1 w ((mrs_src0, fr_src0), i_src) ((mrs_tgt1, fr_tgt0), k_tgt tt))
-    :
-      _sim_itree sim_itree RR i0 w ((mrs_src0, fr_src0), i_src)
-                 ((mrs_tgt0, fr_tgt0), trigger (MPut mn mr1) >>= k_tgt)
-  | sim_itree_fput_tgt
-      i0 w mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
-      i1 i_src k_tgt
-      (ORD: Ord.lt i1 i0)
-      fr_tgt1
-      (K: sim_itree _ _ RR i1 w ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt1), k_tgt tt))
-    :
-      _sim_itree sim_itree RR i0 w ((mrs_src0, fr_src0), i_src)
-                 ((mrs_tgt0, fr_tgt0), trigger (FPut fr_tgt1) >>= k_tgt)
+      _sim_itree sim_itree RR i0 w (st_src0, i_src)
+                 (st_tgt0, trigger (PPut mn mp1) >>= k_tgt)
 
   | sim_itree_pget_tgt
-      i0 w mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i0 w st_src0 st_tgt0
       i1 i_src k_tgt
       (ORD: Ord.lt i1 i0)
-      mn mr0 mp0
-      (MR0: alist_find mn mrs_tgt0 = Some (mr0, mp0))
-      (K: sim_itree _ _ RR i1 w ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt0), k_tgt mp0))
+      mn mp0
+      (MR0: alist_find mn st_tgt0 = Some mp0)
+      (K: sim_itree _ _ RR i1 w (st_src0, i_src) (st_tgt0, k_tgt mp0))
     :
-      _sim_itree sim_itree RR i0 w ((mrs_src0, fr_src0), i_src)
-                 ((mrs_tgt0, fr_tgt0), trigger (PGet mn) >>= k_tgt)
-  | sim_itree_mget_tgt
-      i0 w mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
-      i1 i_src k_tgt
-      (ORD: Ord.lt i1 i0)
-      mn mr0 mp0
-      (MR0: alist_find mn mrs_tgt0 = Some (mr0, mp0))
-      (K: sim_itree _ _ RR i1 w ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt0), k_tgt mr0))
-    :
-      _sim_itree sim_itree RR i0 w ((mrs_src0, fr_src0), i_src)
-                 ((mrs_tgt0, fr_tgt0), trigger (MGet mn) >>= k_tgt)
-  | sim_itree_fget_tgt
-      i0 w mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
-      i1 i_src k_tgt
-      (ORD: Ord.lt i1 i0)
-      (K: sim_itree _ _ RR i1 w ((mrs_src0, fr_src0), i_src) ((mrs_tgt0, fr_tgt0), k_tgt  fr_tgt0))
-    :
-      _sim_itree sim_itree RR i0 w ((mrs_src0, fr_src0), i_src)
-                 ((mrs_tgt0, fr_tgt0), trigger (FGet) >>= k_tgt)
-  (* | sim_itree_hint *)
-  (*     i0 i1 mrs_src0 mrs_tgt0 fr_src0 fr_tgt0 *)
-  (*     fn varg k_src i_tgt *)
-  (*     (ORD: Ord.lt i1 i0) *)
-  (*     (K: forall (HINT: namespace fn), *)
-  (*         sim_itree _ _ RR i1 ((mrs_src0, fr_src0), (trigger PushFrame;;; r <- trigger (Call fn varg);; trigger PopFrame;;; tau;; k_src r)) ((mrs_tgt0, fr_tgt0), i_tgt)) *)
-  (*   : *)
-  (*     _sim_itree sim_itree RR i0 ((mrs_src0, fr_src0), (trigger PushFrame;;; r <- trigger (Call fn varg);; trigger PopFrame;;; tau;; k_src r)) *)
-  (*                ((mrs_tgt0, fr_tgt0), i_tgt) *)
+      _sim_itree sim_itree RR i0 w (st_src0, i_src)
+                 (st_tgt0, trigger (PGet mn) >>= k_tgt)
   | sim_itree_call_fail
-      i0 w mn mrs_src0 mrs_tgt0 fr_src0 fr_tgt0
+      i0 w mn st_src0 st_tgt0
       fn varg k_src i_tgt
       (FAIL: ~ ns fn)
     :
-      _sim_itree sim_itree RR i0 w ((mrs_src0, fr_src0), (trigger PushFrame;;; r <- trigger (Call mn fn varg);;
-                                                          trigger PopFrame;;; tau;; k_src r))
-                 ((mrs_tgt0, fr_tgt0), i_tgt)
+      _sim_itree sim_itree RR i0 w (st_src0, (r <- trigger (Call mn fn varg);;
+                                              k_src r))
+                 (st_tgt0, i_tgt)
   .
 
   Program Definition sim_itree o w0: relation _ :=
     paco7 _sim_itree bot7 _ _ (fun st_src st_tgt (ret_src ret_tgt: Any.t) =>
-                                 exists w1, <<WLE: le w0 w1>> /\ <<WF: wf w1 (fst st_src, fst st_tgt)>> /\ <<RET: ret_src = ret_tgt>>) o w0.
+                                 exists w1, <<WLE: le w0 w1>> /\ <<WF: wf w1 (st_src, st_tgt)>> /\ <<RET: ret_src = ret_tgt>>) o w0.
 
   Lemma sim_itree_mon: monotone7 _sim_itree.
   Proof.
@@ -413,20 +270,12 @@ Section SIM.
     - econs; try apply SIM; et. eapply Ord.lt_le_lt; et.
     - econs; try apply SIM; et. eapply Ord.lt_le_lt; et.
     - econs; try apply SIM; et. eapply Ord.lt_le_lt; et.
-    - econs; try apply SIM; et. eapply Ord.lt_le_lt; et.
-    - econs; try apply SIM; et. eapply Ord.lt_le_lt; et.
-    - econs; try apply SIM; et. eapply Ord.lt_le_lt; et.
-    - econs; try apply SIM; et. eapply Ord.lt_le_lt; et.
-    - econs; try apply SIM; et. eapply Ord.lt_le_lt; et.
-    - econs; try apply SIM; et. eapply Ord.lt_le_lt; et.
-    - econs; try apply SIM; et. eapply Ord.lt_le_lt; et.
-    - econs; try apply SIM; et. eapply Ord.lt_le_lt; et.
   Qed.
 
   Definition sim_fsem: relation ((option mname * Any.t) -> itree Es Any.t) :=
-    (eq ==> (fun it_src it_tgt => forall mrs_src mrs_tgt w (SIMMRS: wf w (mrs_src, mrs_tgt)),
-                 exists n, sim_itree n w ((mrs_src, URA.unit), it_src)
-                                     ((mrs_tgt, URA.unit), it_tgt)))%signature
+    (eq ==> (fun it_src it_tgt => forall st_src st_tgt w (SIMMRS: wf w (st_src, st_tgt)),
+                 exists n, sim_itree n w (st_src, it_src)
+                                     (st_tgt, it_tgt)))%signature
   .
 
   Definition sim_fnsem: relation (string * ((option mname * Any.t) -> itree Es Any.t)) := RelProd eq sim_fsem.
@@ -514,11 +363,11 @@ Section SIM.
       eapply sim_itree_mon; eauto with paco.
     + rewrite ! bind_tau. econs; eauto.
       econs 2; eauto with paco. econs; eauto with paco.
-    + replace (x <- (trigger PushFrame;;; r0 <- trigger (Call mn fn varg);; trigger PopFrame;;; (tau;; k_src0 r0));; k_src x) with
-          (trigger PushFrame;;; r <- trigger (Call mn fn varg);; trigger PopFrame;;; tau;; (k_src0 >=> k_src) r); cycle 1.
+    + replace (x <- (r0 <- trigger (Call mn fn varg);; (tau;; k_src0 r0));; k_src x) with
+          (r <- trigger (Call mn fn varg);; tau;; (k_src0 >=> k_src) r); cycle 1.
       { grind. }
-      replace (x <- (trigger PushFrame;;; r0 <- trigger (Call mn fn varg);; trigger PopFrame;;; (tau;; k_tgt0 r0));; k_tgt x) with
-          (trigger PushFrame;;; r <- trigger (Call mn fn varg);; trigger PopFrame;;; tau;; (k_tgt0 >=> k_tgt) r); cycle 1.
+      replace (x <- (r0 <- trigger (Call mn fn varg);; (tau;; k_tgt0 r0));; k_tgt x) with
+          (r <- trigger (Call mn fn varg);; tau;; (k_tgt0 >=> k_tgt) r); cycle 1.
       { grind. }
       econs; eauto.
       i. exploit K; eauto. i. des. eexists.
@@ -536,14 +385,6 @@ Section SIM.
       eapply rclo7_clo_base. econs; eauto.
     + rewrite ! bind_bind. econs; eauto.
       eapply rclo7_clo_base. econs; eauto.
-    + rewrite ! bind_bind. econs; eauto.
-      eapply rclo7_clo_base. econs; eauto.
-    + rewrite ! bind_bind. econs; eauto.
-      eapply rclo7_clo_base. econs; eauto.
-    + rewrite ! bind_bind. econs; eauto.
-      eapply rclo7_clo_base. econs; eauto.
-    + rewrite ! bind_bind. econs; eauto.
-      eapply rclo7_clo_base. econs; eauto.
     + rewrite ! bind_tau. econs; eauto.
       { eapply OrdArith.lt_add_r; eauto. }
       econs 2; eauto with paco. econs; eauto with paco.
@@ -553,18 +394,6 @@ Section SIM.
     + rewrite ! bind_bind. econs; eauto.
       { eapply OrdArith.lt_add_r; eauto. }
       i. hexploit K; eauto. i.
-      eapply rclo7_clo_base. econs; eauto.
-    + rewrite ! bind_bind. econs; eauto.
-      { eapply OrdArith.lt_add_r; eauto. }
-      eapply rclo7_clo_base. econs; eauto.
-    + rewrite ! bind_bind. econs; eauto.
-      { eapply OrdArith.lt_add_r; eauto. }
-      eapply rclo7_clo_base. econs; eauto.
-    + rewrite ! bind_bind. econs; eauto.
-      { eapply OrdArith.lt_add_r; eauto. }
-      eapply rclo7_clo_base. econs; eauto.
-    + rewrite ! bind_bind. econs; eauto.
-      { eapply OrdArith.lt_add_r; eauto. }
       eapply rclo7_clo_base. econs; eauto.
     + rewrite ! bind_bind. econs; eauto.
       { eapply OrdArith.lt_add_r; eauto. }
@@ -582,18 +411,6 @@ Section SIM.
     + rewrite ! bind_bind. des. econs; eauto.
       { eapply OrdArith.lt_add_r; eauto. }
       eexists. eapply rclo7_clo_base. econs; eauto.
-    + rewrite ! bind_bind. econs; eauto.
-      { eapply OrdArith.lt_add_r; eauto. }
-      eapply rclo7_clo_base. econs; eauto.
-    + rewrite ! bind_bind. econs; eauto.
-      { eapply OrdArith.lt_add_r; eauto. }
-      eapply rclo7_clo_base. econs; eauto.
-    + rewrite ! bind_bind. econs; eauto.
-      { eapply OrdArith.lt_add_r; eauto. }
-      eapply rclo7_clo_base. econs; eauto.
-    + rewrite ! bind_bind. econs; eauto.
-      { eapply OrdArith.lt_add_r; eauto. }
-      eapply rclo7_clo_base. econs; eauto.
     + rewrite ! bind_bind. econs; eauto.
       { eapply OrdArith.lt_add_r; eauto. }
       eapply rclo7_clo_base. econs; eauto.
@@ -615,7 +432,7 @@ End SIM.
 Hint Resolve sim_itree_mon: paco.
 
 
-Variant _wf_function `{Σ: GRA.t} (ms: list mname)
+Variant _wf_function (ms: list mname)
         (wf_function: itree Es Any.t -> Prop) (st0: itree Es Any.t): Prop :=
 | wf_function_ret
     v
@@ -637,32 +454,14 @@ Variant _wf_function `{Σ: GRA.t} (ms: list mname)
     (VIS: st0 = trigger (PPut mn mp) >>= k)
     (MN: List.In mn ms)
     (WF: forall x, wf_function (k x))
-| wf_function_mput
-    mn mr k
-    (VIS: st0 = trigger (MPut mn mr) >>= k)
-    (MN: List.In mn ms)
-    (WF: forall x, wf_function (k x))
-| wf_function_fput
-    fr k
-    (VIS: st0 = trigger (FPut fr) >>= k)
-    (WF: forall x, wf_function (k x))
 | wf_function_pget
     mn k
     (VIS: st0 = trigger (PGet mn) >>= k)
     (MN: List.In mn ms)
     (WF: forall x, wf_function (k x))
-| wf_function_mget
-    mn k
-    (VIS: st0 = trigger (MGet mn) >>= k)
-    (MN: List.In mn ms)
-    (WF: forall x, wf_function (k x))
-| wf_function_fget
-    k
-    (VIS: st0 = trigger (FGet) >>= k)
-    (WF: forall x, wf_function (k x))
 | wf_function_call
     fn mn varg k
-    (CALL: st0 = trigger PushFrame;;; r <- trigger (Call (Some mn) fn varg);; trigger PopFrame;;; tau;; k r)
+    (CALL: st0 = r <- trigger (Call (Some mn) fn varg);; tau;; k r)
     (MN: List.In mn ms)
     (WF: forall x, wf_function (k x))
 | wf_function_syscall
@@ -671,7 +470,7 @@ Variant _wf_function `{Σ: GRA.t} (ms: list mname)
     (WF: forall x, wf_function (k x))
 .
 
-Lemma wf_function_gen_mon `{Σ: GRA.t} (ms: list mname):
+Lemma wf_function_gen_mon (ms: list mname):
   monotone1 (_wf_function ms).
 Proof.
   ii. inv IN.
@@ -683,16 +482,12 @@ Proof.
   - econs 6; eauto.
   - econs 7; eauto.
   - econs 8; eauto.
-  - econs 9; eauto.
-  - econs 10; eauto.
-  - econs 11; eauto.
-  - econs 12; eauto.
 Qed.
 Hint Resolve wf_function_gen_mon: paco.
 
-Definition wf_function `{Σ: GRA.t} (ms: list mname) := paco1 (_wf_function ms) bot1.
+Definition wf_function (ms: list mname) := paco1 (_wf_function ms) bot1.
 
-Lemma wf_function_mon `{Σ: GRA.t} (ms0 ms1: list mname)
+Lemma wf_function_mon (ms0 ms1: list mname)
       (LE: forall mn (IN: List.In mn ms0), List.In mn ms1):
   wf_function ms0 <1= wf_function ms1.
 Proof.
@@ -706,33 +501,29 @@ Proof.
   - econs 6; eauto. i. right. eapply CIH. eapply WF.
   - econs 7; eauto. i. right. eapply CIH. eapply WF.
   - econs 8; eauto. i. right. eapply CIH. eapply WF.
-  - econs 9; eauto. i. right. eapply CIH. eapply WF.
-  - econs 10; eauto. i. right. eapply CIH. eapply WF.
-  - econs 11; eauto. i. right. eapply CIH. eapply WF.
-  - econs 12; eauto. i. right. eapply CIH. eapply WF.
 Qed.
 
-Definition wf_mrs `{Σ: GRA.t} (ms: list mname) (mrs: alist mname (Σ * Any.t)): Prop :=
+Definition wf_mrs (ms: list mname) (mrs: alist mname (Any.t)): Prop :=
   forall mn (IN: List.In mn ms),
-  exists mr mp, <<FIND: alist_find mn mrs = Some (mr, mp)>>.
+  exists mp, <<FIND: alist_find mn mrs = Some mp>>.
 
-Lemma wf_mrs_add `{Σ: GRA.t} (ms: list mname) (mrs: alist mname (Σ * Any.t))
+Lemma wf_mrs_add (ms: list mname) (mrs: alist mname (Any.t))
       (WF: wf_mrs ms mrs)
       mn mr:
   wf_mrs ms (alist_add mn mr mrs).
 Proof.
   ii. destruct (string_Dec mn mn0).
-  - subst. destruct mr as [mr mp]. exists mr, mp. eapply alist_add_find_eq.
+  - subst. exists mr. eapply alist_add_find_eq.
   - hexploit (WF mn0); auto. i. des.
-    exists mr0, mp. rewrite alist_add_find_neq; auto.
+    exists mp. rewrite alist_add_find_neq; auto.
 Qed.
 
-Lemma self_sim_itree `{Σ: GRA.t} `{ns: gnames} (ms: list mname):
-  forall n mrs fr st
+Lemma self_sim_itree `{ns: gnames} (ms: list mname):
+  forall n mrs st
          (WF: wf_function ms st)
          (MRS: wf_mrs ms mrs),
-    @sim_itree _ unit (fun _ p => fst p = snd p /\ wf_mrs ms (fst p)) top2 ns
-               n tt ((mrs, fr), st) ((mrs, fr), st).
+    @sim_itree unit (fun _ p => fst p = snd p /\ wf_mrs ms (fst p)) top2 ns
+               n tt (mrs, st) (mrs, st).
 Proof.
   pcofix CIH. i. pfold. punfold WF. inv WF; pclearbot.
   - eapply sim_itree_ret; ss.
@@ -745,39 +536,18 @@ Proof.
     eapply sim_itree_pput_both; eauto.
     right. eapply CIH; ss. apply wf_mrs_add. auto.
   - hexploit (MRS mn); eauto. i. des.
-    eapply sim_itree_mput_both; eauto. right. eapply CIH; ss.
-    eapply wf_mrs_add; eauto.
-  - eapply sim_itree_fput_both; eauto. right. eapply CIH; ss.
-  - hexploit (MRS mn); eauto. i. des.
     eapply sim_itree_pget_both; eauto.
     right. eapply CIH; ss.
-  - hexploit (MRS mn); eauto. i. des.
-    eapply sim_itree_mget_both; eauto. right. eapply CIH; ss.
-  - eapply sim_itree_fget_both; eauto. right. eapply CIH; ss.
-    Unshelve. all: exact 0.
   - eapply sim_itree_call; eauto.
     { exact tt. }
     i. exists 0.
     ss. des; subst. right. eapply CIH; ss.
   - eapply sim_itree_syscall; eauto. i. exists 0.
     ss. des; subst. right. eapply CIH; ss.
+    Unshelve. all: try (exact 0).
 Qed.
 
 
-
-(*** Q: do we need SimMemOh.le (and lepriv) ??? ***)
-
-(*** Let's say that le/lepriv can be encoded using RA and CheckWf... ***)
-(*** Q: Is "Source CheckWf >= Target CheckWf" trivial? or can be derived automatically? ***)
-(*** A: I think no. It looks like a real user obligation. ***)
-(*** N.B.: In the course of verifying "Source CheckWf >= Target CheckWf", one may need "le".
-         For an instance, if target RA is in some sense monotonic, while source RA is unit,
-         we have to prove that "Target CheckWf" holds from the ground. To do so, we need "le".
-         I am not entirely sure that we don't need "lepriv",
-         but (1) lepriv alone won't scale with concurrency,
-         so we need separation (putting into/out of function local resource), then
-         (2) it seems function-local resource (without lepriv) is sufficient for the cases
-         that I can think of ***)
 
 (*** desiderata: (1) state-aware simulation relation !!!! ***)
 (*** (2) not whole function frame, just my function frame !!!! ***)
@@ -785,7 +555,7 @@ Qed.
 
 
 
-Definition wf_mod `{Σ: GRA.t} (ms: ModSemL.t): Prop :=
+Definition wf_mod (ms: ModSemL.t): Prop :=
   let mns := List.map fst ms.(ModSemL.initial_mrs) in
   (<<ND: NoDup mns>>) /\
   (<<WFFUN: List.Forall (fun '(_, fn) => forall arg, wf_function mns (fn arg)) ms.(ModSemL.fnsems)>>).
@@ -793,11 +563,10 @@ Definition wf_mod `{Σ: GRA.t} (ms: ModSemL.t): Prop :=
 Module ModSemLPair.
 Section SIMMODSEML.
 
-  Context `{Σ: GRA.t}.
   Context `{ns: gnames}.
   Variable (ms_src ms_tgt: ModSemL.t).
 
-  Let W: Type := (alist mname (Σ * Any.t)) * (alist mname (Σ * Any.t)).
+  Let W: Type := (alist mname Any.t) * (alist mname Any.t).
   Inductive _sim: Prop := mk {
     world: Type;
     wf: world -> W -> Prop;
@@ -813,7 +582,7 @@ Section SIMMODSEML.
 
 End SIMMODSEML.
 
-Lemma self_sim_mod `{Σ: GRA.t} `{ns: gnames} (ms: ModSemL.t) (WF: wf_mod ms):
+Lemma self_sim_mod `{ns: gnames} (ms: ModSemL.t) (WF: wf_mod ms):
   sim ms ms.
 Proof.
   right.
@@ -821,7 +590,7 @@ Proof.
   2: {
     exists tt. split; auto. ii. eapply in_map_iff in IN. des. subst.
     destruct (alist_find (fst x) (ModSemL.initial_mrs ms)) eqn:EQ.
-    - destruct p. et.
+    - et.
     - destruct x. eapply alist_find_none in EQ.
       exfalso. ss. eapply EQ; et.
   }
@@ -912,10 +681,9 @@ Section ADD.
   Qed.
 
 
-  Context `{Σ: GRA.t}.
   Context `{ns: gnames}.
 
-  Let W: Type := (alist mname (Σ * Any.t)) * (alist mname (Σ * Any.t)).
+  Let W: Type := (alist mname Any.t) * (alist mname Any.t).
 
   Variant add_wf
           (world0 world1: Type)
@@ -972,18 +740,6 @@ Section ADD.
     - econs; et. pclearbot. et.
     - econs; et. pclearbot. et.
     - econs; et. pclearbot. et.
-    - econs; et. pclearbot. et.
-    - econs; et. pclearbot. et.
-    - econs; et. pclearbot. et.
-    - econs; et. pclearbot. et.
-    - econs; et. des. pclearbot. et.
-    - econs; et. i. hexploit K. i. des. esplits. right. eapply CIH. pclearbot. et.
-    - econs; et. i. hexploit K. i. des. esplits. right. eapply CIH. pclearbot. et.
-    - econs; et. i. hexploit K. i. des. esplits. right. eapply CIH. pclearbot. et.
-    - econs; et. i. hexploit K. i. des. esplits. right. eapply CIH. pclearbot. et.
-    - econs; et. i. hexploit K. i. des. esplits. right. eapply CIH. pclearbot. et.
-    - econs; et. i. hexploit K. i. des. esplits. right. eapply CIH. pclearbot. et.
-    - econs; et. i. hexploit K. i. des. esplits. right. eapply CIH. pclearbot. et.
     - econs; et. i. hexploit K. i. des. esplits. right. eapply CIH. pclearbot. et.
     - econs; et. i. hexploit K. i. des. esplits. right. eapply CIH. pclearbot. et.
     - econs; et. i. hexploit K. i. des. esplits. right. eapply CIH. pclearbot. et.
@@ -1009,12 +765,12 @@ Section ADD.
                          (IN0: (in_dec string_Dec mn ms_tgt1: bool) = true)
                          (IN1: (in_dec string_Dec mn ms_tgt0: bool) = true),
             False)
-    : forall st_src st_tgt fr_src fr_tgt mrs_src mrs_tgt n w0 w1
+    : forall st_src st_tgt mrs_src mrs_tgt n w0 w1
              (SIM: sim_itree wf1 le1 n w1
                              (alist_filter (fun mn => in_dec string_Dec mn ms_src1)
-                                           mrs_src, fr_src, st_src)
+                                           mrs_src, st_src)
                              (alist_filter (fun mn => in_dec string_Dec mn ms_tgt1)
-                                           mrs_tgt, fr_tgt, st_tgt))
+                                           mrs_tgt, st_tgt))
              (WF: __guard__ (exists w0',
                                 (<<WLE: le0 w0 w0'>>) /\
                                 (<<WWF: wf0 w0' (alist_filter (fun mn => in_dec string_Dec mn ms_src0)
@@ -1025,7 +781,7 @@ Section ADD.
              (NDTGT: NoDup (List.map fst mrs_tgt)),
       sim_itree
         (add_wf ms_src0 ms_src1 ms_tgt0 ms_tgt1 wf0 wf1) (RelProd le0 le1) n (w0, w1)
-        (mrs_src, fr_src, st_src) (mrs_tgt, fr_tgt, st_tgt).
+        (mrs_src, st_src) (mrs_tgt, st_tgt).
   Proof.
     i. ginit. { eapply cpn7_wcompat; eauto with paco. } revert_until DISJTGT. gcofix CIH. i.
     gstep. punfold SIM. inv SIM; pclearbot.
@@ -1060,29 +816,13 @@ Section ADD.
     * econs 8; eauto.
       { eapply alist_find_filter; eauto. }
       { eapply alist_find_filter; eauto. }
-      { gbase. eapply CIH; eauto.
-        { repeat erewrite alist_find_add_filter; eauto. }
-        { repeat erewrite alist_add_disjoint_filter; eauto.
-          { eapply alist_disjoint_find; eauto. }
-          { eapply alist_disjoint_find; eauto. }
-        }
-        { eapply alist_add_nodup; eauto. }
-        { eapply alist_add_nodup; eauto. }
-      }
+      { gbase. eapply CIH; eauto. }
     * econs 9; eauto with paco.
     * econs 10; eauto with paco.
-      { eapply alist_find_filter; eauto. }
-      { eapply alist_find_filter; eauto. }
-    * econs 11; eauto with paco.
-      { eapply alist_find_filter; eauto. }
-      { eapply alist_find_filter; eauto. }
-    * econs 12; eauto with paco.
-    * econs 13; eauto with paco.
-    * econs 14; eauto with paco.
       i. hexploit K; eauto. i. des. pclearbot. esplits; eauto with paco.
-    * econs 15; eauto.
+    * econs 11; eauto.
       i. hexploit K; eauto with paco.
-    * econs 16; eauto with paco.
+    * econs 12; eauto with paco.
       { eapply alist_find_filter; eauto. }
       gbase. eapply CIH; eauto.
       { repeat erewrite alist_find_add_filter; eauto. }
@@ -1090,6 +830,13 @@ Section ADD.
         { eapply alist_disjoint_find; eauto. }
       }
       { eapply alist_add_nodup; eauto. }
+    * econs 13; eauto with paco.
+      { eapply alist_find_filter; eauto. }
+    * econs 14; eauto with paco.
+    * econs 15; eauto.
+      i. hexploit K; eauto with paco.
+    * econs 16; eauto.
+      i. hexploit K; eauto. i. des. pclearbot. esplits; eauto with paco.
     * econs 17; eauto with paco.
       { eapply alist_find_filter; eauto. }
       gbase. eapply CIH; eauto.
@@ -1099,39 +846,8 @@ Section ADD.
       }
       { eapply alist_add_nodup; eauto. }
     * econs 18; eauto with paco.
-    * econs 19; eauto with paco.
       { eapply alist_find_filter; eauto. }
-    * econs 20; eauto with paco.
-      { eapply alist_find_filter; eauto. }
-    * econs 21; eauto with paco.
-    * econs 22; eauto with paco.
-    * econs 23; eauto.
-      i. hexploit K; eauto with paco.
-    * econs 24; eauto.
-      i. hexploit K; eauto. i. des. pclearbot. esplits; eauto with paco.
-    * econs 25; eauto with paco.
-      { eapply alist_find_filter; eauto. }
-      gbase. eapply CIH; eauto.
-      { repeat erewrite alist_find_add_filter; eauto. }
-      { repeat erewrite alist_add_disjoint_filter; eauto.
-        { eapply alist_disjoint_find; eauto. }
-      }
-      { eapply alist_add_nodup; eauto. }
-    * econs 26; eauto with paco.
-      { eapply alist_find_filter; eauto. }
-      gbase. eapply CIH; eauto.
-      { repeat erewrite alist_find_add_filter; eauto. }
-      { repeat erewrite alist_add_disjoint_filter; eauto.
-        { eapply alist_disjoint_find; eauto. }
-      }
-      { eapply alist_add_nodup; eauto. }
-    * econs 27; eauto with paco.
-    * econs 28; eauto with paco.
-      { eapply alist_find_filter; eauto. }
-    * econs 29; eauto with paco.
-      { eapply alist_find_filter; eauto. }
-    * econs 30; eauto with paco.
-    * econs 31; eauto.
+    * econs 19; eauto.
   Qed.
 
   (* TODO: Coqlib? *)
@@ -1313,7 +1029,7 @@ Require Import SimGlobal.
                       ).
 
   Ltac mgo := repeat (try rewrite ! interp_Es_bind; try rewrite ! interp_Es_ret; try rewrite ! interp_Es_tau;
-                      try rewrite ! interp_Es_rE; try rewrite ! interp_Es_eventE; try rewrite ! interp_Es_callE;
+                      try rewrite ! interp_Es_eventE; try rewrite ! interp_Es_callE;
                       try rewrite ! interp_Es_triggerNB; try rewrite ! interp_Es_triggerUB; igo).
   Ltac mstep := gstep; econs; eauto; [eapply OrdArith.lt_from_nat; ss|].
 
@@ -1357,65 +1073,40 @@ Require Import SimGlobal.
 
 Module ModLPair.
 Section SIMMOD.
-   Context `{Σ: GRA.t}.
 
    Hint Resolve cpn6_wcompat: paco.
 
-   Definition eqv (mrsl: alist string (Σ * Any.t)) (mrs: string -> Σ) (mps: string -> Any.t): Prop :=
-     forall mn mr mp
-            (FIND: alist_find mn mrsl = Some (mr, mp)),
-       mrs mn = mr /\ mps mn = mp.
+   Definition eqv (mrsl: alist string (Any.t)) (mps: string -> Any.t): Prop :=
+     forall mn mp
+            (FIND: alist_find mn mrsl = Some mp),
+       mps mn = mp.
 
-   Lemma eqv_lookup_mr mrsl mrs mps (EQV: eqv mrsl mrs mps)
-         mn mr mp
-         (LOOKUP: alist_find mn mrsl = Some (mr, mp))
-     :
-       mrs mn = mr.
-   Proof.
-     eapply EQV in LOOKUP. des; auto.
-   Qed.
-
-   Lemma eqv_lookup_mp mrsl mrs mps (EQV: eqv mrsl mrs mps)
-         mn mr mp
-         (LOOKUP: alist_find mn mrsl = Some (mr, mp))
+   Lemma eqv_lookup_mp mrsl mps (EQV: eqv mrsl mps)
+         mn mp
+         (LOOKUP: alist_find mn mrsl = Some mp)
      :
        mps mn = mp.
    Proof.
      eapply EQV in LOOKUP. des; auto.
    Qed.
 
-   Lemma eqv_add_mr mrsl mrs mps (EQV: eqv mrsl mrs mps)
-         mn mr0 mr1 mp0
-         (LOOKUP: alist_find mn mrsl = Some (mr0, mp0))
+   Lemma eqv_add_ms mrsl mps (EQV: eqv mrsl mps)
+         mn mp0 mp1
+         (LOOKUP: alist_find mn mrsl = Some mp0)
      :
-       eqv (alist_add mn (mr1, mp0) mrsl) (update mrs mn mr1) mps.
+       eqv (alist_add mn mp1 mrsl) (update mps mn mp1).
    Proof.
      ii. unfold update. des_ifs.
-     { erewrite alist_add_find_eq in FIND. clarify. split; auto.
-       eapply eqv_lookup_mp in LOOKUP; eauto.
-     }
+     { erewrite alist_add_find_eq in FIND. clarify. }
      { erewrite alist_add_find_neq in FIND; auto. }
    Qed.
 
-   Lemma eqv_add_ms mrsl mrs mps (EQV: eqv mrsl mrs mps)
-         mn mr0 mp0 mp1
-         (LOOKUP: alist_find mn mrsl = Some (mr0, mp0))
-     :
-       eqv (alist_add mn (mr0, mp1) mrsl) mrs (update mps mn mp1).
-   Proof.
-     ii. unfold update. des_ifs.
-     { erewrite alist_add_find_eq in FIND. clarify. split; auto.
-       eapply eqv_lookup_mr in LOOKUP; eauto.
-     }
-     { erewrite alist_add_find_neq in FIND; auto. }
-   Qed.
-
-   Variant lift_wf world (wf: world -> alist string (Σ * Any.t) * alist string (Σ * Any.t) -> Prop)
-           (w: world) (mrs_src mrs_tgt: string -> Σ) (mps_src mps_tgt: string -> Any.t): Prop :=
+   Variant lift_wf world (wf: world -> alist string (Any.t) * alist string (Any.t) -> Prop)
+           (w: world) (mps_src mps_tgt: string -> Any.t): Prop :=
    | lift_wf_intro
        mrsl_src mrsl_tgt
-       (EQVSRC: eqv mrsl_src mrs_src mps_src)
-       (EQVTGT: eqv mrsl_tgt mrs_tgt mps_tgt)
+       (EQVSRC: eqv mrsl_src mps_src)
+       (EQVTGT: eqv mrsl_tgt mps_tgt)
        (WF: wf w (mrsl_src, mrsl_tgt))
    .
 
@@ -1460,72 +1151,61 @@ Section SIMMOD.
          (* (NAMESPACE: forall fn arg (IN: ~ns fn), (ModSemL.prog ms_src) _ (Call fn arg) = triggerUB) *)
          (NAMESPACE: forall fn (SOME: is_some (alist_find fn (ModSemL.fnsems ms_src))), ns fn)
          world
-         (wf: world -> alist string (Σ * Any.t) * alist string (Σ * Any.t) -> Prop)
+         (wf: world -> alist string (Any.t) * alist string (Any.t) -> Prop)
          (le: world -> world -> Prop)
          (FNS: forall fn : string,
              option_rel (sim_fsem wf le)
                         (alist_find fn (ModSemL.fnsems ms_src))
                         (alist_find fn (ModSemL.fnsems ms_tgt)))
      :
-       forall n w mrsl_src fr_src f_src mrsl_tgt fr_tgt f_tgt
+       forall n w mrsl_src f_src mrsl_tgt f_tgt
               (* (WF: wf (mrsl_src, mrsl_tgt)) *)
-              (SIM: sim_itree wf le n w (mrsl_src, fr_src, f_src) (mrsl_tgt, fr_tgt, f_tgt))
-              mrs_src mrs_tgt mps_src mps_tgt
-              (EQVSRC: eqv mrsl_src mrs_src mps_src)
-              (EQVTGT: eqv mrsl_tgt mrs_tgt mps_tgt)
-              frs_src frs_tgt,
-         simg (fun (vret_src vret_tgt: r_state * p_state * Any.t) =>
-                 exists fr_src' fr_tgt' w',
-                   (<<WF: lift_wf wf w' (fst (fst (fst vret_src))) (fst (fst (fst vret_tgt))) (snd (fst vret_src)) (snd (fst vret_tgt))>>) /\
+              (SIM: sim_itree wf le n w (mrsl_src, f_src) (mrsl_tgt, f_tgt))
+              mps_src mps_tgt
+              (EQVSRC: eqv mrsl_src mps_src)
+              (EQVTGT: eqv mrsl_tgt mps_tgt),
+         simg (fun (vret_src vret_tgt: p_state * Any.t) =>
+                 exists w',
+                   (<<WF: lift_wf wf w' (fst vret_src) (fst vret_tgt)>>) /\
                    (<<WLE: le w w'>>) /\
-                   (<<FRSRC: snd (fst (fst vret_src)) = fr_src'::frs_src>>) /\
-                   (<<FRTGT: snd (fst (fst vret_tgt)) = fr_tgt'::frs_tgt>>) /\
                    (<<VAL: snd vret_src = snd vret_tgt>>)) (arith n 4 4)
               (interp_Es
                  (ModSemL.prog ms_src)
                  f_src
-                 (mrs_src, fr_src::frs_src, mps_src))
+                 mps_src)
               (interp_Es
                  (ModSemL.prog ms_tgt)
                  f_tgt
-                 (mrs_tgt, fr_tgt::frs_tgt, mps_tgt)).
+                 mps_tgt).
    Proof.
      ginit. gcofix CIH. i.
      punfold SIM. gstep. Local Opaque interp_Es.
      inv SIM; pclearbot; ss; mgo; ss; mgo.
-     - econs; ss. des. esplits; et. econs; eauto.
+     - econs; ss. des. clarify. esplits; et. econs; eauto.
      - econs; ss. gbase. eapply CIH; eauto.
-     - rewrite interp_Es_rE with (rst0:=(mrs_src, fr_src :: frs_src)).
-       rewrite interp_Es_rE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)).
-       mgo. ss. mgo.
-
-       econs; ss; et.
-       gstep. econs; ss; et.
-
-       mgo. generalize (FNS fn). i. inv H; cycle 1.
-       { unfold ModSemL.prog at 3. unfold unwrapU, triggerUB. mgo.
-         gstep. econs; ss. gstep. econs; ss. }
+     - mgo. generalize (FNS fn). i. inv H; cycle 1.
+       { econs; et. unfold ModSemL.prog at 3. unfold unwrapU, triggerUB. mgo.
+         gstep. econs; ss. }
 
        mgo. rename a into f_src. rename b into f_tgt.
        exploit IN; eauto. i. des.
-       cbn. mgo. gstep. econs; ss.
+       cbn. mgo.
+       econs; ss.
+
        instantiate (1:=(20+(arith n0 4 4))%ord).
        gclo. eapply wrespect6_companion; auto with paco.
        { eapply bindC_wrespectful. }
        econs.
        + gbase. eapply CIH; eauto.
        + i. ss. des.
-         destruct vret_src as [[mrs_src' frs_src'] val_src].
-         destruct vret_tgt as [[mrs_tgt' frs_tgt'] val_tgt].
-         destruct mrs_src', mrs_tgt'. ss. subst. mgo. ss. mgo.
-         gstep. econs; auto.
+         destruct vret_src as [mrs_src' val_src].
+         destruct vret_tgt as [mrs_tgt' val_tgt].
+         ss. subst. mgo. ss. mgo.
          inv WF0. hexploit K; eauto. i. des. pclearbot.
          eapply CIH in H; eauto; ss.
          gstep. econs; auto.
-         gstep. econs; auto.
-         gbase. eapply H.
+         gbase. et.
      - econs. ii. mgo.
-       gstep. econs; auto.
        gstep. econs; auto.
        subst. hexploit K; eauto. i. des. pclearbot.
        eapply CIH in H; eauto; ss.
@@ -1535,51 +1215,21 @@ Section SIMMOD.
        eexists. mgo.
        gstep. econs; auto.
        gstep. econs; auto.
-       gstep. econs; auto.
        gbase. eapply CIH; eauto.
      - econs; eauto. i. hexploit K; eauto. i. des. pclearbot.
        eexists. mgo.
        gstep. econs; auto.
        gstep. econs; auto.
-       gstep. econs; auto.
        gbase. eapply CIH; eauto.
-     - erewrite interp_Es_pE with (rst0:=(mrs_src, fr_src :: frs_src)).
-       erewrite interp_Es_pE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
+     - erewrite ! interp_Es_pE. ss. mgo.
        econs; eauto.
-       gstep. econs; auto.
        gstep. econs; auto.
        gbase. eapply CIH; eauto.
        { eapply eqv_add_ms; eauto. }
        { eapply eqv_add_ms; eauto. }
-     - erewrite interp_Es_rE with (rst0:=(mrs_src, fr_src :: frs_src)).
-       erewrite interp_Es_rE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
-       econs; eauto.
-       gstep. econs; auto.
-       gbase. eapply CIH; eauto.
-       { eapply eqv_add_mr; eauto. }
-       { eapply eqv_add_mr; eauto. }
-     - erewrite interp_Es_rE with (rst0:=(mrs_src, fr_src :: frs_src)).
-       erewrite interp_Es_rE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
-       econs; eauto.
-       gstep. econs; auto.
-       gbase. eapply CIH; eauto.
      - eapply eqv_lookup_mp in MRSRC; eauto.
        eapply eqv_lookup_mp in MRTGT; eauto. subst.
-       erewrite interp_Es_pE with (rst0:=(mrs_src, fr_src :: frs_src)).
-       erewrite interp_Es_pE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
-       econs; eauto.
-       gstep. econs; auto.
-       gstep. econs; auto.
-       gbase. eapply CIH; eauto.
-     - eapply eqv_lookup_mr in MRSRC; eauto.
-       eapply eqv_lookup_mr in MRTGT; eauto. subst.
-       erewrite interp_Es_rE with (rst0:=(mrs_src, fr_src :: frs_src)).
-       erewrite interp_Es_rE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
-       econs; eauto.
-       gstep. econs; auto.
-       gbase. eapply CIH; eauto.
-     - erewrite interp_Es_rE with (rst0:=(mrs_src, fr_src :: frs_src)).
-       erewrite interp_Es_rE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
+       erewrite ! interp_Es_pE. ss. mgo.
        econs; eauto.
        gstep. econs; auto.
        gbase. eapply CIH; eauto.
@@ -1594,64 +1244,26 @@ Section SIMMOD.
        eexists. mgo. gstep. econs; eauto.
        { eapply arith_lt_2 with (n1:=6); auto. }
        gstep. econs; eauto.
-       { eapply arith_lt_2 with (n1:=5); auto. }
-       gstep. econs; eauto.
        { eapply arith_lt_2 with (n1:=4); auto. }
        gbase. eapply CIH; eauto.
      - econs; eauto.
        { eapply arith_lt_1 with (n1:=7); auto.
          - eassumption. }
        i. mgo. gstep. econs; eauto.
-       { eapply arith_lt_2 with (n1:=6); auto. }
-       gstep. econs; eauto.
        { eapply arith_lt_2 with (n1:=5); auto. }
        gstep. econs; eauto.
        { eapply arith_lt_2 with (n1:=4); auto. }
        gbase. eapply CIH; eauto. eapply K.
-     - erewrite interp_Es_pE with (rst0:=(mrs_src, fr_src :: frs_src)). ss. mgo.
+     - erewrite interp_Es_pE. ss. mgo.
        econs; eauto.
        { eapply arith_lt_1 with (n1:=7); auto.
          - eassumption. }
-       gstep. econs; auto.
-       { eapply arith_lt_2 with (n1:=6); auto. }
        gstep. econs; auto.
        { eapply arith_lt_2 with (n1:=4); auto. }
        gbase. eapply CIH; eauto.
        { eapply eqv_add_ms; eauto. }
-     - erewrite interp_Es_rE with (rst0:=(mrs_src, fr_src :: frs_src)).  ss. mgo.
-       econs; eauto.
-       { eapply arith_lt_1 with (n1:=7); auto.
-         - eassumption. }
-       gstep. econs; auto.
-       { eapply arith_lt_2 with (n1:=4); auto. }
-       gbase. eapply CIH; eauto.
-       { eapply eqv_add_mr; eauto. }
-     - erewrite interp_Es_rE with (rst0:=(mrs_src, fr_src :: frs_src)). ss. mgo.
-       econs; eauto.
-       { eapply arith_lt_1 with (n1:=7); auto.
-         - eassumption. }
-       gstep. econs; auto.
-       { eapply arith_lt_2 with (n1:=4); auto. }
-       gbase. eapply CIH; eauto.
      - eapply eqv_lookup_mp in MR0; eauto. subst.
-       erewrite interp_Es_pE with (rst0:=(mrs_src, fr_src :: frs_src)). ss. mgo.
-       econs; eauto.
-       { eapply arith_lt_1 with (n1:=7); auto.
-         - eassumption. }
-       gstep. econs; auto.
-       { eapply arith_lt_2 with (n1:=6); auto. }
-       gstep. econs; auto.
-       { eapply arith_lt_2 with (n1:=4); auto. }
-       gbase. eapply CIH; eauto.
-     - eapply eqv_lookup_mr in MR0; eauto. subst.
-       erewrite interp_Es_rE with (rst0:=(mrs_src, fr_src :: frs_src)). ss. mgo.
-       econs; eauto.
-       { eapply arith_lt_1 with (n1:=7); auto.
-         - eassumption. }
-       gstep. econs; auto.
-       { eapply arith_lt_2 with (n1:=4); auto. }
-       gbase. eapply CIH; eauto.
-     - erewrite interp_Es_rE with (rst0:=(mrs_src, fr_src :: frs_src)). ss. mgo.
+       erewrite interp_Es_pE. ss. mgo.
        econs; eauto.
        { eapply arith_lt_1 with (n1:=7); auto.
          - eassumption. }
@@ -1669,8 +1281,6 @@ Section SIMMOD.
        i. mgo. gstep. econs; eauto.
        { eapply arith_lt_2 with (n1:=6); auto. }
        gstep. econs; eauto.
-       { eapply arith_lt_2 with (n1:=5); auto. }
-       gstep. econs; eauto.
        { eapply arith_lt_2 with (n1:=4); auto. }
        gbase. eapply CIH; eauto. eapply K.
      - des. pclearbot. econs; eauto.
@@ -1679,72 +1289,31 @@ Section SIMMOD.
        eexists. mgo. gstep. econs; eauto.
        { eapply arith_lt_2 with (n1:=6); auto. }
        gstep. econs; eauto.
-       { eapply arith_lt_2 with (n1:=5); auto. }
-       gstep. econs; eauto.
        { eapply arith_lt_2 with (n1:=4); auto. }
        gbase. eapply CIH; eauto.
-     - erewrite interp_Es_pE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
+     - erewrite interp_Es_pE. ss. mgo.
        econs; eauto.
        { eapply arith_lt_1 with (n1:=7); auto.
          - eassumption. }
-       gstep. econs; auto.
-       { eapply arith_lt_2 with (n1:=6); auto. }
        gstep. econs; auto.
        { eapply arith_lt_2 with (n1:=4); auto. }
        gbase. eapply CIH; eauto.
        { eapply eqv_add_ms; eauto. }
-     - erewrite interp_Es_rE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
-       econs; eauto.
-       { eapply arith_lt_1 with (n1:=7); auto.
-         - eassumption. }
-       gstep. econs; auto.
-       { eapply arith_lt_2 with (n1:=4); auto. }
-       gbase. eapply CIH; eauto.
-       { eapply eqv_add_mr; eauto. }
-     - erewrite interp_Es_rE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
-       econs; eauto.
-       { eapply arith_lt_1 with (n1:=7); auto.
-         - eassumption. }
-       gstep. econs; auto.
-       { eapply arith_lt_2 with (n1:=4); auto. }
-       gbase. eapply CIH; eauto.
      - eapply eqv_lookup_mp in MR0; eauto. subst.
-       erewrite interp_Es_pE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
-       econs; eauto.
-       { eapply arith_lt_1 with (n1:=7); auto.
-         - eassumption. }
-       gstep. econs; auto.
-       { eapply arith_lt_2 with (n1:=6); auto. }
-       gstep. econs; auto.
-       { eapply arith_lt_2 with (n1:=4); auto. }
-       gbase. eapply CIH; eauto.
-     - eapply eqv_lookup_mr in MR0; eauto. subst.
-       erewrite interp_Es_rE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
+       erewrite interp_Es_pE. ss. mgo.
        econs; eauto.
        { eapply arith_lt_1 with (n1:=7); auto.
          - eassumption. }
        gstep. econs; auto.
        { eapply arith_lt_2 with (n1:=4); auto. }
        gbase. eapply CIH; eauto.
-     - erewrite interp_Es_rE with (rst0:=(mrs_tgt, fr_tgt :: frs_tgt)). ss. mgo.
-       econs; eauto.
-       { eapply arith_lt_1 with (n1:=7); auto.
-         - eassumption. }
-       gstep. econs; auto.
-       { eapply arith_lt_2 with (n1:=4); auto. }
-       gbase. eapply CIH; eauto.
-       Unshelve. all: exact O.
-     - erewrite interp_Es_rE with (rst0:=(mrs_src, fr_src :: frs_src)). ss. mgo.
-       econs; eauto.
+     - econs; eauto.
        { eapply arith_lt_2 with (n1:=3); auto. }
-       gstep. econs; eauto.
-       { eapply arith_lt_2 with (n1:=2); auto. }
-       gstep. econs; eauto.
-       { eapply arith_lt_2 with (n1:=1); auto. }
        cbn. unfold unwrapU, triggerUB. des_ifs.
        { exfalso. eapply FAIL. eapply NAMESPACE. rewrite Heq. ss. }
        mgo. gstep. econs; ss.
        { eapply arith_lt_2 with (n1:=0); auto. }
+     Unshelve. all: try (exact 0).
    Qed.
 
    Variable (md_src md_tgt: ModL.t).
@@ -1815,8 +1384,8 @@ Section SIMMOD.
        { ii. rewrite sim_sk0 in *. unfold ModSemL.initial_p_state. des_ifs. }
      }
      { i. ss. des.
-       destruct vret_src as [[[mrs_src frs_src] p_src] v_src].
-       destruct vret_tgt as [[[mrs_tgt frs_tgt] p_tgt] v_tgt]. ss. subst.
+       destruct vret_src as [p_src v_src].
+       destruct vret_tgt as [p_tgt v_tgt]. ss. subst.
        mgo. ss. mgo.
        gstep. econs; eauto.
      }
