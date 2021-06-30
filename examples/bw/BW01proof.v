@@ -72,7 +72,7 @@ Section SIMMODSEM.
     econs; ss.
     { unfold getF. init. harg.
       mDesAll. des; clarify.
-      steps. rewrite Any.upcast_downcast in *. astart 0. astop.
+      steps. astart 0. astop.
       mAssertPure (x = Z.odd w); subst.
       { iApply (bw_ra_merge with "INV PRE"). }
       steps. force_l. eexists. steps.
@@ -84,7 +84,7 @@ Section SIMMODSEM.
     econs; ss.
     { unfold flipF. init. harg.
       mDesAll. des; clarify.
-      steps. rewrite Any.upcast_downcast in *. astart 0. astop.
+      steps. astart 0. astop.
       mAssertPure (x = Z.odd w); subst.
       { iApply (bw_ra_merge with "INV PRE"). }
       steps. force_l. eexists. steps.

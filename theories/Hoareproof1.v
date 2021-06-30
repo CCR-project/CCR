@@ -546,8 +546,6 @@ Section CANCEL.
     { rewrite FIND. steps. exfalso. eapply x1; et. }
     rewrite STB. steps.
     steps. rewrite FINDMID. unfold fun_to_mid. steps.
-    rewrite Any.pair_split. steps.
-    rewrite Any.upcast_downcast. steps.
     guclo ordC_spec. econs.
     { eapply OrdArith.add_base_l. }
     guclo ordC_spec. econs.
@@ -664,8 +662,6 @@ Section CANCEL.
       { _ord_step. }
       i. ired_both. unseal_left. steps.
       rewrite FINDMID. unfold fun_to_mid. ired_both. steps.
-      rewrite Any.pair_split. steps.
-      rewrite Any.upcast_downcast. steps.
       guclo ordC_spec. econs.
       { eapply OrdArith.add_base_l. }
       rewrite idK_spec2 at 1.
@@ -676,15 +672,13 @@ Section CANCEL.
     }
 
     (* IMPURE *)
-    { Local Opaque ord_lt. unfold guarantee. 
+    { Local Opaque ord_lt. unfold guarantee.
       ired_both. seal_left.
       gstep. econs; et.
       { _ord_step. }
       i. ired_both. unseal_left. steps.
       rewrite FINDMID. rewrite FINDSRC.
       unfold fun_to_src, cfun, fun_to_mid. steps.
-      rewrite Any.pair_split. steps.
-      rewrite Any.upcast_downcast. steps.
       guclo ordC_spec. econs.
       { eapply OrdArith.add_base_l. }
       guclo bindC_spec. econs.
@@ -769,9 +763,6 @@ Section CANCEL.
       fold ms_src. fold ms_mid.
       rewrite FINDSRC. rewrite FINDMID. steps.
       unfold fun_to_src, fun_to_mid, cfun. steps.
-
-      rewrite Any.pair_split. steps.
-      rewrite Any.upcast_downcast. steps.
 
       guclo ordC_spec. econs.
       { eapply OrdArith.add_base_l. }

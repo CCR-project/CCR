@@ -40,8 +40,7 @@ Section SIMMODSEM.
     { ss. }
     2: { exists tt. econs; ss; red; uipropall. }
     econs; ss. init. harg. mDesAll.
-    des; clarify. unfold gF, ccall.
-    rewrite Any.upcast_downcast. steps. astart 10.
+    des; clarify. unfold gF, ccall. steps. astart 10.
     force_r.
     { eapply mut_max_intrange. auto. } steps.
     destruct (dec (Z.of_nat x) 0%Z).
@@ -55,7 +54,7 @@ Section SIMMODSEM.
         esplits; et. lia. }
       { splits; ss; eauto with ord_step. }
       i. mDesAll. des; clarify.
-      rewrite Any.upcast_downcast. steps. astop.
+      steps. astop.
       force_l. eexists. steps. force_r.
       { eapply mut_max_sum_intrange. lia. } steps.
       force_r.

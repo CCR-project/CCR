@@ -734,10 +734,8 @@ Section KTACTICS.
     assert(ord_cur = ord_top).
     { on_current ltac:(fun ACC => clear - ACC); mClear "INV"; des_ifs; mDesAll; des; ss. }
     subst. des_ifs; mDesAll; des; subst.
-    - rewrite Any.pair_split. steps. rewrite Any.upcast_downcast. steps.
-      exploit POST; et.
-    - rewrite Any.pair_split. steps. rewrite Any.upcast_downcast. steps.
-      exploit POST; et.
+    - steps. exploit POST; et.
+    - steps. exploit POST; et.
   Qed.
 
 End KTACTICS.

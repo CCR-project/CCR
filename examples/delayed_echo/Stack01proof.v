@@ -75,7 +75,7 @@ Section SIMMODSEM.
           iSplitR; ss. iRight. iRight. iRight. iRight. iPureIntro. ss. }
         { split; ss. eauto with ord_step. }
         mDesAll. clarify.
-        steps. erewrite Any.upcast_downcast in *. steps.
+        steps.
 
         (* ret *)
         astop. force_l. eexists. steps. hret _; ss; et.

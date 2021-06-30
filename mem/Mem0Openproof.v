@@ -296,15 +296,12 @@ Proof Outline
         - cbn. lia.
         - clear - WFTGT. ii. ss. unfold update in *. des_ifs. exploit WFTGT; et. i; des. r. lia.
       }
-      { unfold KModSem.transl_fun_tgt. des_ifs_safe (mDesAll; ss). des; subst.
-        rewrite Any.upcast_downcast in *. apply Any.downcast_upcast in _UNWRAPN. des; clarify. unhide_k.
-        rewrite Any.pair_split. ired_both. rewrite Any.upcast_downcast. (* TODO any related tactics *)
+      { unfold KModSem.transl_fun_tgt. des_ifs_safe (mDesAll; ss). des; subst. steps.
+        apply Any.downcast_upcast in _UNWRAPN. des; clarify. unhide_k.
         steps.
-        renamer. rewrite ! Any.upcast_downcast. steps. unfold pget. steps. des_ifs; steps.
+        renamer. steps. des_ifs; steps.
 
         set (blk := mem_tgt0.(Mem.nb) + x). destruct v; ss. clarify. rename z into sz.
-        rewrite Any.pair_split in *. clarify.
-        rewrite Any.upcast_downcast in *. sym in _UNWRAPU0. clarify.
         force_l. exists (mem_tgt0.(Mem.nb) - memu_src0.(Mem.nb) + x). steps.
         unfold pput. steps.
         replace (Mem.nb memu_src0 + (Mem.nb mem_tgt0 - Mem.nb memu_src0 + x)) with (Mem.nb mem_tgt0 + x) by lia.
@@ -401,11 +398,8 @@ Proof Outline
       { unfold KModSem.transl_fun_tgt. des_ifs_safe (mDesAll; ss). des; subst.
         rewrite Any.upcast_downcast in *. apply Any.downcast_upcast in _UNWRAPN. des; clarify. unhide_k. steps.
         renamer.
-        rewrite Any.pair_split. steps. rewrite ! Any.upcast_downcast. steps.
-        unfold pget. steps. unfold pput. steps.
-        destruct v; ss. clarify. rename t0 into memu_src1. rename n into b. rename z into ofs.
-        rewrite Any.pair_split in *. clarify.
-                rewrite Any.upcast_downcast in *. sym in _UNWRAPU0. clarify.
+        steps.
+        destruct v; ss. clarify. rename n into b. rename z into ofs.
         force_r.
         { unfold Mem.free in *. des_ifs. hexploit (SIM b ofs); et. intro T.
           rewrite Heq0 in *. rewrite Heq in *. inv T.
@@ -451,13 +445,9 @@ Proof Outline
       { unfold KModSem.transl_fun_tgt. des_ifs_safe (mDesAll; ss). des; subst.
         rewrite Any.upcast_downcast in *. apply Any.downcast_upcast in _UNWRAPN. des; clarify. unhide_k. steps.
         renamer.
-        rewrite Any.pair_split. steps. rewrite ! Any.upcast_downcast. steps.
-        unfold pget. steps.
         destruct v; ss. clarify. rename n into b. rename z into ofs.
-        rewrite Any.pair_split in *. clarify.
-        rewrite Any.upcast_downcast in *. sym in _UNWRAPU0. clarify.
 
-        hexploit (SIM b ofs); et. intro T. unfold Mem.load in *. rewrite _UNWRAPU2 in T. inv T.
+        hexploit (SIM b ofs); et. intro T. unfold Mem.load in *. rewrite _UNWRAPU0 in T. inv T.
         steps.
         hret _; ss. iModIntro. iSplitL; ss; et.
       }
@@ -521,24 +511,19 @@ Proof Outline
       { unfold KModSem.transl_fun_tgt. des_ifs_safe (mDesAll; ss). des; subst.
         rewrite Any.upcast_downcast in *. apply Any.downcast_upcast in _UNWRAPN. des; clarify. unhide_k. steps.
         renamer.
-        rewrite Any.pair_split in *. steps. rewrite ! Any.upcast_downcast in *. steps.
-        unfold pget. steps.
         destruct v; ss. clarify. rename n into b. rename z into ofs.
-        rewrite Any.pair_split in *. clarify.
-        rewrite Any.upcast_downcast in *. sym in _UNWRAPU0. clarify.
 
         force_r.
         { hexploit (SIM b ofs); et. intro T. unfold Mem.store in *. des_ifs. inv T. }
         steps. rename t into mem_tgt1.
-        unfold pput. steps. rewrite Any.pair_split in *. clarify.
         hret _; ss. iModIntro. iSplitL; ss. iExists _, _, _; ss. iSplitR; ss. iPureIntro.
         esplits; ss; et.
         - ii. unfold Mem.store in *. des_ifs. ss. des_ifs. bsimpl; des; des_sumbool; subst.
           hexploit (SIM b0 ofs0); et. intro T. rewrite Heq0 in *. rewrite Heq in *. inv T. econs.
         - unfold Mem.store in *. des_ifs.
-        - clear - _UNWRAPU1 WFSRC. ii. unfold Mem.store in *. des_ifs; ss. des_ifs; et.
+        - clear - _UNWRAPU WFSRC. ii. unfold Mem.store in *. des_ifs; ss. des_ifs; et.
           + bsimpl; des; des_sumbool; subst. et.
-        - clear - _UNWRAPU WFTGT. ii. unfold Mem.store in *. des_ifs; ss. des_ifs; et.
+        - clear - _UNWRAPU0 WFTGT. ii. unfold Mem.store in *. des_ifs; ss. des_ifs; et.
           + bsimpl; des; des_sumbool; subst. et.
       }
     }
@@ -604,11 +589,8 @@ Proof Outline
         }
       }
       { unfold KModSem.transl_fun_tgt. des_ifs_safe (mDesAll; ss). des; subst.
-        rewrite Any.upcast_downcast in *. apply Any.downcast_upcast in _UNWRAPN. des; clarify. unhide_k. steps.
+        unhide_k. steps.
         renamer.
-        rewrite Any.pair_split in *. steps. rewrite ! Any.upcast_downcast in *. steps.
-        unfold pget. steps.
-        rewrite Any.pair_split in *. clarify.
         sym in _UNWRAPU0. rewrite Any.upcast_downcast in *. clarify.
         assert(T: forall b ofs, Mem.valid_ptr memu_src0 b ofs -> Mem.valid_ptr mem_tgt0 b ofs).
         { clear - SIM. i. unfold Mem.valid_ptr in *.

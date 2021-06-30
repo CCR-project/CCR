@@ -47,17 +47,15 @@ Section SIMMODSEM.
       steps. rewrite my_if_same. steps.
       rewrite BDOOR. steps.
       force_l. esplits. steps. rewrite _UNWRAPN0. steps. rewrite _GUARANTEE. force_l; ss. steps.
-      red. esplits; et. econs; ss; et. 
+      red. esplits; et. econs; ss; et.
     }
     econs; ss.
     { init. inv WF.
       unfold fun_to_src, body_to_src, KModSem.body_to_src, cfun, pop_body, NewStack1.pop_body.
       steps. rewrite my_if_same. steps.
       rewrite BDOOR. steps. apply Any.downcast_upcast in _UNWRAPN0. des; subst. des_ifs; steps.
-      { red. esplits; et. rewrite Any.upcast_downcast in *. clarify. 
-        rewrite insert_delete; ss. rewrite insert_id; ss. }
-      { red. esplits; et. rewrite Any.upcast_downcast in *. clarify. 
-        rewrite insert_delete; ss. }
+      { red. esplits; et. rewrite insert_delete; ss. rewrite insert_id; ss. }
+      { red. esplits; et. rewrite insert_delete; ss. }
     }
     admit "ez".
   Unshelve.

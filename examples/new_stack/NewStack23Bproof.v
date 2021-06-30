@@ -101,9 +101,9 @@ Section SIMMODSEM.
     }
     econs; ss.
     { unfold NewStack2.new_body, cfun. init. harg. fold wf. mDesAll. des; clarify.
-      rewrite Any.upcast_downcast in *. steps. rewrite Any.upcast_downcast in *. clarify.
+      steps.
       astart 0. astop. steps.
-      rename g into stk_mgr0. rename x0 into h. rename a0 into stk_res0. rename x into P. des_u.
+      rename a into stk_mgr0. rename x0 into h. rename a0 into stk_res0. rename x into P. des_u.
       force_l. exists ((Vptr h 0)↑). steps.
       mOwnWf "O".
       (* assert(WF1: forall k, stk_res0 k <> Excl.boom). *)
@@ -129,9 +129,9 @@ Section SIMMODSEM.
     }
     econs; ss.
     { unfold NewStack2.pop_body, cfun. init. harg. fold wf. des_ifs_safe. mDesAll. des; clarify.
-      rewrite Any.upcast_downcast in *. steps. rewrite Any.upcast_downcast in *. clarify.
+      steps.
       astart 1. steps.
-      rename g into stk_mgr0. rename n into h. rename a0 into stk_res0.
+      rename a into stk_mgr0. rename n into h. rename a0 into stk_res0.
       mCombine "O" "A".
       mOwnWf "O".
       (* assert(A: forall k, URA.wf ((stk_res0 k): URA.car (t:=Excl.t _))). *)
@@ -163,8 +163,8 @@ Section SIMMODSEM.
     }
     econs; ss.
     { unfold NewStack2.push_body, cfun. init. harg. fold wf. des_ifs_safe. mDesAll. des; clarify.
-      rewrite Any.upcast_downcast in *. steps. rewrite Any.upcast_downcast in *. clarify.
-      rename g into stk_mgr0. rename n into h. rename a1 into stk_res0. rename a into x.
+      steps.
+      rename a0 into stk_mgr0. rename n into h. rename a1 into stk_res0. rename a into x.
       mCombine "O" "PRE".
       mOwnWf "O".
       assert(A: forall k, URA.wf ((stk_res0 k): URA.car (t:=Opt.t (Ag.t _)))).

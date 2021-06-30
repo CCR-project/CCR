@@ -113,7 +113,7 @@ Section SIMMODSEM.
         iApply (echo_ra_white with "INV PRE"). }
       mDesAll. mAssertPure _.
       { iApply (echo_ra_merge with "INV PRE"). }
-      des; subst. rewrite Any.upcast_downcast. steps.
+      des; subst.
 
       destruct ( to_stb (StackStb ++ ClientStb ++ MemStb ++ EchoStb) "getint") eqn:T; stb_tac; clarify.
       steps. hcall _ _ _ with "PRE"; et.
@@ -143,7 +143,7 @@ Section SIMMODSEM.
         iModIntro. iSplitL; ss. et.
       }
       { des_sumbool. ss. }
-      { steps. rewrite Any.upcast_downcast. steps. astart 1. acatch.
+      { steps. astart 1. acatch.
 
         hcall _ (_, _) _ with "- INV"; ss.
         { iModIntro. iSplitL "INV1"; ss.
@@ -191,15 +191,14 @@ Section SIMMODSEM.
       { iApply (echo_ra_merge with "INV PRE"). }
       des; subst.
 
-      rewrite Any.upcast_downcast. steps. destruct a.
+      destruct a.
       { rewrite unfold_is_list in ACC. ss.
         mPure "A". subst. ss.
-        steps. rewrite Any.upcast_downcast. steps. hret _; ss.
+        steps. hret _; ss.
         iModIntro. iSplitL; et.
       }
       rewrite unfold_is_list in ACC. ss. mDesAll. subst. ss.
 
-      rewrite Any.upcast_downcast.
       steps. astart 10. acatch. hcall _ 1 _ with "PRE"; ss.
       { iModIntro. iSplitL; ss; et. }
       { split; ss. }

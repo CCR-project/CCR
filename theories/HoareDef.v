@@ -327,11 +327,12 @@ Section CANCEL.
   .
 
   Definition handle_pE_tgt: pE ~> itree Es :=
-    fun _ e =>
-      match e with
-      | PPut st => pput st
-      | PGet => pget
-      end.
+    Eval unfold pput, pget in
+      (fun _ e =>
+         match e with
+         | PPut st => pput st
+         | PGet => pget
+         end).
 
   Definition interp_hCallE_tgt (ord_cur: ord): itree Es' ~> stateT (Σ * Σ) (itree Es) :=
     interp_state (case_ (bif:=sum1) (handle_hCallE_tgt ord_cur)

@@ -79,20 +79,20 @@ Section SIMMODSEM.
       hcall _ (Some _) _ with "A"; ss; et.
       { iModIntro. iSplits; ss; et. }
       { ss. }
-      post_call. steps. rewrite Any.upcast_downcast. steps.
+      post_call. steps.
       erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.
       hcall _ (Some _) _ with "A"; ss; et.
       { iModIntro. iSplits; ss; et. }
       { ss. }
-      post_call. steps. rewrite Any.upcast_downcast. steps.
+      post_call. steps.
       hret _; ss.
     }
     econs; ss.
     { unfold NewEcho0.input_body, input_body, cfun, kcall, ccall. init. harg. post_call.
       unfold KModSem.transl_fun_tgt.
       destruct x; des_ifs_safe; mDesAll; ss; des; subst; cycle 1.
-      { rewrite Any.pair_split. steps. rewrite ! Any.upcast_downcast. steps. }
-      rewrite Any.pair_split. steps. rewrite ! Any.upcast_downcast in *. clarify. steps.
+      { rewrite Any.pair_split. steps. }
+      rewrite Any.pair_split. steps.
       erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.
       hcall _ (Some _) _ with ""; ss; et.
       post_call. steps. rewrite _UNWRAPN. steps.
@@ -111,7 +111,7 @@ Section SIMMODSEM.
         hcall _ (Some _) _ with "-"; ss; et.
         { iModIntro. iSplits; ss; et. }
         { ss. }
-        post_call. steps. rewrite Any.upcast_downcast. steps.
+        post_call. steps. 
         hret _; ss.
         { iModIntro. iSplits; ss; et. }
     }
@@ -119,8 +119,8 @@ Section SIMMODSEM.
     { unfold NewEcho0.output_body, output_body, cfun, kcall, ccall. init. harg. post_call.
       unfold KModSem.transl_fun_tgt.
       destruct x; des_ifs_safe; mDesAll; ss; des; subst; cycle 1.
-      { rewrite Any.pair_split. steps. rewrite ! Any.upcast_downcast. steps. }
-      rewrite Any.pair_split. steps. rewrite ! Any.upcast_downcast in *. clarify. steps.
+      { rewrite Any.pair_split. steps. }
+      rewrite Any.pair_split.  steps.
       kstart 1. kcatch.
       { erewrite STBINCL; ss. stb_tac; ss. }
       hcall _ (Some (_, _)) _ with "-"; ss; et.
@@ -139,7 +139,7 @@ Section SIMMODSEM.
         hcall _ (Some _) _ with "-"; ss; et.
         { iModIntro. iSplits; ss; et. }
         { ss. }
-        post_call. steps. rewrite Any.upcast_downcast. steps.
+        post_call. steps. 
         hret _; ss.
         { iModIntro. iSplits; ss; et. }
     }

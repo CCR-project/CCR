@@ -283,7 +283,6 @@ Section HLEMMAS.
     }
     des. exists (rarg_src, fr_src0', mr_src0').
     repeat (ired_both; gstep; econs; eauto with ord_step).
-    rewrite Any.pair_split.
     repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
     { r_wf UPDATABLE0. }
     repeat (ired_both; gstep; econs; eauto with ord_step). exists x_tgt.
@@ -296,7 +295,6 @@ Section HLEMMAS.
     i. exists (o_new + 20)%ord.
     repeat (ired_both; gstep; econs; eauto with ord_step). i. destruct x0.
     repeat (ired_both; gstep; econs; eauto with ord_step). inv WF.
-    rewrite Any.pair_split. ired_both. rewrite Any.upcast_downcast.
     repeat (ired_both; gstep; econs; eauto with ord_step). i.
     repeat (ired_both; gstep; econs; eauto with ord_step). i.
     repeat (ired_both; gstep; econs; eauto with ord_step). i.
@@ -481,7 +479,6 @@ Section HLEMMAS.
     repeat (ired_both; gstep; econs; eauto with ord_step). intro varg_src.
     repeat (ired_both; gstep; econs; eauto with ord_step). intros (rarg_src, ctx).
     repeat (ired_both; gstep; econs; eauto with ord_step).
-    rewrite Any.pair_split. ired_both. rewrite Any.upcast_downcast.
     repeat (ired_both; gstep; econs; eauto with ord_step). intro VALID.
     repeat (ired_both; gstep; econs; eauto with ord_step). intro ord_cur.
     repeat (ired_both; gstep; econs; eauto with ord_step). i.
@@ -538,7 +535,6 @@ Section HLEMMAS.
     }
     des. exists (rret_src, mr_src1).
     repeat (ired_both; gstep; econs; eauto with ord_step).
-    rewrite Any.pair_split.
     repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits.
     { r_wf UPDATABLE0. }
     repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.

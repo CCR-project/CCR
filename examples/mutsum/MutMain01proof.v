@@ -42,7 +42,7 @@ Section SIMMODSEM.
     2: { exists tt. red. econs; ss. red. uipropall. }
     econs; ss. init.
     unfold mainF, mainBody. harg.
-    mDesAll. des; clarify. steps. rewrite Any.upcast_downcast. steps.
+    mDesAll. des; clarify. steps. steps.
     hcall _ _ tt with "*"; ss.
     { iPureIntro. esplits; eauto.
       { instantiate (1:=10). ss. }

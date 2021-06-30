@@ -624,19 +624,11 @@ Section ADQ.
     {
       destruct s; ss.
       { resub. rewrite massage_itr_pe. destruct p; ss.
-        - ired_both. unfold pget, pput. steps.
-          rewrite Any.pair_split in *. clarify.
-          gbase. eapply CIH; et.
-        - ired_both. unfold pget, pput. resub. ired_both.
-          force_r. ired_both. _step. ired_both. _step. steps.
-
-steps.
-          rewrite Any.pair_split in *. clarify.
-          gbase. eapply CIH; et.
-        - resub. ired_both. resub. steps. rewrite Any.pair_split. steps. gbase. eapply CIH; et.
+        - steps. gbase. eapply CIH; et.
+        - steps. gbase. eapply CIH; et.
       }
       { destruct e; ss.
-        - resub. ired_both. resub.
+        - resub. steps. resub. ired_both. resub.
           gstep. eapply sim_itree_tau_tgt; eauto with ord_step.
           ired_both. gstep; econs; et. i. esplits; et. steps. gbase. eapply CIH; et.
         - resub. ired_both. resub.

@@ -215,7 +215,7 @@ Section SIMMODSEM.
     econs; ss.
     { unfold NewStack2.new_body, cfun. init. harg. post_call.
       destruct x; des_ifs_safe; mDesAll; ss; des; subst.
-      - steps. rewrite Any.upcast_downcast in *. clarify. steps. rewrite Any.upcast_downcast in *. clarify.
+      - steps.
         post_call.
         rename x into h.
         astart 0. astop. steps. force_l. eexists. steps.
@@ -246,13 +246,9 @@ Section SIMMODSEM.
           rewrite add_disj_insert; ss. eapply sim_fresh_k; et.
         }
       - unfold KModSem.transl_fun_tgt, new_body. cbn. steps.
-        rewrite Any.pair_split. steps. rewrite Any.upcast_downcast. steps. rewrite _UNWRAPN. steps.
-        rewrite Any.upcast_downcast in *. clarify.
         rename x into h. force_l. exists h. steps.
-        unfold pget. steps. rewrite Any.pair_split in *. clarify.
-        rewrite Any.upcast_downcast. steps.
+        unfold pget. steps.
         assert(S:=SIM h). rewrite _GUARANTEE in *. inv S; ss. force_l; ss. steps.
-        unfold pput. steps. rewrite Any.pair_split in *. clarify.
 
         hret _; ss.
         iModIntro. iSplits; ss; et. iPureIntro. eapply sim_fresh_u; et.
@@ -262,7 +258,6 @@ Section SIMMODSEM.
     { unfold NewStack2.pop_body, cfun. init. harg. post_call.
       destruct x; des_ifs_safe; mDesAll; ss; des; subst.
       - unfold KModSem.transl_fun_tgt. steps.
-        rewrite Any.upcast_downcast in *. clarify. steps. rewrite Any.upcast_downcast in *. clarify.
         renamer. rename n into h. rename l into stk0.
 
         mCombine "O" "A1".
@@ -306,9 +301,6 @@ Section SIMMODSEM.
           force_l. esplits. steps. hret _; ss.
           iModIntro. iFrame. iSplitL "A"; ss; et.
       - unfold KModSem.transl_fun_tgt, pop_body. cbn. steps.
-        rewrite Any.pair_split. steps. rewrite Any.upcast_downcast. steps. rewrite _UNWRAPN. steps.
-        rewrite Any.upcast_downcast in *. clarify. unfold pget. steps.
-        rewrite Any.pair_split in *. clarify. rewrite Any.upcast_downcast. steps.
         rename n into h. rename l into stk0. destruct v; ss. des_ifs_safe.
         assert(S:=SIM h). rewrite _UNWRAPU0 in *. inv S; ss. steps.
         destruct stk0 as [|x stk1].
@@ -323,7 +315,6 @@ Section SIMMODSEM.
     { unfold NewStack2.push_body, cfun. init. harg. post_call.
       destruct x; des_ifs_safe; mDesAll; ss; des; subst.
       - unfold KModSem.transl_fun_tgt. steps.
-        rewrite Any.upcast_downcast in *. clarify. steps. rewrite ! Any.upcast_downcast in *. clarify. steps.
         renamer. rename n into h. rename l into stk0. rename v into x.
         mCombine "O" "A1".
         mOwnWf "O".
@@ -362,9 +353,6 @@ Section SIMMODSEM.
         force_l. esplits. steps. hret _; ss.
         iModIntro. iFrame. iSplitL "A"; ss; et.
       - unfold KModSem.transl_fun_tgt, push_body. cbn. steps.
-        rewrite Any.pair_split. steps. rewrite Any.upcast_downcast. steps. rewrite _UNWRAPN. steps.
-        rewrite Any.upcast_downcast in *. clarify. unfold pget. steps.
-        rewrite Any.pair_split in *. clarify. rewrite Any.upcast_downcast. steps.
         rename n into h. rename l into stk0. destruct v; ss. des_ifs_safe.
         assert(S:=SIM h). rewrite _UNWRAPU in *. inv S; ss. steps.
         unfold pput. steps.

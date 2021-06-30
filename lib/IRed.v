@@ -2,6 +2,7 @@ Require Import Red.
 Require Import Coqlib.
 Require Import ITreelib.
 Require Import ModSem.
+Require Import Any.
 
 Local Open Scope nat_scope.
 
@@ -176,6 +177,17 @@ Ltac _red_itree f :=
   end.
 
 Ltac __red_interp f term :=
+  match term with
+  | unwrapU (@Any.downcast ?A (@Any.upcast ?A ?a)) =>
+    instantiate (f:=_continue); apply f_equal; apply Any.upcast_downcast; fail
+  | unwrapU (Any.split (Any.pair ?a0 ?a1)) =>
+    instantiate (f:=_continue); apply f_equal; apply Any.pair_split; fail
+  | unwrapN (@Any.downcast ?A (@Any.upcast ?A ?a)) =>
+    instantiate (f:=_continue); apply f_equal; apply Any.upcast_downcast; fail
+  | unwrapN (Any.split (Any.pair ?a0 ?a1)) =>
+    instantiate (f:=_continue); apply f_equal; apply Any.pair_split; fail
+  | _ =>
+
   (* idtac "__red_interp"; *)
   (* idtac term; *)
   let my_interp := get_head2 term in
@@ -194,37 +206,37 @@ Ltac __red_interp f term :=
     match goal with | name := mk_box ?lemma |- _ => first[apply (@lemma _ _ i0 k0)|apply lemma] end
   | Tau _ =>
     instantiate (f:=_continue); pose (rdb_tau tc) as name; cbn in name;
-    match goal with | name := mk_box ?lemma |- _ => apply lemma; fail end
+    match goal with | name := mk_box ?lemma |- _ => apply lemma; fail 2 end
   | Ret _ =>
     (* idtac "ret"; *)
     instantiate (f:=_continue); pose (rdb_ret tc) as name; cbn in name;
-    match goal with | name := mk_box ?lemma |- _ => apply lemma; fail end
+    match goal with | name := mk_box ?lemma |- _ => apply lemma; fail 2 end
   | trigger ?e =>
     instantiate (f:=_continue);
-    ((pose (rdb_trigger0 tc) as name; cbn in name; match goal with | name := mk_box ?lemma |- _ => apply lemma; fail end) ||
-     (pose (rdb_trigger1 tc) as name; cbn in name; match goal with | name := mk_box ?lemma |- _ => apply lemma; fail end) ||
-     (pose (rdb_trigger2 tc) as name; cbn in name; match goal with | name := mk_box ?lemma |- _ => apply lemma; fail end) ||
-     (pose (rdb_trigger3 tc) as name; cbn in name; match goal with | name := mk_box ?lemma |- _ => apply lemma; fail end) ||
-     fail 2
+    ((pose (rdb_trigger0 tc) as name; cbn in name; match goal with | name := mk_box ?lemma |- _ => apply lemma; fail 2 end) ||
+     (pose (rdb_trigger1 tc) as name; cbn in name; match goal with | name := mk_box ?lemma |- _ => apply lemma; fail 2 end) ||
+     (pose (rdb_trigger2 tc) as name; cbn in name; match goal with | name := mk_box ?lemma |- _ => apply lemma; fail 2 end) ||
+     (pose (rdb_trigger3 tc) as name; cbn in name; match goal with | name := mk_box ?lemma |- _ => apply lemma; fail 2 end) ||
+     fail 3
     )
   | triggerUB =>
     instantiate (f:=_continue); pose (rdb_UB tc) as name; cbn in name;
-    match goal with | name := mk_box ?lemma |- _ => apply lemma; fail end
+    match goal with | name := mk_box ?lemma |- _ => apply lemma; fail 2 end
   | triggerNB =>
     instantiate (f:=_continue); pose (rdb_NB tc) as name; cbn in name;
-    match goal with | name := mk_box ?lemma |- _ => apply lemma; fail end
+    match goal with | name := mk_box ?lemma |- _ => apply lemma; fail 2 end
   | unwrapU _ =>
     instantiate (f:=_continue); pose (rdb_unwrapU tc) as name; cbn in name;
-    match goal with | name := mk_box ?lemma |- _ => apply lemma; fail end
+    match goal with | name := mk_box ?lemma |- _ => apply lemma; fail 2 end
   | unwrapN _ =>
     instantiate (f:=_continue); pose (rdb_unwrapN tc) as name; cbn in name;
-    match goal with | name := mk_box ?lemma |- _ => apply lemma; fail end
+    match goal with | name := mk_box ?lemma |- _ => apply lemma; fail 2 end
   | assume _ =>
     instantiate (f:=_continue); pose (rdb_assume tc) as name; cbn in name;
-    match goal with | name := mk_box ?lemma |- _ => apply lemma; fail end
+    match goal with | name := mk_box ?lemma |- _ => apply lemma; fail 2 end
   | guarantee _ =>
     instantiate (f:=_continue); pose (rdb_guarantee tc) as name; cbn in name;
-    match goal with | name := mk_box ?lemma |- _ => apply lemma; fail end
+    match goal with | name := mk_box ?lemma |- _ => apply lemma; fail 2 end
   | ?term =>
     (* idtac "term"; *)
     pose (rdb_ext tc) as name; cbn in name;
@@ -232,6 +244,7 @@ Ltac __red_interp f term :=
     subst tc;
     __red_interp f term
   end
+end
 .
 
 Ltac _red_interp f :=

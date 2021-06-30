@@ -398,14 +398,14 @@ Section CANCEL.
       destruct s; ss.
       {
         destruct p; ss.
-        - resub. seal_left. steps. unfold pput. unseal_left. steps.
-          erewrite zip_state_get; et. rewrite Any.pair_split. steps.
+        - resub. steps.
+          erewrite zip_state_get; et. steps.
           gbase. eapply CIH; ss.
           extensionality mn0. unfold update, zip_state. des_ifs.
           exfalso. eapply in_map_iff in MIN. des. destruct x. subst.
           eapply alist_find_none in Heq. et.
-        - resub. seal_left. steps. unfold pget. unseal_left. steps.
-          erewrite zip_state_get; et. rewrite Any.pair_split. steps.
+        - resub. steps.
+          erewrite zip_state_get; et. steps.
           gbase. eapply CIH; ss.
       }
       { dependent destruction e.
@@ -423,7 +423,7 @@ Section CANCEL.
     steps. hexploit (stb_find_iff fn). i. des.
     { rewrite NONE. steps. }
     { rewrite FIND. unfold HoareCall, mput, mget. steps.
-      erewrite zip_state_get; et. rewrite Any.pair_split. steps.
+      erewrite zip_state_get; et. steps.
       des; clarify. destruct tbr; ss.
       { exfalso. hexploit TRIVIAL; et. i. subst. ss. hexploit x5; ss. }
       seal_right. unseal_left. steps. rewrite FIND. steps. esplits; et.
@@ -480,13 +480,10 @@ Section CANCEL.
       unfold fun_to_src, fun_to_tgt, compose. des_ifs. unfold HoareFun, mget, mput.
       rename x3 into PRECOND. rename c0 into rarg.
       steps. exists x0.
-      steps. exists varg_src.
-      rewrite Any.pair_split. ired_both.
-      rewrite Any.upcast_downcast. ired_both. steps.
+      steps. exists varg_src. steps.
       eexists (rarg, c1 ⋅ (frs ⋅ rsum_minus mn0 (update mrs0 mn c))).
       steps. erewrite ! zip_state_mput; et.
-      erewrite zip_state_get; et.
-      rewrite Any.pair_split. steps. rewrite Any.upcast_downcast. steps.
+      erewrite zip_state_get; et. steps.
       assert (RWF0: URA.wf (rarg ⋅ (c1 ⋅ (frs ⋅ rsum_minus mn0 (update mrs0 mn c))) ⋅ update mrs0 mn c mn0)).
       { r_wf x. symmetry. eapply rsum_minus_update; et. }
       unshelve esplits; eauto.
@@ -507,7 +504,7 @@ Section CANCEL.
     { ii. ss. des_ifs_safe. des. subst.
       steps. eexists (rret, frs ⋅ rsum_minus mn mrs1). steps.
       rewrite zip_state_get; et.
-      rewrite Any.pair_split. steps. rewrite Any.upcast_downcast. steps.
+      rewrite Any.pair_split. steps.
       unshelve esplits; et.
       { r_wf RWF0. }
       steps. exists t. steps. unshelve esplits; et.
@@ -580,10 +577,9 @@ Section CANCEL.
     unfold Any_src, Any_mid, Any_tgt in *. rewrite FINDTGT. rewrite FINDMID. steps.
     eexists. steps. eexists. steps.
     eexists (entry_r, rsum_minus (SModSem.mn (SMod.get_modsem md sk)) initial_mrs).
-    steps. rewrite Any.pair_split.
-    unfold mput, mget. steps.
+    steps. unfold mput, mget. steps.
     rewrite zip_state_get; et.
-    rewrite Any.pair_split. steps. rewrite ! Any.upcast_downcast. steps.
+    rewrite Any.pair_split. steps.
     assert (RWF: URA.wf (entry_r ⋅ rsum_minus (SModSem.mn (SMod.get_modsem md sk)) initial_mrs ⋅ initial_mrs (SModSem.mn (SMod.get_modsem md sk)))).
     { r_wf WFR. eapply initial_rsum_minus. }
     unshelve esplits; et.

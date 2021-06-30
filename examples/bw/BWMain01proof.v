@@ -48,8 +48,7 @@ Section SIMMODSEM.
 
     econs; ss.
     { unfold mainbody, mainF, ccall, hcall. init. harg.
-      mDesAll. des; clarify.
-      steps. rewrite Any.upcast_downcast in *. clarify.
+      mDesAll. des; clarify. steps.
       destruct (to_stb (BWStb ++ ClientStb ++ MainStb) "getbool") eqn:T; unfold to_stb in T; stb_tac; clarify.
       steps. hcall _ _ _ with ""; ss.
       { splits; ss. ss. }
@@ -79,8 +78,7 @@ Section SIMMODSEM.
       { steps. acatch.
         hcall _ _ _ with "*"; auto.
         { eauto with ord_step. }
-        mDesAll. clarify. steps.
-        rewrite Any.upcast_downcast in *. clarify. astop.
+        mDesAll. clarify. steps. astop.
         steps. force_l. eexists. steps.
         force_l; et. steps.
         destruct (to_stb (BWStb ++ ClientStb ++ MainStb) "putint") eqn:T; stb_tac; clarify.
