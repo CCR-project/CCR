@@ -115,12 +115,12 @@ struct Node* pop2(struct Node* ll, int *n) {
 //// client
 int getint() {
   int n;
-  scanf("%d", &n);
+  scan("%d", &n);
   return n;
 }
 
 void putint(int n) {
-  printf("%d\t", n);
+  print("%d\t", n);
 }
 
 

@@ -13,12 +13,12 @@ Set Implicit Arguments.
 
 
 Definition getintF {E} `{eventE -< E}:  list val -> itree E val :=
-  fun _ => trigger (Syscall "scanf" [] top1).
+  fun _ => trigger (Syscall "scan" [] top1).
 
 Definition putintF {E} `{eventE -< E}: list val -> itree E val :=
   fun varg =>
     `v: val <- (pargs [Tuntyped] varg)?;;
-    trigger (Syscall "printf" varg top1);;;
+    trigger (Syscall "print" varg top1);;;
     Ret Vundef
 .
 
