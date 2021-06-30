@@ -25,24 +25,23 @@ Definition modulus_64 := two_power_nat wordsize_64.
 Definition modulus_64_half := (modulus_64 / 2)%Z.
 Definition max_64 := (modulus_64_half - 1)%Z.
 Definition min_64 := (- modulus_64_half)%Z.
-Definition intrange_64 : Z -> Prop := fun z => (min_64 <= z <= max_64)%Z.
-Definition modrange_64 : Z -> Prop := fun z => (- 1 < z < modulus_64)%Z.
+
+(* Definition intrange_64 : Z -> Prop := fun z => (min_64 <= z <= max_64)%Z. *)
+(* Definition modrange_64 : Z -> Prop := fun z => (- 1 < z < modulus_64)%Z. *)
+Definition intrange_64 : Z -> bool := fun z => (Z_le_gt_dec min_64 z) && (Z_le_gt_dec z max_64).
+Definition modrange_64 : Z -> bool := fun z => (Z_le_gt_dec 0 z) && (Z_lt_ge_dec z modulus_64).
+
 
 Ltac unfold_intrange_64 := unfold intrange_64, min_64, max_64 in *; unfold modulus_64_half, modulus_64, wordsize_64 in *.
 Ltac unfold_modrange_64 := unfold modrange_64, modulus_64, wordsize_64 in *.
 
 Definition scale_ofs (ofs : Z) := (8 * ofs)%Z.
+
 Definition wf_val (v : val) :=
   match v with
   | Vint z => intrange_64 z
-  | Vptr _ z => intrange_64 (scale_ofs z)
-  | Vundef => False
-  end.
-
-Definition wf_ofs_size (v : val) :=
-  match v with
-  | Vint z => modrange_64 (scale_ofs z)
-  | _ => False
+  | Vptr _ z => modrange_64 (scale_ofs z)
+  | Vundef => false
   end.
 
 (* Notation ofs0 := 0%Z. *)

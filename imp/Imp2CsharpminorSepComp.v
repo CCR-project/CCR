@@ -486,14 +486,19 @@ Section PROOFSINGLE.
     hexploit tgt_genv_find_def_by_blk; eauto. i. rename H into TGTMAIN. ss; clarify.
     match goal with [H: Genv.find_def _ _ = Some (Gfun (Internal ?tf)) |- _ ] => set (tmainf:=tf) in * end.
     unfold cfun. rewrite Any.upcast_downcast. grind. rewrite unfold_eval_imp_only.
-    sim_red. unfold assume. sim_red.
-    pfold. econs 5; ss; eauto; i. dtm H H0.
-    eapply angelic_step in STEP; des; clarify.
-    eexists; split; [ord_step2|auto]. left. rename STEP0 into WF_MAIN.
-    do 3 (pfold; sim_tau; left). sim_red.
+    sim_red.
+    (* unfold assume. sim_red. *)
+    (* pfold. econs 5; ss; eauto; i. dtm H H0. *)
+    (* eapply angelic_step in STEP; des; clarify. *)
+    (* eexists; split; [ord_step2|auto]. left. rename STEP0 into WF_MAIN. *)
+    (* do 4 (pfold; sim_tau; left). sim_red. *)
+    des_ifs.
+    2,3: sim_triggerUB.
+    rename n into WF_MAIN.
 
-    des_ifs; grind; sim_red.
-    2:{ sim_triggerUB. }
+    (* des_ifs; grind; sim_red. *)
+    (* 2:{ sim_triggerUB. } *)
+    grind; sim_red.
     assert (MAINPARAM: fn_params smain = []).
     { depgen Heq. clear. i. remember (fn_params smain) as m. clear Heqm. depgen l. induction m; i; ss; clarify. }
     rename l into sle, Heq into INITARGS. rewrite MAINPARAM in INITARGS. ss. clarify.
