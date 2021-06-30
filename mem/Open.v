@@ -525,7 +525,7 @@ Section RDB.
   .
   Global Program Instance transl_itr_rdb: red_database (mk_box (@massage_itr)) :=
     mk_rdb
-      1
+      0
       (mk_box massage_itr_bind)
       (mk_box massage_itr_tau)
       (mk_box massage_itr_ret)
@@ -618,7 +618,7 @@ Section ADQ.
   .
   Proof.
     ginit. revert_until ske. gcofix CIH. i. ides itr.
-    { steps. rewrite massage_itr_ret. steps. }
+    { steps. }
     { rewrite massage_itr_tau. steps. gbase. eapply CIH; et. }
     rewrite <- bind_trigger. rewrite massage_itr_bind. (* TODO: why reduction tactic doesn't work?? *)
     destruct e; cycle 1.
@@ -847,44 +847,30 @@ Section ADQ.
       { gsteps. gbase. eapply CIH. right. econs. auto. }
       rewrite <- bind_trigger. destruct e.
       { resub. destruct c. gsteps.
-        gsteps. destruct mr.
-        { gsteps. }
         gsteps. hexploit (stb_find_iff_mid fn). i. des.
         { rewrite SRC. rewrite TGT. gsteps. }
         { rewrite SRC. rewrite TGT. gsteps.
           unfold my_if, sumbool_to_bool. des_ifs.
           unfold fun_to_src, body_to_src. rewrite Any.pair_split. gsteps.
-          rewrite Any.upcast_downcast. gsteps.
           guclo bindC_spec. econs.
           { gbase. eapply CIH. left. econs. auto. }
-          i. subst. destruct vret_tgt as [[[fr0 mr0] mp0] retv].
-          gsteps. destruct mr0; gsteps.
+          i. subst. destruct vret_tgt as [mp0 retv].
+          gsteps.
           gbase. eapply CIH. right. econs. auto.
         }
         { rewrite SRC. rewrite TGT. gsteps.
           unfold fun_to_src, body_to_src. rewrite Any.pair_split. gsteps.
           guclo bindC_spec. econs.
           { gbase. eapply CIH. right. econs. auto. }
-          i. subst. destruct vret_tgt as [[[fr0 mr0] mp0] retv].
-          gsteps. destruct mr0; gsteps.
+          i. subst. destruct vret_tgt as [mp0 retv].
+          gsteps.
           gbase. eapply CIH. right. econs. auto.
         }
       }
       destruct s.
-      { resub. destruct r1.
-        { gsteps. destruct (Any.split (mp mn)); gsteps.
-          gbase. eapply CIH. right. econs. auto. }
-        { gsteps. gbase. eapply CIH. right. econs. auto. }
-        { gsteps. destruct (Any.split (mp mn)); gsteps. destruct (Any.downcast t); gsteps.
-          gbase. eapply CIH. right. econs. auto. }
-        { gsteps. gbase. eapply CIH. right. econs. auto. }
-      }
-      destruct s.
       { resub. destruct p.
-        { gsteps. destruct (Any.split (mp mn)); gsteps.
-          gbase. eapply CIH. right. econs. auto. }
-        { gsteps. destruct (Any.split (mp mn)); gsteps.
-          gbase. eapply CIH. right. econs. auto. }
+        { gsteps. gbase. eapply CIH. right. econs. auto. }
+        { gsteps. gbase. eapply CIH. right. econs. auto. }
       }
       { resub. destruct e.
         { gsteps. exists x_tgt. gsteps.
@@ -927,12 +913,12 @@ Section ADQ.
 
   Lemma my_lemma2_initial_state
     :
-      (ModSemL.initial_r_state (ModL.enclose prog_mid), ModSemL.initial_p_state (ModL.enclose prog_mid))
+      (ModSemL.initial_p_state (ModL.enclose prog_mid))
       =
-      (ModSemL.initial_r_state (ModL.enclose prog_tgt), ModSemL.initial_p_state (ModL.enclose prog_tgt)).
+      (ModSemL.initial_p_state (ModL.enclose prog_tgt)).
   Proof.
     unfold ModL.enclose.
-    unfold ModSemL.initial_r_state, ModSemL.initial_p_state.
+    unfold ModSemL.initial_p_state.
     rewrite my_lemma2_initial_mrs. auto.
   Qed.
 
@@ -974,7 +960,6 @@ Section ADQ.
     { rewrite SRC. rewrite TGT. gsteps.
       unfold my_if, sumbool_to_bool. des_ifs.
       unfold fun_to_src, body_to_src. rewrite Any.pair_split. gsteps.
-      rewrite Any.upcast_downcast. gsteps.
       guclo bindC_spec. econs.
       { gfinal. right.
         rewrite my_lemma2_initial_state. eapply my_lemma2_aux. left. econs. ss. }
@@ -996,8 +981,7 @@ Section ADQ.
       ModPair.sim (addtau_md md) (SMod.to_src (massage_md false md)).
   Proof.
     econs; ss. i.
-    eapply ModSemPair.mk with (wf:=fun (_: unit) '((mr_src, mp_src), (mr_tgt, mp_tgt)) =>
-                                     mp_tgt = Any.pair mr_src↑ mp_src) (le:=top2).
+    eapply ModSemPair.mk with (wf:=fun (_: unit) '(mp_src, mp_tgt) => mp_src = mp_tgt) (le:=top2).
     { ss. }
     { ss. rewrite ! map_map.
       eapply Forall2_apply_Forall2.
@@ -1005,74 +989,38 @@ Section ADQ.
       i. subst. destruct b as [fn f]. ss. econs.
       { ss. }
       ii. subst.
-      destruct mrs_src as [mr_src mp_src]. destruct mrs_tgt as [mr_tgt mp_tgt]. subst.
       exists 100. ginit. unfold fun_to_src, body_to_src. ss. destruct y.
-      rewrite interp_src_bind.
-      guclo @lordC_spec. econs.
-      { instantiate (1:=(50+50)%ord). rewrite <- OrdArith.add_from_nat. refl. }
-      unfold addtau_ktr. erewrite (idK_spec (addtau (f (o, t)))).
-      guclo @lbindC_spec. econs.
-      { instantiate (1:=tt).
-        instantiate (1:=fun '(mr_src, mp_src, fr_src) '(mr_tgt, mp_tgt, fr_tgt) ret_src ret_tgt => mp_tgt = Any.pair mr_src↑ mp_src /\ snd ret_tgt = ret_src).
-        generalize (f (o, t)). generalize (@URA.unit (GRA.to_URA Σ)) at 1 3.
-        revert mr_src mp_src mr_tgt.
-        gcofix CIH. i. ides i.
-        { steps. }
-        { steps. gbase. eapply CIH. }
-        rewrite <- bind_trigger. destruct e.
-        { resub. destruct c0. steps. gstep. econs; et. i.
-          exists 100. steps. gbase. destruct w1. eapply CIH.
-        }
-        destruct s.
-        { resub. destruct r0.
-          { ired_both. force_r. steps.
-            { instantiate (1:=100). shelve. }
-            rewrite Any.pair_split in *. clarify.
-            gbase. eapply CIH.
-          }
-          { ired_both. steps. gbase. eapply CIH. }
-          { ired_both. force_r. steps.
-            { instantiate (1:=100). shelve. }
-            rewrite Any.pair_split in *. clarify.
-            rewrite Any.upcast_downcast in *. clarify.
-            gbase. eapply CIH.
-          }
-          { ired_both. steps. gbase. eapply CIH. }
-        }
-        destruct s.
-        { resub. destruct p.
-          { ired_both. force_r. steps.
-            { instantiate (1:=100). shelve. }
-            steps. rewrite Any.pair_split in *. clarify.
-            gbase. eapply CIH. }
-          { ired_both. force_r. steps.
-            { instantiate (1:=100). shelve. }
-            rewrite Any.pair_split in *. clarify.
-            gbase. eapply CIH.
-          }
-        }
-        { resub. destruct e.
-          { ired_both. resub. force_r. i. steps. force_l. exists x. steps.
-            gbase. eapply CIH. }
-          { ired_both. resub. force_l. force_l. i.
-            force_r. exists x. steps. gbase. eapply CIH. }
-          { ired_both. resub. steps. gstep. econs. i. esplits.
-            steps. gbase. eapply CIH.
-          }
+      unfold addtau_ktr.
+      generalize (f (o, t)).
+      revert mrs_tgt.
+      gcofix CIH. i. ides i.
+      { steps. }
+      { steps. gbase. eapply CIH. }
+      rewrite <- bind_trigger. destruct e.
+      { resub. destruct c. steps. gstep. econs; et. i.
+        exists 100. steps. gbase. destruct w1. eapply CIH.
+      }
+      destruct s.
+      { resub. destruct p.
+        { ired_both. force_r. steps.
+          gbase. eapply CIH. }
+        { ired_both. force_r. steps.
+          gbase. eapply CIH.
         }
       }
-      { i. unfold idK.
-        destruct vret_tgt. ss. destruct st_src1, st_tgt1. destruct p, p0.
-        ss. des. clarify. steps.
+      { resub. destruct e.
+        { ired_both. resub. force_r. i. steps. force_l. exists x. steps.
+          gbase. eapply CIH. }
+        { ired_both. resub. force_l. force_l. i.
+          force_r. exists x. steps. gbase. eapply CIH. }
+        { ired_both. resub. steps. gstep. econs. i. esplits.
+          steps. gbase. eapply CIH.
+        }
       }
     }
     { ss. }
     { exists tt. ss. }
-    Unshelve. all: try (exact 0).
-    { rewrite <- ! OrdArith.add_from_nat. eapply OrdArith.lt_from_nat. lia. }
-    { rewrite <- ! OrdArith.add_from_nat. eapply OrdArith.lt_from_nat. lia. }
-    { rewrite <- ! OrdArith.add_from_nat. eapply OrdArith.lt_from_nat. lia. }
-    { rewrite <- ! OrdArith.add_from_nat. eapply OrdArith.lt_from_nat. lia. }
+  Unshelve. all: try (exact 0).
   Qed.
 
   Lemma my_lemma3:
