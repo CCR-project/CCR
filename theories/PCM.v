@@ -1132,11 +1132,12 @@ Ltac r_solve :=
     let a := r_first lhs in
     try rewrite <- (URA.add_comm a);
     repeat rewrite <- URA.add_assoc;
-    f_equal;
-    r_solve
-  | _ => reflexivity
+    try (eapply f_equal; r_solve)
+  | _ => try reflexivity
   end
 .
+
+Ltac r_wf H := eapply prop_ext_rev; [eapply f_equal|]; [|eapply H]; r_solve.
 
 Require Import Any.
 

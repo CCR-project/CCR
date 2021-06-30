@@ -194,7 +194,7 @@ Section CANCEL.
               end.
 
   Let rsum_minus (mn: mname): r_state -> Σ :=
-    fun mrs_tgt => (fold_left (⋅) (List.map ((update mrs_tgt mn ε) <*> fst) ms_tgt.(ModSemL.initial_mrs)) ε).
+    fun mrs_tgt => (fold_left (⋅) (List.map (update mrs_tgt mn ε) (List.map fst ms_tgt.(ModSemL.initial_mrs))) ε).
 
   Let rsum: r_state -> Σ :=
     fun mrs_tgt => (fold_left (⋅) (List.map (mrs_tgt <*> fst) ms_tgt.(ModSemL.initial_mrs)) ε).
@@ -281,13 +281,6 @@ Section CANCEL.
   (*   { r_solve. } *)
   (* Qed. *)
 
-  Let wf: W -> W -> r_state -> Prop :=
-    fun mps_src mps_tgt mrs_tgt =>
-      mps_src = zip_state mps_tgt mrs_tgt
-  .
-  Local Opaque rsum rsum_minus.
-
-
 
   Ltac ired_l := try (prw _red_gen 2 0).
   Ltac ired_r := try (prw _red_gen 1 0).
@@ -301,12 +294,6 @@ Section CANCEL.
 
 
 
-
-  (*** TODO: move to ITreelib ***)
-  (*** it inserts "subevent" ***)
-  (* Lemma bind_trigger: *)
-  (*   forall [E : Type -> Type] [R U : Type] (e : E U) (k : U -> itree E R), ` x : U <- trigger e;; k x = Vis e (fun x : U => k x). *)
-  (* Proof. i. eapply bind_trigger. Qed. *)
 
   Let zip_state_get st mrs mn
       (MIN: List.In mn (List.map fst ms_tgt.(ModSemL.initial_mrs)))
@@ -333,14 +320,48 @@ Section CANCEL.
     exfalso. eapply Heq. et.
   Qed.
 
-  (* Let zip_state_put st_tgt st_src mrs mn *)
-  (*     (ZIP: st_src = zip_state st_tgt mrs) *)
-  (*     (MIN: List.In mn (List.map fst ms_tgt.(ModSemL.initial_mrs))) *)
-  (*   : *)
-  (*     st_tgt mn = Any.pair (st_src mn) (mrs mn)↑. *)
-  (* Proof. *)
-  (*   admit "ez". *)
-  (* Qed. *)
+  Let rsum_update mn (mrs: r_state) r (mns: list mname) r0
+      (MIN: List.In mn mns)
+      (NODUP: NoDup mns)
+    :
+      (fold_left (⋅) (List.map (update mrs mn r) mns) r0) ⋅ (mrs mn)
+      =
+      (fold_left (⋅) (List.map mrs mns) r0) ⋅ r.
+  Proof.
+    revert mn mrs r r0 MIN NODUP. induction mns; ss. i.
+    inv NODUP. des.
+    { subst. rewrite fold_left_add. rewrite (fold_left_add (r0 ⋅ mrs mn)).
+      rewrite <- ! URA.add_assoc. f_equal.
+      { f_equal. apply map_ext_in. i.
+        unfold update. des_ifs. }
+      { unfold update. des_ifs. r_solve. }
+    }
+    { rewrite IHmns; et.
+      rewrite fold_left_add. rewrite (fold_left_add (r0 ⋅ mrs a)).
+      unfold update. des_ifs. }
+  Qed.
+
+  Lemma rsum_minus_update mn0 mn1 mrs r
+        (MIN0: List.In mn0 (List.map fst ms_tgt.(ModSemL.initial_mrs)))
+        (MIN1: List.In mn1 (List.map fst ms_tgt.(ModSemL.initial_mrs)))
+        (NODUP: NoDup (List.map fst ms_tgt.(ModSemL.initial_mrs)))
+    :
+      rsum_minus mn0 mrs ⋅ r = rsum_minus mn1 (update mrs mn0 r) ⋅ update mrs mn0 r mn1.
+  Proof.
+    unfold rsum_minus.
+    revert MIN0 MIN1 NODUP. generalize (List.map fst (ModSemL.initial_mrs ms_tgt)). i.
+    rewrite rsum_update; et.
+    transitivity (fold_left (⋅) (List.map (update (update mrs mn0 ε) mn0 r) l) ε ⋅ (update mrs mn0 ε mn0)).
+    { rewrite rsum_update; et. }
+    { f_equal.
+      { f_equal. f_equal. extensionality mn. unfold update. des_ifs. }
+      { unfold update. des_ifs. }
+    }
+  Qed.
+
+  Local Opaque rsum rsum_minus.
+
+
 
   Let adequacy_type_aux
       (NODUP: NoDup (List.map fst ms_tgt.(ModSemL.initial_mrs))):
@@ -466,9 +487,8 @@ Section CANCEL.
       steps. erewrite ! zip_state_mput; et.
       erewrite zip_state_get; et.
       rewrite Any.pair_split. steps. rewrite Any.upcast_downcast. steps.
-
       assert (RWF0: URA.wf (rarg ⋅ (c1 ⋅ (frs ⋅ rsum_minus mn0 (update mrs0 mn c))) ⋅ update mrs0 mn c mn0)).
-      { admit "ez". }
+      { r_wf x. symmetry. eapply rsum_minus_update; et. }
       unshelve esplits; eauto.
       steps. esplits; eauto. steps. unshelve esplits; eauto. steps.
       guclo ordC_spec. econs.
@@ -481,7 +501,7 @@ Section CANCEL.
         steps. rewrite zip_state_get; et.
         rewrite Any.pair_split. steps.
         esplits; ss; et.
-        { admit "ez". }
+        { r_wf x7. symmetry. eapply rsum_minus_update; et. }
       }
     }
     { ii. ss. des_ifs_safe. des. subst.
@@ -489,17 +509,10 @@ Section CANCEL.
       rewrite zip_state_get; et.
       rewrite Any.pair_split. steps. rewrite Any.upcast_downcast. steps.
       unshelve esplits; et.
-      { rewrite ! URA.add_assoc. rewrite ! URA.add_assoc in RWF0. et. }
+      { r_wf RWF0. }
       steps. exists t. steps. unshelve esplits; et.
       steps. gbase. eapply CIH; et.
-      { eapply URA.wf_mon.
-        { instantiate (1:=rret).
-          r_wf RWF0.
-
-          wf_tac. _solve.
-
-      { rewrite ! URA.add_assoc. rewrite ! URA.add_assoc in RWF0. et. }
-      { admit "ez". }
+      { r_wf RWF0. }
     }
   Unshelve.
     all: try (by exact 0).
@@ -516,6 +529,13 @@ Section CANCEL.
   Lemma initial_p_zip:
     zip_state (ModSemL.initial_p_state ms_mid) initial_mrs =
     ModSemL.initial_p_state ms_tgt.
+  Proof.
+    admit "ez".
+  Qed.
+
+  Lemma initial_rsum_minus mn
+    :
+      rsum_minus mn initial_mrs ⋅ initial_mrs mn = fold_left URA.add (List.map SModSem.initial_mr mss) ε.
   Proof.
     admit "ez".
   Qed.
@@ -554,8 +574,7 @@ Section CANCEL.
     esplits; et.
     { inv WF. econs; auto. rewrite fns_eq. auto. }
     { rewrite sk_eq. auto. }
-    steps. folder.
-    unfold mrec. rewrite <- initial_p_zip.
+    steps. fold ms_tgt ms_mid. rewrite <- initial_p_zip.
 
     Local Transparent ModSemL.prog. ss.
     unfold Any_src, Any_mid, Any_tgt in *. rewrite FINDTGT. rewrite FINDMID. steps.
@@ -565,8 +584,9 @@ Section CANCEL.
     unfold mput, mget. steps.
     rewrite zip_state_get; et.
     rewrite Any.pair_split. steps. rewrite ! Any.upcast_downcast. steps.
-    unshelve esplits.
-    { admit "ez". }
+    assert (RWF: URA.wf (entry_r ⋅ rsum_minus (SModSem.mn (SMod.get_modsem md sk)) initial_mrs ⋅ initial_mrs (SModSem.mn (SMod.get_modsem md sk)))).
+    { r_wf WFR. eapply initial_rsum_minus. }
+    unshelve esplits; et.
     steps. exists ord_top. steps.
     unshelve esplits; et. steps.
 
@@ -577,8 +597,7 @@ Section CANCEL.
     guclo bindC_spec. econs.
     { gfinal. right. fold simg.
       eapply adequacy_type_aux; ss.
-      { symmetry. eapply URA.unit_idl. }
-      { admit "ez". }
+      { r_solve. }
     }
     i. ss.
     destruct vret_src as [mps_src v_src].

@@ -782,7 +782,7 @@ Section ADQ.
     all: try (exact Ord.O).
     all: try (exact 0%nat).
   Qed.
-  Ltac r_wf H := eapply prop_ext_rev; [eapply f_equal|]; [|eapply H]; r_solve.
+
   Lemma my_lemma1_aux
         mn ske
         ktr arg mr0 st0
