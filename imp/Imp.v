@@ -348,7 +348,7 @@ Section MODSEM.
     ModSemL.fnsems :=
       List.map (fun '(mn, (fn, f)) => (fn, fun a => transl_all mn (cfun (eval_imp ge f) a))) mL.(prog_funsL);
     ModSemL.initial_mrs :=
-      List.map (fun name => (name, (ε, tt↑))) mL.(nameL);
+      List.map (fun name => (name, tt↑)) mL.(nameL);
   |}.
 
   Definition get_modL (mL : programL) : ModL.t := {|

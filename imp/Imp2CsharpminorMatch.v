@@ -83,24 +83,24 @@ Section MATCH.
     :
       itree_of_imp_cont (x <- itr;; ktr x) ge le ms mn rp
       =
-      '(r, p, (le2, v)) <- (itree_of_imp_cont itr ge le ms mn rp);; (itree_of_imp_cont (ktr v) ge le2 ms mn (r, p)).
+      '(p, (le2, v)) <- (itree_of_imp_cont itr ge le ms mn rp);; (itree_of_imp_cont (ktr v) ge le2 ms mn (p)).
   Proof.
-    unfold itree_of_imp_cont. rewrite interp_imp_bind. grind.    
+    unfold itree_of_imp_cont. rewrite interp_imp_bind. grind.
     rewrite! transl_all_bind; rewrite! EventsL.interp_Es_bind.
     grind. destruct p0. grind.
   Qed.
 
   Definition itree_of_imp_pop :=
-    fun ge ms mn retmn (retx: var) (retle: lenv) (x: _ * _ * (lenv * val)) =>
-      let '(r, p, (le0, _)) := x in
-      '(r2, p2, rv) <- EventsL.interp_Es (ModSemL.prog ms) (transl_all mn ('(_, v) <- interp_imp ge (denote_expr (Var "return"%string)) le0;; Ret (v↑))) (r, p);;
-      '(r3, p3, rv) <- EventsL.interp_Es (ModSemL.prog ms) (trigger EventsL.PopFrame;;; (tau;; Ret rv)) (r2, p2);;
-      pop <- EventsL.interp_Es (ModSemL.prog ms) (transl_all retmn (tau;; tau;; v0 <- unwrapN (rv↓);; (tau;; tau;; tau;; Ret (alist_add retx v0  retle, Vundef)))) (r3, p3);;
+    fun ge ms mn retmn (retx: var) (retle: lenv) (x: _ * (lenv * val)) =>
+      let '(p, (le0, _)) := x in
+      '(p2, rv) <- EventsL.interp_Es (ModSemL.prog ms) (transl_all mn ('(_, v) <- interp_imp ge (denote_expr (Var "return"%string)) le0;; Ret (v↑))) (p);;
+      '(p3, rv) <- EventsL.interp_Es (ModSemL.prog ms) ((tau;; Ret rv)) (p2);;
+      pop <- EventsL.interp_Es (ModSemL.prog ms) (transl_all retmn (tau;; tau;; v0 <- unwrapN (rv↓);; (tau;; tau;; tau;; Ret (alist_add retx v0  retle, Vundef)))) (p3);;
       Ret pop.
 
   Definition itree_of_imp_pop_bottom :=
-    fun ms mn (x : r_state * p_state * (lenv * val)) =>
-      ` x0 : r_state * p_state * Any.t <-
+    fun ms mn (x : p_state * (lenv * val)) =>
+      ` x0 : p_state * Any.t <-
       (let (st1, v) := x in
       EventsL.interp_Es (ModSemL.prog ms)
                         (transl_all mn (` x0 : val <- (let (_, retv) := v in Ret retv);; Ret (Any.upcast x0))) st1);; Ret (snd x0).
@@ -109,8 +109,8 @@ Section MATCH.
     fun ge le ms mn rp => itree_of_imp_cont (denote_stmt s) ge le ms mn rp.
 
   Definition imp_state := itree eventE Any.t.
-  Definition imp_cont {T} {R} := (r_state * p_state * (lenv * T)) -> itree eventE (r_state * p_state * (lenv * R)).
-  Definition imp_stack := (r_state * p_state * (lenv * val)) -> imp_state.
+  Definition imp_cont {T} {R} := (p_state * (lenv * T)) -> itree eventE (p_state * (lenv * R)).
+  Definition imp_stack := (p_state * (lenv * val)) -> imp_state.
 
   (* Hypothesis archi_ptr64 : Archi.ptr64 = true. *)
   Context `{builtins : builtinsTy}.
@@ -191,14 +191,14 @@ Section MATCH.
   Inductive match_code (mn: mname) : imp_cont -> (list Csharpminor.stmt) -> Prop :=
   | match_code_exit
     :
-      match_code mn (fun '(r, p, (le, _)) => itree_of_imp_ret ge le ms mn (r, p)) [exit_stmt]
+      match_code mn (fun '(p, (le, _)) => itree_of_imp_ret ge le ms mn (p)) [exit_stmt]
   | match_code_return
     :
       match_code mn idK [return_stmt]
   | match_code_cont
       code itr ktr chead ctail
       (CST: compile_stmt code = chead)
-      (ITR: itr = fun '(r, p, (le, _)) => itree_of_cont_stmt code ge le ms mn (r, p))
+      (ITR: itr = fun '(p, (le, _)) => itree_of_cont_stmt code ge le ms mn (p))
       (MCONT: match_code mn ktr ctail)
     :
       match_code mn (fun x => (itr x >>= ktr)) (chead :: ctail)
@@ -241,16 +241,15 @@ Section MATCH.
 
   Variant match_states src : imp_state -> Csharpminor.state -> Prop :=
   | match_states_intro
-      tf rstate pstate le tle code itr tcode m tm next stack tcont mn sz
+      tf pstate le tle code itr tcode m tm next stack tcont mn sz
       (CST: compile_stmt code = tcode)
-      (WFRSTATE: List.length (snd rstate) = S sz)
       (ML: @match_le src le tle)
       (PSTATE: pstate "Mem"%string = m↑)
       (MM: @match_mem src m tm)
       (WFCONT: wf_ccont tcont)
       (MCONT: match_code mn next (get_cont_stmts tcont))
       (MSTACK: @match_stack sz src mn stack (get_cont_stack tcont))
-      (ITR: itr = itree_of_cont_stmt code ge le ms mn (rstate, pstate))
+      (ITR: itr = itree_of_cont_stmt code ge le ms mn (pstate))
     :
       match_states src (x <- itr;; next x >>= stack) (State tf tcode tcont empty_env tle tm)
   .

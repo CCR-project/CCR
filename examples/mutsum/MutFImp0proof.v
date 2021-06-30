@@ -31,12 +31,12 @@ Section SIMMODSEM.
 
   Context `{Σ: GRA.t}.
 
-  Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
+  Let W: Type := Any.t * Any.t.
 
   Let wf: unit -> W -> Prop :=
     fun _ '(mrps_src0, mrps_tgt0) =>
-      (<<SRC: mrps_src0 = (ε, tt↑)>>) /\
-      (<<TGT: mrps_tgt0 = (ε, tt↑)>>)
+      (<<SRC: mrps_src0 = tt↑>>) /\
+      (<<TGT: mrps_tgt0 = tt↑>>)
   .
 
   Theorem correct:
