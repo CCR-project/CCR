@@ -178,7 +178,7 @@ Section PROOF.
       sim_red.
       unfold unwrapU. destruct (vadd rv rv0) eqn:VADD; ss; clarify.
       + sim_red.
-        specialize SIM with (rv:=v) (trv:= @map_val Σ builtins srcprog v).
+        specialize SIM with (rv:=v) (trv:= @map_val builtins srcprog v).
         sim_ord.
         { eapply OrdArith.add_base_l. }
         apply SIM; auto.
@@ -201,7 +201,7 @@ Section PROOF.
       sim_red.
       unfold unwrapU. destruct (vsub rv rv0) eqn:VSUB; ss; clarify.
       + sim_red.
-        specialize SIM with (rv:=v) (trv:= @map_val Σ builtins srcprog v).
+        specialize SIM with (rv:=v) (trv:= @map_val builtins srcprog v).
         sim_ord.
         { eapply OrdArith.add_base_l. }
         apply SIM; auto.
@@ -225,7 +225,7 @@ Section PROOF.
       sim_red.
       unfold unwrapU. destruct (vmul rv rv0) eqn:VMUL; ss; clarify.
       + sim_red.
-        specialize SIM with (rv:=v) (trv:= @map_val Σ builtins srcprog v).
+        specialize SIM with (rv:=v) (trv:= @map_val builtins srcprog v).
         sim_ord.
         { eapply OrdArith.add_base_l. }
         apply SIM; auto.
@@ -510,13 +510,15 @@ Section PROOF.
         (* clear STEP0. *)
 
         (* do 6 (gstep; sim_tau). red. sim_red. *)
-        destruct rstate. ss. des_ifs.
         do 3 (gstep; sim_tau). red. sim_red.
         gstep. econs 6; clarify.
         eexists. eexists.
         { eapply step_return. }
         eexists. exists (step_tau _). eexists.
-        rewrite Any.upcast_downcast. grind. do 1 (gstep; sim_tau). gstep; sim_tau.
+        (* do 1 (gstep; sim_tau). red. sim_red. *)
+        (* rewrite Any.upcast_downcast. grind. *)
+        do 1 (gstep; sim_tau).
+        (* gstep; sim_tau. *)
         sim_ord.
         { eapply OrdArith.add_base_l. }
         gbase. apply CIH.
@@ -649,7 +651,7 @@ Section PROOF.
       { hexploit tgt_genv_find_def_by_blk; eauto. }
 
       unfold cfun. sim_red.
-      rewrite Any.upcast_downcast. sim_red.
+      (* rewrite Any.upcast_downcast. sim_red. *)
       rewrite unfold_eval_imp_only.
       grind. des_ifs.
       2,3: sim_triggerUB.
@@ -800,7 +802,8 @@ Section PROOF.
       assert (TGTGFIND: Globalenvs.Genv.find_def (Globalenvs.Genv.globalenv tgt) b = Some (snd (compile_iFun (mn2, (fn, impf))))).
       { hexploit tgt_genv_find_def_by_blk; eauto. }
 
-      unfold cfun. sim_red. rewrite Any.upcast_downcast. sim_red.
+      unfold cfun. sim_red.
+      (* rewrite Any.upcast_downcast. sim_red. *)
       rewrite unfold_eval_imp_only.
       grind. des_ifs.
       2,3,4: sim_triggerUB.
@@ -1046,7 +1049,7 @@ Section PROOF.
       ss.
       sim_ord.
       { eapply max_fuel_spec1'. }
-      eapply step_expr; eauto. i. rename H0 into TGTEXPR. rename H1 into MAPRV. sim_red.
+      eapply step_expr; eauto. i. rename H0 into MAPRV. sim_red.
       do 1 (gstep; sim_tau). sim_red.
       match goal with
       | [ MCONT: match_code ?_ge _ _ _ _ |- _ ] =>
@@ -1205,7 +1208,10 @@ Section PROOF.
       sim_ord.
       { eapply max_fuel_spec1'. }
       eapply step_expr; eauto.
-      i. sim_red.
+      i.
+      des_ifs.
+      2: sim_triggerUB.
+      sim_red.
       grind. do 1 (gstep; sim_tau). sim_red.
       match goal with
       | [ MCONT: match_code ?_ge _ _ _ _ |- _ ] =>
@@ -1317,9 +1323,9 @@ Section PROOF.
       2: sim_triggerUB.
       bsimpl. des. rename Heq into WFA, Heq0 into WFB.
       sim_red.
-      destruct rstate. ss. destruct l0; clarify.
-      grind. do 3 (gstep; sim_tau). sim_red.
-      unfold cfun.
+      (* destruct rstate. ss. destruct l0; clarify. *)
+      grind. do 1 (gstep; sim_tau). sim_red.
+      (* unfold cfun. *)
       grind. unfold cmpF. sim_red.
       do 3 (gstep; sim_tau). sim_red.
       rewrite PSTATE. rewrite Any.upcast_downcast. grind.
