@@ -37,7 +37,6 @@ Section PROOF.
   Definition KnotSem (sk: Sk.t): ModSem.t := {|
     ModSem.fnsems := [("rec", cfun (recF sk)); ("knot", cfun (knotF sk))];
     ModSem.mn := "Knot";
-    ModSem.initial_mr := ε;
     ModSem.initial_st := tt↑;
   |}
   .

@@ -53,13 +53,12 @@ Section SIMMODSEM.
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG BW1.bwRA Σ}.
 
-  Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
+  Let W: Type := Any.t * Any.t.
   Let wf: _ -> W -> Prop :=
     @mk_wf
       _
       Z
-      (fun n _ _ => (OwnM (bw_full (Z.odd n))))
-      (fun n mp_src mp_tgt _ => mp_tgt = n↑)
+      (fun n _ mp_tgt => (OwnM (bw_full (Z.odd n))) ** ⌜mp_tgt = n↑⌝)
   .
 
   Require Import Red.
@@ -68,12 +67,12 @@ Section SIMMODSEM.
   Proof.
     econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
     { ss. }
-    { ss. eexists. red. econs; et. red. red. uipropall.
-      exists ε. rewrite URA.unit_id; ss. }
+    { ss. eexists. red. econs; et.
+      eapply to_semantic. iIntros "H". iSplitL "H"; [|et]. ss. }
     econs; ss.
     { unfold getF. init. harg.
       mDesAll. des; clarify.
-      steps. rewrite Any.upcast_downcast in *. astart 0. astop.
+      steps. astart 0. astop.
       mAssertPure (x = Z.odd w); subst.
       { iApply (bw_ra_merge with "INV PRE"). }
       steps. force_l. eexists. steps.
@@ -85,7 +84,7 @@ Section SIMMODSEM.
     econs; ss.
     { unfold flipF. init. harg.
       mDesAll. des; clarify.
-      steps. rewrite Any.upcast_downcast in *. astart 0. astop.
+      steps. astart 0. astop.
       mAssertPure (x = Z.odd w); subst.
       { iApply (bw_ra_merge with "INV PRE"). }
       steps. force_l. eexists. steps.

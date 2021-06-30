@@ -26,7 +26,6 @@ Section PROOF.
   Definition MainSem: ModSem.t := {|
     ModSem.fnsems := [("main", mainF)];
     ModSem.mn := "Main";
-    ModSem.initial_mr := ε;
     ModSem.initial_st := tt↑;
   |}
   .

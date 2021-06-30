@@ -32,7 +32,7 @@ Section SIMMODSEM.
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG memRA Σ}.
 
-  Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
+  Let W: Type := Any.t * Any.t.
 
   From iris.algebra Require Import big_op.
   From iris.bi Require Import big_op.
@@ -45,8 +45,6 @@ Section SIMMODSEM.
                             ({{"SIM": ([∗ map] handle ↦ stk ∈ stk_mgr0,
                                        (∃ hd, OwnM ((handle, 0%Z) |-> [hd]) ** is_list hd stk))}})
                         ))
-           (* (fun _ _ _ => ⌜True⌝%I) *)
-           top4
   .
 
   Variable global_stb: gname -> option fspec.
@@ -97,13 +95,13 @@ Section SIMMODSEM.
       post_call. steps. eapply Any.downcast_upcast in _UNWRAPN0. des. clarify.
       kstop. steps.
 
-      force_l. exists handle. steps. rewrite Any.upcast_downcast. steps.
+      force_l. exists handle. steps.
       destruct (stk_mgr0 !! handle) eqn:T.
       { mAssertPure False; ss.
         (*** IEXPLOIT*) iDestruct (big_sepM_lookup_acc with "SIM") as "[B C]"; et. iDestruct "B" as (x) "[B D]".
         iApply (points_to_disj with "POST B"); et.
       }
-      force_l; ss. steps.
+      force_l; ss. steps. unfold pput. steps.
 
       hret _; ss.
       { iModIntro. iSplits; ss; et. iApply big_sepM_insert; ss. iFrame; ss; et. }
@@ -113,7 +111,7 @@ Section SIMMODSEM.
     { unfold popF. trivial_init. fold wf. mDesAll; des; subst. ss.
       unfold pop_body, KModSem.transl_fun_tgt, ccall, cfun. steps.
 
-      rewrite Any.upcast_downcast in *. steps. kstart 7.
+      kstart 7.
 
       hide_k. destruct v; ss. des_ifs. clear_fast.
       renamer. rename n into handle. rename l into stk. rename _UNWRAPU0 into T.
@@ -125,16 +123,15 @@ Section SIMMODSEM.
       kcatch. { eapply STBINCL. stb_tac; ss. } hcall _ (Some (_, _, _)) _ with "SIM A"; ss; et.
       { iModIntro. iSplitL "SIM"; ss; et. iSplits; ss; et. }
       { ss. }
-      post_call. unhide_k. steps. rewrite Any.upcast_downcast in *. clarify.
+      post_call. unhide_k. steps.
       hide_k.
 
       destruct stk as [|x stk1]; ss.
       - mDesAll. subst.
         kcatch. { eapply STBINCL. stb_tac; ss. } hcall (ord_pure 0) (Some (_, _)) _ with "SIM POST"; ss.
         { iModIntro. iSplitL "SIM"; ss; [et|]. iSplits; ss. repeat iRight. et. }
-        post_call. unhide_k. steps. rewrite Any.upcast_downcast in *. clarify.
-        hide_k. ss. steps. unhide_k. kstop. steps.
-        rewrite Any.upcast_downcast. steps.
+        post_call. unhide_k. steps. kstop. steps.
+        unfold pget. steps.
 
         hret _; ss. iModIntro. iSplits; ss; et.
         destruct (stk_mgr1 !! handle) eqn:U.
@@ -146,7 +143,7 @@ Section SIMMODSEM.
 
         kcatch. { eapply STBINCL. stb_tac; ss. } hcall (ord_pure 0) (Some (_, _)) _ with "SIM A1"; ss.
         { iModIntro. iSplitL "SIM"; ss. { et. } iSplits; ss; et. }
-        post_call. unhide_k. steps. rewrite Any.upcast_downcast in *. clarify. steps.
+        post_call. unhide_k. steps.
 
         unfold scale_int. uo. steps.
         kcatch. { eapply STBINCL. stb_tac; ss. } hcall (ord_pure 0) (Some (_, _, _)) _ with "SIM POST1"; ss.
@@ -169,12 +166,14 @@ Section SIMMODSEM.
         { iModIntro. iSplitL "SIM"; ss; et. iSplits; ss; et. }
         post_call. steps.
 
-        kstop. steps. rewrite Any.upcast_downcast. steps. renamer.
+        kstop. steps. unfold pget. steps. renamer.
 
         destruct (stk_mgr1 !! handle) eqn:V.
         { mAssertPure False; ss. iDestruct (big_sepM_lookup_acc with "SIM") as "[B C]"; et.
           iDestruct "B" as (y) "[SIM B]".
           iApply (points_to_disj with "POST1 SIM"). }
+        steps.
+
 
         hret _; ss.
         { iModIntro. iSplits; ss; et. iApply big_sepM_insert; ss. iFrame. iExists _; ss. iFrame. }
@@ -183,7 +182,7 @@ Section SIMMODSEM.
     { unfold pushF. trivial_init. fold wf. mDesAll; des; subst. ss.
       unfold push_body, KModSem.transl_fun_tgt, ccall, cfun. steps.
 
-      rewrite Any.upcast_downcast in *; clarify. steps. kstart 7.
+      kstart 7.
 
       hide_k. destruct v; ss. des_ifs. clear_tac.
       rename n into handle. renamer. rename l into stk. rename _UNWRAPU into T.
@@ -197,7 +196,7 @@ Section SIMMODSEM.
         { instantiate (1:=2). ss. }
         { iPureIntro. ss. }
       }
-      post_call. rename a0 into node. unhide_k. steps. rewrite Any.upcast_downcast in *. clarify. steps.
+      post_call. rename a0 into node. unhide_k. steps.
 
       rewrite points_to_split in ACC. mDesOwn "A1". rewrite Z.add_0_l in *. clear_fast.
 
@@ -218,12 +217,12 @@ Section SIMMODSEM.
       { iModIntro. iSplitL "SIM"; et. iSplits; ss; et. }
       post_call. steps.
 
-      kstop. steps. rewrite Any.upcast_downcast. steps.
+      kstop. steps.
 
       destruct (stk_mgr1 !! handle) eqn:V.
       { mAssertPure False; ss. iDestruct (big_sepM_lookup_acc with "SIM") as "[B C]"; et.
         iDestruct "B" as (y) "[SIM B]". iApply (points_to_disj with "POST3 SIM"). }
-
+      
       hret _; ss.
       { iModIntro. iSplits; ss; et.
         iApply big_sepM_insert; ss. iFrame. iExists _; ss. iFrame.

@@ -29,14 +29,10 @@ Section SIMMODSEM.
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG Mem1.memRA Σ}.
 
-  Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
+  Let W: Type := Any.t * Any.t.
 
   Let wf: _ -> W -> Prop :=
-    @mk_wf
-      _ unit
-      top4
-      (fun _ _mem_src0 _mem_tgt0 => ⌜_mem_src0 = _mem_tgt0⌝)%I
-  .
+    fun (_: unit) '(mem_src0, mem_tgt0) => mem_src0 = mem_tgt0.
 
   Variable sk: Sk.t.
   Variable frds: list mname.
@@ -45,7 +41,7 @@ Section SIMMODSEM.
   Proof.
    econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
     { ss. }
-    { esplits. ss. econs; ss. red. uipropall. }
+    { esplits. ss. }
 
 
 
@@ -55,50 +51,50 @@ Section SIMMODSEM.
     { unfold allocF, fun_to_src, body_to_src, cfun, KModSem.disclose_ksb_src, KModSem.body_to_src. init.
       match goal with | |- context[my_if ?b _ _] => destruct b eqn:T end.
       { cbn. steps. }
-      steps. inv WF. rr in RTGT. uipropall. clarify. clear_fast.
+      steps. inv WF.
       apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
       des_ifs.
       { steps. force_l. esplits; et. steps.
-        red. esplits; et. rr. econs; ss. rr. uipropall. }
+        red. esplits; et. rr. econs; ss. }
       { steps. }
     }
     econs; ss.
     { unfold freeF, fun_to_src, body_to_src, cfun, KModSem.disclose_ksb_src, KModSem.body_to_src. init.
       match goal with | |- context[my_if ?b _ _] => destruct b eqn:T end.
       { cbn. steps. }
-      steps. inv WF. rr in RTGT. uipropall. clarify. clear_fast.
+      steps. inv WF.
       apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
       force_r; ss. steps.
-      red. esplits; et. rr. econs; ss. rr. uipropall.
+      red. esplits; et. rr. econs; ss. 
     }
     econs; ss.
     { unfold loadF, fun_to_src, body_to_src, cfun, KModSem.disclose_ksb_src, KModSem.body_to_src. init.
       match goal with | |- context[my_if ?b _ _] => destruct b eqn:T end.
       { cbn. steps. }
-      steps. inv WF. rr in RTGT. uipropall. clarify. clear_fast.
+      steps. inv WF.
       apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
       force_r; ss. steps.
-      red. esplits; et. rr. econs; ss. rr. uipropall.
+      red. esplits; et. rr. econs; ss.
     }
     econs; ss.
     { unfold storeF, fun_to_src, body_to_src, cfun, KModSem.disclose_ksb_src, KModSem.body_to_src. init.
       match goal with | |- context[my_if ?b _ _] => destruct b eqn:T end.
       { cbn. steps. }
-      steps. inv WF. rr in RTGT. uipropall. clarify. clear_fast.
+      steps. inv WF.
       apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
       force_r; ss. steps.
-      red. esplits; et. rr. econs; ss. rr. uipropall.
+      red. esplits; et. rr. econs; ss.
     }
     econs; ss.
     { unfold cmpF, fun_to_src, body_to_src, cfun, KModSem.disclose_ksb_src, KModSem.body_to_src. init.
       match goal with | |- context[my_if ?b _ _] => destruct b eqn:T end.
       { cbn. steps. }
-      steps. inv WF. rr in RTGT. uipropall. clarify. clear_fast.
+      steps. inv WF. 
       apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
       force_r; ss. steps.
       des_ifs; steps.
-      { red. esplits; et. rr. econs; ss. rr. uipropall. }
-      { red. esplits; et. rr. econs; ss. rr. uipropall. }
+      { red. esplits; et. rr. econs; ss. }
+      { red. esplits; et. rr. econs; ss. }
     }
   Unshelve.
     all: ss.

@@ -490,7 +490,7 @@ Section PROOFSINGLE.
     pfold. econs 5; ss; eauto; i. dtm H H0.
     eapply angelic_step in STEP; des; clarify.
     eexists; split; [ord_step2|auto]. left. rename STEP0 into WF_MAIN.
-    do 4 (pfold; sim_tau; left). sim_red.
+    do 3 (pfold; sim_tau; left). sim_red.
 
     des_ifs; grind; sim_red.
     2:{ sim_triggerUB. }
@@ -533,7 +533,6 @@ Section PROOFSINGLE.
     | [ |- match_states ?_ge ?_ms _ _ _ ] => set (ms:=_ms) in *
     end.
     econs; eauto.
-    { ss. }
     { eapply init_lenv_match; eauto. rewrite map_app. ss. }
     { clarify. }
     { econs; ss.
@@ -568,18 +567,18 @@ Section PROOFSINGLE.
     { ss.
       match goal with
       | [ |- match_code _ _ _ ?i0 ?s0 ] =>
-        replace i0 with ((fun '(r, p, (le, _)) => itree_of_imp_ret sge le ms mn (r, p)) : (_ * _ * (lenv * val)) -> _);
+        replace i0 with ((fun '(p, (le, _)) => itree_of_imp_ret sge le ms mn (p)) : (_ * (lenv * val)) -> _);
           replace s0 with [exit_stmt]; eauto
       end.
       { econs 1. }
       extensionality x. unfold itree_of_imp_ret, itree_of_imp_cont. grind. destruct p0. rewrite interp_imp_expr_Var. grind. }
     { ss.
       match goal with
-      | [ |- match_stack _ _ _ _ _ ?i0 ?s0 ] =>
-        replace i0 with ((itree_of_imp_pop_bottom ms mn) : (_ * _ * (lenv * val)) -> _);
+      | [ |- match_stack _ _ _ _ ?i0 ?s0 ] =>
+        replace i0 with ((itree_of_imp_pop_bottom ms mn) : (_ * (lenv * val)) -> _);
           replace s0 with (Some ret_call_main); eauto
       end.
-      { econs 1. ss. }
+      { econs 1. }
       extensionality x. unfold itree_of_imp_pop_bottom. grind. sim_red. Red.prw ltac:(_red_gen) 1 0. ss.
     }
   Qed.

@@ -34,11 +34,11 @@ Section SIMMODSEM.
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG Mem1.memRA Σ}.
 
-  Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
+  Let W: Type := Any.t * Any.t.
   Eval compute in (@URA.car Mem1._memRA).
 
   Let wf: _ -> W -> Prop :=
-    mk_wf (fun (_: unit) _ _ => (True: iProp)%I) top4.
+    mk_wf (fun (_: unit) _ _ => (True: iProp)%I).
 
   Local Opaque points_to.
 
@@ -75,7 +75,7 @@ Section SIMMODSEM.
           iSplitR; ss. iRight. iRight. iRight. iRight. iPureIntro. ss. }
         { split; ss. eauto with ord_step. }
         mDesAll. clarify.
-        steps. erewrite Any.upcast_downcast in *. steps.
+        steps.
 
         (* ret *)
         astop. force_l. eexists. steps. hret _; ss; et.

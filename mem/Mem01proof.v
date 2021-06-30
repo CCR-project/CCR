@@ -119,7 +119,7 @@ Section SIMMODSEM.
   .
   Hint Constructors sim_loc: core.
 
-  Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
+  Let W: Type := Any.t * Any.t.
   (* Let wf: W -> Prop := *)
   (*   @mk_wf *)
   (*     _ *)
@@ -147,7 +147,6 @@ Section SIMMODSEM.
               (<<WFTGT: mem_wf mem_tgt0>>)⌝) ∧ (*** TODO: put it inside Mem.t? ***)
              (OwnM ((Auth.black memk_src0): URA.car (t:=Mem1.memRA)))
          )%I)
-      top4
   .
 
   Hint Resolve sim_itree_mon: paco.
@@ -163,7 +162,7 @@ Section SIMMODSEM.
     end;
 
     match goal with
-    | |- gpaco7 _ _ _ _ _ _ _ _ _ (?mr_src, _, _, _) (?mr_tgt, (?mp_tgt↑), _, _) =>
+    | |- gpaco7 _ _ _ _ _ _ _ _ _ _ ((?mp_tgt↑), _) =>
 
       repeat multimatch mp_tgt with
              | context[?g] =>

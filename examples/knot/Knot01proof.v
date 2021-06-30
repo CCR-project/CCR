@@ -73,7 +73,7 @@ Section SIMMODSEM.
   Context `{@GRA.inG memRA Σ}.
   Context `{@GRA.inG knotRA Σ}.
 
-  Let W: Type := (Σ * Any.t) * (Σ * Any.t).
+  Let W: Type := Any.t * Any.t.
 
   Variable RecStb: SkEnv.t -> gname -> option fspec.
   Variable FunStb: SkEnv.t -> gname -> option fspec.
@@ -93,7 +93,7 @@ Section SIMMODSEM.
       _ _
       unit
       (fun _ _ _ => inv skenv)
-      top4.
+  .
 
   Hypothesis RecStb_incl: forall skenv,
       stb_incl (to_stb KnotRecStb) (RecStb skenv).
@@ -112,7 +112,6 @@ Section SIMMODSEM.
     { eexists (inl _). red. econs.
       { eapply to_semantic. ss.
         iIntros "[H0 H1]". unfold inv. iExists None, _. iFrame. iPureIntro. ss. }
-      { ss. }
     }
     { eapply inv_le_PreOrder. ss. }
     eapply Sk.incl_incl_env in SKINCL. eapply Sk.load_skenv_wf in SKWF.
@@ -135,7 +134,6 @@ Section SIMMODSEM.
 
       (* call with the opened invariant *)
       icall_open _ (_, _, _) with "A1".
-      { ss. }
       { iModIntro. iSplitL; ss. iSplitL; ss. iSplitR; ss.
         iEval (unfold var_points_to) in "A1". rewrite FIND1. iFrame. }
       { split; ss. eauto with ord_step. }
@@ -149,7 +147,6 @@ Section SIMMODSEM.
 
       (* call with the closed invariant *)
       icall_weaken (fun_gen RecStb sk f) (ord_pure (2 * n)) _ _ with "*".
-      { et. }
       { et. }
       { iModIntro. iFrame. iSplitL; ss.
         { iEval (unfold inv).  iExists _, _. iFrame.
@@ -183,7 +180,6 @@ Section SIMMODSEM.
 
       (* call with the opened invariant *)
       icall_open _ (_, _, _) with "A1".
-      { ss. }
       { iModIntro. iSplitL; ss.
         iSplitL; ss. iExists _. iSplitR; ss.
         iEval (unfold var_points_to) in "A1". rewrite FIND1. ss. }

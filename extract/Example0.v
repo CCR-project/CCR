@@ -24,7 +24,7 @@ Definition Ex0: ModL.t := {|
   ModL.get_modsem :=
     fun _ => {|
         ModSemL.fnsems := [("main", fun _ => main0)];
-        ModSemL.initial_mrs := [("Main", (ε, unit↑))];
+        ModSemL.initial_mrs := [("Main", unit↑)];
       |};
   ModL.sk := Sk.unit;
                         |}

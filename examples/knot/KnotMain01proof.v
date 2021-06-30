@@ -32,7 +32,7 @@ Section SIMMODSEM.
   Context `{@GRA.inG invRA Σ}.
   Context `{@GRA.inG knotRA Σ}.
 
-  Let W: Type := (Σ * Any.t) * (Σ * Any.t).
+  Let W: Type := Any.t * Any.t.
 
   Variable RecStb: SkEnv.t -> gname -> option fspec.
   Variable FunStb: SkEnv.t -> gname -> option fspec.
@@ -42,7 +42,6 @@ Section SIMMODSEM.
     @mk_wf
       _ unit
       (fun _ _ _=> True%I)
-      top4
   .
 
   Hypothesis RecStb_incl: forall skenv,

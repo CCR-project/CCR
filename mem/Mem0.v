@@ -94,7 +94,6 @@ Section PROOF.
     {|
       ModSem.fnsems := [("alloc", cfun allocF) ; ("free", cfun freeF) ; ("load", cfun loadF) ; ("store", cfun storeF) ; ("cmp", cfun cmpF)];
       ModSem.mn := "Mem";
-      ModSem.initial_mr := ε;
       ModSem.initial_st := (Sk.load_mem sk)↑;
     |}
   .

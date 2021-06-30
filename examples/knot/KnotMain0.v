@@ -40,7 +40,6 @@ Section PROOF.
   Definition MainSem (skenv: SkEnv.t): ModSem.t := {|
     ModSem.fnsems := [("fib", cfun (fibF skenv)); ("main", cfun (mainF skenv))];
     ModSem.mn := "Main";
-    ModSem.initial_mr := ε;
     ModSem.initial_st := tt↑;
   |}
   .

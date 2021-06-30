@@ -29,10 +29,10 @@ Section SIMMODSEM.
 
   Context `{Σ: GRA.t}.
 
-  Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
+  Let W: Type := Any.t * Any.t.
 
   Let wf: _ -> W -> Prop :=
-    mk_wf (fun (_: unit) _ _ => (True: iProp)%I) top4.
+    mk_wf (fun (_: unit) _ _ => (True: iProp)%I).
 
   Theorem correct: ModPair.sim MutMain1.Main MutMain0.Main.
   Proof.
@@ -42,7 +42,7 @@ Section SIMMODSEM.
     2: { exists tt. red. econs; ss. red. uipropall. }
     econs; ss. init.
     unfold mainF, mainBody. harg.
-    mDesAll. des; clarify. steps. rewrite Any.upcast_downcast. steps.
+    mDesAll. des; clarify. steps. steps.
     hcall _ _ tt with "*"; ss.
     { iPureIntro. esplits; eauto.
       { instantiate (1:=10). ss. }

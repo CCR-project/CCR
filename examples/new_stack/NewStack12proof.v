@@ -29,41 +29,33 @@ Section SIMMODSEM.
 
   Context `{Σ: GRA.t}.
 
-  Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
+  Let W: Type := Any.t * Any.t.
 
   Let wf: _ -> W -> Prop :=
-    @mk_wf _ unit
-           top4
-           (fun _ mp_src mp_tgt => ⌜mp_src = mp_tgt⌝%I)
-  .
+    fun (_: unit) '(mp_src, mp_tgt) => mp_src = mp_tgt.
 
   Variable frds: list mname.
 
   Theorem sim_modsem: ModSemPair.sim (NewStack2.StackSem) (KModSem.transl_src frds NewStack1.KStackSem).
   Proof.
     econstructor 1 with (wf:=wf) (le:=top2); ss; et; swap 2 3.
-    { esplits. econs; ss.
-      - red. uipropall.
-    }
     assert(BDOOR: (KModSem.interp_kCallE_src APCK) = Ret tt).
     { admit "mid - BDOOR". }
     econs; ss.
-    { init. inv WF. rr in RTGT. rewrite Seal.sealing_eq in *. subst. clear_fast.
+    { init. inv WF.
       unfold fun_to_src, body_to_src, KModSem.body_to_src, cfun, new_body, NewStack1.new_body.
       steps. rewrite my_if_same. steps.
       rewrite BDOOR. steps.
       force_l. esplits. steps. rewrite _UNWRAPN0. steps. rewrite _GUARANTEE. force_l; ss. steps.
-      red. esplits; et. econs; ss; et. rr. uipropall; ss.
+      red. esplits; et. econs; ss; et.
     }
     econs; ss.
-    { init. inv WF. rr in RTGT. rewrite Seal.sealing_eq in *. uipropall. subst. clear_fast.
+    { init. inv WF.
       unfold fun_to_src, body_to_src, KModSem.body_to_src, cfun, pop_body, NewStack1.pop_body.
       steps. rewrite my_if_same. steps.
       rewrite BDOOR. steps. apply Any.downcast_upcast in _UNWRAPN0. des; subst. des_ifs; steps.
-      { red. esplits; et. rewrite Any.upcast_downcast in *. clarify. econs; ss; et. rr. uipropall; ss.
-        f_equal. rewrite insert_delete; ss. rewrite insert_id; ss. }
-      { red. esplits; et. rewrite Any.upcast_downcast in *. clarify. econs; ss; et. rr. uipropall; ss.
-        f_equal. rewrite insert_delete; ss. }
+      { red. esplits; et. rewrite insert_delete; ss. rewrite insert_id; ss. }
+      { red. esplits; et. rewrite insert_delete; ss. }
     }
     admit "ez".
   Unshelve.

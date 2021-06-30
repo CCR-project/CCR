@@ -67,11 +67,10 @@ Section PROOF.
         eapply adequacy_type2; revgoals.
         { i. ss. clarify. ss. esplits; et; ss.
           { instantiate (1:=ε). red. uipropall. split; red; uipropall. }
-          { instantiate (1:=[MutMain1.Main ; MutF1.F ; MutG1.G]). ss.
-            rewrite ! URA.unit_id. apply URA.wf_unit. }
+          { rewrite ! URA.unit_id. apply URA.wf_unit. }
           { i. red in POST. uipropall. des. red in POST0. uipropall. }
         }
-        { admit "ez". }      
+        { admit "ez". }
       }
       { ss. }
     }
@@ -81,7 +80,6 @@ Section PROOF.
     Mod.get_modsem := fun _ => {|
       ModSem.fnsems := [("f", fun _ => trigger (Choose _))];
       ModSem.mn := "F";
-      ModSem.initial_mr := ε;
       ModSem.initial_st := tt↑;
     |};
     Mod.sk := [("f", Sk.Gfun)];
@@ -92,7 +90,6 @@ Section PROOF.
     Mod.get_modsem := fun _ => {|
       ModSem.fnsems := [("g", fun _ => trigger (Choose _))];
       ModSem.mn := "G";
-      ModSem.initial_mr := ε;
       ModSem.initial_st := tt↑;
     |};
     Mod.sk := [("g", Sk.Gfun)];
@@ -103,7 +100,6 @@ Section PROOF.
     Mod.get_modsem := fun _ => {|
       ModSem.fnsems := [("main", fun _ => Ret (Vint 55)↑)];
       ModSem.mn := "Main";
-      ModSem.initial_mr := ε;
       ModSem.initial_st := tt↑;
     |};
     Mod.sk := Sk.unit;

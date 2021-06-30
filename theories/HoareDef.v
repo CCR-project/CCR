@@ -86,42 +86,41 @@ Section PROOF.
   Let GURA: URA.t := GRA.to_URA Σ.
   Local Existing Instance GURA.
 
-  Definition put E `{rE -< E} `{eventE -< E}
-             (ctx: Σ) (mr1: Σ) (fr1: Σ): itree E unit :=
-    mr0 <- trigger (MGet);;
-    fr0 <- trigger FGet;;
-    guarantee(URA.wf (URA.add ctx (URA.add mr1 fr1)));;;
-    trigger (FPut fr1);;; trigger (MPut mr1)
+
+  Definition mput E `{pE -< E} `{eventE -< E} (mr: Σ): itree E unit :=
+    st <- trigger PGet;; '(mp, _) <- ((Any.split st)?);;
+    trigger (PPut (Any.pair mp mr↑))
   .
 
-  Definition forge E `{rE -< E} `{eventE -< E}
-             (delta: Σ): itree E unit :=
-    fr0 <- trigger FGet;;
-    trigger (FPut (URA.add fr0 delta))
+  Definition mget E `{pE -< E} `{eventE -< E}: itree E Σ :=
+    st <- trigger PGet;; '(_, mr) <- ((Any.split st)?);;
+    mr↓ǃ
   .
 
-  Definition discard E `{rE -< E} `{eventE -< E} (fr1: Σ): itree E unit :=
-    fr0 <- trigger FGet;;
-    rest <- trigger (Choose _);;
-    guarantee(fr0 = URA.add fr1 rest);;;
-    trigger (FPut rest)
+  Definition pput E `{pE -< E} `{eventE -< E} (mp: Any.t): itree E unit :=
+    st <- trigger PGet;; '(_, mr) <- ((Any.split st)?);;
+    trigger (PPut (Any.pair mp mr))
   .
 
-  Definition checkWf E `{rE -< E} `{eventE -< E} (ctx: Σ): itree E unit :=
-    mr0 <- trigger (MGet);; fr0 <- trigger FGet;;
-    assume(URA.wf (URA.add ctx (URA.add mr0 fr0)))
+  Definition pget E `{pE -< E} `{eventE -< E}: itree E Any.t :=
+    st <- trigger PGet;; '(mp, _) <- ((Any.split st)?);;
+    Ret mp
   .
+
+
 
   Definition HoareCall
              (mn: mname)
              (tbr: bool)
              (ord_cur: ord)
              (fsp: fspec):
-    gname -> Any.t -> stateT Σ (itree Es) Any.t :=
-    fun fn varg_src ctx =>
-      '(marg, farg) <- trigger (Choose _);;
-      put ctx marg farg;;; (*** updating resources in an abstract way ***)
-      rarg <- trigger (Choose Σ);; discard rarg;;; (*** virtual resource passing ***)
+    gname -> Any.t -> stateT (Σ * Σ) (itree Es) Any.t :=
+    fun fn varg_src '(ctx, fr) =>
+
+      '(rarg, fr, mr) <- trigger (Choose (Σ * Σ * Σ));;
+      mput mr;;;
+      guarantee(URA.wf (rarg ⋅ fr ⋅ ctx ⋅ mr));;;
+
       x <- trigger (Choose fsp.(meta));; varg_tgt <- trigger (Choose Any_tgt);;
       ord_next <- trigger (Choose _);;
       guarantee(fsp.(precond) (Some mn) x varg_src varg_tgt  ord_next rarg);;; (*** precondition ***)
@@ -129,13 +128,14 @@ Section PROOF.
       guarantee(ord_lt ord_next ord_cur /\ (tbr = true -> is_pure ord_next) /\ (tbr = false -> ord_next = ord_top));;;
       vret_tgt <- trigger (Call fn varg_tgt);; (*** call ***)
 
-      rret <- trigger (Take Σ);; forge rret;;; (*** virtual resource passing ***)
+      '(rret, ctx) <- trigger (Take (Σ * Σ));;
+      mr <- mget;;
+      assume(URA.wf (rret ⋅ fr ⋅ ctx ⋅ mr));;;
+
       vret_src <- trigger (Take Any.t);;
-      ctx <- trigger (Take _);;
-      checkWf ctx;;;
       assume(fsp.(postcond) (Some mn) x vret_src vret_tgt rret);;; (*** postcondition ***)
 
-      Ret (ctx, vret_src) (*** return to body ***)
+      Ret (ctx, fr ⋅ rret, vret_src) (*** return to body ***)
   .
 
 End PROOF.
@@ -320,20 +320,29 @@ Section CANCEL.
                                  | _ => body (mn, varg_src)
                                  end).
 
-  Definition handle_hCallE_tgt (ord_cur: ord): hCallE ~> stateT Σ (itree Es) :=
-    fun _ '(hCall tbr fn varg_src) ctx =>
+  Definition handle_hCallE_tgt (ord_cur: ord): hCallE ~> stateT (Σ * Σ) (itree Es) :=
+    fun _ '(hCall tbr fn varg_src) '(ctx, fr) =>
       f <- (stb fn)ǃ;;
-      '(ctx, vret_src) <- (HoareCall mn tbr ord_cur f fn varg_src ctx);;
-      Ret (ctx, vret_src)
+      HoareCall mn tbr ord_cur f fn varg_src (ctx, fr)
   .
 
-  Definition interp_hCallE_tgt (ord_cur: ord): itree Es' ~> stateT Σ (itree Es) :=
+  Definition handle_pE_tgt: pE ~> itree Es :=
+    Eval unfold pput, pget in
+      (fun _ e =>
+         match e with
+         | PPut st => pput st
+         | PGet => pget
+         end).
+
+  Definition interp_hCallE_tgt (ord_cur: ord): itree Es' ~> stateT (Σ * Σ) (itree Es) :=
     interp_state (case_ (bif:=sum1) (handle_hCallE_tgt ord_cur)
-                        ((fun T X s => x <- trigger X;; Ret (s, x)): _ ~> stateT Σ (itree Es)))
+                        (case_ (bif:=sum1)
+                               ((fun T X s => x <- handle_pE_tgt X;; Ret (s, x)): _ ~> stateT (Σ * Σ) (itree Es))
+                               ((fun T X s => x <- trigger X;; Ret (s, x)): _ ~> stateT (Σ * Σ) (itree Es))))
   .
 
   Definition body_to_tgt (ord_cur: ord)
-             {X} (body: X -> itree (hCallE +' pE +' eventE) Any_src): X -> stateT Σ (itree Es) Any_src :=
+             {X} (body: X -> itree (hCallE +' pE +' eventE) Any_src): X -> stateT (Σ * Σ) (itree Es) Any_src :=
     (@interp_hCallE_tgt ord_cur _) ∘ body.
 
 
@@ -342,24 +351,24 @@ Section CANCEL.
              (P: option mname -> X -> Any.t -> Any_tgt -> ord -> Σ -> Prop)
              (Q: option mname -> X -> Any.t -> Any_tgt -> Σ -> Prop)
              (body: (option mname * Any.t) -> itree Es' Any.t): option mname * Any_tgt -> itree Es Any_tgt := fun '(mn_caller, varg_tgt) =>
-    ctx <- trigger (Take _);;
-    varg_src <- trigger (Take _);;
     x <- trigger (Take X);;
-    rarg <- trigger (Take Σ);; forge rarg;;; (*** virtual resource passing ***)
-    (checkWf ctx);;;
+    varg_src <- trigger (Take _);;
+    '(rarg, ctx) <- trigger (Take _);;
+    mr <- mget;;
+    assume(URA.wf (rarg ⋅ ctx ⋅ mr));;;
     ord_cur <- trigger (Take _);;
-    assume(P mn_caller x varg_src varg_tgt  ord_cur rarg);;; (*** precondition ***)
+    assume(P mn_caller x varg_src varg_tgt ord_cur rarg);;; (*** precondition ***)
 
-    '(ctx, vret_src) <- interp_hCallE_tgt ord_cur (match ord_cur with
-                                                   | ord_pure n => APC;;; trigger (Choose _)
-                                                   | _ => body (mn_caller, varg_src)
-                                                   end) ctx;;
+    '(ctx, fr, vret_src) <- interp_hCallE_tgt ord_cur (match ord_cur with
+                                                       | ord_pure n => APC;;; trigger (Choose _)
+                                                       | _ => body (mn_caller, varg_src)
+                                                       end) (ctx, rarg);;
 
     vret_tgt <- trigger (Choose Any_tgt);;
-    '(mret, fret) <- trigger (Choose _);; put ctx mret fret;;; (*** updating resources in an abstract way ***)
-    rret <- trigger (Choose Σ);; guarantee(Q mn_caller x vret_src vret_tgt rret);;; (*** postcondition ***)
-    (discard rret);;; (*** virtual resource passing ***)
-
+    '(rret, mr) <- trigger (Choose _);;
+    mput mr;;;
+    guarantee(URA.wf (rret ⋅ ctx ⋅ mr));;;
+    guarantee(Q mn_caller x vret_src vret_tgt rret);;; (*** postcondition ***)
     Ret vret_tgt (*** return ***)
   .
 
@@ -382,26 +391,26 @@ If this feature is needed; we can extend it then. At the moment, I will only all
   Definition HoareFunArg
              {X: Type}
              (P: option mname -> X -> Any.t -> Any_tgt -> ord -> Σ -> Prop):
-    option mname * Any_tgt -> itree Es (Σ * (option mname * X * Any.t * ord)) := fun '(mn_caller, varg_tgt) =>
-    ctx <- trigger (Take _);;
-    varg_src <- trigger (Take _);;
+    option mname * Any_tgt -> itree Es ((Σ * Σ) * (option mname * X * Any.t * ord)) := fun '(mn_caller, varg_tgt) =>
     x <- trigger (Take X);;
-    rarg <- trigger (Take Σ);; forge rarg;;; (*** virtual resource passing ***)
-    (checkWf ctx);;;
+    varg_src <- trigger (Take _);;
+    '(rarg, ctx) <- trigger (Take _);;
+    mr <- mget;;
+    assume(URA.wf (rarg ⋅ ctx ⋅ mr));;;
     ord_cur <- trigger (Take _);;
     assume(P mn_caller x varg_src varg_tgt  ord_cur rarg);;; (*** precondition ***)
-    Ret (ctx, (mn_caller, x, varg_src, ord_cur))
+    Ret (ctx, rarg, (mn_caller, x, varg_src, ord_cur))
   .
 
   Definition HoareFunRet
              {X: Type}
              (Q: option mname -> X -> Any.t -> Any_tgt -> Σ -> Prop):
-    option mname -> X -> (Σ * Any.t) -> itree Es Any_tgt := fun mn x '(ctx, vret_src) =>
+    option mname -> X -> ((Σ * Σ) * Any.t) -> itree Es Any_tgt := fun mn x '(ctx, fr, vret_src) =>
     vret_tgt <- trigger (Choose Any_tgt);;
-    '(mret, fret) <- trigger (Choose _);; put ctx mret fret;;; (*** updating resources in an abstract way ***)
-    rret <- trigger (Choose Σ);; guarantee(Q mn x vret_src vret_tgt rret);;; (*** postcondition ***)
-    (discard rret);;; (*** virtual resource passing ***)
-
+    '(rret, mr) <- trigger (Choose _);;
+    mput mr;;;
+    guarantee(URA.wf (rret ⋅ ctx ⋅ mr));;;
+    guarantee(Q mn x vret_src vret_tgt rret);;; (*** postcondition ***)
     Ret vret_tgt (*** return ***)
   .
 
@@ -468,17 +477,16 @@ Section SMODSEM.
   }
   .
 
-  Definition transl (tr: mname -> fspecbody -> (option mname * Any.t -> itree Es Any.t)) (mr: t -> Σ) (ms: t): ModSem.t := {|
+  Definition transl (tr: mname -> fspecbody -> (option mname * Any.t -> itree Es Any.t)) (mst: t -> Any.t) (ms: t): ModSem.t := {|
     ModSem.fnsems := List.map (fun '(fn, sb) => (fn, tr ms.(mn) sb)) ms.(fnsems);
     ModSem.mn := ms.(mn);
-    ModSem.initial_mr := mr ms;
-    ModSem.initial_st := ms.(initial_st);
+    ModSem.initial_st := mst ms;
   |}
   .
 
-  Definition to_src (ms: t): ModSem.t := transl (fun mn => fun_to_src ∘ fsb_body) (fun _ => ε) ms.
-  Definition to_mid (stb: gname -> option fspec) (ms: t): ModSem.t := transl (fun mn => fun_to_mid stb ∘ fsb_body) (fun _ => ε) ms.
-  Definition to_tgt (stb: gname -> option fspec) (ms: t): ModSem.t := transl (fun mn => fun_to_tgt mn stb) (initial_mr) ms.
+  Definition to_src (ms: t): ModSem.t := transl (fun mn => fun_to_src ∘ fsb_body) initial_st ms.
+  Definition to_mid (stb: gname -> option fspec) (ms: t): ModSem.t := transl (fun mn => fun_to_mid stb ∘ fsb_body) initial_st ms.
+  Definition to_tgt (stb: gname -> option fspec) (ms: t): ModSem.t := transl (fun mn => fun_to_tgt mn stb) (fun ms => Any.pair ms.(initial_st) ms.(initial_mr)↑) ms.
 
   Definition main (mainpre: Any.t -> ord -> iProp) (mainbody: (option mname * Any.t) -> itree (hCallE +' pE +' eventE) Any.t): t := {|
       fnsems := [("main", (mk_specbody (mk_simple (fun (_: unit) => (mainpre, fun _ => (⌜True⌝: iProp)%I))) mainbody))];
@@ -504,16 +512,16 @@ Section SMOD.
   }
   .
 
-  Definition transl (tr: Sk.t -> mname -> fspecbody -> (option mname * Any.t -> itree Es Any.t)) (mr: SModSem.t -> Σ) (md: t): Mod.t := {|
-    Mod.get_modsem := fun sk => SModSem.transl (tr sk) mr (md.(get_modsem) sk);
+  Definition transl (tr: Sk.t -> mname -> fspecbody -> (option mname * Any.t -> itree Es Any.t)) (mst: SModSem.t -> Any.t) (md: t): Mod.t := {|
+    Mod.get_modsem := fun sk => SModSem.transl (tr sk) mst (md.(get_modsem) sk);
     Mod.sk := md.(sk);
   |}
   .
 
-  Definition to_src (md: t): Mod.t := transl (fun _ _ => fun_to_src ∘ fsb_body) (fun _ => ε) md.
-  Definition to_mid (stb: gname -> option fspec) (md: t): Mod.t := transl (fun _ _ => fun_to_mid stb ∘ fsb_body) (fun _ => ε) md.
+  Definition to_src (md: t): Mod.t := transl (fun _ _ => fun_to_src ∘ fsb_body) SModSem.initial_st md.
+  Definition to_mid (stb: gname -> option fspec) (md: t): Mod.t := transl (fun _ _ => fun_to_mid stb ∘ fsb_body) SModSem.initial_st md.
   Definition to_tgt (stb: Sk.t -> gname -> option fspec) (md: t): Mod.t :=
-    transl (fun sk mn => fun_to_tgt mn (stb sk)) SModSem.initial_mr md.
+    transl (fun sk mn => fun_to_tgt mn (stb sk)) (fun ms => Any.pair ms.(SModSem.initial_st) ms.(SModSem.initial_mr)↑) md.
 
   (* Definition transl (tr: SModSem.t -> ModSem.t) (md: t): Mod.t := {| *)
   (*   Mod.get_modsem := (SModSem.transl tr) ∘ md.(get_modsem); *)
@@ -684,10 +692,10 @@ Section SMOD.
 
 
 
-  Definition load_initial_mrs (sk: Sk.t) (mds: list t) (mr0: SModSem.t -> Σ): list (string * (Σ * Any.t)) :=
+  Definition load_initial_mrs (sk: Sk.t) (mds: list t) (mr0: SModSem.t -> Any.t): list (string * Any.t) :=
     do md <- mds;
     let ms := (get_modsem md sk) in
-    ret (ms.(SModSem.mn), (mr0 ms, ms.(SModSem.initial_st)))
+    ret (ms.(SModSem.mn), mr0 ms)
   .
 
   Let transl_initial_mrs_aux
@@ -826,7 +834,7 @@ End SMod.
         `{Σ: GRA.t}
         prog st0 (P: Prop)
     :
-      EventsL.interp_Es prog (assume P) st0 = assume P;;; tau;; tau;; tau;; Ret (st0, tt)
+      EventsL.interp_Es prog (assume P) st0 = assume P;;; tau;; tau;; Ret (st0, tt)
   .
   Proof.
     unfold assume.
@@ -841,7 +849,7 @@ End SMod.
         `{Σ: GRA.t}
         prog st0 (P: Prop)
     :
-      EventsL.interp_Es prog (guarantee P) st0 = guarantee P;;; tau;; tau;; tau;; Ret (st0, tt)
+      EventsL.interp_Es prog (guarantee P) st0 = guarantee P;;; tau;; tau;; Ret (st0, tt)
   .
   Proof.
     unfold guarantee.
@@ -872,7 +880,7 @@ Section AUX.
       (mk_box EventsL.interp_Es_tau)
       (mk_box EventsL.interp_Es_ret)
       (mk_box EventsL.interp_Es_pE)
-      (mk_box EventsL.interp_Es_rE)
+      (mk_box EventsL.interp_Es_pE)
       (mk_box EventsL.interp_Es_callE)
       (mk_box EventsL.interp_Es_eventE)
       (mk_box EventsL.interp_Es_triggerUB)
@@ -949,7 +957,7 @@ Section AUX.
       (mk_box transl_all_tau)
       (mk_box transl_all_ret)
       (mk_box transl_all_pE)
-      (mk_box transl_all_rE)
+      (mk_box transl_all_pE)
       (mk_box transl_all_callE)
       (mk_box transl_all_eventE)
       (mk_box transl_all_triggerUB)
@@ -1008,7 +1016,7 @@ Lemma interp_tgt_triggerp mn stb o ctx
   :
     (interp_hCallE_tgt mn stb o (trigger i) ctx)
     =
-    (trigger i >>= (fun r => tau;; Ret (ctx, r))).
+    (handle_pE_tgt i >>= (fun r => tau;; Ret (ctx, r))).
 Proof.
   unfold interp_hCallE_tgt. rewrite interp_state_trigger. cbn. grind.
 Qed.
@@ -1040,7 +1048,7 @@ Lemma interp_tgt_triggerUB mn stb o ctx
   :
     (interp_hCallE_tgt mn stb o (triggerUB) ctx)
     =
-    triggerUB (A:=Σ*R).
+    triggerUB (A:=Σ*Σ*R).
 Proof.
   unfold interp_hCallE_tgt, triggerUB in *. rewrite unfold_interp_state. cbn. grind.
 Qed.
@@ -1050,7 +1058,7 @@ Lemma interp_tgt_triggerNB mn stb o ctx
   :
     (interp_hCallE_tgt mn stb o (triggerNB) ctx)
     =
-    triggerNB (A:=Σ*R).
+    triggerNB (A:=Σ*Σ*R).
 Proof.
   unfold interp_hCallE_tgt, triggerNB in *. rewrite unfold_interp_state. cbn. grind.
 Qed.
@@ -1530,7 +1538,7 @@ Ltac ired_both := ired_l; ired_r.
 
   Ltac mred := repeat (cbn; ired_both).
   Ltac Esred :=
-            try rewrite ! EventsL.interp_Es_rE; try rewrite ! EventsL.interp_Es_pE;
+            try rewrite ! EventsL.interp_Es_pE;
             try rewrite ! EventsL.interp_Es_eventE; try rewrite ! EventsL.interp_Es_callE;
             try rewrite ! EventsL.interp_Es_triggerNB; try rewrite ! EventsL.interp_Es_triggerUB (*** igo ***).
   (*** step and some post-processing ***)
@@ -1605,7 +1613,7 @@ Ltac ired_both := ired_l; ired_r.
   Ltac init :=
     split; ss; ii; clarify; rename y into varg; eexists 100%nat; ss; des; clarify;
     ginit; []; unfold alist_add, alist_remove; ss;
-    unfold fun_to_tgt, cfun, HoareFun; ss.
+    unfold fun_to_tgt, cfun; ss.
 
 
 Create HintDb stb.

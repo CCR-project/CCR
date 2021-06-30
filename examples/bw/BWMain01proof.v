@@ -31,14 +31,13 @@ Section SIMMODSEM.
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG BW1.bwRA Σ}.
 
-  Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
+  Let W: Type := Any.t * Any.t.
 
   Let wf: _ -> W -> Prop :=
     @mk_wf
       _
       unit
       (fun _ _ _ => (True)%I)
-      top4
   .
 
   Theorem correct: ModSemPair.sim BWMain1.MainSem BWMain0.MainSem.
@@ -49,8 +48,7 @@ Section SIMMODSEM.
 
     econs; ss.
     { unfold mainbody, mainF, ccall, hcall. init. harg.
-      mDesAll. des; clarify.
-      steps. rewrite Any.upcast_downcast in *. clarify.
+      mDesAll. des; clarify. steps.
       destruct (to_stb (BWStb ++ ClientStb ++ MainStb) "getbool") eqn:T; unfold to_stb in T; stb_tac; clarify.
       steps. hcall _ _ _ with ""; ss.
       { splits; ss. ss. }
@@ -80,8 +78,7 @@ Section SIMMODSEM.
       { steps. acatch.
         hcall _ _ _ with "*"; auto.
         { eauto with ord_step. }
-        mDesAll. clarify. steps.
-        rewrite Any.upcast_downcast in *. clarify. astop.
+        mDesAll. clarify. steps. astop.
         steps. force_l. eexists. steps.
         force_l; et. steps.
         destruct (to_stb (BWStb ++ ClientStb ++ MainStb) "putint") eqn:T; stb_tac; clarify.

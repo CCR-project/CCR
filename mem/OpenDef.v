@@ -210,7 +210,6 @@ Section KMODSEM.
   Definition transl_src (ms: t): ModSem.t := {|
     ModSem.fnsems := List.map (map_snd disclose_ksb_src) ms.(fnsems);
     ModSem.mn := ms.(mn);
-    ModSem.initial_mr := ε;
     ModSem.initial_st := ms.(initial_st);
   |}
   .
@@ -597,29 +596,28 @@ Section KTACTICS.
   Lemma APCK_start_clo
         (at_most: Ord.t) (n1: Ord.t)
         (o: ord)
-        world w r rg (n0: Ord.t) mr_src0 mp_src0 fr_src0
-        mn mrs_tgt frs_tgt k_src
-        (wf: world -> (Σ * Any.t) * (Σ * Any.t) -> Prop)
+        world w r rg (n0: Ord.t) mp_src0
+        mn k_src
+        (wf: world -> Any.t * Any.t -> Prop)
         (le: world -> world -> Prop)
-        (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
+        (eqr: Any.t -> Any.t -> Any.t -> Any.t -> Prop)
         stb itr_tgt ctx
 
         (ATMOST: (at_most < kappa)%ord)
         (FUEL: (n1 + 5 < n0)%ord)
 
         (POST: gpaco7 (_sim_itree wf le) (cpn7 (_sim_itree wf le)) rg rg _ _ eqr n1 w
-                      (mr_src0, mp_src0, fr_src0,
+                      (mp_src0,
                        (interp_hCallE_tgt stb mn o (KModSem.transl_itr_tgt (_APCK at_most)) ctx) >>= k_src)
-                      ((mrs_tgt, frs_tgt),
-                       itr_tgt))
+                      (itr_tgt))
     :
       gpaco7 (_sim_itree wf le) (cpn7 (_sim_itree wf le)) r rg _ _ eqr n0 w
-             (mr_src0, mp_src0, fr_src0,
+             (mp_src0,
               (interp_hCallE_tgt stb mn o (KModSem.transl_itr_tgt APCK) ctx) >>= k_src)
-             ((mrs_tgt, frs_tgt),
-              itr_tgt).
+             (itr_tgt).
   Proof.
-    unfold APCK. steps. force_l.
+    unfold APCK. destruct ctx. destruct itr_tgt.
+    steps. force_l.
     exists at_most. ired_l.  _step; [by eauto with ord_step|]. steps; [by eauto with ord_step|].
     unfold guarantee. ired_both. force_l. esplits; et.
     ired_both. _step; [by eauto with ord_step|]. steps; [by eauto with ord_step|]. ss.
@@ -630,12 +628,12 @@ Section KTACTICS.
         (fn: gname) (args: Any.t) (next: Ord.t) (n1: Ord.t)
 
         (o: ord)
-        world w r rg (n0: Ord.t) mr_src0 mp_src0 fr_src0
-        mn mrs_tgt frs_tgt k_src
+        world w r rg (n0: Ord.t) mp_src0
+        mn k_src
         (at_most: Ord.t)
-        (wf: world -> (Σ * Any.t) * (Σ * Any.t) -> Prop)
+        (wf: world -> Any.t * Any.t -> Prop)
         (le: world -> world -> Prop)
-        (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
+        (eqr: Any.t -> Any.t -> Any.t -> Any.t -> Prop)
         stb itr_tgt ctx0
 
         (FUEL: (n1 + 11 < n0)%ord)
@@ -644,19 +642,18 @@ Section KTACTICS.
         (NEXT: (next < at_most)%ord)
 
         (POST: gpaco7 (_sim_itree wf le) (cpn7 (_sim_itree wf le)) rg rg _ _ eqr n1 w
-                      (mr_src0, mp_src0, fr_src0,
+                      (mp_src0,
                        '(ctx1, _) <- (HoareCall mn true o (KModSem.disclose_tgt ftsp) fn (Any.pair true↑ args) ctx0);;
                        tau;; tau;; (interp_hCallE_tgt mn stb o (KModSem.transl_itr_tgt (_APCK next)) ctx1)
                                      >>= k_src)
-                      ((mrs_tgt, frs_tgt),
-                       itr_tgt))
+                      (itr_tgt))
     :
       gpaco7 (_sim_itree wf le) (cpn7 (_sim_itree wf le)) r rg _ _ eqr n0 w
-             (mr_src0, mp_src0, fr_src0,
+             (mp_src0,
               (interp_hCallE_tgt mn stb o (KModSem.transl_itr_tgt (_APCK at_most)) ctx0) >>= k_src)
-             ((mrs_tgt, frs_tgt),
-              itr_tgt).
+             (itr_tgt).
   Proof.
+    destruct ctx0. destruct itr_tgt.
     rewrite unfold_APCK. steps. force_l. exists false. ired_both.
     _step; [by eauto with ord_step|].
     steps; [by eauto with ord_step|].
@@ -682,27 +679,26 @@ Section KTACTICS.
         (n1: Ord.t)
 
         (o: ord)
-        world w r rg (n0: Ord.t) mr_src0 mp_src0 fr_src0
-        mn mrs_tgt frs_tgt k_src
+        world w r rg (n0: Ord.t) mp_src0
+        mn k_src
         (at_most: Ord.t)
-        (wf: world -> (Σ * Any.t) * (Σ * Any.t) -> Prop)
+        (wf: world -> Any.t * Any.t -> Prop)
         (le: world -> world -> Prop)
-        (eqr: Σ * Any.t * Σ -> Σ * Any.t * Σ -> Any.t -> Any.t -> Prop)
+        (eqr: Any.t -> Any.t -> Any.t -> Any.t -> Prop)
         stb itr_tgt ctx
 
         (FUEL: (n1 + 2 < n0)%ord)
 
         (POST: gpaco7 (_sim_itree wf le) (cpn7 (_sim_itree wf le)) rg rg _ _ eqr n1 w
-                      (mr_src0, mp_src0, fr_src0, k_src (ctx, ()))
-                      ((mrs_tgt, frs_tgt),
-                       itr_tgt))
+                      (mp_src0, k_src (ctx, ()))
+                      (itr_tgt))
     :
       gpaco7 (_sim_itree wf le) (cpn7 (_sim_itree wf le)) r rg _ _ eqr n0 w
-             (mr_src0, mp_src0, fr_src0,
+             (mp_src0,
               (interp_hCallE_tgt stb mn o (KModSem.transl_itr_tgt (_APCK at_most)) ctx) >>= k_src)
-             ((mrs_tgt, frs_tgt),
-              itr_tgt).
+             (itr_tgt).
   Proof.
+    destruct ctx. destruct itr_tgt.
     rewrite unfold_APCK. steps. force_l. exists true.
     ired_both; _step; [by eauto with ord_step|].
     ired_both; _step; [by eauto with ord_step|].
@@ -712,25 +708,24 @@ Section KTACTICS.
 
   Lemma trivial_init_clo
         A
-        (R_src: A -> Any.t -> Any.t -> iProp) (R_tgt: A -> Any.t -> Any.t -> iProp) (le: A -> A -> Prop)
+        (R_src: A -> Any.t -> Any.t -> iProp) (le: A -> A -> Prop)
         (mn: string) fn f_tgt gstb body
-        (POST: forall a mp_src mp_tgt mr_src mr_tgt fr_src ctx varg
-                      (RTGT: R_tgt a mp_src mp_tgt mr_tgt)
+        (POST: forall a mp_src mp_tgt (mr_src: Σ) fr_src ctx varg
                       (ACC: current_iPropL ctx [("INV", R_src a mp_src mp_tgt)])
           ,
-            gpaco7 (_sim_itree (mk_wf R_src R_tgt) le) (cpn7 (_sim_itree (mk_wf R_src R_tgt) le)) bot7 bot7
+            gpaco7 (_sim_itree (mk_wf R_src) le) (cpn7 (_sim_itree (mk_wf R_src) le)) bot7 bot7
                    _ _
-                   (lift_rel (mk_wf R_src R_tgt) le a (@eq Any.t))
-                   89 a
-                   (((mr_src, mp_src), fr_src),
-                    ((interp_hCallE_tgt mn gstb ord_top (KModSem.transl_fun_tgt body varg) ctx)
+                   (lift_rel (mk_wf R_src) le a (@eq Any.t))
+                   93 a
+                   (Any.pair mp_src mr_src↑,
+                    ((interp_hCallE_tgt mn gstb ord_top (KModSem.transl_fun_tgt body varg) (ctx, fr_src))
                        >>= (HoareFunRet (fun (_: option string) (_: unit) (reth retl: Any.t) =>
                                            (⌜reth = retl⌝%I): iProp) (Some mn) tt))
                    )
-                   (((mr_tgt, mp_tgt), ε), (f_tgt varg))
+                   (mp_tgt, (f_tgt varg))
         )
     :
-      sim_fnsem (mk_wf R_src R_tgt) le
+      sim_fnsem (mk_wf R_src) le
                 (fn, fun_to_tgt mn gstb (KModSem.disclose_ksb_tgt (mk_kspecbody fspec_trivial body body)))
                 (fn, f_tgt)
   .
@@ -739,10 +734,8 @@ Section KTACTICS.
     assert(ord_cur = ord_top).
     { on_current ltac:(fun ACC => clear - ACC); mClear "INV"; des_ifs; mDesAll; des; ss. }
     subst. des_ifs; mDesAll; des; subst.
-    - rewrite Any.pair_split. steps. rewrite Any.upcast_downcast. steps.
-      exploit POST; et.
-    - rewrite Any.pair_split. steps. rewrite Any.upcast_downcast. steps.
-      exploit POST; et.
+    - steps. exploit POST; et.
+    - steps. exploit POST; et.
   Qed.
 
 End KTACTICS.
