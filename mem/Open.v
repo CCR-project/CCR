@@ -573,6 +573,7 @@ Section ADQ.
   Let umss: list ModSem.t := Eval red in (_umss sk_link).
   Let gstb: list (gname * fspec) := Eval red in (_gstb sk_link).
   Let _frds: list (option mname) := (None :: (List.map Some (frds sk_link))).
+
   Lemma add_list_fnsems
         mds ske
     :
@@ -627,8 +628,8 @@ Section ADQ.
         - steps. gbase. eapply CIH; et.
         - steps. gbase. eapply CIH; et.
       }
-      { destruct e; ss.
-        - resub. steps. resub. ired_both. resub.
+      { resub. rewrite massage_itr_evente. destruct e; ss.
+        - resub. ired_both. resub.
           gstep. eapply sim_itree_tau_tgt; eauto with ord_step.
           ired_both. gstep; econs; et. i. esplits; et. steps. gbase. eapply CIH; et.
         - resub. ired_both. resub.
@@ -639,7 +640,7 @@ Section ADQ.
           ired_both. gstep; econs; et. i. esplits; et. steps. gbase. eapply CIH; et.
       }
     }
-    destruct c. resub. ired_both. resub. steps.
+    destruct c. resub. rewrite massage_itr_calle. ired_both. resub. steps.
     destruct (_stb ske fn) eqn:STB.
     2: { unfold _stb in *. des_ifs. }
     steps.
@@ -648,13 +649,11 @@ Section ADQ.
       list_tac.
       des_ifs. unfold _kmss in T. list_tac. subst. unfold kmds in T0. list_tac. subst.
       ss. list_tac. des_ifs. ss.
-      unfold HoareCall, discard, forge, put, checkWf. steps.
-      force_l. exists (ε, ε). steps.
+      Local Transparent HoareCall.
+      unfold HoareCall, mput, mget. steps.
+      force_l. exists (ε, ε, ε). steps.
       force_l.
-      { rewrite ! URA.unit_id. auto. }
-      steps. force_l. exists ε. steps.
-      force_l. exists ε. steps. force_l.
-      { rewrite URA.unit_id. auto. }
+      { rewrite ! URA.unit_id. rewrite ! URA.unit_idl. auto. }
       steps. force_l. exists None. steps.
       force_l. exists (args). steps.
       force_l. exists ord_top. steps.
@@ -668,14 +667,11 @@ Section ADQ.
       i. des_ifs. des; subst. eexists. steps.
       red in _ASSUME0. uipropall. subst.
       destruct w1. gbase. eapply CIH; et.
-      eapply URA.wf_mon; et.
-    - unfold HoareCall, discard, forge, put, checkWf. steps.
-      force_l. exists (ε, ε). steps.
+      eapply URA.wf_mon; et. instantiate (1:=c). r_wf _ASSUME.
+    - unfold HoareCall, mput, mget. steps.
+      force_l. exists (ε, ε, ε). steps.
       force_l.
-      { rewrite ! URA.unit_id. auto. }
-      steps. force_l. exists ε. steps.
-      force_l. exists ε. steps. force_l.
-      { rewrite URA.unit_id. auto. }
+      { rewrite ! URA.unit_id. rewrite ! URA.unit_idl. auto. }
       steps. force_l. exists None. steps.
       force_l. eexists (args). steps.
       force_l. exists ord_top. steps.
@@ -688,7 +684,7 @@ Section ADQ.
       i. des_ifs. des; subst. eexists. steps.
       red in _ASSUME0. uipropall. subst.
       destruct w1. gbase. eapply CIH; ss.
-      eapply URA.wf_mon; et.
+      eapply URA.wf_mon; et. instantiate (1:=c). r_wf _ASSUME.
       Unshelve.
       all: try (exact Ord.O).
       all: try (exact 0%nat).
@@ -696,20 +692,19 @@ Section ADQ.
 
   Lemma my_lemma1_aux
         mn ske
-        ktr arg mr0 st0
+        ktr arg st0
     :
-      sim_itree (fun (_: unit) '((mr_src, st_src), (mr_tgt, st_tgt)) =>
-                       mr_src = ε /\ st_src = (Any.pair mr_tgt↑ st_tgt)) top2 100%nat tt
-                (ε, (Any.pair mr0↑ st0), ε, fun_to_tgt mn (_stb ske) (massage_fsb true ktr) arg)
-                (mr0, st0, ε, addtau (ktr arg))
+      sim_itree (fun (_: unit) '(st_src, st_tgt) => st_src = Any.pair st_tgt (ε: Σ)↑) top2 100%nat tt
+                ((Any.pair st0 (ε: Σ)↑), fun_to_tgt mn (_stb ske) (massage_fsb true ktr) arg)
+                (st0, addtau (ktr arg))
   .
   Proof.
     Local Transparent HoareFun.
-    unfold fun_to_tgt, HoareFun, discard, forge, checkWf, put, cfun.
+    unfold fun_to_tgt, HoareFun, mput, mget, cfun.
     Local Opaque HoareFun.
     ginit. steps.
-    assert (x3 = ord_top /\ exists b, x0 = Any.pair b t).
-    { destruct x1; ss.
+    assert (x1 = ord_top /\ exists b, x0 = Any.pair b t).
+    { destruct x; ss.
       { red in _ASSUME0. uipropall. des. uipropall. des.
         red in _ASSUME0. red in _ASSUME1. uipropall. des. subst. et. }
       { uipropall. red in _ASSUME0. uipropall. des. clarify. et. }
@@ -722,23 +717,16 @@ Section ADQ.
     erewrite idK_spec with (i0:=(addtau (ktr (o, t)))).
     guclo lbindC_spec. econs.
     { instantiate (1:=tt).
-      instantiate (1:=(fun '((mr_src, st_src), fr_src) '((mr_tgt, st_tgt), fr_tgt) '(ctx, (_, r_src)) r_tgt =>
-                         mr_src = ε /\ st_src = (Any.pair mr_tgt↑ st_tgt) /\ r_src = r_tgt
-                         /\ URA.wf ctx)).
       gfinal. right. eapply my_lemma1_aux''; et.
-      eapply URA.wf_mon; et.
+      eapply URA.wf_mon; et. instantiate (1:=c). r_wf _ASSUME.
     }
     i. des_ifs. ss. des_ifs. ss. des; clarify. unfold idK. steps.
     force_l. eexists. force_l. eexists (_, _). steps.
     force_l.
-    { instantiate (1:=ε). instantiate (1:=ε). rewrite ! URA.unit_id; ss. }
-    steps. force_l. eexists.
-    force_l.
-    { red. destruct x1; red; uipropall. }
-    steps. force_l. eexists. force_l.
-    { instantiate (1:=ε). instantiate (1:=ε). rewrite URA.unit_id. auto. }
+    { instantiate (1:=ε). instantiate (1:=ε). r_wf SIM0. }
+    steps. force_l.
+    { red. destruct x; red; uipropall. }
     steps.
-    Unshelve. all: try exact tt.
   Qed.
   Lemma my_lemma1
         umd
@@ -750,8 +738,7 @@ Section ADQ.
     econs; ss.
     i. r. econs.
     { instantiate (1:=fun (_ _: unit) => True). ss. }
-    { instantiate (1:=(fun (_: unit) '((mr_src, st_src), (mr_tgt, st_tgt)) =>
-                       mr_src = ε /\ st_src = (Any.pair mr_tgt↑ st_tgt))). ss.
+    { instantiate (1:=(fun (_: unit) '(st_src, st_tgt) => st_src = Any.pair st_tgt (ε: Σ)↑)). ss.
       set (ums:=Mod.get_modsem umd sk) in *.
       rewrite ! List.map_map.
       eapply Forall2_apply_Forall2.
@@ -762,10 +749,13 @@ Section ADQ.
     { ss. }
     { ss. }
   Qed.
+
   Require Import SimGlobal.
+
   Let prog_src := Mod.add_list (map (KMod.transl_src frds) _kmds ++ umds).
   Let prog_mid := Mod.add_list (map (KMod.transl_src frds) _kmds ++ map (SMod.to_src ∘ massage_md false) umds).
   Let prog_tgt := Mod.add_list (map SMod.to_src kmds ++ map (SMod.to_src ∘ massage_md true) umds).
+
   Lemma stb_find_iff_mid fn
     :
       ((<<SRC: alist_find fn (ModSemL.fnsems (ModL.enclose prog_mid)) = None>>) /\
@@ -781,6 +771,7 @@ Section ADQ.
   Proof.
     admit "alist find".
   Qed.
+
   Variant my_lemma2_r1: forall R0 R1 (RR: R0 -> R1 -> Prop), Ord.t -> itree eventE R0 -> itree eventE R1 -> Prop :=
   | my_lemma2_r1_intro
       R mn (itr: itree _ R) st
@@ -790,17 +781,21 @@ Section ADQ.
                    (EventsL.interp_Es (ModSemL.prog (ModL.enclose prog_mid)) (transl_all mn (KModSem.interp_kCallE_src itr)) st)
                    (EventsL.interp_Es (ModSemL.prog (ModL.enclose prog_tgt)) (transl_all mn (interp_hCallE_src (KModSem.transl_itr_tgt itr))) st)
   .
+
   Variant my_lemma2_r2: forall R0 R1 (RR: R0 -> R1 -> Prop), Ord.t -> itree eventE R0 -> itree eventE R1 -> Prop :=
   | my_lemma2_r2_intro
-      R mn (itr: itree _ R) st r
+      R mn (itr: itree _ R) st
       (MN: ~ List.In (Some mn) _frds)
     :
       my_lemma2_r2 eq 200
-                   (EventsL.interp_Es (ModSemL.prog (ModL.enclose prog_mid)) (transl_all mn (interp_hCallE_src (massage_itr false itr r))) st)
-                   (EventsL.interp_Es (ModSemL.prog (ModL.enclose prog_tgt)) (transl_all mn (interp_hCallE_src (massage_itr true itr r))) st)
+                   (EventsL.interp_Es (ModSemL.prog (ModL.enclose prog_mid)) (transl_all mn (interp_hCallE_src (massage_itr false itr))) st)
+                   (EventsL.interp_Es (ModSemL.prog (ModL.enclose prog_tgt)) (transl_all mn (interp_hCallE_src (massage_itr true itr))) st)
   .
+
   Let my_r := my_lemma2_r1 \6/ my_lemma2_r2.
+
   Ltac gsteps := HoareDef.steps.
+
   Lemma my_lemma2_aux
     :
       my_r <6= simg.
@@ -809,32 +804,29 @@ Section ADQ.
     ginit.
     { i. eapply cpn6_wcompat; eauto with paco. }
     gcofix CIH. i. destruct PR.
-    { destruct H. destruct st as [[fr mr] mp]. ides itr.
+    { destruct H. ides itr.
       { gsteps. }
       { gsteps. gbase. eapply CIH. left. econs. auto. }
       rewrite <- bind_trigger. destruct e.
       { resub. destruct k0. gsteps. destruct kf.
         { gsteps. exists x_tgt. gsteps. gbase. eapply CIH. left. econs. auto. }
-        { gsteps. destruct mr.
-          { gsteps. }
-          gsteps. hexploit (stb_find_iff_mid fn). i. des.
+        { gsteps. hexploit (stb_find_iff_mid fn). i. des.
           { rewrite SRC. rewrite TGT. gsteps. }
           { rewrite SRC. rewrite TGT. gsteps.
             unfold my_if, sumbool_to_bool. des_ifs.
             unfold fun_to_src, body_to_src. rewrite Any.pair_split. gsteps.
-            rewrite Any.upcast_downcast. gsteps.
             guclo bindC_spec. econs.
             { gbase. eapply CIH. left. econs. auto. }
-            i. subst. destruct vret_tgt as [[[fr0 mr0] mp0] retv].
-            gsteps. destruct mr0; gsteps.
+            i. subst. destruct vret_tgt as [mp0 retv].
+            gsteps.
             gbase. eapply CIH. left. econs. auto.
           }
           { rewrite SRC. rewrite TGT. gsteps.
             unfold fun_to_src, body_to_src. rewrite Any.pair_split. gsteps.
             guclo bindC_spec. econs.
             { gbase. eapply CIH. right. econs. auto. }
-            i. subst. destruct vret_tgt as [[[fr0 mr0] mp0] retv].
-            gsteps. destruct mr0; gsteps.
+            i. subst. destruct vret_tgt as [mp0 retv].
+            gsteps.
             gbase. eapply CIH. left. econs. auto.
           }
         }
@@ -850,8 +842,8 @@ Section ADQ.
         { gsteps. gbase. eapply CIH. left. econs. auto. }
       }
     }
-    { destruct H. destruct st as [[fr mr] mp]. ides itr.
-      { gsteps. }
+    { destruct H. ides itr.
+      { ired_both. gsteps. }
       { gsteps. gbase. eapply CIH. right. econs. auto. }
       rewrite <- bind_trigger. destruct e.
       { resub. destruct c. gsteps.
