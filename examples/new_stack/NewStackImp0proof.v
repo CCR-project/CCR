@@ -47,7 +47,7 @@ Section SIMMODSEM.
   Proof.
     econstructor 1 with (wf:=wf) (le:=top2); et; ss.
     econs; ss.
-    - init.
+    { init.
       unfold newF.
       unfold new.
       steps.
@@ -60,7 +60,21 @@ Section SIMMODSEM.
       imp_steps.
       gstep. econs; ss. i. exists 100.
       imp_steps.
+      (* des_ifs. *)
+      admit "wf for alloced ptr".
+    }
+    econs; ss.
+    { init.
+      steps.
+      unfold popF.
+      unfold pop.
+      steps.
+      rewrite unfold_eval_imp.
+      imp_steps.
       des_ifs.
+      2:{ exfalso; apply n. solve_NoDup. }
+      imp_steps.
+      
       (* Unshelve. all: ss. *)
   Admitted.
 
