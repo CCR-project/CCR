@@ -204,25 +204,23 @@ Section MATCH.
       match_code mn (fun x => (itr x >>= ktr)) (chead :: ctail)
   .
 
-  Inductive match_stack (size: nat) (src: Imp.programL) (mn: mname) : imp_stack -> option Csharpminor.cont -> Prop :=
+  Inductive match_stack (src: Imp.programL) (mn: mname) : imp_stack -> option Csharpminor.cont -> Prop :=
   | match_stack_bottom
-      (SIZEEND: size = 1)
     :
-      match_stack size src mn (itree_of_imp_pop_bottom ms mn) (Some ret_call_main)
+      match_stack src mn (itree_of_imp_pop_bottom ms mn) (Some ret_call_main)
 
   | match_stack_cret
-      tf le tle next stack tcont id tid tpop retmn sz
+      tf le tle next stack tcont id tid tpop retmn
       (MLE: @match_le src le tle)
       (MID: s2p id = tid)
 
       (WFCONT: wf_ccont tcont)
       (MCONT: match_code retmn next (get_cont_stmts tcont))
-      (MSTACK: match_stack sz src retmn stack (get_cont_stack tcont))
-      (SIZEUP: size = S sz)
+      (MSTACK: match_stack src retmn stack (get_cont_stack tcont))
 
       (TPOP: tpop = ret_call_cont (Kcall (Some tid) tf empty_env tle tcont))
     :
-      match_stack size src mn (fun x => (y <- (itree_of_imp_pop ge ms mn retmn id le x);; next y >>= stack)) (Some tpop)
+      match_stack src mn (fun x => (y <- (itree_of_imp_pop ge ms mn retmn id le x);; next y >>= stack)) (Some tpop)
   .
 
   Variant match_mem src : Mem.t -> Memory.Mem.mem -> Prop :=
@@ -241,14 +239,14 @@ Section MATCH.
 
   Variant match_states src : imp_state -> Csharpminor.state -> Prop :=
   | match_states_intro
-      tf pstate le tle code itr tcode m tm next stack tcont mn sz
+      tf pstate le tle code itr tcode m tm next stack tcont mn
       (CST: compile_stmt code = tcode)
       (ML: @match_le src le tle)
       (PSTATE: pstate "Mem"%string = m↑)
       (MM: @match_mem src m tm)
       (WFCONT: wf_ccont tcont)
       (MCONT: match_code mn next (get_cont_stmts tcont))
-      (MSTACK: @match_stack sz src mn stack (get_cont_stack tcont))
+      (MSTACK: @match_stack src mn stack (get_cont_stack tcont))
       (ITR: itr = itree_of_cont_stmt code ge le ms mn (pstate))
     :
       match_states src (x <- itr;; next x >>= stack) (State tf tcode tcont empty_env tle tm)
