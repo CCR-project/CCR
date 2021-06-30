@@ -14,35 +14,33 @@ Section CLIENT.
   Local Open Scope expr_scope.
   Local Open Scope stmt_scope.
 
+  Definition getint :=
+    mk_function
+      []
+      ["ret"]
+      (
+        "ret" =@! "scan" [] ;#
+        return# "ret"
+      ).
 
-  (* Definition pop := *)
-  (*   mk_function *)
-  (*     ["stk"] *)
-  (*     ["hd"; "b"; "v"; "next"] *)
-  (*     ( *)
-  (*       "hd" =#* "stk" ;# *)
-  (*       "b" =# ("hd" == 0%Z) ;# *)
-  (*       if# "b" *)
-  (*       then# return# (-1)%Z *)
-  (*       else# ("v" =#* "hd" ;# *)
-  (*              "next" =#* ("hd" + 8%Z) ;# *)
-  (*              free# "hd" ;# *)
-  (*              free# ("hd" + 8%Z) ;# *)
-  (*              "stk" *=# "next" ;# *)
-  (*              return# "v") *)
-  (*       fi# *)
-  (*     ). *)
+  Definition putint :=
+    mk_function
+      ["v"]
+      []
+      (
+        @! "print" ["v" : expr]
+      ).
 
-  (* Definition Stack_prog : program := *)
-  (*   mk_program *)
-  (*     "Stack" *)
-  (*     [] *)
-  (*     [] *)
-  (*     [] *)
-  (*     [("new", new); ("pop", pop); ("push", push)] *)
-  (* . *)
+  Definition Client_prog : program :=
+    mk_program
+      "Client"
+      []
+      []
+      []
+      [("getint", getint); ("putint", putint)]
+  .
 
-  (* Definition StackSem ge : ModSem.t := ImpMod.modsem Stack_prog ge. *)
-  (* Definition Stack : Mod.t := ImpMod.get_mod Stack_prog. *)
+  Definition ClientSem ge : ModSem.t := ImpMod.modsem Client_prog ge.
+  Definition Client : Mod.t := ImpMod.get_mod Client_prog.
 
 End CLIENT.
