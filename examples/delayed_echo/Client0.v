@@ -38,7 +38,6 @@ Section PROOF.
   Definition ClientSem: ModSem.t := {|
     ModSem.fnsems := [("getint", cfun getintF); ("putint", cfun putintF)];
     ModSem.mn := "Client";
-    ModSem.initial_mr := ε;
     ModSem.initial_st := tt↑;
   |}
   .

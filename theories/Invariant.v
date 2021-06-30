@@ -66,22 +66,16 @@ Section AUX.
 
   Definition inv_wf
              A
-             (R_src: A -> Any.t -> Any.t -> iProp)
-             (R_tgt: A -> Any.t -> Any.t -> iProp)
-    : _ -> (((Σ * Any.t)) * ((Σ * Any.t)) -> Prop) :=
+             (R: A -> Any.t -> Any.t -> iProp)
+    : _ -> (Any.t * Any.t -> Prop) :=
     @mk_wf
       _
       (A + Any.t * Any.t)
       (fun a' mp_src mp_tgt =>
          match a' with
-         | inl a => R_src a mp_src mp_tgt
+         | inl a => R a mp_src mp_tgt
          | inr (mp_src1, mp_tgt1) => inv_closed ** ⌜mp_src1 = mp_src /\ mp_tgt1 = mp_tgt⌝
          end)%I
-      (fun a' mp_src mp_tgt =>
-         match a' with
-         | inl a => R_tgt a mp_src mp_tgt
-         | inr (mp_src, mp_tgt) => top1
-         end)
   .
 
   Definition mk_fspec_inv (fsp: fspec): fspec :=
@@ -133,13 +127,12 @@ Tactic Notation "icall_open" uconstr(o) uconstr(x) "with" constr(Hns) :=
   eapply (@hcall_clo _ _ Hns POST INV o _ x _ (inr (_, _)));
   unshelve_goal;
   [eassumption
-  |
   |start_ipm_proof; iSplitL "☃CLOSED"; [iModIntro; iSplitL "☃CLOSED"; [iExact "☃CLOSED"|ss]|]
   |eauto with ord_step
   |
   |
   on_current ltac:(fun H => try clear H);
-  intros ? ? ? ? ? ? [|[?mp_src ?mp_tgt]]; i; simpl;
+  intros ? ? ? ? ? [|[?mp_src ?mp_tgt]]; i; simpl;
   on_current ltac:(fun H => simpl in H);
   [exfalso; match goal with | H: inv_le _ _ _ |- _ => cbn in H; inv H end
   |mDesSep "☃CLOSED" as "☃CLOSED" "☃TMP"; mPure "☃TMP" as [[] []]
@@ -155,14 +148,12 @@ Tactic Notation "icall_weaken" uconstr(ftsp) uconstr(o) uconstr(x) uconstr(a) "w
   let Hns := constr:("☃CLOSED"::Hns) in
   eapply (@hcall_clo_weaken _ _ Hns POST INV ftsp o x _ (inl a));
   unshelve_goal;
-  [|
-   eassumption
-   |
+  [|eassumption
    |start_ipm_proof; iFrame "☃CLOSED"
    |eauto with ord_step
    |
    |on_current ltac:(fun H => try clear H);
-    intros ? ? ? ? ? ? [|[?mp_src ?mp_tgt]]; i; simpl;
+    intros ? ? ? ? ? [|[?mp_src ?mp_tgt]]; i; simpl;
     on_current ltac:(fun H => simpl in H);
     [
       mDesSep POST as "☃CLOSED" POST
@@ -177,7 +168,6 @@ Tactic Notation "iret" uconstr(a) :=
   eapply (@hret_clo _ _ _ (inl a)); unshelve_goal;
   [eauto with ord_step
   |eassumption
-  |
   |
   |start_ipm_proof; iFrame "☃CLOSED"
   |try by (i; (try unfold lift_rel); esplits; et)

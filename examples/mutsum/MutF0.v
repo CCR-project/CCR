@@ -5,15 +5,12 @@ Require Import STS.
 Require Import Behavior.
 Require Import ModSem.
 Require Import Skeleton.
-Require Import PCM.
 
 Set Implicit Arguments.
 
 
 
 Section PROOF.
-
-  Context `{Σ: GRA.t}.
 
   (***
     f(n) := if (n == 0) then 0 else (n + g(n-1))
@@ -35,7 +32,6 @@ Section PROOF.
   Definition FSem: ModSem.t := {|
     ModSem.fnsems := [("f", cfun fF)];
     ModSem.mn := "F";
-    ModSem.initial_mr := ε;
     ModSem.initial_st := tt↑;
   |}
   .

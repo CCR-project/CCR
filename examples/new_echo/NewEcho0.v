@@ -41,7 +41,7 @@ Section PROOF.
   (*   Stack.push(h, n); *)
   (*   echo_get(h); *)
   (* } *)
-  
+
   Definition input_body: list val -> itree Es val :=
     fun args =>
       h <- (pargs [Tuntyped] args)?;;
@@ -76,7 +76,6 @@ Section PROOF.
   Definition EchoSem: ModSem.t := {|
     ModSem.fnsems := [("echo", cfun echo_body); ("input", cfun input_body); ("output", cfun output_body)];
     ModSem.mn := "Echo";
-    ModSem.initial_mr := ε;
     ModSem.initial_st := tt↑;
   |}
   .

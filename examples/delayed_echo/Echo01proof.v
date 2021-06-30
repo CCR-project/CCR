@@ -82,15 +82,14 @@ Section SIMMODSEM.
   Context `{@GRA.inG Mem1.memRA Σ}.
   Context `{@GRA.inG Echo1.echoRA Σ}.
 
-  Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
+  Let W: Type := Any.t * Any.t.
   Eval compute in (@URA.car Mem1._memRA).
 
   Let wf: _ -> W -> Prop :=
     @mk_wf
       _
       val
-      (fun ll _ _ => ((∃ ns, (OwnM(echo_black ll ns)) ** is_list ll (List.map Vint ns)) ∨ (∃ ns, OwnM(echo_white ll ns)): iProp)%I)
-      (fun ll mp_src mp_tgt _ => mp_tgt = ll↑)
+      (fun ll _ mp_tgt => (((∃ ns, (OwnM(echo_black ll ns)) ** is_list ll (List.map Vint ns)) ∨ (∃ ns, OwnM(echo_white ll ns)) ** {{ EQ : ⌜mp_tgt = ll↑⌝ }}): iProp)%I)
   .
   Local Opaque is_list.
 

@@ -487,6 +487,14 @@ Section SMODSEM.
   Definition to_mid (stb: gname -> option fspec) (ms: t): ModSem.t := transl (fun mn => fun_to_mid stb ∘ fsb_body) initial_st ms.
   Definition to_tgt (stb: gname -> option fspec) (ms: t): ModSem.t := transl (fun mn => fun_to_tgt mn stb) (fun ms => Any.pair ms.(initial_st) ms.(initial_mr)↑) ms.
 
+  Definition main (mainpre: Any.t -> ord -> iProp) (mainbody: (option mname * Any.t) -> itree (hCallE +' pE +' eventE) Any.t): t := {|
+      fnsems := [("main", (mk_specbody (mk_simple (fun (_: unit) => (mainpre, fun _ => (⌜True⌝: iProp)%I))) mainbody))];
+      mn := "Main";
+      initial_mr := ε;
+      initial_st := tt↑;
+    |}
+  .
+
 End SMODSEM.
 End SModSem.
 
@@ -722,6 +730,12 @@ Section SMOD.
     rewrite ! transl_initial_mrs. unfold load_initial_mrs. rewrite <- ! red_do_ret.
     rewrite ! flat_map_assoc. eapply flat_map_ext. i. ss.
   Qed.
+
+  Definition main (mainpre: Any.t -> ord -> Σ -> Prop) (mainbody: (option mname * Any.t) -> itree (hCallE +' pE +' eventE) Any.t): t := {|
+    get_modsem := fun _ => (SModSem.main mainpre mainbody);
+    sk := Sk.unit;
+  |}
+  .
 
 End SMOD.
 End SMod.
@@ -1598,7 +1612,7 @@ Ltac ired_both := ired_l; ired_r.
   Ltac init :=
     split; ss; ii; clarify; rename y into varg; eexists 100%nat; ss; des; clarify;
     ginit; []; unfold alist_add, alist_remove; ss;
-    unfold fun_to_tgt, cfun, HoareFun; ss.
+    unfold fun_to_tgt, cfun; ss.
 
 
 Create HintDb stb.

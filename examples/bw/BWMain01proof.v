@@ -31,14 +31,13 @@ Section SIMMODSEM.
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG BW1.bwRA Σ}.
 
-  Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
+  Let W: Type := Any.t * Any.t.
 
   Let wf: _ -> W -> Prop :=
     @mk_wf
       _
       unit
       (fun _ _ _ => (True)%I)
-      top4
   .
 
   Theorem correct: ModSemPair.sim BWMain1.MainSem BWMain0.MainSem.

@@ -85,7 +85,6 @@ Section PROOF.
   Definition StackSem: ModSem.t := {|
     ModSem.fnsems := [("new", cfun newF); ("pop", cfun popF); ("push", cfun pushF)];
     ModSem.mn := "Stack";
-    ModSem.initial_mr := ε;
     ModSem.initial_st := tt↑;
   |}
   .

@@ -34,11 +34,11 @@ Section SIMMODSEM.
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG Mem1.memRA Σ}.
 
-  Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
+  Let W: Type := Any.t * Any.t.
   Eval compute in (@URA.car Mem1._memRA).
 
   Let wf: _ -> W -> Prop :=
-    mk_wf (fun (_: unit) _ _ => (True: iProp)%I) top4.
+    mk_wf (fun (_: unit) _ _ => (True: iProp)%I).
 
   Local Opaque points_to.
 

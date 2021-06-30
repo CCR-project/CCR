@@ -47,7 +47,6 @@ def flip(): Unit
   Definition BWSem: ModSem.t := {|
     ModSem.fnsems := [("get", cfun getF); ("flip", cfun flipF)];
     ModSem.mn := "BW";
-    ModSem.initial_mr := ε;
     ModSem.initial_st := 0%Z↑;
   |}
   .

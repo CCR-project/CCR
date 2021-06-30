@@ -336,7 +336,6 @@ Section MODSEM.
   Definition modsem (m : program) (ge: SkEnv.t) : ModSem.t := {|
     ModSem.fnsems := List.map (fun '(fn, f) => (fn, cfun (eval_imp ge f))) m.(prog_funs);
     ModSem.mn := m.(name);
-    ModSem.initial_mr := ε;
     ModSem.initial_st := tt↑;
   |}.
 

@@ -325,7 +325,7 @@ Section HLEMMAS.
         (fsp0: fspec)
         mp_tgt0 k_tgt k_src
         fn tbr ord_cur varg_src varg_tgt
-        (R: A -> Any.t -> Any.t -> iProp) (R_tgt: A -> Any.t -> Any.t -> iProp)
+        (R: A -> Any.t -> Any.t -> iProp)
         (eqr: Any.t -> Any.t -> Any.t -> Any.t -> Prop)
 
         (WEAKER: fspec_weaker fsp1 fsp0)
@@ -378,7 +378,7 @@ Section HLEMMAS.
         (fsp0: fspec)
         mp_tgt0 k_tgt k_src
         fn tbr ord_cur varg_src varg_tgt
-        (R: A -> Any.t -> Any.t -> iProp) (R_tgt: A -> Any.t -> Any.t -> iProp)
+        (R: A -> Any.t -> Any.t -> iProp)
         (eqr: Any.t -> Any.t -> Any.t -> Any.t -> Prop)
 
         (WEAKER: fspec_weaker fsp1 fsp0)
@@ -921,12 +921,10 @@ Ltac init :=
   let varg := fresh "varg" in
   let EQ := fresh "EQ" in
   let w := fresh "w" in
-  let mr_src := fresh "mr_src" in
-  let mp_src := fresh "mp_src" in
-  let mr_tgt := fresh "mr_tgt" in
+  let mrp_src := fresh "mrp_src" in
   let mp_tgt := fresh "mp_tgt" in
   let WF := fresh "WF" in
-  split; ss; intros varg_src [mn varg] EQ w [mr_src mp_src] [mr_tgt mp_tgt] WF;
+  split; ss; intros varg_src [mn varg] EQ w mrp_src mp_tgt WF;
   (try subst varg_src); exists 100; cbn;
   ginit;
   try (unfold fun_to_tgt, cfun; rewrite HoareFun_parse); simpl.
@@ -944,7 +942,6 @@ Tactic Notation "hret" uconstr(a) :=
   [eauto with ord_step
   |eassumption
   |
-  |
   |start_ipm_proof
   |try by (i; (try unfold lift_rel); esplits; et)
   ].
@@ -956,7 +953,6 @@ Tactic Notation "hcall" uconstr(o) uconstr(x) uconstr(a) "with" constr(Hns) :=
   eapply (@hcall_clo _ _ Hns POST INV o _ x _ a);
   unshelve_goal;
   [eassumption
-  |
   |start_ipm_proof
   |eauto with ord_step
   |
@@ -971,7 +967,6 @@ Tactic Notation "hcall_weaken" uconstr(fsp) uconstr(o) uconstr(x) uconstr(a) "wi
   unshelve_goal;
   [
   |eassumption
-  |
   |start_ipm_proof
   |eauto with ord_step
   |
@@ -980,7 +975,7 @@ Tactic Notation "hcall_weaken" uconstr(fsp) uconstr(o) uconstr(x) uconstr(a) "wi
 
 Global Opaque _APC APC interp interp_hCallE_tgt.
 
-Global Opaque HoareFun HoareFunArg HoareFunRet.
+Global Opaque HoareFun HoareFunArg HoareFunRet HoareCall.
 
 Definition __hide_mark A (a : A) : A := a.
 Lemma intro_hide_mark: forall A (a: A), a = __hide_mark a. refl. Qed.
