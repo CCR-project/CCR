@@ -103,23 +103,6 @@ Section SIM.
   (*** TODO: sim_syscall is nontrivial; it should accept "injected" memory... ***)
   (*** TODO: simplify the model: Syscall: list val -> val ***)
 
-  | safe_sim_itree_pput_both
-      i0 w0
-      i1 k_src k_tgt
-      st_src0 st_tgt0 st_src1 st_tgt1
-      (K: sim_itree _ _ RR i1 w0 (st_src1, k_src tt) (st_tgt1, k_tgt tt))
-    :
-      _safe_sim_itree sim_itree RR i0 w0 (st_src0, trigger (PPut st_src1) >>= k_src)
-                 (st_tgt0, trigger (PPut st_tgt1) >>= k_tgt)
-  | safe_sim_itree_pget_both
-      i0 w0
-      i1 k_src k_tgt
-      st_src0 st_tgt0
-      (K: sim_itree _ _ RR i1 w0 (st_src0, k_src st_src0) (st_tgt0, k_tgt st_tgt0))
-    :
-      _safe_sim_itree sim_itree RR i0 w0 (st_src0, trigger (PGet) >>= k_src)
-                 (st_tgt0, trigger (PGet) >>= k_tgt)
-
 
 
   | safe_sim_itree_tau_src

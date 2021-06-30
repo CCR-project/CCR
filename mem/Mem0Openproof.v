@@ -589,9 +589,9 @@ Proof Outline
         }
       }
       { unfold KModSem.transl_fun_tgt. des_ifs_safe (mDesAll; ss). des; subst.
-        unhide_k. steps.
+        rewrite Any.upcast_downcast in *. apply Any.downcast_upcast in _UNWRAPN. des; clarify. unhide_k. steps.
         renamer.
-        sym in _UNWRAPU0. rewrite Any.upcast_downcast in *. clarify.
+        sym in _UNWRAPU.
         assert(T: forall b ofs, Mem.valid_ptr memu_src0 b ofs -> Mem.valid_ptr mem_tgt0 b ofs).
         { clear - SIM. i. unfold Mem.valid_ptr in *.
           hexploit (SIM b ofs); et. intro T. unfold is_some in *. des_ifs. inv T. }
