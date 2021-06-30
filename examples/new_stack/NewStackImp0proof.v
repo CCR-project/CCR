@@ -53,17 +53,14 @@ Section SIMMODSEM.
       steps.
       rewrite unfold_eval_imp.
       steps.
-      force_r.
-      solve_NoDup.
-      imp_steps.
-      force_r.
-      ss.
+      des_ifs.
+      2:{ exfalso; apply n. solve_NoDup. }
       imp_steps.
       unfold ccall.
       steps.
       gstep. econs; ss. i. exists 100.
       imp_steps.
-      force_r.
+      des_ifs.
       (* Unshelve. all: ss. *)
   Admitted.
 

@@ -129,7 +129,7 @@ Section PROOF.
         (CEXP: compile_expr e = te)
         (SIM:
            forall rv trv,
-             wf_val rv ->
+             (* wf_val rv -> *)
              eval_expr tge empty_env tle tm te trv ->
              trv = map_val srcprog rv ->
              gpaco3 (_sim (ModL.compile src) (semantics tgt))
@@ -148,25 +148,17 @@ Section PROOF.
     generalize dependent e. Local Opaque Init.Nat.add. induction e; i; ss; des; clarify.
     - rewrite interp_imp_expr_Var. sim_red.
       destruct (alist_find v le) eqn:AFIND; try sim_red.
-      + repeat (gstep; sim_tau). red. sim_red. unfold assume. grind.
-        gstep. econs 5; ss; auto.
-        { i. dtm H H0. }
-        i. eapply angelic_step in STEP; des; clarify.
-        eexists; split; [ord_step2|auto].
-        do 5 (gstep; sim_tau). red.
-        sim_red. sim_ord.
+      + do 2 (gstep; sim_tau). red. sim_red.
+        sim_ord.
         { eapply OrdArith.add_base_l. }
         eapply SIM; auto.
         econs. inv MLE. specialize ML with (x:=v) (sv:=v0).
         hexploit ML; auto.
       + sim_triggerUB.
     - rewrite interp_imp_expr_Lit.
-      sim_red. unfold assume. grind. gstep. econs 5; auto; i.
-      { dtm H H0. }
-      eapply angelic_step in STEP; des; clarify.
-      eexists; split; [ord_step2|].
-      do 5 (gstep; sim_tau). red.
-      sim_red. sim_ord.
+      do 1 (gstep; sim_tau). red.
+      sim_red.
+      sim_ord.
       { eapply OrdArith.add_base_l. }
       eapply SIM; eauto. econs. unfold map_val. ss.
     - rewrite interp_imp_expr_Plus.
@@ -180,14 +172,13 @@ Section PROOF.
       { instantiate (1:=(i1 + 20 + expr_ord e2)%ord).
         eapply OrdArith.add_base_l. }
       eapply IHe2; auto. clear IHe2.
-      i. sim_red.
+      i.
+      des_ifs.
+      2: sim_triggerUB.
+      sim_red.
       unfold unwrapU. destruct (vadd rv rv0) eqn:VADD; ss; clarify.
-      + sim_red. unfold assume. grind. gstep. econs 5; auto; i.
-        dtm H1 H4.
-        eapply angelic_step in STEP; des; clarify.
-        eexists; split; [ord_step2|].
-        do 5 (gstep; sim_tau). red.
-        sim_red. specialize SIM with (rv:=v) (trv:= @map_val builtins srcprog v).
+      + sim_red.
+        specialize SIM with (rv:=v) (trv:= @map_val Σ builtins srcprog v).
         sim_ord.
         { eapply OrdArith.add_base_l. }
         apply SIM; auto.
@@ -204,14 +195,13 @@ Section PROOF.
       { instantiate (1:=(i1 + 20 + expr_ord e2)%ord).
         eapply OrdArith.add_base_l. }
       eapply IHe2; auto. clear IHe2.
-      i. sim_red.
+      i.
+      des_ifs.
+      2: sim_triggerUB.
+      sim_red.
       unfold unwrapU. destruct (vsub rv rv0) eqn:VSUB; ss; clarify.
-      + sim_red. unfold assume. grind. gstep. econs 5; auto; i.
-        dtm H1 H4.
-        eapply angelic_step in STEP; des; clarify.
-        eexists; split; [ord_step2|].
-        do 5 (gstep; sim_tau). red.
-        sim_red. specialize SIM with (rv:=v) (trv:= @map_val builtins srcprog v).
+      + sim_red.
+        specialize SIM with (rv:=v) (trv:= @map_val Σ builtins srcprog v).
         sim_ord.
         { eapply OrdArith.add_base_l. }
         apply SIM; auto.
@@ -223,19 +213,19 @@ Section PROOF.
       { instantiate (1:=((i1 + 20 + expr_ord e2 + 20) + expr_ord e1)%ord).
         rewrite <- ! OrdArith.add_assoc. eapply OrdArith.add_base_l. }
       eapply IHe1; auto. clear IHe1.
-      i. sim_red.
+      i.
+      sim_red.
       sim_ord.
       { instantiate (1:=(i1 + 20 + expr_ord e2)%ord).
         eapply OrdArith.add_base_l. }
       eapply IHe2; auto. clear IHe2.
-      i. sim_red.
+      i.
+      des_ifs.
+      2: sim_triggerUB.
+      sim_red.
       unfold unwrapU. destruct (vmul rv rv0) eqn:VMUL; ss; clarify.
-      + sim_red. unfold assume. grind. gstep. econs 5; auto; i.
-        dtm H1 H4.
-        eapply angelic_step in STEP; des; clarify.
-        eexists; split; [ord_step2|].
-        do 5 (gstep; sim_tau). red.
-        sim_red. specialize SIM with (rv:=v) (trv:= @map_val builtins srcprog v).
+      + sim_red.
+        specialize SIM with (rv:=v) (trv:= @map_val Σ builtins srcprog v).
         sim_ord.
         { eapply OrdArith.add_base_l. }
         apply SIM; auto.
@@ -253,7 +243,7 @@ Section PROOF.
         (CEXP: compile_exprs es = tes)
         (SIM:
            forall rvs trvs,
-             Forall wf_val rvs ->
+             (* Forall wf_val rvs -> *)
              eval_exprlist tge empty_env tle tm tes trvs ->
              trvs = List.map (map_val srcprog) rvs ->
              gpaco3 (_sim (ModL.compile src) (semantics tgt)) (cpn3 (_sim (ModL.compile src) (semantics tgt))) r rg i1
@@ -284,7 +274,7 @@ Section PROOF.
       eapply IHes; auto.
       i. rewrite interp_imp_Ret. sim_red.
       eapply gpaco3_mon; [eapply SIM|..]; auto.
-      unfold compile_exprs in H3. econs; ss; clarify; eauto.
+      unfold compile_exprs in H2. econs; ss; clarify; eauto.
   Qed.
 
   Lemma compile_stmt_no_Sreturn
@@ -460,10 +450,16 @@ Section PROOF.
         { eapply step_return_1; ss; eauto. econs; ss. econs; ss. inv ML; ss; clarify. hexploit ML0; i; eauto. }
         eexists. exists (step_tau _). eexists.
         (* Local Opaque itree_of_imp_pop_bottom. *)
-        do 1 (gstep; sim_tau). red. sim_red. unfold assume. grind.
-        gstep. econs 5; ss; auto; i. dtm H H0.
-        eapply angelic_step in STEP; des; clarify. eexists; split; [ord_step2|].
-        do 5 (gstep; sim_tau). sim_red. unfold itree_of_imp_pop_bottom. sim_red.
+        do 1 (gstep; sim_tau). red. sim_red.
+        (* unfold itree_of_imp_pop_bottom. grind. *)
+        (* unfold assume. grind. *)
+        (* gstep. econs 5; ss; auto; i. dtm H H0. *)
+        (* eapply angelic_step in STEP; des; clarify. eexists; split; [ord_step2|]. *)
+
+        (* clear STEP0. *)
+
+        (* do 6 (gstep; sim_tau). sim_red. *)
+        unfold itree_of_imp_pop_bottom. sim_red.
         destruct v.
         - destruct ((0 <=? n)%Z && (n <? two_power_nat 32)%Z) eqn:INT32; bsimpl; des.
           + gstep. econs 1; eauto.
@@ -485,7 +481,11 @@ Section PROOF.
           { unfold state_sort; ss. rewrite Any.upcast_downcast. des_ifs. }
           { i. inv H. }
           i. inv STEP.
-        - gstep. econs 5; ss; eauto. }
+        - gstep. econs 5; ss; eauto.
+          { unfold state_sort; ss. rewrite Any.upcast_downcast. des_ifs. }
+          { i. inv H. }
+          i. inv STEP.
+      }
 
       { unfold return_stmt in *; ss; clarify. destruct tcont; inv MSTACK; ss; clarify.
         sim_red. gstep. econs 6; clarify.
@@ -500,12 +500,18 @@ Section PROOF.
         eexists. eexists.
         { eapply step_return_1; ss; eauto. econs; ss. inv ML; ss; clarify. hexploit ML0; i; eauto. }
         eexists. exists (step_tau _). eexists.
-        do 1 (gstep; sim_tau). red. sim_red. unfold assume. grind.
-        gstep. econs 5; ss; auto; i. dtm H H0.
-        eapply angelic_step in STEP; des; clarify.
-        eexists; split; [ord_step2|].
-        do 6 (gstep; sim_tau). red. sim_red.
         do 1 (gstep; sim_tau). red. sim_red.
+        (* unfold assume. grind. *)
+        (* gstep. econs 5; ss; auto; i. dtm H H0. *)
+        (* eapply angelic_step in STEP; des; clarify. *)
+        (* eexists; split; [ord_step2|]. *)
+
+
+        (* clear STEP0. *)
+
+        (* do 6 (gstep; sim_tau). red. sim_red. *)
+        destruct rstate. ss. des_ifs.
+        do 3 (gstep; sim_tau). red. sim_red.
         gstep. econs 6; clarify.
         eexists. eexists.
         { eapply step_return. }
@@ -541,7 +547,7 @@ Section PROOF.
       do 1 (gstep; sim_tau). red. sim_red.
       gstep. econs 6; auto.
       eexists. eexists.
-      { eapply step_set. eapply H0. }
+      { eapply step_set. eapply H. }
       eexists. eexists.
       { eapply step_tau. }
       eexists. gbase. apply CIH. hexploit match_states_intro.
@@ -573,7 +579,10 @@ Section PROOF.
       sim_ord.
       { eapply max_fuel_spec1'. }
       eapply step_expr; eauto.
-      i. sim_red. destruct (is_true rv) eqn:COND; ss; clarify.
+      i. des_ifs.
+      2:{ sim_triggerUB. }
+
+      sim_red. destruct (is_true rv) eqn:COND; ss; clarify.
       2:{ sim_triggerUB. }
       sim_red. destruct rv; clarify. ss. destruct (n =? 0)%Z eqn:CZERO; ss; clarify.
       { rewrite Z.eqb_eq in CZERO. clarify.
@@ -596,10 +605,12 @@ Section PROOF.
             + ss.
           - ss. destruct (negb (Int64.eq (Int64.repr n) Int64.zero)) eqn:CONTRA; ss; clarify.
             rewrite negb_false_iff in CONTRA. apply Int64.same_if_eq in CONTRA.
-            unfold Int64.zero in CONTRA. unfold_intrange_64.
+            unfold Int64.zero in CONTRA. unfold_intrange_64. bsimpl. des.
+            apply sumbool_to_bool_true in Heq.
+            apply sumbool_to_bool_true in Heq0.
             hexploit Int64.signed_repr.
             { unfold_Int64_max_signed. unfold_Int64_min_signed. instantiate (1:=n). nia. }
-            i. rewrite CONTRA in H1. rewrite Int64.signed_repr_eq in H1. des_ifs. }
+            i. rewrite CONTRA in H0. rewrite Int64.signed_repr_eq in H0. des_ifs. }
         eexists. exists (step_tau _).
         eexists. des_ifs. gbase. eapply CIH. hexploit match_states_intro; eauto. }
 
@@ -628,7 +639,8 @@ Section PROOF.
       end.
       destruct p. destruct p. clarify. eapply found_imp_function in FOUND. des; clarify.
       hexploit in_tgt_prog_defs_ifuns; eauto. i.
-      des. rename H1 into COMPF.
+      des. rename H0 into COMPF.
+      (* assert (INTGT: In (s2p f, Gfun (Internal tf0)) (prog_defs tgtp)); auto. *)
       rename s into mn2, f into fn, f0 into impf.
       assert (COMPF2: In (compile_iFun (mn2, (fn, impf))) (prog_defs tgt)); auto.
       eapply Globalenvs.Genv.find_symbol_exists in COMPF.
@@ -637,19 +649,23 @@ Section PROOF.
       { hexploit tgt_genv_find_def_by_blk; eauto. }
 
       unfold cfun. sim_red.
-      rewrite unfold_eval_imp_only. sim_red.
-      unfold assume. sim_red. gstep. econs 5; ss; auto; i. dtm H1 H2.
-      eapply angelic_step in STEP; des; clarify.
-      eexists; split; [ord_step2|auto].
-      rename STEP0 into WFFUN. sim_red.
-      do 3 (gstep; sim_tau). sim_red.
+      rewrite Any.upcast_downcast. sim_red.
+      rewrite unfold_eval_imp_only.
+      grind. des_ifs.
+      2,3: sim_triggerUB.
+      (* unfold assume. sim_red. gstep. econs 5; ss; auto; i. dtm H1 H2. *)
+      (* eapply angelic_step in STEP; des; clarify. *)
+      (* eexists; split; [ord_step2|auto]. *)
+      rename n into WFFUN, Heq into ARGS. sim_red.
+      (* (* do 1 (gstep; sim_tau). sim_red. *) *)
 
-      destruct (init_args (Imp.fn_params impf) rvs (init_lenv (Imp.fn_vars impf ++ ["return"; "_"]))) eqn:ARGS; sim_red.
-      2:{ sim_triggerUB. }
+      (* destruct (init_args (Imp.fn_params impf) rvs (init_lenv (Imp.fn_vars impf ++ ["return"; "_"]))) eqn:ARGS; sim_red. *)
+      (* 2:{ sim_triggerUB. } *)
       (* tau point?? need a tau BEFORE denote_stmt(fn_body) *)
-      rewrite interp_imp_tau. sim_red. des_ifs.
-      { rewrite rel_dec_correct in Heq; clarify. }
-      clear Heq.
+      rewrite interp_imp_tau. sim_red.
+      (* des_ifs. *)
+      (* { rewrite rel_dec_correct in Heq; clarify. } *)
+      (* clear Heq. *)
       gstep. econs 6; auto.
       eexists. eexists.
       { eapply step_call; eauto.
@@ -658,9 +674,12 @@ Section PROOF.
           eapply TGTFG.
         - rewrite Globalenvs.Genv.find_funct_find_funct_ptr.
           rewrite Globalenvs.Genv.find_funct_ptr_iff. ss. eapply TGTGFIND.
-        - ss. apply init_args_prop in ARGS. rewrite map_length. des. setoid_rewrite ARGS. depgen H0. clear. i.
-          apply eval_exprlist_length in H0. des. unfold compile_exprs in H0. rewrite ! map_length in H0.
-          rewrite H0. ss.
+        - ss. apply init_args_prop in ARGS. rewrite map_length. des. setoid_rewrite ARGS.
+          des_ifs; eauto.
+          { rewrite eq_rel_dec_correct in Heq. des_ifs. }
+          depgen H. clear. i.
+          apply eval_exprlist_length in H. des. unfold compile_exprs in H. rewrite ! map_length in H.
+          rewrite H. ss.
       }
       eexists. exists (step_tau _). eexists.
 
@@ -669,7 +688,7 @@ Section PROOF.
       eexists. eexists.
       { rewrite <- NoDup_norepeat in WFFUN. apply Coqlib.list_norepet_app in WFFUN. des.
         eapply step_internal_function; ss; eauto; try econs.
-        { apply Coqlib.list_map_norepet; eauto. i. ii. apply H3. apply s2p_inj; auto. }
+        { apply Coqlib.list_map_norepet; eauto. i. ii. apply H2. apply s2p_inj; auto. }
         { unfold Coqlib.list_disjoint in *. depgen WFFUN1. clear. i.
           apply Coqlib.list_in_map_inv in H. apply in_app_or in H0. des.
           - apply Coqlib.list_in_map_inv in H0. des. clarify.
@@ -683,6 +702,10 @@ Section PROOF.
       }
       eexists; split; [ord_step2|].
 
+      des_ifs.
+      { rewrite rel_dec_correct in Heq; clarify. }
+      clear Heq.
+      
       gstep. econs 4.
       eexists. eexists.
       { eapply step_seq. }
@@ -730,11 +753,15 @@ Section PROOF.
       { eauto. }
 
     - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_CallPtr.
-      sim_red. unfold assume. sim_red. gstep. econs 5; ss; auto; i. dtm H H0.
-      eapply angelic_step in STEP; des; clarify.
-      eexists; split; [ord_step2|auto].
-      des_ifs_safe. clear STEP0.
-      grind. do 5 (gstep; sim_tau). sim_red.
+      (* sim_red. unfold assume. sim_red. gstep. econs 5; ss; auto; i. dtm H H0. *)
+      (* eapply angelic_step in STEP; des; clarify. *)
+      (* eexists; split; [ord_step2|auto]. *)
+      des_ifs.
+      2,3,4,5: sim_triggerUB.
+      (* des_ifs_safe. clear STEP0. *)
+      clear Heq.
+      (* grind. do 6 (gstep; sim_tau). sim_red. *)
+      sim_red.
       sim_ord.
       { eapply max_fuel_spec4. }
       grind. eapply step_expr; eauto. i. rename H0 into TGTEXPR. clarify.
@@ -765,7 +792,7 @@ Section PROOF.
       end.
       destruct p. destruct p. clarify. eapply found_imp_function in FOUND. des; clarify.
       hexploit in_tgt_prog_defs_ifuns; eauto. i.
-      des. rename H2 into COMPF. clear FOUND.
+      des. rename H1 into COMPF. clear FOUND.
       rename s0 into mn2, s into fn, f into impf.
       assert (COMPF2: In (compile_iFun (mn2, (fn, impf))) (prog_defs tgt)); auto.
       eapply Globalenvs.Genv.find_symbol_exists in COMPF.
@@ -773,32 +800,41 @@ Section PROOF.
       assert (TGTGFIND: Globalenvs.Genv.find_def (Globalenvs.Genv.globalenv tgt) b = Some (snd (compile_iFun (mn2, (fn, impf))))).
       { hexploit tgt_genv_find_def_by_blk; eauto. }
 
-      unfold cfun. sim_red.
-      rewrite unfold_eval_imp_only. sim_red.
-      unfold assume. sim_red. gstep. econs 5; ss; auto; i. dtm H2 H3.
-      eapply angelic_step in STEP; des; clarify.
-      eexists; split; [ord_step2|auto].
-      rename STEP0 into WFFUN. sim_red.
-      do 3 (gstep; sim_tau). sim_red.
+      unfold cfun. sim_red. rewrite Any.upcast_downcast. sim_red.
+      rewrite unfold_eval_imp_only.
+      grind. des_ifs.
+      2,3,4: sim_triggerUB.
+      sim_red.
+      (* unfold assume. sim_red. gstep. econs 5; ss; auto; i. dtm H2 H3. *)
+      (* eapply angelic_step in STEP; des; clarify. *)
+      (* eexists; split; [ord_step2|auto]. *)
+      rename n into WFFUN. grind.
+      (* sim_red. *)
+      (* do 1 (gstep; sim_tau). sim_red. *)
       inv MGENV. apply Sk.sort_wf in WFSK.
       assert (BBLK: (map_blk srcprog blk) = b).
       { apply Sk.load_skenv_wf in WFSK. apply WFSK in Heq. apply MG in Heq. clarify. }
       clarify.
 
-      destruct (init_args (Imp.fn_params impf) rvs (init_lenv (Imp.fn_vars impf ++ ["return"; "_"]))) eqn:ARGS; sim_red.
-      2:{ sim_triggerUB. }
+      rename Heq0 into ARGS.
+      (* destruct (init_args (Imp.fn_params impf) rvs (init_lenv (Imp.fn_vars impf ++ ["return"; "_"]))) eqn:ARGS; sim_red. *)
+      (* 2:{ sim_triggerUB. } *)
       (* tau point?? need a tau BEFORE denote_stmt(fn_body) *)
-      rewrite interp_imp_tau. sim_red. des_ifs.
-      { rewrite rel_dec_correct in Heq0; clarify. }
-      clear Heq0.
+      rewrite interp_imp_tau. sim_red.
+      (* sim_red. des_ifs. *)
+      (* { rewrite rel_dec_correct in Heq0; clarify. } *)
+      (* clear Heq0. *)
       gstep. econs 6; auto.
       eexists. eexists.
       { eapply step_call; eauto.
         - rewrite Globalenvs.Genv.find_funct_find_funct_ptr.
           rewrite Globalenvs.Genv.find_funct_ptr_iff. ss. eapply TGTGFIND.
-        - ss. apply init_args_prop in ARGS. rewrite map_length. des. setoid_rewrite ARGS. depgen H1. clear. i.
-          apply eval_exprlist_length in H1. des. unfold compile_exprs in H1. rewrite ! map_length in H1.
-          rewrite H1. ss.
+        - ss. apply init_args_prop in ARGS. rewrite map_length. des. setoid_rewrite ARGS.
+          des_ifs.
+          { rewrite rel_dec_correct in Heq0; clarify. }
+          depgen H0. clear. i.
+          apply eval_exprlist_length in H0. des. unfold compile_exprs in H0. rewrite ! map_length in H0.
+          rewrite H0. ss.
       }
       eexists. exists (step_tau _). eexists.
 
@@ -807,7 +843,7 @@ Section PROOF.
       eexists. eexists.
       { rewrite <- NoDup_norepeat in WFFUN. apply Coqlib.list_norepet_app in WFFUN. des.
         eapply step_internal_function; ss; eauto; try econs.
-        { apply Coqlib.list_map_norepet; eauto. i. ii. apply H4. apply s2p_inj; auto. }
+        { apply Coqlib.list_map_norepet; eauto. i. ii. apply H3. apply s2p_inj; auto. }
         { unfold Coqlib.list_disjoint in *. depgen WFFUN1. clear. i.
           apply Coqlib.list_in_map_inv in H. apply in_app_or in H0. des.
           - apply Coqlib.list_in_map_inv in H0. des. clarify.
@@ -821,6 +857,8 @@ Section PROOF.
       }
       eexists; split; [ord_step2|].
 
+      des_ifs.
+      { rewrite rel_dec_correct in Heq0; clarify. }
       gstep. econs 4.
       eexists. eexists.
       { eapply step_seq. }
@@ -871,9 +909,10 @@ Section PROOF.
       ss. sim_red. unfold unwrapU. des_ifs.
       2:{ sim_triggerUB. }
       rename Heq into FOUND.
-      sim_red. unfold assume. grind. gstep. econs 5; auto; i. dtm H H0.
-      eapply angelic_step in STEP; des; clarify.
-      eexists; split; [ord_step2|].
+      sim_red.
+      (* unfold assume. grind. gstep. econs 5; auto; i. dtm H H0. *)
+      (* eapply angelic_step in STEP; des; clarify. *)
+      (* eexists; split; [ord_step2|]. *)
 
       apply alist_find_some in FOUND.
       assert (COMP2: Imp2Csharpminor.compile srcprog = OK tgt).
@@ -882,12 +921,19 @@ Section PROOF.
       hexploit Genv.find_symbol_exists; eauto. i. des. rename H into FINDSYM.
       hexploit tgt_genv_find_def_by_blk; eauto. i. rename H into FINDDEF.
 
-      do 5 (gstep; sim_tau).
+      des_ifs.
+      2: sim_triggerUB.
+      rewrite Nat.eqb_eq in Heq. clarify.
+      (* do 5 (gstep; sim_tau). *)
       sim_red.
       sim_ord.
       { eapply max_fuel_spec3'. }
       eapply step_exprs; eauto.
-      i. sim_red.
+      i.
+      des_ifs.
+      2: sim_triggerUB.
+      rename Heq into WFARGS.
+      sim_red.
       gstep. econs 4.
       eexists. eexists.
       { eapply step_call; eauto.
@@ -900,21 +946,30 @@ Section PROOF.
       eexists; split; [ord_step2|].
 
       (* System call semantics *)
+      set (trvs:= List.map (map_val srcprog) rvs) in *.
       pose (syscall_exists f (make_signature (List.length args)) (Genv.globalenv tgt) trvs tm) as TGTSYSSEM. des.
       hexploit syscall_refines; eauto. i. ss. des. clarify.
 
       gstep. econs 2; auto.
       { eexists. eexists. eapply step_external_function. ss. eauto. }
-      clear TGT EV0 SRC ARGS ev ret_int args_int. rename H into WFARGS. rename H0 into TGTARGS.
+      clear TGT EV0 SRC ARGS ev ret_int args_int.
+      (* rename H into WFARGS. *)
+      rename H into TGTARGS.
       i. inv STEP. ss. rename H5 into TGT.
       hexploit syscall_refines; eauto. i; ss; des; clarify.
 
       assert (SRCARGS: rvs = (List.map (Vint <*> Int64.signed) args_int)).
-      { depgen ARGS. depgen WFARGS. clear. depgen rvs. induction args_int; i; ss; clarify.
+      { depgen ARGS. depgen WFARGS. subst trvs. clear. depgen rvs. induction args_int; i; ss; clarify.
         - apply map_eq_nil in ARGS. auto.
-        - destruct rvs; ss; clarify. inv WFARGS. f_equal; ss; eauto.
-          unfold map_val in H1. des_ifs. unfold compose.
-          f_equal. hexploit Int64.signed_repr; eauto. }
+        - destruct rvs; ss; clarify. bsimpl. des.
+          f_equal; ss; eauto.
+          unfold map_val in H1. des_ifs.
+          f_equal. hexploit Int64.signed_repr; eauto.
+          ss. unfold_intrange_64. bsimpl. des.
+          apply sumbool_to_bool_true in WFARGS.
+          apply sumbool_to_bool_true in WFARGS1.
+          unfold_Int64_max_signed; unfold_Int64_min_signed; lia.
+      }
 
       eexists. eexists. eexists.
       { hexploit step_syscall.
@@ -1005,9 +1060,11 @@ Section PROOF.
       unfold allocF. sim_red.
       do 3 (gstep; sim_tau). sim_red.
       rewrite PSTATE. rewrite Any.upcast_downcast. grind. unfold unint. des_ifs; sim_red.
-      des_ifs; sim_red.
+      (* des_ifs; sim_red. *)
       2,3: sim_triggerUB.
-      bsimpl. des.
+      des_ifs.
+      2: sim_triggerUB.
+      bsimpl. des. sim_red.
       rename Heq into NRANGE1. apply sumbool_to_bool_true in NRANGE1.
       rename Heq0 into NRANGE2. apply sumbool_to_bool_true in NRANGE2.
 
@@ -1041,7 +1098,9 @@ Section PROOF.
       do 9 (gstep; sim_tau). sim_red.
       do 2 (gstep; sim_tau).
 
-      rewrite Int64.mul_signed. rewrite! Int64.signed_repr; ss.
+      (* rewrite Int64.mul_signed. rewrite! Int64.signed_repr; ss. *)
+      unfold Int64.mul. rewrite! Int64.unsigned_repr; ss.
+      2:{ split; ss. unfold_modrange_64. unfold Int64.max_unsigned. unfold_Int64_modulus. lia. }
 
       assert (TGTALLOC: forall tm ch sz, Memory.Mem.alloc tm ch sz = (fst (Memory.Mem.alloc tm ch sz), snd (Memory.Mem.alloc tm ch sz))).
       { clear. i. ss. }
@@ -1114,7 +1173,7 @@ Section PROOF.
       unfold cfun. grind. unfold freeF. sim_red.
       do 3 (gstep; sim_tau). sim_red.
       rewrite PSTATE. rewrite Any.upcast_downcast. grind. unfold unptr. des_ifs; sim_red.
-      1: sim_triggerUB.
+      1,3: sim_triggerUB.
       unfold Mem.free. destruct (Mem.cnts m blk ofs) eqn:MEMCNT; ss.
       2:{ sim_triggerUB. }
       sim_red.
@@ -1160,7 +1219,7 @@ Section PROOF.
       grind. unfold loadF. sim_red.
       do 3 (gstep; sim_tau). sim_red.
       rewrite PSTATE. rewrite Any.upcast_downcast. grind. unfold unptr. des_ifs; sim_red.
-      1:{ sim_triggerUB. }
+      1: sim_triggerUB.
       unfold Mem.load. destruct (Mem.cnts m blk ofs) eqn:MEMCNT; ss.
       2:{ sim_triggerUB. }
       sim_red.
@@ -1199,7 +1258,10 @@ Section PROOF.
       ss.
       sim_ord.
       { eapply max_fuel_spec2'. }
-      eapply step_expr; eauto. i. sim_red.
+      eapply step_expr; eauto. i.
+      des_ifs.
+      2: sim_triggerUB.
+      sim_red.
       eapply step_expr; eauto. i. sim_red.
       grind. do 1 (gstep; sim_tau). sim_red.
       unfold cfun.
@@ -1250,8 +1312,13 @@ Section PROOF.
       sim_ord.
       { eapply max_fuel_spec2'. }
       eapply step_expr; eauto. i. sim_red.
-      eapply step_expr; eauto. i. sim_red.
-      grind. do 1 (gstep; sim_tau). sim_red.
+      eapply step_expr; eauto. i.
+      des_ifs.
+      2: sim_triggerUB.
+      bsimpl. des. rename Heq into WFA, Heq0 into WFB.
+      sim_red.
+      destruct rstate. ss. destruct l0; clarify.
+      grind. do 3 (gstep; sim_tau). sim_red.
       unfold cfun.
       grind. unfold cmpF. sim_red.
       do 3 (gstep; sim_tau). sim_red.

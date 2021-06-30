@@ -157,7 +157,7 @@ Section MEM.
 
   Lemma valid_ptr_contra
         blk ofs
-        (WFOFS: intrange_64 (scale_ofs ofs))
+        (WFOFS: modrange_64 (scale_ofs ofs))
         (SRC: Mem.valid_ptr m blk ofs = true)
         (TGT: Mem.valid_pointer tm (map_blk src blk) (Ptrofs.unsigned (Ptrofs.of_int64 (Int64.repr (map_ofs ofs)))) = false)
     :
@@ -195,7 +195,12 @@ Section MEM.
       unfold Values.Val.cmplu. ss. unfold Values.Val.of_bool. rewrite Int64.eq_true. ss.
     - apply sumbool_to_bool_false in H0. clarify; ss.
       unfold Values.Val.cmplu. ss. unfold Values.Val.of_bool. rewrite Int64.signed_eq.
-      unfold_intrange_64. rewrite! Int64.signed_repr.
+      unfold_intrange_64. bsimpl. des.
+      apply sumbool_to_bool_true in WFA.
+      apply sumbool_to_bool_true in WFA0.
+      apply sumbool_to_bool_true in WFB.
+      apply sumbool_to_bool_true in WFB0.
+      rewrite! Int64.signed_repr.
       2,3: unfold_Int64_min_signed; unfold_Int64_max_signed; try nia.
       des_ifs. apply Coqlib.proj_sumbool_true in Heq; clarify.
     - clear SRCCMP. bsimpl. des. apply sumbool_to_bool_true in Heq0. clarify.

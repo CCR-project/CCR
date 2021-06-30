@@ -50,26 +50,21 @@ Section SIMMODSEM.
     steps.
     rewrite unfold_eval_imp.
     eapply Any.downcast_upcast in _UNWRAPN. des.
-    unfold unint in *. destruct v; clarify; ss. force_r. solve_NoDup.
-    imp_steps. force_r; auto.
+    unfold unint in *. destruct v; clarify; ss.
     des_ifs.
-    - imp_steps. force_r; auto. imp_steps. force_r; auto. imp_steps.
-      red. esplits; et.
+    2: exfalso; apply n; solve_NoDup.
+    3:{ exfalso; apply n0; solve_NoDup. }
+    - imp_steps. red. esplits; et.
     - unfold ccall.
       imp_steps. replace (z =? 0)%Z with false.
       2:{ symmetry. eapply Z.eqb_neq. auto. }
-      steps. imp_steps.
-      force_r; auto. imp_steps.
-      force_r; auto.
-      { econs; ss. }
-      imp_steps.
-      force_r; auto.
       imp_steps.
       gstep. econs; ss. i. exists 100.
       imp_steps.
-      force_r; auto. imp_steps. force_r; auto. steps.
-      rewrite _UNWRAPU. steps. force_r; auto. imp_steps. force_r; auto. imp_steps.
-      red. esplits; et.
+      des_ifs.
+      3:{ bsimpl. admit "solve for z". }
+      { imp_steps. rewrite _UNWRAPU. steps. imp_steps. red. esplits; et. }
+      { imp_steps. rewrite _UNWRAPU. steps. imp_steps. red. esplits; et. }
     Unshelve. all: ss.
   Qed.
 
