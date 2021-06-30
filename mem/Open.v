@@ -208,7 +208,6 @@ Section MODAUX.
   Definition addtau_ms (ms: ModSem.t): ModSem.t := {|
     ModSem.fnsems := map (map_snd (addtau_ktr(T:=_))) ms.(ModSem.fnsems);
     ModSem.mn := ms.(ModSem.mn);
-    ModSem.initial_mr := ms.(ModSem.initial_mr);
     ModSem.initial_st := ms.(ModSem.initial_st);
   |}
   .
@@ -230,8 +229,7 @@ Section MODAUX.
       { refl. }
       i. subst. destruct y as [fn f]. econs; ss. ii. subst. ss. exists 10.
       unfold addtau_ktr.
-      generalize (f y). generalize (@URA.unit (GRA.to_URA Σ)).
-      destruct mrs_tgt. revert w c t.
+      generalize (f y). revert w mrs_tgt.
       pcofix CIH. i. ides i.
       { pfold. rewrite addtau_ret. econs; et. red. esplits; et. }
       { pfold. rewrite addtau_tau. econs; et. }
@@ -240,24 +238,9 @@ Section MODAUX.
         rewrite bind_tau. rewrite bind_bind.
         pfold. econs; [ord_tac|].
         left. destruct e.
-        { destruct c1. resub. pfold. econs; et. i. subst.
+        { destruct c. resub. pfold. econs; et. i. subst.
           esplits. left. rewrite bind_tau. pfold. econs; [ord_tac|].
-          right. rewrite bind_ret_l. destruct mrs_tgt1. eapply CIH.
-        }
-        destruct s.
-        { resub. destruct r0.
-          { pfold. econs; et. left. rewrite bind_tau. pfold. econs; [ord_tac|].
-            right. rewrite bind_ret_l. eapply CIH.
-          }
-          { pfold. econs; et. left. rewrite bind_tau. pfold. econs; [ord_tac|].
-            right. rewrite bind_ret_l. eapply CIH.
-          }
-          { pfold. econs; et. left. rewrite bind_tau. pfold. econs; [ord_tac|].
-            right. rewrite bind_ret_l. eapply CIH.
-          }
-          { pfold. econs; et. left. rewrite bind_tau. pfold. econs; [ord_tac|].
-            right. rewrite bind_ret_l. eapply CIH.
-          }
+          right. rewrite bind_ret_l. eapply CIH.
         }
         destruct s.
         { resub. destruct p.
@@ -297,8 +280,7 @@ Section MODAUX.
       { refl. }
       i. subst. destruct y as [fn f]. econs; ss. ii. subst. ss. exists 10.
       unfold addtau_ktr.
-      generalize (f y). generalize (@URA.unit (GRA.to_URA Σ)).
-      destruct mrs_tgt. revert w c t.
+      generalize (f y). revert w mrs_tgt.
       pcofix CIH. i. ides i.
       { pfold. rewrite addtau_ret. econs; et. red. esplits; et. }
       { pfold. rewrite addtau_tau. econs; et. }
@@ -307,24 +289,9 @@ Section MODAUX.
         rewrite bind_tau. rewrite bind_bind.
         pfold. econs; [ord_tac|].
         left. destruct e.
-        { destruct c1. resub. pfold. econs; et. i. subst.
+        { destruct c. resub. pfold. econs; et. i. subst.
           esplits. left. rewrite bind_tau. pfold. econs; [ord_tac|].
-          right. rewrite bind_ret_l. destruct mrs_tgt1. eapply CIH.
-        }
-        destruct s.
-        { resub. destruct r0.
-          { pfold. econs; et. left. rewrite bind_tau. pfold. econs; [ord_tac|].
-            right. rewrite bind_ret_l. eapply CIH.
-          }
-          { pfold. econs; et. left. rewrite bind_tau. pfold. econs; [ord_tac|].
-            right. rewrite bind_ret_l. eapply CIH.
-          }
-          { pfold. econs; et. left. rewrite bind_tau. pfold. econs; [ord_tac|].
-            right. rewrite bind_ret_l. eapply CIH.
-          }
-          { pfold. econs; et. left. rewrite bind_tau. pfold. econs; [ord_tac|].
-            right. rewrite bind_ret_l. eapply CIH.
-          }
+          right. rewrite bind_ret_l. eapply CIH.
         }
         destruct s.
         { resub. destruct p.
@@ -364,57 +331,26 @@ Section MASSAGE.
   (* | FPut' (fr0: Σ): frE unit *)
   (* | FGet': frE Σ *)
   (* . *)
-  Definition massage_callE (b: bool): callE ~> stateT Σ (itree Es') :=
+  Definition massage_callE (b: bool): callE ~> itree Es' :=
     if b
     then
-      fun T '(Call fn args) fr0 => r <- trigger (hCall false fn (Any.pair false↑ args));; Ret (fr0, r)
+      fun T '(Call fn args) => trigger (hCall false fn (Any.pair false↑ args))
     else
-      fun T '(Call fn args) fr0 => r <- trigger (hCall false fn args);; Ret (fr0, r)
+      fun T '(Call fn args) => trigger (hCall false fn args)
   .
-  Definition massage_rE: rE ~> stateT Σ (itree Es') :=
-    fun T re fr0 =>
-      match re with
-      | FPut fr1 => Ret (fr1, tt)
-      | FGet => Ret (fr0, fr0)
-      | MPut mr0 =>
-        mrst0 <- trigger (PGet);;
-        '(_, st0) <- (Any.split mrst0)ǃ;;
-        trigger (PPut (Any.pair mr0↑ st0));;;
-        Ret (fr0, tt)
-      | MGet =>
-        mrst0 <- trigger (PGet);;
-        '(mr0, _) <- (Any.split mrst0)ǃ;;
-        `mr0: Σ <- mr0↓ǃ;;
-        Ret (fr0, mr0)
-      end
-  .
-  Definition massage_pE: pE ~> stateT Σ (itree Es') :=
-    fun T pe fr0 =>
-      match pe with
-      | PPut st0 =>
-        mrst0 <- trigger (PGet);;
-        '(mr0, _) <- (Any.split mrst0)ǃ;;
-        trigger (PPut (Any.pair mr0 st0 ));;;
-        Ret (fr0, tt)
-      | PGet =>
-        mrst0 <- trigger (PGet);;
-        '(_, st0) <- (Any.split mrst0)ǃ;;
-        Ret (fr0, st0)
-      end
-  .
-  Definition massage_itr b: itree Es ~> stateT Σ (itree Es') :=
+  Definition massage_itr b: itree Es ~> itree Es' :=
     (* interp (case_ (massage_callE) (case_ (massage_rE) (case_ (massage_pE) trivial_state_Handler))) *)
-    interp_state (case_ (massage_callE b) (case_ (massage_rE) (case_ (massage_pE) trivial_state_Handler)))
+    interp (case_ (massage_callE b) trivial_Handler)
   .
   Definition massage_fun (b: bool) (ktr: (option mname * Any.t) -> itree Es Any.t): ((option mname * Any.t) -> itree Es' Any.t) :=
     if b
     then
       fun '(mn, args) =>
         '(_, args) <- (Any.split args)ǃ;;
-        '(_, rv) <- massage_itr b (ktr (mn, args)) ε;; Ret rv
+        massage_itr b (ktr (mn, args))
     else
       fun '(mn, args) =>
-        '(_, rv) <- massage_itr b (ktr (mn, args)) ε;; Ret rv
+        massage_itr b (ktr (mn, args))
   .
   Definition massage_fsb b: ((option mname * Any.t) -> itree Es Any.t) -> fspecbody :=
     fun ktr => mk_specbody (KModSem.disclose_tgt fspec_trivial) (massage_fun b ktr)
@@ -423,7 +359,7 @@ Section MASSAGE.
     SModSem.fnsems := List.map (map_snd (massage_fsb b)) ms.(ModSem.fnsems);
     SModSem.mn := ms.(ModSem.mn);
     SModSem.initial_mr := ε;
-    SModSem.initial_st := Any.pair (ms.(ModSem.initial_mr))↑ (ms.(ModSem.initial_st));
+    SModSem.initial_st := ms.(ModSem.initial_st);
                                                       |}
   .
 
@@ -433,101 +369,91 @@ Section MASSAGE.
   (*****************************************************)
   Lemma massage_itr_bind b
         (R S: Type)
-        fr0 (s: itree _ R) (k : R -> itree _ S)
+        (s: itree _ R) (k : R -> itree _ S)
     :
-      (massage_itr b (s >>= k)) fr0
+      (massage_itr b (s >>= k))
       =
-      ((massage_itr b s fr0) >>= (fun '(fr1, r) => massage_itr b (k r) fr1)).
+      ((massage_itr b s) >>= (fun r => massage_itr b (k r))).
   Proof.
-    unfold massage_itr in *. rewrite interp_state_bind. grind. des_ifs.
+    unfold massage_itr in *. rewrite interp_bind. grind.
   Qed.
   Lemma massage_itr_tau b
         (U: Type)
-        (t : itree _ U) fr0
+        (t : itree _ U)
     :
-      (massage_itr b (tau;; t) fr0)
+      (massage_itr b (tau;; t))
       =
-      (tau;; (massage_itr b t) fr0).
+      (tau;; (massage_itr b t)).
   Proof.
-    unfold massage_itr in *. rewrite interp_state_tau. grind.
+    unfold massage_itr in *. rewrite interp_tau. grind.
   Qed.
   Lemma massage_itr_ret b
         (U: Type)
-        (t: U) fr0
+        (t: U)
     :
-      ((massage_itr b (Ret t)) fr0)
+      ((massage_itr b (Ret t)))
       =
-      Ret (fr0, t).
+      Ret t.
   Proof.
-    unfold massage_itr in *. rewrite interp_state_ret. grind.
+    unfold massage_itr in *. rewrite interp_ret. grind.
   Qed.
   Lemma massage_itr_pe b
         (R: Type)
-        (i: pE R) fr0
+        (i: pE R)
     :
-      (massage_itr b (trigger i) fr0)
+      (massage_itr b (trigger i))
       =
-      (massage_pE i fr0 >>= (fun r => tau;; Ret r)).
+      (trigger i >>= (fun r => tau;; Ret r)).
   Proof.
-    unfold massage_itr in *. rewrite interp_state_trigger. grind.
-  Qed.
-  Lemma massage_itr_re b
-        (R: Type)
-        (i: rE R) fr0
-    :
-      (massage_itr b (trigger i) fr0)
-      =
-      (massage_rE i fr0 >>= (fun r => tau;; Ret r)).
-  Proof.
-    unfold massage_itr in *. rewrite interp_state_trigger. grind.
+    unfold massage_itr in *. rewrite interp_trigger. grind.
   Qed.
   Lemma massage_itr_calle b
         (R: Type)
-        (i: callE R) fr0
+        (i: callE R)
     :
-      (massage_itr b (trigger i) fr0)
+      (massage_itr b (trigger i))
       =
-      ((massage_callE b i fr0) >>= (fun r => tau;; Ret r)).
+      ((massage_callE b i) >>= (fun r => tau;; Ret r)).
   Proof.
-    unfold massage_itr in *. grind.
+    unfold massage_itr in *. rewrite interp_trigger. grind.
   Qed.
   Lemma massage_itr_evente b
         (R: Type)
-        (i: eventE R) fr0
+        (i: eventE R)
     :
-      (massage_itr b (trigger i) fr0)
+      (massage_itr b (trigger i))
       =
-      ((trigger i) >>= (fun r => tau;; Ret (fr0, r))).
+      ((trigger i) >>= (fun r => tau;; Ret (r))).
   Proof.
-    unfold massage_itr in *. grind. unfold trivial_state_Handler. grind.
+    unfold massage_itr in *. rewrite interp_trigger. grind.
   Qed.
   Lemma massage_itr_triggerUB b
-        (R: Type) fr0
+        (R: Type)
     :
-      (massage_itr b (triggerUB) fr0)
+      (massage_itr b (triggerUB))
       =
-      triggerUB (A:=(Σ * R)).
+      triggerUB (A:=R).
   Proof.
-    unfold massage_itr, triggerUB in *. rewrite unfold_interp_state. cbn.
+    unfold massage_itr, triggerUB in *. rewrite unfold_interp. cbn.
     unfold trivial_state_Handler. grind.
   Qed.
   Lemma massage_itr_triggerNB b
-        (R: Type) fr0
+        (R: Type)
     :
-      (massage_itr b (triggerNB) fr0)
+      (massage_itr b (triggerNB))
       =
-      triggerNB (A:=(Σ * R)).
+      triggerNB (A:=(R)).
   Proof.
-    unfold massage_itr, triggerNB in *. rewrite unfold_interp_state. cbn.
+    unfold massage_itr, triggerNB in *. rewrite unfold_interp. cbn.
     unfold trivial_state_Handler. grind.
   Qed.
   Lemma massage_itr_unwrapU b
         (R: Type)
-        (i: option R) fr0
+        (i: option R)
     :
-      (massage_itr b (unwrapU i) fr0)
+      (massage_itr b (unwrapU i))
       =
-      r <- (unwrapU i);; Ret (fr0, r).
+      unwrapU i.
   Proof.
     unfold massage_itr, unwrapU in *. des_ifs.
     { etrans.
@@ -541,11 +467,11 @@ Section MASSAGE.
   Qed.
   Lemma massage_itr_unwrapN b
         (R: Type)
-        (i: option R) fr0
+        (i: option R)
     :
-      (massage_itr b (unwrapN i) fr0)
+      (massage_itr b (unwrapN i))
       =
-      r <- (unwrapN i);; Ret (fr0, r).
+      unwrapN i.
   Proof.
     unfold massage_itr, unwrapN in *. des_ifs.
     { etrans.
@@ -558,21 +484,21 @@ Section MASSAGE.
     }
   Qed.
   Lemma massage_itr_assume b
-        P fr0
+        P
     :
-      (massage_itr b (assume P) fr0)
+      (massage_itr b (assume P))
       =
-      (assume P;;; tau;; Ret (fr0, tt))
+      (assume P;;; tau;; Ret (tt))
   .
   Proof.
     unfold assume. rewrite massage_itr_bind. rewrite massage_itr_evente. grind. eapply massage_itr_ret.
   Qed.
   Lemma massage_itr_guarantee b
-        P fr0
+        P
     :
-      (massage_itr b (guarantee P) fr0)
+      (massage_itr b (guarantee P))
       =
-      (guarantee P;;; tau;; Ret (fr0, tt)).
+      (guarantee P;;; tau;; Ret (tt)).
   Proof.
     unfold guarantee. rewrite massage_itr_bind. rewrite massage_itr_evente. grind. eapply massage_itr_ret.
   Qed.
@@ -604,7 +530,7 @@ Section RDB.
       (mk_box massage_itr_tau)
       (mk_box massage_itr_ret)
       (mk_box massage_itr_calle)
-      (mk_box massage_itr_re)
+      (mk_box massage_itr_pe)
       (mk_box massage_itr_pe)
       (mk_box massage_itr_evente)
       (mk_box massage_itr_triggerUB)
@@ -674,46 +600,39 @@ Section ADQ.
   Ltac list_tac := repeat _list_tac.
 
   Lemma my_lemma1_aux''
-        (ske: Sk.t) mr0 st0 (A: Type) (itr: itree Es A) (ctx: Σ)
+        (ske: Sk.t) st0 (A: Type) (itr: itree Es A) (ctx fr_trash: Σ)
         mn
-        fr0 fr_trash
         (* (WF: URA.wf (ctx ⋅ mr0)) *)
         (WF: URA.wf ctx)
     :
       paco7
-        (_sim_itree (fun (_: unit) '((mr_src, st_src), (mr_tgt, st_tgt)) =>
-                       mr_src = ε /\ st_src = (Any.pair mr_tgt↑ st_tgt)) top2)
+        (_sim_itree (fun (_: unit) '(st_src, st_tgt) => st_src = Any.pair st_tgt (ε: Σ)↑) top2)
         bot7
-        (Σ * (Σ * A))%type A
-        (fun '((mr_src, st_src), fr_src) '((mr_tgt, st_tgt), fr_tgt) '(ctx, (_, r_src)) r_tgt =>
-           mr_src = ε /\ st_src = (Any.pair mr_tgt↑ st_tgt) /\ r_src = r_tgt
-           /\ URA.wf ctx
-        )
+        (Σ * Σ * A)%type A
+        (fun st_src st_tgt '(ctx, fr, r_src) r_tgt =>
+           r_src = r_tgt /\ URA.wf ctx /\ st_src = Any.pair st_tgt (ε: Σ)↑)
         40%nat tt
-        (ε, (Any.pair mr0↑ st0), fr_trash, (interp_hCallE_tgt mn (_stb ske) ord_top
-                                                              (massage_itr true itr fr0) ctx))
-        (mr0, st0, fr0, addtau itr)
+        (Any.pair st0 (ε: Σ)↑, (interp_hCallE_tgt mn (_stb ske) ord_top (massage_itr true itr) (ctx, fr_trash)))
+        (st0, addtau itr)
   .
   Proof.
     ginit. revert_until ske. gcofix CIH. i. ides itr.
-    { steps. }
-    { steps. gbase. eapply CIH; et. }
-    rewrite <- bind_trigger.
+    { steps. rewrite massage_itr_ret. steps. }
+    { rewrite massage_itr_tau. steps. gbase. eapply CIH; et. }
+    rewrite <- bind_trigger. rewrite massage_itr_bind. (* TODO: why reduction tactic doesn't work?? *)
     destruct e; cycle 1.
     {
       destruct s; ss.
-      { destruct r0; ss.
-        - resub. ired_both. steps.
-          rewrite Any.pair_split. steps. gbase. eapply CIH; et.
-        - resub. ired_both. resub.
-          steps. gbase. eapply CIH; et.
-        - resub. ired_both. steps.
-          rewrite Any.pair_split. steps. rewrite Any.upcast_downcast. steps. gbase. eapply CIH; et.
-        - resub. ired_both. steps. gbase. eapply CIH; et.
-      }
-      destruct s.
-      { destruct p; ss.
-        - resub. ired_both. resub. steps. rewrite Any.pair_split. steps. gbase. eapply CIH; et.
+      { resub. rewrite massage_itr_pe. destruct p; ss.
+        - ired_both. unfold pget, pput. steps.
+          rewrite Any.pair_split in *. clarify.
+          gbase. eapply CIH; et.
+        - ired_both. unfold pget, pput. resub. ired_both.
+          force_r. ired_both. _step. ired_both. _step. steps.
+
+steps.
+          rewrite Any.pair_split in *. clarify.
+          gbase. eapply CIH; et.
         - resub. ired_both. resub. steps. rewrite Any.pair_split. steps. gbase. eapply CIH; et.
       }
       { destruct e; ss.
@@ -778,9 +697,9 @@ Section ADQ.
       red in _ASSUME0. uipropall. subst.
       destruct w1. gbase. eapply CIH; ss.
       eapply URA.wf_mon; et.
-    Unshelve.
-    all: try (exact Ord.O).
-    all: try (exact 0%nat).
+      Unshelve.
+      all: try (exact Ord.O).
+      all: try (exact 0%nat).
   Qed.
 
   Lemma my_lemma1_aux

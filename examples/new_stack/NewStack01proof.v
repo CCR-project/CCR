@@ -32,7 +32,7 @@ Section SIMMODSEM.
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG memRA Σ}.
 
-  Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
+  Let W: Type := Any.t * Any.t.
 
   From iris.algebra Require Import big_op.
   From iris.bi Require Import big_op.
@@ -45,8 +45,6 @@ Section SIMMODSEM.
                             ({{"SIM": ([∗ map] handle ↦ stk ∈ stk_mgr0,
                                        (∃ hd, OwnM ((handle, 0%Z) |-> [hd]) ** is_list hd stk))}})
                         ))
-           (* (fun _ _ _ => ⌜True⌝%I) *)
-           top4
   .
 
   Variable global_stb: gname -> option fspec.
@@ -97,13 +95,15 @@ Section SIMMODSEM.
       post_call. steps. eapply Any.downcast_upcast in _UNWRAPN0. des. clarify.
       kstop. steps.
 
-      force_l. exists handle. steps. rewrite Any.upcast_downcast. steps.
+      force_l. exists handle. steps.
+      unfold pget. steps. rewrite Any.pair_split in *. steps.
+      rewrite Any.upcast_downcast. steps.
       destruct (stk_mgr0 !! handle) eqn:T.
       { mAssertPure False; ss.
         (*** IEXPLOIT*) iDestruct (big_sepM_lookup_acc with "SIM") as "[B C]"; et. iDestruct "B" as (x) "[B D]".
         iApply (points_to_disj with "POST B"); et.
       }
-      force_l; ss. steps.
+      force_l; ss. steps. unfold pput. steps.
 
       hret _; ss.
       { iModIntro. iSplits; ss; et. iApply big_sepM_insert; ss. iFrame; ss; et. }
@@ -112,8 +112,10 @@ Section SIMMODSEM.
     econs; ss.
     { unfold popF. trivial_init. fold wf. mDesAll; des; subst. ss.
       unfold pop_body, KModSem.transl_fun_tgt, ccall, cfun. steps.
+      unfold pget. steps. rewrite Any.pair_split in *. clarify.
 
-      rewrite Any.upcast_downcast in *. steps. kstart 7.
+      rewrite Any.upcast_downcast in *. steps.
+      unfold pput. steps. rewrite Any.pair_split in *. clarify. kstart 7.
 
       hide_k. destruct v; ss. des_ifs. clear_fast.
       renamer. rename n into handle. rename l into stk. rename _UNWRAPU0 into T.
@@ -134,7 +136,9 @@ Section SIMMODSEM.
         { iModIntro. iSplitL "SIM"; ss; [et|]. iSplits; ss. repeat iRight. et. }
         post_call. unhide_k. steps. rewrite Any.upcast_downcast in *. clarify.
         hide_k. ss. steps. unhide_k. kstop. steps.
+        unfold pget. steps. rewrite Any.pair_split in *. clarify.
         rewrite Any.upcast_downcast. steps.
+        unfold pput. steps. rewrite Any.pair_split in *. clarify.
 
         hret _; ss. iModIntro. iSplits; ss; et.
         destruct (stk_mgr1 !! handle) eqn:U.
@@ -169,12 +173,15 @@ Section SIMMODSEM.
         { iModIntro. iSplitL "SIM"; ss; et. iSplits; ss; et. }
         post_call. steps.
 
-        kstop. steps. rewrite Any.upcast_downcast. steps. renamer.
+        kstop. steps. unfold pget. steps. rewrite Any.pair_split in *. clarify.
+        rewrite Any.upcast_downcast. steps. renamer.
 
         destruct (stk_mgr1 !! handle) eqn:V.
         { mAssertPure False; ss. iDestruct (big_sepM_lookup_acc with "SIM") as "[B C]"; et.
           iDestruct "B" as (y) "[SIM B]".
           iApply (points_to_disj with "POST1 SIM"). }
+        unfold pput. steps. rewrite Any.pair_split in *. clarify.
+
 
         hret _; ss.
         { iModIntro. iSplits; ss; et. iApply big_sepM_insert; ss. iFrame. iExists _; ss. iFrame. }
@@ -182,8 +189,10 @@ Section SIMMODSEM.
     econs; ss.
     { unfold pushF. trivial_init. fold wf. mDesAll; des; subst. ss.
       unfold push_body, KModSem.transl_fun_tgt, ccall, cfun. steps.
+      unfold pget. steps. rewrite Any.pair_split in *. clarify.
 
-      rewrite Any.upcast_downcast in *; clarify. steps. kstart 7.
+      rewrite Any.upcast_downcast in *; clarify. steps.
+      unfold pput. steps. rewrite Any.pair_split in *. clarify. kstart 7.
 
       hide_k. destruct v; ss. des_ifs. clear_tac.
       rename n into handle. renamer. rename l into stk. rename _UNWRAPU into T.
@@ -218,11 +227,14 @@ Section SIMMODSEM.
       { iModIntro. iSplitL "SIM"; et. iSplits; ss; et. }
       post_call. steps.
 
-      kstop. steps. rewrite Any.upcast_downcast. steps.
+      kstop. steps.
+      unfold pget. steps. rewrite Any.pair_split in *. clarify.
+      rewrite Any.upcast_downcast. steps.
 
       destruct (stk_mgr1 !! handle) eqn:V.
       { mAssertPure False; ss. iDestruct (big_sepM_lookup_acc with "SIM") as "[B C]"; et.
         iDestruct "B" as (y) "[SIM B]". iApply (points_to_disj with "POST3 SIM"). }
+      unfold pput. steps. rewrite Any.pair_split in *. clarify.
 
       hret _; ss.
       { iModIntro. iSplits; ss; et.

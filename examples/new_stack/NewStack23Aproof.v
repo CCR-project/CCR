@@ -30,7 +30,7 @@ Section SIMMODSEM.
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG stkRA Σ}.
 
-  Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
+  Let W: Type := Any.t * Any.t.
 
   Inductive sim_loc: URA.car (t:=(Excl.t _)) -> option (list val) -> option (list val) -> Prop :=
   | sim_loc_k stk0: sim_loc (Some stk0) None (Some stk0)
@@ -50,7 +50,6 @@ Section SIMMODSEM.
                    (<<SIM: sim res0 mgr_src0 mgr_tgt0>>)⌝)
                   ∧ ({{"O": OwnM ((Auth.black res0): URA.car (t:=stkRA))}})
               )%I)
-           top4
   .
 
   Variable global_stb: gname -> option fspec.
@@ -173,7 +172,7 @@ Section SIMMODSEM.
     end;
 
     match goal with
-    | |- gpaco7 _ _ _ _ _ _ _ _ _ (?mr_src, (?mp_src↑), _, _) (?mr_tgt, (?mp_tgt↑), _, _) =>
+    | |- gpaco7 _ _ _ _ _ _ _ _ _ (Any.pair ?mp_src↑ _, _) ((?mp_tgt↑), _) =>
 
       (* rename mr_src into tmp; let name := fresh "res0" in rename tmp into name *)
       (* ; *)
@@ -249,8 +248,11 @@ Section SIMMODSEM.
       - unfold KModSem.transl_fun_tgt, new_body. cbn. steps.
         rewrite Any.pair_split. steps. rewrite Any.upcast_downcast. steps. rewrite _UNWRAPN. steps.
         rewrite Any.upcast_downcast in *. clarify.
-        rename x into h. force_l. exists h. steps. rewrite Any.upcast_downcast. steps.
+        rename x into h. force_l. exists h. steps.
+        unfold pget. steps. rewrite Any.pair_split in *. clarify.
+        rewrite Any.upcast_downcast. steps.
         assert(S:=SIM h). rewrite _GUARANTEE in *. inv S; ss. force_l; ss. steps.
+        unfold pput. steps. rewrite Any.pair_split in *. clarify.
 
         hret _; ss.
         iModIntro. iSplits; ss; et. iPureIntro. eapply sim_fresh_u; et.
@@ -305,12 +307,13 @@ Section SIMMODSEM.
           iModIntro. iFrame. iSplitL "A"; ss; et.
       - unfold KModSem.transl_fun_tgt, pop_body. cbn. steps.
         rewrite Any.pair_split. steps. rewrite Any.upcast_downcast. steps. rewrite _UNWRAPN. steps.
-        rewrite Any.upcast_downcast in *. clarify. steps.
+        rewrite Any.upcast_downcast in *. clarify. unfold pget. steps.
+        rewrite Any.pair_split in *. clarify. rewrite Any.upcast_downcast. steps.
         rename n into h. rename l into stk0. destruct v; ss. des_ifs_safe.
         assert(S:=SIM h). rewrite _UNWRAPU0 in *. inv S; ss. steps.
         destruct stk0 as [|x stk1].
         + steps. hret _; ss. iModIntro. iSplits; ss; et.
-        + steps.
+        + steps. unfold pput. steps.
 
           hret _; ss.
           { iModIntro. iSplits; ss; et. iPureIntro. eapply sim_update_u; et. }
@@ -360,10 +363,11 @@ Section SIMMODSEM.
         iModIntro. iFrame. iSplitL "A"; ss; et.
       - unfold KModSem.transl_fun_tgt, push_body. cbn. steps.
         rewrite Any.pair_split. steps. rewrite Any.upcast_downcast. steps. rewrite _UNWRAPN. steps.
-        rewrite Any.upcast_downcast in *. clarify. steps.
+        rewrite Any.upcast_downcast in *. clarify. unfold pget. steps.
+        rewrite Any.pair_split in *. clarify. rewrite Any.upcast_downcast. steps.
         rename n into h. rename l into stk0. destruct v; ss. des_ifs_safe.
         assert(S:=SIM h). rewrite _UNWRAPU in *. inv S; ss. steps.
-        steps.
+        unfold pput. steps.
 
         hret _; ss.
         { iModIntro. iSplits; ss; et. iPureIntro. eapply sim_update_u; et. }

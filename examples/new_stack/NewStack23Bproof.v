@@ -30,7 +30,7 @@ Section SIMMODSEM.
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG stkRA Σ}.
 
-  Let W: Type := ((Σ * Any.t)) * ((Σ * Any.t)).
+  Let W: Type := Any.t * Any.t.
 
   Notation sim stk_res0 stk_mgr0 :=
     (∀ h,
@@ -52,7 +52,6 @@ Section SIMMODSEM.
                   (⌜(<<PHYS: _stk_mgr0 = stk_mgr0↑>>) /\ (<<SIM: sim stk_res0 stk_mgr0>>)⌝)
                   ∧ ({{"O": OwnM ((Auth.black stk_res0): URA.car (t:=stkRA))}})
               )%I)
-           (fun _ _ _ => ⌜True⌝%I)
   .
 
   Variable global_stb: gname -> option fspec.
@@ -99,7 +98,6 @@ Section SIMMODSEM.
     { esplits. econs; ss.
       - eapply to_semantic. iIntros "H". iExists _, _. iSplit; ss; et.
         iSplit; ss; et.
-      - red. uipropall.
     }
     econs; ss.
     { unfold NewStack2.new_body, cfun. init. harg. fold wf. mDesAll. des; clarify.
