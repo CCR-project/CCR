@@ -254,10 +254,10 @@ Proof Outline
 
 
     econs; ss.
-    { unfold allocF. init.
-      harg. fold wf. steps. hide_k. destruct x as [sz|].
-      { mDesAll; ss. des; subst.
-        des_ifs_safe (mDesAll; ss). des; subst. clarify. rewrite Any.upcast_downcast in *. clarify.
+    { unfold allocF. kinit.
+      { harg. fold wf. steps. hide_k. rename x into sz.
+        mDesAll; ss. des; subst.
+        des_ifs_safe (mDesAll; ss). des; subst. clarify.
         steps. unhide_k. steps. des_ifs; clarify.
         2:{ bsimpl; des; des_sumbool; ss; try lia. }
         steps. astart 0. astop.
@@ -296,8 +296,8 @@ Proof Outline
         - cbn. lia.
         - clear - WFTGT. ii. ss. unfold update in *. des_ifs. exploit WFTGT; et. i; des. r. lia.
       }
-      { unfold KModSem.transl_fun_tgt. des_ifs_safe (mDesAll; ss). des; subst. steps.
-        destruct v; ss. clarify. unhide_k.
+      { harg. fold wf. steps. hide_k. destruct x.
+        mDesAll. des; subst. steps. destruct v; ss. clarify. unhide_k.
         steps.
         renamer. steps. des_ifs; steps.
 
@@ -326,14 +326,14 @@ Proof Outline
 
 
     econs; ss.
-    { unfold freeF. init.
-      harg. fold wf. steps. hide_k. destruct x as [[b ofs]|].
-      { des_ifs_safe (mDesAll; ss). des; subst.
+    { unfold freeF. kinit.
+      { harg. fold wf. steps. hide_k. rename n into b. rename z into ofs.
+        des_ifs_safe (mDesAll; ss). des; subst.
         des_ifs; mDesAll; ss. des; subst. clarify. rewrite Any.upcast_downcast in *. clarify.
         steps. unhide_k. steps. astart 0. astop.
         renamer.
-        rename a0 into v. rename WF into SIMWF.
-        mCombine "INV" "A1". mOwnWf "INV".
+        rename a into v. rename WF into SIMWF.
+        mCombine "INV" "A". mOwnWf "INV".
         assert(HIT: memk_src0 b ofs = (Some v)).
         { clear - WF.
           dup WF. eapply Auth.auth_included in WF. des. eapply pw_extends in WF. eapply pw_extends in WF.
@@ -395,8 +395,9 @@ Proof Outline
         - clear - _UNWRAPU WFTGT. ii. unfold Mem.free in *. des_ifs. ss.
           unfold update in *. des_ifs; eapply WFTGT; et.
       }
-      { unfold KModSem.transl_fun_tgt. des_ifs_safe (mDesAll; ss). des; subst.
-        rewrite Any.pair_split. unhide_k. steps. destruct v; ss. clarify. steps.
+      { harg. fold wf. steps. destruct x.
+        des_ifs_safe (mDesAll; ss). des; subst.
+        steps. destruct v; ss. clarify. steps.
         renamer.
         steps.
         rename n into b. rename z into ofs.
@@ -423,13 +424,14 @@ Proof Outline
 
 
     econs; ss.
-    { unfold loadF. init.
-      harg. fold wf. steps. hide_k. destruct x as [[[b ofs] v]|].
-      { des_ifs_safe (mDesAll; ss). des; subst. clarify. rewrite Any.upcast_downcast in *. clarify.
+    { unfold loadF. kinit.
+      { harg. fold wf. steps. hide_k.
+        rename n into b. rename z into ofs.
+        des_ifs_safe (mDesAll; ss). des; subst. clarify. rewrite Any.upcast_downcast in *. clarify.
         steps. unhide_k. steps. astart 0. astop.
         renamer.
         rename WF into SIMWF.
-        mCombine "INV" "A1". mOwnWf "INV".
+        mCombine "INV" "A". mOwnWf "INV".
         assert(T: memk_src0 b ofs = (Some v)).
         { clear - WF.
           dup WF.
@@ -442,8 +444,9 @@ Proof Outline
         force_r; ss. clarify. steps. force_l. esplits. steps.
         hret _; ss. iModIntro. iFrame. iSplitL; et.
       }
-      { unfold KModSem.transl_fun_tgt. des_ifs_safe (mDesAll; ss). des; subst.
-        rewrite Any.pair_split. unhide_k. steps. destruct v; ss. clarify. steps.
+      { harg. fold wf. steps.
+        des_ifs_safe (mDesAll; ss). des; subst.
+        steps. destruct v; ss. clarify. steps.
         renamer.
         rename n into b. rename z into ofs.
 
@@ -458,14 +461,15 @@ Proof Outline
 
 
     econs; ss.
-    { unfold storeF. init.
-      harg. fold wf. steps. hide_k. destruct x as [[[b ofs] v1]|].
-      { des_ifs_safe (mDesAll; ss). des; subst. clarify. rewrite Any.upcast_downcast in *. clarify.
+    { unfold storeF. kinit.
+      { harg. fold wf. steps. hide_k.
+        rename n into b. rename z into ofs. rename v into v1.
+        des_ifs_safe (mDesAll; ss). des; subst. clarify. rewrite Any.upcast_downcast in *. clarify.
         steps. unhide_k. steps. astart 0. astop.
         renamer.
-        rename a0 into v0. rename WF into SIMWF.
+        rename a into v0. rename WF into SIMWF.
         steps.
-        mCombine "INV" "A1". mOwnWf "INV".
+        mCombine "INV" "A". mOwnWf "INV".
         assert(T: memk_src0 b ofs = (Some v0)).
         { clear - WF.
           dup WF.
@@ -508,8 +512,9 @@ Proof Outline
           + bsimpl; des; des_sumbool; subst. eapply WFTGT; et.
           + eapply WFTGT; et.
       }
-      { unfold KModSem.transl_fun_tgt. des_ifs_safe (mDesAll; ss). des; subst.
-        rewrite Any.pair_split. unhide_k. steps.
+      { harg. fold wf. steps. hide_k.
+        des_ifs_safe (mDesAll; ss). des; subst.
+        unhide_k. steps.
         renamer.
         destruct v; ss. clarify. rename n into b. rename z into ofs.
 
@@ -533,9 +538,9 @@ Proof Outline
 
 
     econs; ss.
-    { unfold cmpF. init.
-      harg. fold wf. steps. hide_k. destruct x as [[result resource]|].
-      { des_ifs_safe (mDesAll; ss). des; subst. clarify.
+    { unfold cmpF. kinit.
+      { harg. fold wf. steps. hide_k.
+        des_ifs_safe (mDesAll; ss). des; subst. clarify.
         steps. unhide_k. steps. astart 0. astop.
         renamer.
         rename WF into SIMWF.
@@ -552,7 +557,7 @@ Proof Outline
             eapply Excl.extends in WF; ss. do 2 eapply lookup_wf. eapply Auth.black_wf. eapply URA.wf_mon; et.
         }
         steps.
-        mCombine "INV" "A1". mOwnWf "INV". Fail mDesOwn "INV". (*** TODO: BUG!! FIXME ***)
+        mCombine "INV" "A". mOwnWf "INV". Fail mDesOwn "INV". (*** TODO: BUG!! FIXME ***)
 
         mDesOr "PRE".
         { mDesAll; subst. rewrite Any.upcast_downcast in *. clarify. steps.
@@ -588,7 +593,7 @@ Proof Outline
           force_l. eexists. steps. hret _; ss. iModIntro. iDestruct "INV" as "[INV A]". iSplitR "A"; ss; et.
         }
       }
-      { unfold KModSem.transl_fun_tgt. des_ifs_safe (mDesAll; ss). des; subst.
+      { harg. fold wf. steps. hide_k. des_ifs_safe (mDesAll; ss). des; subst.
         unhide_k. steps.
         renamer.
         sym in _UNWRAPU.

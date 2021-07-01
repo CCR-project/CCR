@@ -340,8 +340,6 @@ Section KMODSEM.
 
 End KMODSEM.
 End KModSem.
-Coercion KModSem.disclose_ksb_mid: kspecbody >-> fspecbody.
-Coercion KModSem.transl_mid: KModSem.t >-> SModSem.t.
 
 
 
@@ -456,4 +454,17 @@ Section KMOD.
 End KMOD.
 End KMod.
 
-Coercion KMod.transl_mid: KMod.t >-> SMod.t.
+Ltac kinit :=
+  let varg_src := fresh "varg_src" in
+  let mn := fresh "mn" in
+  let varg := fresh "varg" in
+  let EQ := fresh "EQ" in
+  let w := fresh "w" in
+  let mrp_src := fresh "mrp_src" in
+  let mp_tgt := fresh "mp_tgt" in
+  let WF := fresh "WF" in
+  split; ss; intros varg_src [mn varg] EQ w mrp_src mp_tgt WF; try subst varg_src;
+  exists 101; cbn; ginit;
+  try (unfold fun_to_tgt, cfunN, cfunU, KModSem.disclose_ksb_tgt, fun_to_tgt);
+  simpl;
+  gstep; eapply sim_itree_take_src; [eauto with ord_step|intros []; rewrite HoareFun_parse; simpl].

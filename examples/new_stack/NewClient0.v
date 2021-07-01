@@ -20,7 +20,7 @@ Definition getintF {E} `{eventE -< E}:  list val -> itree E val :=
 Definition putintF {E} `{eventE -< E}: list val -> itree E val :=
   fun varg =>
     `v: val <- (pargs [Tuntyped] varg)?;;
-    assume(wf_val v);;;
+    (if (wf_val v) then Ret tt else triggerUB);;; (* TODO: make notation *)
     trigger (Syscall "print" varg top1);;;
     Ret Vundef
 .

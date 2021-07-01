@@ -105,8 +105,7 @@ Section PROOF.
     KModSem.initial_st := (Sk.load_mem sk)↑;
   |}
   .
-  Definition SMemSem: Sk.t -> SModSem.t := KMemSem.
-  Definition MemSem (stb: gname -> option fspec): Sk.t -> ModSem.t := (SModSem.to_tgt stb) ∘ SMemSem.
+  Definition MemSem (stb: gname -> option fspec): Sk.t -> ModSem.t := (KModSem.transl_tgt stb) ∘ KMemSem.
 
 
 
@@ -115,8 +114,7 @@ Section PROOF.
     KMod.sk := Sk.unit;
   |}
   .
-  Definition SMem: SMod.t := KMem.
-  Definition Mem (stb: Sk.t -> gname -> option fspec): Mod.t := SMod.to_tgt stb SMem.
+  Definition Mem (stb: Sk.t -> gname -> option fspec): Mod.t := KMod.transl_tgt stb KMem.
 
 End PROOF.
 Global Hint Unfold MemStb: stb.

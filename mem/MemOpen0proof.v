@@ -45,7 +45,7 @@ Section SIMMODSEM.
 
 
     econs; ss.
-    { unfold allocF, fun_to_src, body_to_src, cfunU, KModSem.disclose_ksb_src, KModSem.body_to_src. init.
+    { unfold allocF, fun_to_src, body_to_src, cfunU, KModSem.disclose_ksb_src, body_to_src. init.
       match goal with | |- context[my_if ?b _ _] => destruct b eqn:T end.
       { cbn. steps. }
       destruct mn eqn:MN; ss; clarify. des_ifs.
@@ -57,16 +57,7 @@ Section SIMMODSEM.
     }
 
     econs; ss.
-    { unfold freeF, fun_to_src, body_to_src, cfunU, KModSem.disclose_ksb_src, KModSem.body_to_src. init.
-      match goal with | |- context[my_if ?b _ _] => destruct b eqn:T end.
-      { cbn. steps. }
-      destruct mn eqn:MN; ss; clarify. des_ifs.
-      steps. apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
-      force_r; ss. steps.
-      red. esplits; et. rr. econs; ss. 
-    }
-    econs; ss.
-    { unfold loadF, fun_to_src, body_to_src, cfunU, KModSem.disclose_ksb_src, KModSem.body_to_src. init.
+    { unfold freeF, fun_to_src, body_to_src, cfunU, KModSem.disclose_ksb_src, body_to_src. init.
       match goal with | |- context[my_if ?b _ _] => destruct b eqn:T end.
       { cbn. steps. }
       destruct mn eqn:MN; ss; clarify. des_ifs.
@@ -75,7 +66,7 @@ Section SIMMODSEM.
       red. esplits; et. rr. econs; ss.
     }
     econs; ss.
-    { unfold storeF, fun_to_src, body_to_src, cfunU, KModSem.disclose_ksb_src, KModSem.body_to_src. init.
+    { unfold loadF, fun_to_src, body_to_src, cfunU, KModSem.disclose_ksb_src, body_to_src. init.
       match goal with | |- context[my_if ?b _ _] => destruct b eqn:T end.
       { cbn. steps. }
       destruct mn eqn:MN; ss; clarify. des_ifs.
@@ -84,7 +75,16 @@ Section SIMMODSEM.
       red. esplits; et. rr. econs; ss.
     }
     econs; ss.
-    { unfold cmpF, fun_to_src, body_to_src, cfunU, KModSem.disclose_ksb_src, KModSem.body_to_src. init.
+    { unfold storeF, fun_to_src, body_to_src, cfunU, KModSem.disclose_ksb_src, body_to_src. init.
+      match goal with | |- context[my_if ?b _ _] => destruct b eqn:T end.
+      { cbn. steps. }
+      destruct mn eqn:MN; ss; clarify. des_ifs.
+      steps. apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
+      force_r; ss. steps.
+      red. esplits; et. rr. econs; ss.
+    }
+    econs; ss.
+    { unfold cmpF, fun_to_src, body_to_src, cfunU, KModSem.disclose_ksb_src, body_to_src. init.
       match goal with | |- context[my_if ?b _ _] => destruct b eqn:T end.
       { cbn. steps. }
       destruct mn eqn:MN; ss; clarify. des_ifs.
