@@ -1,5 +1,7 @@
 #!/bin/bash
 
+./test.native -conf compcert.ini
+
 mv simple.s bin/simple.s
 cc -o bin/simple bin/simple.s
 bin/simple
@@ -36,4 +38,12 @@ echo $?
 mv link.s bin/link.s
 gcc -no-pie -o bin/link bin/link.s bin/print.s bin/scan.s
 bin/link
+echo $?
+
+mv stack.s bin/stack.s
+mv echo.s bin/echo.s
+mv echo_main.s bin/echo_main.s
+mv client.s bin/client.s
+cc -o bin/echo_all bin/stack.s bin/echo.s bin/echo_main.s bin/client.s bin/print.s bin/scan.s
+bin/echo_all
 echo $?

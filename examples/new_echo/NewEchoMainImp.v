@@ -21,16 +21,16 @@ Section ECHO.
       []
       []
       (
-        @ "echoImp" []
+        @ "echo" []
       ).
 
   Definition EchoMain_prog : program :=
     mk_program
       "EchoMainImp"
       []
-      [("echoImp", 0)]
+      [("echo", 0)]
       []
-      [("echoMainImp", main)]
+      [("main", main)]
   .
 
   Definition EchoMainSem ge : ModSem.t := ImpMod.modsem EchoMain_prog ge.

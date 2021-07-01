@@ -62,7 +62,7 @@ Section ECHO.
       []
       [("new", 0); ("getint", 0); ("putint", 1); ("push", 2); ("pop", 1)]
       []
-      [("echoImp", echo); ("inputImp", input); ("outputImp", output)]
+      [("echo", echo); ("input", input); ("output", output)]
   .
 
   Definition EchoSem ge : ModSem.t := ImpMod.modsem Echo_prog ge.

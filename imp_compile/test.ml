@@ -13,6 +13,10 @@ open ImpMem1
 open ImpMem2
 open ImpLink
 
+open NewStackImp
+open NewEchoImp
+open NewEchoMainImp
+open NewClientImp
 
 
 (* let get_builtin (name, (out, ins, b)) =
@@ -103,7 +107,13 @@ let main =
   compile_imp (ImpKnot.imp_knot_prog) "knot.s";
   compile_imp (ImpMem1.imp_mem1_f) "mem1F.s";
   compile_imp (ImpMem1.imp_mem1_main) "mem1Main.s";
-  compile_imp (ImpMem2.imp_mem2_prog) "mem2.s";
+  compile_imp (ImpMem2.imp_mem2_prog) "mem2.s"; 
+
+  compile_imp (NewStackImp.coq_Stack_prog) "stack.s";
+  compile_imp (NewEchoImp.coq_Echo_prog) "echo.s";
+  compile_imp (NewEchoMainImp.coq_EchoMain_prog) "echo_main.s";
+  compile_imp (NewClientImp.coq_Client_prog) "client.s";
+
   let _link1 =
     (Imp2Csharpminor.link_imps builtins
        [ImpLink.imp_linkMain_prog; ImpLink.imp_linkF_prog; ImpLink.imp_linkG_prog]) in

@@ -70,3 +70,22 @@ Section ECHOSPEC.
 End ECHOSPEC.
 
 Definition echo_spec_itr := ModSemL.initial_itr (ModL.enclose echo_spec) None.
+
+
+
+
+
+
+Require Import Mem0 NewStackImp NewEchoImp NewEchoMainImp NewClientImp.
+
+Section ECHOIMP.
+
+  Let Σ: GRA.t := GRA.of_list [].
+  Local Existing Instance Σ.
+
+  Definition echo_imp: ModL.t :=
+    Mod.add_list [Mem; EchoMain; Stack; Echo; Client].
+
+End ECHOIMP.
+
+Definition echo_imp_itr := ModSemL.initial_itr (ModL.enclose echo_imp) None.
