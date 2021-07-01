@@ -156,6 +156,18 @@ Section AUX.
     i. eapply unfold_is_list.
   Qed.
 
+  Lemma is_list_wf
+        ll xs
+    :
+      (is_list ll xs) -∗ (⌜(ll = Vnullptr) \/ (match ll with | Vptr _ 0 => True | _ => False end)⌝)
+  .
+  Proof.
+    iIntros "H0". destruct xs; ss; et.
+    { iPure "H0" as H0. iPureIntro. left. et. }
+    iDestruct "H0" as (lhd ltl) "[[H0 H1] H2]".
+    iPure "H0" as H0. iPureIntro. right. subst. et.
+  Qed.
+
   (* Global Opaque is_list. *)
 End AUX.
 

@@ -41,10 +41,10 @@ Section SIMMODSEM.
     @mk_wf _ unit
            (fun _ _stk_mgr0 _ =>
               ⌜True⌝ ** (∃ (stk_mgr0: gmap mblock (list val)),
-                            (⌜_stk_mgr0 = stk_mgr0↑⌝) ∧
-                            ({{"SIM": ([∗ map] handle ↦ stk ∈ stk_mgr0,
-                                       (∃ hd, OwnM ((handle, 0%Z) |-> [hd]) ** is_list hd stk))}})
-                        ))
+                         (⌜_stk_mgr0 = stk_mgr0↑⌝) ∧
+                         ({{"SIM": ([∗ map] handle ↦ stk ∈ stk_mgr0,
+                                    (∃ hd, OwnM ((handle, 0%Z) |-> [hd]) ** is_list hd stk))}})
+           ))
   .
 
   Variable global_stb: gname -> option fspec.
@@ -130,7 +130,10 @@ Section SIMMODSEM.
       hide_k.
 
       force_r.
-      { admit "wf for loaded value". }
+      { mAssertPure _ as WF.
+        { iClear "SIM". iClear "POST". iApply is_list_wf. iApply "A2". }
+        des; clarify; et. des_ifs.
+      }
       steps.
 
       destruct stk as [|x stk1]; ss.
