@@ -29,23 +29,23 @@ def flip(): Unit
   return ()
 ***)
 
-  Definition getF: list val -> itree Es val :=
+  Definition getF: (option string * Any.t) -> itree Es Any.t :=
     fun _ =>
       n <- trigger (PGet);; `n: Z <- n↓?;;
       let r := (if (Z.even n) then Vint 0 else Vint (0xffffff)) in
-      Ret r
+      Ret (r↑)
     .
 
-  Definition flipF: list val -> itree Es val :=
+  Definition flipF: (option string * Any.t) -> itree Es Any.t :=
     fun _ =>
       n <- trigger (PGet);; `n: Z <- n↓?;;
       let n := (n+1)%Z in
       trigger (PPut n↑);;;
-      Ret Vundef
+      Ret (Vundef↑)
     .
 
   Definition BWSem: ModSem.t := {|
-    ModSem.fnsems := [("get", cfun getF); ("flip", cfun flipF)];
+    ModSem.fnsems := [("get", getF); ("flip", flipF)];
     ModSem.mn := "BW";
     ModSem.initial_st := 0%Z↑;
   |}

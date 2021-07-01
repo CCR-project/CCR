@@ -213,7 +213,7 @@ Section SIMMODSEM.
         { admit "ez - wf". }
     }
     econs; ss.
-    { unfold NewStack2.new_body, cfun. init. harg. post_call.
+    { unfold NewStack2.new_body, cfunN, cfunU. init. harg. post_call.
       destruct x; des_ifs_safe; mDesAll; ss; des; subst.
       - steps.
         post_call.
@@ -255,7 +255,7 @@ Section SIMMODSEM.
     }
 
     econs; ss.
-    { unfold NewStack2.pop_body, cfun. init. harg. post_call.
+    { unfold NewStack2.pop_body, cfunN. init. harg. post_call.
       destruct x; des_ifs_safe; mDesAll; ss; des; subst.
       - unfold KModSem.transl_fun_tgt. steps.
         renamer. rename n into h. rename l into stk0.
@@ -302,7 +302,7 @@ Section SIMMODSEM.
           iModIntro. iFrame. iSplitL "A"; ss; et.
       - unfold KModSem.transl_fun_tgt, pop_body. cbn. steps.
         rename n into h. rename l into stk0. destruct v; ss. des_ifs_safe.
-        assert(S:=SIM h). rewrite _UNWRAPU0 in *. inv S; ss. steps.
+        assert(S:=SIM h). rewrite _UNWRAPU1 in *. inv S; ss. steps.
         destruct stk0 as [|x stk1].
         + steps. hret _; ss. iModIntro. iSplits; ss; et.
         + steps. unfold pput. steps.
@@ -312,7 +312,7 @@ Section SIMMODSEM.
     }
 
     econs; ss.
-    { unfold NewStack2.push_body, cfun. init. harg. post_call.
+    { unfold NewStack2.push_body, cfunN. init. harg. post_call.
       destruct x; des_ifs_safe; mDesAll; ss; des; subst.
       - unfold KModSem.transl_fun_tgt. steps.
         renamer. rename n into h. rename l into stk0. rename v into x.
@@ -354,7 +354,7 @@ Section SIMMODSEM.
         iModIntro. iFrame. iSplitL "A"; ss; et.
       - unfold KModSem.transl_fun_tgt, push_body. cbn. steps.
         rename n into h. rename l into stk0. destruct v; ss. des_ifs_safe.
-        assert(S:=SIM h). rewrite _UNWRAPU in *. inv S; ss. steps.
+        assert(S:=SIM h). rewrite _UNWRAPU0 in *. inv S; ss. steps.
         unfold pput. steps.
 
         hret _; ss.

@@ -26,19 +26,19 @@ Section PROOF.
       if(Z_le_gt_dec n 1)
       then Ret (Vint 1)
       else
-        `n0: val <- ccall fn [Vint (n - 1)];; `n0: Z <- (unint n0)?;;
-        `n1: val <- ccall fn [Vint (n - 2)];; `n1: Z <- (unint n1)?;;
+        `n0: val <- ccallU fn [Vint (n - 1)];; `n0: Z <- (unint n0)?;;
+        `n1: val <- ccallU fn [Vint (n - 2)];; `n1: Z <- (unint n1)?;;
         Ret (Vint (n0 + n1)).
 
   Definition mainF (skenv: SkEnv.t): list val -> itree Es val :=
     fun varg =>
       fibb <- (skenv.(SkEnv.id2blk) "fib")?;;
-      `fb: val <- ccall "knot" [Vptr fibb 0];; `fb: mblock <- (unblk fb)?;;
+      `fb: val <- ccallU "knot" [Vptr fibb 0];; `fb: mblock <- (unblk fb)?;;
       fn <- (skenv.(SkEnv.blk2id) fb)?;;
-      ccall fn [Vint 10].
+      ccallU fn [Vint 10].
 
   Definition MainSem (skenv: SkEnv.t): ModSem.t := {|
-    ModSem.fnsems := [("fib", cfun (fibF skenv)); ("main", cfun (mainF skenv))];
+    ModSem.fnsems := [("fib", cfunU (fibF skenv)); ("main", cfunU (mainF skenv))];
     ModSem.mn := "Main";
     ModSem.initial_st := tt↑;
   |}

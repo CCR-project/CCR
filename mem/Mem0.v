@@ -92,7 +92,7 @@ Section PROOF.
 
   Definition MemSem (sk: Sk.t): ModSem.t :=
     {|
-      ModSem.fnsems := [("alloc", cfun allocF) ; ("free", cfun freeF) ; ("load", cfun loadF) ; ("store", cfun storeF) ; ("cmp", cfun cmpF)];
+      ModSem.fnsems := [("alloc", cfunU allocF) ; ("free", cfunU freeF) ; ("load", cfunU loadF) ; ("store", cfunU storeF) ; ("cmp", cfunU cmpF)];
       ModSem.mn := "Mem";
       ModSem.initial_st := (Sk.load_mem sk)↑;
     |}

@@ -82,9 +82,9 @@ Section PROOF.
 
 
   Definition EchoSbtb: list (gname * kspecbody) :=
-    [("echo", ksb_trivial (cfun echo_body));
-    ("input",  mk_kspecbody input_spec (fun _ => triggerUB) (cfun input_body));
-    ("output", mk_kspecbody output_spec (fun _ => triggerUB) (cfun output_body))
+    [("echo", ksb_trivial (cfunU echo_body));
+    ("input",  mk_kspecbody input_spec (fun _ => triggerUB) (cfunN input_body));
+    ("output", mk_kspecbody output_spec (fun _ => triggerUB) (cfunN output_body))
     ]
   .
 

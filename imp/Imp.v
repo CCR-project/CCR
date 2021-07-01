@@ -372,7 +372,7 @@ Section MODSEM.
   (* Instance Initial_void1 : @Initial (Type -> Type) IFun void1 := @elim_void1. (*** TODO: move to ITreelib ***) *)
 
   Definition modsem (m : program) (ge: SkEnv.t) : ModSem.t := {|
-    ModSem.fnsems := List.map (fun '(fn, f) => (fn, cfun (eval_imp ge f))) m.(prog_funs);
+    ModSem.fnsems := List.map (fun '(fn, f) => (fn, cfunU (eval_imp ge f))) m.(prog_funs);
     ModSem.mn := m.(name);
     ModSem.initial_st := tt↑;
   |}.
@@ -384,7 +384,7 @@ Section MODSEM.
 
   Definition modsemL (mL : programL) (ge: SkEnv.t) : ModSemL.t := {|
     ModSemL.fnsems :=
-      List.map (fun '(mn, (fn, f)) => (fn, fun a => transl_all mn (cfun (eval_imp ge f) a))) mL.(prog_funsL);
+      List.map (fun '(mn, (fn, f)) => (fn, fun a => transl_all mn (cfunU (eval_imp ge f) a))) mL.(prog_funsL);
     ModSemL.initial_mrs :=
       List.map (fun name => (name, tt↑)) mL.(nameL);
   |}.

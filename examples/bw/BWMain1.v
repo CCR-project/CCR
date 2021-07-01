@@ -40,13 +40,13 @@ Section MAIN.
     Seal.sealing "stb" [("main", main_spec)].
 
   Definition MainSbtb: list (gname * fspecbody) :=
-    [("main", mk_specbody main_spec (cfun mainbody))
+    [("main", mk_specbody main_spec (cfunN mainbody))
     ]
   .
 
-  Definition SMain: SMod.t := SMod.main mainpre (cfun mainbody).
+  Definition SMain: SMod.t := SMod.main mainpre (cfunN mainbody).
   Definition Main: Mod.t := SMod.to_tgt (fun _ => to_stb (BWStb++ClientStb++MainStb)) SMain.
-  Definition SMainSem: SModSem.t := SModSem.main mainpre (cfun mainbody).
+  Definition SMainSem: SModSem.t := SModSem.main mainpre (cfunN mainbody).
   Definition MainSem: ModSem.t := SModSem.to_tgt (to_stb (BWStb++ClientStb++MainStb)) SMainSem.
 
 End MAIN.

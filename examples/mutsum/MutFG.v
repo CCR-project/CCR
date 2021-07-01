@@ -113,12 +113,12 @@ Section PROOF.
     eapply refines_close.
     eapply adequacy_local_list. econs; [|econs; [|econs; ss]].
     - econs; ss. ii. econstructor 1 with (wf:=top2) (le:=top2); ss. econs; et.
-      init. unfold cfun, fun_to_src, body_to_src, mainBody. steps.
+      init. unfold cfunN, fun_to_src, body_to_src, mainBody. steps.
     - econs; ss. ii. econstructor 1 with (wf:=top2) (le:=top2); ss. econs; et.
-      init. unfold cfun, fun_to_src, body_to_src, mainBody. steps.
+      init. unfold cfunN, fun_to_src, body_to_src, mainBody. steps.
       force_l. eexists. steps.
     - econs; ss. ii. econstructor 1 with (wf:=top2) (le:=top2); ss. econs; et.
-      init. unfold cfun, fun_to_src, body_to_src, mainBody. steps.
+      init. unfold cfunN, fun_to_src, body_to_src, mainBody. steps.
       force_l. eexists. steps.
       Unshelve. all: try (exact tt).
   Qed.

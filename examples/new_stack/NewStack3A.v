@@ -97,9 +97,9 @@ Section PROOF.
 
 
   Definition StackSbtb: list (gname * kspecbody) :=
-    [("new", mk_kspecbody new_spec (cfun new_body) (fun _ => trigger (Choose _)));
-    ("pop",  mk_kspecbody pop_spec (cfun pop_body) (fun _ => trigger (Choose _)));
-    ("push", mk_kspecbody push_spec (cfun push_body) (fun _ => trigger (Choose _)))
+    [("new", mk_kspecbody new_spec (cfunU new_body) (fun _ => trigger (Choose _)));
+    ("pop",  mk_kspecbody pop_spec (cfunU pop_body) (fun _ => trigger (Choose _)));
+    ("push", mk_kspecbody push_spec (cfunU push_body) (fun _ => trigger (Choose _)))
     ]
   .
 

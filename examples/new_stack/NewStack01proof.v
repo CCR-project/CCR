@@ -72,7 +72,7 @@ Section SIMMODSEM.
     { esplits. econs; ss. eapply to_semantic. iIntros "H". iClear "H". iSplits; ss. }
     econs; ss.
     { unfold newF. trivial_init. fold wf. mDesAll; des; subst. ss.
-      unfold new_body, KModSem.transl_fun_tgt, ccall, cfun. steps.
+      unfold new_body, KModSem.transl_fun_tgt, ccallN, ccallU, cfunN, cfunU. steps.
 
       kstart 2.
       kcatch. { eapply STBINCL. stb_tac; ss. } hcall _ (Some _) _ with "SIM"; ss; et.
@@ -84,6 +84,9 @@ Section SIMMODSEM.
       Ltac post_call :=
         fold wf; clear_fast; mDesAll; des_safe; subst; try rewrite Any.upcast_downcast in *; clarify; renamer.
       post_call. rename a0 into handle.
+      steps.
+      force_r.
+      { ss. }
       steps.
 
       kcatch. { eapply STBINCL. stb_tac; ss. } hcall _ (Some (_, _, _)) _ with "SIM A"; ss; et.
@@ -109,7 +112,7 @@ Section SIMMODSEM.
     }
     econs; ss.
     { unfold popF. trivial_init. fold wf. mDesAll; des; subst. ss.
-      unfold pop_body, KModSem.transl_fun_tgt, ccall, cfun. steps.
+      unfold pop_body, KModSem.transl_fun_tgt, ccallU, cfunU. steps.
 
       kstart 7.
 
@@ -126,11 +129,19 @@ Section SIMMODSEM.
       post_call. unhide_k. steps.
       hide_k.
 
+      force_r.
+      { admit "wf for loaded value". }
+      steps.
+
       destruct stk as [|x stk1]; ss.
       - mDesAll. subst.
+        unhide_k. steps. hide_k.
         kcatch. { eapply STBINCL. stb_tac; ss. } hcall (ord_pure 0) (Some (_, _)) _ with "SIM POST"; ss.
         { iModIntro. iSplitL "SIM"; ss; [et|]. iSplits; ss. repeat iRight. et. }
         post_call. unhide_k. steps. kstop. steps.
+        force_r.
+        { ss. }
+        steps.
         unfold pget. steps.
 
         hret _; ss. iModIntro. iSplits; ss; et.
@@ -140,10 +151,19 @@ Section SIMMODSEM.
         iApply big_sepM_insert; ss. iSplitR "SIM"; et.
       - mDesAll. subst. rename a into hd. rename a0 into tl. rewrite points_to_split in ACC. mDesOwn "A1".
         rewrite Z.add_0_l in *.
+        unhide_k. steps. hide_k.
 
         kcatch. { eapply STBINCL. stb_tac; ss. } hcall (ord_pure 0) (Some (_, _)) _ with "SIM A1"; ss.
         { iModIntro. iSplitL "SIM"; ss. { et. } iSplits; ss; et. }
         post_call. unhide_k. steps.
+
+        force_r.
+        { ss. }
+        steps.
+
+        force_r.
+        { ss. }
+        steps.
 
         unfold scale_int. uo. steps.
         kcatch. { eapply STBINCL. stb_tac; ss. } hcall (ord_pure 0) (Some (_, _, _)) _ with "SIM POST1"; ss.
@@ -180,7 +200,7 @@ Section SIMMODSEM.
     }
     econs; ss.
     { unfold pushF. trivial_init. fold wf. mDesAll; des; subst. ss.
-      unfold push_body, KModSem.transl_fun_tgt, ccall, cfun. steps.
+      unfold push_body, KModSem.transl_fun_tgt, ccallU, cfunU. steps.
 
       kstart 7.
 
@@ -201,6 +221,9 @@ Section SIMMODSEM.
       rewrite points_to_split in ACC. mDesOwn "A1". rewrite Z.add_0_l in *. clear_fast.
 
       unfold scale_int. uo. steps.
+
+      force_r; ss. steps.
+
       kcatch. { eapply STBINCL. stb_tac; ss. } hcall (ord_pure 0) (Some (_, _, _)) _ with "A SIM"; ss; et.
       { iModIntro. iSplitL "SIM"; et. iSplits; ss; et. }
       post_call. steps.

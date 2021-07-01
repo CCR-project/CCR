@@ -473,7 +473,7 @@ Section PROOFSINGLE.
 
     left. unfold ITree.map. sim_red.
     set (sge:=Sk.load_skenv (Sk.sort (defsL src))) in *.
-    destruct (alist_find "main" (List.map (fun '(mn, (fn, f)) => (fn, transl_all mn (T:=_) ∘ cfun (eval_imp sge f))) (prog_funsL src)))
+    destruct (alist_find "main" (List.map (fun '(mn, (fn, f)) => (fn, transl_all mn (T:=_) ∘ cfunU (eval_imp sge f))) (prog_funsL src)))
              eqn:FOUNDMAIN; ss; grind.
     2:{ sim_triggerUB. }
     repeat match goal with | [ H : false = false |- _ ] => clear H end.
@@ -485,7 +485,7 @@ Section PROOFSINGLE.
     hexploit in_tgt_prog_defs_ifuns; eauto. i. rename H into INFMAINTGT.
     hexploit tgt_genv_find_def_by_blk; eauto. i. rename H into TGTMAIN. ss; clarify.
     match goal with [H: Genv.find_def _ _ = Some (Gfun (Internal ?tf)) |- _ ] => set (tmainf:=tf) in * end.
-    unfold cfun. rewrite Any.upcast_downcast. grind. rewrite unfold_eval_imp_only.
+    unfold cfunU. rewrite Any.upcast_downcast. grind. rewrite unfold_eval_imp_only.
     sim_red.
     (* unfold assume. sim_red. *)
     (* pfold. econs 5; ss; eauto; i. dtm H H0. *)

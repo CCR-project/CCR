@@ -100,7 +100,7 @@ Section SIMMODSEM.
         iSplit; ss; et.
     }
     econs; ss.
-    { unfold NewStack2.new_body, cfun. init. harg. fold wf. mDesAll. des; clarify.
+    { unfold NewStack2.new_body, cfunN. init. harg. fold wf. mDesAll. des; clarify.
       steps.
       astart 0. astop. steps.
       rename a into stk_mgr0. rename x0 into h. rename a0 into stk_res0. rename x into P. des_u.
@@ -128,7 +128,7 @@ Section SIMMODSEM.
       }
     }
     econs; ss.
-    { unfold NewStack2.pop_body, cfun. init. harg. fold wf. des_ifs_safe. mDesAll. des; clarify.
+    { unfold NewStack2.pop_body, cfunN. init. harg. fold wf. des_ifs_safe. mDesAll. des; clarify.
       steps.
       astart 1. steps.
       rename a into stk_mgr0. rename n into h. rename a0 into stk_res0.
@@ -162,7 +162,7 @@ Section SIMMODSEM.
         { iModIntro. iFrame; ss; et. iSplits; ss; et. iPureIntro. right. inv PR; ss. }
     }
     econs; ss.
-    { unfold NewStack2.push_body, cfun. init. harg. fold wf. des_ifs_safe. mDesAll. des; clarify.
+    { unfold NewStack2.push_body, cfunN. init. harg. fold wf. des_ifs_safe. mDesAll. des; clarify.
       steps.
       rename a0 into stk_mgr0. rename n into h. rename a1 into stk_res0. rename a into x.
       mCombine "O" "PRE".
