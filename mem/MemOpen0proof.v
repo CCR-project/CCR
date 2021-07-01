@@ -44,26 +44,24 @@ Section SIMMODSEM.
     { esplits. ss. }
 
 
-
-
-
     econs; ss.
     { unfold allocF, fun_to_src, body_to_src, cfunU, KModSem.disclose_ksb_src, KModSem.body_to_src. init.
       match goal with | |- context[my_if ?b _ _] => destruct b eqn:T end.
       { cbn. steps. }
-      steps. inv WF.
-      apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
+      destruct mn eqn:MN; ss; clarify. des_ifs.
+      steps. apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
       des_ifs.
       { steps. force_l. esplits; et. steps.
         red. esplits; et. rr. econs; ss. }
       { steps. }
     }
+
     econs; ss.
     { unfold freeF, fun_to_src, body_to_src, cfunU, KModSem.disclose_ksb_src, KModSem.body_to_src. init.
       match goal with | |- context[my_if ?b _ _] => destruct b eqn:T end.
       { cbn. steps. }
-      steps. inv WF.
-      apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
+      destruct mn eqn:MN; ss; clarify. des_ifs.
+      steps. apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
       force_r; ss. steps.
       red. esplits; et. rr. econs; ss. 
     }
@@ -71,8 +69,8 @@ Section SIMMODSEM.
     { unfold loadF, fun_to_src, body_to_src, cfunU, KModSem.disclose_ksb_src, KModSem.body_to_src. init.
       match goal with | |- context[my_if ?b _ _] => destruct b eqn:T end.
       { cbn. steps. }
-      steps. inv WF.
-      apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
+      destruct mn eqn:MN; ss; clarify. des_ifs.
+      steps. apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
       force_r; ss. steps.
       red. esplits; et. rr. econs; ss.
     }
@@ -80,8 +78,8 @@ Section SIMMODSEM.
     { unfold storeF, fun_to_src, body_to_src, cfunU, KModSem.disclose_ksb_src, KModSem.body_to_src. init.
       match goal with | |- context[my_if ?b _ _] => destruct b eqn:T end.
       { cbn. steps. }
-      steps. inv WF.
-      apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
+      destruct mn eqn:MN; ss; clarify. des_ifs.
+      steps. apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
       force_r; ss. steps.
       red. esplits; et. rr. econs; ss.
     }
@@ -89,8 +87,8 @@ Section SIMMODSEM.
     { unfold cmpF, fun_to_src, body_to_src, cfunU, KModSem.disclose_ksb_src, KModSem.body_to_src. init.
       match goal with | |- context[my_if ?b _ _] => destruct b eqn:T end.
       { cbn. steps. }
-      steps. inv WF. 
-      apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
+      destruct mn eqn:MN; ss; clarify. des_ifs.
+      steps. apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
       force_r; ss. steps.
       des_ifs; steps.
       { red. esplits; et. rr. econs; ss. }
