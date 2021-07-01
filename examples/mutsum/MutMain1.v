@@ -18,9 +18,9 @@ Section PROOF.
 
   Context `{Σ: GRA.t}.
 
-  Definition mainBody: list val -> itree (hCallE +' pE +' eventE) val :=
+  Definition mainBody: list val -> itree hEs val :=
     fun _ =>
-      trigger (hCall true "f" [Vint 10]↑);;;
+      trigger hAPC;;;
       Ret (Vint 55)
   .
 
