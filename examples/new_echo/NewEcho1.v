@@ -21,12 +21,12 @@ Section PROOF.
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG stkRA Σ}.
 
-  Definition echo_body: list val -> itree (kCallE +' pE +' eventE) val :=
+  Definition echo_body: list val -> itree hEs val :=
     fun args =>
       _ <- (pargs [] args)?;;
-      APCK;;;
-      `stk0: list Z    <- (kcall impure "input" ([]: list Z));;
-      `_: list Z    <- (kcall impure "output" (stk0));;
+      trigger hAPC;;;
+      `stk0: list Z    <- (ccallN "input" ([]: list Z));;
+      `_: list Z    <- (ccallN "output" (stk0));;
       Ret Vundef
   .
 
@@ -45,15 +45,15 @@ Section PROOF.
              (fun _ h _reth _retl => (∃ (stk1: list Z), ⌜_reth = stk1↑ ∧ _retl = Vundef↑⌝ ** is_int_stack h stk1)%I)
   .
 
-  Definition input_body: list Z -> itree (kCallE +' pE +' eventE) (list Z) :=
+  Definition input_body: list Z -> itree hEs (list Z) :=
     fun stk =>
-      n <- (kcall impure "getint" ([]: list val));;
+      n <- (ccallU "getint" ([]: list val));;
       n <- (parg Tint n)?;;
       if (dec n (- 1)%Z)
       then Ret stk
       else
-        APCK;;;
-        (kcall impure "input" (n :: stk))
+        trigger hAPC;;;
+        (ccallN "input" (n :: stk))
   .
 
 
@@ -68,12 +68,12 @@ Section PROOF.
              (fun _ h _reth _retl => (∃ (stk1: list Z), ⌜_reth = stk1↑ ∧ _retl = Vundef↑⌝ ** is_int_stack h stk1)%I)
   .
 
-  Definition output_body: list Z -> itree (kCallE +' pE +' eventE) (list Z) :=
+  Definition output_body: list Z -> itree hEs (list Z) :=
     fun stk =>
-      APCK;;;
+      trigger hAPC;;;
       match stk with
       | [] => Ret []
-      | n :: stk' => `_: val <- (kcall impure "putint" ([Vint n]: list val));; (kcall impure "output" (stk'))
+      | n :: stk' => `_: val <- (ccallU "putint" ([Vint n]: list val));; (ccallN "output" (stk'))
       end
   .
 
@@ -90,7 +90,7 @@ Section PROOF.
 
   Definition EchoStb: list (gname * fspec).
     eapply (Seal.sealing "stb").
-    let x := constr:(List.map (map_snd (fun ksb => (KModSem.disclose_ksb_tgt ksb): fspec)) EchoSbtb) in
+    let x := constr:(List.map (map_snd (fun ksb => ksb.(ksb_fspec): fspec)) EchoSbtb) in
     let y := eval cbn in x in
     eapply y.
   Defined.

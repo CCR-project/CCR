@@ -62,7 +62,7 @@ Section PROOF.
   Notation pget := (p0 <- trigger PGet;; `p0: (gmap mblock (list val)) <- p0↓ǃ;; Ret p0) (only parsing).
   Notation pput p0 := (trigger (PPut (p0: (gmap mblock (list val)))↑)) (only parsing).
 
-  Definition new_body: list val -> itree (kCallE +' pE +' eventE) val :=
+  Definition new_body: list val -> itree hEs val :=
     fun args =>
       _ <- (pargs [] args)?;;
       handle <- trigger (Choose _);;
@@ -73,7 +73,7 @@ Section PROOF.
       Ret (Vptr handle 0)
   .
 
-  Definition pop_body: list val -> itree (kCallE +' pE +' eventE) val :=
+  Definition pop_body: list val -> itree hEs val :=
     fun args =>
       handle <- (pargs [Tblk] args)?;;
       stk_mgr0 <- pget;;
@@ -86,7 +86,7 @@ Section PROOF.
       end
   .
 
-  Definition push_body: list val -> itree (kCallE +' pE +' eventE) val :=
+  Definition push_body: list val -> itree hEs val :=
     fun args =>
       '(handle, x) <- (pargs [Tblk; Tuntyped] args)?;;
       stk_mgr0 <- pget;;
@@ -105,7 +105,7 @@ Section PROOF.
 
   Definition StackStb: list (gname * fspec).
     eapply (Seal.sealing "stb").
-    let x := constr:(List.map (map_snd (fun ksb => (KModSem.disclose_ksb_tgt ksb): fspec)) StackSbtb) in
+    let x := constr:(List.map (map_snd (fun ksb => ksb.(ksb_fspec): fspec)) StackSbtb) in
     let y := eval cbn in x in
     eapply y.
   Defined.
