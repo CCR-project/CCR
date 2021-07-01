@@ -1,0 +1,42 @@
+diff --git a/examples/new_stack/NewStack0.v b/examples/new_stack/NewStack0.v
+index e849f87..1f35f4f 100644
+--- a/examples/new_stack/NewStack0.v
++++ b/examples/new_stack/NewStack0.v
+@@ -44,8 +44,8 @@ Section PROOF.
+ 
+   Definition popF: list val -> itree Es val :=
+     fun args =>
+-      `stk: val <- (pargs [Tuntyped] args)?;;
+-      `hd: val  <- (ccall "load" [stk]);;
++      `stk: mblock <- (pargs [Tblk] args)?;;
++      `hd: val  <- (ccall "load" [Vptr stk 0]);;
+       `b: val   <- (ccall "cmp"  [hd; Vnullptr]);;
+       if is_zero b
+       then (
+@@ -55,7 +55,7 @@ Section PROOF.
+           `next: val      <- (ccall "load"  [addr_next]);;
+           `_: val         <- (ccall "free"  [addr_val]);;
+           `_: val         <- (ccall "free"  [addr_next]);;
+-          `_: val         <- (ccall "store" [stk; next]);;
++          `_: val         <- (ccall "store" [Vptr stk 0; next]);;
+           Ret v
+         )
+       else Ret (Vint (- 1))
+@@ -71,14 +71,14 @@ Section PROOF.
+ 
+   Definition pushF: list val -> itree Es val :=
+     fun args =>
+-      '(stk, v)      <- (pargs [Tuntyped; Tuntyped] args)?;;
++      '(stk, v)      <- (pargs [Tblk; Tuntyped] args)?;;
+       `new_node: val <- (ccall "alloc" [Vint 2]);;
+       let addr_val   := new_node in
+       addr_next      <- (vadd new_node (Vint 8))?;;
+-      `hd: val       <- (ccall "load"  [stk]);;
++      `hd: val       <- (ccall "load"  [Vptr stk 0]);;
+       `_: val        <- (ccall "store" [addr_val;   v]);;
+       `_: val        <- (ccall "store" [addr_next; hd]);;
+-      `_: val        <- (ccall "store" [stk; new_node]);;
++      `_: val        <- (ccall "store" [Vptr stk 0; new_node]);;
+       Ret Vundef
+   .
+ 
