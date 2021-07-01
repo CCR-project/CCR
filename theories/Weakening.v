@@ -45,7 +45,7 @@ Section PROOF.
   Variable fsp_src fsp_tgt: fspec.
   Hypothesis fsp_weaker: fspec_weaker fsp_src fsp_tgt.
 
-  Variable body: (option mname * Any.t) -> itree (hCallE +' pE +' eventE) Any.t.
+  Variable body: (option mname * Any.t) -> itree hEs Any.t.
 
   Let wf: unit -> W -> Prop :=
     fun _ '(mrps_src0, mrps_tgt0) => mrps_src0 = mrps_tgt0

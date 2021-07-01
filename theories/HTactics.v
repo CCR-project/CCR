@@ -736,7 +736,7 @@ Ltac _step :=
     let thyp := fresh "TMP" in
     remember (assume P) as tvar eqn:thyp; unfold assume in thyp; subst tvar;
     let name := fresh "_ASSUME" in
-    ired_both; gstep; eapply sim_itree_take_src; [eapply OrdArith.lt_from_nat; apply Nat.lt_succ_diag_r|]; intro name
+    ired_both; gstep; eapply sim_itree_take_src; [eauto with ord_step|]; intro name
 
   (*** blacklisting ***)
   (* | [ |- (gpaco5 (_sim_itree wf) _ _ _ _ (_, _) (_, trigger (Take _) >>= _)) ] => idtac *)
@@ -753,12 +753,12 @@ Ltac _step :=
     let thyp := fresh "TMP" in
     remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar;
     let name := fresh "_GUARANTEE" in
-    ired_both; gstep; eapply sim_itree_choose_tgt; [eapply OrdArith.lt_from_nat; apply Nat.lt_succ_diag_r|]; intro name
+    ired_both; gstep; eapply sim_itree_choose_tgt; [eauto with ord_step|]; intro name
 
 
 
   | _ => (*** default ***)
-    gstep; eapply safe_sim_sim; econs; try (eapply OrdArith.lt_from_nat; apply Nat.lt_succ_diag_r); i
+    gstep; eapply safe_sim_sim; econs; try (eauto with ord_step); i
   end;
   match goal with
   | [ |- exists _, _ ] => fail 1

@@ -7,7 +7,7 @@ Require Import Skeleton.
 Require Import PCM.
 Require Import Any.
 Require Export HoareDef STB.
-Require Import Hoareproof0 Hoareproof1.
+Require Import Hoareproof0 Hoareproof1 Hoareproof2.
 Require Import SimModSem Logic.
 
 Set Implicit Arguments.
@@ -113,7 +113,8 @@ Section CANCEL.
       Beh.of_program (ModL.compile_arg (Mod.add_list mds_tgt) main_arg_tgt) <1=
       Beh.of_program (ModL.compile_arg (Mod.add_list mds_src) main_arg_src).
   Proof.
-    ii. eapply adequacy_type_m2s; et.
+    ii. eapply adequacy_type_m2s.
+    eapply adequacy_type_m2m; et.
     eapply adequacy_type_t2m; et.
     Unshelve.
     all:ss.

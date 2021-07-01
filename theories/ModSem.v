@@ -494,6 +494,9 @@ Section MODSEML.
   Definition compile P: semantics :=
     compile_itree (initial_itr P).
 
+  Definition compile_arg P arg: semantics :=
+    compile_itree (initial_itr_arg P arg).
+
   Lemma initial_itr_arg_not_wf P arg
         (WF: ~ P)
         tr
@@ -530,14 +533,14 @@ Section MODSEML.
   (*** TODO: probably we can make ModSemL.t as an RA too. (together with Sk.t) ***)
   (*** However, I am not sure what would be the gain; and there might be universe problem. ***)
 
-  Let add_comm_aux
+  Let add_comm_aux arg
       ms0 ms1 stl0 str0
       P
       (SIM: stl0 = str0)
     :
-      <<COMM: Beh.of_state (compile (add ms0 ms1) P) stl0
+      <<COMM: Beh.of_state (compile_arg (add ms0 ms1) P arg) stl0
               <1=
-              Beh.of_state (compile (add ms1 ms0) P) str0>>
+              Beh.of_state (compile_arg (add ms1 ms0) P arg) str0>>
   .
   Proof.
     subst. revert str0. pcofix CIH. i. pfold.
@@ -570,15 +573,15 @@ Section MODSEML.
     r. eapply prop_ext. split; i; auto.
   Qed.
 
-  Theorem add_comm
+  Theorem add_comm_arg arg
           ms0 ms1 (P0 P1: Prop) (IMPL: P1 -> P0)
           (WF: wf (add ms1 ms0))
     :
-      <<COMM: Beh.of_program (compile (add ms0 ms1) (Some P0)) <1= Beh.of_program (compile (add ms1 ms0) (Some P1))>>
+      <<COMM: Beh.of_program (compile_arg (add ms0 ms1) (Some P0) arg) <1= Beh.of_program (compile_arg (add ms1 ms0) (Some P1) arg)>>
   .
   Proof.
     destruct (classic (P1)); cycle 1.
-    { ii. eapply compile_not_wf; et. }
+    { ii. eapply initial_itr_arg_not_wf; et. }
     replace P0 with P1.
     2: { eapply prop_ext. split; auto. }
     ii. ss. r in PR. r. eapply add_comm_aux; et.
@@ -603,6 +606,16 @@ Section MODSEML.
     }
   Qed.
 
+  Theorem add_comm
+          ms0 ms1 (P0 P1: Prop) (IMPL: P1 -> P0)
+          (WF: wf (add ms1 ms0))
+    :
+      <<COMM: Beh.of_program (compile (add ms0 ms1) (Some P0)) <1= Beh.of_program (compile (add ms1 ms0) (Some P1))>>
+  .
+  Proof.
+    eapply (@add_comm_arg ([]: list val)↑ ms0 ms1 P0 P1 IMPL WF).
+  Qed.
+
   Lemma add_assoc' ms0 ms1 ms2:
     add ms0 (add ms1 ms2) = add (add ms0 ms1) ms2.
   Proof.
@@ -620,11 +633,31 @@ Section MODSEML.
     { apply List.app_assoc. }
   Qed.
 
+  Theorem add_assoc_arg arg
+          ms0 ms1 ms2 P
+    :
+      <<COMM: Beh.of_program (compile_arg (add ms0 (add ms1 ms2)) P arg) <1=
+              Beh.of_program (compile_arg (add (add ms0 ms1) ms2) P arg)>>
+  .
+  Proof.
+    rewrite add_assoc_eq. ss.
+  Qed.
+
   Theorem add_assoc
           ms0 ms1 ms2 P
     :
       <<COMM: Beh.of_program (compile (add ms0 (add ms1 ms2)) P) <1=
               Beh.of_program (compile (add (add ms0 ms1) ms2) P)>>
+  .
+  Proof.
+    rewrite add_assoc_eq. ss.
+  Qed.
+
+  Theorem add_assoc_rev_arg arg
+          ms0 ms1 ms2 P
+    :
+      <<COMM: Beh.of_program (compile_arg (add ms0 (add ms1 ms2)) P arg) <1=
+              Beh.of_program (compile_arg (add (add ms0 ms1) ms2) P arg)>>
   .
   Proof.
     rewrite add_assoc_eq. ss.
@@ -639,7 +672,6 @@ Section MODSEML.
   Proof.
     rewrite add_assoc_eq. ss.
   Qed.
-
 End MODSEML.
 End ModSemL.
 
@@ -879,26 +911,35 @@ Section MODL.
   |}
   .
 
+  Theorem add_comm_arg arg
+          md0 md1
+    :
+      <<COMM: Beh.of_program (compile_arg (add md0 md1) arg) <1= Beh.of_program (compile_arg (add md1 md0) arg)>>
+  .
+  Proof.
+    ii. unfold compile_arg in *.
+    destruct (classic (ModSemL.wf (enclose (add md1 md0)) /\ Sk.wf (sk (add md1 md0)))).
+    2: { eapply ModSemL.initial_itr_arg_not_wf. ss. }
+    ss. des. assert (SK: Sk.wf (Sk.add (sk md0) (sk md1))).
+    { unfold Sk.wf, Sk.add. rewrite List.map_app.
+      eapply nodup_comm; et. rewrite <- List.map_app. auto. }
+    rewrite Sk.sort_add_comm; et.
+    eapply ModSemL.add_comm_arg; [| |et].
+    { i. split; auto. unfold enclose. ss. rewrite Sk.sort_add_comm; et.
+      inv H. econs; ss.
+      { rewrite List.map_app in *. eapply nodup_comm; et. }
+      { rewrite List.map_app in *. eapply nodup_comm; et. }
+    }
+    { rewrite Sk.sort_add_comm; et. }
+  Qed.
+
   Theorem add_comm
           md0 md1
     :
       <<COMM: Beh.of_program (compile (add md0 md1)) <1= Beh.of_program (compile (add md1 md0))>>
   .
   Proof.
-    ii. unfold compile in *.
-    destruct (classic (ModSemL.wf (enclose (add md1 md0)) /\ Sk.wf (sk (add md1 md0)))).
-    2: { eapply ModSemL.compile_not_wf. ss. }
-    ss. des. assert (SK: Sk.wf (Sk.add (sk md0) (sk md1))).
-    { unfold Sk.wf, Sk.add. rewrite List.map_app.
-      eapply nodup_comm; et. rewrite <- List.map_app. auto. }
-    rewrite Sk.sort_add_comm; et.
-    eapply ModSemL.add_comm; [| |et].
-    { i. split; auto. des. rewrite Sk.sort_add_comm; et.
-      inv H. econs; ss.
-      { rewrite List.map_app in *. eapply nodup_comm; et. }
-      { rewrite List.map_app in *. eapply nodup_comm; et. }
-    }
-    { rewrite Sk.sort_add_comm; et. }
+    rewrite ! compile_compile_arg_nil. eapply add_comm_arg.
   Qed.
 
   Lemma add_assoc' ms0 ms1 ms2:
@@ -907,6 +948,26 @@ Section MODL.
     unfold add. f_equal.
     { extensionality skenv_link. ss. apply ModSemL.add_assoc'. }
     { eapply app_assoc. }
+  Qed.
+
+  Theorem add_assoc_arg arg
+          md0 md1 md2
+    :
+      <<COMM: Beh.of_program (compile_arg (add md0 (add md1 md2)) arg) =
+              Beh.of_program (compile_arg (add (add md0 md1) md2) arg)>>
+  .
+  Proof.
+    rewrite add_assoc'. ss.
+  Qed.
+
+  Theorem add_assoc_rev_arg arg
+          md0 md1 md2
+    :
+      <<COMM: Beh.of_program (compile_arg (add (add md0 md1) md2) arg) =
+              Beh.of_program (compile_arg (add md0 (add md1 md2)) arg)>>
+  .
+  Proof.
+    rewrite add_assoc'. ss.
   Qed.
 
   Theorem add_assoc
@@ -1140,6 +1201,16 @@ End Equisatisfiability.
 
 
 Section REFINE.
+   Definition refines_arg (arg: Any.t) (md_tgt md_src: ModL.t): Prop :=
+     (* forall (ctx: list Mod.t), Beh.of_program (ModL.compile (add_list (md_tgt :: ctx))) <1= *)
+     (*                           Beh.of_program (ModL.compile (add_list (md_src :: ctx))) *)
+     forall (ctx: list Mod.t), Beh.of_program (ModL.compile_arg (ModL.add (Mod.add_list ctx) md_tgt) arg) <1=
+                               Beh.of_program (ModL.compile_arg (ModL.add (Mod.add_list ctx) md_src) arg)
+   .
+
+   Definition refines_strong (md_tgt md_src: ModL.t): Prop :=
+     forall arg, refines_arg arg md_tgt md_src.
+
    Definition refines (md_tgt md_src: ModL.t): Prop :=
      (* forall (ctx: list Mod.t), Beh.of_program (ModL.compile (add_list (md_tgt :: ctx))) <1= *)
      (*                           Beh.of_program (ModL.compile (add_list (md_src :: ctx))) *)
@@ -1152,13 +1223,31 @@ Section REFINE.
    Next Obligation. ii. ss. Qed.
    Next Obligation. ii. eapply H0. eapply H. ss. Qed.
 
-   (*** horizontal composition ***)
-   Theorem refines_add
-         (md0_src md0_tgt md1_src md1_tgt: Mod.t)
-         (SIM0: refines md0_tgt md0_src)
-         (SIM1: refines md1_tgt md1_src)
+   Global Program Instance refines_arg_PreOrder arg: PreOrder (refines_arg arg).
+   Next Obligation. ii. ss. Qed.
+   Next Obligation. ii. eapply H0. eapply H. ss. Qed.
+
+   Global Program Instance refines_strong_PreOrder: PreOrder refines_strong.
+   Next Obligation. ii. ss. Qed.
+   Next Obligation. ii. eapply H0. eapply H. ss. Qed.
+
+   Lemma refines_refines_arg_nil md_tgt md_src
      :
-       <<SIM: refines (ModL.add md0_tgt md1_tgt) (ModL.add md0_src md1_src)>>
+       refines_arg ([]: list val)↑ md_tgt md_src
+       <->
+       refines md_tgt md_src.
+   Proof.
+     auto.
+   Qed.
+
+
+   (*** horizontal composition ***)
+   Theorem refines_add_arg arg
+         (md0_src md0_tgt md1_src md1_tgt: Mod.t)
+         (SIM0: refines_arg arg md0_tgt md0_src)
+         (SIM1: refines_arg arg md1_tgt md1_src)
+     :
+       <<SIM: refines_arg arg (ModL.add md0_tgt md1_tgt) (ModL.add md0_src md1_src)>>
    .
    Proof.
      ii. r in SIM0. r in SIM1.
@@ -1167,7 +1256,7 @@ ctx (a0 b0)
 (ctx a0) b0
 (ctx a0) b1
       ***)
-     rewrite ModL.add_assoc in PR.
+     rewrite ModL.add_assoc_arg in PR.
      specialize (SIM1 (snoc ctx md0_tgt)). spc SIM1. rewrite Mod.add_list_snoc in SIM1. eapply SIM1 in PR.
      (***
 ctx (a0 b1)
@@ -1176,9 +1265,9 @@ a0 (b1 ctx)
 (b1 ctx) a0
       ***)
      rewrite <- ModL.add_assoc' in PR.
-     eapply ModL.add_comm in PR.
+     eapply ModL.add_comm_arg in PR.
      rewrite <- ModL.add_assoc' in PR.
-     eapply ModL.add_comm in PR.
+     eapply ModL.add_comm_arg in PR.
      (***
 (b1 ctx) a1
 a1 (b1 ctx)
@@ -1186,46 +1275,17 @@ a1 (b1 ctx)
 ctx (a1 b1)
       ***)
      specialize (SIM0 (cons md1_src ctx)). spc SIM0. rewrite Mod.add_list_cons in SIM0. eapply SIM0 in PR.
-     eapply ModL.add_comm in PR.
+     eapply ModL.add_comm_arg in PR.
      rewrite ModL.add_assoc' in PR.
-     eapply ModL.add_comm in PR.
+     eapply ModL.add_comm_arg in PR.
      ss.
    Qed.
 
-(*    Theorem refines_proper_r *)
-(*          (md0_src md0_tgt: Mod.t) (ctx: list Mod.t) *)
-(*          (SIM0: refines md0_tgt md0_src) *)
-(*      : *)
-(*        <<SIM: refines (ModL.add md0_tgt (add_list ctx)) (ModL.add md0_src (add_list ctx))>> *)
-(*    . *)
-(*    Proof. *)
-(*      ii. r in SIM0. rename ctx into xs. rename ctx0 into ys. *)
-(*      (*** *)
-(* ys + (tgt + xs) *)
-(* (tgt + xs) + ys *)
-(* tgt + (xs + ys) *)
-(* (xs + ys) + tgt *)
-(*       ***) *)
-(*      eapply ModL.add_comm in PR. *)
-(*      rewrite <- ModL.add_assoc' in PR. *)
-(*      eapply ModL.add_comm in PR. *)
-(*      (*** *)
-(* (xs + ys) + src *)
-(* src + (xs + ys) *)
-(* (src + xs) + ys *)
-(* ys + (src + xs) *)
-(*       ***) *)
-(*      specialize (SIM0 (xs ++ ys)). spc SIM0. rewrite add_list_app in SIM0. eapply SIM0 in PR. *)
-(*      eapply ModL.add_comm in PR. *)
-(*      rewrite ModL.add_assoc' in PR. *)
-(*      eapply ModL.add_comm in PR. *)
-(*      ss. *)
-(*    Qed. *)
-   Theorem refines_proper_r
+   Theorem refines_proper_r_arg arg
          (mds0_src mds0_tgt: list Mod.t) (ctx: list Mod.t)
-         (SIM0: refines (Mod.add_list mds0_tgt) (Mod.add_list mds0_src))
+         (SIM0: refines_arg arg (Mod.add_list mds0_tgt) (Mod.add_list mds0_src))
      :
-       <<SIM: refines (ModL.add (Mod.add_list mds0_tgt) (Mod.add_list ctx)) (ModL.add (Mod.add_list mds0_src) (Mod.add_list ctx))>>
+       <<SIM: refines_arg arg (ModL.add (Mod.add_list mds0_tgt) (Mod.add_list ctx)) (ModL.add (Mod.add_list mds0_src) (Mod.add_list ctx))>>
    .
    Proof.
      ii. r in SIM0. rename ctx into xs. rename ctx0 into ys.
@@ -1235,9 +1295,9 @@ ys + (tgt + xs)
 tgt + (xs + ys)
 (xs + ys) + tgt
       ***)
-     eapply ModL.add_comm in PR.
+     eapply ModL.add_comm_arg in PR.
      rewrite <- ModL.add_assoc' in PR.
-     eapply ModL.add_comm in PR.
+     eapply ModL.add_comm_arg in PR.
      (***
 (xs + ys) + src
 src + (xs + ys)
@@ -1245,17 +1305,17 @@ src + (xs + ys)
 ys + (src + xs)
       ***)
      specialize (SIM0 (xs ++ ys)). spc SIM0. rewrite Mod.add_list_app in SIM0. eapply SIM0 in PR.
-     eapply ModL.add_comm in PR.
+     eapply ModL.add_comm_arg in PR.
      rewrite ModL.add_assoc' in PR.
-     eapply ModL.add_comm in PR.
+     eapply ModL.add_comm_arg in PR.
      ss.
    Qed.
 
-   Theorem refines_proper_l
+   Theorem refines_proper_l_arg arg
          (mds0_src mds0_tgt: list Mod.t) (ctx: list Mod.t)
-         (SIM0: refines (Mod.add_list mds0_tgt) (Mod.add_list mds0_src))
+         (SIM0: refines_arg arg (Mod.add_list mds0_tgt) (Mod.add_list mds0_src))
      :
-       <<SIM: refines (ModL.add (Mod.add_list ctx) (Mod.add_list mds0_tgt)) (ModL.add (Mod.add_list ctx) (Mod.add_list mds0_src))>>
+       <<SIM: refines_arg arg (ModL.add (Mod.add_list ctx) (Mod.add_list mds0_tgt)) (ModL.add (Mod.add_list ctx) (Mod.add_list mds0_src))>>
    .
    Proof.
      ii. r in SIM0. rename ctx into xs. rename ctx0 into ys.
@@ -1271,6 +1331,73 @@ ys + (xs + src)
      ss.
    Qed.
 
+
+   (*** horizontal composition ***)
+   Theorem refines_add
+         (md0_src md0_tgt md1_src md1_tgt: Mod.t)
+         (SIM0: refines md0_tgt md0_src)
+         (SIM1: refines md1_tgt md1_src)
+     :
+       <<SIM: refines (ModL.add md0_tgt md1_tgt) (ModL.add md0_src md1_src)>>
+   .
+   Proof.
+     eapply (@refines_add_arg ([]: list val)↑); et.
+   Qed.
+
+   Theorem refines_proper_r
+         (mds0_src mds0_tgt: list Mod.t) (ctx: list Mod.t)
+         (SIM0: refines (Mod.add_list mds0_tgt) (Mod.add_list mds0_src))
+     :
+       <<SIM: refines (ModL.add (Mod.add_list mds0_tgt) (Mod.add_list ctx)) (ModL.add (Mod.add_list mds0_src) (Mod.add_list ctx))>>
+   .
+   Proof.
+     eapply (@refines_proper_r_arg ([]: list val)↑); et.
+   Qed.
+
+   Theorem refines_proper_l
+         (mds0_src mds0_tgt: list Mod.t) (ctx: list Mod.t)
+         (SIM0: refines (Mod.add_list mds0_tgt) (Mod.add_list mds0_src))
+     :
+       <<SIM: refines (ModL.add (Mod.add_list ctx) (Mod.add_list mds0_tgt)) (ModL.add (Mod.add_list ctx) (Mod.add_list mds0_src))>>
+   .
+   Proof.
+     eapply (@refines_proper_l_arg ([]: list val)↑); et.
+   Qed.
+
+   (*** horizontal composition ***)
+   Theorem refines_strong_add
+         (md0_src md0_tgt md1_src md1_tgt: Mod.t)
+         (SIM0: refines_strong md0_tgt md0_src)
+         (SIM1: refines_strong md1_tgt md1_src)
+     :
+       <<SIM: refines_strong (ModL.add md0_tgt md1_tgt) (ModL.add md0_src md1_src)>>
+   .
+   Proof.
+     intros arg. eapply (@refines_add_arg arg); et.
+   Qed.
+
+   Theorem refines_strong_proper_r
+         (mds0_src mds0_tgt: list Mod.t) (ctx: list Mod.t)
+         (SIM0: refines_strong (Mod.add_list mds0_tgt) (Mod.add_list mds0_src))
+     :
+       <<SIM: refines_strong (ModL.add (Mod.add_list mds0_tgt) (Mod.add_list ctx)) (ModL.add (Mod.add_list mds0_src) (Mod.add_list ctx))>>
+   .
+   Proof.
+     intros arg. eapply (@refines_proper_r_arg arg); et.
+   Qed.
+
+   Theorem refines_strong_proper_l
+         (mds0_src mds0_tgt: list Mod.t) (ctx: list Mod.t)
+         (SIM0: refines_strong (Mod.add_list mds0_tgt) (Mod.add_list mds0_src))
+     :
+       <<SIM: refines_strong (ModL.add (Mod.add_list ctx) (Mod.add_list mds0_tgt)) (ModL.add (Mod.add_list ctx) (Mod.add_list mds0_src))>>
+   .
+   Proof.
+     intros arg. eapply (@refines_proper_l_arg arg); et.
+   Qed.
+
+
+
    Definition refines_closed (md_tgt md_src: ModL.t): Prop :=
      Beh.of_program (ModL.compile md_tgt) <1= Beh.of_program (ModL.compile md_src)
    .
@@ -1281,6 +1408,20 @@ ys + (xs + src)
 
    Lemma refines_close: refines <2= refines_closed.
    Proof. ii. specialize (PR nil). ss. unfold Mod.add_list in *. ss. rewrite ! ModL.add_empty_l in PR. eauto. Qed.
+
+
+   Definition refines_closed_arg arg (md_tgt md_src: ModL.t): Prop :=
+     Beh.of_program (ModL.compile_arg md_tgt arg) <1= Beh.of_program (ModL.compile_arg md_src arg)
+   .
+   Global Program Instance refines_closed_arg_PreOrder arg: PreOrder (refines_closed_arg arg).
+   Next Obligation. ii; ss. Qed.
+   Next Obligation. ii; ss. r in H. r in H0. eauto. Qed.
+
+   Lemma refines_close_arg arg: refines_arg arg <2= refines_closed_arg arg.
+   Proof. ii. specialize (PR nil). ss. unfold Mod.add_list in *. ss. rewrite ! ModL.add_empty_l in PR. eauto. Qed.
+
+   Lemma refines_strong_refines: refines_strong <2= refines.
+   Proof. ii. rewrite ModL.compile_compile_arg_nil in *. eapply PR. et. Qed.
 End REFINE.
 
 Class gnames := mk_gnames { gnames_contents :> gname -> Prop }.
