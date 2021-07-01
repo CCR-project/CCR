@@ -38,7 +38,7 @@ Section PROOFS.
       interp_imp ge (denote_expr (Plus a b)) le0 =
       interp_imp ge (
                    ` l : val <- denote_expr a;; ` r : val <- denote_expr b;;
-                   (if checkOps l r then ` u : val <- unwrapU (vadd l r);; Ret u else triggerUB)) le0.
+                   ` u : val <- unwrapU (vadd l r);; Ret u)le0.
   Proof. reflexivity. Qed.
 
   Lemma denote_expr_Minus
@@ -47,7 +47,7 @@ Section PROOFS.
       interp_imp ge (denote_expr (Minus a b)) le0 =
       interp_imp ge (
                    ` l : val <- denote_expr a;; ` r : val <- denote_expr b;;
-                   (if checkOps l r then ` u : val <- unwrapU (vsub l r);; Ret u else triggerUB)) le0.
+                   ` u : val <- unwrapU (vsub l r);; Ret u) le0.
   Proof. reflexivity. Qed.
 
   Lemma denote_expr_Mult
@@ -56,7 +56,7 @@ Section PROOFS.
       interp_imp ge (denote_expr (Mult a b)) le0 =
       interp_imp ge (
                    ` l : val <- denote_expr a;; ` r : val <- denote_expr b;;
-                   (if checkOps l r then ` u : val <- unwrapU (vmul l r);; Ret u else triggerUB)) le0.
+                   ` u : val <- unwrapU (vmul l r);; Ret u) le0.
   Proof. reflexivity. Qed.
 
   (* stmt *)
@@ -405,15 +405,12 @@ Section PROOFS.
       interp_imp ge (denote_expr (Plus a b)) le0 =
       '(le1, l) <- interp_imp ge (denote_expr a) le0 ;;
       '(le2, r) <- interp_imp ge (denote_expr b) le1 ;;
-      (if checkOps l r
-       then ` u : val <- unwrapU (vadd l r);; Ret (le2, u)
-       else triggerUB)
+      ` u : val <- unwrapU (vadd l r);; Ret (le2, u)
   .
   Proof.
     rewrite denote_expr_Plus. rewrite interp_imp_bind.
-    grind. rewrite interp_imp_bind. grind. des_ifs; grind.
-    - rewrite interp_imp_unwrapU. grind.
-    - apply interp_imp_triggerUB.
+    grind. rewrite interp_imp_bind. grind.
+    rewrite interp_imp_unwrapU. grind.
   Qed.
 
   Lemma interp_imp_expr_Minus
@@ -422,15 +419,12 @@ Section PROOFS.
       interp_imp ge (denote_expr (Minus a b)) le0 =
       '(le1, l) <- interp_imp ge (denote_expr a) le0 ;;
       '(le2, r) <- interp_imp ge (denote_expr b) le1 ;;
-      (if checkOps l r
-       then ` u : val <- unwrapU (vsub l r);; Ret (le2, u)
-       else triggerUB)
+      ` u : val <- unwrapU (vsub l r);; Ret (le2, u)
   .
   Proof.
     rewrite denote_expr_Minus. rewrite interp_imp_bind.
-    grind. rewrite interp_imp_bind. grind. des_ifs; grind.
-    - rewrite interp_imp_unwrapU. grind.
-    - apply interp_imp_triggerUB.
+    grind. rewrite interp_imp_bind. grind.
+    rewrite interp_imp_unwrapU. grind.
   Qed.
 
   Lemma interp_imp_expr_Mult
@@ -439,15 +433,12 @@ Section PROOFS.
       interp_imp ge (denote_expr (Mult a b)) le0 =
       '(le1, l) <- interp_imp ge (denote_expr a) le0 ;;
       '(le2, r) <- interp_imp ge (denote_expr b) le1 ;;
-      (if checkOps l r
-       then ` u : val <- unwrapU (vmul l r);; Ret (le2, u)
-       else triggerUB)
+      ` u : val <- unwrapU (vmul l r);; Ret (le2, u)
   .
   Proof.
     rewrite denote_expr_Mult. rewrite interp_imp_bind.
-    grind. rewrite interp_imp_bind. grind. des_ifs; grind.
-    - rewrite interp_imp_unwrapU. grind.
-    - apply interp_imp_triggerUB.
+    grind. rewrite interp_imp_bind. grind.
+    rewrite interp_imp_unwrapU. grind.
   Qed.
 
   Lemma interp_imp_Skip

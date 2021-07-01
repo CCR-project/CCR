@@ -137,12 +137,12 @@ Section Denote.
   Context {HasCall : callE -< eff}.
   Context {HasEvent : eventE -< eff}.
 
-  Definition checkOps (va vb : val) : bool :=
-    match va, vb with
-    | Vint a, Vptr _ b => (modrange_64 a) && (wf_val vb)
-    | Vptr _ a, Vint b => (wf_val va) && (modrange_64 b)
-    | _, _ => (wf_val va) && (wf_val vb)
-    end.
+  (* Definition checkOps (va vb : val) : bool := *)
+  (*   match va, vb with *)
+  (*   | Vint a, Vptr _ b => (modrange_64 a) && (wf_val vb) *)
+  (*   | Vptr _ a, Vint b => (wf_val va) && (modrange_64 b) *)
+  (*   | _, _ => (wf_val va) && (wf_val vb) *)
+  (*   end. *)
 
   (** Denotation of expressions *)
   Fixpoint denote_expr (e : expr) : itree eff val :=
@@ -150,22 +150,13 @@ Section Denote.
     | Var v     => u <- trigger (GetVar v) ;; Ret u
     | Lit n     => tau;; Ret (Vint n)
     | Plus a b  =>
-      l <- denote_expr a ;; r <- denote_expr b ;;
-      if (checkOps l r)
-      then u <- (vadd l r)? ;; Ret u
-      else triggerUB
+      l <- denote_expr a ;; r <- denote_expr b ;; u <- (vadd l r)? ;; Ret u
 
     | Minus a b =>
-      l <- denote_expr a ;; r <- denote_expr b ;;
-      if (checkOps l r)
-      then u <- (vsub l r)? ;; Ret u
-      else triggerUB
+      l <- denote_expr a ;; r <- denote_expr b ;; u <- (vsub l r)? ;; Ret u
 
     | Mult a b  =>
-      l <- denote_expr a ;; r <- denote_expr b ;;
-      if (checkOps l r)
-      then u <- (vmul l r)? ;; Ret u
-      else triggerUB
+      l <- denote_expr a ;; r <- denote_expr b ;; u <- (vmul l r)? ;; Ret u
 
     end.
 

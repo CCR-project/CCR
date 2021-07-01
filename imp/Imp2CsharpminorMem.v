@@ -159,13 +159,15 @@ Section MEM.
         blk ofs
         (WFOFS: modrange_64 (scale_ofs ofs))
         (SRC: Mem.valid_ptr m blk ofs = true)
-        (TGT: Mem.valid_pointer tm (map_blk src blk) (Ptrofs.unsigned (Ptrofs.of_int64 (Int64.repr (map_ofs ofs)))) = false)
+        (TGT: Mem.valid_pointer tm (map_blk src blk) (Ptrofs.unsigned (Ptrofs.repr (map_ofs ofs))) = false)
     :
       False.
   Proof.
     unfold Mem.valid_ptr in SRC. unfold is_some in SRC. des_ifs.
     inv MM. apply MMEM in Heq. des. clear MMEM. unfold map_ofs in *.
-    rewrite unwrap_Ptrofs_Int64_z in TGT; try nia; auto. rename TGT into CONTRA.
+    unfold scale_ofs in WFOFS.
+    rewrite unwrap_Ptrofs_repr_z in TGT; try nia; auto.
+    rename TGT into CONTRA.
     match goal with [ CONTRA: ?vp = false |- _ ] => assert (CONTRA2: vp = true) end.
     { rewrite Mem.valid_pointer_nonempty_perm. eapply Mem.valid_access_perm in TVALID.
       hexploit Mem.perm_implies; eauto. econs. }
@@ -220,7 +222,7 @@ Section MEM.
       + apply sumbool_to_bool_false in H0. rename H0 into OFS. unfold Values.Val.cmplu. ss. des_ifs.
         { apply map_blk_inj in e; clarify. ss.
           unfold Ptrofs.eq. hexploit (valid_ptr_wf_ofs _ _ Heq); i. hexploit (valid_ptr_wf_ofs _ _ Heq0); i.
-          unfold map_ofs in *. rewrite! unwrap_Ptrofs_Int64_z; try nia; eauto. erewrite Coqlib.zeq_false; try lia. ss. }
+          unfold map_ofs in *. rewrite! unwrap_Ptrofs_repr_z; try nia; eauto. erewrite Coqlib.zeq_false; try lia. ss. }
         { bsimpl; des.
           - pose (valid_ptr_contra _ _ WFA Heq Heq2). clarify.
           - pose (valid_ptr_contra _ _ WFB Heq0 Heq2). clarify. }

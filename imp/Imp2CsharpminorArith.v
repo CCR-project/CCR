@@ -28,6 +28,51 @@ Ltac unfold_Int_min_signed := unfold Int.min_signed, Int.half_modulus in *; unfo
 
 Section ARITH.
 
+  Context `{Σ: GRA.t}.
+  Context `{builtins : builtinsTy}.
+
+  Lemma int64_ptrofs :
+    Ptrofs.modulus = Int64.modulus.
+  Proof. unfold_Int64_modulus. unfold_Ptrofs_modulus. des_ifs. Qed.
+
+  Lemma int64_ext
+        i0 i1
+        (INTVAL: (Int64.intval i0) = (Int64.intval i1))
+    :
+      i0 = i1.
+  Proof.
+    destruct i0, i1. ss. clarify. f_equal. apply proof_irrelevance.
+  Qed.
+
+  Lemma int64_mod_ext
+        i0 i1
+        (INTVAL: ((Int64.intval i0) mod Int64.modulus)%Z = ((Int64.intval i1) mod Int64.modulus)%Z)
+    :
+      i0 = i1.
+  Proof.
+    destruct i0, i1. ss. rewrite Z.mod_small in INTVAL; try lia. rewrite Z.mod_small in INTVAL; try lia.
+    eapply int64_ext; eauto.
+  Qed.
+
+  Lemma ptrofs_ext
+        i0 i1
+        (INTVAL: (Ptrofs.intval i0) = (Ptrofs.intval i1))
+    :
+      i0 = i1.
+  Proof.
+    destruct i0, i1. ss. clarify. f_equal. apply proof_irrelevance.
+  Qed.
+
+  Lemma ptrofs_mod_ext
+        i0 i1
+        (INTVAL: ((Ptrofs.intval i0) mod Ptrofs.modulus)%Z = ((Ptrofs.intval i1) mod Ptrofs.modulus)%Z)
+    :
+      i0 = i1.
+  Proof.
+    destruct i0, i1. ss. rewrite Z.mod_small in INTVAL; try lia. rewrite Z.mod_small in INTVAL; try lia.
+    eapply ptrofs_ext; eauto.
+  Qed.
+
   Lemma unwrap_Ptrofs_Int64_z
         (z: Z)
         (UB: modrange_64 z = true)
@@ -45,161 +90,130 @@ Section ARITH.
     unfold Ptrofs.max_unsigned. unfold_Ptrofs_modulus. des_ifs. split; try nia.
   Qed.
 
-  Context `{Σ: GRA.t}.
-  Context `{builtins : builtinsTy}.
+  Lemma unwrap_Ptrofs_repr_z
+        z
+        (UB: modrange_64 z = true)
+    :
+      (Ptrofs.unsigned (Ptrofs.repr z)) = z.
+  Proof.
+    unfold_modrange_64. bsimpl. des.
+    apply sumbool_to_bool_true in UB.
+    apply sumbool_to_bool_true in UB0.
+    apply Ptrofs.unsigned_repr.
+    unfold Ptrofs.max_unsigned. unfold_Ptrofs_modulus. des_ifs. lia.
+  Qed.
 
   Lemma map_val_vadd_comm
         src a b v
         (VADD: vadd a b = Some v)
-        (WFOPS: checkOps a b)
     :
       Values.Val.addl (map_val src a) (map_val src b) = (map_val src v).
   Proof.
     destruct a; destruct b; ss; clarify.
     - ss. repeat f_equal.
-      rewrite Int64.add_signed. f_equal. unfold_intrange_64.
-      bsimpl. des.
-      apply sumbool_to_bool_true in H.
-      apply sumbool_to_bool_true in H0.
-      apply sumbool_to_bool_true in WFOPS.
-      apply sumbool_to_bool_true in WFOPS0.
-      rewrite Int64.signed_repr; try (rewrite Int64.signed_repr); unfold_Int64_max_signed; unfold_Int64_min_signed; try nia.
-    - uo; des_ifs. unfold scale_int in *. des_ifs. ss. unfold Ptrofs.of_int64 in *.
-      f_equal. unfold map_ofs in *. unfold scale_ofs in *.
+      unfold Int64.add.
+      rewrite ! Int64.unsigned_repr_eq.
+      apply int64_mod_ext.
+      f_equal.
+      Local Transparent Int64.repr.
+      ss. rewrite ! Int64.Z_mod_modulus_eq.
+      rewrite <- Z.add_mod; try lia.
+      unfold_Int64_modulus. ss.
+      Local Opaque Int64.repr.
+    - uo; des_ifs. unfold scale_int in *. des_ifs. ss.
+      unfold Ptrofs.of_int64 in *.
+      f_equal. unfold map_ofs in *.
+      unfold scale_ofs in *.
       unfold Z.divide in d. des. clarify. rewrite Z_div_mult in *; try nia.
       assert (COMM: (8 * z)%Z = (z * 8)%Z); try nia. rewrite <- COMM in *; clear COMM.
       rewrite Z.mul_add_distr_l in *. remember (8 * z)%Z as b. remember (8 * ofs)%Z as a.
       clear Heqb Heqa ofs z blk. move a before b.
-      rename H into WFB, WFOPS into WFA.
-      unfold_modrange_64. bsimpl; des.
-      apply sumbool_to_bool_true in WFA.
-      apply sumbool_to_bool_true in WFA0.
-      apply sumbool_to_bool_true in WFB.
-      apply sumbool_to_bool_true in WFB0.
-      pose (Ptrofs.agree64_repr Heq (Int64.unsigned (Int64.repr a))) as aInt.
-      pose (Ptrofs.agree64_repr Heq (Int64.unsigned (Int64.repr b))) as bInt.
-      hexploit Ptrofs.agree64_add; auto.
-      { eapply aInt. }
-      { eapply bInt. }
-      i. rename H into addInt.
-      pose (Ptrofs.agree64_repr Heq (Int64.unsigned (Int64.repr (a + b)))) as abInt.
-      rewrite <- Ptrofs.of_int64_to_int64 at 1; auto.
-      rewrite <- Ptrofs.of_int64_to_int64; auto. f_equal.
-      apply Ptrofs.agree64_to_int_eq in addInt. apply Ptrofs.agree64_to_int_eq in abInt.
-      rewrite addInt; clear addInt. rewrite abInt; clear abInt. clear aInt bInt Heq.
-      rewrite! Int64.repr_unsigned.
-      rewrite Int64.add_unsigned. f_equal.
-      rewrite Int64.unsigned_repr; try (rewrite Int64.unsigned_repr); unfold Int64.max_unsigned; unfold_Int64_modulus; try nia.
-    - uo; des_ifs. unfold scale_int in *. des_ifs. ss. unfold Ptrofs.of_int64 in *.
-      f_equal. unfold map_ofs in *. unfold scale_ofs in *.
+      rewrite Int64.unsigned_repr_eq.
+      rewrite <- int64_ptrofs.
+      unfold Ptrofs.add. rewrite <- Ptrofs.unsigned_repr_eq.
+      rewrite Ptrofs.repr_unsigned. rewrite ! Ptrofs.unsigned_repr_eq.
+      apply ptrofs_ext.
+      Local Transparent Ptrofs.repr.
+      ss. rewrite ! Ptrofs.Z_mod_modulus_eq.
+      rewrite <- Z.add_mod; try lia.
+      unfold_Ptrofs_modulus. ss.
+      Local Opaque Ptrofs.repr.
+    - uo; des_ifs. unfold scale_int in *. des_ifs. ss.
+      unfold Ptrofs.of_int64 in *.
+      f_equal. unfold map_ofs in *.
+      unfold scale_ofs in *.
       unfold Z.divide in d. des. clarify. rewrite Z_div_mult in *; try nia.
       assert (COMM: (8 * z)%Z = (z * 8)%Z); try nia. rewrite <- COMM in *; clear COMM.
       rewrite Z.mul_add_distr_l in *. remember (8 * z)%Z as b. remember (8 * ofs)%Z as a.
       clear Heqb Heqa ofs z blk. move a before b.
-      rename H into WFB, WFOPS into WFA.
-      unfold_modrange_64. bsimpl; des.
-      apply sumbool_to_bool_true in WFA.
-      apply sumbool_to_bool_true in WFA0.
-      apply sumbool_to_bool_true in WFB.
-      apply sumbool_to_bool_true in WFB0.
-      pose (Ptrofs.agree64_repr Heq (Int64.unsigned (Int64.repr a))) as aInt.
-      pose (Ptrofs.agree64_repr Heq (Int64.unsigned (Int64.repr b))) as bInt.
-      hexploit Ptrofs.agree64_add; auto.
-      { eapply aInt. }
-      { eapply bInt. }
-      i. rename H into addInt.
-      pose (Ptrofs.agree64_repr Heq (Int64.unsigned (Int64.repr (a + b)))) as abInt.
-      rewrite <- Ptrofs.of_int64_to_int64 at 1; auto.
-      rewrite <- Ptrofs.of_int64_to_int64; auto. f_equal.
-      apply Ptrofs.agree64_to_int_eq in addInt. apply Ptrofs.agree64_to_int_eq in abInt.
-      rewrite addInt; clear addInt. rewrite abInt; clear abInt. clear aInt bInt Heq.
-      rewrite! Int64.repr_unsigned.
-      rewrite Int64.add_unsigned. f_equal.
-      rewrite Int64.unsigned_repr; try (rewrite Int64.unsigned_repr); unfold Int64.max_unsigned; unfold_Int64_modulus; try nia.
+      rewrite Int64.unsigned_repr_eq.
+      rewrite <- int64_ptrofs.
+      unfold Ptrofs.add. rewrite <- Ptrofs.unsigned_repr_eq.
+      rewrite Ptrofs.repr_unsigned. rewrite ! Ptrofs.unsigned_repr_eq.
+      apply ptrofs_ext.
+      Local Transparent Ptrofs.repr.
+      ss. rewrite ! Ptrofs.Z_mod_modulus_eq.
+      rewrite <- Z.add_mod; try lia.
+      unfold_Ptrofs_modulus. ss.
+      Local Opaque Ptrofs.repr.
   Qed.
 
   Lemma map_val_vsub_comm
         src a b v
         (VSUB: vsub a b = Some v)
-        (WFOPS: checkOps a b)
     :
       Values.Val.subl (map_val src a) (map_val src b) = map_val src v.
   Proof.
+    Local Transparent Int64.repr. Local Transparent Ptrofs.repr.
     destruct a; destruct b; ss; clarify.
     - ss. repeat f_equal.
-      rewrite Int64.sub_signed. f_equal. unfold_intrange_64.
-      bsimpl. des.
-      apply sumbool_to_bool_true in H.
-      apply sumbool_to_bool_true in H0.
-      apply sumbool_to_bool_true in WFOPS.
-      apply sumbool_to_bool_true in WFOPS0.
-      rewrite Int64.signed_repr; try (rewrite Int64.signed_repr); unfold_Int64_max_signed; unfold_Int64_min_signed; try nia.
+      unfold Int64.sub. rewrite ! Int64.unsigned_repr_eq.
+      apply int64_mod_ext. f_equal.
+      ss. rewrite ! Int64.Z_mod_modulus_eq.
+      rewrite <- Zminus_mod; try lia.
     - uo; des_ifs. unfold scale_int in *. des_ifs. ss. unfold Ptrofs.of_int64 in *.
       f_equal. unfold map_ofs in *. unfold scale_ofs in *.
       unfold Z.divide in d. des. clarify. rewrite Z_div_mult in *; try nia.
       assert (COMM: (8 * z)%Z = (z * 8)%Z); try nia. rewrite <- COMM in *; clear COMM.
       rewrite Z.mul_sub_distr_l in *. remember (8 * z)%Z as b. remember (8 * ofs)%Z as a.
       clear Heqb Heqa ofs z blk. move a before b.
-      rename H into WFB, WFOPS into WFA.
-      unfold_modrange_64. bsimpl; des.
-      apply sumbool_to_bool_true in WFA.
-      apply sumbool_to_bool_true in WFA0.
-      apply sumbool_to_bool_true in WFB.
-      apply sumbool_to_bool_true in WFB0.
-      pose (Ptrofs.agree64_repr Heq (Int64.unsigned (Int64.repr a))) as aInt.
-      pose (Ptrofs.agree64_repr Heq (Int64.unsigned (Int64.repr b))) as bInt.
-      hexploit Ptrofs.agree64_sub; auto.
-      { eapply aInt. }
-      { eapply bInt. }
-      i. rename H into subInt.
-      pose (Ptrofs.agree64_repr Heq (Int64.unsigned (Int64.repr (a - b)))) as abInt.
-      rewrite <- Ptrofs.of_int64_to_int64 at 1; auto.
-      rewrite <- Ptrofs.of_int64_to_int64; auto. f_equal.
-      apply Ptrofs.agree64_to_int_eq in subInt. apply Ptrofs.agree64_to_int_eq in abInt.
-      rewrite subInt; clear subInt. rewrite abInt; clear abInt. clear aInt bInt Heq.
-      rewrite! Int64.repr_unsigned.
-      unfold Int64.sub. f_equal.
-      rewrite Int64.unsigned_repr; try (rewrite Int64.unsigned_repr); unfold Int64.max_unsigned; unfold_Int64_modulus; try nia.
+      rewrite Int64.unsigned_repr_eq.
+      rewrite <- int64_ptrofs.
+      unfold Ptrofs.sub. rewrite <- Ptrofs.unsigned_repr_eq.
+      rewrite Ptrofs.repr_unsigned. rewrite ! Ptrofs.unsigned_repr_eq.
+      apply ptrofs_ext.
+      ss. rewrite ! Ptrofs.Z_mod_modulus_eq.
+      rewrite <- Zminus_mod; try lia.
     - uo; des_ifs.
       2:{ exfalso; apply n. f_equal. bsimpl. apply Nat.eqb_eq in Heq0. clarify. }
       apply Nat.eqb_eq in Heq0. clarify; ss. repeat f_equal.
       unfold Ptrofs.of_int64 in *. unfold map_ofs in *. unfold scale_ofs in *.
       rewrite Z.mul_sub_distr_l in *. remember (8 * ofs0)%Z as b. remember (8 * ofs)%Z as a.
       clear Heqb Heqa ofs ofs0 e blk0. move a before b.
-      rename H into WFB, WFOPS into WFA.
-      unfold_modrange_64. bsimpl; des.
-      apply sumbool_to_bool_true in WFA.
-      apply sumbool_to_bool_true in WFA0.
-      apply sumbool_to_bool_true in WFB.
-      apply sumbool_to_bool_true in WFB0.
-      pose (Ptrofs.agree64_repr Heq (Int64.unsigned (Int64.repr a))) as aInt.
-      pose (Ptrofs.agree64_repr Heq (Int64.unsigned (Int64.repr b))) as bInt.
-      hexploit Ptrofs.agree64_sub; auto.
-      { eapply aInt. }
-      { eapply bInt. }
-      i. rename H into subInt.
-      apply Ptrofs.agree64_to_int_eq in subInt. rewrite subInt; clear subInt aInt bInt.
-      unfold Int64.sub. f_equal. rewrite ! Int64.repr_unsigned.
-      rewrite Int64.unsigned_repr; try (rewrite Int64.unsigned_repr); unfold Int64.max_unsigned; unfold_Int64_modulus; try nia.
+      unfold Ptrofs.to_int64.
+      unfold Ptrofs.sub. ss.
+      rewrite ! Ptrofs.Z_mod_modulus_eq.
+      rewrite ! int64_ptrofs. rewrite <- Zminus_mod.
+      apply int64_mod_ext.
+      ss. rewrite ! Int64.Z_mod_modulus_eq.
+      rewrite ! Zmod_mod. ss.
+      Local Opaque Int64.repr. Local Opaque Ptrofs.repr.
   Qed.
 
   Lemma map_val_vmul_comm
         src a b v
         (VMUL: vmul a b = Some v)
-        (WFOPS: checkOps a b)
     :
       Values.Val.mull (map_val src a) (map_val src b) = map_val src v.
   Proof.
+    Local Transparent Int64.repr.
     destruct a; destruct b; ss; clarify.
     ss. repeat f_equal.
-    rename H into WFB, WFOPS into WFA.
-    unfold_intrange_64. bsimpl; des.
-    apply sumbool_to_bool_true in WFA.
-    apply sumbool_to_bool_true in WFA0.
-    apply sumbool_to_bool_true in WFB.
-    apply sumbool_to_bool_true in WFB0.
-    rewrite Int64.mul_signed. f_equal. unfold_intrange_64.
-    rewrite Int64.signed_repr; try (rewrite Int64.signed_repr); unfold_Int64_max_signed; unfold_Int64_min_signed; try nia.
+    unfold Int64.mul. rewrite ! Int64.unsigned_repr_eq.
+    apply int64_mod_ext. f_equal.
+    ss. rewrite ! Int64.Z_mod_modulus_eq.
+    rewrite <- Zmult_mod; try lia.
+    Local Opaque Int64.repr.
   Qed.
 
 End ARITH.
