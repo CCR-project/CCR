@@ -331,18 +331,18 @@ Section MASSAGE.
   (* | FPut' (fr0: Σ): frE unit *)
   (* | FGet': frE Σ *)
   (* . *)
-  Definition massage_callE (b: bool): callE ~> itree Es' :=
+  Definition massage_callE (b: bool): callE ~> itree hEs :=
     if b
     then
-      fun T '(Call fn args) => trigger (hCall false fn (Any.pair false↑ args))
+      fun T '(Call fn args) => trigger (Call fn (Any.pair false↑ args))
     else
-      fun T '(Call fn args) => trigger (hCall false fn args)
+      fun T '(Call fn args) => trigger (Call fn args)
   .
-  Definition massage_itr b: itree Es ~> itree Es' :=
+  Definition massage_itr b: itree Es ~> itree hEs :=
     (* interp (case_ (massage_callE) (case_ (massage_rE) (case_ (massage_pE) trivial_state_Handler))) *)
     interp (case_ (massage_callE b) trivial_Handler)
   .
-  Definition massage_fun (b: bool) (ktr: (option mname * Any.t) -> itree Es Any.t): ((option mname * Any.t) -> itree Es' Any.t) :=
+  Definition massage_fun (b: bool) (ktr: (option mname * Any.t) -> itree Es Any.t): ((option mname * Any.t) -> itree hEs Any.t) :=
     if b
     then
       fun '(mn, args) =>
@@ -613,7 +613,7 @@ Section ADQ.
         (fun st_src st_tgt '(ctx, fr, r_src) r_tgt =>
            r_src = r_tgt /\ URA.wf ctx /\ st_src = Any.pair st_tgt (ε: Σ)↑)
         40%nat tt
-        (Any.pair st0 (ε: Σ)↑, (interp_hCallE_tgt mn (_stb ske) ord_top (massage_itr true itr) (ctx, fr_trash)))
+        (Any.pair st0 (ε: Σ)↑, (interp_hCallE_tgt mn (_stb ske) ord_top (interp_hEs_tgt (massage_itr true itr)) (ctx, fr_trash)))
         (st0, addtau itr)
   .
   Proof.
@@ -625,19 +625,32 @@ Section ADQ.
     {
       destruct s; ss.
       { resub. rewrite massage_itr_pe. destruct p; ss.
-        - steps. gbase. eapply CIH; et.
-        - steps. gbase. eapply CIH; et.
+        - steps. guclo lordC_spec. econs.
+          { eapply OrdArith.add_base_l. }
+          gbase. eapply CIH; et.
+        - steps. guclo lordC_spec. econs.
+          { eapply OrdArith.add_base_l. }
+          gbase. eapply CIH; et.
       }
       { resub. rewrite massage_itr_evente. destruct e; ss.
         - resub. ired_both. resub.
           gstep. eapply sim_itree_tau_tgt; eauto with ord_step.
-          ired_both. gstep; econs; et. i. esplits; et. steps. gbase. eapply CIH; et.
+          ired_both. gstep; econs; et. i. esplits; et. steps.
+          guclo lordC_spec. econs.
+          { eapply OrdArith.add_base_l. }
+          gbase. eapply CIH; et.
         - resub. ired_both. resub.
           gstep. eapply sim_itree_tau_tgt; eauto with ord_step.
-          ired_both. gstep; econs; et. i. esplits; et. steps. gbase. eapply CIH; et.
+          ired_both. gstep; econs; et. i. esplits; et. steps.
+          guclo lordC_spec. econs.
+          { eapply OrdArith.add_base_l. }
+          gbase. eapply CIH; et.
         - resub. ired_both. resub.
           gstep. eapply sim_itree_tau_tgt; eauto with ord_step.
-          ired_both. gstep; econs; et. i. esplits; et. steps. gbase. eapply CIH; et.
+          ired_both. gstep; econs; et. i. esplits; et. steps.
+          guclo lordC_spec. econs.
+          { eapply OrdArith.add_base_l. }
+          gbase. eapply CIH; et.
       }
     }
     destruct c. resub. rewrite massage_itr_calle. ired_both. resub. steps.
@@ -666,7 +679,10 @@ Section ADQ.
       { exact tt. }
       i. des_ifs. des; subst. eexists. steps.
       red in _ASSUME0. uipropall. subst.
-      destruct w1. gbase. eapply CIH; et.
+      destruct w1.
+      guclo lordC_spec. econs.
+      { eapply OrdArith.add_base_l. }
+      gbase. eapply CIH; et.
       eapply URA.wf_mon; et. instantiate (1:=c). r_wf _ASSUME.
     - unfold HoareCall, mput, mget. steps.
       force_l. exists (ε, ε, ε). steps.
@@ -683,7 +699,10 @@ Section ADQ.
       { exact tt. }
       i. des_ifs. des; subst. eexists. steps.
       red in _ASSUME0. uipropall. subst.
-      destruct w1. gbase. eapply CIH; ss.
+      destruct w1.
+      guclo lordC_spec. econs.
+      { eapply OrdArith.add_base_l. }
+      gbase. eapply CIH; et.
       eapply URA.wf_mon; et. instantiate (1:=c). r_wf _ASSUME.
       Unshelve.
       all: try (exact Ord.O).
@@ -728,6 +747,7 @@ Section ADQ.
     { red. destruct x; red; uipropall. }
     steps.
   Qed.
+
   Lemma my_lemma1
         umd
         (IN: In umd umds)
@@ -778,8 +798,8 @@ Section ADQ.
       (MN: List.In (Some mn) _frds)
     :
       my_lemma2_r1 eq 200
-                   (EventsL.interp_Es (ModSemL.prog (ModL.enclose prog_mid)) (transl_all mn (KModSem.interp_kCallE_src itr)) st)
-                   (EventsL.interp_Es (ModSemL.prog (ModL.enclose prog_tgt)) (transl_all mn (interp_hCallE_src (KModSem.transl_itr_tgt itr))) st)
+                   (EventsL.interp_Es (ModSemL.prog (ModL.enclose prog_mid)) (transl_all mn (interp_hEs_src itr)) st)
+                   (EventsL.interp_Es (ModSemL.prog (ModL.enclose prog_tgt)) (transl_all mn (interp_hEs_src (KModSem.transl_itr_tgt itr))) st)
   .
 
   Variant my_lemma2_r2: forall R0 R1 (RR: R0 -> R1 -> Prop), Ord.t -> itree eventE R0 -> itree eventE R1 -> Prop :=
@@ -788,8 +808,8 @@ Section ADQ.
       (MN: ~ List.In (Some mn) _frds)
     :
       my_lemma2_r2 eq 200
-                   (EventsL.interp_Es (ModSemL.prog (ModL.enclose prog_mid)) (transl_all mn (interp_hCallE_src (massage_itr false itr))) st)
-                   (EventsL.interp_Es (ModSemL.prog (ModL.enclose prog_tgt)) (transl_all mn (interp_hCallE_src (massage_itr true itr))) st)
+                   (EventsL.interp_Es (ModSemL.prog (ModL.enclose prog_mid)) (transl_all mn (interp_hEs_src (massage_itr false itr))) st)
+                   (EventsL.interp_Es (ModSemL.prog (ModL.enclose prog_tgt)) (transl_all mn (interp_hEs_src (massage_itr true itr))) st)
   .
 
   Let my_r := my_lemma2_r1 \6/ my_lemma2_r2.
@@ -808,27 +828,27 @@ Section ADQ.
       { gsteps. }
       { gsteps. gbase. eapply CIH. left. econs. auto. }
       rewrite <- bind_trigger. destruct e.
-      { resub. destruct k0. gsteps. destruct kf.
-        { gsteps. exists x_tgt. gsteps. gbase. eapply CIH. left. econs. auto. }
-        { gsteps. hexploit (stb_find_iff_mid fn). i. des.
-          { rewrite SRC. rewrite TGT. gsteps. }
-          { rewrite SRC. rewrite TGT. gsteps.
-            unfold my_if, sumbool_to_bool. des_ifs.
-            unfold fun_to_src, body_to_src. rewrite Any.pair_split. gsteps.
-            guclo bindC_spec. econs.
-            { gbase. eapply CIH. left. econs. auto. }
-            i. subst. destruct vret_tgt as [mp0 retv].
-            gsteps.
-            gbase. eapply CIH. left. econs. auto.
-          }
-          { rewrite SRC. rewrite TGT. gsteps.
-            unfold fun_to_src, body_to_src. rewrite Any.pair_split. gsteps.
-            guclo bindC_spec. econs.
-            { gbase. eapply CIH. right. econs. auto. }
-            i. subst. destruct vret_tgt as [mp0 retv].
-            gsteps.
-            gbase. eapply CIH. left. econs. auto.
-          }
+      { resub. destruct h. gsteps. gbase. eapply CIH. left. econs. auto. }
+      destruct e.
+      { resub. destruct c. gsteps.
+        hexploit (stb_find_iff_mid fn). i. des.
+        { rewrite SRC. rewrite TGT. gsteps. }
+        { rewrite SRC. rewrite TGT. gsteps.
+          unfold my_if, sumbool_to_bool. des_ifs.
+          unfold fun_to_src, body_to_src. rewrite Any.pair_split. gsteps.
+          guclo bindC_spec. econs.
+          { gbase. eapply CIH. left. econs. auto. }
+          i. subst. destruct vret_tgt as [mp0 retv].
+          gsteps.
+          gbase. eapply CIH. left. econs. auto.
+        }
+        { rewrite SRC. rewrite TGT. gsteps.
+          unfold fun_to_src, body_to_src. rewrite Any.pair_split. gsteps.
+          guclo bindC_spec. econs.
+          { gbase. eapply CIH. right. econs. auto. }
+          i. subst. destruct vret_tgt as [mp0 retv].
+          gsteps.
+          gbase. eapply CIH. left. econs. auto.
         }
       }
       destruct s; resub.
@@ -998,7 +1018,10 @@ Section ADQ.
       { steps. gbase. eapply CIH. }
       rewrite <- bind_trigger. destruct e.
       { resub. destruct c. steps. gstep. econs; et. i.
-        exists 100. steps. gbase. destruct w1. eapply CIH.
+        eexists. steps. destruct w1.
+        guclo lordC_spec. econs.
+        { eapply OrdArith.add_base_l. }
+        gbase. eapply CIH.
       }
       destruct s.
       { resub. destruct p.
@@ -1010,11 +1033,20 @@ Section ADQ.
       }
       { resub. destruct e.
         { ired_both. resub. force_r. i. steps. force_l. exists x. steps.
-          gbase. eapply CIH. }
+          guclo lordC_spec. econs.
+          { eapply OrdArith.add_base_l. }
+          gbase. eapply CIH.
+        }
         { ired_both. resub. force_l. force_l. i.
-          force_r. exists x. steps. gbase. eapply CIH. }
+          force_r. exists x. steps.
+          guclo lordC_spec. econs.
+          { eapply OrdArith.add_base_l. }
+          gbase. eapply CIH.
+        }
         { ired_both. resub. steps. gstep. econs. i. esplits.
-          steps. gbase. eapply CIH.
+          steps. guclo lordC_spec. econs.
+          { eapply OrdArith.add_base_l. }
+          gbase. eapply CIH.
         }
       }
     }
