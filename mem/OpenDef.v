@@ -99,11 +99,14 @@ Section KMODSEM.
     mk_fspec (meta:=option fs.(meta))
              (fun mn ox argh argl o =>
                 match ox with
-                | Some x => (∃ argh', ⌜argh = Any.pair true↑ argh'⌝ ∧ (fs.(precond) mn x argh' argl o: iProp))%I
-                | None => ((⌜argh = Any.pair false↑ argl /\ o = ord_top⌝): iProp)%I
+                | Some x => fun r =>
+                              exists argh',
+                                argh = Any.pair true↑ argh' /\ fs.(precond) mn x argh' argl o r
+                | None => fun r =>
+                            argh = Any.pair false↑ argl /\ o = ord_top
                 end)
              (fun mn ox reth retl =>
-                map_or_else ox (fun x => (fs.(postcond) mn x reth retl)) (⌜reth = retl⌝: iProp)%I)
+                map_or_else ox (fun x => (fs.(postcond) mn x reth retl)) (fun r => reth = retl))
   .
 
   Definition disclose_ksb_mid (ksb: kspecbody): fspecbody :=

@@ -705,14 +705,12 @@ Section ADQ.
       force_l. exists (args). steps.
       force_l. exists ord_top. steps.
       force_l.
-      { eapply to_semantic; [|eapply URA.wf_unit]. iIntros. iPureIntro.
-        esplits; et. }
+      { split; auto. }
       steps. force_l.
       { split; et. }
       steps. gstep. econs; et.
       { exact tt. }
       i. des_ifs. des; subst. eexists. steps.
-      red in _ASSUME0. uipropall. subst.
       destruct w1.
       guclo lordC_spec. econs.
       { eapply OrdArith.add_base_l. }
@@ -726,13 +724,12 @@ Section ADQ.
       force_l. eexists (args). steps.
       force_l. exists ord_top. steps.
       force_l.
-      { eapply to_semantic; [|eapply URA.wf_unit]. iIntros. iPureIntro. esplits; et. }
+      { split; et. }
       steps. force_l.
       { split; et. }
       steps. gstep. econs; et.
       { exact tt. }
       i. des_ifs. des; subst. eexists. steps.
-      red in _ASSUME0. uipropall. subst.
       destruct w1.
       guclo lordC_spec. econs.
       { eapply OrdArith.add_base_l. }
@@ -758,9 +755,8 @@ Section ADQ.
     ginit. steps.
     assert (x1 = ord_top /\ exists b, x0 = Any.pair b t).
     { destruct x; ss.
-      { red in _ASSUME0. uipropall. des. uipropall. des.
-        red in _ASSUME0. red in _ASSUME1. uipropall. des. subst. et. }
-      { uipropall. red in _ASSUME0. uipropall. des. clarify. et. }
+      { des. subst. red in _ASSUME1. uipropall. des. clarify. et. }
+      { des. subst. et. }
     }
     des; clarify. clear _ASSUME0.
     unfold massage_fun.
@@ -778,7 +774,7 @@ Section ADQ.
     force_l.
     { instantiate (1:=ε). instantiate (1:=ε). r_wf SIM0. }
     steps. force_l.
-    { red. destruct x; red; uipropall. }
+    { red. destruct x; et. red. uipropall. }
     steps.
   Qed.
 
@@ -1117,7 +1113,7 @@ Section ADQ.
     }
   Qed.
 
-  Theorem adequacy_open_aux:
+  Theorem adequacy_open_aux1':
     refines_closed (Mod.add_list (List.map (SMod.to_tgt _stb) kmds ++ umds))
                    (Mod.add_list (List.map (KMod.transl_src frds) _kmds ++ umds))
   .
@@ -1166,14 +1162,14 @@ Section ADQ.
 
   End UMDS.
 
-  Theorem adequacy_open:
+  Lemma adequacy_open_aux1:
     refines (Mod.add_list (List.map (SMod.to_tgt _stb) kmds))
             (Mod.add_list (List.map (KMod.transl_src frds) _kmds))
   .
   Proof.
     ii. eapply ModL.add_comm. eapply ModL.add_comm in PR.
     rewrite <- Mod.add_list_app in *.
-    eapply adequacy_open_aux. auto.
+    eapply adequacy_open_aux1'. auto.
   Qed.
 
 End ADQ.
@@ -1206,13 +1202,193 @@ Section ADQ.
   Let _gstb_mid: Sk.t -> list (gname * fspec) :=
     fun ske => (flat_map (List.map (map_snd fsb_fspec) ∘ SModSem.fnsems) (_kmss_mid ske)).
   Let _stb_mid: Sk.t -> gname -> option fspec :=
-    fun sk fn => match alist_find fn (_gstb sk) with
+    fun sk fn => match alist_find fn (_gstb_mid sk) with
                  | Some fsp => Some fsp
                  | _ => Some (KModSem.disclose_mid fspec_trivial)
                  end.
 
 
+  Let stb_find_iff (sk: Sk.t) (fn: gname) (fsp: fspec)
+      (FIND: _stb sk fn = Some fsp)
+    :
+      _stb_mid sk fn = Some (KModSem.disclose_mid fsp).
+  Proof.
+    unfold _stb, _gstb, _kmss in FIND.
+    unfold _stb_mid, _gstb_mid, _kmss_mid.
+    admit "ez".
+  Qed.
+
   Let kmds: list Mod.t := List.map (KMod.transl_tgt _stb) _kmds.
+
+  Lemma adequacy_open_aux2_hcall
+    :
+      forall mp (mr: Σ) w mn o fsp fn arg ctx fr tbr,
+        paco7 (_sim_itree (fun (_: unit) '(st_src, st_tgt) =>
+                             exists st (mr: Σ),
+                               st_src = Any.pair st mr↑ /\ st_tgt = Any.pair st mr↑) top2)
+              bot7 (Σ * Σ * Any.t)%type (Σ * Σ * Any.t)%type
+              (fun st_src st_tgt ret_src ret_tgt =>
+                 exists st (mr: Σ),
+                   st_src = Any.pair st mr↑ /\ st_tgt = Any.pair st mr↑ /\ ret_src = ret_tgt)
+              20%ord w
+              (Any.pair mp mr↑,
+                        HoareCall mn tbr o (KModSem.disclose_mid fsp) fn (Any.pair true↑ arg) (ctx, fr))
+              (Any.pair mp mr↑,
+                        HoareCall mn tbr o fsp fn arg (ctx, fr)).
+  Proof.
+    i. ginit.
+    Local Transparent HoareCall. unfold HoareCall. Local Opaque HoareCall.
+    unfold mput, mget. steps.
+    force_l. eexists (c0, c1, c). steps.
+    force_l; auto. steps. force_l. exists (Some x). steps.
+    force_l. eexists. force_l. eexists. force_l.
+    { esplits; et. }
+    steps. force_l; auto. steps.
+    gstep. econs; et. i. des. clarify. exists 100.
+    steps. force_r. eexists (c2, c3). steps.
+    force_r; auto. steps. force_r. eexists.
+    force_r; et. steps.
+  Qed.
+
+  Lemma adequacy_open_aux2_apc sk
+    :
+      forall mp (mr: Σ) w mn o ctx fr,
+        paco7 (_sim_itree (fun (_: unit) '(st_src, st_tgt) =>
+                             exists st (mr: Σ),
+                               st_src = Any.pair st mr↑ /\ st_tgt = Any.pair st mr↑) top2)
+              bot7 (Σ * Σ * unit)%type (Σ * Σ * unit)%type
+              (fun st_src st_tgt ret_src ret_tgt =>
+                 exists st (mr: Σ),
+                   st_src = Any.pair st mr↑ /\ st_tgt = Any.pair st mr↑ /\ ret_src = ret_tgt)
+              100%ord w
+              (Any.pair mp mr↑,
+                        interp_hCallE_tgt mn
+                        (_stb_mid sk) o
+                        APC
+                        (ctx, fr))
+              (Any.pair mp mr↑,
+                        interp_hCallE_tgt mn
+                        (_stb sk) o
+                        APC
+                        (ctx, fr)).
+  Proof.
+    ginit. i.
+    Local Transparent APC. unfold APC. Local Opaque APC.
+    steps. force_l. exists x. steps. force_l; auto. steps.
+    clear _GUARANTEE _GUARANTEE0.
+    revert x mp mr w mn o ctx fr. gcofix CIH. i.
+    rewrite unfold_APC. steps. force_l. exists x0. steps. destruct x0.
+    { steps. }
+    steps. force_l. exists x0. steps. force_l; auto. steps.
+    force_l. exists (s, Any.pair true↑ t). steps.
+    hexploit stb_find_iff; et. i. rewrite H. steps.
+    guclo lordC_spec. econs.
+    { instantiate (1:=(50 + 20)%ord).
+      rewrite <- OrdArith.add_from_nat.
+      eapply OrdArith.le_from_nat. lia. }
+    guclo lbindC_spec. econs.
+    { gfinal. right. eapply paco7_mon.
+      { eapply adequacy_open_aux2_hcall. }
+      { ss. }
+    }
+    i. ss. des; clarify.
+    destruct vret_tgt as [[ctx0 fr0] vret]. ired_both. steps.
+    gbase. eapply CIH.
+    Unshelve. all: ss.
+  Qed.
+
+  Lemma adequacy_open_aux2_itr sk
+    :
+      forall R mp (mr: Σ) w mn o itr ctx fr,
+        paco7 (_sim_itree (fun (_: unit) '(st_src, st_tgt) =>
+                             exists st (mr: Σ),
+                               st_src = Any.pair st mr↑ /\ st_tgt = Any.pair st mr↑) top2)
+              bot7 (Σ * Σ * R)%type (Σ * Σ * R)%type
+              (fun st_src st_tgt ret_src ret_tgt =>
+                 exists st (mr: Σ),
+                   st_src = Any.pair st mr↑ /\ st_tgt = Any.pair st mr↑ /\ ret_src = ret_tgt)
+              200%ord w
+              (Any.pair mp mr↑,
+                        interp_hCallE_tgt mn
+                        (_stb_mid sk) o
+                        (interp_hEs_tgt (KModSem.transl_itr_mid itr))
+                        (ctx, fr))
+              (Any.pair mp mr↑,
+                        interp_hCallE_tgt mn
+                        (_stb sk) o (interp_hEs_tgt itr)
+                        (ctx, fr)).
+  Proof.
+    ginit. gcofix CIH. i. ides itr.
+    { steps. }
+    { steps. gbase. et. }
+    rewrite <- bind_trigger. ired_both.
+    destruct e.
+    { resub. destruct h. steps.
+      guclo lordC_spec. econs.
+      { instantiate (1:=(50 + 100)%ord).
+        rewrite <- OrdArith.add_from_nat.
+        eapply OrdArith.le_from_nat. lia. }
+      guclo lbindC_spec. econs.
+      { gfinal. right. eapply paco7_mon.
+        { eapply adequacy_open_aux2_apc. }
+        { ss. }
+      }
+      i. ss. des; clarify. destruct vret_tgt as [[ctx0 fr0] vret].
+      steps. guclo lordC_spec. econs.
+      { eapply OrdArith.add_base_l. }
+      gbase. eapply CIH.
+    }
+    destruct e.
+    { resub. destruct c. steps.
+      hexploit stb_find_iff; et. i. rewrite H. steps.
+      guclo lordC_spec. econs.
+      { instantiate (1:=(50 + 20)%ord).
+        rewrite <- OrdArith.add_from_nat.
+        eapply OrdArith.le_from_nat. lia. }
+      guclo lbindC_spec. econs.
+      { gfinal. right. eapply paco7_mon.
+        { eapply adequacy_open_aux2_hcall. }
+        { ss. }
+      }
+      i. ss. des; clarify. destruct vret_tgt as [[ctx0 fr0] vret].
+      steps. guclo lordC_spec. econs.
+      { eapply OrdArith.add_base_l. }
+      gbase. eapply CIH.
+    }
+    destruct s.
+    { resub. destruct p.
+      { ired_both. force_l. force_l. force_r. force_r. steps.
+        guclo lordC_spec. econs.
+        { eapply OrdArith.add_base_l. }
+        gbase. eapply CIH.
+      }
+      { ired_both. force_l. force_l. force_r. force_r. steps.
+        guclo lordC_spec. econs.
+        { eapply OrdArith.add_base_l. }
+        gbase. eapply CIH.
+      }
+    }
+    { resub. destruct e.
+      { ired_both. force_r. i. force_l. exists x.
+        ired_both. steps.
+        guclo lordC_spec. econs.
+        { eapply OrdArith.add_base_l. }
+        gbase. eapply CIH.
+      }
+      { ired_both. force_l. i. force_r. exists x.
+        ired_both. steps.
+        guclo lordC_spec. econs.
+        { eapply OrdArith.add_base_l. }
+        gbase. eapply CIH.
+      }
+      { steps. gstep. econs. i. eexists. steps.
+        guclo lordC_spec. econs.
+        { eapply OrdArith.add_base_l. }
+        gbase. eapply CIH.
+      }
+    }
+    Unshelve. all: ss; try (exact 0).
+  Qed.
 
   Lemma adequacy_open_aux2:
     refines (Mod.add_list kmds)
@@ -1231,84 +1407,101 @@ Section ADQ.
       eapply Forall2_apply_Forall2.
       { refl. }
       i. subst. destruct b0 as [fn ksb]. ss. econs; ss.
-      ii. subst. ss. exists 200. ginit.
+      ii. subst. ss. exists 300. ginit.
       unfold KModSem.disclose_ksb_tgt, fun_to_tgt. ss.
       Local Transparent HoareFun. unfold HoareFun. Local Opaque HoareFun.
       des. clarify. unfold mget, mput. steps. destruct x.
-      { red in _ASSUME0. uipropall. des. ss.
-        uipropall. des. red in _ASSUME0.
+      { des; clarify. force_r. exists true.
+        force_r. exists m. force_r. eexists _.
+        force_r. exists (c, c0). force_r. force_r; auto.
+        force_r. eexists _. force_r; eauto.
+        steps. destruct x1.
+        { steps. guclo lordC_spec. econs.
+          { instantiate (1:=(50 + 100)%ord).
+            rewrite <- OrdArith.add_from_nat.
+            eapply OrdArith.le_from_nat. lia. }
+          guclo lbindC_spec. econs.
+          { gfinal. right. eapply paco7_mon.
+            { eapply adequacy_open_aux2_apc. }
+            { ss. }
+          }
+          i. ss. des; clarify. destruct vret_tgt as [[ctx0 fr0] vret].
+          steps. force_l. eexists. steps.
+          force_l. eexists. force_l. eexists (c1, c2). steps.
+          force_l; et. force_l; et.
+          steps. econs; ss. esplits; et.
+        }
+        { steps. guclo lordC_spec. econs.
+          { instantiate (1:=(50 + 200)%ord).
+            rewrite <- OrdArith.add_from_nat.
+            eapply OrdArith.le_from_nat. lia. }
+          guclo lbindC_spec. econs.
+          { gfinal. right. eapply paco7_mon.
+            { eapply adequacy_open_aux2_itr. }
+            { ss. }
+          }
+          i. ss. des; clarify. destruct vret_tgt as [[ctx0 fr0] vret].
+          steps. force_l. eexists. steps.
+          force_l. eexists (c1, c2). steps.
+          force_l; et. force_l; et.
+          steps. econs; ss. esplits; et.
+        }
+      }
+      { des; clarify. force_r. exists false.
+        force_r. exists tt. force_r. exists t.
+        force_r. exists (c, c0). force_r. force_r; auto.
+        force_r. exists ord_top. force_r.
+        { red. uipropall. }
+        steps.
+        guclo lordC_spec. econs.
+        { instantiate (1:=(50 + 200)%ord).
+          rewrite <- OrdArith.add_from_nat.
+          eapply OrdArith.le_from_nat. lia. }
+        guclo lbindC_spec. econs.
+        { gfinal. right. eapply paco7_mon.
+          { eapply adequacy_open_aux2_itr. }
+          { ss. }
+        }
+        i. ss. des; clarify. destruct vret_tgt as [[ctx0 fr0] vret].
+        steps. force_l. eexists.
+        force_l. eexists (c1, c2). steps.
+        force_l; et. force_l.
+        { red in _GUARANTEE0. uipropall. }
+        steps. econs; ss. esplits; et.
+      }
+    }
+    { exists tt. esplits; et. }
+    Unshelve. all: ss.
+  Qed.
+End ADQ.
 
- des. red in _ASSUME0.
 
-force_l.
+Section ADQ.
+  Context `{Σ: GRA.t}.
+  Variable _kmds: list KMod.t.
 
- force_r.
-      steps.
- ss.
-      ss.
+  Let frds: Sk.t -> list mname := fun sk => (map (KModSem.mn ∘ (flip KMod.get_modsem sk)) _kmds).
 
-      steps.
-
-      steps.
- gstep.
-
-econs.
-
-      eapply Forall2
-
-
-ss. }
-
-    {
-
-
-.
-
-
-            (Mod.add_list
-
-    List.Forall2 ModSemPair.sim kmds (List.map (KMod.transl_src frds) kmds_mid).
-
-
-
-  Let kmds: list
-
-  Let _gstb
-
-
-
-SMod.
-
-  Let _kmss: Sk.t -> list SModSem.t := fun ske => List.map (flip SMod.get_modsem ske) kmds.
-
+  Let _kmss: Sk.t -> list KModSem.t := fun ske => List.map (flip KMod.get_modsem ske) _kmds.
 
   Let _gstb: Sk.t -> list (gname * fspec) := fun ske =>
-    (flat_map (List.map (map_snd fsb_fspec) ∘ KModSem.fnsems) (_kmss ske)).
+    (flat_map (List.map (map_snd ksb_fspec) ∘ KModSem.fnsems) (_kmss ske)).
+
+  (* TODO: define this *)
   Let _stb: Sk.t -> gname -> option fspec :=
     fun sk fn => match alist_find fn (_gstb sk) with
                  | Some fsp => Some fsp
-                 | _ => Some (KModSem.disclose_mid fspec_trivial)
+                 | _ => Some fspec_trivial
                  end.
 
+  Let kmds: list Mod.t := List.map (KMod.transl_tgt _stb) _kmds.
 
-  Let kmds: list Mod.t := Lis.map
-
-
-  Let kmds: list SMod.t := List.map KMod.transl_mid _kmds.
-  Let _kmss: Sk.t -> list SModSem.t := fun ske => List.map (flip SMod.get_modsem ske) kmds.
-  Let _gstb: Sk.t -> list (gname * fspec) := fun ske =>
-    (flat_map (List.map (map_snd fsb_fspec) ∘ SModSem.fnsems) (_kmss ske)).
-  Let _stb: Sk.t -> gname -> option fspec :=
-    fun sk fn => match alist_find fn (_gstb sk) with
-                 | Some fsp => Some fsp
-                 | _ => Some (KModSem.disclose_mid fspec_trivial)
-                 end.
-  Section UMDS.
-  Variable umds: list Mod.t.
-  Let sk_link: Sk.t := Sk.sort (fold_right Sk.add Sk.unit ((List.map SMod.sk kmds) ++ (List.map Mod.sk umds))).
-  Let skenv: SkEnv.t := Sk.load_skenv sk_link.
-  Let _umss: Sk.t -> list ModSem.t := fun ske => List.map (flip Mod.get_modsem ske) umds.
-  Let kmss: list SModSem.t := Eval red in (_kmss sk_link).
-  Let umss: list ModSem.t := Eval red in (_umss sk_link).
-  Let gstb: list (gname * fspec) := Eval red in (_gstb sk_link).
-  Let _frds: list (option mname) := (None :: (List.map Some (frds sk_link))).
+  Theorem adequacy_open:
+    refines (Mod.add_list kmds)
+            (Mod.add_list (List.map (KMod.transl_src frds) _kmds)).
+  Proof.
+    etrans.
+    { eapply adequacy_open_aux2. }
+    { eapply adequacy_open_aux1. }
+  Qed.
+End ADQ.
