@@ -1177,3 +1177,138 @@ Section ADQ.
   Qed.
 
 End ADQ.
+
+
+Require Import HTactics.
+
+Section ADQ.
+  Context `{Σ: GRA.t}.
+  Variable _kmds: list KMod.t.
+
+  Let frds: Sk.t -> list mname := fun sk => (map (KModSem.mn ∘ (flip KMod.get_modsem sk)) _kmds).
+
+  Let _kmss: Sk.t -> list KModSem.t := fun ske => List.map (flip KMod.get_modsem ske) _kmds.
+
+  Let _gstb: Sk.t -> list (gname * fspec) := fun ske =>
+    (flat_map (List.map (map_snd ksb_fspec) ∘ KModSem.fnsems) (_kmss ske)).
+
+  (* TODO: define this *)
+  Let _stb: Sk.t -> gname -> option fspec :=
+    fun sk fn => match alist_find fn (_gstb sk) with
+                 | Some fsp => Some fsp
+                 | _ => Some fspec_trivial
+                 end.
+
+
+  Let kmds_mid: list SMod.t := List.map KMod.transl_mid _kmds.
+  Let _kmss_mid: Sk.t -> list SModSem.t := fun ske => List.map (flip SMod.get_modsem ske) kmds_mid.
+
+  Let _gstb_mid: Sk.t -> list (gname * fspec) :=
+    fun ske => (flat_map (List.map (map_snd fsb_fspec) ∘ SModSem.fnsems) (_kmss_mid ske)).
+  Let _stb_mid: Sk.t -> gname -> option fspec :=
+    fun sk fn => match alist_find fn (_gstb sk) with
+                 | Some fsp => Some fsp
+                 | _ => Some (KModSem.disclose_mid fspec_trivial)
+                 end.
+
+
+  Let kmds: list Mod.t := List.map (KMod.transl_tgt _stb) _kmds.
+
+  Lemma adequacy_open_aux2:
+    refines (Mod.add_list kmds)
+            (Mod.add_list (List.map (SMod.to_tgt _stb_mid) kmds_mid)).
+  Proof.
+    unfold kmds. eapply adequacy_local_list.
+    unfold kmds_mid. rewrite List.map_map.
+    eapply Forall2_apply_Forall2.
+    { refl. }
+    i. subst. econs; ss. i. econs; ss.
+    { instantiate (1:=fun (_ _: unit) => True). ss. }
+    { instantiate (1:=fun _ '(st_src, st_tgt) =>
+                        exists st (mr: Σ),
+                          st_src = Any.pair st mr↑ /\ st_tgt = Any.pair st mr↑).
+      rewrite List.map_map.
+      eapply Forall2_apply_Forall2.
+      { refl. }
+      i. subst. destruct b0 as [fn ksb]. ss. econs; ss.
+      ii. subst. ss. exists 200. ginit.
+      unfold KModSem.disclose_ksb_tgt, fun_to_tgt. ss.
+      Local Transparent HoareFun. unfold HoareFun. Local Opaque HoareFun.
+      des. clarify. unfold mget, mput. steps. destruct x.
+      { red in _ASSUME0. uipropall. des. ss.
+        uipropall. des. red in _ASSUME0.
+
+ des. red in _ASSUME0.
+
+force_l.
+
+ force_r.
+      steps.
+ ss.
+      ss.
+
+      steps.
+
+      steps.
+ gstep.
+
+econs.
+
+      eapply Forall2
+
+
+ss. }
+
+    {
+
+
+.
+
+
+            (Mod.add_list
+
+    List.Forall2 ModSemPair.sim kmds (List.map (KMod.transl_src frds) kmds_mid).
+
+
+
+  Let kmds: list
+
+  Let _gstb
+
+
+
+SMod.
+
+  Let _kmss: Sk.t -> list SModSem.t := fun ske => List.map (flip SMod.get_modsem ske) kmds.
+
+
+  Let _gstb: Sk.t -> list (gname * fspec) := fun ske =>
+    (flat_map (List.map (map_snd fsb_fspec) ∘ KModSem.fnsems) (_kmss ske)).
+  Let _stb: Sk.t -> gname -> option fspec :=
+    fun sk fn => match alist_find fn (_gstb sk) with
+                 | Some fsp => Some fsp
+                 | _ => Some (KModSem.disclose_mid fspec_trivial)
+                 end.
+
+
+  Let kmds: list Mod.t := Lis.map
+
+
+  Let kmds: list SMod.t := List.map KMod.transl_mid _kmds.
+  Let _kmss: Sk.t -> list SModSem.t := fun ske => List.map (flip SMod.get_modsem ske) kmds.
+  Let _gstb: Sk.t -> list (gname * fspec) := fun ske =>
+    (flat_map (List.map (map_snd fsb_fspec) ∘ SModSem.fnsems) (_kmss ske)).
+  Let _stb: Sk.t -> gname -> option fspec :=
+    fun sk fn => match alist_find fn (_gstb sk) with
+                 | Some fsp => Some fsp
+                 | _ => Some (KModSem.disclose_mid fspec_trivial)
+                 end.
+  Section UMDS.
+  Variable umds: list Mod.t.
+  Let sk_link: Sk.t := Sk.sort (fold_right Sk.add Sk.unit ((List.map SMod.sk kmds) ++ (List.map Mod.sk umds))).
+  Let skenv: SkEnv.t := Sk.load_skenv sk_link.
+  Let _umss: Sk.t -> list ModSem.t := fun ske => List.map (flip Mod.get_modsem ske) umds.
+  Let kmss: list SModSem.t := Eval red in (_kmss sk_link).
+  Let umss: list ModSem.t := Eval red in (_umss sk_link).
+  Let gstb: list (gname * fspec) := Eval red in (_gstb sk_link).
+  Let _frds: list (option mname) := (None :: (List.map Some (frds sk_link))).

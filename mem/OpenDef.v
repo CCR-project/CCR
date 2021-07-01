@@ -135,10 +135,27 @@ Section KMODSEM.
             (body_to_src ksb.(ksb_ubody) (mn, argh))
   .
 
+  Definition disclose_ksb_tgt (mn: mname) (stb: string -> option fspec)
+             (ksb: kspecbody): option string * Any.t -> itree Es Any.t :=
+    fun arg =>
+      b <- trigger (Take bool);;
+      if (b: bool) then
+        fun_to_tgt mn stb (mk_specbody ksb.(ksb_fspec) (ksb.(ksb_kbody))) arg
+      else
+        fun_to_tgt mn stb (mk_specbody fspec_trivial (ksb.(ksb_ubody))) arg
+  .
+
   Definition transl_src (ms: t): ModSem.t := {|
     ModSem.fnsems := List.map (map_snd disclose_ksb_src) ms.(fnsems);
     ModSem.mn := ms.(mn);
     ModSem.initial_st := ms.(initial_st);
+  |}
+  .
+
+  Definition transl_tgt stb (ms: t): ModSem.t := {|
+    ModSem.fnsems := List.map (map_snd (disclose_ksb_tgt ms.(mn) stb)) ms.(fnsems);
+    ModSem.mn := ms.(mn);
+    ModSem.initial_st := Any.pair ms.(initial_st) ms.(initial_mr)↑
   |}
   .
 
@@ -421,6 +438,16 @@ Section KMOD.
 
   Lemma transl_src_comm: forall md frds sk, KModSem.transl_src (frds sk) (md.(get_modsem) sk) =
                                             (transl_src frds md).(Mod.get_modsem) sk.
+  Proof. i. refl. Qed.
+
+  Definition transl_tgt stb (md: t): Mod.t := {|
+    Mod.get_modsem := fun sk => KModSem.transl_tgt (stb sk) (md.(get_modsem) sk);
+    Mod.sk := md.(sk);
+  |}
+  .
+
+  Lemma transl_tgt_comm stb: forall md sk, KModSem.transl_tgt (stb sk) (md.(get_modsem) sk) =
+                                           (transl_tgt stb md).(Mod.get_modsem) sk.
   Proof. i. refl. Qed.
 
 End KMOD.
