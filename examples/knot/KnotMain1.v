@@ -59,7 +59,7 @@ Section MAIN.
       mk_simple (X:=(nat -> nat))
                 (fun f => (
                      (fun varg o =>
-                        (⌜o = ord_top⌝)
+                        (⌜o = ord_top ∧ varg = ([]: list val)↑⌝)
                           ** OwnM (knot_init)
                           ** inv_closed: iProp
                      ),

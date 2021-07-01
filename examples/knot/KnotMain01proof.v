@@ -99,7 +99,7 @@ Section SIMMODSEM.
                   | S n'' => Fib x + Fib n''
                   end). clear Heqn. rewrite Nat.sub_0_r. lia. }
     }
-    { init. unfold mainF, ccallN, ccallU. harg. mDesAll. subst.
+    { init. unfold mainF, ccallN, ccallU. harg. mDesAll. des; subst.
       steps. astart 2.
       hexploit (SKINCL "fib"); ss; eauto. i. des.
       rewrite FIND. ss. steps.

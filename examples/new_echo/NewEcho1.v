@@ -42,7 +42,7 @@ Section PROOF.
                 (∃ (stk0: list Z) (argl: list val),
                   ⌜_argh = stk0↑ ∧ _argl = argl↑ ∧ argl = [Vptr h 0] ∧ o = ord_top⌝
                    ** (is_int_stack h stk0))%I)
-             (fun _ h _reth _ => (∃ (stk1: list Z), ⌜_reth = stk1↑⌝ ** is_int_stack h stk1)%I)
+             (fun _ h _reth _retl => (∃ (stk1: list Z), ⌜_reth = stk1↑ ∧ _retl = Vundef↑⌝ ** is_int_stack h stk1)%I)
   .
 
   Definition input_body: list Z -> itree (kCallE +' pE +' eventE) (list Z) :=
@@ -65,7 +65,7 @@ Section PROOF.
                 (∃ (stk0: list Z) (argl: list val),
                   ⌜_argh = stk0↑ ∧ _argl = argl↑ ∧ argl = [Vptr h 0] ∧ o = ord_top⌝
                    ** is_int_stack h stk0)%I)
-             (fun _ h _reth _ => (∃ (stk1: list Z), ⌜_reth = stk1↑⌝ ** is_int_stack h stk1)%I)
+             (fun _ h _reth _retl => (∃ (stk1: list Z), ⌜_reth = stk1↑ ∧ _retl = Vundef↑⌝ ** is_int_stack h stk1)%I)
   .
 
   Definition output_body: list Z -> itree (kCallE +' pE +' eventE) (list Z) :=
