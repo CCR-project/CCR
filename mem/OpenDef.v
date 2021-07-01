@@ -78,24 +78,24 @@ Section KMODSEM.
   (************************* TGT ***************************)
   (************************* TGT ***************************)
 
-  Definition transl_kCallE_tgt: callE ~> callE :=
+  Definition transl_kCallE_mid: callE ~> callE :=
     fun _ '(Call fn args) => Call fn (Any.pair true↑ args)
   .
 
-  Definition transl_event_tgt: hEs ~> hEs :=
-    (bimap (id_ _) (bimap transl_kCallE_tgt (id_ _)))
+  Definition transl_event_mid: hEs ~> hEs :=
+    (bimap (id_ _) (bimap transl_kCallE_mid (id_ _)))
   .
 
-  Definition transl_itr_tgt: itree hEs ~> itree hEs :=
-    fun _ => interp (T:=_) (fun _ e => trigger (transl_event_tgt e))
+  Definition transl_itr_mid: itree hEs ~> itree hEs :=
+    fun _ => interp (T:=_) (fun _ e => trigger (transl_event_mid e))
   .
 
-  Definition transl_fun_tgt (ktr: (option mname * Any.t) -> itree hEs Any.t):
+  Definition transl_fun_mid (ktr: (option mname * Any.t) -> itree hEs Any.t):
     (option mname * Any.t) -> itree hEs Any.t :=
-    (transl_itr_tgt (T:=_)) ∘ ktr
+    (transl_itr_mid (T:=_)) ∘ ktr
   .
 
-  Definition disclose_tgt (fs: fspec): fspec :=
+  Definition disclose_mid (fs: fspec): fspec :=
     mk_fspec (meta:=option fs.(meta))
              (fun mn ox argh argl o =>
                 match ox with
@@ -106,17 +106,17 @@ Section KMODSEM.
                 map_or_else ox (fun x => (fs.(postcond) mn x reth retl)) (⌜reth = retl⌝: iProp)%I)
   .
 
-  Definition disclose_ksb_tgt (ksb: kspecbody): fspecbody :=
-    mk_specbody (disclose_tgt ksb)
+  Definition disclose_ksb_mid (ksb: kspecbody): fspecbody :=
+    mk_specbody (disclose_mid ksb)
                 (fun '(mn, argh) =>
                    '(kf, argh) <- (Any.split argh)ǃ;; kf <- kf↓ǃ;;
                    my_if kf
-                         (transl_fun_tgt ksb.(ksb_kbody) (mn, argh))
-                         (transl_fun_tgt ksb.(ksb_ubody) (mn, argh)))
+                         (transl_fun_mid ksb.(ksb_kbody) (mn, argh))
+                         (transl_fun_mid ksb.(ksb_ubody) (mn, argh)))
   .
 
-  Definition transl_tgt (ms: t): SModSem.t := {|
-    SModSem.fnsems := List.map (map_snd disclose_ksb_tgt) ms.(fnsems);
+  Definition transl_mid (ms: t): SModSem.t := {|
+    SModSem.fnsems := List.map (map_snd disclose_ksb_mid) ms.(fnsems);
     SModSem.mn := ms.(mn);
     SModSem.initial_mr := ms.(initial_mr);
     SModSem.initial_st := ms.(initial_st);
@@ -146,205 +146,205 @@ Section KMODSEM.
   (****************** Reduction Lemmas *****************)
   (*****************************************************)
 
-  Lemma transl_itr_tgt_bind
+  Lemma transl_itr_mid_bind
         (R S: Type)
         (s: itree _ R) (k : R -> itree _ S)
     :
-      (transl_itr_tgt (s >>= k))
+      (transl_itr_mid (s >>= k))
       =
-      ((transl_itr_tgt s) >>= (fun r => transl_itr_tgt (k r))).
+      ((transl_itr_mid s) >>= (fun r => transl_itr_mid (k r))).
   Proof.
-    unfold transl_itr_tgt in *. grind.
+    unfold transl_itr_mid in *. grind.
   Qed.
 
-  Lemma transl_itr_tgt_tau
+  Lemma transl_itr_mid_tau
         (U: Type)
         (t : itree _ U)
     :
-      (transl_itr_tgt (Tau t))
+      (transl_itr_mid (Tau t))
       =
-      (Tau (transl_itr_tgt t)).
+      (Tau (transl_itr_mid t)).
   Proof.
-    unfold transl_itr_tgt in *. grind.
+    unfold transl_itr_mid in *. grind.
   Qed.
 
-  Lemma transl_itr_tgt_ret
+  Lemma transl_itr_mid_ret
         (U: Type)
         (t: U)
     :
-      ((transl_itr_tgt (Ret t)))
+      ((transl_itr_mid (Ret t)))
       =
       Ret t.
   Proof.
-    unfold transl_itr_tgt in *. grind.
+    unfold transl_itr_mid in *. grind.
   Qed.
 
-  Lemma transl_itr_tgt_triggerp
+  Lemma transl_itr_mid_triggerp
         (R: Type)
         (i: pE R)
     :
-      (transl_itr_tgt (trigger i))
+      (transl_itr_mid (trigger i))
       =
       (trigger i >>= (fun r => tau;; Ret r)).
   Proof.
-    unfold transl_itr_tgt in *.
+    unfold transl_itr_mid in *.
     repeat rewrite interp_trigger. grind.
   Qed.
 
-  Lemma transl_itr_tgt_triggere
+  Lemma transl_itr_mid_triggere
         (R: Type)
         (i: eventE R)
     :
-      (transl_itr_tgt (trigger i))
+      (transl_itr_mid (trigger i))
       =
       (trigger i >>= (fun r => tau;; Ret r)).
   Proof.
-    unfold transl_itr_tgt in *.
+    unfold transl_itr_mid in *.
     repeat rewrite interp_trigger. grind.
   Qed.
 
-  Lemma transl_itr_tgt_call
+  Lemma transl_itr_mid_call
         (R: Type)
         (i: callE R)
     :
-      (transl_itr_tgt (trigger i))
+      (transl_itr_mid (trigger i))
       =
-      (trigger (transl_kCallE_tgt i) >>= (fun r => tau;; Ret r)).
+      (trigger (transl_kCallE_mid i) >>= (fun r => tau;; Ret r)).
   Proof.
-    unfold transl_itr_tgt in *.
+    unfold transl_itr_mid in *.
     repeat rewrite interp_trigger. grind.
   Qed.
 
-  Lemma transl_itr_tgt_hapc
+  Lemma transl_itr_mid_hapc
         (R: Type)
         (i: hAPCE R)
     :
-      (transl_itr_tgt (trigger i))
+      (transl_itr_mid (trigger i))
       =
       (trigger i >>= (fun r => tau;; Ret r)).
   Proof.
-    unfold transl_itr_tgt in *.
+    unfold transl_itr_mid in *.
     repeat rewrite interp_trigger. grind.
   Qed.
 
-  Lemma transl_itr_tgt_triggerUB
+  Lemma transl_itr_mid_triggerUB
         (R: Type)
     :
-      (transl_itr_tgt (triggerUB))
+      (transl_itr_mid (triggerUB))
       =
       triggerUB (A:=R).
   Proof.
-    unfold transl_itr_tgt, triggerUB in *. rewrite unfold_interp. cbn. grind.
+    unfold transl_itr_mid, triggerUB in *. rewrite unfold_interp. cbn. grind.
   Qed.
 
-  Lemma transl_itr_tgt_triggerNB
+  Lemma transl_itr_mid_triggerNB
         (R: Type)
     :
-      (transl_itr_tgt (triggerNB))
+      (transl_itr_mid (triggerNB))
       =
       triggerNB (A:=R).
   Proof.
-    unfold transl_itr_tgt, triggerNB in *. rewrite unfold_interp. cbn. grind.
+    unfold transl_itr_mid, triggerNB in *. rewrite unfold_interp. cbn. grind.
   Qed.
 
-  Lemma transl_itr_tgt_unwrapU
+  Lemma transl_itr_mid_unwrapU
         (R: Type)
         (i: option R)
     :
-      (transl_itr_tgt (unwrapU i))
+      (transl_itr_mid (unwrapU i))
       =
       (unwrapU i).
   Proof.
-    unfold transl_itr_tgt, unwrapU in *. des_ifs.
+    unfold transl_itr_mid, unwrapU in *. des_ifs.
     { etrans.
-      { eapply transl_itr_tgt_ret. }
+      { eapply transl_itr_mid_ret. }
       { grind. }
     }
     { etrans.
-      { eapply transl_itr_tgt_triggerUB. }
+      { eapply transl_itr_mid_triggerUB. }
       { unfold triggerUB. grind. }
     }
   Qed.
 
-  Lemma transl_itr_tgt_unwrapN
+  Lemma transl_itr_mid_unwrapN
         (R: Type)
         (i: option R)
     :
-      (transl_itr_tgt (unwrapN i))
+      (transl_itr_mid (unwrapN i))
       =
       (unwrapN i).
   Proof.
-    unfold transl_itr_tgt, unwrapN in *. des_ifs.
+    unfold transl_itr_mid, unwrapN in *. des_ifs.
     { etrans.
-      { eapply transl_itr_tgt_ret. }
+      { eapply transl_itr_mid_ret. }
       { grind. }
     }
     { etrans.
-      { eapply transl_itr_tgt_triggerNB. }
+      { eapply transl_itr_mid_triggerNB. }
       { unfold triggerNB. grind. }
     }
   Qed.
 
-  Lemma transl_itr_tgt_assume
+  Lemma transl_itr_mid_assume
         P
     :
-      (transl_itr_tgt (assume P))
+      (transl_itr_mid (assume P))
       =
       (assume P;;; tau;; Ret tt)
   .
   Proof.
-    unfold assume. rewrite transl_itr_tgt_bind. rewrite transl_itr_tgt_triggere. grind. eapply transl_itr_tgt_ret.
+    unfold assume. rewrite transl_itr_mid_bind. rewrite transl_itr_mid_triggere. grind. eapply transl_itr_mid_ret.
   Qed.
 
-  Lemma transl_itr_tgt_guarantee
+  Lemma transl_itr_mid_guarantee
         P
     :
-      (transl_itr_tgt (guarantee P))
+      (transl_itr_mid (guarantee P))
       =
       (guarantee P;;; tau;; Ret tt).
   Proof.
-    unfold guarantee. rewrite transl_itr_tgt_bind. rewrite transl_itr_tgt_triggere. grind. eapply transl_itr_tgt_ret.
+    unfold guarantee. rewrite transl_itr_mid_bind. rewrite transl_itr_mid_triggere. grind. eapply transl_itr_mid_ret.
   Qed.
 
-  Lemma transl_itr_tgt_ext
+  Lemma transl_itr_mid_ext
         R (itr0 itr1: itree _ R)
         (EQ: itr0 = itr1)
     :
-      (transl_itr_tgt itr0)
+      (transl_itr_mid itr0)
       =
-      (transl_itr_tgt itr1)
+      (transl_itr_mid itr1)
   .
   Proof. subst; et. Qed.
 
-  Global Opaque transl_itr_tgt.
+  Global Opaque transl_itr_mid.
 
 End KMODSEM.
 End KModSem.
-Coercion KModSem.disclose_ksb_tgt: kspecbody >-> fspecbody.
-Coercion KModSem.transl_tgt: KModSem.t >-> SModSem.t.
+Coercion KModSem.disclose_ksb_mid: kspecbody >-> fspecbody.
+Coercion KModSem.transl_mid: KModSem.t >-> SModSem.t.
 
 
 
 Section RDB.
   Context `{Σ: GRA.t}.
 
-  Global Program Instance ktransl_itr_tgt_rdb: red_database (mk_box (@KModSem.transl_itr_tgt)) :=
+  Global Program Instance ktransl_itr_mid_rdb: red_database (mk_box (@KModSem.transl_itr_mid)) :=
     mk_rdb
       0
-      (mk_box KModSem.transl_itr_tgt_bind)
-      (mk_box KModSem.transl_itr_tgt_tau)
-      (mk_box KModSem.transl_itr_tgt_ret)
-      (mk_box KModSem.transl_itr_tgt_call)
-      (mk_box KModSem.transl_itr_tgt_triggere)
-      (mk_box KModSem.transl_itr_tgt_triggerp)
-      (mk_box KModSem.transl_itr_tgt_hapc)
-      (mk_box KModSem.transl_itr_tgt_triggerUB)
-      (mk_box KModSem.transl_itr_tgt_triggerNB)
-      (mk_box KModSem.transl_itr_tgt_unwrapU)
-      (mk_box KModSem.transl_itr_tgt_unwrapN)
-      (mk_box KModSem.transl_itr_tgt_assume)
-      (mk_box KModSem.transl_itr_tgt_guarantee)
-      (mk_box KModSem.transl_itr_tgt_ext)
+      (mk_box KModSem.transl_itr_mid_bind)
+      (mk_box KModSem.transl_itr_mid_tau)
+      (mk_box KModSem.transl_itr_mid_ret)
+      (mk_box KModSem.transl_itr_mid_call)
+      (mk_box KModSem.transl_itr_mid_triggere)
+      (mk_box KModSem.transl_itr_mid_triggerp)
+      (mk_box KModSem.transl_itr_mid_hapc)
+      (mk_box KModSem.transl_itr_mid_triggerUB)
+      (mk_box KModSem.transl_itr_mid_triggerNB)
+      (mk_box KModSem.transl_itr_mid_unwrapU)
+      (mk_box KModSem.transl_itr_mid_unwrapN)
+      (mk_box KModSem.transl_itr_mid_assume)
+      (mk_box KModSem.transl_itr_mid_guarantee)
+      (mk_box KModSem.transl_itr_mid_ext)
   .
 
 End RDB.
@@ -403,14 +403,14 @@ Section KMOD.
   }
   .
 
-  Definition transl_tgt (md: t): SMod.t := {|
-    SMod.get_modsem := fun sk => KModSem.transl_tgt (md.(get_modsem) sk);
+  Definition transl_mid (md: t): SMod.t := {|
+    SMod.get_modsem := fun sk => KModSem.transl_mid (md.(get_modsem) sk);
     SMod.sk := md.(sk);
   |}
   .
 
-  Lemma transl_tgt_comm: forall md sk, KModSem.transl_tgt (md.(get_modsem) sk) =
-                                       (transl_tgt md).(SMod.get_modsem) sk.
+  Lemma transl_mid_comm: forall md sk, KModSem.transl_mid (md.(get_modsem) sk) =
+                                       (transl_mid md).(SMod.get_modsem) sk.
   Proof. i. refl. Qed.
 
   Definition transl_src (frds: Sk.t -> list mname) (md: t): Mod.t := {|
@@ -426,4 +426,4 @@ Section KMOD.
 End KMOD.
 End KMod.
 
-Coercion KMod.transl_tgt: KMod.t >-> SMod.t.
+Coercion KMod.transl_mid: KMod.t >-> SMod.t.

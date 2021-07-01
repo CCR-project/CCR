@@ -52,13 +52,17 @@ Qed.
 Section ITREEAUX.
   Definition trivial_state_Handler `{E -< F} {S}: E ~> (stateT S (itree F)) :=
     fun T X s => x <- trigger X;; Ret (s, x).
+
   Definition addtau `{eventE -< E}: itree E ~> itree E := interp (fun _ (e: E _) => tau;; trigger e).
+
   Definition addtau_ktr `{eventE -< E} {R}: ktree E R ~> ktree E R := fun _ ktr => addtau(T:=_) ∘ ktr.
+
   Section ADDTAU.
   (*****************************************************)
   (****************** Reduction Lemmas *****************)
   (*****************************************************)
   Context `{eventE -< E}.
+
   Lemma addtau_bind
         (R S: Type)
         (s: itree E R) (k : R -> itree E S)
@@ -80,6 +84,7 @@ Section ITREEAUX.
   Proof.
     unfold addtau in *. grind.
   Qed.
+
   Lemma addtau_ret
         (U: Type)
         (t: U)
@@ -90,6 +95,7 @@ Section ITREEAUX.
   Proof.
     unfold addtau in *. grind.
   Qed.
+
   Lemma addtau_event
         (R: Type)
         (i: E R)
@@ -101,6 +107,7 @@ Section ITREEAUX.
     unfold addtau in *.
     repeat rewrite interp_trigger. grind.
   Qed.
+
   Lemma addtau_triggerUB
         (R: Type)
     :
@@ -110,6 +117,7 @@ Section ITREEAUX.
   Proof.
     unfold addtau, triggerUB in *. rewrite unfold_interp. cbn. grind.
   Qed.
+
   Lemma addtau_triggerNB
         (R: Type)
     :
@@ -119,6 +127,7 @@ Section ITREEAUX.
   Proof.
     unfold addtau, triggerNB in *. rewrite unfold_interp. cbn. grind.
   Qed.
+
   Lemma addtau_unwrapU
         (R: Type)
         (i: option R)
@@ -132,6 +141,7 @@ Section ITREEAUX.
   Proof.
     unfold addtau. unfold unwrapU. des_ifs; grind. eapply addtau_triggerUB.
   Qed.
+
   Lemma addtau_unwrapN
         (R: Type)
         (i: option R)
@@ -145,6 +155,7 @@ Section ITREEAUX.
   Proof.
     unfold addtau. unfold unwrapN. des_ifs; grind. eapply addtau_triggerNB.
   Qed.
+
   Lemma addtau_assume
         P
     :
@@ -155,6 +166,7 @@ Section ITREEAUX.
   Proof.
     unfold addtau, assume. grind. rewrite unfold_interp; cbn. grind.
   Qed.
+
   Lemma addtau_guarantee
         P
     :
@@ -164,6 +176,7 @@ Section ITREEAUX.
   Proof.
     unfold addtau, guarantee. grind. rewrite unfold_interp; cbn. grind.
   Qed.
+
   Lemma addtau_ext
         R (itr0 itr1: itree _ R)
         (EQ: itr0 = itr1)
@@ -173,6 +186,7 @@ Section ITREEAUX.
       (addtau itr1)
   .
   Proof. subst; et. Qed.
+
   Global Program Instance addtau_rdb: red_database (mk_box (@addtau E H)) :=
     mk_rdb
       0
@@ -205,17 +219,20 @@ End AUX.
 Import AUX.
 Section MODAUX.
   Context `{Σ: GRA.t}.
+
   Definition addtau_ms (ms: ModSem.t): ModSem.t := {|
     ModSem.fnsems := map (map_snd (addtau_ktr(T:=_))) ms.(ModSem.fnsems);
     ModSem.mn := ms.(ModSem.mn);
     ModSem.initial_st := ms.(ModSem.initial_st);
   |}
   .
+
   Definition addtau_md (md: Mod.t): Mod.t := {|
     Mod.get_modsem := addtau_ms ∘ md.(Mod.get_modsem);
     Mod.sk := md.(Mod.sk);
   |}
   .
+
   Theorem adequacy_addtau
           (md: Mod.t)
     :
@@ -267,6 +284,7 @@ Section MODAUX.
     { ss. }
     { exists tt. ss. }
   Qed.
+
   Theorem adequacy_rmtau
           md
     :
@@ -338,10 +356,12 @@ Section MASSAGE.
     else
       fun T '(Call fn args) => trigger (Call fn args)
   .
+
   Definition massage_itr b: itree Es ~> itree hEs :=
     (* interp (case_ (massage_callE) (case_ (massage_rE) (case_ (massage_pE) trivial_state_Handler))) *)
     interp (case_ (massage_callE b) trivial_Handler)
   .
+
   Definition massage_fun (b: bool) (ktr: (option mname * Any.t) -> itree Es Any.t): ((option mname * Any.t) -> itree hEs Any.t) :=
     if b
     then
@@ -352,9 +372,11 @@ Section MASSAGE.
       fun '(mn, args) =>
         massage_itr b (ktr (mn, args))
   .
+
   Definition massage_fsb b: ((option mname * Any.t) -> itree Es Any.t) -> fspecbody :=
-    fun ktr => mk_specbody (KModSem.disclose_tgt fspec_trivial) (massage_fun b ktr)
+    fun ktr => mk_specbody (KModSem.disclose_mid fspec_trivial) (massage_fun b ktr)
   .
+
   Definition massage_ms b (ms: ModSem.t): SModSem.t := {|
     SModSem.fnsems := List.map (map_snd (massage_fsb b)) ms.(ModSem.fnsems);
     SModSem.mn := ms.(ModSem.mn);
@@ -377,6 +399,7 @@ Section MASSAGE.
   Proof.
     unfold massage_itr in *. rewrite interp_bind. grind.
   Qed.
+
   Lemma massage_itr_tau b
         (U: Type)
         (t : itree _ U)
@@ -387,6 +410,7 @@ Section MASSAGE.
   Proof.
     unfold massage_itr in *. rewrite interp_tau. grind.
   Qed.
+
   Lemma massage_itr_ret b
         (U: Type)
         (t: U)
@@ -397,6 +421,7 @@ Section MASSAGE.
   Proof.
     unfold massage_itr in *. rewrite interp_ret. grind.
   Qed.
+
   Lemma massage_itr_pe b
         (R: Type)
         (i: pE R)
@@ -407,6 +432,7 @@ Section MASSAGE.
   Proof.
     unfold massage_itr in *. rewrite interp_trigger. grind.
   Qed.
+
   Lemma massage_itr_calle b
         (R: Type)
         (i: callE R)
@@ -417,6 +443,7 @@ Section MASSAGE.
   Proof.
     unfold massage_itr in *. rewrite interp_trigger. grind.
   Qed.
+
   Lemma massage_itr_evente b
         (R: Type)
         (i: eventE R)
@@ -427,6 +454,7 @@ Section MASSAGE.
   Proof.
     unfold massage_itr in *. rewrite interp_trigger. grind.
   Qed.
+
   Lemma massage_itr_triggerUB b
         (R: Type)
     :
@@ -437,6 +465,7 @@ Section MASSAGE.
     unfold massage_itr, triggerUB in *. rewrite unfold_interp. cbn.
     unfold trivial_state_Handler. grind.
   Qed.
+
   Lemma massage_itr_triggerNB b
         (R: Type)
     :
@@ -447,6 +476,7 @@ Section MASSAGE.
     unfold massage_itr, triggerNB in *. rewrite unfold_interp. cbn.
     unfold trivial_state_Handler. grind.
   Qed.
+
   Lemma massage_itr_unwrapU b
         (R: Type)
         (i: option R)
@@ -465,6 +495,7 @@ Section MASSAGE.
       { unfold triggerUB. grind. }
     }
   Qed.
+
   Lemma massage_itr_unwrapN b
         (R: Type)
         (i: option R)
@@ -483,6 +514,7 @@ Section MASSAGE.
       { unfold triggerNB. grind. }
     }
   Qed.
+
   Lemma massage_itr_assume b
         P
     :
@@ -493,6 +525,7 @@ Section MASSAGE.
   Proof.
     unfold assume. rewrite massage_itr_bind. rewrite massage_itr_evente. grind. eapply massage_itr_ret.
   Qed.
+
   Lemma massage_itr_guarantee b
         P
     :
@@ -502,6 +535,7 @@ Section MASSAGE.
   Proof.
     unfold guarantee. rewrite massage_itr_bind. rewrite massage_itr_evente. grind. eapply massage_itr_ret.
   Qed.
+
   Lemma massage_itr_ext b
         R (itr0 itr1: itree _ R)
         (EQ: itr0 = itr1)
@@ -555,14 +589,14 @@ Section ADQ.
   Context `{Σ: GRA.t}.
   Variable _kmds: list KMod.t.
   Let frds: Sk.t -> list mname := fun sk => (map (KModSem.mn ∘ (flip KMod.get_modsem sk)) _kmds).
-  Let kmds: list SMod.t := List.map KMod.transl_tgt _kmds.
+  Let kmds: list SMod.t := List.map KMod.transl_mid _kmds.
   Let _kmss: Sk.t -> list SModSem.t := fun ske => List.map (flip SMod.get_modsem ske) kmds.
   Let _gstb: Sk.t -> list (gname * fspec) := fun ske =>
     (flat_map (List.map (map_snd fsb_fspec) ∘ SModSem.fnsems) (_kmss ske)).
   Let _stb: Sk.t -> gname -> option fspec :=
     fun sk fn => match alist_find fn (_gstb sk) with
                  | Some fsp => Some fsp
-                 | _ => Some (KModSem.disclose_tgt fspec_trivial)
+                 | _ => Some (KModSem.disclose_mid fspec_trivial)
                  end.
   Section UMDS.
   Variable umds: list Mod.t.
@@ -782,7 +816,7 @@ Section ADQ.
        (<<TGT: alist_find fn (ModSemL.fnsems (ModL.enclose prog_tgt)) = None>>)) \/
       (exists mn ksb,
           (<<SRC: alist_find fn (ModSemL.fnsems (ModL.enclose prog_mid)) = Some (transl_all (T:=_) mn ∘ KModSem.disclose_ksb_src (frds sk_link) ksb)>>) /\
-          (<<TGT: alist_find fn (ModSemL.fnsems (ModL.enclose prog_tgt)) = Some (transl_all (T:=_) mn ∘ (fun_to_src (KModSem.disclose_ksb_tgt ksb).(fsb_body)))>>) /\
+          (<<TGT: alist_find fn (ModSemL.fnsems (ModL.enclose prog_tgt)) = Some (transl_all (T:=_) mn ∘ (fun_to_src (KModSem.disclose_ksb_mid ksb).(fsb_body)))>>) /\
           (<<MN: List.In (Some mn) _frds>>)) \/
       (exists mn uf,
           (<<SRC: alist_find fn (ModSemL.fnsems (ModL.enclose prog_mid)) = Some (transl_all (T:=_) mn ∘ (fun_to_src (massage_fsb false uf).(fsb_body)))>>) /\
@@ -799,7 +833,7 @@ Section ADQ.
     :
       my_lemma2_r1 eq 200
                    (EventsL.interp_Es (ModSemL.prog (ModL.enclose prog_mid)) (transl_all mn (interp_hEs_src itr)) st)
-                   (EventsL.interp_Es (ModSemL.prog (ModL.enclose prog_tgt)) (transl_all mn (interp_hEs_src (KModSem.transl_itr_tgt itr))) st)
+                   (EventsL.interp_Es (ModSemL.prog (ModL.enclose prog_tgt)) (transl_all mn (interp_hEs_src (KModSem.transl_itr_mid itr))) st)
   .
 
   Variant my_lemma2_r2: forall R0 R1 (RR: R0 -> R1 -> Prop), Ord.t -> itree eventE R0 -> itree eventE R1 -> Prop :=
