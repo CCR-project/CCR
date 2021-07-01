@@ -26,8 +26,9 @@ Section PROOF.
   Definition newF: list val -> itree Es val :=
     fun args =>
       _ <- (pargs [] args)?;;
-      `new_node: val  <- (ccall "alloc" [Vint 1]);;
-      `_: val         <- (ccall "store" [new_node; Vnullptr]);;
+      `new_node: val  <- (ccallU "alloc" [Vint 1]);;
+      assume(wf_val new_node);;;
+      `_: val         <- (ccallU "store" [new_node; Vnullptr]);;
       Ret new_node
   .
 
@@ -45,17 +46,20 @@ Section PROOF.
   Definition popF: list val -> itree Es val :=
     fun args =>
       `stk: mblock <- (pargs [Tblk] args)?;;
-      `hd: val  <- (ccall "load" [Vptr stk 0]);;
-      `b: val   <- (ccall "cmp"  [hd; Vnullptr]);;
+      `hd: val  <- (ccallU "load" [Vptr stk 0]);;
+      assume(wf_val hd);;;
+      `b: val   <- (ccallU "cmp"  [hd; Vnullptr]);;
+      assume((wf_val b) /\ (match b with | Vint _ => True | _ => False end));;;
       if is_zero b
       then (
           let addr_val    := hd in
+          assume (match addr_val with | Vptr _ 0 => True | _ => False end);;;
           `addr_next: val <- (vadd hd (Vint 8))?;;
-          `v: val         <- (ccall "load"  [addr_val]);;
-          `next: val      <- (ccall "load"  [addr_next]);;
-          `_: val         <- (ccall "free"  [addr_val]);;
-          `_: val         <- (ccall "free"  [addr_next]);;
-          `_: val         <- (ccall "store" [Vptr stk 0; next]);;
+          `v: val         <- (ccallU "load"  [addr_val]);;
+          `next: val      <- (ccallU "load"  [addr_next]);;
+          `_: val         <- (ccallU "free"  [addr_val]);;
+          `_: val         <- (ccallU "free"  [addr_next]);;
+          `_: val         <- (ccallU "store" [Vptr stk 0; next]);;
           Ret v
         )
       else Ret (Vint (- 1))
@@ -72,18 +76,19 @@ Section PROOF.
   Definition pushF: list val -> itree Es val :=
     fun args =>
       '(stk, v)      <- (pargs [Tblk; Tuntyped] args)?;;
-      `new_node: val <- (ccall "alloc" [Vint 2]);;
+      `new_node: val <- (ccallU "alloc" [Vint 2]);;
       let addr_val   := new_node in
+      assume(match addr_val with | Vptr _ 0 => True | _ => False end);;;
       addr_next      <- (vadd new_node (Vint 8))?;;
-      `hd: val       <- (ccall "load"  [Vptr stk 0]);;
-      `_: val        <- (ccall "store" [addr_val;   v]);;
-      `_: val        <- (ccall "store" [addr_next; hd]);;
-      `_: val        <- (ccall "store" [Vptr stk 0; new_node]);;
+      `hd: val       <- (ccallU "load"  [Vptr stk 0]);;
+      `_: val        <- (ccallU "store" [addr_val;   v]);;
+      `_: val        <- (ccallU "store" [addr_next; hd]);;
+      `_: val        <- (ccallU "store" [Vptr stk 0; new_node]);;
       Ret Vundef
   .
 
   Definition StackSem: ModSem.t := {|
-    ModSem.fnsems := [("new", cfun newF); ("pop", cfun popF); ("push", cfun pushF)];
+    ModSem.fnsems := [("new", cfunU newF); ("pop", cfunU popF); ("push", cfunU pushF)];
     ModSem.mn := "Stack";
     ModSem.initial_st := tt↑;
   |}

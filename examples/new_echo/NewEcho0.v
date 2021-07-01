@@ -29,9 +29,9 @@ Section PROOF.
   Definition echo_body: list val -> itree Es val :=
     fun args =>
       _ <- (pargs [] args)?;;
-      `h: val    <- (ccall "new" ([]: list val));;
-      `_: val    <- (ccall "input" ([h]: list val));;
-      `_: val    <- (ccall "output" ([h]: list val));;
+      `h: val    <- (ccallU "new" ([]: list val));;
+      `_: val    <- (ccallU "input" ([h]: list val));;
+      `_: val    <- (ccallU "output" ([h]: list val));;
       Ret Vundef
   .
 
@@ -45,12 +45,12 @@ Section PROOF.
   Definition input_body: list val -> itree Es val :=
     fun args =>
       h <- (pargs [Tuntyped] args)?;;
-      `n: val    <- (ccall "getint" ([]: list val));;
+      `n: val    <- (ccallU "getint" ([]: list val));;
       if (dec n (Vint (- 1)))
       then Ret Vundef
       else
-        `_: val    <- (ccall "push" ([h; n]: list val));;
-        `_: val    <- (ccall "input" ([h]: list val));;
+        `_: val    <- (ccallU "push" ([h; n]: list val));;
+        `_: val    <- (ccallU "input" ([h]: list val));;
         Ret Vundef
   .
 
@@ -64,17 +64,17 @@ Section PROOF.
   Definition output_body: list val -> itree Es val :=
     fun args =>
       h <- (pargs [Tuntyped] args)?;;
-      `n: val    <- (ccall "pop" ([h]: list val));;
+      `n: val    <- (ccallU "pop" ([h]: list val));;
       if (dec n (Vint (- 1)))
       then Ret Vundef
       else
-        `_: val    <- (ccall "putint" ([n]: list val));;
-        `_: val    <- (ccall "output" ([h]: list val));;
+        `_: val    <- (ccallU "putint" ([n]: list val));;
+        `_: val    <- (ccallU "output" ([h]: list val));;
         Ret Vundef
   .
 
   Definition EchoSem: ModSem.t := {|
-    ModSem.fnsems := [("echo", cfun echo_body); ("input", cfun input_body); ("output", cfun output_body)];
+    ModSem.fnsems := [("echo", cfunU echo_body); ("input", cfunU input_body); ("output", cfunU output_body)];
     ModSem.mn := "Echo";
     ModSem.initial_st := tt↑;
   |}

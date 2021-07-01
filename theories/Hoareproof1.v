@@ -678,7 +678,7 @@ Section CANCEL.
       { _ord_step. }
       i. ired_both. unseal_left. steps.
       rewrite FINDMID. rewrite FINDSRC.
-      unfold fun_to_src, cfun, fun_to_mid. steps.
+      unfold fun_to_src, cfunN, fun_to_mid. steps.
       guclo ordC_spec. econs.
       { eapply OrdArith.add_base_l. }
       guclo bindC_spec. econs.
@@ -762,7 +762,7 @@ Section CANCEL.
 
       fold ms_src. fold ms_mid.
       rewrite FINDSRC. rewrite FINDMID. steps.
-      unfold fun_to_src, fun_to_mid, cfun. steps.
+      unfold fun_to_src, fun_to_mid, cfunN. steps.
 
       guclo ordC_spec. econs.
       { eapply OrdArith.add_base_l. }

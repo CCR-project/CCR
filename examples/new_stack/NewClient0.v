@@ -28,7 +28,7 @@ Section PROOF.
   Context `{Σ: GRA.t}.
 
   Definition ClientSem: ModSem.t := {|
-    ModSem.fnsems := [("getint", cfun getintF); ("putint", cfun putintF)];
+    ModSem.fnsems := [("getint", cfunU getintF); ("putint", cfunU putintF)];
     ModSem.mn := "Client";
     ModSem.initial_st := tt↑;
   |}

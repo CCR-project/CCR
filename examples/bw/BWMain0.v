@@ -41,17 +41,17 @@ def main(): Unit
 
   Definition mainF: list val -> itree Es val :=
     fun _ =>
-      `b: val <- ccall "getbool" ([]: list val);; `b: bool <- (unbool b)?;;
+      `b: val <- ccallU "getbool" ([]: list val);; `b: bool <- (unbool b)?;;
       (if(b)
-       then ccall "flip" ([]: list val)
+       then ccallU "flip" ([]: list val)
        else Ret Vundef);;;
-      `i: val <- ccall "get" ([]: list val);;
-      `_: val <- ccall "putint" [i];;
+      `i: val <- ccallU "get" ([]: list val);;
+      `_: val <- ccallU "putint" [i];;
       Ret Vundef
   .
 
   Definition MainSem: ModSem.t := {|
-    ModSem.fnsems := [("main", cfun mainF)];
+    ModSem.fnsems := [("main", cfunU mainF)];
     ModSem.mn := "Main";
     ModSem.initial_st := 0%Z↑;
   |}

@@ -641,7 +641,7 @@ Section PROOF.
       assert (TGTGFIND: Globalenvs.Genv.find_def (Globalenvs.Genv.globalenv tgt) b = Some (snd (compile_iFun (mn2, (fn, impf))))).
       { hexploit tgt_genv_find_def_by_blk; eauto. }
 
-      unfold cfun. sim_red.
+      unfold cfunU. sim_red.
       (* rewrite Any.upcast_downcast. sim_red. *)
       rewrite unfold_eval_imp_only.
       grind. des_ifs.
@@ -793,7 +793,7 @@ Section PROOF.
       assert (TGTGFIND: Globalenvs.Genv.find_def (Globalenvs.Genv.globalenv tgt) b = Some (snd (compile_iFun (mn2, (fn, impf))))).
       { hexploit tgt_genv_find_def_by_blk; eauto. }
 
-      unfold cfun. sim_red.
+      unfold cfunU. sim_red.
       (* rewrite Any.upcast_downcast. sim_red. *)
       rewrite unfold_eval_imp_only.
       grind. des_ifs.
@@ -1050,7 +1050,7 @@ Section PROOF.
       | [ MCONT: match_code _ ?_ms _ _ _ |- _ ] =>
         set (ms:=_ms) in *
       end.
-      unfold cfun.
+      unfold cfunU.
       unfold allocF. sim_red.
       do 3 (gstep; sim_tau). sim_red.
       rewrite PSTATE. rewrite Any.upcast_downcast. grind. unfold unint. des_ifs; sim_red.
@@ -1164,7 +1164,7 @@ Section PROOF.
       | [ MCONT: match_code _ ?_ms _ _ _ |- _ ] =>
         set (ms:=_ms) in *
       end.
-      unfold cfun. grind. unfold freeF. sim_red.
+      unfold cfunU. grind. unfold freeF. sim_red.
       do 3 (gstep; sim_tau). sim_red.
       rewrite PSTATE. rewrite Any.upcast_downcast. grind. unfold unptr. des_ifs; sim_red.
       1,3: sim_triggerUB.
@@ -1212,7 +1212,7 @@ Section PROOF.
       | [ MCONT: match_code _ ?_ms _ _ _ |- _ ] =>
         set (ms:=_ms) in *
       end.
-      unfold cfun.
+      unfold cfunU.
       grind. unfold loadF. sim_red.
       do 3 (gstep; sim_tau). sim_red.
       rewrite PSTATE. rewrite Any.upcast_downcast. grind. unfold unptr. des_ifs; sim_red.
@@ -1261,7 +1261,7 @@ Section PROOF.
       sim_red.
       eapply step_expr; eauto. i. sim_red.
       grind. do 1 (gstep; sim_tau). sim_red.
-      unfold cfun.
+      unfold cfunU.
       grind. unfold storeF. sim_red.
       do 3 (gstep; sim_tau). sim_red.
       rewrite PSTATE. rewrite Any.upcast_downcast. grind. unfold unptr. des_ifs; sim_red.
@@ -1316,7 +1316,7 @@ Section PROOF.
       sim_red.
       (* destruct rstate. ss. destruct l0; clarify. *)
       grind. do 1 (gstep; sim_tau). sim_red.
-      (* unfold cfun. *)
+      (* unfold cfunU. *)
       grind. unfold cmpF. sim_red.
       do 3 (gstep; sim_tau). sim_red.
       rewrite PSTATE. rewrite Any.upcast_downcast. grind.

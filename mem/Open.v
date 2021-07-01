@@ -700,7 +700,7 @@ Section ADQ.
   .
   Proof.
     Local Transparent HoareFun.
-    unfold fun_to_tgt, HoareFun, mput, mget, cfun.
+    unfold fun_to_tgt, HoareFun, mput, mget, cfunN.
     Local Opaque HoareFun.
     ginit. steps.
     assert (x1 = ord_top /\ exists b, x0 = Any.pair b t).

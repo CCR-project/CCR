@@ -40,7 +40,7 @@ Section SIMMODSEM.
     { ss. }
     2: { exists tt. econs; ss; red; uipropall. }
     econs; ss. init. harg. mDesAll.
-    des; clarify. unfold gF, ccall. steps. astart 10.
+    des; clarify. unfold gF, ccallU. steps. astart 10.
     force_r.
     { eapply mut_max_intrange. auto. } steps.
     destruct (dec (Z.of_nat x) 0%Z).

@@ -43,28 +43,25 @@ Section SIMMODSEM.
     forall ge, ModSemPair.sim MutG0.GSem (MutGImp.GSem ge).
   Proof.
     econstructor 1 with (wf:=wf) (le:=top2); et; ss.
-    econs; ss. init. unfold cfun.
+    econs; ss. init. unfold cfunU.
     unfold gF.
     unfold MutGImp.gF.
     Local Opaque vadd.
     steps.
     rewrite unfold_eval_imp.
-    eapply Any.downcast_upcast in _UNWRAPN. des.
+    (* eapply Any.downcast_upcast in _UNWRAPN. des. *)
     unfold unint in *. destruct v; clarify; ss.
     des_ifs.
     2: exfalso; apply n; solve_NoDup.
     3:{ exfalso; apply n0; solve_NoDup. }
     - imp_steps. red. esplits; et.
-    - unfold ccall.
+    - unfold ccallU.
       imp_steps. replace (z =? 0)%Z with false.
       2:{ symmetry. eapply Z.eqb_neq. auto. }
       imp_steps.
       gstep. econs; ss. i. exists 100.
       imp_steps.
-      des_ifs.
-      3:{ bsimpl. admit "solve for z". }
-      { imp_steps. rewrite _UNWRAPU. steps. imp_steps. red. esplits; et. }
-      { imp_steps. rewrite _UNWRAPU. steps. imp_steps. red. esplits; et. }
+      rewrite _UNWRAPU1. steps. imp_steps. red. esplits; et.
     Unshelve. all: ss.
   Qed.
 

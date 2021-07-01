@@ -24,10 +24,10 @@ Section PROOF.
       Ret (Vint 55)
   .
 
-  Definition mainsbtb := [("main", mk_specbody main_spec (cfun mainBody))].
+  Definition mainsbtb := [("main", mk_specbody main_spec (cfunN mainBody))].
 
   Definition SMain: SMod.t := SMod.main (fun varg o => (⌜varg = ([]: list val)↑ ∧ o = ord_top⌝: iProp)%I)
-                                        (cfun mainBody).
+                                        (cfunN mainBody).
   Definition Main: Mod.t := SMod.to_tgt (fun _ => GlobalStb) SMain.
 
 End PROOF.

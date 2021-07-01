@@ -906,7 +906,7 @@ Ltac init :=
   split; ss; intros varg_src [mn varg] EQ w mrp_src mp_tgt WF;
   (try subst varg_src); exists 100; cbn;
   ginit;
-  try (unfold fun_to_tgt, cfun; rewrite HoareFun_parse); simpl.
+  try (unfold fun_to_tgt, cfunN, cfunU; rewrite HoareFun_parse); simpl.
 
 Ltac harg :=
   let PRE := constr:("PRE") in

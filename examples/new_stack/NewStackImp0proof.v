@@ -32,6 +32,8 @@ Local Open Scope nat_scope.
 
 Section SIMMODSEM.
 
+  Import ImpNotations.
+
   Context `{Σ: GRA.t}.
 
   Let W: Type := Any.t * Any.t.
@@ -48,34 +50,80 @@ Section SIMMODSEM.
     econstructor 1 with (wf:=wf) (le:=top2); et; ss.
     econs; ss.
     { init.
-      unfold newF.
-      unfold new.
+      unfold newF, new.
       steps.
-      rewrite unfold_eval_imp.
-      steps.
+      rewrite unfold_eval_imp. steps.
       des_ifs.
       2:{ exfalso; apply n. solve_NoDup. }
       imp_steps.
-      unfold ccall.
-      imp_steps.
-      gstep. econs; ss. i. exists 100.
-      imp_steps.
-      (* des_ifs. *)
-      admit "wf for alloced ptr".
+      unfold ccallU. imp_steps.
+      gstep. econs; ss. i. exists 100. imp_steps.
+      gstep. econs; ss. i. exists 100. imp_steps.
+      red. esplits; et.
     }
     econs; ss.
     { init.
       steps.
-      unfold popF.
-      unfold pop.
+      unfold popF, pop.
       steps.
-      rewrite unfold_eval_imp.
-      imp_steps.
+      rewrite unfold_eval_imp. steps.
       des_ifs.
-      2:{ exfalso; apply n. solve_NoDup. }
+      2:{ exfalso; apply n0. solve_NoDup. }
       imp_steps.
-      
-      (* Unshelve. all: ss. *)
-  Admitted.
+      unfold unblk in *. des_ifs.
+      imp_steps.
+      unfold ccallU. imp_steps.
+      unfold unblk in *. des_ifs. clarify; ss.
+      gstep. econs; ss. i. exists 100. imp_steps.
+      gstep. econs; ss. i. exists 100. imp_steps.
+      des. des_ifs_safe. ss.
+      destruct (n1 =? 0)%Z eqn:N1; ss; clarify.
+      - apply Z.eqb_eq in N1. clarify. ss.
+        grind. ss.
+        destruct v; ss.
+        { steps. }
+        destruct ofs; ss.
+        2:{ steps. }
+        imp_steps.
+        gstep. econs; ss. i. exists 100. imp_steps.
+        uo. des_ifs_safe; ss; clarify. unfold scale_int in Heq2.
+        des_ifs_safe. steps.
+        gstep. econs; ss. i. exists 100. imp_steps.
+        gstep. econs; ss. i. exists 100. imp_steps.
+        unfold scale_int. uo; ss. des_ifs. ss.
+        rewrite Z_div_same; ss. rewrite Z.add_0_l. steps.
+        gstep. econs; ss. i. exists 100. imp_steps.
+        gstep. econs; ss. i. exists 100. imp_steps.
+        red. esplits; et.
+      - apply Z.eqb_neq in N1.
+        unfold sumbool_to_bool. des_ifs_safe.
+        imp_steps.
+        red. esplits; et. unfold wf. ss.
+    }
+    econs; ss.
+    { init.
+      steps.
+      unfold pushF, push.
+      steps.
+      rewrite unfold_eval_imp. imp_steps.
+      des_ifs.
+      2:{ exfalso. apply n0; solve_NoDup. }
+      imp_steps.
+      unfold unblk in *. des_ifs.
+      imp_steps.
+      unfold ccallU. steps.
+      gstep. econs; ss. i. exists 100. imp_steps.
+      rewrite _UNWRAPU1. imp_steps.
+      gstep. econs; ss. i. exists 100. imp_steps.
+      gstep. econs; ss. i. exists 100. imp_steps.
+      uo; des_ifs; ss; clarify.
+      2:{ unfold scale_int in *. des_ifs. }
+      imp_steps.
+      gstep. econs; ss. i. exists 100. imp_steps.
+      gstep. econs; ss. i. exists 100. imp_steps.
+      red. esplits; et.
+    }
+    Unshelve. all: ss.
+  Qed.
 
 End SIMMODSEM.

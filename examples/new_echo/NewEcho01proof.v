@@ -71,7 +71,7 @@ Section SIMMODSEM.
       - eapply to_semantic. iIntros "H". ss.
     }
     econs; ss.
-    { unfold NewEcho0.echo_body, echo_body, cfun, kcall, ccall. trivial_init. post_call.
+    { unfold NewEcho0.echo_body, echo_body, cfunN, cfunU, kcall, ccallN, ccallU. trivial_init. post_call.
       des_ifs. steps. unfold KModSem.transl_fun_tgt. steps. rewrite _UNWRAPN. steps.
       kstart 1. kcatch. { eapply STBINCL. stb_tac; ss. } hcall _ (Some _) _ with ""; ss; et.
       { ss. }
@@ -88,7 +88,7 @@ Section SIMMODSEM.
       hret _; ss.
     }
     econs; ss.
-    { unfold NewEcho0.input_body, input_body, cfun, kcall, ccall. init. harg. post_call.
+    { unfold NewEcho0.input_body, input_body, cfunU, kcall, ccallU. init. harg. post_call.
       unfold KModSem.transl_fun_tgt.
       destruct x; des_ifs_safe; mDesAll; ss; des; subst; cycle 1.
       { rewrite Any.pair_split. steps. }
@@ -116,7 +116,7 @@ Section SIMMODSEM.
         { iModIntro. iSplits; ss; et. }
     }
     econs; ss.
-    { unfold NewEcho0.output_body, output_body, cfun, kcall, ccall. init. harg. post_call.
+    { unfold NewEcho0.output_body, output_body, cfunU, kcall, ccallU. init. harg. post_call.
       unfold KModSem.transl_fun_tgt.
       destruct x; des_ifs_safe; mDesAll; ss; des; subst; cycle 1.
       { rewrite Any.pair_split. steps. }

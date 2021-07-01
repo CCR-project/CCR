@@ -24,7 +24,7 @@ Section PROOF.
   .
 
   Definition MainSem: KModSem.t := {|
-    KModSem.fnsems := [("main", ksb_trivial (cfun main_body))];
+    KModSem.fnsems := [("main", ksb_trivial (cfunN main_body))];
     KModSem.mn := "main";
     KModSem.initial_mr := ε;
     KModSem.initial_st := tt↑;

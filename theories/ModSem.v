@@ -786,9 +786,14 @@ Section EVENTSCOMMON.
   (*   fun varg => varg <- varg↓ǃ;; vret <- body varg;; Ret vret↑. *)
   Context `{HasCallE: callE -< E}.
   Context `{HasEventE: eventE -< E}.
-  Definition ccall {X Y} (fn: gname) (varg: X): itree E Y := vret <- trigger (Call fn varg↑);; vret <- vret↓ǃ;; Ret vret.
-  Definition cfun {X Y} (body: X -> itree E Y): (option mname * Any.t) -> itree E Any.t :=
+
+  Definition ccallN {X Y} (fn: gname) (varg: X): itree E Y := vret <- trigger (Call fn varg↑);; vret <- vret↓ǃ;; Ret vret.
+  Definition ccallU {X Y} (fn: gname) (varg: X): itree E Y := vret <- trigger (Call fn varg↑);; vret <- vret↓?;; Ret vret.
+
+  Definition cfunN {X Y} (body: X -> itree E Y): (option mname * Any.t) -> itree E Any.t :=
     fun '(_, varg) => varg <- varg↓ǃ;; vret <- body varg;; Ret vret↑.
+  Definition cfunU {X Y} (body: X -> itree E Y): (option mname * Any.t) -> itree E Any.t :=
+    fun '(_, varg) => varg <- varg↓?;; vret <- body varg;; Ret vret↑.
 
 End EVENTSCOMMON.
 

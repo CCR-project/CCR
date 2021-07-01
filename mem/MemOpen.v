@@ -83,11 +83,11 @@ Section PROOF.
   Context `{@GRA.inG memRA Σ}.
 
   Definition MemSbtb: list (gname * kspecbody) :=
-    [("alloc", mk_kspecbody alloc_spec (cfun allocF) (fun _ => triggerNB));
-    ("free",   mk_kspecbody free_spec  (cfun freeF)  (fun _ => triggerNB));
-    ("load",   mk_kspecbody load_spec  (cfun loadF)  (fun _ => triggerNB));
-    ("store",  mk_kspecbody store_spec (cfun storeF) (fun _ => triggerNB));
-    ("cmp",    mk_kspecbody cmp_spec   (cfun cmpF)   (fun _ => triggerNB))
+    [("alloc", mk_kspecbody alloc_spec (cfunN allocF) (fun _ => triggerNB));
+    ("free",   mk_kspecbody free_spec  (cfunN freeF)  (fun _ => triggerNB));
+    ("load",   mk_kspecbody load_spec  (cfunN loadF)  (fun _ => triggerNB));
+    ("store",  mk_kspecbody store_spec (cfunN storeF) (fun _ => triggerNB));
+    ("cmp",    mk_kspecbody cmp_spec   (cfunN cmpF)   (fun _ => triggerNB))
     ]
   .
 

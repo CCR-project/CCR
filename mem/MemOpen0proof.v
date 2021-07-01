@@ -48,7 +48,7 @@ Section SIMMODSEM.
 
 
     econs; ss.
-    { unfold allocF, fun_to_src, body_to_src, cfun, KModSem.disclose_ksb_src, KModSem.body_to_src. init.
+    { unfold allocF, fun_to_src, body_to_src, cfunU, KModSem.disclose_ksb_src, KModSem.body_to_src. init.
       match goal with | |- context[my_if ?b _ _] => destruct b eqn:T end.
       { cbn. steps. }
       steps. inv WF.
@@ -59,7 +59,7 @@ Section SIMMODSEM.
       { steps. }
     }
     econs; ss.
-    { unfold freeF, fun_to_src, body_to_src, cfun, KModSem.disclose_ksb_src, KModSem.body_to_src. init.
+    { unfold freeF, fun_to_src, body_to_src, cfunU, KModSem.disclose_ksb_src, KModSem.body_to_src. init.
       match goal with | |- context[my_if ?b _ _] => destruct b eqn:T end.
       { cbn. steps. }
       steps. inv WF.
@@ -68,7 +68,7 @@ Section SIMMODSEM.
       red. esplits; et. rr. econs; ss. 
     }
     econs; ss.
-    { unfold loadF, fun_to_src, body_to_src, cfun, KModSem.disclose_ksb_src, KModSem.body_to_src. init.
+    { unfold loadF, fun_to_src, body_to_src, cfunU, KModSem.disclose_ksb_src, KModSem.body_to_src. init.
       match goal with | |- context[my_if ?b _ _] => destruct b eqn:T end.
       { cbn. steps. }
       steps. inv WF.
@@ -77,7 +77,7 @@ Section SIMMODSEM.
       red. esplits; et. rr. econs; ss.
     }
     econs; ss.
-    { unfold storeF, fun_to_src, body_to_src, cfun, KModSem.disclose_ksb_src, KModSem.body_to_src. init.
+    { unfold storeF, fun_to_src, body_to_src, cfunU, KModSem.disclose_ksb_src, KModSem.body_to_src. init.
       match goal with | |- context[my_if ?b _ _] => destruct b eqn:T end.
       { cbn. steps. }
       steps. inv WF.
@@ -86,7 +86,7 @@ Section SIMMODSEM.
       red. esplits; et. rr. econs; ss.
     }
     econs; ss.
-    { unfold cmpF, fun_to_src, body_to_src, cfun, KModSem.disclose_ksb_src, KModSem.body_to_src. init.
+    { unfold cmpF, fun_to_src, body_to_src, cfunU, KModSem.disclose_ksb_src, KModSem.body_to_src. init.
       match goal with | |- context[my_if ?b _ _] => destruct b eqn:T end.
       { cbn. steps. }
       steps. inv WF. 

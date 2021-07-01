@@ -235,7 +235,7 @@ Section CANCEL.
     : fspecbody :=
     mk_specbody
       (mk precond postcond)
-      (cfun body)
+      (cfunN body)
   .
 
   (*** argument remains the same ***)
@@ -1613,7 +1613,7 @@ Ltac ired_both := ired_l; ired_r.
   Ltac init :=
     split; ss; ii; clarify; rename y into varg; eexists 100%nat; ss; des; clarify;
     ginit; []; unfold alist_add, alist_remove; ss;
-    unfold fun_to_tgt, cfun; ss.
+    unfold fun_to_tgt, cfunN; ss.
 
 
 Create HintDb stb.
