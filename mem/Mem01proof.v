@@ -397,7 +397,7 @@ Section SIMMODSEM.
     econs; ss.
     { unfold cmpF. init.
       harg. fold wf. steps. hide_k.
-      { des_ifs_safe (mDesAll; ss). des; subst. clarify. rewrite Any.upcast_downcast in *. clarify.
+      { des_ifs_safe (mDesAll; ss). des; subst. clarify.
         steps. unhide_k. steps. astart 0. astop.
         renamer.
         rename b into result. rename c into resource. rename WF into SIMWF.

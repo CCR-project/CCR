@@ -95,7 +95,7 @@ Section SIMMODSEM.
         { iSplits; ss; et. }
       }
       { ss. }
-      post_call. steps. eapply Any.downcast_upcast in _UNWRAPN0. des. clarify.
+      post_call. steps.
       kstop. steps.
 
       force_l. exists handle. steps.
@@ -117,7 +117,7 @@ Section SIMMODSEM.
       kstart 7.
 
       hide_k. destruct v; ss. des_ifs. clear_fast.
-      renamer. rename n into handle. rename l into stk. rename _UNWRAPU0 into T.
+      renamer. rename n into handle. rename l into stk. rename _UNWRAPU into T.
       mAssert _ with "SIM".
       { iDestruct (big_sepM_delete with "SIM") as "[B C]"; et. (* big_sepM_lookup_acc *)
         instantiate (1:=_ ** _). iSplitL "B". { iExact "B". } iExact "C". }

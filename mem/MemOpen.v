@@ -39,7 +39,7 @@ Section PROOF.
                      (fun varg o => (∃ v, ⌜varg = ([Vptr b ofs])↑⌝ **
                                           OwnM ((b, ofs) |-> [v]) **
                                           ⌜o = ord_pure 0⌝)%I),
-                     (fun _ => ⌜True⌝%I)
+                     (fun vret => ⌜vret = (Vint 0)↑⌝%I)
     ))).
 
   Definition load_spec: fspec :=
@@ -56,7 +56,7 @@ Section PROOF.
             (fun varg o =>
                (∃ v_old, ⌜varg = ([Vptr b ofs ; v_new])↑⌝ **
                           OwnM ((b, ofs) |-> [v_old]) ** ⌜o = ord_pure 0⌝)%I),
-            (fun _ => OwnM ((b, ofs) |-> [v_new]))
+            (fun vret => OwnM ((b, ofs) |-> [v_new]) ** ⌜vret = (Vint 0)↑⌝)
     ))).
 
   Definition cmp_spec: fspec :=
@@ -83,11 +83,11 @@ Section PROOF.
   Context `{@GRA.inG memRA Σ}.
 
   Definition MemSbtb: list (gname * kspecbody) :=
-    [("alloc", mk_kspecbody alloc_spec (cfunN allocF) (fun _ => triggerNB));
-    ("free",   mk_kspecbody free_spec  (cfunN freeF)  (fun _ => triggerNB));
-    ("load",   mk_kspecbody load_spec  (cfunN loadF)  (fun _ => triggerNB));
-    ("store",  mk_kspecbody store_spec (cfunN storeF) (fun _ => triggerNB));
-    ("cmp",    mk_kspecbody cmp_spec   (cfunN cmpF)   (fun _ => triggerNB))
+    [("alloc", mk_kspecbody alloc_spec (cfunU allocF) (fun _ => triggerNB));
+    ("free",   mk_kspecbody free_spec  (cfunU freeF)  (fun _ => triggerNB));
+    ("load",   mk_kspecbody load_spec  (cfunU loadF)  (fun _ => triggerNB));
+    ("store",  mk_kspecbody store_spec (cfunU storeF) (fun _ => triggerNB));
+    ("cmp",    mk_kspecbody cmp_spec   (cfunU cmpF)   (fun _ => triggerNB))
     ]
   .
 

@@ -72,7 +72,7 @@ Section SIMMODSEM.
     }
     econs; ss.
     { unfold NewEcho0.echo_body, echo_body, cfunN, cfunU, kcall, ccallN, ccallU. trivial_init. post_call.
-      des_ifs. steps. unfold KModSem.transl_fun_tgt. steps. rewrite _UNWRAPN. steps.
+      des_ifs. steps. unfold KModSem.transl_fun_tgt. steps.
       kstart 1. kcatch. { eapply STBINCL. stb_tac; ss. } hcall _ (Some _) _ with ""; ss; et.
       { ss. }
       post_call. steps. kstop. steps. erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.

@@ -178,7 +178,7 @@ Section PROOF.
                     (fun varg o => (∃ v, (⌜varg = ([Vptr b ofs])↑⌝)
                                            ** OwnM ((b, ofs) |-> [v]))
                                      ** ⌜o = ord_pure 0⌝),
-                    fun _ => (True: iProp)%I
+                    fun vret => ⌜vret = (Vint 0)↑⌝%I
     ))).
 
   Definition load_spec: fspec :=
@@ -196,7 +196,7 @@ Section PROOF.
                                (⌜varg = ([Vptr b ofs ; v_new])↑⌝)
                                  ** OwnM((b, ofs) |-> [v_old]))
                              ** (⌜o = ord_pure 0⌝)%I),
-            (fun _ => OwnM((b, ofs) |-> [v_new])
+            (fun vret => OwnM((b, ofs) |-> [v_new]) ** ⌜vret = (Vint 0)↑⌝
     )))).
 
   Definition cmp_spec: fspec :=
