@@ -172,10 +172,7 @@ Section PROOF.
       { instantiate (1:=(i1 + 20 + expr_ord e2)%ord).
         eapply OrdArith.add_base_l. }
       eapply IHe2; auto. clear IHe2.
-      i.
-      des_ifs.
-      2: sim_triggerUB.
-      sim_red.
+      i. sim_red.
       unfold unwrapU. destruct (vadd rv rv0) eqn:VADD; ss; clarify.
       + sim_red.
         specialize SIM with (rv:=v) (trv:= @map_val builtins srcprog v).
@@ -195,10 +192,7 @@ Section PROOF.
       { instantiate (1:=(i1 + 20 + expr_ord e2)%ord).
         eapply OrdArith.add_base_l. }
       eapply IHe2; auto. clear IHe2.
-      i.
-      des_ifs.
-      2: sim_triggerUB.
-      sim_red.
+      i. sim_red.
       unfold unwrapU. destruct (vsub rv rv0) eqn:VSUB; ss; clarify.
       + sim_red.
         specialize SIM with (rv:=v) (trv:= @map_val builtins srcprog v).
@@ -219,10 +213,7 @@ Section PROOF.
       { instantiate (1:=(i1 + 20 + expr_ord e2)%ord).
         eapply OrdArith.add_base_l. }
       eapply IHe2; auto. clear IHe2.
-      i.
-      des_ifs.
-      2: sim_triggerUB.
-      sim_red.
+      i. sim_red.
       unfold unwrapU. destruct (vmul rv rv0) eqn:VMUL; ss; clarify.
       + sim_red.
         specialize SIM with (rv:=v) (trv:= @map_val builtins srcprog v).
@@ -1232,7 +1223,7 @@ Section PROOF.
       gstep. econs 6; clarify.
       eexists. eexists.
       { eapply step_set. econs; eauto. ss. inv MM. apply MMEM in MEMCNT. des.
-        unfold scale_ofs in *. unfold map_ofs in *. rewrite unwrap_Ptrofs_Int64_z; try nia; eauto. }
+        unfold scale_ofs in *. unfold map_ofs in *. rewrite unwrap_Ptrofs_repr_z; try nia; eauto. }
       eexists. exists (step_tau _).
       eexists.
       do 2 (gstep; sim_tau). sim_red. grind.
@@ -1286,7 +1277,7 @@ Section PROOF.
       gstep. econs 6; clarify.
       eexists. eexists.
       { eapply step_store; eauto. ss. inv MM. unfold scale_ofs in *; unfold map_ofs in *.
-        hexploit MMEM; eauto. i; des. rewrite unwrap_Ptrofs_Int64_z; try nia; eauto. }
+        hexploit MMEM; eauto. i; des. rewrite unwrap_Ptrofs_repr_z; try nia; eauto. }
       eexists. exists (step_tau _). eexists.
       do 4 (gstep; sim_tau). sim_red. gstep; sim_tau.
       sim_ord.
