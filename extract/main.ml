@@ -73,7 +73,7 @@ let handle_Event = fun e k ->
   | Syscall (str, args) ->
      print_string (cl2s str ^ "(" ^ string_of_vals args ^ " ): ");
      let n =
-       if (String.equal (cl2s str) ("printf"))
+       if (String.equal (cl2s str) ("print"))
        then (print_endline ""; 0)
        else (try int_of_string (read_line())
              with Failure _ -> 0) in
