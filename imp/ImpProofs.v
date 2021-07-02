@@ -38,6 +38,7 @@ Section PROOFS.
       interp_imp ge (denote_expr (Eq a b)) le0 =
       interp_imp ge (
       l <- denote_expr a ;; r <- denote_expr b ;;
+      (if (wf_val l && wf_val r) then Ret tt else triggerUB);;;
       match l, r with
       | Vint lv, Vint rv => if (lv =? rv)%Z then Ret (Vint 1) else Ret (Vint 0)
       | _, _ => triggerUB
@@ -401,6 +402,7 @@ Section PROOFS.
       interp_imp ge (denote_expr (Eq a b)) le0 =
       '(le1, l) <- interp_imp ge (denote_expr a) le0 ;;
       '(le2, r) <- interp_imp ge (denote_expr b) le1 ;;
+      (if (wf_val l && wf_val r) then Ret tt else triggerUB);;;
       match l, r with
       | Vint lv, Vint rv => if (lv =? rv)%Z then Ret (le2, Vint 1) else Ret (le2, Vint 0)
       | _, _ => triggerUB
@@ -409,6 +411,9 @@ Section PROOFS.
   Proof.
     rewrite denote_expr_Eq. rewrite interp_imp_bind.
     grind. rewrite interp_imp_bind. grind.
+    rewrite interp_imp_bind. destruct (wf_val v && wf_val v0).
+    2:{ rewrite interp_imp_triggerUB. unfold triggerUB; grind. }
+    rewrite interp_imp_Ret. grind.
     des_ifs; try apply interp_imp_triggerUB.
     1,2: apply interp_imp_Ret.
   Qed.
@@ -671,7 +676,7 @@ Section PROOFS.
   .
   Proof.
     rewrite denote_stmt_CallPtr. des_ifs.
-    2,3,4,5: rewrite interp_imp_triggerUB_bind; unfold triggerUB; grind.
+    2,3,4,5,6: rewrite interp_imp_triggerUB_bind; unfold triggerUB; grind.
     rewrite interp_imp_bind. rewrite interp_imp_Ret. grind.
     rewrite interp_imp_bind. grind.
     rewrite interp_imp_bind. rewrite interp_imp_GetName.

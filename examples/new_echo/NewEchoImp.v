@@ -32,12 +32,12 @@ Section ECHO.
       ["n"]
       (
         "n" =@ "getint" [] ;#
-        if# ("n" + 1%Z)
-        then# (
+        if# ("n" =? (-1)%Z)
+        then# skip#
+        else# (
                @ "push" [Var "h"; Var "n"] ;#
                @ "input" ["h" : expr]
               )
-        else# skip#
         fi#
       ).
 
@@ -47,12 +47,12 @@ Section ECHO.
       ["n"]
       (
         "n" =@ "pop" [Var "h"] ;#
-        if# ("n" + 1%Z)
-        then# (
+        if# ("n" =? (-1)%Z)
+        then# skip#
+        else# (
                @ "putint" [Var "n"] ;#
                @ "output" ["h" : expr]
               )
-        else# skip#
         fi#
       ).
 

@@ -6,7 +6,6 @@ Require Import STS Behavior.
 Require Import Any.
 Require Import ModSem.
 Require Import Imp.
-Require Import ImpProofs.
 
 Require Import Coq.Lists.SetoidList.
 
@@ -38,7 +37,7 @@ Section Compile.
     | Var x => Evar (s2p x)
     | Lit z => Econst (Olongconst (Int64.repr z))
     | Eq a b =>
-      let ca := compile_expr a in let cb := compile_expr b in (Ebinop Ocmpl ca cb)
+      let ca := compile_expr a in let cb := compile_expr b in Eunop Olongofint (Ebinop (Ocmpl Ceq) ca cb)
     | Plus a b =>
       let ca := compile_expr a in let cb := compile_expr b in (Ebinop Oaddl ca cb)
     | Minus a b =>
@@ -530,69 +529,3 @@ Section LINKLIST.
 End LINKLIST.
 
 Coercion nlist2list : Coqlib.nlist >-> list.
-
-
-
-
-
-Section Beh.
-
-  Inductive match_val : eventval -> val -> Prop :=
-  | match_val_intro :
-      forall v, match_val (EVlong v) (Vint (Int64.signed v)).
-
-  Inductive match_event : Events.event -> Universe.event -> Prop :=
-  | match_event_intro
-      name eargs uargs er ur
-      (MV: Forall2 match_val eargs uargs)
-      (MV: match_val er ur)
-    :
-      match_event (Event_syscall name eargs er) (event_sys name uargs ur)
-  .
-
-  Variant _match_beh (match_beh: _ -> _ -> Prop) (tgtb : program_behavior) (srcb : Tr.t) : Prop :=
-  | match_beh_Terminates
-      tr mtr r
-      (MT : Forall2 match_event tr mtr)
-      (TB : tgtb = Terminates tr r)
-      (SB : srcb = Tr.app mtr (Tr.done r.(intval)))
-    :
-      _match_beh match_beh tgtb srcb
-  | match_beh_Diverges
-      tr mtr
-      (MT : Forall2 match_event tr mtr)
-      (TB : tgtb = Diverges tr)
-      (SB : srcb = Tr.app mtr (Tr.spin))
-    :
-      _match_beh match_beh tgtb srcb
-  | match_beh_Reacts
-      ev mev trinf mtrinf
-      (ME : match_event ev mev)
-      (MB : match_beh (Reacts trinf) mtrinf)
-      (TB : tgtb = Reacts (Econsinf ev trinf))
-      (SB : srcb = Tr.cons mev mtrinf)
-    :
-      _match_beh match_beh tgtb srcb
-  | match_beh_ub_trace
-      mtr tr
-      (SB : srcb = Tr.app mtr (Tr.ub))
-      (MT : Forall2 match_event tr mtr)
-      (TB : behavior_prefix tr tgtb)
-    :
-      _match_beh match_beh tgtb srcb.
-
-  Definition match_beh : _ -> _ -> Prop := paco2 _match_beh bot2.
-
-  Lemma match_beh_mon : monotone2 _match_beh.
-  Proof.
-    ii. inv IN.
-    - econs 1; eauto.
-    - econs 2; eauto.
-    - econs 3; eauto.
-    - econs 4; eauto.
-  Qed.
-
-End Beh.
-Hint Constructors _match_beh.
-Hint Unfold match_beh.
-Hint Resolve match_beh_mon: paco.
