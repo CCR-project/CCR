@@ -1,5 +1,4 @@
 Require Import Coqlib.
-Require Import Universe.
 Require Import Skeleton.
 Require Import PCM.
 Require Import STS Behavior.

@@ -1,8 +1,6 @@
 Require Import sflib.
 Require Import String.
 Require Import Coqlib.
-(* Require Import Universe. *)
-(* Require Import Behavior. *)
 
 Set Implicit Arguments.
 

@@ -1,6 +1,5 @@
 Require Import Logic.
 Require Import Coqlib.
-Require Import Universe.
 Require Import STS.
 Require Import Behavior.
 Require Import ModSem.

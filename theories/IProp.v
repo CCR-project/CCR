@@ -1,5 +1,5 @@
 Require Import Coqlib.
-Require Import Universe.
+Require Import String.
 Require Import PCM.
 Require Import Any.
 

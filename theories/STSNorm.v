@@ -1,5 +1,4 @@
 Require Import sflib.
-Require Import Universe.
 Require Import Coqlib.
 Require Import STS.
 Require Import Behavior.
