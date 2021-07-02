@@ -66,6 +66,8 @@ Section SIMMODSEM.
       unfold putintF, putint.
       steps.
       rewrite unfold_eval_imp. steps.
+      destruct (wf_val v) eqn:WFV.
+      2:{ steps. }
       des_ifs.
       2:{ exfalso; apply n. solve_NoDup. }
       imp_steps.

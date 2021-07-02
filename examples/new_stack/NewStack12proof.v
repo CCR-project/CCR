@@ -39,22 +39,19 @@ Section SIMMODSEM.
   Theorem sim_modsem: ModSemPair.sim (NewStack2.StackSem) (KModSem.transl_src frds NewStack1.KStackSem).
   Proof.
     econstructor 1 with (wf:=wf) (le:=top2); ss; et; swap 2 3.
-    assert(BDOOR: (KModSem.interp_kCallE_src APCK) = Ret tt).
-    { admit "mid - BDOOR". }
     econs; ss.
     { init. inv WF.
-      unfold fun_to_src, body_to_src, KModSem.body_to_src, cfunU, cfunN, new_body, NewStack1.new_body.
+      unfold fun_to_src, body_to_src, cfunU, cfunN, new_body, NewStack1.new_body.
       steps. rewrite my_if_same. steps.
-      rewrite BDOOR. steps.
       force_l. esplits. steps. rewrite _UNWRAPN. steps. rewrite _GUARANTEE. force_l; ss. steps.
       red. esplits; et. econs; ss; et.
     }
     econs; ss.
     { init. inv WF.
-      unfold fun_to_src, body_to_src, KModSem.body_to_src, cfunU, cfunN, pop_body, NewStack1.pop_body.
+      unfold fun_to_src, body_to_src, cfunU, cfunN, pop_body, NewStack1.pop_body.
       steps. rewrite my_if_same. steps.
       unfold unblk in *. des_ifs; ss. steps.
-      rewrite BDOOR. steps. apply Any.downcast_upcast in _UNWRAPN. des; subst. des_ifs; steps.
+      apply Any.downcast_upcast in _UNWRAPN. des; subst. des_ifs; steps.
       { red. esplits; et. rewrite insert_delete; ss. rewrite insert_id; ss. }
       { red. esplits; et. rewrite insert_delete; ss. }
     }

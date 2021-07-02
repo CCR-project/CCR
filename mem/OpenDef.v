@@ -368,46 +368,6 @@ Section RDB.
 End RDB.
 
 Require Import SimModSem HTactics.
-Section KTACTICS.
-
-  Context `{Σ: GRA.t}.
-
-  (* Lemma trivial_init_clo *)
-  (*       A *)
-  (*       (R_src: A -> Any.t -> Any.t -> iProp) (le: A -> A -> Prop) *)
-  (*       (mn: string) fn f_tgt gstb body *)
-  (*       (POST: forall a mp_src mp_tgt (mr_src: Σ) fr_src ctx varg *)
-  (*                     (ACC: current_iPropL ctx [("INV", R_src a mp_src mp_tgt)]) *)
-  (*         , *)
-  (*           gpaco7 (_sim_itree (mk_wf R_src) le) (cpn7 (_sim_itree (mk_wf R_src) le)) bot7 bot7 *)
-  (*                  _ _ *)
-  (*                  (lift_rel (mk_wf R_src) le a (@eq Any.t)) *)
-  (*                  93 a *)
-  (*                  (Any.pair mp_src mr_src↑, *)
-  (*                   ((interp_hCallE_tgt mn gstb ord_top (KModSem.transl_fun_tgt body varg) (ctx, fr_src)) *)
-  (*                      >>= (HoareFunRet (fun (_: option string) (_: unit) (reth retl: Any.t) => *)
-  (*                                          (⌜reth = retl⌝%I): iProp) (Some mn) tt)) *)
-  (*                  ) *)
-  (*                  (mp_tgt, (f_tgt varg)) *)
-  (*       ) *)
-  (*   : *)
-  (*     sim_fnsem (mk_wf R_src) le *)
-  (*               (fn, fun_to_tgt mn gstb (KModSem.disclose_ksb_tgt (mk_kspecbody fspec_trivial body body))) *)
-  (*               (fn, f_tgt) *)
-  (* . *)
-  (* Proof. *)
-  (*   init. harg. rename w into aa. *)
-  (*   assert(ord_cur = ord_top). *)
-  (*   { on_current ltac:(fun ACC => clear - ACC); mClear "INV"; des_ifs; mDesAll; des; ss. } *)
-  (*   subst. des_ifs; mDesAll; des; subst. *)
-  (*   - steps. exploit POST; et. *)
-  (*   - steps. exploit POST; et. *)
-  (* Qed. *)
-
-End KTACTICS.
-
-(* Ltac trivial_init := eapply trivial_init_clo; i; des_u. *)
-
 
 
 Module KMod.
@@ -454,6 +414,29 @@ Section KMOD.
 End KMOD.
 End KMod.
 
+
+Section KTACTICS.
+
+  Context `{Σ: GRA.t}.
+
+  Lemma trivial_init_clo
+        A wf (le: A -> A -> Prop) r rg w arg mrp_src mp_tgt itr_tgt mn stb body RR
+        (INIT:
+           gpaco7 (_sim_itree wf le) (cpn7 (_sim_itree wf le)) rg rg Any.t Any.t
+                  RR 100 w
+                  (mrp_src, fun_to_tgt mn stb (mk_specbody fspec_trivial body) arg)
+                  (mp_tgt, itr_tgt))
+    :
+      gpaco7 (_sim_itree wf le) (cpn7 (_sim_itree wf le)) r rg Any.t Any.t
+             RR 101 w
+             (mrp_src, KModSem.disclose_ksb_tgt mn stb (ksb_trivial body) arg)
+             (mp_tgt, itr_tgt).
+  Proof.
+    unfold KModSem.disclose_ksb_tgt. steps. destruct x; ss.
+  Qed.
+
+End KTACTICS.
+
 Ltac kinit :=
   let varg_src := fresh "varg_src" in
   let mn := fresh "mn" in
@@ -465,6 +448,13 @@ Ltac kinit :=
   let WF := fresh "WF" in
   split; ss; intros varg_src [mn varg] EQ w mrp_src mp_tgt WF; try subst varg_src;
   exists 101; cbn; ginit;
-  try (unfold fun_to_tgt, cfunN, cfunU, KModSem.disclose_ksb_tgt, fun_to_tgt);
-  simpl;
-  gstep; eapply sim_itree_take_src; [eauto with ord_step|intros []; rewrite HoareFun_parse; simpl].
+  match goal with
+  | |- gpaco7 _ _ _ _ _ _ _ _ _ (_, KModSem.disclose_ksb_tgt _ _ (ksb_trivial _) _) _ =>
+    eapply trivial_init_clo;
+    try (unfold fun_to_tgt, cfunN, cfunU, KModSem.disclose_ksb_tgt, fun_to_tgt);
+    rewrite HoareFun_parse; simpl
+  | _ =>
+    try (unfold fun_to_tgt, cfunN, cfunU, KModSem.disclose_ksb_tgt, fun_to_tgt);
+    simpl;
+    gstep; eapply sim_itree_take_src; [eauto with ord_step|intros []; rewrite HoareFun_parse; simpl]
+  end.
