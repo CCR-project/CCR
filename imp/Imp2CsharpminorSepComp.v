@@ -487,17 +487,10 @@ Section PROOFSINGLE.
     match goal with [H: Genv.find_def _ _ = Some (Gfun (Internal ?tf)) |- _ ] => set (tmainf:=tf) in * end.
     unfold cfunU. rewrite Any.upcast_downcast. grind. rewrite unfold_eval_imp_only.
     sim_red.
-    (* unfold assume. sim_red. *)
-    (* pfold. econs 5; ss; eauto; i. dtm H H0. *)
-    (* eapply angelic_step in STEP; des; clarify. *)
-    (* eexists; split; [ord_step2|auto]. left. rename STEP0 into WF_MAIN. *)
-    (* do 4 (pfold; sim_tau; left). sim_red. *)
     des_ifs.
-    2,3: sim_triggerUB.
+    2,3,4: sim_triggerUB.
     rename n into WF_MAIN.
 
-    (* des_ifs; grind; sim_red. *)
-    (* 2:{ sim_triggerUB. } *)
     grind; sim_red.
     assert (MAINPARAM: fn_params smain = []).
     { depgen Heq. clear. i. remember (fn_params smain) as m. clear Heqm. depgen l. induction m; i; ss; clarify. }

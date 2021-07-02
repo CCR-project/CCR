@@ -195,74 +195,56 @@ Section Denote.
       tau;; denote_stmt a;;; denote_stmt b
     | If i t e =>
       v <- denote_expr i;;
-      if (wf_val v)
-      then (
-          `b: bool <- (is_true v)?;; tau;;
-              if b then (denote_stmt t) else (denote_stmt e))
-      else triggerUB
+      (if (wf_val v) then Ret tt else triggerUB);;;
+      `b: bool <- (is_true v)?;; tau;;
+      if b then (denote_stmt t) else (denote_stmt e)
 
     | CallFun x f args =>
-      if (call_ban f)
-      then triggerUB
-      else
-        eval_args <- denote_exprs args;;
-        v <- trigger (Call f (eval_args↑));; v <- unwrapN (v↓);;
-        trigger (SetVar x v);;; tau;; Ret Vundef
+      (if (call_ban f) then triggerUB else Ret tt);;;
+      eval_args <- denote_exprs args;;
+      v <- ccallU f eval_args;;
+      trigger (SetVar x v);;; tau;; Ret Vundef
 
     | CallPtr x e args =>
-      if (match e with | Var _ => true | _ => false end)
-      then (
-          p <- denote_expr e;; f <- trigger (GetName p);;
-          if (call_ban f)
-          then triggerUB
-          else (
-              eval_args <- denote_exprs args;;
-              v <- trigger (Call f (eval_args↑));; v <- unwrapN (v↓);;
-              trigger (SetVar x v);;; tau;; Ret Vundef))
-      else triggerUB
+      (if (match e with | Var _ => true | _ => false end) then Ret tt else triggerUB);;;
+      p <- denote_expr e;; f <- trigger (GetName p);;
+      (if (call_ban f) then triggerUB else Ret tt);;;
+      eval_args <- denote_exprs args;;
+      v <- ccallU f eval_args;;
+      trigger (SetVar x v);;; tau;; Ret Vundef
 
     | CallSys x f args =>
       sig <- (alist_find f syscalls)? ;;
-      if (sig =? List.length args)%nat
-      then (
-          eval_args <- denote_exprs args;;
-          if (forallb wf_val eval_args)
-          then (
-              v <- trigger (Syscall f eval_args top1);;
-              trigger (SetVar x v);;; tau;; Ret Vundef)
-          else triggerUB)
-      else triggerUB
+      (if (sig =? List.length args)%nat then Ret tt else triggerUB);;;
+      eval_args <- denote_exprs args;;
+      (if (forallb wf_val eval_args) then Ret tt else triggerUB);;;
+      v <- trigger (Syscall f eval_args top1);;
+      trigger (SetVar x v);;; tau;; Ret Vundef
 
     | AddrOf x X =>
       v <- trigger (GetPtr X);; trigger (SetVar x v);;; tau;; Ret Vundef
     | Malloc x se =>
       s <- denote_expr se;;
-      v <- trigger (Call "alloc" ([s]↑));; v <- unwrapN(v↓);;
+      v <- ccallU "alloc" [s];;
       trigger (SetVar x v);;; tau;; Ret Vundef
     | Free pe =>
       p <- denote_expr pe;;
-      trigger (Call "free" ([p]↑));;; tau;; Ret Vundef
+      `_: val <- ccallU "free" [p];; tau;; Ret Vundef
     | Load x pe =>
       p <- denote_expr pe;;
-      if (wf_val p)
-      then (
-          v <- trigger (Call "load" ([p]↑));; v <- unwrapN(v↓);;
-          trigger (SetVar x v);;; tau;; Ret Vundef)
-      else triggerUB
+      (if (wf_val p) then Ret tt else triggerUB);;;
+      v <- ccallU "load" [p];;
+      trigger (SetVar x v);;; tau;; Ret Vundef
     | Store pe ve =>
       p <- denote_expr pe;;
-      if (wf_val p)
-      then (
-          v <- denote_expr ve;;
-          trigger (Call "store" ([p ; v]↑));;; tau;; Ret Vundef)
-      else triggerUB
+      (if (wf_val p) then Ret tt else triggerUB);;;
+      v <- denote_expr ve;;
+      `_:val <- ccallU "store" [p; v];; tau;; Ret Vundef
     | Cmp x ae be =>
       a <- denote_expr ae;; b <- denote_expr be;;
-      if (wf_val a && wf_val b)
-      then (
-          v <- trigger (Call "cmp" ([a ; b]↑));; v <- unwrapN (v↓);;
-          trigger (SetVar x v);;; tau;; Ret Vundef)
-      else triggerUB
+      (if (wf_val a && wf_val b) then Ret tt else triggerUB);;;
+      v <- ccallU "cmp" [a; b];;
+      trigger (SetVar x v);;; tau;; Ret Vundef
 
     end.
 
@@ -344,15 +326,13 @@ Section Interp.
   Definition eval_imp (ge: SkEnv.t) (f: function) (args: list val) : itree Es val :=
     let vars := f.(fn_vars) ++ ["return"; "_"] in
     let params := f.(fn_params) in
-    if (ListDec.NoDup_dec string_dec (params ++ vars))
-    then (
-        match (init_args params args (init_lenv vars)) with
-        | Some iargs =>
-          '(_, retv) <- (interp_imp ge (tau;; (denote_stmt f.(fn_body));;; retv <- (denote_expr (Var "return")) ;; Ret retv)
-                                   iargs);; Ret retv
-        | None => triggerUB
-        end)
-    else triggerUB
+    (if (ListDec.NoDup_dec string_dec (params ++ vars)) then Ret tt else triggerUB);;;
+    match (init_args params args (init_lenv vars)) with
+    | Some iargs =>
+      '(_, retv) <- (interp_imp ge (tau;; (denote_stmt f.(fn_body));;; retv <- (denote_expr (Var "return")) ;; Ret retv)
+                               iargs);; Ret retv
+    | None => triggerUB
+    end
   .
 
 End Interp.

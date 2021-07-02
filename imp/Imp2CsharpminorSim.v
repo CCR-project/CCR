@@ -440,16 +440,7 @@ Section PROOF.
         eexists. eexists.
         { eapply step_return_1; ss; eauto. econs; ss. econs; ss. inv ML; ss; clarify. hexploit ML0; i; eauto. }
         eexists. exists (step_tau _). eexists.
-        (* Local Opaque itree_of_imp_pop_bottom. *)
         do 1 (gstep; sim_tau). red. sim_red.
-        (* unfold itree_of_imp_pop_bottom. grind. *)
-        (* unfold assume. grind. *)
-        (* gstep. econs 5; ss; auto; i. dtm H H0. *)
-        (* eapply angelic_step in STEP; des; clarify. eexists; split; [ord_step2|]. *)
-
-        (* clear STEP0. *)
-
-        (* do 6 (gstep; sim_tau). sim_red. *)
         unfold itree_of_imp_pop_bottom. sim_red.
         destruct v.
         - destruct ((0 <=? n)%Z && (n <? two_power_nat 32)%Z) eqn:INT32; bsimpl; des.
@@ -491,25 +482,13 @@ Section PROOF.
         eexists. eexists.
         { eapply step_return_1; ss; eauto. econs; ss. inv ML; ss; clarify. hexploit ML0; i; eauto. }
         eexists. exists (step_tau _). eexists.
-        do 1 (gstep; sim_tau). red. sim_red.
-        (* unfold assume. grind. *)
-        (* gstep. econs 5; ss; auto; i. dtm H H0. *)
-        (* eapply angelic_step in STEP; des; clarify. *)
-        (* eexists; split; [ord_step2|]. *)
-
-
-        (* clear STEP0. *)
-
-        (* do 6 (gstep; sim_tau). red. sim_red. *)
-        do 3 (gstep; sim_tau). red. sim_red.
+        do 4 (gstep; sim_tau). red. sim_red.
+        rewrite Any.upcast_downcast. sim_red.
         gstep. econs 6; clarify.
         eexists. eexists.
         { eapply step_return. }
         eexists. exists (step_tau _). eexists.
-        (* do 1 (gstep; sim_tau). red. sim_red. *)
-        (* rewrite Any.upcast_downcast. grind. *)
         do 1 (gstep; sim_tau).
-        (* gstep; sim_tau. *)
         sim_ord.
         { eapply OrdArith.add_base_l. }
         gbase. apply CIH.
@@ -642,23 +621,12 @@ Section PROOF.
       { hexploit tgt_genv_find_def_by_blk; eauto. }
 
       unfold cfunU. sim_red.
-      (* rewrite Any.upcast_downcast. sim_red. *)
       rewrite unfold_eval_imp_only.
       grind. des_ifs.
-      2,3: sim_triggerUB.
-      (* unfold assume. sim_red. gstep. econs 5; ss; auto; i. dtm H1 H2. *)
-      (* eapply angelic_step in STEP; des; clarify. *)
-      (* eexists; split; [ord_step2|auto]. *)
+      2,3,4: sim_triggerUB.
       rename n into WFFUN, Heq into ARGS. sim_red.
-      (* (* do 1 (gstep; sim_tau). sim_red. *) *)
-
-      (* destruct (init_args (Imp.fn_params impf) rvs (init_lenv (Imp.fn_vars impf ++ ["return"; "_"]))) eqn:ARGS; sim_red. *)
-      (* 2:{ sim_triggerUB. } *)
-      (* tau point?? need a tau BEFORE denote_stmt(fn_body) *)
       rewrite interp_imp_tau. sim_red.
-      (* des_ifs. *)
-      (* { rewrite rel_dec_correct in Heq; clarify. } *)
-      (* clear Heq. *)
+
       gstep. econs 6; auto.
       eexists. eexists.
       { eapply step_call; eauto.
@@ -746,21 +714,17 @@ Section PROOF.
       { eauto. }
 
     - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_CallPtr.
-      (* sim_red. unfold assume. sim_red. gstep. econs 5; ss; auto; i. dtm H H0. *)
-      (* eapply angelic_step in STEP; des; clarify. *)
-      (* eexists; split; [ord_step2|auto]. *)
       des_ifs.
       2,3,4,5: sim_triggerUB.
-      (* des_ifs_safe. clear STEP0. *)
       clear Heq.
-      (* grind. do 6 (gstep; sim_tau). sim_red. *)
       sim_red.
       sim_ord.
       { eapply max_fuel_spec4. }
       grind. eapply step_expr; eauto. i. rename H0 into TGTEXPR. clarify.
       des_ifs.
       1,2,4,5,6: try sim_triggerUB.
-      { sim_red. gstep; sim_tau. sim_triggerUB. }
+      1:{ sim_red; gstep; sim_tau; sim_triggerUB. }
+      2:{ sim_red. sim_triggerUB. }
       gstep; sim_tau.
 
       assert (COMP2: Imp2Csharpminor.compile srcprog = OK tgt).
@@ -794,30 +758,18 @@ Section PROOF.
       { hexploit tgt_genv_find_def_by_blk; eauto. }
 
       unfold cfunU. sim_red.
-      (* rewrite Any.upcast_downcast. sim_red. *)
       rewrite unfold_eval_imp_only.
       grind. des_ifs.
       2,3,4: sim_triggerUB.
       sim_red.
-      (* unfold assume. sim_red. gstep. econs 5; ss; auto; i. dtm H2 H3. *)
-      (* eapply angelic_step in STEP; des; clarify. *)
-      (* eexists; split; [ord_step2|auto]. *)
       rename n into WFFUN. grind.
-      (* sim_red. *)
-      (* do 1 (gstep; sim_tau). sim_red. *)
       inv MGENV. apply Sk.sort_wf in WFSK.
       assert (BBLK: (map_blk srcprog blk) = b).
       { apply Sk.load_skenv_wf in WFSK. apply WFSK in Heq. apply MG in Heq. clarify. }
       clarify.
 
       rename Heq0 into ARGS.
-      (* destruct (init_args (Imp.fn_params impf) rvs (init_lenv (Imp.fn_vars impf ++ ["return"; "_"]))) eqn:ARGS; sim_red. *)
-      (* 2:{ sim_triggerUB. } *)
-      (* tau point?? need a tau BEFORE denote_stmt(fn_body) *)
       rewrite interp_imp_tau. sim_red.
-      (* sim_red. des_ifs. *)
-      (* { rewrite rel_dec_correct in Heq0; clarify. } *)
-      (* clear Heq0. *)
       gstep. econs 6; auto.
       eexists. eexists.
       { eapply step_call; eauto.
@@ -904,9 +856,6 @@ Section PROOF.
       2:{ sim_triggerUB. }
       rename Heq into FOUND.
       sim_red.
-      (* unfold assume. grind. gstep. econs 5; auto; i. dtm H H0. *)
-      (* eapply angelic_step in STEP; des; clarify. *)
-      (* eexists; split; [ord_step2|]. *)
 
       apply alist_find_some in FOUND.
       assert (COMP2: Imp2Csharpminor.compile srcprog = OK tgt).
@@ -918,7 +867,6 @@ Section PROOF.
       des_ifs.
       2: sim_triggerUB.
       rewrite Nat.eqb_eq in Heq. clarify.
-      (* do 5 (gstep; sim_tau). *)
       sim_red.
       sim_ord.
       { eapply max_fuel_spec3'. }
@@ -1054,7 +1002,6 @@ Section PROOF.
       unfold allocF. sim_red.
       do 3 (gstep; sim_tau). sim_red.
       rewrite PSTATE. rewrite Any.upcast_downcast. grind. unfold unint. des_ifs; sim_red.
-      (* des_ifs; sim_red. *)
       2,3: sim_triggerUB.
       des_ifs.
       2: sim_triggerUB.
@@ -1092,7 +1039,6 @@ Section PROOF.
       do 9 (gstep; sim_tau). sim_red.
       do 2 (gstep; sim_tau).
 
-      (* rewrite Int64.mul_signed. rewrite! Int64.signed_repr; ss. *)
       unfold Int64.mul. rewrite! Int64.unsigned_repr; ss.
       2:{ split; ss. unfold_modrange_64. unfold Int64.max_unsigned. unfold_Int64_modulus. lia. }
 
@@ -1180,6 +1126,7 @@ Section PROOF.
       eexists. eexists.
       { econs. }
       eexists. exists (step_tau _). eexists. gbase. eapply CIH.
+      rewrite Any.upcast_downcast. grind.
       hexploit match_states_intro.
       { instantiate (2:=Skip). ss. }
       1,4,5,6: eauto.
@@ -1282,7 +1229,7 @@ Section PROOF.
       do 4 (gstep; sim_tau). sim_red. gstep; sim_tau.
       sim_ord.
       { eapply OrdArith.add_base_l. }
-      gbase. eapply CIH.
+      gbase. eapply CIH. rewrite Any.upcast_downcast. grind.
       hexploit match_states_intro.
       { instantiate (2:=Skip). ss. }
       1,4,5,6: eauto.
