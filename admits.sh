@@ -1,1 +1,1 @@
-ag admit
+ag admit --ignore-dir deprecated
