@@ -6,6 +6,8 @@ Set Implicit Arguments.
 
 
 
+
+
 Module Tr.
   CoInductive t: Type :=
   | done (retv: Z)

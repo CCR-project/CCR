@@ -4,6 +4,8 @@ Require Import PCM.
 
 Set Implicit Arguments.
 
+Notation gname := string (only parsing). (*** convention: not capitalized ***)
+Notation mname := string (only parsing). (*** convention: capitalized ***)
 
 
 Fixpoint _find_idx {A} (f: A -> bool) (l: list A) (acc: nat): option (nat * A) :=

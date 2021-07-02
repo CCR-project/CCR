@@ -80,17 +80,8 @@ Definition vmul (x y: val): option val :=
   end
 .
 
-Notation gname := string (only parsing). (*** convention: not capitalized ***)
-Notation mname := string (only parsing). (*** convention: capitalized ***)
 
 
-
-Inductive event: Type :=
-| event_sys
-    (fn: gname)
-    (args: list val)
-    (rv: val)
-.
 
 Module Mem.
 
@@ -262,5 +253,3 @@ Defined.
 
 (*** NOTE: Probably we can support comparison between nullptr and 0 ***)
 (*** NOTE: Unlike CompCert, we don't support comparison with weak_valid_ptr (for simplicity) ***)
-
-Parameter syscall_sem: event -> Prop.
