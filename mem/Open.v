@@ -819,7 +819,9 @@ Section ADQ.
           (<<TGT: alist_find fn (ModSemL.fnsems (ModL.enclose prog_tgt)) = Some (transl_all (T:=_) mn ∘ (fun_to_src (massage_fsb true uf).(fsb_body)))>>) /\
           (<<MN: ~ List.In (Some mn) _frds>>)).
   Proof.
-    admit "alist find".
+
+
+admit "alist find".
   Qed.
 
   Variant my_lemma2_r1: forall R0 R1 (RR: R0 -> R1 -> Prop), Ord.t -> itree eventE R0 -> itree eventE R1 -> Prop :=
@@ -1113,6 +1115,40 @@ Section ADQ.
     }
   Qed.
 
+  Let stb2 :=
+    (map (fun '(fn0, fs) => (fn0, ((fs: fspecbody): fspec)))
+         (flat_map SModSem.fnsems
+                   (map
+                      (flip SMod.get_modsem
+                            (Sk.sort
+                               (foldr Sk.add Sk.unit
+                                      (map SMod.sk (kmds ++ map (massage_md true) umds)))))
+                      (kmds ++ map (massage_md true) umds)))).
+
+  Let stb2_eq fn:
+    _stb (Sk.sort (foldr Sk.add Sk.unit (map SMod.sk (kmds ++ map (massage_md true) umds)))) fn
+    =
+    match alist_find fn stb2 with
+    | Some fsp => Some fsp
+    | _ => Some (KModSem.disclose_mid fspec_trivial)
+    end.
+  Proof.
+    unfold _stb, stb2, _gstb,_kmss. ss.
+    generalize (Sk.sort
+                  (foldr Sk.add Sk.unit
+                         (map SMod.sk (kmds ++ map (massage_md true) umds)))). i.
+    rewrite <- (flat_map_map SModSem.fnsems (map (map_snd fsb_fspec))).
+    rewrite <- ! map_flat_map. rewrite alist_find_map_snd.
+    symmetry. erewrite map_ext.
+    2: { instantiate (1:=map_snd fsb_fspec). ss. }
+    rewrite alist_find_map_snd.
+    rewrite map_app. rewrite flat_map_app. rewrite alist_find_app_o. uo.
+    des_ifs_safe. f_equal. clear - Heq1.
+    rewrite map_map in Heq1. rewrite flat_map_map in Heq1. ss.
+    rewrite <- flat_map_map in Heq1. rewrite <- map_flat_map in Heq1.
+    rewrite alist_find_map_snd in Heq1. uo. des_ifs.
+  Qed.
+
   Theorem adequacy_open_aux1':
     refines_closed (Mod.add_list (List.map (SMod.to_tgt _stb) kmds ++ umds))
                    (Mod.add_list (List.map (KMod.transl_src frds) _kmds ++ umds))
@@ -1145,12 +1181,12 @@ Section ADQ.
     ii. eapply my_lemma3. eapply my_lemma2.
     rewrite <- (map_map (massage_md true)). rewrite <- map_app.
     eapply adequacy_type_arg.
-    { i. instantiate (1:=_stb). unfold _stb, _gstb, _kmss, map_snd. ss.
-      rewrite map_app in FIND. rewrite flat_map_app in FIND. rewrite map_app in FIND.
-      rewrite alist_find_app_o in FIND.
-      rewrite ! map_flat_map in FIND. rewrite flat_map_map in FIND. des_ifs.
-      clear - FIND. rewrite ! map_map in FIND. admit "ez". }
-    { i. right. admit "ez". }
+    { i. fold stb2 in FIND. instantiate (1:=_stb).
+      rewrite stb2_eq. rewrite FIND. et. }
+    { i. fold stb2 in FIND. rewrite stb2_eq.
+      rewrite FIND. right. esplits; et.
+      i. ss. destruct x; des; auto.
+      red in PRE0. uipropall. des; auto. }
     { admit "main". }
     match goal with
     | H: Beh.of_program ?p0 x0 |- Beh.of_program ?p1 x0 => replace p1 with p0
@@ -1214,8 +1250,19 @@ Section ADQ.
       _stb_mid sk fn = Some (KModSem.disclose_mid fsp).
   Proof.
     unfold _stb, _gstb, _kmss in FIND.
-    unfold _stb_mid, _gstb_mid, _kmss_mid.
-    admit "ez".
+    unfold _stb_mid, _gstb_mid, _kmss_mid, kmds_mid.
+    rewrite map_map.
+    rewrite <- flat_map_map. rewrite <- map_flat_map.
+    rewrite <- flat_map_map in FIND. rewrite <- map_flat_map in FIND.
+    rewrite alist_find_map_snd. rewrite alist_find_map_snd in FIND. uo.
+    replace (flat_map
+               SModSem.fnsems
+               (map (flip SMod.get_modsem sk ∘ KMod.transl_mid) _kmds)) with
+        (map (map_snd KModSem.disclose_ksb_mid) (flat_map KModSem.fnsems (map (flip KMod.get_modsem sk) _kmds))).
+    { rewrite alist_find_map_snd. uo. des_ifs. }
+    ss. rewrite flat_map_map.
+    rewrite map_flat_map. ss. rewrite ! flat_map_map.
+    eapply flat_map_ext. i. ss.
   Qed.
 
   Let kmds: list Mod.t := List.map (KMod.transl_tgt _stb) _kmds.
