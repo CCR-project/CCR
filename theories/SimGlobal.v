@@ -557,7 +557,7 @@ Proof.
     extensionality x0. eapply itree_eta. ss. }
 Qed.
 
-Lemma step_trigger_syscall fn args (rvs: val -> Prop) k rv
+Lemma step_trigger_syscall fn args (rvs: Z -> Prop) k rv
       (RV: rvs rv) (SYS: syscall_sem (event_sys fn args rv))
   :
     ModSemL.step (trigger (Syscall fn args rvs) >>= k) (Some (event_sys fn args rv)) (k rv).

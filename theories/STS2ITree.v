@@ -271,10 +271,10 @@ paco2 has 'fixed' semantics -> needs fixed semantics to do pcofix
                        (let (x, _) := x_ in
                         match x with
                         | event_sys fn args _ =>
-                          ` rv0 : val <-
+                          ` rv0 : Z <-
                                   trigger
                                     (Syscall fn args
-                                             (fun rv0 : val =>
+                                             (fun rv0 : Z =>
                                                 exists st1, step st0 (Some (event_sys fn args rv0)) st1));;
                                   Vis
                                     (Choose {st1 | step st0 (Some (event_sys fn args rv0)) st1})
@@ -308,7 +308,7 @@ paco2 has 'fixed' semantics -> needs fixed semantics to do pcofix
         i. des. clarify.
         exists (cont rv). eexists.
         { ss. rewrite bind_trigger. subst cont. ss.
-          apply (@ModSemL.step_syscall fn args rv (fun rv0 : val => exists st1, step st0 (Some (event_sys fn args rv0)) st1) (fun x : val => Vis (Choose {st1 | step st0 (Some (event_sys fn args x)) st1}) (fun st1 : {st1 | step st0 (Some (event_sys fn args x)) st1} => decompile_STS step state_sort (st1 $)))).
+          apply (@ModSemL.step_syscall fn args rv (fun rv0 : Z => exists st1, step st0 (Some (event_sys fn args rv0)) st1) (fun x : Z => Vis (Choose {st1 | step st0 (Some (event_sys fn args x)) st1}) (fun st1 : {st1 | step st0 (Some (event_sys fn args x)) st1} => decompile_STS step state_sort (st1 $)))).
           2:{ exists st_tgt1. auto. }
           apply wf_syscall.
           exists st0, st_tgt1. auto. }

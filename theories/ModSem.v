@@ -9,6 +9,8 @@ Require Import Permutation.
 Set Implicit Arguments.
 
 
+Notation gname := string (only parsing). (*** convention: not capitalized ***)
+Notation mname := string (only parsing). (*** convention: capitalized ***)
 
 (* TODO: move it to Coqlib *)
 Lemma nodup_comm A (l0 l1: list A)
@@ -25,7 +27,7 @@ Section EVENTSCOMMON.
   Variant eventE: Type -> Type :=
   | Choose (X: Type): eventE X
   | Take X: eventE X
-  | Syscall (fn: gname) (args: list val) (rvs: val -> Prop): eventE val
+  | Syscall (fn: gname) (args: list Z) (rvs: Z -> Prop): eventE Z
   .
 
   (* Notation "'Choose' X" := (trigger (Choose X)) (at level 50, only parsing). *)
@@ -353,7 +355,7 @@ Section MODSEML.
     :
       step (Vis (subevent _ (Take X)) k) None (k x)
   | step_syscall
-      fn args rv (rvs: val -> Prop) k
+      fn args rv (rvs: Z -> Prop) k
       (SYSCALL: syscall_sem (event_sys fn args rv))
       (RETURN: rvs rv)
     :
@@ -460,7 +462,7 @@ Section MODSEML.
       extensionality x0. eapply itree_eta. ss. }
   Qed.
 
-  Lemma step_trigger_syscall fn args (rvs: val -> Prop) k rv
+  Lemma step_trigger_syscall fn args (rvs: Z -> Prop) k rv
         (RV: rvs rv) (SYS: syscall_sem (event_sys fn args rv))
     :
       step (trigger (Syscall fn args rvs) >>= k) (Some (event_sys fn args rv)) (k rv).
