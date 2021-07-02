@@ -53,7 +53,7 @@ Section PROOF.
     mk_simple (fun '(h, x, stk0) => (
                    (fun varg o => (⌜varg = ([Vptr h 0%Z; x]: list val)↑ /\ o = ord_pure 1⌝
                                    ** OwnM (is_stack h stk0): iProp)%I),
-                   (fun vret => (OwnM (is_stack h (x :: stk0)): iProp)%I)
+                   (fun vret => (OwnM (is_stack h (x :: stk0)) ** ⌜vret = (Vundef)↑⌝: iProp)%I)
               ))
   .
 

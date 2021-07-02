@@ -45,8 +45,39 @@ Section SIMMODSEM.
   .
 
   Theorem correct:
-    forall ge, ModSemPair.sim NewStack0.StackSem (NewStackImp.StackSem ge).
+    forall ge, ModSemPair.sim NewEcho0.EchoSem (NewEchoImp.EchoSem ge).
   Proof.
     econstructor 1 with (wf:=wf) (le:=top2); et; ss.
     econs; ss.
+    { init.
+      unfold echo_body, echo.
+      steps.
+      rewrite unfold_eval_imp. steps.
+      des_ifs.
+      2:{ exfalso; apply n. solve_NoDup. }
+      unfold ccallU. imp_steps.
+      gstep. econs; ss. i. exists 100. imp_steps.
+      gstep. econs; ss. i. exists 100. imp_steps.
+      gstep. econs; ss. i. exists 100. imp_steps.
+      red. esplits; et.
+    }
+    econs; ss.
+    { init.
+      unfold input_body, input.
+      steps.
+      rewrite unfold_eval_imp. steps.
+      des_ifs.
+      2:{ exfalso; apply n. solve_NoDup. }
+      unfold ccallU. imp_steps.
+      gstep. econs; ss. i. exists 100. imp_steps.
+      des_ifs.
+      { imp_steps. red. esplits; et. }
+      assert (exists added, vadd v0 (Vint 1) = Some added).
+
+      
+      gstep. econs; ss. i. exists 100. imp_steps.
+      gstep. econs; ss. i. exists 100. imp_steps.
+      red. esplits; et.
+    }
+    
 

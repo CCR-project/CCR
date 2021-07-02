@@ -46,6 +46,7 @@ Section PROOF.
     fun args =>
       h <- (pargs [Tuntyped] args)?;;
       `n: val    <- (ccallU "getint" ([]: list val));;
+      assume (wf_val n);;;
       if (dec n (Vint (- 1)))
       then Ret Vundef
       else
@@ -65,6 +66,7 @@ Section PROOF.
     fun args =>
       h <- (pargs [Tuntyped] args)?;;
       `n: val    <- (ccallU "pop" ([h]: list val));;
+      assume (wf_val n);;;
       if (dec n (Vint (- 1)))
       then Ret Vundef
       else

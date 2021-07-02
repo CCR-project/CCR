@@ -37,6 +37,8 @@ Section Compile.
     match expr with
     | Var x => Evar (s2p x)
     | Lit z => Econst (Olongconst (Int64.repr z))
+    | Eq a b =>
+      let ca := compile_expr a in let cb := compile_expr b in (Ebinop Ocmpl ca cb)
     | Plus a b =>
       let ca := compile_expr a in let cb := compile_expr b in (Ebinop Oaddl ca cb)
     | Minus a b =>
@@ -65,7 +67,7 @@ Section Compile.
       let cc := (compile_expr cond) in
       let cif := (compile_stmt sif) in
       let celse := (compile_stmt selse) in
-      let bexp := Ebinop (Ocmplu Cne) cc (Econst (Olongconst Int64.zero)) in
+      let bexp := Ebinop (Ocmpl Cne) cc (Econst (Olongconst Int64.zero)) in
       (Sifthenelse bexp cif celse)
 
     | CallFun x f args =>

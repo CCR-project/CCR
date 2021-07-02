@@ -22,6 +22,7 @@ Definition var : Set := string.
 Inductive expr : Type :=
 | Var (_ : var)
 | Lit (_ : Z)
+| Eq (_ _ : expr)
 | Plus  (_ _ : expr)
 | Minus (_ _ : expr)
 | Mult  (_ _ : expr)
@@ -137,18 +138,19 @@ Section Denote.
   Context {HasCall : callE -< eff}.
   Context {HasEvent : eventE -< eff}.
 
-  (* Definition checkOps (va vb : val) : bool := *)
-  (*   match va, vb with *)
-  (*   | Vint a, Vptr _ b => (modrange_64 a) && (wf_val vb) *)
-  (*   | Vptr _ a, Vint b => (wf_val va) && (modrange_64 b) *)
-  (*   | _, _ => (wf_val va) && (wf_val vb) *)
-  (*   end. *)
-
   (** Denotation of expressions *)
   Fixpoint denote_expr (e : expr) : itree eff val :=
     match e with
     | Var v     => u <- trigger (GetVar v) ;; Ret u
     | Lit n     => tau;; Ret (Vint n)
+
+    | Eq a b =>
+      l <- denote_expr a ;; r <- denote_expr b ;;
+      match l, r with
+      | Vint lv, Vint rv => if (lv =? rv)%Z then Ret (Vint 1) else Ret (Vint 0)
+      | _, _ => triggerUB
+      end
+
     | Plus a b  =>
       l <- denote_expr a ;; r <- denote_expr b ;; u <- (vadd l r)? ;; Ret u
 

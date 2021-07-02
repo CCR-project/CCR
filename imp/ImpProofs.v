@@ -32,6 +32,18 @@ Section PROOFS.
       interp_imp ge (tau;; Ret (Vint n)) le0.
   Proof. reflexivity. Qed.
 
+  Lemma denote_expr_Eq
+        ge le0 a b
+    :
+      interp_imp ge (denote_expr (Eq a b)) le0 =
+      interp_imp ge (
+      l <- denote_expr a ;; r <- denote_expr b ;;
+      match l, r with
+      | Vint lv, Vint rv => if (lv =? rv)%Z then Ret (Vint 1) else Ret (Vint 0)
+      | _, _ => triggerUB
+      end)le0.
+  Proof. reflexivity. Qed.
+
   Lemma denote_expr_Plus
         ge le0 a b
     :
@@ -381,6 +393,24 @@ Section PROOFS.
       tau;; Ret (le0, Vint n).
   Proof.
     rewrite denote_expr_Lit. rewrite interp_imp_tau. grind; apply interp_imp_Ret.
+  Qed.
+
+  Lemma interp_imp_expr_Eq
+        ge le0 a b
+    :
+      interp_imp ge (denote_expr (Eq a b)) le0 =
+      '(le1, l) <- interp_imp ge (denote_expr a) le0 ;;
+      '(le2, r) <- interp_imp ge (denote_expr b) le1 ;;
+      match l, r with
+      | Vint lv, Vint rv => if (lv =? rv)%Z then Ret (le2, Vint 1) else Ret (le2, Vint 0)
+      | _, _ => triggerUB
+      end
+  .
+  Proof.
+    rewrite denote_expr_Eq. rewrite interp_imp_bind.
+    grind. rewrite interp_imp_bind. grind.
+    des_ifs; try apply interp_imp_triggerUB.
+    1,2: apply interp_imp_Ret.
   Qed.
 
   Lemma interp_imp_expr_Plus
@@ -778,6 +808,7 @@ Ltac imp_red :=
     match expr with
     | Var _ => rewrite interp_imp_expr_Var
     | Lit _ => rewrite interp_imp_expr_Lit
+    | Eq _ _ => rewrite interp_imp_expr_Eq
     | Plus _ _ => rewrite interp_imp_expr_Plus
     | Minus _ _ => rewrite interp_imp_expr_Minus
     | Mult _ _ => rewrite interp_imp_expr_Mult

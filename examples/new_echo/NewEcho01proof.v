@@ -93,7 +93,8 @@ Section SIMMODSEM.
       harg. post_call. steps.
       erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.
       hcall _ _ _ with ""; ss; et.
-      post_call. steps.
+      post_call. steps. force_r. unshelve esplits; et.
+      steps.
       destruct v; ss; clarify. des_ifs.
       - steps. hret _; ss.
         { iModIntro. iSplits; ss; et. }
@@ -103,10 +104,6 @@ Section SIMMODSEM.
         hcall _ (_, _, _) _ with "-"; ss; et.
         { ss. }
         post_call. steps. astop. steps.
-
-        force_r.
-        { admit "ccall...". }
-        steps.
 
         erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.
         hcall _ _ _ with "-"; ss; et.
@@ -126,12 +123,19 @@ Section SIMMODSEM.
       { ss. }
       post_call. steps. astop. steps.
       destruct a as [|hd tl]; ss.
-      - steps. mDesAll; ss; des; subst. rewrite Any.upcast_downcast in *. clarify. steps. hret _; ss.
+      - steps. mDesAll; ss; des; subst. rewrite Any.upcast_downcast in *. clarify. steps.
+        force_r; ss. grind.
+        hret _; ss.
         { iModIntro. iSplits; ss; et. }
       - steps. mDesAll; ss; des; subst. rewrite Any.upcast_downcast in *. clarify.
-        erewrite STBINCL; cycle 1. { stb_tac; ss. }
+        erewrite STBINCL; cycle 1.
+        { stb_tac; ss. }
         Local Opaque NewEchoHeader.val_dec. steps. Local Transparent NewEchoHeader.val_dec.
-        inv PURE. des_ifs. steps.
+        inv PURE. des.
+        hide_k.
+        force_r; ss. grind.
+        unhide_k.
+        des_ifs. steps.
         hcall _ _ _ with ""; ss; et.
         post_call. steps.
         erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.
