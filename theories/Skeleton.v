@@ -1,6 +1,8 @@
 Require Import Coqlib.
-Require Import Universe.
+Require Export ZArith.
+Require Import String.
 Require Import PCM.
+Require Export AList.
 
 Set Implicit Arguments.
 
@@ -27,7 +29,7 @@ Lemma find_idx_red {A} (f: A -> bool) (l: list A):
   | [] => None
   | hd :: tl =>
     if (f hd)
-    then Some (0, hd)
+    then Some (0%nat, hd)
     else
       do (n, a) <- find_idx f tl;
       Some (S n, a)
@@ -41,6 +43,9 @@ Qed.
 
 
 Module SkEnv.
+
+  Notation mblock := nat (only parsing).
+  Notation ptrofs := Z (only parsing).
 
   Record t: Type := mk {
     blk2id: mblock -> option gname;

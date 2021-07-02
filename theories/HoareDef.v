@@ -1,5 +1,4 @@
 Require Import Coqlib AList.
-Require Import Universe.
 Require Import STS.
 Require Import Behavior.
 Require Import ModSem.

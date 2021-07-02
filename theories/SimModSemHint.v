@@ -1,6 +1,5 @@
 Require Import Coqlib.
 Require Import ITreelib.
-Require Import Universe.
 Require Import Skeleton.
 Require Import ModSem.
 Require Import Behavior.
