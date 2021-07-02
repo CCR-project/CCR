@@ -93,9 +93,13 @@ Section SIMMODSEM.
       harg. post_call. steps.
       erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.
       hcall _ _ _ with ""; ss; et.
-      post_call. steps. force_r. unshelve esplits; et.
-      steps.
-      destruct v; ss; clarify. des_ifs.
+      post_call. steps.
+      hide_k. force_r.
+      { unshelve esplits; et. }
+      unhide_k.
+      hide_k. steps. unhide_k.
+      ss. clarify.
+      des_ifs.
       - steps. hret _; ss.
         { iModIntro. iSplits; ss; et. }
       - steps.

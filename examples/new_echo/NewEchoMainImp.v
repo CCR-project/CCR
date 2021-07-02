@@ -21,12 +21,13 @@ Section ECHO.
       []
       []
       (
-        @ "echo" []
+        @ "echo" [] ;#
+        return# 0%Z
       ).
 
   Definition EchoMain_prog : program :=
     mk_program
-      "EchoMainImp"
+      "main"
       []
       [("echo", 0)]
       []

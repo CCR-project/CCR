@@ -24,7 +24,7 @@ Require Import Imp.
 Require Import ImpNotations.
 Require Import ImpProofs.
 
-Require Import NewEcho0 NewEchoImp.
+Require Import NewEchoMain0 NewEchoMainImp.
 
 Set Implicit Arguments.
 
@@ -45,57 +45,19 @@ Section SIMMODSEM.
   .
 
   Theorem correct:
-    forall ge, ModSemPair.sim NewEcho0.EchoSem (NewEchoImp.EchoSem ge).
+    forall ge, ModSemPair.sim NewEchoMain0.MainSem (NewEchoMainImp.EchoMainSem ge).
   Proof.
     econstructor 1 with (wf:=wf) (le:=top2); et; ss.
     econs; ss.
     { init.
-      unfold echo_body, echo.
+      unfold main_body, main.
       steps.
       rewrite unfold_eval_imp. steps.
       des_ifs.
       2:{ exfalso; apply n. solve_NoDup. }
       unfold ccallU. imp_steps.
-      gstep. econs; ss. i. exists 100. imp_steps.
-      gstep. econs; ss. i. exists 100. imp_steps.
       gstep. econs; ss. i. exists 100. imp_steps.
       red. esplits; et.
-    }
-    econs; ss.
-    { init.
-      unfold input_body, input.
-      steps.
-      rewrite unfold_eval_imp. steps.
-      des_ifs.
-      2:{ exfalso; apply n. solve_NoDup. }
-      unfold ccallU. imp_steps.
-      gstep. econs; ss. i. exists 100. imp_steps.
-      des. destruct v0; ss; clarify.
-      des_ifs.
-      - imp_steps. red. esplits; et. ss.
-      - rewrite Z.eqb_eq in Heq. clarify.
-      - imp_steps.
-        gstep. econs; ss. i. exists 100. imp_steps.
-        gstep. econs; ss. i. exists 100. imp_steps.
-        red. esplits; et.
-    }
-    econs; ss.
-    { init.
-      unfold output_body, output.
-      steps.
-      rewrite unfold_eval_imp. steps.
-      des_ifs.
-      2:{ exfalso; apply n. solve_NoDup. }
-      unfold ccallU. imp_steps.
-      gstep. econs; ss. i. exists 100. imp_steps.
-      des. destruct v0; ss; clarify.
-      des_ifs.
-      - imp_steps. red. esplits; et. ss.
-      - rewrite Z.eqb_eq in Heq. clarify.
-      - imp_steps.
-        gstep. econs; ss. i. exists 100. imp_steps.
-        gstep. econs; ss. i. exists 100. imp_steps.
-        red. esplits; et.
     }
     Unshelve. all: ss.
   Qed.

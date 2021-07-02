@@ -20,7 +20,10 @@ Section PROOF.
   Context `{Σ: GRA.t}.
 
   Definition main_body: list val -> itree hEs val :=
-    fun _ => (ccallN "echo" ([]: list val))
+    fun args =>
+      _ <- (pargs [] args)?;;
+      `_:val <- (ccallN "echo" ([]: list val));;
+      Ret (Vint 0)
   .
 
   Definition MainSem: KModSem.t := {|

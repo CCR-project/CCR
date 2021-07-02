@@ -58,7 +58,7 @@ Section ECHO.
 
   Definition Echo_prog : program :=
     mk_program
-      "EchoImp"
+      "Echo"
       []
       [("new", 0); ("getint", 0); ("putint", 1); ("push", 2); ("pop", 1)]
       []

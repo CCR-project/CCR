@@ -48,7 +48,7 @@ Section PROOF.
   Definition input_body: list Z -> itree hEs (list Z) :=
     fun stk =>
       n <- (ccallU "getint" ([]: list val));;
-      assume (wf_val n);;;
+      assume(wf_val n);;;
       n <- (parg Tint n)?;;
       if (dec n (- 1)%Z)
       then Ret stk
