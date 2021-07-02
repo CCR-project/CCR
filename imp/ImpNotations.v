@@ -26,6 +26,7 @@ Module ImpNotations.
   Declare Scope expr_scope.
   Bind Scope expr_scope with expr.
 
+  Infix "=?" := Eq : expr_scope.
   Infix "+" := Plus : expr_scope.
   Infix "-" := Minus : expr_scope.
   Infix "*" := Mult : expr_scope.

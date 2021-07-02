@@ -34,7 +34,7 @@ Section PROOF.
 
 
   Let is_int_stack (h: mblock) (stk0: list Z): iProp :=
-    (OwnM (is_stack h (List.map Vint stk0)) ∧ ⌜Forall (fun z => z <> (- 1)%Z) stk0⌝)%I
+    (OwnM (is_stack h (List.map Vint stk0)) ∧ ⌜Forall (fun z => (z <> (- 1)%Z) /\ (intrange_64 z)) stk0⌝)%I
   .
 
   Definition input_spec: fspec :=
@@ -48,6 +48,7 @@ Section PROOF.
   Definition input_body: list Z -> itree hEs (list Z) :=
     fun stk =>
       n <- (ccallU "getint" ([]: list val));;
+      assume(wf_val n);;;
       n <- (parg Tint n)?;;
       if (dec n (- 1)%Z)
       then Ret stk

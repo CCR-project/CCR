@@ -13,6 +13,97 @@ Set Implicit Arguments.
 
 
 
+Section Beh.
+
+  Inductive match_val : eventval -> val -> Prop :=
+  | match_val_intro :
+      forall v, match_val (EVlong v) (Vint (Int64.signed v)).
+
+  Inductive match_event : Events.event -> Universe.event -> Prop :=
+  | match_event_intro
+      name eargs uargs er ur
+      (MV: Forall2 match_val eargs uargs)
+      (MV: match_val er ur)
+    :
+      match_event (Event_syscall name eargs er) (event_sys name uargs ur)
+  .
+
+  Variant _match_beh (match_beh: _ -> _ -> Prop) (tgtb : program_behavior) (srcb : Tr.t) : Prop :=
+  | match_beh_Terminates
+      tr mtr r
+      (MT : Forall2 match_event tr mtr)
+      (TB : tgtb = Terminates tr r)
+      (SB : srcb = Tr.app mtr (Tr.done r.(Int.intval)))
+    :
+      _match_beh match_beh tgtb srcb
+  | match_beh_Diverges
+      tr mtr
+      (MT : Forall2 match_event tr mtr)
+      (TB : tgtb = Diverges tr)
+      (SB : srcb = Tr.app mtr (Tr.spin))
+    :
+      _match_beh match_beh tgtb srcb
+  | match_beh_Reacts
+      ev mev trinf mtrinf
+      (ME : match_event ev mev)
+      (MB : match_beh (Reacts trinf) mtrinf)
+      (TB : tgtb = Reacts (Econsinf ev trinf))
+      (SB : srcb = Tr.cons mev mtrinf)
+    :
+      _match_beh match_beh tgtb srcb
+  | match_beh_ub_trace
+      mtr tr
+      (SB : srcb = Tr.app mtr (Tr.ub))
+      (MT : Forall2 match_event tr mtr)
+      (TB : behavior_prefix tr tgtb)
+    :
+      _match_beh match_beh tgtb srcb.
+
+  Definition match_beh : _ -> _ -> Prop := paco2 _match_beh bot2.
+
+  Lemma match_beh_mon : monotone2 _match_beh.
+  Proof.
+    ii. inv IN.
+    - econs 1; eauto.
+    - econs 2; eauto.
+    - econs 3; eauto.
+    - econs 4; eauto.
+  Qed.
+
+End Beh.
+Hint Constructors _match_beh.
+Hint Unfold match_beh.
+Hint Resolve match_beh_mon: paco.
+
+
+
+
+
+
+
+Definition improves2 {L0 L1} (st_src0: L0.(STS.state)) (st_tgt0: L1.(Smallstep.state)): Prop :=
+  forall tr_tgt (BEH: state_behaves L1 st_tgt0 tr_tgt),
+  exists tr_src, (<<BEH: (Beh.of_state L0 st_src0) tr_src>>) /\
+                 (<<SIM: match_beh tr_tgt tr_src>>)
+.
+
+Definition improves2_program (L0: STS.semantics) (L1: Smallstep.semantics) : Prop :=
+  forall tr_tgt (BEH: program_behaves L1 tr_tgt),
+  exists tr_src, (<<BEH: (Beh.of_state L0 L0.(initial_state)) tr_src>>) /\
+                 (<<SIM: match_beh tr_tgt tr_src>>)
+.
+
+
+(* Definition improves2_program (L0: STS.semantics) (L1: Smallstep.semantics) : Prop := *)
+(*   forall tgt_init, (L1.(Smallstep.initial_state) tgt_init) -> (@improves2 L0 L1 L0.(initial_state) tgt_init). *)
+
+
+
+
+
+
+
+
 
 (************************ Coq Aux ****************************)
 (************************ Coq Aux ****************************)
@@ -581,27 +672,6 @@ Qed.
 
 
 
-Definition improves_state2 {L0 L1} (st_src0: L0.(STS.state)) (st_tgt0: L1.(Smallstep.state)): Prop :=
-  forall tr_tgt (BEH: state_behaves L1 st_tgt0 tr_tgt),
-  exists tr_src, (<<BEH: (Beh.of_state L0 st_src0) tr_src>>) /\
-                 (<<SIM: match_beh tr_tgt tr_src>>)
-.
-
-Definition improves2 (L0: STS.semantics) (L1: Smallstep.semantics) : Prop :=
-  forall tr_tgt (BEH: program_behaves L1 tr_tgt),
-  exists tr_src, (<<BEH: (Beh.of_state L0 L0.(initial_state)) tr_src>>) /\
-                 (<<SIM: match_beh tr_tgt tr_src>>)
-.
-
-
-(* Definition improves2 (L0: STS.semantics) (L1: Smallstep.semantics) : Prop := *)
-(*   forall tgt_init, (L1.(Smallstep.initial_state) tgt_init) -> (@improves_state2 L0 L1 L0.(initial_state) tgt_init). *)
-
-
-
-
-
-
 Section SIM.
 
   Variable L0: STS.semantics.
@@ -839,7 +909,7 @@ Section SIM.
     ii. des; clarify. eapply SAFE; ss.
     { econs; et. }
     { instantiate (1 := e0 :: _). ss. des_ifs. rewrite MB0 in *; clarify. }
-    { esplits; et. }
+    { ss. }
   Qed.
 
   Lemma safe_along_events_step_none
@@ -933,7 +1003,7 @@ Section SIM.
       exploit SAFE; try apply SRT.
       { econs; et. }
       { instantiate (1:=[]). ss. }
-      { esplits; et. }
+      { ss. }
       i; des.
       exploit wf_angelic; et. i; subst.
       exploit SIM0; et. i; des. pclearbot.
@@ -1023,7 +1093,7 @@ Section SIM.
         i0 st_src0 st_tgt0
         (SIM: sim i0 st_src0 st_tgt0)
     :
-      <<IMPR: improves_state2 st_src0 st_tgt0>>
+      <<IMPR: improves2 st_src0 st_tgt0>>
   .
   Proof.
     ii.

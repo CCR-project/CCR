@@ -95,7 +95,7 @@ Section MATCH.
       let '(p, (le0, _)) := x in
       '(p2, rv) <- EventsL.interp_Es (ModSemL.prog ms) (transl_all mn ('(_, v) <- interp_imp ge (denote_expr (Var "return"%string)) le0;; Ret (v↑))) (p);;
       '(p3, rv) <- EventsL.interp_Es (ModSemL.prog ms) ((tau;; Ret rv)) (p2);;
-      pop <- EventsL.interp_Es (ModSemL.prog ms) (transl_all retmn (tau;; tau;; v0 <- unwrapN (rv↓);; (tau;; tau;; tau;; Ret (alist_add retx v0  retle, Vundef)))) (p3);;
+      pop <- EventsL.interp_Es (ModSemL.prog ms) (transl_all retmn (tau;; tau;; v0 <- unwrapU (rv↓);; (tau;; tau;; tau;; Ret (alist_add retx v0  retle, Vundef)))) (p3);;
       Ret pop.
 
   Definition itree_of_imp_pop_bottom :=
