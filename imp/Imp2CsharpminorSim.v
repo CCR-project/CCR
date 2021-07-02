@@ -648,9 +648,8 @@ Section PROOF.
       2:{ sim_triggerUB. }
       unfold call_ban in Heq. bsimpl; des. des_ifs; clarify.
       rename Heq0 into NOTMAIN. apply neg_rel_dec_correct in NOTMAIN.
-      repeat match goal with
-      | [ Heq: _ = false |- _ ] => clear Heq
-      end.
+      repeat match goal with | [ Heq: _ = false |- _ ] => clear Heq end.
+
       grind. rewrite alist_find_find_some in FSEM. rewrite find_map in FSEM.
       match goal with
       | [ FSEM: o_map (?a) _ = _ |- _ ] => destruct a eqn:FOUND; ss; clarify
