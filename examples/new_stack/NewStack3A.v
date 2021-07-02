@@ -117,9 +117,8 @@ Section PROOF.
     KModSem.initial_st := (∅: gmap mblock (list val))↑;
   |}
   .
-  Definition SStackSem: SModSem.t := KStackSem.
   Definition StackSem (stb: gname -> option fspec): ModSem.t :=
-    (SModSem.to_tgt stb) SStackSem.
+    KModSem.transl_tgt stb KStackSem.
 
 
 
@@ -128,9 +127,8 @@ Section PROOF.
     KMod.sk := Sk.unit;
   |}
   .
-  Definition SStack: SMod.t := KStack.
   Definition Stack (stb: Sk.t -> gname -> option fspec): Mod.t :=
-    SMod.to_tgt stb SStack.
+    KMod.transl_tgt stb KStack.
 
 End PROOF.
 Global Hint Unfold StackStb: stb.

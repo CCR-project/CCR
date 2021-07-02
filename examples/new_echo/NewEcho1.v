@@ -102,9 +102,8 @@ Section PROOF.
     KModSem.initial_st := (∅: gmap mblock (list Z))↑;
   |}
   .
-  Definition SEchoSem: SModSem.t := KEchoSem.
   Definition EchoSem (stb: gname -> option fspec): ModSem.t :=
-    (SModSem.to_tgt stb) SEchoSem.
+    KModSem.transl_tgt stb KEchoSem.
 
 
 
@@ -113,9 +112,8 @@ Section PROOF.
     KMod.sk := Sk.unit;
   |}
   .
-  Definition SEcho: SMod.t := KEcho.
   Definition Echo (stb: Sk.t -> gname -> option fspec): Mod.t :=
-    SMod.to_tgt stb SEcho.
+    KMod.transl_tgt stb KEcho.
 
 End PROOF.
 Global Hint Unfold EchoStb: stb.
