@@ -875,12 +875,14 @@ Section SIMMOD.
                     (SOME: is_some (alist_find fn (ModSemL.fnsems (ModL.get_modsem (ModL.add (Mod.add_list ctx) md_src) sk)))),
                sk_gnames_contents sk fn)
            (SIM: ModPair.sim md_src md_tgt)
+           arg
      :
-       refines_closed (ModL.add (Mod.add_list ctx) md_tgt) (ModL.add (Mod.add_list ctx) md_src)
-   .
+       Beh.of_program (ModL.compile_arg (ModL.add (Mod.add_list ctx) md_tgt) arg)
+       <1=
+       Beh.of_program (ModL.compile_arg (ModL.add (Mod.add_list ctx) md_src) arg).
    Proof.
      ii. destruct (classic (ModL.wf (ModL.add (Mod.add_list ctx) md_src))).
-     2: { unfold ModL.compile. eapply ModSemL.compile_not_wf. auto. }
+     2: { unfold ModL.compile_arg. eapply ModSemL.initial_itr_arg_not_wf. auto. }
      rename H into WFSRC.
      assert (SKEQ: Sk.add (ModL.sk (Mod.add_list ctx)) (Mod.sk md_src)
                    =
@@ -1037,11 +1039,14 @@ Section SIMMOD.
                     (SOME: is_some (alist_find fn (ModSemL.fnsems (ModL.get_modsem (Mod.add_list mds_src) sk)))),
                sk_gnames_contents sk fn)
            (SIM: List.Forall2 ModPair.sim mds_src mds_tgt)
+           arg
      :
-       refines_closed (Mod.add_list mds_tgt) (Mod.add_list mds_src).
+       Beh.of_program (ModL.compile_arg (Mod.add_list mds_tgt) arg)
+       <1=
+       Beh.of_program (ModL.compile_arg (Mod.add_list mds_src) arg).
    Proof.
      ii. destruct (classic (ModSemL.wf (ModL.enclose (Mod.add_list mds_src)) /\ Sk.wf (ModL.sk (Mod.add_list mds_src)))).
-     2: { unfold ModL.compile. eapply ModSemL.compile_not_wf. et. }
+     2: { unfold ModL.compile_arg. eapply ModSemL.initial_itr_arg_not_wf. auto. }
      rename H into WF.
 
      assert (SKEQ: ModL.sk (Mod.add_list mds_tgt) = ModL.sk (Mod.add_list mds_src)).
@@ -1114,10 +1119,10 @@ Section SIMMOD.
 
    Local Existing Instances top_sk_gnames.
 
-   Theorem adequacy_local md_src md_tgt
+   Theorem adequacy_local_strong md_src md_tgt
            (SIM: ModPair.sim md_src md_tgt)
      :
-       <<CR: (refines md_tgt md_src)>>
+       <<CR: (refines_strong md_tgt md_src)>>
    .
    Proof.
      ii. replace (ModL.add (Mod.add_list ctx) md_src) with
@@ -1132,6 +1137,34 @@ Section SIMMOD.
      { econs; ss. }
    Qed.
 
+   Theorem adequacy_local md_src md_tgt
+           (SIM: ModPair.sim md_src md_tgt)
+     :
+       <<CR: (refines md_tgt md_src)>>
+   .
+   Proof.
+     eapply ModSem.refines_strong_refines.
+     eapply adequacy_local_strong; et.
+   Qed.
+
+   Corollary adequacy_local_list_strong
+             mds_src mds_tgt
+             (FORALL: List.Forall2 ModPair.sim mds_src mds_tgt)
+     :
+       <<CR: refines_strong (Mod.add_list mds_tgt) (Mod.add_list mds_src)>>
+   .
+   Proof.
+     r. induction FORALL; ss.
+     { ii. auto. }
+     rewrite ! Mod.add_list_cons.
+     etrans.
+     { rewrite <- Mod.add_list_single. eapply refines_strong_proper_r.
+       rewrite ! Mod.add_list_single. eapply adequacy_local_strong; et. }
+     replace (Mod.lift x) with (Mod.add_list [x]); cycle 1.
+     { cbn. rewrite ModL.add_empty_r. refl. }
+     eapply refines_strong_proper_l; et.
+   Qed.
+
    Corollary adequacy_local_list
              mds_src mds_tgt
              (FORALL: List.Forall2 ModPair.sim mds_src mds_tgt)
@@ -1139,13 +1172,8 @@ Section SIMMOD.
        <<CR: refines (Mod.add_list mds_tgt) (Mod.add_list mds_src)>>
    .
    Proof.
-     r. induction FORALL; ss.
-     rewrite ! Mod.add_list_cons.
-     etrans.
-     { rewrite <- Mod.add_list_single. eapply refines_proper_r. rewrite ! Mod.add_list_single. eapply adequacy_local; et. }
-     replace (Mod.lift x) with (Mod.add_list [x]); cycle 1.
-     { cbn. rewrite ModL.add_empty_r. refl. }
-     eapply refines_proper_l; et.
+     eapply ModSem.refines_strong_refines.
+     eapply adequacy_local_list_strong; et.
    Qed.
 
 End SIMMOD.

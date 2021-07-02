@@ -13,7 +13,7 @@ open ModSem
 
 open MutFG
 open Example0
-open EchoAll
+(* open EchoAll *)
 open NewEchoAll
 open Imp
 
@@ -89,8 +89,10 @@ let rec run t =
 let main =
   print_endline "-----------------------------------";
   print_endline "- Mutual Sum"; run (mutsum);
+  (* print_endline "-----------------------------------";
+   * print_endline "- Delayed Echo"; run (echo_prog); *)
   print_endline "-----------------------------------";
-  print_endline "- Delayed Echo"; run (echo_prog);
+  print_endline "- New Echo Imp"; run (echo_imp_itr);
   print_endline "-----------------------------------";
   print_endline "- New Echo Impl (choose is from Mem0.alloc)"; run (echo_impl_itr);
   print_endline "-----------------------------------";

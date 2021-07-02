@@ -39,7 +39,7 @@ Section PROOF.
                      (fun varg o => (∃ v, ⌜varg = ([Vptr b ofs])↑⌝ **
                                           OwnM ((b, ofs) |-> [v]) **
                                           ⌜o = ord_pure 0⌝)%I),
-                     (fun _ => ⌜True⌝%I)
+                     (fun vret => ⌜vret = (Vint 0)↑⌝%I)
     ))).
 
   Definition load_spec: fspec :=
@@ -56,7 +56,7 @@ Section PROOF.
             (fun varg o =>
                (∃ v_old, ⌜varg = ([Vptr b ofs ; v_new])↑⌝ **
                           OwnM ((b, ofs) |-> [v_old]) ** ⌜o = ord_pure 0⌝)%I),
-            (fun _ => OwnM ((b, ofs) |-> [v_new]))
+            (fun vret => OwnM ((b, ofs) |-> [v_new]) ** ⌜vret = (Vint 0)↑⌝)
     ))).
 
   Definition cmp_spec: fspec :=
@@ -83,17 +83,17 @@ Section PROOF.
   Context `{@GRA.inG memRA Σ}.
 
   Definition MemSbtb: list (gname * kspecbody) :=
-    [("alloc", mk_kspecbody alloc_spec (cfun allocF) (fun _ => triggerNB));
-    ("free",   mk_kspecbody free_spec  (cfun freeF)  (fun _ => triggerNB));
-    ("load",   mk_kspecbody load_spec  (cfun loadF)  (fun _ => triggerNB));
-    ("store",  mk_kspecbody store_spec (cfun storeF) (fun _ => triggerNB));
-    ("cmp",    mk_kspecbody cmp_spec   (cfun cmpF)   (fun _ => triggerNB))
+    [("alloc", mk_kspecbody alloc_spec (cfunU allocF) (fun _ => triggerNB));
+    ("free",   mk_kspecbody free_spec  (cfunU freeF)  (fun _ => triggerNB));
+    ("load",   mk_kspecbody load_spec  (cfunU loadF)  (fun _ => triggerNB));
+    ("store",  mk_kspecbody store_spec (cfunU storeF) (fun _ => triggerNB));
+    ("cmp",    mk_kspecbody cmp_spec   (cfunU cmpF)   (fun _ => triggerNB))
     ]
   .
 
   Definition MemStb: list (gname * fspec).
     eapply (Seal.sealing "stb").
-    let x := constr:(List.map (map_snd (fun ksb => (KModSem.disclose_ksb_tgt ksb): fspec)) MemSbtb) in
+    let x := constr:(List.map (map_snd (fun ksb => ksb.(ksb_fspec): fspec)) MemSbtb) in
     let y := eval cbn in x in
     eapply y.
   Defined.
@@ -105,8 +105,7 @@ Section PROOF.
     KModSem.initial_st := (Sk.load_mem sk)↑;
   |}
   .
-  Definition SMemSem: Sk.t -> SModSem.t := KMemSem.
-  Definition MemSem (stb: gname -> option fspec): Sk.t -> ModSem.t := (SModSem.to_tgt stb) ∘ SMemSem.
+  Definition MemSem (stb: gname -> option fspec): Sk.t -> ModSem.t := (KModSem.transl_tgt stb) ∘ KMemSem.
 
 
 
@@ -115,8 +114,7 @@ Section PROOF.
     KMod.sk := Sk.unit;
   |}
   .
-  Definition SMem: SMod.t := KMem.
-  Definition Mem (stb: Sk.t -> gname -> option fspec): Mod.t := SMod.to_tgt stb SMem.
+  Definition Mem (stb: Sk.t -> gname -> option fspec): Mod.t := KMod.transl_tgt stb KMem.
 
 End PROOF.
 Global Hint Unfold MemStb: stb.

@@ -155,7 +155,7 @@ Section MATCH.
     match v with
     | Vint z => Values.Vlong (Int64.repr z)
     | Vptr blk ofs =>
-      Values.Vptr (map_blk src blk) (Ptrofs.of_int64 (Int64.repr (map_ofs ofs)))
+      Values.Vptr (map_blk src blk) (Ptrofs.repr (map_ofs ofs))
     | Vundef => Values.Vundef
     end.
 

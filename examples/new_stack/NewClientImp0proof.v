@@ -1,4 +1,4 @@
-Require Import HoareDef MutHeader MutGImp MutG0 SimModSem.
+Require Import HoareDef SimModSem.
 Require Import Coqlib.
 Require Import Universe.
 Require Import Skeleton.
@@ -15,19 +15,24 @@ From ExtLib Require Import
      Core.RelDec
      Structures.Maps
      Data.Map.FMapAList.
-
-Require Import HTactics.
+Require Import TODOYJ.
+Require Import HTactics Logic IPM.
+Require Import OpenDef.
+Require Import Mem1 MemOpen STB.
 
 Require Import Imp.
 Require Import ImpNotations.
 Require Import ImpProofs.
 
+Require Import NewClient0 NewClientImp.
+
 Set Implicit Arguments.
 
 Local Open Scope nat_scope.
 
-
 Section SIMMODSEM.
+
+  Import ImpNotations.
 
   Context `{Σ: GRA.t}.
 
@@ -40,28 +45,36 @@ Section SIMMODSEM.
   .
 
   Theorem correct:
-    forall ge, ModSemPair.sim MutG0.GSem (MutGImp.GSem ge).
+    forall ge, ModSemPair.sim NewClient0.ClientSem (NewClientImp.ClientSem ge).
   Proof.
+    Local Transparent syscalls.
     econstructor 1 with (wf:=wf) (le:=top2); et; ss.
-    econs; ss. init. unfold cfunU.
-    unfold gF.
-    unfold MutGImp.gF.
-    Local Opaque vadd.
-    steps.
-    rewrite unfold_eval_imp.
-    (* eapply Any.downcast_upcast in _UNWRAPN. des. *)
-    unfold unint in *. destruct v; clarify; ss.
-    des_ifs.
-    2: exfalso; apply n; solve_NoDup.
-    3:{ exfalso; apply n0; solve_NoDup. }
-    - imp_steps. red. esplits; et.
-    - unfold ccallU.
-      imp_steps. replace (z =? 0)%Z with false.
-      2:{ symmetry. eapply Z.eqb_neq. auto. }
+    econs; ss.
+    { init.
+      unfold getintF, getint.
+      steps.
+      rewrite unfold_eval_imp. steps.
+      des_ifs.
+      2:{ exfalso; apply n. solve_NoDup. }
       imp_steps.
-      gstep. econs; ss. i. exists 100.
+      gstep. econs; ss. i. exists 100. imp_steps.
+      red. esplits; et.
+    }
+    econs; ss.
+    { init.
+      steps.
+      unfold putintF, putint.
+      steps.
+      rewrite unfold_eval_imp. steps.
+      destruct (wf_val v) eqn:WFV.
+      2:{ steps. }
+      des_ifs.
+      2:{ exfalso; apply n. solve_NoDup. }
       imp_steps.
-      rewrite _UNWRAPU1. steps. imp_steps. red. esplits; et.
+      gstep. econs; ss. i. exists 100. imp_steps.
+      red. esplits; et.
+    }
+    Local Opaque syscalls.
     Unshelve. all: ss.
   Qed.
 

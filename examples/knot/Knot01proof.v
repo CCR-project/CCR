@@ -119,7 +119,7 @@ Section SIMMODSEM.
     hexploit (SKINCL "_f"); ss; eauto. intros [blk1 FIND1].
 
     econs; ss; [|econs; ss].
-    { init. unfold recF, ccall.
+    { init. unfold recF, ccallU.
 
       (* arg *)
       iarg. destruct x as [f n]. ss. mDesAll. des. clarify.
@@ -165,7 +165,7 @@ Section SIMMODSEM.
       (* ret *)
       iret _; ss. iModIntro. iFrame. et.
     }
-    { init. unfold knotF, ccall.
+    { init. unfold knotF, ccallU.
 
       (* arg *)
       iarg. mDesAll. des. clarify.

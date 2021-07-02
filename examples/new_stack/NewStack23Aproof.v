@@ -213,11 +213,10 @@ Section SIMMODSEM.
         { admit "ez - wf". }
     }
     econs; ss.
-    { unfold NewStack2.new_body, cfun. init. harg. post_call.
-      destruct x; des_ifs_safe; mDesAll; ss; des; subst.
-      - steps.
+    { unfold NewStack2.new_body, cfunN, cfunU. kinit.
+      - harg. mDesAll. des; clarify. steps.
         post_call.
-        rename x into h.
+        rename x0 into h.
         astart 0. astop. steps. force_l. eexists. steps.
 
         mOwnWf "O".
@@ -245,8 +244,8 @@ Section SIMMODSEM.
           }
           rewrite add_disj_insert; ss. eapply sim_fresh_k; et.
         }
-      - unfold KModSem.transl_fun_tgt, new_body. cbn. steps.
-        rename x into h. force_l. exists h. steps.
+      - harg. mDesAll. des; clarify. unfold new_body. cbn. steps.
+        rename x0 into h. force_l. exists h. steps.
         unfold pget. steps.
         assert(S:=SIM h). rewrite _GUARANTEE in *. inv S; ss. force_l; ss. steps.
 
@@ -255,12 +254,11 @@ Section SIMMODSEM.
     }
 
     econs; ss.
-    { unfold NewStack2.pop_body, cfun. init. harg. post_call.
-      destruct x; des_ifs_safe; mDesAll; ss; des; subst.
-      - unfold KModSem.transl_fun_tgt. steps.
+    { unfold NewStack2.pop_body, cfunN. kinit. 
+      - harg. mDesAll. des; clarify. steps. ss. mDesAll. des; clarify.
         renamer. rename n into h. rename l into stk0.
 
-        mCombine "O" "A1".
+        mCombine "O" "A".
         mOwnWf "O".
         assert(A: forall k, URA.wf ((res0 k): URA.car (t:=Excl.t _))).
         { eapply URA.wf_mon in WF0.
@@ -272,7 +270,8 @@ Section SIMMODSEM.
         assert(S:=SIM h). rewrite B in *. inv S; ss. steps.
         astart 0. astop.
         destruct stk0 as [|x stk1].
-        + steps. force_l. esplits. steps. hret _; ss.
+        + steps. force_l. esplits. steps. 
+          rewrite <- H3. steps. hret _; ss.
           iDestruct "O" as "[A B]". iModIntro. iFrame. iSplitL "A"; ss; et.
         + steps.
 
@@ -298,12 +297,13 @@ Section SIMMODSEM.
           assert(SIM0: sim res1 mgr_src0 (<[h:=stk1]> mgr_tgt0)).
           { eapply sim_update_k; et. }
 
-          force_l. esplits. steps. hret _; ss.
+          force_l. esplits. steps. 
+          rewrite <- H3. steps. hret _; ss.
           iModIntro. iFrame. iSplitL "A"; ss; et.
-      - unfold KModSem.transl_fun_tgt, pop_body. cbn. steps.
+      - harg. mDesAll. des; clarify. unfold pop_body. cbn. steps.
         rename n into h. rename l into stk0. destruct v; ss. des_ifs_safe.
-        assert(S:=SIM h). rewrite _UNWRAPU0 in *. inv S; ss. steps.
-        destruct stk0 as [|x stk1].
+        assert(S:=SIM h). rewrite _UNWRAPU1 in *. inv S; ss. steps.
+        destruct stk0 as [|x0 stk1].
         + steps. hret _; ss. iModIntro. iSplits; ss; et.
         + steps. unfold pput. steps.
 
@@ -312,11 +312,10 @@ Section SIMMODSEM.
     }
 
     econs; ss.
-    { unfold NewStack2.push_body, cfun. init. harg. post_call.
-      destruct x; des_ifs_safe; mDesAll; ss; des; subst.
-      - unfold KModSem.transl_fun_tgt. steps.
+    { unfold NewStack2.push_body, cfunN. kinit. 
+      - harg. mDesAll. des; clarify. steps. ss. mDesAll. des; clarify.
         renamer. rename n into h. rename l into stk0. rename v into x.
-        mCombine "O" "A1".
+        mCombine "O" "A".
         mOwnWf "O".
         assert(A: forall k, URA.wf ((res0 k): URA.car (t:=Excl.t _))).
         { eapply URA.wf_mon in WF0.
@@ -350,11 +349,12 @@ Section SIMMODSEM.
         { eapply sim_update_k; et. }
 
         astart 0. astop.
-        force_l. esplits. steps. hret _; ss.
+        force_l. esplits. steps. 
+        rewrite <- H3. steps. hret _; ss.
         iModIntro. iFrame. iSplitL "A"; ss; et.
-      - unfold KModSem.transl_fun_tgt, push_body. cbn. steps.
+      - harg. mDesAll. des; clarify. unfold push_body. cbn. steps.
         rename n into h. rename l into stk0. destruct v; ss. des_ifs_safe.
-        assert(S:=SIM h). rewrite _UNWRAPU in *. inv S; ss. steps.
+        assert(S:=SIM h). rewrite _UNWRAPU0 in *. inv S; ss. steps.
         unfold pput. steps.
 
         hret _; ss.

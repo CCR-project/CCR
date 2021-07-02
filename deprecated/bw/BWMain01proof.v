@@ -47,13 +47,15 @@ Section SIMMODSEM.
     { exists tt. ss. red. econs; et; ss. red. uipropall. }
 
     econs; ss.
-    { unfold mainbody, mainF, ccall, hcall. init. harg.
+    { unfold mainbody, mainF, ccallU, hcall. init. harg.
       mDesAll. des; clarify. steps.
       destruct (to_stb (BWStb ++ ClientStb ++ MainStb) "getbool") eqn:T; unfold to_stb in T; stb_tac; clarify.
       steps. hcall _ _ _ with ""; ss.
       { splits; ss. ss. }
       mDesAll. clarify. steps.
-      steps. unfold unbool in *. rewrite _UNWRAPN. steps. astart 3.
+      steps. unfold unbool in *.
+      (* rewrite _UNWRAPN. *)
+      steps. astart 3.
       (* TODO: use bind rule to reduce redundancy *)
       des_ifs.
       { steps. acatch.

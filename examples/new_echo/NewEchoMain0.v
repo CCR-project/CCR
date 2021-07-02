@@ -19,11 +19,11 @@ Section PROOF.
   Context `{Σ: GRA.t}.
 
   Definition main_body: list val -> itree Es val :=
-    fun _ => (ccall "echo" ([]: list val))
+    fun _ => (ccallU "echo" ([]: list val))
   .
 
   Definition MainSem: ModSem.t := {|
-    ModSem.fnsems := [("main", cfun main_body)];
+    ModSem.fnsems := [("main", cfunU main_body)];
     ModSem.mn := "main";
     ModSem.initial_st := tt↑;
   |}

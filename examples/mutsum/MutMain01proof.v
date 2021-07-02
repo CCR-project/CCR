@@ -42,14 +42,14 @@ Section SIMMODSEM.
     2: { exists tt. red. econs; ss. red. uipropall. }
     econs; ss. init.
     unfold mainF, mainBody. harg.
-    mDesAll. des; clarify. steps. steps.
-    hcall _ _ tt with "*"; ss.
+    mDesAll. des; clarify. steps.
+    astart 10. acatch. hcall _ _ tt with "*"; ss.
     { iPureIntro. esplits; eauto.
       { instantiate (1:=10). ss. }
       { unfold mut_max. lia. }
     }
     { splits; ss. }
-    mDesAll. des; clarify. steps.
+    steps. astop. mDesAll. des; clarify. steps.
     hret tt; ss.
   Qed.
 

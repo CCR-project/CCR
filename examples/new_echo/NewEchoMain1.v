@@ -19,12 +19,12 @@ Section PROOF.
 
   Context `{Σ: GRA.t}.
 
-  Definition main_body: list val -> itree (kCallE +' pE +' eventE) val :=
-    fun _ => (kcall impure "echo" ([]: list val))
+  Definition main_body: list val -> itree hEs val :=
+    fun _ => (ccallN "echo" ([]: list val))
   .
 
   Definition MainSem: KModSem.t := {|
-    KModSem.fnsems := [("main", ksb_trivial (cfun main_body))];
+    KModSem.fnsems := [("main", ksb_trivial (cfunN main_body))];
     KModSem.mn := "main";
     KModSem.initial_mr := ε;
     KModSem.initial_st := tt↑;

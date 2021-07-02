@@ -156,6 +156,18 @@ Section AUX.
     i. eapply unfold_is_list.
   Qed.
 
+  Lemma is_list_wf
+        ll xs
+    :
+      (is_list ll xs) -∗ (⌜(ll = Vnullptr) \/ (match ll with | Vptr _ 0 => True | _ => False end)⌝)
+  .
+  Proof.
+    iIntros "H0". destruct xs; ss; et.
+    { iPure "H0" as H0. iPureIntro. left. et. }
+    iDestruct "H0" as (lhd ltl) "[[H0 H1] H2]".
+    iPure "H0" as H0. iPureIntro. right. subst. et.
+  Qed.
+
   (* Global Opaque is_list. *)
 End AUX.
 
@@ -178,7 +190,7 @@ Section PROOF.
                     (fun varg o => (∃ v, (⌜varg = ([Vptr b ofs])↑⌝)
                                            ** OwnM ((b, ofs) |-> [v]))
                                      ** ⌜o = ord_pure 0⌝),
-                    fun _ => (True: iProp)%I
+                    fun vret => ⌜vret = (Vint 0)↑⌝%I
     ))).
 
   Definition load_spec: fspec :=
@@ -196,7 +208,7 @@ Section PROOF.
                                (⌜varg = ([Vptr b ofs ; v_new])↑⌝)
                                  ** OwnM((b, ofs) |-> [v_old]))
                              ** (⌜o = ord_pure 0⌝)%I),
-            (fun _ => OwnM((b, ofs) |-> [v_new])
+            (fun vret => OwnM((b, ofs) |-> [v_new]) ** ⌜vret = (Vint 0)↑⌝
     )))).
 
   Definition cmp_spec: fspec :=

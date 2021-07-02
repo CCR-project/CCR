@@ -21,12 +21,12 @@ Section PROOF.
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG stkRA Σ}.
 
-  Definition echo_body: list val -> itree (kCallE +' pE +' eventE) val :=
+  Definition echo_body: list val -> itree hEs val :=
     fun args =>
       _ <- (pargs [] args)?;;
-      APCK;;;
-      `stk0: list Z    <- (kcall impure "input" ([]: list Z));;
-      `_: list Z    <- (kcall impure "output" (stk0));;
+      trigger hAPC;;;
+      `stk0: list Z    <- (ccallN "input" ([]: list Z));;
+      `_: list Z    <- (ccallN "output" (stk0));;
       Ret Vundef
   .
 
@@ -42,18 +42,18 @@ Section PROOF.
                 (∃ (stk0: list Z) (argl: list val),
                   ⌜_argh = stk0↑ ∧ _argl = argl↑ ∧ argl = [Vptr h 0] ∧ o = ord_top⌝
                    ** (is_int_stack h stk0))%I)
-             (fun _ h _reth _ => (∃ (stk1: list Z), ⌜_reth = stk1↑⌝ ** is_int_stack h stk1)%I)
+             (fun _ h _reth _retl => (∃ (stk1: list Z), ⌜_reth = stk1↑ ∧ _retl = Vundef↑⌝ ** is_int_stack h stk1)%I)
   .
 
-  Definition input_body: list Z -> itree (kCallE +' pE +' eventE) (list Z) :=
+  Definition input_body: list Z -> itree hEs (list Z) :=
     fun stk =>
-      n <- (kcall impure "getint" ([]: list val));;
+      n <- (ccallU "getint" ([]: list val));;
       n <- (parg Tint n)?;;
       if (dec n (- 1)%Z)
       then Ret stk
       else
-        APCK;;;
-        (kcall impure "input" (n :: stk))
+        trigger hAPC;;;
+        (ccallN "input" (n :: stk))
   .
 
 
@@ -65,15 +65,15 @@ Section PROOF.
                 (∃ (stk0: list Z) (argl: list val),
                   ⌜_argh = stk0↑ ∧ _argl = argl↑ ∧ argl = [Vptr h 0] ∧ o = ord_top⌝
                    ** is_int_stack h stk0)%I)
-             (fun _ h _reth _ => (∃ (stk1: list Z), ⌜_reth = stk1↑⌝ ** is_int_stack h stk1)%I)
+             (fun _ h _reth _retl => (∃ (stk1: list Z), ⌜_reth = stk1↑ ∧ _retl = Vundef↑⌝ ** is_int_stack h stk1)%I)
   .
 
-  Definition output_body: list Z -> itree (kCallE +' pE +' eventE) (list Z) :=
+  Definition output_body: list Z -> itree hEs (list Z) :=
     fun stk =>
-      APCK;;;
+      trigger hAPC;;;
       match stk with
       | [] => Ret []
-      | n :: stk' => `_: val <- (kcall impure "putint" ([Vint n]: list val));; (kcall impure "output" (stk'))
+      | n :: stk' => `_: val <- (ccallU "putint" ([Vint n]: list val));; (ccallN "output" (stk'))
       end
   .
 
@@ -82,15 +82,15 @@ Section PROOF.
 
 
   Definition EchoSbtb: list (gname * kspecbody) :=
-    [("echo", ksb_trivial (cfun echo_body));
-    ("input",  mk_kspecbody input_spec (fun _ => triggerUB) (cfun input_body));
-    ("output", mk_kspecbody output_spec (fun _ => triggerUB) (cfun output_body))
+    [("echo", ksb_trivial (cfunU echo_body));
+    ("input",  mk_kspecbody input_spec (fun _ => triggerUB) (cfunN input_body));
+    ("output", mk_kspecbody output_spec (fun _ => triggerUB) (cfunN output_body))
     ]
   .
 
   Definition EchoStb: list (gname * fspec).
     eapply (Seal.sealing "stb").
-    let x := constr:(List.map (map_snd (fun ksb => (KModSem.disclose_ksb_tgt ksb): fspec)) EchoSbtb) in
+    let x := constr:(List.map (map_snd (fun ksb => ksb.(ksb_fspec): fspec)) EchoSbtb) in
     let y := eval cbn in x in
     eapply y.
   Defined.
@@ -102,9 +102,8 @@ Section PROOF.
     KModSem.initial_st := (∅: gmap mblock (list Z))↑;
   |}
   .
-  Definition SEchoSem: SModSem.t := KEchoSem.
   Definition EchoSem (stb: gname -> option fspec): ModSem.t :=
-    (SModSem.to_tgt stb) SEchoSem.
+    KModSem.transl_tgt stb KEchoSem.
 
 
 
@@ -113,9 +112,8 @@ Section PROOF.
     KMod.sk := Sk.unit;
   |}
   .
-  Definition SEcho: SMod.t := KEcho.
   Definition Echo (stb: Sk.t -> gname -> option fspec): Mod.t :=
-    SMod.to_tgt stb SEcho.
+    KMod.transl_tgt stb KEcho.
 
 End PROOF.
 Global Hint Unfold EchoStb: stb.

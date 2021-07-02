@@ -95,7 +95,7 @@ int pop(struct Node## llref) {
 (*   struct Node* new_node = malloc(sizeof(struct Node)); *)
 (*   new_node->val = x; *)
 (*   new_node->next = ll; *)
-(*   printf("[DEBUG]: "); *)
+(*   print("[DEBUG]: "); *)
 (*   print_all(new_node); *)
 (*   return new_node; *)
 (* } *)

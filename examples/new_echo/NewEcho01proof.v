@@ -41,7 +41,7 @@ Section SIMMODSEM.
   (*** TODO: remove this later ***)
   Definition ClientStb: list (gname * fspec).
     eapply (Seal.sealing "stb").
-    let x := constr:(List.map (fun fn => (fn, (KModSem.disclose_tgt fspec_trivial))) ["getint"; "putint"]) in
+    let x := constr:(List.map (fun fn => (fn, fspec_trivial)) ["getint"; "putint"]) in
     let y := eval cbn in x in
     eapply y.
   Defined.
@@ -71,75 +71,74 @@ Section SIMMODSEM.
       - eapply to_semantic. iIntros "H". ss.
     }
     econs; ss.
-    { unfold NewEcho0.echo_body, echo_body, cfun, kcall, ccall. trivial_init. post_call.
-      des_ifs. steps. unfold KModSem.transl_fun_tgt. steps. rewrite _UNWRAPN. steps.
-      kstart 1. kcatch. { eapply STBINCL. stb_tac; ss. } hcall _ (Some _) _ with ""; ss; et.
-      { ss. }
-      post_call. steps. kstop. steps. erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.
-      hcall _ (Some _) _ with "A"; ss; et.
+    { unfold NewEcho0.echo_body, echo_body, cfunN, cfunU, ccallN, ccallU.
+      kinit. harg. post_call.
+      des_ifs. steps.
+      astart 1. acatch. { eapply STBINCL. stb_tac; ss. } hcall _ _ _ with ""; ss; et.
+      post_call. steps. astop. steps. erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.
+      hcall _ _ _ with "A"; ss; et.
       { iModIntro. iSplits; ss; et. }
       { ss. }
       post_call. steps.
       erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.
-      hcall _ (Some _) _ with "A"; ss; et.
+      hcall _ _ _ with "A"; ss; et.
       { iModIntro. iSplits; ss; et. }
       { ss. }
       post_call. steps.
       hret _; ss.
     }
     econs; ss.
-    { unfold NewEcho0.input_body, input_body, cfun, kcall, ccall. init. harg. post_call.
-      unfold KModSem.transl_fun_tgt.
-      destruct x; des_ifs_safe; mDesAll; ss; des; subst; cycle 1.
-      { rewrite Any.pair_split. steps. }
-      rewrite Any.pair_split. steps.
+    { unfold NewEcho0.input_body, input_body, cfunU, ccallU, ccallN. kinit.
+      2: { harg. mDesAll. des; clarify. steps. }
+      harg. post_call. steps.
       erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.
-      hcall _ (Some _) _ with ""; ss; et.
-      post_call. steps. rewrite _UNWRAPN. steps.
+      hcall _ _ _ with ""; ss; et.
+      post_call. steps.
       destruct v; ss; clarify. des_ifs.
       - steps. hret _; ss.
         { iModIntro. iSplits; ss; et. }
       - steps.
-        kstart 1. kcatch.
+        astart 1. acatch.
         { erewrite STBINCL; ss. stb_tac; ss. }
-        hcall _ (Some (_, _, _)) _ with "-"; ss; et.
-        { iModIntro. iSplits; ss; et. }
+        hcall _ (_, _, _) _ with "-"; ss; et.
         { ss. }
-        post_call. steps. kstop. steps.
+        post_call. steps. astop. steps.
+
+        force_r.
+        { admit "ccall...". }
+        steps.
 
         erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.
-        hcall _ (Some _) _ with "-"; ss; et.
+        hcall _ _ _ with "-"; ss; et.
         { iModIntro. iSplits; ss; et. }
         { ss. }
-        post_call. steps. 
+        post_call. steps.
         hret _; ss.
         { iModIntro. iSplits; ss; et. }
     }
     econs; ss.
-    { unfold NewEcho0.output_body, output_body, cfun, kcall, ccall. init. harg. post_call.
-      unfold KModSem.transl_fun_tgt.
-      destruct x; des_ifs_safe; mDesAll; ss; des; subst; cycle 1.
-      { rewrite Any.pair_split. steps. }
-      rewrite Any.pair_split.  steps.
-      kstart 1. kcatch.
+    { unfold NewEcho0.output_body, output_body, cfunU, ccallU, ccallN. kinit.
+      2:{ harg. mDesAll. des; clarify. steps. }
+      harg. post_call. steps.
+      astart 1. acatch.
       { erewrite STBINCL; ss. stb_tac; ss. }
-      hcall _ (Some (_, _)) _ with "-"; ss; et.
-      { iModIntro. iSplits; ss; et. }
+      hcall _ (_, _) _ with "-"; ss; et.
       { ss. }
-      post_call. steps. kstop. steps.
-      destruct a0 as [|hd tl]; ss.
+      post_call. steps. astop. steps.
+      destruct a as [|hd tl]; ss.
       - steps. mDesAll; ss; des; subst. rewrite Any.upcast_downcast in *. clarify. steps. hret _; ss.
         { iModIntro. iSplits; ss; et. }
       - steps. mDesAll; ss; des; subst. rewrite Any.upcast_downcast in *. clarify.
+        erewrite STBINCL; cycle 1. { stb_tac; ss. }
+        Local Opaque NewEchoHeader.val_dec. steps. Local Transparent NewEchoHeader.val_dec.
+        inv PURE. des_ifs. steps.
+        hcall _ _ _ with ""; ss; et.
+        post_call. steps.
         erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.
-        inv PURE0. des_ifs. steps.
-        hcall _ (Some _) _ with ""; ss; et.
-        post_call. steps. rewrite _UNWRAPN. steps.
-        erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.
-        hcall _ (Some _) _ with "-"; ss; et.
+        hcall _ _ _ with "-"; ss; et.
         { iModIntro. iSplits; ss; et. }
         { ss. }
-        post_call. steps. 
+        post_call. steps.
         hret _; ss.
         { iModIntro. iSplits; ss; et. }
     }

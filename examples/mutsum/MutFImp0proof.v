@@ -43,33 +43,25 @@ Section SIMMODSEM.
     forall ge, ModSemPair.sim MutF0.FSem (MutFImp.FSem ge).
   Proof.
     econstructor 1 with (wf:=wf) (le:=top2); et; ss.
-    econs; ss. init. unfold cfun.
+    econs; ss. init. unfold cfunU, cfunN.
     unfold fF.
     unfold MutFImp.fF.
     Local Opaque vadd.
     steps.
     rewrite unfold_eval_imp.
-    eapply Any.downcast_upcast in _UNWRAPN. des.
-    unfold unint in *. destruct v; clarify; ss. force_r. solve_NoDup.
-    imp_steps. force_r; auto.
+    (* eapply Any.downcast_upcast in _UNWRAPN. des. *)
+    unfold unint in *. destruct v; clarify; ss.
     des_ifs.
-    - imp_steps. force_r; auto. imp_steps. force_r; auto. imp_steps.
-      red. esplits; et.
-    - unfold ccall.
+    2: exfalso; apply n; solve_NoDup.
+    3:{ exfalso; apply n0; solve_NoDup. }
+    - imp_steps. red. esplits; et.
+    - unfold ccallU.
       imp_steps. replace (z =? 0)%Z with false.
       2:{ symmetry. eapply Z.eqb_neq. auto. }
-      steps. imp_steps.
-      force_r; auto. imp_steps.
-      force_r; auto.
-      { econs; ss. }
-      imp_steps.
-      force_r; auto.
       imp_steps.
       gstep. econs; ss. i. exists 100.
       imp_steps.
-      force_r; auto. imp_steps. force_r; auto. steps.
-      rewrite _UNWRAPU. steps. force_r; auto. imp_steps. force_r; auto. imp_steps.
-      red. esplits; et.
+      rewrite _UNWRAPU1. steps. imp_steps. red. esplits; et.
     Unshelve. all: ss.
   Qed.
 

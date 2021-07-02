@@ -20,6 +20,8 @@ Require Import ImpMem1.
 Require Import ImpMem2.
 Require Import ImpLink.
 
+Require Import NewStackImp NewEchoImp NewEchoMainImp NewClientImp.
+
 Extract Constant excluded_middle_informative => "true".
 
 Extract Constant s2p => "(fun str -> Camlcoq.(str |> camlstring_of_coqstring |> intern_string))".
@@ -175,6 +177,7 @@ Separate Extraction
    imp_mem1_f imp_mem1_main
    imp_mem2_prog
    imp_linkF_prog imp_linkG_prog imp_linkMain_prog
+   Stack_prog Echo_prog EchoMain_prog Client_prog
 .
 
 Cd "..".

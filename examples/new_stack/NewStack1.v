@@ -29,10 +29,10 @@ Section PROOF.
   (*   stk_mgr(handle) := Some []; *)
   (*   return handle *)
 
-  Definition new_body: list val -> itree (kCallE +' pE +' eventE) val :=
+  Definition new_body: list val -> itree hEs val :=
     fun args =>
       _ <- (pargs [] args)?;;
-      APCK;;;
+      trigger hAPC;;;
       handle <- trigger (Choose _);;
       stk_mgr0 <- pget;;
       guarantee(stk_mgr0 !! handle = None);;;
@@ -50,13 +50,13 @@ Section PROOF.
   (*   | [] => return -1 *)
   (*   end *)
 
-  Definition pop_body: list val -> itree (kCallE +' pE +' eventE) val :=
+  Definition pop_body: list val -> itree hEs val :=
     fun args =>
       handle <- (pargs [Tblk] args)?;;
       stk_mgr0 <- pget;;
       stk0 <- (stk_mgr0 !! handle)?;;
       let stk_mgr1 := delete handle stk_mgr0 in pput stk_mgr1;;;
-      APCK;;;
+      trigger hAPC;;;
       match stk0 with
       | x :: stk1 =>
         stk_mgr2 <- pget;; pput (<[handle:=stk1]> stk_mgr2);;;
@@ -72,26 +72,26 @@ Section PROOF.
   (*   stk_mgr(handle) := Some (x :: stk); *)
   (*   () *)
 
-  Definition push_body: list val -> itree (kCallE +' pE +' eventE) val :=
+  Definition push_body: list val -> itree hEs val :=
     fun args =>
       '(handle, x) <- (pargs [Tblk; Tuntyped] args)?;;
       stk_mgr0 <- pget;;
       stk0 <- (stk_mgr0 !! handle)?;;
       let stk_mgr1 := delete handle stk_mgr0 in pput stk_mgr1;;;
-      APCK;;;
+      trigger hAPC;;;
       stk_mgr2 <- pget;; pput (<[handle:=(x :: stk0)]> stk_mgr2);;;
       Ret Vundef
   .
 
   Definition StackSbtb: list (gname * kspecbody) :=
-    [("new", ksb_trivial (cfun new_body));
-    ("pop", ksb_trivial (cfun pop_body));
-    ("push", ksb_trivial (cfun push_body))
+    [("new", ksb_trivial (cfunU new_body));
+    ("pop", ksb_trivial (cfunU pop_body));
+    ("push", ksb_trivial (cfunU push_body))
     ].
 
   Definition StackStb: list (gname * fspec).
     eapply (Seal.sealing "stb").
-    let x := constr:(List.map (map_snd (fun ksb => (KModSem.disclose_ksb_tgt ksb): fspec)) StackSbtb) in
+    let x := constr:(List.map (map_snd (fun ksb => ksb.(ksb_fspec): fspec)) StackSbtb) in
     let y := eval cbn in x in
     eapply y.
   Defined.
@@ -103,9 +103,8 @@ Section PROOF.
     KModSem.initial_st := (∅: gmap mblock (list val))↑;
   |}
   .
-  Definition SStackSem: SModSem.t := KStackSem.
   Definition StackSem (stb: gname -> option fspec): ModSem.t :=
-    (SModSem.to_tgt stb) SStackSem.
+    KModSem.transl_tgt stb KStackSem.
 
 
 
@@ -114,9 +113,8 @@ Section PROOF.
     KMod.sk := Sk.unit;
   |}
   .
-  Definition SStack: SMod.t := KStack.
   Definition Stack (stb: Sk.t -> gname -> option fspec): Mod.t :=
-    SMod.to_tgt stb SStack.
+    KMod.transl_tgt stb KStack.
 
 End PROOF.
 Global Hint Unfold StackStb: stb.

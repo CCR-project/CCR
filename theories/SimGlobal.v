@@ -687,6 +687,7 @@ Let ms_tgt: ModSemL.t := md_tgt.(ModL.enclose).
 (* . *)
 (* Hypothesis (SIM: Forall2 sim_fnsem ms_src.(ModSemL.fnsems) ms_tgt.(ModSemL.fnsems)). *)
 
+Section ADEQUACY.
 Hypothesis (SIM: exists o0, simg eq o0 (ModSemL.initial_itr ms_src (Some (ModL.wf md_src))) (ModSemL.initial_itr ms_tgt (Some (ModL.wf md_tgt)))).
 
 
@@ -697,6 +698,21 @@ Theorem adequacy_global: Beh.of_program (ModL.compile md_tgt) <1= Beh.of_program
 Proof.
   eapply adequacy_global_itree. eapply SIM.
 Qed.
+End ADEQUACY.
+
+
+Section ADEQUACY.
+Variable arg: Any.t.
+Hypothesis (SIM: exists o0, simg eq o0 (ModSemL.initial_itr_arg ms_src (Some (ModL.wf md_src)) arg) (ModSemL.initial_itr_arg ms_tgt (Some (ModL.wf md_tgt)) arg)).
+
+
+Local Hint Resolve cpn3_wcompat: paco.
+
+Theorem adequacy_global_arg: Beh.of_program (ModL.compile_arg md_tgt arg) <1= Beh.of_program (ModL.compile_arg md_src arg).
+Proof.
+  eapply adequacy_global_itree. eapply SIM.
+Qed.
+End ADEQUACY.
 
 End SIM.
 
@@ -707,3 +723,66 @@ Hint Constructors ordC: core.
 Hint Resolve ordC_mon: paco.
 Hint Constructors bindR: core.
 Hint Unfold bindC: core.
+
+
+Inductive _simg_safe (simg: forall R0 R1 (RR: R0 -> R1 -> Prop), Ord.t -> (itree eventE R0) -> (itree eventE R1) -> Prop)
+          {R0 R1} (RR: R0 -> R1 -> Prop) (i0: Ord.t): (itree eventE R0) -> (itree eventE R1) -> Prop :=
+| simg_safe_ret
+    r_src r_tgt
+    (SIM: RR r_src r_tgt)
+  :
+    _simg_safe simg RR i0 (Ret r_src) (Ret r_tgt)
+| simg_safe_syscall
+    i1 ktr_src0 ktr_tgt0 fn varg rvs
+    (SIM: forall x_src x_tgt (EQ: x_src = x_tgt), simg _ _ RR i1 (ktr_src0 x_src) (ktr_tgt0 x_tgt))
+  :
+    _simg_safe simg RR i0 (trigger (Syscall fn varg rvs) >>= ktr_src0) (trigger (Syscall fn varg rvs) >>= ktr_tgt0)
+
+
+
+| simg_safe_tau
+    i1 itr_src0 itr_tgt0
+    (TAUBOTH: True)
+    (* (ORD: Ordinal.le i1 i0) *)
+    (SIM: simg _ _ RR i1 itr_src0 itr_tgt0)
+  :
+    _simg_safe simg RR i0 (tau;; itr_src0) (tau;; itr_tgt0)
+| simg_safe_tauL
+    i1 itr_src0 itr_tgt0
+    (TAUL: True)
+    (ORD: Ord.lt i1 i0)
+    (SIM: simg _ _ RR i1 itr_src0 itr_tgt0)
+  :
+    _simg_safe simg RR i0 (tau;; itr_src0) (itr_tgt0)
+| simg_safe_tauR
+    i1 itr_src0 itr_tgt0
+    (TAUR: True)
+    (ORD: Ord.lt i1 i0)
+    (SIM: simg _ _ RR i1 itr_src0 itr_tgt0)
+  :
+    _simg_safe simg RR i0 (itr_src0) (tau;; itr_tgt0)
+
+
+
+| simg_safe_chooseR
+    i1 X itr_src0 ktr_tgt0
+    (CHOOSER: True)
+    (ORD: Ord.lt i1 i0)
+    (SIM: forall x, simg _ _ RR i1 itr_src0 (ktr_tgt0 x))
+  :
+    _simg_safe simg RR i0 (itr_src0) (trigger (Choose X) >>= ktr_tgt0)
+
+
+
+| simg_safe_takeL
+    i1 X ktr_src0 itr_tgt0
+    (TAKEL: True)
+    (ORD: Ord.lt i1 i0)
+    (SIM: forall x, simg _ _ RR i1 (ktr_src0 x) itr_tgt0)
+  :
+    _simg_safe simg RR i0 (trigger (Take X) >>= ktr_src0) (itr_tgt0)
+.
+
+Lemma simg_safe_spec:
+  _simg_safe <7= _simg.
+Proof. i. inv PR; try by (econs; eauto). Qed.

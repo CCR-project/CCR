@@ -62,7 +62,7 @@ Section PROOF.
   Notation pget := (p0 <- trigger PGet;; `p0: (gmap mblock (list val)) <- p0↓ǃ;; Ret p0) (only parsing).
   Notation pput p0 := (trigger (PPut (p0: (gmap mblock (list val)))↑)) (only parsing).
 
-  Definition new_body: list val -> itree (kCallE +' pE +' eventE) val :=
+  Definition new_body: list val -> itree hEs val :=
     fun args =>
       _ <- (pargs [] args)?;;
       handle <- trigger (Choose _);;
@@ -73,7 +73,7 @@ Section PROOF.
       Ret (Vptr handle 0)
   .
 
-  Definition pop_body: list val -> itree (kCallE +' pE +' eventE) val :=
+  Definition pop_body: list val -> itree hEs val :=
     fun args =>
       handle <- (pargs [Tblk] args)?;;
       stk_mgr0 <- pget;;
@@ -86,7 +86,7 @@ Section PROOF.
       end
   .
 
-  Definition push_body: list val -> itree (kCallE +' pE +' eventE) val :=
+  Definition push_body: list val -> itree hEs val :=
     fun args =>
       '(handle, x) <- (pargs [Tblk; Tuntyped] args)?;;
       stk_mgr0 <- pget;;
@@ -97,15 +97,15 @@ Section PROOF.
 
 
   Definition StackSbtb: list (gname * kspecbody) :=
-    [("new", mk_kspecbody new_spec (cfun new_body) (fun _ => trigger (Choose _)));
-    ("pop",  mk_kspecbody pop_spec (cfun pop_body) (fun _ => trigger (Choose _)));
-    ("push", mk_kspecbody push_spec (cfun push_body) (fun _ => trigger (Choose _)))
+    [("new", mk_kspecbody new_spec (cfunU new_body) (fun _ => trigger (Choose _)));
+    ("pop",  mk_kspecbody pop_spec (cfunU pop_body) (fun _ => trigger (Choose _)));
+    ("push", mk_kspecbody push_spec (cfunU push_body) (fun _ => trigger (Choose _)))
     ]
   .
 
   Definition StackStb: list (gname * fspec).
     eapply (Seal.sealing "stb").
-    let x := constr:(List.map (map_snd (fun ksb => (KModSem.disclose_ksb_tgt ksb): fspec)) StackSbtb) in
+    let x := constr:(List.map (map_snd (fun ksb => ksb.(ksb_fspec): fspec)) StackSbtb) in
     let y := eval cbn in x in
     eapply y.
   Defined.
@@ -117,9 +117,8 @@ Section PROOF.
     KModSem.initial_st := (∅: gmap mblock (list val))↑;
   |}
   .
-  Definition SStackSem: SModSem.t := KStackSem.
   Definition StackSem (stb: gname -> option fspec): ModSem.t :=
-    (SModSem.to_tgt stb) SStackSem.
+    KModSem.transl_tgt stb KStackSem.
 
 
 
@@ -128,9 +127,8 @@ Section PROOF.
     KMod.sk := Sk.unit;
   |}
   .
-  Definition SStack: SMod.t := KStack.
   Definition Stack (stb: Sk.t -> gname -> option fspec): Mod.t :=
-    SMod.to_tgt stb SStack.
+    KMod.transl_tgt stb KStack.
 
 End PROOF.
 Global Hint Unfold StackStb: stb.

@@ -13,12 +13,15 @@ Set Implicit Arguments.
 
 
 Definition getintF {E} `{eventE -< E}:  list val -> itree E val :=
-  fun _ => trigger (Syscall "scanf" [] top1).
+  fun args =>
+    _ <- (pargs [] args)?;;
+    trigger (Syscall "scan" [] top1).
 
 Definition putintF {E} `{eventE -< E}: list val -> itree E val :=
   fun varg =>
     `v: val <- (pargs [Tuntyped] varg)?;;
-    trigger (Syscall "printf" varg top1);;;
+    (if (wf_val v) then Ret tt else triggerUB);;; (* TODO: make notation *)
+    trigger (Syscall "print" varg top1);;;
     Ret Vundef
 .
 
@@ -28,7 +31,7 @@ Section PROOF.
   Context `{Σ: GRA.t}.
 
   Definition ClientSem: ModSem.t := {|
-    ModSem.fnsems := [("getint", cfun getintF); ("putint", cfun putintF)];
+    ModSem.fnsems := [("getint", cfunU getintF); ("putint", cfunU putintF)];
     ModSem.mn := "Client";
     ModSem.initial_st := tt↑;
   |}

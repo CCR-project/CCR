@@ -59,7 +59,7 @@ Section MAIN.
       mk_simple (X:=(nat -> nat))
                 (fun f => (
                      (fun varg o =>
-                        (⌜o = ord_top⌝)
+                        (⌜o = ord_top ∧ varg = ([]: list val)↑⌝)
                           ** OwnM (knot_init)
                           ** inv_closed: iProp
                      ),
@@ -70,7 +70,7 @@ Section MAIN.
     Definition MainStb: list (gname * fspec) := [("fib", fib_spec); ("main", main_spec)].
 
     Definition MainSbtb: list (gname * fspecbody) :=[("fib", mk_specbody fib_spec (fun _ => trigger (Choose _)));
-                                                    ("main", mk_specbody main_spec (fun _ => APC;;; Ret (Vint (Z.of_nat (Fib 10)))↑))].
+                                                    ("main", mk_specbody main_spec (fun _ => trigger hAPC;;; Ret (Vint (Z.of_nat (Fib 10)))↑))].
 
     Definition SMainSem: SModSem.t := {|
       SModSem.fnsems := MainSbtb;

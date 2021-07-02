@@ -21,7 +21,7 @@ Section PROOF.
     fun varg =>
       'fb <- (pargs [Tblk] varg)?;;
       blk <- (skenv.(SkEnv.id2blk) "_f")?;;
-      `_: val <- ccall "store" [Vptr blk 0; Vptr fb 0];;
+      `_: val <- ccallU "store" [Vptr blk 0; Vptr fb 0];;
       rb <- (skenv.(SkEnv.id2blk) "rec")?;;
       Ret (Vptr rb 0).
 
@@ -29,13 +29,13 @@ Section PROOF.
     fun varg =>
       'n <- (pargs [Tint] varg)?;;
       blk <- (skenv.(SkEnv.id2blk) "_f")?;;
-      `fb: val <- ccall "load" [Vptr blk 0];; fb <- (unblk fb)?;;
+      `fb: val <- ccallU "load" [Vptr blk 0];; fb <- (unblk fb)?;;
       fn <- (skenv.(SkEnv.blk2id) fb)?;;
       rb <- (skenv.(SkEnv.id2blk) "rec")?;;
-      ccall fn [Vptr rb 0; Vint n].
+      ccallU fn [Vptr rb 0; Vint n].
 
   Definition KnotSem (sk: Sk.t): ModSem.t := {|
-    ModSem.fnsems := [("rec", cfun (recF sk)); ("knot", cfun (knotF sk))];
+    ModSem.fnsems := [("rec", cfunU (recF sk)); ("knot", cfunU (knotF sk))];
     ModSem.mn := "Knot";
     ModSem.initial_st := tt↑;
   |}

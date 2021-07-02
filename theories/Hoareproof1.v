@@ -30,85 +30,6 @@ Set Implicit Arguments.
 
 
 
-Inductive _simg_safe (simg: forall R0 R1 (RR: R0 -> R1 -> Prop), Ord.t -> (itree eventE R0) -> (itree eventE R1) -> Prop)
-          {R0 R1} (RR: R0 -> R1 -> Prop) (i0: Ord.t): (itree eventE R0) -> (itree eventE R1) -> Prop :=
-| simg_safe_ret
-    r_src r_tgt
-    (SIM: RR r_src r_tgt)
-  :
-    _simg_safe simg RR i0 (Ret r_src) (Ret r_tgt)
-| simg_safe_syscall
-    i1 ktr_src0 ktr_tgt0 fn varg rvs
-    (SIM: forall x_src x_tgt (EQ: x_src = x_tgt), simg _ _ RR i1 (ktr_src0 x_src) (ktr_tgt0 x_tgt))
-  :
-    _simg_safe simg RR i0 (trigger (Syscall fn varg rvs) >>= ktr_src0) (trigger (Syscall fn varg rvs) >>= ktr_tgt0)
-
-
-
-| simg_safe_tau
-    i1 itr_src0 itr_tgt0
-    (TAUBOTH: True)
-    (* (ORD: Ordinal.le i1 i0) *)
-    (SIM: simg _ _ RR i1 itr_src0 itr_tgt0)
-  :
-    _simg_safe simg RR i0 (tau;; itr_src0) (tau;; itr_tgt0)
-| simg_safe_tauL
-    i1 itr_src0 itr_tgt0
-    (TAUL: True)
-    (ORD: Ord.lt i1 i0)
-    (SIM: simg _ _ RR i1 itr_src0 itr_tgt0)
-  :
-    _simg_safe simg RR i0 (tau;; itr_src0) (itr_tgt0)
-| simg_safe_tauR
-    i1 itr_src0 itr_tgt0
-    (TAUR: True)
-    (ORD: Ord.lt i1 i0)
-    (SIM: simg _ _ RR i1 itr_src0 itr_tgt0)
-  :
-    _simg_safe simg RR i0 (itr_src0) (tau;; itr_tgt0)
-
-
-
-| simg_safe_chooseR
-    i1 X itr_src0 ktr_tgt0
-    (CHOOSER: True)
-    (ORD: Ord.lt i1 i0)
-    (SIM: forall x, simg _ _ RR i1 itr_src0 (ktr_tgt0 x))
-  :
-    _simg_safe simg RR i0 (itr_src0) (trigger (Choose X) >>= ktr_tgt0)
-
-
-
-| simg_safe_takeL
-    i1 X ktr_src0 itr_tgt0
-    (TAKEL: True)
-    (ORD: Ord.lt i1 i0)
-    (SIM: forall x, simg _ _ RR i1 (ktr_src0 x) itr_tgt0)
-  :
-    _simg_safe simg RR i0 (trigger (Take X) >>= ktr_src0) (itr_tgt0)
-.
-
-Lemma simg_safe_spec:
-  _simg_safe <7= _simg.
-Proof. i. inv PR; try by (econs; eauto). Qed.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 Lemma add_le_lt: forall x0 x1 y0 y1, (x0 <= x1)%ord -> (y0 < y1)%ord -> (x0 + y0 < x1 + y1)%ord.
 Proof.
   i.
@@ -402,7 +323,7 @@ Section CANCEL.
       (<<NONE: stb fn = None>>) \/ (exists fsp, <<FIND: stb fn = Some fsp>> /\ <<TRIVIAL: forall mn x arg_src arg_tgt o r (PRE: fsp.(precond) mn x arg_src arg_tgt o r), o = ord_top>>).
 
 
-  Let mds_src: list Mod.t := List.map (SMod.to_src) mds.
+  Let mds_mid2: list Mod.t := List.map (SMod.to_mid2 stb) mds.
   Let mds_mid: list Mod.t := List.map (SMod.to_mid stb) mds.
 
 
@@ -412,10 +333,10 @@ Section CANCEL.
 
   Opaque EventsL.interp_Es.
 
-  Let ms_src: ModSemL.t := ModL.enclose (Mod.add_list mds_src).
+  Let ms_mid2: ModSemL.t := ModL.enclose (Mod.add_list mds_mid2).
   Let ms_mid: ModSemL.t := ModL.enclose (Mod.add_list mds_mid).
 
-  Let p_src := ModSemL.prog ms_src.
+  Let p_mid2 := ModSemL.prog ms_mid2.
   Let p_mid := ModSemL.prog ms_mid.
 
   Ltac _ord_step := eapply add_le_lt; [refl|eapply OrdArith.lt_from_nat; ss].
@@ -470,23 +391,23 @@ Section CANCEL.
   Lemma stb_find_iff_aux fn
     :
       ((<<NONE: alist_find fn _stb = None>>) /\
-       (<<FINDSRC: alist_find fn (fnsems ms_src) = None>>) /\
+       (<<FINDSRC: alist_find fn (fnsems ms_mid2) = None>>) /\
        (<<FINDMID: alist_find fn (fnsems ms_mid) = None>>)) \/
 
       (exists md (f: fspecbody),
           (<<SOME: alist_find fn _stb = Some (f: fspec)>>) /\
-          (<<FINDSRC: alist_find fn (fnsems ms_src) =
+          (<<FINDSRC: alist_find fn (fnsems ms_mid2) =
                       Some (transl_all (T:=_)
                               (SModSem.mn
                                  (SMod.get_modsem md sk))
-                              ∘ fun_to_src (fsb_body f))>>) /\
+                              ∘ fun_to_mid2 (fsb_body f))>>) /\
           (<<FINDMID: alist_find fn (fnsems ms_mid) =
                       Some (transl_all (T:=_)
                               (SModSem.mn
                                  (SMod.get_modsem md sk))
                               ∘ fun_to_mid stb (fsb_body f))>>)).
   Proof.
-    unfold ms_src, ms_mid, mds_mid, mds_src, SMod.to_src, SMod.to_mid.
+    unfold ms_mid2, ms_mid, mds_mid, mds_mid2, SMod.to_mid2, SMod.to_mid.
     rewrite SMod.transl_fnsems. rewrite SMod.transl_fnsems. fold sk.
     unfold _stb at 1 2. unfold sbtb, mss. rewrite alist_find_map.
     generalize mds. induction mds0; ss; auto. rewrite ! alist_find_app_o.
@@ -501,16 +422,16 @@ Section CANCEL.
   Lemma stb_find_iff fn
     :
       ((<<NONE: stb fn = None>> \/ (exists fsp, <<FIND: stb fn = Some fsp>> /\ <<TRIVIAL: forall mn x arg_src arg_tgt o r (PRE: fsp.(precond) mn x arg_src arg_tgt o r), o = ord_top>>)) /\
-       (<<FINDSRC: alist_find fn (fnsems ms_src) = None>>) /\
+       (<<FINDSRC: alist_find fn (fnsems ms_mid2) = None>>) /\
        (<<FINDMID: alist_find fn (fnsems ms_mid) = None>>)) \/
 
       (exists md (f: fspecbody),
           (<<STB: stb fn = Some (f: fspec)>>) /\
-          (<<FINDSRC: alist_find fn (fnsems ms_src) =
+          (<<FINDSRC: alist_find fn (fnsems ms_mid2) =
                       Some (transl_all (T:=_)
                               (SModSem.mn
                                  (SMod.get_modsem md sk))
-                              ∘ fun_to_src (fsb_body f))>>) /\
+                              ∘ fun_to_mid2 (fsb_body f))>>) /\
           (<<FINDMID: alist_find fn (fnsems ms_mid) =
                       Some (transl_all (T:=_)
                               (SModSem.mn
@@ -623,7 +544,7 @@ Section CANCEL.
     ,
       simg eq
            (formula o0 + 50)%ord
-           (EventsL.interp_Es p_src (transl_all mn (interp_hCallE_src body)) st_src0)
+           (EventsL.interp_Es p_mid2 (transl_all mn (interp_hCallE_mid2 body)) st_src0)
            (EventsL.interp_Es p_mid (transl_all mn (interp_hCallE_mid stb o0 body)) st_tgt0)
   .
   Proof.
@@ -678,7 +599,7 @@ Section CANCEL.
       { _ord_step. }
       i. ired_both. unseal_left. steps.
       rewrite FINDMID. rewrite FINDSRC.
-      unfold fun_to_src, cfun, fun_to_mid. steps.
+      unfold fun_to_mid2, cfunN, fun_to_mid. steps.
       guclo ordC_spec. econs.
       { eapply OrdArith.add_base_l. }
       guclo bindC_spec. econs.
@@ -694,21 +615,21 @@ Section CANCEL.
   Qed.
 
   Lemma sk_eq:
-    ModL.sk (Mod.add_list mds_mid) = ModL.sk (Mod.add_list mds_src).
+    ModL.sk (Mod.add_list mds_mid) = ModL.sk (Mod.add_list mds_mid2).
   Proof.
-    unfold ms_mid, ms_src, mds_src, mds_mid, ModL.enclose.
+    unfold ms_mid, ms_mid2, mds_mid2, mds_mid, ModL.enclose.
     rewrite ! Mod.add_list_sk. f_equal.
     generalize mds. clear. i. induction mds; ss.
     rewrite IHl. auto.
   Qed.
 
   Lemma initial_mrs_eq:
-    initial_mrs ms_mid = initial_mrs ms_src.
+    initial_mrs ms_mid = initial_mrs ms_mid2.
   Proof.
     pose proof sk_eq.
-    unfold ms_mid, ms_src, mds_src, mds_mid, ModL.enclose.
-    unfold mds_src, mds_mid in H. rewrite H.
-    generalize (ModL.sk (Mod.add_list (List.map SMod.to_src mds))). i.
+    unfold ms_mid, ms_mid2, mds_mid2, mds_mid, ModL.enclose.
+    unfold mds_mid2, mds_mid in H. rewrite H.
+    generalize (ModL.sk (Mod.add_list (List.map (SMod.to_mid2 stb) mds))). i.
     rewrite ! Mod.add_list_initial_mrs.
     generalize mds. clear. i. induction mds; auto.
     ss. rewrite IHl. auto.
@@ -717,20 +638,20 @@ Section CANCEL.
   Lemma fns_eq:
     (List.map fst (fnsems (ModL.enclose (Mod.add_list mds_mid))))
     =
-    (List.map fst (fnsems (ModL.enclose (Mod.add_list mds_src)))).
+    (List.map fst (fnsems (ModL.enclose (Mod.add_list mds_mid2)))).
   Proof.
     pose proof sk_eq. unfold ModL.enclose.
-    unfold mds_src, mds_mid, ModL.enclose.
-    unfold mds_src, mds_mid in H. rewrite H.
-    generalize (ModL.sk (Mod.add_list (List.map SMod.to_src mds))). i.
+    unfold mds_mid2, mds_mid, ModL.enclose.
+    unfold mds_mid2, mds_mid in H. rewrite H.
+    generalize (ModL.sk (Mod.add_list (List.map (SMod.to_mid2 stb) mds))). i.
     rewrite ! Mod.add_list_fns. rewrite ! List.map_map. f_equal.
     f_equal. extensionality sm. ss. rewrite ! List.map_map. f_equal.
     extensionality fnsb. destruct fnsb as [fn sb]. ss.
   Qed.
 
-  Theorem adequacy_type_m2s main_arg:
+  Theorem adequacy_type_m2m main_arg:
     Beh.of_program (ModL.compile_arg (Mod.add_list mds_mid) (Any.pair ord_top↑ main_arg)) <1=
-    Beh.of_program (ModL.compile_arg (Mod.add_list mds_src) main_arg).
+    Beh.of_program (ModL.compile_arg (Mod.add_list mds_mid2) main_arg).
   Proof.
     eapply adequacy_global_itree.
     exists (200)%ord.
@@ -748,7 +669,7 @@ Section CANCEL.
       { des. inv x. split.
         { inv H. econs.
           { rewrite fns_eq. auto. }
-          { pose proof initial_mrs_eq. unfold ms_mid, ms_src in H.
+          { pose proof initial_mrs_eq. unfold ms_mid, ms_mid2 in H.
             rewrite H. auto. }
         }
         { ss. rewrite sk_eq. auto. }
@@ -757,12 +678,12 @@ Section CANCEL.
 
       (* stb main *)
       hexploit (stb_find_iff "main"). i. des.
-      { unfold ms_src in FINDSRC. rewrite FINDSRC. steps. }
-      { unfold ms_src in FINDSRC. rewrite FINDSRC. steps. }
+      { unfold ms_mid2 in FINDSRC. rewrite FINDSRC. steps. }
+      { unfold ms_mid2 in FINDSRC. rewrite FINDSRC. steps. }
 
-      fold ms_src. fold ms_mid.
+      fold ms_mid2. fold ms_mid.
       rewrite FINDSRC. rewrite FINDMID. steps.
-      unfold fun_to_src, fun_to_mid, cfun. steps.
+      unfold fun_to_mid2, fun_to_mid, cfunN. steps.
 
       guclo ordC_spec. econs.
       { eapply OrdArith.add_base_l. }

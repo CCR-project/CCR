@@ -36,7 +36,9 @@ Proof.
   unfold mut_max in *. unfold_intrange_64. rewrite two_power_nat_S.
   replace (2 * two_power_nat 63)%Z with ((two_power_nat 63) * 2)%Z.
   2:{ rewrite Z.mul_comm. lia. }
-  unfold two_power_nat. ss. rewrite Z.div_mul; try lia.
+  unfold two_power_nat. ss.
+  unfold sumbool_to_bool. des_ifs; try lia.
+  all: rewrite Z.div_mul in *; try lia.
 Qed.
 
 Lemma mut_max_intrange_sub1 x
@@ -47,7 +49,9 @@ Proof.
   unfold mut_max in *. unfold_intrange_64. rewrite two_power_nat_S.
   replace (2 * two_power_nat 63)%Z with ((two_power_nat 63) * 2)%Z.
   2:{ rewrite Z.mul_comm. lia. }
-  unfold two_power_nat. ss. rewrite Z.div_mul; try lia.
+  unfold two_power_nat. ss.
+  unfold sumbool_to_bool. des_ifs; try lia.
+  all: rewrite Z.div_mul in *; try lia.
 Qed.
 
 Lemma mut_max_sum_intrange x
@@ -61,7 +65,9 @@ Proof.
     unfold_intrange_64. rewrite two_power_nat_S.
     replace (2 * two_power_nat 63)%Z with ((two_power_nat 63) * 2)%Z.
     2:{ rewrite Z.mul_comm. lia. }
-    unfold two_power_nat. ss. rewrite Z.div_mul; try lia.
+    unfold two_power_nat. ss.
+    unfold sumbool_to_bool. des_ifs; try lia.
+    all: rewrite Z.div_mul in *; try lia.
   }
   cut (sum x <= x * x).
   { i. rewrite <- Nat2Z.inj_mul. apply inj_le.

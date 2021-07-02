@@ -59,7 +59,7 @@ Section SIMMODSEM.
     2: { eexists. econs; ss. red. uipropall. }
     eapply Sk.incl_incl_env in SKINCL. eapply Sk.load_skenv_wf in SKWF.
     econs; ss; [|econs; ss].
-    { init. unfold fibF, ccall. harg.
+    { init. unfold fibF, ccallU. harg.
       destruct x as [x INV]. mDesAll. ss. des. subst.
       rewrite Any.upcast_downcast. steps.
       inv PURE3. rewrite FBLOCK. ss. steps.
@@ -99,7 +99,7 @@ Section SIMMODSEM.
                   | S n'' => Fib x + Fib n''
                   end). clear Heqn. rewrite Nat.sub_0_r. lia. }
     }
-    { init. unfold mainF, ccall. harg. mDesAll. subst.
+    { init. unfold mainF, ccallN, ccallU. harg. mDesAll. des; subst.
       steps. astart 2.
       hexploit (SKINCL "fib"); ss; eauto. i. des.
       rewrite FIND. ss. steps.
