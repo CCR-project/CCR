@@ -453,7 +453,7 @@ Section PROOFSINGLE.
           (SINIT: srcst = imp_initial_state src)
           (TINIT: Csharpminor.initial_state tgt tgtst)
     :
-      <<IMPROVES: @improves_state2 _ (Csharpminor.semantics tgt) srcst tgtst>>.
+      <<IMPROVES: @improves2 _ (Csharpminor.semantics tgt) srcst tgtst>>.
   Proof.
     eapply adequacy; eauto.
     { apply Ordinal.Ord.lt_well_founded. }
@@ -589,9 +589,9 @@ Section PROOFSINGLE.
           (WFPROG2 : forall gn gv, In (gn, Sk.Gvar gv) (Sk.sort (defsL src)) -> In (gn, gv) (prog_varsL src))
           (COMP: Imp2Csharpminor.compile src = OK tgt)
     :
-      <<IMPROVES: improves2 (imp_sem src) (Csharpminor.semantics tgt)>>.
+      <<IMPROVES: improves2_program (imp_sem src) (Csharpminor.semantics tgt)>>.
   Proof.
-    red. unfold improves2. i. inv BEH.
+    red. unfold improves2_program. i. inv BEH.
     { eapply single_compile_behavior_improves; eauto. }
     (* initiall wrong case, for us only when main is not found *)
     exists (Tr.ub). split; red; eauto.
@@ -671,7 +671,7 @@ Section PROOFLINK.
   (*   : *)
   (*     (forall tgt_init, *)
   (*         (Csharpminor.initial_state tgtl tgt_init) -> *)
-  (*         (@improves_state2 _ (Csharpminor.semantics tgtl) (imps_sem srcs).(initial_state) tgt_init)). *)
+  (*         (@improves2 _ (Csharpminor.semantics tgtl) (imps_sem srcs).(initial_state) tgt_init)). *)
   (* Proof. *)
   (*   des. *)
   (*   i. unfold imps_sem. *)
@@ -690,7 +690,7 @@ Section PROOFLINK.
         (LINKSRC: exists srcl, link_imps srcs = Some srcl)
         (LINKTGT: link_list tgts = Some tgtl)
     :
-      <<IMPROVES: improves2 (imps_sem srcs) (Csharpminor.semantics tgtl)>>.
+      <<IMPROVES: improves2_program (imps_sem srcs) (Csharpminor.semantics tgtl)>>.
   Proof.
     des.
     i. unfold imps_sem.
@@ -720,7 +720,7 @@ Section PROOFLINK.
           (LINKSRC: exists srcl, link_imps srcs = Some srcl)
     :
       exists tgtl, ((link_list tgts = Some tgtl) /\
-               (improves2 (imps_sem srcs) (Csharpminor.semantics tgtl))).
+               (improves2_program (imps_sem srcs) (Csharpminor.semantics tgtl))).
   Proof.
     hexploit compile_behavior_improves_compile_exists; eauto. i. des. exists tgtl. split; eauto.
     eapply compile_behavior_improves_compile; eauto.

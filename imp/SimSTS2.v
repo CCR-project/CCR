@@ -79,6 +79,32 @@ Hint Resolve match_beh_mon: paco.
 
 
 
+
+
+Definition improves2 {L0 L1} (st_src0: L0.(STS.state)) (st_tgt0: L1.(Smallstep.state)): Prop :=
+  forall tr_tgt (BEH: state_behaves L1 st_tgt0 tr_tgt),
+  exists tr_src, (<<BEH: (Beh.of_state L0 st_src0) tr_src>>) /\
+                 (<<SIM: match_beh tr_tgt tr_src>>)
+.
+
+Definition improves2_program (L0: STS.semantics) (L1: Smallstep.semantics) : Prop :=
+  forall tr_tgt (BEH: program_behaves L1 tr_tgt),
+  exists tr_src, (<<BEH: (Beh.of_state L0 L0.(initial_state)) tr_src>>) /\
+                 (<<SIM: match_beh tr_tgt tr_src>>)
+.
+
+
+(* Definition improves2_program (L0: STS.semantics) (L1: Smallstep.semantics) : Prop := *)
+(*   forall tgt_init, (L1.(Smallstep.initial_state) tgt_init) -> (@improves2 L0 L1 L0.(initial_state) tgt_init). *)
+
+
+
+
+
+
+
+
+
 (************************ Coq Aux ****************************)
 (************************ Coq Aux ****************************)
 (************************ Coq Aux ****************************)
@@ -646,27 +672,6 @@ Qed.
 
 
 
-Definition improves_state2 {L0 L1} (st_src0: L0.(STS.state)) (st_tgt0: L1.(Smallstep.state)): Prop :=
-  forall tr_tgt (BEH: state_behaves L1 st_tgt0 tr_tgt),
-  exists tr_src, (<<BEH: (Beh.of_state L0 st_src0) tr_src>>) /\
-                 (<<SIM: match_beh tr_tgt tr_src>>)
-.
-
-Definition improves2 (L0: STS.semantics) (L1: Smallstep.semantics) : Prop :=
-  forall tr_tgt (BEH: program_behaves L1 tr_tgt),
-  exists tr_src, (<<BEH: (Beh.of_state L0 L0.(initial_state)) tr_src>>) /\
-                 (<<SIM: match_beh tr_tgt tr_src>>)
-.
-
-
-(* Definition improves2 (L0: STS.semantics) (L1: Smallstep.semantics) : Prop := *)
-(*   forall tgt_init, (L1.(Smallstep.initial_state) tgt_init) -> (@improves_state2 L0 L1 L0.(initial_state) tgt_init). *)
-
-
-
-
-
-
 Section SIM.
 
   Variable L0: STS.semantics.
@@ -1088,7 +1093,7 @@ Section SIM.
         i0 st_src0 st_tgt0
         (SIM: sim i0 st_src0 st_tgt0)
     :
-      <<IMPR: improves_state2 st_src0 st_tgt0>>
+      <<IMPR: improves2 st_src0 st_tgt0>>
   .
   Proof.
     ii.

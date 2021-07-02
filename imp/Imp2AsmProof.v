@@ -81,7 +81,7 @@ Section PROOF.
         (LINKSRC: exists impl, link_imps imps = Some impl)
         (LINKTGT: link_list asms = Some asml)
     :
-      (improves2 (imps_sem imps) (Asm.semantics asml)).
+      (improves2_program (imps_sem imps) (Asm.semantics asml)).
   Proof.
     assert (CSM: exists csms, Forall2 (fun imp csm => Imp2Csharpminor.compile_imp imp = OK csm) imps (nlist2list csms)).
     { depgen LINKSRC. induction COMP; ss; clarify.
@@ -109,7 +109,7 @@ Section PROOF.
       unfold compile_imp, compile in H3. des_ifs.
       unfold Imp2Csharpminor.compile_imp in H2. rewrite H2 in Heq. clarify. }
 
-    move C2A after IMP2. unfold improves2 in *.
+    move C2A after IMP2. unfold improves2_program in *.
     i.
     hexploit separate_transf_csm_program_preservation; eauto.
     i. des.
@@ -142,7 +142,7 @@ Section PROOF.
           (LINKSRC: exists impl, link_imps imps = Some impl)
     :
       exists asml, ((link_list asms = Some asml) /\
-               (improves2 (imps_sem imps) (Asm.semantics asml))).
+               (improves2_program (imps_sem imps) (Asm.semantics asml))).
   Proof.
     hexploit compile_behavior_improves_exists; eauto. i. des. exists asml; split; auto.
     eapply compile_behavior_improves_if_exists; eauto.
