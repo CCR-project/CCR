@@ -729,7 +729,7 @@ Section SMOD.
 
 
 
-  Definition load_initial_mrs (sk: Sk.t) (mds: list t) (mr0: SModSem.t -> Any.t): list (string * Any.t) :=
+  Definition load_initial_mrs {A} (sk: Sk.t) (mds: list t) (mr0: SModSem.t -> A): list (string * A) :=
     do md <- mds;
     let ms := (get_modsem md sk) in
     ret (ms.(SModSem.mn), mr0 ms)

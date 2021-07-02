@@ -1,3 +1,4 @@
+Require Import Logic.
 Require Import Coqlib.
 Require Import Universe.
 Require Import STS.
@@ -10,7 +11,6 @@ Require Import HoareDef.
 Require Import SimSTS.
 Require Import SimGlobal.
 From Ordinal Require Import Ordinal Arithmetic.
-Require Import Logic.
 Require Import List.
 Require Import Red IRed.
 
@@ -101,19 +101,6 @@ Section CANCEL.
     ss. rewrite IHmds0. auto.
   Qed.
 
-  (* Lemma initial_p_eq: *)
-  (*   ModSemL.initial_p_state ms_tgt = ModSemL.initial_p_state ms_mid. *)
-  (* Proof. *)
-  (*   unfold ModSemL.initial_p_state. extensionality mn. *)
-  (*   pose proof sk_eq. *)
-  (*   unfold ms_tgt, ms_mid, mds_tgt, mds_mid, ModL.enclose. *)
-  (*   unfold mds_mid, mds_tgt in H. rewrite H. *)
-  (*   generalize (ModL.sk (Mod.add_list (List.map (SMod.to_mid (stb sk)) mds))). i. *)
-  (*   rewrite ! Mod.add_list_initial_mrs. *)
-  (*   generalize mds. clear. i. induction mds0; auto. *)
-  (*   ss. rewrite eq_rel_dec_correct in *. des_ifs. *)
-  (* Qed. *)
-
   Lemma fns_eq:
     (List.map fst (ModSemL.fnsems (ModL.enclose (Mod.add_list mds_tgt))))
     =
@@ -201,14 +188,6 @@ Section CANCEL.
 
 
 
-  Lemma fold_left_radd (r0 r1: Σ) rl
-    :
-      fold_left URA.add rl (r0 ⋅ r1) = r0 ⋅ fold_left URA.add rl r1.
-  Proof.
-    revert r0 r1. induction rl; ss.
-    i. rewrite <- URA.add_assoc. rewrite IHrl. auto.
-  Qed.
-
   Lemma fold_left_add (r: Σ) rs
     :
       fold_left URA.add rs r = (fold_left URA.add rs ε) ⋅ r.
@@ -216,108 +195,6 @@ Section CANCEL.
     revert r. induction rs; ss.
     { i. rewrite URA.unit_idl. auto. }
     i. rewrite IHrs. rewrite (IHrs (ε ⋅ a)). r_solve.
-  Qed.
-
-  (* Lemma rsum_update mn mrs frs r *)
-  (*       (NODUP: NoDup (List.map fst ms_tgt.(ModSemL.initial_mrs))) *)
-  (*       (IN: List.In mn (List.map fst ms_tgt.(ModSemL.initial_mrs))) *)
-  (*   : *)
-  (*     rsum (update mrs mn r, frs) = rsum (update mrs mn ε, frs) ⋅ r. *)
-  (* Proof. *)
-  (*   unfold rsum. rewrite <- URA.add_assoc. rewrite (URA.add_comm _ r). *)
-  (*   rewrite URA.add_assoc. f_equal. unfold compose. *)
-  (*   rewrite <- (List.map_map fst). rewrite <- (List.map_map fst). revert IN NODUP. *)
-  (*   generalize (List.map fst (ModSemL.initial_mrs ms_tgt)) as mds0. i. *)
-  (*   cut (forall r0 r1, fold_left URA.add (List.map (update mrs mn r0) mds0) ε ⋅ r1 *)
-  (*                      = *)
-  (*                      fold_left URA.add (List.map (update mrs mn r1) mds0) ε ⋅ r0). *)
-  (*   { i. specialize (H r ε). rewrite URA.unit_id in H. auto. } *)
-  (*   i. revert mn r0 r1 IN NODUP. induction mds0; ss. i. *)
-  (*   destruct (classic (In mn mds0)). *)
-  (*   { clear IN. rewrite (fold_left_add (ε ⋅ update mrs mn r0 a)). *)
-  (*     rewrite (fold_left_add (ε ⋅ update mrs mn r1 a)). *)
-  (*     rewrite ! URA.unit_idl. rewrite <- URA.add_assoc. rewrite <- URA.add_assoc. *)
-  (*     rewrite (URA.add_comm _ r1). rewrite (URA.add_comm _ r0). *)
-  (*     rewrite URA.add_assoc. rewrite URA.add_assoc. *)
-  (*     inv NODUP. rewrite IHmds0; ss. *)
-  (*     f_equal. unfold update. des_ifs. *)
-  (*   } *)
-  (*   { des; ss. rewrite (fold_left_add (ε ⋅ update mrs mn r0 a)). *)
-  (*     rewrite (fold_left_add (ε ⋅ update mrs mn r1 a)). subst. *)
-  (*     unfold update at 2 4. des_ifs. *)
-  (*     rewrite ! URA.unit_idl. rewrite <- URA.add_assoc. rewrite <- URA.add_assoc. f_equal. *)
-  (*     { revert H. clear IHmds0 NODUP. induction mds0; ss. i. *)
-  (*       rewrite (fold_left_add (ε ⋅ update mrs mn r0 a)). *)
-  (*       rewrite (fold_left_add (ε ⋅ update mrs mn r1 a)). *)
-  (*       rewrite IHmds0; auto. f_equal. f_equal. *)
-  (*       unfold update. des_ifs; ss. exfalso. eapply H; auto. *)
-  (*     } *)
-  (*     { eapply URA.add_comm. } *)
-  (*   } *)
-  (* Qed. *)
-
-  (* Lemma update_same A (mrs: string -> A) mn *)
-  (*   : *)
-  (*     update mrs mn (mrs mn) = mrs. *)
-  (* Proof. *)
-  (*   extensionality mn0. unfold update. des_ifs. *)
-  (* Qed. *)
-
-  (* Lemma rsum_cons mrs fhd ftl *)
-  (*   : *)
-  (*     rsum (mrs, fhd::ftl) = fhd ⋅ rsum (mrs, ftl). *)
-  (* Proof. *)
-  (*   ss. transitivity (fold_left URA.add (List.map (mrs <*> fst) (ModSemL.initial_mrs ms_tgt)) ε *)
-  (*                               ⋅ (fhd ⋅ fold_left URA.add ftl ε)). *)
-  (*   { f_equal. *)
-  (*     generalize fhd. generalize (@URA.unit (GRA.to_URA Σ)). *)
-  (*     induction ftl; ss. *)
-  (*     { i. r_solve. } *)
-  (*     { i. ss. *)
-  (*       replace (c ⋅ fhd0 ⋅ a) with ((c ⋅ a) ⋅ fhd0) by r_solve. *)
-  (*       rewrite IHftl. r_solve. *)
-  (*     } *)
-  (*   } *)
-  (*   { r_solve. } *)
-  (* Qed. *)
-
-
-  Ltac ired_l := try (prw _red_gen 2 0).
-  Ltac ired_r := try (prw _red_gen 1 0).
-
-  Ltac ired_both := ired_l; ired_r.
-
-  Ltac mred := repeat (cbn; ired_both).
-
-  Ltac steps := repeat (mred; try _step; des_ifs_safe).
-
-
-
-
-
-  Let zip_state_get st mrs mn
-      (MIN: List.In mn (List.map fst ms_tgt.(ModSemL.initial_mrs)))
-    :
-      zip_state st mrs mn = Any.pair (st mn) (mrs mn)↑.
-  Proof.
-    unfold zip_state. des_ifs.
-    eapply in_map_iff in MIN. des. destruct x. subst.
-    eapply alist_find_none in Heq.
-    exfalso. eapply Heq. et.
-  Qed.
-
-  Let zip_state_mput st mrs mn r
-      (MIN: List.In mn (List.map fst ms_tgt.(ModSemL.initial_mrs)))
-    :
-      update (zip_state st mrs) mn (Any.pair (st mn) (Any.upcast r))
-      =
-      zip_state st (update mrs mn r).
-  Proof.
-    extensionality mn0.
-    unfold update, zip_state. des_ifs.
-    eapply in_map_iff in MIN. des. destruct x. subst.
-    eapply alist_find_none in Heq.
-    exfalso. eapply Heq. et.
   Qed.
 
   Let rsum_update mn (mrs: r_state) r (mns: list mname) r0
@@ -359,8 +236,106 @@ Section CANCEL.
     }
   Qed.
 
+  Lemma rsum_minus_rsum mn mrs
+        (NODUP: NoDup (List.map fst ms_tgt.(ModSemL.initial_mrs)))
+        (IN: List.In mn (List.map fst ms_tgt.(ModSemL.initial_mrs)))
+    :
+      rsum_minus mn mrs ⋅ mrs mn = rsum mrs.
+  Proof.
+    unfold rsum_minus, rsum. revert NODUP IN.
+    setoid_rewrite <- (List.map_map fst mrs).
+    generalize (map fst (ModSemL.initial_mrs ms_tgt)) as mns.
+    i. rewrite rsum_update; et. r_solve.
+  Qed.
+
+  Lemma initial_mrs_exist
+        (NODUP: List.NoDup (map fst ms_tgt.(ModSemL.initial_mrs)))
+    :
+      exists (initial_mrs: r_state),
+        (<<INITIALZIP:
+           zip_state (ModSemL.initial_p_state ms_mid) initial_mrs =
+           ModSemL.initial_p_state ms_tgt>>) /\
+        (<<INITIALRSUM:
+           forall mn (MIN: List.In mn (map fst ms_tgt.(ModSemL.initial_mrs))),
+             rsum_minus mn initial_mrs ⋅ initial_mrs mn = fold_left URA.add (List.map SModSem.initial_mr mss) ε>>).
+  Proof.
+    exists (fun mn =>
+              match alist_find mn (SMod.load_initial_mrs
+                                     (Sk.sort (foldr Sk.add Sk.unit (map SMod.sk mds))) mds
+                                     SModSem.initial_mr) with
+              | Some r => r
+              | _ => ε
+              end).
+    split.
+    { revert NODUP.
+      unfold ModSemL.initial_p_state, zip_state.
+      unfold ms_mid, ms_tgt.
+      unfold mds_mid, mds_tgt, SMod.to_mid, SMod.to_tgt. ss.
+      rewrite ! SMod.transl_initial_mrs.
+      generalize (Sk.sort (foldr Sk.add Sk.unit (map SMod.sk mds))).
+      intros sk0. i. red. extensionality mn.
+      unfold SMod.load_initial_mrs.
+      rewrite ! SMod.red_do_ret. clear. induction mds; ss.
+      rewrite ! eq_rel_dec_correct. des_ifs.
+    }
+    { ii. rewrite rsum_minus_rsum; et. fold sk. unfold rsum. clear mn MIN.
+      f_equal. revert NODUP.
+      unfold mss, _mss, ms_tgt, mds_tgt, SMod.to_tgt.
+      rewrite ! SMod.transl_initial_mrs.
+      unfold SMod.load_initial_mrs.
+      rewrite ! SMod.red_do_ret.
+      rewrite ! List.map_map. ss. fold sk. generalize sk. clear. i.
+      eapply map_ext_in. i. des_ifs.
+      { eapply alist_find_some in Heq.
+        eapply in_map_iff in Heq. des. clarify.
+        destruct (classic (a = x)).
+        { subst. auto. }
+        eapply NoDup_inj_aux in H0; et. ss.
+        exfalso. eapply H0. et.
+      }
+      { exfalso. eapply alist_find_none in Heq.
+        eapply (in_map (fun x => (SModSem.mn (SMod.get_modsem x sk), SModSem.initial_mr (SMod.get_modsem x sk)))) in H; et.
+      }
+    }
+  Qed.
+
   Local Opaque rsum rsum_minus.
 
+
+  Ltac ired_l := try (prw _red_gen 2 0).
+  Ltac ired_r := try (prw _red_gen 1 0).
+
+  Ltac ired_both := ired_l; ired_r.
+
+  Ltac mred := repeat (cbn; ired_both).
+
+  Ltac steps := repeat (mred; try _step; des_ifs_safe).
+
+
+  Let zip_state_get st mrs mn
+      (MIN: List.In mn (List.map fst ms_tgt.(ModSemL.initial_mrs)))
+    :
+      zip_state st mrs mn = Any.pair (st mn) (mrs mn)↑.
+  Proof.
+    unfold zip_state. des_ifs.
+    eapply in_map_iff in MIN. des. destruct x. subst.
+    eapply alist_find_none in Heq.
+    exfalso. eapply Heq. et.
+  Qed.
+
+  Let zip_state_mput st mrs mn r
+      (MIN: List.In mn (List.map fst ms_tgt.(ModSemL.initial_mrs)))
+    :
+      update (zip_state st mrs) mn (Any.pair (st mn) (Any.upcast r))
+      =
+      zip_state st (update mrs mn r).
+  Proof.
+    extensionality mn0.
+    unfold update, zip_state. des_ifs.
+    eapply in_map_iff in MIN. des. destruct x. subst.
+    eapply alist_find_none in Heq.
+    exfalso. eapply Heq. et.
+  Qed.
 
 
   Let adequacy_type_aux
@@ -514,25 +489,6 @@ Section CANCEL.
 
   Opaque EventsL.interp_Es.
 
-  Let initial_mrs: mname ->  Σ :=
-    fun mn => match alist_find mn (List.map (fun md => (SModSem.mn md, SModSem.initial_mr md)) mss) with
-              | Some r => r
-              | None => ε
-              end.
-
-  Lemma initial_p_zip:
-    zip_state (ModSemL.initial_p_state ms_mid) initial_mrs =
-    ModSemL.initial_p_state ms_tgt.
-  Proof.
-    admit "ez".
-  Qed.
-
-  Lemma initial_rsum_minus mn
-    :
-      rsum_minus mn initial_mrs ⋅ initial_mrs mn = fold_left URA.add (List.map SModSem.initial_mr mss) ε.
-  Proof.
-    admit "ez".
-  Qed.
 
   Theorem adequacy_type_t2m
           main_arg_src main_arg_tgt
@@ -568,7 +524,9 @@ Section CANCEL.
     esplits; et.
     { inv WF. econs; auto. rewrite fns_eq. auto. }
     { rewrite sk_eq. auto. }
-    steps. fold ms_tgt ms_mid. rewrite <- initial_p_zip.
+
+    hexploit initial_mrs_exist; auto. i. des.
+    steps. fold ms_tgt ms_mid. rewrite <- INITIALZIP.
 
     Local Transparent ModSemL.prog. ss.
     unfold Any_src, Any_mid, Any_tgt in *. rewrite FINDTGT. rewrite FINDMID. steps.
@@ -578,7 +536,7 @@ Section CANCEL.
     rewrite zip_state_get; et.
     rewrite Any.pair_split. steps.
     assert (RWF: URA.wf (entry_r ⋅ rsum_minus (SModSem.mn (SMod.get_modsem md sk)) initial_mrs ⋅ initial_mrs (SModSem.mn (SMod.get_modsem md sk)))).
-    { r_wf WFR. eapply initial_rsum_minus. }
+    { r_wf WFR. eapply INITIALRSUM; et. }
     unshelve esplits; et.
     steps. exists ord_top. steps.
     unshelve esplits; et. steps.
