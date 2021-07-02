@@ -366,24 +366,22 @@ Section CANCEL.
   Let adequacy_type_aux
       (NODUP: NoDup (List.map fst ms_tgt.(ModSemL.initial_mrs))):
     forall RT
-           mrs0 frs fr0 ctx0
+           mrs0 frs ctx0
            st_src0 st_tgt0 (i0: itree (hCallE +' pE +' eventE) RT)
            mn cur
            (ZIP: st_tgt0 = zip_state st_src0 mrs0)
            (CTX: ctx0 = frs ⋅ rsum_minus mn mrs0)
-           (RWF: URA.wf (fr0 ⋅ ctx0 ⋅ (mrs0 mn)))
 
            (MIN: List.In mn (List.map fst ms_tgt.(ModSemL.initial_mrs)))
            (NODUP: NoDup (List.map fst ms_tgt.(ModSemL.initial_mrs)))
     ,
       simg (fun '(st_src1, v_src) '(st_tgt1, v_tgt) =>
-              exists mrs1 fr1,
+              exists mrs1,
                 (<<ZIP: st_tgt1 = zip_state st_src1 mrs1>>) /\
-                (<<RET: (v_tgt: Σ * Σ * RT) = (frs ⋅ rsum_minus mn mrs1, fr1, v_src)>>) /\
-                (<<RWF: URA.wf (fr1 ⋅ (frs ⋅ rsum_minus mn mrs1) ⋅ (mrs1 mn))>>))
+                (<<RET: (v_tgt: Σ * RT) = (frs ⋅ rsum_minus mn mrs1, v_src)>>))
            (Ord.from_nat 100%nat)
            (EventsL.interp_Es (ModSemL.prog ms_mid) (transl_all mn (interp_hCallE_mid (stb sk) cur i0)) st_src0)
-           (EventsL.interp_Es (ModSemL.prog ms_tgt) (transl_all mn (interp_hCallE_tgt mn (stb sk) cur i0 (ctx0, fr0))) st_tgt0)
+           (EventsL.interp_Es (ModSemL.prog ms_tgt) (transl_all mn (interp_hCallE_tgt mn (stb sk) cur i0 ctx0)) st_tgt0)
   .
   Proof.
     Opaque subevent.
@@ -391,7 +389,7 @@ Section CANCEL.
     { i. eapply cpn6_wcompat; eauto with paco. }
     gcofix CIH. i; subst.
     ides i0; try rewrite ! unfold_interp; cbn; mred.
-    { steps. esplits; et. }
+    { steps. }
     { steps. gbase. eapply CIH; [..|M]; Mskip et. ss. }
     rewrite <- bind_trigger. destruct e; cycle 1.
     {
@@ -506,10 +504,9 @@ Section CANCEL.
       rewrite zip_state_get; et.
       rewrite Any.pair_split. steps.
       unshelve esplits; et.
-      { r_wf RWF0. }
+      { r_wf RWF. }
       steps. exists t. steps. unshelve esplits; et.
       steps. gbase. eapply CIH; et.
-      { r_wf RWF0. }
     }
   Unshelve.
     all: try (by exact 0).
@@ -597,7 +594,7 @@ Section CANCEL.
     }
     i. ss.
     destruct vret_src as [mps_src v_src].
-    destruct vret_tgt as [mps_tgt [[? ?] v_tgt]]. des. clarify.
+    destruct vret_tgt as [mps_tgt [? v_tgt]]. des. clarify.
     steps. rewrite zip_state_get; et.
     rewrite Any.pair_split. steps.
     Unshelve. all: try (exact 0).

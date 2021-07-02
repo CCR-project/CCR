@@ -117,8 +117,8 @@ Section PROOF.
              (tbr: bool)
              (ord_cur: ord)
              (fsp: fspec):
-    gname -> Any.t -> stateT (Σ * Σ) (itree Es) Any.t :=
-    fun fn varg_src '(ctx, fr) =>
+    gname -> Any.t -> stateT (Σ) (itree Es) Any.t :=
+    fun fn varg_src ctx =>
 
       '(rarg, fr, mr) <- trigger (Choose (Σ * Σ * Σ));;
       mput mr;;;
@@ -138,7 +138,7 @@ Section PROOF.
       vret_src <- trigger (Take Any.t);;
       assume(fsp.(postcond) (Some mn) x vret_src vret_tgt rret);;; (*** postcondition ***)
 
-      Ret (ctx, fr ⋅ rret, vret_src) (*** return to body ***)
+      Ret (ctx, vret_src) (*** return to body ***)
   .
 
 End PROOF.
@@ -355,10 +355,10 @@ Section CANCEL.
                                  | _ => interp_hEs_tgt (body (mn, varg_src))
                                  end).
 
-  Definition handle_hCallE_tgt (ord_cur: ord): hCallE ~> stateT (Σ * Σ) (itree Es) :=
-    fun _ '(hCall tbr fn varg_src) '(ctx, fr) =>
+  Definition handle_hCallE_tgt (ord_cur: ord): hCallE ~> stateT (Σ) (itree Es) :=
+    fun _ '(hCall tbr fn varg_src) 'ctx =>
       f <- (stb fn)ǃ;;
-      HoareCall mn tbr ord_cur f fn varg_src (ctx, fr)
+      HoareCall mn tbr ord_cur f fn varg_src ctx
   .
 
   Definition handle_pE_tgt: pE ~> itree Es :=
@@ -369,15 +369,15 @@ Section CANCEL.
          | PGet => pget
          end).
 
-  Definition interp_hCallE_tgt (ord_cur: ord): itree Es' ~> stateT (Σ * Σ) (itree Es) :=
+  Definition interp_hCallE_tgt (ord_cur: ord): itree Es' ~> stateT Σ (itree Es) :=
     interp_state (case_ (bif:=sum1) (handle_hCallE_tgt ord_cur)
                         (case_ (bif:=sum1)
-                               ((fun T X s => x <- handle_pE_tgt X;; Ret (s, x)): _ ~> stateT (Σ * Σ) (itree Es))
-                               ((fun T X s => x <- trigger X;; Ret (s, x)): _ ~> stateT (Σ * Σ) (itree Es))))
+                               ((fun T X s => x <- handle_pE_tgt X;; Ret (s, x)): _ ~> stateT Σ (itree Es))
+                               ((fun T X s => x <- trigger X;; Ret (s, x)): _ ~> stateT Σ (itree Es))))
   .
 
   Definition body_to_tgt (ord_cur: ord)
-             {X} (body: X -> itree (hCallE +' pE +' eventE) Any_src): X -> stateT (Σ * Σ) (itree Es) Any_src :=
+             {X} (body: X -> itree (hCallE +' pE +' eventE) Any_src): X -> stateT Σ (itree Es) Any_src :=
     (@interp_hCallE_tgt ord_cur _) ∘ body.
 
 
@@ -394,10 +394,10 @@ Section CANCEL.
     ord_cur <- trigger (Take _);;
     assume(P mn_caller x varg_src varg_tgt ord_cur rarg);;; (*** precondition ***)
 
-    '(ctx, fr, vret_src) <- interp_hCallE_tgt ord_cur (match ord_cur with
-                                                       | ord_pure n => APC;;; trigger (Choose _)
-                                                       | _ => body (mn_caller, varg_src)
-                                                       end) (ctx, rarg);;
+    '(ctx, vret_src) <- interp_hCallE_tgt ord_cur (match ord_cur with
+                                                   | ord_pure n => APC;;; trigger (Choose _)
+                                                   | _ => body (mn_caller, varg_src)
+                                                   end) ctx;;
 
     vret_tgt <- trigger (Choose Any_tgt);;
     '(rret, mr) <- trigger (Choose _);;
@@ -426,7 +426,7 @@ If this feature is needed; we can extend it then. At the moment, I will only all
   Definition HoareFunArg
              {X: Type}
              (P: option mname -> X -> Any.t -> Any_tgt -> ord -> Σ -> Prop):
-    option mname * Any_tgt -> itree Es ((Σ * Σ) * (option mname * X * Any.t * ord)) := fun '(mn_caller, varg_tgt) =>
+    option mname * Any_tgt -> itree Es ((Σ) * (option mname * X * Any.t * ord)) := fun '(mn_caller, varg_tgt) =>
     x <- trigger (Take X);;
     varg_src <- trigger (Take _);;
     '(rarg, ctx) <- trigger (Take _);;
@@ -434,13 +434,13 @@ If this feature is needed; we can extend it then. At the moment, I will only all
     assume(URA.wf (rarg ⋅ ctx ⋅ mr));;;
     ord_cur <- trigger (Take _);;
     assume(P mn_caller x varg_src varg_tgt  ord_cur rarg);;; (*** precondition ***)
-    Ret (ctx, rarg, (mn_caller, x, varg_src, ord_cur))
+    Ret (ctx, (mn_caller, x, varg_src, ord_cur))
   .
 
   Definition HoareFunRet
              {X: Type}
              (Q: option mname -> X -> Any.t -> Any_tgt -> Σ -> Prop):
-    option mname -> X -> ((Σ * Σ) * Any.t) -> itree Es Any_tgt := fun mn x '(ctx, fr, vret_src) =>
+    option mname -> X -> ((Σ) * Any.t) -> itree Es Any_tgt := fun mn x '(ctx, vret_src) =>
     vret_tgt <- trigger (Choose Any_tgt);;
     '(rret, mr) <- trigger (Choose _);;
     mput mr;;;
@@ -1085,7 +1085,7 @@ Lemma interp_tgt_triggerUB mn stb o ctx
   :
     (interp_hCallE_tgt mn stb o (triggerUB) ctx)
     =
-    triggerUB (A:=Σ*Σ*R).
+    triggerUB (A:=Σ*R).
 Proof.
   unfold interp_hCallE_tgt, triggerUB in *. rewrite unfold_interp_state. cbn. grind.
 Qed.
@@ -1095,7 +1095,7 @@ Lemma interp_tgt_triggerNB mn stb o ctx
   :
     (interp_hCallE_tgt mn stb o (triggerNB) ctx)
     =
-    triggerNB (A:=Σ*Σ*R).
+    triggerNB (A:=Σ*R).
 Proof.
   unfold interp_hCallE_tgt, triggerNB in *. rewrite unfold_interp_state. cbn. grind.
 Qed.

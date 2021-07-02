@@ -50,17 +50,17 @@ Section PROOF.
   Lemma weakening_itree
     :
       forall
-        R mp (mr: Σ) ord_cur ctx fr_src fr_tgt itr,
-        paco7 (_sim_itree wf top2) bot7 (Σ * Σ * R)%type (Σ * Σ * R)%type
+        R mp (mr: Σ) ord_cur ctx itr,
+        paco7 (_sim_itree wf top2) bot7 (Σ * R)%type (Σ * R)%type
               (fun st_src st_tgt vret_src vret_tgt =>
-                 exists mp (mr: Σ) ctx fr_src fr_tgt vret,
+                 exists mp (mr: Σ) ctx vret,
                    st_src = Any.pair mp mr↑ /\
                    st_tgt = Any.pair mp mr↑ /\
-                   vret_src = (ctx, fr_src, vret) /\
-                   vret_tgt = (ctx, fr_tgt, vret))
+                   vret_src = (ctx, vret) /\
+                   vret_tgt = (ctx, vret))
               100 tt
-              (Any.pair mp mr↑, interp_hCallE_tgt mn stb_src ord_cur itr (ctx, fr_src))
-              (Any.pair mp mr↑, interp_hCallE_tgt mn stb_tgt ord_cur itr (ctx, fr_tgt)).
+              (Any.pair mp mr↑, interp_hCallE_tgt mn stb_src ord_cur itr ctx)
+              (Any.pair mp mr↑, interp_hCallE_tgt mn stb_tgt ord_cur itr ctx).
   Proof.
     ginit. gcofix CIH. i. ides itr.
     { steps. gstep. econs. esplits; et. }

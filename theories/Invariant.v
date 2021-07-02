@@ -132,7 +132,7 @@ Tactic Notation "icall_open" uconstr(o) uconstr(x) "with" constr(Hns) :=
   |
   |
   on_current ltac:(fun H => try clear H);
-  intros ? ? ? ? ? [|[?mp_src ?mp_tgt]]; i; simpl;
+  intros ? ? ? ? [|[?mp_src ?mp_tgt]]; i; simpl;
   on_current ltac:(fun H => simpl in H);
   [exfalso; match goal with | H: inv_le _ _ _ |- _ => cbn in H; inv H end
   |mDesSep "☃CLOSED" as "☃CLOSED" "☃TMP"; mPure "☃TMP" as [[] []]
@@ -153,7 +153,7 @@ Tactic Notation "icall_weaken" uconstr(ftsp) uconstr(o) uconstr(x) uconstr(a) "w
    |eauto with ord_step
    |
    |on_current ltac:(fun H => try clear H);
-    intros ? ? ? ? ? [|[?mp_src ?mp_tgt]]; i; simpl;
+    intros ? ? ? ? [|[?mp_src ?mp_tgt]]; i; simpl;
     on_current ltac:(fun H => simpl in H);
     [
       mDesSep POST as "☃CLOSED" POST
