@@ -635,7 +635,7 @@ Section ADQ.
   Ltac list_tac := repeat _list_tac.
 
   Lemma my_lemma1_aux''
-        (ske: Sk.t) st0 (A: Type) (itr: itree Es A) (ctx fr_trash: Σ)
+        (ske: Sk.t) st0 (A: Type) (itr: itree Es A) (ctx: Σ)
         mn
         (* (WF: URA.wf (ctx ⋅ mr0)) *)
         (WF: URA.wf ctx)
@@ -643,11 +643,11 @@ Section ADQ.
       paco7
         (_sim_itree (fun (_: unit) '(st_src, st_tgt) => st_src = Any.pair st_tgt (ε: Σ)↑) top2)
         bot7
-        (Σ * Σ * A)%type A
-        (fun st_src st_tgt '(ctx, fr, r_src) r_tgt =>
+        (Σ * A)%type A
+        (fun st_src st_tgt '(ctx, r_src) r_tgt =>
            r_src = r_tgt /\ URA.wf ctx /\ st_src = Any.pair st_tgt (ε: Σ)↑)
         40%nat tt
-        (Any.pair st0 (ε: Σ)↑, (interp_hCallE_tgt mn (_stb ske) ord_top (interp_hEs_tgt (massage_itr true itr)) (ctx, fr_trash)))
+        (Any.pair st0 (ε: Σ)↑, (interp_hCallE_tgt mn (_stb ske) ord_top (interp_hEs_tgt (massage_itr true itr)) ctx))
         (st0, addtau itr)
   .
   Proof.
@@ -819,7 +819,9 @@ Section ADQ.
           (<<TGT: alist_find fn (ModSemL.fnsems (ModL.enclose prog_tgt)) = Some (transl_all (T:=_) mn ∘ (fun_to_src (massage_fsb true uf).(fsb_body)))>>) /\
           (<<MN: ~ List.In (Some mn) _frds>>)).
   Proof.
-    admit "alist find".
+
+
+admit "alist find".
   Qed.
 
   Variant my_lemma2_r1: forall R0 R1 (RR: R0 -> R1 -> Prop), Ord.t -> itree eventE R0 -> itree eventE R1 -> Prop :=
@@ -1113,6 +1115,40 @@ Section ADQ.
     }
   Qed.
 
+  Let stb2 :=
+    (map (fun '(fn0, fs) => (fn0, ((fs: fspecbody): fspec)))
+         (flat_map SModSem.fnsems
+                   (map
+                      (flip SMod.get_modsem
+                            (Sk.sort
+                               (foldr Sk.add Sk.unit
+                                      (map SMod.sk (kmds ++ map (massage_md true) umds)))))
+                      (kmds ++ map (massage_md true) umds)))).
+
+  Let stb2_eq fn:
+    _stb (Sk.sort (foldr Sk.add Sk.unit (map SMod.sk (kmds ++ map (massage_md true) umds)))) fn
+    =
+    match alist_find fn stb2 with
+    | Some fsp => Some fsp
+    | _ => Some (KModSem.disclose_mid fspec_trivial)
+    end.
+  Proof.
+    unfold _stb, stb2, _gstb,_kmss. ss.
+    generalize (Sk.sort
+                  (foldr Sk.add Sk.unit
+                         (map SMod.sk (kmds ++ map (massage_md true) umds)))). i.
+    rewrite <- (flat_map_map SModSem.fnsems (map (map_snd fsb_fspec))).
+    rewrite <- ! map_flat_map. rewrite alist_find_map_snd.
+    symmetry. erewrite map_ext.
+    2: { instantiate (1:=map_snd fsb_fspec). ss. }
+    rewrite alist_find_map_snd.
+    rewrite map_app. rewrite flat_map_app. rewrite alist_find_app_o. uo.
+    des_ifs_safe. f_equal. clear - Heq1.
+    rewrite map_map in Heq1. rewrite flat_map_map in Heq1. ss.
+    rewrite <- flat_map_map in Heq1. rewrite <- map_flat_map in Heq1.
+    rewrite alist_find_map_snd in Heq1. uo. des_ifs.
+  Qed.
+
   Theorem adequacy_open_aux1':
     refines_closed (Mod.add_list (List.map (SMod.to_tgt _stb) kmds ++ umds))
                    (Mod.add_list (List.map (KMod.transl_src frds) _kmds ++ umds))
@@ -1145,12 +1181,12 @@ Section ADQ.
     ii. eapply my_lemma3. eapply my_lemma2.
     rewrite <- (map_map (massage_md true)). rewrite <- map_app.
     eapply adequacy_type_arg.
-    { i. instantiate (1:=_stb). unfold _stb, _gstb, _kmss, map_snd. ss.
-      rewrite map_app in FIND. rewrite flat_map_app in FIND. rewrite map_app in FIND.
-      rewrite alist_find_app_o in FIND.
-      rewrite ! map_flat_map in FIND. rewrite flat_map_map in FIND. des_ifs.
-      clear - FIND. rewrite ! map_map in FIND. admit "ez". }
-    { i. right. admit "ez". }
+    { i. fold stb2 in FIND. instantiate (1:=_stb).
+      rewrite stb2_eq. rewrite FIND. et. }
+    { i. fold stb2 in FIND. rewrite stb2_eq.
+      rewrite FIND. right. esplits; et.
+      i. ss. destruct x; des; auto.
+      red in PRE0. uipropall. des; auto. }
     { admit "main". }
     match goal with
     | H: Beh.of_program ?p0 x0 |- Beh.of_program ?p1 x0 => replace p1 with p0
@@ -1214,27 +1250,38 @@ Section ADQ.
       _stb_mid sk fn = Some (KModSem.disclose_mid fsp).
   Proof.
     unfold _stb, _gstb, _kmss in FIND.
-    unfold _stb_mid, _gstb_mid, _kmss_mid.
-    admit "ez".
+    unfold _stb_mid, _gstb_mid, _kmss_mid, kmds_mid.
+    rewrite map_map.
+    rewrite <- flat_map_map. rewrite <- map_flat_map.
+    rewrite <- flat_map_map in FIND. rewrite <- map_flat_map in FIND.
+    rewrite alist_find_map_snd. rewrite alist_find_map_snd in FIND. uo.
+    replace (flat_map
+               SModSem.fnsems
+               (map (flip SMod.get_modsem sk ∘ KMod.transl_mid) _kmds)) with
+        (map (map_snd KModSem.disclose_ksb_mid) (flat_map KModSem.fnsems (map (flip KMod.get_modsem sk) _kmds))).
+    { rewrite alist_find_map_snd. uo. des_ifs. }
+    ss. rewrite flat_map_map.
+    rewrite map_flat_map. ss. rewrite ! flat_map_map.
+    eapply flat_map_ext. i. ss.
   Qed.
 
   Let kmds: list Mod.t := List.map (KMod.transl_tgt _stb) _kmds.
 
   Lemma adequacy_open_aux2_hcall
     :
-      forall mp (mr: Σ) w mn o fsp fn arg ctx fr tbr,
+      forall mp (mr: Σ) w mn o fsp fn arg ctx tbr,
         paco7 (_sim_itree (fun (_: unit) '(st_src, st_tgt) =>
                              exists st (mr: Σ),
                                st_src = Any.pair st mr↑ /\ st_tgt = Any.pair st mr↑) top2)
-              bot7 (Σ * Σ * Any.t)%type (Σ * Σ * Any.t)%type
+              bot7 (Σ * Any.t)%type (Σ * Any.t)%type
               (fun st_src st_tgt ret_src ret_tgt =>
                  exists st (mr: Σ),
                    st_src = Any.pair st mr↑ /\ st_tgt = Any.pair st mr↑ /\ ret_src = ret_tgt)
               20%ord w
               (Any.pair mp mr↑,
-                        HoareCall mn tbr o (KModSem.disclose_mid fsp) fn (Any.pair true↑ arg) (ctx, fr))
+                        HoareCall mn tbr o (KModSem.disclose_mid fsp) fn (Any.pair true↑ arg) ctx)
               (Any.pair mp mr↑,
-                        HoareCall mn tbr o fsp fn arg (ctx, fr)).
+                        HoareCall mn tbr o fsp fn arg ctx).
   Proof.
     i. ginit.
     Local Transparent HoareCall. unfold HoareCall. Local Opaque HoareCall.
@@ -1252,11 +1299,11 @@ Section ADQ.
 
   Lemma adequacy_open_aux2_apc sk
     :
-      forall mp (mr: Σ) w mn o ctx fr,
+      forall mp (mr: Σ) w mn o ctx,
         paco7 (_sim_itree (fun (_: unit) '(st_src, st_tgt) =>
                              exists st (mr: Σ),
                                st_src = Any.pair st mr↑ /\ st_tgt = Any.pair st mr↑) top2)
-              bot7 (Σ * Σ * unit)%type (Σ * Σ * unit)%type
+              bot7 (Σ * unit)%type (Σ * unit)%type
               (fun st_src st_tgt ret_src ret_tgt =>
                  exists st (mr: Σ),
                    st_src = Any.pair st mr↑ /\ st_tgt = Any.pair st mr↑ /\ ret_src = ret_tgt)
@@ -1265,18 +1312,18 @@ Section ADQ.
                         interp_hCallE_tgt mn
                         (_stb_mid sk) o
                         APC
-                        (ctx, fr))
+                        ctx)
               (Any.pair mp mr↑,
                         interp_hCallE_tgt mn
                         (_stb sk) o
                         APC
-                        (ctx, fr)).
+                        ctx).
   Proof.
     ginit. i.
     Local Transparent APC. unfold APC. Local Opaque APC.
     steps. force_l. exists x. steps. force_l; auto. steps.
     clear _GUARANTEE _GUARANTEE0.
-    revert x mp mr w mn o ctx fr. gcofix CIH. i.
+    revert x mp mr w mn o ctx. gcofix CIH. i.
     rewrite unfold_APC. steps. force_l. exists x0. steps. destruct x0.
     { steps. }
     steps. force_l. exists x0. steps. force_l; auto. steps.
@@ -1292,18 +1339,18 @@ Section ADQ.
       { ss. }
     }
     i. ss. des; clarify.
-    destruct vret_tgt as [[ctx0 fr0] vret]. ired_both. steps.
+    destruct vret_tgt as [ctx0 vret]. ired_both. steps.
     gbase. eapply CIH.
     Unshelve. all: ss.
   Qed.
 
   Lemma adequacy_open_aux2_itr sk
     :
-      forall R mp (mr: Σ) w mn o itr ctx fr,
+      forall R mp (mr: Σ) w mn o itr ctx,
         paco7 (_sim_itree (fun (_: unit) '(st_src, st_tgt) =>
                              exists st (mr: Σ),
                                st_src = Any.pair st mr↑ /\ st_tgt = Any.pair st mr↑) top2)
-              bot7 (Σ * Σ * R)%type (Σ * Σ * R)%type
+              bot7 (Σ * R)%type (Σ * R)%type
               (fun st_src st_tgt ret_src ret_tgt =>
                  exists st (mr: Σ),
                    st_src = Any.pair st mr↑ /\ st_tgt = Any.pair st mr↑ /\ ret_src = ret_tgt)
@@ -1312,11 +1359,11 @@ Section ADQ.
                         interp_hCallE_tgt mn
                         (_stb_mid sk) o
                         (interp_hEs_tgt (KModSem.transl_itr_mid itr))
-                        (ctx, fr))
+                        ctx)
               (Any.pair mp mr↑,
                         interp_hCallE_tgt mn
                         (_stb sk) o (interp_hEs_tgt itr)
-                        (ctx, fr)).
+                        ctx).
   Proof.
     ginit. gcofix CIH. i. ides itr.
     { steps. }
@@ -1333,7 +1380,7 @@ Section ADQ.
         { eapply adequacy_open_aux2_apc. }
         { ss. }
       }
-      i. ss. des; clarify. destruct vret_tgt as [[ctx0 fr0] vret].
+      i. ss. des; clarify. destruct vret_tgt as [ctx0 vret].
       steps. guclo lordC_spec. econs.
       { eapply OrdArith.add_base_l. }
       gbase. eapply CIH.
@@ -1350,7 +1397,7 @@ Section ADQ.
         { eapply adequacy_open_aux2_hcall. }
         { ss. }
       }
-      i. ss. des; clarify. destruct vret_tgt as [[ctx0 fr0] vret].
+      i. ss. des; clarify. destruct vret_tgt as [ctx0 vret].
       steps. guclo lordC_spec. econs.
       { eapply OrdArith.add_base_l. }
       gbase. eapply CIH.
@@ -1425,7 +1472,7 @@ Section ADQ.
             { eapply adequacy_open_aux2_apc. }
             { ss. }
           }
-          i. ss. des; clarify. destruct vret_tgt as [[ctx0 fr0] vret].
+          i. ss. des; clarify. destruct vret_tgt as [ctx0 vret].
           steps. force_l. eexists. steps.
           force_l. eexists. force_l. eexists (c1, c2). steps.
           force_l; et. force_l; et.
@@ -1440,7 +1487,7 @@ Section ADQ.
             { eapply adequacy_open_aux2_itr. }
             { ss. }
           }
-          i. ss. des; clarify. destruct vret_tgt as [[ctx0 fr0] vret].
+          i. ss. des; clarify. destruct vret_tgt as [ctx0 vret].
           steps. force_l. eexists. steps.
           force_l. eexists (c1, c2). steps.
           force_l; et. force_l; et.
@@ -1462,7 +1509,7 @@ Section ADQ.
           { eapply adequacy_open_aux2_itr. }
           { ss. }
         }
-        i. ss. des; clarify. destruct vret_tgt as [[ctx0 fr0] vret].
+        i. ss. des; clarify. destruct vret_tgt as [ctx0 vret].
         steps. force_l. eexists.
         force_l. eexists (c1, c2). steps.
         force_l; et. force_l.
