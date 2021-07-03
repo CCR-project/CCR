@@ -252,6 +252,8 @@ Opaque EventsL.interp_Es.
 
 
 
+Class BehConfig := { finalize: Any.t -> option Z }.
+
 Module ModSemL.
 Import EventsL.
 Section MODSEML.
@@ -321,20 +323,19 @@ Section MODSEML.
     snd <$> interp_Es prog (prog (Call None "main" arg)) (initial_p_state).
 
   Definition initial_itr (P: option Prop): itree (eventE) Any.t :=
-    initial_itr_arg P ([]: list unit)↑.
+    initial_itr_arg P (tt)↑.
 
 
   Let state: Type := itree eventE Any.t.
+
+  Context {BCONF: BehConfig}.
 
   Definition state_sort (st0: state): sort :=
     match (observe st0) with
     | TauF _ => demonic
     | RetF rv =>
-      match rv↓ with
-      | Some (rv) =>
-        if (0 <=? rv)%Z && (rv <? two_power_nat 32)%Z
-        then final rv
-        else angelic
+      match (finalize rv) with
+      | Some rv => final rv
       | _ => angelic
       end
     | VisF (Choose X) k => demonic
@@ -537,6 +538,8 @@ Section MODSEML.
   (*** TODO: probably we can make ModSemL.t as an RA too. (together with Sk.t) ***)
   (*** However, I am not sure what would be the gain; and there might be universe problem. ***)
 
+  Context {BCONF: BehConfig}.
+
   Let add_comm_aux arg
       ms0 ms1 stl0 str0
       P
@@ -617,7 +620,7 @@ Section MODSEML.
       <<COMM: Beh.of_program (compile (add ms0 ms1) (Some P0)) <1= Beh.of_program (compile (add ms1 ms0) (Some P1))>>
   .
   Proof.
-    eapply (@add_comm_arg ([]: list unit)↑ ms0 ms1 P0 P1 IMPL WF).
+    eapply (@add_comm_arg (tt)↑ ms0 ms1 P0 P1 IMPL WF).
   Qed.
 
   Lemma add_assoc' ms0 ms1 ms2:
@@ -868,7 +871,7 @@ Section MODSEM.
 
   Definition wf (ms: t): Prop := ModSemL.wf (lift ms).
 
-  Definition compile (ms: t) P: semantics := ModSemL.compile (lift ms) P.
+  Definition compile {BCONF: BehConfig} (ms: t) P: semantics := ModSemL.compile (lift ms) P.
 
 End MODSEM.
 End ModSem.
@@ -885,19 +888,23 @@ Section MODL.
     get_modsem: Sk.t -> ModSemL.t;
     sk: Sk.t;
     enclose: ModSemL.t := (get_modsem (Sk.sort sk));
-    compile: semantics :=
-      ModSemL.compile enclose
-                      (Some (<<WF: ModSemL.wf enclose>> /\ <<SK: Sk.wf sk>>));
   }
   .
 
   Definition wf (md: t): Prop := (<<WF: ModSemL.wf md.(enclose)>> /\ <<SK: Sk.wf md.(sk)>>).
 
+  Section BEH.
+
+  Context {BCONF: BehConfig}.
+
+  Definition compile (md: t): semantics :=
+      ModSemL.compile (enclose md)
+                      (Some (<<WF: ModSemL.wf (enclose md)>> /\ <<SK: Sk.wf md.(sk)>>)).
   Definition compile_arg (md: t) (arg: Any.t): semantics :=
     ModSemL.compile_itree (ModSemL.initial_itr_arg md.(enclose) (Some (wf md)) arg).
 
   Lemma compile_compile_arg_nil md:
-    compile md = compile_arg md ([]: list unit)↑.
+    compile md = compile_arg md (tt)↑.
   Proof.
     refl.
   Qed.
@@ -1015,6 +1022,8 @@ Section MODL.
     unfold add, ModSemL.add. f_equal; ss.
     extensionality skenv. destruct (get_modsem0 skenv); ss.
   Qed.
+
+  End BEH.
 
 End MODL.
 End ModL.
@@ -1205,6 +1214,7 @@ End Equisatisfiability.
 
 
 Section REFINE.
+   Context {BCONF: BehConfig}.
    Definition refines_arg (arg: Any.t) (md_tgt md_src: ModL.t): Prop :=
      (* forall (ctx: list Mod.t), Beh.of_program (ModL.compile (add_list (md_tgt :: ctx))) <1= *)
      (*                           Beh.of_program (ModL.compile (add_list (md_src :: ctx))) *)
@@ -1237,7 +1247,7 @@ Section REFINE.
 
    Lemma refines_refines_arg_nil md_tgt md_src
      :
-       refines_arg ([]: list unit)↑ md_tgt md_src
+       refines_arg (tt)↑ md_tgt md_src
        <->
        refines md_tgt md_src.
    Proof.
@@ -1345,7 +1355,7 @@ ys + (xs + src)
        <<SIM: refines (ModL.add md0_tgt md1_tgt) (ModL.add md0_src md1_src)>>
    .
    Proof.
-     eapply (@refines_add_arg ([]: list unit)↑); et.
+     eapply (@refines_add_arg (tt)↑); et.
    Qed.
 
    Theorem refines_proper_r
@@ -1355,7 +1365,7 @@ ys + (xs + src)
        <<SIM: refines (ModL.add (Mod.add_list mds0_tgt) (Mod.add_list ctx)) (ModL.add (Mod.add_list mds0_src) (Mod.add_list ctx))>>
    .
    Proof.
-     eapply (@refines_proper_r_arg ([]: list unit)↑); et.
+     eapply (@refines_proper_r_arg (tt)↑); et.
    Qed.
 
    Theorem refines_proper_l
@@ -1365,7 +1375,7 @@ ys + (xs + src)
        <<SIM: refines (ModL.add (Mod.add_list ctx) (Mod.add_list mds0_tgt)) (ModL.add (Mod.add_list ctx) (Mod.add_list mds0_src))>>
    .
    Proof.
-     eapply (@refines_proper_l_arg ([]: list unit)↑); et.
+     eapply (@refines_proper_l_arg (tt)↑); et.
    Qed.
 
    (*** horizontal composition ***)

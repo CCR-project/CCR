@@ -579,6 +579,8 @@ Proof.
   econs.
 Qed.
 
+Context {BCONF: BehConfig}.
+
 Theorem adequacy_global_itree itr_src itr_tgt
         (SIM: exists o0, simg eq o0 itr_src itr_tgt)
   :
@@ -594,15 +596,11 @@ Proof.
   generalize itr_src at 1 as md_src. i.
   revert o itr_src itr_tgt SIMG. pcofix CIH.
   i. punfold SIMG. inv SIMG; pfold.
-  { destruct (classic (exists rv, @Any.downcast Z r_tgt = Some (rv) /\
-                                  (0 <=? rv)%Z && (rv <? two_power_nat 32)%Z)).
-    { des. eapply sim_fin; ss.
-      { cbn. rewrite H. rewrite H0. ss. }
-      { cbn. rewrite H. rewrite H0. ss. }
-    }
+  { destruct (finalize r_tgt) eqn:T.
+    { des. eapply sim_fin; ss; cbn; des_ifs. }
     { eapply sim_angelic_both.
-      { cbn. des_ifs. exfalso. eapply H. et. }
-      { cbn. des_ifs. exfalso. eapply H. et. }
+      { cbn. des_ifs. }
+      { cbn. des_ifs. }
       i. exfalso. inv STEP.
     }
   }
