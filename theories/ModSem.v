@@ -871,7 +871,8 @@ Section MODSEM.
 
   Definition wf (ms: t): Prop := ModSemL.wf (lift ms).
 
-  Definition compile {BCONF: BehConfig} (ms: t) P: semantics := ModSemL.compile (lift ms) P.
+  Context {BCONF: BehConfig}.
+  Definition compile (ms: t) P: semantics := ModSemL.compile (lift ms) P.
 
 End MODSEM.
 End ModSem.
