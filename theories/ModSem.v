@@ -252,7 +252,7 @@ Opaque EventsL.interp_Es.
 
 
 
-Class BehConfig := { finalize: Any.t -> option Z }.
+Class BehConfig := { finalize: Any.t -> option Z; initial_arg: Any.t }.
 
 Module ModSemL.
 Import EventsL.
@@ -315,20 +315,17 @@ Section MODSEML.
                | None => tt↑
                end).
 
-  Definition initial_itr_arg (P: option Prop) (arg: Any.t): itree (eventE) Any.t :=
+  Context `{BCONF: BehConfig}.
+  Definition initial_itr (P: option Prop): itree (eventE) Any.t :=
     match P with
     | None => Ret tt
     | Some P' => assume (<<WF: P'>>)
     end;;;
-    snd <$> interp_Es prog (prog (Call None "main" arg)) (initial_p_state).
+    snd <$> interp_Es prog (prog (Call None "main" initial_arg)) (initial_p_state).
 
-  Definition initial_itr (P: option Prop): itree (eventE) Any.t :=
-    initial_itr_arg P (tt)↑.
 
 
   Let state: Type := itree eventE Any.t.
-
-  Context {BCONF: BehConfig}.
 
   Definition state_sort (st0: state): sort :=
     match (observe st0) with
@@ -499,17 +496,14 @@ Section MODSEML.
   Definition compile P: semantics :=
     compile_itree (initial_itr P).
 
-  Definition compile_arg P arg: semantics :=
-    compile_itree (initial_itr_arg P arg).
-
-  Lemma initial_itr_arg_not_wf P arg
+  Lemma initial_itr_not_wf P
         (WF: ~ P)
         tr
     :
-      Beh.of_program (compile_itree (initial_itr_arg (Some P) arg)) tr.
+      Beh.of_program (compile_itree (initial_itr (Some P))) tr.
   Proof.
     eapply Beh.ub_top. pfold. econsr; ss; et. rr. ii; ss.
-    unfold initial_itr_arg, assume in *. rewrite bind_bind in STEP.
+    unfold initial_itr, assume in *. rewrite bind_bind in STEP.
     eapply step_trigger_take_iff in STEP. des. subst. ss.
   Qed.
 
@@ -519,7 +513,7 @@ Section MODSEML.
     :
       Beh.of_program (compile (Some P)) tr.
   Proof.
-    eapply initial_itr_arg_not_wf; et.
+    eapply initial_itr_not_wf; et.
   Qed.
 
   (* Program Definition interp_no_forge: semantics := {| *)
