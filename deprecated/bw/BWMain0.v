@@ -1,5 +1,5 @@
 Require Import Coqlib.
-Require Import Universe.
+Require Import ImpPrelude.
 Require Import STS.
 Require Import Behavior.
 Require Import ModSem.
@@ -10,7 +10,7 @@ Require Import BW1.
 Require Import TODOYJ.
 
 Require Import Coqlib.
-Require Import Universe.
+Require Import ImpPrelude.
 Require Import STS.
 Require Import Behavior.
 Require Import ModSem.

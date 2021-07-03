@@ -1,6 +1,6 @@
 From compcert Require Import Smallstep Clight Integers Events Behaviors.
 Require Import Coqlib.
-Require Import Universe.
+Require Import ImpPrelude.
 Require Import STS.
 Require Import Behavior.
 Require Import Imp.
