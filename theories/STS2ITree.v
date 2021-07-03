@@ -82,7 +82,7 @@ Section PROOF.
 
   Import Behavior.Beh.
 
-  Context {BCONF: BehConfig}.
+  Context {CONF: EMSConfig}.
 
   Variable
     (state: Type)

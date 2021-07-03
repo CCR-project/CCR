@@ -868,7 +868,7 @@ Section SIMMOD.
     i. ss. des; ss; auto.
   Qed.
 
-  Context {BCONF: BehConfig}.
+  Context {CONF: EMSConfig}.
 
   Theorem adequacy_hint_aux `{ns: sk_gnames} (md_src md_tgt: Mod.t) ctx
           (NAMESPACE:

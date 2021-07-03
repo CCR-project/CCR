@@ -11,7 +11,7 @@ Require Import ModSem.
 
 Set Implicit Arguments.
 
-Global Program Instance BehConfigImp: BehConfig := {|
+Global Program Instance EMSConfigImp: EMSConfig := {|
   finalize := fun rv =>
     match rv↓ with
     | Some (rv) =>

@@ -252,7 +252,7 @@ Opaque EventsL.interp_Es.
 
 
 
-Class BehConfig := { finalize: Any.t -> option Z; initial_arg: Any.t }.
+Class EMSConfig := { finalize: Any.t -> option Z; initial_arg: Any.t }.
 
 Module ModSemL.
 Import EventsL.
@@ -315,7 +315,7 @@ Section MODSEML.
                | None => tt↑
                end).
 
-  Context `{BCONF: BehConfig}.
+  Context `{CONF: EMSConfig}.
   Definition initial_itr (P: option Prop): itree (eventE) Any.t :=
     match P with
     | None => Ret tt
@@ -532,7 +532,7 @@ Section MODSEML.
   (*** TODO: probably we can make ModSemL.t as an RA too. (together with Sk.t) ***)
   (*** However, I am not sure what would be the gain; and there might be universe problem. ***)
 
-  Context {BCONF: BehConfig}.
+  Context {CONF: EMSConfig}.
 
   Let add_comm_aux arg
       ms0 ms1 stl0 str0
@@ -865,7 +865,7 @@ Section MODSEM.
 
   Definition wf (ms: t): Prop := ModSemL.wf (lift ms).
 
-  Context {BCONF: BehConfig}.
+  Context {CONF: EMSConfig}.
   Definition compile (ms: t) P: semantics := ModSemL.compile (lift ms) P.
 
 End MODSEM.
@@ -890,7 +890,7 @@ Section MODL.
 
   Section BEH.
 
-  Context {BCONF: BehConfig}.
+  Context {CONF: EMSConfig}.
 
   Definition compile (md: t): semantics :=
       ModSemL.compile (enclose md)
@@ -1209,7 +1209,7 @@ End Equisatisfiability.
 
 
 Section REFINE.
-   Context {BCONF: BehConfig}.
+   Context {CONF: EMSConfig}.
    Definition refines_arg (arg: Any.t) (md_tgt md_src: ModL.t): Prop :=
      (* forall (ctx: list Mod.t), Beh.of_program (ModL.compile (add_list (md_tgt :: ctx))) <1= *)
      (*                           Beh.of_program (ModL.compile (add_list (md_src :: ctx))) *)
