@@ -88,6 +88,7 @@ Section CANCEL.
 
   Lemma idK_spec2: forall E A B (a: A) (itr: itree E B), itr = Ret a >>= fun _ => itr. Proof. { i. ired. ss. } Qed.
 
+  Context {BCONF: BehConfig}.
   Theorem adequacy_type_m2s main_arg:
     Beh.of_program (ModL.compile_arg (Mod.add_list mds_mid2) main_arg) <1=
     Beh.of_program (ModL.compile_arg (Mod.add_list mds_src) main_arg).

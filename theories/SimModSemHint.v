@@ -868,7 +868,9 @@ Section SIMMOD.
     i. ss. des; ss; auto.
   Qed.
 
-  Theorem adequacy_hint_aux {BCONF: BehConfig} `{ns: sk_gnames} (md_src md_tgt: Mod.t) ctx
+  Context {BCONF: BehConfig}.
+
+  Theorem adequacy_hint_aux `{ns: sk_gnames} (md_src md_tgt: Mod.t) ctx
           (NAMESPACE:
              forall sk fn
                     (SOME: is_some (alist_find fn (ModSemL.fnsems (ModL.get_modsem (ModL.add (Mod.add_list ctx) md_src) sk)))),
@@ -1032,7 +1034,7 @@ Section SIMMOD.
      induction l; ss.
    Qed.
 
-   Theorem adequacy_hint {BCONF: BehConfig} `{ns: sk_gnames} mds_src mds_tgt
+   Theorem adequacy_hint `{ns: sk_gnames} mds_src mds_tgt
           (NAMESPACE:
              forall sk fn
                     (SOME: is_some (alist_find fn (ModSemL.fnsems (ModL.get_modsem (Mod.add_list mds_src) sk)))),
@@ -1117,8 +1119,6 @@ Section SIMMOD.
    Qed.
 
    Local Existing Instances top_sk_gnames.
-
-   Context {BCONF: BehConfig}.
 
    Theorem adequacy_local_strong md_src md_tgt
            (SIM: ModPair.sim md_src md_tgt)
