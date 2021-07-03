@@ -27,13 +27,17 @@ Defined.
 
 Global Program Instance EMSConfigImp: EMSConfig := {|
   finalize := fun rv =>
-    match rv↓ with
-    | Some (rv) =>
-      if (0 <=? rv)%Z && (rv <? two_power_nat 32)%Z
-      then Some rv
-      else None
-    | _ => None
-    end;
+                match rv↓ with
+                | Some (rv) =>
+                  match rv with
+                  | Vint z =>
+                    if (0 <=? z)%Z && (z <? two_power_nat 32)%Z
+                    then Some z
+                    else None
+                  | _ => None
+                  end
+                | _ => None
+                end;
   initial_arg := ([]: list val)↑;
 |}
 .

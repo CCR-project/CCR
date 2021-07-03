@@ -465,7 +465,7 @@ Section PROOFSINGLE.
     unfold compile in COMP. des_ifs.
     match goal with | [ COMP0: compile _ = OK ?_tgt |- _ ] => set (tgt:=_tgt) in * end.
     rename l into NOREPET.
-    unfold ModSemL.initial_itr. unfold ModSemL.initial_itr_arg.
+    unfold ModSemL.initial_itr.
     pfold. econs 5; eauto. unfold assume. ss.
     { grind. dtm H H0. }
     unfold assume. grind. eapply angelic_step in STEP. des; clarify.
@@ -602,7 +602,7 @@ Section PROOFSINGLE.
         - unfold behavior_prefix. exists (Goes_wrong E0). ss.
     }
     rename H into NOINIT.
-    unfold imp_sem in *. ss. unfold ModSemL.initial_itr. unfold ModSemL.initial_itr_arg.
+    unfold imp_sem in *. ss. unfold ModSemL.initial_itr.
     pfold. econs 6; ss; eauto.
     unfold Beh.inter. ss. unfold assume. grind.
     apply ModSemL.step_trigger_take_iff in STEP. des. clarify. split; eauto.

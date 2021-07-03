@@ -72,7 +72,7 @@ Section PROOF.
 
   Variable srcprog : Imp.programL.
 
-  Definition compile_val md := @ModL.compile_arg EMSConfigImp md ([]: list val)↑.
+  Definition compile_val md := @ModL.compile EMSConfigImp md.
 
   Let _sim_mon := Eval simpl in (fun (src: ModL.t) (tgt: Csharpminor.program) => @sim_mon (compile_val src) (semantics tgt)).
   Hint Resolve _sim_mon: paco.
