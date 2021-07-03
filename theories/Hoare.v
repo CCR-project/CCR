@@ -98,19 +98,22 @@ Section CANCEL.
   Let ms_src: ModSemL.t := ModL.enclose (Mod.add_list mds_src).
   Let ms_tgt: ModSemL.t := ModL.enclose (Mod.add_list mds_tgt).
 
+  Section STRONGER.
+  Context {CONFS CONFT: EMSConfig}.
+  Hypothesis (FINSAME: (@finalize CONFS) = (@finalize CONFT)).
+
   Theorem adequacy_type_arg
-          main_arg_tgt main_arg_src
           (MAINM:
              forall (main_fsp: fspec) (MAIN: stb sk "main" = Some main_fsp),
              exists (x: main_fsp.(meta)) entry_r,
-               (<<PRE: main_fsp.(precond) None x main_arg_src main_arg_tgt ord_top entry_r>>) /\
+               (<<PRE: main_fsp.(precond) None x (@initial_arg CONFS) (@initial_arg CONFT) ord_top entry_r>>) /\
                (<<WFR: URA.wf (entry_r ⋅ fold_left (⋅) (List.map SModSem.initial_mr mss) ε)>>) /\
                (<<RET: forall ret_src ret_tgt r
                               (POST: main_fsp.(postcond) None x ret_src ret_tgt r),
                    ret_src = ret_tgt>>))
     :
-      Beh.of_program (ModL.compile_arg (Mod.add_list mds_tgt) main_arg_tgt) <1=
-      Beh.of_program (ModL.compile_arg (Mod.add_list mds_src) main_arg_src).
+      Beh.of_program (@ModL.compile CONFT (Mod.add_list mds_tgt)) <1=
+      Beh.of_program (@ModL.compile CONFS (Mod.add_list mds_src)).
   Proof.
     ii. eapply adequacy_type_m2s.
     eapply adequacy_type_m2m; et.
@@ -118,11 +121,13 @@ Section CANCEL.
     Unshelve.
     all:ss.
   Qed.
+  End STRONGER.
 
 
+  Context {CONF: EMSConfig}.
   Variable entry_r: Σ.
   Variable mainpre: Any.t -> ord -> Σ -> Prop.
-  Hypothesis MAINPRE: mainpre ([]: list val)↑ ord_top entry_r.
+  Hypothesis MAINPRE: mainpre initial_arg ord_top entry_r.
 
   Hypothesis WFR: URA.wf (entry_r ⋅ fold_left (⋅) (List.map SModSem.initial_mr mss) ε).
 
@@ -263,11 +268,12 @@ Section CANCEL.
     induction mds; ii; ss. f_equal; ss.
   Qed.
 
+  Context {CONF: EMSConfig}.
   Lemma adequacy_type2
           (MAINM:
              forall (main_fsp: fspec) (MAIN: stb "main" = Some main_fsp),
              exists (x: main_fsp.(meta)) entry_r,
-               (<<PRE: main_fsp.(precond) None x ([]: list val)↑ ([]: list val)↑ ord_top entry_r>>) /\
+               (<<PRE: main_fsp.(precond) None x initial_arg initial_arg ord_top entry_r>>) /\
                (<<WFR: URA.wf (entry_r ⋅ fold_left (⋅) (List.map SModSem.initial_mr mss) ε)>>) /\
                (<<RET: forall ret_src ret_tgt r
                               (POST: main_fsp.(postcond) None x ret_src ret_tgt r),
@@ -275,13 +281,13 @@ Section CANCEL.
     :
       refines_closed (Mod.add_list mds_tgt) (Mod.add_list mds_src).
   Proof.
-    ii. rewrite ModL.compile_compile_arg_nil. eapply adequacy_type_arg.
+    ii. eapply adequacy_type_arg; ss.
     { instantiate (1:=fun _ => stb). unfold stb. i.
       unfold _stb, _sbtb, _mss, sk. rewrite FIND. auto. }
     { i. unfold stb, _stb, _sbtb, _mss, sk. rewrite FIND.
       right. esplits; et. ii. red in PRE. ss. red in PRE. uipropall. des; auto. }
     { i. fold stb. hexploit MAINM; et.  }
-    { rewrite <- ModL.compile_compile_arg_nil. revert x0 PR.
+    { revert x0 PR.
       eapply refines_close.
       eapply adequacy_local_list.
       rewrite <- map_id. eapply Forall2_apply_Forall2; et.

@@ -876,14 +876,13 @@ Section SIMMOD.
                     (SOME: is_some (alist_find fn (ModSemL.fnsems (ModL.get_modsem (ModL.add (Mod.add_list ctx) md_src) sk)))),
                sk_gnames_contents sk fn)
            (SIM: ModPair.sim md_src md_tgt)
-           arg
      :
-       Beh.of_program (ModL.compile_arg (ModL.add (Mod.add_list ctx) md_tgt) arg)
+       Beh.of_program (ModL.compile (ModL.add (Mod.add_list ctx) md_tgt))
        <1=
-       Beh.of_program (ModL.compile_arg (ModL.add (Mod.add_list ctx) md_src) arg).
+       Beh.of_program (ModL.compile (ModL.add (Mod.add_list ctx) md_src)).
    Proof.
      ii. destruct (classic (ModL.wf (ModL.add (Mod.add_list ctx) md_src))).
-     2: { unfold ModL.compile_arg. eapply ModSemL.initial_itr_arg_not_wf. auto. }
+     2: { unfold ModL.compile. eapply ModSemL.initial_itr_not_wf. auto. }
      rename H into WFSRC.
      assert (SKEQ: Sk.add (ModL.sk (Mod.add_list ctx)) (Mod.sk md_src)
                    =
@@ -1040,14 +1039,13 @@ Section SIMMOD.
                     (SOME: is_some (alist_find fn (ModSemL.fnsems (ModL.get_modsem (Mod.add_list mds_src) sk)))),
                sk_gnames_contents sk fn)
            (SIM: List.Forall2 ModPair.sim mds_src mds_tgt)
-           arg
      :
-       Beh.of_program (ModL.compile_arg (Mod.add_list mds_tgt) arg)
+       Beh.of_program (ModL.compile (Mod.add_list mds_tgt))
        <1=
-       Beh.of_program (ModL.compile_arg (Mod.add_list mds_src) arg).
+       Beh.of_program (ModL.compile (Mod.add_list mds_src)).
    Proof.
      ii. destruct (classic (ModSemL.wf (ModL.enclose (Mod.add_list mds_src)) /\ Sk.wf (ModL.sk (Mod.add_list mds_src)))).
-     2: { unfold ModL.compile_arg. eapply ModSemL.initial_itr_arg_not_wf. auto. }
+     2: { unfold ModL.compile. eapply ModSemL.initial_itr_not_wf. auto. }
      rename H into WF.
 
      assert (SKEQ: ModL.sk (Mod.add_list mds_tgt) = ModL.sk (Mod.add_list mds_src)).
@@ -1118,6 +1116,9 @@ Section SIMMOD.
      }
    Qed.
 
+End SIMMOD.
+
+Section SIMMOD.
    Local Existing Instances top_sk_gnames.
 
    Theorem adequacy_local_strong md_src md_tgt
@@ -1137,6 +1138,8 @@ Section SIMMOD.
      { clear. induction ctx; ss. econs; et. eapply ModPair.self_sim. }
      { econs; ss. }
    Qed.
+
+   Context {CONF: EMSConfig}.
 
    Theorem adequacy_local md_src md_tgt
            (SIM: ModPair.sim md_src md_tgt)
