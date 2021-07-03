@@ -579,7 +579,7 @@ Proof.
   econs.
 Qed.
 
-Context {BCONF: BehConfig}.
+Context {CONF: EMSConfig}.
 
 Theorem adequacy_global_itree itr_src itr_tgt
         (SIM: exists o0, simg eq o0 itr_src itr_tgt)
