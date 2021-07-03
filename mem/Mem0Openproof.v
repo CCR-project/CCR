@@ -244,7 +244,7 @@ Proof Outline
    { esplits. ss. econs; ss. eapply to_semantic.
      iIntros "H". iExists _, _, _.
      repeat (iSplit; eauto).
-     { iPureIntro. ii. destruct (Mem.cnts (Sk.load_mem sk) b ofs) eqn:T; econs. }
+     { iPureIntro. ii. destruct (Mem.cnts (Mem.load_mem sk) b ofs) eqn:T; econs. }
      { iPureIntro. admit "ez". }
      { iPureIntro. admit "ez". }
    }
