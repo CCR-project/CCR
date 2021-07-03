@@ -50,7 +50,7 @@ Section PROOF.
       assume(wf_val hd);;;
       `b: val   <- (ccallU "cmp"  [hd; Vnullptr]);;
       assume((wf_val b) /\ (match b with | Vint _ => True | _ => False end));;;
-      if is_zero b
+      if dec (Vint 0) b
       then (
           let addr_val    := hd in
           assume (match addr_val with | Vptr _ 0 => True | _ => False end);;;

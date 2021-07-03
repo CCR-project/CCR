@@ -32,6 +32,11 @@ Inductive val: Type :=
 | Vundef
 .
 
+Global Program Instance val_dec: Dec val.
+Next Obligation.
+  repeat (decide equality).
+Defined.
+
 Definition wordsize_64 := 64.
 Definition modulus_64 := two_power_nat wordsize_64.
 Definition modulus_64_half := (modulus_64 / 2)%Z.
