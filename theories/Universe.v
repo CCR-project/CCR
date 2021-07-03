@@ -11,18 +11,6 @@ Require Import ModSem.
 
 Set Implicit Arguments.
 
-Global Program Instance EMSConfigImp: EMSConfig := {|
-  finalize := fun rv =>
-    match rv↓ with
-    | Some (rv) =>
-      if (0 <=? rv)%Z && (rv <? two_power_nat 32)%Z
-      then Some rv
-      else None
-    | _ => None
-    end
-|}
-.
-
 Notation mblock := nat (only parsing).
 Notation ptrofs := Z (only parsing).
 
@@ -36,6 +24,19 @@ Global Program Instance val_dec: Dec val.
 Next Obligation.
   repeat (decide equality).
 Defined.
+
+Global Program Instance EMSConfigImp: EMSConfig := {|
+  finalize := fun rv =>
+    match rv↓ with
+    | Some (rv) =>
+      if (0 <=? rv)%Z && (rv <? two_power_nat 32)%Z
+      then Some rv
+      else None
+    | _ => None
+    end;
+  initial_arg := ([]: list val)↑;
+|}
+.
 
 Definition wordsize_64 := 64.
 Definition modulus_64 := two_power_nat wordsize_64.
