@@ -1,6 +1,5 @@
 Require Import Coqlib.
 Require Import ITreelib.
-Require Import Universe.
 Require Import Skeleton.
 Require Import ModSem.
 Import EventsL.
@@ -1327,21 +1326,23 @@ Section SIMMOD.
 
    Hypothesis NAMESPACE: forall fn (SOME: is_some (alist_find fn (ModSemL.fnsems (ModL.get_modsem md_src (Sk.sort (ModL.sk md_src)))))), ns fn.
 
-   Theorem adequacy_local_closed arg
+   Context {CONF: EMSConfig}.
+
+   Theorem adequacy_local_closed
            (SIM: sim)
      :
-       Beh.of_program (ModL.compile_arg md_tgt arg) <1=
-       Beh.of_program (ModL.compile_arg md_src arg)
+       Beh.of_program (ModL.compile md_tgt) <1=
+       Beh.of_program (ModL.compile md_src)
    .
    Proof.
      inv SIM. inv sim_modsem0.
-     { i. unfold ModL.compile_arg. eapply ModSemL.initial_itr_arg_not_wf.
+     { i. unfold ModL.compile. eapply ModSemL.initial_itr_not_wf.
        ii. eapply H. eapply H0. }
      inv H. red in sim_sk0.
      unfold ModL.enclose in *.
 
-     eapply adequacy_global_arg; et. exists (OrdArith.add Ord.O Ord.O).
-     unfold ModSemL.initial_itr, ModSemL.initial_itr_arg, ModL.enclose.
+     eapply adequacy_global; et. exists (OrdArith.add Ord.O Ord.O).
+     unfold ModSemL.initial_itr, ModSemL.initial_itr, ModL.enclose.
 
      assert (FNS: forall fn : string,
                 option_rel (sim_fsem wf le)

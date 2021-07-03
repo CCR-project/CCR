@@ -1,7 +1,7 @@
 From compcert Require Import Globalenvs Smallstep AST Integers Events Behaviors Errors Memory.
 Require Import Coqlib.
 Require Import ITreelib.
-Require Import Universe.
+Require Import ImpPrelude.
 Require Import Skeleton.
 Require Import PCM.
 Require Import STS Behavior.
@@ -151,7 +151,7 @@ Section MATCH.
 
   Definition map_ofs (ofs : Z) : Z := 8 * ofs.
 
-  Definition map_val (src : Imp.programL) (v : Universe.val) : Values.val :=
+  Definition map_val (src : Imp.programL) (v : ImpPrelude.val) : Values.val :=
     match v with
     | Vint z => Values.Vlong (Int64.repr z)
     | Vptr blk ofs =>

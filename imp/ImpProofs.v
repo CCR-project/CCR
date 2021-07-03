@@ -1,6 +1,6 @@
 Require Import Coqlib.
 Require Import ITreelib.
-Require Import Universe.
+Require Import ImpPrelude.
 Require Import Skeleton.
 Require Import PCM.
 Require Import STS Behavior.
@@ -196,8 +196,16 @@ Section PROOFS.
       ` sig : nat <- unwrapU (alist_find f syscalls);;
       (if (sig =? Datatypes.length args)%nat then Ret () else triggerUB);;;
       ` eval_args : list val <- denote_exprs args;;
-      (if forallb wf_val eval_args then Ret () else triggerUB);;;
-      ` v : val <- trigger (Syscall f eval_args top1);; trigger (SetVar x v);;; (tau;; Ret Vundef)) le0.
+      (if forallb (fun v : val => match v with
+                                  | Vint _ => true
+                                  | _ => false
+                                  end) eval_args then Ret () else triggerUB);;;
+      (let eval_zs := List.map (fun v : val => match v with
+                                               | Vint z => z
+                                               | _ => 0%Z
+                                               end) eval_args in
+       (if forallb intrange_64 eval_zs then Ret () else triggerUB);;;
+       ` v : Z <- trigger (Syscall f eval_zs top1);; trigger (SetVar x (Vint v));;; (tau;; Ret Vundef))) le0.
   Proof. reflexivity. Qed.
 
   (* interp_imp *)
@@ -691,19 +699,36 @@ Section PROOFS.
         ge le0 x f args t
     :
       interp_imp ge (
-                   eval_args <- (denote_exprs args);;
-                   (if (forallb wf_val eval_args) then Ret tt else triggerUB);;;
-                       v <- trigger (Syscall f eval_args t);;
-                       trigger (SetVar x v);;; tau;; Ret Vundef) le0
+      ` eval_args : list val <- denote_exprs args;;
+      (if forallb (fun v : val => match v with
+                                  | Vint _ => true
+                                  | _ => false
+                                  end) eval_args then Ret () else triggerUB);;;
+      (let eval_zs := List.map (fun v : val => match v with
+                                               | Vint z => z
+                                               | _ => 0%Z
+                                               end) eval_args in
+       (if forallb intrange_64 eval_zs then Ret () else triggerUB);;;
+       ` v : Z <- trigger (Syscall f eval_zs t);; trigger (SetVar x (Vint v));;; (tau;; Ret Vundef))) le0
       =
       '(le1, vals) <- interp_imp ge (denote_exprs args) le0;;
-      (if (forallb wf_val vals) then Ret tt else triggerUB);;;
-        v <- trigger (Syscall f vals t);;
+      (if forallb (fun v : val => match v with
+                                  | Vint _ => true
+                                  | _ => false
+                                  end) vals then Ret () else triggerUB);;;
+      (let eval_zs := List.map (fun v : val => match v with
+                                               | Vint z => z
+                                               | _ => 0%Z
+                                               end) vals in
+      (if (forallb intrange_64 eval_zs) then Ret tt else triggerUB);;;
+        v <- trigger (Syscall f eval_zs t);;
         tau;; tau;; tau;; tau;;
-        tau;; Ret (alist_add x v le1, Vundef).
+        tau;; Ret (alist_add x (Vint v) le1, Vundef)).
   Proof.
     rewrite interp_imp_bind. grind.
     des_ifs.
+    2:{ rewrite interp_imp_triggerUB_bind. unfold triggerUB; grind. }
+    2:{ rewrite interp_imp_bind. rewrite interp_imp_Ret. grind. rewrite interp_imp_triggerUB_bind. unfold triggerUB; grind. }
     2:{ rewrite interp_imp_triggerUB_bind. unfold triggerUB; grind. }
     rewrite interp_imp_bind. rewrite interp_imp_Ret; grind.
     rewrite interp_imp_bind. rewrite interp_imp_Syscall. grind.
@@ -717,12 +742,19 @@ Section PROOFS.
       interp_imp ge (denote_stmt (CallSys x f args)) le0 =
       sig <- (alist_find f syscalls)? ;;
       (if (sig =? List.length args)%nat then Ret tt else triggerUB);;;
-        '(le1, vals) <- interp_imp ge (denote_exprs args) le0;;
-        (if forallb wf_val vals then Ret tt else triggerUB);;;
-             v <- trigger (Syscall f vals top1);;
-             tau;; tau;; tau;; tau;;
-             tau;; Ret (alist_add x v le1, Vundef)
-  .
+      '(le1, vals) <- interp_imp ge (denote_exprs args) le0;;
+      (if forallb (fun v : val => match v with
+                                  | Vint _ => true
+                                  | _ => false
+                                  end) vals then Ret () else triggerUB);;;
+      (let eval_zs := List.map (fun v : val => match v with
+                                               | Vint z => z
+                                               | _ => 0%Z
+                                               end) vals in
+      (if (forallb intrange_64 eval_zs) then Ret tt else triggerUB);;;
+        v <- trigger (Syscall f eval_zs top1);;
+        tau;; tau;; tau;; tau;;
+        tau;; Ret (alist_add x (Vint v) le1, Vundef)).
   Proof.
     rewrite denote_stmt_CallSys.
     rewrite interp_imp_bind. rewrite interp_imp_unwrapU. grind.

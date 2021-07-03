@@ -1,4 +1,4 @@
-Require Import Universe.
+Require Import ImpPrelude.
 Require Import PCM.
 Require Import ModSem.
 Require Import Imp.

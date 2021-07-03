@@ -1,5 +1,5 @@
 Require Import Coqlib.
-Require Import Universe.
+Require Import ImpPrelude.
 Require Import STS.
 Require Import Behavior.
 Require Import ModSem.
@@ -15,13 +15,13 @@ Set Implicit Arguments.
 Definition getintF {E} `{eventE -< E}:  list val -> itree E val :=
   fun args =>
     _ <- (pargs [] args)?;;
-    trigger (Syscall "scan" [] top1).
+    z <- trigger (Syscall "scan" [] top1);; Ret (Vint z).
 
 Definition putintF {E} `{eventE -< E}: list val -> itree E val :=
   fun varg =>
-    `v: val <- (pargs [Tuntyped] varg)?;;
-    (if (wf_val v) then Ret tt else triggerUB);;; (* TODO: make notation *)
-    trigger (Syscall "print" varg top1);;;
+    `v: Z <- (pargs [Tint] varg)?;;
+    (if (intrange_64 v) then Ret tt else triggerUB);;; (* TODO: make notation *)
+    trigger (Syscall "print" [v] top1);;;
     Ret Vundef
 .
 

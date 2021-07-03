@@ -1,6 +1,5 @@
 Require Import Coqlib.
 Require Import ITreelib.
-Require Import Universe.
 Require Import STS.
 Require Import Behavior.
 Require Import ModSem.
@@ -52,7 +51,8 @@ Notation " K ==> V' " := (URA.pointwise K V'): ra_scope.
 
 
 
-Definition is_zero (v: val): bool := match v with | Vint x => dec x 0%Z | _ => false end.
+(* Definition is_zero (v: val): bool := match v with | Vint x => dec x 0%Z | _ => false end. *)
+Definition is_zero (v: Z): bool := (dec v 0%Z).
 
 Ltac on_first_hyp tac :=
   match reverse goal with [ H : _ |- _ ] => first [ tac H | fail 1 ] end.

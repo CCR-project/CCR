@@ -1,5 +1,4 @@
 Require Import Coqlib.
-Require Import Universe.
 Require Import STS.
 Require Import Behavior.
 Require Import ModSem.
@@ -649,15 +648,17 @@ Section CANCEL.
     extensionality fnsb. destruct fnsb as [fn sb]. ss.
   Qed.
 
-  Theorem adequacy_type_m2m main_arg:
-    Beh.of_program (ModL.compile_arg (Mod.add_list mds_mid) (Any.pair ord_top↑ main_arg)) <1=
-    Beh.of_program (ModL.compile_arg (Mod.add_list mds_mid2) main_arg).
+  Context `{CONF: EMSConfig}.
+  Definition midConf: EMSConfig := {| finalize := finalize; initial_arg := Any.pair ord_top↑ initial_arg |}.
+  Theorem adequacy_type_m2m:
+    Beh.of_program (@ModL.compile midConf (Mod.add_list mds_mid)) <1=
+    Beh.of_program (ModL.compile (Mod.add_list mds_mid2)).
   Proof.
-    eapply adequacy_global_itree.
+    eapply adequacy_global_itree; ss.
     exists (200)%ord.
     ginit.
     { eapply cpn6_wcompat; eauto with paco. }
-    unfold ModSemL.initial_itr, ModSemL.initial_itr_arg. Local Opaque ModSemL.prog. ss.
+    unfold ModSemL.initial_itr, ModSemL.initial_itr. Local Opaque ModSemL.prog. ss.
     unfold ITree.map. steps.
     2: {
       Local Transparent ModSemL.prog.

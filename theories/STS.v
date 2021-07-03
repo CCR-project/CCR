@@ -1,8 +1,17 @@
 Require Import sflib.
-Require Import Universe.
+Require Import String.
+Require Import Coqlib.
 
 Set Implicit Arguments.
 
+
+Inductive event: Type :=
+| event_sys
+    (fn: string)
+    (args: list Z)
+    (rv: Z)
+.
+Parameter syscall_sem: event -> Prop.
 
 
 Inductive sort: Type :=

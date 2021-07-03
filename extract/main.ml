@@ -8,7 +8,7 @@ open BinInt
 
 open ITreeDefinition
 open Any
-open Universe
+open ImpPrelude
 open ModSem
 
 open MutFG

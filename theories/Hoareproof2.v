@@ -1,5 +1,4 @@
 Require Import Coqlib.
-Require Import Universe.
 Require Import STS.
 Require Import Behavior.
 Require Import ModSem.
@@ -89,11 +88,12 @@ Section CANCEL.
 
   Lemma idK_spec2: forall E A B (a: A) (itr: itree E B), itr = Ret a >>= fun _ => itr. Proof. { i. ired. ss. } Qed.
 
-  Theorem adequacy_type_m2s main_arg:
-    Beh.of_program (ModL.compile_arg (Mod.add_list mds_mid2) main_arg) <1=
-    Beh.of_program (ModL.compile_arg (Mod.add_list mds_src) main_arg).
+  Context {CONF: EMSConfig}.
+  Theorem adequacy_type_m2s:
+    Beh.of_program (ModL.compile (Mod.add_list mds_mid2)) <1=
+    Beh.of_program (ModL.compile (Mod.add_list mds_src)).
   Proof.
-    eapply ModSem.refines_close_arg.
+    eapply ModSem.refines_close.
     eapply (@adequacy_local_list_strong mds_src mds_mid2).
     unfold mds_src, mds_mid2.
     eapply Forall2_apply_Forall2.

@@ -1,6 +1,6 @@
 Require Import Coqlib.
 Require Import ITreelib.
-Require Import Universe.
+Require Import ImpPrelude.
 Require Import STS.
 Require Import Behavior.
 Require Import ModSem.
@@ -102,7 +102,7 @@ Section PROOF.
     KModSem.fnsems := MemSbtb;
     KModSem.mn := "Mem";
     KModSem.initial_mr := (GRA.embed (Auth.black (M:=_memRA) ε));
-    KModSem.initial_st := (Sk.load_mem sk)↑;
+    KModSem.initial_st := (Mem.load_mem sk)↑;
   |}
   .
   Definition MemSem (stb: gname -> option fspec): Sk.t -> ModSem.t := (KModSem.transl_tgt stb) ∘ KMemSem.

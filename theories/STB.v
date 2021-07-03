@@ -1,5 +1,4 @@
 Require Import Coqlib.
-Require Import Universe.
 Require Import STS.
 Require Import Behavior.
 Require Import ModSem.
@@ -11,6 +10,8 @@ Require Import Logic.
 Set Implicit Arguments.
 
 
+Notation mblock := nat (only parsing).
+Notation ptrofs := Z (only parsing).
 
 
 Section HEADER.

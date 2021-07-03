@@ -1,6 +1,6 @@
 Require Import Coqlib.
 Require Import ITreelib.
-Require Import Universe.
+Require Import Any.
 Require Import STS.
 Require Import Behavior.
 Require Import ModSem.
@@ -557,7 +557,7 @@ Proof.
     extensionality x0. eapply itree_eta. ss. }
 Qed.
 
-Lemma step_trigger_syscall fn args (rvs: val -> Prop) k rv
+Lemma step_trigger_syscall fn args (rvs: Z -> Prop) k rv
       (RV: rvs rv) (SYS: syscall_sem (event_sys fn args rv))
   :
     ModSemL.step (trigger (Syscall fn args rvs) >>= k) (Some (event_sys fn args rv)) (k rv).
@@ -579,12 +579,15 @@ Proof.
   econs.
 Qed.
 
+Context {CONFS CONFT: EMSConfig}.
+Hypothesis (FINSAME: (@finalize CONFS) = (@finalize CONFT)).
+
 Theorem adequacy_global_itree itr_src itr_tgt
         (SIM: exists o0, simg eq o0 itr_src itr_tgt)
   :
-    Beh.of_program (ModSemL.compile_itree itr_tgt)
+    Beh.of_program (@ModSemL.compile_itree CONFT itr_tgt)
     <1=
-    Beh.of_program (ModSemL.compile_itree itr_src).
+    Beh.of_program (@ModSemL.compile_itree CONFS itr_src).
 Proof.
   unfold Beh.of_program. ss.
   i. destruct SIM as [o SIMG]. eapply adequacy_aux; et.
@@ -594,15 +597,11 @@ Proof.
   generalize itr_src at 1 as md_src. i.
   revert o itr_src itr_tgt SIMG. pcofix CIH.
   i. punfold SIMG. inv SIMG; pfold.
-  { destruct (classic (exists rv, @Any.downcast val r_tgt = Some (Vint rv) /\
-                                  (0 <=? rv)%Z && (rv <? two_power_nat 32)%Z)).
-    { des. eapply sim_fin; ss.
-      { cbn. rewrite H. rewrite H0. ss. }
-      { cbn. rewrite H. rewrite H0. ss. }
-    }
+  { destruct (finalize r_tgt) eqn:T.
+    { des. eapply sim_fin; ss; cbn; des_ifs; rewrite FINSAME in *; clarify. }
     { eapply sim_angelic_both.
-      { cbn. des_ifs. exfalso. eapply H. et. }
-      { cbn. des_ifs. exfalso. eapply H. et. }
+      { cbn. des_ifs; rewrite FINSAME in *; clarify. }
+      { cbn. des_ifs; rewrite FINSAME in *; clarify. }
       i. exfalso. inv STEP.
     }
   }
@@ -688,32 +687,17 @@ Let ms_tgt: ModSemL.t := md_tgt.(ModL.enclose).
 (* Hypothesis (SIM: Forall2 sim_fnsem ms_src.(ModSemL.fnsems) ms_tgt.(ModSemL.fnsems)). *)
 
 Section ADEQUACY.
-Hypothesis (SIM: exists o0, simg eq o0 (ModSemL.initial_itr ms_src (Some (ModL.wf md_src))) (ModSemL.initial_itr ms_tgt (Some (ModL.wf md_tgt)))).
+Hypothesis (SIM: exists o0, simg eq o0 (@ModSemL.initial_itr ms_src CONFS (Some (ModL.wf md_src))) (@ModSemL.initial_itr ms_tgt CONFT (Some (ModL.wf md_tgt)))).
 
 
 Local Hint Resolve cpn3_wcompat: paco.
 
 
-Theorem adequacy_global: Beh.of_program (ModL.compile md_tgt) <1= Beh.of_program (ModL.compile md_src).
+Theorem adequacy_global: Beh.of_program (@ModL.compile CONFT md_tgt) <1= Beh.of_program (@ModL.compile CONFS md_src).
 Proof.
   eapply adequacy_global_itree. eapply SIM.
 Qed.
 End ADEQUACY.
-
-
-Section ADEQUACY.
-Variable arg: Any.t.
-Hypothesis (SIM: exists o0, simg eq o0 (ModSemL.initial_itr_arg ms_src (Some (ModL.wf md_src)) arg) (ModSemL.initial_itr_arg ms_tgt (Some (ModL.wf md_tgt)) arg)).
-
-
-Local Hint Resolve cpn3_wcompat: paco.
-
-Theorem adequacy_global_arg: Beh.of_program (ModL.compile_arg md_tgt arg) <1= Beh.of_program (ModL.compile_arg md_src arg).
-Proof.
-  eapply adequacy_global_itree. eapply SIM.
-Qed.
-End ADEQUACY.
-
 End SIM.
 
 Hint Constructors _simg.

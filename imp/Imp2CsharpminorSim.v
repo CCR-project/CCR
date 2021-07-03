@@ -1,7 +1,7 @@
 From compcert Require Import Globalenvs Smallstep AST Integers Events Behaviors Errors Memory.
 Require Import Coqlib.
 Require Import ITreelib.
-Require Import Universe.
+Require Import ImpPrelude.
 Require Import Skeleton.
 Require Import PCM.
 Require Import STS Behavior.
@@ -72,10 +72,12 @@ Section PROOF.
 
   Variable srcprog : Imp.programL.
 
-  Let _sim_mon := Eval simpl in (fun (src: ModL.t) (tgt: Csharpminor.program) => @sim_mon (ModL.compile src) (semantics tgt)).
+  Definition compile_val md := @ModL.compile EMSConfigImp md.
+
+  Let _sim_mon := Eval simpl in (fun (src: ModL.t) (tgt: Csharpminor.program) => @sim_mon (compile_val src) (semantics tgt)).
   Hint Resolve _sim_mon: paco.
 
-  Let _ordC_spec := Eval simpl in (fun (src: ModL.t) (tgt: Csharpminor.program) => @ordC_spec (ModL.compile src) (semantics tgt)).
+  Let _ordC_spec := Eval simpl in (fun (src: ModL.t) (tgt: Csharpminor.program) => @ordC_spec (compile_val src) (semantics tgt)).
 
   Ltac sim_red := try red; Red.prw ltac:(_red_gen) 2 0.
   Ltac sim_tau := (try sim_red); econs 3; ss; clarify; eexists; exists (step_tau _); eexists; split; [ord_step2|auto].
@@ -136,13 +138,13 @@ Section PROOF.
              (* wf_val rv -> *)
              eval_expr tge empty_env tle tm te trv ->
              trv = map_val srcprog rv ->
-             gpaco3 (_sim (ModL.compile src) (semantics tgt))
-                    (cpn3 (_sim (ModL.compile src) (semantics tgt))) rg rg i1
+             gpaco3 (_sim (compile_val src) (semantics tgt))
+                    (cpn3 (_sim (compile_val src) (semantics tgt))) rg rg i1
                     (ktr (pstate, (le, rv)))
                     (State tf tcode tcont empty_env tle tm))
     :
-      gpaco3 (_sim (ModL.compile src) (semantics tgt))
-             (cpn3 (_sim (ModL.compile src) (semantics tgt)))
+      gpaco3 (_sim (compile_val src) (semantics tgt))
+             (cpn3 (_sim (compile_val src) (semantics tgt)))
              r rg (i1 + expr_ord e)%ord
              (r0 <- EventsL.interp_Es (prog ms) (transl_all mn (interp_imp ge (denote_expr e) le)) (pstate);; ktr r0)
              (State tf tcode tcont empty_env tle tm).
@@ -283,12 +285,12 @@ Section PROOF.
              (* Forall wf_val rvs -> *)
              eval_exprlist tge empty_env tle tm tes trvs ->
              trvs = List.map (map_val srcprog) rvs ->
-             gpaco3 (_sim (ModL.compile src) (semantics tgt)) (cpn3 (_sim (ModL.compile src) (semantics tgt))) r rg i1
+             gpaco3 (_sim (compile_val src) (semantics tgt)) (cpn3 (_sim (compile_val src) (semantics tgt))) r rg i1
                    (ktr (pstate, (le, rvs)))
                    (State tf tcode tcont empty_env tle tm))
     :
-      gpaco3 (_sim (ModL.compile src) (semantics tgt))
-             (cpn3 (_sim (ModL.compile src) (semantics tgt)))
+      gpaco3 (_sim (compile_val src) (semantics tgt))
+             (cpn3 (_sim (compile_val src) (semantics tgt)))
              r rg (i1 + (Ord.omega * List.length es))%ord
             (r0 <- EventsL.interp_Es (prog ms) (transl_all mn (interp_imp ge (denote_exprs es) le)) (pstate);; ktr r0)
             (State tf tcode tcont empty_env tle tm).
@@ -343,8 +345,8 @@ Section PROOF.
       exists args_int ret_int ev,
         (<<ARGS: args_tgt = (List.map Values.Vlong args_int)>>) /\
         (<<RET: ret_tgt = (Values.Vlong ret_int)>>) /\
-        let args_src := List.map (Vint ∘ Int64.signed) args_int in
-        let ret_src := (Vint ∘ Int64.signed) ret_int in
+        let args_src := List.map Int64.signed args_int in
+        let ret_src := Int64.signed ret_int in
         (<<EV: tr = [ev] /\ decompile_event ev = Some (event_sys fn args_src ret_src)>>)
         /\ (<<SRC: syscall_sem (event_sys fn args_src ret_src)>>)
         /\ (<<MEM: m0 = m1>>)
@@ -464,7 +466,7 @@ Section PROOF.
           (MS: match_states ge ms srcprog ist cst)
           (WFSK: Sk.wf srcprog.(defsL))
     :
-      <<SIM: sim (ModL.compile modl) (semantics tgt) ((100 + max_fuel) + 100 + Ord.omega + 100)%ord ist cst>>.
+      <<SIM: sim (compile_val modl) (semantics tgt) ((100 + max_fuel) + 100 + Ord.omega + 100)%ord ist cst>>.
   Proof.
     red. red. ginit.
     depgen ist. depgen cst. gcofix CIH. i.
@@ -917,7 +919,7 @@ Section PROOF.
       eapply step_exprs; eauto.
       i.
       des_ifs.
-      2: sim_triggerUB.
+      2,3,4: sim_triggerUB.
       rename Heq into WFARGS.
       sim_red.
       gstep. econs 4.
@@ -944,7 +946,7 @@ Section PROOF.
       i. inv STEP. ss. rename H5 into TGT.
       hexploit syscall_refines; eauto. i; ss; des; clarify.
 
-      assert (SRCARGS: rvs = (List.map (Vint <*> Int64.signed) args_int)).
+      assert (SRCARGS: rvs = (List.map (Vint ∘ Int64.signed) args_int)).
       { depgen ARGS. depgen WFARGS. subst trvs. clear. depgen rvs. induction args_int; i; ss; clarify.
         - apply map_eq_nil in ARGS. auto.
         - destruct rvs; ss; clarify. bsimpl. des.
@@ -959,20 +961,27 @@ Section PROOF.
 
       eexists. eexists. eexists.
       { hexploit step_syscall.
-        { eauto. }
-        { instantiate (1:=top1). ss. }
-        i. rename H into SYSSTEP.
-        match goal with
-        | [ SYSSTEP: step ?i0 _ _ |- step ?i1 _ _ ] =>
-          replace i1 with i0; eauto
-        end.
-        rewrite bind_trigger. ss. grind. }
+        (* { eauto. } *)
+        (* { instantiate (1:=top1). ss. } *)
+        3:{ i. rename H into SYSSTEP.
+            match goal with
+            | [ SYSSTEP: step ?i0 _ _ |- step ?i1 _ _ ] =>
+              replace i1 with i0; eauto
+            end.
+            rewrite bind_trigger. ss. }
+        { match goal with
+          | [ SRC: syscall_sem (event_sys _ ?args0 _) |- syscall_sem (event_sys _ ?args1 _) ] =>
+            replace args1 with args0; eauto
+          end.
+          rewrite SRCARGS. rewrite List.map_map. ss. }
+        ss.
+      }
 
       split.
       { unfold decompile_event in EV0. des_ifs. uo; des_ifs; ss; clarify.
-        unfold decompile_eval in Heq1. des_ifs; ss; clarify. econs; auto. econs.
-        2:{ unfold compose. rewrite <- H0. econs. }
-        generalize dependent Heq0. clear. generalize dependent args_int.
+        unfold decompile_eval in Heq2. des_ifs; ss; clarify. econs; auto. econs.
+        2:{ rewrite <- H0. econs. }
+        generalize dependent Heq1. clear. generalize dependent args_int.
         induction l0; i; ss; clarify.
         { destruct args_int; ss; clarify. }
         des_ifs. uo; des_ifs; ss. destruct args_int; ss; clarify.

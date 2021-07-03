@@ -1,6 +1,6 @@
 From compcert Require Import Smallstep Clight Integers Events Behaviors.
 Require Import Coqlib.
-Require Import Universe.
+Require Import ImpPrelude.
 Require Import STS.
 Require Import Behavior.
 Require Import Imp.
@@ -15,11 +15,11 @@ Set Implicit Arguments.
 
 Section Beh.
 
-  Inductive match_val : eventval -> val -> Prop :=
+  Inductive match_val : eventval -> Z -> Prop :=
   | match_val_intro :
-      forall v, match_val (EVlong v) (Vint (Int64.signed v)).
+      forall v, match_val (EVlong v) (Int64.signed v).
 
-  Inductive match_event : Events.event -> Universe.event -> Prop :=
+  Inductive match_event : Events.event -> STS.event -> Prop :=
   | match_event_intro
       name eargs uargs er ur
       (MV: Forall2 match_val eargs uargs)
@@ -435,9 +435,9 @@ End BEH.
 (************************ Decompile ****************************)
 (************************ Decompile ****************************)
 
-Definition decompile_eval (ev: eventval): option val :=
+Definition decompile_eval (ev: eventval): option Z :=
   match ev with
-  | EVlong i => Some (Vint (Int64.signed i))
+  | EVlong i => Some (Int64.signed i)
   | _ => None
   end
 .

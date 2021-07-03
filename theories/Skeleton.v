@@ -1,9 +1,13 @@
 Require Import Coqlib.
-Require Import Universe.
+Require Export ZArith.
+Require Import String.
 Require Import PCM.
+Require Export AList.
 
 Set Implicit Arguments.
 
+Notation gname := string (only parsing). (*** convention: not capitalized ***)
+Notation mname := string (only parsing). (*** convention: capitalized ***)
 
 
 Fixpoint _find_idx {A} (f: A -> bool) (l: list A) (acc: nat): option (nat * A) :=
@@ -25,7 +29,7 @@ Lemma find_idx_red {A} (f: A -> bool) (l: list A):
   | [] => None
   | hd :: tl =>
     if (f hd)
-    then Some (0, hd)
+    then Some (0%nat, hd)
     else
       do (n, a) <- find_idx f tl;
       Some (S n, a)
@@ -39,6 +43,9 @@ Qed.
 
 
 Module SkEnv.
+
+  Notation mblock := nat (only parsing).
+  Notation ptrofs := Z (only parsing).
 
   Record t: Type := mk {
     blk2id: mblock -> option gname;
@@ -118,26 +125,6 @@ Module Sk.
 
   (*** TODO: It might be nice if Sk.t also constitutes a resource algebra ***)
   (*** At the moment, List.app is not assoc/commutative. We need to equip RA with custom equiv. ***)
-
-  Definition load_mem (sk: t): Mem.t :=
-    Mem.mk
-      (fun blk ofs =>
-         do '(_, gd) <- (List.nth_error sk blk);
-         match gd with
-         | Gfun =>
-           None
-         | Gvar gv =>
-           if (dec ofs 0%Z) then Some (Vint gv) else None
-         end)
-      (*** TODO: This simplified model doesn't allow function pointer comparsion.
-           To be more faithful, we need to migrate the notion of "permission" from CompCert.
-           CompCert expresses it with "nonempty" permission.
-       ***)
-      (*** TODO: When doing so, I would like to extend val with "Vfid (id: gname)" case.
-           That way, I might be able to support more higher-order features (overriding, newly allocating function)
-       ***)
-      (List.length sk)
-  .
 
   Definition load_skenv (sk: t): (SkEnv.t) :=
     let n := List.length sk in

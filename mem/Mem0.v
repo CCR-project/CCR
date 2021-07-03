@@ -1,6 +1,6 @@
 Require Import Coqlib.
 Require Import ITreelib.
-Require Import Universe.
+Require Import ImpPrelude.
 Require Import STS.
 Require Import Behavior.
 Require Import ModSem.
@@ -94,7 +94,7 @@ Section PROOF.
     {|
       ModSem.fnsems := [("alloc", cfunU allocF) ; ("free", cfunU freeF) ; ("load", cfunU loadF) ; ("store", cfunU storeF) ; ("cmp", cfunU cmpF)];
       ModSem.mn := "Mem";
-      ModSem.initial_st := (Sk.load_mem sk)↑;
+      ModSem.initial_st := (Mem.load_mem sk)↑;
     |}
   .
 

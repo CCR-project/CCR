@@ -1,12 +1,11 @@
 Require Import Coqlib.
-Require Import Universe.
 Require Import Skeleton.
 Require Import PCM.
-Require Import STS Behavior.
 Require Import Any.
 Require Import ModSem.
 Require Import SimSTS.
 Require Import STSNorm.
+Require Import STS Behavior.
 
 Set Implicit Arguments.
 
@@ -19,15 +18,15 @@ Section CONV.
     state -> itree eventE Any.t :=
     fun st0 =>
       match (state_sort st0) with
-      | angelic =>
+      | STS.angelic =>
         Vis (Take {st': state | @step st0 None st' })
             (fun st1 => decompile_STS step state_sort (proj1_sig st1))
-      | demonic =>
+      | STS.demonic =>
         Vis (Choose {st': state | @step st0 None st' })
             (fun st1 => decompile_STS step state_sort (proj1_sig st1))
-      | final z =>
-        Ret (Vint z)↑
-      | vis =>
+      | STS.final z =>
+        Ret (z)↑
+      | STS.vis =>
         '(exist _ (event_sys fn args _) _) <-
         trigger (Choose {ev': event | exists st1, @step st0 (Some ev') st1 });;
         rv <- trigger (Syscall fn args (fun rv => exists st1, (@step st0 (Some (event_sys fn args rv)) st1)));;
@@ -55,15 +54,15 @@ Section CONV.
     decompile_STS step state_sort st0
     =
     match (state_sort st0) with
-    | angelic =>
+    | STS.angelic =>
       Vis (Take {st': state | @step st0 None st' })
           (fun st1 => decompile_STS step state_sort (proj1_sig st1))
-    | demonic =>
+    | STS.demonic =>
       Vis (Choose {st': state | @step st0 None st' })
           (fun st1 => decompile_STS step state_sort (proj1_sig st1))
-    | final z =>
-      Ret (Vint z)↑
-    | vis =>
+    | STS.final z =>
+      Ret (z)↑
+    | STS.vis =>
       '(exist _ (event_sys fn args _) _) <-
       trigger (Choose {ev': event | exists st1, @step st0 (Some ev') st1 });;
       rv <- trigger (Syscall fn args (fun rv => exists st1, (@step st0 (Some (event_sys fn args rv)) st1)));;
@@ -82,6 +81,8 @@ End CONV.
 Section PROOF.
 
   Import Behavior.Beh.
+
+  Context {CONF: EMSConfig}.
 
   Variable
     (state: Type)
@@ -155,13 +156,13 @@ Section PROOF.
     inv H0. eapply wf_syscall0; eauto.
   Qed.
 
-  Hypothesis wf_final_range0:
-    forall st0 rv, state_sort0 st0 = final rv -> (0 <=? rv)%Z && (rv <? two_power_nat 32)%Z.
+  Hypothesis wf_finalize0:
+    forall st0 rv, state_sort0 st0 = final rv -> finalize (rv↑) = Some rv.
 
-  Lemma wf_final_range:
-    forall st0 rv, state_sort st0 = final rv -> (0 <=? rv)%Z && (rv <? two_power_nat 32)%Z.
+  Lemma wf_finalize:
+    forall st0 rv, state_sort st0 = final rv -> finalize (rv↑) = Some rv.
   Proof.
-    i. unfold state_sort, norm_state_sort in H. des_ifs. eapply wf_final_range0; et.
+    i. unfold state_sort, norm_state_sort in H. des_ifs. eapply wf_finalize0; et.
   Qed.
 
 (**
@@ -205,7 +206,7 @@ paco2 has 'fixed' semantics -> needs fixed semantics to do pcofix
     - eapply sim_fin; eauto.
       ss. rewrite unfold_decompile_STS. rewrite SRT.
       unfold ModSemL.state_sort. ss.
-      rewrite Any.upcast_downcast. erewrite wf_final_range; et.
+      erewrite wf_finalize; et.
     - eapply sim_demonic_tgt; ss; clarify.
       + rewrite unfold_decompile_STS. rewrite SRT. ss.
       + i. rewrite unfold_decompile_STS in STEP. rewrite SRT in STEP.
@@ -260,7 +261,7 @@ paco2 has 'fixed' semantics -> needs fixed semantics to do pcofix
     - econs; ss.
       + rewrite unfold_decompile_STS. rewrite SRT.
         unfold ModSemL.state_sort. ss.
-        rewrite Any.upcast_downcast. erewrite wf_final_range; et.
+        erewrite wf_finalize; et.
       + auto.
     - assert (CASE: (forall ev st1, not (step st0 (Some ev) st1)) \/ (exists ev st1, (step st0 (Some ev) st1))).
       { destruct (classic (exists ev st1, step st0 (Some ev) st1)); eauto.
@@ -271,10 +272,10 @@ paco2 has 'fixed' semantics -> needs fixed semantics to do pcofix
                        (let (x, _) := x_ in
                         match x with
                         | event_sys fn args _ =>
-                          ` rv0 : val <-
+                          ` rv0 : Z <-
                                   trigger
                                     (Syscall fn args
-                                             (fun rv0 : val =>
+                                             (fun rv0 : Z =>
                                                 exists st1, step st0 (Some (event_sys fn args rv0)) st1));;
                                   Vis
                                     (Choose {st1 | step st0 (Some (event_sys fn args rv0)) st1})
@@ -308,7 +309,7 @@ paco2 has 'fixed' semantics -> needs fixed semantics to do pcofix
         i. des. clarify.
         exists (cont rv). eexists.
         { ss. rewrite bind_trigger. subst cont. ss.
-          apply (@ModSemL.step_syscall fn args rv (fun rv0 : val => exists st1, step st0 (Some (event_sys fn args rv0)) st1) (fun x : val => Vis (Choose {st1 | step st0 (Some (event_sys fn args x)) st1}) (fun st1 : {st1 | step st0 (Some (event_sys fn args x)) st1} => decompile_STS step state_sort (st1 $)))).
+          apply (@ModSemL.step_syscall fn args rv (fun rv0 : Z => exists st1, step st0 (Some (event_sys fn args rv0)) st1) (fun x : Z => Vis (Choose {st1 | step st0 (Some (event_sys fn args x)) st1}) (fun st1 : {st1 | step st0 (Some (event_sys fn args x)) st1} => decompile_STS step state_sort (st1 $)))).
           2:{ exists st_tgt1. auto. }
           apply wf_syscall.
           exists st0, st_tgt1. auto. }

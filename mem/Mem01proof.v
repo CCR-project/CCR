@@ -1,6 +1,6 @@
 Require Import Mem0 Mem1 HoareDef STB SimModSem.
 Require Import Coqlib.
-Require Import Universe.
+Require Import ImpPrelude.
 Require Import Skeleton.
 Require Import PCM.
 Require Import ModSem Behavior.
@@ -181,7 +181,7 @@ Section SIMMODSEM.
    { ss. }
     { ss. eexists. econs; ss. eapply to_semantic.
       iIntros "H". iSplits; ss; et.
-      { iPureIntro. ii. unfold Sk.load_mem. cbn. uo. des_ifs; et. econs; et. }
+      { iPureIntro. ii. unfold Mem.load_mem. cbn. uo. des_ifs; et. econs; et. }
       { iPureIntro. admit "ez". }
     }
 

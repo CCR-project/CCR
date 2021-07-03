@@ -1,6 +1,6 @@
 Require Import HoareDef SimModSem.
 Require Import Coqlib.
-Require Import Universe.
+Require Import ImpPrelude.
 Require Import Skeleton.
 Require Import PCM.
 Require Import ModSem Behavior.
@@ -66,11 +66,12 @@ Section SIMMODSEM.
       unfold putintF, putint.
       steps.
       rewrite unfold_eval_imp. steps.
-      destruct (wf_val v) eqn:WFV.
+      destruct (intrange_64 z) eqn:WFZ.
       2:{ steps. }
       des_ifs.
       2:{ exfalso; apply n. solve_NoDup. }
       imp_steps.
+      unfold unint in *. clarify; ss. imp_steps.
       gstep. econs; ss. i. exists 100. imp_steps.
       red. esplits; et.
     }

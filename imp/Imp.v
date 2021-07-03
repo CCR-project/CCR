@@ -2,7 +2,7 @@
 
 Require Import Coqlib.
 Require Import ITreelib.
-Require Import Universe.
+Require Import ImpPrelude.
 Require Import Skeleton.
 Require Import PCM.
 Require Import STS Behavior.
@@ -220,9 +220,11 @@ Section Denote.
       sig <- (alist_find f syscalls)? ;;
       (if (sig =? List.length args)%nat then Ret tt else triggerUB);;;
       eval_args <- denote_exprs args;;
-      (if (forallb wf_val eval_args) then Ret tt else triggerUB);;;
-      v <- trigger (Syscall f eval_args top1);;
-      trigger (SetVar x v);;; tau;; Ret Vundef
+      (if (forallb (fun v => match v with | Vint _ => true | _ => false end) eval_args) then Ret tt else triggerUB);;;
+      let eval_zs := List.map (fun v => match v with | Vint z => z | _ => 0%Z end) eval_args in
+      (if (forallb intrange_64 eval_zs) then Ret tt else triggerUB);;;
+      v <- trigger (Syscall f eval_zs top1);;
+      trigger (SetVar x (Vint v));;; tau;; Ret Vundef
 
     | AddrOf x X =>
       v <- trigger (GetPtr X);; trigger (SetVar x v);;; tau;; Ret Vundef
