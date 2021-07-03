@@ -65,6 +65,8 @@ Section SIMMODSEM.
     { init.
       steps.
       unfold popF, pop.
+      unfold dec.
+      Local Opaque val_dec.
       steps.
       rewrite unfold_eval_imp. steps.
       des_ifs.
@@ -96,8 +98,9 @@ Section SIMMODSEM.
         gstep. econs; ss. i. exists 100. imp_steps.
         red. esplits; et.
       - apply Z.eqb_neq in N1.
-        unfold sumbool_to_bool. des_ifs_safe.
+        unfold sumbool_to_bool. des_ifs.
         imp_steps.
+        Local Transparent val_dec.
         red. esplits; et. unfold wf. ss.
     }
     econs; ss.

@@ -99,6 +99,25 @@ Definition vmul (x y: val): option val :=
 .
 
 
+Global Program Instance BehConfigImp: BehConfig := {|
+  finalize := fun rv =>
+    match rv↓ with
+    | Some rval =>
+      match rval with
+      | Vint z =>
+        if (0 <=? z)%Z && (z <? two_power_nat 32)%Z
+        then Some z
+        else None
+      | _ => None
+      end
+    | _ => None
+    end
+|}
+.
+
+
+
+
 
 
 Module Mem.

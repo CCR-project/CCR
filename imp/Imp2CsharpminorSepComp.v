@@ -439,7 +439,7 @@ Section PROOFSINGLE.
 
   Ltac dtm H H0 := eapply angelic_step in H; eapply angelic_step in H0; des; rewrite H; rewrite H0; ss.
 
-  Definition imp_sem (src : Imp.programL) := ModL.compile (ModL.add (Mod.lift Mem) (ImpMod.get_modL src)).
+  Definition imp_sem (src : Imp.programL) := compile_val (ModL.add (Mod.lift Mem) (ImpMod.get_modL src)).
 
   Definition imp_initial_state (src : Imp.programL) := (imp_sem src).(initial_state).
 
@@ -503,6 +503,8 @@ Section PROOFSINGLE.
     { rewrite <- NoDup_norepeat in WF_MAIN. apply Coqlib.list_norepet_app in WF_MAIN; des. subst tmainf.
       rewrite MAINPARAM in *. eapply step_internal_function; ss; eauto; try econs. }
     eexists; split; [ord_step2|auto]. left. ss.
+
+    unfold ModL.wf in WF. des.
 
     pfold. econs 6; ss; eauto. eexists. eexists.
     { eapply step_seq. }
@@ -630,7 +632,7 @@ Section PROOFSINGLE.
     hexploit (Genv.init_mem_exists tgt); eauto.
     { i. subst tgt; ss. hexploit perm_elements_PTree_norepeat_in_in; eauto.
       i. apply H0 in H. clear H0. apply decomp_gdefs in H. des; ss; clarify; eauto.
-      { unfold bts in BTS1. apply Coqlib.list_in_map_inv in BTS1. des. destruct fd; ss; clarify. destruct x; ss; clarify. }
+      { unfold bts in BTS1. apply Coqlib.list_in_map_inv in BTS1. des. destruct fd; ss; clarify. destruct x0; ss; clarify. }
       { destruct fd. unfold compile_eFun in SYS; ss; clarify. }
       { destruct fd. unfold compile_eFun in EFS; ss; clarify. }
       { depgen EVS. clear. i. unfold compile_eVar in EVS. ss; clarify. }
@@ -660,7 +662,7 @@ Section PROOFLINK.
   Context `{builtins : builtinsTy}.
 
   Definition imps_sem (srcs : list Imp.program) :=
-    let srcs_mod := List.map ImpMod.get_mod srcs in ModL.compile (Mod.add_list (Mem :: srcs_mod)).
+    let srcs_mod := List.map ImpMod.get_mod srcs in compile_val (Mod.add_list (Mem :: srcs_mod)).
 
   (* Lemma compile_behavior_improves_compile *)
   (*       (srcs : list Imp.program) (tgts : Coqlib.nlist Csharpminor.program) *)

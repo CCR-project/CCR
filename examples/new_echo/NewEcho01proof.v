@@ -134,7 +134,7 @@ Section SIMMODSEM.
       - steps. mDesAll; ss; des; subst. rewrite Any.upcast_downcast in *. clarify.
         erewrite STBINCL; cycle 1.
         { stb_tac; ss. }
-        Local Opaque NewEchoHeader.val_dec. steps. Local Transparent NewEchoHeader.val_dec.
+        Local Opaque dec. steps. Local Transparent dec.
         inv PURE. des.
         hide_k.
         force_r; ss. grind.
