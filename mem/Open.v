@@ -974,15 +974,18 @@ admit "alist find".
     rewrite my_lemma2_initial_mrs. auto.
   Qed.
 
-  Lemma my_lemma2 main_arg:
-    Beh.of_program (ModL.compile_arg (Mod.add_list (List.map SMod.to_src kmds ++ List.map (SMod.to_src ∘ massage_md true) umds)) (Any.pair true↑ main_arg)) <1=
-    Beh.of_program (ModL.compile_arg (Mod.add_list (List.map (KMod.transl_src frds) _kmds ++ List.map (SMod.to_src ∘ massage_md false) umds)) main_arg).
+  Context {CONF: EMSConfig}.
+  Definition midConf: EMSConfig := {| finalize := finalize; initial_arg := Any.pair true↑ initial_arg |}.
+
+  Lemma my_lemma2:
+    Beh.of_program (@ModL.compile midConf (Mod.add_list (List.map SMod.to_src kmds ++ List.map (SMod.to_src ∘ massage_md true) umds))) <1=
+    Beh.of_program (@ModL.compile CONF (Mod.add_list (List.map (KMod.transl_src frds) _kmds ++ List.map (SMod.to_src ∘ massage_md false) umds))).
   Proof.
-    eapply adequacy_global_itree.
+    eapply adequacy_global_itree; ss.
     exists (200)%ord.
     ginit.
     { eapply cpn6_wcompat; eauto with paco. }
-    unfold ModSemL.initial_itr, ModSemL.initial_itr_arg.
+    unfold ModSemL.initial_itr, ModSemL.initial_itr.
     fold prog_tgt. fold prog_mid.
     gsteps. unshelve esplits.
     { inv x_src. econs.
@@ -1180,7 +1183,7 @@ admit "alist find".
     }
     ii. eapply my_lemma3. eapply my_lemma2.
     rewrite <- (map_map (massage_md true)). rewrite <- map_app.
-    eapply adequacy_type_arg.
+    eapply adequacy_type_arg; ss.
     { i. fold stb2 in FIND. instantiate (1:=_stb).
       rewrite stb2_eq. rewrite FIND. et. }
     { i. fold stb2 in FIND. rewrite stb2_eq.
@@ -1192,7 +1195,6 @@ admit "alist find".
     | H: Beh.of_program ?p0 x0 |- Beh.of_program ?p1 x0 => replace p1 with p0
     end.
     { auto. }
-    rewrite ModL.compile_compile_arg_nil.
     rewrite map_app. rewrite map_map. auto.
   Qed.
 
