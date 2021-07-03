@@ -82,6 +82,8 @@ Section PROOF.
 
   Import Behavior.Beh.
 
+  Context {BCONF: BehConfig}.
+
   Variable
     (state: Type)
     (st_init0: state)
@@ -154,13 +156,13 @@ Section PROOF.
     inv H0. eapply wf_syscall0; eauto.
   Qed.
 
-  Hypothesis wf_final_range0:
-    forall st0 rv, state_sort0 st0 = final rv -> (0 <=? rv)%Z && (rv <? two_power_nat 32)%Z.
+  Hypothesis wf_finalize0:
+    forall st0 rv, state_sort0 st0 = final rv -> finalize (rv↑) = Some rv.
 
-  Lemma wf_final_range:
-    forall st0 rv, state_sort st0 = final rv -> (0 <=? rv)%Z && (rv <? two_power_nat 32)%Z.
+  Lemma wf_finalize:
+    forall st0 rv, state_sort st0 = final rv -> finalize (rv↑) = Some rv.
   Proof.
-    i. unfold state_sort, norm_state_sort in H. des_ifs. eapply wf_final_range0; et.
+    i. unfold state_sort, norm_state_sort in H. des_ifs. eapply wf_finalize0; et.
   Qed.
 
 (**
@@ -204,7 +206,7 @@ paco2 has 'fixed' semantics -> needs fixed semantics to do pcofix
     - eapply sim_fin; eauto.
       ss. rewrite unfold_decompile_STS. rewrite SRT.
       unfold ModSemL.state_sort. ss.
-      rewrite Any.upcast_downcast. erewrite wf_final_range; et.
+      erewrite wf_finalize; et.
     - eapply sim_demonic_tgt; ss; clarify.
       + rewrite unfold_decompile_STS. rewrite SRT. ss.
       + i. rewrite unfold_decompile_STS in STEP. rewrite SRT in STEP.
@@ -259,7 +261,7 @@ paco2 has 'fixed' semantics -> needs fixed semantics to do pcofix
     - econs; ss.
       + rewrite unfold_decompile_STS. rewrite SRT.
         unfold ModSemL.state_sort. ss.
-        rewrite Any.upcast_downcast. erewrite wf_final_range; et.
+        erewrite wf_finalize; et.
       + auto.
     - assert (CASE: (forall ev st1, not (step st0 (Some ev) st1)) \/ (exists ev st1, (step st0 (Some ev) st1))).
       { destruct (classic (exists ev st1, step st0 (Some ev) st1)); eauto.

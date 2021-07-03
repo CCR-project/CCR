@@ -7,9 +7,21 @@ Require Export sflib.
 Require Export ITreelib.
 Require Export AList.
 Require Import Skeleton.
+Require Import ModSem.
 
 Set Implicit Arguments.
 
+Global Program Instance BehConfigImp: BehConfig := {|
+  finalize := fun rv =>
+    match rv↓ with
+    | Some (rv) =>
+      if (0 <=? rv)%Z && (rv <? two_power_nat 32)%Z
+      then Some rv
+      else None
+    | _ => None
+    end
+|}
+.
 
 Notation mblock := nat (only parsing).
 Notation ptrofs := Z (only parsing).
