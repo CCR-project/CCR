@@ -1,5 +1,6 @@
 Require Import Coqlib.
 Require Import ITreelib.
+Require Import Any.
 Require Import STS.
 Require Import Behavior.
 Require Import ModSem.
@@ -593,7 +594,7 @@ Proof.
   generalize itr_src at 1 as md_src. i.
   revert o itr_src itr_tgt SIMG. pcofix CIH.
   i. punfold SIMG. inv SIMG; pfold.
-  { destruct (classic (exists rv, @Any.downcast val r_tgt = Some (Vint rv) /\
+  { destruct (classic (exists rv, @Any.downcast Z r_tgt = Some (rv) /\
                                   (0 <=? rv)%Z && (rv <? two_power_nat 32)%Z)).
     { des. eapply sim_fin; ss.
       { cbn. rewrite H. rewrite H0. ss. }

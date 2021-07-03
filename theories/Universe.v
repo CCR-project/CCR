@@ -6,9 +6,9 @@ Require Export Axioms.
 Require Export sflib.
 Require Export ITreelib.
 Require Export AList.
+Require Import Skeleton.
 
 Set Implicit Arguments.
-
 
 
 Notation mblock := nat (only parsing).
@@ -146,6 +146,29 @@ Module Mem.
 
   Definition valid_ptr (m0: Mem.t) (b: mblock) (ofs: ptrofs): bool := is_some (m0.(cnts) b ofs).
 
+(*** NOTE: Probably we can support comparison between nullptr and 0 ***)
+(*** NOTE: Unlike CompCert, we don't support comparison with weak_valid_ptr (for simplicity) ***)
+
+  Definition load_mem (sk: Sk.t): Mem.t :=
+    Mem.mk
+      (fun blk ofs =>
+         do '(_, gd) <- (List.nth_error sk blk);
+         match gd with
+         | Sk.Gfun =>
+           None
+         | Sk.Gvar gv =>
+           if (dec ofs 0%Z) then Some (Vint gv) else None
+         end)
+      (*** TODO: This simplified model doesn't allow function pointer comparsion.
+           To be more faithful, we need to migrate the notion of "permission" from CompCert.
+           CompCert expresses it with "nonempty" permission.
+       ***)
+      (*** TODO: When doing so, I would like to extend val with "Vfid (id: gname)" case.
+           That way, I might be able to support more higher-order features (overriding, newly allocating function)
+       ***)
+      (List.length sk)
+  .
+
 End Mem.
 
 Definition vcmp (m0: Mem.t) (x y: val): option bool :=
@@ -249,7 +272,3 @@ Proof.
                | None => None
                end).
 Defined.
-
-
-(*** NOTE: Probably we can support comparison between nullptr and 0 ***)
-(*** NOTE: Unlike CompCert, we don't support comparison with weak_valid_ptr (for simplicity) ***)

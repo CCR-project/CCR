@@ -1,4 +1,7 @@
 Require Import Coqlib.
+Require Export sflib.
+Require Export ITreelib.
+Require Export AList.
 Require Import Skeleton.
 Require Import PCM.
 Require Import STS Behavior.
@@ -318,7 +321,7 @@ Section MODSEML.
     snd <$> interp_Es prog (prog (Call None "main" arg)) (initial_p_state).
 
   Definition initial_itr (P: option Prop): itree (eventE) Any.t :=
-    initial_itr_arg P ([]: list val)↑.
+    initial_itr_arg P ([]: list unit)↑.
 
 
   Let state: Type := itree eventE Any.t.
@@ -328,7 +331,7 @@ Section MODSEML.
     | TauF _ => demonic
     | RetF rv =>
       match rv↓ with
-      | Some (Vint rv) =>
+      | Some (rv) =>
         if (0 <=? rv)%Z && (rv <? two_power_nat 32)%Z
         then final rv
         else angelic
@@ -614,7 +617,7 @@ Section MODSEML.
       <<COMM: Beh.of_program (compile (add ms0 ms1) (Some P0)) <1= Beh.of_program (compile (add ms1 ms0) (Some P1))>>
   .
   Proof.
-    eapply (@add_comm_arg ([]: list val)↑ ms0 ms1 P0 P1 IMPL WF).
+    eapply (@add_comm_arg ([]: list unit)↑ ms0 ms1 P0 P1 IMPL WF).
   Qed.
 
   Lemma add_assoc' ms0 ms1 ms2:
@@ -894,7 +897,7 @@ Section MODL.
     ModSemL.compile_itree (ModSemL.initial_itr_arg md.(enclose) (Some (wf md)) arg).
 
   Lemma compile_compile_arg_nil md:
-    compile md = compile_arg md ([]: list val)↑.
+    compile md = compile_arg md ([]: list unit)↑.
   Proof.
     refl.
   Qed.
@@ -1234,7 +1237,7 @@ Section REFINE.
 
    Lemma refines_refines_arg_nil md_tgt md_src
      :
-       refines_arg ([]: list val)↑ md_tgt md_src
+       refines_arg ([]: list unit)↑ md_tgt md_src
        <->
        refines md_tgt md_src.
    Proof.
@@ -1342,7 +1345,7 @@ ys + (xs + src)
        <<SIM: refines (ModL.add md0_tgt md1_tgt) (ModL.add md0_src md1_src)>>
    .
    Proof.
-     eapply (@refines_add_arg ([]: list val)↑); et.
+     eapply (@refines_add_arg ([]: list unit)↑); et.
    Qed.
 
    Theorem refines_proper_r
@@ -1352,7 +1355,7 @@ ys + (xs + src)
        <<SIM: refines (ModL.add (Mod.add_list mds0_tgt) (Mod.add_list ctx)) (ModL.add (Mod.add_list mds0_src) (Mod.add_list ctx))>>
    .
    Proof.
-     eapply (@refines_proper_r_arg ([]: list val)↑); et.
+     eapply (@refines_proper_r_arg ([]: list unit)↑); et.
    Qed.
 
    Theorem refines_proper_l
@@ -1362,7 +1365,7 @@ ys + (xs + src)
        <<SIM: refines (ModL.add (Mod.add_list ctx) (Mod.add_list mds0_tgt)) (ModL.add (Mod.add_list ctx) (Mod.add_list mds0_src))>>
    .
    Proof.
-     eapply (@refines_proper_l_arg ([]: list val)↑); et.
+     eapply (@refines_proper_l_arg ([]: list unit)↑); et.
    Qed.
 
    (*** horizontal composition ***)

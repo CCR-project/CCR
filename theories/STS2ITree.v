@@ -1,11 +1,11 @@
 Require Import Coqlib.
 Require Import Skeleton.
 Require Import PCM.
-Require Import STS Behavior.
 Require Import Any.
 Require Import ModSem.
 Require Import SimSTS.
 Require Import STSNorm.
+Require Import STS Behavior.
 
 Set Implicit Arguments.
 
@@ -18,15 +18,15 @@ Section CONV.
     state -> itree eventE Any.t :=
     fun st0 =>
       match (state_sort st0) with
-      | angelic =>
+      | STS.angelic =>
         Vis (Take {st': state | @step st0 None st' })
             (fun st1 => decompile_STS step state_sort (proj1_sig st1))
-      | demonic =>
+      | STS.demonic =>
         Vis (Choose {st': state | @step st0 None st' })
             (fun st1 => decompile_STS step state_sort (proj1_sig st1))
-      | final z =>
-        Ret (Vint z)↑
-      | vis =>
+      | STS.final z =>
+        Ret (z)↑
+      | STS.vis =>
         '(exist _ (event_sys fn args _) _) <-
         trigger (Choose {ev': event | exists st1, @step st0 (Some ev') st1 });;
         rv <- trigger (Syscall fn args (fun rv => exists st1, (@step st0 (Some (event_sys fn args rv)) st1)));;
@@ -54,15 +54,15 @@ Section CONV.
     decompile_STS step state_sort st0
     =
     match (state_sort st0) with
-    | angelic =>
+    | STS.angelic =>
       Vis (Take {st': state | @step st0 None st' })
           (fun st1 => decompile_STS step state_sort (proj1_sig st1))
-    | demonic =>
+    | STS.demonic =>
       Vis (Choose {st': state | @step st0 None st' })
           (fun st1 => decompile_STS step state_sort (proj1_sig st1))
-    | final z =>
-      Ret (Vint z)↑
-    | vis =>
+    | STS.final z =>
+      Ret (z)↑
+    | STS.vis =>
       '(exist _ (event_sys fn args _) _) <-
       trigger (Choose {ev': event | exists st1, @step st0 (Some ev') st1 });;
       rv <- trigger (Syscall fn args (fun rv => exists st1, (@step st0 (Some (event_sys fn args rv)) st1)));;
