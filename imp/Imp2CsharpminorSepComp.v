@@ -445,9 +445,12 @@ Section PROOFSINGLE.
 
   Theorem single_compile_behavior_improves
           (src: Imp.programL) (tgt: Csharpminor.program) srcst tgtst
-          (WFPROG: Permutation.Permutation
-                     ((List.map fst src.(prog_varsL)) ++ (List.map (compose fst snd) src.(prog_funsL)))
-                     (List.map fst src.(defsL)))
+          (WFPROG: (NoDup (name1 src.(defsL))) /\
+                   (incl (name1 src.(defsL)) ((name1 src.(prog_varsL)) ++ (name2 src.(prog_funsL)))))
+          (WFPROG3: forall blk name,
+              let modl := ModL.add (Mod.lift Mem) (ImpMod.get_modL src) in
+              let ge := (Sk.load_skenv (Sk.sort modl.(ModL.sk))) in
+              (ge.(SkEnv.blk2id) blk = Some name) -> call_ban name = false)
           (WFPROG2 : forall gn gv, In (gn, Sk.Gvar gv) (Sk.sort (defsL src)) -> In (gn, gv) (prog_varsL src))
           (COMP: Imp2Csharpminor.compile src = OK tgt)
           (SINIT: srcst = imp_initial_state src)
@@ -513,6 +516,7 @@ Section PROOFSINGLE.
     assert (MATCHGE: match_ge src (Sk.sort (ModL.sk (ModL.add Mem (ImpMod.get_modL src)))) (Genv.globalenv tgt)).
     { econs. i. unfold map_blk. rewrite COMP0. hexploit Sk.env_found_range; eauto. i. unfold src_init_nb, int_len.
       rewrite <- sksort_same_len in H0. ss. des_ifs; unfold NW in *; try lia.
+      - 
       - unfold get_sge in *. ss. apply Sk.sort_wf in SK.
         hexploit Sk.load_skenv_wf; eauto. i. apply H1 in H. rewrite H in Heq. clarify.
       - unfold get_sge in *. ss. apply Sk.sort_wf in SK.

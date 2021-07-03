@@ -116,9 +116,10 @@ Section MATCH.
   Context `{builtins : builtinsTy}.
 
   Definition ext_len : Imp.programL -> nat := fun src => List.length (src.(ext_varsL)) + List.length (src.(ext_funsL)).
-  Definition int_len : Imp.programL -> nat := fun src => List.length src.(defsL).
+  Definition int_len : Imp.programL -> nat := fun src => List.length (src.(prog_varsL)) + List.length (src.(prog_funsL)).
+  Definition sk_len : Imp.programL -> nat := fun src => List.length src.(defsL).
   (* next block of src's initialized genv *)
-  Definition src_init_nb : Imp.programL -> nat := fun src => int_len src.
+  Definition src_init_nb : Imp.programL -> nat := fun src => sk_len src.
   (* next block of tgt's initialized genv *)
   Definition tgt_init_len := List.length ((@init_g builtins) ++ c_sys).
   Definition tgt_init_nb : Imp.programL -> Values.block := fun src => Pos.of_succ_nat (tgt_init_len + (ext_len src) + (int_len src)).
@@ -133,7 +134,8 @@ Section MATCH.
     fun src blk =>
       match (compile src) with
       | OK tgt =>
-        if (ge_dec blk (src_init_nb src)) then Pos.of_succ_nat (tgt_init_len + (ext_len src) + blk)
+        if (ge_dec blk (src_init_nb src))
+        then Pos.of_succ_nat (tgt_init_len + (ext_len src) + (int_len src - sk_len src) + blk)
         else
           let sg := get_sge src in
           let tg := get_tge tgt in

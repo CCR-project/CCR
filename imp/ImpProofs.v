@@ -184,7 +184,6 @@ Section PROOFS.
           end then Ret () else triggerUB);;;
       ` p : val <- denote_expr e;;
       ` f : string <- trigger (GetName p);;
-      (if call_ban f then triggerUB else Ret ());;;
       ` eval_args : list val <- denote_exprs args;; ` v : val <- ccallU f eval_args;; trigger (SetVar x v);;; (tau;; Ret Vundef)) le0.
   Proof. reflexivity. Qed.
 
@@ -672,7 +671,7 @@ Section PROOFS.
           | Vptr n 0 =>
             match (SkEnv.blk2id ge n) with
             | Some f =>
-              (if (call_ban f) then tau;; triggerUB else tau;; Ret tt);;;
+                tau;;
                 '(le2, vals) <- interp_imp ge (denote_exprs args) le1;;
                 v <- trigger (Call f (vals↑));;
                 tau;; tau;; v <- unwrapU (v↓);;
@@ -689,10 +688,10 @@ Section PROOFS.
     rewrite interp_imp_bind. grind.
     rewrite interp_imp_bind. rewrite interp_imp_GetName.
     des_ifs.
-    1,5,6,7:(unfold triggerUB; grind).
+    1,5,6:(unfold triggerUB; grind).
     3:{ unfold unwrapU. grind. unfold triggerUB. grind. }
-    - unfold unwrapU. grind. rewrite interp_imp_triggerUB_bind. unfold triggerUB; grind.
     - unfold unwrapU. grind. apply interp_imp_Call_args.
+    - unfold unwrapU. grind. unfold triggerUB; grind.
   Qed.
 
   Lemma interp_imp_Syscall_args

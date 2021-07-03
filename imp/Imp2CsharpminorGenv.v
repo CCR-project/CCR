@@ -16,6 +16,8 @@ Require Import Imp2CsharpminorMatch.
 
 From compcert Require Import Csharpminor.
 
+Import Permutation.
+
 Set Implicit Arguments.
 
 Section GENV.
@@ -219,10 +221,8 @@ Section MAPBLK.
     forall src blk
       (COMP : exists tgt, Imp2Csharpminor.compile src = OK tgt)
       (ALLOCED : blk >= (src_init_nb src)),
-      (<<ALLOCMAP: (map_blk src blk) = Pos.of_succ_nat (tgt_init_len + (ext_len src) + blk)>>).
-  Proof.
-    i. unfold map_blk. des. des_ifs.
-  Qed.
+      (<<ALLOCMAP: (map_blk src blk) = Pos.of_succ_nat (tgt_init_len + (ext_len src) + (int_len src - sk_len src) + blk)>>).
+  Proof. i. unfold map_blk. des. des_ifs. Qed.
 
   Lemma Genv_advance_next_length :
     forall (l : list (ident * globdef fundef ())) p,
@@ -286,16 +286,16 @@ Section MAPBLK.
     i. eapply Permutation_length. eapply perm_elements_PTree_norepeat. auto.
   Qed.
 
-  Lemma wfprog_defsL_length :
-    forall src
-      (WFPROG: Permutation.Permutation
-                 ((List.map fst src.(prog_varsL)) ++ (List.map (compose fst snd) src.(prog_funsL)))
-                 (List.map fst src.(defsL))),
-      <<DEFSL: List.length src.(defsL) = List.length src.(prog_varsL) + List.length src.(prog_funsL)>>.
-  Proof.
-    i. unfold compose in *. do 2 rewrite <- (map_length fst). rewrite <- (map_length (compose fst snd)).
-    rewrite <- app_length. eapply Permutation.Permutation_length. apply Permutation.Permutation_sym. auto.
-  Qed.
+  (* Lemma wfprog_defsL_length : *)
+  (*   forall src *)
+  (*     (WFPROG: Permutation.Permutation *)
+  (*                ((List.map fst src.(prog_varsL)) ++ (List.map (compose fst snd) src.(prog_funsL))) *)
+  (*                (List.map fst src.(defsL))), *)
+  (*     <<DEFSL: List.length src.(defsL) = List.length src.(prog_varsL) + List.length src.(prog_funsL)>>. *)
+  (* Proof. *)
+  (*   i. unfold compose in *. do 2 rewrite <- (map_length fst). rewrite <- (map_length (compose fst snd)). *)
+  (*   rewrite <- app_length. eapply Permutation.Permutation_length. apply Permutation.Permutation_sym. auto. *)
+  (* Qed. *)
 
   Lemma gdefs_preserves_length :
         forall src,
@@ -311,9 +311,6 @@ Section MAPBLK.
   Lemma map_blk_init_range :
     forall src tgt id b
       (COMP : Imp2Csharpminor.compile src = OK tgt)
-      (WFPROG: Permutation.Permutation
-                 ((List.map fst src.(prog_varsL)) ++ (List.map (compose fst snd) src.(prog_funsL)))
-                 (List.map fst src.(defsL)))
       (TGT: Genv.find_symbol (get_tge tgt) id = Some b),
       <<RANGE: (b < (tgt_init_nb src))%positive>>.
   Proof.
@@ -322,7 +319,7 @@ Section MAPBLK.
     unfold Genv.globalenv in TGT. ss. rewrite Genv.genv_next_add_globals in TGT. ss.
     unfold tgt_init_nb. unfold ext_len, int_len.
     rewrite Genv_advance_next_length in TGT. rewrite length_elements_PTree_norepet in TGT; eauto.
-    rewrite wfprog_defsL_length; auto. red. rewrite gdefs_preserves_length in TGT.
+    red. rewrite gdefs_preserves_length in TGT.
     match goal with
     | [ TGT: Coqlib.Plt _ ?l1 |- (_ < ?l2)%positive ] => replace l2 with l1; eauto
     end.
@@ -358,16 +355,14 @@ Section MAPBLK.
   Lemma found_in_src_in_tgt :
     forall src tgt blk symb
       (COMP: compile src = OK tgt)
-      (WFPROG: Permutation.Permutation
-                 ((List.map fst src.(prog_varsL)) ++ (List.map (fst ∘ snd) src.(prog_funsL)))
-                 (List.map fst src.(defsL)))
+      (WFPROG: incl (name1 src.(defsL)) ((name1 src.(prog_varsL)) ++ (name2 src.(prog_funsL))))
       (SRC: SkEnv.blk2id (get_sge src) blk = Some symb),
       <<TGTFOUND: exists tb, Genv.find_symbol (get_tge tgt) (s2p symb) = Some tb>>.
   Proof.
     i. unfold compile in COMP. des_ifs_safe. unfold get_sge, get_tge in *. ss.
     eapply Sk.in_env_in_sk in SRC. des. eapply Sk.sort_incl_rev in SRC.
-    apply Permutation.Permutation_sym in WFPROG. apply (in_map fst) in SRC. ss.
-    eapply Permutation.Permutation_in in WFPROG; eauto. clear SRC def.
+    apply (in_map fst) in SRC. ss.
+    unfold name1, name2 in WFPROG. apply WFPROG in SRC.
     hexploit in_src_in_tgt; eauto.
     { instantiate (1:=symb). rewrite app_assoc. apply in_or_app. left. auto. }
     i. des. eapply Genv.find_symbol_exists. ss. eapply H.
@@ -379,21 +374,34 @@ Section MAPBLK.
     i. pose (Sk.SkSort.Permuted_sort l) as SORTED. apply Permutation.Permutation_length in SORTED. eauto.
   Qed.
 
+  Lemma wfprog_defsL_length :
+    forall src
+      (WFPROG: (NoDup (name1 src.(defsL))) /\
+               (incl (name1 src.(defsL)) ((name1 src.(prog_varsL)) ++ (name2 src.(prog_funsL))))),
+      <<DEFSL: sk_len src <= int_len src>>.
+  Proof.
+    i. unfold sk_len, int_len. unfold name1, name2 in *.
+    do 2 rewrite <- (map_length fst). rewrite <- (map_length (fst ∘ snd)).
+    rewrite <- app_length. des. eapply NoDup_incl_length; eauto.
+  Qed.
+
   Lemma map_blk_neq :
     forall src b1 b2
       (COMP : exists tgt, Imp2Csharpminor.compile src = OK tgt)
-      (WFPROG: Permutation.Permutation
-                 ((List.map fst src.(prog_varsL)) ++ (List.map (compose fst snd) src.(prog_funsL)))
-                 (List.map fst src.(defsL)))
+      (WFPROG: (NoDup (name1 src.(defsL))) /\
+               (incl (name1 src.(defsL)) ((name1 src.(prog_varsL)) ++ (name2 src.(prog_funsL)))))
       (BLK1: b1 >= (src_init_nb src))
       (BLK2: ~ (b2 >= (src_init_nb src))),
       map_blk src b1 <> map_blk src b2.
   Proof.
     i. unfold map_blk. des_ifs; ii; rename H into CONTRA.
-    - clear g n. assert (RANGE: (b < (tgt_init_nb src))%positive).
+    - clear g n.
+      assert (RANGE: (b < (tgt_init_nb src))%positive).
       { eapply map_blk_init_range; eauto. }
-      unfold tgt_init_nb in RANGE. unfold src_init_nb in *. lia.
-    - clear g n. unfold get_sge, get_tge in *. hexploit found_in_src_in_tgt; eauto. i; des. unfold get_tge in H; clarify.
+      unfold tgt_init_nb in RANGE. unfold src_init_nb in *.
+      hexploit (wfprog_defsL_length _ WFPROG). i. des. lia.
+    - clear g n. unfold get_sge, get_tge in *. des.
+      hexploit found_in_src_in_tgt; eauto. i; des. unfold get_tge in H; clarify.
     - clear g n. unfold get_sge in Heq0. apply not_ge in BLK2. rename Heq0 into NOTFOUND. simpl in NOTFOUND.
       unfold src_init_nb in BLK2. unfold int_len in BLK2.
       assert (SORTED: b2 < Datatypes.length (Sk.sort (defsL src))).
@@ -405,9 +413,9 @@ Section MAPBLK.
   Lemma map_blk_inj :
     forall src b1 b2
       (COMP : exists tgt, Imp2Csharpminor.compile src = OK tgt)
-      (WFPROG: Permutation.Permutation
-                 ((List.map fst src.(prog_varsL)) ++ (List.map (compose fst snd) src.(prog_funsL)))
-                 (List.map fst src.(defsL)) /\ Sk.wf src.(defsL)),
+      (WFPROG: (NoDup (name1 src.(defsL))) /\
+               (incl (name1 src.(defsL)) ((name1 src.(prog_varsL)) ++ (name2 src.(prog_funsL)))))
+      (WFSK: Sk.wf src.(defsL)),
       <<INJ: map_blk src b1 = map_blk src b2 -> b1 = b2>>.
   Proof.
     i. des. destruct (ge_dec b1 (src_init_nb src)) eqn:BRANGE1; destruct (ge_dec b2 (src_init_nb src)) eqn:BRANGE2.
@@ -432,8 +440,8 @@ Section MAPBLK.
     i. des. rewrite H0 in H. rewrite H1 in H. clarify.
     apply Genv.find_invert_symbol in H0. apply Genv.find_invert_symbol in H1.
     rewrite H1 in H0. clear H1. clarify. apply s2p_inj in H0. clarify.
-    apply Sk.sort_wf in WFPROG0. apply Sk.load_skenv_wf in WFPROG0. des.
-    apply WFPROG0 in SBLK1. apply WFPROG0 in SBLK2. rewrite SBLK1 in SBLK2. clarify.
+    apply Sk.sort_wf in WFSK. apply Sk.load_skenv_wf in WFSK. des.
+    apply WFSK in SBLK1. apply WFSK in SBLK2. rewrite SBLK1 in SBLK2. clarify.
   Qed.
 
   Lemma found_gvar_in_src_then_tgt :
