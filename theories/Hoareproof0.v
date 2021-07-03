@@ -488,7 +488,7 @@ Section CANCEL.
 
   Opaque EventsL.interp_Es.
 
-
+  Context {BCONF: BehConfig}.
   Theorem adequacy_type_t2m
           main_arg_src main_arg_tgt
           (MAINM:

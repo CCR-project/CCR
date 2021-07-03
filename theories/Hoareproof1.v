@@ -648,6 +648,7 @@ Section CANCEL.
     extensionality fnsb. destruct fnsb as [fn sb]. ss.
   Qed.
 
+  Context `{BCONF: BehConfig}.
   Theorem adequacy_type_m2m main_arg:
     Beh.of_program (ModL.compile_arg (Mod.add_list mds_mid) (Any.pair ord_top↑ main_arg)) <1=
     Beh.of_program (ModL.compile_arg (Mod.add_list mds_mid2) main_arg).

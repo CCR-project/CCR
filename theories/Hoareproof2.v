@@ -94,7 +94,7 @@ Section CANCEL.
     Beh.of_program (ModL.compile_arg (Mod.add_list mds_src) main_arg).
   Proof.
     eapply ModSem.refines_close_arg.
-    eapply (@adequacy_local_list_strong mds_src mds_mid2).
+    eapply (@adequacy_local_list_strong _ mds_src mds_mid2).
     unfold mds_src, mds_mid2.
     eapply Forall2_apply_Forall2.
     { refl. }
