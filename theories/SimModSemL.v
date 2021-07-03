@@ -1326,7 +1326,7 @@ Section SIMMOD.
 
    Hypothesis NAMESPACE: forall fn (SOME: is_some (alist_find fn (ModSemL.fnsems (ModL.get_modsem md_src (Sk.sort (ModL.sk md_src)))))), ns fn.
 
-   Theorem adequacy_local_closed arg
+   Theorem adequacy_local_closed {BCONF: BehConfig} arg
            (SIM: sim)
      :
        Beh.of_program (ModL.compile_arg md_tgt arg) <1=
