@@ -488,25 +488,28 @@ Section CANCEL.
 
   Opaque EventsL.interp_Es.
 
-  Context {CONF: EMSConfig}.
+  Context {CONFS: EMSConfig}.
+  Definition midConf: EMSConfig := {| finalize := finalize; initial_arg := Any.pair ord_top↑ initial_arg |}.
+  Context {CONFT: EMSConfig}.
+  Hypothesis (FINSAME: (@finalize CONFS) = (@finalize CONFT)).
+
   Theorem adequacy_type_t2m
-          main_arg_src main_arg_tgt
           (MAINM:
              forall (main_fsp: fspec) (MAIN: stb sk "main" = Some main_fsp),
              exists (x: main_fsp.(meta)) entry_r,
-               (<<PRE: main_fsp.(precond) None x main_arg_src main_arg_tgt ord_top entry_r>>) /\
+               (<<PRE: main_fsp.(precond) None x (@initial_arg CONFS) (@initial_arg CONFT) ord_top entry_r>>) /\
                (<<WFR: URA.wf (entry_r ⋅ fold_left (⋅) (List.map SModSem.initial_mr mss) ε)>>) /\
                (<<RET: forall ret_src ret_tgt r
                               (POST: main_fsp.(postcond) None x ret_src ret_tgt r),
                    ret_src = ret_tgt>>)):
-    Beh.of_program (ModL.compile_arg (Mod.add_list mds_tgt) main_arg_tgt) <1=
-    Beh.of_program (ModL.compile_arg (Mod.add_list mds_mid) (Any.pair ord_top↑ main_arg_src)).
+    Beh.of_program (@ModL.compile CONFT (Mod.add_list mds_tgt)) <1=
+    Beh.of_program (@ModL.compile midConf (Mod.add_list mds_mid)).
   Proof.
-    eapply adequacy_global_itree.
+    eapply adequacy_global_itree; ss.
     exists (Ord.from_nat 100%nat). ss.
     ginit.
     { eapply cpn6_wcompat; eauto with paco. }
-    unfold ModSemL.initial_itr, ModSemL.initial_itr_arg. Local Opaque ModSemL.prog. ss.
+    unfold ModSemL.initial_itr, ModSemL.initial_itr. Local Opaque ModSemL.prog. ss.
     unfold ITree.map.
 
     hexploit (stb_find_iff "main"). i. destruct H as [[_ ?]|?]; des; clarify.
