@@ -55,7 +55,13 @@ Section SIMMODSEM.
       { red. esplits; et. rewrite insert_delete; ss. rewrite insert_id; ss. }
       { red. esplits; et. rewrite insert_delete; ss. }
     }
-    admit "ez".
+    econs; ss.
+    { init. inv WF.
+      unfold fun_to_src, body_to_src, cfunU, cfunN, push_body, NewStack1.push_body.
+      steps. rewrite my_if_same. steps.
+      econs. esplits; et. red. f_equal.
+      rewrite insert_delete. auto.
+    }
   Unshelve.
     all: ss.
   Qed.

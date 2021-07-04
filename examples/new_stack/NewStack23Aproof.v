@@ -209,8 +209,6 @@ Section SIMMODSEM.
     econstructor 1 with (wf:=wf) (le:=top2); ss; et; swap 2 3.
     { esplits. econs; ss.
       - eapply to_semantic. iIntros "H". iExists _, _, _. iSplits; ss; et.
-        { iPureIntro. i. instantiate (1:=fun _ => Excl.unit). econs; ss; et. }
-        { admit "ez - wf". }
     }
     econs; ss.
     { unfold NewStack2.new_body, cfunN, cfunU. kinit.

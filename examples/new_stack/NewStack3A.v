@@ -113,7 +113,7 @@ Section PROOF.
   Definition KStackSem: KModSem.t := {|
     KModSem.fnsems := StackSbtb;
     KModSem.mn := "Stack";
-    KModSem.initial_mr := ε;
+    KModSem.initial_mr := GRA.embed (@Auth.black _stkRA ε);
     KModSem.initial_st := (∅: gmap mblock (list val))↑;
   |}
   .

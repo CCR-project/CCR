@@ -245,8 +245,10 @@ Proof Outline
      iIntros "H". iExists _, _, _.
      repeat (iSplit; eauto).
      { iPureIntro. ii. destruct (Mem.cnts (Mem.load_mem sk) b ofs) eqn:T; econs. }
-     { iPureIntro. admit "ez". }
-     { iPureIntro. admit "ez". }
+     { iPureIntro. ii. ss. uo. des_ifs.
+       apply nth_error_Some. ii. clarify. }
+     { iPureIntro. ii. ss. uo. des_ifs.
+       apply nth_error_Some. ii. clarify. }
    }
 
 
