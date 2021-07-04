@@ -23,6 +23,7 @@ Section PROOF.
     fun varg =>
       '(fb, n) <- (pargs [Tblk; Tint] varg)?;;
       fn <- (skenv.(SkEnv.blk2id) fb)?;;
+      assume(intrange_64 n);;;
       if(Z_le_gt_dec n 1)
       then Ret (Vint 1)
       else
@@ -32,6 +33,7 @@ Section PROOF.
 
   Definition mainF (skenv: SkEnv.t): list val -> itree Es val :=
     fun varg =>
+      _ <- (pargs [] varg)?;;
       fibb <- (skenv.(SkEnv.id2blk) "fib")?;;
       `fb: val <- ccallU "knot" [Vptr fibb 0];; `fb: mblock <- (unblk fb)?;;
       fn <- (skenv.(SkEnv.blk2id) fb)?;;

@@ -25,7 +25,7 @@ Section REC.
     mk_simple (X:=nat)
               (fun n => (
                    (fun varg o =>
-                      (⌜varg = [Vint (Z.of_nat n)]↑ /\ o = ord_pure (2 * n + 1)%nat⌝)
+                      (⌜varg = [Vint (Z.of_nat n)]↑ /\ (intrange_64 n) /\ o = ord_pure (2 * n + 1)%nat⌝)
                         ** INV
                    ),
                    (fun vret =>
