@@ -62,20 +62,27 @@ Section SIMMODSEM.
     { init. unfold fibF, ccallU. harg.
       destruct x as [x INV]. mDesAll. ss. des. subst.
       rewrite Any.upcast_downcast. steps.
-      inv PURE3. rewrite FBLOCK. ss. steps.
+      inv PURE4. rewrite FBLOCK. ss. steps.
       des_ifs.
       { astart 0. astop. steps. force_l. eexists. steps.
+        force_r.
+        { ss. }
+        steps.
         hret _; ss. iModIntro. iFrame; ss. iPureIntro.
         esplits; eauto. f_equal. f_equal.
         clear - l. destruct x; ss. destruct x; ss. lia.
       }
+      force_r.
+      { ss. }
       steps. inv SPEC. astart 10. acatch.
       { eapply RecStb_incl. eauto. }
 
       hcall_weaken _ _ _ _ with "A"; et.
       { ss. iModIntro. iFrame; ss. iSplitR; ss.
-        iPureIntro. splits; et. instantiate (1:=(x - 1%nat)).
-        repeat f_equal. lia.
+        iPureIntro. splits.
+        { instantiate (1:=(x - 1%nat)). repeat f_equal. lia. }
+        { unfold_intrange_64. unfold sumbool_to_bool in *. des_ifs; try lia. }
+        ss.
       }
       { splits; ss. eauto with ord_step. }
       steps. ss. mDesAll. clarify.
@@ -83,9 +90,11 @@ Section SIMMODSEM.
       { eapply RecStb_incl. eauto. }
       hcall_weaken _ _ _ _ with "A"; et.
       { ss. iModIntro. iFrame; ss.
-        iSplitR; ss. iSplitR; ss.
-        iPureIntro. instantiate (1:=(x - 2%nat)).
-        repeat f_equal. lia.
+        iSplitR; ss.
+        iPureIntro. splits.
+        { instantiate (1:=(x - 2%nat)). repeat f_equal. lia. }
+        { unfold_intrange_64. unfold sumbool_to_bool in *. des_ifs; try lia. }
+        ss.
       }
       { splits; ss. eauto with ord_step. }
       steps. ss. mDesAll. clarify.

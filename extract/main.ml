@@ -43,6 +43,8 @@ let string_of_nat n =
 let string_of_z n =
   string_of_int (Z.to_int n)
 
+let string_of_zs ns = List.fold_left (fun s i -> s ^ " " ^ string_of_z i) "" ns
+
 let string_of_val v =
   match v with
   | Vint n -> "Vint " ^ string_of_z n
@@ -71,13 +73,13 @@ let handle_Event = fun e k ->
         with Failure _ -> 0) in
      k (Obj.repr (Nat.of_int n))
   | Syscall (str, args) ->
-     print_string (cl2s str ^ "(" ^ string_of_vals args ^ " ): ");
+     print_string (cl2s str ^ "(" ^ string_of_zs args ^ " ): ");
      let n =
        if (String.equal (cl2s str) ("print"))
        then (print_endline ""; 0)
        else (try int_of_string (read_line())
              with Failure _ -> 0) in
-     k (Obj.repr (Vint (Z.of_int n)))
+     k (Obj.repr (Z.of_int n))
 
 let rec run t =
   match observe t with

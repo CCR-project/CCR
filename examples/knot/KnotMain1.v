@@ -45,7 +45,7 @@ Section MAIN.
                 (fun '(n, INV) => (
                      (fun varg o =>
                         ((⌜exists fb,
-                               varg = [Vptr fb 0; Vint (Z.of_nat n)]↑ /\ o = ord_pure (2 * n)%nat /\
+                               varg = [Vptr fb 0; Vint (Z.of_nat n)]↑ /\ (intrange_64 n) /\ o = ord_pure (2 * n)%nat /\
                                fb_has_spec skenv (RecStb skenv) fb (mrec_spec Fib INV)⌝)
                            ** INV)%I),
                      (fun vret =>

@@ -23,6 +23,7 @@ Inductive expr : Type :=
 | Var (_ : var)
 | Lit (_ : Z)
 | Eq (_ _ : expr)
+| Lt (_ _ : expr)
 | Plus  (_ _ : expr)
 | Minus (_ _ : expr)
 | Mult  (_ _ : expr)
@@ -52,6 +53,9 @@ Record function : Type := mk_function {
   fn_body : stmt
 }.
 
+(* prohibited names for Callfun/Ptr *)
+Definition call_ban f :=
+  rel_dec f "alloc" || rel_dec f "free" || rel_dec f "load" || rel_dec f "store" || rel_dec f "cmp" || rel_dec f "main".
 
 
 (** ** Supported System Calls by Imp *)
@@ -100,7 +104,7 @@ Record program : Type := mk_program {
   defs : list (gname * Sk.gdef) :=
     let fs := (List.map (fun '(fn, _) => (fn, Sk.Gfun)) prog_funs) in
     let vs := (List.map (fun '(vn, vv) => (vn, Sk.Gvar vv)) prog_vars) in
-    fs ++ vs;
+    (List.filter (negb ∘ call_ban ∘ fst) (fs ++ vs));
 }.
 
 Definition lift (p : program) : programL :=
@@ -152,6 +156,14 @@ Section Denote.
       | _, _ => triggerUB
       end
 
+    | Lt a b =>
+      l <- denote_expr a ;; r <- denote_expr b ;;
+      (if (wf_val l && wf_val r) then Ret tt else triggerUB);;;
+      match l, r with
+      | Vint lv, Vint rv => if (Z_lt_dec lv rv) then Ret (Vint 1) else Ret (Vint 0)
+      | _, _ => triggerUB
+      end
+
     | Plus a b  =>
       l <- denote_expr a ;; r <- denote_expr b ;; u <- (vadd l r)? ;; Ret u
 
@@ -186,9 +198,6 @@ Section Denote.
       Ret (v :: vs)
     end.
 
-  Definition call_ban f :=
-    rel_dec f "alloc" || rel_dec f "free" || rel_dec f "load" || rel_dec f "store" || rel_dec f "cmp" || rel_dec f "main".
-
   Fixpoint denote_stmt (s : stmt) : itree eff val :=
     match s with
     | Skip => tau;; Ret Vundef
@@ -211,7 +220,6 @@ Section Denote.
     | CallPtr x e args =>
       (if (match e with | Var _ => true | _ => false end) then Ret tt else triggerUB);;;
       p <- denote_expr e;; f <- trigger (GetName p);;
-      (if (call_ban f) then triggerUB else Ret tt);;;
       eval_args <- denote_exprs args;;
       v <- ccallU f eval_args;;
       trigger (SetVar x v);;; tau;; Ret Vundef

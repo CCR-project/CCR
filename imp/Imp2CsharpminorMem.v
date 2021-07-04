@@ -28,23 +28,21 @@ Section MEM.
     forall src blk
       (COMP : exists tgt, compile src = OK tgt)
       (ALLOCED : blk >= (src_init_nb src)),
-      (<<ALLOCMAP: (map_blk src blk) = Pos.of_succ_nat (tgt_init_len + (ext_len src) + blk)>>).
+      (<<ALLOCMAP: (map_blk src blk) = Pos.of_succ_nat (tgt_init_len + (ext_len src) + (int_len src - sk_len src) + blk)>>).
 
   Hypothesis map_blk_inj :
     forall src b1 b2
-      (COMP : exists tgt, compile src = OK tgt)
-      (WFPROG: Permutation.Permutation
-                 ((List.map fst src.(prog_varsL)) ++ (List.map (compose fst snd) src.(prog_funsL)))
-                 (List.map fst src.(defsL)) /\ Sk.wf src.(defsL)),
+      (COMP : exists tgt, Imp2Csharpminor.compile src = OK tgt)
+      (WFPROG: (incl (name1 src.(defsL)) ((name1 src.(prog_varsL)) ++ (name2 src.(prog_funsL)))))
+      (WFSK: Sk.wf src.(defsL)),
       <<INJ: map_blk src b1 = map_blk src b2 -> b1 = b2>>.
 
   Variable src : Imp.programL.
   Variable m : Mem.t.
   Variable tm : Mem.mem.
   Context {MM: match_mem src m tm}.
-  Context {WFPROG: Permutation.Permutation
-                     ((List.map fst src.(prog_varsL)) ++ (List.map (compose fst snd) src.(prog_funsL)))
-                     (List.map fst src.(defsL)) /\ Sk.wf src.(defsL)}.
+  Context {WFPROG: (incl (name1 src.(defsL)) ((name1 src.(prog_varsL)) ++ (name2 src.(prog_funsL))))}.
+  Context {WFSK: Sk.wf src.(defsL)}.
   Context {COMP : exists tgt, compile src = OK tgt}.
 
   Lemma match_mem_alloc

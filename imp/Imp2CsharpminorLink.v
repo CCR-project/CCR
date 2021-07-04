@@ -913,33 +913,32 @@ Section PROOF.
 
   Context `{builtins: builtinsTy}.
 
-  Definition wf_prog_perm (src: Imp.programL) :=
-    <<WFPROG: Permutation
-                ((List.map fst src.(prog_varsL)) ++ (List.map (compose fst snd) src.(prog_funsL)))
-                (List.map fst src.(defsL))>>.
+  Definition wf_prog_incl (src: Imp.programL) :=
+    <<WFPROG: (incl (name1 src.(defsL)) ((name1 src.(prog_varsL)) ++ (name2 src.(prog_funsL))))>>.
 
   Definition wf_prog_gvar (src: Imp.programL) :=
     <<WFPROG2 : forall gn gv, In (gn, Sk.Gvar gv) (Sk.sort (defsL src)) -> In (gn, gv) (prog_varsL src)>>.
 
-  Definition wf_prog src := wf_prog_perm src /\ wf_prog_gvar src.
+  Definition wf_prog src := wf_prog_incl src /\ wf_prog_gvar src.
 
   Lemma lifted_then_wf :
     forall (src: Imp.program), <<WFLIFT: wf_prog (lift src)>>.
   Proof.
     i. unfold lift. split.
-    - unfold wf_prog_perm. ss. unfold defs. rewrite map_app. rewrite! List.map_map. red. unfold compose. ss.
-      match goal with
-      | [ |- Permutation (?lv1 ++ ?lf1) (?lf2 ++ ?lv2)] => assert (FUNS: lf1 = lf2)
-      end.
-      { remember (prog_funs src) as l. clear Heql src. induction l; ss; clarify.
-        rewrite IHl. f_equal. destruct a. ss. }
-      match goal with
-      | [ |- Permutation (?lv1 ++ ?lf1) (?lf2 ++ ?lv2)] => assert (VARS: lv1 = lv2)
-      end.
-      { remember (prog_vars src) as l. clear Heql FUNS src. induction l; ss; clarify.
-        rewrite IHl. f_equal. destruct a. ss. }
-      rewrite FUNS; clear FUNS. rewrite VARS; clear VARS. apply Permutation_app_comm.
+    - unfold wf_prog_incl. ss. unfold defs. red. ii. unfold name1, name2 in *.
+      rewrite List.map_map; ss.
+      apply Coqlib.list_in_map_inv in H. des.
+      destruct x; ss; clarify. apply filter_In in H0. des. ss.
+      apply (in_map fst) in H0. ss.
+      rewrite map_app in H0. rewrite ! List.map_map in H0. rewrite in_app_iff in H0. des; ss.
+      + rewrite in_app_iff. right.
+        match goal with | [ H0: In _ (List.map ?mf0 _) |- In _ (List.map ?mf1 _) ] => replace mf1 with mf0; eauto end.
+        extensionality x. destruct x. ss.
+      + rewrite in_app_iff. left.
+        match goal with | [ H0: In _ (List.map ?mf0 _) |- In _ (List.map ?mf1 _) ] => replace mf1 with mf0; eauto end.
+        extensionality x. destruct x. ss.
     - unfold wf_prog_gvar. ss. red. unfold defs. i. apply Sk.sort_incl_rev in H.
+      apply filter_In in H. des. ss.
       apply in_app_or in H. des.
       + apply Coqlib.list_in_map_inv in H. des. destruct x. ss.
       + apply Coqlib.list_in_map_inv in H. des. destruct x. clarify.
@@ -953,15 +952,14 @@ Section PROOF.
       <<WFLINK: wf_prog srcl>>.
   Proof.
     i. unfold wf_prog in *. des. unfold link_imp in LINKED. des_ifs. split.
-    - unfold wf_prog_perm in *; ss. unfold l_pvs; unfold l_pfs; unfold l_defsL.
-      rewrite! map_app. red. rewrite <- app_assoc.
-      match goal with
-      | [ |- Permutation (?l1 ++ ?l2 ++ ?l3 ++ ?l4) _ ] =>
-        cut (Permutation (l1 ++ l2 ++ l3 ++ l4) ((l1 ++ l3) ++ l2 ++ l4))
-      end.
-      { i. eapply Permutation_trans; eauto. apply Permutation_app; eauto. }
-      clear. rewrite <- app_assoc. apply Permutation_app_head.
-      rewrite! app_assoc. apply Permutation_app_tail. apply Permutation_app_comm.
+    - unfold wf_prog_incl in *; ss. unfold l_pvs; unfold l_pfs; unfold l_defsL.
+      red. ii. unfold name1, name2 in *. rewrite map_app in H. apply in_app_iff in H. des.
+      + apply WF1 in H. apply in_app_iff in H. des.
+        * apply in_app_iff. left. rewrite map_app. apply in_app_iff. auto.
+        * apply in_app_iff. right. rewrite map_app. apply in_app_iff. auto.
+      + apply WF2 in H. apply in_app_iff in H. des.
+        * apply in_app_iff. left. rewrite map_app. apply in_app_iff. auto.
+        * apply in_app_iff. right. rewrite map_app. apply in_app_iff. auto.
     - unfold wf_prog_gvar in *; ss. ii. apply Sk.sort_incl_rev in H. apply in_or_app. apply in_app_or in H. des.
       + left; apply WF3. apply Sk.sort_incl. auto.
       + right; apply WF0. apply Sk.sort_incl. auto.

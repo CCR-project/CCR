@@ -72,6 +72,8 @@ Section PROOF.
 
   Variable srcprog : Imp.programL.
 
+
+
   Definition compile_val md := @ModL.compile EMSConfigImp md.
 
   Let _sim_mon := Eval simpl in (fun (src: ModL.t) (tgt: Csharpminor.program) => @sim_mon (compile_val src) (semantics tgt)).
@@ -83,8 +85,6 @@ Section PROOF.
   Ltac sim_tau := (try sim_red); econs 3; ss; clarify; eexists; exists (step_tau _); eexists; split; [ord_step2|auto].
   Ltac sim_ord := guclo _ordC_spec; econs.
 
-  (* Ltac sim_triggerUB := gstep; ss; unfold triggerUB; (try sim_red); econs 5; i; ss; auto; *)
-  (*                       dependent destruction STEP; try (irw in x; clarify; fail). *)
 
   Ltac solve_ub := des; irw in H; dependent destruction H; clarify.
   Ltac sim_triggerUB := (try rename H into HH); gstep; ss; unfold triggerUB; try sim_red; econs 5; i; ss; auto;
@@ -92,11 +92,14 @@ Section PROOF.
 
   Ltac dtm H H0 := eapply angelic_step in H; eapply angelic_step in H0; des; rewrite H; rewrite H0; ss.
 
+
+
   Fixpoint expr_ord (e: Imp.expr): Ord.t :=
     match e with
     | Imp.Var _ => 20
     | Imp.Lit _ => 20
     | Imp.Eq e0 e1 => (20 + expr_ord e1 + 20 + expr_ord e0 + 20)%ord
+    | Imp.Lt e0 e1 => (20 + expr_ord e1 + 20 + expr_ord e0 + 20)%ord
     | Imp.Plus e0 e1 => (20 + expr_ord e1 + 20 + expr_ord e0 + 20)%ord
     | Imp.Minus e0 e1 => (20 + expr_ord e1 + 20 + expr_ord e0 + 20)%ord
     | Imp.Mult e0 e1 => (20 + expr_ord e1 + 20 + expr_ord e0 + 20)%ord
@@ -121,9 +124,99 @@ Section PROOF.
       { des. eexists.
         rewrite IHe1. rewrite IHe2.
         rewrite <- ! OrdArith.add_from_nat. refl. }
+      { des. eexists.
+        rewrite IHe1. rewrite IHe2.
+        rewrite <- ! OrdArith.add_from_nat. refl. }
     }
     des. eapply Ord.le_lt_lt; et. eapply Ord.omega_upperbound.
   Qed.
+
+  Definition max_fuel := (Ord.omega * Ord.omega)%ord.
+
+  Lemma max_fuel_spec2 e0 e1 (n: Ord.t) :
+    (100 + expr_ord e0 + expr_ord e1 <= 100 + max_fuel + n)%ord.
+  Proof.
+    rewrite ! OrdArith.add_assoc. eapply OrdArith.le_add_r.
+    etrans.
+    2: { eapply OrdArith.add_base_l. }
+    unfold max_fuel. etrans.
+    2: {
+      eapply OrdArith.le_mult_r.
+      eapply Ord.lt_le. eapply Ord.omega_upperbound.
+    }
+    instantiate (1:=2). rewrite Ord.from_nat_S. rewrite Ord.from_nat_S.
+    rewrite OrdArith.mult_S. rewrite OrdArith.mult_S.
+    etrans.
+    2:{ rewrite OrdArith.add_assoc. eapply OrdArith.add_base_r. }
+    etrans.
+    { eapply OrdArith.le_add_l. eapply Ord.lt_le. eapply expr_ord_omega. }
+    { eapply OrdArith.le_add_r. eapply Ord.lt_le. eapply expr_ord_omega. }
+  Qed.
+
+  Lemma max_fuel_spec2' e0 e1 (n: Ord.t) :
+    (100 + expr_ord e0 + expr_ord e1 <= (100 + max_fuel) + 100 + Ord.omega + n)%ord.
+  Proof.
+    set (temp:=(100 + expr_ord e0 + expr_ord e1)%ord).
+    do 2 rewrite OrdArith.add_assoc.
+    subst temp. eapply max_fuel_spec2.
+  Qed.
+
+  Lemma max_fuel_spec1 e (n: Ord.t) :
+    (100 + expr_ord e <= 100 + max_fuel + n)%ord.
+  Proof.
+    etrans.
+    2: { eapply max_fuel_spec2. }
+    eapply OrdArith.add_base_l.
+    Unshelve. all: exact e.
+  Qed.
+
+  Lemma max_fuel_spec1' e (n: Ord.t) :
+    (100 + expr_ord e <= (100 + max_fuel) + 100 + Ord.omega + n)%ord.
+  Proof.
+    do 2 (rewrite OrdArith.add_assoc). eapply max_fuel_spec1.
+  Qed.
+
+  Lemma max_fuel_spec3 (args: list Imp.expr) (n: Ord.t) :
+    (100 + Ord.omega * Datatypes.length args <= 100 + max_fuel + n)%ord.
+  Proof.
+    rewrite ! OrdArith.add_assoc. eapply OrdArith.le_add_r.
+    etrans.
+    2: { eapply OrdArith.add_base_l. }
+    unfold max_fuel. eapply OrdArith.le_mult_r.
+    eapply Ord.lt_le. eapply Ord.omega_upperbound.
+  Qed.
+
+  Lemma max_fuel_spec3' (args: list Imp.expr) (n: Ord.t) :
+    (100 + Ord.omega * Datatypes.length args <= (100 + max_fuel) + 100 + Ord.omega + n)%ord.
+  Proof.
+    do 2 (rewrite OrdArith.add_assoc). eapply max_fuel_spec3.
+  Qed.
+
+  Lemma max_fuel_spec4 e (args: list Imp.expr) (n: Ord.t) :
+    ((100 + Ord.omega * Datatypes.length args) + 100 + (expr_ord e) <= (100 + max_fuel) + 100 + Ord.omega + n)%ord.
+  Proof.
+    rewrite ! OrdArith.add_assoc.
+    etrans.
+    2:{ repeat rewrite <- OrdArith.add_assoc. eapply OrdArith.add_base_l. }
+    etrans.
+    2:{ instantiate (1:= (100 + (Ord.omega * Datatypes.length args) + (100 + Ord.omega))%ord).
+        rewrite <- OrdArith.add_assoc. do 2 eapply OrdArith.le_add_l.
+        eapply OrdArith.le_add_r. unfold max_fuel.
+        eapply OrdArith.le_mult_r. eapply Ord.lt_le. eapply Ord.omega_upperbound.
+    }
+    rewrite ! OrdArith.add_assoc.
+    do 3 eapply OrdArith.le_add_r. eapply Ord.lt_le. eapply expr_ord_omega.
+  Qed.
+
+  Lemma max_fuel_spec4' (args: list Imp.expr) (n: Ord.t) :
+    (100 + Ord.omega * Datatypes.length args <= 100 + Ord.omega * Datatypes.length args + n)%ord.
+  Proof.
+    apply OrdArith.add_base_l.
+  Qed.
+
+
+
+
 
   Lemma step_expr
         (src: ModL.t) (tgt: Csharpminor.program)
@@ -135,7 +228,6 @@ Section PROOF.
         (CEXP: compile_expr e = te)
         (SIM:
            forall rv trv,
-             (* wf_val rv -> *)
              eval_expr tge empty_env tle tm te trv ->
              trv = map_val srcprog rv ->
              gpaco3 (_sim (compile_val src) (semantics tgt))
@@ -209,6 +301,54 @@ Section PROOF.
         rewrite ! Int64.signed_repr.
         2,3: unfold_Int64_max_signed; unfold_Int64_min_signed; lia.
         rewrite Z.eqb_neq in Heq. unfold Coqlib.proj_sumbool. des_ifs.
+    - rewrite interp_imp_expr_Lt.
+      sim_red.
+      sim_ord.
+      { instantiate (1:=((i1 + 20 + expr_ord e2 + 20) + expr_ord e1)%ord).
+        rewrite <- ! OrdArith.add_assoc. eapply OrdArith.add_base_l. }
+      eapply IHe1; auto. clear IHe1.
+      i. sim_red.
+      sim_ord.
+      { instantiate (1:=(i1 + 20 + expr_ord e2)%ord).
+        eapply OrdArith.add_base_l. }
+      eapply IHe2; auto. clear IHe2.
+      i. sim_red.
+      destruct (wf_val rv && wf_val rv0) eqn:WFVAL.
+      2: sim_triggerUB.
+      sim_red. destruct rv; destruct rv0; try sim_triggerUB.
+      2,3,4: gstep; ss; unfold triggerUB; try sim_red.
+      des_ifs; ss; try sim_triggerUB.
+      + sim_ord.
+        { eapply OrdArith.add_base_l. }
+        sim_red.        
+        eapply SIM; eauto.
+        econs; eauto.
+        { econs; eauto. }
+        ss. f_equal.
+        bsimpl. des. unfold_intrange_64. bsimpl. des.
+        apply sumbool_to_bool_true in WFVAL.
+        apply sumbool_to_bool_true in WFVAL0.
+        apply sumbool_to_bool_true in WFVAL1.
+        apply sumbool_to_bool_true in WFVAL2.
+        unfold Int64.lt. rewrite ! Int64.signed_repr.
+        2,3: unfold_Int64_max_signed; unfold_Int64_min_signed; lia.
+        des_ifs.
+      + sim_ord.
+        { eapply OrdArith.add_base_l. }
+        sim_red.        
+        eapply SIM; eauto.
+        econs; eauto.
+        { econs; eauto. }
+        ss. f_equal.
+        bsimpl. des. unfold_intrange_64. bsimpl. des.
+        apply sumbool_to_bool_true in WFVAL.
+        apply sumbool_to_bool_true in WFVAL0.
+        apply sumbool_to_bool_true in WFVAL1.
+        apply sumbool_to_bool_true in WFVAL2.
+        unfold Int64.lt. rewrite ! Int64.signed_repr.
+        2,3: unfold_Int64_max_signed; unfold_Int64_min_signed; lia.
+        des_ifs.
+
     - rewrite interp_imp_expr_Plus.
       sim_red.
       sim_ord.
@@ -324,6 +464,9 @@ Section PROOF.
   Proof. destruct src; ss; uo; des_ifs; clarify. Qed.
 
 
+
+
+
   (**** At the moment, it suffices to support integer IO in our scenario,
         and we simplify all the other aspects.
         e.g., the system calls that we are aware of
@@ -353,106 +496,25 @@ Section PROOF.
   .
 
 
+
+
+
   Hypothesis map_blk_after_init :
     forall src blk
       (COMP : exists tgt, Imp2Csharpminor.compile src = OK tgt)
       (ALLOCED : blk >= (src_init_nb src)),
-      (<<ALLOCMAP: (map_blk src blk) = Pos.of_succ_nat (tgt_init_len + (ext_len src) + blk)>>).
+      (<<ALLOCMAP: (map_blk src blk) = Pos.of_succ_nat (tgt_init_len + (ext_len src) + (int_len src - sk_len src) + blk)>>).
 
   Hypothesis map_blk_inj :
     forall src b1 b2
       (COMP : exists tgt, Imp2Csharpminor.compile src = OK tgt)
-      (WFPROG: Permutation.Permutation
-                 ((List.map fst src.(prog_varsL)) ++ (List.map (compose fst snd) src.(prog_funsL)))
-                 (List.map fst src.(defsL)) /\ Sk.wf src.(defsL)),
+      (WFPROG: incl (name1 src.(defsL)) ((name1 src.(prog_varsL)) ++ (name2 src.(prog_funsL))))
+      (WFSK: Sk.wf src.(defsL)),
       <<INJ: map_blk src b1 = map_blk src b2 -> b1 = b2>>.
 
-  Context {WFPROG: Permutation.Permutation
-                     ((List.map fst srcprog.(prog_varsL)) ++ (List.map (compose fst snd) srcprog.(prog_funsL)))
-                     (List.map fst srcprog.(defsL)) /\ Sk.wf srcprog.(defsL)}.
-
-  Definition max_fuel := (Ord.omega * Ord.omega)%ord.
-
-  Lemma max_fuel_spec2 e0 e1 (n: Ord.t) :
-    (100 + expr_ord e0 + expr_ord e1 <= 100 + max_fuel + n)%ord.
-  Proof.
-    rewrite ! OrdArith.add_assoc. eapply OrdArith.le_add_r.
-    etrans.
-    2: { eapply OrdArith.add_base_l. }
-    unfold max_fuel. etrans.
-    2: {
-      eapply OrdArith.le_mult_r.
-      eapply Ord.lt_le. eapply Ord.omega_upperbound.
-    }
-    instantiate (1:=2). rewrite Ord.from_nat_S. rewrite Ord.from_nat_S.
-    rewrite OrdArith.mult_S. rewrite OrdArith.mult_S.
-    etrans.
-    2:{ rewrite OrdArith.add_assoc. eapply OrdArith.add_base_r. }
-    etrans.
-    { eapply OrdArith.le_add_l. eapply Ord.lt_le. eapply expr_ord_omega. }
-    { eapply OrdArith.le_add_r. eapply Ord.lt_le. eapply expr_ord_omega. }
-  Qed.
-
-  Lemma max_fuel_spec2' e0 e1 (n: Ord.t) :
-    (100 + expr_ord e0 + expr_ord e1 <= (100 + max_fuel) + 100 + Ord.omega + n)%ord.
-  Proof.
-    set (temp:=(100 + expr_ord e0 + expr_ord e1)%ord).
-    do 2 rewrite OrdArith.add_assoc.
-    subst temp. eapply max_fuel_spec2.
-  Qed.
-
-  Lemma max_fuel_spec1 e (n: Ord.t) :
-    (100 + expr_ord e <= 100 + max_fuel + n)%ord.
-  Proof.
-    etrans.
-    2: { eapply max_fuel_spec2. }
-    eapply OrdArith.add_base_l.
-    Unshelve. all: exact e.
-  Qed.
-
-  Lemma max_fuel_spec1' e (n: Ord.t) :
-    (100 + expr_ord e <= (100 + max_fuel) + 100 + Ord.omega + n)%ord.
-  Proof.
-    do 2 (rewrite OrdArith.add_assoc). eapply max_fuel_spec1.
-  Qed.
-
-  Lemma max_fuel_spec3 (args: list Imp.expr) (n: Ord.t) :
-    (100 + Ord.omega * Datatypes.length args <= 100 + max_fuel + n)%ord.
-  Proof.
-    rewrite ! OrdArith.add_assoc. eapply OrdArith.le_add_r.
-    etrans.
-    2: { eapply OrdArith.add_base_l. }
-    unfold max_fuel. eapply OrdArith.le_mult_r.
-    eapply Ord.lt_le. eapply Ord.omega_upperbound.
-  Qed.
-
-  Lemma max_fuel_spec3' (args: list Imp.expr) (n: Ord.t) :
-    (100 + Ord.omega * Datatypes.length args <= (100 + max_fuel) + 100 + Ord.omega + n)%ord.
-  Proof.
-    do 2 (rewrite OrdArith.add_assoc). eapply max_fuel_spec3.
-  Qed.
-
-  Lemma max_fuel_spec4 e (args: list Imp.expr) (n: Ord.t) :
-    ((100 + Ord.omega * Datatypes.length args) + 100 + (expr_ord e) <= (100 + max_fuel) + 100 + Ord.omega + n)%ord.
-  Proof.
-    rewrite ! OrdArith.add_assoc.
-    etrans.
-    2:{ repeat rewrite <- OrdArith.add_assoc. eapply OrdArith.add_base_l. }
-    etrans.
-    2:{ instantiate (1:= (100 + (Ord.omega * Datatypes.length args) + (100 + Ord.omega))%ord).
-        rewrite <- OrdArith.add_assoc. do 2 eapply OrdArith.le_add_l.
-        eapply OrdArith.le_add_r. unfold max_fuel.
-        eapply OrdArith.le_mult_r. eapply Ord.lt_le. eapply Ord.omega_upperbound.
-    }
-    rewrite ! OrdArith.add_assoc.
-    do 3 eapply OrdArith.le_add_r. eapply Ord.lt_le. eapply expr_ord_omega.
-  Qed.
-
-  Lemma max_fuel_spec4' (args: list Imp.expr) (n: Ord.t) :
-    (100 + Ord.omega * Datatypes.length args <= 100 + Ord.omega * Datatypes.length args + n)%ord.
-  Proof.
-    apply OrdArith.add_base_l.
-  Qed.
+  (* Context {WFPROG: Permutation.Permutation *)
+  (*                    ((List.map fst srcprog.(prog_varsL)) ++ (List.map (compose fst snd) srcprog.(prog_funsL))) *)
+  (*                    (List.map fst srcprog.(defsL)) /\ Sk.wf srcprog.(defsL)}. *)
 
   Theorem match_states_sim
           tgt
@@ -464,6 +526,8 @@ Section PROOF.
           (MGENV: match_ge srcprog ge (Genv.globalenv tgt))
           (COMP: Imp2Csharpminor.compile srcprog = OK tgt)
           (MS: match_states ge ms srcprog ist cst)
+          (WFPROG: incl (name1 srcprog.(defsL)) ((name1 srcprog.(prog_varsL)) ++ (name2 srcprog.(prog_funsL))))
+          (WFPROG2: forall blk name, (ge.(SkEnv.blk2id) blk = Some name) -> call_ban name = false)
           (WFSK: Sk.wf srcprog.(defsL))
     :
       <<SIM: sim (compile_val modl) (semantics tgt) ((100 + max_fuel) + 100 + Ord.omega + 100)%ord ist cst>>.
@@ -762,15 +826,14 @@ Section PROOF.
 
     - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_CallPtr.
       des_ifs.
-      2,3,4,5: sim_triggerUB.
+      2,3,4,5,6,7: sim_triggerUB.
       clear Heq.
       sim_red.
       sim_ord.
       { eapply max_fuel_spec4. }
       grind. eapply step_expr; eauto. i. rename H0 into TGTEXPR. clarify.
       des_ifs.
-      1,2,4,5,6,7,8: try sim_triggerUB.
-      1:{ sim_red; gstep; sim_tau; sim_triggerUB. }
+      1,3,4,5,6: try sim_triggerUB.
       gstep; sim_tau.
 
       assert (COMP2: Imp2Csharpminor.compile srcprog = OK tgt).
@@ -784,11 +847,24 @@ Section PROOF.
       | [ |- gpaco3 _ _ _ _ _ (r0 <- unwrapU (?f);; _) _ ] => destruct f eqn:FSEM; ss
       end.
       2:{ sim_triggerUB. }
-      unfold call_ban in Heq0. bsimpl; des. des_ifs; clarify.
-      rename Heq1 into NOTMAIN. apply neg_rel_dec_correct in NOTMAIN.
-      repeat match goal with
-      | [ Heq: _ = false |- _ ] => clear Heq
-      end.
+
+      des_ifs; ss; clarify.
+      { apply rel_dec_correct in Heq0. unfold call_ban in WFPROG2. apply WFPROG2 in Heq. bsimpl. des.
+        apply neg_rel_dec_correct in Heq. clarify. }
+      { apply rel_dec_correct in Heq1. unfold call_ban in WFPROG2. apply WFPROG2 in Heq. bsimpl. des.
+        apply neg_rel_dec_correct in Heq6. clarify. }
+      { apply rel_dec_correct in Heq2. unfold call_ban in WFPROG2. apply WFPROG2 in Heq. bsimpl. des.
+        apply neg_rel_dec_correct in Heq6. clarify. }
+      { apply rel_dec_correct in Heq3. unfold call_ban in WFPROG2. apply WFPROG2 in Heq. bsimpl. des.
+        apply neg_rel_dec_correct in Heq6. clarify. }
+      { apply rel_dec_correct in Heq4. unfold call_ban in WFPROG2. apply WFPROG2 in Heq. bsimpl. des.
+        apply neg_rel_dec_correct in Heq6. clarify. }
+      repeat match goal with | [ Heq: _ = false |- _ ] => clear Heq end.
+
+      assert (NOTMAIN: s <> "main").
+      { depgen WFPROG2. depgen Heq. clear; i. apply WFPROG2 in Heq.
+        unfold call_ban in Heq. bsimpl; des.  apply neg_rel_dec_correct in Heq0. ss. }
+
       grind. rewrite alist_find_find_some in FSEM. rewrite find_map in FSEM.
       match goal with
       | [ FSEM: o_map (?a) _ = _ |- _ ] => destruct a eqn:FOUND; ss; clarify

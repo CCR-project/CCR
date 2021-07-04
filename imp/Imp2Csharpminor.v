@@ -38,6 +38,8 @@ Section Compile.
     | Lit z => Econst (Olongconst (Int64.repr z))
     | Eq a b =>
       let ca := compile_expr a in let cb := compile_expr b in Eunop Olongofint (Ebinop (Ocmpl Ceq) ca cb)
+    | Lt a b =>
+      let ca := compile_expr a in let cb := compile_expr b in Eunop Olongofint (Ebinop (Ocmpl Clt) ca cb)
     | Plus a b =>
       let ca := compile_expr a in let cb := compile_expr b in (Ebinop Oaddl ca cb)
     | Minus a b =>

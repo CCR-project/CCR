@@ -57,20 +57,21 @@ Section SIMMODSEM.
       2:{ exfalso; apply n0. solve_NoDup. }
       3:{ exfalso; apply n0. solve_NoDup. }
       - imp_steps.
-        unfold unint in *. des_ifs; ss; clarify.
-        2:{ admit "int64 range for z". }
-        imp_steps. des_ifs.
-        + imp_steps. red. esplits; et.
-        + imp_steps. admit "z is 1".
+        unfold unint in *. clarify.
+
+        des_ifs; ss; clarify.
+        2:{ lia. }
+        imp_steps.
+        red. esplits; et.
       - imp_steps.
         unfold unint in *. des_ifs; ss; clarify.
-        2:{ admit "int64 range for z". }
-        imp_steps. des_ifs.
-        + imp_steps.
-        + imp_steps. des_ifs.
-          { depgen z. clear. i. exfalso. rewrite Z.eqb_eq in Heq3. lia. }
-          imp_steps. unfold unblk in *; ss; clarify. rewrite _UNWRAPU0.
-          admit "call_ban".
+        { lia. }
+        imp_steps.
+        unfold unblk in *. ss; clarify. rewrite _UNWRAPU0.
+        unfold ccallU. imp_steps.
+        gstep. econs; ss. i. exists 100. imp_steps.
+        gstep. econs; ss. i. exists 100. imp_steps.
+        red. esplits; et.
     }
     econs; ss.
     { init.
@@ -80,17 +81,15 @@ Section SIMMODSEM.
       rewrite unfold_eval_imp. steps.
       des_ifs.
       2:{ exfalso; apply n0. solve_NoDup. }
-      3:{ exfalso; apply n0. solve_NoDup. }
-      - imp_steps.
-        rewrite _UNWRAPU0. ss.
-        unfold ccallU. imp_steps.
-        gstep. econs; ss. i. exists 100. imp_steps.
-        unfold unblk in *; ss; clarify.
-        rewrite _UNWRAPU3.
-        admit "call_ban".
-      - admit "args to main should be []".
+      imp_steps.
+      rewrite _UNWRAPU0. unfold ccallU. imp_steps.
+      gstep. econs; ss. i. exists 100. imp_steps.
+      unfold unblk in *. ss; clarify. rewrite _UNWRAPU3.
+      imp_steps.
+      gstep. econs; ss. i. exists 100. imp_steps.
+      red. esplits; et.
     }
-    Unshelve. all: ss. exact Ord.O.
+    Unshelve. all: ss.
   Qed.
 
 End SIMMODSEM.

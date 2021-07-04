@@ -20,16 +20,12 @@ Section Knot.
     fn_params := ["fb"; "n"];
     fn_vars := ["n0"; "n1"];
     fn_body :=
-      if# ("n")
-      then#
-            if# ("n" =? 1%Z)
-            then# return# 1%Z
-            else#
-                  "n0" =@* "fb" ["n" - 1%Z] ;#
-                  "n1" =@* "fb" ["n" - 2%Z] ;#
-                  return# ("n0" + "n1")
-            fi#
-      else# return# 1%Z
+      if# ("n" < 2%Z)
+      then# return# 1%Z
+      else#
+            "n0" =@* "fb" ["n" - 1%Z] ;#
+            "n1" =@* "fb" ["n" - 2%Z] ;#
+            return# ("n0" + "n1")
       fi#
   |}.
 

@@ -61,9 +61,10 @@ Section SIMMODSEM.
       gstep. econs; ss. i. exists 100. imp_steps.
       rewrite _UNWRAPU5. imp_steps.
       unfold unblk in *. des_ifs_safe; ss; clarify.
-
-      admit "call name".
-      
+      imp_steps.
+      unfold unint in *. ss; clarify. des_ifs; clarify.
+      gstep. econs; ss. i. exists 100. imp_steps.
+      red. esplits; et.
     }
     econs; ss.
     { init.

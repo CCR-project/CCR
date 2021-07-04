@@ -36,7 +36,7 @@ Section KNOT.
         (mk_simple (X:=(nat -> nat) * nat)
                    (fun '(f, n) => (
                         (fun varg o =>
-                           (⌜varg = [Vint (Z.of_nat n)]↑ /\ o = ord_pure (2 * n + 1)%nat⌝)
+                           (⌜varg = [Vint (Z.of_nat n)]↑ /\ (intrange_64 n) /\ o = ord_pure (2 * n + 1)%nat⌝)
                              ** (OwnM (knot_frag (Some f)))
                         ),
                         (fun vret =>
@@ -51,7 +51,7 @@ Section KNOT.
                    (fun n => (
                         (fun varg o =>
                            (⌜exists fb,
-                                 varg = [Vptr fb 0; Vint (Z.of_nat n)]↑ /\ o = ord_pure (2 * n)%nat /\
+                                 varg = [Vptr fb 0; Vint (Z.of_nat n)]↑ /\ (intrange_64 n) /\ o = ord_pure (2 * n)%nat /\
                                  fb_has_spec skenv (RecStb skenv) fb rec_spec⌝)
                              ** OwnM (knot_frag (Some f))
                         ),
@@ -116,7 +116,7 @@ Section KNOT.
 
   Definition SKnot: SMod.t := {|
     SMod.get_modsem := SKnotSem;
-    SMod.sk := [("rec", Sk.Gfun); ("_f", Sk.Gvar 0)];
+    SMod.sk := [("rec", Sk.Gfun); ("knot", Sk.Gfun); ("_f", Sk.Gvar 0)];
   |}
   .
 
