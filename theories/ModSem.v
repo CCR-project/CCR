@@ -1267,6 +1267,61 @@ ys + (xs + src)
    Lemma refines_close: refines <2= refines_closed.
    Proof. ii. specialize (PR nil). ss. unfold Mod.add_list in *. ss. rewrite ! ModL.add_empty_l in PR. eauto. Qed.
 
+   Definition refines2 (md_tgt md_src: list Mod.t): Prop :=
+     forall (ctx: list Mod.t), Beh.of_program (ModL.compile (ModL.add (Mod.add_list ctx) (Mod.add_list md_tgt))) <1=
+                               Beh.of_program (ModL.compile (ModL.add (Mod.add_list ctx) (Mod.add_list md_src)))
+   .
+
+   Global Program Instance refins2_PreOrder: PreOrder refines2.
+   Next Obligation.
+     ii. ss.
+   Qed.
+   Next Obligation.
+     ii. r in H. r in H0. exploit H. { eapply PR. } intro T. exploit H0. { eapply T. } intro U. ss.
+   Qed.
+
+   (*** horizontal composition ***)
+   Theorem refines2_add
+         (s0 s1 t0 t1: list Mod.t)
+         (SIM0: refines2 t0 s0)
+         (SIM1: refines2 t1 s1)
+     :
+       <<SIM: refines2 (t0 ++ t1) (s0 ++ s1)>>
+   .
+   Proof.
+     ii. r in SIM0. r in SIM1.
+     (***
+ctx (a0 b0)
+(ctx a0) b0
+(ctx a0) b1
+      ***)
+     rewrite Mod.add_list_app in PR.
+     rewrite ModL.add_assoc in PR.
+     specialize (SIM1 (ctx ++ t0)). spc SIM1. rewrite Mod.add_list_app in SIM1. eapply SIM1 in PR.
+     (***
+ctx (a0 b1)
+(a0 b1) ctx
+a0 (b1 ctx)
+(b1 ctx) a0
+      ***)
+     rewrite <- ModL.add_assoc' in PR.
+     eapply ModL.add_comm in PR.
+     rewrite <- ModL.add_assoc' in PR.
+     eapply ModL.add_comm in PR.
+     (***
+(b1 ctx) a1
+a1 (b1 ctx)
+(a1 b1) ctx
+ctx (a1 b1)
+      ***)
+     specialize (SIM0 (s1 ++ ctx)). spc SIM0. rewrite Mod.add_list_app in SIM0. eapply SIM0 in PR.
+     eapply ModL.add_comm in PR.
+     rewrite ModL.add_assoc' in PR.
+     eapply ModL.add_comm in PR.
+     rewrite ! Mod.add_list_app in *.
+     assumption.
+   Qed.
+
    End CONF.
 
 
