@@ -99,6 +99,7 @@ Section PROOF.
     | Imp.Var _ => 20
     | Imp.Lit _ => 20
     | Imp.Eq e0 e1 => (20 + expr_ord e1 + 20 + expr_ord e0 + 20)%ord
+    | Imp.Lt e0 e1 => (20 + expr_ord e1 + 20 + expr_ord e0 + 20)%ord
     | Imp.Plus e0 e1 => (20 + expr_ord e1 + 20 + expr_ord e0 + 20)%ord
     | Imp.Minus e0 e1 => (20 + expr_ord e1 + 20 + expr_ord e0 + 20)%ord
     | Imp.Mult e0 e1 => (20 + expr_ord e1 + 20 + expr_ord e0 + 20)%ord
@@ -111,6 +112,9 @@ Section PROOF.
     { induction e; ss.
       { eexists. refl. }
       { eexists. refl. }
+      { des. eexists.
+        rewrite IHe1. rewrite IHe2.
+        rewrite <- ! OrdArith.add_from_nat. refl. }
       { des. eexists.
         rewrite IHe1. rewrite IHe2.
         rewrite <- ! OrdArith.add_from_nat. refl. }
@@ -224,7 +228,6 @@ Section PROOF.
         (CEXP: compile_expr e = te)
         (SIM:
            forall rv trv,
-             (* wf_val rv -> *)
              eval_expr tge empty_env tle tm te trv ->
              trv = map_val srcprog rv ->
              gpaco3 (_sim (compile_val src) (semantics tgt))
@@ -298,6 +301,54 @@ Section PROOF.
         rewrite ! Int64.signed_repr.
         2,3: unfold_Int64_max_signed; unfold_Int64_min_signed; lia.
         rewrite Z.eqb_neq in Heq. unfold Coqlib.proj_sumbool. des_ifs.
+    - rewrite interp_imp_expr_Lt.
+      sim_red.
+      sim_ord.
+      { instantiate (1:=((i1 + 20 + expr_ord e2 + 20) + expr_ord e1)%ord).
+        rewrite <- ! OrdArith.add_assoc. eapply OrdArith.add_base_l. }
+      eapply IHe1; auto. clear IHe1.
+      i. sim_red.
+      sim_ord.
+      { instantiate (1:=(i1 + 20 + expr_ord e2)%ord).
+        eapply OrdArith.add_base_l. }
+      eapply IHe2; auto. clear IHe2.
+      i. sim_red.
+      destruct (wf_val rv && wf_val rv0) eqn:WFVAL.
+      2: sim_triggerUB.
+      sim_red. destruct rv; destruct rv0; try sim_triggerUB.
+      2,3,4: gstep; ss; unfold triggerUB; try sim_red.
+      des_ifs; ss; try sim_triggerUB.
+      + sim_ord.
+        { eapply OrdArith.add_base_l. }
+        sim_red.        
+        eapply SIM; eauto.
+        econs; eauto.
+        { econs; eauto. }
+        ss. f_equal.
+        bsimpl. des. unfold_intrange_64. bsimpl. des.
+        apply sumbool_to_bool_true in WFVAL.
+        apply sumbool_to_bool_true in WFVAL0.
+        apply sumbool_to_bool_true in WFVAL1.
+        apply sumbool_to_bool_true in WFVAL2.
+        unfold Int64.lt. rewrite ! Int64.signed_repr.
+        2,3: unfold_Int64_max_signed; unfold_Int64_min_signed; lia.
+        des_ifs.
+      + sim_ord.
+        { eapply OrdArith.add_base_l. }
+        sim_red.        
+        eapply SIM; eauto.
+        econs; eauto.
+        { econs; eauto. }
+        ss. f_equal.
+        bsimpl. des. unfold_intrange_64. bsimpl. des.
+        apply sumbool_to_bool_true in WFVAL.
+        apply sumbool_to_bool_true in WFVAL0.
+        apply sumbool_to_bool_true in WFVAL1.
+        apply sumbool_to_bool_true in WFVAL2.
+        unfold Int64.lt. rewrite ! Int64.signed_repr.
+        2,3: unfold_Int64_max_signed; unfold_Int64_min_signed; lia.
+        des_ifs.
+
     - rewrite interp_imp_expr_Plus.
       sim_red.
       sim_ord.
@@ -775,7 +826,7 @@ Section PROOF.
 
     - unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_CallPtr.
       des_ifs.
-      2,3,4,5,6: sim_triggerUB.
+      2,3,4,5,6,7: sim_triggerUB.
       clear Heq.
       sim_red.
       sim_ord.

@@ -23,6 +23,7 @@ Inductive expr : Type :=
 | Var (_ : var)
 | Lit (_ : Z)
 | Eq (_ _ : expr)
+| Lt (_ _ : expr)
 | Plus  (_ _ : expr)
 | Minus (_ _ : expr)
 | Mult  (_ _ : expr)
@@ -152,6 +153,14 @@ Section Denote.
       (if (wf_val l && wf_val r) then Ret tt else triggerUB);;;
       match l, r with
       | Vint lv, Vint rv => if (lv =? rv)%Z then Ret (Vint 1) else Ret (Vint 0)
+      | _, _ => triggerUB
+      end
+
+    | Lt a b =>
+      l <- denote_expr a ;; r <- denote_expr b ;;
+      (if (wf_val l && wf_val r) then Ret tt else triggerUB);;;
+      match l, r with
+      | Vint lv, Vint rv => if (Z_lt_dec lv rv) then Ret (Vint 1) else Ret (Vint 0)
       | _, _ => triggerUB
       end
 

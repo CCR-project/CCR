@@ -45,6 +45,19 @@ Section PROOFS.
       end)le0.
   Proof. reflexivity. Qed.
 
+  Lemma denote_expr_Lt
+        ge le0 a b
+    :
+      interp_imp ge (denote_expr (Lt a b)) le0 =
+      interp_imp ge (
+      l <- denote_expr a ;; r <- denote_expr b ;;
+      (if (wf_val l && wf_val r) then Ret tt else triggerUB);;;
+      match l, r with
+      | Vint lv, Vint rv => if (Z_lt_dec lv rv) then Ret (Vint 1) else Ret (Vint 0)
+      | _, _ => triggerUB
+      end)le0.
+  Proof. reflexivity. Qed.
+
   Lemma denote_expr_Plus
         ge le0 a b
     :
@@ -425,6 +438,28 @@ Section PROOFS.
     1,2: apply interp_imp_Ret.
   Qed.
 
+  Lemma interp_imp_expr_Lt
+        ge le0 a b
+    :
+      interp_imp ge (denote_expr (Lt a b)) le0 =
+      '(le1, l) <- interp_imp ge (denote_expr a) le0 ;;
+      '(le2, r) <- interp_imp ge (denote_expr b) le1 ;;
+      (if (wf_val l && wf_val r) then Ret tt else triggerUB);;;
+      match l, r with
+      | Vint lv, Vint rv => if (Z_lt_dec lv rv) then Ret (le2, Vint 1) else Ret (le2, Vint 0)
+      | _, _ => triggerUB
+      end
+  .
+  Proof.
+    rewrite denote_expr_Lt. rewrite interp_imp_bind.
+    grind. rewrite interp_imp_bind. grind.
+    rewrite interp_imp_bind. destruct (wf_val v && wf_val v0).
+    2:{ rewrite interp_imp_triggerUB. unfold triggerUB; grind. }
+    rewrite interp_imp_Ret. grind.
+    des_ifs; try apply interp_imp_triggerUB.
+    1,2: apply interp_imp_Ret.
+  Qed.
+
   Lemma interp_imp_expr_Plus
         ge le0 a b
     :
@@ -683,7 +718,7 @@ Section PROOFS.
   .
   Proof.
     rewrite denote_stmt_CallPtr. des_ifs.
-    2,3,4,5,6: rewrite interp_imp_triggerUB_bind; unfold triggerUB; grind.
+    2,3,4,5,6,7: rewrite interp_imp_triggerUB_bind; unfold triggerUB; grind.
     rewrite interp_imp_bind. rewrite interp_imp_Ret. grind.
     rewrite interp_imp_bind. grind.
     rewrite interp_imp_bind. rewrite interp_imp_GetName.
@@ -845,6 +880,7 @@ Ltac imp_red :=
     | Var _ => rewrite interp_imp_expr_Var
     | Lit _ => rewrite interp_imp_expr_Lit
     | Eq _ _ => rewrite interp_imp_expr_Eq
+    | Lt _ _ => rewrite interp_imp_expr_Lt
     | Plus _ _ => rewrite interp_imp_expr_Plus
     | Minus _ _ => rewrite interp_imp_expr_Minus
     | Mult _ _ => rewrite interp_imp_expr_Mult
