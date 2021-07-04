@@ -913,9 +913,6 @@ Section PROOF.
 
   Context `{builtins: builtinsTy}.
 
-  Definition wf_prog_NoDup (src: Imp.programL) :=
-    <<WFPROG: (NoDup (name1 src.(defsL)))>>.
-
   Definition wf_prog_incl (src: Imp.programL) :=
     <<WFPROG: (incl (name1 src.(defsL)) ((name1 src.(prog_varsL)) ++ (name2 src.(prog_funsL))))>>.
 

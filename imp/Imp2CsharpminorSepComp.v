@@ -445,8 +445,7 @@ Section PROOFSINGLE.
 
   Theorem single_compile_behavior_improves
           (src: Imp.programL) (tgt: Csharpminor.program) srcst tgtst
-          (WFPROG: (NoDup (name1 src.(defsL))) /\
-                   (incl (name1 src.(defsL)) ((name1 src.(prog_varsL)) ++ (name2 src.(prog_funsL)))))
+          (WFPROG: incl (name1 src.(defsL)) ((name1 src.(prog_varsL)) ++ (name2 src.(prog_funsL))))
           (WFPROG3: forall blk name,
               let modl := ModL.add (Mod.lift Mem) (ImpMod.get_modL src) in
               let ge := (Sk.load_skenv (Sk.sort modl.(ModL.sk))) in
@@ -515,15 +514,11 @@ Section PROOFSINGLE.
     rewrite interp_imp_bind. grind. sim_red.
     assert (MATCHGE: match_ge src (Sk.sort (ModL.sk (ModL.add Mem (ImpMod.get_modL src)))) (Genv.globalenv tgt)).
     { econs. i. unfold map_blk. rewrite COMP0. hexploit Sk.env_found_range; eauto. i. unfold src_init_nb, int_len.
-      rewrite <- sksort_same_len in H0. ss. des_ifs; unfold NW in *; try lia.
-      - 
-      - unfold get_sge in *. ss. apply Sk.sort_wf in SK.
-        hexploit Sk.load_skenv_wf; eauto. i. apply H1 in H. rewrite H in Heq. clarify.
-      - unfold get_sge in *. ss. apply Sk.sort_wf in SK.
-        hexploit Sk.load_skenv_wf; eauto. i. apply H1 in H. rewrite H in Heq. clarify.
-        hexploit found_in_src_in_tgt; eauto. i. des. rewrite Heq0 in H2. clarify.
-      - unfold get_sge in *. ss. apply Sk.sort_wf in SK.
-        hexploit Sk.load_skenv_wf; eauto. i. apply H1 in H. rewrite H in Heq. clarify. }
+      rewrite <- sksort_same_len in H0. ss. unfold sk_len. des.
+      hexploit (Sk.sort_wf SK). i. apply Sk.load_skenv_wf in H1.
+      apply H1 in H. unfold get_sge. ss. rewrite H. unfold get_tge. des_ifs; try lia.
+      hexploit found_in_src_in_tgt; eauto. i. des. unfold get_tge in H2. clarify.
+    }
 
     unfold imp_sem in *.
     eapply match_states_sim; eauto.
@@ -540,14 +535,20 @@ Section PROOFSINGLE.
     { eapply init_lenv_match; eauto. rewrite map_app. ss. }
     { clarify. }
     { econs; ss.
-      { unfold src_init_nb, int_len. rewrite <- sksort_same_len. lia. }
+      { unfold src_init_nb, sk_len. rewrite <- sksort_same_len. lia. }
       { apply Genv.init_mem_genv_next in TMINIT. rewrite <- TMINIT. unfold Genv.globalenv. ss.
         rewrite Genv.genv_next_add_globals. ss. rewrite Genv_advance_next_length. ss.
         rewrite length_elements_PTree_norepet; eauto. rewrite map_blk_after_init; eauto.
-        2:{ unfold src_init_nb, int_len. rewrite <- sksort_same_len. lia. }
-        unfold ext_len. subst tgds. repeat rewrite app_length. ss.
-        rewrite <- sksort_same_len. rewrite wfprog_defsL_length; eauto.
-        rewrite gdefs_preserves_length. lia. }
+        2:{ unfold src_init_nb, sk_len. rewrite <- sksort_same_len. lia. }
+        unfold ext_len. subst tgds.
+        rewrite Pos2Nat.inj_1. rewrite Nat.add_1_r. rewrite <- Pos.of_nat_succ. f_equal.
+        rewrite gdefs_preserves_length. repeat rewrite <- Nat.add_assoc. do 3 f_equal.
+        unfold Sk.wf in SK. hexploit wfprog_defsL_length; eauto. i. des.
+        unfold sk_len in *.
+        match goal with | [ |- _ = ?x ] => replace x with (int_len src) end.
+        { unfold int_len. ss. }
+        rewrite <- sksort_same_len. sym. apply Nat.sub_add. auto.
+      }
       i. uo; des_ifs. unfold NW in H. clarify. rename s into gn, Heq0 into SGENV.
       set (tblk:=map_blk src blk) in *. unfold map_ofs in *. rewrite! Z.mul_0_r.
       hexploit found_gvar_in_src_then_tgt; eauto. i. des. rename H into FOUNDTGV.
@@ -589,9 +590,11 @@ Section PROOFSINGLE.
 
   Theorem single_compile_program_improves
           (src: Imp.programL) (tgt: Csharpminor.program)
-          (WFPROG: Permutation.Permutation
-                     ((List.map fst src.(prog_varsL)) ++ (List.map (compose fst snd) src.(prog_funsL)))
-                     (List.map fst src.(defsL)))
+          (WFPROG: incl (name1 src.(defsL)) ((name1 src.(prog_varsL)) ++ (name2 src.(prog_funsL))))
+          (WFPROG3: forall blk name,
+              let modl := ModL.add (Mod.lift Mem) (ImpMod.get_modL src) in
+              let ge := (Sk.load_skenv (Sk.sort modl.(ModL.sk))) in
+              (ge.(SkEnv.blk2id) blk = Some name) -> call_ban name = false)
           (WFPROG2 : forall gn gv, In (gn, Sk.Gvar gv) (Sk.sort (defsL src)) -> In (gn, gv) (prog_varsL src))
           (COMP: Imp2Csharpminor.compile src = OK tgt)
     :
@@ -665,29 +668,62 @@ Section PROOFLINK.
   Context `{Σ: GRA.t}.
   Context `{builtins : builtinsTy}.
 
+  Definition wf_call_ban (src: Imp.programL) :=
+    <<WFCB: forall blk name,
+      let modl := ModL.add Mem (ImpMod.get_modL src) in
+      let ge := Sk.load_skenv (Sk.sort (ModL.sk modl)) in
+      SkEnv.blk2id ge blk = Some name -> call_ban name = false>>.
+
+  Lemma lifted_wf_call_ban :
+    forall (src: Imp.program), wf_call_ban (lift src).
+  Proof.
+    i. unfold wf_call_ban. ii. ss. apply Sk.in_env_in_sk in H. des. apply Sk.sort_incl_rev in H.
+    unfold defs in H. apply filter_In in H. des. ss. bsimpl. ss.
+  Qed.
+
+  Lemma linked_two_wf_call_ban :
+    forall (src1 src2: Imp.programL) srcl
+      (WF1: wf_call_ban src1)
+      (WF2: wf_call_ban src2)
+      (LINKED: link_imp src1 src2 = Some srcl),
+      <<WFLINK: wf_call_ban srcl>>.
+  Proof.
+    ii. unfold wf_call_ban in *. ss. unfold link_imp in LINKED. des_ifs. ss. clear modl.
+    unfold l_defsL in ge. subst ge. apply Sk.in_env_in_sk in H. des. apply Sk.sort_incl_rev in H.
+    apply in_app_iff in H. des.
+    - apply Sk.sort_incl in H. apply Sk.in_sk_in_env in H. des. eapply WF1. eauto.
+    - apply Sk.sort_incl in H. apply Sk.in_sk_in_env in H. des. eapply WF2. eauto.
+  Qed.
+
+  Lemma linked_list_wf_call_ban :
+    forall (src_list: list Imp.programL) srcl
+      (WFPROGS: Forall wf_call_ban src_list)
+      (LINKED: link_imp_list src_list = Some srcl),
+      <<WFLINK: wf_call_ban srcl>>.
+  Proof.
+    i. destruct src_list as [| src0 src_list]; ss; clarify.
+    depgen src0. depgen srcl. induction src_list; i; ss; clarify.
+    { inv WFPROGS. ss. }
+    rename a into src1. des_ifs; ss; clarify. rename p into srct.
+    hexploit IHsrc_list.
+    2:{ eapply Heq. }
+    { inv WFPROGS. ss. }
+    i. red. eapply linked_two_wf_call_ban with (src1:=src0) (src2:=srct); eauto.
+    inv WFPROGS. auto.
+  Qed.
+
+  Lemma linked_list_wf_lift_call_ban :
+    forall (src_list: list Imp.program) srcl
+      (LINKED: link_imps src_list = Some srcl),
+      <<WFLINK: wf_call_ban srcl>>.
+  Proof.
+    i. unfold link_imps in LINKED. assert (WFPROGS: Forall wf_call_ban (List.map lift src_list)).
+    { clear LINKED. clear srcl. induction src_list; ss; clarify. econs; auto. apply lifted_wf_call_ban. }
+    hexploit linked_list_wf_call_ban; eauto.
+  Qed.
+
   Definition imps_sem (srcs : list Imp.program) :=
     let srcs_mod := List.map ImpMod.get_mod srcs in compile_val (Mod.add_list (Mem :: srcs_mod)).
-
-  (* Lemma compile_behavior_improves_compile *)
-  (*       (srcs : list Imp.program) (tgts : Coqlib.nlist Csharpminor.program) *)
-  (*       tgtl *)
-  (*       (COMP: Forall2 (fun src tgt => compile (lift src) = OK tgt) srcs (nlist2list tgts)) *)
-  (*       (LINKSRC: exists srcl, link_imps srcs = Some srcl) *)
-  (*       (LINKTGT: link_list tgts = Some tgtl) *)
-  (*   : *)
-  (*     (forall tgt_init, *)
-  (*         (Csharpminor.initial_state tgtl tgt_init) -> *)
-  (*         (@improves2 _ (Csharpminor.semantics tgtl) (imps_sem srcs).(initial_state) tgt_init)). *)
-  (* Proof. *)
-  (*   des. *)
-  (*   i. unfold imps_sem. *)
-  (*   hexploit left_arrow; eauto. *)
-  (*   i. instantiate (1:=Mem) in H0. rewrite H0; clear H0. *)
-  (*   hexploit right_arrow; eauto. *)
-  (*   i. des. clarify. *)
-  (*   hexploit linked_list_wf_lift; eauto. i. des. unfold wf_prog in H0. des. *)
-  (*   eapply single_compile_behavior_improves; eauto. *)
-  (* Qed. *)
 
   Lemma compile_behavior_improves_compile
         (srcs : list Imp.program) (tgts : Coqlib.nlist Csharpminor.program)
@@ -705,6 +741,7 @@ Section PROOFLINK.
     hexploit right_arrow; eauto.
     i. des. clarify.
     hexploit linked_list_wf_lift; eauto. i. des. unfold wf_prog in H. des.
+    hexploit linked_list_wf_lift_call_ban; eauto. i. des.
     eapply single_compile_program_improves; eauto.
   Qed.
 

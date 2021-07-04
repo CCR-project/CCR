@@ -413,12 +413,14 @@ Section MAPBLK.
   Lemma map_blk_inj :
     forall src b1 b2
       (COMP : exists tgt, Imp2Csharpminor.compile src = OK tgt)
-      (WFPROG: (NoDup (name1 src.(defsL))) /\
-               (incl (name1 src.(defsL)) ((name1 src.(prog_varsL)) ++ (name2 src.(prog_funsL)))))
+      (WFPROG: incl (name1 src.(defsL)) ((name1 src.(prog_varsL)) ++ (name2 src.(prog_funsL))))
       (WFSK: Sk.wf src.(defsL)),
       <<INJ: map_blk src b1 = map_blk src b2 -> b1 = b2>>.
   Proof.
-    i. des. destruct (ge_dec b1 (src_init_nb src)) eqn:BRANGE1; destruct (ge_dec b2 (src_init_nb src)) eqn:BRANGE2.
+    i.
+    assert (NODUP: NoDup (name1 src.(defsL))).
+    { unfold Sk.wf in WFSK. ss. }
+    des. destruct (ge_dec b1 (src_init_nb src)) eqn:BRANGE1; destruct (ge_dec b2 (src_init_nb src)) eqn:BRANGE2.
     { unfold map_blk. des_ifs. ii. lia. }
     { hexploit map_blk_neq; eauto; ii; clarify. }
     { hexploit map_blk_neq; eauto; ii. sym in H0. clarify. }

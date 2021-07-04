@@ -452,13 +452,12 @@ Section PROOF.
     forall src blk
       (COMP : exists tgt, Imp2Csharpminor.compile src = OK tgt)
       (ALLOCED : blk >= (src_init_nb src)),
-      (<<ALLOCMAP: (map_blk src blk) = Pos.of_succ_nat (tgt_init_len + (ext_len src) + blk)>>).
+      (<<ALLOCMAP: (map_blk src blk) = Pos.of_succ_nat (tgt_init_len + (ext_len src) + (int_len src - sk_len src) + blk)>>).
 
   Hypothesis map_blk_inj :
     forall src b1 b2
       (COMP : exists tgt, Imp2Csharpminor.compile src = OK tgt)
-      (WFPROG: (NoDup (name1 src.(defsL))) /\
-               (incl (name1 src.(defsL)) ((name1 src.(prog_varsL)) ++ (name2 src.(prog_funsL)))))
+      (WFPROG: incl (name1 src.(defsL)) ((name1 src.(prog_varsL)) ++ (name2 src.(prog_funsL))))
       (WFSK: Sk.wf src.(defsL)),
       <<INJ: map_blk src b1 = map_blk src b2 -> b1 = b2>>.
 
@@ -476,8 +475,7 @@ Section PROOF.
           (MGENV: match_ge srcprog ge (Genv.globalenv tgt))
           (COMP: Imp2Csharpminor.compile srcprog = OK tgt)
           (MS: match_states ge ms srcprog ist cst)
-          (WFPROG: (NoDup (name1 srcprog.(defsL))) /\
-                   (incl (name1 srcprog.(defsL)) ((name1 srcprog.(prog_varsL)) ++ (name2 srcprog.(prog_funsL)))))
+          (WFPROG: incl (name1 srcprog.(defsL)) ((name1 srcprog.(prog_varsL)) ++ (name2 srcprog.(prog_funsL))))
           (WFPROG2: forall blk name, (ge.(SkEnv.blk2id) blk = Some name) -> call_ban name = false)
           (WFSK: Sk.wf srcprog.(defsL))
     :
