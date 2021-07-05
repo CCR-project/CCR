@@ -25,21 +25,15 @@ Section PROOF.
   Local Existing Instance Σ.
 
   Let invRA_inG: @GRA.inG invRA Σ.
-  Proof.
-    exists 0. ss.
-  Qed.
+  Proof. exists 0. ss. Defined.
   Local Existing Instance invRA_inG.
 
   Let knotRA_inG: @GRA.inG knotRA Σ.
-  Proof.
-    exists 1. ss.
-  Qed.
+  Proof. exists 1. ss. Defined.
   Local Existing Instance knotRA_inG.
 
   Let memRA_inG: @GRA.inG memRA Σ.
-  Proof.
-    exists 2. ss.
-  Qed.
+  Proof. exists 2. ss. Defined.
   Local Existing Instance memRA_inG.
 
   Let RecStb: Sk.t -> gname -> option fspec :=
@@ -86,12 +80,49 @@ Section PROOF.
       { eapply adequacy_local2. eapply Weakening.adequacy_weaken. ss. }
   Qed.
 
+  Lemma GRA_point_add (G: GRA.t) (x0 x1: G) n
+    :
+      (x0 ⋅ x1) n = x0 n ⋅ x1 n.
+  Proof.
+    ur. Local Transparent GRA.to_URA. unfold GRA.to_URA. Local Opaque GRA.to_URA.
+    ss. ur. auto.
+  Qed.
+
   Lemma KnotAll12_correct:
     refines_closed (Mod.add_list KnotAll1) (Mod.add_list KnotAll2).
   Proof.
     eapply adequacy_type.
     { instantiate (1:=GRA.embed inv_token ⋅ GRA.embed (Auth.white (Some None: Excl.t (option (nat -> nat))): knotRA)).
-      unfold SMod.get_initial_mrs. simpl. admit "".
+      cbn. ss. repeat rewrite URA.unit_id; repeat rewrite URA.unit_idl.
+      Local Opaque URA.unit.
+      apply GRA.point_wise_wf_lift. ss. splits.
+      { repeat rewrite GRA_point_add.
+        unfold GRA.embed. ss.
+        repeat rewrite URA.unit_id. repeat rewrite URA.unit_idl.
+        Local Transparent Sk.load_skenv _points_to string_dec.
+        ur. unfold var_points_to, initial_mem_mr. ss. uo. split.
+        2: { ur. i. ur. i. ur. des_ifs. }
+        { repeat rewrite URA.unit_id. ur. eexists ε.
+          repeat rewrite URA.unit_id. extensionality k. extensionality n.
+          unfold sumbool_to_bool, andb. des_ifs.
+          { ss. clarify. }
+          { ss. clarify. exfalso. lia. }
+          { repeat (destruct k; ss). }
+        }
+      }
+      { repeat rewrite GRA_point_add.
+        unfold GRA.embed. ss.
+        repeat rewrite URA.unit_id. repeat rewrite URA.unit_idl.
+        unfold knot_full. ur. splits; auto.
+        { rewrite URA.unit_id. refl. }
+        { ur. ss. }
+      }
+      { repeat rewrite GRA_point_add.
+        unfold GRA.embed. ss.
+        repeat rewrite URA.unit_id. repeat rewrite URA.unit_idl.
+        ur. ss.
+      }
+      { ss. }
     }
     { i. ss. clarify. ss. exists id. splits; auto.
       { iIntros "[H0 H1]". iFrame. iSplits; ss. }

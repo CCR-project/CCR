@@ -1070,6 +1070,30 @@ Module GRA.
   }
   .
 
+  Fixpoint point_wise_wf (Ml: list URA.t) (x: of_list Ml) (n: nat) :=
+  match n with
+  | O => True
+  | S n' => @URA.wf (of_list Ml n') (x n') /\ @point_wise_wf Ml x n'
+  end.
+
+  Definition point_wise_wf_lift (Ml: list URA.t) (x: of_list Ml)
+             (POINT: point_wise_wf x (List.length Ml))
+    :
+      @URA.wf (of_list Ml) x.
+  Proof.
+    ur. ss. i. unfold of_list in *.
+    assert (WF: forall (n m: nat)
+                       (POINT: point_wise_wf x n)
+                       (LT: (m < n)%nat),
+               URA.wf (x m)).
+    { induction n.
+      { i. inv LT. }
+      { i. ss. des. inv LT; auto. }
+    }
+    destruct (le_lt_dec (List.length Ml) k).
+    { generalize (x k). rewrite nth_overflow; auto. i. ur. destruct c; ss. }
+    { eapply WF; et. }
+  Qed.
 End GRA.
 Coercion GRA.to_URA: GRA.t >-> URA.t.
 
@@ -1138,6 +1162,10 @@ Ltac r_solve :=
 .
 
 Ltac r_wf H := eapply prop_ext_rev; [eapply f_equal|]; [|eapply H]; r_solve.
+
+Ltac g_wf_tac :=
+  cbn; repeat rewrite URA.unit_id; repeat rewrite URA.unit_idl;
+  apply GRA.point_wise_wf_lift; ss; splits; unfold GRA.of_list, GRA.embed; ss.
 
 Require Import Any.
 
