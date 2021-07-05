@@ -62,18 +62,14 @@ Section PROOF.
   Proof.
     unfold FG1, FG2.
     replace [SMod.to_src SMain; SMod.to_src SF; SMod.to_src SG] with (List.map SMod.to_src [SMain; SF; SG]) by refl.
-    { erewrite f_equal with (x:=[Main; F; G]).
-      {
-        eapply adequacy_type2; revgoals.
-        { i. ss. clarify. ss. esplits; et; ss.
-          { instantiate (1:=ε). red. uipropall. split; red; uipropall. }
-          { rewrite ! URA.unit_id. apply URA.wf_unit. }
-          { i. red in POST. uipropall. des. red in POST0. uipropall. }
-        }
-        { admit "ez". }
-      }
-      { ss. }
+    erewrite f_equal with (x:=[Main; F; G]).
+    { eapply adequacy_type with (stb:=fun _ => GlobalStb); et.
+      { instantiate (1:=ε). ss. rewrite ! URA.unit_id. eapply URA.wf_unit. }
+      i. cbn in MAIN. ss. des_ifs. exists tt. split.
+      { iIntros "H". ss. }
+      { ii. iPureIntro. i. des. auto. }
     }
+    { ss. }
   Qed.
 
   Definition F3: Mod.t := {|

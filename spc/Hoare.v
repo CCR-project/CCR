@@ -108,9 +108,8 @@ Section CANCEL.
              exists (x: main_fsp.(meta)) entry_r,
                (<<PRE: main_fsp.(precond) None x (@initial_arg CONFS) (@initial_arg CONFT) ord_top entry_r>>) /\
                (<<WFR: URA.wf (entry_r ⋅ fold_left (⋅) (List.map SModSem.initial_mr mss) ε)>>) /\
-               (<<RET: forall ret_src ret_tgt r
-                              (POST: main_fsp.(postcond) None x ret_src ret_tgt r),
-                   ret_src = ret_tgt>>))
+               (<<RET: forall ret_src ret_tgt,
+                   ((main_fsp.(postcond) None x ret_src ret_tgt: iProp) -∗ ⌜ret_src = ret_tgt⌝)>>))
     :
       Beh.of_program (@ModL.compile CONFT (Mod.add_list mds_tgt)) <1=
       Beh.of_program (@ModL.compile CONFS (Mod.add_list mds_src)).
@@ -118,7 +117,9 @@ Section CANCEL.
     ii. eapply adequacy_type_m2s.
     eapply adequacy_type_m2m; et.
     eapply adequacy_type_t2m; et.
-    Unshelve.
+    i. exploit MAINM; et. i. des. esplits; et.
+    i. specialize (RET ret_src ret_tgt). uipropall.
+    hexploit RET; et. i. red in H. uipropall.
     all:ss.
   Qed.
   End STRONGER.
@@ -126,20 +127,23 @@ Section CANCEL.
 
   Context {CONF: EMSConfig}.
   Variable entry_r: Σ.
-  Variable mainpre: Any.t -> ord -> Σ -> Prop.
-  Hypothesis MAINPRE: mainpre initial_arg ord_top entry_r.
 
   Hypothesis WFR: URA.wf (entry_r ⋅ fold_left (⋅) (List.map SModSem.initial_mr mss) ε).
 
-  Hypothesis MAINM: stb sk "main" = Some (mk_simple (fun _ : () => (mainpre, fun _ => (⌜True⌝: iProp)%I))).
+  Hypothesis MAINM: forall (main_fsp: fspec) (MAIN: stb sk "main" = Some main_fsp),
+      exists (x: main_fsp.(meta)),
+        (<<PRE: Own (entry_r) -∗ main_fsp.(precond) None x initial_arg initial_arg ord_top>>) /\
+        (<<RET: forall ret_src ret_tgt,
+            (main_fsp.(postcond) None x ret_src ret_tgt: iProp) -∗ (⌜ret_src = ret_tgt⌝)>>).
 
   Theorem adequacy_type: refines_closed (Mod.add_list mds_tgt) (Mod.add_list mds_src).
   Proof.
     ii. eapply adequacy_type_arg; et.
-    i. clarify. esplits; et.
-    { ss. uipropall. split; auto. red. uipropall. }
-    { i. ss. red in POST. uipropall. des. red in POST0. uipropall. }
-    Unshelve. ss.
+    i. hexploit MAINM; et. i. des. esplits; et.
+    { eapply to_semantic.
+      { uipropall. }
+      { eapply URA.wf_mon; et. }
+    }
   Qed.
 
 End CANCEL.
@@ -269,15 +273,14 @@ Section CANCEL.
   Qed.
 
   Context {CONF: EMSConfig}.
-  Lemma adequacy_type2
-          (MAINM:
-             forall (main_fsp: fspec) (MAIN: stb "main" = Some main_fsp),
-             exists (x: main_fsp.(meta)) entry_r,
-               (<<PRE: main_fsp.(precond) None x initial_arg initial_arg ord_top entry_r>>) /\
-               (<<WFR: URA.wf (entry_r ⋅ fold_left (⋅) (List.map SModSem.initial_mr mss) ε)>>) /\
-               (<<RET: forall ret_src ret_tgt r
-                              (POST: main_fsp.(postcond) None x ret_src ret_tgt r),
-                   ret_src = ret_tgt>>))
+  Lemma adequacy_type2 entry_r
+        (WFR: URA.wf (entry_r ⋅ fold_left (⋅) (List.map SModSem.initial_mr mss) ε))
+        (MAINM:
+           forall (main_fsp: fspec) (MAIN: stb "main" = Some main_fsp),
+           exists (x: main_fsp.(meta)),
+             (<<PRE: Own entry_r -∗ main_fsp.(precond) None x initial_arg initial_arg ord_top>>) /\
+             (<<RET: forall ret_src ret_tgt,
+                 (main_fsp.(postcond) None x ret_src ret_tgt: iProp) -∗ (⌜ret_src = ret_tgt⌝)>>))
     :
       refines_closed (Mod.add_list mds_tgt) (Mod.add_list mds_src).
   Proof.
@@ -286,7 +289,10 @@ Section CANCEL.
       unfold _stb, _sbtb, _mss, sk. rewrite FIND. auto. }
     { i. unfold stb, _stb, _sbtb, _mss, sk. rewrite FIND.
       right. esplits; et. ii. red in PRE. ss. red in PRE. uipropall. des; auto. }
-    { i. fold stb. hexploit MAINM; et.  }
+    { i. fold stb. hexploit MAINM; et. i. des. esplits; et.
+      eapply to_semantic.
+      { uipropall. }
+      eapply URA.wf_mon; et. }
     { revert x0 PR.
       eapply refines_close.
       eapply adequacy_local_list.

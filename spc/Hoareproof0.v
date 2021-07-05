@@ -500,6 +500,7 @@ Section CANCEL.
                (<<PRE: main_fsp.(precond) None x (@initial_arg CONFS) (@initial_arg CONFT) ord_top entry_r>>) /\
                (<<WFR: URA.wf (entry_r ⋅ fold_left (⋅) (List.map SModSem.initial_mr mss) ε)>>) /\
                (<<RET: forall ret_src ret_tgt r
+                              (WFR: URA.wf r)
                               (POST: main_fsp.(postcond) None x ret_src ret_tgt r),
                    ret_src = ret_tgt>>)):
     Beh.of_program (@ModL.compile CONFT (Mod.add_list mds_tgt)) <1=
@@ -557,6 +558,9 @@ Section CANCEL.
     destruct vret_tgt as [mps_tgt [? v_tgt]]. des. clarify.
     steps. rewrite zip_state_get; et.
     rewrite Any.pair_split. steps.
+    { eapply RET; [|et]. eapply URA.wf_mon.
+      instantiate (1:=(ε ⋅ rsum_minus (SModSem.mn (SMod.get_modsem md sk)) mrs1) ⋅ c0).
+      r_wf x0. }
     Unshelve. all: try (exact 0).
   Qed.
 
