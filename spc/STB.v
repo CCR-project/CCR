@@ -50,7 +50,7 @@ Section HEADER.
   | fn_has_spec_intro
       fsp1
       (FIND: stb fn = Some fsp1)
-      (WEAL: fspec_weaker fsp fsp1)
+      (WEAK: fspec_weaker fsp fsp1)
   .
   Hint Constructors fn_has_spec: core.
 

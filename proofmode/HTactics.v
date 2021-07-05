@@ -803,14 +803,14 @@ Ltac astep_full _fn _args _next _n1 :=
   eapply (@APC_step_clo _ _ _fn _args _next _n1);
   [(try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; lia)]))|
    (try by ((try stb_tac); refl))|
-   (eapply OrdArith.lt_from_nat; lia)|
+   (try by (eapply OrdArith.lt_from_nat; lia))|
   ].
 
 Ltac astep _fn _args :=
   eapply (@APC_step_clo _ _ _fn _args);
   [(try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r; eapply Nat.lt_succ_diag_r)]))|
    (try by ((try stb_tac); refl))|
-   (eapply OrdArith.lt_from_nat; eapply Nat.lt_succ_diag_r)|
+   (try by (eapply OrdArith.lt_from_nat; eapply Nat.lt_succ_diag_r))|
   ].
 
 Ltac acatch :=
@@ -946,7 +946,7 @@ Tactic Notation "hcall_weaken" uconstr(fsp) uconstr(o) uconstr(x) uconstr(a) "wi
   let POST := get_fresh_name_tac "POST" in
   let INV := get_fresh_name_tac "INV" in
   let Hns := select_ihyps Hns in
-  eapply (@hcall_clo_weaken _ _ Hns POST INV _ _ fsp o _ x _ a);
+  eapply (@hcall_clo_weaken _ _ Hns POST INV fsp o x _ a);
   unshelve_goal;
   [
   |eassumption
