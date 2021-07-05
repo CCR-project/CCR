@@ -7,7 +7,7 @@ Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef STB.
 Require Import BW1.
-Require Import TODOYJ Logic.
+(* Require Import TODOYJ. *)Logic.
 
 Set Implicit Arguments.
 

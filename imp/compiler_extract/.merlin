@@ -1,0 +1,21 @@
+S lib
+S common
+S x86
+S backend
+S cfrontend
+S driver
+S debug
+S exportclight
+S cparser
+S extraction
+
+B lib
+B common
+B x86
+B backend
+B cfrontend
+B driver
+B debug
+B exportclight
+B cparser
+B extraction

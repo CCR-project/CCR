@@ -1435,3 +1435,49 @@ Ltac unshelve_goal :=
   end.
 
 Notation "f ∘ g" := (fun x => (f (g x))).
+
+
+
+
+
+(* from TODOYJ *)
+Definition map_fst A B C (f: A -> C): A * B -> C * B := fun '(a, b) => (f a, b).
+Definition map_snd A B C (f: B -> C): A * B -> A * C := fun '(a, b) => (a, f b).
+
+
+
+(* Definition is_zero (v: Z): bool := (dec v 0%Z)%Z. *)
+
+Ltac on_first_hyp tac :=
+  match reverse goal with [ H : _ |- _ ] => first [ tac H | fail 1 ] end.
+
+Ltac idtacs Hs :=
+  match Hs with
+  | (?H0, ?H1) => idtacs H0; idtacs H1
+  | ?H => idtac H
+  end
+.
+
+Notation "(∘)" := (fun g f => g ∘ f) (at level 0, left associativity).
+
+Variant option_rel A B (P: A -> B -> Prop): option A -> option B -> Prop :=
+| option_rel_some
+    a b (IN: P a b)
+  :
+    option_rel P (Some a) (Some b)
+| option_rel_none
+  :
+    option_rel P None None
+.
+Hint Constructors option_rel: core.
+
+Definition map_or_else X Y (ox: option X) (f: X -> Y) (d: Y) :=
+  match ox with | Some x => f x | None => d end.
+
+Lemma map_or_else_same: forall X Y (ox: option X) (d: Y), map_or_else ox (fun _ => d) d = d.
+  i. destruct ox; ss.
+Qed.
+
+Definition or_else X (ox: option X) (d: X) := match ox with | Some x => x | None => d end.
+
+Lemma map_or_else_id: forall X ox (d: X), map_or_else ox id d = or_else ox d. refl. Qed.

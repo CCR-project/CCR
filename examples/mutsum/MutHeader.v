@@ -12,7 +12,7 @@ From ExtLib Require Import
      Core.RelDec
      Structures.Maps
      Data.Map.FMapAList.
-Require Import Logic.
+Require Import ProofMode.
 
 Set Implicit Arguments.
 
