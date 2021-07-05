@@ -10,7 +10,7 @@ Require Import HoareDef STB.
 Require Import SimModSem.
 
 Require Import HTactics.
-Require Import Logic.
+Require Import ProofMode.
 
 From ITree Require Import
      Events.MapDefault.

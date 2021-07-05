@@ -394,7 +394,7 @@ Section MODSEM.
     f_equal. unfold modsemL, modsem. ss. unfold ModSem.lift.
     ss. extensionality sk. f_equal.
     revert sk. induction (prog_funs p); i; ss; clarify.
-    destruct a. unfold ModSem.map_snd. f_equal.
+    destruct a. unfold map_snd. f_equal.
     apply IHp0.
   Qed.
 

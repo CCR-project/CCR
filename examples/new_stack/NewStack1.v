@@ -6,9 +6,8 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef OpenDef.
-Require Import Logic.
+Require Import ProofMode.
 Require Import Mem1.
-Require Import TODOYJ.
 Require Import AList.
 
 Set Implicit Arguments.

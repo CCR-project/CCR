@@ -33,18 +33,18 @@ main.d.byte
 *.out
 *~
 
-/imp_compile/*
-!/imp_compile/*.v
-!/imp_compile/build.sh
-!/imp_compile/_tags
-!/imp_compile/test.ml
-!/imp_compile/configure
-!/imp_compile/Makefile
-!/imp_compile/CompCert
-!/imp_compile/run.sh
+/imp/compiler_extract/*
+!/imp/compiler_extract/*.v
+!/imp/compiler_extract/build.sh
+!/imp/compiler_extract/_tags
+!/imp/compiler_extract/test.ml
+!/imp/compiler_extract/configure
+!/imp/compiler_extract/Makefile
+!/imp/compiler_extract/CompCert
+!/imp/compiler_extract/run.sh
 
-!/imp_compile/bin
-/imp_compile/bin/*
-!/imp_compile/bin/*.c
+!/imp/compiler_extract/bin
+/imp/compiler_extract/bin/*
+!/imp/compiler_extract/bin/*.c
 
 /.vscode

@@ -10,6 +10,7 @@ Require Import ExtrOcamlString.
 
 Require Import Imp ImpNotations.
 Require Import Imp2Csharpminor.
+(* Require Import Csharpminor2Asm. *)
 Require Import Imp2Asm.
 
 Require Import ImpSimple.
@@ -136,7 +137,7 @@ Set Extraction AccessOpaque.
 
 (* Go! *)
 
-Cd "imp_compile".
+Cd "imp/compiler_extract".
 
 Separate Extraction
    (* Compiler.transf_c_program *)
@@ -165,7 +166,7 @@ Separate Extraction
    (* For imp compilation *)
    Compiler.transf_clight_program
    Imp2Asm.list_type_to_typelist
-   Imp2Asm.transf_csharpminor_program
+   (* Csharpminor2Asm.transf_csharpminor_program *)
    Imp2Asm.compile
    Imp2Asm.compile_imp
    Imp2Csharpminor.link_imps
@@ -180,4 +181,4 @@ Separate Extraction
    Stack_prog Echo_prog EchoMain_prog Client_prog
 .
 
-Cd "..".
+Cd "../..".

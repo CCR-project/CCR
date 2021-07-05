@@ -14,15 +14,6 @@ Set Implicit Arguments.
 Notation gname := string (only parsing). (*** convention: not capitalized ***)
 Notation mname := string (only parsing). (*** convention: capitalized ***)
 
-(* TODO: move it to Coqlib *)
-Lemma nodup_comm A (l0 l1: list A)
-      (NODUP: NoDup (l0 ++ l1))
-  :
-    NoDup (l1 ++ l0).
-Proof.
-  eapply Permutation_NoDup; [|et].
-  eapply Permutation_app_comm.
-Qed.
 
 Section EVENTSCOMMON.
 
@@ -62,6 +53,30 @@ Section EVENTSCOMMON.
   (* Notation "'unint﹗'" := (unwrapG <*> unint) (at level 57, only parsing). *)
   (* Notation "'Ret!' f" := (RetG f) (at level 57, only parsing). *)
   (* Notation "'Ret?' f" := (RetA f) (at level 57, only parsing). *)
+
+  Definition unleftU {E X Y} `{eventE -< E} (xy: X + Y): itree E X :=
+    match xy with
+    | inl x => Ret x
+    | inr y => triggerUB
+    end.
+
+  Definition unleftN {E X Y} `{eventE -< E} (xy: X + Y): itree E X :=
+    match xy with
+    | inl x => Ret x
+    | inr y => triggerNB
+    end.
+
+  Definition unrightU {E X Y} `{eventE -< E} (xy: X + Y): itree E Y :=
+    match xy with
+    | inl x => triggerUB
+    | inr y => Ret y
+    end.
+
+  Definition unrightN {E X Y} `{eventE -< E} (xy: X + Y): itree E Y :=
+    match xy with
+    | inl x => triggerNB
+    | inr y => Ret y
+    end.
 
 End EVENTSCOMMON.
 
@@ -821,8 +836,8 @@ Section MODSEM.
 
   (*** TODO: move to CoqlibC ***)
   (*** ss, cbn does not work as expected (in both version) ***)
-  Definition map_fst A0 A1 B (f: A0 -> A1): (A0 * B) -> (A1 * B) := fun '(a, b) => (f a, b).
-  Definition map_snd A B0 B1 (f: B0 -> B1): (A * B0) -> (A * B1) := fun '(a, b) => (a, f b).
+  (* Definition map_fst A0 A1 B (f: A0 -> A1): (A0 * B) -> (A1 * B) := fun '(a, b) => (f a, b). *)
+  (* Definition map_snd A B0 B1 (f: B0 -> B1): (A * B0) -> (A * B1) := fun '(a, b) => (a, f b). *)
   (* Definition map_fst A0 A1 B (f: A0 -> A1): (A0 * B) -> (A1 * B) := fun ab => match ab with (a, b) => (f a, b) end. *)
   (* Definition map_snd A B0 B1 (f: B0 -> B1): (A * B0) -> (A * B1) := fun ab => match ab with (a, b) => (a, f b) end. *)
 

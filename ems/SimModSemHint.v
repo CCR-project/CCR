@@ -501,7 +501,7 @@ Section ADQ.
     revert_until wf. gcofix CIH. i.
     punfold SIM. dependent destruction SIM.
     - unfold transl_all. rewrite ! unfold_interp. ss. gstep. econs; eauto.
-      red in RET. ss. des. subst. esplits; et.
+      red in RET. ss. des. subst. esplits; et; ss.
     - unfold transl_all. rewrite ! unfold_interp. ss. gstep. econs; eauto.
       pclearbot. gbase. eapply CIH; et.
     - unfold transl_all. rewrite ! interp_bind. rewrite ! unfold_interp. ss. rewrite ! bind_bind.
@@ -861,7 +861,7 @@ Section SIMMOD.
       i. destruct a0. i. eapply wf_function_mon; [|et].
       i. ss. auto. }
     eapply Forall_forall. i.
-    unfold ModSem.map_snd in *.
+    unfold map_snd in *.
     eapply in_map_iff in H. des. destruct x0. subst. i.
     eapply wf_function_mon.
     2: { eapply lift_wf_function. }

@@ -1,4 +1,5 @@
 Require Import Coqlib.
+Require Import ITreelib.
 Require Import Skeleton.
 Require Import PCM.
 Require Import Any.
@@ -35,16 +36,6 @@ Section CONV.
       end
   .
 
-  (** TODO: move to ITreelib? *)
-  Lemma observe_eta E R (itr0 itr1: itree E R)
-        (EQ: _observe itr0 = _observe itr1)
-    :
-      itr0 = itr1.
-  Proof.
-    erewrite (itree_eta_ itr0).
-    erewrite (itree_eta_ itr1).
-    f_equal. auto.
-  Qed.
 
   Lemma unfold_decompile_STS
         (state: Type)

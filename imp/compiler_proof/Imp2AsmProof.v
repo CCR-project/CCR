@@ -9,13 +9,14 @@ Require Import STS Behavior.
 Require Import Any.
 Require Import ModSem.
 Require Import Imp.
-Require Import Imp2Csharpminor.
 Require Import SimSTS2.
+Require Import Imp2Csharpminor.
+Require Import Csharpminor2Asm.
 
 Require Import Imp2CsharpminorLink.
 Require Import Imp2CsharpminorSepComp.
 Require Import Imp2Asm.
-Require Import CsmProofs.
+Require Import Csharpminor2AsmProofs.
 
 Set Implicit Arguments.
 

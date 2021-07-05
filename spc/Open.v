@@ -7,9 +7,7 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
-Require Import TODOYJ.
-Require Import Logic.
-(* Require Import Mem0 MemOpen. *)
+Require Import ProofMode.
 Require Import HoareDef Hoare.
 Require Import OpenDef.
 Require Import IRed.
@@ -621,13 +619,13 @@ Section ADQ.
     | [ H: context[ModL.enclose] |- _ ] => unfold ModL.enclose in H; try rewrite add_list_fnsems in H
     | [ H: In _ (flat_map _ _) |- _ ] => apply in_flat_map in H; des
     | [ H: In _ (List.map _ _) |- _ ] => apply in_map_iff in H; des
-    | [ H: ModSem.map_snd _ _ = _ |- _ ] => unfold ModSem.map_snd in H; ss
+    | [ H: map_snd _ _ = _ |- _ ] => unfold map_snd in H; ss
     | [ H: map_snd _ _ = _ |- _ ] => unfold map_snd in H; ss
     | [ H: flip _ _ _ = _ |- _ ] => unfold flip in H; ss
     | [ |- context[ModL.enclose] ] => unfold ModL.enclose; try rewrite add_list_fnsems
     | [ |- In _ (flat_map _ _) ] => apply in_flat_map; esplits; et
     | [ |- In _ (List.map _ _) ] => apply in_map_iff; esplits; et
-    | [ |- ModSem.map_snd _ _ = _ ] => unfold ModSem.map_snd; ss
+    | [ |- map_snd _ _ = _ ] => unfold map_snd; ss
     | [ |- map_snd _ _ = _ ] => unfold map_snd; ss
     | [ |- flip _ _ _ = _ ] => unfold flip; ss
     end

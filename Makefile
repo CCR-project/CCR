@@ -21,7 +21,10 @@ proof: Makefile.coq $(COQTHEORIES)
 
 Makefile.coq: Makefile $(COQTHEORIES)
 	(echo "-R lib $(COQMODULE)"; \
-         echo "-R theories $(COQMODULE)"; \
+         echo "-R ems $(COQMODULE)"; \
+         echo "-R spc $(COQMODULE)"; \
+         echo "-R proofmode $(COQMODULE)"; \
+         echo "-R imp $(COQMODULE)"; \
          echo "-R . $(COQMODULE)"; \
    echo $(COQTHEORIES)) > _CoqProject
 	coq_makefile -f _CoqProject -o Makefile.coq

@@ -11,7 +11,7 @@ Require Import STB KnotHeader SimModSem.
 Require Import KnotMain0 KnotMain1 Knot0 Knot1 Mem0 Mem1.
 Require Import KnotMain01proof Knot01proof Mem01proof.
 
-Require Import HTactics TODOYJ Invariant.
+Require Import HTactics Invariant.
 
 Set Implicit Arguments.
 
