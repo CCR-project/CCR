@@ -1532,10 +1532,10 @@ Section ADQ.
 
   Let frds: Sk.t -> list mname := fun sk => (map (KModSem.mn ∘ (flip KMod.get_modsem sk)) _kmds).
 
-  Let _kmss: Sk.t -> list KModSem.t := fun ske => List.map (flip KMod.get_modsem ske) _kmds.
+  Let _kmss: Sk.t -> list KModSem.t := fun ske => map (flip KMod.get_modsem ske) _kmds.
 
   Let _gstb: Sk.t -> list (gname * fspec) := fun ske =>
-    (flat_map (List.map (map_snd ksb_fspec) ∘ KModSem.fnsems) (_kmss ske)).
+    (flat_map (map (map_snd ksb_fspec) ∘ KModSem.fnsems) (_kmss ske)).
 
   Let _stb: Sk.t -> gname -> option fspec :=
     fun sk => to_closed_stb (_gstb sk).
@@ -1570,3 +1570,41 @@ Section ADQ.
     eapply adequacy_open.
   Qed.
 End ADQ.
+
+Require Import Weakening.
+
+Section WEAKEN.
+
+  Context `{Σ: GRA.t}.
+
+  Theorem kmod_adequacy_weaken
+          stb0 stb1
+          md
+          (WEAK: forall sk, stb_weaker (stb0 sk) (stb1 sk))
+    :
+      <<SIM: ModPair.sim (KMod.transl_tgt stb1 md) (KMod.transl_tgt stb0 md)>>
+  .
+  Proof.
+    econs; cycle 1.
+    { unfold KMod.transl_tgt. cbn. eauto. }
+    i. specialize (WEAK sk). r. econs.
+    2:{ unfold KMod.transl_tgt. ss.
+        abstr (KModSem.fnsems (KMod.get_modsem md sk)) fnsems.
+        eapply Forall2_apply_Forall2.
+        { refl. }
+        i. subst. destruct b. split.
+        { rr. cbn. ss. }
+        ii. subst. exists 201. ss.
+        unfold KModSem.disclose_ksb_tgt.
+        ginit. gstep. econs. i. exists x_src. exists 200.
+        gfinal. right. instantiate (1:=unit) in w. destruct w.
+        destruct x_src.
+        { eapply weakening_fn; et. refl. }
+        { eapply weakening_fn; et. refl. }
+    }
+    { ss. }
+    { ss. }
+    exists tt. esplits; et.
+  Qed.
+
+End WEAKEN.

@@ -86,6 +86,67 @@ Section HEADER.
     eapply alist_find_some_iff in FIND; et.
   Qed.
 
+  Definition stb_weaker (stb0 stb1: gname -> option fspec): Prop :=
+    forall fn fsp0 (FINDTGT: stb0 fn = Some fsp0),
+    exists fsp1,
+      (<<FINDSRC: stb1 fn = Some fsp1>>) /\
+      (<<WEAKER: fspec_weaker fsp0 fsp1>>)
+  .
+
+  Global Program Instance stb_weaker_PreOrder: PreOrder stb_weaker.
+  Next Obligation. ii. esplits; eauto. refl. Qed.
+  Next Obligation.
+    ii. r in H. r in H0. exploit H; et. intro T; des.
+    exploit H0; et. intro U; des. esplits; eauto. etrans; et.
+  Qed.
+
+  Lemma stb_incl_weaker: stb_incl <2= stb_weaker.
+  Proof.
+    ii. eapply PR in FINDTGT. esplits; et. refl.
+  Qed.
+
+  Lemma incl_stb_incl: forall stb0 stb1 (NODUP: List.NoDup (List.map fst stb1)) (INCL: incl stb0 stb1), stb_incl (to_stb stb0) (to_stb stb1).
+  Proof.
+    unfold to_stb.
+    ii. eapply alist_find_some in FIND.
+    destruct (alist_find fn stb1) eqn:T.
+    { eapply alist_find_some in T.
+      eapply INCL in FIND.
+      destruct (classic (fsp = f)).
+      { subst. esplits; et. }
+      exfalso.
+      eapply NoDup_inj_aux in NODUP; revgoals.
+      { eapply T. }
+      { eapply FIND. }
+      { ii; clarify. }
+      ss.
+    }
+    eapply alist_find_none in T; et. exfalso. et.
+  Qed.
+
+  Lemma incl_weaker: forall stb0 stb1 (NODUP: List.NoDup (List.map fst stb1)) (INCL: incl stb0 stb1), stb_weaker (to_stb stb0) (to_stb stb1).
+  Proof.
+    i. eapply stb_incl_weaker. eapply incl_stb_incl; et.
+  Qed.
+
+  Lemma app_incl: forall stb0 stb1, stb_incl (to_stb stb0) (to_stb (stb0 ++ stb1)).
+  Proof.
+    unfold to_stb.
+    ii. eapply alist_find_app in FIND. esplits; eauto.
+  Qed.
+
+  Lemma app_weaker: forall stb0 stb1, stb_weaker (to_stb stb0) (to_stb (stb0 ++ stb1)).
+  Proof.
+    i. eapply stb_incl_weaker. eapply app_incl.
+  Qed.
+
+  Lemma to_closed_stb_weaker stb
+    :
+      stb_incl (to_stb stb) (to_closed_stb stb).
+  Proof.
+    unfold to_closed_stb, to_stb. ii. rewrite FIND. auto.
+  Qed.
+
   Lemma incl_to_closed_stb stb0 stb1 (INCL: List.incl stb0 stb1)
         (NODUP: NoDup (List.map fst stb1))
     :
