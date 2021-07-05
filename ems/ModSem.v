@@ -1170,6 +1170,19 @@ Section REFINE.
    Section CONF.
    Context {CONF: EMSConfig}.
 
+   Definition refines2 (md_tgt md_src: list Mod.t): Prop :=
+     forall (ctx: list Mod.t), Beh.of_program (ModL.compile (ModL.add (Mod.add_list ctx) (Mod.add_list md_tgt))) <1=
+                               Beh.of_program (ModL.compile (ModL.add (Mod.add_list ctx) (Mod.add_list md_src)))
+   .
+
+   Global Program Instance refins2_PreOrder: PreOrder refines2.
+   Next Obligation.
+     ii. ss.
+   Qed.
+   Next Obligation.
+     ii. r in H. r in H0. exploit H. { eapply PR. } intro T. exploit H0. { eapply T. } intro U. ss.
+   Qed.
+
    (*** vertical composition ***)
    Global Program Instance refines_PreOrder: PreOrder refines.
    Next Obligation. ii. ss. Qed.
@@ -1282,19 +1295,6 @@ ys + (xs + src)
    Lemma refines_close: refines <2= refines_closed.
    Proof. ii. specialize (PR nil). ss. unfold Mod.add_list in *. ss. rewrite ! ModL.add_empty_l in PR. eauto. Qed.
 
-   Definition refines2 (md_tgt md_src: list Mod.t): Prop :=
-     forall (ctx: list Mod.t), Beh.of_program (ModL.compile (ModL.add (Mod.add_list ctx) (Mod.add_list md_tgt))) <1=
-                               Beh.of_program (ModL.compile (ModL.add (Mod.add_list ctx) (Mod.add_list md_src)))
-   .
-
-   Global Program Instance refins2_PreOrder: PreOrder refines2.
-   Next Obligation.
-     ii. ss.
-   Qed.
-   Next Obligation.
-     ii. r in H. r in H0. exploit H. { eapply PR. } intro T. exploit H0. { eapply T. } intro U. ss.
-   Qed.
-
    (*** horizontal composition ***)
    Theorem refines2_add
          (s0 s1 t0 t1: list Mod.t)
@@ -1335,6 +1335,20 @@ ctx (a1 b1)
      eapply ModL.add_comm in PR.
      rewrite ! Mod.add_list_app in *.
      assumption.
+   Qed.
+
+
+   Corollary refines2_pairwise
+             (mds0_src mds0_tgt: list Mod.t)
+             (FORALL: List.Forall2 (fun md_src md_tgt => refines2 [md_src] [md_tgt]) mds0_src mds0_tgt)
+     :
+       refines2 mds0_src mds0_tgt.
+   Proof.
+     induction FORALL; ss.
+     hexploit refines2_add.
+     { eapply H. }
+     { eapply IHFORALL. }
+     i. ss.
    Qed.
 
    End CONF.

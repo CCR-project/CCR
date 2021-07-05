@@ -43,33 +43,91 @@ Section PROOF.
 
   Let RecStb: SkEnv.t -> gname -> option fspec :=
     fun skenv => to_stb KnotRecStb.
+  Hint Unfold RecStb: stb.
 
   Let FunStb: SkEnv.t -> gname -> option fspec :=
     fun skenv => to_stb (MainFunStb RecStb skenv).
+  Hint Unfold RecStb: stb.
+
+  Let smds := [SMain RecStb; SKnot RecStb FunStb; SMem].
+
+  Let stb
+
+  Definition KnotAll0: list Mod.t := [KnotMain0.Main; Knot0.Knot; Mem0.Mem].
+
+  Definition KnotAll1: list Mod.t := List.map (SMod.to_tgt GlobalStb) smds.
+
+[SMain RecStb; SKnot RecStb FunStb; SMem].
+
+  Definition KnotAll2: list Mod.t :=
+    List.map SMod.to_src [SMain RecStb; SKnot RecStb FunStb; SMem].
+
+
+  Let stb := fun skenv =>
 
   Let GlobalStb: SkEnv.t -> gname -> option fspec :=
     fun skenv => to_stb ((MainStb RecStb skenv) ++ (KnotStb RecStb FunStb skenv) ++ MemStb).
+  Hint Unfold RecStb: stb.
 
-  Definition KnotAll0: ModL.t := Mod.add_list [KnotMain0.Main; Knot0.Knot; Mem0.Mem].
+  Definition KnotAll0: list Mod.t := [KnotMain0.Main; Knot0.Knot; Mem0.Mem].
 
-  Definition KnotAll1: ModL.t := Mod.add_list [KnotMain1.Main RecStb GlobalStb; Knot1.Knot RecStb FunStb GlobalStb; Mem1.Mem].
+  Definition KnotAll1: list Mod.t :=
+    List.map (SMod.to_tgt GlobalStb) [SMain RecStb; SKnot RecStb FunStb; SMem].
+
+  Definition KnotAll2: list Mod.t :=
+    List.map SMod.to_src [SMain RecStb; SKnot RecStb FunStb; SMem].
+
+  Ltac stb_incl_tac :=
+    i; eapply incl_to_stb;
+    [ autounfold with stb; autorewrite with stb; ii; ss; des; clarify; auto|
+      autounfold with stb; autorewrite with stb; repeat econs; ii; ss; des; ss].
+
+  Ltac ors_tac := repeat ((try by (ss; left; ss)); right).
 
   Lemma KnotAll01_correct:
-    refines KnotAll0 KnotAll1.
+    refines2 KnotAll0 KnotAll1.
+  Proof.
+    cbn. eapply refines2_pairwise. econs; [|econs; [|econs; ss]].
+    - eapply adequacy_local2.
+      eapply KnotMain01proof.correct with (RecStb0:=RecStb) (FunStb0:=FunStb) (GlobalStb0:=GlobalStb).
+      + stb_incl_tac.
+      + ii. econs; ss. refl.
+      + ii. econs; ss. refl.
+    - eapply adequacy_local2.
+      eapply Knot01proof.correct with (RecStb0:=RecStb) (FunStb0:=FunStb) (GlobalStb0:=GlobalStb).
+      + stb_incl_tac.
+      + stb_incl_tac.
+      + stb_incl_tac; ors_tac.
+    - etrans.
+      { eapply adequacy_local2. eapply Mem01proof.correct. }
+      { eapply adequacy_local2. eapply Weakening.adequacy_weaken. ss. }
+  Qed.
+
+  Lemma KnotAll12_correct:
+    refines_closed (Mod.add_list KnotAll1) (Mod.add_list KnotAll2).
+  Proof.
+    eapply adequacy_type.
+    {
+
+
+with (stb:=fun _ => GlobalStb); et.
+
+
+
+  Lemma Knot_correct:
+    refines_closed KnotAll0 KnotAll1.
   Proof.
     eapply adequacy_local_list. econs; [|econs; [|econs; ss]].
     - eapply KnotMain01proof.correct with (RecStb0:=RecStb) (FunStb0:=FunStb) (GlobalStb0:=GlobalStb).
-      + ii. ss. unfold FunStb, RecStb, GlobalStb, to_stb in *. ss.
-        rewrite ! eq_rel_dec_correct in *. des_ifs.
+      + stb_incl_tac.
       + ii. econs; ss. refl.
       + ii. econs; ss. refl.
     - eapply Knot01proof.correct with (RecStb0:=RecStb) (FunStb0:=FunStb) (GlobalStb0:=GlobalStb).
-      + ii. ss.
-      + ii. ss. unfold FunStb, RecStb, GlobalStb, to_stb in *. ss.
-        rewrite ! eq_rel_dec_correct in *. des_ifs.
-      + ii. ss. unfold FunStb, RecStb, GlobalStb, to_stb in *. ss.
-        rewrite ! eq_rel_dec_correct in *. des_ifs; stb_tac; ss.
+      + stb_incl_tac.
+      + stb_incl_tac.
+      + stb_incl_tac; ors_tac.
     - eapply Mem01proof.correct.
   Qed.
+
 
 End PROOF.

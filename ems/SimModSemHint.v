@@ -1169,6 +1169,16 @@ Section SIMMOD.
      eapply refines_strong_proper_l; et.
    Qed.
 
+   Theorem adequacy_local2 md_src md_tgt
+           (SIM: ModPair.sim md_src md_tgt)
+     :
+       <<CR: (refines2 [md_tgt] [md_src])>>
+   .
+   Proof.
+     eapply ModSem.refines_strong_refines.
+     eapply adequacy_local_list_strong. econs; ss.
+   Qed.
+
    Corollary adequacy_local_list
              mds_src mds_tgt
              (FORALL: List.Forall2 ModPair.sim mds_src mds_tgt)

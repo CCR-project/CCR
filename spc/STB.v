@@ -178,3 +178,8 @@ Section HEADER.
   Qed.
 
 End HEADER.
+
+Ltac stb_incl_tac :=
+  i; eapply incl_to_stb;
+  [ autounfold with stb; autorewrite with stb; ii; ss; des; clarify; auto|
+    autounfold with stb; autorewrite with stb; repeat econs; ii; ss; des; ss].
