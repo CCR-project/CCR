@@ -27,7 +27,7 @@ From compcert Require Import
 .
 
 Require Import Coqlib.
-Require Import Imp2Asm.
+Require Import Csharpminor2Asm.
 
 Set Implicit Arguments.
 

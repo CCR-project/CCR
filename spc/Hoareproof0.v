@@ -1,4 +1,4 @@
-Require Import Logic.
+Require Import ProofMode.
 Require Import Coqlib.
 Require Import STS.
 Require Import Behavior.

@@ -17,7 +17,7 @@ From ExtLib Require Import
      Structures.Maps
      Data.Map.FMapAList.
 
-Require Import HTactics ProofMode Invariant TODOYJ.
+Require Import HTactics ProofMode Invariant.
 
 Set Implicit Arguments.
 

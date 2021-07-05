@@ -274,20 +274,20 @@ Section LINK.
   Qed.
 
   (* check external fun decls' sig *)
-  Fixpoint __link_imp_cond2 (p : string * nat) (l : extFuns) :=
+  Fixpoint _link_imp_cond2' (p : string * nat) (l : extFuns) :=
     let '(id, n) := p in
     match l with
     | [] => true
     | (id2, n2) :: t =>
       if (eqb id id2 && negb (n =? n2)%nat) then false
-      else __link_imp_cond2 p t
+      else _link_imp_cond2' p t
     end
   .
 
-  Lemma __link_imp_cond2_prop :
+  Lemma _link_imp_cond2'_prop :
     forall p (l : list (string * nat))
-      (__LIC3: __link_imp_cond2 p l = true),
-      <<__LIC3: forall a, ((In a l) /\ (fst a = fst p)) -> (snd a = snd p)>>.
+      (_LIC2': _link_imp_cond2' p l = true),
+      <<_LIC2: forall a, ((In a l) /\ (fst a = fst p)) -> (snd a = snd p)>>.
   Proof.
     i. red. depgen p. depgen l. clear. induction l; ii; ss; clarify.
     { des. clarify. }
@@ -296,21 +296,21 @@ Section LINK.
       { rewrite eqb_refl in Heq. clarify. }
       rewrite Nat.eqb_eq in Heq. ss. }
     destruct p. destruct a0. ss; clarify. destruct a. ss; clarify. des_ifs. bsimpl. des.
-    { set (k0:=(s, n0)) in *. set (k:=(s, n)) in *. eapply IHl in __LIC3.
-      { instantiate (1:=k0) in __LIC3. subst k; subst k0; ss; clarify. }
+    { set (k0:=(s, n0)) in *. set (k:=(s, n)) in *. eapply IHl in _LIC2'.
+      { instantiate (1:=k0) in _LIC2'. subst k; subst k0; ss; clarify. }
       split; auto. }
-    rewrite Nat.eqb_eq in Heq. clarify. eapply IHl in __LIC3.
-    { instantiate (1:= (s, n0)) in __LIC3. ss; clarify. }
+    rewrite Nat.eqb_eq in Heq. clarify. eapply IHl in _LIC2'.
+    { instantiate (1:= (s, n0)) in _LIC2'. ss; clarify. }
     split; ss; eauto.
   Qed.
 
-  Lemma __link_imp_cond2_prop_perm :
+  Lemma _link_imp_cond2'_prop_perm :
     forall p (l1 l2 : list (string * nat))
       (PERM: Permutation l1 l2)
-      (__LIC3: __link_imp_cond2 p l1 = true),
-      <<_LIC3: __link_imp_cond2 p l2 = true>>.
+      (_LIC2': _link_imp_cond2' p l1 = true),
+      <<_LIC2: _link_imp_cond2' p l2 = true>>.
   Proof.
-    i. red. depgen PERM. depgen __LIC3. clear. i. depgen p. induction PERM; i; ss; clarify.
+    i. red. depgen PERM. depgen _LIC2'. clear. i. depgen p. induction PERM; i; ss; clarify.
     - destruct p; ss; clarify. destruct x; ss; clarify. des_ifs. eauto.
     - destruct p; ss; clarify. destruct x; ss; clarify. destruct y; ss; clarify. des_ifs.
     - eauto.
@@ -320,7 +320,7 @@ Section LINK.
     match l with
     | [] => true
     | h :: t =>
-      if (__link_imp_cond2 h t) then _link_imp_cond2 t
+      if (_link_imp_cond2' h t) then _link_imp_cond2 t
       else false
     end
   .
@@ -333,8 +333,8 @@ Section LINK.
     i. red. depgen l. clear. induction l; i; ss; clarify.
     { des; clarify. }
     des; ss; clarify.
-    - des_ifs. eapply __link_imp_cond2_prop in Heq. eapply Heq; eauto.
-    - des_ifs. eapply __link_imp_cond2_prop in Heq. sym; eapply Heq; eauto.
+    - des_ifs. eapply _link_imp_cond2'_prop in Heq. eapply Heq; eauto.
+    - des_ifs. eapply _link_imp_cond2'_prop in Heq. sym; eapply Heq; eauto.
     - des_ifs. assert (TRUE: true = true); auto.
   Qed.
 
@@ -347,7 +347,7 @@ Section LINK.
     i. red. clear src1 src2. depgen _LIC3. induction PERM; i; ss; clarify.
     - des_ifs.
       + eauto.
-      + hexploit __link_imp_cond2_prop_perm; eauto.
+      + hexploit _link_imp_cond2'_prop_perm; eauto.
     - destruct x; destruct y; ss; clarify. des_ifs. bsimpl. des.
       + rewrite eqb_eq in Heq0. rewrite eqb_neq in Heq3. clarify.
       + rewrite Nat.eqb_eq in Heq3. rewrite Nat.eqb_neq in Heq4. clarify.

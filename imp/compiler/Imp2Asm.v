@@ -2,6 +2,7 @@ Require Import Coqlib.
 Require Import ImpPrelude.
 Require Import Imp.
 Require Import Imp2Csharpminor.
+Require Import Csharpminor2Asm.
 
 From compcert Require Import Ctypes Errors Compiler.
 
@@ -16,11 +17,6 @@ Section ASMGEN.
     | h :: t => Tcons h (list_type_to_typelist t)
     end
   .
-
-  Definition transf_csharpminor_program (p: Csharpminor.program) : res Asm.program :=
-    OK p
-       @@@ time "Cminor generation" Cminorgen.transl_program
-       @@@ transf_cminor_program.
 
   Context `{builtins: builtinsTy}.
 

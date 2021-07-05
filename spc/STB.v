@@ -5,7 +5,7 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
-Require Import Logic.
+Require Import ProofMode.
 
 Set Implicit Arguments.
 
