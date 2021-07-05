@@ -7,9 +7,7 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
-(* Require Import TODOYJ. *)
 Require Import ProofMode.
-(* Require Import Mem0 MemOpen. *)
 Require Import HoareDef Hoare.
 Require Import OpenDef.
 Require Import IRed.

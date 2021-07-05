@@ -619,3 +619,13 @@ Ltac resub :=
 
 Definition resum_ktr A E F `{E -< F}: ktree E A ~> ktree F A := fun _ ktr a => resum_itr (ktr a).
 Definition trivial_Handler `{E -< F}: Handler E F := fun T X => trigger X.
+
+Lemma observe_eta E R (itr0 itr1: itree E R)
+      (EQ: _observe itr0 = _observe itr1)
+  :
+    itr0 = itr1.
+Proof.
+  erewrite (itree_eta_ itr0).
+  erewrite (itree_eta_ itr1).
+  f_equal. auto.
+Qed.

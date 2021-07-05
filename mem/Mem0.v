@@ -6,7 +6,6 @@ Require Import Behavior.
 Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
-(* Require Import TODOYJ. *)
 
 Set Implicit Arguments.
 Set Typeclasses Depth 5.
@@ -14,11 +13,6 @@ Set Typeclasses Depth 5.
 
 
 
-
-(*** TODO: Move to universe.v ***)
-Definition mem_pad (m0: Mem.t) (delta: nat): Mem.t :=
-  Mem.mk m0.(Mem.cnts) (m0.(Mem.nb) + delta)
-.
 
 Section PROOF.
   Let memRA: URA.t := (RA.excl Mem.t).
@@ -39,7 +33,7 @@ Section PROOF.
         `sz: Z <- (pargs [Tint] varg)?;;
         if (Z_le_gt_dec 0 sz && Z_lt_ge_dec (8 * sz) modulus_64)
         then (delta <- trigger (Choose _);;
-              let m0': Mem.t := mem_pad m0 delta in
+              let m0': Mem.t := Mem.mem_pad m0 delta in
               let (blk, m1) := Mem.alloc m0' sz in
               trigger (PPut m1↑);;;
               Ret (Vptr blk 0))

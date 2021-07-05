@@ -194,6 +194,10 @@ Module Mem.
       (List.length sk)
   .
 
+  Definition mem_pad (m0: Mem.t) (delta: nat): Mem.t :=
+    Mem.mk m0.(Mem.cnts) (m0.(Mem.nb) + delta)
+  .
+
 End Mem.
 
 Definition vcmp (m0: Mem.t) (x y: val): option bool :=

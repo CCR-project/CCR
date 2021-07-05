@@ -14,15 +14,6 @@ Set Implicit Arguments.
 Notation gname := string (only parsing). (*** convention: not capitalized ***)
 Notation mname := string (only parsing). (*** convention: capitalized ***)
 
-(* TODO: move it to Coqlib *)
-Lemma nodup_comm A (l0 l1: list A)
-      (NODUP: NoDup (l0 ++ l1))
-  :
-    NoDup (l1 ++ l0).
-Proof.
-  eapply Permutation_NoDup; [|et].
-  eapply Permutation_app_comm.
-Qed.
 
 Section EVENTSCOMMON.
 

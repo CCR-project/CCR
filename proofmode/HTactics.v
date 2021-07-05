@@ -798,7 +798,6 @@ Section TEST.
 
 End TEST.
 
-(* Require Import TODOYJ. *)
 
 Ltac astep_full _fn _args _next _n1 :=
   eapply (@APC_step_clo _ _ _fn _args _next _n1);

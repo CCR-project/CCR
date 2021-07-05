@@ -20,6 +20,7 @@ Require Export List.
 Require Export ClassicalDescription.
 Require Export Program.
 Require Export Morphisms.
+Require Import Sorting.Permutation.
 
 Set Implicit Arguments.
 
@@ -1118,6 +1119,35 @@ Proof.
       exploit IHxs; et. i; des.
       rewrite snoc_length in *. destruct lt; ss. rewrite Nat.sub_0_r in *; ss.
   }
+Qed.
+
+(* TODO: Coqlib? *)
+Lemma nodup_app_l A (l0 l1: list A)
+      (ND: NoDup (l0 ++ l1))
+  :
+    NoDup l0.
+Proof.
+  induction l0.
+  { econs. }
+  ss. inv ND. econs; et.
+  ii. eapply H1. eapply List.in_or_app. auto.
+Qed.
+
+Lemma nodup_app_r A (l0 l1: list A)
+      (ND: NoDup (l0 ++ l1))
+  :
+    NoDup l1.
+Proof.
+  induction l0; ss. inv ND. auto.
+Qed.
+
+Lemma nodup_comm A (l0 l1: list A)
+      (NODUP: NoDup (l0 ++ l1))
+  :
+    NoDup (l1 ++ l0).
+Proof.
+  eapply Permutation_NoDup; [|et].
+  eapply Permutation_app_comm.
 Qed.
 
 Lemma NoDup_snoc

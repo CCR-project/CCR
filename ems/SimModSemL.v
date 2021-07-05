@@ -16,7 +16,6 @@ From ExtLib Require Import
      Structures.Maps
      Data.Map.FMapAList.
 Require Import Any.
-(* Require Import TODOYJ. *)
 
 From Ordinal Require Import Ordinal Arithmetic.
 
@@ -848,25 +847,6 @@ Section ADD.
     * econs 19; eauto.
   Qed.
 
-  (* TODO: Coqlib? *)
-  Lemma nodup_app_l A (l0 l1: list A)
-        (ND: NoDup (l0 ++ l1))
-    :
-      NoDup l0.
-  Proof.
-    induction l0.
-    { econs. }
-    ss. inv ND. econs; et.
-    ii. eapply H1. eapply List.in_or_app. auto.
-  Qed.
-
-  Lemma nodup_app_r A (l0 l1: list A)
-        (ND: NoDup (l0 ++ l1))
-    :
-      NoDup l1.
-  Proof.
-    induction l0; ss. inv ND. auto.
-  Qed.
 
   Lemma add_modsempair (ms_src0 ms_src1 ms_tgt0 ms_tgt1: ModSemL.t)
         (SIM0: sim ms_src0 ms_tgt0)

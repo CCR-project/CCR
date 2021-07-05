@@ -7,7 +7,6 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef STB.
-(* Require Import TODOYJ. *)
 Require Import ProofMode.
 
 Set Implicit Arguments.
