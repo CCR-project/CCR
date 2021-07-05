@@ -76,6 +76,26 @@ Section HEADER.
     ii. eapply H0, H, FIND.
   Qed.
 
+  Lemma incl_to_stb stb0 stb1 (INCL: List.incl stb0 stb1)
+        (NODUP: NoDup (List.map fst stb1))
+    :
+      stb_incl (to_stb stb0) (to_stb stb1).
+  Proof.
+    unfold to_stb. ii.
+    eapply alist_find_some in FIND. eapply INCL in FIND.
+    eapply alist_find_some_iff in FIND; et.
+  Qed.
+
+  Lemma incl_to_closed_stb stb0 stb1 (INCL: List.incl stb0 stb1)
+        (NODUP: NoDup (List.map fst stb1))
+    :
+      stb_incl (to_stb stb0) (to_closed_stb stb1).
+  Proof.
+    unfold to_stb, to_closed_stb. ii.
+    eapply alist_find_some in FIND. eapply INCL in FIND.
+    eapply alist_find_some_iff in FIND; et.
+    rewrite FIND. et.
+  Qed.
 
   Variable skenv: SkEnv.t.
 

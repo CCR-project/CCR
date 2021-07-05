@@ -2051,10 +2051,19 @@ Hint Rewrite (Seal.sealing_eq "stb"): stb.
 Definition to_stb`{Σ: GRA.t} (l: alist gname fspec): gname -> option fspec :=
   fun fn => alist_find fn l.
 
+Definition to_closed_stb`{Σ: GRA.t} (l: alist gname fspec): gname -> option fspec :=
+  fun fn => match alist_find fn l with
+            | Some fsp => Some fsp
+            | _ => Some fspec_trivial
+            end.
+
 Ltac stb_tac :=
   match goal with
   | [ |- to_stb ?xs _ = _ ] =>
     unfold to_stb;
+    autounfold with stb; autorewrite with stb; simpl
+  | [ |- to_closed_stb ?xs _ = _ ] =>
+    unfold to_closed_stb;
     autounfold with stb; autorewrite with stb; simpl
   | [ |- alist_find _ ?xs = _ ] =>
     match type of xs with
@@ -2068,6 +2077,9 @@ Ltac stb_tac :=
     end
   | [H: to_stb ?xs _ = _ |- _ ] =>
     unfold to_stb in H;
+    autounfold with stb in H; autorewrite with stb in H; simpl in H
+  | [H: to_closed_stb ?xs _ = _ |- _ ] =>
+    unfold to_closed_stb in H;
     autounfold with stb in H; autorewrite with stb in H; simpl in H
   end.
 

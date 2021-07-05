@@ -216,6 +216,7 @@ Module AUX.
 End AUX.
 Import AUX.
 Section MODAUX.
+  Context {CONF: EMSConfig}.
   Context `{Σ: GRA.t}.
 
   Definition addtau_ms (ms: ModSem.t): ModSem.t := {|
@@ -342,6 +343,7 @@ End MODAUX.
 
 Module Massage.
 Section MASSAGE.
+  Context {CONF: EMSConfig}.
   Context `{Σ: GRA.t}.
   (* Variant frE: Type -> Type := *)
   (* | FPut' (fr0: Σ): frE unit *)
@@ -584,6 +586,7 @@ Require Import HTactics ProofMode.
 
 
 Section ADQ.
+  Context {CONF: EMSConfig}.
   Context `{Σ: GRA.t}.
   Variable _kmds: list KMod.t.
   Let frds: Sk.t -> list mname := fun sk => (map (KModSem.mn ∘ (flip KMod.get_modsem sk)) _kmds).
@@ -970,7 +973,6 @@ admit "alist find".
     rewrite my_lemma2_initial_mrs. auto.
   Qed.
 
-  Context {CONF: EMSConfig}.
   Definition midConf: EMSConfig := {| finalize := finalize; initial_arg := Any.pair true↑ initial_arg |}.
 
   Lemma my_lemma2:
@@ -1212,6 +1214,7 @@ End ADQ.
 Require Import HTactics.
 
 Section ADQ.
+  Context {CONF: EMSConfig}.
   Context `{Σ: GRA.t}.
   Variable _kmds: list KMod.t.
 
@@ -1522,6 +1525,8 @@ End ADQ.
 
 
 Section ADQ.
+  Context {CONF: EMSConfig}.
+
   Context `{Σ: GRA.t}.
   Variable _kmds: list KMod.t.
 
@@ -1532,14 +1537,22 @@ Section ADQ.
   Let _gstb: Sk.t -> list (gname * fspec) := fun ske =>
     (flat_map (List.map (map_snd ksb_fspec) ∘ KModSem.fnsems) (_kmss ske)).
 
-  (* TODO: define this *)
   Let _stb: Sk.t -> gname -> option fspec :=
-    fun sk fn => match alist_find fn (_gstb sk) with
-                 | Some fsp => Some fsp
-                 | _ => Some fspec_trivial
-                 end.
+    fun sk => to_closed_stb (_gstb sk).
 
   Let kmds: list Mod.t := List.map (KMod.transl_tgt _stb) _kmds.
+
+  Hypothesis MAINM:
+    forall sk,
+    exists (entry_r: Σ),
+      (<<WFR: URA.wf (entry_r ⋅ fold_left (⋅) (List.map KModSem.initial_mr (_kmss sk)) ε)>>) /\
+      (<<MAIN: forall (main_fsp: fspec)
+                      (MAIN: alist_find "main" (_gstb sk) = Some main_fsp),
+          exists (x: main_fsp.(meta)),
+            (<<PRE: main_fsp.(precond) None x initial_arg initial_arg ord_top entry_r>>) /\
+            (<<RET: forall ret_src ret_tgt r
+                           (POST: main_fsp.(postcond) None x ret_src ret_tgt r),
+                ret_src = ret_tgt>>)>>).
 
   Theorem adequacy_open:
     refines (Mod.add_list kmds)
@@ -1548,5 +1561,12 @@ Section ADQ.
     etrans.
     { eapply adequacy_open_aux2. }
     { eapply adequacy_open_aux1. }
+  Qed.
+
+  Theorem adequacy_open2:
+    refines2 kmds
+             (List.map (KMod.transl_src frds) _kmds).
+  Proof.
+    eapply adequacy_open.
   Qed.
 End ADQ.
