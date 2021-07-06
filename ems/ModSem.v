@@ -1351,6 +1351,35 @@ ctx (a1 b1)
      i. ss.
    Qed.
 
+   Lemma refines2_eq (mds0 mds1: list Mod.t)
+     :
+       refines2 mds0 mds1 <-> refines (Mod.add_list mds0) (Mod.add_list mds1).
+   Proof.
+     split.
+     { ii. eapply H. auto. }
+     { ii. eapply H. auto. }
+   Qed.
+
+   Lemma refines2_app mhd0 mhd1 mtl0 mtl1
+         (HD: refines2 mhd0 mhd1)
+         (TL: refines2 mtl0 mtl1)
+     :
+       refines2 (mhd0++mtl0) (mhd1++mtl1).
+   Proof.
+     eapply refines2_eq. rewrite ! Mod.add_list_app. etrans.
+     { eapply refines_proper_l. eapply refines2_eq. et. }
+     { eapply refines_proper_r. eapply refines2_eq. et. }
+   Qed.
+
+   Lemma refines2_cons mhd0 mhd1 mtl0 mtl1
+         (HD: refines2 [mhd0] [mhd1])
+         (TL: refines2 mtl0 mtl1)
+     :
+       refines2 (mhd0::mtl0) (mhd1::mtl1).
+   Proof.
+     eapply (refines2_app HD TL).
+   Qed.
+
    End CONF.
 
 
