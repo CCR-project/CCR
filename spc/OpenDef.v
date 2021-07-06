@@ -421,6 +421,11 @@ Section KMOD.
                                            (transl_tgt stb md).(Mod.get_modsem) sk.
   Proof. i. refl. Qed.
 
+  Definition transl_tgt_list (mds: list t): list Mod.t :=
+    map (transl_tgt (to_closed_stb ∘ get_stb mds)) mds.
+
+  Definition transl_src_list (mds: list t): list Mod.t :=
+    map (transl_src (get_frds mds)) mds.
 End KMOD.
 End KMod.
 

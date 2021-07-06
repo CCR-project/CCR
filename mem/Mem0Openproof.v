@@ -234,10 +234,9 @@ Proof Outline
 
   (* Ltac mRefresh := on_current ltac:(fun H => move H at bottom). *)
 
-  Variable sk: Sk.t.
-
-  Theorem correct: ModSemPair.sim (MemOpen.MemSem (to_stb []) sk) (Mem0.MemSem sk).
+  Theorem correct stb: ModPair.sim (MemOpen.Mem stb) (Mem0.Mem).
   Proof.
+    econs; ss. i.
    econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
    { ss. }
    { esplits. ss. econs; ss. eapply to_semantic.

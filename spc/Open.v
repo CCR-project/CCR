@@ -1504,25 +1504,14 @@ Section ADQ.
   Context {CONF: EMSConfig}.
 
   Context `{Σ: GRA.t}.
-  Variable _kmds: list KMod.t.
-
-  Let frds: Sk.t -> list mname := KMod.get_frds _kmds.
-
-  Let _kmss: Sk.t -> list KModSem.t := fun ske => map (flip KMod.get_modsem ske) _kmds.
-
-  Let _gstb: Sk.t -> list (gname * fspec) := KMod.get_stb _kmds.
-
-  Let _stb: Sk.t -> gname -> option fspec :=
-    fun sk => to_closed_stb (_gstb sk).
-
-  Let kmds: list Mod.t := List.map (KMod.transl_tgt _stb) _kmds.
+  Variable kmds: list KMod.t.
 
   Hypothesis MAINM:
     forall sk,
     exists (entry_r: Σ),
-      (<<WFR: URA.wf (entry_r ⋅ KMod.get_initial_mrs _kmds sk)>>) /\
+      (<<WFR: URA.wf (entry_r ⋅ KMod.get_initial_mrs kmds sk)>>) /\
       (<<MAIN: forall (main_fsp: fspec)
-                      (MAIN: alist_find "main" (_gstb sk) = Some main_fsp),
+                      (MAIN: alist_find "main" (KMod.get_stb kmds sk) = Some main_fsp),
           exists (x: main_fsp.(meta)),
             (<<PRE: main_fsp.(precond) None x initial_arg initial_arg ord_top entry_r>>) /\
             (<<RET: forall ret_src ret_tgt r
@@ -1530,8 +1519,8 @@ Section ADQ.
                 ret_src = ret_tgt>>)>>).
 
   Theorem adequacy_open:
-    refines (Mod.add_list kmds)
-            (Mod.add_list (List.map (KMod.transl_src frds) _kmds)).
+    refines2 (KMod.transl_tgt_list kmds)
+             (KMod.transl_src_list kmds).
   Proof.
     etrans.
     { eapply adequacy_open_aux2. }
@@ -1550,9 +1539,10 @@ Section WEAKEN.
           md
           (WEAK: forall sk, stb_weaker (stb0 sk) (stb1 sk))
     :
-      <<SIM: ModPair.sim (KMod.transl_tgt stb1 md) (KMod.transl_tgt stb0 md)>>
+      refines2 [KMod.transl_tgt stb0 md] [KMod.transl_tgt stb1 md]
   .
   Proof.
+    eapply adequacy_local2.
     econs; cycle 1.
     { unfold KMod.transl_tgt. cbn. eauto. }
     i. specialize (WEAK sk). r. econs.

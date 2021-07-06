@@ -45,8 +45,9 @@ Section SIMMODSEM.
   .
 
   Theorem correct:
-    forall ge, ModSemPair.sim NewEchoMain0.MainSem (NewEchoMainImp.EchoMainSem ge).
+    ModPair.sim NewEchoMain0.Main (NewEchoMainImp.EchoMain).
   Proof.
+    econs; ss. i.
     econstructor 1 with (wf:=wf) (le:=top2); et; ss.
     econs; ss.
     { init.

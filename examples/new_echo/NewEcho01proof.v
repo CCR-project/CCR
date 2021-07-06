@@ -48,7 +48,7 @@ Section SIMMODSEM.
   Hint Unfold ClientStb: stb.
 
   Variable global_stb: gname -> option fspec.
-  Hypothesis STBINCL: stb_incl (to_stb (ClientStb ++ EchoStb ++ StackStb)) global_stb.
+  Hypothesis STBINCL: stb_incl (to_stb (EchoStb ++ StackStb)) global_stb.
 
   Ltac renamer := idtac.
   Ltac post_call :=
@@ -154,6 +154,7 @@ Section SIMMODSEM.
   Qed.
 
 End SIMMODSEM.
+Hint Unfold ClientStb: stb.
 
 
 

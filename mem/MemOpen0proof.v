@@ -33,11 +33,9 @@ Section SIMMODSEM.
   Let wf: _ -> W -> Prop :=
     fun (_: unit) '(mem_src0, mem_tgt0) => mem_src0 = mem_tgt0.
 
-  Variable sk: Sk.t.
-  Variable frds: list mname.
-
-  Theorem correct: ModSemPair.sim (Mem0.MemSem sk) (KModSem.transl_src frds (MemOpen.KMemSem sk)).
+  Theorem correct frds: ModPair.sim (Mem0.Mem) (KMod.transl_src frds (MemOpen.KMem )).
   Proof.
+    econs;ss. i.
    econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
     { ss. }
     { esplits. ss. }

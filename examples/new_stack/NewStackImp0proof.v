@@ -44,8 +44,9 @@ Section SIMMODSEM.
   .
 
   Theorem correct:
-    forall ge, ModSemPair.sim NewStack0.StackSem (NewStackImp.StackSem ge).
+    ModPair.sim NewStack0.Stack (NewStackImp.Stack).
   Proof.
+    econs; ss. i.
     econstructor 1 with (wf:=wf) (le:=top2); et; ss.
     econs; ss.
     { init.
