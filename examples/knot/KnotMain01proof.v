@@ -34,9 +34,9 @@ Section SIMMODSEM.
 
   Let W: Type := Any.t * Any.t.
 
-  Variable RecStb: SkEnv.t -> gname -> option fspec.
-  Variable FunStb: SkEnv.t -> gname -> option fspec.
-  Variable GlobalStb: SkEnv.t -> gname -> option fspec.
+  Variable RecStb: Sk.t -> gname -> option fspec.
+  Variable FunStb: Sk.t -> gname -> option fspec.
+  Variable GlobalStb: Sk.t -> gname -> option fspec.
 
   Let wf: _ -> W -> Prop :=
     @mk_wf
@@ -44,14 +44,14 @@ Section SIMMODSEM.
       (fun _ _ _=> True%I)
   .
 
-  Hypothesis RecStb_incl: forall skenv,
-      stb_incl (RecStb skenv) (GlobalStb skenv).
+  Hypothesis RecStb_incl: forall sk,
+      stb_incl (RecStb sk) (GlobalStb sk).
 
-  Hypothesis FunStb_fib: forall skenv,
-      fn_has_spec (FunStb skenv) "fib" (fib_spec RecStb skenv).
+  Hypothesis FunStb_fib: forall sk,
+      fn_has_spec (FunStb sk) "fib" (fib_spec RecStb sk).
 
-  Hypotheses GlobalStb_knot: forall skenv,
-      fn_has_spec (GlobalStb skenv) "knot" (knot_spec RecStb FunStb skenv).
+  Hypotheses GlobalStb_knot: forall sk,
+      fn_has_spec (GlobalStb sk) "knot" (knot_spec RecStb FunStb sk).
 
   Theorem correct: ModPair.sim (KnotMain1.Main RecStb GlobalStb) KnotMain0.Main.
   Proof.

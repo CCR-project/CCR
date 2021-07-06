@@ -8,8 +8,9 @@ Require Import Skeleton.
 Require Import PCM.
 Require Import Hoare.
 Require Import STB KnotHeader SimModSem.
-Require Import KnotMain0 KnotMain1 Knot0 Knot1 Mem0 Mem1.
-Require Import KnotMain01proof Knot01proof Mem01proof.
+Require Import KnotMainImp KnotMain0 KnotMain1 KnotImp Knot0 Knot1 Mem0 Mem1.
+Require Import KnotMainImp0proof KnotImp0proof KnotMain01proof Knot01proof Mem01proof.
+Require Import ProofMode.
 
 Require Import HTactics Invariant.
 
@@ -41,41 +42,23 @@ Section PROOF.
   Qed.
   Local Existing Instance memRA_inG.
 
-  Let RecStb: SkEnv.t -> gname -> option fspec :=
-    fun skenv => to_stb KnotRecStb.
+  Let RecStb: Sk.t -> gname -> option fspec :=
+    fun sk => to_stb KnotRecStb.
   Hint Unfold RecStb: stb.
 
-  Let FunStb: SkEnv.t -> gname -> option fspec :=
-    fun skenv => to_stb (MainFunStb RecStb skenv).
-  Hint Unfold RecStb: stb.
+  Let FunStb: Sk.t -> gname -> option fspec :=
+    fun sk => to_stb (MainFunStb RecStb sk).
+  Hint Unfold FunStb: stb.
 
   Let smds := [SMain RecStb; SKnot RecStb FunStb; SMem].
+  Let GlobalStb := fun sk => to_stb (SMod.get_stb smds sk).
 
-  Let stb
-
+  Definition KnotAllImp: list Mod.t := [KnotMainImp.KnotMain; KnotImp.Knot; Mem0.Mem].
   Definition KnotAll0: list Mod.t := [KnotMain0.Main; Knot0.Knot; Mem0.Mem].
-
   Definition KnotAll1: list Mod.t := List.map (SMod.to_tgt GlobalStb) smds.
+  Definition KnotAll2: list Mod.t := List.map SMod.to_src smds.
 
-[SMain RecStb; SKnot RecStb FunStb; SMem].
-
-  Definition KnotAll2: list Mod.t :=
-    List.map SMod.to_src [SMain RecStb; SKnot RecStb FunStb; SMem].
-
-
-  Let stb := fun skenv =>
-
-  Let GlobalStb: SkEnv.t -> gname -> option fspec :=
-    fun skenv => to_stb ((MainStb RecStb skenv) ++ (KnotStb RecStb FunStb skenv) ++ MemStb).
-  Hint Unfold RecStb: stb.
-
-  Definition KnotAll0: list Mod.t := [KnotMain0.Main; Knot0.Knot; Mem0.Mem].
-
-  Definition KnotAll1: list Mod.t :=
-    List.map (SMod.to_tgt GlobalStb) [SMain RecStb; SKnot RecStb FunStb; SMem].
-
-  Definition KnotAll2: list Mod.t :=
-    List.map SMod.to_src [SMain RecStb; SKnot RecStb FunStb; SMem].
+  Hint Unfold GlobalStb: stb.
 
   Ltac stb_incl_tac :=
     i; eapply incl_to_stb;
@@ -107,27 +90,28 @@ Section PROOF.
     refines_closed (Mod.add_list KnotAll1) (Mod.add_list KnotAll2).
   Proof.
     eapply adequacy_type.
-    {
-
-
-with (stb:=fun _ => GlobalStb); et.
-
-
-
-  Lemma Knot_correct:
-    refines_closed KnotAll0 KnotAll1.
-  Proof.
-    eapply adequacy_local_list. econs; [|econs; [|econs; ss]].
-    - eapply KnotMain01proof.correct with (RecStb0:=RecStb) (FunStb0:=FunStb) (GlobalStb0:=GlobalStb).
-      + stb_incl_tac.
-      + ii. econs; ss. refl.
-      + ii. econs; ss. refl.
-    - eapply Knot01proof.correct with (RecStb0:=RecStb) (FunStb0:=FunStb) (GlobalStb0:=GlobalStb).
-      + stb_incl_tac.
-      + stb_incl_tac.
-      + stb_incl_tac; ors_tac.
-    - eapply Mem01proof.correct.
+    { instantiate (1:=GRA.embed inv_token ⋅ GRA.embed (Auth.white (Some None: Excl.t (option (nat -> nat))): knotRA)).
+      unfold SMod.get_initial_mrs. simpl. admit "".
+    }
+    { i. ss. clarify. ss. exists id. splits; auto.
+      { iIntros "[H0 H1]". iFrame. iSplits; ss. }
+      { i. iPureIntro. i. des; auto. }
+    }
   Qed.
 
+  Theorem Knot_correct:
+    refines_closed (Mod.add_list KnotAllImp) (Mod.add_list KnotAll2).
+  Proof.
+    transitivity (Mod.add_list KnotAll0).
+    { eapply refines_close. eapply refines2_pairwise. econs; simpl.
+      { eapply adequacy_local2. eapply KnotMainImp0proof.correct. }
+      econs; simpl.
+      { eapply adequacy_local2. eapply KnotImp0proof.correct. }
+      econs; ss.
+    }
+    etrans.
+    { eapply refines_close. eapply KnotAll01_correct. }
+    { eapply KnotAll12_correct. }
+  Qed.
 
 End PROOF.

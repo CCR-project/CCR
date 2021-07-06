@@ -1511,3 +1511,37 @@ Qed.
 Definition or_else X (ox: option X) (d: X) := match ox with | Some x => x | None => d end.
 
 Lemma map_or_else_id: forall X ox (d: X), map_or_else ox id d = or_else ox d. refl. Qed.
+
+Lemma flat_map_map A B C (f: A -> B) (g: B -> list C) (l: list A)
+  :
+    flat_map g (map f l) = flat_map (g ∘ f) l.
+Proof.
+  induction l; ss. f_equal; auto.
+Qed.
+
+Lemma fold_right_app_flat_map A B (f: A -> list B) l
+  :
+    flat_map f l
+    =
+    fold_right (@app _) [] (List.map f l).
+Proof.
+  induction l; ss. f_equal. auto.
+Qed.
+
+Lemma map_flat_map A B C (f: A -> list B) (g: B -> C) (l: list A)
+  :
+    List.map g (flat_map f l)
+    =
+    flat_map (List.map g) (List.map f l).
+Proof.
+  induction l; ss. rewrite List.map_app. f_equal; auto.
+Qed.
+
+Lemma flat_map_single A B (f: A -> B) (l: list A)
+  :
+    flat_map (fun a => [f a]) l
+    =
+    List.map f l.
+Proof.
+  induction l; ss.
+Qed.

@@ -560,7 +560,13 @@ Section SMOD.
     transl (fun sk mn => fun_to_tgt mn (stb sk)) (fun ms => Any.pair ms.(SModSem.initial_st) ms.(SModSem.initial_mr)↑) md.
 
   Definition get_stb (mds: list t): Sk.t -> alist gname fspec :=
-    fun sk => map map_snd fsb_fspec (flat_map (fun md => (md.(get_modsem) sk).(SModSem.fnsems)) mds).
+    fun sk => map (map_snd fsb_fspec) (flat_map (fun md => (md.(get_modsem) sk).(SModSem.fnsems)) mds).
+
+  Definition get_sk (mds: list t): Sk.t :=
+    Sk.sort (fold_right Sk.add Sk.unit (List.map sk mds)).
+
+  Definition get_initial_mrs (mds: list t): Sk.t -> Σ :=
+    fun sk => fold_left (⋅) (List.map (SModSem.initial_mr ∘ (flip get_modsem sk)) mds) ε.
 
 
   (* Definition transl (tr: SModSem.t -> ModSem.t) (md: t): Mod.t := {| *)

@@ -75,40 +75,40 @@ Section SIMMODSEM.
 
   Let W: Type := Any.t * Any.t.
 
-  Variable RecStb: SkEnv.t -> gname -> option fspec.
-  Variable FunStb: SkEnv.t -> gname -> option fspec.
-  Variable GlobalStb: SkEnv.t -> gname -> option fspec.
+  Variable RecStb: Sk.t -> gname -> option fspec.
+  Variable FunStb: Sk.t -> gname -> option fspec.
+  Variable GlobalStb: Sk.t -> gname -> option fspec.
 
-  Definition inv (skenv: SkEnv.t): iProp :=
+  Definition inv (sk: Sk.t): iProp :=
     (∃ (f': option (nat -> nat)) (fb': val),
         (⌜forall f (EQ: f' = Some f),
               exists fb,
                 (<<BLK: fb' = Vptr fb 0>>) /\
-                (<<FN: fb_has_spec skenv (FunStb skenv) fb (fun_gen RecStb skenv f)>>)⌝)
+                (<<FN: fb_has_spec sk (FunStb sk) fb (fun_gen RecStb sk f)>>)⌝)
           ** (OwnM (knot_full f'))
-          ** (OwnM (var_points_to skenv "_f" fb')))%I.
+          ** (OwnM (var_points_to sk "_f" fb')))%I.
 
-  Let wf (skenv: SkEnv.t): _ -> W -> Prop :=
+  Let wf (sk: Sk.t): _ -> W -> Prop :=
     @inv_wf
       _ _
       unit
-      (fun _ _ _ => inv skenv)
+      (fun _ _ _ => inv sk)
   .
 
-  Hypothesis RecStb_incl: forall skenv,
-      stb_incl (to_stb KnotRecStb) (RecStb skenv).
+  Hypothesis RecStb_incl: forall sk,
+      stb_incl (to_stb KnotRecStb) (RecStb sk).
 
-  Hypothesis FunStb_incl: forall skenv,
-      stb_incl (FunStb skenv) (GlobalStb skenv).
+  Hypothesis FunStb_incl: forall sk,
+      stb_incl (FunStb sk) (GlobalStb sk).
 
-  Variable MemStb_incl: forall skenv,
-      stb_incl (to_stb MemStb) (GlobalStb skenv).
+  Variable MemStb_incl: forall sk,
+      stb_incl (to_stb MemStb) (GlobalStb sk).
 
 
   Theorem correct: ModPair.sim (Knot1.Knot RecStb FunStb GlobalStb) Knot0.Knot.
   Proof.
     econs; ss.
-    i. econstructor 1 with (wf:=wf (Sk.load_skenv sk)) (le:=inv_le top2); et; ss; cycle 2.
+    i. econstructor 1 with (wf:=wf sk) (le:=inv_le top2); et; ss; cycle 2.
     { eexists (inl _). red. econs.
       { eapply to_semantic. ss.
         iIntros "[H0 H1]". unfold inv. iExists None, _. iFrame. iPureIntro. ss. }

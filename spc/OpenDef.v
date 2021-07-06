@@ -379,6 +379,12 @@ Section KMOD.
   }
   .
 
+  Definition get_stb (mds: list t): Sk.t -> alist gname fspec :=
+    fun sk => map (map_snd ksb_fspec) (flat_map (fun md => (md.(get_modsem) sk).(KModSem.fnsems)) mds).
+
+  Definition get_sk (mds: list t): Sk.t :=
+    Sk.sort (fold_right Sk.add Sk.unit (List.map sk mds)).
+
   Definition transl_mid (md: t): SMod.t := {|
     SMod.get_modsem := fun sk => KModSem.transl_mid (md.(get_modsem) sk);
     SMod.sk := md.(sk);
