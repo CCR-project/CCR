@@ -1506,21 +1506,21 @@ Section ADQ.
   Context `{Σ: GRA.t}.
   Variable kmds: list KMod.t.
 
-  Hypothesis MAINM:
-    forall sk,
-    exists (entry_r: Σ),
-      (<<WFR: URA.wf (entry_r ⋅ KMod.get_initial_mrs kmds sk)>>) /\
-      (<<MAIN: forall (main_fsp: fspec)
-                      (MAIN: alist_find "main" (KMod.get_stb kmds sk) = Some main_fsp),
-          exists (x: main_fsp.(meta)),
-            (<<PRE: main_fsp.(precond) None x initial_arg initial_arg ord_top entry_r>>) /\
-            (<<RET: forall ret_src ret_tgt r
-                           (POST: main_fsp.(postcond) None x ret_src ret_tgt r),
-                ret_src = ret_tgt>>)>>).
-
-  Theorem adequacy_open:
-    refines2 (KMod.transl_tgt_list kmds)
-             (KMod.transl_src_list kmds).
+  Theorem adequacy_open
+          (MAINM:
+             forall sk (SKWF: Sk.wf sk) (SKINCL: Sk.incl (KMod.get_sk kmds) sk),
+             exists (entry_r: Σ),
+               (<<WFR: URA.wf (entry_r ⋅ KMod.get_initial_mrs kmds sk)>>) /\
+               (<<MAIN: forall (main_fsp: fspec)
+                               (MAIN: alist_find "main" (KMod.get_stb kmds sk) = Some main_fsp),
+                   exists (x: main_fsp.(meta)),
+                     (<<PRE: main_fsp.(precond) None x initial_arg initial_arg ord_top entry_r>>) /\
+                     (<<RET: forall ret_src ret_tgt r
+                                    (POST: main_fsp.(postcond) None x ret_src ret_tgt r),
+                         ret_src = ret_tgt>>)>>))
+    :
+      refines2 (KMod.transl_tgt_list kmds)
+               (KMod.transl_src_list kmds).
   Proof.
     etrans.
     { eapply adequacy_open_aux2. }

@@ -8,7 +8,7 @@ Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
 Require Export ProofMode.
-Require Import HoareDef.
+Require Import HoareDef STB.
 Require Import Red IRed.
 
 Set Implicit Arguments.

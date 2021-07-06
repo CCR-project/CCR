@@ -127,7 +127,10 @@ Section ECHOSPEC.
       }
       etrans.
       { rewrite Mod.add_list_app. eapply refines_proper_r.
-        eapply adequacy_open. }
+        eapply adequacy_open. i. exists ε. split.
+        { admit "URA wf". }
+        { ii. ss. }
+      }
       pose (kmd1 := [NewStack3A.KStack; KEcho]).
       transitivity (Mod.add_list (Mem0.Mem :: (KMod.transl_tgt_list kmd1) ++ [Main; Client])).
       { rewrite <- Mod.add_list_app. eapply refines2_cons.
@@ -138,14 +141,16 @@ Section ECHOSPEC.
           { eapply adequacy_local2. eapply NewStack23Aproof.correct. }
         }
         eapply refines2_cons.
-        { eapply adequacy_local2. eapply NewEcho01proof.correct. i.
-          autounfold with stb. admit "stb". }
+        { eapply adequacy_local2. eapply NewEcho01proof.correct.
+          stb_context_incl_tac; tauto. }
         refl.
       }
       eapply refines2_cons; [refl|].
       transitivity (KMod.transl_src_list kmd1 ++ [Main; Client]); [|refl].
       eapply refines2_app; [|refl].
-      eapply adequacy_open.
+      eapply adequacy_open. i. exists ε. split.
+      { admit "URA wf". }
+      { ii. ss. }
     Qed.
   End PROOF.
 End ECHOSPEC.

@@ -1180,6 +1180,15 @@ Proof.
   eapply NoDup_snoc; et. rewrite <- in_rev. ss.
 Qed.
 
+Lemma NoDup_app_disjoint A (l0 l1: list A) (NODUP: NoDup (l0 ++ l1))
+  :
+    forall a (IN0: List.In a l0) (IN1: List.In a l1), False.
+Proof.
+  revert NODUP. induction l0; et. i. ss. des; ss.
+  { subst. inv NODUP. eapply H1. eapply in_or_app. auto. }
+  { eapply IHl0; et. inv NODUP. ss. }
+Qed.
+
 Lemma map_ext
       A B
       (f g : A -> B)
