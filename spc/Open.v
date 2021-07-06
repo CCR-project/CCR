@@ -581,10 +581,10 @@ Require Import HTactics ProofMode.
 
 Section ADQ.
   Context {CONF: EMSConfig}.
-  Context `{Σ: GRA.t}
-.
+  Context `{Σ: GRA.t}.
+
   Variable _kmds: list KMod.t.
-  Let frds: Sk.t -> list mname := fun sk => (map (KModSem.mn ∘ (flip KMod.get_modsem sk)) _kmds).
+  Let frds: Sk.t -> list mname := KMod.get_frds _kmds.
   Let _gstb: Sk.t -> list (gname * fspec) := KMod.get_stb _kmds.
   Let _stb: Sk.t -> gname -> option fspec :=
     fun sk fn => match alist_find fn (_gstb sk) with
@@ -1217,7 +1217,7 @@ Section ADQ.
   Context `{Σ: GRA.t}.
   Variable _kmds: list KMod.t.
 
-  Let frds: Sk.t -> list mname := fun sk => (map (KModSem.mn ∘ (flip KMod.get_modsem sk)) _kmds).
+  Let frds: Sk.t -> list mname := KMod.get_frds _kmds.
 
   Let _kmss: Sk.t -> list KModSem.t := fun ske => List.map (flip KMod.get_modsem ske) _kmds.
 
@@ -1506,7 +1506,7 @@ Section ADQ.
   Context `{Σ: GRA.t}.
   Variable _kmds: list KMod.t.
 
-  Let frds: Sk.t -> list mname := fun sk => (map (KModSem.mn ∘ (flip KMod.get_modsem sk)) _kmds).
+  Let frds: Sk.t -> list mname := KMod.get_frds _kmds.
 
   Let _kmss: Sk.t -> list KModSem.t := fun ske => map (flip KMod.get_modsem ske) _kmds.
 
@@ -1520,7 +1520,7 @@ Section ADQ.
   Hypothesis MAINM:
     forall sk,
     exists (entry_r: Σ),
-      (<<WFR: URA.wf (entry_r ⋅ fold_left (⋅) (List.map KModSem.initial_mr (_kmss sk)) ε)>>) /\
+      (<<WFR: URA.wf (entry_r ⋅ KMod.get_initial_mrs _kmds sk)>>) /\
       (<<MAIN: forall (main_fsp: fspec)
                       (MAIN: alist_find "main" (_gstb sk) = Some main_fsp),
           exists (x: main_fsp.(meta)),

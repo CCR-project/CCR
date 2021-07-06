@@ -559,8 +559,9 @@ Section SMOD.
   Definition to_tgt (stb: Sk.t -> gname -> option fspec) (md: t): Mod.t :=
     transl (fun sk mn => fun_to_tgt mn (stb sk)) (fun ms => Any.pair ms.(SModSem.initial_st) ms.(SModSem.initial_mr)↑) md.
 
+
   Definition get_stb (mds: list t): Sk.t -> alist gname fspec :=
-    fun sk => map (map_snd fsb_fspec) (flat_map (fun md => (md.(get_modsem) sk).(SModSem.fnsems)) mds).
+    fun sk => map (map_snd fsb_fspec) (flat_map (SModSem.fnsems ∘ (flip get_modsem sk)) mds).
 
   Definition get_sk (mds: list t): Sk.t :=
     Sk.sort (fold_right Sk.add Sk.unit (List.map sk mds)).
