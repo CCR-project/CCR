@@ -93,13 +93,15 @@ Definition improves2_program (L0: STS.semantics) (L1: Smallstep.semantics) : Pro
                  (<<SIM: match_beh tr_tgt tr_src>>)
 .
 
+Definition improves (L0 L1: STS.semantics): Prop :=
+  Beh.improves (Beh.of_program L0) (Beh.of_program L1)
+.
 
-(* Definition improves2_program (L0: STS.semantics) (L1: Smallstep.semantics) : Prop := *)
-(*   forall tgt_init, (L1.(Smallstep.initial_state) tgt_init) -> (@improves2 L0 L1 L0.(initial_state) tgt_init). *)
-
-
-
-
+Lemma improves_combine: forall (S I: STS.semantics) (A: Smallstep.semantics),
+    improves S I -> improves2_program I A -> improves2_program S A.
+Proof.
+  i. ii. exploit H0; et. i; des. exists tr_src. esplits; et. eapply H; et.
+Qed.
 
 
 
