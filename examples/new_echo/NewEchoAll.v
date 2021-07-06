@@ -8,13 +8,37 @@ Set Implicit Arguments.
 
 
 
+(* Definition _point_wise_wf: *)
+(*   forall (Ml: list URA.t) (x: GRA.of_list Ml) (n: nat), Prop. *)
+(* Proof. *)
+(*   fix IH 1. *)
+
+(* as IH. *)
+
+(* Fixpoint _point_wise_wf (Ml: list URA.t) (x: GRA.of_list MS) (n: nat): Prop := *)
+(*   match Ml with *)
+(*   | [] => True *)
+(*   | Mhd::Mtl => *)
+(*     @URA.wf Mhd (GRA.of_list *)
+
+(*     point_wise_wf Mtl *)
+
+(* Lemma GRA_of_list_point_wise_wf *)
+(*       (MS: list URA.t) (x: GRA.of_list MS) *)
+(*       (forall n, *)
+
+
+(*   : *)
+(*     URA.wf x. *)
+(* Proof. *)
+(* Admitted. *)
 
 Definition EchoGRA: GRA.t := GRA.of_list [Mem1.memRA; stkRA].
 Local Existing Instance EchoGRA.
 
 Instance memRA_inG: @GRA.inG Mem1.memRA EchoGRA.
 Proof.
-  exists 0. ss.
+  exists 0. ss. Show Proof.
 Qed.
 Local Existing Instance memRA_inG.
 
@@ -23,6 +47,7 @@ Proof.
   exists 1. ss.
 Qed.
 Local Existing Instance stkRA_inG.
+
 
 
 (* Imp program *)
@@ -58,6 +83,7 @@ Section ECHOSPEC.
 
   Definition echo_spec_itr := ModSemL.initial_itr (ModL.enclose echo_spec) None.
 End ECHOSPEC.
+
 
 
 Require Import Mem0Openproof MemOpen0proof.
