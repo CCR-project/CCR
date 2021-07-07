@@ -605,6 +605,12 @@ Section ADQ.
   Let gstb: list (gname * fspec) := Eval red in (_gstb sk_link).
   Let _frds: list (option mname) := (None :: (List.map Some (frds sk_link))).
 
+  Hypothesis MNNODUP:
+    forall mn
+           (MIN0: List.In (Some mn) _frds)
+           (MIN1: List.In mn (map (ModSem.mn ∘ flip Mod.get_modsem sk_link) umds)),
+      False.
+
   Lemma add_list_fnsems
         mds ske
     :
@@ -800,6 +806,73 @@ Section ADQ.
   Let prog_mid := Mod.add_list (map (KMod.transl_src frds) _kmds ++ map (SMod.to_src ∘ massage_md false) umds).
   Let prog_tgt := Mod.add_list (map SMod.to_src kmds ++ map (SMod.to_src ∘ massage_md true) umds).
 
+  Lemma option_rel_impl A B (R0 R1: A -> B -> Prop)
+        (LE: R0 <2= R1)
+    :
+      option_rel R0 <2= option_rel R1.
+  Proof.
+    i. inv PR; et.
+  Qed.
+
+  Let stb_find_iff_mid_kmd sk fn:
+    option_rel
+      (fun f0 f1 =>
+         exists mn ksb,
+           f0 = transl_all (T:=_) mn ∘ KModSem.disclose_ksb_src (frds sk) ksb /\
+           f1 = transl_all (T:=_) mn ∘ (fun_to_src (KModSem.disclose_ksb_mid ksb).(fsb_body)) /\
+           List.In mn (frds sk))
+      (alist_find
+         fn
+         (ModSemL.fnsems
+            (ModL.get_modsem (Mod.add_list (map (KMod.transl_src frds) _kmds)) sk)))
+      (alist_find
+         fn
+         (ModSemL.fnsems
+            (ModL.get_modsem
+               (Mod.add_list (map SMod.to_src (map KMod.transl_mid _kmds))) sk))).
+  Proof.
+    unfold frds at 2. generalize frds. i.
+    rewrite ! add_list_fnsems. rewrite ! map_map. rewrite ! flat_map_map. ss.
+    generalize _kmds. i. revert fn. induction _kmds0; ss.
+    i. ss. rewrite ! alist_find_app_o.
+    rewrite ! alist_find_map_snd. uo.
+    change (fun '(fn0, sb) => (fn0: string, fun_to_src (fsb_body sb)))
+      with (map_snd (A:=string) (fun_to_src ∘ fsb_body)).
+    rewrite ! alist_find_map_snd. uo. des_ifs.
+    { econs. esplits; et. }
+    { eapply option_rel_impl; [|eapply IH_kmds0].
+      i. ss. des. esplits; et. }
+  Qed.
+
+  Let stb_find_iff_mid_umd sk fn:
+    option_rel
+      (fun f0 f1 =>
+         exists mn uf,
+           f0 = transl_all (T:=_) mn ∘ (fun_to_src (massage_fsb false uf).(fsb_body)) /\
+           f1 = transl_all (T:=_) mn ∘ (fun_to_src (massage_fsb true uf).(fsb_body)) /\
+           List.In mn (map (ModSem.mn ∘ flip Mod.get_modsem sk) umds))
+      (alist_find
+         fn
+         (ModSemL.fnsems
+            (ModL.get_modsem (Mod.add_list (map (SMod.to_src ∘ massage_md false) umds)) sk)))
+      (alist_find
+         fn
+         (ModSemL.fnsems
+            (ModL.get_modsem
+               (Mod.add_list (map (SMod.to_src ∘ massage_md true) umds)) sk))).
+  Proof.
+    rewrite ! add_list_fnsems. rewrite ! map_map. rewrite ! flat_map_map. ss.
+    generalize umds. i. revert fn. induction umds0; ss.
+    i. ss. rewrite ! alist_find_app_o.
+    rewrite ! alist_find_map_snd. uo.
+    change (fun '(fn0, sb) => (fn0: string, fun_to_src (fsb_body sb)))
+      with (map_snd (A:=string) (fun_to_src ∘ fsb_body)).
+    rewrite ! alist_find_map_snd. uo. des_ifs.
+    { econs. esplits; et. }
+    { eapply option_rel_impl; [|eapply IHumds0].
+      i. ss. des. esplits; et. }
+  Qed.
+
   Lemma stb_find_iff_mid fn
     :
       ((<<SRC: alist_find fn (ModSemL.fnsems (ModL.enclose prog_mid)) = None>>) /\
@@ -813,9 +886,28 @@ Section ADQ.
           (<<TGT: alist_find fn (ModSemL.fnsems (ModL.enclose prog_tgt)) = Some (transl_all (T:=_) mn ∘ (fun_to_src (massage_fsb true uf).(fsb_body)))>>) /\
           (<<MN: ~ List.In (Some mn) _frds>>)).
   Proof.
-
-
-admit "alist find".
+    unfold ModL.enclose, prog_mid, prog_tgt, kmds. ss.
+    replace (Sk.sort
+               (ModL.sk
+                  (Mod.add_list
+                     (map (KMod.transl_src frds) _kmds ++
+                          map (SMod.to_src ∘ massage_md false) umds)))) with sk_link.
+    2: { unfold sk_link, kmds. f_equal. rewrite ! Mod.add_list_sk. f_equal.
+         rewrite ! map_app. rewrite ! map_map. ss. }
+    replace (Sk.sort
+               (ModL.sk
+                  (Mod.add_list
+                     (map SMod.to_src (map KMod.transl_mid _kmds) ++
+                          map (SMod.to_src ∘ massage_md true) umds)))) with sk_link.
+    2: { unfold sk_link, kmds. f_equal. rewrite ! Mod.add_list_sk. f_equal.
+         rewrite ! map_app. rewrite ! map_map. ss. }
+    rewrite ! Mod.add_list_app. rewrite ! ModL_add_fnsems.
+    rewrite ! alist_find_app_o.
+    hexploit (stb_find_iff_mid_kmd sk_link fn). i. inv H.
+    { des. subst. right. left. esplits; et. right. eapply in_map. et. }
+    hexploit (stb_find_iff_mid_umd sk_link fn). i. inv H.
+    { des. subst. right. right. esplits; et. }
+    { left. auto. }
   Qed.
 
   Variant my_lemma2_r1: forall R0 R1 (RR: R0 -> R1 -> Prop), Ord.t -> itree eventE R0 -> itree eventE R1 -> Prop :=
@@ -1253,6 +1345,15 @@ admit "alist find".
 
   End UMDS.
 
+  (* TODO: move it to ModSem *)
+  Lemma ModL_add_fnsems md0 md1 sk
+    :
+      (ModSemL.initial_mrs (ModL.get_modsem (ModL.add md0 md1) sk)) =
+      (ModSemL.initial_mrs (ModL.get_modsem md0 sk)) ++ (ModSemL.initial_mrs (ModL.get_modsem md1 sk)).
+  Proof.
+    ss.
+  Qed.
+
   Lemma adequacy_open_aux1
         (MAINM:
            forall sk (SKWF: Sk.wf sk) (SKINCL: Sk.incl (KMod.get_sk _kmds) sk),
@@ -1275,6 +1376,29 @@ admit "alist find".
     destruct (classic (ModL.wf (Mod.add_list (map (KMod.transl_src frds) _kmds ++ ctx)))).
     2: { unfold ModL.compile. eapply ModSemL.compile_not_wf. et. }
     eapply adequacy_open_aux1'; auto.
+    { i. ss. des; ss. eapply in_map_iff in MIN0. des. clarify.
+      inv H. inv H0. unfold ModL.enclose in wf_initial_mrs.
+      replace (Sk.sort
+                 (ModL.sk
+                    (Mod.add_list
+                       (map (KMod.transl_src frds) _kmds ++ ctx)))) with
+          (Sk.sort (foldr Sk.add Sk.unit (map SMod.sk kmds ++ map Mod.sk ctx)))
+          in wf_initial_mrs.
+      { rewrite Mod.add_list_app in wf_initial_mrs.
+        rewrite ModL_add_fnsems in wf_initial_mrs.
+        rewrite map_app in wf_initial_mrs.
+        eapply NoDup_app_disjoint in wf_initial_mrs; ss.
+        { instantiate (1:=mn).
+          rewrite Mod.add_list_initial_mrs. ss.
+          rewrite <- fold_right_app_flat_map.
+          rewrite flat_map_single. rewrite ! map_map. ss. }
+        { rewrite Mod.add_list_initial_mrs. ss.
+          rewrite <- fold_right_app_flat_map.
+          rewrite flat_map_single. rewrite ! map_map. ss. }
+      }
+      { rewrite Mod.add_list_sk. rewrite map_app. unfold kmds.
+        f_equal. f_equal. f_equal. rewrite ! map_map. ss. }
+    }
     i. subst sk. eapply MAINM.
     { inv H. red in H2. eapply Sk.sort_wf.
       match goal with
