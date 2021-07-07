@@ -63,34 +63,56 @@ End SkEnv.
 
 
 
-(* Require Import Logic.FinFun. *)
-(* Definition finfun A B: Type := *)
-(*   { f: A -> option B | *)
-(*     exists (card: nat) (inj: A -> nat), *)
-(*     Injective inj /\ forall a (IN: is_some (f a)), ((inj a) < card)%nat }. *)
-(* Program Definition add_finfun A B (add: B -> B -> B) (f g: finfun A B): finfun A B := *)
-(*   exist _ (fun a => match `f a, `g a with *)
-(*                     | Some x, None => Some x *)
-(*                     | None, Some y => Some y *)
-(*                     | Some x, Some y => Some (add x y) *)
-(*                     | None, None => None *)
-(*                     end) _. *)
-(* Next Obligation. *)
-(*   destruct f, g; ss. des. *)
-(*   exists (card + card0)%nat. eexists (fun a => if (is_some (x a)) && (inj a <? card)%nat *)
-(*                                                then inj a *)
-(*                                                else (card + (inj0 a))%nat). *)
-(*   esplits; eauto. *)
-(*   - rr. ii. des_ifs; bsimpl; des; apply_all_once Nat.leb_le; apply_all_once Nat.leb_gt; *)
-(*               apply_all_once e; apply_all_once e0; clarify; *)
-(*               apply_all_once e1; apply_all_once e2; clarify. *)
-(* Qed. *)
-
-
-
 Require Import Orders.
 
 Module Sk.
+  Class t: Type := mk {
+    car:> Type;
+    unit: car;
+    add: car -> car -> car;
+    canon: car -> car;
+    wf: car -> Prop;
+    add_comm: forall a b, canon (add a b = add b a;
+    add_assoc: forall a b c, add a (add b c) = add (add a b) c;
+    wf_mon: forall a b, wf (add a b) -> wf a;
+
+    extends := fun a b => exists ctx, add a ctx = b;
+    updatable := fun a b => forall ctx, wf (add a ctx) -> wf (add b ctx);
+    updatable_set := fun a B => forall ctx (WF: wf (add a ctx)),
+                         exists b, <<IN: B b>> /\ <<WF: wf (add b ctx)>>;
+  }
+  .
+
+
+(*** PCM == Unital RA ***)
+(*** When URA, not RA? (1) Auth algebra (2) global RA construction ***)
+Module URA.
+  Class t: Type := mk {
+    car:> Type;
+    unit: car;
+    _add: car -> car -> car;
+    _wf: car -> Prop;
+    _add_comm: forall a b, _add a b = _add b a;
+    _add_assoc: forall a b c, _add a (_add b c) = _add (_add a b) c;
+    add: car -> car -> car := Seal.sealing "ra" _add;
+    wf: car -> Prop := Seal.sealing "ra" _wf;
+    unit_id: forall a, add a unit = a;
+    wf_unit: wf unit;
+    wf_mon: forall a b, wf (add a b) -> wf a;
+
+    (* extends := fun a b => exists ctx, add a ctx = b; *)
+    (* updatable := fun a b => forall ctx, wf (add a ctx) -> wf (add b ctx); *)
+    extends := fun a b => exists ctx, add a ctx = b;
+    updatable := fun a b => forall ctx, wf (add a ctx) -> wf (add b ctx);
+    updatable_set := fun a B => forall ctx (WF: wf (add a ctx)),
+                         exists b, <<IN: B b>> /\ <<WF: wf (add b ctx)>>;
+  }
+  .
+
+
+  Class t:
+
+
 
   Inductive gdef: Type := Gfun | Gvar (gv: Z).
 
