@@ -2057,3 +2057,20 @@ Ltac ired_both := ired_l; ired_r.
 
 
 Notation Es' := (hCallE +' pE +' eventE).
+
+Module IPCNotations.
+  Notation ";;; t2" :=
+    (ITree.bind (trigger hAPC) (fun _ => t2))
+      (at level 63, t2 at next level, right associativity) : itree_scope.
+  Notation "` x : t <- t1 ;;; t2" :=
+    (ITree.bind t1 (fun x : t => ;;; t2))
+      (at level 62, t at next level, t1 at next level, x ident, right associativity) : itree_scope.
+  Notation "x <- t1 ;;; t2" :=
+    (ITree.bind t1 (fun x => ;;; t2))
+      (at level 62, t1 at next level, right associativity) : itree_scope.
+  Notation "' p <- t1 ;;; t2" :=
+    (ITree.bind t1 (fun x_ => match x_ with p => ;;; t2 end))
+      (at level 62, t1 at next level, p pattern, right associativity) : itree_scope.
+End IPCNotations.
+
+Export IPCNotations.

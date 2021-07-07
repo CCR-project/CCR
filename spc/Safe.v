@@ -150,17 +150,16 @@ Section LEMMAS.
   Variant safe_bind_clo
           (r: forall R, (R -> Prop) -> itree eventE R -> Prop)
     :
-      forall R (safe_reval: R -> Prop) (itr: itree eventE R), Prop
-    :=
-    | safe_bind_clo_intro
-        R0 R1
-        (itr: itree eventE R0) (ktr: R0 -> itree eventE R1)
-        safe_retval0 safe_retval1
-        (SAFE0: r R0 safe_retval0 itr)
-        (SAFE1: forall x (SAFE: safe_retval0 x),
-            r R1 safe_retval1 (ktr x))
-      :
-        safe_bind_clo r safe_retval1 (itr >>= ktr)
+      forall R (safe_reval: R -> Prop) (itr: itree eventE R), Prop :=
+  | safe_bind_clo_intro
+      R0 R1
+      (itr: itree eventE R0) (ktr: R0 -> itree eventE R1)
+      safe_retval0 safe_retval1
+      (SAFE0: r R0 safe_retval0 itr)
+      (SAFE1: forall x (SAFE: safe_retval0 x),
+          r R1 safe_retval1 (ktr x))
+    :
+      safe_bind_clo r safe_retval1 (itr >>= ktr)
   .
 
   Lemma safe_bind_clo_mon: monotone3 safe_bind_clo.

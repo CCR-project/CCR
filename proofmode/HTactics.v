@@ -99,8 +99,6 @@ Section SIM.
     :
       _safe_sim_itree sim_itree RR i0 w0 (st_src0, trigger (Syscall fn varg rvs) >>= k_src)
                  (st_tgt0, trigger (Syscall fn varg rvs) >>= k_tgt)
-  (*** TODO: sim_syscall is nontrivial; it should accept "injected" memory... ***)
-  (*** TODO: simplify the model: Syscall: list val -> val ***)
 
 
 
@@ -650,13 +648,6 @@ Section HLEMMAS.
 End HLEMMAS.
 
 
-(* main tactics *)
-
-(* Ltac init := *)
-(*   split; ss; ii; clarify; rename y into varg; eexists 100%nat; ss; des; clarify; *)
-(*   ginit; asimpl; *)
-(*   try (unfold fun_to_tgt, cfun; rewrite HoareFun_parse); ss. *)
-
 (* TODO: init with user given ordinal *)
 
 Ltac prep := ired_both.
@@ -819,84 +810,21 @@ Ltac acatch :=
     astep fn args
   end.
 
-Ltac astop :=
-  eapply APC_stop_clo;
-  [(try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r; eapply Nat.lt_succ_diag_r)]))|].
-
 Ltac astart _at_most :=
   eapply (@APC_start_clo _ _ _at_most);
   [eauto with ord_kappa|
    (try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r; eapply Nat.lt_succ_diag_r)]))|
   ]
+
 .
 
-(* Ltac harg_tac := *)
-(*   _harg_tac; *)
-(*   match goal with *)
-(*   | [H: URA.wf ?cur |- _] => *)
-(*     let name := fresh "GWF" in *)
-(*     assert(name: __gwf_mark__ cur cur) by (split; [refl|exact H]); clear H *)
-(*   end. *)
-
-(* Ltac hcall_tac x o MR_SRC1 FR_SRC1 RARG_SRC := *)
-(*   let mr_src1 := r_gather MR_SRC1 in *)
-(*   let fr_src1 := r_gather FR_SRC1 in *)
-(*   let rarg_src := r_gather RARG_SRC in *)
-(*   let tac0 := try by (eapply URA.extends_updatable; r_equalize; r_solve) in *)
-(*   let tac1 := (on_gwf ltac:(fun H => clear H); *)
-(*                let WF := fresh "WF" in *)
-(*                let tmp := fresh "_tmp_" in *)
-(*                let GWF := fresh "GWF" in *)
-(*                intros ? ? ? ? ? WF; cbn in WF; desH WF; subst; *)
-(*                esplits; ss; et; intros tmp ?; assert(GWF: ☀) by (split; [refl|exact tmp]); clear tmp; iRefresh; iClears') in *)
-(*   prep; *)
-(*   (match x with *)
-(*    | ltac_wild => *)
-(*      match o with *)
-(*      | ltac_wild => eapply (@hcall_clo _ mr_src1 fr_src1 rarg_src) *)
-(*      | _ => eapply (@hcall_clo _ mr_src1 fr_src1 rarg_src o) *)
-(*      end *)
-(*    | _ => eapply (@hcall_clo _ mr_src1 fr_src1 rarg_src o _ x) *)
-(*    end); *)
-(*   shelve_goal; [on_gwf ltac:(fun GWF => apply GWF)|tac0|eapply OrdArith.lt_from_nat; lia|..|tac1] *)
-(* . *)
-
-(* Ltac hcall_tac_weaken fsp x o MR_SRC1 FR_SRC1 RARG_SRC := *)
-(*   let mr_src1 := r_gather MR_SRC1 in *)
-(*   let fr_src1 := r_gather FR_SRC1 in *)
-(*   let rarg_src := r_gather RARG_SRC in *)
-(*   let tac0 := try by (eapply URA.extends_updatable; r_equalize; r_solve) in *)
-(*   (* let tac0 := etrans; [etrans; [|on_gwf ltac:(fun GWF => apply GWF)]|]; eapply URA.extends_updatable; r_equalize; r_solve; fail in *) *)
-(*   let tac1 := (on_gwf ltac:(fun H => clear H); *)
-(*                let WF := fresh "WF" in *)
-(*                let tmp := fresh "_tmp_" in *)
-(*                let GWF := fresh "GWF" in *)
-(*                intros ? ? ? ? ? WF; cbn in WF; desH WF; subst; *)
-(*                esplits; ss; et; intros tmp ?; assert(GWF: ☀) by (split; [refl|exact tmp]); clear tmp; iRefresh; iClears') in *)
-(*   prep; *)
-(*   (match x with *)
-(*    | ltac_wild => *)
-(*      match o with *)
-(*      | ltac_wild => eapply (@hcall_clo_weaken _ _ _ fsp mr_src1 fr_src1 rarg_src) *)
-(*      | _ => eapply (@hcall_clo_weaken _ _ _ fsp mr_src1 fr_src1 rarg_src o) *)
-(*      end *)
-(*    | _ => eapply (@hcall_clo_weaken _ _ _ fsp mr_src1 fr_src1 rarg_src o x) *)
-(*    end); *)
-(*   shelve_goal; [|on_gwf ltac:(fun GWF => apply GWF)|tac0|eapply OrdArith.lt_from_nat; lia|..|tac1] *)
-(* . *)
-
-(* Ltac hret_tac MR_SRC RT_SRC := *)
-(*   let mr_src1 := r_gather MR_SRC in *)
-(*   let fr_src1 := r_gather RT_SRC in *)
-(*   let tac0 := try by (eapply URA.extends_updatable; r_equalize; r_solve) in *)
-(*   _hret_tac mr_src1 fr_src1; [on_gwf ltac:(fun GWF => apply GWF)|tac0| | |try refl] *)
-(* . *)
-
-(* Ltac acall_tac A0 A1 A2 A3 A4 := *)
-(*   acatch; [..|hcall_tac A0 A1 A2 A3 A4]. *)
-
-(* Ltac acall_tac_weaken fsp A0 A1 A2 A3 A4 := *)
-(*   acatch; [..|hcall_tac_weaken fsp A0 A1 A2 A3 A4]. *)
+Ltac astop :=
+  match goal with
+  | [ |- (gpaco7 (_sim_itree _ _) _ _ _ _ _ _ _ _ (_, interp_hCallE_tgt _ _ _ APC _ >>= _) (_, _)) ] => astart 0
+  | _ => idtac
+  end;
+  eapply APC_stop_clo;
+  [(try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; eapply Nat.lt_add_lt_sub_r; eapply Nat.lt_succ_diag_r)]))|].
 
 Ltac init :=
   let varg_src := fresh "varg_src" in

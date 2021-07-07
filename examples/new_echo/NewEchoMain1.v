@@ -20,8 +20,8 @@ Section PROOF.
 
   Definition main_body: list val -> itree hEs val :=
     fun args =>
-      _ <- (pargs [] args)?;;
-      `_:val <- (ccallN "echo" ([]: list val));;
+      _ <- (pargs [] args)?;;;
+      `_:val <- (ccallN "echo" ([]: list val));;;
       Ret (Vint 0)
   .
 
