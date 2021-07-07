@@ -1148,6 +1148,19 @@ admit "alist find".
       uo. des_ifs. }
   Qed.
 
+  Hypothesis MAINM:
+    True ->
+    let sk := (Sk.sort (foldr Sk.add Sk.unit (map SMod.sk (kmds ++ map (massage_md true) umds)))) in
+    exists (entry_r: Σ),
+      (<<WFR: URA.wf (entry_r ⋅ KMod.get_initial_mrs _kmds sk)>>) /\
+      (<<MAIN: forall (main_fsp: fspec)
+                      (MAIN: alist_find "main" (KMod.get_stb _kmds sk) = Some main_fsp),
+          exists (x: main_fsp.(meta)),
+            (<<PRE: main_fsp.(precond) None x initial_arg initial_arg ord_top entry_r>>) /\
+            (<<RET: forall ret_src ret_tgt r
+                           (POST: main_fsp.(postcond) None x ret_src ret_tgt r),
+                ret_src = ret_tgt>>)>>).
+
   Theorem adequacy_open_aux1':
     refines_closed (Mod.add_list (List.map (SMod.to_tgt _stb) kmds ++ umds))
                    (Mod.add_list (List.map (KMod.transl_src frds) _kmds ++ umds))
@@ -1187,7 +1200,50 @@ admit "alist find".
       unfold stb2. rewrite FIND. esplits; et.
       i. ss. destruct x; des; auto.
       red in PRE0. uipropall. des; auto. }
-    { admit "main". }
+    { hexploit MAINM; et. i. des. unfold _stb, _gstb, KMod.get_stb in MAIN.
+      assert (RWF: URA.wf
+                     (entry_r
+                        ⋅ fold_left URA.add
+                        (map SModSem.initial_mr
+                             (map
+                                (flip SMod.get_modsem
+                                      (SMod.get_sk (kmds ++ map (massage_md true) umds)))
+                                (kmds ++ map (massage_md true) umds))) ε)).
+      { match goal with
+        | H: URA.wf ?r0 |- URA.wf ?r1 => replace r1 with r0; auto
+        end.
+        f_equal. unfold KMod.get_initial_mrs.
+        rewrite map_map. ss. unfold SMod.get_sk.
+        generalize (Sk.sort
+                      (foldr Sk.add Sk.unit
+                             (map SMod.sk (kmds ++ map (massage_md true) umds)))).
+        i. unfold kmds. rewrite map_app. rewrite ! map_map. ss.
+        rewrite fold_left_app.
+        generalize (fold_left
+                      URA.add
+                      (map (fun x=>  KModSem.initial_mr (KMod.get_modsem x t)) _kmds) ε).
+        i. generalize umds. i. induction umds0; ss.
+        rewrite URA.unit_id. auto.
+      }
+      rewrite alist_find_map_snd in MAIN. uo. des_ifs.
+      { hexploit MAIN0.
+        { instantiate (1:=k). unfold KMod.get_stb.
+          rewrite alist_find_map_snd. uo.
+          match goal with
+          | H: alist_find _ ?l0 = Some _ |- context[alist_find _ ?l1] =>
+            replace l1 with l0
+          end.
+          { rewrite Heq0. auto. }
+          eapply flat_map_ext. i. ss.
+        }
+        i. des. exists (Some x), entry_r. splits; auto.
+        { ss. esplits; et. }
+        { i. ss. uipropall. i. red. uipropall. eapply RET; et. }
+      }
+      { exists (Some tt). exists entry_r. splits; auto.
+        { ss. esplits; et. red. uipropall. }
+      }
+    }
     match goal with
     | H: Beh.of_program ?p0 x0 |- Beh.of_program ?p1 x0 => replace p1 with p0
     end.
@@ -1197,14 +1253,42 @@ admit "alist find".
 
   End UMDS.
 
-  Lemma adequacy_open_aux1:
-    refines (Mod.add_list (List.map (SMod.to_tgt _stb) kmds))
-            (Mod.add_list (List.map (KMod.transl_src frds) _kmds))
+  Lemma adequacy_open_aux1
+        (MAINM:
+           forall sk (SKWF: Sk.wf sk) (SKINCL: Sk.incl (KMod.get_sk _kmds) sk),
+           exists (entry_r: Σ),
+             (<<WFR: URA.wf (entry_r ⋅ KMod.get_initial_mrs _kmds sk)>>) /\
+             (<<MAIN: forall (main_fsp: fspec)
+                             (MAIN: alist_find "main" (KMod.get_stb _kmds sk) = Some main_fsp),
+                 exists (x: main_fsp.(meta)),
+                   (<<PRE: main_fsp.(precond) None x initial_arg initial_arg ord_top entry_r>>) /\
+                   (<<RET: forall ret_src ret_tgt r
+                                  (POST: main_fsp.(postcond) None x ret_src ret_tgt r),
+                       ret_src = ret_tgt>>)>>))
+    :
+      refines (Mod.add_list (List.map (SMod.to_tgt _stb) kmds))
+              (Mod.add_list (List.map (KMod.transl_src frds) _kmds))
   .
   Proof.
     ii. eapply ModL.add_comm. eapply ModL.add_comm in PR.
     rewrite <- Mod.add_list_app in *.
-    eapply adequacy_open_aux1'. auto.
+    destruct (classic (ModL.wf (Mod.add_list (map (KMod.transl_src frds) _kmds ++ ctx)))).
+    2: { unfold ModL.compile. eapply ModSemL.compile_not_wf. et. }
+    eapply adequacy_open_aux1'; auto.
+    i. subst sk. eapply MAINM.
+    { inv H. red in H2. eapply Sk.sort_wf.
+      match goal with
+      | H: Sk.wf ?l0 |- Sk.wf ?l1 => replace l1 with l0; auto
+      end.
+      rewrite Mod.add_list_sk. f_equal. unfold kmds.
+      rewrite ! map_app. rewrite ! map_map. auto.
+    }
+    { etrans; [|eapply Sk.sort_incl]. etrans; [eapply Sk.sort_incl_rev|].
+      unfold kmds. unfold Sk.t, Sk.add, Sk.unit, alist.
+      rewrite <- ! fold_right_app_flat_map.
+      rewrite flat_map_app. ii. eapply in_or_app. left.
+      rewrite flat_map_map. ss.
+    }
   Qed.
 
 End ADQ.
@@ -1524,7 +1608,7 @@ Section ADQ.
   Proof.
     etrans.
     { eapply adequacy_open_aux2. }
-    { eapply adequacy_open_aux1. }
+    { eapply adequacy_open_aux1; et. }
   Qed.
 End ADQ.
 

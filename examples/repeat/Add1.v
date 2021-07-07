@@ -18,7 +18,6 @@ Section PROOF.
 
   Context `{Σ: GRA.t}.
 
-  Variable FunStb: SkEnv.t -> gname -> option fspec.
   Variable GlobalStb: SkEnv.t -> gname -> option fspec.
 
   Section SKENV.
