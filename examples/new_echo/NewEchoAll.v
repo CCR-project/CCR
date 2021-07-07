@@ -96,7 +96,7 @@ Section PROOF.
     etrans.
     { rewrite Mod.add_list_app. eapply refines_proper_r.
       eapply adequacy_open. i. exists ε. split.
-      { g_wf_tac; repeat (i; splits; ur; ss). refl. }
+      { g_wf_tac. repeat (i; splits; ur; ss). refl. }
       { ii. ss. }
     }
     pose (kmd1 := [NewStack3A.KStack; KEcho]).

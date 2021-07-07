@@ -46,20 +46,12 @@ Section PROOF.
 
   Let smds := [SMain RecStb; SKnot RecStb FunStb; SMem].
   Let GlobalStb := fun sk => to_stb (SMod.get_stb smds sk).
+  Hint Unfold GlobalStb: stb.
 
   Definition KnotAllImp: list Mod.t := [KnotMainImp.KnotMain; KnotImp.Knot; Mem0.Mem].
   Definition KnotAll0: list Mod.t := [KnotMain0.Main; Knot0.Knot; Mem0.Mem].
   Definition KnotAll1: list Mod.t := List.map (SMod.to_tgt GlobalStb) smds.
   Definition KnotAll2: list Mod.t := List.map SMod.to_src smds.
-
-  Hint Unfold GlobalStb: stb.
-
-  Ltac stb_incl_tac :=
-    i; eapply incl_to_stb;
-    [ autounfold with stb; autorewrite with stb; ii; ss; des; clarify; auto|
-      autounfold with stb; autorewrite with stb; repeat econs; ii; ss; des; ss].
-
-  Ltac ors_tac := repeat ((try by (ss; left; ss)); right).
 
   Lemma KnotAll01_correct:
     refines2 KnotAll0 KnotAll1.
@@ -80,26 +72,13 @@ Section PROOF.
       { eapply adequacy_local2. eapply Weakening.adequacy_weaken. ss. }
   Qed.
 
-  Lemma GRA_point_add (G: GRA.t) (x0 x1: G) n
-    :
-      (x0 ⋅ x1) n = x0 n ⋅ x1 n.
-  Proof.
-    ur. Local Transparent GRA.to_URA. unfold GRA.to_URA. Local Opaque GRA.to_URA.
-    ss. ur. auto.
-  Qed.
-
   Lemma KnotAll12_correct:
     refines_closed (Mod.add_list KnotAll1) (Mod.add_list KnotAll2).
   Proof.
     eapply adequacy_type.
     { instantiate (1:=GRA.embed inv_token ⋅ GRA.embed (Auth.white (Some None: Excl.t (option (nat -> nat))): knotRA)).
-      cbn. ss. repeat rewrite URA.unit_id; repeat rewrite URA.unit_idl.
-      Local Opaque URA.unit.
-      apply GRA.point_wise_wf_lift. ss. splits.
-      { repeat rewrite GRA_point_add.
-        unfold GRA.embed. ss.
-        repeat rewrite URA.unit_id. repeat rewrite URA.unit_idl.
-        Local Transparent Sk.load_skenv _points_to string_dec.
+      g_wf_tac.
+      { Local Transparent Sk.load_skenv _points_to string_dec.
         ur. unfold var_points_to, initial_mem_mr. ss. uo. split.
         2: { ur. i. ur. i. ur. des_ifs. }
         { repeat rewrite URA.unit_id. ur. eexists ε.
@@ -110,19 +89,11 @@ Section PROOF.
           { repeat (destruct k; ss). }
         }
       }
-      { repeat rewrite GRA_point_add.
-        unfold GRA.embed. ss.
-        repeat rewrite URA.unit_id. repeat rewrite URA.unit_idl.
-        unfold knot_full. ur. splits; auto.
+      { unfold knot_full. ur. splits; auto.
         { rewrite URA.unit_id. refl. }
         { ur. ss. }
       }
-      { repeat rewrite GRA_point_add.
-        unfold GRA.embed. ss.
-        repeat rewrite URA.unit_id. repeat rewrite URA.unit_idl.
-        ur. ss.
-      }
-      { ss. }
+      { ur. ss. }
     }
     { i. ss. clarify. ss. exists id. splits; auto.
       { iIntros "[H0 H1]". iFrame. iSplits; ss. }

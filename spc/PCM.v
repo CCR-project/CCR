@@ -1094,6 +1094,13 @@ Module GRA.
     { generalize (x k). rewrite nth_overflow; auto. i. ur. destruct c; ss. }
     { eapply WF; et. }
   Qed.
+
+  Lemma point_add (G: t) (x0 x1: G) n
+    :
+      (x0 ⋅ x1) n = x0 n ⋅ x1 n.
+  Proof.
+    ur. ss. ur. auto.
+  Qed.
 End GRA.
 Coercion GRA.to_URA: GRA.t >-> URA.t.
 
@@ -1165,7 +1172,8 @@ Ltac r_wf H := eapply prop_ext_rev; [eapply f_equal|]; [|eapply H]; r_solve.
 
 Ltac g_wf_tac :=
   cbn; repeat rewrite URA.unit_id; repeat rewrite URA.unit_idl;
-  apply GRA.point_wise_wf_lift; ss; splits; unfold GRA.of_list, GRA.embed; ss.
+  apply GRA.point_wise_wf_lift; ss; splits; repeat rewrite GRA.point_add; unfold GRA.embed; ss;
+  repeat rewrite URA.unit_id; repeat rewrite URA.unit_idl; try apply URA.wf_unit.
 
 Require Import Any.
 
@@ -1174,3 +1182,5 @@ Module FOO.
   Definition foo_ura (M: URA.t) (r: M): Any.t := r↑.
   Definition foo_gra (Σ: GRA.t) (r: Σ): Any.t := r↑.
 End FOO.
+
+Global Opaque URA.unit.
