@@ -22,10 +22,9 @@ Section PROOF.
 
   Definition echo_body: list val -> itree hEs val :=
     fun args =>
-      _ <- (pargs [] args)?;;
-      trigger hAPC;;;
-      `stk0: list Z    <- (ccallN "input" ([]: list Z));;
-      `_: list Z    <- (ccallN "output" (stk0));;
+      _ <- (pargs [] args)?;;;
+      `stk0: list Z    <- (ccallN "input" ([]: list Z));;;
+      `_: list Z    <- (ccallN "output" (stk0));;;
       Ret Vundef
   .
 
@@ -46,14 +45,13 @@ Section PROOF.
 
   Definition input_body: list Z -> itree hEs (list Z) :=
     fun stk =>
-      n <- (ccallU "getint" ([]: list val));;
+      n <- (ccallU "getint" ([]: list val));;;
       assume(wf_val n);;;
-      n <- (parg Tint n)?;;
+      n <- (parg Tint n)?;;;
       if (dec n (- 1)%Z)
       then Ret stk
       else
-        trigger hAPC;;;
-        (ccallN "input" (n :: stk))
+        ret <- (ccallN "input" (n :: stk));;; Ret ret
   .
 
 
@@ -70,10 +68,13 @@ Section PROOF.
 
   Definition output_body: list Z -> itree hEs (list Z) :=
     fun stk =>
-      trigger hAPC;;;
+      ;;;
       match stk with
       | [] => Ret []
-      | n :: stk' => `_: val <- (ccallU "putint" ([Vint n]: list val));; (ccallN "output" (stk'))
+      | n :: stk' =>
+        `_: val <- (ccallU "putint" ([Vint n]: list val));;;
+         ret <- (ccallN "output" (stk'));;;
+         Ret ret
       end
   .
 

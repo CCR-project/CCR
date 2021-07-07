@@ -103,7 +103,7 @@ Section SIMMODSEM.
         (*** IEXPLOIT*) iDestruct (big_sepM_lookup_acc with "SIM") as "[B C]"; et. iDestruct "B" as (x) "[B D]".
         iApply (points_to_disj with "POST B"); et.
       }
-      force_l; ss. steps. unfold pput. steps.
+      astop. steps. astop. steps. force_l; ss. steps. astop. steps.
 
       hret _; ss.
       { iModIntro. iSplits; ss; et. iApply big_sepM_insert; ss. iFrame; ss; et. }
@@ -111,9 +111,8 @@ Section SIMMODSEM.
     }
     econs; ss.
     { unfold popF. kinit. harg. fold wf. mDesAll; des; subst. ss.
-      unfold pop_body, ccallU, cfunU. steps.
-
-      astart 7.
+      unfold pop_body, ccallU, cfunU.
+      steps. astop. steps. astop. steps. astop. steps. astart 7.
 
       hide_k. destruct v; ss. des_ifs. clear_fast.
       renamer. rename n into handle. rename l into stk. rename _UNWRAPU into T.
@@ -143,8 +142,7 @@ Section SIMMODSEM.
         post_call. unhide_k. steps. astop. steps.
         force_r.
         { ss. }
-        steps.
-        unfold pget. steps.
+        steps. astop. steps. astop. steps.
 
         hret _; ss. iModIntro. iSplits; ss; et.
         destruct (stk_mgr1 !! handle) eqn:U.
@@ -194,17 +192,15 @@ Section SIMMODSEM.
         { mAssertPure False; ss. iDestruct (big_sepM_lookup_acc with "SIM") as "[B C]"; et.
           iDestruct "B" as (y) "[SIM B]".
           iApply (points_to_disj with "POST1 SIM"). }
-        steps.
-
+        steps. astop. steps. astop. steps.
 
         hret _; ss.
         { iModIntro. iSplits; ss; et. iApply big_sepM_insert; ss. iFrame. iExists _; ss. iFrame. }
     }
     econs; ss.
     { unfold pushF. kinit. harg. fold wf. mDesAll; des; subst. ss.
-      unfold push_body, ccallU, cfunU. steps.
-
-      astart 7.
+      unfold push_body, ccallU, cfunU.
+      steps. astop. steps. astop. steps. astop. steps. astart 7.
 
       hide_k. destruct v; ss. des_ifs. clear_tac.
       rename n into handle. renamer. rename l into stk. rename _UNWRAPU into T.

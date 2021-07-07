@@ -78,12 +78,12 @@ Section SIMMODSEM.
       hcall _ _ _ with "A"; ss; et.
       { iModIntro. iSplits; ss; et. }
       { ss. }
-      post_call. steps.
+      post_call. steps. astop. steps.
       erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.
       hcall _ _ _ with "A"; ss; et.
       { iModIntro. iSplits; ss; et. }
       { ss. }
-      post_call. steps.
+      post_call. steps. astop. steps.
       hret _; ss.
     }
     econs; ss.
@@ -92,14 +92,14 @@ Section SIMMODSEM.
       harg. post_call. steps.
       erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.
       hcall _ _ _ with ""; ss; et.
-      post_call. steps.
+      post_call. steps. astop. steps.
       hide_k. force_r.
       { unshelve esplits; et. }
       unhide_k.
       hide_k. steps. unhide_k.
       ss. clarify.
       des_ifs.
-      - steps. hret _; ss.
+      - steps. astop. steps. hret _; ss.
         { iModIntro. iSplits; ss; et. }
       - steps.
         astart 1. acatch.
@@ -112,7 +112,7 @@ Section SIMMODSEM.
         hcall _ _ _ with "-"; ss; et.
         { iModIntro. iSplits; ss; et. }
         { ss. }
-        post_call. steps.
+        post_call. steps. astop. steps.
         hret _; ss.
         { iModIntro. iSplits; ss; et. }
     }
@@ -140,12 +140,12 @@ Section SIMMODSEM.
         unhide_k.
         des_ifs. steps.
         hcall _ _ _ with ""; ss; et.
-        post_call. steps.
+        post_call. steps. astop. steps.
         erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.
         hcall _ _ _ with "-"; ss; et.
         { iModIntro. iSplits; ss; et. }
         { ss. }
-        post_call. steps.
+        post_call. steps. astop. steps.
         hret _; ss.
         { iModIntro. iSplits; ss; et. }
     }

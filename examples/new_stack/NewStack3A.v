@@ -61,25 +61,27 @@ Section PROOF.
   Notation pget := (p0 <- trigger PGet;; `p0: (gmap mblock (list val)) <- p0↓ǃ;; Ret p0) (only parsing).
   Notation pput p0 := (trigger (PPut (p0: (gmap mblock (list val)))↑)) (only parsing).
 
+
+
   Definition new_body: list val -> itree hEs val :=
     fun args =>
-      _ <- (pargs [] args)?;;
-      handle <- trigger (Choose _);;
-      stk_mgr0 <- pget;;
+      _ <- (pargs [] args)?;;;
+      handle <- trigger (Choose _);;;
+      stk_mgr0 <- pget;;;
       guarantee(stk_mgr0 !! handle = None);;;
       let stk_mgr1 := <[handle:=[]]> stk_mgr0 in
-      pput stk_mgr1;;;
+      _ <- pput stk_mgr1;;;
       Ret (Vptr handle 0)
   .
 
   Definition pop_body: list val -> itree hEs val :=
     fun args =>
-      handle <- (pargs [Tblk] args)?;;
-      stk_mgr0 <- pget;;
-      stk0 <- (stk_mgr0 !! handle)?;;
+      handle <- (pargs [Tblk] args)?;;;
+      stk_mgr0 <- pget;;;
+      stk0 <- (stk_mgr0 !! handle)?;;;
       match stk0 with
       | x :: stk1 =>
-        pput (<[handle:=stk1]> stk_mgr0);;;
+        _ <- pput (<[handle:=stk1]> stk_mgr0);;;
         Ret x
       | _ => Ret (Vint (- 1))
       end
@@ -87,10 +89,10 @@ Section PROOF.
 
   Definition push_body: list val -> itree hEs val :=
     fun args =>
-      '(handle, x) <- (pargs [Tblk; Tuntyped] args)?;;
-      stk_mgr0 <- pget;;
-      stk0 <- (stk_mgr0 !! handle)?;;
-      pput (<[handle:=(x :: stk0)]> stk_mgr0);;;
+      '(handle, x) <- (pargs [Tblk; Tuntyped] args)?;;;
+      stk_mgr0 <- pget;;;
+      stk0 <- (stk_mgr0 !! handle)?;;;
+      _ <- pput (<[handle:=(x :: stk0)]> stk_mgr0);;;
       Ret Vundef
   .
 

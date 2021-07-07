@@ -30,13 +30,12 @@ Section PROOF.
 
   Definition new_body: list val -> itree hEs val :=
     fun args =>
-      _ <- (pargs [] args)?;;
-      trigger hAPC;;;
-      handle <- trigger (Choose _);;
-      stk_mgr0 <- pget;;
+      _ <- (pargs [] args)?;;;
+      handle <- trigger (Choose _);;;
+      stk_mgr0 <- pget;;;
       guarantee(stk_mgr0 !! handle = None);;;
       let stk_mgr1 := <[handle:=[]]> stk_mgr0 in
-      pput stk_mgr1;;;
+      _ <- pput stk_mgr1;;;
       Ret (Vptr handle 0)
   .
 
@@ -51,17 +50,16 @@ Section PROOF.
 
   Definition pop_body: list val -> itree hEs val :=
     fun args =>
-      handle <- (pargs [Tblk] args)?;;
-      stk_mgr0 <- pget;;
-      stk0 <- (stk_mgr0 !! handle)?;;
-      let stk_mgr1 := delete handle stk_mgr0 in pput stk_mgr1;;;
-      trigger hAPC;;;
+      handle <- (pargs [Tblk] args)?;;;
+      stk_mgr0 <- pget;;;
+      stk0 <- (stk_mgr0 !! handle)?;;;
+      let stk_mgr1 := delete handle stk_mgr0 in _ <- pput stk_mgr1;;;
       match stk0 with
       | x :: stk1 =>
-        stk_mgr2 <- pget;; pput (<[handle:=stk1]> stk_mgr2);;;
+        stk_mgr2 <- pget;;; _ <- pput (<[handle:=stk1]> stk_mgr2);;;
         Ret x
       | _ =>
-        stk_mgr2 <- pget;; pput (<[handle:=[]]> stk_mgr2);;;
+        stk_mgr2 <- pget;;; _ <- pput (<[handle:=[]]> stk_mgr2);;;
         Ret (Vint (- 1))
       end
   .
@@ -73,11 +71,10 @@ Section PROOF.
 
   Definition push_body: list val -> itree hEs val :=
     fun args =>
-      '(handle, x) <- (pargs [Tblk; Tuntyped] args)?;;
-      stk_mgr0 <- pget;;
-      stk0 <- (stk_mgr0 !! handle)?;;
-      let stk_mgr1 := delete handle stk_mgr0 in pput stk_mgr1;;;
-      trigger hAPC;;;
+      '(handle, x) <- (pargs [Tblk; Tuntyped] args)?;;;
+      stk_mgr0 <- pget;;;
+      stk0 <- (stk_mgr0 !! handle)?;;;
+      let stk_mgr1 := delete handle stk_mgr0 in _ <- pput stk_mgr1;;;
       stk_mgr2 <- pget;; pput (<[handle:=(x :: stk0)]> stk_mgr2);;;
       Ret Vundef
   .

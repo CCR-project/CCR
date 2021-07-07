@@ -20,7 +20,7 @@ Section PROOF.
 
   Definition mainBody: list val -> itree hEs val :=
     fun _ =>
-      trigger hAPC;;;
+      ;;;
       Ret (Vint 55)
   .
 
