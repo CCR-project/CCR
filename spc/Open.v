@@ -31,15 +31,6 @@ Qed.
 
 Global Program Instance Forall2_PreOrder `{PreOrder A R}: PreOrder (Forall2 R).
 
-Lemma alist_find_map_snd K R `{RD_K: @RelDec K R} A B (f: A -> B) (l: alist K A) k
-  :
-    alist_find k (map (map_snd f) l)
-    =
-    o_map (alist_find k l) f.
-Proof.
-  induction l; ss. destruct a. ss. uo. des_ifs.
-Qed.
-
 (*** TODO: move ***)
 Section ITREEAUX.
   Definition trivial_state_Handler `{E -< F} {S}: E ~> (stateT S (itree F)) :=

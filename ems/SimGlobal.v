@@ -519,7 +519,7 @@ Proof.
 Qed.
 
 
-Let itree_eta E R (itr0 itr1: itree E R)
+Lemma itree_eta_eq E R (itr0 itr1: itree E R)
     (OBSERVE: observe itr0 = observe itr1)
   :
     itr0 = itr1.
@@ -539,8 +539,8 @@ Proof.
     replace itr with (Subevent.vis (Choose X) k)
   end; ss.
   { econs. }
-  { eapply itree_eta. ss. cbv. f_equal.
-    extensionality x0. eapply itree_eta. ss. }
+  { eapply itree_eta_eq. ss. cbv. f_equal.
+    extensionality x0. eapply itree_eta_eq. ss. }
 Qed.
 
 Lemma step_trigger_take X k x
@@ -553,8 +553,8 @@ Proof.
     replace itr with (Subevent.vis (Take X) k)
   end; ss.
   { econs. }
-  { eapply itree_eta. ss. cbv. f_equal.
-    extensionality x0. eapply itree_eta. ss. }
+  { eapply itree_eta_eq. ss. cbv. f_equal.
+    extensionality x0. eapply itree_eta_eq. ss. }
 Qed.
 
 Lemma step_trigger_syscall fn args (rvs: Z -> Prop) k rv
@@ -568,8 +568,8 @@ Proof.
     replace itr with (Subevent.vis (Syscall fn args rvs) k)
   end; ss.
   { econs; et. }
-  { eapply itree_eta. ss. cbv. f_equal.
-    extensionality x0. eapply itree_eta. ss. }
+  { eapply itree_eta_eq. ss. cbv. f_equal.
+    extensionality x0. eapply itree_eta_eq. ss. }
 Qed.
 
 Lemma step_tau itr

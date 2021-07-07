@@ -311,6 +311,15 @@ Section ALIST.
   Proof.
     induction l0; ss. destruct a. rewrite eq_rel_dec_correct. des_ifs.
   Qed.
+
+  Lemma alist_find_map_snd K R `{RD_K: @RelDec K R} A B (f: A -> B) (l: alist K A) k
+    :
+      alist_find k (map (map_snd f) l)
+      =
+      o_map (alist_find k l) f.
+  Proof.
+    induction l; ss. destruct a. ss. uo. des_ifs.
+  Qed.
 End ALIST.
 
 
