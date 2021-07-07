@@ -131,14 +131,14 @@ Section PROOF.
 
   Variable body: (option mname * Any.t) -> itree hEs Any.t.
 
-  Lemma weakening_fn:
-    sim_fsem wf top2
-             (fun_to_tgt mn stb_src (mk_specbody fsp_src body))
-             (fun_to_tgt mn stb_tgt (mk_specbody fsp_tgt body)).
+  Lemma weakening_fn arg mrs_src mrs_tgt (WF: wf tt (mrs_src, mrs_tgt)):
+    sim_itree wf top2 200 tt
+              (mrs_src, fun_to_tgt mn stb_src (mk_specbody fsp_src body) arg)
+              (mrs_tgt, fun_to_tgt mn stb_tgt (mk_specbody fsp_tgt body) arg).
   Proof.
-    econs; ss. instantiate (1:=200). subst.
+    red in WF. des. subst.
     Local Transparent HoareFun. unfold fun_to_tgt, HoareFun, mput, mget. Local Opaque HoareFun.
-    destruct y as [mn_caller varg_tgt]. ss. des. clarify.
+    destruct arg as [mn_caller varg_tgt]. ss. des. clarify.
     ginit. steps.
     hexploit (fsp_weaker x mn_caller). i. des.
     assert (exists rarg_tgt,
@@ -178,50 +178,19 @@ Section PROOF.
     Unshelve. all: ss.
   Qed.
 
+  Lemma weakening_fsem:
+    sim_fsem wf top2
+             (fun_to_tgt mn stb_src (mk_specbody fsp_src body))
+             (fun_to_tgt mn stb_tgt (mk_specbody fsp_tgt body)).
+  Proof.
+    econs; ss. instantiate (1:=200). destruct w. subst. eapply weakening_fn. auto.
+  Qed.
+
 End PROOF.
 
 Section PROOF.
 
   Context `{Σ: GRA.t}.
-
-  Definition stb_weaker (stb0 stb1: gname -> option fspec): Prop :=
-    forall fn fsp0 (FINDTGT: stb0 fn = Some fsp0),
-    exists fsp1,
-      (<<FINDSRC: stb1 fn = Some fsp1>>) /\
-      (<<WEAKER: fspec_weaker fsp0 fsp1>>)
-  .
-
-  Global Program Instance stb_weaker_PreOrder: PreOrder stb_weaker.
-  Next Obligation. ii. esplits; eauto. refl. Qed.
-  Next Obligation.
-    ii. r in H. r in H0. exploit H; et. intro T; des.
-    exploit H0; et. intro U; des. esplits; eauto. etrans; et.
-  Qed.
-
-  Theorem incl_weaker: forall stb0 stb1 (NODUP: List.NoDup (List.map fst stb1)) (INCL: incl stb0 stb1), stb_weaker (to_stb stb0) (to_stb stb1).
-  Proof.
-    unfold to_stb.
-    ii. eapply alist_find_some in FINDTGT.
-    destruct (alist_find fn stb1) eqn:T.
-    { eapply alist_find_some in T.
-      eapply INCL in FINDTGT.
-      destruct (classic (fsp0 = f)).
-      { subst. esplits; et. refl. }
-      exfalso.
-      eapply NoDup_inj_aux in NODUP; revgoals.
-      { eapply T. }
-      { eapply FINDTGT. }
-      { ii; clarify. }
-      ss.
-    }
-    eapply alist_find_none in T; et. exfalso. et.
-  Qed.
-
-  Lemma app_weaker: forall stb0 stb1, stb_weaker (to_stb stb0) (to_stb (stb0 ++ stb1)).
-  Proof.
-    unfold to_stb.
-    ii. eapply alist_find_app in FINDTGT. esplits; eauto. refl.
-  Qed.
 
   Theorem adequacy_weaken
           stb0 stb1
@@ -241,7 +210,7 @@ Section PROOF.
       { refl. }
       i. subst. destruct b. destruct f. econs.
       { rr. cbn. ss. }
-      eapply weakening_fn.
+      eapply weakening_fsem.
       { i. exploit WEAK; et. }
       { refl. }
     }

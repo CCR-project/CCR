@@ -38,9 +38,9 @@ Section SIMMODSEM.
   .
 
   (*** TODO: remove this later ***)
-  Definition ClientStb: list (gname * fspec).
+  Definition ClientStb: list gname.
     eapply (Seal.sealing "stb").
-    let x := constr:(List.map (fun fn => (fn, fspec_trivial)) ["getint"; "putint"]) in
+    let x := constr:(["getint"; "putint"]) in
     let y := eval cbn in x in
     eapply y.
   Defined.
@@ -48,7 +48,7 @@ Section SIMMODSEM.
   Hint Unfold ClientStb: stb.
 
   Variable global_stb: gname -> option fspec.
-  Hypothesis STBINCL: stb_incl (to_stb (ClientStb ++ EchoStb ++ StackStb)) global_stb.
+  Hypothesis STBINCL: stb_incl (to_stb_context ClientStb (EchoStb ++ StackStb)) global_stb.
 
   Ltac renamer := idtac.
   Ltac post_call :=
@@ -154,6 +154,7 @@ Section SIMMODSEM.
   Qed.
 
 End SIMMODSEM.
+Hint Unfold ClientStb: stb.
 
 
 
@@ -163,7 +164,7 @@ Section SIMMOD.
   Context `{@GRA.inG stkRA Σ}.
 
   Variable global_stb: Sk.t -> gname -> option fspec.
-  Hypothesis STBINCL: forall sk, stb_incl (to_stb (ClientStb ++ EchoStb ++ StackStb)) (global_stb sk).
+  Hypothesis STBINCL: forall sk, stb_incl (to_stb_context ClientStb (EchoStb ++ StackStb)) (global_stb sk).
 
   Theorem correct: ModPair.sim (NewEcho1.Echo global_stb) (NewEcho0.Echo).
   Proof.

@@ -45,8 +45,9 @@ Section SIMMODSEM.
   .
 
   Theorem correct:
-    forall ge, ModSemPair.sim (KnotMain0.MainSem ge) (KnotMainImp.KnotMainSem ge).
+    ModPair.sim KnotMain0.Main KnotMainImp.KnotMain.
   Proof.
+    econs; ss. i.
     econstructor 1 with (wf:=wf) (le:=top2); et; ss.
     econs; ss.
     { init.

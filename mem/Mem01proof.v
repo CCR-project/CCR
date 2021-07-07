@@ -181,7 +181,8 @@ Section SIMMODSEM.
    { ss. }
     { ss. eexists. econs; ss. eapply to_semantic.
       iIntros "H". iSplits; ss; et.
-      { iPureIntro. ii. unfold Mem.load_mem. cbn. uo. des_ifs; et. econs; et. }
+      { iPureIntro. ii. unfold Mem.load_mem, initial_mem_mr.
+        cbn. uo. des_ifs; et. econs; et. }
       { iPureIntro. ii. ss. uo. des_ifs.
         apply nth_error_Some. ii. clarify. }
     }

@@ -38,7 +38,7 @@ Section PROOF.
 
   Definition pop_spec: fspec :=
     mk_simple (fun '(h, stk0) => (
-                   (fun varg o => (⌜varg = ([Vptr h 0%Z]: list val)↑ /\ o = ord_pure 1⌝
+                   (fun varg o => (⌜varg = ([Vptr h 0%Z]: list val)↑ /\ o = ord_pure 0⌝
                                    ** OwnM (is_stack h stk0): iProp)%I),
                    (fun vret =>
                       (match stk0 with
@@ -50,7 +50,7 @@ Section PROOF.
 
   Definition push_spec: fspec :=
     mk_simple (fun '(h, x, stk0) => (
-                   (fun varg o => (⌜varg = ([Vptr h 0%Z; x]: list val)↑ /\ o = ord_pure 1⌝
+                   (fun varg o => (⌜varg = ([Vptr h 0%Z; x]: list val)↑ /\ o = ord_pure 0⌝
                                    ** OwnM (is_stack h stk0): iProp)%I),
                    (fun vret => (OwnM (is_stack h (x :: stk0)) ** ⌜vret = (Vundef)↑⌝: iProp)%I)
               ))
@@ -123,7 +123,7 @@ Section PROOF.
 
   Definition KStack: KMod.t := {|
     KMod.get_modsem := fun _ => KStackSem;
-    KMod.sk := Sk.unit;
+    KMod.sk := [("new", Sk.Gfun); ("pop", Sk.Gfun); ("push", Sk.Gfun)];
   |}
   .
   Definition Stack (stb: Sk.t -> gname -> option fspec): Mod.t :=

@@ -1070,6 +1070,37 @@ Module GRA.
   }
   .
 
+  Fixpoint point_wise_wf (Ml: list URA.t) (x: of_list Ml) (n: nat) :=
+  match n with
+  | O => True
+  | S n' => @URA.wf (of_list Ml n') (x n') /\ @point_wise_wf Ml x n'
+  end.
+
+  Definition point_wise_wf_lift (Ml: list URA.t) (x: of_list Ml)
+             (POINT: point_wise_wf x (List.length Ml))
+    :
+      @URA.wf (of_list Ml) x.
+  Proof.
+    ur. ss. i. unfold of_list in *.
+    assert (WF: forall (n m: nat)
+                       (POINT: point_wise_wf x n)
+                       (LT: (m < n)%nat),
+               URA.wf (x m)).
+    { induction n.
+      { i. inv LT. }
+      { i. ss. des. inv LT; auto. }
+    }
+    destruct (le_lt_dec (List.length Ml) k).
+    { generalize (x k). rewrite nth_overflow; auto. i. ur. destruct c; ss. }
+    { eapply WF; et. }
+  Qed.
+
+  Lemma point_add (G: t) (x0 x1: G) n
+    :
+      (x0 ⋅ x1) n = x0 n ⋅ x1 n.
+  Proof.
+    ur. ss. ur. auto.
+  Qed.
 End GRA.
 Coercion GRA.to_URA: GRA.t >-> URA.t.
 
@@ -1139,6 +1170,11 @@ Ltac r_solve :=
 
 Ltac r_wf H := eapply prop_ext_rev; [eapply f_equal|]; [|eapply H]; r_solve.
 
+Ltac g_wf_tac :=
+  cbn; repeat rewrite URA.unit_id; repeat rewrite URA.unit_idl;
+  apply GRA.point_wise_wf_lift; ss; splits; repeat rewrite GRA.point_add; unfold GRA.embed; ss;
+  repeat rewrite URA.unit_id; repeat rewrite URA.unit_idl; try apply URA.wf_unit.
+
 Require Import Any.
 
 (* universe of GRA < universe of Any *)
@@ -1146,3 +1182,5 @@ Module FOO.
   Definition foo_ura (M: URA.t) (r: M): Any.t := r↑.
   Definition foo_gra (Σ: GRA.t) (r: Σ): Any.t := r↑.
 End FOO.
+
+Global Opaque URA.unit.

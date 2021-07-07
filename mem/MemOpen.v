@@ -101,6 +101,7 @@ Section PROOF.
     KModSem.fnsems := MemSbtb;
     KModSem.mn := "Mem";
     KModSem.initial_mr := (GRA.embed (Auth.black (M:=_memRA) ε));
+    (* KModSem.initial_mr := (GRA.embed (Auth.black (M:=_memRA) (initial_mem_mr sk))); *)
     KModSem.initial_st := (Mem.load_mem sk)↑;
   |}
   .

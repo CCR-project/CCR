@@ -34,11 +34,11 @@ Section MAIN.
   Context `{@GRA.inG invRA Σ}.
   Context `{@GRA.inG knotRA Σ}.
 
-  Variable RecStb: SkEnv.t -> gname -> option fspec.
-  Variable GlobalStb: SkEnv.t -> gname -> option fspec.
+  Variable RecStb: Sk.t -> gname -> option fspec.
+  Variable GlobalStb: Sk.t -> gname -> option fspec.
 
   Section SKENV.
-    Variable skenv: SkEnv.t.
+    Variable sk: Sk.t.
 
     Definition fib_spec: fspec :=
       mk_simple (X:=nat*iProp)
@@ -46,7 +46,7 @@ Section MAIN.
                      (fun varg o =>
                         ((⌜exists fb,
                                varg = [Vptr fb 0; Vint (Z.of_nat n)]↑ /\ (intrange_64 n) /\ o = ord_pure (2 * n)%nat /\
-                               fb_has_spec skenv (RecStb skenv) fb (mrec_spec Fib INV)⌝)
+                               fb_has_spec sk (RecStb sk) fb (mrec_spec Fib INV)⌝)
                            ** INV)%I),
                      (fun vret =>
                         (⌜vret = (Vint (Z.of_nat (Fib n)))↑⌝)

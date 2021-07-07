@@ -24,21 +24,16 @@ Section PROOF.
   Definition Σ: GRA.t := fun _ => of_RA.t RA.empty.
   Local Existing Instance Σ.
 
-  Definition FGImp: ModL.t := Mod.add_list [MutMain0.Main ; MutFImp.F ; MutGImp.G].
+  Let smds := [MutMain1.SMain; MutF1.SF; MutG1.SG].
+  Let GlobalStb := fun sk => to_stb (SMod.get_stb smds sk).
 
-  Definition FG0: ModL.t := Mod.add_list [MutMain0.Main ; MutF0.F ; MutG0.G].
-
-  Definition FG1: ModL.t := Mod.add_list [MutMain1.Main ; MutF1.F ; MutG1.G].
-
-  Definition FG2: ModL.t :=
-    Mod.add_list [
-        SMod.to_src MutMain1.SMain;
-        SMod.to_src MutF1.SF;
-        SMod.to_src MutG1.SG
-      ].
+  Definition FGImp: list Mod.t := [MutMain0.Main ; MutFImp.F ; MutGImp.G].
+  Definition FG0: list Mod.t := [MutMain0.Main ; MutF0.F ; MutG0.G].
+  Definition FG1: list Mod.t := List.map (SMod.to_tgt GlobalStb) smds.
+  Definition FG2: list Mod.t := List.map (SMod.to_src) smds.
 
   Lemma FGImp0_correct:
-    refines FGImp FG0.
+    refines2 FGImp FG0.
   Proof.
     eapply adequacy_local_list. econs; [|econs; [|econs; ss]].
     - econs; ss. ii. eapply ModSemPair.self_sim.
@@ -47,7 +42,7 @@ Section PROOF.
   Qed.
 
   Lemma FG01_correct:
-    refines FG0 FG1.
+    refines2 FG0 FG1.
   Proof.
     eapply adequacy_local_list. econs; [|econs; [|econs; ss]].
     - eapply MutMain01proof.correct.
@@ -58,86 +53,27 @@ Section PROOF.
   Require Import ProofMode.
 
   Lemma FG12_correct:
-    refines_closed (FG1) (FG2).
+    refines_closed (Mod.add_list FG1) (Mod.add_list FG2).
   Proof.
     unfold FG1, FG2.
-    replace [SMod.to_src SMain; SMod.to_src SF; SMod.to_src SG] with (List.map SMod.to_src [SMain; SF; SG]) by refl.
-    { erewrite f_equal with (x:=[Main; F; G]).
-      {
-        eapply adequacy_type2; revgoals.
-        { i. ss. clarify. ss. esplits; et; ss.
-          { instantiate (1:=ε). red. uipropall. split; red; uipropall. }
-          { rewrite ! URA.unit_id. apply URA.wf_unit. }
-          { i. red in POST. uipropall. des. red in POST0. uipropall. }
-        }
-        { admit "ez". }
-      }
-      { ss. }
-    }
-  Qed.
-
-  Definition F3: Mod.t := {|
-    Mod.get_modsem := fun _ => {|
-      ModSem.fnsems := [("f", fun _ => trigger (Choose _))];
-      ModSem.mn := "F";
-      ModSem.initial_st := tt↑;
-    |};
-    Mod.sk := [("f", Sk.Gfun)];
-  |}
-  .
-
-  Definition G3: Mod.t := {|
-    Mod.get_modsem := fun _ => {|
-      ModSem.fnsems := [("g", fun _ => trigger (Choose _))];
-      ModSem.mn := "G";
-      ModSem.initial_st := tt↑;
-    |};
-    Mod.sk := [("g", Sk.Gfun)];
-  |}
-  .
-
-  Definition Main3: Mod.t := {|
-    Mod.get_modsem := fun _ => {|
-      ModSem.fnsems := [("main", fun _ => Ret (Vint 55)↑)];
-      ModSem.mn := "Main";
-      ModSem.initial_st := tt↑;
-    |};
-    Mod.sk := Sk.unit;
-  |}
-  .
-
-  Definition FG3: ModL.t := Mod.add_list [Main3;F3;G3].
-
-  Lemma FG23_correct: refines_closed (FG2) (FG3).
-  Proof.
-    eapply refines_close.
-    eapply adequacy_local_list. econs; [|econs; [|econs; ss]].
-    - econs; ss. ii. econstructor 1 with (wf:=top2) (le:=top2); ss. econs; et.
-      init. unfold cfunN, fun_to_src, body_to_src, mainBody. steps.
-    - econs; ss. ii. econstructor 1 with (wf:=top2) (le:=top2); ss. econs; et.
-      init. unfold cfunN, fun_to_src, body_to_src, mainBody. steps.
-      force_l. eexists. steps.
-    - econs; ss. ii. econstructor 1 with (wf:=top2) (le:=top2); ss. econs; et.
-      init. unfold cfunN, fun_to_src, body_to_src, mainBody. steps.
-      force_l. eexists. steps.
-      Unshelve. all: try (exact tt).
+    eapply adequacy_type.
+    { instantiate (1:=ε). cbn. rewrite ! URA.unit_id. eapply URA.wf_unit. }
+    i. cbn in MAIN. ss. clarify. ss. exists tt. split.
+    { iIntros "H". iPureIntro. splits; auto. }
+    { ii. iPureIntro. i. des; auto. }
   Qed.
 
   Theorem FG_correct:
-    refines_closed FGImp FG3.
+    refines_closed (Mod.add_list FGImp) (Mod.add_list FG2).
   Proof.
     etrans.
     { eapply refines_close. eapply FGImp0_correct. }
     etrans.
     { eapply refines_close. eapply FG01_correct. }
-    etrans.
     { eapply FG12_correct. }
-    etrans.
-    { eapply FG23_correct. }
-    refl.
   Qed.
 
 End PROOF.
 
-Definition mutsum_imp := ModSemL.initial_itr (ModL.enclose FGImp) None.
-Definition mutsum := ModSemL.initial_itr (ModL.enclose FG3) None.
+Definition mutsum_imp := ModSemL.initial_itr (ModL.enclose (Mod.add_list FGImp)) None.
+Definition mutsum := ModSemL.initial_itr (ModL.enclose (Mod.add_list FG2)) None.

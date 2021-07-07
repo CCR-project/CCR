@@ -559,6 +559,17 @@ Section SMOD.
   Definition to_tgt (stb: Sk.t -> gname -> option fspec) (md: t): Mod.t :=
     transl (fun sk mn => fun_to_tgt mn (stb sk)) (fun ms => Any.pair ms.(SModSem.initial_st) ms.(SModSem.initial_mr)↑) md.
 
+
+  Definition get_stb (mds: list t): Sk.t -> alist gname fspec :=
+    fun sk => map (map_snd fsb_fspec) (flat_map (SModSem.fnsems ∘ (flip get_modsem sk)) mds).
+
+  Definition get_sk (mds: list t): Sk.t :=
+    Sk.sort (fold_right Sk.add Sk.unit (List.map sk mds)).
+
+  Definition get_initial_mrs (mds: list t): Sk.t -> Σ :=
+    fun sk => fold_left (⋅) (List.map (SModSem.initial_mr ∘ (flip get_modsem sk)) mds) ε.
+
+
   (* Definition transl (tr: SModSem.t -> ModSem.t) (md: t): Mod.t := {| *)
   (*   Mod.get_modsem := (SModSem.transl tr) ∘ md.(get_modsem); *)
   (*   Mod.sk := md.(sk); *)
@@ -2044,31 +2055,5 @@ Ltac ired_both := ired_l; ired_r.
     ginit; []; unfold alist_add, alist_remove; ss;
     unfold fun_to_tgt, cfunN; ss.
 
-
-Create HintDb stb.
-Hint Rewrite (Seal.sealing_eq "stb"): stb.
-
-Definition to_stb`{Σ: GRA.t} (l: alist gname fspec): gname -> option fspec :=
-  fun fn => alist_find fn l.
-
-Ltac stb_tac :=
-  match goal with
-  | [ |- to_stb ?xs _ = _ ] =>
-    unfold to_stb;
-    autounfold with stb; autorewrite with stb; simpl
-  | [ |- alist_find _ ?xs = _ ] =>
-    match type of xs with
-    | (list (string * fspec)) =>
-      autounfold with stb; autorewrite with stb; simpl
-    end
-  | [H: alist_find _ ?xs = _ |- _ ] =>
-    match type of xs with
-    | (list (string * fspec)) =>
-      autounfold with stb in H; autorewrite with stb in H; simpl in H
-    end
-  | [H: to_stb ?xs _ = _ |- _ ] =>
-    unfold to_stb in H;
-    autounfold with stb in H; autorewrite with stb in H; simpl in H
-  end.
 
 Notation Es' := (hCallE +' pE +' eventE).

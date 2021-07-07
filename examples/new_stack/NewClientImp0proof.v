@@ -44,8 +44,9 @@ Section SIMMODSEM.
   .
 
   Theorem correct:
-    forall ge, ModSemPair.sim NewClient0.ClientSem (NewClientImp.ClientSem ge).
+    ModPair.sim NewClient0.Client (NewClientImp.Client).
   Proof.
+    econs; ss. i.
     Local Transparent syscalls.
     econstructor 1 with (wf:=wf) (le:=top2); et; ss.
     econs; ss.

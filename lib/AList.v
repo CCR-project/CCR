@@ -122,6 +122,19 @@ Section ALIST.
     i. destruct a. ss. rewrite eq_rel_dec_correct in *. des_ifs; auto.
   Qed.
 
+  Lemma alist_find_some_iff K `{Dec K} V (k: K) (l: alist K V) (v: V)
+        (ND: NoDup (List.map fst l))
+        (IN: In (k, v) l)
+  :
+    alist_find k l = Some v.
+  Proof.
+    revert ND IN. induction l; ss.
+    i. destruct a. ss. inv ND. des.
+    { clarify. rewrite eq_rel_dec_correct in *. des_ifs. }
+    { rewrite eq_rel_dec_correct in *. des_ifs; et.
+      exfalso. eapply (List.in_map fst) in IN. et. }
+  Qed.
+
   Lemma alist_find_none K `{Dec K} V (k: K) (l: alist K V)
         (FIND: alist_find k l = None)
         v

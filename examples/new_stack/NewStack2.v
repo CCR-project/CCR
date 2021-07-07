@@ -84,7 +84,7 @@ Section PROOF.
 
   Definition Stack: Mod.t := {|
     Mod.get_modsem := fun _ => StackSem;
-    Mod.sk := Sk.unit;
+    Mod.sk := [("new", Sk.Gfun); ("pop", Sk.Gfun); ("push", Sk.Gfun)];
   |}
   .
 
