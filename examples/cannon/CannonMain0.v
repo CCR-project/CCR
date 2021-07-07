@@ -21,12 +21,12 @@ Section CANNONMAIN.
     | 0 =>
       Ret tt
     | S n' =>
-      r <- ccallU "fire" tt;;
+      r <- ccallU "fire" ([]: list val);;
       _ <- trigger (Syscall "print" [r] top1);;
       main_repeat n'
     end.
 
-  Definition main_body {E} `{callE -< E} `{eventE -< E}: unit -> itree E unit :=
+  Definition main_body {E} `{callE -< E} `{eventE -< E}: list val -> itree E unit :=
     fun args =>
       main_repeat num_fire
   .

@@ -27,9 +27,9 @@ Section SIMMODSEM.
                                ∨ OwnM (Fired))%I)
   .
 
-  Theorem correct: ModPair.sim (Cannon1.Cannon GlobalStb) Cannon0.Cannon.
+  Theorem correct: refines2 [Cannon0.Cannon] [Cannon1.Cannon GlobalStb].
   Proof.
-    econs; ss.
+    eapply adequacy_local2. econs; ss.
     i. econstructor 1 with (wf:=wf) (le:=top2); et; ss; cycle 1.
     { exists tt. red. econs. eapply to_semantic.
       iIntros "H". iLeft. iSplitR; ss. }

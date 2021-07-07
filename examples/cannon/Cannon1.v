@@ -22,7 +22,7 @@ Section CANNON.
     mk_simple (X:=unit)
               (fun _ => (
                    (fun varg o =>
-                      (⌜varg = tt↑ /\ o = ord_top⌝)
+                      (⌜varg = ([]: list val)↑ /\ o = ord_top⌝)
                         ** (OwnM (Ball))
                    ),
                    (fun vret =>

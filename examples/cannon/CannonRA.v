@@ -31,17 +31,9 @@ Proof.
   ur. ii. des. ur in H. red in H. des. ur in H. destruct ctx; ss.
 Qed.
 
-Goal ~ URA.wf (Ready ⋅ Ready).
+Lemma BallReady_wf: URA.wf (Ball ⋅ Ready).
 Proof.
-  ur. ss.
-Qed.
-
-Goal ~ URA.wf (Fired ⋅ Fired).
-Proof.
-  ur. ss.
-Qed.
-
-Goal ~ URA.wf (Ball ⋅ Ball).
-Proof.
-  ur. ii. ur in H. ss.
+  ur. split.
+  { eexists. rewrite ! URA.unit_id. ss. }
+  { ur. ss. }
 Qed.

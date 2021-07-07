@@ -18,7 +18,7 @@ Section CANNON.
     if Z_zerop m then None else Some (Z.div n m).
 
   Definition fire_body {E} `{callE -< E} `{pE -< E} `{eventE -< E}
-    : unit -> itree E Z :=
+    : list val -> itree E Z :=
     fun args =>
       powder <- trigger PGet;; powder <- powder↓?;;
       r <- (div 1 powder)?;;
