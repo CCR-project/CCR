@@ -1059,6 +1059,17 @@ Section MOD.
      ss. rewrite map_app. auto.
    Qed.
 
+   Lemma add_list_fnsems (mdl: list t) (ske: Sk.t)
+     :
+       (ModSemL.fnsems (ModL.get_modsem (add_list mdl) ske))
+       =
+       fold_right (@app _) [] (List.map (fun md => (ModSemL.fnsems (get_modsem md ske))) mdl).
+   Proof.
+     induction mdl.
+     { auto. }
+     transitivity ((ModSemL.fnsems (get_modsem a ske))++(fold_right (@app _) [] (List.map (fun md => ModSemL.fnsems (get_modsem md ske)) mdl))); auto.
+     rewrite <- IHmdl. clear. ss.
+   Qed.
 End MOD.
 End Mod.
 
