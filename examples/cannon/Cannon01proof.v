@@ -33,7 +33,7 @@ Section SIMMODSEM.
     i. econstructor 1 with (wf:=wf) (le:=top2); et; ss; cycle 1.
     { exists tt. red. econs. eapply to_semantic.
       iIntros "H". iLeft. iSplitR; ss. }
-    econs; ss. init. unfold fire_body. harg.
+    econs; ss. init. unfold Cannon0.fire_body, Cannon1.fire_body. harg.
     mDesOr "INV".
     { mDesAll. des; clarify.
       steps. gstep. econs; et. i. exists 100.

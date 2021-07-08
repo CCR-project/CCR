@@ -18,6 +18,14 @@ Section CANNON.
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG CannonRA Σ}.
 
+  Definition fire_body {E} `{callE -< E} `{pE -< E} `{eventE -< E}
+    : list val -> itree E Z :=
+    fun args =>
+      let r := 1%Z in
+      _ <- trigger (Syscall "print" [r] top1);;
+      Ret r
+  .
+
   Definition fire_spec:    fspec :=
     mk_simple (X:=unit)
               (fun _ => (
