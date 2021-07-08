@@ -473,3 +473,5 @@ Ltac kinit :=
     simpl;
     gstep; eapply sim_itree_take_src; [eauto with ord_step|intros []; rewrite HoareFun_parse; simpl]
   end.
+
+Arguments in_dec: simpl never.
