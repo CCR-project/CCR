@@ -66,68 +66,76 @@ End SkEnv.
 Require Import Orders.
 
 Module Sk.
-  Class t: Type := mk {
-    car:> Type;
-    unit: car;
-    add: car -> car -> car;
-    canon: car -> car;
-    wf: car -> Prop;
-    add_comm: forall a b, canon (add a b = add b a;
+  Class ld: Type := mk {
+    t:> Type;
+    unit: t;
+    add: t -> t -> t;
+    canon: t -> t;
+    wf: t -> Prop;
+    add_comm: forall a b (WF: wf (add a b)),
+        canon (add a b) = canon (add b a);
     add_assoc: forall a b c, add a (add b c) = add (add a b) c;
-    wf_mon: forall a b, wf (add a b) -> wf a;
+    add_unit_l: forall a, add unit a = a;
+    add_unit_r: forall a, add a unit = a;
+    wf_comm: forall a b, wf (add a b) -> wf (add b a);
+    unit_wf: wf unit;
+    wf_mon: forall a b, wf (canon (add a b)) -> wf (canon a);
 
-    extends := fun a b => exists ctx, add a ctx = b;
-    updatable := fun a b => forall ctx, wf (add a ctx) -> wf (add b ctx);
-    updatable_set := fun a B => forall ctx (WF: wf (add a ctx)),
-                         exists b, <<IN: B b>> /\ <<WF: wf (add b ctx)>>;
+    extends := fun a b => exists ctx, canon (add a ctx) = b;
   }
   .
 
 
-(*** PCM == Unital RA ***)
-(*** When URA, not RA? (1) Auth algebra (2) global RA construction ***)
-Module URA.
-  Class t: Type := mk {
-    car:> Type;
-    unit: car;
-    _add: car -> car -> car;
-    _wf: car -> Prop;
-    _add_comm: forall a b, _add a b = _add b a;
-    _add_assoc: forall a b c, _add a (_add b c) = _add (_add a b) c;
-    add: car -> car -> car := Seal.sealing "ra" _add;
-    wf: car -> Prop := Seal.sealing "ra" _wf;
-    unit_id: forall a, add a unit = a;
-    wf_unit: wf unit;
-    wf_mon: forall a b, wf (add a b) -> wf a;
-
-    (* extends := fun a b => exists ctx, add a ctx = b; *)
-    (* updatable := fun a b => forall ctx, wf (add a ctx) -> wf (add b ctx); *)
-    extends := fun a b => exists ctx, add a ctx = b;
-    updatable := fun a b => forall ctx, wf (add a ctx) -> wf (add b ctx);
-    updatable_set := fun a B => forall ctx (WF: wf (add a ctx)),
-                         exists b, <<IN: B b>> /\ <<WF: wf (add b ctx)>>;
-  }
-  .
-
-
-  Class t:
-
-
-
+  (* Imp Instance *)
   Inductive gdef: Type := Gfun | Gvar (gv: Z).
-
-  Definition t: Type := alist gname gdef.
-
-  Definition unit: t := nil.
-
-  Definition add: t -> t -> t := @List.app _.
-
-  Definition wf (sk: t): Prop := @List.NoDup _ (List.map fst sk).
 
   Module GDef <: Typ. Definition t := gdef. End GDef.
   Module SkSort := AListSort GDef.
 
-  Definition sort: t -> t := SkSort.sort.
+  Definition sort: alist gname gdef -> alist gname gdef := SkSort.sort.
+
+  Program Definition gdefs: ld :=
+    @mk (alist gname gdef) nil (@List.app _) sort (fun sk => @List.NoDup _ (List.map fst sk)) _ _ _ _ _ _ _.
+  Next Obligation.
+  Proof.
+    eapply SkSort.sort_add_comm. auto.
+    (* eapply Permutation.Permutation_NoDup; [|et]. *)
+    (* eapply Permutation.Permutation_map. *)
+    (* symmetry. eapply SkSort.sort_permutation. *)
+  Qed.
+  Next Obligation.
+  Proof.
+    eapply List.app_assoc.
+  Qed.
+  Next Obligation.
+  Proof.
+    rewrite List.app_nil_r. auto.
+  Qed.
+  Next Obligation.
+  Proof.
+    i. eapply Permutation.Permutation_NoDup; [|et].
+    eapply Permutation.Permutation_map.
+    apply Permutation.Permutation_app_comm.
+  Qed.
+  Next Obligation.
+  Proof.
+    econs.
+  Qed.
+  Next Obligation.
+  Proof.
+    cut (NoDup (map fst a)).
+    { i. eapply Permutation.Permutation_NoDup; [|et].
+      eapply Permutation.Permutation_map.
+      eapply SkSort.sort_permutation. }
+    cut (NoDup (map fst (a ++ b))).
+    { i. rewrite map_app in H0.
+      eapply nodup_app_l. et. }
+    i. eapply Permutation.Permutation_NoDup; [|et].
+    eapply Permutation.Permutation_map.
+    symmetry. eapply SkSort.sort_permutation.
+  Qed.
+
+  Local Existing Instance gdefs.
 
   Definition sort_add_comm sk0 sk1
              (WF: wf (add sk0 sk1))
@@ -140,7 +148,7 @@ Module URA.
   Definition sort_wf sk (WF: wf sk):
     wf (sort sk).
   Proof.
-    eapply Permutation.Permutation_NoDup; [|apply WF].
+    ss. eapply Permutation.Permutation_NoDup; [|apply WF].
     eapply Permutation.Permutation_map.
     eapply SkSort.sort_permutation.
   Qed.
@@ -281,6 +289,3 @@ Module URA.
   Qed.
 
 End Sk.
-
-Coercion Sk.load_skenv: Sk.t >-> SkEnv.t.
-Global Opaque Sk.load_skenv.

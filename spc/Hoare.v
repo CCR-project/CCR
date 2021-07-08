@@ -110,8 +110,8 @@ Section CANCELSTB.
                (<<RET: forall ret_src ret_tgt,
                    ((main_fsp.(postcond) None x ret_src ret_tgt: iProp) -∗ ⌜ret_src = ret_tgt⌝)>>))
     :
-      Beh.of_program (@ModL.compile CONFT (Mod.add_list mds_tgt)) <1=
-      Beh.of_program (@ModL.compile CONFS (Mod.add_list mds_src)).
+      Beh.of_program (@ModL.compile _ CONFT (Mod.add_list mds_tgt)) <1=
+      Beh.of_program (@ModL.compile _ CONFS (Mod.add_list mds_src)).
   Proof.
     ii. eapply adequacy_type_m2s.
     eapply adequacy_type_m2m; et.
@@ -177,8 +177,8 @@ Section CANCEL.
                (<<RET: forall ret_src ret_tgt,
                    ((main_fsp.(postcond) None x ret_src ret_tgt: iProp) -∗ ⌜ret_src = ret_tgt⌝)>>))
     :
-      Beh.of_program (@ModL.compile CONFT (Mod.add_list mds_tgt0)) <1=
-      Beh.of_program (@ModL.compile CONFS (Mod.add_list mds_src)).
+      Beh.of_program (@ModL.compile _ CONFT (Mod.add_list mds_tgt0)) <1=
+      Beh.of_program (@ModL.compile _ CONFS (Mod.add_list mds_src)).
   Proof.
     eapply adequacy_type_arg_stb; et.
     { unfold stb0, sk, SMod.get_stb, SMod.get_sk. unfold to_stb.
@@ -199,8 +199,8 @@ Section CANCEL.
                (<<RET: forall ret_src ret_tgt,
                    ((main_fsp.(postcond) None x ret_src ret_tgt: iProp) -∗ ⌜ret_src = ret_tgt⌝)>>))
     :
-      Beh.of_program (@ModL.compile CONFT (Mod.add_list mds_tgt1)) <1=
-      Beh.of_program (@ModL.compile CONFS (Mod.add_list mds_src)).
+      Beh.of_program (@ModL.compile _ CONFT (Mod.add_list mds_tgt1)) <1=
+      Beh.of_program (@ModL.compile _ CONFS (Mod.add_list mds_src)).
   Proof.
     eapply adequacy_type_arg_stb; et.
     { unfold stb1, sk, SMod.get_stb, SMod.get_sk. unfold to_closed_stb.

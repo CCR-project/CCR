@@ -28,7 +28,7 @@ Section PROOF.
   Variable GlobalStb: Sk.t -> gname -> option fspec.
 
   Section SKENV.
-    Variable skenv: Sk.t.
+    Variable sk: Sk.t.
 
     Definition repeat_spec:    fspec :=
       mk_simple (X:=nat * nat * Z * (Z -> Z))
@@ -37,7 +37,7 @@ Section PROOF.
                         (⌜o = ord_pure (Ord.omega + n)%ord
                          /\ varg = [Vptr f 0; Vint (Z.of_nat n); Vint x]↑ /\ (intrange_64 n)
                          /\ fb_has_spec
-                              skenv (FunStb skenv) f
+                              (Sk.load_skenv sk) (FunStb sk) f
                               (mk_simple
                                  (X:=Z)
                                  (fun x =>

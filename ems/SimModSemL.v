@@ -1327,9 +1327,9 @@ Section SIMMOD.
      assert (FNS: forall fn : string,
                 option_rel (sim_fsem wf le)
                            (alist_find fn
-                                       (ModSemL.fnsems (ModL.get_modsem md_src (Sk.sort (ModL.sk md_src)))))
+                                       (ModSemL.fnsems (ModL.get_modsem md_src (Sk.canon (ModL.sk md_src)))))
                            (alist_find fn
-                                       (ModSemL.fnsems (ModL.get_modsem md_tgt (Sk.sort (ModL.sk md_tgt)))))).
+                                       (ModSemL.fnsems (ModL.get_modsem md_tgt (Sk.canon (ModL.sk md_tgt)))))).
      { rewrite <- sim_sk0 in *.
        remember (ModSemL.fnsems (ModL.get_modsem md_src (Sk.sort (ModL.sk md_src)))).
        remember (ModSemL.fnsems (ModL.get_modsem md_tgt (Sk.sort (ModL.sk md_src)))).

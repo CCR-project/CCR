@@ -52,7 +52,7 @@ Section KNOT.
                         (fun varg o =>
                            (⌜exists fb,
                                  varg = [Vptr fb 0; Vint (Z.of_nat n)]↑ /\ (intrange_64 n) /\ o = ord_pure (2 * n)%nat /\
-                                 fb_has_spec sk (RecStb sk) fb rec_spec⌝)
+                                 fb_has_spec (Sk.load_skenv sk) (RecStb sk) fb rec_spec⌝)
                              ** OwnM (knot_frag (Some f))
                         ),
                         (fun vret =>
@@ -70,13 +70,13 @@ Section KNOT.
                         (fun varg o =>
                            (⌜exists fb,
                                  varg = [Vptr fb 0]↑ /\ o = ord_pure 1 /\
-                                 fb_has_spec sk (FunStb sk) fb (fun_gen f)⌝)
+                                 fb_has_spec (Sk.load_skenv sk) (FunStb sk) fb (fun_gen f)⌝)
                              ** (∃ old, OwnM (knot_frag old))
                         ),
                         (fun vret =>
                            (⌜exists fb,
                                  vret = (Vptr fb 0)↑ /\
-                                 fb_has_spec sk (RecStb sk) fb rec_spec⌝)
+                                 fb_has_spec (Sk.load_skenv sk) (RecStb sk) fb rec_spec⌝)
                              ** OwnM (knot_frag (Some f))
                         )
                    ))).
@@ -87,7 +87,7 @@ Section KNOT.
                      (fun varg o =>
                         (⌜exists fb,
                               varg = [Vptr fb 0]↑ /\ o = ord_pure 1 /\
-                              fb_has_spec sk (FunStb sk) fb (fun_gen f)⌝)
+                              fb_has_spec (Sk.load_skenv sk) (FunStb sk) fb (fun_gen f)⌝)
                           ** OwnM (knot_init)
                           ** inv_closed
                      ),
@@ -95,7 +95,7 @@ Section KNOT.
                         (∃ INV,
                             (⌜exists fb,
                                   vret = (Vptr fb 0)↑ /\
-                                  fb_has_spec sk (RecStb sk) fb (mrec_spec f INV)⌝)
+                                  fb_has_spec (Sk.load_skenv sk) (RecStb sk) fb (mrec_spec f INV)⌝)
                               ** INV)%I
                      )
                 )).
@@ -108,7 +108,7 @@ Section KNOT.
     Definition SKnotSem: SModSem.t := {|
       SModSem.fnsems := KnotSbtb;
       SModSem.mn := "Knot";
-      SModSem.initial_mr := (GRA.embed (var_points_to sk "_f" (Vint 0))) ⋅ (GRA.embed (knot_full None)) ;
+      SModSem.initial_mr := (GRA.embed (var_points_to (Sk.load_skenv sk) "_f" (Vint 0))) ⋅ (GRA.embed (knot_full None)) ;
       SModSem.initial_st := tt↑;
     |}
     .
@@ -146,10 +146,10 @@ Section WEAK.
   Context `{@GRA.inG invRA Σ}.
   Context `{@GRA.inG knotRA Σ}.
 
-  Variable RecStb: SkEnv.t -> gname -> option fspec.
-  Variable FunStb: SkEnv.t -> gname -> option fspec.
+  Variable RecStb: Sk.t -> gname -> option fspec.
+  Variable FunStb: Sk.t -> gname -> option fspec.
 
-  Lemma knot_spec2_weaker skenv: fspec_weaker (knot_spec2 RecStb FunStb skenv) (knot_spec RecStb FunStb skenv).
+  Lemma knot_spec2_weaker sk: fspec_weaker (knot_spec2 RecStb FunStb sk) (knot_spec RecStb FunStb sk).
   Proof.
     ii. ss. exists x_src. split.
     { intros arg_src arg_tgt o.

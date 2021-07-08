@@ -84,9 +84,9 @@ Section SIMMODSEM.
         (⌜forall f (EQ: f' = Some f),
               exists fb,
                 (<<BLK: fb' = Vptr fb 0>>) /\
-                (<<FN: fb_has_spec sk (FunStb sk) fb (fun_gen RecStb sk f)>>)⌝)
+                (<<FN: fb_has_spec (Sk.load_skenv sk) (FunStb sk) fb (fun_gen RecStb sk f)>>)⌝)
           ** (OwnM (knot_full f'))
-          ** (OwnM (var_points_to sk "_f" fb')))%I.
+          ** (OwnM (var_points_to (Sk.load_skenv sk) "_f" fb')))%I.
 
   Let wf (sk: Sk.t): _ -> W -> Prop :=
     @inv_wf

@@ -271,7 +271,8 @@ Section CANCEL.
       unfold ms_mid, ms_tgt.
       unfold mds_mid, mds_tgt, SMod.to_mid, SMod.to_tgt. ss.
       rewrite ! SMod.transl_initial_mrs.
-      generalize (Sk.sort (foldr Sk.add Sk.unit (map SMod.sk mds))).
+      change (alist string Sk.gdef) with Sk.t.
+      generalize (Sk.sort (fold_right Sk.add Sk.unit (map SMod.sk mds))).
       intros sk0. i. red. extensionality mn.
       unfold SMod.load_initial_mrs.
       rewrite ! SMod.red_do_ret. clear. induction mds; ss.
@@ -503,8 +504,8 @@ Section CANCEL.
                               (WFR: URA.wf r)
                               (POST: main_fsp.(postcond) None x ret_src ret_tgt r),
                    ret_src = ret_tgt>>)):
-    Beh.of_program (@ModL.compile CONFT (Mod.add_list mds_tgt)) <1=
-    Beh.of_program (@ModL.compile midConf (Mod.add_list mds_mid)).
+    Beh.of_program (@ModL.compile _ CONFT (Mod.add_list mds_tgt)) <1=
+    Beh.of_program (@ModL.compile _ midConf (Mod.add_list mds_mid)).
   Proof.
     eapply adequacy_global_itree; ss.
     exists (Ord.from_nat 100%nat). ss.

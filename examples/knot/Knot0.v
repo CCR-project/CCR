@@ -35,7 +35,7 @@ Section PROOF.
       ccallU fn [Vptr rb 0; Vint n].
 
   Definition KnotSem (sk: Sk.t): ModSem.t := {|
-    ModSem.fnsems := [("rec", cfunU (recF sk)); ("knot", cfunU (knotF sk))];
+    ModSem.fnsems := [("rec", cfunU (recF (Sk.load_skenv sk: SkEnv.t))); ("knot", cfunU (knotF (Sk.load_skenv sk)))];
     ModSem.mn := "Knot";
     ModSem.initial_st := tt↑;
   |}

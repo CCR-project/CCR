@@ -32,7 +32,7 @@ Section GENV.
         (FOUND : find
                    ((fun '(k2, _) => f ?[ eq ] k2) <*>
                      (fun '(mn, (fn, f)) =>
-                      (fn, transl_all mn (T:=_) ∘ cfunU (eval_imp (Sk.sort (defsL src)) f)))) (prog_funsL src) =
+                      (fn, transl_all mn (T:=_) ∘ cfunU (eval_imp (Sk.load_skenv (Sk.sort (defsL src))) f)))) (prog_funsL src) =
                  Some (mn, (fn, impf)))
     :
       (fn = f) /\ (In (mn, (fn, impf)) (prog_funsL src)).
@@ -456,7 +456,7 @@ Section MAPBLK.
       <<FOUNDTGT: exists tgv, (Genv.find_def (Genv.globalenv tgt) (map_blk src blk) = Some (Gvar tgv))>>.
   Proof.
     i. apply Sk.sort_wf in WFSK. set (sge:= Sk.sort (defsL src)) in *. set (tge:= Genv.globalenv tgt) in *.
-    assert (SFOUND: SkEnv.blk2id sge blk = Some gn).
+    assert (SFOUND: SkEnv.blk2id (Sk.load_skenv sge) blk = Some gn).
     { Local Transparent Sk.load_skenv. unfold Sk.load_skenv. ss. rewrite SGENV. uo; ss. Local Opaque Sk.load_skenv. }
     apply Sk.load_skenv_wf in WFSK. apply WFSK in SFOUND. apply nth_error_In in SGENV.
     assert (INTDEFS: exists cv, In (s2p gn, Gvar cv) (prog_defs tgt)).

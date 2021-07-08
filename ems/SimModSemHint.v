@@ -1064,7 +1064,7 @@ Section SIMMOD.
        }
      }
      { des. clear - SIM WF0 SKEQ. unfold ModL.enclose.
-       remember (Sk.sort (ModL.sk (Mod.add_list mds_src))) as sk.
+       remember (Sk.canon (ModL.sk (Mod.add_list mds_src))) as sk.
        rewrite ! Mod_add_list_get_modsem.
        eapply Forall2_apply_Forall2 with
            (f := (fun md => (Mod.lift md).(ModL.get_modsem) sk))

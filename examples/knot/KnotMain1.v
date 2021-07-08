@@ -46,7 +46,7 @@ Section MAIN.
                      (fun varg o =>
                         ((⌜exists fb,
                                varg = [Vptr fb 0; Vint (Z.of_nat n)]↑ /\ (intrange_64 n) /\ o = ord_pure (2 * n)%nat /\
-                               fb_has_spec sk (RecStb sk) fb (mrec_spec Fib INV)⌝)
+                               fb_has_spec (Sk.load_skenv sk) (RecStb sk) fb (mrec_spec Fib INV)⌝)
                            ** INV)%I),
                      (fun vret =>
                         (⌜vret = (Vint (Z.of_nat (Fib n)))↑⌝)

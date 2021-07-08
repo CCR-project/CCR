@@ -262,7 +262,8 @@ Section SAFETY.
         =
         Some (transl_all (T:=_) mn ∘ fun_to_src (fun _ => SafeModSem.safe_itree stb)).
   Proof.
-    unfold ModL.enclose, mds.
+    unfold ModL.enclose, mds. unfold Sk.canon. ss.
+    change (alist string Sk.gdef) with Sk.t.
     generalize (Sk.sort (ModL.sk (Mod.add_list (map (SMod.to_src ∘ SafeMod.to_smod stb) smds)))).
     i. rewrite ! Mod.add_list_fnsems.
     rewrite <- fold_right_app_flat_map. rewrite ! flat_map_map.
