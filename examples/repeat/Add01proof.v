@@ -72,29 +72,35 @@ Section SIMMODSEM.
     }
     econs; ss.
     { init. harg. destruct x as [m n]. mDesAll. des; clarify.
-      steps. astart 1. unfold Add0.add. rewrite unfold_eval_imp. imp_steps.
+      steps. unfold Add0.add, add_body. rewrite unfold_eval_imp. imp_steps.
       des_ifs.
-      2: { exfalso. apply n0. solve_NoDup. }
+      2: { exfalso. apply n. solve_NoDup. }
+      unfold unint in *. des_ifs.
       hexploit FunStb_succ. i. inv H.
-      imp_steps. rewrite FIND0. imp_steps.
-      hexploit GlobalStb_repeat; et. i. inv H. acatch; et.
+      imp_steps. rewrite FIND0. imp_steps. des.
+      assert (exists m, z0 = Z.of_nat m).
+      { exists (Z.to_nat z0). rewrite Z2Nat.id; auto. lia. } des. subst.
+      hexploit GlobalStb_repeat; et. i. inv H. astart 1. acatch; et.
       hcall_weaken (Repeat1.repeat_spec FunStb sk) _ (_, _, _, Z.succ) _ with ""; et.
       { iPureIntro. splits; et. econs.
         { eapply SKWF. eauto. }
         econs.
         { et. }
-        { apply WEAK. }
+        { etrans; [|et]. econs. ss. split.
+          { ii. iIntros "H". iPure "H" as H. des. clarify.
+            iModIntro. iSplits; et. }
+          { ii. iIntros "H". iPure "H" as H. des; clarify. }
+        }
       }
-      { splits; ss. eauto with ord_step. }
+      { splits; ss. }
       mDesAll. des; clarify. imp_steps.
       guclo lordC_spec. econs.
       { instantiate (5:=100). eapply OrdArith.add_base_l. } (* TODO: make index reset tactics *)
-      astop. steps. force_l. eexists.
-      steps. hret _; ss.
+      astop. steps. hret _; ss.
       iPureIntro. esplits; et.
-      f_equal. f_equal. clear. generalize m. induction n; ss; i.
+      f_equal. f_equal. clear. generalize z. induction m; ss; i.
       { lia. }
-      { rewrite IHn. lia. }
+      { rewrite <- IHm. lia. }
     }
     Unshelve. all:ss. all:try (exact 0).
   Qed.

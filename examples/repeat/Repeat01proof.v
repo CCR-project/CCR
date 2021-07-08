@@ -74,7 +74,10 @@ Section SIMMODSEM.
       astart 2. acatch.
       { eapply FunStb_incl. et. }
       hcall_weaken _ _ _ _ with ""; et.
-      { splits; ss. eapply OrdArith.lt_from_nat. lia. }
+      { splits; ss. eapply Ord.le_lt_lt.
+        { eapply OrdArith.add_base_l. }
+        { eapply OrdArith.lt_add_r. rewrite Ord.from_nat_S. eapply Ord.S_lt. }
+      }
       ss. mDesAll. des; clarify. imp_steps.
       guclo lordC_spec. econs.
       { instantiate (5:=100). eapply OrdArith.add_base_l. }

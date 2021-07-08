@@ -34,14 +34,15 @@ Section PROOF.
       mk_simple (X:=nat * nat * Z * (Z -> Z))
                 (fun '(f, n, x, f_spec) => (
                      (fun varg o =>
-                        (⌜o = ord_pure n /\ varg = [Vptr f 0; Vint (Z.of_nat n); Vint x]↑ /\ (intrange_64 n)
+                        (⌜o = ord_pure (Ord.omega + n)%ord
+                         /\ varg = [Vptr f 0; Vint (Z.of_nat n); Vint x]↑ /\ (intrange_64 n)
                          /\ fb_has_spec
                               skenv (FunStb skenv) f
                               (mk_simple
                                  (X:=Z)
                                  (fun x =>
                                     ((fun varg o =>
-                                        ⌜o = ord_pure 0 /\ varg = [Vint x]↑⌝),
+                                        ⌜o = ord_pure Ord.omega /\ varg = [Vint x]↑⌝),
                                      (fun vret => ⌜vret = (Vint (f_spec x))↑⌝))))⌝: iProp)%I
                      ),
                      (fun vret =>
