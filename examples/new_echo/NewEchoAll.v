@@ -45,14 +45,26 @@ Section ECHOIMPL.
 End ECHOIMPL.
 
 
-(* spec program *)
 Require Import MemOpen NewStack3A NewEcho1 NewEchoMain0 NewClient0.
-Section ECHOSPEC.
+Section ECHOMID.
   Let frds: list string := ["Stack"; "Echo"].
-  Definition echo_spec: ModL.t :=
+  Definition echo_mid: ModL.t :=
     Mod.add_list [
         Mem0.Mem;
       KMod.transl_src (fun _ => frds) KStack; KMod.transl_src (fun _ => frds) KEcho;
+      Main; Client
+      ].
+End ECHOMID.
+
+
+(* spec program *)
+Require Import NewStack2.
+Section ECHOSPEC.
+  Definition echo_spec: ModL.t :=
+    Mod.add_list [
+        Mem0.Mem;
+      NewStack2.Stack;
+      KMod.transl_src (fun _ => ["Echo"]) KEcho;
       Main; Client
       ].
 
@@ -64,7 +76,8 @@ End ECHOSPEC.
 Require Import Mem0Openproof MemOpen0proof.
 Require Import NewStackImp0proof NewStack01proof NewStack12proof NewStack23Aproof.
 Require Import NewEchoMainImp0proof NewEchoImp0proof.
-Require Import NewClientImp0proof  NewEcho01proof.
+Require Import NewClientImp0proof NewEcho01proof.
+Require Import NewEcho1mon NewStack32proof.
 Section PROOF.
   Theorem echo_correct:
     refines echo_imp echo_spec.
@@ -113,12 +126,21 @@ Section PROOF.
         stb_context_incl_tac; tauto. }
       refl.
     }
-    eapply refines2_cons; [refl|].
-    transitivity (KMod.transl_src_list kmd1 ++ [Main; Client]); [|refl].
-    eapply refines2_app; [|refl].
-    eapply adequacy_open. i. exists ε. split.
-    { g_wf_tac; repeat (i; splits; ur; ss). refl. }
-    { ii. ss. }
+    transitivity echo_mid.
+    { eapply refines2_cons; [refl|].
+      transitivity (KMod.transl_src_list kmd1 ++ [Main; Client]); [|refl].
+      eapply refines2_app; [|refl].
+      eapply adequacy_open. i. exists ε. split.
+      { g_wf_tac; repeat (i; splits; ur; ss). refl. }
+      { ii. ss. }
+    }
+    { eapply refines2_cons; [refl|].
+      eapply refines2_cons.
+      { eapply NewStack32proof.correct. }
+      eapply refines2_cons.
+      { eapply NewEcho1mon.correct. ii. ss. des; auto. }
+      refl.
+    }
   Qed.
 End PROOF.
 
