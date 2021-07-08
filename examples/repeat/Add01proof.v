@@ -1,4 +1,4 @@
-Require Import HoareDef STB Repeat1 Add0 Add1 SimModSem.
+Require Import HoareDef OpenDef STB Repeat1 Add0 Add1 SimModSem.
 Require Import Coqlib.
 Require Import ImpPrelude.
 Require Import Skeleton.
@@ -52,15 +52,17 @@ Section SIMMODSEM.
   Hypothesis GlobalStb_repeat: forall skenv,
       fn_has_spec (GlobalStb skenv) "repeat" (Repeat1.repeat_spec FunStb skenv).
 
-  Theorem correct: ModPair.sim (Add1.Add GlobalStb) Add0.Add.
+  Theorem correct: refines2 [Add0.Add] [Add1.Add GlobalStb].
   Proof.
-    econs; ss.
+    eapply adequacy_local2. econs; ss.
     i. econstructor 1 with (wf:=wf) (le:=top2); ss.
     2: { esplits; et. red. econs. eapply to_semantic. et. }
     eapply Sk.incl_incl_env in SKINCL. eapply Sk.load_skenv_wf in SKWF.
     hexploit (SKINCL "succ"); ss; eauto. intros [blk0 FIND0].
     econs; ss.
-    { init. harg. mDesAll. des; clarify.
+    { kinit.
+      2: { harg. mDesAll. des; clarify. steps. }
+      harg. mDesAll. des; clarify.
       steps. astart 0. astop. force_l. eexists.
       unfold Add0.succ. rewrite unfold_eval_imp. imp_steps.
       des_ifs.
@@ -68,7 +70,7 @@ Section SIMMODSEM.
       imp_steps. hret _; ss.
     }
     econs; ss.
-    { init. harg. destruct x as [m n]. mDesAll. des; clarify.
+    { kinit. harg. destruct x as [m n]. mDesAll. des; clarify.
       steps. unfold Add0.add, add_body. rewrite unfold_eval_imp. imp_steps.
       des_ifs.
       2: { exfalso. apply n. solve_NoDup. }

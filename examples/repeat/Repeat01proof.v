@@ -1,4 +1,4 @@
-Require Import HoareDef STB Repeat0 Repeat1 SimModSem.
+Require Import HoareDef OpenDef STB Repeat0 Repeat1 SimModSem.
 Require Import Coqlib.
 Require Import ImpPrelude.
 Require Import Skeleton.
@@ -52,13 +52,15 @@ Section SIMMODSEM.
   Hypothesis GlobalStb_repeat: forall skenv,
       fn_has_spec (GlobalStb skenv) "repeat" (Repeat1.repeat_spec FunStb skenv).
 
-  Theorem correct: ModPair.sim (Repeat1.Repeat FunStb GlobalStb) Repeat0.Repeat.
+  Theorem correct: refines2 [Repeat0.Repeat] [Repeat1.Repeat FunStb GlobalStb].
   Proof.
-    econs; ss.
+    eapply adequacy_local2. econs; ss.
     i. econstructor 1 with (wf:=wf) (le:=top2); ss.
     2: { esplits; et. red. econs. eapply to_semantic. et. }
     econs; ss.
-    init. harg. destruct x as [[[f n] x] f_spec]. ss. mDesAll. des; clarify.
+    kinit.
+    2: { harg. mDesAll. des; clarify. steps. }
+    harg. destruct x as [[[f n] x] f_spec]. ss. mDesAll. des; clarify.
     steps. unfold Repeat0.repeat.
     rewrite unfold_eval_imp. imp_steps.
     des_ifs.
