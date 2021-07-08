@@ -36,8 +36,8 @@ Section SIMMODSEM.
 
   Let W: Type := Any.t * Any.t.
 
-  Variable FunStb: SkEnv.t -> gname -> option fspec.
-  Variable GlobalStb: SkEnv.t -> gname -> option fspec.
+  Variable FunStb: Sk.t -> gname -> option fspec.
+  Variable GlobalStb: Sk.t -> gname -> option fspec.
 
   Let wf: _ -> W -> Prop :=
     @mk_wf
@@ -45,9 +45,6 @@ Section SIMMODSEM.
       unit
       (fun _ _ _ => True%I)
   .
-
-  Hypothesis FunStb_incl: forall skenv,
-      stb_incl (FunStb skenv) (GlobalStb skenv).
 
   Hypothesis FunStb_succ: forall skenv,
       fn_has_spec (FunStb skenv) "succ" (Add1.succ_spec).

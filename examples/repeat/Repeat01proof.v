@@ -36,8 +36,8 @@ Section SIMMODSEM.
 
   Let W: Type := Any.t * Any.t.
 
-  Variable FunStb: SkEnv.t -> gname -> option fspec.
-  Variable GlobalStb: SkEnv.t -> gname -> option fspec.
+  Variable FunStb: Sk.t -> gname -> option fspec.
+  Variable GlobalStb: Sk.t -> gname -> option fspec.
 
   Let wf: _ -> W -> Prop :=
     @mk_wf

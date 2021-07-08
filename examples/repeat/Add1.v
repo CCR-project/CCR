@@ -18,10 +18,10 @@ Section PROOF.
 
   Context `{Σ: GRA.t}.
 
-  Variable GlobalStb: SkEnv.t -> gname -> option fspec.
+  Variable GlobalStb: Sk.t -> gname -> option fspec.
 
   Section SKENV.
-    Variable skenv: SkEnv.t.
+    Variable skenv: Sk.t.
 
     Definition succ_spec:    fspec :=
       mk_simple (X:=Z)
