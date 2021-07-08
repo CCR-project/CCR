@@ -693,7 +693,7 @@ Hypothesis (SIM: exists o0, simg eq o0 (@ModSemL.initial_itr ms_src CONFS (Some 
 Local Hint Resolve cpn3_wcompat: paco.
 
 
-Theorem adequacy_global: Beh.of_program (@ModL.compile CONFT md_tgt) <1= Beh.of_program (@ModL.compile CONFS md_src).
+Theorem adequacy_global: Beh.of_program (@ModL.compile _ CONFT md_tgt) <1= Beh.of_program (@ModL.compile _ CONFS md_src).
 Proof.
   eapply adequacy_global_itree. eapply SIM.
 Qed.

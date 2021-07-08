@@ -47,7 +47,7 @@ Section PROOF.
   .
 
   Definition Main: Mod.t := {|
-    Mod.get_modsem := fun skenv => MainSem skenv;
+    Mod.get_modsem := fun skenv => MainSem (Sk.load_skenv skenv);
     Mod.sk := [("fib", Sk.Gfun)];
   |}
   .

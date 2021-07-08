@@ -473,7 +473,7 @@ Section PROOFSINGLE.
     unfold assume. grind. eapply angelic_step in STEP. des; clarify.
     eexists; split; [ord_step2|auto].
 
-    left. unfold ITree.map. sim_red.
+    left. unfold ITree.map. sim_red. rewrite ! Sk.add_unit_l.
     set (sge:=Sk.load_skenv (Sk.sort (defsL src))) in *.
     destruct (alist_find "main" (List.map (fun '(mn, (fn, f)) => (fn, transl_all mn (T:=_) ∘ cfunU (eval_imp sge f))) (prog_funsL src)))
              eqn:FOUNDMAIN; ss; grind.
@@ -512,25 +512,29 @@ Section PROOFSINGLE.
     { eapply step_seq. }
     eexists. exists (ModSemL.step_tau _). exists ((100 + max_fuel) + 100 + Ord.omega + 100)%ord. left.
     rewrite interp_imp_bind. grind. sim_red.
-    assert (MATCHGE: match_ge src (Sk.sort (ModL.sk (ModL.add Mem (ImpMod.get_modL src)))) (Genv.globalenv tgt)).
-    { econs. i. unfold map_blk. rewrite COMP0. hexploit Sk.env_found_range; eauto. i. unfold src_init_nb, int_len.
+    assert (MATCHGE: match_ge src (Sk.load_skenv (Sk.sort (ModL.sk (ModL.add Mem (ImpMod.get_modL src))))) (Genv.globalenv tgt)).
+    { econs. i. simpl in H. rewrite Sk.add_unit_l in H.
+      unfold map_blk. rewrite COMP0. hexploit Sk.env_found_range; eauto. i. unfold src_init_nb, int_len.
       rewrite <- sksort_same_len in H0. ss. unfold sk_len. des.
-      hexploit (Sk.sort_wf SK). i. apply Sk.load_skenv_wf in H1.
+      hexploit (Sk.sort_wf SK). i. rewrite Sk.add_unit_l in H1.
+      apply Sk.load_skenv_wf in H1.
       apply H1 in H. unfold get_sge. ss. rewrite H. unfold get_tge. des_ifs; try lia.
       hexploit found_in_src_in_tgt; eauto. i. des. unfold get_tge in H2. clarify.
     }
+    ss. rewrite Sk.add_unit_l in MATCHGE. rewrite Sk.add_unit_l in WF0.
 
     unfold imp_sem in *.
     eapply match_states_sim; eauto.
     { apply map_blk_after_init. }
     { apply map_blk_inj. }
-    ss.
+    ss. rewrite Sk.add_unit_l.
     match goal with
     | [ |- match_states ?_ge ?_ms _ _ _ ] => replace _ge with sge; auto
     end.
     match goal with
     | [ |- match_states ?_ge ?_ms _ _ _ ] => set (ms:=_ms) in *
     end.
+    ss.
     econs; eauto.
     { eapply init_lenv_match; eauto. rewrite map_app. ss. }
     { clarify. }
@@ -543,7 +547,9 @@ Section PROOFSINGLE.
         unfold ext_len. subst tgds.
         rewrite Pos2Nat.inj_1. rewrite Nat.add_1_r. rewrite <- Pos.of_nat_succ. f_equal.
         rewrite gdefs_preserves_length. repeat rewrite <- Nat.add_assoc. do 3 f_equal.
-        unfold Sk.wf in SK. hexploit wfprog_defsL_length; eauto. i. des.
+        unfold Sk.wf in SK. ss.
+        rewrite Sk.add_unit_l in SK.
+        hexploit wfprog_defsL_length; eauto. i. des.
         unfold sk_len in *.
         match goal with | [ |- _ = ?x ] => replace x with (int_len src) end.
         { unfold int_len. ss. }
@@ -625,7 +631,9 @@ Section PROOFSINGLE.
     match goal with
     | [ FSEM: o_map (?a) _ = _ |- _ ] => destruct a eqn:FOUND; ss; clarify
     end.
-    destruct p as [mn [fn ff]]; ss; clarify. eapply found_imp_function in FOUND. des; clarify.
+    destruct p as [mn [fn ff]]; ss; clarify.
+    rewrite Sk.add_unit_l in FOUND.
+    eapply found_imp_function in FOUND. des; clarify.
     hexploit in_tgt_prog_defs_ifuns; eauto. i.
     des. rename H into COMPF. clear FOUND.
     assert (COMPF2: In (compile_iFun (mn, ("main", ff))) (prog_defs tgt)); auto.
@@ -678,7 +686,8 @@ Section PROOFLINK.
     forall (src: Imp.program), wf_call_ban (lift src).
   Proof.
     i. unfold wf_call_ban. ii. ss. apply Sk.in_env_in_sk in H. des. apply Sk.sort_incl_rev in H.
-    unfold defs in H. apply filter_In in H. des. ss. bsimpl. ss.
+    unfold defs in H. rewrite Sk.add_unit_l in H.
+    apply filter_In in H. des. ss. bsimpl. ss.
   Qed.
 
   Lemma linked_two_wf_call_ban :
@@ -690,6 +699,7 @@ Section PROOFLINK.
   Proof.
     ii. unfold wf_call_ban in *. ss. unfold link_imp in LINKED. des_ifs. ss. clear modl.
     unfold l_defsL in ge. subst ge. apply Sk.in_env_in_sk in H. des. apply Sk.sort_incl_rev in H.
+    rewrite Sk.add_unit_l in H.
     apply in_app_iff in H. des.
     - apply Sk.sort_incl in H. apply Sk.in_sk_in_env in H. des. eapply WF1. eauto.
     - apply Sk.sort_incl in H. apply Sk.in_sk_in_env in H. des. eapply WF2. eauto.

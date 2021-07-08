@@ -63,49 +63,79 @@ End SkEnv.
 
 
 
-(* Require Import Logic.FinFun. *)
-(* Definition finfun A B: Type := *)
-(*   { f: A -> option B | *)
-(*     exists (card: nat) (inj: A -> nat), *)
-(*     Injective inj /\ forall a (IN: is_some (f a)), ((inj a) < card)%nat }. *)
-(* Program Definition add_finfun A B (add: B -> B -> B) (f g: finfun A B): finfun A B := *)
-(*   exist _ (fun a => match `f a, `g a with *)
-(*                     | Some x, None => Some x *)
-(*                     | None, Some y => Some y *)
-(*                     | Some x, Some y => Some (add x y) *)
-(*                     | None, None => None *)
-(*                     end) _. *)
-(* Next Obligation. *)
-(*   destruct f, g; ss. des. *)
-(*   exists (card + card0)%nat. eexists (fun a => if (is_some (x a)) && (inj a <? card)%nat *)
-(*                                                then inj a *)
-(*                                                else (card + (inj0 a))%nat). *)
-(*   esplits; eauto. *)
-(*   - rr. ii. des_ifs; bsimpl; des; apply_all_once Nat.leb_le; apply_all_once Nat.leb_gt; *)
-(*               apply_all_once e; apply_all_once e0; clarify; *)
-(*               apply_all_once e1; apply_all_once e2; clarify. *)
-(* Qed. *)
-
-
-
 Require Import Orders.
 
 Module Sk.
+  Class ld: Type := mk {
+    t:> Type;
+    unit: t;
+    add: t -> t -> t;
+    canon: t -> t;
+    wf: t -> Prop;
+    add_comm: forall a b (WF: wf (add a b)),
+        canon (add a b) = canon (add b a);
+    add_assoc: forall a b c, add a (add b c) = add (add a b) c;
+    add_unit_l: forall a, add unit a = a;
+    add_unit_r: forall a, add a unit = a;
+    wf_comm: forall a b, wf (add a b) -> wf (add b a);
+    unit_wf: wf unit;
+    wf_mon: forall a b, wf (canon (add a b)) -> wf (canon a);
 
+    extends := fun a b => exists ctx, canon (add a ctx) = b;
+  }
+  .
+
+
+  (* Imp Instance *)
   Inductive gdef: Type := Gfun | Gvar (gv: Z).
-
-  Definition t: Type := alist gname gdef.
-
-  Definition unit: t := nil.
-
-  Definition add: t -> t -> t := @List.app _.
-
-  Definition wf (sk: t): Prop := @List.NoDup _ (List.map fst sk).
 
   Module GDef <: Typ. Definition t := gdef. End GDef.
   Module SkSort := AListSort GDef.
 
-  Definition sort: t -> t := SkSort.sort.
+  Definition sort: alist gname gdef -> alist gname gdef := SkSort.sort.
+
+  Program Definition gdefs: ld :=
+    @mk (alist gname gdef) nil (@List.app _) sort (fun sk => @List.NoDup _ (List.map fst sk)) _ _ _ _ _ _ _.
+  Next Obligation.
+  Proof.
+    eapply SkSort.sort_add_comm. auto.
+    (* eapply Permutation.Permutation_NoDup; [|et]. *)
+    (* eapply Permutation.Permutation_map. *)
+    (* symmetry. eapply SkSort.sort_permutation. *)
+  Qed.
+  Next Obligation.
+  Proof.
+    eapply List.app_assoc.
+  Qed.
+  Next Obligation.
+  Proof.
+    rewrite List.app_nil_r. auto.
+  Qed.
+  Next Obligation.
+  Proof.
+    i. eapply Permutation.Permutation_NoDup; [|et].
+    eapply Permutation.Permutation_map.
+    apply Permutation.Permutation_app_comm.
+  Qed.
+  Next Obligation.
+  Proof.
+    econs.
+  Qed.
+  Next Obligation.
+  Proof.
+    cut (NoDup (map fst a)).
+    { i. eapply Permutation.Permutation_NoDup; [|et].
+      eapply Permutation.Permutation_map.
+      eapply SkSort.sort_permutation. }
+    cut (NoDup (map fst (a ++ b))).
+    { i. rewrite map_app in H0.
+      eapply nodup_app_l. et. }
+    i. eapply Permutation.Permutation_NoDup; [|et].
+    eapply Permutation.Permutation_map.
+    symmetry. eapply SkSort.sort_permutation.
+  Qed.
+
+  Local Existing Instance gdefs.
 
   Definition sort_add_comm sk0 sk1
              (WF: wf (add sk0 sk1))
@@ -118,7 +148,7 @@ Module Sk.
   Definition sort_wf sk (WF: wf sk):
     wf (sort sk).
   Proof.
-    eapply Permutation.Permutation_NoDup; [|apply WF].
+    ss. eapply Permutation.Permutation_NoDup; [|apply WF].
     eapply Permutation.Permutation_map.
     eapply SkSort.sort_permutation.
   Qed.
@@ -259,6 +289,3 @@ Module Sk.
   Qed.
 
 End Sk.
-
-Coercion Sk.load_skenv: Sk.t >-> SkEnv.t.
-Global Opaque Sk.load_skenv.

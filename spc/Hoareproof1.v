@@ -651,7 +651,7 @@ Section CANCEL.
   Context `{CONF: EMSConfig}.
   Definition midConf: EMSConfig := {| finalize := finalize; initial_arg := Any.pair ord_top↑ initial_arg |}.
   Theorem adequacy_type_m2m:
-    Beh.of_program (@ModL.compile midConf (Mod.add_list mds_mid)) <1=
+    Beh.of_program (@ModL.compile _ midConf (Mod.add_list mds_mid)) <1=
     Beh.of_program (ModL.compile (Mod.add_list mds_mid2)).
   Proof.
     eapply adequacy_global_itree; ss.

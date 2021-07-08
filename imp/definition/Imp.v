@@ -371,7 +371,7 @@ Section MODSEM.
   |}.
 
   Definition get_mod (m : program) : Mod.t := {|
-    Mod.get_modsem := fun ge => (modsem m ge);
+    Mod.get_modsem := fun ge => (modsem m (Sk.load_skenv ge));
     Mod.sk := m.(defs);
   |}.
 
@@ -383,7 +383,7 @@ Section MODSEM.
   |}.
 
   Definition get_modL (mL : programL) : ModL.t := {|
-    ModL.get_modsem := fun ge => (modsemL mL ge);
+    ModL.get_modsem := fun ge => (modsemL mL (Sk.load_skenv ge));
     ModL.sk := mL.(defsL);
   |}.
 

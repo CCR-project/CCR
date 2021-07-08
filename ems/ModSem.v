@@ -14,7 +14,6 @@ Set Implicit Arguments.
 Notation gname := string (only parsing). (*** convention: not capitalized ***)
 Notation mname := string (only parsing). (*** convention: capitalized ***)
 
-
 Section EVENTSCOMMON.
 
   Variant eventE: Type -> Type :=
@@ -863,15 +862,16 @@ Coercion ModSem.lift: ModSem.t >-> ModSemL.t.
 
 Module ModL.
 Section MODL.
+  Context `{Sk.ld}.
 
   Record t: Type := mk {
     get_modsem: Sk.t -> ModSemL.t;
     sk: Sk.t;
-    enclose: ModSemL.t := (get_modsem (Sk.sort sk));
+    enclose: ModSemL.t := (get_modsem (Sk.canon sk));
   }
   .
 
-  Definition wf (md: t): Prop := (<<WF: ModSemL.wf md.(enclose)>> /\ <<SK: Sk.wf md.(sk)>>).
+  Definition wf (md: t): Prop := (<<WF: ModSemL.wf md.(enclose)>> /\ <<SK: Sk.wf (md.(sk))>>).
 
   Section BEH.
 
@@ -903,16 +903,15 @@ Section MODL.
     destruct (classic (ModSemL.wf (enclose (add md1 md0)) /\ Sk.wf (sk (add md1 md0)))).
     2: { eapply ModSemL.initial_itr_not_wf. ss. }
     ss. des. assert (SK: Sk.wf (Sk.add (sk md0) (sk md1))).
-    { unfold Sk.wf, Sk.add. rewrite List.map_app.
-      eapply nodup_comm; et. rewrite <- List.map_app. auto. }
-    rewrite Sk.sort_add_comm; et.
+    { apply Sk.wf_comm. auto. }
+    rewrite Sk.add_comm; et.
     eapply ModSemL.add_comm; [| |et].
-    { i. split; auto. unfold enclose. ss. rewrite Sk.sort_add_comm; et.
-      inv H. econs; ss.
+    { i. split; auto. unfold enclose. ss. rewrite Sk.add_comm; et.
+      inv H2. inv H3. econs; ss.
       { rewrite List.map_app in *. eapply nodup_comm; et. }
       { rewrite List.map_app in *. eapply nodup_comm; et. }
     }
-    { rewrite Sk.sort_add_comm; et. }
+    { rewrite Sk.add_comm; et. }
   Qed.
 
   Lemma add_assoc' ms0 ms1 ms2:
@@ -920,7 +919,7 @@ Section MODL.
   Proof.
     unfold add. f_equal.
     { extensionality skenv_link. ss. apply ModSemL.add_assoc'. }
-    { eapply app_assoc. }
+    { ss. rewrite Sk.add_assoc. auto. }
   Qed.
 
   Theorem add_assoc
@@ -955,14 +954,15 @@ Section MODL.
     unfold add, ModSemL.add. f_equal; ss.
     - extensionality skenv. destruct (get_modsem0 skenv); ss.
       repeat rewrite app_nil_r. auto.
-    - unfold Sk.add. rewrite app_nil_r. auto.
+    - eapply Sk.add_unit_r.
   Qed.
 
   Lemma add_empty_l md: add empty md = md.
   Proof.
     destruct md; ss.
     unfold add, ModSemL.add. f_equal; ss.
-    extensionality skenv. destruct (get_modsem0 skenv); ss.
+    { extensionality skenv. destruct (get_modsem0 skenv); ss. }
+    { apply Sk.add_unit_l. }
   Qed.
 
   End BEH.
@@ -974,6 +974,7 @@ End ModL.
 
 Module Mod.
 Section MOD.
+  Context `{Sk.ld}.
 
   Record t: Type := mk {
     get_modsem: Sk.t -> ModSem.t;
@@ -1167,6 +1168,7 @@ End Equisatisfiability.
 
 
 Section REFINE.
+  Context `{Sk.ld}.
 
    Definition refines {CONF: EMSConfig} (md_tgt md_src: ModL.t): Prop :=
      (* forall (ctx: list Mod.t), Beh.of_program (ModL.compile (add_list (md_tgt :: ctx))) <1= *)
@@ -1186,22 +1188,22 @@ Section REFINE.
                                Beh.of_program (ModL.compile (ModL.add (Mod.add_list ctx) (Mod.add_list md_src)))
    .
 
-   Global Program Instance refins2_PreOrder: PreOrder refines2.
+   Global Program Instance refines2_PreOrder: PreOrder refines2.
    Next Obligation.
      ii. ss.
    Qed.
    Next Obligation.
-     ii. r in H. r in H0. exploit H. { eapply PR. } intro T. exploit H0. { eapply T. } intro U. ss.
+     ii. eapply H0 in PR. eapply H1 in PR. eapply PR.
    Qed.
 
    (*** vertical composition ***)
    Global Program Instance refines_PreOrder: PreOrder refines.
    Next Obligation. ii. ss. Qed.
-   Next Obligation. ii. eapply H0. eapply H. ss. Qed.
+   Next Obligation. ii. eapply H1. eapply H0. ss. Qed.
 
    Global Program Instance refines_strong_PreOrder: PreOrder refines_strong.
    Next Obligation. ii. ss. Qed.
-   Next Obligation. ii. eapply H0. eapply H. ss. Qed.
+   Next Obligation. ii. eapply H1. eapply H0. ss. Qed.
 
 
 
@@ -1301,7 +1303,7 @@ ys + (xs + src)
 
    Global Program Instance refines_closed_PreOrder: PreOrder refines_closed.
    Next Obligation. ii; ss. Qed.
-   Next Obligation. ii; ss. r in H. r in H0. eauto. Qed.
+   Next Obligation. ii; ss. eapply H1. eapply H0. eauto. Qed.
 
    Lemma refines_close: refines <2= refines_closed.
    Proof. ii. specialize (PR nil). ss. unfold Mod.add_list in *. ss. rewrite ! ModL.add_empty_l in PR. eauto. Qed.
@@ -1357,7 +1359,7 @@ ctx (a1 b1)
    Proof.
      induction FORALL; ss.
      hexploit refines2_add.
-     { eapply H. }
+     { eapply H0. }
      { eapply IHFORALL. }
      i. ss.
    Qed.
@@ -1367,8 +1369,8 @@ ctx (a1 b1)
        refines2 mds0 mds1 <-> refines (Mod.add_list mds0) (Mod.add_list mds1).
    Proof.
      split.
-     { ii. eapply H. auto. }
-     { ii. eapply H. auto. }
+     { ii. eapply H0. auto. }
+     { ii. eapply H0. auto. }
    Qed.
 
    Lemma refines2_app mhd0 mhd1 mtl0 mtl1
@@ -1435,6 +1437,14 @@ Class gnames := mk_gnames { gnames_contents :> gname -> Prop }.
 Coercion gnames_contents: gnames >-> Funclass.
 
 Definition top_gnames := mk_gnames top1.
+
+
+Global Existing Instance Sk.gdefs.
+Arguments Sk.unit: simpl never.
+Arguments Sk.add: simpl never.
+Arguments Sk.wf: simpl never.
+Coercion Sk.load_skenv: Sk.t >-> SkEnv.t.
+Global Opaque Sk.load_skenv.
 
 Class sk_gnames := mk_sk_gnames { sk_gnames_contents :> Sk.t -> gnames }.
 Coercion sk_gnames_contents: Sk.t >-> gnames.

@@ -74,7 +74,7 @@ Section PROOF.
 
 
 
-  Definition compile_val md := @ModL.compile EMSConfigImp md.
+  Definition compile_val md := @ModL.compile _ EMSConfigImp md.
 
   Let _sim_mon := Eval simpl in (fun (src: ModL.t) (tgt: Csharpminor.program) => @sim_mon (compile_val src) (semantics tgt)).
   Hint Resolve _sim_mon: paco.
@@ -279,7 +279,7 @@ Section PROOF.
       des_ifs; ss; try sim_triggerUB.
       + sim_ord.
         { eapply OrdArith.add_base_l. }
-        sim_red.        
+        sim_red.
         eapply SIM; eauto.
         econs; eauto.
         { econs; eauto. }
@@ -287,7 +287,7 @@ Section PROOF.
         rewrite Int64.eq_true. ss.
       + sim_ord.
         { eapply OrdArith.add_base_l. }
-        sim_red.        
+        sim_red.
         eapply SIM; eauto.
         econs; eauto.
         { econs; eauto. }
@@ -720,7 +720,9 @@ Section PROOF.
       match goal with
       | [ FSEM: o_map (?a) _ = _ |- _ ] => destruct a eqn:FOUND; ss; clarify
       end.
-      destruct p. destruct p. clarify. eapply found_imp_function in FOUND. des; clarify.
+      destruct p. destruct p. clarify. 
+      rewrite Sk.add_unit_l in FOUND.
+      eapply found_imp_function in FOUND. des; clarify.
       hexploit in_tgt_prog_defs_ifuns; eauto. i.
       des. rename H0 into COMPF.
       (* assert (INTGT: In (s2p f, Gfun (Internal tf0)) (prog_defs tgtp)); auto. *)
@@ -777,7 +779,7 @@ Section PROOF.
       des_ifs.
       { rewrite rel_dec_correct in Heq; clarify. }
       clear Heq.
-      
+
       gstep. econs 4.
       eexists. eexists.
       { eapply step_seq. }
@@ -869,7 +871,9 @@ Section PROOF.
       match goal with
       | [ FSEM: o_map (?a) _ = _ |- _ ] => destruct a eqn:FOUND; ss; clarify
       end.
-      destruct p. destruct p. clarify. eapply found_imp_function in FOUND. des; clarify.
+      destruct p. destruct p. clarify. 
+      rewrite Sk.add_unit_l in FOUND.
+      eapply found_imp_function in FOUND. des; clarify.
       hexploit in_tgt_prog_defs_ifuns; eauto. i.
       des. rename H1 into COMPF. clear FOUND.
       rename s0 into mn2, s into fn, f into impf.

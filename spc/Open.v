@@ -1017,18 +1017,16 @@ Section ADQ.
       ModL.sk prog_mid = ModL.sk prog_tgt.
   Proof.
     unfold prog_mid, prog_tgt. rewrite ! Mod.add_list_sk.
-    unfold Sk.add, Sk.unit.
-    rewrite <- ! (@fold_right_app_flat_map _ _ Mod.sk).
-    rewrite ! flat_map_app. f_equal.
-    { unfold kmds. rewrite ! map_map.
-      rewrite ! flat_map_map. eapply flat_map_ext. i. ss. }
-    { rewrite ! flat_map_map. eapply flat_map_ext. i. ss. }
+    unfold Sk.add, Sk.unit. ss.
+    rewrite ! map_app. rewrite ! foldr_app. f_equal.
+    { rewrite ! map_map. ss. }
+    { unfold kmds. rewrite ! map_map. ss. }
   Qed.
 
   Lemma my_lemma2_initial_mrs
     :
-      ModSemL.initial_mrs (ModL.get_modsem prog_mid (Sk.sort (ModL.sk prog_mid))) =
-      ModSemL.initial_mrs (ModL.get_modsem prog_tgt (Sk.sort (ModL.sk prog_tgt))).
+      ModSemL.initial_mrs (ModL.get_modsem prog_mid (Sk.canon (ModL.sk prog_mid))) =
+      ModSemL.initial_mrs (ModL.get_modsem prog_tgt (Sk.canon (ModL.sk prog_tgt))).
   Proof.
     rewrite my_lemma2_sk. unfold prog_mid, prog_tgt.
     rewrite ! Mod.add_list_initial_mrs.
@@ -1054,8 +1052,8 @@ Section ADQ.
   Definition midConf: EMSConfig := {| finalize := finalize; initial_arg := Any.pair true↑ initial_arg |}.
 
   Lemma my_lemma2:
-    Beh.of_program (@ModL.compile midConf (Mod.add_list (List.map SMod.to_src kmds ++ List.map (SMod.to_src ∘ massage_md true) umds))) <1=
-    Beh.of_program (@ModL.compile CONF (Mod.add_list (List.map (KMod.transl_src frds) _kmds ++ List.map (SMod.to_src ∘ massage_md false) umds))).
+    Beh.of_program (@ModL.compile _ midConf (Mod.add_list (List.map SMod.to_src kmds ++ List.map (SMod.to_src ∘ massage_md true) umds))) <1=
+    Beh.of_program (@ModL.compile _ CONF (Mod.add_list (List.map (KMod.transl_src frds) _kmds ++ List.map (SMod.to_src ∘ massage_md false) umds))).
   Proof.
     eapply adequacy_global_itree; ss.
     exists (200)%ord.
@@ -1278,9 +1276,10 @@ Section ADQ.
     eapply adequacy_type_arg_stb; ss.
     { i. instantiate (1:=_stb).
       rewrite stb2_eq. unfold stb2.
-      unfold SMod.get_sk in FIND. rewrite FIND. auto. }
+      unfold SMod.get_sk in FIND. setoid_rewrite FIND. auto. }
     { i. unfold SMod.get_sk in FIND. rewrite stb2_eq. right.
-      unfold stb2. rewrite FIND. esplits; et.
+      unfold stb2. change (alist string Sk.gdef) with Sk.t in *.
+      rewrite FIND. esplits; et.
       i. ss. destruct x; des; auto.
       red in PRE0. uipropall. des; auto. }
     { hexploit MAINM; et. i. des. unfold _stb, _gstb, KMod.get_stb in MAIN.
@@ -1297,6 +1296,7 @@ Section ADQ.
         end.
         f_equal. unfold KMod.get_initial_mrs.
         rewrite map_map. ss. unfold SMod.get_sk.
+        change (alist string Sk.gdef) with Sk.t.
         generalize (Sk.sort
                       (foldr Sk.add Sk.unit
                              (map SMod.sk (kmds ++ map (massage_md true) umds)))).
@@ -1304,7 +1304,7 @@ Section ADQ.
         rewrite fold_left_app.
         generalize (fold_left
                       URA.add
-                      (map (fun x=>  KModSem.initial_mr (KMod.get_modsem x t)) _kmds) ε).
+                      (map (fun x=>  KModSem.initial_mr (KMod.get_modsem x a)) _kmds) ε).
         i. generalize umds. i. induction umds0; ss.
         rewrite URA.unit_id. auto.
       }
@@ -1369,7 +1369,8 @@ Section ADQ.
     eapply adequacy_open_aux1'; auto.
     { i. ss. des; ss. eapply in_map_iff in MIN0. des. clarify.
       inv H. inv H0. unfold ModL.enclose in wf_initial_mrs.
-      replace (Sk.sort
+      change (alist string Sk.gdef) with Sk.t in wf_initial_mrs.
+      replace (Sk.canon
                  (ModL.sk
                     (Mod.add_list
                        (map (KMod.transl_src frds) _kmds ++ ctx)))) with
@@ -1399,8 +1400,8 @@ Section ADQ.
       rewrite ! map_app. rewrite ! map_map. auto.
     }
     { etrans; [|eapply Sk.sort_incl]. etrans; [eapply Sk.sort_incl_rev|].
-      unfold kmds. unfold Sk.t, Sk.add, Sk.unit, alist.
-      rewrite <- ! fold_right_app_flat_map.
+      unfold kmds. unfold Sk.t, Sk.add, Sk.unit, alist. ss.
+      setoid_rewrite <- fold_right_app_flat_map.
       rewrite flat_map_app. ii. eapply in_or_app. left.
       rewrite flat_map_map. ss.
     }
