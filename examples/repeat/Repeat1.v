@@ -6,7 +6,7 @@ Require Import Behavior.
 Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
-Require Import HoareDef.
+Require Import HoareDef OpenDef.
 Require Import ProofMode.
 Require Import STB.
 
@@ -24,24 +24,25 @@ Section PROOF.
 
   Context `{Σ: GRA.t}.
 
-  Variable FunStb: SkEnv.t -> gname -> option fspec.
-  Variable GlobalStb: SkEnv.t -> gname -> option fspec.
+  Variable FunStb: Sk.t -> gname -> option fspec.
+  Variable GlobalStb: Sk.t -> gname -> option fspec.
 
   Section SKENV.
-    Variable skenv: SkEnv.t.
+    Variable skenv: Sk.t.
 
     Definition repeat_spec:    fspec :=
       mk_simple (X:=nat * nat * Z * (Z -> Z))
                 (fun '(f, n, x, f_spec) => (
                      (fun varg o =>
-                        (⌜o = ord_pure n /\ varg = [Vptr f 0; Vint (Z.of_nat n); Vint x]↑ /\ (intrange_64 n)
+                        (⌜o = ord_pure (Ord.omega + n)%ord
+                         /\ varg = [Vptr f 0; Vint (Z.of_nat n); Vint x]↑ /\ (intrange_64 n)
                          /\ fb_has_spec
                               skenv (FunStb skenv) f
                               (mk_simple
                                  (X:=Z)
                                  (fun x =>
                                     ((fun varg o =>
-                                        ⌜o = ord_pure 0 /\ varg = [Vint x]↑⌝),
+                                        ⌜o = ord_pure Ord.omega /\ varg = [Vint x]↑⌝),
                                      (fun vret => ⌜vret = (Vint (f_spec x))↑⌝))))⌝: iProp)%I
                      ),
                      (fun vret =>
@@ -49,23 +50,24 @@ Section PROOF.
                      )
                 )).
 
-    Definition RepeatSbtb: list (gname * fspecbody) :=[("repeat", mk_specbody repeat_spec (fun _ => trigger (Choose _)))].
+    Definition RepeatSbtb: list (gname * kspecbody) :=
+      [("repeat", mk_kspecbody repeat_spec (fun _ => triggerUB) (fun _ => triggerNB))].
 
-    Definition SRepeatSem: SModSem.t := {|
-      SModSem.fnsems := RepeatSbtb;
-      SModSem.mn := "Repeat";
-      SModSem.initial_mr := ε;
-      SModSem.initial_st := tt↑;
+    Definition KRepeatSem: KModSem.t := {|
+      KModSem.fnsems := RepeatSbtb;
+      KModSem.mn := "Repeat";
+      KModSem.initial_mr := ε;
+      KModSem.initial_st := tt↑;
     |}
     .
   End SKENV.
 
-  Definition SRepeat: SMod.t := {|
-    SMod.get_modsem := SRepeatSem;
-    SMod.sk := [("repeat", Sk.Gfun)];
+  Definition KRepeat: KMod.t := {|
+    KMod.get_modsem := KRepeatSem;
+    KMod.sk := [("repeat", Sk.Gfun)];
   |}
   .
 
-  Definition Repeat: Mod.t := (SMod.to_tgt GlobalStb) SRepeat.
+  Definition Repeat: Mod.t := (KMod.transl_tgt GlobalStb) KRepeat.
 
 End PROOF.

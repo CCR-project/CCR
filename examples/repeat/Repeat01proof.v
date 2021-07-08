@@ -1,4 +1,4 @@
-Require Import HoareDef STB Repeat0 Repeat1 SimModSem.
+Require Import HoareDef OpenDef STB Repeat0 Repeat1 SimModSem.
 Require Import Coqlib.
 Require Import ImpPrelude.
 Require Import Skeleton.
@@ -36,8 +36,8 @@ Section SIMMODSEM.
 
   Let W: Type := Any.t * Any.t.
 
-  Variable FunStb: SkEnv.t -> gname -> option fspec.
-  Variable GlobalStb: SkEnv.t -> gname -> option fspec.
+  Variable FunStb: Sk.t -> gname -> option fspec.
+  Variable GlobalStb: Sk.t -> gname -> option fspec.
 
   Let wf: _ -> W -> Prop :=
     @mk_wf
@@ -52,13 +52,15 @@ Section SIMMODSEM.
   Hypothesis GlobalStb_repeat: forall skenv,
       fn_has_spec (GlobalStb skenv) "repeat" (Repeat1.repeat_spec FunStb skenv).
 
-  Theorem correct: ModPair.sim (Repeat1.Repeat FunStb GlobalStb) Repeat0.Repeat.
+  Theorem correct: refines2 [Repeat0.Repeat] [Repeat1.Repeat FunStb GlobalStb].
   Proof.
-    econs; ss.
+    eapply adequacy_local2. econs; ss.
     i. econstructor 1 with (wf:=wf) (le:=top2); ss.
     2: { esplits; et. red. econs. eapply to_semantic. et. }
     econs; ss.
-    init. harg. destruct x as [[[f n] x] f_spec]. ss. mDesAll. des; clarify.
+    kinit.
+    2: { harg. mDesAll. des; clarify. steps. }
+    harg. destruct x as [[[f n] x] f_spec]. ss. mDesAll. des; clarify.
     steps. unfold Repeat0.repeat.
     rewrite unfold_eval_imp. imp_steps.
     des_ifs.
@@ -74,7 +76,10 @@ Section SIMMODSEM.
       astart 2. acatch.
       { eapply FunStb_incl. et. }
       hcall_weaken _ _ _ _ with ""; et.
-      { splits; ss. eapply OrdArith.lt_from_nat. lia. }
+      { splits; ss. eapply Ord.le_lt_lt.
+        { eapply OrdArith.add_base_l. }
+        { eapply OrdArith.lt_add_r. rewrite Ord.from_nat_S. eapply Ord.S_lt. }
+      }
       ss. mDesAll. des; clarify. imp_steps.
       guclo lordC_spec. econs.
       { instantiate (5:=100). eapply OrdArith.add_base_l. }
