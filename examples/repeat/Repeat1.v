@@ -9,6 +9,7 @@ Require Import PCM.
 Require Import HoareDef OpenDef.
 Require Import ProofMode.
 Require Import STB.
+Require Import Repeat0.
 
 Set Implicit Arguments.
 

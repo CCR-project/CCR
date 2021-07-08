@@ -1,43 +1,37 @@
-Require Import ImpPrelude.
-Require Import PCM.
+Require Import Coqlib.
+Require Import ImpPrelude ITreelib.
+Require Import STS.
+Require Import Behavior.
 Require Import ModSem.
-Require Import Imp.
-Require Import ImpNotations.
+Require Import Skeleton.
+Require Import STB.
 
 Set Implicit Arguments.
 
 
-Section Knot.
 
-  Import ImpNotations.
+Section PROOF.
+  Definition repeatF {E} `{callE -< E} `{eventE -< E} (skenv: SkEnv.t): list val -> itree E val :=
+    fun varg =>
+      '(fb, (n, x)) <- (pargs [Tblk; Tint; Tint] varg)?;;
+      assume(intrange_64 n);;;
+      if (Z_lt_le_dec n 1)
+      then Ret (Vint x)
+      else
+        fn <- (skenv.(SkEnv.blk2id) fb)?;;
+        v <- ccallU fn [Vint x];;
+        ccallU "repeat" [Vptr fb 0; Vint (n - 1); v].
 
-  Local Open Scope expr_scope.
-  Local Open Scope stmt_scope.
+  Definition RepeatSem (sk: Sk.t): ModSem.t := {|
+    ModSem.fnsems := [("repeat", cfunU (repeatF (Sk.load_skenv sk: SkEnv.t)))];
+    ModSem.mn := "Repeat";
+    ModSem.initial_st := tt↑;
+  |}
+  .
 
-  Context `{Σ: GRA.t}.
-
-  Definition repeat : function := {|
-    fn_params := ["fb"; "n"; "x"];
-    fn_vars := ["v"; "ret"];
-    fn_body :=
-      if# ("n" < 1%Z)
-      then# return# "x"
-      else# ("v" =@* "fb" ["x" : expr] ;#
-             "ret" =@ "repeat" ["fb": expr; ("n" - 1%Z): expr; "v": expr] ;#
-             return# "ret"
-            )
-      fi#
-  |}.
-
-  Definition Repeat_prog : program := {|
-    name := "Repeat";
-    ext_vars := [];
-    ext_funs := [];
-    prog_vars := [];
-    prog_funs := [("repeat", repeat)];
-  |}.
-
-  Definition RepeatSem ge : ModSem.t := ImpMod.modsem Repeat_prog ge.
-  Definition Repeat : Mod.t := ImpMod.get_mod Repeat_prog.
-
-End Knot.
+  Definition Repeat: Mod.t := {|
+    Mod.get_modsem := RepeatSem;
+    Mod.sk := [("repeat", Sk.Gfun)];
+  |}
+  .
+End PROOF.
