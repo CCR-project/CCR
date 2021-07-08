@@ -755,8 +755,8 @@ Section PROOFS.
                                                | _ => 0%Z
                                                end) vals in
       (if (forallb intrange_64 eval_zs) then Ret tt else triggerUB);;;
-        v <- trigger (Syscall f eval_zs↑ t);; v <- v↓?;;
-        tau;; tau;; tau;; tau;;
+        v <- trigger (Syscall f eval_zs↑ t);; tau;; tau;; v <- v↓?;;
+        tau;; tau;;
         tau;; Ret (alist_add x (Vint v) le1, Vundef)).
   Proof.
     rewrite interp_imp_bind. grind.
@@ -766,8 +766,10 @@ Section PROOFS.
     2:{ rewrite interp_imp_triggerUB_bind. unfold triggerUB; grind. }
     rewrite interp_imp_bind. rewrite interp_imp_Ret; grind.
     rewrite interp_imp_bind. rewrite interp_imp_Syscall. grind.
-    rewrite interp_imp_bind. rewrite interp_imp_SetVar. grind.
-    rewrite interp_imp_tau; grind. apply interp_imp_Ret.
+    rewrite interp_imp_bind. destruct (Any.downcast x0).
+    { cbn. rewrite interp_imp_Ret. grind. rewrite interp_imp_bind. rewrite interp_imp_SetVar. grind.
+      rewrite interp_imp_tau; grind. apply interp_imp_Ret. }
+    { cbn. rewrite interp_imp_triggerUB. unfold triggerUB. grind. }
   Qed.
 
   Lemma interp_imp_CallSys
@@ -786,8 +788,8 @@ Section PROOFS.
                                                | _ => 0%Z
                                                end) vals in
       (if (forallb intrange_64 eval_zs) then Ret tt else triggerUB);;;
-        v <- trigger (Syscall f eval_zs top1);;
-        tau;; tau;; tau;; tau;;
+        v <- trigger (Syscall f eval_zs↑ top1);; tau;; tau;; v <- v↓?;;
+        tau;; tau;;
         tau;; Ret (alist_add x (Vint v) le1, Vundef)).
   Proof.
     rewrite denote_stmt_CallSys.

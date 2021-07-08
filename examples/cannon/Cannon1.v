@@ -22,7 +22,7 @@ Section CANNON.
     : list val -> itree E Z :=
     fun args =>
       let r := 1%Z in
-      _ <- trigger (Syscall "print" [r] top1);;
+      _ <- trigger (Syscall "print" [r]↑ top1);;
       Ret r
   .
 
