@@ -32,7 +32,7 @@ Section SAFEMODSEM.
     if break: bool
     then
       ret <- trigger (Choose _);;
-      guarantee (finalize ret);;;
+      guarantee (finalize ret <> None);;;
       Ret ret
     else
       '(fn, varg) <- trigger (Choose _);;
@@ -46,7 +46,7 @@ Section SAFEMODSEM.
     if break: bool
     then
       ret <- trigger (Choose _);;
-      guarantee (finalize ret);;;
+      guarantee (finalize ret <> None);;;
                 Ret ret
     else
       '(fn, varg) <- trigger (Choose _);;
@@ -197,7 +197,10 @@ Section LEMMAS.
     eapply safe_bind_clo_wrespectful.
   Qed.
 
-  Lemma safe_state_no_ub st (SAFE: safe_state finalize st)
+  Definition safe_retval: Any.t -> Prop :=
+    fun x => finalize x <> None.
+
+  Lemma safe_state_no_ub st (SAFE: safe_state safe_retval st)
     :
       ~ Beh.of_state L st Tr.ub.
   Proof.
@@ -276,7 +279,7 @@ Section SAFETY.
     forall md fn arg st
            (IN: stb fn),
       paco3 _safe_state bot3 _
-            (fun '(st, retv) => finalize retv)
+            (fun '(st, retv) => safe_retval retv)
             (EventsL.interp_Es
                (ModSemL.prog (ModL.enclose (Mod.add_list mds)))
                (ModSemL.prog (ModL.enclose (Mod.add_list mds))
@@ -290,7 +293,7 @@ Section SAFETY.
     Local Opaque ModSemL.prog. ss.
     hexploit (fnsems_find_safe s). i. des; clarify. steps.
     guclo safe_bind_clo_spec. econs.
-    { instantiate (1:=fun '(st, retv) => finalize retv).
+    { instantiate (1:=fun '(st, retv) => safe_retval retv).
       unfold fun_to_src, body_to_src. generalize st. gcofix CIH0. i.
       rewrite SafeModSem.safe_itree_red. steps. i. destruct x.
       { steps. ss. }

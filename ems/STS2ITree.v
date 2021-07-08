@@ -148,10 +148,10 @@ Section PROOF.
   Qed.
 
   Hypothesis wf_finalize0:
-    forall st0 rv, state_sort0 st0 = final rv -> finalize rv.
+    forall st0 rv, state_sort0 st0 = final rv -> finalize (rv) = Some rv.
 
   Lemma wf_finalize:
-    forall st0 rv, state_sort st0 = final rv -> finalize rv.
+    forall st0 rv, state_sort st0 = final rv -> finalize (rv) = Some rv.
   Proof.
     i. unfold state_sort, norm_state_sort in H. des_ifs. eapply wf_finalize0; et.
   Qed.

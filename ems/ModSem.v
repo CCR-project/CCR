@@ -266,7 +266,7 @@ Opaque EventsL.interp_Es.
 
 
 
-Class EMSConfig := { finalize: Any.t -> bool; initial_arg: Any.t }.
+Class EMSConfig := { finalize: Any.t -> option Any.t; initial_arg: Any.t }.
 
 Module ModSemL.
 Import EventsL.

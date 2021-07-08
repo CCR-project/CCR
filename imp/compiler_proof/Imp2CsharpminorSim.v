@@ -490,8 +490,8 @@ Section PROOF.
         (<<RET: ret_tgt = (Values.Vlong ret_int)>>) /\
         let args_src := List.map Int64.signed args_int in
         let ret_src := Int64.signed ret_int in
-        (<<EV: tr = [ev] /\ decompile_event ev = Some (event_sys fn args_src ret_src)>>)
-        /\ (<<SRC: syscall_sem (event_sys fn args_src ret_src)>>)
+        (<<EV: tr = [ev] /\ decompile_event ev = Some (event_sys fn args_src↑ ret_src↑)>>)
+        /\ (<<SRC: syscall_sem (event_sys fn args_src↑ ret_src↑)>>)
         /\ (<<MEM: m0 = m1>>)
   .
 
