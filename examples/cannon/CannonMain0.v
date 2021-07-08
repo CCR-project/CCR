@@ -21,8 +21,8 @@ Section CANNONMAIN.
     | 0 =>
       Ret tt
     | S n' =>
-      r <- ccallU "fire" ([]: list val);;
-      _ <- trigger (Syscall "print" [r] top1);;
+      `r: Z <- ccallU "fire" ([]: list val);;
+      _ <- trigger (Syscall "print" [r]↑ top1);;
       main_repeat n'
     end.
 

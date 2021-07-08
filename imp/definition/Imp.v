@@ -231,7 +231,8 @@ Section Denote.
       (if (forallb (fun v => match v with | Vint _ => true | _ => false end) eval_args) then Ret tt else triggerUB);;;
       let eval_zs := List.map (fun v => match v with | Vint z => z | _ => 0%Z end) eval_args in
       (if (forallb intrange_64 eval_zs) then Ret tt else triggerUB);;;
-      v <- trigger (Syscall f eval_zs top1);;
+      v <- trigger (Syscall f eval_zs↑ top1);;
+      v <- v↓?;;
       trigger (SetVar x (Vint v));;; tau;; Ret Vundef
 
     | AddrOf x X =>

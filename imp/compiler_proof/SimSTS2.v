@@ -25,7 +25,7 @@ Section Beh.
       (MV: Forall2 match_val eargs uargs)
       (MV: match_val er ur)
     :
-      match_event (Event_syscall name eargs er) (event_sys name uargs ur)
+      match_event (Event_syscall name eargs er) (event_sys name uargs↑ ur↑)
   .
 
   Variant _match_beh (match_beh: _ -> _ -> Prop) (tgtb : program_behavior) (srcb : Tr.t) : Prop :=
@@ -33,7 +33,7 @@ Section Beh.
       tr mtr r
       (MT : Forall2 match_event tr mtr)
       (TB : tgtb = Terminates tr r)
-      (SB : srcb = Tr.app mtr (Tr.done r.(Int.intval)))
+      (SB : srcb = Tr.app mtr (Tr.done r.(Int.intval)↑))
     :
       _match_beh match_beh tgtb srcb
   | match_beh_Diverges
@@ -449,7 +449,7 @@ Definition decompile_event (ev: Events.event): option event :=
   | Event_syscall fn evs ev =>
     do vs <- sequence (List.map decompile_eval evs);
     do v <- decompile_eval ev;
-    Some (event_sys fn vs v)
+    Some (event_sys fn vs↑ v↑)
   | _ => None
   end.
 
@@ -476,7 +476,7 @@ CoFixpoint decompile_trinf (tr: traceinf): Tr.t :=
 .
 
 Variant _Tr: Type :=
-| _Tr_done (retv: Z)
+| _Tr_done (retv: Any.t)
 | _Tr_spin
 | _Tr_ub
 | _Tr_nb
@@ -533,7 +533,7 @@ Definition transl_beh (p: program_behavior): Tr.t :=
   match p with
   | Terminates tr i =>
     let '(es, succ) := squeeze (List.map decompile_event tr) in
-    Tr.app es (if succ then (Tr.done (Int.unsigned i)) else Tr.ub)
+    Tr.app es (if succ then (Tr.done (Int.unsigned i)↑) else Tr.ub)
   | Diverges tr =>
     let '(es, succ) := squeeze (List.map decompile_event tr) in
     Tr.app es (if succ then (Tr.spin) else Tr.ub)
@@ -688,7 +688,7 @@ Section SIM.
       retv
       (RANGE: (0 <= retv <= Int.max_unsigned)%Z)
       (* (RANGE: (Int.min_signed <= retv <= Int.max_signed)%Z) *)
-      (SRT: _.(state_sort) st_src0 = final retv)
+      (SRT: _.(state_sort) st_src0 = final retv↑)
       (SRT: _.(Smallstep.final_state) st_tgt0 (Int.repr retv))
       (* (DTM: True) (*** TODO: copy-paste sd_final_determ in Smallstep.v ***) *)
     :
@@ -889,13 +889,13 @@ Section SIM.
   .
   Proof.
     inv M0. inv M1. f_equal.
-    { clear - MV MV1. ginduction MV; ii; ss.
+    { f_equal. clear - MV MV1. ginduction MV; ii; ss.
       { inv MV1; ss. }
       inv MV1; ss.
       f_equal; et.
       eapply match_val_inj; et.
     }
-    eapply match_val_inj; et.
+    f_equal. eapply match_val_inj; et.
   Qed.
 
   Lemma safe_along_events_step_some
@@ -1117,7 +1117,7 @@ Section SIM.
           (*** 1. Lemma: star + Beh.of_state -> Beh.of_state app ***)
           (*** 2. wf induction on i1 ***)
           eapply beh_of_state_star; ss; et.
-          cut (Beh.of_state L0 st_src1 (Tr.done (Int.unsigned r))); ss.
+          cut (Beh.of_state L0 st_src1 (Tr.done (Int.unsigned r)↑)); ss.
           (* assert(SAFE0: safe_along_trace st_src1 (Terminates tr r)). *)
           assert(SAFE0: safe_along_events st_src1 []).
           { clear - SAFE STEP MB.

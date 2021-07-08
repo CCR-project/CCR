@@ -22,7 +22,7 @@ Section CANNON.
     fun args =>
       powder <- trigger PGet;; powder <- powder↓?;;
       r <- (div 1 powder)?;;
-      _ <- trigger (Syscall "print" [r] top1);;
+      _ <- trigger (Syscall "print" [r]↑ top1);;
       _ <- trigger (PPut r↑);;
       Ret r
   .

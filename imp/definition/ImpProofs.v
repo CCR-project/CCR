@@ -217,7 +217,7 @@ Section PROOFS.
                                                | _ => 0%Z
                                                end) eval_args in
        (if forallb intrange_64 eval_zs then Ret () else triggerUB);;;
-       ` v : Z <- trigger (Syscall f eval_zs top1);; trigger (SetVar x (Vint v));;; (tau;; Ret Vundef))) le0.
+       v <- trigger (Syscall f eval_zs↑ top1);; v <- v↓?;; trigger (SetVar x (Vint v));;; (tau;; Ret Vundef))) le0.
   Proof. reflexivity. Qed.
 
   (* interp_imp *)
@@ -743,7 +743,7 @@ Section PROOFS.
                                                | _ => 0%Z
                                                end) eval_args in
        (if forallb intrange_64 eval_zs then Ret () else triggerUB);;;
-       ` v : Z <- trigger (Syscall f eval_zs t);; trigger (SetVar x (Vint v));;; (tau;; Ret Vundef))) le0
+       v <- trigger (Syscall f eval_zs↑ t);; v <- v↓?;; trigger (SetVar x (Vint v));;; (tau;; Ret Vundef))) le0
       =
       '(le1, vals) <- interp_imp ge (denote_exprs args) le0;;
       (if forallb (fun v : val => match v with
@@ -755,7 +755,7 @@ Section PROOFS.
                                                | _ => 0%Z
                                                end) vals in
       (if (forallb intrange_64 eval_zs) then Ret tt else triggerUB);;;
-        v <- trigger (Syscall f eval_zs t);;
+        v <- trigger (Syscall f eval_zs↑ t);; v <- v↓?;;
         tau;; tau;; tau;; tau;;
         tau;; Ret (alist_add x (Vint v) le1, Vundef)).
   Proof.

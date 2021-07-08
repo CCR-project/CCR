@@ -26,7 +26,7 @@ Section CONV.
         Vis (Choose {st': state | @step st0 None st' })
             (fun st1 => decompile_STS step state_sort (proj1_sig st1))
       | STS.final z =>
-        Ret (z)↑
+        Ret (z)
       | STS.vis =>
         '(exist _ (event_sys fn args _) _) <-
         trigger (Choose {ev': event | exists st1, @step st0 (Some ev') st1 });;
@@ -52,7 +52,7 @@ Section CONV.
       Vis (Choose {st': state | @step st0 None st' })
           (fun st1 => decompile_STS step state_sort (proj1_sig st1))
     | STS.final z =>
-      Ret (z)↑
+      Ret (z)
     | STS.vis =>
       '(exist _ (event_sys fn args _) _) <-
       trigger (Choose {ev': event | exists st1, @step st0 (Some ev') st1 });;
@@ -148,10 +148,10 @@ Section PROOF.
   Qed.
 
   Hypothesis wf_finalize0:
-    forall st0 rv, state_sort0 st0 = final rv -> finalize (rv↑) = Some rv.
+    forall st0 rv, state_sort0 st0 = final rv -> finalize rv.
 
   Lemma wf_finalize:
-    forall st0 rv, state_sort st0 = final rv -> finalize (rv↑) = Some rv.
+    forall st0 rv, state_sort st0 = final rv -> finalize rv.
   Proof.
     i. unfold state_sort, norm_state_sort in H. des_ifs. eapply wf_finalize0; et.
   Qed.
@@ -263,10 +263,10 @@ paco2 has 'fixed' semantics -> needs fixed semantics to do pcofix
                        (let (x, _) := x_ in
                         match x with
                         | event_sys fn args _ =>
-                          ` rv0 : Z <-
+                          ` rv0 : Any.t <-
                                   trigger
                                     (Syscall fn args
-                                             (fun rv0 : Z =>
+                                             (fun rv0 : Any.t =>
                                                 exists st1, step st0 (Some (event_sys fn args rv0)) st1));;
                                   Vis
                                     (Choose {st1 | step st0 (Some (event_sys fn args rv0)) st1})
@@ -300,7 +300,7 @@ paco2 has 'fixed' semantics -> needs fixed semantics to do pcofix
         i. des. clarify.
         exists (cont rv). eexists.
         { ss. rewrite bind_trigger. subst cont. ss.
-          apply (@ModSemL.step_syscall fn args rv (fun rv0 : Z => exists st1, step st0 (Some (event_sys fn args rv0)) st1) (fun x : Z => Vis (Choose {st1 | step st0 (Some (event_sys fn args x)) st1}) (fun st1 : {st1 | step st0 (Some (event_sys fn args x)) st1} => decompile_STS step state_sort (st1 $)))).
+          apply (@ModSemL.step_syscall fn args rv (fun rv0 : Any.t => exists st1, step st0 (Some (event_sys fn args rv0)) st1) (fun x : Any.t => Vis (Choose {st1 | step st0 (Some (event_sys fn args x)) st1}) (fun st1 : {st1 | step st0 (Some (event_sys fn args x)) st1} => decompile_STS step state_sort (st1 $)))).
           2:{ exists st_tgt1. auto. }
           apply wf_syscall.
           exists st0, st_tgt1. auto. }

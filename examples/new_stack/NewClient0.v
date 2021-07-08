@@ -14,13 +14,13 @@ Set Implicit Arguments.
 Definition getintF {E} `{eventE -< E}:  list val -> itree E val :=
   fun args =>
     _ <- (pargs [] args)?;;
-    z <- trigger (Syscall "scan" [] top1);; Ret (Vint z).
+    z <- trigger (Syscall "scan" (([]: list Z)↑) top1);; z <- z↓?;; Ret (Vint z).
 
 Definition putintF {E} `{eventE -< E}: list val -> itree E val :=
   fun varg =>
     `v: Z <- (pargs [Tint] varg)?;;
     (if (intrange_64 v) then Ret tt else triggerUB);;; (* TODO: make notation *)
-    trigger (Syscall "print" [v] top1);;;
+    trigger (Syscall "print" [v]↑ top1);;;
     Ret Vundef
 .
 
