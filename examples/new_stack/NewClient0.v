@@ -20,7 +20,7 @@ Definition putintF {E} `{eventE -< E}: list val -> itree E val :=
   fun varg =>
     `v: Z <- (pargs [Tint] varg)?;;
     (if (intrange_64 v) then Ret tt else triggerUB);;; (* TODO: make notation *)
-    trigger (Syscall "print" [v]↑ top1);;;
+    z <- trigger (Syscall "print" [v]↑ top1);; `z: Z <- z↓?;;
     Ret Vundef
 .
 
