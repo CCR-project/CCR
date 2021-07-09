@@ -18,7 +18,7 @@ Set Implicit Arguments.
 (*** TODO: remove redundancy ***)
 Ltac my_red_both := try (prw _red_gen 2 0); try (prw _red_gen 1 0).
 
-(*** TODO: move to TODOYJ ***)
+(*** TODO: move to Coqlib ***)
 Definition my_if X (b: bool) (x0 x1: X): X := if b then x0 else x1.
 Lemma my_if_same: forall X b (x: X), my_if b x x = x. i. destruct b; ss. Qed.
 

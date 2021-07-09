@@ -1479,7 +1479,6 @@ Notation "f ∘ g" := (fun x => (f (g x))).
 
 
 
-(* from TODOYJ *)
 Definition map_fst A B C (f: A -> C): A * B -> C * B := fun '(a, b) => (f a, b).
 Definition map_snd A B C (f: B -> C): A * B -> A * C := fun '(a, b) => (a, f b).
 
