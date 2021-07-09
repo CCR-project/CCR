@@ -1,6 +1,7 @@
 Require Import sflib.
 Require Import String.
 Require Import Coqlib.
+Require Import Any.
 
 Set Implicit Arguments.
 
@@ -8,8 +9,8 @@ Set Implicit Arguments.
 Inductive event: Type :=
 | event_sys
     (fn: string)
-    (args: list Z)
-    (rv: Z)
+    (args: Any.t)
+    (rv: Any.t)
 .
 Parameter syscall_sem: event -> Prop.
 
@@ -17,7 +18,7 @@ Parameter syscall_sem: event -> Prop.
 Inductive sort: Type :=
 | angelic
 | demonic
-| final (retv: Z)
+| final (retv: Any.t)
 | vis
 .
 

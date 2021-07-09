@@ -32,7 +32,7 @@ Global Program Instance EMSConfigImp: EMSConfig := {|
                   match rv with
                   | Vint z =>
                     if (0 <=? z)%Z && (z <? two_power_nat 32)%Z
-                    then Some z
+                    then Some z↑
                     else None
                   | _ => None
                   end

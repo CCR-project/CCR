@@ -1,5 +1,6 @@
 Require Import Coqlib.
 Require Import STS.
+Require Import Any.
 
 Set Implicit Arguments.
 
@@ -9,7 +10,7 @@ Set Implicit Arguments.
 
 Module Tr.
   CoInductive t: Type :=
-  | done (retv: Z)
+  | done (retv: Any.t)
   | spin
   | ub
   | nb

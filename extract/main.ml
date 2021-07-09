@@ -73,13 +73,18 @@ let handle_Event = fun e k ->
         with Failure _ -> 0) in
      k (Obj.repr (Nat.of_int n))
   | Syscall (str, args) ->
-     print_string (cl2s str ^ "(" ^ string_of_zs args ^ " ): ");
+     let argv =
+       match (Any.downcast args) with
+       | Some args' -> args'
+       | None -> []
+     in
+     print_string (cl2s str ^ "(" ^ string_of_zs argv ^ " ): ");
      let n =
        if (String.equal (cl2s str) ("print"))
        then (print_endline ""; 0)
        else (try int_of_string (read_line())
              with Failure _ -> 0) in
-     k (Obj.repr (Z.of_int n))
+     k (Obj.repr (Any.upcast (Z.of_int n)))
 
 let rec run t =
   match observe t with
@@ -94,8 +99,8 @@ let main =
   (* print_endline "-----------------------------------";
    * print_endline "- Delayed Echo"; run (echo_prog); *)
   print_endline "-----------------------------------";
-  print_endline "- New Echo Imp"; run (echo_imp_itr);
+  print_endline "- New Echo Imp (choose is from Mem0.alloc - put any natural number)"; run (echo_imp_itr);
   print_endline "-----------------------------------";
-  print_endline "- New Echo Impl (choose is from Mem0.alloc)"; run (echo_impl_itr);
+  print_endline "- New Echo Impl (choose is from Mem0.alloc - put any natural number)"; run (echo_impl_itr);
   print_endline "-----------------------------------";
-  print_endline "- New Echo Spec (choose is from purecall remnant; can't put list val now)"; run (echo_spec_itr);
+  print_endline "- New Echo Spec"; run (echo_spec_itr);

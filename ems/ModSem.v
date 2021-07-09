@@ -19,7 +19,7 @@ Section EVENTSCOMMON.
   Variant eventE: Type -> Type :=
   | Choose (X: Type): eventE X
   | Take X: eventE X
-  | Syscall (fn: gname) (args: list Z) (rvs: Z -> Prop): eventE Z
+  | Syscall (fn: gname) (args: Any.t) (rvs: Any.t -> Prop): eventE Any.t
   .
 
   (* Notation "'Choose' X" := (trigger (Choose X)) (at level 50, only parsing). *)
@@ -266,7 +266,7 @@ Opaque EventsL.interp_Es.
 
 
 
-Class EMSConfig := { finalize: Any.t -> option Z; initial_arg: Any.t }.
+Class EMSConfig := { finalize: Any.t -> option Any.t; initial_arg: Any.t }.
 
 Module ModSemL.
 Import EventsL.
@@ -348,7 +348,7 @@ Section MODSEML.
       match (finalize rv) with
       | Some rv => final rv
       | _ => angelic
-      end
+      end 
     | VisF (Choose X) k => demonic
     | VisF (Take X) k => angelic
     | VisF (Syscall fn args rvs) k => vis
@@ -369,7 +369,7 @@ Section MODSEML.
     :
       step (Vis (subevent _ (Take X)) k) None (k x)
   | step_syscall
-      fn args rv (rvs: Z -> Prop) k
+      fn args rv (rvs: Any.t -> Prop) k
       (SYSCALL: syscall_sem (event_sys fn args rv))
       (RETURN: rvs rv)
     :
@@ -476,7 +476,7 @@ Section MODSEML.
       extensionality x0. eapply itree_eta. ss. }
   Qed.
 
-  Lemma step_trigger_syscall fn args (rvs: Z -> Prop) k rv
+  Lemma step_trigger_syscall fn args (rvs: Any.t -> Prop) k rv
         (RV: rvs rv) (SYS: syscall_sem (event_sys fn args rv))
     :
       step (trigger (Syscall fn args rvs) >>= k) (Some (event_sys fn args rv)) (k rv).

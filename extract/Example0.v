@@ -16,8 +16,8 @@ Local Existing Instance Σ.
 
 Definition main0: itree EventsL.Es Any.t :=
   n <- trigger (Choose nat) ;;
-  r <- trigger (Syscall "print" [(Z.of_nat n)] top1) ;;
-  Ret r↑
+  r <- trigger (Syscall "print" [(Z.of_nat n)]↑ top1) ;;
+  Ret r
 .
 
 Definition Ex0: ModL.t := {|
