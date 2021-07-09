@@ -91,5 +91,5 @@ Theorem 6.1
 
 ## How to use
 - Compilation: make -j[N] -k
-- Running extracted examples: "./extract/run.sh"
+- Running extracted examples: "cd ./extract; ./run.sh"
 - Building IMP compiler and compiling IMP implementation of Echo example: "cd ./imp/compiler_extract; ./run.sh" (refer to the script for detailed instructions)
