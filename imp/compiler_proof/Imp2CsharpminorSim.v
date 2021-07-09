@@ -1059,16 +1059,21 @@ Section PROOF.
 
       split.
       { unfold decompile_event in EV0. des_ifs. uo; des_ifs; ss; clarify.
-        unfold decompile_eval in Heq2. des_ifs; ss; clarify. econs; auto. econs.
-        2:{ rewrite <- H0. econs. }
-        generalize dependent Heq1. clear. generalize dependent args_int.
+        unfold decompile_eval in Heq2. des_ifs; ss; clarify. econs; auto.
+        apply Any.upcast_inj in H0. des; ss.
+        apply Any.upcast_inj in H1. des; ss.
+        econs.
+        2:{ rewrite <- EQ0. econs. }
+        generalize dependent Heq1. depgen EQ2. clear. generalize dependent args_int. depgen l1.
         induction l0; i; ss; clarify.
         { destruct args_int; ss; clarify. }
         des_ifs. uo; des_ifs; ss. destruct args_int; ss; clarify.
         econs; eauto. unfold decompile_eval in Heq. des_ifs. rewrite <- H0. econs. }
 
       eexists.
-      do 7 (gstep; sim_tau).
+      do 5 (gstep; sim_tau).
+      sim_red. rewrite Any.upcast_downcast. sim_red.
+      do 2 (gstep; sim_tau).
       gstep. econs 4.
       eexists. eexists.
       { eapply step_return. }

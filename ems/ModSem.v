@@ -345,9 +345,10 @@ Section MODSEML.
     match (observe st0) with
     | TauF _ => demonic
     | RetF rv =>
-      if (finalize rv)
-      then final rv
-      else angelic
+      match (finalize rv) with
+      | Some rv => final rv
+      | _ => angelic
+      end 
     | VisF (Choose X) k => demonic
     | VisF (Take X) k => angelic
     | VisF (Syscall fn args rvs) k => vis
