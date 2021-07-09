@@ -22,5 +22,64 @@ Our development successfully compiles with following versions (in Linux, OS X):
 
 All packages can be installed from [OPAM archive for Coq](https://github.com/coq/opam-coq-archive)
 
-## Installation
-- make -j -k
+## Figure to code mapping
+
+Fig. 2
+- In examples/cannon directory.
+
+Fig. 3
+- mem/MemOpen.v
+
+Fig. 4
+- examples/stack directory. Stack1 maps to Stack2.v
+
+Fig. 5
+- examples/stack directory. Stack2A/2B maps to Stack3A/B.v
+
+Fig. 6
+- examples/echo directory. Composed result is in EchoAll.v
+
+Fig. 7
+- examples/repeat directory.
+
+Fig. 8
+- Eprim --> eventE in ModSem.v
+- EEMS --> Es in ModSem.v
+- EMS --> ModSem.t in ModSem.v
+- EPAbs --> hEs in HoarDef.v
+- PAbs --> KModSem.t in OpenDef.v
+- PCM --> URA.t in PCM.v
+- rProp --> iProp' in IProp.v
+- Spec --> fspec in HoarDef.v
+- Specs --> `(alist gname fspec)`
+- s1 ⊒ s0 --> fspec_weaker in STB.v
+- S1 ⊒ s0 --> stb_weaker in STB.v
+- Mod --> Mod.t in ModSem.v
+- Trace --> Tr.t in Behavior.v
+- Beh --> composition of Beh.of_program in Behavior.v and ModL.compile in ModSem.v.
+- Mi ≤ctx Ma --> refines2 in ModSem.v
+
+Fig. 9
+- toAbs --> KModSem.transl_src in OpenDef.v
+- toAbspec --> KModSem.transl_tgt in OpenDef.v
+- safe --> safe_itree in Safe.v
+- others are in OpenDef.v/HoareDef.v
+
+Theorem 3.1
+- adequacy_open in Open.v
+
+Theorem 4.1
+- safe_mods_safe in Safe.v
+
+Theorem 4.2 
+- adequacy_local2 in SimModSemHint.v
+
+Theorem 4.3
+- adequacy_weaken in Weakening.v
+
+Theorem 4.4
+- beh_preserved in STS2ITree.v
+
+## Delta with paper's presentation
+
+- In the paper, the order of arguments in pre/postconditions are "x -> x_a -> d", but in development it is "x_a -> x -> d".
