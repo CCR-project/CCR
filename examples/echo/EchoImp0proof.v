@@ -15,7 +15,6 @@ From ExtLib Require Import
      Core.RelDec
      Structures.Maps
      Data.Map.FMapAList.
-(* Require Import TODOYJ. *)
 Require Import HTactics ProofMode IPM.
 Require Import OpenDef.
 Require Import Mem1 MemOpen STB.
@@ -24,7 +23,7 @@ Require Import Imp.
 Require Import ImpNotations.
 Require Import ImpProofs.
 
-Require Import NewEchoMain0 NewEchoMainImp.
+Require Import Echo0 EchoImp.
 
 Set Implicit Arguments.
 
@@ -45,20 +44,58 @@ Section SIMMODSEM.
   .
 
   Theorem correct:
-    refines2 [NewEchoMainImp.EchoMain] [NewEchoMain0.Main].
+    refines2 [EchoImp.Echo] [Echo0.Echo].
   Proof.
     eapply adequacy_local2. econs; ss. i.
     econstructor 1 with (wf:=wf) (le:=top2); et; ss.
     econs; ss.
     { init.
-      unfold main_body, main.
+      unfold echo_body, echo.
       steps.
       rewrite unfold_eval_imp. steps.
       des_ifs.
       2:{ exfalso; apply n. solve_NoDup. }
       unfold ccallU. imp_steps.
       gstep. econs; ss. i. exists 100. imp_steps.
+      gstep. econs; ss. i. exists 100. imp_steps.
+      gstep. econs; ss. i. exists 100. imp_steps.
       red. esplits; et.
+    }
+    econs; ss.
+    { init.
+      unfold input_body, input.
+      steps.
+      rewrite unfold_eval_imp. steps.
+      des_ifs.
+      2:{ exfalso; apply n. solve_NoDup. }
+      unfold ccallU. imp_steps.
+      gstep. econs; ss. i. exists 100. imp_steps.
+      des. destruct v0; ss; clarify.
+      des_ifs.
+      - imp_steps. red. esplits; et. ss.
+      - rewrite Z.eqb_eq in Heq. clarify.
+      - imp_steps.
+        gstep. econs; ss. i. exists 100. imp_steps.
+        gstep. econs; ss. i. exists 100. imp_steps.
+        red. esplits; et.
+    }
+    econs; ss.
+    { init.
+      unfold output_body, output.
+      steps.
+      rewrite unfold_eval_imp. steps.
+      des_ifs.
+      2:{ exfalso; apply n. solve_NoDup. }
+      unfold ccallU. imp_steps.
+      gstep. econs; ss. i. exists 100. imp_steps.
+      des. destruct v0; ss; clarify.
+      des_ifs.
+      - imp_steps. red. esplits; et. ss.
+      - rewrite Z.eqb_eq in Heq. clarify.
+      - imp_steps.
+        gstep. econs; ss. i. exists 100. imp_steps.
+        gstep. econs; ss. i. exists 100. imp_steps.
+        red. esplits; et.
     }
     Unshelve. all: ss.
   Qed.

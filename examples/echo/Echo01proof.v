@@ -1,5 +1,5 @@
-Require Import NewEcho0 NewEcho1 HoareDef SimModSem.
-Require Import NewStack3A.
+Require Import Echo0 Echo1 HoareDef SimModSem.
+Require Import Stack3A.
 Require Import Coqlib.
 Require Import ImpPrelude.
 Require Import Skeleton.
@@ -63,14 +63,14 @@ Section SIMMODSEM.
   (* Proof. *)
   (* Qed. *)
 
-  Theorem sim_modsem: ModSemPair.sim (NewEcho1.EchoSem global_stb) (NewEcho0.EchoSem).
+  Theorem sim_modsem: ModSemPair.sim (Echo1.EchoSem global_stb) (Echo0.EchoSem).
   Proof.
     econstructor 1 with (wf:=wf) (le:=top2); ss; et; swap 2 3.
     { esplits. econs; ss.
       - eapply to_semantic. iIntros "H". ss.
     }
     econs; ss.
-    { unfold NewEcho0.echo_body, echo_body, cfunN, cfunU, ccallN, ccallU.
+    { unfold Echo0.echo_body, echo_body, cfunN, cfunU, ccallN, ccallU.
       kinit. harg. post_call.
       des_ifs. steps.
       astart 1. acatch. { eapply STBINCL. stb_tac; ss. } hcall _ _ _ with ""; ss; et.
@@ -87,7 +87,7 @@ Section SIMMODSEM.
       hret _; ss.
     }
     econs; ss.
-    { unfold NewEcho0.input_body, input_body, cfunU, ccallU, ccallN. kinit.
+    { unfold Echo0.input_body, input_body, cfunU, ccallU, ccallN. kinit.
       2: { harg. mDesAll. des; clarify. steps. }
       harg. post_call. steps.
       erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.
@@ -117,7 +117,7 @@ Section SIMMODSEM.
         { iModIntro. iSplits; ss; et. }
     }
     econs; ss.
-    { unfold NewEcho0.output_body, output_body, cfunU, ccallU, ccallN. kinit.
+    { unfold Echo0.output_body, output_body, cfunU, ccallU, ccallN. kinit.
       2:{ harg. mDesAll. des; clarify. steps. }
       harg. post_call. steps.
       astart 1. acatch.
@@ -166,7 +166,7 @@ Section SIMMOD.
   Variable global_stb: Sk.t -> gname -> option fspec.
   Hypothesis STBINCL: forall sk, stb_incl (to_stb_context ClientStb (EchoStb ++ StackStb)) (global_stb sk).
 
-  Theorem correct: refines2 [NewEcho0.Echo] [NewEcho1.Echo global_stb].
+  Theorem correct: refines2 [Echo0.Echo] [Echo1.Echo global_stb].
   Proof.
     eapply adequacy_local2. econs; ss.
     { ii. eapply sim_modsem; ss. }

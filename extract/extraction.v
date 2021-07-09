@@ -14,7 +14,7 @@ Extract Constant excluded_middle_informative => "true".
 Extract Constant assume => "(fun _ -> lazy (Coq_go (RetF ())))".
 Extract Constant guarantee => "(fun _ -> lazy (Coq_go (RetF ())))".
 
-Require Import MutFG Example0 NewEchoAll Imp ImpNotations.
+Require Import MutFG Example0 EchoAll Imp ImpNotations.
         (* EchoAll *)
 
 Cd "extract".

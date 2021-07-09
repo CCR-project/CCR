@@ -1,4 +1,4 @@
-Require Import NewEcho1 NewStack3A HoareDef SimModSem.
+Require Import Echo1 Stack3A HoareDef SimModSem.
 Require Import Coqlib.
 Require Import ImpPrelude.
 Require Import Skeleton.
@@ -35,7 +35,7 @@ Section REFINE.
   Hypothesis FRDS: forall sk, List.incl (frds1 sk) (frds0 sk).
 
   Theorem correct:
-    refines2 [KMod.transl_src frds0 NewEcho1.KEcho] [KMod.transl_src frds1 NewEcho1.KEcho].
+    refines2 [KMod.transl_src frds0 Echo1.KEcho] [KMod.transl_src frds1 Echo1.KEcho].
   Proof.
     eapply adequacy_local2. econs; ss. i.
     econstructor 1 with (wf:=wf) (le:=top2); ss.

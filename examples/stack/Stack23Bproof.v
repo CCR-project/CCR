@@ -1,4 +1,4 @@
-Require Import NewStack2 NewStack3B HoareDef SimModSem.
+Require Import Stack2 Stack3B HoareDef SimModSem.
 Require Import Coqlib.
 Require Import ImpPrelude.
 Require Import Skeleton.
@@ -92,7 +92,7 @@ Section SIMMODSEM.
     - rewrite URA.unit_id. ss.
   Qed.
 
-  Theorem sim_modsem: ModSemPair.sim (NewStack3B.StackSem global_stb) (NewStack2.StackSem).
+  Theorem sim_modsem: ModSemPair.sim (Stack3B.StackSem global_stb) (Stack2.StackSem).
   Proof.
     econstructor 1 with (wf:=wf) (le:=top2); ss; et; swap 2 3.
     { esplits. econs; ss.
@@ -100,7 +100,7 @@ Section SIMMODSEM.
         iSplit; ss; et.
     }
     econs; ss.
-    { unfold NewStack2.new_body, cfunN. init. harg. fold wf. mDesAll. des; clarify.
+    { unfold Stack2.new_body, cfunN. init. harg. fold wf. mDesAll. des; clarify.
       steps.
       astart 0. astop. steps.
       rename a into stk_mgr0. rename x0 into h. rename a0 into stk_res0. rename x into P. des_u.
@@ -128,7 +128,7 @@ Section SIMMODSEM.
       }
     }
     econs; ss.
-    { unfold NewStack2.pop_body, cfunN. init. harg. fold wf. des_ifs_safe. mDesAll. des; clarify.
+    { unfold Stack2.pop_body, cfunN. init. harg. fold wf. des_ifs_safe. mDesAll. des; clarify.
       steps.
       astart 1. steps.
       rename a into stk_mgr0. rename n into h. rename a0 into stk_res0.
@@ -162,7 +162,7 @@ Section SIMMODSEM.
         { iModIntro. iFrame; ss; et. iSplits; ss; et. iPureIntro. right. inv PR; ss. }
     }
     econs; ss.
-    { unfold NewStack2.push_body, cfunN. init. harg. fold wf. des_ifs_safe. mDesAll. des; clarify.
+    { unfold Stack2.push_body, cfunN. init. harg. fold wf. des_ifs_safe. mDesAll. des; clarify.
       steps.
       rename a0 into stk_mgr0. rename n into h. rename a1 into stk_res0. rename a into x.
       mCombine "O" "PRE".
@@ -203,7 +203,7 @@ Section SIMMOD.
   Variable global_stb: Sk.t -> gname -> option fspec.
   Hypothesis STBINCL: forall sk, stb_incl (to_stb StackStb) (global_stb sk).
 
-  Theorem correct: refines2 [NewStack2.Stack] [NewStack3B.Stack global_stb].
+  Theorem correct: refines2 [Stack2.Stack] [Stack3B.Stack global_stb].
   Proof.
     eapply adequacy_local2. econs; ss.
     { ii. eapply sim_modsem; ss. }

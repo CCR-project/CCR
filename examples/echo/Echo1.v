@@ -6,9 +6,9 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import Mem1 MemOpen.
-Require Import NewEchoHeader.
+Require Import EchoHeader.
 Require Import IPM HoareDef OpenDef.
-Require Import NewStack3A.
+Require Import Stack3A.
 
 Set Implicit Arguments.
 

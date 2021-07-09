@@ -23,7 +23,7 @@ Require Import Imp.
 Require Import ImpNotations.
 Require Import ImpProofs.
 
-Require Import NewEcho0 NewEchoImp.
+Require Import Stack0 StackImp.
 
 Set Implicit Arguments.
 
@@ -44,58 +44,87 @@ Section SIMMODSEM.
   .
 
   Theorem correct:
-    refines2 [NewEchoImp.Echo] [NewEcho0.Echo].
+    refines2 [StackImp.Stack] [Stack0.Stack].
   Proof.
     eapply adequacy_local2. econs; ss. i.
     econstructor 1 with (wf:=wf) (le:=top2); et; ss.
     econs; ss.
     { init.
-      unfold echo_body, echo.
+      unfold newF, new.
       steps.
       rewrite unfold_eval_imp. steps.
       des_ifs.
       2:{ exfalso; apply n. solve_NoDup. }
+      imp_steps.
       unfold ccallU. imp_steps.
-      gstep. econs; ss. i. exists 100. imp_steps.
       gstep. econs; ss. i. exists 100. imp_steps.
       gstep. econs; ss. i. exists 100. imp_steps.
       red. esplits; et.
     }
     econs; ss.
     { init.
-      unfold input_body, input.
+      steps.
+      unfold popF, pop.
+      unfold dec.
+      Local Opaque val_dec.
       steps.
       rewrite unfold_eval_imp. steps.
       des_ifs.
-      2:{ exfalso; apply n. solve_NoDup. }
+      2:{ exfalso; apply n0. solve_NoDup. }
+      imp_steps.
+      unfold unblk in *. des_ifs.
+      imp_steps.
       unfold ccallU. imp_steps.
+      unfold unblk in *. des_ifs. clarify; ss.
       gstep. econs; ss. i. exists 100. imp_steps.
-      des. destruct v0; ss; clarify.
-      des_ifs.
-      - imp_steps. red. esplits; et. ss.
-      - rewrite Z.eqb_eq in Heq. clarify.
-      - imp_steps.
+      gstep. econs; ss. i. exists 100. imp_steps.
+      des. des_ifs_safe. ss.
+      destruct (n1 =? 0)%Z eqn:N1; ss; clarify.
+      - apply Z.eqb_eq in N1. clarify. ss.
+        grind. ss.
+        destruct v; ss.
+        { steps. }
+        destruct ofs; ss.
+        2:{ steps. }
+        imp_steps.
+        gstep. econs; ss. i. exists 100. imp_steps.
+        uo. des_ifs_safe; ss; clarify. unfold scale_int in Heq2.
+        des_ifs_safe. steps.
+        gstep. econs; ss. i. exists 100. imp_steps.
+        gstep. econs; ss. i. exists 100. imp_steps.
+        unfold scale_int. uo; ss. des_ifs. ss.
+        rewrite Z_div_same; ss. rewrite Z.add_0_l. steps.
         gstep. econs; ss. i. exists 100. imp_steps.
         gstep. econs; ss. i. exists 100. imp_steps.
         red. esplits; et.
+      - apply Z.eqb_neq in N1.
+        unfold sumbool_to_bool. des_ifs.
+        imp_steps.
+        Local Transparent val_dec.
+        red. esplits; et. unfold wf. ss.
     }
     econs; ss.
     { init.
-      unfold output_body, output.
       steps.
-      rewrite unfold_eval_imp. steps.
+      unfold pushF, push.
+      steps.
+      rewrite unfold_eval_imp. imp_steps.
       des_ifs.
-      2:{ exfalso; apply n. solve_NoDup. }
-      unfold ccallU. imp_steps.
+      2:{ exfalso. apply n0; solve_NoDup. }
+      imp_steps.
+      unfold unblk in *. des_ifs.
+      imp_steps.
+      unfold ccallU. steps.
       gstep. econs; ss. i. exists 100. imp_steps.
-      des. destruct v0; ss; clarify.
-      des_ifs.
-      - imp_steps. red. esplits; et. ss.
-      - rewrite Z.eqb_eq in Heq. clarify.
-      - imp_steps.
-        gstep. econs; ss. i. exists 100. imp_steps.
-        gstep. econs; ss. i. exists 100. imp_steps.
-        red. esplits; et.
+      rewrite _UNWRAPU1. imp_steps.
+      gstep. econs; ss. i. exists 100. imp_steps.
+      gstep. econs; ss. i. exists 100. imp_steps.
+      uo; des_ifs; ss; clarify.
+      2:{ unfold scale_int in *. des_ifs. }
+      imp_steps.
+      gstep. econs; ss. i. exists 100. imp_steps.
+      gstep. econs; ss. i. exists 100. imp_steps.
+      red. esplits; et.
     }
     Unshelve. all: ss.
   Qed.

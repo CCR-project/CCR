@@ -15,6 +15,7 @@ From ExtLib Require Import
      Core.RelDec
      Structures.Maps
      Data.Map.FMapAList.
+(* Require Import TODOYJ. *)
 Require Import HTactics ProofMode IPM.
 Require Import OpenDef.
 Require Import Mem1 MemOpen STB.
@@ -23,7 +24,7 @@ Require Import Imp.
 Require Import ImpNotations.
 Require Import ImpProofs.
 
-Require Import NewClient0 NewClientImp.
+Require Import EchoMain0 EchoMainImp.
 
 Set Implicit Arguments.
 
@@ -44,38 +45,21 @@ Section SIMMODSEM.
   .
 
   Theorem correct:
-    refines2 [NewClientImp.Client] [NewClient0.Client].
+    refines2 [EchoMainImp.EchoMain] [EchoMain0.Main].
   Proof.
     eapply adequacy_local2. econs; ss. i.
-    Local Transparent syscalls.
     econstructor 1 with (wf:=wf) (le:=top2); et; ss.
     econs; ss.
     { init.
-      unfold getintF, getint.
+      unfold main_body, main.
       steps.
       rewrite unfold_eval_imp. steps.
       des_ifs.
       2:{ exfalso; apply n. solve_NoDup. }
-      imp_steps.
+      unfold ccallU. imp_steps.
       gstep. econs; ss. i. exists 100. imp_steps.
       red. esplits; et.
     }
-    econs; ss.
-    { init.
-      steps.
-      unfold putintF, putint.
-      steps.
-      rewrite unfold_eval_imp. steps.
-      destruct (intrange_64 z) eqn:WFZ.
-      2:{ steps. }
-      des_ifs.
-      2:{ exfalso; apply n. solve_NoDup. }
-      imp_steps.
-      unfold unint in *. clarify; ss. imp_steps.
-      gstep. econs; ss. i. exists 100. imp_steps.
-      red. esplits; et.
-    }
-    Local Opaque syscalls.
     Unshelve. all: ss.
   Qed.
 

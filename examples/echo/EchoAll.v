@@ -1,8 +1,8 @@
 Require Import Coqlib ITreelib ImpPrelude STS Behavior.
 Require Import ModSem Skeleton PCM STB OpenDef.
 Require Import Open.
-Require Import Mem0 Mem1 NewStack3A.
-Require Import Imp NewStackImp NewEchoImp NewEchoMainImp NewClientImp.
+Require Import Mem0 Mem1 Stack3A.
+Require Import Imp StackImp EchoImp EchoMainImp ClientImp.
 
 Set Implicit Arguments.
 
@@ -26,7 +26,7 @@ Local Existing Instance stkRA_inG.
 
 
 (* Imp program *)
-Require Import Mem0 NewStackImp NewEchoImp NewEchoMainImp NewClientImp.
+Require Import Mem0 StackImp EchoImp EchoMainImp ClientImp.
 Section ECHOIMP.
   Definition echo_progs := [Stack_prog; Echo_prog; EchoMain_prog; Client_prog].
   Definition echo_imp: ModL.t :=
@@ -36,7 +36,7 @@ Section ECHOIMP.
 End ECHOIMP.
 
 
-Require Import Mem0 NewStack0 NewEcho0 NewEchoMain0 NewClient0.
+Require Import Mem0 Stack0 Echo0 EchoMain0 Client0.
 Section ECHOIMPL.
   Definition echo_impl: ModL.t :=
     Mod.add_list [Mem; Stack; Echo; Main; Client].
@@ -45,14 +45,14 @@ Section ECHOIMPL.
 End ECHOIMPL.
 
 
-Require Import MemOpen NewStack3A NewEcho1 NewEchoMain0 NewClient0.
+Require Import MemOpen Stack3A Echo1 EchoMain0 Client0.
 (* spec program *)
-Require Import NewStack2.
+Require Import Stack2.
 Section ECHOSPEC.
   Definition echo_spec: ModL.t :=
     Mod.add_list [
         Mem0.Mem;
-      NewStack2.Stack;
+      Stack2.Stack;
       KMod.transl_src (fun _ => ["Echo"]) KEcho;
       Main; Client
       ].
@@ -63,22 +63,22 @@ End ECHOSPEC.
 
 
 Require Import Mem0Openproof MemOpen0proof.
-Require Import NewStackImp0proof NewStack01proof NewStack12proof NewStack23Aproof.
-Require Import NewEchoMainImp0proof NewEchoImp0proof.
-Require Import NewClientImp0proof NewEcho01proof.
-Require Import NewEcho1mon NewStack32proof.
+Require Import StackImp0proof Stack01proof Stack12proof Stack23Aproof.
+Require Import EchoMainImp0proof EchoImp0proof.
+Require Import ClientImp0proof Echo01proof.
+Require Import Echo1mon Stack32proof.
 Section PROOF.
   Theorem echo_correct:
-    refines2 [Mem0.Mem; NewStackImp.Stack; NewEchoImp.Echo]
-             [Mem0.Mem; NewStack2.Stack; KMod.transl_src (fun _ => ["Echo"]) KEcho].
+    refines2 [Mem0.Mem; StackImp.Stack; EchoImp.Echo]
+             [Mem0.Mem; Stack2.Stack; KMod.transl_src (fun _ => ["Echo"]) KEcho].
   Proof.
-    transitivity (KMod.transl_tgt_list [KMem; NewStack1.KStack]++[NewEchoImp.Echo]).
+    transitivity (KMod.transl_tgt_list [KMem; Stack1.KStack]++[EchoImp.Echo]).
     { eapply refines2_cons.
       { eapply Mem0Openproof.correct. }
       eapply refines2_cons; [|refl].
       { etrans.
-        { eapply NewStackImp0proof.correct. }
-        { eapply NewStack01proof.correct. i.
+        { eapply StackImp0proof.correct. }
+        { eapply Stack01proof.correct. i.
           etrans; [|eapply to_closed_stb_weaker]. stb_incl_tac; tauto. }
       }
     }
@@ -90,15 +90,15 @@ Section PROOF.
     }
     eapply refines2_cons.
     { eapply MemOpen0proof.correct. }
-    transitivity (KMod.transl_tgt_list [NewStack3A.KStack; KEcho]).
+    transitivity (KMod.transl_tgt_list [Stack3A.KStack; KEcho]).
     { eapply refines2_cons.
       { etrans.
-        { eapply NewStack12proof.correct. }
-        { eapply NewStack23Aproof.correct. }
+        { eapply Stack12proof.correct. }
+        { eapply Stack23Aproof.correct. }
       }
       { etrans.
-        { eapply NewEchoImp0proof.correct. }
-        { eapply NewEcho01proof.correct.
+        { eapply EchoImp0proof.correct. }
+        { eapply Echo01proof.correct.
           stb_context_incl_tac; tauto. }
       }
     }
@@ -108,9 +108,9 @@ Section PROOF.
       { ii. ss. }
     }
     { eapply refines2_cons.
-      { eapply NewStack32proof.correct. }
+      { eapply Stack32proof.correct. }
       eapply refines2_cons; [|refl].
-      { eapply NewEcho1mon.correct. ii. ss. des; auto. }
+      { eapply Echo1mon.correct. ii. ss. des; auto. }
     }
   Qed.
 
@@ -120,8 +120,8 @@ Section PROOF.
     eapply refines_close. hexploit refines2_app.
     { eapply echo_correct. }
     { eapply refines2_cons.
-      { eapply NewEchoMainImp0proof.correct. }
-      { eapply NewClientImp0proof.correct. }
+      { eapply EchoMainImp0proof.correct. }
+      { eapply ClientImp0proof.correct. }
     }
     ss.
   Qed.

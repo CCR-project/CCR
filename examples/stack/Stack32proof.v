@@ -1,4 +1,4 @@
-Require Import NewStack2 NewStack3A HoareDef SimModSem.
+Require Import Stack2 Stack3A HoareDef SimModSem.
 Require Import Coqlib.
 Require Import ImpPrelude.
 Require Import Skeleton.
@@ -37,13 +37,13 @@ Section REFINE.
       exists (st: gmap mblock (list val)),
         st_src = st↑ /\ st_tgt = st↑.
 
-  Theorem correct: refines2 [KMod.transl_src frds NewStack3A.KStack] [NewStack2.Stack].
+  Theorem correct: refines2 [KMod.transl_src frds Stack3A.KStack] [Stack2.Stack].
   Proof.
     eapply adequacy_local2. econs; ss. i.
     econstructor 1 with (wf:=wf) (le:=top2); ss.
     2: { esplits; et. ss. }
     econs; ss.
-    { init. unfold NewStack2.new_body, new_body, body_to_src.
+    { init. unfold Stack2.new_body, new_body, body_to_src.
       red in WF. des; clarify.
       match goal with
       | |- context[my_if ?cond _ _] => destruct cond
@@ -53,7 +53,7 @@ Section REFINE.
         steps. red. esplits; et. red. esplits; et. }
     }
     econs; ss.
-    { init. unfold NewStack2.pop_body, pop_body, body_to_src.
+    { init. unfold Stack2.pop_body, pop_body, body_to_src.
       red in WF. des; clarify.
       match goal with
       | |- context[my_if ?cond _ _] => destruct cond
@@ -65,7 +65,7 @@ Section REFINE.
       }
     }
     econs; ss.
-    { init. unfold NewStack2.push_body, push_body, body_to_src.
+    { init. unfold Stack2.push_body, push_body, body_to_src.
       red in WF. des; clarify.
       match goal with
       | |- context[my_if ?cond _ _] => destruct cond

@@ -57,7 +57,7 @@ Section PROOF.
   .
 
 
-  (*** TODO: remove redundancy with NewStack2 ***)
+  (*** TODO: remove redundancy with Stack2 ***)
   Notation pget := (p0 <- trigger PGet;; `p0: (gmap mblock (list val)) <- p0↓ǃ;; Ret p0) (only parsing).
   Notation pput p0 := (trigger (PPut (p0: (gmap mblock (list val)))↑)) (only parsing).
 
