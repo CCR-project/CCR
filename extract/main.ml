@@ -13,8 +13,7 @@ open ModSem
 
 open MutFG
 open Example0
-(* open EchoAll *)
-open NewEchoAll
+open EchoAll
 open Imp
 
 let cl2s = fun cl -> String.concat "" (List.map (String.make 1) cl)
@@ -99,8 +98,8 @@ let main =
   (* print_endline "-----------------------------------";
    * print_endline "- Delayed Echo"; run (echo_prog); *)
   print_endline "-----------------------------------";
-  print_endline "- New Echo Imp (choose is from Mem0.alloc - put any natural number)"; run (echo_imp_itr);
+  print_endline "- Echo Imp (choose is from Mem0.alloc - put any natural number)"; run (echo_imp_itr);
   print_endline "-----------------------------------";
-  print_endline "- New Echo Impl (choose is from Mem0.alloc - put any natural number)"; run (echo_impl_itr);
+  print_endline "- Echo Impl (choose is from Mem0.alloc - put any natural number)"; run (echo_impl_itr);
   print_endline "-----------------------------------";
-  print_endline "- New Echo Spec"; run (echo_spec_itr);
+  print_endline "- Echo Spec"; run (echo_spec_itr);
