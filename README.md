@@ -87,3 +87,10 @@ Theorem 6.1
 
 - In the paper, the order of arguments in pre/postconditions are "x -> x_a -> d", but in development it is "x_a -> x -> d".
 - In the paper, we use explicit event GetCaller (using monadic style) but in development we just thread it.
+- In the paper, the magic number is zero but in development it is -1. (Note also that when running the extracted examples, it stops with -1)
+
+## Compilation
+make -j[N] -k
+
+## Running extracted examples
+"./extract/run.sh"
