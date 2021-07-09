@@ -45,9 +45,9 @@ Section SIMMODSEM.
   .
 
   Theorem correct:
-    ModPair.sim KnotMain0.Main KnotMainImp.KnotMain.
+    refines2 [KnotMainImp.KnotMain] [KnotMain0.Main].
   Proof.
-    econs; ss. i.
+    eapply adequacy_local2. econs; ss. i.
     econstructor 1 with (wf:=wf) (le:=top2); et; ss.
     econs; ss.
     { init.

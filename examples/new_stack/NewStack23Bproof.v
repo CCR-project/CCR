@@ -203,9 +203,9 @@ Section SIMMOD.
   Variable global_stb: Sk.t -> gname -> option fspec.
   Hypothesis STBINCL: forall sk, stb_incl (to_stb StackStb) (global_stb sk).
 
-  Theorem correct: ModPair.sim (NewStack3B.Stack global_stb) (NewStack2.Stack).
+  Theorem correct: refines2 [NewStack2.Stack] [NewStack3B.Stack global_stb].
   Proof.
-    econs; ss.
+    eapply adequacy_local2. econs; ss.
     { ii. eapply sim_modsem; ss. }
   Qed.
 

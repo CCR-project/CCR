@@ -458,9 +458,9 @@ Section SIMMODSEM.
     all: try (by econs).
   Qed.
 
-  Theorem correct: ModPair.sim Mem1.Mem Mem0.Mem.
+  Theorem correct: refines2 [Mem0.Mem] [Mem1.Mem].
   Proof.
-    econs; ss; et. i. eapply correct_modsem.
+    eapply adequacy_local2. econs; ss; et. i. eapply correct_modsem.
   Qed.
 
 End SIMMODSEM.

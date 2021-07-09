@@ -44,9 +44,9 @@ Section SIMMODSEM.
   .
 
   Theorem correct:
-    ModPair.sim NewStack0.Stack (NewStackImp.Stack).
+    refines2 [NewStackImp.Stack] [NewStack0.Stack].
   Proof.
-    econs; ss. i.
+    eapply adequacy_local2. econs; ss. i.
     econstructor 1 with (wf:=wf) (le:=top2); et; ss.
     econs; ss.
     { init.

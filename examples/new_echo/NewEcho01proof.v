@@ -166,9 +166,9 @@ Section SIMMOD.
   Variable global_stb: Sk.t -> gname -> option fspec.
   Hypothesis STBINCL: forall sk, stb_incl (to_stb_context ClientStb (EchoStb ++ StackStb)) (global_stb sk).
 
-  Theorem correct: ModPair.sim (NewEcho1.Echo global_stb) (NewEcho0.Echo).
+  Theorem correct: refines2 [NewEcho0.Echo] [NewEcho1.Echo global_stb].
   Proof.
-    econs; ss.
+    eapply adequacy_local2. econs; ss.
     { ii. eapply sim_modsem; ss. }
   Qed.
 

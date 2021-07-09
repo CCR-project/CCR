@@ -77,9 +77,9 @@ Section SIMMOD.
 
   Variable frds: Sk.t -> list mname.
 
-  Theorem correct: ModPair.sim (NewStack2.Stack) (KMod.transl_src frds NewStack1.KStack).
+  Theorem correct: refines2 [KMod.transl_src frds NewStack1.KStack] [NewStack2.Stack].
   Proof.
-    econs; ss. ii. eapply sim_modsem; ss.
+    eapply adequacy_local2. econs; ss. ii. eapply sim_modsem; ss.
   Qed.
 
 End SIMMOD.

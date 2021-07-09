@@ -44,9 +44,9 @@ Section SIMMODSEM.
   .
 
   Theorem correct:
-    ModPair.sim NewEcho0.Echo (NewEchoImp.Echo).
+    refines2 [NewEchoImp.Echo] [NewEcho0.Echo].
   Proof.
-    econs; ss. i.
+    eapply adequacy_local2. econs; ss. i.
     econstructor 1 with (wf:=wf) (le:=top2); et; ss.
     econs; ss.
     { init.

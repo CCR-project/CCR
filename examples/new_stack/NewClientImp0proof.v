@@ -44,9 +44,9 @@ Section SIMMODSEM.
   .
 
   Theorem correct:
-    ModPair.sim NewClient0.Client (NewClientImp.Client).
+    refines2 [NewClientImp.Client] [NewClient0.Client].
   Proof.
-    econs; ss. i.
+    eapply adequacy_local2. econs; ss. i.
     Local Transparent syscalls.
     econstructor 1 with (wf:=wf) (le:=top2); et; ss.
     econs; ss.

@@ -295,7 +295,7 @@ Section SIMMODSEM.
           assert(SIM0: sim res1 mgr_src0 (<[h:=stk1]> mgr_tgt0)).
           { eapply sim_update_k; et. }
 
-          force_l. esplits. steps. 
+          force_l. esplits. steps.
           rewrite <- H3. steps. hret _; ss.
           iModIntro. iFrame. iSplitL "A"; ss; et.
       - harg. mDesAll. des; clarify. unfold pop_body. cbn.
@@ -311,7 +311,7 @@ Section SIMMODSEM.
     }
 
     econs; ss.
-    { unfold NewStack2.push_body, cfunN. kinit. 
+    { unfold NewStack2.push_body, cfunN. kinit.
       - harg. mDesAll. des; clarify. steps. ss. mDesAll. des; clarify.
         renamer. rename n into h. rename l into stk0. rename v into x.
         mCombine "O" "A".
@@ -348,10 +348,10 @@ Section SIMMODSEM.
         { eapply sim_update_k; et. }
 
         astart 0. astop.
-        force_l. esplits. steps. 
+        force_l. esplits. steps.
         rewrite <- H3. steps. hret _; ss.
         iModIntro. iFrame. iSplitL "A"; ss; et.
-      - harg. mDesAll. des; clarify. unfold push_body. cbn. 
+      - harg. mDesAll. des; clarify. unfold push_body. cbn.
         steps. astop. steps. astop. steps. astop. steps. astop. steps.
         rename n into h. rename l into stk0. destruct v; ss. des_ifs_safe.
         assert(S:=SIM h). rewrite _UNWRAPU0 in *. inv S; ss. steps.
@@ -376,9 +376,9 @@ Section SIMMOD.
   Variable global_stb: Sk.t -> gname -> option fspec.
   Hypothesis STBINCL: forall sk, stb_incl (to_stb StackStb) (global_stb sk).
 
-  Theorem correct: ModPair.sim (NewStack3A.Stack global_stb) (NewStack2.Stack).
+  Theorem correct: refines2 [NewStack2.Stack] [NewStack3A.Stack global_stb].
   Proof.
-    econs; ss.
+    eapply adequacy_local2. econs; ss.
     { ii. eapply sim_modsem; ss. }
   Qed.
 

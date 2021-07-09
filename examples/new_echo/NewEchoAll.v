@@ -1,6 +1,6 @@
 Require Import Coqlib ITreelib ImpPrelude STS Behavior.
 Require Import ModSem Skeleton PCM STB OpenDef.
-Require Import SimModSem Open.
+Require Import Open.
 Require Import Mem0 Mem1 NewStack3A.
 Require Import Imp NewStackImp NewEchoImp NewEchoMainImp NewClientImp.
 
@@ -46,17 +46,6 @@ End ECHOIMPL.
 
 
 Require Import MemOpen NewStack3A NewEcho1 NewEchoMain0 NewClient0.
-Section ECHOMID.
-  Let frds: list string := ["Stack"; "Echo"].
-  Definition echo_mid: ModL.t :=
-    Mod.add_list [
-        Mem0.Mem;
-      KMod.transl_src (fun _ => frds) KStack; KMod.transl_src (fun _ => frds) KEcho;
-      Main; Client
-      ].
-End ECHOMID.
-
-
 (* spec program *)
 Require Import NewStack2.
 Section ECHOSPEC.
@@ -80,67 +69,61 @@ Require Import NewClientImp0proof NewEcho01proof.
 Require Import NewEcho1mon NewStack32proof.
 Section PROOF.
   Theorem echo_correct:
-    refines echo_imp echo_spec.
+    refines2 [Mem0.Mem; NewStackImp.Stack; NewEchoImp.Echo]
+             [Mem0.Mem; NewStack2.Stack; KMod.transl_src (fun _ => ["Echo"]) KEcho].
   Proof.
-    unfold echo_imp, echo_spec. transitivity echo_impl.
-    { eapply refines2_pairwise. econs.
-      { cbn. ss. }
-      econs.
-      { eapply adequacy_local2. eapply NewStackImp0proof.correct. }
-      econs.
-      { eapply adequacy_local2. eapply NewEchoImp0proof.correct. }
-      econs.
-      { eapply adequacy_local2. eapply NewEchoMainImp0proof.correct. }
-      econs.
-      { eapply adequacy_local2. eapply NewClientImp0proof.correct. }
-      ss.
-    }
-    unfold echo_impl.
-    pose (kmd0 := [KMem; NewStack1.KStack]).
-    transitivity (Mod.add_list (KMod.transl_tgt_list kmd0 ++ [NewEcho0.Echo; NewEchoMain0.Main; Client])).
+    transitivity (KMod.transl_tgt_list [KMem; NewStack1.KStack]++[NewEchoImp.Echo]).
     { eapply refines2_cons.
-      { eapply adequacy_local2. eapply Mem0Openproof.correct. }
-      eapply refines2_cons.
-      { eapply adequacy_local2. eapply NewStack01proof.correct. i.
-        etrans; [|eapply to_closed_stb_weaker].
-        stb_incl_tac; tauto. }
-      refl.
+      { eapply Mem0Openproof.correct. }
+      eapply refines2_cons; [|refl].
+      { etrans.
+        { eapply NewStackImp0proof.correct. }
+        { eapply NewStack01proof.correct. i.
+          etrans; [|eapply to_closed_stb_weaker]. stb_incl_tac; tauto. }
+      }
     }
     etrans.
-    { rewrite Mod.add_list_app. eapply refines_proper_r.
+    { eapply refines2_app; [|refl].
       eapply adequacy_open. i. exists ε. split.
       { g_wf_tac. repeat (i; splits; ur; ss). refl. }
       { ii. ss. }
     }
-    pose (kmd1 := [NewStack3A.KStack; KEcho]).
-    transitivity (Mod.add_list (Mem0.Mem :: (KMod.transl_tgt_list kmd1) ++ [Main; Client])).
-    { rewrite <- Mod.add_list_app. eapply refines2_cons.
-      { eapply adequacy_local2. eapply MemOpen0proof.correct. }
-      eapply refines2_cons.
+    eapply refines2_cons.
+    { eapply MemOpen0proof.correct. }
+    transitivity (KMod.transl_tgt_list [NewStack3A.KStack; KEcho]).
+    { eapply refines2_cons.
       { etrans.
-        { eapply adequacy_local2. eapply NewStack12proof.correct. }
-        { eapply adequacy_local2. eapply NewStack23Aproof.correct. }
+        { eapply NewStack12proof.correct. }
+        { eapply NewStack23Aproof.correct. }
       }
-      eapply refines2_cons.
-      { eapply adequacy_local2. eapply NewEcho01proof.correct.
-        stb_context_incl_tac; tauto. }
-      refl.
+      { etrans.
+        { eapply NewEchoImp0proof.correct. }
+        { eapply NewEcho01proof.correct.
+          stb_context_incl_tac; tauto. }
+      }
     }
-    transitivity echo_mid.
-    { eapply refines2_cons; [refl|].
-      transitivity (KMod.transl_src_list kmd1 ++ [Main; Client]); [|refl].
-      eapply refines2_app; [|refl].
-      eapply adequacy_open. i. exists ε. split.
+    etrans.
+    { eapply adequacy_open. i. exists ε. split.
       { g_wf_tac; repeat (i; splits; ur; ss). refl. }
       { ii. ss. }
     }
-    { eapply refines2_cons; [refl|].
-      eapply refines2_cons.
+    { eapply refines2_cons.
       { eapply NewStack32proof.correct. }
-      eapply refines2_cons.
+      eapply refines2_cons; [|refl].
       { eapply NewEcho1mon.correct. ii. ss. des; auto. }
-      refl.
     }
+  Qed.
+
+  Corollary echo_closed_correct:
+    refines_closed echo_imp echo_spec.
+  Proof.
+    eapply refines_close. hexploit refines2_app.
+    { eapply echo_correct. }
+    { eapply refines2_cons.
+      { eapply NewEchoMainImp0proof.correct. }
+      { eapply NewClientImp0proof.correct. }
+    }
+    ss.
   Qed.
 End PROOF.
 
@@ -159,6 +142,6 @@ Section PROOF.
                    (improves2_program (ModL.compile echo_spec) (Asm.semantics asml)).
   Proof.
     hexploit compile_behavior_improves; [et|et|]. i. des. esplits; [et|].
-    eapply improves_combine; [|et]. eapply refines_close. eapply echo_correct.
+    eapply improves_combine; [|et]. eapply echo_closed_correct.
   Qed.
 End PROOF.

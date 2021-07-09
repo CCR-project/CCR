@@ -40,8 +40,9 @@ Section SIMMODSEM.
   .
 
   Theorem correct:
-    forall ge, ModSemPair.sim MutG0.GSem (MutGImp.GSem ge).
+    refines2 [MutGImp.G] [MutG0.G].
   Proof.
+    eapply adequacy_local2. econs; ss. i.
     econstructor 1 with (wf:=wf) (le:=top2); et; ss.
     econs; ss. init. unfold cfunU.
     unfold gF.
