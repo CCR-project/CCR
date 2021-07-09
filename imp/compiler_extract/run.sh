@@ -19,15 +19,15 @@ echo "Run IMP compiler:"
 echo ""
 
 echo "Compile IO modules..."
-cc -S -o bin/print.s bin/print.c
-cc -S -o bin/scan.s bin/scan.c
+gcc -S -o bin/print.s bin/print.c
+gcc -S -o bin/scan.s bin/scan.c
 
 echo "Linking modules (in ./bin)..."
 mv stack.s bin/stack.s
 mv echo.s bin/echo.s
 mv echo_main.s bin/echo_main.s
 mv client.s bin/client.s
-cc -o bin/echo_all bin/stack.s bin/echo.s bin/echo_main.s bin/client.s bin/print.s bin/scan.s
+gcc -m64 -no-pie -o bin/echo_all bin/stack.s bin/echo.s bin/echo_main.s bin/client.s bin/print.s bin/scan.s
 
 echo "Run program:"
 echo "(Echo) Input integers, -1 to stop:"
