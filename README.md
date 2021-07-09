@@ -80,6 +80,10 @@ Theorem 4.3
 Theorem 4.4
 - beh_preserved in STS2ITree.v
 
+Theorem 6.1
+- compile_behavior_improves in Imp2AsmProof.v
+
 ## Delta with paper's presentation
 
 - In the paper, the order of arguments in pre/postconditions are "x -> x_a -> d", but in development it is "x_a -> x -> d".
+- In the paper, we use explicit event GetCaller (using monadic style) but in development we just thread it.
