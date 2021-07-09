@@ -53,8 +53,9 @@ Section SIMMODSEM.
   Hypotheses GlobalStb_knot: forall sk,
       fn_has_spec (GlobalStb sk) "knot" (knot_spec RecStb FunStb sk).
 
-  Theorem correct: ModPair.sim (KnotMain1.Main RecStb GlobalStb) KnotMain0.Main.
+  Theorem correct: refines2 [KnotMain0.Main] [KnotMain1.Main RecStb GlobalStb].
   Proof.
+    eapply adequacy_local2.
     econs; ss. i. econstructor 1 with (wf:=wf) (le:=top2); ss; et.
     2: { eexists. econs; ss. red. uipropall. }
     eapply Sk.incl_incl_env in SKINCL. eapply Sk.load_skenv_wf in SKWF.

@@ -1,4 +1,4 @@
-Require Import NewStack0 NewStack1 HoareDef SimModSem.
+Require Import Stack0 Stack1 HoareDef SimModSem.
 Require Import Coqlib.
 Require Import ImpPrelude.
 Require Import Skeleton.
@@ -65,7 +65,7 @@ Section SIMMODSEM.
     end
   .
 
-  Theorem sim_modsem: ModSemPair.sim (NewStack1.StackSem global_stb) NewStack0.StackSem.
+  Theorem sim_modsem: ModSemPair.sim (Stack1.StackSem global_stb) Stack0.StackSem.
   Proof.
     econstructor 1 with (wf:=wf) (le:=top2); ss; et; swap 2 3.
     { esplits. econs; ss. eapply to_semantic. iIntros "H". iClear "H". iSplits; ss. }
@@ -267,9 +267,9 @@ Section SIMMOD.
   Variable global_stb: Sk.t -> gname -> option fspec.
   Hypothesis STBINCL: forall sk, stb_incl (to_stb (StackStb ++ MemStb)) (global_stb sk).
 
-  Theorem correct: ModPair.sim (NewStack1.Stack global_stb) NewStack0.Stack.
+  Theorem correct: refines2 [Stack0.Stack] [Stack1.Stack global_stb].
   Proof.
-    econs; ss. ii. eapply sim_modsem; ss.
+    eapply adequacy_local2. econs; ss. ii. eapply sim_modsem; ss.
   Qed.
 
 End SIMMOD.

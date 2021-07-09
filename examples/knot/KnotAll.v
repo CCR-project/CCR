@@ -7,12 +7,12 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import Hoare.
-Require Import STB KnotHeader SimModSem.
+Require Import STB KnotHeader.
 Require Import KnotMainImp KnotMain0 KnotMain1 KnotImp Knot0 Knot1 Mem0 Mem1.
 Require Import KnotMainImp0proof KnotImp0proof KnotMain01proof Knot01proof Mem01proof.
 Require Import ProofMode.
 
-Require Import HTactics Invariant.
+Require Import Invariant Weakening.
 
 Set Implicit Arguments.
 
@@ -56,20 +56,21 @@ Section PROOF.
   Lemma KnotAll01_correct:
     refines2 KnotAll0 KnotAll1.
   Proof.
-    cbn. eapply refines2_pairwise. econs; [|econs; [|econs; ss]].
-    - eapply adequacy_local2.
-      eapply KnotMain01proof.correct with (RecStb0:=RecStb) (FunStb0:=FunStb) (GlobalStb0:=GlobalStb).
-      + stb_incl_tac.
-      + ii. econs; ss. refl.
-      + ii. econs; ss. refl.
-    - eapply adequacy_local2.
-      eapply Knot01proof.correct with (RecStb0:=RecStb) (FunStb0:=FunStb) (GlobalStb0:=GlobalStb).
+    eapply refines2_cons.
+    { eapply KnotMain01proof.correct with (RecStb0:=RecStb) (FunStb0:=FunStb) (GlobalStb0:=GlobalStb).
+      { stb_incl_tac. }
+      { ii. econs; ss. refl. }
+      { ii. econs; ss. refl. }
+    }
+    eapply refines2_cons.
+    { eapply Knot01proof.correct with (RecStb0:=RecStb) (FunStb0:=FunStb) (GlobalStb0:=GlobalStb).
       + stb_incl_tac.
       + stb_incl_tac.
       + stb_incl_tac; ors_tac.
-    - etrans.
-      { eapply adequacy_local2. eapply Mem01proof.correct. }
-      { eapply adequacy_local2. eapply Weakening.adequacy_weaken. ss. }
+    }
+    etrans.
+    { eapply Mem01proof.correct. }
+    { eapply Weakening.adequacy_weaken. ss. }
   Qed.
 
   Lemma KnotAll12_correct:
@@ -106,9 +107,9 @@ Section PROOF.
   Proof.
     transitivity (Mod.add_list KnotAll0).
     { eapply refines_close. eapply refines2_pairwise. econs; simpl.
-      { eapply adequacy_local2. eapply KnotMainImp0proof.correct. }
+      { eapply KnotMainImp0proof.correct. }
       econs; simpl.
-      { eapply adequacy_local2. eapply KnotImp0proof.correct. }
+      { eapply KnotImp0proof.correct. }
       econs; ss.
     }
     etrans.

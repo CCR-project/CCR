@@ -10,8 +10,7 @@ Require Import Hoare.
 Require Import MutHeader SimModSem.
 Require Import MutFImp MutGImp MutF0 MutG0 MutMain0 MutF1 MutG1 MutMain1.
 Require Import MutFImp0proof MutGImp0proof MutF01proof MutG01proof MutMain01proof.
-
-Require Import HTactics.
+Require Import ProofMode.
 
 Set Implicit Arguments.
 
@@ -35,22 +34,22 @@ Section PROOF.
   Lemma FGImp0_correct:
     refines2 FGImp FG0.
   Proof.
-    eapply adequacy_local_list. econs; [|econs; [|econs; ss]].
-    - econs; ss. ii. eapply ModSemPair.self_sim.
-    - split; auto. ii. ss. eapply MutFImp0proof.correct.
-    - split; auto. ii. ss. eapply MutGImp0proof.correct.
+    eapply refines2_cons.
+    { refl. }
+    eapply refines2_cons.
+    { eapply MutFImp0proof.correct. }
+    { eapply MutGImp0proof.correct. }
   Qed.
 
   Lemma FG01_correct:
     refines2 FG0 FG1.
   Proof.
-    eapply adequacy_local_list. econs; [|econs; [|econs; ss]].
-    - eapply MutMain01proof.correct.
-    - eapply MutF01proof.correct.
-    - eapply MutG01proof.correct.
+    eapply refines2_cons.
+    { eapply MutMain01proof.correct. }
+    eapply refines2_cons.
+    { eapply MutF01proof.correct. }
+    { eapply MutG01proof.correct. }
   Qed.
-
-  Require Import ProofMode.
 
   Lemma FG12_correct:
     refines_closed (Mod.add_list FG1) (Mod.add_list FG2).
@@ -58,9 +57,10 @@ Section PROOF.
     unfold FG1, FG2.
     eapply adequacy_type.
     { instantiate (1:=ε). cbn. rewrite ! URA.unit_id. eapply URA.wf_unit. }
-    i. cbn in MAIN. ss. clarify. ss. exists tt. split.
-    { iIntros "H". iPureIntro. splits; auto. }
-    { ii. iPureIntro. i. des; auto. }
+    { i. ss. clarify. ss. exists tt. splits.
+      { iIntros "H". iPureIntro. splits; auto. }
+      { ii. iPureIntro. i. des; auto. }
+    }
   Qed.
 
   Theorem FG_correct:

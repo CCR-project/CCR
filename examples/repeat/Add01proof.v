@@ -60,23 +60,16 @@ Section SIMMODSEM.
     eapply Sk.incl_incl_env in SKINCL. eapply Sk.load_skenv_wf in SKWF.
     hexploit (SKINCL "succ"); ss; eauto. intros [blk0 FIND0].
     econs; ss.
-    { kinit.
-      2: { harg. mDesAll. des; clarify. steps. }
+    { unfold succF. kinit.
+      2: { harg. mDesAll. des; clarify. steps. hret _; ss. }
       harg. mDesAll. des; clarify.
       steps. astart 0. astop. force_l. eexists.
-      unfold Add0.succ. rewrite unfold_eval_imp. imp_steps.
-      des_ifs.
-      2: { exfalso. apply n. solve_NoDup. }
-      imp_steps. hret _; ss.
+      steps. hret _; ss.
     }
     econs; ss.
-    { kinit. harg. destruct x as [m n]. mDesAll. des; clarify.
-      steps. unfold Add0.add, add_body. rewrite unfold_eval_imp. imp_steps.
-      des_ifs.
-      2: { exfalso. apply n. solve_NoDup. }
-      unfold unint in *. des_ifs.
+    { unfold addF, add_body. kinit. harg. mDesAll. des; clarify.
+      steps.  rewrite FIND0. steps. unfold ccallU. steps.
       hexploit FunStb_succ. i. inv H.
-      imp_steps. rewrite FIND0. imp_steps. des.
       assert (exists m, z0 = Z.of_nat m).
       { exists (Z.to_nat z0). rewrite Z2Nat.id; auto. lia. } des. subst.
       hexploit GlobalStb_repeat; et. i. inv H. astart 1. acatch; et.
@@ -92,10 +85,7 @@ Section SIMMODSEM.
         }
       }
       { splits; ss. }
-      mDesAll. des; clarify. imp_steps.
-      guclo lordC_spec. econs.
-      { instantiate (5:=100). eapply OrdArith.add_base_l. } (* TODO: make index reset tactics *)
-      astop. steps. hret _; ss.
+      mDesAll. des; clarify. steps. astop. steps. hret _; ss.
       iPureIntro. esplits; et.
       f_equal. f_equal. clear. generalize z. induction m; ss; i.
       { lia. }

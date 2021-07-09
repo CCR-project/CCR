@@ -234,9 +234,9 @@ Proof Outline
 
   (* Ltac mRefresh := on_current ltac:(fun H => move H at bottom). *)
 
-  Theorem correct stb: ModPair.sim (MemOpen.Mem stb) (Mem0.Mem).
+  Theorem correct stb: refines2 [Mem0.Mem] [MemOpen.Mem stb].
   Proof.
-    econs; ss. i.
+    eapply adequacy_local2. econs; ss. i.
    econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
    { ss. }
    { esplits. ss. econs; ss. eapply to_semantic.

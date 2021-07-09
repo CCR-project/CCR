@@ -23,7 +23,7 @@ Require Import Imp.
 Require Import ImpNotations.
 Require Import ImpProofs.
 
-Require Import NewEcho0 NewEchoImp.
+Require Import Client0 ClientImp.
 
 Set Implicit Arguments.
 
@@ -44,59 +44,38 @@ Section SIMMODSEM.
   .
 
   Theorem correct:
-    ModPair.sim NewEcho0.Echo (NewEchoImp.Echo).
+    refines2 [ClientImp.Client] [Client0.Client].
   Proof.
-    econs; ss. i.
+    eapply adequacy_local2. econs; ss. i.
+    Local Transparent syscalls.
     econstructor 1 with (wf:=wf) (le:=top2); et; ss.
     econs; ss.
     { init.
-      unfold echo_body, echo.
+      unfold getintF, getint.
       steps.
       rewrite unfold_eval_imp. steps.
       des_ifs.
       2:{ exfalso; apply n. solve_NoDup. }
-      unfold ccallU. imp_steps.
-      gstep. econs; ss. i. exists 100. imp_steps.
-      gstep. econs; ss. i. exists 100. imp_steps.
+      imp_steps.
       gstep. econs; ss. i. exists 100. imp_steps.
       red. esplits; et.
     }
     econs; ss.
     { init.
-      unfold input_body, input.
+      steps.
+      unfold putintF, putint.
       steps.
       rewrite unfold_eval_imp. steps.
+      destruct (intrange_64 z) eqn:WFZ.
+      2:{ steps. }
       des_ifs.
       2:{ exfalso; apply n. solve_NoDup. }
-      unfold ccallU. imp_steps.
+      imp_steps.
+      unfold unint in *. clarify; ss. imp_steps.
       gstep. econs; ss. i. exists 100. imp_steps.
-      des. destruct v0; ss; clarify.
-      des_ifs.
-      - imp_steps. red. esplits; et. ss.
-      - rewrite Z.eqb_eq in Heq. clarify.
-      - imp_steps.
-        gstep. econs; ss. i. exists 100. imp_steps.
-        gstep. econs; ss. i. exists 100. imp_steps.
-        red. esplits; et.
+      red. esplits; et.
     }
-    econs; ss.
-    { init.
-      unfold output_body, output.
-      steps.
-      rewrite unfold_eval_imp. steps.
-      des_ifs.
-      2:{ exfalso; apply n. solve_NoDup. }
-      unfold ccallU. imp_steps.
-      gstep. econs; ss. i. exists 100. imp_steps.
-      des. destruct v0; ss; clarify.
-      des_ifs.
-      - imp_steps. red. esplits; et. ss.
-      - rewrite Z.eqb_eq in Heq. clarify.
-      - imp_steps.
-        gstep. econs; ss. i. exists 100. imp_steps.
-        gstep. econs; ss. i. exists 100. imp_steps.
-        red. esplits; et.
-    }
+    Local Opaque syscalls.
     Unshelve. all: ss.
   Qed.
 

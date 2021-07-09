@@ -33,9 +33,9 @@ Section SIMMODSEM.
   Let wf: _ -> W -> Prop :=
     fun (_: unit) '(mem_src0, mem_tgt0) => mem_src0 = mem_tgt0.
 
-  Theorem correct frds: ModPair.sim (Mem0.Mem) (KMod.transl_src frds (MemOpen.KMem )).
+  Theorem correct frds: refines2 [KMod.transl_src frds MemOpen.KMem] [Mem0.Mem].
   Proof.
-    econs;ss. i.
+    eapply adequacy_local2. econs;ss. i.
    econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
     { ss. }
     { esplits. ss. }

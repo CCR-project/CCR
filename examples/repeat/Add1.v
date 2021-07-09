@@ -9,6 +9,7 @@ Require Import PCM.
 Require Import HoareDef OpenDef.
 Require Import ProofMode.
 Require Import STB.
+Require Import Add0.
 
 Set Implicit Arguments.
 
@@ -21,8 +22,6 @@ Section PROOF.
   Variable GlobalStb: Sk.t -> gname -> option fspec.
 
   Section SKENV.
-    Variable skenv: Sk.t.
-
     Definition succ_spec:    fspec :=
       mk_simple (X:=Z)
                 (fun n => (
@@ -42,7 +41,7 @@ Section PROOF.
     .
 
     Definition AddSbtb: list (gname * kspecbody) :=
-      [("succ", mk_kspecbody succ_spec (fun _ => triggerUB) (fun _ => triggerNB));
+      [("succ", mk_kspecbody succ_spec (cfunU succF) (fun _ => triggerNB));
       ("add", ksb_trivial (cfunU add_body))].
 
     Definition KAddSem: KModSem.t := {|

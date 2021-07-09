@@ -13,10 +13,10 @@ open ImpMem1
 open ImpMem2
 open ImpLink
 
-open NewStackImp
-open NewEchoImp
-open NewEchoMainImp
-open NewClientImp
+open StackImp
+open EchoImp
+open EchoMainImp
+open ClientImp
 
 
 (* builtin functions for CompCert compilation, ref: Velus project *)
@@ -82,10 +82,10 @@ let compile_impL p ofile =
 
 let main =
   print_endline "Start Imp Echo compilations...";
-  compile_imp (NewStackImp.coq_Stack_prog) "stack.s";
-  compile_imp (NewEchoImp.coq_Echo_prog) "echo.s";
-  compile_imp (NewEchoMainImp.coq_EchoMain_prog) "echo_main.s";
-  compile_imp (NewClientImp.coq_Client_prog) "client.s";
+  compile_imp (StackImp.coq_Stack_prog) "stack.s";
+  compile_imp (EchoImp.coq_Echo_prog) "echo.s";
+  compile_imp (EchoMainImp.coq_EchoMain_prog) "echo_main.s";
+  compile_imp (ClientImp.coq_Client_prog) "client.s";
   print_endline "Done!"
   (* compile_imp (ImpSimple.imp_simple_prog) "simple.s";
    * compile_imp (ImpFactorial.imp_factorial_prog) "factorial.s";

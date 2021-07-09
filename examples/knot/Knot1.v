@@ -7,7 +7,6 @@ Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
 Require Import Mem1.
-(* Require Import TODOYJ. *)
 Require Import ProofMode.
 Require Import KnotHeader.
 Require Import Invariant.

@@ -33,9 +33,9 @@ Section SIMMODSEM.
   Let wf: _ -> W -> Prop :=
     mk_wf (fun (_: unit) _ _ => (True: iProp)%I).
 
-  Theorem correct: ModPair.sim MutG1.G MutG0.G.
+  Theorem correct: refines2 [MutG0.G] [MutG1.G].
   Proof.
-    econs; ss.
+    eapply adequacy_local2. econs; ss.
     i. econstructor 1 with (wf:=wf) (le:=top2); et.
     { ss. }
     2: { exists tt. econs; ss; red; uipropall. }

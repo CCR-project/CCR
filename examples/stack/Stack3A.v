@@ -57,7 +57,7 @@ Section PROOF.
   .
 
 
-  (*** TODO: remove redundancy with NewStack2 ***)
+  (*** TODO: remove redundancy with Stack2 ***)
   Notation pget := (p0 <- trigger PGet;; `p0: (gmap mblock (list val)) <- p0↓ǃ;; Ret p0) (only parsing).
   Notation pput p0 := (trigger (PPut (p0: (gmap mblock (list val)))↑)) (only parsing).
 
@@ -98,9 +98,9 @@ Section PROOF.
 
 
   Definition StackSbtb: list (gname * kspecbody) :=
-    [("new", mk_kspecbody new_spec (cfunU new_body) (fun _ => trigger (Choose _)));
-    ("pop",  mk_kspecbody pop_spec (cfunU pop_body) (fun _ => trigger (Choose _)));
-    ("push", mk_kspecbody push_spec (cfunU push_body) (fun _ => trigger (Choose _)))
+    [("new", mk_kspecbody new_spec (cfunU new_body) (fun _ => triggerNB));
+    ("pop",  mk_kspecbody pop_spec (cfunU pop_body) (fun _ => triggerNB));
+    ("push", mk_kspecbody push_spec (cfunU push_body) (fun _ => triggerNB))
     ]
   .
 

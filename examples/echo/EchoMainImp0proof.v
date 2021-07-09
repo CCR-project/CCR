@@ -15,7 +15,6 @@ From ExtLib Require Import
      Core.RelDec
      Structures.Maps
      Data.Map.FMapAList.
-(* Require Import TODOYJ. *)
 Require Import HTactics ProofMode IPM.
 Require Import OpenDef.
 Require Import Mem1 MemOpen STB.
@@ -24,7 +23,7 @@ Require Import Imp.
 Require Import ImpNotations.
 Require Import ImpProofs.
 
-Require Import NewEchoMain0 NewEchoMainImp.
+Require Import EchoMain0 EchoMainImp.
 
 Set Implicit Arguments.
 
@@ -45,9 +44,9 @@ Section SIMMODSEM.
   .
 
   Theorem correct:
-    ModPair.sim NewEchoMain0.Main (NewEchoMainImp.EchoMain).
+    refines2 [EchoMainImp.EchoMain] [EchoMain0.Main].
   Proof.
-    econs; ss. i.
+    eapply adequacy_local2. econs; ss. i.
     econstructor 1 with (wf:=wf) (le:=top2); et; ss.
     econs; ss.
     { init.

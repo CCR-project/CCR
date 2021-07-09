@@ -404,10 +404,9 @@ Section CANCEL.
         eapply URA.wf_mon; et. }
       { r_wf WFR. unfold SMod.get_initial_mrs. rewrite map_map. ss. }
     }
-    { revert x0 PR.
-      eapply refines_close.
-      eapply adequacy_local_list.
-      rewrite <- map_id. eapply Forall2_apply_Forall2; et.
+    { revert x0 PR. eapply refines_close. eapply refines2_pairwise.
+      rewrite <- (map_id mds_tgt). rewrite <- Forall2_flip.
+      eapply Forall2_apply_Forall2; et.
       i. ss. des. subst. eapply adequacy_weaken; et.
     }
   Qed.

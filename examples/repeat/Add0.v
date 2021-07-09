@@ -1,46 +1,39 @@
-Require Import ImpPrelude.
-Require Import PCM.
+Require Import Coqlib.
+Require Import ImpPrelude ITreelib.
+Require Import STS.
+Require Import Behavior.
 Require Import ModSem.
-Require Import Imp.
-Require Import ImpNotations.
+Require Import Skeleton.
+Require Import STB.
 
 Set Implicit Arguments.
 
 
-Section Knot.
 
-  Import ImpNotations.
+Section PROOF.
+  Definition succF {E} `{callE -< E} `{eventE -< E}: list val -> itree E val :=
+    fun varg =>
+      n <- ((pargs [Tint] varg)?);;
+      Ret (Vint (n + 1)).
 
-  Local Open Scope expr_scope.
-  Local Open Scope stmt_scope.
+  Definition addF {E} `{callE -< E} `{eventE -< E} (skenv: SkEnv.t): list val -> itree E val :=
+    fun varg =>
+      '(n, m) <- ((pargs [Tint; Tint] varg)?);;
+      fb <- ((skenv.(SkEnv.id2blk) "succ")?);;
+      ccallU "repeat" [Vptr fb 0; Vint m; Vint n]
+  .
 
-  Context `{Σ: GRA.t}.
+  Definition AddSem (sk: Sk.t): ModSem.t := {|
+    ModSem.fnsems :=
+      [("succ", cfunU succF); ("add", cfunU (addF (Sk.load_skenv sk)))];
+    ModSem.mn := "Add";
+    ModSem.initial_st := tt↑;
+  |}
+  .
 
-  Definition succ : function := {|
-    fn_params := ["n"];
-    fn_vars := [];
-    fn_body :=
-      return# ("n" + 1%Z)
-  |}.
-
-  Definition add : function := {|
-    fn_params := ["n"; "m"];
-    fn_vars := ["succb"; "ret"];
-    fn_body :=
-      "succb" =#& "succ" ;#
-      "ret" =@ "repeat" ["succb": expr; "m": expr; "n": expr] ;#
-      return# "ret"
-  |}.
-
-  Definition Add_prog : program := {|
-    name := "Add";
-    ext_vars := [];
-    ext_funs := [];
-    prog_vars := [];
-    prog_funs := [("succ", succ); ("add", add)];
-  |}.
-
-  Definition AddSem ge : ModSem.t := ImpMod.modsem Add_prog ge.
-  Definition Add : Mod.t := ImpMod.get_mod Add_prog.
-
-End Knot.
+  Definition Add: Mod.t := {|
+    Mod.get_modsem := AddSem;
+    Mod.sk := [("succ", Sk.Gfun); ("add", Sk.Gfun)];
+  |}
+  .
+End PROOF.

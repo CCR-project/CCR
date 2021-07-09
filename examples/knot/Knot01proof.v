@@ -105,9 +105,9 @@ Section SIMMODSEM.
       stb_incl (to_stb MemStb) (GlobalStb sk).
 
 
-  Theorem correct: ModPair.sim (Knot1.Knot RecStb FunStb GlobalStb) Knot0.Knot.
+  Theorem correct: refines2 [Knot0.Knot] [Knot1.Knot RecStb FunStb GlobalStb].
   Proof.
-    econs; ss.
+    eapply adequacy_local2. econs; ss.
     i. econstructor 1 with (wf:=wf sk) (le:=inv_le top2); et; ss; cycle 2.
     { eexists (inl _). red. econs.
       { eapply to_semantic. ss.

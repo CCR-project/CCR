@@ -189,7 +189,7 @@ Section PROOF.
 End PROOF.
 
 Section PROOF.
-
+  Context `{EMSConfig}.
   Context `{Σ: GRA.t}.
 
   Theorem adequacy_weaken
@@ -197,10 +197,10 @@ Section PROOF.
           md
           (WEAK: forall sk, stb_weaker (stb0 sk) (stb1 sk))
     :
-      <<SIM: ModPair.sim (SMod.to_tgt stb1 md) (SMod.to_tgt stb0 md)>>
+      refines2 [SMod.to_tgt stb0 md] [SMod.to_tgt stb1 md]
   .
   Proof.
-    econs; cycle 1.
+    eapply adequacy_local2. econs; cycle 1.
     { unfold SMod.to_tgt. cbn. eauto. }
     i. specialize (WEAK sk). r. econs.
     2:{ unfold SMod.to_tgt.

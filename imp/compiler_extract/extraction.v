@@ -21,7 +21,7 @@ Require Import ImpMem1.
 Require Import ImpMem2.
 Require Import ImpLink.
 
-Require Import NewStackImp NewEchoImp NewEchoMainImp NewClientImp.
+Require Import StackImp EchoImp EchoMainImp ClientImp.
 
 Extract Constant excluded_middle_informative => "true".
 
