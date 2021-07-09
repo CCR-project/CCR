@@ -1,9 +1,11 @@
 # Abstraction Logic: The Marriage of Contextual Refinement and Separation Logic
 
 ## Dependencies
-- coq (= *8.13.1*)
+Our development successfully compiles with following versions (in Linux, OS X):
 
-- coq-extlib (= *0.11.1*)
+- coq (= *8.13.2*)
+
+- coq-extlib (= *0.11.3*)
 - coq-paco (= *4.1.1*)
 - coq-itree (= *3.2.0*)
 - coq-ordinal (= *0.5.0*)
@@ -12,7 +14,7 @@
 - coq-iris (= *3.4.0*)
 
 - coq-compcert (= *3.8*) and its dependencies:
-  + coq-flocq (= *3.1.0*)
+  + coq-flocq (= *3.4.1*)
   + menhir (= *20210310*)
   + coq-menhirlib (= *20210310*)
 
