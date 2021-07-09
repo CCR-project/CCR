@@ -81,30 +81,30 @@ let compile_impL p ofile =
 
 
 let main =
-  print_endline "Start Imp compilations...";
-  compile_imp (ImpSimple.imp_simple_prog) "simple.s";
-  compile_imp (ImpFactorial.imp_factorial_prog) "factorial.s";
-  compile_imp (ImpMutsum.imp_mutsumF_prog) "mutsumF.s";
-  compile_imp (ImpMutsum.imp_mutsumG_prog) "mutsumG.s";
-  compile_imp (ImpMutsum.imp_mutsumMain_prog) "mutsumMain.s";
-  compile_imp (ImpKnot.imp_knot_prog) "knot.s";
-  compile_imp (ImpMem1.imp_mem1_f) "mem1F.s";
-  compile_imp (ImpMem1.imp_mem1_main) "mem1Main.s";
-  compile_imp (ImpMem2.imp_mem2_prog) "mem2.s"; 
-
+  print_endline "Start Imp Echo compilations...";
   compile_imp (NewStackImp.coq_Stack_prog) "stack.s";
   compile_imp (NewEchoImp.coq_Echo_prog) "echo.s";
   compile_imp (NewEchoMainImp.coq_EchoMain_prog) "echo_main.s";
   compile_imp (NewClientImp.coq_Client_prog) "client.s";
+  print_endline "Done!"
+  (* compile_imp (ImpSimple.imp_simple_prog) "simple.s";
+   * compile_imp (ImpFactorial.imp_factorial_prog) "factorial.s";
+   * compile_imp (ImpMutsum.imp_mutsumF_prog) "mutsumF.s";
+   * compile_imp (ImpMutsum.imp_mutsumG_prog) "mutsumG.s";
+   * compile_imp (ImpMutsum.imp_mutsumMain_prog) "mutsumMain.s";
+   * compile_imp (ImpKnot.imp_knot_prog) "knot.s";
+   * compile_imp (ImpMem1.imp_mem1_f) "mem1F.s";
+   * compile_imp (ImpMem1.imp_mem1_main) "mem1Main.s";
+   * compile_imp (ImpMem2.imp_mem2_prog) "mem2.s";  *)
 
-  let _link1 =
-    (Imp2Csharpminor.link_imps builtins
-       [ImpLink.imp_linkMain_prog; ImpLink.imp_linkF_prog; ImpLink.imp_linkG_prog]) in
-  match _link1 with
-  | Some link1 ->
-     print_endline "link1 succeed.";
-     compile_impL (link1) "link.s";
-     print_endline "Done!"
-  | None ->
-     print_endline "link1 failed.";
-     print_endline "Done!"
+  (* let _link1 =
+   *   (Imp2Csharpminor.link_imps builtins
+   *      [ImpLink.imp_linkMain_prog; ImpLink.imp_linkF_prog; ImpLink.imp_linkG_prog]) in
+   * match _link1 with
+   * | Some link1 ->
+   *    print_endline "link1 succeed.";
+   *    compile_impL (link1) "link.s";
+   *    print_endline "Done!"
+   * | None ->
+   *    print_endline "link1 failed.";
+   *    print_endline "Done!" *)
