@@ -31,7 +31,7 @@ Fig. 3
 - mem/MemOpen.v
 
 Fig. 4
-- examples/stack directory. Stack1 maps to Stack2.v
+- examples/stack directory. I_Stack maps to Stack0.v, Stack1 maps to Stack2.v
 
 Fig. 5
 - examples/stack directory. Stack2A/2B maps to Stack3A/B.v
@@ -68,17 +68,14 @@ Fig. 9
 Theorem 3.1
 - `adequacy_open` in Open.v
 
-Theorem 4.1
-- `safe_mods_safe` in Safe.v
-
-Theorem 4.2 
+Theorem 4.1 
 - `adequacy_local2` in SimModSemHint.v
 
-Theorem 4.3
+Theorem 4.2
 - `adequacy_weaken` in Weakening.v
 
-Theorem 4.4
-- `beh_preserved` in STS2ITree.v
+Theorem 4.3
+- `safe_mods_safe` in Safe.v
 
 Theorem 6.1
 - `compile_behavior_improves` in Imp2AsmProof.v
