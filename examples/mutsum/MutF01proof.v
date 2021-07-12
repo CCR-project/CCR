@@ -1,4 +1,4 @@
-Require Import HoareDef MutHeader MutF0 MutF1 SimModSem.
+Require Import HoareDef MutHeader MutF0 MutF1 SimModSemdouble.
 Require Import Coqlib.
 Require Import ImpPrelude.
 Require Import Skeleton.
@@ -16,7 +16,7 @@ From ExtLib Require Import
      Structures.Maps
      Data.Map.FMapAList.
 
-Require Import HTactics ProofMode.
+Require Import HTacticsdouble ProofMode.
 
 Set Implicit Arguments.
 
@@ -64,7 +64,7 @@ Section SIMMODSEM.
       } steps.
       hret _; ss. iPureIntro. esplits; ss.
       f_equal. f_equal. lia.
-      Unshelve. all: ss.
+      Unshelve. all: ss. all: try exact 0.
   Qed.
 
 End SIMMODSEM.
