@@ -657,7 +657,7 @@ End HLEMMAS.
 
 Ltac prep := ired_both.
 
-Ltac force_l :=
+Ltac _force_l tac :=
   prep;
   match goal with
   | [ |- (gpaco8 (_sim_itree _ _) _ _ _ _ _ _ _ _ _ (_, unwrapN ?ox >>= _) (_, _)) ] =>
@@ -671,14 +671,14 @@ Ltac force_l :=
     let thyp := fresh "TMP" in
     remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar;
     let name := fresh "_GUARANTEE" in
-    destruct (classic P) as [name|name]; [ired_both; gstep; eapply sim_itree_choose_src; [oauto2|exists name]|contradict name]; cycle 1
+    destruct (classic P) as [name|name]; [ired_both; gstep; eapply sim_itree_choose_src; [try tac|exists name]|contradict name]; cycle 1
 
   | [ |- (gpaco8 (_sim_itree _ _) _ _ _ _ _ _ _ _ _ (_, ITree.bind' _ (interp _ guarantee ?P) (_, _))) ] =>
     let tvar := fresh "tmp" in
     let thyp := fresh "TMP" in
     remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar;
     let name := fresh "_GUARANTEE" in
-    destruct (classic P) as [name|name]; [ired_both; gstep; eapply sim_itree_choose_src; [oauto2|exists name]|contradict name]; cycle 1
+    destruct (classic P) as [name|name]; [ired_both; gstep; eapply sim_itree_choose_src; [try tac|exists name]|contradict name]; cycle 1
 
    (* TODO: handle interp_hCallE_tgt better and remove this case *)
   | [ |- (gpaco8 (_sim_itree _ _) _ _ _ _ _ _ _ _ _ (_, ITree.bind' _ (interp _ (guarantee ?P ))) (_, _)) ] =>
@@ -686,14 +686,14 @@ Ltac force_l :=
     let thyp := fresh "TMP" in
     remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar;
     let name := fresh "_GUARANTEE" in
-    destruct (classic P) as [name|name]; [ired_both; gstep; eapply sim_itree_choose_src; [oauto2|exists name]|contradict name]; cycle 1; clear name
+    destruct (classic P) as [name|name]; [ired_both; gstep; eapply sim_itree_choose_src; [try tac|exists name]|contradict name]; cycle 1; clear name
 
   | [ |- (gpaco8 (_sim_itree _ _) _ _ _ _ _ _ _ _ _ (_, ?i_src) (_, ?i_tgt)) ] =>
-    seal i_tgt; gstep; econs; (oauto2); unseal i_tgt
+    seal i_tgt; gstep; econs; (try tac); unseal i_tgt
   end
 .
 
-Ltac force_r :=
+Ltac _force_r tac :=
   prep;
   match goal with
   | [ |- (gpaco8 (_sim_itree _ _) _ _ _ _ _ _ _ _ _ (_, _) (_, unwrapU ?ox >>= _)) ] =>
@@ -707,60 +707,64 @@ Ltac force_r :=
     let thyp := fresh "TMP" in
     remember (assume P) as tvar eqn:thyp; unfold assume in thyp; subst tvar;
     let name := fresh "_ASSUME" in
-    destruct (classic P) as [name|name]; [ired_both; gstep; eapply sim_itree_take_tgt; [oauto2|exists name]|contradict name]; cycle 1
+    destruct (classic P) as [name|name]; [ired_both; gstep; eapply sim_itree_take_tgt; [try tac|exists name]|contradict name]; cycle 1
 
   | [ |- (gpaco8 (_sim_itree _ _) _ _ _ _ _ _ _ _ _ (_, ?i_src) (_, ?i_tgt)) ] =>
-    seal i_src; gstep; econs; oauto2; unseal i_src
+    seal i_src; gstep; econs; (try tac); unseal i_src
   end
 .
 
-Ltac _step :=
+Ltac _step tac :=
   match goal with
   (*** blacklisting ***)
   (* | [ |- (gpaco5 (_sim_itree wf) _ _ _ _ (_, trigger (Choose _) >>= _) (_, ?i_tgt)) ] => idtac *)
   | [ |- (gpaco8 (_sim_itree _ _) _ _ _ _ _ _ _ _ _ (_, triggerUB >>= _) (_, _)) ] =>
-    unfold triggerUB; ired_l; _step; done
+    unfold triggerUB; ired_l; _step tac; done
   | [ |- (gpaco8 (_sim_itree _ _) _ _ _ _ _ _ _ _ _ (_, unwrapU ?ox >>= _) (_, _)) ] =>
     let tvar := fresh "tmp" in
     let thyp := fresh "TMP" in
     remember (unwrapU ox) as tvar eqn:thyp; unfold unwrapU in thyp; subst tvar;
     let name := fresh "_UNWRAPU" in
-    destruct (ox) eqn:name; [|unfold triggerUB; ired_both; force_l; ss; fail]
+    destruct (ox) eqn:name; [|unfold triggerUB; ired_both; _force_l tac; ss; fail]
   | [ |- (gpaco8 (_sim_itree _ _) _ _ _ _ _ _ _ _ _ (_, assume ?P >>= _) (_, _)) ] =>
     let tvar := fresh "tmp" in
     let thyp := fresh "TMP" in
     remember (assume P) as tvar eqn:thyp; unfold assume in thyp; subst tvar;
     let name := fresh "_ASSUME" in
-    ired_both; gstep; eapply sim_itree_take_src; [oauto2|]; intro name
+    ired_both; gstep; eapply sim_itree_take_src; [try tac|]; intro name
 
   (*** blacklisting ***)
   (* | [ |- (gpaco5 (_sim_itree wf) _ _ _ _ (_, _) (_, trigger (Take _) >>= _)) ] => idtac *)
   | [ |- (gpaco8 (_sim_itree _ _) _ _ _ _ _ _ _ _ _ (_, triggerNB >>= _) (_, _)) ] =>
-    unfold triggerNB; ired_r; _step; done
+    unfold triggerNB; ired_r; _step tac; done
   | [ |- (gpaco8 (_sim_itree _ _) _ _ _ _ _ _ _ _ _ (_, _) (_, unwrapN ?ox >>= _)) ] =>
     let tvar := fresh "tmp" in
     let thyp := fresh "TMP" in
     remember (unwrapN ox) as tvar eqn:thyp; unfold unwrapN in thyp; subst tvar;
     let name := fresh "_UNWRAPN" in
-    destruct (ox) eqn:name; [|unfold triggerNB; ired_both; force_r; ss; fail]
+    destruct (ox) eqn:name; [|unfold triggerNB; ired_both; _force_r tac; ss; fail]
   | [ |- (gpaco8 (_sim_itree _ _) _ _ _ _ _ _ _ _ _ (_, _) (_, guarantee ?P >>= _)) ] =>
     let tvar := fresh "tmp" in
     let thyp := fresh "TMP" in
     remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar;
     let name := fresh "_GUARANTEE" in
-    ired_both; gstep; eapply sim_itree_choose_tgt; [oauto2|]; intro name
+    ired_both; gstep; eapply sim_itree_choose_tgt; [try tac|]; intro name
 
 
 
   | _ => (*** default ***)
-    gstep; eapply safe_sim_sim; econs; try (oauto2); i
+    gstep; eapply safe_sim_sim; econs; (try tac); i
   end;
   match goal with
   | [ |- exists _, _ ] => fail 1
   | _ => idtac
   end
 .
-Ltac steps := repeat ((*** pre processing ***) prep; try _step; (*** post processing ***) unfold alist_add; simpl; des_ifs_safe).
+Ltac _steps tac := repeat ((*** pre processing ***) prep; try (_step tac); (*** post processing ***) simpl).
+
+Ltac steps := repeat ((*** pre processing ***) prep; try (_step oauto2); (*** post processing ***) simpl; des_ifs_safe).
+Ltac force_l := _force_l oauto2.
+Ltac force_r := _force_r oauto2.
 
 Notation "wf n '------------------------------------------------------------------' src0 tgt0 '------------------------------------------------------------------' src1 '------------------------------------------------------------------' src2 tgt2"
   :=
