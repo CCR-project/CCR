@@ -1,10 +1,10 @@
-Require Import HoareDef STB CannonRA CannonMain0 CannonMain1 Cannon1 SimModSem.
+Require Import HoareDef STB CannonRA CannonMain0 CannonMain1 Cannon1 SimModSemdouble.
 Require Import Coqlib.
 Require Import ImpPrelude.
 Require Import Skeleton.
 Require Import PCM.
 Require Import ModSem Behavior.
-Require Import HTactics ProofMode.
+Require Import HTacticsdouble ProofMode.
 
 Set Implicit Arguments.
 
@@ -39,9 +39,9 @@ Section SIMMODSEM.
     { iModIntro. iSplits; ss. }
     { splits; ss. }
     mDesAll. des; clarify. steps.
-    gstep. econs; et. i. exists 100.
+    gstep. econs; et. i. exists 100, 100.
     steps. hret _; ss.
-    Unshelve. all: ss.
+    Unshelve. all: ss. all: try exact 0.
   Qed.
 
 End SIMMODSEM.
