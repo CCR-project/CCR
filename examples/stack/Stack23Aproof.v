@@ -1,4 +1,4 @@
-Require Import Stack2 Stack3A HoareDef SimModSem.
+Require Import Stack2 Stack3A HoareDef SimModSemdouble.
 Require Import Coqlib.
 Require Import ImpPrelude.
 Require Import Skeleton.
@@ -15,7 +15,7 @@ From ExtLib Require Import
      Core.RelDec
      Structures.Maps
      Data.Map.FMapAList.
-Require Import HTactics ProofMode IPM.
+Require Import HTacticsdouble ProofMode IPM.
 Require Import OpenDef STB.
 
 Set Implicit Arguments.
@@ -171,7 +171,7 @@ Section SIMMODSEM.
     end;
 
     match goal with
-    | |- gpaco7 _ _ _ _ _ _ _ _ _ (Any.pair ?mp_src↑ _, _) ((?mp_tgt↑), _) =>
+    | |- gpaco8 _ _ _ _ _ _ _ _ _ _ (Any.pair ?mp_src↑ _, _) ((?mp_tgt↑), _) =>
 
       (* rename mr_src into tmp; let name := fresh "res0" in rename tmp into name *)
       (* ; *)
@@ -361,7 +361,7 @@ Section SIMMODSEM.
         { iModIntro. iSplits; ss; et. iPureIntro. eapply sim_update_u; et. }
     }
   Unshelve.
-    all: ss.
+    all: try exact 0. all: ss.
   Qed.
 
 End SIMMODSEM.

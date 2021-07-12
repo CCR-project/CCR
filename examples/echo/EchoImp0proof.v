@@ -1,4 +1,4 @@
-Require Import HoareDef SimModSem.
+Require Import HoareDef SimModSemdouble.
 Require Import Coqlib.
 Require Import ImpPrelude.
 Require Import Skeleton.
@@ -15,13 +15,13 @@ From ExtLib Require Import
      Core.RelDec
      Structures.Maps
      Data.Map.FMapAList.
-Require Import HTactics ProofMode IPM.
+Require Import HTacticsdouble ProofMode IPM.
 Require Import OpenDef.
 Require Import Mem1 MemOpen STB.
 
 Require Import Imp.
 Require Import ImpNotations.
-Require Import ImpProofs.
+Require Import ImpProofs2.
 
 Require Import Echo0 EchoImp.
 
@@ -56,9 +56,6 @@ Section SIMMODSEM.
       des_ifs.
       2:{ exfalso; apply n. solve_NoDup. }
       unfold ccallU. imp_steps.
-      gstep. econs; ss. i. exists 100. imp_steps.
-      gstep. econs; ss. i. exists 100. imp_steps.
-      gstep. econs; ss. i. exists 100. imp_steps.
       red. esplits; et.
     }
     econs; ss.
@@ -69,14 +66,11 @@ Section SIMMODSEM.
       des_ifs.
       2:{ exfalso; apply n. solve_NoDup. }
       unfold ccallU. imp_steps.
-      gstep. econs; ss. i. exists 100. imp_steps.
       des. destruct v0; ss; clarify.
       des_ifs.
       - imp_steps. red. esplits; et. ss.
       - rewrite Z.eqb_eq in Heq. clarify.
       - imp_steps.
-        gstep. econs; ss. i. exists 100. imp_steps.
-        gstep. econs; ss. i. exists 100. imp_steps.
         red. esplits; et.
     }
     econs; ss.
@@ -87,17 +81,14 @@ Section SIMMODSEM.
       des_ifs.
       2:{ exfalso; apply n. solve_NoDup. }
       unfold ccallU. imp_steps.
-      gstep. econs; ss. i. exists 100. imp_steps.
       des. destruct v0; ss; clarify.
       des_ifs.
       - imp_steps. red. esplits; et. ss.
       - rewrite Z.eqb_eq in Heq. clarify.
       - imp_steps.
-        gstep. econs; ss. i. exists 100. imp_steps.
-        gstep. econs; ss. i. exists 100. imp_steps.
         red. esplits; et.
     }
-    Unshelve. all: ss.
+    Unshelve. all: try exact 0. all: ss.
   Qed.
 
 End SIMMODSEM.

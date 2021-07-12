@@ -1,4 +1,4 @@
-Require Import Stack2 Stack3A HoareDef SimModSem.
+Require Import Stack2 Stack3A HoareDef SimModSemdouble.
 Require Import Coqlib.
 Require Import ImpPrelude.
 Require Import Skeleton.
@@ -15,7 +15,7 @@ From ExtLib Require Import
      Core.RelDec
      Structures.Maps
      Data.Map.FMapAList.
-Require Import HTactics ProofMode IPM.
+Require Import HTacticsdouble ProofMode IPM.
 Require Import OpenDef STB.
 
 Set Implicit Arguments.
@@ -74,6 +74,6 @@ Section REFINE.
       { steps. rewrite _UNWRAPU0. steps.
         red. esplits; et. red. esplits; et. }
     }
-    Unshelve. all: ss.
+    Unshelve. all: try exact 0. all: ss.
   Qed.
 End REFINE.

@@ -81,7 +81,7 @@ Section SIMMODSEM.
       imp_steps.
       red. esplits; et.
     }
-    Unshelve. all: ss.
+    Unshelve. all: try exact 0. all: ss.
   Qed.
 
 End SIMMODSEM.
