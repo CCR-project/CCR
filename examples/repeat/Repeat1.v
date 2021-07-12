@@ -6,7 +6,7 @@ Require Import Behavior.
 Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
-Require Import HoareDef OpenDef.
+Require Import HoareDef OpenDef2.
 Require Import ProofMode.
 Require Import STB.
 Require Import Repeat0.

@@ -7,7 +7,7 @@ Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
 Require Import ProofMode.
-Require Import SimModSem HTactics.
+Require Import SimModSemdouble HTacticsdouble.
 Require Import STB.
 
 Set Implicit Arguments.
@@ -111,7 +111,7 @@ Ltac iarg :=
   i;
   mDesSep PRE as CLOSED PRE;
   match goal with
-  | [ |- (gpaco7 _ _ _ _ _ _ _ _ ?w _ _)] =>
+  | [ |- (gpaco8 _ _ _ _ _ _ _ _ _ ?w _ _)] =>
     destruct w as [?|[?mp_src ?mp_tgt]]; simpl;
     [
         |mAssertPure False; ss; iDestruct "INV" as "[INV _]"; iApply (inv_closed_unique with "☃CLOSED INV")
