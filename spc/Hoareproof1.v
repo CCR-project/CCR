@@ -8,11 +8,12 @@ Require Import PCM.
 Require Import Any.
 Require Import HoareDef.
 Require Import SimSTS.
-Require Import SimGlobal.
+Require Import SimGlobaldouble.
 Require Import HoareDef.
 From Ordinal Require Import Ordinal Arithmetic.
 
 Set Implicit Arguments.
+
 
 
 
@@ -343,29 +344,29 @@ Section CANCEL.
   Ltac _step tac :=
     match goal with
     (*** terminal cases ***)
-    | [ |- gpaco6 _ _ _ _ _ _ _ _ (triggerUB >>= _) _ ] =>
+    | [ |- gpaco7 _ _ _ _ _ _ _ _ _ (triggerUB >>= _) _ ] =>
       unfold triggerUB; mred; _step tac; ss; fail
-    | [ |- gpaco6 _ _ _ _ _ _ _ _ (triggerNB >>= _) _ ] =>
+    | [ |- gpaco7 _ _ _ _ _ _ _ _ _ (triggerNB >>= _) _ ] =>
       exfalso
-    | [ |- gpaco6 _ _ _ _ _ _ _ _ _ (triggerUB >>= _) ] =>
+    | [ |- gpaco7 _ _ _ _ _ _ _ _ _ _ (triggerUB >>= _) ] =>
       exfalso
-    | [ |- gpaco6 _ _ _ _ _ _ _ _ _ (triggerNB >>= _) ] =>
+    | [ |- gpaco7 _ _ _ _ _ _ _ _ _ _ (triggerNB >>= _) ] =>
       unfold triggerNB; mred; _step tac; ss; fail
 
     (*** assume/guarantee ***)
-    | [ |- gpaco6 _ _ _ _ _ _ _ _ (assume ?P ;;; _) _ ] =>
+    | [ |- gpaco7 _ _ _ _ _ _ _ _ _ (assume ?P ;;; _) _ ] =>
       let tvar := fresh "tmp" in
       let thyp := fresh "TMP" in
       remember (assume P) as tvar eqn:thyp; unfold assume in thyp; subst tvar
-    | [ |- gpaco6 _ _ _ _ _ _ _ _ (guarantee ?P ;;; _) _ ] =>
+    | [ |- gpaco7 _ _ _ _ _ _ _ _ _ (guarantee ?P ;;; _) _ ] =>
       let tvar := fresh "tmp" in
       let thyp := fresh "TMP" in
       remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar
-    | [ |- gpaco6 _ _ _ _ _ _ _ _ _ (assume ?P ;;; _) ] =>
+    | [ |- gpaco7 _ _ _ _ _ _ _ _ _ _ (assume ?P ;;; _) ] =>
       let tvar := fresh "tmp" in
       let thyp := fresh "TMP" in
       remember (assume P) as tvar eqn:thyp; unfold assume in thyp; subst tvar
-    | [ |- gpaco6 _ _ _ _ _ _ _ _ _ (guarantee ?P ;;; _) ] =>
+    | [ |- gpaco7 _ _ _ _ _ _ _ _ _ _ (guarantee ?P ;;; _) ] =>
       let tvar := fresh "tmp" in
       let thyp := fresh "TMP" in
       remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar
@@ -386,6 +387,25 @@ Section CANCEL.
 
   Ltac steps := repeat (mred; try _step ltac:(eapply simg_safe_spec); des_ifs_safe).
   Ltac steps_strong := repeat (mred; try (_step ltac:(idtac)); des_ifs_safe).
+
+  Ltac seal_left :=
+    match goal with
+    | [ |- gpaco7 _ _ _ _ _ _ _ _ _ ?i_src ?i_tgt ] => seal i_src
+    end.
+  Ltac seal_right :=
+    match goal with
+    | [ |- gpaco7 _ _ _ _ _ _ _ _ _ ?i_src ?i_tgt ] => seal i_tgt
+    end.
+  Ltac unseal_left :=
+    match goal with
+    | [ |- gpaco7 _ _ _ _ _ _ _ _ _ (@Seal.sealing _ _ ?i_src) ?i_tgt ] => unseal i_src
+    end.
+  Ltac unseal_right :=
+    match goal with
+    | [ |- gpaco7 _ _ _ _ _ _ _ _ _ ?i_src (@Seal.sealing _ _ ?i_tgt) ] => unseal i_tgt
+    end.
+  Ltac force_l := seal_right; _step ltac:(idtac); unseal_right.
+  Ltac force_r := seal_left; _step ltac:(idtac); unseal_left.
 
   Lemma stb_find_iff_aux fn
     :
@@ -447,12 +467,12 @@ Section CANCEL.
            st_src0 st_tgt0
     ,
       simg (fun (st_src1: p_state * unit) '(st_tgt1, x) => st_tgt1 = st_tgt0)
-           (C.myG o0 at_most + C.d)%ord (Ret (st_src0, tt))
+           (C.myG o0 at_most + C.d)%ord (C.myG o0 at_most + C.d)%ord (Ret (st_src0, tt))
            (EventsL.interp_Es p_mid (transl_all mn (interp_hCallE_mid stb (ord_pure o0) (_APC at_most))) st_tgt0)
   .
   Proof.
     ginit.
-    { i. eapply cpn6_wcompat; eauto with paco. }
+    { i. eapply cpn7_wcompat; eauto with paco. }
     (* induction *)
     intros ? ?. remember (mk_opair o0 at_most) as fuel. move fuel at top. revert at_most o0 Heqfuel.
     pattern fuel. eapply well_founded_induction. { eapply wf_opair_lt. } clear fuel.
@@ -468,11 +488,14 @@ Section CANCEL.
     steps. rewrite FINDMID. unfold fun_to_mid. steps.
     guclo ordC_spec. econs.
     { eapply OrdArith.add_base_l. }
+    { refl. }
     guclo ordC_spec. econs.
     { eapply C.my_thm2; et. }
+    { refl. }
     guclo ordC_spec. econs.
     { rewrite OrdArith.add_assoc. refl. }
-    rewrite idK_spec at 1.
+    { refl. }
+   rewrite idK_spec at 1.
     guclo bindC_spec. econs.
     { unfold APC. gstep. mred. eapply simg_chooseR; et; [_ord_step|]. i. steps.
       guclo ordC_spec. econs.
@@ -485,6 +508,7 @@ Section CANCEL.
         - eapply Ord.lt_le in x5. rewrite <- x5. refl.
         - etrans; [|eapply OrdArith.add_base_l]. etrans; [|eapply OrdArith.add_base_l]. refl.
       }
+      { refl. }
       eapply IH; auto. econs. left. auto.
     }
 
@@ -492,35 +516,38 @@ Section CANCEL.
     unfold idK. unfold C.f.
     guclo ordC_spec. econs.
     { rewrite <- OrdArith.add_assoc. refl. }
+    { refl. }
     steps.
     guclo ordC_spec. econs.
     { eapply OrdArith.add_base_l. }
-    { eapply IH; et. econs; et. right; split; et. refl. }
+    { refl. }
+    eapply IH; et. econs; et. right; split; et. refl.
+    Unshelve. all:try exact 0.
   Qed.
 
   Let adequacy_type_aux_APC:
     forall o0 st_src0 st_tgt0 mn
     ,
       simg (fun (st_src1: p_state * unit) '(st_tgt1, _) => st_tgt1 = st_tgt0)
-           (C.myF o0)%ord (Ret (st_src0, tt))
+           (C.myF o0)%ord (C.myF o0)%ord (Ret (st_src0, tt))
            (EventsL.interp_Es p_mid (transl_all mn (interp_hCallE_mid stb (ord_pure o0) APC)) st_tgt0)
   .
   Proof.
     ginit.
-    { i. eapply cpn6_wcompat; eauto with paco. }
+    { i. eapply cpn7_wcompat; eauto with paco. }
     i. unfold APC.
     guclo ordC_spec. econs.
-    { rewrite <- C.my_thm1. refl. }
-    unfold C.c.
-    guclo ordC_spec. econs.
-    { rewrite <- OrdArith.add_assoc. refl. }
+    { rewrite <- C.my_thm1. unfold C.c. rewrite <- OrdArith.add_assoc. refl. }
+    { rewrite <- C.my_thm1. unfold C.c. rewrite <- OrdArith.add_assoc. refl. }
     steps.
     guclo ordC_spec. econs.
     { etrans; [|eapply OrdArith.add_base_l]. eapply add_le_le; [|refl].
       instantiate (1:=C.myG o0 x).
       eapply Ord.lt_le in x0. rewrite <- x0. refl. }
+    { refl. }
     gfinal. right.
     eapply adequacy_type_aux__APC.
+    Unshelve. all: try exact 0.
   Qed.
 
   Lemma idK_spec2: forall E A B (a: A) (itr: itree E B), itr = Ret a >>= fun _ => itr. Proof. { i. ired. ss. } Qed.
@@ -542,13 +569,13 @@ Section CANCEL.
       (SIM: st_tgt0 = st_src0)
     ,
       simg eq
-           (formula o0 + 50)%ord
+           (formula o0 + 50)%ord (formula o0 + 50)%ord
            (EventsL.interp_Es p_mid2 (transl_all mn (interp_hCallE_mid2 body)) st_src0)
            (EventsL.interp_Es p_mid (transl_all mn (interp_hCallE_mid stb o0 body)) st_tgt0)
   .
   Proof.
     ginit.
-    { i. eapply cpn6_wcompat; eauto with paco. }
+    { i. eapply cpn7_wcompat; eauto with paco. }
     gcofix CIH. i. ides body.
     { steps. }
     { steps. gbase. eapply CIH; ss. }
@@ -561,8 +588,8 @@ Section CANCEL.
         - steps. gbase. eapply CIH; ss; et.
       }
       { dependent destruction e; resub; ss.
-        - steps_strong. exists x_tgt. steps. gbase. eapply CIH; et.
-        - steps_strong. exists x_src. steps. gbase. eapply CIH; et.
+        - steps. steps_strong. exists x. steps. gbase. eapply CIH; et.
+        - steps. steps_strong. exists x. steps. gbase. eapply CIH; et.
         - steps_strong. gbase. eapply CIH; et.
       }
     }
@@ -576,17 +603,14 @@ Section CANCEL.
     }
     rewrite STB. steps. destruct tbr.
     (* PURE *)
-    { Local Opaque ord_lt.
-      ired_both. seal_left.
-      gstep. econs; et.
-      { _ord_step. }
-      i. ired_both. unseal_left. steps.
-      rewrite FINDMID. unfold fun_to_mid. ired_both. steps.
+    { Local Opaque ord_lt. ired_both. force_r. force_l. steps.
+      rewrite FINDMID. unfold fun_to_mid. ired_both.
       guclo ordC_spec. econs.
       { eapply OrdArith.add_base_l. }
+      { refl. }
       rewrite idK_spec2 at 1.
       guclo bindC_spec. econs.
-      { gfinal. right. eapply paco6_mon. { eapply adequacy_type_aux_APC. } ii; ss. }
+      { gfinal. right. eapply paco7_mon. { eapply adequacy_type_aux_APC. } ii; ss. }
       i. steps. steps_strong. exists x2. steps.
       gbase. eapply CIH. ss.
     }
@@ -601,6 +625,7 @@ Section CANCEL.
       unfold fun_to_mid2, cfunN, fun_to_mid. steps.
       guclo ordC_spec. econs.
       { eapply OrdArith.add_base_l. }
+      { refl. }
       guclo bindC_spec. econs.
       { gbase. eapply CIH. ss. }
       i. subst. steps.
@@ -655,9 +680,9 @@ Section CANCEL.
     Beh.of_program (ModL.compile (Mod.add_list mds_mid2)).
   Proof.
     eapply adequacy_global_itree; ss.
-    exists (200)%ord.
+    exists (200)%ord, (200)%ord.
     ginit.
-    { eapply cpn6_wcompat; eauto with paco. }
+    { eapply cpn7_wcompat; eauto with paco. }
     unfold ModSemL.initial_itr, ModSemL.initial_itr. Local Opaque ModSemL.prog. ss.
     unfold ITree.map. steps.
     2: {
@@ -687,6 +712,7 @@ Section CANCEL.
       unfold fun_to_mid2, fun_to_mid, cfunN. steps.
 
       guclo ordC_spec. econs.
+      { eapply OrdArith.add_base_l. }
       { eapply OrdArith.add_base_l. }
       guclo bindC_spec. econs.
       { gfinal. right. eapply adequacy_type_aux. ss.
