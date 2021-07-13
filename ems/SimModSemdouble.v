@@ -31,8 +31,6 @@ Local Open Scope nat_scope.
 
 
 
-Existing Instance top_gnames.
-
 Section SIM.
   Let st_local: Type := (Any.t).
 
@@ -340,7 +338,7 @@ End SIM.
 Hint Resolve sim_itree_mon: paco.
 
 
-Lemma self_sim_itree `{ns: gnames}:
+Lemma self_sim_itree:
   forall st itr,
     sim_itree (fun _ '(src, tgt) => src = tgt) top2 (Ord.S Ord.O) (Ord.S Ord.O) tt (st, itr) (st, itr).
 Proof.
@@ -374,7 +372,6 @@ Qed.
 Module ModSemPair.
 Section SIMMODSEM.
 
-  Context `{ns: gnames}.
   Variable (ms_src ms_tgt: ModSem.t).
 
   Let W: Type := (Any.t) * (Any.t).
@@ -390,7 +387,7 @@ Section SIMMODSEM.
 
 End SIMMODSEM.
 
-Lemma self_sim `{ns: gnames} (ms: ModSem.t):
+Lemma self_sim (ms: ModSem.t):
   sim ms ms.
 Proof.
   econs; et.
@@ -734,28 +731,6 @@ Section ADEQUACY.
       Unshelve. all: try exact 0.
     Qed.
   End SEMPAIR.
-
-  (* TODO: move it to Coqlib *)
-  Lemma Forall2_In_l A B R (l0: list A) (l1: list B) a
-        (FORALL2: Forall2 R l0 l1)
-        (IN: In a l0)
-    :
-      exists b, In b l1 /\ R a b.
-  Proof.
-    revert IN. induction FORALL2; ss. i. des.
-    { subst. et. }
-    { eapply IHFORALL2 in IN; et. i. des. esplits; et. }
-  Qed.
-
-  (* From Hoare.v *)
-  Lemma Forall2_eq
-        A
-        (xs0 xs1: list A)
-        (EQ: Forall2 eq xs0 xs1)
-    :
-      <<EQ: xs0 = xs1>>
-  .
-  Proof. induction EQ; ss. des; subst. refl. Qed.
 
   Theorem adequacy_local_strong md_src md_tgt
           (SIM: ModPair.sim md_src md_tgt)

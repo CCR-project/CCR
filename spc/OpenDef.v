@@ -433,7 +433,6 @@ End KMod.
 Section KTACTICS.
 
   Context `{Σ: GRA.t}.
-  Context `{ns: gnames}.
 
   Lemma trivial_init_clo
         A wf (le: A -> A -> Prop) r rg w arg mrp_src mp_tgt itr_tgt mn stb body RR n

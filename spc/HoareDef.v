@@ -814,8 +814,6 @@ End SMod.
 
   Global Opaque EventsL.interp_Es.
 
-  Require Import SimGlobal.
-
 
 
 

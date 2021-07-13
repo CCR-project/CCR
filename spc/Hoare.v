@@ -32,15 +32,6 @@ Proof.
   rewrite HOM. f_equal. eapply IHxi; et.
 Qed.
 
-Lemma Forall2_eq
-      A
-      (xs0 xs1: list A)
-      (EQ: Forall2 eq xs0 xs1)
-  :
-    <<EQ: xs0 = xs1>>
-.
-Proof. induction EQ; ss. des; subst. refl. Qed.
-
 (*** TODO: move to Coqlib ***)
 Lemma find_app
       X (xs0 xs1: list X) (f: X -> bool) x

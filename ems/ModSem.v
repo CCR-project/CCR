@@ -1179,11 +1179,6 @@ ctx (a1 b1)
    Proof. ii. eapply PR; et. Qed.
 End REFINE.
 
-Class gnames := mk_gnames { gnames_contents :> gname -> Prop }.
-Coercion gnames_contents: gnames >-> Funclass.
-
-Definition top_gnames := mk_gnames top1.
-
 
 Global Existing Instance Sk.gdefs.
 Arguments Sk.unit: simpl never.
@@ -1191,11 +1186,6 @@ Arguments Sk.add: simpl never.
 Arguments Sk.wf: simpl never.
 Coercion Sk.load_skenv: Sk.t >-> SkEnv.t.
 Global Opaque Sk.load_skenv.
-
-Class sk_gnames := mk_sk_gnames { sk_gnames_contents :> Sk.t -> gnames }.
-Coercion sk_gnames_contents: Sk.t >-> gnames.
-
-Definition top_sk_gnames := mk_sk_gnames (fun _ => top_gnames).
 
 
 (*** TODO: Move to ModSem.v ***)

@@ -1553,3 +1553,34 @@ Lemma flat_map_single A B (f: A -> B) (l: list A)
 Proof.
   induction l; ss.
 Qed.
+
+Lemma Forall2_In_l A B R (l0: list A) (l1: list B) a
+      (FORALL2: Forall2 R l0 l1)
+      (IN: In a l0)
+  :
+    exists b, In b l1 /\ R a b.
+Proof.
+  revert IN. induction FORALL2; ss. i. des.
+  { subst. et. }
+  { eapply IHFORALL2 in IN; et. i. des. esplits; et. }
+Qed.
+
+Lemma Forall2_In_r A B R (l0: list A) (l1: list B) b
+      (FORALL2: Forall2 R l0 l1)
+      (IN: In b l1)
+  :
+    exists a, In a l0 /\ R a b.
+Proof.
+  revert IN. induction FORALL2; ss. i. des.
+  { subst. et. }
+  { eapply IHFORALL2 in IN; et. i. des. esplits; et. }
+Qed.
+
+Lemma Forall2_eq
+      A
+      (xs0 xs1: list A)
+      (EQ: Forall2 eq xs0 xs1)
+  :
+    <<EQ: xs0 = xs1>>
+.
+Proof. induction EQ; ss. des; subst. refl. Qed.
