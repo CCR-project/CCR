@@ -525,12 +525,12 @@ Section HLEMMAS.
         (ATMOST: (at_most < kappa)%ord)
         (FUEL: (n1 + 3 < n0)%ord)
 
-        (POST: gpaco8 (_sim_itree wf le) (cpn8 (_sim_itree wf le)) rg rg _ _ eqr m n1 a
+        (POST: gpaco8 (_sim_itree wf le) (cpn8 (_sim_itree wf le)) rg rg _ _ eqr 100 n1 a
                       (mp_src0,
                        (interp_hCallE_tgt mn stb o (_APC at_most) ctx)>>= k_src)
                       (itr_tgt))
     :
-      gpaco8 (_sim_itree wf le) (cpn8 (_sim_itree wf le)) r rg _ _ eqr 100 n0 a
+      gpaco8 (_sim_itree wf le) (cpn8 (_sim_itree wf le)) r rg _ _ eqr m n0 a
              (mp_src0,
               (interp_hCallE_tgt mn stb o APC ctx) >>= k_src)
              (itr_tgt).
@@ -809,7 +809,6 @@ Ltac astart _at_most :=
   [eauto with ord_kappa|
    oauto|
   ]
-
 .
 
 Ltac astop :=
