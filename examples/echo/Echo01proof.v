@@ -1,4 +1,4 @@
-Require Import Echo0 Echo1 HoareDef SimModSem.
+Require Import Echo0 Echo1 HoareDef SimModSemdouble.
 Require Import Stack3A.
 Require Import Coqlib.
 Require Import ImpPrelude.
@@ -16,7 +16,7 @@ From ExtLib Require Import
      Core.RelDec
      Structures.Maps
      Data.Map.FMapAList.
-Require Import HTactics ProofMode IPM.
+Require Import HTacticsdouble ProofMode IPM.
 Require Import OpenDef STB.
 
 Set Implicit Arguments.
@@ -150,7 +150,7 @@ Section SIMMODSEM.
         { iModIntro. iSplits; ss; et. }
     }
   Unshelve.
-    all: ss.
+    all: ss. all: try exact 0.
   Qed.
 
 End SIMMODSEM.

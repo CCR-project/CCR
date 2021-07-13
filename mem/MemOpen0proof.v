@@ -15,7 +15,7 @@ From ExtLib Require Import
      Core.RelDec
      Structures.Maps
      Data.Map.FMapAList.
-Require Import OpenDef2 HTacticsdouble ProofMode IPM.
+Require Import OpenDef HTacticsdouble ProofMode IPM.
 
 Set Implicit Arguments.
 
@@ -92,7 +92,7 @@ Section SIMMODSEM.
       { red. esplits; et. rr. econs; ss. }
     }
   Unshelve.
-    all: ss.
+    all: ss. all: try exact 0.
   Qed.
 
 End SIMMODSEM.
