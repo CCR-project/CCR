@@ -85,19 +85,19 @@ Section SIM.
     :
       _safe_sim_itree sim_itree RR i_src0 i_tgt0 w0 (st_src0, (Ret v_src)) (st_tgt0, (Ret v_tgt))
   | safe_sim_itree_call
-      i_src0 i_tgt0 w w0 st_src0 st_tgt0
+      i_src0 i_tgt0 i_src1 i_tgt1 w w0 st_src0 st_tgt0
       fn varg k_src k_tgt
       (WF: wf w0 (st_src0, st_tgt0))
       (K: forall w1 vret st_src1 st_tgt1 (WLE: le w0 w1) (WF: wf w1 (st_src1, st_tgt1)),
-          exists i_src1 i_tgt1, sim_itree _ _ RR i_src1 i_tgt1 w (st_src1, k_src vret) (st_tgt1, k_tgt vret))
+          sim_itree _ _ RR i_src1 i_tgt1 w (st_src1, k_src vret) (st_tgt1, k_tgt vret))
     :
       _safe_sim_itree sim_itree RR i_src0 i_tgt0 w (st_src0, trigger (Call fn varg) >>= k_src)
                  (st_tgt0, trigger (Call fn varg) >>= k_tgt)
   | safe_sim_itree_syscall
-      i_src0 i_tgt0 w0 st_src0 st_tgt0
+      i_src0 i_tgt0 i_src1 i_tgt1 w0 st_src0 st_tgt0
       fn varg rvs k_src k_tgt
       (K: forall vret,
-          exists i_src1 i_tgt1, sim_itree _ _ RR i_src1 i_tgt1 w0 (st_src0, k_src vret) (st_tgt0, k_tgt vret))
+          sim_itree _ _ RR i_src1 i_tgt1 w0 (st_src0, k_src vret) (st_tgt0, k_tgt vret))
     :
       _safe_sim_itree sim_itree RR i_src0 i_tgt0 w0 (st_src0, trigger (Syscall fn varg rvs) >>= k_src)
                  (st_tgt0, trigger (Syscall fn varg rvs) >>= k_tgt)

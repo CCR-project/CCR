@@ -38,9 +38,7 @@ Section SIMMODSEM.
     hcall _ _ _ with "A".
     { iModIntro. iSplits; ss. }
     { splits; ss. }
-    mDesAll. des; clarify. steps.
-    gstep. econs; et. i. exists 100, 100.
-    steps. hret _; ss.
+    mDesAll. des; clarify. steps. hret _; ss.
     Unshelve. all: ss. all: try exact 0.
   Qed.
 

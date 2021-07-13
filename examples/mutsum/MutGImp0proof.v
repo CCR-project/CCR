@@ -60,8 +60,6 @@ Section SIMMODSEM.
       imp_steps. replace (z =? 0)%Z with false.
       2:{ symmetry. eapply Z.eqb_neq. auto. }
       imp_steps.
-      gstep. econs; ss. i. exists 100, 100.
-      imp_steps.
       rewrite _UNWRAPU1. steps. imp_steps. red. esplits; et.
     Unshelve. all: ss. all: try exact 0.
   Qed.

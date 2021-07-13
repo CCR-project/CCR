@@ -437,14 +437,15 @@ Section KTACTICS.
 
   Lemma trivial_init_clo
         A wf (le: A -> A -> Prop) r rg w arg mrp_src mp_tgt itr_tgt mn stb body RR n
+        o_src1 o_tgt1
         (INIT:
            gpaco8 (_sim_itree wf le) (cpn8 (_sim_itree wf le)) rg rg Any.t Any.t
-                  RR 100 100 w
+                  RR o_src1 o_tgt1 w
                   (mrp_src, fun_to_tgt mn stb (mk_specbody fspec_trivial body) arg)
                   (mp_tgt, itr_tgt))
     :
       gpaco8 (_sim_itree wf le) (cpn8 (_sim_itree wf le)) r rg Any.t Any.t
-             RR n 101 w
+             RR n (Ord.S o_tgt1) w
              (mrp_src, KModSem.disclose_ksb_tgt mn stb (ksb_trivial body) arg)
              (mp_tgt, itr_tgt).
   Proof.
@@ -463,7 +464,7 @@ Ltac kinit :=
   let mp_tgt := fresh "mp_tgt" in
   let WF := fresh "WF" in
   split; ss; intros varg_src [mn varg] EQ w mrp_src mp_tgt WF; try subst varg_src;
-  exists 100, 101; cbn; ginit;
+  eexists _, _; cbn; ginit;
   match goal with
   | |- gpaco8 _ _ _ _ _ _ _ _ _ _ (_, KModSem.disclose_ksb_tgt _ _ (ksb_trivial _) _) _ =>
     eapply trivial_init_clo;
@@ -472,7 +473,7 @@ Ltac kinit :=
   | _ =>
     try (unfold fun_to_tgt, cfunN, cfunU, KModSem.disclose_ksb_tgt, fun_to_tgt);
     simpl;
-    gstep; eapply sim_itree_take_src; [eauto with ord_step|intros []; rewrite HoareFun_parse; simpl]
+    gstep; eapply sim_itree_take_src; [oauto2|intros []; rewrite HoareFun_parse; simpl]
   end.
 
 Arguments in_dec: simpl never.

@@ -36,7 +36,6 @@ Section SIMMODSEM.
     econs; ss. init. unfold Cannon0.fire_body, Cannon1.fire_body. harg.
     mDesOr "INV".
     { mDesAll. des; clarify.
-      steps. gstep. econs; et. i. exists 100, 100.
       steps. hret _; ss.
       iModIntro. iSplit; ss. iRight.
       iCombine "A" "A1" as "A".

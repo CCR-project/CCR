@@ -1,4 +1,4 @@
-Require Import HoareDef SimModSem.
+Require Import HoareDef SimModSemdouble.
 Require Import Coqlib.
 Require Import ImpPrelude.
 Require Import Skeleton.
@@ -15,13 +15,13 @@ From ExtLib Require Import
      Core.RelDec
      Structures.Maps
      Data.Map.FMapAList.
-Require Import HTactics ProofMode IPM.
+Require Import HTacticsdouble ProofMode IPM.
 Require Import OpenDef.
 Require Import Mem1 MemOpen STB.
 
 Require Import Imp.
 Require Import ImpNotations.
-Require Import ImpProofs.
+Require Import ImpProofs2.
 
 Require Import KnotMain0 KnotMainImp.
 
@@ -69,8 +69,6 @@ Section SIMMODSEM.
         imp_steps.
         unfold unblk in *. ss; clarify. rewrite _UNWRAPU0.
         unfold ccallU. imp_steps.
-        gstep. econs; ss. i. exists 100. imp_steps.
-        gstep. econs; ss. i. exists 100. imp_steps.
         red. esplits; et.
     }
     econs; ss.
@@ -83,13 +81,11 @@ Section SIMMODSEM.
       2:{ exfalso; apply n0. solve_NoDup. }
       imp_steps.
       rewrite _UNWRAPU0. unfold ccallU. imp_steps.
-      gstep. econs; ss. i. exists 100. imp_steps.
       unfold unblk in *. ss; clarify. rewrite _UNWRAPU3.
       imp_steps.
-      gstep. econs; ss. i. exists 100. imp_steps.
       red. esplits; et.
     }
-    Unshelve. all: ss.
+    Unshelve. all: ss. all: try exact 0.
   Qed.
 
 End SIMMODSEM.
