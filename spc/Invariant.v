@@ -7,7 +7,7 @@ Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef.
 Require Import ProofMode.
-Require Import SimModSemdouble HTacticsdouble.
+Require Import SimModSem HTactics.
 Require Import STB.
 
 Set Implicit Arguments.

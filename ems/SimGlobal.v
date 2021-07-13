@@ -10,7 +10,7 @@ Require Import Coq.Relations.Relation_Definitions.
 Require Import Relation_Operators.
 Require Import RelationPairs.
 From Ordinal Require Import Ordinal Arithmetic.
-Require Import SimSTSdouble.
+Require Import SimSTS.
 
 Set Implicit Arguments.
 

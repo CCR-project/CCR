@@ -7,9 +7,9 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef STB.
-Require Import SimModSemdouble.
+Require Import SimModSem.
 
-Require Import HTacticsdouble.
+Require Import HTactics.
 Require Import ProofMode.
 
 From ITree Require Import

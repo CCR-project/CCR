@@ -1,10 +1,10 @@
-Require Import HoareDef STB CannonRA Cannon0 Cannon1 SimModSemdouble.
+Require Import HoareDef STB CannonRA Cannon0 Cannon1 SimModSem.
 Require Import Coqlib.
 Require Import ImpPrelude.
 Require Import Skeleton.
 Require Import PCM.
 Require Import ModSem Behavior.
-Require Import HTacticsdouble ProofMode.
+Require Import HTactics ProofMode.
 
 Set Implicit Arguments.
 

@@ -365,7 +365,7 @@ Section RDB.
 
 End RDB.
 
-Require Import SimModSemdouble HTacticsdouble.
+Require Import SimModSem HTactics.
 
 
 Module KMod.

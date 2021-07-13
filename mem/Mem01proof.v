@@ -1,4 +1,4 @@
-Require Import Mem0 Mem1 HoareDef STB SimModSemdouble.
+Require Import Mem0 Mem1 HoareDef STB SimModSem.
 Require Import Coqlib.
 Require Import ImpPrelude.
 Require Import Skeleton.
@@ -15,7 +15,7 @@ From ExtLib Require Import
      Core.RelDec
      Structures.Maps
      Data.Map.FMapAList.
-Require Import HTacticsdouble ProofMode.
+Require Import HTactics ProofMode.
 
 Set Implicit Arguments.
 

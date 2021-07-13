@@ -1,4 +1,4 @@
-Require Import HoareDef MutHeader MutGImp MutG0 SimModSemdouble.
+Require Import HoareDef MutHeader MutGImp MutG0 SimModSem.
 Require Import Coqlib.
 Require Import ImpPrelude.
 Require Import Skeleton.
@@ -16,11 +16,11 @@ From ExtLib Require Import
      Structures.Maps
      Data.Map.FMapAList.
 
-Require Import HTacticsdouble.
+Require Import HTactics.
 
 Require Import Imp.
 Require Import ImpNotations.
-Require Import ImpProofs2.
+Require Import ImpProofs.
 
 Set Implicit Arguments.
 

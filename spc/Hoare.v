@@ -7,7 +7,7 @@ Require Import PCM.
 Require Import Any.
 Require Export HoareDef STB.
 Require Import Hoareproof0 Hoareproof1 Hoareproof2.
-Require Import SimModSemdouble ProofMode.
+Require Import SimModSem ProofMode.
 
 Set Implicit Arguments.
 

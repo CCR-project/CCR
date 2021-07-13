@@ -4,50 +4,6 @@ Require Import Behavior.
 
 Set Implicit Arguments.
 
-(* Definition option_to_list X (ox: option X): list X := match ox with | Some x => [x] | _ => [] end. *)
-(* Coercion option_to_list_coercion := option_to_list. *)
-
-(* Definition PStep L (P: L.(state) -> Prop) (st0: L.(state)) (ev: option event) (st1: (L.(state))): Prop := *)
-(*   (<<PROP: P st0>>) /\ (<<STEP: L.(step) st0 ev st1>>) *)
-(* . *)
-
-(* Inductive PStar L (P: L.(state) -> Prop) (st0: L.(state)): (list event) -> (L.(state)) -> Prop := *)
-(* | star_refl *)
-(*     (PROP: P st0) *)
-(*     (* ev_sum *) *)
-(*     (* (EV: ev_sum = []) *) *)
-(*   : *)
-(*     PStar L P st0 [] st0 *)
-(* | star_step *)
-(*     ev evs st1 st2 *)
-(*     (STEP: PStep L P st0 ev st1) *)
-(*     (STAR: PStar L P st1 evs st2) *)
-(*     (* ev_sum *) *)
-(*     (* (EV: ev_sum = ev ++ evs) *) *)
-(*   : *)
-(*     PStar L P st0 (ev ++ evs) st2 *)
-(* . *)
-
-(* Inductive PPlus L (P: L.(state) -> Prop) (st0: L.(state)): (list event) -> (L.(state)) -> Prop := *)
-(* | plus_intro *)
-(*     ev evs st1 st2 *)
-(*     (STEP: PStep L P st0 ev st1) *)
-(*     (STAR: PStar L P st1 evs st2) *)
-(*   : *)
-(*     PPlus L P st0 (ev ++ evs) st2 *)
-(* . *)
-
-(* Definition DStep L (st0: (L.(state))) (ev: option event) (st1: L.(state)) := *)
-(*   PStep L (fun st => L.(state_sort) st = demonic) st0 ev st1. *)
-(* Definition AStep L (st0: (L.(state))) (ev: option event) (st1: L.(state)) := *)
-(*   PStep L (fun st => L.(state_sort) st = angelic) st0 ev st1. *)
-(* Definition DPlus L (st0: (L.(state))) (evs: list event) (st1: L.(state)) := *)
-(*   PPlus L (fun st => L.(state_sort) st = demonic) st0 evs st1. *)
-(* Definition APlus L (st0: (L.(state))) (evs: list event) (st1: L.(state)) := *)
-(*   PPlus L (fun st => L.(state_sort) st = angelic) st0 evs st1. *)
-(* Hint Unfold DStep AStep. *)
-(* Hint Unfold DPlus APlus. *)
-
 Lemma spin_nofinal
       L st0
       (SPIN: Beh.state_spin L st0)
@@ -68,35 +24,6 @@ Proof.
   punfold SPIN. inv SPIN; ii; rewrite H in *; ss.
 Qed.
 
-(* Lemma spin_noevent *)
-(*       L st0 e st1 *)
-(*       (STAR: PStar L (fun st => _.(state_sort) st = angelic) st0 [e] st1) *)
-(*       (SPIN: Beh.state_spin _ st0) *)
-(*   : *)
-(*     False *)
-(* . *)
-(* Proof. *)
-(*   remember [e] as tmp in STAR. revert Heqtmp. *)
-(*   induction STAR; ii; ss. punfold SPIN. rr in STEP; des. inv SPIN; ii; rewrite PROP in *; ss. *)
-(*   destruct ev, evs; ss; clarify. *)
-(*   - exploit wf_angelic; et. i; ss. *)
-(*   - exploit STEP; eauto. i; des; ss. pclearbot. eapply IHSTAR; eauto. *)
-(* Qed. *)
-
-(* Lemma spin_astar *)
-(*       L st0 st1 *)
-(*       (STAR: PStar L (fun st => _.(state_sort) st = angelic) st0 [] st1) *)
-(*       (SPIN: Beh.state_spin _ st0) *)
-(*   : *)
-(*     <<SPIN: Beh.state_spin _ st1>> *)
-(* . *)
-(* Proof. *)
-(*   remember [] as tmp in STAR. revert Heqtmp. *)
-(*   revert SPIN. induction STAR; ii; ss. *)
-(*   { destruct ev, evs; ss. dup SPIN. rr in STEP; des. punfold SPIN. inv SPIN; rewrite PROP in *; ss. *)
-(*     exploit STEP; eauto. i; des. pclearbot. eapply IHSTAR; ss. } *)
-(* Qed. *)
-
 Lemma spin_astep
       L st0 ev st1
       (SRT: L.(state_sort) st0 = angelic)
@@ -116,16 +43,20 @@ Qed.
 Section SIM.
 
   Variable L0 L1: semantics.
-  Variable idx: Type.
-  Variable ord: idx -> idx -> Prop.
+  Variable idx_src: Type.
+  Variable idx_tgt: Type.
+  Variable ord_src: idx_src -> idx_src -> Prop.
+  Variable ord_tgt: idx_tgt -> idx_tgt -> Prop.
 
-  Variant _sim sim (i0: idx) (st_src0: L0.(state)) (st_tgt0: L1.(state)): Prop :=
+  Hypothesis ORDSRCTRANS: Transitive ord_src.
+
+  Variant _sim sim (i_src0: idx_src) (i_tgt0: idx_tgt) (st_src0: L0.(state)) (st_tgt0: L1.(state)): Prop :=
   | sim_fin
       retv
       (SRT: _.(state_sort) st_src0 = final retv)
       (SRT: _.(state_sort) st_tgt0 = final retv)
     :
-      _sim sim i0 st_src0 st_tgt0
+      _sim sim i_src0 i_tgt0 st_src0 st_tgt0
 
   | sim_vis
       (SRT: _.(state_sort) st_src0 = vis)
@@ -134,15 +65,15 @@ Section SIM.
           (STEP: _.(step) st_tgt0 (Some ev) st_tgt1)
         ,
           exists st_src1 (STEP: _.(step) st_src0 (Some ev) st_src1),
-            <<SIM: exists i1, sim i1 st_src1 st_tgt1>>)
+            <<SIM: exists i_src1 i_tgt1, sim i_src1 i_tgt1 st_src1 st_tgt1>>)
     :
-      _sim sim i0 st_src0 st_tgt0
+      _sim sim i_src0 i_tgt0 st_src0 st_tgt0
 
   | sim_vis_stuck_tgt
       (SRT: _.(state_sort) st_tgt0 = vis)
       (STUCK: forall ev st_tgt1, not (_.(step) st_tgt0 (Some ev) st_tgt1))
     :
-      _sim sim i0 st_src0 st_tgt0
+      _sim sim i_src0 i_tgt0 st_src0 st_tgt0
 
   | sim_demonic_src
       (SRT: _.(state_sort) st_src0 = demonic)
@@ -150,86 +81,43 @@ Section SIM.
       (SIM: exists st_src1
           (STEP: _.(step) st_src0 None st_src1)
         ,
-          exists i1, <<ORD: ord i1 i0>> /\ <<SIM: sim i1 st_src1 st_tgt0>>)
+          exists i_src1 i_tgt1, <<ORD: ord_tgt i_tgt1 i_tgt0>> /\ <<SIM: sim i_src1 i_tgt1 st_src1 st_tgt0>>)
     :
-      _sim sim i0 st_src0 st_tgt0
+      _sim sim i_src0 i_tgt0 st_src0 st_tgt0
   | sim_demonic_tgt
       (SRT: _.(state_sort) st_tgt0 = demonic)
       (* (FIN: _.(state_sort) st_src0 = final <-> _.(state_sort) st_tgt0 = final) *)
       (SIM: forall st_tgt1
           (STEP: _.(step) st_tgt0 None st_tgt1)
         ,
-          exists i1, <<ORD: ord i1 i0>> /\ <<SIM: sim i1 st_src0 st_tgt1>>)
+          exists i_src1 i_tgt1, <<ORD: ord_src i_src1 i_src0>> /\ <<SIM: sim i_src1 i_tgt1 st_src0 st_tgt1>>)
     :
-      _sim sim i0 st_src0 st_tgt0
+      _sim sim i_src0 i_tgt0 st_src0 st_tgt0
   | sim_angelic_src
       (SRT: _.(state_sort) st_src0 = angelic)
       (* (FIN: _.(state_sort) st_src0 = final <-> _.(state_sort) st_tgt0 = final) *)
       (SIM: forall st_src1
           (STEP: _.(step) st_src0 None st_src1)
         ,
-          exists i1, <<ORD: ord i1 i0>> /\ <<SIM: sim i1 st_src1 st_tgt0>>)
+          exists i_src1 i_tgt1, <<ORD: ord_tgt i_tgt1 i_tgt0>> /\ <<SIM: sim i_src1 i_tgt1 st_src1 st_tgt0>>)
     :
-      _sim sim i0 st_src0 st_tgt0
+      _sim sim i_src0 i_tgt0 st_src0 st_tgt0
   | sim_angelic_tgt
       (SRT: _.(state_sort) st_tgt0 = angelic)
       (* (FIN: _.(state_sort) st_src0 = final <-> _.(state_sort) st_tgt0 = final) *)
       (SIM: exists st_tgt1
           (STEP: _.(step) st_tgt0 None st_tgt1)
         ,
-          exists i1, <<ORD: ord i1 i0>> /\ <<SIM: sim i1 st_src0 st_tgt1>>)
+          exists i_src1 i_tgt1, <<ORD: ord_src i_src1 i_src0>> /\ <<SIM: sim i_src1 i_tgt1 st_src0 st_tgt1>>)
     :
-      _sim sim i0 st_src0 st_tgt0
-
-
-  | sim_demonic_both
-      (SRT: _.(state_sort) st_src0 = demonic)
-      (SRT: _.(state_sort) st_tgt0 = demonic)
-      (SIM: forall st_tgt1
-          (STEP: _.(step) st_tgt0 None st_tgt1)
-        ,
-          exists st_src1 (STEP: _.(step) st_src0 None st_src1),
-            <<SIM: exists i1, sim i1 st_src1 st_tgt1>>)
-    :
-      _sim sim i0 st_src0 st_tgt0
-  | sim_angelic_both
-      (SRT: _.(state_sort) st_src0 = angelic)
-      (SRT: _.(state_sort) st_tgt0 = angelic)
-      (SIM: forall st_src1
-          (STEP: _.(step) st_src0 None st_src1)
-        ,
-          exists st_tgt1 (STEP: _.(step) st_tgt0 None st_tgt1),
-            <<SIM: exists i1, sim i1 st_src1 st_tgt1>>)
-    :
-      _sim sim i0 st_src0 st_tgt0
-  | sim_demonic_angelic
-      (SRT: _.(state_sort) st_src0 = demonic)
-      (SRT: _.(state_sort) st_tgt0 = angelic)
-      (SIM: exists st_tgt1
-          (STEP: _.(step) st_tgt0 None st_tgt1)
-        ,
-          exists st_src1 (STEP: _.(step) st_src0 None st_src1),
-            <<SIM: exists i1, sim i1 st_src1 st_tgt1>>)
-    :
-      _sim sim i0 st_src0 st_tgt0
-  | sim_angelic_demonic
-      (SRT: _.(state_sort) st_src0 = angelic)
-      (SRT: _.(state_sort) st_tgt0 = demonic)
-      (SIM: forall st_src1
-          (STEP: _.(step) st_src0 None st_src1)
-        ,
-          forall st_tgt1 (STEP: _.(step) st_tgt0 None st_tgt1),
-            <<SIM: exists i1, sim i1 st_src1 st_tgt1>>)
-    :
-      _sim sim i0 st_src0 st_tgt0
+      _sim sim i_src0 i_tgt0 st_src0 st_tgt0
   .
 
-  Definition sim: _ -> _ -> _ -> Prop := paco3 _sim bot3.
+  Definition sim: _ -> _ -> _ -> _ -> Prop := paco4 _sim bot4.
 
-  Lemma sim_mon: monotone3 _sim.
+  Lemma sim_mon: monotone4 _sim.
   Proof.
     ii. inv IN.
-
     - econs 1; et.
     - econs 2; et. i. exploit SIM; et. i; des. esplits; et.
     - econs 3; et.
@@ -237,10 +125,6 @@ Section SIM.
     - econs 5; et. i. exploit SIM; et. i; des. esplits; et.
     - econs 6; et. i. exploit SIM; et. i; des. esplits; et.
     - econs 7; et. des. esplits; et.
-    - econs 8; et. i. exploit SIM; et. i; des. esplits; et.
-    - econs 9; et. i. exploit SIM; et. i; des. esplits; et.
-    - econs 10; et. des. esplits; et.
-    - econs 11; et. i. exploit SIM; et. i; des. esplits; et.
   Qed.
 
   Hint Constructors _sim.
@@ -248,29 +132,29 @@ Section SIM.
   Hint Resolve sim_mon: paco.
 
   Record simulation: Prop := mk_simulation {
-    sim_wf_ord: <<WF: well_founded ord>>;
-    sim_init: exists i0, <<SIM: sim i0 L0.(initial_state) L1.(initial_state)>>;
+    sim_wf_ord_src: <<WF: well_founded ord_src>>;
+    sim_wf_ord_tgt: <<WF: well_founded ord_tgt>>;
+    sim_init: exists i_src0 i_tgt0, <<SIM: sim i_src0 i_tgt0 L0.(initial_state) L1.(initial_state)>>;
   }
   .
 
-  Hypothesis WF: well_founded ord.
+  Hypothesis WFSRC: well_founded ord_src.
+  Hypothesis WFTGT: well_founded ord_tgt.
 
   Ltac pc H := rr in H; desH H; ss.
   Lemma adequacy_spin
-        i0 st_src0 st_tgt0
-        (SIM: sim i0 st_src0 st_tgt0)
+        i_src0 i_tgt0 st_src0 st_tgt0
+        (SIM: sim i_src0 i_tgt0 st_src0 st_tgt0)
         (SPIN: Beh.state_spin L1 st_tgt0)
     :
       <<SPIN: Beh.state_spin L0 st_src0>>
   .
   Proof.
-    revert_until WF.
     ginit.
     { i. eapply cpn1_wcompat; eauto. eapply Beh.state_spin_mon. }
-    gcofix CIH. i.
-    revert_until i0. pattern i0. eapply well_founded_ind; eauto. clear i0. i.
-    rename x into i0. rename H into IH.
-
+    revert i_src0 i_tgt0 st_src0 st_tgt0 SIM SPIN. gcofix CIH.
+    intros i_src0. induction (WFSRC i_src0).
+    clear H. rename x into i_src0. rename H0 into IH. i.
     punfold SIM. inv SIM.
     - (** final **)
       des. exfalso. punfold SPIN. inv SPIN; rewrite SRT1 in *; ss.
@@ -289,158 +173,85 @@ Section SIM.
       + gstep. econs 1; et. ii.
         exploit L0.(wf_angelic); et. i; clarify. esplits; et.
         exploit SIM0; et. i; des. pc SIM.
-        gbase. eapply CIH; eauto.
+        gbase. eapply CIH; et.
       + des; clarify. rename st1 into st_tgt1.
         exploit wf_demonic; et; i; clarify.
         gstep. econs; et. ii. exploit wf_angelic; et; i; clarify.
         pc TL. exploit SIM0; et. i; des. pc SIM.
-        (* gbase. eapply CIH; et. pfold; econs 2; et. esplits; et. *)
-        eapply gpaco1_mon. { eapply IH; et. pfold; econs 2; et. esplits; et. } { ss. } { ss. }
+        gbase. eapply CIH; et. pfold. econs 2; et. esplits; et.
     - (** atgt **)
       des. pc SIM. eapply IH; eauto. eapply spin_astep; et.
-    - (** dd **)
-      punfold SPIN. inv SPIN; rewrite SRT0 in *; ss. des.
-      exploit wf_demonic; et; i; clarify. pc TL.
-      exploit SIM0; et. i; des. pc SIM.
-      gstep. econs 2; et. esplits; et. gbase. eapply CIH; et.
-    - (** aa **)
-      punfold SPIN. inv SPIN; rewrite SRT0 in *; ss. des.
-      gstep. econs; et. ii.
-      exploit L0.(wf_angelic); et; i; clarify.
-      exploit SIM0; et. i; des. pc SIM.
-      gbase. eapply CIH; et. eapply spin_astep; et.
-    - (** da **)
-      des. pc SIM. gstep. econs 2; et. esplits; et. gbase. eapply CIH; et. eapply spin_astep; et.
-    - (** ad **)
-      gstep. econs 1; et. ii.
-      exploit L0.(wf_angelic); et; i; clarify.
-      punfold SPIN. inv SPIN; rewrite SRT0 in *; ss. des; clarify. pc TL.
-      exploit (wf_demonic); et; i; clarify.
-      exploit SIM0; et. i; des. pc x.
-      gbase. eapply CIH; et.
   Qed.
 
   Lemma adequacy_aux
-        i0 st_src0 st_tgt0
-        (SIM: sim i0 st_src0 st_tgt0)
+        i_src0 i_tgt0 st_src0 st_tgt0
+        (SIM: sim i_src0 i_tgt0 st_src0 st_tgt0)
     :
       <<IMPR: Beh.improves (Beh.of_state L0 st_src0) (Beh.of_state L1 st_tgt0)>>
   .
   Proof.
-    revert_until WF.
-    (* ginit. *)
-    (* { i. eapply cpn2_wcompat; eauto. eapply Beh.of_state_mon. } *)
-    (* gcofix CIH. i. *)
-    pcofix CIH. i.
-    rename x2 into tr.
-    punfold PR. generalize dependent st_src0. generalize dependent i0.
+    ginit.
+    { i. eapply cpn2_wcompat; eauto. eapply Beh.of_state_mon. }
+    revert i_tgt0 i_src0 st_src0 st_tgt0 SIM. gcofix CIH.
+    i. rename x2 into tr.
+    punfold PR. revert i_src0 i_tgt0 st_src0 SIM.
     induction PR using Beh.of_state_ind; ii; ss; rename st0 into st_tgt0.
     - (** done **)
-      move i0 before CIH. revert_until i0. pattern i0.
-      eapply well_founded_ind; eauto. clear i0. i.
-      rename x into i0. rename H into IH.
-
-      punfold SIM. inv SIM; try rewrite H0 in *; ss.
+      revert i_src0 st_src0 SIM.
+      induction (WFTGT i_tgt0).
+      clear H0. rename x into i_tgt0. rename H1 into IHTGT. i.
+      punfold SIM. inv SIM; try rewrite H in *; ss.
       + (** ff **)
-        pfold. econs; eauto. clarify.
+        gstep. econs; eauto. clarify.
       + (** d_ **)
         des. pc SIM.
-        pfold. econs 5; eauto. rr. esplits; eauto.
-        exploit IH; eauto. intro A. punfold A.
+        guclo Beh.dstep_clo_spec. econs; et.
       + (** a_ **)
-        pfold. econs 6; eauto. ii.
-        exploit wf_angelic; et. i; clarify.
-        esplits; eauto.
-        exploit SIM0; eauto. i; des. pc SIM.
-        exploit IH; eauto. intro A. punfold A.
+        guclo Beh.astep_clo_spec. econs; et.
+        i. exploit SIM0; et. i. des. pc SIM. et.
     - (** spin **)
-      exploit adequacy_spin; eauto.
+      exploit adequacy_spin; eauto. i.
+      gstep. econs. et.
     - (** nb **)
-      pfold. econs; eauto.
+      gstep. econs; eauto.
     - (** cons **)
-      move i0 before CIH. revert_until i0. pattern i0.
-      eapply well_founded_ind; eauto. clear i0. i.
-      rename x into i0. rename H into IH.
-
-      pc TL.
-      punfold SIM. inv SIM; try rewrite SRT in *; ss.
+      revert i_src0 st_src0 SIM.
+      induction (WFTGT i_tgt0).
+      clear H. rename x into i_tgt0. rename H0 into IHTGT. i.
+      pc TL. punfold SIM. inv SIM; try rewrite SRT in *; ss.
       + (** vv **)
         specialize (SIM0 ev st1). apply SIM0 in STEP; clear SIM0; des.
-        pfold. econs 4; eauto. pc SIM. right. eapply CIH; eauto.
+        gstep. econs 4; eauto. pc SIM. gbase. eapply CIH; eauto.
       + (** vis stuck **)
         apply STUCK in STEP. clarify.
       + (** d_ **)
         des. pc SIM.
-        pfold. econs 5; eauto. rr. esplits; eauto.
-        exploit IH; et. intro A. punfold A.
+        guclo Beh.dstep_clo_spec. econs; eauto.
       + (** a_ **)
-        pfold. econs 6; eauto. ii.
-        exploit wf_angelic; et. i; clarify.
-        exploit SIM0; eauto. i; des. pc SIM.
-        esplits; eauto.
-        exploit IH; et. intro A. punfold A.
+        guclo Beh.astep_clo_spec. econs; eauto. ii.
+        exploit SIM0; et. i. des. pc SIM. et.
     - (** demonic **)
+      revert i_src0 st_src0 SIM.
+      induction (WFTGT i_tgt0).
+      clear H. rename x into i_tgt0. rename H0 into IHTGT. i.
       rr in STEP. des. clarify. rename st1 into st_tgt1.
-      move i0 before CIH. move IH before i0. move SRT before i0. revert_until TL.
-      pattern i0.
-      eapply well_founded_ind; eauto. clear i0. i.
-      rename x into i0. rename H into IHi.
       punfold SIM. inv SIM; try rewrite SRT in *; ss.
-      + (** d_ **)
-        des. pc SIM.
-        pfold. econs 5; eauto. rr. esplits; eauto.
-        exploit IHi; et. intro A. punfold A.
-      + (** _d **)
-        exploit SIM0; eauto. i; des. pc SIM. exploit IH; et.
-      + (** a_ **)
-        pfold. econs 6; eauto. ii.
-        exploit wf_angelic; et. i; clarify.
-        exploit SIM0; eauto. i; des. pc SIM.
-        esplits; eauto.
-        exploit IHi. { et. } { et. } intro A. punfold A.
-      + (** dd **)
-        exploit SIM0; et. i; des. pc SIM.
-        exploit IH; et. intro A.
-        eapply Beh._beh_dstep; et.
-      + (** ad **)
-        pfold. econs 6; eauto. ii.
-        exploit wf_angelic; et. i; clarify.
-        exploit SIM0; et. i; des. pc x.
-        esplits; eauto.
-        exploit IH; et. intro A.
-        punfold A.
-
+      + des. pc SIM.
+        guclo Beh.dstep_clo_spec. econs; et.
+      + exploit SIM0; et. i. des. pc SIM.
+        eapply IH; et.
+      + guclo Beh.astep_clo_spec. econs; et. ii.
+        exploit SIM0; et. i. des. pc SIM. et.
     - (** angelic **)
-      move i0 before CIH. move STEP before i0. move SRT before i0. revert_until STEP.
-      pattern i0.
-      eapply well_founded_ind; eauto. clear i0. i.
-      rename x into i0. rename H into IHi.
+      revert i_src0 st_src0 SIM.
+      induction (WFTGT i_tgt0).
+      clear H. rename x into i_tgt0. rename H0 into IHTGT. i.
       punfold SIM. inv SIM; try rewrite SRT in *; ss.
-      + (** d_ **)
-        des. pc SIM.
-        pfold. econs 5; eauto. rr. esplits; eauto.
-        exploit IHi; et. intro A. punfold A.
-      + (** a_ **)
-        pfold. econs 6; eauto. ii.
-        exploit wf_angelic; et. i; clarify.
-        exploit SIM0; eauto. i; des. pc SIM.
-        esplits; eauto.
-        exploit IHi; et. intro A. punfold A.
-      + (** _a **)
-        des. pc SIM. exploit STEP; et. i; des.
-        exploit IH; et.
-      + (** aa **)
-        pfold. econs 6; eauto. ii.
-        exploit wf_angelic; et. i; clarify.
-        exploit SIM0; eauto. i; des. pc SIM.
-        esplits; eauto.
-        exploit STEP; et. i; des.
-        exploit IH; et. intro A. punfold A.
-      + (** da **)
-        des. pc SIM.
-        exploit STEP; et. i; des.
-        exploit IH. { et. } intro A.
-        eapply Beh._beh_dstep; et.
+      + des. pc SIM.
+        guclo Beh.dstep_clo_spec. econs; et.
+      + guclo Beh.astep_clo_spec. econs; et. ii.
+        exploit SIM0; et. i. des. pc SIM. et.
+      + des. pc SIM. exploit STEP; et. i. des. et.
   Qed.
 
   Theorem adequacy

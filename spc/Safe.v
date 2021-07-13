@@ -13,7 +13,7 @@ From ExtLib Require Import
      Structures.Maps
      Data.Map.FMapAList.
 
-Require Import SimGlobaldouble.
+Require Import SimGlobal.
 Require Import HoareDef.
 Require Import List.
 

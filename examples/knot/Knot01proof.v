@@ -1,4 +1,4 @@
-Require Import HoareDef STB KnotHeader Knot0 Knot1 SimModSemdouble.
+Require Import HoareDef STB KnotHeader Knot0 Knot1 SimModSem.
 Require Import Coqlib.
 Require Import ImpPrelude.
 Require Import Skeleton.
@@ -17,7 +17,7 @@ From ExtLib Require Import
      Structures.Maps
      Data.Map.FMapAList.
 
-Require Import HTacticsdouble ProofMode Invariant.
+Require Import HTactics ProofMode Invariant.
 
 Set Implicit Arguments.
 

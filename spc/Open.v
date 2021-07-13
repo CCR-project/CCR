@@ -11,7 +11,7 @@ Require Import ProofMode.
 Require Import HoareDef Hoare.
 Require Import OpenDef.
 Require Import IRed.
-Require Import SimModSemdouble.
+Require Import SimModSem.
 
 Set Implicit Arguments.
 
@@ -197,7 +197,7 @@ Proof. i. my_red_both. refl. Qed.
 
 
 Require Import Hoare.
-Require Import HTacticsdouble ProofMode.
+Require Import HTactics ProofMode.
 
 Module AUX.
   Ltac ord_tac := eapply OrdArith.lt_from_nat; eapply Nat.lt_succ_diag_r.
@@ -540,7 +540,7 @@ End RDB.
 
 
 Require Import Hoare.
-Require Import HTacticsdouble ProofMode.
+Require Import HTactics ProofMode.
 
 
 
@@ -876,7 +876,7 @@ Section ADQ.
 
   Let my_r := my_lemma2_r1 \7/ my_lemma2_r2.
 
-  Require Import SimGlobaldouble.
+  Require Import SimGlobal.
 
   Ltac _gstep :=
     match goal with
@@ -1431,7 +1431,7 @@ Section ADQ.
 End ADQ.
 
 
-Require Import HTacticsdouble.
+Require Import HTactics.
 
 Section ADQ.
   Context {CONF: EMSConfig}.

@@ -8,7 +8,7 @@ Require Import PCM.
 Require Import Any.
 Require Import HoareDef.
 Require Import SimSTS.
-Require Import SimGlobaldouble.
+Require Import SimGlobal.
 From Ordinal Require Import Ordinal Arithmetic.
 Require Import List.
 Require Import Red IRed.
