@@ -106,6 +106,7 @@ Ltac iarg :=
   let CLOSED := constr:("☃CLOSED") in
   eapply (@harg_clo _ _ PRE INV);
   [eassumption
+  |refl
   |
   ];
   i;
@@ -127,7 +128,7 @@ Tactic Notation "icall_open" uconstr(o) uconstr(x) "with" constr(Hns) :=
   unshelve_goal;
   [eassumption
   |start_ipm_proof; iSplitL "☃CLOSED"; [iModIntro; iSplitL "☃CLOSED"; [iExact "☃CLOSED"|ss]|]
-  |eauto with ord_step
+  |refl
   |
   |
   on_current ltac:(fun H => try clear H);
@@ -149,7 +150,7 @@ Tactic Notation "icall_weaken" uconstr(ftsp) uconstr(o) uconstr(x) uconstr(a) "w
   unshelve_goal;
   [|eassumption
    |start_ipm_proof; iFrame "☃CLOSED"
-   |eauto with ord_step
+   |refl
    |
    |on_current ltac:(fun H => try clear H);
     intros ? ? ? ? [|[?mp_src ?mp_tgt]]; i; simpl;
@@ -165,7 +166,7 @@ Tactic Notation "icall_weaken" uconstr(ftsp) uconstr(o) uconstr(x) uconstr(a) "w
 
 Tactic Notation "iret" uconstr(a) :=
   eapply (@hret_clo _ _ (inl a)); unshelve_goal;
-  [eauto with ord_step
+  [refl
   |eassumption
   |
   |start_ipm_proof; iFrame "☃CLOSED"

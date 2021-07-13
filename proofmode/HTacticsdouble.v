@@ -21,6 +21,7 @@ Set Implicit Arguments.
 #[export] Hint Resolve sim_itree_mon: paco.
 #[export] Hint Resolve cpn8_wcompat: paco.
 
+
 Lemma ord_from_lt_sub (n1 n2: nat)
       (LT: n1 < n2)
   :
@@ -39,7 +40,22 @@ Create HintDb ord_step.
 Ltac oauto :=
   try by (simpl; let bar := fresh in place_bar bar; clear_until bar; eauto with ord_step).
 
+Create HintDb ord_step2.
+#[export] Hint Resolve Ord.S_lt: ord_step2.
+Ltac oauto2 := simpl; try apply Ord.S_lt.
 
+Fixpoint Ord_S_n (o: Ord.t) (n: nat) :=
+  match n with
+  | 0 => o
+  | S n' => Ord.S (Ord_S_n o n')
+  end.
+
+Lemma Ord_S_n_le o n: (o <= Ord_S_n o n)%ord.
+Proof.
+  induction n; ss.
+  { refl. }
+  { etrans; et. eapply Ord.lt_le. eapply Ord.S_lt. }
+Qed.
 
 Ltac ired_l := try (prw _red_gen 2 1 0).
 Ltac ired_r := try (prw _red_gen 1 1 0).
@@ -186,7 +202,7 @@ Section HLEMMAS.
 
         A (a0: shelve__ A) FR
 
-        (le: A -> A -> Prop) mn r rg a (n: nat) m mr_src0 mp_src0
+        (le: A -> A -> Prop) mn r rg a n m n' mr_src0 mp_src0
         (fsp0: fspec)
         mp_tgt0 k_tgt k_src
         fn tbr ord_cur varg_src varg_tgt
@@ -202,7 +218,7 @@ Section HLEMMAS.
         (UPDATABLE:
            I ⊢ #=> (FR ** R a0 mp_src0 mp_tgt0 ** (fsp1.(precond) (Some mn) x varg_src varg_tgt o: iProp)))
 
-        (FUEL: (15 < n)%ord)
+        (FUEL: n = Ord_S_n n' 10)
         (PURE: ord_lt o ord_cur /\
                (tbr = true -> is_pure o) /\ (tbr = false -> o = ord_top))
 
@@ -220,8 +236,8 @@ Section HLEMMAS.
              (mp_tgt0, trigger (Call fn varg_tgt) >>= k_tgt)
   .
   Proof.
-    unfold HoareCall, mput, mget, assume, guarantee.
-    ired_both. gstep. econs; [eauto with ord_step|].
+    subst. unfold HoareCall, mput, mget, assume, guarantee.
+    ired_both. gstep. econs; [eauto with ord_step2|].
     hexploit (WEAKER x). i. des.
     assert (exists mr_src0' rarg_src fr_src0',
                (<<UPDATABLE: URA.wf (ctx0 ⋅ (mr_src0' ⋅ (rarg_src ⋅ fr_src0')))>>) /\
@@ -241,26 +257,27 @@ Section HLEMMAS.
       { replace (ctx0 ⋅ (b0 ⋅ (r1 ⋅ a2))) with (r1 ⋅ (a2 ⋅ b0 ⋅ ctx0)); auto. r_solve. }
     }
     des. exists (rarg_src, fr_src0', mr_src0').
-    repeat (ired_both; gstep; econs; eauto with ord_step).
-    repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
+    repeat (ired_both; gstep; econs; eauto with ord_step2).
+    repeat (ired_both; gstep; econs; eauto with ord_step2). unshelve esplits; eauto.
     { r_wf UPDATABLE0. }
-    repeat (ired_both; gstep; econs; eauto with ord_step). exists x_tgt.
-    repeat (ired_both; gstep; econs; eauto with ord_step). exists varg_tgt.
-    repeat (ired_both; gstep; econs; eauto with ord_step). exists o.
-    repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
-    repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
-    repeat (ired_both; gstep; econs; eauto with ord_step).
+    repeat (ired_both; gstep; econs; eauto with ord_step2). exists x_tgt.
+    repeat (ired_both; gstep; econs; eauto with ord_step2). exists varg_tgt.
+    repeat (ired_both; gstep; econs; eauto with ord_step2). exists o.
+    repeat (ired_both; gstep; econs; eauto with ord_step2). unshelve esplits; eauto.
+    repeat (ired_both; gstep; econs; eauto with ord_step2). unshelve esplits; eauto.
+    repeat (ired_both; gstep; econs; eauto with ord_step2).
     { econs; eauto. }
-    i. eexists _, (o_new_tgt + 20)%ord.
-    repeat (ired_both; gstep; econs; eauto with ord_step). i. destruct x0.
-    repeat (ired_both; gstep; econs; eauto with ord_step). inv WF.
-    repeat (ired_both; gstep; econs; eauto with ord_step). i.
-    repeat (ired_both; gstep; econs; eauto with ord_step). i.
-    repeat (ired_both; gstep; econs; eauto with ord_step). i.
-    ired_both. guclo lordC_spec. econs.
-    { eapply OrdArith.add_base_l. }
-    { eapply OrdArith.add_base_l. }
-    eapply POST; et. hexploit POST0. i.
+    i. eexists _, (Ord_S_n o_new_tgt 20)%ord.
+    repeat (ired_both; gstep; econs; eauto with ord_step2). i. destruct x0.
+    repeat (ired_both; gstep; econs; eauto with ord_step2). inv WF.
+    repeat (ired_both; gstep; econs; eauto with ord_step2). i.
+    repeat (ired_both; gstep; econs; eauto with ord_step2). i.
+    repeat (ired_both; gstep; econs; eauto with ord_step2). i.
+    ired_both. guclo lordC_spec. econs; [| |eapply POST].
+    { refl. }
+    { eapply (Ord_S_n_le o_new_tgt 15). }
+    { et. }
+    hexploit POST0. i.
     uipropall. hexploit (H c); et.
     { eapply URA.wf_mon. instantiate (1:=fr_src0' ⋅ c0 ⋅ mr_src). r_wf x0. }
     { instantiate (1:=fr_src0' ⋅ c0 ⋅ mr_src). r_wf x0. }
@@ -280,7 +297,7 @@ Section HLEMMAS.
 
         A (a0: shelve__ A)
 
-        (le: A -> A -> Prop) mn r rg a (n: nat) m mr_src0 mp_src0
+        (le: A -> A -> Prop) mn r rg a n m n' mr_src0 mp_src0
         (fsp0: fspec)
         mp_tgt0 k_tgt k_src
         fn tbr ord_cur varg_src varg_tgt
@@ -296,7 +313,7 @@ Section HLEMMAS.
         (UPDATABLE:
            from_iPropL (fst (alist_pops Hns l)) ⊢ #=> (R a0 mp_src0 mp_tgt0 ** (fsp1.(precond) (Some mn) x varg_src varg_tgt o: iProp)))
 
-        (FUEL: (15 < n)%ord)
+        (FUEL: n = Ord_S_n n' 10)
         (PURE: ord_lt o ord_cur /\
                (tbr = true -> is_pure o) /\ (tbr = false -> o = ord_top))
 
@@ -314,7 +331,7 @@ Section HLEMMAS.
              (mp_tgt0, trigger (Call fn varg_tgt) >>= k_tgt)
   .
   Proof.
-    eapply hcall_clo_ord_weaken'; et.
+    subst. eapply hcall_clo_ord_weaken'; et.
     { instantiate (3:=from_iPropL (snd (alist_pops Hns l))).
       etrans.
       { eapply iPropL_alist_pops. }
@@ -334,7 +351,7 @@ Section HLEMMAS.
 
         A (a0: shelve__ A)
 
-        (le: A -> A -> Prop) mn r rg a (n: nat) m mr_src0 mp_src0
+        (le: A -> A -> Prop) mn r rg a n m n' mr_src0 mp_src0
         (fsp0: fspec)
         mp_tgt0 k_tgt k_src
         fn tbr ord_cur varg_src varg_tgt
@@ -343,13 +360,13 @@ Section HLEMMAS.
 
         (WEAKER: fspec_weaker fsp1 fsp0)
 
-        ctx0 l
+        ctx0 l o_src1 o_tgt1
         (ACC: current_iPropL ctx0 l)
 
         (UPDATABLE:
            from_iPropL (fst (alist_pops Hns l)) ⊢ #=> (R a0 mp_src0 mp_tgt0 ** (fsp1.(precond) (Some mn) x varg_src varg_tgt o: iProp)))
 
-        (FUEL: (15 < n)%ord)
+        (FUEL: n = Ord_S_n n' 10)
         (PURE: ord_lt o ord_cur /\
                (tbr = true -> is_pure o) /\ (tbr = false -> o = ord_top))
 
@@ -359,7 +376,7 @@ Section HLEMMAS.
                       ctx1
                       (ACC: current_iPropL ctx1 (@cons (prod string (bi_car iProp)) (Invn, R a1 mp_src1 mp_tgt1) (@cons (prod string (bi_car iProp)) (Rn, fsp1.(postcond) (Some mn) x vret_src vret_tgt) (snd (alist_pops Hns l)))))
           ,
-            gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) rg rg _ _ eqr 100 100 a
+            gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) rg rg _ _ eqr o_src1 o_tgt1 a
                    (Any.pair mp_src1 mr_src1↑, k_src (ctx1, vret_src)) (mp_tgt1, k_tgt vret_tgt))
     :
       gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) r rg _ _ eqr m n a
@@ -367,7 +384,7 @@ Section HLEMMAS.
              (mp_tgt0, trigger (Call fn varg_tgt) >>= k_tgt)
   .
   Proof.
-    eapply (@hcall_clo_ord_weaken _ _ _ 100); eauto.
+    eapply (@hcall_clo_ord_weaken _ _ _); eauto.
   Qed.
 
   Lemma hcall_clo
@@ -377,19 +394,19 @@ Section HLEMMAS.
 
         (P: option mname -> X -> Any.t -> Any.t -> ord -> Σ -> Prop)
         (Q: option mname -> X -> Any.t -> Any.t -> Σ -> Prop)
-        (le: A -> A -> Prop) mn r rg a (n: nat) m mr_src0 mp_src0
+        (le: A -> A -> Prop) mn r rg a n m n' mr_src0 mp_src0
         mp_tgt0 k_tgt k_src
         fn tbr ord_cur varg_src varg_tgt
         (R: A -> Any.t -> Any.t -> iProp)
         (eqr: Any.t -> Any.t -> Any.t -> Any.t -> Prop)
 
-        ctx0 l
+        ctx0 l o_src1 o_tgt1
         (ACC: current_iPropL ctx0 l)
 
         (UPDATABLE:
            from_iPropL (fst (alist_pops Hns l)) ⊢ #=> (R a0 mp_src0 mp_tgt0 ** (P (Some mn) x varg_src varg_tgt o: iProp)))
 
-        (FUEL: (15 < n)%ord)
+        (FUEL: n = Ord_S_n n' 10)
         (PURE: ord_lt o ord_cur /\
                (tbr = true -> is_pure o) /\ (tbr = false -> o = ord_top))
 
@@ -399,7 +416,7 @@ Section HLEMMAS.
                       ctx1
                       (ACC: current_iPropL ctx1 (@cons (prod string (bi_car iProp)) (Invn, R a1 mp_src1 mp_tgt1) (@cons (prod string (bi_car iProp)) (Rn, Q (Some mn) x vret_src vret_tgt) (snd (alist_pops Hns l)))))
           ,
-                gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) rg rg _ _ eqr 100 100 a
+                gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) rg rg _ _ eqr o_src1 o_tgt1 a
                        (Any.pair mp_src1 mr_src1↑, k_src (ctx1, vret_src)) (mp_tgt1, k_tgt vret_tgt))
     :
       gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) r rg _ _ eqr m n a
@@ -422,28 +439,30 @@ Section HLEMMAS.
         (R: A -> Any.t -> Any.t -> iProp)
         (eqr: Any.t -> Any.t -> Any.t -> Any.t -> Prop)
         (WF: mk_wf R a (mpr_src, mp_tgt))
+        o_src0 o_src1 o_tgt0 o_tgt1
+        (FUEL: o_tgt0 = Ord_S_n o_tgt1 7)
         (ARG:
            forall x varg_src ord_cur
                   ctx (mr_src: Σ) mp_src
                   (ACC: current_iPropL ctx (@cons (prod string (bi_car iProp)) (Rn, P mn x varg_src varg ord_cur) (@cons (prod string (bi_car iProp)) (Invn, R a mp_src mp_tgt) (@nil (prod string (bi_car iProp)))))),
-             gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) rg rg _ _ eqr 100 93 a
+             gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) rg rg _ _ eqr o_src1 o_tgt1 a
                     (Any.pair mp_src mr_src↑, k_src (ctx, ((mn, x), varg_src, ord_cur)))
                     (mp_tgt, f_tgt))
     :
-      gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) r rg _ _ eqr 100 100 a
+      gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) r rg _ _ eqr o_src0 o_tgt0 a
              (mpr_src, (HoareFunArg P (mn, varg) >>= k_src))
              (mp_tgt, f_tgt)
   .
   Proof.
     inv WF.
     unfold HoareFunArg, mput, mget, assume, guarantee.
-    repeat (ired_both; gstep; econs; eauto with ord_step). intro x.
-    repeat (ired_both; gstep; econs; eauto with ord_step). intro varg_src.
-    repeat (ired_both; gstep; econs; eauto with ord_step). intros (rarg_src, ctx).
-    repeat (ired_both; gstep; econs; eauto with ord_step).
-    repeat (ired_both; gstep; econs; eauto with ord_step). intro VALID.
-    repeat (ired_both; gstep; econs; eauto with ord_step). intro ord_cur.
-    repeat (ired_both; gstep; econs; eauto with ord_step). i.
+    repeat (ired_both; gstep; econs; eauto with ord_step2). intro x.
+    repeat (ired_both; gstep; econs; eauto with ord_step2). intro varg_src.
+    repeat (ired_both; gstep; econs; eauto with ord_step2). intros (rarg_src, ctx).
+    repeat (ired_both; gstep; econs; eauto with ord_step2).
+    repeat (ired_both; gstep; econs; eauto with ord_step2). intro VALID.
+    repeat (ired_both; gstep; econs; eauto with ord_step2). intro ord_cur.
+    repeat (ired_both; gstep; econs; eauto with ord_step2). i.
     ired_both. eapply ARG; et.
     red. econs.
     { instantiate (1:=rarg_src ⋅ mr_src). r_wf VALID. }
@@ -463,8 +482,8 @@ Section HLEMMAS.
         mp_tgt
         (le: A -> A -> Prop)
         (eqr: Any.t -> Any.t -> Any.t -> Any.t -> Prop)
-        (R: A -> Any.t -> Any.t -> iProp) n0
-        (FUEL: (n0 + 14 < n)%ord)
+        (R: A -> Any.t -> Any.t -> iProp) n'
+        (FUEL: n = Ord_S_n n' 14)
 
         ctx l
         (ACC: current_iPropL ctx l)
@@ -482,9 +501,9 @@ Section HLEMMAS.
              (mp_tgt, (Ret vret_tgt))
   .
   Proof.
-    unfold HoareFunRet, mput, mget, guarantee.
-    repeat (ired_both; gstep; econs; eauto with ord_step). exists vret_tgt.
-    repeat (ired_both; gstep; econs; eauto with ord_step).
+    subst. unfold HoareFunRet, mput, mget, guarantee.
+    repeat (ired_both; gstep; econs; eauto with ord_step2). exists vret_tgt.
+    repeat (ired_both; gstep; econs; eauto with ord_step2).
     assert (exists mr_src1 rret_src,
                (<<UPDATABLE: URA.wf (ctx ⋅ (mr_src1 ⋅ rret_src))>>) /\
                (<<RSRC: R a mp_src mp_tgt mr_src1>>) /\
@@ -497,11 +516,11 @@ Section HLEMMAS.
       r_solve.
     }
     des. exists (rret_src, mr_src1).
-    repeat (ired_both; gstep; econs; eauto with ord_step).
-    repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits.
+    repeat (ired_both; gstep; econs; eauto with ord_step2).
+    repeat (ired_both; gstep; econs; eauto with ord_step2). unshelve esplits.
     { r_wf UPDATABLE0. }
-    repeat (ired_both; gstep; econs; eauto with ord_step). unshelve esplits; eauto.
-    repeat (ired_both; gstep; econs; eauto with ord_step).
+    repeat (ired_both; gstep; econs; eauto with ord_step2). unshelve esplits; eauto.
+    repeat (ired_both; gstep; econs; eauto with ord_step2).
     eapply EQ; et. econs; et.
     Unshelve. all: ss.
   Qed.
@@ -514,12 +533,12 @@ Section HLEMMAS.
         (wf: A -> Any.t * Any.t -> Prop)
         (le: A -> A -> Prop)
         (eqr: Any.t -> Any.t -> Any.t -> Any.t -> Prop)
-        stb itr_tgt ctx
+        stb itr_tgt ctx o_src1
 
         (ATMOST: (at_most < kappa)%ord)
-        (FUEL: (n1 + 3 < n0)%ord)
+        (FUEL: n0 = Ord_S_n n1 4)
 
-        (POST: gpaco8 (_sim_itree wf le) (cpn8 (_sim_itree wf le)) rg rg _ _ eqr 100 n1 a
+        (POST: gpaco8 (_sim_itree wf le) (cpn8 (_sim_itree wf le)) rg rg _ _ eqr o_src1 n1 a
                       (mp_src0,
                        (interp_hCallE_tgt mn stb o (_APC at_most) ctx)>>= k_src)
                       (itr_tgt))
@@ -529,14 +548,14 @@ Section HLEMMAS.
               (interp_hCallE_tgt mn stb o APC ctx) >>= k_src)
              (itr_tgt).
   Proof.
-    unfold APC. destruct itr_tgt.
+    subst. unfold APC. destruct itr_tgt.
     ired_both. gstep. eapply sim_itree_choose_src.
-    { eapply FUEL. }
+    { eauto with ord_step2. }
     exists at_most. ired_l. steps.
-    { eauto with ord_step. }
-    { unfold guarantee. ired_both. gstep. econs; eauto with ord_step. esplits; eauto.
+    { eauto with ord_step2. }
+    { unfold guarantee. ired_both. gstep. econs; eauto with ord_step2. esplits; eauto.
       ired_both. gstep. econs.
-      { instantiate (1:=n1). eapply OrdArith.add_lt_l. rewrite Ord.from_nat_S. eapply Ord.S_pos. }
+      { eauto with ord_step2. }
       ired_both. et. }
     Unshelve.
     all: ss.
@@ -552,11 +571,11 @@ Section HLEMMAS.
         (wf: A -> Any.t * Any.t -> Prop)
         (le: A -> A -> Prop)
         (eqr: Any.t -> Any.t -> Any.t -> Any.t -> Prop)
-        stb itr_tgt ctx
+        stb itr_tgt ctx o_src1
 
-        (FUEL: (n1 + 1 < n0)%ord)
+        (FUEL: n0 = Ord_S_n n1 2)
 
-        (POST: gpaco8 (_sim_itree wf le) (cpn8 (_sim_itree wf le)) rg rg _ _ eqr 100 n1 a
+        (POST: gpaco8 (_sim_itree wf le) (cpn8 (_sim_itree wf le)) rg rg _ _ eqr o_src1 n1 a
                       (mp_src0, k_src (ctx, ()))
                       (itr_tgt))
     :
@@ -565,11 +584,11 @@ Section HLEMMAS.
               (interp_hCallE_tgt mn stb o (_APC at_most) ctx) >>= k_src)
              (itr_tgt).
   Proof.
-    destruct itr_tgt.
+    subst. destruct itr_tgt.
     rewrite unfold_APC. ired_l. gstep. eapply sim_itree_choose_src.
-    { eapply FUEL. }
+    { eauto with ord_step2. }
     exists true. ired_l. gstep. eapply sim_itree_tau_src.
-    { eapply OrdArith.add_lt_l. rewrite Ord.from_nat_S. eapply Ord.S_pos. }
+    { eauto with ord_step2. }
     ired_both. et.
     Unshelve. all: ss.
   Qed.
@@ -584,14 +603,14 @@ Section HLEMMAS.
         (wf: A -> Any.t * Any.t -> Prop)
         (le: A -> A -> Prop)
         (eqr: Any.t -> Any.t -> Any.t -> Any.t -> Prop)
-        stb itr_tgt
+        stb itr_tgt o_src1
 
-        (FUEL: (n1 + 7 < n0)%ord)
+        (FUEL: n0 = Ord_S_n n1 8)
         (fsp: fspec)
         (FIND: stb fn = Some fsp)
         (NEXT: (next < at_most)%ord)
 
-        (POST: gpaco8 (_sim_itree wf le) (cpn8 (_sim_itree wf le)) rg rg _ _ eqr 100 n1 a
+        (POST: gpaco8 (_sim_itree wf le) (cpn8 (_sim_itree wf le)) rg rg _ _ eqr o_src1 n1 a
                       (mp_src0,
                        ('(ctx1, _) <- (HoareCall mn true o fsp fn args ctx0);;
                         Tau (ITree.bind (interp_hCallE_tgt mn stb o (_APC next) ctx1) k_src)))
@@ -601,26 +620,26 @@ Section HLEMMAS.
              (mp_src0, (interp_hCallE_tgt mn stb o (_APC at_most) ctx0) >>= k_src)
              (itr_tgt).
   Proof.
-    destruct itr_tgt.
+    subst. destruct itr_tgt.
     rewrite unfold_APC. ired_l. gstep. eapply sim_itree_choose_src.
-    { eapply FUEL. }
+    { eauto with ord_step2. }
     exists false. ired_l. gstep. eapply sim_itree_tau_src.
-    { eapply OrdArith.lt_add_r. eauto with ord_step. }
+    { eauto with ord_step2. }
     ired_l. gstep. eapply sim_itree_choose_src.
-    { eapply OrdArith.lt_add_r. eauto with ord_step. }
+    { eauto with ord_step2. }
     exists next. ired_l. gstep. eapply sim_itree_tau_src.
-    { eapply OrdArith.lt_add_r. eauto with ord_step. }
+    { eauto with ord_step2. }
     ired_l. unfold guarantee. ired_l. gstep. eapply sim_itree_choose_src.
-    { eapply OrdArith.lt_add_r. eauto with ord_step. }
+    { eauto with ord_step2. }
     split.
     { auto. }
     ired_l. gstep. eapply sim_itree_tau_src.
-    { eapply OrdArith.lt_add_r. eauto with ord_step. }
+    { eauto with ord_step2. }
     ired_l. gstep. eapply sim_itree_choose_src.
-    { eapply OrdArith.lt_add_r. eauto with ord_step. }
+    { eauto with ord_step2. }
     exists (fn, args).
     ired_l. gstep. eapply sim_itree_tau_src.
-    { eapply OrdArith.add_lt_l. rewrite Ord.from_nat_S. eapply Ord.S_pos. }
+    { eauto with ord_step2. }
     ired_l. ss. rewrite FIND. ss. subst. ired_l.
     ss. ired_l.
     match goal with
@@ -652,14 +671,14 @@ Ltac force_l :=
     let thyp := fresh "TMP" in
     remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar;
     let name := fresh "_GUARANTEE" in
-    destruct (classic P) as [name|name]; [ired_both; gstep; eapply sim_itree_choose_src; [oauto|exists name]|contradict name]; cycle 1
+    destruct (classic P) as [name|name]; [ired_both; gstep; eapply sim_itree_choose_src; [oauto2|exists name]|contradict name]; cycle 1
 
   | [ |- (gpaco8 (_sim_itree _ _) _ _ _ _ _ _ _ _ _ (_, ITree.bind' _ (interp _ guarantee ?P) (_, _))) ] =>
     let tvar := fresh "tmp" in
     let thyp := fresh "TMP" in
     remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar;
     let name := fresh "_GUARANTEE" in
-    destruct (classic P) as [name|name]; [ired_both; gstep; eapply sim_itree_choose_src; [oauto|exists name]|contradict name]; cycle 1
+    destruct (classic P) as [name|name]; [ired_both; gstep; eapply sim_itree_choose_src; [oauto2|exists name]|contradict name]; cycle 1
 
    (* TODO: handle interp_hCallE_tgt better and remove this case *)
   | [ |- (gpaco8 (_sim_itree _ _) _ _ _ _ _ _ _ _ _ (_, ITree.bind' _ (interp _ (guarantee ?P ))) (_, _)) ] =>
@@ -667,10 +686,10 @@ Ltac force_l :=
     let thyp := fresh "TMP" in
     remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar;
     let name := fresh "_GUARANTEE" in
-    destruct (classic P) as [name|name]; [ired_both; gstep; eapply sim_itree_choose_src; [oauto|exists name]|contradict name]; cycle 1; clear name
+    destruct (classic P) as [name|name]; [ired_both; gstep; eapply sim_itree_choose_src; [oauto2|exists name]|contradict name]; cycle 1; clear name
 
   | [ |- (gpaco8 (_sim_itree _ _) _ _ _ _ _ _ _ _ _ (_, ?i_src) (_, ?i_tgt)) ] =>
-    seal i_tgt; gstep; econs; (oauto); unseal i_tgt
+    seal i_tgt; gstep; econs; (oauto2); unseal i_tgt
   end
 .
 
@@ -688,10 +707,10 @@ Ltac force_r :=
     let thyp := fresh "TMP" in
     remember (assume P) as tvar eqn:thyp; unfold assume in thyp; subst tvar;
     let name := fresh "_ASSUME" in
-    destruct (classic P) as [name|name]; [ired_both; gstep; eapply sim_itree_take_tgt; [oauto|exists name]|contradict name]; cycle 1
+    destruct (classic P) as [name|name]; [ired_both; gstep; eapply sim_itree_take_tgt; [oauto2|exists name]|contradict name]; cycle 1
 
   | [ |- (gpaco8 (_sim_itree _ _) _ _ _ _ _ _ _ _ _ (_, ?i_src) (_, ?i_tgt)) ] =>
-    seal i_src; gstep; econs; oauto; unseal i_src
+    seal i_src; gstep; econs; oauto2; unseal i_src
   end
 .
 
@@ -712,7 +731,7 @@ Ltac _step :=
     let thyp := fresh "TMP" in
     remember (assume P) as tvar eqn:thyp; unfold assume in thyp; subst tvar;
     let name := fresh "_ASSUME" in
-    ired_both; gstep; eapply sim_itree_take_src; [oauto|]; intro name
+    ired_both; gstep; eapply sim_itree_take_src; [oauto2|]; intro name
 
   (*** blacklisting ***)
   (* | [ |- (gpaco5 (_sim_itree wf) _ _ _ _ (_, _) (_, trigger (Take _) >>= _)) ] => idtac *)
@@ -729,12 +748,12 @@ Ltac _step :=
     let thyp := fresh "TMP" in
     remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar;
     let name := fresh "_GUARANTEE" in
-    ired_both; gstep; eapply sim_itree_choose_tgt; [oauto|]; intro name
+    ired_both; gstep; eapply sim_itree_choose_tgt; [oauto2|]; intro name
 
 
 
   | _ => (*** default ***)
-    gstep; eapply safe_sim_sim; econs; try (oauto); i
+    gstep; eapply safe_sim_sim; econs; try (oauto2); i
   end;
   match goal with
   | [ |- exists _, _ ] => fail 1
@@ -761,16 +780,20 @@ Section TEST.
   Let le := fun (_ _: unit) => True.
   Variable (srcs0 tgts0: Any.t).
 
-  Goal gpaco8 (_sim_itree wf le) (cpn8 (_sim_itree wf le)) bot8 bot8 Any.t Any.t (fun _ _ => eq) 100 100 tt
+  Goal exists o_src o_tgt,
+      gpaco8 (_sim_itree wf le) (cpn8 (_sim_itree wf le)) bot8 bot8 Any.t Any.t (fun _ _ => eq) o_src o_tgt tt
        (srcs0, triggerUB >>= idK) (tgts0, triggerUB >>= idK).
-    i.
+  Proof.
+    esplits.
     steps.
     Unshelve. all: try exact 0.
   Qed.
 
-  Goal gpaco8 (_sim_itree wf le) (cpn8 (_sim_itree wf le)) bot8 bot8 Any.t Any.t (fun _ _ => eq) 100 100 tt
+  Goal exists o_src o_tgt,
+      gpaco8 (_sim_itree wf le) (cpn8 (_sim_itree wf le)) bot8 bot8 Any.t Any.t (fun _ _ => eq) o_src o_tgt tt
        (srcs0, triggerNB >>= idK) (tgts0, triggerNB >>= idK).
-    i.
+  Proof.
+    esplits.
     steps.
     Unshelve. all: try exact 0.
   Qed.
@@ -780,14 +803,14 @@ End TEST.
 
 Ltac astep_full _fn _args _next _n1 :=
   eapply (@APC_step_clo _ _fn _args _next _n1);
-  [(try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; lia)]))|
+  [refl|
    (try by ((try stb_tac); refl))|
-   (try by (eapply OrdArith.lt_from_nat; lia))|
+   oauto|
   ].
 
 Ltac astep _fn _args :=
   eapply (@APC_step_clo _ _fn _args);
-  [oauto|
+  [refl|
    (try by ((try stb_tac); refl))|
    oauto|
   ].
@@ -801,7 +824,7 @@ Ltac acatch :=
 Ltac astart _at_most :=
   eapply (@APC_start_clo _ _at_most);
   [eauto with ord_kappa|
-   oauto|
+   refl|
   ]
 .
 
@@ -811,7 +834,7 @@ Ltac astop :=
   | _ => idtac
   end;
   eapply APC_stop_clo;
-  [oauto|].
+  [refl|].
 
 Ltac init :=
   let varg_src := fresh "varg_src" in
@@ -823,7 +846,7 @@ Ltac init :=
   let mp_tgt := fresh "mp_tgt" in
   let WF := fresh "WF" in
   split; ss; intros varg_src [mn varg] EQ w mrp_src mp_tgt WF;
-  (try subst varg_src); exists 100, 100; cbn;
+  (try subst varg_src); eexists _, _; cbn;
   ginit;
   try (unfold fun_to_tgt, cfunN, cfunU; rewrite HoareFun_parse); simpl.
 
@@ -832,12 +855,13 @@ Ltac harg :=
   let INV := constr:("INV") in
   eapply (@harg_clo _ _ PRE INV);
   [eassumption
+  |refl
   |
   ]; i.
 
 Tactic Notation "hret" uconstr(a) :=
   eapply (@hret_clo _ _ a); unshelve_goal;
-  [oauto
+  [refl
   |eassumption
   |
   |start_ipm_proof
@@ -852,7 +876,7 @@ Tactic Notation "hcall" uconstr(o) uconstr(x) uconstr(a) "with" constr(Hns) :=
   unshelve_goal;
   [eassumption
   |start_ipm_proof
-  |oauto
+  |refl
   |
   |on_current ltac:(fun H => try clear H); i; on_current ltac:(fun H => simpl in H)
   ].
@@ -866,7 +890,7 @@ Tactic Notation "hcall_weaken" uconstr(fsp) uconstr(o) uconstr(x) uconstr(a) "wi
   [
   |eassumption
   |start_ipm_proof
-  |oauto
+  |refl
   |
   |on_current ltac:(fun H => try clear H); i; on_current ltac:(fun H => simpl in H)
   ].

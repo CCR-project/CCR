@@ -33,6 +33,12 @@ Section SIMMODSEM.
   Let wf: _ -> W -> Prop :=
     mk_wf (fun (_: unit) _ _ => (True: iProp)%I).
 
+  Ltac check_o :=
+    match goal with
+    | [ |- (gpaco8 _ _ _ _ _ _ _ ?o_src ?o_tgt _ _ _) ] =>
+      pose o_src; pose o_tgt
+    end.
+
   Theorem correct: refines2 [MutF0.F] [MutF1.F].
   Proof.
     eapply adequacy_local2. econs; ss.
