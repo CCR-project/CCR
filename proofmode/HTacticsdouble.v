@@ -42,7 +42,7 @@ Ltac oauto :=
 
 Create HintDb ord_step2.
 #[export] Hint Resolve Ord.S_lt: ord_step2.
-Ltac oauto2 := simpl; try apply Ord.S_lt.
+Ltac oauto2 := simpl; try apply Ord.S_lt; try by oauto.
 
 Fixpoint Ord_S_n (o: Ord.t) (n: nat) :=
   match n with

@@ -7,7 +7,7 @@ Require Import PCM.
 Require Import Any.
 Require Export HoareDef STB.
 Require Import Hoareproof0 Hoareproof1 Hoareproof2.
-Require Import SimModSem ProofMode.
+Require Import SimModSemdouble ProofMode.
 
 Set Implicit Arguments.
 
@@ -113,7 +113,7 @@ Section CANCELSTB.
       Beh.of_program (@ModL.compile _ CONFT (Mod.add_list mds_tgt)) <1=
       Beh.of_program (@ModL.compile _ CONFS (Mod.add_list mds_src)).
   Proof.
-    ii. eapply adequacy_type_m2s.
+    ii. eapply adequacy_type_m2s; et.
     eapply adequacy_type_m2m; et.
     eapply adequacy_type_t2m; et.
     i. exploit MAINM; et. i. des. esplits; et.
