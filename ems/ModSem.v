@@ -1,268 +1,14 @@
 Require Import Coqlib.
 Require Export sflib.
 Require Export ITreelib.
+Require Export ModSemE.
 Require Export AList.
 Require Import Skeleton.
-Require Import PCM.
 Require Import STS Behavior.
 Require Import Any.
 Require Import Permutation.
 
 Set Implicit Arguments.
-
-
-Notation gname := string (only parsing). (*** convention: not capitalized ***)
-Notation mname := string (only parsing). (*** convention: capitalized ***)
-
-Section EVENTSCOMMON.
-
-  Variant eventE: Type -> Type :=
-  | Choose (X: Type): eventE X
-  | Take X: eventE X
-  | Syscall (fn: gname) (args: Any.t) (rvs: Any.t -> Prop): eventE Any.t
-  .
-
-  (* Notation "'Choose' X" := (trigger (Choose X)) (at level 50, only parsing). *)
-  (* Notation "'Take' X" := (trigger (Take X)) (at level 50, only parsing). *)
-
-  Definition triggerUB {E A} `{eventE -< E}: itree E A :=
-    v <- trigger (Take void);; match v: void with end
-  .
-
-  Definition triggerNB {E A} `{eventE -< E}: itree E A :=
-    v <- trigger (Choose void);; match v: void with end
-  .
-
-  Definition unwrapN {E X} `{eventE -< E} (x: option X): itree E X :=
-    match x with
-    | Some x => Ret x
-    | None => triggerNB
-    end.
-
-  Definition unwrapU {E X} `{eventE -< E} (x: option X): itree E X :=
-    match x with
-    | Some x => Ret x
-    | None => triggerUB
-    end.
-
-  Definition assume {E} `{eventE -< E} (P: Prop): itree E unit := trigger (Take P) ;;; Ret tt.
-  Definition guarantee {E} `{eventE -< E} (P: Prop): itree E unit := trigger (Choose P) ;;; Ret tt.
-
-  (* Notation "'unint?'" := (unwrapA <*> unint) (at level 57, only parsing). *)
-  (* Notation "'unint﹗'" := (unwrapG <*> unint) (at level 57, only parsing). *)
-  (* Notation "'Ret!' f" := (RetG f) (at level 57, only parsing). *)
-  (* Notation "'Ret?' f" := (RetA f) (at level 57, only parsing). *)
-
-  Definition unleftU {E X Y} `{eventE -< E} (xy: X + Y): itree E X :=
-    match xy with
-    | inl x => Ret x
-    | inr y => triggerUB
-    end.
-
-  Definition unleftN {E X Y} `{eventE -< E} (xy: X + Y): itree E X :=
-    match xy with
-    | inl x => Ret x
-    | inr y => triggerNB
-    end.
-
-  Definition unrightU {E X Y} `{eventE -< E} (xy: X + Y): itree E Y :=
-    match xy with
-    | inl x => triggerUB
-    | inr y => Ret y
-    end.
-
-  Definition unrightN {E X Y} `{eventE -< E} (xy: X + Y): itree E Y :=
-    match xy with
-    | inl x => triggerNB
-    | inr y => Ret y
-    end.
-
-End EVENTSCOMMON.
-
-Notation "f '?'" := (unwrapU f) (at level 9, only parsing).
-Notation "f 'ǃ'" := (unwrapN f) (at level 9, only parsing).
-Notation "(?)" := (unwrapU) (only parsing).
-Notation "(ǃ)" := (unwrapN) (only parsing).
-Goal (tt ↑↓?) = Ret tt. rewrite Any.upcast_downcast. ss. Qed.
-Goal (tt ↑↓ǃ) = Ret tt. rewrite Any.upcast_downcast. ss. Qed.
-
-
-
-
-
-
-
-Section EVENTSCOMMON.
-
-  Definition p_state: Type := (mname -> Any.t).
-
-  (*** Same as State.pure_state, but does not use "Vis" directly ***)
-  Definition pure_state {S E}: E ~> stateT S (itree E) := fun _ e s => x <- trigger e;; Ret (s, x).
-
-  Lemma unfold_interp_state: forall {E F} {S R} (h: E ~> stateT S (itree F)) (t: itree E R) (s: S),
-      interp_state h t s = _interp_state h (observe t) s.
-  Proof. i. f. apply unfold_interp_state. Qed.
-
-End EVENTSCOMMON.
-
-
-
-
-
-
-
-
-Module EventsL.
-Section EVENTSL.
-
-  Inductive callE: Type -> Type :=
-  | Call (mn: option mname) (fn: gname) (args: Any.t): callE Any.t
-  .
-
-  Inductive pE: Type -> Type :=
-  | PPut (mn: mname) (p: Any.t): pE unit
-  | PGet (mn: mname): pE Any.t
-  .
-
-  (*** TODO: we don't want to require "mname" here ***)
-  (*** use dummy mname? ***)
-  (* Definition FPut E `{rE -< E} (mn: mname) (fr: GRA): itree E unit := *)
-
-  Definition Es: Type -> Type := (callE +' pE +' eventE).
-
-  (* Inductive mdE: Type -> Type := *)
-  (* | MPut (mn: mname) (r: GRA): mdE unit *)
-  (* | MGet (mn: mname): mdE GRA *)
-  (* . *)
-
-  (* Inductive fnE: Type -> Type := *)
-  (* | FPut (r: GRA): fnE unit *)
-  (* | FGet: fnE GRA *)
-  (* | FPush: fnE unit *)
-  (* | FPop: fnE unit *)
-  (* . *)
-
-
-
-
-
-
-  (********************************************************************)
-  (*************************** Interpretation *************************)
-  (********************************************************************)
-
-  Definition handle_pE {E}: pE ~> stateT p_state (itree E) :=
-    fun _ e mps =>
-      match e with
-      | PPut mn p => Ret (update mps mn p, tt)
-      | PGet mn => Ret (mps, mps mn)
-      end.
-  Definition interp_pE {E}: itree (pE +' E) ~> stateT p_state (itree E) :=
-    (* State.interp_state (case_ ((fun _ e s0 => resum_itr (handle_pE e s0)): _ ~> stateT _ _) State.pure_state). *)
-    State.interp_state (case_ handle_pE pure_state).
-
-  (* Definition interp_Es A (prog: callE ~> itree Es) (itr0: itree Es A) (rst0: r_state) (pst0: p_state): itree eventE _ := *)
-  (*   interp_pE (interp_rE (interp_mrec prog itr0) rst0) pst0 *)
-  (* . *)
-  Definition interp_Es A (prog: callE ~> itree Es) (itr0: itree Es A) (st0: p_state): itree eventE (p_state * _)%type :=
-    '(st1, v) <- interp_pE (interp_mrec prog itr0) st0;;
-    Ret (st1, v)
-  .
-
-
-
-  Lemma interp_Es_bind
-        A B
-        (itr: itree Es A) (ktr: A -> itree Es B)
-        (prog: callE ~> itree Es)
-        st0
-    :
-      interp_Es prog (v <- itr ;; ktr v) st0 =
-      '(st1, v) <- interp_Es prog (itr) st0 ;; interp_Es prog (ktr v) st1
-  .
-  Proof. unfold interp_Es, interp_pE. des_ifs. grind. Qed.
-
-  Lemma interp_Es_tau
-        (prog: callE ~> itree Es)
-        A
-        (itr: itree Es A)
-        st0
-    :
-      interp_Es prog (tau;; itr) st0 = tau;; interp_Es prog itr st0
-  .
-  Proof. unfold interp_Es, interp_pE. des_ifs. grind. Qed.
-
-  Lemma interp_Es_ret
-        T
-        prog st0 (v: T)
-    :
-      interp_Es prog (Ret v) st0 = Ret (st0, v)
-  .
-  Proof. unfold interp_Es, interp_pE. des_ifs. grind. Qed.
-
-  Lemma interp_Es_callE
-        p st0 T
-        (* (e: Es Σ) *)
-        (e: callE T)
-    :
-      interp_Es p (trigger e) st0 = tau;; (interp_Es p (p _ e) st0)
-  .
-  Proof. unfold interp_Es, interp_pE. des_ifs. grind. Qed.
-
-  Lemma interp_Es_pE
-        p st0
-        (* (e: Es Σ) *)
-        T
-        (e: pE T)
-    :
-      interp_Es p (trigger e) st0 =
-      '(st1, r) <- handle_pE e st0;;
-      tau;; tau;;
-      Ret (st1, r)
-  .
-  Proof.
-    unfold interp_Es, interp_pE. grind.
-  Qed.
-
-  Lemma interp_Es_eventE
-        p st0
-        (* (e: Es Σ) *)
-        T
-        (e: eventE T)
-    :
-      interp_Es p (trigger e) st0 = r <- trigger e;; tau;; tau;; Ret (st0, r)
-  .
-  Proof.
-    unfold interp_Es, interp_pE. grind.
-    unfold pure_state. grind.
-  Qed.
-
-  Lemma interp_Es_triggerUB
-        (prog: callE ~> itree Es)
-        st0
-        A
-    :
-      (interp_Es prog (triggerUB) st0: itree eventE (_ * A)) = triggerUB
-  .
-  Proof.
-    unfold interp_Es, interp_pE, pure_state, triggerUB. grind.
-  Qed.
-
-  Lemma interp_Es_triggerNB
-        (prog: callE ~> itree Es)
-        st0
-        A
-    :
-      (interp_Es prog (triggerNB) st0: itree eventE (_ * A)) = triggerNB
-  .
-  Proof.
-    unfold interp_Es, interp_pE, pure_state, triggerNB. grind.
-  Qed.
-  Opaque interp_Es.
-End EVENTSL.
-End EventsL.
-Opaque EventsL.interp_Es.
-
 
 
 
@@ -348,7 +94,7 @@ Section MODSEML.
       match (finalize rv) with
       | Some rv => final rv
       | _ => angelic
-      end 
+      end
     | VisF (Choose X) k => demonic
     | VisF (Take X) k => angelic
     | VisF (Syscall fn args rvs) k => vis
@@ -1450,3 +1196,165 @@ Class sk_gnames := mk_sk_gnames { sk_gnames_contents :> Sk.t -> gnames }.
 Coercion sk_gnames_contents: Sk.t >-> gnames.
 
 Definition top_sk_gnames := mk_sk_gnames (fun _ => top_gnames).
+
+
+(*** TODO: Move to ModSem.v ***)
+Lemma interp_Es_unwrapU
+      prog R st0 (r: option R)
+  :
+    EventsL.interp_Es prog (unwrapU r) st0 = r <- unwrapU r;; Ret (st0, r)
+.
+Proof.
+  unfold unwrapU. des_ifs.
+  - rewrite EventsL.interp_Es_ret. grind.
+  - rewrite EventsL.interp_Es_triggerUB. unfold triggerUB. grind.
+Qed.
+
+Lemma interp_Es_unwrapN
+      prog R st0 (r: option R)
+  :
+    EventsL.interp_Es prog (unwrapN r) st0 = r <- unwrapN r;; Ret (st0, r)
+.
+Proof.
+  unfold unwrapN. des_ifs.
+  - rewrite EventsL.interp_Es_ret. grind.
+  - rewrite EventsL.interp_Es_triggerNB. unfold triggerNB. grind.
+Qed.
+
+Lemma interp_Es_assume
+      prog st0 (P: Prop)
+  :
+    EventsL.interp_Es prog (assume P) st0 = assume P;;; tau;; tau;; Ret (st0, tt)
+.
+Proof.
+  unfold assume.
+  repeat (try rewrite EventsL.interp_Es_bind; try rewrite bind_bind). grind.
+  rewrite EventsL.interp_Es_eventE.
+  repeat (try rewrite EventsL.interp_Es_bind; try rewrite bind_bind). grind.
+  rewrite EventsL.interp_Es_ret.
+  refl.
+Qed.
+
+Lemma interp_Es_guarantee
+      prog st0 (P: Prop)
+  :
+    EventsL.interp_Es prog (guarantee P) st0 = guarantee P;;; tau;; tau;; Ret (st0, tt)
+.
+Proof.
+  unfold guarantee.
+  repeat (try rewrite EventsL.interp_Es_bind; try rewrite bind_bind). grind.
+  rewrite EventsL.interp_Es_eventE.
+  repeat (try rewrite EventsL.interp_Es_bind; try rewrite bind_bind). grind.
+  rewrite EventsL.interp_Es_ret.
+  refl.
+Qed.
+
+
+
+
+
+Require Import Red IRed.
+Section AUX.
+  Lemma interp_Es_ext
+        prog R (itr0 itr1: itree _ R) st0
+    :
+      itr0 = itr1 -> EventsL.interp_Es prog itr0 st0 = EventsL.interp_Es prog itr1 st0
+  .
+  Proof. i; subst; refl. Qed.
+
+  Global Program Instance interp_Es_rdb: red_database (mk_box (@EventsL.interp_Es)) :=
+    mk_rdb
+      1
+      (mk_box EventsL.interp_Es_bind)
+      (mk_box EventsL.interp_Es_tau)
+      (mk_box EventsL.interp_Es_ret)
+      (mk_box EventsL.interp_Es_pE)
+      (mk_box EventsL.interp_Es_pE)
+      (mk_box EventsL.interp_Es_callE)
+      (mk_box EventsL.interp_Es_eventE)
+      (mk_box EventsL.interp_Es_triggerUB)
+      (mk_box EventsL.interp_Es_triggerNB)
+      (mk_box interp_Es_unwrapU)
+      (mk_box interp_Es_unwrapN)
+      (mk_box interp_Es_assume)
+      (mk_box interp_Es_guarantee)
+      (mk_box interp_Es_ext)
+  .
+
+  Lemma transl_all_unwrapU
+        mn R (r: option R)
+    :
+      transl_all mn (unwrapU r) = unwrapU r
+  .
+  Proof.
+    unfold unwrapU. des_ifs.
+    - rewrite transl_all_ret. grind.
+    - rewrite transl_all_triggerUB. unfold triggerUB. grind.
+  Qed.
+
+  Lemma transl_all_unwrapN
+        mn R (r: option R)
+    :
+      transl_all mn (unwrapN r) = unwrapN r
+  .
+  Proof.
+    unfold unwrapN. des_ifs.
+    - rewrite transl_all_ret. grind.
+    - rewrite transl_all_triggerNB. unfold triggerNB. grind.
+  Qed.
+
+  Lemma transl_all_assume
+        mn (P: Prop)
+    :
+      transl_all mn (assume P) = assume P;;; tau;; Ret (tt)
+  .
+  Proof.
+    unfold assume.
+    repeat (try rewrite transl_all_bind; try rewrite bind_bind). grind.
+    rewrite transl_all_eventE.
+    repeat (try rewrite transl_all_bind; try rewrite bind_bind). grind.
+    rewrite transl_all_ret.
+    refl.
+  Qed.
+
+  Lemma transl_all_guarantee
+        mn (P: Prop)
+    :
+      transl_all mn (guarantee P) = guarantee P;;; tau;; Ret (tt)
+  .
+  Proof.
+    unfold guarantee.
+    repeat (try rewrite transl_all_bind; try rewrite bind_bind). grind.
+    rewrite transl_all_eventE.
+    repeat (try rewrite transl_all_bind; try rewrite bind_bind). grind.
+    rewrite transl_all_ret.
+    refl.
+  Qed.
+
+  Lemma transl_all_ext
+        mn R (itr0 itr1: itree _ R)
+        (EQ: itr0 = itr1)
+    :
+      transl_all mn itr0 = transl_all mn itr1
+  .
+  Proof. subst; refl. Qed.
+
+  Global Program Instance transl_all_rdb: red_database (mk_box (@transl_all)) :=
+    mk_rdb
+      0
+      (mk_box transl_all_bind)
+      (mk_box transl_all_tau)
+      (mk_box transl_all_ret)
+      (mk_box transl_all_pE)
+      (mk_box transl_all_pE)
+      (mk_box transl_all_callE)
+      (mk_box transl_all_eventE)
+      (mk_box transl_all_triggerUB)
+      (mk_box transl_all_triggerNB)
+      (mk_box transl_all_unwrapU)
+      (mk_box transl_all_unwrapN)
+      (mk_box transl_all_assume)
+      (mk_box transl_all_guarantee)
+      (mk_box transl_all_ext)
+  .
+End AUX.

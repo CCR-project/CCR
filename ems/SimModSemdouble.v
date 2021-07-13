@@ -474,65 +474,430 @@ Section SIMMOD.
 
 End SIMMOD.
 
-Section SIMMOD.
-   Theorem adequacy_local_strong md_src md_tgt
-           (SIM: ModPair.sim md_src md_tgt)
-     :
-       <<CR: (refines_strong md_tgt md_src)>>
-   .
-   Proof.
-     admit "TODO".
-   Qed.
+Require Import SimGlobaldouble.
+Require Import Red IRed.
 
-   Context {CONF: EMSConfig}.
+Module TAC.
+  Ltac ired_l := try (prw _red_gen 2 0).
+  Ltac ired_r := try (prw _red_gen 1 0).
 
-   Theorem adequacy_local md_src md_tgt
-           (SIM: ModPair.sim md_src md_tgt)
-     :
-       <<CR: (refines md_tgt md_src)>>
-   .
-   Proof.
-     eapply ModSem.refines_strong_refines.
-     eapply adequacy_local_strong; et.
-   Qed.
+  Ltac ired_both := ired_l; ired_r.
 
-   Corollary adequacy_local_list_strong
-             mds_src mds_tgt
-             (FORALL: List.Forall2 ModPair.sim mds_src mds_tgt)
-     :
-       <<CR: refines_strong (Mod.add_list mds_tgt) (Mod.add_list mds_src)>>
-   .
-   Proof.
-     r. induction FORALL; ss.
-     { ii. auto. }
-     rewrite ! Mod.add_list_cons.
-     etrans.
-     { rewrite <- Mod.add_list_single. eapply refines_strong_proper_r.
-       rewrite ! Mod.add_list_single. eapply adequacy_local_strong; et. }
-     replace (Mod.lift x) with (Mod.add_list [x]); cycle 1.
-     { cbn. rewrite ModL.add_empty_r. refl. }
-     eapply refines_strong_proper_l; et.
-   Qed.
+  Ltac step := ired_both; gstep; econs; et; [try eapply Ord.S_lt|..].
+  Ltac steps := (repeat step); ired_both.
+End TAC.
+Import TAC.
 
-   Theorem adequacy_local2 md_src md_tgt
-           (SIM: ModPair.sim md_src md_tgt)
-     :
-       <<CR: (refines2 [md_tgt] [md_src])>>
-   .
-   Proof.
-     eapply ModSem.refines_strong_refines.
-     eapply adequacy_local_list_strong. econs; ss.
-   Qed.
+Section ADEQUACY.
+  Section SEMPAIR.
+    Variable ms_src: ModSemL.t.
+    Variable ms_tgt: ModSemL.t.
 
-   Corollary adequacy_local_list
-             mds_src mds_tgt
-             (FORALL: List.Forall2 ModPair.sim mds_src mds_tgt)
-     :
-       <<CR: refines (Mod.add_list mds_tgt) (Mod.add_list mds_src)>>
-   .
-   Proof.
-     eapply ModSem.refines_strong_refines.
-     eapply adequacy_local_list_strong; et.
-   Qed.
+    Variable mn: mname.
+    Variable world: Type.
+    Variable wf: world -> Any.t * Any.t -> Prop.
+    Variable le: world -> world -> Prop.
 
-End SIMMOD.
+    Hypothesis le_PreOrder: PreOrder le.
+
+    Hypothesis fnsems_find_iff:
+      forall fn,
+        (<<NONE: alist_find fn ms_src.(ModSemL.fnsems) = None>>) \/
+        (exists mn' f,
+            (<<MN: mn <> mn'>>) /\
+            (<<SRC: alist_find fn ms_src.(ModSemL.fnsems) = Some (transl_all mn' (T:=Any.t) ∘ f)>>) /\
+            (<<TGT: alist_find fn ms_tgt.(ModSemL.fnsems) = Some (transl_all mn' (T:=Any.t) ∘ f)>>)) \/
+        (exists f_src f_tgt,
+            (<<SRC: alist_find fn ms_src.(ModSemL.fnsems) = Some (transl_all mn (T:=Any.t) ∘ f_src)>>) /\
+            (<<TGT: alist_find fn ms_tgt.(ModSemL.fnsems) = Some (transl_all mn (T:=Any.t) ∘ f_tgt)>>) /\
+            (<<SIM: sim_fsem wf le f_src f_tgt>>)).
+
+
+    Variant g_lift_rel
+            (w0: world) (st_src st_tgt: p_state): Prop :=
+    | g_lift_rel_intro
+        w1
+        (LE: le w0 w1)
+        (MN: wf w1 (st_src mn, st_tgt mn))
+        (NMN: forall mn' (NIN: mn <> mn'), st_src mn' = st_tgt mn')
+    .
+
+    Variant my_r0:
+      forall R0 R1 (RR: R0 -> R1 -> Prop), Ord.t -> Ord.t -> (itree eventE R0) -> (itree eventE R1) -> Prop :=
+    | my_r0_intro
+        w0
+        (itr_src itr_tgt: itree Es Any.t)
+        st_src st_tgt o_src o_tgt
+        (SIM: sim_itree wf le o_src o_tgt w0 (st_src mn, itr_src) (st_tgt mn, itr_tgt))
+        (STATE: forall mn' (MN: mn <> mn'), st_src mn' = st_tgt mn')
+      :
+        my_r0 (fun '(st_src, ret_src) '(st_tgt, ret_tgt) =>
+                 g_lift_rel w0 st_src st_tgt /\ ret_src = ret_tgt)
+              (Ord.S (4 * o_src))%ord (Ord.S (4 * o_tgt))%ord
+              (EventsL.interp_Es (ModSemL.prog ms_src) (transl_all mn itr_src) st_src)
+              (EventsL.interp_Es (ModSemL.prog ms_tgt) (transl_all mn itr_tgt) st_tgt)
+    .
+
+    Let ord_lemma o0 o1 (LT: (o0 < o1)%ord)
+      :
+        (Ord.S (Ord.S (Ord.S (4 * o0))) < 4 * o1)%ord.
+    Proof.
+      eapply Ord.lt_le_lt.
+      { eapply Ord.S_lt. }
+      transitivity (4 * (Ord.S o0))%ord.
+      { rewrite OrdArith.mult_S.
+        transitivity (4 * o0 + Ord.S (Ord.S (Ord.S (Ord.S Ord.O))))%ord.
+        { rewrite ! OrdArith.add_S. rewrite OrdArith.add_O_r. refl. }
+        { eapply OrdArith.le_add_r.
+          rewrite ! Ord.from_nat_S. rewrite Ord.from_nat_O. refl. }
+      }
+      { eapply OrdArith.le_mult_r. eapply Ord.S_supremum. et. }
+    Qed.
+
+    Variant my_r1:
+      forall R0 R1 (RR: R0 -> R1 -> Prop), Ord.t -> Ord.t -> (itree eventE R0) -> (itree eventE R1) -> Prop :=
+    | my_r1_intro
+        mn' w0 st_src st_tgt
+        (MN: mn <> mn')
+        (SIM: g_lift_rel w0 st_src st_tgt)
+        (itr: itree Es Any.t)
+      :
+        my_r1 (fun '(st_src, ret_src) '(st_tgt, ret_tgt) =>
+                 g_lift_rel w0 st_src st_tgt /\ ret_src = ret_tgt)
+              (Ord.S (Ord.S (Ord.S Ord.O))) (Ord.S (Ord.S (Ord.S Ord.O)))
+              (EventsL.interp_Es (ModSemL.prog ms_src) (transl_all mn' itr) st_src)
+              (EventsL.interp_Es (ModSemL.prog ms_tgt) (transl_all mn' itr) st_tgt)
+    .
+
+    Let my_r := my_r0 \7/ my_r1.
+    Let sim_lift: my_r <7= simg.
+    Proof.
+      ginit.
+      { i. eapply cpn7_wcompat; eauto with paco. }
+      gcofix CIH. i. destruct PR.
+      { destruct H. punfold SIM. inv SIM.
+        - rr in RET. des. subst. step. splits; auto. econs; et.
+        - hexploit (fnsems_find_iff fn). i. des.
+          { steps. rewrite NONE. unfold unwrapU, triggerUB. step. ss. }
+          { steps. rewrite SRC. rewrite TGT. unfold unwrapU. ired_both.
+            guclo bindC_spec. econs.
+            { gbase. eapply CIH. right. econs; ss. econs; et. refl. }
+            { i. ss. des. destruct vret_src, vret_tgt. des; clarify. inv SIM.
+              hexploit K; et. i. des. pclearbot.
+              steps. gbase. eapply CIH. left. econs; et.
+            }
+          }
+          { hexploit (SIM (Some mn, varg) (Some mn, varg)); et. i. des.
+            steps. rewrite SRC. rewrite TGT. unfold unwrapU. ired_both.
+            guclo bindC_spec. econs.
+            { gbase. eapply CIH. left. econs; ss. et. }
+            { i. ss. destruct vret_src, vret_tgt. des; clarify. inv SIM0.
+              hexploit K; et. i. des. pclearbot.
+              steps. gbase. eapply CIH. left. econs; et.
+            }
+          }
+        - step. i. subst.
+          hexploit (K x_tgt). i. des. pclearbot.
+          steps. gbase. eapply CIH. left. econs; et.
+        - pclearbot. ired_both. gstep. econs.
+          { et. }
+          { eapply Ord.lt_S. eapply OrdArith.lt_mult_r; et.
+            rewrite Ord.from_nat_S. eapply Ord.S_pos. }
+          gbase. eapply CIH. left. econs; et.
+        - des. pclearbot. ired_both. steps. exists x. steps.
+          gbase. eapply CIH. left. econs; et.
+        - steps. i. hexploit K. i. pclearbot. steps.
+          gbase. eapply CIH. left. econs; et.
+        - pclearbot. steps. guclo ordC_spec. econs.
+          { refl. }
+          { etrans; [|apply Ord.S_le]. refl. }
+          gbase. eapply CIH. left. econs; et.
+          { unfold update. des_ifs. et. }
+          { i. unfold update. des_ifs. et. }
+        - pclearbot. steps. guclo ordC_spec. econs.
+          { refl. }
+          { etrans; [|apply Ord.S_le]. refl. }
+          gbase. eapply CIH. left. econs; et.
+        - pclearbot. ired_both. gstep. econs.
+          { et. }
+          { eapply Ord.lt_S. eapply OrdArith.lt_mult_r; et.
+            rewrite Ord.from_nat_S. eapply Ord.S_pos. }
+          gbase. eapply CIH. left. econs; et.
+        - steps. i. hexploit K. i. pclearbot. steps.
+          gbase. eapply CIH. left. econs; et.
+        - des. pclearbot. steps. exists x. steps.
+          gbase. eapply CIH. left. econs; et.
+        - pclearbot. steps. guclo ordC_spec. econs.
+          { etrans; [|apply Ord.S_le]. refl. }
+          { refl. }
+          gbase. eapply CIH. left. econs; et.
+          { unfold update. des_ifs. et. }
+          { i. unfold update. des_ifs. et. }
+        - pclearbot. steps. guclo ordC_spec. econs.
+          { etrans; [|apply Ord.S_le]. refl. }
+          { refl. }
+          gbase. eapply CIH. left. econs; et.
+      }
+      { destruct H. ides itr.
+        { steps. gstep. econs. esplits; et. }
+        { steps. gbase. eapply CIH. right. econs; et. }
+        rewrite <- ! bind_trigger. destruct e.
+        { resub. destruct c. hexploit (fnsems_find_iff fn). i. des.
+          { steps. rewrite NONE. unfold unwrapU, triggerUB. step. ss. }
+          { inv SIM. steps. rewrite SRC. rewrite TGT. unfold unwrapU. ired_both.
+            guclo bindC_spec. econs.
+            { gbase. eapply CIH. right. econs; ss. econs; et. }
+            { i. ss. des. destruct vret_src, vret_tgt. des; clarify.
+              steps. gbase. eapply CIH. right. econs; et. }
+          }
+          { inv SIM. hexploit (SIM0 (Some mn', args) (Some mn', args)); et. i. des.
+            steps. rewrite SRC. rewrite TGT. unfold unwrapU. ired_both.
+            guclo bindC_spec. econs.
+            { gbase. eapply CIH. left. econs; ss. et. }
+            { i. ss. destruct vret_src, vret_tgt. des; clarify.
+              steps. gbase. eapply CIH. right. econs; et.
+              inv SIM. econs.
+              { etrans; et. }
+              { et. }
+              { et. }
+            }
+          }
+        }
+        destruct s.
+        { resub. destruct p.
+          { steps. gbase. eapply CIH. right. econs; et.
+            inv SIM. econs; et.
+            { unfold update. des_ifs. }
+            { ii. unfold update. des_ifs. et. }
+          }
+          { steps. gbase. eapply CIH. right.
+            replace (st_tgt mn') with (st_src mn'); et.
+            { econs; et. }
+            { inv SIM. et. }
+          }
+        }
+        { resub. destruct e.
+          { ired_both. gstep. eapply simg_chooseR; et.
+            { eapply Ord.S_lt. }
+            i. gstep. eapply simg_chooseL; et.
+            { eapply Ord.S_lt. }
+            exists x. steps.
+            gbase. eapply CIH; et. right. econs; et.
+          }
+          { ired_both. gstep. eapply simg_takeL; et.
+            { eapply Ord.S_lt. }
+            i. gstep. eapply simg_takeR; et.
+            { eapply Ord.S_lt. }
+            exists x. steps.
+            gbase. eapply CIH; et. right. econs; et.
+          }
+          { steps. i. subst. steps.
+            gbase. eapply CIH; et. right. econs; et. }
+        }
+      }
+      Unshelve. all: try exact 0.
+    Qed.
+
+    Context `{CONF: EMSConfig}.
+
+    Hypothesis INIT:
+      exists w, g_lift_rel w (ModSemL.initial_p_state ms_src) (ModSemL.initial_p_state ms_tgt).
+
+    Lemma adequacy_local_aux (P Q: Prop)
+          (WF: Q -> P)
+      :
+        (Beh.of_program (ModSemL.compile ms_tgt (Some P)))
+        <1=
+        (Beh.of_program (ModSemL.compile ms_src (Some Q))).
+    Proof.
+      eapply adequacy_global_itree; ss.
+      hexploit INIT. i. des.
+      eexists _, _. ginit.
+      { eapply cpn7_wcompat; eauto with paco. }
+      unfold ModSemL.initial_itr, assume.
+      hexploit (fnsems_find_iff "main"). i. des.
+      { steps. unshelve esplits; et. unfold ITree.map, unwrapU, triggerUB. steps.
+        rewrite NONE. steps. ss. }
+      { steps. unshelve esplits; et. unfold ITree.map, unwrapU. steps.
+        rewrite SRC. rewrite TGT. steps. guclo bindC_spec. econs.
+        { gfinal. right. eapply sim_lift. right. econs; et. }
+        { i. destruct vret_src, vret_tgt. des; clarify. steps.
+          gstep. econs; et. }
+      }
+      { inv H. hexploit (SIM (None, initial_arg) (None, initial_arg)); et. i. des.
+        steps. unshelve esplits; et. unfold ITree.map, unwrapU. steps.
+        rewrite SRC. rewrite TGT. steps. guclo bindC_spec. econs.
+        { gfinal. right. eapply sim_lift. left. econs; et. }
+        { i. destruct vret_src, vret_tgt. des; clarify. steps.
+          gstep. econs; et. }
+      }
+      Unshelve. all: try exact 0.
+    Qed.
+  End SEMPAIR.
+
+  (* TODO: move it to Coqlib *)
+  Lemma Forall2_In_l A B R (l0: list A) (l1: list B) a
+        (FORALL2: Forall2 R l0 l1)
+        (IN: In a l0)
+    :
+      exists b, In b l1 /\ R a b.
+  Proof.
+    revert IN. induction FORALL2; ss. i. des.
+    { subst. et. }
+    { eapply IHFORALL2 in IN; et. i. des. esplits; et. }
+  Qed.
+
+  (* From Hoare.v *)
+  Lemma Forall2_eq
+        A
+        (xs0 xs1: list A)
+        (EQ: Forall2 eq xs0 xs1)
+    :
+      <<EQ: xs0 = xs1>>
+  .
+  Proof. induction EQ; ss. des; subst. refl. Qed.
+
+  Theorem adequacy_local_strong md_src md_tgt
+          (SIM: ModPair.sim md_src md_tgt)
+    :
+      <<CR: (refines_strong md_tgt md_src)>>
+  .
+  Proof.
+    ii. unfold ModL.compile, ModL.enclose in *.
+    destruct (classic (ModL.wf (ModL.add (Mod.add_list ctx) md_src))).
+    2:{ eapply ModSemL.compile_not_wf. ss. }
+    pose (sk_tgt := (ModL.sk (ModL.add (Mod.add_list ctx) md_tgt))).
+    pose (sk_src := (ModL.sk (ModL.add (Mod.add_list ctx) md_src))).
+    assert (SKEQ: sk_tgt = sk_src).
+    { unfold sk_src, sk_tgt. ss. f_equal.
+      inv SIM. auto. }
+    rr in H. unfold ModL.enclose in *. fold sk_src in H. des. inv WF.
+    rename SK into SKWF.
+    rename wf_fnsems into FNWF.
+    rename wf_initial_mrs into MNWF.
+    inv SIM. hexploit (sim_modsem (Sk.canon sk_tgt)).
+    { etrans; [|eapply Sk.sort_incl]. ss. ii. eapply in_or_app. auto. }
+    { ss. fold sk_src in SKWF. rewrite SKEQ. clear - SKWF.
+      unfold Sk.wf in *. ss. eapply Permutation.Permutation_NoDup; [|et].
+      eapply Permutation.Permutation_map. eapply Sk.SkSort.sort_permutation. }
+    i. inv H. des.
+    assert (WFTGT: ModL.wf (ModL.add (Mod.add_list ctx) md_tgt)).
+    { rr. unfold ModL.enclose. fold sk_src sk_tgt.
+      rewrite SKEQ in *. split; auto. econs.
+      { clear MNWF.
+        match goal with
+        | H: NoDup ?l0 |- NoDup ?l1 => replace l1 with l0
+        end; auto. ss.
+        rewrite ! List.map_app. f_equal. rewrite ! List.map_map.
+        eapply Forall2_eq. eapply Forall2_apply_Forall2; et.
+        i. destruct a, b. inv H. ss.
+      }
+      { clear FNWF.
+        match goal with
+        | H: NoDup ?l0 |- NoDup ?l1 => replace l1 with l0
+        end; auto. ss.
+        rewrite ! List.map_app. f_equal. ss.
+        rewrite sim_mn. auto.
+      }
+    }
+    eapply adequacy_local_aux in PR; et.
+    { ss. ii. fold sk_src sk_tgt. rewrite <- SKEQ. rewrite ! alist_find_app_o. des_ifs.
+      { eapply alist_find_some in Heq.
+        rewrite Mod.add_list_fnsems in Heq.
+        rewrite <- fold_right_app_flat_map in Heq. ss.
+        eapply in_flat_map in Heq. des.
+        eapply in_map_iff in Heq0. des. destruct x1. ss. clarify.
+        right. left. esplits; et.
+        instantiate (1:=ModSem.mn (Mod.get_modsem md_src (Sk.sort sk_tgt))).
+        ii. eapply NoDup_app_disjoint.
+        { rewrite List.map_app in MNWF. eapply MNWF. }
+        { rewrite Mod.add_list_initial_mrs.
+          rewrite <- fold_right_app_flat_map. eapply in_map.
+          eapply in_flat_map. ss. esplits; et. }
+        { ss. rewrite <- SKEQ. rewrite H. auto. }
+      }
+      { rewrite ! alist_find_map_snd. uo. des_ifs_safe ltac:(auto).
+        eapply alist_find_some in Heq0. right. right.
+        eapply Forall2_In_l in sim_fnsems; et. des. inv sim_fnsems0.
+        destruct b. esplits; et. erewrite alist_find_some_iff; et.
+        { rewrite sim_mn. et. }
+        { inv WFTGT. inv H1. ss. rewrite List.map_app in wf_fnsems.
+          apply nodup_app_r in wf_fnsems.
+          rewrite List.map_map in wf_fnsems. ss. fold sk_tgt in wf_fnsems.
+          erewrite List.map_ext; et. i. destruct a. ss.
+        }
+        { ss. inv H. ss. clarify. }
+      }
+    }
+    { exists w_init. econs.
+      { refl. }
+      { unfold ModSemL.initial_p_state.
+        erewrite ! alist_find_some_iff; et.
+        { clear FNWF.
+          match goal with
+          | H: NoDup ?l0 |- NoDup ?l1 => replace l1 with l0
+          end; auto. ss.
+          fold sk_src. fold sk_tgt. rewrite <- SKEQ.
+          rewrite ! List.map_app. f_equal. ss. f_equal. auto.
+        }
+        { ss. eapply in_or_app. right. ss. left. fold sk_tgt. f_equal. auto. }
+        { ss. eapply in_or_app. right. ss. left. fold sk_src. rewrite SKEQ. auto. }
+      }
+      { ii. ss. fold sk_src sk_tgt. rewrite SKEQ. unfold ModSemL.initial_p_state.
+        ss. rewrite ! alist_find_app_o. des_ifs_safe.
+        rewrite <- SKEQ. ss. rewrite ! eq_rel_dec_correct. des_ifs. }
+    }
+  Qed.
+
+  Context {CONF: EMSConfig}.
+
+  Theorem adequacy_local md_src md_tgt
+          (SIM: ModPair.sim md_src md_tgt)
+    :
+      <<CR: (refines md_tgt md_src)>>
+  .
+  Proof.
+    eapply ModSem.refines_strong_refines.
+    eapply adequacy_local_strong; et.
+  Qed.
+
+  Corollary adequacy_local_list_strong
+            mds_src mds_tgt
+            (FORALL: List.Forall2 ModPair.sim mds_src mds_tgt)
+    :
+      <<CR: refines_strong (Mod.add_list mds_tgt) (Mod.add_list mds_src)>>
+  .
+  Proof.
+    r. induction FORALL; ss.
+    { ii. auto. }
+    rewrite ! Mod.add_list_cons.
+    etrans.
+    { rewrite <- Mod.add_list_single. eapply refines_strong_proper_r.
+      rewrite ! Mod.add_list_single. eapply adequacy_local_strong; et. }
+    replace (Mod.lift x) with (Mod.add_list [x]); cycle 1.
+    { cbn. rewrite ModL.add_empty_r. refl. }
+    eapply refines_strong_proper_l; et.
+  Qed.
+
+  Theorem adequacy_local2 md_src md_tgt
+          (SIM: ModPair.sim md_src md_tgt)
+    :
+      <<CR: (refines2 [md_tgt] [md_src])>>
+  .
+  Proof.
+    eapply ModSem.refines_strong_refines.
+    eapply adequacy_local_list_strong. econs; ss.
+  Qed.
+
+  Corollary adequacy_local_list
+            mds_src mds_tgt
+            (FORALL: List.Forall2 ModPair.sim mds_src mds_tgt)
+    :
+      <<CR: refines (Mod.add_list mds_tgt) (Mod.add_list mds_src)>>
+  .
+  Proof.
+    eapply ModSem.refines_strong_refines.
+    eapply adequacy_local_list_strong; et.
+  Qed.
+
+End ADEQUACY.
