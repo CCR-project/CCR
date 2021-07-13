@@ -30,8 +30,11 @@ Proof.
 Qed.
 
 Create HintDb ord_step.
-#[export] Hint Resolve ord_from_lt_sub OrdArith.lt_add_r Nat.lt_succ_diag_r OrdArith.lt_from_nat: ord_step.
+#[export] Hint Resolve OrdArith.lt_add_r OrdArith.lt_from_nat: ord_step.
+#[export] Hint Extern 5 => eapply Nat.lt_succ_diag_r: ord_step.
+#[export] Hint Extern 5 => eapply ord_from_lt_sub; lia: ord_step.
 #[export] Hint Extern 1000 => lia: ord_step.
+(* Hint Rewrite <- OrdArith.add_from_nat: ord_step. *)
 
 Ltac oauto :=
   try by (simpl; let bar := fresh in place_bar bar; clear_until bar; eauto with ord_step).
@@ -47,9 +50,6 @@ Ltac ired_both := ired_l; ired_r.
 
 (* "safe" simulation constructors *)
 Section SIM.
-
-  Context `{ns: gnames}.
-
   Variable world: Type.
 
   Let st_local: Type := (Any.t).
@@ -68,12 +68,6 @@ Section SIM.
       (RET: RR st_src0 st_tgt0 v_src v_tgt)
     :
       _safe_sim_itree sim_itree RR i_src0 i_tgt0 w0 (st_src0, (Ret v_src)) (st_tgt0, (Ret v_tgt))
-  | safe_sim_itree_tau
-      i_src0 i_tgt0 w0 st_src0 st_tgt0
-      i_src1 i_tgt1 i_src i_tgt
-      (K: sim_itree _ _ RR i_src1 i_tgt1 w0 (st_src0, i_src) (st_tgt0, i_tgt))
-    :
-      _safe_sim_itree sim_itree RR i_src0 i_tgt0 w0 (st_src0, tau;; i_src) (st_tgt0, tau;; i_tgt)
   | safe_sim_itree_call
       i_src0 i_tgt0 w w0 st_src0 st_tgt0
       fn varg k_src k_tgt
@@ -172,7 +166,7 @@ End SIM.
 
 
 Section HLEMMAS.
-  Context `{Σ: GRA.t} `{ns: gnames}.
+  Context `{Σ: GRA.t}.
   Local Opaque GRA.to_URA.
 
   Variant mk_wf (A: Type)
@@ -469,8 +463,8 @@ Section HLEMMAS.
         mp_tgt
         (le: A -> A -> Prop)
         (eqr: Any.t -> Any.t -> Any.t -> Any.t -> Prop)
-        (R: A -> Any.t -> Any.t -> iProp)
-        (FUEL: (14 < n)%ord)
+        (R: A -> Any.t -> Any.t -> iProp) n0
+        (FUEL: (n0 + 14 < n)%ord)
 
         ctx l
         (ACC: current_iPropL ctx l)
@@ -762,7 +756,7 @@ Notation "wf n '----------------------------------------------------------------
        format "wf  n '//' '------------------------------------------------------------------' '//' src0 '//' tgt0 '//' '------------------------------------------------------------------' '//' '//' '------------------------------------------------------------------' '//' src2 '//' '//' '//' tgt2 '//' ").
 
 Section TEST.
-  Context `{Σ: GRA.t} `{ns: gnames}.
+  Context `{Σ: GRA.t}.
   Let wf := (mk_wf (fun (_ : unit) (_ _ : Any.t) => bi_pure True)).
   Let le := fun (_ _: unit) => True.
   Variable (srcs0 tgts0: Any.t).
@@ -785,14 +779,14 @@ End TEST.
 
 
 Ltac astep_full _fn _args _next _n1 :=
-  eapply (@APC_step_clo _ _ _fn _args _next _n1);
+  eapply (@APC_step_clo _ _fn _args _next _n1);
   [(try by (eapply Ord.eq_lt_lt; [(symmetry; eapply OrdArith.add_from_nat)|(eapply OrdArith.lt_from_nat; lia)]))|
    (try by ((try stb_tac); refl))|
    (try by (eapply OrdArith.lt_from_nat; lia))|
   ].
 
 Ltac astep _fn _args :=
-  eapply (@APC_step_clo _ _ _fn _args);
+  eapply (@APC_step_clo _ _fn _args);
   [oauto|
    (try by ((try stb_tac); refl))|
    oauto|
@@ -805,7 +799,7 @@ Ltac acatch :=
   end.
 
 Ltac astart _at_most :=
-  eapply (@APC_start_clo _ _ _at_most);
+  eapply (@APC_start_clo _ _at_most);
   [eauto with ord_kappa|
    oauto|
   ]
@@ -836,13 +830,13 @@ Ltac init :=
 Ltac harg :=
   let PRE := constr:("PRE") in
   let INV := constr:("INV") in
-  eapply (@harg_clo _ _ _ PRE INV);
+  eapply (@harg_clo _ _ PRE INV);
   [eassumption
   |
   ]; i.
 
 Tactic Notation "hret" uconstr(a) :=
-  eapply (@hret_clo _ _ _ a); unshelve_goal;
+  eapply (@hret_clo _ _ a); unshelve_goal;
   [oauto
   |eassumption
   |
@@ -854,7 +848,7 @@ Tactic Notation "hcall" uconstr(o) uconstr(x) uconstr(a) "with" constr(Hns) :=
   let POST := get_fresh_name_tac "POST" in
   let INV := get_fresh_name_tac "INV" in
   let Hns := select_ihyps Hns in
-  eapply (@hcall_clo _ _ Hns POST INV o _ x _ a);
+  eapply (@hcall_clo _ Hns POST INV o _ x _ a);
   unshelve_goal;
   [eassumption
   |start_ipm_proof
@@ -867,7 +861,7 @@ Tactic Notation "hcall_weaken" uconstr(fsp) uconstr(o) uconstr(x) uconstr(a) "wi
   let POST := get_fresh_name_tac "POST" in
   let INV := get_fresh_name_tac "INV" in
   let Hns := select_ihyps Hns in
-  eapply (@hcall_clo_weaken _ _ Hns POST INV fsp o x _ a);
+  eapply (@hcall_clo_weaken _ Hns POST INV fsp o x _ a);
   unshelve_goal;
   [
   |eassumption

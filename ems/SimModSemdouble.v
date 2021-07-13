@@ -31,12 +31,9 @@ Local Open Scope nat_scope.
 
 
 
-
+Existing Instance top_gnames.
 
 Section SIM.
-
-  Context `{ns: gnames}.
-
   Let st_local: Type := (Any.t).
 
   Variable world: Type.
@@ -55,12 +52,6 @@ Section SIM.
       (RET: RR st_src0 st_tgt0 v_src v_tgt)
     :
       _sim_itree sim_itree RR i_src0 i_tgt0 w0 (st_src0, (Ret v_src)) (st_tgt0, (Ret v_tgt))
-  | sim_itree_tau
-      i_src0 i_tgt0 w0 st_src0 st_tgt0
-      i_src1 i_tgt1 i_src i_tgt
-      (K: sim_itree _ _ RR i_src1 i_tgt1 w0 (st_src0, i_src) (st_tgt0, i_tgt))
-    :
-      _sim_itree sim_itree RR i_src0 i_tgt0 w0 (st_src0, tau;; i_src) (st_tgt0, tau;; i_tgt)
   | sim_itree_call
       i_src0 i_tgt0 w w0 st_src0 st_tgt0
       fn varg k_src k_tgt
@@ -169,13 +160,6 @@ Section SIM.
     :
       _sim_itree sim_itree RR i_src0 i_tgt0 w0 (st_src0, i_src)
                  (st_tgt0, trigger (PGet) >>= k_tgt)
-  | sim_itree_call_fail
-      i_src0 i_tgt0 w0 st_src0 st_tgt0
-      fn varg k_src i_tgt
-      (FAIL: ~ ns fn)
-    :
-      _sim_itree sim_itree RR i_src0 i_tgt0 w0 (st_src0, trigger (Call fn varg) >>= k_src)
-                 (st_tgt0, i_tgt)
   .
 
   Definition lift_rel {R_src R_tgt} (w0: world) (RR: R_src -> R_tgt -> Prop)
@@ -306,8 +290,6 @@ Section SIM.
       { eapply OrdArith.add_base_l. }
       { eapply OrdArith.add_base_l. }
       eapply sim_itree_mon; eauto with paco.
-    + rewrite ! bind_tau. econs; eauto.
-      econs 2; eauto with paco. econs; eauto with paco.
     + rewrite ! bind_bind.
       econs; eauto.
       i. exploit K; eauto. i. des. esplits.
@@ -347,7 +329,6 @@ Section SIM.
     + rewrite ! bind_bind. econs; eauto.
       { eapply OrdArith.lt_add_r; eauto. }
       eapply rclo8_clo_base. econs; eauto.
-    + rewrite ! bind_bind. econs; eauto.
   Qed.
 
   Lemma lbindC_spec: lbindC <9= gupaco8 (_sim_itree) (cpn8 (_sim_itree)).
@@ -365,7 +346,7 @@ Lemma self_sim_itree `{ns: gnames}:
 Proof.
   pcofix CIH. i. pfold. ides itr.
   { eapply sim_itree_ret; ss. }
-  { eapply sim_itree_tau. right. eapply CIH; ss. }
+  { econs; [eapply Ord.S_lt|]. left. pfold. econs; [eapply Ord.S_lt|]. et. }
   destruct e.
   { dependent destruction c. rewrite <- ! bind_trigger. eapply sim_itree_call; ss.
     ii; subst. esplits. right. eapply CIH.
@@ -376,8 +357,8 @@ Proof.
     { econs; [eapply Ord.S_lt|]. left. pfold. econs; [eapply Ord.S_lt|]. et. }
   }
   { rewrite <- ! bind_trigger. resub. dependent destruction e.
-    { econs 11; [eapply Ord.S_lt|]. i. left. pfold. econs 6; [eapply Ord.S_lt|]. et. }
-    { econs 7; [eapply Ord.S_lt|]. i. left. pfold. econs 12; [eapply Ord.S_lt|]. et. }
+    { econs 10; [eapply Ord.S_lt|]. i. left. pfold. econs 5; [eapply Ord.S_lt|]. et. }
+    { econs 6; [eapply Ord.S_lt|]. i. left. pfold. econs 11; [eapply Ord.S_lt|]. et. }
     { econs; et. }
   }
 Qed.
@@ -435,14 +416,13 @@ End ModSemPair.
 
 Module ModPair.
 Section SIMMOD.
-   Context `{ns: sk_gnames}.
    Variable (md_src md_tgt: Mod.t).
    Inductive sim: Prop := mk {
      sim_modsem:
        forall sk
               (SKINCL: Sk.incl md_tgt.(Mod.sk) sk)
               (SKWF: Sk.wf sk),
-         <<SIM: ModSemPair.sim (ns:=sk_gnames_contents sk) (md_src.(Mod.get_modsem) sk) (md_tgt.(Mod.get_modsem) sk)>>;
+         <<SIM: ModSemPair.sim (md_src.(Mod.get_modsem) sk) (md_tgt.(Mod.get_modsem) sk)>>;
      sim_sk: <<SIM: md_src.(Mod.sk) = md_tgt.(Mod.sk)>>;
    }.
 
@@ -495,8 +475,6 @@ Section SIMMOD.
 End SIMMOD.
 
 Section SIMMOD.
-   Local Existing Instances top_sk_gnames.
-
    Theorem adequacy_local_strong md_src md_tgt
            (SIM: ModPair.sim md_src md_tgt)
      :

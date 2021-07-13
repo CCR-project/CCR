@@ -104,7 +104,7 @@ Ltac iarg :=
   let PRE := constr:("PRE") in
   let INV := constr:("INV") in
   let CLOSED := constr:("☃CLOSED") in
-  eapply (@harg_clo _ _ _ PRE INV);
+  eapply (@harg_clo _ _ PRE INV);
   [eassumption
   |
   ];
@@ -123,7 +123,7 @@ Tactic Notation "icall_open" uconstr(o) uconstr(x) "with" constr(Hns) :=
   let INV := constr:("☃CLOSED") in
   let Hns := select_ihyps Hns in
   let Hns := constr:("☃CLOSED"::Hns) in
-  eapply (@hcall_clo _ _ Hns POST INV o _ x _ (inr (_, _)));
+  eapply (@hcall_clo _ Hns POST INV o _ x _ (inr (_, _)));
   unshelve_goal;
   [eassumption
   |start_ipm_proof; iSplitL "☃CLOSED"; [iModIntro; iSplitL "☃CLOSED"; [iExact "☃CLOSED"|ss]|]
@@ -145,7 +145,7 @@ Tactic Notation "icall_weaken" uconstr(ftsp) uconstr(o) uconstr(x) uconstr(a) "w
   let TMP := constr:("☃TMP") in
   let Hns := select_ihyps Hns in
   let Hns := constr:("☃CLOSED"::Hns) in
-  eapply (@hcall_clo_weaken _ _ Hns POST INV ftsp o x _ (inl a));
+  eapply (@hcall_clo_weaken _ Hns POST INV ftsp o x _ (inl a));
   unshelve_goal;
   [|eassumption
    |start_ipm_proof; iFrame "☃CLOSED"
@@ -164,7 +164,7 @@ Tactic Notation "icall_weaken" uconstr(ftsp) uconstr(o) uconstr(x) uconstr(a) "w
   ].
 
 Tactic Notation "iret" uconstr(a) :=
-  eapply (@hret_clo _ _ _ (inl a)); unshelve_goal;
+  eapply (@hret_clo _ _ (inl a)); unshelve_goal;
   [eauto with ord_step
   |eassumption
   |

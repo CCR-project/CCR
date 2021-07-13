@@ -1,4 +1,4 @@
-Require Import HoareDef KnotHeader KnotMain0 KnotMain1 Knot1 SimModSemL SimModSem.
+Require Import HoareDef KnotHeader KnotMain0 KnotMain1 Knot1 SimModSemdouble.
 Require Import Coqlib.
 Require Import ImpPrelude.
 Require Import Skeleton.
@@ -16,7 +16,7 @@ From ExtLib Require Import
      Structures.Maps
      Data.Map.FMapAList.
 
-Require Import HTactics ProofMode Invariant.
+Require Import HTacticsdouble ProofMode Invariant.
 Require Import STB.
 
 Local Open Scope nat_scope.
@@ -148,7 +148,7 @@ Section SIMMODSEM.
       mDesAll. subst. rewrite Any.upcast_downcast. steps.
       astop. steps. hret _; ss.
     }
-    Unshelve. all: ss.
+    Unshelve. all: ss. all: try exact 0.
   Qed.
 
 End SIMMODSEM.
