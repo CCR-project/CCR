@@ -38,7 +38,8 @@ Section SIMMODSEM.
     { mDesAll. des; clarify.
       steps. gstep. econs; et. i. exists 100.
       steps. hret _; ss.
-      iModIntro. iSplit; ss. iRight.
+      iModIntro. iSplit; ss.
+      iRight.
       iCombine "A" "A1" as "A".
       iEval (rewrite ReadyBall) in "A". ss.
     }

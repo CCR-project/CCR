@@ -23,7 +23,7 @@ Section CANNON.
       powder <- trigger PGet;; powder <- powder↓?;;
       r <- (div 1 powder)?;;
       _ <- trigger (Syscall "print" [r]↑ top1);;
-      _ <- trigger (PPut r↑);;
+      _ <- trigger (PPut (powder - 1)%Z↑);;
       Ret r
   .
 
