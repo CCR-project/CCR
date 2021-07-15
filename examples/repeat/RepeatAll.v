@@ -58,6 +58,6 @@ Section PROOF.
     { eapply adequacy_open. i. exists ε. splits; ss. g_wf_tac. }
     eapply refines2_cons.
     { eapply Add01proof.correct; et. }
-    { eapply Repeat01proof.correct; et. }
+    { eapply Repeat01proof.correct; et. unfold to_closed_stb. ii. des_ifs. }
   Qed.
 End PROOF.

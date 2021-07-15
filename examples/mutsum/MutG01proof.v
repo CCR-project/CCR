@@ -64,7 +64,7 @@ Section SIMMODSEM.
       } steps.
       hret _; ss. iPureIntro. esplits; ss.
       f_equal. f_equal. lia.
-      Unshelve. all: ss.
+      Unshelve. all: ss. all: try exact 0.
   Qed.
 
 End SIMMODSEM.

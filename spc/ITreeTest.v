@@ -60,6 +60,7 @@ Qed.
 Goal (infloop (E:=void1) (S:=void) (Ret 1)) ≈ (infloop (tau;; Ret 1)).
 Proof.
   unfold infloop. f_equiv. ii.
+  Local Transparent resum_itr.
   unfold resum_itr. repeat (try rewrite ! interp_ret; try rewrite ! interp_tau). irw.
   rewrite tau_eutt. refl.
 Qed.

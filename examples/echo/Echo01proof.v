@@ -150,7 +150,7 @@ Section SIMMODSEM.
         { iModIntro. iSplits; ss; et. }
     }
   Unshelve.
-    all: ss.
+    all: ss. all: try exact 0.
   Qed.
 
 End SIMMODSEM.

@@ -1,4 +1,4 @@
-Require Import HoareDef STB KnotHeader Knot0 Knot1 SimModSemL SimModSem.
+Require Import HoareDef STB KnotHeader Knot0 Knot1 SimModSem.
 Require Import Coqlib.
 Require Import ImpPrelude.
 Require Import Skeleton.
@@ -209,7 +209,7 @@ Section SIMMODSEM.
         { refl. }
       }
     }
-    Unshelve. all: ss.
+    Unshelve. all: ss. all: try exact 0.
   Qed.
 
 End SIMMODSEM.

@@ -92,7 +92,7 @@ Section SIMMODSEM.
       { red. esplits; et. rr. econs; ss. }
     }
   Unshelve.
-    all: ss.
+    all: ss. all: try exact 0.
   Qed.
 
 End SIMMODSEM.

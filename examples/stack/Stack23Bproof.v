@@ -187,7 +187,7 @@ Section SIMMODSEM.
       { iModIntro. iFrame; ss; et. }
     }
   Unshelve.
-    all: ss.
+    all: try exact 0. all: ss.
   Qed.
 
 End SIMMODSEM.

@@ -58,12 +58,11 @@ Section SIMMODSEM.
       imp_steps.
       rewrite _UNWRAPU1.
       unfold ccallU. imp_steps.
-      gstep. econs; ss. i. exists 100. imp_steps.
       rewrite _UNWRAPU5. imp_steps.
       unfold unblk in *. des_ifs_safe; ss; clarify.
       imp_steps.
       unfold unint in *. ss; clarify. des_ifs; clarify.
-      gstep. econs; ss. i. exists 100. imp_steps.
+      imp_steps.
       red. esplits; et.
     }
     econs; ss.
@@ -78,12 +77,11 @@ Section SIMMODSEM.
       unfold unblk in *. des_ifs.
       rewrite _UNWRAPU1. ss.
       unfold ccallU. imp_steps.
-      gstep. econs; ss. i. exists 100. imp_steps.
       rewrite _UNWRAPU2. ss.
       imp_steps.
       red. esplits; et.
     }
-    Unshelve. all: ss.
+    Unshelve. all: try exact 0. all: ss.
   Qed.
 
 End SIMMODSEM.

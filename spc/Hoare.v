@@ -32,15 +32,6 @@ Proof.
   rewrite HOM. f_equal. eapply IHxi; et.
 Qed.
 
-Lemma Forall2_eq
-      A
-      (xs0 xs1: list A)
-      (EQ: Forall2 eq xs0 xs1)
-  :
-    <<EQ: xs0 = xs1>>
-.
-Proof. induction EQ; ss. des; subst. refl. Qed.
-
 (*** TODO: move to Coqlib ***)
 Lemma find_app
       X (xs0 xs1: list X) (f: X -> bool) x
@@ -113,7 +104,7 @@ Section CANCELSTB.
       Beh.of_program (@ModL.compile _ CONFT (Mod.add_list mds_tgt)) <1=
       Beh.of_program (@ModL.compile _ CONFS (Mod.add_list mds_src)).
   Proof.
-    ii. eapply adequacy_type_m2s.
+    ii. eapply adequacy_type_m2s; et.
     eapply adequacy_type_m2m; et.
     eapply adequacy_type_t2m; et.
     i. exploit MAINM; et. i. des. esplits; et.

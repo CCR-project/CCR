@@ -56,10 +56,9 @@ Section SIMMODSEM.
       des_ifs.
       2:{ exfalso; apply n. solve_NoDup. }
       unfold ccallU. imp_steps.
-      gstep. econs; ss. i. exists 100. imp_steps.
       red. esplits; et.
     }
-    Unshelve. all: ss.
+    Unshelve. all: try exact 0. all: ss.
   Qed.
 
 End SIMMODSEM.

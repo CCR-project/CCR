@@ -304,6 +304,49 @@ Proof.
   eapply _beh_dstep; et.
 Qed.
 
+Variant dstep_clo (r: L.(state) -> Tr.t -> Prop): L.(state) -> Tr.t -> Prop :=
+| dstep_clo_intro
+    st0 tr st1 ev
+    (SRT: L.(state_sort) st0 = demonic)
+    (STEP: _.(step) st0 ev st1)
+    (STEP: r st1 tr)
+  :
+    dstep_clo r st0 tr
+.
+
+Lemma dstep_clo_mon: monotone2 dstep_clo.
+Proof. ii. inv IN. econs; et. Qed.
+
+Lemma dstep_clo_spec: dstep_clo <3= gupaco2 (_of_state) (cpn2 _of_state).
+Proof.
+  intros. eapply prespect2_uclo; eauto with paco. econs.
+  { eapply dstep_clo_mon. }
+  i. inv PR0. pfold. econs 5; et.
+  exploit wf_demonic; et. i; clarify.
+  red. esplits; et. eapply of_state_mon; et.
+Qed.
+
+Variant astep_clo (r: L.(state) -> Tr.t -> Prop): L.(state) -> Tr.t -> Prop :=
+| astep_clo_intro
+    st0 tr
+    (SRT: L.(state_sort) st0 = angelic)
+    (STEP: forall st1, _.(step) st0 None st1 -> r st1 tr)
+  :
+    astep_clo r st0 tr
+.
+
+Lemma astep_clo_mon: monotone2 astep_clo.
+Proof. ii. inv IN. econs; et. Qed.
+
+Lemma astep_clo_spec: astep_clo <3= gupaco2 (_of_state) (cpn2 _of_state).
+Proof.
+  intros. eapply prespect2_uclo; eauto with paco. econs.
+  { eapply astep_clo_mon. }
+  i. inv PR0. pfold. econs 6; et. ii.
+  exploit wf_angelic; et. i; clarify.
+  red. esplits; et. eapply of_state_mon; et.
+Qed.
+
 End BEHAVES.
 
 End Beh.

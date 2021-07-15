@@ -62,7 +62,7 @@ Section SIMMODSEM.
       rewrite insert_delete. auto.
     }
   Unshelve.
-    all: ss.
+    all: try exact 0. all: ss.
   Qed.
 
 End SIMMODSEM.

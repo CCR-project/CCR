@@ -171,7 +171,7 @@ Section SIMMODSEM.
     end;
 
     match goal with
-    | |- gpaco7 _ _ _ _ _ _ _ _ _ (Any.pair ?mp_src↑ _, _) ((?mp_tgt↑), _) =>
+    | |- gpaco8 _ _ _ _ _ _ _ _ _ _ (Any.pair ?mp_src↑ _, _) ((?mp_tgt↑), _) =>
 
       (* rename mr_src into tmp; let name := fresh "res0" in rename tmp into name *)
       (* ; *)
@@ -361,7 +361,7 @@ Section SIMMODSEM.
         { iModIntro. iSplits; ss; et. iPureIntro. eapply sim_update_u; et. }
     }
   Unshelve.
-    all: ss.
+    all: try exact 0. all: ss.
   Qed.
 
 End SIMMODSEM.

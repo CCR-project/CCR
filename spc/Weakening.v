@@ -22,7 +22,12 @@ From ExtLib Require Import
 Set Implicit Arguments.
 
 
-
+Module TAC.
+  Ltac steps := repeat (_steps oauto; des_ifs_safe).
+  Ltac force_l := _force_l oauto.
+  Ltac force_r := _force_r oauto.
+End TAC.
+Import TAC.
 
 Section PROOF.
 
@@ -51,14 +56,14 @@ Section PROOF.
     :
       forall
         R mp (mr: Σ) ord_cur ctx itr,
-        paco7 (_sim_itree wf top2) bot7 (Σ * R)%type (Σ * R)%type
+        paco8 (_sim_itree wf top2) bot8 (Σ * R)%type (Σ * R)%type
               (fun st_src st_tgt vret_src vret_tgt =>
                  exists mp (mr: Σ) ctx vret,
                    st_src = Any.pair mp mr↑ /\
                    st_tgt = Any.pair mp mr↑ /\
                    vret_src = (ctx, vret) /\
                    vret_tgt = (ctx, vret))
-              100 tt
+              100 100 tt
               (Any.pair mp mr↑, interp_hCallE_tgt mn stb_src ord_cur itr ctx)
               (Any.pair mp mr↑, interp_hCallE_tgt mn stb_tgt ord_cur itr ctx).
   Proof.
@@ -87,9 +92,11 @@ Section PROOF.
       steps. force_l. exists x1.
       steps. force_l; et.
       steps. force_l; et.
-      steps. gstep. econs; et.
-      { red. esplits; et. }
-      i. destruct w1. exists 200. red in WF. des; clarify. steps.
+      steps.
+      { esplits; et. }
+      i. destruct w1. red in WF. des; clarify.
+      rewrite Any.pair_split in _UNWRAPU. des; clarify.
+      steps.
       assert (exists rret_tgt,
                  (<<POSTTGT: postcond f (Some mn) x x2 vret rret_tgt>>) /\
                  (<<VALIDTGT: URA.wf (rret_tgt ⋅ c1 ⋅ c3 ⋅ mr0)>>)
@@ -103,9 +110,7 @@ Section PROOF.
       steps. force_r; et.
       steps. force_r. exists x2.
       steps. force_r; et.
-      steps. guclo lordC_spec. econs.
-      { instantiate (1:=100). eapply OrdArith.le_from_nat. lia. }
-      gbase. eapply CIH.
+      steps. gbase. eapply CIH.
     }
     destruct s.
     { resub. destruct p.
@@ -120,10 +125,9 @@ Section PROOF.
         gbase. eapply CIH. }
       { ired_both. force_l. i. force_r. exists x. steps.
         gbase. eapply CIH. }
-      { steps. gstep. econs. i. exists 100. steps.
-        gbase. eapply CIH. }
+      { steps. gbase. eapply CIH. }
     }
-    Unshelve. all: ss.
+    Unshelve. all: ss. all: try exact 0.
   Qed.
 
   Variable fsp_src fsp_tgt: fspec.
@@ -132,7 +136,7 @@ Section PROOF.
   Variable body: (option mname * Any.t) -> itree hEs Any.t.
 
   Lemma weakening_fn arg mrs_src mrs_tgt (WF: wf tt (mrs_src, mrs_tgt)):
-    sim_itree wf top2 200 tt
+    sim_itree wf top2 200 200 tt
               (mrs_src, fun_to_tgt mn stb_src (mk_specbody fsp_src body) arg)
               (mrs_tgt, fun_to_tgt mn stb_tgt (mk_specbody fsp_tgt body) arg).
   Proof.
@@ -156,8 +160,10 @@ Section PROOF.
     steps. force_r. exists x1.
     steps. force_r; et.
     steps. guclo lordC_spec. econs.
-    { instantiate (1:=(50 + 100)%ord).
-      rewrite <- OrdArith.add_from_nat. eapply OrdArith.le_from_nat. lia. }
+    { instantiate (2:=(50 + 100)%ord).
+      rewrite <- OrdArith.add_from_nat. eapply OrdArith.le_from_nat. refl. }
+    { instantiate (2:=(50 + 100)%ord).
+      rewrite <- OrdArith.add_from_nat. eapply OrdArith.le_from_nat. refl. }
     guclo lbindC_spec. econs.
     { gfinal. right. eapply weakening_itree. }
     i. ss. des; clarify. steps.
@@ -175,7 +181,7 @@ Section PROOF.
     steps. force_l; et.
     steps. force_l; et.
     steps. red. esplits; et. red. esplits; et.
-    Unshelve. all: ss.
+    Unshelve. all: ss. all: try exact 0.
   Qed.
 
   Lemma weakening_fsem:
@@ -183,7 +189,7 @@ Section PROOF.
              (fun_to_tgt mn stb_src (mk_specbody fsp_src body))
              (fun_to_tgt mn stb_tgt (mk_specbody fsp_tgt body)).
   Proof.
-    econs; ss. instantiate (1:=200). destruct w. subst. eapply weakening_fn. auto.
+    ii. eexists _, _. destruct w. subst. eapply weakening_fn. auto.
   Qed.
 
 End PROOF.

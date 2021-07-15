@@ -44,7 +44,7 @@ Section SIMMODSEM.
   Proof.
     eapply adequacy_local2. econs; ss. i.
     econstructor 1 with (wf:=wf) (le:=top2); et; ss.
-    econs; ss. init. unfold cfunU, cfunN.
+    econs; ss. init. unfold cfunU.
     unfold fF.
     unfold MutFImp.fF.
     Local Opaque vadd.
@@ -60,10 +60,8 @@ Section SIMMODSEM.
       imp_steps. replace (z =? 0)%Z with false.
       2:{ symmetry. eapply Z.eqb_neq. auto. }
       imp_steps.
-      gstep. econs; ss. i. exists 100.
-      imp_steps.
       rewrite _UNWRAPU1. steps. imp_steps. red. esplits; et.
-    Unshelve. all: ss.
+    Unshelve. all: ss. all: try exact 0.
   Qed.
 
 End SIMMODSEM.

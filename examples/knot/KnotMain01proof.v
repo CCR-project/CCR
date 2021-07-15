@@ -1,4 +1,4 @@
-Require Import HoareDef KnotHeader KnotMain0 KnotMain1 Knot1 SimModSemL SimModSem.
+Require Import HoareDef KnotHeader KnotMain0 KnotMain1 Knot1 SimModSem.
 Require Import Coqlib.
 Require Import ImpPrelude.
 Require Import Skeleton.
@@ -148,7 +148,7 @@ Section SIMMODSEM.
       mDesAll. subst. rewrite Any.upcast_downcast. steps.
       astop. steps. hret _; ss.
     }
-    Unshelve. all: ss.
+    Unshelve. all: ss. all: try exact 0.
   Qed.
 
 End SIMMODSEM.

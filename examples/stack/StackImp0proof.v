@@ -57,8 +57,6 @@ Section SIMMODSEM.
       2:{ exfalso; apply n. solve_NoDup. }
       imp_steps.
       unfold ccallU. imp_steps.
-      gstep. econs; ss. i. exists 100. imp_steps.
-      gstep. econs; ss. i. exists 100. imp_steps.
       red. esplits; et.
     }
     econs; ss.
@@ -75,32 +73,24 @@ Section SIMMODSEM.
       unfold unblk in *. des_ifs.
       imp_steps.
       unfold ccallU. imp_steps.
-      unfold unblk in *. des_ifs. clarify; ss.
-      gstep. econs; ss. i. exists 100. imp_steps.
-      gstep. econs; ss. i. exists 100. imp_steps.
-      des. des_ifs_safe. ss.
-      destruct (n1 =? 0)%Z eqn:N1; ss; clarify.
+      unfold unblk in *. des. des_ifs_safe.
+      unfold is_true. destruct (n1 =? 0)%Z eqn:N1; ss; clarify.
       - apply Z.eqb_eq in N1. clarify. ss.
+        destruct (val_dec (Vint 0) (Vint 0)); ss.
         grind. ss.
         destruct v; ss.
         { steps. }
         destruct ofs; ss.
         2:{ steps. }
         imp_steps.
-        gstep. econs; ss. i. exists 100. imp_steps.
         uo. des_ifs_safe; ss; clarify. unfold scale_int in Heq2.
-        des_ifs_safe. steps.
-        gstep. econs; ss. i. exists 100. imp_steps.
-        gstep. econs; ss. i. exists 100. imp_steps.
+        des_ifs_safe. steps. imp_steps.
         unfold scale_int. uo; ss. des_ifs. ss.
-        rewrite Z_div_same; ss. rewrite Z.add_0_l. steps.
-        gstep. econs; ss. i. exists 100. imp_steps.
-        gstep. econs; ss. i. exists 100. imp_steps.
+        rewrite Z_div_same; ss. rewrite Z.add_0_l. imp_steps.
         red. esplits; et.
       - apply Z.eqb_neq in N1.
-        unfold sumbool_to_bool. des_ifs.
+        destruct (val_dec (Vint 0) (Vint 0)); ss.
         imp_steps.
-        Local Transparent val_dec.
         red. esplits; et. unfold wf. ss.
     }
     econs; ss.
@@ -114,19 +104,14 @@ Section SIMMODSEM.
       imp_steps.
       unfold unblk in *. des_ifs.
       imp_steps.
-      unfold ccallU. steps.
-      gstep. econs; ss. i. exists 100. imp_steps.
+      unfold ccallU. imp_steps.
       rewrite _UNWRAPU1. imp_steps.
-      gstep. econs; ss. i. exists 100. imp_steps.
-      gstep. econs; ss. i. exists 100. imp_steps.
       uo; des_ifs; ss; clarify.
       2:{ unfold scale_int in *. des_ifs. }
       imp_steps.
-      gstep. econs; ss. i. exists 100. imp_steps.
-      gstep. econs; ss. i. exists 100. imp_steps.
       red. esplits; et.
     }
-    Unshelve. all: ss.
+    Unshelve. all: try exact 0. all: ss.
   Qed.
 
 End SIMMODSEM.

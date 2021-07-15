@@ -74,6 +74,6 @@ Section REFINE.
       { steps. rewrite _UNWRAPU0. steps.
         red. esplits; et. red. esplits; et. }
     }
-    Unshelve. all: ss.
+    Unshelve. all: try exact 0. all: ss.
   Qed.
 End REFINE.

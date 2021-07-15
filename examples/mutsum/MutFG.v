@@ -7,7 +7,7 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import Hoare.
-Require Import MutHeader SimModSem.
+Require Import MutHeader.
 Require Import MutFImp MutGImp MutF0 MutG0 MutMain0 MutF1 MutG1 MutMain1.
 Require Import MutFImp0proof MutGImp0proof MutF01proof MutG01proof MutMain01proof.
 Require Import ProofMode.

@@ -301,7 +301,7 @@ Section Interp.
       end.
 
   Definition interp_ImpState {eff} `{eventE -< eff}: itree (ImpState +' eff) ~> stateT lenv (itree eff) :=
-    State.interp_state (case_ handle_ImpState ModSem.pure_state).
+    State.interp_state (case_ handle_ImpState pure_state).
 
   (* Definition interp_imp ge le (itr : itree effs val) := *)
   (*   interp_ImpState (interp_GlobEnv ge itr) le. *)

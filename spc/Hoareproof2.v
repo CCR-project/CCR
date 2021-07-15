@@ -15,6 +15,13 @@ From Ordinal Require Import Ordinal Arithmetic.
 Set Implicit Arguments.
 
 
+Module TAC.
+  Ltac my_steps := repeat (_steps ltac:(eauto with ord_step); des_ifs_safe).
+  Ltac my_force_l := _force_l ltac:(eauto with ord_step).
+  Ltac my_force_r := _force_r ltac:(eauto with ord_step).
+End TAC.
+Import TAC.
+
 Section CANCEL.
 
   (*** execute following commands in emacs (by C-x C-e)
@@ -65,16 +72,17 @@ Section CANCEL.
 
   Lemma my_lemma__APC o (w: unit) st
     :
-      paco7 (_sim_itree (fun (_: unit) '(st_src, st_tgt) => st_src = st_tgt) top2) bot7 unit unit
+      paco8 (_sim_itree (fun (_: unit) '(st_src, st_tgt) => st_src = st_tgt) top2) bot8 unit unit
             (fun st_src st_tgt _ _ => st_src = st_tgt)
-            ((30 * o) + 30)%ord w
+            ((30 * o) + 30)%ord ((30 * o) + 30)%ord w
             (st, Ret tt)
             (st, interp_hCallE_mid2 (_APC o)).
   Proof.
     ginit. revert o w st. gcofix CIH. i.
-    rewrite unfold_APC. steps. destruct x.
-    { steps. }
-    steps. guclo lordC_spec. econs.
+    rewrite unfold_APC. my_steps.
+    destruct x.
+    { my_steps. }
+    my_steps. guclo lordC_spec. econs.
     { instantiate (1:=((30 * x) + 30)%ord).
       etrans.
       { eapply OrdArith.mult_S. }
@@ -83,7 +91,9 @@ Section CANCEL.
         eapply Ord.S_supremum. et. }
       { eapply OrdArith.add_base_l. }
     }
+    { refl. }
     gbase. eapply CIH.
+    Unshelve. all: try exact 0.
   Qed.
 
   Lemma idK_spec2: forall E A B (a: A) (itr: itree E B), itr = Ret a >>= fun _ => itr. Proof. { i. ired. ss. } Qed.
@@ -104,7 +114,7 @@ Section CANCEL.
       eapply Forall2_apply_Forall2.
       { refl. }
       i. subst. destruct b0. econs; ss. ii. subst.
-      exists 100. unfold fun_to_src, fun_to_mid2, body_to_src, body_to_mid2. ss.
+      eexists _, _. unfold fun_to_src, fun_to_mid2, body_to_src, body_to_mid2. ss.
       generalize (fsb_body f y).
       revert mrs_tgt w. ginit. gcofix CIH. i. ides i.
       { steps. }
@@ -114,54 +124,37 @@ Section CANCEL.
       { resub. destruct h. ired_both.
         Local Transparent APC. unfold APC. Local Opaque APC.
         force_r. i. ired_both.
-        _step. steps. rewrite (idK_spec2 tt (interp_hEs_src (k ()))).
+        steps. rewrite (idK_spec2 tt (interp_hEs_src (k ()))).
         guclo lbindC_spec. econs.
-        { guclo lordC_spec. econs.
-          { eapply OrdArith.add_base_l. }
-          gfinal. right. eapply paco7_mon.
+        { gfinal. right. eapply paco8_mon.
           { eapply my_lemma__APC. }
           { i. ss. }
         }
         { i. ss. clear _GUARANTEE. steps. destruct vret_tgt.
-          guclo lordC_spec. econs.
-          { eapply OrdArith.add_base_l. }
           gbase. et.
         }
       }
       destruct e.
       { resub. destruct c. steps.
-        gstep. econs; et. i. subst. eexists. steps.
-        guclo lordC_spec. econs.
-        { eapply OrdArith.add_base_l. }
         gbase. et.
       }
       destruct s0.
       { resub. destruct p.
         { ired_both. force_r. force_l. steps.
-          guclo lordC_spec. econs.
-          { eapply OrdArith.add_base_l. }
           gbase. et.
         }
         { ired_both. force_r. force_l. steps.
-          guclo lordC_spec. econs.
-          { eapply OrdArith.add_base_l. }
           gbase. et.
         }
       }
       { resub. destruct e.
         { ired_both. force_r. i. force_l. exists x. steps.
-          guclo lordC_spec. econs.
-          { eapply OrdArith.add_base_l. }
           gbase. et.
         }
         { ired_both. force_l. i. force_r. exists x. steps.
-          guclo lordC_spec. econs.
-          { eapply OrdArith.add_base_l. }
           gbase. et.
         }
-        { ired_both. gstep. econs. i. eexists. steps.
-          guclo lordC_spec. econs.
-          { eapply OrdArith.add_base_l. }
+        { ired_both. steps.
           gbase. et.
         }
       }

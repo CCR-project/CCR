@@ -43,19 +43,16 @@ Section REFINE.
     econs; ss.
     { init. rewrite ! my_if_same. unfold echo_body, body_to_src.
       steps. unfold unwrapU. steps. des_ifs; steps. des_ifs; steps.
-      unfold ccallN. steps. gstep. econs; et. i. exists 100.
-      steps. unfold unwrapN. des_ifs; steps.
-      gstep. econs; et. i. exists 100.
-      steps. des_ifs; steps. red. esplits; et. }
+      unfold ccallN. steps. unfold unwrapN. des_ifs; steps.
+      des_ifs; steps. red. esplits; et. }
     econs; ss.
     { init. unfold sumbool_to_bool, body_to_src. des_ifs.
       { unfold cfunN, input_body. steps.
         unfold unwrapN, ccallU, ccallN, unwrapU, unwrapN.
-        des_ifs; steps. gstep. econs; et. i. exists 100.
-        steps. des_ifs; steps. force_r. esplits; et.
+        des_ifs; steps. des_ifs; steps. force_r. esplits; et.
         steps. des_ifs; steps. des_ifs; steps.
         { red. esplits; et. }
-        gstep. econs; et. i. exists 100. steps. des_ifs; steps.
+        steps. des_ifs; steps.
         red. esplits; et.
       }
       { exfalso. eapply n. ss. des; auto. right.
@@ -69,9 +66,8 @@ Section REFINE.
         unfold unwrapN, ccallU, ccallN, unwrapU, unwrapN.
         des_ifs; steps. des_ifs; steps.
         { red. esplits; et. }
-        gstep. econs; et. i. exists 100.
-        steps. des_ifs; steps. gstep. econs; et. i. exists 100.
-        steps. des_ifs; steps. red. esplits; et.
+        steps. des_ifs; steps.
+        des_ifs; steps. red. esplits; et.
       }
       { exfalso. eapply n. ss. des; auto. right.
         eapply in_map_iff in i. des; subst. eapply in_map. eapply FRDS. et. }

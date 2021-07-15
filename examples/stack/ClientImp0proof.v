@@ -57,7 +57,6 @@ Section SIMMODSEM.
       des_ifs.
       2:{ exfalso; apply n. solve_NoDup. }
       imp_steps.
-      gstep. econs; ss. i. exists 100. imp_steps.
       red. esplits; et.
     }
     econs; ss.
@@ -72,11 +71,10 @@ Section SIMMODSEM.
       2:{ exfalso; apply n. solve_NoDup. }
       imp_steps.
       unfold unint in *. clarify; ss. imp_steps.
-      gstep. econs; ss. i. exists 100. imp_steps.
       red. esplits; et.
     }
     Local Opaque syscalls.
-    Unshelve. all: ss.
+    Unshelve. all:try exact 0. all: ss.
   Qed.
 
 End SIMMODSEM.

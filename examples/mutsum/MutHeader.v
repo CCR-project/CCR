@@ -7,7 +7,6 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef STB.
-Require Import SimModSem.
 From ExtLib Require Import
      Core.RelDec
      Structures.Maps

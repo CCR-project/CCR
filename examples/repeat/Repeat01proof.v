@@ -93,7 +93,7 @@ Section SIMMODSEM.
       }
     }
     { harg. mDesAll. des; clarify. steps. }
-    Unshelve. all: ss.
+    Unshelve. all: ss. all: try exact 0.
   Qed.
 
 End SIMMODSEM.

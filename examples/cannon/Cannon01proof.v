@@ -36,7 +36,6 @@ Section SIMMODSEM.
     econs; ss. init. unfold Cannon0.fire_body, Cannon1.fire_body. harg.
     mDesOr "INV".
     { mDesAll. des; clarify.
-      steps. gstep. econs; et. i. exists 100.
       steps. hret _; ss.
       iModIntro. iSplit; ss. iRight.
       iCombine "A" "A1" as "A".
@@ -45,7 +44,7 @@ Section SIMMODSEM.
     { mDesAll. mAssertPure False; ss.
       iCombine "INV" "A" as "A". iOwnWf "A".
       exfalso. eapply FiredBall. et. }
-    Unshelve. all: ss.
+    Unshelve. all: ss. all: try exact 0.
   Qed.
 
 End SIMMODSEM.

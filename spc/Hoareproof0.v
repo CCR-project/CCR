@@ -33,6 +33,71 @@ Set Implicit Arguments.
 
 
 
+Module TAC.
+  Ltac _step :=
+    match goal with
+    (*** terminal cases ***)
+    | [ |- gpaco7 _ _ _ _ _ _ _ _ _ (triggerUB >>= _) _ ] =>
+      unfold triggerUB; mred; _step; ss; fail
+    | [ |- gpaco7 _ _ _ _ _ _ _ _ _ _ (triggerNB >>= _) ] =>
+      unfold triggerNB; mred; _step; ss; fail
+    | [ |- gpaco7 _ _ _ _ _ _ _ _ _ (triggerNB >>= _) _ ] =>
+      exfalso
+    | [ |- gpaco7 _ _ _ _ _ _ _ _ _ _ (triggerUB >>= _) ] =>
+      exfalso
+
+    (*** assume/guarantee ***)
+    | [ |- gpaco7 _ _ _ _ _ _ _ _ _ (assume ?P ;;; _) _ ] =>
+      let tvar := fresh "tmp" in
+      let thyp := fresh "TMP" in
+      remember (assume P) as tvar eqn:thyp; unfold assume in thyp; subst tvar
+    | [ |- gpaco7 _ _ _ _ _ _ _ _ _ (guarantee ?P ;;; _) _ ] =>
+      let tvar := fresh "tmp" in
+      let thyp := fresh "TMP" in
+      remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar
+    | [ |- gpaco7 _ _ _ _ _ _ _ _ _ _ (assume ?P ;;; _) ] =>
+      let tvar := fresh "tmp" in
+      let thyp := fresh "TMP" in
+      remember (assume P) as tvar eqn:thyp; unfold assume in thyp; subst tvar
+    | [ |- gpaco7 _ _ _ _ _ _ _ _ _ _ (guarantee ?P ;;; _) ] =>
+      let tvar := fresh "tmp" in
+      let thyp := fresh "TMP" in
+      remember (guarantee P) as tvar eqn:thyp; unfold guarantee in thyp; subst tvar
+
+    (*** default cases ***)
+    | _ =>
+      (gstep; econs; eauto; try (by eapply OrdArith.lt_from_nat; ss);
+       (*** some post-processing ***)
+       i;
+       try match goal with
+           | [ |- (eq ==> _)%signature _ _ ] =>
+             let v_src := fresh "v_src" in
+             let v_tgt := fresh "v_tgt" in
+             intros v_src v_tgt ?; subst v_tgt
+           end)
+    end
+  .
+  Ltac seal_left :=
+    match goal with
+    | [ |- gpaco7 _ _ _ _ _ _ _ _ _ ?i_src ?i_tgt ] => seal i_src
+    end.
+  Ltac seal_right :=
+    match goal with
+    | [ |- gpaco7 _ _ _ _ _ _ _ _ _ ?i_src ?i_tgt ] => seal i_tgt
+    end.
+  Ltac unseal_left :=
+    match goal with
+    | [ |- gpaco7 _ _ _ _ _ _ _ _ _ (@Seal.sealing _ _ ?i_src) ?i_tgt ] => unseal i_src
+    end.
+  Ltac unseal_right :=
+    match goal with
+    | [ |- gpaco7 _ _ _ _ _ _ _ _ _ ?i_src (@Seal.sealing _ _ ?i_tgt) ] => unseal i_tgt
+    end.
+  Ltac force_l := seal_right; _step; unseal_right.
+  Ltac force_r := seal_left; _step; unseal_left.
+  (* Ltac mstep := gstep; econs; eauto; [eapply from_nat_lt; ss|]. *)
+End TAC.
+Import TAC.
 
 
 Section CANCEL.
@@ -354,14 +419,14 @@ Section CANCEL.
               exists mrs1,
                 (<<ZIP: st_tgt1 = zip_state st_src1 mrs1>>) /\
                 (<<RET: (v_tgt: Σ * RT) = (frs ⋅ rsum_minus mn mrs1, v_src)>>))
-           (Ord.from_nat 100%nat)
+           (Ord.from_nat 100%nat) (Ord.from_nat 100%nat)
            (EventsL.interp_Es (ModSemL.prog ms_mid) (transl_all mn (interp_hCallE_mid (stb sk) cur i0)) st_src0)
            (EventsL.interp_Es (ModSemL.prog ms_tgt) (transl_all mn (interp_hCallE_tgt mn (stb sk) cur i0 ctx0)) st_tgt0)
   .
   Proof.
     Opaque subevent.
     ginit.
-    { i. eapply cpn6_wcompat; eauto with paco. }
+    { i. eapply cpn7_wcompat; eauto with paco. }
     gcofix CIH. i; subst.
     ides i0; try rewrite ! unfold_interp; cbn; mred.
     { steps. }
@@ -382,7 +447,8 @@ Section CANCEL.
           gbase. eapply CIH; ss.
       }
       { dependent destruction e.
-        - resub. steps. esplits; eauto. steps. gbase. eapply CIH; [..|M]; Mskip et. ss.
+        - resub. ired_both. force_r. steps. esplits; eauto. steps.
+          gbase. eapply CIH; [..|M]; Mskip et. ss.
         - resub. steps. esplits; eauto. steps. gbase. eapply CIH; [..|M]; Mskip et. ss.
         - resub. steps. gbase. eapply CIH; [..|M]; Mskip et. ss.
       }
@@ -424,6 +490,7 @@ Section CANCEL.
     guclo ordC_spec. econs.
     { instantiate (2:=(400+5)%ord).
       rewrite <- OrdArith.add_from_nat. refl. }
+    { instantiate (2:=(400+5)%ord). refl. }
     guclo bindC_spec. econs.
     { instantiate (1:= fun '(st_src, o) (_: unit) => st_src = st_src0 /\ o = x2).
       destruct tbr.
@@ -439,6 +506,7 @@ Section CANCEL.
     rewrite FINDMID. rewrite FINDTGT. rewrite ! bind_ret_l.
 
     guclo ordC_spec. econs.
+    { instantiate (2:=(195+200)%ord). refl. }
     { instantiate (1:=(195+200)%ord). rewrite <- OrdArith.add_from_nat. refl. }
     rename f into fs.
     guclo bindC_spec. econs.
@@ -463,6 +531,7 @@ Section CANCEL.
       steps. esplits; eauto. steps. unshelve esplits; eauto. steps.
       guclo ordC_spec. econs.
       { instantiate (1:=(73+100)%ord). rewrite <- OrdArith.add_from_nat. refl. }
+      { instantiate (2:=(73+100)%ord). refl. }
       guclo bindC_spec. econs.
       { gbase. eapply CIH; ss.
         { instantiate (1:=c1 ⋅ frs). r_solve. }
@@ -508,9 +577,9 @@ Section CANCEL.
     Beh.of_program (@ModL.compile _ midConf (Mod.add_list mds_mid)).
   Proof.
     eapply adequacy_global_itree; ss.
-    exists (Ord.from_nat 100%nat). ss.
+    exists (Ord.from_nat 100%nat), (Ord.from_nat 100%nat). ss.
     ginit.
-    { eapply cpn6_wcompat; eauto with paco. }
+    { eapply cpn7_wcompat; eauto with paco. }
     unfold ModSemL.initial_itr, ModSemL.initial_itr. Local Opaque ModSemL.prog. ss.
     unfold ITree.map.
 
@@ -549,6 +618,7 @@ Section CANCEL.
     { instantiate (2:=(_ + _)%ord).
       rewrite <- OrdArith.add_from_nat.
       eapply OrdArith.le_from_nat. refl. }
+    { instantiate (2:=(_ + _)%ord). refl. }
     guclo bindC_spec. econs.
     { gfinal. right. fold simg.
       eapply adequacy_type_aux; ss.

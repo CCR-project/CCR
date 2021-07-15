@@ -161,7 +161,7 @@ Section SIMMODSEM.
     end;
 
     match goal with
-    | |- gpaco7 _ _ _ _ _ _ _ _ _ _ ((?mp_tgt↑), _) =>
+    | |- gpaco8 _ _ _ _ _ _ _ _ _ _ _ ((?mp_tgt↑), _) =>
 
       repeat multimatch mp_tgt with
              | context[?g] =>
@@ -326,7 +326,7 @@ Section SIMMODSEM.
           eapply pw_extends in WF. eapply pw_extends in WF. spc WF. rewrite _points_to_hit in WF. des; ss.
           eapply Excl.extends in WF; ss. do 2 eapply lookup_wf. eapply Auth.black_wf. eapply URA.wf_mon; et.
         }
-        exploit SIM; et. intro U. rewrite T in U. inv U; ss. unfold Mem.load.
+        hexploit SIM; et. intro U. rewrite T in U. inv U; ss. unfold Mem.load.
         mDesOwn "INV".
         force_r; ss. clarify. steps. force_l. esplits. steps.
         hret _; ss. iModIntro. iFrame. iSplitL; et.
@@ -355,7 +355,7 @@ Section SIMMODSEM.
           des; ss.
           eapply Excl.extends in WF; ss. do 2 eapply lookup_wf. eapply Auth.black_wf. eapply URA.wf_mon; et.
         }
-        exploit SIM; et. intro U. rewrite T in U. inv U; ss. unfold Mem.store. des_ifs. steps.
+        hexploit SIM; et. intro U. rewrite T in U. inv U; ss. unfold Mem.store. des_ifs. steps.
         set (memk_src1 := fun _b _ofs => if dec _b b && dec _ofs ofs then (Some v1: URA.car (t:=Excl.t _)) else memk_src0 _b _ofs).
         assert(WF': URA.wf (memk_src1: URA.car (t:=Mem1._memRA))).
         { clear - WF. unfold memk_src1. do 2 ur. ii. eapply URA.wf_mon in WF. ur in WF. des.
@@ -453,8 +453,7 @@ Section SIMMODSEM.
       }
     }
   Unshelve.
-    all: ss.
-    all: try (by econs).
+    all: ss. all: try exact 0.
   Qed.
 
   Theorem correct: refines2 [Mem0.Mem] [Mem1.Mem].
