@@ -175,25 +175,29 @@ paco2 has 'fixed' semantics -> needs fixed semantics to do pcofix
         st0
         tr.
   Proof.
-    intros st0. eapply adequacy_aux with (i0 := 10).
+    intros st0. eapply adequacy_aux.
     { apply Nat.lt_wf_0. }
+    { apply Nat.lt_wf_0. }
+    instantiate (1:=10). instantiate (1:=10).
     revert st0.
     pcofix CIH. i. pfold.
     destruct (state_sort st0) eqn:SRT.
-    - eapply sim_angelic_both; ss; clarify.
+    - eapply sim_angelic_src; ss; clarify. i. esplits; et.
+      left. pfold. eapply sim_angelic_tgt; ss; clarify.
       + rewrite unfold_decompile_STS. rewrite SRT. ss.
       + i.
         set (cont:= (fun st1 : {st' | step st0 None st'} => decompile_STS step state_sort (st1 $))).
         exists (cont (exist (fun st => step st0 None st) st_src1 STEP)). eexists.
         { rewrite unfold_decompile_STS. rewrite SRT. econs 3. }
-        exists 10. right. eapply CIH.
-    - eapply sim_demonic_both; ss; clarify.
+        esplits; et.
+    - eapply sim_demonic_tgt; ss; clarify.
       + rewrite unfold_decompile_STS. rewrite SRT. ss.
       + i. rewrite unfold_decompile_STS in STEP. rewrite SRT in STEP.
         dependent destruction STEP.
         destruct x. rename x into st1.
+        esplits; et. left. pfold. eapply sim_demonic_src; ss; clarify.
         exists st1. eexists; auto.
-        exists 10. right. apply CIH.
+        esplits; et.
     - eapply sim_fin; eauto.
       ss. rewrite unfold_decompile_STS. rewrite SRT.
       unfold ModSemL.state_sort. ss.
@@ -204,20 +208,21 @@ paco2 has 'fixed' semantics -> needs fixed semantics to do pcofix
         rewrite bind_trigger in STEP.
         dependent destruction STEP.
         destruct x. des. destruct x.
-        exists 9. split; auto.
+        esplits; et.
         left. pfold. eapply sim_vis; i; ss; clarify.
         rewrite bind_trigger in STEP.
         dependent destruction STEP.
         des. rename RETURN into STEP.
         exists st2. eexists.
         { auto. }
-        exists 11. left. pfold. eapply sim_demonic_tgt; ss; clarify.
+        esplits. left. pfold. eapply sim_demonic_tgt; ss; clarify.
         i. dependent destruction STEP0.
         destruct x.
-        exists 10. split; auto. right.
+        esplits; et. right.
         assert (st2 = x).
         { eapply wf_vis. apply SRT. apply STEP. apply s. reflexivity. }
         clarify.
+    Unshelve. all: try exact 0.
   Qed.
 
   Lemma beh_preserved_L1_inv :
@@ -232,23 +237,27 @@ paco2 has 'fixed' semantics -> needs fixed semantics to do pcofix
         (decompile_STS step state_sort st0)
         tr.
   Proof.
-    intros st0. eapply adequacy_aux with (i0:=10).
+    intros st0. eapply adequacy_aux.
     { apply Nat.lt_wf_0. }
+    { apply Nat.lt_wf_0. }
+    instantiate (1:=10). instantiate (1:=10).
     revert st0.
     pcofix CIH. i. pfold.
     destruct (state_sort st0) eqn:SRT.
-    - eapply sim_angelic_both; ss; clarify.
+    - eapply sim_angelic_src; ss; clarify.
       + rewrite unfold_decompile_STS. rewrite SRT. ss.
       + i. rewrite unfold_decompile_STS in STEP. rewrite SRT in STEP.
         dependent destruction STEP. destruct x.
-        exists x. exists s. exists 10. right. apply CIH.
-    - eapply sim_demonic_both; ss; clarify.
+        esplits; et. left. pfold. eapply sim_angelic_tgt; ss; clarify.
+        exists x. exists s. esplits; et.
+    - eapply sim_demonic_tgt; ss; clarify. i.
+      esplits; et. left. pfold. eapply sim_demonic_src; ss; clarify.
       + rewrite unfold_decompile_STS. rewrite SRT. ss.
       + i. exists (decompile_STS step state_sort st_tgt1).
         eexists.
         { rewrite unfold_decompile_STS in *. rewrite SRT in *.
           apply (ModSemL.step_choose (fun st1 : {st' | step st0 None st'} => decompile_STS step state_sort (st1 $)) (exist _ st_tgt1 STEP)). }
-        exists 10. right. apply CIH.
+        esplits; et.
     - econs; ss.
       + rewrite unfold_decompile_STS. rewrite SRT.
         unfold ModSemL.state_sort. ss.
@@ -281,7 +290,7 @@ paco2 has 'fixed' semantics -> needs fixed semantics to do pcofix
         destruct x. eexists.
         { rewrite unfold_decompile_STS. rewrite SRT. ss. rewrite bind_trigger.
           eapply (ModSemL.step_choose cont (exist (fun 'ev => exists st1, step st0 (Some ev) st1) (event_sys fn args rv) H)). }
-        exists 9. split; auto.
+        esplits; et.
         left. pfold. destruct H. rename s into STEP. subst cont.
         set (cont := fun rv0 =>
                        Vis
@@ -304,7 +313,7 @@ paco2 has 'fixed' semantics -> needs fixed semantics to do pcofix
           2:{ exists st_tgt1. auto. }
           apply wf_syscall.
           exists st0, st_tgt1. auto. }
-        exists 11. left. pfold. eapply sim_demonic_src; ss; clarify.
+        esplits. left. pfold. eapply sim_demonic_src; ss; clarify.
         subst cont. ss.
         set (cont :=
                (fun
@@ -316,7 +325,8 @@ paco2 has 'fixed' semantics -> needs fixed semantics to do pcofix
         exists (cont (exist (fun st1 => step st0 (Some (event_sys fn args rv)) st1) st_tgt1 STEP)).
         eexists.
         { econs. }
-        exists 10. split; eauto.
+        esplits; et.
+    Unshelve. all: try exact 0.
   Qed.
 
   Lemma beh_preserved_L1 :
