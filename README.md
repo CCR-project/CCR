@@ -5,7 +5,7 @@ Our development successfully compiles with following versions (in Linux, OS X):
 
 - coq (= *8.13.2*)
 
-- coq-extlib (= *0.11.3*)
+- coq-ext-lib (= *0.11.3*)
 - coq-paco (= *4.1.1*)
 - coq-itree (= *3.2.0*)
 - coq-ordinal (= *0.5.0*)
