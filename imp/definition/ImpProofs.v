@@ -85,6 +85,17 @@ Section PROOFS.
                    ` u : val <- unwrapU (vmul l r);; Ret u) le0.
   Proof. reflexivity. Qed.
 
+  Lemma denote_expr_Cmp
+        ge le0 ae be
+    :
+      interp_imp ge (denote_expr (Cmp ae be)) le0 =
+      interp_imp ge ( a <- denote_expr ae;; b <- denote_expr be;;
+                      (if (wf_val a && wf_val b) then Ret tt else triggerUB);;;
+                        v <- ccallU "cmp" [a; b];;
+                        tau;; Ret v) le0.
+  Proof. reflexivity. Qed.
+
+
   (* stmt *)
 
   Lemma denote_stmt_Skip
@@ -163,16 +174,6 @@ Section PROOFS.
                           ` v : val <- denote_expr ve;;
                               `_:val <- ccallU "store" [p; v];; tau;; Ret Vundef
                           ) le0.
-  Proof. reflexivity. Qed.
-
-  Lemma denote_stmt_Cmp
-        ge le0 x ae be
-    :
-      interp_imp ge (denote_stmt (Cmp x ae be)) le0 =
-      interp_imp ge ( a <- denote_expr ae;; b <- denote_expr be;;
-                      (if (wf_val a && wf_val b) then Ret tt else triggerUB);;;
-                        v <- ccallU "cmp" [a; b];;
-                        trigger (SetVar x v);;; tau;; Ret Vundef) le0.
   Proof. reflexivity. Qed.
 
   Lemma denote_stmt_CallFun
@@ -502,6 +503,27 @@ Section PROOFS.
     rewrite interp_imp_unwrapU. grind.
   Qed.
 
+  Lemma interp_imp_expr_Cmp
+        ge le0 ae be
+    :
+      interp_imp ge (denote_expr (Cmp ae be)) le0 =
+      '(le1, a) <- interp_imp ge (denote_expr ae) le0;;
+      '(le2, b) <- interp_imp ge (denote_expr be) le1;;
+      (if (wf_val a && wf_val b) then Ret tt else triggerUB);;;
+          v <- trigger (Call "cmp" ([a ; b]↑));;
+          tau;; tau;; `v: val <- unwrapU (v↓);;
+          tau;; Ret (le2, v).
+  Proof.
+    rewrite denote_expr_Cmp. rewrite interp_imp_bind. grind.
+    rewrite interp_imp_bind. grind.
+    des_ifs.
+    2:{ rewrite interp_imp_bind. rewrite interp_imp_triggerUB. unfold triggerUB; grind. }
+    rewrite interp_imp_bind. rewrite interp_imp_Ret; grind.
+    rewrite interp_imp_bind. rewrite interp_imp_ccallU. grind.
+    rewrite interp_imp_tau; grind. apply interp_imp_Ret.
+  Qed.
+
+
   Lemma interp_imp_Skip
         ge le0
     :
@@ -637,27 +659,6 @@ Section PROOFS.
     rewrite interp_imp_tau; grind. apply interp_imp_Ret.
   Qed.
 
-  Lemma interp_imp_Cmp
-        ge le0 x ae be
-    :
-      interp_imp ge (denote_stmt (Cmp x ae be)) le0 =
-      '(le1, a) <- interp_imp ge (denote_expr ae) le0;;
-      '(le2, b) <- interp_imp ge (denote_expr be) le1;;
-      (if (wf_val a && wf_val b) then Ret tt else triggerUB);;;
-          v <- trigger (Call "cmp" ([a ; b]↑));;
-          tau;; tau;; v <- unwrapU (v↓);;
-          tau;; tau;; tau;; Ret (alist_add x v le2, Vundef).
-  Proof.
-    rewrite denote_stmt_Cmp. rewrite interp_imp_bind. grind.
-    rewrite interp_imp_bind. grind.
-    des_ifs.
-    2:{ rewrite interp_imp_bind. rewrite interp_imp_triggerUB. unfold triggerUB; grind. }
-    rewrite interp_imp_bind. rewrite interp_imp_Ret; grind.
-    rewrite interp_imp_bind. rewrite interp_imp_ccallU. grind.
-    rewrite interp_imp_bind. rewrite interp_imp_SetVar. grind.
-    rewrite interp_imp_tau; grind. apply interp_imp_Ret.
-  Qed.
-
   Lemma interp_imp_Call_args
         ge le0 x f args
     :
@@ -718,7 +719,7 @@ Section PROOFS.
   .
   Proof.
     rewrite denote_stmt_CallPtr. des_ifs.
-    2,3,4,5,6,7: rewrite interp_imp_triggerUB_bind; unfold triggerUB; grind.
+    2,3,4,5,6,7,8: rewrite interp_imp_triggerUB_bind; unfold triggerUB; grind.
     rewrite interp_imp_bind. rewrite interp_imp_Ret. grind.
     rewrite interp_imp_bind. grind.
     rewrite interp_imp_bind. rewrite interp_imp_GetName.
@@ -872,7 +873,6 @@ Ltac imp_red :=
     | Free _ => rewrite interp_imp_Free
     | Load _ _ => rewrite interp_imp_Load
     | Store _ _ => rewrite interp_imp_Store
-    | Cmp _ _ _ => rewrite interp_imp_Cmp
     | _ => fail
     end
 
@@ -886,6 +886,7 @@ Ltac imp_red :=
     | Plus _ _ => rewrite interp_imp_expr_Plus
     | Minus _ _ => rewrite interp_imp_expr_Minus
     | Mult _ _ => rewrite interp_imp_expr_Mult
+    | Cmp _ _ => rewrite interp_imp_expr_Cmp
     | Var_coerce _ => rewrite interp_imp_expr_Var
     | Lit_coerce _ => rewrite interp_imp_expr_Lit
     | _ => fail

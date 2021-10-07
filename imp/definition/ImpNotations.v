@@ -102,8 +102,8 @@ Module ImpNotations.
   Notation " p '*=#' v" :=
     (Store p v) (at level 60): stmt_scope.
 
-  Notation "x '=#' '(' a '==' b ')'" :=
-    (Cmp x a b) (at level 60): stmt_scope.
+  Notation "a '==' b" :=
+    (Cmp a b) (at level 70): stmt_scope.
 
 End ImpNotations.
 

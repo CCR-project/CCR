@@ -103,6 +103,7 @@ Section PROOF.
     | Imp.Plus e0 e1 => (20 + expr_ord e1 + 20 + expr_ord e0 + 20)%ord
     | Imp.Minus e0 e1 => (20 + expr_ord e1 + 20 + expr_ord e0 + 20)%ord
     | Imp.Mult e0 e1 => (20 + expr_ord e1 + 20 + expr_ord e0 + 20)%ord
+    | Imp.Cmp e0 e1 => (20 + expr_ord e1 + 20 + expr_ord e0 + 20)%ord
     end.
 
   Lemma expr_ord_omega e:
@@ -112,6 +113,9 @@ Section PROOF.
     { induction e; ss.
       { eexists. refl. }
       { eexists. refl. }
+      { des. eexists.
+        rewrite IHe1. rewrite IHe2.
+        rewrite <- ! OrdArith.add_from_nat. refl. }
       { des. eexists.
         rewrite IHe1. rewrite IHe2.
         rewrite <- ! OrdArith.add_from_nat. refl. }
@@ -402,6 +406,97 @@ Section PROOF.
         eapply OrdArith.add_base_l. }
       eapply IHe2; auto. clear IHe2.
       i. sim_red.
+      unfold unwrapU. destruct (vmul rv rv0) eqn:VMUL; ss; clarify.
+      + sim_red.
+        specialize SIM with (rv:=v) (trv:= @map_val builtins srcprog v).
+        sim_ord.
+        { eapply OrdArith.add_base_l. }
+        apply SIM; auto.
+        econs; eauto. ss. f_equal. apply map_val_vmul_comm; auto.
+      + sim_triggerUB.
+    - rewrite interp_imp_expr_Cmp.
+      sim_red.
+      sim_ord.
+      { instantiate (1:=((i1 + 20 + expr_ord e2 + 20) + expr_ord e1)%ord).
+        rewrite <- ! OrdArith.add_assoc. eapply OrdArith.add_base_l. }
+      eapply IHe1; auto. clear IHe1.
+      i.
+      sim_red.
+      sim_ord.
+      { instantiate (1:=(i1 + 20 + expr_ord e2)%ord).
+        eapply OrdArith.add_base_l. }
+      eapply IHe2; auto. clear IHe2.
+      i. sim_red.
+
+      des_ifs.
+      2: sim_triggerUB.
+      bsimpl. des. rename Heq into WFA, Heq0 into WFB.
+      sim_red.
+      do 1 (gstep; sim_tau). sim_red.
+      (* unfold cfunU. *)
+      grind.
+      do 3 (gstep; sim_tau). sim_red.
+      rewrite PSTATE. rewrite Any.upcast_downcast. grind.
+      destruct (vcmp m rv rv0) eqn:VCMP; sim_red.
+      2:{ sim_triggerUB. }
+      des_ifs.
+      + sim_red.
+        gstep. econs 6; clarify.
+        eexists. eexists.
+        { eapply step_set. econs; eauto. econs; eauto; ss. eapply match_mem_cmp in VCMP; eauto. }
+        eexists. exists (step_tau _).
+        eexists.
+        do 2 (gstep; sim_tau). sim_red. grind.
+        do 1 (gstep; sim_tau). gstep; sim_tau.
+        sim_ord.
+        { eapply OrdArith.add_base_l. }
+        gbase. eapply CIH.
+        hexploit match_states_intro.
+        { instantiate (2:=Skip). ss. }
+        2,3,4,5,6: eauto.
+        2: clarify.
+        2:{ i.
+            match goal with
+            | [ H1: match_states _ _ _ ?i0 _ |- match_states _ _ _ ?i1 _ ] =>
+              replace i1 with i0; eauto
+            end.
+            unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
+        { econs. i. unfold Int.one. rewrite Int.signed_repr.
+          2:{ unfold_Int_max_signed; unfold_Int_min_signed. ss. }
+          set (vv:=Vint 1) in *.
+          replace (Values.Vlong (Int64.repr 1)) with (map_val srcprog vv).
+          2:{ ss. }
+          eapply alist_update_le; eauto. }
+    + sim_red.
+        gstep. econs 6; clarify.
+        eexists. eexists.
+        { eapply step_set. econs; eauto. econs; eauto; ss. eapply match_mem_cmp in VCMP; eauto. }
+        eexists. exists (step_tau _).
+        eexists.
+        do 2 (gstep; sim_tau). sim_red. grind.
+        do 1 (gstep; sim_tau). gstep; sim_tau.
+        sim_ord.
+        { eapply OrdArith.add_base_l. } gbase. eapply CIH.
+        hexploit match_states_intro.
+        { instantiate (2:=Skip). ss. }
+        2,3,4,5,6: eauto.
+        2: clarify.
+        2:{ i.
+            match goal with
+            | [ H1: match_states _ _ _ ?i0 _ |- match_states _ _ _ ?i1 _ ] =>
+              replace i1 with i0; eauto
+            end.
+            unfold itree_of_cont_stmt, itree_of_imp_cont. rewrite interp_imp_Skip. grind. }
+        { econs. i. unfold Int.zero. rewrite Int.signed_repr.
+          2:{ unfold_Int_max_signed; unfold_Int_min_signed. ss. }
+          set (vv:=Vint 0) in *.
+          replace (Values.Vlong (Int64.repr 0)) with (map_val srcprog vv).
+          2:{ ss. }
+          eapply alist_update_le; eauto. }
+
+        Unshelve. all: try (exact Ord.O). all: try (exact 0%nat). all: ss.
+        { eapply (Genv.globalenv tgt). }
+
       unfold unwrapU. destruct (vmul rv rv0) eqn:VMUL; ss; clarify.
       + sim_red.
         specialize SIM with (rv:=v) (trv:= @map_val builtins srcprog v).

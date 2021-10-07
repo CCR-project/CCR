@@ -46,6 +46,11 @@ Section Compile.
       let ca := compile_expr a in let cb := compile_expr b in (Ebinop Osubl ca cb)
     | Mult a b =>
       let ca := compile_expr a in let cb := compile_expr b in (Ebinop Omull ca cb)
+    | Cmp ae be =>
+      let cae := (compile_expr ae) in
+      let cbe := (compile_expr be) in
+      let cmpexpr := Eunop Olongofint (Ebinop (Ocmplu Ceq) cae cbe) in
+      cmpexpr
     end
   .
 
@@ -111,11 +116,6 @@ Section Compile.
       let cpe := (compile_expr pe) in
       let cve := (compile_expr ve) in
       (Sstore Mint64 cpe cve)
-    | Cmp x ae be =>
-      let cae := (compile_expr ae) in
-      let cbe := (compile_expr be) in
-      let cmpexpr := Eunop Olongofint (Ebinop (Ocmplu Ceq) cae cbe) in
-      (Sset (s2p x) cmpexpr)
     end
   .
 

@@ -27,6 +27,7 @@ Inductive expr : Type :=
 | Plus  (_ _ : expr)
 | Minus (_ _ : expr)
 | Mult  (_ _ : expr)
+| Cmp (a : expr) (b : expr)  (* memory accessing equality comparison *)
 .
 
 (** function call exists only as a statement *)
@@ -43,7 +44,6 @@ Inductive stmt : Type :=
 | Free (p : expr)                      (* free(p) *)
 | Load (x : var) (p : expr)            (* x = *p *)
 | Store (p : expr) (v : expr)          (* *p = v *)
-| Cmp (x : var) (a : expr) (b : expr)  (* memory accessing equality comparison *)
 .
 
 (** information of a function *)
@@ -173,6 +173,12 @@ Section Denote.
     | Mult a b  =>
       l <- denote_expr a ;; r <- denote_expr b ;; u <- (vmul l r)? ;; Ret u
 
+    | Cmp ae be =>
+      a <- denote_expr ae;; b <- denote_expr be;;
+      (if (wf_val a && wf_val b) then Ret tt else triggerUB);;;
+      v <- ccallU "cmp" [a; b];;
+      tau;; Ret v
+
     end.
 
   (** Denotation of statements *)
@@ -254,11 +260,6 @@ Section Denote.
       (if (wf_val p) then Ret tt else triggerUB);;;
       v <- denote_expr ve;;
       `_:val <- ccallU "store" [p; v];; tau;; Ret Vundef
-    | Cmp x ae be =>
-      a <- denote_expr ae;; b <- denote_expr be;;
-      (if (wf_val a && wf_val b) then Ret tt else triggerUB);;;
-      v <- ccallU "cmp" [a; b];;
-      trigger (SetVar x v);;; tau;; Ret Vundef
 
     end.
 
