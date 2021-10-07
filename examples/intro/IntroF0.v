@@ -37,8 +37,9 @@ Section PROOF.
     fun varg =>
       `n: Z <- (pargs [Tint] varg)?;;
       assume (intrange_64 n);;;
+      assume ((Z.to_nat n) < max);;;
       if (n <? 0)%Z
-      then Ret (Vint (- 1))
+      then `_: val <- ccallU "log" [Vint n];; Ret (Vint (- 1))
       else if (n =? 0)%Z
            then Ret (Vint 0)
            else (Ncall (fun x => (0 <= x < Z.of_nat max)%Z) (fun r => r = Vint (5 * n - 2)) "g" n)
