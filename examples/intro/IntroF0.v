@@ -26,7 +26,7 @@ F.f(n) {
 Section PROOF.
 
   Definition Ncall X Y P Q (f: string) (x: X): itree Es Y :=
-    guarantee(P x);;;
+    guarantee(P);;;
     `b: bool <- trigger (Choose bool);;
     r <- if b then ccallU f x else trigger (Choose _);;
     assume(Q r);;;
@@ -42,8 +42,25 @@ Section PROOF.
       then `_: val <- ccallU "log" [Vint n];; Ret (Vint (- 1))
       else if (n =? 0)%Z
            then Ret (Vint 0)
-           else (Ncall (fun x => (0 <= x < Z.of_nat max)%Z) (fun r => r = Vint (5 * n - 2)) "g" n)
+           else (Ncall ((0 <= n < Z.of_nat max)%Z) (fun r => r = Vint (5 * n - 2)) "g" [Vint n])
   .
+
+  (* Definition Ncall {X Y} (f: string) (x: X): itree Es Y := *)
+  (*   `b: bool <- trigger (Choose bool);; *)
+  (*   if b then ccallU f x else trigger (Choose _) *)
+  (* . *)
+
+  (* Definition fF: list val -> itree Es val := *)
+  (*   fun varg => *)
+  (*     `n: Z <- (pargs [Tint] varg)?;; *)
+  (*     assume (intrange_64 n);;; *)
+  (*     assume ((Z.to_nat n) < max);;; *)
+  (*     if (n <? 0)%Z *)
+  (*     then `_: val <- ccallU "log" [Vint n];; Ret (Vint (- 1)) *)
+  (*     else if (n =? 0)%Z *)
+  (*          then Ret (Vint 0) *)
+  (*          else (Ncall "g" [Vint n]) *)
+  (* . *)
 
   Definition FSem: ModSem.t := {|
     ModSem.fnsems := [("f", cfunU fF)];

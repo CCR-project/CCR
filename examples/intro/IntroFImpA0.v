@@ -58,7 +58,25 @@ Section SIMMODSEM.
     - repeat (steps; (des_ifs; try lia; []); imp_steps). r; esplits; et.
     - repeat (steps; (des_ifs; try lia; []); imp_steps).
       unfold Ncall.
-      steps. (des_ifs; try lia; []); imp_steps.
+      steps. des_ifs.
+      + repeat (steps; (des_ifs; try lia; []); imp_steps).
+        force_l. { lia. } repeat (steps; (des_ifs; try lia; []); imp_steps).
+        force_l. exists false. force_l. esplits. steps.
+        r; esplits; et.
+      + repeat (steps; (des_ifs; try lia; []); imp_steps). force_l.
+        { unfold IntroHeader.max in *. lia. }
+        unfold ccallU.
+        repeat (steps; (des_ifs; try lia; []); imp_steps).
+        force_l. exists true.
+        repeat (steps; (des_ifs; try lia; []); imp_steps).
+        r; esplits; et. do 2 f_equal. lia.
+        lia.
+
+        unfold unwrapU.
+        unfold vadd.
+
+
+        (des_ifs; try lia; []); imp_steps.
       r; esplits; et.
     - repeat (steps; (des_ifs; try lia; []); imp_steps). r; esplits; et.
     - repeat (steps; (des_ifs; try lia; []); imp_steps). r; esplits; et.
