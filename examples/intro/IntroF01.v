@@ -51,7 +51,8 @@ Section SIMMODSEM.
       force_l; ss. steps. force_l. eexists (Vint _). steps. force_l; ss. steps. r. esplits; et.
     }
     steps. destruct x0.
-    - force_l. exists true. unfold ccallU. steps. force_l; ss. steps. force_r. { f_equal. lia. } steps.
+    - force_l. exists true. unfold ccallU. steps.
+      rewrite Z.eqb_neq in *. force_l; ss. { lia. } steps. force_r. { f_equal. lia. } steps.
       force_l. eexists. steps. force_l; ss. steps. r. esplits; et. do 2 f_equal. lia.
     - steps. force_l. exists false. steps. force_l. eexists. steps. force_l; ss. steps.
       force_l. esplits. steps. force_l; ss. steps. r. esplits; et. do 2 f_equal. lia.

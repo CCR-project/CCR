@@ -17,6 +17,14 @@ G.g(n) {
    if (usable) { Log.log("error"); -1 }        -> expire 지우기, spec -> termination 증명
    else { r = F.f(n-1); usable = false; 3 + r }
 }
+
+G.g(n) {
+   local usable = true
+   r := if (usable) { Log.log("error"); -1 }        -> expire 지우기, spec -> termination 증명
+        else { 3 + F.f(n-1) }
+   usable = false;
+   r
+}
 ***)
 
 Section PROOF.

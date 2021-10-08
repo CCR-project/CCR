@@ -54,8 +54,13 @@ Section SIMMODSEM.
       steps. astop. ss. steps. mDesAll; clarify. rewrite Any.upcast_downcast. ss. steps.
       force_r; ss. steps. force_l. esplits. steps. hret _; ss.
       { iModIntro. iFrame. iSplits; ss; et. }
-    - steps. astop. steps. force_l. esplits. steps. hret _; ss.
-      { iModIntro. iFrame. iSplits; ss; et. TTTTTTTTTTTTTTTTTTTTTTT }
+    - steps. astop. steps. force_l. esplits. steps.
+      mAssert _ with "A".
+      { iApply (OwnM_Upd with "A"). instantiate (1:=IRA.client false). r. clear_until H.
+        ur. i. des_ifs.
+      }
+      hret _; ss.
+      { iMod "A1". iModIntro. iFrame. iSplits; ss; et. }
   Unshelve. all: ss. all: try exact 0.
   Qed.
 

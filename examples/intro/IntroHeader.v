@@ -79,10 +79,10 @@ Variant car: Type :=
 Let add := fun a0 a1 => match a0, a1 with
                                     | module true, client true => full
                                     | module false, client false => full
-                                    (* | module false, client true => full *)
+                                    | module true, client false => full
                                     | client true, module true => full
                                     | client false, module false => full
-                                    (* | client true, module false => full *)
+                                    | client false, module true => full
                                     | _, unit => a0
                                     | unit, _ => a1
                                     | _, _ => boom

@@ -57,11 +57,11 @@ Section SIMMODSEM.
       }
       { esplits; ss; et. eapply OrdArith.lt_from_nat. lia. }
       steps. astop. ss. steps. mDesAll; clarify. rewrite Any.upcast_downcast. ss. steps.
-      mAssertPure (a = false).
-      { iCombine "A" "INV1" as "A". iOwnWf "A". ur in H0. des_ifs. }
-      subst.
+      mAssert _ with "A INV1".
+      { iCombine "A" "INV1" as "A". iApply (OwnM_Upd with "A").
+        instantiate (1:=@URA.add IRA.t (IRA.client false) (IRA.module false)). r. ur. i. des_ifs. }
       force_l. eexists. steps. hret _; ss.
-      { iModIntro. iFrame. iSplits; ss; et. iPureIntro. do 2 f_equal. lia. }
+      { iMod "A1". iModIntro. iDestruct "A1" as "[B C]". iFrame. iSplits; ss; et. iPureIntro. do 2 f_equal. lia. }
     - steps.
       mAssertPure False.
       { iCombine "A" "INV" as "A". iOwnWf "A". ur in H0. des_ifs. }
