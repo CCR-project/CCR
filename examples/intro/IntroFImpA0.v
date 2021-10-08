@@ -60,18 +60,18 @@ Section SIMMODSEM.
       unfold Ncall.
       steps. des_ifs.
       + repeat (steps; (des_ifs; try lia; []); imp_steps).
-        force_l. { lia. } repeat (steps; (des_ifs; try lia; []); imp_steps).
-        rewrite Z.eqb_eq in *. clarify.
         force_l. exists false. steps. force_l. esplits. steps.
+        force_l; ss. repeat (steps; (des_ifs; try lia; []); imp_steps).
+        rewrite Z.eqb_eq in *. clarify.
         r; esplits; et.
-      + repeat (steps; (des_ifs; try lia; []); imp_steps). force_l.
-        { unfold IntroHeader.max in *. lia. }
+      + repeat (steps; (des_ifs; try lia; []); imp_steps).
+        force_l. exists true.
         unfold ccallU.
         repeat (steps; (des_ifs; try lia; []); imp_steps).
-        force_l. exists true.
+        force_l; ss.
         repeat (steps; (des_ifs; try lia; []); imp_steps).
         r; esplits; et. do 2 f_equal. lia.
-  Unshelve. all: try exact 0. all: ss. { econs; ss. apply 0%Z. }
+  Unshelve. all: try exact 0. all: ss.
   Qed.
 
 End SIMMODSEM.

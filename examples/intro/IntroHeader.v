@@ -33,11 +33,15 @@ Proof.
 Qed.
 
 Definition Ncall X Y P Q (f: string) (x: X): itree Es Y :=
-  guarantee(P);;;
+  (* guarantee(P);;; *)
+  (* `b: bool <- trigger (Choose bool);; *)
+  (* r <- (if b then ccallU f x else trigger (Choose _));; *)
+  (* assume(Q r);;; *)
+  (* Ret r *)
   `b: bool <- trigger (Choose bool);;
-  r <- (if b then ccallU f x else trigger (Choose _));;
-  assume(Q r);;;
-  Ret r
+  if b
+  then guarantee(P);;; r <- ccallU f x;; assume (Q r);;; Ret r
+  else r <- trigger (Choose _);; guarantee (Q r);;; Ret r
 .
 
 Section PROOF.
@@ -55,3 +59,5 @@ Section PROOF.
   Definition GlobalStb: gname -> option fspec := to_stb [("f", f_spec); ("g", g_spec)].
 
 End PROOF.
+
+Global Opaque Z.mul Nat.mul.

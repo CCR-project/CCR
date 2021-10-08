@@ -25,24 +25,15 @@ F.f(n) {
 
 Section PROOF.
 
-  Definition Ncall X Y P Q (f: string) (x: X): itree Es Y :=
-    guarantee(P);;;
-    `b: bool <- trigger (Choose bool);;
-    r <- if b then ccallU f x else trigger (Choose _);;
-    assume(Q r);;;
-    Ret r
-  .
-
   Definition fF: list val -> itree Es val :=
     fun varg =>
       `n: Z <- (pargs [Tint] varg)?;;
       assume (intrange_64 n);;;
-      assume ((Z.to_nat n) < max);;;
       if (n <? 0)%Z
       then `_: val <- ccallU "log" [Vint n];; Ret (Vint (- 1))
       else if (n =? 0)%Z
            then Ret (Vint 0)
-           else r <- (Ncall ((0 <= n < Z.of_nat max)%Z) (fun r => r = Vint (5 * n - 2)) "g" [Vint n]);;
+           else r <- (Ncall True (fun r => r = Vint (5 * n - 2)) "g" [Vint n]);;
                 res <- (vadd (Vint 2) r)?;;
                 Ret res
   .

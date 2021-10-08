@@ -43,28 +43,19 @@ Section SIMMODSEM.
     econs; ss. init. unfold cfunU.
     unfold fF, IntroF0.fF.
     steps. des. clarify. ss. steps.
-    rewrite unfold_eval_imp. cbn. steps.
-    (* eapply Any.downcast_upcast in _UNWRAPN. des. *)
-    unfold unint, ccallU in *. destruct v; clarify; ss.
-    des_ifs; try (by exfalso; apply n; solve_NoDup).
-    - repeat (steps; (des_ifs; try lia; []); imp_steps). r; esplits; et.
-    - repeat (steps; (des_ifs; try lia; []); imp_steps). r; esplits; et.
-    - repeat (steps; (des_ifs; try lia; []); imp_steps).
-      unfold Ncall.
-      steps. des_ifs.
-      + repeat (steps; (des_ifs; try lia; []); imp_steps).
-        force_l. { lia. } repeat (steps; (des_ifs; try lia; []); imp_steps).
-        rewrite Z.eqb_eq in *. clarify.
-        force_l. exists false. steps. force_l. esplits. steps.
-        r; esplits; et.
-      + repeat (steps; (des_ifs; try lia; []); imp_steps). force_l.
-        { unfold IntroHeader.max in *. lia. }
-        unfold ccallU.
-        repeat (steps; (des_ifs; try lia; []); imp_steps).
-        force_l. exists true.
-        repeat (steps; (des_ifs; try lia; []); imp_steps).
-        r; esplits; et. do 2 f_equal. lia.
-  Unshelve. all: try exact 0. all: ss. { econs; ss. apply 0%Z. }
+    force_r. { eapply max_intrange; ss. } steps.
+    destruct (Z.of_nat x <? 0)%Z eqn:T; try lia.
+    unfold Ncall.
+    destruct (Z.of_nat x =? 0)%Z eqn:U.
+    { steps. assert(x = 0) by lia. steps. force_l. exists false. steps. force_l. eexists (Vint 0). steps.
+      force_l; ss. steps. force_l. eexists (Vint _). steps. force_l; ss. steps. r. esplits; et.
+    }
+    steps. destruct x0.
+    - force_l. exists true. unfold ccallU. steps. force_l; ss. steps. force_r. { f_equal. lia. } steps.
+      force_l. eexists. steps. force_l; ss. steps. r. esplits; et. do 2 f_equal. lia.
+    - steps. force_l. exists false. steps. force_l. eexists. steps. force_l; ss. steps.
+      force_l. esplits. steps. force_l; ss. steps. r. esplits; et. do 2 f_equal. lia.
+  Unshelve. all: try exact 0. all: ss.
   Qed.
 
 End SIMMODSEM.
