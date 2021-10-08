@@ -1,4 +1,4 @@
-Require Import HoareDef MutHeader IntroFImpA IntroF0 SimModSem.
+Require Import HoareDef MutHeader IntroFImpB IntroF0 SimModSem.
 Require Import Coqlib.
 Require Import ImpPrelude.
 Require Import Skeleton.
@@ -41,13 +41,13 @@ Section SIMMODSEM.
   .
 
   Theorem correct:
-    refines2 [IntroFImpA.F] [IntroF0.F].
+    refines2 [IntroFImpB.F] [IntroF0.F].
   Proof.
     eapply adequacy_local2. econs; ss. i.
     econstructor 1 with (wf:=wf) (le:=top2); et; ss.
     econs; ss. init. unfold cfunU.
     unfold fF.
-    unfold IntroFImpA.fF.
+    unfold IntroFImpB.fF.
     (* Local Opaque vadd. *)
     steps.
     rewrite unfold_eval_imp. cbn. steps.

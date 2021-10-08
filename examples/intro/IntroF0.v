@@ -42,7 +42,9 @@ Section PROOF.
       then `_: val <- ccallU "log" [Vint n];; Ret (Vint (- 1))
       else if (n =? 0)%Z
            then Ret (Vint 0)
-           else (Ncall ((0 <= n < Z.of_nat max)%Z) (fun r => r = Vint (5 * n - 2)) "g" [Vint n])
+           else r <- (Ncall ((0 <= n < Z.of_nat max)%Z) (fun r => r = Vint (5 * n - 2)) "g" [Vint n]);;
+                res <- (vadd (Vint 2) r)?;;
+                Ret res
   .
 
   (* Definition Ncall {X Y} (f: string) (x: X): itree Es Y := *)
