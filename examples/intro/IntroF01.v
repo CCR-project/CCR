@@ -1,4 +1,4 @@
-Require Import HoareDef IntroHeader IntroFImpA IntroF0 SimModSem.
+Require Import HoareDef IntroHeader IntroF0 IntroF1 SimModSem.
 Require Import Coqlib.
 Require Import ImpPrelude.
 Require Import Skeleton.
@@ -18,11 +18,6 @@ From ExtLib Require Import
 
 Require Import HTactics.
 
-Require Import Imp.
-Require Import ImpNotations.
-Require Import ImpProofs.
-Import ImpNotations.
-
 Set Implicit Arguments.
 
 Local Open Scope nat_scope.
@@ -41,15 +36,13 @@ Section SIMMODSEM.
   .
 
   Theorem correct:
-    refines2 [IntroFImpA.F] [IntroF0.F].
+    refines2 [IntroF0.F] [IntroF1.F].
   Proof.
     eapply adequacy_local2. econs; ss. i.
     econstructor 1 with (wf:=wf) (le:=top2); et; ss.
     econs; ss. init. unfold cfunU.
-    unfold fF.
-    unfold IntroFImpA.fF.
-    (* Local Opaque vadd. *)
-    steps.
+    unfold fF, IntroF0.fF.
+    steps. des. clarify. ss. steps.
     rewrite unfold_eval_imp. cbn. steps.
     (* eapply Any.downcast_upcast in _UNWRAPN. des. *)
     unfold unint, ccallU in *. destruct v; clarify; ss.
