@@ -32,32 +32,100 @@ Proof.
   all: rewrite Z.div_mul in *; try lia.
 Qed.
 
+Global Opaque Z.mul Nat.mul.
+
+
+
 Definition Ncall X Y P Q (f: string) (x: X): itree Es Y :=
-  (* guarantee(P);;; *)
-  (* `b: bool <- trigger (Choose bool);; *)
-  (* r <- (if b then ccallU f x else trigger (Choose _));; *)
-  (* assume(Q r);;; *)
-  (* Ret r *)
   `b: bool <- trigger (Choose bool);;
   if b
   then guarantee(P);;; r <- ccallU f x;; assume (Q r);;; Ret r
   else r <- trigger (Choose _);; guarantee (Q r);;; Ret r
 .
 
+Module Plain.
 Section PROOF.
 
   Context `{Σ: GRA.t}.
 
   Definition f_spec: fspec :=
     mk_simple (fun (n: nat) =>
-                 ((fun varg o => (⌜varg = [Vint (Z.of_nat n)]↑ /\ o = ord_pure n /\ n < max⌝: iProp)%I),
+                 ((fun varg o => (⌜varg = [Vint (Z.of_nat n)]↑ /\ o = ord_pure (2*n)%nat /\ n < max⌝: iProp)%I),
                   (fun vret => (⌜vret = (Vint (Z.of_nat (5 * n)))↑⌝: iProp)%I))).
   Definition g_spec: fspec :=
     mk_simple (fun (n: nat) =>
-                 ((fun varg o => (⌜varg = [Vint (Z.of_nat n)]↑ /\ o = ord_pure n /\ n < max⌝: iProp)%I),
+                 ((fun varg o => (⌜varg = [Vint (Z.of_nat n)]↑ /\ o = ord_pure (2*n - 1)%nat /\ 1 <= n < max⌝: iProp)%I),
                   (fun vret => (⌜vret = (Vint (Z.of_nat (5 * n - 2)))↑⌝: iProp)%I))).
   Definition GlobalStb: gname -> option fspec := to_stb [("f", f_spec); ("g", g_spec)].
 
 End PROOF.
+End Plain.
 
-Global Opaque Z.mul Nat.mul.
+
+
+
+(*** RA for the intro example ***)
+Module IRA.
+Section IRA.
+
+Variant car: Type :=
+| module (usable: bool)
+| client (usable: bool)
+| full
+| boom
+| unit
+.
+
+Let add := fun a0 a1 => match a0, a1 with
+                                    | module true, client true => full
+                                    | module false, client false => full
+                                    (* | module false, client true => full *)
+                                    | client true, module true => full
+                                    | client false, module false => full
+                                    (* | client true, module false => full *)
+                                    | _, unit => a0
+                                    | unit, _ => a1
+                                    | _, _ => boom
+                                    end.
+Let wf := fun a => match a with | boom => False | _ => True end.
+
+Program Instance t: URA.t := {
+  car := car;
+  unit := unit;
+  _add := add;
+  _wf := wf;
+}
+.
+Next Obligation. subst add wf. i. destruct a, b; ss; des_ifs; ss. Qed.
+Next Obligation. subst add wf. i. destruct a, b; ss; des_ifs; ss. Qed.
+Next Obligation. subst add wf. i. unseal "ra". des_ifs. Qed.
+Next Obligation. subst add wf. i. unseal "ra". ss. Qed.
+Next Obligation. subst add wf. i. unseal "ra". des_ifs. Qed.
+
+End IRA.
+End IRA.
+
+
+
+Module Sep.
+Section PROOF.
+
+  Context `{Σ: GRA.t}.
+  Context `{@GRA.inG IRA.t Σ}.
+
+  Definition f_spec: fspec :=
+    mk_simple (fun (n: nat) =>
+                 ((fun varg o => (⌜varg = [Vint (Z.of_nat n)]↑ /\ o = ord_pure (2*n)%nat /\ n < max⌝
+                                  ** OwnM (IRA.client true: IRA.t))),
+                  (fun vret => (⌜vret = (Vint (Z.of_nat (5 * n)))↑⌝
+                                 ** OwnM (IRA.client false: IRA.t))))).
+  Definition g_spec: fspec :=
+    mk_simple (fun (n: nat) =>
+                 ((fun varg o => (⌜varg = [Vint (Z.of_nat n)]↑ /\ o = ord_pure (2*n - 1)%nat /\ 1 <= n < max⌝
+                                   ** OwnM (IRA.client true: IRA.t))),
+                  (fun vret => (⌜vret = (Vint (Z.of_nat (5 * n - 2)))↑⌝
+                                   ** OwnM (IRA.client false: IRA.t))))).
+  Definition GlobalStb: gname -> option fspec := to_stb [("f", f_spec); ("g", g_spec)].
+
+End PROOF.
+End Sep.
