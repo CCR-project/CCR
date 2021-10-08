@@ -17,7 +17,7 @@ Section PROOF.
     fun varg =>
       n <- trigger (Take _);;
       assume(varg = [Vint (Z.of_nat n)] /\ n < max);;;
-      (Ncall (n < max) (fun r => r = Vint (Z.of_nat (5 * n - 2))) "g" [Vint (Z.of_nat n)]);;;
+      (Ncall (1 <= n < max) (fun r => r = Vint (Z.of_nat (5 * n - 2))) "g" [Vint (Z.of_nat n)]);;;
       r <- trigger (Choose _);;
       guarantee(r = (Vint (Z.of_nat (5 * n))));;;
       Ret r
