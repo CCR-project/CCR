@@ -13,11 +13,8 @@ Set Implicit Arguments.
 
 (***
 G.g(n) {
-   local usable = true
-   if (usable) { Log.log("error"); -1 }        -> expire 지우기, spec -> termination 증명
-   else { r = F.f(n-1); usable = false; 3 + r }
+   3 + F.f(n-1)
 }
-
 ***)
 
 Section PROOF.
@@ -25,17 +22,13 @@ Section PROOF.
   Definition gF: list val -> itree Es val :=
     fun varg =>
       `n: Z <- (pargs [Tint] varg)?;;
-      p0 <- trigger (PGet);;
-      p0 <- p0↓?;;
-      if (p0: bool)
-      then r <- ccallU "f" [Vint (n - 1)];; res <- (vadd (Vint 3) r)?;; trigger (PPut false↑);;; Ret res
-      else `_: val <- ccallU "log" [Vint n];; Ret (Vint (- 1))
+      r <- ccallU "f" [Vint (n - 1)];; res <- (vadd (Vint 3) r)?;; Ret res
   .
 
   Definition GSem: ModSem.t := {|
     ModSem.fnsems := [("g", cfunU gF)];
     ModSem.mn := "G";
-    ModSem.initial_st := true↑;
+    ModSem.initial_st := tt↑;
   |}
   .
 

@@ -49,8 +49,8 @@ Section SIMMODSEM.
     econs; ss. init. harg. mDesAll.
     des; clarify. unfold fF, ccallU. steps. astart 10. force_r. exists x. steps. force_r; ss. steps.
     unfold Ncall. steps. des_ifs.
-    - unfold ccallU. steps. acatch. hcall _ _ _ with "*"; auto.
-      { esplits; ss; et. eapply OrdArith.lt_from_nat. lia. }
+    - unfold ccallU. steps. acatch. des. hcall _ _ _ with "*"; auto.
+      { esplits; ss; et. }
       steps. astop. ss. steps. mDesAll; clarify. rewrite Any.upcast_downcast. ss. steps.
       force_r; ss. steps. force_l. esplits. steps. hret _; ss.
       { iModIntro. iFrame. iSplits; ss; et. }

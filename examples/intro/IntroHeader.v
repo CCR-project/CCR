@@ -43,6 +43,9 @@ Definition Ncall X Y P Q (f: string) (x: X): itree Es Y :=
   else r <- trigger (Choose _);; guarantee (Q r);;; Ret r
 .
 
+Definition f_measure (n: nat): ord := ord_pure (2*n).
+Definition g_measure (n: nat): ord := ord_pure (2*n - 1).
+
 Module Plain.
 Section PROOF.
 
@@ -50,11 +53,11 @@ Section PROOF.
 
   Definition f_spec: fspec :=
     mk_simple (fun (n: nat) =>
-                 ((fun varg o => (⌜varg = [Vint (Z.of_nat n)]↑ /\ o = ord_pure (2*n)%nat /\ n < max⌝: iProp)%I),
+                 ((fun varg o => (⌜varg = [Vint (Z.of_nat n)]↑ /\ o = f_measure n /\ n < max⌝: iProp)%I),
                   (fun vret => (⌜vret = (Vint (Z.of_nat (5 * n)))↑⌝: iProp)%I))).
   Definition g_spec: fspec :=
     mk_simple (fun (n: nat) =>
-                 ((fun varg o => (⌜varg = [Vint (Z.of_nat n)]↑ /\ o = ord_pure (2*n - 1)%nat /\ 1 <= n < max⌝: iProp)%I),
+                 ((fun varg o => (⌜varg = [Vint (Z.of_nat n)]↑ /\ o = g_measure n /\ 1 <= n < max⌝: iProp)%I),
                   (fun vret => (⌜vret = (Vint (Z.of_nat (5 * n - 2)))↑⌝: iProp)%I))).
   Definition GlobalStb: gname -> option fspec := to_stb [("f", f_spec); ("g", g_spec)].
 
@@ -115,13 +118,13 @@ Section PROOF.
 
   Definition f_spec: fspec :=
     mk_simple (fun (n: nat) =>
-                 ((fun varg o => (⌜varg = [Vint (Z.of_nat n)]↑ /\ o = ord_pure (2*n)%nat /\ n < max⌝
+                 ((fun varg o => (⌜varg = [Vint (Z.of_nat n)]↑ /\ o = f_measure n /\ n < max⌝
                                   ** OwnM (IRA.client true: IRA.t))),
                   (fun vret => (⌜vret = (Vint (Z.of_nat (5 * n)))↑⌝
                                  ** OwnM (IRA.client false: IRA.t))))).
   Definition g_spec: fspec :=
     mk_simple (fun (n: nat) =>
-                 ((fun varg o => (⌜varg = [Vint (Z.of_nat n)]↑ /\ o = ord_pure (2*n - 1)%nat /\ 1 <= n < max⌝
+                 ((fun varg o => (⌜varg = [Vint (Z.of_nat n)]↑ /\ o = g_measure n /\ 1 <= n < max⌝
                                    ** OwnM (IRA.client true: IRA.t))),
                   (fun vret => (⌜vret = (Vint (Z.of_nat (5 * n - 2)))↑⌝
                                    ** OwnM (IRA.client false: IRA.t))))).
