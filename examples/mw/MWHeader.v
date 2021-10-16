@@ -17,9 +17,11 @@ Set Implicit Arguments.
 
 
 
-Instance AppRA: URA.t := Excl.t unit.
-Definition AppInit: AppRA := (@None unit).
-Definition AppRun: AppRA := Some tt.
+Instance AppRA: URA.t := Auth.t (Excl.t unit).
+Definition AppInit: AppRA := Auth.white ((@None unit): (@URA.car (Excl.t _))).
+Definition AppRun: AppRA := Auth.white (Some tt: (@URA.car (Excl.t _))).
+Definition AppInitX: AppRA := Auth.black ((@None unit): (@URA.car (Excl.t _))).
+Definition AppRunX: AppRA := Auth.black (Some tt: (@URA.car (Excl.t _))).
 
 
 Instance mwRA: URA.t := (Z ==> (Excl.t Z))%ra.
@@ -29,10 +31,14 @@ Section PROOF.
   Context `{@GRA.inG mwRA Σ}.
 
   Definition init_spec0: fspec :=
-    mk_simple (fun (_: unit) => ((fun varg o => (OwnM AppInit)), (fun vret => (OwnM AppRun)))).
+    mk_simple (fun (_: unit) => (
+                   (fun varg o => ⌜varg = ([]: list val)↑ ∧ o = ord_top⌝ ** OwnM AppInit),
+                   (fun vret => ⌜vret = Vundef↑⌝ ** OwnM AppRun))).
 
   Definition run_spec0: fspec :=
-    mk_simple (fun (_: unit) => ((fun varg o => (OwnM AppRun)), (fun vret => (OwnM AppRun)))).
+    mk_simple (fun (_: unit) => (
+                   (fun varg o => ⌜varg = ([]: list val)↑ ∧ o = ord_top⌝ ** OwnM AppRun),
+                   (fun vret => ⌜vret = Vundef↑⌝ ** OwnM AppRun))).
 
   Definition main_spec: fspec :=
     mk_simple (fun (_: unit) =>
@@ -60,7 +66,7 @@ Section PROOF.
                          (fun vret => OwnM AppRun ** OwnM f ∧ ⌜f 0 = Some 42%Z⌝))).
 
   Definition GlobalStb0: gname -> option fspec :=
-    to_stb [("init",init_spec0); ("run",run_spec0)].
+    to_stb [("init",init_spec0); ("run",run_spec0); ("put",fspec_trivial); ("get",fspec_trivial)].
 
   Definition GlobalStb1: gname -> option fspec :=
     to_stb [("init",init_spec1); ("run",run_spec1); ("main",main_spec); ("put",put_spec); ("get",get_spec)].

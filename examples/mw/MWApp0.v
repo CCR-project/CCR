@@ -24,7 +24,7 @@ Section PROOF.
       initialized <- pget;;
       if (initialized: bool)
       then trigger (Syscall "print" [Vint (- 1)]↑ top1);;; Ret Vundef
-      else `_: val <- ccallU "put" [Vint 0; Vint 42];; Ret Vundef
+      else `_: val <- ccallU "put" [Vint 0; Vint 42];; pput true;;; Ret Vundef
   .
 
   Definition runF: list val -> itree Es val :=

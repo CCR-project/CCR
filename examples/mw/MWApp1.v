@@ -19,20 +19,21 @@ Section PROOF.
   Context `{@GRA.inG AppRA Σ}.
 
   Definition sbtb: list (string * fspecbody) :=
-    [("init", mk_specbody init_spec0 (fun _ => trigger (Choose _)));
-     ("run", mk_specbody run_spec0 (fun _ => trigger (Choose _)))].
+    [("init", mk_specbody init_spec0 (fun _ => `_: val <- ccallU "put" [Vint 0; Vint 42];; Ret Vundef↑));
+     ("run", mk_specbody run_spec0 (fun _ => `v: val <- ccallU "get" [Vint 0];;
+                                                 trigger (Syscall "print" [v]↑ top1);;; Ret Vundef↑))].
 
   Definition SAppSem: SModSem.t := {|
     SModSem.fnsems := sbtb;
     SModSem.mn := "App";
-    SModSem.initial_mr := ε;
+    SModSem.initial_mr := GRA.embed AppInitX;
     SModSem.initial_st := tt↑;
   |}
   .
 
   Definition SApp: SMod.t := {|
     SMod.get_modsem := fun _ => SAppSem;
-    SMod.sk := [];
+    SMod.sk := [("init", Sk.Gfun); ("run", Sk.Gfun)];
   |}
   .
 

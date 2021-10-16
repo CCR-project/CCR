@@ -33,7 +33,7 @@ Section PROOF.
 
   Definition SApp: SMod.t := {|
     SMod.get_modsem := fun _ => SAppSem;
-    SMod.sk := [];
+    SMod.sk := [("init", Sk.Gfun); ("run", Sk.Gfun)];
   |}
   .
 
