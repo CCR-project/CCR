@@ -58,11 +58,11 @@ Section PROOF.
   .
 
   Definition init_spec1: fspec :=
-    mk_simple (fun f => ((fun varg o => OwnM AppInit ** OwnM f),
+    mk_simple (fun f => ((fun varg o => ⌜varg = ([]: list val)↑ ∧ o = ord_top⌝ ** OwnM AppInit ** OwnM f),
                          (fun vret => OwnM AppRun ** OwnM f ∧ ⌜f 0 = Some 42%Z⌝))).
 
   Definition run_spec1: fspec :=
-    mk_simple (fun f => ((fun varg o => OwnM AppRun ** OwnM f ∧ ⌜f 0 = Some 42%Z⌝),
+    mk_simple (fun f => ((fun varg o => ⌜varg = ([]: list val)↑ ∧ o = ord_top⌝ ** OwnM AppRun ** OwnM f ∧ ⌜f 0 = Some 42%Z⌝),
                          (fun vret => OwnM AppRun ** OwnM f ∧ ⌜f 0 = Some 42%Z⌝))).
 
   Definition GlobalStb0: gname -> option fspec :=
