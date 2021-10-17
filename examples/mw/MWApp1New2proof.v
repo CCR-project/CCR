@@ -42,7 +42,7 @@ Section SIMMODSEM.
 
   Opaque AppRA.t. (****************** todo move to the root ******************)
   Opaque mwRA.
-  Opaque Z.eqb.
+  Opaque Z.eq_dec Z.eqb.
 
   Theorem correct: refines2 [MWApp1New.App] [MWApp2.App].
   Proof.
