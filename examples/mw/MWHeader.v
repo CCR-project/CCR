@@ -16,18 +16,52 @@ Require Import ProofMode.
 Set Implicit Arguments.
 
 
+Module AppRA.
+Section AppRA.
 
-Instance AppRA: URA.t := Auth.t (Excl.t unit).
-Definition AppInit: AppRA := Auth.white ((@None unit): (@URA.car (Excl.t _))).
-Definition AppRun: AppRA := Auth.white (Some tt: (@URA.car (Excl.t _))).
-Definition AppInitX: AppRA := Auth.black ((@None unit): (@URA.car (Excl.t _))).
-Definition AppRunX: AppRA := Auth.black (Some tt: (@URA.car (Excl.t _))).
+Variant car: Type :=
+| half (usable: bool)
+| full
+| boom
+| unit
+.
+
+Let add := fun a0 a1 => match a0, a1 with
+                                    | half true, half true => full
+                                    | half false, half false => full
+                                    | _, unit => a0
+                                    | unit, _ => a1
+                                    | _, _ => boom
+                                    end.
+Let wf := fun a => match a with | boom => False | _ => True end.
+
+Program Instance t: URA.t := {
+  car := car;
+  unit := unit;
+  _add := add;
+  _wf := wf;
+}
+.
+Next Obligation. subst add wf. i. destruct a, b; ss; des_ifs; ss. Qed.
+Next Obligation. subst add wf. i. destruct a, b; ss; des_ifs; ss. Qed.
+Next Obligation. subst add wf. i. unseal "ra". des_ifs. Qed.
+Next Obligation. subst add wf. i. unseal "ra". ss. Qed.
+Next Obligation. subst add wf. i. unseal "ra". des_ifs. Qed.
+
+End AppRA.
+End AppRA.
+
+Definition Init: AppRA.t := AppRA.half false.
+Definition InitX: AppRA.t := AppRA.half false.
+Definition Run: AppRA.t := AppRA.half true.
+Definition RunX: AppRA.t := AppRA.half true.
+
 
 
 Instance mwRA: URA.t := (Z ==> (Excl.t Z))%ra.
 
 Section PROOF.
-  Context `{@GRA.inG AppRA Σ}.
+  Context `{@GRA.inG AppRA.t Σ}.
   Context `{@GRA.inG mwRA Σ}.
 
   Definition mk_simple_frame {X: Type} (PQ: X -> ((Any.t -> ord -> iProp) * (Any.t -> iProp))): fspec :=
@@ -37,18 +71,18 @@ Section PROOF.
 
   Definition init_spec0: fspec :=
     mk_simple (fun (_: unit) => (
-                   (fun varg o => ⌜varg = ([]: list val)↑ ∧ o = ord_top⌝ ** OwnM AppInit),
-                   (fun vret => ⌜vret = Vundef↑⌝ ** OwnM AppRun))).
+                   (fun varg o => ⌜varg = ([]: list val)↑ ∧ o = ord_top⌝ ** OwnM Init),
+                   (fun vret => ⌜vret = Vundef↑⌝ ** OwnM Run))).
 
   Definition run_spec0: fspec :=
     mk_simple (fun (_: unit) => (
-                   (fun varg o => ⌜varg = ([]: list val)↑ ∧ o = ord_top⌝ ** OwnM AppRun),
-                   (fun vret => ⌜vret = Vundef↑⌝ ** OwnM AppRun))).
+                   (fun varg o => ⌜varg = ([]: list val)↑ ∧ o = ord_top⌝ ** OwnM Run),
+                   (fun vret => ⌜vret = Vundef↑⌝ ** OwnM Run))).
 
   Definition main_spec: fspec :=
     mk_simple (fun (_: unit) =>
-                 ((fun varg o => OwnM AppInit),
-                  (fun vret => OwnM AppRun))).
+                 ((fun varg o => OwnM Init),
+                  (fun vret => OwnM Run))).
 
   Definition put_spec: fspec :=
     mk_simple (fun '(f, k, v) =>
@@ -63,12 +97,12 @@ Section PROOF.
   .
 
   Definition init_spec1: fspec :=
-    mk_simple (fun f => ((fun varg o => ⌜varg = ([]: list val)↑ ∧ o = ord_top⌝ ** OwnM AppInit ** OwnM (f: Z -> option Z)),
-                         (fun vret => OwnM AppRun ** OwnM (add 0%Z 42%Z f)))).
+    mk_simple (fun f => ((fun varg o => ⌜varg = ([]: list val)↑ ∧ o = ord_top⌝ ** OwnM Init ** OwnM (f: Z -> option Z)),
+                         (fun vret => OwnM Run ** OwnM (add 0%Z 42%Z f)))).
 
   Definition run_spec1: fspec :=
-    mk_simple (fun f => ((fun varg o => ⌜varg = ([]: list val)↑ ∧ o = ord_top⌝ ** OwnM AppRun ** OwnM (f: Z -> option Z) ∧ ⌜f 0 = Some 42%Z⌝),
-                         (fun vret => OwnM AppRun ** OwnM f ∧ ⌜f 0 = Some 42%Z⌝))).
+    mk_simple (fun f => ((fun varg o => ⌜varg = ([]: list val)↑ ∧ o = ord_top⌝ ** OwnM Run ** OwnM (f: Z -> option Z) ∧ ⌜f 0 = Some 42%Z⌝),
+                         (fun vret => OwnM Run ** OwnM f ∧ ⌜f 0 = Some 42%Z⌝))).
 
   Definition GlobalStb0: gname -> option fspec :=
     to_stb [("init",init_spec0); ("run",run_spec0); ("put",fspec_trivial); ("get",fspec_trivial)].

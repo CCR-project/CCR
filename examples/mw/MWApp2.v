@@ -16,7 +16,7 @@ Set Implicit Arguments.
 
 Section PROOF.
 
-  Context `{@GRA.inG AppRA Σ}.
+  Context `{@GRA.inG AppRA.t Σ}.
   Context `{@GRA.inG mwRA Σ}.
 
   Definition sbtb: list (string * fspecbody) :=
@@ -27,7 +27,7 @@ Section PROOF.
   Definition SAppSem: SModSem.t := {|
     SModSem.fnsems := sbtb;
     SModSem.mn := "App";
-    SModSem.initial_mr := GRA.embed AppInitX;
+    SModSem.initial_mr := GRA.embed InitX;
     SModSem.initial_st := tt↑;
   |}
   .

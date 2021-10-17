@@ -27,7 +27,7 @@ Local Open Scope nat_scope.
 Section SIMMODSEM.
 
   Context `{Σ: GRA.t}.
-  Context `{@GRA.inG AppRA Σ}.
+  Context `{@GRA.inG AppRA.t Σ}.
 
   Let W: Type := Any.t * Any.t.
 
@@ -37,8 +37,8 @@ Section SIMMODSEM.
     (*   unit *)
     (*   (fun _ _ st_tgt => ((OwnM(AppInitX) ∧ ⌜st_tgt = false↑⌝) ∨ (OwnM(AppRunX) ∧ ⌜st_tgt = true↑⌝))%I) *)
 
-    fun (_: unit) '(mpr_src, mpr_tgt) => (mpr_src = (AppInitX)↑ ∧ mpr_tgt = false↑) ∨
-                                         (mpr_src = (AppRunX)↑ ∧ mpr_tgt = true↑)
+    fun (_: unit) '(mpr_src, mpr_tgt) => (mpr_src = (InitX)↑ ∧ mpr_tgt = false↑) ∨
+                                         (mpr_src = (RunX)↑ ∧ mpr_tgt = true↑)
   .
 
   Theorem correct: refines2 [MWApp0.App] [MWApp1New.App].
@@ -52,12 +52,12 @@ Section SIMMODSEM.
     { init. steps. unfold initF, MWApp0.initF, ASSUME, GUARANTEE. steps.
       rr in WF. des; clarify; rewrite Any.upcast_downcast in *; clarify.
       2: { steps. des; clarify. admit "ez". }
-      steps. des; clarify. unfold ccallU. steps. force_l. exists (AppInitX, @URA.unit AppRA, AppInit).
+      steps. des; clarify. unfold ccallU. steps. force_l. exists (InitX, AppRA.unit, Init).
       steps. force_l; ss. steps. force_l; ss.
       { admit "ez". }
       steps. des; clarify; rewrite Any.upcast_downcast in *; clarify.
       2: { steps. des; clarify. admit "ez". }
-      steps. force_l. exists (AppRunX, AppRun, @URA.unit AppRA). steps. force_l; ss. steps. des; clarify.
+      steps. force_l. exists (RunX, Run, AppRA.unit). steps. force_l; ss. steps. des; clarify.
       force_l; ss.
       { admit "ez". }
       steps. rr. esplits; et. rr. right; ss.
@@ -66,12 +66,12 @@ Section SIMMODSEM.
     { init. steps. unfold runF, MWApp0.runF, ASSUME, GUARANTEE. steps.
       rr in WF. des; clarify; rewrite Any.upcast_downcast in *; clarify.
       1: { steps. des; clarify. admit "ez". }
-      steps. des; clarify. unfold ccallU. steps. force_l. exists (AppRunX, @URA.unit AppRA, AppRun).
+      steps. des; clarify. unfold ccallU. steps. force_l. exists (RunX, AppRA.unit, Run).
       steps. force_l; ss. steps. force_l; ss.
       { admit "ez". }
       steps. des; clarify; rewrite Any.upcast_downcast in *; clarify.
       1: { steps. des; clarify. admit "ez". }
-      steps. des; clarify. force_l. exists (AppRunX, AppRun, @URA.unit AppRA). steps. force_l; ss. steps.
+      steps. des; clarify. force_l. exists (RunX, Run, AppRA.unit). steps. force_l; ss. steps.
       force_l; ss.
       { admit "ez". }
       steps. rr. esplits; et. rr. right; ss.

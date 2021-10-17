@@ -27,7 +27,7 @@ Local Open Scope nat_scope.
 Section SIMMODSEM.
 
   Context `{Σ: GRA.t}.
-  Context `{@GRA.inG AppRA Σ}.
+  Context `{@GRA.inG AppRA.t Σ}.
   Context `{@GRA.inG mwRA Σ}.
 
   Let W: Type := Any.t * Any.t.
@@ -37,10 +37,10 @@ Section SIMMODSEM.
       _
       unit
       (* (fun _ _ mpr_tgt => (∃ (mr_tgt: AppRA), ⌜mpr_tgt = Any.pair tt↑ (GRA.embed mr_tgt)↑⌝ ** OwnM mr_tgt)%I) *)
-      (fun _ _ mpr_tgt => (∃ (rm: AppRA), ⌜mpr_tgt = rm↑⌝ ** OwnM rm)%I)
+      (fun _ _ mpr_tgt => (∃ (rm: AppRA.t), ⌜mpr_tgt = rm↑⌝ ** OwnM rm)%I)
   .
 
-  Opaque AppRA. (****************** todo move to the root ******************)
+  Opaque AppRA.t. (****************** todo move to the root ******************)
   Opaque mwRA.
   Opaque Z.eqb.
 
@@ -55,7 +55,7 @@ Section SIMMODSEM.
     econs; ss.
     { init. harg. mDesAll. des; clarify. rename x into mwf. rename a into _lower_layer_rm.
       steps. unfold initF, ASSUME, GUARANTEE. steps.
-      force_r. exists AppInit. steps. force_r; ss. steps. force_r. eexists. steps. force_r; ss.
+      force_r. exists Init. steps. force_r; ss. steps. force_r. eexists. steps. force_r; ss.
       { esplits; et. admit "ez". }
       steps. rename c0 into rm. rename c1 into ro. rename c into rf1.
       rewrite URA.unit_id in _GUARANTEE0.
@@ -80,7 +80,7 @@ Section SIMMODSEM.
     econs; ss.
     { init. harg. mDesAll. des; clarify. rename x into mwf. rename a into _lower_layer_rm.
       steps. unfold runF, ASSUME, GUARANTEE. steps.
-      force_r. exists AppRun. steps. force_r; ss. steps. force_r. eexists. steps. force_r; ss.
+      force_r. exists Run. steps. force_r; ss. steps. force_r. eexists. steps. force_r; ss.
       { esplits; et. admit "ez". }
       steps. rename c0 into rm. rename c1 into ro. rename c into rf1.
       rewrite URA.unit_id in _GUARANTEE0.
