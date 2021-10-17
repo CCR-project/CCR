@@ -1,4 +1,4 @@
-Require Import HoareDef MWHeader MWApp0 MWApp1New SimModSem.
+Require Import HoareDef MWHeader MWApp0 MWApp1 SimModSem.
 Require Import Coqlib.
 Require Import ImpPrelude.
 Require Import Skeleton.
@@ -41,7 +41,7 @@ Section SIMMODSEM.
                                          (mpr_src = (RunX)↑ ∧ mpr_tgt = true↑)
   .
 
-  Theorem correct: refines2 [MWApp0.App] [MWApp1New.App].
+  Theorem correct: refines2 [MWApp0.App] [MWApp1.App].
   Proof.
     eapply adequacy_local2. econs; ss.
     i. econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.

@@ -1,4 +1,4 @@
-Require Import HoareDef MWHeader MWApp1New MWApp2 SimModSem.
+Require Import HoareDef MWHeader MWApp1 MWApp2 SimModSem.
 Require Import Coqlib.
 Require Import ImpPrelude.
 Require Import Skeleton.
@@ -44,7 +44,7 @@ Section SIMMODSEM.
   Opaque mwRA.
   Opaque Z.eq_dec Z.eqb.
 
-  Theorem correct: refines2 [MWApp1New.App] [MWApp2.App].
+  Theorem correct: refines2 [MWApp1.App] [MWApp2.App].
   Proof.
     eapply adequacy_local2. econs; ss.
     i. econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
