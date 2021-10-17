@@ -51,30 +51,30 @@ Section SIMMODSEM.
     econs; ss.
     { init. steps. unfold initF, MWApp0.initF, ASSUME, GUARANTEE. steps.
       rr in WF. des; clarify; rewrite Any.upcast_downcast in *; clarify.
-      2: { steps. des; clarify. admit "ez". }
+      2: { steps. des; clarify. ur in _ASSUME0. des_ifs. }
       steps. des; clarify. unfold ccallU. steps. force_l. exists (InitX, AppRA.unit, Init).
       steps. force_l; ss. steps. force_l; ss.
-      { admit "ez". }
+      { ur; ss. }
       steps. des; clarify; rewrite Any.upcast_downcast in *; clarify.
-      2: { steps. des; clarify. admit "ez". }
+      2: { steps. des; clarify. ur in _ASSUME2. des_ifs. }
       steps. force_l. exists (RunX, Run, AppRA.unit). steps. force_l; ss. steps. des; clarify.
+      assert(x = AppRA.unit). { ur in _ASSUME2. des_ifs. } subst.
       force_l; ss.
-      { admit "ez". }
+      { ur; ss. }
       steps. rr. esplits; et. rr. right; ss.
     }
     econs; ss.
     { init. steps. unfold runF, MWApp0.runF, ASSUME, GUARANTEE. steps.
       rr in WF. des; clarify; rewrite Any.upcast_downcast in *; clarify.
-      1: { steps. des; clarify. admit "ez". }
+      1: { steps. des; clarify. ur in _ASSUME0. des_ifs. }
       steps. des; clarify. unfold ccallU. steps. force_l. exists (RunX, AppRA.unit, Run).
       steps. force_l; ss. steps. force_l; ss.
-      { admit "ez". }
+      { ur; ss. }
       steps. des; clarify; rewrite Any.upcast_downcast in *; clarify.
-      1: { steps. des; clarify. admit "ez". }
+      1: { steps. des; clarify. ur in _ASSUME2. des_ifs. }
       steps. des; clarify. force_l. exists (RunX, Run, AppRA.unit). steps. force_l; ss. steps.
-      force_l; ss.
-      { admit "ez". }
-      steps. rr. esplits; et. rr. right; ss.
+      assert(x = AppRA.unit). { ur in _ASSUME2. des_ifs. } subst.
+      force_l; ss. steps. rr. esplits; et. rr. right; ss.
     }
     (*   { left. ss. esplits; et. *)
     (*   des; clarify. *)
