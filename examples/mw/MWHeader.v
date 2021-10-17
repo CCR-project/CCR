@@ -30,6 +30,11 @@ Section PROOF.
   Context `{@GRA.inG AppRA Σ}.
   Context `{@GRA.inG mwRA Σ}.
 
+  Definition mk_simple_frame {X: Type} (PQ: X -> ((Any.t -> ord -> iProp) * (Any.t -> iProp))): fspec :=
+    mk_simple (fun '(FRAME, x) => let '(P, Q) := (PQ x) in
+                                  (fun varg ord => FRAME ** P varg ord, fun vret => FRAME ** Q vret))
+  .
+
   Definition init_spec0: fspec :=
     mk_simple (fun (_: unit) => (
                    (fun varg o => ⌜varg = ([]: list val)↑ ∧ o = ord_top⌝ ** OwnM AppInit),
