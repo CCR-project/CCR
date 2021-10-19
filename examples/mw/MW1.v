@@ -80,7 +80,7 @@ Section PROOF.
       assume(is_some (lst0.(lst_dom) k) \/ is_some (lst0.(lst_opt) k));;;
       v <- (match lst0.(lst_opt) k with
             | Some v => Ret v
-            | _ => ccallU "access" ([Vint k])
+            | _ => ccallU "access" ([lst0.(lst_map); Vint k])
             end);;
       trigger (Syscall "print" [Vint k]↑ top1);;; (*** TODO: make something like "syscallu" ***)
       trigger (Syscall "print" [v]↑ top1);;;

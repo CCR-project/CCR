@@ -27,8 +27,9 @@ Section PROOF.
   Definition mainF: list val -> itree Es val :=
     fun varg =>
       _ <- (pargs [] varg)?;;
+      `arr: val <- ccallU "alloc" ([Vint 100]);;
       `map: val <- ccallU "new" ([]: list val);;
-      pput map;;;
+      pput (arr, map);;;
       `_: val <- ccallU "loop" ([]: list val);;
       Ret Vundef
   .
@@ -36,8 +37,10 @@ Section PROOF.
   Definition putF: list val -> itree Es val :=
     fun varg =>
       '(k, v) <- (pargs [Tint; Tuntyped] varg)?;;
-      map <- pget;;
-      `_: val <- ccallU "update" ([map; Vint k; v]);;
+      '(arr, map) <- pget;;
+      (if ((0 <=? k) && (k <? 100))%Z
+       then `_: val <- ccallU "store" [arr; Vint k; v];; Ret tt
+       else `_: val <- ccallU "update" ([map; Vint k; v]);; Ret tt);;;
       trigger (Syscall "print" [Vint k]↑ top1);;; (*** TODO: make something like "syscallu" ***)
       trigger (Syscall "print" [v]↑ top1);;;
       Ret Vundef
@@ -46,8 +49,10 @@ Section PROOF.
   Definition getF: list val -> itree Es val :=
     fun varg =>
       k <- (pargs [Tint] varg)?;;
-      map <- pget;;
-      `v: val <- ccallU "access" ([map; Vint k]);;
+      '(arr, map) <- pget;;
+      `v: val <- (if ((0 <=? k) && (k <? 100))%Z
+                  then ccallU "load" [arr; Vint k]
+                  else ccallU "access" ([map; Vint k]));;
       trigger (Syscall "print" [Vint k]↑ top1);;; (*** TODO: make something like "syscallu" ***)
       trigger (Syscall "print" [v]↑ top1);;;
       Ret Vundef
