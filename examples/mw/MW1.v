@@ -20,8 +20,24 @@ Section PROOF.
     lst_dom: Z -> option unit;
     lst_opt: Z -> option val;
     lst_map: val;
+    (* lst_wf: forall k, (is_some (lst_opt k)) -> (is_some (lst_dom k)) *)
   }
   .
+
+  (* Program Definition add_dom (lst0: local_state) k: local_state := *)
+  (*   (mk_lst (add k tt lst0.(lst_dom)) lst0.(lst_opt) lst0.(lst_map) _) *)
+  (* . *)
+  (* Next Obligation. *)
+  (*   i. eapply lst0.(lst_wf) in H. unfold is_some in *. des_ifs. unfold add in *. ss. des_ifs. *)
+  (* Qed. *)
+
+  (* Program Definition add_opt (lst0: local_state) k v: local_state := *)
+  (*   (mk_lst (add k v lst0.(lst_opt)) (add k v lst0.(lst_opt)) lst0.(lst_map) _) *)
+  (* . *)
+  (* Next Obligation. *)
+  (*   i. unfold add in *. ss. des_ifs. *)
+  (*   - eapply lst0.(lst_wf) in H. unfold is_some in *. des_ifs. unfold add in *. ss. des_ifs. *)
+  (* Qed. *)
 
   Notation upd_dom f := (lst0 <- pget;; pput (mk_lst (f lst0.(lst_dom)) lst0.(lst_opt) lst0.(lst_map))).
   Notation upd_opt f := (lst0 <- pget;; pput (mk_lst lst0.(lst_dom) (f lst0.(lst_opt)) lst0.(lst_map))).
@@ -51,8 +67,7 @@ Section PROOF.
       b <- trigger (Choose _);;
       (if (b: bool)
        then upd_opt (fun opt => add k v opt)
-       else lst0 <- pget;; ccallU "update" ([lst0.(lst_map); Vint k; v]));;;
-      upd_dom (fun dom => add k tt dom);;;
+       else lst0 <- pget;; `_: val <- ccallU "update" ([lst0.(lst_map); Vint k; v]);; upd_dom (fun dom => add k tt dom));;;
       trigger (Syscall "print" [Vint k]↑ top1);;;
       trigger (Syscall "print" [v]↑ top1);;;
       Ret Vundef
@@ -62,7 +77,7 @@ Section PROOF.
     fun varg =>
       k <- (pargs [Tint] varg)?;;
       `lst0: local_state <- pget;;
-      assume(is_some (lst0.(lst_dom) k));;;
+      assume(is_some (lst0.(lst_dom) k) \/ is_some (lst0.(lst_opt) k));;;
       v <- (match lst0.(lst_opt) k with
             | Some v => Ret v
             | _ => ccallU "access" ([Vint k])

@@ -32,7 +32,7 @@ Section SIMMODSEM.
 
   Let wf: _ -> W -> Prop :=
     (* mk_wf (fun (_: unit) mp_src0 mp_tgt0 => (⌜∃ lst0, mp_src0 = lst0↑ ∧ mp_tgt0 = lst0.(lst_map)↑⌝)%I). *)
-    fun (_: unit) '(mp_src0, mp_tgt0) => ∃ lst0, mp_src0 = lst0↑ ∧ mp_tgt0 = lst0.(lst_map)↑
+    fun (_: unit) '(mp_src0, mp_tgt0) => ∃ lst0, mp_src0 = lst0↑ ∧ mp_tgt0 = lst0.(lst_map)↑ ∧ forall k, lst0.(lst_opt) k = None
   .
 
   Theorem correct: refines2 [MWA0.MW] [MW1.MW].
@@ -55,38 +55,15 @@ Section SIMMODSEM.
     econs; ss.
     { init. unfold putF, MWA0.putF, ccallU. steps. force_l. exists false. steps. rr in WF. des; clarify.
       rewrite Any.upcast_downcast in *; clarify. steps. gstep; econs; et. { econs; et. } ii; ss. des; clarify.
-      esplits; et. steps. r. esplits; et. r. econs; et. esplits; try refl. ss. TTTTTTTTTTTTTTTTTTTTTT et. ss.
-      des_ifs; steps. des_ifs; steps. des; clarify. des_ifs; steps.
-      gstep; econs; et.
-      { econs; et. }
-      steps. ii. des; clarify. esplits; et. des_ifs; steps. rr; esplits; et. rr; econs; et.
+      esplits; et. steps. r. esplits; ss; et.
     }
-    init. harg. mDesAll.
-    des; clarify. unfold fF, ccallU. steps. astart 10.
-    force_r.
-    { eapply mut_max_intrange. auto. } steps.
-    destruct (dec (Z.of_nat x) 0%Z).
-    - destruct x; ss. astop. force_l. eexists. steps.
-      hret _; ss.
-    - destruct x; [ss|]. rewrite Nat2Z.inj_succ. steps. force_r.
-      { rewrite <- Nat2Z.inj_succ. eapply mut_max_intrange_sub1. auto. }
-      steps. acatch. hcall _ _ _ with "*"; auto.
-      { iPureIntro.
-        replace (Z.succ (Z.of_nat x) - 1)%Z with (Z.of_nat x) by lia.
-        esplits; et. lia. }
-      { splits; ss; eauto with ord_step. }
-      i. mDesAll. des; clarify.
-      steps. astop.
-      force_l. eexists. steps. force_r.
-      { eapply mut_max_sum_intrange. lia. } steps.
-      force_r.
-      { replace (Z.succ x + sum x)%Z with ((sum (S x)): Z).
-        { eapply mut_max_sum_intrange. lia. }
-        { ss. lia. }
-      } steps.
-      hret _; ss. iPureIntro. esplits; ss.
-      f_equal. f_equal. lia.
-      Unshelve. all: ss. all: try exact 0.
+    econs; ss.
+    { init. unfold getF, MWA0.getF, ccallU. steps. r in WF. des ;clarify. rewrite Any.upcast_downcast in *. steps.
+      assert(NONE := WF1 z). rewrite WF1 in *. ss. des; ss. steps. gstep; econs; et.
+      { ss. esplits; et. }
+      ii; ss. des; clarify. esplits; et. steps. unfold unwrapU. des_ifs; steps. r. esplits; ss; et.
+    }
+  Unshelve. all: ss. all: try exact 0.
   Qed.
 
 End SIMMODSEM.
