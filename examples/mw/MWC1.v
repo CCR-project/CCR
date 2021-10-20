@@ -33,13 +33,6 @@ Section PROOF.
 
   Let Es := (hAPCE +' Es).
 
-  Definition ncall X Y (f: string): itree Es Y :=
-    `b: bool <- trigger (Choose bool);;
-    if b
-    then `x: X <- trigger (Choose _);; ccallU f x
-    else r <- trigger (Choose _);; Ret r
-  .
-
   Definition loopF: list val -> itree Es val :=
     fun varg =>
       _ <- (pargs [] varg)?;;
@@ -50,8 +43,7 @@ Section PROOF.
 
   Definition mainF: list val -> itree Es val :=
     fun varg =>
-      _ <- (pargs [] varg)?;;
-      ncall (list val) val "alloc";;;
+      _ <- (pargs [] varg)?;;;
       `map: val <- ccallU "new" ([]: list val);;
       upd_map (fun _ => map);;;
       `_: val <- ccallU "loop" ([]: list val);;
@@ -64,9 +56,9 @@ Section PROOF.
       lst0 <- pget;; 
       assume(lst0.(lst_map) <> Vnullptr);;;
       assume((0 <= k)%Z);;;
-      b <- trigger (Choose _);;
+      b <- trigger (Choose _);;;
       (if (b: bool)
-       then ncall (list val) val "store";;; upd_opt (fun opt => add k v opt)
+       then upd_opt (fun opt => add k v opt)
        else `_: val <- ccallU "update" ([lst0.(lst_map); Vint k; v]);; upd_dom (fun dom => add k tt dom));;;
       trigger (Syscall "print" [Vint k]↑ top1);;;
       trigger (Syscall "print" [v]↑ top1);;;
@@ -80,7 +72,7 @@ Section PROOF.
       assume(lst0.(lst_map) <> Vnullptr);;;
       assume(is_some (lst0.(lst_dom) k) \/ is_some (lst0.(lst_opt) k));;;
       v <- (match lst0.(lst_opt) k with
-            | Some v => ncall (list val) val "load";;; Ret v
+            | Some v => Ret v
             | _ => ccallU "access" ([lst0.(lst_map); Vint k])
             end);;
       trigger (Syscall "print" [Vint k]↑ top1);;; (*** TODO: make something like "syscallu" ***)
