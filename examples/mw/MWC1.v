@@ -6,7 +6,7 @@ Require Import Behavior.
 Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
-Require Import HoareDef.
+Require Import HoareDef STB.
 Require Import MWHeader.
 Require Import Mem1.
 
@@ -43,7 +43,9 @@ Section PROOF.
 
   Definition mainF: list val -> itree Es val :=
     fun varg =>
-      _ <- (pargs [] varg)?;;;
+      _ <- (pargs [] varg)?;;
+      lst0 <- pget;;;
+      assume(lst0.(lst_map) <> Vnullptr);;;
       `map: val <- ccallU "new" ([]: list val);;
       upd_map (fun _ => map);;;
       `_: val <- ccallU "loop" ([]: list val);;
@@ -54,8 +56,7 @@ Section PROOF.
     fun varg =>
       '(k, v) <- (pargs [Tint; Tuntyped] varg)?;;
       lst0 <- pget;; 
-      assume(lst0.(lst_map) <> Vnullptr);;;
-      assume((0 <= k)%Z);;;
+      assume(lst0.(lst_map) <> Vnullptr /\ (0 <= k)%Z);;;
       b <- trigger (Choose _);;;
       (if (b: bool)
        then upd_opt (fun opt => add k v opt)
@@ -69,8 +70,7 @@ Section PROOF.
     fun varg =>
       k <- (pargs [Tint] varg)?;;
       `lst0: local_state <- pget;;
-      assume(lst0.(lst_map) <> Vnullptr);;;
-      assume(is_some (lst0.(lst_dom) k) \/ is_some (lst0.(lst_opt) k));;;
+      assume((is_some (lst0.(lst_dom) k) \/ is_some (lst0.(lst_opt) k)) /\ lst0.(lst_map) <> Vnullptr);;;
       v <- (match lst0.(lst_opt) k with
             | Some v => Ret v
             | _ => ccallU "access" ([lst0.(lst_map); Vint k])
@@ -105,6 +105,6 @@ Section PROOF.
 
   Context `{@GRA.inG memRA Σ}.
 
-  Definition MW: Mod.t := (SMod.to_tgt (fun _ => GlobalStbC)) SMW.
+  Definition MW: Mod.t := (SMod.to_tgt (fun _ => to_stb GlobalStbC)) SMW.
 
 End PROOF.

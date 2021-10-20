@@ -89,11 +89,11 @@ Section SIMMODSEM.
          (*                               (⌜mp_tgt = (Vnullptr, lst0.(lst_map))↑⌝))%I) *)
 
 
-         (* (∃ lst0 blk vs, ⌜mp_src = lst0↑⌝ ** ⌜mp_tgt = (Vptr blk 0, lst0.(lst_map))↑⌝ ** OwnM ((blk,0%Z) |-> vs) ** *)
-         (*                                      ⌜sim_opt lst0.(lst_opt) vs ∧ (lst0.(lst_map) = Vnullptr ∨ length vs = 100)⌝)%I) *)
-         (∃ lst0 blk vs, ⌜mp_src = lst0↑⌝ ** ⌜mp_tgt = (Vptr blk 0, lst0.(lst_map))↑⌝ **
-                                              (OwnM ((blk,0%Z) |-> vs) ** ⌜sim_opt lst0.(lst_opt) vs⌝ ** ⌜length vs = 100⌝) ∨
-                                              (⌜lst0.(lst_map) = Vnullptr⌝))%I)
+         (∃ lst0 blk vs, ⌜mp_src = lst0↑⌝ ** ⌜mp_tgt = (Vptr blk 0, lst0.(lst_map))↑⌝ ** OwnM ((blk,0%Z) |-> vs) **
+             ⌜sim_opt lst0.(lst_opt) vs ∧ (if dec lst0.(lst_map) Vnullptr then (lst0.(lst_opt) = Maps.empty) else length vs = 100)⌝)%I)
+         (* (∃ lst0 blk vs, ⌜mp_src = lst0↑⌝ ** ⌜mp_tgt = (Vptr blk 0, lst0.(lst_map))↑⌝ ** *)
+         (*                                      (OwnM ((blk,0%Z) |-> vs) ** ⌜sim_opt lst0.(lst_opt) vs⌝ ** ⌜length vs = 100⌝) ∨ *)
+         (*                                      (⌜lst0.(lst_map) = Vnullptr⌝))%I) *)
   .
 
   Lemma points_to_nil
@@ -111,6 +111,7 @@ Section SIMMODSEM.
   Opaque memRA.
   Opaque mwRA.
   Opaque Z.eq_dec Z.eqb.
+  Opaque List.repeat.
 
   Theorem correct: refines2 [MWC0.MW] [MWC1.MW].
   Proof.
@@ -120,12 +121,34 @@ Section SIMMODSEM.
     { destruct (SkEnv.id2blk (Sk.load_skenv sk) "arr") eqn:T; cycle 1.
       { exfalso. Local Transparent Sk.load_skenv. unfold Sk.load_skenv in *. Local Opaque Sk.load_skenv.
         ss. uo. des_ifs. admit "ez". }
-      esplits. econs; ss. eapply to_semantic. iIntros "H". rewrite T. cbn. iSplits; ss. iRight; ss.
+      esplits. econs; ss. eapply to_semantic. iIntros "H". rewrite T. cbn. iSplits; ss; et.
+      { rewrite points_to_nil. iApply OwnM_unit; ss. }
+      { iPureIntro. econs. ss. ii. sym. eapply nth_error_None. ss. lia. }
     }
 
     econs; ss.
-    { init. harg. mDesAll. des; clarify. des_u. steps. unfold mainF, MWC0.mainF. steps.
-      unfold ncall. steps. force_l. exists true. steps. force_l. eexists. steps. unfold ccallU. steps.
+    { init. harg. mDesAll. des; clarify. des_u. steps. unfold mainF, MWC0.mainF. steps. rename a into lst0.
+      unfold ccallU. steps. astart 1. acatch. hcall _ _ _ with "*".
+      { iModIntro. iSplits; ss; et.
+        { iPureIntro. instantiate (1:=100). cbn. refl. }
+        { ss. }
+      }
+      { esplits; ss; et. }
+      steps. astop. mDesAll. des; clarify. steps. force_l; stb_tac; clarify; ss. steps.
+      hcall _ _ _ with "-A1".
+      { iModIntro. iSplits; ss; et. }
+      { esplits; ss; et. }
+      steps. mDesAll. des; clarify. steps. force_l; stb_tac; clarify; ss. steps. rewrite _UNWRAPU0. steps.
+      hcall _ _ _ with "*".
+      { iModIntro. iSplits; ss; et. cbn. iPureIntro; ss. iLeft. iFrame. rewrite repeat_length. iSplits; ss; et.
+        iPureIntro. econs.
+      }
+      { 
+
+      { stb_tac.
+        autounfold with stb; autorewrite with stb; simpl.
+        stb_tac. }
+      steps. force_l. exists true. steps. force_l. eexists. steps. unfold ccallU. steps.
       force_l; stb_tac; ss; clarify. steps.
       hcall _ _ _ with "*".
       { iModIntro. iSplits; ss; et.

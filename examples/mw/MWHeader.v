@@ -113,8 +113,22 @@ Section PROOF.
 
   Context `{@GRA.inG memRA Σ}.
 
-  Definition GlobalStbC: gname -> option fspec :=
-    to_stb (List.map (fun x => (x, fspec_trivial)) ["main"; "loop"; "put"; "get"; "init"; "run"; "access"; "update"] ++ MemStb)
-  .
+  Definition GlobalStbC: list (gname * fspec).
+    eapply (Seal.sealing "stb").
+    eapply [("main", fspec_trivial); ("loop", fspec_trivial); ("put", fspec_trivial); ("get", fspec_trivial);
+            ("init", fspec_trivial); ("run", fspec_trivial);
+            ("new", fspec_trivial); ("access", fspec_trivial); ("update", fspec_trivial);
+            ("alloc", alloc_spec); ("free", free_spec); ("load", load_spec); ("store", store_spec); ("cmp", cmp_spec)].
+    (* set (x:=(List.map (fun x => (x, fspec_trivial)) ["main"; "loop"; "put"; "get"; "init"; "run"; "access"; "update"] ++ *)
+    (*                   [("alloc", alloc_spec); ("free", free_spec); ("load", load_spec); ("store", store_spec); ("cmp", cmp_spec)])). *)
+    (* unfold map in x. *)
+    (* exact x. *)
+  Defined.
+  (* Definition GlobalStbC: gname -> option fspec := *)
+  (*   to_stb (List.map (fun x => (x, fspec_trivial)) ["main"; "loop"; "put"; "get"; "init"; "run"; "access"; "update"] ++ MemStb) *)
+  (* . *)
 
 End PROOF.
+Global Hint Unfold GlobalStb0: stb.
+Global Hint Unfold GlobalStb1: stb.
+Global Hint Unfold GlobalStbC: stb.
