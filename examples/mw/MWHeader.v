@@ -12,6 +12,7 @@ From ExtLib Require Import
      Structures.Maps
      Data.Map.FMapAList.
 Require Import ProofMode.
+Require Import Mem1.
 
 Set Implicit Arguments.
 
@@ -109,5 +110,11 @@ Section PROOF.
 
   Definition GlobalStb1: gname -> option fspec :=
     to_stb [("init",init_spec1); ("run",run_spec1); ("main",main_spec); ("put",put_spec); ("get",get_spec)].
+
+  Context `{@GRA.inG memRA Σ}.
+
+  Definition GlobalStbC: gname -> option fspec :=
+    to_stb (List.map (fun x => (x, fspec_trivial)) ["main"; "loop"; "put"; "get"; "init"; "run"; "access"; "update"] ++ MemStb)
+  .
 
 End PROOF.

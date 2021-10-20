@@ -58,16 +58,16 @@ Section PROOF.
       Ret Vundef
   .
 
-  Definition MWSem: ModSem.t := {|
+  Definition MWSem (skenv: SkEnv.t): ModSem.t := {|
     ModSem.fnsems := [("main", cfunU mainF); ("loop", cfunU loopF); ("put", cfunU putF); ("get", cfunU getF)];
     ModSem.mn := "MW";
-    ModSem.initial_st := Vnullptr↑;
+    ModSem.initial_st := (Vptr (or_else (skenv.(SkEnv.id2blk) "arr") 0) 0, Vnullptr)↑;
   |}
   .
 
   Definition MW: Mod.t := {|
-    Mod.get_modsem := fun _ => MWSem;
-    Mod.sk := [("main", Sk.Gfun); ("loop", Sk.Gfun); ("put", Sk.Gfun); ("get", Sk.Gfun)];
+    Mod.get_modsem := fun sk => MWSem (Sk.load_skenv sk);
+    Mod.sk := [("arr", Sk.Gvar 0); ("map", Sk.Gvar 0); ("main", Sk.Gfun); ("loop", Sk.Gfun); ("put", Sk.Gfun); ("get", Sk.Gfun)];
   |}
   .
 
