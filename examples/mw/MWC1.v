@@ -43,11 +43,11 @@ Section PROOF.
 
   Definition mainF: list val -> itree Es val :=
     fun varg =>
-      _ <- (pargs [] varg)?;;
-      lst0 <- pget;;;
-      assume(lst0.(lst_map) <> Vnullptr);;;
+      _ <- (pargs [] varg)?;;;
       `map: val <- ccallU "new" ([]: list val);;
+      assume(map <> Vnullptr);;;
       upd_map (fun _ => map);;;
+      `_: val <- ccallU "init" ([]: list val);;
       `_: val <- ccallU "loop" ([]: list val);;
       Ret Vundef
   .
@@ -56,10 +56,10 @@ Section PROOF.
     fun varg =>
       '(k, v) <- (pargs [Tint; Tuntyped] varg)?;;
       lst0 <- pget;; 
-      assume(lst0.(lst_map) <> Vnullptr /\ (0 <= k)%Z);;;
-      b <- trigger (Choose _);;;
+      assume((0 <= k)%Z);;;
+      b <- trigger (Choose _);;
       (if (b: bool)
-       then upd_opt (fun opt => add k v opt)
+       then _ <- assume(lst0.(lst_map) <> Vnullptr);;; upd_opt (fun opt => add k v opt)
        else `_: val <- ccallU "update" ([lst0.(lst_map); Vint k; v]);; upd_dom (fun dom => add k tt dom));;;
       trigger (Syscall "print" [Vint k]↑ top1);;;
       trigger (Syscall "print" [v]↑ top1);;;
@@ -70,7 +70,7 @@ Section PROOF.
     fun varg =>
       k <- (pargs [Tint] varg)?;;
       `lst0: local_state <- pget;;
-      assume((is_some (lst0.(lst_dom) k) \/ is_some (lst0.(lst_opt) k)) /\ lst0.(lst_map) <> Vnullptr);;;
+      assume((is_some (lst0.(lst_dom) k) \/ is_some (lst0.(lst_opt) k)));;;
       v <- (match lst0.(lst_opt) k with
             | Some v => Ret v
             | _ => ccallU "access" ([lst0.(lst_map); Vint k])

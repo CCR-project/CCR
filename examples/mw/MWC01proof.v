@@ -76,7 +76,8 @@ Section SIMMODSEM.
 
   Variant sim_opt (opt: Z -> option val) (vs: list val): Prop :=
   | sim_opt_intro
-      (SIM: ∀ k, 0 <= k < 100 -> opt k = List.nth_error vs (Z.to_nat k))
+      (* (SIM: ∀ k, 0 <= k < 100 -> opt k = List.nth_error vs (Z.to_nat k)) *)
+      (SIM: ∀ k v, 0 <= k < 100 -> opt k = Some v -> List.nth_error vs (Z.to_nat k) = Some v)
   .
 
   Let wf: _ -> W -> Prop :=
@@ -89,11 +90,16 @@ Section SIMMODSEM.
          (*                               (⌜mp_tgt = (Vnullptr, lst0.(lst_map))↑⌝))%I) *)
 
 
-         (∃ lst0 blk vs, ⌜mp_src = lst0↑⌝ ** ⌜mp_tgt = (Vptr blk 0, lst0.(lst_map))↑⌝ ** OwnM ((blk,0%Z) |-> vs) **
-             ⌜sim_opt lst0.(lst_opt) vs ∧ (if dec lst0.(lst_map) Vnullptr then (lst0.(lst_opt) = Maps.empty) else length vs = 100)⌝)%I)
+         (* (∃ lst0 blk vs, ⌜mp_src = lst0↑⌝ ** ⌜mp_tgt = (Vptr blk 0, lst0.(lst_map))↑⌝ ** OwnM ((blk,0%Z) |-> vs) ** *)
+         (*     ⌜sim_opt lst0.(lst_opt) vs ∧ (if dec lst0.(lst_map) Vnullptr then (lst0.(lst_opt) = Maps.empty) else length vs = 100)⌝)%I) *)
          (* (∃ lst0 blk vs, ⌜mp_src = lst0↑⌝ ** ⌜mp_tgt = (Vptr blk 0, lst0.(lst_map))↑⌝ ** *)
          (*                                      (OwnM ((blk,0%Z) |-> vs) ** ⌜sim_opt lst0.(lst_opt) vs⌝ ** ⌜length vs = 100⌝) ∨ *)
          (*                                      (⌜lst0.(lst_map) = Vnullptr⌝))%I) *)
+         (∃ lst0 arr, ⌜mp_src = lst0↑⌝ ** ⌜mp_tgt = (arr, lst0.(lst_map))↑⌝ ** ({{"CASES":
+            (⌜arr = Vnullptr ∧ lst0.(lst_map) = Vnullptr ∧ lst0.(lst_opt) = Maps.empty⌝) ∨
+            (∃ arrb vs, ⌜arr = Vptr arrb 0 ∧ lst0.(lst_map) = Vnullptr ∧ lst0.(lst_opt) = Maps.empty ∧ length vs = 100⌝ ** OwnM ((arrb,0%Z) |-> vs)) ∨
+            (∃ arrb vs, ⌜arr = Vptr arrb 0 ∧ lst0.(lst_map) <> Vnullptr ∧ length vs = 100⌝ ** OwnM ((arrb,0%Z) |-> vs))
+         }}))%I)
   .
 
   Lemma points_to_nil
@@ -118,13 +124,13 @@ Section SIMMODSEM.
     eapply adequacy_local2. econs; ss.
     i. econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
     { ss. }
-    { destruct (SkEnv.id2blk (Sk.load_skenv sk) "arr") eqn:T; cycle 1.
-      { exfalso. Local Transparent Sk.load_skenv. unfold Sk.load_skenv in *. Local Opaque Sk.load_skenv.
-        ss. uo. des_ifs. admit "ez". }
-      esplits. econs; ss. eapply to_semantic. iIntros "H". rewrite T. cbn. iSplits; ss; et.
-      { rewrite points_to_nil. iApply OwnM_unit; ss. }
-      { iPureIntro. econs. ss. ii. sym. eapply nth_error_None. ss. lia. }
-    }
+    { esplits; et. econs; et. eapply to_semantic. iIntros "H". iSplits; ss; et. }
+    (* { destruct (SkEnv.id2blk (Sk.load_skenv sk) "arr") eqn:T; cycle 1. *)
+    (*   { exfalso. Local Transparent Sk.load_skenv. unfold Sk.load_skenv in *. Local Opaque Sk.load_skenv. *)
+    (*     ss. uo. des_ifs. admit "ez". } *)
+    (*   esplits. econs; ss. eapply to_semantic. iIntros "H". rewrite T. cbn. iSplits; ss; et. *)
+    (*   { rewrite points_to_nil. iApply OwnM_unit; ss. } *)
+    (* } *)
 
     econs; ss.
     { init. harg. mDesAll. des; clarify. des_u. steps. unfold mainF, MWC0.mainF. steps. rename a into lst0.
@@ -134,13 +140,103 @@ Section SIMMODSEM.
         { ss. }
       }
       { esplits; ss; et. }
-      steps. astop. mDesAll. des; clarify. steps. force_l; stb_tac; clarify; ss. steps.
-      hcall _ _ _ with "-A1".
+      steps. astop. mDesAll. des; clarify. steps. force_l; stb_tac; clarify; ss. steps. rename a3 into arrb.
+      hcall _ _ _ with "-A".
       { iModIntro. iSplits; ss; et. }
       { esplits; ss; et. }
-      steps. mDesAll. des; clarify. steps. force_l; stb_tac; clarify; ss. steps. rewrite _UNWRAPU0. steps.
+      steps. clear_fast. mDesAll; des; clarify. rename a1 into arr. rename a into lst1. steps. rewrite _UNWRAPU0. steps.
+      force_l; stb_tac; ss; clarify. steps.
+      (* mDesOr "CASES"; mDesAll; des; clarify. *)
+      rename v into mapb.
       hcall _ _ _ with "*".
-      { iModIntro. iSplits; ss; et. cbn. iPureIntro; ss. iLeft. iFrame. rewrite repeat_length. iSplits; ss; et.
+      { iModIntro. iSplits; ss; et. iRight. cbn. iRight. iSplits; ss; et. }
+      { esplits; ss; et. }
+      clear_fast. mDesAll; des; clarify. steps. rename a into lst1. rename a1 into arr.
+      force_l; stb_tac; ss; clarify. steps.
+      hcall _ _ _ with "*".
+      { iModIntro. iSplits; ss; et. }
+      { esplits; ss; et. }
+      steps. mDesAll; clarify. rewrite _UNWRAPU2. steps. hret _; ss.
+      { iModIntro. iSplits; ss; et. }
+    }
+
+    econs; ss.
+    { init. harg. mDesAll. des; clarify. des_u. steps. unfold loopF, MWC0.loopF, ccallU. steps.
+      force_l; stb_tac; ss. steps.
+      hcall _ _ _ with "*".
+      { iModIntro. iSplits; ss; et. }
+      { esplits; ss; et. }
+      steps. mDesAll; clarify. rewrite _UNWRAPU0. steps. force_l; stb_tac; ss. steps.
+      hcall _ _ _ with "*".
+      { iModIntro. iSplits; ss; et. }
+      { esplits; ss; et. }
+      steps. mDesAll; clarify. rewrite _UNWRAPU1. steps. hret _; ss.
+      { iModIntro. iSplits; ss; et. }
+    }
+
+    econs; ss.
+    { init. harg. mDesAll. des; clarify. des_u. steps. unfold putF, MWC0.putF, ccallU. steps.
+      des_ifs.
+      - force_l. exists true. steps. astart 1. acatch.
+        mDesOr "CASES"; mDesAll; des; clarify.
+        mDesOr "CASES"; mDesAll; des; clarify. rename a1 into arrb. rename a2 into vs. rename a into lst0.
+        hcall _ (_, _, _) _ with "*".
+        { iModIntro. iSplits; ss; et. iSplitR.
+          - iSplits; ss; et. iRight. iRight. iSplits; ss; et.
+        {
+      -
+      force_l; stb_tac; ss. steps.
+      hcall _ _ _ with "*".
+      { iModIntro. iSplits; ss; et. }
+      { esplits; ss; et. }
+      steps. mDesAll; clarify. rewrite _UNWRAPU0. steps. force_l; stb_tac; ss. steps.
+      hcall _ _ _ with "*".
+      { iModIntro. iSplits; ss; et. }
+      { esplits; ss; et. }
+      steps. mDesAll; clarify. rewrite _UNWRAPU1. steps. hret _; ss.
+      { iModIntro. iSplits; ss; et. }
+    }
+
+    {
+      {
+      rename a into lst0.
+      unfold ccallU. steps. astart 1. acatch. hcall _ _ _ with "*".
+      { iModIntro. iSplits; ss; et.
+        { iPureIntro. instantiate (1:=100). cbn. refl. }
+        { ss. }
+      }
+      { esplits; ss; et. }
+      steps. astop. mDesAll. des; clarify. steps. force_l; stb_tac; clarify; ss. steps. rename a3 into arrb.
+      hcall _ _ _ with "-A".
+      { iModIntro. iSplits; ss; et. }
+      { esplits; ss; et. }
+      steps. clear_fast. mDesAll; des; clarify. rename a1 into arr. rename a into lst1. steps. rewrite _UNWRAPU0. steps.
+      force_l; stb_tac; ss; clarify. steps.
+      (* mDesOr "CASES"; mDesAll; des; clarify. *)
+      rename v into mapb.
+      hcall _ _ _ with "*".
+      { iModIntro. iSplits; ss; et. iRight. cbn. iRight. iSplits; ss; et. }
+      { esplits; ss; et. }
+      clear_fast. mDesAll; des; clarify. steps. rename a into lst1. rename a1 into arr.
+      force_l; stb_tac; ss; clarify. steps.
+      hcall _ _ _ with "*".
+      { iModIntro. iSplits; ss; et. }
+      { esplits; ss; et. }
+      steps. mDesAll; clarify. rewrite _UNWRAPU2. steps. hret _; ss.
+      { iModIntro. iSplits; ss; et. }
+    }
+    {
+    }
+      {
+      { iModIntro. iSplits; ss; et. }
+      { 
+      }
+      clears lst0; clear lst0. clears a4; clear a4.
+      mDesAll. des; clarify. steps. force_l; stb_tac; clarify; ss. steps. rewrite _UNWRAPU0. steps.
+      hcall _ _ _ with "*".
+      { iModIntro. iSplits; ss; et.
+        - cbn. iPureIntro; ss. econs. ii. rewrite clear - PURE1. inv PURE1. econs. ii. repeat spc SIM.
+          iLeft. iFrame. rewrite repeat_length. iSplits; ss; et.
         iPureIntro. econs.
       }
       { 
