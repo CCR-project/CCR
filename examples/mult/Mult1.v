@@ -20,9 +20,9 @@ Section PROOF.
   Context `{@GRA.inG hRA Σ}.
 
   Definition multSbtb: list (gname * fspecbody) :=
-    (* [("fire", mk_specbody f_spec (fun _ => trigger (Choose _)))]. *)
-    (* [("f", mk_specbody f_spec0 (fun _ => `_: val <- ccallU "g" tt;; `_: val <- ccallU "h" tt;; Ret Vundef↑))]. *)
-    [("f", mk_specbody f_spec0 (fun _ => Ret Vundef↑))].
+    [("f", mk_specbody f_spec0 (fun _ => Ret Vundef↑));
+    ("ff", mk_specbody f_spec1 (fun _ => `_: val <- ccallU "g" tt;; `_: val <- ccallU "h" tt;; Ret Vundef↑))
+    ].
 
   Definition SMultSem: SModSem.t := {|
     SModSem.fnsems := multSbtb;

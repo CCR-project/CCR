@@ -45,12 +45,12 @@ Section PROOF.
 
   Definition GlobalStb0: list (gname * fspec).
     eapply (Seal.sealing "stb").
-    apply [("f", f_spec0); ("g", g_spec); ("h", h_spec0)].
+    apply [("ff", f_spec0); ("f", f_spec0); ("g", g_spec); ("h", h_spec0)].
   Defined.
 
   Definition GlobalStb1: list (gname * fspec).
     eapply (Seal.sealing "stb").
-    apply [("f", f_spec1); ("g", g_spec); ("h", h_spec1)].
+    apply [("ff", f_spec0); ("f", f_spec1); ("g", g_spec); ("h", h_spec1)].
   Defined.
 
   (* Definition GlobalStb0: gname -> option fspec := to_stb [("f", f_spec0); ("g", g_spec); ("h", h_spec0)]. *)
