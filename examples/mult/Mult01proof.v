@@ -16,7 +16,7 @@ From ExtLib Require Import
      Structures.Maps
      Data.Map.FMapAList.
 
-Require Import ProofMode.
+Require Import STB ProofMode.
 Require Import HTactics.
 
 Set Implicit Arguments.
@@ -370,7 +370,9 @@ Ltac harg :=
 
 Section SIMMODSEM.
 
-  Context `{@GRA.inG multRA Σ}.
+  Context `{@GRA.inG fRA Σ}.
+  Context `{@GRA.inG gRA Σ}.
+  Context `{@GRA.inG hRA Σ}.
 
   Let W: Type := Any.t * Any.t.
 
@@ -381,11 +383,10 @@ Section SIMMODSEM.
       (fun _ _ st_tgt => ⌜True⌝%I)
   .
 
-  Theorem correct: refines2 [Mult0.Mult (fun _ => GlobalStb)] [Mult1.Mult (fun _ => GlobalStb)].
+  Theorem correct: refines2 [Mult0.Mult (fun _ => to_stb GlobalStb0)] [Mult1.Mult (fun _ => to_stb GlobalStb1)].
   Proof.
     eapply adequacy_local2. econs; ss.
-    i. econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
-    { ss. }
+    i. econstructor 1 with (wf:=wf) (le:=top2); ss; et; swap 2 3.
     { esplits. econs; ss. eapply to_semantic. iIntros "H". iSplits; ss. }
 
     econs; ss.
@@ -404,7 +405,7 @@ Section SIMMODSEM.
     (*** TODO: use entailment instead ***)
     mAssert (⌜True⌝)%I with "" as "X"; ss.
     mAssert _ with "INVT" as "INVT". { iExact "INVT". }
-    mAssert (((OwnM ((Excl.just 5%Z): @URA.car multRA) ** ⌜ord_top = ord_top⌝) ∧ ⌜varg = varg⌝))%I
+    mAssert (((OwnM fpre ** ⌜ord_top = ord_top⌝) ∧ ⌜varg = varg⌝))%I
       with "PRE" as "P".
     { iSplits; ss; et. }
     eapply harg_clo_tgt; et. i.
