@@ -368,6 +368,20 @@ Ltac harg :=
 
 
 
+Ltac init :=
+  let varg_src := fresh "varg_src" in
+  let mn := fresh "mn" in
+  let varg := fresh "varg" in
+  let EQ := fresh "EQ" in
+  let w := fresh "w" in
+  let mrp_src := fresh "mrp_src" in
+  let mp_tgt := fresh "mp_tgt" in
+  let WF := fresh "WF" in
+  split; rr; ss; intros varg_src [mn varg] EQ w mrp_src mp_tgt WF;
+  (try subst varg_src); eexists _, _; cbn;
+  ginit;
+  try (unfold fun_to_tgt, cfunN, cfunU; rewrite ! HoareFun_parse); simpl.
+
 Section SIMMODSEM.
 
   Context `{@GRA.inG fRA Σ}.
@@ -389,7 +403,7 @@ Section SIMMODSEM.
     i. econstructor 1 with (wf:=wf) (le:=top2); ss; et; swap 2 3.
     { esplits. econs; ss. eapply to_semantic. iIntros "H". iSplits; ss. }
 
-    econs; ss.
+    econs.
 
     (*** init ***)
     init.
