@@ -282,6 +282,15 @@ Section MODE.
   Unshelve. all: try exact 0.
   Qed.
 
+  Lemma wf_extends
+        (x0 x1: Σ)
+        (WF: URA.wf x0)
+        (EXT: URA.extends x1 x0)
+    :
+      <<WF: URA.wf x1>>
+  .
+  Proof. r in EXT. des; clarify. eapply URA.wf_mon; et. Qed.
+
   Lemma hret_clo_both
         A (a: shelve__ A)
         mn r rg n m mp_src mp_tgt (mr_src mr_tgt: Σ) a0
@@ -304,36 +313,44 @@ Section MODE.
            bi_entails ((Qt mn xt vret_tgt vret_tgt_tgt: iProp) ** Xtra)
                       (bupd (R a mp_src mp_tgt ** (Qs mn xs vret_src vret_tgt: iProp))))
 
-        (EQ: forall (mr_src1 mr_tgt1: Σ) (WLE: le a0 a)
+        (EQ: forall (mr_src1 mr_tgt1: Σ) (WLE: le a0 a) vret_tgt_tgt
+                    (QT: exists rq, Qt mn xt vret_tgt vret_tgt_tgt rq)
                     (WF: mk_wf R a (Any.pair mp_src mr_src1↑, Any.pair mp_tgt mr_tgt1↑)),
-            eqr (Any.pair mp_src mr_src1↑) (Any.pair mp_tgt mr_tgt1↑) vret_tgt vret_tgt)
+            eqr (Any.pair mp_src mr_src1↑) (Any.pair mp_tgt mr_tgt1↑) vret_tgt vret_tgt_tgt)
     :
       gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) r rg _ _ eqr m n a0
              (Any.pair mp_src mr_src↑, (HoareFunRet Qs mn xs (ctx, vret_src)))
-             (Any.pair mp_tgt mr_tgt↑, (HoareFunRet Qt mn xt (ctx ⋅ rx, vret_src)))
+             (Any.pair mp_tgt mr_tgt↑, (HoareFunRet Qt mn xt (ctx ⋅ rx, vret_tgt)))
   .
   Proof.
     subst. unfold HoareFunRet, mput, mget, guarantee.
     repeat (ired_both; gstep; econs; eauto with ord_step2). exists vret_tgt.
+    steps.
     repeat (ired_both; gstep; econs; eauto with ord_step2).
+    rename c0 into mr_tgt1.
     assert (exists mr_src1 rret_src,
                (<<UPDATABLE: URA.wf (ctx ⋅ (mr_src1 ⋅ rret_src))>>) /\
                (<<RSRC: R a mp_src mp_tgt mr_src1>>) /\
                (<<PRE: Qs mn xs vret_src vret_tgt rret_src>>)).
-    { red in ACC. inv ACC. uipropall.
-      hexploit (UPDATABLE r0); et.
-      { eapply URA.wf_mon; et. }
-      i. des. subst. exists a1, b. splits; et.
-      replace (ctx ⋅ (a1 ⋅ b)) with (a1 ⋅ b ⋅ ctx); et.
-      r_solve.
+    { clear - ACC UPDATABLE x0 x1. red in ACC. inv ACC.
+      rename x into vret_tgt_tgt. rename c into rt.
+      specialize (UPDATABLE vret_tgt_tgt).
+      unfold from_iPropL in IPROP.
+      uipropall. des. clarify. rename a1 into rx.
+      hexploit (UPDATABLE (rt ⋅ rx)); et.
+      { eapply wf_extends; try apply x0. r. exists (ctx ⋅ c0). r_solve. }
+      { instantiate (1:=ctx). eapply wf_extends; try apply x0. r. exists (c0). r_solve. }
+      i; des. clarify. esplits; et.
+      r_wf H.
     }
-    des. exists (rret_src, mr_src1).
-    repeat (ired_both; gstep; econs; eauto with ord_step2).
+    des. exists (rret_src, mr_src1 ⋅ mr_tgt1).
+    steps.
     repeat (ired_both; gstep; econs; eauto with ord_step2). unshelve esplits.
     { r_wf UPDATABLE0. }
     repeat (ired_both; gstep; econs; eauto with ord_step2). unshelve esplits; eauto.
     repeat (ired_both; gstep; econs; eauto with ord_step2).
     eapply EQ; et. econs; et.
+    {
     Unshelve. all: ss.
     admit "".
   Qed.
