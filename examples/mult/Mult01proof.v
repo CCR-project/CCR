@@ -329,7 +329,7 @@ Section MODE.
     repeat (ired_both; gstep; econs; eauto with ord_step2).
     rename c0 into mr_tgt1.
     assert (exists mr_src1 rret_src,
-               (<<UPDATABLE: URA.wf (ctx ⋅ (mr_src1 ⋅ rret_src))>>) /\
+               (<<UPDATABLE: URA.wf (ctx ⋅ (mr_tgt1 ⋅ mr_src1 ⋅ rret_src))>>) /\
                (<<RSRC: R a mp_src mp_tgt mr_src1>>) /\
                (<<PRE: Qs mn xs vret_src vret_tgt rret_src>>)).
     { clear - ACC UPDATABLE x0 x1. red in ACC. inv ACC.
@@ -338,8 +338,8 @@ Section MODE.
       unfold from_iPropL in IPROP.
       uipropall. des. clarify. rename a1 into rx.
       hexploit (UPDATABLE (rt ⋅ rx)); et.
-      { eapply wf_extends; try apply x0. r. exists (ctx ⋅ c0). r_solve. }
-      { instantiate (1:=ctx). eapply wf_extends; try apply x0. r. exists (c0). r_solve. }
+      { eapply wf_extends; try apply x0. r. exists (ctx ⋅ mr_tgt1). r_solve. }
+      { instantiate (1:=ctx ⋅ mr_tgt1). r_wf x0. }
       i; des. clarify. esplits; et.
       r_wf H.
     }
@@ -350,9 +350,8 @@ Section MODE.
     repeat (ired_both; gstep; econs; eauto with ord_step2). unshelve esplits; eauto.
     repeat (ired_both; gstep; econs; eauto with ord_step2).
     eapply EQ; et. econs; et.
-    {
+    { ii. uipropall. esplits; et. refl. }
     Unshelve. all: ss.
-    admit "".
   Qed.
 
 End MODE.
@@ -415,7 +414,7 @@ Section SIMMODSEM.
     mClear "P".
     eapply hret_clo_both; et.
     { i. iIntros "H". iDestruct "H" as "[[A _] B]". iModIntro. iFrame. iSplits; et. }
-    { i. r. esplits; et. }
+    { i. r. esplits; et. des; clarify. uipropall. des; clarify. rr in QT0. uipropall. }
   Unshelve. all: ss. all: try exact 0.
   Qed.
 
