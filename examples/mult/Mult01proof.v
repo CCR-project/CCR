@@ -638,7 +638,7 @@ Section MODE.
         ctx x vret_tgt vret_src fr_tgt
         (ACC: current_iPropL ctx [(Rn, Q (Some mn) x vret_src vret_tgt); (Frn, OwnInvT fr_tgt); (Invtn, OwnInvT mr_tgt); (Xn, Xtra)])
         (ARG: forall
-            rx vret_src
+            rx
             (ACC: current_iPropL ctx [(Rn, Q (Some mn) x vret_src vret_tgt);
                                      (Invtn, OwnInvT mr_tgt);
                                      (Xn, (Xtra ∧ Exactly rx)%I)]),
@@ -769,10 +769,11 @@ Section SIMMODSEM.
 
       harg. mDesAll; clarify. steps.
       (*** TODO: use entailment instead ***)
-      mAssert (OwnM gpre)%I with "A" as "X"; ss.
-      mAssert _ with "INVT" as "INVT". { iExact "INVT". }
-                                       mAssert (((OwnM fpre ** ⌜ord_top = ord_top⌝) ∧ ⌜varg = varg⌝))%I
-                                         with "PRE" as "P".
+      mAssert (OwnM gpre ** OwnM hpre)%I with "A A1" as "X"; ss.
+      { iFrame. }
+      mAssert _ with "INVT" as "INVT".
+      { iExact "INVT". }
+      mAssert (((OwnM fpre ** ⌜ord_top = ord_top⌝) ∧ ⌜varg = varg⌝))%I with "PRE" as "P".
       { iSplits; ss; et. }
       eapply harg_clo_tgt; et. i.
       clear ACC. mClear "P".
@@ -786,23 +787,26 @@ Section SIMMODSEM.
       i. ss. clear_fast.
       clear ACC0. mDesAll. clarify. steps. force_l; stb_tac; ss; clarify. steps.
 
-      steps.
-      mClear "P".
-      mAssert _ with "FR" as "FR".
-      { iExact "FR". }
-      mAssert _ with "A" as "A".
-      { iExact "A". }
+      mAssert (_ ** _) with "FR A" as "X".
+      { iSplitL "A"; et. - iExact "A". - iExact "FR". }
+      mAssert _ with "A1" as "INVT".
+      { iExact "A1". }
       mAssert _ with "FRT" as "FRT".
       { iExact "FRT". }
-      mAssert (OwnM gpost ∧ ⌜vret_tgt = vret_tgt⌝)%I with "POST" as "X"; ss.
+      mAssert (OwnM gpost ∧ ⌜vret_tgt = vret_tgt⌝)%I with "POST" as "POST"; ss.
       { iSplits; ss; et. }
       eapply hret_clo_tgt; et.
-      i. clear ACC. mDesAll; clarify.
-      steps. rewrite _UNWRAPU. steps.
+      i. clear ACC. mClear "POST".
+      steps. rewrite _UNWRAPU. steps. stb_tac. clarify.
 
 
 
       eapply hcall_clo_ord_weaken'; ss; et.
+      { cbn. i. iIntros "[A [% %]]". clarify. iModIntro. iSplitR; iSplits; ss; et.
+        { instantiate (1:=True%I). ss. }
+        iIntros "[A [#B #C]]". iModIntro. iFrame. iSplits; ss; et. iExact "A". }
+      { esplits; ss; et. }
+      { i. iIntros "H". ss. iDestruct "H" as "[A #B]". eauto. }
       {
 
 
