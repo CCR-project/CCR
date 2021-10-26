@@ -34,8 +34,8 @@ Section PROOF.
   Context `{@GRA.inG gRA Σ}.
   Context `{@GRA.inG hRA Σ}.
 
-  Definition f_spec0: fspec := mk_simple (fun (_: unit) => ((fun varg o => (OwnM fpre ** ⌜o = ord_top⌝)%I),
-                                                           (fun vret => (OwnM fpost)%I))).
+  Definition f_spec0: fspec := mk_simple (fun (_: unit) => ((fun varg o => (OwnM fpre ** OwnM gpre ** ⌜o = ord_top⌝)%I),
+                                                           (fun vret => (OwnM fpost ** OwnM gpost)%I))).
   Definition f_spec1: fspec := mk_simple (fun (_: unit) => ((fun varg o => (OwnM fpre ** OwnM gpre ** OwnM hpre ** ⌜o = ord_top⌝)%I),
                                                            (fun vret => (OwnM fpost ** OwnM gpost ** OwnM hpost)%I))).
   Definition g_spec: fspec := mk_simple (fun (_: unit) => ((fun varg o => (OwnM gpre ** ⌜o = ord_top⌝)%I),

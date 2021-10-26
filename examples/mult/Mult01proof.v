@@ -742,10 +742,10 @@ Section SIMMODSEM.
       harg. mDesAll; clarify. steps.
       (*** TODO: use entailment instead ***)
       mAssert (⌜True⌝)%I with "" as "X"; ss.
-      mAssert _ with "INVT" as "INVT". { iExact "INVT". }
-                                       mAssert (((OwnM fpre ** ⌜ord_top = ord_top⌝) ∧ ⌜varg = varg⌝))%I
-                                         with "PRE" as "P".
-      { iSplits; ss; et. }
+      mAssert _ with "INVT" as "INVT".
+      { iExact "INVT". }
+      mAssert (((OwnM fpre ** OwnM gpre ** ⌜ord_top = ord_top⌝) ∧ ⌜varg = varg⌝))%I with "PRE A" as "P".
+      { iSplits; ss; et. iSplitR "A"; ss. }
       eapply harg_clo_tgt; et. i.
       clear ACC. mClear "P".
 
@@ -769,12 +769,11 @@ Section SIMMODSEM.
 
       harg. mDesAll; clarify. steps.
       (*** TODO: use entailment instead ***)
-      mAssert (OwnM gpre ** OwnM hpre)%I with "A A1" as "X"; ss.
-      { iFrame. }
+      mAssert (OwnM hpre)%I with "A" as "X"; ss.
       mAssert _ with "INVT" as "INVT".
       { iExact "INVT". }
-      mAssert (((OwnM fpre ** ⌜ord_top = ord_top⌝) ∧ ⌜varg = varg⌝))%I with "PRE" as "P".
-      { iSplits; ss; et. }
+      mAssert (((OwnM fpre ** OwnM gpre ** ⌜ord_top = ord_top⌝) ∧ ⌜varg = varg⌝))%I with "PRE A1" as "P".
+      { iSplits; ss; et. iSplitR "A1"; ss. }
       eapply harg_clo_tgt; et. i.
       clear ACC. mClear "P".
 
@@ -787,13 +786,15 @@ Section SIMMODSEM.
       i. ss. clear_fast.
       clear ACC0. mDesAll. clarify. steps. force_l; stb_tac; ss; clarify. steps.
 
-      mAssert (_ ** _) with "FR A" as "X".
-      { iSplitL "A"; et. - iExact "A". - iExact "FR". }
-      mAssert _ with "A1" as "INVT".
-      { iExact "A1". }
+      (* mAssert (_ ** _) with "FR POST" as "X". *)
+      (* { iSplitL "POST"; et. - iExact "POST". - iExact "FR". } *)
+      mAssert _ with "POST" as "X".
+      { iExact "POST". }
+      mAssert _ with "A" as "INVT".
+      { iExact "A". }
       mAssert _ with "FRT" as "FRT".
       { iExact "FRT". }
-      mAssert (OwnM gpost ∧ ⌜vret_tgt = vret_tgt⌝)%I with "POST" as "POST"; ss.
+      mAssert (OwnM gpost ∧ ⌜vret_tgt = vret_tgt⌝)%I with "X" as "POST"; ss.
       { iSplits; ss; et. }
       eapply hret_clo_tgt; et.
       i. clear ACC. mClear "POST".
@@ -804,14 +805,28 @@ Section SIMMODSEM.
       eapply hcall_clo_ord_weaken'; ss; et.
       { cbn. i. iIntros "[A [% %]]". clarify. iModIntro. iSplitR; iSplits; ss; et.
         { instantiate (1:=True%I). ss. }
-        iIntros "[A [#B #C]]". iModIntro. iFrame. iSplits; ss; et. iExact "A". }
+      }
       { esplits; ss; et. }
-      { i. iIntros "H". ss. iDestruct "H" as "[A #B]". eauto. }
-      {
+      { i. iIntros "%". des; clarify. }
+      i. ss. clear_fast.
+      clear ACC0. mDesAll. clarify. steps.
+
+
+
+      mAssert _ with "POST" as "X".
+      { iExact "POST". }
+      mAssert _ with "A" as "INVT".
+      { iExact "A". }
+      mAssert _ with "FRT" as "FRT".
+      { iExact "FRT". }
+      mAssert (⌜vret_tgt0 = vret_tgt0⌝)%I with "" as "POST"; ss.
+      eapply hret_clo_tgt; et.
+      i. clear ACC. mClear "POST".
+      steps. rewrite _UNWRAPU0. steps.
 
 
       eapply hret_clo_both; et.
-      { i. iIntros "H". iDestruct "H" as "[[A _] B]". iModIntro. iFrame. iSplits; et. }
+      { i. iIntros "[[A %] C]". clarify. iModIntro. iSplits; ss; et. iFrame. }
       { i. r. esplits; et. des; clarify. uipropall. des; clarify. rr in QT0. uipropall. }
     }
 
