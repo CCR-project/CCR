@@ -504,16 +504,19 @@ Section MODE.
         (FUEL1: m = Ord_S_n m' 10)
         (PURE: ord_lt o_src ord_cur_src /\
                (tbr = true -> is_pure o_src) /\ (tbr = false -> o_src = ord_top))
+        (SIMPLE: forall x_tgt varg_tgt_tgt ro_tgt o_tgt,
+            precond fsp_tgt (Some mn) x_tgt varg_tgt varg_tgt_tgt o_tgt ro_tgt -> varg_tgt = varg_tgt_tgt)
 
         (POST: forall (vret_tgt : Any.t) (mr_src1 mr_tgt1: Σ) (mp_src1 mp_tgt1 : Any.t) a1
                       (vret_src: Any.t)
                       (WLE: le a0 a1)
-                      (ACC: current_iProp ctx0 (FR ** R a1 mp_src1 mp_tgt1 ** fsp_src.(postcond) (Some mn) x_src vret_src vret_tgt))
-                      x_src x_tgt fr_src fr_tgt
+                      ctx1 fr_tgt x_tgt
+                      (ACC: current_iProp ctx1 (FR ** OwnInvT fr_tgt ** OwnInvT mr_tgt1
+                                                   ** R a1 mp_src1 mp_tgt1 ** fsp_src.(postcond) (Some mn) x_src vret_src vret_tgt))
           ,
                 gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) rg rg _ _ eqr o_new_src o_new_tgt _a
-                       TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT WE DONT NEED HoareCallRet IN THE SOURCE TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
-                       (Any.pair mp_src1 mr_src1↑, HoareCallRet mn tbr ord_cur_src fsp_src vret_src x_src (fr_src ⋅ fr_tgt) >>= k_src)
+                       (* TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT WE DONT NEED HoareCallRet IN THE SOURCE TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT *)
+                       (Any.pair mp_src1 mr_src1↑, k_src (ctx1, vret_src))
                        (* (mp_tgt1, k_tgt (ctx1, vret_tgt)) *)
                        (Any.pair mp_tgt1 mr_tgt1↑, HoareCallRet mn tbr ord_cur_tgt fsp_tgt vret_tgt x_tgt fr_tgt >>= k_tgt)
         )
@@ -531,18 +534,19 @@ Section MODE.
                (<<RSRC: R a0 mp_src0 mp_tgt0 mr_src1>>) /\
                (<<FRS: FR fr_src>>) /\
                (<<PRE: fsp_src.(precond) (Some mn) x_src varg_src varg_tgt o_src ro_src>>)).
-    { admit "". }
-    (* { clear - ACC UPDATABLE x0 x1. red in ACC. inv ACC. *)
-    (*   rename x into vret_tgt_tgt. rename c into rt. *)
-    (*   specialize (UPDATABLE vret_tgt_tgt). *)
-    (*   unfold from_iPropL in IPROP. *)
-    (*   uipropall. des. clarify. rename a1 into rx. *)
-    (*   hexploit (UPDATABLE (rt ⋅ rx)); et. *)
-    (*   { eapply wf_extends; try apply x0. r. exists (ctx ⋅ mr_tgt1). r_solve. } *)
-    (*   { instantiate (1:=ctx ⋅ mr_tgt1). r_wf x0. } *)
-    (*   i; des. clarify. esplits; et. *)
-    (*   r_wf H. *)
-    (* } *)
+    { clear - ACC UPDATABLE x x3.
+      eapply current_iPropL_pop in ACC; des.
+      eapply current_iPropL_pop in TL; des.
+      eapply current_iPropL_nil in TL0. ss.
+      specialize (UPDATABLE x0 x2 x1).
+      rr in HD0. autorewrite with iprop in HD0. des; clarify. r in HD1. autorewrite with iprop in HD1. des; clarify.
+      uipropall. exploit UPDATABLE; swap 1 2.
+      { esplits; et. }
+      { eapply wf_extends; et. r. exists (fr_tgt ⋅ ctx0 ⋅ mr_tgt1). r_solve. }
+      { instantiate (1:= fr_tgt ⋅ ctx0 ⋅ mr_tgt1). r_wf x. }
+      i; des. clarify.
+      esplits; et. r_wf x4.
+    }
     des. (ired_both; gstep; econs; eauto with ord_step2).
     exists (ro_src, fr_src ⋅ fr_tgt, mr_src1 ⋅ mr_tgt1).
     steps.
@@ -554,12 +558,16 @@ Section MODE.
     (ired_both; gstep; econs; eauto with ord_step2). unshelve esplits; eauto.
     (ired_both; gstep; econs; eauto with ord_step2). unshelve esplits; eauto.
     ired_both.
-    assert(x1 = varg_tgt). { admit "". } subst.
+    assert(x1 = varg_tgt). { sym. eapply SIMPLE; et. } subst.
     steps.
     { econs; et. i. uipropall. esplits; eauto. refl. }
     inv WF.
+
+    unfold HoareCallRet at 1. unfold mget. steps.
     eapply POST; et.
-    { admit "". }
+    { econs; cycle 1.
+      -
+    }
   Unshelve. all: ss.
   Qed.
 
