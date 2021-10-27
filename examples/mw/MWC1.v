@@ -16,22 +16,28 @@ Set Implicit Arguments.
 
 Section PROOF.
 
-  Notation pget := (p0 <- trigger PGet;; p0 <- p0↓ǃ;; Ret p0) (only parsing).
+  Notation pget := (p0 <- trigger PGet;; p0 <- p0↓?;; Ret p0) (only parsing). (*** NOTE THAT IT IS UB CASTING ***)
   Notation pput p0 := (trigger (PPut p0↑)) (only parsing).
 
+  Variant cls: Type := uninit | opt | map.
+
+  Global Program Instance cls_Dec: Dec cls. Next Obligation. decide equality. Defined.
+
   Record local_state: Type := mk_lst {
-    lst_dom: Z -> option unit;
-    lst_opt: Z -> option val;
+    lst_cls: Z -> cls;
+    lst_opt: Z -> val;
     lst_map: val;
     (* lst_wf: forall k, (is_some (lst_opt k)) -> (is_some (lst_dom k)) *)
   }
   .
 
-  Notation upd_dom f := (lst0 <- pget;; pput (mk_lst (f lst0.(lst_dom)) lst0.(lst_opt) lst0.(lst_map))).
-  Notation upd_opt f := (lst0 <- pget;; pput (mk_lst lst0.(lst_dom) (f lst0.(lst_opt)) lst0.(lst_map))).
-  Notation upd_map f := (lst0 <- pget;; pput (mk_lst lst0.(lst_dom) lst0.(lst_opt) (f lst0.(lst_map)))).
+  Definition set `{Dec K} V (k: K) (v: V) (f: K -> V): K -> V := fun k0 => if dec k k0 then v else f k0.
 
   Let Es := (hAPCE +' Es).
+
+  Notation upd_cls f := (lst0 <- pget;; pput (mk_lst (f lst0.(lst_cls)) lst0.(lst_opt) lst0.(lst_map))).
+  Notation upd_opt f := (lst0 <- pget;; pput (mk_lst lst0.(lst_cls) (f lst0.(lst_opt)) lst0.(lst_map))).
+  Notation upd_map f := (lst0 <- pget;; pput (mk_lst lst0.(lst_cls) lst0.(lst_opt) (f lst0.(lst_map)))).
 
   Definition loopF: list val -> itree Es val :=
     fun varg =>
@@ -45,8 +51,7 @@ Section PROOF.
     fun varg =>
       _ <- (pargs [] varg)?;;;
       `map: val <- ccallU "new" ([]: list val);;
-      assume(map <> Vnullptr);;;
-      upd_map (fun _ => map);;;
+      pput (mk_lst (fun _ => uninit) (fun _ => Vundef) map);;;
       `_: val <- ccallU "init" ([]: list val);;
       `_: val <- ccallU "loop" ([]: list val);;
       Ret Vundef
@@ -55,12 +60,13 @@ Section PROOF.
   Definition putF: list val -> itree Es val :=
     fun varg =>
       '(k, v) <- (pargs [Tint; Tuntyped] varg)?;;
-      lst0 <- pget;; 
-      assume((0 <= k)%Z);;;
-      b <- trigger (Choose _);;
-      (if (b: bool)
-       then _ <- assume(lst0.(lst_map) <> Vnullptr);;; upd_opt (fun opt => add k v opt)
-       else `_: val <- ccallU "update" ([lst0.(lst_map); Vint k; v]);; upd_dom (fun dom => add k tt dom));;;
+      lst0 <- pget;;
+      (if dec (lst0.(lst_cls) k) uninit
+       then b <- trigger (Choose _);; let class := (if (b: bool) then opt else map) in upd_cls (fun cls => set k class cls);;; Ret tt
+       else Ret tt);;;
+      (if dec (lst0.(lst_cls) k) opt
+       then _ <- upd_opt (fun opt => set k v opt);;; Ret tt
+       else `_: val <- ccallU "update" ([lst0.(lst_map); Vint k; v]);; Ret tt);;;
       trigger (Syscall "print" [Vint k]↑ top1);;;
       trigger (Syscall "print" [v]↑ top1);;;
       Ret Vundef
@@ -69,15 +75,14 @@ Section PROOF.
   Definition getF: list val -> itree Es val :=
     fun varg =>
       k <- (pargs [Tint] varg)?;;
-      `lst0: local_state <- pget;;
-      assume((is_some (lst0.(lst_dom) k) \/ is_some (lst0.(lst_opt) k)));;;
-      v <- (match lst0.(lst_opt) k with
-            | Some v => Ret v
-            | _ => ccallU "access" ([lst0.(lst_map); Vint k])
-            end);;
-      trigger (Syscall "print" [Vint k]↑ top1);;; (*** TODO: make something like "syscallu" ***)
+      lst0 <- pget;;
+      assume(lst0.(lst_cls) k <> uninit);;;
+      v <- (if dec (lst0.(lst_cls) k) uninit
+            then ;;; Ret (lst0.(lst_opt) k)
+            else ccallU "access" ([lst0.(lst_map); Vint k]));;
+      trigger (Syscall "print" [Vint k]↑ top1);;;
       trigger (Syscall "print" [v]↑ top1);;;
-      Ret Vundef
+      Ret v
   .
 
   Context `{Σ: GRA.t}.
@@ -93,7 +98,7 @@ Section PROOF.
     SModSem.fnsems := MWsbtb;
     SModSem.mn := "MW";
     SModSem.initial_mr := ε;
-    SModSem.initial_st := (mk_lst empty empty Vnullptr)↑;
+    SModSem.initial_st := tt↑;
   |}
   .
 
