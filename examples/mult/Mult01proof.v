@@ -24,12 +24,6 @@ Set Implicit Arguments.
 Local Open Scope nat_scope.
 
 
-(* Notation "wf n '------------------------------------------------------------------' src0 tgt0 '------------------------------------------------------------------' src1 '------------------------------------------------------------------' src2 tgt2" *)
-(*   := *)
-(*     (gpaco8 (_sim_itree wf _) _ _ _ _ _ _ _ _ n ((Any.pair src0 src1), src2) ((Any.pair tgt0 _), tgt2)) *)
-(*       (at level 60, *)
-(*        format "wf  n '//' '------------------------------------------------------------------' '//' src0 '//' tgt0 '//' '------------------------------------------------------------------' '//' src1 '//' '------------------------------------------------------------------' '//' src2 '//' '//' '//' tgt2 '//' "). *)
-
 Section AUX.
   Context `{Σ: GRA.t}.
 
@@ -63,68 +57,6 @@ Section MODE.
   .
 
   Local Transparent HoareFun HoareFunArg HoareFunRet HoareCall.
-
-  (* Lemma own_rewrite *)
-  (*       r (P: iProp) *)
-  (*       (HOLDS: P r) *)
-  (*   : *)
-  (*     bi_entails (Own r) P *)
-  (* . *)
-  (* Proof. *)
-  (*   uipropall.  i. et. *)
-  (* Qed. *)
-
-  (* Lemma harg_clo *)
-  (*       A Rn Invsn Invtn *)
-  (*       mn r rg *)
-  (*       X (P: option mname -> X -> Any.t -> Any.t -> ord -> Σ -> Prop) varg *)
-  (*       mpr_src mp_tgt mr_tgt f_tgt k_src *)
-  (*       a (le: A -> A -> Prop) *)
-  (*       (R: A -> Any.t -> Any.t -> iProp) *)
-  (*       (eqr: Any.t -> Any.t -> Any.t -> Any.t -> Prop) *)
-  (*       (WF: mk_wf R a (mpr_src, (Any.pair mp_tgt mr_tgt↑))) *)
-  (*       o_src0 o_src1 o_tgt0 o_tgt1 *)
-  (*       (FUEL: o_tgt0 = Ord_S_n o_tgt1 7) *)
-  (*       (ARG: *)
-  (*          forall x varg_src ord_cur *)
-  (*                 ctx (mr_src: Σ) mp_src *)
-  (*                 (ACC: current_iPropL ctx [(Rn, P mn x varg_src varg ord_cur); *)
-  (*                                          (Invsn, R a mp_src mp_tgt); *)
-  (*                                          (Invtn, Own mr_tgt)]), *)
-  (*            gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) rg rg _ _ eqr o_src1 o_tgt1 a *)
-  (*                   (Any.pair mp_src mr_src↑, k_src (ctx, ((mn, x), varg_src, ord_cur))) *)
-  (*                   ((Any.pair mp_tgt mr_tgt↑), f_tgt)) *)
-  (*   : *)
-  (*     gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) r rg _ _ eqr o_src0 o_tgt0 a *)
-  (*            (mpr_src, (HoareFunArg P (mn, varg) >>= k_src)) *)
-  (*            ((Any.pair mp_tgt mr_tgt↑), f_tgt) *)
-  (* . *)
-  (* Proof. *)
-  (*   inv WF. *)
-  (*   unfold HoareFunArg, mput, mget, assume, guarantee. *)
-  (*   repeat (ired_both; gstep; econs; eauto with ord_step2). intro x. *)
-  (*   repeat (ired_both; gstep; econs; eauto with ord_step2). intro varg_src. *)
-  (*   repeat (ired_both; gstep; econs; eauto with ord_step2). intros (rarg_src, ctx). *)
-  (*   repeat (ired_both; gstep; econs; eauto with ord_step2). *)
-  (*   repeat (ired_both; gstep; econs; eauto with ord_step2). intro VALID. *)
-  (*   repeat (ired_both; gstep; econs; eauto with ord_step2). intro ord_cur. *)
-  (*   repeat (ired_both; gstep; econs; eauto with ord_step2). i. *)
-  (*   eapply Any.pair_inj in H2. des; clarify. eapply Any.upcast_inj in H0. des; clarify. *)
-  (*   ired_both. eapply ARG; et. *)
-  (*   red. econs. *)
-  (*   { instantiate (1:=rarg_src ⋅ mr_src). r_wf VALID. } *)
-  (*   { ss. red. rr. *)
-  (*     autorewrite with iprop; ss. esplits; et. *)
-  (*     assert(T: URA.wf mr_src). *)
-  (*     { eapply URA.wf_mon. instantiate (1:=(ctx ⋅ rarg_src)). r_wf VALID. } *)
-  (*     spc RSRC. *)
-  (*     clear - RSRC T VALID. *)
-  (*     uipropall. des. clarify. esplits; et. *)
-  (*     { rewrite URA.unit_id; ss. } *)
-  (*     { r. uipropall. } *)
-  (*   } *)
-  (*   Unshelve. all: try exact 0. *)
-  (* Qed. *)
 
   Lemma harg_clo
         A Rn Invsn Invtn
@@ -317,7 +249,7 @@ Section MODE.
   (* Qed. *)
 
   Lemma harg_clo_tgt'
-        A Xn Xtra Invtn mp_tgt mr_tgt
+        A Xn Invtn Xtra mp_tgt mr_tgt
         mn r rg
         X (P: option mname -> X -> Any.t -> Any.t -> ord -> iProp) varg
         mpr_src f_src k_tgt
@@ -469,74 +401,10 @@ Section MODE.
     unfold HoareCall, HoareCallPre, HoareCallPost. grind.
   Qed.
 
-  (* Lemma hcall_clo_both *)
-  (*       A (a: shelve__ A) *)
-  (*       mn r rg n m mp_src0 mp_tgt0 (mr_src0 mr_tgt0: Σ) a0 *)
-  (*       Xs (Qs: option mname -> Xs -> Any.t -> Any.t -> Σ -> Prop) *)
-  (*       Xt (Qt: option mname -> Xt -> Any.t -> Any.t -> Σ -> Prop) *)
-  (*       xs xt vret_src vret_tgt *)
-  (*       (le: A -> A -> Prop) *)
-  (*       (eqr: Any.t -> Any.t -> Any.t -> Any.t -> Prop) *)
-  (*       (R: A -> Any.t -> Any.t -> iProp) n' m' *)
-  (*       (FUEL: n = Ord_S_n n' 14) *)
-  (*       (FUEL2: m = Ord_S_n m' 14) *)
-
-  (*       ctx0 rx *)
-  (*       Invtn Xn Xtra *)
-  (*       (ACC: current_iPropL ctx0 [(Invtn, OwnT mr_tgt0); (Xn, (Xtra ∧ Exactly rx)%I)]) *)
-
-  (*       (WLE: le a0 a) *)
-  (*       tbr ord_cur_src ord_cur_tgt fsp_src fsp_tgt fn varg_src varg_tgt k_src k_tgt *)
-
-  (*       (UPDATABLE: forall vret_tgt_tgt, *)
-  (*          bi_entails ((Qt (Some mn) xt vret_tgt vret_tgt_tgt: iProp) ** Xtra) *)
-  (*                     (bupd (R a mp_src0 mp_tgt0 ** (Qs (Some mn) xs vret_src vret_tgt: iProp)))) *)
-
-  (*       (EQ: forall (mr_src1 mr_tgt1: Σ) (WLE: le a0 a) vret_tgt_tgt *)
-  (*                   (QT: exists rq, Qt (Some mn) xt vret_tgt vret_tgt_tgt rq) *)
-  (*                   (WF: mk_wf R a (Any.pair mp_src0 mr_src1↑, Any.pair mp_tgt0 mr_tgt1↑)), *)
-  (*           eqr (Any.pair mp_src0 mr_src1↑) (Any.pair mp_tgt0 mr_tgt1↑) vret_tgt vret_tgt_tgt) *)
-  (*   : *)
-  (*     gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) r rg _ _ eqr m n a *)
-  (*            (Any.pair mp_src0 mr_src0↑, (HoareCall mn tbr ord_cur_src fsp_src fn varg_src) ctx0 >>= k_src) *)
-  (*            (Any.pair mp_tgt0 mr_tgt0↑, (HoareCall mn tbr ord_cur_tgt fsp_tgt fn varg_tgt) (ctx0 ⋅ rx) >>= k_tgt) *)
-  (* . *)
-  (* Proof. *)
-  (*   subst. unfold HoareFunRet, mput, mget, guarantee. *)
-  (*   repeat (ired_both; gstep; econs; eauto with ord_step2). exists vret_tgt. *)
-  (*   steps. *)
-  (*   repeat (ired_both; gstep; econs; eauto with ord_step2). *)
-  (*   rename c0 into mr_tgt1. *)
-  (*   assert (exists mr_src1 rret_src, *)
-  (*              (<<UPDATABLE: URA.wf (ctx ⋅ (mr_tgt1 ⋅ mr_src1 ⋅ rret_src))>>) /\ *)
-  (*              (<<RSRC: R a mp_src mp_tgt mr_src1>>) /\ *)
-  (*              (<<PRE: Qs mn xs vret_src vret_tgt rret_src>>)). *)
-  (*   { clear - ACC UPDATABLE x0 x1. red in ACC. inv ACC. *)
-  (*     rename x into vret_tgt_tgt. rename c into rt. *)
-  (*     specialize (UPDATABLE vret_tgt_tgt). *)
-  (*     unfold from_iPropL in IPROP. *)
-  (*     uipropall. des. clarify. rename a1 into rx. *)
-  (*     hexploit (UPDATABLE (rt ⋅ rx)); et. *)
-  (*     { eapply wf_extends; try apply x0. r. exists (ctx ⋅ mr_tgt1). r_solve. } *)
-  (*     { instantiate (1:=ctx ⋅ mr_tgt1). r_wf x0. } *)
-  (*     i; des. clarify. esplits; et. *)
-  (*     r_wf H. *)
-  (*   } *)
-  (*   des. exists (rret_src, mr_src1 ⋅ mr_tgt1). *)
-  (*   steps. *)
-  (*   repeat (ired_both; gstep; econs; eauto with ord_step2). unshelve esplits. *)
-  (*   { r_wf UPDATABLE0. } *)
-  (*   repeat (ired_both; gstep; econs; eauto with ord_step2). unshelve esplits; eauto. *)
-  (*   repeat (ired_both; gstep; econs; eauto with ord_step2). *)
-  (*   eapply EQ; et. econs; et. *)
-  (*   { ii. uipropall. esplits; et. refl. } *)
-  (*   Unshelve. all: ss. *)
-  (* Qed. *)
-
-  Lemma hcall_clo_ord_weaken' (o_new_src: Ord.t)
-        (fsp_src: fspec)
-        (o_src: ord) (x_src: shelve__ fsp_src.(meta))
-        fsp_tgt 
+  Lemma hcall_clo_ord_weaken'
+        (o_src: ord) fsp_src (x_src: shelve__ fsp_src.(meta))
+        fsp_tgt
+        (o_new_src: Ord.t)
 
         A (a0: shelve__ A) FR
 
@@ -639,48 +507,62 @@ Section MODE.
   Unshelve. all: ss.
   Qed.
 
-  (* Lemma hcall_clo_both *)
-  (*       Hns Rn Invn *)
-  (*       (o: ord) X (x: shelve__ X) *)
-  (*       A (a0: shelve__ A) *)
+  Lemma hcall_clo_ord_weaken''
+        (o_src: ord) fsp_src (x_src: shelve__ fsp_src.(meta))
+        A (a0: shelve__ A) FR
+        fsp_tgt
+        (o_new_src: Ord.t)
 
-  (*       (P: option mname -> X -> Any.t -> Any.t -> ord -> Σ -> Prop) *)
-  (*       (Q: option mname -> X -> Any.t -> Any.t -> Σ -> Prop) *)
-  (*       (le: A -> A -> Prop) mn r rg a n m n' mr_src0 mp_src0 *)
-  (*       mp_tgt0 k_tgt k_src *)
-  (*       fn tbr ord_cur varg_src varg_tgt *)
-  (*       (R: A -> Any.t -> Any.t -> iProp) *)
-  (*       (eqr: Any.t -> Any.t -> Any.t -> Any.t -> Prop) *)
 
-  (*       ctx0 l o_src1 o_tgt1 *)
-  (*       (ACC: current_iPropL ctx0 l) *)
+        (le: A -> A -> Prop) mn r rg _a n m n' m' mp_src0 mp_tgt0 (mr_src0 mr_tgt0: Σ)
+        k_tgt k_src
+        fn tbr ord_cur_src ord_cur_tgt varg_src varg_tgt
+        (R: A -> Any.t -> Any.t -> iProp)
+        (eqr: Any.t -> Any.t -> Any.t -> Any.t -> Prop)
+        (o_new_tgt: Ord.t)
 
-  (*       (UPDATABLE: *)
-  (*          from_iPropL (fst (alist_pops Hns l)) ⊢ #=> (R a0 mp_src0 mp_tgt0 ** (P (Some mn) x varg_src varg_tgt o: iProp))) *)
 
-  (*       (FUEL: n = Ord_S_n n' 10) *)
-  (*       (PURE: ord_lt o ord_cur /\ *)
-  (*              (tbr = true -> is_pure o) /\ (tbr = false -> o = ord_top)) *)
+        ctx0 rx
+        ips Xtra
+        (ACC: current_iPropL ctx0 ips)
+        (ENTAIL: bi_entails (from_iPropL ips) ((OwnT mr_tgt0) ** (Xtra ∧ Exactly rx)))
 
-  (*       (POST: forall (vret_tgt : Any.t) (mr_src1: Σ) (mp_src1 mp_tgt1 : Any.t) a1 *)
-  (*                     (vret_src: Any.t) *)
-  (*                     (WLE: le a0 a1) *)
-  (*                     ctx1 *)
-  (*                     (ACC: current_iPropL ctx1 (@cons (prod string (bi_car iProp)) (Invn, R a1 mp_src1 mp_tgt1) (@cons (prod string (bi_car iProp)) (Rn, Q (Some mn) x vret_src vret_tgt) (snd (alist_pops Hns l))))) *)
-  (*         , *)
-  (*               gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) rg rg _ _ eqr o_src1 o_tgt1 a *)
-  (*                      (Any.pair mp_src1 mr_src1↑, k_src (ctx1, vret_src)) (mp_tgt1, k_tgt vret_tgt)) *)
-  (*   : *)
-  (*     gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) r rg _ _ eqr m n a *)
-  (*            (Any.pair mp_src0 mr_src0, (HoareCall mn tbr ord_cur (mk_fspec P Q) fn varg_src) ctx0 >>= k_src) *)
-  (*            (mp_tgt0, trigger (Call fn varg_tgt) >>= k_tgt) *)
-  (* . *)
-  (* Proof. *)
-  (*   eapply hcall_clo_weaken; eauto. *)
-  (*   { refl. } *)
-  (*   { eauto. } *)
-  (*   { eauto. } *)
-  (* Qed. *)
+        (UPDATABLE: forall x_tgt o_tgt varg_tgt_tgt,
+           bi_entails (Xtra ** (fsp_tgt.(precond) (Some mn) x_tgt varg_tgt varg_tgt_tgt o_tgt: iProp))
+                      (bupd (FR ** R a0 mp_src0 mp_tgt0 ** (fsp_src.(precond) (Some mn) x_src varg_src varg_tgt o_src: iProp))))
+
+        (FUEL0: n = Ord_S_n n' 10)
+        (FUEL1: m = Ord_S_n m' 10)
+        (PURE: ord_lt o_src ord_cur_src /\
+               (tbr = true -> is_pure o_src) /\ (tbr = false -> o_src = ord_top))
+        (SIMPLE: forall x_tgt varg_tgt_tgt o_tgt,
+            (bi_entails ((precond fsp_tgt (Some mn) x_tgt varg_tgt varg_tgt_tgt o_tgt): iProp) (⌜varg_tgt = varg_tgt_tgt⌝%I)))
+
+        (POST: forall (vret_tgt : Any.t) (mr_src1 mr_tgt1: Σ) (mp_src1 mp_tgt1 : Any.t) a1
+                      (vret_src: Any.t)
+                      (WLE: le a0 a1)
+                      ctx1 fr_tgt x_tgt
+                      (* (ACC: current_iProp ctx1 (FR ** OwnT fr_tgt ** OwnT mr_tgt1 *)
+                      (*                              ** R a1 mp_src1 mp_tgt1 ** fsp_src.(postcond) (Some mn) x_src vret_src vret_tgt)) *)
+                      (ACC: current_iPropL ctx1 [("FR", FR); ("FRT", OwnT fr_tgt); ("INV", R a1 mp_src1 mp_tgt1 ** OwnT mr_tgt1);
+                                                ("POST", fsp_src.(postcond) (Some mn) x_src vret_src vret_tgt)])
+          ,
+                gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) rg rg _ _ eqr o_new_src o_new_tgt _a
+                       (Any.pair mp_src1 mr_src1↑, k_src (ctx1, vret_src))
+                       (Any.pair mp_tgt1 mr_tgt1↑, HoareCallPost mn tbr ord_cur_tgt fsp_tgt.(postcond) vret_tgt x_tgt fr_tgt >>= k_tgt)
+        )
+    :
+      gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) r rg _ _ eqr m n _a
+             (Any.pair mp_src0 mr_src0↑, (HoareCall mn tbr ord_cur_src fsp_src fn varg_src) ctx0 >>= k_src)
+             (Any.pair mp_tgt0 mr_tgt0↑, (HoareCall mn tbr ord_cur_tgt fsp_tgt fn varg_tgt) (ctx0 ⋅ rx) >>= k_tgt)
+  .
+  Proof.
+    eapply current_iPropL_entail_all with (Hn:="A") in ACC; et.
+    mDesAll.
+    mAssert _ with "A1". { iAssumption. }
+    mAssert _ with "A". { iAssumption. }
+    eapply hcall_clo_ord_weaken'; et.
+  Qed.
 
   Lemma hpost_clo_tgt
         A Xn Xtra Rn Frn Invtn mp_tgt mr_tgt
@@ -733,7 +615,7 @@ Section MODE.
   Qed.
 
   Lemma hpost_clo_tgt'
-        A Xn Xtra Invtn mp_tgt mr_tgt
+        A Xn Invtn Xtra mp_tgt mr_tgt
         mn r rg
         X (Q: option mname -> X -> Any.t -> Any.t -> iProp)
         mpr_src f_src k_tgt
@@ -798,6 +680,40 @@ Ltac init :=
   ginit;
   try (unfold fun_to_tgt, cfunN, cfunU; rewrite ! HoareFun_parse); simpl.
 
+Ltac harg_tgt :=
+  let XN := constr:("FR") in
+  let INVTN := constr:("INVT") in
+  eapply (@harg_clo_tgt' _ _ XN INVTN);
+  [eassumption
+  |refl
+  |eassumption
+  |start_ipm_proof
+  |on_current ltac:(fun H => try clear H); i; on_current ltac:(fun H => simpl in H)].
+
+Ltac hpost_tgt :=
+  let XN := constr:("FR") in
+  let INVTN := constr:("INVT") in
+  eapply (@hpost_clo_tgt' _ _ XN INVTN);
+  [refl
+  |eassumption
+  |start_ipm_proof
+  |on_current ltac:(fun H => try clear H); i; on_current ltac:(fun H => simpl in H)].
+
+Tactic Notation "hcall" uconstr(o) uconstr(x) uconstr(a) :=
+  eapply (@hcall_clo_ord_weaken'' _ o _ x _ a);
+  unshelve_goal;
+  [eassumption
+  |start_ipm_proof; try (iFrame; et)
+  |cbn; i; iIntros "[FR P]"
+  |refl
+  |refl
+  |
+  |
+  |on_current ltac:(fun H => try clear H); i; on_current ltac:(fun H => simpl in H)]
+.
+
+
+
 Section SIMMODSEM.
 
   Context `{@GRA.inG fRA Σ}.
@@ -833,9 +749,8 @@ Section SIMMODSEM.
 
 
       harg. mDesAll; clarify. steps.
-      eapply harg_clo_tgt' with (Invtn:="INVT") (Xn:="Xn"); et; i.
-      { unfold from_iPropL. iIntros "[A [B [C D]]]". iFrame. iSplits; et. iAssumption. }
-      clear ACC.
+      harg_tgt.
+      { iFrame. iSplits; et. instantiate (1:=True%I); ss. }
 
       steps.
       eapply hret_clo_both; et.
@@ -859,39 +774,37 @@ Section SIMMODSEM.
       mAssert _ with "PRE" as "PRE".
       { iApply (OwnM_Upd with "PRE"). eapply f01_update. }
       mUpd "PRE".
-      eapply harg_clo_tgt' with (Invtn:="INVT") (Xn:="X"); et; i.
-      { unfold from_iPropL. iIntros "[A [B [C [D _]]]]". iFrame. iSplits; et. iAssumption. }
-      clear ACC.
+
+      harg_tgt.
+      { iFrame. iSplits; et. iAssumption. }
 
       unfold ccallU. steps. stb_tac; clarify. force_l; stb_tac; clarify. steps.
-      eapply hcall_clo_ord_weaken'; et.
-      { cbn. i. iIntros "H". iModIntro. iDestruct "H" as "[A [[B #C] #D]]".
-        iFrame. iSplits; ss; et. iExact "A". }
+
+
+      hcall _ _ _.
+      { iModIntro. iDestruct "P" as "[[A %] %]". clarify. iFrame. iSplits; ss; et. iAssumption. }
       { esplits; ss; et. }
-      { i. iIntros "H". ss. iDestruct "H" as "[A #B]". eauto. }
-      i. ss. clear_fast.
-      clear ACC0. mDesAll. clarify. steps. force_l; stb_tac; ss; clarify. steps.
+      { i. iIntros "H". ss. iDestruct "H" as "[A %]". eauto. }
+      mDesAll. clarify. steps. force_l; stb_tac; ss; clarify. steps.
 
 
-      eapply hpost_clo_tgt' with (Invtn:="INVT") (Xn:="X"); et; i.
-      { unfold from_iPropL. iIntros "[A [B [C [D _]]]]". iFrame. iSplits; et. iAssumption. }
+
+      hpost_tgt.
+      { iFrame. iSplits; et. iAssumption. }
       steps. rewrite _UNWRAPU. steps. stb_tac. clarify.
 
 
 
-      eapply hcall_clo_ord_weaken'; ss; et.
-      { cbn. i. iIntros "[A [% %]]". clarify. iModIntro. iSplitR; iSplits; ss; et.
-        { instantiate (1:=True%I). ss. }
-      }
+      hcall _ _ _.
+      { iModIntro. iDestruct "P" as "[% %]". clarify. iFrame. iSplits; ss; et. instantiate (1:=True%I). ss. }
       { esplits; ss; et. }
-      { i. iIntros "%". des; clarify. }
-      i. ss. clear_fast.
-      clear ACC0. mDesAll. clarify. steps.
+      { i. iIntros "H". ss. iDestruct "H" as "[A %]". eauto. }
+      clear_fast. mDesAll. clarify. steps.
 
 
 
-      eapply hpost_clo_tgt' with (Invtn:="INVT") (Xn:="X"); et; i.
-      { unfold from_iPropL. iIntros "[A [B [C _]]]". iFrame. iSplits; et. iAssumption. }
+      hpost_tgt.
+      { iFrame. iSplits; et. iAssumption. } 
       steps. rewrite _UNWRAPU0. steps.
 
 

@@ -59,7 +59,9 @@ Definition RunX: AppRA.t := AppRA.half true.
 
 
 
-Instance mwRA: URA.t := (Z ==> (Excl.t Z))%ra.
+Instance _mwRA: URA.t := (Z ==> (Excl.t Z))%ra.
+Instance mwRA: URA.t := Auth.t _mwRA%ra.
+Definition mw_state (f: Z -> option Z): mwRA := @Auth.white _mwRA f.
 
 Section PROOF.
   Context `{@GRA.inG AppRA.t Σ}.
@@ -87,26 +89,26 @@ Section PROOF.
 
   Definition put_spec: fspec :=
     mk_simple (fun '(f, k, v) =>
-                 ((fun varg o => ⌜varg = [Vint k; Vint v]↑ ∧ intrange_64 k ∧ intrange_64 v⌝ ** OwnM (f: Z -> option Z)),
-                  (fun vret => OwnM (add k v f))))
+                 ((fun varg o => ⌜varg = [Vint k; Vint v]↑ ∧ intrange_64 k ∧ intrange_64 v⌝ ** OwnM (mw_state f)),
+                  (fun vret => OwnM (mw_state (add k v f)))))
   .
 
   Definition get_spec: fspec :=
     mk_simple (fun '(f, k, v) =>
-                 ((fun varg o => ⌜varg = [Vint k]↑ ∧ intrange_64 k ∧ f k = Some v⌝ ** OwnM (f: Z -> option Z)),
-                  (fun vret => ⌜vret = (Vint v)↑⌝ ** OwnM f)))
+                 ((fun varg o => ⌜varg = [Vint k]↑ ∧ intrange_64 k ∧ f k = Some v⌝ ** OwnM (mw_state f)),
+                  (fun vret => ⌜vret = (Vint v)↑⌝ ** OwnM (mw_state f))))
   .
 
   Definition init_spec1: fspec :=
-    mk_simple (fun f => ((fun varg o => ⌜varg = ([]: list val)↑ ∧ o = ord_top⌝ ** OwnM Init ** OwnM (f: Z -> option Z)),
-                         (fun vret => OwnM Run ** OwnM (add 0%Z 42%Z f)))).
+    mk_simple (fun f => ((fun varg o => ⌜varg = ([]: list val)↑ ∧ o = ord_top⌝ ** OwnM Init ** OwnM (mw_state f)),
+                         (fun vret => OwnM Run ** OwnM (mw_state (add 0%Z 42%Z f))))).
 
   Definition run_spec1: fspec :=
-    mk_simple (fun f => ((fun varg o => ⌜varg = ([]: list val)↑ ∧ o = ord_top⌝ ** OwnM Run ** OwnM (f: Z -> option Z) ∧ ⌜f 0 = Some 42%Z⌝),
-                         (fun vret => OwnM Run ** OwnM f ∧ ⌜f 0 = Some 42%Z⌝))).
+    mk_simple (fun f => ((fun varg o => ⌜varg = ([]: list val)↑ ∧ o = ord_top⌝ ** OwnM Run ** OwnM (mw_state f) ∧ ⌜f 0 = Some 42%Z⌝),
+                         (fun vret => OwnM Run ** OwnM (mw_state f) ∧ ⌜f 0 = Some 42%Z⌝))).
 
   Definition GlobalStb0: gname -> option fspec :=
-    to_stb [("init",init_spec0); ("run",run_spec0); ("put",fspec_trivial); ("get",fspec_trivial)].
+    to_stb [("init",init_spec0); ("run",run_spec0); ("main",fspec_trivial); ("put",fspec_trivial); ("get",fspec_trivial)].
 
   Definition GlobalStb1: gname -> option fspec :=
     to_stb [("init",init_spec1); ("run",run_spec1); ("main",main_spec); ("put",put_spec); ("get",get_spec)].
