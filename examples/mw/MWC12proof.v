@@ -27,7 +27,9 @@ Local Open Scope nat_scope.
 Section SIMMODSEM.
 
   Context `{Σ: GRA.t}.
-  Context `{@GRA.inG IRA.t Σ}.
+
+  Context `{@GRA.inG AppRA.t Σ}.
+  Context `{@GRA.inG mwRA Σ}.
 
   Let W: Type := Any.t * Any.t.
 
@@ -35,7 +37,7 @@ Section SIMMODSEM.
     @mk_wf
       _
       unit
-      (fun _ _ st_tgt => (∃ (usable: bool), OwnM(IRA.module(usable): IRA.t) ∧ ⌜st_tgt = usable↑⌝)%I)
+      (fun _ _ st_tgt => (∃ (f: Z -> option Z), OwnM (@Auth.black _mwRA f))%I)
   .
 
   Theorem correct: refines2 [IntroGSep0.G] [IntroGSep1.G].
