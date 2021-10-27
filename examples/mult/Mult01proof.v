@@ -234,6 +234,7 @@ Section MODE.
 
   Lemma harg_clo_tgt
         A Xn Xtra Rn Invtn mp_tgt mr_tgt
+        Invtn' Xn'
         mn r rg
         X (P: option mname -> X -> Any.t -> Any.t -> ord -> Σ -> Prop) varg
         mpr_src f_src k_tgt
@@ -247,7 +248,7 @@ Section MODE.
         (ACC: current_iPropL ctx [(Rn, P mn x varg_tgt varg ord_cur); (Invtn, OwnT mr_tgt); (Xn, Xtra)])
         (ARG: forall
             rx
-            (ACC: current_iPropL ctx [(Invtn, OwnT mr_tgt); (Xn, (Xtra ∧ Exactly rx)%I)]),
+            (ACC: current_iPropL ctx [(Invtn', OwnT mr_tgt); (Xn', (Xtra ∧ Exactly rx)%I)]),
             gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) rg rg _ _ eqr o_src1 o_tgt1 a
                    (mpr_src, f_src)
                    (Any.pair mp_tgt mr_tgt↑, k_tgt (ctx ⋅ rx, ((mn, x), varg_tgt, ord_cur))))
@@ -279,6 +280,74 @@ Section MODE.
     eapply current_iPropL_nil; et.
     { eapply wf_extends; et. exists rarg_src. r_solve. }
   Unshelve. all: try exact 0.
+  Qed.
+
+  Lemma current_iPropL_entail_all Hn ctx (l: iPropL) (P: iProp)
+        (ACC: current_iPropL ctx l)
+        (ENTAIL: from_iPropL l -∗ P)
+    :
+      current_iPropL ctx [(Hn, P)].
+  Proof.
+    eapply current_iProp_upd.
+    eapply current_iProp_entail; et.
+    unfold from_iPropL at 2. etrans; et. (*** !!! ***)
+  Qed.
+
+  (* Lemma current_iPropL_merge_all Hn ctx (l: iPropL) *)
+  (*   : *)
+  (*     current_iPropL ctx l <-> current_iPropL ctx [(Hn, from_iPropL l)]. *)
+  (* Proof. *)
+  (*   unfold current_iPropL. unfold from_iPropL at 2. *)
+  (*   set (from_iPropL l) as x. *)
+  (*   set (x ** emp) as y. *)
+  (*   assert(x = y). *)
+  (*   { subst y. uipropall. extensionality r. apply Axioms.prop_ext. split; i; et. *)
+  (*     - esplits; et. { rewrite URA.unit_id; ss. } r. uipropall. *)
+  (*     - des. clarify. ss. *)
+  (*   Check (from_iPropL l). *)
+  (*   Check (from_iPropL l ** emp). *)
+  (*   assert((from_iPropL l): iProp = (from_iPropL l ** emp): iProp). *)
+  (*   assert(from_iPropL l = from_iPropL l ** emp). *)
+  (*   { } *)
+  (*   f_equal. *)
+  (*   eapply prop_ext. *)
+  (*   eapply current_iProp_upd. *)
+  (*   eapply current_iProp_entail; et. *)
+  (*   unfold from_iPropL at 2. etrans; et. (*** !!! ***) *)
+  (* Qed. *)
+
+  Lemma harg_clo_tgt'
+        A Xn Xtra Invtn mp_tgt mr_tgt
+        mn r rg
+        X (P: option mname -> X -> Any.t -> Any.t -> ord -> iProp) varg
+        mpr_src f_src k_tgt
+        a (le: A -> A -> Prop)
+        (R: A -> Any.t -> Any.t -> iProp)
+        (eqr: Any.t -> Any.t -> Any.t -> Any.t -> Prop)
+        (WF: mk_wf R a (mpr_src, Any.pair mp_tgt mr_tgt↑))
+        o_src0 o_src1 o_tgt0 o_tgt1
+        (FUEL: o_src0 = Ord_S_n o_src1 7)
+        ctx x varg_tgt ord_cur ips
+        (ACC: current_iPropL ctx ips)
+        (ENTAIL: bi_entails (from_iPropL ips) (P mn x varg_tgt varg ord_cur ** OwnT mr_tgt ** Xtra))
+        (ARG: forall
+            rx
+            (ACC: current_iPropL ctx [(Invtn, OwnT mr_tgt); (Xn, (Xtra ∧ Exactly rx)%I)]),
+            gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) rg rg _ _ eqr o_src1 o_tgt1 a
+                   (mpr_src, f_src)
+                   (Any.pair mp_tgt mr_tgt↑, k_tgt (ctx ⋅ rx, ((mn, x), varg_tgt, ord_cur))))
+    :
+      gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) r rg _ _ eqr o_src0 o_tgt0 a
+             (mpr_src, f_src)
+             (Any.pair mp_tgt mr_tgt↑, (HoareFunArg P (mn, varg) >>= k_tgt))
+  .
+  Proof.
+    eapply current_iPropL_entail_all with (Hn:="A") in ACC; et.
+    mDesAll.
+    mAssert _ with "A1". { iAssumption. }
+    mAssert _ with "A2". { iAssumption. }
+    mAssert _ with "A". { iAssumption. }
+    eapply harg_clo_tgt; et.
   Qed.
 
   Lemma hret_clo_both
@@ -616,6 +685,7 @@ Section MODE.
   Lemma hpost_clo_tgt
         A Xn Xtra Rn Frn Invtn mp_tgt mr_tgt
         mn r rg
+        Invtn' Xn'
         X (Q: option mname -> X -> Any.t -> Any.t -> Σ -> Prop)
         mpr_src f_src k_tgt
         a (le: A -> A -> Prop)
@@ -627,7 +697,7 @@ Section MODE.
         (ACC: current_iPropL ctx [(Rn, Q (Some mn) x vret_src vret_tgt); (Frn, OwnT fr_tgt); (Invtn, OwnT mr_tgt); (Xn, Xtra)])
         (ARG: forall
             rx
-            (ACC: current_iPropL ctx [(Invtn, OwnT mr_tgt); (Xn, (Xtra ∧ Exactly rx)%I)]),
+            (ACC: current_iPropL ctx [(Invtn', OwnT mr_tgt); (Xn', (Xtra ∧ Exactly rx)%I)]),
             gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) rg rg _ _ eqr o_src1 o_tgt1 a
                    (mpr_src, f_src)
                    (Any.pair mp_tgt mr_tgt↑, k_tgt (ctx ⋅ rx, vret_src)))
@@ -659,6 +729,42 @@ Section MODE.
     2: { instantiate (1:=rx). cbn. uipropall. }
     eapply current_iPropL_nil; et.
     { eapply wf_extends; et. exists (rret ⋅ rf). r_solve. }
+  Unshelve. all: try exact 0.
+  Qed.
+
+  Lemma hpost_clo_tgt'
+        A Xn Xtra Invtn mp_tgt mr_tgt
+        mn r rg
+        X (Q: option mname -> X -> Any.t -> Any.t -> iProp)
+        mpr_src f_src k_tgt
+        a (le: A -> A -> Prop)
+        (R: A -> Any.t -> Any.t -> iProp)
+        (eqr: Any.t -> Any.t -> Any.t -> Any.t -> Prop)
+        o_src0 o_src1 o_tgt0 o_tgt1
+        (FUEL: o_src0 = Ord_S_n o_src1 5)
+        ctx x vret_tgt vret_src fr_tgt ips
+        (ACC: current_iPropL ctx ips)
+        (ENTAIL: bi_entails (from_iPropL ips) (Q (Some mn) x vret_src vret_tgt ** OwnT fr_tgt ** OwnT mr_tgt ** Xtra))
+        (ARG: forall
+            rx
+            (ACC: current_iPropL ctx [(Invtn, OwnT mr_tgt); (Xn, (Xtra ∧ Exactly rx)%I)]),
+            gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) rg rg _ _ eqr o_src1 o_tgt1 a
+                   (mpr_src, f_src)
+                   (Any.pair mp_tgt mr_tgt↑, k_tgt (ctx ⋅ rx, vret_src)))
+        tbr ord_tgt
+    :
+      gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) r rg _ _ eqr o_src0 o_tgt0 a
+             (mpr_src, f_src)
+             (Any.pair mp_tgt mr_tgt↑, (HoareCallPost mn tbr ord_tgt Q vret_tgt x fr_tgt >>= k_tgt))
+  .
+  Proof.
+    eapply current_iPropL_entail_all with (Hn:="A") in ACC; et.
+    mDesAll.
+    mAssert _ with "A1". { iAssumption. }
+    mAssert _ with "A2". { iAssumption. }
+    mAssert _ with "A3". { iAssumption. }
+    mAssert _ with "A". { iAssumption. }
+    eapply hpost_clo_tgt; et.
   Unshelve. all: try exact 0.
   Qed.
 
@@ -727,14 +833,9 @@ Section SIMMODSEM.
 
 
       harg. mDesAll; clarify. steps.
-      (*** TODO: use entailment instead ***)
-      mAssert (⌜True⌝)%I with "" as "X"; ss.
-      mAssert _ with "INVT" as "INVT".
-      { iExact "INVT". }
-      mAssert (((OwnM f1 ** OwnM gpre ** ⌜ord_top = ord_top⌝) ∧ ⌜varg = varg⌝))%I with "PRE A" as "P".
-      { iSplits; ss; et. iSplitR "A"; ss. }
-      eapply harg_clo_tgt; et. i.
-      clear ACC. mClear "P".
+      eapply harg_clo_tgt' with (Invtn:="INVT") (Xn:="Xn"); et; i.
+      { unfold from_iPropL. iIntros "[A [B [C D]]]". iFrame. iSplits; et. iAssumption. }
+      clear ACC.
 
       steps.
       eapply hret_clo_both; et.
@@ -755,17 +856,12 @@ Section SIMMODSEM.
 
 
       harg. mDesAll; clarify. steps.
-      (*** TODO: use entailment instead ***)
-      mAssert (OwnM hpre)%I with "A" as "X"; ss.
-      mAssert _ with "INVT" as "INVT".
-      { iExact "INVT". }
       mAssert _ with "PRE" as "PRE".
       { iApply (OwnM_Upd with "PRE"). eapply f01_update. }
       mUpd "PRE".
-      mAssert (((OwnM f1 ** OwnM gpre ** ⌜ord_top = ord_top⌝) ∧ ⌜varg = varg⌝))%I with "PRE A1" as "P".
-      { iSplits; ss; et. iSplitR "A1"; ss. }
-      eapply harg_clo_tgt; et. i.
-      clear ACC. mClear "P".
+      eapply harg_clo_tgt' with (Invtn:="INVT") (Xn:="X"); et; i.
+      { unfold from_iPropL. iIntros "[A [B [C [D _]]]]". iFrame. iSplits; et. iAssumption. }
+      clear ACC.
 
       unfold ccallU. steps. stb_tac; clarify. force_l; stb_tac; clarify. steps.
       eapply hcall_clo_ord_weaken'; et.
@@ -776,18 +872,9 @@ Section SIMMODSEM.
       i. ss. clear_fast.
       clear ACC0. mDesAll. clarify. steps. force_l; stb_tac; ss; clarify. steps.
 
-      (* mAssert (_ ** _) with "FR POST" as "X". *)
-      (* { iSplitL "POST"; et. - iExact "POST". - iExact "FR". } *)
-      mAssert _ with "POST" as "X".
-      { iExact "POST". }
-      mAssert _ with "A" as "INVT".
-      { iExact "A". }
-      mAssert _ with "FRT" as "FRT".
-      { iExact "FRT". }
-      mAssert (OwnM gpost ∧ ⌜vret_tgt = vret_tgt⌝)%I with "X" as "POST"; ss.
-      { iSplits; ss; et. }
-      eapply hpost_clo_tgt; et.
-      i. clear ACC. mClear "POST".
+
+      eapply hpost_clo_tgt' with (Invtn:="INVT") (Xn:="X"); et; i.
+      { unfold from_iPropL. iIntros "[A [B [C [D _]]]]". iFrame. iSplits; et. iAssumption. }
       steps. rewrite _UNWRAPU. steps. stb_tac. clarify.
 
 
@@ -803,15 +890,8 @@ Section SIMMODSEM.
 
 
 
-      mAssert _ with "POST" as "X".
-      { iExact "POST". }
-      mAssert _ with "A" as "INVT".
-      { iExact "A". }
-      mAssert _ with "FRT" as "FRT".
-      { iExact "FRT". }
-      mAssert (⌜vret_tgt0 = vret_tgt0⌝)%I with "" as "POST"; ss.
-      eapply hpost_clo_tgt; et.
-      i. clear ACC. mClear "POST".
+      eapply hpost_clo_tgt' with (Invtn:="INVT") (Xn:="X"); et; i.
+      { unfold from_iPropL. iIntros "[A [B [C _]]]". iFrame. iSplits; et. iAssumption. }
       steps. rewrite _UNWRAPU0. steps.
 
 
