@@ -744,7 +744,7 @@ Section SIMMODSEM.
       mAssert (⌜True⌝)%I with "" as "X"; ss.
       mAssert _ with "INVT" as "INVT".
       { iExact "INVT". }
-      mAssert (((OwnM fpre ** OwnM gpre ** ⌜ord_top = ord_top⌝) ∧ ⌜varg = varg⌝))%I with "PRE A" as "P".
+      mAssert (((OwnM f1 ** OwnM gpre ** ⌜ord_top = ord_top⌝) ∧ ⌜varg = varg⌝))%I with "PRE A" as "P".
       { iSplits; ss; et. iSplitR "A"; ss. }
       eapply harg_clo_tgt; et. i.
       clear ACC. mClear "P".
@@ -772,7 +772,10 @@ Section SIMMODSEM.
       mAssert (OwnM hpre)%I with "A" as "X"; ss.
       mAssert _ with "INVT" as "INVT".
       { iExact "INVT". }
-      mAssert (((OwnM fpre ** OwnM gpre ** ⌜ord_top = ord_top⌝) ∧ ⌜varg = varg⌝))%I with "PRE A1" as "P".
+      mAssert _ with "PRE" as "PRE".
+      { iApply (OwnM_Upd with "PRE"). eapply f01_update. }
+      mUpd "PRE".
+      mAssert (((OwnM f1 ** OwnM gpre ** ⌜ord_top = ord_top⌝) ∧ ⌜varg = varg⌝))%I with "PRE A1" as "P".
       { iSplits; ss; et. iSplitR "A1"; ss. }
       eapply harg_clo_tgt; et. i.
       clear ACC. mClear "P".
@@ -826,7 +829,10 @@ Section SIMMODSEM.
 
 
       eapply hret_clo_both; et.
-      { i. iIntros "[[A %] C]". clarify. iModIntro. iSplits; ss; et. iFrame. }
+      { i. iIntros "[[A %] C]". clarify. iDestruct "A" as "[A B]".
+        iPoseProof (OwnM_Upd with "A") as "A".
+        { eapply f23_update. }
+        iMod "A". iModIntro. iSplits; ss; et. iFrame. }
       { i. r. esplits; et. des; clarify. uipropall. des; clarify. rr in QT0. uipropall. }
     }
 

@@ -20,13 +20,21 @@ Set Implicit Arguments.
 Instance fRA: URA.t := Excl.t Z%ra.
 Instance gRA: URA.t := Excl.t bool%ra.
 Instance hRA: URA.t := Excl.t nat%ra.
-Definition fpre: fRA := Some 5%Z.
-Definition fpost: fRA := Some 7%Z.
+Definition f0: fRA := Some 5%Z.
+Definition f1: fRA := Some 6%Z.
+Definition f2: fRA := Some 7%Z.
+Definition f3: fRA := Some 8%Z.
 Definition gpre: gRA := Some true.
 Definition gpost: gRA := Some false.
 Definition hpre: hRA := Some 15.
 Definition hpost: hRA := Some 17.
-Global Opaque fpre fpost gpre gpost hpre hpost.
+
+Lemma f01_update: URA.updatable f0 f1.
+Proof. eapply Excl.updatable; et. ur; ss. Qed.
+Lemma f23_update: URA.updatable f2 f3.
+Proof. eapply Excl.updatable; et. ur; ss. Qed.
+
+Global Opaque f0 f1 f2 f3 gpre gpost hpre hpost.
 
 Section PROOF.
 
@@ -34,10 +42,10 @@ Section PROOF.
   Context `{@GRA.inG gRA Σ}.
   Context `{@GRA.inG hRA Σ}.
 
-  Definition f_spec0: fspec := mk_simple (fun (_: unit) => ((fun varg o => (OwnM fpre ** OwnM gpre ** ⌜o = ord_top⌝)%I),
-                                                           (fun vret => (OwnM fpost ** OwnM gpost)%I))).
-  Definition f_spec1: fspec := mk_simple (fun (_: unit) => ((fun varg o => (OwnM fpre ** OwnM gpre ** OwnM hpre ** ⌜o = ord_top⌝)%I),
-                                                           (fun vret => (OwnM fpost ** OwnM gpost ** OwnM hpost)%I))).
+  Definition f_spec0: fspec := mk_simple (fun (_: unit) => ((fun varg o => (OwnM f1 ** OwnM gpre ** ⌜o = ord_top⌝)%I),
+                                                           (fun vret => (OwnM f2 ** OwnM gpost)%I))).
+  Definition f_spec1: fspec := mk_simple (fun (_: unit) => ((fun varg o => (OwnM f0 ** OwnM gpre ** OwnM hpre ** ⌜o = ord_top⌝)%I),
+                                                           (fun vret => (OwnM f3 ** OwnM gpost ** OwnM hpost)%I))).
   Definition g_spec: fspec := mk_simple (fun (_: unit) => ((fun varg o => (OwnM gpre ** ⌜o = ord_top⌝)%I),
                                                            (fun vret => (OwnM gpost)%I))).
   Definition h_spec0: fspec := fspec_trivial.
