@@ -286,7 +286,7 @@ Section MODE.
         A (a: shelve__ A)
         mn r rg n m mp_src mp_tgt (mr_src mr_tgt: Σ) a0
         Xs (Qs: option mname -> Xs -> Any.t -> Any.t -> Σ -> Prop)
-        Xt (Qt: option mname -> Xt -> Any.t -> Any.t -> Σ -> Prop)
+        Xt (Qt: option mname -> Xt -> Any.t -> Any.t -> iProp)
         xs xt vret_src vret_tgt
         (le: A -> A -> Prop)
         (eqr: Any.t -> Any.t -> Any.t -> Any.t -> Prop)
@@ -305,9 +305,13 @@ Section MODE.
                       (bupd (R a mp_src mp_tgt ** (Qs mn xs vret_src vret_tgt: iProp))))
 
         (EQ: forall (mr_src1 mr_tgt1: Σ) (WLE: le a0 a) vret_tgt_tgt
-                    (QT: exists rq, Qt mn xt vret_tgt vret_tgt_tgt rq)
                     (WF: mk_wf R a (Any.pair mp_src mr_src1↑, Any.pair mp_tgt mr_tgt1↑)),
-            eqr (Any.pair mp_src mr_src1↑) (Any.pair mp_tgt mr_tgt1↑) vret_tgt vret_tgt_tgt)
+                    bi_entails (Qt mn xt vret_tgt vret_tgt_tgt)
+            (⌜eqr (Any.pair mp_src mr_src1↑) (Any.pair mp_tgt mr_tgt1↑) vret_tgt vret_tgt_tgt⌝)%I)
+        (* (EQ: forall (mr_src1 mr_tgt1: Σ) (WLE: le a0 a) vret_tgt_tgt *)
+        (*             (QT: exists rq, Qt mn xt vret_tgt vret_tgt_tgt rq) *)
+        (*             (WF: mk_wf R a (Any.pair mp_src mr_src1↑, Any.pair mp_tgt mr_tgt1↑)), *)
+        (*     eqr (Any.pair mp_src mr_src1↑) (Any.pair mp_tgt mr_tgt1↑) vret_tgt vret_tgt_tgt) *)
     :
       gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) r rg _ _ eqr m n a0
              (Any.pair mp_src mr_src↑, (HoareFunRet Qs mn xs (ctx, vret_src)))
@@ -340,9 +344,12 @@ Section MODE.
     { r_wf UPDATABLE0. }
     repeat (ired_both; gstep; econs; eauto with ord_step2). unshelve esplits; eauto.
     repeat (ired_both; gstep; econs; eauto with ord_step2).
-    eapply EQ; et. econs; et.
-    { ii. unfold OwnT. uipropall. esplits; et. refl. }
-    Unshelve. all: ss.
+    exploit EQ; et.
+    { econs; et. ii. unfold OwnT. uipropall. esplits; et. refl. }
+    i. uipropall. exploit x2; try apply x1; et.
+    { eapply wf_extends; try apply x0. exists (ctx ⋅ rx ⋅ mr_tgt1). r_solve. }
+    i. rr in x4. uipropall. et.
+  Unshelve. all: ss.
   Qed.
 
   Definition HoareCallPre
@@ -712,6 +719,19 @@ Tactic Notation "hcall" uconstr(o) uconstr(x) uconstr(a) :=
   |on_current ltac:(fun H => try clear H); i; on_current ltac:(fun H => simpl in H)]
 .
 
+Tactic Notation "hret" uconstr(a) :=
+  eapply (@hret_clo_both _ _ a); unshelve_goal;
+  [refl
+  |refl
+  |eassumption
+  |
+  |i; iIntros "[Q FR]"
+  |i; iIntros "Q"
+  ].
+
+
+
+
 
 
 Section SIMMODSEM.
@@ -753,9 +773,11 @@ Section SIMMODSEM.
       { iFrame. iSplits; et. instantiate (1:=True%I); ss. }
 
       steps.
-      eapply hret_clo_both; et.
-      { i. iIntros "H". iDestruct "H" as "[[A _] B]". iModIntro. iFrame. iSplits; et. }
-      { i. r. esplits; et. des; clarify. uipropall. des; clarify. rr in QT0. uipropall. }
+
+
+      hret _; ss.
+      { iDestruct "Q" as "[[A B] %]". iModIntro. iFrame. iSplits; et. }
+      { iDestruct "Q" as "[_ %]". clarify. iPureIntro. r. esplits; et. }
     }
 
     econs; [|ss].
@@ -808,12 +830,11 @@ Section SIMMODSEM.
       steps. rewrite _UNWRAPU0. steps.
 
 
-      eapply hret_clo_both; et.
-      { i. iIntros "[[A %] C]". clarify. iDestruct "A" as "[A B]".
-        iPoseProof (OwnM_Upd with "A") as "A".
+      hret _; ss.
+      { iDestruct "Q" as "[[A B] %]". iPoseProof (OwnM_Upd with "A") as "A".
         { eapply f23_update. }
         iMod "A". iModIntro. iSplits; ss; et. iFrame. }
-      { i. r. esplits; et. des; clarify. uipropall. des; clarify. rr in QT0. uipropall. }
+      { iDestruct "Q" as "[_ %]". iPureIntro. clarify. r. esplits; et. }
     }
 
   Unshelve. all: ss. all: try exact 0.
