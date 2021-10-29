@@ -25,46 +25,6 @@ Local Open Scope nat_scope.
 
 
 
-Section PROOF.
-  Context `{Σ: GRA.t}.
-  
-  Lemma Own_unit
-    :
-      bi_entails True%I (Own ε)
-  .
-  Proof.
-    red. uipropall. ii. rr. esplits; et. rewrite URA.unit_idl. refl.
-  Qed.
-
-  Context `{@GRA.inG M Σ}.
-
-  Lemma embed_unit
-    :
-      (GRA.embed ε) = ε
-  .
-  Proof.
-    unfold GRA.embed.
-    Local Transparent GRA.to_URA. unfold GRA.to_URA. Local Opaque GRA.to_URA.
-    Local Transparent URA.unit. unfold URA.unit. Local Opaque URA.unit.
-    cbn.
-    apply func_ext_dep. i.
-    dependent destruction H. ss. rewrite inG_prf. cbn. des_ifs.
-  Qed.
-
-End PROOF.
-
-Section PROOF.
-  Context `{@GRA.inG M Σ}.
-
-  Lemma OwnM_unit
-    :
-      bi_entails True%I (OwnM ε)
-  .
-  Proof.
-    unfold OwnM. r. uipropall. ii. rr. esplits; et. rewrite embed_unit. rewrite URA.unit_idl. refl.
-  Qed.
-End PROOF.
-
 
 
 Section SIMMODSEM.

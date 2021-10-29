@@ -62,6 +62,23 @@ Definition RunX: AppRA.t := AppRA.half true.
 Instance _mwRA: URA.t := (Z ==> (Excl.t Z))%ra.
 Instance mwRA: URA.t := Auth.t _mwRA%ra.
 Definition mw_state (f: Z -> option Z): mwRA := @Auth.white _mwRA f.
+Definition mw_stateX (f: Z -> option Z): mwRA := @Auth.black _mwRA f.
+
+
+
+
+Definition _mapRA: URA.t := (mblock ==> (Excl.t (list (Z * Z))))%ra.
+Instance mapRA: URA.t := Auth.t _mapRA.
+Definition _is_map (h: mblock) (map: list (Z * Z)): _mapRA :=
+  (fun _h => if (dec _h h) then Some map else ε)
+.
+Definition is_map (h: mblock) (map: list (Z * Z)): mapRA := Auth.white (_is_map h map).
+
+
+
+
+
+
 
 Section PROOF.
   Context `{@GRA.inG AppRA.t Σ}.
@@ -134,3 +151,50 @@ End PROOF.
 Global Hint Unfold GlobalStb0: stb.
 Global Hint Unfold GlobalStb1: stb.
 Global Hint Unfold GlobalStbC: stb.
+
+
+
+Definition set `{Dec K} V (k: K) (v: V) (f: K -> V): K -> V := fun k0 => if dec k k0 then v else f k0.
+
+
+
+Section PROOF.
+  Context `{Σ: GRA.t}.
+  
+  Lemma Own_unit
+    :
+      bi_entails True%I (Own ε)
+  .
+  Proof.
+    red. uipropall. ii. rr. esplits; et. rewrite URA.unit_idl. refl.
+  Qed.
+
+  Context `{@GRA.inG M Σ}.
+
+  Lemma embed_unit
+    :
+      (GRA.embed ε) = ε
+  .
+  Proof.
+    unfold GRA.embed.
+    Local Transparent GRA.to_URA. unfold GRA.to_URA. Local Opaque GRA.to_URA.
+    Local Transparent URA.unit. unfold URA.unit. Local Opaque URA.unit.
+    cbn.
+    apply func_ext_dep. i.
+    dependent destruction H. ss. rewrite inG_prf. cbn. des_ifs.
+  Qed.
+
+End PROOF.
+
+Section PROOF.
+  Context `{@GRA.inG M Σ}.
+
+  Lemma OwnM_unit
+    :
+      bi_entails True%I (OwnM ε)
+  .
+  Proof.
+    unfold OwnM. r. uipropall. ii. rr. esplits; et. rewrite embed_unit. rewrite URA.unit_idl. refl.
+  Qed.
+End PROOF.
+

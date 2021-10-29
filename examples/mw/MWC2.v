@@ -32,7 +32,7 @@ Section PROOF.
   Definition mainF: list val -> itree Es val :=
     fun varg =>
       _ <- (pargs [] varg)?;;;
-      pput (empty: Z -> option val);;;
+      pput (fun (_: Z) => 0%Z);;;
       `_: val <- ccallU "init" ([]: list val);;
       `_: val <- ccallU "loop" ([]: list val);;
       Ret Vundef
@@ -42,7 +42,7 @@ Section PROOF.
     fun varg =>
       '(k, v) <- (pargs [Tint; Tuntyped] varg)?;;
       full0 <- pget;;
-      pput (Maps.add k v full0);;;
+      pput (set k v full0);;;
       trigger (Syscall "print" [Vint k]↑ top1);;;
       trigger (Syscall "print" [v]↑ top1);;;
       Ret Vundef
@@ -51,8 +51,8 @@ Section PROOF.
   Definition getF: list val -> itree Es val :=
     fun varg =>
       k <- (pargs [Tint] varg)?;;
-      `full0: (Z -> option val) <- pget;;
-      v <- (full0 k)ǃ;;
+      `full0: (Z -> Z) <- pget;;
+      let v := (full0 k) in
       trigger (Syscall "print" [Vint k]↑ top1);;; (*** TODO: make something like "syscallu" ***)
       trigger (Syscall "print" [v]↑ top1);;;
       Ret Vundef
@@ -67,10 +67,12 @@ Section PROOF.
     ("get", mk_specbody fspec_trivial (cfunU getF))
     ].
 
+  Context `{@GRA.inG mwRA Σ}.
+
   Definition SMWSem: SModSem.t := {|
     SModSem.fnsems := MWsbtb;
     SModSem.mn := "MW";
-    SModSem.initial_mr := ε;
+    SModSem.initial_mr := GRA.embed ((mw_stateX Maps.empty)) ⋅ GRA.embed ((mw_state Maps.empty));
     SModSem.initial_st := tt↑;
   |}
   .

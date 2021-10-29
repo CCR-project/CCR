@@ -19,7 +19,7 @@ Section PROOF.
   Notation pget := (p0 <- trigger PGet;; p0 <- p0↓?;; Ret p0) (only parsing). (*** NOTE THAT IT IS UB CASTING ***)
   Notation pput p0 := (trigger (PPut p0↑)) (only parsing).
 
-  Variant cls: Type := uninit | opt | map.
+  Variant cls: Type := uninit | opt | normal.
 
   Global Program Instance cls_Dec: Dec cls. Next Obligation. decide equality. Defined.
 
@@ -30,8 +30,6 @@ Section PROOF.
     (* lst_wf: forall k, (is_some (lst_opt k)) -> (is_some (lst_dom k)) *)
   }
   .
-
-  Definition set `{Dec K} V (k: K) (v: V) (f: K -> V): K -> V := fun k0 => if dec k k0 then v else f k0.
 
   Let Es := (hAPCE +' Es).
 
@@ -62,7 +60,7 @@ Section PROOF.
       '(k, v) <- (pargs [Tint; Tuntyped] varg)?;;
       lst0 <- pget;;
       (if dec (lst0.(lst_cls) k) uninit
-       then b <- trigger (Choose _);; let class := (if (b: bool) then opt else map) in upd_cls (fun cls => set k class cls);;; Ret tt
+       then b <- trigger (Choose _);; let class := (if (b: bool) then opt else normal) in upd_cls (fun cls => set k class cls);;; Ret tt
        else Ret tt);;;
       (if dec (lst0.(lst_cls) k) opt
        then _ <- upd_opt (fun opt => set k v opt);;; Ret tt
