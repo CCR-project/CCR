@@ -425,8 +425,8 @@ Section MODE.
         Invtn Xn Xtra
         (ACC: current_iPropL ctx0 [(Invtn, OwnT mr_tgt0); (Xn, (Xtra ∧ Exactly rx)%I)])
 
-        (UPDATABLE: forall x_tgt o_tgt varg_tgt_tgt,
-           bi_entails (Xtra ** (fsp_tgt.(precond) (Some mn) x_tgt varg_tgt varg_tgt_tgt o_tgt: iProp))
+        (UPDATABLE: forall x_tgt o_tgt,
+           bi_entails (Xtra ** (fsp_tgt.(precond) (Some mn) x_tgt varg_tgt varg_tgt o_tgt: iProp))
                       (bupd (FR ** R a0 mp_src0 mp_tgt0 ** (fsp_src.(precond) (Some mn) x_src varg_src varg_tgt o_src: iProp))))
 
         (FUEL0: n = Ord_S_n n' 10)
@@ -458,6 +458,13 @@ Section MODE.
     subst. rewrite ! HoareCall_parse. unfold HoareCallPre, mput, mget, assume, guarantee.
     steps.
     rename c into mr_tgt1. rename c0 into ro_tgt. rename c1 into fr_tgt.
+    assert(x1 = varg_tgt).
+    { exploit SIMPLE; et. intros T. uipropall.
+      exploit (T ro_tgt); et.
+      { eapply wf_extends; try apply x. r. exists (fr_tgt ⋅ ctx0 ⋅ rx ⋅ mr_tgt1). r_solve.  }
+      intro U. r in U. uipropall.
+    }
+    subst.
     assert (exists mr_src1 ro_src fr_src,
                (<<UPDATABLE: URA.wf (ctx0 ⋅ (mr_tgt1 ⋅ mr_src1 ⋅ ro_src ⋅ fr_src ⋅ fr_tgt))>>) /\
                (<<RSRC: R a0 mp_src0 mp_tgt0 mr_src1>>) /\
@@ -467,14 +474,14 @@ Section MODE.
       eapply current_iPropL_pop in ACC; des.
       eapply current_iPropL_pop in TL; des.
       eapply current_iPropL_nil in TL0. ss.
-      specialize (UPDATABLE x0 x2 x1).
+      specialize (UPDATABLE x0 x2).
       rr in HD0. autorewrite with iprop in HD0. des; clarify. r in HD1. autorewrite with iprop in HD1. des; clarify.
       uipropall. exploit UPDATABLE; swap 1 2.
       { esplits; et. }
       { eapply wf_extends; et. r. exists (fr_tgt ⋅ ctx0 ⋅ mr_tgt1). r_solve. }
       { instantiate (1:= fr_tgt ⋅ ctx0 ⋅ mr_tgt1). r_wf x. }
       i; des. clarify.
-      esplits; et. r_wf x4.
+      esplits; et. r_wf x1.
     }
     des. (ired_both; gstep; econs; eauto with ord_step2).
     exists (ro_src, fr_src ⋅ fr_tgt, mr_src1 ⋅ mr_tgt1).
@@ -487,13 +494,6 @@ Section MODE.
     (ired_both; gstep; econs; eauto with ord_step2). unshelve esplits; eauto.
     (ired_both; gstep; econs; eauto with ord_step2). unshelve esplits; eauto.
     ired_both.
-    assert(x1 = varg_tgt).
-    { exploit SIMPLE; et. intros T. uipropall.
-      exploit (T ro_tgt); et.
-      { eapply wf_extends; try apply x. r. exists (fr_tgt ⋅ ctx0 ⋅ rx ⋅ mr_tgt1). r_solve.  }
-      intro U. r in U. uipropall.
-    }
-    subst.
     steps.
     { econs; et. i. unfold OwnT. uipropall. esplits; eauto. refl. }
     inv WF.
@@ -532,8 +532,8 @@ Section MODE.
         (ACC: current_iPropL ctx0 ips)
         (ENTAIL: bi_entails (from_iPropL ips) ((OwnT mr_tgt0) ** (Xtra ∧ Exactly rx)))
 
-        (UPDATABLE: forall x_tgt o_tgt varg_tgt_tgt,
-           bi_entails (Xtra ** (fsp_tgt.(precond) (Some mn) x_tgt varg_tgt varg_tgt_tgt o_tgt: iProp))
+        (UPDATABLE: forall x_tgt o_tgt,
+           bi_entails (Xtra ** (fsp_tgt.(precond) (Some mn) x_tgt varg_tgt varg_tgt o_tgt: iProp))
                       (bupd (FR ** R a0 mp_src0 mp_tgt0 ** (fsp_src.(precond) (Some mn) x_src varg_src varg_tgt o_src: iProp))))
 
         (FUEL0: n = Ord_S_n n' 10)
