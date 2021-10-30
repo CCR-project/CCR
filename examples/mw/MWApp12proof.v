@@ -45,7 +45,7 @@ Section SIMMODSEM.
   Opaque Z.eq_dec Z.eqb.
 
   Variable global_stb: Sk.t -> gname -> option fspec.
-  Hypothesis STBINCL: forall sk, stb_incl (to_stb MWStb1) (global_stb sk).
+  Hypothesis STBINCL: forall sk, stb_incl (to_stb MWStb) (global_stb sk).
 
   Theorem correct: refines2 [MWApp1.App] [MWApp2.App global_stb].
   Proof.

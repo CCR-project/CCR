@@ -84,7 +84,7 @@ TODO: APC, locked thinges
        st_tgt = w0
    ***)
 
-  (*** TODO: redundant with Invariant.v ***)
+  (*** TODO: redundant with Invariant.v. Make it as a pattern (write sth like Invariant2.v) ***)
   Definition le (w0 w1: option local_state): Prop :=
     match w0, w1 with
     | Some lst0, Some lst1 => lst0 = lst1
@@ -105,11 +105,28 @@ TODO: APC, locked thinges
            {{"INIT": ∃ f h map lst0, OwnM (mw_stateX f) ** OwnM (is_map h map)
                         ** ⌜st_src = (trans f)↑⌝ ** ⌜st_tgt = lst0↑⌝ ** ⌜w0 = Some lst0⌝
                         ** ⌜lst0.(lst_map) = Vptr h 0%Z⌝ ** ⌜sim f map lst0⌝}} ∨
-           {{"UNINIT": ⌜st_src = tt↑ ∧ st_tgt = tt↑⌝ ** ⌜w0 = None⌝ ** OwnM (mw_stateX Maps.empty)}} ∨
+           {{"UNINIT": ⌜st_src = tt↑ ∧ st_tgt = tt↑⌝ ** ⌜w0 = None⌝}} ∨
            {{"LOCKED": ∃ f lst0, OwnM (mw_state f) ** ⌜st_src = (trans f)↑⌝ ** ⌜st_tgt = lst0↑⌝
                         ** ⌜w0 = Some lst0⌝}}
          )%I)
   .
+
+  Let PURENICL: stb_pure_incl (to_stb MW1Stb) (to_stb (MWStb ++ AppStb ++ MapStb ++ MemStb)).
+  Proof.
+    clear.
+    { r. i. autounfold with stb in *; autorewrite with stb in *. ss. des_ifs.
+      - r in PURE; des; ss; unfold is_pure in *. des_ifs. r in PURE. uipropall. des; clarify.
+      - r in PURE; des; ss; unfold is_pure in *. des_ifs. r in PURE. uipropall. des; clarify.
+      - r in PURE; des; ss; unfold is_pure in *. des_ifs. r in PURE. uipropall. des; clarify.
+      - r in PURE; des; ss; unfold is_pure in *. des_ifs. r in PURE. uipropall. des; clarify.
+      - r in PURE; des; ss; unfold is_pure in *. des_ifs. r in PURE. uipropall. des; clarify.
+      - r in PURE; des; ss; unfold is_pure in *. des_ifs. r in PURE. uipropall. des; clarify.
+      - r in PURE; des; ss; unfold is_pure in *. des_ifs. r in PURE. uipropall. des; clarify.
+      - r in PURE; des; ss; unfold is_pure in *. des_ifs. r in PURE. uipropall. des; clarify.
+      - r in PURE; des; ss; unfold is_pure in *. des_ifs. r in PURE. uipropall. des; clarify.
+      - r in PURE; des; ss; unfold is_pure in *. des_ifs. r in PURE. uipropall. des; clarify.
+    }
+  Qed.
 
 
 
@@ -144,6 +161,24 @@ TODO: APC, locked thinges
       mDesAll; des; clarify.
       mDesOr "INVS"; mDesAll; des; clarify; steps.
       { (* INIT *)
+        mCombine "A" "INIT". mOwnWf "A". exfalso. admit "ez".
+      }
+      mDesOr "INVS"; mDesAll; des; clarify; steps.
+      { (* UNINIT *)
+        harg_tgt.
+        { iFrame. iSplits; et. iCombine "A" "A1" as "A". iCombine "A" "A2" as "A". iAssumption. }
+        steps.
+        hAPC _; try assumption.
+        { iIntros "[[A B] C]". iSplitL "B".
+          - et.
+          - iCombine "A" "C" as "A". iAssumption.
+        }
+        fold wf. steps. astart 1. astep "new" (([]: list val)↑). stb_tac. clarify.
+        hcall _ _ _.
+        steps.
+        {
+        mCombine "A" "INIT". mOwnWf "A". exfalso. admit "ez".
+      }
         harg_tgt.
         { iFrame. iSplits; ss; et. iCombine "A" "INIT" as "A". iAssumption. }
         fold wf.
