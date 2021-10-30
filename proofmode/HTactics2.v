@@ -415,7 +415,7 @@ Section MODE.
 
         (le: A -> A -> Prop) mn r rg _a n m n' m' mp_src0 mp_tgt0 (mr_src0 mr_tgt0: Σ)
         k_tgt k_src
-        fn tbr ord_cur_src ord_cur_tgt varg_src varg_tgt
+        fn tbr_src tbr_tgt ord_cur_src ord_cur_tgt varg_src varg_tgt
         (R: A -> Any.t -> Any.t -> iProp)
         (eqr: Any.t -> Any.t -> Any.t -> Any.t -> Prop)
         (o_new_tgt: Ord.t)
@@ -432,7 +432,7 @@ Section MODE.
         (FUEL0: n = Ord_S_n n' 10)
         (FUEL1: m = Ord_S_n m' 10)
         (PURE: ord_lt o_src ord_cur_src /\
-               (tbr = true -> is_pure o_src) /\ (tbr = false -> o_src = ord_top))
+               (tbr_src = true -> is_pure o_src) /\ (tbr_src = false -> o_src = ord_top))
         (SIMPLE: forall x_tgt varg_tgt_tgt o_tgt,
             (bi_entails ((precond fsp_tgt (Some mn) x_tgt varg_tgt varg_tgt_tgt o_tgt): iProp) (⌜varg_tgt = varg_tgt_tgt⌝%I)))
 
@@ -447,12 +447,12 @@ Section MODE.
           ,
                 gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) rg rg _ _ eqr o_new_src o_new_tgt _a
                        (Any.pair mp_src1 mr_src1↑, k_src (ctx1, vret_src))
-                       (Any.pair mp_tgt1 mr_tgt1↑, HoareCallPost mn tbr ord_cur_tgt fsp_tgt.(postcond) vret_tgt x_tgt fr_tgt >>= k_tgt)
+                       (Any.pair mp_tgt1 mr_tgt1↑, HoareCallPost mn tbr_tgt ord_cur_tgt fsp_tgt.(postcond) vret_tgt x_tgt fr_tgt >>= k_tgt)
         )
     :
       gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) r rg _ _ eqr m n _a
-             (Any.pair mp_src0 mr_src0↑, (HoareCall mn tbr ord_cur_src fsp_src fn varg_src) ctx0 >>= k_src)
-             (Any.pair mp_tgt0 mr_tgt0↑, (HoareCall mn tbr ord_cur_tgt fsp_tgt fn varg_tgt) (ctx0 ⋅ rx) >>= k_tgt)
+             (Any.pair mp_src0 mr_src0↑, (HoareCall mn tbr_src ord_cur_src fsp_src fn varg_src) ctx0 >>= k_src)
+             (Any.pair mp_tgt0 mr_tgt0↑, (HoareCall mn tbr_tgt ord_cur_tgt fsp_tgt fn varg_tgt) (ctx0 ⋅ rx) >>= k_tgt)
   .
   Proof.
     subst. rewrite ! HoareCall_parse. unfold HoareCallPre, mput, mget, assume, guarantee.
@@ -521,7 +521,7 @@ Section MODE.
 
         (le: A -> A -> Prop) mn r rg _a n m n' m' mp_src0 mp_tgt0 (mr_src0 mr_tgt0: Σ)
         k_tgt k_src
-        fn tbr ord_cur_src ord_cur_tgt varg_src varg_tgt
+        fn tbr_src tbr_tgt ord_cur_src ord_cur_tgt varg_src varg_tgt
         (R: A -> Any.t -> Any.t -> iProp)
         (eqr: Any.t -> Any.t -> Any.t -> Any.t -> Prop)
         (o_new_tgt: Ord.t)
@@ -539,7 +539,7 @@ Section MODE.
         (FUEL0: n = Ord_S_n n' 10)
         (FUEL1: m = Ord_S_n m' 10)
         (PURE: ord_lt o_src ord_cur_src /\
-               (tbr = true -> is_pure o_src) /\ (tbr = false -> o_src = ord_top))
+               (tbr_src = true -> is_pure o_src) /\ (tbr_src = false -> o_src = ord_top))
         (SIMPLE: forall x_tgt varg_tgt_tgt o_tgt,
             (bi_entails ((precond fsp_tgt (Some mn) x_tgt varg_tgt varg_tgt_tgt o_tgt): iProp) (⌜varg_tgt = varg_tgt_tgt⌝%I)))
 
@@ -554,12 +554,12 @@ Section MODE.
           ,
                 gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) rg rg _ _ eqr o_new_src o_new_tgt _a
                        (Any.pair mp_src1 mr_src1↑, k_src (ctx1, vret_src))
-                       (Any.pair mp_tgt1 mr_tgt1↑, HoareCallPost mn tbr ord_cur_tgt fsp_tgt.(postcond) vret_tgt x_tgt fr_tgt >>= k_tgt)
+                       (Any.pair mp_tgt1 mr_tgt1↑, HoareCallPost mn tbr_tgt ord_cur_tgt fsp_tgt.(postcond) vret_tgt x_tgt fr_tgt >>= k_tgt)
         )
     :
       gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) r rg _ _ eqr m n _a
-             (Any.pair mp_src0 mr_src0↑, (HoareCall mn tbr ord_cur_src fsp_src fn varg_src) ctx0 >>= k_src)
-             (Any.pair mp_tgt0 mr_tgt0↑, (HoareCall mn tbr ord_cur_tgt fsp_tgt fn varg_tgt) (ctx0 ⋅ rx) >>= k_tgt)
+             (Any.pair mp_src0 mr_src0↑, (HoareCall mn tbr_src ord_cur_src fsp_src fn varg_src) ctx0 >>= k_src)
+             (Any.pair mp_tgt0 mr_tgt0↑, (HoareCall mn tbr_tgt ord_cur_tgt fsp_tgt fn varg_tgt) (ctx0 ⋅ rx) >>= k_tgt)
   .
   Proof.
     eapply current_iPropL_entail_all with (Hn:="A") in ACC; et.

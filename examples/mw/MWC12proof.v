@@ -128,6 +128,9 @@ TODO: APC, locked thinges
     }
   Qed.
 
+  Global Opaque OwnM Own. (*** TODO: put this somewhere else. Without this, iCombine gives later modality. ***)
+
+
 
 
   (* Variable global_stb: Sk.t -> gname -> option fspec. *)
@@ -173,10 +176,34 @@ TODO: APC, locked thinges
           - et.
           - iCombine "A" "C" as "A". iAssumption.
         }
+
         fold wf. steps. astart 1. astep "new" (([]: list val)↑). stb_tac. clarify.
         hcall _ _ _.
-        steps.
-        {
+        { iDestruct "FR" as "[A [B C]]". iModIntro. iFrame. iSplits; ss. iCombine "B" "C" as "A". iApply "A". }
+        { esplits; ss; et. }
+        { i. iIntros "H". ss. iDestruct "H" as "[A %]". eauto. }
+
+        fold wf. steps. astop. steps. mDesAll; des; clarify.
+        force_l; stb_tac; ss; clarify. steps.
+
+        hpost_tgt.
+        { iFrame. iSplits; ss. iCombine "A" "INV" as "A". iCombine "A" "FR" as "A".
+          iCombine "A" "A2" as "A". iApply "A". }
+        fold wf. steps. stb_tac; ss; clarify. steps.
+
+        hcall _ _ _.
+        { iDestruct "FR" as "[[[A B] C] D]".
+          iDestruct "B" as "[B|B]".
+          { iDestruct "B" as (f h map lst0) "[[[E %] %] %]". ss. }
+          iDestruct "B" as "[B|B]"; cycle 1.
+          { iDestruct "B" as (f lst0) "[[[E %] %] %]". ss. }
+          iDestruct "B" as "[% %]". iDestruct "P" as "[% %]". clarify. des; clarify.
+          iModIntro. iSplitL "C D".
+          - instantiate (4:=True%I). iSplitR; ss. iLeft. iSplits; ss; et; iFrame.
+            + iSplits; ss.
+            + iSplits; ss.
+          - iFrame. iSplits; ss.
+        }
         mCombine "A" "INIT". mOwnWf "A". exfalso. admit "ez".
       }
         harg_tgt.
