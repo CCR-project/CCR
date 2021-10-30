@@ -70,6 +70,8 @@ Section PROOF.
         (*     mk_wf R a1 ((Any.pair mp_src1 mr_src1↑), (Any.pair mp_tgt1 mr_tgt1↑))) *)
 
 
+        stb_src stb_tgt d
+        (STBINCL: stb_pure_incl stb_tgt stb_src)
         (ARG: forall
             (mr_src1 mr_tgt1: Σ) (mp_src1 mp_tgt1 : Any.t) a1
             (WLE: le a0 a1)
@@ -79,8 +81,6 @@ Section PROOF.
             gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) rg rg _ _ eqr o_new_src o_new_tgt _a
                    (Any.pair mp_src1 mr_src1↑, k_src (ctx1, tt))
                    (Any.pair mp_tgt1 mr_tgt1↑, k_tgt (ctx1 ⋅ rx1, tt)))
-        stb_src stb_tgt d
-        (STBINCL: stb_pure_incl stb_tgt stb_src)
     :
       gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) r rg _ _ eqr o_src0 o_tgt0 _a
              (Any.pair mp_src0 mr_src0↑, (interp_hCallE_tgt mn stb_src d APC ctx0) >>= k_src)
@@ -92,13 +92,28 @@ Section PROOF.
 
     (* Unset Printing Notations. *)
     instantiate (1:=5%ord). instantiate (1:=5%ord).
-    clear_until x. gen x d ctx0 rx0. gen mp_src0 mp_tgt0 mr_src0 mr_tgt0. gen a0. gcofix CIH. i.
+    clear_until x. gen x d ctx0 rx0. gen mp_src0 mp_tgt0 mr_src0 mr_tgt0. gen a0. gen Xtra. gcofix CIH. i.
     {
       rewrite unfold_APC. ired_both.
       force_r. i. force_l. exists x0.
       destruct x0.
       - steps. eapply gpaco8_mon; et.
-        { eapply ARG. { refl. } admit "". }
+        { eapply ARG.
+          { refl. }
+          clear - ACC ENTAIL.
+          eapply current_iPropL_pop in ACC; des.
+          eapply current_iPropL_pop in TL; des.
+          eapply current_iPropL_nil in TL0. ss.
+          eapply current_iPropL_push; et.
+          uipropall. des. r in HD1. uipropall. clarify.
+          exploit ENTAIL; try apply HD0.
+          { eapply wf_extends; et. r. exists (ctx0 ⋅ hdr). r_solve. }
+          i; des. clarify.
+          eapply current_iPropL_push; cycle 1.
+          { ss. esplits; et. r. uipropall. }
+          eapply current_iPropL_nil.
+          { r_wf TL0. }
+        }
       -
         assert(T: exists rf_src rm_src, R a0 mp_src0 mp_tgt0 rm_src /\ FR rf_src /\ rx0 = rf_src ⋅ rm_src).
         { clear - ACC ENTAIL. uipropall.
@@ -142,32 +157,16 @@ Section PROOF.
         steps. force_r. esplits. steps. force_r; et. steps.
 
         move CIH at bottom.
-        gbase. eapply (CIH w1); et.
+        gbase. eapply (CIH _ w1); et.
         { i. eapply ARG; try apply ACC0. etrans; et. }
-        { iIntros "H". }
-        instantiate (1:=5). instantiate (1:=5).
-        eapply CIH; et.
-        {
-        steps.
-        {
-        steps.
-          r.
-          iIntros "H". TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT }
-        (* hcall _ _ _. *)
-        (* { iIntros "[A [B _]]". iFrame. } *)
-        (* { iModIntro. iSplitR "P"; et. *)
-        (*   admit "". *)
-        (*   instantiate (1:=x_tgt). *)
-        (*   instantiate (1:=o_tgt). *)
+        { eapply current_iPropL_push; et.
+          eapply current_iPropL_push; cycle 1.
+          { ss. uipropall. unfold Exactly. uipropall. esplits; et. }
+          eapply current_iPropL_nil.
+          eapply wf_extends; try apply _ASSUME.
+          exists (ri ⋅ rf). r_solve.
+        }
     }
-
-    eapply current_iPropL_entail_all with (Hn:="A") in ACC; et.
-    mDesAll.
-    mAssert _ with "A1". { iAssumption. }
-    mAssert _ with "A2". { iAssumption. }
-    mAssert _ with "A3". { iAssumption. }
-    mAssert _ with "A". { iAssumption. }
-    eapply hpost_clo_tgt; et.
   Unshelve. all: try exact 0.
   Qed.
 
@@ -296,11 +295,20 @@ Section SIMMODSEM.
       harg_tgt.
       { iFrame. iSplits; et. instantiate (1:=True%I). ss. }
 
-      unfold ccallU. steps. eapply hAPC_both; et. stb_tac; clarify. force_l; stb_tac; clarify. steps.
-      harg_clo_tgt.
+      unfold ccallU. steps.
+      eapply hAPC_both; et.
+      { typeclasses eauto. }
+      { instantiate (1:=True%I). et. }
+      { r. i. autounfold with stb in *; autorewrite with stb in *. ss. des_ifs.
+        - r in PURE. des. ss. unfold is_pure in *. des_ifs. uipropall. des. clarify. r in PURE4. uipropall.
+        - r in PURE. des. ss. unfold is_pure in *. des_ifs. r in PURE. uipropall. des; clarify.
+      }
+      i. clear ACC.
+      steps.
 
-
-
+      hret _; ss.
+      { iDestruct "Q" as "[[A B] %]". clarify. iModIntro. iFrame; ss. }
+      { iDestruct "Q" as "[[A B] %]". clarify. iPureIntro. r. esplits; et. }
     }
 
   Unshelve. all: ss. all: try exact 0.
