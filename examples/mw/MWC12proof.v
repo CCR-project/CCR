@@ -85,7 +85,7 @@ TODO: APC, locked thinges
    ***)
 
   (*** TODO: redundant with Invariant.v. Make it as a pattern (write sth like Invariant2.v) ***)
-  Definition le (w0 w1: option local_state): Prop :=
+  Definition le (w0 w1: option Any.t): Prop :=
     match w0, w1 with
     | Some lst0, Some lst1 => lst0 = lst1
     | None, None => True
@@ -100,14 +100,13 @@ TODO: APC, locked thinges
   Let wf: _ -> W -> Prop :=
     @mk_wf
       _
-      (option local_state)
+      (option Any.t)
       (fun w0 st_src st_tgt => (
            {{"INIT": ∃ f h map lst0, OwnM (mw_stateX f) ** OwnM (is_map h map)
-                        ** ⌜st_src = (trans f)↑⌝ ** ⌜st_tgt = lst0↑⌝ ** ⌜w0 = Some lst0⌝
+                        ** ⌜st_src = (trans f)↑⌝ ** ⌜st_tgt = lst0↑⌝ ** ⌜w0 = Some lst0↑⌝
                         ** ⌜lst0.(lst_map) = Vptr h 0%Z⌝ ** ⌜sim f map lst0⌝}} ∨
            {{"UNINIT": ⌜st_src = tt↑ ∧ st_tgt = tt↑⌝ ** ⌜w0 = None⌝}} ∨
-           {{"LOCKED": ∃ f lst0, OwnM (mw_state f) ** ⌜st_src = (trans f)↑⌝ ** ⌜st_tgt = lst0↑⌝
-                        ** ⌜w0 = Some lst0⌝}}
+           {{"LOCKED": ∃ f, OwnM (mw_state f) ** ⌜st_src = (trans f)↑⌝ ** ⌜w0 = Some st_tgt⌝}}
          )%I)
   .
 
@@ -177,7 +176,7 @@ TODO: APC, locked thinges
           - iCombine "A" "C" as "A". iAssumption.
         }
 
-        fold wf. steps. astart 1. astep "new" (([]: list val)↑). stb_tac. clarify.
+        fold wf. steps. astart 1. astep "new" (([]: list val)↑). stb_tac. clarify. destruct a1; ss.
         hcall _ _ _.
         { iDestruct "FR" as "[A [B C]]". iModIntro. iFrame. iSplits; ss. iCombine "B" "C" as "A". iApply "A". }
         { esplits; ss; et. }
@@ -196,7 +195,7 @@ TODO: APC, locked thinges
           iDestruct "B" as "[B|B]".
           { iDestruct "B" as (f h map lst0) "[[[E %] %] %]". ss. }
           iDestruct "B" as "[B|B]"; cycle 1.
-          { iDestruct "B" as (f lst0) "[[[E %] %] %]". ss. }
+          { iDestruct "B" as (f) "[[E %] %]". ss. }
           iDestruct "B" as "[% %]". iDestruct "P" as "[% %]". clarify. des; clarify.
           iModIntro. iSplitL "C D".
           - instantiate (4:=True%I). iSplitR; ss. iLeft. iSplits; ss; et; iFrame.
