@@ -54,7 +54,7 @@ Section PROOF.
         (FUELS: o_src0 = Ord_S_n o_src1 5)
         (FUELT: o_tgt0 = Ord_S_n o_tgt1 5)
         ctx0
-        `{Reflexive _ le}
+        `{PreOrder _ le}
 
         (* (WF: mk_wf R a0 ((Any.pair mp_src0 mr_src0↑), (Any.pair mp_tgt0 mr_tgt0↑))) *)
 
@@ -74,7 +74,7 @@ Section PROOF.
             (mr_src1 mr_tgt1: Σ) (mp_src1 mp_tgt1 : Any.t) a1
             (WLE: le a0 a1)
             ctx1 rx1
-            (ACC: current_iPropL ctx1 [("INVT", OwnT mr_tgt0);
+            (ACC: current_iPropL ctx1 [("INVT", OwnT mr_tgt1);
                                       ("X", ((R a1 mp_src1 mp_tgt1 ** FR) ∧ Exactly rx1)%I)]),
             gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) rg rg _ _ eqr o_new_src o_new_tgt _a
                    (Any.pair mp_src1 mr_src1↑, k_src (ctx1, tt))
@@ -90,13 +90,15 @@ Section PROOF.
     subst.
     unfold APC. steps. force_l. exists x. steps. force_l; ss. steps.
 
-    clear_until x. gen x d ctx0 rx0. gcofix CIH. i.
+    (* Unset Printing Notations. *)
+    instantiate (1:=5%ord). instantiate (1:=5%ord).
+    clear_until x. gen x d ctx0 rx0. gen mp_src0 mp_tgt0 mr_src0 mr_tgt0. gen a0. gcofix CIH. i.
     {
       rewrite unfold_APC. ired_both.
       force_r. i. force_l. exists x0.
       destruct x0.
       - steps. eapply gpaco8_mon; et.
-        { eapply ARG; et. admit "". }
+        { eapply ARG. { refl. } admit "". }
       -
         assert(T: exists rf_src rm_src, R a0 mp_src0 mp_tgt0 rm_src /\ FR rf_src /\ rx0 = rf_src ⋅ rm_src).
         { clear - ACC ENTAIL. uipropall.
@@ -130,14 +132,22 @@ Section PROOF.
         inv WF. rewrite Any.pair_split in *. clarify. rewrite Any.upcast_downcast. steps.
         hexploit1 RSRC.
         { eapply wf_extends; et. r. exists (c ⋅ rf ⋅ rf_src ⋅ c0). r_solve. }
-        rename c into ri. rename c0 into ctx1. uipropall. des. clarify.
-        Local Transparent OwnT. r in RSRC1. uipropall. r in RSRC1. des; clarify.
-        force_r. exists (ri, ctx1). steps. force_r; ss.
-        { eapply wf_extends; et. r. exists (rf_src ⋅ a ⋅ ctx). r_solve. }
+        rename c into ri. rename c0 into ctx1.
+        r in RSRC. autounfold with iprop in RSRC; autorewrite with iprop in RSRC. des. clarify.
+        rename a into rinv.
+        force_r. exists (ri, ctx1 ⋅ (rinv ⋅ rf_src)). steps. force_r; ss.
+        { eapply wf_extends; et.
+          Local Transparent OwnT. r in RSRC1. uipropall. r in RSRC1. des; clarify.
+          r. exists (ctx). r_solve. }
         steps. force_r. esplits. steps. force_r; et. steps.
 
         move CIH at bottom.
-        gbase. eapply CIH.
+        gbase. eapply (CIH w1); et.
+        { i. eapply ARG; try apply ACC0. etrans; et. }
+        { iIntros "H". }
+        instantiate (1:=5). instantiate (1:=5).
+        eapply CIH; et.
+        {
         steps.
         {
         steps.
