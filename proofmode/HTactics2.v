@@ -868,7 +868,7 @@ Tactic Notation "hret" uconstr(a) :=
   ].
 
 Tactic Notation "hAPC" uconstr(a) :=
-  eapply (hAPC_both _ a);
+  eapply (@hAPC_both _ _ a);
   [refl
   |refl
   |try (typeclasses eauto)
