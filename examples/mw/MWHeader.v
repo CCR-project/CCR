@@ -67,12 +67,13 @@ Definition mw_stateX (f: Z -> option Z): mwRA := @Auth.black _mwRA f.
 
 
 
-Definition _mapRA: URA.t := (mblock ==> (Excl.t (list (Z * Z))))%ra.
+(* Definition _mapRA: URA.t := (mblock ==> (Excl.t (list (Z * Z))))%ra. *)
+Definition _mapRA: URA.t := (mblock ==> (Excl.t (Z -> option Z)))%ra.
 Instance mapRA: URA.t := Auth.t _mapRA.
-Definition _is_map (h: mblock) (map: list (Z * Z)): _mapRA :=
+Definition _is_map (h: mblock) (map: (Z -> option Z)): _mapRA :=
   (fun _h => if (dec _h h) then Some map else ε)
 .
-Definition is_map (h: mblock) (map: list (Z * Z)): mapRA := Auth.white (_is_map h map).
+Definition is_map (h: mblock) (map: (Z -> option Z)): mapRA := Auth.white (_is_map h map).
 
 
 
@@ -89,20 +90,16 @@ Section PROOF.
                                   (fun varg ord => FRAME ** P varg ord, fun vret => FRAME ** Q vret))
   .
 
-  Definition init_spec0: fspec :=
-    mk_simple (fun (_: unit) => (
-                   (fun varg o => ⌜varg = ([]: list val)↑ ∧ o = ord_top⌝ ** OwnM Init),
-                   (fun vret => ⌜vret = Vundef↑⌝ ** OwnM Run))).
-
-  Definition run_spec0: fspec :=
-    mk_simple (fun (_: unit) => (
-                   (fun varg o => ⌜varg = ([]: list val)↑ ∧ o = ord_top⌝ ** OwnM Run),
-                   (fun vret => ⌜vret = Vundef↑⌝ ** OwnM Run))).
-
+  (******************************* MW ****************************)
   Definition main_spec: fspec :=
     mk_simple (fun (_: unit) =>
-                 ((fun varg o => OwnM Init),
-                  (fun vret => OwnM Run))).
+                 ((fun varg o => ⌜varg = ([]: list val)↑ ∧ o = ord_top⌝ ** OwnM Init),
+                  (fun vret => ⌜vret = Vundef↑⌝ ** OwnM Run))).
+
+  Definition loop_spec: fspec :=
+    mk_simple (fun (_: unit) =>
+                 ((fun varg o => ⌜varg = ([]: list val)↑ ∧ o = ord_top⌝ ** OwnM Run),
+                  (fun vret => ⌜vret = Vundef↑⌝ ** OwnM Run))).
 
   Definition put_spec: fspec :=
     mk_simple (fun '(f, k, v) =>
@@ -116,6 +113,31 @@ Section PROOF.
                   (fun vret => ⌜vret = (Vint v)↑⌝ ** OwnM (mw_state f))))
   .
 
+  Definition MWStb0: alist gname fspec.
+    eapply (Seal.sealing "stb").
+    let x := constr:(List.map (fun x => (x, fspec_trivial)) ["main"; "loop"; "put"; "get"]) in
+    let y := eval cbn in x in
+    eapply y.
+  Defined.
+
+  Definition MWStb1: alist gname fspec.
+    eapply (Seal.sealing "stb").
+    eapply [("main",main_spec); ("loop",loop_spec); ("put",put_spec); ("get",get_spec)].
+  Defined.
+
+
+
+  (******************************* App ****************************)
+  (* Definition init_spec0: fspec := *)
+  (*   mk_simple (fun (_: unit) => ( *)
+  (*                  (fun varg o => ⌜varg = ([]: list val)↑ ∧ o = ord_top⌝ ** OwnM Init), *)
+  (*                  (fun vret => ⌜vret = Vundef↑⌝ ** OwnM Run))). *)
+
+  (* Definition run_spec0: fspec := *)
+  (*   mk_simple (fun (_: unit) => ( *)
+  (*                  (fun varg o => ⌜varg = ([]: list val)↑ ∧ o = ord_top⌝ ** OwnM Run), *)
+  (*                  (fun vret => ⌜vret = Vundef↑⌝ ** OwnM Run))). *)
+
   Definition init_spec1: fspec :=
     mk_simple (fun f => ((fun varg o => ⌜varg = ([]: list val)↑ ∧ o = ord_top⌝ ** OwnM Init ** OwnM (mw_state f)),
                          (fun vret => OwnM Run ** OwnM (mw_state (add 0%Z 42%Z f))))).
@@ -124,33 +146,44 @@ Section PROOF.
     mk_simple (fun f => ((fun varg o => ⌜varg = ([]: list val)↑ ∧ o = ord_top⌝ ** OwnM Run ** OwnM (mw_state f) ∧ ⌜f 0 = Some 42%Z⌝),
                          (fun vret => OwnM Run ** OwnM (mw_state f) ∧ ⌜f 0 = Some 42%Z⌝))).
 
-  Definition GlobalStb0: gname -> option fspec :=
-    to_stb [("init",init_spec0); ("run",run_spec0); ("main",fspec_trivial); ("put",fspec_trivial); ("get",fspec_trivial)].
-
-  Definition GlobalStb1: gname -> option fspec :=
-    to_stb [("init",init_spec1); ("run",run_spec1); ("main",main_spec); ("put",put_spec); ("get",get_spec)].
-
-  Context `{@GRA.inG memRA Σ}.
-
-  Definition GlobalStbC: list (gname * fspec).
+  Definition AppStb: alist gname fspec.
     eapply (Seal.sealing "stb").
-    eapply [("main", fspec_trivial); ("loop", fspec_trivial); ("put", fspec_trivial); ("get", fspec_trivial);
-            ("init", fspec_trivial); ("run", fspec_trivial);
-            ("new", fspec_trivial); ("access", fspec_trivial); ("update", fspec_trivial);
-            ("alloc", alloc_spec); ("free", free_spec); ("load", load_spec); ("store", store_spec); ("cmp", cmp_spec)].
-    (* set (x:=(List.map (fun x => (x, fspec_trivial)) ["main"; "loop"; "put"; "get"; "init"; "run"; "access"; "update"] ++ *)
-    (*                   [("alloc", alloc_spec); ("free", free_spec); ("load", load_spec); ("store", store_spec); ("cmp", cmp_spec)])). *)
-    (* unfold map in x. *)
-    (* exact x. *)
+    eapply [("init",init_spec1); ("run",run_spec1)].
   Defined.
-  (* Definition GlobalStbC: gname -> option fspec := *)
-  (*   to_stb (List.map (fun x => (x, fspec_trivial)) ["main"; "loop"; "put"; "get"; "init"; "run"; "access"; "update"] ++ MemStb) *)
-  (* . *)
+
+
+
+  (******************************* Map ****************************)
+  Context `{@GRA.inG mapRA Σ}.
+
+  Definition new_spec: fspec :=
+    (mk_simple (fun (_: unit) => (
+                    (fun varg o => (⌜varg = ([]: list val)↑ ∧ o = ord_pure 0⌝: iProp)%I),
+                    (fun vret => (∃ h, ⌜vret = (Vptr h 0)↑⌝ ** OwnM(is_map h (fun _ => None)): iProp)%I)
+    )))
+  .
+
+  Definition update_spec: fspec :=
+    mk_simple (fun '(h, k, v, m) =>
+                 ((fun varg o => (⌜varg = ([Vptr h 0%Z; Vint k; Vint v]: list val)↑ ∧ o = ord_top⌝ **
+                                   OwnM (is_map h m))%I),
+                  (fun vret => ⌜vret = Vundef↑⌝ **  OwnM (is_map h (Maps.add k v m))))).
+
+  Definition access_spec: fspec :=
+    mk_simple (fun '(h, k, v, m) =>
+                 ((fun varg o => ⌜varg = ([Vptr h 0%Z; Vint k]: list val)↑ ∧ o = ord_top ∧ m k = Some v⌝ **
+                                  OwnM (is_map h m)),
+                  (fun vret => ⌜vret = (Vint v)↑⌝ ** (OwnM (is_map h m))))).
+
+  Definition MapStb: alist gname fspec.
+    eapply (Seal.sealing "stb").
+    eapply [("new",new_spec); ("update",update_spec); ("access",access_spec)].
+  Defined.
+
+  (* Context `{@GRA.inG memRA Σ}. *)
 
 End PROOF.
-Global Hint Unfold GlobalStb0: stb.
-Global Hint Unfold GlobalStb1: stb.
-Global Hint Unfold GlobalStbC: stb.
+Global Hint Unfold MWStb0 MWStb1 AppStb MapStb: stb.
 
 
 

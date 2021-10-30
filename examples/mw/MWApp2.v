@@ -38,6 +38,6 @@ Section PROOF.
   |}
   .
 
-  Definition App: Mod.t := (SMod.to_tgt (fun _ => GlobalStb1)) SApp.
+  Definition App (stb: Sk.t -> gname -> option fspec): Mod.t := (SMod.to_tgt stb) SApp.
 
 End PROOF.

@@ -16,7 +16,7 @@ From ExtLib Require Import
      Structures.Maps
      Data.Map.FMapAList.
 
-Require Import HTactics ProofMode.
+Require Import HTactics ProofMode STB.
 
 Set Implicit Arguments.
 
@@ -44,7 +44,10 @@ Section SIMMODSEM.
   Opaque mwRA.
   Opaque Z.eq_dec Z.eqb.
 
-  Theorem correct: refines2 [MWApp1.App] [MWApp2.App].
+  Variable global_stb: Sk.t -> gname -> option fspec.
+  Hypothesis STBINCL: forall sk, stb_incl (to_stb MWStb1) (global_stb sk).
+
+  Theorem correct: refines2 [MWApp1.App] [MWApp2.App global_stb].
   Proof.
     eapply adequacy_local2. econs; ss.
     i. econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
@@ -61,6 +64,7 @@ Section SIMMODSEM.
       rewrite URA.unit_id in _GUARANTEE0.
       mCombine "A1" "A2". mEval ltac:(erewrite URA.add_comm; erewrite <- _GUARANTEE0) in "A1".
       unfold ccallU. steps. des. clear_tac. mDesOwn "A1" as "B" "C".
+      erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.
       hcall _ (_, _, _) _ with "A B".
       { iModIntro. iDestruct "B" as "[B C]". iFrame. iSplits; ss; et. }
       { esplits; ss; et. rr; ss. }
@@ -86,6 +90,7 @@ Section SIMMODSEM.
       rewrite URA.unit_id in _GUARANTEE0.
       mCombine "A1" "A2". mEval ltac:(erewrite URA.add_comm; erewrite <- _GUARANTEE0) in "A1".
       unfold ccallU. steps. des. clear_tac. mDesOwn "A1" as "B" "C".
+      erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.
       hcall _ (_, _, _) _ with "A B".
       { iModIntro. iDestruct "B" as "[B C]". iFrame. iSplits; ss; et. }
       { esplits; ss; et. rr; ss. }

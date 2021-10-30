@@ -123,6 +123,8 @@ TODO: APC, locked thinges
         fold wf.
         { steps. rewrite _UNWRAPU; ss. steps.
       - (* UNINIT *)
+        hAPC _.
+        {
       steps.
     }
     econs; ss. init. harg. mDesAll.
