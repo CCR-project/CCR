@@ -37,6 +37,8 @@ Section SIMMODSEM.
   Let W: Type := Any.t * Any.t.
 
   (***
+BOTTOM LINE: We should relate uninit state explicitly - its physical states are (tt), (tt)
+
 (1) after init
   cls, opt, map == full
   Own (black f)
@@ -78,18 +80,38 @@ TODO: APC, locked thinges
     )
   .
 
+  (*** st_src = mw_state = mw_stateX
+       st_tgt = w0
+   ***)
+
+  (*** TODO: redundant with Invariant.v ***)
+  Definition le (w0 w1: option local_state): Prop :=
+    match w0, w1 with
+    | Some lst0, Some lst1 => lst0 = lst1
+    | None, None => True
+    | _, _ => False
+    end
+  .
+
+  Global Program Instance le_PreOrder: PreOrder le.
+  Next Obligation. unfold le. ii. des_ifs. Qed.
+  Next Obligation. unfold le. ii. des_ifs. Qed.
+
   Let wf: _ -> W -> Prop :=
     @mk_wf
       _
-      unit
-      (fun _ st_src st_tgt => (
+      (option local_state)
+      (fun w0 st_src st_tgt => (
            {{"INIT": ∃ f h map lst0, OwnM (mw_stateX f) ** OwnM (is_map h map)
-                        ** ⌜st_src = (trans f)↑⌝ ** ⌜st_tgt = lst0↑⌝
+                        ** ⌜st_src = (trans f)↑⌝ ** ⌜st_tgt = lst0↑⌝ ** ⌜w0 = Some lst0⌝
                         ** ⌜lst0.(lst_map) = Vptr h 0%Z⌝ ** ⌜sim f map lst0⌝}} ∨
-           {{"UNINIT": ⌜st_src = tt↑ ∧ st_tgt = tt↑⌝ ** OwnM (mw_stateX Maps.empty)
-                                                  ** OwnM (mw_state Maps.empty)}}
+           {{"UNINIT": ⌜st_src = tt↑ ∧ st_tgt = tt↑⌝ ** ⌜w0 = None⌝ ** OwnM (mw_stateX Maps.empty)}} ∨
+           {{"LOCKED": ∃ f lst0, OwnM (mw_state f) ** ⌜st_src = (trans f)↑⌝ ** ⌜st_tgt = lst0↑⌝
+                        ** ⌜w0 = Some lst0⌝}}
          )%I)
   .
+
+
 
   (* Variable global_stb: Sk.t -> gname -> option fspec. *)
   (* Hypothesis STBINCL: forall sk, stb_incl (to_stb MWStb1) (global_stb sk). *)
@@ -98,12 +120,12 @@ TODO: APC, locked thinges
   Theorem correct: refines2 [MWC1.MW] [MWC2.MW].
   Proof.
     eapply adequacy_local2. econs; ss.
-    i. econstructor 1 with (wf:=wf) (le:=top2); ss; cycle 1.
-    { esplits. econs; et. eapply to_semantic. iIntros "[A B]".
-      iSplitL; cycle 1.
-      { iApply Own_unit; ss. }
-      iRight. iSplits; ss; et. iFrame. iSplits; ss.
-    }
+    i. econstructor 1 with (wf:=wf) (le:=le); ss.
+    { typeclasses eauto. }
+    2: { esplits. econs; et. eapply to_semantic. iIntros "A".
+         iSplitL; cycle 1.
+         { iApply Own_unit; ss. }
+         iRight. iSplits; ss; et. }
 
 
     econs.
@@ -121,14 +143,14 @@ TODO: APC, locked thinges
       harg. fold wf.
       mDesAll; des; clarify.
       mDesOr "INVS"; mDesAll; des; clarify; steps.
-      - (* INIT *)
+      { (* INIT *)
         harg_tgt.
         { iFrame. iSplits; ss; et. iCombine "A" "INIT" as "A". iAssumption. }
         fold wf.
         { steps. rewrite _UNWRAPU; ss. steps.
       - (* UNINIT *)
         hAPC _.
-        {
+        { iIntros "[A B]". }
       steps.
     }
     econs; ss. init. harg. mDesAll.

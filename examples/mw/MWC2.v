@@ -32,6 +32,7 @@ Section PROOF.
   Definition mainF: list val -> itree Es val :=
     fun varg =>
       _ <- (pargs [] varg)?;;;
+      _ <- Ret tt;;;
       pput (fun (_: Z) => 0%Z);;;
       `_: val <- ccallU "init" ([]: list val);;
       `_: val <- ccallU "loop" ([]: list val);;
@@ -59,12 +60,17 @@ Section PROOF.
   .
 
   Context `{Σ: GRA.t}.
+  Context `{@GRA.inG memRA Σ}.
+  Context `{@GRA.inG AppRA.t Σ}.
+  Context `{@GRA.inG mapRA Σ}.
+  Context `{@GRA.inG mwRA Σ}.
+
 
   Definition MWsbtb: list (string * fspecbody) :=
-    [("main", mk_specbody fspec_trivial (cfunU mainF));
-    ("loop", mk_specbody fspec_trivial (cfunU loopF));
-    ("put", mk_specbody fspec_trivial (cfunU putF));
-    ("get", mk_specbody fspec_trivial (cfunU getF))
+    [("main", mk_specbody main_spec (cfunU mainF));
+    ("loop", mk_specbody loop_spec (cfunU loopF));
+    ("put", mk_specbody put_spec (cfunU putF));
+    ("get", mk_specbody get_spec (cfunU getF))
     ].
 
   Context `{@GRA.inG mwRA Σ}.
@@ -72,7 +78,7 @@ Section PROOF.
   Definition SMWSem: SModSem.t := {|
     SModSem.fnsems := MWsbtb;
     SModSem.mn := "MW";
-    SModSem.initial_mr := GRA.embed ((mw_stateX Maps.empty)) ⋅ GRA.embed ((mw_state Maps.empty));
+    SModSem.initial_mr := GRA.embed ((mw_stateX Maps.empty)); (* ⋅ GRA.embed ((mw_state Maps.empty)) *)
     SModSem.initial_st := tt↑;
   |}
   .
@@ -82,10 +88,6 @@ Section PROOF.
     SMod.sk := [("main", Sk.Gfun); ("loop", Sk.Gfun); ("put", Sk.Gfun); ("get", Sk.Gfun)];
   |}
   .
-
-  Context `{@GRA.inG memRA Σ}.
-  Context `{@GRA.inG AppRA.t Σ}.
-  Context `{@GRA.inG mapRA Σ}.
 
   Definition MW: Mod.t := (SMod.to_tgt (fun _ => to_stb (MWStb ++ AppStb ++ MapStb ++ MemStb)) SMW).
 
