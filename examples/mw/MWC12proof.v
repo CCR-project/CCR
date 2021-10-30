@@ -16,7 +16,7 @@ From ExtLib Require Import
      Structures.Maps
      Data.Map.FMapAList.
 
-Require Import HTactics2 ProofMode.
+Require Import HTactics2 ProofMode STB.
 Require Import Mem1.
 
 Set Implicit Arguments.
@@ -68,12 +68,12 @@ TODO: APC, locked thinges
   (*       end *)
   (*   )%I *)
   (* . *)
-  Definition sim (f: Z -> option Z) (map: list (Z * Z)) (lst0: local_state): Prop :=
+  Definition sim (f map: Z -> option Z) (lst0: local_state): Prop :=
     (∀ k v (IN: f k = Some v),
         match lst0.(lst_cls) k with
         | uninit => False
         | opt => lst0.(lst_opt) k = Vint v
-        | normal => alist_find k map = Some v
+        | normal => map k = Some v
         end
     )
   .
@@ -91,6 +91,10 @@ TODO: APC, locked thinges
          )%I)
   .
 
+  (* Variable global_stb: Sk.t -> gname -> option fspec. *)
+  (* Hypothesis STBINCL: forall sk, stb_incl (to_stb MWStb1) (global_stb sk). *)
+
+  (* Theorem correct: refines2 [MWC1.MW global_stb] [MWC2.MW global_stb]. *)
   Theorem correct: refines2 [MWC1.MW] [MWC2.MW].
   Proof.
     eapply adequacy_local2. econs; ss.

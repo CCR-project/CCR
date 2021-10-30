@@ -108,6 +108,6 @@ Section PROOF.
 
   Context `{@GRA.inG memRA Σ}.
 
-  Definition MW: Mod.t := (SMod.to_tgt (fun _ => to_stb GlobalStbC)) SMW.
+  Definition MW: Mod.t := (SMod.to_tgt (fun _ => to_stb MW1Stb) SMW).
 
 End PROOF.

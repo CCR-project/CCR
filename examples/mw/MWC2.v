@@ -84,7 +84,9 @@ Section PROOF.
   .
 
   Context `{@GRA.inG memRA Σ}.
+  Context `{@GRA.inG AppRA.t Σ}.
+  Context `{@GRA.inG mapRA Σ}.
 
-  Definition MW: Mod.t := (SMod.to_tgt (fun _ => to_stb GlobalStbC)) SMW.
+  Definition MW: Mod.t := (SMod.to_tgt (fun _ => to_stb (MWStb ++ AppStb ++ MapStb ++ MemStb)) SMW).
 
 End PROOF.

@@ -113,17 +113,11 @@ Section PROOF.
                   (fun vret => ⌜vret = (Vint v)↑⌝ ** OwnM (mw_state f))))
   .
 
-  Definition MWStb0: alist gname fspec.
-    eapply (Seal.sealing "stb").
-    let x := constr:(List.map (fun x => (x, fspec_trivial)) ["main"; "loop"; "put"; "get"]) in
-    let y := eval cbn in x in
-    eapply y.
-  Defined.
-
-  Definition MWStb1: alist gname fspec.
+  Definition MWStb: alist gname fspec.
     eapply (Seal.sealing "stb").
     eapply [("main",main_spec); ("loop",loop_spec); ("put",put_spec); ("get",get_spec)].
   Defined.
+
 
 
 
@@ -180,10 +174,24 @@ Section PROOF.
     eapply [("new",new_spec); ("update",update_spec); ("access",access_spec)].
   Defined.
 
-  (* Context `{@GRA.inG memRA Σ}. *)
+
+
+
+
+
+  (******************************* Dedicated STB for MW1 ****************************)
+  Context `{@GRA.inG memRA Σ}.
+
+  Definition MW1Stb: alist gname fspec.
+    eapply (Seal.sealing "stb").
+    eapply [("main", fspec_trivial); ("loop", fspec_trivial); ("put", fspec_trivial); ("get", fspec_trivial);
+            ("init", fspec_trivial); ("run", fspec_trivial);
+            ("new", fspec_trivial); ("access", fspec_trivial); ("update", fspec_trivial);
+            ("alloc", alloc_spec); ("free", free_spec); ("load", load_spec); ("store", store_spec); ("cmp", cmp_spec)].
+   Defined.
 
 End PROOF.
-Global Hint Unfold MWStb0 MWStb1 AppStb MapStb: stb.
+Global Hint Unfold MWStb MW1Stb AppStb MapStb: stb.
 
 
 
