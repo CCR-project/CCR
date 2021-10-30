@@ -32,53 +32,117 @@ Section PROOF.
 
   Local Transparent APC.
 
+  Definition is_possibly_pure (fsp: fspec): Prop :=
+    exists x mn varg_src varg_tgt d r, fsp.(precond) x mn varg_src varg_tgt d r ∧ is_pure d
+  .
+
+  Definition stb_pure_incl (stb_tgt stb_src: string -> option fspec): Prop :=
+    forall fn fsp (FIND: stb_tgt fn = Some fsp) (PURE: is_possibly_pure fsp), stb_src fn = Some fsp
+  .
+
+  Local Transparent HoareCall.
+
   Lemma hAPC_both
         A mp_src0 mp_tgt0 (mr_src0 mr_tgt0: Σ)
         mn r rg
         k_src k_tgt
-        a (le: A -> A -> Prop)
+        _a a0 (le: A -> A -> Prop)
         (R: A -> Any.t -> Any.t -> iProp)
         (eqr: Any.t -> Any.t -> Any.t -> Any.t -> Prop)
+        o_new_src o_new_tgt
         o_src0 o_src1 o_tgt0 o_tgt1
         (FUELS: o_src0 = Ord_S_n o_src1 5)
         (FUELT: o_tgt0 = Ord_S_n o_tgt1 5)
         ctx0
+        `{Reflexive _ le}
 
+        (* (WF: mk_wf R a0 ((Any.pair mp_src0 mr_src0↑), (Any.pair mp_tgt0 mr_tgt0↑))) *)
 
-        rx
+        rx0
         (* ips Xtra *)
         (* (ACC: current_iPropL ctx0 ips) *)
         (* (ENTAIL: bi_entails (from_iPropL ips) ((OwnT mr_tgt0) ** (Xtra ∧ Exactly rx))) *)
         Xn Invtn Xtra
-        (ACC: current_iPropL ctx0 [(Invtn, OwnT mr_tgt0); (Xn, (Xtra ∧ Exactly rx)%I)])
-        (* (ARG: forall *)
-        (*     rx *)
-        (*     (ACC: current_iPropL ctx0 [(Invtn, OwnT mr_tgt0); (Xn, (Xtra ∧ Exactly rx)%I)]), *)
-        (*     gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) rg rg _ _ eqr o_src1 o_tgt1 a *)
-        (*            (mpr_src, k_src) *)
-        (*            (Any.pair mp_tgt0 mr_tgt0↑, k_tgt (ctx0 ⋅ rx, vret_src))) *)
-        stb d_tgt d_src
+        (ACC: current_iPropL ctx0 [(Invtn, OwnT mr_tgt0); (Xn, (Xtra ∧ Exactly rx0)%I)])
+        FR
+        (ENTAIL: bi_entails Xtra (R a0 mp_src0 mp_tgt0 ** FR))
+        (* (WFA: forall a1 mp_src1 mp_tgt1 (mr_src1 mr_tgt1: Σ) (INV: I mr_src1), *)
+        (*     mk_wf R a1 ((Any.pair mp_src1 mr_src1↑), (Any.pair mp_tgt1 mr_tgt1↑))) *)
+
+
+        (ARG: forall
+            (mr_src1 mr_tgt1: Σ) (mp_src1 mp_tgt1 : Any.t) a1
+            (WLE: le a0 a1)
+            ctx1 rx1
+            (ACC: current_iPropL ctx1 [("INVT", OwnT mr_tgt0);
+                                      ("X", ((R a1 mp_src1 mp_tgt1 ** FR) ∧ Exactly rx1)%I)]),
+            gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) rg rg _ _ eqr o_new_src o_new_tgt _a
+                   (Any.pair mp_src1 mr_src1↑, k_src (ctx1, tt))
+                   (Any.pair mp_tgt1 mr_tgt1↑, k_tgt (ctx1 ⋅ rx1, tt)))
+        stb_src stb_tgt d
+        (STBINCL: stb_pure_incl stb_tgt stb_src)
     :
-      gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) r rg _ _ eqr o_src0 o_tgt0 a
-             (Any.pair mp_src0 mr_src0↑, (interp_hCallE_tgt mn stb d_src APC ctx0) >>= k_src)
-             (Any.pair mp_tgt0 mr_tgt0↑, (interp_hCallE_tgt mn stb d_tgt APC (ctx0 ⋅ rx)) >>= k_tgt)
+      gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) r rg _ _ eqr o_src0 o_tgt0 _a
+             (Any.pair mp_src0 mr_src0↑, (interp_hCallE_tgt mn stb_src d APC ctx0) >>= k_src)
+             (Any.pair mp_tgt0 mr_tgt0↑, (interp_hCallE_tgt mn stb_tgt d APC (ctx0 ⋅ rx0)) >>= k_tgt)
   .
   Proof.
     subst.
     unfold APC. steps. force_l. exists x. steps. force_l; ss. steps.
 
+    clear_until x. gen x d ctx0 rx0. gcofix CIH. i.
     {
-      rewrite unfold_APC. steps. force_l. exists x0. steps.
+      rewrite unfold_APC. ired_both.
+      force_r. i. force_l. exists x0.
       destruct x0.
-      - steps. admit "".
-      - steps. force_l. exists x0. steps. force_l; ss. steps. force_l. eexists (_, _). steps.
-        rewrite _UNWRAPN. steps. instantiate (1:=t).
-        Local Transparent HoareCall. unfold HoareCall. unfold mput, mget. steps.
-        force_l. exists (c0, c, c1). steps. force_l; ss.
-        { eapply wf_extends; et. exists rx. r_solve. }
+      - steps. eapply gpaco8_mon; et.
+        { eapply ARG; et. admit "". }
+      -
+        assert(T: exists rf_src rm_src, R a0 mp_src0 mp_tgt0 rm_src /\ FR rf_src /\ rx0 = rf_src ⋅ rm_src).
+        { clear - ACC ENTAIL. uipropall.
+          eapply current_iPropL_pop in ACC. des.
+          eapply current_iPropL_pop in TL. des.
+          eapply current_iPropL_nil in TL0. ss.
+          des. r in HD1. uipropall. clarify.
+          exploit ENTAIL; try apply HD0.
+          { eapply wf_extends; et. exists (ctx0 ⋅ hdr). r_solve. }
+          i; des. clarify. esplits; et.
+          r_solve.
+        }
+        des. subst.
+
+        steps. force_l. exists x0. steps. force_l; ss. steps. unfold HoareCall. unfold mput, mget. steps.
+        des; ss.
+        assert(STB: stb_src s = Some f).
+        { eapply STBINCL; et. r. esplits; et. }
+        force_l. eexists (_, _). steps. rewrite STB. steps. instantiate (1:=t).
+        unfold HoareCall. unfold mput, mget. steps.
+
+        force_l. rename c into mr_tgt1. rename c0 into ro. rename c1 into rf.
+        exists (ro, rf ⋅ rf_src, rm_src ⋅ mr_tgt1). steps. force_l; ss.
+        { r_wf _GUARANTEE1. }
         steps. force_l. esplits; et. steps. force_l. esplits; et. steps. force_l. esplits; et.
-        steps. force_l; et. steps. force_l; ss. { des. esplits; et. admit "ez". } steps.
-        { TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT }
+        steps. force_l; et. steps. force_l; ss. steps.
+        { econs. eapply to_semantic. iIntros "[A B]". iFrame. iStopProof.
+          uipropall. i. r in H0. des; clarify. esplits; et. r. uipropall.
+        }
+
+        inv WF. rewrite Any.pair_split in *. clarify. rewrite Any.upcast_downcast. steps.
+        hexploit1 RSRC.
+        { eapply wf_extends; et. r. exists (c ⋅ rf ⋅ rf_src ⋅ c0). r_solve. }
+        rename c into ri. rename c0 into ctx1. uipropall. des. clarify.
+        Local Transparent OwnT. r in RSRC1. uipropall. r in RSRC1. des; clarify.
+        force_r. exists (ri, ctx1). steps. force_r; ss.
+        { eapply wf_extends; et. r. exists (rf_src ⋅ a ⋅ ctx). r_solve. }
+        steps. force_r. esplits. steps. force_r; et. steps.
+
+        move CIH at bottom.
+        gbase. eapply CIH.
+        steps.
+        {
+        steps.
+          r.
+          iIntros "H". TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT }
         (* hcall _ _ _. *)
         (* { iIntros "[A [B _]]". iFrame. } *)
         (* { iModIntro. iSplitR "P"; et. *)
@@ -222,7 +286,7 @@ Section SIMMODSEM.
       harg_tgt.
       { iFrame. iSplits; et. instantiate (1:=True%I). ss. }
 
-      unfold ccallU. steps. stb_tac; clarify. force_l; stb_tac; clarify. steps.
+      unfold ccallU. steps. eapply hAPC_both; et. stb_tac; clarify. force_l; stb_tac; clarify. steps.
       harg_clo_tgt.
 
 
