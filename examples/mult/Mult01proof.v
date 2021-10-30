@@ -43,10 +43,10 @@ Section PROOF.
   Local Transparent HoareCall.
 
   Lemma hAPC_both
-        A mp_src0 mp_tgt0 (mr_src0 mr_tgt0: Σ)
+        A (a0: shelve__ A) mp_src0 mp_tgt0 (mr_src0 mr_tgt0: Σ)
         mn r rg
         k_src k_tgt
-        _a a0 (le: A -> A -> Prop)
+        _a (le: A -> A -> Prop)
         (R: A -> Any.t -> Any.t -> iProp)
         (eqr: Any.t -> Any.t -> Any.t -> Any.t -> Prop)
         o_new_src o_new_tgt
@@ -172,6 +172,16 @@ Section PROOF.
 
 End PROOF.
 
+Tactic Notation "hAPC" uconstr(a) :=
+  eapply (hAPC_both _ a);
+  [refl
+  |refl
+  |try (typeclasses eauto)
+  |eassumption
+  |
+  |
+  |on_current ltac:(fun H => try clear H); i; on_current ltac:(fun H => simpl in H)]
+.
 
 
 
@@ -296,14 +306,12 @@ Section SIMMODSEM.
       { iFrame. iSplits; et. instantiate (1:=True%I). ss. }
 
       unfold ccallU. steps.
-      eapply hAPC_both; et.
-      { typeclasses eauto. }
+      hAPC _.
       { instantiate (1:=True%I). et. }
       { r. i. autounfold with stb in *; autorewrite with stb in *. ss. des_ifs.
         - r in PURE. des. ss. unfold is_pure in *. des_ifs. uipropall. des. clarify. r in PURE4. uipropall.
         - r in PURE. des. ss. unfold is_pure in *. des_ifs. r in PURE. uipropall. des; clarify.
       }
-      i. clear ACC.
       steps.
 
       hret _; ss.
