@@ -94,7 +94,7 @@ Section PROOF.
   Definition main_spec: fspec :=
     mk_simple (fun (_: unit) =>
                  ((fun varg o => ⌜varg = ([]: list val)↑ ∧ o = ord_top⌝ ** OwnM Init
-                                   ** OwnM (mw_state Maps.empty) ** OwnM (mw_stateX Maps.empty)),
+                                   ** OwnM (mw_state Maps.empty)),
                   (fun vret => ⌜vret = Vundef↑⌝ ** OwnM Run))).
 
   Definition loop_spec: fspec :=

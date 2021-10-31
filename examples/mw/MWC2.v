@@ -79,7 +79,7 @@ Section PROOF.
     SModSem.fnsems := MWsbtb;
     SModSem.mn := "MW";
     SModSem.initial_mr := GRA.embed ((mw_stateX Maps.empty)); (* ⋅ GRA.embed ((mw_state Maps.empty)) *)
-    SModSem.initial_st := tt↑;
+    SModSem.initial_st := (fun (_:Z) => 0%Z)↑;
   |}
   .
 

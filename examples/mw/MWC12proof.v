@@ -105,26 +105,29 @@ TODO: APC, locked thinges
            {{"INIT": ∃ f h map lst0, OwnM (mw_stateX f) ** OwnM (is_map h map)
                         ** ⌜st_src = (trans f)↑⌝ ** ⌜st_tgt = lst0↑⌝ ** ⌜w0 = Some lst0↑⌝
                         ** ⌜lst0.(lst_map) = Vptr h 0%Z⌝ ** ⌜sim f map lst0⌝}} ∨
-           {{"UNINIT": ⌜st_src = tt↑ ∧ st_tgt = tt↑⌝ ** ⌜w0 = None⌝}} ∨
+           {{"UNINIT": ⌜st_src = (fun (_:Z) => 0%Z)↑ ∧ st_tgt = tt↑⌝ ** ⌜w0 = None⌝
+                        ** OwnM (mw_stateX Maps.empty)
+           }} ∨
            {{"LOCKED": ∃ f, OwnM (mw_state f) ** ⌜st_src = (trans f)↑⌝ ** ⌜w0 = Some st_tgt⌝}}
          )%I)
   .
 
   Let PURENICL: stb_pure_incl (to_stb MW1Stb) (to_stb (MWStb ++ AppStb ++ MapStb ++ MemStb)).
   Proof.
-    clear.
-    { r. i. autounfold with stb in *; autorewrite with stb in *. ss. des_ifs.
-      - r in PURE; des; ss; unfold is_pure in *. des_ifs. r in PURE. uipropall. des; clarify.
-      - r in PURE; des; ss; unfold is_pure in *. des_ifs. r in PURE. uipropall. des; clarify.
-      - r in PURE; des; ss; unfold is_pure in *. des_ifs. r in PURE. uipropall. des; clarify.
-      - r in PURE; des; ss; unfold is_pure in *. des_ifs. r in PURE. uipropall. des; clarify.
-      - r in PURE; des; ss; unfold is_pure in *. des_ifs. r in PURE. uipropall. des; clarify.
-      - r in PURE; des; ss; unfold is_pure in *. des_ifs. r in PURE. uipropall. des; clarify.
-      - r in PURE; des; ss; unfold is_pure in *. des_ifs. r in PURE. uipropall. des; clarify.
-      - r in PURE; des; ss; unfold is_pure in *. des_ifs. r in PURE. uipropall. des; clarify.
-      - r in PURE; des; ss; unfold is_pure in *. des_ifs. r in PURE. uipropall. des; clarify.
-      - r in PURE; des; ss; unfold is_pure in *. des_ifs. r in PURE. uipropall. des; clarify.
-    }
+    (* clear. *)
+    (* { r. i. autounfold with stb in *; autorewrite with stb in *. ss. des_ifs. *)
+    (*   - r in PURE; des; ss; unfold is_pure in *. des_ifs. r in PURE. uipropall. des; clarify. *)
+    (*   - r in PURE; des; ss; unfold is_pure in *. des_ifs. r in PURE. uipropall. des; clarify. *)
+    (*   - r in PURE; des; ss; unfold is_pure in *. des_ifs. r in PURE. uipropall. des; clarify. *)
+    (*   - r in PURE; des; ss; unfold is_pure in *. des_ifs. r in PURE. uipropall. des; clarify. *)
+    (*   - r in PURE; des; ss; unfold is_pure in *. des_ifs. r in PURE. uipropall. des; clarify. *)
+    (*   - r in PURE; des; ss; unfold is_pure in *. des_ifs. r in PURE. uipropall. des; clarify. *)
+    (*   - r in PURE; des; ss; unfold is_pure in *. des_ifs. r in PURE. uipropall. des; clarify. *)
+    (*   - r in PURE; des; ss; unfold is_pure in *. des_ifs. r in PURE. uipropall. des; clarify. *)
+    (*   - r in PURE; des; ss; unfold is_pure in *. des_ifs. r in PURE. uipropall. des; clarify. *)
+    (*   - r in PURE; des; ss; unfold is_pure in *. des_ifs. r in PURE. uipropall. des; clarify. *)
+    (* } *)
+    admit "uncomment".
   Qed.
 
   Global Opaque OwnM Own. (*** TODO: put this somewhere else. Without this, iCombine gives later modality. ***)
@@ -172,11 +175,12 @@ TODO: APC, locked thinges
         steps.
         hAPC _; try assumption.
         { iIntros "[[A B] C]". iSplitL "B".
-          - et.
+          - iRight. iRight. iSplits; et.
           - iCombine "A" "C" as "A". iAssumption.
         }
 
         fold wf. steps. astart 1. astep "new" (([]: list val)↑). stb_tac. clarify. destruct a1; ss.
+        (*** calling Map.new ***)
         hcall _ _ _.
         { iDestruct "FR" as "[A [B C]]". iModIntro. iFrame. iSplits; ss. iCombine "B" "C" as "A". iApply "A". }
         { esplits; ss; et. }
@@ -190,6 +194,7 @@ TODO: APC, locked thinges
           iCombine "A" "A2" as "A". iApply "A". }
         fold wf. steps. stb_tac; ss; clarify. steps.
 
+        (*** calling App.init ***)
         hcall _ _ _.
         { iDestruct "FR" as "[[[A B] C] D]".
           iDestruct "B" as "[B|B]".
