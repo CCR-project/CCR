@@ -67,7 +67,7 @@ Section SIMMODSEM.
       erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.
       hcall _ (_, _, _) _ with "A B".
       { iModIntro. iDestruct "B" as "[B C]". iFrame. iSplits; ss; et. }
-      { esplits; ss; et. rr; ss. }
+      { esplits; ss; et. }
       steps. mDesAll; clarify.
       rewrite _UNWRAPU. steps. force_r. exists ε. steps. force_r; ss. steps. force_r. rename a into rm0.
       eexists. steps. force_r; ss.
@@ -93,7 +93,7 @@ Section SIMMODSEM.
       erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.
       hcall _ (_, _, _) _ with "A B".
       { iModIntro. iDestruct "B" as "[B C]". iFrame. iSplits; ss; et. }
-      { esplits; ss; et. rr; ss. }
+      { esplits; ss; et. }
       steps. mDesAll; clarify.
       rewrite _UNWRAPU. steps. rewrite Any.upcast_downcast in *. clarify. steps.
       force_r. exists ε. steps. force_r; ss. steps. force_r. rename a into rm0.

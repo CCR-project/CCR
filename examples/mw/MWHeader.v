@@ -59,11 +59,58 @@ Definition RunX: AppRA.t := AppRA.half true.
 
 
 
-Instance _mwRA: URA.t := (Z ==> (Excl.t Z))%ra.
+(* Instance _mwRA: URA.t := (Z ==> (Excl.t Z))%ra. *)
+Instance _mwRA: URA.t := Excl.t (Z -> option Z)%ra.
 Instance mwRA: URA.t := Auth.t _mwRA%ra.
-Definition mw_state (f: Z -> option Z): mwRA := @Auth.white _mwRA f.
-Definition mw_stateX (f: Z -> option Z): mwRA := @Auth.black _mwRA f.
+Definition mw_state (f: Z -> option Z): mwRA := @Auth.white _mwRA (Some f).
+Definition mw_stateX (f: Z -> option Z): mwRA := @Auth.black _mwRA (Some f).
 
+Lemma _mw_state_false: forall f g, ~ URA.wf (mw_state f ⋅ mw_state g).
+Proof.
+  ii. rr in H. ur in H. rewrite Seal.sealing_eq in *.
+  rr in H. ur in H. rewrite Seal.sealing_eq in *. rr in H. ss.
+Qed.
+
+Lemma _mw_stateX_false: forall f g, ~ URA.wf (mw_stateX f ⋅ mw_stateX g).
+Proof.
+  ii. rr in H. ur in H. rewrite Seal.sealing_eq in *. ss.
+Qed.
+
+Lemma _mw_state_eq: forall f g, URA.wf (mw_state f ⋅ mw_stateX g) -> f = g.
+Proof.
+  ii. rr in H. ur in H. rewrite Seal.sealing_eq in *. des. rr in H. des. ur in H. des_ifs.
+Qed.
+
+Lemma _mw_state_upd: forall f g h, URA.updatable (mw_state f ⋅ mw_stateX g) (mw_state h ⋅ mw_stateX h).
+Proof.
+  ii. rr in H. ur in H. rewrite Seal.sealing_eq in *. des_ifs.
+  rr. ur. rewrite Seal.sealing_eq in *. des; ss. rr in H. ur in H. des. des_ifs.
+  esplits; ss.
+  { rr. esplits; et. ur. instantiate (1:=Excl.unit). ss. }
+  { ur. ss. }
+Qed.
+
+Section PROOF.
+  Context `{@GRA.inG mwRA Σ}.
+  Lemma mw_state_false: forall f g, (OwnM (mw_state f) ⊢ OwnM (mw_state g) -* ⌜False⌝)%I.
+  Proof.
+    i. iIntros "A B". iCombine "A B" as "A". iOwnWf "A". exfalso. eapply _mw_state_false; et.
+  Qed.
+  Lemma mw_stateX_false: forall f g, (OwnM (mw_stateX f) ⊢ OwnM (mw_stateX g) -* ⌜False⌝)%I.
+  Proof.
+    i. iIntros "A B". iCombine "A B" as "A". iOwnWf "A". exfalso. eapply _mw_stateX_false; et.
+  Qed.
+  Lemma mw_state_eq: forall f g, (OwnM (mw_state f) ⊢ OwnM (mw_stateX g) -* ⌜f = g⌝)%I.
+  Proof.
+    i. iIntros "A B". iCombine "A B" as "A". iOwnWf "A". iPureIntro. eapply _mw_state_eq; et.
+  Qed.
+  Lemma mw_state_upd: forall f g h, (OwnM (mw_state f) ⊢ OwnM (mw_stateX g) -* #=> (OwnM (mw_state h) ** OwnM (mw_stateX h)))%I.
+  Proof.
+    i. iIntros "A B". iCombine "A B" as "A". iPoseProof (OwnM_Upd with "A") as "B".
+    { eapply _mw_state_upd; et. }
+    iMod "B". iModIntro. iDestruct "B" as "[A B]". iFrame.
+  Qed.
+End PROOF.
 
 
 

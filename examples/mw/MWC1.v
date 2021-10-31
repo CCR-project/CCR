@@ -62,6 +62,7 @@ Section PROOF.
       (if dec (lst0.(lst_cls) k) uninit
        then b <- trigger (Choose _);; let class := (if (b: bool) then opt else normal) in upd_cls (fun cls => set k class cls);;; Ret tt
        else Ret tt);;;
+      lst0 <- pget;;
       (if dec (lst0.(lst_cls) k) opt
        then _ <- upd_opt (fun opt => set k v opt);;; Ret tt
        else `_: val <- ccallU "update" ([lst0.(lst_map); Vint k; v]);; Ret tt);;;

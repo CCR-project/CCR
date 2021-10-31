@@ -173,7 +173,7 @@ TODO: APC, locked thinges
       mDesOr "INVS"; mDesAll; des; clarify; steps.
       { (* UNINIT *)
         harg_tgt.
-        { iFrame. iSplits; et. iCombine "A" "A1" as "A". iCombine "A" "A2" as "A". iAssumption. }
+        { iModIntro. iFrame. iSplits; et. iCombine "A" "A1" as "A". iCombine "A" "A2" as "A". iAssumption. }
         steps.
 
 
@@ -250,7 +250,7 @@ TODO: APC, locked thinges
         force_l; stb_tac; ss; clarify. steps.
 
         hpost_tgt.
-        { iFrame. iSplits; ss.
+        { iModIntro. iFrame. iSplits; ss.
           iAssert ({{"LOCKED": ∃ f : Z → option Z,
                  ((OwnM (mw_state f) ** OwnM (mw_stateX f)) ** ⌜mp_src0 = Any.upcast f⌝) **
                  ⌜Some (Any.upcast (λ _ : Z, None), Any.upcast tt) = Some (mp_src0, mp_tgt0)⌝}})%I
@@ -279,7 +279,7 @@ TODO: APC, locked thinges
 
 
         hpost_tgt.
-        { iSplits; ss; et. iFrame. iSplits; ss; et.
+        { iModIntro. iSplits; ss; et. iFrame. iSplits; ss; et.
           iCombine "A1" "POST" as "A". iCombine "A" "INV" as "A". iAssumption.
         }
         fold wf. steps. force_l; stb_tac; ss; clarify. steps. rewrite _UNWRAPU. steps.
@@ -303,8 +303,8 @@ TODO: APC, locked thinges
         steps. fold wf. mDesAll. des; clarify.
 
         hpost_tgt.
-        { iSplits; ss; et. iFrame. iSplits; ss; et. iCombine "A1" "INV" as "A". iCombine "A2" "A" as "A".
-          iAssumption. }
+        { iModIntro. iSplits; ss; et. iFrame. iSplits; ss; et.
+          iCombine "A1" "INV" as "A". iCombine "A2" "A" as "A". iAssumption. }
         steps. fold wf.
 
 
@@ -343,8 +343,8 @@ TODO: APC, locked thinges
       { (* INIT *)
         force_l; stb_tac; ss; clarify. steps.
         harg_tgt.
-        { iFrame. iSplits; et. iCombine "A" "A1" as "A". iCombine "A" "A2" as "A". iCombine "A" "INIT" as "A".
-          iAssumption. }
+        { iModIntro. iFrame. iSplits; et.
+          iCombine "A" "A1" as "A". iCombine "A" "A2" as "A". iCombine "A" "INIT" as "A". iAssumption. }
         steps. stb_tac; ss; clarify.
 
         hcall _ _ _.
@@ -358,7 +358,7 @@ TODO: APC, locked thinges
 
 
         hpost_tgt.
-        { iFrame. iSplits; ss; et.
+        { iModIntro. iFrame. iSplits; ss; et.
           iCombine "A1 POST" as "A". iCombine "INV A" as "A". iAssumption. }
         fold wf. steps. rewrite _UNWRAPU. steps. stb_tac; ss; clarify.
 
@@ -375,7 +375,7 @@ TODO: APC, locked thinges
         fold wf. steps. mDesAll; des; clarify. rewrite Any.upcast_downcast in *. clarify.
 
         hpost_tgt.
-        { iFrame. iSplits ;ss; et. iCombine "A2 A1" as "A". iCombine "INV A" as "A". iAssumption. }
+        { iModIntro. iFrame. iSplits ;ss; et. iCombine "A2 A1" as "A". iCombine "INV A" as "A". iAssumption. }
         fold wf. steps.
 
 
@@ -411,24 +411,31 @@ TODO: APC, locked thinges
       harg. fold wf. mDesAll; ss; des; clarify. des_ifs_safe; ss. mDesAll; des; ss; clarify.
       mDesOr "INVS"; mDesAll; des; clarify; steps.
       { (* INIT *)
-        hide_k.
-Ltac harg_tgt :=
-  let XN := constr:("FR") in
-  let INVTN := constr:("INVT") in
-  eapply (harg_clo_tgt' (Xn:=XN) (Invtn:=INVTN));
-   [ eassumption
-   | refl
-   | eassumption
-   | start_ipm_proof
-   | on_current ltac:(fun H => try clear H); i; on_current ltac:(fun H => simpl in H) ].
-eapply harg_clo_tgt'.
-fold wf. eassumption.
-  [ eassumption
-   | refl
-   | eassumption
-   | start_ipm_proof
-   | on_current ltac:(fun H => try clear H); i; on_current ltac:(fun H => simpl in H) ].
-harg_tgt.
+        rename a2 into lst0. rename z0 into k. rename z into v.
+        harg_tgt.
+        { iModIntro. iFrame. iSplits; ss; et.
+          iCombine "A" "A1" as "A". iCombine "A" "INIT" as "A". iAssumption. }
+        fold wf. steps.
+        destruct (dec (lst_cls lst0 k) uninit).
+        - steps.
+          unfold set. destruct (dec k k); ss. destruct x; steps.
+          + hAPC _; ss.
+            { iIntros "[[A B] C]". iSplitL "A C".
+              - iRight. iRight. iSplits; et. admit "TODO".
+              - iAssumption.
+            }
+            steps.
+            admit "TODO".
+          + steps.
+            admit "TODO".
+        - steps.
+          destruct (lst_cls lst0 k) eqn:T; ss.
+          + steps.
+            admit "ditto".
+          + steps.
+            admit "ditto".
+      }
+        -
         harg_tgt.
         rewrite Any.upcast_downcast.
         ss.

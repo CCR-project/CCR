@@ -89,7 +89,7 @@ Section SIMMODSEM.
       mUpd "PRE".
 
       harg_tgt.
-      { iFrame. iSplits; et. iAssumption. }
+      { iModIntro. iFrame. iSplits; et. iAssumption. }
 
       unfold ccallU. steps. stb_tac; clarify. force_l; stb_tac; clarify. steps.
 
@@ -103,7 +103,7 @@ Section SIMMODSEM.
 
 
       hpost_tgt.
-      { iFrame. iSplits; et. iAssumption. }
+      { iModIntro. iFrame. iSplits; et. iAssumption. }
       steps. rewrite _UNWRAPU. steps. stb_tac. clarify.
 
 
@@ -117,7 +117,7 @@ Section SIMMODSEM.
 
 
       hpost_tgt.
-      { iFrame. iSplits; et. iAssumption. } 
+      { iModIntro. iFrame. iSplits; et. iAssumption. } 
       steps. rewrite _UNWRAPU0. steps.
 
 

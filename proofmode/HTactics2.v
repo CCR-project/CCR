@@ -167,11 +167,10 @@ Section MODE.
         Invtn' Xn'
         mn r rg
         X (P: option mname -> X -> Any.t -> Any.t -> ord -> Σ -> Prop) varg
-        mpr_src f_src k_tgt
+        mp_src (mr_src: Σ) f_src k_tgt
         a (le: A -> A -> Prop)
         (R: A -> Any.t -> Any.t -> iProp)
         (eqr: Any.t -> Any.t -> Any.t -> Any.t -> Prop)
-        (WF: mk_wf R a (mpr_src, Any.pair mp_tgt mr_tgt↑))
         o_src0 o_src1 o_tgt0 o_tgt1
         (FUEL: o_src0 = Ord_S_n o_src1 7)
         ctx x varg_tgt ord_cur
@@ -180,15 +179,15 @@ Section MODE.
             rx
             (ACC: current_iPropL ctx [(Invtn', OwnT mr_tgt); (Xn', (Xtra ∧ Exactly rx)%I)]),
             gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) rg rg _ _ eqr o_src1 o_tgt1 a
-                   (mpr_src, f_src)
+                   (Any.pair mp_src mr_src↑, f_src)
                    (Any.pair mp_tgt mr_tgt↑, k_tgt (ctx ⋅ rx, ((mn, x), varg_tgt, ord_cur))))
     :
       gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) r rg _ _ eqr o_src0 o_tgt0 a
-             (mpr_src, f_src)
+             (Any.pair mp_src mr_src↑, f_src)
              (Any.pair mp_tgt mr_tgt↑, (HoareFunArg P (mn, varg) >>= k_tgt))
   .
   Proof.
-    inv WF.
+    subst.
     unfold HoareFunArg, mput, mget, assume, guarantee. des.
     repeat (ired_both; gstep; econs; eauto with ord_step2). exists x.
     repeat (ired_both; gstep; econs; eauto with ord_step2). exists varg_tgt.
@@ -196,7 +195,6 @@ Section MODE.
     eapply current_iPropL_pop in TL. des.
     eapply current_iPropL_pop in TL0. des. ss. clear_fast.
     eapply current_iPropL_nil in TL. rename hdr into rarg_src. rename hdr0 into rinv. rename hdr1 into rx.
-    apply Any.pair_inj in H2. des; clarify. apply Any.upcast_inj in H0. des; clarify.
     repeat (ired_both; gstep; econs; eauto with ord_step2). exists (rarg_src, (ctx ⋅ rx)).
     repeat (ired_both; gstep; econs; eauto with ord_step2). esplits.
     { clear - TL HD0. rr in HD0. uipropall. rr in HD0. des; clarify.
@@ -214,13 +212,14 @@ Section MODE.
 
   Lemma current_iPropL_entail_all Hn ctx (l: iPropL) (P: iProp)
         (ACC: current_iPropL ctx l)
-        (ENTAIL: from_iPropL l -∗ P)
+        (ENTAIL: from_iPropL l -∗ (bupd P))
     :
       current_iPropL ctx [(Hn, P)].
   Proof.
     eapply current_iProp_upd.
     eapply current_iProp_entail; et.
     unfold from_iPropL at 2. etrans; et. (*** !!! ***)
+    iIntros "H". iMod "H". iModIntro. iFrame.
   Qed.
 
   (* Lemma current_iPropL_merge_all Hn ctx (l: iPropL) *)
@@ -250,25 +249,24 @@ Section MODE.
         A Xn Invtn Xtra mp_tgt mr_tgt
         mn r rg
         X (P: option mname -> X -> Any.t -> Any.t -> ord -> iProp) varg
-        mpr_src f_src k_tgt
+        mp_src (mr_src: Σ) f_src k_tgt
         a (le: A -> A -> Prop)
         (R: A -> Any.t -> Any.t -> iProp)
         (eqr: Any.t -> Any.t -> Any.t -> Any.t -> Prop)
-        (WF: mk_wf R a (mpr_src, Any.pair mp_tgt mr_tgt↑))
         o_src0 o_src1 o_tgt0 o_tgt1
         (FUEL: o_src0 = Ord_S_n o_src1 7)
         ctx x varg_tgt ord_cur ips
         (ACC: current_iPropL ctx ips)
-        (ENTAIL: bi_entails (from_iPropL ips) (P mn x varg_tgt varg ord_cur ** OwnT mr_tgt ** Xtra))
+        (ENTAIL: bi_entails (from_iPropL ips) (bupd (P mn x varg_tgt varg ord_cur ** OwnT mr_tgt ** Xtra)))
         (ARG: forall
             rx
             (ACC: current_iPropL ctx [(Invtn, OwnT mr_tgt); (Xn, (Xtra ∧ Exactly rx)%I)]),
             gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) rg rg _ _ eqr o_src1 o_tgt1 a
-                   (mpr_src, f_src)
+                   (Any.pair mp_src mr_src↑, f_src)
                    (Any.pair mp_tgt mr_tgt↑, k_tgt (ctx ⋅ rx, ((mn, x), varg_tgt, ord_cur))))
     :
       gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) r rg _ _ eqr o_src0 o_tgt0 a
-             (mpr_src, f_src)
+             (Any.pair mp_src mr_src↑, f_src)
              (Any.pair mp_tgt mr_tgt↑, (HoareFunArg P (mn, varg) >>= k_tgt))
   .
   Proof.
@@ -530,7 +528,7 @@ Section MODE.
         ctx0 rx
         ips Xtra
         (ACC: current_iPropL ctx0 ips)
-        (ENTAIL: bi_entails (from_iPropL ips) ((OwnT mr_tgt0) ** (Xtra ∧ Exactly rx)))
+        (ENTAIL: bi_entails (from_iPropL ips) (bupd ((OwnT mr_tgt0) ** (Xtra ∧ Exactly rx))))
 
         (UPDATABLE: forall x_tgt o_tgt,
            bi_entails (Xtra ** (fsp_tgt.(precond) (Some mn) x_tgt varg_tgt varg_tgt o_tgt: iProp))
@@ -631,7 +629,7 @@ Section MODE.
         (FUEL: o_src0 = Ord_S_n o_src1 5)
         ctx x vret_tgt vret_src fr_tgt ips
         (ACC: current_iPropL ctx ips)
-        (ENTAIL: bi_entails (from_iPropL ips) (Q (Some mn) x vret_src vret_tgt ** OwnT fr_tgt ** OwnT mr_tgt ** Xtra))
+        (ENTAIL: bi_entails (from_iPropL ips) (bupd (Q (Some mn) x vret_src vret_tgt ** OwnT fr_tgt ** OwnT mr_tgt ** Xtra)))
         (ARG: forall
             rx
             (ACC: current_iPropL ctx [(Invtn, OwnT mr_tgt); (Xn, (Xtra ∧ Exactly rx)%I)]),
@@ -829,8 +827,7 @@ Ltac harg_tgt :=
   let XN := constr:("FR") in
   let INVTN := constr:("INVT") in
   eapply (@harg_clo_tgt' _ _ XN INVTN);
-  [eassumption
-  |refl
+  [refl
   |eassumption
   |start_ipm_proof
   |on_current ltac:(fun H => try clear H); i; on_current ltac:(fun H => simpl in H)].

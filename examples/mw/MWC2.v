@@ -43,9 +43,9 @@ Section PROOF.
     fun varg =>
       '(k, v) <- (pargs [Tint; Tint] varg)?;;
       full0 <- pget;;
-      pput (add k v full0);;;
+      _ <- pput (add k v full0);;;
       trigger (Syscall "print" [Vint k]↑ top1);;;
-      trigger (Syscall "print" [v]↑ top1);;;
+      trigger (Syscall "print" [Vint v]↑ top1);;;
       Ret Vundef
   .
 
