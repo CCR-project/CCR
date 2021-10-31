@@ -103,13 +103,13 @@ TODO: APC, locked thinges
       (option (Any.t * Any.t))
       (fun w0 st_src st_tgt => (
            {{"INIT": ∃ f h map lst0, OwnM (mw_stateX f) ** OwnM (is_map h map)
-                        ** ⌜st_src = (trans f)↑⌝ ** ⌜st_tgt = lst0↑⌝ ** ⌜w0 = None⌝
+                        ** ⌜st_src = f↑⌝ ** ⌜st_tgt = lst0↑⌝ ** ⌜w0 = None⌝
                         ** ⌜lst0.(lst_map) = Vptr h 0%Z⌝ ** ⌜sim f map lst0⌝}} ∨
-           {{"UNINIT": ⌜st_src = (fun (_:Z) => 0%Z)↑ ∧ st_tgt = tt↑⌝ ** ⌜w0 = None⌝
+           {{"UNINIT": ⌜st_src = (Maps.empty (K:=Z) (V:=Z))↑ ∧ st_tgt = tt↑⌝ ** ⌜w0 = None⌝
                         ** OwnM (mw_state Maps.empty)
            }} ∨
            {{"LOCKED": ∃ f, OwnM (mw_state f) ** OwnM (mw_stateX f) **
-                            ⌜st_src = (trans f)↑⌝ ** ⌜w0 = Some (st_src, st_tgt)⌝}}
+                            ⌜st_src = f↑⌝ ** ⌜w0 = Some (st_src, st_tgt)⌝}}
          )%I)
   .
 
@@ -131,7 +131,8 @@ TODO: APC, locked thinges
     admit "uncomment".
   Qed.
 
-  Global Opaque OwnM Own. (*** TODO: put this somewhere else. Without this, iCombine gives later modality. ***)
+  Global Opaque bi_exist bi_sep OwnM Own.
+  (*** TODO: put this somewhere else. Without this, iCombine gives later modality. ***)
 
 
 
@@ -177,10 +178,10 @@ TODO: APC, locked thinges
 
 
         (*** calling APC ***)
-        hAPC (Some (_, _)); try assumption.
-        { iIntros "[[A B] C]". iSplitR "B".
-          - iRight. iRight. iSplits; et. { iFrame. } iSplits; ss.
-          - iAssumption.
+        hAPC None; try assumption.
+        { iIntros "[[A B] C]". iSplitL "C".
+          - iRight. iLeft. iSplits; et.
+          - iCombine "A" "B" as "A". iAssumption.
         }
         fold wf. steps. r in WLE. des_ifs. astart 1. astep "new" (([]: list val)↑). stb_tac. clarify.
 
@@ -220,8 +221,6 @@ TODO: APC, locked thinges
           .
           Ltac iDes :=
             repeat multimatch goal with
-            (* | |- environments.envs_entails ?a _ => idtac a *)
-            (* | |- context[@environments.Esnoc _ _ ?namm ?ip] => idtac namm; idtac ip *)
             | |- context[@environments.Esnoc _ _ (INamed ?namm) ?ip] =>
               match ip with
               | @bi_or _ _ _ =>
@@ -230,247 +229,91 @@ TODO: APC, locked thinges
               | @bi_pure _ _ => iDestruct namm as "%"
               | @iNW _ ?newnamm _ => iEval (unfold iNW) in namm; iRename namm into newnamm
               | @bi_sep _ _ _ =>
-                (* iDestruct namm as "[? ?]" *)
-                (* let namm2 := iFresh in *)
-                (* let pat := constr:("[" +:+ namm +:+ " " +:+ namm2 +:+ "]") in *)
-                (* let pat := ltac:(eval vm_compute in ("[" +:+ namm +:+ " " +:+ namm +:+ "]")) in *)
-
-
-                (* let pat := constr:("[" +:+ ltac:(get_fresh_string) +:+ " ?]") in *)
                 let f := get_fresh_string in
                 let pat := ltac:(eval vm_compute in ("[" +:+ namm +:+ " " +:+ f +:+ "]")) in
-                (* let pat := constr:("[" +:+ "A" +:+ " ?]") in *)
-                (* idtac pat; *)
                 iDestruct namm as pat
-                      (* iDestruct namm as pat *)
               | @bi_exist _ _ (fun x => _) =>
                 let x := fresh x in
                 iDestruct namm as (x) namm
               end
             end
           .
-          iDes; ss.
-          iDes.
-          match goal with
-          | |- context[@environments.Esnoc _ _ (INamed ?naeme) ?ip] =>
-            match ip with
-              | @bi_exist _ _ (fun x => _) =>
-                (* idtac name; idtac x; *)
-                (* let x := fresh x in *)
-                iDestruct "INIT" as (f) "B"
-              end
-            end
-          .
-          iDestruct "INIT" as (f) "INIT".
-          iDestruct "INIT" as (f) "INIT".
-    | H : exists x, NW (fun y => _) |- _ =>
-      let x' := fresh x in let y' := fresh y in destruct H as [x' y']; red in y'
-          Set Printing All.
-                  (@bi_exist (@iProp Σ) (forall _ : Z, option Z)
-                     (fun f : forall _ : Z, option Z =>
-          iDestruct "INIT" as (f) "INIT".
-          Ltac iCounter :=
-            match goal with
-            | |- context[@environments.Envs _ _ _ ?a ] => idtac a
-            end
-          .
-          iDes.
-          Set Printing All.
-          environments.envs_entails
-
-(INamed (String (Ascii.Ascii false false false false true false true false) EmptyString))
-(@bi_pure (@iProp Σ)
-   (and (@eq Any.t (@Any.upcast (list val) (@nil val)) (@Any.upcast (list val) (@nil val))) (@eq ord o_tgt ord_top)))
-(INamed
-   (String (Ascii.Ascii false true true false false false true false)
-      (String (Ascii.Ascii false true false false true false true false) EmptyString)))
-(@bi_sep (@iProp Σ)
-   (@bi_or (@iProp Σ)
-      (@iNW Σ
-         (String (Ascii.Ascii true false false true false false true false)
-            (String (Ascii.Ascii false true true true false false true false)
-               (String (Ascii.Ascii true false false true false false true false)
-                  (String (Ascii.Ascii false false true false true false true false) EmptyString))))
-         (@bi_exist (@iProp Σ) (forall _ : Z, option Z)
-            (fun f : forall _ : Z, option Z =>
-             @bi_exist (@iProp Σ) nat
-               (fun h : nat =>
-                @bi_exist (@iProp Σ) (forall _ : Z, option Z)
-                  (fun map : forall _ : Z, option Z =>
-                   @bi_exist (@iProp Σ) local_state
-                     (fun lst0 : local_state =>
-                      @bi_sep (@iProp Σ)
-                        (@bi_sep (@iProp Σ)
-                           (@bi_sep (@iProp Σ)
-                              (@bi_sep (@iProp Σ)
-                                 (@bi_sep (@iProp Σ)
-                                    (@bi_sep (@iProp Σ) (@OwnM Σ mwRA H0 (mw_stateX f))
-                                       (@OwnM Σ mapRA H2 (is_map h map)))
-                                    (@bi_pure (@iProp Σ)
-                                       (@eq Any.t mp_src1 (@Any.upcast (forall _ : Z, Z) (trans f)))))
-                                 (@bi_pure (@iProp Σ) (@eq Any.t mp_tgt1 (@Any.upcast local_state lst0))))
-                              (@bi_pure (@iProp Σ)
-                                 (@eq (option (prod Any.t Any.t))
-                                    (@Some (prod Any.t Any.t)
-                                       (@pair Any.t Any.t (@Any.upcast (forall _ : Z, Z) (fun _ : Z => Z0))
-                                          (@Any.upcast unit tt))) (@None (prod Any.t Any.t)))))
-                           (@bi_pure (@iProp Σ) (@eq val (lst_map lst0) (Vptr h Z0))))
-                        (@bi_pure (@iProp Σ) (sim f map lst0))))))))
-      (@bi_or (@iProp Σ)
-         (@iNW Σ
-            (String (Ascii.Ascii true false true false true false true false)
-               (String (Ascii.Ascii false true true true false false true false)
-                  (String (Ascii.Ascii true false false true false false true false)
-                     (String (Ascii.Ascii false true true true false false true false)
-                        (String (Ascii.Ascii true false false true false false true false)
-                           (String (Ascii.Ascii false false true false true false true false) EmptyString))))))
-            (@bi_sep (@iProp Σ)
-               (@bi_sep (@iProp Σ)
-                  (@bi_pure (@iProp Σ)
-                     (and (@eq Any.t mp_src1 (@Any.upcast (forall _ : Z, Z) (fun _ : Z => Z0)))
-                        (@eq Any.t mp_tgt1 (@Any.upcast unit tt))))
-                  (@bi_pure (@iProp Σ)
-                     (@eq (option (prod Any.t Any.t))
-                        (@Some (prod Any.t Any.t)
-                           (@pair Any.t Any.t (@Any.upcast (forall _ : Z, Z) (fun _ : Z => Z0))
-                              (@Any.upcast unit tt))) (@None (prod Any.t Any.t)))))
-               (@OwnM Σ mwRA H0 (mw_state (fun _ : Z => @None Z)))))
-         (@iNW Σ
-            (String (Ascii.Ascii false false true true false false true false)
-               (String (Ascii.Ascii true true true true false false true false)
-                  (String (Ascii.Ascii true true false false false false true false)
-                     (String (Ascii.Ascii true true false true false false true false)
-                        (String (Ascii.Ascii true false true false false false true false)
-                           (String (Ascii.Ascii false false true false false false true false) EmptyString))))))
-            (@bi_exist (@iProp Σ) (forall _ : Z, option Z)
-               (fun f : forall _ : Z, option Z =>
-                @bi_sep (@iProp Σ)
-                  (@bi_sep (@iProp Σ)
-                     (@bi_sep (@iProp Σ) (@OwnM Σ mwRA H0 (mw_state f)) (@OwnM Σ mwRA H0 (mw_stateX f)))
-                     (@bi_pure (@iProp Σ) (@eq Any.t mp_src1 (@Any.upcast (forall _ : Z, Z) (trans f)))))
-                  (@bi_pure (@iProp Σ)
-                     (@eq (option (prod Any.t Any.t))
-                        (@Some (prod Any.t Any.t)
-                           (@pair Any.t Any.t (@Any.upcast (forall _ : Z, Z) (fun _ : Z => Z0))
-                              (@Any.upcast unit tt)))
-                        (@Some (prod Any.t Any.t) (@pair Any.t Any.t mp_src1 mp_tgt1)))))))))
-   (@OwnM Σ AppRA.t H Init))
-
-
-
-
-
-
-
-
-          (@environments.Esnoc (bi_car (@iProp Σ)) (@environments.Enil (bi_car (@iProp Σ)))
-             (INamed
-                (String (Ascii.Ascii false true true false false false true false)
-                   (String (Ascii.Ascii false true false false true false true false) EmptyString)))
-             (@bi_sep (@iProp Σ)
-                (@bi_or (@iProp Σ)
-                   (@iNW Σ
-                      (String (Ascii.Ascii true false false true false false true false)
-                         (String (Ascii.Ascii false true true true false false true false)
-                            (String (Ascii.Ascii true false false true false false true false)
-                               (String (Ascii.Ascii false false true false true false true false) EmptyString))))
-                      (@bi_exist (@iProp Σ) (forall _ : Z, option Z)
-                         (fun f : forall _ : Z, option Z =>
-                          @bi_exist (@iProp Σ) nat
-                            (fun h : nat =>
-                             @bi_exist (@iProp Σ) (forall _ : Z, option Z)
-                               (fun map : forall _ : Z, option Z =>
-                                @bi_exist (@iProp Σ) local_state
-                                  (fun lst0 : local_state =>
-                                   @bi_sep (@iProp Σ)
-                                     (@bi_sep (@iProp Σ)
-                                        (@bi_sep (@iProp Σ)
-                                           (@bi_sep (@iProp Σ)
-                                              (@bi_sep (@iProp Σ)
-                                                 (@bi_sep (@iProp Σ) (@OwnM Σ mwRA H0 (mw_stateX f))
-                                                    (@OwnM Σ mapRA H2 (is_map h map)))
-                                                 (@bi_pure (@iProp Σ)
-                                                    (@eq Any.t mp_src1 (@Any.upcast (forall _ : Z, Z) (trans f)))))
-                                              (@bi_pure (@iProp Σ)
-                                                 (@eq Any.t mp_tgt1 (@Any.upcast local_state lst0))))
-                                           (@bi_pure (@iProp Σ)
-                                              (@eq (option (prod Any.t Any.t))
-                                                 (@Some (prod Any.t Any.t)
-                                                    (@pair Any.t Any.t
-                                                       (@Any.upcast (forall _ : Z, Z) (fun _ : Z => Z0))
-                                                       (@Any.upcast unit tt))) (@None (prod Any.t Any.t)))))
-                                        (@bi_pure (@iProp Σ) (@eq val (lst_map lst0) (Vptr h Z0))))
-                                     (@bi_pure (@iProp Σ) (sim f map lst0))))))))
-                   (@bi_or (@iProp Σ)
-                      (@iNW Σ
-                         (String (Ascii.Ascii true false true false true false true false)
-                            (String (Ascii.Ascii false true true true false false true false)
-                               (String (Ascii.Ascii true false false true false false true false)
-                                  (String (Ascii.Ascii false true true true false false true false)
-                                     (String (Ascii.Ascii true false false true false false true false)
-                                        (String (Ascii.Ascii false false true false true false true false)
-                                           EmptyString))))))
-                         (@bi_sep (@iProp Σ)
-                            (@bi_sep (@iProp Σ)
-                               (@bi_pure (@iProp Σ)
-                                  (and (@eq Any.t mp_src1 (@Any.upcast (forall _ : Z, Z) (fun _ : Z => Z0)))
-                                     (@eq Any.t mp_tgt1 (@Any.upcast unit tt))))
-                               (@bi_pure (@iProp Σ)
-                                  (@eq (option (prod Any.t Any.t))
-                                     (@Some (prod Any.t Any.t)
-                                        (@pair Any.t Any.t (@Any.upcast (forall _ : Z, Z) (fun _ : Z => Z0))
-                                           (@Any.upcast unit tt))) (@None (prod Any.t Any.t)))))
-                            (@OwnM Σ mwRA H0 (mw_state (fun _ : Z => @None Z)))))
-                      (@iNW Σ
-                         (String (Ascii.Ascii false false true true false false true false)
-                            (String (Ascii.Ascii true true true true false false true false)
-                               (String (Ascii.Ascii true true false false false false true false)
-                                  (String (Ascii.Ascii true true false true false false true false)
-                                     (String (Ascii.Ascii true false true false false false true false)
-                                        (String (Ascii.Ascii false false true false false false true false)
-                                           EmptyString))))))
-                         (@bi_exist (@iProp Σ) (forall _ : Z, option Z)
-                            (fun f : forall _ : Z, option Z =>
-                             @bi_sep (@iProp Σ)
-                               (@bi_sep (@iProp Σ)
-                                  (@bi_sep (@iProp Σ) (@OwnM Σ mwRA H0 (mw_state f))
-                                     (@OwnM Σ mwRA H0 (mw_stateX f)))
-                                  (@bi_pure (@iProp Σ)
-                                     (@eq Any.t mp_src1 (@Any.upcast (forall _ : Z, Z) (trans f)))))
-                               (@bi_pure (@iProp Σ)
-                                  (@eq (option (prod Any.t Any.t))
-                                     (@Some (prod Any.t Any.t)
-                                        (@pair Any.t Any.t (@Any.upcast (forall _ : Z, Z) (fun _ : Z => Z0))
-                                           (@Any.upcast unit tt)))
-                                     (@Some (prod Any.t Any.t) (@pair Any.t Any.t mp_src1 mp_tgt1)))))))))
-                (@OwnM Σ AppRA.t H Init)))
-            intros; unfold NW, iNW;
-            repeat match goal with
-                   | [ |- @ex _ _ ] => eexists
-                   | [ |- _ /\ _ ] => split
-                   | [ |- @sig _ _ ] => eexists
-                   | [ |- @sigT _ _ ] => eexists
-                   | [ |- @prod _  _ ] => split
-                   | |- environments.envs_entails _ (@bi_exist _ _ _) => iExists _
-                   | _ => iSplit
-                   end
-          .
-          iDestruct "FR" as "[[A|A] B]".
-          iDestruct "FR" as "[A [B C]]". iModIntro. iFrame. iSplits; ss. iCombine "B" "C" as "A". iApply "A". }
+          iDes; ss; des; clarify.
+          { iCombine "INIT" "A" as "A". iOwnWf "A". exfalso. admit "ez". }
+          iModIntro. iSplits; ss. iSplitL "A0".
+          { iAssumption. }
+          { iRight. iRight. iSplits; ss; et. iFrame. }
+        }
         { esplits; ss; et. }
         { i. iIntros "H". ss. iDestruct "H" as "[A %]". eauto. }
-
-        fold wf. steps. astop. steps. mDesAll; des; clarify.
+        fold wf. steps. astop. steps. mDesAll; des; clarify. r in WLE0. des_ifs.
         force_l; stb_tac; ss; clarify. steps.
 
         hpost_tgt.
-        { iFrame. iSplits; ss. iCombine "A" "INV" as "A". iCombine "A" "FR" as "A".
-          iCombine "A" "A2" as "A". iApply "A". }
-        fold wf. steps. stb_tac; ss; clarify. steps.
+        { iFrame. iSplits; ss.
+          iAssert ({{"LOCKED": ∃ f : Z → option Z,
+                 ((OwnM (mw_state f) ** OwnM (mw_stateX f)) ** ⌜mp_src0 = Any.upcast f⌝) **
+                 ⌜Some (Any.upcast (λ _ : Z, None), Any.upcast tt) = Some (mp_src0, mp_tgt0)⌝}})%I
+            with "[INV]" as "INV".
+          { iDes; ss. iSplits; ss; et. iFrame. }
+          iCombine "A1" "INV" as "A". iCombine "A" "FR" as "A". iAssumption.
+        }
+        fold wf. steps. stb_tac; ss; clarify. steps. hide_k.
+
+
 
         (*** calling App.init ***)
         hcall _ _ _.
-        { iDestruct "FR" as "[[[A B] C] D]".
+        { iDes; ss; des; clarify. apply Any.upcast_inj in H6. des; clarify. clear_fast.
+          iModIntro. iSplits; ss; et.
+          iSplitR "LOCKED A"; cycle 1.
+          { iFrame. iSplits; ss; et. }
+          iSplitR.
+          { instantiate (1:=True%I); ss. }
+          iLeft. iSplits; ss; et. iFrame.
+        }
+        { esplits; ss; et. }
+        { i. iIntros "H". ss. iDestruct "H" as "[A %]". eauto. }
+        unhide_k. steps. fold wf. mDesAll. des; clarify.
+
+
+
+        hpost_tgt.
+        { iSplits; ss; et. iFrame. iSplits; ss; et.
+          iCombine "A1" "POST" as "A". iCombine "A" "INV" as "A". iAssumption.
+        }
+        fold wf. steps. force_l; stb_tac; ss; clarify. steps. rewrite _UNWRAPU. steps.
+        stb_tac; clarify.
+
+
+
+        (*** calling loop ***)
+        Opaque Z.eq_dec.
+        hcall _ _ _.
+        { iDes; ss; des; clarify; cycle 1.
+          { iCombine "FR A0" as "B". iOwnWf "B". exfalso. admit "ez". }
+          iModIntro. iSplits; ss; et. iSplitR "A1"; iSplits; ss; et.
+          iSplitR.
+          { instantiate (1:=True%I); ss. }
+          iLeft. iSplits; ss; et. iFrame.
+        }
+        { esplits; ss; et. }
+        { i. iIntros "H". ss. iDestruct "H" as "[A %]". eauto. }
+        steps. fold wf. mDesAll. des; clarify.
+
+        hpost_tgt.
+        { iSplits; ss; et. iFrame. iSplits; ss; et. iCombine "A1" "INV" as "A". iAssumption. }
+        steps. fold wf.
+
+
+        (*** returning ***)
+        hret None; ss.
+        { iModIntro. iDes; ss; clarify.
+          { iSplitL.
+        }
+
+          iSplits; ss; et.
+          iDestruct "FR" as "[[[A B] C] D]".
           iDestruct "B" as "[B|B]".
           { iDestruct "B" as (f h map lst0) "[[[E %] %] %]". ss. }
           iDestruct "B" as "[B|B]"; cycle 1.

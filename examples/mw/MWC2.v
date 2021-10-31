@@ -33,7 +33,7 @@ Section PROOF.
     fun varg =>
       _ <- (pargs [] varg)?;;;
       _ <- Ret tt;;;
-      pput (fun (_: Z) => 0%Z);;;
+      pput (empty (K:=Z) (V:=Z));;;
       `_: val <- ccallU "init" ([]: list val);;
       `_: val <- ccallU "loop" ([]: list val);;
       Ret Vundef
@@ -43,7 +43,7 @@ Section PROOF.
     fun varg =>
       '(k, v) <- (pargs [Tint; Tuntyped] varg)?;;
       full0 <- pget;;
-      pput (set k v full0);;;
+      pput (add k v full0);;;
       trigger (Syscall "print" [Vint k]↑ top1);;;
       trigger (Syscall "print" [v]↑ top1);;;
       Ret Vundef
@@ -52,8 +52,8 @@ Section PROOF.
   Definition getF: list val -> itree Es val :=
     fun varg =>
       k <- (pargs [Tint] varg)?;;
-      `full0: (Z -> Z) <- pget;;
-      let v := (full0 k) in
+      `full0: (Z -> option Z) <- pget;;
+      v <- (full0 k)ǃ;;
       trigger (Syscall "print" [Vint k]↑ top1);;; (*** TODO: make something like "syscallu" ***)
       trigger (Syscall "print" [v]↑ top1);;;
       Ret Vundef
@@ -79,7 +79,7 @@ Section PROOF.
     SModSem.fnsems := MWsbtb;
     SModSem.mn := "MW";
     SModSem.initial_mr := GRA.embed ((mw_state Maps.empty)); (* ⋅ GRA.embed ((mw_state Maps.empty)) *)
-    SModSem.initial_st := (fun (_:Z) => 0%Z)↑;
+    SModSem.initial_st := (empty (K:=Z) (V:=Z))↑;
   |}
   .
 
