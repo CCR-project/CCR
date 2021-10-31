@@ -76,7 +76,7 @@ Section PROOF.
       k <- (pargs [Tint] varg)?;;
       lst0 <- pget;;
       assume(lst0.(lst_cls) k <> uninit);;;
-      v <- (if dec (lst0.(lst_cls) k) uninit
+      v <- (if dec (lst0.(lst_cls) k) opt
             then ;;; Ret (lst0.(lst_opt) k)
             else ccallU "access" ([lst0.(lst_map); Vint k]));;
       trigger (Syscall "print" [Vint k]↑ top1);;;

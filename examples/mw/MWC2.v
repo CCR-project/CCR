@@ -53,10 +53,10 @@ Section PROOF.
     fun varg =>
       k <- (pargs [Tint] varg)?;;
       `full0: (Z -> option Z) <- pget;;
-      v <- (full0 k)ǃ;;
+      v <- (full0 k)ǃ;;;
       trigger (Syscall "print" [Vint k]↑ top1);;; (*** TODO: make something like "syscallu" ***)
       trigger (Syscall "print" [Vint v]↑ top1);;;
-      Ret Vundef
+      Ret (Vint v)
   .
 
   Context `{Σ: GRA.t}.

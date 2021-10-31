@@ -409,150 +409,169 @@ TODO: APC, locked thinges
       unfold putF, MWC2.putF, ccallU.
 
       harg. fold wf. mDesAll; ss; des; clarify. des_ifs_safe; ss. mDesAll; des; ss; clarify.
-      mDesOr "INVS"; mDesAll; des; clarify; steps.
+      mDesOr "INVS".
       { (* INIT *)
+        mDesAll; des; clarify.
+        mAssertPure (o = a).
+        { iApply (mw_state_eq with "A"). iFrame. }
+        subst. rename a into full.
+        steps.
         rename a2 into lst0. rename z0 into k. rename z into v.
+        change (λ k1 : Z, if dec k k1 then Some v else full k1) with (add k v full).
         harg_tgt.
-        { iModIntro. iFrame. iSplits; ss; et.
-          iCombine "A" "A1" as "A". iCombine "A" "INIT" as "A". iAssumption. }
+        { iPoseProof ((mw_state_upd _ _ (add k v full)) with "A INIT") as "A".
+          iMod "A". iModIntro. iFrame. iSplits; ss; et.
+          iCombine "A" "A1" as "A". iAssumption. }
         fold wf. steps.
         destruct (dec (lst_cls lst0 k) uninit).
         - steps.
           unfold set. destruct (dec k k); ss. destruct x; steps.
           + hAPC _; ss.
-            { iIntros "[[A B] C]". iSplitL "A C".
-              - iRight. iRight. iSplits; et. admit "TODO".
+            { iIntros "[[A B] C]". iSplitL "A B".
+              - iRight. iRight. iSplits; et. iFrame.
               - iAssumption.
             }
-            steps.
-            admit "TODO".
+            steps. fold wf. r in WLE. des_ifs.
+            
+
+            hret None; ss.
+            { iDes; ss; clarify. apply Any.upcast_inj in H5. des; clarify.
+              iModIntro. iFrame. iSplits; ss; et. iLeft. iSplits; ss; et.
+              { iFrame. iAssumption. }
+              clear - PURE. iPureIntro. r. r in PURE. ss. i. specialize (PURE k0 v0). des_ifs; et.
+            }
+            { iDestruct "Q" as "%". iPureIntro. clarify. r. fold wf in WF0. exists None; esplits; et. }
           + steps.
-            admit "TODO".
+            astart 1. astep "update" ([lst_map lst0; Vint k; Vint v]↑). stb_tac; ss; clarify.
+            hcall _ _ (Some (_, _)).
+            { iDes; clarify. instantiate (2:=(_, _, _, _)). cbn. iModIntro. iSplits; ss; et. iFrame.
+              iSplitL.
+              - iSplitR. { instantiate (1:=True%I); ss. } iRight. iRight. iSplits; ss; et. iSplitL "FR"; ss.
+              - iSplits; ss; et. rewrite PURE2; ss.
+            }
+            { esplits; ss; et. }
+            { i. iIntros "H". ss. iDestruct "H" as "[A %]". eauto. }
+            fold wf. mDesAll; des; clarify. steps. astop. steps.
+
+            hpost_tgt.
+            { iModIntro. iFrame. iSplits; ss. iCombine "A1" "INV" as "A". iAssumption. }
+            steps. fold wf. ss. des_ifs.
+            hret None; ss.
+            { iDes; ss; clarify. iModIntro. iSplits; ss; et. apply Any.upcast_inj in H5. des; clarify.
+              iSplitR "A"; ss; et. iLeft. iSplits; ss; et; iFrame.
+              clear - PURE. iPureIntro. r. r in PURE. ss. i. specialize (PURE k0 v0). des_ifs; et.
+            }
+            { iDestruct "Q" as "%". iPureIntro. clarify. r. fold wf in WF0. exists None; esplits; et. }
         - steps.
           destruct (lst_cls lst0 k) eqn:T; ss.
+          + steps. hAPC _; ss.
+            { iIntros "[[A B] C]". iSplitL "A B".
+              - iRight. iRight. iSplits; et. iFrame.
+              - iAssumption.
+            }
+            steps. fold wf. r in WLE. des_ifs.
+            
+
+            hret None; ss.
+            { iDes; ss; clarify. apply Any.upcast_inj in H5. des; clarify.
+              iModIntro. iFrame. iSplits; ss; et. iLeft. iSplits; ss; et.
+              { iFrame. iAssumption. }
+              clear - T PURE. iPureIntro. r. r in PURE. ss. i. specialize (PURE k0 v0). unfold set.
+              des_ifs; et; try congruence.
+            }
+            { iDestruct "Q" as "%". iPureIntro. clarify. r. fold wf in WF0. exists None; esplits; et. }
           + steps.
-            admit "ditto".
-          + steps.
-            admit "ditto".
+            astart 1. astep "update" ([lst_map lst0; Vint k; Vint v]↑). stb_tac; ss; clarify.
+            hcall _ _ (Some (_, _)).
+            { iDes; clarify. instantiate (2:=(_, _, _, _)). cbn. iModIntro. iSplits; ss; et. iFrame.
+              iSplitL.
+              - iSplitR. { instantiate (1:=True%I); ss. } iRight. iRight. iSplits; ss; et. iSplitL "FR"; ss.
+              - iSplits; ss; et. rewrite PURE2; ss.
+            }
+            { esplits; ss; et. }
+            { i. iIntros "H". ss. iDestruct "H" as "[A %]". eauto. }
+            fold wf. mDesAll; des; clarify. steps. astop. steps.
+
+            hpost_tgt.
+            { iModIntro. iFrame. iSplits; ss. iCombine "A1" "INV" as "A". iAssumption. }
+            steps. fold wf. ss. des_ifs.
+            hret None; ss.
+            { iDes; ss; clarify. iModIntro. iSplits; ss; et. apply Any.upcast_inj in H5. des; clarify.
+              iSplitR "A"; ss; et. iLeft. iSplits; ss; et; iFrame.
+              clear - T PURE. iPureIntro. r. r in PURE. ss. i. specialize (PURE k0 v0).
+              des_ifs; et; try congruence.
+            }
+            { iDestruct "Q" as "%". iPureIntro. clarify. r. fold wf in WF0. exists None; esplits; et. }
       }
-        -
-        harg_tgt.
-        rewrite Any.upcast_downcast.
-        ss.
-        force_l; stb_tac; ss; clarify. steps.
-        harg_tgt.
-        { iFrame. iSplits; et. iCombine "A" "A1" as "A". iCombine "A" "A2" as "A". iCombine "A" "INIT" as "A".
-          iAssumption. }
-        steps. stb_tac; ss; clarify.
-
-        hcall _ _ _.
-        { iDes. iModIntro. iFrame. iSplits; ss; et. iSplitR.
-          { instantiate (1:=True%I); ss. }
-          iLeft. iSplits; ss; et. iFrame.
-        }
-        { esplits; ss; et. }
-        { i. iIntros "H". ss. iDestruct "H" as "[A %]". eauto. }
-        fold wf. steps. mDesAll; des; clarify. force_l; stb_tac; ss; clarify. steps.
-
-
-        hpost_tgt.
-        { iFrame. iSplits; ss; et.
-          iCombine "A1 POST" as "A". iCombine "INV A" as "A". iAssumption. }
-        fold wf. steps. rewrite _UNWRAPU. steps. stb_tac; ss; clarify.
-
-
-        hcall _ _ _.
-        { iDes; ss; cycle 1.
-          { iCombine "A" "A1" as "A". iOwnWf "A". admit "ez". }
-          iModIntro. iFrame. iSplits; ss; et. iSplitR.
-          { instantiate (1:=True%I); ss. }
-          iLeft. iSplits; ss; et. iFrame.
-        }
-        { esplits; ss; et. }
-        { i. iIntros "H". ss. iDestruct "H" as "[A %]". eauto. }
-        fold wf. steps. mDesAll; des; clarify. rewrite Any.upcast_downcast in *. clarify.
-
-        hpost_tgt.
-        { iFrame. iSplits ;ss; et. iCombine "A2 A1" as "A". iCombine "INV A" as "A". iAssumption. }
-        fold wf. steps.
-
-
-        hret None; ss.
-        { iDes; ss; clarify; cycle 1.
-          { iCombine "A1 A0" as "B". iOwnWf "B". exfalso. admit "ez". }
-          iModIntro. iSplits; ss; et. iFrame. iSplits; ss; et. iLeft. iSplits; ss; et. iFrame.
-        }
-        { iDestruct "Q" as "%". iPureIntro. clarify. r. fold wf in WF0. exists None; esplits; et. }
-      }
-      mDesOr "INVS"; mDesAll; des; clarify; steps.
-      { (* UNINIT *)
-        mCombine "A" "A2". mOwnWf "A". exfalso. admit "ez".
-      }
-      { (* LOCKED *)
-        mCombine "A" "LOCKED". mOwnWf "A". exfalso. admit "ez".
-      }
+      mDesOr "INVS"; mDesAll; des; clarify.
+      { (* UNINIT *) mAssertPure False; ss. iApply (mw_state_false with "A"); et. }
+      { (* LOCKED *) mAssertPure False; ss. iApply (mw_state_false with "A"); et. }
     }
+
+    econs.
     {
-    }
+      (*** init ***)
+      init.
+      rename mp_tgt into mpr_tgt.
+      assert(exists mp_src mp_tgt (mr_src mr_tgt: Σ),
+                mrp_src = Any.pair mp_src mr_src↑ ∧ mpr_tgt = Any.pair mp_tgt mr_tgt↑).
+      { inv WF. esplits; et. } des; clarify.
+      (*** init ***)
 
+      unfold getF, MWC2.getF, ccallU.
 
-
-      econs.
-      {
-      }
-    }
-        {
+      harg. fold wf. mDesAll; ss; des; clarify. des_ifs_safe; ss. mDesAll; des; ss; clarify.
+      mDesOr "INVS".
+      { (* INIT *)
+        mDesAll; des; clarify.
+        mAssertPure (o = a).
+        { iApply (mw_state_eq with "A"). iFrame. }
+        subst. rename a into full.
         steps.
-        {
-          iDes; ss; cycle 1.
-          { iCombine "A1 A0" as "B". iOwnWf "B". exfalso. admit "ez". }
-          clarify.
-          iAssert ⌜f = x⌝%I with "[A1 INIT]" as "%".
-          { iCombine "A1" "INIT" as "A". iOwnWf "A". admit "ez". }
-          subst.
-          iFrame. iSplits; ss; et.
-          instantiate (1:=OwnM (mw_state x) ** OwnM Run ** OwnM (mw_stateX x)).
-          (* iFrame. *)
-          iCombine "A1" "A0" as "A".
-          iCombine "A" "POST" as "A".
-          iCombine "A" "INIT" as "A".
-          iAssumption.
-          iApply "A".
-        }
+        rename a2 into lst0. rename z0 into k. rename z into v.
+        rewrite PURE1. steps.
+
+        harg_tgt.
+        { iModIntro. iFrame. iSplits; ss; et. iCombine "A" "A1" as "A". iCombine "INIT A" as "A". iAssumption. }
+        steps. fold wf. force_r.
+        { exploit PURE; et. i. des_ifs. }
+        steps.
+        des_ifs.
+        - steps. hAPC (Some (_, _)); ss.
+          { iIntros "[A [B C]]". iSplitR "C"; try iAssumption. iRight. iRight. iSplits; ss; et. iFrame. }
+          fold wf. steps.
+          assert(T: lst_opt lst0 k = (Vint v)).
+          { r in PURE. exploit PURE; et. i; des_ifs. }
+          rewrite T. steps.
+          hret None; ss.
+          { iDes; ss; clarify. iModIntro. apply Any.upcast_inj in H5. des; clarify. iFrame. iSplits; ss; et.
+            iLeft. iSplits; ss; et. { iFrame. } admit "TODO". }
+          { iDestruct "Q" as "%". iPureIntro. clarify. r. fold wf in WF0. exists None; esplits; et. }
+        - steps. astart 1. astep "access" ([lst_map lst0; Vint k]↑). stb_tac; ss; clarify.
+          hcall _ _ (Some (_, _)).
+          { iDes; clarify. instantiate (2:=(_, _, _, _)). cbn. iModIntro. iSplits; ss; et. iFrame.
+            des; clarify. apply Any.upcast_inj in H3. des; clarify.
+            iSplitL.
+            - iSplitR. { instantiate (1:=True%I); ss. } iRight. iRight. iSplits; ss; et. iFrame.
+            - iSplits; ss. { rewrite PURE2; ss. } iPureIntro. r in PURE. hexploit PURE; et. i; des_ifs. et. }
+          { esplits; ss; et. }
+          { i. iIntros "H". ss. iDestruct "H" as "[A %]". eauto. }
+          fold wf. mDesAll; des; clarify. steps. astop. steps.
+
+          hpost_tgt.
+          { iModIntro. iFrame. iSplits; ss. iCombine "A1" "INV" as "A". iAssumption. }
+          steps. fold wf. ss. des_ifs.
+          hret None; ss.
+          { iDes; ss; clarify. iModIntro. iSplits; ss; et. apply Any.upcast_inj in H5. des; clarify.
+            iSplitR "A"; ss; et. iLeft. iSplits; ss; et; iFrame. iFrame. iSplits; ss; et. admit "TODO". }
+          { iDestruct "Q" as "%". iPureIntro. clarify. r. fold wf in WF0. exists None; esplits; et. }
       }
-      mDesOr "INVS"; mDesAll; des; clarify; steps.
-      { (* UNINIT *)
-        mCombine "A" "A2". mOwnWf "A". exfalso. admit "ez".
-      }
-      { (* LOCKED *)
-        mCombine "A" "LOCKED". mOwnWf "A". exfalso. admit "ez".
-      }
+      mDesOr "INVS"; mDesAll; des; clarify.
+      { (* UNINIT *) mAssertPure False; ss. iApply (mw_state_false with "A"); et. }
+      { (* LOCKED *) mAssertPure False; ss. iApply (mw_state_false with "A"); et. }
     }
 
-
-
-
-
-    econs; ss. init. harg. mDesAll.
-    des; clarify. unfold gF, ccallU. steps. astart 10.
-    des_ifs.
-    - steps. acatch. hcall _ _ _ with "*"; auto.
-      { iModIntro. iFrame. iSplits; try by (iPureIntro; refl).
-        2: { iPureIntro. do 3 f_equal. instantiate (1:=x - 1). lia. }
-        { ss. }
-        { iPureIntro. lia. }
-      }
-      { esplits; ss; et. eapply OrdArith.lt_from_nat. lia. }
-      steps. astop. ss. steps. mDesAll; clarify. rewrite Any.upcast_downcast. ss. steps.
-      mAssert _ with "A INV1".
-      { iCombine "A" "INV1" as "A". iApply (OwnM_Upd with "A").
-        instantiate (1:=@URA.add IRA.t (IRA.client false) (IRA.module false)). r. ur. i. des_ifs. }
-      force_l. eexists. steps. hret _; ss.
-      { iMod "A1". iModIntro. iDestruct "A1" as "[B C]". iFrame. iSplits; ss; et. iPureIntro. do 2 f_equal. lia. }
-    - steps.
-      mAssertPure False.
-      { iCombine "A" "INV" as "A". iOwnWf "A". ur in H0. des_ifs. }
-      ss.
+    econs; ss.
   Unshelve. all: ss. all: try exact 0.
   Qed.
 

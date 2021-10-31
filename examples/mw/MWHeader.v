@@ -208,13 +208,13 @@ Section PROOF.
 
   Definition update_spec: fspec :=
     mk_simple (fun '(h, k, v, m) =>
-                 ((fun varg o => (⌜varg = ([Vptr h 0%Z; Vint k; Vint v]: list val)↑ ∧ o = ord_top⌝ **
+                 ((fun varg o => (⌜varg = ([Vptr h 0%Z; Vint k; Vint v]: list val)↑ ∧ o = ord_pure 1⌝ **
                                    OwnM (is_map h m))%I),
                   (fun vret => ⌜vret = Vundef↑⌝ **  OwnM (is_map h (Maps.add k v m))))).
 
   Definition access_spec: fspec :=
     mk_simple (fun '(h, k, v, m) =>
-                 ((fun varg o => ⌜varg = ([Vptr h 0%Z; Vint k]: list val)↑ ∧ o = ord_top ∧ m k = Some v⌝ **
+                 ((fun varg o => ⌜varg = ([Vptr h 0%Z; Vint k]: list val)↑ ∧ o = ord_pure 1 ∧ m k = Some v⌝ **
                                   OwnM (is_map h m)),
                   (fun vret => ⌜vret = (Vint v)↑⌝ ** (OwnM (is_map h m))))).
 
