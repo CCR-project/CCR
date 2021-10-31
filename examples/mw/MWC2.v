@@ -41,7 +41,7 @@ Section PROOF.
 
   Definition putF: list val -> itree Es val :=
     fun varg =>
-      '(k, v) <- (pargs [Tint; Tuntyped] varg)?;;
+      '(k, v) <- (pargs [Tint; Tint] varg)?;;
       full0 <- pget;;
       pput (add k v full0);;;
       trigger (Syscall "print" [Vint k]↑ top1);;;
@@ -55,7 +55,7 @@ Section PROOF.
       `full0: (Z -> option Z) <- pget;;
       v <- (full0 k)ǃ;;
       trigger (Syscall "print" [Vint k]↑ top1);;; (*** TODO: make something like "syscallu" ***)
-      trigger (Syscall "print" [v]↑ top1);;;
+      trigger (Syscall "print" [Vint v]↑ top1);;;
       Ret Vundef
   .
 

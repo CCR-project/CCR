@@ -323,6 +323,209 @@ TODO: APC, locked thinges
         mCombine "A" "A2". mOwnWf "A". exfalso. admit "ez".
       }
     }
+
+
+
+    econs.
+    {
+      (*** init ***)
+      init.
+      rename mp_tgt into mpr_tgt.
+      assert(exists mp_src mp_tgt (mr_src mr_tgt: Σ),
+                mrp_src = Any.pair mp_src mr_src↑ ∧ mpr_tgt = Any.pair mp_tgt mr_tgt↑).
+      { inv WF. esplits; et. } des; clarify.
+      (*** init ***)
+
+      unfold loopF, MWC2.loopF, ccallU.
+
+      harg. fold wf. mDesAll; des; clarify.
+      mDesOr "INVS"; mDesAll; des; clarify; steps.
+      { (* INIT *)
+        force_l; stb_tac; ss; clarify. steps.
+        harg_tgt.
+        { iFrame. iSplits; et. iCombine "A" "A1" as "A". iCombine "A" "A2" as "A". iCombine "A" "INIT" as "A".
+          iAssumption. }
+        steps. stb_tac; ss; clarify.
+
+        hcall _ _ _.
+        { iDes. iModIntro. iFrame. iSplits; ss; et. iSplitR.
+          { instantiate (1:=True%I); ss. }
+          iLeft. iSplits; ss; et. iFrame.
+        }
+        { esplits; ss; et. }
+        { i. iIntros "H". ss. iDestruct "H" as "[A %]". eauto. }
+        fold wf. steps. mDesAll; des; clarify. force_l; stb_tac; ss; clarify. steps.
+
+
+        hpost_tgt.
+        { iFrame. iSplits; ss; et.
+          iCombine "A1 POST" as "A". iCombine "INV A" as "A". iAssumption. }
+        fold wf. steps. rewrite _UNWRAPU. steps. stb_tac; ss; clarify.
+
+
+        hcall _ _ _.
+        { iDes; ss; cycle 1.
+          { iCombine "A" "A1" as "A". iOwnWf "A". admit "ez". }
+          iModIntro. iFrame. iSplits; ss; et. iSplitR.
+          { instantiate (1:=True%I); ss. }
+          iLeft. iSplits; ss; et. iFrame.
+        }
+        { esplits; ss; et. }
+        { i. iIntros "H". ss. iDestruct "H" as "[A %]". eauto. }
+        fold wf. steps. mDesAll; des; clarify. rewrite Any.upcast_downcast in *. clarify.
+
+        hpost_tgt.
+        { iFrame. iSplits ;ss; et. iCombine "A2 A1" as "A". iCombine "INV A" as "A". iAssumption. }
+        fold wf. steps.
+
+
+        hret None; ss.
+        { iDes; ss; clarify; cycle 1.
+          { iCombine "A1 A0" as "B". iOwnWf "B". exfalso. admit "ez". }
+          iModIntro. iSplits; ss; et. iFrame. iSplits; ss; et. iLeft. iSplits; ss; et. iFrame.
+        }
+        { iDestruct "Q" as "%". iPureIntro. clarify. r. fold wf in WF0. exists None; esplits; et. }
+      }
+      mDesOr "INVS"; mDesAll; des; clarify; steps.
+      { (* UNINIT *)
+        mCombine "A" "A2". mOwnWf "A". exfalso. admit "ez".
+      }
+      { (* LOCKED *)
+        mCombine "A" "LOCKED". mOwnWf "A". exfalso. admit "ez".
+      }
+    }
+
+
+    econs.
+    {
+      (*** init ***)
+      init.
+      rename mp_tgt into mpr_tgt.
+      assert(exists mp_src mp_tgt (mr_src mr_tgt: Σ),
+                mrp_src = Any.pair mp_src mr_src↑ ∧ mpr_tgt = Any.pair mp_tgt mr_tgt↑).
+      { inv WF. esplits; et. } des; clarify.
+      (*** init ***)
+
+      unfold putF, MWC2.putF, ccallU.
+
+      harg. fold wf. mDesAll; ss; des; clarify. des_ifs_safe; ss. mDesAll; des; ss; clarify.
+      mDesOr "INVS"; mDesAll; des; clarify; steps.
+      { (* INIT *)
+        hide_k.
+Ltac harg_tgt :=
+  let XN := constr:("FR") in
+  let INVTN := constr:("INVT") in
+  eapply (harg_clo_tgt' (Xn:=XN) (Invtn:=INVTN));
+   [ eassumption
+   | refl
+   | eassumption
+   | start_ipm_proof
+   | on_current ltac:(fun H => try clear H); i; on_current ltac:(fun H => simpl in H) ].
+eapply harg_clo_tgt'.
+fold wf. eassumption.
+  [ eassumption
+   | refl
+   | eassumption
+   | start_ipm_proof
+   | on_current ltac:(fun H => try clear H); i; on_current ltac:(fun H => simpl in H) ].
+harg_tgt.
+        harg_tgt.
+        rewrite Any.upcast_downcast.
+        ss.
+        force_l; stb_tac; ss; clarify. steps.
+        harg_tgt.
+        { iFrame. iSplits; et. iCombine "A" "A1" as "A". iCombine "A" "A2" as "A". iCombine "A" "INIT" as "A".
+          iAssumption. }
+        steps. stb_tac; ss; clarify.
+
+        hcall _ _ _.
+        { iDes. iModIntro. iFrame. iSplits; ss; et. iSplitR.
+          { instantiate (1:=True%I); ss. }
+          iLeft. iSplits; ss; et. iFrame.
+        }
+        { esplits; ss; et. }
+        { i. iIntros "H". ss. iDestruct "H" as "[A %]". eauto. }
+        fold wf. steps. mDesAll; des; clarify. force_l; stb_tac; ss; clarify. steps.
+
+
+        hpost_tgt.
+        { iFrame. iSplits; ss; et.
+          iCombine "A1 POST" as "A". iCombine "INV A" as "A". iAssumption. }
+        fold wf. steps. rewrite _UNWRAPU. steps. stb_tac; ss; clarify.
+
+
+        hcall _ _ _.
+        { iDes; ss; cycle 1.
+          { iCombine "A" "A1" as "A". iOwnWf "A". admit "ez". }
+          iModIntro. iFrame. iSplits; ss; et. iSplitR.
+          { instantiate (1:=True%I); ss. }
+          iLeft. iSplits; ss; et. iFrame.
+        }
+        { esplits; ss; et. }
+        { i. iIntros "H". ss. iDestruct "H" as "[A %]". eauto. }
+        fold wf. steps. mDesAll; des; clarify. rewrite Any.upcast_downcast in *. clarify.
+
+        hpost_tgt.
+        { iFrame. iSplits ;ss; et. iCombine "A2 A1" as "A". iCombine "INV A" as "A". iAssumption. }
+        fold wf. steps.
+
+
+        hret None; ss.
+        { iDes; ss; clarify; cycle 1.
+          { iCombine "A1 A0" as "B". iOwnWf "B". exfalso. admit "ez". }
+          iModIntro. iSplits; ss; et. iFrame. iSplits; ss; et. iLeft. iSplits; ss; et. iFrame.
+        }
+        { iDestruct "Q" as "%". iPureIntro. clarify. r. fold wf in WF0. exists None; esplits; et. }
+      }
+      mDesOr "INVS"; mDesAll; des; clarify; steps.
+      { (* UNINIT *)
+        mCombine "A" "A2". mOwnWf "A". exfalso. admit "ez".
+      }
+      { (* LOCKED *)
+        mCombine "A" "LOCKED". mOwnWf "A". exfalso. admit "ez".
+      }
+    }
+    {
+    }
+
+
+
+      econs.
+      {
+      }
+    }
+        {
+        steps.
+        {
+          iDes; ss; cycle 1.
+          { iCombine "A1 A0" as "B". iOwnWf "B". exfalso. admit "ez". }
+          clarify.
+          iAssert ⌜f = x⌝%I with "[A1 INIT]" as "%".
+          { iCombine "A1" "INIT" as "A". iOwnWf "A". admit "ez". }
+          subst.
+          iFrame. iSplits; ss; et.
+          instantiate (1:=OwnM (mw_state x) ** OwnM Run ** OwnM (mw_stateX x)).
+          (* iFrame. *)
+          iCombine "A1" "A0" as "A".
+          iCombine "A" "POST" as "A".
+          iCombine "A" "INIT" as "A".
+          iAssumption.
+          iApply "A".
+        }
+      }
+      mDesOr "INVS"; mDesAll; des; clarify; steps.
+      { (* UNINIT *)
+        mCombine "A" "A2". mOwnWf "A". exfalso. admit "ez".
+      }
+      { (* LOCKED *)
+        mCombine "A" "LOCKED". mOwnWf "A". exfalso. admit "ez".
+      }
+    }
+
+
+
+
+
     econs; ss. init. harg. mDesAll.
     des; clarify. unfold gF, ccallU. steps. astart 10.
     des_ifs.

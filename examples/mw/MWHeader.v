@@ -105,13 +105,13 @@ Section PROOF.
 
   Definition put_spec: fspec :=
     mk_simple (fun '(f, k, v) =>
-                 ((fun varg o => ⌜varg = [Vint k; Vint v]↑ ∧ intrange_64 k ∧ intrange_64 v⌝ ** OwnM (mw_state f)),
+                 ((fun varg o => ⌜varg = [Vint k; Vint v]↑ ∧ intrange_64 k ∧ intrange_64 v ∧ o = ord_top⌝ ** OwnM (mw_state f)),
                   (fun vret => OwnM (mw_state (add k v f)))))
   .
 
   Definition get_spec: fspec :=
     mk_simple (fun '(f, k, v) =>
-                 ((fun varg o => ⌜varg = [Vint k]↑ ∧ intrange_64 k ∧ f k = Some v⌝ ** OwnM (mw_state f)),
+                 ((fun varg o => ⌜varg = [Vint k]↑ ∧ intrange_64 k ∧ f k = Some v ∧ o = ord_top⌝ ** OwnM (mw_state f)),
                   (fun vret => ⌜vret = (Vint v)↑⌝ ** OwnM (mw_state f))))
   .
 
