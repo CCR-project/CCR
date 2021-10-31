@@ -292,7 +292,8 @@ TODO: APC, locked thinges
         hcall _ _ _.
         { iDes; ss; des; clarify; cycle 1.
           { iCombine "FR A0" as "B". iOwnWf "B". exfalso. admit "ez". }
-          iModIntro. iSplits; ss; et. iSplitR "A1"; iSplits; ss; et.
+          iModIntro. iSplits; ss; et. iSplitR "A1 FR"; cycle 1.
+          { iSplits; ss; et. iFrame. iSplits; ss; et. }
           iSplitR.
           { instantiate (1:=True%I); ss. }
           iLeft. iSplits; ss; et. iFrame.
@@ -302,39 +303,25 @@ TODO: APC, locked thinges
         steps. fold wf. mDesAll. des; clarify.
 
         hpost_tgt.
-        { iSplits; ss; et. iFrame. iSplits; ss; et. iCombine "A1" "INV" as "A". iAssumption. }
+        { iSplits; ss; et. iFrame. iSplits; ss; et. iCombine "A1" "INV" as "A". iCombine "A2" "A" as "A".
+          iAssumption. }
         steps. fold wf.
 
 
         (*** returning ***)
         hret None; ss.
-        { iModIntro. iDes; ss; clarify.
-          { iSplitL.
+        { iModIntro. iDes; ss; clarify; cycle 1.
+          { iCombine "A A1" as "B". iOwnWf "B". exfalso. admit "ez". }
+          iFrame.
+          iSplitL; cycle 1.
+          { iSplits; ss; et. }
+          iLeft. iSplits; ss; et. iFrame.
         }
-
-          iSplits; ss; et.
-          iDestruct "FR" as "[[[A B] C] D]".
-          iDestruct "B" as "[B|B]".
-          { iDestruct "B" as (f h map lst0) "[[[E %] %] %]". ss. }
-          iDestruct "B" as "[B|B]"; cycle 1.
-          { iDestruct "B" as (f) "[[E %] %]". ss. }
-          iDestruct "B" as "[% %]". iDestruct "P" as "[% %]". clarify. des; clarify.
-          iModIntro. iSplitL "C D".
-          - instantiate (4:=True%I). iSplitR; ss. iLeft. iSplits; ss; et; iFrame.
-            + iSplits; ss.
-            + iSplits; ss.
-          - iFrame. iSplits; ss.
-        }
-        mCombine "A" "INIT". mOwnWf "A". exfalso. admit "ez".
+        { iDestruct "Q" as "%". iPureIntro. clarify. r. fold wf in WF0. exists None; esplits; et. }
       }
-        harg_tgt.
-        { iFrame. iSplits; ss; et. iCombine "A" "INIT" as "A". iAssumption. }
-        fold wf.
-        { steps. rewrite _UNWRAPU; ss. steps.
-      - (* UNINIT *)
-        hAPC _.
-        { iIntros "[A B]". }
-      steps.
+      { (* LOCKED *)
+        mCombine "A" "A2". mOwnWf "A". exfalso. admit "ez".
+      }
     }
     econs; ss. init. harg. mDesAll.
     des; clarify. unfold gF, ccallU. steps. astart 10.

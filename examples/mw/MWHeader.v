@@ -98,9 +98,10 @@ Section PROOF.
                   (fun vret => ⌜vret = Vundef↑⌝ ** OwnM Run))).
 
   Definition loop_spec: fspec :=
-    mk_simple (fun (_: unit) =>
-                 ((fun varg o => ⌜varg = ([]: list val)↑ ∧ o = ord_top⌝ ** OwnM Run),
-                  (fun vret => ⌜vret = Vundef↑⌝ ** OwnM Run))).
+    mk_simple (fun f =>
+                 ((fun varg o => ⌜varg = ([]: list val)↑ ∧ o = ord_top⌝ ** OwnM Run
+                                        ** OwnM (mw_state f) ∧ ⌜f 0 = Some 42%Z⌝),
+                  (fun vret => ⌜vret = Vundef↑⌝ ** OwnM Run ** OwnM (mw_state f)))).
 
   Definition put_spec: fspec :=
     mk_simple (fun '(f, k, v) =>
