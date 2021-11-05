@@ -85,12 +85,13 @@ Section PROOF.
   .
 
   Context `{Σ: GRA.t}.
+  Context `{@GRA.inG spRA Σ}.
 
   Definition MWsbtb: list (string * fspecbody) :=
-    [("main", mk_specbody fspec_trivial (cfunU mainF));
-    ("loop", mk_specbody fspec_trivial (cfunU loopF));
-    ("put", mk_specbody fspec_trivial (cfunU putF));
-    ("get", mk_specbody fspec_trivial (cfunU getF))
+    [("main", mk_specbody fspec_mw1 (cfunU mainF));
+    ("loop", mk_specbody fspec_mw1 (cfunU loopF));
+    ("put", mk_specbody fspec_mw1 (cfunU putF));
+    ("get", mk_specbody fspec_mw1 (cfunU getF))
     ].
 
   Definition SMWSem: SModSem.t := {|

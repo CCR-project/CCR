@@ -64,6 +64,7 @@ Section PROOF.
   Context `{@GRA.inG AppRA.t Σ}.
   Context `{@GRA.inG mapRA Σ}.
   Context `{@GRA.inG mwRA Σ}.
+  Context `{@GRA.inG spRA Σ}.
 
 
   Definition MWsbtb: list (string * fspecbody) :=

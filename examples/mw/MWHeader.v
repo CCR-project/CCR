@@ -58,7 +58,14 @@ Definition Run: AppRA.t := AppRA.half true.
 Definition RunX: AppRA.t := AppRA.half true.
 
 
+(*** simpl RA ***)
+Instance spRA: URA.t := Auth.t (Excl.t unit).
+Definition sp_white: spRA := @Auth.white (Excl.t unit) (Some tt).
+Definition sp_black: spRA := @Auth.black (Excl.t unit) (Some tt).
 
+
+
+(*** MW RA ***)
 (* Instance _mwRA: URA.t := (Z ==> (Excl.t Z))%ra. *)
 Instance _mwRA: URA.t := Excl.t (Z -> option Z)%ra.
 Instance mwRA: URA.t := Auth.t _mwRA%ra.
@@ -131,6 +138,7 @@ Definition is_map (h: mblock) (map: (Z -> option Z)): mapRA := Auth.white (_is_m
 Section PROOF.
   Context `{@GRA.inG AppRA.t Σ}.
   Context `{@GRA.inG mwRA Σ}.
+  Context `{@GRA.inG spRA Σ}.
 
   Definition mk_simple_frame {X: Type} (PQ: X -> ((Any.t -> ord -> iProp) * (Any.t -> iProp))): fspec :=
     mk_simple (fun '(FRAME, x) => let '(P, Q) := (PQ x) in
@@ -141,25 +149,25 @@ Section PROOF.
   Definition main_spec: fspec :=
     mk_simple (fun (_: unit) =>
                  ((fun varg o => ⌜varg = ([]: list val)↑ ∧ o = ord_top⌝ ** OwnM Init
-                                   ** OwnM (mw_stateX Maps.empty)),
-                  (fun vret => ⌜vret = Vundef↑⌝ ** OwnM Run))).
+                                   ** OwnM (mw_stateX Maps.empty) ** OwnM sp_white),
+                  (fun vret => ⌜vret = Vundef↑⌝ ** OwnM Run ** OwnM sp_white))).
 
   Definition loop_spec: fspec :=
     mk_simple (fun f =>
                  ((fun varg o => ⌜varg = ([]: list val)↑ ∧ o = ord_top⌝ ** OwnM Run
-                                        ** OwnM (mw_state f) ∧ ⌜f 0 = Some 42%Z⌝),
-                  (fun vret => ⌜vret = Vundef↑⌝ ** OwnM Run ** OwnM (mw_state f)))).
+                                        ** OwnM (mw_state f) ** OwnM sp_white ∧ ⌜f 0 = Some 42%Z⌝),
+                  (fun vret => ⌜vret = Vundef↑⌝ ** OwnM Run ** OwnM (mw_state f) ** OwnM sp_white))).
 
   Definition put_spec: fspec :=
     mk_simple (fun '(f, k, v) =>
-                 ((fun varg o => ⌜varg = [Vint k; Vint v]↑ ∧ intrange_64 k ∧ intrange_64 v ∧ o = ord_top⌝ ** OwnM (mw_state f)),
-                  (fun vret => OwnM (mw_state (add k v f)))))
+                 ((fun varg o => ⌜varg = [Vint k; Vint v]↑ ∧ intrange_64 k ∧ intrange_64 v ∧ o = ord_top⌝ ** OwnM (mw_state f) ** OwnM sp_white),
+                  (fun vret => OwnM (mw_state (add k v f)) ** OwnM sp_white)))
   .
 
   Definition get_spec: fspec :=
     mk_simple (fun '(f, k, v) =>
-                 ((fun varg o => ⌜varg = [Vint k]↑ ∧ intrange_64 k ∧ f k = Some v ∧ o = ord_top⌝ ** OwnM (mw_state f)),
-                  (fun vret => ⌜vret = (Vint v)↑⌝ ** OwnM (mw_state f))))
+                 ((fun varg o => ⌜varg = [Vint k]↑ ∧ intrange_64 k ∧ f k = Some v ∧ o = ord_top⌝ ** OwnM (mw_state f) ** OwnM sp_white),
+                  (fun vret => ⌜vret = (Vint v)↑⌝ ** OwnM (mw_state f) ** OwnM sp_white)))
   .
 
   Definition MWStb: alist gname fspec.
@@ -227,13 +235,17 @@ Section PROOF.
 
 
 
+  Definition fspec_mw1: fspec :=
+    mk_fspec (meta:=unit) (fun _ _ argh argl o => (⌜argh = argl ∧ o = ord_top⌝ ** OwnM (sp_white))%I)
+             (fun _ _ reth retl => (⌜reth = retl⌝ ** OwnM (sp_white))%I)
+  .
 
   (******************************* Dedicated STB for MW1 ****************************)
   Context `{@GRA.inG memRA Σ}.
 
   Definition MW1Stb: alist gname fspec.
     eapply (Seal.sealing "stb").
-    eapply [("main", fspec_trivial); ("loop", fspec_trivial); ("put", fspec_trivial); ("get", fspec_trivial);
+    eapply [("main", fspec_mw1); ("loop", fspec_mw1); ("put", fspec_mw1); ("get", fspec_mw1);
             ("init", fspec_trivial); ("run", fspec_trivial);
             ("new", fspec_trivial); ("access", fspec_trivial); ("update", fspec_trivial);
             ("alloc", alloc_spec); ("free", free_spec); ("load", load_spec); ("store", store_spec); ("cmp", cmp_spec)].
