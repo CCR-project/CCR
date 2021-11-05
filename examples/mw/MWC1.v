@@ -97,7 +97,7 @@ Section PROOF.
   Definition SMWSem: SModSem.t := {|
     SModSem.fnsems := MWsbtb;
     SModSem.mn := "MW";
-    SModSem.initial_mr := ε;
+    SModSem.initial_mr := (GRA.embed sp_black);
     SModSem.initial_st := tt↑;
   |}
   .

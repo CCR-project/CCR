@@ -147,10 +147,7 @@ TODO: APC, locked thinges
     eapply adequacy_local2. econs; ss.
     i. econstructor 1 with (wf:=wf) (le:=le); ss.
     { typeclasses eauto. }
-    2: { esplits. econs; et. eapply to_semantic. iIntros "A".
-         iSplitL; cycle 1.
-         { iApply Own_unit; ss. }
-         iRight. iSplits; ss; et. }
+    2: { esplits. econs; et. eapply to_semantic. iIntros "[A B]". iSplitL "B"; et. iRight. iSplits; ss; et. }
 
 
     econs.
