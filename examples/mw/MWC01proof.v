@@ -42,6 +42,7 @@ Section SIMMODSEM.
       (SIM: ∀ k (IN: 0 <= k < 100),
           <<INIT: lst0.(lst_cls) k = opt ∧ vs !! (Z.to_nat k) = Some (lst0.(lst_opt) k)>> ∨
           <<UNINIT: lst0.(lst_cls) k = uninit ∧ vs !! (Z.to_nat k) = Some Vundef>>)
+      (NORMAL: ∀ k (NOTIN: ~(0 <= k < 100)), lst0.(lst_cls) k = normal)
   .
 
   Definition le (w0 w1: option (Any.t * Any.t)): Prop :=
@@ -88,6 +89,67 @@ Section SIMMODSEM.
   Opaque mwRA.
   Opaque Z.eq_dec Z.eqb.
   Opaque List.repeat.
+
+  Lemma repeat_nil
+        V (v: V)
+    :
+      repeat v 0 = nil
+  .
+  Proof. ss. Qed.
+
+  Lemma repeat_eq
+        V n (v: V)
+    :
+      repeat v (S n) = v :: (repeat v n)
+  .
+  Proof. ss. Qed.
+
+  Lemma repeat_snoc
+        V n (v: V)
+    :
+      repeat v (S n) = (repeat v n) ++ [v]
+  .
+  Proof. replace (S n) with (n + 1) by lia. rewrite repeat_app. ss. Qed.
+
+  Lemma points_to_snoc
+        blk ofs x tl
+    :
+      (points_to (blk, ofs) (tl ++ [x])) =
+      (points_to (blk, ofs) tl) ⋅ (points_to (blk, (ofs + length tl)%Z) [x])
+  .
+  Proof.
+    admit "".
+  Qed.
+
+  Lemma points_to_app
+        blk ofs hd tl
+    :
+      (points_to (blk, ofs) (hd ++ tl)) = (points_to (blk, ofs) hd) ⋅ (points_to (blk, (ofs + length hd)%Z) tl)
+  .
+  Proof.
+    revert ofs hd. induction tl; ii; ss.
+    - rewrite points_to_nil. rewrite app_nil_r. rewrite URA.unit_id. ss.
+    - rewrite cons_app. rewrite IHtl. rewrite app_assoc. rewrite IHtl. ss. rewrite points_to_split.
+      rewrite points_to_snoc. rewrite <- ! URA.add_assoc. f_equal. f_equal. rewrite points_to_nil.
+      rewrite URA.unit_idl. rewrite app_length. ss. rewrite <- Z.add_assoc. rewrite ! Nat2Z.inj_add. ss.
+  Qed.
+
+  Lemma OwnM_repeat_sepL
+        v n b
+    :
+        bi_entails (OwnM ((b, 0%Z) |-> repeat v n))
+                   (#=> [∗ list] k↦x ∈ repeat v n, OwnM ((b, Z.of_nat k) |-> [x]))
+  .
+  Proof.
+    induction n.
+    { iIntros "H". rewrite repeat_nil. ss. rewrite points_to_nil. iClear "H". iModIntro. ss. }
+    { rewrite ! repeat_snoc. iIntros "H".
+      iApply big_sepL_snoc.
+      rewrite points_to_split. rewrite points_to_app. iDestruct "H" as "[A B]". rewrite Z.add_0_l.
+      iDestruct (IHn with "A") as "C". iFrame. rewrite points_to_nil. rewrite URA.unit_id.
+      iMod "C". iModIntro. iFrame.
+    }
+  Qed.
 
   Theorem correct: refines2 [MWC0.MW] [MWC1.MW].
   Proof.
