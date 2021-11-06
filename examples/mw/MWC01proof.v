@@ -62,7 +62,7 @@ Section SIMMODSEM.
       (option (Any.t * Any.t))
       (fun w0 mp_src mp_tgt =>
          ({{"UNINIT": OwnM sp_black ** ⌜mp_src = tt↑ ∧ w0 = None⌝}} ∨
-          {{"INIT": OwnM sp_black ** ∃ lst0 arr vs, ⌜mp_src = lst0↑ ∧ mp_tgt = (Vptr arr 0, lst0.(lst_map))↑ ∧
+          {{"INIT": OwnM sp_black ** ∃ lst0 arr vs, ⌜mp_src = lst0↑ ∧ mp_tgt = (arr, lst0.(lst_map))↑ ∧
                                                   sim_opt lst0 vs ∧ w0 = None⌝ ** OwnM ((arr, 0%Z) |-> vs)}} ∨
           {{"LOCKED": OwnM sp_black ** OwnM sp_white ** ⌜w0 = Some (mp_src, mp_tgt)⌝}})%I)
   .

@@ -13,7 +13,7 @@ Set Implicit Arguments.
 
 Section PROOF.
 
-  Notation pget := (p0 <- trigger PGet;; p0 <- p0↓ǃ;; Ret p0) (only parsing).
+  Notation pget := (p0 <- trigger PGet;; p0 <- p0↓?;; Ret p0) (only parsing). (*** NOTE THAT IT IS UB CASTING ***)
   Notation pput p0 := (trigger (PPut p0↑)) (only parsing).
 
   Definition loopF: list val -> itree Es val :=
@@ -27,7 +27,8 @@ Section PROOF.
   Definition mainF: list val -> itree Es val :=
     fun varg =>
       _ <- (pargs [] varg)?;;
-      `arr: val <- ccallU "alloc" ([Vint 100]);;
+      arr <- ccallU "alloc" ([Vint 100]);;
+      arr <- (pargs [Tblk] [arr])?;;
       `map: val <- ccallU "new" ([]: list val);;
       pput (arr, map);;;
       `_: val <- ccallU "init" ([]: list val);;
@@ -40,7 +41,7 @@ Section PROOF.
       '(k, v) <- (pargs [Tint; Tuntyped] varg)?;;
       '(arr, map) <- pget;;
       (if ((0 <=? k) && (k <? 100))%Z
-       then `_: val <- ccallU "store" [arr; Vint k; v];; Ret tt
+       then `_: val <- ccallU "store" [Vptr arr k; v];; Ret tt
        else `_: val <- ccallU "update" ([map; Vint k; v]);; Ret tt);;;
       trigger (Syscall "print" [Vint k]↑ top1);;; (*** TODO: make something like "syscallu" ***)
       trigger (Syscall "print" [v]↑ top1);;;
@@ -52,7 +53,7 @@ Section PROOF.
       k <- (pargs [Tint] varg)?;;
       '(arr, map) <- pget;;
       `v: val <- (if ((0 <=? k) && (k <? 100))%Z
-                  then ccallU "load" [arr; Vint k]
+                  then ccallU "load" [Vptr arr k]
                   else ccallU "access" ([map; Vint k]));;
       trigger (Syscall "print" [Vint k]↑ top1);;; (*** TODO: make something like "syscallu" ***)
       trigger (Syscall "print" [v]↑ top1);;;
@@ -62,7 +63,7 @@ Section PROOF.
   Definition MWSem (skenv: SkEnv.t): ModSem.t := {|
     ModSem.fnsems := [("main", cfunU mainF); ("loop", cfunU loopF); ("put", cfunU putF); ("get", cfunU getF)];
     ModSem.mn := "MW";
-    ModSem.initial_st := (Vnullptr, Vnullptr)↑;
+    ModSem.initial_st := tt↑;
   |}
   .
   (* Vptr (or_else (skenv.(SkEnv.id2blk) "arr") 0) 0 *)
