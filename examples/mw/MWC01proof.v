@@ -35,32 +35,36 @@ Section SIMMODSEM.
 
   Let W: Type := Any.t * Any.t.
 
-  Variant sim_opt (opt: Z -> option val) (vs: list val): Prop :=
+  Variant sim_opt (lst0: local_state) (vs: list val): Prop :=
   | sim_opt_intro
-      (* (SIM: ∀ k, 0 <= k < 100 -> opt k = List.nth_error vs (Z.to_nat k)) *)
-      (SIM: ∀ k v, 0 <= k < 100 -> opt k = Some v -> List.nth_error vs (Z.to_nat k) = Some v)
+      (* (SIM: ∀ k (IN: 0 <= k < 100) (CLS: lst0.(lst_cls) k = opt), *)
+      (*     <<SIM: List.nth_error vs (Z.to_nat k) = Some (lst0.(lst_opt) k)>>) *)
+      (SIM: ∀ k (IN: 0 <= k < 100),
+          <<INIT: lst0.(lst_cls) k = opt ∧ List.nth_error vs (Z.to_nat k) = Some (lst0.(lst_opt) k)>> ∨
+          <<UNINIT: lst0.(lst_cls) k = uninit ∧ List.nth_error vs (Z.to_nat k) = Some Vundef>>)
   .
+
+  Definition le (w0 w1: option (Any.t * Any.t)): Prop :=
+    match w0, w1 with
+    | Some w0, Some w1 => w0 = w1
+    | None, None => True
+    | _, _ => False
+    end
+  .
+
+  Global Program Instance le_PreOrder: PreOrder le.
+  Next Obligation. unfold le. ii. des_ifs. Qed.
+  Next Obligation. unfold le. ii. des_ifs. Qed.
 
   Let wf: _ -> W -> Prop :=
     @mk_wf
       _
-      unit
-      (* (fun _ _ mpr_tgt => (∃ (mr_tgt: AppRA), ⌜mpr_tgt = Any.pair tt↑ (GRA.embed mr_tgt)↑⌝ ** OwnM mr_tgt)%I) *)
-      (fun _ mp_src mp_tgt =>
-         (* (∃ lst0, ⌜mp_src = lst0↑⌝ ** (∃ blk vs, ⌜mp_tgt = (Vptr blk 0, lst0.(lst_map))↑⌝ ** OwnM ((blk,0%Z) |-> vs)) ∨ *)
-         (*                               (⌜mp_tgt = (Vnullptr, lst0.(lst_map))↑⌝))%I) *)
-
-
-         (* (∃ lst0 blk vs, ⌜mp_src = lst0↑⌝ ** ⌜mp_tgt = (Vptr blk 0, lst0.(lst_map))↑⌝ ** OwnM ((blk,0%Z) |-> vs) ** *)
-         (*     ⌜sim_opt lst0.(lst_opt) vs ∧ (if dec lst0.(lst_map) Vnullptr then (lst0.(lst_opt) = Maps.empty) else length vs = 100)⌝)%I) *)
-         (* (∃ lst0 blk vs, ⌜mp_src = lst0↑⌝ ** ⌜mp_tgt = (Vptr blk 0, lst0.(lst_map))↑⌝ ** *)
-         (*                                      (OwnM ((blk,0%Z) |-> vs) ** ⌜sim_opt lst0.(lst_opt) vs⌝ ** ⌜length vs = 100⌝) ∨ *)
-         (*                                      (⌜lst0.(lst_map) = Vnullptr⌝))%I) *)
-         (∃ lst0 arr, ⌜mp_src = lst0↑⌝ ** ⌜mp_tgt = (arr, lst0.(lst_map))↑⌝ ** ({{"CASES":
-            (⌜arr = Vnullptr ∧ lst0.(lst_map) = Vnullptr ∧ lst0.(lst_opt) = Maps.empty⌝) ∨
-            (∃ arrb vs, ⌜arr = Vptr arrb 0 ∧ lst0.(lst_map) = Vnullptr ∧ lst0.(lst_opt) = Maps.empty ∧ length vs = 100⌝ ** OwnM ((arrb,0%Z) |-> vs)) ∨
-            (∃ arrb vs, ⌜arr = Vptr arrb 0 ∧ lst0.(lst_map) <> Vnullptr ∧ length vs = 100⌝ ** OwnM ((arrb,0%Z) |-> vs))
-         }}))%I)
+      (option (Any.t * Any.t))
+      (fun w0 mp_src mp_tgt =>
+         ({{"UNINIT": OwnM sp_black ** ⌜mp_src = tt↑ ∧ w0 = None⌝}} ∨
+          {{"INIT": OwnM sp_black ** ∃ lst0 arr vs, ⌜mp_src = lst0↑ ∧ mp_tgt = (Vptr arr 0, lst0.(lst_map))↑ ∧
+                                                  sim_opt lst0 vs ∧ w0 = None⌝ ** OwnM ((arr, 0%Z) |-> vs)}} ∨
+          {{"LOCKED": OwnM sp_black ** OwnM sp_white ** ⌜w0 = Some (mp_src, mp_tgt)⌝}})%I)
   .
 
   Lemma points_to_nil
@@ -83,9 +87,9 @@ Section SIMMODSEM.
   Theorem correct: refines2 [MWC0.MW] [MWC1.MW].
   Proof.
     eapply adequacy_local2. econs; ss.
-    i. econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
-    { ss. }
-    { esplits; et. econs; et. eapply to_semantic. iIntros "H". iSplits; ss; et. }
+    i. econstructor 1 with (wf:=wf) (le:=le); et; swap 2 3.
+    { typeclasses eauto. }
+    { esplits; et. econs; et. eapply to_semantic. iIntros "H". ss; et. iFrame. ss; et. }
     (* { destruct (SkEnv.id2blk (Sk.load_skenv sk) "arr") eqn:T; cycle 1. *)
     (*   { exfalso. Local Transparent Sk.load_skenv. unfold Sk.load_skenv in *. Local Opaque Sk.load_skenv. *)
     (*     ss. uo. des_ifs. admit "ez". } *)
@@ -94,7 +98,165 @@ Section SIMMODSEM.
     (* } *)
 
     econs; ss.
-    { init. harg. mDesAll. des; clarify. des_u. steps. unfold mainF, MWC0.mainF. steps. rename a into lst0.
+    { init. harg. mDesAll. des; clarify. des_u. steps. unfold mainF, MWC0.mainF, ccallU. steps. fold wf.
+      mAssert (OwnM sp_black ** OwnM sp_white ** ⌜w = None⌝) with "*" as "A".
+      { iDes; des; clarify; try (by iFrame; iSplits; ss; et). admit "ez". }
+      mDesAll; des; clarify.
+      astart 1. acatch. hcall _ 100 (Some (_, _)) with "*".
+      { iModIntro. iFrame. iSplits; ss; et. }
+      { esplits; ss; et. }
+      fold wf. steps. astop. mDesAll; des; clarify. steps. force_l; stb_tac; ss; clarify. steps.
+      hcall _ _ _ with "INV".
+      { iModIntro. iFrame. iSplits; ss; et. }
+      { esplits; ss; et. }
+      fold wf. mDesAll; des; clarify. steps. force_l; stb_tac; ss; clarify. steps.
+      mDesOr "INV1"; mDesAll; des; clarify; ss.
+      mDesOr "INV1"; mDesAll; des; clarify; ss.
+      hcall _ _ _ with "LOCKED A1".
+      { iModIntro. iSplits; ss; et. iRight. iRight. iFrame. iSplits; ss; et. }
+      { esplits; ss; et. }
+      fold wf. mDesAll; des; clarify. steps. force_l; stb_tac; ss; clarify. steps.
+      mDesOr "INV"; mDesAll; des; clarify; ss.
+      mDesOr "INV"; mDesAll; des; clarify; ss.
+      hcall _ _ _ with "*".
+      { iModIntro. iSplits; ss; et. iFrame. iSplitL; ss; et. iRight. iLeft. iSplits; ss; et.
+        iPureIntro. econs. ii. right. esplits; et. admit "ez".
+      }
+      { esplits; ss; et. }
+      fold wf. mDesAll; des; clarify. steps. ss. des_ifs.
+      mDesOr "INV"; mDesAll; des; clarify; ss.
+      { hret None; ss. iModIntro. iFrame. ss; et. }
+      mDesOr "INV"; mDesAll; des; clarify; ss.
+      { hret None ;ss. iModIntro. iFrame. iSplits; ss; et. iRight. iLeft. iSplits; ss; et. }
+    }
+
+    econs; ss.
+    { init. harg. mDesAll. des; clarify. des_u.
+      assert(w = None).
+      { repeat mDesOr "INV"; mDesAll; des; clarify. mAssertPure False; ss. admit "ez". }
+      steps. unfold loopF, MWC0.loopF, ccallU. steps. fold wf.
+      force_l; stb_tac; ss; clarify. steps. hcall _ _ _ with "INV".
+      { iModIntro. ss; et. }
+      { esplits; ss; et. }
+      fold wf. mDesAll; des; clarify. steps. force_l; stb_tac; ss; clarify. steps. hcall _ _ _ with "*".
+      { iModIntro. iFrame. et. }
+      { esplits; ss; et. }
+      fold wf. mDesAll; des; clarify. steps. ss. des_ifs.
+      hret None; ss.
+      { iModIntro. iFrame; et. }
+    }
+
+    econs; ss.
+    { init. harg. mDesAll. des; clarify. des_u. unfold putF, MWC0.putF, ccallU. steps. fold wf.
+      mDesOr "INV"; mDesAll; des; clarify.
+      { exfalso. clear - _UNWRAPU0. apply Any.downcast_upcast in _UNWRAPU0. des.
+        apply Any.upcast_inj in _UNWRAPU0. des; clarify.
+        assert(T: exists (a b: local_state), a <> b).
+        { exists (mk_lst (fun _ => uninit) (fun _ => Vundef) Vundef),
+          (mk_lst (fun _ => uninit) (fun _ => Vundef) (Vint 1)). ii. clarify. }
+        des. revert a b T. rewrite EQ. i. repeat des_u; ss.
+      }
+      mDesOr "INV"; mDesAll; des; clarify; cycle 1.
+      { mAssertPure False; ss. admit "ez". }
+      steps. rewrite Any.upcast_downcast in *. clarify. steps.
+      destruct ((0 <=? z)%Z && (z <? 100)%Z) eqn:T.
+      - inv PURE1. hexploit (SIM (Z.to_nat z)); [lia|]. intro U. des; ss.
+        + rewrite ! Nat2Z.id in *. rewrite Z2Nat.id in *; try lia. rewrite INIT. ss. steps.
+          astart 1. acatch. hcall _ (_, _, _) (Some (_, _)) with "*".
+          { iModIntro. iFrame. iSplitR "A2"; et. iSplits; ss; et.
+            - iPureIntro. f_equal. f_equal; et. f_equal; et.
+            - et. iSplits; ss; et.
+          exfalso.
+          Set Printing All.
+          Z2Nat.id
+          rewrite ! Nat2Z.id in INIT.
+          Set Printing All. des_ifs; ss. rewrite INIT. des_ifs; ss.
+        { lia. }
+        ss.
+        autorewrite with simpl_bool in T; des.
+        rewrite Z.leb_le in *. rewrite Z.ltb_lt in *.
+      des.
+        rewrite Any.upcast_downcast in _UNWRAPU0. fold wf. steps. }
+      assert(w = None).
+      { repeat mDesOr "INV"; mDesAll; des; clarify. mAssertPure False; ss. admit "ez". }
+      steps. unfold putF, MWC0.putF, ccallU. steps. fold wf.
+      force_l; stb_tac; ss; clarify. steps. hcall _ _ _ with "INV".
+      { iModIntro. ss; et. }
+      { esplits; ss; et. }
+      fold wf. mDesAll; des; clarify. steps. force_l; stb_tac; ss; clarify. steps. hcall _ _ _ with "*".
+      { iModIntro. iFrame. et. }
+      { esplits; ss; et. }
+      fold wf. mDesAll; des; clarify. steps. ss. des_ifs.
+      hret None; ss.
+      { iModIntro. iFrame; et. }
+    }
+    {
+    }
+      rename w into ww.
+      {
+      hcall _ _ _ with "*".
+      
+      - 
+      {
+      steps.
+    }
+      }
+      mDesOr "INV"; mDesAll; des; clarify.
+      { (** uninit **)
+        astart 1. acatch. hcall _ 100 (Some (_, _)) with "*".
+        { iModIntro. iFrame. iSplits; ss; et. }
+        { esplits; ss; et. }
+        fold wf. steps. astop. mDesAll; des; clarify. steps. force_l; stb_tac; ss; clarify. steps.
+        hcall _ _ _ with "INV".
+        { iModIntro. iFrame. iSplits; ss; et. }
+        { esplits; ss; et. }
+        fold wf. mDesAll; des; clarify. steps. force_l; stb_tac; ss; clarify. steps.
+        mDesOr "INV1"; mDesAll; des; clarify; ss.
+        mDesOr "INV1"; mDesAll; des; clarify; ss.
+        hcall _ _ _ with "LOCKED A1".
+        { iModIntro. iSplits; ss; et. iRight. iRight. iFrame. iSplits; ss; et. }
+        { esplits; ss; et. }
+        fold wf. mDesAll; des; clarify. steps. force_l; stb_tac; ss; clarify. steps.
+        mDesOr "INV"; mDesAll; des; clarify; ss.
+        mDesOr "INV"; mDesAll; des; clarify; ss.
+        hcall _ _ _ with "*".
+        { iModIntro. iSplits; ss; et. iFrame. iSplitL; ss; et. iRight. iLeft. iSplits; ss; et. }
+        { esplits; ss; et. }
+        fold wf. mDesAll; des; clarify. steps. ss. des_ifs.
+        mDesOr "INV"; mDesAll; des; clarify; ss.
+        { hret None; ss. iModIntro. iFrame. ss; et. }
+        mDesOr "INV"; mDesAll; des; clarify; ss.
+        { hret None ;ss. iModIntro. iFrame. iSplits; ss; et. iRight. iLeft. iSplits; ss; et. }
+      }
+      mDesOr "INV"; mDesAll; des; clarify.
+      { (** init **)
+        mClear "A2".
+        astart 1. acatch. hcall _ 100 (Some (_, _)) with "*".
+        { iModIntro. iFrame. iSplits; ss; et. }
+        { esplits; ss; et. }
+        fold wf. steps. astop. mDesAll; des; clarify. steps. force_l; stb_tac; ss; clarify. steps.
+        hcall _ _ _ with "INV".
+        { iModIntro. iFrame. iSplits; ss; et. }
+        { esplits; ss; et. }
+        fold wf. mDesAll; des; clarify. steps. force_l; stb_tac; ss; clarify. steps.
+        mDesOr "INV1"; mDesAll; des; clarify; ss.
+        mDesOr "INV1"; mDesAll; des; clarify; ss.
+        hcall _ _ _ with "LOCKED A1".
+        { iModIntro. iSplits; ss; et. iRight. iRight. iFrame. iSplits; ss; et. }
+        { esplits; ss; et. }
+        fold wf. mDesAll; des; clarify. steps. force_l; stb_tac; ss; clarify. steps.
+        mDesOr "INV"; mDesAll; des; clarify; ss.
+        mDesOr "INV"; mDesAll; des; clarify; ss.
+        hcall _ _ _ with "*".
+        { iModIntro. iSplits; ss; et. iFrame. iSplitL; ss; et. iRight. iLeft. iSplits; ss; et. }
+        { esplits; ss; et. }
+        fold wf. mDesAll; des; clarify. steps. ss. des_ifs.
+        mDesOr "INV"; mDesAll; des; clarify; ss.
+        { hret None; ss. iModIntro. iFrame. ss; et. }
+        mDesOr "INV"; mDesAll; des; clarify; ss.
+        { hret None ;ss. iModIntro. iFrame. iSplits; ss; et. iRight. iLeft. iSplits; ss; et. }
+      }
+      {
       unfold ccallU. steps. astart 1. acatch. hcall _ _ _ with "*".
       { iModIntro. iSplits; ss; et.
         { iPureIntro. instantiate (1:=100). cbn. refl. }
