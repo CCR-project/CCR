@@ -31,6 +31,7 @@ Section SIMMODSEM.
 
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG memRA Σ}.
+  Context `{@GRA.inG spRA Σ}.
 
   Let W: Type := Any.t * Any.t.
 
