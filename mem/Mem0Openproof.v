@@ -255,7 +255,35 @@ Proof Outline
 
     econs; ss.
     { unfold allocF. kinit.
-      { harg. fold wf. steps. hide_k. rename x into sz.
+      { harg. fold wf. steps. hide_k.
+        destruct x as [sz|]; cycle 1.
+        { mDesAll; des; clarify. des_ifs.
+          { apply Any.downcast_upcast in Heq. des; subst. tauto. }
+          (*** TODO: remove redundancy with u (context) case ***)
+          (*** COPY START ***)
+          mDesAll. des; subst. steps. destruct v; ss. clarify. unhide_k.
+          steps.
+          renamer. steps. des_ifs; steps.
+
+          set (blk := mem_tgt0.(Mem.nb) + x). clarify. rename z into sz.
+          force_l. exists (mem_tgt0.(Mem.nb) - memu_src0.(Mem.nb) + x). steps.
+          unfold pput. steps.
+          replace (Mem.nb memu_src0 + (Mem.nb mem_tgt0 - Mem.nb memu_src0 + x)) with (Mem.nb mem_tgt0 + x) by lia.
+          hret _; ss. iModIntro. iSplitL "INV"; ss.
+          iExists _, _, _. iSplitR; ss. iPureIntro. esplits; et; cbn.
+          - ii.
+            destruct (dec b blk); subst.
+            { unfold update. des_ifs_safe.
+              hexploit (SIM blk ofs); et. intro T.
+              destruct (Mem.cnts mem_tgt0 blk ofs) eqn: U.
+              { exploit (WFTGT blk ofs); et. i; des. lia. }
+              inv T. des_ifs; econs; et.
+            }
+            unfold update. des_ifs.
+          - ii. ss. unfold update in *. des_ifs. r. exploit WFSRC; et. i; des. lia.
+          - ii. ss. unfold update in *. des_ifs. r. exploit WFTGT; et. i; des. lia.
+          (*** COPY END ***)
+        }
         mDesAll; ss. des; subst.
         des_ifs_safe (mDesAll; ss). des; subst. clarify.
         steps. unhide_k. steps. des_ifs; clarify.
@@ -281,7 +309,7 @@ Proof Outline
         mUpd "INV". mDesOwn "INV".
 
         force_l. eexists. steps. hret _; ss. iModIntro. iSplitR "A"; cycle 1.
-        { iSplitL; ss. iExists _. iSplitR; ss. }
+        { iSplits; ss; et. }
         iExists _, _, _. iSplitR; ss. iPureIntro. esplits; et.
         - i. destruct (mem_tgt0.(Mem.cnts) blk ofs) eqn:T.
           { exfalso. exploit WFTGT; et. i; des. lia. }
@@ -327,7 +355,35 @@ Proof Outline
 
     econs; ss.
     { unfold freeF. kinit.
-      { harg. fold wf. steps. hide_k. rename n into b. rename z into ofs.
+      { harg. fold wf. steps.
+        destruct x as [[b ofs]|]; cycle 1.
+        { mDesAll; des; clarify. des_ifs.
+          { apply Any.downcast_upcast in Heq. des; subst. tauto. }
+          (*** TODO: remove redundancy with u (context) case ***)
+          (*** COPY START ***)
+          des_ifs_safe (mDesAll; ss). des; subst.
+          steps. destruct v; ss. clarify. steps.
+          renamer.
+          steps.
+          rename n into b. rename z into ofs.
+          force_r.
+          { unfold Mem.free in *. des_ifs. hexploit (SIM b ofs); et. intro T.
+            rewrite Heq0 in *. rewrite Heq1 in *. inv T.
+          }
+          rename t into mem_tgt1.
+          steps.
+          hret _; ss. iModIntro. iSplitL; ss.
+          iExists _, _, _. iSplitR; ss. iPureIntro. esplits; et; cbn.
+          - ii. unfold Mem.free in *. des_ifs. ss. unfold update. des_ifs.
+            replace (memk_src0 b0 ofs0) with (@URA.unit (Excl.t val)); cycle 1.
+            { hexploit (SIM b0 ofs0); et. intro T. rewrite Heq0 in *. rewrite Heq1 in *. inv T; ss. }
+            econs.
+          - unfold Mem.free in *. des_ifs.
+          - rr in WFSRC. rr. ii. unfold Mem.free in *. des_ifs. ss. unfold update in *. des_ifs; et.
+          - rr in WFTGT. rr. ii. unfold Mem.free in *. des_ifs. ss. unfold update in *. des_ifs; et.
+          (*** COPY END ***)
+        }
+        hide_k.
         des_ifs_safe (mDesAll; ss). des; subst.
         des_ifs; mDesAll; ss. des; subst. clarify. rewrite Any.upcast_downcast in *. clarify.
         steps. unhide_k. steps. astart 0. astop.
@@ -425,8 +481,23 @@ Proof Outline
 
     econs; ss.
     { unfold loadF. kinit.
-      { harg. fold wf. steps. hide_k.
-        rename n into b. rename z into ofs.
+      { harg. fold wf. steps.
+        destruct x as [[[b ofs] v]|]; cycle 1.
+        { mDesAll; des; clarify. des_ifs.
+          { apply Any.downcast_upcast in Heq. des; subst. tauto. }
+          (*** TODO: remove redundancy with u (context) case ***)
+          (*** COPY START ***)
+          des_ifs_safe (mDesAll; ss). des; subst.
+          steps. destruct v; ss. clarify. steps.
+          renamer.
+          rename n into b. rename z into ofs.
+
+          hexploit (SIM b ofs); et. intro T. unfold Mem.load in *. rewrite _UNWRAPU1 in T. inv T.
+          steps.
+          hret _; ss. iModIntro. iSplitL; ss; et.
+          (*** COPY END ***)
+        }
+        hide_k.
         des_ifs_safe (mDesAll; ss). des; subst. clarify. rewrite Any.upcast_downcast in *. clarify.
         steps. unhide_k. steps. astart 0. astop.
         renamer.
@@ -463,7 +534,30 @@ Proof Outline
     econs; ss.
     { unfold storeF. kinit.
       { harg. fold wf. steps. hide_k.
-        rename n into b. rename z into ofs. rename v into v1.
+        destruct x as [[[b ofs] v1]|]; cycle 1.
+        { mDesAll; des; clarify. des_ifs.
+          { apply Any.downcast_upcast in Heq. des; subst. tauto. }
+          (*** TODO: remove redundancy with u (context) case ***)
+          (*** COPY START ***)
+          des_ifs_safe (mDesAll; ss). des; subst.
+          unhide_k. steps.
+          renamer.
+          destruct v; ss. clarify. rename n into b. rename z into ofs.
+
+          force_r.
+          { hexploit (SIM b ofs); et. intro T. unfold Mem.store in *. des_ifs. inv T. }
+          steps. rename t into mem_tgt1.
+          hret _; ss. iModIntro. iSplitL; ss. iExists _, _, _; ss. iSplitR; ss. iPureIntro.
+          esplits; ss; et.
+          - ii. unfold Mem.store in *. des_ifs. ss. des_ifs. bsimpl; des; des_sumbool; subst.
+            hexploit (SIM b0 ofs0); et. intro T. rewrite Heq0 in *. rewrite Heq1 in *. inv T. econs.
+          - unfold Mem.store in *. des_ifs.
+          - clear - _UNWRAPU0 WFSRC. ii. unfold Mem.store in *. des_ifs; ss. des_ifs; et.
+            + bsimpl; des; des_sumbool; subst. et.
+          - clear - _UNWRAPU1 WFTGT. ii. unfold Mem.store in *. des_ifs; ss. des_ifs; et.
+            + bsimpl; des; des_sumbool; subst. et.
+          (*** COPY END ***)
+        }
         des_ifs_safe (mDesAll; ss). des; subst. clarify. rewrite Any.upcast_downcast in *. clarify.
         steps. unhide_k. steps. astart 0. astop.
         renamer.
@@ -540,6 +634,29 @@ Proof Outline
     econs; ss.
     { unfold cmpF. kinit.
       { harg. fold wf. steps. hide_k.
+        destruct x as [[result resource]|]; cycle 1.
+        { mDesAll; des; clarify. des_ifs.
+          { apply Any.downcast_upcast in Heq. des; subst. tauto. }
+          (*** TODO: remove redundancy with u (context) case ***)
+          (*** COPY START ***)
+          des_ifs_safe (mDesAll; ss). des; subst.
+          unhide_k. steps.
+          renamer.
+          sym in _UNWRAPU.
+          assert(T: forall b ofs, Mem.valid_ptr memu_src0 b ofs -> Mem.valid_ptr mem_tgt0 b ofs).
+          { clear - SIM. i. unfold Mem.valid_ptr in *.
+            hexploit (SIM b ofs); et. intro T. unfold is_some in *. des_ifs. inv T. }
+          match goal with
+          | |- context[unwrapU ?x] => replace x with (Some b); cycle 1
+          end.
+          { (*** TODO: make lemma ***)
+            unfold vcmp in *. des_ifs; ss; bsimpl; des; des_sumbool; subst; ss; erewrite T in *; ss.
+          }
+          steps. destruct b.
+          - steps. hret _; ss. iModIntro. iSplitL; ss. iExists _, _, _; ss. iSplitR; ss.
+          - steps. hret _; ss. iModIntro. iSplitL; ss. iExists _, _, _; ss. iSplitR; ss.
+          (*** COPY END ***)
+        }
         des_ifs_safe (mDesAll; ss). des; subst. clarify.
         steps. unhide_k. steps. astart 0. astop.
         renamer.
