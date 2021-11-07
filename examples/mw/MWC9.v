@@ -20,6 +20,8 @@ Section PROOF.
 
   Notation pget := (p0 <- trigger PGet;; p0 <- p0↓?;; Ret p0) (only parsing). (*** NOTE THAT IT IS UB CASTING ***)
   Notation pput p0 := (trigger (PPut p0↑)) (only parsing).
+  Notation pupd_arr arr := (`st: mblock * val <- pget;; pput (arr, st.2)) (only parsing).
+  Notation pupd_map map := (`st: mblock * val <- pget;; pput (st.1, map)) (only parsing).
 
   Notation check_lock := (p0 <- trigger PGet;; if (Any.split p0) then triggerUB else Ret tt) (only parsing).
   Notation lAPC := (p0 <- trigger PGet;; _ <- trigger (PPut (Any.pair tt↑ p0));;; trigger (PPut p0))
@@ -43,9 +45,10 @@ Section PROOF.
       arr <- ccallU "alloc" ([Vint 100]);;
       lAPC;;;
       arr <- (pargs [Tblk] [arr])?;;
+      pupd_arr arr;;;
       `map: val <- ccallU "new" ([]: list val);;
+      pupd_map map;;;
       lAPC;;;
-      pput (arr, map);;;
       `_: val <- ccallU "init" ([]: list val);;
       `_: val <- ccallU "loop" ([]: list val);;
       Ret Vundef
@@ -111,3 +114,4 @@ Section PROOF.
   Definition MW (stb: Sk.t -> gname -> option fspec): Mod.t := (KMod.transl_tgt stb KMW).
 
 End PROOF.
+Global Hint Unfold MWStb: stb.

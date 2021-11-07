@@ -58,7 +58,7 @@ Section SIMMODSEM.
     @mk_wf _ (option (Any.t * Any.t))
            (fun w0 st_src st_tgt => (
                 {{"NORMAL": ∃ arr map, ⌜w0 = None ∧ st_src = (arr, map)↑⌝ **
-                    OwnM (var_points_to ske "gv0" arr) ** OwnM (var_points_to ske "gv1" map)}} ∨
+                    OwnM (var_points_to ske "gv0" (Vptr arr 0)) ** OwnM (var_points_to ske "gv1" map)}} ∨
                 (* {{"NORMAL": ∃ arr map arrb mapb, ⌜w0 = None ∧ ske.(SkEnv.id2blk) "gv0" = Some arrb *)
                 (*     ∧ ske.(SkEnv.id2blk) "gv1" = Some mapb ∧ st_src = (arr, map)↑⌝ ** *)
                 (*     OwnM ((arrb, 0%Z) |-> [arr]) ** OwnM ((mapb, 0%Z) |-> [map ])}} ∨ *)
@@ -71,8 +71,10 @@ Section SIMMODSEM.
   .
 
   Variable global_stb: gname -> option fspec.
-  Hypothesis INCLMW: stb_incl (to_stb (MWStb)) global_stb.
-  Hypothesis INCLMEM: stb_incl (to_stb (MemStb)) global_stb.
+  (* Hypothesis INCLMW: stb_incl (to_stb (MWStb)) global_stb. *)
+  (* Hypothesis INCLMEM: stb_incl (to_stb (MemStb)) global_stb. *)
+  Hypothesis STBINCL: stb_incl (to_stb_context ["new"; "access"; "update"; "init"; "run"]
+                                               (MWStb ++ MemStb)) global_stb.
 
   Import ImpNotations.
 
@@ -80,8 +82,13 @@ Section SIMMODSEM.
     refines2 [MWCImp.MW] [MWC9.MW (fun _ => global_stb)].
   Proof.
     eapply adequacy_local2. econs; ss. i.
-    econstructor 1 with (wf:=wf (Sk.load_skenv sk)) (le:=top2); et; ss; cycle 1.
+    econstructor 1 with (wf:=wf (Sk.load_skenv sk)) (le:=le); et; ss; swap 2 3.
+    { typeclasses eauto. }
     { eexists. econs. eapply to_semantic. iIntros "[A B]". iLeft. iSplits; ss; et. iFrame. iSplits; ss; et. }
+
+    eapply Sk.incl_incl_env in SKINCL. eapply Sk.load_skenv_wf in SKWF.
+    hexploit (SKINCL "gv0"); ss; eauto. intros [blk0 FIND0].
+    hexploit (SKINCL "gv1"); ss; eauto 10. intros [blk1 FIND1].
 
     econs; ss.
     { kinit. harg. mDesAll; des; clarify. unfold mainF, MWCImp.mainF, ccallU.
@@ -94,8 +101,29 @@ Section SIMMODSEM.
       rewrite Any.upcast_split. steps.
       des_ifs; cycle 1.
       { contradict n. solve_NoDup. }
-      steps. erewrite INCLMEM; cycle 1. { stb_tac; ss. } isteps.
-      hcall _ _ _ with
+      steps. erewrite STBINCL; cycle 1. { stb_tac; ss. } isteps.
+      hcall _ None None with "*".
+      { iModIntro. iSplits; ss; et.
+        - iLeft. iSplits; ss; et. iFrame. iPureIntro. esplits; ss; et.
+        - admit "ez - size argument".
+      }
+      { esplits; ss; et. }
+      fold (wf ske). mDesAll; des; clarify. steps. isteps. rewrite FIND0. steps.
+      isteps. ss. des_ifs. mDesOr "INV"; mDesAll; des; clarify; ss.
+      unfold var_points_to in *. rewrite FIND0 in *. rewrite FIND1 in *.
+      astart 1. astep "store" (tt↑). { eapply STBINCL. stb_tac; ss. } hcall _ (Some (_, _, _)) _ with "A1".
+      { iModIntro. iSplitR; iSplits; ss; et. }
+      { esplits; ss; et. }
+      fold (wf ske). rewrite FIND0 in *. rewrite FIND1 in *. ss. des_ifs.
+      mDesOr "INV"; mDesAll; des; clarify; ss. isteps. astop. steps.
+      erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.
+      apply Any.pair_inj in H2. exfalso. Set Printing All.
+      apply Any.upcast_downcast in _UNWRAPU2. des ;clarify.
+      hcall _ _ None with "*".
+      { iModIntro. iSplits; ss; et. iLeft. iSplits; ss; et. rewrite FIND0. rewrite FIND1.
+        iFrame. iSplits; ss; et. }
+      (to_stb_context ClientStb (EchoStb ++ StackStb))
+      force_l; stb_tac; ss; clarify.
           T.
           acatch.
       ired.
