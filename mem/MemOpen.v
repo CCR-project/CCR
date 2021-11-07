@@ -22,19 +22,49 @@ Let _memRA: URA.t := (mblock ==> Z ==> (Excl.t val))%ra.
 
 
 
+Section TUNNEL.
+  Context `{Σ: GRA.t}.
+  Definition mk_tunneled {X: Type} (PQ: X -> ((Any.t -> ord -> iProp) * (Any.t -> iProp))): fspec :=
+    (* mk_fspec (fun _ x y a o => (((fst ∘ PQ) x a o: iProp) ∧ ⌜y = tt↑⌝)%I) *)
+    (*          (fun _ x z a => (((snd ∘ PQ) x a: iProp) ∧ ⌜z = tt↑⌝)%I) *)
+    mk_fspec (fun _ x y a o =>
+                match x with
+                | Some x => (((fst ∘ PQ) x a o: iProp) ∧ ⌜y = tt↑⌝)%I
+                | _ => ⌜y = a ∧ o = ord_top ∧ y <> tt↑⌝%I: iProp
+                end)
+             (fun _ x z a =>
+                match x with
+                | Some x => (((snd ∘ PQ) x a: iProp) (* ∧ ⌜z = tt↑⌝ *))%I
+                | _ => ⌜z = a⌝%I: iProp
+                end)
+  .
+
+  Context `{HasCallE: callE -< E}.
+  Context `{HasEventE: eventE -< E}.
+  Definition cfunU_tunneled {X Y} (body: X -> itree E Y): (option mname * Any.t) -> itree E Any.t :=
+    fun '(_, varg) =>
+      match varg↓ with
+      | Some tt => triggerNB
+      | _ => varg <- varg↓?;; vret <- body varg;; Ret vret↑
+      end
+  .
+
+End TUNNEL.
+
+
 
 Section PROOF.
   Context `{@GRA.inG memRA Σ}.
 
   Definition alloc_spec: fspec :=
-    (mk_simple (fun sz => (
+    (mk_tunneled (fun sz => (
                      (fun varg o => (⌜varg = [Vint (Z.of_nat sz)]↑ /\ (8 * (Z.of_nat sz) < modulus_64)%Z /\ o = ord_pure 0⌝)%I),
                      (fun vret => (∃ b, ⌜vret = (Vptr b 0)↑⌝ **
                                         OwnM ((b, 0%Z) |-> (List.repeat Vundef sz)))%I)
     ))).
 
   Definition free_spec: fspec :=
-    (mk_simple (fun '(b, ofs) => (
+    (mk_tunneled (fun '(b, ofs) => (
                      (fun varg o => (∃ v, ⌜varg = ([Vptr b ofs])↑⌝ **
                                           OwnM ((b, ofs) |-> [v]) **
                                           ⌜o = ord_pure 0⌝)%I),
@@ -42,7 +72,7 @@ Section PROOF.
     ))).
 
   Definition load_spec: fspec :=
-    (mk_simple (fun '(b, ofs, v) => (
+    (mk_tunneled (fun '(b, ofs, v) => (
                      (fun varg o => ⌜varg = ([Vptr b ofs])↑⌝ **
                                     OwnM ((b, ofs) |-> [v]) **
                                     ⌜o = ord_pure 0⌝),
@@ -50,7 +80,7 @@ Section PROOF.
     ))).
 
   Definition store_spec: fspec :=
-    (mk_simple
+    (mk_tunneled
        (fun '(b, ofs, v_new) => (
             (fun varg o =>
                (∃ v_old, ⌜varg = ([Vptr b ofs ; v_new])↑⌝ **
@@ -59,7 +89,7 @@ Section PROOF.
     ))).
 
   Definition cmp_spec: fspec :=
-    (mk_simple
+    (mk_tunneled
        (fun '(result, resource) => (
           (fun varg o =>
           ((∃ b ofs v, ⌜varg = [Vptr b ofs; Vnullptr]↑⌝ ** ⌜resource = ((b, ofs) |-> [v])⌝ ** ⌜result = false⌝) ∨
@@ -82,11 +112,11 @@ Section PROOF.
   Context `{@GRA.inG memRA Σ}.
 
   Definition MemSbtb: list (gname * kspecbody) :=
-    [("alloc", mk_kspecbody alloc_spec (cfunU allocF) (fun _ => triggerNB));
-    ("free",   mk_kspecbody free_spec  (cfunU freeF)  (fun _ => triggerNB));
-    ("load",   mk_kspecbody load_spec  (cfunU loadF)  (fun _ => triggerNB));
-    ("store",  mk_kspecbody store_spec (cfunU storeF) (fun _ => triggerNB));
-    ("cmp",    mk_kspecbody cmp_spec   (cfunU cmpF)   (fun _ => triggerNB))
+    [("alloc", mk_kspecbody alloc_spec (cfunU allocF) (cfunU_tunneled allocF));
+    ("free",   mk_kspecbody free_spec  (cfunU freeF)  (cfunU_tunneled freeF));
+    ("load",   mk_kspecbody load_spec  (cfunU loadF)  (cfunU_tunneled loadF));
+    ("store",  mk_kspecbody store_spec (cfunU storeF) (cfunU_tunneled storeF));
+    ("cmp",    mk_kspecbody cmp_spec   (cfunU cmpF)   (cfunU_tunneled cmpF))
     ]
   .
 
