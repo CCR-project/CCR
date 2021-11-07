@@ -39,10 +39,11 @@ Section SIMMODSEM.
   | sim_opt_intro
       (* (SIM: ∀ k (IN: 0 <= k < 100) (CLS: lst0.(lst_cls) k = opt), *)
       (*     <<SIM: List.nth_error vs (Z.to_nat k) = Some (lst0.(lst_opt) k)>>) *)
-      (SIM: ∀ k (IN: 0 <= k < 100),
+      (SIM: ∀ k (IN: (0 <= k < 100)%Z),
           <<INIT: lst0.(lst_cls) k = opt ∧ vs !! (Z.to_nat k) = Some (lst0.(lst_opt) k)>> ∨
           <<UNINIT: lst0.(lst_cls) k = uninit ∧ vs !! (Z.to_nat k) = Some Vundef>>)
-      (NORMAL: ∀ k (NOTIN: ~(0 <= k < 100)), lst0.(lst_cls) k = normal)
+      (NORMAL: ∀ k (NOTIN: ~(0 <= k < 100)%Z), lst0.(lst_cls) k = normal \/ lst0.(lst_cls) k = uninit)
+      (LEN: length vs = 100)
   .
 
   Definition le (w0 w1: option (Any.t * Any.t)): Prop :=
@@ -88,68 +89,135 @@ Section SIMMODSEM.
   Opaque memRA.
   Opaque mwRA.
   Opaque Z.eq_dec Z.eqb.
-  Opaque List.repeat.
 
-  Lemma repeat_nil
-        V (v: V)
+  Lemma repeat_replicate
+        A (a: A) n
     :
-      repeat v 0 = nil
-  .
-  Proof. ss. Qed.
-
-  Lemma repeat_eq
-        V n (v: V)
-    :
-      repeat v (S n) = v :: (repeat v n)
-  .
-  Proof. ss. Qed.
-
-  Lemma repeat_snoc
-        V n (v: V)
-    :
-      repeat v (S n) = (repeat v n) ++ [v]
-  .
-  Proof. replace (S n) with (n + 1) by lia. rewrite repeat_app. ss. Qed.
-
-  Lemma points_to_snoc
-        blk ofs x tl
-    :
-      (points_to (blk, ofs) (tl ++ [x])) =
-      (points_to (blk, ofs) tl) ⋅ (points_to (blk, (ofs + length tl)%Z) [x])
+      repeat a n = replicate n a
   .
   Proof.
-    admit "".
+    induction n; ii; ss. rewrite IHn. f_equal; ss.
   Qed.
+
+  Opaque List.repeat.
+
+  (* Lemma repeat_nil *)
+  (*       V (v: V) *)
+  (*   : *)
+  (*     repeat v 0 = nil *)
+  (* . *)
+  (* Proof. ss. Qed. *)
+
+  (* Lemma repeat_snoc *)
+  (*       V n (v: V) *)
+  (*   : *)
+  (*     repeat v (S n) = (repeat v n) ++ [v] *)
+  (* . *)
+  (* Proof. replace (S n) with (n + 1) by lia. rewrite repeat_app. ss. Qed. *)
+  Opaque replicate.
+
+  Lemma replicate_nil
+        V (v: V)
+    :
+      replicate 0 v = nil
+  .
+  Proof. ss. Qed.
 
   Lemma points_to_app
         blk ofs hd tl
     :
-      (points_to (blk, ofs) (hd ++ tl)) = (points_to (blk, ofs) hd) ⋅ (points_to (blk, (ofs + length hd)%Z) tl)
+      (points_to (blk, ofs) (hd ++ tl)) =
+      (points_to (blk, ofs) hd) ⋅ (points_to (blk, (ofs + length hd)%Z) tl)
   .
   Proof.
-    revert ofs hd. induction tl; ii; ss.
-    - rewrite points_to_nil. rewrite app_nil_r. rewrite URA.unit_id. ss.
-    - rewrite cons_app. rewrite IHtl. rewrite app_assoc. rewrite IHtl. ss. rewrite points_to_split.
-      rewrite points_to_snoc. rewrite <- ! URA.add_assoc. f_equal. f_equal. rewrite points_to_nil.
-      rewrite URA.unit_idl. rewrite app_length. ss. rewrite <- Z.add_assoc. rewrite ! Nat2Z.inj_add. ss.
+    revert ofs tl. induction hd; ii; ss.
+    - rewrite points_to_nil. rewrite URA.unit_idl. rewrite Z.add_0_r. ss.
+    - rewrite points_to_split. rewrite IHhd.
+      erewrite points_to_split with (hd:=a) (tl:=hd). rewrite URA.add_assoc. do 3 f_equal. lia.
   Qed.
 
-  Lemma OwnM_repeat_sepL
+  (* Lemma points_to_snoc *)
+  (*       blk ofs x tl *)
+  (*   : *)
+  (*     (points_to (blk, ofs) (tl ++ [x])) = *)
+  (*     (points_to (blk, ofs) tl) ⋅ (points_to (blk, (ofs + length tl)%Z) [x]) *)
+  (* . *)
+  (* Proof. rewrite points_to_app. ss. Qed. *)
+
+  (* Lemma points_to_app *)
+  (*       blk ofs hd tl *)
+  (*   : *)
+  (*     (points_to (blk, ofs) (hd ++ tl)) = (points_to (blk, ofs) hd) ⋅ (points_to (blk, (ofs + length hd)%Z) tl) *)
+  (* . *)
+  (* Proof. *)
+  (*   revert ofs hd. induction tl; ii; ss. *)
+  (*   - rewrite points_to_nil. rewrite app_nil_r. rewrite URA.unit_id. ss. *)
+  (*   - rewrite cons_app. rewrite IHtl. rewrite app_assoc. rewrite IHtl. ss. rewrite points_to_split. *)
+  (*     rewrite points_to_snoc. rewrite <- ! URA.add_assoc. f_equal. f_equal. rewrite points_to_nil. *)
+  (*     rewrite URA.unit_idl. rewrite app_length. ss. rewrite <- Z.add_assoc. rewrite ! Nat2Z.inj_add. ss. *)
+  (* Qed. *)
+
+  Lemma OwnM_replicate_sepL
         v n b
     :
-        bi_entails (OwnM ((b, 0%Z) |-> repeat v n))
-                   (#=> [∗ list] k↦x ∈ repeat v n, OwnM ((b, Z.of_nat k) |-> [x]))
+        bi_entails (OwnM ((b, 0%Z) |-> replicate n v))
+                   (#=> [∗ list] k↦x ∈ replicate n v, OwnM ((b, Z.of_nat k) |-> [x]))
   .
   Proof.
     induction n.
-    { iIntros "H". rewrite repeat_nil. ss. rewrite points_to_nil. iClear "H". iModIntro. ss. }
-    { rewrite ! repeat_snoc. iIntros "H".
+    { iIntros "H". rewrite replicate_nil. ss. rewrite points_to_nil. iClear "H". iModIntro. ss. }
+    { rewrite ! replicate_S_end. iIntros "H".
       iApply big_sepL_snoc.
       rewrite points_to_split. rewrite points_to_app. iDestruct "H" as "[A B]". rewrite Z.add_0_l.
       iDestruct (IHn with "A") as "C". iFrame. rewrite points_to_nil. rewrite URA.unit_id.
       iMod "C". iModIntro. iFrame.
     }
   Qed.
+
+  Lemma sim_init: forall v,
+      sim_opt {| lst_cls := λ _, uninit; lst_opt := λ _, Vundef; lst_map := v |} (replicate 100 Vundef).
+  Proof.
+    econs; ii; ss; et.
+    - right. esplits; et. rewrite lookup_replicate_2; ss. lia.
+  Qed.
+
+  Lemma sim_upd
+        k v lst0 vs0 (SIM: sim_opt lst0 vs0) (OPT: lst_cls lst0 k = opt) (IN: (0 <= k < 100)%Z)
+    :
+      sim_opt {| lst_cls := lst_cls lst0; lst_opt := set k v (lst_opt lst0); lst_map := lst_map lst0 |}
+              (<[Z.to_nat k:=v]> vs0).
+  Proof.
+    i. inv SIM. econs; et; cycle 1.
+    { rewrite insert_length; ss. }
+    i. destruct (dec k k0); subst; ss.
+    - exploit SIM0; et. intro T; des.
+      + left. esplits; et. unfold set. des_ifs. rewrite list_lookup_insert; ss. eapply lookup_lt_is_Some_1; et.
+      + rewrite OPT in *; ss.
+    - exploit SIM0; et. i; des.
+      + left. esplits; et. unfold set. des_ifs. rewrite list_lookup_insert_ne; ss. ii.
+        apply Z2Nat.inj in H1; ss.
+      + right. esplits; et. rewrite list_lookup_insert_ne; ss. ii.
+        apply Z2Nat.inj in H1; ss.
+  Qed.
+
+  Lemma sim_upd2
+        k v lst0 vs0 (SIM: sim_opt lst0 vs0) (OPT: lst_cls lst0 k = uninit) (IN: (0 <= k < 100)%Z)
+    :
+      sim_opt {| lst_cls := set k opt (lst_cls lst0);
+                 lst_opt := set k v (lst_opt lst0); lst_map := lst_map lst0 |}
+              (<[Z.to_nat k:=v]> vs0).
+  Proof.
+    i. inv SIM. econs; ss; et; cycle 1.
+    { ii. unfold set. des_ifs. exploit NORMAL; et. }
+    { rewrite insert_length; ss. }
+    i. unfold set. des_ifs.
+    - left. esplits; et. rewrite list_lookup_insert; ss. lia.
+    - exploit SIM0; et. i; des.
+      + left. esplits; ss; et. rewrite list_lookup_insert_ne; ss. ii. apply Z2Nat.inj in H1; ss.
+      + right. esplits; ss; et. rewrite list_lookup_insert_ne; ss. ii. apply Z2Nat.inj in H1; ss.
+  Qed.
+
+
 
   Theorem correct: refines2 [MWC0.MW] [MWC1.MW].
   Proof.
@@ -186,12 +254,9 @@ Section SIMMODSEM.
       mDesOr "INV"; mDesAll; des; clarify; ss.
       mDesOr "INV"; mDesAll; des; clarify; ss.
       hcall _ _ _ with "*".
-      { iModIntro. iSplits; ss; et. iFrame. iSplitL; ss; et. iRight. iLeft. iSplits; ss; et.
-        - instantiate (1:=repeat Vundef 100). iPureIntro. econs. ii. ss. right. esplits; et. admit "ez".
-        - admit "somehow".
-          (* big_opL_snoc *)
-          (*   big_opL_app *)
-          (*   big_opL_consZ_l *)
+      { rewrite repeat_replicate. iDestruct (OwnM_replicate_sepL with "A") as "A". iMod "A".
+        iModIntro. iSplits; ss; et. iFrame. iSplitL; ss; et. iRight. iLeft. iSplits; ss; et.
+        - iPureIntro. eapply sim_init.
       }
       { esplits; ss; et. }
       fold wf. mDesAll; des; clarify. steps. ss. des_ifs.
@@ -247,7 +312,8 @@ Section SIMMODSEM.
           steps. astop. steps. hret None; ss.
           { iModIntro. iFrame. iSplits; ss; et. iRight. iLeft. iSplits; ss; et; cycle 1.
             { iApply "A2"; et. }
-            admit "TODO". }
+            iPureIntro. eapply sim_upd; et; try lia. econs; et.
+          }
         + rewrite UNINIT. ss. steps. force_l. exists true. steps. unfold set; ss. des_ifs. steps.
           mAssert _ with "A2".
           { iDestruct (big_sepL_insert_acc with "A2") as "[B C]"; et.
@@ -262,7 +328,8 @@ Section SIMMODSEM.
           steps. astop. steps. hret None; ss.
           { iModIntro. iFrame. iSplits; ss; et. iRight. iLeft. iSplits; ss; et; cycle 1.
             { iApply "A2"; et. }
-            admit "TODO". }
+            iPureIntro. eapply sim_upd; et; try lia. econs; et.
+          }
       - steps.
         destruct (lst_cls l z) eqn:U.
         + ss. steps. force_l. exists false. steps. unfold set. des_ifs. steps. force_l; stb_tac; ss; clarify.
@@ -275,7 +342,7 @@ Section SIMMODSEM.
           steps. hret None; ss.
           { iSplits; ss; et. iModIntro. iFrame. iSplits; ss; et. iRight. iLeft. iSplits; ss; et.
             admit "TODO". }
-        + admit "this should not happen".
+        + exfalso. inv PURE2. hexploit (NORMAL z); et. { lia. } intro V. rewrite V in *; ss.
         + ss. steps. rewrite U. ss. steps. force_l; stb_tac; ss; clarify. steps.
           hcall _ _ _ with "-A2".
           { iModIntro. iSplits; ss; et. iRight. iRight. iFrame. iSplits; ss; et. }
