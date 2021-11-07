@@ -71,7 +71,8 @@ Section SIMMODSEM.
   .
 
   Variable global_stb: gname -> option fspec.
-  Hypothesis STBINCL: stb_incl (to_stb (MWStb ++ MemStb)) global_stb.
+  Hypothesis INCLMW: stb_incl (to_stb (MWStb)) global_stb.
+  Hypothesis INCLMEM: stb_incl (to_stb (MemStb)) global_stb.
 
   Import ImpNotations.
 
@@ -80,12 +81,27 @@ Section SIMMODSEM.
   Proof.
     eapply adequacy_local2. econs; ss. i.
     econstructor 1 with (wf:=wf (Sk.load_skenv sk)) (le:=top2); et; ss; cycle 1.
-    { exists None. econs. eapply to_semantic. iIntros "[A B]". iLeft. iSplits; ss; et. iFrame.
-      iSplits; ss; et. }
+    { eexists. econs. eapply to_semantic. iIntros "[A B]". iLeft. iSplits; ss; et. iFrame. iSplits; ss; et. }
+
     econs; ss.
-    { kinit. harg. mDesAll; des; clarify. unfold mainF, MWCImp.mainF.
+    { kinit. harg. mDesAll; des; clarify. unfold mainF, MWCImp.mainF, ccallU.
+      set (Sk.load_skenv sk) as ske in *.
+      fold (wf ske).
       Ltac isteps := repeat (steps; imp_steps).
       isteps. rewrite unfold_eval_imp. isteps.
+      mDesOr "INV"; mDesAll; des; clarify; cycle 1.
+      { rewrite Any.pair_split. steps. }
+      rewrite Any.upcast_split. steps.
+      des_ifs; cycle 1.
+      { contradict n. solve_NoDup. }
+      steps. erewrite INCLMEM; cycle 1. { stb_tac; ss. } isteps.
+      hcall _ _ _ with
+          T.
+          acatch.
+      ired.
+      rewrite interp_imp_AddrOf.
+      rewrite <- INCLMEM. force_l; stb_tac; ss; clarify.
+
       des_ifs.
       contradict n.
       solve_NoDup.

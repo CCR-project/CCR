@@ -63,7 +63,7 @@ Section PROOF.
   Definition MWSem (skenv: SkEnv.t): ModSem.t := {|
     ModSem.fnsems := [("main", cfunU mainF); ("loop", cfunU loopF); ("put", cfunU putF); ("get", cfunU getF)];
     ModSem.mn := "MW";
-    ModSem.initial_st := tt↑;
+    ModSem.initial_st := (Vint 0, Vint 0)↑;
   |}
   .
   (* Vptr (or_else (skenv.(SkEnv.id2blk) "arr") 0) 0 *)

@@ -94,7 +94,7 @@ Section PROOF.
     KModSem.mn := "MW";
     KModSem.initial_mr := GRA.embed (var_points_to ske "gv0" (Vint 0)) ⋅
                                     GRA.embed (var_points_to ske "gv1" (Vint 0));
-    KModSem.initial_st := tt↑;
+    KModSem.initial_st := (Vint 0, Vint 0)↑;
   |}
   .
 
