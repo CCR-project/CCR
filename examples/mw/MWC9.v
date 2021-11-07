@@ -89,20 +89,22 @@ Section PROOF.
     eapply y.
   Defined.
 
-  Definition KMWSem: KModSem.t := {|
+  Definition KMWSem ske: KModSem.t := {|
     KModSem.fnsems := MWsbtb;
     KModSem.mn := "MW";
-    KModSem.initial_mr := ε;
+    KModSem.initial_mr := GRA.embed (var_points_to ske "gv0" (Vint 0)) ⋅
+                                    GRA.embed (var_points_to ske "gv1" (Vint 0));
     KModSem.initial_st := tt↑;
   |}
   .
 
-  Definition MWSem (stb: gname -> option fspec): ModSem.t :=
-    KModSem.transl_tgt stb KMWSem.
+  (* Definition MWSem (stb: gname -> option fspec): ModSem.t := *)
+  (*   KModSem.transl_tgt stb KMWSem. *)
 
   Definition KMW: KMod.t := {|
-    KMod.get_modsem := fun _ => KMWSem;
-    KMod.sk := [("main", Sk.Gfun); ("loop", Sk.Gfun); ("put", Sk.Gfun); ("get", Sk.Gfun)];
+    KMod.get_modsem := fun sk => KMWSem (Sk.load_skenv sk);
+    KMod.sk := [("loop", Sk.Gfun); ("put", Sk.Gfun); ("get", Sk.Gfun); ("gv0", Sk.Gvar 0); ("gv1", Sk.Gvar 0);
+               ("gv2", Sk.Gvar 0); ("gv3", Sk.Gvar 0)]
   |}
   .
 
