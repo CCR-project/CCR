@@ -217,6 +217,17 @@ Section SIMMODSEM.
       + right. esplits; ss; et. rewrite list_lookup_insert_ne; ss. ii. apply Z2Nat.inj in H1; ss.
   Qed.
 
+  Lemma sim_upd3
+        k lst0 vs0 (SIM: sim_opt lst0 vs0) (OPT: lst_cls lst0 k = uninit) (IN: ~(0 <= k < 100)%Z)
+    :
+      sim_opt {| lst_cls := set k normal (lst_cls lst0);
+                 lst_opt := (lst_opt lst0); lst_map := lst_map lst0 |} vs0.
+  Proof.
+    i. inv SIM. econs; ss; et; cycle 1.
+    { ii. unfold set. des_ifs; ss; et. }
+    i. unfold set. des_ifs; et.
+  Qed.
+
 
 
   Theorem correct: refines2 [MWC0.MW] [MWC1.MW].
@@ -328,7 +339,7 @@ Section SIMMODSEM.
           steps. astop. steps. hret None; ss.
           { iModIntro. iFrame. iSplits; ss; et. iRight. iLeft. iSplits; ss; et; cycle 1.
             { iApply "A2"; et. }
-            iPureIntro. eapply sim_upd; et; try lia. econs; et.
+            iPureIntro. eapply sim_upd2; et; try lia. econs; et.
           }
       - steps.
         destruct (lst_cls l z) eqn:U.
@@ -341,8 +352,8 @@ Section SIMMODSEM.
           mDesOr "INV"; mDesAll; des; clarify; ss.
           steps. hret None; ss.
           { iSplits; ss; et. iModIntro. iFrame. iSplits; ss; et. iRight. iLeft. iSplits; ss; et.
-            admit "TODO". }
-        + exfalso. inv PURE2. hexploit (NORMAL z); et. { lia. } intro V. rewrite V in *; ss.
+            iPureIntro. eapply sim_upd3; et; try lia. }
+        + exfalso. inv PURE2. hexploit (NORMAL z); et. { lia. } intro V. rewrite U in *; des; ss.
         + ss. steps. rewrite U. ss. steps. force_l; stb_tac; ss; clarify. steps.
           hcall _ _ _ with "-A2".
           { iModIntro. iSplits; ss; et. iRight. iRight. iFrame. iSplits; ss; et. }
@@ -352,6 +363,79 @@ Section SIMMODSEM.
           mDesOr "INV"; mDesAll; des; clarify; ss.
           steps. hret None; ss.
           { iSplits; ss; et. iModIntro. iFrame. iSplits; ss; et. iRight. iLeft. iSplits; ss; et. }
+    }
+
+    econs; ss.
+    { init. harg. mDesAll. des; clarify. des_u. unfold getF, MWC0.getF, ccallU. steps. fold wf.
+      mDesOr "INV"; mDesAll; des; clarify.
+      { exfalso. clear - _UNWRAPU1. apply Any.downcast_upcast in _UNWRAPU1. des.
+        apply Any.upcast_inj in _UNWRAPU1. des; clarify.
+        assert(T: exists (a b: local_state), a <> b).
+        { exists (mk_lst (fun _ => uninit) (fun _ => Vundef) Vundef),
+          (mk_lst (fun _ => uninit) (fun _ => Vundef) (Vint 1)). ii. clarify. }
+        des. revert a b T. rewrite EQ. i. repeat des_u; ss.
+      }
+      mDesOr "INV"; mDesAll; des; clarify; cycle 1.
+      { mAssertPure False; ss. admit "ez". }
+      steps. rewrite Any.upcast_downcast in *. clarify. steps.
+      destruct ((0 <=? z)%Z && (z <? 100)%Z) eqn:T.
+      - inv PURE2. hexploit (SIM (Z.to_nat z)); [lia|]. rewrite ! Nat2Z.id in *;rewrite Z2Nat.id in *;try lia.
+        intro U. des; ss.
+        + rewrite INIT. ss. steps.
+          mAssert _ with "A2".
+          { iDestruct (big_sepL_insert_acc with "A2") as "[B C]"; et.
+            instantiate (1:=_ ** _). iSplitL "B". { iExact "B". } iExact "C". }
+          mDesAll; ss. rewrite Z2Nat.id in *; try lia.
+          astart 1. acatch. hcall _ (_, _, _) (Some (_, _)) with "-A2".
+          { iModIntro. iFrame. iSplits; ss; et. }
+          { esplits; ss; et. }
+          fold wf. mDesAll; des; clarify. ss. des_ifs.
+          mDesOr "INV"; mDesAll; des; clarify; ss.
+          mDesOr "INV"; mDesAll; des; clarify; ss.
+          steps. astop. steps. hret None; ss.
+          { iModIntro. iFrame. iSplits; ss; et. iRight. iLeft. iSplits; ss; et; cycle 1.
+            { iApply "A2"; et. }
+            iPureIntro. eapply sim_upd; et; try lia. econs; et.
+          }
+        + rewrite UNINIT. ss. steps. force_l. exists true. steps. unfold set; ss. des_ifs. steps.
+          mAssert _ with "A2".
+          { iDestruct (big_sepL_insert_acc with "A2") as "[B C]"; et.
+            instantiate (1:=_ ** _). iSplitL "B". { iExact "B". } iExact "C". }
+          mDesAll; ss. rewrite Z2Nat.id in *; try lia.
+          astart 1. acatch. hcall _ (_, _, _) (Some (_, _)) with "-A2".
+          { iModIntro. iFrame. iSplitR "A1"; et. }
+          { esplits; ss; et. }
+          fold wf. mDesAll; des; clarify. ss. des_ifs.
+          mDesOr "INV"; mDesAll; des; clarify; ss.
+          mDesOr "INV"; mDesAll; des; clarify; ss.
+          steps. astop. steps. hret None; ss.
+          { iModIntro. iFrame. iSplits; ss; et. iRight. iLeft. iSplits; ss; et; cycle 1.
+            { iApply "A2"; et. }
+            iPureIntro. eapply sim_upd2; et; try lia. econs; et.
+          }
+      - steps.
+        destruct (lst_cls l z) eqn:U.
+        + ss. steps. force_l. exists false. steps. unfold set. des_ifs. steps. force_l; stb_tac; ss; clarify.
+          steps. hcall _ _ _ with "A INIT".
+          { iModIntro. iSplits; ss; et. iRight. iRight. iFrame. iSplits; ss; et. }
+          { esplits; ss; et. }
+          fold wf. ss. des_ifs.
+          mDesOr "INV"; mDesAll; des; clarify; ss.
+          mDesOr "INV"; mDesAll; des; clarify; ss.
+          steps. hret None; ss.
+          { iSplits; ss; et. iModIntro. iFrame. iSplits; ss; et. iRight. iLeft. iSplits; ss; et.
+            iPureIntro. eapply sim_upd3; et; try lia. }
+        + exfalso. inv PURE2. hexploit (NORMAL z); et. { lia. } intro V. rewrite U in *; des; ss.
+        + ss. steps. rewrite U. ss. steps. force_l; stb_tac; ss; clarify. steps.
+          hcall _ _ _ with "-A2".
+          { iModIntro. iSplits; ss; et. iRight. iRight. iFrame. iSplits; ss; et. }
+          { esplits; ss; et. }
+          fold wf. ss. des_ifs.
+          mDesOr "INV"; mDesAll; des; clarify; ss.
+          mDesOr "INV"; mDesAll; des; clarify; ss.
+          steps. hret None; ss.
+          { iSplits; ss; et. iModIntro. iFrame. iSplits; ss; et. iRight. iLeft. iSplits; ss; et. }
+
     }
         +
         r ewrite ! Nat2Z.id in *;rewrite Z2Nat.id in *;try lia.

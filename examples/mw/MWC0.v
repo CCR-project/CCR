@@ -57,7 +57,7 @@ Section PROOF.
                   else ccallU "access" ([map; Vint k]));;
       trigger (Syscall "print" [Vint k]↑ top1);;; (*** TODO: make something like "syscallu" ***)
       trigger (Syscall "print" [v]↑ top1);;;
-      Ret Vundef
+      Ret v
   .
 
   Definition MWSem (skenv: SkEnv.t): ModSem.t := {|
