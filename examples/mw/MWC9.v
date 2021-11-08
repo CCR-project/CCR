@@ -62,8 +62,7 @@ Section PROOF.
       (if ((0 <=? k) && (k <? 100))%Z
        then lAPC;;; addr <- (vadd arr (Vint (8 * k)))?;; `_: val <- ccallU "store" [addr; v];; Ret tt
        else lAPC;;; `_: val <- ccallU "update" ([map; Vint k; v]);; Ret tt);;;
-      trigger (Syscall "print" [Vint k]↑ top1);;; (*** TODO: make something like "syscallu" ***)
-      trigger (Syscall "print" [v]↑ top1);;;
+      z <- trigger (Syscall "print" [k]↑ top1);; `_: Z <- z↓?;; (*** TODO: make something like "syscallu" ***)
       Ret Vundef
   .
 
@@ -75,8 +74,7 @@ Section PROOF.
       `v: val <- (if ((0 <=? k) && (k <? 100))%Z
                   then addr <- (vadd arr (Vint (8 * k)))?;; ccallU "load" [addr]
                   else ccallU "access" ([map; Vint k]));;
-      trigger (Syscall "print" [Vint k]↑ top1);;; (*** TODO: make something like "syscallu" ***)
-      trigger (Syscall "print" [v]↑ top1);;;
+      z <- trigger (Syscall "print" [k]↑ top1);; `_: Z <- z↓?;; (*** TODO: make something like "syscallu" ***)
       Ret v
   .
 

@@ -44,8 +44,7 @@ Section PROOF.
       '(k, v) <- (pargs [Tint; Tint] varg)?;;
       full0 <- pget;;
       _ <- pput (add k v full0);;;
-      trigger (Syscall "print" [Vint k]↑ top1);;;
-      trigger (Syscall "print" [Vint v]↑ top1);;;
+      z <- trigger (Syscall "print" [k]↑ top1);; `_: Z <- z↓?;; (*** TODO: make something like "syscallu" ***)
       Ret Vundef
   .
 
@@ -54,8 +53,7 @@ Section PROOF.
       k <- (pargs [Tint] varg)?;;
       `full0: (Z -> option Z) <- pget;;
       v <- (full0 k)ǃ;;;
-      trigger (Syscall "print" [Vint k]↑ top1);;; (*** TODO: make something like "syscallu" ***)
-      trigger (Syscall "print" [Vint v]↑ top1);;;
+      z <- trigger (Syscall "print" [k]↑ top1);; `_: Z <- z↓?;; (*** TODO: make something like "syscallu" ***)
       Ret (Vint v)
   .
 

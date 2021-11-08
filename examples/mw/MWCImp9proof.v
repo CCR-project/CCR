@@ -86,6 +86,8 @@ Section SIMMODSEM.
 
   Import ImpNotations.
 
+  Ltac isteps := repeat (steps; imp_steps).
+
   Theorem correct:
     refines2 [MWCImp.MW] [MWC9.MW (fun _ => global_stb)].
   Proof.
@@ -99,96 +101,97 @@ Section SIMMODSEM.
     hexploit (SKINCL "gv1"); ss; eauto 10. intros [blk1 FIND1].
 
     econs; ss.
-    { kinit. harg. mDesAll; des; clarify. unfold mainF, MWCImp.mainF, ccallU.
-      set (Sk.load_skenv sk) as ske in *.
-      fold (wf ske).
-      Ltac isteps := repeat (steps; imp_steps).
-      isteps. rewrite unfold_eval_imp. isteps.
-      mDesOr "INV"; mDesAll; des; clarify; cycle 1.
-      { rewrite Any.pair_split. steps. }
-      rewrite Any.upcast_split. steps.
-      des_ifs; cycle 1.
-      { contradict n. solve_NoDup. }
-      steps. erewrite STBINCL; cycle 1. { stb_tac; ss. } isteps.
-      hcall _ None None with "*".
-      { iModIntro. iSplits; ss; et.
-        - iLeft. iSplits; ss; et. iFrame. iPureIntro. esplits; ss; et.
-        - admit "ez - size argument".
-      }
-      { esplits; ss; et. }
-      fold (wf ske). mDesAll; des; clarify. steps. isteps. rewrite FIND0. steps.
-      isteps. ss. des_ifs. mDesOr "INV"; mDesAll; des; clarify; ss.
-      unfold var_points_to in *. rewrite FIND0 in *. rewrite FIND1 in *.
-      astart 1. astep "store" (tt↑). { eapply STBINCL. stb_tac; ss. } hcall _ (Some (_, _, _)) _ with "A1".
-      { iModIntro. iSplitR; iSplits; ss; et. }
-      { esplits; ss; et. }
-      fold (wf ske). rewrite FIND0 in *. rewrite FIND1 in *. ss. des_ifs.
-      mDesOr "INV"; mDesAll; des; clarify; ss. isteps. astop. steps.
+    { admit "". }
+    (* { kinit. harg. mDesAll; des; clarify. unfold mainF, MWCImp.mainF, ccallU. *)
+    (*   set (Sk.load_skenv sk) as ske in *. *)
+    (*   fold (wf ske). *)
+    (*   isteps. rewrite unfold_eval_imp. isteps. *)
+    (*   mDesOr "INV"; mDesAll; des; clarify; cycle 1. *)
+    (*   { rewrite Any.pair_split. steps. } *)
+    (*   rewrite Any.upcast_split. steps. *)
+    (*   des_ifs; cycle 1. *)
+    (*   { contradict n. solve_NoDup. } *)
+    (*   steps. erewrite STBINCL; cycle 1. { stb_tac; ss. } isteps. *)
+    (*   hcall _ None None with "*". *)
+    (*   { iModIntro. iSplits; ss; et. *)
+    (*     - iLeft. iSplits; ss; et. iFrame. iPureIntro. esplits; ss; et. *)
+    (*     - admit "ez - size argument". *)
+    (*   } *)
+    (*   { esplits; ss; et. } *)
+    (*   fold (wf ske). mDesAll; des; clarify. steps. isteps. rewrite FIND0. steps. *)
+    (*   isteps. ss. des_ifs. mDesOr "INV"; mDesAll; des; clarify; ss. *)
+    (*   unfold var_points_to in *. rewrite FIND0 in *. rewrite FIND1 in *. *)
+    (*   astart 1. astep "store" (tt↑). { eapply STBINCL. stb_tac; ss. } hcall _ (Some (_, _, _)) _ with "A1". *)
+    (*   { iModIntro. iSplitR; iSplits; ss; et. } *)
+    (*   { esplits; ss; et. } *)
+    (*   fold (wf ske). rewrite FIND0 in *. rewrite FIND1 in *. ss. des_ifs. *)
+    (*   mDesOr "INV"; mDesAll; des; clarify; ss. isteps. astop. steps. *)
 
-      apply Any.pair_inj in H2. des; clarify.
-      unfold unblk in *. des_ifs.
+    (*   apply Any.pair_inj in H2. des; clarify. *)
+    (*   unfold unblk in *. des_ifs. *)
 
-      erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.
-      hcall _ _ None with "*".
-      { iModIntro. iSplits; ss; et. iLeft. iSplits; ss; et. rewrite FIND0. rewrite FIND1. iFrame. ss. }
-      { esplits; ss; et. }
-      fold (wf ske). rewrite FIND0 in *. rewrite FIND1 in *. ss. des_ifs.
-      mDesOr "INV"; mDesAll; des; clarify; ss. isteps.
+    (*   erewrite STBINCL; cycle 1. { stb_tac; ss. } steps. *)
+    (*   hcall _ _ None with "*". *)
+    (*   { iModIntro. iSplits; ss; et. iLeft. iSplits; ss; et. rewrite FIND0. rewrite FIND1. iFrame. ss. } *)
+    (*   { esplits; ss; et. } *)
+    (*   fold (wf ske). rewrite FIND0 in *. rewrite FIND1 in *. ss. des_ifs. *)
+    (*   mDesOr "INV"; mDesAll; des; clarify; ss. isteps. *)
 
-      astart 1. astep "store" (tt↑). { eapply STBINCL. stb_tac; ss. } rewrite FIND1. isteps.
-      hcall _ (Some (_, _, _)) _ with "A".
-      { iModIntro. iSplitR; iSplits; ss; et. }
-      { esplits; ss; et. }
-      fold (wf ske). rewrite FIND0 in *. rewrite FIND1 in *. ss. des_ifs.
-      mDesOr "INV"; mDesAll; des; clarify; ss. isteps. astop. steps.
+    (*   astart 1. astep "store" (tt↑). { eapply STBINCL. stb_tac; ss. } rewrite FIND1. isteps. *)
+    (*   hcall _ (Some (_, _, _)) _ with "A". *)
+    (*   { iModIntro. iSplitR; iSplits; ss; et. } *)
+    (*   { esplits; ss; et. } *)
+    (*   fold (wf ske). rewrite FIND0 in *. rewrite FIND1 in *. ss. des_ifs. *)
+    (*   mDesOr "INV"; mDesAll; des; clarify; ss. isteps. astop. steps. *)
 
-      erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.
-      hcall _ _ None with "*".
-      { iModIntro. iSplits; ss; et. iLeft. iSplits; ss; et. rewrite FIND0. rewrite FIND1. iFrame. ss. }
-      { esplits; ss; et. }
-      fold (wf ske). rewrite FIND0 in *. rewrite FIND1 in *. ss. des_ifs.
-      mDesOr "INV"; mDesAll; des; clarify; ss. isteps.
+    (*   erewrite STBINCL; cycle 1. { stb_tac; ss. } steps. *)
+    (*   hcall _ _ None with "*". *)
+    (*   { iModIntro. iSplits; ss; et. iLeft. iSplits; ss; et. rewrite FIND0. rewrite FIND1. iFrame. ss. } *)
+    (*   { esplits; ss; et. } *)
+    (*   fold (wf ske). rewrite FIND0 in *. rewrite FIND1 in *. ss. des_ifs. *)
+    (*   mDesOr "INV"; mDesAll; des; clarify; ss. isteps. *)
 
-      erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.
-      hcall _ _ None with "*".
-      { iModIntro. iSplits; ss; et. iLeft. iSplits; ss; et. rewrite FIND0. rewrite FIND1. iFrame. ss. }
-      { esplits; ss; et. }
-      fold (wf ske). rewrite FIND0 in *. rewrite FIND1 in *. ss. des_ifs.
-      mDesOr "INV"; mDesAll; des; clarify; ss. isteps.
+    (*   erewrite STBINCL; cycle 1. { stb_tac; ss. } steps. *)
+    (*   hcall _ _ None with "*". *)
+    (*   { iModIntro. iSplits; ss; et. iLeft. iSplits; ss; et. rewrite FIND0. rewrite FIND1. iFrame. ss. } *)
+    (*   { esplits; ss; et. } *)
+    (*   fold (wf ske). rewrite FIND0 in *. rewrite FIND1 in *. ss. des_ifs. *)
+    (*   mDesOr "INV"; mDesAll; des; clarify; ss. isteps. *)
 
-      hret None; ss.
-      { iModIntro. iSplits; ss; et. iLeft. iSplits; ss; et. rewrite FIND0. rewrite FIND1. iFrame. ss. }
-    }
+    (*   hret None; ss. *)
+    (*   { iModIntro. iSplits; ss; et. iLeft. iSplits; ss; et. rewrite FIND0. rewrite FIND1. iFrame. ss. } *)
+    (* } *)
 
     econs; ss.
-    { kinit. harg. mDesAll; des; clarify. unfold loopF, MWCImp.loopF, ccallU.
-      set (Sk.load_skenv sk) as ske in *.
-      fold (wf ske).
-      isteps. rewrite unfold_eval_imp. isteps.
-      mDesOr "INV"; mDesAll; des; clarify; cycle 1.
-      { rewrite Any.pair_split. steps. }
-      rewrite Any.upcast_split. steps.
-      des_ifs; cycle 1.
-      { contradict n. solve_NoDup. }
-      steps. isteps.
+    { admit "". }
+    (* { kinit. harg. mDesAll; des; clarify. unfold loopF, MWCImp.loopF, ccallU. *)
+    (*   set (Sk.load_skenv sk) as ske in *. *)
+    (*   fold (wf ske). *)
+    (*   isteps. rewrite unfold_eval_imp. isteps. *)
+    (*   mDesOr "INV"; mDesAll; des; clarify; cycle 1. *)
+    (*   { rewrite Any.pair_split. steps. } *)
+    (*   rewrite Any.upcast_split. steps. *)
+    (*   des_ifs; cycle 1. *)
+    (*   { contradict n. solve_NoDup. } *)
+    (*   steps. isteps. *)
 
-      erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.
-      hcall _ _ None with "*".
-      { iModIntro. iSplits; ss; et. iLeft. iSplits; ss; et. iFrame. ss. }
-      { esplits; ss; et. }
-      fold (wf ske). ss. des_ifs.
-      mDesOr "INV"; mDesAll; des; clarify; ss. isteps.
+    (*   erewrite STBINCL; cycle 1. { stb_tac; ss. } steps. *)
+    (*   hcall _ _ None with "*". *)
+    (*   { iModIntro. iSplits; ss; et. iLeft. iSplits; ss; et. iFrame. ss. } *)
+    (*   { esplits; ss; et. } *)
+    (*   fold (wf ske). ss. des_ifs. *)
+    (*   mDesOr "INV"; mDesAll; des; clarify; ss. isteps. *)
 
-      erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.
-      hcall _ _ None with "*".
-      { iModIntro. iSplits; ss; et. iLeft. iSplits; ss; et. iFrame. ss. }
-      { esplits; ss; et. }
-      fold (wf ske). ss. des_ifs.
-      mDesOr "INV"; mDesAll; des; clarify; ss. isteps.
+    (*   erewrite STBINCL; cycle 1. { stb_tac; ss. } steps. *)
+    (*   hcall _ _ None with "*". *)
+    (*   { iModIntro. iSplits; ss; et. iLeft. iSplits; ss; et. iFrame. ss. } *)
+    (*   { esplits; ss; et. } *)
+    (*   fold (wf ske). ss. des_ifs. *)
+    (*   mDesOr "INV"; mDesAll; des; clarify; ss. isteps. *)
 
-      hret None; ss.
-      { iModIntro. iSplits; ss; et. iLeft. iSplits; ss; et. iFrame. ss. }
-    }
+    (*   hret None; ss. *)
+    (*   { iModIntro. iSplits; ss; et. iLeft. iSplits; ss; et. iFrame. ss. } *)
+    (* } *)
 
     econs; ss.
     { kinit. harg. mDesAll; des; clarify. unfold putF, MWCImp.putF, ccallU.
@@ -228,7 +231,13 @@ Section SIMMODSEM.
               apply Z.leb_le in Heq0. apply Z.ltb_lt in Heq1.
               rewrite two_power_nat_S in *. set (8 * z)%Z as y in *. rewrite Z.mul_comm in *.
               rewrite Z.div_mul in *; ss. rewrite two_power_nat_equiv in *. lia. }
-          - admit "TODO".
+          - rewrite scale_int_8 in *. uo. clarify. ss. rewrite Z.add_0_l.
+            unfold modrange_64. unfold scale_ofs. bsimpl; des.
+            destruct (Z_le_gt_dec 0 (8 * z)); cycle 1.
+            { lia. }
+            destruct (Z_lt_ge_dec (8 * z) modulus_64); ss.
+            unfold modulus_64, wordsize_64 in *.
+            rewrite two_power_nat_equiv in *. lia.
         }
         rewrite Y. steps. isteps. erewrite STBINCL; [|stb_tac; ss]. steps.
         hcall _ None _ with "*".
@@ -240,7 +249,45 @@ Section SIMMODSEM.
         fold (wf ske). mDesAll; des; clarify.
         mDesOr "INV"; mDesAll; des; clarify; ss. steps. isteps.
         Local Transparent syscalls.
-        cbn. des_ifs. steps. isteps.
+        cbn. des_ifs. steps. isteps. hret None; ss.
+        { iModIntro. iSplits; ss; et. iLeft. iSplits; ss; et. iFrame. ss. }
+      - isteps. replace (intrange_64 (- 1)) with true by ss. unfold unint in *. des_ifs_safe.
+        steps.
+        bsimpl; des; des_sumbool.
+        + destruct ((ZArith_dec.Z_lt_dec (- 1) z)%Z).
+          { lia. }
+          isteps.
+          destruct ((ZArith_dec.Z_lt_dec z 100)%Z); cycle 1.
+          { lia. }
+          isteps.
+          rewrite FIND1. steps. isteps.
+          astart 1. astep "load" (tt↑). { eapply STBINCL. stb_tac; ss. }
+          hcall _ (Some (_, _, _)) _ with "A".
+          { iModIntro. iSplitR; iSplits; ss; et. unfold var_points_to. rewrite FIND1. iFrame. }
+          { esplits; ss; et. }
+          fold (wf ske). ss. des_ifs. clear_fast.
+          mDesOr "INV"; mDesAll; des; clarify; ss. rewrite Any.upcast_downcast. steps. astop. isteps.
+          erewrite STBINCL; [|stb_tac; ss]. steps.
+          apply Any.pair_inj in H2. des; clarify.
+          hcall _ _ _ with "*".
+          { iModIntro. iSplits; ss; et.
+            - iLeft. iSplits; ss; et. unfold var_points_to. rewrite FIND0. rewrite FIND1. iFrame.
+              iSplits; ss; et.
+            - iPureIntro. ii. apply Any.upcast_inj in H0. des; clarify. admit "size argument". }
+          { esplits; ss; et. }
+          fold (wf ske). mDesAll; des; clarify.
+          mDesOr "INV"; mDesAll; des; clarify; ss. steps. isteps.
+          hcall _ _ _ with "*".
+          idtac.
+          astart 1.
+        +
+
+          isteps.
+        destruct ((ZArith_dec.Z_lt_dec z 100)%Z); cycle 1.
+        { lia. }
+        isteps.
+    }
+        idtac.
         TTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
         astop. steps.
         isteps.

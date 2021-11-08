@@ -368,7 +368,7 @@ TODO: APC, locked thinges
               - iRight. iRight. iSplits; et. iFrame.
               - iAssumption.
             }
-            steps. fold wf. r in WLE. des_ifs.
+            steps. fold wf. r in WLE. des_ifs. rewrite _UNWRAPU. steps.
             
 
             hret None; ss.
@@ -392,7 +392,7 @@ TODO: APC, locked thinges
 
             hpost_tgt.
             { iModIntro. iFrame. iSplits; ss. xtra. }
-            steps. fold wf. ss. des_ifs.
+            steps. fold wf. ss. des_ifs. rewrite _UNWRAPU. steps.
             hret None; ss.
             { iDes; ss; clarify. iModIntro. iSplits; ss; et. apply Any.upcast_inj in H6. des; clarify.
               iSplitR "A A1"; ss; et.
@@ -408,7 +408,7 @@ TODO: APC, locked thinges
               - iRight. iRight. iSplits; et. iFrame.
               - iAssumption.
             }
-            steps. fold wf. r in WLE. des_ifs.
+            steps. fold wf. r in WLE. des_ifs. rewrite _UNWRAPU. steps.
             
 
             hret None; ss.
@@ -433,7 +433,7 @@ TODO: APC, locked thinges
 
             hpost_tgt.
             { iModIntro. iFrame. iSplits; ss. iCombine "A1" "INV" as "A". iAssumption. }
-            steps. fold wf. ss. des_ifs.
+            steps. fold wf. ss. des_ifs. rewrite _UNWRAPU. steps.
             hret None; ss.
             { iDes; ss; clarify. iModIntro. iSplits; ss; et. apply Any.upcast_inj in H6. des; clarify.
               iSplitR "A A1"; ss; et.
@@ -483,7 +483,7 @@ TODO: APC, locked thinges
           fold wf. steps.
           assert(T: lst_opt lst0 k = (Vint v)).
           { r in PURE. exploit PURE; et. i; des_ifs. }
-          rewrite T. steps.
+          rewrite T. steps. rewrite _UNWRAPU. steps.
           hret None; ss.
           { iDes; ss; clarify. iModIntro. apply Any.upcast_inj in H6. des; clarify. iFrame. iSplits; ss; et.
             iLeft. iSplits; ss; et. { iFrame. } }
@@ -502,7 +502,7 @@ TODO: APC, locked thinges
 
           hpost_tgt.
           { iModIntro. iFrame. iSplits; ss. iCombine "A1" "INV" as "A". iAssumption. }
-          steps. fold wf. ss. des_ifs.
+          steps. fold wf. ss. des_ifs. rewrite _UNWRAPU. steps.
           hret None; ss.
           { iDes; ss; clarify. iModIntro. iSplits; ss; et. apply Any.upcast_inj in H6. des; clarify.
             iSplitR "A A1"; ss; et.

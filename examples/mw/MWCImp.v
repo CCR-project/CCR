@@ -45,10 +45,9 @@ Section PROOF.
       ((* if# ((0%Z =? "k") + (0%Z <"k")) * ("k" < 100%Z) *)
        if# ((- 1)%Z < "k") * ("k" < 100%Z)
        then# "arr" =#& "gv0" ;# "arrv" =#* "arr" ;# ("arrv" + (8%Z * "k")) *=# "v"
-       else# "map" =#& "gv1" ;# "mapv" =#* "map" ;# @ "update" ["map": expr; "k": expr; "v": expr]
+       else# "map" =#& "gv1" ;# "mapv" =#* "map" ;# @ "update" ["mapv": expr; "k": expr; "v": expr]
        fi# ;#
-       @! "print" ["k" : expr] ;#
-       @! "print" ["v" : expr]
+       @! "print" ["k" : expr]
       )
   .
 
@@ -58,10 +57,9 @@ Section PROOF.
       ["v"; "arr"; "map"; "tmp"]
       (if# ((- 1)%Z < "k") * ("k" < 100%Z)
        then# "arr" =#& "gv0" ;# "arrv" =#* "arr" ;# "v" =#* ("arrv" + (8%Z * "k"))
-       else# "map" =#& "gv1" ;# "mapv" =#* "map" ;# "v" =@ "access" ["map": expr; "k": expr]
+       else# "map" =#& "gv1" ;# "mapv" =#* "map" ;# "v" =@ "access" ["mapv": expr; "k": expr]
        fi# ;#
        @! "print" ["k" : expr] ;#
-       @! "print" ["v" : expr] ;#
        return# "v"
       )
   .
