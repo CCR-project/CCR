@@ -70,10 +70,11 @@ Section PROOF.
     fun varg =>
       k <- (pargs [Tint] varg)?;;
       assume(intrange_64 k);;;
+      check_lock;;;
       '(arr, map) <- pget;;
       `v: val <- (if ((0 <=? k) && (k <? 100))%Z
-                  then addr <- (vadd arr (Vint (8 * k)))?;; ccallU "load" [addr]
-                  else ccallU "access" ([map; Vint k]));;
+                  then lAPC;;; addr <- (vadd arr (Vint (8 * k)))?;; ccallU "load" [addr]
+                  else lAPC;;; ccallU "access" ([map; Vint k]));;
       z <- trigger (Syscall "print" [k]↑ top1);; `_: Z <- z↓?;; (*** TODO: make something like "syscallu" ***)
       Ret v
   .
