@@ -42,10 +42,10 @@ Section PROOF.
     fun varg =>
       _ <- (pargs [] varg)?;;
       check_lock;;;
-      `arr: val <- ccallU "alloc" ([Vint 100]);; assume(wf_val arr);;;
+      `arr: val <- ccallU "alloc" ([Vint 100]);; (pargs [Tblk] [arr])?;;;
       lAPC;;;
       pupd_arr arr;;;
-      `map: val <- ccallU "new" ([]: list val);; assume(wf_val map);;;
+      `map: val <- ccallU "new" ([]: list val);;
       pupd_map map;;;
       lAPC;;;
       `_: val <- ccallU "init" ([]: list val);;

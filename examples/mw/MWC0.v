@@ -29,9 +29,9 @@ Section PROOF.
   Definition mainF: list val -> itree Es val :=
     fun varg =>
       _ <- (pargs [] varg)?;;
-      `arr: val <- ccallU "alloc" ([Vint 100]);; assume(wf_val arr);;;
+      `arr: val <- ccallU "alloc" ([Vint 100]);; (pargs [Tblk] [arr])?;;;
       pupd_arr arr;;;
-      `map: val <- ccallU "new" ([]: list val);; assume(wf_val map);;;
+      `map: val <- ccallU "new" ([]: list val);;
       pupd_map map;;;
       `_: val <- ccallU "init" ([]: list val);;
       `_: val <- ccallU "loop" ([]: list val);;

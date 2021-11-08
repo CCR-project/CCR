@@ -229,13 +229,6 @@ Section SIMMODSEM.
   Qed.
 
 
-  Lemma scale_int_8 n: scale_int (8 * n) = Some n.
-  Proof.
-    unfold scale_int. des_ifs.
-    - rewrite Z.mul_comm. rewrite Z.div_mul; ss.
-    - contradict n0. eapply Z.divide_factor_l.
-  Qed.
-
   Theorem correct: refines2 [MWC0.MW] [MWC1.MW].
   Proof.
     eapply adequacy_local2. econs; ss.
@@ -260,11 +253,11 @@ Section SIMMODSEM.
       fold wf. steps. astop. mDesAll; des; clarify.
       mDesOr "INV"; mDesAll; des; clarify; ss.
       mDesOr "INV"; mDesAll; des; clarify; ss.
-      steps. force_l; stb_tac; ss; clarify. steps. force_r; ss. steps.
+      steps. force_l; stb_tac; ss; clarify. steps.
       hcall _ _ _ with "-A".
       { iModIntro. iFrame. iSplits; ss; et. }
       { esplits; ss; et. }
-      fold wf. mDesAll; des; clarify. steps. force_l; stb_tac; ss; clarify. force_r. esplits; ss. steps.
+      fold wf. mDesAll; des; clarify. steps. force_l; stb_tac; ss; clarify.
       mDesOr "INV"; mDesAll; des; clarify; ss.
       mDesOr "INV"; mDesAll; des; clarify; ss. steps.
       hcall _ _ _ with "-A".

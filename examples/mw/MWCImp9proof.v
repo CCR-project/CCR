@@ -54,10 +54,18 @@ Section SIMMODSEM.
   (*     (<<SRC: mrps_src0 = tt↑>>) /\ *)
   (*     (<<TGT: mrps_tgt0 = tt↑>>) *)
   (* . *)
+  Definition wf_arr (arr: val): Prop :=
+    match arr with
+    | Vint n => n = 0%Z
+    | Vptr _ ofs => ofs = 0%Z
+    | _ => False
+    end
+  .
+
   Let wf (ske: SkEnv.t): _ -> W -> Prop :=
     @mk_wf _ (option (Any.t * Any.t))
            (fun w0 st_src st_tgt => (
-                {{"NORMAL": ∃ arr map, ⌜w0 = None ∧ st_src = (arr, map)↑ ∧ wf_val arr ∧ wf_val map⌝ **
+                {{"NORMAL": ∃ arr map, ⌜w0 = None ∧ st_src = (arr, map)↑ ∧ wf_arr arr⌝ **
                     OwnM (var_points_to ske "gv0" arr) ** OwnM (var_points_to ske "gv1" map)}} ∨
                 (* {{"NORMAL": ∃ arr map arrb mapb, ⌜w0 = None ∧ ske.(SkEnv.id2blk) "gv0" = Some arrb *)
                 (*     ∧ ske.(SkEnv.id2blk) "gv1" = Some mapb ∧ st_src = (arr, map)↑⌝ ** *)
@@ -118,6 +126,7 @@ Section SIMMODSEM.
       mDesOr "INV"; mDesAll; des; clarify; ss. isteps. astop. steps.
 
       apply Any.pair_inj in H2. des; clarify.
+      unfold unblk in *. des_ifs.
 
       erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.
       hcall _ _ None with "*".
@@ -207,6 +216,43 @@ Section SIMMODSEM.
         fold (wf ske). ss. des_ifs.
         mDesOr "INV"; mDesAll; des; clarify; ss. rewrite Any.upcast_downcast. steps. isteps. astop. steps.
         apply Any.pair_inj in H2. des; clarify. clear_fast.
+        assert(Y: wf_val v).
+        { clear - PURE1 _UNWRAPU0 Heq0. r in PURE1. des_ifs; ss; clarify.
+          - unfold wf_val. rewrite Z.add_0_l. unfold intrange_64. bsimpl; des; des_sumbool.
+            destruct (Z_le_gt_dec min_64 (8 * z)); ss; cycle 1.
+            { unfold min_64, modulus_64_half, modulus_64, wordsize_64 in *.
+              rewrite two_power_nat_S in *. rewrite Z.mul_comm in *. rewrite Z.div_mul in *; ss.
+              rewrite two_power_nat_equiv in *. lia. }
+            destruct (Z_le_gt_dec (8 * z) max_64); ss; cycle 1.
+            { unfold max_64, modulus_64_half, modulus_64, wordsize_64 in *.
+              apply Z.leb_le in Heq0. apply Z.ltb_lt in Heq1.
+              rewrite two_power_nat_S in *. set (8 * z)%Z as y in *. rewrite Z.mul_comm in *.
+              rewrite Z.div_mul in *; ss. rewrite two_power_nat_equiv in *. lia. }
+          - admit "TODO".
+        }
+        rewrite Y. steps. isteps. erewrite STBINCL; [|stb_tac; ss]. steps.
+        hcall _ None _ with "*".
+        { iModIntro. iSplits; ss; et.
+          - iLeft. iSplits; ss; et. unfold var_points_to. rewrite FIND0. rewrite FIND1. iFrame.
+            iSplits; ss; et.
+          - iPureIntro. ii. apply Any.upcast_inj in H0. des; clarify. admit "size argument". }
+        { esplits; ss; et. }
+        fold (wf ske). mDesAll; des; clarify.
+        mDesOr "INV"; mDesAll; des; clarify; ss. steps. isteps.
+        Local Transparent syscalls.
+        cbn. des_ifs. steps. isteps.
+        TTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
+        astop. steps.
+        isteps.
+        +
+      -
+    }
+        { esplits; ss; et. }
+        fold (wf ske). ss. des_ifs.
+        mDesOr "INV"; mDesAll; des; clarify; ss. rewrite Any.upcast_downcast. steps. isteps. astop. steps.
+        { erewrite STBINCL; stb_tac; ss. } rewrite FIND0. isteps.
+        hcall _ (Some (_, _, _)) _ with "A1".
+        idtac.
         TTTTTTTTTTTTTTTTTTTTTTT
         rename a into aa.
         exfalso. Set Printing All.

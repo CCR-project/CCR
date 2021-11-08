@@ -365,3 +365,10 @@ Definition add_ofs (ptr: val) (d: Z): val :=
   | _ => Vundef
   end
 .
+
+Lemma scale_int_8 n: scale_int (8 * n) = Some n.
+Proof.
+  unfold scale_int. des_ifs.
+  - rewrite Z.mul_comm. rewrite Z.div_mul; ss.
+  - contradict n0. eapply Z.divide_factor_l.
+Qed.
