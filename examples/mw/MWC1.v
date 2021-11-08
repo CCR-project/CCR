@@ -58,6 +58,7 @@ Section PROOF.
   Definition putF: list val -> itree Es val :=
     fun varg =>
       '(k, v) <- (pargs [Tint; Tuntyped] varg)?;;
+      assume(intrange_64 k);;;
       lst0 <- pget;;
       (if dec (lst0.(lst_cls) k) uninit
        then b <- trigger (Choose _);; let class := (if (b: bool) then opt else normal) in upd_cls (fun cls => set k class cls);;; Ret tt
@@ -74,6 +75,7 @@ Section PROOF.
   Definition getF: list val -> itree Es val :=
     fun varg =>
       k <- (pargs [Tint] varg)?;;
+      assume(intrange_64 k);;;
       lst0 <- pget;;
       assume(lst0.(lst_cls) k <> uninit);;;
       v <- (if dec (lst0.(lst_cls) k) opt

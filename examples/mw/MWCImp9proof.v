@@ -192,7 +192,29 @@ Section SIMMODSEM.
       match goal with [|- context[ ListDec.NoDup_dec ?a ?b ]] => destruct (ListDec.NoDup_dec a b) end; cycle 1.
       { contradict n0. solve_NoDup. }
       des_ifs.
-      - isteps. unfold intrange_64. cbn. cbn. des_ifs; ss.
+      - isteps. ss. clarify. replace (intrange_64 0) with true by ss. cbn. steps.
+        destruct ((ZArith_dec.Z_lt_dec (- 1) z)%Z); cycle 1.
+        { lia. }
+        isteps.
+        destruct ((ZArith_dec.Z_lt_dec z 100)%Z); cycle 1.
+        { lia. }
+        isteps.
+
+        astart 1. astep "load" (tt↑). { eapply STBINCL. stb_tac; ss. } rewrite FIND0. isteps.
+        hcall _ (Some (_, _, _)) _ with "A1".
+        { iModIntro. iSplitR; iSplits; ss; et. unfold var_points_to. rewrite FIND0. iFrame. }
+        { esplits; ss; et. }
+        fold (wf ske). ss. des_ifs.
+        mDesOr "INV"; mDesAll; des; clarify; ss. rewrite Any.upcast_downcast. steps. isteps. astop. steps.
+
+        TTTTTTTTTTTTTTttt
+        astart 1. acatch.
+        des_ifs.
+        + isteps. rewrite FIND0. steps. isteps.
+          admit "".
+        + isteps.
+          
+        assert(T: intrange_64 0 && intrange_64 n1 = true). { ss. clarify. unfold unint in *. des_ifs_safe. unfold intrange_64. cbn. cbn. des_ifs; ss.
       -
       des_ifs; cycle 1.
       { contradict n0. solve_NoDup. }

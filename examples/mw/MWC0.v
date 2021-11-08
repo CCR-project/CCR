@@ -41,6 +41,7 @@ Section PROOF.
   Definition putF: list val -> itree Es val :=
     fun varg =>
       '(k, v) <- (pargs [Tint; Tuntyped] varg)?;;
+      assume(intrange_64 k);;;
       '(arr, map) <- pget;;
       (if ((0 <=? k) && (k <? 100))%Z
        then `_: val <- ccallU "store" [add_ofs arr k; v];; Ret tt
@@ -53,6 +54,7 @@ Section PROOF.
   Definition getF: list val -> itree Es val :=
     fun varg =>
       k <- (pargs [Tint] varg)?;;
+      assume(intrange_64 k);;;
       '(arr, map) <- pget;;
       `v: val <- (if ((0 <=? k) && (k <? 100))%Z
                   then ccallU "load" [add_ofs arr k]

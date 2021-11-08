@@ -42,7 +42,8 @@ Section PROOF.
     mk_function
       ["k"; "v"]
       ["arr"; "arrv"; "map"; "mapv"; "tmp"]
-      (if# ((0%Z =? "k") + (0%Z <"k")) * ("k" < 100%Z)
+      ((* if# ((0%Z =? "k") + (0%Z <"k")) * ("k" < 100%Z) *)
+       if# ((- 1)%Z < "k") * ("k" < 100%Z)
        then# "arr" =#& "gv0" ;# "arrv" =#* "arr" ;# @ "store" ["arrv" + (8%Z * "k"); "v": expr]
        else# "map" =#& "gv1" ;# "mapv" =#* "map" ;# @ "update" ["map": expr; "k": expr; "v": expr]
        fi# ;#

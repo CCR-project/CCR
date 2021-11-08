@@ -359,7 +359,7 @@ TODO: APC, locked thinges
         harg_tgt.
         { iPoseProof ((mw_state_upd _ _ (add k v full)) with "A1 INIT") as "B".
           iMod "B". iModIntro. iFrame. iSplits; ss; et. xtra. }
-        fold wf. steps.
+        fold wf. steps. force_r; ss. steps.
         destruct (dec (lst_cls lst0 k) uninit).
         - steps.
           unfold set. destruct (dec k k); ss. destruct x; steps.
@@ -474,7 +474,7 @@ TODO: APC, locked thinges
 
         harg_tgt.
         { iModIntro. iFrame. iSplits; ss; et. xtra. }
-        steps. fold wf. force_r.
+        steps. fold wf. force_r; ss. steps. force_r.
         { exploit PURE; et. i. des_ifs. }
         steps.
         des_ifs.

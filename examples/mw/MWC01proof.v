@@ -298,6 +298,7 @@ Section SIMMODSEM.
 
     econs; ss.
     { init. harg. mDesAll. des; clarify. des_u. unfold putF, MWC0.putF, ccallU. steps. fold wf.
+      force_r; ss. esplits; ss. steps.
       mDesOr "INV"; mDesAll; des; clarify.
       { exfalso. clear - _UNWRAPU0. apply Any.downcast_upcast in _UNWRAPU0. des.
         apply Any.upcast_inj in _UNWRAPU0. des; clarify.
@@ -370,6 +371,7 @@ Section SIMMODSEM.
 
     econs; ss.
     { init. harg. mDesAll. des; clarify. des_u. unfold getF, MWC0.getF, ccallU. steps. fold wf.
+      force_r. esplits; ss. steps.
       mDesOr "INV"; mDesAll; des; clarify.
       { exfalso. clear - _UNWRAPU1. apply Any.downcast_upcast in _UNWRAPU1. des.
         apply Any.upcast_inj in _UNWRAPU1. des; clarify.
