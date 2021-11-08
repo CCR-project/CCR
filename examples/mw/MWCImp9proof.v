@@ -190,7 +190,7 @@ Section SIMMODSEM.
       { rewrite Any.pair_split. steps. }
       rewrite Any.upcast_split. steps.
       match goal with [|- context[ ListDec.NoDup_dec ?a ?b ]] => destruct (ListDec.NoDup_dec a b) end; cycle 1.
-      { contradict n0. solve_NoDup. }
+      { contradict n. solve_NoDup. }
       des_ifs.
       - isteps. ss. clarify. replace (intrange_64 0) with true by ss. cbn. steps.
         destruct ((ZArith_dec.Z_lt_dec (- 1) z)%Z); cycle 1.
@@ -206,7 +206,15 @@ Section SIMMODSEM.
         { esplits; ss; et. }
         fold (wf ske). ss. des_ifs.
         mDesOr "INV"; mDesAll; des; clarify; ss. rewrite Any.upcast_downcast. steps. isteps. astop. steps.
-
+        apply Any.pair_inj in H2. des; clarify. clear_fast.
+        rename a into aa.
+        exfalso. Set Printing All.
+        erewrite Any.upcast_downcast in _UNWRAPU. apply Any.upcast_inj in H2.
+        replace (vadd a (Vint (8 * z))) with 
+        rewrite Any.upcast_downcast in _UNWRAPU0. apply Any.upcast_inj in H2.
+        unfold vadd.
+        unfold vadd. uo. des_ifs.
+        cbn.
         TTTTTTTTTTTTTTttt
         astart 1. acatch.
         des_ifs.

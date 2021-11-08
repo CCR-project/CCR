@@ -60,7 +60,7 @@ Section PROOF.
       check_lock;;;
       '(arr, map) <- pget;;
       (if ((0 <=? k) && (k <? 100))%Z
-       then lAPC;;; `_: val <- ccallU "store" [Vptr arr k; v];; Ret tt
+       then lAPC;;; `_: val <- ccallU "store" [add_ofs arr k; v];; Ret tt
        else lAPC;;; `_: val <- ccallU "update" ([map; Vint k; v]);; Ret tt);;;
       trigger (Syscall "print" [Vint k]↑ top1);;; (*** TODO: make something like "syscallu" ***)
       trigger (Syscall "print" [v]↑ top1);;;
@@ -73,7 +73,7 @@ Section PROOF.
       assume(intrange_64 k);;;
       '(arr, map) <- pget;;
       `v: val <- (if ((0 <=? k) && (k <? 100))%Z
-                  then ccallU "load" [Vptr arr k]
+                  then ccallU "load" [add_ofs arr k]
                   else ccallU "access" ([map; Vint k]));;
       trigger (Syscall "print" [Vint k]↑ top1);;; (*** TODO: make something like "syscallu" ***)
       trigger (Syscall "print" [v]↑ top1);;;

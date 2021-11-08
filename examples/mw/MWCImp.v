@@ -44,7 +44,7 @@ Section PROOF.
       ["arr"; "arrv"; "map"; "mapv"; "tmp"]
       ((* if# ((0%Z =? "k") + (0%Z <"k")) * ("k" < 100%Z) *)
        if# ((- 1)%Z < "k") * ("k" < 100%Z)
-       then# "arr" =#& "gv0" ;# "arrv" =#* "arr" ;# @ "store" ["arrv" + (8%Z * "k"); "v": expr]
+       then# "arr" =#& "gv0" ;# "arrv" =#* "arr" ;# ("arrv" + (8%Z * "k")) *=# "v"
        else# "map" =#& "gv1" ;# "mapv" =#* "map" ;# @ "update" ["map": expr; "k": expr; "v": expr]
        fi# ;#
        @! "print" ["k" : expr] ;#
@@ -54,14 +54,26 @@ Section PROOF.
 
   Definition getF :=
     mk_function
-      []
-      ["arr"; "map"; "tmp"]
-      ("tmp" =# malloc# 100%Z ;# "arr" =#& "gv0" ;# "arr" *=# "tmp" ;#
-       "tmp" =@ "new" [] ;# "map" =#& "gv1" ;# "map" *=# "tmp" ;#
-       @ "init" [] ;#
-       @ "loop" []
+      ["k"]
+      ["v"; "arr"; "map"; "tmp"]
+      (if# ((- 1)%Z < "k") * ("k" < 100%Z)
+       then# "arr" =#& "gv0" ;# "arrv" =#* "arr" ;# "v" =#* ("arrv" + (8%Z * "k"))
+       else# "map" =#& "gv1" ;# "mapv" =#* "map" ;# "v" =@ "access" ["map": expr; "k": expr]
+       fi# ;#
+       @! "print" ["k" : expr] ;#
+       @! "print" ["v" : expr] ;#
+       return# "v"
       )
   .
+      (* k <- (pargs [Tint] varg)?;; *)
+      (* assume(intrange_64 k);;; *)
+      (* '(arr, map) <- pget;; *)
+      (* `v: val <- (if ((0 <=? k) && (k <? 100))%Z *)
+      (*             then ccallU "load" [add_ofs arr k] *)
+      (*             else ccallU "access" ([map; Vint k]));; *)
+      (* trigger (Syscall "print" [Vint k]↑ top1);;; (*** TODO: make something like "syscallu" ***) *)
+      (* trigger (Syscall "print" [v]↑ top1);;; *)
+      (* Ret v *)
 
   Definition MWprog: program :=
     mk_program
