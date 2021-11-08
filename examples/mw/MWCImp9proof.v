@@ -58,7 +58,7 @@ Section SIMMODSEM.
     @mk_wf _ (option (Any.t * Any.t))
            (fun w0 st_src st_tgt => (
                 {{"NORMAL": ∃ arr map, ⌜w0 = None ∧ st_src = (arr, map)↑⌝ **
-                    OwnM (var_points_to ske "gv0" (Vptr arr 0)) ** OwnM (var_points_to ske "gv1" map)}} ∨
+                    OwnM (var_points_to ske "gv0" arr) ** OwnM (var_points_to ske "gv1" map)}} ∨
                 (* {{"NORMAL": ∃ arr map arrb mapb, ⌜w0 = None ∧ ske.(SkEnv.id2blk) "gv0" = Some arrb *)
                 (*     ∧ ske.(SkEnv.id2blk) "gv1" = Some mapb ∧ st_src = (arr, map)↑⌝ ** *)
                 (*     OwnM ((arrb, 0%Z) |-> [arr]) ** OwnM ((mapb, 0%Z) |-> [map ])}} ∨ *)

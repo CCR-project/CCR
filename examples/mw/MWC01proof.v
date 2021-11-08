@@ -69,7 +69,7 @@ Section SIMMODSEM.
       (fun w0 mp_src mp_tgt =>
          ({{"UNINIT": OwnM sp_black ** ⌜mp_src = tt↑ ∧ w0 = None⌝}} ∨
           {{"INIT": OwnM sp_black **
-             ∃ lst0 arr vs, ⌜mp_src = lst0↑ ∧ mp_tgt = (arr, lst0.(lst_map))↑ ∧ w0 = None ∧
+             ∃ lst0 arr vs, ⌜mp_src = lst0↑ ∧ mp_tgt = (Vptr arr 0%Z, lst0.(lst_map))↑ ∧ w0 = None ∧
                             sim_opt lst0 vs⌝ ** ([∗ list] k ↦ x ∈ vs, OwnM ((arr, Z.of_nat k) |-> [x]))}} ∨
           {{"LOCKED": OwnM sp_black ** OwnM sp_white ** ⌜w0 = Some (mp_src, mp_tgt)⌝}})%I)
   .

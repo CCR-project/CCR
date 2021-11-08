@@ -357,3 +357,11 @@ Ltac iCombineAll :=
          end
 .
 Ltac xtra := iCombineAll; iAssumption.
+
+(*** TODO: MOVE TO ImpPrelude ***)
+Definition add_ofs (ptr: val) (d: Z): val :=
+  match ptr with
+  | Vptr b ofs => Vptr b (ofs + d)
+  | _ => Vundef
+  end
+.

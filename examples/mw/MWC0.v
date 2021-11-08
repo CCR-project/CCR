@@ -15,6 +15,8 @@ Section PROOF.
 
   Notation pget := (p0 <- trigger PGet;; p0 <- p0↓?;; Ret p0) (only parsing). (*** NOTE THAT IT IS UB CASTING ***)
   Notation pput p0 := (trigger (PPut p0↑)) (only parsing).
+  Notation pupd_arr arr := (`st: mblock * val <- pget;; pput (arr, snd st)) (only parsing).
+  Notation pupd_map map := (`st: mblock * val <- pget;; pput (fst st, map)) (only parsing).
 
   Definition loopF: list val -> itree Es val :=
     fun varg =>
@@ -27,10 +29,10 @@ Section PROOF.
   Definition mainF: list val -> itree Es val :=
     fun varg =>
       _ <- (pargs [] varg)?;;
-      arr <- ccallU "alloc" ([Vint 100]);;
-      arr <- (pargs [Tblk] [arr])?;;
+      `arr: val <- ccallU "alloc" ([Vint 100]);;
+      (* pupd_arr arr;;; *)
       `map: val <- ccallU "new" ([]: list val);;
-      pput (arr, map);;;
+      (* pupd_arr map;;; *)
       `_: val <- ccallU "init" ([]: list val);;
       `_: val <- ccallU "loop" ([]: list val);;
       Ret Vundef
@@ -41,7 +43,7 @@ Section PROOF.
       '(k, v) <- (pargs [Tint; Tuntyped] varg)?;;
       '(arr, map) <- pget;;
       (if ((0 <=? k) && (k <? 100))%Z
-       then `_: val <- ccallU "store" [Vptr arr k; v];; Ret tt
+       then `_: val <- ccallU "store" [add_ofs arr k; v];; Ret tt
        else `_: val <- ccallU "update" ([map; Vint k; v]);; Ret tt);;;
       trigger (Syscall "print" [Vint k]↑ top1);;; (*** TODO: make something like "syscallu" ***)
       trigger (Syscall "print" [v]↑ top1);;;
@@ -53,7 +55,7 @@ Section PROOF.
       k <- (pargs [Tint] varg)?;;
       '(arr, map) <- pget;;
       `v: val <- (if ((0 <=? k) && (k <? 100))%Z
-                  then ccallU "load" [Vptr arr k]
+                  then ccallU "load" [add_ofs arr k]
                   else ccallU "access" ([map; Vint k]));;
       trigger (Syscall "print" [Vint k]↑ top1);;; (*** TODO: make something like "syscallu" ***)
       trigger (Syscall "print" [v]↑ top1);;;
