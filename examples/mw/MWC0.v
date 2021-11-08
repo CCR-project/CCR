@@ -15,8 +15,8 @@ Section PROOF.
 
   Notation pget := (p0 <- trigger PGet;; p0 <- p0↓?;; Ret p0) (only parsing). (*** NOTE THAT IT IS UB CASTING ***)
   Notation pput p0 := (trigger (PPut p0↑)) (only parsing).
-  Notation pupd_arr arr := (`st: mblock * val <- pget;; pput (arr, snd st)) (only parsing).
-  Notation pupd_map map := (`st: mblock * val <- pget;; pput (fst st, map)) (only parsing).
+  Notation pupd_arr arr := (`st: val * val <- pget;; pput (arr, snd st)) (only parsing).
+  Notation pupd_map map := (`st: val * val <- pget;; pput (fst st, map)) (only parsing).
 
   Definition loopF: list val -> itree Es val :=
     fun varg =>
@@ -30,9 +30,9 @@ Section PROOF.
     fun varg =>
       _ <- (pargs [] varg)?;;
       `arr: val <- ccallU "alloc" ([Vint 100]);;
-      (* pupd_arr arr;;; *)
+      pupd_arr arr;;;
       `map: val <- ccallU "new" ([]: list val);;
-      (* pupd_arr map;;; *)
+      pupd_map map;;;
       `_: val <- ccallU "init" ([]: list val);;
       `_: val <- ccallU "loop" ([]: list val);;
       Ret Vundef

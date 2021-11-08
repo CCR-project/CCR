@@ -20,8 +20,8 @@ Section PROOF.
 
   Notation pget := (p0 <- trigger PGet;; p0 <- p0↓?;; Ret p0) (only parsing). (*** NOTE THAT IT IS UB CASTING ***)
   Notation pput p0 := (trigger (PPut p0↑)) (only parsing).
-  Notation pupd_arr arr := (`st: mblock * val <- pget;; pput (arr, st.2)) (only parsing).
-  Notation pupd_map map := (`st: mblock * val <- pget;; pput (st.1, map)) (only parsing).
+  Notation pupd_arr arr := (`st: val * val <- pget;; pput (arr, st.2)) (only parsing).
+  Notation pupd_map map := (`st: val * val <- pget;; pput (st.1, map)) (only parsing).
 
   Notation check_lock := (p0 <- trigger PGet;; if (Any.split p0) then triggerUB else Ret tt) (only parsing).
   Notation lAPC := (p0 <- trigger PGet;; _ <- trigger (PPut (Any.pair tt↑ p0));;; trigger (PPut p0))
@@ -42,9 +42,8 @@ Section PROOF.
     fun varg =>
       _ <- (pargs [] varg)?;;
       check_lock;;;
-      arr <- ccallU "alloc" ([Vint 100]);;
+      `arr: val <- ccallU "alloc" ([Vint 100]);;
       lAPC;;;
-      arr <- (pargs [Tblk] [arr])?;;
       pupd_arr arr;;;
       `map: val <- ccallU "new" ([]: list val);;
       pupd_map map;;;
@@ -57,10 +56,11 @@ Section PROOF.
   Definition putF: list val -> itree Es val :=
     fun varg =>
       '(k, v) <- (pargs [Tint; Tuntyped] varg)?;;
+      check_lock;;;
       '(arr, map) <- pget;;
       (if ((0 <=? k) && (k <? 100))%Z
-       then `_: val <- ccallU "store" [Vptr arr k; v];; Ret tt
-       else `_: val <- ccallU "update" ([map; Vint k; v]);; Ret tt);;;
+       then lAPC;;; `_: val <- ccallU "store" [Vptr arr k; v];; Ret tt
+       else lAPC;;; `_: val <- ccallU "update" ([map; Vint k; v]);; Ret tt);;;
       trigger (Syscall "print" [Vint k]↑ top1);;; (*** TODO: make something like "syscallu" ***)
       trigger (Syscall "print" [v]↑ top1);;;
       Ret Vundef

@@ -67,7 +67,7 @@ Section SIMMODSEM.
       _
       (option (Any.t * Any.t))
       (fun w0 mp_src mp_tgt =>
-         ({{"UNINIT": OwnM sp_black ** ⌜mp_src = tt↑ ∧ w0 = None⌝}} ∨
+         ({{"UNINIT": OwnM sp_black ** ⌜mp_src = tt↑ ∧ w0 = None ∧ ∃ (arr map: val), mp_tgt = (arr, map)↑⌝}} ∨
           {{"INIT": OwnM sp_black **
              ∃ lst0 arr vs, ⌜mp_src = lst0↑ ∧ mp_tgt = (Vptr arr 0%Z, lst0.(lst_map))↑ ∧ w0 = None ∧
                             sim_opt lst0 vs⌝ ** ([∗ list] k ↦ x ∈ vs, OwnM ((arr, Z.of_nat k) |-> [x]))}} ∨
@@ -235,7 +235,7 @@ Section SIMMODSEM.
     eapply adequacy_local2. econs; ss.
     i. econstructor 1 with (wf:=wf) (le:=le); et; swap 2 3.
     { typeclasses eauto. }
-    { esplits; et. econs; et. eapply to_semantic. iIntros "H". ss; et. iFrame. ss; et. }
+    { esplits; et. econs; et. eapply to_semantic. iIntros "H". ss; et. iFrame. iLeft. iSplits; ss; et. }
     (* { destruct (SkEnv.id2blk (Sk.load_skenv sk) "arr") eqn:T; cycle 1. *)
     (*   { exfalso. Local Transparent Sk.load_skenv. unfold Sk.load_skenv in *. Local Opaque Sk.load_skenv. *)
     (*     ss. uo. des_ifs. admit "ez". } *)
@@ -245,20 +245,23 @@ Section SIMMODSEM.
 
     econs; ss.
     { init. harg. mDesAll. des; clarify. des_u. steps. unfold mainF, MWC0.mainF, ccallU. steps. fold wf.
-      mAssert (OwnM sp_black ** OwnM sp_white ** ⌜w = None⌝) with "*" as "A".
+      mAssert (OwnM sp_black ** OwnM sp_white ** ⌜w = None ∧ ∃ (arr map: val), mp_tgt = (arr, map)↑⌝) with "*" as "A".
       { iDes; des; clarify; try (by iFrame; iSplits; ss; et). admit "ez". }
       mDesAll; des; clarify.
       astart 1. acatch. hcall _ 100 (Some (_, _)) with "*".
       { iModIntro. iFrame. iSplits; ss; et. }
       { esplits; ss; et. }
-      fold wf. steps. astop. mDesAll; des; clarify. steps. force_l; stb_tac; ss; clarify. steps.
-      hcall _ _ _ with "INV".
+      fold wf. steps. astop. mDesAll; des; clarify.
+      mDesOr "INV"; mDesAll; des; clarify; ss.
+      mDesOr "INV"; mDesAll; des; clarify; ss.
+      steps. force_l; stb_tac; ss; clarify. steps.
+      hcall _ _ _ with "-A".
       { iModIntro. iFrame. iSplits; ss; et. }
       { esplits; ss; et. }
       fold wf. mDesAll; des; clarify. steps. force_l; stb_tac; ss; clarify. steps.
-      mDesOr "INV1"; mDesAll; des; clarify; ss.
-      mDesOr "INV1"; mDesAll; des; clarify; ss.
-      hcall _ _ _ with "LOCKED A1".
+      mDesOr "INV"; mDesAll; des; clarify; ss.
+      mDesOr "INV"; mDesAll; des; clarify; ss. steps.
+      hcall _ _ _ with "-A".
       { iModIntro. iSplits; ss; et. iRight. iRight. iFrame. iSplits; ss; et. }
       { esplits; ss; et. }
       fold wf. mDesAll; des; clarify. steps. force_l; stb_tac; ss; clarify. steps.
@@ -272,7 +275,7 @@ Section SIMMODSEM.
       { esplits; ss; et. }
       fold wf. mDesAll; des; clarify. steps. ss. des_ifs.
       mDesOr "INV"; mDesAll; des; clarify; ss.
-      { hret None; ss. iModIntro. iFrame. ss; et. }
+      { hret None; ss. iModIntro. iFrame. iSplits; ss; et. iLeft. iSplits; ss; et. }
       mDesOr "INV"; mDesAll; des; clarify; ss.
       { hret None ;ss. iModIntro. iFrame. iSplits; ss; et. iRight. iLeft. iSplits; ss; et. }
     }
