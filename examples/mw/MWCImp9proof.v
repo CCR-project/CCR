@@ -57,7 +57,7 @@ Section SIMMODSEM.
   Let wf (ske: SkEnv.t): _ -> W -> Prop :=
     @mk_wf _ (option (Any.t * Any.t))
            (fun w0 st_src st_tgt => (
-                {{"NORMAL": ∃ arr map, ⌜w0 = None ∧ st_src = (arr, map)↑⌝ **
+                {{"NORMAL": ∃ arr map, ⌜w0 = None ∧ st_src = (arr, map)↑ ∧ wf_val arr ∧ wf_val map⌝ **
                     OwnM (var_points_to ske "gv0" arr) ** OwnM (var_points_to ske "gv1" map)}} ∨
                 (* {{"NORMAL": ∃ arr map arrb mapb, ⌜w0 = None ∧ ske.(SkEnv.id2blk) "gv0" = Some arrb *)
                 (*     ∧ ske.(SkEnv.id2blk) "gv1" = Some mapb ∧ st_src = (arr, map)↑⌝ ** *)
@@ -207,6 +207,7 @@ Section SIMMODSEM.
         fold (wf ske). ss. des_ifs.
         mDesOr "INV"; mDesAll; des; clarify; ss. rewrite Any.upcast_downcast. steps. isteps. astop. steps.
         apply Any.pair_inj in H2. des; clarify. clear_fast.
+        TTTTTTTTTTTTTTTTTTTTTTT
         rename a into aa.
         exfalso. Set Printing All.
         erewrite Any.upcast_downcast in _UNWRAPU. apply Any.upcast_inj in H2.

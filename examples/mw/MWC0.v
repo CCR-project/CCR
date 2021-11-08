@@ -29,9 +29,9 @@ Section PROOF.
   Definition mainF: list val -> itree Es val :=
     fun varg =>
       _ <- (pargs [] varg)?;;
-      `arr: val <- ccallU "alloc" ([Vint 100]);;
+      `arr: val <- ccallU "alloc" ([Vint 100]);; assume(wf_val arr);;;
       pupd_arr arr;;;
-      `map: val <- ccallU "new" ([]: list val);;
+      `map: val <- ccallU "new" ([]: list val);; assume(wf_val map);;;
       pupd_map map;;;
       `_: val <- ccallU "init" ([]: list val);;
       `_: val <- ccallU "loop" ([]: list val);;
@@ -44,7 +44,7 @@ Section PROOF.
       assume(intrange_64 k);;;
       '(arr, map) <- pget;;
       (if ((0 <=? k) && (k <? 100))%Z
-       then `_: val <- ccallU "store" [add_ofs arr k; v];; Ret tt
+       then addr <- (vadd arr (Vint (8 * k)))?;; `_: val <- ccallU "store" [addr; v];; Ret tt
        else `_: val <- ccallU "update" ([map; Vint k; v]);; Ret tt);;;
       trigger (Syscall "print" [Vint k]↑ top1);;; (*** TODO: make something like "syscallu" ***)
       trigger (Syscall "print" [v]↑ top1);;;
@@ -57,7 +57,7 @@ Section PROOF.
       assume(intrange_64 k);;;
       '(arr, map) <- pget;;
       `v: val <- (if ((0 <=? k) && (k <? 100))%Z
-                  then ccallU "load" [add_ofs arr k]
+                  then addr <- (vadd arr (Vint (8 * k)))?;; ccallU "load" [addr]
                   else ccallU "access" ([map; Vint k]));;
       trigger (Syscall "print" [Vint k]↑ top1);;; (*** TODO: make something like "syscallu" ***)
       trigger (Syscall "print" [v]↑ top1);;;

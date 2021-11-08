@@ -229,6 +229,12 @@ Section SIMMODSEM.
   Qed.
 
 
+  Lemma scale_int_8 n: scale_int (8 * n) = Some n.
+  Proof.
+    unfold scale_int. des_ifs.
+    - rewrite Z.mul_comm. rewrite Z.div_mul; ss.
+    - contradict n0. eapply Z.divide_factor_l.
+  Qed.
 
   Theorem correct: refines2 [MWC0.MW] [MWC1.MW].
   Proof.
@@ -254,11 +260,11 @@ Section SIMMODSEM.
       fold wf. steps. astop. mDesAll; des; clarify.
       mDesOr "INV"; mDesAll; des; clarify; ss.
       mDesOr "INV"; mDesAll; des; clarify; ss.
-      steps. force_l; stb_tac; ss; clarify. steps.
+      steps. force_l; stb_tac; ss; clarify. steps. force_r; ss. steps.
       hcall _ _ _ with "-A".
       { iModIntro. iFrame. iSplits; ss; et. }
       { esplits; ss; et. }
-      fold wf. mDesAll; des; clarify. steps. force_l; stb_tac; ss; clarify. steps.
+      fold wf. mDesAll; des; clarify. steps. force_l; stb_tac; ss; clarify. force_r. esplits; ss. steps.
       mDesOr "INV"; mDesAll; des; clarify; ss.
       mDesOr "INV"; mDesAll; des; clarify; ss. steps.
       hcall _ _ _ with "-A".
@@ -317,7 +323,7 @@ Section SIMMODSEM.
           mAssert _ with "A2".
           { iDestruct (big_sepL_insert_acc with "A2") as "[B C]"; et.
             instantiate (1:=_ ** _). iSplitL "B". { iExact "B". } iExact "C". }
-          mDesAll; ss. rewrite Z2Nat.id in *; try lia.
+          mDesAll; ss. rewrite Z2Nat.id in *; try lia. rewrite scale_int_8. steps.
           astart 1. acatch. hcall _ (_, _, _) (Some (_, _)) with "-A2".
           { iModIntro. iFrame. iSplitR "A1"; et. }
           { esplits; ss; et. }
@@ -333,7 +339,7 @@ Section SIMMODSEM.
           mAssert _ with "A2".
           { iDestruct (big_sepL_insert_acc with "A2") as "[B C]"; et.
             instantiate (1:=_ ** _). iSplitL "B". { iExact "B". } iExact "C". }
-          mDesAll; ss. rewrite Z2Nat.id in *; try lia.
+          mDesAll; ss. rewrite Z2Nat.id in *; try lia. rewrite scale_int_8. steps.
           astart 1. acatch. hcall _ (_, _, _) (Some (_, _)) with "-A2".
           { iModIntro. iFrame. iSplitR "A1"; et. }
           { esplits; ss; et. }
@@ -389,7 +395,7 @@ Section SIMMODSEM.
         + rewrite INIT. ss. steps.
           mAssert _ with "A2".
           { iDestruct (big_sepL_delete with "A2") as "[B C]"; et. xtra. }
-          mDesAll; ss. rewrite Z2Nat.id in *; try lia.
+          mDesAll; ss. rewrite Z2Nat.id in *; try lia. rewrite scale_int_8. steps.
           astart 1. acatch. hcall _ (_, _, _) (Some (_, _)) with "-A2".
           { iModIntro. iFrame. iSplits; ss; et. }
           { esplits; ss; et. }

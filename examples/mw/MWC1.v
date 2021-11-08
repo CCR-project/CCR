@@ -48,7 +48,7 @@ Section PROOF.
   Definition mainF: list val -> itree Es val :=
     fun varg =>
       _ <- (pargs [] varg)?;;;
-      `map: val <- ccallU "new" ([]: list val);;
+      `map: val <- ccallU "new" ([]: list val);; assume(wf_val map);;;
       pput (mk_lst (fun _ => uninit) (fun _ => Vundef) map);;;
       `_: val <- ccallU "init" ([]: list val);;
       `_: val <- ccallU "loop" ([]: list val);;
