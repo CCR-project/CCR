@@ -42,8 +42,7 @@ Section SIMMODSEM.
     econstructor 1 with (wf:=wf) (le:=top2); et; ss.
     econs; ss. init. unfold cfunU.
     unfold fF, IntroF0.fF.
-    steps. des. clarify. ss. steps.
-    force_r. { eapply max_intrange; ss. } steps.
+    steps. des. clarify. ss. steps. rewrite max_intrange; ss. steps.
     destruct (Z.of_nat x <? 0)%Z eqn:T; try lia.
     unfold Ncall.
     destruct (Z.of_nat x =? 0)%Z eqn:U.

@@ -14,7 +14,6 @@ Section PROOF.
   Definition repeatF {E} `{callE -< E} `{eventE -< E} (skenv: SkEnv.t): list val -> itree E val :=
     fun varg =>
       '(fb, (n, x)) <- (pargs [Tblk; Tint; Tint] varg)?;;
-      assume(intrange_64 n);;;
       if (Z_lt_le_dec n 1)
       then Ret (Vint x)
       else

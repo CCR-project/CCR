@@ -228,7 +228,7 @@ Definition unptr (v: val): option (mblock * ptrofs) :=
 
 Definition unint (v: val): option Z :=
   match v with
-  | Vint x => Some x
+  | Vint x => if intrange_64 x then Some x else None
   | _ => None
   end.
 

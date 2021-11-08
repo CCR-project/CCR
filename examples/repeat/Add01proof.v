@@ -74,7 +74,7 @@ Section SIMMODSEM.
       { exists (Z.to_nat z0). rewrite Z2Nat.id; auto. lia. } des. subst.
       hexploit GlobalStb_repeat; et. i. inv H. astart 1. acatch; et.
       hcall_weaken (Repeat1.repeat_spec FunStb sk) _ (_, _, _, Z.succ) _ with ""; et.
-      { iPureIntro. splits; et. econs.
+      { iPureIntro. splits; et. { unfold unint in *. des_ifs. } econs.
         { eapply SKWF. eauto. }
         econs.
         { et. }

@@ -18,7 +18,6 @@ Section PROOF.
   Definition fF: list val -> itree Es val :=
     fun varg =>
       `n: Z <- (pargs [Tint] varg)?;;
-      assume (intrange_64 n);;;
       if dec n 0%Z
       then Ret (Vint 0)
       else

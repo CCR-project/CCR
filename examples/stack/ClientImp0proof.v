@@ -65,12 +65,10 @@ Section SIMMODSEM.
       unfold putintF, putint.
       steps.
       rewrite unfold_eval_imp. steps.
-      destruct (intrange_64 z) eqn:WFZ.
-      2:{ steps. }
       des_ifs.
       2:{ exfalso; apply n. solve_NoDup. }
       imp_steps.
-      unfold unint in *. clarify; ss. imp_steps.
+      ss. des_ifs. imp_steps.
       red. esplits; et.
     }
     Local Opaque syscalls.

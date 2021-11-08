@@ -28,7 +28,6 @@ Section PROOF.
   Definition fF: list val -> itree Es val :=
     fun varg =>
       `n: Z <- (pargs [Tint] varg)?;;
-      assume (intrange_64 n);;;
       if (n <? 0)%Z
       then `_: val <- ccallU "log" [Vint n];; Ret (Vint (- 1))
       else if (n =? 0)%Z

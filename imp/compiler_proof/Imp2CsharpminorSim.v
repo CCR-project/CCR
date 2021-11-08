@@ -1141,11 +1141,12 @@ Section PROOF.
       do 3 (gstep; sim_tau). sim_red.
       rewrite PSTATE. rewrite Any.upcast_downcast. grind. unfold unint. des_ifs; sim_red.
       2,3: sim_triggerUB.
+      2: sim_triggerUB.
       des_ifs.
       2: sim_triggerUB.
       bsimpl. des. sim_red.
-      rename Heq into NRANGE1. apply sumbool_to_bool_true in NRANGE1.
-      rename Heq0 into NRANGE2. apply sumbool_to_bool_true in NRANGE2.
+      rename Heq0 into NRANGE1. apply sumbool_to_bool_true in NRANGE1.
+      rename Heq1 into NRANGE2. apply sumbool_to_bool_true in NRANGE2.
 
       assert (COMP2: Imp2Csharpminor.compile srcprog = OK tgt).
       { unfold Imp2Csharpminor.compile. des_ifs; ss; auto. }

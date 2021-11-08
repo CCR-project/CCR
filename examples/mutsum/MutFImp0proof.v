@@ -53,8 +53,8 @@ Section SIMMODSEM.
     (* eapply Any.downcast_upcast in _UNWRAPN. des. *)
     unfold unint in *. destruct v; clarify; ss.
     des_ifs.
-    2: exfalso; apply n; solve_NoDup.
-    3:{ exfalso; apply n0; solve_NoDup. }
+    2: exfalso; apply n0; solve_NoDup.
+    3:{ exfalso; apply n1; solve_NoDup. }
     - imp_steps. red. esplits; et.
     - unfold ccallU.
       imp_steps. replace (z =? 0)%Z with false.

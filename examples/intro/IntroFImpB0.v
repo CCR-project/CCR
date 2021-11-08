@@ -53,7 +53,7 @@ Section SIMMODSEM.
     rewrite unfold_eval_imp. cbn. steps.
     (* eapply Any.downcast_upcast in _UNWRAPN. des. *)
     unfold unint, ccallU in *. destruct v; clarify; ss.
-    des_ifs; try (by exfalso; apply n; solve_NoDup).
+    des_ifs; try (by exfalso; apply n0; solve_NoDup).
     - repeat (steps; (des_ifs; try lia; []); imp_steps). r; esplits; et.
     - repeat (steps; (des_ifs; try lia; []); imp_steps). r; esplits; et.
     - repeat (steps; (des_ifs; try lia; []); imp_steps).
