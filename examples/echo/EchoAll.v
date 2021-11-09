@@ -30,7 +30,7 @@ Require Import Mem0 StackImp EchoImp EchoMainImp ClientImp.
 Section ECHOIMP.
   Definition echo_progs := [Stack_prog; Echo_prog; EchoMain_prog; Client_prog].
   Definition echo_imp: ModL.t :=
-    Mod.add_list (Mem :: map ImpMod.get_mod echo_progs).
+    Mod.add_list (Mem (fun _ => false) :: map ImpMod.get_mod echo_progs).
 
   Definition echo_imp_itr := ModSemL.initial_itr (ModL.enclose echo_imp) None.
 End ECHOIMP.
@@ -39,7 +39,7 @@ End ECHOIMP.
 Require Import Mem0 Stack0 Echo0 EchoMain0 Client0.
 Section ECHOIMPL.
   Definition echo_impl: ModL.t :=
-    Mod.add_list [Mem; Stack; Echo; Main; Client].
+    Mod.add_list [Mem (fun _ => false); Stack; Echo; Main; Client].
 
   Definition echo_impl_itr := ModSemL.initial_itr (ModL.enclose echo_impl) None.
 End ECHOIMPL.
@@ -51,7 +51,7 @@ Require Import Stack2.
 Section ECHOSPEC.
   Definition echo_spec: ModL.t :=
     Mod.add_list [
-        Mem0.Mem;
+        Mem0.Mem (fun _ => true);
       Stack2.Stack;
       KMod.transl_src (fun _ => ["Echo"]) KEcho;
       Main; Client
@@ -69,12 +69,12 @@ Require Import ClientImp0proof Echo01proof.
 Require Import Echo1mon Stack32proof.
 Section PROOF.
   Theorem echo_correct:
-    refines2 [Mem0.Mem; StackImp.Stack; EchoImp.Echo]
-             [Mem0.Mem; Stack2.Stack; KMod.transl_src (fun _ => ["Echo"]) KEcho].
+    refines2 [Mem0.Mem (fun _ => false); StackImp.Stack; EchoImp.Echo]
+             [Mem0.Mem (fun _ => true); Stack2.Stack; KMod.transl_src (fun _ => ["Echo"]) KEcho].
   Proof.
-    transitivity (KMod.transl_tgt_list [KMem; Stack1.KStack]++[EchoImp.Echo]).
+    transitivity (KMod.transl_tgt_list [KMem (fun _ => true) (fun _ => true); Stack1.KStack]++[EchoImp.Echo]).
     { eapply refines2_cons.
-      { eapply Mem0Openproof.correct. }
+      { eapply Mem0Openproof.correct. i; ss. }
       eapply refines2_cons; [|refl].
       { etrans.
         { eapply StackImp0proof.correct. }
@@ -85,7 +85,10 @@ Section PROOF.
     etrans.
     { eapply refines2_app; [|refl].
       eapply adequacy_open. i. exists ε. split.
-      { g_wf_tac. repeat (i; splits; ur; ss). refl. }
+      { g_wf_tac. repeat (i; splits; ur; ss).
+        { r. esplits; et. rewrite URA.unit_idl. refl. }
+        { unfold initial_mem_mr. des_ifs; ss. }
+      }
       { ii. ss. }
     }
     eapply refines2_cons.

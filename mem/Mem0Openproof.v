@@ -234,19 +234,22 @@ Proof Outline
 
   (* Ltac mRefresh := on_current ltac:(fun H => move H at bottom). *)
 
-  Theorem correct stb: refines2 [Mem0.Mem] [MemOpen.Mem stb].
+  Variable csl0 csl1: gname -> bool.
+  Hypothesis EXCL: forall g, csl0 g -> csl1 g -> False.
+
+  Theorem correct stb: refines2 [Mem0.Mem csl0] [MemOpen.Mem (fun g => csl0 g || csl1 g) csl1 stb].
   Proof.
     eapply adequacy_local2. econs; ss. i.
    econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
    { ss. }
-   { esplits. ss. econs; ss. eapply to_semantic.
-     iIntros "H". iExists _, _, _.
-     repeat (iSplit; eauto).
-     { iPureIntro. ii. destruct (Mem.cnts (Mem.load_mem sk) b ofs) eqn:T; econs. }
-     { iPureIntro. ii. ss. uo. des_ifs.
-       apply nth_error_Some. ii. clarify. }
-     { iPureIntro. ii. ss. uo. des_ifs.
-       apply nth_error_Some. ii. clarify. }
+   { ss. eexists. econs; ss. eapply to_semantic.
+      iIntros "H". iSplits; ss; et.
+      { iPureIntro. ii. unfold Mem.load_mem, initial_mem_mr.
+        cbn. uo. des_ifs; et; try (by econs; et). exploit EXCL; et. i; ss. }
+      { iPureIntro. ii. ss. uo. des_ifs.
+        apply nth_error_Some. ii. clarify. }
+      { iPureIntro. ii. ss. uo. des_ifs.
+        apply nth_error_Some. ii. clarify. }
    }
 
 

@@ -174,14 +174,15 @@ Module Mem.
 (*** NOTE: Probably we can support comparison between nullptr and 0 ***)
 (*** NOTE: Unlike CompCert, we don't support comparison with weak_valid_ptr (for simplicity) ***)
 
-  Definition load_mem (sk: Sk.t): Mem.t :=
+  Definition load_mem (csl: gname -> bool) (sk: Sk.t): Mem.t :=
     Mem.mk
       (fun blk ofs =>
-         do '(_, gd) <- (List.nth_error sk blk);
+         do '(g, gd) <- (List.nth_error sk blk);
          match gd with
          | Sk.Gfun =>
            None
          | Sk.Gvar gv =>
+           if csl g then None else
            if (dec ofs 0%Z) then Some (Vint gv) else None
          end)
       (*** TODO: This simplified model doesn't allow function pointer comparsion.

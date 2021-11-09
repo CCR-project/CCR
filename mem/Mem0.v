@@ -84,11 +84,12 @@ Section PROOF.
 
 
 
+  Variable csl: gname -> bool.
   Definition MemSem (sk: Sk.t): ModSem.t :=
     {|
       ModSem.fnsems := [("alloc", cfunU allocF) ; ("free", cfunU freeF) ; ("load", cfunU loadF) ; ("store", cfunU storeF) ; ("cmp", cfunU cmpF)];
       ModSem.mn := "Mem";
-      ModSem.initial_st := (Mem.load_mem sk)↑;
+      ModSem.initial_st := (Mem.load_mem csl sk)↑;
     |}
   .
 

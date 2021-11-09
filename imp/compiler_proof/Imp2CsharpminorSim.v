@@ -520,7 +520,7 @@ Section PROOF.
           tgt
           (modl: ModL.t) ge ms
           ist cst
-          (MODL: modl = (ModL.add (Mod.lift Mem) (ImpMod.get_modL srcprog)))
+          (MODL: modl = (ModL.add (Mod.lift (Mem (fun _ => false))) (ImpMod.get_modL srcprog)))
           (MODSEML: ms = modl.(ModL.enclose))
           (GENV: ge = Sk.load_skenv (Sk.sort modl.(ModL.sk)))
           (MGENV: match_ge srcprog ge (Genv.globalenv tgt))

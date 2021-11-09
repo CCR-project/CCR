@@ -174,7 +174,7 @@ Section SIMMODSEM.
     end
   .
 
-  Theorem correct_modsem: forall sk, ModSemPair.sim (SModSem.to_tgt (to_stb []) (Mem1.SMemSem sk)) (Mem0.MemSem sk).
+  Theorem correct_modsem: forall sk, ModSemPair.sim (SModSem.to_tgt (to_stb []) (Mem1.SMemSem (fun _ => true) sk)) (Mem0.MemSem (fun _ => false) sk).
   Proof.
    econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
    { ss. }
@@ -456,7 +456,7 @@ Section SIMMODSEM.
     all: ss. all: try exact 0.
   Qed.
 
-  Theorem correct: refines2 [Mem0.Mem] [Mem1.Mem].
+  Theorem correct: refines2 [Mem0.Mem (fun _ => false)] [Mem1.Mem (fun _ => true)].
   Proof.
     eapply adequacy_local2. econs; ss; et. i. eapply correct_modsem.
   Qed.
