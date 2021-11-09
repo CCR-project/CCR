@@ -439,7 +439,7 @@ Section PROOFSINGLE.
 
   Ltac dtm H H0 := eapply angelic_step in H; eapply angelic_step in H0; des; rewrite H; rewrite H0; ss.
 
-  Definition imp_sem (src : Imp.programL) := compile_val (ModL.add (Mod.lift Mem) (ImpMod.get_modL src)).
+  Definition imp_sem (src : Imp.programL) := compile_val (ModL.add (Mod.lift (Mem (fun _ => false))) (ImpMod.get_modL src)).
 
   Definition imp_initial_state (src : Imp.programL) := (imp_sem src).(initial_state).
 
@@ -447,7 +447,7 @@ Section PROOFSINGLE.
           (src: Imp.programL) (tgt: Csharpminor.program) srcst tgtst
           (WFPROG: incl (name1 src.(defsL)) ((name1 src.(prog_varsL)) ++ (name2 src.(prog_funsL))))
           (WFPROG3: forall blk name,
-              let modl := ModL.add (Mod.lift Mem) (ImpMod.get_modL src) in
+              let modl := ModL.add (Mod.lift (Mem (fun _ => false))) (ImpMod.get_modL src) in
               let ge := (Sk.load_skenv (Sk.sort modl.(ModL.sk))) in
               (ge.(SkEnv.blk2id) blk = Some name) -> call_ban name = false)
           (WFPROG2 : forall gn gv, In (gn, Sk.Gvar gv) (Sk.sort (defsL src)) -> In (gn, gv) (prog_varsL src))
@@ -477,7 +477,9 @@ Section PROOFSINGLE.
     set (sge:=Sk.load_skenv (Sk.sort (defsL src))) in *.
     destruct (alist_find "main" (List.map (fun '(mn, (fn, f)) => (fn, transl_all mn (T:=_) ∘ cfunU (eval_imp sge f))) (prog_funsL src)))
              eqn:FOUNDMAIN; ss; grind.
-    2:{ sim_triggerUB. }
+    2:{ unfold triggerUB. ired. pfold; econs 5; ss.
+        { i. solve_ub. } { i. dependent destruction STEP; irw in x; ss. injection x. i. simpl_depind. ss. }
+    }
     repeat match goal with | [ H : false = false |- _ ] => clear H end.
     rewrite alist_find_find_some in FOUNDMAIN. rewrite find_map in FOUNDMAIN. uo; des_ifs; ss.
     rename s into mn, f into smain, Heq into SFOUND. apply find_some in SFOUND. des. ss. clear SFOUND0.
@@ -512,7 +514,7 @@ Section PROOFSINGLE.
     { eapply step_seq. }
     eexists. exists (ModSemL.step_tau _). exists ((100 + max_fuel) + 100 + Ord.omega + 100)%ord. left.
     rewrite interp_imp_bind. grind. sim_red.
-    assert (MATCHGE: match_ge src (Sk.load_skenv (Sk.sort (ModL.sk (ModL.add Mem (ImpMod.get_modL src))))) (Genv.globalenv tgt)).
+    assert (MATCHGE: match_ge src (Sk.load_skenv (Sk.sort (ModL.sk (ModL.add (Mem (fun _ => false)) (ImpMod.get_modL src))))) (Genv.globalenv tgt)).
     { econs. i. simpl in H. rewrite Sk.add_unit_l in H.
       unfold map_blk. rewrite COMP0. hexploit Sk.env_found_range; eauto. i. unfold src_init_nb, int_len.
       rewrite <- sksort_same_len in H0. ss. unfold sk_len. des.
@@ -598,7 +600,7 @@ Section PROOFSINGLE.
           (src: Imp.programL) (tgt: Csharpminor.program)
           (WFPROG: incl (name1 src.(defsL)) ((name1 src.(prog_varsL)) ++ (name2 src.(prog_funsL))))
           (WFPROG3: forall blk name,
-              let modl := ModL.add (Mod.lift Mem) (ImpMod.get_modL src) in
+              let modl := ModL.add (Mod.lift (Mem (fun _ => false))) (ImpMod.get_modL src) in
               let ge := (Sk.load_skenv (Sk.sort modl.(ModL.sk))) in
               (ge.(SkEnv.blk2id) blk = Some name) -> call_ban name = false)
           (WFPROG2 : forall gn gv, In (gn, Sk.Gvar gv) (Sk.sort (defsL src)) -> In (gn, gv) (prog_varsL src))
@@ -678,7 +680,7 @@ Section PROOFLINK.
 
   Definition wf_call_ban (src: Imp.programL) :=
     <<WFCB: forall blk name,
-      let modl := ModL.add Mem (ImpMod.get_modL src) in
+      let modl := ModL.add (Mem (fun _ => false)) (ImpMod.get_modL src) in
       let ge := Sk.load_skenv (Sk.sort (ModL.sk modl)) in
       SkEnv.blk2id ge blk = Some name -> call_ban name = false>>.
 
@@ -733,7 +735,7 @@ Section PROOFLINK.
   Qed.
 
   Definition imps_sem (srcs : list Imp.program) :=
-    let srcs_mod := List.map ImpMod.get_mod srcs in compile_val (Mod.add_list (Mem :: srcs_mod)).
+    let srcs_mod := List.map ImpMod.get_mod srcs in compile_val (Mod.add_list ((Mem (fun _ => false)) :: srcs_mod)).
 
   Lemma compile_behavior_improves_compile
         (srcs : list Imp.program) (tgts : Coqlib.nlist Csharpminor.program)
@@ -747,7 +749,7 @@ Section PROOFLINK.
     des.
     i. unfold imps_sem.
     hexploit left_arrow; eauto.
-    i. instantiate (1:=Mem) in H. rewrite H; clear H.
+    i. instantiate (1:=Mem (fun _ => false)) in H. rewrite H; clear H.
     hexploit right_arrow; eauto.
     i. des. clarify.
     hexploit linked_list_wf_lift; eauto. i. des. unfold wf_prog in H. des.
