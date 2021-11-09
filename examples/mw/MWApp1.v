@@ -8,7 +8,7 @@ Require Import Skeleton.
 Require Import PCM.
 (* Require Import HoareDef. *)
 Require Import MWHeader.
-Require Import STB IPM.
+Require Import HoareDef STB IPM.
 
 Set Implicit Arguments.
 
@@ -21,113 +21,84 @@ Section PROOF.
   Notation pget := (p0 <- trigger PGet;; p0 <- p0↓ǃ;; Ret p0) (only parsing).
   Notation pput p0 := (trigger (PPut p0↑)) (only parsing).
 
-  (* Definition ASSUME (P: iProp): itree Es unit := *)
+  (* Definition ASSUME rf0 (P: AppRA.t -> Prop): itree Es _ := *)
   (*   ri <- trigger (Take _);; *)
   (*   assume(P ri);;; *)
-  (*   rm0 <- pget;; rm1 <- trigger (Take _);; assume(rm1 = rm0 ⋅ ri ∧ URA.wf rm1);;; pput rm1;;; *)
-  (*   Ret tt *)
+  (*   rm <- pget;; rf1 <- trigger (Take _);; assume(rf1 = rm ⋅ ri ⋅ rf0 ∧ URA.wf rf1);;; *)
+  (*   Ret rf1 *)
   (* . *)
 
-  (* Definition GUARANTEE (Q: iProp): itree Es unit := *)
-  (*   ro <- trigger (Choose _);; *)
+  (* Definition GUARANTEE rf0 (Q: AppRA.t -> Prop): itree Es _ := *)
+  (*   '(rm, ro, rf1) <- trigger (Choose _);; *)
   (*   guarantee(Q ro);;; *)
-  (*   rm0 <- pget;; rm1 <- trigger (Choose _);; guarantee(rm1 ⋅ ro = rm0);;; *)
-  (*   Ret tt *)
+  (*   guarantee(rm ⋅ ro ⋅ rf1 = rf0);;; pput rm;;; *)
+  (*   Ret rf1 *)
   (* . *)
 
+  (*** OLD CODE ***)
   (* Definition initF: list val -> itree Es val := *)
   (*   fun varg => _ <- (pargs [] varg)?;; *)
-  (*     ASSUME(OwnM AppInit);;; *)
+  (*     let rf := ε in *)
+  (*     rf <- (ASSUME rf (eq Init));; *)
 
-  (*     GUARANTEE(⌜True⌝%I);;; *)
+  (*     rf <- (GUARANTEE rf top1);; *)
   (*     `_: val <- ccallU "put" [Vint 0; Vint 42];; *)
-  (*     ASSUME(⌜True⌝%I);;; *)
+  (*     rf <- (ASSUME rf top1);; *)
 
-  (*     GUARANTEE(OwnM AppRun);;; *)
+  (*     rf <- (GUARANTEE rf (eq Run));; *)
 
   (*     Ret Vundef *)
   (* . *)
-
-
-  (***
-     var ri := Take
-     assume(P ri)
-     rf := take(rf + rm + ri)
-   ***)
-
-  (***
-     var (rm, ro) := Choose
-     guarantee(Q ro)
-     rf := choose (rf - rm - ro)
-   ***)
-
-  Definition ASSUME rf0 (P: AppRA.t -> Prop): itree Es _ :=
-    ri <- trigger (Take _);;
-    assume(P ri);;;
-    rm <- pget;; rf1 <- trigger (Take _);; assume(rf1 = rm ⋅ ri ⋅ rf0 ∧ URA.wf rf1);;;
-    Ret rf1
-  .
-
-  Definition GUARANTEE rf0 (Q: AppRA.t -> Prop): itree Es _ :=
-    '(rm, ro, rf1) <- trigger (Choose _);;
-    guarantee(Q ro);;;
-    guarantee(rm ⋅ ro ⋅ rf1 = rf0);;; pput rm;;;
-    Ret rf1
-  .
-
-  Definition initF: list val -> itree Es val :=
-    fun varg => _ <- (pargs [] varg)?;;
-      let rf := ε in
-      rf <- (ASSUME rf (eq Init));;
-
-      rf <- (GUARANTEE rf top1);;
-      `_: val <- ccallU "put" [Vint 0; Vint 42];;
-      rf <- (ASSUME rf top1);;
-
-      rf <- (GUARANTEE rf (eq Run));;
-
-      Ret Vundef
-  .
 
   (* Definition runF: list val -> itree Es val := *)
   (*   fun varg => _ <- (pargs [] varg)?;; *)
-  (*     ri <- trigger (Take _);; *)
-  (*     assume(ri = AppInit);;; *)
-  (*     `rm0: AppRA <- pget;; rm1 <- trigger (Take _);; assume(rm1 = rm0 ⋅ ri ∧ URA.wf rm1);;; pput rm1;;; *)
+  (*     let rf := ε in *)
+  (*     rf <- (ASSUME rf (eq Run));; *)
 
+  (*     rf <- (GUARANTEE rf top1);; *)
   (*     `v: val <- ccallU "get" [Vint 0];; trigger (Syscall "print" [v]↑ top1);;; *)
+  (*     rf <- (ASSUME rf top1);; *)
 
-  (*     ro <- trigger (Choose _);; *)
-  (*     guarantee(ro = AppRun);;; *)
-  (*     rm2 <- pget;; rm3 <- trigger (Choose _);; guarantee(rm3 ⋅ ro = rm2);;; *)
-
+  (*     rf <- GUARANTEE rf (eq Run);; *)
   (*     Ret Vundef *)
   (* . *)
 
-  Definition runF: list val -> itree Es val :=
-    fun varg => _ <- (pargs [] varg)?;;
-      let rf := ε in
-      rf <- (ASSUME rf (eq Run));;
+  Let Es := (hAPCE +' Es).
 
-      rf <- (GUARANTEE rf top1);;
-      `v: val <- ccallU "get" [Vint 0];; trigger (Syscall "print" [v]↑ top1);;;
-      rf <- (ASSUME rf top1);;
-
-      rf <- GUARANTEE rf (eq Run);;
+  Definition initF: list val -> itree Es val :=
+    fun varg =>
+      _ <- (pargs [] varg)?;;
+      `_: val <- ccallU "put" ([Vint 0; Vint 42]);;
       Ret Vundef
   .
 
-  Definition AppSem: ModSem.t := {|
-    ModSem.fnsems := [("init", cfunU initF); ("run", cfunU runF)];
-    ModSem.mn := "App";
-    ModSem.initial_st := (InitX)↑;
+  Definition runF: list val -> itree Es val :=
+    fun varg =>
+      _ <- (pargs [] varg)?;;
+      `r: val <- ccallU "get" ([Vint 0]);;
+      r <- (pargs [Tint] [r])?;; syscallU "print" [r];;;
+      Ret Vundef
+  .
+
+  Definition AppSbtb: list (string * fspecbody) :=
+    [("init", mk_specbody init_spec1 (cfunU initF));
+    ("run", mk_specbody run_spec1 (cfunU runF))
+    ].
+
+  Definition SAppSem: SModSem.t := {|
+    SModSem.fnsems := AppSbtb;
+    SModSem.mn := "App";
+    SModSem.initial_mr := (GRA.embed Run);
+    SModSem.initial_st := tt↑;
   |}
   .
 
-  Definition App: Mod.t := {|
-    Mod.get_modsem := fun _ => AppSem;
-    Mod.sk := [("init", Sk.Gfun); ("run", Sk.Gfun)];
+  Definition SApp: SMod.t := {|
+    SMod.get_modsem := fun _ => SAppSem;
+    SMod.sk := [("init", Sk.Gfun); ("run", Sk.Gfun)];
   |}
   .
+
+  Definition App: Mod.t := (SMod.to_tgt (fun _ => to_stb App1Stb) SApp).
 
 End PROOF.

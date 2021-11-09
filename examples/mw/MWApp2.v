@@ -21,14 +21,14 @@ Section PROOF.
   Context `{@GRA.inG spRA Σ}.
 
   Definition sbtb: list (string * fspecbody) :=
-    [("init", mk_specbody init_spec1 (fun _ => `_: val <- ccallU "put" [Vint 0; Vint 42];; Ret Vundef↑));
-     ("run", mk_specbody run_spec1 (fun _ => `_: val <- ccallU "get" [Vint 0];;
-                                             trigger (Syscall "print" [Vint 42]↑ top1);;; Ret Vundef↑))].
+    [("init", mk_specbody init_spec (fun _ => `_: val <- ccallU "put" [Vint 0; Vint 42];; Ret Vundef↑));
+     ("run", mk_specbody run_spec (fun _ => `_: val <- ccallU "get" [Vint 0];;
+                                             syscallU "print" [42%Z];;; Ret Vundef↑))].
 
   Definition SAppSem: SModSem.t := {|
     SModSem.fnsems := sbtb;
     SModSem.mn := "App";
-    SModSem.initial_mr := GRA.embed InitX;
+    SModSem.initial_mr := GRA.embed Run;
     SModSem.initial_st := tt↑;
   |}
   .

@@ -21,15 +21,16 @@ Module AppRA.
 Section AppRA.
 
 Variant car: Type :=
-| half (usable: bool)
+| init
+| run
 | full
 | boom
 | unit
 .
 
 Let add := fun a0 a1 => match a0, a1 with
-                                    | half true, half true => full
-                                    | half false, half false => full
+                                    | init, run => full
+                                    | run, init => full
                                     | _, unit => a0
                                     | unit, _ => a1
                                     | _, _ => boom
@@ -52,10 +53,9 @@ Next Obligation. subst add wf. i. unseal "ra". des_ifs. Qed.
 End AppRA.
 End AppRA.
 
-Definition Init: AppRA.t := AppRA.half false.
-Definition InitX: AppRA.t := AppRA.half false.
-Definition Run: AppRA.t := AppRA.half true.
-Definition RunX: AppRA.t := AppRA.half true.
+Definition Init: AppRA.t := AppRA.init.
+Definition Run: AppRA.t := AppRA.run.
+
 
 
 (*** simpl RA ***)
@@ -189,17 +189,17 @@ Section PROOF.
   (*                  (fun varg o => ⌜varg = ([]: list val)↑ ∧ o = ord_top⌝ ** OwnM Run), *)
   (*                  (fun vret => ⌜vret = Vundef↑⌝ ** OwnM Run))). *)
 
-  Definition init_spec1: fspec :=
+  Definition init_spec: fspec :=
     mk_simple (fun f => ((fun varg o => ⌜varg = ([]: list val)↑ ∧ o = ord_top⌝ ** OwnM Init ** OwnM (mw_state f) ** OwnM (sp_white)),
                          (fun vret => OwnM Run ** OwnM (mw_state (add 0%Z 42%Z f)) ** OwnM (sp_white)))).
 
-  Definition run_spec1: fspec :=
+  Definition run_spec: fspec :=
     mk_simple (fun f => ((fun varg o => ⌜varg = ([]: list val)↑ ∧ o = ord_top⌝ ** OwnM Run ** OwnM (mw_state f) ** OwnM (sp_white) ∧ ⌜f 0 = Some 42%Z⌝),
                          (fun vret => OwnM Run ** OwnM (mw_state f) ** OwnM (sp_white) ∧ ⌜f 0 = Some 42%Z⌝))).
 
   Definition AppStb: alist gname fspec.
     eapply (Seal.sealing "stb").
-    eapply [("init",init_spec1); ("run",run_spec1)].
+    eapply [("init",init_spec); ("run",run_spec)].
   Defined.
 
 
@@ -251,8 +251,20 @@ Section PROOF.
             ("alloc", alloc_spec); ("free", free_spec); ("load", load_spec); ("store", store_spec); ("cmp", cmp_spec)].
    Defined.
 
+  (******************************* Dedicated STB for App1 ****************************)
+  Definition init_spec1: fspec :=
+    mk_simple (fun (_: unit) => ((fun varg o => ⌜o = ord_top⌝ ** OwnM Init),
+                                 (fun vret => OwnM Run))).
+  Definition run_spec1: fspec :=
+    mk_simple (fun (_: unit) => ((fun varg o => ⌜o = ord_top⌝ ** OwnM Run),
+                                 (fun vret => OwnM Run))).
+  Definition App1Stb: alist gname fspec.
+    eapply (Seal.sealing "stb").
+    eapply [("put", fspec_trivial); ("get", fspec_trivial)].
+   Defined.
+
 End PROOF.
-Global Hint Unfold MWStb MW1Stb AppStb MapStb: stb.
+Global Hint Unfold MWStb MW1Stb AppStb App1Stb MapStb: stb.
 
 
 
@@ -372,3 +384,11 @@ Proof.
   - rewrite Z.mul_comm. rewrite Z.div_mul; ss.
   - contradict n0. eapply Z.divide_factor_l.
 Qed.
+
+(* Section PROOF. *)
+(*   Context `{eventE -< E}. *)
+(*   Definition syscallU (name: string) (vs: list Z): itree E Z := *)
+(*     z <- trigger (Syscall name vs↑ top1);; `z: Z <- z↓?;; Ret z *)
+(*   . *)
+(* End PROOF. *)
+Notation syscallU name vs := (z <- trigger (Syscall name vs↑ top1);; `z: Z <- z↓?;; Ret z).

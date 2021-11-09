@@ -67,7 +67,7 @@ Section PROOF.
       (if dec (lst0.(lst_cls) k) opt
        then _ <- upd_opt (fun opt => set k v opt);;; Ret tt
        else `_: val <- ccallU "update" ([lst0.(lst_map); Vint k; v]);; Ret tt);;;
-      z <- trigger (Syscall "print" [k]↑ top1);; `_: Z <- z↓?;; (*** TODO: make something like "syscallu" ***)
+      syscallU "print" [k];;;
       Ret Vundef
   .
 
@@ -80,7 +80,7 @@ Section PROOF.
       v <- (if dec (lst0.(lst_cls) k) opt
             then ;;; Ret (lst0.(lst_opt) k)
             else ccallU "access" ([lst0.(lst_map); Vint k]));;
-      z <- trigger (Syscall "print" [k]↑ top1);; `_: Z <- z↓?;; (*** TODO: make something like "syscallu" ***)
+      syscallU "print" [k];;;
       Ret v
   .
 

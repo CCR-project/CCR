@@ -23,7 +23,7 @@ Section PROOF.
       _ <- (pargs [] varg)?;;
       initialized <- pget;;
       if (initialized: bool)
-      then trigger (Syscall "print" [Vint (- 1)]↑ top1);;; Ret Vundef
+      then syscallU "print" [(- 1)%Z];;; Ret Vundef
       else `_: val <- ccallU "put" [Vint 0; Vint 42];; pput true;;; Ret Vundef
   .
 
@@ -32,8 +32,8 @@ Section PROOF.
       _ <- (pargs [] varg)?;;
       initialized <- pget;;
       if negb (initialized: bool)
-      then trigger (Syscall "print" [Vint (- 1)]↑ top1);;; Ret Vundef
-      else `v: val <- ccallU "get" [Vint 0];; trigger (Syscall "print" [v]↑ top1);;; Ret Vundef
+      then syscallU "print" [(- 1)%Z];;; Ret Vundef
+      else `v: val <- ccallU "get" [Vint 0];; v <- (pargs [Tint] [v])?;; syscallU "print" [v];;; Ret Vundef
   .
 
   Definition AppSem: ModSem.t := {|
