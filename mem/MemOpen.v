@@ -127,12 +127,13 @@ Section PROOF.
     eapply y.
   Defined.
 
+  Variable cslp cslr: gname -> bool.
+
   Definition KMemSem (sk: Sk.t): KModSem.t := {|
     KModSem.fnsems := MemSbtb;
     KModSem.mn := "Mem";
-    KModSem.initial_mr := (GRA.embed (Auth.black (M:=_memRA) ε));
-    (* KModSem.initial_mr := (GRA.embed (Auth.black (M:=_memRA) (initial_mem_mr sk))); *)
-    KModSem.initial_st := (Mem.load_mem sk)↑;
+    KModSem.initial_mr := (GRA.embed (Auth.black (M:=_memRA) (initial_mem_mr cslr sk)));
+    KModSem.initial_st := (Mem.load_mem cslp sk)↑;
   |}
   .
   Definition MemSem (stb: gname -> option fspec): Sk.t -> ModSem.t := (KModSem.transl_tgt stb) ∘ KMemSem.

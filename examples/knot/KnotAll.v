@@ -44,12 +44,12 @@ Section PROOF.
     fun sk => to_stb (MainFunStb RecStb sk).
   Hint Unfold FunStb: stb.
 
-  Let smds := [SMain RecStb; SKnot RecStb FunStb; SMem].
+  Let smds := [SMain RecStb; SKnot RecStb FunStb; SMem (fun _ => true)].
   Let GlobalStb := fun sk => to_stb (SMod.get_stb smds sk).
   Hint Unfold GlobalStb: stb.
 
-  Definition KnotAllImp: list Mod.t := [KnotMainImp.KnotMain; KnotImp.Knot; Mem0.Mem].
-  Definition KnotAll0: list Mod.t := [KnotMain0.Main; Knot0.Knot; Mem0.Mem].
+  Definition KnotAllImp: list Mod.t := [KnotMainImp.KnotMain; KnotImp.Knot; Mem0.Mem (fun _ => false)].
+  Definition KnotAll0: list Mod.t := [KnotMain0.Main; Knot0.Knot; Mem0.Mem (fun _ => false)].
   Definition KnotAll1: list Mod.t := List.map (SMod.to_tgt GlobalStb) smds.
   Definition KnotAll2: list Mod.t := List.map SMod.to_src smds.
 

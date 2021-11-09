@@ -81,13 +81,13 @@ Section PROOF.
       rewrite Z.sub_diag in *. ss.
   Qed.
 
-  Definition initial_mem_mr (sk: Sk.t): _memRA :=
+  Definition initial_mem_mr (csl: gname -> bool) (sk: Sk.t): _memRA :=
     fun blk ofs =>
       match List.nth_error sk blk with
-      | Some (_, gd) =>
+      | Some (g, gd) =>
         match gd with
         | Sk.Gfun => ε
-        | Sk.Gvar gv => if (dec ofs 0%Z) then Some (Vint gv) else ε
+        | Sk.Gvar gv => if csl g then if (dec ofs 0%Z) then Some (Vint gv) else ε else ε
         end
       | _ => ε
       end.
@@ -251,10 +251,12 @@ Section PROOF.
     ]
   .
 
+  Variable csl: gname -> bool.
+
   Definition SMemSem (sk: Sk.t): SModSem.t := {|
     SModSem.fnsems := MemSbtb;
     SModSem.mn := "Mem";
-    SModSem.initial_mr := (GRA.embed (Auth.black (initial_mem_mr sk)));
+    SModSem.initial_mr := (GRA.embed (Auth.black (initial_mem_mr csl sk)));
     SModSem.initial_st := tt↑;
   |}
   .
