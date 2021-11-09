@@ -408,7 +408,6 @@ Section SIMMODSEM.
         { iModIntro. iFrame. iSplits; ss; et. iRight. iLeft. iSplits; ss; et. }
     }
 
-    { admit "TODO". }
   Unshelve. all: ss. all: try exact 0.
   Qed.
 

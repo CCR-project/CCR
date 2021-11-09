@@ -1,4 +1,4 @@
-Require Import HoareDef MWHeader MWCImp MWC9 SimModSem.
+Require Import HoareDef MWHeader MWAppImp MWApp9 SimModSem.
 Require Import Coqlib.
 Require Import ImpPrelude.
 Require Import Skeleton.
@@ -49,162 +49,95 @@ Section SIMMODSEM.
 
   Let W: Type := Any.t * Any.t.
 
-  (* Let wf: unit -> W -> Prop := *)
-  (*   fun _ '(mrps_src0, mrps_tgt0) => *)
-  (*     (<<SRC: mrps_src0 = tt↑>>) /\ *)
-  (*     (<<TGT: mrps_tgt0 = tt↑>>) *)
-  (* . *)
-  Definition wf_arr (arr: val): Prop :=
-    match arr with
-    | Vint n => n = 0%Z
-    | Vptr _ ofs => ofs = 0%Z
-    | _ => False
-    end
-  .
+  Definition to_val (b: bool): val := if b then Vint 1 else Vint 0.
 
   Let wf (ske: SkEnv.t): _ -> W -> Prop :=
     @mk_wf _ (option (Any.t * Any.t))
            (fun w0 st_src st_tgt => (
-                {{"NORMAL": ∃ arr map, ⌜w0 = None ∧ st_src = (arr, map)↑ ∧ wf_arr arr⌝ **
-                    OwnM (var_points_to ske "gv0" arr) ** OwnM (var_points_to ske "gv1" map)}} ∨
-                (* {{"NORMAL": ∃ arr map arrb mapb, ⌜w0 = None ∧ ske.(SkEnv.id2blk) "gv0" = Some arrb *)
-                (*     ∧ ske.(SkEnv.id2blk) "gv1" = Some mapb ∧ st_src = (arr, map)↑⌝ ** *)
-                (*     OwnM ((arrb, 0%Z) |-> [arr]) ** OwnM ((mapb, 0%Z) |-> [map ])}} ∨ *)
+                {{"NORMAL": ∃ initv, ⌜w0 = None ∧ st_src = initv↑⌝ **
+                    OwnM (var_points_to ske "initialized" (to_val initv))}} ∨
                 {{"LOCKED": ⌜(∃ p0, st_src = Any.pair tt↑ p0) ∧ w0 = Some (st_src, st_tgt)⌝%I}})%I
-              (* ⌜True⌝ ** (∃ (stk_mgr0: gmap mblock (list val)), *)
-              (*            (⌜_stk_mgr0 = stk_mgr0↑⌝) ∧ *)
-              (*            ({{"SIM": ([∗ map] handle ↦ stk ∈ stk_mgr0, *)
-              (*                       (∃ hd, OwnM ((handle, 0%Z) |-> [hd]) ** is_list hd stk))}}) *)
            )
   .
 
   Variable global_stb: Sk.t -> gname -> option fspec.
   (* Hypothesis INCLMW: stb_incl (to_stb (MWStb)) global_stb. *)
   (* Hypothesis INCLMEM: stb_incl (to_stb (MemStb)) global_stb. *)
-  Hypothesis STBINCL: forall sk, stb_incl (to_stb_context ["new"; "access"; "update"; "init"; "run"; "loop"] (MemStb))
+  Hypothesis STBINCL: forall sk, stb_incl (to_stb_context ["put"; "get"] (MemStb))
                                           (global_stb sk).
 
   Import ImpNotations.
 
   Ltac isteps := repeat (steps; imp_steps).
 
-  Lemma _main_sim sk (SKINCL: Sk.incl (defs MWprog) sk) (SKWF: Sk.wf sk):
-    sim_fnsem (wf (Sk.load_skenv sk)) le
-              ("main", KModSem.disclose_ksb_tgt "MW" (global_stb sk) (ksb_trivial (cfunU mainF)))
-              ("main", cfunU (eval_imp (Sk.load_skenv sk) MWCImp.mainF)).
+  Theorem correct:
+    refines2 [MWAppImp.App] [MWApp9.App (global_stb)].
   Proof.
+    eapply adequacy_local2. econs; ss. i.
+    econstructor 1 with (wf:=wf (Sk.load_skenv sk)) (le:=le); et; ss; swap 2 3.
+    { typeclasses eauto. }
+    { eexists. econs. eapply to_semantic. iIntros "A". iLeft. iSplits; ss; et. }
+
     eapply Sk.incl_incl_env in SKINCL. eapply Sk.load_skenv_wf in SKWF.
-    hexploit (SKINCL "gv0"); ss; eauto. intros [blk0 FIND0].
-    hexploit (SKINCL "gv1"); ss; eauto 10. intros [blk1 FIND1].
-    { kinit. harg. mDesAll; des; clarify. unfold mainF, MWCImp.mainF, ccallU.
+    hexploit (SKINCL "initialized"); ss; eauto. intros [blk0 FIND0].
+
+    econs; ss.
+    { kinit. harg. mDesAll; des; clarify. unfold initF, MWAppImp.initF, ccallU.
       set (Sk.load_skenv sk) as ske in *.
       fold (wf ske).
       isteps. rewrite unfold_eval_imp. isteps.
       mDesOr "INV"; mDesAll; des; clarify; cycle 1.
       { rewrite Any.pair_split. steps. }
       rewrite Any.upcast_split. steps.
-      des_ifs; cycle 1.
+      match goal with [|- context[ ListDec.NoDup_dec ?a ?b ]] => destruct (ListDec.NoDup_dec a b) end; cycle 1.
       { contradict n. solve_NoDup. }
-      steps. erewrite STBINCL; cycle 1. { stb_tac; ss. } isteps.
-      hcall _ None None with "*".
-      { iModIntro. iSplits; ss; et.
-        - iLeft. iSplits; ss; et. iFrame. iPureIntro. esplits; ss; et.
-        - admit "ez - size argument".
-      }
-      { esplits; ss; et. }
-      fold (wf ske). mDesAll; des; clarify. steps. isteps. rewrite FIND0. steps.
-      isteps. ss. des_ifs. mDesOr "INV"; mDesAll; des; clarify; ss.
-      unfold var_points_to in *. rewrite FIND0 in *. rewrite FIND1 in *.
-      astart 1. astep "store" (tt↑). { eapply STBINCL. stb_tac; ss. } hcall _ (Some (_, _, _)) _ with "A1".
-      { iModIntro. iSplitR; iSplits; ss; et. }
-      { esplits; ss; et. }
-      fold (wf ske). rewrite FIND0 in *. rewrite FIND1 in *. ss. des_ifs.
-      mDesOr "INV"; mDesAll; des; clarify; ss. isteps. astop. steps.
-
-      apply Any.pair_inj in H2. des; clarify.
-      unfold unblk in *. des_ifs.
-
-      erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.
-      hcall _ _ None with "*".
-      { iModIntro. iSplits; ss; et. iLeft. iSplits; ss; et. rewrite FIND0. rewrite FIND1. iFrame. ss. }
-      { esplits; ss; et. }
-      fold (wf ske). rewrite FIND0 in *. rewrite FIND1 in *. ss. des_ifs.
-      mDesOr "INV"; mDesAll; des; clarify; ss. isteps.
-
-      astart 1. astep "store" (tt↑). { eapply STBINCL. stb_tac; ss. } rewrite FIND1. isteps.
+      isteps.
+      astart 1. astep "load" (tt↑). { eapply STBINCL. stb_tac; ss. } rewrite FIND0. isteps.
       hcall _ (Some (_, _, _)) _ with "A".
-      { iModIntro. iSplitR; iSplits; ss; et. }
-      { esplits; ss; et. }
-      fold (wf ske). rewrite FIND0 in *. rewrite FIND1 in *. ss. des_ifs.
-      mDesOr "INV"; mDesAll; des; clarify; ss. isteps. astop. steps.
-
-      erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.
-      hcall _ _ None with "*".
-      { iModIntro. iSplits; ss; et. iLeft. iSplits; ss; et. rewrite FIND0. rewrite FIND1. iFrame. ss. }
-      { esplits; ss; et. }
-      fold (wf ske). rewrite FIND0 in *. rewrite FIND1 in *. ss. des_ifs.
-      mDesOr "INV"; mDesAll; des; clarify; ss. isteps.
-
-      erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.
-      hcall _ _ None with "*".
-      { iModIntro. iSplits; ss; et. iLeft. iSplits; ss; et. rewrite FIND0. rewrite FIND1. iFrame. ss. }
-      { esplits; ss; et. }
-      fold (wf ske). rewrite FIND0 in *. rewrite FIND1 in *. ss. des_ifs.
-      mDesOr "INV"; mDesAll; des; clarify; ss. isteps.
-
-      hret None; ss.
-      { iModIntro. iSplits; ss; et. iLeft. iSplits; ss; et. rewrite FIND0. rewrite FIND1. iFrame. ss. }
-    }
-  Unshelve. all: try exact 0. all: ss.
-  Qed.
-
-  Lemma _loop_sim sk (SKINCL: Sk.incl (defs MWprog) sk) (SKWF: Sk.wf sk):
-    sim_fnsem (wf (Sk.load_skenv sk)) le
-              ("loop", KModSem.disclose_ksb_tgt "MW" (global_stb sk) (ksb_trivial (cfunU loopF)))
-              ("loop", cfunU (eval_imp (Sk.load_skenv sk) MWCImp.loopF)).
-  Proof.
-    eapply Sk.incl_incl_env in SKINCL. eapply Sk.load_skenv_wf in SKWF.
-    hexploit (SKINCL "gv0"); ss; eauto. intros [blk0 FIND0].
-    hexploit (SKINCL "gv1"); ss; eauto 10. intros [blk1 FIND1].
-    { kinit. harg. mDesAll; des; clarify. unfold loopF, MWCImp.loopF, ccallU.
-      set (Sk.load_skenv sk) as ske in *.
-      fold (wf ske).
-      isteps. rewrite unfold_eval_imp. isteps.
-      mDesOr "INV"; mDesAll; des; clarify; cycle 1.
-      { rewrite Any.pair_split. steps. }
-      rewrite Any.upcast_split. steps.
-      des_ifs; cycle 1.
-      { contradict n. solve_NoDup. }
-      steps. isteps.
-
-      erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.
-      hcall _ _ None with "*".
-      { iModIntro. iSplits; ss; et. iLeft. iSplits; ss; et. iFrame. ss. }
+      { iModIntro. iSplitR; iSplits; ss; et. unfold var_points_to. rewrite FIND0. iFrame. }
       { esplits; ss; et. }
       fold (wf ske). ss. des_ifs.
-      mDesOr "INV"; mDesAll; des; clarify; ss. isteps.
+      mDesOr "INV"; mDesAll; des; clarify; ss. rewrite Any.upcast_downcast. steps. isteps. astop. steps.
+      assert(T: wf_val (to_val a)).
+      { destruct a; ss. }
+      apply Any.pair_inj in H2. des; clarify. clear_fast. steps.
+      assert(U: is_true (to_val a) = Some a).
+      { destruct a; ss. }
+      rewrite U. steps.
+      des_ifs.
+      - steps. isteps.
+        Local Transparent syscalls.
+        cbn. steps. isteps.
+        hret None; ss.
+        { iModIntro. iSplits; ss; et. iLeft. iSplits; ss; et. unfold var_points_to. des_ifs. }
+      - steps. isteps.
+        erewrite STBINCL; [|stb_tac; ss]. steps.
+        hcall _ None _ with "*".
+        { iModIntro. iSplits; ss; et.
+          - iLeft. iSplits; ss; et. unfold var_points_to. rewrite FIND0. rewrite FIND1. iFrame.
+            iSplits; ss; et.
+          - iPureIntro. ii. apply Any.upcast_inj in H0. des; clarify. admit "size argument". }
+        { esplits; ss; et. }
+        fold (wf ske). mDesAll; des; clarify.
+        mDesOr "INV"; mDesAll; des; clarify; ss. steps. isteps.
+        Local Transparent syscalls.
+        cbn. des_ifs. steps. isteps. hret None; ss.
+        { iModIntro. iSplits; ss; et. iLeft. iSplits; ss; et. iFrame. ss. }
 
-      erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.
-      hcall _ _ None with "*".
-      { iModIntro. iSplits; ss; et. iLeft. iSplits; ss; et. iFrame. ss. }
-      { esplits; ss; et. }
-      fold (wf ske). ss. des_ifs.
-      mDesOr "INV"; mDesAll; des; clarify; ss. isteps.
 
-      hret None; ss.
-      { iModIntro. iSplits; ss; et. iLeft. iSplits; ss; et. iFrame. ss. }
+        Local Transparent syscalls.
+        cbn. steps. isteps.
+        hret None; ss.
+        { iModIntro. iSplits; ss; et. iLeft. iSplits; ss; et. unfold var_points_to. des_ifs. }
+      -
+      assert(Y: wf_val v).
+      des_ifs.
     }
-    Unshelve. all: try exact 0. all: ss.
-  Qed.
 
-  Lemma _put_sim sk (SKINCL: Sk.incl (defs MWprog) sk) (SKWF: Sk.wf sk):
-    sim_fnsem (wf (Sk.load_skenv sk)) le
-              ("put", KModSem.disclose_ksb_tgt "MW" (global_stb sk) (ksb_trivial (cfunU putF)))
-              ("put", cfunU (eval_imp (Sk.load_skenv sk) MWCImp.putF)).
-  Proof.
-    eapply Sk.incl_incl_env in SKINCL. eapply Sk.load_skenv_wf in SKWF.
-    hexploit (SKINCL "gv0"); ss; eauto. intros [blk0 FIND0].
-    hexploit (SKINCL "gv1"); ss; eauto 10. intros [blk1 FIND1].
+    econs; ss.
+    { eapply _loop_sim; et. }
+
+    econs; ss.
     { kinit. harg. mDesAll; des; clarify. unfold putF, MWCImp.putF, ccallU.
       set (Sk.load_skenv sk) as ske in *.
       fold (wf ske).
@@ -314,17 +247,8 @@ Section SIMMODSEM.
           hret None; ss.
           { iModIntro. iSplits; ss; et. iLeft. iSplits; ss; et. iFrame. ss. }
     }
-    Unshelve. all: try exact 0. all: ss.
-  Qed.
 
-  Lemma _get_sim sk (SKINCL: Sk.incl (defs MWprog) sk) (SKWF: Sk.wf sk):
-    sim_fnsem (wf (Sk.load_skenv sk)) le
-              ("get", KModSem.disclose_ksb_tgt "MW" (global_stb sk) (ksb_trivial (cfunU getF)))
-              ("get", cfunU (eval_imp (Sk.load_skenv sk) MWCImp.getF)).
-  Proof.
-    eapply Sk.incl_incl_env in SKINCL. eapply Sk.load_skenv_wf in SKWF.
-    hexploit (SKINCL "gv0"); ss; eauto. intros [blk0 FIND0].
-    hexploit (SKINCL "gv1"); ss; eauto 10. intros [blk1 FIND1].
+    econs; ss.
     { kinit. harg. mDesAll; des; clarify. unfold getF, MWCImp.getF, ccallU.
       set (Sk.load_skenv sk) as ske in *.
       fold (wf ske).
@@ -434,33 +358,6 @@ Section SIMMODSEM.
           hret None; ss.
           { iModIntro. iSplits; ss; et. iLeft. iSplits; ss; et. iFrame. ss. }
     }
-    Unshelve. all: try exact 0. all: ss.
-  Qed.
-
-  Theorem correct:
-    refines2 [MWCImp.MW] [MWC9.MW (global_stb)].
-  Proof.
-    eapply adequacy_local2. econs; ss. i.
-    econstructor 1 with (wf:=wf (Sk.load_skenv sk)) (le:=le); et; ss; swap 2 3.
-    { typeclasses eauto. }
-    { eexists. econs. eapply to_semantic. iIntros "[A B]". iLeft. iSplits; ss; et. iFrame. iSplits; ss; et. }
-
-    (* eapply Sk.incl_incl_env in SKINCL. eapply Sk.load_skenv_wf in SKWF. *)
-    (* hexploit (SKINCL "gv0"); ss; eauto. intros [blk0 FIND0]. *)
-    (* hexploit (SKINCL "gv1"); ss; eauto 10. intros [blk1 FIND1]. *)
-
-    econs; ss.
-    { eapply _main_sim; et. }
-
-    econs; ss.
-    { eapply _loop_sim; et. }
-
-    econs; ss.
-    { eapply _put_sim; et. }
-
-    econs; ss.
-    { eapply _get_sim; et. }
-
   Unshelve. all: try exact 0. all: ss.
   Qed.
 

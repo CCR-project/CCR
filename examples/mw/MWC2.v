@@ -84,7 +84,8 @@ Section PROOF.
 
   Definition SMW: SMod.t := {|
     SMod.get_modsem := fun _ => SMWSem;
-    SMod.sk := [("main", Sk.Gfun); ("loop", Sk.Gfun); ("put", Sk.Gfun); ("get", Sk.Gfun)];
+    SMod.sk := [("loop", Sk.Gfun); ("put", Sk.Gfun); ("get", Sk.Gfun); ("gv0", Sk.Gvar 0); ("gv1", Sk.Gvar 0);
+               ("gv2", Sk.Gvar 0); ("gv3", Sk.Gvar 0)];
   |}
   .
 

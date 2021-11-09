@@ -71,7 +71,8 @@ Section PROOF.
   (* Vptr (or_else (skenv.(SkEnv.id2blk) "arr") 0) 0 *)
   Definition MW: Mod.t := {|
     Mod.get_modsem := fun sk => MWSem (Sk.load_skenv sk);
-    Mod.sk := [("arr", Sk.Gvar 0); ("map", Sk.Gvar 0); ("main", Sk.Gfun); ("loop", Sk.Gfun); ("put", Sk.Gfun); ("get", Sk.Gfun)];
+    Mod.sk := [("loop", Sk.Gfun); ("put", Sk.Gfun); ("get", Sk.Gfun); ("gv0", Sk.Gvar 0); ("gv1", Sk.Gvar 0);
+              ("gv2", Sk.Gvar 0); ("gv3", Sk.Gvar 0)];
   |}
   .
 

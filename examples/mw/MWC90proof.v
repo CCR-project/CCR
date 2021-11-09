@@ -83,7 +83,6 @@ Section SIMMODSEM.
         { r. esplits; ss; et. }
     }
 
-    { admit "TODO". }
   Unshelve.
     all: try exact 0. all: ss.
   Qed.

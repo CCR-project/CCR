@@ -116,20 +116,11 @@ TODO: APC, locked thinges
 
   Let PURENICL: stb_pure_incl (to_stb MW1Stb) (to_stb (MWStb ++ AppStb ++ MapStb ++ MemStb)).
   Proof.
-    (* clear. *)
-    (* { r. i. autounfold with stb in *; autorewrite with stb in *. ss. des_ifs. *)
-    (*   - r in PURE; des; ss; unfold is_pure in *. des_ifs. r in PURE. uipropall. des; clarify. *)
-    (*   - r in PURE; des; ss; unfold is_pure in *. des_ifs. r in PURE. uipropall. des; clarify. *)
-    (*   - r in PURE; des; ss; unfold is_pure in *. des_ifs. r in PURE. uipropall. des; clarify. *)
-    (*   - r in PURE; des; ss; unfold is_pure in *. des_ifs. r in PURE. uipropall. des; clarify. *)
-    (*   - r in PURE; des; ss; unfold is_pure in *. des_ifs. r in PURE. uipropall. des; clarify. *)
-    (*   - r in PURE; des; ss; unfold is_pure in *. des_ifs. r in PURE. uipropall. des; clarify. *)
-    (*   - r in PURE; des; ss; unfold is_pure in *. des_ifs. r in PURE. uipropall. des; clarify. *)
-    (*   - r in PURE; des; ss; unfold is_pure in *. des_ifs. r in PURE. uipropall. des; clarify. *)
-    (*   - r in PURE; des; ss; unfold is_pure in *. des_ifs. r in PURE. uipropall. des; clarify. *)
-    (*   - r in PURE; des; ss; unfold is_pure in *. des_ifs. r in PURE. uipropall. des; clarify. *)
-    (* } *)
-    admit "uncomment".
+    clear.
+    { r. i. autounfold with stb in *; autorewrite with stb in *. ss.
+      des_ifs; (r in PURE; des; ss; unfold is_pure in *; des_ifs;
+                r in PURE; uipropall; des; clarify; r in PURE1; uipropall; des; clarify).
+    }
   Qed.
 
   Global Opaque bi_exist bi_sep OwnM Own.
