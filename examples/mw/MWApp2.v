@@ -18,6 +18,7 @@ Section PROOF.
 
   Context `{@GRA.inG AppRA.t Σ}.
   Context `{@GRA.inG mwRA Σ}.
+  Context `{@GRA.inG spRA Σ}.
 
   Definition sbtb: list (string * fspecbody) :=
     [("init", mk_specbody init_spec1 (fun _ => `_: val <- ccallU "put" [Vint 0; Vint 42];; Ret Vundef↑));

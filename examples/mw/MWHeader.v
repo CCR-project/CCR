@@ -190,12 +190,12 @@ Section PROOF.
   (*                  (fun vret => ⌜vret = Vundef↑⌝ ** OwnM Run))). *)
 
   Definition init_spec1: fspec :=
-    mk_simple (fun f => ((fun varg o => ⌜varg = ([]: list val)↑ ∧ o = ord_top⌝ ** OwnM Init ** OwnM (mw_state f)),
-                         (fun vret => OwnM Run ** OwnM (mw_state (add 0%Z 42%Z f))))).
+    mk_simple (fun f => ((fun varg o => ⌜varg = ([]: list val)↑ ∧ o = ord_top⌝ ** OwnM Init ** OwnM (mw_state f) ** OwnM (sp_white)),
+                         (fun vret => OwnM Run ** OwnM (mw_state (add 0%Z 42%Z f)) ** OwnM (sp_white)))).
 
   Definition run_spec1: fspec :=
-    mk_simple (fun f => ((fun varg o => ⌜varg = ([]: list val)↑ ∧ o = ord_top⌝ ** OwnM Run ** OwnM (mw_state f) ∧ ⌜f 0 = Some 42%Z⌝),
-                         (fun vret => OwnM Run ** OwnM (mw_state f) ∧ ⌜f 0 = Some 42%Z⌝))).
+    mk_simple (fun f => ((fun varg o => ⌜varg = ([]: list val)↑ ∧ o = ord_top⌝ ** OwnM Run ** OwnM (mw_state f) ** OwnM (sp_white) ∧ ⌜f 0 = Some 42%Z⌝),
+                         (fun vret => OwnM Run ** OwnM (mw_state f) ** OwnM (sp_white) ∧ ⌜f 0 = Some 42%Z⌝))).
 
   Definition AppStb: alist gname fspec.
     eapply (Seal.sealing "stb").
@@ -246,7 +246,7 @@ Section PROOF.
   Definition MW1Stb: alist gname fspec.
     eapply (Seal.sealing "stb").
     eapply [("main", fspec_mw1); ("loop", fspec_mw1); ("put", fspec_mw1); ("get", fspec_mw1);
-            ("init", fspec_trivial); ("run", fspec_trivial);
+            ("init", fspec_mw1); ("run", fspec_mw1);
             ("new", fspec_trivial); ("access", fspec_trivial); ("update", fspec_trivial);
             ("alloc", alloc_spec); ("free", free_spec); ("load", load_spec); ("store", store_spec); ("cmp", cmp_spec)].
    Defined.

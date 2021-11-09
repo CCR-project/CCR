@@ -213,22 +213,20 @@ TODO: APC, locked thinges
         hcall _ _ _.
         { iDes; ss; des; clarify. apply Any.upcast_inj in H7. des; clarify. clear_fast.
           iModIntro. iSplits; ss; et.
-          iSplitR "LOCKED A"; cycle 1.
+          iSplitR "LOCKED A A0"; cycle 1.
           { iFrame. iSplits; ss; et. }
           iSplitR.
           { instantiate (1:=True%I); ss. }
           iLeft. iSplits; ss; et. iFrame.
         }
         { esplits; ss; et. }
-        { i. iIntros "H". ss. iDestruct "H" as "[A %]". eauto. }
+        { i. iIntros "H". ss. iDes; des; clarify. }
         unhide_k. steps. fold wf. mDesAll. des; clarify.
 
 
 
         hpost_tgt.
-        { iModIntro. iSplits; ss; et. iFrame. iSplits; ss; et.
-          iCombine "A1" "POST" as "A". iCombine "A" "INV" as "A". iAssumption.
-        }
+        { iModIntro. iSplits; ss; et. iFrame. iSplits; ss; et. xtra. }
         fold wf. steps. force_l; stb_tac; ss; clarify. steps. rewrite _UNWRAPU. steps.
         stb_tac; clarify.
 
@@ -239,7 +237,7 @@ TODO: APC, locked thinges
         hcall _ _ _.
         { iDes; ss; des; clarify; cycle 1.
           { iExFalso. iApply (mw_state_false with "FR"); et. }
-          iModIntro. iSplits; ss; et. iSplitR "A A2 FR"; cycle 1.
+          iModIntro. iSplits; ss; et. iSplitR "A A0 FR"; cycle 1.
           { iSplits; ss; et. iFrame. iSplits; ss; et. }
           iSplitR.
           { instantiate (1:=True%I); ss. }
@@ -296,7 +294,7 @@ TODO: APC, locked thinges
           iLeft. iSplits; ss; et. iFrame.
         }
         { esplits; ss; et. }
-        { i. iIntros "H". ss. iDestruct "H" as "[A %]". eauto. }
+        { i. iIntros "H". ss. iDes; des; clarify. }
         fold wf. steps. mDesAll; des; clarify. force_l; stb_tac; ss; clarify. steps.
 
 

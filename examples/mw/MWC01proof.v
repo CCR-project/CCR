@@ -260,23 +260,20 @@ Section SIMMODSEM.
       fold wf. mDesAll; des; clarify. steps. force_l; stb_tac; ss; clarify.
       mDesOr "INV"; mDesAll; des; clarify; ss.
       mDesOr "INV"; mDesAll; des; clarify; ss. steps.
-      hcall _ _ _ with "-A".
-      { iModIntro. iSplits; ss; et. iRight. iRight. iFrame. iSplits; ss; et. }
-      { esplits; ss; et. }
-      fold wf. mDesAll; des; clarify. steps. force_l; stb_tac; ss; clarify. steps.
-      mDesOr "INV"; mDesAll; des; clarify; ss.
-      mDesOr "INV"; mDesAll; des; clarify; ss.
       hcall _ _ _ with "*".
       { rewrite repeat_replicate. iDestruct (OwnM_replicate_sepL with "A") as "A". iMod "A".
-        iModIntro. iSplits; ss; et. iFrame. iSplitL; ss; et. iRight. iLeft. iSplits; ss; et.
+        iModIntro. iSplits; ss; et. iFrame. iSplits; ss; et. iRight. iLeft. iSplits; ss; et.
         - iPureIntro. eapply sim_init.
       }
       { esplits; ss; et. }
+      fold wf. mDesAll; des; clarify. steps. force_l; stb_tac; ss; clarify. steps.
+
+      hcall _ _ _ with "*".
+      { iModIntro. iFrame. iSplits; ss; et. }
+      { esplits; ss; et. }
       fold wf. mDesAll; des; clarify. steps. ss. des_ifs.
-      mDesOr "INV"; mDesAll; des; clarify; ss.
-      { hret None; ss. iModIntro. iFrame. iSplits; ss; et. iLeft. iSplits; ss; et. }
-      mDesOr "INV"; mDesAll; des; clarify; ss.
-      { hret None ;ss. iModIntro. iFrame. iSplits; ss; et. iRight. iLeft. iSplits; ss; et. }
+      hret None; ss.
+      { iModIntro. iFrame. iSplits; ss; et. }
     }
 
     econs; ss.
@@ -284,11 +281,11 @@ Section SIMMODSEM.
       assert(w = None).
       { repeat mDesOr "INV"; mDesAll; des; clarify. mAssertPure False; ss. admit "ez". }
       steps. unfold loopF, MWC0.loopF, ccallU. steps. fold wf.
-      force_l; stb_tac; ss; clarify. steps. hcall _ _ _ with "INV".
-      { iModIntro. ss; et. }
+      force_l; stb_tac; ss; clarify. steps. hcall _ _ _ with "*".
+      { iFrame. iSplits; ss; et. }
       { esplits; ss; et. }
       fold wf. mDesAll; des; clarify. steps. force_l; stb_tac; ss; clarify. steps. hcall _ _ _ with "*".
-      { iModIntro. iFrame. et. }
+      { iFrame. iSplits; ss; et. }
       { esplits; ss; et. }
       fold wf. mDesAll; des; clarify. steps. ss. des_ifs.
       hret None; ss.
