@@ -37,7 +37,7 @@ Section PROOF.
       []
       ["init"; "initv"; "v"]
       ("init" =#& "initialized" ;# "initv" =#* "init" ;#
-       if# ("initv" =? (1%Z))
+       if# ("initv" =? (0%Z))
        then# @! "print" [(- 1)%Z : expr]
        else# "v" =@ "get" [0%Z: expr] ;# @! "print" ["v": expr]
        fi#

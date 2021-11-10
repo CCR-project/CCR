@@ -36,32 +36,172 @@ Local Existing Instance AppRA_inG.
 
 Section PROOF.
 
-(*   Check (to_stb_context ["new"; "access"; "update"; "init"; "run"] (MWStb ++ MemStb)). *)
-(*   Check (@to_closed_stb MWGRA ∘ @KMod.get_stb MWGRA [@KMem MWGRA memRA_inG; @KMW MWGRA memRA_inG]). *)
-  Let abc_correct :
-∀ (Σ : GRA.t) (H : GRA.inG memRA Σ) (global_stb : Sk.t -> string → option HoareDef.fspec),
-  (forall sk, stb_incl (to_stb_context ["new"; "access"; "update"; "init"; "run"] (MemStb)) (global_stb sk))
-  → refines2 [MWCImp.MW] [MWC9.MW (global_stb)].
-  admit "".
-  Qed.
+(* (*   Check (to_stb_context ["new"; "access"; "update"; "init"; "run"] (MWStb ++ MemStb)). *) *)
+(* (*   Check (@to_closed_stb MWGRA ∘ @KMod.get_stb MWGRA [@KMem MWGRA memRA_inG; @KMW MWGRA memRA_inG]). *) *)
+(*   Let abc_correct : *)
+(* ∀ (Σ : GRA.t) (H : GRA.inG memRA Σ) (global_stb : Sk.t -> string → option HoareDef.fspec), *)
+(*   (forall sk, stb_incl (to_stb_context ["new"; "access"; "update"; "init"; "run"] (MemStb)) (global_stb sk)) *)
+(*   → refines2 [MWCImp.MW] [MWC9.MW (global_stb)]. *)
+(*   admit "". *)
+(*   Qed. *)
 
-  Let MWLow: refines2 [Mem0.Mem; MWCImp.MW] [Mem0.Mem; MWC0.MW].
+  Let CSL0: gname -> bool := fun g => in_dec dec g ["gv0"; "gv1"].
+  Let MWLow: refines2 [Mem0.Mem (fun _ => false); MWCImp.MW] [Mem0.Mem CSL0; MWC0.MW].
   Proof.
-    transitivity (KMod.transl_tgt_list [KMem; MWC9.KMW]).
+    (* etransitivity. *)
+    (* { eapply refines2_cons. *)
+    (*   { eapply Mem0Openproof.correct. instantiate (1:=(fun _ => false)). ss. } *)
+    (*   { eapply MWCImp9proof.correct. *)
+    (*     i. eapply to_stb_context_incl. *)
+    (*     { refl. } *)
+    (*     unfold MemStb. autounfold with stb. autorewrite with stb. cbn. *)
+    (*     ImpProofs.solve_NoDup; ss. *)
+    (*   } *)
+    (* } *)
+    (* etrans. *)
+    (* { eapply adequacy_open. i. exists ε. split. *)
+    (*   { g_wf_tac. *)
+    (*     Local Transparent Sk.load_skenv _points_to string_dec. *)
+    (*     unfold var_points_to. *)
+    (*     rewrite URA.unit_idl. *)
+    (*     ur. unfold var_points_to, initial_mem_mr. ss. uo. idtac. split. *)
+    (*     2: { ur. i. ur. i. ur. des_ifs. } *)
+    (*     { repeat rewrite URA.unit_id. ur. eexists ε. *)
+    (*       repeat rewrite URA.unit_id. extensionality k. extensionality n. *)
+    (*       unfold sumbool_to_bool, andb. des_ifs. *)
+    (*       { ss. clarify. } *)
+    (*     } *)
+    (*   } *)
+    (* } *)
+
+    transitivity (KMod.transl_tgt_list [KMem CSL0 CSL0; MWC9.KMW]).
     { eapply refines2_cons.
-      { eapply Mem0Openproof.correct. }
-      { eapply abc_correct. i.
-        eapply to_stb_context_incl.
-        { etrans.
-          { eapply incl_appl; refl. }
-          cbn. unfold MemStb. autounfold with stb. autorewrite with stb. cbn. refl.
-        }
-        ImpProofs.solve_NoDup.
+      { eapply Mem0Openproof.correct. ii; ss. }
+      { eapply MWCImp9proof.correct.
+        i.
+        ii. unfold to_closed_stb.
+        autounfold with stb in *. autorewrite with stb in *. cbn in *.
+        rewrite ! eq_rel_dec_correct in *. des_ifs.
       }
     }
     etrans.
     { eapply adequacy_open. i. exists ε. split.
       { g_wf_tac.
+        { Local Transparent Sk.load_skenv _points_to string_dec.
+          (* Eval compute in (KMod.get_sk [KMem CSL0 CSL0; KMW]). *)
+          replace (KMod.get_sk [KMem CSL0 CSL0; KMW]) with
+                  [("get", Sk.Gfun); ("gv0", Sk.Gvar 0); ("gv1", Sk.Gvar 0); ("gv2", Sk.Gvar 0);
+                   ("gv3", Sk.Gvar 0); ("loop", Sk.Gfun); ("put", Sk.Gfun)] in * by refl.
+          dup SKINCL. dup SKWF.
+          eapply Sk.incl_incl_env in SKINCL. eapply Sk.load_skenv_wf in SKWF.
+          hexploit (SKINCL "gv0"). { ss. eauto. } intros [blk0 FIND0].
+          hexploit (SKINCL "gv1"). { ss. eauto. } intros [blk1 FIND1].
+          ur. unfold var_points_to. des_ifs. des; clarify.
+          rewrite URA.unit_idl. unfold points_to, Auth.white in *.
+          Opaque _points_to SkEnv.id2blk. clarify.
+          esplits.
+          - r. exists ε.
+            extensionality b. extensionality ofs.
+            unfold initial_mem_mr.
+            des_ifs.
+            { assert(s <> "gv0").
+              { ii; clarify.
+                exploit (SKINCL0 "gv0"); ss; et. intro T.
+                eapply nth_error_In in Heq.
+                r in SKWF0. ss.
+                eapply NoDup_inj_aux; [eassumption| |apply Heq|apply T|..]; ss.
+              }
+              assert(s <> "gv1").
+              { ii; clarify.
+                exploit (SKINCL0 "gv1"); ss; et. intro T.
+                eapply nth_error_In in Heq.
+                r in SKWF0. ss.
+                eapply NoDup_inj_aux; [eassumption| |apply Heq|apply T|..]; ss.
+              }
+              assert(SkEnv.id2blk (Sk.load_skenv sk) s = Some b).
+              { Local Transparent SkEnv.id2blk.
+                clear - Heq. cbn. uo. des_ifs.
+                - admit "somehow?".
+                - admit "somehow?".
+              }
+              assert(b <> blk0).
+              { ii. clarify. admit "somehow?". }
+              assert(b <> blk1).
+              { ii. clarify. admit "somehow?". }
+              admit "somehow?".
+            }
+            { admit "???". }
+            { admit "???". }
+            { admit "???". }
+            { admit "???". }
+          - { admit "???". }
+        }
+                -
+                ss. r. unfold SkEnv.id2blk.
+              assert(b <> blk0).
+              { ii; clarify.
+                exploit (SKINCL0 "gv0"); ss; et. intro T.
+                eapply nth_error_In in Heq.
+                r in SKWF0. ss.
+                eapply NoDup_inj_aux; [eassumption| |apply Heq|..]; ss.
+              }
+              { ii. clarify.
+                {
+              ss.
+            Transparent _points_to.
+            extensionality b. extensionality ofs.
+            unfold initial_mem_mr.
+            des_ifs.
+            extensionality b. extensionality ofs.
+
+            etrans.
+            { instantiate (1:=initial_mem_mr CSL0 [("get", Sk.Gfun); ("gv0", Sk.Gvar 0); ("gv1", Sk.Gvar 0);
+                                                   ("gv2", Sk.Gvar 0); ("gv3", Sk.Gvar 0); ("loop", Sk.Gfun);
+                                                   ("put", Sk.Gfun)]).
+              r. exists ε. rewrite URA.unit_id.
+              extensionality b. extensionality ofs.
+              destruct b.
+              { cbn. ur. ur. cbn.
+              ur. extensionality b.
+              ur. extensionality ofs.
+              ur.
+              unfold initial_mem_mr.
+              destruct b; ss.
+              des_ifs; bsimpl; des; des_sumbool.
+              extensionality b. extensionality ofs.
+              ur.
+            }
+            r. exists ε. rewrite URA.unit_id.
+            ur. extensionality b.
+            ur. extensionality ofs.
+            ur.
+            unfold initial_mem_mr.
+            des_ifs; bsimpl; des; des_sumbool.
+            extensionality b. extensionality ofs.
+            ur.
+            ss.
+          -
+          ur. ss.
+
+
+          intros [blk1 FIND1].
+          cbn. eauto. [cbn; eauto|]. intros G0.
+          hexploit (SKINCL "gv1"); ss; eauto. intros G1.
+          ur. unfold var_points_to. des_ifs.
+          { admit "". }
+          { exfalso. cbn in *.
+          unfold initial_mem_mr.
+
+          des_ifs. ss. uo. split.
+          2: { ur. i. ur. i. ur. des_ifs. }
+          { repeat rewrite URA.unit_id. ur. eexists ε.
+            repeat rewrite URA.unit_id. extensionality k. extensionality n.
+            unfold sumbool_to_bool, andb. des_ifs.
+            { ss. clarify. }
+            { ss. clarify. exfalso. lia. }
+            { repeat (destruct k; ss). }
+          }
+        }
         Local Transparent Sk.load_skenv _points_to string_dec.
         unfold var_points_to.
         rewrite URA.unit_idl.

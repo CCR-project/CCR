@@ -24,7 +24,7 @@ Require Import ImpProofs.
 Require Import HTactics ProofMode IPM.
 Require Import OpenDef.
 Require Import Mem1 MemOpen STB.
-Require Import MWCImp9proofMain MWCImp9proofLoop MWCImp9proofPut MWCImp9proofGet.
+Require Import MWCImp9proofDef MWCImp9proofMain MWCImp9proofLoop MWCImp9proofPut MWCImp9proofGet.
 
 Set Implicit Arguments.
 
