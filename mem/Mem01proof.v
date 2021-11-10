@@ -195,7 +195,21 @@ Section SIMMODSEM.
       harg. fold wf. steps. hide_k. rename x into sz.
       { mDesAll; ss. des; subst.
         des_ifs_safe (mDesAll; ss). des; subst. clarify. rewrite Any.upcast_downcast in *. clarify.
-        steps. unhide_k. steps. des_ifs; clarify.
+        steps. unhide_k. steps.
+        assert(X: intrange_64 sz).
+        { clear - PURE1. unfold_intrange_64. bsimpl. split; ss.
+          - destruct (Z_le_gt_dec (- two_power_nat 64 `div` 2)%Z (Z.of_nat sz)); ss.
+            assert((0 <= (Z.of_nat sz))%Z) by lia.
+            assert((0 <= two_power_nat 64 `div` 2)%Z) by ss.
+            lia.
+          - destruct (Z_le_gt_dec sz (two_power_nat 64 `div` 2 - 1)%Z); ss.
+            rewrite two_power_nat_S in *.
+            assert(((2 * two_power_nat 63) `div` 2 = two_power_nat 63)%Z).
+            { rewrite Z.mul_comm. rewrite Z_div_mult; lia. }
+            lia.
+        }
+        rewrite X. steps.
+        des_ifs; clarify.
         2:{ bsimpl; des; ss; apply sumbool_to_bool_false in Heq; try lia. }
         steps. astart 0. astop.
         renamer.

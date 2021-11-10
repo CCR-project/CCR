@@ -22,7 +22,6 @@ Section PROOF.
     fun varg =>
       '(fb, n) <- (pargs [Tblk; Tint] varg)?;;
       fn <- (skenv.(SkEnv.blk2id) fb)?;;
-      assume(intrange_64 n);;;
       if(Z_le_gt_dec n 1)
       then Ret (Vint 1)
       else

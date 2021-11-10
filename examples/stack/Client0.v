@@ -19,7 +19,6 @@ Definition getintF {E} `{eventE -< E}:  list val -> itree E val :=
 Definition putintF {E} `{eventE -< E}: list val -> itree E val :=
   fun varg =>
     `v: Z <- (pargs [Tint] varg)?;;
-    (if (intrange_64 v) then Ret tt else triggerUB);;; (* TODO: make notation *)
     z <- trigger (Syscall "print" [v]↑ top1);; `z: Z <- z↓?;;
     Ret Vundef
 .

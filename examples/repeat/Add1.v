@@ -26,7 +26,7 @@ Section PROOF.
       mk_simple (X:=Z)
                 (fun n => (
                      (fun varg o =>
-                        (⌜exists o': Ord.t, o = ord_pure o' /\ varg = [Vint n]↑⌝)%I
+                        (⌜exists o': Ord.t, o = ord_pure o' /\ varg = [Vint n]↑ ∧ intrange_64 n⌝)%I
                      ),
                      (fun vret =>
                         (⌜vret = (Vint (n + 1))↑⌝)%I
@@ -36,7 +36,7 @@ Section PROOF.
     Definition add_body: list val -> itree hEs val :=
       fun args =>
         '(n, m) <- (pargs [Tint; Tint] args)?;;
-        _ <- assume(intrange_64 m /\ m >= 0)%Z;;;
+        _ <- assume(m >= 0)%Z;;;
         Ret (Vint (n + m)%Z)
     .
 

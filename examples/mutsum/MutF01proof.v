@@ -47,8 +47,7 @@ Section SIMMODSEM.
     2: { exists tt. econs; ss; red; uipropall. }
     econs; ss. init. harg. mDesAll.
     des; clarify. unfold fF, ccallU. steps. astart 10.
-    force_r.
-    { eapply mut_max_intrange. auto. } steps.
+    erewrite mut_max_intrange; ss. steps.
     destruct (dec (Z.of_nat x) 0%Z).
     - destruct x; ss. astop. force_l. eexists. steps.
       hret _; ss.
