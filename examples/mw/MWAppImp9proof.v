@@ -161,7 +161,6 @@ Section SIMMODSEM.
         hret None; ss.
         { iModIntro. iSplits; ss; et. iLeft. iSplits; ss; et. unfold var_points_to. des_ifs. }
     }
-    { admit "TODO". }
   Unshelve. all: try exact 0. all: ss.
   Qed.
 

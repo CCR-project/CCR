@@ -75,7 +75,7 @@ Section PROOF.
 
   Definition KApp: KMod.t := {|
     KMod.get_modsem := fun sk => KAppSem (Sk.load_skenv sk);
-    KMod.sk := []
+    KMod.sk := [("App.init", Sk.Gfun); ("App.run", Sk.Gfun); ("initialized", Sk.Gvar 0)];
   |}
   .
 

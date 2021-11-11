@@ -45,7 +45,7 @@ Section PROOF.
 
   Definition App: Mod.t := {|
     Mod.get_modsem := fun _ => AppSem;
-    Mod.sk := [("App.init", Sk.Gfun); ("App.run", Sk.Gfun)];
+    Mod.sk := [("App.init", Sk.Gfun); ("App.run", Sk.Gfun); ("initialized", Sk.Gvar 0)];
   |}
   .
 

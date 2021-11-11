@@ -64,9 +64,9 @@ Qed.
 
 
 
-(* Section AUTHAUX. *)
-(*   Context `{Σ: GRA.t}. *)
-(*   Context `{@GRA.inG M Σ}. *)
+Section AUTHAUX.
+  Context `{Σ: GRA.t}.
+  Context `{@GRA.inG M Σ}.
 
 (*   Lemma wf_cons *)
 (*         (a0 b0 a1 b1: M) *)
@@ -80,7 +80,14 @@ Qed.
 (*     cbn. *)
 (*   Qed. *)
 
-(* End AUTHAUX. *)
+  Lemma white_add
+        (a b: M)
+    :
+      Auth.white (a ⋅ b) = Auth.white a ⋅ Auth.white b
+  .
+  Proof. ur. unfold Auth.white. f_equal. ur. ss. Qed.
+
+End AUTHAUX.
 
 
 
@@ -191,6 +198,13 @@ Section MEMAUX.
     - eapply initial_mem_mr_wf_aux.
   Qed.
 
+  Lemma unfold_var_points_to
+        ske g v
+    :
+      var_points_to ske g v = Auth.white (_var_points_to ske g v)
+  .
+  Proof. unfold var_points_to, _var_points_to. des_ifs. Qed.
+
 End MEMAUX.
 
 
@@ -255,25 +269,25 @@ Section PROOF.
     etrans.
     { eapply adequacy_open. i. exists ε. split.
       { cbn. rewrite ! URA.unit_idl. rewrite ! GRA.embed_add. apply GRA.wf_embed.
-        (* assert(FIND0: alist_find "gv0" sk = Some (Sk.Gvar 0)). *)
-        (* { admit "". } *)
-        (* assert(FIND1: alist_find "gv1" sk = Some (Sk.Gvar 0)). *)
-        (* { admit "". } *)
-        (* assert(FIND2: alist_find "initialized" sk = Some (Sk.Gvar 0)). *)
-        (* { admit "". } *)
+        assert(FIND0: alist_find "gv0" sk = Some (Sk.Gvar 0)).
+        { exploit (SKINCL "gv0"); et. { ss. eauto 10. } intro T. eapply In_nth_error in T. des; et.
+          eapply nth_error_alist_find; et. }
+        assert(FIND1: alist_find "gv1" sk = Some (Sk.Gvar 0)).
+        { exploit (SKINCL "gv1"); et. { ss. eauto 10. } intro T. eapply In_nth_error in T. des; et.
+          eapply nth_error_alist_find; et. }
+        assert(FIND2: alist_find "initialized" sk = Some (Sk.Gvar 0)).
+        { exploit (SKINCL "initialized"); et. { ss. eauto 10. } intro T. eapply In_nth_error in T. des; et.
+          eapply nth_error_alist_find; et. }
         hexploit (@initial_mem_mr_wf sk ["gv0"; "gv1"; "initialized"]); et.
         { ii. ss. des; clarify.
-          -
-
-          dup SKINCL. dup SKWF.
-          eapply Sk.incl_incl_env in SKINCL. eapply Sk.load_skenv_wf in SKWF.
-          hexploit (SKINCL "gv0"). { ss. eauto 10. } intros [blk0 FIND0].
-          hexploit (SKINCL "gv1"). { ss. eauto. } intros [blk1 FIND1].
-            inv SKINCL.
+          - exploit (SKINCL "gv0"); et. { ss. eauto 10. } intro T. eapply In_nth_error in T. des; et.
+          - exploit (SKINCL "gv1"); et. { ss. eauto 10. } intro T. eapply In_nth_error in T. des; et.
+          - exploit (SKINCL "initialized"); et. { ss. eauto 10. } intro T. eapply In_nth_error in T. des; et.
         }
         { ImpProofs.solve_NoDup. }
-        i. ss. des_ifs.
-        rewrite URA.unit_idl. admit "". }
+        i. ss. des_ifs. rewrite URA.unit_id in H.
+        rewrite ! white_add in H. rewrite <- ! unfold_var_points_to in H.
+        rewrite ! URA.add_assoc in *. rewrite ! URA.add_assoc in H. ss. }
       ii. ss.
     }
     eapply refines2_cons.

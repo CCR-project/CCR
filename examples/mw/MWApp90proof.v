@@ -63,7 +63,6 @@ Section SIMMODSEM.
         force_r; ss; clarify. steps. force_r; ss; clarify. steps.
         { r. esplits; ss; et. }
     }
-    { admit "TODO". }
   Unshelve.
     all: try exact 0. all: ss.
   Qed.
