@@ -209,26 +209,43 @@ Section PROOF.
 
   Definition new_spec: fspec :=
     (mk_simple (fun (_: unit) => (
-                    (fun varg o => (⌜varg = ([]: list val)↑ ∧ o = ord_pure 0⌝: iProp)%I),
+                    (fun varg o => (⌜varg = ([]: list val)↑ ∧ o = ord_pure 2⌝: iProp)%I),
                     (fun vret => (∃ h, ⌜vret = (Vptr h 0)↑⌝ ** OwnM(is_map h (fun _ => None)): iProp)%I)
     )))
   .
 
   Definition update_spec: fspec :=
     mk_simple (fun '(h, k, v, m) =>
-                 ((fun varg o => (⌜varg = ([Vptr h 0%Z; Vint k; Vint v]: list val)↑ ∧ o = ord_pure 1⌝ **
+                 ((fun varg o => (⌜varg = ([Vptr h 0%Z; Vint k; Vint v]: list val)↑ ∧ o = ord_pure 2⌝ **
                                    OwnM (is_map h m))%I),
                   (fun vret => ⌜vret = Vundef↑⌝ **  OwnM (is_map h (Maps.add k v m))))).
 
   Definition access_spec: fspec :=
     mk_simple (fun '(h, k, v, m) =>
-                 ((fun varg o => ⌜varg = ([Vptr h 0%Z; Vint k]: list val)↑ ∧ o = ord_pure 1 ∧ m k = Some v⌝ **
+                 ((fun varg o => ⌜varg = ([Vptr h 0%Z; Vint k]: list val)↑ ∧ o = ord_pure 2 ∧ m k = Some v⌝ **
                                   OwnM (is_map h m)),
                   (fun vret => ⌜vret = (Vint v)↑⌝ ** (OwnM (is_map h m))))).
 
+  Context `{@GRA.inG memRA Σ}.
+  Fixpoint is_map_internal (hd: val) (kvs: list (Z * Z)): iProp :=
+    match kvs with
+    | [] => (⌜hd = Vnullptr⌝: iProp)%I
+    | (k,v) :: tl =>
+      (∃ cur next, ⌜hd = Vptr cur 0⌝ ** (OwnM ((cur,0%Z) |-> [Vint k; Vint v; next])) **
+                              is_map_internal next tl: iProp)%I
+    end
+  .
+
+  Definition access_loop_spec: fspec :=
+    mk_simple (fun '(h, k, v, kvs) =>
+                 ((fun varg o => ⌜varg = ([Vptr h 0%Z; Vint k]: list val)↑ ∧ o = ord_pure 1 ∧
+                                 alist_find k (kvs: list (Z * Z)) = Some v⌝ ** is_map_internal (Vptr h 0) kvs),
+                  (fun vret => ⌜vret = (Vint v)↑⌝ ** (is_map_internal (Vptr h 0) kvs)))).
+
   Definition MapStb: alist gname fspec.
     eapply (Seal.sealing "stb").
-    eapply [("Map.new",new_spec); ("Map.update",update_spec); ("Map.access",access_spec)].
+    eapply [("Map.new",new_spec); ("Map.update",update_spec); ("Map.access",access_spec);
+           ("Map.loop",access_loop_spec)].
   Defined.
 
 
@@ -241,7 +258,6 @@ Section PROOF.
   .
 
   (******************************* Dedicated STB for MW1 ****************************)
-  Context `{@GRA.inG memRA Σ}.
 
   Definition MW1Stb: alist gname fspec.
     eapply (Seal.sealing "stb").

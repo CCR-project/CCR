@@ -24,15 +24,6 @@ Section PROOF.
   Context `{@GRA.inG mapRA Σ}.
   Context `{@GRA.inG memRA Σ}.
 
-  Fixpoint is_map_internal (hd: val) (kvs: list (Z * Z)): iProp :=
-    match kvs with
-    | [] => (⌜hd = Vnullptr⌝: iProp)%I
-    | (k,v) :: tl =>
-      (∃ cur next, ⌜hd = Vptr cur 0⌝ ** (OwnM ((cur,0%Z) |-> [Vint k; Vint v; next])) **
-                              is_map_internal next tl: iProp)%I
-    end
-  .
-
   (* Lemma unfold_is_map_internal: forall ll xs, *)
   (*     is_map_internal ll xs = *)
   (*     match xs with *)
@@ -55,46 +46,37 @@ Section PROOF.
   (* Qed. *)
 
 
-  Definition loop_spec: fspec :=
-    mk_simple (fun '(h, k, v, kvs) =>
-                 ((fun varg o => ⌜varg = ([Vptr h 0%Z; Vint k]: list val)↑ ∧ o = ord_pure 1 ∧
-                                 alist_find k (kvs: list (Z * Z)) = Some v⌝ ** is_map_internal (Vptr h 0) kvs),
-                  (fun vret => ⌜vret = (Vint v)↑⌝ ** (is_map_internal (Vptr h 0) kvs)))).
-
-  Definition StackSbtb: list (gname * fspecbody) :=
+  Definition MapSbtb: list (gname * fspecbody) :=
     [("Map.new", mk_specbody new_spec (fun _ => triggerNB));
     ("Map.update", mk_specbody update_spec (fun _ => triggerNB));
-    ("Map.access", mk_specbody access_spec (fun _ => triggerNB))
-    ("Map.loop", mk_specbody loop_spec (fun _ => triggerNB))
+    ("Map.access", mk_specbody access_spec (fun _ => triggerNB));
+    ("Map.loop", mk_specbody access_loop_spec (fun _ => triggerNB))
     ]
   .
 
-  Definition StackStb: list (gname * fspec).
+  Definition MapStb: list (gname * fspec).
     eapply (Seal.sealing "stb").
-    let x := constr:(List.map (map_snd (fun ksb => ksb.(ksb_fspec): fspec)) StackSbtb) in
+    let x := constr:(List.map (map_snd (fun fsb => fsb.(fsb_fspec): fspec)) MapSbtb) in
     let y := eval cbn in x in
     eapply y.
   Defined.
 
-  Definition KStackSem: KModSem.t := {|
-    KModSem.fnsems := StackSbtb;
-    KModSem.mn := "Stack";
-    KModSem.initial_mr := GRA.embed (@Auth.black _stkRA ε);
-    KModSem.initial_st := (∅: gmap mblock (list val))↑;
+  Definition SMapSem: SModSem.t := {|
+    SModSem.fnsems := MapSbtb;
+    SModSem.mn := "Map";
+    SModSem.initial_mr := GRA.embed (@Auth.black _mapRA ε);
+    SModSem.initial_st := (* (∅: gmap mblock (list val)) *)tt↑;
   |}
   .
-  Definition StackSem (stb: gname -> option fspec): ModSem.t :=
-    KModSem.transl_tgt stb KStackSem.
 
-
-
-  Definition KStack: KMod.t := {|
-    KMod.get_modsem := fun _ => KStackSem;
-    KMod.sk := [("new", Sk.Gfun); ("pop", Sk.Gfun); ("push", Sk.Gfun)];
+  Definition SMap: SMod.t := {|
+    SMod.get_modsem := fun _ => SMapSem;
+    SMod.sk := [("Map.new", Sk.Gfun); ("Map.update", Sk.Gfun); ("Map.access", Sk.Gfun); ("Map.loop", Sk.Gfun)];
   |}
   .
-  Definition Stack (stb: Sk.t -> gname -> option fspec): Mod.t :=
-    KMod.transl_tgt stb KStack.
+
+  Definition Map (stb: Sk.t -> gname -> option fspec): Mod.t :=
+    SMod.to_tgt stb SMap.
 
 End PROOF.
-Global Hint Unfold StackStb: stb.
+Global Hint Unfold MapStb: stb.

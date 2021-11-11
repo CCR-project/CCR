@@ -117,9 +117,16 @@ TODO: APC, locked thinges
   Let PURENICL: stb_pure_incl (to_stb MW1Stb) (to_stb (MWStb ++ AppStb ++ MapStb ++ MemStb)).
   Proof.
     clear.
-    { r. i. autounfold with stb in *; autorewrite with stb in *. ss.
-      des_ifs; (r in PURE; des; ss; unfold is_pure in *; des_ifs;
-                r in PURE; uipropall; des; clarify; r in PURE1; uipropall; des; clarify).
+    { r. i.
+      autounfold with stb in FIND; autorewrite with stb in FIND. ss.
+      assert(In fn ["MW.main"; "MW.loop"; "MW.put"; "MW.get"; "App.init"; "App.run";
+                    "Map.new"; "Map.access"; "Map.update"; "alloc"; "free"; "load"; "store"; "cmp"]).
+      { rewrite ! eq_rel_dec_correct in *. ss. des_ifs_safe (eauto 30). des_ifs. }
+      ss.
+      des; subst; ss; clarify;
+        try by (r in PURE; des; ss; unfold is_pure in *; des_ifs;
+                r in PURE; uipropall; des; clarify; r in PURE1; uipropall; des; clarify);
+        try by (stb_tac; ss).
     }
   Qed.
 
