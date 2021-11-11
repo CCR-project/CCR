@@ -11,6 +11,202 @@ Set Implicit Arguments.
 
 
 
+(*** TODO: move to proper place ***)
+Lemma nth_error_alist_find
+      `{Dec K} V kvs n (k: K) (v: V)
+      (NTH: nth_error kvs n = Some (k, v))
+      (NODUP: NoDup (map fst kvs))
+  :
+    alist_find k kvs = Some v
+.
+Proof.
+  ginduction kvs; ii; ss.
+  { destruct n; ss. }
+  des_ifs.
+  { apply rel_dec_correct in Heq. subst. ss. destruct n; ss.
+    { clarify. }
+    apply nth_error_In in NTH.
+    inv NODUP. contradict H2. eapply in_map_iff. esplits; et. ss.
+  }
+  assert(k <> k0).
+  { ii; clarify.
+    assert(k0 ?[ eq ] k0 = true).
+    { eapply rel_dec_correct; ss. }
+    congruence.
+  }
+  destruct n; ss.
+  { clarify. }
+  inv NODUP.
+  eapply IHkvs; et.
+Qed.
+
+Lemma nth_error_find_idx
+      `{Dec K} V (kvs: list (K * V))
+      k v n
+      (NTH: nth_error kvs n = Some (k, v))
+      (NODUP: NoDup (map fst kvs))
+  :
+    find_idx (fun '(k0, v0) => dec k k0) kvs = Some (n, (k, v))
+.
+Proof.
+  ginduction kvs; ii; ss.
+  { destruct n; ss. }
+  destruct n; ss.
+  - clarify. cbn. des_ifs. ss. des_sumbool. ss.
+  - destruct a; ss. inv NODUP. rewrite find_idx_red. des_ifs; ss.
+    + contradict H2. des_sumbool. clarify. eapply nth_error_In; et.
+      erewrite map_nth_error; et; ss.
+    + erewrite IHkvs; et.
+Qed.
+
+
+
+
+
+
+(* Section AUTHAUX. *)
+(*   Context `{Σ: GRA.t}. *)
+(*   Context `{@GRA.inG M Σ}. *)
+
+(*   Lemma wf_cons *)
+(*         (a0 b0 a1 b1: M) *)
+(*         (WF: URA.wf (Auth.black a0 ⋅ Auth.white b0)) *)
+(*     : *)
+(*       URA.wf (Auth.black (a0 ⋅ a1) ⋅ Auth.white b0 ⋅ Auth.white b1) *)
+(*   . *)
+(*   Proof. *)
+(*     ur in WF. des. *)
+(*     ur. rewrite URA.unit_idl in *. esplits; et. *)
+(*     cbn. *)
+(*   Qed. *)
+
+(* End AUTHAUX. *)
+
+
+
+
+
+Section MEMAUX.
+
+  Context `{@GRA.inG memRA Σ}.
+
+  Definition _var_points_to (skenv: SkEnv.t) (var: gname) (v: val): Mem1._memRA :=
+    match (skenv.(SkEnv.id2blk) var) with
+    | Some  blk => _points_to (blk, 0%Z) [v]
+    | None => ε
+    end.
+
+  Fixpoint _initial_points_to (sk: alist gname Sk.gdef) (csl: list gname): Mem1._memRA :=
+    match csl with
+    | [] => ε
+    | hd :: tl =>
+      match alist_find hd sk with
+      | Some (Sk.Gvar iv) => (_var_points_to (Sk.load_skenv sk) hd (Vint iv)) ⋅ _initial_points_to sk tl
+      | _ => ε (*** should not happen ***)
+      end
+    end
+  .
+
+  Lemma initial_mem_mr_cons
+        sk (hd: gname) tl iv blk
+        (NTH: nth_error sk blk = Some (hd, Sk.Gvar iv))
+        (NIN: ~In hd tl)
+        (NODUP: NoDup (map fst sk))
+    :
+      (initial_mem_mr (fun g => in_dec dec g (hd :: tl)) sk) =
+      (initial_mem_mr (fun g => in_dec dec g tl) sk) ⋅ (_points_to (blk, 0%Z) [Vint iv])
+  .
+  Proof.
+    extensionality b. extensionality ofs.
+    ur. ur.
+    destruct (dec b blk).
+    - subst. unfold initial_mem_mr. rewrite NTH. ss.
+      assert(In hd (hd :: tl)).
+      { ss; et. }
+      assert(~In hd tl).
+      { ss; et. }
+      des_ifs; des_sumbool; ss.
+      + rewrite URA.unit_idl. rewrite _points_to_hit. ss.
+      + rewrite URA.unit_idl. rewrite _points_to_miss; ss; et.
+    - rewrite _points_to_miss; ss; et. rewrite URA.unit_id.
+      unfold initial_mem_mr. des_ifs; des_sumbool; ss; et.
+      + des; ss. subst.
+        eapply NoDup_nth_error in NODUP; revgoals.
+        { erewrite map_nth_error; try apply NTH; et; ss.
+          erewrite map_nth_error; try apply Heq; et; ss. }
+        { eapply nth_error_Some; ss. erewrite map_nth_error; et. }
+        clarify.
+      + Psimpl. des; ss.
+  Qed.
+
+  Lemma var_points_to_spec
+        a (sk: alist gname Sk.gdef) iv blk
+        (Heq: alist_find a sk = Some (Sk.Gvar iv))
+        (NTH: nth_error sk blk = Some (a, Sk.Gvar iv))
+        (NODUP: NoDup (map fst sk))
+    :
+      _var_points_to (Sk.load_skenv sk) a (Vint iv) = _points_to (blk, 0%Z) [Vint iv]
+  .
+  Proof.
+    Local Transparent Sk.load_skenv. unfold _var_points_to. cbn.
+    replace string_dec with (@dec _ string_Dec) by ss.
+    erewrite nth_error_find_idx; et.
+  Qed.
+
+  Lemma initial_mem_mr_wf_aux
+        sk csl
+    :
+      URA.wf (initial_mem_mr csl sk)
+  .
+  Proof.
+    ur. ur. intros b ofs. unfold initial_mem_mr. des_ifs; ur; ss.
+  Qed.
+
+  Lemma initial_mem_mr_wf
+        (sk: alist gname Sk.gdef)
+        (csl: list gname)
+        (INCL: forall g (IN: In g csl),
+            exists blk iv, nth_error sk blk = Some (g, Sk.Gvar iv))
+            (* exists iv, alist_find g sk = Some (Sk.Gvar iv)) *)
+        (WF: Sk.wf sk)
+        (NODUP: NoDup csl)
+    :
+      URA.wf ((Auth.black (initial_mem_mr (fun g => in_dec dec g csl) sk))
+                ⋅ Auth.white (_initial_points_to sk csl))
+  .
+  Proof.
+    erewrite URA.unfold_wf. cbn. rewrite URA.unfold_add. cbn. esplits; et.
+    - rewrite URA.unit_idl.
+      induction csl.
+      { ss. r. esplits. rewrite URA.unit_idl. refl. }
+      exploit INCL. { ss; et. } i; des.
+      erewrite initial_mem_mr_cons; et; cycle 1.
+      { inv NODUP; ss. }
+      dup x. eapply nth_error_alist_find in x; ss. des_ifs.
+      erewrite var_points_to_spec; et.
+      rewrite URA.add_comm.
+      eapply URA.extends_add.
+      eapply IHcsl; et.
+      inv NODUP; ss.
+    - eapply initial_mem_mr_wf_aux.
+  Qed.
+
+End MEMAUX.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 Definition MWGRA: GRA.t := GRA.of_list [Mem1.memRA; spRA; mapRA; mwRA; AppRA.t].
 Local Existing Instance MWGRA.
 
@@ -34,91 +230,137 @@ Instance AppRA_inG: @GRA.inG AppRA.t MWGRA.
 Proof. exists 4. ss. Defined.
 Local Existing Instance AppRA_inG.
 
+
+
+
+
 Section PROOF.
 
-(* (*   Check (to_stb_context ["new"; "access"; "update"; "init"; "run"] (MWStb ++ MemStb)). *) *)
-(* (*   Check (@to_closed_stb MWGRA ∘ @KMod.get_stb MWGRA [@KMem MWGRA memRA_inG; @KMW MWGRA memRA_inG]). *) *)
-(*   Let abc_correct : *)
-(* ∀ (Σ : GRA.t) (H : GRA.inG memRA Σ) (global_stb : Sk.t -> string → option HoareDef.fspec), *)
-(*   (forall sk, stb_incl (to_stb_context ["new"; "access"; "update"; "init"; "run"] (MemStb)) (global_stb sk)) *)
-(*   → refines2 [MWCImp.MW] [MWC9.MW (global_stb)]. *)
-(*   admit "". *)
-(*   Qed. *)
-
-  Let CSL0: gname -> bool := fun g => in_dec dec g ["gv0"; "gv1"].
-  Let MWLow: refines2 [Mem0.Mem (fun _ => false); MWCImp.MW] [Mem0.Mem CSL0; MWC0.MW].
+  Let CSL0: gname -> bool := fun g => in_dec dec g ["gv0"; "gv1"; "initialized"].
+  Let MWLow: refines2 [Mem0.Mem (fun _ => false); MWCImp.MW; MWAppImp.App] [Mem0.Mem CSL0; MWC0.MW; MWApp0.App].
   Proof.
-    transitivity (KMod.transl_tgt_list [KMem CSL0 CSL0; MWC9.KMW]).
+    transitivity (KMod.transl_tgt_list [KMem CSL0 CSL0; MWC9.KMW; MWApp9.KApp]).
     { eapply refines2_cons.
       { eapply Mem0Openproof.correct. ii; ss. }
-      { eapply MWCImp9proof.correct.
-        i.
+      eapply refines2_cons.
+      - eapply MWCImp9proof.correct. i.
         ii. unfold to_closed_stb.
-        autounfold with stb in *. autorewrite with stb in *. cbn in *.
+        autounfold with stb in *. autorewrite with stb in *. cbn in FIND.
         rewrite ! eq_rel_dec_correct in *. des_ifs.
-      }
+      - eapply MWAppImp9proof.correct. i.
+        ii. unfold to_closed_stb.
+        autounfold with stb in *. autorewrite with stb in *. cbn in FIND.
+        rewrite ! eq_rel_dec_correct in *. des_ifs.
     }
     etrans.
     { eapply adequacy_open. i. exists ε. split.
-      { g_wf_tac.
-        { Local Transparent Sk.load_skenv _points_to string_dec.
-          (* Eval compute in (KMod.get_sk [KMem CSL0 CSL0; KMW]). *)
-          replace (KMod.get_sk [KMem CSL0 CSL0; KMW]) with
-                  [("get", Sk.Gfun); ("gv0", Sk.Gvar 0); ("gv1", Sk.Gvar 0); ("gv2", Sk.Gvar 0);
-                   ("gv3", Sk.Gvar 0); ("loop", Sk.Gfun); ("put", Sk.Gfun)] in * by refl.
+      { cbn. rewrite ! URA.unit_idl. rewrite ! GRA.embed_add. apply GRA.wf_embed.
+        (* assert(FIND0: alist_find "gv0" sk = Some (Sk.Gvar 0)). *)
+        (* { admit "". } *)
+        (* assert(FIND1: alist_find "gv1" sk = Some (Sk.Gvar 0)). *)
+        (* { admit "". } *)
+        (* assert(FIND2: alist_find "initialized" sk = Some (Sk.Gvar 0)). *)
+        (* { admit "". } *)
+        hexploit (@initial_mem_mr_wf sk ["gv0"; "gv1"; "initialized"]); et.
+        { ii. ss. des; clarify.
+          -
+
           dup SKINCL. dup SKWF.
           eapply Sk.incl_incl_env in SKINCL. eapply Sk.load_skenv_wf in SKWF.
-          hexploit (SKINCL "gv0"). { ss. eauto. } intros [blk0 FIND0].
+          hexploit (SKINCL "gv0"). { ss. eauto 10. } intros [blk0 FIND0].
           hexploit (SKINCL "gv1"). { ss. eauto. } intros [blk1 FIND1].
-          ur. unfold var_points_to. des_ifs. des; clarify.
-          rewrite URA.unit_idl. unfold points_to, Auth.white in *.
-          Opaque _points_to SkEnv.id2blk. clarify.
-          esplits.
-          - r. exists ε.
-            extensionality b. extensionality ofs.
-            unfold initial_mem_mr.
-            des_ifs.
-            { assert(s <> "gv0").
-              { ii; clarify.
-                exploit (SKINCL0 "gv0"); ss; et. intro T.
-                eapply nth_error_In in Heq.
-                r in SKWF0. ss.
-                eapply NoDup_inj_aux; [eassumption| |apply Heq|apply T|..]; ss.
-              }
-              assert(s <> "gv1").
-              { ii; clarify.
-                exploit (SKINCL0 "gv1"); ss; et. intro T.
-                eapply nth_error_In in Heq.
-                r in SKWF0. ss.
-                eapply NoDup_inj_aux; [eassumption| |apply Heq|apply T|..]; ss.
-              }
-              assert(SkEnv.id2blk (Sk.load_skenv sk) s = Some b).
-              { Local Transparent SkEnv.id2blk.
-                clear - Heq. cbn. uo. des_ifs.
-                - admit "somehow?".
-                - admit "somehow?".
-              }
-              assert(b <> blk0).
-              { ii. clarify. admit "somehow?". }
-              assert(b <> blk1).
-              { ii. clarify. admit "somehow?". }
-              admit "somehow?".
-            }
-            { admit "???". }
-            { admit "???". }
-            { admit "???". }
-            { admit "???". }
-          - { admit "???". }
+            inv SKINCL.
         }
-      }
-      ii. ss. clarify. ss. esplits; ss; et.
-      - rr. uipropall.
-      - ii. rr in POST. uipropall.
+        { ImpProofs.solve_NoDup. }
+        i. ss. des_ifs.
+        rewrite URA.unit_idl. admit "". }
+      ii. ss.
     }
     eapply refines2_cons.
     { eapply MemOpen0proof.correct. }
-    { eapply MWC90proof.correct. }
+    { eapply refines2_cons.
+      - eapply MWC90proof.correct.
+      - eapply MWApp90proof.correct. }
   Qed.
+
+  (* Let CSL0: gname -> bool := fun g => in_dec dec g ["gv0"; "gv1"]. *)
+  (* Let MWLow: refines2 [Mem0.Mem (fun _ => false); MWCImp.MW] [Mem0.Mem CSL0; MWC0.MW]. *)
+  (* Proof. *)
+  (*   transitivity (KMod.transl_tgt_list [KMem CSL0 CSL0; MWC9.KMW]). *)
+  (*   { eapply refines2_cons. *)
+  (*     { eapply Mem0Openproof.correct. ii; ss. } *)
+  (*     { eapply MWCImp9proof.correct. *)
+  (*       i. *)
+  (*       ii. unfold to_closed_stb. *)
+  (*       autounfold with stb in *. autorewrite with stb in *. cbn in *. *)
+  (*       rewrite ! eq_rel_dec_correct in *. des_ifs. *)
+  (*     } *)
+  (*   } *)
+  (*   etrans. *)
+  (*   { eapply adequacy_open. i. exists ε. split. *)
+  (*     { g_wf_tac. *)
+  (*       { Local Transparent Sk.load_skenv _points_to string_dec. *)
+  (*         (* Eval compute in (KMod.get_sk [KMem CSL0 CSL0; KMW]). *) *)
+  (*         replace (KMod.get_sk [KMem CSL0 CSL0; KMW]) with *)
+  (*                 [("get", Sk.Gfun); ("gv0", Sk.Gvar 0); ("gv1", Sk.Gvar 0); ("gv2", Sk.Gvar 0); *)
+  (*                  ("gv3", Sk.Gvar 0); ("loop", Sk.Gfun); ("put", Sk.Gfun)] in * by refl. *)
+  (*         dup SKINCL. dup SKWF. *)
+  (*         eapply Sk.incl_incl_env in SKINCL. eapply Sk.load_skenv_wf in SKWF. *)
+  (*         hexploit (SKINCL "gv0"). { ss. eauto. } intros [blk0 FIND0]. *)
+  (*         hexploit (SKINCL "gv1"). { ss. eauto. } intros [blk1 FIND1]. *)
+  (*         ur. unfold var_points_to. des_ifs. des; clarify. *)
+  (*         rewrite URA.unit_idl. unfold points_to, Auth.white in *. *)
+  (*         Opaque _points_to SkEnv.id2blk. clarify. *)
+  (*         esplits. *)
+  (*         - r. exists ε. *)
+  (*           extensionality b. extensionality ofs. *)
+  (*           unfold initial_mem_mr. *)
+  (*           des_ifs. *)
+  (*           { assert(s <> "gv0"). *)
+  (*             { ii; clarify. *)
+  (*               exploit (SKINCL0 "gv0"); ss; et. intro T. *)
+  (*               eapply nth_error_In in Heq. *)
+  (*               r in SKWF0. ss. *)
+  (*               eapply NoDup_inj_aux; [eassumption| |apply Heq|apply T|..]; ss. *)
+  (*             } *)
+  (*             assert(s <> "gv1"). *)
+  (*             { ii; clarify. *)
+  (*               exploit (SKINCL0 "gv1"); ss; et. intro T. *)
+  (*               eapply nth_error_In in Heq. *)
+  (*               r in SKWF0. ss. *)
+  (*               eapply NoDup_inj_aux; [eassumption| |apply Heq|apply T|..]; ss. *)
+  (*             } *)
+  (*             assert(SkEnv.id2blk (Sk.load_skenv sk) s = Some b). *)
+  (*             { Local Transparent SkEnv.id2blk. *)
+  (*               clear - Heq. cbn. uo. des_ifs. *)
+  (*               - admit "somehow?". *)
+  (*               - admit "somehow?". *)
+  (*             } *)
+  (*             assert(b <> blk0). *)
+  (*             { ii. clarify. admit "somehow?". } *)
+  (*             assert(b <> blk1). *)
+  (*             { ii. clarify. admit "somehow?". } *)
+  (*             admit "somehow?". *)
+  (*           } *)
+  (*           { admit "???". } *)
+  (*           { admit "???". } *)
+  (*           { admit "???". } *)
+  (*           { admit "???". } *)
+  (*         - { admit "???". } *)
+  (*       } *)
+  (*     } *)
+  (*     ii. ss. clarify. ss. esplits; ss; et. *)
+  (*     - rr. uipropall. *)
+  (*     - ii. rr in POST. uipropall. *)
+  (*   } *)
+  (*   eapply refines2_cons. *)
+  (*   { eapply MemOpen0proof.correct. } *)
+  (*   { eapply MWC90proof.correct. } *)
+  (* Qed. *)
+
+
+
+
 
   (* Section AUX. *)
   (*   Context {CONF: EMSConfig}. *)
