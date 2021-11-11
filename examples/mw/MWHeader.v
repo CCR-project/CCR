@@ -122,12 +122,28 @@ End PROOF.
 
 
 (* Definition _mapRA: URA.t := (mblock ==> (Excl.t (list (Z * Z))))%ra. *)
-Definition _mapRA: URA.t := (mblock ==> (Excl.t (Z -> option Z)))%ra.
-Instance mapRA: URA.t := Auth.t _mapRA.
-Definition _is_map (h: mblock) (map: (Z -> option Z)): _mapRA :=
-  (fun _h => if (dec _h h) then Some map else ε)
-.
-Definition is_map (h: mblock) (map: (Z -> option Z)): mapRA := Auth.white (_is_map h map).
+(* Definition _mapRA: URA.t := (mblock ==> (Excl.t (Z -> option Z)))%ra. *)
+(* Instance mapRA: URA.t := Auth.t _mapRA. *)
+
+Section MAPRA.
+  Context `{@GRA.inG memRA Σ}.
+  Fixpoint is_map_internal (hd: val) (kvs: list (Z * Z)): iProp :=
+    match kvs with
+    | [] => (⌜hd = Vnullptr⌝: iProp)%I
+    | (k,v) :: tl =>
+      (∃ cur next, ⌜hd = Vptr cur 0⌝ ** (OwnM ((cur,0%Z) |-> [Vint k; Vint v; next])) **
+                              is_map_internal next tl: iProp)%I
+    end
+  .
+  Definition is_map (h: mblock) (map: (Z -> option Z)): iProp :=
+    (∃ hd kvs, is_map_internal hd kvs ** OwnM ((h,0%Z) |-> [hd]) ** ⌜map = (fun k => alist_find k kvs)⌝)%I
+  .
+  (* Definition _is_map (h: mblock) (map: (Z -> option Z)): _mapRA := *)
+  (*   (fun _h => if (dec _h h) then Some map else ε) *)
+  (* . *)
+  (* Definition is_map (h: mblock) (map: (Z -> option Z)): mapRA := Auth.white (_is_map h map). *)
+End MAPRA.
+Global Opaque is_map.
 
 
 
@@ -205,36 +221,26 @@ Section PROOF.
 
 
   (******************************* Map ****************************)
-  Context `{@GRA.inG mapRA Σ}.
+  Context `{@GRA.inG memRA Σ}.
 
   Definition new_spec: fspec :=
     (mk_simple (fun (_: unit) => (
                     (fun varg o => (⌜varg = ([]: list val)↑ ∧ o = ord_pure 2⌝: iProp)%I),
-                    (fun vret => (∃ h, ⌜vret = (Vptr h 0)↑⌝ ** OwnM(is_map h (fun _ => None)): iProp)%I)
+                    (fun vret => (∃ h, ⌜vret = (Vptr h 0)↑⌝ ** is_map h (fun _ => None): iProp)%I)
     )))
   .
 
   Definition update_spec: fspec :=
     mk_simple (fun '(h, k, v, m) =>
                  ((fun varg o => (⌜varg = ([Vptr h 0%Z; Vint k; Vint v]: list val)↑ ∧ o = ord_pure 2⌝ **
-                                   OwnM (is_map h m))%I),
-                  (fun vret => ⌜vret = Vundef↑⌝ **  OwnM (is_map h (Maps.add k v m))))).
+                                   is_map h m)%I),
+                  (fun vret => ⌜vret = Vundef↑⌝ **  is_map h (Maps.add k v m)))).
 
   Definition access_spec: fspec :=
     mk_simple (fun '(h, k, v, m) =>
                  ((fun varg o => ⌜varg = ([Vptr h 0%Z; Vint k]: list val)↑ ∧ o = ord_pure 2 ∧ m k = Some v⌝ **
-                                  OwnM (is_map h m)),
-                  (fun vret => ⌜vret = (Vint v)↑⌝ ** (OwnM (is_map h m))))).
-
-  Context `{@GRA.inG memRA Σ}.
-  Fixpoint is_map_internal (hd: val) (kvs: list (Z * Z)): iProp :=
-    match kvs with
-    | [] => (⌜hd = Vnullptr⌝: iProp)%I
-    | (k,v) :: tl =>
-      (∃ cur next, ⌜hd = Vptr cur 0⌝ ** (OwnM ((cur,0%Z) |-> [Vint k; Vint v; next])) **
-                              is_map_internal next tl: iProp)%I
-    end
-  .
+                                  is_map h m),
+                  (fun vret => ⌜vret = (Vint v)↑⌝ ** (is_map h m)))).
 
   Definition access_loop_spec: fspec :=
     mk_simple (fun '(h, k, v, kvs) =>

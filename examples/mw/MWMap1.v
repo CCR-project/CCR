@@ -64,7 +64,7 @@ Section PROOF.
   Definition SMapSem: SModSem.t := {|
     SModSem.fnsems := MapSbtb;
     SModSem.mn := "Map";
-    SModSem.initial_mr := GRA.embed (@Auth.black _mapRA ε);
+    SModSem.initial_mr := ε(* GRA.embed (@Auth.black _mapRA ε) *);
     SModSem.initial_st := (* (∅: gmap mblock (list val)) *)tt↑;
   |}
   .

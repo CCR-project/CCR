@@ -33,13 +33,13 @@ Section SIMMODSEM.
 
   Let W: Type := Any.t * Any.t.
 
-  Definition transl2 (hkvs: gmap mblock (list (Z * Z))): _mapRA :=
-    fun h =>
-      match hkvs !! h with
-      | Some kvs => Some (fun k => alist_find k kvs)
-      | _ => ε
-      end
-  .
+  (* Definition transl2 (hkvs: gmap mblock (list (Z * Z))): _mapRA := *)
+  (*   fun h => *)
+  (*     match hkvs !! h with *)
+  (*     | Some kvs => Some (fun k => alist_find k kvs) *)
+  (*     | _ => ε *)
+  (*     end *)
+  (* . *)
 
   (* Definition transl (hkvs: list (mblock * (list (Z * Z)))): _mapRA := *)
   (*   fun h => *)
@@ -78,9 +78,7 @@ Section SIMMODSEM.
 
   Let wf: _ -> W -> Prop :=
     @mk_wf _ unit
-           (fun _ _ _ =>
-              (∃ hkvs, ([∗ map] h ↦ kvs ∈ hkvs, ∃ hd, OwnM ((h,0%Z) |-> [hd]) ** is_map_internal hd kvs)
-                         ** OwnM (Auth.black (transl2 hkvs)))%I)
+           (fun _ _ _ => True%I)
   .
   (* True **  *)
   (* Inductive sim_loc: URA.car (t:=(Excl.t _)) -> option (list val) -> option (list val) -> Prop := *)
@@ -142,12 +140,14 @@ Section SIMMODSEM.
   (*   | [ |- (gpaco8 (_sim_itree _ _) _ _ _ _ _ _ _ _ _ (_, _) (_, trigger (Call ?fn ?args) >>= _)) ] => *)
   (*     astep fn (tt↑) *)
   (*   end. *)
+  Local Transparent is_map.
+
   Theorem correct: refines2 [MWMap0.Map] [MWMap1.Map global_stb].
   Proof.
     eapply adequacy_local2. econs; ss.
     i. econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
     { typeclasses eauto. }
-    { esplits; et. ss. econs; et. eapply to_semantic. iIntros "H". iExists ∅. iFrame. iSplitL; ss. }
+    { esplits; et. ss. econs; et. eapply to_semantic. iIntros "H". ss. }
 
     econs; ss.
     { init. harg. mDesAll; des; clarify. fold wf.
@@ -155,94 +155,223 @@ Section SIMMODSEM.
       acatch.
       { eapply STBINCL. stb_tac; ss. }
       hcall _ (1) _ with "*".
-      { iModIntro.
-        (*** TODO: iSplits; ss; et gives weird goal ***)
-        (* Global Opaque Pure And Sepconj Own OwnM Ex. *)
-        iSplitL; [|iSplits; ss; et]; cycle 1.
-        iExists _. iFrame. }
+      { iModIntro. iSplits; ss; et. }
       { esplits; ss; et. eapply OrdArith.lt_from_nat; lia. }
       fold wf. mDesAll; des; clarify. steps. force_r; ss. steps.
       acatch.
       { eapply STBINCL. stb_tac; ss. }
       hcall _ (_, _, _) _ with "*".
-      { iModIntro. iSplitL "INV1 A".
-        { iExists _. iFrame. }
-        iSplits; ss; et.
-      }
+      { iModIntro. iSplits; ss; et. }
       { esplits; ss; et. eapply OrdArith.lt_from_nat; lia. }
       fold wf. mDesAll; des; clarify. steps. astop. steps. force_l. esplits. steps.
-      rename a4 into hkvs. rename a2 into h.
-      mAssertPure (hkvs !! h = None).
-      { destruct (hkvs !! h) eqn:T; ss.
-        (* Search big_opM. *)
-        iDestruct (big_sepM_lookup with "INV") as "B"; et. iDes.
-        iExFalso. iApply (points_to_disj with "B"); eauto.
-      }
-      mAssert ([∗ map] h↦kvs ∈ <[h:=[]]>hkvs, ∃ hd, OwnM((h,0%Z) |-> [hd]) ** is_map_internal hd kvs)%I
-        with "POST INV".
-      { iApply big_sepM_insert; ss. iFrame. ss. iSplits; ss; et. }
-      mAssert (#=> (OwnM (Auth.black (transl2 (<[h:=[]]>hkvs))) ** OwnM (is_map h (λ _, None)))) with "A".
-      { iPoseProof (OwnM_Upd with "A") as "A"; cycle 1.
-        { iMod "A". iModIntro. instantiate (1:=_ ⋅ _). iDestruct "A" as "[A B]". iFrame. }
-        rewrite URA.add_comm. unfold is_map.
-        etrans.
-        { eapply Auth.auth_alloc2. instantiate (1:=(_is_map h (λ _, None))).
-          mOwnWf "A". eapply Auth.black_wf in WF0. des.
-          clear - PURE WF0.
-          ur. i. ur in WF0. specialize (WF0 k).
-          destruct (dec k h).
-          - subst. clear WF0. unfold transl2, _is_map. ur. des_ifs. unfold alist in *. congruence.
-          - unfold _is_map. des_ifs. rewrite URA.unit_id. ss.
-        }
-        eapply URA.updatable_add; try refl.
-        clear - PURE.
-        erewrite f_equal; try refl. f_equal.
-        ur. unfold transl2, _is_map. extensionality h0.
-        destruct (dec h h0); subst.
-        - des_ifs_safe. unfold alist. rewrite PURE. rewrite URA.unit_idl. rewrite lookup_insert. ss.
-        - des_ifs_safe. unfold alist. rewrite URA.unit_id. rewrite lookup_insert_ne; ss.
-      }
-      mUpd "A2".
       hret _; ss.
-      { iModIntro. iDestruct "A2" as "[A B]". iSplitL "A A1".
-        - iExists _. iFrame.
-        - iSplits; ss; et.
-      }
+      { iModIntro. iSplits; ss; et. unfold is_map. iExists _, []. iFrame. iSplits; ss; et. }
     }
 
     econs; ss.
     { init. harg. mDesAll; des; clarify. fold wf.
       des_ifs_safe; ss. mDesAll; des; clarify.
       unfold updateF, ccallU. steps. astart 6.
-      rename n into nn.
+      rename n into h.
 
       acatch.
       { eapply STBINCL. stb_tac; ss. }
-      hcall _ (3) _ with "A INV".
-      { iModIntro.
-        (*** TODO: iSplits; ss; et gives weird goal ***)
-        iSplitL; [|iSplits; ss; et]; cycle 1.
-        iExists _. iFrame. }
+      hcall _ (3) _ with "".
+      { iModIntro. iSplits; ss; et. }
       { esplits; ss; et. eapply OrdArith.lt_from_nat; lia. }
       fold wf. mDesAll; des; clarify. steps.
 
       rewrite points_to_split in *. rewrite Z.add_0_l in *. erewrite points_to_split with (ofs:=1%Z) in *.
-      mAssert _ with "A2".
-      { iDestruct "A2" as "[A [B C]]".
-        instantiate (1:=OwnM ((a2, 0%Z) |-> [Vundef]) ** OwnM ((a2, 1%Z) |-> [Vundef]) **
-                             OwnM ((a2, 2%Z) |-> [Vundef])). iFrame. }
+      mAssert _ with "A1".
+      { iDestruct "A1" as "[A [B C]]".
+        instantiate (1:=OwnM ((a, 0%Z) |-> [Vundef]) ** OwnM ((a, 1%Z) |-> [Vundef]) **
+                             OwnM ((a, 2%Z) |-> [Vundef])). iFrame. }
       mDesAll.
+      unfold is_map in ACC. mDesAll; des; clarify.
 
       acatch.
       { eapply STBINCL. stb_tac; ss. }
-      hcall _ (_, _, _) _ with "*".
-      { iModIntro. iSplitL "INV1 A".
-        { iExists _. iFrame. }
-        iSplits; ss; et.
-      }
+      hcall _ (_, _, _) _ with "A4".
+      { iModIntro. iSplits; ss; et. }
       { esplits; ss; et. eapply OrdArith.lt_from_nat; lia. }
-      fold wf. mDesAll; des; clarify. steps. astop. steps. force_l. esplits. steps.
-      rename a4 into hkvs. rename a2 into h.
+      fold wf. mDesAll; des; clarify. steps.
+
+      acatch.
+      { eapply STBINCL. stb_tac; ss. }
+      hcall _ (_, _, _) _ with "A2".
+      { iModIntro. iSplits; ss; et. }
+      { esplits; ss; et. eapply OrdArith.lt_from_nat; lia. }
+      fold wf. mDesAll; des; clarify. steps.
+
+      acatch.
+      { eapply STBINCL. stb_tac; ss. }
+      hcall _ (_, _, _) _ with "A3".
+      { iModIntro. iSplits; ss; et. }
+      { esplits; ss; et. eapply OrdArith.lt_from_nat; lia. }
+      fold wf. mDesAll; des; clarify. steps.
+
+      acatch.
+      { eapply STBINCL. stb_tac; ss. }
+      hcall _ (_, _, _) _ with "A1".
+      { iModIntro. iSplits; ss; et. }
+      { esplits; ss; et. eapply OrdArith.lt_from_nat; lia. }
+      fold wf. mDesAll; des; clarify. steps.
+
+      acatch.
+      { eapply STBINCL. stb_tac; ss. }
+      hcall _ (_, _, _) _ with "POST".
+      { iModIntro. iSplits; ss; et. }
+      { esplits; ss; et. eapply OrdArith.lt_from_nat; lia. }
+      fold wf. mDesAll; des; clarify. steps.
+
+      astop. steps. force_l. esplits. steps.
+      hret _; ss.
+      { iModIntro. iSplits; ss; et. unfold is_map.
+        rename a0 into hd. rename a into newhd. rename a2 into kvs. rename z0 into k. rename z into v.
+        iExists (Vptr newhd 0), ((k,v) :: kvs). iFrame. iSplits; ss; et; cycle 1.
+        { iPureIntro. extensionality b. rewrite eq_rel_dec_correct. des_ifs. }
+        iSplits; ss; et. iFrame. iSplits; ss; et.
+        erewrite points_to_split with (tl:=[Vint v; hd]).
+        erewrite points_to_split with (tl:=[hd]). rewrite Z.add_0_l.
+        iSplitL "POST1"; et.
+        iSplitL "POST2"; et.
+      }
+    }
+
+    econs; ss.
+    { init. harg. mDesAll; des; clarify. fold wf.
+      des_ifs_safe; ss. mDesAll; des; clarify.
+      unfold accessF, ccallU. steps. astart 2.
+      rename n into h. rename z0 into k. rename z into v.
+      unfold is_map in ACC. mDesAll; des; clarify. rename a into hd. rename a0 into kvs.
+
+      acatch.
+      { eapply STBINCL. stb_tac; ss. }
+      hcall _ (_, _, _) _ with "A1".
+      { iModIntro. iSplits; ss; et. }
+      { esplits; ss; et. eapply OrdArith.lt_from_nat; lia. }
+      fold wf. mDesAll; des; clarify. steps.
+
+      mAssertPure (exists hdb, hd = Vptr hdb 0%Z).
+      { destruct kvs; ss. des_ifs_safe. iDes. iPureIntro. et. }
+      des. subst.
+
+      acatch.
+      { eapply STBINCL. stb_tac; ss. }
+      hcall _ (_, _, _, _) _ with "A".
+      { iModIntro. iSplits; ss; et. }
+      { esplits; ss; et. eapply OrdArith.lt_from_nat; lia. }
+      fold wf. mDesAll; des; clarify. steps.
+
+      astop. steps. force_l. esplits. steps.
+      hret _; ss.
+      { iModIntro. iSplits; ss; et. unfold is_map. iSplits; ss; et. iFrame. }
+    }
+
+    econs; ss.
+    { init. harg. mDesAll; des; clarify. fold wf.
+      des_ifs_safe; ss. mDesAll; des; clarify.
+      unfold loopF, ccallU. steps. astart 4.
+      rename n into h. rename z0 into k. rename z into v.
+      destruct l; ss. des_ifs_safe. rewrite eq_rel_dec_correct in *. mDesAll; des; clarify.
+      rewrite points_to_split in *. rewrite Z.add_0_l in *. erewrite points_to_split with (ofs:=1%Z) in *.
+      mAssert _ with "A2".
+      { iDestruct "A2" as "[A [B C]]".
+        instantiate (1:=OwnM ((a, 0%Z) |-> [_]) ** OwnM ((a, 1%Z) |-> [_]) **
+                             OwnM ((a, 2%Z) |-> [_])). iFrame. }
+      mDesAll.
+      des_ifs.
+      - acatch.
+        { eapply STBINCL. stb_tac; ss. }
+        hcall _ (_, _, _) _ with "A".
+        { iModIntro. iSplits; ss; et. }
+        { esplits; ss; et. eapply OrdArith.lt_from_nat; lia. }
+        fold wf. mDesAll; des; clarify. steps.
+        force_r.
+        { admit "intrange". }
+        steps.
+
+        acatch.
+        { eapply STBINCL. stb_tac; ss. }
+        hcall _ (_, _, _) _ with "A3".
+        { iModIntro. iSplits; ss; et. }
+        { esplits; ss; et. eapply OrdArith.lt_from_nat; lia. }
+        fold wf. mDesAll; des; clarify. steps.
+
+        astop. steps. force_l. esplits. steps.
+        hret _; ss.
+        { iModIntro. iSplits; ss; et. iFrame. iSplits; ss; et.
+          erewrite points_to_split with (tl:=[Vint v; a0]). rewrite Z.add_0_l.
+          erewrite points_to_split with (tl:=[a0]).
+          iSplitL "POST"; iFrame.
+          iSplitL "POST1"; iFrame.
+        }
+      - acatch.
+        { eapply STBINCL. stb_tac; ss. }
+        hcall _ (_, _, _) _ with "A".
+        { iModIntro. iSplits; ss; et. }
+        { esplits; ss; et. eapply OrdArith.lt_from_nat; lia. }
+        fold wf. mDesAll; des; clarify. steps.
+
+        force_r.
+        { admit "intrange". }
+        steps.
+
+        acatch.
+        { eapply STBINCL. stb_tac; ss. }
+        hcall _ (_, _, _) _ with "A2".
+        { iModIntro. iSplits; ss; et. }
+        { esplits; ss; et. eapply OrdArith.lt_from_nat; lia. }
+        fold wf. mDesAll; des; clarify. steps.
+
+        mAssertPure (exists hdb, a0 = Vptr hdb 0%Z).
+        { destruct l; ss. des_ifs_safe. iDes. iPureIntro. et. }
+        des. subst.
+
+        acatch.
+        { eapply STBINCL. stb_tac; ss. }
+        hcall _ (_, _, _, _) _ with "A1".
+        { iModIntro. iSplits; ss; et. }
+        { esplits; ss; et. eapply OrdArith.lt_from_nat; lia. }
+        fold wf. mDesAll; des; clarify. steps.
+        acatch.
+    }
+        astop.
+        acatch.
+        { eapply STBINCL. stb_tac; ss. }
+        hcall _ (_, _, _) _ with "A3".
+        { iModIntro. iSplits; ss; et. }
+        { esplits; ss; et. eapply OrdArith.lt_from_nat; lia. }
+        fold wf. mDesAll; des; clarify. steps.
+
+      -
+      unfold is_map in ACC. mDesAll; des; clarify. rename a into hd. rename a0 into kvs.
+
+      acatch.
+      { eapply STBINCL. stb_tac; ss. }
+      hcall _ (_, _, _) _ with "A1".
+      { iModIntro. iSplits; ss; et. }
+      { esplits; ss; et. eapply OrdArith.lt_from_nat; lia. }
+      fold wf. mDesAll; des; clarify. steps.
+
+      mAssertPure (exists hdb, hd = Vptr hdb 0%Z).
+      { destruct kvs; ss. des_ifs_safe. iDes. iPureIntro. et. }
+      des. subst.
+
+      acatch.
+      { eapply STBINCL. stb_tac; ss. }
+      hcall _ (_, _, _, _) _ with "A".
+      { iModIntro. iSplits; ss; et. }
+      { esplits; ss; et. eapply OrdArith.lt_from_nat; lia. }
+      fold wf. mDesAll; des; clarify. steps.
+
+      astop. steps. force_l. esplits. steps.
+      hret _; ss.
+      { iModIntro. iSplits; ss; et. unfold is_map. iSplits; ss; et. iFrame. }
+    }
+
+
+    rename a4 into hkvs. rename a2 into h.
       mAssertPure (hkvs !! h = None).
       { destruct (hkvs !! h) eqn:T; ss.
         (* Search big_opM. *)
