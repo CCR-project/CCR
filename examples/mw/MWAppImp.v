@@ -27,7 +27,7 @@ Section PROOF.
       ("init" =#& "initialized" ;# "initv" =#* "init" ;#
        if# "initv"
        then# @! "print" [(- 1)%Z : expr]
-       else# @ "put" [0%Z: expr; 42%Z: expr] ;# "init" *=# 1%Z
+       else# @ "MW.put" [0%Z: expr; 42%Z: expr] ;# "init" *=# 1%Z
        fi#
       )
   .
@@ -39,7 +39,7 @@ Section PROOF.
       ("init" =#& "initialized" ;# "initv" =#* "init" ;#
        if# ("initv" =? (0%Z))
        then# @! "print" [(- 1)%Z : expr]
-       else# "v" =@ "get" [0%Z: expr] ;# @! "print" ["v": expr]
+       else# "v" =@ "MW.get" [0%Z: expr] ;# @! "print" ["v": expr]
        fi#
       )
   .
@@ -50,7 +50,7 @@ Section PROOF.
       []
       [("put", 2); ("get", 1)]
       [("initialized", 0%Z)]
-      [("init", initF); ("run", runF)]
+      [("App.init", initF); ("App.run", runF)]
   .
 
   Definition AppSem ge: ModSem.t := ImpMod.modsem Appprog ge.

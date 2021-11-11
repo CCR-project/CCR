@@ -33,8 +33,8 @@ Section PROOF.
     fun varg =>
       check_lock;;;
       _ <- (pargs [] varg)?;;
-      `_: val <- ccallU "run" ([]: list val);;
-      `_: val <- ccallU "loop" ([]: list val);;
+      `_: val <- ccallU "App.run" ([]: list val);;
+      `_: val <- ccallU "MW.loop" ([]: list val);;
       Ret Vundef
   .
 
@@ -45,11 +45,11 @@ Section PROOF.
       `arr: val <- ccallU "alloc" ([Vint 100]);; (pargs [Tblk] [arr])?;;;
       lAPC;;;
       pupd_arr arr;;;
-      `map: val <- ccallU "new" ([]: list val);;
+      `map: val <- ccallU "Map.new" ([]: list val);;
       pupd_map map;;;
       lAPC;;;
-      `_: val <- ccallU "init" ([]: list val);;
-      `_: val <- ccallU "loop" ([]: list val);;
+      `_: val <- ccallU "App.init" ([]: list val);;
+      `_: val <- ccallU "MW.loop" ([]: list val);;
       Ret Vundef
   .
 
@@ -61,7 +61,7 @@ Section PROOF.
       '(arr, map) <- pget;;
       (if ((0 <=? k) && (k <? 100))%Z
        then lAPC;;; addr <- (vadd arr (Vint (8 * k)))?;; `_: val <- ccallU "store" [addr; v];; Ret tt
-       else lAPC;;; `_: val <- ccallU "update" ([map; Vint k; v]);; Ret tt);;;
+       else lAPC;;; `_: val <- ccallU "Map.update" ([map; Vint k; v]);; Ret tt);;;
       syscallU "print" [k];;;
       Ret Vundef
   .
@@ -74,7 +74,7 @@ Section PROOF.
       '(arr, map) <- pget;;
       `v: val <- (if ((0 <=? k) && (k <? 100))%Z
                   then lAPC;;; addr <- (vadd arr (Vint (8 * k)))?;; ccallU "load" [addr]
-                  else lAPC;;; ccallU "access" ([map; Vint k]));;
+                  else lAPC;;; ccallU "Map.access" ([map; Vint k]));;
       syscallU "print" [k];;;
       Ret v
   .
@@ -83,8 +83,8 @@ Section PROOF.
   Context `{@GRA.inG memRA Σ}.
 
   Definition MWsbtb: list (string * kspecbody) :=
-    [("main", ksb_trivial (cfunU mainF)); ("loop", ksb_trivial (cfunU loopF));
-    ("put", ksb_trivial (cfunU putF)); ("get", ksb_trivial (cfunU getF))].
+    [("MW.main", ksb_trivial (cfunU mainF)); ("MW.loop", ksb_trivial (cfunU loopF));
+    ("MW.put", ksb_trivial (cfunU putF)); ("MW.get", ksb_trivial (cfunU getF))].
 
   Definition MWStb: list (gname * fspec).
     eapply (Seal.sealing "stb").
@@ -107,8 +107,8 @@ Section PROOF.
 
   Definition KMW: KMod.t := {|
     KMod.get_modsem := fun sk => KMWSem (Sk.load_skenv sk);
-    KMod.sk := [("loop", Sk.Gfun); ("put", Sk.Gfun); ("get", Sk.Gfun); ("gv0", Sk.Gvar 0); ("gv1", Sk.Gvar 0);
-               ("gv2", Sk.Gvar 0); ("gv3", Sk.Gvar 0)]
+    KMod.sk := [("MW.main", Sk.Gfun); ("MW.loop", Sk.Gfun); ("MW.put", Sk.Gfun); ("MW.get", Sk.Gfun);
+               ("gv0", Sk.Gvar 0); ("gv1", Sk.Gvar 0)]
   |}
   .
 

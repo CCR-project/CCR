@@ -37,8 +37,9 @@ Section SIMMODSEM.
   Context `{@GRA.inG memRA Σ}.
 
   Variable global_stb: Sk.t -> gname -> option fspec.
-  Hypothesis STBINCL: forall sk, stb_incl (to_stb_context ["new"; "access"; "update"; "init"; "run"; "loop"] (MemStb))
-                                          (global_stb sk).
+  Hypothesis STBINCL: forall sk,
+      stb_incl (to_stb_context ["Map.new"; "Map.access"; "Map.update"; "App.init"; "App.run"; "MW.loop"]
+                               (MemStb)) (global_stb sk).
 
   Theorem correct:
     refines2 [MWCImp.MW] [MWC9.MW (global_stb)].

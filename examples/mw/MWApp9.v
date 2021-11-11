@@ -35,7 +35,7 @@ Section PROOF.
       initialized <- pget;;
       if (initialized: bool)
       then syscallU "print" [(- 1)%Z];;; Ret Vundef
-      else `_: val <- ccallU "put" [Vint 0; Vint 42];; lAPC;;; pput true;;; Ret Vundef
+      else `_: val <- ccallU "MW.put" [Vint 0; Vint 42];; lAPC;;; pput true;;; Ret Vundef
   .
 
   Definition runF: list val -> itree Es val :=
@@ -46,14 +46,14 @@ Section PROOF.
       initialized <- pget;;
       if negb (initialized: bool)
       then syscallU "print" [(- 1)%Z];;; Ret Vundef
-      else `v: val <- ccallU "get" [Vint 0];; v <- (pargs [Tint] [v])?;; assume(intrange_64 v);;; syscallU "print" [v];;; Ret Vundef
+      else `v: val <- ccallU "MW.get" [Vint 0];; v <- (pargs [Tint] [v])?;; assume(intrange_64 v);;; syscallU "print" [v];;; Ret Vundef
   .
 
   Context `{Σ: GRA.t}.
   Context `{@GRA.inG memRA Σ}.
 
   Definition Appsbtb: list (string * kspecbody) :=
-    [("init", ksb_trivial (cfunU initF)); ("run", ksb_trivial (cfunU runF))].
+    [("App.init", ksb_trivial (cfunU initF)); ("App.run", ksb_trivial (cfunU runF))].
 
   Definition AppStb: list (gname * fspec).
     eapply (Seal.sealing "stb").

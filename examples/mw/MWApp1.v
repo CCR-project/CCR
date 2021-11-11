@@ -68,22 +68,21 @@ Section PROOF.
   Definition initF: list val -> itree Es val :=
     fun varg =>
       _ <- (pargs [] varg)?;;
-      `_: val <- ccallU "put" ([Vint 0; Vint 42]);;
+      `_: val <- ccallU "MW.put" ([Vint 0; Vint 42]);;
       Ret Vundef
   .
 
   Definition runF: list val -> itree Es val :=
     fun varg =>
       _ <- (pargs [] varg)?;;
-      `r: val <- ccallU "get" ([Vint 0]);;
+      `r: val <- ccallU "MW.get" ([Vint 0]);;
       r <- (pargs [Tint] [r])?;; assume(intrange_64 r);;; syscallU "print" [r];;;
       Ret Vundef
   .
 
   Definition AppSbtb: list (string * fspecbody) :=
-    [("init", mk_specbody init_spec1 (cfunU initF));
-    ("run", mk_specbody run_spec1 (cfunU runF))
-    ].
+    [("App.init", mk_specbody init_spec1 (cfunU initF));
+    ("App.run", mk_specbody run_spec1 (cfunU runF))].
 
   Definition SAppSem: SModSem.t := {|
     SModSem.fnsems := AppSbtb;
@@ -95,7 +94,7 @@ Section PROOF.
 
   Definition SApp: SMod.t := {|
     SMod.get_modsem := fun _ => SAppSem;
-    SMod.sk := [("init", Sk.Gfun); ("run", Sk.Gfun)];
+    SMod.sk := [("App.init", Sk.Gfun); ("App.run", Sk.Gfun)];
   |}
   .
 

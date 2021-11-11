@@ -172,7 +172,7 @@ Section PROOF.
 
   Definition MWStb: alist gname fspec.
     eapply (Seal.sealing "stb").
-    eapply [("main",main_spec); ("loop",loop_spec); ("put",put_spec); ("get",get_spec)].
+    eapply [("MW.main",main_spec); ("MW.loop",loop_spec); ("MW.put",put_spec); ("MW.get",get_spec)].
   Defined.
 
 
@@ -199,7 +199,7 @@ Section PROOF.
 
   Definition AppStb: alist gname fspec.
     eapply (Seal.sealing "stb").
-    eapply [("init",init_spec); ("run",run_spec)].
+    eapply [("App.init",init_spec); ("App.run",run_spec)].
   Defined.
 
 
@@ -228,7 +228,7 @@ Section PROOF.
 
   Definition MapStb: alist gname fspec.
     eapply (Seal.sealing "stb").
-    eapply [("new",new_spec); ("update",update_spec); ("access",access_spec)].
+    eapply [("Map.new",new_spec); ("Map.update",update_spec); ("Map.access",access_spec)].
   Defined.
 
 
@@ -245,9 +245,9 @@ Section PROOF.
 
   Definition MW1Stb: alist gname fspec.
     eapply (Seal.sealing "stb").
-    eapply [("main", fspec_mw1); ("loop", fspec_mw1); ("put", fspec_mw1); ("get", fspec_mw1);
-            ("init", fspec_mw1); ("run", fspec_mw1);
-            ("new", fspec_trivial); ("access", fspec_trivial); ("update", fspec_trivial);
+    eapply [("MW.main", fspec_mw1); ("MW.loop", fspec_mw1); ("MW.put", fspec_mw1); ("MW.get", fspec_mw1);
+            ("App.init", fspec_mw1); ("App.run", fspec_mw1);
+            ("Map.new", fspec_trivial); ("Map.access", fspec_trivial); ("Map.update", fspec_trivial);
             ("alloc", alloc_spec); ("free", free_spec); ("load", load_spec); ("store", store_spec); ("cmp", cmp_spec)].
    Defined.
 
@@ -260,7 +260,7 @@ Section PROOF.
                                  (fun vret => OwnM Run))).
   Definition App1Stb: alist gname fspec.
     eapply (Seal.sealing "stb").
-    eapply [("put", fspec_trivial); ("get", fspec_trivial)].
+    eapply [("MW.put", fspec_trivial); ("MW.get", fspec_trivial)].
    Defined.
 
 End PROOF.

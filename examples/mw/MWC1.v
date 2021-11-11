@@ -40,18 +40,18 @@ Section PROOF.
   Definition loopF: list val -> itree Es val :=
     fun varg =>
       _ <- (pargs [] varg)?;;
-      `_: val <- ccallU "run" ([]: list val);;
-      `_: val <- ccallU "loop" ([]: list val);;
+      `_: val <- ccallU "App.run" ([]: list val);;
+      `_: val <- ccallU "MW.loop" ([]: list val);;
       Ret Vundef
   .
 
   Definition mainF: list val -> itree Es val :=
     fun varg =>
       _ <- (pargs [] varg)?;;;
-      `map: val <- ccallU "new" ([]: list val);;
+      `map: val <- ccallU "Map.new" ([]: list val);;
       pput (mk_lst (fun _ => uninit) (fun _ => Vundef) map);;;
-      `_: val <- ccallU "init" ([]: list val);;
-      `_: val <- ccallU "loop" ([]: list val);;
+      `_: val <- ccallU "App.init" ([]: list val);;
+      `_: val <- ccallU "MW.loop" ([]: list val);;
       Ret Vundef
   .
 
@@ -66,7 +66,7 @@ Section PROOF.
       lst0 <- pget;;
       (if dec (lst0.(lst_cls) k) opt
        then _ <- upd_opt (fun opt => set k v opt);;; Ret tt
-       else `_: val <- ccallU "update" ([lst0.(lst_map); Vint k; v]);; Ret tt);;;
+       else `_: val <- ccallU "Map.update" ([lst0.(lst_map); Vint k; v]);; Ret tt);;;
       syscallU "print" [k];;;
       Ret Vundef
   .
@@ -79,7 +79,7 @@ Section PROOF.
       assume(lst0.(lst_cls) k <> uninit);;;
       v <- (if dec (lst0.(lst_cls) k) opt
             then ;;; Ret (lst0.(lst_opt) k)
-            else ccallU "access" ([lst0.(lst_map); Vint k]));;
+            else ccallU "Map.access" ([lst0.(lst_map); Vint k]));;
       syscallU "print" [k];;;
       Ret v
   .
@@ -88,10 +88,10 @@ Section PROOF.
   Context `{@GRA.inG spRA Σ}.
 
   Definition MWsbtb: list (string * fspecbody) :=
-    [("main", mk_specbody fspec_mw1 (cfunU mainF));
-    ("loop", mk_specbody fspec_mw1 (cfunU loopF));
-    ("put", mk_specbody fspec_mw1 (cfunU putF));
-    ("get", mk_specbody fspec_mw1 (cfunU getF))
+    [("MW.main", mk_specbody fspec_mw1 (cfunU mainF));
+    ("MW.loop", mk_specbody fspec_mw1 (cfunU loopF));
+    ("MW.put", mk_specbody fspec_mw1 (cfunU putF));
+    ("MW.get", mk_specbody fspec_mw1 (cfunU getF))
     ].
 
   Definition SMWSem: SModSem.t := {|
@@ -104,8 +104,8 @@ Section PROOF.
 
   Definition SMW: SMod.t := {|
     SMod.get_modsem := fun _ => SMWSem;
-    SMod.sk := [("loop", Sk.Gfun); ("put", Sk.Gfun); ("get", Sk.Gfun); ("gv0", Sk.Gvar 0); ("gv1", Sk.Gvar 0);
-               ("gv2", Sk.Gvar 0); ("gv3", Sk.Gvar 0)];
+    SMod.sk := [("MW.main", Sk.Gfun); ("MW.loop", Sk.Gfun); ("MW.put", Sk.Gfun); ("MW.get", Sk.Gfun);
+               ("gv0", Sk.Gvar 0); ("gv1", Sk.Gvar 0)];
   |}
   .
 

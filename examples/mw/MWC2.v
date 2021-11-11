@@ -24,8 +24,8 @@ Section PROOF.
   Definition loopF: list val -> itree Es val :=
     fun varg =>
       _ <- (pargs [] varg)?;;
-      `_: val <- ccallU "run" ([]: list val);;
-      `_: val <- ccallU "loop" ([]: list val);;
+      `_: val <- ccallU "App.run" ([]: list val);;
+      `_: val <- ccallU "MW.loop" ([]: list val);;
       Ret Vundef
   .
 
@@ -34,8 +34,8 @@ Section PROOF.
       _ <- (pargs [] varg)?;;;
       _ <- Ret tt;;;
       pput (empty (K:=Z) (V:=Z));;;
-      `_: val <- ccallU "init" ([]: list val);;
-      `_: val <- ccallU "loop" ([]: list val);;
+      `_: val <- ccallU "App.init" ([]: list val);;
+      `_: val <- ccallU "MW.loop" ([]: list val);;
       Ret Vundef
   .
 
@@ -66,10 +66,10 @@ Section PROOF.
 
 
   Definition MWsbtb: list (string * fspecbody) :=
-    [("main", mk_specbody main_spec (cfunU mainF));
-    ("loop", mk_specbody loop_spec (cfunU loopF));
-    ("put", mk_specbody put_spec (cfunU putF));
-    ("get", mk_specbody get_spec (cfunU getF))
+    [("MW.main", mk_specbody main_spec (cfunU mainF));
+    ("MW.loop", mk_specbody loop_spec (cfunU loopF));
+    ("MW.put", mk_specbody put_spec (cfunU putF));
+    ("MW.get", mk_specbody get_spec (cfunU getF))
     ].
 
   Context `{@GRA.inG mwRA Σ}.
@@ -84,8 +84,8 @@ Section PROOF.
 
   Definition SMW: SMod.t := {|
     SMod.get_modsem := fun _ => SMWSem;
-    SMod.sk := [("loop", Sk.Gfun); ("put", Sk.Gfun); ("get", Sk.Gfun); ("gv0", Sk.Gvar 0); ("gv1", Sk.Gvar 0);
-               ("gv2", Sk.Gvar 0); ("gv3", Sk.Gvar 0)];
+    SMod.sk := [("MW.main", Sk.Gfun); ("MW.loop", Sk.Gfun); ("MW.put", Sk.Gfun); ("MW.get", Sk.Gfun);
+               ("gv0", Sk.Gvar 0); ("gv1", Sk.Gvar 0)];
   |}
   .
 

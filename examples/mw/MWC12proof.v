@@ -170,7 +170,7 @@ TODO: APC, locked thinges
           - iRight. iLeft. iSplits; et.
           - xtra.
         }
-        fold wf. steps. r in WLE. des_ifs. astart 1. astep "new" (([]: list val)↑). stb_tac. clarify.
+        fold wf. steps. r in WLE. des_ifs. astart 1. astep "Map.new" (([]: list val)↑). stb_tac. clarify.
 
 
         (*** calling Map.new ***)
@@ -368,7 +368,7 @@ TODO: APC, locked thinges
             }
             { iDes; des; clarify. iPureIntro. r. fold wf in WF0. exists None; esplits; et. }
           + steps.
-            astart 1. astep "update" ([lst_map lst0; Vint k; Vint v]↑). stb_tac; ss; clarify.
+            astart 1. astep "Map.update" ([lst_map lst0; Vint k; Vint v]↑). stb_tac; ss; clarify.
             hcall _ _ (Some (_, _)).
             { iDes; clarify. instantiate (2:=(_, _, _, _)). cbn. iModIntro. iSplits; ss; et. iFrame.
               iSplitL.
@@ -409,7 +409,7 @@ TODO: APC, locked thinges
             }
             { iDes; des; clarify. iPureIntro. r. fold wf in WF0. exists None; esplits; et. }
           + steps.
-            astart 1. astep "update" ([lst_map lst0; Vint k; Vint v]↑). stb_tac; ss; clarify.
+            astart 1. astep "Map.update" ([lst_map lst0; Vint k; Vint v]↑). stb_tac; ss; clarify.
             hcall _ _ (Some (_, _)).
             { iDes; clarify. instantiate (2:=(_, _, _, _)). cbn. iModIntro. iSplits; ss; et. iFrame.
               iSplitL.
@@ -477,7 +477,7 @@ TODO: APC, locked thinges
           { iDes; ss; clarify. iModIntro. apply Any.upcast_inj in H6. des; clarify. iFrame. iSplits; ss; et.
             iLeft. iSplits; ss; et. { iFrame. } }
           { iDes; des; clarify. iPureIntro. r. fold wf in WF0. exists None; esplits; et. }
-        - steps. astart 1. astep "access" ([lst_map lst0; Vint k]↑). stb_tac; ss; clarify.
+        - steps. astart 1. astep "Map.access" ([lst_map lst0; Vint k]↑). stb_tac; ss; clarify.
           hcall _ _ (Some (_, _)).
           { iDes; clarify. instantiate (2:=(_, _, _, _)). cbn. iModIntro. iSplits; ss; et. iFrame.
             des; clarify. apply Any.upcast_inj in H4. des; clarify.

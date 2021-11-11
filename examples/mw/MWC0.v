@@ -21,8 +21,8 @@ Section PROOF.
   Definition loopF: list val -> itree Es val :=
     fun varg =>
       _ <- (pargs [] varg)?;;
-      `_: val <- ccallU "run" ([]: list val);;
-      `_: val <- ccallU "loop" ([]: list val);;
+      `_: val <- ccallU "App.run" ([]: list val);;
+      `_: val <- ccallU "MW.loop" ([]: list val);;
       Ret Vundef
   .
 
@@ -31,10 +31,10 @@ Section PROOF.
       _ <- (pargs [] varg)?;;
       `arr: val <- ccallU "alloc" ([Vint 100]);; (pargs [Tblk] [arr])?;;;
       pupd_arr arr;;;
-      `map: val <- ccallU "new" ([]: list val);;
+      `map: val <- ccallU "Map.new" ([]: list val);;
       pupd_map map;;;
-      `_: val <- ccallU "init" ([]: list val);;
-      `_: val <- ccallU "loop" ([]: list val);;
+      `_: val <- ccallU "App.init" ([]: list val);;
+      `_: val <- ccallU "MW.loop" ([]: list val);;
       Ret Vundef
   .
 
@@ -45,7 +45,7 @@ Section PROOF.
       '(arr, map) <- pget;;
       (if ((0 <=? k) && (k <? 100))%Z
        then addr <- (vadd arr (Vint (8 * k)))?;; `_: val <- ccallU "store" [addr; v];; Ret tt
-       else `_: val <- ccallU "update" ([map; Vint k; v]);; Ret tt);;;
+       else `_: val <- ccallU "Map.update" ([map; Vint k; v]);; Ret tt);;;
       syscallU "print" [k];;;
       Ret Vundef
   .
@@ -57,13 +57,14 @@ Section PROOF.
       '(arr, map) <- pget;;
       `v: val <- (if ((0 <=? k) && (k <? 100))%Z
                   then addr <- (vadd arr (Vint (8 * k)))?;; ccallU "load" [addr]
-                  else ccallU "access" ([map; Vint k]));;
+                  else ccallU "Map.access" ([map; Vint k]));;
       syscallU "print" [k];;;
       Ret v
   .
 
   Definition MWSem (skenv: SkEnv.t): ModSem.t := {|
-    ModSem.fnsems := [("main", cfunU mainF); ("loop", cfunU loopF); ("put", cfunU putF); ("get", cfunU getF)];
+    ModSem.fnsems := [("MW.main", cfunU mainF); ("MW.loop", cfunU loopF);
+                     ("MW.put", cfunU putF); ("MW.get", cfunU getF)];
     ModSem.mn := "MW";
     ModSem.initial_st := (Vint 0, Vint 0)↑;
   |}
@@ -71,8 +72,8 @@ Section PROOF.
   (* Vptr (or_else (skenv.(SkEnv.id2blk) "arr") 0) 0 *)
   Definition MW: Mod.t := {|
     Mod.get_modsem := fun sk => MWSem (Sk.load_skenv sk);
-    Mod.sk := [("loop", Sk.Gfun); ("put", Sk.Gfun); ("get", Sk.Gfun); ("gv0", Sk.Gvar 0); ("gv1", Sk.Gvar 0);
-              ("gv2", Sk.Gvar 0); ("gv3", Sk.Gvar 0)];
+    Mod.sk := [("MW.main", Sk.Gfun); ("MW.loop", Sk.Gfun); ("MW.put", Sk.Gfun); ("MW.get", Sk.Gfun);
+               ("gv0", Sk.Gvar 0); ("gv1", Sk.Gvar 0)];
   |}
   .
 

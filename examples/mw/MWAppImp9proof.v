@@ -63,7 +63,7 @@ Section SIMMODSEM.
   Variable global_stb: Sk.t -> gname -> option fspec.
   (* Hypothesis INCLMW: stb_incl (to_stb (MWStb)) global_stb. *)
   (* Hypothesis INCLMEM: stb_incl (to_stb (MemStb)) global_stb. *)
-  Hypothesis STBINCL: forall sk, stb_incl (to_stb_context ["put"; "get"] (MemStb))
+  Hypothesis STBINCL: forall sk, stb_incl (to_stb_context ["MW.put"; "MW.get"] (MemStb))
                                           (global_stb sk).
 
   Import ImpNotations.

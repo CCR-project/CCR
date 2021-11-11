@@ -24,7 +24,7 @@ Section PROOF.
     mk_function
       []
       []
-      (@ "run" [] ;# @ "loop" [])
+      (@ "App.run" [] ;# @ "MW.loop" [])
   .
 
   Definition mainF :=
@@ -32,9 +32,9 @@ Section PROOF.
       []
       ["arr"; "map"; "tmp"]
       ("tmp" =# malloc# 100%Z ;# "arr" =#& "gv0" ;# "arr" *=# "tmp" ;#
-       "tmp" =@ "new" [] ;# "map" =#& "gv1" ;# "map" *=# "tmp" ;#
-       @ "init" [] ;#
-       @ "loop" []
+       "tmp" =@ "Map.new" [] ;# "map" =#& "gv1" ;# "map" *=# "tmp" ;#
+       @ "App.init" [] ;#
+       @ "MW.loop" []
       )
   .
 
@@ -45,7 +45,7 @@ Section PROOF.
       ((* if# ((0%Z =? "k") + (0%Z <"k")) * ("k" < 100%Z) *)
        if# ((- 1)%Z < "k") * ("k" < 100%Z)
        then# "arr" =#& "gv0" ;# "arrv" =#* "arr" ;# ("arrv" + (8%Z * "k")) *=# "v"
-       else# "map" =#& "gv1" ;# "mapv" =#* "map" ;# @ "update" ["mapv": expr; "k": expr; "v": expr]
+       else# "map" =#& "gv1" ;# "mapv" =#* "map" ;# @ "Map.update" ["mapv": expr; "k": expr; "v": expr]
        fi# ;#
        @! "print" ["k" : expr]
       )
@@ -57,7 +57,7 @@ Section PROOF.
       ["v"; "arr"; "map"; "tmp"]
       (if# ((- 1)%Z < "k") * ("k" < 100%Z)
        then# "arr" =#& "gv0" ;# "arrv" =#* "arr" ;# "v" =#* ("arrv" + (8%Z * "k"))
-       else# "map" =#& "gv1" ;# "mapv" =#* "map" ;# "v" =@ "access" ["mapv": expr; "k": expr]
+       else# "map" =#& "gv1" ;# "mapv" =#* "map" ;# "v" =@ "Map.access" ["mapv": expr; "k": expr]
        fi# ;#
        @! "print" ["k" : expr] ;#
        return# "v"
@@ -77,9 +77,9 @@ Section PROOF.
     mk_program
       "MW"
       []
-      [("init", 0); ("loop", 0); ("new", 0); ("update", 0); ("access", 0)]
-      [("gv0", 0%Z); ("gv1", 0%Z); ("gv2", 0%Z); ("gv3", 0%Z)]
-      [("main", mainF); ("loop", loopF); ("put", putF); ("get", getF)]
+      [("App.init", 0); ("App.run", 0); ("Map.new", 0); ("Map.update", 3); ("Map.access", 2)]
+      [("gv0", 0%Z); ("gv1", 0%Z)]
+      [("MW.main", mainF); ("MW.loop", loopF); ("MW.put", putF); ("MW.get", getF)]
   .
 
   Definition MWSem ge: ModSem.t := ImpMod.modsem MWprog ge.

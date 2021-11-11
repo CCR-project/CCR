@@ -37,8 +37,9 @@ Section SIMMODSEM.
   Context `{@GRA.inG memRA Σ}.
 
   Variable global_stb: Sk.t -> gname -> option fspec.
-  Hypothesis STBINCL: forall sk, stb_incl (to_stb_context ["new"; "access"; "update"; "init"; "run"; "loop"] (MemStb))
-                                          (global_stb sk).
+  Hypothesis STBINCL: forall sk,
+      stb_incl (to_stb_context ["Map.new"; "Map.access"; "Map.update"; "App.init"; "App.run"; "MW.loop"]
+                               (MemStb)) (global_stb sk).
   Import ImpNotations.
 
   Ltac isteps := repeat (steps; imp_steps).
@@ -46,11 +47,11 @@ Section SIMMODSEM.
 
   Lemma _get_sim sk (SKINCL: Sk.incl (defs MWprog) sk) (SKWF: Sk.wf sk):
     sim_fnsem (wf (Sk.load_skenv sk)) le
-              ("get", KModSem.disclose_ksb_tgt "MW" (global_stb sk) (ksb_trivial (cfunU getF)))
-              ("get", cfunU (eval_imp (Sk.load_skenv sk) MWCImp.getF)).
+              ("MW.get", KModSem.disclose_ksb_tgt "MW" (global_stb sk) (ksb_trivial (cfunU getF)))
+              ("MW.get", cfunU (eval_imp (Sk.load_skenv sk) MWCImp.getF)).
   Proof.
     eapply Sk.incl_incl_env in SKINCL. eapply Sk.load_skenv_wf in SKWF.
-    hexploit (SKINCL "gv0"); ss; eauto. intros [blk0 FIND0].
+    hexploit (SKINCL "gv0"); ss; eauto 10. intros [blk0 FIND0].
     hexploit (SKINCL "gv1"); ss; eauto 10. intros [blk1 FIND1].
     { kinit. harg. mDesAll; des; clarify. unfold getF, MWCImp.getF, ccallU.
       set (Sk.load_skenv sk) as ske in *.

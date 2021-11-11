@@ -24,7 +24,7 @@ Section PROOF.
       initialized <- pget;;
       if (initialized: bool)
       then syscallU "print" [(- 1)%Z];;; Ret Vundef
-      else `_: val <- ccallU "put" [Vint 0; Vint 42];; pput true;;; Ret Vundef
+      else `_: val <- ccallU "MW.put" [Vint 0; Vint 42];; pput true;;; Ret Vundef
   .
 
   Definition runF: list val -> itree Es val :=
@@ -33,11 +33,11 @@ Section PROOF.
       initialized <- pget;;
       if negb (initialized: bool)
       then syscallU "print" [(- 1)%Z];;; Ret Vundef
-      else `v: val <- ccallU "get" [Vint 0];; v <- (pargs [Tint] [v])?;; assume(intrange_64 v);;; syscallU "print" [v];;; Ret Vundef
+      else `v: val <- ccallU "MW.get" [Vint 0];; v <- (pargs [Tint] [v])?;; assume(intrange_64 v);;; syscallU "print" [v];;; Ret Vundef
   .
 
   Definition AppSem: ModSem.t := {|
-    ModSem.fnsems := [("init", cfunU initF); ("run", cfunU runF)];
+    ModSem.fnsems := [("App.init", cfunU initF); ("App.run", cfunU runF)];
     ModSem.mn := "App";
     ModSem.initial_st := false↑;
   |}
@@ -45,7 +45,7 @@ Section PROOF.
 
   Definition App: Mod.t := {|
     Mod.get_modsem := fun _ => AppSem;
-    Mod.sk := [("init", Sk.Gfun); ("run", Sk.Gfun)];
+    Mod.sk := [("App.init", Sk.Gfun); ("App.run", Sk.Gfun)];
   |}
   .
 
