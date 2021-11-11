@@ -4,7 +4,7 @@ Require Import Mem0 Mem1 MemOpen Mem0Openproof MemOpen0proof.
 Require Import
         MWHeader
         MWCImp MWC9 MWC0 MWC1 MWC2 MWCImp9proof MWC90proof MWC01proof MWC12proof
-        MWApp0 MWApp1 MWApp2 MWApp01proof MWApp12proof
+        MWApp0 MWApp1 MWApp2 MWApp01proof MWApp12proof MWAppImp9proof MWApp90proof
 .
 
 Set Implicit Arguments.
@@ -48,32 +48,6 @@ Section PROOF.
   Let CSL0: gname -> bool := fun g => in_dec dec g ["gv0"; "gv1"].
   Let MWLow: refines2 [Mem0.Mem (fun _ => false); MWCImp.MW] [Mem0.Mem CSL0; MWC0.MW].
   Proof.
-    (* etransitivity. *)
-    (* { eapply refines2_cons. *)
-    (*   { eapply Mem0Openproof.correct. instantiate (1:=(fun _ => false)). ss. } *)
-    (*   { eapply MWCImp9proof.correct. *)
-    (*     i. eapply to_stb_context_incl. *)
-    (*     { refl. } *)
-    (*     unfold MemStb. autounfold with stb. autorewrite with stb. cbn. *)
-    (*     ImpProofs.solve_NoDup; ss. *)
-    (*   } *)
-    (* } *)
-    (* etrans. *)
-    (* { eapply adequacy_open. i. exists ε. split. *)
-    (*   { g_wf_tac. *)
-    (*     Local Transparent Sk.load_skenv _points_to string_dec. *)
-    (*     unfold var_points_to. *)
-    (*     rewrite URA.unit_idl. *)
-    (*     ur. unfold var_points_to, initial_mem_mr. ss. uo. idtac. split. *)
-    (*     2: { ur. i. ur. i. ur. des_ifs. } *)
-    (*     { repeat rewrite URA.unit_id. ur. eexists ε. *)
-    (*       repeat rewrite URA.unit_id. extensionality k. extensionality n. *)
-    (*       unfold sumbool_to_bool, andb. des_ifs. *)
-    (*       { ss. clarify. } *)
-    (*     } *)
-    (*   } *)
-    (* } *)
-
     transitivity (KMod.transl_tgt_list [KMem CSL0 CSL0; MWC9.KMW]).
     { eapply refines2_cons.
       { eapply Mem0Openproof.correct. ii; ss. }
@@ -136,6 +110,42 @@ Section PROOF.
             { admit "???". }
           - { admit "???". }
         }
+      }
+      ii. ss. clarify. ss. esplits; ss; et.
+      - rr. uipropall.
+      - ii. rr in POST. uipropall.
+    }
+    eapply refines2_cons.
+    { eapply MemOpen0proof.correct. }
+    { eapply MWC90proof.correct. }
+  Qed.
+
+  (* Section AUX. *)
+  (*   Context {CONF: EMSConfig}. *)
+  (*   Context `{Sk.ld}. *)
+
+  (*   Lemma refines2_comm_l *)
+  (*         ma mb mc *)
+  (*     : *)
+  (*       refines2 (ma ++ mb) mc = refines2 (mb ++ ma) mc *)
+  (*   . *)
+  (*   Proof. *)
+  (*     eapply Axioms.prop_ext. *)
+  (*     split; i. *)
+  (*     - ii. eapply H0; clear H0. rewrite Mod.add_list_app in *. *)
+  (*       set (Mod.add_list ctx) as c in *. *)
+  (*       set (Mod.add_list ma) as a in *. *)
+  (*       set (Mod.add_list mb) as b in *. *)
+  (*       rewrite ModL.add_assoc in *. *)
+  (*       rewrite ModL.add_assoc_rev in *. *)
+  (*       eapply ModL.add_comm. *)
+  (*       rewrite ModL.add_assoc_rev in *. *)
+  (*       eapply ModL.add_comm. ss. eapply ModL.add_comm in eapply H0. rewrite ModL.add_comm in *. r in H0. r. *)
+  (*   Qed. *)
+  (* End AUX. *)
+    eapply refines2
+    cbn.
+    refl.
                 -
                 ss. r. unfold SkEnv.id2blk.
               assert(b <> blk0).

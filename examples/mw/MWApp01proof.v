@@ -72,7 +72,7 @@ Section SIMMODSEM.
       fold wf. mDesAll; des; clarify.
       mDesOr "INV1"; mDesAll; des; clarify.
       { admit "ez". }
-      steps. unfold unint in *. des_ifs. steps.
+      steps. force_r; ss. exists; ss. steps. unfold unint in *. des_ifs. steps.
       hret _; ss.
       { iModIntro. iFrame. iSplits; ss; et. }
     }

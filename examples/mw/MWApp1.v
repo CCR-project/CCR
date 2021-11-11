@@ -76,7 +76,7 @@ Section PROOF.
     fun varg =>
       _ <- (pargs [] varg)?;;
       `r: val <- ccallU "get" ([Vint 0]);;
-      r <- (pargs [Tint] [r])?;; syscallU "print" [r];;;
+      r <- (pargs [Tint] [r])?;; assume(intrange_64 r);;; syscallU "print" [r];;;
       Ret Vundef
   .
 

@@ -112,7 +112,7 @@ Section SIMMODSEM.
       fold wf. mDesAll; des; clarify. steps.
       hpost_tgt.
       { iFrame. iModIntro. iSplits; ss; et. xtra. }
-      steps. rewrite _UNWRAPU. steps.
+      steps. force_r; ss. steps. rewrite _UNWRAPU. steps.
 
       hret _; ss.
       { iDestruct "Q" as "[Q %]". subst. iDestruct "FR" as "[A B]". iFrame. iSplits; ss; et. }

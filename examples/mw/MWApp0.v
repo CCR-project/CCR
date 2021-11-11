@@ -33,7 +33,7 @@ Section PROOF.
       initialized <- pget;;
       if negb (initialized: bool)
       then syscallU "print" [(- 1)%Z];;; Ret Vundef
-      else `v: val <- ccallU "get" [Vint 0];; v <- (pargs [Tint] [v])?;; syscallU "print" [v];;; Ret Vundef
+      else `v: val <- ccallU "get" [Vint 0];; v <- (pargs [Tint] [v])?;; assume(intrange_64 v);;; syscallU "print" [v];;; Ret Vundef
   .
 
   Definition AppSem: ModSem.t := {|
