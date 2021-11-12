@@ -260,8 +260,7 @@ Proof Outline
     { unfold allocF. kinit.
       { harg. fold wf. steps. hide_k.
         destruct x as [sz|]; cycle 1.
-        { mDesAll; des; clarify. des_ifs.
-          { apply Any.downcast_upcast in Heq. des; subst. tauto. }
+        { mDesAll; des; clarify.
           (*** TODO: remove redundancy with u (context) case ***)
           (*** COPY START ***)
           mDesAll. des; subst. steps. destruct v; ss. clarify. unhide_k.
@@ -360,8 +359,7 @@ Proof Outline
     { unfold freeF. kinit.
       { harg. fold wf. steps.
         destruct x as [[b ofs]|]; cycle 1.
-        { mDesAll; des; clarify. des_ifs.
-          { apply Any.downcast_upcast in Heq. des; subst. tauto. }
+        { mDesAll; des; clarify.
           (*** TODO: remove redundancy with u (context) case ***)
           (*** COPY START ***)
           des_ifs_safe (mDesAll; ss). des; subst.
@@ -371,7 +369,7 @@ Proof Outline
           rename n into b. rename z into ofs.
           force_r.
           { unfold Mem.free in *. des_ifs. hexploit (SIM b ofs); et. intro T.
-            rewrite Heq0 in *. rewrite Heq1 in *. inv T.
+            rewrite Heq in *. rewrite Heq0 in *. inv T.
           }
           rename t into mem_tgt1.
           steps.
@@ -379,7 +377,7 @@ Proof Outline
           iExists _, _, _. iSplitR; ss. iPureIntro. esplits; et; cbn.
           - ii. unfold Mem.free in *. des_ifs. ss. unfold update. des_ifs.
             replace (memk_src0 b0 ofs0) with (@URA.unit (Excl.t val)); cycle 1.
-            { hexploit (SIM b0 ofs0); et. intro T. rewrite Heq0 in *. rewrite Heq1 in *. inv T; ss. }
+            { hexploit (SIM b0 ofs0); et. intro T. rewrite Heq in *. rewrite Heq0 in *. inv T; ss. }
             econs.
           - unfold Mem.free in *. des_ifs.
           - rr in WFSRC. rr. ii. unfold Mem.free in *. des_ifs. ss. unfold update in *. des_ifs; et.
@@ -391,7 +389,7 @@ Proof Outline
         des_ifs; mDesAll; ss. des; subst. clarify. rewrite Any.upcast_downcast in *. clarify.
         steps. unhide_k. steps. astart 0. astop.
         renamer.
-        rename a into v. rename WF into SIMWF.
+        rename a2 into v. rename WF into SIMWF.
         mCombine "INV" "A". mOwnWf "INV".
         assert(HIT: memk_src0 b ofs = (Some v)).
         { clear - WF.
@@ -486,8 +484,7 @@ Proof Outline
     { unfold loadF. kinit.
       { harg. fold wf. steps.
         destruct x as [[[b ofs] v]|]; cycle 1.
-        { mDesAll; des; clarify. des_ifs.
-          { apply Any.downcast_upcast in Heq. des; subst. tauto. }
+        { mDesAll; des; clarify.
           (*** TODO: remove redundancy with u (context) case ***)
           (*** COPY START ***)
           des_ifs_safe (mDesAll; ss). des; subst.
@@ -538,8 +535,7 @@ Proof Outline
     { unfold storeF. kinit.
       { harg. fold wf. steps. hide_k.
         destruct x as [[[b ofs] v1]|]; cycle 1.
-        { mDesAll; des; clarify. des_ifs.
-          { apply Any.downcast_upcast in Heq. des; subst. tauto. }
+        { mDesAll; des; clarify.
           (*** TODO: remove redundancy with u (context) case ***)
           (*** COPY START ***)
           des_ifs_safe (mDesAll; ss). des; subst.
@@ -553,7 +549,7 @@ Proof Outline
           hret _; ss. iModIntro. iSplitL; ss. iExists _, _, _; ss. iSplitR; ss. iPureIntro.
           esplits; ss; et.
           - ii. unfold Mem.store in *. des_ifs. ss. des_ifs. bsimpl; des; des_sumbool; subst.
-            hexploit (SIM b0 ofs0); et. intro T. rewrite Heq0 in *. rewrite Heq1 in *. inv T. econs.
+            hexploit (SIM b0 ofs0); et. intro T. rewrite Heq in *. rewrite Heq0 in *. inv T. econs.
           - unfold Mem.store in *. des_ifs.
           - clear - _UNWRAPU0 WFSRC. ii. unfold Mem.store in *. des_ifs; ss. des_ifs; et.
             + bsimpl; des; des_sumbool; subst. et.
@@ -564,7 +560,7 @@ Proof Outline
         des_ifs_safe (mDesAll; ss). des; subst. clarify. rewrite Any.upcast_downcast in *. clarify.
         steps. unhide_k. steps. astart 0. astop.
         renamer.
-        rename a into v0. rename WF into SIMWF.
+        rename a2 into v0. rename WF into SIMWF.
         steps.
         mCombine "INV" "A". mOwnWf "INV".
         assert(T: memk_src0 b ofs = (Some v0)).
@@ -638,8 +634,7 @@ Proof Outline
     { unfold cmpF. kinit.
       { harg. fold wf. steps. hide_k.
         destruct x as [[result resource]|]; cycle 1.
-        { mDesAll; des; clarify. des_ifs.
-          { apply Any.downcast_upcast in Heq. des; subst. tauto. }
+        { mDesAll; des; clarify.
           (*** TODO: remove redundancy with u (context) case ***)
           (*** COPY START ***)
           des_ifs_safe (mDesAll; ss). des; subst.

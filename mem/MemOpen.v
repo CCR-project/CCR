@@ -29,24 +29,14 @@ Section TUNNEL.
     (*          (fun _ x z a => (((snd ∘ PQ) x a: iProp) ∧ ⌜z = tt↑⌝)%I) *)
     mk_fspec (fun _ x y a o =>
                 match x with
-                | Some x => (((fst ∘ PQ) x a o: iProp) ∧ ⌜y = tt↑⌝)%I
-                | _ => ⌜y = a ∧ o = ord_top ∧ y <> tt↑⌝%I: iProp
+                | Some x => (((fst ∘ PQ) x a o: iProp))%I
+                | _ => ⌜y = a ∧ o = ord_top⌝%I: iProp
                 end)
              (fun _ x z a =>
                 match x with
-                | Some x => (((snd ∘ PQ) x a: iProp) (* ∧ ⌜z = tt↑⌝ *))%I
+                | Some x => (((snd ∘ PQ) x a: iProp))%I
                 | _ => ⌜z = a⌝%I: iProp
                 end)
-  .
-
-  Context `{HasCallE: callE -< E}.
-  Context `{HasEventE: eventE -< E}.
-  Definition cfunU_tunneled {X Y} (body: X -> itree E Y): (option mname * Any.t) -> itree E Any.t :=
-    fun '(_, varg) =>
-      match varg↓ with
-      | Some tt => triggerNB
-      | _ => varg <- varg↓?;; vret <- body varg;; Ret vret↑
-      end
   .
 
 End TUNNEL.
@@ -112,11 +102,11 @@ Section PROOF.
   Context `{@GRA.inG memRA Σ}.
 
   Definition MemSbtb: list (gname * kspecbody) :=
-    [("alloc", mk_kspecbody alloc_spec (cfunU allocF) (cfunU_tunneled allocF));
-    ("free",   mk_kspecbody free_spec  (cfunU freeF)  (cfunU_tunneled freeF));
-    ("load",   mk_kspecbody load_spec  (cfunU loadF)  (cfunU_tunneled loadF));
-    ("store",  mk_kspecbody store_spec (cfunU storeF) (cfunU_tunneled storeF));
-    ("cmp",    mk_kspecbody cmp_spec   (cfunU cmpF)   (cfunU_tunneled cmpF))
+    [("alloc", mk_kspecbody alloc_spec (cfunU allocF) (cfunU allocF));
+    ("free",   mk_kspecbody free_spec  (cfunU freeF)  (cfunU freeF));
+    ("load",   mk_kspecbody load_spec  (cfunU loadF)  (cfunU loadF));
+    ("store",  mk_kspecbody store_spec (cfunU storeF) (cfunU storeF));
+    ("cmp",    mk_kspecbody cmp_spec   (cfunU cmpF)   (cfunU cmpF))
     ]
   .
 

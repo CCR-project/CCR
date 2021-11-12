@@ -63,10 +63,7 @@ Section SIMMODSEM.
       { contradict n. solve_NoDup. }
       steps. erewrite STBINCL; cycle 1. { stb_tac; ss. } isteps.
       hcall _ None None with "*".
-      { iModIntro. iSplits; ss; et.
-        - iLeft. iSplits; ss; et. iFrame. iPureIntro. esplits; ss; et.
-        - admit "ez - size argument".
-      }
+      { iModIntro. iSplits; ss; et. iLeft. iSplits; ss; et. iFrame. iPureIntro. esplits; ss; et. }
       { esplits; ss; et. }
       fold (wf ske). mDesAll; des; clarify. steps. isteps. rewrite FIND0. steps.
       isteps. ss. des_ifs. mDesOr "INV"; mDesAll; des; clarify; ss.

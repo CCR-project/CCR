@@ -100,10 +100,8 @@ Section SIMMODSEM.
         }
         rewrite Y. steps. isteps. erewrite STBINCL; [|stb_tac; ss]. steps.
         hcall _ None _ with "*".
-        { iModIntro. iSplits; ss; et.
-          - iLeft. iSplits; ss; et. unfold var_points_to. rewrite FIND0. rewrite FIND1. iFrame.
-            iSplits; ss; et.
-          - iPureIntro. ii. apply Any.upcast_inj in H0. des; clarify. admit "size argument". }
+        { iModIntro. iSplits; ss; et. iLeft. iSplits; ss; et. unfold var_points_to.
+          rewrite FIND0. rewrite FIND1. iFrame. iSplits; ss; et. }
         { esplits; ss; et. }
         fold (wf ske). mDesAll; des; clarify.
         mDesOr "INV"; mDesAll; des; clarify; ss. steps. isteps.

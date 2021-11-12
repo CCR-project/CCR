@@ -45,17 +45,15 @@ Section SIMMODSEM.
     econs; ss.
     { unfold allocF, fun_to_src, body_to_src, cfunU, KModSem.disclose_ksb_src, body_to_src. init.
       match goal with | |- context[my_if ?b _ _] => destruct b eqn:T end.
-      { cbn. destruct (@Any.downcast unit varg) eqn:U.
-        - des_u; ss. steps.
-        - (*** TODO: remove redundancy with u (context) case ***)
-          r in WF. subst.
-          (*** COPY START ***)
-          steps. apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
-          des_ifs.
-          { steps. force_l. esplits; et. steps.
-            red. esplits; et. rr. econs; ss. }
-          { steps. }
-          (*** COPY END ***)
+      { (*** TODO: remove redundancy with u (context) case ***)
+        r in WF. subst.
+        (*** COPY START ***)
+        steps. apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
+        des_ifs.
+        { steps. force_l. esplits; et. steps.
+          red. esplits; et. rr. econs; ss. }
+        { steps. }
+        (*** COPY END ***)
       }
       destruct mn eqn:MN; ss; clarify. des_ifs.
       steps. apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
@@ -68,15 +66,13 @@ Section SIMMODSEM.
     econs; ss.
     { unfold freeF, fun_to_src, body_to_src, cfunU, KModSem.disclose_ksb_src, body_to_src. init.
       match goal with | |- context[my_if ?b _ _] => destruct b eqn:T end.
-      { cbn. destruct (@Any.downcast unit varg) eqn:U.
-        - des_u; ss. steps.
-        - (*** TODO: remove redundancy with u (context) case ***)
-          r in WF. subst.
-          (*** COPY START ***)
-          steps. apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
-          force_r; ss. steps.
-          red. esplits; et. rr. econs; ss.
-          (*** COPY END ***)
+      { (*** TODO: remove redundancy with u (context) case ***)
+        r in WF. subst.
+        (*** COPY START ***)
+        steps. apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
+        force_r; ss. steps.
+        red. esplits; et. rr. econs; ss.
+        (*** COPY END ***)
       }
       destruct mn eqn:MN; ss; clarify. des_ifs.
       steps. apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
@@ -86,15 +82,13 @@ Section SIMMODSEM.
     econs; ss.
     { unfold loadF, fun_to_src, body_to_src, cfunU, KModSem.disclose_ksb_src, body_to_src. init.
       match goal with | |- context[my_if ?b _ _] => destruct b eqn:T end.
-      { cbn. destruct (@Any.downcast unit varg) eqn:U.
-        - des_u; ss. steps.
-        - (*** TODO: remove redundancy with u (context) case ***)
-          r in WF. subst.
-          (*** COPY START ***)
-          steps. apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
-          force_r; ss. steps.
-          red. esplits; et. rr. econs; ss.
-          (*** COPY END ***)
+      { (*** TODO: remove redundancy with u (context) case ***)
+        r in WF. subst.
+        (*** COPY START ***)
+        steps. apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
+        force_r; ss. steps.
+        red. esplits; et. rr. econs; ss.
+        (*** COPY END ***)
       }
       destruct mn eqn:MN; ss; clarify. des_ifs.
       steps. apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
@@ -104,15 +98,13 @@ Section SIMMODSEM.
     econs; ss.
     { unfold storeF, fun_to_src, body_to_src, cfunU, KModSem.disclose_ksb_src, body_to_src. init.
       match goal with | |- context[my_if ?b _ _] => destruct b eqn:T end.
-      { cbn. destruct (@Any.downcast unit varg) eqn:U.
-        - des_u; ss. steps.
-        - (*** TODO: remove redundancy with u (context) case ***)
-          r in WF. subst.
-          (*** COPY START ***)
-          steps. apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
-          force_r; ss. steps.
-          red. esplits; et. rr. econs; ss.
-          (*** COPY END ***)
+      { (*** TODO: remove redundancy with u (context) case ***)
+        r in WF. subst.
+        (*** COPY START ***)
+        steps. apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
+        force_r; ss. steps.
+        red. esplits; et. rr. econs; ss.
+        (*** COPY END ***)
       }
       destruct mn eqn:MN; ss; clarify. des_ifs.
       steps. apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
@@ -122,17 +114,15 @@ Section SIMMODSEM.
     econs; ss.
     { unfold cmpF, fun_to_src, body_to_src, cfunU, KModSem.disclose_ksb_src, body_to_src. init.
       match goal with | |- context[my_if ?b _ _] => destruct b eqn:T end.
-      { cbn. destruct (@Any.downcast unit varg) eqn:U.
-        - des_u; ss. steps.
-        - (*** TODO: remove redundancy with u (context) case ***)
-          r in WF. subst.
-          (*** COPY START ***)
-          steps. apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
-          force_r; ss. steps.
-          des_ifs; steps.
-          { red. esplits; et. rr. econs; ss. }
-          { red. esplits; et. rr. econs; ss. }
-          (*** COPY END ***)
+      { (*** TODO: remove redundancy with u (context) case ***)
+        r in WF. subst.
+        (*** COPY START ***)
+        steps. apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
+        force_r; ss. steps.
+        des_ifs; steps.
+        { red. esplits; et. rr. econs; ss. }
+        { red. esplits; et. rr. econs; ss. }
+        (*** COPY END ***)
       }
       destruct mn eqn:MN; ss; clarify. des_ifs.
       steps. apply_all_once Any.downcast_upcast. des; clarify. rewrite Any.upcast_downcast in *. steps.
