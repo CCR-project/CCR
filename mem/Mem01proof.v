@@ -174,14 +174,17 @@ Section SIMMODSEM.
     end
   .
 
-  Theorem correct_modsem: forall sk, ModSemPair.sim (SModSem.to_tgt (to_stb []) (Mem1.SMemSem (fun _ => true) sk)) (Mem0.MemSem (fun _ => false) sk).
+  Variable csl: gname -> bool.
+
+  Theorem correct_modsem: forall sk, ModSemPair.sim (SModSem.to_tgt (to_stb [])
+                                           (Mem1.SMemSem (fun g => negb (csl g)) sk)) (Mem0.MemSem csl sk).
   Proof.
    econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
    { ss. }
     { ss. eexists. econs; ss. eapply to_semantic.
       iIntros "H". iSplits; ss; et.
       { iPureIntro. ii. unfold Mem.load_mem, initial_mem_mr.
-        cbn. uo. des_ifs; et. econs; et. }
+        cbn. uo. des_ifs; et; try (by econs; et). }
       { iPureIntro. ii. ss. uo. des_ifs.
         apply nth_error_Some. ii. clarify. }
     }

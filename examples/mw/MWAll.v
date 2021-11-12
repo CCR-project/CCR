@@ -293,6 +293,30 @@ Section PROOF.
       - eapply MWApp90proof.correct. }
   Qed.
 
+  Require Import MWMapImp MWMap0 MWMap1 MWMapImp0proof MWMap01proof
+          Mem01proof
+  .
+
+  Let gstb := MWStb ++ MapStb ++ Mem1.MemStb ++ AppStb.
+
+  Let MWMap: refines2 [MWMapImp.Map] [MWMap1.Map (fun _ => to_stb gstb)].
+  Proof.
+    etrans.
+    eapply MWMapImp0proof.correct.
+    eapply MWMap01proof.correct.
+    subst gstb. i. stb_incl_tac; eauto 20.
+  Qed.
+
+  Theorem MW_correct:
+    refines_closed (Mod.add_list [Mem0.Mem (fun _ => false); MWCImp.MW; MWAppImp.App])
+                   (Mod.add_list [Mem0.Mem CSL0; SMod.to_src MWC2.SMW; SMod.to_src MWApp2.SApp; MWMap1.Map (fun _ => to_stb gstb)]).
+  Theorem MW: refines2 [MWMapImp.Map] [MWMap1.Map (fun _ => to_stb gstb)].
+  Proof.
+    etrans.
+    eapply MWMapImp0proof.correct.
+    eapply MWMap01proof.correct.
+    subst gstb. i. stb_incl_tac; eauto 20.
+  Qed.
   (* Let CSL0: gname -> bool := fun g => in_dec dec g ["gv0"; "gv1"]. *)
   (* Let MWLow: refines2 [Mem0.Mem (fun _ => false); MWCImp.MW] [Mem0.Mem CSL0; MWC0.MW]. *)
   (* Proof. *)
