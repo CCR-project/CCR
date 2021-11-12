@@ -60,14 +60,14 @@ Section SIMMODSEM.
                       ∃ (idv: option (val * val)) (map: val), mp_tgt = (idv, map)↑⌝}} ∨
           (* {{"INIT": OwnM sp_black ** ⌜w0 = None ∧ (∃ map i v cls, mp_tgt = (Some (Vint i, v), map)↑ *)
           (*                   ∧ mp_src = (mk_lst cls (fun k => if dec k i then v else Vundef) map)↑)⌝}} ∨ *)
-          {{"INIT": OwnM sp_black ** ⌜w0 = None ∧ (∃ map idv cls, mp_tgt = (idv, map)↑
+          {{"INIT": OwnM sp_black ** ⌜w0 = None ∧
+                    (∃ idv cls o map, mp_tgt = (idv, map)↑ ∧ mp_src = (mk_lst cls o map)↑ ∧
    (* ∧ match idv with *)
    (*   | Some (i, v) => mp_src = (mk_lst cls (fun k => if dec (Vint k) i then v else Vundef) map)↑ ∧ cls i = opt *)
    (*   | None => mp_src = (mk_lst cls (fun _ => Vundef) map)↑ *)
    (*   end)⌝}} ∨ *)
-   ∧ ((idv = None ∧ mp_src = (mk_lst cls (fun _ => Vundef) map)↑) ∨
-      (∃ i v, idv = Some (Vint i, v) ∧
-              mp_src = (mk_lst cls (fun k => if dec k i then v else Vundef) map)↑ ∧ cls i = opt)))⌝}} ∨
+        ((idv = None ∧ (cls = fun _ => uninit) ∧ (o = fun _ => Vundef)) ∨
+         (∃ i v, idv = Some (Vint i, v) ∧ cls i = opt ∧ (∀ j (NE: i <> j), cls j <> opt) ∧ o i = v)))⌝}} ∨
           {{"LOCKED": OwnM sp_black ** OwnM sp_white ** ⌜w0 = Some (mp_src, mp_tgt)⌝}}
          )%I)
   .
@@ -98,7 +98,7 @@ Section SIMMODSEM.
         force_l; stb_tac; ss; clarify. steps.
         hcall _ _ None with "*".
         { iModIntro. iSplits; ss; et. iFrame. iSplits; ss; et. iRight. iLeft. iSplits; ss; et.
-          iPureIntro. eexists _, None, _; cbn. esplits; ss; et. }
+          iPureIntro. eexists None. esplits; ss; et. }
         { esplits; ss; et. }
         fold wf. mDesAll; des; clarify. steps. force_l; stb_tac; ss; clarify. steps.
 
@@ -123,231 +123,179 @@ Section SIMMODSEM.
       { mDesAll; des_safe; clarify. steps. astop. steps.
 
         force_l; stb_tac; ss; clarify. steps.
-        hcall _ _ None with "*".
-        { iModIntro. iSplits; ss; et. iFrame. iSplits; ss; et. iRight. iLeft. iSplits; ss; et.
-          iPureIntro. des; clarify; iSplits; ss; et. left. iSplits; ss; et. f_equal. }
-        { esplits; ss; et. }
-        fold wf. mDesAll; des; clarify. steps. force_l; stb_tac; ss; clarify. steps.
-
-        - 
-      }
-      mDesOr "INV"; ss; mDesAll; des; clarify.
-      - steps. astop. steps.
-        force_l; stb_tac; ss; clarify. steps.
-        hcall _ _ (Some (_, _)) with "*".
-        { iModIntro. iSplits; ss; et. iRight. iRight. iFrame. iSplits; ss; et. }
-        { esplits; ss; et. }
-        fold wf. mDesAll; des; clarify.
-        mDesOr "INV"; mDesAll; des; clarify; ss.
-        mDesOr "INV"; mDesAll; des; clarify; ss.
-        steps.
-
-        force_l; stb_tac; ss; clarify. steps.
-        hcall _ _ None with "*".
-        { iModIntro. iSplits; ss; et. iFrame. iSplits; ss; et. iRight. iLeft. iSplits; ss; et.
-          iPureIntro. eexists _, None, _; cbn. esplits; ss; et. }
-        { esplits; ss; et. }
-        fold wf. mDesAll; des; clarify. steps. force_l; stb_tac; ss; clarify. steps.
-
-        hcall _ _ None with "*".
+        hcall _ _ (Some _) with "*".
         { iModIntro. iSplits; ss; et. iFrame. iSplits; ss; et. }
         { esplits; ss; et. }
-        fold wf. mDesAll; des; clarify. steps.
+        fold wf. mDesAll; des_safe; clarify. steps. ss. des_ifs_safe.
+        mDesOr "INV".
+        { mDesAll; des; clarify; ss. }
+        mDesOr "INV".
+        { mDesAll; des; clarify; ss. }
+        mDesAll; des_safe; clarify; ss.
+        steps.
+
+        force_l; stb_tac; ss; clarify. steps.
+        hcall _ _ None with "*".
+        { iModIntro. iSplits; ss; et. iFrame. iSplits; ss; et. iRight. iLeft. iSplits; ss; et.
+          iPureIntro. esplits; ss; et. }
+        { esplits; ss; et. }
+        fold wf. mDesAll; des_safe; clarify. steps. ss. des_ifs_safe.
+
+        force_l; stb_tac; ss; clarify. steps.
+        hcall _ _ None with "*".
+        { iModIntro. iFrame. iSplits; ss; et. }
+        { esplits; ss; et. }
+        fold wf. mDesAll; des_safe; clarify. steps. ss. des_ifs_safe.
+        clear PURE0.
 
         hret None; ss.
-        { iModIntro. iSplits; ss; et.
-          iDes; des; clarify.
-          - iFrame; iSplits; ss; et. iLeft. iSplits; ss; et.
-          - iFrame; iSplits; ss; et. iRight. iLeft. iSplits; ss; et. iPureIntro. esplits; ss; et.
-          - iFrame; iSplits; ss; et. iRight. iLeft. iSplits; ss; et. iPureIntro. esplits; ss; et.
-            right. esplits; ss; et.
+        { iModIntro. iSplits; ss; et. iDes; des_safe; clarify.
+          - iFrame. iSplits; ss; et. iLeft. iPureIntro. esplits; ss; et.
+          - iFrame. iSplits; ss; et. iRight. iLeft. iPureIntro. esplits; ss; et.
         }
-        { esplits; ss; et. }
-    }
-          -
-          iSplits; ss; et.
-          - iLeft. iSplits; ss; et.
-          - iRight. iLeft. iSplits; ss; et. iPureIntro. esplits; ss; et.
-          - iRight. iRight. iSplits; ss; et. iPureIntro. esplits; ss; et.
-          -
-          
-        - }
-        { 
-
-        mDesOr "INV"; mDesAll; des; clarify; ss; cycle 1.
-        { des_ifs.
-          mDesOr "INV"; mDesAll; des; clarify; ss.
-        }
-        mDesOr "INV"; mDesAll; des; clarify; ss.
-        steps.
-        iPureIntro. left. esplits; et.
-        hide_k. Set Printing All. rewrite Any.upcast_downcast.
-      -
-        des_u. steps. unfold mainF, MWC0.mainF, ccallU. steps. fold wf.
-      mAssert (OwnM sp_black ** OwnM sp_white ** ⌜w = None ∧ ∃ (arr map: val), mp_tgt = (arr, map)↑⌝) with "*" as "A".
-      { iDes; des; clarify; try (by iFrame; iSplits; ss; et). admit "ez". }
-      mDesAll; des; clarify.
-      astart 1. acatch. hcall _ 100 (Some (_, _)) with "*".
-      { iModIntro. iFrame. iSplits; ss; et. }
-      { esplits; ss; et. }
-      fold wf. steps. astop. mDesAll; des; clarify.
-      mDesOr "INV"; mDesAll; des; clarify; ss.
-      mDesOr "INV"; mDesAll; des; clarify; ss.
-      steps. force_l; stb_tac; ss; clarify. steps.
-      hcall _ _ _ with "-A".
-      { iModIntro. iFrame. iSplits; ss; et. }
-      { esplits; ss; et. }
-      fold wf. mDesAll; des; clarify. steps. force_l; stb_tac; ss; clarify.
-      mDesOr "INV"; mDesAll; des; clarify; ss.
-      mDesOr "INV"; mDesAll; des; clarify; ss. steps.
-      hcall _ _ _ with "*".
-      { rewrite repeat_replicate. iDestruct (OwnM_replicate_sepL with "A") as "A". iMod "A".
-        iModIntro. iSplits; ss; et. iFrame. iSplits; ss; et. iRight. iLeft. iSplits; ss; et.
-        - iPureIntro. eapply sim_init.
       }
-      { esplits; ss; et. }
-      fold wf. mDesAll; des; clarify. steps. force_l; stb_tac; ss; clarify. steps.
-
-      hcall _ _ _ with "*".
-      { iModIntro. iFrame. iSplits; ss; et. }
-      { esplits; ss; et. }
-      fold wf. mDesAll; des; clarify. steps. ss. des_ifs.
-      hret None; ss.
-      { iModIntro. iFrame. iSplits; ss; et. }
     }
 
     econs; ss.
-    { init. harg. mDesAll. des; clarify. des_u.
-      assert(w = None).
-      { repeat mDesOr "INV"; mDesAll; des; clarify. mAssertPure False; ss. admit "ez". }
-      steps. unfold loopF, MWC0.loopF, ccallU. steps. fold wf.
-      force_l; stb_tac; ss; clarify. steps. hcall _ _ _ with "*".
-      { iFrame. iSplits; ss; et. }
-      { esplits; ss; et. }
-      fold wf. mDesAll; des; clarify. steps. force_l; stb_tac; ss; clarify. steps. hcall _ _ _ with "*".
-      { iFrame. iSplits; ss; et. }
-      { esplits; ss; et. }
-      fold wf. mDesAll; des; clarify. steps. ss. des_ifs.
-      hret None; ss.
-      { iModIntro. iFrame; et. }
+    { init. harg. fold wf. unfold loopF, MWB0.loopF, ccallU. mDesAll; des; clarify.
+      mDesOr "INV"; ss; mDesAll; des; clarify.
+      { steps. force_l; stb_tac; ss; clarify. steps.
+        hcall _ _ None with "*".
+        { iModIntro. iFrame. iSplits; ss; et. iLeft. iSplits; ss; et. }
+        { esplits; ss; et. }
+        fold wf. mDesAll; des; clarify.
+        steps.
+
+        force_l; stb_tac; ss; clarify. steps.
+        hcall _ _ None with "*".
+        { iModIntro. iFrame. iSplits; ss; et. }
+        { esplits; ss; et. }
+        fold wf. mDesAll; des; clarify.
+        steps.
+
+        hret None; ss.
+        { iModIntro. iSplits; ss; et. iDes; des_safe; clarify.
+          - iFrame. iSplits; ss; et. iLeft. iPureIntro. esplits; ss; et.
+          - iFrame. iSplits; ss; et. iRight. iLeft. iPureIntro. esplits; ss; et.
+        }
+      }
+      mDesOr "INV"; ss; mDesAll; des_safe; clarify.
+      { steps. force_l; stb_tac; ss; clarify. steps.
+        hcall _ _ None with "*".
+        { iModIntro. iFrame. iSplits; ss; et. iRight. iLeft. iSplits; ss; et. iPureIntro. esplits; ss; et. }
+        { esplits; ss; et. }
+        fold wf. mDesAll; des_safe; clarify.
+        steps.
+
+        force_l; stb_tac; ss; clarify. steps.
+        hcall _ _ None with "*".
+        { iModIntro. iFrame. iSplits; ss; et. }
+        { esplits; ss; et. }
+        fold wf. mDesAll; des_safe; clarify.
+        steps.
+
+        hret None; ss.
+        { iModIntro. iSplits; ss; et. iDes; des_safe; clarify.
+          - iFrame. iSplits; ss; et. iLeft. iPureIntro. esplits; ss; et.
+          - iFrame. iSplits; ss; et. iRight. iLeft. iPureIntro. esplits; ss; et.
+        }
+      }
+      { admit "ez". }
     }
 
     econs; ss.
-    { init. harg. mDesAll. des; clarify. des_u. unfold putF, MWC0.putF, ccallU. steps. fold wf.
-      force_r; ss. esplits; ss. steps.
-      mDesOr "INV"; mDesAll; des; clarify.
-      { exfalso. clear - _UNWRAPU0. apply Any.downcast_upcast in _UNWRAPU0. des.
+    { init. harg. fold wf. unfold putF, MWB0.putF, ccallU. mDesAll; des; clarify.
+      mDesOr "INV"; ss; mDesAll; des; clarify.
+      { steps.
+        exfalso. clear - _UNWRAPU0. apply Any.downcast_upcast in _UNWRAPU0. des.
         apply Any.upcast_inj in _UNWRAPU0. des; clarify.
         assert(T: exists (a b: local_state), a <> b).
         { exists (mk_lst (fun _ => uninit) (fun _ => Vundef) Vundef),
           (mk_lst (fun _ => uninit) (fun _ => Vundef) (Vint 1)). ii. clarify. }
         des. revert a b T. rewrite EQ. i. repeat des_u; ss.
       }
-      mDesOr "INV"; mDesAll; des; clarify; cycle 1.
-      { mAssertPure False; ss. admit "ez". }
-      steps. rewrite Any.upcast_downcast in *. clarify. steps.
-      destruct ((0 <=? z)%Z && (z <? 100)%Z) eqn:T.
-      - inv PURE2. hexploit (SIM (Z.to_nat z)); [lia|]. rewrite ! Nat2Z.id in *;rewrite Z2Nat.id in *;try lia.
-        intro U. des; ss.
-        + rewrite INIT. ss. steps.
-          mAssert _ with "A2".
-          { iDestruct (big_sepL_insert_acc with "A2") as "[B C]"; et.
-            instantiate (1:=_ ** _). iSplitL "B". { iExact "B". } iExact "C". }
-          mDesAll; ss. rewrite Z2Nat.id in *; try lia. rewrite scale_int_8. steps.
-          astart 1. acatch. hcall _ (_, _, _) (Some (_, _)) with "-A2".
-          { iModIntro. iFrame. iSplitR "A1"; et. }
-          { esplits; ss; et. }
-          fold wf. mDesAll; des; clarify. ss. des_ifs.
-          mDesOr "INV"; mDesAll; des; clarify; ss.
-          mDesOr "INV"; mDesAll; des; clarify; ss.
-          steps. astop. steps. hret None; ss.
-          { iModIntro. iFrame. iSplits; ss; et. iRight. iLeft. iSplits; ss; et; cycle 1.
-            { iApply "A2"; et. }
-            iPureIntro. eapply sim_upd; et; try lia. econs; et.
-          }
-        + rewrite UNINIT. ss. steps. force_l. exists true. steps. unfold set; ss. des_ifs. steps.
-          mAssert _ with "A2".
-          { iDestruct (big_sepL_insert_acc with "A2") as "[B C]"; et.
-            instantiate (1:=_ ** _). iSplitL "B". { iExact "B". } iExact "C". }
-          mDesAll; ss. rewrite Z2Nat.id in *; try lia. rewrite scale_int_8. steps.
-          astart 1. acatch. hcall _ (_, _, _) (Some (_, _)) with "-A2".
-          { iModIntro. iFrame. iSplitR "A1"; et. }
-          { esplits; ss; et. }
-          fold wf. mDesAll; des; clarify. ss. des_ifs.
-          mDesOr "INV"; mDesAll; des; clarify; ss.
-          mDesOr "INV"; mDesAll; des; clarify; ss.
-          steps. astop. steps. hret None; ss.
-          { iModIntro. iFrame. iSplits; ss; et. iRight. iLeft. iSplits; ss; et; cycle 1.
-            { iApply "A2"; et. }
-            iPureIntro. eapply sim_upd2; et; try lia. econs; et.
-          }
-      - steps.
-        destruct (lst_cls l z) eqn:U.
-        + ss. steps. force_l. exists false. steps. unfold set. des_ifs. steps. force_l; stb_tac; ss; clarify.
-          steps. hcall _ _ _ with "A INIT".
-          { iModIntro. iSplits; ss; et. iRight. iRight. iFrame. iSplits; ss; et. }
-          { esplits; ss; et. }
-          fold wf. ss. des_ifs.
-          mDesOr "INV"; mDesAll; des; clarify; ss.
-          mDesOr "INV"; mDesAll; des; clarify; ss.
-          steps. hret None; ss.
-          { iSplits; ss; et. iModIntro. iFrame. iSplits; ss; et. iRight. iLeft. iSplits; ss; et.
-            iPureIntro. eapply sim_upd3; et; try lia. }
-        + exfalso. inv PURE2. hexploit (NORMAL z); et. { lia. } intro V. rewrite U in *; des; ss.
-        + ss. steps. rewrite U. ss. steps. force_l; stb_tac; ss; clarify. steps.
-          hcall _ _ _ with "-A2".
-          { iModIntro. iSplits; ss; et. iRight. iRight. iFrame. iSplits; ss; et. }
-          { esplits; ss; et. }
-          fold wf. ss. des_ifs.
-          mDesOr "INV"; mDesAll; des; clarify; ss.
-          mDesOr "INV"; mDesAll; des; clarify; ss.
-          steps. hret None; ss.
-          { iSplits; ss; et. iModIntro. iFrame. iSplits; ss; et. iRight. iLeft. iSplits; ss; et. }
+      mDesOr "INV"; ss; mDesAll; des_safe; clarify.
+      { steps. force_r; esplits; ss. steps. des; clarify.
+        - steps. unfold unint in *. des_ifs.
+          steps. force_l. exists true. steps. unfold set. des_ifs. steps. astop. steps.
+          hret None; ss.
+          { iModIntro. iSplits; ss; et. iFrame. iSplits; ss; et.
+            iRight; iLeft. iPureIntro. esplits; ss; et. right. esplits; ss; et; i; des_ifs. }
+        - steps. unfold unint in *. des_ifs_safe.
+          destruct (dec i z).
+          + subst. des_ifs_safe. rewrite PURE1. steps. astop. steps.
+            hret None; ss.
+            { iModIntro. iSplits; ss; et. iFrame. iSplits; ss; et.
+              iRight; iLeft. iPureIntro. esplits; ss; et. right. unfold set. esplits; ss; et; des_ifs. }
+          + des_ifs_safe. steps. des_ifs.
+            * steps. force_l. exists false. steps. unfold set. des_ifs. steps.
+              force_l; stb_tac; ss; clarify. steps.
+              hcall _ _ (Some _) with "*".
+              { iModIntro. iFrame. iSplits; ss; et. }
+              { esplits; ss; et. }
+              fold wf. mDesAll; des; clarify.
+              steps.
+
+              ss. des_ifs_safe.
+              mDesOr "INV"; ss; mDesAll; des; clarify.
+              mDesOr "INV"; ss; mDesAll; des; clarify.
+
+              hret None; ss.
+              { iModIntro. iSplits; ss; et. iFrame. iSplits; ss; et.
+                iRight; iLeft. iPureIntro. esplits; ss; et. right. esplits; ss; et; i; des_ifs; et. }
+            * steps. des_ifs.
+              { contradict PURE2; et. }
+              steps.
+              force_l; stb_tac; ss; clarify. steps.
+              hcall _ _ (Some _) with "*".
+              { iModIntro. iFrame. iSplits; ss; et. }
+              { esplits; ss; et. }
+              fold wf. mDesAll; des; clarify.
+              mDesOr "INV"; ss; mDesAll; des; clarify.
+              mDesOr "INV"; ss; mDesAll; des; clarify.
+              steps.
+              hret None; ss.
+              { iModIntro. iSplits; ss; et. iFrame. iSplits; ss; et.
+                iRight; iLeft. iPureIntro. esplits; ss; et. right. esplits; ss; et; i; des_ifs; et. }
+      }
+      { admit "ez". }
     }
 
     econs; ss.
-    { init. harg. mDesAll. des; clarify. des_u. unfold getF, MWC0.getF, ccallU. steps. fold wf.
-      force_r. esplits; ss. steps.
-      mDesOr "INV"; mDesAll; des; clarify.
-      { exfalso. clear - _UNWRAPU1. apply Any.downcast_upcast in _UNWRAPU1. des.
+    { init. harg. fold wf. unfold getF, MWB0.getF, ccallU. mDesAll; des; clarify.
+      mDesOr "INV"; ss; mDesAll; des; clarify.
+      { steps.
+        exfalso. clear - _UNWRAPU1. apply Any.downcast_upcast in _UNWRAPU1. des.
         apply Any.upcast_inj in _UNWRAPU1. des; clarify.
         assert(T: exists (a b: local_state), a <> b).
         { exists (mk_lst (fun _ => uninit) (fun _ => Vundef) Vundef),
           (mk_lst (fun _ => uninit) (fun _ => Vundef) (Vint 1)). ii. clarify. }
         des. revert a b T. rewrite EQ. i. repeat des_u; ss.
       }
-      mDesOr "INV"; mDesAll; des; clarify; cycle 1.
-      { mAssertPure False; ss. admit "ez". }
-      steps. rewrite Any.upcast_downcast in *. clarify. steps.
-      destruct ((0 <=? z)%Z && (z <? 100)%Z) eqn:T.
-      - inv PURE2. hexploit (SIM (Z.to_nat z)); [lia|]. rewrite ! Nat2Z.id in *;rewrite Z2Nat.id in *;try lia.
-        intro U. des; ss.
-        + rewrite INIT. ss. steps.
-          mAssert _ with "A2".
-          { iDestruct (big_sepL_delete with "A2") as "[B C]"; et. xtra. }
-          mDesAll; ss. rewrite Z2Nat.id in *; try lia. rewrite scale_int_8. steps.
-          astart 1. acatch. hcall _ (_, _, _) (Some (_, _)) with "-A2".
+      mDesOr "INV"; ss; mDesAll; des_safe; clarify.
+      { steps. force_r; esplits; ss. steps. des; clarify.
+        destruct (dec i z); subst.
+        - steps. astop. steps.
+          hret None; ss.
+          { iModIntro. iSplits; ss; et. iFrame. iSplits; ss; et.
+            iRight; iLeft. iPureIntro. esplits; ss; et. right. esplits; ss; et; i; des_ifs. }
+        - steps. des_ifs.
+          { contradict PURE2; et. }
+          steps.
+          force_l; stb_tac; ss; clarify. steps.
+          hcall _ _ (Some _) with "*".
           { iModIntro. iFrame. iSplits; ss; et. }
           { esplits; ss; et. }
-          fold wf. mDesAll; des; clarify. ss. des_ifs.
-          mDesOr "INV"; mDesAll; des; clarify; ss.
-          mDesOr "INV"; mDesAll; des; clarify; ss.
-          steps. astop. steps. hret None; ss.
-          { iModIntro. iFrame. iSplits; ss; et. iRight. iLeft. iSplits; ss; et; cycle 1.
-            { iApply big_sepL_delete; et. rewrite Z2Nat.id. iFrame. lia. }
-          }
-      - steps. inv PURE2. exploit (NORMAL z); et. { lia. } intro U; des; clarify. rewrite U. ss.
-        steps. force_l; stb_tac; ss; clarify. steps.
-        hcall _ _ (Some (_, _)) with "-A2".
-        { iModIntro. iFrame. iSplits; ss; et. }
-        { esplits; ss; et. }
-        fold wf. mDesAll; des; clarify. ss. des_ifs.
-        mDesOr "INV"; mDesAll; des; clarify; ss.
-        mDesOr "INV"; mDesAll; des; clarify; ss.
-        steps. hret None; ss.
-        { iModIntro. iFrame. iSplits; ss; et. iRight. iLeft. iSplits; ss; et. }
+          fold wf. mDesAll; des; clarify.
+          mDesOr "INV"; ss; mDesAll; des; clarify.
+          mDesOr "INV"; ss; mDesAll; des; clarify.
+          steps.
+          hret None; ss.
+          { iModIntro. iSplits; ss; et. iFrame. iSplits; ss; et.
+            iRight; iLeft. iPureIntro. esplits; ss; et. right. esplits; ss; et; i; des_ifs; et. }
+      }
+      { admit "ez". }
     }
-
   Unshelve. all: ss. all: try exact 0.
   Qed.
 
