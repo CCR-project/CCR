@@ -307,44 +307,128 @@ Section PROOF.
     subst gstb. i. stb_incl_tac; eauto 20.
   Qed.
 
-  Theorem MW_correct:
-    refines2 ([Mem0.Mem (fun _ => false); MWCImp.MW; MWAppImp.App; MWMapImp.Map])
-             ([Mem0.Mem (fun _ => true); SMod.to_src MWC2.SMW; SMod.to_src MWApp2.SApp; SMod.to_src MWMap1.SMap]).
-  Proof.
-    etrans.
-    { change [Mem0.Mem (λ _, false); MWCImp.MW; MWAppImp.App; MWMapImp.Map] with
-        ([Mem0.Mem (λ _, false); MWCImp.MW; MWAppImp.App] ++ [MWMapImp.Map]).
-      eapply refines2_app; try eassumption.
-    }
-    etrans.
-    { eapply refines2_cons.
-      { eapply Mem01proof.correct. }
-      eapply refines2_cons.
-      { etrans; [eapply MWC01proof.correct|]. etrans; [eapply MWC12proof.correct|]. refl. }
-      eapply refines2_cons.
-      { etrans; [eapply MWApp01proof.correct|]. etrans; [eapply MWApp12proof.correct|].
-        { i. instantiate (1:=fun _ => to_stb gstb). unfold gstb. stb_incl_tac; ss; eauto 10. }
-        refl.
-      }
-      refl.
-    }
-    TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
-    -
-    -
-      { et.
-    change [Mem0.Mem CSL0; SMod.to_src SMW; SMod.to_src SApp; SMod.to_src SMap] with
-        ([Mem0.Mem CSL0; SMod.to_src SMW; SMod.to_src SApp] ++ [SMod.to_src SMap]).
-    eapply refines2_app; cycle 1.
-    { eapply MWMap.
-  Qed.
-  TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
-
   Definition refines2_closed (md_tgt md_src: list Mod.t): Prop :=
-    Beh.of_program (ModL.compile (Mod.add_list md_tgt)) <1= Beh.of_program (ModL.compile (Mod.add_list md_src))
+    refines_closed (Mod.add_list md_tgt) (Mod.add_list md_src)
   .
 
    Lemma refines2_close: refines2 <2= refines2_closed.
    Proof. ii. specialize (PR nil). ss. unfold Mod.add_list in *. ss. rewrite ! ModL.add_empty_l in PR. eauto. Qed.
+
+   Global Program Instance refines2_closed_PreOrder: PreOrder refines2_closed.
+   Next Obligation.
+     ii. ss.
+   Qed.
+   Next Obligation.
+     ii. eapply H in PR. eapply H0 in PR. eapply PR.
+   Qed.
+
+   Require Import Weakening.
+
+   Lemma gstb_weaker: forall sk,
+       stb_weaker (to_stb (MWHeader.MWStb ++ AppStb ++ MWHeader.MapStb ++ Mem1.MemStb))
+                  ((λ _ : Sk.t, to_stb gstb) sk).
+   Proof.
+     ii. unfold gstb. stb_tac. rewrite ! eq_rel_dec_correct in *.
+     repeat match goal with
+            | H: context[ match (string_Dec ?x ?y) with _ => _ end ] |- _ =>
+              destruct (string_Dec x y);
+                [subst; ss; clarify;
+                 try by (esplits; et; [stb_tac|]; et; try refl)|]
+            end.
+     ss.
+   Qed.
+
+   Theorem MW_correct:
+     refines2_closed
+       ([Mem0.Mem (fun _ => false); MWCImp.MW; MWAppImp.App; MWMapImp.Map])
+       ([Mem0.Mem (fun _ => true); SMod.to_src MWC2.SMW; SMod.to_src MWApp2.SApp; SMod.to_src MWMap1.SMap]).
+   Proof.
+     etrans.
+     { eapply refines2_close.
+       change [Mem0.Mem (λ _, false); MWCImp.MW; MWAppImp.App; MWMapImp.Map] with
+           ([Mem0.Mem (λ _, false); MWCImp.MW; MWAppImp.App] ++ [MWMapImp.Map]).
+       eapply refines2_app; try eassumption.
+     }
+     etrans.
+     { eapply refines2_close.
+       eapply refines2_cons.
+       { etrans; [eapply Mem01proof.correct|]. unfold Mem1.Mem. eapply adequacy_weaken.
+         instantiate (1:=fun _ => to_stb gstb). i. r. i. ss.
+       }
+       eapply refines2_cons.
+       { etrans; [eapply MWC01proof.correct|]. etrans; [eapply MWC12proof.correct|].
+         eapply adequacy_weaken. eapply gstb_weaker. }
+       eapply refines2_cons.
+       { etrans; [eapply MWApp01proof.correct|]. etrans; [eapply MWApp12proof.correct|].
+         { i. instantiate (1:=fun _ => to_stb gstb). unfold gstb. stb_incl_tac; ss; eauto 10. }
+         refl.
+       }
+       refl.
+     }
+     unfold App, Map.
+     (* set (SMod.to_tgt (to_stb ∘ SMod.get_stb)) as f in *. *)
+     set (SMod.to_tgt (λ _, to_stb gstb)) as f in *.
+     etrans.
+     { change [f (SMem (negb ∘ CSL0)); f SMW; f SApp; f SMap] with
+           (map f [(SMem (negb ∘ CSL0)); SMW; SApp; SMap]).
+       r.
+       assert((λ _ : Sk.t, to_stb gstb) = (to_stb ∘ SMod.get_stb [SMem (negb ∘ CSL0); SMW; SApp; SMap])).
+       { extensionality sk. unfold gstb.
+         autounfold with stb; autorewrite with stb. cbn. extensionality fn. cbn.
+         rewrite ! eq_rel_dec_correct.
+         repeat match goal with
+                | |- context[ match (string_Dec ?x ?y) with _ => _ end ] =>
+                  destruct (string_Dec x y);
+                    [subst; ss; clarify;
+                     try by (r in PURE; des; ss; unfold is_pure in *; des_ifs;
+                             r in PURE; uipropall; des; clarify; r in PURE1; uipropall; des; clarify);
+                     try by (stb_tac; ss)|]
+                end.
+         ss.
+       }
+       subst f. rewrite H. eapply adequacy_type; cycle 1.
+       - i. stb_tac. ss.
+     }
+         des_ifs.
+         repeat replace string_dec with (@dec _ string_Dec) by ss.
+         des_ifs.
+       eapply adequacy_type2.
+       - econs.
+       eapply adequacy_type.
+
+       
+       instantiate (1:=(map f [(SMem (negb ∘ CSL0)); SMW; SApp; SMap])). refl. }
+       repeat (
+           match goal with | [ |- context[?a :: ?b :: ?c] ] => rewrite (@cons_app _ a (b :: c)) end;
+           match goal with
+           | [ |- context[[SMod.to_tgt ?f ?a]] ] =>
+             change ([SMod.to_tgt f a]) with (map (SMod.to_tgt f) [a])
+           end).
+       multimatch goal with
+       | [ |- context[(map ?f ?a) ++ (map _ ?b)] ] => idtac a; idtac b
+       end.
+       (map _ _)
+       erewrite <- map_app with (f:=SMod.to_tgt (λ _ : Sk.t, to_stb gstb)).
+     }
+     unfold MW. unfold App.
+     unfold Map.
+     replace [Mem1.Mem (negb ∘ CSL0)] with [Mem1.Mem (negb ∘ CSL0)].
+     replace [Mem1.Mem (negb ∘ CSL0); MW; App (λ _, to_stb gstb); Map (λ _, to_stb gstb)] with
+         [Mem1.Mem (negb ∘ CSL0); MW; App (λ _, to_stb gstb); Map (λ _, to_stb gstb)].
+     etrans.
+     { r. eapply adequacy_type.
+       [Mem1.Mem (negb ∘ CSL0); MW; App (λ _ : Sk.t, to_stb gstb); Map (λ _ : Sk.t, to_stb gstb)]
+         (map (SMod.to_tgt (to_stb ∘ SMod.get_stb mds)) mds)
+         TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
+       -
+       -
+       { et.
+         change [Mem0.Mem CSL0; SMod.to_src SMW; SMod.to_src SApp; SMod.to_src SMap] with
+             ([Mem0.Mem CSL0; SMod.to_src SMW; SMod.to_src SApp] ++ [SMod.to_src SMap]).
+         eapply refines2_app; cycle 1.
+         { eapply MWMap.
+         Qed.
+         TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
 
   Theorem MW_correct:
     refines2_closed (Mod.add_list [Mem0.Mem (fun _ => false); MWCImp.MW; MWAppImp.App])
