@@ -209,6 +209,81 @@ End MEMAUX.
 
 
 
+Section GRAAUX.
+
+  Inductive wf_res: Type := mk_wf_res { wr_M: URA.t; wr_res: wr_M; wr_pf: URA.wf wr_res }.
+  Definition wf_res_empty: wf_res := @mk_wf_res (of_RA.t RA.empty) ε URA.wf_unit.
+
+  Variable wrs: list wf_res.
+
+  Let Σ: GRA.t := GRA.of_list (map wr_M wrs).
+
+  Definition nth_res (n: nat): Σ.
+    { set (w := nth n wrs wf_res_empty).
+      eapply (@GRA.embed w.(wr_M)); cycle 1.
+      { eapply w.(wr_res). }
+      subst Σ. unfold GRA.of_list.
+      econs; et. instantiate (1:=n).
+      change (of_RA.t RA.empty) with (wr_M wf_res_empty).
+      rewrite map_nth. ss.
+    }
+  Defined.
+
+  Lemma nth_res_wf: forall n, URA.wf (nth_res n).
+  Proof.
+    unfold nth_res. i. set (nth n wrs wf_res_empty) as x.
+    assert(URA.wf (wr_res x)).
+    { eapply wr_pf. }
+    eapply GRA.wf_embed; ss.
+  Qed.
+
+  Lemma nth_res_excl: forall n m (NE: n <> m), (nth_res n) m = ε.
+  Proof.
+    unfold nth_res. i.
+    Local Transparent GRA.to_URA.
+    unfold GRA.embed. des_ifs.
+  Qed.
+
+  Fixpoint summing (n: nat): Σ :=
+    match n with
+    | 0 => nth_res n
+    | S m => nth_res n ⋅ summing m
+    end
+  .
+
+  Lemma summing_unit: forall (k l: nat) (LT: k < l), summing k l = ε.
+  Proof.
+    {
+      intro k. induction k; ii; ss.
+      { unfold nth_res. unfold GRA.embed. cbn. des_ifs. lia. }
+      ur. rewrite IHk; try lia. rewrite URA.unit_id.
+      rewrite nth_res_excl; ss. lia.
+    }
+  Qed.
+
+  Lemma summing_eq: forall (k: nat), summing k k = nth_res k k.
+  Proof.
+    induction k.
+    { ss. }
+    ss. ur. rewrite summing_unit; try lia. rewrite URA.unit_id. ss.
+  Qed.
+
+  Lemma wf_res_wf
+        n
+    :
+      URA.wf (summing n)
+  .
+  Proof.
+    induction n; ii; ss.
+    { eapply nth_res_wf. }
+    ur. i. destruct (dec (S n) k).
+    - subst. rewrite summing_unit; try lia. rewrite URA.unit_id.
+      hexploit (@nth_res_wf (S n)). intro T. ur in T. et.
+    - rewrite nth_res_excl; try lia. rewrite URA.unit_idl. ur in IHn. ss.
+  Qed.
+
+End GRAAUX.
+
 
 
 
@@ -239,6 +314,42 @@ Local Existing Instance mwRA_inG.
 Instance AppRA_inG: @GRA.inG AppRA.t MWGRA.
 Proof. exists 3. ss. Defined.
 Local Existing Instance AppRA_inG.
+
+Lemma high_init_wf
+      (x: Mem1._memRA)
+      (WF: URA.wf x)
+  :
+    URA.wf
+      (GRA.embed Init ⋅ GRA.embed Run ⋅ (GRA.embed (mw_state (λ _, None)) ⋅ GRA.embed (mw_stateX (λ _, None)))
+                 ⋅ (GRA.embed sp_black ⋅ GRA.embed sp_white) ⋅ (GRA.embed (Auth.black x))).
+Proof.
+  rewrite ! GRA.embed_add.
+  unshelve evar (P0: wf_res).
+  { apply (@mk_wf_res AppRA.t (Init ⋅ Run)). ur. ss. }
+  unshelve evar (P1: wf_res).
+  { apply (@mk_wf_res spRA (sp_black ⋅ sp_white)). ur. ss. esplits; ur; ss; et. des_ifs. refl. }
+  unshelve evar (P2: wf_res).
+  { apply (@mk_wf_res memRA (Auth.black x)). ur. esplits; ss.
+    { r. esplits; et. rewrite URA.unit_idl; ss. }
+  }
+  unshelve evar (P3: wf_res).
+  { apply (@mk_wf_res mwRA (mw_state (λ _, None) ⋅ mw_stateX (λ _, None))).
+    ur. rewrite URA.unit_id. esplits; ss.
+    { refl. }
+    { ur. ss. }
+  }
+  hexploit (@wf_res_wf [P2;P1;P3;P0] 4). intro T. ss. unfold nth_res in *. cbn in *.
+  rewrite embed_unit in T. rewrite URA.unit_idl in T.
+  subst P0 P1 P2 P3.
+  r_wf T. clear T.
+  f_equal.
+  { f_equal. unfold AppRA_inG. f_equal. eapply proof_irr. }
+  f_equal.
+  { f_equal. unfold mwRA_inG. f_equal. eapply proof_irr. }
+  f_equal.
+  { f_equal. unfold spRA_inG. f_equal. eapply proof_irr. }
+  { f_equal. unfold memRA_inG. f_equal. eapply proof_irr. }
+Qed.
 
 
 
@@ -284,13 +395,17 @@ Section PROOF.
         i. ss. des_ifs. rewrite URA.unit_id in H.
         rewrite ! white_add in H. rewrite <- ! unfold_var_points_to in H.
         rewrite ! URA.add_assoc in *. rewrite ! URA.add_assoc in H. ss. }
-      ii. ss.
+      ii. ss. clarify. esplits; et; ss.
+      { rr. uipropall. }
+      { ii. rr in POST. uipropall. }
     }
     eapply refines2_cons.
     { eapply MemOpen0proof.correct. }
     { eapply refines2_cons.
       - eapply MWC90proof.correct.
       - eapply MWApp90proof.correct. }
+  Unshelve.
+    all: ss.
   Qed.
 
   Require Import MWMapImp MWMap0 MWMap1 MWMapImp0proof MWMap01proof
@@ -338,10 +453,11 @@ Section PROOF.
      ss.
    Qed.
 
+   (* Mem0.Mem (fun _ => true) *)
    Theorem MW_correct:
      refines2_closed
        ([Mem0.Mem (fun _ => false); MWCImp.MW; MWAppImp.App; MWMapImp.Map])
-       ([Mem0.Mem (fun _ => true); SMod.to_src MWC2.SMW; SMod.to_src MWApp2.SApp; SMod.to_src MWMap1.SMap]).
+       ([SMod.to_src (SMem (negb ∘ CSL0)); SMod.to_src MWC2.SMW; SMod.to_src MWApp2.SApp; SMod.to_src MWMap1.SMap]).
    Proof.
      etrans.
      { eapply refines2_close.
@@ -387,417 +503,21 @@ Section PROOF.
          ss.
        }
        subst f. rewrite H. eapply adequacy_type; cycle 1.
-       - i. stb_tac. ss.
+       - i. stb_tac. clarify. ss. exists tt.
+         instantiate (1:=GRA.embed Init ⋅ GRA.embed (mw_stateX Maps.empty) ⋅ GRA.embed sp_white).
+         esplits; ss; et.
+         + iIntros "[[A B] C]".  iFrame. iSplits; ss; et.
+         + i. iIntros "[A %]". subst. ss.
+       - ss. cbn. rewrite ! URA.unit_id. rewrite ! URA.unit_idl.
+         match goal with
+         | [ |- context[Auth.black ?f] ] => set f as x in *
+         end.
+         erewrite f_equal.
+         { eapply high_init_wf. instantiate (1:=x). subst x. eapply initial_mem_mr_wf_aux. }
+         r_solve.
      }
-         des_ifs.
-         repeat replace string_dec with (@dec _ string_Dec) by ss.
-         des_ifs.
-       eapply adequacy_type2.
-       - econs.
-       eapply adequacy_type.
+     refl.
+   Qed.
 
-       
-       instantiate (1:=(map f [(SMem (negb ∘ CSL0)); SMW; SApp; SMap])). refl. }
-       repeat (
-           match goal with | [ |- context[?a :: ?b :: ?c] ] => rewrite (@cons_app _ a (b :: c)) end;
-           match goal with
-           | [ |- context[[SMod.to_tgt ?f ?a]] ] =>
-             change ([SMod.to_tgt f a]) with (map (SMod.to_tgt f) [a])
-           end).
-       multimatch goal with
-       | [ |- context[(map ?f ?a) ++ (map _ ?b)] ] => idtac a; idtac b
-       end.
-       (map _ _)
-       erewrite <- map_app with (f:=SMod.to_tgt (λ _ : Sk.t, to_stb gstb)).
-     }
-     unfold MW. unfold App.
-     unfold Map.
-     replace [Mem1.Mem (negb ∘ CSL0)] with [Mem1.Mem (negb ∘ CSL0)].
-     replace [Mem1.Mem (negb ∘ CSL0); MW; App (λ _, to_stb gstb); Map (λ _, to_stb gstb)] with
-         [Mem1.Mem (negb ∘ CSL0); MW; App (λ _, to_stb gstb); Map (λ _, to_stb gstb)].
-     etrans.
-     { r. eapply adequacy_type.
-       [Mem1.Mem (negb ∘ CSL0); MW; App (λ _ : Sk.t, to_stb gstb); Map (λ _ : Sk.t, to_stb gstb)]
-         (map (SMod.to_tgt (to_stb ∘ SMod.get_stb mds)) mds)
-         TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
-       -
-       -
-       { et.
-         change [Mem0.Mem CSL0; SMod.to_src SMW; SMod.to_src SApp; SMod.to_src SMap] with
-             ([Mem0.Mem CSL0; SMod.to_src SMW; SMod.to_src SApp] ++ [SMod.to_src SMap]).
-         eapply refines2_app; cycle 1.
-         { eapply MWMap.
-         Qed.
-         TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
-
-  Theorem MW_correct:
-    refines2_closed (Mod.add_list [Mem0.Mem (fun _ => false); MWCImp.MW; MWAppImp.App])
-                   (Mod.add_list [Mem0.Mem CSL0; SMod.to_src MWC2.SMW; SMod.to_src MWApp2.SApp; MWMap1.Map (fun _ => to_stb gstb)]).
-  Proof.
-    etrans.
-    {
-    eapply .
-  Qed.
-
-  Theorem MW: refines2 [MWMapImp.Map] [MWMap1.Map (fun _ => to_stb gstb)].
-  Proof.
-    etrans.
-    eapply MWMapImp0proof.correct.
-    eapply MWMap01proof.correct.
-    subst gstb. i. stb_incl_tac; eauto 20.
-  Qed.
-  (* Let CSL0: gname -> bool := fun g => in_dec dec g ["gv0"; "gv1"]. *)
-  (* Let MWLow: refines2 [Mem0.Mem (fun _ => false); MWCImp.MW] [Mem0.Mem CSL0; MWC0.MW]. *)
-  (* Proof. *)
-  (*   transitivity (KMod.transl_tgt_list [KMem CSL0 CSL0; MWC9.KMW]). *)
-  (*   { eapply refines2_cons. *)
-  (*     { eapply Mem0Openproof.correct. ii; ss. } *)
-  (*     { eapply MWCImp9proof.correct. *)
-  (*       i. *)
-  (*       ii. unfold to_closed_stb. *)
-  (*       autounfold with stb in *. autorewrite with stb in *. cbn in *. *)
-  (*       rewrite ! eq_rel_dec_correct in *. des_ifs. *)
-  (*     } *)
-  (*   } *)
-  (*   etrans. *)
-  (*   { eapply adequacy_open. i. exists ε. split. *)
-  (*     { g_wf_tac. *)
-  (*       { Local Transparent Sk.load_skenv _points_to string_dec. *)
-  (*         (* Eval compute in (KMod.get_sk [KMem CSL0 CSL0; KMW]). *) *)
-  (*         replace (KMod.get_sk [KMem CSL0 CSL0; KMW]) with *)
-  (*                 [("get", Sk.Gfun); ("gv0", Sk.Gvar 0); ("gv1", Sk.Gvar 0); ("gv2", Sk.Gvar 0); *)
-  (*                  ("gv3", Sk.Gvar 0); ("loop", Sk.Gfun); ("put", Sk.Gfun)] in * by refl. *)
-  (*         dup SKINCL. dup SKWF. *)
-  (*         eapply Sk.incl_incl_env in SKINCL. eapply Sk.load_skenv_wf in SKWF. *)
-  (*         hexploit (SKINCL "gv0"). { ss. eauto. } intros [blk0 FIND0]. *)
-  (*         hexploit (SKINCL "gv1"). { ss. eauto. } intros [blk1 FIND1]. *)
-  (*         ur. unfold var_points_to. des_ifs. des; clarify. *)
-  (*         rewrite URA.unit_idl. unfold points_to, Auth.white in *. *)
-  (*         Opaque _points_to SkEnv.id2blk. clarify. *)
-  (*         esplits. *)
-  (*         - r. exists ε. *)
-  (*           extensionality b. extensionality ofs. *)
-  (*           unfold initial_mem_mr. *)
-  (*           des_ifs. *)
-  (*           { assert(s <> "gv0"). *)
-  (*             { ii; clarify. *)
-  (*               exploit (SKINCL0 "gv0"); ss; et. intro T. *)
-  (*               eapply nth_error_In in Heq. *)
-  (*               r in SKWF0. ss. *)
-  (*               eapply NoDup_inj_aux; [eassumption| |apply Heq|apply T|..]; ss. *)
-  (*             } *)
-  (*             assert(s <> "gv1"). *)
-  (*             { ii; clarify. *)
-  (*               exploit (SKINCL0 "gv1"); ss; et. intro T. *)
-  (*               eapply nth_error_In in Heq. *)
-  (*               r in SKWF0. ss. *)
-  (*               eapply NoDup_inj_aux; [eassumption| |apply Heq|apply T|..]; ss. *)
-  (*             } *)
-  (*             assert(SkEnv.id2blk (Sk.load_skenv sk) s = Some b). *)
-  (*             { Local Transparent SkEnv.id2blk. *)
-  (*               clear - Heq. cbn. uo. des_ifs. *)
-  (*               - admit "somehow?". *)
-  (*               - admit "somehow?". *)
-  (*             } *)
-  (*             assert(b <> blk0). *)
-  (*             { ii. clarify. admit "somehow?". } *)
-  (*             assert(b <> blk1). *)
-  (*             { ii. clarify. admit "somehow?". } *)
-  (*             admit "somehow?". *)
-  (*           } *)
-  (*           { admit "???". } *)
-  (*           { admit "???". } *)
-  (*           { admit "???". } *)
-  (*           { admit "???". } *)
-  (*         - { admit "???". } *)
-  (*       } *)
-  (*     } *)
-  (*     ii. ss. clarify. ss. esplits; ss; et. *)
-  (*     - rr. uipropall. *)
-  (*     - ii. rr in POST. uipropall. *)
-  (*   } *)
-  (*   eapply refines2_cons. *)
-  (*   { eapply MemOpen0proof.correct. } *)
-  (*   { eapply MWC90proof.correct. } *)
-  (* Qed. *)
-
-
-
-
-
-  (* Section AUX. *)
-  (*   Context {CONF: EMSConfig}. *)
-  (*   Context `{Sk.ld}. *)
-
-  (*   Lemma refines2_comm_l *)
-  (*         ma mb mc *)
-  (*     : *)
-  (*       refines2 (ma ++ mb) mc = refines2 (mb ++ ma) mc *)
-  (*   . *)
-  (*   Proof. *)
-  (*     eapply Axioms.prop_ext. *)
-  (*     split; i. *)
-  (*     - ii. eapply H0; clear H0. rewrite Mod.add_list_app in *. *)
-  (*       set (Mod.add_list ctx) as c in *. *)
-  (*       set (Mod.add_list ma) as a in *. *)
-  (*       set (Mod.add_list mb) as b in *. *)
-  (*       rewrite ModL.add_assoc in *. *)
-  (*       rewrite ModL.add_assoc_rev in *. *)
-  (*       eapply ModL.add_comm. *)
-  (*       rewrite ModL.add_assoc_rev in *. *)
-  (*       eapply ModL.add_comm. ss. eapply ModL.add_comm in eapply H0. rewrite ModL.add_comm in *. r in H0. r. *)
-  (*   Qed. *)
-  (* End AUX. *)
-    eapply refines2
-    cbn.
-    refl.
-                -
-                ss. r. unfold SkEnv.id2blk.
-              assert(b <> blk0).
-              { ii; clarify.
-                exploit (SKINCL0 "gv0"); ss; et. intro T.
-                eapply nth_error_In in Heq.
-                r in SKWF0. ss.
-                eapply NoDup_inj_aux; [eassumption| |apply Heq|..]; ss.
-              }
-              { ii. clarify.
-                {
-              ss.
-            Transparent _points_to.
-            extensionality b. extensionality ofs.
-            unfold initial_mem_mr.
-            des_ifs.
-            extensionality b. extensionality ofs.
-
-            etrans.
-            { instantiate (1:=initial_mem_mr CSL0 [("get", Sk.Gfun); ("gv0", Sk.Gvar 0); ("gv1", Sk.Gvar 0);
-                                                   ("gv2", Sk.Gvar 0); ("gv3", Sk.Gvar 0); ("loop", Sk.Gfun);
-                                                   ("put", Sk.Gfun)]).
-              r. exists ε. rewrite URA.unit_id.
-              extensionality b. extensionality ofs.
-              destruct b.
-              { cbn. ur. ur. cbn.
-              ur. extensionality b.
-              ur. extensionality ofs.
-              ur.
-              unfold initial_mem_mr.
-              destruct b; ss.
-              des_ifs; bsimpl; des; des_sumbool.
-              extensionality b. extensionality ofs.
-              ur.
-            }
-            r. exists ε. rewrite URA.unit_id.
-            ur. extensionality b.
-            ur. extensionality ofs.
-            ur.
-            unfold initial_mem_mr.
-            des_ifs; bsimpl; des; des_sumbool.
-            extensionality b. extensionality ofs.
-            ur.
-            ss.
-          -
-          ur. ss.
-
-
-          intros [blk1 FIND1].
-          cbn. eauto. [cbn; eauto|]. intros G0.
-          hexploit (SKINCL "gv1"); ss; eauto. intros G1.
-          ur. unfold var_points_to. des_ifs.
-          { admit "". }
-          { exfalso. cbn in *.
-          unfold initial_mem_mr.
-
-          des_ifs. ss. uo. split.
-          2: { ur. i. ur. i. ur. des_ifs. }
-          { repeat rewrite URA.unit_id. ur. eexists ε.
-            repeat rewrite URA.unit_id. extensionality k. extensionality n.
-            unfold sumbool_to_bool, andb. des_ifs.
-            { ss. clarify. }
-            { ss. clarify. exfalso. lia. }
-            { repeat (destruct k; ss). }
-          }
-        }
-        Local Transparent Sk.load_skenv _points_to string_dec.
-        unfold var_points_to.
-        rewrite URA.unit_idl.
-        ur. unfold var_points_to, initial_mem_mr. ss. uo. idtac. split.
-        2: { ur. i. ur. i. ur. des_ifs. }
-        { repeat rewrite URA.unit_id. ur. eexists ε.
-          repeat rewrite URA.unit_id. extensionality k. extensionality n.
-          unfold sumbool_to_bool, andb. des_ifs.
-          { ss. clarify. }
-          { ss. clarify. exfalso. lia. }
-          { repeat (destruct k; ss). }
-        }
-      }
-
-      { g_wf_tac. repeat (i; splits; ur; ss). refl. }
-      { ii. ss. }
-    }
-
-    
-          eapply incl_appl.
-        cbn. rr. unfold to_stb_context, to_stb. ii. ss. stb_tac.
-        des_ifs.
-        apply_all_once rel_dec_correct. subst.
-        Local Transparent
-        unfold rel_dec in *. des_ifs.
-        unfold to_stb_context. unfold to_closed_stb. ss.
-        etrans; [|eapply to_closed_stb_weaker]. stb_incl_tac; try tauto. }
-        i. ss. refl. }
-      eapply MWCImp9proof.correct.
-      etrans.
-      { eapply MWCImp9proof.correct. refl. }
-      { unfold MWC9.MW. Set Printing Implicit. Unset Printing Notations. Set Printing All. unfold KMW.
-        (@to_closed_stb MWGRA ∘ @KMod.get_stb MWGRA [@KMem MWGRA memRA_inG; @KMW MWGRA memRA_inG])
-        TTTTTTTTTTTTTTT
-        eapply MWC90proof.correct.
-
-      
-      eapply refines2_cons; [|refl].
-      { etrans.
-        { eapply StackImp0proof.correct. }
-        { eapply Stack01proof.correct. i.
-          etrans; [|eapply to_closed_stb_weaker]. stb_incl_tac; tauto. }
-      }
-    }
-
-    {
-    }
-    etrans.
-    { eapply adequacy_open. i. exists ε. split.
-      { g_wf_tac. repeat (i; splits; ur; ss). refl. }
-      { ii. ss. }
-
-    }
-  Qed.
-
-  Theorem mw_correct:
-    refines2 [Mem0.Mem; MWCImp.MW.Stack; EchoImp.Echo]
-             [Mem0.Mem; Stack2.Stack; KMod.transl_src (fun _ => ["Echo"]) KEcho].
-  Proof.
-  Qed.
 End PROOF.
 
-
-
-(* Imp program *)
-Require Import Mem0 StackImp EchoImp EchoMainImp ClientImp.
-Section ECHOIMP.
-  Definition echo_progs := [Stack_prog; Echo_prog; EchoMain_prog; Client_prog].
-  Definition echo_imp: ModL.t :=
-    Mod.add_list (Mem :: map ImpMod.get_mod echo_progs).
-
-  Definition echo_imp_itr := ModSemL.initial_itr (ModL.enclose echo_imp) None.
-End ECHOIMP.
-
-
-Require Import Mem0 Stack0 Echo0 EchoMain0 Client0.
-Section ECHOIMPL.
-  Definition echo_impl: ModL.t :=
-    Mod.add_list [Mem; Stack; Echo; Main; Client].
-
-  Definition echo_impl_itr := ModSemL.initial_itr (ModL.enclose echo_impl) None.
-End ECHOIMPL.
-
-
-Require Import MemOpen Stack3A Echo1 EchoMain0 Client0.
-(* spec program *)
-Require Import Stack2.
-Section ECHOSPEC.
-  Definition echo_spec: ModL.t :=
-    Mod.add_list [
-        Mem0.Mem;
-      Stack2.Stack;
-      KMod.transl_src (fun _ => ["Echo"]) KEcho;
-      Main; Client
-      ].
-
-  Definition echo_spec_itr := ModSemL.initial_itr (ModL.enclose echo_spec) None.
-End ECHOSPEC.
-
-
-
-Require Import Mem0Openproof MemOpen0proof.
-Require Import StackImp0proof Stack01proof Stack12proof Stack23Aproof.
-Require Import EchoMainImp0proof EchoImp0proof.
-Require Import ClientImp0proof Echo01proof.
-Require Import Echo1mon Stack32proof.
-Section PROOF.
-  Theorem echo_correct:
-    refines2 [Mem0.Mem; StackImp.Stack; EchoImp.Echo]
-             [Mem0.Mem; Stack2.Stack; KMod.transl_src (fun _ => ["Echo"]) KEcho].
-  Proof.
-    transitivity (KMod.transl_tgt_list [KMem; Stack1.KStack]++[EchoImp.Echo]).
-    { eapply refines2_cons.
-      { eapply Mem0Openproof.correct. }
-      eapply refines2_cons; [|refl].
-      { etrans.
-        { eapply StackImp0proof.correct. }
-        { eapply Stack01proof.correct. i.
-          etrans; [|eapply to_closed_stb_weaker]. stb_incl_tac; tauto. }
-      }
-    }
-    etrans.
-    { eapply refines2_app; [|refl].
-      eapply adequacy_open. i. exists ε. split.
-      { g_wf_tac. repeat (i; splits; ur; ss). refl. }
-      { ii. ss. }
-    }
-    eapply refines2_cons.
-    { eapply MemOpen0proof.correct. }
-    transitivity (KMod.transl_tgt_list [Stack3A.KStack; KEcho]).
-    { eapply refines2_cons.
-      { etrans.
-        { eapply Stack12proof.correct. }
-        { eapply Stack23Aproof.correct. }
-      }
-      { etrans.
-        { eapply EchoImp0proof.correct. }
-        { eapply Echo01proof.correct.
-          stb_context_incl_tac; tauto. }
-      }
-    }
-    etrans.
-    { eapply adequacy_open. i. exists ε. split.
-      { g_wf_tac; repeat (i; splits; ur; ss). refl. }
-      { ii. ss. }
-    }
-    { eapply refines2_cons.
-      { eapply Stack32proof.correct. }
-      eapply refines2_cons; [|refl].
-      { eapply Echo1mon.correct. ii. ss. des; auto. }
-    }
-  Qed.
-
-  Corollary echo_closed_correct:
-    refines_closed echo_imp echo_spec.
-  Proof.
-    eapply refines_close. hexploit refines2_app.
-    { eapply echo_correct. }
-    { eapply refines2_cons.
-      { eapply EchoMainImp0proof.correct. }
-      { eapply ClientImp0proof.correct. }
-    }
-    ss.
-  Qed.
-End PROOF.
-
-
-Require Import SimSTS2 Imp2Csharpminor Imp2Asm.
-Require Import Imp2AsmProof.
-Section PROOF.
-  Context `{builtins : builtinsTy}.
-  Hypothesis source_linking: exists impl, link_imps echo_progs = Some impl.
-
-  Theorem echo_compile_correct
-          (asms : Coqlib.nlist Asm.program)
-          (COMP: Forall2 (fun imp asm => compile_imp imp = Errors.OK asm) echo_progs asms)
-    :
-      exists asml, (Linking.link_list asms = Some asml) /\
-                   (improves2_program (ModL.compile echo_spec) (Asm.semantics asml)).
-  Proof.
-    hexploit compile_behavior_improves; [et|et|]. i. des. esplits; [et|].
-    eapply improves_combine; [|et]. eapply echo_closed_correct.
-  Qed.
-End PROOF.

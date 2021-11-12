@@ -188,7 +188,7 @@ Section PROOF.
 
   Definition MWStb: alist gname fspec.
     eapply (Seal.sealing "stb").
-    eapply [("MW.main",main_spec); ("MW.loop",loop_spec); ("MW.put",put_spec); ("MW.get",get_spec)].
+    eapply [("main",main_spec); ("MW.loop",loop_spec); ("MW.put",put_spec); ("MW.get",get_spec)].
   Defined.
 
 
@@ -267,7 +267,7 @@ Section PROOF.
 
   Definition MW1Stb: alist gname fspec.
     eapply (Seal.sealing "stb").
-    eapply [("MW.main", fspec_mw1); ("MW.loop", fspec_mw1); ("MW.put", fspec_mw1); ("MW.get", fspec_mw1);
+    eapply [("main", fspec_mw1); ("MW.loop", fspec_mw1); ("MW.put", fspec_mw1); ("MW.get", fspec_mw1);
             ("App.init", fspec_mw1); ("App.run", fspec_mw1);
             ("Map.new", fspec_trivial); ("Map.access", fspec_trivial); ("Map.update", fspec_trivial);
             ("alloc", alloc_spec); ("free", free_spec); ("load", load_spec); ("store", store_spec); ("cmp", cmp_spec)].

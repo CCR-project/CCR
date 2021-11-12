@@ -66,7 +66,7 @@ Section PROOF.
 
 
   Definition MWsbtb: list (string * fspecbody) :=
-    [("MW.main", mk_specbody main_spec (cfunU mainF));
+    [("main", mk_specbody main_spec (cfunU mainF));
     ("MW.loop", mk_specbody loop_spec (cfunU loopF));
     ("MW.put", mk_specbody put_spec (cfunU putF));
     ("MW.get", mk_specbody get_spec (cfunU getF))
@@ -84,7 +84,7 @@ Section PROOF.
 
   Definition SMW: SMod.t := {|
     SMod.get_modsem := fun _ => SMWSem;
-    SMod.sk := [("MW.main", Sk.Gfun); ("MW.loop", Sk.Gfun); ("MW.put", Sk.Gfun); ("MW.get", Sk.Gfun);
+    SMod.sk := [("MW.loop", Sk.Gfun); ("MW.put", Sk.Gfun); ("MW.get", Sk.Gfun);
                ("gv0", Sk.Gvar 0); ("gv1", Sk.Gvar 0)];
   |}
   .

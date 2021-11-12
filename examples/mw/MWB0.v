@@ -15,8 +15,8 @@ Section PROOF.
 
   Notation pget := (p0 <- trigger PGet;; p0 <- p0↓?;; Ret p0) (only parsing). (*** NOTE THAT IT IS UB CASTING ***)
   Notation pput p0 := (trigger (PPut p0↑)) (only parsing).
-  Notation pupd_arr arr := (`st: val * val <- pget;; pput (arr, snd st)) (only parsing).
-  Notation pupd_map map := (`st: val * val <- pget;; pput (fst st, map)) (only parsing).
+  Notation pupd_idv idv := (`st: option (val * val) * val <- pget;; pput (idv, snd st)) (only parsing).
+  Notation pupd_map map := (`st: option (val * val) * val <- pget;; pput (fst st, map)) (only parsing).
 
   Definition loopF: list val -> itree Es val :=
     fun varg =>
@@ -29,8 +29,7 @@ Section PROOF.
   Definition mainF: list val -> itree Es val :=
     fun varg =>
       _ <- (pargs [] varg)?;;
-      `arr: val <- ccallU "alloc" ([Vint 100]);; (pargs [Tblk] [arr])?;;;
-      pupd_arr arr;;;
+      pupd_idv (@None (val * val));;;
       `map: val <- ccallU "Map.new" ([]: list val);;
       pupd_map map;;;
       `_: val <- ccallU "App.init" ([]: list val);;
@@ -42,10 +41,14 @@ Section PROOF.
     fun varg =>
       '(k, v) <- (pargs [Tint; Tuntyped] varg)?;;
       assume(intrange_64 k);;;
-      '(arr, map) <- pget;;
-      (if ((0 <=? k) && (k <? 100))%Z
-       then addr <- (vadd arr (Vint (8 * k)))?;; `_: val <- ccallU "store" [addr; v];; Ret tt
-       else `_: val <- ccallU "Map.update" ([map; Vint k; v]);; Ret tt);;;
+      '(idv, map) <- pget;;
+      (match (idv: option (val * val)) with
+       | Some (i, _) =>
+         if dec i (Vint k)
+         then pupd_idv (Some (Vint k, v))
+         else `_: val <- ccallU "Map.update" ([map; Vint k; v]);; Ret tt
+       | _ => pupd_idv (Some (Vint k, v))
+       end);;;
       syscallU "print" [k];;;
       Ret Vundef
   .
@@ -54,10 +57,14 @@ Section PROOF.
     fun varg =>
       k <- (pargs [Tint] varg)?;;
       assume(intrange_64 k);;;
-      '(arr, map) <- pget;;
-      `v: val <- (if ((0 <=? k) && (k <? 100))%Z
-                  then addr <- (vadd arr (Vint (8 * k)))?;; ccallU "load" [addr]
-                  else ccallU "Map.access" ([map; Vint k]));;
+      '(idv, map) <- pget;;
+      `v: val <- (match idv with
+                  | Some (i, v) =>
+                    if dec i (Vint k)
+                    then Ret v
+                    else ccallU "Map.access" ([map; Vint k])
+                  | _ => ccallU "Map.access" ([map; Vint k])
+                  end);;
       syscallU "print" [k];;;
       Ret v
   .
@@ -66,7 +73,7 @@ Section PROOF.
     ModSem.fnsems := [("main", cfunU mainF); ("MW.loop", cfunU loopF);
                      ("MW.put", cfunU putF); ("MW.get", cfunU getF)];
     ModSem.mn := "MW";
-    ModSem.initial_st := (Vint 0, Vint 0)↑;
+    ModSem.initial_st := (@None (val * val), Vint 0)↑;
   |}
   .
   (* Vptr (or_else (skenv.(SkEnv.id2blk) "arr") 0) 0 *)

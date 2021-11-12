@@ -88,7 +88,7 @@ Section PROOF.
   Context `{@GRA.inG spRA Σ}.
 
   Definition MWsbtb: list (string * fspecbody) :=
-    [("MW.main", mk_specbody fspec_mw1 (cfunU mainF));
+    [("main", mk_specbody fspec_mw1 (cfunU mainF));
     ("MW.loop", mk_specbody fspec_mw1 (cfunU loopF));
     ("MW.put", mk_specbody fspec_mw1 (cfunU putF));
     ("MW.get", mk_specbody fspec_mw1 (cfunU getF))
@@ -104,7 +104,7 @@ Section PROOF.
 
   Definition SMW: SMod.t := {|
     SMod.get_modsem := fun _ => SMWSem;
-    SMod.sk := [("MW.main", Sk.Gfun); ("MW.loop", Sk.Gfun); ("MW.put", Sk.Gfun); ("MW.get", Sk.Gfun);
+    SMod.sk := [("MW.loop", Sk.Gfun); ("MW.put", Sk.Gfun); ("MW.get", Sk.Gfun);
                ("gv0", Sk.Gvar 0); ("gv1", Sk.Gvar 0)];
   |}
   .

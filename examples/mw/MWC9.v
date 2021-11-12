@@ -83,7 +83,7 @@ Section PROOF.
   Context `{@GRA.inG memRA Σ}.
 
   Definition MWsbtb: list (string * kspecbody) :=
-    [("MW.main", ksb_trivial (cfunU mainF)); ("MW.loop", ksb_trivial (cfunU loopF));
+    [("main", ksb_trivial (cfunU mainF)); ("MW.loop", ksb_trivial (cfunU loopF));
     ("MW.put", ksb_trivial (cfunU putF)); ("MW.get", ksb_trivial (cfunU getF))].
 
   Definition MWStb: list (gname * fspec).
@@ -107,7 +107,7 @@ Section PROOF.
 
   Definition KMW: KMod.t := {|
     KMod.get_modsem := fun sk => KMWSem (Sk.load_skenv sk);
-    KMod.sk := [("MW.main", Sk.Gfun); ("MW.loop", Sk.Gfun); ("MW.put", Sk.Gfun); ("MW.get", Sk.Gfun);
+    KMod.sk := [("MW.loop", Sk.Gfun); ("MW.put", Sk.Gfun); ("MW.get", Sk.Gfun);
                ("gv0", Sk.Gvar 0); ("gv1", Sk.Gvar 0)]
   |}
   .

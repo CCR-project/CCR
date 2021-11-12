@@ -46,8 +46,8 @@ Section SIMMODSEM.
 
   Lemma _main_sim sk (SKINCL: Sk.incl (defs MWprog) sk) (SKWF: Sk.wf sk):
     sim_fnsem (wf (Sk.load_skenv sk)) le
-              ("MW.main", KModSem.disclose_ksb_tgt "MW" (global_stb sk) (ksb_trivial (cfunU mainF)))
-              ("MW.main", cfunU (eval_imp (Sk.load_skenv sk) MWCImp.mainF)).
+              ("main", KModSem.disclose_ksb_tgt "MW" (global_stb sk) (ksb_trivial (cfunU mainF)))
+              ("main", cfunU (eval_imp (Sk.load_skenv sk) MWCImp.mainF)).
   Proof.
     eapply Sk.incl_incl_env in SKINCL. eapply Sk.load_skenv_wf in SKWF.
     hexploit (SKINCL "gv0"); ss; eauto 10. intros [blk0 FIND0].

@@ -79,7 +79,7 @@ Section PROOF.
       []
       [("App.init", 0); ("App.run", 0); ("Map.new", 0); ("Map.update", 3); ("Map.access", 2)]
       [("gv0", 0%Z); ("gv1", 0%Z)]
-      [("MW.main", mainF); ("MW.loop", loopF); ("MW.put", putF); ("MW.get", getF)]
+      [("main", mainF); ("MW.loop", loopF); ("MW.put", putF); ("MW.get", getF)]
   .
 
   Definition MWSem ge: ModSem.t := ImpMod.modsem MWprog ge.
