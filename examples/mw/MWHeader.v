@@ -238,13 +238,13 @@ Section PROOF.
 
   Definition access_spec: fspec :=
     mk_simple (fun '(h, k, v, m) =>
-                 ((fun varg o => ⌜varg = ([Vptr h 0%Z; Vint k]: list val)↑ ∧ o = ord_pure 2 ∧ m k = Some v⌝ **
+                 ((fun varg o => ⌜varg = ([Vptr h 0%Z; Vint k]: list val)↑ ∧ o = ord_pure Ord.omega ∧ m k = Some v⌝ **
                                   is_map h m),
                   (fun vret => ⌜vret = (Vint v)↑⌝ ** (is_map h m)))).
 
   Definition access_loop_spec: fspec :=
     mk_simple (fun '(h, k, v, kvs) =>
-                 ((fun varg o => ⌜varg = ([Vptr h 0%Z; Vint k]: list val)↑ ∧ o = ord_pure 1 ∧
+                 ((fun varg o => ⌜varg = ([Vptr h 0%Z; Vint k]: list val)↑ ∧ o = ord_pure (1 + length kvs)%ord ∧
                                  alist_find k (kvs: list (Z * Z)) = Some v⌝ ** is_map_internal (Vptr h 0) kvs),
                   (fun vret => ⌜vret = (Vint v)↑⌝ ** (is_map_internal (Vptr h 0) kvs)))).
 

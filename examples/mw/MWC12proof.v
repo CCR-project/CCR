@@ -103,7 +103,7 @@ TODO: APC, locked thinges
       _
       (option (Any.t * Any.t))
       (fun w0 st_src st_tgt => (
-           {{"INIT": ∃ f h map lst0, OwnM (mw_stateX f) ** OwnM (is_map h map)
+           {{"INIT": ∃ f h map lst0, OwnM (mw_stateX f) ** is_map h map
                         ** ⌜st_src = f↑⌝ ** ⌜st_tgt = lst0↑⌝ ** ⌜w0 = None⌝
                         ** ⌜lst0.(lst_map) = Vptr h 0%Z⌝ ** ⌜sim f map lst0⌝}} ∨
            {{"UNINIT": ⌜st_src = (Maps.empty (K:=Z) (V:=Z))↑ ∧ st_tgt = tt↑⌝ ** ⌜w0 = None⌝
@@ -119,14 +119,16 @@ TODO: APC, locked thinges
     clear.
     { r. i.
       autounfold with stb in FIND; autorewrite with stb in FIND. ss.
-      assert(In fn ["MW.main"; "MW.loop"; "MW.put"; "MW.get"; "App.init"; "App.run";
-                    "Map.new"; "Map.access"; "Map.update"; "alloc"; "free"; "load"; "store"; "cmp"]).
-      { rewrite ! eq_rel_dec_correct in *. ss. des_ifs_safe (eauto 30). des_ifs. }
+      rewrite ! eq_rel_dec_correct in *. ss.
+      repeat match goal with
+             | H: context[ match (string_Dec ?x ?y) with _ => _ end ] |- _ =>
+               destruct (string_Dec x y);
+                 [subst; ss; clarify;
+                  try by (r in PURE; des; ss; unfold is_pure in *; des_ifs;
+                          r in PURE; uipropall; des; clarify; r in PURE1; uipropall; des; clarify);
+                  try by (stb_tac; ss)|]
+             end.
       ss.
-      des; subst; ss; clarify;
-        try by (r in PURE; des; ss; unfold is_pure in *; des_ifs;
-                r in PURE; uipropall; des; clarify; r in PURE1; uipropall; des; clarify);
-        try by (stb_tac; ss).
     }
   Qed.
 

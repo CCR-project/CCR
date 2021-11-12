@@ -221,7 +221,7 @@ End MEMAUX.
 
 
 
-Definition MWGRA: GRA.t := GRA.of_list [Mem1.memRA; spRA; mapRA; mwRA; AppRA.t].
+Definition MWGRA: GRA.t := GRA.of_list [Mem1.memRA; spRA; mwRA; AppRA.t].
 Local Existing Instance MWGRA.
 
 Instance memRA_inG: @GRA.inG Mem1.memRA MWGRA.
@@ -232,16 +232,12 @@ Instance spRA_inG: @GRA.inG spRA MWGRA.
 Proof. exists 1. ss. Defined.
 Local Existing Instance spRA_inG.
 
-Instance mapRA_inG: @GRA.inG mapRA MWGRA.
-Proof. exists 2. ss. Defined.
-Local Existing Instance mapRA_inG.
-
 Instance mwRA_inG: @GRA.inG mwRA MWGRA.
-Proof. exists 3. ss. Defined.
+Proof. exists 2. ss. Defined.
 Local Existing Instance mwRA_inG.
 
 Instance AppRA_inG: @GRA.inG AppRA.t MWGRA.
-Proof. exists 4. ss. Defined.
+Proof. exists 3. ss. Defined.
 Local Existing Instance AppRA_inG.
 
 
