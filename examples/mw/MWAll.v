@@ -297,7 +297,7 @@ Section PROOF.
           Mem01proof
   .
 
-  Let gstb := MWStb ++ MapStb ++ Mem1.MemStb ++ AppStb.
+  Let gstb := MWHeader.MWStb ++ MapStb ++ Mem1.MemStb ++ AppStb.
 
   Let MWMap: refines2 [MWMapImp.Map] [MWMap1.Map (fun _ => to_stb gstb)].
   Proof.
@@ -308,8 +308,53 @@ Section PROOF.
   Qed.
 
   Theorem MW_correct:
-    refines_closed (Mod.add_list [Mem0.Mem (fun _ => false); MWCImp.MW; MWAppImp.App])
+    refines2 ([Mem0.Mem (fun _ => false); MWCImp.MW; MWAppImp.App; MWMapImp.Map])
+             ([Mem0.Mem (fun _ => true); SMod.to_src MWC2.SMW; SMod.to_src MWApp2.SApp; SMod.to_src MWMap1.SMap]).
+  Proof.
+    etrans.
+    { change [Mem0.Mem (λ _, false); MWCImp.MW; MWAppImp.App; MWMapImp.Map] with
+        ([Mem0.Mem (λ _, false); MWCImp.MW; MWAppImp.App] ++ [MWMapImp.Map]).
+      eapply refines2_app; try eassumption.
+    }
+    etrans.
+    { eapply refines2_cons.
+      { eapply Mem01proof.correct. }
+      eapply refines2_cons.
+      { etrans; [eapply MWC01proof.correct|]. etrans; [eapply MWC12proof.correct|]. refl. }
+      eapply refines2_cons.
+      { etrans; [eapply MWApp01proof.correct|]. etrans; [eapply MWApp12proof.correct|].
+        { i. instantiate (1:=fun _ => to_stb gstb). unfold gstb. stb_incl_tac; ss; eauto 10. }
+        refl.
+      }
+      refl.
+    }
+    TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
+    -
+    -
+      { et.
+    change [Mem0.Mem CSL0; SMod.to_src SMW; SMod.to_src SApp; SMod.to_src SMap] with
+        ([Mem0.Mem CSL0; SMod.to_src SMW; SMod.to_src SApp] ++ [SMod.to_src SMap]).
+    eapply refines2_app; cycle 1.
+    { eapply MWMap.
+  Qed.
+  TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
+
+  Definition refines2_closed (md_tgt md_src: list Mod.t): Prop :=
+    Beh.of_program (ModL.compile (Mod.add_list md_tgt)) <1= Beh.of_program (ModL.compile (Mod.add_list md_src))
+  .
+
+   Lemma refines2_close: refines2 <2= refines2_closed.
+   Proof. ii. specialize (PR nil). ss. unfold Mod.add_list in *. ss. rewrite ! ModL.add_empty_l in PR. eauto. Qed.
+
+  Theorem MW_correct:
+    refines2_closed (Mod.add_list [Mem0.Mem (fun _ => false); MWCImp.MW; MWAppImp.App])
                    (Mod.add_list [Mem0.Mem CSL0; SMod.to_src MWC2.SMW; SMod.to_src MWApp2.SApp; MWMap1.Map (fun _ => to_stb gstb)]).
+  Proof.
+    etrans.
+    {
+    eapply .
+  Qed.
+
   Theorem MW: refines2 [MWMapImp.Map] [MWMap1.Map (fun _ => to_stb gstb)].
   Proof.
     etrans.
