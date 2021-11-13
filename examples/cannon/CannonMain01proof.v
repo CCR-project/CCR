@@ -35,7 +35,7 @@ Section SIMMODSEM.
     econs; ss. init. harg.
     mDesAll. des; clarify. steps.
     unfold ccallU. steps. rewrite GlobalStb_fire. steps.
-    hcall _ _ _ with "A".
+    hcall _ _ with "A".
     { iModIntro. iSplits; ss. }
     { splits; ss. }
     mDesAll. des; clarify. steps. hret _; ss.

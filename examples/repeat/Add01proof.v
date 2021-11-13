@@ -73,16 +73,12 @@ Section SIMMODSEM.
       assert (exists m, z0 = Z.of_nat m).
       { exists (Z.to_nat z0). rewrite Z2Nat.id; auto. lia. } des. subst.
       hexploit GlobalStb_repeat; et. i. inv H. astart 1. acatch; et.
-      hcall_weaken (Repeat1.repeat_spec FunStb sk) _ (_, _, _, Z.succ) _ with ""; et.
+      hcall_weaken (Repeat1.repeat_spec FunStb sk) (_, _, _, Z.succ) _ with ""; et.
       { iPureIntro. splits; et. econs.
         { eapply SKWF. eauto. }
         econs.
         { et. }
-        { etrans; [|et]. econs. ss. split.
-          { ii. iIntros "H". iPure "H" as H. des. clarify.
-            iModIntro. iSplits; et. }
-          { ii. iIntros "H". iPure "H" as H. des; clarify. }
-        }
+        { etrans; [|et]. econs. ss. esplits; ss; et. eapply Ord.lt_le. eapply Ord.omega_upperbound. }
       }
       { splits; ss. }
       mDesAll. des; clarify. steps. astop. steps. hret _; ss.

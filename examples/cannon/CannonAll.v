@@ -37,7 +37,7 @@ Section PROOF.
       { unfold to_closed_stb. cbn. i. ss. clarify.
         exists tt. split; ss.
         { iIntros "H". iSplits; ss. }
-        { ii. iPureIntro. i. des. auto. }
+        { split; ss. ii. iPureIntro. i. des. auto. }
       }
     Qed.
   End ERASE.

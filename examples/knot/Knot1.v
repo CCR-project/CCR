@@ -34,8 +34,9 @@ Section KNOT.
       mk_fspec_inv
         (mk_simple (X:=(nat -> nat) * nat)
                    (fun '(f, n) => (
-                        (fun varg o =>
-                           (⌜varg = [Vint (Z.of_nat n)]↑ /\ (intrange_64 n) /\ o = ord_pure (2 * n + 1)%nat⌝)
+                        (ord_pure (2 * n + 1)%nat),
+                        (fun varg =>
+                           (⌜varg = [Vint (Z.of_nat n)]↑ /\ (intrange_64 n)⌝)
                              ** (OwnM (knot_frag (Some f)))
                         ),
                         (fun vret =>
@@ -48,9 +49,10 @@ Section KNOT.
       mk_fspec_inv
         (mk_simple (X:=nat)
                    (fun n => (
-                        (fun varg o =>
+                        (ord_pure (2 * n)%nat),
+                        (fun varg =>
                            (⌜exists fb,
-                                 varg = [Vptr fb 0; Vint (Z.of_nat n)]↑ /\ (intrange_64 n) /\ o = ord_pure (2 * n)%nat /\
+                                 varg = [Vptr fb 0; Vint (Z.of_nat n)]↑ /\ (intrange_64 n) /\
                                  fb_has_spec (Sk.load_skenv sk) (RecStb sk) fb rec_spec⌝)
                              ** OwnM (knot_frag (Some f))
                         ),
@@ -66,9 +68,10 @@ Section KNOT.
       mk_fspec_inv
         (mk_simple (X:=(nat -> nat))
                    (fun f => (
-                        (fun varg o =>
+                        (ord_pure 1%nat),
+                        (fun varg =>
                            (⌜exists fb,
-                                 varg = [Vptr fb 0]↑ /\ o = ord_pure 1 /\
+                                 varg = [Vptr fb 0]↑ /\
                                  fb_has_spec (Sk.load_skenv sk) (FunStb sk) fb (fun_gen f)⌝)
                              ** (∃ old, OwnM (knot_frag old))
                         ),
@@ -83,9 +86,10 @@ Section KNOT.
     Definition knot_spec2:    fspec :=
       mk_simple (X:=(nat -> nat))
                 (fun f => (
-                     (fun varg o =>
+                     (ord_pure 1%nat),
+                     (fun varg =>
                         (⌜exists fb,
-                              varg = [Vptr fb 0]↑ /\ o = ord_pure 1 /\
+                              varg = [Vptr fb 0]↑ /\
                               fb_has_spec (Sk.load_skenv sk) (FunStb sk) fb (fun_gen f)⌝)
                           ** OwnM (knot_init)
                           ** inv_closed
@@ -130,8 +134,9 @@ Section WEAK.
 
   Lemma rec_spec_weaker f: fspec_weaker (mrec_spec f (OwnM (knot_frag (Some f)) ** inv_closed)) rec_spec.
   Proof.
-    ii. ss. exists (f, x_src). split.
-    { intros arg_src arg_tgt o. ss.
+    ii. ss. exists (f, x_src). esplits; ss; et.
+    { refl. }
+    { intros arg_src arg_tgt. ss.
       iIntros "H". iDestruct "H" as "[[% [H0 H1]] %]".
       iModIntro. iFrame. et. }
     { intros ret_src ret_tgt. ss.
@@ -150,8 +155,9 @@ Section WEAK.
 
   Lemma knot_spec2_weaker sk: fspec_weaker (knot_spec2 RecStb FunStb sk) (knot_spec RecStb FunStb sk).
   Proof.
-    ii. ss. exists x_src. split.
-    { intros arg_src arg_tgt o.
+    ii. ss. exists x_src. esplits; ss; et.
+    { refl. }
+    { intros arg_src arg_tgt.
       iIntros "H". iDestruct "H" as "[[[% H0] H1] %]".
       des. subst. iModIntro. iSplitL "H1"; ss. iSplitL; ss; et. iSplitR; et.
     }

@@ -81,8 +81,9 @@ Section AUX.
     @mk_fspec
       _
       (meta fsp)
-      (fun mn x varg_src varg_tgt o =>
-         inv_closed ** (precond fsp) mn x varg_src varg_tgt o)
+      fsp.(measure)
+      (fun mn x varg_src varg_tgt =>
+         inv_closed ** (precond fsp) mn x varg_src varg_tgt)
       (fun mn x vret_src vret_tgt =>
          inv_closed ** (postcond fsp) mn x vret_src vret_tgt).
 
@@ -91,7 +92,7 @@ Section AUX.
     :
       fspec_weaker (mk_fspec_inv fsp0) (mk_fspec_inv fsp1).
   Proof.
-    ii. exploit WEAKER. i. des. exists x_tgt. split; ss.
+    ii. exploit WEAKER. i. des. exists x_tgt. esplits; ss; et.
     { ii. iIntros "[INV H]". iSplitL "INV"; ss.
       iApply PRE. iExact "H". }
     { ii. iIntros "[INV H]". iSplitL "INV"; ss.
@@ -119,12 +120,12 @@ Ltac iarg :=
     ]
   end.
 
-Tactic Notation "icall_open" uconstr(o) uconstr(x) "with" constr(Hns) :=
+Tactic Notation "icall_open" uconstr(x) "with" constr(Hns) :=
   let POST := get_fresh_name_tac "POST" in
   let INV := constr:("☃CLOSED") in
   let Hns := select_ihyps Hns in
   let Hns := constr:("☃CLOSED"::Hns) in
-  eapply (@hcall_clo _ Hns POST INV o _ x _ (inr (_, _)));
+  eapply (@hcall_clo _ Hns POST INV _ x _ (inr (_, _)));
   unshelve_goal;
   [eassumption
   |start_ipm_proof; iSplitL "☃CLOSED"; [iModIntro; iSplitL "☃CLOSED"; [iExact "☃CLOSED"|ss]|]
@@ -139,14 +140,14 @@ Tactic Notation "icall_open" uconstr(o) uconstr(x) "with" constr(Hns) :=
   ]
   ].
 
-Tactic Notation "icall_weaken" uconstr(ftsp) uconstr(o) uconstr(x) uconstr(a) "with" constr(Hns) :=
+Tactic Notation "icall_weaken" uconstr(ftsp) uconstr(x) uconstr(a) "with" constr(Hns) :=
   let POST := get_fresh_name_tac "POST" in
   let INV := get_fresh_name_tac "INV" in
   let CLOSED := constr:("☃CLOSED") in
   let TMP := constr:("☃TMP") in
   let Hns := select_ihyps Hns in
   let Hns := constr:("☃CLOSED"::Hns) in
-  eapply (@hcall_clo_weaken _ Hns POST INV ftsp o x _ (inl a));
+  eapply (@hcall_clo_weaken _ Hns POST INV ftsp x _ (inl a));
   unshelve_goal;
   [|eassumption
    |start_ipm_proof; iFrame "☃CLOSED"

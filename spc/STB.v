@@ -62,6 +62,26 @@ Ltac stb_tac :=
   end.
 
 
+
+Definition ord_weaker (next cur: ord): Prop :=
+  match next, cur with
+  | ord_pure next, ord_pure cur => (next <= cur)%ord
+  (* | _, ord_top => True *)
+  | ord_top, ord_top => True
+  | _, _ => False
+  end
+.
+
+Global Program Instance ord_weaker_PreOrder: PreOrder ord_weaker.
+Next Obligation.
+  ii. destruct x; ss. refl.
+Qed.
+Next Obligation.
+  ii. destruct x, y, z; ss. etrans; et.
+Qed.
+
+
+
 Section HEADER.
 
   Context `{Σ: GRA.t}.
@@ -69,7 +89,7 @@ Section HEADER.
   Definition fspec_weaker (fsp_src fsp_tgt: fspec): Prop :=
     forall x_src mn,
     exists x_tgt,
-      (<<MEASURE: fsp_src.(measure) x_src = fsp_tgt.(measure) x_tgt>>) ∧
+      (<<MEASURE: ord_weaker (fsp_tgt.(measure) x_tgt) (fsp_src.(measure) x_src)>>) ∧
       (<<PRE: forall arg_src arg_tgt,
           (fsp_src.(precond) mn x_src arg_src arg_tgt) ⊢ #=> (fsp_tgt.(precond) mn x_tgt arg_src arg_tgt)>>) ∧
       (<<POST: forall ret_src ret_tgt,
@@ -80,7 +100,7 @@ Section HEADER.
   Next Obligation.
   Proof.
     ii. exists x_src. esplits; ii.
-    { ss. }
+    { refl. }
     { iStartProof. iIntros "H". iApply "H". }
     { iStartProof. iIntros "H". iApply "H". }
   Qed.

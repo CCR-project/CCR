@@ -36,9 +36,10 @@ Section PROOF.
   .
 
   Definition input_spec: fspec :=
-    mk_fspec (fun _ h _argh _argl o =>
+    mk_fspec (fun _ => ord_top)
+             (fun _ h _argh _argl =>
                 (∃ (stk0: list Z) (argl: list val),
-                  ⌜_argh = stk0↑ ∧ _argl = argl↑ ∧ argl = [Vptr h 0] ∧ o = ord_top⌝
+                  ⌜_argh = stk0↑ ∧ _argl = argl↑ ∧ argl = [Vptr h 0]⌝
                    ** (is_int_stack h stk0))%I)
              (fun _ h _reth _retl => (∃ (stk1: list Z), ⌜_reth = stk1↑ ∧ _retl = Vundef↑⌝ ** is_int_stack h stk1)%I)
   .
@@ -59,9 +60,10 @@ Section PROOF.
 
 
   Definition output_spec: fspec :=
-    mk_fspec (fun _ h _argh _argl o =>
+    mk_fspec (fun _ => ord_top)
+             (fun _ h _argh _argl =>
                 (∃ (stk0: list Z) (argl: list val),
-                  ⌜_argh = stk0↑ ∧ _argl = argl↑ ∧ argl = [Vptr h 0] ∧ o = ord_top⌝
+                  ⌜_argh = stk0↑ ∧ _argl = argl↑ ∧ argl = [Vptr h 0]⌝
                    ** is_int_stack h stk0)%I)
              (fun _ h _reth _retl => (∃ (stk1: list Z), ⌜_reth = stk1↑ ∧ _retl = Vundef↑⌝ ** is_int_stack h stk1)%I)
   .

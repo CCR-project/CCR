@@ -63,7 +63,7 @@ Section SIMMODSEM.
     { init. unfold fibF, ccallU. harg.
       destruct x as [x INV]. mDesAll. ss. des. subst.
       rewrite Any.upcast_downcast. steps.
-      inv PURE4. rewrite FBLOCK. ss. steps.
+      inv PURE3. rewrite FBLOCK. ss. steps.
       des_ifs.
       { astart 0. astop. steps. force_l. eexists. steps.
         force_r.
@@ -78,24 +78,22 @@ Section SIMMODSEM.
       steps. inv SPEC. astart 10. acatch.
       { eapply RecStb_incl. eauto. }
 
-      hcall_weaken _ _ _ _ with "A"; et.
+      hcall_weaken _ _ _ with "A"; et.
       { ss. iModIntro. iFrame; ss. iSplitR; ss.
         iPureIntro. splits.
         { instantiate (1:=(x - 1%nat)). repeat f_equal. lia. }
         { unfold_intrange_64. unfold sumbool_to_bool in *. des_ifs; try lia. }
-        ss.
       }
       { splits; ss. eauto with ord_step. }
       steps. ss. mDesAll. clarify.
       erewrite Any.upcast_downcast in *. clarify. steps. acatch.
       { eapply RecStb_incl. eauto. }
-      hcall_weaken _ _ _ _ with "A"; et.
+      hcall_weaken _ _ _ with "A"; et.
       { ss. iModIntro. iFrame; ss.
         iSplitR; ss.
         iPureIntro. splits.
         { instantiate (1:=(x - 2%nat)). repeat f_equal. lia. }
         { unfold_intrange_64. unfold sumbool_to_bool in *. des_ifs; try lia. }
-        ss.
       }
       { splits; ss. eauto with ord_step. }
       steps. ss. mDesAll. clarify.
@@ -115,7 +113,7 @@ Section SIMMODSEM.
       rewrite FIND. ss. steps.
       specialize (GlobalStb_knot sk). inv GlobalStb_knot.
       acatch; eauto.
-      hcall_weaken _ _ _ _ with "*"; et.
+      hcall_weaken _ _ _ with "*"; et.
       { ss. iModIntro. iFrame; ss.
         iSplitL; ss. iSplitR; ss.
         { iPureIntro. esplits; eauto. econs.
@@ -123,11 +121,13 @@ Section SIMMODSEM.
           eapply fn_has_spec_weaker; eauto. ii. ss.
           eexists (x_src, OwnM (knot_frag (Some Fib)) ** inv_closed).
           splits; ss.
+          { refl. }
           { i. iIntros "[CLOSED [[% H] %]]".
             iModIntro. iFrame; ss.
             iPureIntro. des. esplits; et.
             eapply fb_has_spec_weaker; eauto.
             ii. ss. exists (Fib, x_src0). splits; ss.
+            { refl. }
             { i. iIntros "[[% [H0 H1]] %]".
               iModIntro. iFrame; ss. }
             { i. iIntros "[CLOSED [[% H] %]]".
@@ -142,8 +142,8 @@ Section SIMMODSEM.
       mDesAll. des; clarify. rewrite Any.upcast_downcast. steps.
       inv PURE3. rewrite FBLOCK. inv SPEC. steps. acatch.
       { eapply RecStb_incl. eauto. }
-      hcall_weaken _ _ _ _ with "*"; et.
-      { ss. iModIntro. instantiate (2:=(_, 10)). ss. iFrame; ss. }
+      hcall_weaken _ _ _ with "*"; et.
+      { ss. iModIntro. instantiate (1:=(_, 10)). ss. iFrame; ss. }
       { split; ss. }
       mDesAll. subst. rewrite Any.upcast_downcast. steps.
       astop. steps. hret _; ss.

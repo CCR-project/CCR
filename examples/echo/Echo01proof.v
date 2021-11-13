@@ -73,16 +73,14 @@ Section SIMMODSEM.
     { unfold Echo0.echo_body, echo_body, cfunN, cfunU, ccallN, ccallU.
       kinit. harg. post_call.
       des_ifs. steps.
-      astart 1. acatch. { eapply STBINCL. stb_tac; ss. } hcall _ _ _ with ""; ss; et.
+      astart 1. acatch. { eapply STBINCL. stb_tac; ss. } hcall _ _ with ""; ss; et.
       post_call. steps. astop. steps. erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.
-      hcall _ _ _ with "A"; ss; et.
+      hcall _ _ with "A"; ss; et.
       { iModIntro. iSplits; ss; et. }
-      { ss. }
       post_call. steps. astop. steps.
       erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.
-      hcall _ _ _ with "A"; ss; et.
+      hcall _ _ with "A"; ss; et.
       { iModIntro. iSplits; ss; et. }
-      { ss. }
       post_call. steps. astop. steps.
       hret _; ss.
     }
@@ -91,7 +89,7 @@ Section SIMMODSEM.
       2: { harg. mDesAll. des; clarify. steps. }
       harg. post_call. steps.
       erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.
-      hcall _ _ _ with ""; ss; et.
+      hcall _ _ with ""; ss; et.
       post_call. steps. astop. steps.
       hide_k. force_r.
       { unshelve esplits; et. }
@@ -104,14 +102,12 @@ Section SIMMODSEM.
       - steps.
         astart 1. acatch.
         { erewrite STBINCL; ss. stb_tac; ss. }
-        hcall _ (_, _, _) _ with "-"; ss; et.
-        { ss. }
+        hcall (_, _, _) _ with "-"; ss; et.
         post_call. steps. astop. steps.
 
         erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.
-        hcall _ _ _ with "-"; ss; et.
+        hcall _ _ with "-"; ss; et.
         { iModIntro. iSplits; ss; et. }
-        { ss. }
         post_call. steps. astop. steps.
         hret _; ss.
         { iModIntro. iSplits; ss; et. }
@@ -122,8 +118,7 @@ Section SIMMODSEM.
       harg. post_call. steps.
       astart 1. acatch.
       { erewrite STBINCL; ss. stb_tac; ss. }
-      hcall _ (_, _) _ with "-"; ss; et.
-      { ss. }
+      hcall (_, _) _ with "-"; ss; et.
       post_call. steps. astop. steps.
       destruct a as [|hd tl]; ss.
       - steps. mDesAll; ss; des; subst. rewrite Any.upcast_downcast in *. clarify. steps.
@@ -139,12 +134,11 @@ Section SIMMODSEM.
         force_r; ss. grind.
         unhide_k.
         des_ifs. steps.
-        hcall _ _ _ with ""; ss; et.
+        hcall _ _ with ""; ss; et.
         post_call. steps. astop. steps.
         erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.
-        hcall _ _ _ with "-"; ss; et.
+        hcall _ _ with "-"; ss; et.
         { iModIntro. iSplits; ss; et. }
-        { ss. }
         post_call. steps. astop. steps.
         hret _; ss.
         { iModIntro. iSplits; ss; et. }

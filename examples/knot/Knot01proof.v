@@ -133,8 +133,8 @@ Section SIMMODSEM.
       { eapply MemStb_incl. stb_tac. ss. }
 
       (* call with the opened invariant *)
-      icall_open _ (_, _, _) with "A1".
-      { iModIntro. iSplitL; ss. iSplitL; ss. iSplitR; ss.
+      icall_open (_, _, _) with "A1".
+      { iModIntro. iSplitL; ss. iSplitR; ss.
         iEval (unfold var_points_to) in "A1". rewrite FIND1. iFrame. }
       { split; ss. eauto with ord_step. }
 
@@ -146,7 +146,7 @@ Section SIMMODSEM.
       (* close invariant *)
 
       (* call with the closed invariant *)
-      icall_weaken (fun_gen RecStb sk f) (ord_pure (2 * n)) _ _ with "*".
+      icall_weaken (fun_gen RecStb sk f) _ _ with "*".
       { et. }
       { iModIntro. iFrame. iSplitL; ss.
         { iEval (unfold inv).  iExists _, _. iFrame.
@@ -179,9 +179,9 @@ Section SIMMODSEM.
       { eapply MemStb_incl. stb_tac. ss. }
 
       (* call with the opened invariant *)
-      icall_open _ (_, _, _) with "A1".
+      icall_open (_, _, _) with "A1".
       { iModIntro. iSplitL; ss.
-        iSplitL; ss. iExists _. iSplitR; ss.
+        iExists _. iSplitR; ss.
         iEval (unfold var_points_to) in "A1". rewrite FIND1. ss. }
       { split; ss. eauto with ord_step. }
       mDesAll. subst. steps. rewrite FIND0. steps. astop.

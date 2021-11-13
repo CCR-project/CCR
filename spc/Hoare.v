@@ -73,7 +73,7 @@ Section CANCELSTB.
     forall fn fsp (FIND: alist_find fn (_stb sk) = Some fsp), stb sk fn = Some fsp.
   Hypothesis STBSOUND:
     forall fn (FIND: alist_find fn (_stb sk) = None),
-      (<<NONE: stb sk fn = None>>) \/ (exists fsp, <<FIND: stb sk fn = Some fsp>> /\ <<TRIVIAL: forall mn x arg_src arg_tgt o r (PRE: fsp.(precond) mn x arg_src arg_tgt o r), o = ord_top>>).
+      (<<NONE: stb sk fn = None>>) \/ (exists fsp, <<FIND: stb sk fn = Some fsp>> /\ <<TRIVIAL: forall x, fsp.(measure) x = ord_top>>).
 
   Let mds_src: list Mod.t := List.map (SMod.to_src) mds.
   Let mds_tgt: list Mod.t := List.map (SMod.to_tgt stb) mds.
@@ -96,7 +96,8 @@ Section CANCELSTB.
           (MAINM:
              forall (main_fsp: fspec) (MAIN: stb sk "main" = Some main_fsp),
              exists (x: main_fsp.(meta)) entry_r,
-               (<<PRE: main_fsp.(precond) None x (@initial_arg CONFS) (@initial_arg CONFT) ord_top entry_r>>) /\
+               (<<PRE: main_fsp.(precond) None x (@initial_arg CONFS) (@initial_arg CONFT) entry_r>>) /\
+               (<<MEASURE: main_fsp.(measure) x = ord_top>>) /\
                (<<WFR: URA.wf (entry_r ⋅ fold_left (⋅) (List.map SModSem.initial_mr mss) ε)>>) /\
                (<<RET: forall ret_src ret_tgt,
                    ((main_fsp.(postcond) None x ret_src ret_tgt: iProp) -∗ ⌜ret_src = ret_tgt⌝)>>))
@@ -122,7 +123,8 @@ Section CANCELSTB.
 
   Hypothesis MAINM: forall (main_fsp: fspec) (MAIN: stb sk "main" = Some main_fsp),
       exists (x: main_fsp.(meta)),
-        (<<PRE: Own (entry_r) -∗ main_fsp.(precond) None x initial_arg initial_arg ord_top>>) /\
+        (<<PRE: Own (entry_r) -∗ main_fsp.(precond) None x initial_arg initial_arg>>) /\
+        (<<MEASURE: main_fsp.(measure) x = ord_top>>) /\
         (<<RET: forall ret_src ret_tgt,
             (main_fsp.(postcond) None x ret_src ret_tgt: iProp) -∗ (⌜ret_src = ret_tgt⌝)>>).
 
@@ -163,7 +165,8 @@ Section CANCEL.
           (MAINM:
              forall (main_fsp: fspec) (MAIN: stb0 sk "main" = Some main_fsp),
              exists (x: main_fsp.(meta)) entry_r,
-               (<<PRE: main_fsp.(precond) None x (@initial_arg CONFS) (@initial_arg CONFT) ord_top entry_r>>) /\
+               (<<PRE: main_fsp.(precond) None x (@initial_arg CONFS) (@initial_arg CONFT) entry_r>>) /\
+               (<<MEASURE: main_fsp.(measure) x = ord_top>>) /\
                (<<WFR: URA.wf (entry_r ⋅ SMod.get_initial_mrs mds sk)>>) /\
                (<<RET: forall ret_src ret_tgt,
                    ((main_fsp.(postcond) None x ret_src ret_tgt: iProp) -∗ ⌜ret_src = ret_tgt⌝)>>))
@@ -185,7 +188,8 @@ Section CANCEL.
           (MAINM:
              forall (main_fsp: fspec) (MAIN: stb1 sk "main" = Some main_fsp),
              exists (x: main_fsp.(meta)) entry_r,
-               (<<PRE: main_fsp.(precond) None x (@initial_arg CONFS) (@initial_arg CONFT) ord_top entry_r>>) /\
+               (<<PRE: main_fsp.(precond) None x (@initial_arg CONFS) (@initial_arg CONFT) entry_r>>) /\
+               (<<MEASURE: main_fsp.(measure) x = ord_top>>) /\
                (<<WFR: URA.wf (entry_r ⋅ SMod.get_initial_mrs mds sk)>>) /\
                (<<RET: forall ret_src ret_tgt,
                    ((main_fsp.(postcond) None x ret_src ret_tgt: iProp) -∗ ⌜ret_src = ret_tgt⌝)>>))
@@ -198,7 +202,7 @@ Section CANCEL.
       rewrite flat_map_map. i. ss. unfold map_snd. rewrite FIND. auto. }
     { unfold stb1, sk, SMod.get_stb, SMod.get_sk. unfold to_closed_stb.
       rewrite flat_map_map. ss. i. right. unfold map_snd.
-      rewrite FIND. esplits; et. ii. ss. red in PRE. uipropall. des; auto. }
+      rewrite FIND. esplits; et. }
     { i. exploit MAINM; et. i. des. esplits; et.
       r_wf WFR. rewrite map_map. ss. }
   Qed.
@@ -212,7 +216,8 @@ Section CANCEL.
   Section TYPE0.
   Hypothesis MAINM: forall (main_fsp: fspec) (MAIN: stb0 sk "main" = Some main_fsp),
       exists (x: main_fsp.(meta)),
-        (<<PRE: Own (entry_r) -∗ main_fsp.(precond) None x initial_arg initial_arg ord_top>>) /\
+        (<<PRE: Own (entry_r) -∗ main_fsp.(precond) None x initial_arg initial_arg>>) /\
+        (<<MEASURE: main_fsp.(measure) x = ord_top>>) /\
         (<<RET: forall ret_src ret_tgt,
             (main_fsp.(postcond) None x ret_src ret_tgt: iProp) -∗ (⌜ret_src = ret_tgt⌝)>>).
 
@@ -231,7 +236,8 @@ Section CANCEL.
   Section TYPE1.
   Hypothesis MAINM: forall (main_fsp: fspec) (MAIN: stb1 sk "main" = Some main_fsp),
       exists (x: main_fsp.(meta)),
-        (<<PRE: Own (entry_r) -∗ main_fsp.(precond) None x initial_arg initial_arg ord_top>>) /\
+        (<<PRE: Own (entry_r) -∗ main_fsp.(precond) None x initial_arg initial_arg>>) /\
+        (<<MEASURE: main_fsp.(measure) x = ord_top>>) /\
         (<<RET: forall ret_src ret_tgt,
             (main_fsp.(postcond) None x ret_src ret_tgt: iProp) -∗ (⌜ret_src = ret_tgt⌝)>>).
 
@@ -379,7 +385,8 @@ Section CANCEL.
         (MAINM:
            forall (main_fsp: fspec) (MAIN: stb "main" = Some main_fsp),
            exists (x: main_fsp.(meta)),
-             (<<PRE: Own entry_r -∗ main_fsp.(precond) None x initial_arg initial_arg ord_top>>) /\
+             (<<PRE: Own entry_r -∗ main_fsp.(precond) None x initial_arg initial_arg>>) /\
+             (<<MEASURE: main_fsp.(measure) x = ord_top>>) /\
              (<<RET: forall ret_src ret_tgt,
                  (main_fsp.(postcond) None x ret_src ret_tgt: iProp) -∗ (⌜ret_src = ret_tgt⌝)>>))
     :
@@ -389,7 +396,7 @@ Section CANCEL.
     { instantiate (1:=fun _ => stb). unfold stb. i.
       unfold _stb, _sbtb, _mss, sk. rewrite FIND. auto. }
     { i. unfold stb, _stb, _sbtb, _mss, sk. rewrite FIND.
-      right. esplits; et. ii. red in PRE. ss. red in PRE. uipropall. des; auto. }
+      right. esplits; et. }
     { i. ss. hexploit MAINM; et. i. des. esplits; et.
       { eapply to_semantic; et.
         eapply URA.wf_mon; et. }

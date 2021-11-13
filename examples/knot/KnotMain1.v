@@ -42,9 +42,10 @@ Section MAIN.
     Definition fib_spec: fspec :=
       mk_simple (X:=nat*iProp)
                 (fun '(n, INV) => (
-                     (fun varg o =>
+                     (ord_pure (2 * n)),
+                     (fun varg =>
                         ((⌜exists fb,
-                               varg = [Vptr fb 0; Vint (Z.of_nat n)]↑ /\ (intrange_64 n) /\ o = ord_pure (2 * n)%nat /\
+                               varg = [Vptr fb 0; Vint (Z.of_nat n)]↑ /\ (intrange_64 n) /\
                                fb_has_spec (Sk.load_skenv sk) (RecStb sk) fb (mrec_spec Fib INV)⌝)
                            ** INV)%I),
                      (fun vret =>
@@ -57,8 +58,9 @@ Section MAIN.
     Definition main_spec:    fspec :=
       mk_simple (X:=(nat -> nat))
                 (fun f => (
-                     (fun varg o =>
-                        (⌜o = ord_top ∧ varg = ([]: list val)↑⌝)
+                     (ord_top),
+                     (fun varg =>
+                        (⌜varg = ([]: list val)↑⌝)
                           ** OwnM (knot_init)
                           ** inv_closed: iProp
                      ),

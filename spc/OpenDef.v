@@ -95,13 +95,14 @@ Section KMODSEM.
 
   Definition disclose_mid (fs: fspec): fspec :=
     mk_fspec (meta:=option fs.(meta))
-             (fun mn ox argh argl o =>
+             (fun ox => match ox with | Some x => fs.(measure) x | _ => ord_top end)
+             (fun mn ox argh argl =>
                 match ox with
                 | Some x => fun r =>
                               exists argh',
-                                argh = Any.pair true↑ argh' /\ fs.(precond) mn x argh' argl o r
+                                argh = Any.pair true↑ argh' /\ fs.(precond) mn x argh' argl r
                 | None => fun r =>
-                            argh = Any.pair false↑ argl /\ o = ord_top
+                            argh = Any.pair false↑ argl
                 end)
              (fun mn ox reth retl =>
                 map_or_else ox (fun x => (fs.(postcond) mn x reth retl)) (fun r => reth = retl))

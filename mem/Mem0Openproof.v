@@ -327,8 +327,8 @@ Proof Outline
         - clear - WFTGT. ii. ss. unfold update in *. des_ifs. exploit WFTGT; et. i; des. r. lia.
       }
       { harg. fold wf. steps. hide_k. destruct x.
-        mDesAll. des; subst. steps. destruct v; ss. clarify. unhide_k.
-        steps.
+        mDesAll. des; subst. rewrite _UNWRAPU. steps. destruct v; ss. clarify. unhide_k.
+        steps. rewrite Any.upcast_downcast in *. clarify.
         renamer. steps. des_ifs; steps.
 
         set (blk := mem_tgt0.(Mem.nb) + x). clarify. rename z into sz.
@@ -455,6 +455,7 @@ Proof Outline
       { harg. fold wf. steps. destruct x.
         des_ifs_safe (mDesAll; ss). des; subst.
         steps. destruct v; ss. clarify. steps.
+        rewrite Any.upcast_downcast in *. clarify. rewrite _UNWRAPU; ss.
         renamer.
         steps.
         rename n into b. rename z into ofs.
@@ -517,11 +518,11 @@ Proof Outline
       }
       { harg. fold wf. steps.
         des_ifs_safe (mDesAll; ss). des; subst.
-        steps. destruct v; ss. clarify. steps.
+        steps. destruct v; ss. clarify. rewrite Any.upcast_downcast in *. clarify. rewrite _UNWRAPU. steps.
         renamer.
         rename n into b. rename z into ofs.
 
-        hexploit (SIM b ofs); et. intro T. unfold Mem.load in *. rewrite _UNWRAPU1 in T. inv T.
+        hexploit (SIM b ofs); et. intro T. unfold Mem.load in *. rewrite _UNWRAPU2 in T. inv T.
         steps.
         hret _; ss. iModIntro. iSplitL; ss; et.
       }
@@ -605,9 +606,7 @@ Proof Outline
           + bsimpl; des; des_sumbool; subst. eapply WFTGT; et.
           + eapply WFTGT; et.
       }
-      { harg. fold wf. steps. hide_k.
-        des_ifs_safe (mDesAll; ss). des; subst.
-        unhide_k. steps.
+      { harg. fold wf. mDesAll; des; clarify. steps.
         renamer.
         destruct v; ss. clarify. rename n into b. rename z into ofs.
 
@@ -708,8 +707,7 @@ Proof Outline
           force_l. eexists. steps. hret _; ss. iModIntro. iDestruct "INV" as "[INV A]". iSplitR "A"; ss; et.
         }
       }
-      { harg. fold wf. steps. hide_k. des_ifs_safe (mDesAll; ss). des; subst.
-        unhide_k. steps.
+      { harg. fold wf. mDesAll; des; clarify. steps.
         renamer.
         sym in _UNWRAPU.
         assert(T: forall b ofs, Mem.valid_ptr memu_src0 b ofs -> Mem.valid_ptr mem_tgt0 b ofs).
