@@ -69,8 +69,9 @@ Section HEADER.
   Definition fspec_weaker (fsp_src fsp_tgt: fspec): Prop :=
     forall x_src mn,
     exists x_tgt,
-      (<<PRE: forall arg_src arg_tgt o,
-          (fsp_src.(precond) mn x_src arg_src arg_tgt o) ⊢ #=> (fsp_tgt.(precond) mn x_tgt arg_src arg_tgt o)>>) /\
+      (<<MEASURE: fsp_src.(measure) x_src = fsp_tgt.(measure) x_tgt>>) ∧
+      (<<PRE: forall arg_src arg_tgt,
+          (fsp_src.(precond) mn x_src arg_src arg_tgt) ⊢ #=> (fsp_tgt.(precond) mn x_tgt arg_src arg_tgt)>>) ∧
       (<<POST: forall ret_src ret_tgt,
           (fsp_tgt.(postcond) mn x_tgt ret_src ret_tgt) ⊢ #=> (fsp_src.(postcond) mn x_src ret_src ret_tgt)>>)
   .
@@ -79,6 +80,7 @@ Section HEADER.
   Next Obligation.
   Proof.
     ii. exists x_src. esplits; ii.
+    { ss. }
     { iStartProof. iIntros "H". iApply "H". }
     { iStartProof. iIntros "H". iApply "H". }
   Qed.
@@ -86,6 +88,7 @@ Section HEADER.
   Proof.
     ii. hexploit (H x_src). i. des.
     hexploit (H0 x_tgt). i. des. esplits; ii.
+    { etrans; et. }
     { iStartProof. iIntros "H".
       iApply bupd_idemp. iApply PRE0.
       iApply bupd_idemp. iApply PRE. iApply "H". }

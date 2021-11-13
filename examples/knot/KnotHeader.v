@@ -23,8 +23,9 @@ Section REC.
   Definition mrec_spec (f: nat -> nat) (INV: iProp): fspec :=
     mk_simple (X:=nat)
               (fun n => (
-                   (fun varg o =>
-                      (⌜varg = [Vint (Z.of_nat n)]↑ /\ (intrange_64 n) /\ o = ord_pure (2 * n + 1)%nat⌝)
+                   (ord_pure (2 * n + 1)%nat),
+                   (fun varg =>
+                      (⌜varg = [Vint (Z.of_nat n)]↑ /\ (intrange_64 n)⌝)
                         ** INV
                    ),
                    (fun vret =>

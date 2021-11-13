@@ -131,7 +131,7 @@ Section CANCEL.
     forall fn fsp (FIND: alist_find fn (_stb sk) = Some fsp), stb sk fn = Some fsp.
   Hypothesis STBSOUND:
     forall fn (FIND: alist_find fn (_stb sk) = None),
-      (<<NONE: stb sk fn = None>>) \/ (exists fsp, <<FIND: stb sk fn = Some fsp>> /\ <<TRIVIAL: forall mn x arg_src arg_tgt o r (PRE: fsp.(precond) mn x arg_src arg_tgt o r), o = ord_top>>).
+      (<<NONE: stb sk fn = None>>) \/ (exists fsp, <<FIND: stb sk fn = Some fsp>> /\ <<TRIVIAL: forall x, fsp.(measure) x = ord_top>>).
 
   (* Let mss: list SModSem.t := (List.map ((flip SMod.get_modsem) sk) mds). *)
   (* Let sbtb: list (gname * fspecbody) := (List.flat_map (SModSem.fnsems) mss). *)
@@ -212,7 +212,7 @@ Section CANCEL.
 
   Lemma stb_find_iff fn
     :
-      ((<<NONE: stb sk fn = None>> \/ (exists fsp, <<FIND: stb sk fn = Some fsp>> /\ <<TRIVIAL: forall mn x arg_src arg_tgt o r (PRE: fsp.(precond) mn x arg_src arg_tgt o r), o = ord_top>>)) /\
+      ((<<NONE: stb sk fn = None>> \/ (exists fsp, <<FIND: stb sk fn = Some fsp>> /\ <<TRIVIAL: forall x, fsp.(measure) x = ord_top>>)) /\
        (<<FINDMID: alist_find fn (ModSemL.fnsems ms_mid) = None>>) /\
        (<<FINDTGT: alist_find fn (ModSemL.fnsems ms_tgt) = None>>)) \/
 
@@ -464,20 +464,20 @@ Section CANCEL.
     { rewrite FIND. unfold HoareCall, mput, mget. steps.
       erewrite zip_state_get; et. steps.
       des; clarify. destruct tbr; ss.
-      { exfalso. hexploit TRIVIAL; et. i. subst. ss. hexploit x5; ss. }
+      { exfalso. hexploit TRIVIAL; et. intro T. rewrite T in *. hexploit x4; ss. }
       seal_right. unseal_left. steps. rewrite FIND. steps. esplits; et.
       steps. esplits; et.
-      { destruct cur; ss. hexploit x6; ss. i. subst. ss. }
+      { destruct cur; ss. hexploit x5; ss. intro T. rewrite T in *; ss. }
       steps. rewrite FINDMID. steps.
     }
     unfold HoareCall, mput, mget.
 
     (*** exploiting both_tau ***)
     rewrite STB. ss. mred. force_r.
-    destruct (classic (tbr = true /\ forall mn x arg_src arg_tgt o r (PRE: f.(precond) mn x arg_src arg_tgt o r), o = ord_top)).
+    destruct (classic (tbr = true /\ forall x, f.(measure) x = ord_top)).
     { des. subst. steps.
       erewrite zip_state_get; et. rewrite Any.pair_split. steps.
-      hexploit H0; et. i. subst. ss. des. hexploit x2; ss. }
+      hexploit H0; et. i. rewrite H in *. ss. des. hexploit x4; ss. }
     rename H into TRIVIAL.
     unseal_left. ired_both. rewrite STB. steps. esplit.
     { ii. subst. eapply TRIVIAL; ss. } steps.
@@ -492,11 +492,11 @@ Section CANCEL.
       rewrite <- OrdArith.add_from_nat. refl. }
     { instantiate (2:=(400+5)%ord). refl. }
     guclo bindC_spec. econs.
-    { instantiate (1:= fun '(st_src, o) (_: unit) => st_src = st_src0 /\ o = x2).
+    { instantiate (1:= fun '(st_src, o) (_: unit) => st_src = st_src0 /\ o = (f.(measure) x0)).
       destruct tbr.
-      { steps. des. destruct x2; ss.
+      { steps. des. destruct (measure f x0); ss.
         { exists n. steps. }
-        { exfalso. hexploit x5; ss. }
+        { exfalso. hexploit x4; ss. }
       }
       { steps. des. splits; auto. symmetry. auto. }
     }
@@ -530,7 +530,7 @@ Section CANCEL.
       unshelve esplits; eauto.
       steps. esplits; eauto. steps. unshelve esplits; eauto. steps.
       guclo ordC_spec. econs.
-      { instantiate (1:=(73+100)%ord). rewrite <- OrdArith.add_from_nat. refl. }
+      { instantiate (1:=(73+100)%ord). rewrite <- OrdArith.add_from_nat. eapply OrdArith.le_from_nat. lia. }
       { instantiate (2:=(73+100)%ord). refl. }
       guclo bindC_spec. econs.
       { gbase. eapply CIH; ss.
@@ -540,7 +540,7 @@ Section CANCEL.
         steps. rewrite zip_state_get; et.
         rewrite Any.pair_split. steps.
         esplits; ss; et.
-        { r_wf x7. symmetry. eapply rsum_minus_update; et. }
+        { r_wf x6. symmetry. eapply rsum_minus_update; et. }
       }
     }
     { ii. ss. des_ifs_safe. des. subst.
@@ -567,7 +567,7 @@ Section CANCEL.
           (MAINM:
              forall (main_fsp: fspec) (MAIN: stb sk "main" = Some main_fsp),
              exists (x: main_fsp.(meta)) entry_r,
-               (<<PRE: main_fsp.(precond) None x (@initial_arg CONFS) (@initial_arg CONFT) ord_top entry_r>>) /\
+               (<<PRE: main_fsp.(precond) None x (@initial_arg CONFS) (@initial_arg CONFT) entry_r ∧ main_fsp.(measure) x = ord_top>>) /\
                (<<WFR: URA.wf (entry_r ⋅ fold_left (⋅) (List.map SModSem.initial_mr mss) ε)>>) /\
                (<<RET: forall ret_src ret_tgt r
                               (WFR: URA.wf r)
@@ -588,7 +588,7 @@ Section CANCEL.
       seal_right. ss. unfold ms_mid in FINDMID. rewrite FINDMID. steps.
       Local Opaque ModSemL.prog. }
     rename f into main_fsb. hexploit MAINM; et.
-    i. des. rename x into metav.
+    i. des.
 
     unfold assume.
     steps. unfold ModL.wf in *. des.
@@ -611,8 +611,7 @@ Section CANCEL.
     assert (RWF: URA.wf (entry_r ⋅ rsum_minus (SModSem.mn (SMod.get_modsem md sk)) initial_mrs ⋅ initial_mrs (SModSem.mn (SMod.get_modsem md sk)))).
     { r_wf WFR. eapply INITIALRSUM; et. }
     unshelve esplits; et.
-    steps. exists ord_top. steps.
-    unshelve esplits; et. steps.
+    steps. unshelve esplits; et. steps.
 
     guclo ordC_spec. econs.
     { instantiate (2:=(_ + _)%ord).
@@ -631,7 +630,7 @@ Section CANCEL.
     rewrite Any.pair_split. steps.
     { eapply RET; [|et]. eapply URA.wf_mon.
       instantiate (1:=(ε ⋅ rsum_minus (SModSem.mn (SMod.get_modsem md sk)) mrs1) ⋅ c0).
-      r_wf x0. }
+      r_wf x1. }
     Unshelve. all: try (exact 0).
   Qed.
 
