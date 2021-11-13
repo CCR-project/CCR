@@ -94,9 +94,9 @@ Section SIMMODSEM.
       unfold ccallU. steps. stb_tac; clarify. force_l; stb_tac; clarify. steps.
 
 
-      hcall _ _ _.
-      { iModIntro. iDestruct "P" as "[[A %] %]". clarify. iFrame. iSplits; ss; et. iAssumption. }
-      { esplits; ss; et. }
+      hcall _ _.
+      { iModIntro. iDestruct "P" as "%". iDestruct "FR" as "[A [B %]]". iSplits; ss; et. iFrame.
+        iSplits; ss; et. iAssumption. }
       { i. iIntros "H". ss. iDestruct "H" as "[A %]". eauto. }
       mDesAll. clarify. steps. force_l; stb_tac; ss; clarify. steps.
 
@@ -108,10 +108,10 @@ Section SIMMODSEM.
 
 
 
-      hcall _ _ _.
-      { iModIntro. iDestruct "P" as "[% %]". clarify. iFrame. iSplits; ss; et. instantiate (1:=True%I). ss. }
-      { esplits; ss; et. }
-      { i. iIntros "H". ss. iDestruct "H" as "[A %]". eauto. }
+      hcall _ _.
+      { iModIntro. iDestruct "FR" as "[A %]".
+        iDestruct "P" as "[% %]". iSplits; ss; et. instantiate (1:=True%I). iFrame. ss. }
+      { i. iIntros "H". ss. }
       clear_fast. mDesAll. clarify. steps.
 
 
@@ -148,9 +148,9 @@ Section SIMMODSEM.
       unfold ccallU. steps.
       hAPC _.
       { instantiate (1:=True%I). et. }
-      { r. i. autounfold with stb in *; autorewrite with stb in *. ss. des_ifs.
-        - r in PURE. des. ss. unfold is_pure in *. des_ifs. uipropall. des. clarify. r in PURE4. uipropall.
-        - r in PURE. des. ss. unfold is_pure in *. des_ifs. r in PURE. uipropall. des; clarify.
+      { r. i. autounfold with stb in *; autorewrite with stb in *. ss. rewrite ! eq_rel_dec_correct in *. des_ifs.
+        - r in PURE. des. ss.
+        - r in PURE. des. ss.
       }
       steps.
 

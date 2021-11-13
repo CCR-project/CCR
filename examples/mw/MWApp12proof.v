@@ -72,11 +72,10 @@ Section SIMMODSEM.
       harg_tgt.
       { iFrame. iModIntro. iSplits; ss; et. xtra. }
       steps. stb_tac. clarify.
-      hcall _ _ _.
+      hcall _ _.
       { instantiate (2:=(_,_,_)). cbn. iDes; des; clarify. iDestruct "FR" as "[A B]". iFrame.
         iModIntro. iSplits; ss; et. instantiate (1:=True%I); ss. }
-      { esplits; ss; et. }
-      { i. iIntros "H". ss. iDes; des; clarify. }
+      { i. iIntros "H". ss. }
       fold wf. mDesAll; des; clarify. steps.
       hpost_tgt.
       { iFrame. iModIntro. iSplits; ss; et. xtra. }
@@ -104,11 +103,10 @@ Section SIMMODSEM.
       harg_tgt.
       { iFrame. iModIntro. iSplits; ss; et. xtra. }
       steps. stb_tac. clarify.
-      hcall _ _ _.
+      hcall _ _.
       { instantiate (2:=(_,_,_)). cbn. iDes; des; clarify. iDestruct "FR" as "[A B]". iFrame.
         iModIntro. iSplits; ss; et. instantiate (1:=True%I); ss. }
-      { esplits; ss; et. }
-      { i. iIntros "H". ss. iDes; des; clarify. }
+      { i. iIntros "H". ss. }
       fold wf. mDesAll; des; clarify. steps.
       hpost_tgt.
       { iFrame. iModIntro. iSplits; ss; et. xtra. }

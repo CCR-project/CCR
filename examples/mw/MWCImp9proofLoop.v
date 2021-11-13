@@ -65,14 +65,14 @@ Section SIMMODSEM.
       steps. isteps.
 
       erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.
-      hcall _ _ None with "*".
+      hcall _ None with "*".
       { iModIntro. iSplits; ss; et. iLeft. iSplits; ss; et. iFrame. ss. }
       { esplits; ss; et. }
       fold (wf ske). ss. des_ifs.
       mDesOr "INV"; mDesAll; des; clarify; ss. isteps.
 
       erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.
-      hcall _ _ None with "*".
+      hcall _ None with "*".
       { iModIntro. iSplits; ss; et. iLeft. iSplits; ss; et. iFrame. ss. }
       { esplits; ss; et. }
       fold (wf ske). ss. des_ifs.

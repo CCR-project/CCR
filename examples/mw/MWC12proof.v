@@ -128,7 +128,7 @@ TODO: APC, locked thinges
                           r in PURE; uipropall; des; clarify; r in PURE1; uipropall; des; clarify);
                   try by (stb_tac; ss)|]
              end.
-      ss.
+      all: stb_tac; ss.
     }
   Qed.
 
@@ -183,7 +183,7 @@ TODO: APC, locked thinges
 
 
         (*** calling Map.new ***)
-        hcall _ _ _.
+        hcall _ _.
         {
           iDes; ss; des; clarify.
           { iExFalso. iApply (mw_stateX_false with "INIT"); et. }
@@ -192,7 +192,6 @@ TODO: APC, locked thinges
           { iRight. iRight. iSplits; ss; et. iFrame. }
         }
         { esplits; ss; et. }
-        { i. iIntros "H". ss. iDestruct "H" as "[A %]". eauto. }
         fold wf. steps. astop. steps. mDesAll; des; clarify. r in WLE0. des_ifs.
         force_l; stb_tac; ss; clarify. steps.
 
@@ -210,8 +209,8 @@ TODO: APC, locked thinges
 
 
         (*** calling App.init ***)
-        hcall _ _ _.
-        { iDes; ss; des; clarify. apply Any.upcast_inj in H7. des; clarify. clear_fast.
+        hcall _ _.
+        { iDes; ss; des; clarify. apply Any.upcast_inj in H10. des; clarify. clear_fast.
           iModIntro. iSplits; ss; et.
           iSplitR "LOCKED A A0"; cycle 1.
           { iFrame. iSplits; ss; et. }
@@ -219,7 +218,6 @@ TODO: APC, locked thinges
           { instantiate (1:=True%I); ss. }
           iLeft. iSplits; ss; et. iFrame.
         }
-        { esplits; ss; et. }
         { i. iIntros "H". ss. iDes; des; clarify. }
         unhide_k. steps. fold wf. mDesAll. des; clarify.
 
@@ -234,7 +232,7 @@ TODO: APC, locked thinges
 
         (*** calling loop ***)
         Opaque Z.eq_dec.
-        hcall _ _ _.
+        hcall _ _.
         { iDes; ss; des; clarify; cycle 1.
           { iExFalso. iApply (mw_state_false with "FR"); et. }
           iModIntro. iSplits; ss; et. iSplitR "A A0 FR"; cycle 1.
@@ -243,7 +241,6 @@ TODO: APC, locked thinges
           { instantiate (1:=True%I); ss. }
           iLeft. iSplits; ss; et. iFrame.
         }
-        { esplits; ss; et. }
         { i. iIntros "H". ss. iDes. des; clarify. }
         steps. fold wf. mDesAll. des; clarify.
 
@@ -288,12 +285,11 @@ TODO: APC, locked thinges
         { iModIntro. iFrame. iSplits; et. xtra. }
         steps. stb_tac; ss; clarify.
 
-        hcall _ _ _.
+        hcall _ _.
         { iDes. iModIntro. iFrame. iSplits; ss; et. iSplitR.
           { instantiate (1:=True%I); ss. }
           iLeft. iSplits; ss; et. iFrame.
         }
-        { esplits; ss; et. }
         { i. iIntros "H". ss. iDes; des; clarify. }
         fold wf. steps. mDesAll; des; clarify. force_l; stb_tac; ss; clarify. steps.
 
@@ -303,14 +299,13 @@ TODO: APC, locked thinges
         fold wf. steps. rewrite _UNWRAPU. steps. stb_tac; ss; clarify.
 
 
-        hcall _ _ _.
+        hcall _ _.
         { iDes; ss; cycle 1.
           { iExFalso. iApply (mw_state_false with "FR"); et. }
           iModIntro. iFrame. iSplits; ss; et. iSplitR.
           { instantiate (1:=True%I); ss. }
           iLeft. iSplits; ss; et. iFrame.
         }
-        { esplits; ss; et. }
         { i. iIntros "H". ss. iDes. des; clarify. }
         fold wf. steps. mDesAll; des; clarify. rewrite Any.upcast_downcast in *. clarify.
 
@@ -378,14 +373,13 @@ TODO: APC, locked thinges
             { iDes; des; clarify. iPureIntro. r. fold wf in WF0. exists None; esplits; et. }
           + steps.
             astart 1. astep "Map.update" ([lst_map lst0; Vint k; Vint v]↑). stb_tac; ss; clarify.
-            hcall _ _ (Some (_, _)).
+            hcall _ (Some (_, _)).
             { iDes; clarify. instantiate (2:=(_, _, _, _)). cbn. iModIntro. iSplits; ss; et. iFrame.
               iSplitL.
               - iSplitR. { instantiate (1:=True%I); ss. } iRight. iRight. iSplits; ss; et. iSplitL "A"; ss.
               - iSplits; ss; et. rewrite PURE2; ss.
             }
-            { esplits; ss; et. }
-            { i. iIntros "H". ss. iDestruct "H" as "[A %]". eauto. }
+            { i. iIntros "H". ss. }
             fold wf. mDesAll; des; clarify. steps. astop. steps.
 
             hpost_tgt.
@@ -419,14 +413,13 @@ TODO: APC, locked thinges
             { iDes; des; clarify. iPureIntro. r. fold wf in WF0. exists None; esplits; et. }
           + steps.
             astart 1. astep "Map.update" ([lst_map lst0; Vint k; Vint v]↑). stb_tac; ss; clarify.
-            hcall _ _ (Some (_, _)).
+            hcall _ (Some (_, _)).
             { iDes; clarify. instantiate (2:=(_, _, _, _)). cbn. iModIntro. iSplits; ss; et. iFrame.
               iSplitL.
               - iSplitR. { instantiate (1:=True%I); ss. } iRight. iRight. iSplits; ss; et. iSplitL "A"; ss.
               - iSplits; ss; et. rewrite PURE2; ss.
             }
-            { esplits; ss; et. }
-            { i. iIntros "H". ss. iDestruct "H" as "[A %]". eauto. }
+            { i. iIntros "H". ss. }
             fold wf. mDesAll; des; clarify. steps. astop. steps.
 
             hpost_tgt.
@@ -487,15 +480,14 @@ TODO: APC, locked thinges
             iLeft. iSplits; ss; et. { iFrame. } }
           { iDes; des; clarify. iPureIntro. r. fold wf in WF0. exists None; esplits; et. }
         - steps. astart 1. astep "Map.access" ([lst_map lst0; Vint k]↑). stb_tac; ss; clarify.
-          hcall _ _ (Some (_, _)).
+          hcall _ (Some (_, _)).
           { iDes; clarify. instantiate (2:=(_, _, _, _)). cbn. iModIntro. iSplits; ss; et. iFrame.
-            des; clarify. apply Any.upcast_inj in H4. des; clarify.
+            des; clarify. apply Any.upcast_inj in H5. des; clarify.
             iSplitL.
             - iSplitR. { instantiate (1:=True%I); ss. } iRight. iRight. iSplits; ss; et.
               iDestruct "A" as "[A B]". iFrame.
             - iSplits; ss. { rewrite PURE2; ss. } iPureIntro. r in PURE. hexploit PURE; et. i; des_ifs. et. }
-          { esplits; ss; et. }
-          { i. iIntros "H". ss. iDestruct "H" as "[A %]". eauto. }
+          { i. iIntros "H". ss. }
           fold wf. mDesAll; des; clarify. steps. astop. steps.
 
           hpost_tgt.

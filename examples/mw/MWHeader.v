@@ -156,33 +156,37 @@ Section PROOF.
   Context `{@GRA.inG mwRA Σ}.
   Context `{@GRA.inG spRA Σ}.
 
-  Definition mk_simple_frame {X: Type} (PQ: X -> ((Any.t -> ord -> iProp) * (Any.t -> iProp))): fspec :=
-    mk_simple (fun '(FRAME, x) => let '(P, Q) := (PQ x) in
-                                  (fun varg ord => FRAME ** P varg ord, fun vret => FRAME ** Q vret))
-  .
+  (* Definition mk_simple_frame {X: Type} (PQ: X -> ((Any.t -> ord -> iProp) * (Any.t -> iProp))): fspec := *)
+  (*   mk_simple (fun '(FRAME, x) => let '(P, Q) := (PQ x) in *)
+  (*                                 (fun varg ord => FRAME ** P varg ord, fun vret => FRAME ** Q vret)) *)
+  (* . *)
 
   (******************************* MW ****************************)
   Definition main_spec: fspec :=
     mk_simple (fun (_: unit) =>
-                 ((fun varg o => ⌜varg = ([]: list val)↑ ∧ o = ord_top⌝ ** OwnM Init
+                 (ord_top,
+                  (fun varg => ⌜varg = ([]: list val)↑⌝ ** OwnM Init
                                    ** OwnM (mw_stateX Maps.empty) ** OwnM sp_white),
                   (fun vret => ⌜vret = Vundef↑⌝ ** OwnM Run ** OwnM sp_white))).
 
   Definition loop_spec: fspec :=
     mk_simple (fun f =>
-                 ((fun varg o => ⌜varg = ([]: list val)↑ ∧ o = ord_top⌝ ** OwnM Run
-                                        ** OwnM (mw_state f) ** OwnM sp_white ∧ ⌜f 0 = Some 42%Z⌝),
+                 (ord_top,
+                  (fun varg => ⌜varg = ([]: list val)↑⌝ ** OwnM Run
+                                  ** OwnM (mw_state f) ** OwnM sp_white ∧ ⌜f 0 = Some 42%Z⌝),
                   (fun vret => ⌜vret = Vundef↑⌝ ** OwnM Run ** OwnM (mw_state f) ** OwnM sp_white))).
 
   Definition put_spec: fspec :=
     mk_simple (fun '(f, k, v) =>
-                 ((fun varg o => ⌜varg = [Vint k; Vint v]↑ ∧ intrange_64 k ∧ intrange_64 v ∧ o = ord_top⌝ ** OwnM (mw_state f) ** OwnM sp_white),
+                 (ord_top,
+                  (fun varg => ⌜varg = [Vint k; Vint v]↑ ∧ intrange_64 k ∧ intrange_64 v⌝ ** OwnM (mw_state f) ** OwnM sp_white),
                   (fun vret => OwnM (mw_state (add k v f)) ** OwnM sp_white)))
   .
 
   Definition get_spec: fspec :=
     mk_simple (fun '(f, k, v) =>
-                 ((fun varg o => ⌜varg = [Vint k]↑ ∧ intrange_64 k ∧ f k = Some v ∧ o = ord_top⌝ ** OwnM (mw_state f) ** OwnM sp_white),
+                 (ord_top,
+                  (fun varg => ⌜varg = [Vint k]↑ ∧ intrange_64 k ∧ f k = Some v⌝ ** OwnM (mw_state f) ** OwnM sp_white),
                   (fun vret => ⌜vret = (Vint v)↑⌝ ** OwnM (mw_state f) ** OwnM sp_white)))
   .
 
@@ -206,11 +210,13 @@ Section PROOF.
   (*                  (fun vret => ⌜vret = Vundef↑⌝ ** OwnM Run))). *)
 
   Definition init_spec: fspec :=
-    mk_simple (fun f => ((fun varg o => ⌜varg = ([]: list val)↑ ∧ o = ord_top⌝ ** OwnM Init ** OwnM (mw_state f) ** OwnM (sp_white)),
+    mk_simple (fun f => (ord_top,
+                         (fun varg => ⌜varg = ([]: list val)↑⌝ ** OwnM Init ** OwnM (mw_state f) ** OwnM (sp_white)),
                          (fun vret => OwnM Run ** OwnM (mw_state (add 0%Z 42%Z f)) ** OwnM (sp_white)))).
 
   Definition run_spec: fspec :=
-    mk_simple (fun f => ((fun varg o => ⌜varg = ([]: list val)↑ ∧ o = ord_top⌝ ** OwnM Run ** OwnM (mw_state f) ** OwnM (sp_white) ∧ ⌜f 0 = Some 42%Z⌝),
+    mk_simple (fun f => (ord_top,
+                         (fun varg => ⌜varg = ([]: list val)↑⌝ ** OwnM Run ** OwnM (mw_state f) ** OwnM (sp_white) ∧ ⌜f 0 = Some 42%Z⌝),
                          (fun vret => OwnM Run ** OwnM (mw_state f) ** OwnM (sp_white) ∧ ⌜f 0 = Some 42%Z⌝))).
 
   Definition AppStb: alist gname fspec.
@@ -225,26 +231,30 @@ Section PROOF.
 
   Definition new_spec: fspec :=
     (mk_simple (fun (_: unit) => (
-                    (fun varg o => (⌜varg = ([]: list val)↑ ∧ o = ord_pure 2⌝: iProp)%I),
+                    ord_pure 2,
+                    (fun varg => (⌜varg = ([]: list val)↑⌝: iProp)%I),
                     (fun vret => (∃ h, ⌜vret = (Vptr h 0)↑⌝ ** is_map h (fun _ => None): iProp)%I)
     )))
   .
 
   Definition update_spec: fspec :=
     mk_simple (fun '(h, k, v, m) =>
-                 ((fun varg o => (⌜varg = ([Vptr h 0%Z; Vint k; Vint v]: list val)↑ ∧ o = ord_pure 2⌝ **
+                 (ord_pure 2,
+                  (fun varg => (⌜varg = ([Vptr h 0%Z; Vint k; Vint v]: list val)↑⌝ **
                                    is_map h m)%I),
-                  (fun vret => ⌜vret = Vundef↑⌝ **  is_map h (Maps.add k v m)))).
+                  (fun vret => ⌜vret = Vundef↑⌝ ** is_map h (Maps.add k v m)))).
 
   Definition access_spec: fspec :=
     mk_simple (fun '(h, k, v, m) =>
-                 ((fun varg o => ⌜varg = ([Vptr h 0%Z; Vint k]: list val)↑ ∧ o = ord_pure Ord.omega ∧ m k = Some v⌝ **
+                 (ord_pure Ord.omega,
+                  (fun varg => ⌜varg = ([Vptr h 0%Z; Vint k]: list val)↑ ∧ m k = Some v⌝ **
                                   is_map h m),
                   (fun vret => ⌜vret = (Vint v)↑⌝ ** (is_map h m)))).
 
   Definition access_loop_spec: fspec :=
     mk_simple (fun '(h, k, v, kvs) =>
-                 ((fun varg o => ⌜varg = ([Vptr h 0%Z; Vint k]: list val)↑ ∧ o = ord_pure (1 + length kvs)%ord ∧
+                 (ord_pure (1 + length kvs)%ord,
+                  (fun varg => ⌜varg = ([Vptr h 0%Z; Vint k]: list val)↑ ∧
                                  alist_find k (kvs: list (Z * Z)) = Some v⌝ ** is_map_internal (Vptr h 0) kvs),
                   (fun vret => ⌜vret = (Vint v)↑⌝ ** (is_map_internal (Vptr h 0) kvs)))).
 
@@ -259,7 +269,7 @@ Section PROOF.
 
 
   Definition fspec_mw1: fspec :=
-    mk_fspec (meta:=unit) (fun _ _ argh argl o => (⌜argh = argl ∧ o = ord_top⌝ ** OwnM (sp_white))%I)
+    mk_fspec (meta:=unit) (fun _ => ord_top) (fun _ _ argh argl => (⌜argh = argl⌝ ** OwnM (sp_white))%I)
              (fun _ _ reth retl => (⌜reth = retl⌝ ** OwnM (sp_white))%I)
   .
 
@@ -275,10 +285,12 @@ Section PROOF.
 
   (******************************* Dedicated STB for App1 ****************************)
   Definition init_spec1: fspec :=
-    mk_simple (fun (_: unit) => ((fun varg o => ⌜o = ord_top⌝ ** OwnM Init),
+    mk_simple (fun (_: unit) => (ord_top,
+                                 (fun varg => OwnM Init),
                                  (fun vret => OwnM Run))).
   Definition run_spec1: fspec :=
-    mk_simple (fun (_: unit) => ((fun varg o => ⌜o = ord_top⌝ ** OwnM Run),
+    mk_simple (fun (_: unit) => (ord_top,
+                                 (fun varg => OwnM Run),
                                  (fun vret => OwnM Run))).
   Definition App1Stb: alist gname fspec.
     eapply (Seal.sealing "stb").

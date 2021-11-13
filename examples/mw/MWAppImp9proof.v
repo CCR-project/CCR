@@ -93,7 +93,7 @@ Section SIMMODSEM.
       { contradict n. solve_NoDup. }
       isteps.
       astart 1. astep "load" (tt↑). { eapply STBINCL. stb_tac; ss. } rewrite FIND0. isteps.
-      hcall _ (Some (_, _, _)) _ with "A".
+      hcall (Some (_, _, _)) _ with "A".
       { iModIntro. iSplitR; iSplits; ss; et. unfold var_points_to. rewrite FIND0. iFrame. }
       { esplits; ss; et. }
       fold (wf ske). ss. des_ifs.
@@ -112,13 +112,13 @@ Section SIMMODSEM.
         { iModIntro. iSplits; ss; et. iLeft. iSplits; ss; et. unfold var_points_to. des_ifs. }
       - steps. isteps.
         erewrite STBINCL; [|stb_tac; ss]. steps.
-        hcall _ _ None with "*".
+        hcall _ None with "*".
         { iModIntro. iSplits; ss; et. iLeft. iSplits; ss; et. unfold var_points_to. rewrite FIND0. ss. }
         { esplits; ss; et. }
         fold (wf ske). mDesAll; des; clarify.
         mDesOr "INV"; mDesAll; des; clarify; ss. steps. isteps.
         astart 1. astep "store" (tt↑). { eapply STBINCL. stb_tac; ss. }
-        hcall _ (Some (_, _, _)) _ with "A".
+        hcall (Some (_, _, _)) _ with "A".
         { iModIntro. iSplitR; iSplits; ss; et. unfold var_points_to. rewrite FIND0. iFrame. }
         { esplits; ss; et. }
         fold (wf ske). ss. des_ifs.
@@ -139,7 +139,7 @@ Section SIMMODSEM.
       { contradict n. solve_NoDup. }
       isteps.
       astart 1. astep "load" (tt↑). { eapply STBINCL. stb_tac; ss. } rewrite FIND0. isteps.
-      hcall _ (Some (_, _, _)) _ with "A".
+      hcall (Some (_, _, _)) _ with "A".
       { iModIntro. iSplitR; iSplits; ss; et. unfold var_points_to. rewrite FIND0. iFrame. }
       { esplits; ss; et. }
       fold (wf ske). ss. des_ifs.
@@ -149,7 +149,7 @@ Section SIMMODSEM.
       apply Any.pair_inj in H2. des; clarify. clear_fast. steps.
       destruct a; ss.
       - steps. erewrite STBINCL; [|stb_tac; ss]. steps. isteps.
-        hcall _ _ None with "*".
+        hcall _ None with "*".
         { iModIntro. iSplits; ss; et. iLeft. iSplits; ss; et. unfold var_points_to. des_ifs. }
         { esplits; ss; et. }
         fold (wf ske).

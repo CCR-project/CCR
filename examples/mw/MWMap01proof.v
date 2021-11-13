@@ -154,13 +154,13 @@ Section SIMMODSEM.
       unfold newF, ccallU. steps. astart 2.
       acatch.
       { eapply STBINCL. stb_tac; ss. }
-      hcall _ (1) _ with "*".
+      hcall (1) _ with "*".
       { iModIntro. iSplits; ss; et. }
       { esplits; ss; et. eapply OrdArith.lt_from_nat; lia. }
       fold wf. mDesAll; des; clarify. steps. force_r; ss. steps.
       acatch.
       { eapply STBINCL. stb_tac; ss. }
-      hcall _ (_, _, _) _ with "*".
+      hcall (_, _, _) _ with "*".
       { iModIntro. iSplits; ss; et. }
       { esplits; ss; et. eapply OrdArith.lt_from_nat; lia. }
       fold wf. mDesAll; des; clarify. steps. astop. steps. force_l. esplits. steps.
@@ -176,7 +176,7 @@ Section SIMMODSEM.
 
       acatch.
       { eapply STBINCL. stb_tac; ss. }
-      hcall _ (3) _ with "".
+      hcall (3) _ with "".
       { iModIntro. iSplits; ss; et. }
       { esplits; ss; et. eapply OrdArith.lt_from_nat; lia. }
       fold wf. mDesAll; des; clarify. steps.
@@ -191,35 +191,35 @@ Section SIMMODSEM.
 
       acatch.
       { eapply STBINCL. stb_tac; ss. }
-      hcall _ (_, _, _) _ with "A4".
+      hcall (_, _, _) _ with "A4".
       { iModIntro. iSplits; ss; et. }
       { esplits; ss; et. eapply OrdArith.lt_from_nat; lia. }
       fold wf. mDesAll; des; clarify. steps.
 
       acatch.
       { eapply STBINCL. stb_tac; ss. }
-      hcall _ (_, _, _) _ with "A2".
+      hcall (_, _, _) _ with "A2".
       { iModIntro. iSplits; ss; et. }
       { esplits; ss; et. eapply OrdArith.lt_from_nat; lia. }
       fold wf. mDesAll; des; clarify. steps.
 
       acatch.
       { eapply STBINCL. stb_tac; ss. }
-      hcall _ (_, _, _) _ with "A3".
+      hcall (_, _, _) _ with "A3".
       { iModIntro. iSplits; ss; et. }
       { esplits; ss; et. eapply OrdArith.lt_from_nat; lia. }
       fold wf. mDesAll; des; clarify. steps.
 
       acatch.
       { eapply STBINCL. stb_tac; ss. }
-      hcall _ (_, _, _) _ with "A1".
+      hcall (_, _, _) _ with "A1".
       { iModIntro. iSplits; ss; et. }
       { esplits; ss; et. eapply OrdArith.lt_from_nat; lia. }
       fold wf. mDesAll; des; clarify. steps.
 
       acatch.
       { eapply STBINCL. stb_tac; ss. }
-      hcall _ (_, _, _) _ with "POST".
+      hcall (_, _, _) _ with "POST".
       { iModIntro. iSplits; ss; et. }
       { esplits; ss; et. eapply OrdArith.lt_from_nat; lia. }
       fold wf. mDesAll; des; clarify. steps.
@@ -247,7 +247,7 @@ Section SIMMODSEM.
 
       acatch.
       { eapply STBINCL. stb_tac; ss. }
-      hcall _ (_, _, _) _ with "A1".
+      hcall (_, _, _) _ with "A1".
       { iModIntro. iSplits; ss; et. }
       { esplits; ss; et. eapply Ord.omega_upperbound. }
       fold wf. mDesAll; des; clarify. steps.
@@ -258,7 +258,7 @@ Section SIMMODSEM.
 
       acatch.
       { eapply STBINCL. stb_tac; ss. }
-      hcall _ (_, _, _, _) _ with "A".
+      hcall (_, _, _, _) _ with "A".
       { iModIntro. iSplits; ss; et. }
       { esplits; ss; et. rewrite <- OrdArith.add_from_nat. eapply Ord.omega_upperbound. }
       fold wf. mDesAll; des; clarify. steps.
@@ -285,7 +285,7 @@ Section SIMMODSEM.
 
         acatch.
         { eapply STBINCL. stb_tac; ss. }
-        hcall _ (_, _, _) _ with "A".
+        hcall (_, _, _) _ with "A".
         { iModIntro. iSplits; ss; et. }
         { esplits; ss; et. rewrite <- OrdArith.add_from_nat. eapply OrdArith.lt_from_nat; lia. }
         fold wf. mDesAll; des; clarify. steps.
@@ -295,7 +295,7 @@ Section SIMMODSEM.
 
         acatch.
         { eapply STBINCL. stb_tac; ss. }
-        hcall _ (_, _, _) _ with "A3".
+        hcall (_, _, _) _ with "A3".
         { iModIntro. iSplits; ss; et. }
         { esplits; ss; et. rewrite <- OrdArith.add_from_nat. eapply OrdArith.lt_from_nat; lia. }
         fold wf. mDesAll; des; clarify. steps.
@@ -319,7 +319,7 @@ Section SIMMODSEM.
 
         acatch.
         { eapply STBINCL. stb_tac; ss. }
-        hcall _ (_, _, _) _ with "A".
+        hcall (_, _, _) _ with "A".
         { iModIntro. iSplits; ss; et. }
         { esplits; ss; et. rewrite <- OrdArith.add_from_nat. eapply OrdArith.lt_from_nat; lia. }
         fold wf. mDesAll; des; clarify. steps.
@@ -329,7 +329,7 @@ Section SIMMODSEM.
 
         acatch.
         { eapply STBINCL. stb_tac; ss. }
-        hcall _ (_, _, _) _ with "A2".
+        hcall (_, _, _) _ with "A2".
         { iModIntro. iSplits; ss; et. }
         { esplits; ss; et. rewrite <- OrdArith.add_from_nat. eapply OrdArith.lt_from_nat; lia. }
         fold wf. mDesAll; des; clarify. steps.
@@ -340,7 +340,7 @@ Section SIMMODSEM.
 
         acatch.
         { eapply STBINCL. stb_tac; ss. }
-        hcall _ (_, _, _, _) _ with "A1".
+        hcall (_, _, _, _) _ with "A1".
         { iFrame. iSplits; ss; et. }
         { esplits; ss; et. rewrite <- ! OrdArith.add_from_nat. eapply OrdArith.lt_from_nat; lia. }
         fold wf. mDesAll; des; clarify. steps.

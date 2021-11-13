@@ -247,20 +247,20 @@ Section SIMMODSEM.
       mAssert (OwnM sp_black ** OwnM sp_white ** ⌜w = None ∧ ∃ (arr map: val), mp_tgt = (arr, map)↑⌝) with "*" as "A".
       { iDes; des; clarify; try (by iFrame; iSplits; ss; et). admit "ez". }
       mDesAll; des; clarify.
-      astart 1. acatch. hcall _ 100 (Some (_, _)) with "*".
+      astart 1. acatch. hcall 100 (Some (_, _)) with "*".
       { iModIntro. iFrame. iSplits; ss; et. }
       { esplits; ss; et. }
       fold wf. steps. astop. mDesAll; des; clarify.
       mDesOr "INV"; mDesAll; des; clarify; ss.
       mDesOr "INV"; mDesAll; des; clarify; ss.
       steps. force_l; stb_tac; ss; clarify. steps.
-      hcall _ _ _ with "-A".
+      hcall _ _ with "-A".
       { iModIntro. iFrame. iSplits; ss; et. }
       { esplits; ss; et. }
       fold wf. mDesAll; des; clarify. steps. force_l; stb_tac; ss; clarify.
       mDesOr "INV"; mDesAll; des; clarify; ss.
       mDesOr "INV"; mDesAll; des; clarify; ss. steps.
-      hcall _ _ _ with "*".
+      hcall _ _ with "*".
       { rewrite repeat_replicate. iDestruct (OwnM_replicate_sepL with "A") as "A". iMod "A".
         iModIntro. iSplits; ss; et. iFrame. iSplits; ss; et. iRight. iLeft. iSplits; ss; et.
         - iPureIntro. eapply sim_init.
@@ -268,7 +268,7 @@ Section SIMMODSEM.
       { esplits; ss; et. }
       fold wf. mDesAll; des; clarify. steps. force_l; stb_tac; ss; clarify. steps.
 
-      hcall _ _ _ with "*".
+      hcall _ _ with "*".
       { iModIntro. iFrame. iSplits; ss; et. }
       { esplits; ss; et. }
       fold wf. mDesAll; des; clarify. steps. ss. des_ifs.
@@ -281,10 +281,10 @@ Section SIMMODSEM.
       assert(w = None).
       { repeat mDesOr "INV"; mDesAll; des; clarify. mAssertPure False; ss. admit "ez". }
       steps. unfold loopF, MWC0.loopF, ccallU. steps. fold wf.
-      force_l; stb_tac; ss; clarify. steps. hcall _ _ _ with "*".
+      force_l; stb_tac; ss; clarify. steps. hcall _ _ with "*".
       { iFrame. iSplits; ss; et. }
       { esplits; ss; et. }
-      fold wf. mDesAll; des; clarify. steps. force_l; stb_tac; ss; clarify. steps. hcall _ _ _ with "*".
+      fold wf. mDesAll; des; clarify. steps. force_l; stb_tac; ss; clarify. steps. hcall _ _ with "*".
       { iFrame. iSplits; ss; et. }
       { esplits; ss; et. }
       fold wf. mDesAll; des; clarify. steps. ss. des_ifs.
@@ -314,7 +314,7 @@ Section SIMMODSEM.
           { iDestruct (big_sepL_insert_acc with "A2") as "[B C]"; et.
             instantiate (1:=_ ** _). iSplitL "B". { iExact "B". } iExact "C". }
           mDesAll; ss. rewrite Z2Nat.id in *; try lia. rewrite scale_int_8. steps.
-          astart 1. acatch. hcall _ (_, _, _) (Some (_, _)) with "-A2".
+          astart 1. acatch. hcall (_, _, _) (Some (_, _)) with "-A2".
           { iModIntro. iFrame. iSplitR "A1"; et. }
           { esplits; ss; et. }
           fold wf. mDesAll; des; clarify. ss. des_ifs.
@@ -330,7 +330,7 @@ Section SIMMODSEM.
           { iDestruct (big_sepL_insert_acc with "A2") as "[B C]"; et.
             instantiate (1:=_ ** _). iSplitL "B". { iExact "B". } iExact "C". }
           mDesAll; ss. rewrite Z2Nat.id in *; try lia. rewrite scale_int_8. steps.
-          astart 1. acatch. hcall _ (_, _, _) (Some (_, _)) with "-A2".
+          astart 1. acatch. hcall (_, _, _) (Some (_, _)) with "-A2".
           { iModIntro. iFrame. iSplitR "A1"; et. }
           { esplits; ss; et. }
           fold wf. mDesAll; des; clarify. ss. des_ifs.
@@ -344,7 +344,7 @@ Section SIMMODSEM.
       - steps.
         destruct (lst_cls l z) eqn:U.
         + ss. steps. force_l. exists false. steps. unfold set. des_ifs. steps. force_l; stb_tac; ss; clarify.
-          steps. hcall _ _ _ with "A INIT".
+          steps. hcall _ _ with "A INIT".
           { iModIntro. iSplits; ss; et. iRight. iRight. iFrame. iSplits; ss; et. }
           { esplits; ss; et. }
           fold wf. ss. des_ifs.
@@ -355,7 +355,7 @@ Section SIMMODSEM.
             iPureIntro. eapply sim_upd3; et; try lia. }
         + exfalso. inv PURE2. hexploit (NORMAL z); et. { lia. } intro V. rewrite U in *; des; ss.
         + ss. steps. rewrite U. ss. steps. force_l; stb_tac; ss; clarify. steps.
-          hcall _ _ _ with "-A2".
+          hcall _ _ with "-A2".
           { iModIntro. iSplits; ss; et. iRight. iRight. iFrame. iSplits; ss; et. }
           { esplits; ss; et. }
           fold wf. ss. des_ifs.
@@ -386,7 +386,7 @@ Section SIMMODSEM.
           mAssert _ with "A2".
           { iDestruct (big_sepL_delete with "A2") as "[B C]"; et. xtra. }
           mDesAll; ss. rewrite Z2Nat.id in *; try lia. rewrite scale_int_8. steps.
-          astart 1. acatch. hcall _ (_, _, _) (Some (_, _)) with "-A2".
+          astart 1. acatch. hcall (_, _, _) (Some (_, _)) with "-A2".
           { iModIntro. iFrame. iSplits; ss; et. }
           { esplits; ss; et. }
           fold wf. mDesAll; des; clarify. ss. des_ifs.
@@ -398,7 +398,7 @@ Section SIMMODSEM.
           }
       - steps. inv PURE2. exploit (NORMAL z); et. { lia. } intro U; des; clarify. rewrite U. ss.
         steps. force_l; stb_tac; ss; clarify. steps.
-        hcall _ _ (Some (_, _)) with "-A2".
+        hcall _ (Some (_, _)) with "-A2".
         { iModIntro. iFrame. iSplits; ss; et. }
         { esplits; ss; et. }
         fold wf. mDesAll; des; clarify. ss. des_ifs.

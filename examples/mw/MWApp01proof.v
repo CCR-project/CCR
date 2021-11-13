@@ -51,7 +51,7 @@ Section SIMMODSEM.
       { admit "ez". }
       rewrite Any.upcast_downcast in *. clarify. steps. force_l; stb_tac; ss; clarify. steps.
 
-      hcall _ _ _ with "INV".
+      hcall _ _ with "INV".
       { iSplits; ss; et. }
       { esplits; ss; et. }
       fold wf. mDesAll; des; clarify.
@@ -66,7 +66,7 @@ Section SIMMODSEM.
       { admit "ez". }
       rewrite Any.upcast_downcast in *. clarify. steps. force_l; stb_tac; ss; clarify. steps.
 
-      hcall _ _ _ with "INV".
+      hcall _ _ with "INV".
       { iSplits; ss; et. }
       { esplits; ss; et. }
       fold wf. mDesAll; des; clarify.

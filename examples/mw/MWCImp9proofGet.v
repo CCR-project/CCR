@@ -72,7 +72,7 @@ Section SIMMODSEM.
         isteps.
 
         astart 1. astep "load" (tt↑). { eapply STBINCL. stb_tac; ss. } rewrite FIND0. isteps.
-        hcall _ (Some (_, _, _)) _ with "A1".
+        hcall (Some (_, _, _)) _ with "A1".
         { iModIntro. iSplitR; iSplits; ss; et. unfold var_points_to. rewrite FIND0. iFrame. }
         { esplits; ss; et. }
         fold (wf ske). ss. des_ifs.
@@ -99,7 +99,7 @@ Section SIMMODSEM.
             rewrite two_power_nat_equiv in *. lia.
         }
         rewrite Y. steps. isteps. erewrite STBINCL; [|stb_tac; ss]. steps.
-        hcall _ None _ with "*".
+        hcall None _ with "*".
         { iModIntro. iSplits; ss; et. iLeft. iSplits; ss; et. unfold var_points_to.
           rewrite FIND0. rewrite FIND1. iFrame. iSplits; ss; et. }
         { esplits; ss; et. }
@@ -119,14 +119,14 @@ Section SIMMODSEM.
           isteps.
           rewrite FIND1. steps. isteps.
           astart 1. astep "load" (tt↑). { eapply STBINCL. stb_tac; ss. }
-          hcall _ (Some (_, _, _)) _ with "A".
+          hcall (Some (_, _, _)) _ with "A".
           { iModIntro. iSplitR; iSplits; ss; et. unfold var_points_to. rewrite FIND1. iFrame. }
           { esplits; ss; et. }
           fold (wf ske). ss. des_ifs. clear_fast.
           mDesOr "INV"; mDesAll; des; clarify; ss. rewrite Any.upcast_downcast. steps. astop. isteps.
           erewrite STBINCL; [|stb_tac; ss]. steps.
           apply Any.pair_inj in H2. des; clarify.
-          hcall _ _ None with "*".
+          hcall _ None with "*".
           { iModIntro. iSplits; ss; et.
             iLeft. iSplits; ss; et. iFrame. unfold var_points_to. rewrite FIND1. iFrame. iSplits; ss; et.
           }
@@ -143,14 +143,14 @@ Section SIMMODSEM.
           isteps.
           rewrite FIND1. steps. isteps.
           astart 1. astep "load" (tt↑). { eapply STBINCL. stb_tac; ss. }
-          hcall _ (Some (_, _, _)) _ with "A".
+          hcall (Some (_, _, _)) _ with "A".
           { iModIntro. iSplitR; iSplits; ss; et. unfold var_points_to. rewrite FIND1. iFrame. }
           { esplits; ss; et. }
           fold (wf ske). ss. des_ifs. clear_fast.
           mDesOr "INV"; mDesAll; des; clarify; ss. rewrite Any.upcast_downcast. steps. astop. isteps.
           erewrite STBINCL; [|stb_tac; ss]. steps.
           apply Any.pair_inj in H2. des; clarify.
-          hcall _ _ None with "*".
+          hcall _ None with "*".
           { iModIntro. iSplits; ss; et.
             iLeft. iSplits; ss; et. iFrame. unfold var_points_to. rewrite FIND1. iFrame. iSplits; ss; et.
           }

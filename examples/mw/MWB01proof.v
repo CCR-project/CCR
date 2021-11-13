@@ -87,7 +87,7 @@ Section SIMMODSEM.
       mDesOr "INV"; ss; mDesAll; des; clarify.
       { steps. astop. steps.
         force_l; stb_tac; ss; clarify. steps.
-        hcall _ _ (Some (_, _)) with "*".
+        hcall _ (Some (_, _)) with "*".
         { iModIntro. iSplits; ss; et. iRight. iRight. iFrame. iSplits; ss; et. }
         { esplits; ss; et. }
         fold wf. mDesAll; des; clarify.
@@ -96,13 +96,13 @@ Section SIMMODSEM.
         steps.
 
         force_l; stb_tac; ss; clarify. steps.
-        hcall _ _ None with "*".
+        hcall _ None with "*".
         { iModIntro. iSplits; ss; et. iFrame. iSplits; ss; et. iRight. iLeft. iSplits; ss; et.
           iPureIntro. eexists None. esplits; ss; et. }
         { esplits; ss; et. }
         fold wf. mDesAll; des; clarify. steps. force_l; stb_tac; ss; clarify. steps.
 
-        hcall _ _ None with "*".
+        hcall _ None with "*".
         { iModIntro. iSplits; ss; et. iFrame. iSplits; ss; et. }
         { esplits; ss; et. }
         fold wf. mDesAll; des; clarify. steps.
@@ -123,7 +123,7 @@ Section SIMMODSEM.
       { mDesAll; des_safe; clarify. steps. astop. steps.
 
         force_l; stb_tac; ss; clarify. steps.
-        hcall _ _ (Some _) with "*".
+        hcall _ (Some _) with "*".
         { iModIntro. iSplits; ss; et. iFrame. iSplits; ss; et. }
         { esplits; ss; et. }
         fold wf. mDesAll; des_safe; clarify. steps. ss. des_ifs_safe.
@@ -135,14 +135,14 @@ Section SIMMODSEM.
         steps.
 
         force_l; stb_tac; ss; clarify. steps.
-        hcall _ _ None with "*".
+        hcall _ None with "*".
         { iModIntro. iSplits; ss; et. iFrame. iSplits; ss; et. iRight. iLeft. iSplits; ss; et.
           iPureIntro. esplits; ss; et. }
         { esplits; ss; et. }
         fold wf. mDesAll; des_safe; clarify. steps. ss. des_ifs_safe.
 
         force_l; stb_tac; ss; clarify. steps.
-        hcall _ _ None with "*".
+        hcall _ None with "*".
         { iModIntro. iFrame. iSplits; ss; et. }
         { esplits; ss; et. }
         fold wf. mDesAll; des_safe; clarify. steps. ss. des_ifs_safe.
@@ -160,14 +160,14 @@ Section SIMMODSEM.
     { init. harg. fold wf. unfold loopF, MWB0.loopF, ccallU. mDesAll; des; clarify.
       mDesOr "INV"; ss; mDesAll; des; clarify.
       { steps. force_l; stb_tac; ss; clarify. steps.
-        hcall _ _ None with "*".
+        hcall _ None with "*".
         { iModIntro. iFrame. iSplits; ss; et. iLeft. iSplits; ss; et. }
         { esplits; ss; et. }
         fold wf. mDesAll; des; clarify.
         steps.
 
         force_l; stb_tac; ss; clarify. steps.
-        hcall _ _ None with "*".
+        hcall _ None with "*".
         { iModIntro. iFrame. iSplits; ss; et. }
         { esplits; ss; et. }
         fold wf. mDesAll; des; clarify.
@@ -181,14 +181,14 @@ Section SIMMODSEM.
       }
       mDesOr "INV"; ss; mDesAll; des_safe; clarify.
       { steps. force_l; stb_tac; ss; clarify. steps.
-        hcall _ _ None with "*".
+        hcall _ None with "*".
         { iModIntro. iFrame. iSplits; ss; et. iRight. iLeft. iSplits; ss; et. iPureIntro. esplits; ss; et. }
         { esplits; ss; et. }
         fold wf. mDesAll; des_safe; clarify.
         steps.
 
         force_l; stb_tac; ss; clarify. steps.
-        hcall _ _ None with "*".
+        hcall _ None with "*".
         { iModIntro. iFrame. iSplits; ss; et. }
         { esplits; ss; et. }
         fold wf. mDesAll; des_safe; clarify.
@@ -230,7 +230,7 @@ Section SIMMODSEM.
           + des_ifs_safe. steps. des_ifs.
             * steps. force_l. exists false. steps. unfold set. des_ifs. steps.
               force_l; stb_tac; ss; clarify. steps.
-              hcall _ _ (Some _) with "*".
+              hcall _ (Some _) with "*".
               { iModIntro. iFrame. iSplits; ss; et. }
               { esplits; ss; et. }
               fold wf. mDesAll; des; clarify.
@@ -247,7 +247,7 @@ Section SIMMODSEM.
               { contradict PURE2; et. }
               steps.
               force_l; stb_tac; ss; clarify. steps.
-              hcall _ _ (Some _) with "*".
+              hcall _ (Some _) with "*".
               { iModIntro. iFrame. iSplits; ss; et. }
               { esplits; ss; et. }
               fold wf. mDesAll; des; clarify.
@@ -283,7 +283,7 @@ Section SIMMODSEM.
           { contradict PURE2; et. }
           steps.
           force_l; stb_tac; ss; clarify. steps.
-          hcall _ _ (Some _) with "*".
+          hcall _ (Some _) with "*".
           { iModIntro. iFrame. iSplits; ss; et. }
           { esplits; ss; et. }
           fold wf. mDesAll; des; clarify.

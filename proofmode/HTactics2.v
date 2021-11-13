@@ -59,21 +59,21 @@ Section MODE.
   Lemma harg_clo
         A Rn Invsn Invtn
         mn r rg
-        X (P: option mname -> X -> Any.t -> Any.t -> ord -> Σ -> Prop) varg
+        X (P: option mname -> X -> Any.t -> Any.t -> Σ -> Prop) varg
         mp_src mp_tgt (mr_src mr_tgt: Σ) f_tgt k_src
         a (le: A -> A -> Prop)
         (R: A -> Any.t -> Any.t -> iProp)
         (eqr: Any.t -> Any.t -> Any.t -> Any.t -> Prop)
         (WF: mk_wf R a ((Any.pair mp_src mr_src↑), (Any.pair mp_tgt mr_tgt↑)))
         o_src0 o_src1 o_tgt0 o_tgt1
-        (FUEL: o_tgt0 = Ord_S_n o_tgt1 7)
+        (FUEL: o_tgt0 = Ord_S_n o_tgt1 6)
         (ARG:
-           forall x varg_src ord_cur ctx
-                  (ACC: current_iPropL ctx [(Rn, P mn x varg_src varg ord_cur);
+           forall x varg_src ctx
+                  (ACC: current_iPropL ctx [(Rn, P mn x varg_src varg);
                                            (Invsn, R a mp_src mp_tgt);
                                            (Invtn, OwnT mr_tgt)]),
              gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) rg rg _ _ eqr o_src1 o_tgt1 a
-                    (Any.pair mp_src mr_src↑, k_src (ctx, ((mn, x), varg_src, ord_cur)))
+                    (Any.pair mp_src mr_src↑, k_src (ctx, ((mn, x), varg_src)))
                     (Any.pair mp_tgt mr_tgt↑, f_tgt))
     :
       gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) r rg _ _ eqr o_src0 o_tgt0 a
@@ -166,21 +166,21 @@ Section MODE.
         A Xn Xtra Rn Invtn mp_tgt mr_tgt
         Invtn' Xn'
         mn r rg
-        X (P: option mname -> X -> Any.t -> Any.t -> ord -> Σ -> Prop) varg
+        X (P: option mname -> X -> Any.t -> Any.t -> Σ -> Prop) varg
         mp_src (mr_src: Σ) f_src k_tgt
         a (le: A -> A -> Prop)
         (R: A -> Any.t -> Any.t -> iProp)
         (eqr: Any.t -> Any.t -> Any.t -> Any.t -> Prop)
         o_src0 o_src1 o_tgt0 o_tgt1
-        (FUEL: o_src0 = Ord_S_n o_src1 7)
-        ctx x varg_tgt ord_cur
-        (ACC: current_iPropL ctx [(Rn, P mn x varg_tgt varg ord_cur); (Invtn, OwnT mr_tgt); (Xn, Xtra)])
+        (FUEL: o_src0 = Ord_S_n o_src1 6)
+        ctx x varg_tgt
+        (ACC: current_iPropL ctx [(Rn, P mn x varg_tgt varg); (Invtn, OwnT mr_tgt); (Xn, Xtra)])
         (ARG: forall
             rx
             (ACC: current_iPropL ctx [(Invtn', OwnT mr_tgt); (Xn', (Xtra ∧ Exactly rx)%I)]),
             gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) rg rg _ _ eqr o_src1 o_tgt1 a
                    (Any.pair mp_src mr_src↑, f_src)
-                   (Any.pair mp_tgt mr_tgt↑, k_tgt (ctx ⋅ rx, ((mn, x), varg_tgt, ord_cur))))
+                   (Any.pair mp_tgt mr_tgt↑, k_tgt (ctx ⋅ rx, ((mn, x), varg_tgt))))
     :
       gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) r rg _ _ eqr o_src0 o_tgt0 a
              (Any.pair mp_src mr_src↑, f_src)
@@ -199,7 +199,6 @@ Section MODE.
     repeat (ired_both; gstep; econs; eauto with ord_step2). esplits.
     { clear - TL HD0. rr in HD0. uipropall. rr in HD0. des; clarify.
       eapply wf_extends; et. exists ctx0. r_solve. }
-    repeat (ired_both; gstep; econs; eauto with ord_step2). exists ord_cur.
     repeat (ired_both; gstep; econs; eauto with ord_step2). eexists; et.
     ired_both. eapply ARG.
     eapply current_iPropL_push; et.
@@ -248,22 +247,22 @@ Section MODE.
   Lemma harg_clo_tgt'
         A Xn Invtn Xtra mp_tgt mr_tgt
         mn r rg
-        X (P: option mname -> X -> Any.t -> Any.t -> ord -> iProp) varg
+        X (P: option mname -> X -> Any.t -> Any.t -> iProp) varg
         mp_src (mr_src: Σ) f_src k_tgt
         a (le: A -> A -> Prop)
         (R: A -> Any.t -> Any.t -> iProp)
         (eqr: Any.t -> Any.t -> Any.t -> Any.t -> Prop)
         o_src0 o_src1 o_tgt0 o_tgt1
-        (FUEL: o_src0 = Ord_S_n o_src1 7)
-        ctx x varg_tgt ord_cur ips
+        (FUEL: o_src0 = Ord_S_n o_src1 6)
+        ctx x varg_tgt ips
         (ACC: current_iPropL ctx ips)
-        (ENTAIL: bi_entails (from_iPropL ips) (bupd (P mn x varg_tgt varg ord_cur ** OwnT mr_tgt ** Xtra)))
+        (ENTAIL: bi_entails (from_iPropL ips) (bupd (P mn x varg_tgt varg ** OwnT mr_tgt ** Xtra)))
         (ARG: forall
             rx
             (ACC: current_iPropL ctx [(Invtn, OwnT mr_tgt); (Xn, (Xtra ∧ Exactly rx)%I)]),
             gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) rg rg _ _ eqr o_src1 o_tgt1 a
                    (Any.pair mp_src mr_src↑, f_src)
-                   (Any.pair mp_tgt mr_tgt↑, k_tgt (ctx ⋅ rx, ((mn, x), varg_tgt, ord_cur))))
+                   (Any.pair mp_tgt mr_tgt↑, k_tgt (ctx ⋅ rx, ((mn, x), varg_tgt))))
     :
       gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) r rg _ _ eqr o_src0 o_tgt0 a
              (Any.pair mp_src mr_src↑, f_src)
@@ -360,8 +359,8 @@ Section MODE.
       _ <- guarantee(URA.wf (rarg ⋅ fr ⋅ ctx ⋅ mr));;
 
       x <- trigger (Choose fsp.(meta));; varg_tgt <- trigger (Choose Any.t);;
-      ord_next <- trigger (Choose _);;
-      _ <- guarantee(fsp.(precond) (Some mn) x varg_src varg_tgt  ord_next rarg);;
+      let ord_next := measure fsp x in
+      _ <- guarantee(fsp.(precond) (Some mn) x varg_src varg_tgt rarg);;
 
       _ <- guarantee(ord_lt ord_next ord_cur /\ (tbr = true -> is_pure ord_next) /\ (tbr = false -> ord_next = ord_top));;
       Ret (x, fr, varg_tgt)
@@ -405,7 +404,7 @@ Section MODE.
   Qed.
 
   Lemma hcall_clo_ord_weaken'
-        (o_src: ord) fsp_src (x_src: shelve__ fsp_src.(meta))
+        fsp_src (x_src: shelve__ fsp_src.(meta))
         fsp_tgt
         (o_new_src: Ord.t)
 
@@ -423,16 +422,22 @@ Section MODE.
         Invtn Xn Xtra
         (ACC: current_iPropL ctx0 [(Invtn, OwnT mr_tgt0); (Xn, (Xtra ∧ Exactly rx)%I)])
 
-        (UPDATABLE: forall x_tgt o_tgt,
-           bi_entails (Xtra ** (fsp_tgt.(precond) (Some mn) x_tgt varg_tgt varg_tgt o_tgt: iProp))
-                      (bupd (FR ** R a0 mp_src0 mp_tgt0 ** (fsp_src.(precond) (Some mn) x_src varg_src varg_tgt o_src: iProp))))
+        (UPDATABLE: forall x_tgt,
+           bi_entails (Xtra ** (fsp_tgt.(precond) (Some mn) x_tgt varg_tgt varg_tgt: iProp) **
+                            ⌜ord_lt (measure fsp_tgt x_tgt) ord_cur_tgt
+                             ∧ (tbr_tgt = true → is_pure (measure fsp_tgt x_tgt))
+                             ∧ (tbr_tgt = false → measure fsp_tgt x_tgt = ord_top)⌝)
+                      (bupd (FR ** R a0 mp_src0 mp_tgt0 **
+                                (fsp_src.(precond) (Some mn) x_src varg_src varg_tgt: iProp) **
+                                ⌜ord_lt (measure fsp_src x_src) ord_cur_src
+                             ∧ (tbr_src = true → is_pure (measure fsp_src x_src))
+                             ∧ (tbr_src = false → measure fsp_src x_src = ord_top)⌝
+        )))
 
         (FUEL0: n = Ord_S_n n' 10)
         (FUEL1: m = Ord_S_n m' 10)
-        (PURE: ord_lt o_src ord_cur_src /\
-               (tbr_src = true -> is_pure o_src) /\ (tbr_src = false -> o_src = ord_top))
-        (SIMPLE: forall x_tgt varg_tgt_tgt o_tgt,
-            (bi_entails ((precond fsp_tgt (Some mn) x_tgt varg_tgt varg_tgt_tgt o_tgt): iProp) (⌜varg_tgt = varg_tgt_tgt⌝%I)))
+        (SIMPLE: forall x_tgt varg_tgt_tgt,
+            (bi_entails ((precond fsp_tgt (Some mn) x_tgt varg_tgt varg_tgt_tgt): iProp) (⌜varg_tgt = varg_tgt_tgt⌝%I)))
 
         (POST: forall (vret_tgt : Any.t) (mr_src1 mr_tgt1: Σ) (mp_src1 mp_tgt1 : Any.t) a1
                       (vret_src: Any.t)
@@ -467,19 +472,27 @@ Section MODE.
                (<<UPDATABLE: URA.wf (ctx0 ⋅ (mr_tgt1 ⋅ mr_src1 ⋅ ro_src ⋅ fr_src ⋅ fr_tgt))>>) /\
                (<<RSRC: R a0 mp_src0 mp_tgt0 mr_src1>>) /\
                (<<FRS: FR fr_src>>) /\
-               (<<PRE: fsp_src.(precond) (Some mn) x_src varg_src varg_tgt o_src ro_src>>)).
-    { clear - ACC UPDATABLE x x3.
+               (<<PRE: fsp_src.(precond) (Some mn) x_src varg_src varg_tgt ro_src>>) ∧
+               (<<MEASURE: ord_lt (measure fsp_src x_src) ord_cur_src ∧
+                           (tbr_src = true → is_pure (measure fsp_src x_src)) ∧
+                           (tbr_src = false → measure fsp_src x_src = ord_top)>>)
+           ).
+    { clear - ACC UPDATABLE x x0 x2 x3.
       eapply current_iPropL_pop in ACC; des.
       eapply current_iPropL_pop in TL; des.
       eapply current_iPropL_nil in TL0. ss.
-      specialize (UPDATABLE x0 x2).
+      specialize (UPDATABLE x0).
       rr in HD0. autorewrite with iprop in HD0. des; clarify. r in HD1. autorewrite with iprop in HD1. des; clarify.
       uipropall. exploit UPDATABLE; swap 1 2.
-      { esplits; et. }
-      { eapply wf_extends; et. r. exists (fr_tgt ⋅ ctx0 ⋅ mr_tgt1). r_solve. }
+      { esplits; et. rr. uipropall. }
+      { eapply wf_extends; et. r. exists (fr_tgt ⋅ ctx0 ⋅ mr_tgt1). instantiate (1:=ε). r_solve. }
       { instantiate (1:= fr_tgt ⋅ ctx0 ⋅ mr_tgt1). r_wf x. }
       i; des. clarify.
-      esplits; et. r_wf x1.
+      esplits; et.
+      { eapply wf_extends; et. r. exists b. r_solve. }
+      { r in x8. uipropall. des; ss. }
+      { r in x8. uipropall. des; ss. }
+      { r in x8. uipropall. des; ss. }
     }
     des. (ired_both; gstep; econs; eauto with ord_step2).
     exists (ro_src, fr_src ⋅ fr_tgt, mr_src1 ⋅ mr_tgt1).
@@ -488,7 +501,6 @@ Section MODE.
     { r_wf UPDATABLE0. }
     (ired_both; gstep; econs; eauto with ord_step2). unshelve esplits; eauto.
     (ired_both; gstep; econs; eauto with ord_step2). esplits.
-    (ired_both; gstep; econs; eauto with ord_step2). exists o_src.
     (ired_both; gstep; econs; eauto with ord_step2). unshelve esplits; eauto.
     (ired_both; gstep; econs; eauto with ord_step2). unshelve esplits; eauto.
     ired_both.
@@ -511,7 +523,7 @@ Section MODE.
   Qed.
 
   Lemma hcall_clo_ord_weaken''
-        (o_src: ord) fsp_src (x_src: shelve__ fsp_src.(meta))
+        fsp_src (x_src: shelve__ fsp_src.(meta))
         A (a0: shelve__ A) FR
         fsp_tgt
         (o_new_src: Ord.t)
@@ -530,16 +542,22 @@ Section MODE.
         (ACC: current_iPropL ctx0 ips)
         (ENTAIL: bi_entails (from_iPropL ips) (bupd ((OwnT mr_tgt0) ** (Xtra ∧ Exactly rx))))
 
-        (UPDATABLE: forall x_tgt o_tgt,
-           bi_entails (Xtra ** (fsp_tgt.(precond) (Some mn) x_tgt varg_tgt varg_tgt o_tgt: iProp))
-                      (bupd (FR ** R a0 mp_src0 mp_tgt0 ** (fsp_src.(precond) (Some mn) x_src varg_src varg_tgt o_src: iProp))))
+        (UPDATABLE: forall x_tgt,
+           bi_entails (Xtra ** (fsp_tgt.(precond) (Some mn) x_tgt varg_tgt varg_tgt: iProp) **
+                            ⌜ord_lt (measure fsp_tgt x_tgt) ord_cur_tgt
+                             ∧ (tbr_tgt = true → is_pure (measure fsp_tgt x_tgt))
+                             ∧ (tbr_tgt = false → measure fsp_tgt x_tgt = ord_top)⌝
+                      )
+                      (bupd (FR ** R a0 mp_src0 mp_tgt0 ** (fsp_src.(precond) (Some mn) x_src varg_src varg_tgt: iProp)
+                                ** ⌜ord_lt (measure fsp_src x_src) ord_cur_src
+                             ∧ (tbr_src = true → is_pure (measure fsp_src x_src))
+                             ∧ (tbr_src = false → measure fsp_src x_src = ord_top)⌝)))
+
 
         (FUEL0: n = Ord_S_n n' 10)
         (FUEL1: m = Ord_S_n m' 10)
-        (PURE: ord_lt o_src ord_cur_src /\
-               (tbr_src = true -> is_pure o_src) /\ (tbr_src = false -> o_src = ord_top))
-        (SIMPLE: forall x_tgt varg_tgt_tgt o_tgt,
-            (bi_entails ((precond fsp_tgt (Some mn) x_tgt varg_tgt varg_tgt_tgt o_tgt): iProp) (⌜varg_tgt = varg_tgt_tgt⌝%I)))
+        (SIMPLE: forall x_tgt varg_tgt_tgt,
+            (bi_entails ((precond fsp_tgt (Some mn) x_tgt varg_tgt varg_tgt_tgt): iProp) (⌜varg_tgt = varg_tgt_tgt⌝%I)))
 
         (POST: forall (vret_tgt : Any.t) (mr_src1 mr_tgt1: Σ) (mp_src1 mp_tgt1 : Any.t) a1
                       (vret_src: Any.t)
@@ -655,9 +673,7 @@ Section MODE.
 
   Local Transparent APC.
 
-  Definition is_possibly_pure (fsp: fspec): Prop :=
-    exists x mn varg_src varg_tgt d r, fsp.(precond) x mn varg_src varg_tgt d r ∧ is_pure d
-  .
+  Definition is_possibly_pure (fsp: fspec): Prop := exists x, is_pure (fsp.(measure) x).
 
   Definition stb_pure_incl (stb_tgt stb_src: string -> option fspec): Prop :=
     forall fn fsp (FIND: stb_tgt fn = Some fsp) (PURE: is_possibly_pure fsp), stb_src fn = Some fsp
@@ -762,7 +778,7 @@ Section MODE.
         exists (ro, rf ⋅ rf_src, rm_src ⋅ mr_tgt1). steps. force_l; ss.
         { r_wf _GUARANTEE1. }
         steps. force_l. esplits; et. steps. force_l. esplits; et. steps. force_l. esplits; et.
-        steps. force_l; et. steps. force_l; ss. steps.
+        steps. force_l; et. steps.
         { econs. eapply to_semantic. iIntros "[A B]". iFrame. iStopProof.
           uipropall. i. r in H0. des; clarify. esplits; et. r. uipropall.
         }
@@ -841,15 +857,14 @@ Ltac hpost_tgt :=
   |start_ipm_proof
   |on_current ltac:(fun H => try clear H); i; on_current ltac:(fun H => simpl in H)].
 
-Tactic Notation "hcall" uconstr(o) uconstr(x) uconstr(a) :=
-  eapply (@hcall_clo_ord_weaken'' _ o _ x _ a);
+Tactic Notation "hcall" uconstr(x) uconstr(a) :=
+  eapply (@hcall_clo_ord_weaken'' _ _ x _ a);
   unshelve_goal;
   [eassumption
   |start_ipm_proof; try (iFrame; et)
   |cbn; i; iIntros "[FR P]"
   |refl
   |refl
-  |
   |
   |on_current ltac:(fun H => try clear H); i; on_current ltac:(fun H => simpl in H)]
 .
