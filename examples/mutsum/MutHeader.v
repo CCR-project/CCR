@@ -82,13 +82,15 @@ Section PROOF.
   Context `{Σ: GRA.t}.
 
   Definition main_spec: fspec :=
-    mk_simple (fun (_: unit) => ((fun varg o => (⌜varg = ([]: list val)↑ ∧ o = ord_top⌝: iProp)%I),
+    mk_simple (fun (_: unit) => (ord_top, (fun varg => (⌜varg = ([]: list val)↑⌝: iProp)%I),
                                  fun _ => (True: iProp)%I)).
   Definition f_spec:    fspec := mk_simple (fun (n: nat) =>
-                                              ((fun varg o => (⌜varg = [Vint (Z.of_nat n)]↑ /\ o = ord_pure n /\ n < mut_max⌝: iProp)%I),
+                                              (ord_pure n,
+                                               (fun varg => (⌜varg = [Vint (Z.of_nat n)]↑ /\ n < mut_max⌝: iProp)%I),
                                                (fun vret => (⌜vret = (Vint (Z.of_nat (sum n)))↑⌝: iProp)%I))).
   Definition g_spec:    fspec := mk_simple (fun (n: nat) =>
-                                              ((fun varg o => (⌜varg = [Vint (Z.of_nat n)]↑ /\ o = ord_pure n /\ n < mut_max⌝: iProp)%I),
+                                              (ord_pure n,
+                                               (fun varg => (⌜varg = [Vint (Z.of_nat n)]↑ /\ n < mut_max⌝: iProp)%I),
                                                (fun vret => (⌜vret = (Vint (Z.of_nat (sum n)))↑⌝: iProp)%I))).
   Definition GlobalStb: gname -> option fspec := to_stb [("main", main_spec); ("f", f_spec); ("g", g_spec)].
 

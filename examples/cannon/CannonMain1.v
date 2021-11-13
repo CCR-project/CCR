@@ -23,8 +23,9 @@ Section CANNONMAIN.
   Definition main_spec:    fspec :=
     mk_simple (X:=unit)
               (fun _ => (
-                   (fun varg o =>
-                      (⌜varg = ([]: list val)↑ /\ o = ord_top⌝)
+                   ord_top,
+                   (fun varg =>
+                      (⌜varg = ([]: list val)↑⌝)
                         ** (OwnM (Ball))
                    ),
                    (fun vret =>

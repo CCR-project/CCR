@@ -53,11 +53,13 @@ Section PROOF.
 
   Definition f_spec: fspec :=
     mk_simple (fun (n: nat) =>
-                 ((fun varg o => (⌜varg = [Vint (Z.of_nat n)]↑ /\ o = f_measure n /\ n < max⌝: iProp)%I),
+                 (f_measure n,
+                  (fun varg => (⌜varg = [Vint (Z.of_nat n)]↑ /\ n < max⌝: iProp)%I),
                   (fun vret => (⌜vret = (Vint (Z.of_nat (5 * n)))↑⌝: iProp)%I))).
   Definition g_spec: fspec :=
     mk_simple (fun (n: nat) =>
-                 ((fun varg o => (⌜varg = [Vint (Z.of_nat n)]↑ /\ o = g_measure n /\ 1 <= n < max⌝: iProp)%I),
+                 (g_measure n,
+                  (fun varg => (⌜varg = [Vint (Z.of_nat n)]↑ /\ 1 <= n < max⌝: iProp)%I),
                   (fun vret => (⌜vret = (Vint (Z.of_nat (5 * n - 2)))↑⌝: iProp)%I))).
   Definition GlobalStb: gname -> option fspec := to_stb [("f", f_spec); ("g", g_spec)].
 
@@ -118,13 +120,15 @@ Section PROOF.
 
   Definition f_spec: fspec :=
     mk_simple (fun (n: nat) =>
-                 ((fun varg o => (⌜varg = [Vint (Z.of_nat n)]↑ /\ o = f_measure n /\ n < max⌝
+                 (f_measure n,
+                  (fun varg => (⌜varg = [Vint (Z.of_nat n)]↑ /\ n < max⌝
                                   ** OwnM (IRA.client true: IRA.t))),
                   (fun vret => (⌜vret = (Vint (Z.of_nat (5 * n)))↑⌝
                                  ** OwnM (IRA.client false: IRA.t))))).
   Definition g_spec: fspec :=
     mk_simple (fun (n: nat) =>
-                 ((fun varg o => (⌜varg = [Vint (Z.of_nat n)]↑ /\ o = g_measure n /\ 1 <= n < max⌝
+                 (g_measure n,
+                  (fun varg => (⌜varg = [Vint (Z.of_nat n)]↑ /\ 1 <= n < max⌝
                                    ** OwnM (IRA.client true: IRA.t))),
                   (fun vret => (⌜vret = (Vint (Z.of_nat (5 * n - 2)))↑⌝
                                    ** OwnM (IRA.client false: IRA.t))))).

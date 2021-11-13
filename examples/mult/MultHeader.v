@@ -42,15 +42,19 @@ Section PROOF.
   Context `{@GRA.inG gRA Σ}.
   Context `{@GRA.inG hRA Σ}.
 
-  Definition f_spec0: fspec := mk_simple (fun (_: unit) => ((fun varg o => (OwnM f1 ** OwnM gpre ** ⌜o = ord_top⌝)%I),
+  Definition f_spec0: fspec := mk_simple (fun (_: unit) => (ord_top,
+                                                            (fun varg => (OwnM f1 ** OwnM gpre)%I),
                                                            (fun vret => (OwnM f2 ** OwnM gpost)%I))).
-  Definition f_spec1: fspec := mk_simple (fun (_: unit) => ((fun varg o => (OwnM f0 ** OwnM gpre ** OwnM hpre ** ⌜o = ord_top⌝)%I),
+  Definition f_spec1: fspec := mk_simple (fun (_: unit) => (ord_top,
+                                                            (fun varg => (OwnM f0 ** OwnM gpre ** OwnM hpre)%I),
                                                            (fun vret => (OwnM f3 ** OwnM gpost ** OwnM hpost)%I))).
-  Definition g_spec: fspec := mk_simple (fun (_: unit) => ((fun varg o => (OwnM gpre ** ⌜o = ord_top⌝)%I),
+  Definition g_spec: fspec := mk_simple (fun (_: unit) => (ord_top,
+                                                           (fun varg => (OwnM gpre)%I),
                                                            (fun vret => (OwnM gpost)%I))).
   Definition h_spec0: fspec := fspec_trivial.
-  Definition h_spec1: fspec := mk_simple (fun (_: unit) => ((fun varg o => (OwnM hpre ** ⌜o = ord_top⌝)%I),
-                                                           (fun vret => (OwnM hpost)%I))).
+  Definition h_spec1: fspec := mk_simple (fun (_: unit) => (ord_top,
+                                                            (fun varg => (OwnM hpre)%I),
+                                                            (fun vret => (OwnM hpost)%I))).
 
   Definition GlobalStb0: list (gname * fspec).
     eapply (Seal.sealing "stb").
