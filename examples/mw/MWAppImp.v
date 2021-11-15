@@ -48,7 +48,7 @@ Section PROOF.
     mk_program
       "App"
       []
-      [("put", 2); ("get", 1)]
+      [("MW.put", 2); ("MW.get", 1)]
       [("initialized", 0%Z)]
       [("App.init", initF); ("App.run", runF)]
   .

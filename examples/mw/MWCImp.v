@@ -54,7 +54,7 @@ Section PROOF.
   Definition getF :=
     mk_function
       ["k"]
-      ["v"; "arr"; "map"; "tmp"]
+      ["v"; "arr"; "arrv"; "map"; "mapv"; "tmp"]
       (if# ((- 1)%Z < "k") * ("k" < 100%Z)
        then# "arr" =#& "gv0" ;# "arrv" =#* "arr" ;# "v" =#* ("arrv" + (8%Z * "k"))
        else# "map" =#& "gv1" ;# "mapv" =#* "map" ;# "v" =@ "Map.access" ["mapv": expr; "k": expr]
