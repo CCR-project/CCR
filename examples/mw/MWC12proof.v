@@ -377,7 +377,7 @@ TODO: APC, locked thinges
             { iDes; clarify. instantiate (2:=(_, _, _, _)). cbn. iModIntro. iSplits; ss; et. iFrame.
               iSplitL.
               - iSplitR. { instantiate (1:=True%I); ss. } iRight. iRight. iSplits; ss; et. iSplitL "A"; ss.
-              - iSplits; ss; et. rewrite PURE2; ss.
+              - instantiate (1:=k). iSplits; ss; et. rewrite PURE2; ss.
             }
             { i. iIntros "H". ss. }
             fold wf. mDesAll; des; clarify. steps. astop. steps.
@@ -417,7 +417,7 @@ TODO: APC, locked thinges
             { iDes; clarify. instantiate (2:=(_, _, _, _)). cbn. iModIntro. iSplits; ss; et. iFrame.
               iSplitL.
               - iSplitR. { instantiate (1:=True%I); ss. } iRight. iRight. iSplits; ss; et. iSplitL "A"; ss.
-              - iSplits; ss; et. rewrite PURE2; ss.
+              - instantiate (1:=k). iSplits; ss; et. rewrite PURE2; ss.
             }
             { i. iIntros "H". ss. }
             fold wf. mDesAll; des; clarify. steps. astop. steps.

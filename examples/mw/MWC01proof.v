@@ -235,17 +235,11 @@ Section SIMMODSEM.
     i. econstructor 1 with (wf:=wf) (le:=le); et; swap 2 3.
     { typeclasses eauto. }
     { esplits; et. econs; et. eapply to_semantic. iIntros "H". ss; et. iFrame. iLeft. iSplits; ss; et. }
-    (* { destruct (SkEnv.id2blk (Sk.load_skenv sk) "arr") eqn:T; cycle 1. *)
-    (*   { exfalso. Local Transparent Sk.load_skenv. unfold Sk.load_skenv in *. Local Opaque Sk.load_skenv. *)
-    (*     ss. uo. des_ifs. admit "ez". } *)
-    (*   esplits. econs; ss. eapply to_semantic. iIntros "H". rewrite T. cbn. iSplits; ss; et. *)
-    (*   { rewrite points_to_nil. iApply OwnM_unit; ss. } *)
-    (* } *)
 
     econs; ss.
     { init. harg. mDesAll. des; clarify. des_u. steps. unfold mainF, MWC0.mainF, ccallU. steps. fold wf.
       mAssert (OwnM sp_black ** OwnM sp_white ** ⌜w = None ∧ ∃ (arr map: val), mp_tgt = (arr, map)↑⌝) with "*" as "A".
-      { iDes; des; clarify; try (by iFrame; iSplits; ss; et). admit "ez". }
+      { iDes; des; clarify; try (by iFrame; iSplits; ss; et). iExFalso. iApply (sp_white_false); iFrame. }
       mDesAll; des; clarify.
       astart 1. acatch. hcall 100 (Some (_, _)) with "*".
       { iModIntro. iFrame. iSplits; ss; et. }
@@ -279,7 +273,7 @@ Section SIMMODSEM.
     econs; ss.
     { init. harg. mDesAll. des; clarify. des_u.
       assert(w = None).
-      { repeat mDesOr "INV"; mDesAll; des; clarify. mAssertPure False; ss. admit "ez". }
+      { repeat mDesOr "INV"; mDesAll; des; clarify. mAssertPure False; ss. iApply (sp_white_false); iFrame. }
       steps. unfold loopF, MWC0.loopF, ccallU. steps. fold wf.
       force_l; stb_tac; ss; clarify. steps. hcall _ _ with "*".
       { iFrame. iSplits; ss; et. }
@@ -304,7 +298,7 @@ Section SIMMODSEM.
         des. revert a b T. rewrite EQ. i. repeat des_u; ss.
       }
       mDesOr "INV"; mDesAll; des; clarify; cycle 1.
-      { mAssertPure False; ss. admit "ez". }
+      { mAssertPure False; ss. iApply (sp_white_false); iFrame. }
       steps. rewrite Any.upcast_downcast in *. clarify. steps.
       destruct ((0 <=? z)%Z && (z <? 100)%Z) eqn:T.
       - inv PURE2. hexploit (SIM (Z.to_nat z)); [lia|]. rewrite ! Nat2Z.id in *;rewrite Z2Nat.id in *;try lia.
@@ -377,7 +371,7 @@ Section SIMMODSEM.
         des. revert a b T. rewrite EQ. i. repeat des_u; ss.
       }
       mDesOr "INV"; mDesAll; des; clarify; cycle 1.
-      { mAssertPure False; ss. admit "ez". }
+      { mAssertPure False; ss. iApply (sp_white_false); iFrame. }
       steps. rewrite Any.upcast_downcast in *. clarify. steps.
       destruct ((0 <=? z)%Z && (z <? 100)%Z) eqn:T.
       - inv PURE2. hexploit (SIM (Z.to_nat z)); [lia|]. rewrite ! Nat2Z.id in *;rewrite Z2Nat.id in *;try lia.

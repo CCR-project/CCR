@@ -117,9 +117,7 @@ Section SIMMODSEM.
         }
       }
       mDesOr "INV"; ss; cycle 1.
-      { mDesAll; des; clarify.
-        admit "ez".
-      }
+      { mDesAll; des; clarify. mAssertPure False; ss. iApply (sp_white_false); iFrame. }
       { mDesAll; des_safe; clarify. steps. astop. steps.
 
         force_l; stb_tac; ss; clarify. steps.
@@ -200,7 +198,7 @@ Section SIMMODSEM.
           - iFrame. iSplits; ss; et. iRight. iLeft. iPureIntro. esplits; ss; et.
         }
       }
-      { admit "ez". }
+      { mAssertPure False; ss. iApply (sp_white_false); iFrame. }
     }
 
     econs; ss.
@@ -258,7 +256,7 @@ Section SIMMODSEM.
               { iModIntro. iSplits; ss; et. iFrame. iSplits; ss; et.
                 iRight; iLeft. iPureIntro. esplits; ss; et. right. esplits; ss; et; i; des_ifs; et. }
       }
-      { admit "ez". }
+      { mAssertPure False; ss. iApply (sp_white_false); iFrame. }
     }
 
     econs; ss.
@@ -294,7 +292,7 @@ Section SIMMODSEM.
           { iModIntro. iSplits; ss; et. iFrame. iSplits; ss; et.
             iRight; iLeft. iPureIntro. esplits; ss; et. right. esplits; ss; et; i; des_ifs; et. }
       }
-      { admit "ez". }
+      { mAssertPure False; ss. iApply (sp_white_false); iFrame. }
     }
   Unshelve. all: ss. all: try exact 0.
   Qed.

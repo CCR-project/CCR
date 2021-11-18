@@ -48,7 +48,7 @@ Section SIMMODSEM.
     econs; ss.
     { init. harg. mDesAll; des; clarify. fold wf. steps. unfold initF, MWApp0.initF, ccallU. steps.
       mDesOr "INV"; mDesAll; des; clarify; cycle 1.
-      { admit "ez". }
+      { mAssertPure False; ss. iApply (init_false); iFrame. }
       rewrite Any.upcast_downcast in *. clarify. steps. force_l; stb_tac; ss; clarify. steps.
 
       hcall _ _ with "INV".
@@ -56,14 +56,14 @@ Section SIMMODSEM.
       { esplits; ss; et. }
       fold wf. mDesAll; des; clarify.
       mDesOr "INV1"; mDesAll; des; clarify; cycle 1.
-      { admit "ez". }
+      { mAssertPure False; ss. iApply (init_false); iFrame. }
       steps. hret _; ss.
       { iModIntro. iFrame. iSplits; ss; et. }
     }
     econs; ss.
     { init. harg. mDesAll; des; clarify. fold wf. steps. unfold runF, MWApp0.runF, ccallU. steps.
       mDesOr "INV"; mDesAll; des; clarify.
-      { admit "ez". }
+      { mAssertPure False; ss. iApply (run_false); iFrame. }
       rewrite Any.upcast_downcast in *. clarify. steps. force_l; stb_tac; ss; clarify. steps.
 
       hcall _ _ with "INV".
@@ -71,7 +71,7 @@ Section SIMMODSEM.
       { esplits; ss; et. }
       fold wf. mDesAll; des; clarify.
       mDesOr "INV1"; mDesAll; des; clarify.
-      { admit "ez". }
+      { mAssertPure False; ss. iApply (run_false); iFrame. }
       steps. force_r; ss. exists; ss. steps. unfold unint in *. des_ifs. steps.
       hret _; ss.
       { iModIntro. iFrame. iSplits; ss; et. }

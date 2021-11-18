@@ -26,8 +26,8 @@ Section SIMMODSEM.
 
   Lemma _get_sim sk (wf: unit -> Any.t * Any.t -> Prop) (SKINCL: Sk.incl (defs MWprog) sk) (SKWF: Sk.wf sk):
     sim_fnsem wf top2
-              ("get", cfunU (getF (Sk.load_skenv sk)))
-              ("get", cfunU (eval_imp (Sk.load_skenv sk) MWCImp.getF)).
+              ("MW.get", cfunU (getF (Sk.load_skenv sk)))
+              ("MW.get", cfunU (eval_imp (Sk.load_skenv sk) MWCImp.getF)).
   Proof.
     { init.
       unfold getF, MWCImp.getF, ccallU.

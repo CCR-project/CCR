@@ -290,7 +290,7 @@ Section SIMMODSEM.
         { esplits; ss; et. rewrite <- OrdArith.add_from_nat. eapply OrdArith.lt_from_nat; lia. }
         fold wf. mDesAll; des; clarify. steps.
         force_r.
-        { admit "TODO: intrange". }
+        { ss. inv PURE2. ss. }
         steps.
 
         acatch.
@@ -324,7 +324,8 @@ Section SIMMODSEM.
         { esplits; ss; et. rewrite <- OrdArith.add_from_nat. eapply OrdArith.lt_from_nat; lia. }
         fold wf. mDesAll; des; clarify. steps.
         force_r.
-        { admit "TODO: intrange". }
+        { inv PURE2; ss. esplits; ss. apply alist_find_some in PURE1.
+          rewrite Forall_forall in H4. eapply H4; et. rewrite in_map_iff. esplits; et. ss. }
         steps.
 
         acatch.
@@ -341,7 +342,7 @@ Section SIMMODSEM.
         acatch.
         { eapply STBINCL. stb_tac; ss. }
         hcall (_, _, _, _) _ with "A1".
-        { iFrame. iSplits; ss; et. }
+        { inv PURE2; ss. iFrame. iSplits; ss; et. }
         { esplits; ss; et. rewrite <- ! OrdArith.add_from_nat. eapply OrdArith.lt_from_nat; lia. }
         fold wf. mDesAll; des; clarify. steps.
 

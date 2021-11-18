@@ -25,8 +25,8 @@ Section SIMMODSEM.
 
   Lemma _loop_sim sk (wf: unit -> Any.t * Any.t -> Prop) (SKINCL: Sk.incl (defs MWprog) sk) (SKWF: Sk.wf sk):
     sim_fnsem wf top2
-              ("loop", cfunU (loopF))
-              ("loop", cfunU (eval_imp (Sk.load_skenv sk) MWCImp.loopF)).
+              ("MW.loop", cfunU (loopF))
+              ("MW.loop", cfunU (eval_imp (Sk.load_skenv sk) MWCImp.loopF)).
   Proof.
     { init.
       unfold loopF, MWCImp.loopF, ccallU.

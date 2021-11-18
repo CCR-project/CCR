@@ -364,7 +364,9 @@ Section PROOF.
     { eapply refines2_cons.
       { eapply Mem0Openproof.correct. ii; ss. }
       eapply refines2_cons.
-      - eapply MWCImp9proof.correct. i.
+      - etrans.
+        { eapply MWCImp8proof.correct. }
+        eapply MWC89proof.correct. i.
         ii. unfold to_closed_stb.
         autounfold with stb in *. autorewrite with stb in *. cbn in FIND.
         rewrite ! eq_rel_dec_correct in *. des_ifs.

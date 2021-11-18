@@ -55,14 +55,55 @@ End AppRA.
 
 Definition Init: AppRA.t := AppRA.init.
 Definition Run: AppRA.t := AppRA.run.
+Lemma _init_false: ~ URA.wf (Init ⋅ Init).
+Proof.
+  ii. rr in H. ur in H. rewrite Seal.sealing_eq in *. ss.
+Qed.
 
+Lemma _run_false: ~ URA.wf (Run ⋅ Run).
+Proof.
+  ii. rr in H. ur in H. rewrite Seal.sealing_eq in *. ss.
+Qed.
+
+Section PROOF.
+  Context `{@GRA.inG AppRA.t Σ}.
+  Lemma init_false: (OwnM Init ** OwnM Init ⊢ ⌜False⌝)%I.
+  Proof.
+    i. iIntros "[A B]". iCombine "A B" as "A". iOwnWf "A". exfalso. eapply _init_false; et.
+  Qed.
+  Lemma run_false: (OwnM Run ** OwnM Run ⊢ ⌜False⌝)%I.
+  Proof.
+    i. iIntros "[A B]". iCombine "A B" as "A". iOwnWf "A". exfalso. eapply _run_false; et.
+  Qed.
+End PROOF.
 
 
 (*** simpl RA ***)
 Instance spRA: URA.t := Auth.t (Excl.t unit).
 Definition sp_white: spRA := @Auth.white (Excl.t unit) (Some tt).
 Definition sp_black: spRA := @Auth.black (Excl.t unit) (Some tt).
+Lemma _sp_white_false: ~ URA.wf (sp_white ⋅ sp_white).
+Proof.
+  ii. rr in H. ur in H. rewrite Seal.sealing_eq in *.
+  rr in H. ur in H. rewrite Seal.sealing_eq in *. rr in H. ss.
+Qed.
 
+Lemma _sp_black_false: ~ URA.wf (sp_black ⋅ sp_black).
+Proof.
+  ii. rr in H. ur in H. rewrite Seal.sealing_eq in *. ss.
+Qed.
+
+Section PROOF.
+  Context `{@GRA.inG spRA Σ}.
+  Lemma sp_white_false: (OwnM (sp_white) ** OwnM (sp_white) ⊢ ⌜False⌝)%I.
+  Proof.
+    i. iIntros "[A B]". iCombine "A B" as "A". iOwnWf "A". exfalso. eapply _sp_white_false; et.
+  Qed.
+  Lemma sp_black_false: (OwnM (sp_black) ** OwnM (sp_black) ⊢ ⌜False⌝)%I.
+  Proof.
+    i. iIntros "[A B]". iCombine "A B" as "A". iOwnWf "A". exfalso. eapply _sp_black_false; et.
+  Qed.
+End PROOF.
 
 
 (*** MW RA ***)
@@ -136,7 +177,8 @@ Section MAPRA.
     end
   .
   Definition is_map (h: mblock) (map: (Z -> option Z)): iProp :=
-    (∃ hd kvs, is_map_internal hd kvs ** OwnM ((h,0%Z) |-> [hd]) ** ⌜map = (fun k => alist_find k kvs)⌝)%I
+    (∃ hd kvs, is_map_internal hd kvs ** OwnM ((h,0%Z) |-> [hd]) **
+        ⌜map = (fun k => alist_find k kvs) ∧ (Forall intrange_64 (List.map fst kvs))⌝)%I
   .
   (* Definition _is_map (h: mblock) (map: (Z -> option Z)): _mapRA := *)
   (*   (fun _h => if (dec _h h) then Some map else ε) *)
@@ -240,7 +282,7 @@ Section PROOF.
   Definition update_spec: fspec :=
     mk_simple (fun '(h, k, v, m) =>
                  (ord_pure 2,
-                  (fun varg => (⌜varg = ([Vptr h 0%Z; Vint k; Vint v]: list val)↑⌝ **
+                  (fun varg => (⌜varg = ([Vptr h 0%Z; Vint k; Vint v]: list val)↑ ∧ intrange_64 k⌝ **
                                    is_map h m)%I),
                   (fun vret => ⌜vret = Vundef↑⌝ ** is_map h (Maps.add k v m)))).
 
@@ -255,7 +297,9 @@ Section PROOF.
     mk_simple (fun '(h, k, v, kvs) =>
                  (ord_pure (1 + length kvs)%ord,
                   (fun varg => ⌜varg = ([Vptr h 0%Z; Vint k]: list val)↑ ∧
-                                 alist_find k (kvs: list (Z * Z)) = Some v⌝ ** is_map_internal (Vptr h 0) kvs),
+                                 alist_find k (kvs: list (Z * Z)) = Some v ∧
+                                 (Forall intrange_64 (List.map fst kvs))⌝
+                                ** is_map_internal (Vptr h 0) kvs),
                   (fun vret => ⌜vret = (Vint v)↑⌝ ** (is_map_internal (Vptr h 0) kvs)))).
 
   Definition MapStb: alist gname fspec.

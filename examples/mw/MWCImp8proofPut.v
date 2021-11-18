@@ -26,8 +26,8 @@ Section SIMMODSEM.
 
   Lemma _put_sim sk (wf: unit -> Any.t * Any.t -> Prop) (SKINCL: Sk.incl (defs MWprog) sk) (SKWF: Sk.wf sk):
     sim_fnsem wf top2
-              ("put", cfunU (putF (Sk.load_skenv sk)))
-              ("put", cfunU (eval_imp (Sk.load_skenv sk) MWCImp.putF)).
+              ("MW.put", cfunU (putF (Sk.load_skenv sk)))
+              ("MW.put", cfunU (eval_imp (Sk.load_skenv sk) MWCImp.putF)).
   Proof.
     { init.
       unfold putF, MWCImp.putF, ccallU.
