@@ -49,7 +49,7 @@ Section SIMMODSEM.
     econs; ss. init. harg. mDesAll.
     des; clarify. unfold gF, ccallU. steps. astart 10.
     des_ifs.
-    - steps. acatch. hcall _ _ _ with "*"; auto.
+    - steps. acatch. hcall _ _ with "*"; auto.
       { iModIntro. iFrame. iSplits; try by (iPureIntro; refl).
         2: { iPureIntro. do 3 f_equal. instantiate (1:=x - 1). lia. }
         { ss. }

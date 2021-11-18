@@ -57,7 +57,7 @@ Section PROOF.
     unfold FG1, FG2.
     eapply adequacy_type.
     { instantiate (1:=ε). cbn. rewrite ! URA.unit_id. eapply URA.wf_unit. }
-    { i. ss. clarify. ss. exists tt. splits.
+    { i. ss. clarify. ss. exists tt. splits; ss.
       { iIntros "H". iPureIntro. splits; auto. }
       { ii. iPureIntro. i. des; auto. }
     }

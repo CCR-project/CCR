@@ -13,15 +13,18 @@ Require Import Imp2Csharpminor.
 (* Require Import Csharpminor2Asm. *)
 Require Import Imp2Asm.
 
-Require Import ImpSimple.
-Require Import ImpFactorial.
-Require Import ImpMutsum.
-Require Import ImpKnot.
-Require Import ImpMem1.
-Require Import ImpMem2.
-Require Import ImpLink.
-
-Require Import StackImp EchoImp EchoMainImp ClientImp.
+(************************************)
+(* example programs for compilation *)
+(* Require Import ImpSimple. *)
+(* Require Import ImpFactorial. *)
+(* Require Import ImpMutsum. *)
+(* Require Import ImpKnot. *)
+(* Require Import ImpMem1. *)
+(* Require Import ImpMem2. *)
+(* Require Import ImpLink. *)
+(* Require Import StackImp EchoImp EchoMainImp ClientImp. *)
+Require Import MWAppImp MWCImp MWMapImp.
+(************************************)
 
 Extract Constant excluded_middle_informative => "true".
 
@@ -171,14 +174,15 @@ Separate Extraction
    Imp2Asm.compile_imp
    Imp2Csharpminor.link_imps
    (* test programs written in Imp *)
-   imp_factorial_prog
-   imp_simple_prog
-   imp_mutsumF_prog imp_mutsumG_prog imp_mutsumMain_prog
-   imp_knot_prog
-   imp_mem1_f imp_mem1_main
-   imp_mem2_prog
-   imp_linkF_prog imp_linkG_prog imp_linkMain_prog
-   Stack_prog Echo_prog EchoMain_prog Client_prog
+   (* imp_factorial_prog *)
+   (* imp_simple_prog *)
+   (* imp_mutsumF_prog imp_mutsumG_prog imp_mutsumMain_prog *)
+   (* imp_knot_prog *)
+   (* imp_mem1_f imp_mem1_main *)
+   (* imp_mem2_prog *)
+   (* imp_linkF_prog imp_linkG_prog imp_linkMain_prog *)
+   (* Stack_prog Echo_prog EchoMain_prog Client_prog *)
+   Appprog MWprog Map_prog
 .
 
 Cd "../..".

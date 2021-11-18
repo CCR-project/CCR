@@ -657,7 +657,6 @@ Section ADQ.
       { rewrite ! URA.unit_id. rewrite ! URA.unit_idl. auto. }
       steps. force_l. exists None. steps.
       force_l. exists (args). steps.
-      force_l. exists ord_top. steps.
       force_l.
       { split; auto. }
       steps. force_l.
@@ -671,7 +670,6 @@ Section ADQ.
       { rewrite ! URA.unit_id. rewrite ! URA.unit_idl. auto. }
       steps. force_l. exists None. steps.
       force_l. eexists (args). steps.
-      force_l. exists ord_top. steps.
       force_l.
       { split; et. }
       steps. force_l.
@@ -697,7 +695,9 @@ Section ADQ.
     unfold fun_to_tgt, HoareFun, mput, mget, cfunN.
     Local Opaque HoareFun.
     ginit. steps.
-    assert (x1 = ord_top /\ exists b, x0 = Any.pair b t).
+    replace (match x with | Some _ | _ => ord_top end) with ord_top; cycle 1.
+    { des_ifs. }
+    assert (exists b, x0 = Any.pair b t).
     { destruct x; ss.
       { des. subst. red in _ASSUME1. uipropall. des. clarify. et. }
       { des. subst. et. }
@@ -1258,7 +1258,8 @@ Section ADQ.
       (<<MAIN: forall (main_fsp: fspec)
                       (MAIN: alist_find "main" (KMod.get_stb _kmds sk) = Some main_fsp),
           exists (x: main_fsp.(meta)),
-            (<<PRE: main_fsp.(precond) None x initial_arg initial_arg ord_top entry_r>>) /\
+            (<<PRE: main_fsp.(precond) None x initial_arg initial_arg entry_r>>) /\
+            (<<MEASURE: main_fsp.(measure) x = ord_top>>) /\
             (<<RET: forall ret_src ret_tgt r
                            (POST: main_fsp.(postcond) None x ret_src ret_tgt r),
                 ret_src = ret_tgt>>)>>).
@@ -1302,7 +1303,7 @@ Section ADQ.
       unfold stb2. change (alist string Sk.gdef) with Sk.t in *.
       rewrite FIND. esplits; et.
       i. ss. destruct x; des; auto.
-      red in PRE0. uipropall. des; auto. }
+    }
     { hexploit MAINM; et. i. des. unfold _stb, _gstb, KMod.get_stb in MAIN.
       assert (RWF: URA.wf
                      (entry_r
@@ -1374,7 +1375,8 @@ Section ADQ.
              (<<MAIN: forall (main_fsp: fspec)
                              (MAIN: alist_find "main" (KMod.get_stb _kmds sk) = Some main_fsp),
                  exists (x: main_fsp.(meta)),
-                   (<<PRE: main_fsp.(precond) None x initial_arg initial_arg ord_top entry_r>>) /\
+                   (<<PRE: main_fsp.(precond) None x initial_arg initial_arg entry_r>>) /\
+                   (<<MEASURE: main_fsp.(measure) x = ord_top>>) /\
                    (<<RET: forall ret_src ret_tgt r
                                   (POST: main_fsp.(postcond) None x ret_src ret_tgt r),
                        ret_src = ret_tgt>>)>>))
@@ -1486,7 +1488,7 @@ Section ADQ.
     unfold mput, mget. steps.
     force_l. eexists (c0, c1, c). steps.
     force_l; auto. steps. force_l. exists (Some x). steps.
-    force_l. eexists. force_l. eexists. force_l.
+    force_l. eexists. force_l.
     { esplits; et. }
     steps. force_l; auto. steps.
     gstep. econs; et. i. des. clarify. eexists _, _.
@@ -1639,8 +1641,8 @@ Section ADQ.
         des; clarify. force_r. exists true.
         force_r. exists m. force_r. eexists _.
         force_r. exists (c, c0). force_r. force_r; auto.
-        force_r. eexists _. force_r; eauto.
-        steps. destruct x1.
+        force_r; eauto.
+        steps. destruct (measure ksb m) eqn:T.
         { guclo lordC_spec. econs.
           { eapply Ord.union_l. }
           { eapply Ord.union_l. }
@@ -1676,7 +1678,7 @@ Section ADQ.
         des; clarify. force_r. exists false.
         force_r. exists tt. force_r. exists t.
         force_r. exists (c, c0). force_r. force_r; auto.
-        force_r. exists ord_top. force_r.
+        force_r.
         { red. uipropall. }
         steps.
         guclo lbindC_spec. econs.
@@ -1712,7 +1714,8 @@ Section ADQ.
                (<<MAIN: forall (main_fsp: fspec)
                                (MAIN: alist_find "main" (KMod.get_stb kmds sk) = Some main_fsp),
                    exists (x: main_fsp.(meta)),
-                     (<<PRE: main_fsp.(precond) None x initial_arg initial_arg ord_top entry_r>>) /\
+                     (<<PRE: main_fsp.(precond) None x initial_arg initial_arg entry_r>>) /\
+                     (<<MEASURE: main_fsp.(measure) x = ord_top>>) /\
                      (<<RET: forall ret_src ret_tgt r
                                     (POST: main_fsp.(postcond) None x ret_src ret_tgt r),
                          ret_src = ret_tgt>>)>>))

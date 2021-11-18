@@ -343,13 +343,15 @@ Section PROOF.
 
   Definition new_spec: fspec :=
     (mk_simple (fun P => (
-                    (fun varg o => (⌜varg = ([]: list val)↑ /\ o = ord_pure 0⌝: iProp)%I),
+                    (ord_pure 0),
+                    (fun varg => (⌜varg = ([]: list val)↑⌝: iProp)%I),
                     (fun vret => (∃ h, ⌜vret = (Vptr h 0)↑⌝ ** OwnM (is_stack h P): iProp)%I)
     ))).
 
   Definition pop_spec: fspec :=
     mk_simple (fun '(h, P) => (
-                 (fun varg o => (⌜varg = ([Vptr h 0%Z]: list val)↑ /\ o = ord_pure 0⌝
+                   (ord_pure 0),
+                 (fun varg => (⌜varg = ([Vptr h 0%Z]: list val)↑⌝
                                   ** OwnM (is_stack h P): iProp)%I),
                  (fun vret =>
                     (((OwnM (is_stack h P) ** ∃ x, ⌜(x = Vint (- 1)%Z ∨ P x) ∧ vret = x↑⌝): iProp)%I))
@@ -358,8 +360,9 @@ Section PROOF.
 
   Definition push_spec: fspec :=
     mk_simple (fun '(h, P) => (
-                   (fun varg o => (OwnM (is_stack h P)
-                        ** ∃ x, ⌜varg = ([Vptr h 0%Z; x]: list val)↑ ∧ P x ∧ o = ord_pure 0⌝: iProp)%I),
+                   (ord_pure 0),
+                   (fun varg => (OwnM (is_stack h P)
+                        ** ∃ x, ⌜varg = ([Vptr h 0%Z; x]: list val)↑ ∧ P x⌝: iProp)%I),
                    (fun vret => (((OwnM (is_stack h P)): iProp)%I))
               ))
   .

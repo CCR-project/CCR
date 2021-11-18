@@ -191,48 +191,45 @@ Section PROOF.
 
   Definition alloc_spec: fspec :=
     (mk_simple (fun sz => (
-                    (fun varg o => (⌜varg = [Vint (Z.of_nat sz)]↑ /\ (8 * (Z.of_nat sz) < modulus_64)%Z /\ o = ord_pure 0⌝: iProp)%I),
+                    (ord_pure 0),
+                    (fun varg => (⌜varg = [Vint (Z.of_nat sz)]↑ /\ (8 * (Z.of_nat sz) < modulus_64)%Z⌝: iProp)%I),
                     (fun vret => (∃ b, (⌜vret = (Vptr b 0)↑⌝)
                                          ** OwnM ((b, 0%Z) |-> (List.repeat Vundef sz))): iProp)%I
     ))).
 
   Definition free_spec: fspec :=
     (mk_simple (fun '(b, ofs) => (
-                    (fun varg o => (∃ v, (⌜varg = ([Vptr b ofs])↑⌝)
-                                           ** OwnM ((b, ofs) |-> [v]))
-                                     ** ⌜o = ord_pure 0⌝),
+                    (ord_pure 0),
+                    (fun varg => (∃ v, (⌜varg = ([Vptr b ofs])↑⌝) ** OwnM ((b, ofs) |-> [v]))%I),
                     fun vret => ⌜vret = (Vint 0)↑⌝%I
     ))).
 
   Definition load_spec: fspec :=
     (mk_simple (fun '(b, ofs, v) => (
-                    (fun varg o => (⌜varg = ([Vptr b ofs])↑⌝)
-                                     ** OwnM(((b, ofs) |-> [v]))
-                                     ** (⌜o = ord_pure 0⌝)),
+                    (ord_pure 0),
+                    (fun varg => (⌜varg = ([Vptr b ofs])↑⌝) ** OwnM(((b, ofs) |-> [v]))),
                     (fun vret => OwnM((b, ofs) |-> [v]) ** ⌜vret = v↑⌝)
     ))).
 
   Definition store_spec: fspec :=
     (mk_simple
        (fun '(b, ofs, v_new) => (
-            (fun varg o => (∃ v_old,
-                               (⌜varg = ([Vptr b ofs ; v_new])↑⌝)
-                                 ** OwnM((b, ofs) |-> [v_old]))
-                             ** (⌜o = ord_pure 0⌝)%I),
+            (ord_pure 0),
+            (fun varg => (∃ v_old, (⌜varg = ([Vptr b ofs ; v_new])↑⌝) ** OwnM((b, ofs) |-> [v_old]))%I),
             (fun vret => OwnM((b, ofs) |-> [v_new]) ** ⌜vret = (Vint 0)↑⌝
     )))).
 
   Definition cmp_spec: fspec :=
     (mk_simple
        (fun '(result, resource) => (
-            (fun varg o =>
+            (ord_pure 0),
+            (fun varg =>
                ((∃ b ofs v, ⌜varg = [Vptr b ofs; Vnullptr]↑⌝ ** ⌜resource = ((b, ofs) |-> [v])⌝ ** ⌜result = false⌝) ∨
                 (∃ b ofs v, ⌜varg = [Vnullptr; Vptr b ofs]↑⌝ ** ⌜resource = ((b, ofs) |-> [v])⌝ ** ⌜result = false⌝) ∨
                 (∃ b0 ofs0 v0 b1 ofs1 v1, ⌜varg = [Vptr b0 ofs0; Vptr b1 ofs1]↑⌝ ** ⌜resource = (((b0, ofs0) |-> [v0])) ⋅ ((b1, ofs1) |-> [v1])⌝ ** ⌜result = false⌝) ∨
                 (∃ b ofs v, ⌜varg = [Vptr b ofs; Vptr b  ofs]↑⌝ ** ⌜resource = ((b, ofs) |-> [v])⌝ ** ⌜result = true⌝) ∨
                 (⌜varg = [Vnullptr; Vnullptr]↑ /\ result = true⌝))
                  ** OwnM(resource)
-                 ** ⌜o = ord_pure 0⌝
             ),
             (fun vret => OwnM(resource) ** ⌜vret = (if result then Vint 1 else Vint 0)↑⌝)
     ))).

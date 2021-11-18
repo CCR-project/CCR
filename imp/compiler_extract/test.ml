@@ -5,18 +5,22 @@ open Compiler
 open Imp
 open Imp2Csharpminor
 open Imp2Asm
-open ImpSimple
-open ImpFactorial
-open ImpMutsum
-open ImpKnot
-open ImpMem1
-open ImpMem2
-open ImpLink
+(* open ImpSimple
+ * open ImpFactorial
+ * open ImpMutsum
+ * open ImpKnot *)
+(* open ImpMem1
+ * open ImpMem2
+ * open ImpLink *)
 
-open StackImp
-open EchoImp
-open EchoMainImp
-open ClientImp
+(* open StackImp
+ * open EchoImp
+ * open EchoMainImp
+ * open ClientImp *)
+
+open MWAppImp
+open MWCImp
+open MWMapImp
 
 
 (* builtin functions for CompCert compilation, ref: Velus project *)
@@ -81,12 +85,16 @@ let compile_impL p ofile =
 
 
 let main =
-  print_endline "Start Imp Echo compilations...";
+  print_endline "Start Imp compilations...";
+  compile_imp (MWAppImp.coq_Appprog) "MWApp.s";
+  compile_imp (MWCImp.coq_MWprog) "MWC.s";
+  compile_imp (MWMapImp.coq_Map_prog) "MWMap.s";
+  print_endline "MW Done!";
   compile_imp (StackImp.coq_Stack_prog) "stack.s";
   compile_imp (EchoImp.coq_Echo_prog) "echo.s";
   compile_imp (EchoMainImp.coq_EchoMain_prog) "echo_main.s";
   compile_imp (ClientImp.coq_Client_prog) "client.s";
-  print_endline "Done!"
+  print_endline "Echo Done!";
   (* compile_imp (ImpSimple.imp_simple_prog) "simple.s";
    * compile_imp (ImpFactorial.imp_factorial_prog) "factorial.s";
    * compile_imp (ImpMutsum.imp_mutsumF_prog) "mutsumF.s";

@@ -320,7 +320,7 @@ Section CANCEL.
     forall fn fsp (FIND: alist_find fn _stb = Some fsp), stb fn = Some fsp.
   Hypothesis STBSOUND:
     forall fn (FIND: alist_find fn _stb = None),
-      (<<NONE: stb fn = None>>) \/ (exists fsp, <<FIND: stb fn = Some fsp>> /\ <<TRIVIAL: forall mn x arg_src arg_tgt o r (PRE: fsp.(precond) mn x arg_src arg_tgt o r), o = ord_top>>).
+      (<<NONE: stb fn = None>>) \/ (exists fsp, <<FIND: stb fn = Some fsp>> /\ <<TRIVIAL: forall x, fsp.(measure) x = ord_top>>).
 
 
   Let mds_mid2: list Mod.t := List.map (SMod.to_mid2 stb) mds.
@@ -440,7 +440,7 @@ Section CANCEL.
 
   Lemma stb_find_iff fn
     :
-      ((<<NONE: stb fn = None>> \/ (exists fsp, <<FIND: stb fn = Some fsp>> /\ <<TRIVIAL: forall mn x arg_src arg_tgt o r (PRE: fsp.(precond) mn x arg_src arg_tgt o r), o = ord_top>>)) /\
+      ((<<NONE: stb fn = None>> \/ (exists fsp, <<FIND: stb fn = Some fsp>> /\ <<TRIVIAL: forall x, fsp.(measure) x = ord_top>>)) /\
        (<<FINDSRC: alist_find fn (fnsems ms_mid2) = None>>) /\
        (<<FINDMID: alist_find fn (fnsems ms_mid) = None>>)) \/
 

@@ -25,8 +25,9 @@ Section PROOF.
     Definition succ_spec:    fspec :=
       mk_simple (X:=Z)
                 (fun n => (
-                     (fun varg o =>
-                        (⌜exists o': Ord.t, o = ord_pure o' /\ varg = [Vint n]↑⌝)%I
+                     (ord_pure 0),
+                     (fun varg =>
+                        (⌜varg = [Vint n]↑⌝)%I
                      ),
                      (fun vret =>
                         (⌜vret = (Vint (n + 1))↑⌝)%I

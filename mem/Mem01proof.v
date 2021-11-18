@@ -174,14 +174,17 @@ Section SIMMODSEM.
     end
   .
 
-  Theorem correct_modsem: forall sk, ModSemPair.sim (SModSem.to_tgt (to_stb []) (Mem1.SMemSem (fun _ => true) sk)) (Mem0.MemSem (fun _ => false) sk).
+  Variable csl: gname -> bool.
+
+  Theorem correct_modsem: forall sk, ModSemPair.sim (SModSem.to_tgt (to_stb [])
+                                           (Mem1.SMemSem (negb ∘ csl) sk)) (Mem0.MemSem csl sk).
   Proof.
    econstructor 1 with (wf:=wf) (le:=top2); et; swap 2 3.
    { ss. }
     { ss. eexists. econs; ss. eapply to_semantic.
       iIntros "H". iSplits; ss; et.
       { iPureIntro. ii. unfold Mem.load_mem, initial_mem_mr.
-        cbn. uo. des_ifs; et. econs; et. }
+        cbn. uo. des_ifs; et; try (by econs; et). }
       { iPureIntro. ii. ss. uo. des_ifs.
         apply nth_error_Some. ii. clarify. }
     }
@@ -456,7 +459,7 @@ Section SIMMODSEM.
     all: ss. all: try exact 0.
   Qed.
 
-  Theorem correct: refines2 [Mem0.Mem (fun _ => false)] [Mem1.Mem (fun _ => true)].
+  Theorem correct: refines2 [Mem0.Mem csl] [Mem1.Mem (negb ∘ csl)].
   Proof.
     eapply adequacy_local2. econs; ss; et. i. eapply correct_modsem.
   Qed.

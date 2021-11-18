@@ -43,12 +43,11 @@ Section SIMMODSEM.
     econs; ss. init.
     unfold mainF, mainBody. harg.
     mDesAll. des; clarify. steps.
-    astart 10. acatch. hcall _ _ tt with "*"; ss.
+    astart 10. acatch. hcall _ tt with "*"; ss.
     { iPureIntro. esplits; eauto.
       { instantiate (1:=10). ss. }
       { unfold mut_max. lia. }
     }
-    { splits; ss. }
     steps. astop. mDesAll. des; clarify. steps.
     hret tt; ss.
     Unshelve. all: ss. all: try exact 0.

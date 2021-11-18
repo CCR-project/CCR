@@ -49,7 +49,7 @@ Section CANCEL.
     forall fn fsp (FIND: alist_find fn _stb = Some fsp), stb fn = Some fsp.
   Hypothesis STBSOUND:
     forall fn (FIND: alist_find fn _stb = None),
-      (<<NONE: stb fn = None>>) \/ (exists fsp, <<FIND: stb fn = Some fsp>> /\ <<TRIVIAL: forall mn x arg_src arg_tgt o r (PRE: fsp.(precond) mn x arg_src arg_tgt o r), o = ord_top>>).
+      (<<NONE: stb fn = None>>) \/ (exists fsp, <<FIND: stb fn = Some fsp>> /\ <<TRIVIAL: forall x, fsp.(measure) x = ord_top>>).
 
 
   Let mds_src: list Mod.t := List.map (SMod.to_src) mds.

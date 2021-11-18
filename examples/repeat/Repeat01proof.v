@@ -69,10 +69,10 @@ Section SIMMODSEM.
       }
       { destruct n.
         { exfalso. lia. }
-        steps. inv PURE4. inv SPEC. rewrite FBLOCK. unfold ccallU. steps.
+        steps. inv PURE3. inv SPEC. rewrite FBLOCK. unfold ccallU. steps.
         astart 2. acatch.
         { eapply FunStb_incl. et. }
-        hcall_weaken _ _ _ _ with ""; et.
+        hcall_weaken _ _ _ with ""; et.
         { splits; ss. eapply Ord.le_lt_lt.
           { eapply OrdArith.add_base_l. }
           { eapply OrdArith.lt_add_r. rewrite Ord.from_nat_S. eapply Ord.S_lt. }
@@ -80,7 +80,7 @@ Section SIMMODSEM.
         ss. mDesAll. des; clarify.
         hexploit GlobalStb_repeat. i. inv H. steps. acatch.
         { et. }
-        hcall_weaken (Repeat1.repeat_spec FunStb sk) _ (_, n, _, _) _ with ""; ss.
+        hcall_weaken (Repeat1.repeat_spec FunStb sk) (_, n, _, _) _ with ""; ss.
         { iPureIntro. esplits; et.
           { repeat f_equal. lia. }
           { unfold_intrange_64. unfold sumbool_to_bool in *. des_ifs; try lia. }

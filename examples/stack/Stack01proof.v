@@ -79,12 +79,11 @@ Section SIMMODSEM.
     { unfold newF. kinit. harg. fold wf. mDesAll; des; subst. ss.
       unfold new_body. steps. unfold ccallN, ccallU, cfunN, cfunU. steps.
 
-      astart 2. acatch. { eapply STBINCL. stb_tac; ss. } hcall _ (Some _) _ with "SIM"; ss; et.
+      astart 2. acatch. { eapply STBINCL. stb_tac; ss. } hcall (Some _) _ with "SIM"; ss; et.
       { iModIntro. iSplits; ss; et.
         { instantiate (1:=1%nat). ss. }
         { iPureIntro. unfold_modrange_64. ss. }
       }
-      { ss. }
       Ltac post_call :=
         fold wf; clear_fast; mDesAll; des_safe; subst; try rewrite Any.upcast_downcast in *; clarify; renamer.
       post_call. rename a0 into handle.
@@ -93,12 +92,11 @@ Section SIMMODSEM.
       { ss. }
       steps.
 
-      acatch. { eapply STBINCL. stb_tac; ss. } hcall _ (Some (_, _, _)) _ with "SIM A"; ss; et.
+      acatch. { eapply STBINCL. stb_tac; ss. } hcall (Some (_, _, _)) _ with "SIM A"; ss; et.
       { iModIntro. iSplitL "SIM"; ss.
         { iSplits; ss; et. }
         { iSplits; ss; et. }
       }
-      { ss. }
       post_call. steps.
       astop. steps.
 
@@ -126,9 +124,8 @@ Section SIMMODSEM.
         instantiate (1:=_ ** _). iSplitL "B". { iExact "B". } iExact "C". }
       mDesAll; ss. rename a into hd. renamer.
 
-      acatch. { eapply STBINCL. stb_tac; ss. } hcall _ (Some (_, _, _)) _ with "SIM A"; ss; et.
+      acatch. { eapply STBINCL. stb_tac; ss. } hcall (Some (_, _, _)) _ with "SIM A"; ss; et.
       { iModIntro. iSplitL "SIM"; ss; et. }
-      { ss. }
       post_call. unhide_k. steps.
       hide_k.
 
@@ -142,7 +139,7 @@ Section SIMMODSEM.
       destruct stk as [|x stk1]; ss.
       - mDesAll. subst.
         unhide_k. steps. hide_k.
-        acatch. { eapply STBINCL. stb_tac; ss. } hcall (ord_pure 0) (Some (_, _)) _ with "SIM POST"; ss.
+        acatch. { eapply STBINCL. stb_tac; ss. } hcall (Some (_, _)) _ with "SIM POST"; ss.
         { iModIntro. iSplitL "SIM"; ss; [et|]. iSplits; ss. repeat iRight. et. }
         post_call. unhide_k. steps. astop. steps.
         force_r.
@@ -158,7 +155,7 @@ Section SIMMODSEM.
         rewrite Z.add_0_l in *.
         unhide_k. steps. hide_k.
 
-        acatch. { eapply STBINCL. stb_tac; ss. } hcall (ord_pure 0) (Some (_, _)) _ with "SIM A1"; ss.
+        acatch. { eapply STBINCL. stb_tac; ss. } hcall (Some (_, _)) _ with "SIM A1"; ss.
         { iModIntro. iSplitL "SIM"; ss. { et. } iSplits; ss; et. }
         post_call. unhide_k. steps.
 
@@ -171,23 +168,23 @@ Section SIMMODSEM.
         steps.
 
         unfold scale_int. uo. steps.
-        acatch. { eapply STBINCL. stb_tac; ss. } hcall (ord_pure 0) (Some (_, _, _)) _ with "SIM POST1"; ss.
+        acatch. { eapply STBINCL. stb_tac; ss. } hcall (Some (_, _, _)) _ with "SIM POST1"; ss.
         { iModIntro. iSplitL "SIM"; ss; et. }
         post_call. steps.
 
-        acatch. { eapply STBINCL. stb_tac; ss. } hcall (ord_pure 0) (Some (_, _, _)) _ with "SIM A2"; ss.
+        acatch. { eapply STBINCL. stb_tac; ss. } hcall (Some (_, _, _)) _ with "SIM A2"; ss.
         { iModIntro. iSplitL "SIM"; ss; et. }
         post_call. steps.
 
-        acatch. { eapply STBINCL. stb_tac; ss. } hcall (ord_pure 0) (Some (_, _)) _ with "SIM POST2"; ss.
+        acatch. { eapply STBINCL. stb_tac; ss. } hcall (Some (_, _)) _ with "SIM POST2"; ss.
         { iModIntro. iSplitL "SIM"; ss; et. }
         post_call. steps.
 
-        acatch. { eapply STBINCL. stb_tac; ss. } hcall (ord_pure 0) (Some (_, _)) _ with "SIM POST1"; ss.
+        acatch. { eapply STBINCL. stb_tac; ss. } hcall (Some (_, _)) _ with "SIM POST1"; ss.
         { iModIntro. iSplitL "SIM"; ss; et. }
         post_call. steps.
 
-        acatch. { eapply STBINCL. stb_tac; ss. } hcall (ord_pure 0) (Some (_, _, _)) _ with "SIM POST"; ss.
+        acatch. { eapply STBINCL. stb_tac; ss. } hcall (Some (_, _, _)) _ with "SIM POST"; ss.
         { iModIntro. iSplitL "SIM"; ss; et. }
         post_call. steps.
 
@@ -214,7 +211,7 @@ Section SIMMODSEM.
         instantiate (1:=_ ** _). iSplitL "B". { iExact "B". } iExact "C". }
       mDesAll; ss. renamer. rename a into hd.
 
-      acatch. { eapply STBINCL. stb_tac; ss. } hcall (ord_pure 0) (Some _) _ with "SIM"; ss; et.
+      acatch. { eapply STBINCL. stb_tac; ss. } hcall (Some _) _ with "SIM"; ss; et.
       { iModIntro. iSplitL "SIM"; et. iSplits; ss; et.
         { instantiate (1:=2). ss. }
         { iPureIntro. ss. }
@@ -227,19 +224,19 @@ Section SIMMODSEM.
 
       force_r; ss. steps.
 
-      acatch. { eapply STBINCL. stb_tac; ss. } hcall (ord_pure 0) (Some (_, _, _)) _ with "A SIM"; ss; et.
+      acatch. { eapply STBINCL. stb_tac; ss. } hcall (Some (_, _, _)) _ with "A SIM"; ss; et.
       { iModIntro. iSplitL "SIM"; et. }
       post_call. steps.
 
-      acatch. { eapply STBINCL. stb_tac; ss. } hcall (ord_pure 0) (Some (_, _, _)) _ with "A1 SIM"; ss; et.
+      acatch. { eapply STBINCL. stb_tac; ss. } hcall (Some (_, _, _)) _ with "A1 SIM"; ss; et.
       { iModIntro. iSplitL "SIM"; et. }
       post_call. steps.
 
-      acatch. { eapply STBINCL. stb_tac; ss. } hcall (ord_pure 0) (Some (_, _, _)) _ with "A3 SIM"; ss; et.
+      acatch. { eapply STBINCL. stb_tac; ss. } hcall (Some (_, _, _)) _ with "A3 SIM"; ss; et.
       { iModIntro. iSplitL "SIM"; et. }
       post_call. steps.
 
-      acatch. { eapply STBINCL. stb_tac; ss. } hcall (ord_pure 0) (Some (_, _, _)) _ with "POST SIM"; ss; et.
+      acatch. { eapply STBINCL. stb_tac; ss. } hcall (Some (_, _, _)) _ with "POST SIM"; ss; et.
       { iModIntro. iSplitL "SIM"; et. }
       post_call. steps.
 

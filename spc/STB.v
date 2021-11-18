@@ -62,6 +62,26 @@ Ltac stb_tac :=
   end.
 
 
+
+Definition ord_weaker (next cur: ord): Prop :=
+  match next, cur with
+  | ord_pure next, ord_pure cur => (next <= cur)%ord
+  (* | _, ord_top => True *)
+  | ord_top, ord_top => True
+  | _, _ => False
+  end
+.
+
+Global Program Instance ord_weaker_PreOrder: PreOrder ord_weaker.
+Next Obligation.
+  ii. destruct x; ss. refl.
+Qed.
+Next Obligation.
+  ii. destruct x, y, z; ss. etrans; et.
+Qed.
+
+
+
 Section HEADER.
 
   Context `{Σ: GRA.t}.
@@ -69,8 +89,9 @@ Section HEADER.
   Definition fspec_weaker (fsp_src fsp_tgt: fspec): Prop :=
     forall x_src mn,
     exists x_tgt,
-      (<<PRE: forall arg_src arg_tgt o,
-          (fsp_src.(precond) mn x_src arg_src arg_tgt o) ⊢ #=> (fsp_tgt.(precond) mn x_tgt arg_src arg_tgt o)>>) /\
+      (<<MEASURE: ord_weaker (fsp_tgt.(measure) x_tgt) (fsp_src.(measure) x_src)>>) ∧
+      (<<PRE: forall arg_src arg_tgt,
+          (fsp_src.(precond) mn x_src arg_src arg_tgt) ⊢ #=> (fsp_tgt.(precond) mn x_tgt arg_src arg_tgt)>>) ∧
       (<<POST: forall ret_src ret_tgt,
           (fsp_tgt.(postcond) mn x_tgt ret_src ret_tgt) ⊢ #=> (fsp_src.(postcond) mn x_src ret_src ret_tgt)>>)
   .
@@ -79,6 +100,7 @@ Section HEADER.
   Next Obligation.
   Proof.
     ii. exists x_src. esplits; ii.
+    { refl. }
     { iStartProof. iIntros "H". iApply "H". }
     { iStartProof. iIntros "H". iApply "H". }
   Qed.
@@ -86,6 +108,7 @@ Section HEADER.
   Proof.
     ii. hexploit (H x_src). i. des.
     hexploit (H0 x_tgt). i. des. esplits; ii.
+    { etrans; et. }
     { iStartProof. iIntros "H".
       iApply bupd_idemp. iApply PRE0.
       iApply bupd_idemp. iApply PRE. iApply "H". }

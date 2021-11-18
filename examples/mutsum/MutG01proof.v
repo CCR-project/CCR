@@ -48,7 +48,7 @@ Section SIMMODSEM.
       hret _; ss.
     - destruct x; [ss|]. rewrite Nat2Z.inj_succ. steps. force_r.
       { rewrite <- Nat2Z.inj_succ. eapply mut_max_intrange_sub1. auto. }
-      steps. acatch. hcall _ _ _ with "*"; auto.
+      steps. acatch. hcall _ _ with "*"; auto.
       { iPureIntro.
         replace (Z.succ (Z.of_nat x) - 1)%Z with (Z.of_nat x) by lia.
         esplits; et. lia. }
