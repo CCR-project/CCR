@@ -6,6 +6,9 @@ Require Import
         MWCImp MWC9 MWC0 MWC1 MWC2 MWCImp8proof MWC89proof MWC90proof MWC01proof MWC12proof
         MWApp0 MWApp1 MWApp2 MWApp01proof MWApp12proof MWAppImp9proof MWApp90proof
 .
+Require Import MWMapImp MWMap0 MWMap1 MWMapImp0proof MWMap01proof
+        Mem01proof
+.
 
 Set Implicit Arguments.
 
@@ -354,10 +357,23 @@ Qed.
 
 
 
+Let CSL0: gname -> bool := fun g => in_dec dec g ["gv0"; "gv1"; "initialized"].
+
+Section MWIMPL.
+  Definition mw_impl := [Mem0.Mem (fun _ => false); MWCImp.MW; MWAppImp.App; MWMapImp.Map].
+  Definition mw_impl_itr: itree eventE Any.t := ModSemL.initial_itr (ModL.enclose (Mod.add_list mw_impl)) None.
+End MWIMPL.
+
+Section MWABS.
+  Definition mw_abs :=
+    [SMod.to_src (SMem (negb ∘ CSL0)); SMod.to_src MWC2.SMW; SMod.to_src MWApp2.SApp; SMod.to_src MWMap1.SMap].
+  Definition mw_abs_itr: itree eventE Any.t := ModSemL.initial_itr (ModL.enclose (Mod.add_list mw_abs)) None.
+End MWABS.
+
+
 
 Section PROOF.
 
-  Let CSL0: gname -> bool := fun g => in_dec dec g ["gv0"; "gv1"; "initialized"].
   Let MWLow: refines2 [Mem0.Mem (fun _ => false); MWCImp.MW; MWAppImp.App] [Mem0.Mem CSL0; MWC0.MW; MWApp0.App].
   Proof.
     transitivity (KMod.transl_tgt_list [KMem CSL0 CSL0; MWC9.KMW; MWApp9.KApp]).
@@ -410,10 +426,6 @@ Section PROOF.
     all: ss.
   Qed.
 
-  Require Import MWMapImp MWMap0 MWMap1 MWMapImp0proof MWMap01proof
-          Mem01proof
-  .
-
   Let gstb := MWHeader.MWStb ++ MapStb ++ Mem1.MemStb ++ AppStb.
 
   Let MWMap: refines2 [MWMapImp.Map] [MWMap1.Map (fun _ => to_stb gstb)].
@@ -457,10 +469,9 @@ Section PROOF.
 
    (* Mem0.Mem (fun _ => true) *)
    Theorem MW_correct:
-     refines2_closed
-       ([Mem0.Mem (fun _ => false); MWCImp.MW; MWAppImp.App; MWMapImp.Map])
-       ([SMod.to_src (SMem (negb ∘ CSL0)); SMod.to_src MWC2.SMW; SMod.to_src MWApp2.SApp; SMod.to_src MWMap1.SMap]).
+     refines2_closed (mw_impl) (mw_abs).
    Proof.
+     unfold mw_impl, mw_abs.
      etrans.
      { eapply refines2_close.
        change [Mem0.Mem (λ _, false); MWCImp.MW; MWAppImp.App; MWMapImp.Map] with
@@ -523,3 +534,21 @@ Section PROOF.
 
 End PROOF.
 
+Require Import SimSTS2 Imp2Csharpminor Imp2Asm.
+Require Import Imp2AsmProof.
+Section PROOF.
+  Context `{builtins : builtinsTy}.
+  Let mw_imp := [MWprog; MWAppImp.Appprog; Map_prog].
+  Hypothesis source_linking: exists imp, link_imps mw_imp = Some imp.
+
+  Theorem echo_compile_correct
+          (asms : Coqlib.nlist Asm.program)
+          (COMP: Forall2 (fun imp asm => compile_imp imp = Errors.OK asm) mw_imp asms)
+    :
+      exists asml, (Linking.link_list asms = Some asml) /\
+                   (improves2_program (ModL.compile (Mod.add_list mw_abs)) (Asm.semantics asml)).
+  Proof.
+    hexploit compile_behavior_improves; [et|et|]. i. des. esplits; [et|].
+    eapply improves_combine; [|et]. eapply MW_correct.
+  Qed.
+End PROOF.
