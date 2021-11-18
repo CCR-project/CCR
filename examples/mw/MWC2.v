@@ -23,25 +23,25 @@ Section PROOF.
 
   Definition loopF: list val -> itree Es val :=
     fun varg =>
-      _ <- (pargs [] varg)?;;
-      `_: val <- ccallU "App.run" ([]: list val);;
-      `_: val <- ccallU "MW.loop" ([]: list val);;
+      _ <- (pargs [] varg)ǃ;;
+      `_: val <- ccallN "App.run" ([]: list val);;
+      `_: val <- ccallN "MW.loop" ([]: list val);;
       Ret Vundef
   .
 
   Definition mainF: list val -> itree Es val :=
     fun varg =>
-      _ <- (pargs [] varg)?;;;
+      _ <- (pargs [] varg)ǃ;;;
       _ <- Ret tt;;;
       pput (empty (K:=Z) (V:=Z));;;
-      `_: val <- ccallU "App.init" ([]: list val);;
-      `_: val <- ccallU "MW.loop" ([]: list val);;
+      `_: val <- ccallN "App.init" ([]: list val);;
+      `_: val <- ccallN "MW.loop" ([]: list val);;
       Ret Vundef
   .
 
   Definition putF: list val -> itree Es val :=
     fun varg =>
-      '(k, v) <- (pargs [Tint; Tint] varg)?;;
+      '(k, v) <- (pargs [Tint; Tint] varg)ǃ;;
       full0 <- pget;;
       _ <- pput (add k v full0);;;
       syscallU "print" [k];;;
@@ -50,7 +50,7 @@ Section PROOF.
 
   Definition getF: list val -> itree Es val :=
     fun varg =>
-      k <- (pargs [Tint] varg)?;;
+      k <- (pargs [Tint] varg)ǃ;;
       `full0: (Z -> option Z) <- pget;;
       v <- (full0 k)ǃ;;;
       syscallU "print" [k];;;

@@ -1,4 +1,4 @@
-Require Import HoareDef MWHeader MWCImp MWC8 SimModSem.
+Require Import HoareDef MWCImp MWC8 SimModSem.
 Require Import Coqlib.
 Require Import ImpPrelude.
 Require Import Skeleton.

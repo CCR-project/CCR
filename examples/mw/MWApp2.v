@@ -21,8 +21,8 @@ Section PROOF.
   Context `{@GRA.inG spRA Σ}.
 
   Definition sbtb: list (string * fspecbody) :=
-    [("App.init", mk_specbody init_spec (fun _ => `_: val <- ccallU "MW.put" [Vint 0; Vint 42];; Ret Vundef↑));
-     ("App.run", mk_specbody run_spec (fun _ => `_: val <- ccallU "MW.get" [Vint 0];;
+    [("App.init", mk_specbody init_spec (fun _ => `_: val <- ccallN "MW.put" [Vint 0; Vint 42];; Ret Vundef↑));
+     ("App.run", mk_specbody run_spec (fun _ => `_: val <- ccallN "MW.get" [Vint 0];;
                                              syscallU "print" [42%Z];;; Ret Vundef↑))].
 
   Definition SAppSem: SModSem.t := {|

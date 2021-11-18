@@ -65,7 +65,7 @@ Section SIMMODSEM.
       { inv WF. esplits; et. } des; clarify.
       (*** init ***)
 
-      unfold initF, ccallU.
+      unfold initF, ccallU, ccallN.
       harg. fold wf.
       mDesAll; des; clarify. steps.
       erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.
@@ -79,7 +79,7 @@ Section SIMMODSEM.
       fold wf. mDesAll; des; clarify. steps.
       hpost_tgt.
       { iFrame. iModIntro. iSplits; ss; et. xtra. }
-      steps. rewrite _UNWRAPU. steps.
+      steps.
 
       hret _; ss.
       { iDestruct "Q" as "[Q %]". subst. iDestruct "FR" as "[A B]". iFrame. iSplits; ss; et. }
@@ -96,7 +96,7 @@ Section SIMMODSEM.
       { inv WF. esplits; et. } des; clarify.
       (*** init ***)
 
-      unfold runF, ccallU.
+      unfold runF, ccallU, ccallN.
       harg. fold wf.
       mDesAll; des; clarify. steps.
       erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.

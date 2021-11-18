@@ -222,7 +222,7 @@ Section PROOF.
     mk_simple (fun '(f, k, v) =>
                  (ord_top,
                   (fun varg => ⌜varg = [Vint k; Vint v]↑ ∧ intrange_64 k ∧ intrange_64 v⌝ ** OwnM (mw_state f) ** OwnM sp_white),
-                  (fun vret => OwnM (mw_state (add k v f)) ** OwnM sp_white)))
+                  (fun vret => ⌜vret = Vundef↑⌝ ** OwnM (mw_state (add k v f)) ** OwnM sp_white)))
   .
 
   Definition get_spec: fspec :=
@@ -254,12 +254,12 @@ Section PROOF.
   Definition init_spec: fspec :=
     mk_simple (fun f => (ord_top,
                          (fun varg => ⌜varg = ([]: list val)↑⌝ ** OwnM Init ** OwnM (mw_state f) ** OwnM (sp_white)),
-                         (fun vret => OwnM Run ** OwnM (mw_state (add 0%Z 42%Z f)) ** OwnM (sp_white)))).
+                         (fun vret => ⌜vret = Vundef↑⌝ ** OwnM Run ** OwnM (mw_state (add 0%Z 42%Z f)) ** OwnM (sp_white)))).
 
   Definition run_spec: fspec :=
     mk_simple (fun f => (ord_top,
                          (fun varg => ⌜varg = ([]: list val)↑⌝ ** OwnM Run ** OwnM (mw_state f) ** OwnM (sp_white) ∧ ⌜f 0 = Some 42%Z⌝),
-                         (fun vret => OwnM Run ** OwnM (mw_state f) ** OwnM (sp_white) ∧ ⌜f 0 = Some 42%Z⌝))).
+                         (fun vret => ⌜vret = Vundef↑⌝ ** OwnM Run ** OwnM (mw_state f) ** OwnM (sp_white) ∧ ⌜f 0 = Some 42%Z⌝))).
 
   Definition AppStb: alist gname fspec.
     eapply (Seal.sealing "stb").

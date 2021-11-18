@@ -160,7 +160,7 @@ TODO: APC, locked thinges
       { inv WF. esplits; et. } des; clarify.
       (*** init ***)
 
-      unfold mainF, MWC2.mainF, ccallU.
+      unfold mainF, MWC2.mainF, ccallU, ccallN.
 
       harg. fold wf.
       mDesAll; des; clarify.
@@ -225,7 +225,7 @@ TODO: APC, locked thinges
 
         hpost_tgt.
         { iModIntro. iSplits; ss; et. iFrame. iSplits; ss; et. xtra. }
-        fold wf. steps. force_l; stb_tac; ss; clarify. steps. rewrite _UNWRAPU. steps.
+        fold wf. steps. force_l; stb_tac; ss; clarify. steps.
         stb_tac; clarify.
 
 
@@ -234,7 +234,7 @@ TODO: APC, locked thinges
         Opaque Z.eq_dec.
         hcall _ _.
         { iDes; ss; des; clarify; cycle 1.
-          { iExFalso. iApply (mw_state_false with "FR"); et. }
+          { iExFalso. iApply (mw_state_false with "A2"); et. }
           iModIntro. iSplits; ss; et. iSplitR "A A0 FR"; cycle 1.
           { iSplits; ss; et. iFrame. iSplits; ss; et. }
           iSplitR.
@@ -275,7 +275,7 @@ TODO: APC, locked thinges
       { inv WF. esplits; et. } des; clarify.
       (*** init ***)
 
-      unfold loopF, MWC2.loopF, ccallU.
+      unfold loopF, MWC2.loopF, ccallU, ccallN.
 
       harg. fold wf. mDesAll; des; clarify.
       mDesOr "INVS"; mDesAll; des; clarify; steps.
@@ -296,12 +296,12 @@ TODO: APC, locked thinges
 
         hpost_tgt.
         { iModIntro. iFrame. iSplits; ss; et. xtra. }
-        fold wf. steps. rewrite _UNWRAPU. steps. stb_tac; ss; clarify.
+        fold wf. steps. stb_tac; ss; clarify.
 
 
         hcall _ _.
         { iDes; ss; cycle 1.
-          { iExFalso. iApply (mw_state_false with "FR"); et. }
+          { iExFalso. iApply (mw_state_false with "A2"); et. }
           iModIntro. iFrame. iSplits; ss; et. iSplitR.
           { instantiate (1:=True%I); ss. }
           iLeft. iSplits; ss; et. iFrame.
@@ -337,7 +337,7 @@ TODO: APC, locked thinges
       { inv WF. esplits; et. } des; clarify.
       (*** init ***)
 
-      unfold putF, MWC2.putF, ccallU.
+      unfold putF, MWC2.putF, ccallU, ccallN.
 
       harg. fold wf. mDesAll; ss; des; clarify. des_ifs_safe; ss. mDesAll; des; ss; clarify.
       mDesOr "INVS".
@@ -450,7 +450,7 @@ TODO: APC, locked thinges
       { inv WF. esplits; et. } des; clarify.
       (*** init ***)
 
-      unfold getF, MWC2.getF, ccallU.
+      unfold getF, MWC2.getF, ccallU, ccallN.
 
       harg. fold wf. mDesAll; ss; des; clarify. des_ifs_safe; ss. mDesAll; des; ss; clarify.
       mDesOr "INVS".
