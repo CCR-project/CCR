@@ -26,20 +26,25 @@ echo "Linking modules (in ./bin)..."
 mv MWApp.s bin/MWApp.s
 mv MWC.s bin/MWC.s
 mv MWMap.s bin/MWMap.s
-gcc -m64 -no-pie -o bin/MW bin/MWApp.s bin/MWC.s bin/MWMap.s bin/print.s bin/scan.s
+gcc -m64 -no-pie -o bin/MW_all bin/MWApp.s bin/MWC.s bin/MWMap.s bin/print.s bin/scan.s
 
-# mv stack.s bin/stack.s
-# mv echo.s bin/echo.s
-# mv echo_main.s bin/echo_main.s
-# mv client.s bin/client.s
-# gcc -m64 -no-pie -o bin/echo_all bin/stack.s bin/echo.s bin/echo_main.s bin/client.s bin/print.s bin/scan.s
+mv stack.s bin/stack.s
+mv echo.s bin/echo.s
+mv echo_main.s bin/echo_main.s
+mv client.s bin/client.s
+gcc -m64 -no-pie -o bin/echo_all bin/stack.s bin/echo.s bin/echo_main.s bin/client.s bin/print.s bin/scan.s
 
-echo "Run program:"
-echo "(Echo) Input integers, -1 to stop:"
-bin/MW
-
+echo "Run program: put 1 for MW example (it prints 0/42 infinitely), and 2 for echo example (on the technical report)"
+read input
+if [[ "$input" == 1 ]]
+then bin/MW_all
+else if [[ "$input" == 2 ]]
+     then bin/echo_all
+     else echo "Wrong number!"
+     fi
+fi
 # echo "(Echo) Input integers, -1 to stop:"
-# bin/echo_all
+# bin/MW_all
 
 # mv simple.s bin/simple.s
 # cc -o bin/simple bin/simple.s

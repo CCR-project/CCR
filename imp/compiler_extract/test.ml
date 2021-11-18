@@ -89,11 +89,12 @@ let main =
   compile_imp (MWAppImp.coq_Appprog) "MWApp.s";
   compile_imp (MWCImp.coq_MWprog) "MWC.s";
   compile_imp (MWMapImp.coq_Map_prog) "MWMap.s";
-  (* compile_imp (StackImp.coq_Stack_prog) "stack.s";
-   * compile_imp (EchoImp.coq_Echo_prog) "echo.s";
-   * compile_imp (EchoMainImp.coq_EchoMain_prog) "echo_main.s";
-   * compile_imp (ClientImp.coq_Client_prog) "client.s"; *)
-  print_endline "Done!"
+  print_endline "MW Done!";
+  compile_imp (StackImp.coq_Stack_prog) "stack.s";
+  compile_imp (EchoImp.coq_Echo_prog) "echo.s";
+  compile_imp (EchoMainImp.coq_EchoMain_prog) "echo_main.s";
+  compile_imp (ClientImp.coq_Client_prog) "client.s";
+  print_endline "Echo Done!";
   (* compile_imp (ImpSimple.imp_simple_prog) "simple.s";
    * compile_imp (ImpFactorial.imp_factorial_prog) "factorial.s";
    * compile_imp (ImpMutsum.imp_mutsumF_prog) "mutsumF.s";
