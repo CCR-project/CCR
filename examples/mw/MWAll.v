@@ -3,7 +3,7 @@ Require Import ModSem Skeleton PCM STB Open OpenDef Hoare HoareDef Imp.
 Require Import Mem0 Mem1 MemOpen Mem0Openproof MemOpen0proof.
 Require Import
         MWHeader
-        MWCImp MWC9 MWC0 MWC1 MWC2 MWCImp9proof MWC90proof MWC01proof MWC12proof
+        MWCImp MWC9 MWC0 MWC1 MWC2 MWCImp8proof MWC89proof MWC90proof MWC01proof MWC12proof
         MWApp0 MWApp1 MWApp2 MWApp01proof MWApp12proof MWAppImp9proof MWApp90proof
 .
 
