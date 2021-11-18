@@ -536,9 +536,12 @@ End PROOF.
 
 Require Import SimSTS2 Imp2Csharpminor Imp2Asm.
 Require Import Imp2AsmProof.
+
+Let mw_imp := [MWprog; MWAppImp.Appprog; Map_prog].
+Definition EXTRACT_MW_IMPL_LINKING_CHECK: bool := is_some (@link_imps (mk nil) mw_imp).
+
 Section PROOF.
   Context `{builtins : builtinsTy}.
-  Let mw_imp := [MWprog; MWAppImp.Appprog; Map_prog].
   Hypothesis source_linking: exists imp, link_imps mw_imp = Some imp.
 
   Theorem echo_compile_correct
