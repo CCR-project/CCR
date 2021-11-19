@@ -22,7 +22,7 @@ Require Import Imp2Asm.
 (* Require Import ImpMem1. *)
 (* Require Import ImpMem2. *)
 (* Require Import ImpLink. *)
-(* Require Import StackImp EchoImp EchoMainImp ClientImp. *)
+Require Import StackImp EchoImp EchoMainImp ClientImp.
 Require Import MWAppImp MWCImp MWMapImp.
 (************************************)
 
@@ -181,7 +181,7 @@ Separate Extraction
    (* imp_mem1_f imp_mem1_main *)
    (* imp_mem2_prog *)
    (* imp_linkF_prog imp_linkG_prog imp_linkMain_prog *)
-   (* Stack_prog Echo_prog EchoMain_prog Client_prog *)
+   Stack_prog Echo_prog EchoMain_prog Client_prog
    Appprog MWprog Map_prog
 .
 

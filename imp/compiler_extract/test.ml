@@ -13,10 +13,10 @@ open Imp2Asm
  * open ImpMem2
  * open ImpLink *)
 
-(* open StackImp
- * open EchoImp
- * open EchoMainImp
- * open ClientImp *)
+open StackImp
+open EchoImp
+open EchoMainImp
+open ClientImp
 
 open MWAppImp
 open MWCImp
