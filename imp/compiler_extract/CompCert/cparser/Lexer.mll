@@ -6,10 +6,11 @@
 (*                                                                     *)
 (*  Copyright Institut National de Recherche en Informatique et en     *)
 (*  Automatique.  All rights reserved.  This file is distributed       *)
-(*  under the terms of the GNU General Public License as published by  *)
-(*  the Free Software Foundation, either version 2 of the License, or  *)
-(*  (at your option) any later version.  This file is also distributed *)
-(*  under the terms of the INRIA Non-Commercial License Agreement.     *)
+(*  under the terms of the GNU Lesser General Public License as        *)
+(*  published by the Free Software Foundation, either version 2.1 of   *)
+(*  the License, or  (at your option) any later version.               *)
+(*  This file is also distributed under the terms of the               *)
+(*  INRIA Non-Commercial License Agreement.                            *)
 (*                                                                     *)
 (* *********************************************************************)
 
@@ -95,7 +96,8 @@ let () =
     (* We can ignore the __extension__ GCC keyword. *)
     ignored_keywords := SSet.add "__extension__" !ignored_keywords
 
-let init_ctx = SSet.singleton "__builtin_va_list"
+let init_ctx = SSet.of_list (List.map fst CBuiltins.builtins.C.builtin_typedefs)
+
 let types_context : SSet.t ref = ref init_ctx
 
 let _ =

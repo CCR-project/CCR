@@ -13,7 +13,7 @@ Our development successfully compiles with following versions (in Linux, OS X):
 - coq-stdpp (= *1.5.0*)
 - coq-iris (= *3.4.0*)
 
-- coq-compcert (= *3.8*) and its dependencies:
+- coq-compcert (= *3.9*) and its dependencies:
   + coq-flocq (= *3.4.1*)
   + menhir (= *20210310*)
   + coq-menhirlib (= *20210310*)

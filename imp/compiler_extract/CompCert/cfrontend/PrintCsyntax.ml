@@ -6,10 +6,11 @@
 (*                                                                     *)
 (*  Copyright Institut National de Recherche en Informatique et en     *)
 (*  Automatique.  All rights reserved.  This file is distributed       *)
-(*  under the terms of the GNU General Public License as published by  *)
-(*  the Free Software Foundation, either version 2 of the License, or  *)
-(*  (at your option) any later version.  This file is also distributed *)
-(*  under the terms of the INRIA Non-Commercial License Agreement.     *)
+(*  under the terms of the GNU Lesser General Public License as        *)
+(*  published by the Free Software Foundation, either version 2.1 of   *)
+(*  the License, or  (at your option) any later version.               *)
+(*  This file is also distributed under the terms of the               *)
+(*  INRIA Non-Commercial License Agreement.                            *)
 (*                                                                     *)
 (* *********************************************************************)
 
@@ -111,8 +112,8 @@ let rec name_cdecl id ty =
       | Tnil ->
           if first then
             Buffer.add_string b
-               (if cconv.cc_vararg then "..." else "void")
-          else if cconv.cc_vararg then
+               (if cconv.cc_vararg <> None then "..." else "void")
+          else if cconv.cc_vararg <> None then
             Buffer.add_string b ", ..."
           else
             ()
@@ -400,11 +401,11 @@ let name_function_parameters name_param fun_name params cconv =
   Buffer.add_char b '(';
   begin match params with
   | [] ->
-      Buffer.add_string b (if cconv.cc_vararg then "..." else "void")
+      Buffer.add_string b (if cconv.cc_vararg <> None then "..." else "void")
   | _ ->
       let rec add_params first = function
       | [] ->
-          if cconv.cc_vararg then Buffer.add_string b ",..."
+          if cconv.cc_vararg <> None then Buffer.add_string b ",..."
       | (id, ty) :: rem ->
           if not first then Buffer.add_string b ", ";
           Buffer.add_string b (name_cdecl (name_param id) ty);
