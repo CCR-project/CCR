@@ -6,10 +6,11 @@
 (*                                                                     *)
 (*  Copyright Institut National de Recherche en Informatique et en     *)
 (*  Automatique.  All rights reserved.  This file is distributed       *)
-(*  under the terms of the GNU General Public License as published by  *)
-(*  the Free Software Foundation, either version 2 of the License, or  *)
-(*  (at your option) any later version.  This file is also distributed *)
-(*  under the terms of the INRIA Non-Commercial License Agreement.     *)
+(*  under the terms of the GNU Lesser General Public License as        *)
+(*  published by the Free Software Foundation, either version 2.1 of   *)
+(*  the License, or  (at your option) any later version.               *)
+(*  This file is also distributed under the terms of the               *)
+(*  INRIA Non-Commercial License Agreement.                            *)
 (*                                                                     *)
 (* *********************************************************************)
 
@@ -1001,7 +1002,7 @@ and elab_field_group env = function
             | TInt(ik, _) -> ik
             | TEnum(_, _) -> enum_ikind
             | _ -> ILongLong (* trigger next error message *) in
-          if integer_rank ik > integer_rank IInt then begin
+          if sizeof_ikind ik > sizeof_ikind IInt then begin
             error loc
               "the type of bit-field '%a' must be an integer type no bigger than 'int'" pp_field id;
             None,env
@@ -2871,7 +2872,10 @@ let elab_definition (for_loop: bool) (local: bool) (nonstatic_inline: bool)
 
   (* pragma *)
   | PRAGMA(s, loc) ->
-      emit_elab env loc (Gpragma s);
+      if local then
+        warning loc Unnamed "pragmas are ignored inside functions"
+      else
+        emit_elab env loc (Gpragma s);
       ([], env)
 
   (* static assertion *)

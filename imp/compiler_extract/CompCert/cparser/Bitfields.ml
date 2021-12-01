@@ -6,10 +6,11 @@
 (*                                                                     *)
 (*  Copyright Institut National de Recherche en Informatique et en     *)
 (*  Automatique.  All rights reserved.  This file is distributed       *)
-(*  under the terms of the GNU General Public License as published by  *)
-(*  the Free Software Foundation, either version 2 of the License, or  *)
-(*  (at your option) any later version.  This file is also distributed *)
-(*  under the terms of the INRIA Non-Commercial License Agreement.     *)
+(*  under the terms of the GNU Lesser General Public License as        *)
+(*  published by the Free Software Foundation, either version 2.1 of   *)
+(*  the License, or  (at your option) any later version.               *)
+(*  This file is also distributed under the terms of the               *)
+(*  INRIA Non-Commercial License Agreement.                            *)
 (*                                                                     *)
 (* *********************************************************************)
 
@@ -267,7 +268,7 @@ let bitfield_extract env bf carrier =
 unsigned int bitfield_insert(unsigned int x, int ofs, int sz, unsigned int y)
 {
   unsigned int mask = ((1U << sz) - 1) << ofs;
-  return (x & ~mask) | ((y << ofs) & mask);
+  return ((y << ofs) & mask) | (x & ~mask);
 }
 
 If the bitfield is of type _Bool, the new value (y above) must be converted
@@ -284,7 +285,7 @@ let bitfield_assign env bf carrier newval =
     eshift env Oshl newval_casted (intconst (Int64.of_int bf.bf_pos) IUInt) in
   let newval_masked = ebinint env Oand newval_shifted msk
   and oldval_masked = ebinint env Oand carrier notmsk in
-  ebinint env Oor oldval_masked newval_masked
+  ebinint env Oor newval_masked oldval_masked
 
 (* Initialize a bitfield *)
 

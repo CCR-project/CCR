@@ -134,9 +134,9 @@ module ELF_System : SYSTEM =
     let name_of_section = function
       | Section_text -> ".text"
       | Section_data i | Section_small_data i ->
-          if i then ".data" else common_section ()
+          variable_section ~sec:".data" ~bss:".bss" i
       | Section_const i | Section_small_const i ->
-          if i || (not !Clflags.option_fcommon) then ".section	.rodata" else "COMM"
+          variable_section ~sec:".section	.rodata" i
       | Section_string -> ".section	.rodata"
       | Section_literal -> ".section	.rodata.cst8,\"aM\",@progbits,8"
       | Section_jumptable -> ".text"
@@ -192,11 +192,11 @@ module MacOS_System : SYSTEM =
     let name_of_section = function
       | Section_text -> ".text"
       | Section_data i | Section_small_data i ->
-          if i || (not !Clflags.option_fcommon) then ".data" else "COMM"
+          variable_section ~sec:".data" i
       | Section_const i  | Section_small_const i ->
-          if i || (not !Clflags.option_fcommon) then ".const" else "COMM"
+          variable_section ~sec:".const" ~reloc:".const_data" i
       | Section_string -> ".const"
-      | Section_literal -> ".literal8"
+      | Section_literal -> ".const"
       | Section_jumptable -> ".text"
       | Section_user(s, wr, ex) ->
           sprintf ".section	\"%s\", %s, %s"
@@ -254,9 +254,9 @@ module Cygwin_System : SYSTEM =
     let name_of_section = function
       | Section_text -> ".text"
       | Section_data i | Section_small_data i ->
-          if i then ".data" else common_section ()
+          variable_section ~sec:".data" ~bss:".bss" i
       | Section_const i | Section_small_const i ->
-          if i || (not !Clflags.option_fcommon) then ".section	.rdata,\"dr\"" else "COMM"
+          variable_section ~sec:".section	.rdata,\"dr\"" i
       | Section_string -> ".section	.rdata,\"dr\""
       | Section_literal -> ".section	.rdata,\"dr\""
       | Section_jumptable -> ".text"
@@ -733,7 +733,7 @@ module Target(System: SYSTEM):TARGET =
       | Pret ->
           if (not Archi.ptr64)
           && (!current_function_sig).sig_cc.cc_structret then begin
-            fprintf oc "	movl	0(%%esp), %%eax\n";
+            fprintf oc "	movl	4(%%esp), %%eax\n";
             fprintf oc "	ret	$4\n"
           end else begin
             fprintf oc "	ret\n"
@@ -914,8 +914,7 @@ module Target(System: SYSTEM):TARGET =
 
     let print_epilogue oc =
       if !need_masks then begin
-        section oc (Section_const true);
-        (* not Section_literal because not 8-bytes *)
+        section oc Section_literal;
         print_align oc 16;
         fprintf oc "%a:	.quad   0x8000000000000000, 0\n"
           raw_symbol "__negd_mask";
@@ -945,7 +944,7 @@ end
 let sel_target () =
  let module S = (val (match Configuration.system with
   | "linux" | "bsd" -> (module ELF_System:SYSTEM)
-  | "macosx" -> (module MacOS_System:SYSTEM)
+  | "macos" -> (module MacOS_System:SYSTEM)
   | "cygwin" -> (module Cygwin_System:SYSTEM)
   | _ -> invalid_arg ("System " ^ Configuration.system ^ " not supported")  ):SYSTEM) in
  (module Target(S):TARGET)

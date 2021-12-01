@@ -398,27 +398,29 @@ let cmdline_actions =
       push_action process_h_file s; incr num_source_files; incr num_input_files);
   ]
 
-(* let _ =
- *   try
- *     Gc.set { (Gc.get()) with
- *                 Gc.minor_heap_size = 524288; (\* 512k *\)
- *                 Gc.major_heap_increment = 4194304 (\* 4M *\)
- *            };
- *     Printexc.record_backtrace true;
- *     Frontend.init ();
- *     parse_cmdline cmdline_actions;
- *     DebugInit.init (); (\* Initialize the debug functions *\)
- *     if nolink () && !option_o <> None && !num_source_files >= 2 then
- *       fatal_error no_loc "ambiguous '-o' option (multiple source files)";
- *     if !num_input_files = 0 then
- *       fatal_error no_loc "no input file";
- *     let linker_args = time "Total compilation time" perform_actions () in
- *     if not (nolink ()) && linker_args <> [] then begin
- *       linker (output_filename_default "a.out") linker_args
- *     end;
- *     check_errors ()
- *   with
- *   | Sys_error msg
- *   | CmdError msg -> error no_loc "%s" msg; exit 2
- *   | Abort -> error_summary (); exit 2
- *   | e -> crash e *)
+let _ =
+  try
+    Gc.set { (Gc.get()) with
+                Gc.minor_heap_size = 524288; (* 512k *)
+                Gc.major_heap_increment = 4194304 (* 4M *)
+           };
+    Printexc.record_backtrace true;
+    Frontend.init ();
+    parse_cmdline cmdline_actions;
+    DebugInit.init (); (* Initialize the debug functions *)
+    if nolink () && !option_o <> None && !num_source_files >= 2 then
+      fatal_error no_loc "ambiguous '-o' option (multiple source files)";
+    if !num_input_files = 0 then
+      fatal_error no_loc "no input file";
+    if not !option_interp && !main_function_name <> "main" then
+      fatal_error no_loc "option '-main' requires option '-interp'";
+    let linker_args = time "Total compilation time" perform_actions () in
+    if not (nolink ()) && linker_args <> [] then begin
+      linker (output_filename_default "a.out") linker_args
+    end;
+    check_errors ()
+  with
+  | Sys_error msg
+  | CmdError msg -> error no_loc "%s" msg; exit 2
+  | Abort -> error_summary (); exit 2
+  | e -> crash e
