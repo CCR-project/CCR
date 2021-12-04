@@ -166,6 +166,24 @@ Section SIM.
       (SRT: _.(state_sort) st_tgt0 = final retv)
     :
       _sim sim i_src0 i_tgt0 st_src0 st_tgt0
+
+  | sim_vis
+      (SRT: _.(state_sort) st_src0 = vis)
+      (SRT: _.(state_sort) st_tgt0 = vis)
+      (SIM: forall ev st_tgt1
+          (STEP: _.(step) st_tgt0 (Some ev) st_tgt1)
+        ,
+          exists st_src1 (STEP: _.(step) st_src0 (Some ev) st_src1),
+            <<SIM: sim true true st_src1 st_tgt1>>)
+    :
+      _sim sim i_src0 i_tgt0 st_src0 st_tgt0
+
+  | sim_vis_stuck_tgt
+      (SRT: _.(state_sort) st_tgt0 = vis)
+      (STUCK: forall ev st_tgt1, not (_.(step) st_tgt0 (Some ev) st_tgt1))
+    :
+      _sim sim i_src0 i_tgt0 st_src0 st_tgt0
+
   | sim_demonic_src
       (SRT: _.(state_sort) st_src0 = demonic)
       (SIM: exists st_src1
@@ -214,6 +232,21 @@ Section SIM.
             (SRT: _.(state_sort) st_src0 = final retv)
             (SRT: _.(state_sort) st_tgt0 = final retv),
             P i_src0 i_tgt0 st_src0 st_tgt0)
+        (VIS: forall
+            i_src0 i_tgt0 st_src0 st_tgt0
+            (SRT: _.(state_sort) st_src0 = vis)
+            (SRT: _.(state_sort) st_tgt0 = vis)
+            (SIM: forall ev st_tgt1
+                         (STEP: _.(step) st_tgt0 (Some ev) st_tgt1)
+              ,
+                exists st_src1 (STEP: _.(step) st_src0 (Some ev) st_src1),
+                  <<SIM: sim true true st_src1 st_tgt1>>),
+            P i_src0 i_tgt0 st_src0 st_tgt0)
+        (VISSTUCK: forall
+            i_src0 i_tgt0 st_src0 st_tgt0
+            (SRT: _.(state_sort) st_tgt0 = vis)
+            (STUCK: forall ev st_tgt1, not (_.(step) st_tgt0 (Some ev) st_tgt1)),
+            P i_src0 i_tgt0 st_src0 st_tgt0)
         (DMSRC: forall
             i_src0 i_tgt0 st_src0 st_tgt0
             (SRT: _.(state_sort) st_src0 = demonic)
@@ -260,6 +293,8 @@ Section SIM.
   Proof.
     fix IH 5. i. inv SIM.
     { eapply FIN; eauto. }
+    { eapply VIS; eauto. }
+    { eapply VISSTUCK; eauto. }
     { eapply DMSRC; eauto.
       des. esplits; eauto. }
     { eapply DMTGT; eauto. i.
@@ -275,11 +310,13 @@ Section SIM.
   Proof.
     ii. revert x0 x1 x2 x3 IN. eapply _sim_ind2; i; clarify.
     { econs 1; eauto. }
-    { econs 2; eauto. des. esplits; eauto. }
-    { econs 3; eauto. i. hexploit SIM; eauto. i. des. esplits; eauto. }
-    { econs 4; eauto. i. hexploit SIM; eauto. i. des. esplits; eauto. }
-    { econs 5; eauto. des. esplits; eauto. }
-    { econs 6; eauto. }
+    { econs 2; eauto. i. exploit SIM; eauto. i. des. esplits; eauto. }
+    { econs 3; eauto. }
+    { econs 4; eauto. des. esplits; eauto. }
+    { econs 5; eauto. i. hexploit SIM; eauto. i. des. esplits; eauto. }
+    { econs 6; eauto. i. hexploit SIM; eauto. i. des. esplits; eauto. }
+    { econs 7; eauto. des. esplits; eauto. }
+    { econs 8; eauto. }
   Qed.
 
   Definition sim: _ -> _ -> _ -> _ -> Prop := paco4 _sim bot4.
@@ -295,6 +332,21 @@ Section SIM.
             retv
             (SRT: _.(state_sort) st_src0 = final retv)
             (SRT: _.(state_sort) st_tgt0 = final retv),
+            P i_src0 i_tgt0 st_src0 st_tgt0)
+        (VIS: forall
+            i_src0 i_tgt0 st_src0 st_tgt0
+            (SRT: _.(state_sort) st_src0 = vis)
+            (SRT: _.(state_sort) st_tgt0 = vis)
+            (SIM: forall ev st_tgt1
+                         (STEP: _.(step) st_tgt0 (Some ev) st_tgt1)
+              ,
+                exists st_src1 (STEP: _.(step) st_src0 (Some ev) st_src1),
+                  <<SIM: sim true true st_src1 st_tgt1>>),
+            P i_src0 i_tgt0 st_src0 st_tgt0)
+        (VISSTUCK: forall
+            i_src0 i_tgt0 st_src0 st_tgt0
+            (SRT: _.(state_sort) st_tgt0 = vis)
+            (STUCK: forall ev st_tgt1, not (_.(step) st_tgt0 (Some ev) st_tgt1)),
             P i_src0 i_tgt0 st_src0 st_tgt0)
         (DMSRC: forall
             i_src0 i_tgt0 st_src0 st_tgt0
@@ -364,6 +416,23 @@ Section SIM.
       (SRT: _.(state_sort) st_tgt0 = final retv)
     :
       sim_indC sim i_src0 i_tgt0 st_src0 st_tgt0
+
+  | sim_indC_vis
+      (SRT: _.(state_sort) st_src0 = vis)
+      (SRT: _.(state_sort) st_tgt0 = vis)
+      (SIM: forall ev st_tgt1
+          (STEP: _.(step) st_tgt0 (Some ev) st_tgt1)
+        ,
+          exists st_src1 (STEP: _.(step) st_src0 (Some ev) st_src1),
+            <<SIM: sim true true st_src1 st_tgt1>>)
+    :
+      sim_indC sim i_src0 i_tgt0 st_src0 st_tgt0
+
+  | sim_indC_vis_stuck_tgt
+      (SRT: _.(state_sort) st_tgt0 = vis)
+      (STUCK: forall ev st_tgt1, not (_.(step) st_tgt0 (Some ev) st_tgt1))
+    :
+      sim_indC sim i_src0 i_tgt0 st_src0 st_tgt0
   | sim_indC_demonic_src
       (SRT: _.(state_sort) st_src0 = demonic)
       (SIM: exists st_src1
@@ -408,11 +477,13 @@ Section SIM.
   Proof.
     ii. inv IN; eauto.
     { econs 1; eauto. }
-    { econs 2; eauto. des. esplits; eauto. }
-    { econs 3; eauto. i. hexploit SIM; eauto. }
-    { econs 4; eauto. i. hexploit SIM; eauto. }
-    { econs 5; eauto. des. esplits; eauto. }
-    { econs 6; eauto. }
+    { econs 2; eauto. i. exploit SIM; eauto. i. des. esplits; eauto. }
+    { econs 3; eauto. }
+    { econs 4; eauto. des. esplits; eauto. }
+    { econs 5; eauto. i. hexploit SIM; eauto. }
+    { econs 6; eauto. i. hexploit SIM; eauto. }
+    { econs 7; eauto. des. esplits; eauto. }
+    { econs 8; eauto. }
   Qed.
   Hint Resolve sim_indC_mon: paco.
 
@@ -422,19 +493,22 @@ Section SIM.
     eapply wrespect4_uclo; eauto with paco.
     econs; eauto with paco. i. inv PR.
     { econs 1; eauto. }
-    { econs 2; eauto. des. esplits; eauto.
+    { econs 2; eauto. i. exploit SIM; eauto. i. des.
+      esplits; eauto. eapply rclo4_base. auto. }
+    { econs 3; eauto. }
+    { econs 4; eauto. des. esplits; eauto.
       eapply sim_mon; eauto. i. eapply rclo4_base. auto.
     }
-    { econs 3; eauto. i. hexploit SIM; eauto. i.
+    { econs 5; eauto. i. hexploit SIM; eauto. i.
       eapply sim_mon; eauto. i. eapply rclo4_base. auto.
     }
-    { econs 4; eauto. i. hexploit SIM; eauto. i.
+    { econs 6; eauto. i. hexploit SIM; eauto. i.
       eapply sim_mon; eauto. i. eapply rclo4_base. auto.
     }
-    { econs 5; eauto. des. esplits; eauto.
+    { econs 7; eauto. des. esplits; eauto.
       eapply sim_mon; eauto. i. eapply rclo4_base. auto.
     }
-    { econs 6; eauto. eapply rclo4_base. auto. }
+    { econs 8; eauto. eapply rclo4_base. auto. }
   Qed.
 
   Variant sim_flagC (sim: bool -> bool -> L0.(state) -> L1.(state) -> Prop)
@@ -460,11 +534,14 @@ Section SIM.
     eapply GF in SIM.
     revert x0 x1 SRC TGT. induction SIM using _sim_ind2; i; clarify.
     { econs 1; eauto. }
-    { econs 2; eauto. des. esplits; eauto. }
-    { econs 3; eauto. i. exploit SIM; eauto. i. des. eauto. }
-    { econs 4; eauto. i. exploit SIM; eauto. i. des. eauto. }
-    { econs 5; eauto. des. esplits; eauto. }
-    { econs 6; eauto. eapply rclo4_base. auto. }
+    { econs 2; eauto. i. exploit SIM; eauto. i. des.
+      esplits; eauto. eapply rclo4_base. auto. }
+    { econs 3; eauto. }
+    { econs 4; eauto. des. esplits; eauto. }
+    { econs 5; eauto. i. exploit SIM; eauto. i. des. eauto. }
+    { econs 6; eauto. i. exploit SIM; eauto. i. des. eauto. }
+    { econs 7; eauto. des. esplits; eauto. }
+    { econs 8; eauto. eapply rclo4_base. auto. }
   Qed.
 
   Lemma sim_flag_mon:
@@ -498,6 +575,10 @@ Section SIM.
     intros ? ? ? ? SIM. induction SIM using sim_ind; i; clarify.
     - (** final **)
       exfalso. punfold SPIN. inv SPIN; rewrite SRT0 in *; ss.
+    - (** vis **)
+      des. exfalso. punfold SPIN. inv SPIN; rewrite SRT1 in *; ss.
+    - (** vis stuck **)
+      exfalso. punfold SPIN. inv SPIN; rewrite SRT0 in *; ss.
     - (** dsrc **)
       des. gstep. econs 2; eauto. esplits; eauto.
       eapply gpaco1_mon; eauto. ss.
@@ -520,6 +601,8 @@ Section SIM.
       revert Heqb. clear Heqb0. revert SPIN.
       induction SIM using sim_ind; i; clarify.
       + exfalso. punfold SPIN. inv SPIN; rewrite SRT1 in *; clarify.
+      + exfalso. punfold SPIN. inv SPIN; rewrite SRT1 in *; clarify.
+      + exfalso. punfold SPIN. inv SPIN; rewrite SRT0 in *; ss.
       + des. gstep. econs 2; auto. esplits; eauto.
         gbase. eapply CIH; eauto.
       + punfold SPIN. inv SPIN; rewrite SRT in *; clarify. des.
@@ -551,6 +634,8 @@ Section SIM.
       rename H into SRT.
       revert retv SRT. induction SIM using sim_ind; i; clarify.
       + rewrite SRT0 in *. clarify. gstep. econs; eauto.
+      + rewrite SRT0 in *. clarify.
+      + rewrite SRT0 in *. clarify.
       + des. exploit IH; eauto. i; des; ss.
         guclo of_state_indC_spec. econs 5; eauto. red. esplits; eauto.
       + rewrite SRT in *. clarify.
@@ -575,6 +660,11 @@ Section SIM.
       gstep. econs; eauto.
     - (** cons **)
       induction SIM using sim_ind; i; try rewrite SRT in *; clarify.
+      + (** vv **)
+        specialize (SIM ev st1). apply SIM in STEP; clear SIM; des.
+        gstep. econs 4; eauto. pc SIM. gbase. eapply CIH; eauto.
+      + (** vis stuck **)
+        apply STUCK in STEP. clarify.
       + (** d_ **)
         des. guclo of_state_indC_spec. econs 5; eauto. red. esplits; eauto.
       + (** a_ **)
@@ -586,6 +676,8 @@ Section SIM.
         remember false as i_tgt0 eqn:FLAGTGT in SIM at 1.
         clear FLAGSRC. revert FLAGTGT. revert ev SRT STEP.
         induction SIM using sim_ind; i; try rewrite SRT0 in *; clarify.
+        * exploit SIM; eauto. i. des. gstep. econs 4; eauto. gbase. eauto.
+        * exfalso. eapply STUCK; eauto.
         * des. exploit IH; eauto. i.
           guclo of_state_indC_spec. econs 5; eauto. red. esplits; eauto.
         * guclo of_state_indC_spec. econs 6; eauto. ii.
