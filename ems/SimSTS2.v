@@ -397,9 +397,6 @@ Section SIM.
   }
   .
 
-  Lemma admitt: False. Admitted.
-  Ltac admitt := exfalso; apply admitt.
-
   Ltac pc H := rr in H; desH H; ss.
   Lemma adequacy_spin
         i_src0 i_tgt0 st_src0 st_tgt0
@@ -446,193 +443,60 @@ Section SIM.
     { i. eapply cpn2_wcompat; eauto. eapply Beh.of_state_mon. }
     revert i_tgt0 i_src0 st_src0 st_tgt0 SIM. gcofix CIH.
     i. rename x2 into tr.
-    cut (sim true i_tgt0 st_src0 st_tgt0).
-    2:{ eapply sim_flag_mon; eauto. }
-    clear i_src0 SIM. intros SIM.
-    match goal with
-    | |- ?goal => cut (goal \/ true = false)
-    end.
-    { i. des; ss. }
-    revert SIM. generalize true. intros i_src0 SIM.
     revert i_src0 i_tgt0 st_src0 SIM.
     induction PR using of_state_ind2; ii; ss; rename st0 into st_tgt0.
     - (** done **)
-      revert retv H.
-      induction SIM using sim_ind; i; clarify.
-      + rewrite SRT0 in *. clarify. left. gstep. econs; eauto.
-      + des. left. exploit IH; eauto. i; des; ss.
-        guclo of_state_indC_spec. econs 5; eauto. red. esplits; eauto.
-      + rewrite SRT in *. clarify.
-      + revert SIM.
-
-        admitt.
-    - (** spin **)
-      left. exploit adequacy_spin; eauto. i.
-      gstep. econs. et.
-    - (** nb **)
-      left. gstep. econs; eauto.
-    - (** cons **)
-      revert ev SRT STEP.
-      induction SIM using sim_ind; i; try rewrite SRT0 in *; clarify.
-      * des. exploit IH; eauto. i. des; ss. left.
-        guclo of_state_indC_spec. econs 5; eauto. red. esplits; eauto.
-      * auto.
-
-      cut (sim false i_tgt0 st_src0 st_tgt0).
-      2:{ admitt. }
-      clear SIM i_src0. intros SIM.
-      match goal with
-      | |- ?goal => cut (goal \/ true = false)
-      end.
-      { i. des; ss. }
-
-  Lemma adequacy_aux
-        i_src0 i_tgt0 st_src0 st_tgt0
-        (SIM: sim i_src0 i_tgt0 st_src0 st_tgt0)
-    :
-      <<IMPR: Beh.improves (Beh.of_state L0 st_src0) (Beh.of_state L1 st_tgt0)>>
-  .
-  Proof.
-    ginit.
-    { i. eapply cpn2_wcompat; eauto. eapply Beh.of_state_mon. }
-    revert i_tgt0 i_src0 st_src0 st_tgt0 SIM. gcofix CIH.
-    i. rename x2 into tr.
-    punfold PR. revert i_src0 i_tgt0 st_src0 SIM.
-    induction PR using Beh.of_state_ind; ii; ss; rename st0 into st_tgt0.
-    - (** done **)
-      revert retv H.
-      induction SIM using sim_ind; i; clarify.
+      rename H into SRT.
+      revert retv SRT. induction SIM using sim_ind; i; clarify.
       + rewrite SRT0 in *. clarify. gstep. econs; eauto.
-      + des. guclo indC_spec. econs 5; eauto. red. esplits; eauto.
+      + des. exploit IH; eauto. i; des; ss.
+        guclo of_state_indC_spec. econs 5; eauto. red. esplits; eauto.
       + rewrite SRT in *. clarify.
-      + admitt.
+      + remember false as i_src0 eqn:FLAGSRC in SIM at 1.
+        remember false as i_tgt0 eqn:FLAGTGT in SIM at 1.
+        clear FLAGSRC. revert FLAGTGT. revert retv SRT.
+        induction SIM using sim_ind; i; try rewrite SRT0 in *; clarify.
+        * gstep. econs; eauto.
+        * des. guclo of_state_indC_spec. econs 5; eauto.
+          red. esplits; eauto.
     - (** spin **)
       exploit adequacy_spin; eauto. i.
       gstep. econs. et.
     - (** nb **)
       gstep. econs; eauto.
     - (** cons **)
-      cut (sim false i_tgt0 st_src0 st_tgt0).
-      2:{ admitt. }
-      clear SIM i_src0. intros SIM.
-      match goal with
-      | |- ?goal => cut (goal \/ true = false)
-      end.
-      { i. des; ss. }
-
-
-      pc TL. induction SIM using sim_ind; i; try rewrite SRT in *; clarify.
+      induction SIM using sim_ind; i; try rewrite SRT in *; clarify.
       + (** d_ **)
-        des. guclo indC_spec. econs 5; eauto. red. esplits; eauto.
+        des. guclo of_state_indC_spec. econs 5; eauto. red. esplits; eauto.
       + (** progress **)
-        match goal with
-        | |- ?goal => cut (goal \/ true = false)
-        end.
-        { i. des; ss. }
-        revert SIM. generalize false at 2 3.
-        generalize false at 1. intros f_src f_tgt SIM.
-        revert ev SRT STEP.
+        remember false as i_src0 eqn:FLAGSRC in SIM at 1.
+        remember false as i_tgt0 eqn:FLAGTGT in SIM at 1.
+        clear FLAGSRC. revert FLAGTGT. revert ev SRT STEP.
         induction SIM using sim_ind; i; try rewrite SRT0 in *; clarify.
-        * des. exploit IH; eauto. i. des; auto. left.
-          guclo indC_spec. econs 5; eauto. red. esplits; eauto.
-        * auto.
-
-
-    - (** cons **)
-      pc TL. induction SIM using sim_ind; i; try rewrite SRT in *; clarify.
-      + (** d_ **)
-        des. guclo indC_spec. econs 5; eauto. red. esplits; eauto.
-      + (** progress **)
-        match goal with
-        | |- ?goal => cut (goal \/ true = false)
-        end.
-        { i. des; ss. }
-        revert SIM. generalize false at 2 3.
-        generalize false at 1. intros f_src f_tgt SIM.
-        revert ev SRT STEP.
-        induction SIM using sim_ind; i; try rewrite SRT0 in *; clarify.
-        * des. exploit IH; eauto. i. des; auto. left.
-          guclo indC_spec. econs 5; eauto. red. esplits; eauto.
-        * auto.
+        des. exploit IH; eauto. i.
+        guclo of_state_indC_spec. econs 5; eauto. red. esplits; eauto.
     - (** demonic **)
       red in STEP. des. clarify.
       induction SIM using sim_ind; i; try rewrite SRT in *; clarify.
-      + des. hexploit IH0; eauto. i.
-        guclo indC_spec. econs 5; eauto. red. esplits; eauto.
+      + des. guclo of_state_indC_spec. econs 5; eauto. red. esplits; eauto.
       + hexploit SIM; eauto. i. des. eapply IH; eauto.
-      +
-
-        des. hexploit IH; eauto.
-
-
-      revert i_src0 st_src0 SIM.
-      induction (WFTGT i_tgt0).
-      clear H. rename x into i_tgt0. rename H0 into IHTGT. i.
-      rr in STEP. des. clarify. rename st1 into st_tgt1.
-      punfold SIM. inv SIM; try rewrite SRT in *; ss.
-      + des. pc SIM.
-        guclo Beh.dstep_clo_spec. econs; et.
-      + exploit SIM0; et. i. des. pc SIM.
-        eapply IH; et.
-      + guclo Beh.astep_clo_spec. econs; et. ii.
-        exploit SIM0; et. i. des. pc SIM. et.
-    -
-
-
-          rewrite SRT0 in *. clarify.
-        * rewrite SRT0 in *. clarify.
-        * rewrite SRT0 in *. clarify.
-
-
-        punfold SIM. induction SIM with
-
-                       inv SIM; try rewrite SRT in *; clarify.
-        des.
-
-
-        eapply IH; eauto.
-        guclo Beh.dstep_clo_spec. econs; eauto.
-      + (** a_ **)
-        guclo Beh.astep_clo_spec. econs; eauto. ii.
-        exploit SIM0; et. i. des. pc SIM. et.
-
-      revert i_src0 st_src0 SIM.
-      induction (WFTGT i_tgt0).
-      clear H. rename x into i_tgt0. rename H0 into IHTGT. i.
-      pc TL. punfold SIM. inv SIM; try rewrite SRT in *; ss.
-      + (** vv **)
-        specialize (SIM0 ev st1). apply SIM0 in STEP; clear SIM0; des.
-        gstep. econs 4; eauto. pc SIM. gbase. eapply CIH; eauto.
-      + (** vis stuck **)
-        apply STUCK in STEP. clarify.
-      + (** d_ **)
-        des. pc SIM.
-        guclo Beh.dstep_clo_spec. econs; eauto.
-      + (** a_ **)
-        guclo Beh.astep_clo_spec. econs; eauto. ii.
-        exploit SIM0; et. i. des. pc SIM. et.
-    - (** demonic **)
-      revert i_src0 st_src0 SIM.
-      induction (WFTGT i_tgt0).
-      clear H. rename x into i_tgt0. rename H0 into IHTGT. i.
-      rr in STEP. des. clarify. rename st1 into st_tgt1.
-      punfold SIM. inv SIM; try rewrite SRT in *; ss.
-      + des. pc SIM.
-        guclo Beh.dstep_clo_spec. econs; et.
-      + exploit SIM0; et. i. des. pc SIM.
-        eapply IH; et.
-      + guclo Beh.astep_clo_spec. econs; et. ii.
-        exploit SIM0; et. i. des. pc SIM. et.
+      + remember false as i_src0 eqn:FLAGSRC in SIM at 1.
+        remember false as i_tgt0 eqn:FLAGTGT in SIM at 1.
+        clear FLAGSRC. revert FLAGTGT. revert st1 SRT STEP0 TL IH.
+        induction SIM using sim_ind; i; try rewrite SRT0 in *; clarify.
+        * des. exploit IH0; eauto. i.
+          guclo of_state_indC_spec. econs 5; eauto. red. esplits; eauto.
+        * exploit SIM; eauto. i. des. eapply IH; eauto.
     - (** angelic **)
-      revert i_src0 st_src0 SIM.
-      induction (WFTGT i_tgt0).
-      clear H. rename x into i_tgt0. rename H0 into IHTGT. i.
-      punfold SIM. inv SIM; try rewrite SRT in *; ss.
-      + des. pc SIM.
-        guclo Beh.dstep_clo_spec. econs; et.
-      + guclo Beh.astep_clo_spec. econs; et. ii.
-        exploit SIM0; et. i. des. pc SIM. et.
-      + des. pc SIM. exploit STEP; et. i. des. et.
+      red in STEP. des. clarify.
+      induction SIM using sim_ind; i; try rewrite SRT in *; clarify.
+      + des. guclo of_state_indC_spec. econs 5; eauto. red. esplits; eauto.
+      + remember false as i_src0 eqn:FLAGSRC in SIM at 1.
+        remember false as i_tgt0 eqn:FLAGTGT in SIM at 1.
+        clear FLAGSRC. revert FLAGTGT. revert SRT STEP.
+        induction SIM using sim_ind; i; try rewrite SRT0 in *; clarify.
+        des. exploit IH; eauto. i.
+        guclo of_state_indC_spec. econs 5; eauto. red. esplits; eauto.
   Qed.
 
   Theorem adequacy
