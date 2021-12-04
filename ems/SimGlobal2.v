@@ -10,7 +10,7 @@ Require Import Coq.Relations.Relation_Definitions.
 Require Import Relation_Operators.
 Require Import RelationPairs.
 From Ordinal Require Import Ordinal Arithmetic.
-Require Import SimSTS.
+Require Import SimSTSNoIndex.
 
 Set Implicit Arguments.
 
@@ -32,6 +32,11 @@ Inductive _simg
     (SIM: RR r_src r_tgt)
   :
     _simg simg RR f_src f_tgt (Ret r_src) (Ret r_tgt)
+| simg_syscall
+    ktr_src0 ktr_tgt0 fn varg rvs
+    (SIM: forall x_src x_tgt (EQ: x_src = x_tgt), simg _ _ RR true true (ktr_src0 x_src) (ktr_tgt0 x_tgt))
+  :
+    _simg simg RR f_src f_tgt (trigger (Syscall fn varg rvs) >>= ktr_src0) (trigger (Syscall fn varg rvs) >>= ktr_tgt0)
 
 | simg_tauL
     itr_src0 itr_tgt0
@@ -46,6 +51,32 @@ Inductive _simg
   :
     _simg simg RR f_src f_tgt (itr_src0) (tau;; itr_tgt0)
 
+| simg_chooseL
+    X ktr_src0 itr_tgt0
+    (CHOOSEL: True)
+    (SIM: exists x, _simg simg RR true f_tgt (ktr_src0 x) itr_tgt0)
+  :
+    _simg simg RR f_src f_tgt (trigger (Choose X) >>= ktr_src0) (itr_tgt0)
+| simg_chooseR
+    X itr_src0 ktr_tgt0
+    (CHOOSER: True)
+    (SIM: forall x, _simg simg RR f_src true itr_src0 (ktr_tgt0 x))
+  :
+    _simg simg RR f_src f_tgt (itr_src0) (trigger (Choose X) >>= ktr_tgt0)
+
+| simg_takeL
+    X ktr_src0 itr_tgt0
+    (TAKEL: True)
+    (SIM: forall x, _simg simg RR true f_tgt (ktr_src0 x) itr_tgt0)
+  :
+    _simg simg RR f_src f_tgt (trigger (Take X) >>= ktr_src0) (itr_tgt0)
+| simg_takeR
+    X itr_src0 ktr_tgt0
+    (TAKER: True)
+    (SIM: exists x, _simg simg RR f_src true itr_src0 (ktr_tgt0 x))
+  :
+    _simg simg RR f_src f_tgt (itr_src0) (trigger (Take X) >>= ktr_tgt0)
+
 | simg_progress
     itr_src itr_tgt
     (SIM: simg _ _ RR false false itr_src itr_tgt)
@@ -55,15 +86,93 @@ Inductive _simg
     _simg simg RR f_src f_tgt itr_src itr_tgt
 .
 
+Lemma _simg_ind2 (r P: forall R0 R1 (RR: R0 -> R1 -> Prop), bool -> bool -> (itree eventE R0) -> (itree eventE R1) -> Prop)
+      (RET: forall
+          R0 R1 (RR: R0 -> R1 -> Prop) f_src f_tgt
+          r_src r_tgt
+          (SIM: RR r_src r_tgt),
+          P _ _ RR f_src f_tgt (Ret r_src) (Ret r_tgt))
+      (SYSCALL: forall
+          R0 R1 (RR: R0 -> R1 -> Prop) f_src f_tgt
+          ktr_src0 ktr_tgt0 fn varg rvs
+          (SIM: forall x_src x_tgt (EQ: x_src = x_tgt), r _ _ RR true true (ktr_src0 x_src) (ktr_tgt0 x_tgt)),
+          P _ _ RR f_src f_tgt (trigger (Syscall fn varg rvs) >>= ktr_src0) (trigger (Syscall fn varg rvs) >>= ktr_tgt0))
+      (TAUL: forall
+          R0 R1 (RR: R0 -> R1 -> Prop) f_src f_tgt
+          itr_src0 itr_tgt0
+          (TAUL: True)
+          (SIM: _simg r RR true f_tgt itr_src0 itr_tgt0)
+          (IH: P _ _ RR true f_tgt itr_src0 itr_tgt0),
+          P _ _ RR f_src f_tgt (tau;; itr_src0) (itr_tgt0))
+      (TAUR: forall
+          R0 R1 (RR: R0 -> R1 -> Prop) f_src f_tgt
+          itr_src0 itr_tgt0
+          (TAUR: True)
+          (SIM: _simg r RR f_src true itr_src0 itr_tgt0)
+          (IH: P _ _ RR f_src true itr_src0 itr_tgt0),
+          P _ _ RR f_src f_tgt (itr_src0) (tau;;itr_tgt0))
+      (CHOOSEL: forall
+          R0 R1 (RR: R0 -> R1 -> Prop) f_src f_tgt
+          X ktr_src0 itr_tgt0
+          (CHOOSEL: True)
+          (SIM: exists x, <<SIM: _simg r RR true f_tgt (ktr_src0 x) itr_tgt0>> /\ <<IH: P _ _ RR true f_tgt (ktr_src0 x) itr_tgt0>>),
+          P _ _ RR f_src f_tgt (trigger (Choose X) >>= ktr_src0) (itr_tgt0))
+      (CHOOSER: forall
+          R0 R1 (RR: R0 -> R1 -> Prop) f_src f_tgt
+          X itr_src0 ktr_tgt0
+          (CHOOSER: True)
+          (SIM: forall x, <<SIM: _simg r RR f_src true itr_src0 (ktr_tgt0 x)>> /\ <<IH: P _ _ RR f_src true itr_src0 (ktr_tgt0 x)>>),
+          P _ _ RR f_src f_tgt (itr_src0) (trigger (Choose X) >>= ktr_tgt0))
+      (TAKEL: forall
+          R0 R1 (RR: R0 -> R1 -> Prop) f_src f_tgt
+          X ktr_src0 itr_tgt0
+          (TAKEL: True)
+          (SIM: forall x, <<SIM: _simg r RR true f_tgt (ktr_src0 x) itr_tgt0>> /\ <<IH: P _ _ RR true f_tgt (ktr_src0 x) itr_tgt0>>),
+          P _ _ RR f_src f_tgt (trigger (Take X) >>= ktr_src0) (itr_tgt0))
+      (TAKER: forall
+          R0 R1 (RR: R0 -> R1 -> Prop) f_src f_tgt
+          X itr_src0 ktr_tgt0
+          (TAKER: True)
+          (SIM: exists x, <<SIM: _simg r RR f_src true itr_src0 (ktr_tgt0 x)>> /\ <<IH: P _ _ RR f_src true itr_src0 (ktr_tgt0 x)>>),
+          P _ _ RR f_src f_tgt (itr_src0) (trigger (Take X) >>= ktr_tgt0))
+      (PROGRESS: forall
+          R0 R1 (RR: R0 -> R1 -> Prop) f_src f_tgt
+          itr_src itr_tgt
+          (SIM: r _ _ RR false false itr_src itr_tgt)
+          (SRC: f_src = true)
+          (TGT: f_tgt = true),
+          P _ _ RR f_src f_tgt itr_src itr_tgt)
+  :
+    forall R0 R1 (RR: R0 -> R1 -> Prop) f_src f_tgt itr_src itr_tgt
+           (SIM: _simg r RR f_src f_tgt itr_src itr_tgt),
+      P _ _ RR f_src f_tgt itr_src itr_tgt.
+Proof.
+  fix IH 8. i. inv SIM.
+  { eapply RET; eauto. }
+  { eapply SYSCALL; eauto. }
+  { eapply TAUL; eauto. }
+  { eapply TAUR; eauto. }
+  { eapply CHOOSEL; eauto. des. esplits; eauto. }
+  { eapply CHOOSER; eauto. }
+  { eapply TAKEL; eauto. }
+  { eapply TAKER; eauto. des. esplits; eauto. }
+  { eapply PROGRESS; eauto. }
+Qed.
+
 Definition simg: forall R0 R1 (RR: R0 -> R1 -> Prop), bool -> bool -> (itree eventE R0) -> (itree eventE R1) -> Prop := paco7 _simg bot7.
 
 Lemma simg_mon: monotone7 _simg.
 Proof.
-  ii. induction IN.
+  ii. induction IN using _simg_ind2.
   { econs 1; eauto. }
   { econs 2; eauto. }
   { econs 3; eauto. }
   { econs 4; eauto. }
+  { econs 5; eauto. des. esplits; eauto. }
+  { econs 6; eauto. i. exploit SIM; eauto. des. i. des. eauto. }
+  { econs 7; eauto. i. exploit SIM; eauto. des. i. des. eauto. }
+  { econs 8; eauto. des. esplits; eauto. }
+  { econs 9; eauto. }
 Qed.
 Hint Resolve simg_mon: paco.
 
@@ -76,6 +185,11 @@ Inductive simg_indC
     (SIM: RR r_src r_tgt)
   :
     simg_indC simg RR f_src f_tgt (Ret r_src) (Ret r_tgt)
+| simg_indC_syscall
+    ktr_src0 ktr_tgt0 fn varg rvs
+    (SIM: forall x_src x_tgt (EQ: x_src = x_tgt), simg _ _ RR true true (ktr_src0 x_src) (ktr_tgt0 x_tgt))
+  :
+    simg_indC simg RR f_src f_tgt (trigger (Syscall fn varg rvs) >>= ktr_src0) (trigger (Syscall fn varg rvs) >>= ktr_tgt0)
 
 | simg_indC_tauL
     itr_src0 itr_tgt0
@@ -89,6 +203,32 @@ Inductive simg_indC
     (SIM: simg _ _ RR f_src true itr_src0 itr_tgt0)
   :
     simg_indC simg RR f_src f_tgt (itr_src0) (tau;; itr_tgt0)
+
+| simg_indC_chooseL
+    X ktr_src0 itr_tgt0
+    (CHOOSEL: True)
+    (SIM: exists x, simg _ _ RR true f_tgt (ktr_src0 x) itr_tgt0)
+  :
+    simg_indC simg RR f_src f_tgt (trigger (Choose X) >>= ktr_src0) (itr_tgt0)
+| simg_indC_chooseR
+    X itr_src0 ktr_tgt0
+    (CHOOSER: True)
+    (SIM: forall x, simg _ _ RR f_src true itr_src0 (ktr_tgt0 x))
+  :
+    simg_indC simg RR f_src f_tgt (itr_src0) (trigger (Choose X) >>= ktr_tgt0)
+
+| simg_indC_takeL
+    X ktr_src0 itr_tgt0
+    (TAKEL: True)
+    (SIM: forall x, simg _ _ RR true f_tgt (ktr_src0 x) itr_tgt0)
+  :
+    simg_indC simg RR f_src f_tgt (trigger (Take X) >>= ktr_src0) (itr_tgt0)
+| simg_indC_takeR
+    X itr_src0 ktr_tgt0
+    (TAKER: True)
+    (SIM: exists x, simg _ _ RR f_src true itr_src0 (ktr_tgt0 x))
+  :
+    simg_indC simg RR f_src f_tgt (itr_src0) (trigger (Take X) >>= ktr_tgt0)
 
 | simg_indC_progress
     itr_src itr_tgt
@@ -106,6 +246,11 @@ Proof.
   { econs 2; eauto. }
   { econs 3; eauto. }
   { econs 4; eauto. }
+  { econs 5; eauto. des. esplits; eauto. }
+  { econs 6; eauto. }
+  { econs 7; eauto. }
+  { econs 8; eauto. des. esplits; eauto. }
+  { econs 9; eauto. }
 Qed.
 Hint Resolve simg_indC_mon: paco.
 
@@ -115,13 +260,87 @@ Proof.
   eapply wrespect7_uclo; eauto with paco.
   econs; eauto with paco. i. inv PR.
   { econs 1; eauto. }
-  { econs 2; eauto.
-    eapply simg_mon; eauto. i. eapply rclo7_base. auto.
-  }
-  { econs 3; eauto.
-    eapply simg_mon; eauto. i. eapply rclo7_base. auto.
-  }
-  { econs 4; eauto. eapply rclo7_base. auto. }
+  { econs 2; eauto. i. eapply rclo7_base. auto. }
+  { econs 3; eauto. eapply simg_mon; eauto. i. eapply rclo7_base. auto. }
+  { econs 4; eauto. eapply simg_mon; eauto. i. eapply rclo7_base. auto. }
+  { des. econs 5; eauto. esplits. eapply simg_mon; eauto. i. eapply rclo7_base; eauto. }
+  { econs 6; eauto. i. eapply simg_mon; eauto. i. eapply rclo7_base; eauto. }
+  { econs 7; eauto. i. eapply simg_mon; eauto. i. eapply rclo7_base; eauto. }
+  { des. econs 8; eauto. esplits. eapply simg_mon; eauto. i. eapply rclo7_base; eauto. }
+  { econs 9; eauto. eapply rclo7_base; eauto. }
+Qed.
+
+Lemma simg_ind (P: forall R0 R1 (RR: R0 -> R1 -> Prop), bool -> bool -> (itree eventE R0) -> (itree eventE R1) -> Prop)
+      (RET: forall
+          R0 R1 (RR: R0 -> R1 -> Prop) f_src f_tgt
+          r_src r_tgt
+          (SIM: RR r_src r_tgt),
+          P _ _ RR f_src f_tgt (Ret r_src) (Ret r_tgt))
+      (SYSCALL: forall
+          R0 R1 (RR: R0 -> R1 -> Prop) f_src f_tgt
+          ktr_src0 ktr_tgt0 fn varg rvs
+          (SIM: forall x_src x_tgt (EQ: x_src = x_tgt), simg RR true true (ktr_src0 x_src) (ktr_tgt0 x_tgt)),
+          P _ _ RR f_src f_tgt (trigger (Syscall fn varg rvs) >>= ktr_src0) (trigger (Syscall fn varg rvs) >>= ktr_tgt0))
+      (TAUL: forall
+          R0 R1 (RR: R0 -> R1 -> Prop) f_src f_tgt
+          itr_src0 itr_tgt0
+          (TAUL: True)
+          (SIM: simg RR true f_tgt itr_src0 itr_tgt0)
+          (IH: P _ _ RR true f_tgt itr_src0 itr_tgt0),
+          P _ _ RR f_src f_tgt (tau;; itr_src0) (itr_tgt0))
+      (TAUR: forall
+          R0 R1 (RR: R0 -> R1 -> Prop) f_src f_tgt
+          itr_src0 itr_tgt0
+          (TAUR: True)
+          (SIM: simg RR f_src true itr_src0 itr_tgt0)
+          (IH: P _ _ RR f_src true itr_src0 itr_tgt0),
+          P _ _ RR f_src f_tgt (itr_src0) (tau;;itr_tgt0))
+      (CHOOSEL: forall
+          R0 R1 (RR: R0 -> R1 -> Prop) f_src f_tgt
+          X ktr_src0 itr_tgt0
+          (CHOOSEL: True)
+          (SIM: exists x, <<SIM: simg RR true f_tgt (ktr_src0 x) itr_tgt0>> /\ <<IH: P _ _ RR true f_tgt (ktr_src0 x) itr_tgt0>>),
+          P _ _ RR f_src f_tgt (trigger (Choose X) >>= ktr_src0) (itr_tgt0))
+      (CHOOSER: forall
+          R0 R1 (RR: R0 -> R1 -> Prop) f_src f_tgt
+          X itr_src0 ktr_tgt0
+          (CHOOSER: True)
+          (SIM: forall x, <<SIM: simg RR f_src true itr_src0 (ktr_tgt0 x)>> /\ <<IH: P _ _ RR f_src true itr_src0 (ktr_tgt0 x)>>),
+          P _ _ RR f_src f_tgt (itr_src0) (trigger (Choose X) >>= ktr_tgt0))
+      (TAKEL: forall
+          R0 R1 (RR: R0 -> R1 -> Prop) f_src f_tgt
+          X ktr_src0 itr_tgt0
+          (TAKEL: True)
+          (SIM: forall x, <<SIM: simg RR true f_tgt (ktr_src0 x) itr_tgt0>> /\ <<IH: P _ _ RR true f_tgt (ktr_src0 x) itr_tgt0>>),
+          P _ _ RR f_src f_tgt (trigger (Take X) >>= ktr_src0) (itr_tgt0))
+      (TAKER: forall
+          R0 R1 (RR: R0 -> R1 -> Prop) f_src f_tgt
+          X itr_src0 ktr_tgt0
+          (TAKER: True)
+          (SIM: exists x, <<SIM: simg RR f_src true itr_src0 (ktr_tgt0 x)>> /\ <<IH: P _ _ RR f_src true itr_src0 (ktr_tgt0 x)>>),
+          P _ _ RR f_src f_tgt (itr_src0) (trigger (Take X) >>= ktr_tgt0))
+      (PROGRESS: forall
+          R0 R1 (RR: R0 -> R1 -> Prop) f_src f_tgt
+          itr_src itr_tgt
+          (SIM: simg RR false false itr_src itr_tgt)
+          (SRC: f_src = true)
+          (TGT: f_tgt = true),
+          P _ _ RR f_src f_tgt itr_src itr_tgt)
+  :
+    forall R0 R1 (RR: R0 -> R1 -> Prop) f_src f_tgt itr_src itr_tgt
+           (SIM: simg RR f_src f_tgt itr_src itr_tgt),
+      P _ _ RR f_src f_tgt itr_src itr_tgt.
+Proof.
+  i. punfold SIM. induction SIM using _simg_ind2; i; clarify.
+  { eapply RET; eauto. }
+  { eapply SYSCALL; eauto. i. exploit SIM; eauto. i. des. pclearbot. eauto. }
+  { eapply TAUL; eauto. pfold. auto. }
+  { eapply TAUR; eauto. pfold. auto. }
+  { eapply CHOOSEL; eauto. des. esplits; eauto. pfold. auto. }
+  { eapply CHOOSER; eauto. i. exploit SIM; eauto. i. des. esplits; eauto. pfold. auto. }
+  { eapply TAKEL; eauto. i. exploit SIM; eauto. i. des. esplits; eauto. pfold. auto. }
+  { eapply TAKER; eauto. des. esplits; eauto. pfold. auto. }
+  { eapply PROGRESS; eauto. pclearbot. auto. }
 Qed.
 
 End TY.
@@ -156,13 +375,16 @@ Proof.
   econs; eauto with paco.
   ii. inv PR. csc.
   eapply GF in SIM.
-  revert x3 x4 SRC TGT. induction SIM.
+  revert x3 x4 SRC TGT. induction SIM using _simg_ind2; i; clarify.
   { econs 1; eauto. }
-  { econs 2; eauto. }
+  { econs 2; eauto. i. eapply rclo7_base; eauto. }
   { econs 3; eauto. }
-  { i. clarify. hexploit SRC0; auto. hexploit TGT0; auto. i. clarify.
-    econs 4; eauto. eapply rclo7_base. eauto.
-  }
+  { econs 4; eauto. }
+  { econs 5; eauto. des. esplits; eauto. }
+  { econs 6; eauto. i. exploit SIM; eauto. i. des. eauto. }
+  { econs 7; eauto. i. exploit SIM; eauto. i. des. eauto. }
+  { econs 8; eauto. des. esplits; eauto. }
+  { econs 9; eauto. eapply rclo7_clo_base. econs; eauto. }
 Qed.
 
 Lemma flagC_spec: flagC <8= gupaco7 (_simg) (cpn7 (_simg)).
@@ -179,11 +401,16 @@ Lemma simg_flag
   :
     @_simg r R0 R1 RR f_src1 f_tgt1 itr_src itr_tgt.
 Proof.
-  revert f_src1 f_tgt1 SRC TGT. induction SIM; i.
+  revert f_src1 f_tgt1 SRC TGT. induction SIM using _simg_ind2; i.
   { econs 1; eauto. }
   { econs 2; eauto. }
   { econs 3; eauto. }
   { econs 4; eauto. }
+  { econs 5; eauto. des. esplits; eauto. }
+  { econs 6; eauto. i. exploit SIM; eauto. i. des. eauto. }
+  { econs 7; eauto. i. exploit SIM; eauto. i. des. eauto. }
+  { econs 8; eauto. des. esplits; eauto. }
+  { econs 9; eauto. }
 Qed.
 
 Structure grespectful7' T0 T1 T2 T3 T4 T5 T6
@@ -206,54 +433,6 @@ Lemma grespectful7'_grespectful7
     grespectful7 gf clo.
 Proof.
 Abort.
-
-Variant left_tauC
-        (r: forall R0 R1 (RR: R0 -> R1 -> Prop), bool -> bool -> (itree eventE R0) -> (itree eventE R1) -> Prop)
-        {R0 R1} (RR: R0 -> R1 -> Prop) (f_src f_tgt: bool): (itree eventE R0) -> (itree eventE R1) -> Prop :=
-| left_tau_intro
-    itr_src itr_tgt
-    (SIM: r R0 R1 RR true f_tgt itr_src itr_tgt)
-  :
-    left_tauC r RR f_src f_tgt (tau;;itr_src) itr_tgt
-.
-
-Lemma left_tauC_mon
-      r1 r2
-      (LE: r1 <7= r2)
-  :
-    @left_tauC r1 <7= @left_tauC r2
-.
-Proof. ii. destruct PR; econs; et. Qed.
-Hint Resolve left_tauC_mon: paco.
-
-Lemma left_tauC_spec: left_tauC <8= gupaco7 (_simg) (cpn7 (_simg)).
-Proof.
-  intros. eapply simg_indC_spec. inv PR. econs; eauto.
-Qed.
-
-Variant right_tauC
-        (r: forall R0 R1 (RR: R0 -> R1 -> Prop), bool -> bool -> (itree eventE R0) -> (itree eventE R1) -> Prop)
-        {R0 R1} (RR: R0 -> R1 -> Prop) (f_src f_tgt: bool): (itree eventE R0) -> (itree eventE R1) -> Prop :=
-| right_tau_intro
-    itr_src itr_tgt
-    (SIM: r R0 R1 RR f_src true itr_src itr_tgt)
-  :
-    right_tauC r RR f_src f_tgt itr_src (tau;;itr_tgt)
-.
-
-Lemma right_tauC_mon
-      r1 r2
-      (LE: r1 <7= r2)
-  :
-    @right_tauC r1 <7= @right_tauC r2
-.
-Proof. ii. destruct PR; econs; et. Qed.
-Hint Resolve right_tauC_mon: paco.
-
-Lemma right_tauC_spec: right_tauC <8= gupaco7 (_simg) (cpn7 (_simg)).
-Proof.
-  intros. eapply simg_indC_spec. inv PR. econs; eauto.
-Qed.
 
 Lemma sim_progress R0 R1 RR r g itr_src itr_tgt
       (SIM: gpaco7 _simg (cpn7 _simg) g g R0 R1 RR false false itr_src itr_tgt)
@@ -299,15 +478,22 @@ Proof.
   econs.
   { ii. eapply bindR_mon; eauto. }
   i. inv PR. csc. eapply GF in SIM.
-  revert k_src k_tgt SIMK. induction SIM; i.
+  revert k_src k_tgt SIMK. induction SIM using _simg_ind2; i.
   { irw. hexploit SIMK; eauto. i. eapply GF in H.
     eapply simg_mon; eauto. eapply simg_flag.
     { eapply simg_mon; eauto. i. eapply rclo7_base. auto. }
     { ss. }
     { ss. }
   }
-  { irw. econs; eauto. }
-  { irw. econs; eauto. }
+  { rewrite ! bind_bind. econs; eauto. ii.
+    { econs 2; eauto with paco. econs; eauto with paco. }
+  }
+  { rewrite ! bind_tau. econs; eauto. }
+  { rewrite ! bind_tau. econs; eauto. }
+  { rewrite ! bind_bind. econs; eauto. des. esplits; et. }
+  { rewrite ! bind_bind. econs; eauto. i. exploit SIM; eauto. i. des. eauto. }
+  { rewrite ! bind_bind. econs; eauto. i. exploit SIM; eauto. i. des. eauto. }
+  { rewrite ! bind_bind. econs; eauto. des. esplits; et. }
   { clarify. econs; eauto. eapply rclo7_clo_base. econs; eauto. }
 Qed.
 
@@ -450,6 +636,15 @@ Theorem adequacy_global_itree itr_src itr_tgt
     <1=
     Beh.of_program (@ModSemL.compile_itree CONFS itr_src).
 Proof.
+  unfold Beh.of_program. ss.
+  i. destruct SIM as [o_src0 [o_tgt0 SIMG]]. eapply adequacy_aux; et.
+  instantiate (1:=o_tgt0). instantiate (1:=o_src0). clear x0 PR.
+  generalize itr_tgt at 1 as md_tgt.
+  generalize itr_src at 1 as md_src. i. ginit.
+  revert o_src0 o_tgt0 itr_src itr_tgt SIMG. gcofix CIH.
+  i. induction SIMG using simg_ind. punfold SIMG. inv SIMG; pfold.
+
+
   unfold Beh.of_program. ss.
   i. destruct SIM as [o_src0 [o_tgt0 SIMG]].
   remember itr_tgt in PR.

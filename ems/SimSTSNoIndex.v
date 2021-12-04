@@ -734,3 +734,4 @@ End SIM.
 Hint Constructors _sim.
 Hint Unfold sim.
 Hint Resolve sim_mon: paco.
+Hint Resolve cpn4_wcompat: paco.
