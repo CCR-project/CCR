@@ -34,15 +34,15 @@ Inductive _simg
     _simg simg RR f_src f_tgt (Ret r_src) (Ret r_tgt)
 
 | simg_tauL
-    itr_src0 itr_tgt0 f_src1
+    itr_src0 itr_tgt0
     (TAUL: True)
-    (SIM: @_simg simg _ _ RR f_src1 f_tgt itr_src0 itr_tgt0)
+    (SIM: @_simg simg _ _ RR true f_tgt itr_src0 itr_tgt0)
   :
     _simg simg RR f_src f_tgt (tau;; itr_src0) (itr_tgt0)
 | simg_tauR
-    itr_src0 itr_tgt0 f_tgt1
+    itr_src0 itr_tgt0
     (TAUR: True)
-    (SIM: @_simg simg _ _ RR f_src f_tgt1 itr_src0 itr_tgt0)
+    (SIM: @_simg simg _ _ RR f_src true itr_src0 itr_tgt0)
   :
     _simg simg RR f_src f_tgt (itr_src0) (tau;; itr_tgt0)
 
@@ -65,7 +65,64 @@ Proof.
   { econs 3; eauto. }
   { econs 4; eauto. }
 Qed.
+Hint Resolve simg_mon: paco.
 
+
+Inductive simg_indC
+          (simg: forall R0 R1 (RR: R0 -> R1 -> Prop), bool -> bool -> (itree eventE R0) -> (itree eventE R1) -> Prop)
+          {R0 R1} (RR: R0 -> R1 -> Prop) (f_src f_tgt: bool): (itree eventE R0) -> (itree eventE R1) -> Prop :=
+| simg_indC_ret
+    r_src r_tgt
+    (SIM: RR r_src r_tgt)
+  :
+    simg_indC simg RR f_src f_tgt (Ret r_src) (Ret r_tgt)
+
+| simg_indC_tauL
+    itr_src0 itr_tgt0
+    (TAUL: True)
+    (SIM: simg _ _ RR true f_tgt itr_src0 itr_tgt0)
+  :
+    simg_indC simg RR f_src f_tgt (tau;; itr_src0) (itr_tgt0)
+| simg_indC_tauR
+    itr_src0 itr_tgt0
+    (TAUR: True)
+    (SIM: simg _ _ RR f_src true itr_src0 itr_tgt0)
+  :
+    simg_indC simg RR f_src f_tgt (itr_src0) (tau;; itr_tgt0)
+
+| simg_indC_progress
+    itr_src itr_tgt
+    (SIM: simg _ _ RR false false itr_src itr_tgt)
+    (SRC: f_src = true)
+    (TGT: f_tgt = true)
+  :
+    simg_indC simg RR f_src f_tgt itr_src itr_tgt
+.
+
+Lemma simg_indC_mon: monotone7 simg_indC.
+Proof.
+  ii. inv IN.
+  { econs 1; eauto. }
+  { econs 2; eauto. }
+  { econs 3; eauto. }
+  { econs 4; eauto. }
+Qed.
+Hint Resolve simg_indC_mon: paco.
+
+Lemma simg_indC_spec:
+  simg_indC <8= gupaco7 _simg (cpn7 _simg).
+Proof.
+  eapply wrespect7_uclo; eauto with paco.
+  econs; eauto with paco. i. inv PR.
+  { econs 1; eauto. }
+  { econs 2; eauto.
+    eapply simg_mon; eauto. i. eapply rclo7_base. auto.
+  }
+  { econs 3; eauto.
+    eapply simg_mon; eauto. i. eapply rclo7_base. auto.
+  }
+  { econs 4; eauto. eapply rclo7_base. auto. }
+Qed.
 
 End TY.
 
@@ -169,23 +226,9 @@ Lemma left_tauC_mon
 Proof. ii. destruct PR; econs; et. Qed.
 Hint Resolve left_tauC_mon: paco.
 
-Lemma left_tauC_wrespectful: wrespectful7 (_simg) left_tauC.
-Proof.
-  econs; eauto with paco.
-  ii. inv PR. eapply GF in SIM.
-  induction SIM; i; clarify.
-  { econs 2; auto. }
-  { econs 2; eauto. }
-  { econs; eauto. econs; eauto.
-    eapply simg_mon; eauto. i. eapply rclo7_base. auto.
-  }
-  { econs; eauto. econs; eauto. eapply rclo7_base. auto. }
-  Unshelve. all: ss.
-Qed.
-
 Lemma left_tauC_spec: left_tauC <8= gupaco7 (_simg) (cpn7 (_simg)).
 Proof.
-  intros. eapply wrespect7_uclo; eauto with paco. eapply left_tauC_wrespectful.
+  intros. eapply simg_indC_spec. inv PR. econs; eauto.
 Qed.
 
 Variant right_tauC
@@ -207,23 +250,9 @@ Lemma right_tauC_mon
 Proof. ii. destruct PR; econs; et. Qed.
 Hint Resolve right_tauC_mon: paco.
 
-Lemma right_tauC_wrespectful: wrespectful7 (_simg) right_tauC.
-Proof.
-  econs; eauto with paco.
-  ii. inv PR. eapply GF in SIM.
-  induction SIM; i; clarify.
-  { econs 3; auto. }
-  { econs 3; eauto. econs; eauto.
-    eapply simg_mon; eauto. i. eapply rclo7_base. auto.
-  }
-  { econs; eauto. }
-  { econs; eauto. econs; eauto. eapply rclo7_base. auto. }
-  Unshelve. all: ss.
-Qed.
-
 Lemma right_tauC_spec: right_tauC <8= gupaco7 (_simg) (cpn7 (_simg)).
 Proof.
-  intros. eapply wrespect7_uclo; eauto with paco. eapply right_tauC_wrespectful.
+  intros. eapply simg_indC_spec. inv PR. econs; eauto.
 Qed.
 
 Lemma sim_progress R0 R1 RR r g itr_src itr_tgt
