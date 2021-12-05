@@ -395,7 +395,6 @@ Proof.
   intros. eapply wrespect7_uclo; eauto with paco. eapply flagC_wrespectful.
 Qed.
 
-
 Lemma simg_flag
       r R0 R1 RR itr_src itr_tgt f_src0 f_tgt0 f_src1 f_tgt1
       (SIM: @_simg r R0 R1 RR f_src0 f_tgt0 itr_src itr_tgt)
@@ -415,27 +414,6 @@ Proof.
   { econs 8; eauto. des. esplits; eauto. }
   { econs 9; eauto. }
 Qed.
-
-Structure grespectful7' T0 T1 T2 T3 T4 T5 T6
-          (gf: rel7 T0 T1 T2 T3 T4 T5 T6 -> rel7 T0 T1 T2 T3 T4 T5 T6)
-          (clo: rel7 T0 T1 T2 T3 T4 T5 T6 -> rel7 T0 T1 T2 T3 T4 T5 T6) : Prop :=
-  grespect7_intro' {
-      grespect7_mon': monotone7 clo;
-      grespect7_respect' :
-        forall l r
-               (LE: l <7= r)
-               (GF: l <7= gf r),
-          clo l <7= gpaco7 gf (cpn7 gf) bot7 (rclo7 (clo \8/ gupaco7 gf (cpn7 gf)) r);
-    }.
-
-Lemma grespectful7'_grespectful7
-      T0 T1 T2 T3 T4 T5 T6
-      gf clo
-      (RESPECT: @grespectful7' T0 T1 T2 T3 T4 T5 T6 gf clo)
-  :
-    grespectful7 gf clo.
-Proof.
-Abort.
 
 Lemma simg_progress_flag R0 R1 RR r g itr_src itr_tgt
       (SIM: gpaco7 _simg (cpn7 _simg) g g R0 R1 RR false false itr_src itr_tgt)
@@ -484,7 +462,7 @@ Proof.
   revert k_src k_tgt SIMK. induction SIM using _simg_ind2; i.
   { irw. hexploit SIMK; eauto. i. eapply GF in H.
     eapply simg_mon; eauto. eapply simg_flag.
-    { eapply simg_mon; eauto. i. eapply rclo7_base. auto. }
+     { eapply simg_mon; eauto. i. eapply rclo7_base. auto. }
     { ss. }
     { ss. }
   }
