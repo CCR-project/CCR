@@ -232,14 +232,6 @@ Inductive simg_indC
     (SIM: exists x, simg _ _ RR f_src true itr_src0 (ktr_tgt0 x))
   :
     simg_indC simg RR f_src f_tgt (itr_src0) (trigger (Take X) >>= ktr_tgt0)
-
-| simg_indC_progress
-    itr_src itr_tgt
-    (SIM: simg _ _ RR false false itr_src itr_tgt)
-    (SRC: f_src = true)
-    (TGT: f_tgt = true)
-  :
-    simg_indC simg RR f_src f_tgt itr_src itr_tgt
 .
 
 Lemma simg_indC_mon: monotone7 simg_indC.
@@ -253,7 +245,6 @@ Proof.
   { econs 6; eauto. }
   { econs 7; eauto. }
   { econs 8; eauto. des. esplits; eauto. }
-  { econs 9; eauto. }
 Qed.
 Hint Resolve simg_indC_mon: paco.
 
@@ -270,7 +261,6 @@ Proof.
   { econs 6; eauto. i. eapply simg_mon; eauto. i. eapply rclo7_base; eauto. }
   { econs 7; eauto. i. eapply simg_mon; eauto. i. eapply rclo7_base; eauto. }
   { des. econs 8; eauto. esplits. eapply simg_mon; eauto. i. eapply rclo7_base; eauto. }
-  { econs 9; eauto. eapply rclo7_base; eauto. }
 Qed.
 
 Lemma simg_ind R0 R1 (RR: R0 -> R1 -> Prop)

@@ -14,7 +14,7 @@ From ExtLib Require Import
      Data.Map.FMapAList.
 From Ordinal Require Export Ordinal Arithmetic.
 Require Import Red IRed.
-Require Import ProofMode.
+Require Import ProofMode Invariant.
 
 Set Implicit Arguments.
 
@@ -194,6 +194,20 @@ Section HLEMMAS.
       (RSRC: URA.wf mr_src -> R a mp_src mp_tgt mr_src)
     :
       mk_wf R a ((Any.pair mp_src mr_src↑), mp_tgt)
+  .
+
+  Definition inv_wf
+             `{@GRA.inG invRA Σ}
+             A
+             (R: A -> Any.t -> Any.t -> iProp)
+    : _ -> (Any.t * Any.t -> Prop) :=
+    @mk_wf
+      (A + Any.t * Any.t)%type
+      (fun a' mp_src mp_tgt =>
+         match a' with
+         | inl a => R a mp_src mp_tgt
+         | inr (mp_src1, mp_tgt1) => inv_closed ** ⌜mp_src1 = mp_src /\ mp_tgt1 = mp_tgt⌝
+         end)%I
   .
 
   Lemma hcall_clo_ord_weaken' (o_new_src: Ord.t)
@@ -901,6 +915,79 @@ Tactic Notation "hcall_weaken" uconstr(fsp) uconstr(x) uconstr(a) "with" constr(
   |refl
   |
   |on_current ltac:(fun H => try clear H); i; on_current ltac:(fun H => simpl in H)
+  ].
+
+Ltac iarg :=
+  let PRE := constr:("PRE") in
+  let INV := constr:("INV") in
+  let CLOSED := constr:("☃CLOSED") in
+  eapply (@harg_clo _ _ PRE INV);
+  [eassumption
+  |refl
+  |
+  ];
+  i;
+  mDesSep PRE as CLOSED PRE;
+  match goal with
+  | [ |- (gpaco8 _ _ _ _ _ _ _ _ _ ?w _ _)] =>
+    destruct w as [?|[?mp_src ?mp_tgt]]; simpl;
+    [
+        |mAssertPure False; ss; iDestruct "INV" as "[INV _]"; iApply (inv_closed_unique with "☃CLOSED INV")
+    ]
+  end.
+
+Tactic Notation "icall_open" uconstr(x) "with" constr(Hns) :=
+  let POST := get_fresh_name_tac "POST" in
+  let INV := constr:("☃CLOSED") in
+  let Hns := select_ihyps Hns in
+  let Hns := constr:("☃CLOSED"::Hns) in
+  eapply (@hcall_clo _ Hns POST INV _ x _ (inr (_, _)));
+  unshelve_goal;
+  [eassumption
+  |start_ipm_proof; iSplitL "☃CLOSED"; [iModIntro; iSplitL "☃CLOSED"; [iExact "☃CLOSED"|ss]|]
+  |refl
+  |
+  |
+  on_current ltac:(fun H => try clear H);
+  intros ? ? ? ? [|[?mp_src ?mp_tgt]]; i; simpl;
+  on_current ltac:(fun H => simpl in H);
+  [exfalso; match goal with | H: inv_le _ _ _ |- _ => cbn in H; inv H end
+  |mDesSep "☃CLOSED" as "☃CLOSED" "☃TMP"; mPure "☃TMP" as [[] []]
+  ]
+  ].
+
+Tactic Notation "icall_weaken" uconstr(ftsp) uconstr(x) uconstr(a) "with" constr(Hns) :=
+  let POST := get_fresh_name_tac "POST" in
+  let INV := get_fresh_name_tac "INV" in
+  let CLOSED := constr:("☃CLOSED") in
+  let TMP := constr:("☃TMP") in
+  let Hns := select_ihyps Hns in
+  let Hns := constr:("☃CLOSED"::Hns) in
+  eapply (@hcall_clo_weaken _ Hns POST INV ftsp x _ (inl a));
+  unshelve_goal;
+  [|eassumption
+   |start_ipm_proof; iFrame "☃CLOSED"
+   |refl
+   |
+   |on_current ltac:(fun H => try clear H);
+    intros ? ? ? ? [|[?mp_src ?mp_tgt]]; i; simpl;
+    on_current ltac:(fun H => simpl in H);
+    [
+      mDesSep POST as "☃CLOSED" POST
+    |
+    mDesSep INV as "☃CLOSED" INV;
+    mDesSep POST as "☃TMP" POST;
+    mAssertPure False; [iApply (inv_closed_unique with "☃TMP ☃CLOSED")|ss]
+    ]
+  ].
+
+Tactic Notation "iret" uconstr(a) :=
+  eapply (@hret_clo _ _ (inl a)); unshelve_goal;
+  [refl
+  |eassumption
+  |
+  |start_ipm_proof; iFrame "☃CLOSED"
+  |try by (i; (try unfold lift_rel); esplits; et)
   ].
 
 Global Opaque _APC APC interp interp_hCallE_tgt.
