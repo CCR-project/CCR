@@ -503,7 +503,7 @@ Section HLEMMAS.
   Qed.
 
   Lemma APC_start_clo
-        (at_most: Ord.t) (n1: Ord.t)
+        (at_most: Ord.t)
         (o: ord)
         A mn r rg a m n mp_src0
         k_src
@@ -535,8 +535,6 @@ Section HLEMMAS.
   Qed.
 
   Lemma APC_stop_clo
-        (n1: Ord.t)
-
         (o: ord)
         A mn r rg a n m mp_src0
         k_src
@@ -562,7 +560,7 @@ Section HLEMMAS.
   Qed.
 
   Lemma APC_step_clo
-        (fn: gname) (args: Any.t) (next: Ord.t) (n1: Ord.t)
+        (fn: gname) (args: Any.t) (next: Ord.t)
 
         (o: ord)
         A mn r rg a n m mp_src0
@@ -759,15 +757,13 @@ End TEST.
 
 Ltac astep_full _fn _args _next _n1 :=
   eapply (@APC_step_clo _ _fn _args _next _n1);
-  [refl|
-   (try by ((try stb_tac); refl))|
+  [(try by ((try stb_tac); refl))|
    oauto|
   ].
 
 Ltac astep _fn _args :=
   eapply (@APC_step_clo _ _fn _args);
-  [refl|
-   (try by ((try stb_tac); refl))|
+  [(try by ((try stb_tac); refl))|
    oauto|
   ].
 
@@ -780,7 +776,6 @@ Ltac acatch :=
 Ltac astart _at_most :=
   eapply (@APC_start_clo _ _at_most);
   [eauto with ord_kappa|
-   refl|
   ]
 .
 
@@ -789,8 +784,7 @@ Ltac astop :=
   | [ |- (gpaco8 (_sim_itree _ _) _ _ _ _ _ _ _ _ _ (_, interp_hCallE_tgt _ _ _ APC _ >>= _) (_, _)) ] => astart 0
   | _ => idtac
   end;
-  eapply APC_stop_clo;
-  [refl|].
+  eapply APC_stop_clo.
 
 Ltac init :=
   let varg_src := fresh "varg_src" in
@@ -802,7 +796,7 @@ Ltac init :=
   let mp_tgt := fresh "mp_tgt" in
   let WF := fresh "WF" in
   split; ss; intros varg_src [mn varg] EQ w mrp_src mp_tgt WF;
-  (try subst varg_src); eexists _, _; cbn;
+  (try subst varg_src); cbn;
   ginit;
   try (unfold fun_to_tgt, cfunN, cfunU; rewrite HoareFun_parse); simpl.
 
@@ -811,14 +805,12 @@ Ltac harg :=
   let INV := constr:("INV") in
   eapply (@harg_clo _ _ PRE INV);
   [eassumption
-  |refl
   |
   ]; i.
 
 Tactic Notation "hret" uconstr(a) :=
   eapply (@hret_clo _ _ a); unshelve_goal;
-  [refl
-  |eassumption
+  [eassumption
   |
   |start_ipm_proof
   |try by (i; (try unfold lift_rel); esplits; et)
@@ -832,7 +824,6 @@ Tactic Notation "hcall" uconstr(x) uconstr(a) "with" constr(Hns) :=
   unshelve_goal;
   [eassumption
   |start_ipm_proof
-  |refl
   |
   |on_current ltac:(fun H => try clear H); i; on_current ltac:(fun H => simpl in H)
   ].
@@ -846,7 +837,6 @@ Tactic Notation "hcall_weaken" uconstr(fsp) uconstr(x) uconstr(a) "with" constr(
   [
   |eassumption
   |start_ipm_proof
-  |refl
   |
   |on_current ltac:(fun H => try clear H); i; on_current ltac:(fun H => simpl in H)
   ].
