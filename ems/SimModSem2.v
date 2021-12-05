@@ -511,14 +511,6 @@ Section SIM.
     :
       sim_itree_indC sim_itree RR i_src0 i_tgt0 w0 (st_src0, i_src)
                      (st_tgt0, trigger (PGet) >>= k_tgt)
-
-  | sim_itree_indC_progress
-      i_src0 i_tgt0 w0 st_src0 st_tgt0 i_src i_tgt
-      (SIM: sim_itree _ _ RR false false w0 (st_src0, i_src) (st_tgt0, i_tgt))
-      (SRC: i_src0 = true)
-      (TGT: i_tgt0 = true)
-    :
-      sim_itree_indC sim_itree RR true true w0 (st_src0, i_src) (st_tgt0, i_tgt)
   .
 
   Lemma sim_itree_indC_mon: monotone8 sim_itree_indC.
@@ -546,7 +538,6 @@ Section SIM.
     { econs 11; eauto. des. esplits; eauto. eapply sim_itree_mon; eauto. i. eapply rclo8_base. eauto. }
     { econs 12; eauto. eapply sim_itree_mon; eauto. i. eapply rclo8_base. eauto. }
     { econs 13; eauto. eapply sim_itree_mon; eauto. i. eapply rclo8_base. eauto. }
-    { econs 14; eauto. eapply rclo8_base. eauto. }
   Qed.
 
   Lemma sim_itree_progress_flag R0 R1 RR r g w st_src st_tgt
