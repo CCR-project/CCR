@@ -556,7 +556,7 @@ Section SIM.
   Qed.
 
   Record simulation: Prop := mk_simulation {
-    sim_init: exists i_src0 i_tgt0, <<SIM: sim i_src0 i_tgt0 L0.(initial_state) L1.(initial_state)>>;
+    sim_init: <<SIM: sim false false L0.(initial_state) L1.(initial_state)>>;
   }
   .
 

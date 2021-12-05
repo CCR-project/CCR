@@ -177,6 +177,7 @@ Proof.
   { econs 9; eauto. }
 Qed.
 Hint Resolve simg_mon: paco.
+Hint Resolve cpn7_wcompat: paco.
 
 
 Inductive simg_indC
@@ -351,6 +352,7 @@ End TY.
 Hint Constructors _simg.
 Hint Unfold simg.
 Hint Resolve simg_mon: paco.
+Hint Resolve cpn7_wcompat: paco.
 
 Variant flagC (r: forall S0 S1 (SS: S0 -> S1 -> Prop), bool -> bool -> (itree eventE S0) -> (itree eventE S1) -> Prop):
   forall S0 S1 (SS: S0 -> S1 -> Prop), bool -> bool -> (itree eventE S0) -> (itree eventE S1) -> Prop :=
@@ -422,6 +424,37 @@ Lemma simg_progress_flag R0 R1 RR r g itr_src itr_tgt
 Proof.
   gstep. econs; eauto.
 Qed.
+
+Lemma simg_flag_down R0 R1 RR r g itr_src itr_tgt f_src f_tgt
+      (SIM: gpaco7 _simg (cpn7 _simg) r g R0 R1 RR false false itr_src itr_tgt)
+  :
+    gpaco7 _simg (cpn7 _simg) r g R0 R1 RR f_src f_tgt itr_src itr_tgt.
+Proof.
+  guclo flagC_spec. econs; [..|eauto]; ss.
+Qed.
+
+Lemma simg_bot_flag_up R0 R1 RR st_src st_tgt f_src f_tgt
+      (SIM: @simg R0 R1 RR true true st_src st_tgt)
+  :
+    simg RR f_src f_tgt st_src st_tgt.
+Proof.
+  ginit. remember true in SIM at 1. remember true in SIM at 1.
+  clear Heqb Heqb0. revert st_src st_tgt f_src f_tgt b b0 SIM.
+  gcofix CIH. i. revert f_src f_tgt.
+  induction SIM using simg_ind.
+  { guclo simg_indC_spec. econs 1; eauto. }
+  { gstep. econs 2; eauto. i. gbase. eapply CIH; eauto. }
+  { guclo simg_indC_spec. econs 3; eauto. }
+  { guclo simg_indC_spec. econs 4; eauto. }
+  { guclo simg_indC_spec. econs 5; eauto. des. esplits; eauto. }
+  { guclo simg_indC_spec. econs 6; eauto. i. hexploit SIM; eauto. i. des. esplits; eauto. }
+  { guclo simg_indC_spec. econs 7; eauto. i. hexploit SIM; eauto. i. des. esplits; eauto. }
+  { guclo simg_indC_spec. econs 8; eauto. des. esplits; eauto. }
+  { i. eapply simg_flag_down. gfinal. right.
+    eapply paco7_mon; eauto. ss.
+  }
+Qed.
+
 
 Variant bindR (r s: forall S0 S1 (SS: S0 -> S1 -> Prop), bool -> bool -> (itree eventE S0) -> (itree eventE S1) -> Prop):
   forall S0 S1 (SS: S0 -> S1 -> Prop), bool -> bool -> (itree eventE S0) -> (itree eventE S1) -> Prop :=
@@ -611,19 +644,21 @@ Context {CONFS CONFT: EMSConfig}.
 Hypothesis (FINSAME: (@finalize CONFS) = (@finalize CONFT)).
 
 Theorem adequacy_global_itree itr_src itr_tgt
-        (SIM: exists o_src0 o_tgt0, simg eq o_src0 o_tgt0 itr_src itr_tgt)
+        (SIM: simg eq false false itr_src itr_tgt)
   :
     Beh.of_program (@ModSemL.compile_itree CONFT itr_tgt)
     <1=
     Beh.of_program (@ModSemL.compile_itree CONFS itr_src).
 Proof.
   unfold Beh.of_program. ss.
-  i. destruct SIM as [o_src0 [o_tgt0 SIMG]]. eapply adequacy_aux; et.
+  remember false as o_src0 in SIM at 1.
+  remember false as o_tgt0 in SIM at 1. clear Heqo_src0 Heqo_tgt0.
+  i. eapply adequacy_aux; et.
   instantiate (1:=o_tgt0). instantiate (1:=o_src0). clear x0 PR.
   generalize itr_tgt at 1 as md_tgt.
   generalize itr_src at 1 as md_src. i. ginit.
-  revert o_src0 o_tgt0 itr_src itr_tgt SIMG. gcofix CIH.
-  i. induction SIMG using simg_ind; i; clarify.
+  revert o_src0 o_tgt0 itr_src itr_tgt SIM. gcofix CIH.
+  i. induction SIM using simg_ind; i; clarify.
   { gstep. destruct (finalize r_tgt) eqn:T.
     { eapply sim_fin; ss; cbn; des_ifs; rewrite FINSAME in *; clarify. }
     { eapply sim_angelic_src.
@@ -666,7 +701,7 @@ Let ms_src: ModSemL.t := md_src.(ModL.enclose).
 Let ms_tgt: ModSemL.t := md_tgt.(ModL.enclose).
 
 Section ADEQUACY.
-Hypothesis (SIM: exists o_src0 o_tgt0, simg eq o_src0 o_tgt0 (@ModSemL.initial_itr ms_src CONFS (Some (ModL.wf md_src))) (@ModSemL.initial_itr ms_tgt CONFT (Some (ModL.wf md_tgt)))).
+Hypothesis (SIM: simg eq false false (@ModSemL.initial_itr ms_src CONFS (Some (ModL.wf md_src))) (@ModSemL.initial_itr ms_tgt CONFT (Some (ModL.wf md_tgt)))).
 
 
 Theorem adequacy_global: Beh.of_program (@ModL.compile _ CONFT md_tgt) <1= Beh.of_program (@ModL.compile _ CONFS md_src).

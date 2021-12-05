@@ -287,9 +287,10 @@ Section SIM.
   Hint Constructors _sim_itree.
   Hint Unfold sim_itree.
   Hint Resolve sim_itree_mon: paco.
+  Hint Resolve cpn8_wcompat: paco.
 
   Lemma sim_itree_ind
-        {R_src R_tgt} (RR: st_local -> st_local -> R_src -> R_tgt -> Prop)
+        R_src R_tgt (RR: st_local -> st_local -> R_src -> R_tgt -> Prop)
         (P: bool -> bool -> world -> st_local * itree Es R_src -> st_local * itree Es R_tgt -> Prop)
         (RET: forall
             i_src0 i_tgt0 w0 st_src0 st_tgt0
@@ -647,6 +648,40 @@ Section SIM.
     guclo lflagC_spec. econs; eauto.
   Qed.
 
+  Lemma sim_itree_bot_flag_up R0 R1 RR w st_src st_tgt f_src f_tgt
+        (SIM: paco8 _sim_itree bot8 R0 R1 RR true true w st_src st_tgt)
+    :
+      paco8 _sim_itree bot8 R0 R1 RR f_src f_tgt w st_src st_tgt.
+  Proof.
+    ginit. remember true in SIM at 1. remember true in SIM at 1.
+    clear Heqb Heqb0. revert w st_src st_tgt f_src f_tgt b b0 SIM.
+    gcofix CIH. i. revert f_src f_tgt.
+
+    (* TODO: why induction using sim_itree_ind doesn't work? *)
+    pattern b, b0, w, st_src, st_tgt.
+    match goal with
+    | |- ?P b b0 w st_src st_tgt => set P
+    end.
+    revert b b0 w st_src st_tgt SIM.
+    eapply (@sim_itree_ind R0 R1 RR P); subst P; ss; i; clarify.
+    { guclo sim_itree_indC_spec. econs 1; eauto. }
+    { gstep. econs 2; eauto. i. gbase. eapply CIH; eauto. }
+    { gstep. econs 3; eauto. i. gbase. eapply CIH; eauto. }
+    { guclo sim_itree_indC_spec. econs 4; eauto. }
+    { guclo sim_itree_indC_spec. econs 5; eauto. des. esplits; eauto. }
+    { guclo sim_itree_indC_spec. econs 6; eauto. i. hexploit K; eauto. i. des. esplits; eauto. }
+    { guclo sim_itree_indC_spec. econs 7; eauto. }
+    { guclo sim_itree_indC_spec. econs 8; eauto. }
+    { guclo sim_itree_indC_spec. econs 9; eauto. }
+    { guclo sim_itree_indC_spec. econs 10; eauto. i. hexploit K; eauto. i. des. esplits; eauto. }
+    { guclo sim_itree_indC_spec. econs 11; eauto. des. esplits; eauto. }
+    { guclo sim_itree_indC_spec. econs 12; eauto. }
+    { guclo sim_itree_indC_spec. econs 13; eauto. }
+    { eapply sim_itree_flag_down. gfinal. right.
+      eapply paco8_mon; eauto. ss.
+    }
+  Qed.
+
   Variant lbindR (r s: forall S_src S_tgt (SS: st_local -> st_local -> S_src -> S_tgt -> Prop), bool -> bool -> world -> st_local * itree Es S_src -> st_local * itree Es S_tgt -> Prop):
     forall S_src S_tgt (SS: st_local -> st_local -> S_src -> S_tgt -> Prop), bool -> bool -> world -> st_local * itree Es S_src -> st_local * itree Es S_tgt -> Prop :=
   | lbindR_intro
@@ -884,14 +919,6 @@ Module TAC.
 End TAC.
 Import TAC.
 
-Lemma simg_flag_down R0 R1 RR r g itr_src itr_tgt f_src f_tgt
-      (SIM: gpaco7 _simg (cpn7 _simg) r g R0 R1 RR false false itr_src itr_tgt)
-  :
-    gpaco7 _simg (cpn7 _simg) r g R0 R1 RR f_src f_tgt itr_src itr_tgt.
-Proof.
-  guclo flagC_spec. econs; [..|eauto]; ss.
-Qed.
-
 
 Section ADEQUACY.
   Section SEMPAIR.
@@ -971,7 +998,7 @@ Section ADEQUACY.
         remember w0 in SIM at 2.
         revert st_src itr_src st_tgt itr_tgt Heqp Heqp0 Heqw STATE.
 
-        (* TODO: why induction using sim_ind doesn't work? *)
+        (* TODO: why induction using sim_itree_ind doesn't work? *)
         pattern o_src, o_tgt, w, p, p0.
         match goal with
         | |- ?P o_src o_tgt w p p0 => set P
@@ -1089,8 +1116,7 @@ Section ADEQUACY.
         (Beh.of_program (ModSemL.compile ms_src (Some Q))).
     Proof.
       eapply adequacy_global_itree; ss.
-      hexploit INIT. i. des.
-      exists false, false. ginit.
+      hexploit INIT. i. des. ginit.
       { eapply cpn7_wcompat; eauto with paco. }
       unfold ModSemL.initial_itr, assume.
       hexploit (fnsems_find_iff "main"). i. des.
