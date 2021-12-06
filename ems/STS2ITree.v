@@ -4,7 +4,7 @@ Require Import Skeleton.
 Require Import PCM.
 Require Import Any.
 Require Import ModSem.
-Require Import SimSTSOld.
+Require Import SimSTS.
 Require Import STSNorm.
 Require Import STS Behavior.
 
@@ -175,50 +175,49 @@ paco2 has 'fixed' semantics -> needs fixed semantics to do pcofix
         st0
         tr.
   Proof.
+    Ltac mclo := eapply gpaco4_uclo; [eapply (@sim_mon L1 L1_itree)|eapply (@sim_indC_spec L1 L1_itree)|].
+    Ltac mbase := gstep; [eapply (@sim_mon L1 L1_itree)|eapply sim_progress; [gbase; eauto|ss|ss]].
     intros st0. eapply adequacy_aux.
-    { apply Nat.lt_wf_0. }
-    { apply Nat.lt_wf_0. }
-    instantiate (1:=10). instantiate (1:=10).
-    revert st0.
-    pcofix CIH. i. pfold.
+    instantiate (1:=false). instantiate (1:=false). ginit.
+    revert st0. gcofix CIH. i. mclo.
     destruct (state_sort st0) eqn:SRT.
-    - eapply sim_angelic_src; ss; clarify. i. esplits; et.
-      left. pfold. eapply sim_angelic_tgt; ss; clarify.
+    - eapply sim_indC_angelic_src; ss; clarify. i. esplits; et.
+      mclo. eapply sim_indC_angelic_tgt; ss; clarify.
       + rewrite unfold_decompile_STS. rewrite SRT. ss.
       + i.
         set (cont:= (fun st1 : {st' | step st0 None st'} => decompile_STS step state_sort (st1 $))).
         exists (cont (exist (fun st => step st0 None st) st_src1 STEP)). eexists.
         { rewrite unfold_decompile_STS. rewrite SRT. econs 3. }
-        esplits; et.
-    - eapply sim_demonic_tgt; ss; clarify.
+        esplits; et. mbase.
+    - eapply sim_indC_demonic_tgt; ss; clarify.
       + rewrite unfold_decompile_STS. rewrite SRT. ss.
       + i. rewrite unfold_decompile_STS in STEP. rewrite SRT in STEP.
         dependent destruction STEP.
         destruct x. rename x into st1.
-        esplits; et. left. pfold. eapply sim_demonic_src; ss; clarify.
+        esplits; et. mclo. eapply sim_indC_demonic_src; ss; clarify.
         exists st1. eexists; auto.
-        esplits; et.
-    - eapply sim_fin; eauto.
+        esplits; et. mbase.
+    - eapply sim_indC_fin; eauto.
       ss. rewrite unfold_decompile_STS. rewrite SRT.
       unfold ModSemL.state_sort. ss.
       erewrite wf_finalize; et.
-    - eapply sim_demonic_tgt; ss; clarify.
+    - eapply sim_indC_demonic_tgt; ss; clarify.
       + rewrite unfold_decompile_STS. rewrite SRT. ss.
       + i. rewrite unfold_decompile_STS in STEP. rewrite SRT in STEP.
         rewrite bind_trigger in STEP.
         dependent destruction STEP.
         destruct x. des. destruct x.
         esplits; et.
-        left. pfold. eapply sim_vis; i; ss; clarify.
+        mclo. eapply sim_indC_vis; i; ss; clarify.
         rewrite bind_trigger in STEP.
         dependent destruction STEP.
         des. rename RETURN into STEP.
         exists st2. eexists.
         { auto. }
-        esplits. left. pfold. eapply sim_demonic_tgt; ss; clarify.
+        esplits. mclo. eapply sim_indC_demonic_tgt; ss; clarify.
         i. dependent destruction STEP0.
         destruct x.
-        esplits; et. right.
+        esplits; et. mbase.
         assert (st2 = x).
         { eapply wf_vis. apply SRT. apply STEP. apply s. reflexivity. }
         clarify.
@@ -237,27 +236,27 @@ paco2 has 'fixed' semantics -> needs fixed semantics to do pcofix
         (decompile_STS step state_sort st0)
         tr.
   Proof.
+    Ltac mclo2 := eapply gpaco4_uclo; [eapply (@sim_mon L1_itree L1)|eapply (@sim_indC_spec L1_itree L1)|].
+    Ltac mbase2 := gstep; [eapply (@sim_mon L1_itree L1)|eapply sim_progress; [gbase; eauto|ss|ss]].
     intros st0. eapply adequacy_aux.
-    { apply Nat.lt_wf_0. }
-    { apply Nat.lt_wf_0. }
-    instantiate (1:=10). instantiate (1:=10).
+    instantiate (1:=false). instantiate (1:=false). ginit.
     revert st0.
-    pcofix CIH. i. pfold.
+    gcofix CIH. i. mclo2.
     destruct (state_sort st0) eqn:SRT.
-    - eapply sim_angelic_src; ss; clarify.
+    - eapply sim_indC_angelic_src; ss; clarify.
       + rewrite unfold_decompile_STS. rewrite SRT. ss.
       + i. rewrite unfold_decompile_STS in STEP. rewrite SRT in STEP.
         dependent destruction STEP. destruct x.
-        esplits; et. left. pfold. eapply sim_angelic_tgt; ss; clarify.
-        exists x. exists s. esplits; et.
-    - eapply sim_demonic_tgt; ss; clarify. i.
-      esplits; et. left. pfold. eapply sim_demonic_src; ss; clarify.
+        esplits; et. mclo2. eapply sim_indC_angelic_tgt; ss; clarify.
+        exists x. exists s. esplits; et. mbase2.
+    - eapply sim_indC_demonic_tgt; ss; clarify. i.
+      esplits; et. mclo2. eapply sim_indC_demonic_src; ss; clarify.
       + rewrite unfold_decompile_STS. rewrite SRT. ss.
       + i. exists (decompile_STS step state_sort st_tgt1).
         eexists.
         { rewrite unfold_decompile_STS in *. rewrite SRT in *.
           apply (ModSemL.step_choose (fun st1 : {st' | step st0 None st'} => decompile_STS step state_sort (st1 $)) (exist _ st_tgt1 STEP)). }
-        esplits; et.
+        esplits; et. mbase2.
     - econs; ss.
       + rewrite unfold_decompile_STS. rewrite SRT.
         unfold ModSemL.state_sort. ss.
@@ -267,7 +266,7 @@ paco2 has 'fixed' semantics -> needs fixed semantics to do pcofix
       { destruct (classic (exists ev st1, step st0 (Some ev) st1)); eauto.
         left. ii. apply H. eauto. }
       destruct CASE.
-      + eapply sim_vis_stuck_tgt; eauto.
+      + eapply sim_indC_vis_stuck_tgt; eauto.
       + set (cont := fun x_ : {ev' : event | exists st1, step st0 (Some ev') st1} =>
                        (let (x, _) := x_ in
                         match x with
@@ -284,14 +283,14 @@ paco2 has 'fixed' semantics -> needs fixed semantics to do pcofix
                                       => decompile_STS step state_sort (st1 $))
                         end)).
         destruct H.
-        eapply sim_demonic_src; ss; clarify.
+        eapply sim_indC_demonic_src; ss; clarify.
         { rewrite unfold_decompile_STS. rewrite SRT. ss. }
         exists (cont (exist (fun 'ev => exists st1, step st0 (Some ev) st1) x H)).
         destruct x. eexists.
         { rewrite unfold_decompile_STS. rewrite SRT. ss. rewrite bind_trigger.
           eapply (ModSemL.step_choose cont (exist (fun 'ev => exists st1, step st0 (Some ev) st1) (event_sys fn args rv) H)). }
         esplits; et.
-        left. pfold. destruct H. rename s into STEP. subst cont.
+        mclo2. destruct H. rename s into STEP. subst cont.
         set (cont := fun rv0 =>
                        Vis
                          (Choose
@@ -299,7 +298,7 @@ paco2 has 'fixed' semantics -> needs fixed semantics to do pcofix
                          (fun
                              st1 : {st1 | step st0 (Some (event_sys fn args rv0)) st1} =>
                              decompile_STS step state_sort (st1 $))).
-        eapply sim_vis; eauto.
+        eapply sim_indC_vis; eauto.
         i. ss.
         exploit wf_vis_norm.
         { instantiate (1:= L1). exists L0. reflexivity. }
@@ -313,7 +312,7 @@ paco2 has 'fixed' semantics -> needs fixed semantics to do pcofix
           2:{ exists st_tgt1. auto. }
           apply wf_syscall.
           exists st0, st_tgt1. auto. }
-        esplits. left. pfold. eapply sim_demonic_src; ss; clarify.
+        esplits. mclo2. eapply sim_indC_demonic_src; ss; clarify.
         subst cont. ss.
         set (cont :=
                (fun
@@ -325,7 +324,7 @@ paco2 has 'fixed' semantics -> needs fixed semantics to do pcofix
         exists (cont (exist (fun st1 => step st0 (Some (event_sys fn args rv)) st1) st_tgt1 STEP)).
         eexists.
         { econs. }
-        esplits; et.
+        esplits; et. mbase2.
     Unshelve. all: try exact 0.
   Qed.
 
