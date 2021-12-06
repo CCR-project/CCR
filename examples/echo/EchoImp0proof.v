@@ -68,7 +68,7 @@ Section SIMMODSEM.
       unfold ccallU. imp_steps.
       des. destruct v0; ss; clarify.
       des_ifs.
-      - imp_steps. red. esplits; et. ss.
+      - imp_steps. red. esplits; et.
       - rewrite Z.eqb_eq in Heq. clarify.
       - imp_steps.
         red. esplits; et.
@@ -83,7 +83,7 @@ Section SIMMODSEM.
       unfold ccallU. imp_steps.
       des. destruct v0; ss; clarify.
       des_ifs.
-      - imp_steps. red. esplits; et. ss.
+      - imp_steps. red. esplits; et.
       - rewrite Z.eqb_eq in Heq. clarify.
       - imp_steps.
         red. esplits; et.

@@ -21,7 +21,7 @@ Local Open Scope nat_scope.
 
 Section SIMMODSEM.
 
-  Ltac isteps := repeat (steps; imp_steps).
+  Ltac isteps := repeat (steps; imp_steps; eauto).
 
   Lemma _loop_sim sk (wf: unit -> Any.t * Any.t -> Prop) (SKINCL: Sk.incl (defs MWprog) sk) (SKWF: Sk.wf sk):
     sim_fnsem wf top2

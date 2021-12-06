@@ -6,7 +6,6 @@ Require Import Behavior.
 Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
-Require Import HoareDef.
 Require Import ProofMode.
 Require Import HoareDef Hoare.
 Require Import OpenDef.
@@ -231,26 +230,26 @@ Section MODAUX.
     { instantiate (1:=fun (_: unit) '(st_src, st_tgt) => st_src = st_tgt). ss.
       rewrite <- map_id. eapply Forall2_fmap_2. eapply Forall2_impl.
       { refl. }
-      i. subst. destruct y as [fn f]. econs; ss. ii. subst. ss. eexists _, _.
+      i. subst. destruct y as [fn f]. econs; ss. ii. subst. ss.
       unfold addtau_ktr. ginit.
       generalize (f y). revert w mrs_tgt.
       gcofix CIH. i. ides i.
       { steps. }
-      { steps. gbase. eapply CIH. }
+      { steps. deflag. gbase. eapply CIH. }
       { rewrite <- bind_trigger. resub.
         rewrite addtau_bind. rewrite addtau_event.
         rewrite bind_tau. rewrite bind_bind.
         steps. destruct e.
-        { destruct c. resub. steps. gbase. eapply CIH. }
+        { destruct c. resub. steps. deflag. gbase. eapply CIH. }
         destruct s.
         { resub. destruct p.
-          { steps. gbase. eapply CIH. }
-          { steps. gbase. eapply CIH. }
+          { steps. deflag. gbase. eapply CIH. }
+          { steps. deflag. gbase. eapply CIH. }
         }
         { resub. destruct e.
-          { steps. force_l. exists x. steps. gbase. eapply CIH. }
-          { steps. force_r. exists x. steps. gbase. eapply CIH. }
-          { steps. gbase. eapply CIH. }
+          { steps. force_l. exists x. steps. deflag. gbase. eapply CIH. }
+          { steps. force_r. exists x. steps. deflag. gbase. eapply CIH. }
+          { steps. deflag. gbase. eapply CIH. }
         }
       }
     }
@@ -270,23 +269,23 @@ Section MODAUX.
     { instantiate (1:=fun (_: unit) '(st_src, st_tgt) => st_src = st_tgt). ss.
       erewrite <- map_id at 1. eapply Forall2_fmap_2. eapply Forall2_impl.
       { refl. }
-      i. subst. destruct y as [fn f]. econs; ss. ii. subst. ss. eexists _, _.
+      i. subst. destruct y as [fn f]. econs; ss. ii. subst. ss.
       ginit. unfold addtau_ktr.
       generalize (f y). revert w mrs_tgt.
       gcofix CIH. i. ides i.
       { steps. }
-      { steps. gbase. eapply CIH. }
+      { steps. deflag. gbase. eapply CIH. }
       { rewrite <- bind_trigger. resub. steps. destruct e.
-        { destruct c. resub. steps. gbase. eapply CIH. }
+        { destruct c. resub. steps. deflag. gbase. eapply CIH. }
         destruct s.
         { resub. destruct p.
-          { steps. gbase. eapply CIH. }
-          { steps. gbase. eapply CIH. }
+          { steps. deflag. gbase. eapply CIH. }
+          { steps. deflag. gbase. eapply CIH. }
         }
         { resub. destruct e.
-          { steps. force_l. eexists. gbase. eapply CIH. }
-          { steps. force_r. eexists. steps. gbase. eapply CIH. }
-          { steps. gbase. eapply CIH. }
+          { steps. force_l. eexists. deflag. gbase. eapply CIH. }
+          { steps. force_r. eexists. steps. deflag. gbase. eapply CIH. }
+          { steps. deflag. gbase. eapply CIH. }
         }
       }
     }
@@ -612,34 +611,28 @@ Section ADQ.
         (Σ * A)%type A
         (fun st_src st_tgt '(ctx, r_src) r_tgt =>
            r_src = r_tgt /\ URA.wf ctx /\ st_src = Any.pair st_tgt (ε: Σ)↑)
-        40%nat 40%nat tt
+        false false tt
         (Any.pair st0 (ε: Σ)↑, (interp_hCallE_tgt mn (_stb ske) ord_top (interp_hEs_tgt (massage_itr true itr)) ctx))
         (st0, addtau itr)
   .
   Proof.
     ginit. revert_until ske. gcofix CIH. i. ides itr.
     { steps. }
-    { rewrite massage_itr_tau. steps. gbase. eapply CIH; et. }
+    { rewrite massage_itr_tau. steps. deflag. gbase. eapply CIH; et. }
     rewrite <- bind_trigger. rewrite massage_itr_bind. (* TODO: why reduction tactic doesn't work?? *)
     destruct e; cycle 1.
     {
       destruct s; ss.
       { resub. rewrite massage_itr_pe. destruct p; ss.
-        - steps. guclo lordC_spec. econs.
-          { eapply OrdArith.add_base_l. }
-          { refl. }
-          gbase. eapply CIH; et.
-        - steps. guclo lordC_spec. econs.
-          { eapply OrdArith.add_base_l. }
-          { refl. }
-          gbase. eapply CIH; et.
+        - steps. deflag. gbase. eapply CIH; et.
+        - steps. deflag. gbase. eapply CIH; et.
       }
       { resub. rewrite massage_itr_evente. destruct e; ss.
         - resub. ired_both. resub. steps.
-          force_l. eexists. steps. gbase. eapply CIH; et.
+          force_l. eexists. steps. deflag. gbase. eapply CIH; et.
         - resub. ired_both. resub. steps.
-          force_r. eexists. steps. gbase. eapply CIH; et.
-        - resub. ired_both. resub. steps. gbase. eapply CIH; et.
+          force_r. eexists. steps. deflag. gbase. eapply CIH; et.
+        - resub. ired_both. resub. steps. deflag. gbase. eapply CIH; et.
       }
     }
     destruct c. resub. rewrite massage_itr_calle. ired_both. resub. steps.
@@ -662,7 +655,7 @@ Section ADQ.
       steps. force_l.
       { split; et. }
       steps. destruct w1.
-      gbase. eapply CIH; et.
+      deflag. gbase. eapply CIH; et.
       eapply URA.wf_mon; et. instantiate (1:=c). r_wf _ASSUME.
     - unfold HoareCall, mput, mget. steps.
       force_l. exists (ε, ε, ε). steps.
@@ -675,7 +668,7 @@ Section ADQ.
       steps. force_l.
       { split; et. }
       steps. destruct w1.
-      gbase. eapply CIH; et.
+      deflag. gbase. eapply CIH; et.
       eapply URA.wf_mon; et. instantiate (1:=c). r_wf _ASSUME.
       Unshelve.
       all: try (exact Ord.O).
@@ -686,7 +679,7 @@ Section ADQ.
         mn ske
         ktr arg st0
     :
-      sim_itree (fun (_: unit) '(st_src, st_tgt) => st_src = Any.pair st_tgt (ε: Σ)↑) top2 100%nat 100%nat tt
+      sim_itree (fun (_: unit) '(st_src, st_tgt) => st_src = Any.pair st_tgt (ε: Σ)↑) top2 false false tt
                 ((Any.pair st0 (ε: Σ)↑), fun_to_tgt mn (_stb ske) (massage_fsb true ktr) arg)
                 (st0, addtau (ktr arg))
   .
@@ -705,13 +698,10 @@ Section ADQ.
     des; clarify. clear _ASSUME0.
     unfold massage_fun.
     rewrite Any.pair_split. steps.
-    guclo lordC_spec. econs.
-    { instantiate (1:=(29 + (40))%ord). refl. }
-    { instantiate (1:=(29 + (40))%ord). rewrite <- ! OrdArith.add_from_nat; cbn. eapply OrdArith.le_from_nat. lia. }
     erewrite idK_spec with (i0:=(addtau (ktr (o, t)))).
     guclo lbindC_spec. econs.
     { instantiate (1:=tt).
-      gfinal. right. eapply my_lemma1_aux''; et.
+      deflag. gfinal. right. eapply my_lemma1_aux''; et.
       eapply URA.wf_mon; et. instantiate (1:=c). r_wf _ASSUME.
     }
     i. des_ifs. ss. des_ifs. ss. des; clarify. unfold idK. steps.
@@ -854,22 +844,22 @@ Section ADQ.
     { left. auto. }
   Qed.
 
-  Variant my_lemma2_r1: forall R0 R1 (RR: R0 -> R1 -> Prop), Ord.t -> Ord.t -> itree eventE R0 -> itree eventE R1 -> Prop :=
+  Variant my_lemma2_r1: forall R0 R1 (RR: R0 -> R1 -> Prop), bool -> bool -> itree eventE R0 -> itree eventE R1 -> Prop :=
   | my_lemma2_r1_intro
       R mn (itr: itree _ R) st
       (MN: List.In (Some mn) _frds)
     :
-      my_lemma2_r1 eq 200 200
+      my_lemma2_r1 eq false false
                    (EventsL.interp_Es (ModSemL.prog (ModL.enclose prog_mid)) (transl_all mn (interp_hEs_src itr)) st)
                    (EventsL.interp_Es (ModSemL.prog (ModL.enclose prog_tgt)) (transl_all mn (interp_hEs_src (KModSem.transl_itr_mid itr))) st)
   .
 
-  Variant my_lemma2_r2: forall R0 R1 (RR: R0 -> R1 -> Prop), Ord.t -> Ord.t -> itree eventE R0 -> itree eventE R1 -> Prop :=
+  Variant my_lemma2_r2: forall R0 R1 (RR: R0 -> R1 -> Prop), bool -> bool -> itree eventE R0 -> itree eventE R1 -> Prop :=
   | my_lemma2_r2_intro
       R mn (itr: itree _ R) st
       (MN: ~ List.In (Some mn) _frds)
     :
-      my_lemma2_r2 eq 200 200
+      my_lemma2_r2 eq false false
                    (EventsL.interp_Es (ModSemL.prog (ModL.enclose prog_mid)) (transl_all mn (interp_hEs_src (massage_itr false itr))) st)
                    (EventsL.interp_Es (ModSemL.prog (ModL.enclose prog_tgt)) (transl_all mn (interp_hEs_src (massage_itr true itr))) st)
   .
@@ -910,7 +900,7 @@ Section ADQ.
 
     (*** default cases ***)
     | _ =>
-      (gstep; econs; eauto; try (oauto);
+      (guclo simg_indC_spec; econs; eauto;
        (*** some post-processing ***)
        i;
        try match goal with
@@ -952,9 +942,9 @@ Section ADQ.
     gcofix CIH. i. destruct PR.
     { destruct H. ides itr.
       { gsteps. }
-      { gsteps. gbase. eapply CIH. left. econs. auto. }
+      { gsteps. apply simg_progress_flag. gbase. eapply CIH. left. econs. auto. }
       rewrite <- bind_trigger. destruct e.
-      { resub. destruct h. gsteps. gbase. eapply CIH. left. econs. auto. }
+      { resub. destruct h. gsteps. apply simg_progress_flag. gbase. eapply CIH. left. econs. auto. }
       destruct e.
       { resub. destruct c. gsteps.
         hexploit (stb_find_iff_mid fn). i. des.
@@ -962,44 +952,35 @@ Section ADQ.
         { rewrite SRC. rewrite TGT. gsteps.
           unfold my_if, sumbool_to_bool. des_ifs.
           unfold fun_to_src, body_to_src. rewrite Any.pair_split. gsteps.
-          guclo ordC_spec. econs.
-          { instantiate (2:=(_ + _)%ord). rewrite <- OrdArith.add_from_nat. refl. }
-          { instantiate (2:=(_ + _)%ord). rewrite <- OrdArith.add_from_nat.
-            eapply OrdArith.le_from_nat. et. }
           guclo bindC_spec. econs.
-          { gbase. eapply CIH. left. econs. auto. }
+          { apply simg_progress_flag. gbase. eapply CIH. left. econs. auto. }
           i. subst. destruct vret_tgt as [mp0 retv].
           gsteps.
-          gbase. eapply CIH. left. econs. auto.
+          apply simg_progress_flag. gbase. eapply CIH. left. econs. auto.
         }
         { rewrite SRC. rewrite TGT. gsteps.
           unfold fun_to_src, body_to_src. rewrite Any.pair_split. gsteps.
-          guclo ordC_spec. econs.
-          { instantiate (2:=(_ + _)%ord). rewrite <- OrdArith.add_from_nat.
-            refl. }
-          { instantiate (2:=(_ + _)%ord). rewrite <- OrdArith.add_from_nat.
-            eapply OrdArith.le_from_nat. et. }
           guclo bindC_spec. econs.
-          { gbase. eapply CIH. right. econs. auto. }
+          { apply simg_progress_flag. gbase. eapply CIH. right. econs. auto. }
           i. subst. destruct vret_tgt as [mp0 retv].
           gsteps.
-          gbase. eapply CIH. left. econs. auto.
+          apply simg_progress_flag. gbase. eapply CIH. left. econs. auto.
         }
       }
       destruct s; resub.
       { destruct p.
-        { gsteps. gbase. eapply CIH. left. econs. auto. }
-        { gsteps. gbase. eapply CIH. left. econs. auto. }
+        { gsteps. apply simg_progress_flag. gbase. eapply CIH. left. econs. auto. }
+        { gsteps. apply simg_progress_flag. gbase. eapply CIH. left. econs. auto. }
       }
       { destruct e.
-        { mred. gforce_r. gsteps. exists x. gsteps. gbase. eapply CIH. left. econs. auto. }
-        { mred. gforce_l. gsteps. exists x. gsteps. gbase. eapply CIH. left. econs. auto. }
-        { gsteps. gbase. eapply CIH. left. econs. auto. }
+        { mred. gforce_r. gsteps. exists x. gsteps. apply simg_progress_flag. gbase. eapply CIH. left. econs. auto. }
+        { mred. gforce_l. gsteps. exists x. gsteps. apply simg_progress_flag. gbase. eapply CIH. left. econs. auto. }
+        { gsteps. apply simg_progress_flag. gbase. eapply CIH. left. econs. auto. }
       }
     }
     { destruct H. ides itr.
       { ired_both. gsteps. }
-      { gsteps. gbase. eapply CIH. right. econs. auto. }
+      { gsteps. apply simg_progress_flag. gbase. eapply CIH. right. econs. auto. }
       rewrite <- bind_trigger. destruct e.
       { resub. destruct c. gsteps.
         gsteps. hexploit (stb_find_iff_mid fn). i. des.
@@ -1007,40 +988,32 @@ Section ADQ.
         { rewrite SRC. rewrite TGT. gsteps.
           unfold my_if, sumbool_to_bool. des_ifs.
           unfold fun_to_src, body_to_src. rewrite Any.pair_split. gsteps.
-          guclo ordC_spec. econs.
-          { instantiate (2:=(_ + _)%ord). rewrite <- OrdArith.add_from_nat. refl. }
-          { instantiate (2:=(_ + _)%ord). rewrite <- OrdArith.add_from_nat.
-            eapply OrdArith.le_from_nat. et. }
           guclo bindC_spec. econs.
-          { gbase. eapply CIH. left. econs. auto. }
+          { apply simg_progress_flag. gbase. eapply CIH. left. econs. auto. }
           i. subst. destruct vret_tgt as [mp0 retv].
           gsteps.
-          gbase. eapply CIH. right. econs. auto.
+          apply simg_progress_flag. gbase. eapply CIH. right. econs. auto.
         }
         { rewrite SRC. rewrite TGT. gsteps.
           unfold fun_to_src, body_to_src. rewrite Any.pair_split. gsteps.
-          guclo ordC_spec. econs.
-          { instantiate (2:=(_ + _)%ord). rewrite <- OrdArith.add_from_nat. refl. }
-          { instantiate (2:=(_ + _)%ord). rewrite <- OrdArith.add_from_nat.
-            eapply OrdArith.le_from_nat. et. }
           guclo bindC_spec. econs.
-          { gbase. eapply CIH. right. econs. auto. }
+          { apply simg_progress_flag. gbase. eapply CIH. right. econs. auto. }
           i. subst. destruct vret_tgt as [mp0 retv].
           gsteps.
-          gbase. eapply CIH. right. econs. auto.
+          apply simg_progress_flag. gbase. eapply CIH. right. econs. auto.
         }
       }
       destruct s.
       { resub. destruct p.
-        { gsteps. gbase. eapply CIH. right. econs. auto. }
-        { gsteps. gbase. eapply CIH. right. econs. auto. }
+        { gsteps. apply simg_progress_flag. gbase. eapply CIH. right. econs. auto. }
+        { gsteps. apply simg_progress_flag. gbase. eapply CIH. right. econs. auto. }
       }
       { resub. destruct e.
         { mred. gforce_r. gsteps. exists x. gsteps.
-          gbase. eapply CIH. right. econs. auto. }
+          apply simg_progress_flag. gbase. eapply CIH. right. econs. auto. }
         { mred. gforce_l. gsteps. exists x. gsteps.
-          gbase. eapply CIH. right. econs. auto. }
-        { gsteps. gbase. eapply CIH. right. econs. auto. }
+          apply simg_progress_flag. gbase. eapply CIH. right. econs. auto. }
+        { gsteps. apply simg_progress_flag. gbase. eapply CIH. right. econs. auto. }
       }
     }
     Unshelve. all: try (exact 0).
@@ -1090,7 +1063,6 @@ Section ADQ.
     Beh.of_program (@ModL.compile _ CONF (Mod.add_list (List.map (KMod.transl_src frds) _kmds ++ List.map (SMod.to_src ∘ massage_md false) umds))).
   Proof.
     eapply adequacy_global_itree; ss.
-    exists (200)%ord, (200)%ord.
     ginit.
     { eapply cpn7_wcompat; eauto with paco. }
     unfold ModSemL.initial_itr, ModSemL.initial_itr.
@@ -1123,24 +1095,16 @@ Section ADQ.
     { rewrite SRC. rewrite TGT. gsteps.
       unfold my_if, sumbool_to_bool. des_ifs.
       unfold fun_to_src, body_to_src. rewrite Any.pair_split. gsteps.
-      guclo ordC_spec. econs.
-      { instantiate (2:=(_ + _)%ord). rewrite <- OrdArith.add_from_nat. refl. }
-      { instantiate (2:=(_ + _)%ord). rewrite <- OrdArith.add_from_nat.
-        eapply OrdArith.le_from_nat. et. }
       guclo bindC_spec. econs.
-      { gfinal. right.
+      { apply simg_progress_flag. gfinal. right.
         rewrite my_lemma2_initial_state. eapply my_lemma2_aux. left. econs. ss. }
       i. subst. gsteps.
     }
     { rewrite SRC. rewrite TGT. gsteps.
       unfold my_if, sumbool_to_bool. des_ifs.
       unfold fun_to_src, body_to_src. rewrite Any.pair_split. gsteps.
-      guclo ordC_spec. econs.
-      { instantiate (2:=(_ + _)%ord). rewrite <- OrdArith.add_from_nat. refl. }
-      { instantiate (2:=(_ + _)%ord). rewrite <- OrdArith.add_from_nat.
-        eapply OrdArith.le_from_nat. et. }
       guclo bindC_spec. econs.
-      { gfinal. right.
+      { apply simg_progress_flag. gfinal. right.
         rewrite my_lemma2_initial_state. eapply my_lemma2_aux. right. econs. ss. }
       i. subst. gsteps.
     }
@@ -1160,24 +1124,24 @@ Section ADQ.
       i. subst. destruct b as [fn f]. ss. econs.
       { ss. }
       ii. subst.
-      exists 100, 100. ginit. unfold fun_to_src, body_to_src. ss. destruct y.
+      ginit. unfold fun_to_src, body_to_src. ss. destruct y.
       unfold addtau_ktr.
       generalize (f (o, t)).
       revert mrs_tgt.
       gcofix CIH. i. ides i.
       { steps. }
-      { steps. gbase. eapply CIH. }
+      { steps. deflag. gbase. eapply CIH. }
       rewrite <- bind_trigger. destruct e.
-      { resub. destruct c. steps. gbase. eapply CIH. }
+      { resub. destruct c. steps. deflag. gbase. eapply CIH. }
       destruct s.
       { resub. destruct p.
-        { steps. gbase. eapply CIH. }
-        { steps. gbase. eapply CIH. }
+        { steps. deflag. gbase. eapply CIH. }
+        { steps. deflag. gbase. eapply CIH. }
       }
       { resub. destruct e.
-        { steps. resub. force_l. eexists. steps. gbase. eapply CIH. }
-        { steps. resub. force_r. eexists. steps. gbase. eapply CIH. }
-        { steps. gbase. eapply CIH. }
+        { steps. resub. force_l. eexists. steps. deflag. gbase. eapply CIH. }
+        { steps. resub. force_r. eexists. steps. deflag. gbase. eapply CIH. }
+        { steps. deflag. gbase. eapply CIH. }
       }
     }
     { ss. }
@@ -1477,7 +1441,7 @@ Section ADQ.
               (fun st_src st_tgt ret_src ret_tgt =>
                  exists st (mr: Σ),
                    st_src = Any.pair st mr↑ /\ st_tgt = Any.pair st mr↑ /\ ret_src = ret_tgt)
-              20%ord 20%ord w
+              false false w
               (Any.pair mp mr↑,
                         HoareCall mn tbr o (KModSem.disclose_mid fsp) fn (Any.pair true↑ arg) ctx)
               (Any.pair mp mr↑,
@@ -1490,12 +1454,11 @@ Section ADQ.
     force_l; auto. steps. force_l. exists (Some x). steps.
     force_l. eexists. force_l.
     { esplits; et. }
-    steps. force_l; auto. steps.
-    gstep. econs; et. i. des. clarify. eexists _, _.
-    steps. force_r. eexists (c2, c3). steps.
+    steps. force_l; auto. steps. des; clarify.
+    rewrite Any.pair_split in _UNWRAPU. clarify.
+    force_r. eexists (c2, c3). steps.
     force_r; auto. steps. force_r. eexists.
     force_r; et. steps. gstep. econs; et.
-    Unshelve. all: try exact 0.
   Qed.
 
   Lemma adequacy_open_aux2_apc sk
@@ -1508,7 +1471,7 @@ Section ADQ.
               (fun st_src st_tgt ret_src ret_tgt =>
                  exists st (mr: Σ),
                    st_src = Any.pair st mr↑ /\ st_tgt = Any.pair st mr↑ /\ ret_src = ret_tgt)
-              100%ord 100%ord w
+              false false w
               (Any.pair mp mr↑,
                         interp_hCallE_tgt mn
                         (_stb_mid sk) o
@@ -1523,7 +1486,7 @@ Section ADQ.
     ginit. i.
     Local Transparent APC. unfold APC. Local Opaque APC.
     steps. force_l. exists x. steps. force_l; auto. steps.
-    clear _GUARANTEE _GUARANTEE0.
+    clear _GUARANTEE _GUARANTEE0. deflag.
     revert x mp mr w mn o ctx. gcofix CIH. i.
     rewrite unfold_APC. steps. force_l. exists x0. steps. destruct x0.
     { steps. gstep. econs; et. }
@@ -1531,13 +1494,13 @@ Section ADQ.
     force_l. exists (s, Any.pair true↑ t). steps.
     hexploit stb_find_iff; et. i. rewrite H. steps.
     guclo lbindC_spec. econs.
-    { gfinal. right. eapply paco8_mon.
+    { deflag. gfinal. right. eapply paco8_mon.
       { eapply adequacy_open_aux2_hcall. }
       { ss. }
     }
     i. ss. des; clarify.
     destruct vret_tgt as [ctx0 vret]. ired_both. steps.
-    gbase. eapply CIH.
+    deflag. gbase. eapply CIH.
     Unshelve. all: try exact 0. all: ss.
   Qed.
 
@@ -1551,7 +1514,7 @@ Section ADQ.
               (fun st_src st_tgt ret_src ret_tgt =>
                  exists st (mr: Σ),
                    st_src = Any.pair st mr↑ /\ st_tgt = Any.pair st mr↑ /\ ret_src = ret_tgt)
-              200%ord 200%ord w
+              false false w
               (Any.pair mp mr↑,
                         interp_hCallE_tgt mn
                         (_stb_mid sk) o
@@ -1564,52 +1527,38 @@ Section ADQ.
   Proof.
     ginit. gcofix CIH. i. ides itr.
     { steps. gstep. econs; et. }
-    { steps. gbase. et. }
+    { steps. deflag. gbase. et. }
     rewrite <- bind_trigger. ired_both.
     destruct e.
     { resub. destruct h. steps.
-      guclo lordC_spec. econs.
-      { instantiate (1:=(50 + 100)%ord).
-        rewrite <- OrdArith.add_from_nat.
-        eapply OrdArith.le_from_nat. lia. }
-      { instantiate (1:=(50 + 100)%ord).
-        rewrite <- OrdArith.add_from_nat.
-        eapply OrdArith.le_from_nat. lia. }
       guclo lbindC_spec. econs.
-      { gfinal. right. eapply paco8_mon.
+      { deflag. gfinal. right. eapply paco8_mon.
         { eapply adequacy_open_aux2_apc. }
         { ss. }
       }
       i. ss. des; clarify. destruct vret_tgt as [ctx0 vret].
-      steps. gbase. eapply CIH.
+      steps. deflag. gbase. eapply CIH.
     }
     destruct e.
     { resub. destruct c. steps.
       hexploit stb_find_iff; et. i. rewrite H. steps.
-      guclo lordC_spec. econs.
-      { instantiate (1:=(50 + 20)%ord).
-        rewrite <- OrdArith.add_from_nat.
-        eapply OrdArith.le_from_nat. lia. }
-      { instantiate (1:=(50 + 20)%ord).
-        rewrite <- OrdArith.add_from_nat.
-        eapply OrdArith.le_from_nat. lia. }
       guclo lbindC_spec. econs.
       { gfinal. right. eapply paco8_mon.
         { eapply adequacy_open_aux2_hcall. }
         { ss. }
       }
       i. ss. des; clarify. destruct vret_tgt as [ctx0 vret].
-      steps. gbase. eapply CIH.
+      steps. deflag. gbase. eapply CIH.
     }
     destruct s.
     { resub. destruct p.
-      { steps. gbase. eapply CIH. }
-      { steps. gbase. eapply CIH. }
+      { steps. deflag. gbase. eapply CIH. }
+      { steps. deflag. gbase. eapply CIH. }
     }
     { resub. destruct e.
-      { steps. force_l. exists x. steps. gbase. eapply CIH. }
-      { steps. force_r. exists x. steps. gbase. eapply CIH. }
-      { steps. gbase. eapply CIH. }
+      { steps. force_l. exists x. steps. deflag. gbase. eapply CIH. }
+      { steps. force_r. exists x. steps. deflag. gbase. eapply CIH. }
+      { steps. deflag. gbase. eapply CIH. }
     }
     Unshelve. all: ss; try (exact 0).
   Qed.
@@ -1631,23 +1580,17 @@ Section ADQ.
       eapply Forall2_apply_Forall2.
       { refl. }
       i. subst. destruct b0 as [fn ksb]. ss. econs; ss.
-      ii. subst. ss. eexists 200, 200. ginit.
+      ii. subst. ss. ginit.
       unfold KModSem.disclose_ksb_tgt, fun_to_tgt. ss.
       Local Transparent HoareFun. unfold HoareFun. Local Opaque HoareFun.
       des. clarify. unfold mget, mput. steps. destruct x.
-      { guclo lordC_spec. econs.
-        { eapply Ord.union_l. }
-        { refl. }
-        des; clarify. force_r. exists true.
+      { des; clarify. force_r. exists true.
         force_r. exists m. force_r. eexists _.
         force_r. exists (c, c0). force_r. force_r; auto.
         force_r; eauto.
         steps. destruct (measure ksb m) eqn:T.
-        { guclo lordC_spec. econs.
-          { eapply Ord.union_l. }
-          { eapply Ord.union_l. }
-          steps. guclo lbindC_spec. econs.
-          { gfinal. right. eapply paco8_mon.
+        { steps. guclo lbindC_spec. econs.
+          { deflag. gfinal. right. eapply paco8_mon.
             { eapply adequacy_open_aux2_apc. }
             { ss. }
           }
@@ -1657,11 +1600,8 @@ Section ADQ.
           force_l; et. force_l; et.
           steps. econs; ss. esplits; et.
         }
-        { guclo lordC_spec. econs.
-          { eapply Ord.union_r. }
-          { eapply Ord.union_r. }
-          steps. guclo lbindC_spec. econs.
-          { gfinal. right. eapply paco8_mon.
+        { steps. guclo lbindC_spec. econs.
+          { deflag. gfinal. right. eapply paco8_mon.
             { eapply adequacy_open_aux2_itr. }
             { ss. }
           }
@@ -1672,17 +1612,14 @@ Section ADQ.
           steps. econs; ss. esplits; et.
         }
       }
-      { guclo lordC_spec. econs.
-        { eapply Ord.union_r. }
-        { refl. }
-        des; clarify. force_r. exists false.
+      { des; clarify. force_r. exists false.
         force_r. exists tt. force_r. exists t.
         force_r. exists (c, c0). force_r. force_r; auto.
         force_r.
         { red. uipropall. }
         steps.
         guclo lbindC_spec. econs.
-        { gfinal. right. eapply paco8_mon.
+        { deflag. gfinal. right. eapply paco8_mon.
           { eapply adequacy_open_aux2_itr. }
           { ss. }
         }
@@ -1753,10 +1690,10 @@ Section WEAKEN.
         { refl. }
         i. subst. destruct b. split.
         { rr. cbn. ss. }
-        ii. subst. exists 201, 201. ss.
+        ii. subst. ss.
         unfold KModSem.disclose_ksb_tgt.
         ginit. steps. force_r. exists x.
-        gfinal. right. instantiate (1:=unit) in w. destruct w.
+        deflag. gfinal. right. instantiate (1:=unit) in w. destruct w.
         destruct x.
         { eapply weakening_fn; et. refl. }
         { eapply weakening_fn; et. refl. }

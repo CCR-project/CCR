@@ -257,7 +257,7 @@ Proof Outline
 
 
     econs; ss.
-    { unfold allocF. kinit.
+    { unfold allocF. init.
       { harg. fold wf. steps. hide_k.
         destruct x as [sz|]; cycle 1.
         { mDesAll; des; clarify.
@@ -356,7 +356,7 @@ Proof Outline
 
 
     econs; ss.
-    { unfold freeF. kinit.
+    { unfold freeF. init.
       { harg. fold wf. steps.
         destruct x as [[b ofs]|]; cycle 1.
         { mDesAll; des; clarify.
@@ -482,7 +482,7 @@ Proof Outline
 
 
     econs; ss.
-    { unfold loadF. kinit.
+    { unfold loadF. init.
       { harg. fold wf. steps.
         destruct x as [[[b ofs] v]|]; cycle 1.
         { mDesAll; des; clarify.
@@ -533,7 +533,7 @@ Proof Outline
 
 
     econs; ss.
-    { unfold storeF. kinit.
+    { unfold storeF. init.
       { harg. fold wf. steps. hide_k.
         destruct x as [[[b ofs] v1]|]; cycle 1.
         { mDesAll; des; clarify.
@@ -630,7 +630,7 @@ Proof Outline
 
 
     econs; ss.
-    { unfold cmpF. kinit.
+    { unfold cmpF. init.
       { harg. fold wf. steps. hide_k.
         destruct x as [[result resource]|]; cycle 1.
         { mDesAll; des; clarify.

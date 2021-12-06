@@ -82,7 +82,7 @@ Section SIMMODSEM.
     hexploit (SKINCL "initialized"); ss; eauto. intros [blk0 FIND0].
 
     econs; ss.
-    { kinit. harg. mDesAll; des; clarify. unfold initF, MWAppImp.initF, ccallU.
+    { init. harg. mDesAll; des; clarify. unfold initF, MWAppImp.initF, ccallU.
       set (Sk.load_skenv sk) as ske in *.
       fold (wf ske).
       isteps. rewrite unfold_eval_imp. isteps.
@@ -128,7 +128,7 @@ Section SIMMODSEM.
     }
 
     econs; ss.
-    { kinit. harg. mDesAll; des; clarify. unfold runF, MWAppImp.runF, ccallU.
+    { init. harg. mDesAll; des; clarify. unfold runF, MWAppImp.runF, ccallU.
       set (Sk.load_skenv sk) as ske in *.
       fold (wf ske).
       isteps. rewrite unfold_eval_imp. isteps.

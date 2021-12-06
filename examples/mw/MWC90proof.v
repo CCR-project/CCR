@@ -45,10 +45,10 @@ Section SIMMODSEM.
     econs; ss.
     { init. inv WF. des; clarify.
       unfold fun_to_src, body_to_src, cfunU, cfunN, MWC9.mainF, mainF, ccallU.
-      steps. rewrite my_if_same. steps. des; clarify. steps.
+      steps. rewrite my_if_same. steps. ss. des; clarify. steps.
       force_r; ss. steps. force_r; ss. steps. force_r; ss. steps.
       { esplits; ss; et. rewrite Any.upcast_split; ss. }
-      des; clarify. force_r; ss. clarify. steps. force_r; ss. clarify. steps.
+      ss. des; clarify. force_r; ss. clarify. steps. force_r; ss. clarify. steps.
       { esplits; ss; et. rewrite Any.upcast_split; ss. }
       des; clarify. force_r; ss; clarify. steps. des; clarify. force_r; ss; clarify. steps.
       { r. esplits; ss; et. }
@@ -84,7 +84,7 @@ Section SIMMODSEM.
     }
 
   Unshelve.
-    all: try exact 0. all: ss.
+    all: ss.
   Qed.
 
 End SIMMODSEM.

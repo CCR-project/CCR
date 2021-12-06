@@ -7,9 +7,9 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import HoareDef STB.
-Require Import SimModSem2.
+Require Import SimModSemOld.
 
-Require Import HTacticsNoIndex.
+Require Import HTacticsOld.
 Require Import ProofMode.
 
 From ITree Require Import
@@ -23,9 +23,9 @@ Set Implicit Arguments.
 
 
 Module TAC.
-  Ltac steps := repeat (_steps; des_ifs_safe).
-  Ltac force_l := _force_l.
-  Ltac force_r := _force_r.
+  Ltac steps := repeat (_steps oauto; des_ifs_safe).
+  Ltac force_l := _force_l oauto.
+  Ltac force_r := _force_r oauto.
 End TAC.
 Import TAC.
 
@@ -63,13 +63,13 @@ Section PROOF.
                    st_tgt = Any.pair mp mr↑ /\
                    vret_src = (ctx, vret) /\
                    vret_tgt = (ctx, vret))
-              false false tt
+              100 100 tt
               (Any.pair mp mr↑, interp_hCallE_tgt mn stb_src ord_cur_src itr ctx)
               (Any.pair mp mr↑, interp_hCallE_tgt mn stb_tgt ord_cur_tgt itr ctx).
   Proof.
     ginit. gcofix CIH. i. ides itr.
     { steps. gstep. econs. esplits; et. }
-    { steps. deflag. gbase. eapply CIH; ss. }
+    { steps. gbase. eapply CIH; ss. }
     rewrite <- bind_trigger. steps.
     destruct e.
     { resub. destruct h. steps.
@@ -114,22 +114,22 @@ Section PROOF.
       steps. force_r; et.
       steps. force_r. exists x1.
       steps. force_r; et.
-      steps. deflag. gbase. eapply CIH; ss.
+      steps. gbase. eapply CIH; ss.
     }
     destruct s.
     { resub. destruct p.
       { ired_both. force_l. force_r. ired_both.
-        force_l. force_r. ired_both. steps. deflag.
+        force_l. force_r. ired_both. steps.
         gbase. eapply CIH; ss. }
-      { ired_both. force_l. force_r. ired_both. steps. deflag.
+      { ired_both. force_l. force_r. ired_both. steps.
         gbase. eapply CIH; ss. }
     }
     { resub. destruct e.
-      { ired_both. force_r. i. force_l. exists x. steps. deflag.
+      { ired_both. force_r. i. force_l. exists x. steps.
         gbase. eapply CIH; ss. }
-      { ired_both. force_l. i. force_r. exists x. steps. deflag.
+      { ired_both. force_l. i. force_r. exists x. steps.
         gbase. eapply CIH; ss. }
-      { steps. deflag. gbase. eapply CIH; ss. }
+      { steps. gbase. eapply CIH; ss. }
     }
     Unshelve. all: ss. all: try exact 0.
   Qed.
@@ -140,7 +140,7 @@ Section PROOF.
   Variable body: (option mname * Any.t) -> itree hEs Any.t.
 
   Lemma weakening_fn arg mrs_src mrs_tgt (WF: wf tt (mrs_src, mrs_tgt)):
-    sim_itree wf top2 false false tt
+    sim_itree wf top2 200 200 tt
               (mrs_src, fun_to_tgt mn stb_src (mk_specbody fsp_src body) arg)
               (mrs_tgt, fun_to_tgt mn stb_tgt (mk_specbody fsp_tgt body) arg).
   Proof.
@@ -162,7 +162,12 @@ Section PROOF.
     steps. force_r. exists (rarg_tgt, c0).
     steps. force_r; et.
     steps. force_r; et.
-    steps. deflag. guclo lbindC_spec. econs.
+    steps. guclo lordC_spec. econs.
+    { instantiate (2:=(50 + 100)%ord).
+      rewrite <- OrdArith.add_from_nat. eapply OrdArith.le_from_nat. refl. }
+    { instantiate (2:=(50 + 100)%ord).
+      rewrite <- OrdArith.add_from_nat. eapply OrdArith.le_from_nat. refl. }
+    guclo lbindC_spec. econs.
     { gfinal. right. r in MEASURE. des_ifs.
       - eapply weakening_itree; ss.
       - eapply weakening_itree; ss.
@@ -190,7 +195,7 @@ Section PROOF.
              (fun_to_tgt mn stb_src (mk_specbody fsp_src body))
              (fun_to_tgt mn stb_tgt (mk_specbody fsp_tgt body)).
   Proof.
-    ii. destruct w. subst. eapply weakening_fn. auto.
+    ii. eexists _, _. destruct w. subst. eapply weakening_fn. auto.
   Qed.
 
 End PROOF.

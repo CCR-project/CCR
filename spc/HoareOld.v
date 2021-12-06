@@ -6,8 +6,8 @@ Require Import Skeleton.
 Require Import PCM.
 Require Import Any.
 Require Export HoareDef STB.
-Require Import Hoareproof02 Hoareproof12 Hoareproof22.
-Require Import SimModSem2 ProofMode.
+Require Import Hoareproof0Old Hoareproof1Old Hoareproof2Old.
+Require Import SimModSemOld ProofMode.
 
 Set Implicit Arguments.
 

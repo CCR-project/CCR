@@ -210,7 +210,7 @@ Section SIMMODSEM.
       - eapply to_semantic. iIntros "H". iExists _, _, _. iSplits; ss; et.
     }
     econs; ss.
-    { unfold Stack2.new_body, cfunN, cfunU. kinit.
+    { unfold Stack2.new_body, cfunN, cfunU. init.
       - harg. mDesAll. des; clarify. steps.
         post_call.
         rename x0 into h.
@@ -252,7 +252,7 @@ Section SIMMODSEM.
     }
 
     econs; ss.
-    { unfold Stack2.pop_body, cfunN. kinit.
+    { unfold Stack2.pop_body, cfunN. init.
       - harg. mDesAll. des; clarify. steps. ss. mDesAll. des; clarify.
         renamer. rename n into h. rename l into stk0.
 
@@ -311,7 +311,7 @@ Section SIMMODSEM.
     }
 
     econs; ss.
-    { unfold Stack2.push_body, cfunN. kinit.
+    { unfold Stack2.push_body, cfunN. init.
       - harg. mDesAll. des; clarify. steps. ss. mDesAll. des; clarify.
         renamer. rename n into h. rename l into stk0. rename v into x.
         mCombine "O" "A".

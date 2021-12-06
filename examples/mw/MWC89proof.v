@@ -95,7 +95,7 @@ Section SIMMODSEM.
     hexploit (SKINCL "gv1"); ss; eauto 10. intros [blk1 FIND1].
 
     econs; ss.
-    { kinit. harg. mDesAll; des; clarify. unfold mainF, MWC8.mainF, ccallU.
+    { init. harg. mDesAll; des; clarify. unfold mainF, MWC8.mainF, ccallU.
       set (Sk.load_skenv sk) as ske in *.
       fold (wf ske).
       steps.
@@ -151,7 +151,7 @@ Section SIMMODSEM.
     }
 
     econs; ss.
-    { kinit. harg. mDesAll; des; clarify. unfold loopF, MWC8.loopF, ccallU.
+    { init. harg. mDesAll; des; clarify. unfold loopF, MWC8.loopF, ccallU.
       set (Sk.load_skenv sk) as ske in *.
       fold (wf ske).
       steps.
@@ -179,7 +179,7 @@ Section SIMMODSEM.
     }
 
     econs; ss.
-    { kinit. harg. mDesAll; des; clarify. unfold putF, MWC8.putF, ccallU.
+    { init. harg. mDesAll; des; clarify. unfold putF, MWC8.putF, ccallU.
       set (Sk.load_skenv sk) as ske in *.
       fold (wf ske).
       steps.
@@ -248,7 +248,7 @@ Section SIMMODSEM.
     }
 
     econs; ss.
-    { kinit. harg. mDesAll; des; clarify. unfold getF, MWC8.getF, ccallU.
+    { init. harg. mDesAll; des; clarify. unfold getF, MWC8.getF, ccallU.
       set (Sk.load_skenv sk) as ske in *.
       fold (wf ske).
       steps.

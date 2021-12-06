@@ -4,7 +4,7 @@ Require Import Skeleton.
 Require Import PCM.
 Require Import Any.
 Require Import ModSem.
-Require Import SimSTS.
+Require Import SimSTSOld.
 Require Import STSNorm.
 Require Import STS Behavior.
 
