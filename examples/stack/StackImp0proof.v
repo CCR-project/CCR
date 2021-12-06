@@ -43,9 +43,12 @@ Section SIMMODSEM.
       (<<TGT: mrps_tgt0 = tt↑>>)
   .
 
+  (* Ltac imp_steps := repeat (repeat (imp_red); steps). *)
+
   Theorem correct:
     refines2 [StackImp.Stack] [Stack0.Stack].
   Proof.
+    (* Set Ltac Profiling. *)
     eapply adequacy_local2. econs; ss. i.
     econstructor 1 with (wf:=wf) (le:=top2); et; ss.
     econs; ss.
@@ -86,7 +89,8 @@ Section SIMMODSEM.
         uo. des_ifs_safe; ss; clarify. unfold scale_int in Heq2.
         des_ifs_safe. steps. imp_steps.
         unfold scale_int. uo; ss. des_ifs. ss.
-        rewrite Z_div_same; ss. rewrite Z.add_0_l. imp_steps.
+        rewrite Z_div_same; ss. rewrite Z.add_0_l.
+        imp_steps.
         red. esplits; et.
       - apply Z.eqb_neq in N1.
         destruct (val_dec (Vint 0) (Vint 0)); ss.
@@ -105,12 +109,14 @@ Section SIMMODSEM.
       unfold unblk in *. des_ifs.
       imp_steps.
       unfold ccallU. imp_steps.
-      rewrite _UNWRAPU1. imp_steps.
+      rewrite _UNWRAPU1.
+      imp_steps.
       uo; des_ifs; ss; clarify.
       2:{ unfold scale_int in *. des_ifs. }
       imp_steps.
       red. esplits; et.
     }
+    (* Show Ltac Profile. *)
     Unshelve. all: try exact 0. all: ss.
   Qed.
 

@@ -397,6 +397,23 @@ Section PROOFS.
     unfold pure_state. grind.
   Qed.
 
+  Lemma interp_imp_guarantee
+        ge le0 p
+    :
+      interp_imp ge (guarantee p) le0 = guarantee p;;; tau;; tau;; Ret (le0, ()).
+  Proof.
+    unfold interp_imp, interp_GlobEnv, interp_ImpState.
+    unfold guarantee. grind. rewrite interp_trigger. grind.
+    unfold pure_state. grind.
+  Qed.
+
+  Lemma interp_Es_ext
+        ge R (itr0 itr1: itree _ R) le0
+    :
+      itr0 = itr1 -> interp_imp ge itr0 le0 = interp_imp ge itr1 le0
+  .
+  Proof. i; subst; refl. Qed.
+
   Lemma interp_imp_expr_Var
         ge le0 v
     :
@@ -848,6 +865,8 @@ Global Opaque denote_stmt.
 Global Opaque interp_imp.
 Global Opaque eval_imp.
 
+Require Import Red IRed.
+
 Require Import SimModSem.
 Require Import HTactics.
 Require Import ImpNotations.
@@ -900,5 +919,5 @@ Ltac imp_red :=
   | _ => idtac
   end.
 
-Ltac imp_steps := repeat (repeat imp_red; steps).
+Ltac imp_steps := repeat (repeat (imp_red; ss); steps).
 Ltac solve_NoDup := repeat econs; ii; ss; des; ss.
