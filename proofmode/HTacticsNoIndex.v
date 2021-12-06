@@ -5,7 +5,7 @@ Require Import ModSem.
 Require Import Skeleton.
 Require Import PCM.
 Require Import Any.
-Require Import HoareDef STB SimModSem2.
+Require Import HoareDef OpenDef STB SimModSem2.
 
 Require Import Relation_Definitions.
 Require Import Relation_Operators.
@@ -622,6 +622,24 @@ Section HLEMMAS.
     f_equal. grind.
   Qed.
 
+  Lemma trivial_init_clo
+        A wf (le: A -> A -> Prop) r rg w arg mrp_src mp_tgt itr_tgt mn stb body RR
+        m n
+        (INIT:
+           gpaco8 (_sim_itree wf le) (cpn8 (_sim_itree wf le)) r rg Any.t Any.t
+                  RR true n w
+                  (mrp_src, fun_to_tgt mn stb (mk_specbody fspec_trivial body) arg)
+                  (mp_tgt, itr_tgt))
+    :
+      gpaco8 (_sim_itree wf le) (cpn8 (_sim_itree wf le)) r rg Any.t Any.t
+             RR m n w
+             (mrp_src, KModSem.disclose_ksb_tgt mn stb (ksb_trivial body) arg)
+             (mp_tgt, itr_tgt).
+  Proof.
+    unfold KModSem.disclose_ksb_tgt.
+    apply sim_itreeC_spec. econs; eauto. i. destruct x; et.
+  Qed.
+
 End HLEMMAS.
 
 
@@ -810,9 +828,19 @@ Ltac init :=
   let mp_tgt := fresh "mp_tgt" in
   let WF := fresh "WF" in
   split; ss; intros varg_src [mn varg] EQ w mrp_src mp_tgt WF;
-  (try subst varg_src); cbn;
-  ginit;
-  try (unfold fun_to_tgt, cfunN, cfunU; rewrite HoareFun_parse); simpl.
+  try subst varg_src; cbn; ginit;
+  match goal with
+  | |- gpaco8 _ _ _ _ _ _ _ _ _ _ (_, KModSem.disclose_ksb_tgt _ _ (ksb_trivial _) _) _ =>
+    eapply trivial_init_clo;
+    try (unfold fun_to_tgt, cfunN, cfunU, KModSem.disclose_ksb_tgt, fun_to_tgt);
+    rewrite HoareFun_parse; simpl
+  | |- gpaco8 _ _ _ _ _ _ _ _ _ _ (_, KModSem.disclose_ksb_tgt _ _ _ _) _ =>
+    try (unfold fun_to_tgt, cfunN, cfunU, KModSem.disclose_ksb_tgt, fun_to_tgt);
+    simpl;
+    apply sim_itreeC_spec; apply sim_itreeC_take_src; intros [];rewrite HoareFun_parse; simpl
+  | |- _ =>
+    try (unfold fun_to_tgt, cfunN, cfunU; rewrite HoareFun_parse); simpl
+  end.
 
 Ltac harg :=
   let PRE := constr:("PRE") in
