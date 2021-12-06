@@ -43,6 +43,7 @@ Section SIMMODSEM.
       (<<TGT: mrps_tgt0 = tt↑>>)
   .
 
+
   Theorem correct:
     refines2 [KnotMainImp.KnotMain] [KnotMain0.Main].
   Proof.
@@ -67,7 +68,6 @@ Section SIMMODSEM.
         unfold unint in *. des_ifs; ss; clarify.
         { lia. }
         imp_steps.
-        unfold unblk in *. ss; clarify. rewrite _UNWRAPU0.
         unfold ccallU. imp_steps.
         red. esplits; et.
     }
@@ -81,8 +81,6 @@ Section SIMMODSEM.
       2:{ exfalso; apply n0. solve_NoDup. }
       imp_steps.
       rewrite _UNWRAPU0. unfold ccallU. imp_steps.
-      unfold unblk in *. ss; clarify. rewrite _UNWRAPU3.
-      imp_steps.
       red. esplits; et.
     }
     Unshelve. all: ss. all: try exact 0.
