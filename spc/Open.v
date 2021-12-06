@@ -1485,8 +1485,7 @@ Section ADQ.
   Proof.
     ginit. i.
     Local Transparent APC. unfold APC. Local Opaque APC.
-    steps. force_l. exists x. steps. force_l; auto. steps.
-    clear _GUARANTEE _GUARANTEE0. deflag.
+    steps. force_l. exists x. steps. deflag.
     revert x mp mr w mn o ctx. gcofix CIH. i.
     rewrite unfold_APC. steps. force_l. exists x0. steps. destruct x0.
     { steps. gstep. econs; et. }

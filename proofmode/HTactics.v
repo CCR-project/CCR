@@ -530,8 +530,6 @@ Section HLEMMAS.
         (eqr: Any.t -> Any.t -> Any.t -> Any.t -> Prop)
         stb itr_tgt ctx
 
-        (ATMOST: (at_most < kappa)%ord)
-
         (POST: gpaco8 (_sim_itree wf le) (cpn8 (_sim_itree wf le)) r rg _ _ eqr true n a
                       (mp_src0,
                        (interp_hCallE_tgt mn stb o (_APC at_most) ctx)>>= k_src)
@@ -546,8 +544,6 @@ Section HLEMMAS.
     ired_both. apply sim_itreeC_spec. eapply sim_itreeC_choose_src.
     exists at_most.
     repeat (ired_both; apply sim_itreeC_spec; econs).
-    unfold guarantee. ired_both. apply sim_itreeC_spec. econs. esplits; eauto.
-    ired_both. apply sim_itreeC_spec. econs.
     ired_both. et.
     Unshelve. all: ss.
   Qed.
@@ -809,9 +805,7 @@ Ltac acatch :=
   end.
 
 Ltac astart _at_most :=
-  eapply (@APC_start_clo _ _at_most);
-  [eauto with ord_kappa|
-  ]
+  eapply (@APC_start_clo _ _at_most)
 .
 
 Ltac astop :=

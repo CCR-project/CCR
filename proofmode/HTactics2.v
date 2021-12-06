@@ -708,7 +708,7 @@ Section MODE.
   .
   Proof.
     subst.
-    unfold APC. steps. force_l. exists x. steps. force_l; ss. steps.
+    unfold APC. steps. force_l. exists x. steps.
     deflag.
     (* Unset Printing Notations. *)
     clear_until x. gen x d ctx0 rx0. gen mp_src0 mp_tgt0 mr_src0 mr_tgt0. gen a0. gen Xtra. gcofix CIH. i.

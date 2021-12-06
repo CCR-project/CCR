@@ -121,7 +121,7 @@ Section CANCEL.
           { eapply my_lemma__APC. }
           { i. ss. }
         }
-        { i. ss. clear _GUARANTEE. steps. destruct vret_tgt.
+        { i. ss. subst. destruct vret_tgt. steps.
           deflag. gbase. et.
         }
       }

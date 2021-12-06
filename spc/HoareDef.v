@@ -197,7 +197,6 @@ Qed.
 
 Definition APC: itree Es' unit :=
   at_most <- trigger (Choose _);;
-  guarantee(at_most < kappa)%ord;;;
   _APC at_most
 .
 
