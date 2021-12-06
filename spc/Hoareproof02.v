@@ -488,11 +488,7 @@ Section CANCEL.
     | |- _ ?i_tgt => replace i_tgt with (Ret tt;;; i_tgt)
     end.
     2: { mred. auto. }
-    guclo ordC_spec. econs.
-    { instantiate (2:=(400+5)%ord).
-      rewrite <- OrdArith.add_from_nat. refl. }
-    { instantiate (2:=(400+5)%ord). refl. }
-    guclo bindC_spec. econs.
+    deflag. guclo bindC_spec. econs.
     { instantiate (1:= fun '(st_src, o) (_: unit) => st_src = st_src0 /\ o = (f.(measure) x0)).
       destruct tbr.
       { steps. des. destruct (measure f x0); ss.
@@ -506,16 +502,12 @@ Section CANCEL.
     steps. esplits; eauto. steps. unfold unwrapU.
     rewrite FINDMID. rewrite FINDTGT. rewrite ! bind_ret_l.
 
-    guclo ordC_spec. econs.
-    { instantiate (2:=(195+200)%ord). refl. }
-    { instantiate (1:=(195+200)%ord). rewrite <- OrdArith.add_from_nat. refl. }
-    rename f into fs.
     guclo bindC_spec. econs.
 
     { instantiate (1:= fun '(st_src1, vret_src) '(st_tgt1, vret_tgt) =>
                          exists (mrs1: r_state) rret,
                            (<<ZIP: st_tgt1 = zip_state st_src1 mrs1>>) /\
-                           (<<POST: fs.(postcond) (Some mn) x0 vret_src vret_tgt rret>>) /\
+                           (<<POST: f.(postcond) (Some mn) x0 vret_src vret_tgt rret>>) /\
                            (<<RWF: URA.wf (rret ⋅ (c1 ⋅ (frs ⋅ rsum_minus mn mrs1) ⋅ (mrs1 mn)))>>)).
       fold sk. fold sk. set (mn0:=SModSem.mn (SMod.get_modsem md sk)) in *.
       fold Any_tgt in x3.
@@ -530,10 +522,7 @@ Section CANCEL.
       { r_wf x. symmetry. eapply rsum_minus_update; et. }
       unshelve esplits; eauto.
       steps. esplits; eauto. steps. unshelve esplits; eauto. steps.
-      guclo ordC_spec. econs.
-      { instantiate (1:=(73+100)%ord). rewrite <- OrdArith.add_from_nat. eapply OrdArith.le_from_nat. lia. }
-      { instantiate (2:=(73+100)%ord). refl. }
-      guclo bindC_spec. econs.
+      deflag. guclo bindC_spec. econs.
       { gbase. eapply CIH; ss.
         { instantiate (1:=c1 ⋅ frs). r_solve. }
       }
@@ -551,7 +540,7 @@ Section CANCEL.
       unshelve esplits; et.
       { r_wf RWF. }
       steps. exists t. steps. unshelve esplits; et.
-      steps. gbase. eapply CIH; et.
+      steps. deflag. gbase. eapply CIH; et.
     }
   Unshelve.
     all: try (by exact 0).
@@ -578,7 +567,6 @@ Section CANCEL.
     Beh.of_program (@ModL.compile _ midConf (Mod.add_list mds_mid)).
   Proof.
     eapply adequacy_global_itree; ss.
-    exists (Ord.from_nat 100%nat), (Ord.from_nat 100%nat). ss.
     ginit.
     { eapply cpn7_wcompat; eauto with paco. }
     unfold ModSemL.initial_itr, ModSemL.initial_itr. Local Opaque ModSemL.prog. ss.
@@ -613,14 +601,8 @@ Section CANCEL.
     { r_wf WFR. eapply INITIALRSUM; et. }
     unshelve esplits; et.
     steps. unshelve esplits; et. steps.
-
-    guclo ordC_spec. econs.
-    { instantiate (2:=(_ + _)%ord).
-      rewrite <- OrdArith.add_from_nat.
-      eapply OrdArith.le_from_nat. refl. }
-    { instantiate (2:=(_ + _)%ord). refl. }
     guclo bindC_spec. econs.
-    { gfinal. right. fold simg.
+    { deflag. gfinal. right. fold simg.
       eapply adequacy_type_aux; ss.
       { r_solve. }
     }
