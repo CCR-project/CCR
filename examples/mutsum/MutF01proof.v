@@ -50,11 +50,20 @@ Section SIMMODSEM.
     force_r.
     { eapply mut_max_intrange. auto. } steps.
     destruct (dec (Z.of_nat x) 0%Z).
-    - destruct x; ss. astop. force_l. eexists. steps.
+    destruct x; ss. astop. force_l. eexists. steps.
       hret _; ss.
-    - destruct x; [ss|]. rewrite Nat2Z.inj_succ. steps. force_r.
-      { rewrite <- Nat2Z.inj_succ. eapply mut_max_intrange_sub1. auto. }
-      steps. acatch. hcall _ _ with "*"; auto.
+    - destruct x; [ss|]. rewrite Nat2Z.inj_succ. steps.
+      (* force_r. *)
+      (* { rewrite <- Nat2Z.inj_succ. eapply mut_max_intrange_sub1. auto. } *)
+      (* steps. *)
+      ss.
+      eapply (APC_step_clo "g" (Any.upcast [Vint (Z.succ x - 1)])).
+      { ss.
+
+      [ refl | try by try STB.stb_tac; refl | oauto |  ].
+      astep "g" (Any.upcast [Vint (Z.succ x - 1)]).
+      acatch.
+      hcall _ _ with "*"; auto.
       { iPureIntro.
         replace (Z.succ (Z.of_nat x) - 1)%Z with (Z.of_nat x) by lia.
         esplits; et. lia. }
