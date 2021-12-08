@@ -22,11 +22,8 @@ Section PROOF.
       if dec n 0%Z
       then Ret (Vint 0)
       else (
-        (* (assume (intrange_64 (n - 1));;; *)
         m <- ccallU "g" [Vint (n - 1)];;
-        (* assume (wf_val m);;; *)
         r <- (vadd (Vint n) m)?;;
-        (* assume (wf_val r);;; *)
         Ret r).
 
   Definition FSem: ModSem.t := {|

@@ -95,7 +95,7 @@ Section SIMMODSEM.
       - apply Z.eqb_neq in N1.
         destruct (val_dec (Vint 0) (Vint 0)); ss.
         imp_steps.
-        red. esplits; et.
+        red. esplits; et. ss.
     }
     econs; ss.
     { init.

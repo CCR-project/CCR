@@ -68,10 +68,9 @@ Section SIMMODSEM.
       unfold ccallU. imp_steps.
       des. destruct v0; ss; clarify.
       des_ifs.
-      - imp_steps. red. esplits; et.
+      - imp_steps. red. esplits; et. ss.
       - rewrite Z.eqb_eq in Heq. clarify.
-      - imp_steps.
-        red. esplits; et.
+      - imp_steps. red. esplits; et.
     }
     econs; ss.
     { init.
@@ -83,10 +82,9 @@ Section SIMMODSEM.
       unfold ccallU. imp_steps.
       des. destruct v0; ss; clarify.
       des_ifs.
-      - imp_steps. red. esplits; et.
+      - imp_steps. red. esplits; et. ss.
       - rewrite Z.eqb_eq in Heq. clarify.
-      - imp_steps.
-        red. esplits; et.
+      - imp_steps. red. esplits; et.
     }
     Unshelve. all: try exact 0. all: ss.
   Qed.
