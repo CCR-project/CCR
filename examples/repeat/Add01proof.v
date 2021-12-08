@@ -60,14 +60,14 @@ Section SIMMODSEM.
     eapply Sk.incl_incl_env in SKINCL. eapply Sk.load_skenv_wf in SKWF.
     hexploit (SKINCL "succ"); ss; eauto. intros [blk0 FIND0].
     econs; ss.
-    { unfold succF. kinit.
+    { unfold succF. init.
       2: { harg. mDesAll. des; clarify. steps. hret _; ss. }
       harg. mDesAll. des; clarify.
       steps. astart 0. astop. force_l. eexists.
       steps. hret _; ss.
     }
     econs; ss.
-    { unfold addF, add_body. kinit. harg. mDesAll. des; clarify.
+    { unfold addF, add_body. init. harg. mDesAll. des; clarify.
       steps.  rewrite FIND0. steps. unfold ccallU. steps.
       hexploit FunStb_succ. i. inv H.
       assert (exists m, z0 = Z.of_nat m).

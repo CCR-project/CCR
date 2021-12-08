@@ -60,7 +60,7 @@ Section SIMMODSEM.
     eapply adequacy_local2. econs; ss.
     i. econstructor 1 with (wf:=wf) (le:=top2); ss.
     2: { esplits; et. red. econs. eapply to_semantic. et. }
-    econs; ss. unfold repeatF. kinit.
+    econs; ss. unfold repeatF. init.
     { harg. destruct x as [[[f n] x] f_spec]. ss. mDesAll. des; clarify.
       steps. force_r; auto. des_ifs.
       { astop. steps. force_l. eexists. steps.

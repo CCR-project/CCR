@@ -76,7 +76,7 @@ Section SIMMODSEM.
     econstructor 1 with (wf:=wf) (le:=top2); ss; et; swap 2 3.
     { esplits. econs; ss. eapply to_semantic. iIntros "H". iClear "H". iSplits; ss. }
     econs; ss.
-    { unfold newF. kinit. harg. fold wf. mDesAll; des; subst. ss.
+    { unfold newF. init. harg. fold wf. mDesAll; des; subst. ss.
       unfold new_body. steps. unfold ccallN, ccallU, cfunN, cfunU. steps.
 
       astart 2. acatch. { eapply STBINCL. stb_tac; ss. } hcall (Some _) _ with "SIM"; ss; et.
@@ -113,7 +113,7 @@ Section SIMMODSEM.
       (*** ISPECIALIZE SYNTAX: iSpecialize ("A" $! _ _ H0). et. *)
     }
     econs; ss.
-    { unfold popF. kinit. harg. fold wf. mDesAll; des; subst. ss.
+    { unfold popF. init. harg. fold wf. mDesAll; des; subst. ss.
       unfold pop_body, ccallU, cfunU.
       steps. astop. steps. astop. steps. astop. steps. astart 7.
 
@@ -200,7 +200,7 @@ Section SIMMODSEM.
         { iModIntro. iSplits; ss; et. iApply big_sepM_insert; ss. iFrame. iExists _; ss. iFrame. }
     }
     econs; ss.
-    { unfold pushF. kinit. harg. fold wf. mDesAll; des; subst. ss.
+    { unfold pushF. init. harg. fold wf. mDesAll; des; subst. ss.
       unfold push_body, ccallU, cfunU.
       steps. astop. steps. astop. steps. astop. steps. astart 7.
 

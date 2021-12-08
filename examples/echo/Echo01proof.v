@@ -71,7 +71,7 @@ Section SIMMODSEM.
     }
     econs; ss.
     { unfold Echo0.echo_body, echo_body, cfunN, cfunU, ccallN, ccallU.
-      kinit. harg. post_call.
+      init. harg. post_call.
       des_ifs. steps.
       astart 1. acatch. { eapply STBINCL. stb_tac; ss. } hcall _ _ with ""; ss; et.
       post_call. steps. astop. steps. erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.
@@ -85,7 +85,7 @@ Section SIMMODSEM.
       hret _; ss.
     }
     econs; ss.
-    { unfold Echo0.input_body, input_body, cfunU, ccallU, ccallN. kinit.
+    { unfold Echo0.input_body, input_body, cfunU, ccallU, ccallN. init.
       2: { harg. mDesAll. des; clarify. steps. }
       harg. post_call. steps.
       erewrite STBINCL; cycle 1. { stb_tac; ss. } steps.
@@ -113,7 +113,7 @@ Section SIMMODSEM.
         { iModIntro. iSplits; ss; et. }
     }
     econs; ss.
-    { unfold Echo0.output_body, output_body, cfunU, ccallU, ccallN. kinit.
+    { unfold Echo0.output_body, output_body, cfunU, ccallU, ccallN. init.
       2:{ harg. mDesAll. des; clarify. steps. }
       harg. post_call. steps.
       astart 1. acatch.

@@ -42,24 +42,23 @@ Section SIMMODSEM.
     { ss. }
     2: { esplits; ss; et. }
     econs; ss.
-    { init. unfold mainF, MWA0.mainF, ccallU. steps. des; clarify. steps. gstep; econs; et.
-      { r. esplits; et. }
-      ii; ss. des; clarify. esplits; et. steps. unfold unwrapU. des_ifs; ss; steps. rr. esplits; et. econs; et.
+    { init. unfold mainF, MWA0.mainF, ccallU. steps. ss. des; clarify. steps.
+      { esplits; et. }
+      ii; ss. des; clarify. unfold unwrapU. des_ifs; ss; steps. rr. esplits; et. econs; et.
     }
     econs; ss.
-    { init. unfold loopF, MWA0.loopF, ccallU. steps. unfold unwrapU. des_ifs; steps. des_ifs; steps. des; clarify. des_ifs; steps.
-      gstep; econs; et.
+    { init. unfold loopF, MWA0.loopF, ccallU. steps. unfold unwrapU. des_ifs; steps. des_ifs; steps. ss. des; clarify. des_ifs; steps.
       { econs; et. }
-      steps. ii. des; clarify. esplits; et. des_ifs; steps. rr; esplits; et. rr; econs; et.
+      steps. ii. des; clarify. esplits; et. des_ifs; steps. rr; esplits; et.
     }
     econs; ss.
     { init. unfold putF, MWA0.putF, ccallU. steps. force_l. exists false. steps. rr in WF. des; clarify.
-      rewrite Any.upcast_downcast in *; clarify. steps. gstep; econs; et. { econs; et. } ii; ss. des; clarify.
+      rewrite Any.upcast_downcast in *; clarify. steps. { econs; et. } ii; ss. des; clarify.
       esplits; et. steps. r. esplits; ss; et.
     }
     econs; ss.
     { init. unfold getF, MWA0.getF, ccallU. steps. r in WF. des ;clarify. rewrite Any.upcast_downcast in *. steps.
-      assert(NONE := WF1 z). rewrite WF1 in *. ss. des; ss. steps. gstep; econs; et.
+      assert(NONE := WF1 z). rewrite WF1 in *. ss. des; ss. steps. 
       { ss. esplits; et. }
       ii; ss. des; clarify. esplits; et. steps. unfold unwrapU. des_ifs; steps. r. esplits; ss; et.
     }

@@ -366,8 +366,6 @@ Section RDB.
 
 End RDB.
 
-Require Import SimModSem HTactics.
-
 
 Module KMod.
 Section KMOD.
@@ -429,51 +427,5 @@ Section KMOD.
     map (transl_src (get_frds mds)) mds.
 End KMOD.
 End KMod.
-
-
-Section KTACTICS.
-
-  Context `{Σ: GRA.t}.
-
-  Lemma trivial_init_clo
-        A wf (le: A -> A -> Prop) r rg w arg mrp_src mp_tgt itr_tgt mn stb body RR n
-        o_src1 o_tgt1
-        (INIT:
-           gpaco8 (_sim_itree wf le) (cpn8 (_sim_itree wf le)) rg rg Any.t Any.t
-                  RR o_src1 o_tgt1 w
-                  (mrp_src, fun_to_tgt mn stb (mk_specbody fspec_trivial body) arg)
-                  (mp_tgt, itr_tgt))
-    :
-      gpaco8 (_sim_itree wf le) (cpn8 (_sim_itree wf le)) r rg Any.t Any.t
-             RR n (Ord.S o_tgt1) w
-             (mrp_src, KModSem.disclose_ksb_tgt mn stb (ksb_trivial body) arg)
-             (mp_tgt, itr_tgt).
-  Proof.
-    unfold KModSem.disclose_ksb_tgt. steps. destruct x; et.
-  Qed.
-
-End KTACTICS.
-
-Ltac kinit :=
-  let varg_src := fresh "varg_src" in
-  let mn := fresh "mn" in
-  let varg := fresh "varg" in
-  let EQ := fresh "EQ" in
-  let w := fresh "w" in
-  let mrp_src := fresh "mrp_src" in
-  let mp_tgt := fresh "mp_tgt" in
-  let WF := fresh "WF" in
-  split; ss; intros varg_src [mn varg] EQ w mrp_src mp_tgt WF; try subst varg_src;
-  eexists _, _; cbn; ginit;
-  match goal with
-  | |- gpaco8 _ _ _ _ _ _ _ _ _ _ (_, KModSem.disclose_ksb_tgt _ _ (ksb_trivial _) _) _ =>
-    eapply trivial_init_clo;
-    try (unfold fun_to_tgt, cfunN, cfunU, KModSem.disclose_ksb_tgt, fun_to_tgt);
-    rewrite HoareFun_parse; simpl
-  | _ =>
-    try (unfold fun_to_tgt, cfunN, cfunU, KModSem.disclose_ksb_tgt, fun_to_tgt);
-    simpl;
-    gstep; eapply sim_itree_take_src; [oauto2|intros []; rewrite HoareFun_parse; simpl]
-  end.
 
 Arguments in_dec: simpl never.
