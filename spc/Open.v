@@ -1,6 +1,8 @@
 Require Import Coqlib.
 Require Import ITreelib.
-Require Import ImpPrelude.
+Require Import Any.
+Require Import String.
+Require Import AList.
 Require Import STS.
 Require Import Behavior.
 Require Import ModSem.
@@ -13,9 +15,6 @@ Require Import IRed.
 Require Import SimModSem.
 
 Set Implicit Arguments.
-
-
-
 
 
 Global Program Instance Forall2_Reflexive `{Reflexive A R}: Reflexive (Forall2 R).
@@ -1668,7 +1667,7 @@ End ADQ.
 Require Import Weakening.
 
 Section WEAKEN.
-
+  Context `{EMSConfig}.
   Context `{Σ: GRA.t}.
 
   Theorem kmod_adequacy_weaken
