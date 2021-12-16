@@ -1667,7 +1667,7 @@ End ADQ.
 Require Import Weakening.
 
 Section WEAKEN.
-  Context `{EMSConfig}.
+  Context {CONF: EMSConfig}.
   Context `{Σ: GRA.t}.
 
   Theorem kmod_adequacy_weaken
