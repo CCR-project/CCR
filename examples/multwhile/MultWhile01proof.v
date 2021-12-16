@@ -16,7 +16,7 @@ From ExtLib Require Import
      Structures.Maps
      Data.Map.FMapAList.
 
-Require Import HTactics ProofMode.
+Require Import HTactics ProofMode HSim.
 
 Set Implicit Arguments.
 
@@ -63,75 +63,6 @@ Section SIMMODSEM.
       (<<SRC: st_src = Any.pair mp_src (Any.upcast mr_src)>>) /\
       (<<IPROP: RR r_src r_tgt mp_src st_tgt mr_src>>).
 
-  Lemma hbind_clo
-        A (a: shelve__ A)
-        mn r rg n m mr_src mp_src a0
-        X (Q: option mname -> X -> Any.t -> Any.t -> Σ -> Prop)
-        x vret_src vret_tgt
-        mp_tgt
-        (le: A -> A -> Prop)
-        (eqr: Any.t -> Any.t -> Any.t -> Any.t -> Prop)
-        (R: A -> Any.t -> Any.t -> iProp)
-        (R_src0 R_tgt0 R_src1 R_tgt1: Type)
-        (RR: R_src0 -> R_tgt0 -> Any.t -> Any.t -> iProp)
-
-        (itr_src: itree Es (Σ * R_src0)) (ktr_src: (Σ * R_src0) -> itree Es R_src1)
-        (itr_tgt: itree Es R_tgt) (ktr_tgt: R_tgt0 -> itree Es R_tgt1)
-
-        ctx l
-        (ACC: current_iPropL ctx l)
-
-        (WLE: le a0 a)
-
-        (UPDATABLE:
-           (from_iPropL l) ⊢ #=> (R a mp_src mp_tgt ** (Q mn x vret_src vret_tgt: iProp)))
-
-        (LEFT: gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le))
-                      r rg _ _ (to_irel RR) m n a0
-                      (Any.pair mp_src mr_src, itr_src)
-                      (mp_tgt, itr_tgt))
-        (LEFT: forall mr_src mp_src mp_tgt r_src r_tgt
-                      (RR: RR mp_src mp_tgt r_src r_tgt
-
-gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le))
-                      r rg _ _ RR m n a0
-                      (Any.pair mp_src mr_src, itr_src)
-                      (mp_tgt, itr_tgt))
-
-
-        (EQ: forall (mr_src1: Σ) (WLE: le a0 a) (WF: mk_wf R a (Any.pair mp_src mr_src1↑, mp_tgt)),
-            eqr (Any.pair mp_src mr_src1↑) mp_tgt vret_tgt vret_tgt)
-    :
-      gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le))
-             r rg _ _ eqr m n a0
-             (Any.pair mp_src mr_src, itr_src >>= ktr_src)
-             (mp_tgt, itr_tgt >>= ktr_tgt)
-  .
-  Proof.
-    subst. unfold HoareFunRet, mput, mget, guarantee.
-    repeat (ired_both; apply sim_itreeC_spec; econs). exists vret_tgt.
-    repeat (ired_both; apply sim_itreeC_spec; econs).
-    assert (exists mr_src1 rret_src,
-               (<<UPDATABLE: URA.wf (ctx ⋅ (mr_src1 ⋅ rret_src))>>) /\
-               (<<RSRC: R a mp_src mp_tgt mr_src1>>) /\
-               (<<PRE: Q mn x vret_src vret_tgt rret_src>>)).
-    { red in ACC. inv ACC. uipropall.
-      hexploit (UPDATABLE r0); et.
-      { eapply URA.wf_mon; et. }
-      i. des. subst. exists a1, b. splits; et.
-      replace (ctx ⋅ (a1 ⋅ b)) with (a1 ⋅ b ⋅ ctx); et.
-      r_solve.
-    }
-    des. exists (rret_src, mr_src1).
-    repeat (ired_both; apply sim_itreeC_spec; econs).
-    repeat (ired_both; apply sim_itreeC_spec; econs). unshelve esplits.
-    { r_wf UPDATABLE0. }
-    repeat (ired_both; apply sim_itreeC_spec; econs). unshelve esplits; eauto.
-    repeat (ired_both; apply sim_itreeC_spec; econs).
-    eapply EQ; et. econs; et.
-  Qed.
-
-
   Theorem correct: refines2 [MultWhile0.Mul] [MultWhile1.Mul].
   Proof.
     (* boring part *)
@@ -140,6 +71,84 @@ gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le))
     { ss. }
     2: { exists tt. unfold Inv. econs; ss; red; uipropall. }
     econs; ss. unfold mulF, ccallU. init. harg.
+    mDesAll. des_ifs. gfinal. right.    
+    hexploit (@hsim_adequacy_aux _ unit top2 Inv "Mul" (STB.to_stb Mulstb) (ord_pure n) true false (mp_src) mp_tgt).
+    2:{ i. instantiate (8:=None) in H.
+        instantiate (4:=ctx) in H.
+        instantiate (4:=(z, z0)) in H.
+        instantiate (4:=mn) in H.
+        instantiate (4:=Any.upcast mr_src) in H.
+        instantiate (4:=w) in H.
+        instantiate (1:=    ` varg0 : Z * Z <- unwrapU (Any.downcast varg);;
+                                      ` vret : Z <-
+                                               (let
+                                                   '(a, b) := varg0 in
+                                                 ITree.iter (λ '(a0, res), if (0 <? a0)%Z then Ret (inl ((a0 - 1)%Z, (res + b)%Z)) else Ret (inr res)) (a, 0%Z));;
+                                               Ret (Any.upcast vret)) in H.
+        ss.
+        match goal with
+        | H: ?P0 |- ?P1 => replace P1 with P0
+        end.
+        { eapply H. }
+        f_equal. f_equal. ss. f_equal. f_equal.
+
+        instantiate (6:=ctx).
+
+
+
+        instantiate (1:=(APC;; trigger (Choose Any.t))) in H.
+
+        ss.
+
+
+        eapply H. mDesAll. des; clarify.
+
+
+        instantiate (4:=w) in H.
+        instantiate (8:=None) in H.
+        instantiate (7:=None) in H.
+
+ ss.
+        instantiate (2:=x) in H.
+
+
+hsim_adequacy_aux
+     : ∀ (world : Type) (le : relation world) (I : world → Any.t → Any.t → iProp) (mn : string) (stb : string → option fspec) 
+         (o : ord) (f_src f_tgt : bool) (st_src st_tgt : Any.t) (itr_src : itree (hAPCE +' Es) Any.t) (itr_tgt : itree Es Any.t) 
+         (mr_src : Any.t) (ctx : Σ) (X : Type) (x : X) (Q : option string → X → Any.t → Any.t → iProp) (mn_caller : option string) 
+         (fuel : option Ord.t) (w0 : world),
+         hsim I mn stb o (st_tgt, itr_tgt)
+         → paco8 (_sim_itree (mk_wf I) le) bot8 Any.t Any.t (lift_rel (mk_wf I) le w0 eq) f_src f_tgt w0
+             (Any.pair st_src mr_src, mylift mn stb o fuel mn_caller x ctx Q itr_src) (st_tgt, itr_tgt)
+
+
+        match goal with
+        | H: ?P0 |- ?P1 => replace P1 with P0
+        end.
+        { eapply H. }
+        instantiate (6:=ctx).
+
+        eapply f_equal.
+
+        f_equal.
+        
+eapply f_equal.
+        repeat f_equal.
+
+
+        2:{ 
+
+eapply H.
+
+hsim_adequacy_aux
+     : ∀ (world : Type) (le : relation world) (I : world → Any.t → Any.t → iProp) (mn : string) (stb : string → option fspec) 
+         (o : ord) (f_src f_tgt : bool) (st_src st_tgt : Any.t) (itr_src : itree (hAPCE +' Es) Any.t) (itr_tgt : itree Es Any.t) 
+         (mr_src : Any.t) (ctx : Σ) (X : Type) (x : X) (Q : option string → X → Any.t → Any.t → iProp) (mn_caller : option string) 
+         (fuel : option Ord.t) (w0 : world),
+         hsim I mn stb o (st_tgt, itr_tgt)
+         → paco8 (_sim_itree (mk_wf I) le) bot8 Any.t Any.t (lift_rel (mk_wf I) le w0 eq) f_src f_tgt w0
+             (Any.pair st_src mr_src, mylift mn stb o fuel mn_caller x ctx Q itr_src) (st_tgt, itr_tgt)
+
 
     destruct x as [a b]. mDesAll. des; clarify. simpl. steps. astop. simpl. steps.
     (* bind *)

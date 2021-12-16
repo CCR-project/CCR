@@ -560,34 +560,6 @@ Section SIM.
       (HoareFunRet Q mn_caller x r2)
     end.
 
-  Variant myr w0:
-    option Ord.t -> bool -> bool -> world → Any.t * itree Es Any.t → Any.t * itree Es Any.t → Prop :=
-  | myr_intro0
-      f_src f_tgt st_src st_tgt (itr_src: itree (hAPCE +' Es) Any.t) itr_tgt mr_src ctx X (x: X) Q mn_caller
-      (SIM: hsim (fun st_src st_tgt ret_src ret_tgt =>
-                    (∃ w1, ⌜le w0 w1⌝ ** I w1 st_src st_tgt) ** (Q mn_caller x ret_src ret_tgt: iProp)) ctx None f_src f_tgt (st_src, itr_src) (st_tgt, itr_tgt))
-    :
-      @myr
-        w0
-        None f_src f_tgt w0
-        (Any.pair st_src mr_src, (interp_hCallE_tgt mn stb o (interp_hEs_tgt itr_src) ctx) >>= (HoareFunRet Q mn_caller x))
-        (st_tgt, itr_tgt)
-  | myr_intro1
-      fuel f_src f_tgt st_src st_tgt (itr_src: itree (hAPCE +' Es) Any.t)  itr_tgt mr_src ctx X (x: X) Q mn_caller at_most
-      (SIM: hsim (fun st_src st_tgt ret_src ret_tgt =>
-                    (∃ w1, ⌜le w0 w1⌝ ** I w1 st_src st_tgt) ** (Q mn_caller x ret_src ret_tgt: iProp)) ctx (Some (fuel)) f_src f_tgt (st_src, itr_src) (st_tgt, itr_tgt))
-    :
-      @myr
-        w0
-        (Some (fuel)) f_src f_tgt w0
-        (Any.pair st_src mr_src,
-         r0 <- (interp_hCallE_tgt mn stb o (_APC (Ord.S at_most)) ctx);;
-         r1 <- (interp_hCallE_tgt mn stb o (tau;; Ret (snd r0)) (fst r0));;
-         r2 <- (interp_hCallE_tgt mn stb o (interp_hEs_tgt itr_src) (fst r1));;
-         (HoareFunRet Q mn_caller x r2))
-        (st_tgt, itr_tgt)
-  .
-
   Lemma current_iPropL_convert ctx P
         (CUR: current_iProp ctx P)
     :
@@ -595,14 +567,6 @@ Section SIM.
   Proof.
     unfold current_iPropL. ss. unfold from_iPropL.
     eapply current_iProp_entail; eauto.
-  Qed.
-
-  Lemma AAA P Q
-        (EQ: P = Q)
-    :
-      P -> Q.
-  Proof.
-    subst. auto.
   Qed.
 
   Lemma hsim_adequacy_aux:
