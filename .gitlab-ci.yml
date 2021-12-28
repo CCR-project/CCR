@@ -18,7 +18,7 @@ variables:
     paths:
     - _opam/
   only:
-  - main@iris/cccr
+  - master@iris/cccr
   - /^ci/@iris/cccr
   - /^time/@iris/cccr
   except:
