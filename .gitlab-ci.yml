@@ -18,7 +18,7 @@ variables:
     paths:
     - _opam/
   only:
-  - master@iris/cccr
+  - main@iris/cccr
   - /^ci/@iris/cccr
   - /^time/@iris/cccr
   except:
@@ -38,6 +38,6 @@ build-coq.8.13.2:
 build-coq.8.14.1:
   <<: *template
   variables:
-    OPAM_PINS: "coq version 8.13.2"
+    OPAM_PINS: "coq version 8.14.1"
   tags:
   - fp-timing
