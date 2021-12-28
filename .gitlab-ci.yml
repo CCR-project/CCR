@@ -1,0 +1,43 @@
+image: ralfjung/opam-ci:opam2
+
+stages:
+  - build
+
+variables:
+  CPU_CORES: "10"
+
+.template: &template
+  stage: build
+  tags:
+  - fp
+  script:
+  - git clone https://gitlab.mpi-sws.org/iris/ci.git ci -b opam2
+  - ci/buildjob
+  cache:
+    key: "$CI_JOB_NAME"
+    paths:
+    - _opam/
+  only:
+  - master@iris/cccr
+  - /^ci/@iris/cccr
+  - /^time/@iris/cccr
+  except:
+  - triggers
+  - schedules
+  - api
+
+## Build jobs
+
+build-coq.8.13.2:
+  <<: *template
+  variables:
+    OPAM_PINS: "coq version 8.13.2"
+  tags:
+  - fp-timing
+
+build-coq.8.14.1:
+  <<: *template
+  variables:
+    OPAM_PINS: "coq version 8.13.2"
+  tags:
+  - fp-timing
