@@ -33,14 +33,14 @@ build-coq.8.13.2:
   variables:
     OPAM_PINS: "coq version 8.13.2"
   tags:
-  - fp-timing
+  - fp
 
 build-coq.8.14.1:
   <<: *template
   variables:
     OPAM_PINS: "coq version 8.14.1"
   tags:
-  - fp-timing
+  - fp
 
 trigger-iris.dev:
   <<: *template
