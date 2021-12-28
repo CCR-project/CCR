@@ -48,3 +48,6 @@ main.d.byte
 !/imp/compiler_extract/bin/*.c
 
 /.vscode
+
+builddep
+_opam

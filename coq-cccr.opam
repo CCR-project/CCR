@@ -17,5 +17,5 @@ depends: [
   "ocamlbuild" { (>= "0.14.0") }
 ]
 
-build: []
-install: []
+build: [make "-j%{jobs}%"]
+install: [make "install"]
