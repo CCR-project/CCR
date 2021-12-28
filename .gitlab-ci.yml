@@ -18,9 +18,9 @@ variables:
     paths:
     - _opam/
   only:
-  - master@iris/cccr
-  - /^ci/@iris/cccr
-  - /^time/@iris/cccr
+  - master@youngju/cccr
+  - /^ci/@youngju/cccr
+  - /^time/@youngju/cccr
   except:
   - triggers
   - schedules
