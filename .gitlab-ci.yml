@@ -38,16 +38,6 @@ build-coq.8.13.2:
 build-coq.8.14.1:
   <<: *template
   variables:
-    OPAM_PINS: "coq version 8.14.1"
+    OPAM_PINS: "coq version 8.14.1     coq-compcert version 3.9"
   tags:
   - fp
-
-trigger-iris.dev:
-  <<: *template
-  variables:
-    OPAM_PINS: "coq version 8.13.dev   coq-stdpp.dev git git+https://gitlab.mpi-sws.org/iris/stdpp.git#$STDPP_REV   coq-iris.dev git git+https://gitlab.mpi-sws.org/iris/iris.git#$IRIS_REV"
-  except:
-  only:
-  - triggers
-  - schedules
-  - api
