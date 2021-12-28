@@ -41,3 +41,13 @@ build-coq.8.14.1:
     OPAM_PINS: "coq version 8.14.1"
   tags:
   - fp-timing
+
+trigger-iris.dev:
+  <<: *template
+  variables:
+    OPAM_PINS: "coq version 8.13.dev   coq-stdpp.dev git git+https://gitlab.mpi-sws.org/iris/stdpp.git#$STDPP_REV   coq-iris.dev git git+https://gitlab.mpi-sws.org/iris/iris.git#$IRIS_REV"
+  except:
+  only:
+  - triggers
+  - schedules
+  - api
