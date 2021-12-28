@@ -28,13 +28,6 @@ variables:
 
 ## Build jobs
 
-build-coq.8.13.2:
-  <<: *template
-  variables:
-    OPAM_PINS: "coq version 8.13.2     coq-compcert version 3.8"
-  tags:
-  - fp
-
 build-coq.8.14.1:
   <<: *template
   variables:
