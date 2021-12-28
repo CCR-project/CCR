@@ -31,7 +31,7 @@ variables:
 build-coq.8.13.2:
   <<: *template
   variables:
-    OPAM_PINS: "coq version 8.13.2"
+    OPAM_PINS: "coq version 8.13.2     coq-compcert version 3.8"
   tags:
   - fp
 
