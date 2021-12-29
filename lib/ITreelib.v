@@ -102,15 +102,6 @@ Ltac fold_eutt :=
          end
 .
 
-Lemma bind_ret_map {E R1 R2} (u : itree E R1) (f : R1 -> R2) :
-  (r <- u ;; Ret (f r)) = f <$> u.
-Proof.
-  f.
-  rewrite <- (bind_ret_r u) at 2. apply eqit_bind.
-  - hnf. intros. apply eqit_Ret. auto.
-  - rewrite bind_ret_r. reflexivity.
-Qed.
-
 Lemma map_vis {E R1 R2 X} (e: E X) (k: X -> itree E R1) (f: R1 -> R2) :
   (* (f <$> (Vis e k)) ≅ Vis e (fun x => f <$> (k x)). *)
   ITree.map f (Vis e k) = Vis e (fun x => f <$> (k x)).
@@ -168,9 +159,14 @@ Lemma bind_bind : forall (E : Type -> Type) (R S T : Type) (s : itree E R) (k : 
     ` x : _ <- (` x : _ <- s;; k x);; h x = ` r : R <- s;; ` x : _ <- k r;; h x.
 Proof. i. f. eapply bind_bind. Qed.
 
-Lemma unfold_bind :
-forall (E : Type -> Type) (R S : Type) (t : itree E R) (k : R -> itree E S),
-` x : _ <- t;; k x = ITree._bind k (fun t0 : itree E R => ` x : _ <- t0;; k x) (observe t).
+Lemma unfold_bind:
+forall {E : Type -> Type} {R S : Type} (t : itree E R) (k : R -> itree E S),
+` x : _ <- t;; k x
+= match observe t with
+  | RetF r => k r
+  | TauF t0 => tau;; ` x : _ <- t0;; k x
+  | @VisF _ _ _ X e ke => Vis e (fun x : X => ` x : _ <- ke x;; k x)
+  end.
 Proof. i. f. apply unfold_bind. Qed.
 
 Lemma interp_mrec_bind:
@@ -307,6 +303,9 @@ Lemma interp_interp:
     interp g (interp f t) = interp (fun (T : Type) (e : (fun H : Type => E H) T) => interp g (f T e)) t.
 Proof. i. f. apply interp_interp. Qed.
 
+Lemma subst_bind: forall E T U (k: T -> itree E U) i, ITree.subst k i = ITree.bind i k.
+Proof. i. refl. Qed.
+
 Ltac iby3 TAC :=
   first [
       instantiate (1:= fun _ _ _ => _); TAC|
@@ -333,7 +332,8 @@ Ltac iby1 TAC :=
 
 (* Ltac grind :=  f; repeat (f_equiv; ii; des_ifs_safe); f. *)
 
-Ltac ired := repeat (try rewrite bind_bind; try rewrite bind_ret_l; try rewrite bind_ret_r; try rewrite bind_tau;
+Ltac ired := repeat (try rewrite subst_bind;
+                     try rewrite bind_bind; try rewrite bind_ret_l; try rewrite bind_ret_r; try rewrite bind_tau;
                      (* try rewrite interp_vis; *)
                      try rewrite interp_ret;
                      try rewrite interp_tau;
@@ -538,55 +538,6 @@ Lemma idK_spec E R (i0: itree E R): i0 = i0 >>= idK. Proof. unfold idK. irw. ref
 
 
 
-Lemma interp_state_resum_l
-      (E0 E1 F : Type -> Type) (A S: Type)
-      (f0: forall T, E0 T -> S -> itree F (S * T))
-      (f1: forall T, E1 T -> S -> itree F (S * T))
-      (t: itree E0 A)
-      (s: S)
-  :
-    interp_state (case_ f0 f1) (resum_itr t) s = interp_state (fun T e s0 => '(s1, t) <- f0 T e s0;; tau;; Ret (s1, t)) t s
-.
-Proof.
-  f. revert t s. ginit. gcofix CIH. i.
-  unfold resum_itr.
-  rewrite 2 unfold_interp_state.
-  ides t.
-  - cbn. gstep. econs; et.
-  - cbn. gstep. econs; eauto with paco.
-  - cbn. ired.
-    unfold resum, ReSum_id, id_, Id_IFun.
-    guclo eqit_clo_bind.
-    apply pbc_intro_h with (RU := eq).
-    + refl.
-    + intros ? _ []. ired. des_ifs. ss. clarify.
-      ired. cbn. gstep. econs; eauto with paco. gstep. econs; eauto with paco.
-Qed.
-
-Lemma interp_state_resum_r
-      (E0 E1 F : Type -> Type) (A S: Type)
-      (f0: forall T, E0 T -> S -> itree F (S * T))
-      (f1: forall T, E1 T -> S -> itree F (S * T))
-      (t: itree E1 A)
-      (s: S)
-  :
-    interp_state (case_ f0 f1) (resum_itr t) s = interp_state (fun T e s0 => '(s1, t) <- f1 T e s0;; tau;; Ret (s1, t)) t s
-.
-Proof.
-  f. revert t s. ginit. gcofix CIH. i.
-  unfold resum_itr.
-  rewrite 2 unfold_interp_state.
-  ides t.
-  - cbn. gstep. econs; et.
-  - cbn. gstep. econs; eauto with paco.
-  - cbn. ired.
-    unfold resum, ReSum_id, id_, Id_IFun.
-    guclo eqit_clo_bind.
-    apply pbc_intro_h with (RU := eq).
-    + refl.
-    + intros ? _ []. ired. des_ifs. ss. clarify.
-      ired. cbn. gstep. econs; eauto with paco. gstep. econs; eauto with paco.
-Qed.
 
 
 (* (* Notation Checking *) *)

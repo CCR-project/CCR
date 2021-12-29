@@ -11,6 +11,8 @@ Require Import ModSem.
 
 Set Implicit Arguments.
 
+Local Open Scope nat_scope.
+
 Notation mblock := nat (only parsing).
 Notation ptrofs := Z (only parsing).
 

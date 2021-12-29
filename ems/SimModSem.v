@@ -1063,11 +1063,11 @@ Section ADEQUACY.
     Hypothesis fnsems_find_iff:
       forall fn,
         (<<NONE: alist_find fn ms_src.(ModSemL.fnsems) = None>>) \/
-        (exists mn' f,
+        (exists mn' (f: _ -> itree _ _),
             (<<MN: mn <> mn'>>) /\
             (<<SRC: alist_find fn ms_src.(ModSemL.fnsems) = Some (transl_all mn' (T:=Any.t) ∘ f)>>) /\
             (<<TGT: alist_find fn ms_tgt.(ModSemL.fnsems) = Some (transl_all mn' (T:=Any.t) ∘ f)>>)) \/
-        (exists f_src f_tgt,
+        (exists (f_src f_tgt: _ -> itree _ _),
             (<<SRC: alist_find fn ms_src.(ModSemL.fnsems) = Some (transl_all mn (T:=Any.t) ∘ f_src)>>) /\
             (<<TGT: alist_find fn ms_tgt.(ModSemL.fnsems) = Some (transl_all mn (T:=Any.t) ∘ f_tgt)>>) /\
             (<<SIM: sim_fsem wf le f_src f_tgt>>)).
@@ -1318,7 +1318,7 @@ Section ADEQUACY.
         rewrite <- fold_right_app_flat_map in Heq. ss.
         eapply in_flat_map in Heq. des.
         eapply in_map_iff in Heq0. des. destruct x1. ss. clarify.
-        right. left. esplits; et.
+        right. left. esplits; ss; et.
         instantiate (1:=ModSem.mn (Mod.get_modsem md_src (Sk.sort sk_tgt))).
         ii. eapply NoDup_app_disjoint.
         { rewrite List.map_app in MNWF. eapply MNWF. }
@@ -1330,8 +1330,8 @@ Section ADEQUACY.
       { rewrite ! alist_find_map_snd. uo. des_ifs_safe ltac:(auto).
         eapply alist_find_some in Heq0. right. right.
         eapply Forall2_In_l in sim_fnsems; et. des. inv sim_fnsems0.
-        destruct b. esplits; et. erewrite alist_find_some_iff; et.
-        { rewrite sim_mn. et. }
+        destruct b. esplits; ss; et. erewrite alist_find_some_iff; et.
+        { rewrite sim_mn. ss; et. }
         { inv WFTGT. inv H1. ss. rewrite List.map_app in wf_fnsems.
           apply nodup_app_r in wf_fnsems.
           rewrite List.map_map in wf_fnsems. ss. fold sk_tgt in wf_fnsems.

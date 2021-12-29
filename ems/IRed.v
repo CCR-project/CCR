@@ -157,9 +157,9 @@ Proof. i. grind. Qed.
 
 Ltac _red_itree f :=
   lazymatch goal with
-  | [ |- ITree.bind' ?ktr ?itr = _] =>
+  | [ |- ?itr >>= ?ktr = _] =>
     lazymatch itr with
-    | ITree.bind' _ _ =>
+    | _ >>= _ =>
       instantiate (f:=_continue); apply bind_bind; fail
     | Tau _ =>
       instantiate (f:=_break); apply bind_tau; fail
@@ -199,7 +199,7 @@ Ltac __red_interp f term :=
   let nth := (eval simpl in _nth) in
   let itr := get_nth term nth in
   lazymatch itr with
-  | ITree.bind' ?k0 ?i0 =>
+  | ?i0 >>= ?k0 =>
     (* idtac "bind"; *)
     instantiate (f:=_continue); pose (rdb_bind tc) as name; cbn in name;
     (*** Note: Why not just "apply lemma"? Because of Coq bug. (Anomaly) ***)
@@ -250,7 +250,7 @@ end
 Ltac _red_interp f :=
   (* idtac "_red_interp"; *)
   lazymatch goal with
-  | [ |- ITree.bind' _ ?term = _ ] =>
+  | [ |- ?term >>= _ = _ ] =>
     (* idtac "_red_interp_bind"; *)
     apply bind_ext; __red_interp f term
   | [ |- ?term = _] =>

@@ -880,11 +880,11 @@ Lemma firstn_S
       (le (Datatypes.length l) n /\ firstn (n + 1) l = firstn n l)
     \/ (lt n (Datatypes.length l) /\ exists x, firstn (n + 1) l = (firstn n l) ++ [x]).
 Proof.
-  ginduction l; i; try by (left; do 2 rewrite firstn_nil; split; ss; omega). destruct n.
-  { right. ss. split; try omega. eauto. }
+  ginduction l; i; try by (left; do 2 rewrite firstn_nil; split; ss; lia). destruct n.
+  { right. ss. split; try lia. eauto. }
   specialize (IHl n). ss. des.
-  - left. split; try omega. rewrite IHl0. ss.
-  - right. split; try omega. rewrite IHl0. eauto.
+  - left. split; try lia. rewrite IHl0. ss.
+  - right. split; try lia. rewrite IHl0. eauto.
 Qed.
 
 Lemma map_firstn
@@ -932,12 +932,12 @@ Proof.
   - destruct idx; ss.
   - exists 0%nat. rewrite Nat.add_0_r. esplits; eauto.
   - exploit IHla; eauto. intros [T _]. exploit T; eauto. i; des. esplits; eauto.
-    { rp; eauto. f_equal. instantiate (1:= (S idx%nat)). omega. }
+    { rp; eauto. f_equal. instantiate (1:= (S idx%nat)). lia. }
     ss.
   - destruct idx; ss; clarify.
-    { left. f_equal. omega. }
+    { left. f_equal. lia. }
     right. eapply IHla; eauto. esplits; eauto.
-    { rp; eauto. f_equal. omega. }
+    { rp; eauto. f_equal. lia. }
 Qed.
 
 (* NOTE: If you give name << >>, rewrite tactic does not work... *)

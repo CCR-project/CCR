@@ -829,9 +829,9 @@ End SMod.
 
   Ltac _red_itree f :=
     match goal with
-    | [ |- ITree.bind' _ ?itr = _] =>
+    | [ |- ?itr >>= _ = _] =>
       match itr with
-      | ITree.bind' _ _ =>
+      | _ >>= _ =>
         instantiate (f:=_continue); apply bind_bind; fail
       | Tau _ =>
         instantiate (f:=_break); apply bind_tau; fail

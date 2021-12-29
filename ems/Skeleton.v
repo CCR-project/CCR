@@ -6,6 +6,8 @@ Require Export AList.
 
 Set Implicit Arguments.
 
+Local Open Scope nat_scope.
+
 Notation gname := string (only parsing). (*** convention: not capitalized ***)
 Notation mname := string (only parsing). (*** convention: capitalized ***)
 
