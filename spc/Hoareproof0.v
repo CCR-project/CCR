@@ -16,6 +16,7 @@ Require Import Red IRed.
 
 Set Implicit Arguments.
 
+Local Open Scope nat.
 
 
 

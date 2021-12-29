@@ -17,6 +17,8 @@ Require Import SimGlobal.
 Require Import HoareDef.
 Require Import List.
 
+Local Open Scope nat.
+
 Set Implicit Arguments.
 
 
