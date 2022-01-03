@@ -25,7 +25,6 @@ Ltac ired_both := ired_l; ired_r.
 
 
 
-(* "safe" simulation constructors *)
 Section SIM.
   Context `{Σ: GRA.t}.
   Variable world: Type.
@@ -35,6 +34,19 @@ Section SIM.
   Variable mn: mname.
   Variable stb: gname -> option fspec.
   Variable o: ord.
+
+  Variant fn_has_spec (fn: gname)
+          (pre: Any.t -> Any.t -> iProp)
+          (post: Any.t -> Any.t -> iProp)
+          (tbr: bool): Prop :=
+  | fn_has_spec_intro
+      fsp (x: fsp.(meta))
+      (STB: stb fn = Some fsp)
+      (MEASURE: ord_lt (fsp.(measure) x) o)
+      (PRE: forall arg_src arg_tgt, bi_entails (pre arg_src arg_tgt) (#=> fsp.(precond) (Some mn) x arg_src arg_tgt))
+      (POST: forall ret_src ret_tgt, bi_entails (fsp.(postcond) (Some mn) x ret_src ret_tgt: iProp) (#=> post ret_src ret_tgt))
+      (TBR: tbr = is_pure (fsp.(measure) x))
+  .
 
   Definition option_Ord_lt (o0 o1: option Ord.t): Prop :=
     match o0, o1 with
@@ -712,135 +724,6 @@ Section SIM.
   Proof.
     i. hexploit hsim_adequacy_aux; eauto.
   Qed.
-
-  (* Definition mylift_pure (fuel: option Ord.t) (mn_caller: option mname) X (x: X) *)
-  (*            ctx *)
-  (*            (Q: option mname -> X -> Any.t -> Any.t -> iProp)  *)
-  (*   : itree Es Any.t := *)
-  (*   match fuel with *)
-  (*   | None => *)
-  (*     (interp_hCallE_tgt mn stb o (trigger (Choose _)) ctx) >>= (HoareFunRet Q mn_caller x)      *)
-  (*   | Some fuel => *)
-  (*     (interp_hCallE_tgt mn stb o (_ <- (_APC fuel);; trigger (Choose _)) ctx) >>= (HoareFunRet Q mn_caller x) *)
-  (*   end. *)
-
-  (* Lemma hsim_adequacy_aux_pure: *)
-  (*   forall *)
-  (*     f_src f_tgt st_src st_tgt itr_tgt mr_src ctx X (x: X) Q mn_caller fuel w0 *)
-  (*     (SIM: hsim (fun st_src st_tgt ret_src ret_tgt => *)
-  (*                   (∃ w1, ⌜le w0 w1⌝ ** I w1 st_src st_tgt) ** (Q mn_caller x ret_src ret_tgt: iProp)) ctx fuel f_src f_tgt (st_src, trigger (Choose _)) (st_tgt, itr_tgt)), *)
-  (*     paco8 (_sim_itree (mk_wf I) le) bot8 Any.t Any.t (lift_rel (mk_wf I) le w0 (@eq Any.t)) *)
-  (*           f_src f_tgt w0 *)
-  (*           (Any.pair st_src mr_src, *)
-  (*            mylift_pure fuel mn_caller x ctx Q) *)
-  (*           (st_tgt, itr_tgt). *)
-  (* Proof. *)
-  (*   ginit. gcofix CIH. i. *)
-  (*   remember (st_src, itr_src). remember (st_tgt, itr_tgt). *)
-  (*   revert st_src st_tgt itr_src itr_tgt Heqp Heqp0 CIH. *)
-  (*   induction SIM using hsim_ind; i; clarify. *)
-  (*   { eapply current_iPropL_convert in RET. mDesAll. destruct fuel; steps. *)
-  (*     { astop. steps. hret _; eauto. iModIntro. iSplitL "A1"; auto. } *)
-  (*     { hret _; eauto. iModIntro. iSplitL "A1"; auto. } *)
-  (*   } *)
-  (*   { eapply current_iPropL_convert in PRE. mDesAll. destruct fuel; steps. *)
-  (*     { astop. steps. rewrite SPEC. steps. destruct fsp. ss. hcall _ _ with "A A1". *)
-  (*       { iModIntro. iSplitL "A1"; eauto. iApply "A". } *)
-  (*       { rewrite MEASURE in *. splits; ss. unfold ord_lt. des_ifs. } *)
-  (*       { steps. gbase. hexploit CIH. *)
-  (*         { eapply POST. eapply current_iProp_entail; [eauto|]. *)
-  (*           start_ipm_proof. iSplitR "POST". *)
-  (*           { iSplitL "H"; eauto. } *)
-  (*           { iApply "POST". } *)
-  (*         } *)
-  (*         i. ss. eauto. *)
-  (*       } *)
-  (*     } *)
-  (*     { rewrite SPEC. steps. destruct fsp. ss. hcall _ _ with "A A1". *)
-  (*       { iModIntro. iSplitL "A1"; eauto. iApply "A". } *)
-  (*       { rewrite MEASURE in *. splits; ss. unfold ord_lt. des_ifs. } *)
-  (*       { steps. gbase. hexploit CIH. *)
-  (*         { eapply POST. eapply current_iProp_entail; [eauto|]. *)
-  (*           start_ipm_proof. iSplitR "POST". *)
-  (*           { iSplitL "H"; eauto. } *)
-  (*           { iApply "POST". } *)
-  (*         } *)
-  (*         i. ss. eauto. *)
-  (*       } *)
-  (*     } *)
-  (*   } *)
-  (*   { destruct fuel; steps. *)
-  (*     { astop. steps. exploit IHSIM; eauto. i. destruct fuel1; ss. *)
-  (*       { astart t0. *)
-  (*         match goal with *)
-  (*         | x0: ?P1 (_, ?itr0) _ |- ?P0 (_, ?itr1) _ => *)
-  (*           replace itr1 with itr0 *)
-  (*         end; auto. *)
-  (*         grind. destruct x1, x2. destruct u, u0. grind. *)
-  (*       } *)
-  (*       { astop. steps. } *)
-  (*     } *)
-  (*     { exploit IHSIM; eauto. i. destruct fuel1; ss. *)
-  (*       { astart t. *)
-  (*         match goal with *)
-  (*         | x0: ?P1 (_, ?itr0) _ |- ?P0 (_, ?itr1) _ => *)
-  (*           replace itr1 with itr0 *)
-  (*         end; auto. *)
-  (*         grind. destruct x1, x2. destruct u, u0. grind. *)
-  (*       } *)
-  (*       { astop. steps. } *)
-  (*     } *)
-  (*   } *)
-  (*   { des. steps. rewrite unfold_APC. steps. *)
-  (*     force_l. exists false. steps. *)
-  (*     force_l. exists fuel1. steps. *)
-  (*     force_l; [eauto|..]. steps. *)
-  (*     force_l. exists (fn, arg_src). steps. *)
-  (*     rewrite SPEC. steps. *)
-  (*     eapply current_iPropL_convert in PRE. mDesAll. *)
-  (*     destruct fsp. ss. hcall _ _ with "A A1". *)
-  (*     { iModIntro. iSplitL "A1"; eauto. iApply "A". } *)
-  (*     { splits; ss. } *)
-  (*     { steps. gbase. hexploit CIH. *)
-  (*       { eapply SIM. eapply current_iProp_entail; [eauto|]. *)
-  (*         start_ipm_proof. iSplitR "POST". *)
-  (*         { iSplitL "H"; eauto. } *)
-  (*         { iApply "POST". } *)
-  (*       } *)
-  (*       i. ss. eauto. *)
-  (*     } *)
-  (*   } *)
-  (*   { destruct fuel; steps. *)
-  (*     { astop. steps. gbase. hexploit CIH; eauto. } *)
-  (*     { gbase. hexploit CIH; eauto. } *)
-  (*   } *)
-  (*   { destruct fuel; steps. *)
-  (*     { astop. steps. exploit IHSIM; eauto. } *)
-  (*     { exploit IHSIM; eauto. } *)
-  (*   } *)
-  (*   { steps. exploit IHSIM; eauto. } *)
-  (*   { des. exploit IH; eauto. i. destruct fuel; steps. *)
-  (*     { astop. steps. force_l. eexists. steps. eauto. } *)
-  (*     { force_l. eexists. steps. eauto. } *)
-  (*   } *)
-  (*   { steps. exploit SIM; eauto. i. des. eauto. } *)
-  (*   { destruct fuel; steps. *)
-  (*     { astop. steps. exploit SIM; eauto. i. des. eauto. } *)
-  (*     { exploit SIM; eauto. i. des. eauto. } *)
-  (*   } *)
-  (*   { des. exploit IH; eauto. i. force_r. eexists. eauto. } *)
-  (*   { destruct fuel; steps. *)
-  (*     { astop. steps. exploit IHSIM; eauto. } *)
-  (*     { exploit IHSIM; eauto. } *)
-  (*   } *)
-  (*   { steps. exploit IHSIM; eauto. } *)
-  (*   { destruct fuel; steps. *)
-  (*     { astop. steps. exploit IHSIM; eauto. } *)
-  (*     { exploit IHSIM; eauto. } *)
-  (*   } *)
-  (*   { steps. exploit IHSIM; eauto. } *)
-  (*   { deflag. gbase. eapply CIH; eauto. } *)
-  (* Qed. *)
 
   Lemma hsim_progress_flag R_src R_tgt r g Q ctx fuel st_src st_tgt
         (SIM: gpaco9 _hsim (cpn9 _hsim) g g R_src R_tgt Q ctx fuel false false st_src st_tgt)
@@ -1645,16 +1528,14 @@ Section SIM.
   Lemma back_call_impure
         (Q: Any.t -> Any.t -> Any.t -> Any.t -> iProp)
         r g fuel f_src f_tgt st_src st_tgt fn arg_src arg_tgt
-        fsp x w0
-        (SPEC: stb fn = Some fsp)
-        (MEASURE: o = ord_top)
-        (NPURE: fsp.(measure) x = ord_top)
+        w0 pre post
+        (SPEC: fn_has_spec fn pre post false)
     :
       bi_entails
-        ((#=> ((fsp.(precond) (Some mn) x arg_src arg_tgt: iProp) ** I w0 st_src st_tgt))
+        ((#=> ((pre arg_src arg_tgt: iProp) ** I w0 st_src st_tgt))
            **
            (∀ st_src st_tgt ret_src ret_tgt,
-               ((∃ w1, I w1 st_src st_tgt ** ⌜le w0 w1⌝) ** (fsp.(postcond) (Some mn) x ret_src ret_tgt: iProp)) -* #=> Q st_src st_tgt ret_src ret_tgt))
+               ((∃ w1, I w1 st_src st_tgt ** ⌜le w0 w1⌝) ** (post ret_src ret_tgt: iProp)) -* #=> Q st_src st_tgt ret_src ret_tgt))
         (back r g Q fuel f_src f_tgt (st_src, trigger (Call fn arg_src)) (st_tgt, trigger (Call fn arg_tgt))).
   Proof.
     red. unfold Entails. autorewrite with iprop.
@@ -1666,22 +1547,82 @@ Section SIM.
     { econs; eauto. }
     apply current_iPropL_convert in CUR.
     mDesAll. mUpd "H". mDesSep "H".
-    ired_both. gstep. econs; eauto.
-    { eapply current_iProp_entail; [eapply CUR|]. start_ipm_proof.
-      iSplitR "H"; [|iExact "H"].
+    ired_both. gstep. inv SPEC. econs; eauto.
+    { mAssert _ with "H".
+      { iApply (PRE with "H"). }
+      mUpd "A2".
+      eapply current_iProp_entail; [eapply CUR|]. start_ipm_proof.
+      iSplitR "A2"; [|iExact "A2"].
       iSplitR "A1"; [|iExact "A1"].
       iExact "A".
     }
+    { destruct (measure fsp x), o; ss. }
+    { destruct (measure fsp x), o; ss. }
     i. apply current_iPropL_convert in ACC.
     mDesAll. mSpcUniv "H" with st_src1.
     mSpcUniv "H" with st_tgt1.
     mSpcUniv "H" with ret_src.
     mSpcUniv "H" with ret_tgt.
+    mAssert _ with "A".
+    { iApply (POST with "A"). }
+    mUpd "A2".
     mAssert (#=> Q st_src1 st_tgt1 ret_src ret_tgt) with "*".
-    { iApply "H". iSplitR "A"; [|iExact "A"].
+    { iApply "H". iSplitR "A2"; [|iExact "A2"].
       iExists w1. iSplit; ss.
     }
+    mUpd "A".
+    gstep. econs.
+    eapply current_iProp_entail; [eapply ACC|].
+    start_ipm_proof. auto.
+  Qed.
+
+  Lemma back_call_pure
+        (Q: Any.t -> Any.t -> unit -> Any.t -> iProp)
+        r g f_src f_tgt st_src st_tgt fn arg_src arg_tgt
+        w0 pre post
+        (SPEC: fn_has_spec fn pre post true)
+    :
+      bi_entails
+        ((#=> ((pre arg_src arg_tgt: iProp) ** I w0 st_src st_tgt))
+           **
+           (∀ st_src st_tgt ret_src ret_tgt,
+               ((∃ w1, I w1 st_src st_tgt ** ⌜le w0 w1⌝) ** (post ret_src ret_tgt: iProp)) -* #=> Q st_src st_tgt tt ret_tgt))
+        (back r g Q (Some (1: Ord.t)) f_src f_tgt (st_src, Ret tt) (st_tgt, trigger (Call fn arg_tgt))).
+  Proof.
+    red. unfold Entails. autorewrite with iprop.
+    unfold back in *. i.
+    match (type of H) with
+    | ?P _ =>
+      assert (CUR: current_iProp ctx P)
+    end.
+    { econs; eauto. }
+    apply current_iPropL_convert in CUR.
+    mDesAll. mUpd "H". mDesSep "H".
+    ired_both. gstep. inv SPEC. econs; eauto.
+    { mAssert _ with "H".
+      { iApply (PRE with "H"). }
+      mUpd "A2".
+      eapply current_iProp_entail; [eapply CUR|]. start_ipm_proof.
+      iSplitR "A2"; [|iExact "A2"].
+      iSplitR "A1"; [|iExact "A1"].
+      iExact "A".
+    }
+    { destruct (measure fsp x), o; ss. }
+    exists (Ord.O). splits.
+    { oauto2. }
+    i. apply current_iPropL_convert in ACC.
+    mDesAll. mSpcUniv "H" with st_src1.
+    mSpcUniv "H" with st_tgt1.
+    mSpcUniv "H" with ret_src.
+    mSpcUniv "H" with ret_tgt.
+    mAssert _ with "A".
+    { iApply (POST with "A"). }
     mUpd "A2".
+    mAssert (#=> Q st_src1 st_tgt1 tt ret_tgt) with "*".
+    { iApply "H". iSplitR "A2"; [|iExact "A2"].
+      iExists w1. iSplit; ss.
+    }
+    mUpd "A".
     gstep. econs.
     eapply current_iProp_entail; [eapply ACC|].
     start_ipm_proof. auto.
