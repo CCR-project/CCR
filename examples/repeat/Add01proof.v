@@ -63,7 +63,7 @@ Section SIMMODSEM.
     { unfold succF. init.
       2: { harg. mDesAll. des; clarify. steps. hret _; ss. }
       harg. mDesAll. des; clarify.
-      steps. astart 0. astop. force_l. eexists.
+      steps. astart 0. astop. steps. force_l. eexists.
       steps. hret _; ss.
     }
     econs; ss.

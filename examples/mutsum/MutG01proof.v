@@ -44,7 +44,7 @@ Section SIMMODSEM.
     force_r.
     { eapply mut_max_intrange. auto. } steps.
     destruct (dec (Z.of_nat x) 0%Z).
-    - destruct x; ss. astop. force_l. eexists. steps.
+    - destruct x; ss. astop. steps. force_l. eexists. steps.
       hret _; ss.
     - destruct x; [ss|]. rewrite Nat2Z.inj_succ. steps.
       acatch. hcall _ _ with "*"; auto.
@@ -53,7 +53,7 @@ Section SIMMODSEM.
         esplits; et. lia. }
       { splits; ss; eauto with ord_step. }
       i. mDesAll. des; clarify.
-      steps. astop.
+      steps. astop. steps.
       force_l. eexists. steps.
       hret _; ss. iPureIntro. esplits; ss.
       f_equal. f_equal. lia.
