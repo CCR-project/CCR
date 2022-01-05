@@ -62,9 +62,7 @@ Section SIMMODSEM.
       hred_r. hred_l. iApply back_choose_src. iExists _.
       iApply back_ret. iModIntro. iSplitL "INV"; eauto.
     - destruct x; [ss|]. rewrite Nat2Z.inj_succ. hred_r.
-      iApply back_bind_right_pure. iApply back_assume_tgt. iSplit.
-      { iPureIntro. rewrite <- Nat2Z.inj_succ. eapply mut_max_intrange_sub1. auto. }
-      hred_r. iApply back_apc. iExists (Some (10: Ord.t)).
+      iApply back_apc. iExists (Some (10: Ord.t)).
       iApply back_call_pure; [|oauto|..].
       { (* TODO: make lemmas *)
         econs; ss.
@@ -81,15 +79,8 @@ Section SIMMODSEM.
         { iPureIntro. lia. }
       }
       ss. iIntros (st_src st_tgt ret_src ret_tgt) "[H0 %]".
-      des; clarify. iModIntro. hred_r.
-      iApply back_bind_right_pure. iApply back_assume_tgt. iSplit.
-      { iPureIntro. eapply mut_max_sum_intrange. lia. }
-      hred_r. iApply back_bind_right_pure. iApply back_assume_tgt. iSplit.
-      { iPureIntro. replace (Z.succ x + sum x)%Z with ((sum (S x)): Z).
-        { eapply mut_max_sum_intrange. lia. }
-        { ss. lia. }
-      }
-      hred_r. hred_l. iApply back_choose_src. iExists _.
+      des; clarify. iModIntro. hred_r. hred_l.
+      iApply back_choose_src. iExists _.
       iApply back_ret. iModIntro. iSplitL "H0"; eauto. iSplits; eauto.
       iPureIntro. f_equal. f_equal. lia.
   Qed.
