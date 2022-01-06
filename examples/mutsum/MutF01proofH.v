@@ -46,18 +46,18 @@ Section SIMMODSEM.
     apply back_fun_to_tgt; auto. i; ss.
     iIntros "[INV %]". des. clarify.
     unfold fF, ccallU. ss. hred_r.
-    iApply back_bind_right_pure. iApply back_assume_tgt. iSplit.
+    iApply back_apc. iExists (Some (10: Ord.t)).
+    iApply back_assume_tgt. iSplit.
     { iPureIntro. eapply mut_max_intrange. auto. }
     destruct (dec (Z.of_nat x) 0%Z).
-    - destruct x; ss. iApply back_apc. iExists None.
-      hred_r. hred_l. iApply back_choose_src. iExists _.
+    - destruct x; ss. hred_r. iApply back_choose_src_trigger. iExists _.
       iApply back_ret. iSplitL "INV"; eauto.
     - destruct x; [ss|]. rewrite Nat2Z.inj_succ. hred_r.
-      iApply back_apc. iExists (Some (10: Ord.t)).
-      iApply back_call_pure; [|oauto|..].
+      iApply back_call_pure.
       { eapply fn_has_spec_in_stb; eauto.
         instantiate (1:=x). ss. eauto with ord_step.
       }
+      { oauto. }
       iSplitL "INV".
       { ss. iSplitR "INV"; eauto. iSplits; eauto.
         { iPureIntro.
@@ -67,8 +67,8 @@ Section SIMMODSEM.
         { iPureIntro. lia. }
       }
       ss. iIntros (st_src0 st_tgt0 ret_src ret_tgt) "[H0 %]".
-      des; clarify. hred_r. hred_l.
-      iApply back_choose_src. iExists _.
+      des; clarify. hred_r.
+      iApply back_choose_src_trigger. iExists _.
       iApply back_ret. iSplitL "H0"; eauto. iSplits; eauto.
       iPureIntro. f_equal. f_equal. lia.
   Qed.

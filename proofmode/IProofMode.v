@@ -19,6 +19,12 @@ Require Import HTactics HSim.
 Set Implicit Arguments.
 
 
+Require Import Red.
+Require Import IRed.
+
+Ltac hred_l := try (prw _red_gen 1 2 1 0).
+Ltac hred_r := try (prw _red_gen 1 1 1 0).
+
 Section SIM.
   Context `{Σ: GRA.t}.
   Variable world: Type.
@@ -497,20 +503,6 @@ Section SIM.
     iApply back_ret. iApply ("H1" with "H0 H2").
   Qed.
 
-  Lemma back_syscall
-        R_src R_tgt
-        (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
-        fn arg rvs
-        r g fuel f_src f_tgt st_src st_tgt ktr_src ktr_tgt
-    :
-      bi_entails
-        (∀ ret, back g g Q None true true (st_src, ktr_src ret) (st_tgt, ktr_tgt ret))
-        (back r g Q fuel f_src f_tgt (st_src, trigger (Syscall fn arg rvs) >>= ktr_src) (st_tgt, trigger (Syscall fn arg rvs) >>= ktr_tgt)).
-  Proof.
-    eapply back_final. i. eapply hsimC_uclo. econs; eauto.
-    i. inv CUR. red in IPROP. uipropall. eapply IPROP; eauto.
-  Qed.
-
   Global Instance iProp_back_absorbing
          R_src R_tgt r g (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
          fuel f_src f_tgt st_src st_tgt:
@@ -530,6 +522,20 @@ Section SIM.
     unfold ElimModal. i. iIntros "[H0 H1]".
     iApply back_upd. iMod "H0". iModIntro.
     iApply "H1". iApply "H0".
+  Qed.
+
+  Lemma back_syscall
+        R_src R_tgt
+        (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
+        fn arg rvs
+        r g fuel f_src f_tgt st_src st_tgt ktr_src ktr_tgt
+    :
+      bi_entails
+        (∀ ret, back g g Q None true true (st_src, ktr_src ret) (st_tgt, ktr_tgt ret))
+        (back r g Q fuel f_src f_tgt (st_src, trigger (Syscall fn arg rvs) >>= ktr_src) (st_tgt, trigger (Syscall fn arg rvs) >>= ktr_tgt)).
+  Proof.
+    eapply back_final. i. eapply hsimC_uclo. econs; eauto.
+    i. inv CUR. red in IPROP. uipropall. eapply IPROP; eauto.
   Qed.
 
   Lemma back_syscall_trigger
@@ -588,18 +594,17 @@ Section SIM.
   Qed.
 
   Lemma back_choose_src_trigger
-        X
-        (Q: Any.t -> Any.t -> X -> unit -> iProp)
-        r g fuel f_src f_tgt st_src st_tgt
+        X R_tgt
+        (Q: Any.t -> Any.t -> X -> R_tgt -> iProp)
+        r g fuel f_src f_tgt st_src st_tgt itr_tgt
     :
       bi_entails
-        (∃ x, Q st_src st_tgt x tt)
-        (back r g Q fuel f_src f_tgt (st_src, trigger (Choose X)) (st_tgt, Ret tt)).
+        (∃ x, back r g Q None true f_tgt (st_src, Ret x) (st_tgt, itr_tgt))
+        (back r g Q fuel f_src f_tgt (st_src, trigger (Choose X)) (st_tgt, itr_tgt)).
   Proof.
     erewrite (@idK_spec _ _ (trigger (Choose X))).
     iIntros "H". iApply back_choose_src.
-    iDestruct "H" as (x) "H". iExists x.
-    iApply back_ret. iApply "H".
+    iDestruct "H" as (x) "H". iExists x. auto.
   Qed.
 
   Lemma back_choose_tgt
@@ -616,17 +621,17 @@ Section SIM.
   Qed.
 
   Lemma back_choose_tgt_trigger
-        X
-        (Q: Any.t -> Any.t -> unit -> X -> iProp)
-        r g fuel f_src f_tgt st_src st_tgt
+        R_src X
+        (Q: Any.t -> Any.t -> R_src -> X -> iProp)
+        r g fuel f_src f_tgt st_src st_tgt itr_src
     :
       bi_entails
-        (∀ x, Q st_src st_tgt tt x)
-        (back r g Q fuel f_src f_tgt (st_src, Ret tt) (st_tgt, trigger (Choose X))).
+        (∀ x, back r g Q fuel f_src true (st_src, itr_src) (st_tgt, Ret x))
+        (back r g Q fuel f_src f_tgt (st_src, itr_src) (st_tgt, trigger (Choose X))).
   Proof.
     erewrite (@idK_spec _ _ (trigger (Choose X))).
     iIntros "H". iApply back_choose_tgt.
-    iIntros (x). iApply back_ret. iApply "H".
+    iIntros (x). iApply "H".
   Qed.
 
   Lemma back_take_src
@@ -643,17 +648,17 @@ Section SIM.
   Qed.
 
   Lemma back_take_src_trigger
-        X
-        (Q: Any.t -> Any.t -> X -> unit -> iProp)
-        r g fuel f_src f_tgt st_src st_tgt
+        X R_tgt
+        (Q: Any.t -> Any.t -> X -> R_tgt -> iProp)
+        r g fuel f_src f_tgt st_src st_tgt itr_tgt
     :
       bi_entails
-        (∀ x, Q st_src st_tgt x tt)
-        (back r g Q fuel f_src f_tgt (st_src, trigger (Take X)) (st_tgt, Ret tt)).
+        (∀ x, back r g Q None true f_tgt (st_src, Ret x) (st_tgt, itr_tgt))
+        (back r g Q fuel f_src f_tgt (st_src, trigger (Take X)) (st_tgt, itr_tgt)).
   Proof.
     erewrite (@idK_spec _ _ (trigger (Take X))).
     iIntros "H". iApply back_take_src.
-    iIntros (x). iApply back_ret. iApply "H".
+    iIntros (x). iApply "H".
   Qed.
 
   Lemma back_take_tgt
@@ -670,18 +675,17 @@ Section SIM.
   Qed.
 
   Lemma back_take_tgt_trigger
-        X
-        (Q: Any.t -> Any.t -> unit -> X -> iProp)
-        r g fuel f_src f_tgt st_src st_tgt
+        R_src X
+        (Q: Any.t -> Any.t -> R_src -> X -> iProp)
+        r g fuel f_src f_tgt st_src st_tgt itr_src
     :
       bi_entails
-        (∃ x, Q st_src st_tgt tt x)
-        (back r g Q fuel f_src f_tgt (st_src, Ret tt) (st_tgt, trigger (Take X))).
+        (∃ x, back r g Q fuel f_src true (st_src, itr_src) (st_tgt, Ret x))
+        (back r g Q fuel f_src f_tgt (st_src, itr_src) (st_tgt, trigger (Take X))).
   Proof.
     erewrite (@idK_spec _ _ (trigger (Take X))).
     iIntros "H". iApply back_take_tgt.
-    iDestruct "H" as (x) "H". iExists x.
-    iApply back_ret. iApply "H".
+    iDestruct "H" as (x) "H". iExists x. iApply "H".
   Qed.
 
   Lemma back_pput_src
@@ -698,16 +702,16 @@ Section SIM.
   Qed.
 
   Lemma back_pput_src_trigger
-        (Q: Any.t -> Any.t -> unit -> unit -> iProp)
-        r g fuel f_src f_tgt st_src0 st_src1 st_tgt
+        R_tgt
+        (Q: Any.t -> Any.t -> unit -> R_tgt -> iProp)
+        r g fuel f_src f_tgt st_src0 st_src1 st_tgt itr_tgt
     :
       bi_entails
-        (Q st_src1 st_tgt tt tt)
-        (back r g Q fuel f_src f_tgt (st_src0, trigger (PPut st_src1)) (st_tgt, Ret tt)).
+        (back r g Q None true f_tgt (st_src1, Ret tt) (st_tgt, itr_tgt))
+        (back r g Q fuel f_src f_tgt (st_src0, trigger (PPut st_src1)) (st_tgt, itr_tgt)).
   Proof.
     erewrite (@idK_spec _ _ (trigger (PPut st_src1))).
-    iIntros "H". iApply back_pput_src.
-    iApply back_ret. iApply "H".
+    iIntros "H". iApply back_pput_src. iApply "H".
   Qed.
 
   Lemma back_pget_src
@@ -724,16 +728,16 @@ Section SIM.
   Qed.
 
   Lemma back_get_src_trigger
-        (Q: Any.t -> Any.t -> Any.t -> unit -> iProp)
-        r g fuel f_src f_tgt st_src st_tgt
+        R_tgt
+        (Q: Any.t -> Any.t -> Any.t -> R_tgt -> iProp)
+        r g fuel f_src f_tgt st_src st_tgt itr_tgt
     :
       bi_entails
-        (Q st_src st_tgt st_src tt)
-        (back r g Q fuel f_src f_tgt (st_src, trigger (PGet)) (st_tgt, Ret tt)).
+        (back r g Q None true f_tgt (st_src, Ret st_src) (st_tgt, itr_tgt))
+        (back r g Q fuel f_src f_tgt (st_src, trigger (PGet)) (st_tgt, itr_tgt)).
   Proof.
     erewrite (@idK_spec _ _ (trigger (PGet))).
-    iIntros "H". iApply back_pget_src.
-    iApply back_ret. iApply "H".
+    iIntros "H". iApply back_pget_src. iApply "H".
   Qed.
 
   Lemma back_pput_tgt
@@ -750,16 +754,16 @@ Section SIM.
   Qed.
 
   Lemma back_pput_tgt_trigger
-        (Q: Any.t -> Any.t -> unit -> unit -> iProp)
-        r g fuel f_src f_tgt st_src st_tgt0 st_tgt1
+        R_src
+        (Q: Any.t -> Any.t -> R_src -> unit -> iProp)
+        r g fuel f_src f_tgt st_src st_tgt0 st_tgt1 itr_src
     :
       bi_entails
-        (Q st_src st_tgt1 tt tt)
-        (back r g Q fuel f_src f_tgt (st_src, Ret tt) (st_tgt0, trigger (PPut st_tgt1))).
+        (back r g Q fuel f_src true (st_src, itr_src) (st_tgt1, Ret tt))
+        (back r g Q fuel f_src f_tgt (st_src, itr_src) (st_tgt0, trigger (PPut st_tgt1))).
   Proof.
     erewrite (@idK_spec _ _ (trigger (PPut st_tgt1))).
-    iIntros "H". iApply back_pput_tgt.
-    iApply back_ret. iApply "H".
+    iIntros "H". iApply back_pput_tgt. iApply "H".
   Qed.
 
   Lemma back_pget_tgt
@@ -776,71 +780,153 @@ Section SIM.
   Qed.
 
   Lemma back_pget_tgt_trigger
-        (Q: Any.t -> Any.t -> unit -> Any.t -> iProp)
-        r g fuel f_src f_tgt st_src st_tgt
+        R_src
+        (Q: Any.t -> Any.t -> R_src -> Any.t -> iProp)
+        r g fuel f_src f_tgt st_src st_tgt itr_src
     :
       bi_entails
-        (Q st_src st_tgt tt st_tgt)
-        (back r g Q fuel f_src f_tgt (st_src, Ret tt) (st_tgt, trigger (PGet))).
+        (back r g Q fuel f_src true (st_src, itr_src) (st_tgt, Ret st_tgt))
+        (back r g Q fuel f_src f_tgt (st_src, itr_src) (st_tgt, trigger (PGet))).
   Proof.
     erewrite (@idK_spec _ _ (trigger (PGet))).
-    iIntros "H". iApply back_pget_tgt.
-    iApply back_ret. iApply "H".
+    iIntros "H". iApply back_pget_tgt. iApply "H".
   Qed.
 
   Lemma back_assume_src
-        (Q: Any.t -> Any.t -> unit -> unit -> iProp)
-        r g fuel f_src f_tgt st_src st_tgt P
+        R_src R_tgt
+        (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
+        r g fuel f_src f_tgt st_src st_tgt P k_src i_tgt
     :
       bi_entails
-        (⌜P⌝ -* Q st_src st_tgt tt tt)
-        (back r g Q fuel f_src f_tgt (st_src, assume P) (st_tgt, Ret tt)).
+        (⌜P⌝ -* back r g Q None true f_tgt (st_src, k_src tt) (st_tgt, i_tgt))
+        (back r g Q fuel f_src f_tgt (st_src, assume P >>= k_src) (st_tgt, i_tgt)).
   Proof.
-    iIntros "H". unfold assume.
-    iApply back_bind_left. iApply back_take_src_trigger.
-    iIntros (H). iApply back_ret. iApply "H". iPureIntro. auto.
+    iIntros "H". unfold assume. hred_l.
+    iApply back_take_src. iIntros (H). hred_l. iApply "H". iPureIntro. auto.
+  Qed.
+
+  Lemma back_assume_src_trigger
+        R_tgt
+        (Q: Any.t -> Any.t -> unit -> R_tgt -> iProp)
+        r g fuel f_src f_tgt st_src st_tgt P itr_tgt
+    :
+      bi_entails
+        (⌜P⌝ -* back r g Q None true f_tgt (st_src, Ret tt) (st_tgt, itr_tgt))
+        (back r g Q fuel f_src f_tgt (st_src, assume P) (st_tgt, itr_tgt)).
+  Proof.
+    erewrite (@idK_spec _ _ (assume P)).
+    iIntros "H". iApply back_assume_src.
+    iIntros "H0". iApply "H". auto.
   Qed.
 
   Lemma back_assume_tgt
-        (Q: Any.t -> Any.t -> unit -> unit -> iProp)
-        r g fuel f_src f_tgt st_src st_tgt P
+        R_src R_tgt
+        (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
+        r g fuel f_src f_tgt st_src st_tgt P itr_src ktr_tgt
     :
       bi_entails
-        (⌜P⌝ ∧ Q st_src st_tgt tt tt)
-        (back r g Q fuel f_src f_tgt (st_src, Ret tt) (st_tgt, assume P)).
+        (⌜P⌝ ∧ back r g Q fuel f_src true (st_src, itr_src) (st_tgt, ktr_tgt tt))
+        (back r g Q fuel f_src f_tgt (st_src, itr_src) (st_tgt, assume P >>= ktr_tgt)).
   Proof.
     iIntros "H". iDestruct "H" as "[% H]".
-    unfold assume. iApply back_bind_right. iApply back_take_tgt_trigger.
-    iExists H. iApply back_ret. iApply "H".
+    unfold assume. hred_r. iApply back_take_tgt.
+    iExists H. hred_r. iApply "H".
+  Qed.
+
+  Global Instance iProp_pure_elim_affine
+         P (Q: iProp):
+    ElimModal True false false (<affine> ⌜P⌝) (⌜P⌝) Q Q.
+  Proof.
+    unfold ElimModal. i. iIntros "[H0 H1]".
+    iApply "H1". iApply "H0".
+  Qed.
+
+  Lemma back_assume_tgt_trigger
+        R_src
+        (Q: Any.t -> Any.t -> R_src -> unit -> iProp)
+        r g fuel f_src f_tgt st_src st_tgt P itr_src
+    :
+      bi_entails
+        (⌜P⌝ ∧ back r g Q fuel f_src true (st_src, itr_src) (st_tgt, Ret tt))
+        (back r g Q fuel f_src f_tgt (st_src, itr_src) (st_tgt, assume P)).
+  Proof.
+    erewrite (@idK_spec _ _ (assume P)).
+    iIntros "H". iApply back_assume_tgt. iSplit; auto.
+    { iDestruct "H" as "[H _]". iApply "H". }
+    { iDestruct "H" as "[_ H]". iApply "H". }
   Qed.
 
   Lemma back_guarantee_src
-        (Q: Any.t -> Any.t -> unit -> unit -> iProp)
-        r g fuel f_src f_tgt st_src st_tgt P
+        R_src R_tgt
+        (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
+        r g fuel f_src f_tgt st_src st_tgt P ktr_src itr_tgt
     :
       bi_entails
-        (⌜P⌝ ∧ Q st_src st_tgt tt tt)
-        (back r g Q fuel f_src f_tgt (st_src, guarantee P) (st_tgt, Ret tt)).
+        (⌜P⌝ ∧ back r g Q None true f_tgt (st_src, ktr_src tt) (st_tgt, itr_tgt))
+        (back r g Q fuel f_src f_tgt (st_src, guarantee P >>= ktr_src) (st_tgt, itr_tgt)).
   Proof.
     iIntros "H". iDestruct "H" as "[% H]".
-    unfold guarantee. iApply back_bind_left. iApply back_choose_src_trigger.
-    iExists H. iApply back_ret. iApply "H".
+    unfold guarantee. hred_l. iApply back_choose_src.
+    iExists H. hred_l. iApply "H".
+  Qed.
+
+  Lemma back_guarantee_src_trigger
+        R_tgt
+        (Q: Any.t -> Any.t -> unit -> R_tgt -> iProp)
+        r g fuel f_src f_tgt st_src st_tgt P itr_tgt
+    :
+      bi_entails
+        (⌜P⌝ ∧ back r g Q None true f_tgt (st_src, Ret tt) (st_tgt, itr_tgt))
+        (back r g Q fuel f_src f_tgt (st_src, guarantee P) (st_tgt, itr_tgt)).
+  Proof.
+    erewrite (@idK_spec _ _ (guarantee P)).
+    iIntros "H". iApply back_guarantee_src. iSplit; auto.
+    { iDestruct "H" as "[H _]". iApply "H". }
+    { iDestruct "H" as "[_ H]". iApply "H". }
   Qed.
 
   Lemma back_guarantee_tgt
-        (Q: Any.t -> Any.t -> unit -> unit -> iProp)
-        r g fuel f_src f_tgt st_src st_tgt P
+        R_src R_tgt
+        (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
+        r g fuel f_src f_tgt st_src st_tgt P itr_src ktr_tgt
     :
       bi_entails
-        (⌜P⌝ -* Q st_src st_tgt tt tt)
-        (back r g Q fuel f_src f_tgt (st_src, Ret tt) (st_tgt, guarantee P)).
+        (⌜P⌝ -* back r g Q fuel f_src true (st_src, itr_src) (st_tgt, ktr_tgt tt))
+        (back r g Q fuel f_src f_tgt (st_src, itr_src) (st_tgt, guarantee P >>= ktr_tgt)).
   Proof.
-    iIntros "H". unfold guarantee.
-    iApply back_bind_right. iApply back_choose_tgt_trigger.
-    iIntros (H). iApply back_ret. iApply "H". iPureIntro. auto.
+    iIntros "H". unfold guarantee. hred_r.
+    iApply back_choose_tgt.
+    iIntros (H). hred_r. iApply "H". iPureIntro. auto.
+  Qed.
+
+  Lemma back_guarantee_tgt_trigger
+        R_src
+        (Q: Any.t -> Any.t -> R_src -> unit -> iProp)
+        r g fuel f_src f_tgt st_src st_tgt P itr_src
+    :
+      bi_entails
+        (⌜P⌝ -* back r g Q fuel f_src true (st_src, itr_src) (st_tgt, Ret tt))
+        (back r g Q fuel f_src f_tgt (st_src, itr_src) (st_tgt, guarantee P)).
+  Proof.
+    erewrite (@idK_spec _ _ (guarantee P)).
+    iIntros "H". iApply back_guarantee_tgt.
+    iIntros "H0". iApply "H". auto.
   Qed.
 
   Lemma back_triggerUB_src
+        R_src R_tgt
+        (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
+        r g fuel f_src f_tgt st_src st_tgt X (ktr_src: X -> _) itr_tgt
+    :
+      bi_entails
+        (⌜True⌝)
+        (back r g Q fuel f_src f_tgt (st_src, triggerUB >>= ktr_src) (st_tgt, itr_tgt)).
+  Proof.
+    iIntros "H". unfold triggerUB. hred_l. iApply back_take_src.
+    iIntros (x). destruct x.
+  Qed.
+
+  Lemma back_triggerUB_src_trigger
         R_src R_tgt
         (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
         r g fuel f_src f_tgt st_src st_tgt itr_tgt
@@ -849,35 +935,24 @@ Section SIM.
         (⌜True⌝)
         (back r g Q fuel f_src f_tgt (st_src, triggerUB) (st_tgt, itr_tgt)).
   Proof.
-    iIntros "H". iApply back_take_src.
-    iIntros (x). destruct x.
-  Qed.
-
-  Lemma back_triggerNB_src
-        R_src R_tgt
-        (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
-        r g fuel f_src f_tgt st_src st_tgt itr_tgt
-    :
-      bi_entails
-        (⌜False⌝)
-        (back r g Q fuel f_src f_tgt (st_src, triggerUB) (st_tgt, itr_tgt)).
-  Proof.
-    iIntros "%". inv H.
-  Qed.
-
-  Lemma back_triggerUB_tgt
-        R_src R_tgt
-        (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
-        r g fuel f_src f_tgt st_src st_tgt itr_src
-    :
-      bi_entails
-        (⌜False⌝)
-        (back r g Q fuel f_src f_tgt (st_src, itr_src) (st_tgt, triggerUB)).
-  Proof.
-    iIntros "%". inv H.
+    erewrite (@idK_spec _ _ (triggerUB)).
+    iIntros "H". iApply back_triggerUB_src. auto.
   Qed.
 
   Lemma back_triggerNB_tgt
+        R_src R_tgt
+        (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
+        r g fuel f_src f_tgt st_src st_tgt X itr_src (ktr_tgt: X -> _)
+    :
+      bi_entails
+        (⌜True⌝)
+        (back r g Q fuel f_src f_tgt (st_src, itr_src) (st_tgt, triggerNB >>= ktr_tgt)).
+  Proof.
+    iIntros "H". unfold triggerNB. hred_r. iApply back_choose_tgt.
+    iIntros (x). destruct x.
+  Qed.
+
+  Lemma back_triggerNB_trigger
         R_src R_tgt
         (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
         r g fuel f_src f_tgt st_src st_tgt itr_src
@@ -886,62 +961,118 @@ Section SIM.
         (⌜True⌝)
         (back r g Q fuel f_src f_tgt (st_src, itr_src) (st_tgt, triggerNB)).
   Proof.
-    iIntros "H". iApply back_choose_tgt.
-    iIntros (x). destruct x.
+    erewrite (@idK_spec _ _ (triggerNB)).
+    iIntros "H". iApply back_triggerNB_tgt. auto.
   Qed.
 
   Lemma back_unwrapU_src
-        X
-        (Q: Any.t -> Any.t -> X -> unit -> iProp)
-        r g fuel f_src f_tgt st_src st_tgt x
+        R_src R_tgt
+        (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
+        r g fuel f_src f_tgt st_src st_tgt X (x: option X) ktr_src itr_tgt
     :
       bi_entails
-        (∀ x', ⌜x = Some x'⌝ -* Q st_src st_tgt x' tt)
-        (back r g Q fuel f_src f_tgt (st_src, unwrapU x) (st_tgt, Ret tt)).
+        (∀ x', ⌜x = Some x'⌝ -* back r g Q fuel f_src f_tgt (st_src, ktr_src x') (st_tgt, itr_tgt))
+        (back r g Q fuel f_src f_tgt (st_src, unwrapU x >>= ktr_src) (st_tgt, itr_tgt)).
   Proof.
     iIntros "H". unfold unwrapU. destruct x.
-    { iApply back_ret. iApply "H". auto. }
+    { hred_l. iApply "H". auto. }
     { iApply back_triggerUB_src. auto. }
   Qed.
 
-  Lemma back_unwrapN_src
-        X
-        (Q: Any.t -> Any.t -> X -> unit -> iProp)
-        r g fuel f_src f_tgt st_src st_tgt x
+  Lemma back_unwrapU_src_trigger
+        X R_tgt
+        (Q: Any.t -> Any.t -> X -> R_tgt -> iProp)
+        r g fuel f_src f_tgt st_src st_tgt x itr_tgt
     :
       bi_entails
-        (∃ x', ⌜x = Some x'⌝ ∧ Q st_src st_tgt x' tt)
-        (back r g Q fuel f_src f_tgt (st_src, unwrapN x) (st_tgt, Ret tt)).
+        (∀ x', ⌜x = Some x'⌝ -* back r g Q fuel f_src f_tgt (st_src, Ret x') (st_tgt, itr_tgt))
+        (back r g Q fuel f_src f_tgt (st_src, unwrapU x) (st_tgt, itr_tgt)).
   Proof.
-    iIntros "H". iDestruct "H" as (x') "[% H]". subst. ss.
-    iApply back_ret. iApply "H".
+    erewrite (@idK_spec _ _ (unwrapU x)).
+    iIntros "H". iApply back_unwrapU_src.
+    iIntros (x') "EQ". iApply "H"; auto.
+  Qed.
+
+  Lemma back_unwrapN_src
+        R_src R_tgt
+        (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
+        r g fuel f_src f_tgt st_src st_tgt X (x: option X) ktr_src itr_tgt
+    :
+      bi_entails
+        (∃ x', ⌜x = Some x'⌝ ∧ back r g Q fuel f_src f_tgt (st_src, ktr_src x') (st_tgt, itr_tgt))
+        (back r g Q fuel f_src f_tgt (st_src, unwrapN x >>= ktr_src) (st_tgt, itr_tgt)).
+  Proof.
+    iIntros "H". iDestruct "H" as (x') "[% H]".
+    subst. ss. hred_l. iApply "H".
+  Qed.
+
+  Lemma back_unwrapN_src_trigger
+        R_src R_tgt
+        (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
+        r g fuel f_src f_tgt st_src st_tgt x itr_tgt
+    :
+      bi_entails
+        (∃ x', ⌜x = Some x'⌝ ∧ back r g Q fuel f_src f_tgt (st_src, Ret x') (st_tgt, itr_tgt))
+        (back r g Q fuel f_src f_tgt (st_src, unwrapN x) (st_tgt, itr_tgt)).
+  Proof.
+    erewrite (@idK_spec _ _ (unwrapN x)).
+    iIntros "H". iDestruct "H" as (x') "[% H]".
+    iApply back_unwrapN_src. iExists x'. iSplit; auto.
   Qed.
 
   Lemma back_unwrapU_tgt
-        X
-        (Q: Any.t -> Any.t -> unit -> X -> iProp)
-        r g fuel f_src f_tgt st_src st_tgt x
+        R_src R_tgt
+        (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
+        r g fuel f_src f_tgt st_src st_tgt X (x: option X) itr_src ktr_tgt
     :
       bi_entails
-        (∃ x', ⌜x = Some x'⌝ ∧ Q st_src st_tgt tt x')
-        (back r g Q fuel f_src f_tgt (st_src, Ret tt) (st_tgt, unwrapU x)).
+        (∃ x', ⌜x = Some x'⌝ ∧ back r g Q fuel f_src f_tgt (st_src, itr_src) (st_tgt, ktr_tgt x'))
+        (back r g Q fuel f_src f_tgt (st_src, itr_src) (st_tgt, unwrapU x >>= ktr_tgt)).
   Proof.
     iIntros "H". iDestruct "H" as (x') "[% H]". subst. ss.
-    iApply back_ret. iApply "H".
+    hred_r. iApply "H".
+  Qed.
+
+  Lemma back_unwrapU_tgt_trigger
+        R_src R_tgt
+        (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
+        r g fuel f_src f_tgt st_src st_tgt x itr_src
+    :
+      bi_entails
+        (∃ x', ⌜x = Some x'⌝ ∧ back r g Q fuel f_src f_tgt (st_src, itr_src) (st_tgt, Ret x'))
+        (back r g Q fuel f_src f_tgt (st_src, itr_src) (st_tgt, unwrapU x)).
+  Proof.
+    erewrite (@idK_spec _ _ (unwrapU x)).
+    iIntros "H". iDestruct "H" as (x') "[% H]".
+    iApply back_unwrapU_tgt. iExists x'. iSplit; auto.
   Qed.
 
   Lemma back_unwrapN_tgt
-        X
-        (Q: Any.t -> Any.t -> unit -> X -> iProp)
-        r g fuel f_src f_tgt st_src st_tgt x
+        R_src R_tgt
+        (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
+        r g fuel f_src f_tgt st_src st_tgt X (x: option X) itr_src ktr_tgt
     :
       bi_entails
-        (∀ x', ⌜x = Some x'⌝ -* Q st_src st_tgt tt x')
-        (back r g Q fuel f_src f_tgt (st_src, Ret tt) (st_tgt, unwrapN x)).
+        (∀ x', ⌜x = Some x'⌝ -* back r g Q fuel f_src f_tgt (st_src, itr_src) (st_tgt, ktr_tgt x'))
+        (back r g Q fuel f_src f_tgt (st_src, itr_src) (st_tgt, unwrapN x >>= ktr_tgt)).
   Proof.
     iIntros "H". unfold unwrapN. destruct x.
-    { iApply back_ret. iApply "H". auto. }
+    { hred_r. iApply "H". auto. }
     { iApply back_triggerNB_tgt. auto. }
+  Qed.
+
+  Lemma back_unwrapN_tgt_trigger
+        R_src R_tgt
+        (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
+        r g fuel f_src f_tgt st_src st_tgt x itr_src
+    :
+      bi_entails
+        (∀ x', ⌜x = Some x'⌝ -* back r g Q fuel f_src f_tgt (st_src, itr_src) (st_tgt, Ret x'))
+        (back r g Q fuel f_src f_tgt (st_src, itr_src) (st_tgt, unwrapN x)).
+  Proof.
+    erewrite (@idK_spec _ _ (unwrapN x)).
+    iIntros "H". iApply back_unwrapN_tgt.
+    iIntros (x') "EQ". iApply "H"; auto.
   Qed.
 End SIM.
 
@@ -1061,9 +1192,3 @@ Section ADEQUACY.
     iIntros "[H0 %]". subst. iApply CONTEXT. iApply "H0".
   Qed.
 End ADEQUACY.
-
-Require Import Red.
-Require Import IRed.
-
-Ltac hred_l := try (prw _red_gen 1 2 1 0).
-Ltac hred_r := try (prw _red_gen 1 1 1 0).
