@@ -1074,6 +1074,31 @@ Section SIM.
     iIntros "H". iApply back_unwrapN_tgt.
     iIntros (x') "EQ". iApply "H"; auto.
   Qed.
+
+  Lemma back_ccallU_pure
+        pre post w0 fuel1
+        R_src R_tgt
+        (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
+        r g f_src f_tgt st_src st_tgt
+        fn X Y arg_src (arg_tgt: X) itr_src (ktr_tgt: Y -> _)
+        fuel0
+        (SPEC: fn_has_spec fn arg_src (Any.upcast arg_tgt) pre post true)
+        (FUEL: Ord.lt fuel1 fuel0)
+    :
+      bi_entails
+        (inv_with le I w0 st_src st_tgt
+                  ** (pre: iProp)
+                  **
+                  (∀ st_src st_tgt ret_src ret_tgt,
+                      ((inv_with le I w0 st_src st_tgt) ** (post ret_src ret_tgt: iProp)) -* ∃ ret_tgt', ⌜ret_tgt = Any.upcast ret_tgt'⌝ ∧ back g g Q (Some fuel1) true true (st_src, itr_src) (st_tgt, ktr_tgt ret_tgt')))
+        (back r g Q (Some fuel0) f_src f_tgt (st_src, itr_src) (st_tgt, ccallU fn arg_tgt >>= ktr_tgt)).
+  Proof.
+    iIntros "[H0 H1]". unfold ccallU. hred_r. iApply back_call_pure; eauto.
+    iSplitL "H0"; [iExact "H0"|].
+    iIntros (st_src0 st_tgt0 ret_src ret_tgt) "H0".
+    iPoseProof ("H1" with "H0") as (ret_tgt') "[% H1]". subst.
+    hred_r. iApply "H1".
+  Qed.
 End SIM.
 
 Require Import OpenDef.
