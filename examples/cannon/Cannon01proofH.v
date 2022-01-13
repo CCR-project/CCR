@@ -27,7 +27,7 @@ Section SIMMODSEM.
   Proof. unfold le. econs; eauto. Qed.
   Local Existing Instance le_PreOrder.
 
-  (* state invariant *)
+  (* state relation *)
   Let wf: W -> Any.t -> Any.t -> iProp :=
         fun _ st_src st_tgt => ((⌜st_src = (1: Z)↑ /\ st_tgt = (1: Z)↑⌝ ** OwnM (Ready))
                                 ∨ OwnM (Fired))%I
@@ -47,6 +47,21 @@ Section SIMMODSEM.
     econs; ss. econs; ss. red.
     (* use IPM *)
     apply isim_fun_to_tgt; auto. i; ss.
+
+    (* isim *)
+    (*   (* state relation *) *)
+    (*   le (* world future *) wf (* state relation *) w (* current world *) *)
+    (*   (* conditions for functions *) *)
+    (*   mn (* current module name *) conds (* conditions *) o (* maximal call depth (for termination) *) *)
+    (*   (* for coinduction *) *)
+    (*   (r, g, f_src, f_tgt) *)
+    (*   (* post condition : state_src -> state_tgt -> R_src -> R_tgt -> iProp *) *)
+    (*   Q *)
+    (*   (* source program : state_src * itree E R_src *) *)
+    (*   (st_src, prog_src) *)
+    (*   (* target program : state_tgt * itree E R_tgt*) *)
+    (*   (st_tgt, prog_tgt) *)
+
     unfold Cannon0.fire_body, Cannon1.fire_body.
     iIntros "[INV PRE]".
     iDestruct "PRE" as "[[% BALL] %]". subst.
