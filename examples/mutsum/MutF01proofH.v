@@ -43,17 +43,17 @@ Section SIMMODSEM.
     i. econstructor 1 with (wf:=mk_wf wf) (le:=top2); et.
     2: { unfold wf. exists tt. econs; ss; red; uipropall. }
     econs; ss. econs; ss.
-    apply back_fun_to_tgt; auto. i; ss.
+    apply isim_fun_to_tgt; auto. i; ss.
     iIntros "[INV %]". des. clarify.
     unfold fF. ss. hred_r.
-    iApply back_apc. iExists (Some (10: Ord.t)).
-    iApply back_assume_tgt. iSplit.
+    iApply isim_apc. iExists (Some (10: Ord.t)).
+    iApply isim_assume_tgt. iSplit.
     { iPureIntro. eapply mut_max_intrange. auto. }
     destruct (dec (Z.of_nat x) 0%Z).
-    - destruct x; ss. hred_r. iApply back_choose_src_trigger. iExists _.
-      iApply back_ret. iSplitL "INV"; eauto.
+    - destruct x; ss. hred_r. iApply isim_choose_src_trigger. iExists _.
+      iApply isim_ret. iSplitL "INV"; eauto.
     - destruct x; [ss|]. rewrite Nat2Z.inj_succ. hred_r.
-      iApply back_ccallU_pure.
+      iApply isim_ccallU_pure.
       { eapply fn_has_spec_in_stb; eauto.
         instantiate (1:=x). ss. eauto with ord_step.
       }
@@ -68,8 +68,8 @@ Section SIMMODSEM.
       }
       ss. iIntros (st_src0 st_tgt0 ret_src ret_tgt) "[H0 %]".
       des; clarify. iExists _. iSplit; [eauto|].
-      iApply back_choose_src_trigger. iExists _.
-      hred_r. iApply back_ret. iSplitL "H0"; eauto. iSplits; eauto.
+      iApply isim_choose_src_trigger. iExists _.
+      hred_r. iApply isim_ret. iSplitL "H0"; eauto. iSplits; eauto.
       iPureIntro. f_equal. f_equal. lia.
   Qed.
 End SIMMODSEM.

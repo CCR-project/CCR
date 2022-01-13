@@ -61,87 +61,87 @@ Section SIMMODSEM.
       - eapply to_semantic. iIntros "H". ss.
     }
     econs; ss.
-    { econs; ss. apply back_fun_to_tgt_open_trivial; auto.
+    { econs; ss. apply isim_fun_to_tgt_open_trivial; auto.
       unfold Echo0.echo_body, echo_body, cfunN, cfunU, ccallN, ccallU.
       i. iIntros "INV".
-      iApply back_unwrapU_src. iIntros (l) "EQ".
-      iApply back_unwrapU_tgt. iExists l. iSplit; [iApply "EQ"|].
+      iApply isim_unwrapU_src. iIntros (l) "EQ".
+      iApply isim_unwrapU_tgt. iExists l. iSplit; [iApply "EQ"|].
       destruct l; ss.
-      2:{ hred_l. iApply back_triggerUB_src. auto. }
-      hred_l. hred_r. iApply back_apc. iExists (Some (1: Ord.t)). hred_l.
-      iApply back_call_pure.
+      2:{ hred_l. iApply isim_triggerUB_src. auto. }
+      hred_l. hred_r. iApply isim_apc. iExists (Some (1: Ord.t)). hred_l.
+      iApply isim_call_pure.
       { eapply fn_has_spec_in_stb; [eapply STBINCL; stb_tac; ss|ss|ss]. }
       { oauto. }
       iSplitL "INV"; auto.
       simpl. iIntros (st_src0 st_tgt0 ret_src ret_tgt) "[INV POST]".
       iDestruct "POST" as "[POST %]". iDestruct "POST" as (n) "[% OWN]".
       subst. hred_r.
-      iApply back_call_impure.
+      iApply isim_call_impure.
       { eapply fn_has_spec_in_stb; [eapply STBINCL; stb_tac; ss|ss|ss]. }
       simpl. iSplitL "INV OWN".
       { iSplitL "INV"; auto. }
       iIntros (st_src1 st_tgt1 ret_src ret_tgt) "INV POST".
       iDestruct "POST" as (stk1) "[% [OWN %]]".
       des; clarify. hred_l. hred_r.
-      iApply back_apc. iExists None. hred_l.
-      iApply back_call_impure.
+      iApply isim_apc. iExists None. hred_l.
+      iApply isim_call_impure.
       { eapply fn_has_spec_in_stb; [eapply STBINCL; stb_tac; ss|ss|ss]. }
       simpl. iSplitL "INV OWN".
       { iSplitL "INV"; auto. }
       iIntros (st_src2 st_tgt2 ret_src ret_tgt) "INV POST".
       iDestruct "POST" as (stk2) "[% [OWN %]]".
       des; clarify. hred_l. hred_r.
-      iApply back_apc. iExists None. hred_l.
-      iApply back_ret. iSplit; auto.
+      iApply isim_apc. iExists None. hred_l.
+      iApply isim_ret. iSplit; auto.
     }
     econs; ss.
-    { econs; ss. apply back_fun_to_tgt_open; auto.
+    { econs; ss. apply isim_fun_to_tgt_open; auto.
       2:{ unfold Echo0.input_body, input_body, cfunU, ccallU, ccallN. ss.
-          i. iIntros "H". iApply back_triggerUB_src_trigger. auto. }
+          i. iIntros "H". iApply isim_triggerUB_src_trigger. auto. }
       unfold Echo0.input_body, input_body, cfunU, ccallU, ccallN. ss.
       i. iIntros "[INV POST]".
       iDestruct "POST" as (? ?) "[% [POST %]]". des; clarify.
       hred_l. hred_r.
-      iApply back_call_impure.
+      iApply isim_call_impure.
       { eapply fn_has_spec_in_stb; [eapply STBINCL; stb_tac; ss|ss|ss]. }
       simpl. iSplitL "INV"; auto.
       iIntros (? ? ? ?) "INV %". subst. hred_l. hred_r.
-      iApply back_unwrapU_src. iIntros (v) "%".
-      iApply back_unwrapU_tgt. iExists v. iSplit; auto.
-      hred_l. hred_r. iApply back_apc. iExists None.
-      hred_l. iApply back_assume_src. iIntros "%".
-      hred_l. iApply back_unwrapU_src. iIntros (n) "%".
+      iApply isim_unwrapU_src. iIntros (v) "%".
+      iApply isim_unwrapU_tgt. iExists v. iSplit; auto.
+      hred_l. hred_r. iApply isim_apc. iExists None.
+      hred_l. iApply isim_assume_src. iIntros "%".
+      hred_l. iApply isim_unwrapU_src. iIntros (n) "%".
       destruct v; ss; clarify.
-      iApply back_assume_tgt. iSplit; auto. des_ifs.
-      { hred_l. iApply back_apc. iExists None.
-        hred_l. hred_r. iApply back_ret. iSplitL "INV"; auto. }
-      { hred_l. iApply back_apc. iExists (Some (1: Ord.t)).
-        hred_l. hred_r. iApply back_call_pure.
+      iApply isim_assume_tgt. iSplit; auto. des_ifs.
+      { hred_l. iApply isim_apc. iExists None.
+        hred_l. hred_r. iApply isim_ret. iSplitL "INV"; auto. }
+      { hred_l. iApply isim_apc. iExists (Some (1: Ord.t)).
+        hred_l. hred_r. iApply isim_call_pure.
       { eapply fn_has_spec_in_stb; [eapply STBINCL; stb_tac; ss|ss|ss].
         { instantiate (1:=(_, _, _)). ss. }
         { ss. }
       }
       { oauto. }
       simpl. iSplitR ""; auto. iIntros (? ? ? ?) "[INV [[OWN %] %]]".
-      subst. hred_r. iApply back_call_impure.
+      subst. hred_r. iApply isim_call_impure.
       { eapply fn_has_spec_in_stb; [eapply STBINCL; stb_tac; ss|ss|ss]. }
       simpl. iSplitR ""; auto.
       { iSplitL "INV"; eauto. iExists _. iExists _. iSplit; auto. }
       iIntros (? ? ? ?) "INV POST". hred_l. hred_r.
       iDestruct "POST" as (stk1) "[% [OWN %]]". des; clarify.
-      hred_l. hred_r. iApply back_apc. iExists None. hred_l.
-      iApply back_ret. iSplitL "INV"; auto.
+      hred_l. hred_r. iApply isim_apc. iExists None. hred_l.
+      iApply isim_ret. iSplitL "INV"; auto.
       }
     }
     econs; ss.
-    { econs; ss. apply back_fun_to_tgt_open; auto.
+    { econs; ss. apply isim_fun_to_tgt_open; auto.
       2:{ unfold Echo0.input_body, input_body, cfunU, ccallU, ccallN. ss.
-          i. iIntros "H". iApply back_triggerUB_src_trigger. auto. }
+          i. iIntros "H". iApply isim_triggerUB_src_trigger. auto. }
       unfold Echo0.output_body, output_body, cfunU, ccallU, ccallN. ss.
       i. iIntros "[INV POST]".
       iDestruct "POST" as (? ?) "[% [POST %]]". des; clarify.
-      hred_l. hred_r. iApply back_apc. iExists (Some (1: Ord.t)).
-      iApply back_call_pure.
+      hred_l. hred_r. iApply isim_apc. iExists (Some (1: Ord.t)).
+      iApply isim_call_pure.
       { eapply fn_has_spec_in_stb; [eapply STBINCL; stb_tac; ss|ss|ss].
         { instantiate (1:=(_, _)). ss. }
         { ss. }
@@ -151,29 +151,29 @@ Section SIMMODSEM.
       iIntros (? ? ? ?) "[INV [POST %]]". subst.
       destruct stk0; ss.
       { iDestruct "POST" as "[% OWN]". subst.
-        hred_r. iApply back_assume_tgt. iSplit; auto.
-        hred_l. hred_r. iApply back_ret. iSplitL "INV"; auto.
+        hred_r. iApply isim_assume_tgt. iSplit; auto.
+        hred_l. hred_r. iApply isim_ret. iSplitL "INV"; auto.
       }
       iDestruct "POST" as "[% OWN]". subst.
       Local Opaque dec. hred_r.
-      iApply back_assume_tgt. inv H1. des. iSplit; auto.
+      iApply isim_assume_tgt. inv H1. des. iSplit; auto.
       hred_l. des_ifs. hred_r.
-      iApply back_call_impure.
+      iApply isim_call_impure.
       { eapply fn_has_spec_in_stb; [eapply STBINCL; stb_tac; ss|ss|ss]. }
       simpl. iSplitL "INV".
       { iSplitL "INV"; auto. }
       iIntros (st_src1 st_tgt1 ret_src ret_tgt) "INV %". subst.
-      hred_l. iApply back_unwrapU_src. iIntros (v) "%".
-      hred_r. iApply back_unwrapU_tgt. iExists v. iSplit; auto.
-      hred_l. iApply back_apc. iExists None. hred_l. hred_r.
-      iApply back_call_impure.
+      hred_l. iApply isim_unwrapU_src. iIntros (v) "%".
+      hred_r. iApply isim_unwrapU_tgt. iExists v. iSplit; auto.
+      hred_l. iApply isim_apc. iExists None. hred_l. hred_r.
+      iApply isim_call_impure.
       { eapply fn_has_spec_in_stb; [eapply STBINCL; stb_tac; ss|ss|ss]. }
       simpl. iSplitL "INV OWN".
       { iSplitL "INV"; auto. }
       iIntros (? ? ? ?) "INV POST".
       iDestruct "POST" as (stk1) "[% [OWN %]]". des; clarify.
-      hred_l. hred_r. iApply back_apc. iExists None.
-      hred_l. iApply back_ret. iSplitL "INV"; auto.
+      hred_l. hred_r. iApply isim_apc. iExists None.
+      hred_l. iApply isim_ret. iSplitL "INV"; auto.
     }
     Unshelve. all: ss.
   Qed.
