@@ -24,6 +24,8 @@ Require Import IRed.
 
 Ltac hred_l := try (prw _red_gen 1 2 1 0).
 Ltac hred_r := try (prw _red_gen 1 1 1 0).
+Ltac hred := try (prw _red_gen 1 1 0).
+
 
 Section SIM.
   Context `{Σ: GRA.t}.
@@ -132,11 +134,26 @@ Section SIM.
     inv CUR. eapply IPROP; eauto.
   Qed.
 
+  Lemma isim_upd R_src R_tgt
+        (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
+        r g fuel f_src f_tgt st_src st_tgt
+    :
+      bi_entails
+        (#=> (isim (r, g, f_src, f_tgt) (fun st_src st_tgt ret_src ret_tgt => #=> Q st_src st_tgt ret_src ret_tgt) fuel st_src st_tgt))
+        (isim (r, g, f_src, f_tgt) Q fuel st_src st_tgt).
+  Proof.
+    red. unfold Entails. autorewrite with iprop.
+    unfold isim in *. i.
+    red in H. unfold bi_bupd_bupd in H. ss. unfold Upd in H. autorewrite with iprop in H.
+    hexploit H; eauto. i. des.
+    hexploit H1; eauto. i. guclo hmonoC_spec. econs; auto.
+  Qed.
+
   Lemma isim_mono R_src R_tgt
         (Q0 Q1: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
         r g fuel f_src f_tgt st_src itr_src st_tgt itr_tgt
         (MONO: forall st_src st_tgt ret_src ret_tgt,
-            (bi_entails (Q0 st_src st_tgt ret_src ret_tgt) (#=> Q1 st_src st_tgt ret_src ret_tgt)))
+            (bi_entails (Q0 st_src st_tgt ret_src ret_tgt) (Q1 st_src st_tgt ret_src ret_tgt)))
     :
       bi_entails
         (isim (r, g, f_src, f_tgt) Q0 fuel (st_src, itr_src) (st_tgt, itr_tgt))
@@ -144,7 +161,8 @@ Section SIM.
   Proof.
     red. unfold Entails. autorewrite with iprop.
     unfold isim in *. i. hexploit H; eauto. i.
-    guclo hmonoC_spec. econs; eauto.
+    guclo hmonoC_spec. econs; eauto. i. iIntros "H".
+    iModIntro. iApply MONO. auto.
   Qed.
 
   Lemma isim_wand R_src R_tgt
@@ -153,7 +171,7 @@ Section SIM.
     :
       bi_entails
         ((∀ st_src st_tgt ret_src ret_tgt,
-             ((Q0 st_src st_tgt ret_src ret_tgt) -∗ (#=> Q1 st_src st_tgt ret_src ret_tgt))) ** (isim (r, g, f_src, f_tgt) Q0 fuel (st_src, itr_src) (st_tgt, itr_tgt)))
+             ((Q0 st_src st_tgt ret_src ret_tgt) -∗ (Q1 st_src st_tgt ret_src ret_tgt))) ** (isim (r, g, f_src, f_tgt) Q0 fuel (st_src, itr_src) (st_tgt, itr_tgt)))
         (isim (r, g, f_src, f_tgt) Q1 fuel (st_src, itr_src) (st_tgt, itr_tgt)).
   Proof.
     red. unfold Entails. autorewrite with iprop.
@@ -168,21 +186,6 @@ Section SIM.
     i. iIntros "H0". iModIntro. iIntros "H1".
     iPoseProof (H0 with "H1") as "H1".
     iMod "H1". iApply "H1". iApply "H0".
-  Qed.
-
-  Lemma isim_upd R_src R_tgt
-        (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
-        r g fuel f_src f_tgt st_src st_tgt
-    :
-      bi_entails
-        (#=> (isim (r, g, f_src, f_tgt) Q fuel st_src st_tgt))
-        (isim (r, g, f_src, f_tgt) Q fuel st_src st_tgt).
-  Proof.
-    red. unfold Entails. autorewrite with iprop.
-    unfold isim in *. i.
-    red in H. unfold bi_bupd_bupd in H. ss. unfold Upd in H. autorewrite with iprop in H.
-    hexploit H; eauto. i. des.
-    hexploit H1; eauto.
   Qed.
 
   Lemma isim_bind R_src R_tgt S_src S_tgt
@@ -388,6 +391,23 @@ Section SIM.
     eapply hsim_progress_flag. auto.
   Qed.
 
+  Lemma isim_knowledge_mon
+        r0 g0
+        R_src R_tgt
+        (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
+        r1 g1 st_src itr_src st_tgt itr_tgt
+        fuel f_src f_tgt
+        (LE0: r0 <9= r1)
+        (LE1: g0 <9= g1)
+    :
+      bi_entails
+        (isim (r0, g0, f_src, f_tgt) Q fuel (st_src, itr_src) (st_tgt, itr_tgt))
+        (isim (r1, g1, f_src, f_tgt) Q fuel (st_src, itr_src) (st_tgt, itr_tgt)).
+  Proof.
+    eapply isim_final. i. eapply isim_current in CUR.
+    eapply gpaco9_mon; eauto.
+  Qed.
+
   Lemma isim_flag_mon
         fuel0 f_src0 f_tgt0
         R_src R_tgt
@@ -506,7 +526,9 @@ Section SIM.
   Proof.
     unfold Absorbing. unfold bi_absorbingly.
     iIntros "[H0 H1]". iApply isim_upd.
-    iDestruct "H0" as "%". iModIntro. iApply "H1".
+    iDestruct "H0" as "%". iModIntro.
+    destruct st_src, st_tgt. iApply isim_mono; [|iApply "H1"].
+    i. ss. iIntros "H". iModIntro. auto.
   Qed.
 
   Global Instance iProp_isim_elim_upd
@@ -517,7 +539,8 @@ Section SIM.
   Proof.
     unfold ElimModal. i. iIntros "[H0 H1]".
     iApply isim_upd. iMod "H0". iModIntro.
-    iApply "H1". iApply "H0".
+    destruct st_src, st_tgt. iApply isim_mono; [|iApply "H1"; auto].
+    i. ss. iIntros "H". iModIntro. auto.
   Qed.
 
   Lemma isim_syscall
@@ -1098,6 +1121,514 @@ Section SIM.
 End SIM.
 
 Global Opaque isim.
+
+Section TRIVIAL.
+  Context `{Σ: GRA.t}.
+
+  Definition world_trivial: Type := unit.
+  Definition world_le_trivial: relation world_trivial := top2.
+  Definition world_wf_trivial: world_trivial -> Any.t -> Any.t -> iProp :=
+    fun _ st_src st_tgt =>
+      (⌜st_src = Any.upcast tt /\ st_tgt = Any.upcast tt⌝)%I
+  .
+
+  Global Program Instance world_le_trivial_PreOrder: PreOrder world_le_trivial.
+
+  Lemma world_wf_trivial_unit
+        w r
+    :
+      mk_wf
+        world_wf_trivial
+        w
+        (Any.pair (Any.upcast tt) (Any.upcast (r: Σ)), Any.upcast tt).
+  Proof.
+    econs. eapply to_semantic.
+    iIntros "H". unfold world_wf_trivial. auto.
+  Qed.
+
+  Lemma world_wf_trivial_init
+    :
+      exists w_init,
+        mk_wf
+          world_wf_trivial
+          w_init
+          (Any.pair (Any.upcast tt) (Any.upcast (ε: Σ)), Any.upcast tt).
+  Proof.
+    exists tt. eapply world_wf_trivial_unit.
+  Qed.
+
+  Lemma world_wf_trivial_inv_with
+        w
+    :
+      (⊢
+         inv_with
+         world_le_trivial
+         world_wf_trivial
+         w
+         (Any.upcast tt)
+         (Any.upcast tt)).
+  Proof.
+    iStartProof. iApply inv_with_current.
+    unfold world_wf_trivial. auto.
+  Qed.
+
+  Variable mn: mname.
+  Variable stb: gname -> option fspec.
+  Variable o: ord.
+
+  Definition isim_trivial {R} (Q: R -> iProp) (p: itree Es R): iProp :=
+    (∃ fuel,
+        isim
+          world_le_trivial world_wf_trivial mn stb o
+          (bot9, bot9, false, false)
+          (fun st_src st_tgt ret_src ret_tgt =>
+             (Q ret_tgt ** ⌜st_src = Any.upcast tt /\ st_tgt = Any.upcast tt⌝))
+          (Some fuel)
+          (Any.upcast tt, Ret tt)
+          (Any.upcast tt, p))%I
+  .
+
+  Lemma isim_trivial_init
+        w r g f_src f_tgt R Q fuel st_src st_tgt (itr: itree Es R)
+    :
+      bi_entails
+        ((inv_with world_le_trivial world_wf_trivial w st_src st_tgt)
+           **
+           isim_trivial (fun ret => Q (Any.upcast tt) (Any.upcast tt) tt ret) itr)
+        (isim
+           world_le_trivial world_wf_trivial mn stb o
+           (r, g, f_src, f_tgt)
+           Q
+           fuel
+           (st_src, trigger hAPC)
+           (st_tgt, itr)).
+  Proof.
+    unfold isim_trivial. iIntros "[H0 H1]".
+    iDestruct "H1" as (fuel0) "H1". iApply isim_apc_trigger.
+    iExists (Some fuel0).
+    iEval (unfold inv_with, world_wf_trivial) in "H0".
+    iDestruct "H0" as (w1) "[% _]". des. subst.
+    iApply isim_knowledge_mon.
+    { instantiate (1:=bot9). ss. }
+    { instantiate (1:=bot9). ss. }
+    iApply isim_upd. iModIntro.
+    iApply isim_mono.
+    2:{ iApply isim_flag_mon; [..|iApply "H1"]; ss. refl. }
+    i. ss. iIntros "[H0 %]". des; subst.
+    iModIntro. destruct ret_src. auto.
+  Qed.
+
+  Lemma isim_trivial_final
+        R Q fuel (itr: itree Es R)
+    :
+      bi_entails
+        (isim
+           world_le_trivial world_wf_trivial mn stb o
+           (bot9, bot9, false, false)
+           (fun st_src st_tgt ret_src ret_tgt =>
+              (Q ret_tgt ** ⌜st_src = Any.upcast tt /\ st_tgt = Any.upcast tt⌝))
+           (Some fuel)
+           (Any.upcast tt, Ret tt)
+           (Any.upcast tt, itr))
+        (isim_trivial Q itr).
+  Proof.
+    unfold isim_trivial. iIntros "H". iExists fuel. auto.
+  Qed.
+
+  Lemma isim_trivial_mono R
+        (Q0 Q1: R -> iProp)
+        itr
+        (MONO: forall ret,
+            (bi_entails (Q0 ret) (Q1 ret)))
+    :
+      bi_entails
+        (isim_trivial Q0 itr)
+        (isim_trivial Q1 itr).
+  Proof.
+    unfold isim_trivial. iIntros "H".
+    iDestruct "H" as (fuel) "SIM". iExists fuel.
+    iApply isim_mono; [|iExact "SIM"].
+    iIntros (? ? ? ?) "[POST EQ]".
+    iPoseProof (MONO with "POST") as "POST". iFrame.
+  Qed.
+
+  Lemma isim_trivial_wand R
+        (Q0 Q1: R -> iProp)
+        itr
+    :
+      bi_entails
+        ((∀ ret,
+             ((Q0 ret) -∗ (Q1 ret))) ** (isim_trivial Q0 itr))
+        (isim_trivial Q1 itr).
+  Proof.
+    unfold isim_trivial. iIntros "[MONO H]".
+    iDestruct "H" as (fuel) "SIM". iExists fuel.
+    iApply isim_wand. iSplitR "SIM"; [|iExact "SIM"].
+    iIntros (? ? ? ?) "[POST EQ]".
+    iSpecialize ("MONO" with "POST"). iFrame.
+  Qed.
+
+  Lemma isim_trivial_init_pure
+        w r g f_src f_tgt Q fuel st_src st_tgt (itr: itree Es Any.t)
+    :
+      bi_entails
+        ((inv_with world_le_trivial world_wf_trivial w st_src st_tgt)
+           **
+           isim_trivial (fun ret => Q (Any.upcast tt) (Any.upcast tt) ret ret) itr)
+        (isim
+           world_le_trivial world_wf_trivial mn stb o
+           (r, g, f_src, f_tgt)
+           Q
+           fuel
+           (st_src, trigger hAPC >>= (fun _ => trigger (Choose Any.t)))
+           (st_tgt, itr)).
+  Proof.
+    assert (itr = itr >>= idK).
+    { grind. }
+    iIntros "[H0 H1]". iEval (rewrite H). iApply isim_bind.
+    iApply isim_trivial_init. iFrame.
+    ss. iApply isim_trivial_mono.
+    2:{ iApply "H1". }
+    i. ss. iIntros "H". iApply isim_choose_src_trigger.
+    iExists _. iApply isim_ret. eauto.
+  Qed.
+
+  From Ordinal Require Import ClassicalOrdinal.
+  Lemma ord_exist X (P: X -> Ord.t -> Prop)
+    :
+      exists o_top,
+      forall x (EXIST: exists o, P x o),
+        (exists o, P x o /\ Ord.le o o_top).
+  Proof.
+    hexploit (ClassicalChoice.choice (fun x o1 => forall o0, P x o0 -> P x o1)).
+    { i. destruct (classic (exists o1, P x o1)).
+      { des. exists o1. eauto. }
+      { exists Ord.O. i. exfalso. eauto. }
+    }
+    i. des. exists (Ord.join f). i. des.
+    eapply H in EXIST. esplits; eauto.
+    eapply Ord.join_upperbound.
+  Qed.
+
+  Lemma ord_exist_iProp (P: Ord.t -> iProp)
+    :
+      exists o_top,
+        (bi_entails
+           (∃ (o: Ord.t), P o)
+           (∃ (o: Ord.t), P o ∧ ⌜Ord.le o o_top⌝)).
+  Proof.
+    hexploit (ord_exist (fun (r: Σ) (o0: Ord.t) => P o0 r)).
+    i. des. exists o_top. uipropall. i.
+    red in H0. red. uipropall. eapply H in H0.
+    des. esplits. uipropall. esplits; eauto. red. uipropall.
+  Qed.
+
+  Lemma ord_exist_iProp_mon (P: Ord.t -> iProp)
+        (MON: forall o0 o1 (LE: Ord.le o0 o1), bi_entails (P o0) (P o1))
+    :
+      exists o_top,
+        (bi_entails
+           (∃ (o: Ord.t), P o)
+           (P o_top)).
+  Proof.
+    hexploit ord_exist_iProp. i. des.
+    exists o_top. iIntros "H".
+    iPoseProof (H with "H") as (o0) "[H %]".
+    iApply MON; eauto.
+  Qed.
+
+  Lemma ord_exist_upd (P: Ord.t -> iProp)
+    :
+      bi_entails
+        (#=> ∃ (o: Ord.t), P o)
+        (∃ (o1: Ord.t), (#=> (∃ o0, P o0 ∧ ⌜Ord.le o0 o1⌝))).
+  Proof.
+    hexploit (ord_exist_iProp P). i. des.
+    iIntros "H". iExists o_top. iMod "H". iModIntro.
+    iPoseProof (H with "H") as "H". eauto.
+  Qed.
+
+  Lemma ord_exist_upd_mon (P: Ord.t -> iProp)
+        (MON: forall o0 o1 (LE: Ord.le o0 o1), bi_entails (P o0) (P o1))
+    :
+      bi_entails
+        (#=> ∃ (o: Ord.t), P o)
+        (∃ (o: Ord.t), (#=> P o)).
+  Proof.
+    iIntros "H". iPoseProof (ord_exist_upd with "H") as (o1) "H".
+    iExists o1. iMod "H". iModIntro. iDestruct "H" as (o0) "[H %]".
+    iApply MON; eauto.
+  Qed.
+
+  Lemma isim_trivial_upd R
+        (Q: R -> iProp)
+        itr
+    :
+      bi_entails
+        (#=> (isim_trivial (fun ret => #=> Q ret) itr))
+        (isim_trivial Q itr).
+  Proof.
+    unfold isim_trivial. iIntros "H".
+    iPoseProof (ord_exist_upd_mon with "H") as (fuel) "H".
+    { i. iIntros "H". iApply isim_flag_mon; eauto. ss. }
+    iExists fuel. iMod "H". iApply isim_upd. iModIntro.
+    iApply isim_mono; [|iApply "H"]. i. ss.
+    iIntros "[> H0 H1]". iModIntro. iFrame.
+  Qed.
+
+  Lemma isim_trivial_bind R S
+        (Q: S -> iProp)
+        (itr: itree Es R) (ktr: _ -> itree Es S)
+    :
+      bi_entails
+        (isim_trivial (fun ret => isim_trivial Q (ktr ret)) itr)
+        (isim_trivial Q (itr >>= ktr)).
+  Proof.
+    unfold isim_trivial. iIntros "H".
+    iDestruct "H" as (fuel0) "H".
+    hexploit (ord_exist
+                (fun ret fuel1 =>
+                   forall fuel0,
+                     bi_entails
+                       (isim
+                          world_le_trivial world_wf_trivial mn stb o
+                          (bot9, bot9, false, false)
+                          (λ (st_src0 st_tgt0 : Any.t) (_ : ()) (ret_tgt0 : S),
+                           Q ret_tgt0 ** ⌜st_src0 = Any.upcast tt ∧ st_tgt0 = Any.upcast tt⌝)
+                          (Some fuel0) (Any.upcast tt, Ret tt) (Any.upcast tt, ktr ret))
+                       (isim
+                          world_le_trivial world_wf_trivial mn stb o
+                          (bot9, bot9, false, false)
+                          (λ (st_src0 st_tgt0 : Any.t) (_ : ()) (ret_tgt0 : S),
+                           Q ret_tgt0 ** ⌜st_src0 = Any.upcast tt ∧ st_tgt0 = Any.upcast tt⌝)
+                          (Some fuel1) (Any.upcast tt, Ret tt) (Any.upcast tt, ktr ret))
+             )).
+    i. des.
+    iExists (o_top + fuel0)%ord. iApply isim_split_aux.
+    iApply isim_mono; [|iApply "H"]. simpl.
+    iIntros (? ? ? ?) "[H %]". des; subst.
+    hexploit (H ret_tgt).
+    { hexploit (ord_exist_iProp_mon (fun o0 =>
+                                       isim
+                                         world_le_trivial world_wf_trivial mn stb o
+                                         (bot9, bot9, false, false)
+                                         (λ (st_src0 st_tgt0 : Any.t) (_ : ()) (ret_tgt0 : S),
+                                          Q ret_tgt0 ** ⌜st_src0 = Any.upcast tt ∧ st_tgt0 = Any.upcast tt⌝)
+                                         (Some o0) (Any.upcast tt, Ret tt) (Any.upcast tt, ktr ret_tgt))).
+      { i. iIntros "H". iApply isim_flag_mon; [..|iApply "H"]; ss. }
+      i. des. exists o_top0. i.
+      iIntros "H". iApply H0. iExists _. eauto.
+    }
+    i. des. iDestruct "H" as (fuel) "H".
+    iPoseProof (H0 with "H") as "H". iApply isim_flag_mon; [..|iApply "H"]; ss.
+  Qed.
+
+  Lemma isim_trivial_ret
+        R (Q: R -> iProp)
+        v
+    :
+      bi_entails
+        (Q v)
+        (isim_trivial Q (Ret v)).
+  Proof.
+    unfold isim_trivial. iIntros "POST".
+    iExists (Ord.O). iApply isim_ret. iFrame. auto.
+  Qed.
+
+  Lemma isim_trivial_tau
+        R
+        (Q: R -> iProp)
+        itr
+    :
+      bi_entails
+        (isim_trivial Q itr)
+        (isim_trivial Q (tau;; itr)).
+  Proof.
+    unfold isim_trivial. iIntros "H".
+    iDestruct "H" as (fuel) "SIM".
+    iExists fuel. iApply isim_tau_tgt.
+    iApply isim_flag_mon; [..|iApply "SIM"]; ss. refl.
+  Qed.
+
+  Lemma isim_trivial_choose
+        X
+        (Q: X -> iProp)
+    :
+      bi_entails
+        (∀ x, Q x)
+        (isim_trivial Q (trigger (Choose X))).
+  Proof.
+    unfold isim_trivial. iIntros "PRE". iExists Ord.O.
+    iApply isim_choose_tgt_trigger. iIntros (x).
+    iApply isim_ret. iSplit; auto.
+  Qed.
+
+  Lemma isim_trivial_take
+        X
+        (Q: X -> iProp)
+    :
+      bi_entails
+        (∃ x, Q x)
+        (isim_trivial Q (trigger (Take X))).
+  Proof.
+    unfold isim_trivial. iIntros "PRE". iExists Ord.O.
+    iDestruct "PRE" as (x) "PRE".
+    iApply isim_take_tgt_trigger. iExists x.
+    iApply isim_ret. iSplit; auto.
+  Qed.
+
+  Lemma isim_trivial_call
+        pre post
+        (Q: Any.t -> iProp)
+        fn arg_src arg_tgt
+        (SPEC: fn_has_spec mn stb o fn arg_src arg_tgt pre post true)
+    :
+      bi_entails
+        ((pre: iProp)
+           **
+           (∀ ret_src ret_tgt,
+               (post ret_src ret_tgt: iProp) -* Q ret_tgt))
+        (isim_trivial Q (trigger (Call fn arg_tgt))).
+  Proof.
+    unfold isim_trivial. iIntros "[PRE RET]".
+    iExists (1: Ord.t). iApply isim_call_pure_trigger.
+    { eauto. }
+    iSplitL "PRE".
+    { iSplitR "PRE"; [|auto]. iApply inv_with_current.
+      unfold world_wf_trivial. iPureIntro. auto.
+    }
+    { iIntros (? ? ? ?) "INV PRE".
+      iSpecialize ("RET" with "PRE"). iFrame.
+      unfold inv_with. iDestruct "INV" as (w1) "[WF _]". auto.
+    }
+    Unshelve. all: exact tt.
+  Qed.
+
+  Lemma isim_trivial_ccallU
+        pre post
+        A R
+        (Q: R -> iProp)
+        fn arg_src (arg_tgt: A)
+        (SPEC: fn_has_spec mn stb o fn arg_src (Any.upcast arg_tgt) pre post true)
+    :
+      bi_entails
+        ((pre: iProp)
+           **
+           (∀ ret_src ret_tgt,
+               ((post ret_src ret_tgt: iProp)) -* ∃ ret_tgt', ⌜ret_tgt = Any.upcast ret_tgt'⌝ ∧ Q ret_tgt'))
+        (isim_trivial Q (ccallU fn arg_tgt)).
+  Proof.
+    erewrite (@idK_spec _ _ (ccallU fn arg_tgt)).
+    unfold isim_trivial. iIntros "[PRE POST]".
+    iExists (1: Ord.t). iApply isim_ccallU_pure.
+    { eauto. }
+    { oauto. }
+    iSplitL "PRE".
+    { iSplitR "PRE"; auto. iApply inv_with_current.
+      unfold world_wf_trivial. auto.
+    }
+    iIntros (? ? ? ?) "[INV H]".
+    iPoseProof ("POST" with "H") as (ret_tgt') "[% POST]".
+    iExists ret_tgt'. iSplit; auto. iApply isim_ret.
+    unfold inv_with, world_wf_trivial.
+    iDestruct "INV" as (w1) "[INV _]". iFrame.
+    Unshelve. all: try exact tt.
+  Qed.
+
+  Global Instance iProp_isim_trivial_absorbing
+         R (Q: R -> iProp)
+         itr:
+    Absorbing (isim_trivial Q itr).
+  Proof.
+    unfold Absorbing. unfold bi_absorbingly.
+    iIntros "[H0 H1]". iApply isim_trivial_upd.
+    iDestruct "H0" as "%". iModIntro.
+    iApply isim_trivial_mono; [|iApply "H1"].
+    i. ss. iIntros "H". iModIntro. auto.
+  Qed.
+
+  Global Instance iProp_isim_trivial_elim_upd
+         R (Q: R -> iProp)
+         itr
+         P:
+    ElimModal True false false (#=> P) P (isim_trivial Q itr) (isim_trivial Q itr).
+  Proof.
+    unfold ElimModal. i. iIntros "[H0 H1]".
+    iApply isim_trivial_upd. iMod "H0". iModIntro.
+    iApply isim_trivial_mono; [|iApply "H1"; auto].
+    i. ss. iIntros "H". iModIntro. auto.
+  Qed.
+
+
+  Lemma isim_trivial_assume
+        (Q: unit -> iProp)
+        P
+    :
+      bi_entails
+        (⌜P⌝ ∧ Q tt)
+        (isim_trivial Q (assume P)).
+  Proof.
+    unfold assume. iIntros "[% H1]".
+    iApply isim_trivial_bind. iApply isim_trivial_take.
+    iExists H. iApply isim_trivial_ret. auto.
+  Qed.
+
+  Lemma isim_trivial_guarantee
+        (Q: unit -> iProp)
+        P
+    :
+      bi_entails
+        (⌜P⌝ -* Q tt)
+        (isim_trivial Q (guarantee P)).
+  Proof.
+    unfold guarantee. iIntros "H".
+    iApply isim_trivial_bind. iApply isim_trivial_choose.
+    iIntros (H). iApply isim_trivial_ret. iApply "H". auto.
+  Qed.
+
+  Lemma isim_trivial_triggerNB
+        R
+        (Q: R -> iProp)
+    :
+      bi_entails
+        (⌜True⌝)
+        (isim_trivial Q (triggerNB)).
+  Proof.
+    unfold triggerNB. iIntros "_".
+    iApply isim_trivial_bind. iApply isim_trivial_choose.
+    iIntros ([]).
+  Qed.
+
+  Lemma isim_trivial_unwrapU
+        R
+        (Q: R -> iProp)
+        x
+    :
+      bi_entails
+        (∃ x', ⌜x = Some x'⌝ ∧ Q x')
+        (isim_trivial Q (unwrapU x)).
+  Proof.
+    unfold unwrapU. iIntros "H".
+    iDestruct "H" as (x') "[% H]". subst.
+    iApply isim_trivial_ret. auto.
+  Qed.
+
+  Lemma isim_trivial_unwrapN
+        R
+        (Q: R -> iProp)
+        x
+    :
+      bi_entails
+        (∀ x', ⌜x = Some x'⌝ -* Q x')
+        (isim_trivial Q (unwrapN x)).
+  Proof.
+    unfold unwrapN. iIntros "H". destruct x.
+    { iApply isim_trivial_ret. iApply "H". auto. }
+    { iApply isim_trivial_triggerNB. auto. }
+  Qed.
+End TRIVIAL.
+#[export] Hint Resolve world_le_trivial_PreOrder: core.
+
 
 Require Import OpenDef.
 

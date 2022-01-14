@@ -25,51 +25,35 @@ Local Open Scope nat_scope.
 
 
 Section SIMMODSEM.
-
   Context `{Σ: GRA.t}.
-
-  Let W: Type := Any.t * Any.t.
-
-  Let wf: unit -> Any.t -> Any.t -> iProp
-    := (fun _ _ _ => (True: iProp)%I).
-
-  Let top2_PreOrder: @PreOrder unit top2.
-  Proof. econs; eauto. Qed.
-  Local Existing Instance top2_PreOrder.
 
   Theorem correct: refines2 [MutF0.F] [MutF1.F].
   Proof.
     eapply adequacy_local2. econs; ss.
-    i. econstructor 1 with (wf:=mk_wf wf) (le:=top2); et.
-    2: { unfold wf. exists tt. econs; ss; red; uipropall. }
+    i. econstructor 1 with (wf:=mk_wf world_wf_trivial) (le:=world_le_trivial); et.
+    2: { eapply world_wf_trivial_init. }
     econs; ss. econs; ss.
     apply isim_fun_to_tgt; auto. i; ss.
     iIntros "[INV %]". des. clarify.
-    unfold fF. ss. hred_r.
-    iApply isim_apc. iExists (Some (10: Ord.t)).
-    iApply isim_assume_tgt. iSplit.
+    iApply isim_trivial_init_pure. iFrame.
+    unfold fF. ss. hred. iApply isim_trivial_bind.
+    iApply isim_trivial_assume. iSplit.
     { iPureIntro. eapply mut_max_intrange. auto. }
     destruct (dec (Z.of_nat x) 0%Z).
-    - destruct x; ss. hred_r. iApply isim_choose_src_trigger. iExists _.
-      iApply isim_ret. iSplitL "INV"; eauto.
-    - destruct x; [ss|]. rewrite Nat2Z.inj_succ. hred_r.
-      iApply isim_ccallU_pure.
+    - destruct x; ss. hred. iApply isim_trivial_ret.
+      iSplit; auto. iApply world_wf_trivial_inv_with.
+    - destruct x; [ss|]. rewrite Nat2Z.inj_succ. hred.
+      iApply isim_trivial_bind. iApply isim_trivial_ccallU.
       { eapply fn_has_spec_in_stb; eauto.
         instantiate (1:=x). ss. eauto with ord_step.
       }
-      { oauto. }
-      iSplitL "INV".
-      { ss. iSplitR "INV"; eauto. iSplits; eauto.
-        { iPureIntro.
-          replace (Z.succ (Z.of_nat x) - 1)%Z with (Z.of_nat x) by lia.
-          esplits; et.
-        }
-        { iPureIntro. lia. }
-      }
-      ss. iIntros (st_src0 st_tgt0 ret_src ret_tgt) "[H0 %]".
-      des; clarify. iExists _. iSplit; [eauto|].
-      iApply isim_choose_src_trigger. iExists _.
-      hred_r. iApply isim_ret. iSplitL "H0"; eauto. iSplits; eauto.
+      ss. iSplits; eauto.
+      { replace (Z.succ (Z.of_nat x) - 1)%Z with (Z.of_nat x) by lia. auto. }
+      { iPureIntro. lia. }
+      iIntros (? ?) "[% %]". subst.
+      iExists _. iSplit; [eauto|]. hred.
+      iApply isim_trivial_ret. iSplits; eauto.
+      { iApply world_wf_trivial_inv_with. }
       iPureIntro. f_equal. f_equal. lia.
   Qed.
 End SIMMODSEM.
