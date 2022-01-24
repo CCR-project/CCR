@@ -2,8 +2,6 @@ Require Import Coq.Lists.List.
 Import Nat.
 Import ListNotations.
 
-Variable A B : Type.
-
 Definition option_bind {A B : Type} : option A -> (A -> option B) -> option B :=
   fun m k =>
     match m with
@@ -12,6 +10,8 @@ Definition option_bind {A B : Type} : option A -> (A -> option B) -> option B :=
     end.
 
 Section Swap.
+
+  Context {A B : Type}.
 
   Fixpoint trim_prefix (xs : list A) (i : nat) {struct i} : option (list A) :=
     match xs, i with
@@ -58,6 +58,8 @@ Section Swap.
 End Swap.
 
 Section CompleteBinaryTree.
+
+  Context {A : Type}.
   
   Inductive perfect_bintree : nat -> Type :=
   | perfect_nil : perfect_bintree O
