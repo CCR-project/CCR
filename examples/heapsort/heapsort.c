@@ -75,10 +75,8 @@ void create(int *base, size_t nmemb, size_t initval) {
  *
  * The time savings from this optimization are on the order of 15-20% for the
  * average case. See Knuth, Vol. 3, page 158, problem 18.
- *
- * XXX Don't break the #define SELECT line, below.  Reiser cpp gets upset.
  */
-void select_heapify(int *base, size_t nmemb, int k) {
+void heapify(int *base, size_t nmemb, int k) {
   size_t par_i, child_i;
   int *par, *child;
   for (par_i = 1; (child_i = par_i * 2) <= nmemb; par_i = child_i) {
@@ -125,6 +123,6 @@ void heapsort(int *vbase, size_t nmemb) {
     int k = base[nmemb];
     base[nmemb] = base[1];
     --nmemb;
-    select_heapify(base, nmemb, k);
+    heapify(base, nmemb, k);
   }
 }
