@@ -20,8 +20,44 @@ Section HEAPSORT.
   Definition create_spec : fspec.
   Admitted.
 
-  Definition heapify_body : list val -> itree hEs val.
-  Admitted.
+  Locate "?".
+
+  Check unwrapU.
+
+  Definition heapify_body : list val -> itree hEs val :=
+    fun varg =>
+    '(base, (nmemb, k)) <- (pargs [Tptr; Tint; Tint] varg)?;;
+    `loop1_ret : _ <- ITree.iter (fun loop1_arg =>
+      '(par_i, (child_i, (par, child))) <- (pargs [Tint; Tint; Tptr; Tptr] loop1_arg)?;;
+      'child_i_val <- (vmul (Vint par_i) (Vint 2))?;;
+      'child_i <- (parg Tint child_i_val)?;;
+      if Z.leb child_i nmemb
+      then Ret (inr [Vint par_i; Vint child_i; Vptr (fst par) (snd par); Vptr (fst child) (snd child)])
+      else (
+        'child_val <- (vadd (Vptr (fst base) (snd base)) (Vint child_i))?;;
+        'child <- (parg Tptr child_val)?;;
+(*     if (child_i < nmemb && *child < *(child+1)) {
+          ++child;
+          ++child_i;
+        }
+        par = base + par_i;
+        *par = *child; *)
+        'par_i <- (parg Tint (Vint child_i))?;;
+        Ret (inl [Vint par_i; Vint child_i; Vptr (fst par) (snd par); Vptr (fst child) (snd child)])
+      )
+    ) [Vint 1; Vundef; Vundef; Vundef];;
+(*  for (;;) {
+      child_i = par_i;
+      par_i = child_i / 2;
+      child = base + child_i;
+      par = base + par_i;
+      if (child_i == 1 || k < *par) {
+        *child = k;
+        break;
+      }
+      *child = *par;
+    } *)
+    Ret Vundef.
 
   Definition heapify_spec : fspec.
   Admitted.
