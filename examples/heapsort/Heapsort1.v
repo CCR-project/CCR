@@ -65,15 +65,25 @@ Section HEAPSORT.
 
   Definition heapsort_body : list Z -> itree hEs (list Z) :=
     fun xs =>
-      _ <- ITree.iter (fun l =>
-                        if Z.eqb l 0
-                        then Ret (inr tt)
-                        else
-                          _ <- trigger (Call "create" (xs, l)↑);;
-                          Ret (inl (l - 1)%Z)
-                     )
-                     (Z.of_nat (length xs / 2));;
-      Ret [].
+      heap <- ITree.iter (fun '(xs, l) =>
+                           if Z.eqb l 0
+                           then Ret (inr xs)
+                           else xs' <- trigger (Call "create" (xs, l)↑);;
+                                xs'' <- (xs'↓)?;;
+                                Ret (inl (xs'', l - 1))%Z
+                        )
+                        (xs, Z.of_nat (length xs / 2));;
+      ys <- ITree.iter (fun '(xs, ys) =>
+                         if Nat.eqb (length xs) 0
+                         then Ret (inr ys)
+                         else
+                           let k := last xs 0%Z in
+                           xs' <- trigger (Call "heapify" (removelast xs, k)↑);;
+                           xs'' <- (xs'↓)?;;
+                           Ret (inl (xs'', k :: ys))
+                      )
+                      (heap, []);;
+      Ret ys.
 
   Definition heapsort_spec : fspec.
   Admitted.
