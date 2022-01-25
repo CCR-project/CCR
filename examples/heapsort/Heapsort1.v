@@ -15,18 +15,38 @@ Set Implicit Arguments.
 Section HEAPSORT.
   Context `{Σ : GRA.t}.
          
-  Definition create_body : list val -> itree hEs val.
-  Admitted.
-
-  Definition create_spec : fspec.
-  Admitted.
-
   Definition look (xs : list Z) (n : nat) : option Z :=
     match n with
     | O => None
     | S n' => nth_error xs n'
     end.
 
+
+  Definition create_body : list Z * Z -> itree hEs (list Z) :=
+    fun '(base, i) =>
+      let nmemb : nat := length base in
+      initval <- Ret(Z.to_nat i);;
+      base <- ITree.iter(fun '(base, par_i) =>
+          if Nat.leb (2*par_i) nmemb
+          then (
+              child_i <- (if Nat.ltb (2*par_i) nmemb
+                         then (child_val0 <- (look base (par_i*2))?;;
+                               child_val1 <- (look base (par_i*2 +1))?;;
+                               if Z.ltb child_val0 child_val1
+                               then Ret(par_i*2 +1) else Ret(par_i*2)
+                              )
+                         else Ret (par_i*2));;
+              child_val <- (look base child_i)?;;
+              par_val <- (look base par_i)?;;
+              if Z.leb child_val par_val
+              then Ret (inr base)                                            
+              else Ret (inl (swap base child_i par_i, child_i))
+            )
+          else Ret (inr base)
+                       ) (base, initval);;Ret base.
+
+  Definition create_spec : fspec.
+  
   Definition heapify_body : (list Z * Z) -> itree hEs (list Z) :=
     fun '(base, k) =>
     let nmemb : nat := length base in
