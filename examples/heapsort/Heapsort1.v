@@ -21,47 +21,47 @@ Section HEAPSORT.
   Definition create_spec : fspec.
   Admitted.
 
-  Locate "?".
+  Definition look (xs : list Z) (n : nat) : option Z :=
+    match n with
+    | O => None
+    | S n' => nth_error xs n'
+    end.
 
-  Check unwrapU.
-
-  Definition heapify_body : list val -> itree hEs val :=
-    fun varg =>
-    '(base, (nmemb, k)) <- (pargs [Tptr; Tint; Tint] varg)?;;
-    `loop1_ret : _ <- ITree.iter (fun loop1_arg =>
-      '(par_i, (child_i, (par, child))) <- (pargs [Tint; Tint; Tptr; Tptr] loop1_arg)?;;
-      'child_i_val <- (vmul (Vint par_i) (Vint 2))?;;
-      'child_i <- (parg Tint child_i_val)?;;
-      if Z.leb child_i nmemb
-      then Ret (inr [Vint par_i; Vint child_i; Vptr (fst par) (snd par); Vptr (fst child) (snd child)])
-      else (
-        'child_val <- (vadd (Vptr (fst base) (snd base)) (Vint child_i))?;;
-        'child <- (parg Tptr child_val)?;;
-(*     if (child_i < nmemb && *child < *(child+1)) {
-          ++child;
-          ++child_i;
-        }
-        par = base + par_i;
-        *par = *child; *)
-        'par_i <- (parg Tint (Vint child_i))?;;
-        Ret (inl [Vint par_i; Vint child_i; Vptr (fst par) (snd par); Vptr (fst child) (snd child)])
+  Definition heapify_body : (list Z * Z) -> itree hEs (list Z) :=
+    fun '(base, k) =>
+    let nmemb : nat := length base in
+    '(base, par_i) <- ITree.iter (fun '(base, par_i) =>
+      if Nat.leb (par_i * 2) nmemb
+      then (
+        if Nat.ltb (par_i * 2) nmemb
+        then (
+          child_l <- (look base (par_i * 2))?;;
+          child_r <- (look base (par_i * 2 + 1))?;;
+          let child_i : nat := if Z.ltb child_l child_r then (par_i * 2) else (par_i * 2 + 1) in
+          Ret (inl (swap base child_i par_i, child_i))
+        )
+        else (
+          let child_i : nat := par_i * 2 + 1 in
+          Ret (inl (swap base child_i par_i, child_i))
+        )
       )
-    ) [Vint 1; Vundef; Vundef; Vundef];;
-(*  for (;;) {
-      child_i = par_i;
-      par_i = child_i / 2;
-      child = base + child_i;
-      par = base + par_i;
-      if (child_i == 1 || k < *par) {
-        *child = k;
-        break;
-      }
-      *child = *par;
-    } *)
-    Ret Vundef.
-
-  Definition heapify_spec : fspec.
-  Admitted.
+      else Ret (inr (base, par_i))
+    ) (k :: tail base, 1%nat);;
+    '(base, par_i) <- ITree.iter (fun '(base, par_i) =>
+      let child_i : nat := par_i in
+      let par_i : nat := child_i / 2 in
+      if Nat.eqb child_i 1 
+      then (
+        par <- (look base par_i)?;;
+        if Z.ltb k par
+        then Ret (inr (base, par_i))
+        else Ret (inl (swap base child_i par_i, par_i))
+      )
+      else (
+        Ret (inl (swap base child_i par_i, par_i))
+      )
+    ) (base, par_i);;
+    Ret base.
 
   Definition heapsort_body : list Z -> itree hEs (list Z) :=
     fun xs =>
