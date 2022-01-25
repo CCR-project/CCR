@@ -63,6 +63,9 @@ Section HEAPSORT.
     ) (base, par_i);;
     Ret base.
 
+  Definition heapify_spec : fspec.
+  Admitted.
+
   Definition heapsort_body : list Z -> itree hEs (list Z) :=
     fun xs =>
       heap <- ITree.iter (fun '(xs, l) =>
