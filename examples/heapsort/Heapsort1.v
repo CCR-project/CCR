@@ -52,11 +52,11 @@ Section HEAPSORT.
         then (
           child_l <- (lookup_1 base (par_i * 2))?;;
           child_r <- (lookup_1 base (par_i * 2 + 1))?;;
-          let child_i : nat := if Z.ltb child_l child_r then (par_i * 2) else (par_i * 2 + 1) in
+          let child_i : nat := if Z.ltb child_l child_r then (par_i * 2 + 1) else (par_i * 2) in
           Ret (inl (swap_1 base child_i par_i, child_i))
         )
         else (
-          let child_i : nat := par_i * 2 + 1 in
+          let child_i : nat := par_i * 2 in
           Ret (inl (swap_1 base child_i par_i, child_i))
         )
       )
