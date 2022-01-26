@@ -66,14 +66,12 @@ Section HEAPSORT.
       let child_i : nat := par_i in
       let par_i : nat := child_i / 2 in
       if Nat.eqb child_i 1 
-      then (
+      then Ret (inr (base, par_i))
+      else (
         par <- (lookup_1 base par_i)?;;
         if Z.ltb k par
         then Ret (inr (base, par_i))
         else Ret (inl (swap_1 base child_i par_i, par_i))
-      )
-      else (
-        Ret (inl (swap_1 base child_i par_i, par_i))
       )
     ) (base, par_i);;
     Ret base.
@@ -83,9 +81,7 @@ Section HEAPSORT.
 
   Definition heapsort_body : list Z -> itree Es (list Z) :=
     fun xs =>
-      _ <- trigger (Syscall "before loop1" tt↑ top1);;
       heap <- ITree.iter (fun '(xs, l) =>
-                           _ <- trigger (Syscall "loop1" tt↑ top1);;
                            if Nat.eqb l 0
                            then Ret (inr xs)
                            else xs' <- trigger (Call "create" (xs, l)↑);;
@@ -93,16 +89,18 @@ Section HEAPSORT.
                                 Ret (inl (xs'', l - 1))
                         )
                         (xs, length xs / 2);;
-      _ <- trigger (Syscall "before loop2" tt↑ top1);;
+      _ <- trigger (Syscall "before loop2 h" heap↑ top1);;
       ys <- ITree.iter (fun '(heap, ys) =>
-                         _ <- trigger (Syscall "loop2" tt↑ top1);;
-                         if Nat.eqb (length heap) 0
-                         then Ret (inr ys)
+                         _ <- trigger (Syscall "loop2 h" heap↑ top1);;
+                         _ <- trigger (Syscall "loop2 o" ys↑ top1);;
+                         if Nat.leb (length heap) 1
+                         then Ret (inr (heap ++ ys))
                          else
+                           m <- (head heap)?;;
                            let k := last heap 0%Z in
                            heap_ <- trigger (Call "heapify" (removelast heap, k)↑);;
                            heap <- (heap_↓)?;;
-                           Ret (inl (heap, k :: ys))
+                           Ret (inl (heap, m :: ys))
                       )
                       (heap, []);;
       Ret ys.
@@ -111,7 +109,7 @@ Section HEAPSORT.
   Admitted.
 
   Definition main_body : itree Es Any.t :=
-    ys <- trigger (Call "heapsort" [1;4;7;5;3]↑);;
+    ys <- trigger (Call "heapsort" ([7;4;5;3;1;6;0]%Z : list Z)↑);;
     r <- trigger (Syscall "print" ys top1);;
     Ret r.
   
