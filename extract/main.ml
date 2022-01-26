@@ -17,6 +17,7 @@ open Example0
 open EchoAll
 open MWAll
 open Imp
+open Heapsort1
 
 let cl2s = fun cl -> String.concat "" (List.map (String.make 1) cl)
 
@@ -104,6 +105,7 @@ let main =
   print_endline "5: Echo example (in the technical report) on Imp level";
   print_endline "6: Echo example (in the technical report) on Imp+ level (everything is the same but shallow embedded into Coq)";
   print_endline "7: Echo example (in the technical report) on Abstraction level";
+  print_endline "8: Heapsort example on abstraction level";
   print_endline "<<NOTE: These programs are all deterministic, but you may see some \"choose\" which is from Mem.alloc. Put any natural number; it does not affect semantics>>";
   match int_of_string (read_line()) with
   | 1 -> run (mw_impl_itr)
@@ -113,4 +115,5 @@ let main =
   | 5 -> run (echo_imp_itr)
   | 6 -> run (echo_impl_itr)
   | 7 -> run (echo_spec_itr)
+  | 8 -> run (heapsort_main)
   | _ -> print_endline "Invalid Number!"

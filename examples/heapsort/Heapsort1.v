@@ -13,9 +13,10 @@ Require Import HeapsortHeader.
 Set Implicit Arguments.
 
 Section HEAPSORT.
+
   Context `{Σ : GRA.t}.
          
-  Definition create_body : list Z * nat -> itree hEs (list Z) :=
+  Definition create_body : list Z * nat -> itree Es (list Z) :=
     fun '(base, i) =>
       let nmemb : nat := length base in
       initval <- Ret(Z.to_nat i);;
@@ -41,7 +42,7 @@ Section HEAPSORT.
   Definition create_spec : fspec.
   Admitted.
   
-  Definition heapify_body : (list Z * Z) -> itree hEs (list Z) :=
+  Definition heapify_body : (list Z * Z) -> itree Es (list Z) :=
     fun '(base, k) =>
     let nmemb : nat := length base in
     '(base, par_i) <- ITree.iter (fun '(base, par_i) =>
@@ -80,7 +81,7 @@ Section HEAPSORT.
   Definition heapify_spec : fspec.
   Admitted.
 
-  Definition heapsort_body : list Z -> itree hEs (list Z) :=
+  Definition heapsort_body : list Z -> itree Es (list Z) :=
     fun xs =>
       heap <- ITree.iter (fun '(xs, l) =>
                            if Nat.eqb l 0
@@ -105,19 +106,27 @@ Section HEAPSORT.
   Definition heapsort_spec : fspec.
   Admitted.
   
-  Definition HeapsortSbtb : list (gname * fspecbody) :=
-    [("create", mk_specbody create_spec (cfunN create_body));
-    ("heapify", mk_specbody heapify_spec (cfunN heapify_body));
-    ("heapsort", mk_specbody heapsort_spec (cfunN heapsort_body))
+  Definition HeapsortSbtb :=
+    [("create",  cfunU create_body);
+    ("heapify",  cfunU heapify_body);
+    ("heapsort", cfunU heapsort_body)
     ].
 
-  Definition SHeapsortSem : SModSem.t.
-  Admitted.
+  Definition HeapsortSem : ModSem.t := {|
+    ModSem.fnsems := HeapsortSbtb;
+    ModSem.mn := "Heapsort";
+    ModSem.initial_st := tt↑;
+  |}.
 
-  Definition SHeapsort : SMod.t.
-  Admitted.
-
-  Variable GlobalStb: Sk.t -> gname -> option fspec.
-  Definition Heapsort : Mod.t := SMod.to_tgt GlobalStb SHeapsort.
+  Definition Heapsort : Mod.t := {|
+    Mod.get_modsem := fun _ => HeapsortSem;
+    Mod.sk := [("create", Sk.Gfun); ("heapify", Sk.Gfun); ("heapsort", Sk.Gfun)];
+  |}.
 
 End HEAPSORT.
+
+Section Ext.
+
+  Definition heapsort_main := ModSemL.initial_itr (ModL.enclose (Mod.add_list [Heapsort])) None.
+
+End Ext.
