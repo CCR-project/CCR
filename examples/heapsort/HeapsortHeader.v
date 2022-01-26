@@ -9,9 +9,12 @@ Definition option_bind {A B : Type} : option A -> (A -> option B) -> option B :=
     | Some x => k x
     end.
 
-Section Swap.
+Section ListOperations.
 
-  Context {A B : Type}.
+  Context {A : Type}.
+
+  Definition lookup (xs : list A) i := nth_error xs i.
+  Definition lookup_1 (xs : list A) i := lookup xs (i-1).
 
   Fixpoint trim_prefix (xs : list A) (i : nat) {struct i} : option (list A) :=
     match xs, i with
@@ -55,7 +58,9 @@ Section Swap.
     | None => xs
     end.
 
-End Swap.
+  Definition swap_1 (xs : list A) i j := swap xs (i-1) (j-1).
+
+End ListOperations.
 
 Section CompleteBinaryTree.
 

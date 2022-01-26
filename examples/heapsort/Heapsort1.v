@@ -15,14 +15,7 @@ Set Implicit Arguments.
 Section HEAPSORT.
   Context `{Σ : GRA.t}.
          
-  Definition look (xs : list Z) (n : nat) : option Z :=
-    match n with
-    | O => None
-    | S n' => nth_error xs n'
-    end.
-
-
-  Definition create_body : list Z * Z -> itree hEs (list Z) :=
+  Definition create_body : list Z * nat -> itree hEs (list Z) :=
     fun '(base, i) =>
       let nmemb : nat := length base in
       initval <- Ret(Z.to_nat i);;
@@ -30,22 +23,23 @@ Section HEAPSORT.
           if Nat.leb (2*par_i) nmemb
           then (
               child_i <- (if Nat.ltb (2*par_i) nmemb
-                         then (child_val0 <- (look base (par_i*2))?;;
-                               child_val1 <- (look base (par_i*2 +1))?;;
+                         then (child_val0 <- (lookup_1 base (par_i*2))?;;
+                               child_val1 <- (lookup_1 base (par_i*2 +1))?;;
                                if Z.ltb child_val0 child_val1
                                then Ret(par_i*2 +1) else Ret(par_i*2)
                               )
                          else Ret (par_i*2));;
-              child_val <- (look base child_i)?;;
-              par_val <- (look base par_i)?;;
+              child_val <- (lookup_1 base child_i)?;;
+              par_val <- (lookup_1 base par_i)?;;
               if Z.leb child_val par_val
               then Ret (inr base)                                            
-              else Ret (inl (swap base child_i par_i, child_i))
+              else Ret (inl (swap_1 base child_i par_i, child_i))
             )
           else Ret (inr base)
                        ) (base, initval);;Ret base.
 
   Definition create_spec : fspec.
+  Admitted.
   
   Definition heapify_body : (list Z * Z) -> itree hEs (list Z) :=
     fun '(base, k) =>
@@ -55,14 +49,14 @@ Section HEAPSORT.
       then (
         if Nat.ltb (par_i * 2) nmemb
         then (
-          child_l <- (look base (par_i * 2))?;;
-          child_r <- (look base (par_i * 2 + 1))?;;
+          child_l <- (lookup_1 base (par_i * 2))?;;
+          child_r <- (lookup_1 base (par_i * 2 + 1))?;;
           let child_i : nat := if Z.ltb child_l child_r then (par_i * 2) else (par_i * 2 + 1) in
-          Ret (inl (swap base child_i par_i, child_i))
+          Ret (inl (swap_1 base child_i par_i, child_i))
         )
         else (
           let child_i : nat := par_i * 2 + 1 in
-          Ret (inl (swap base child_i par_i, child_i))
+          Ret (inl (swap_1 base child_i par_i, child_i))
         )
       )
       else Ret (inr (base, par_i))
@@ -72,13 +66,13 @@ Section HEAPSORT.
       let par_i : nat := child_i / 2 in
       if Nat.eqb child_i 1 
       then (
-        par <- (look base par_i)?;;
+        par <- (lookup_1 base par_i)?;;
         if Z.ltb k par
         then Ret (inr (base, par_i))
-        else Ret (inl (swap base child_i par_i, par_i))
+        else Ret (inl (swap_1 base child_i par_i, par_i))
       )
       else (
-        Ret (inl (swap base child_i par_i, par_i))
+        Ret (inl (swap_1 base child_i par_i, par_i))
       )
     ) (base, par_i);;
     Ret base.
@@ -89,21 +83,21 @@ Section HEAPSORT.
   Definition heapsort_body : list Z -> itree hEs (list Z) :=
     fun xs =>
       heap <- ITree.iter (fun '(xs, l) =>
-                           if Z.eqb l 0
+                           if Nat.eqb l 0
                            then Ret (inr xs)
                            else xs' <- trigger (Call "create" (xs, l)↑);;
                                 xs'' <- (xs'↓)?;;
-                                Ret (inl (xs'', l - 1))%Z
+                                Ret (inl (xs'', l - 1))
                         )
-                        (xs, Z.of_nat (length xs / 2));;
-      ys <- ITree.iter (fun '(xs, ys) =>
-                         if Nat.eqb (length xs) 0
+                        (xs, length xs / 2);;
+      ys <- ITree.iter (fun '(heap, ys) =>
+                         if Nat.eqb (length heap) 0
                          then Ret (inr ys)
                          else
-                           let k := last xs 0%Z in
-                           xs' <- trigger (Call "heapify" (removelast xs, k)↑);;
-                           xs'' <- (xs'↓)?;;
-                           Ret (inl (xs'', k :: ys))
+                           let k := last heap 0%Z in
+                           heap_ <- trigger (Call "heapify" (removelast heap, k)↑);;
+                           heap <- (heap_↓)?;;
+                           Ret (inl (heap, k :: ys))
                       )
                       (heap, []);;
       Ret ys.
@@ -125,4 +119,5 @@ Section HEAPSORT.
 
   Variable GlobalStb: Sk.t -> gname -> option fspec.
   Definition Heapsort : Mod.t := SMod.to_tgt GlobalStb SHeapsort.
+
 End HEAPSORT.
