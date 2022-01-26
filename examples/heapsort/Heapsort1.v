@@ -83,7 +83,9 @@ Section HEAPSORT.
 
   Definition heapsort_body : list Z -> itree Es (list Z) :=
     fun xs =>
+      _ <- trigger (Syscall "before loop1" tt↑ top1);;
       heap <- ITree.iter (fun '(xs, l) =>
+                           _ <- trigger (Syscall "loop1" tt↑ top1);;
                            if Nat.eqb l 0
                            then Ret (inr xs)
                            else xs' <- trigger (Call "create" (xs, l)↑);;
@@ -91,7 +93,9 @@ Section HEAPSORT.
                                 Ret (inl (xs'', l - 1))
                         )
                         (xs, length xs / 2);;
+      _ <- trigger (Syscall "before loop2" tt↑ top1);;
       ys <- ITree.iter (fun '(heap, ys) =>
+                         _ <- trigger (Syscall "loop2" tt↑ top1);;
                          if Nat.eqb (length heap) 0
                          then Ret (inr ys)
                          else
@@ -105,11 +109,17 @@ Section HEAPSORT.
 
   Definition heapsort_spec : fspec.
   Admitted.
+
+  Definition main_body : itree Es Any.t :=
+    ys <- trigger (Call "heapsort" [1;4;7;5;3]↑);;
+    r <- trigger (Syscall "print" ys top1);;
+    Ret r.
   
   Definition HeapsortSbtb :=
     [("create",  cfunU create_body);
     ("heapify",  cfunU heapify_body);
-    ("heapsort", cfunU heapsort_body)
+    ("heapsort", cfunU heapsort_body);
+    ("main", fun _ => main_body)
     ].
 
   Definition HeapsortSem : ModSem.t := {|
@@ -120,7 +130,7 @@ Section HEAPSORT.
 
   Definition Heapsort : Mod.t := {|
     Mod.get_modsem := fun _ => HeapsortSem;
-    Mod.sk := [("create", Sk.Gfun); ("heapify", Sk.Gfun); ("heapsort", Sk.Gfun)];
+    Mod.sk := Sk.unit;
   |}.
 
 End HEAPSORT.
