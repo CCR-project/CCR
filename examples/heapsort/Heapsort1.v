@@ -89,10 +89,7 @@ Section HEAPSORT.
                                 Ret (inl (xs'', l - 1))
                         )
                         (xs, length xs / 2);;
-      _ <- trigger (Syscall "before loop2 h" heap↑ top1);;
       ys <- ITree.iter (fun '(heap, ys) =>
-                         _ <- trigger (Syscall "loop2 h" heap↑ top1);;
-                         _ <- trigger (Syscall "loop2 o" ys↑ top1);;
                          if Nat.leb (length heap) 1
                          then Ret (inr (heap ++ ys))
                          else
@@ -109,7 +106,7 @@ Section HEAPSORT.
   Admitted.
 
   Definition main_body : itree Es Any.t :=
-    ys <- trigger (Call "heapsort" ([7;4;5;3;1;6;0]%Z : list Z)↑);;
+    ys <- trigger (Call "heapsort" ([7;4;5;3;1;6;0;3;6;8;1;6;8;4;7;9;2;5;7]%Z : list Z)↑);;
     r <- trigger (Syscall "print" ys top1);;
     Ret r.
   
