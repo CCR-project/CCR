@@ -88,14 +88,46 @@ End ListOperations.
 Section CompleteBinaryTree.
 
   Context {A : Type}.
-  
+
+  Inductive bintree : Type :=
+  | BT_nil
+  | BT_node (x : A) (l : bintree) (r : bintree)
+  .
+
+  Inductive is_perfect : bintree -> forall rank : nat, Prop :=
+  | Perfect_nil : is_perfect BT_nil O
+  | Perfect_node {n : nat}
+                 (x : A) (l : bintree) (r : bintree)
+                 (H_l : is_perfect l n)
+                 (H_r : is_perfect r n)
+    : is_perfect (BT_node x l r) (S n)
+  .
+
+(*
   Inductive perfect_bintree : nat -> Type :=
   | perfect_nil : perfect_bintree O
   | perfect_node {n : nat}
                  (x : A) (l : perfect_bintree n) (r : perfect_bintree n)
     : perfect_bintree (S n)
   .
-  
+*)
+
+  Inductive is_complete : bintree -> forall rank : nat, Prop :=
+  | Complete_nil
+    : is_complete BT_nil O
+  | Complete_node_perfect_complete {n : nat}
+                                   (x : A) (l : bintree) (r : bintree)
+                                   (H_l : is_perfect l n)
+                                   (H_r : is_complete r n)
+    : is_complete (BT_node x l r) (S n)
+  | Complete_node_complete_perfect {n : nat}
+                                   (x : A) (l : bintree) (r : bintree)
+                                   (H_l : is_complete l (S n))
+                                   (H_r : is_complete r n)
+    : is_complete (BT_node x l r) (S (S n))
+  .
+
+(*
   Inductive complete_bintree : nat -> Type :=
   | complete_nil
     : complete_bintree O
@@ -106,7 +138,9 @@ Section CompleteBinaryTree.
                                    (x : A) (l : complete_bintree (S n)) (r : perfect_bintree n)
     : complete_bintree (S (S n))
   .
+*)
 
+(*
   Fixpoint perfect2complete {n} (t : perfect_bintree n) : complete_bintree n :=
     match t with
     | perfect_nil => complete_nil
@@ -168,41 +202,118 @@ Section CompleteBinaryTree.
       + left. exact (complete_node_complete_perfect x l' r).
       + right. exact (perfect_node x l' r).
   Defined.
+*)
 
 End CompleteBinaryTree.
 
-Arguments perfect_bintree : clear implicits.
-Arguments complete_bintree : clear implicits.
+Arguments bintree: clear implicits.
+
+Section BinaryTreeAccessories.
+
+  Inductive dir_t : Set := Dir_left | Dir_right.
+
+  Definition context (A : Type) := list (dir_t * (A * bintree A)).
+
+  Context {A : Type}.
+
+  Definition recover_step_aux d x t : bintree A -> bintree A :=
+    match d with
+    | Dir_left => fun t_l => BT_node x t_l t
+    | Dir_right => fun t_r => BT_node x t t_r
+    end.
+
+  Definition recover_step it := uncurry (recover_step_aux (fst it)) (snd it).
+
+  Definition recover subtree ctx := fold_right recover_step subtree (rev ctx).
+
+  Lemma recover_unfold subtree ctx :
+    recover subtree ctx =
+    match ctx with
+    | [] => subtree
+    | (Dir_left, (x, t_r)) :: ctx_l => recover (BT_node x subtree t_r) ctx_l
+    | (Dir_right, (x, t_l)) :: ctx_r => recover (BT_node x t_l subtree) ctx_r
+    end.
+  Proof with eauto.
+    unfold recover at 1; rewrite fold_left_rev_right with (f := recover_step).
+    destruct ctx as [ | [[ | ] [e t]] ctx]; simpl...
+    all: unfold recover at 1; rewrite fold_left_rev_right with (f := recover_step)...
+  Qed.
+
+  Lemma recover_last subtree ctx d x t :
+    recover subtree (ctx ++ [(d, (x, t))]) =
+    match d with
+    | Dir_left => BT_node x (recover subtree ctx) t 
+    | Dir_right => BT_node x t (recover subtree ctx)
+    end.
+  Proof. unfold recover at 1; rewrite rev_unit; now destruct d. Qed.
+
+  Inductive context_spec subtree : context A -> bintree A -> Prop :=
+  | CtxSpec_top
+    : context_spec subtree [] subtree
+  | CtxSpec_left ctx_l x t_l t_r
+    (H_l : context_spec subtree ctx_l t_l)
+    : context_spec subtree (ctx_l ++ [(Dir_left, (x, t_r))]) (BT_node x t_l t_r)
+  | CtxSpec_right ctx_r x t_l t_r
+    (H_r : context_spec subtree ctx_r t_r)
+    : context_spec subtree (ctx_r ++ [(Dir_right, (x, t_l))]) (BT_node x t_l t_r).
+
+  Local Hint Constructors context_spec : core.
+
+  Theorem context_spec_recover subtree ctx root :
+    context_spec subtree ctx root <->
+    recover subtree ctx = root.
+  Proof with eauto.
+    split.
+    - intros X; induction X; simpl...
+      all: rewrite recover_last, IHX...
+    - intros H_eq; subst root; revert subtree.
+      pattern ctx; revert ctx; apply rev_ind...
+      intros [[ | ] [x t]] ctx IH subtree; rewrite recover_last...
+  Qed.
+
+  Corollary context_spec_left ctx x t_l t_r root :
+    context_spec (BT_node x t_l t_r) ctx root <->
+    context_spec t_l ((Dir_left, (x, t_r)) :: ctx) root.
+  Proof.
+    do 2 rewrite context_spec_recover.
+    now rewrite recover_unfold with (ctx := (Dir_left, (x, t_r)) :: ctx).
+  Qed.
+
+  Corollary context_spec_right ctx x t_l t_r root :
+    context_spec (BT_node x t_l t_r) ctx root <->
+    context_spec t_r ((Dir_right, (x, t_l)) :: ctx) root.
+  Proof.
+    do 2 rewrite context_spec_recover.
+    now rewrite recover_unfold with (ctx := (Dir_right, (x, t_l)) :: ctx).
+  Qed.
+
+  Lemma context_spec_refl root
+    : context_spec root [] root.
+  Proof. constructor 1. Qed.
+
+  Lemma context_spec_trans t1 c1 t2 c2 root
+    (X1 : context_spec t1 c1 t2)
+    (X2 : context_spec t2 c2 root)
+    : context_spec t1 (c1 ++ c2) root.
+  Proof with eauto with *.
+    revert t2 c2 X2 t1 c1 X1; intros t2 c2 X2.
+    induction X2; intros t1 c1 X1; [rewrite app_nil_r | rewrite app_assoc | rewrite app_assoc]...
+  Qed.
+
+End BinaryTreeAccessories.
 
 Section SwapProperties.
+
+  Search Some Logic.eq.
 
   Lemma Some_inj {A : Type} {lhs : A} {rhs : A} :
     Some lhs = Some rhs -> lhs = rhs.
   Proof. congruence. Qed.
 
-  Definition listEXT_view {A : Type} (xs : list A) : forall idx : nat, {ret : option A | idx < length xs -> ret <> None} :=
-    fun idx : nat =>
-    exist _ (nth_error xs idx) (proj2 (nth_error_Some xs idx))
-  .
-
-  Definition safe_lookup {A : Type} (xs : list A) : forall idx : nat, idx < length xs -> A :=
-    fun idx : nat =>
-    fun H_idx : idx < length xs =>
-    match proj1_sig (listEXT_view xs idx) as Some_x return Some_x <> None -> A with
-    | None => fun H_no => False_rect A (H_no Logic.eq_refl)
-    | Some x => fun _ => x
-    end (proj2_sig (listEXT_view xs idx) H_idx)
-  .
-
-  Definition listExt_view {A : Type} (xs : list A) : nat -> option A :=
-    fun idx : nat =>
-    proj1_sig (listEXT_view xs idx)
-  .
-
   Lemma list_extensionality {A : Type} (xs1 : list A) (xs2 : list A) :
     xs1 = xs2 <->
     forall i : nat,
-    listExt_view xs1 i = listExt_view xs2 i.
+    lookup xs1 i = lookup xs2 i.
   Proof with discriminate || eauto.
     revert xs1 xs2; cbn.
     induction xs1 as [ | x1 xs1 IH]; intros [ | x2 xs2]; simpl in *; split; intros H_eq...
@@ -215,7 +326,7 @@ Section SwapProperties.
 
   Lemma listExt_map {A : Type} {B : Type} (f : A -> B) (xs : list A) :
     forall i : nat,
-    listExt_view (map f xs) i = (option_map f) (listExt_view xs i).
+    lookup (map f xs) i = (option_map f) (lookup xs i).
   Proof with discriminate || eauto.
     cbn; induction xs as [ | x xs IH]; simpl.
     - intros [ | n']...
@@ -224,12 +335,12 @@ Section SwapProperties.
 
   Lemma listExt_seq (start : nat) (len : nat) :
     forall i : nat,
-    match listExt_view (seq start len) i with
+    match lookup (seq start len) i with
     | None => i >= len
     | Some x => x = start + i
     end.
   Proof with discriminate || eauto.
-    intros i; cbn.
+    unfold lookup; intros i.
     destruct (nth_error (seq start len) i) as [x | ] eqn: H_obs.
     - assert (i_lt_len : i < length (seq start len)).
       { apply nth_error_Some. rewrite H_obs... }
@@ -253,31 +364,32 @@ Section SwapProperties.
 
   Lemma listExt_firstn {A : Type} (xs : list A) (n : nat) :
     forall i : nat,
-    match listExt_view (firstn n xs) i with
+    match lookup (firstn n xs) i with
     | None => i >= n \/ i >= length xs
-    | Some x => i < n /\ listExt_view xs i = Some x
+    | Some x => i < n /\ lookup xs i = Some x
     end.
-  Proof with discriminate || eauto.
-    intros i; cbn.
+  Proof with discriminate || (try lia) || eauto.
+    intros i; unfold lookup.
     destruct (nth_error (firstn n xs) i) as [x | ] eqn: H_obs.
     - assert (i_lt_len : i < length (firstn n xs)).
       { apply nth_error_Some. rewrite H_obs... }
-      pose (firstn_length n xs); split; [lia | ].
-      assert (i_lt_length_xs : i < length xs) by lia.
+      pose (firstn_length n xs); split...
+      assert (i_lt_length_xs : i < length xs)...
       rewrite <- H_obs; symmetry.
-      apply firstn_nth_error; lia.
+      apply firstn_nth_error...
     - assert (i_ge_len : i >= length (firstn n xs)).
       { apply nth_error_None... }
-      rewrite (firstn_length n xs) in i_ge_len; lia.
+      rewrite (firstn_length n xs) in i_ge_len...
   Qed.
 
   Lemma listExt_combine {A : Type} {B : Type} (xs : list A) (ys : list B) :
     forall i : nat,
-    match listExt_view (combine xs ys) i with
+    match lookup (combine xs ys) i with
     | None => i >= length xs \/ i >= length ys
-    | Some (x, y) => listExt_view xs i = Some x /\ listExt_view ys i = Some y
+    | Some (x, y) => lookup xs i = Some x /\ lookup ys i = Some y
     end.
   Proof with discriminate || eauto.
+    unfold lookup.
     set (len := min (length xs) (length ys)).
     replace (combine xs ys) with (combine (firstn len xs) (firstn len ys)).
     - assert (H_len : length (firstn len xs) = length (firstn len ys)).
@@ -292,7 +404,7 @@ Section SwapProperties.
         { pose (combine_length (firstn len xs) (firstn len ys)); lia. }
         assert (claim1 := listExt_firstn xs len i).
         assert (claim2 := listExt_firstn ys len i).
-        cbn in claim1, claim2.
+        unfold lookup in claim1, claim2.
         rewrite (nth_error_nth' (firstn len xs) x H1_i) in claim1.
         rewrite (nth_error_nth' (firstn len ys) y H2_i) in claim2.
         rewrite (nth_error_nth' (combine (firstn len xs) (firstn len ys)) (x, y) H_i) in H_obs.
@@ -311,46 +423,45 @@ Section SwapProperties.
 
   Lemma listExt_add_indices {A : Type} (xs : list A) :
     forall i : nat, 
-    match listExt_view (add_indices xs) i with
-    | None => i >= length xs /\ listExt_view xs i = None
-    | Some (x, n) => i = n /\ listExt_view xs i = Some x
+    match lookup (add_indices xs) i with
+    | None => i >= length xs /\ lookup xs i = None
+    | Some (x, n) => i = n /\ lookup xs i = Some x
     end.
   Proof with discriminate || eauto.
-    intros i; cbn; unfold add_indices.
+    intros i; unfold lookup, add_indices.
     assert (claim1 := listExt_combine xs (seq 0 (length xs)) i).
-    unfold listExt_view in claim1; cbn in claim1.
+    unfold lookup in claim1; cbn in claim1.
     destruct (nth_error (combine xs (seq 0 (length xs))) i) as [[x n] | ] eqn: H_obs.
-    - destruct claim1 as [H_obs_xs H_obs_seq].
-      split...
+    - destruct claim1 as [H_obs_xs H_obs_seq]; split...
       assert (claim2 := listExt_seq 0 (length xs) i).
-      unfold listExt_view in claim2; cbn in claim2.
+      unfold lookup in claim2; cbn in claim2.
       rewrite H_obs_seq in claim2...
     - rewrite seq_length in claim1.
       rewrite nth_error_None; lia.
   Qed.
 
-  Lemma listExt_swap {A : Type} (xs : list A) (i1 : nat) (i2 : nat) :
+  Theorem listExt_swap {A : Type} (xs : list A) (i1 : nat) (i2 : nat) :
     i1 < length xs ->
     i2 < length xs ->
     forall i : nat,
-    match listExt_view (swap xs i1 i2) i with
+    match lookup (swap xs i1 i2) i with
     | None => i >= length xs
     | Some val =>
       Some val =
-      if Nat.eq_dec i i1 then nth_error xs i2 else
-      if Nat.eq_dec i i2 then nth_error xs i1 else
-      nth_error xs i
+      if Nat.eq_dec i i1 then lookup xs i2 else
+      if Nat.eq_dec i i2 then lookup xs i1 else
+      lookup xs i
     end.
   Proof with discriminate || eauto.
-    intros H_i1 H_i2.
+    intros H_i1 H_i2; unfold lookup.
     assert (H_lookup_i1 := proj2 (nth_error_Some xs i1) H_i1).
     assert (H_lookup_i2 := proj2 (nth_error_Some xs i2) H_i2).
     intros i; cbn; unfold swap.
     assert (claim1 := listExt_map (uncurry (swap_aux xs i1 i2)) (add_indices xs) i).
-    unfold listExt_view in claim1; cbn in claim1.
+    unfold lookup in claim1; cbn in claim1.
     rewrite claim1; unfold option_map.
     assert (claim2 := listExt_add_indices xs i).
-    unfold listExt_view in claim2; cbn in claim2.
+    unfold lookup in claim2; cbn in claim2.
     destruct (nth_error (add_indices xs) i) as [[x n] | ] eqn: H_obs_add_indices.
     - simpl; unfold swap_aux, lookup.
       destruct claim2 as [H_EQ H_obs_xs]; subst n.
