@@ -218,8 +218,8 @@ Section BinaryTreeAccessories.
 
   Definition recover_step_aux d x t : bintree A -> bintree A :=
     match d with
-    | Dir_left => fun t_l => BT_node x t_l t
-    | Dir_right => fun t_r => BT_node x t t_r
+    | Dir_left => fun l => BT_node x l t
+    | Dir_right => fun r => BT_node x t r
     end.
 
   Definition recover_step it := uncurry (recover_step_aux (fst it)) (snd it).
@@ -230,8 +230,8 @@ Section BinaryTreeAccessories.
     recover subtree ctx =
     match ctx with
     | [] => subtree
-    | (Dir_left, (x, t_r)) :: ctx_l => recover (BT_node x subtree t_r) ctx_l
-    | (Dir_right, (x, t_l)) :: ctx_r => recover (BT_node x t_l subtree) ctx_r
+    | (Dir_left, (x, r)) :: ctx_l => recover (BT_node x subtree r) ctx_l
+    | (Dir_right, (x, l)) :: ctx_r => recover (BT_node x l subtree) ctx_r
     end.
   Proof with eauto.
     unfold recover at 1; rewrite fold_left_rev_right with (f := recover_step).
@@ -250,12 +250,12 @@ Section BinaryTreeAccessories.
   Inductive context_spec subtree : context A -> bintree A -> Prop :=
   | CtxSpec_top
     : context_spec subtree [] subtree
-  | CtxSpec_left ctx_l x t_l t_r
-    (H_l : context_spec subtree ctx_l t_l)
-    : context_spec subtree (ctx_l ++ [(Dir_left, (x, t_r))]) (BT_node x t_l t_r)
-  | CtxSpec_right ctx_r x t_l t_r
-    (H_r : context_spec subtree ctx_r t_r)
-    : context_spec subtree (ctx_r ++ [(Dir_right, (x, t_l))]) (BT_node x t_l t_r).
+  | CtxSpec_left ctx_l x l r
+    (H_l : context_spec subtree ctx_l l)
+    : context_spec subtree (ctx_l ++ [(Dir_left, (x, r))]) (BT_node x l r)
+  | CtxSpec_right ctx_r x l r
+    (H_r : context_spec subtree ctx_r r)
+    : context_spec subtree (ctx_r ++ [(Dir_right, (x, l))]) (BT_node x l r).
 
   Local Hint Constructors context_spec : core.
 
@@ -271,20 +271,20 @@ Section BinaryTreeAccessories.
       intros [[ | ] [x t]] ctx IH subtree; rewrite recover_last...
   Qed.
 
-  Corollary context_spec_left ctx x t_l t_r root :
-    context_spec (BT_node x t_l t_r) ctx root <->
-    context_spec t_l ((Dir_left, (x, t_r)) :: ctx) root.
+  Corollary context_spec_left ctx x l r root :
+    context_spec (BT_node x l r) ctx root <->
+    context_spec l ((Dir_left, (x, r)) :: ctx) root.
   Proof.
     do 2 rewrite context_spec_recover.
-    now rewrite recover_unfold with (ctx := (Dir_left, (x, t_r)) :: ctx).
+    now rewrite recover_unfold with (ctx := (Dir_left, (x, r)) :: ctx).
   Qed.
 
-  Corollary context_spec_right ctx x t_l t_r root :
-    context_spec (BT_node x t_l t_r) ctx root <->
-    context_spec t_r ((Dir_right, (x, t_l)) :: ctx) root.
+  Corollary context_spec_right ctx x l r root :
+    context_spec (BT_node x l r) ctx root <->
+    context_spec r ((Dir_right, (x, l)) :: ctx) root.
   Proof.
     do 2 rewrite context_spec_recover.
-    now rewrite recover_unfold with (ctx := (Dir_right, (x, t_l)) :: ctx).
+    now rewrite recover_unfold with (ctx := (Dir_right, (x, l)) :: ctx).
   Qed.
 
   Lemma context_spec_refl root
@@ -303,8 +303,6 @@ Section BinaryTreeAccessories.
 End BinaryTreeAccessories.
 
 Section SwapProperties.
-
-  Search Some Logic.eq.
 
   Lemma Some_inj {A : Type} {lhs : A} {rhs : A} :
     Some lhs = Some rhs -> lhs = rhs.
