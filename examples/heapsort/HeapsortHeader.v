@@ -7,6 +7,7 @@ Require Import
   PeanoNat
   Permutation
   Lia.
+Require Import Coq.Program.Wf.
 Import Nat.
 Import ListNotations.
 
@@ -204,9 +205,149 @@ Section CompleteBinaryTree.
   Defined.
 *)
 
+  Fixpoint get_rank t : nat :=
+    match t with
+    | BT_nil => 0
+    | BT_node x l r => 1 + max (get_rank l) (get_rank r)
+    end.
+
+  Lemma is_perfect_rank t r :
+    is_perfect t r ->
+    get_rank t = r.
+  Proof with lia. intros X; induction X; simpl... Qed.
+
+  Lemma is_complete_rank t r :
+    is_perfect t r ->
+    get_rank t = r.
+  Proof with lia. intros X; induction X; simpl... Qed.
+
+  Let cnt : bintree -> nat :=
+    fix cnt_fix t :=
+    match t with
+    | BT_nil => 1
+    | BT_node x l r => 1 + cnt_fix l + cnt_fix r
+    end.
+
+(*
+  Program Fixpoint toList_aux ts {measure (list_sum (map cnt ts))} :=
+    match ts with
+    | [] => []
+    | BT_nil :: ts' => toList_aux ts'
+    | BT_node x l r :: ts' => x :: toList_aux ((ts' ++ [l]) ++ [r])
+    end.
+  Next Obligation.
+    simpl; unfold Peano.lt.
+    do 2 rewrite map_last.
+    do 2 rewrite list_sum_app; simpl.
+    do 2 rewrite Nat.add_0_r.
+    rewrite <- Nat.add_assoc at 1.
+    rewrite Nat.add_comm.
+    reflexivity.
+  Qed.
+
+  Lemma toList_aux_unfold ts :
+    toList_aux ts =
+    match ts with
+    | [] => []
+    | BT_nil :: ts' => toList_aux ts'
+    | BT_node x l r :: ts' => x :: toList_aux ((ts' ++ [l]) ++ [r])
+    end.
+  Proof.
+  Admitted.
+*)
+
+  Inductive qtrav_spec : list bintree -> list A -> Prop :=
+  | qtrav_spec1
+    : qtrav_spec [] []
+  | qtrav_spec2 ts xs
+    (IH_spec : qtrav_spec ts xs)
+    : qtrav_spec (BT_nil :: ts) xs
+  | qtrav_spec3 x l r ts xs
+    (IH_spec : qtrav_spec ((ts ++ [l]) ++ [r]) xs)
+    : qtrav_spec (BT_node x l r :: ts) (x :: xs).
+
+  Local Hint Constructors qtrav_spec : core.
+
+  Definition qtrav :
+    {qtrav_body : list bintree -> list A | forall ts rs, qtrav_spec ts rs <-> qtrav_body ts = rs}.
+  Proof with eauto.
+    set (f := fun ts => list_sum (map cnt ts)).
+    set (R := fun ts1 ts2 => f ts1 < f ts2).
+    assert (claim1 : well_founded R).
+    { apply Wf_nat.well_founded_lt_compat with (f := f)... }
+    assert (claim2 : forall phi : list bintree -> Type, (forall x, (forall y, R y x -> phi y) -> phi x) -> forall x, phi x).
+    { intros phi ACC_HYP x. induction (claim1 x) as [x H_acc IH]... }
+    enough (claim3 : forall ts, {xs : list A | forall rs, qtrav_spec ts rs <-> xs = rs}).
+    { exists (fun ts => proj1_sig (claim3 ts)). exact (fun ts => proj2_sig (claim3 ts)). }
+    intros ts; pattern ts; revert ts; apply claim2.
+    intros [ | [ | x l r] ts] acc_hyp.
+    - exists ([]); intros rs; split.
+      + intros H_spec; inversion H_spec; subst...
+      + intros H_spec; subst...
+    - assert (to_show : R ts (BT_nil :: ts)).
+      { unfold R, f. simpl; constructor. }
+      destruct (acc_hyp ts to_show) as [xs H_xs].
+      exists (xs); intros rs; split.
+      + intros H_spec; inversion H_spec; subst. apply H_xs...
+      + intros H_spec; subst. constructor. apply H_xs...
+    - assert (to_show : R ((ts ++ [l]) ++ [r]) (BT_node x l r :: ts)).
+      { unfold R, f. simpl; unfold Peano.lt.
+        do 2 rewrite map_last.
+        do 2 rewrite list_sum_app; simpl.
+        do 2 rewrite Nat.add_0_r.
+        rewrite <- Nat.add_assoc at 1.
+        rewrite Nat.add_comm.
+        reflexivity.
+      }
+      destruct (acc_hyp ((ts ++ [l]) ++ [r]) to_show) as [xs H_xs].
+      exists (x :: xs); intros rs; split.
+      + intros H_spec; inversion H_spec; subst. apply f_equal, H_xs...
+      + intros H_spec; subst. constructor; apply H_xs...
+  Defined.
+
+  Lemma qtrav_unfold ts :
+    proj1_sig qtrav ts =
+    match ts with
+    | [] => []
+    | BT_nil :: ts_tail => proj1_sig qtrav ts_tail
+    | BT_node x l r :: ts_tail => x :: proj1_sig qtrav ((ts_tail ++ [l]) ++ [r])
+    end.
+  Proof with eauto.
+    destruct qtrav as [qtrav_body H_qtrav_body]; simpl.
+    destruct ts as [ | [ | x l r] ts]; simpl; apply H_qtrav_body...
+    all: constructor; apply H_qtrav_body...
+  Qed.
+
+  Definition toList_aux := proj1_sig qtrav.
+
+  Global Opaque toList_aux.
+
+  Lemma toList_aux_unfold ts :
+    toList_aux ts =
+    match ts with
+    | [] => []
+    | BT_nil :: ts_tail => toList_aux ts_tail
+    | BT_node x l r :: ts_tail => x :: toList_aux ((ts_tail ++ [l]) ++ [r])
+    end.
+  Proof. exact (qtrav_unfold ts). Qed.
+
+  Definition toList root := toList_aux [root].
+
 End CompleteBinaryTree.
 
 Arguments bintree: clear implicits.
+
+(*
+Compute toList (BT_node 1 (BT_node 2 (BT_node 4 (BT_node 8 BT_nil BT_nil) (BT_node 9 BT_nil BT_nil)) (BT_node 5 (BT_node 10 BT_nil BT_nil) (BT_node 11 BT_nil BT_nil))) (BT_node 3 (BT_node 6 (BT_node 12 BT_nil BT_nil) (BT_node 13 BT_nil BT_nil)) (BT_node 7 (BT_node 14 BT_nil BT_nil) (BT_node 15 BT_nil BT_nil)))).
+  = [1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12; 13; 14; 15]
+  : list nat
+*)
+
+(*
+Compute toList (BT_node 1 (BT_node 2 (BT_node 4 (BT_node 8 BT_nil BT_nil) (BT_node 9 BT_nil BT_nil)) (BT_node 5 (BT_node 10 BT_nil BT_nil) (BT_node 11 BT_nil BT_nil))) (BT_node 3 (BT_node 6 (BT_node 12 BT_nil BT_nil) (BT_node 13 BT_nil BT_nil)) (BT_node 7 (BT_node 14 BT_nil BT_nil) BT_nil))).
+  = [1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12; 13; 14]
+  : list nat
+*)
 
 Section BinaryTreeAccessories.
 
