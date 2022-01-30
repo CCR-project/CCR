@@ -7,7 +7,7 @@ Require Import
   PeanoNat
   Permutation
   Lia.
-Require Import Coq.Program.Wf.
+From Coq.Program Require Import Basics Wf.
 Import Nat.
 Import ListNotations.
 
@@ -24,6 +24,12 @@ Definition option_match {A B : Type} : B -> (A -> B) -> option A -> B :=
     | None => z0
     | Some x => f x
     end.
+
+Definition option2list {A : Type} : option A -> list A :=
+  option_match [] (fun x => [x]).
+
+Definition pair2list {A : Type} : A * A -> list A :=
+  fun '(x1, x2) => [x1; x2].
 
 Section ListOperations.
 
@@ -95,15 +101,6 @@ Section CompleteBinaryTree.
   | BT_node (x : A) (l : bintree) (r : bintree)
   .
 
-  Inductive is_perfect : bintree -> forall rank : nat, Prop :=
-  | Perfect_nil : is_perfect BT_nil O
-  | Perfect_node {n : nat}
-                 (x : A) (l : bintree) (r : bintree)
-                 (H_l : is_perfect l n)
-                 (H_r : is_perfect r n)
-    : is_perfect (BT_node x l r) (S n)
-  .
-
 (*
   Inductive perfect_bintree : nat -> Type :=
   | perfect_nil : perfect_bintree O
@@ -113,19 +110,12 @@ Section CompleteBinaryTree.
   .
 *)
 
-  Inductive is_complete : bintree -> forall rank : nat, Prop :=
-  | Complete_nil
-    : is_complete BT_nil O
-  | Complete_node_perfect_complete {n : nat}
-                                   (x : A) (l : bintree) (r : bintree)
-                                   (H_l : is_perfect l n)
-                                   (H_r : is_complete r n)
-    : is_complete (BT_node x l r) (S n)
-  | Complete_node_complete_perfect {n : nat}
-                                   (x : A) (l : bintree) (r : bintree)
-                                   (H_l : is_complete l (S n))
-                                   (H_r : is_complete r n)
-    : is_complete (BT_node x l r) (S (S n))
+  Inductive is_perfect : bintree -> forall rank : nat, Prop :=
+  | perfect_nil : is_perfect BT_nil O
+  | perfect_node {n : nat} x l r
+                 (H_l : is_perfect l n)
+                 (H_r : is_perfect r n)
+    : is_perfect (BT_node x l r) (S n)
   .
 
 (*
@@ -141,13 +131,36 @@ Section CompleteBinaryTree.
   .
 *)
 
+  Inductive is_complete : bintree -> forall rank : nat, Prop :=
+  | complete_nil
+    : is_complete BT_nil O
+  | complete_node_perfect_complete {n : nat} x l r
+                                   (H_l : is_perfect l n)
+                                   (H_r : is_complete r n)
+    : is_complete (BT_node x l r) (S n)
+  | complete_node_complete_perfect {n : nat} x l r
+                                   (H_l : is_complete l (S n))
+                                   (H_r : is_complete r n)
+    : is_complete (BT_node x l r) (S (S n))
+  .
+
 (*
   Fixpoint perfect2complete {n} (t : perfect_bintree n) : complete_bintree n :=
     match t with
     | perfect_nil => complete_nil
     | perfect_node x l r => complete_node_perfect_complete x l (perfect2complete r)
     end.
+*)
 
+  Lemma perfect2complete {n} t (H_perfect : is_perfect t n)
+    : is_complete t n.
+  Proof.
+    induction H_perfect as [ | n x l r H_l IH_l H_r IH_r].
+    - exact (complete_nil).
+    - exact (complete_node_perfect_complete x l r H_l IH_r).
+  Qed.
+
+(*
   Ltac destruct_perfect t x l r :=
     match goal with
     | [ H : perfect_bintree ?n |- _ ] => 
@@ -214,13 +227,14 @@ Section CompleteBinaryTree.
   Lemma is_perfect_rank t r :
     is_perfect t r ->
     get_rank t = r.
-  Proof with lia. intros X; induction X; simpl... Qed.
+  Proof. intros X; induction X; simpl; lia. Qed.
 
   Lemma is_complete_rank t r :
     is_perfect t r ->
     get_rank t = r.
-  Proof with lia. intros X; induction X; simpl... Qed.
+  Proof. intros X; induction X; simpl; lia. Qed.
 
+(*
   Let cnt : bintree -> nat :=
     fix cnt_fix t :=
     match t with
@@ -228,32 +242,32 @@ Section CompleteBinaryTree.
     | BT_node x l r => 1 + cnt_fix l + cnt_fix r
     end.
 
-(*
   Program Fixpoint toList_aux ts {measure (list_sum (map cnt ts))} :=
     match ts with
     | [] => []
-    | BT_nil :: ts' => toList_aux ts'
-    | BT_node x l r :: ts' => x :: toList_aux ((ts' ++ [l]) ++ [r])
+    | BT_nil :: ts_tail => toList_aux ts_tail
+    | BT_node x l r :: ts_tail => x :: toList_aux ((ts_tail ++ [l]) ++ [r])
     end.
   Next Obligation.
-    simpl; unfold Peano.lt.
-    do 2 rewrite map_last.
-    do 2 rewrite list_sum_app; simpl.
-    do 2 rewrite Nat.add_0_r.
-    rewrite <- Nat.add_assoc at 1.
-    rewrite Nat.add_comm.
-    reflexivity.
-  Qed.
+    unfold Peano.lt.
+    do 2 rewrite map_last. do 2 rewrite list_sum_app; cbn.
+    do 2 rewrite Nat.add_0_r. rewrite <- Nat.add_assoc at 1.
+    rewrite Nat.add_comm; constructor.
+  Defined.
 
   Lemma toList_aux_unfold ts :
     toList_aux ts =
     match ts with
     | [] => []
-    | BT_nil :: ts' => toList_aux ts'
-    | BT_node x l r :: ts' => x :: toList_aux ((ts' ++ [l]) ++ [r])
+    | BT_nil :: ts_tail => toList_aux ts_tail
+    | BT_node x l r :: ts_tail => x :: toList_aux (ts_tail ++ [l; r])
     end.
   Proof.
   Admitted.
+
+  Global Opaque toList_aux.
+
+  Definition toList root := toList_aux [root].
 *)
 
   Inductive qtrav_spec : list bintree -> list A -> Prop :=
@@ -269,40 +283,45 @@ Section CompleteBinaryTree.
   Local Hint Constructors qtrav_spec : core.
 
   Definition qtrav :
-    {qtrav_body : list bintree -> list A | forall ts rs, qtrav_spec ts rs <-> qtrav_body ts = rs}.
+    { qtrav_body : list bintree -> list A
+    | forall ts rs, qtrav_spec ts rs <-> qtrav_body ts = rs
+    }.
   Proof with eauto.
+    set (cnt :=
+      fix cnt_fix (t : bintree) {struct t} : nat :=
+      match t with
+      | BT_nil => 1
+      | BT_node x l r => 1 + cnt_fix l + cnt_fix r
+      end
+    ).
     set (f := fun ts => list_sum (map cnt ts)).
     set (R := fun ts1 ts2 => f ts1 < f ts2).
-    assert (claim1 : well_founded R).
+    assert (R_wf : well_founded R).
     { apply Wf_nat.well_founded_lt_compat with (f := f)... }
-    assert (claim2 : forall phi : list bintree -> Type, (forall x, (forall y, R y x -> phi y) -> phi x) -> forall x, phi x).
-    { intros phi ACC_HYP x. induction (claim1 x) as [x H_acc IH]... }
-    enough (claim3 : forall ts, {xs : list A | forall rs, qtrav_spec ts rs <-> xs = rs}).
-    { exists (fun ts => proj1_sig (claim3 ts)). exact (fun ts => proj2_sig (claim3 ts)). }
-    intros ts; pattern ts; revert ts; apply claim2.
-    intros [ | [ | x l r] ts] acc_hyp.
-    - exists ([]); intros rs; split.
-      + intros H_spec; inversion H_spec; subst...
-      + intros H_spec; subst...
-    - assert (to_show : R ts (BT_nil :: ts)).
-      { unfold R, f. simpl; constructor. }
-      destruct (acc_hyp ts to_show) as [xs H_xs].
-      exists (xs); intros rs; split.
-      + intros H_spec; inversion H_spec; subst. apply H_xs...
-      + intros H_spec; subst. constructor. apply H_xs...
-    - assert (to_show : R ((ts ++ [l]) ++ [r]) (BT_node x l r :: ts)).
-      { unfold R, f. simpl; unfold Peano.lt.
-        do 2 rewrite map_last.
-        do 2 rewrite list_sum_app; simpl.
-        do 2 rewrite Nat.add_0_r.
-        rewrite <- Nat.add_assoc at 1.
-        rewrite Nat.add_comm.
-        reflexivity.
+    assert (R_wf_rect : forall phi : list bintree -> Type, (forall t1, (forall t2, R t2 t1 -> phi t2) -> phi t1) -> forall t, phi t).
+    { intros phi acc_hyp t. induction (R_wf t)... }
+    enough (to_show : forall ts, {xs : list A | forall rs, qtrav_spec ts rs <-> xs = rs}).
+    { exists (fun ts => proj1_sig (to_show ts)). exact (fun ts => proj2_sig (to_show ts)). }
+    induction ts as [[ | [ | x l r] ts] IH] using R_wf_rect.
+    - exists ([]); intros rs; split; intros H_spec.
+      + inversion H_spec; subst...
+      + subst...
+    - assert (IH_arg : R ts (BT_nil :: ts)).
+      { unfold R, f. cbn; constructor. }
+      destruct (IH ts IH_arg) as [xs H_xs].
+      exists (xs); intros rs; split; intros H_spec.
+      + inversion H_spec; subst. apply H_xs...
+      + subst. constructor. apply H_xs...
+    - assert (IH_arg : R ((ts ++ [l]) ++ [r]) (BT_node x l r :: ts)).
+      { unfold R, f. cbn; unfold Peano.lt.
+        do 2 rewrite map_last. do 2 rewrite list_sum_app; cbn.
+        do 2 rewrite Nat.add_0_r. rewrite <- Nat.add_assoc at 1.
+        rewrite Nat.add_comm; constructor.
       }
-      destruct (acc_hyp ((ts ++ [l]) ++ [r]) to_show) as [xs H_xs].
-      exists (x :: xs); intros rs; split.
-      + intros H_spec; inversion H_spec; subst. apply f_equal, H_xs...
-      + intros H_spec; subst. constructor; apply H_xs...
+      destruct (IH ((ts ++ [l]) ++ [r]) IH_arg) as [xs H_xs].
+      exists (x :: xs); intros rs; split; intros H_spec.
+      + inversion H_spec; subst. apply f_equal, H_xs...
+      + subst. constructor; apply H_xs...
   Defined.
 
   Lemma qtrav_unfold ts :
@@ -314,22 +333,80 @@ Section CompleteBinaryTree.
     end.
   Proof with eauto.
     destruct qtrav as [qtrav_body H_qtrav_body]; simpl.
-    destruct ts as [ | [ | x l r] ts]; simpl; apply H_qtrav_body...
+    destruct ts as [ | [ | x l r] ts_tail]; simpl; apply H_qtrav_body...
     all: constructor; apply H_qtrav_body...
   Qed.
 
   Definition toList_aux := proj1_sig qtrav.
 
+  Lemma toList_aux_unfold queue :
+    toList_aux queue =
+    match queue with
+    | [] => []
+    | BT_nil :: queue_tail => toList_aux queue_tail
+    | BT_node x l r :: queue_tail => x :: toList_aux (queue_tail ++ [l; r])
+    end.
+  Proof.
+    unfold toList_aux; rewrite qtrav_unfold with (ts := queue).
+    destruct queue as [ | [ | x l r] queue_tail]; try reflexivity.
+    now rewrite <- app_assoc at 1; replace ([l] ++ [r]) with ([l; r]).
+  Qed.
+
   Global Opaque toList_aux.
 
-  Lemma toList_aux_unfold ts :
-    toList_aux ts =
+  Definition option_root t :=
+    match t with
+    | BT_nil => None
+    | BT_node x l r => Some x
+    end.
+
+  Definition option_childs t :=
+    match t with
+    | BT_nil => None
+    | BT_node x l r => Some (l, r)
+    end.
+
+  Local Open Scope program_scope.
+
+  Definition extract_roots := flat_map (option2list ∘ option_root).
+
+  Lemma extract_roots_unfold ts :
+    extract_roots ts =
     match ts with
     | [] => []
-    | BT_nil :: ts_tail => toList_aux ts_tail
-    | BT_node x l r :: ts_tail => x :: toList_aux ((ts_tail ++ [l]) ++ [r])
+    | BT_nil :: ts_tail => extract_roots ts_tail
+    | BT_node x l r :: ts_tail => x :: extract_roots ts_tail
     end.
-  Proof. exact (qtrav_unfold ts). Qed.
+  Proof. destruct ts as [ | [ | x l r] ts]; eauto. Qed.
+
+  Definition extract_childs := flat_map (concat (A := _) ∘ option2list ∘ option_map pair2list ∘ option_childs).
+
+  Lemma extract_childs_unfold ts :
+    extract_childs ts =
+    match ts with
+    | [] => []
+    | BT_nil :: ts_tail => extract_childs ts_tail
+    | BT_node x l r :: ts_tail => [l; r] ++ extract_childs ts_tail
+    end.
+  Proof. destruct ts as [ | [ | x l r] ts]; eauto. Qed.
+
+  Local Opaque extract_roots extract_childs.
+
+  Lemma toList_aux_app ts1 ts2 :
+    toList_aux (ts1 ++ ts2) = extract_roots ts1 ++ toList_aux (ts2 ++ extract_childs ts1).
+  Proof with eauto with *.
+    revert ts2; induction ts1 as [ | [ | x l r] ts2 IH]; simpl; intros ts1.
+    - rewrite app_nil_r...
+    - rewrite extract_roots_unfold, extract_childs_unfold, toList_aux_unfold...
+    - rewrite extract_roots_unfold, extract_childs_unfold, toList_aux_unfold.
+      simpl; apply f_equal; rewrite <- app_assoc.
+      replace (ts1 ++ l :: r :: extract_childs ts2) with ((ts1 ++ [l; r]) ++ extract_childs ts2)...
+      rewrite <- app_assoc...
+  Qed.
+
+  Theorem toList_aux_spec ts :
+    toList_aux ts = extract_roots ts ++ toList_aux (extract_childs ts).
+  Proof. replace ts with (ts ++ []) at 1. apply toList_aux_app. apply app_nil_r. Qed.
 
   Definition toList root := toList_aux [root].
 
@@ -338,13 +415,13 @@ End CompleteBinaryTree.
 Arguments bintree: clear implicits.
 
 (*
-Compute toList (BT_node 1 (BT_node 2 (BT_node 4 (BT_node 8 BT_nil BT_nil) (BT_node 9 BT_nil BT_nil)) (BT_node 5 (BT_node 10 BT_nil BT_nil) (BT_node 11 BT_nil BT_nil))) (BT_node 3 (BT_node 6 (BT_node 12 BT_nil BT_nil) (BT_node 13 BT_nil BT_nil)) (BT_node 7 (BT_node 14 BT_nil BT_nil) (BT_node 15 BT_nil BT_nil)))).
+  Compute toList (BT_node 1 (BT_node 2 (BT_node 4 (BT_node 8 BT_nil BT_nil) (BT_node 9 BT_nil BT_nil)) (BT_node 5 (BT_node 10 BT_nil BT_nil) (BT_node 11 BT_nil BT_nil))) (BT_node 3 (BT_node 6 (BT_node 12 BT_nil BT_nil) (BT_node 13 BT_nil BT_nil)) (BT_node 7 (BT_node 14 BT_nil BT_nil) (BT_node 15 BT_nil BT_nil)))).
   = [1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12; 13; 14; 15]
   : list nat
 *)
 
 (*
-Compute toList (BT_node 1 (BT_node 2 (BT_node 4 (BT_node 8 BT_nil BT_nil) (BT_node 9 BT_nil BT_nil)) (BT_node 5 (BT_node 10 BT_nil BT_nil) (BT_node 11 BT_nil BT_nil))) (BT_node 3 (BT_node 6 (BT_node 12 BT_nil BT_nil) (BT_node 13 BT_nil BT_nil)) (BT_node 7 (BT_node 14 BT_nil BT_nil) BT_nil))).
+  Compute toList (BT_node 1 (BT_node 2 (BT_node 4 (BT_node 8 BT_nil BT_nil) (BT_node 9 BT_nil BT_nil)) (BT_node 5 (BT_node 10 BT_nil BT_nil) (BT_node 11 BT_nil BT_nil))) (BT_node 3 (BT_node 6 (BT_node 12 BT_nil BT_nil) (BT_node 13 BT_nil BT_nil)) (BT_node 7 (BT_node 14 BT_nil BT_nil) BT_nil))).
   = [1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12; 13; 14]
   : list nat
 *)
@@ -355,125 +432,122 @@ Section BinaryTreeAccessories.
 
   Definition context (A : Type) := list (dir_t * (A * bintree A)).
 
+  Definition zipper A : Type := bintree A * context A.
+
   Context {A : Type}.
 
-  Definition recover_step_aux d x t : bintree A -> bintree A :=
-    match d with
-    | Dir_left => fun l => BT_node x l t
-    | Dir_right => fun r => BT_node x t r
-    end.
+  Definition init_zipper root : zipper A := (root, []).
 
-  Definition recover_step it := uncurry (recover_step_aux (fst it)) (snd it).
+  Inductive zipper_invariant subtree : context A -> bintree A -> Prop :=
+  | Zipper_top
+    : zipper_invariant subtree [] subtree
+  | Zipper_left ctx_l x l r
+    (X_l : zipper_invariant subtree ctx_l l)
+    : zipper_invariant subtree (ctx_l ++ [(Dir_left, (x, r))]) (BT_node x l r)
+  | Zipper_right ctx_r x l r
+    (X_r : zipper_invariant subtree ctx_r r)
+    : zipper_invariant subtree (ctx_r ++ [(Dir_right, (x, l))]) (BT_node x l r).
 
-  Definition recover subtree ctx := fold_right recover_step subtree (rev ctx).
+  Local Hint Constructors zipper_invariant : core.
 
-  Lemma recover_unfold subtree ctx :
-    recover subtree ctx =
-    match ctx with
-    | [] => subtree
-    | (Dir_left, (x, r)) :: ctx_l => recover (BT_node x subtree r) ctx_l
-    | (Dir_right, (x, l)) :: ctx_r => recover (BT_node x l subtree) ctx_r
-    end.
-  Proof with eauto.
-    unfold recover at 1; rewrite fold_left_rev_right with (f := recover_step).
-    destruct ctx as [ | [[ | ] [e t]] ctx]; simpl...
-    all: unfold recover at 1; rewrite fold_left_rev_right with (f := recover_step)...
-  Qed.
+  Lemma zipper_invariant_refl root
+    : zipper_invariant root [] root.
+  Proof. constructor. Qed.
 
-  Lemma recover_last subtree ctx d x t :
-    recover subtree (ctx ++ [(d, (x, t))]) =
-    match d with
-    | Dir_left => BT_node x (recover subtree ctx) t 
-    | Dir_right => BT_node x t (recover subtree ctx)
-    end.
-  Proof. unfold recover at 1; rewrite rev_unit; now destruct d. Qed.
-
-  Inductive context_spec subtree : context A -> bintree A -> Prop :=
-  | CtxSpec_top
-    : context_spec subtree [] subtree
-  | CtxSpec_left ctx_l x l r
-    (H_l : context_spec subtree ctx_l l)
-    : context_spec subtree (ctx_l ++ [(Dir_left, (x, r))]) (BT_node x l r)
-  | CtxSpec_right ctx_r x l r
-    (H_r : context_spec subtree ctx_r r)
-    : context_spec subtree (ctx_r ++ [(Dir_right, (x, l))]) (BT_node x l r).
-
-  Local Hint Constructors context_spec : core.
-
-  Theorem context_spec_recover subtree ctx root :
-    context_spec subtree ctx root <->
-    recover subtree ctx = root.
-  Proof with eauto.
-    split.
-    - intros X; induction X; simpl...
-      all: rewrite recover_last, IHX...
-    - intros H_eq; subst root; revert subtree.
-      pattern ctx; revert ctx; apply rev_ind...
-      intros [[ | ] [x t]] ctx IH subtree; rewrite recover_last...
-  Qed.
-
-  Corollary context_spec_left ctx x l r root :
-    context_spec (BT_node x l r) ctx root <->
-    context_spec l ((Dir_left, (x, r)) :: ctx) root.
-  Proof.
-    do 2 rewrite context_spec_recover.
-    now rewrite recover_unfold with (ctx := (Dir_left, (x, r)) :: ctx).
-  Qed.
-
-  Corollary context_spec_right ctx x l r root :
-    context_spec (BT_node x l r) ctx root <->
-    context_spec r ((Dir_right, (x, l)) :: ctx) root.
-  Proof.
-    do 2 rewrite context_spec_recover.
-    now rewrite recover_unfold with (ctx := (Dir_right, (x, l)) :: ctx).
-  Qed.
-
-  Lemma context_spec_refl root
-    : context_spec root [] root.
-  Proof. constructor 1. Qed.
-
-  Lemma context_spec_trans t1 c1 t2 c2 root
-    (X1 : context_spec t1 c1 t2)
-    (X2 : context_spec t2 c2 root)
-    : context_spec t1 (c1 ++ c2) root.
+  Lemma zipper_invariant_trans t1 c1 t2 c2 root
+    (X1 : zipper_invariant t1 c1 t2)
+    (X2 : zipper_invariant t2 c2 root)
+    : zipper_invariant t1 (c1 ++ c2) root.
   Proof with eauto with *.
     revert t2 c2 X2 t1 c1 X1; intros t2 c2 X2.
     induction X2; intros t1 c1 X1; [rewrite app_nil_r | rewrite app_assoc | rewrite app_assoc]...
   Qed.
 
+  Definition run_zipper_step_aux d x t : bintree A -> bintree A :=
+    match d with
+    | Dir_left => fun l => BT_node x l t
+    | Dir_right => fun r => BT_node x t r
+    end.
+
+  Definition run_zipper_step it := uncurry (run_zipper_step_aux (fst it)) (snd it).
+
+  Definition run_zipper : zipper A -> bintree A :=
+    fun '(subtree, ctx) => fold_right run_zipper_step subtree (rev ctx).
+
+  Lemma run_zipper_unfold subtree ctx :
+    run_zipper (subtree, ctx) =
+    match ctx with
+    | [] => subtree
+    | (Dir_left, (x, r)) :: ctx_l => run_zipper (BT_node x subtree r, ctx_l)
+    | (Dir_right, (x, l)) :: ctx_r => run_zipper (BT_node x l subtree, ctx_r)
+    end.
+  Proof with eauto.
+    cbn. rewrite fold_left_rev_right with (f := run_zipper_step).
+    destruct ctx as [ | [[ | ] [e t]] ctx]; simpl...
+    all: rewrite fold_left_rev_right with (f := run_zipper_step)...
+  Qed.
+
+  Lemma run_zipper_last subtree ctx d x t :
+    run_zipper (subtree, ctx ++ [(d, (x, t))]) =
+    match d with
+    | Dir_left => BT_node x (run_zipper (subtree, ctx)) t
+    | Dir_right => BT_node x t (run_zipper (subtree, ctx))
+    end.
+  Proof. cbn. now rewrite rev_unit; destruct d. Qed.
+
+  Theorem zipper_invariant_iff subtree ctx root :
+    zipper_invariant subtree ctx root <->
+    run_zipper (subtree, ctx) = root.
+  Proof with eauto.
+    split.
+    - intros X; induction X...
+      all: rewrite run_zipper_last, <- IHX...
+    - intros H_eq; subst root; revert subtree.
+      induction ctx as [ | [[ | ] [x t]] ctx IH] using rev_ind...
+      all: intros subtree; rewrite run_zipper_last...
+  Qed.
+
+  Corollary zipper_invariant_top subtree root :
+    zipper_invariant subtree [] root <->
+    subtree = root.
+  Proof. now rewrite zipper_invariant_iff. Qed.
+
+  Corollary zipper_invariant_left ctx x l r root :
+    zipper_invariant l ((Dir_left, (x, r)) :: ctx) root <->
+    zipper_invariant (BT_node x l r) ctx root.
+  Proof. do 2 rewrite zipper_invariant_iff. now rewrite run_zipper_unfold at 1. Qed.
+
+  Corollary zipper_invariant_right ctx x l r root :
+    zipper_invariant r ((Dir_right, (x, l)) :: ctx) root <->
+    zipper_invariant (BT_node x l r) ctx root.
+  Proof. do 2 rewrite zipper_invariant_iff. now rewrite run_zipper_unfold at 1. Qed.
+
 End BinaryTreeAccessories.
 
-Section SwapProperties.
+Section ListAccessories.
 
   Lemma Some_inj {A : Type} {lhs : A} {rhs : A} :
     Some lhs = Some rhs -> lhs = rhs.
   Proof. congruence. Qed.
 
   Lemma list_extensionality {A : Type} (xs1 : list A) (xs2 : list A) :
-    xs1 = xs2 <->
-    forall i : nat,
-    lookup xs1 i = lookup xs2 i.
+    xs1 = xs2 <-> (forall i, lookup xs1 i = lookup xs2 i).
   Proof with discriminate || eauto.
     revert xs1 xs2; cbn.
     induction xs1 as [ | x1 xs1 IH]; intros [ | x2 xs2]; simpl in *; split; intros H_eq...
     - pose (H_eq 0)...
     - pose (H_eq 0)...
     - rewrite H_eq...
-    - assert (H_x1_eq_x2 : x1 = x2) by exact (Some_inj (H_eq 0)); subst x2.
+    - assert (H_x1_eq_x2 : x1 = x2) by exact (Some_inj (H_eq 0)); subst.
       pose (proj2 (IH xs2) (fun i => H_eq (S i))); congruence.
   Qed.
 
   Lemma listExt_map {A : Type} {B : Type} (f : A -> B) (xs : list A) :
-    forall i : nat,
-    lookup (map f xs) i = (option_map f) (lookup xs i).
-  Proof with discriminate || eauto.
-    cbn; induction xs as [ | x xs IH]; simpl.
-    - intros [ | n']...
-    - intros [ | n']; simpl...
-  Qed.
+    forall i, lookup (map f xs) i = option_map f (lookup xs i).
+  Proof. cbn; induction xs as [ | x xs IH]; intros [ | n']; simpl; (discriminate || eauto). Qed.
 
   Lemma listExt_seq (start : nat) (len : nat) :
-    forall i : nat,
+    forall i,
     match lookup (seq start len) i with
     | None => i >= len
     | Some x => x = start + i
@@ -490,19 +564,18 @@ Section SwapProperties.
   Qed.
 
   Lemma firstn_nth_error {A : Type} (n : nat) (xs : list A)  :
-    forall i : nat,
+    forall i,
     i < length xs ->
     i < n ->
     nth_error (firstn n xs) i = nth_error xs i.
   Proof with discriminate || (try lia) || eauto.
     revert xs; induction n as [ | n IH]; simpl...
     intros [ | x xs] i H_lt1 H_lt2; simpl in *...
-    destruct i as [ | i']; simpl...
-    apply IH...
+    destruct i as [ | i']; simpl... apply IH...
   Qed.
 
   Lemma listExt_firstn {A : Type} (xs : list A) (n : nat) :
-    forall i : nat,
+    forall i,
     match lookup (firstn n xs) i with
     | None => i >= n \/ i >= length xs
     | Some x => i < n /\ lookup xs i = Some x
@@ -522,7 +595,7 @@ Section SwapProperties.
   Qed.
 
   Lemma listExt_combine {A : Type} {B : Type} (xs : list A) (ys : list B) :
-    forall i : nat,
+    forall i,
     match lookup (combine xs ys) i with
     | None => i >= length xs \/ i >= length ys
     | Some (x, y) => lookup xs i = Some x /\ lookup ys i = Some y
@@ -535,7 +608,7 @@ Section SwapProperties.
       { do 2 (rewrite firstn_length_le; [ | lia]); lia. }
       intros i; cbn.
       destruct (nth_error (combine (firstn len xs) (firstn len ys)) i) as [[x y] | ] eqn: H_obs.
-      { assert (H_i : i < length (combine (firstn len xs) (firstn len ys))).
+      + assert (H_i : i < length (combine (firstn len xs) (firstn len ys))).
         { apply nth_error_Some; rewrite H_obs... }
         assert (H1_i : i < length (firstn len xs)).
         { pose (combine_length (firstn len xs) (firstn len ys)); lia. }
@@ -551,17 +624,15 @@ Section SwapProperties.
         assert (x_is : x = nth i (firstn len xs) x) by congruence.
         assert (y_is : y = nth i (firstn len ys) y) by congruence.
         rewrite x_is, y_is; now firstorder.
-      }
-      { enough (to_show : len <= i) by lia.
+      + enough (to_show : len <= i) by lia.
         apply nth_error_None in H_obs.
         rewrite combine_length in H_obs.
         do 2 (rewrite firstn_length_le in H_obs; [ | lia]); lia.
-      }
     - rewrite <- combine_firstn; apply firstn_all2; rewrite combine_length...
   Qed.
 
   Lemma listExt_add_indices {A : Type} (xs : list A) :
-    forall i : nat, 
+    forall i, 
     match lookup (add_indices xs) i with
     | None => i >= length xs /\ lookup xs i = None
     | Some (x, n) => i = n /\ lookup xs i = Some x
@@ -582,7 +653,7 @@ Section SwapProperties.
   Theorem listExt_swap {A : Type} (xs : list A) (i1 : nat) (i2 : nat) :
     i1 < length xs ->
     i2 < length xs ->
-    forall i : nat,
+    forall i,
     match lookup (swap xs i1 i2) i with
     | None => i >= length xs
     | Some val =>
@@ -612,4 +683,4 @@ Section SwapProperties.
     - exact (proj1 claim2).
   Qed.
 
-End SwapProperties.
+End ListAccessories.
