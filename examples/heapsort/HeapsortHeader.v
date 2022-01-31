@@ -188,7 +188,9 @@ Section CompleteBinaryTree.
       subst;
       clear Heq
     end.
-  
+*)
+
+(*
   Fixpoint delete_last_perfect {n} (t : perfect_bintree (S (S n))) : complete_bintree (S (S n)).
   Proof.
     destruct_perfect t x l r.
@@ -200,7 +202,9 @@ Section CompleteBinaryTree.
         by exact (delete_last_perfect _ r).
       exact (complete_node_perfect_complete x l r').
   Defined.
+*)
 
+(*
   Fixpoint delete_last_complete {n} (t : complete_bintree (S n)) : complete_bintree (S n) + perfect_bintree n.
   Proof.
     destruct_complete t x l r.
@@ -224,15 +228,15 @@ Section CompleteBinaryTree.
     | BT_node x l r => 1 + max (get_rank l) (get_rank r)
     end.
 
-  Lemma is_perfect_rank t r :
-    is_perfect t r ->
-    get_rank t = r.
-  Proof. intros X; induction X; simpl; lia. Qed.
+  Lemma is_perfect_rank t rank
+    (H_perfect : is_perfect t rank)
+    : get_rank t = rank.
+  Proof. induction H_perfect; simpl; lia. Qed.
 
-  Lemma is_complete_rank t r :
-    is_perfect t r ->
-    get_rank t = r.
-  Proof. intros X; induction X; simpl; lia. Qed.
+  Lemma is_complete_rank t rank
+    (H_complete : is_complete t rank)
+    : get_rank t = rank.
+  Proof. induction H_complete. 2: apply is_perfect_rank in H_l. all: simpl; lia. Qed.
 
 (*
   Let cnt : bintree -> nat :=
@@ -284,7 +288,7 @@ Section CompleteBinaryTree.
 
   Definition qtrav :
     { qtrav_body : list bintree -> list A
-    | forall ts rs, qtrav_spec ts rs <-> qtrav_body ts = rs
+    | forall ts xs, qtrav_spec ts xs <-> qtrav_body ts = xs
     }.
   Proof with eauto.
     set (cnt :=
@@ -300,67 +304,67 @@ Section CompleteBinaryTree.
     { apply Wf_nat.well_founded_lt_compat with (f := f)... }
     assert (R_wf_rect : forall phi : list bintree -> Type, (forall t1, (forall t2, R t2 t1 -> phi t2) -> phi t1) -> forall t, phi t).
     { intros phi acc_hyp t. induction (R_wf t)... }
-    enough (to_show : forall ts, {xs : list A | forall rs, qtrav_spec ts rs <-> xs = rs}).
+    enough (to_show : forall ts, {rslt : list A | forall xs, qtrav_spec ts xs <-> rslt = xs}).
     { exists (fun ts => proj1_sig (to_show ts)). exact (fun ts => proj2_sig (to_show ts)). }
     induction ts as [[ | [ | x l r] ts] IH] using R_wf_rect.
-    - exists ([]); intros rs; split; intros H_spec.
+    - exists ([]); intros xs; split; intros H_spec.
       + inversion H_spec; subst...
       + subst...
     - assert (IH_arg : R ts (BT_nil :: ts)).
       { unfold R, f. cbn; constructor. }
-      destruct (IH ts IH_arg) as [xs H_xs].
-      exists (xs); intros rs; split; intros H_spec.
-      + inversion H_spec; subst. apply H_xs...
-      + subst. constructor. apply H_xs...
+      destruct (IH ts IH_arg) as [rslt H_rslt].
+      exists (rslt); intros xs; split; intros H_spec.
+      + inversion H_spec; subst. apply H_rslt...
+      + subst. constructor; apply H_rslt...
     - assert (IH_arg : R ((ts ++ [l]) ++ [r]) (BT_node x l r :: ts)).
       { unfold R, f. cbn; unfold Peano.lt.
         do 2 rewrite map_last. do 2 rewrite list_sum_app; cbn.
         do 2 rewrite Nat.add_0_r. rewrite <- Nat.add_assoc at 1.
         rewrite Nat.add_comm; constructor.
       }
-      destruct (IH ((ts ++ [l]) ++ [r]) IH_arg) as [xs H_xs].
-      exists (x :: xs); intros rs; split; intros H_spec.
-      + inversion H_spec; subst. apply f_equal, H_xs...
-      + subst. constructor; apply H_xs...
+      destruct (IH ((ts ++ [l]) ++ [r]) IH_arg) as [rslt H_rslt].
+      exists (x :: rslt); intros xs; split; intros H_spec.
+      + inversion H_spec; subst. apply f_equal, H_rslt...
+      + subst. constructor; apply H_rslt...
   Defined.
 
-  Lemma qtrav_unfold ts :
-    proj1_sig qtrav ts =
-    match ts with
+  Lemma qtrav_unfold queue :
+    proj1_sig qtrav queue =
+    match queue with
     | [] => []
-    | BT_nil :: ts_tail => proj1_sig qtrav ts_tail
-    | BT_node x l r :: ts_tail => x :: proj1_sig qtrav ((ts_tail ++ [l]) ++ [r])
+    | BT_nil :: queue_tail => proj1_sig qtrav queue_tail
+    | BT_node x l r :: queue_tail => x :: proj1_sig qtrav ((queue_tail ++ [l]) ++ [r])
     end.
   Proof with eauto.
     destruct qtrav as [qtrav_body H_qtrav_body]; simpl.
-    destruct ts as [ | [ | x l r] ts_tail]; simpl; apply H_qtrav_body...
+    destruct queue as [ | [ | x l r] queue_tail]; simpl; apply H_qtrav_body...
     all: constructor; apply H_qtrav_body...
   Qed.
 
-  Definition toList_aux := proj1_sig qtrav.
+  Definition toList_step := proj1_sig qtrav.
 
-  Lemma toList_aux_unfold queue :
-    toList_aux queue =
-    match queue with
+  Lemma toList_step_unfold ts :
+    toList_step ts =
+    match ts with
     | [] => []
-    | BT_nil :: queue_tail => toList_aux queue_tail
-    | BT_node x l r :: queue_tail => x :: toList_aux (queue_tail ++ [l; r])
+    | BT_nil :: ts_tail => toList_step ts_tail
+    | BT_node x l r :: ts_tail => x :: toList_step (ts_tail ++ [l; r])
     end.
-  Proof.
-    unfold toList_aux; rewrite qtrav_unfold with (ts := queue).
-    destruct queue as [ | [ | x l r] queue_tail]; try reflexivity.
-    now rewrite <- app_assoc at 1; replace ([l] ++ [r]) with ([l; r]).
+  Proof with eauto.
+    unfold toList_step; rewrite qtrav_unfold with (queue := ts) at 1.
+    destruct ts as [ | [ | x l r] ts_tail]...
+    rewrite <- app_assoc at 1; replace ([l] ++ [r]) with ([l; r])...
   Qed.
 
-  Global Opaque toList_aux.
+  Global Opaque toList_step.
 
-  Definition option_root t :=
+  Definition option_elem t :=
     match t with
     | BT_nil => None
     | BT_node x l r => Some x
     end.
 
-  Definition option_childs t :=
+  Definition option_children_pair t :=
     match t with
     | BT_nil => None
     | BT_node x l r => Some (l, r)
@@ -368,47 +372,42 @@ Section CompleteBinaryTree.
 
   Local Open Scope program_scope.
 
-  Definition extract_roots := flat_map (option2list ∘ option_root).
+  Definition extract_elements := flat_map (option2list ∘ option_elem).
 
-  Lemma extract_roots_unfold ts :
-    extract_roots ts =
+  Definition extract_children := flat_map (@concat bintree ∘ option2list ∘ option_map pair2list ∘ option_children_pair).
+
+  Lemma extract_elements_unfold ts :
+    extract_elements ts =
     match ts with
     | [] => []
-    | BT_nil :: ts_tail => extract_roots ts_tail
-    | BT_node x l r :: ts_tail => x :: extract_roots ts_tail
+    | BT_nil :: ts_tail => extract_elements ts_tail
+    | BT_node x l r :: ts_tail => x :: extract_elements ts_tail
     end.
-  Proof. destruct ts as [ | [ | x l r] ts]; eauto. Qed.
+  Proof. destruct ts as [ | [ | x l r] ts_tail]; reflexivity. Qed.
 
-  Definition extract_childs := flat_map (concat (A := _) ∘ option2list ∘ option_map pair2list ∘ option_childs).
-
-  Lemma extract_childs_unfold ts :
-    extract_childs ts =
+  Lemma extract_children_unfold ts :
+    extract_children ts =
     match ts with
     | [] => []
-    | BT_nil :: ts_tail => extract_childs ts_tail
-    | BT_node x l r :: ts_tail => [l; r] ++ extract_childs ts_tail
+    | BT_nil :: ts_tail => extract_children ts_tail
+    | BT_node x l r :: ts_tail => [l; r] ++ extract_children ts_tail
     end.
-  Proof. destruct ts as [ | [ | x l r] ts]; eauto. Qed.
+  Proof. destruct ts as [ | [ | x l r] ts_tail]; reflexivity. Qed.
 
-  Local Opaque extract_roots extract_childs.
-
-  Lemma toList_aux_app ts1 ts2 :
-    toList_aux (ts1 ++ ts2) = extract_roots ts1 ++ toList_aux (ts2 ++ extract_childs ts1).
+  Lemma toList_step_app ts1 ts2 :
+    toList_step (ts1 ++ ts2) = extract_elements ts1 ++ toList_step (ts2 ++ extract_children ts1).
   Proof with eauto with *.
-    revert ts2; induction ts1 as [ | [ | x l r] ts2 IH]; simpl; intros ts1.
-    - rewrite app_nil_r...
-    - rewrite extract_roots_unfold, extract_childs_unfold, toList_aux_unfold...
-    - rewrite extract_roots_unfold, extract_childs_unfold, toList_aux_unfold.
-      simpl; apply f_equal; rewrite <- app_assoc.
-      replace (ts1 ++ l :: r :: extract_childs ts2) with ((ts1 ++ [l; r]) ++ extract_childs ts2)...
-      rewrite <- app_assoc...
+    revert ts2; induction ts1 as [ | [ | x l r] ts1 IH]; simpl.
+    all: intros ts2; autorewrite with list...
+    { rewrite toList_step_unfold... }
+    { rewrite toList_step_unfold, <- app_assoc, IH, <- app_assoc... }
   Qed.
 
-  Theorem toList_aux_spec ts :
-    toList_aux ts = extract_roots ts ++ toList_aux (extract_childs ts).
-  Proof. replace ts with (ts ++ []) at 1. apply toList_aux_app. apply app_nil_r. Qed.
+  Theorem toList_step_spec ts :
+    toList_step ts = extract_elements ts ++ toList_step (extract_children ts).
+  Proof. replace (ts) with (ts ++ []) at 1; [exact (toList_step_app ts []) | apply app_nil_r]. Qed.
 
-  Definition toList root := toList_aux [root].
+  Definition toList root := toList_step [root].
 
 End CompleteBinaryTree.
 
@@ -430,97 +429,109 @@ Section BinaryTreeAccessories.
 
   Inductive dir_t : Set := Dir_left | Dir_right.
 
-  Definition context (A : Type) := list (dir_t * (A * bintree A)).
+  Definition ctx_t A := list (dir_t * (A * bintree A)).
 
-  Definition zipper A : Type := bintree A * context A.
+  Definition zipper A : Type := ctx_t A * bintree A.
 
   Context {A : Type}.
 
-  Definition init_zipper root : zipper A := (root, []).
+  Definition initZipper (root : bintree A) : zipper A := ([], root).
 
-  Inductive zipper_invariant subtree : context A -> bintree A -> Prop :=
-  | Zipper_top
-    : zipper_invariant subtree [] subtree
-  | Zipper_left ctx_l x l r
-    (X_l : zipper_invariant subtree ctx_l l)
-    : zipper_invariant subtree (ctx_l ++ [(Dir_left, (x, r))]) (BT_node x l r)
-  | Zipper_right ctx_r x l r
-    (X_r : zipper_invariant subtree ctx_r r)
-    : zipper_invariant subtree (ctx_r ++ [(Dir_right, (x, l))]) (BT_node x l r).
+  Inductive ctx_spec subtree : ctx_t A -> bintree A -> Prop :=
+  | CtxSpec_top
+    : ctx_spec subtree [] subtree
+  | CtxSpec_left ctx_l x l r
+    (X_l : ctx_spec subtree ctx_l l)
+    : ctx_spec subtree (ctx_l ++ [(Dir_left, (x, r))]) (BT_node x l r)
+  | CtxSpec_right ctx_r x l r
+    (X_r : ctx_spec subtree ctx_r r)
+    : ctx_spec subtree (ctx_r ++ [(Dir_right, (x, l))]) (BT_node x l r).
 
-  Local Hint Constructors zipper_invariant : core.
+  Local Hint Constructors ctx_spec : core.
 
-  Lemma zipper_invariant_refl root
-    : zipper_invariant root [] root.
+  Lemma ctx_spec_refl root
+    : ctx_spec root [] root.
   Proof. constructor. Qed.
 
-  Lemma zipper_invariant_trans t1 c1 t2 c2 root
-    (X1 : zipper_invariant t1 c1 t2)
-    (X2 : zipper_invariant t2 c2 root)
-    : zipper_invariant t1 (c1 ++ c2) root.
+  Lemma ctx_spec_trans t1 ctx1 t2 ctx2 root
+    (X1 : ctx_spec t1 ctx1 t2)
+    (X2 : ctx_spec t2 ctx2 root)
+    : ctx_spec t1 (ctx1 ++ ctx2) root.
   Proof with eauto with *.
-    revert t2 c2 X2 t1 c1 X1; intros t2 c2 X2.
-    induction X2; intros t1 c1 X1; [rewrite app_nil_r | rewrite app_assoc | rewrite app_assoc]...
+    revert t2 ctx2 X2 t1 ctx1 X1; intros t2 ctx2 X2.
+    induction X2; intros t1 ctx1 X1; [rewrite app_nil_r | rewrite app_assoc | rewrite app_assoc]...
   Qed.
 
-  Definition run_zipper_step_aux d x t : bintree A -> bintree A :=
-    match d with
-    | Dir_left => fun l => BT_node x l t
-    | Dir_right => fun r => BT_node x t r
+  Definition runZipper_step it : bintree A -> bintree A :=
+    match fst it with
+    | Dir_left => fun l => uncurry (fun x r => BT_node x l r) (snd it)
+    | Dir_right => fun r => uncurry (fun x l => BT_node x l r) (snd it)
     end.
 
-  Definition run_zipper_step it := uncurry (run_zipper_step_aux (fst it)) (snd it).
+  Definition runZipper : zipper A -> bintree A :=
+    fun '(ctx, subtree) => fold_right runZipper_step subtree (rev ctx).
 
-  Definition run_zipper : zipper A -> bintree A :=
-    fun '(subtree, ctx) => fold_right run_zipper_step subtree (rev ctx).
-
-  Lemma run_zipper_unfold subtree ctx :
-    run_zipper (subtree, ctx) =
+  Lemma runZipper_unfold ctx subtree :
+    runZipper (ctx, subtree) =
     match ctx with
     | [] => subtree
-    | (Dir_left, (x, r)) :: ctx_l => run_zipper (BT_node x subtree r, ctx_l)
-    | (Dir_right, (x, l)) :: ctx_r => run_zipper (BT_node x l subtree, ctx_r)
+    | (Dir_left, (x, r)) :: ctx_l => runZipper (ctx_l, BT_node x subtree r)
+    | (Dir_right, (x, l)) :: ctx_r => runZipper (ctx_r, BT_node x l subtree)
     end.
   Proof with eauto.
-    cbn. rewrite fold_left_rev_right with (f := run_zipper_step).
-    destruct ctx as [ | [[ | ] [e t]] ctx]; simpl...
-    all: rewrite fold_left_rev_right with (f := run_zipper_step)...
+    cbn. rewrite fold_left_rev_right with (f := runZipper_step).
+    destruct ctx as [ | [[ | ] [x t]] ctx]; simpl...
+    all: rewrite fold_left_rev_right with (f := runZipper_step)...
   Qed.
 
-  Lemma run_zipper_last subtree ctx d x t :
-    run_zipper (subtree, ctx ++ [(d, (x, t))]) =
+  Lemma runZipper_last ctx d x t subtree :
+    runZipper (ctx ++ [(d, (x, t))], subtree) =
     match d with
-    | Dir_left => BT_node x (run_zipper (subtree, ctx)) t
-    | Dir_right => BT_node x t (run_zipper (subtree, ctx))
+    | Dir_left => BT_node x (runZipper (ctx, subtree)) t
+    | Dir_right => BT_node x t (runZipper (ctx, subtree))
     end.
   Proof. cbn. now rewrite rev_unit; destruct d. Qed.
 
-  Theorem zipper_invariant_iff subtree ctx root :
-    zipper_invariant subtree ctx root <->
-    run_zipper (subtree, ctx) = root.
+  Definition zipper_invariant root : zipper A -> Prop :=
+    fun '(ctx, subtree) => ctx_spec subtree ctx root.
+
+  Theorem runZipper_spec root ctx subtree :
+    root = runZipper (ctx, subtree) <->
+    zipper_invariant root (ctx, subtree).
   Proof with eauto.
-    split.
-    - intros X; induction X...
-      all: rewrite run_zipper_last, <- IHX...
+    unfold zipper_invariant; split.
     - intros H_eq; subst root; revert subtree.
       induction ctx as [ | [[ | ] [x t]] ctx IH] using rev_ind...
-      all: intros subtree; rewrite run_zipper_last...
+      all: intros subtree; rewrite runZipper_last...
+    - intros X; induction X...
+      all: rewrite runZipper_last, IHX...
   Qed.
 
-  Corollary zipper_invariant_top subtree root :
-    zipper_invariant subtree [] root <->
-    subtree = root.
-  Proof. now rewrite zipper_invariant_iff. Qed.
+  Corollary zipper_invariant_top root subtree :
+    zipper_invariant root ([], subtree) <->
+    root = subtree.
+  Proof. now rewrite <- runZipper_spec. Qed.
 
-  Corollary zipper_invariant_left ctx x l r root :
-    zipper_invariant l ((Dir_left, (x, r)) :: ctx) root <->
-    zipper_invariant (BT_node x l r) ctx root.
-  Proof. do 2 rewrite zipper_invariant_iff. now rewrite run_zipper_unfold at 1. Qed.
+  Corollary zipper_invariant_left root ctx x l r :
+    zipper_invariant root ((Dir_left, (x, r)) :: ctx, l) <->
+    zipper_invariant root (ctx, BT_node x l r).
+  Proof. do 2 rewrite <- runZipper_spec. now rewrite runZipper_unfold at 1. Qed.
 
-  Corollary zipper_invariant_right ctx x l r root :
-    zipper_invariant r ((Dir_right, (x, l)) :: ctx) root <->
-    zipper_invariant (BT_node x l r) ctx root.
-  Proof. do 2 rewrite zipper_invariant_iff. now rewrite run_zipper_unfold at 1. Qed.
+  Corollary zipper_invariant_right root ctx x l r :
+    zipper_invariant root ((Dir_right, (x, l)) :: ctx, r) <->
+    zipper_invariant root (ctx, BT_node x l r).
+  Proof. do 2 rewrite <- runZipper_spec. now rewrite runZipper_unfold at 1. Qed.
+
+  Local Hint Resolve zipper_invariant_top zipper_invariant_left zipper_invariant_right : core.
+
+  Theorem zipper_invariant_unfold root ctx subtree :
+    zipper_invariant root (ctx, subtree) <->
+    match ctx with
+    | [] => root = subtree
+    | (Dir_left, (x, r)) :: ctx_l => zipper_invariant root (ctx_l, BT_node x subtree r)
+    | (Dir_right, (x, l)) :: ctx_r => zipper_invariant root (ctx_r, BT_node x l subtree)
+    end.
+  Proof. destruct ctx as [ | [[ | ] [? ?]] ?]; eauto. Qed.
 
 End BinaryTreeAccessories.
 
