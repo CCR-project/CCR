@@ -238,7 +238,6 @@ Section CompleteBinaryTree.
     : get_rank t = rank.
   Proof. induction H_complete. 2: apply is_perfect_rank in H_l. all: simpl; lia. Qed.
 
-(*
   Let cnt : bintree -> nat :=
     fix cnt_fix t :=
     match t with
@@ -246,11 +245,11 @@ Section CompleteBinaryTree.
     | BT_node x l r => 1 + cnt_fix l + cnt_fix r
     end.
 
-  Program Fixpoint toList_aux ts {measure (list_sum (map cnt ts))} :=
+  Program Fixpoint toList_step ts {measure (list_sum (map cnt ts))} :=
     match ts with
     | [] => []
-    | BT_nil :: ts_tail => toList_aux ts_tail
-    | BT_node x l r :: ts_tail => x :: toList_aux ((ts_tail ++ [l]) ++ [r])
+    | BT_nil :: ts_tail => toList_step ts_tail
+    | BT_node x l r :: ts_tail => x :: toList_step ((ts_tail ++ [l]) ++ [r])
     end.
   Next Obligation.
     unfold Peano.lt.
@@ -258,90 +257,6 @@ Section CompleteBinaryTree.
     do 2 rewrite Nat.add_0_r. rewrite <- Nat.add_assoc at 1.
     rewrite Nat.add_comm; constructor.
   Defined.
-
-  Lemma toList_aux_unfold ts :
-    toList_aux ts =
-    match ts with
-    | [] => []
-    | BT_nil :: ts_tail => toList_aux ts_tail
-    | BT_node x l r :: ts_tail => x :: toList_aux (ts_tail ++ [l; r])
-    end.
-  Proof.
-  Admitted.
-
-  Global Opaque toList_aux.
-
-  Definition toList root := toList_aux [root].
-*)
-
-  Inductive qtrav_spec : list bintree -> list A -> Prop :=
-  | qtrav_spec1
-    : qtrav_spec [] []
-  | qtrav_spec2 ts xs
-    (IH_spec : qtrav_spec ts xs)
-    : qtrav_spec (BT_nil :: ts) xs
-  | qtrav_spec3 x l r ts xs
-    (IH_spec : qtrav_spec ((ts ++ [l]) ++ [r]) xs)
-    : qtrav_spec (BT_node x l r :: ts) (x :: xs).
-
-  Local Hint Constructors qtrav_spec : core.
-
-  Definition qtrav :
-    { qtrav_body : list bintree -> list A
-    | forall ts xs, qtrav_spec ts xs <-> qtrav_body ts = xs
-    }.
-  Proof with eauto.
-    set (cnt :=
-      fix cnt_fix (t : bintree) {struct t} : nat :=
-      match t with
-      | BT_nil => 1
-      | BT_node x l r => 1 + cnt_fix l + cnt_fix r
-      end
-    ).
-    set (f := fun ts => list_sum (map cnt ts)).
-    set (R := fun ts1 ts2 => f ts1 < f ts2).
-    assert (R_wf : well_founded R).
-    { apply Wf_nat.well_founded_lt_compat with (f := f)... }
-    assert (R_wf_rect : forall phi : list bintree -> Type, (forall t1, (forall t2, R t2 t1 -> phi t2) -> phi t1) -> forall t, phi t).
-    { intros phi acc_hyp t. induction (R_wf t)... }
-    enough (to_show : forall ts, {rslt : list A | forall xs, qtrav_spec ts xs <-> rslt = xs}).
-    { exists (fun ts => proj1_sig (to_show ts)). exact (fun ts => proj2_sig (to_show ts)). }
-    induction ts as [[ | [ | x l r] ts] IH] using R_wf_rect.
-    - exists ([]); intros xs; split; intros H_spec.
-      + inversion H_spec; subst...
-      + subst...
-    - assert (IH_arg : R ts (BT_nil :: ts)).
-      { unfold R, f. cbn; constructor. }
-      destruct (IH ts IH_arg) as [rslt H_rslt].
-      exists (rslt); intros xs; split; intros H_spec.
-      + inversion H_spec; subst. apply H_rslt...
-      + subst. constructor; apply H_rslt...
-    - assert (IH_arg : R ((ts ++ [l]) ++ [r]) (BT_node x l r :: ts)).
-      { unfold R, f. cbn; unfold Peano.lt.
-        do 2 rewrite map_last. do 2 rewrite list_sum_app; cbn.
-        do 2 rewrite Nat.add_0_r. rewrite <- Nat.add_assoc at 1.
-        rewrite Nat.add_comm; constructor.
-      }
-      destruct (IH ((ts ++ [l]) ++ [r]) IH_arg) as [rslt H_rslt].
-      exists (x :: rslt); intros xs; split; intros H_spec.
-      + inversion H_spec; subst. apply f_equal, H_rslt...
-      + subst. constructor; apply H_rslt...
-  Defined.
-
-  Lemma qtrav_unfold queue :
-    proj1_sig qtrav queue =
-    match queue with
-    | [] => []
-    | BT_nil :: queue_tail => proj1_sig qtrav queue_tail
-    | BT_node x l r :: queue_tail => x :: proj1_sig qtrav ((queue_tail ++ [l]) ++ [r])
-    end.
-  Proof with eauto.
-    destruct qtrav as [qtrav_body H_qtrav_body]; simpl.
-    destruct queue as [ | [ | x l r] queue_tail]; simpl; apply H_qtrav_body...
-    all: constructor; apply H_qtrav_body...
-  Qed.
-
-  Definition toList_step := proj1_sig qtrav.
 
   Lemma toList_step_unfold ts :
     toList_step ts =
@@ -351,9 +266,13 @@ Section CompleteBinaryTree.
     | BT_node x l r :: ts_tail => x :: toList_step (ts_tail ++ [l; r])
     end.
   Proof with eauto.
-    unfold toList_step; rewrite qtrav_unfold with (queue := ts) at 1.
-    destruct ts as [ | [ | x l r] ts_tail]...
-    rewrite <- app_assoc at 1; replace ([l] ++ [r]) with ([l; r])...
+    unfold toList_step at 1; rewrite fix_sub_eq.
+    - destruct ts as [ | [ | x l r] ts_tail]...
+      simpl; apply f_equal.
+      replace ((ts_tail ++ [l]) ++ [r]) with (ts_tail ++ [l; r]) at 1...
+      rewrite <- app_assoc...
+    - intros [ | [ | x l r] ts_tail] ? ? ?...
+      apply f_equal... 
   Qed.
 
   Global Opaque toList_step.
@@ -394,11 +313,11 @@ Section CompleteBinaryTree.
     end.
   Proof. destruct ts as [ | [ | x l r] ts_tail]; reflexivity. Qed.
 
-  Lemma toList_step_app ts1 ts2 :
-    toList_step (ts1 ++ ts2) = extract_elements ts1 ++ toList_step (ts2 ++ extract_children ts1).
+  Lemma toList_step_app prevs nexts :
+    toList_step (prevs ++ nexts) = extract_elements prevs ++ toList_step (nexts ++ extract_children prevs).
   Proof with eauto with *.
-    revert ts2; induction ts1 as [ | [ | x l r] ts1 IH]; simpl.
-    all: intros ts2; autorewrite with list...
+    revert nexts; induction prevs as [ | [ | x l r] prevs IH]; simpl.
+    all: intros nexts; autorewrite with list...
     { rewrite toList_step_unfold... }
     { rewrite toList_step_unfold, <- app_assoc, IH, <- app_assoc... }
   Qed.
