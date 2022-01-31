@@ -18,15 +18,8 @@ Definition option_bind {A B : Type} : option A -> (A -> option B) -> option B :=
     | Some x => k x
     end.
 
-Definition option_match {A B : Type} : B -> (A -> B) -> option A -> B :=
-  fun z0 f m =>
-    match m with
-    | None => z0
-    | Some x => f x
-    end.
-
 Definition option2list {A : Type} : option A -> list A :=
-  option_match [] (fun x => [x]).
+  @option_rect A (fun _ => list A) (fun x => [x]) [].
 
 Definition pair2list {A : Type} : A * A -> list A :=
   fun '(x1, x2) => [x1; x2].
@@ -38,53 +31,9 @@ Section ListOperations.
   Definition lookup (xs : list A) i := nth_error xs i.
   Definition lookup_1 (xs : list A) i := lookup xs (i-1).
 
-(*
-  Fixpoint trim_prefix (xs : list A) (i : nat) {struct i} : option (list A) :=
-    match xs, i with
-    | [], _ => None
-    | x :: xs', O => Some nil
-    | x :: xs', S i' => option_map (cons x) (trim_prefix xs' i')
-    end.
-
-  Fixpoint trim_mid (xs : list A) (i : nat) {struct i} : option A :=
-    match xs, i with
-    | [], _ => None
-    | x :: xs', O => Some x
-    | x :: xs', S i' => trim_mid xs' i'
-    end.
-    
-  Fixpoint trim_postfix (xs : list A) (i : nat) {struct i} : option (list A) :=
-    match xs, i with
-    | [], _ => None
-    | x :: xs', O => Some xs'
-    | x :: xs', S i' => trim_postfix xs' i'
-    end.
-
-  Fixpoint trim (xs : list A) (i : nat) {struct i} : option (list A * A * list A) :=
-    match xs, i with
-    | [], _ => None
-    | x :: xs', O => Some ([], x, xs')
-    | x :: xs', S i' => option_map (fun '(ls, m, rs) => (x :: ls, m, rs)) (trim xs' i')
-    end.
-
-  Definition trim3 (xs : list A) (i j : nat) : option (list A * A * list A * A * list A) :=
-    if i =? j then None else
-    let i' := min i j in
-    let j' := max i j in
-    let k' := j' - i' - 1 in
-    option_bind (trim xs i') (fun '(ls, x, mrs) =>
-                                option_map (fun '(ms, y, rs) => (ls, x, ms, y, rs)) (trim mrs k')).
-
-  Definition swap (xs : list A) (i j : nat) : list A :=
-    match trim3 xs i j with
-    | Some (xs, x, ys, y, zs) => xs ++ [y] ++ ys ++ [x] ++ zs
-    | None => xs
-    end.
-*)
-
-  Definition swap_aux (xs : list A) (i1 : nat) (i2 : nat) (x : A) (i : nat) : A :=
-    if Nat.eq_dec i i1 then option_match x id (lookup xs i2) else
-    if Nat.eq_dec i i2 then option_match x id (lookup xs i1) else
+  Definition swap_aux (xs : list A) i1 i2 x i :=
+    if Nat.eq_dec i i1 then nth i2 xs x else
+    if Nat.eq_dec i i2 then nth i1 xs x else
     x.
   Definition add_indices (xs : list A) := (combine xs (seq 0 (length xs))).
   Definition swap (xs : list A) i j := map (uncurry (swap_aux xs i j)) (add_indices xs).
@@ -101,15 +50,6 @@ Section CompleteBinaryTree.
   | BT_node (x : A) (l : bintree) (r : bintree)
   .
 
-(*
-  Inductive perfect_bintree : nat -> Type :=
-  | perfect_nil : perfect_bintree O
-  | perfect_node {n : nat}
-                 (x : A) (l : perfect_bintree n) (r : perfect_bintree n)
-    : perfect_bintree (S n)
-  .
-*)
-
   Inductive is_perfect : bintree -> forall rank : nat, Prop :=
   | perfect_nil : is_perfect BT_nil O
   | perfect_node {n : nat} x l r
@@ -117,19 +57,6 @@ Section CompleteBinaryTree.
                  (H_r : is_perfect r n)
     : is_perfect (BT_node x l r) (S n)
   .
-
-(*
-  Inductive complete_bintree : nat -> Type :=
-  | complete_nil
-    : complete_bintree O
-  | complete_node_perfect_complete {n : nat}
-                                   (x : A) (l : perfect_bintree n) (r : complete_bintree n)
-    : complete_bintree (S n)
-  | complete_node_complete_perfect {n : nat}
-                                   (x : A) (l : complete_bintree (S n)) (r : perfect_bintree n)
-    : complete_bintree (S (S n))
-  .
-*)
 
   Inductive is_complete : bintree -> forall rank : nat, Prop :=
   | complete_nil
@@ -144,15 +71,8 @@ Section CompleteBinaryTree.
     : is_complete (BT_node x l r) (S (S n))
   .
 
-(*
-  Fixpoint perfect2complete {n} (t : perfect_bintree n) : complete_bintree n :=
-    match t with
-    | perfect_nil => complete_nil
-    | perfect_node x l r => complete_node_perfect_complete x l (perfect2complete r)
-    end.
-*)
-
-  Lemma perfect2complete {n} t (H_perfect : is_perfect t n)
+  Lemma perfect2complete {n} t
+    (H_perfect : is_perfect t n)
     : is_complete t n.
   Proof.
     induction H_perfect as [ | n x l r H_l IH_l H_r IH_r].
@@ -188,9 +108,7 @@ Section CompleteBinaryTree.
       subst;
       clear Heq
     end.
-*)
 
-(*
   Fixpoint delete_last_perfect {n} (t : perfect_bintree (S (S n))) : complete_bintree (S (S n)).
   Proof.
     destruct_perfect t x l r.
@@ -202,9 +120,7 @@ Section CompleteBinaryTree.
         by exact (delete_last_perfect _ r).
       exact (complete_node_perfect_complete x l r').
   Defined.
-*)
 
-(*
   Fixpoint delete_last_complete {n} (t : complete_bintree (S n)) : complete_bintree (S n) + perfect_bintree n.
   Proof.
     destruct_complete t x l r.
@@ -245,7 +161,7 @@ Section CompleteBinaryTree.
     | BT_node x l r => 1 + cnt_fix l + cnt_fix r
     end.
 
-  Program Fixpoint toList_step ts {measure (list_sum (map cnt ts))} :=
+  Program Fixpoint toList_step ts {measure (list_sum (map cnt ts))} : list A :=
     match ts with
     | [] => []
     | BT_nil :: ts_tail => toList_step ts_tail
@@ -314,7 +230,8 @@ Section CompleteBinaryTree.
   Proof. destruct ts as [ | [ | x l r] ts_tail]; reflexivity. Qed.
 
   Lemma toList_step_app prevs nexts :
-    toList_step (prevs ++ nexts) = extract_elements prevs ++ toList_step (nexts ++ extract_children prevs).
+    toList_step (prevs ++ nexts) =
+    extract_elements prevs ++ toList_step (nexts ++ extract_children prevs).
   Proof with eauto with *.
     revert nexts; induction prevs as [ | [ | x l r] prevs IH]; simpl.
     all: intros nexts; autorewrite with list...
@@ -323,7 +240,8 @@ Section CompleteBinaryTree.
   Qed.
 
   Theorem toList_step_spec ts :
-    toList_step ts = extract_elements ts ++ toList_step (extract_children ts).
+    toList_step ts =
+    extract_elements ts ++ toList_step (extract_children ts).
   Proof. replace (ts) with (ts ++ []) at 1; [exact (toList_step_app ts []) | apply app_nil_r]. Qed.
 
   Definition toList root := toList_step [root].
@@ -606,9 +524,9 @@ Section ListAccessories.
     - simpl; unfold swap_aux, lookup.
       destruct claim2 as [H_EQ H_obs_xs]; subst n.
       destruct (Nat.eq_dec i i1) as [H_yes1 | H_no1].
-      { subst i. destruct (nth_error xs i2) eqn: H_obs_i2... contradiction. } 
+      { subst i. symmetry; apply nth_error_nth'... } 
       destruct (Nat.eq_dec i i2) as [H_yes2 | H_no2].
-      { subst i. destruct (nth_error xs i1) eqn: H_obs_i1... contradiction. }
+      { subst i. symmetry; apply nth_error_nth'... }
       symmetry...
     - exact (proj1 claim2).
   Qed.
