@@ -17,6 +17,18 @@ Section HEAPSORT.
 
   Context `{Σ : GRA.t}.
 
+  Definition heapify_body : (list Z * Z) -> itree Es (list Z) :=
+    fun _ => trigger (Choose _).
+
+  Definition heapify_spec : fspec :=
+    mk_simple (X := list Z * Z)
+              (fun '(base, k) =>
+                ( ord_top
+                , fun varg => ⌜varg = (base, k)↑⌝
+                , fun vret => ∃ base' : list Z, ⌜vret = base'↑ /\ Permutation (k :: tail base) base'⌝
+                )
+              )%I.
+
   Definition sort_body : list Z -> itree Es (list Z) :=
     fun xs =>
       ys <- trigger (Choose (list Z));;
