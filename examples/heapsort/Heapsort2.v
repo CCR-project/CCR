@@ -10,6 +10,7 @@ Require Import ProofMode.
 Require Import STB.
 Require Import HeapsortHeader.
 Require Import Coq.Sorting.Permutation.
+Require Import Coq.Sorting.Sorted.
 
 Set Implicit Arguments.
 
@@ -25,7 +26,7 @@ Section HEAPSORT.
               (fun '(base, i) =>
                  (ord_top,
                   fun varg => ⌜varg = (base, i)↑⌝,
-                  fun vret => exists base' : list Z, ⌜(vret = base'↑) /\ (Permutation base base')⌝
+                  fun vret => ∃ base' : list Z, ⌜vret = base'↑ /\ Permutation base base'⌝
                  )                           
               )%I.
   
@@ -51,7 +52,7 @@ Section HEAPSORT.
               (fun xs => (
                    ord_top,
                    (fun varg => ⌜varg = xs↑⌝),
-                   (fun vret => (∃ (ys : list Z), ⌜vret = ys↑ /\ Permutation xs ys⌝))
+                   (fun vret => ∃ ys : list Z, ⌜vret = ys↑ /\ Permutation xs ys /\ Sorted Z.le ys⌝)
                  )
               )%I.
 
