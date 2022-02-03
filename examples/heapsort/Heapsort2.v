@@ -17,6 +17,18 @@ Section HEAPSORT.
 
   Context `{Σ : GRA.t}.
 
+  Definition create_body : list Z * nat -> itree Es (list Z) :=
+    fun _ => trigger (Choose _).
+
+  Definition create_spec : fspec :=
+    mk_simple (X := list Z * nat)
+              (fun '(base, i) =>
+                 (ord_top,
+                  fun varg => ⌜varg = (base, i)↑⌝,
+                  fun vret => exists base' : list Z, ⌜(vret = base'↑) /\ (Permutation base base')⌝
+                 )                           
+              )%I.
+  
   Definition heapify_body : (list Z * Z) -> itree Es (list Z) :=
     fun _ => trigger (Choose _).
 
