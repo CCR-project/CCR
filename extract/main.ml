@@ -17,7 +17,7 @@ open Example0
 open EchoAll
 open MWAll
 open Imp
-open Heapsort1
+open HeapsortMain1
 
 let cl2s = fun cl -> String.concat "" (List.map (String.make 1) cl)
 
@@ -115,5 +115,5 @@ let main =
   | 5 -> run (echo_imp_itr)
   | 6 -> run (echo_impl_itr)
   | 7 -> run (echo_spec_itr)
-  | 8 -> run (heapsort_main)
+  | 8 -> run (heapsort_main1)
   | _ -> print_endline "Invalid Number!"

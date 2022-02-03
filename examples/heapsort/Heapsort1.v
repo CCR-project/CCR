@@ -105,16 +105,10 @@ Section HEAPSORT.
   Definition heapsort_spec : fspec.
   Admitted.
 
-  Definition main_body : itree Es Any.t :=
-    ys <- trigger (Call "heapsort" ([7;4;5;3;1;6;0;3;6;8;1;6;8;4;7;9;2;5;7]%Z : list Z)↑);;
-    r <- trigger (Syscall "print" ys top1);;
-    Ret r.
-  
   Definition HeapsortSbtb :=
     [("create",  cfunU create_body);
     ("heapify",  cfunU heapify_body);
-    ("heapsort", cfunU heapsort_body);
-    ("main", fun _ => main_body)
+    ("heapsort", cfunU heapsort_body)
     ].
 
   Definition HeapsortSem : ModSem.t := {|
@@ -129,9 +123,3 @@ Section HEAPSORT.
   |}.
 
 End HEAPSORT.
-
-Section Ext.
-
-  Definition heapsort_main := ModSemL.initial_itr (ModL.enclose (Mod.add_list [Heapsort])) None.
-
-End Ext.

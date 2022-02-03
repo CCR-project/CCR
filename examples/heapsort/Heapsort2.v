@@ -18,7 +18,7 @@ Section HEAPSORT.
 
   Context `{Σ : GRA.t}.
 
-  Definition create_body : list Z * nat -> itree Es (list Z) :=
+  Definition create_body : list Z * nat -> itree hEs (list Z) :=
     fun _ => trigger (Choose _).
 
   Definition create_spec : fspec :=
@@ -30,7 +30,7 @@ Section HEAPSORT.
                  )                           
               )%I.
   
-  Definition heapify_body : (list Z * Z) -> itree Es (list Z) :=
+  Definition heapify_body : (list Z * Z) -> itree hEs (list Z) :=
     fun _ => trigger (Choose _).
 
   Definition heapify_spec : fspec :=
@@ -42,12 +42,12 @@ Section HEAPSORT.
                 )
               )%I.
 
-  Definition sort_body : list Z -> itree Es (list Z) :=
+  Definition heapsort_body : list Z -> itree hEs (list Z) :=
     fun xs =>
       ys <- trigger (Choose (list Z));;
       Ret ys.
 
-  Definition sort_spec : fspec :=
+  Definition heapsort_spec : fspec :=
     mk_simple (X := list Z)
               (fun xs => (
                    ord_top,
@@ -55,5 +55,25 @@ Section HEAPSORT.
                    (fun vret => ∃ ys : list Z, ⌜vret = ys↑ /\ Permutation xs ys /\ Sorted Z.le ys⌝)
                  )
               )%I.
+
+  Definition HeapsortSbtb : list (gname * fspecbody) :=
+    [("create",  mk_specbody create_spec   (cfunN create_body));
+    ("heapify",  mk_specbody heapify_spec  (cfunN heapify_body));
+    ("heapsort", mk_specbody heapsort_spec (cfunN heapsort_body))
+    ].
+
+  Definition SHeapsortSem : SModSem.t := {|
+    SModSem.fnsems := HeapsortSbtb;
+    SModSem.mn := "Heapsort";
+    SModSem.initial_mr := ε;
+    SModSem.initial_st := tt↑;
+  |}.
+
+  Definition SHeapsort : SMod.t := {|
+    SMod.get_modsem := fun _ => SHeapsortSem;
+    SMod.sk := Sk.unit;
+  |}.
+
+  Definition Heapsort stb : Mod.t := (SMod.to_tgt stb) SHeapsort.
 
 End HEAPSORT.
