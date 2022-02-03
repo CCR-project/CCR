@@ -24,7 +24,7 @@ Section HEAPSORT.
   Definition create_spec : fspec :=
     mk_simple (X := list Z * nat)
               (fun '(base, i) =>
-                 (ord_top,
+                 (ord_pure 1,
                   fun varg => ⌜varg = (base, i)↑⌝,
                   fun vret => ∃ base' : list Z, ⌜vret = base'↑ /\ Permutation base base'⌝
                  )                           
@@ -36,7 +36,7 @@ Section HEAPSORT.
   Definition heapify_spec : fspec :=
     mk_simple (X := list Z * Z)
               (fun '(base, k) =>
-                ( ord_top
+                ( ord_pure 1
                 , fun varg => ⌜varg = (base, k)↑⌝
                 , fun vret => ∃ base' : list Z, ⌜vret = base'↑ /\ Permutation (k :: tail base) base'⌝
                 )
@@ -50,7 +50,7 @@ Section HEAPSORT.
   Definition heapsort_spec : fspec :=
     mk_simple (X := list Z)
               (fun xs => (
-                   ord_top,
+                   ord_pure 2,
                    (fun varg => ⌜varg = xs↑⌝),
                    (fun vret => ∃ ys : list Z, ⌜vret = ys↑ /\ Permutation xs ys /\ Sorted Z.le ys⌝)
                  )
