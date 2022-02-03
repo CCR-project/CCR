@@ -22,23 +22,27 @@ Section HEAPSORT.
     fun _ => trigger (Choose _).
 
   Definition create_spec : fspec :=
-    mk_simple (X := list Z * nat)
-              (fun '(base, i) =>
+    mk_simple (X := bintree Z * nat)
+              (fun '(tree, i) =>
                  (ord_pure 1,
-                  fun varg => ⌜varg = (base, i)↑⌝,
-                  fun vret => ∃ base' : list Z, ⌜vret = base'↑ /\ Permutation base base'⌝
-                 )                           
+                  fun varg => ⌜varg = (toList tree, i)↑ /\ forall j, j > i -> heap Z.ge (subtree j tree)⌝,
+                  fun vret => ∃ tree' : bintree Z, ⌜vret = (toList tree')↑
+                                                /\ Permutation (toList tree) (toList tree')
+                                                /\ forall j, j >= i -> heap Z.ge (subtree j tree)⌝
+                 )
               )%I.
   
   Definition heapify_body : (list Z * Z) -> itree hEs (list Z) :=
     fun _ => trigger (Choose _).
 
   Definition heapify_spec : fspec :=
-    mk_simple (X := list Z * Z)
-              (fun '(base, k) =>
+    mk_simple (X := bintree Z * Z)
+              (fun '(tree, k) =>
                 ( ord_pure 1
-                , fun varg => ⌜varg = (base, k)↑⌝
-                , fun vret => ∃ base' : list Z, ⌜vret = base'↑ /\ Permutation (k :: tail base) base'⌝
+                , fun varg => ⌜varg = (toList tree, k)↑ /\ heap Z.ge tree⌝
+                , fun vret => ∃ tree' : bintree Z, ⌜vret = (toList tree')↑
+                                                /\ Permutation (k :: tail (toList tree)) (toList tree')
+                                                /\ heap Z.ge tree'⌝
                 )
               )%I.
 

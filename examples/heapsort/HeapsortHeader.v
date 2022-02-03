@@ -262,7 +262,20 @@ Arguments bintree: clear implicits.
   : list nat
 *)
 
+Section HeapProperty.
+
+  Context {A : Type}.
+  Context (R : A -> A -> Prop).
+
+  Definition heap : bintree A -> Prop.
+  Admitted.
+
+End HeapProperty.
+
 Section BinaryTreeAccessories.
+
+  Definition subtree {A : Type} : nat -> bintree A -> bintree A.
+  Admitted.
 
   Inductive dir_t : Set := Dir_left | Dir_right.
 
