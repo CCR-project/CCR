@@ -28,7 +28,8 @@ Section SIMMODSEM.
   Context `{Σ : GRA.t}.
 
   Variable GlobalStb : Sk.t -> gname -> option fspec.
-  
+  Hypothesis STBINCL : forall sk, stb_incl (to_stb HeapsortStb) (GlobalStb sk).
+  Hint Unfold HeapsortStb : stb.
 
   Definition wf : _ -> Any.t * Any.t -> Prop :=
     @mk_wf
@@ -69,47 +70,43 @@ Section SIMMODSEM.
     init.
     harg. rename x into xs. mDesAll. clear PURE1. steps.
     
+    (* 'length xs / 2' for first loop, 'length xs' for second loop *)
     astart (length xs / 2 + length xs).
     
     remember (length xs / 2) as l. clear Heql.
-    
     set (xs' := xs). unfold xs' at 1.
     assert (xs' ≡ₚ xs) by eapply Permutation_refl.
     remember xs' as xs0. clear xs' Heqxs0.
+    deflag.
     revert xs0 H w ctx mp_src mp_tgt mr_src WF ACC.
     induction l.
     - i. rewrite unfold_iter_eq. steps.
       admit "heapify loop".
     - i. rewrite unfold_iter_eq. steps.
       acatch.
-      { instantiate (1 := create_spec). admit "stb". }
+      { eapply STBINCL. stb_tac. ss. }
       { instantiate (1 := l + length xs0).
         eapply OrdArith.lt_from_nat.
         lia.
       }
-      hcall _ _ with "".
-      { iModIntro. iSplit; ss.
-        admit "we have to construct tree".
+      hcall (fromList xs0, S l) _ with "".
+      { iModIntro. iSplit; ss. iPureIntro. splits.
+        - rewrite toList_fromList. ss.
+        - admit "loop invariant".
+        - ss.
       }
-    (*
-    2: { i.
-    rewrite unfold_iter_eq.
-    steps. des_if. steps.
-    2: {
-      steps.
-      acatch.
-      instantiate (1:=create_spec).
-      admit "1".
-      hcall (x,0) _ with "".
-      { iModIntro. iSplit. ss. iSplit.
-        2: { iPureIntro. eauto. }
-        admit "1".
-      }
-      ss. splits; ss. oauto.
-      steps.
-      Search ITree.iter.
-     *)
-  Admitted.
+      ss. splits; et; oauto.
+      mDesAll. rename a into tree'. destruct PURE1 as [H1 [H2 H3]]. steps.
+      rewrite Nat.sub_0_r.
+      assert (Hlen : length xs0 = length (toList tree')) by admit "length".
+      rewrite Hlen.
+      deflag.
+      eapply IHl.
+      + admit "permutation".
+      + red. inversion WF. econs. et.
+      + assumption.
+    Unshelve. et.
+  Qed.
 
   Theorem correct : refines2 [Heapsort1.Heapsort] [Heapsort2.Heapsort GlobalStb].
   Proof.
