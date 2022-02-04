@@ -32,6 +32,12 @@ Section SIMMODSEM.
    ("create",
    fun_to_tgt "Heapsort" (GlobalStb sk) {| fsb_fspec := create_spec; fsb_body := cfunN create_body |})
    ("create", cfunU Heapsort1.create_body).
+  Proof.
+    unfold create_body. unfold Heapsort1.create_body.
+    init. harg. destruct x as [tree l]. mDesAll. clear PURE1. destruct PURE0. steps.
+    astop. induction tree.
+    - steps.
+      pose proof (@unfold_iter) as H2. pose proof bisim_is_eq as H3.
   Admitted.
 
   Lemma sim_heapify (sk : alist string Sk.gdef) :
@@ -51,7 +57,7 @@ Section SIMMODSEM.
   Proof.
     Search "adequacy_local".
     eapply SimModSem.adequacy_local2; econs; ss.
-    i.
+    i. 
     econstructor 1 with (wf := wf) (le := top2); et; ss; cycle 1.
     { exists tt. red. econs. eapply to_semantic. iIntros. ss. }
     econs; cycle 1.
