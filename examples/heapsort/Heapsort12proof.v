@@ -113,13 +113,15 @@ Section SIMMODSEM.
           - ss.
         }
         ss. splits; et; oauto.
-        mDesAll. rename a into tree'. destruct PURE1 as [H1 [H2 H3]]. steps.
+        mDesAll. rename a into tree'. des. steps.
+        rewrite toList_fromList in PURE2.
+        symmetry in PURE2.
         rewrite Nat.sub_0_r.
-        assert (Hlen : length xs0 = length (toList tree')) by admit "length".
-        rewrite Hlen.
+        replace (length xs0) with (length (toList tree')) by
+            (eapply Permutation_length; et).
         deflag.
         eapply IHl.
-        * admit "permutation".
+        * transitivity xs0; assumption.
         * red. inversion WF. econs. et.
         * assumption.
     Unshelve. et.
