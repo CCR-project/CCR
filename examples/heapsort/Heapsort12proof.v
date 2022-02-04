@@ -84,21 +84,40 @@ Section SIMMODSEM.
       + econs.
       + econs; econs.
       + ss.
-    - steps.
-      (* 'length xs / 2' for first loop, 'length xs' for second loop *)
-      astart (length xs / 2 + length xs).
+    - assert (Hxs : length xs > 1)
+        by (eapply leb_complete_conv; et).
+      clear Heqb.
+      steps.
 
+      (* set tree and it's initial condition *)
       remember (fromList xs) as tree.
-      set (xs0 := xs). unfold xs0 at 1 3.
+      set (xs0 := xs). unfold xs0 at 1.
       replace xs0 with (toList tree)
         by (subst; eapply toList_fromList).
       clear xs0.
-      remember (length (toList tree) / 2) as l. clear Heql.
-      assert (toList tree ≡ₚ xs)
+      assert (Hₚ : toList tree ≡ₚ xs)
         by (subst; rewrite toList_fromList; eapply Permutation_refl).
       clear Heqtree.
+
+      (* set l and it's initial condition *)
+      remember (length (toList tree) / 2) as l.
+      assert (Hₗ : l <= length (toList tree)).
+      { subst.
+        eapply Nat.lt_le_incl.
+        eapply Nat.div_lt.
+        - replace (length (toList tree)) with (length xs)
+            by (eapply Permutation_length; symmetry; ss).
+          lia.
+        - lia.
+      }
+      assert (H : forall j, j > l -> heap Z.ge (subtree j tree)) by admit "heap".
+      clear Heql.
+
+      (* 'l' for first loop, 'length xs' for second loop *)
+      astart (l + length xs).
+
       deflag.
-      revert tree H w ctx mp_src mp_tgt mr_src WF ACC.
+      revert tree Hₚ Hₗ H w ctx mp_src mp_tgt mr_src WF ACC.
       induction l.
       + i. rewrite unfold_iter_eq. steps.
         admit "heapify loop".
@@ -110,17 +129,17 @@ Section SIMMODSEM.
           lia.
         }
         hcall (tree, S l) _ with "".
-        { iModIntro. iSplit; ss. iPureIntro. splits; ss.
-          - lia.
-          - admit "l <= length".
-          - admit "loop invariant".
-        }
-        ss. splits; et; oauto.
+        { iModIntro. iSplit; ss. iPureIntro. splits; ss; lia. }
+        { ss. splits; et; oauto. }
         mDesAll. rename a into tree'. des. steps.
         rewrite Nat.sub_0_r.
         deflag.
         eapply IHl.
         * symmetry in PURE2. transitivity (toList tree); ss.
+        * replace (length (toList tree')) with (length (toList tree))
+            by (eapply Permutation_length; ss).
+          lia.
+        * intros. eapply PURE3. lia.
         * red. inversion WF. econs. et.
         * assumption.
     Unshelve. et.

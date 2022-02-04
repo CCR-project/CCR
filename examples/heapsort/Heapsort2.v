@@ -30,7 +30,7 @@ Section HEAPSORT.
                            /\ forall j, j > i -> heap Z.ge (subtree j tree)⌝,
                   fun vret => ∃ tree' : bintree Z, ⌜vret = (toList tree')↑
                                                 /\ toList tree ≡ₚ toList tree'
-                                                /\ forall j, j >= i -> heap Z.ge (subtree j tree)⌝
+                                                /\ forall j, j >= i -> heap Z.ge (subtree j tree')⌝
                  )
               )%I.
   
