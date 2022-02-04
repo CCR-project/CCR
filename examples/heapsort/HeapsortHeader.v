@@ -11,18 +11,70 @@ From Coq.Program Require Import Basics Wf.
 Import Nat.
 Import ListNotations.
 
-Definition option_bind {A B : Type} : option A -> (A -> option B) -> option B :=
-  fun m k =>
-    match m with
-    | None => None
-    | Some x => k x
-    end.
+Section Utilities.
 
-Definition option2list {A : Type} : option A -> list A :=
-  @option_rect A (fun _ => list A) (fun x => [x]) [].
+  Definition option2list {A : Type} : option A -> list A :=
+    @option_rect A (fun _ => list A) (fun x => [x]) [].
 
-Definition pair2list {A : Type} : A * A -> list A :=
-  fun '(x1, x2) => [x1; x2].
+  Definition pair2list {A : Type} : A * A -> list A :=
+    fun '(x1, x2) => [x1; x2].
+
+  Lemma Some_inj {A : Type} {lhs : A} {rhs : A} :
+    Some lhs = Some rhs -> lhs = rhs.
+  Proof. congruence. Qed.
+
+  Theorem divmod_inv a b q r (H_b_ne_0 : b <> 0) :
+    (a = b * q + r /\ r < b)%nat <->
+    (q = (a - r) / b /\ r = a mod b /\ a >= r)%nat.
+  Proof with lia || eauto.
+    assert (lemma1 := Nat.div_mod).
+    enough (lemma2 : forall x : nat, forall y : nat, x > y <-> (exists z : nat, x = S (y + z))). split.
+    - intros [H_a H_r_bound].
+      assert (claim1 : a = b * (a / b) + (a mod b))...
+      assert (claim2 : 0 <= a mod b /\ a mod b < b). apply (Nat.mod_bound_pos a b)...
+      assert (claim3 : a >= r)...
+      enough (claim4 : ~ q > a / b). enough (claim5 : ~ q < a / b). enough (claim6 : q = a / b)...
+      + split... replace (a - r) with (q * b)... symmetry; apply Nat.div_mul...
+      + intros H_false. destruct (proj1 (lemma2 (a / b) q) H_false) as [x Hx]...
+      + intros H_false. destruct (proj1 (lemma2 q (a / b)) H_false) as [x Hx]...
+    - intros [H_q [H_r H_a_ge_r]].
+      assert (claim1 := Nat.mod_bound_pos a b). split...
+      assert (claim2 : r < b)... assert (claim3 := Nat.div_mod a b H_b_ne_0).
+      rewrite <- H_r in claim3. enough (claim4 : q = a / b)...
+      rewrite H_q; symmetry. apply Nat.div_unique with (r := 0)...
+    - intros x y; split.
+      + intros Hgt; induction Hgt as [ | m Hgt [z Hz]]; [exists (0) | rewrite Hz]...
+      + intros [z Hz]...
+  Qed.
+
+  Lemma positive_odd n_odd n :
+    (n_odd = 2 * n + 1)%nat <->
+    (n = (n_odd - 1) / 2 /\ n_odd mod 2 = 1 /\ n_odd > 0)%nat.
+  Proof with lia || eauto.
+    assert (claim1 := divmod_inv n_odd 2 n 1)...
+  Qed.
+
+  Lemma positive_even n_even n :
+    (n_even = 2 * n + 2)%nat <->
+    (n = (n_even - 2) / 2 /\ n_even mod 2 = 0 /\ n_even > 0)%nat.
+  Proof with lia || eauto.
+    assert (claim1 := divmod_inv (n_even - 2) 2 n 0). split.
+    - intros ?; subst.
+      assert (claim2 : n = (2 * n + 2 - 2 - 0) / 2 /\ 0 = (2 * n + 2 - 2) mod 2 /\ 2 * n + 2 - 2 >= 0)...
+      split. rewrite (proj1 claim2) at 1. replace (2 * n + 2 - 2 - 0) with (2 * n + 2 - 2)...
+      split... replace (2 * n + 2) with (2 + n * 2)... rewrite Nat.mod_add...
+    - intros [H_n [H_r H_gt_0]].
+      assert (claim2 : n_even >= 2). destruct n_even as [ | [ | n_even]]... inversion H_r.
+      assert (claim3 : n_even = 2 * (n_even / 2) + n_even mod 2). apply Nat.div_mod...
+      enough (claim4 : (n_even - 2) mod 2 = 0).
+      + assert (claim5 : n_even - 2 = 2 * n + 0 /\ 0 < 2)...
+        rewrite H_r, Nat.add_0_r in claim3. apply claim1...
+        replace (n_even - 2 - 0) with (n_even - 2)...
+      + transitivity (n_even mod 2)...
+        symmetry; replace (n_even) with ((n_even - 2) + 1 * 2) at 1... apply Nat.mod_add...
+  Qed.
+
+End Utilities.
 
 Section ListOperations.
 
@@ -389,10 +441,6 @@ Section BinaryTreeAccessories.
 End BinaryTreeAccessories.
 
 Section ListAccessories.
-
-  Lemma Some_inj {A : Type} {lhs : A} {rhs : A} :
-    Some lhs = Some rhs -> lhs = rhs.
-  Proof. congruence. Qed.
 
   Lemma list_extensionality {A : Type} (xs1 : list A) (xs2 : list A) :
     xs1 = xs2 <-> (forall i, lookup xs1 i = lookup xs2 i).
