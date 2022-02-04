@@ -85,9 +85,9 @@ Section HEAPSORT.
           if (l =? 0)%nat
           then Ret (inr xs)
           else
-            mxs <- trigger (Call "create" (xs, l)↑);;
-            xs' <- (mxs↓)?;;
-            Ret (inl (xs', l - 1))
+            r <- trigger (Call "create" (xs, l)↑);;
+            xs <- (r↓)?;;
+            Ret (inl (xs, l - 1))
         ) (xs0, length xs0 / 2);;
         ys <- ITree.iter (fun '(xs, ys) =>
           if length xs <=? 1
@@ -95,9 +95,9 @@ Section HEAPSORT.
           else
             m <- (head xs)?;;
             let k := last xs 0%Z in
-            mxs <- trigger (Call "heapify" (removelast xs, k)↑);;
-            xs' <- (mxs↓)?;;
-            Ret (inl (xs', m :: ys))
+            r <- trigger (Call "heapify" (removelast xs, k)↑);;
+            xs <- (r↓)?;;
+            Ret (inl (xs, m :: ys))
         ) (xs1, []);;
         Ret ys.
 
