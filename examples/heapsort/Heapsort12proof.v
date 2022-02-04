@@ -45,8 +45,11 @@ Section SIMMODSEM.
     unfold create_body. unfold Heapsort1.create_body.
     init. harg. destruct x as [tree l]. mDesAll. clear PURE1. destruct PURE0. steps.
     astop. induction tree.
-    - steps.
-      pose proof (@unfold_iter) as H2. pose proof bisim_is_eq as H3.
+    - steps. rewrite unfold_iter_eq.
+      destruct l;nia.
+    - destruct H0. destruct H0. steps. rewrite unfold_iter_eq.
+      destruct (l + (l + 0) <=? S n);destruct (l + (l + 0) <=? n).
+      + unfold toList. rewrite toList_step_unfold. steps.
   Admitted.
 
   Lemma sim_heapify (sk : alist string Sk.gdef) :

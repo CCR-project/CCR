@@ -25,7 +25,7 @@ Section HEAPSORT.
     mk_simple (X := bintree Z * nat)
               (fun '(tree, i) =>
                  (ord_pure 1,
-                  fun varg => ⌜varg = (toList tree, i)↑ /\ forall j, j > i -> heap Z.ge (subtree j tree)⌝,
+                   fun varg => ⌜varg = (toList tree, i)↑ /\ (length (toList tree))>= i /\ i >= 1 /\ forall j, j > i -> heap Z.ge (subtree j tree)⌝,
                   fun vret => ∃ tree' : bintree Z, ⌜vret = (toList tree')↑
                                                 /\ Permutation (toList tree) (toList tree')
                                                 /\ forall j, j >= i -> heap Z.ge (subtree j tree)⌝
