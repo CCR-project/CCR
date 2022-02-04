@@ -138,6 +138,9 @@ Section CompleteBinaryTree.
   Defined.
 *)
 
+  Definition fromList : list A -> bintree.
+  Admitted.
+  
   Fixpoint get_rank t : nat :=
     match t with
     | BT_nil => 0

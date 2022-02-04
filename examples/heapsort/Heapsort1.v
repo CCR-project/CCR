@@ -15,91 +15,87 @@ Set Implicit Arguments.
 Section HEAPSORT.
 
   Context `{Σ : GRA.t}.
-         
+
   Definition create_body : list Z * nat -> itree Es (list Z) :=
-    fun '(base, i) =>
-      let nmemb : nat := length base in
-      initval <- Ret(Z.to_nat i);;
-      base <- ITree.iter(fun '(base, par_i) =>
-          if Nat.leb (2*par_i) nmemb
-          then (
-              child_i <- (if Nat.ltb (2*par_i) nmemb
-                         then (child_val0 <- (lookup_1 base (par_i*2))?;;
-                               child_val1 <- (lookup_1 base (par_i*2 +1))?;;
-                               if Z.ltb child_val0 child_val1
-                               then Ret(par_i*2 +1) else Ret(par_i*2)
-                              )
-                         else Ret (par_i*2));;
-              child_val <- (lookup_1 base child_i)?;;
-              par_val <- (lookup_1 base par_i)?;;
-              if Z.leb child_val par_val
-              then Ret (inr base)                                            
-              else Ret (inl (swap_1 base child_i par_i, child_i))
-            )
-          else Ret (inr base)
-                       ) (base, initval);;Ret base.
+    fun '(xs0, initval) =>
+      let nmemb := length xs0 in
+      xs1 <- ITree.iter (fun '(xs, par_i) =>
+        if 2*par_i <=? nmemb
+        then 
+          child_i <- (
+            if 2*par_i <? nmemb
+            then
+              child_val0 <- (lookup xs (par_i*2 - 1))?;;
+              child_val1 <- (lookup xs (par_i*2))?;;
+              if (child_val0 <? child_val1)%Z
+              then Ret (par_i*2 + 1)
+              else Ret (par_i*2)
+            else Ret (par_i*2));;
+          child_val <- (lookup xs (child_i - 1))?;;
+          par_val <- (lookup xs (par_i - 1))?;;
+          if Z.leb child_val par_val
+          then Ret (inr xs)              
+          else Ret (inl (swap xs (child_i - 1) (par_i - 1), child_i))
+        else Ret (inr xs)
+      ) (xs0, initval);;
+      Ret xs1.
 
   Definition create_spec : fspec.
   Admitted.
   
   Definition heapify_body : (list Z * Z) -> itree Es (list Z) :=
-    fun '(base, k) =>
-    let nmemb : nat := length base in
-    '(base, par_i) <- ITree.iter (fun '(base, par_i) =>
-      if Nat.leb (par_i * 2) nmemb
-      then (
-        if Nat.ltb (par_i * 2) nmemb
-        then (
-          child_l <- (lookup_1 base (par_i * 2))?;;
-          child_r <- (lookup_1 base (par_i * 2 + 1))?;;
-          let child_i : nat := if Z.ltb child_l child_r then (par_i * 2 + 1) else (par_i * 2) in
-          Ret (inl (swap_1 base child_i par_i, child_i))
-        )
-        else (
-          let child_i : nat := par_i * 2 in
-          Ret (inl (swap_1 base child_i par_i, child_i))
-        )
-      )
-      else Ret (inr (base, par_i))
-    ) (k :: tail base, 1%nat);;
-    '(base, par_i) <- ITree.iter (fun '(base, par_i) =>
-      let child_i : nat := par_i in
-      let par_i : nat := child_i / 2 in
-      if Nat.eqb child_i 1 
-      then Ret (inr (base, par_i))
-      else (
-        par <- (lookup_1 base par_i)?;;
-        if Z.ltb k par
-        then Ret (inr (base, par_i))
-        else Ret (inl (swap_1 base child_i par_i, par_i))
-      )
-    ) (base, par_i);;
-    Ret base.
+    fun '(xs0, k) =>
+    let nmemb := length xs0 in
+    '(xs1, par_i) <- ITree.iter (fun '(xs, par_i) =>
+      if par_i*2 <=? nmemb
+      then
+        if par_i*2 <? nmemb
+        then
+          child_l <- (lookup xs (par_i*2 - 1))?;;
+          child_r <- (lookup xs (par_i*2))?;;
+          let child_i := if (child_l <? child_r)%Z then par_i*2 + 1 else par_i*2 in
+          Ret (inl (swap xs (child_i - 1) (par_i - 1), child_i))
+        else
+          let child_i := par_i*2 in
+          Ret (inl (swap xs (child_i - 1) (par_i - 1), child_i))
+      else Ret (inr (xs, par_i))
+    ) (k :: tail xs0, 1);;
+    '(xs2, par_i) <- ITree.iter (fun '(xs, par_i) =>
+      let child_i := par_i in
+      let par_i := child_i / 2 in
+      if (child_i =? 1)%nat
+      then Ret (inr (xs, par_i))
+      else
+        par <- (lookup xs (par_i - 1))?;;
+        if (k <? par)%Z
+        then Ret (inr (xs, par_i))
+        else Ret (inl (swap xs (child_i - 1) (par_i - 1), par_i))
+    ) (xs1, par_i);;
+    Ret xs2.
 
   Definition heapify_spec : fspec.
   Admitted.
 
   Definition heapsort_body : list Z -> itree Es (list Z) :=
-    fun xs =>
-      heap <- ITree.iter (fun '(xs, l) =>
-                           if Nat.eqb l 0
-                           then Ret (inr xs)
-                           else xs' <- trigger (Call "create" (xs, l)↑);;
-                                xs'' <- (xs'↓)?;;
-                                Ret (inl (xs'', l - 1))
-                        )
-                        (xs, length xs / 2);;
-      ys <- ITree.iter (fun '(heap, ys) =>
-                         if Nat.leb (length heap) 1
-                         then Ret (inr (heap ++ ys))
-                         else
-                           m <- (head heap)?;;
-                           let k := last heap 0%Z in
-                           heap_ <- trigger (Call "heapify" (removelast heap, k)↑);;
-                           heap <- (heap_↓)?;;
-                           Ret (inl (heap, m :: ys))
-                      )
-                      (heap, []);;
+    fun xs0 =>
+      xs1 <- ITree.iter (fun '(xs, l) =>
+        if (l =? 0)%nat
+        then Ret (inr xs)
+        else
+          mxs <- trigger (Call "create" (xs, l)↑);;
+          xs' <- (mxs↓)?;;
+          Ret (inl (xs', l - 1))
+      ) (xs0, length xs0 / 2);;
+      ys <- ITree.iter (fun '(xs, ys) =>
+        if length xs <=? 1
+        then Ret (inr (xs ++ ys))
+        else
+          m <- (head xs)?;;
+          let k := last xs 0%Z in
+          mxs <- trigger (Call "heapify" (removelast xs, k)↑);;
+          xs' <- (mxs↓)?;;
+          Ret (inl (xs', m :: ys))
+      ) (xs1, []);;
       Ret ys.
 
   Definition heapsort_spec : fspec.
