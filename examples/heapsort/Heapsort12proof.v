@@ -71,44 +71,50 @@ Section SIMMODSEM.
     unfold Heapsort1.heapsort_body.
     init.
     harg. rename x into xs. mDesAll. clear PURE1. steps.
-    
-    (* 'length xs / 2' for first loop, 'length xs' for second loop *)
-    astart (length xs / 2 + length xs).
-    
-    remember (length xs / 2) as l. clear Heql.
-    set (xs' := xs). unfold xs' at 1.
-    assert (xs' ≡ₚ xs) by eapply Permutation_refl.
-    remember xs' as xs0. clear xs' Heqxs0.
-    deflag.
-    revert xs0 H w ctx mp_src mp_tgt mr_src WF ACC.
-    induction l.
-    - i. rewrite unfold_iter_eq. steps.
-      admit "heapify loop".
-    - i. rewrite unfold_iter_eq. steps.
-      acatch.
-      { eapply STBINCL. stb_tac. ss. }
-      { instantiate (1 := l + length xs0).
-        eapply OrdArith.lt_from_nat.
-        lia.
-      }
-      hcall (fromList xs0, S l) _ with "".
-      { iModIntro. iSplit; ss. iPureIntro. splits.
-        - rewrite toList_fromList. ss.
-        - lia.
-        - admit "length >= 1".
-        - admit "loop invariant".
-        - ss.
-      }
-      ss. splits; et; oauto.
-      mDesAll. rename a into tree'. destruct PURE1 as [H1 [H2 H3]]. steps.
-      rewrite Nat.sub_0_r.
-      assert (Hlen : length xs0 = length (toList tree')) by admit "length".
-      rewrite Hlen.
+
+    remember (length xs <=? 1).
+    destruct b.
+    - astop.
+      steps.
+      admit "choose".
+    - steps.
+      (* 'length xs / 2' for first loop, 'length xs' for second loop *)
+      astart (length xs / 2 + length xs).
+      
+      remember (length xs / 2) as l. clear Heql.
+      set (xs' := xs). unfold xs' at 1.
+      assert (xs' ≡ₚ xs) by eapply Permutation_refl.
+      remember xs' as xs0. clear xs' Heqxs0.
       deflag.
-      eapply IHl.
-      + admit "permutation".
-      + red. inversion WF. econs. et.
-      + assumption.
+      revert xs0 H w ctx mp_src mp_tgt mr_src WF ACC.
+      induction l.
+      + i. rewrite unfold_iter_eq. steps.
+        admit "heapify loop".
+      + i. rewrite unfold_iter_eq. steps.
+        acatch.
+        { eapply STBINCL. stb_tac. ss. }
+        { instantiate (1 := l + length xs0).
+          eapply OrdArith.lt_from_nat.
+          lia.
+        }
+        hcall (fromList xs0, S l) _ with "".
+        { iModIntro. iSplit; ss. iPureIntro. splits.
+          - rewrite toList_fromList. ss.
+          - lia.
+          - admit "length >= 1".
+          - admit "loop invariant".
+          - ss.
+        }
+        ss. splits; et; oauto.
+        mDesAll. rename a into tree'. destruct PURE1 as [H1 [H2 H3]]. steps.
+        rewrite Nat.sub_0_r.
+        assert (Hlen : length xs0 = length (toList tree')) by admit "length".
+        rewrite Hlen.
+        deflag.
+        eapply IHl.
+        * admit "permutation".
+        * red. inversion WF. econs. et.
+        * assumption.
     Unshelve. et.
   Qed.
 
