@@ -190,9 +190,6 @@ Section CompleteBinaryTree.
   Defined.
 *)
 
-  Definition fromList : list A -> bintree.
-  Admitted.
-  
   Fixpoint get_rank t : nat :=
     match t with
     | BT_nil => 0
@@ -208,6 +205,86 @@ Section CompleteBinaryTree.
     (H_complete : is_complete t rank)
     : get_rank t = rank.
   Proof. induction H_complete. 2: apply is_perfect_rank in H_l. all: simpl; lia. Qed.
+
+  Fixpoint option_subtree (i : nat) t {struct t} : option bintree :=
+    if Nat.eqb i 0 then Some t else
+    match t with
+    | BT_nil => None
+    | BT_node x l r =>
+      if Nat.eqb (i mod 2) 1 then option_subtree ((i - 1) / 2) l else
+      if Nat.eqb (i mod 2) 0 then option_subtree ((i - 2) / 2) r else
+      None
+    end.
+
+  Lemma unfold_option_subtree i t :
+    option_subtree i t =
+    if Nat.eq_dec i 0 then Some t else
+    match t with
+    | BT_nil => None
+    | BT_node x l r =>
+      if Nat.eq_dec (i mod 2) 1 then option_subtree ((i - 1) / 2) l else
+      if Nat.eq_dec (i mod 2) 0 then option_subtree ((i - 2) / 2) r else
+      None
+    end.
+  Proof with lia || eauto.
+    unfold option_subtree at 1. destruct t as [ | x l r].
+    - destruct (Nat.eqb i 0) eqn: H_eqb.
+      { rewrite Nat.eqb_eq in H_eqb; subst... }
+      rewrite Nat.eqb_neq in H_eqb.
+      destruct (Nat.eq_dec i 0)...
+    - fold option_subtree. destruct (Nat.eqb i 0) eqn: H_eqb.
+      { rewrite Nat.eqb_eq in H_eqb; subst... }
+      rewrite Nat.eqb_neq in H_eqb.
+      destruct (Nat.eq_dec i 0)...
+      destruct (Nat.eqb (i mod 2) 1) eqn: H_eqb1.
+      { rewrite Nat.eqb_eq in H_eqb1. rewrite H_eqb1... }
+      destruct (Nat.eqb (i mod 2) 0) eqn: H_eqb2.
+      { rewrite Nat.eqb_eq in H_eqb2. rewrite H_eqb2... }
+      apply Nat.eqb_neq in H_eqb1, H_eqb2.
+      pose (Nat.mod_bound_pos i 2)...
+  Qed.
+
+  Inductive subtree_property (t : bintree) : nat -> bintree -> Prop :=
+  | SubtreeProperty_top
+    : subtree_property t 0 t
+  | SubtreeProperty_left x l r i
+    (H_l : subtree_property t i l)
+    : subtree_property t (2 * i + 1) (BT_node x l r)
+  | SubtreeProperty_right x l r i
+    (H_r : subtree_property t i r)
+    : subtree_property t (2 * i + 2) (BT_node x l r).
+
+  Local Hint Constructors subtree_property : core.
+
+  Theorem option_subtree_spec root i t :
+    option_subtree i root = Some t <-> subtree_property t i root.
+  Proof with lia || discriminate || eauto.
+    split.
+    - revert i t; induction root as [ | x l IH_l r IH_r]; intros i t H_eq.
+      + rewrite unfold_option_subtree in H_eq. destruct (Nat.eq_dec i 0)...
+        { apply Some_inj in H_eq. subst... }
+      + rewrite unfold_option_subtree in H_eq. destruct (Nat.eq_dec i 0) as [H_yes1 | H_no1].
+        { apply Some_inj in H_eq. subst... }
+        destruct (Nat.eq_dec (i mod 2) 1) as [H_yes2 | H_no2].
+        { replace (i) with (2 * ((i - 1) / 2) + 1)... symmetry; apply positive_odd... }
+        destruct (Nat.eq_dec (i mod 2) 0) as [H_yes3 | H_no3].
+        { replace (i) with (2 * ((i - 2) / 2) + 2)... symmetry; apply positive_even... }
+        discriminate.
+    - intros X; induction X; rewrite unfold_option_subtree...
+      + destruct (Nat.eq_dec (2 * i + 1) 0) as [H_yes1 | H_no1]...
+        destruct (Nat.eq_dec ((2 * i + 1) mod 2) 1) as [H_yes2 | H_no2].
+        { replace ((2 * i + 1 - 1) / 2) with (i)... apply positive_odd... }
+        contradiction H_no2. pose (positive_odd (2 * i + 1) i)...
+      + destruct (Nat.eq_dec (2 * i + 2) 0) as [H_yes1 | H_no1]...
+        destruct (Nat.eq_dec ((2 * i + 2) mod 2) 1) as [H_yes2 | H_no2].
+        replace (2 * i + 2) with (2 + i * 2) in H_yes2... rewrite Nat.mod_add in H_yes2...
+        destruct (Nat.eq_dec ((2 * i + 2) mod 2) 0) as [H_yes3 | H_no3].
+        { replace ((2 * i + 2 - 2) / 2) with (i)... apply positive_even... }
+        pose (Nat.mod_bound_pos (2 * i + 2) 2)...
+  Qed.
+
+  Definition fromList : list A -> bintree.
+  Admitted.
 
   Let cnt : bintree -> nat :=
     fix cnt_fix t :=
@@ -243,12 +320,12 @@ Section CompleteBinaryTree.
       replace ((ts_tail ++ [l]) ++ [r]) with (ts_tail ++ [l; r]) at 1...
       rewrite <- app_assoc...
     - intros [ | [ | x l r] ts_tail] ? ? ?...
-      apply f_equal... 
+      apply f_equal...
   Qed.
 
   Global Opaque toList_step.
 
-  Definition option_elem t :=
+  Definition option_root t :=
     match t with
     | BT_nil => None
     | BT_node x l r => Some x
@@ -262,7 +339,7 @@ Section CompleteBinaryTree.
 
   Local Open Scope program_scope.
 
-  Definition extract_elements := flat_map (option2list ∘ option_elem).
+  Definition extract_elements := flat_map (option2list ∘ option_root).
 
   Definition extract_children := flat_map (@concat bintree ∘ option2list ∘ option_map pair2list ∘ option_children_pair).
 
@@ -323,10 +400,17 @@ Arguments bintree: clear implicits.
 Section HeapProperty.
 
   Context {A : Type}.
-  Context (R : A -> A -> Prop).
+  Variable R : A -> A -> Prop.
 
-  Definition heap : bintree A -> Prop.
-  Admitted.
+  Inductive heap : bintree A -> Prop :=
+  | heap_nil
+    : heap (BT_nil)
+  | heap_node x l r
+    (R_x_l : @option_rect A (fun _ => Prop) (R x) (True) (option_root l))
+    (R_x_r : @option_rect A (fun _ => Prop) (R x) (True) (option_root r))
+    (heap_l : heap l)
+    (heap_r : heap r)
+    : heap (BT_node x l r).
 
 End HeapProperty.
 
