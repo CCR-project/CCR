@@ -12,6 +12,7 @@ Require Import HeapsortHeader.
 Require Import Heapsort1 Heapsort2.
 Require Import HTactics ProofMode.
 Require Import SimModSem.
+Require Import Coq.Sorting.Sorted.
 
 Set Implicit Arguments.
 
@@ -74,9 +75,15 @@ Section SIMMODSEM.
 
     remember (length xs <=? 1).
     destruct b.
-    - astop.
-      steps.
-      admit "choose".
+    - astop. steps. force_l.
+      eexists. steps.
+      hret tt; ss.
+      iModIntro. iSplit; ss. iPureIntro.
+      esplits; try reflexivity.
+      destruct xs as [| x []].
+      + econs.
+      + econs; econs.
+      + ss.
     - steps.
       (* 'length xs / 2' for first loop, 'length xs' for second loop *)
       astart (length xs / 2 + length xs).
