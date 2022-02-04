@@ -66,6 +66,13 @@ Section HEAPSORT.
     ("heapsort", mk_specbody heapsort_spec (cfunN heapsort_body))
     ].
 
+  Definition HeapsortStb : list (gname * fspec).
+    eapply (Seal.sealing "stb").
+    let x := constr:(List.map (map_snd (fun fsb => fsb.(fsb_fspec) : fspec)) HeapsortSbtb) in
+    let y := eval cbn in x in
+    eapply y.
+  Defined.
+
   Definition SHeapsortSem : SModSem.t := {|
     SModSem.fnsems := HeapsortSbtb;
     SModSem.mn := "Heapsort";

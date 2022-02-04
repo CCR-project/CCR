@@ -301,6 +301,9 @@ Section CompleteBinaryTree.
 
   Definition toList root := toList_step [root].
 
+  Lemma toList_fromList xs : toList (fromList xs) = xs.
+  Admitted.
+
 End CompleteBinaryTree.
 
 Arguments bintree: clear implicits.
