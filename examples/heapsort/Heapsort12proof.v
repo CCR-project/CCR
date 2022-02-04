@@ -87,41 +87,40 @@ Section SIMMODSEM.
     - steps.
       (* 'length xs / 2' for first loop, 'length xs' for second loop *)
       astart (length xs / 2 + length xs).
-      
-      remember (length xs / 2) as l. clear Heql.
-      set (xs' := xs). unfold xs' at 1.
-      assert (xs' ≡ₚ xs) by eapply Permutation_refl.
-      remember xs' as xs0. clear xs' Heqxs0.
+
+      remember (fromList xs) as tree.
+      set (xs0 := xs). unfold xs0 at 1 3.
+      replace xs0 with (toList tree)
+        by (subst; eapply toList_fromList).
+      clear xs0.
+      remember (length (toList tree) / 2) as l. clear Heql.
+      assert (toList tree ≡ₚ xs)
+        by (subst; rewrite toList_fromList; eapply Permutation_refl).
+      clear Heqtree.
       deflag.
-      revert xs0 H w ctx mp_src mp_tgt mr_src WF ACC.
+      revert tree H w ctx mp_src mp_tgt mr_src WF ACC.
       induction l.
       + i. rewrite unfold_iter_eq. steps.
         admit "heapify loop".
       + i. rewrite unfold_iter_eq. steps.
         acatch.
         { eapply STBINCL. stb_tac. ss. }
-        { instantiate (1 := l + length xs0).
+        { instantiate (1 := l + length xs).
           eapply OrdArith.lt_from_nat.
           lia.
         }
-        hcall (fromList xs0, S l) _ with "".
-        { iModIntro. iSplit; ss. iPureIntro. splits.
-          - rewrite toList_fromList. ss.
+        hcall (tree, S l) _ with "".
+        { iModIntro. iSplit; ss. iPureIntro. splits; ss.
           - lia.
-          - admit "length >= 1".
+          - admit "l <= length".
           - admit "loop invariant".
-          - ss.
         }
         ss. splits; et; oauto.
         mDesAll. rename a into tree'. des. steps.
-        rewrite toList_fromList in PURE2.
-        symmetry in PURE2.
         rewrite Nat.sub_0_r.
-        replace (length xs0) with (length (toList tree')) by
-            (eapply Permutation_length; et).
         deflag.
         eapply IHl.
-        * transitivity xs0; assumption.
+        * symmetry in PURE2. transitivity (toList tree); ss.
         * red. inversion WF. econs. et.
         * assumption.
     Unshelve. et.
