@@ -28,6 +28,7 @@ Section SIMMODSEM.
   Context `{Σ : GRA.t}.
 
   Variable GlobalStb : Sk.t -> gname -> option fspec.
+  
 
   Definition wf : _ -> Any.t * Any.t -> Prop :=
     @mk_wf
@@ -68,11 +69,19 @@ Section SIMMODSEM.
     remember xs' as xs0. clear xs' Heqxs0.
     revert xs0 H w ctx mp_src mp_tgt mr_src WF ACC.
     induction l.
-    { i. rewrite unfold_iter_eq. steps.
+    - i. rewrite unfold_iter_eq. steps.
       admit "heapify loop".
-    }
-    { i. rewrite unfold_iter_eq. steps.
-      
+    - i. rewrite unfold_iter_eq. steps.
+      acatch.
+      { instantiate (1 := create_spec). admit "stb". }
+      { instantiate (1 := l + length xs0).
+        eapply OrdArith.lt_from_nat.
+        lia.
+      }
+      hcall _ _ with "".
+      { iModIntro. iSplit; ss.
+        admit "we have to construct tree".
+      }
     (*
     2: { i.
     rewrite unfold_iter_eq.
@@ -91,8 +100,6 @@ Section SIMMODSEM.
       steps.
       Search ITree.iter.
      *)
-      admit "create loop inductive case".
-    }
   Admitted.
 
   Theorem correct : refines2 [Heapsort1.Heapsort] [Heapsort2.Heapsort GlobalStb].
