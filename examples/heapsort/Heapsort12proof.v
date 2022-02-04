@@ -145,20 +145,28 @@ Section SIMMODSEM.
         replace (length xs) with (l + 1)
           by (erewrite Permutation_length in Hₗ by eapply Hₚ; lia).
 
+        remember ([] : list Z) as ys.
+        clear Heqys.
+
         deflag.
-        revert tree Hₚ Hₕ Hₗ w ctx mp_src mp_tgt mr_src WF ACC.
+        revert tree ys Hₚ Hₕ Hₗ w ctx mp_src mp_tgt mr_src WF ACC.
         induction l.
-        -- i.
+        -- i. rewrite unfold_iter_eq. steps.
            assert (length (toList tree) <= 1) by lia.
-           rewrite unfold_iter_eq. steps.
            replace (length (toList tree) <=? 1) with true
              by (symmetry; eapply leb_correct; ss).
            steps.
            astop. force_l. eexists. steps.
            hret tt; ss.
-           iModIntro. iSplit; ss. iPureIntro.
+           iModIntro. iSplit; ss. iPureIntro. esplits; ss.
+           ++ admit "invariant".
+           ++ admit "invariant".
+        -- i. rewrite unfold_iter_eq. steps.
+           assert (length (toList tree) > 1) by lia.
+           replace (length (toList tree) <=? 1) with false
+             by (symmetry; eapply leb_correct_conv; lia).
+           steps.
            admit "wip".
-        -- admit "wip".
       + i. rewrite unfold_iter_eq. steps.
         acatch.
         { eapply STBINCL. stb_tac. ss. }
@@ -180,7 +188,7 @@ Section SIMMODSEM.
         * intros. eapply PURE3. lia.
         * red. inversion WF. econs. et.
         * assumption.
-    Unshelve. et. et.
+    Unshelve. et.
   Qed.
 
   Theorem correct : refines2 [Heapsort1.Heapsort] [Heapsort2.Heapsort GlobalStb].
