@@ -120,7 +120,27 @@ Section SIMMODSEM.
       revert tree Hₚ Hₗ H w ctx mp_src mp_tgt mr_src WF ACC.
       induction l.
       + i. rewrite unfold_iter_eq. steps.
-        admit "heapify loop".
+        assert (Hₕ : heap Z.ge tree) by admit "from H".
+        clear H Hₗ.
+
+        remember (length (toList tree) - 1) as l eqn: Hₗ.
+        replace (length xs) with (l + 1)
+          by (erewrite Permutation_length in Hₗ by eapply Hₚ; lia).
+
+        deflag.
+        revert tree Hₚ Hₕ Hₗ w ctx mp_src mp_tgt mr_src WF ACC.
+        induction l.
+        -- i.
+           assert (length (toList tree) <= 1) by lia.
+           rewrite unfold_iter_eq. steps.
+           replace (length (toList tree) <=? 1) with true
+             by (symmetry; eapply leb_correct; ss).
+           steps.
+           astop. force_l. eexists. steps.
+           hret tt; ss.
+           iModIntro. iSplit; ss. iPureIntro.
+           admit "wip".
+        -- admit "wip".
       + i. rewrite unfold_iter_eq. steps.
         acatch.
         { eapply STBINCL. stb_tac. ss. }
@@ -142,7 +162,7 @@ Section SIMMODSEM.
         * intros. eapply PURE3. lia.
         * red. inversion WF. econs. et.
         * assumption.
-    Unshelve. et.
+    Unshelve. et. et.
   Qed.
 
   Theorem correct : refines2 [Heapsort1.Heapsort] [Heapsort2.Heapsort GlobalStb].
