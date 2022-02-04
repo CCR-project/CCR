@@ -48,9 +48,11 @@ Section SIMMODSEM.
     astop. induction tree.
     - steps. rewrite unfold_iter_eq.
       destruct l;nia.
-    - destruct H0. destruct H0. steps. rewrite unfold_iter_eq.
+    - (*
+        destruct H0. destruct H0. steps. rewrite unfold_iter_eq.
       destruct (l + (l + 0) <=? S n);destruct (l + (l + 0) <=? n).
       + unfold toList. rewrite toList_step_unfold. steps.
+      *)
   Admitted.
 
   Lemma sim_heapify (sk : alist string Sk.gdef) :
@@ -92,6 +94,8 @@ Section SIMMODSEM.
       hcall (fromList xs0, S l) _ with "".
       { iModIntro. iSplit; ss. iPureIntro. splits.
         - rewrite toList_fromList. ss.
+        - lia.
+        - admit "length >= 1".
         - admit "loop invariant".
         - ss.
       }
