@@ -61,6 +61,24 @@ Section SIMMODSEM.
               ("heapify",
                fun_to_tgt "Heapsort" (GlobalStb sk) {| fsb_fspec := heapify_spec; fsb_body := cfunN heapify_body |})
               ("heapify", cfunU Heapsort1.heapify_body).
+  Proof with eauto.
+    init. harg. destruct x as [root k]. mDesAll; subst.
+    clear PURE1. destruct PURE0 as [H_eq PURE]; subst.
+    steps. astop. revert mrp_src mp_tgt WF k ctx mr_src PURE ACC.
+    induction root as [ | x l IH_l r IH_r]; i.
+    { steps. rewrite unfold_iter_eq. des_ifs. steps.
+      unfold toList. rewrite toList_step_unfold. rewrite toList_step_unfold.
+      steps. rewrite unfold_iter_eq. steps.
+      force_l. eexists. steps. hret tt; ss.
+      iModIntro. iSplit; ss. iPureIntro.
+      esplits; try reflexivity.
+      instantiate (1 := (BT_node k BT_nil BT_nil)).
+      - rewrite toList_step_unfold. ss.
+      - rewrite toList_step_unfold. ss.
+      - econs; ss.
+    }
+    { admit "caseOf_BT_node". }
+    (* Unshelve. et. *)
   Admitted.
 
   Lemma sim_heapsort (sk : alist string Sk.gdef) :
