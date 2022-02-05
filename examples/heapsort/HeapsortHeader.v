@@ -365,7 +365,7 @@ Section BinaryTreeAccessories.
       end
     end.
 
-  Definition encode ds := fold_left (fun code : nat => dir_t_rect (fun _ => nat) (2 * code + 1) (2 * code + 2)) ds 0.
+  Definition encode ds := fold_left (fun i => dir_t_rect (fun _ => nat) (2 * i + 1) (2 * i + 2)) ds 0.
 
   Lemma encode_inj ds1 ds2
     (H_encode_eq : encode ds1 = encode ds2)
@@ -374,7 +374,7 @@ Section BinaryTreeAccessories.
     revert H_encode_eq. unfold encode; do 2 rewrite <- fold_left_rev_right.
     intros H_eq; apply rev_inj; revert H_eq.
     generalize (rev ds2) as xs2. generalize (rev ds1) as xs1. clear ds1 ds2.
-    set (myF := fold_right (fun y x => dir_t_rect (fun _ : dir_t => nat) (2 * x + 1) (2 * x + 2) y) 0).
+    set (myF := fold_right (fun d i => dir_t_rect (fun _ => nat) (2 * i + 1) (2 * i + 2) d) 0).
     induction xs1 as [ | x1 xs1 IH]; destruct xs2 as [ | x2 xs2]; simpl...
     - destruct x2; simpl dir_t_rect...
     - destruct x1; simpl dir_t_rect...
@@ -383,28 +383,28 @@ Section BinaryTreeAccessories.
       all: apply f_equal...
   Qed.
 
-  Lemma decodable code :
-    {ds : list dir_t | encode ds = code}.
+  Lemma decodable i :
+    {ds : list dir_t | encode ds = i}.
   Proof with lia || eauto.
-    induction code as [[ | n'] IH] using Wf_nat.lt_wf_rect1.
+    induction i as [[ | n'] IH] using Wf_nat.lt_wf_rect.
     - exists ([])...
-    - set (code := S n').
-      destruct (code mod 2) as [ | [ | code_mod_2]] eqn: H_obs.
-      + assert (claim1 : code = 2 * ((code - 2) / 2) + 2).
-        { apply (positive_even code ((code - 2) / 2))... }
-        assert (claim2 : (code - 2) / 2 < code)...
-        destruct (IH ((code - 2) / 2) claim2) as [ds H_ds].
+    - set (i := S n').
+      destruct (i mod 2) as [ | [ | i_mod_2]] eqn: H_obs.
+      + assert (claim1 : i = 2 * ((i - 2) / 2) + 2).
+        { apply (positive_even i ((i - 2) / 2))... }
+        assert (claim2 : (i - 2) / 2 < i)...
+        destruct (IH ((i - 2) / 2) claim2) as [ds H_ds].
         exists (ds ++ [Dir_right]).
         unfold encode. rewrite fold_left_last. unfold dir_t_rect at 1.
         unfold encode in H_ds. rewrite H_ds...
-      + assert (claim1 : code = 2 * ((code - 1) / 2) + 1).
-        { apply (positive_odd code ((code - 1) / 2))... }
-        assert (claim2 : (code - 1) / 2 < code)...
-        destruct (IH ((code - 1) / 2) claim2) as [ds H_ds].
+      + assert (claim1 : i = 2 * ((i - 1) / 2) + 1).
+        { apply (positive_odd i ((i - 1) / 2))... }
+        assert (claim2 : (i - 1) / 2 < i)...
+        destruct (IH ((i - 1) / 2) claim2) as [ds H_ds].
         exists (ds ++ [Dir_left]).
         unfold encode. rewrite fold_left_last. unfold dir_t_rect at 1.
         unfold encode in H_ds. rewrite H_ds...
-      + pose (Nat.mod_bound_pos code 2)...
+      + pose (Nat.mod_bound_pos i 2)...
   Defined.
 
 (*
@@ -416,14 +416,12 @@ Section BinaryTreeAccessories.
   (* = [Dir_left; Dir_left; Dir_left; Dir_right] *)
 *)
 
-  Definition decode (code : nat) : list dir_t :=
-    proj1_sig (decodable code).
+  Definition decode i := proj1_sig (decodable i).
 
   Global Opaque decode.
 
-  Lemma encode_decode code :
-    encode (decode code) = code.
-  Proof. exact (proj2_sig (decodable code)). Qed.
+  Lemma encode_decode i : encode (decode i) = i.
+  Proof. exact (proj2_sig (decodable i)). Qed.
 
   Definition subtree {A : Type} : nat -> bintree A -> bintree A.
   Admitted.
