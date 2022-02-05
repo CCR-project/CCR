@@ -74,9 +74,18 @@ Section Utilities.
         symmetry; replace (n_even) with ((n_even - 2) + 1 * 2) at 1... apply Nat.mod_add...
   Qed.
 
-  Lemma fold_left_last {A : Type} {B : Type} (f : B -> A -> B) (z0 : B) (xs : list A) (x0 : A) :
+  Lemma fold_left_last {A B : Type} (f : B -> A -> B) (z0 : B) (xs : list A) (x0 : A) :
     fold_left f (xs ++ [x0]) z0 = f (fold_left f xs z0) x0.
   Proof. revert z0 x0; induction xs as [ | x xs IH]; simpl; eauto. Qed.
+
+  Lemma rev_inj {A : Type} (xs1 xs2 : list A)
+    (H_rev_eq : rev xs1 = rev xs2)
+    : xs1 = xs2.
+  Proof.
+    rewrite <- rev_involutive with (l := xs1).
+    rewrite <- rev_involutive with (l := xs2).
+    now apply f_equal.
+  Qed.
 
 End Utilities.
 
@@ -346,7 +355,7 @@ Section BinaryTreeAccessories.
 
   Inductive dir_t : Set := Dir_left | Dir_right.
 
-  Fixpoint option_subtree {A : Type} (ds : list dir_t) (t : bintree A) : option (bintree A) :=
+  Fixpoint option_subtree {A : Type} ds t : option (bintree A) :=
     match ds with
     | [] => Some t
     | d :: ds' =>
@@ -358,7 +367,23 @@ Section BinaryTreeAccessories.
 
   Definition encode ds := fold_left (fun code : nat => dir_t_rect (fun _ => nat) (2 * code + 1) (2 * code + 2)) ds 0.
 
-  Lemma decode (code : nat) :
+  Lemma encode_inj ds1 ds2
+    (H_encode_eq : encode ds1 = encode ds2)
+    : ds1 = ds2.
+  Proof with lia || eauto.
+    revert H_encode_eq. unfold encode; do 2 rewrite <- fold_left_rev_right.
+    intros H_eq; apply rev_inj; revert H_eq.
+    generalize (rev ds2) as xs2. generalize (rev ds1) as xs1. clear ds1 ds2.
+    set (myF := fold_right (fun y x => dir_t_rect (fun _ : dir_t => nat) (2 * x + 1) (2 * x + 2) y) 0).
+    induction xs1 as [ | x1 xs1 IH]; destruct xs2 as [ | x2 xs2]; simpl...
+    - destruct x2; simpl dir_t_rect...
+    - destruct x1; simpl dir_t_rect...
+    - destruct x1; destruct x2; simpl dir_t_rect...
+      all: intros H_eq; assert (claim1 : myF xs1 = myF xs2)...
+      all: apply f_equal...
+  Qed.
+
+  Lemma decodable code :
     {ds : list dir_t | encode ds = code}.
   Proof with lia || eauto.
     induction code as [[ | n'] IH] using Wf_nat.lt_wf_rect1.
@@ -383,15 +408,22 @@ Section BinaryTreeAccessories.
   Defined.
 
 (*
-  Compute (proj1_sig (decode 14)).
+  Compute (proj1_sig (decodable 14)).
   (* = [Dir_right; Dir_right; Dir_right] *)
-  Compute (proj1_sig (decode 15)).
+  Compute (proj1_sig (decodable 15)).
   (* = [Dir_left; Dir_left; Dir_left; Dir_left] *)
-  Compute (proj1_sig (decode 16)).
+  Compute (proj1_sig (decodable 16)).
   (* = [Dir_left; Dir_left; Dir_left; Dir_right] *)
 *)
 
+  Definition decode (code : nat) : list dir_t :=
+    proj1_sig (decodable code).
+
   Global Opaque decode.
+
+  Lemma encode_decode code :
+    encode (decode code) = code.
+  Proof. exact (proj2_sig (decodable code)). Qed.
 
   Definition subtree {A : Type} : nat -> bintree A -> bintree A.
   Admitted.
@@ -404,15 +436,15 @@ Section BinaryTreeAccessories.
 
   Definition initZipper (root : bintree A) : zipper A := ([], root).
 
-  Inductive ctx_spec subtree : ctx_t A -> bintree A -> Prop :=
+  Inductive ctx_spec s : ctx_t A -> bintree A -> Prop :=
   | CtxSpec_top
-    : ctx_spec subtree [] subtree
-  | CtxSpec_left ctx_l x l r
-    (X_l : ctx_spec subtree ctx_l l)
-    : ctx_spec subtree (ctx_l ++ [(Dir_left, (x, r))]) (BT_node x l r)
-  | CtxSpec_right ctx_r x l r
-    (X_r : ctx_spec subtree ctx_r r)
-    : ctx_spec subtree (ctx_r ++ [(Dir_right, (x, l))]) (BT_node x l r).
+    : ctx_spec s [] s
+  | CtxSpec_left c_l x l r
+    (X_l : ctx_spec s c_l l)
+    : ctx_spec s (c_l ++ [(Dir_left, (x, r))]) (BT_node x l r)
+  | CtxSpec_right c_r x l r
+    (X_r : ctx_spec s c_r r)
+    : ctx_spec s (c_r ++ [(Dir_right, (x, l))]) (BT_node x l r).
 
   Local Hint Constructors ctx_spec : core.
 
@@ -420,13 +452,13 @@ Section BinaryTreeAccessories.
     : ctx_spec root [] root.
   Proof. constructor. Qed.
 
-  Lemma ctx_spec_trans t1 ctx1 t2 ctx2 root
-    (X1 : ctx_spec t1 ctx1 t2)
-    (X2 : ctx_spec t2 ctx2 root)
-    : ctx_spec t1 (ctx1 ++ ctx2) root.
+  Lemma ctx_spec_trans t1 c1 t2 c2 root
+    (X1 : ctx_spec t1 c1 t2)
+    (X2 : ctx_spec t2 c2 root)
+    : ctx_spec t1 (c1 ++ c2) root.
   Proof with eauto with *.
-    revert t2 ctx2 X2 t1 ctx1 X1; intros t2 ctx2 X2.
-    induction X2; intros t1 ctx1 X1; [rewrite app_nil_r | rewrite app_assoc | rewrite app_assoc]...
+    revert t2 c2 X2 t1 c1 X1; intros t2 c2 X2.
+    induction X2; intros t1 c1 X1; [rewrite app_nil_r | rewrite app_assoc | rewrite app_assoc]...
   Qed.
 
   Definition runZipper_step it : bintree A -> bintree A :=
@@ -436,69 +468,69 @@ Section BinaryTreeAccessories.
     end.
 
   Definition runZipper : zipper A -> bintree A :=
-    fun '(ctx, subtree) => fold_right runZipper_step subtree (rev ctx).
+    fun '(c, s) => fold_right runZipper_step s (rev c).
 
-  Lemma runZipper_unfold ctx subtree :
-    runZipper (ctx, subtree) =
-    match ctx with
-    | [] => subtree
-    | (Dir_left, (x, r)) :: ctx_l => runZipper (ctx_l, BT_node x subtree r)
-    | (Dir_right, (x, l)) :: ctx_r => runZipper (ctx_r, BT_node x l subtree)
+  Lemma runZipper_unfold c s :
+    runZipper (c, s) =
+    match c with
+    | [] => s
+    | (Dir_left, (x, r)) :: c_l => runZipper (c_l, BT_node x s r)
+    | (Dir_right, (x, l)) :: c_r => runZipper (c_r, BT_node x l s)
     end.
   Proof with eauto.
     cbn. rewrite fold_left_rev_right with (f := runZipper_step).
-    destruct ctx as [ | [[ | ] [x t]] ctx]; simpl...
+    destruct c as [ | [[ | ] [x t]] c]; simpl...
     all: rewrite fold_left_rev_right with (f := runZipper_step)...
   Qed.
 
-  Lemma runZipper_last ctx d x t subtree :
-    runZipper (ctx ++ [(d, (x, t))], subtree) =
+  Lemma runZipper_last c d x t s :
+    runZipper (c ++ [(d, (x, t))], s) =
     match d with
-    | Dir_left => BT_node x (runZipper (ctx, subtree)) t
-    | Dir_right => BT_node x t (runZipper (ctx, subtree))
+    | Dir_left => BT_node x (runZipper (c, s)) t
+    | Dir_right => BT_node x t (runZipper (c, s))
     end.
   Proof. cbn. now rewrite rev_unit; destruct d. Qed.
 
   Definition zipper_invariant root : zipper A -> Prop :=
-    fun '(ctx, subtree) => ctx_spec subtree ctx root.
+    fun '(c, s) => ctx_spec s c root.
 
-  Theorem runZipper_spec root ctx subtree :
-    root = runZipper (ctx, subtree) <->
-    zipper_invariant root (ctx, subtree).
+  Theorem runZipper_spec root c s :
+    root = runZipper (c, s) <->
+    zipper_invariant root (c, s).
   Proof with eauto.
     unfold zipper_invariant; split.
-    - intros H_eq; subst root; revert subtree.
-      induction ctx as [ | [[ | ] [x t]] ctx IH] using rev_ind...
-      all: intros subtree; rewrite runZipper_last...
+    - intros H_eq; subst root; revert s.
+      induction c as [ | [[ | ] [x t]] c IH] using rev_ind...
+      all: intros s; rewrite runZipper_last...
     - intros X; induction X...
       all: rewrite runZipper_last, IHX...
   Qed.
 
-  Corollary zipper_invariant_top root subtree :
-    zipper_invariant root ([], subtree) <->
-    root = subtree.
+  Corollary zipper_invariant_top root s :
+    zipper_invariant root ([], s) <->
+    root = s.
   Proof. now rewrite <- runZipper_spec. Qed.
 
-  Corollary zipper_invariant_left root ctx x l r :
-    zipper_invariant root ((Dir_left, (x, r)) :: ctx, l) <->
-    zipper_invariant root (ctx, BT_node x l r).
+  Corollary zipper_invariant_left root c x l r :
+    zipper_invariant root ((Dir_left, (x, r)) :: c, l) <->
+    zipper_invariant root (c, BT_node x l r).
   Proof. do 2 rewrite <- runZipper_spec. now rewrite runZipper_unfold at 1. Qed.
 
-  Corollary zipper_invariant_right root ctx x l r :
-    zipper_invariant root ((Dir_right, (x, l)) :: ctx, r) <->
-    zipper_invariant root (ctx, BT_node x l r).
+  Corollary zipper_invariant_right root c x l r :
+    zipper_invariant root ((Dir_right, (x, l)) :: c, r) <->
+    zipper_invariant root (c, BT_node x l r).
   Proof. do 2 rewrite <- runZipper_spec. now rewrite runZipper_unfold at 1. Qed.
 
   Local Hint Resolve zipper_invariant_top zipper_invariant_left zipper_invariant_right : core.
 
-  Theorem zipper_invariant_unfold root ctx subtree :
-    zipper_invariant root (ctx, subtree) <->
-    match ctx with
-    | [] => root = subtree
-    | (Dir_left, (x, r)) :: ctx_l => zipper_invariant root (ctx_l, BT_node x subtree r)
-    | (Dir_right, (x, l)) :: ctx_r => zipper_invariant root (ctx_r, BT_node x l subtree)
+  Theorem zipper_invariant_unfold root c s :
+    zipper_invariant root (c, s) <->
+    match c with
+    | [] => root = s
+    | (Dir_left, (x, r)) :: c_l => zipper_invariant root (c_l, BT_node x s r)
+    | (Dir_right, (x, l)) :: c_r => zipper_invariant root (c_r, BT_node x l s)
     end.
-  Proof. destruct ctx as [ | [[ | ] [? ?]] ?]; eauto. Qed.
+  Proof. destruct c as [ | [[ | ] [? ?]] ?]; eauto. Qed.
 
 End BinaryTreeAccessories.
 
