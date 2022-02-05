@@ -74,6 +74,10 @@ Section Utilities.
         symmetry; replace (n_even) with ((n_even - 2) + 1 * 2) at 1... apply Nat.mod_add...
   Qed.
 
+  Lemma fold_left_last {A : Type} {B : Type} (f : B -> A -> B) (z0 : B) (xs : list A) (x0 : A) :
+    fold_left f (xs ++ [x0]) z0 = f (fold_left f xs z0) x0.
+  Proof. revert z0 x0; induction xs as [ | x xs IH]; simpl; eauto. Qed.
+
 End Utilities.
 
 Section ListOperations.
@@ -340,10 +344,57 @@ End HeapProperty.
 
 Section BinaryTreeAccessories.
 
+  Inductive dir_t : Set := Dir_left | Dir_right.
+
+  Fixpoint option_subtree {A : Type} (ds : list dir_t) (t : bintree A) : option (bintree A) :=
+    match ds with
+    | [] => Some t
+    | d :: ds' =>
+      match t with
+      | BT_nil => None
+      | BT_node x l r => option_subtree ds' (dir_t_rect (fun _ => bintree A) l r d)
+      end
+    end.
+
+  Definition encode ds := fold_left (fun code : nat => dir_t_rect (fun _ => nat) (2 * code + 1) (2 * code + 2)) ds 0.
+
+  Lemma decode (code : nat) :
+    {ds : list dir_t | encode ds = code}.
+  Proof with lia || eauto.
+    induction code as [[ | n'] IH] using Wf_nat.lt_wf_rect1.
+    - exists ([])...
+    - set (code := S n').
+      destruct (code mod 2) as [ | [ | code_mod_2]] eqn: H_obs.
+      + assert (claim1 : code = 2 * ((code - 2) / 2) + 2).
+        { apply (positive_even code ((code - 2) / 2))... }
+        assert (claim2 : (code - 2) / 2 < code)...
+        destruct (IH ((code - 2) / 2) claim2) as [ds H_ds].
+        exists (ds ++ [Dir_right]).
+        unfold encode. rewrite fold_left_last. unfold dir_t_rect at 1.
+        unfold encode in H_ds. rewrite H_ds...
+      + assert (claim1 : code = 2 * ((code - 1) / 2) + 1).
+        { apply (positive_odd code ((code - 1) / 2))... }
+        assert (claim2 : (code - 1) / 2 < code)...
+        destruct (IH ((code - 1) / 2) claim2) as [ds H_ds].
+        exists (ds ++ [Dir_left]).
+        unfold encode. rewrite fold_left_last. unfold dir_t_rect at 1.
+        unfold encode in H_ds. rewrite H_ds...
+      + pose (Nat.mod_bound_pos code 2)...
+  Defined.
+
+(*
+  Compute (proj1_sig (decode 14)).
+  (* = [Dir_right; Dir_right; Dir_right] *)
+  Compute (proj1_sig (decode 15)).
+  (* = [Dir_left; Dir_left; Dir_left; Dir_left] *)
+  Compute (proj1_sig (decode 16)).
+  (* = [Dir_left; Dir_left; Dir_left; Dir_right] *)
+*)
+
+  Global Opaque decode.
+
   Definition subtree {A : Type} : nat -> bintree A -> bintree A.
   Admitted.
-
-  Inductive dir_t : Set := Dir_left | Dir_right.
 
   Definition ctx_t A := list (dir_t * (A * bintree A)).
 
