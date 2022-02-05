@@ -93,16 +93,19 @@ Section ListOperations.
 
 End ListOperations.
 
+Inductive bintree (A : Type) : Type :=
+| BT_nil
+| BT_node (x : A) (l r : bintree A)
+.
+
+Arguments BT_nil {A}.
+Arguments BT_node {A} x l r.
+
 Section CompleteBinaryTree.
 
   Context {A : Type}.
 
-  Inductive bintree : Type :=
-  | BT_nil
-  | BT_node (x : A) (l : bintree) (r : bintree)
-  .
-
-  Inductive is_perfect : bintree -> forall rank : nat, Prop :=
+  Inductive is_perfect : bintree A -> nat -> Prop :=
   | perfect_nil : is_perfect BT_nil O
   | perfect_node {n : nat} x l r
                  (H_l : is_perfect l n)
@@ -110,7 +113,7 @@ Section CompleteBinaryTree.
     : is_perfect (BT_node x l r) (S n)
   .
 
-  Inductive is_complete : bintree -> forall rank : nat, Prop :=
+  Inductive is_complete : bintree A -> nat -> Prop :=
   | complete_nil
     : is_complete BT_nil O
   | complete_node_perfect_complete {n : nat} x l r
@@ -190,7 +193,7 @@ Section CompleteBinaryTree.
   Defined.
 *)
 
-  Fixpoint get_rank t : nat :=
+  Fixpoint get_rank (t : bintree A) : nat :=
     match t with
     | BT_nil => 0
     | BT_node x l r => 1 + max (get_rank l) (get_rank r)
@@ -206,7 +209,7 @@ Section CompleteBinaryTree.
     : get_rank t = rank.
   Proof. induction H_complete. 2: apply is_perfect_rank in H_l. all: simpl; lia. Qed.
 
-  Fixpoint option_subtree (i : nat) t {struct t} : option bintree :=
+  Fixpoint option_subtree (i : nat) t {struct t} : option (bintree A) :=
     if Nat.eqb i 0 then Some t else
     match t with
     | BT_nil => None
@@ -244,7 +247,7 @@ Section CompleteBinaryTree.
       pose (Nat.mod_bound_pos i 2)...
   Qed.
 
-  Inductive subtree_property (t : bintree) : nat -> bintree -> Prop :=
+  Inductive subtree_property (t : bintree A) : nat -> bintree A -> Prop :=
   | SubtreeProperty_top
     : subtree_property t 0 t
   | SubtreeProperty_left x l r i
@@ -283,10 +286,10 @@ Section CompleteBinaryTree.
         pose (Nat.mod_bound_pos (2 * i + 2) 2)...
   Qed.
 
-  Definition fromList : list A -> bintree.
+  Definition fromList : list A -> bintree A.
   Admitted.
 
-  Let cnt : bintree -> nat :=
+  Let cnt : bintree A -> nat :=
     fix cnt_fix t :=
     match t with
     | BT_nil => 1
@@ -325,13 +328,13 @@ Section CompleteBinaryTree.
 
   Global Opaque toList_step.
 
-  Definition option_root t :=
+  Definition option_root (t : bintree A) :=
     match t with
     | BT_nil => None
     | BT_node x l r => Some x
     end.
 
-  Definition option_children_pair t :=
+  Definition option_children_pair (t : bintree A) :=
     match t with
     | BT_nil => None
     | BT_node x l r => Some (l, r)
@@ -341,7 +344,7 @@ Section CompleteBinaryTree.
 
   Definition extract_elements := flat_map (option2list ∘ option_root).
 
-  Definition extract_children := flat_map (@concat bintree ∘ option2list ∘ option_map pair2list ∘ option_children_pair).
+  Definition extract_children := flat_map (@concat (bintree A) ∘ option2list ∘ option_map pair2list ∘ option_children_pair).
 
   Lemma extract_elements_unfold ts :
     extract_elements ts =
@@ -382,8 +385,6 @@ Section CompleteBinaryTree.
   Admitted.
 
 End CompleteBinaryTree.
-
-Arguments bintree: clear implicits.
 
 (*
   Compute toList (BT_node 1 (BT_node 2 (BT_node 4 (BT_node 8 BT_nil BT_nil) (BT_node 9 BT_nil BT_nil)) (BT_node 5 (BT_node 10 BT_nil BT_nil) (BT_node 11 BT_nil BT_nil))) (BT_node 3 (BT_node 6 (BT_node 12 BT_nil BT_nil) (BT_node 13 BT_nil BT_nil)) (BT_node 7 (BT_node 14 BT_nil BT_nil) (BT_node 15 BT_nil BT_nil)))).
