@@ -19,8 +19,9 @@ Section Utilities.
   Definition pair2list {A : Type} : A * A -> list A :=
     fun '(x1, x2) => [x1; x2].
 
-  Lemma Some_inj {A : Type} {lhs : A} {rhs : A} :
-    Some lhs = Some rhs -> lhs = rhs.
+  Lemma Some_inj {A : Type} {lhs : A} {rhs : A}
+    (H_Some_eq : Some lhs = Some rhs)
+    : lhs = rhs.
   Proof. congruence. Qed.
 
   Theorem divmod_inv a b q r (H_b_ne_0 : b <> 0) :
@@ -28,7 +29,7 @@ Section Utilities.
     (q = (a - r) / b /\ r = a mod b /\ a >= r)%nat.
   Proof with lia || eauto.
     assert (lemma1 := Nat.div_mod).
-    enough (lemma2 : forall x : nat, forall y : nat, x > y <-> (exists z : nat, x = S (y + z))). split.
+    enough (lemma2 : forall x y, x > y <-> (exists z, x = S (y + z))). split.
     - intros [H_a H_r_bound].
       assert (claim1 : a = b * (a / b) + (a mod b))...
       assert (claim2 : 0 <= a mod b /\ a mod b < b). apply (Nat.mod_bound_pos a b)...
@@ -322,16 +323,11 @@ Section CompleteBinaryTree.
 
 End CompleteBinaryTree.
 
-(*
-  Compute toList (BT_node 1 (BT_node 2 (BT_node 4 (BT_node 8 BT_nil BT_nil) (BT_node 9 BT_nil BT_nil)) (BT_node 5 (BT_node 10 BT_nil BT_nil) (BT_node 11 BT_nil BT_nil))) (BT_node 3 (BT_node 6 (BT_node 12 BT_nil BT_nil) (BT_node 13 BT_nil BT_nil)) (BT_node 7 (BT_node 14 BT_nil BT_nil) (BT_node 15 BT_nil BT_nil)))).
-  = [1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12; 13; 14; 15]
-  : list nat
-*)
-
-(*
-  Compute toList (BT_node 1 (BT_node 2 (BT_node 4 (BT_node 8 BT_nil BT_nil) (BT_node 9 BT_nil BT_nil)) (BT_node 5 (BT_node 10 BT_nil BT_nil) (BT_node 11 BT_nil BT_nil))) (BT_node 3 (BT_node 6 (BT_node 12 BT_nil BT_nil) (BT_node 13 BT_nil BT_nil)) (BT_node 7 (BT_node 14 BT_nil BT_nil) BT_nil))).
-  = [1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12; 13; 14]
-  : list nat
+(* (* Example "toList" *)
+  Compute (toList (BT_node 1 (BT_node 2 (BT_node 4 (BT_node 8 BT_nil BT_nil) (BT_node 9 BT_nil BT_nil)) (BT_node 5 (BT_node 10 BT_nil BT_nil) (BT_node 11 BT_nil BT_nil))) (BT_node 3 (BT_node 6 (BT_node 12 BT_nil BT_nil) (BT_node 13 BT_nil BT_nil)) (BT_node 7 (BT_node 14 BT_nil BT_nil) (BT_node 15 BT_nil BT_nil))))).
+  (* = [1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12; 13; 14; 15] *)
+  Compute (toList (BT_node 1 (BT_node 2 (BT_node 4 (BT_node 8 BT_nil BT_nil) (BT_node 9 BT_nil BT_nil)) (BT_node 5 (BT_node 10 BT_nil BT_nil) (BT_node 11 BT_nil BT_nil))) (BT_node 3 (BT_node 6 (BT_node 12 BT_nil BT_nil) (BT_node 13 BT_nil BT_nil)) (BT_node 7 (BT_node 14 BT_nil BT_nil) BT_nil)))).
+  (* = [1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12; 13; 14] *)
 *)
 
 Section HeapProperty.
@@ -355,16 +351,6 @@ Section BinaryTreeAccessories.
 
   Inductive dir_t : Set := Dir_left | Dir_right.
 
-  Fixpoint option_subtree {A : Type} ds t : option (bintree A) :=
-    match ds with
-    | [] => Some t
-    | d :: ds' =>
-      match t with
-      | BT_nil => None
-      | BT_node x l r => option_subtree ds' (dir_t_rect (fun _ => bintree A) l r d)
-      end
-    end.
-
   Definition encode ds := fold_left (fun i => dir_t_rect (fun _ => nat) (2 * i + 1) (2 * i + 2)) ds 0.
 
   Lemma encode_inj ds1 ds2
@@ -386,9 +372,9 @@ Section BinaryTreeAccessories.
   Lemma decodable i :
     {ds : list dir_t | encode ds = i}.
   Proof with lia || eauto.
-    induction i as [[ | n'] IH] using Wf_nat.lt_wf_rect.
+    induction i as [[ | i'] IH] using Wf_nat.lt_wf_rect.
     - exists ([])...
-    - set (i := S n').
+    - set (i := S i').
       destruct (i mod 2) as [ | [ | i_mod_2]] eqn: H_obs.
       + assert (claim1 : i = 2 * ((i - 2) / 2) + 2).
         { apply (positive_even i ((i - 2) / 2))... }
@@ -407,21 +393,34 @@ Section BinaryTreeAccessories.
       + pose (Nat.mod_bound_pos i 2)...
   Defined.
 
-(*
-  Compute (proj1_sig (decodable 14)).
+  Definition decode i := proj1_sig (decodable i).
+
+(* (* Example "decode" *)
+  Compute (decode 14).
   (* = [Dir_right; Dir_right; Dir_right] *)
-  Compute (proj1_sig (decodable 15)).
+  Compute (decode 15).
   (* = [Dir_left; Dir_left; Dir_left; Dir_left] *)
-  Compute (proj1_sig (decodable 16)).
+  Compute (decode 16).
   (* = [Dir_left; Dir_left; Dir_left; Dir_right] *)
 *)
 
-  Definition decode i := proj1_sig (decodable i).
+  Lemma encode_decode i : encode (decode i) = i.
+  Proof. exact (proj2_sig (decodable i)). Qed.
 
   Global Opaque decode.
 
-  Lemma encode_decode i : encode (decode i) = i.
-  Proof. exact (proj2_sig (decodable i)). Qed.
+  Lemma decode_encode ds : decode (encode ds) = ds.
+  Proof. apply encode_inj. now rewrite encode_decode with (i := encode ds). Qed.
+
+  Fixpoint option_subtree {A : Type} ds (t : bintree A) :=
+    match ds with
+    | [] => Some t
+    | d :: ds' =>
+      match t with
+      | BT_nil => None
+      | BT_node x l r => option_subtree ds' (dir_t_rect (fun _ => bintree A) l r d)
+      end
+    end.
 
   Definition subtree {A : Type} : nat -> bintree A -> bintree A.
   Admitted.
