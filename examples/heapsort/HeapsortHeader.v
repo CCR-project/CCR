@@ -388,23 +388,6 @@ End CompleteBinaryTree.
   (* = [1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12; 13; 14] *)
 *)
 
-Section HeapProperty.
-
-  Context {A : Type}.
-  Variable R : A -> A -> Prop.
-
-  Inductive heap : bintree A -> Prop :=
-  | heap_nil
-    : heap (BT_nil)
-  | heap_node x l r
-    (R_x_l : @option_rect A (fun _ => Prop) (R x) (True) (option_root l))
-    (R_x_r : @option_rect A (fun _ => Prop) (R x) (True) (option_root r))
-    (heap_l : heap l)
-    (heap_r : heap r)
-    : heap (BT_node x l r).
-
-End HeapProperty.
-
 Section BinaryTreeAccessories.
 
   Inductive dir_t : Set := Dir_left | Dir_right.
@@ -472,7 +455,18 @@ Section BinaryTreeAccessories.
 
   Context {A : Type}.
 
-  Fixpoint option_subtree ds (t : bintree A) :=
+  Definition option_subtree_init t : option (bintree A) := Some t.
+
+  Definition option_subtree_step d acc t : option (bintree A) :=
+    match t with
+    | BT_nil => None
+    | BT_node x l r => acc (@dir_t_rect (fun _ => bintree A) l r d)
+    end.
+
+  Definition option_subtree := fold_right option_subtree_step option_subtree_init.
+
+  Lemma unfold_option_subtree ds t :
+    option_subtree ds t =
     match ds with
     | [] => Some t
     | d :: ds' =>
@@ -481,11 +475,57 @@ Section BinaryTreeAccessories.
       | BT_node x l r => option_subtree ds' (dir_t_rect (fun _ => bintree A) l r d)
       end
     end.
+  Proof. induction ds as [ | [ | ] ds IH]; eauto. Qed.
+
+  Inductive occurs (t : bintree A) : list dir_t -> bintree A -> Prop :=
+  | Occurs_0
+    : occurs t [] t
+  | Occurs_l ds x l r
+    (H_l : occurs t ds l)
+    : occurs t (Dir_left :: ds) (BT_node x l r)
+  | Occurs_r ds x l r
+    (H_r : occurs t ds r)
+    : occurs t (Dir_right :: ds) (BT_node x l r).
+
+  Local Hint Constructors occurs : core.
+
+  Lemma occurs_iff ds t root :
+    occurs t ds root <->
+    option_subtree ds root = Some t.
+  Proof with discriminate || eauto.
+    split. intros X; induction X... revert t root.
+    induction ds as [ | [ | ] ds IH]; simpl; intros t root H_eq.
+    { apply Some_inj in H_eq; subst... }
+    all: destruct root as [ | x l r]...
+  Qed.
 
   Definition subtree : nat -> bintree A -> bintree A.
   Admitted.
 
 End BinaryTreeAccessories.
+
+Section HeapProperty.
+
+  Context {A : Type}.
+  Variable R : A -> A -> Prop.
+
+  Inductive heap : bintree A -> Prop :=
+  | heap_nil
+    : heap (BT_nil)
+  | heap_node x l r
+    (R_x_l : @option_rect A (fun _ => Prop) (R x) (True) (option_root l))
+    (R_x_r : @option_rect A (fun _ => Prop) (R x) (True) (option_root r))
+    (heap_l : heap l)
+    (heap_r : heap r)
+    : heap (BT_node x l r).
+
+  Definition heap_at j t : Prop :=
+    match option_subtree (decode j) t with
+    | None => True
+    | Some t' => heap t'
+    end.
+
+End HeapProperty.
 
 Section ListAccessories.
 
