@@ -88,6 +88,9 @@ Section Utilities.
     now apply f_equal.
   Qed.
 
+  Lemma sub_lt_pos m n : m > 0 -> n > 0 -> m - n < m.
+  Proof. intros H1 H2. destruct m, n; try lia. Qed.
+
 End Utilities.
 
 Section ListOperations.
@@ -104,6 +107,48 @@ Section ListOperations.
   Definition add_indices (xs : list A) := (combine xs (seq 0 (length xs))).
   Definition swap (xs : list A) i j := map (uncurry (swap_aux xs i j)) (add_indices xs).
   Definition swap_1 (xs : list A) i j := swap xs (i-1) (j-1).
+
+  Program Fixpoint trim_exp (n : nat) (xs : list A) {measure (length xs)} : list (list A) :=
+    match xs with
+    | [] => []
+    | _ => firstn (2^n) xs :: trim_exp (S n) (skipn (2^n) xs)
+    end.
+  Next Obligation.
+    rewrite skipn_length.
+    eapply sub_lt_pos.
+    - destruct xs; try contradiction.
+      simpl. lia.
+    - assert (n < 2^n) by (eapply pow_gt_lin_r; lia).
+      lia.
+  Defined.
+
+  Fixpoint split_exp_left (n : nat) (xss : list (list A)) : list (list A) :=
+    match xss with
+    | [] => []
+    | xs :: xss => firstn (2^n) xs :: split_exp_left (S n) xss
+    end.
+
+  Fixpoint split_exp_right (n : nat) (xss : list (list A)) : list (list A) :=
+    match xss with
+    | [] => []
+    | xs :: xss => skipn (2^n) xs :: split_exp_right (S n) xss
+    end.
+
+  Lemma split_exp_left_length n xss : length (split_exp_left n xss) = length xss.
+  Proof.
+    revert n.
+    induction xss.
+    - reflexivity.
+    - intros. simpl. rewrite IHxss. reflexivity.
+  Qed.
+
+  Lemma split_exp_right_length n xss : length (split_exp_right n xss) = length xss.
+  Proof.
+    revert n.
+    induction xss.
+    - reflexivity.
+    - intros. simpl. rewrite IHxss. reflexivity.
+  Qed.
 
 End ListOperations.
 
@@ -223,8 +268,21 @@ Section CompleteBinaryTree.
     : get_rank t = rank.
   Proof. induction H_complete. 2: apply is_perfect_rank in H_l. all: simpl; lia. Qed.
 
-  Definition fromList : list A -> bintree A.
-  Admitted.
+  Program Fixpoint fromListAux (xss : list (list A)) {measure (length xss)} : bintree A :=
+    match xss with
+    | [] => BT_nil
+    | [] :: xss => BT_nil
+    | (x :: xs) :: xss => BT_node x (fromListAux (split_exp_left 0 xss)) (fromListAux (split_exp_right 0 xss))
+    end.
+  Next Obligation.
+    rewrite split_exp_left_length. auto.
+  Defined.
+  Next Obligation.
+    rewrite split_exp_right_length. auto.
+  Defined.
+
+  Definition fromList (xs : list A) : bintree A :=
+    fromListAux (trim_exp 0 xs).
 
   Let cnt : bintree A -> nat :=
     fix cnt_fix t :=
