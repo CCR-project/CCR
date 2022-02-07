@@ -488,7 +488,6 @@ Section BinaryTreeAccessories.
     : occurs t (Dir_right :: ds) (BT_node x l r).
 
   Local Hint Constructors occurs : core.
-
   Lemma occurs_iff ds t root :
     occurs t ds root <->
     option_subtree ds root = Some t.
@@ -498,6 +497,12 @@ Section BinaryTreeAccessories.
     { apply Some_inj in H_eq; subst... }
     all: destruct root as [ | x l r]...
   Qed.
+
+  Theorem toList_good root i t
+    (H_occurs : occurs t (decode i) root)
+    : lookup (toList root) i = option_root t.
+  Proof.
+  Admitted.
 
   Definition subtree : nat -> bintree A -> bintree A.
   Admitted.
