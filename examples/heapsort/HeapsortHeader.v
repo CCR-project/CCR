@@ -148,7 +148,7 @@ Section ListOperations.
   Proof.
     remember (length xs) as l.
     revert n xs Heql.
-    induction l using Wf_nat.lt_wf_rec.
+    induction l using Wf_nat.lt_wf_ind.
     intros.
     erewrite unfold_trim_exp.
     destruct xs.
@@ -175,7 +175,10 @@ Section ListOperations.
   Fixpoint split_exp_right (n : nat) (xss : list (list A)) : list (list A) :=
     match xss with
     | [] => []
-    | xs :: xss => skipn (2^n) xs :: split_exp_right (S n) xss
+    | xs :: xss =>
+      if length xs <=? 2^n
+      then []
+      else skipn (2^n) xs :: split_exp_right (S n) xss
     end.
 
   Lemma split_exp_left_length n xss : length (split_exp_left n xss) = length xss.
@@ -186,15 +189,35 @@ Section ListOperations.
     - intros. simpl. rewrite IHxss. reflexivity.
   Qed.
 
-  Lemma split_exp_right_length n xss : length (split_exp_right n xss) = length xss.
+  Lemma split_exp_right_length n xss : length (split_exp_right n xss) <= length xss.
   Proof.
     revert n.
     induction xss.
     - reflexivity.
-    - intros. simpl. rewrite IHxss. reflexivity.
+    - intros. simpl.
+      destruct (length a <=? 2^n); simpl.
+      + lia.
+      + eapply le_n_S.
+        eapply IHxss.
   Qed.
 
+  Fixpoint complete_list (n : nat) (xss : list (list A)) : Prop :=
+    match xss with
+    | [] => True
+    | xs :: xss => length xs = 2^n /\ complete_list (S n) xss
+                 \/ 0 < length xs < 2^n /\ xss = []
+    end.
+
+  Lemma complete_trim n xs : complete_list n (trim_exp n xs).
+  Admitted.
+
   Lemma split_exp_zip n xss : zipWith (@app _) (split_exp_left n xss) (split_exp_right n xss) = xss.
+  Admitted.
+
+  Lemma complete_split_left n xss : complete_list (S n) xss -> complete_list n (split_exp_left 0 xss).
+  Admitted.
+
+  Lemma complete_split_right n xss : complete_list (S n) xss -> complete_list n (split_exp_right 0 xss).
   Admitted.
 
 End ListOperations.
@@ -332,7 +355,9 @@ Section CompleteBinaryTree.
     rewrite split_exp_left_length. auto.
   Defined.
   Next Obligation.
-    rewrite split_exp_right_length. auto.
+    simpl.
+    set (split_exp_right_length 0 xss).
+    lia.
   Defined.
 
   Lemma unfold_fromListAux xss :
@@ -459,23 +484,38 @@ Section CompleteBinaryTree.
 
   Definition toList root := concat (toListAux root).
 
+  Lemma toListAux_fromListAux xss : complete_list 0 xss -> toListAux (fromListAux xss) = xss.
+  Proof.
+    remember (length xss) as l eqn: H.
+    revert xss H.
+    induction l using Wf_nat.lt_wf_ind.
+    - rename H into IH. intros xss H1 H2.
+      destruct xss as [|xs xss]; auto.
+      destruct xs as [|x xs]; simpl in H2.
+      + destruct H2; destruct H; lia.
+      + destruct H2; destruct H; assert (xs = [])
+          by (eapply length_zero_iff_nil; lia);
+        subst; try reflexivity.
+        rewrite unfold_fromListAux.
+        simpl.
+        erewrite IH with (xss := split_exp_left 0 xss); try reflexivity.
+        erewrite IH with (xss := split_exp_right 0 xss); try reflexivity.
+        rewrite split_exp_zip.
+        reflexivity.
+        * assert (length (split_exp_right 0 xss) <= length xss)
+            by eapply split_exp_right_length.
+          simpl. lia.
+        * eapply complete_split_right; assumption.
+        * rewrite split_exp_left_length. simpl. lia.
+        * eapply complete_split_left; assumption.
+  Qed.
+
   Lemma toList_fromList xs : toList (fromList xs) = xs.
   Proof.
     unfold fromList, toList.
-    remember (fromListAux (trim_exp 0 xs)) as tree eqn: H.
-    revert xs H.
-    induction tree.
-    - destruct xs.
-      + reflexivity.
-      + intros. inversion H.
-    - intros.
-      rewrite unfold_fromListAux in H.
-      destruct xs.
-      + inversion H.
-      + rewrite unfold_trim_exp in H.
-        simpl in *.
-        inversion H.
-  Admitted.
+    rewrite toListAux_fromListAux by eapply complete_trim.
+    eapply concat_trim_exp.
+  Qed.
 
 End CompleteBinaryTree.
 
