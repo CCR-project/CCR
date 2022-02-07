@@ -48,11 +48,22 @@ Section SIMMODSEM.
     astop. induction tree.
     - steps. rewrite unfold_iter_eq.
       destruct l;nia.
-    - (*
-        destruct H0. destruct H0. steps. rewrite unfold_iter_eq.
+    - destruct H0. destruct H. steps. rewrite unfold_iter_eq.
       destruct (l + (l + 0) <=? S n);destruct (l + (l + 0) <=? n).
       + unfold toList. rewrite toList_step_unfold. steps.
-      *)
+        assert (forall A (x : A) (l' : list A) (n : nat), HeapsortHeader.lookup (x :: l') n =
+                                            match n with
+                                            | 0 => Some x
+                                            | S n' => HeapsortHeader.lookup l' n'
+                                            end).
+        
+        
+        
+        Search HeapsortHeader.lookup. Search 
+        Print toList.
+        assert (toList_step [tree1;tree2] = match )
+        Search toList_step. Search extract_elements.
+        
   Admitted.
 
   Lemma sim_heapify (sk : alist string Sk.gdef) :
