@@ -47,13 +47,14 @@ Section SIMMODSEM.
     unfold create_body. unfold Heapsort1.create_body.
     init. harg. destruct x as [tree l]. mDesAll. clear PURE1. destruct PURE0. steps.
     astop. induction tree.
-    - steps. rewrite unfold_iter_eq.
-      destruct l;nia.
-    - (*
-        destruct H0. destruct H0. steps. rewrite unfold_iter_eq.
+    (* steps. rewrite unfold_iter_eq.
+       destruct l;nia.
+     *)  
+    (*
+      destruct H0. destruct H0. steps. rewrite unfold_iter_eq.
       destruct (l + (l + 0) <=? S n);destruct (l + (l + 0) <=? n).
       + unfold toList. rewrite toList_step_unfold. steps.
-      *)
+     *)
   Admitted.
 
   Lemma sim_heapify (sk : alist string Sk.gdef) :
@@ -67,6 +68,8 @@ Section SIMMODSEM.
     steps. astop. revert mrp_src mp_tgt WF k ctx mr_src PURE ACC.
     induction root as [ | x l IH_l r IH_r]; i.
     { steps. rewrite unfold_iter_eq. des_ifs. steps.
+      admit "toList".
+      (*
       unfold toList. rewrite toList_step_unfold. rewrite toList_step_unfold.
       steps. rewrite unfold_iter_eq. steps.
       force_l. eexists. steps. hret tt; ss.
@@ -77,6 +80,7 @@ Section SIMMODSEM.
       - admit "complete".
       - rewrite toList_step_unfold. ss.
       - admit "heap".
+      *)
     }
     { admit "caseOf_BT_node". }
     (* Unshelve. et. *)
