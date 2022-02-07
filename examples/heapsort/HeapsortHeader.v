@@ -178,30 +178,30 @@ Section CompleteBinaryTree.
 
   Context {A : Type}.
 
-  Inductive is_perfect : bintree A -> nat -> Prop :=
-  | perfect_nil : is_perfect BT_nil O
+  Inductive perfect' : bintree A -> nat -> Prop :=
+  | perfect_nil : perfect' BT_nil O
   | perfect_node {n : nat} x l r
-                 (H_l : is_perfect l n)
-                 (H_r : is_perfect r n)
-    : is_perfect (BT_node x l r) (S n)
+                 (H_l : perfect' l n)
+                 (H_r : perfect' r n)
+    : perfect' (BT_node x l r) (S n)
   .
 
-  Inductive is_complete : bintree A -> nat -> Prop :=
+  Inductive complete' : bintree A -> nat -> Prop :=
   | complete_nil
-    : is_complete BT_nil O
+    : complete' BT_nil O
   | complete_node_perfect_complete {n : nat} x l r
-                                   (H_l : is_perfect l n)
-                                   (H_r : is_complete r n)
-    : is_complete (BT_node x l r) (S n)
+                                   (H_l : perfect' l n)
+                                   (H_r : complete' r n)
+    : complete' (BT_node x l r) (S n)
   | complete_node_complete_perfect {n : nat} x l r
-                                   (H_l : is_complete l (S n))
-                                   (H_r : is_complete r n)
-    : is_complete (BT_node x l r) (S (S n))
+                                   (H_l : complete' l (S n))
+                                   (H_r : complete' r n)
+    : complete' (BT_node x l r) (S (S n))
   .
 
-  Lemma perfect2complete {n} t
-    (H_perfect : is_perfect t n)
-    : is_complete t n.
+  Lemma perfect'2complete' {n} t
+    (H_perfect : perfect' t n)
+    : complete' t n.
   Proof.
     induction H_perfect as [ | n x l r H_l IH_l H_r IH_r].
     - exact (complete_nil).
@@ -272,15 +272,15 @@ Section CompleteBinaryTree.
     | BT_node x l r => 1 + max (get_rank l) (get_rank r)
     end.
 
-  Lemma is_perfect_rank t rank
-    (H_perfect : is_perfect t rank)
+  Lemma perfect'_rank t rank
+    (H_perfect : perfect' t rank)
     : get_rank t = rank.
   Proof. induction H_perfect; simpl; lia. Qed.
 
-  Lemma is_complete_rank t rank
-    (H_complete : is_complete t rank)
+  Lemma complete'_rank t rank
+    (H_complete : complete' t rank)
     : get_rank t = rank.
-  Proof. induction H_complete. 2: apply is_perfect_rank in H_l. all: simpl; lia. Qed.
+  Proof. induction H_complete. 2: apply perfect'_rank in H_l. all: simpl; lia. Qed.
 
   Program Fixpoint fromListAux (xss : list (list A)) {measure (length xss)} : bintree A :=
     match xss with
