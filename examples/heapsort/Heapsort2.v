@@ -29,8 +29,8 @@ Section HEAPSORT.
                            /\ 1 <= i <= length (toList tree)
                            /\ forall j, j > i -> heap Z.ge (subtree j tree)⌝,
                   fun vret => ∃ tree' : bintree Z, ⌜vret = (toList tree')↑
-                                                /\ Permutation (toList tree) (toList tree')
-                                                /\ forall j, j >= i -> heap Z.ge (subtree j tree)⌝
+                                                /\ toList tree ≡ₚ toList tree'
+                                                /\ forall j, j >= i -> heap Z.ge (subtree j tree')⌝
                  )
               )%I.
   
@@ -43,7 +43,7 @@ Section HEAPSORT.
                 ( ord_pure 1
                 , fun varg => ⌜varg = (toList tree, k)↑ /\ heap Z.ge tree⌝
                 , fun vret => ∃ tree' : bintree Z, ⌜vret = (toList tree')↑
-                                                /\ Permutation (k :: tail (toList tree)) (toList tree')
+                                                /\ (k :: tail (toList tree) ≡ₚ toList tree')
                                                 /\ heap Z.ge tree'⌝
                 )
               )%I.
@@ -58,7 +58,7 @@ Section HEAPSORT.
               (fun xs => (
                    ord_pure 2,
                    (fun varg => ⌜varg = xs↑⌝),
-                   (fun vret => ∃ ys : list Z, ⌜vret = ys↑ /\ Permutation xs ys /\ Sorted Z.le ys⌝)
+                   (fun vret => ∃ ys : list Z, ⌜vret = ys↑ /\ xs ≡ₚ ys /\ Sorted Z.le ys⌝)
                  )
               )%I.
 

@@ -78,25 +78,28 @@ Section HEAPSORT.
 
   Definition heapsort_body : list Z -> itree Es (list Z) :=
     fun xs0 =>
-      xs1 <- ITree.iter (fun '(xs, l) =>
-        if (l =? 0)%nat
-        then Ret (inr xs)
-        else
-          mxs <- trigger (Call "create" (xs, l)↑);;
-          xs' <- (mxs↓)?;;
-          Ret (inl (xs', l - 1))
-      ) (xs0, length xs0 / 2);;
-      ys <- ITree.iter (fun '(xs, ys) =>
-        if length xs <=? 1
-        then Ret (inr (xs ++ ys))
-        else
-          m <- (head xs)?;;
-          let k := last xs 0%Z in
-          mxs <- trigger (Call "heapify" (removelast xs, k)↑);;
-          xs' <- (mxs↓)?;;
-          Ret (inl (xs', m :: ys))
-      ) (xs1, []);;
-      Ret ys.
+      if length xs0 <=? 1
+      then Ret xs0
+      else
+        xs1 <- ITree.iter (fun '(xs, l) =>
+          if (l =? 0)%nat
+          then Ret (inr xs)
+          else
+            r <- trigger (Call "create" (xs, l)↑);;
+            xs <- (r↓)?;;
+            Ret (inl (xs, l - 1))
+        ) (xs0, length xs0 / 2);;
+        ys <- ITree.iter (fun '(xs, ys) =>
+          if length xs <=? 1
+          then Ret (inr (xs ++ ys))
+          else
+            m <- (head xs)?;;
+            let k := last xs 0%Z in
+            r <- trigger (Call "heapify" (removelast xs, k)↑);;
+            xs <- (r↓)?;;
+            Ret (inl (xs, m :: ys))
+        ) (xs1, []);;
+        Ret ys.
 
   Definition heapsort_spec : fspec.
   Admitted.
