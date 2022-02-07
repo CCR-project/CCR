@@ -412,7 +412,9 @@ Section BinaryTreeAccessories.
   Lemma decode_encode ds : decode (encode ds) = ds.
   Proof. apply encode_inj. now rewrite encode_decode with (i := encode ds). Qed.
 
-  Fixpoint option_subtree {A : Type} ds (t : bintree A) :=
+  Context {A : Type}.
+
+  Fixpoint option_subtree ds (t : bintree A) :=
     match ds with
     | [] => Some t
     | d :: ds' =>
@@ -422,112 +424,8 @@ Section BinaryTreeAccessories.
       end
     end.
 
-  Definition subtree {A : Type} : nat -> bintree A -> bintree A.
+  Definition subtree : nat -> bintree A -> bintree A.
   Admitted.
-
-  Definition ctx_t A := list (dir_t * (A * bintree A)).
-
-  Definition zipper A : Type := ctx_t A * bintree A.
-
-  Context {A : Type}.
-
-  Definition initZipper (root : bintree A) : zipper A := ([], root).
-
-  Inductive ctx_spec s : ctx_t A -> bintree A -> Prop :=
-  | CtxSpec_top
-    : ctx_spec s [] s
-  | CtxSpec_left c_l x l r
-    (X_l : ctx_spec s c_l l)
-    : ctx_spec s (c_l ++ [(Dir_left, (x, r))]) (BT_node x l r)
-  | CtxSpec_right c_r x l r
-    (X_r : ctx_spec s c_r r)
-    : ctx_spec s (c_r ++ [(Dir_right, (x, l))]) (BT_node x l r).
-
-  Local Hint Constructors ctx_spec : core.
-
-  Lemma ctx_spec_refl root
-    : ctx_spec root [] root.
-  Proof. constructor. Qed.
-
-  Lemma ctx_spec_trans t1 c1 t2 c2 root
-    (X1 : ctx_spec t1 c1 t2)
-    (X2 : ctx_spec t2 c2 root)
-    : ctx_spec t1 (c1 ++ c2) root.
-  Proof with eauto with *.
-    revert t2 c2 X2 t1 c1 X1; intros t2 c2 X2.
-    induction X2; intros t1 c1 X1; [rewrite app_nil_r | rewrite app_assoc | rewrite app_assoc]...
-  Qed.
-
-  Definition runZipper_step it : bintree A -> bintree A :=
-    match fst it with
-    | Dir_left => fun l => uncurry (fun x r => BT_node x l r) (snd it)
-    | Dir_right => fun r => uncurry (fun x l => BT_node x l r) (snd it)
-    end.
-
-  Definition runZipper : zipper A -> bintree A :=
-    fun '(c, s) => fold_right runZipper_step s (rev c).
-
-  Lemma runZipper_unfold c s :
-    runZipper (c, s) =
-    match c with
-    | [] => s
-    | (Dir_left, (x, r)) :: c_l => runZipper (c_l, BT_node x s r)
-    | (Dir_right, (x, l)) :: c_r => runZipper (c_r, BT_node x l s)
-    end.
-  Proof with eauto.
-    cbn. rewrite fold_left_rev_right with (f := runZipper_step).
-    destruct c as [ | [[ | ] [x t]] c]; simpl...
-    all: rewrite fold_left_rev_right with (f := runZipper_step)...
-  Qed.
-
-  Lemma runZipper_last c d x t s :
-    runZipper (c ++ [(d, (x, t))], s) =
-    match d with
-    | Dir_left => BT_node x (runZipper (c, s)) t
-    | Dir_right => BT_node x t (runZipper (c, s))
-    end.
-  Proof. cbn. now rewrite rev_unit; destruct d. Qed.
-
-  Definition zipper_invariant root : zipper A -> Prop :=
-    fun '(c, s) => ctx_spec s c root.
-
-  Theorem runZipper_spec root c s :
-    root = runZipper (c, s) <->
-    zipper_invariant root (c, s).
-  Proof with eauto.
-    unfold zipper_invariant; split.
-    - intros H_eq; subst root; revert s.
-      induction c as [ | [[ | ] [x t]] c IH] using rev_ind...
-      all: intros s; rewrite runZipper_last...
-    - intros X; induction X...
-      all: rewrite runZipper_last, IHX...
-  Qed.
-
-  Corollary zipper_invariant_top root s :
-    zipper_invariant root ([], s) <->
-    root = s.
-  Proof. now rewrite <- runZipper_spec. Qed.
-
-  Corollary zipper_invariant_left root c x l r :
-    zipper_invariant root ((Dir_left, (x, r)) :: c, l) <->
-    zipper_invariant root (c, BT_node x l r).
-  Proof. do 2 rewrite <- runZipper_spec. now rewrite runZipper_unfold at 1. Qed.
-
-  Corollary zipper_invariant_right root c x l r :
-    zipper_invariant root ((Dir_right, (x, l)) :: c, r) <->
-    zipper_invariant root (c, BT_node x l r).
-  Proof. do 2 rewrite <- runZipper_spec. now rewrite runZipper_unfold at 1. Qed.
-
-  Local Hint Resolve zipper_invariant_top zipper_invariant_left zipper_invariant_right : core.
-
-  Theorem zipper_invariant_unfold root c s :
-    zipper_invariant root (c, s) <->
-    match c with
-    | [] => root = s
-    | (Dir_left, (x, r)) :: c_l => zipper_invariant root (c_l, BT_node x s r)
-    | (Dir_right, (x, l)) :: c_r => zipper_invariant root (c_r, BT_node x l s)
-    end.
-  Proof. destruct c as [ | [[ | ] [? ?]] ?]; eauto. Qed.
 
 End BinaryTreeAccessories.
 
