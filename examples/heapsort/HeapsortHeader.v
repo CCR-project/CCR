@@ -122,6 +122,20 @@ Section ListOperations.
       lia.
   Defined.
 
+  Lemma unfold_trim_exp (n : nat) (xs : list A) :
+    trim_exp n xs =
+    match xs with
+    | [] => []
+    | _ => firstn (2^n) xs :: trim_exp (S n) (skipn (2^n) xs)
+    end.
+  Proof with eauto.
+    unfold trim_exp at 1. unfold trim_exp_func. rewrite fix_sub_eq.
+    - destruct xs...
+    - intros [? ?] ? ? ?; simpl. destruct l... apply f_equal...
+  Qed.
+
+  Global Opaque trim_exp.
+
   Fixpoint split_exp_left (n : nat) (xss : list (list A)) : list (list A) :=
     match xss with
     | [] => []
@@ -281,6 +295,22 @@ Section CompleteBinaryTree.
     rewrite split_exp_right_length. auto.
   Defined.
 
+  Lemma unfold_fromListAux xss :
+    fromListAux xss =
+    match xss with
+    | [] => BT_nil
+    | [] :: xss => BT_nil
+    | (x :: xs) :: xss => BT_node x (fromListAux (split_exp_left 0 xss)) (fromListAux (split_exp_right 0 xss))
+    end.
+  Proof with eauto.
+    unfold fromListAux at 1; rewrite fix_sub_eq.
+    - destruct xss as [ | [ | x xs] xss]...
+    - intros [ | [ | ? ?] ?] ? ? ?...
+      f_equal...
+  Qed.
+
+  Global Opaque fromListAux.
+
   Definition fromList (xs : list A) : bintree A :=
     fromListAux (trim_exp 0 xs).
 
@@ -386,6 +416,28 @@ End CompleteBinaryTree.
   (* = [1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12; 13; 14; 15] *)
   Compute (toList (BT_node 1 (BT_node 2 (BT_node 4 (BT_node 8 BT_nil BT_nil) (BT_node 9 BT_nil BT_nil)) (BT_node 5 (BT_node 10 BT_nil BT_nil) (BT_node 11 BT_nil BT_nil))) (BT_node 3 (BT_node 6 (BT_node 12 BT_nil BT_nil) (BT_node 13 BT_nil BT_nil)) (BT_node 7 (BT_node 14 BT_nil BT_nil) BT_nil)))).
   (* = [1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12; 13; 14] *)
+*)
+
+(*
+ (* Example "fromList" *)
+  Compute (fromList [1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12; 13; 14; 15]).
+  (* = BT_node 1
+         (BT_node 2
+            (BT_node 4 (BT_node 8 BT_nil BT_nil) (BT_node 9 BT_nil BT_nil))
+            (BT_node 5 (BT_node 10 BT_nil BT_nil) (BT_node 11 BT_nil BT_nil)))
+         (BT_node 3
+            (BT_node 6 (BT_node 12 BT_nil BT_nil) (BT_node 13 BT_nil BT_nil))
+            (BT_node 7 (BT_node 14 BT_nil BT_nil) (BT_node 15 BT_nil BT_nil)))
+  *)
+  Compute (fromList [1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12; 13; 14]).
+  (* = BT_node 1
+         (BT_node 2
+            (BT_node 4 (BT_node 8 BT_nil BT_nil) (BT_node 9 BT_nil BT_nil))
+            (BT_node 5 (BT_node 10 BT_nil BT_nil) (BT_node 11 BT_nil BT_nil)))
+         (BT_node 3
+            (BT_node 6 (BT_node 12 BT_nil BT_nil) (BT_node 13 BT_nil BT_nil))
+            (BT_node 7 (BT_node 14 BT_nil BT_nil) BT_nil))
+  *)
 *)
 
 Section BinaryTreeAccessories.
