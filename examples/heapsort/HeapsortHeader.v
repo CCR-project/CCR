@@ -424,8 +424,6 @@ Section BinaryTreeAccessories.
       end
     end.
 
-  Definition subtree : nat -> bintree A -> bintree A.
-  Admitted.
 
 End BinaryTreeAccessories.
 
