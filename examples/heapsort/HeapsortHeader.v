@@ -507,15 +507,15 @@ Section BinaryTreeAccessories.
 
   Context {A : Type}.
 
-  Definition option_subtree_init t : option (bintree A) := Some t.
+  Definition subtree_init t : option (bintree A) := Some t.
 
-  Definition option_subtree_step d acc t : option (bintree A) :=
+  Definition subtree_step d acc t : option (bintree A) :=
     match t with
     | BT_nil => None
     | BT_node x l r => acc (@dir_t_rect (fun _ => bintree A) l r d)
     end.
 
-  Definition option_subtree := fold_right option_subtree_step option_subtree_init.
+  Definition option_subtree := fold_right subtree_step subtree_init.
 
   Lemma unfold_option_subtree ds t :
     option_subtree ds t =
@@ -554,9 +554,6 @@ Section BinaryTreeAccessories.
     (H_occurs : occurs t (decode i) root)
     : lookup (toList root) i = option_root t.
   Proof.
-  Admitted.
-
-  Definition subtree : nat -> bintree A -> bintree A.
   Admitted.
 
 End BinaryTreeAccessories.

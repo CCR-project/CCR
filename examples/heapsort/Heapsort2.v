@@ -27,10 +27,10 @@ Section HEAPSORT.
                  (ord_pure 1,
                   fun varg => ⌜varg = (toList tree, i)↑
                            /\ 1 <= i <= length (toList tree)
-                           /\ forall j, j > i -> heap Z.ge (subtree j tree)⌝,
+                           /\ forall j, j > i -> heap_at Z.ge j tree⌝,
                   fun vret => ∃ tree' : bintree Z, ⌜vret = (toList tree')↑
                                                 /\ toList tree ≡ₚ toList tree'
-                                                /\ forall j, j >= i -> heap Z.ge (subtree j tree')⌝
+                                                /\ forall j, j >= i -> heap_at Z.ge j tree'⌝
                  )
               )%I.
   

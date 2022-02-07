@@ -128,7 +128,7 @@ Section SIMMODSEM.
           lia.
         - lia.
       }
-      assert (H : forall j, j > l -> heap Z.ge (subtree j tree)) by admit "heap".
+      assert (H : forall j, j > l -> heap_at Z.ge j tree) by admit "heap".
       clear Heql.
 
       (* 'l' for first loop, 'length xs' for second loop *)
