@@ -23,12 +23,12 @@ Lemma unfold_iter_eq:
                                           end.
 Proof. intros. eapply bisim_is_eq. eapply unfold_iter. Qed.
 
-Lemma lookup_subtree:
+(*Lemma lookup_subtree:
   forall A (x : A) (l r : bintree A) (i : nat),
     lookup (toList (BT_node x l r)) i =
       match i with
       | 0 => x
-      | 
+      | *)
 
 Section SIMMODSEM.
 
@@ -58,17 +58,17 @@ Section SIMMODSEM.
     - destruct H0. destruct H. steps. rewrite unfold_iter_eq.
       destruct (l + (l + 0) <=? S n);destruct (l + (l + 0) <=? n).
       + unfold toList. rewrite toList_step_unfold. steps.
-        assert (forall A (x : A) (l' : list A) (n : nat), HeapsortHeader.lookup (x :: l') n =
+        (*assert (forall A (x : A) (l' : list A) (n : nat), HeapsortHeader.lookup (x :: l') n =
                                             match n with
                                             | 0 => Some x
                                             | S n' => HeapsortHeader.lookup l' n'
-                                            end).
+                                            end). *)
         
         
         
-        Search HeapsortHeader.lookup. Search 
+        Search HeapsortHeader.lookup.
         Print toList.
-        assert (toList_step [tree1;tree2] = match )
+        (*assert (toList_step [tree1;tree2] = match ) *)
         Search toList_step. Search extract_elements.
         
   Admitted.

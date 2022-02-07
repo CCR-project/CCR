@@ -477,6 +477,10 @@ Section BinaryTreeAccessories.
     end.
   Proof. induction ds as [ | [ | ] ds IH]; eauto. Qed.
 
+  Definition subtree : nat -> bintree A -> bintree A.
+  Proof.
+     Admitted.
+
   Inductive occurs (t : bintree A) : list dir_t -> bintree A -> Prop :=
   | Occurs_0
     : occurs t [] t
