@@ -567,7 +567,7 @@ Section HeapProperty.
 
   Inductive heap : bintree A -> Prop :=
   | heap_nil
-    : heap (BT_nil)
+    : heap BT_nil
   | heap_node x l r
     (R_x_l : @option_rect A (fun _ => Prop) (R x) (True) (option_root l))
     (R_x_r : @option_rect A (fun _ => Prop) (R x) (True) (option_root r))
@@ -575,11 +575,31 @@ Section HeapProperty.
     (heap_r : heap r)
     : heap (BT_node x l r).
 
+  Inductive heap_pr (p : A) : bintree A -> Prop :=
+  | heap_pr_nil : heap_pr p BT_nil
+  | heap_pr_node x l r
+               (R_p_x : R p x)
+               (R_x_l : @option_rect A (fun _ => Prop) (R x) True (option_root l))
+               (R_x_r : @option_rect A (fun _ => Prop) (R x) True (option_root r))
+               (heap_l : heap l)
+               (heap_r : heap r)
+    : heap_pr p (BT_node x l r)
+  .
+
   Definition heap_at j t : Prop :=
     match option_subtree (decode j) t with
     | None => True
     | Some t' => heap t'
     end.
+
+  Lemma heap_erase_priority p t : heap_pr p t -> heap t.
+  Proof. intros. destruct H; econstructor; assumption. Qed.
+
+  Lemma heap_at_0 t : heap_at 0 t -> heap t.
+  Proof.
+    Local Transparent decode.
+    unfold heap_at. simpl. tauto.
+  Qed.
 
 End HeapProperty.
 

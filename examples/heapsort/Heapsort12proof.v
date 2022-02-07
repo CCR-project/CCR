@@ -62,7 +62,7 @@ Section SIMMODSEM.
                fun_to_tgt "Heapsort" (GlobalStb sk) {| fsb_fspec := heapify_spec; fsb_body := cfunN heapify_body |})
               ("heapify", cfunU Heapsort1.heapify_body).
   Proof with eauto.
-    init. harg. destruct x as [root k]. mDesAll; subst.
+    init. harg. destruct x as [[root y] k]. mDesAll; subst.
     clear PURE1. destruct PURE0 as [H_eq PURE]; subst.
     steps. astop. revert mrp_src mp_tgt WF k ctx mr_src PURE ACC.
     induction root as [ | x l IH_l r IH_r]; i.
@@ -76,7 +76,7 @@ Section SIMMODSEM.
       - rewrite toList_step_unfold. ss.
       - admit "complete".
       - rewrite toList_step_unfold. ss.
-      - econs; econs.
+      - admit "heap".
     }
     { admit "caseOf_BT_node". }
     (* Unshelve. et. *)

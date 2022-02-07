@@ -40,16 +40,17 @@ Section HEAPSORT.
     fun _ => trigger (Choose _).
 
   Definition heapify_spec : fspec :=
-    mk_simple (X := bintree Z * Z)
-              (fun '(tree, k) =>
+    mk_simple (X := bintree Z * Z * Z)
+              (fun '(tree, y, k) =>
                 ( ord_pure 1
                 , fun varg => ⌜varg = (toList tree, k)↑
                            /\ complete tree
+                           /\ option_root tree = Some y
                            /\ heap Z.ge tree⌝
                 , fun vret => ∃ tree' : bintree Z, ⌜vret = (toList tree')↑
                                                 /\ complete tree'         
                                                 /\ (k :: tail (toList tree) ≡ₚ toList tree')
-                                                /\ heap Z.ge tree'⌝
+                                                /\ heap_pr Z.ge y tree'⌝
                 )
               )%I.
 
