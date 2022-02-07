@@ -13,6 +13,9 @@ Import ListNotations.
 
 Section Utilities.
 
+  Definition zipWith {A B C : Type} (f : A -> B -> C) (xs : list A) (ys : list B) : list C :=
+    map (uncurry f) (combine xs ys).
+
   Definition option2list {A : Type} : option A -> list A :=
     @option_rect A (fun _ => list A) (fun x => [x]) [].
 
@@ -91,6 +94,14 @@ Section Utilities.
   Lemma sub_lt_pos m n : m > 0 -> n > 0 -> m - n < m.
   Proof. intros H1 H2. destruct m, n; try lia. Qed.
 
+  Lemma exp_pos b n : b > 0 -> b ^ n > 0.
+  Proof.
+    intros.
+    induction n.
+    - auto.
+    - simpl. lia.
+  Qed.
+
 End Utilities.
 
 Section ListOperations.
@@ -118,8 +129,7 @@ Section ListOperations.
     eapply sub_lt_pos.
     - destruct xs; try contradiction.
       simpl. lia.
-    - assert (n < 2^n) by (eapply pow_gt_lin_r; lia).
-      lia.
+    - eapply exp_pos; lia.
   Defined.
 
   Lemma unfold_trim_exp (n : nat) (xs : list A) :
@@ -132,6 +142,26 @@ Section ListOperations.
     unfold trim_exp at 1. unfold trim_exp_func. rewrite fix_sub_eq.
     - destruct xs...
     - intros [? ?] ? ? ?; simpl. destruct l... apply f_equal...
+  Qed.
+
+  Lemma concat_trim_exp n xs : concat (trim_exp n xs) = xs.
+  Proof.
+    remember (length xs) as l.
+    revert n xs Heql.
+    induction l using Wf_nat.lt_wf_rec.
+    intros.
+    erewrite unfold_trim_exp.
+    destruct xs.
+    - reflexivity.
+    - simpl.
+      erewrite H.
+      3: reflexivity.
+      + eapply firstn_skipn.
+      + subst.
+        rewrite skipn_length.
+        eapply sub_lt_pos.
+        * simpl. lia.
+        * eapply exp_pos; lia.
   Qed.
 
   Global Opaque trim_exp.
@@ -164,15 +194,29 @@ Section ListOperations.
     - intros. simpl. rewrite IHxss. reflexivity.
   Qed.
 
+  Lemma split_exp_zip n xss : zipWith (@app _) (split_exp_left n xss) (split_exp_right n xss) = xss.
+  Admitted.
+
 End ListOperations.
 
-Inductive bintree (A : Type) : Type :=
-| BT_nil
-| BT_node (x : A) (l r : bintree A)
-.
+Section BinaryTree.
 
-Arguments BT_nil {A}.
-Arguments BT_node {A} x l r.
+  Context {A : Type}.
+
+  Inductive bintree : Type :=
+  | BT_nil
+  | BT_node (x : A) (l r : bintree)
+  .
+
+  Fixpoint get_rank (t : bintree) : nat :=
+    match t with
+    | BT_nil => 0
+    | BT_node x l r => 1 + max (get_rank l) (get_rank r)
+    end.
+
+End BinaryTree.
+
+Arguments bintree : clear implicits.
 
 Section CompleteBinaryTree.
 
@@ -267,12 +311,6 @@ Section CompleteBinaryTree.
       + right. exact (perfect_node x l' r).
   Defined.
 *)
-
-  Fixpoint get_rank (t : bintree A) : nat :=
-    match t with
-    | BT_nil => 0
-    | BT_node x l r => 1 + max (get_rank l) (get_rank r)
-    end.
 
   Lemma perfect'_rank t rank
     (H_perfect : perfect' t rank)
@@ -406,9 +444,37 @@ Section CompleteBinaryTree.
     extract_elements ts ++ toList_step (extract_children ts).
   Proof. replace (ts) with (ts ++ []) at 1; [exact (toList_step_app ts []) | apply app_nil_r]. Qed.
 
-  Definition toList root := toList_step [root].
+  Fixpoint toListAux (t : bintree A) : list (list A) :=
+    match t with
+    | BT_nil => []
+    | BT_node x l r => [x] :: zipWith (@app _) (toListAux l) (toListAux r)
+    end.
+
+  Lemma unfold_toListAux t :
+    toListAux t = match t with
+                  | BT_nil => []
+                  | BT_node x l r => [x] :: zipWith (@app _) (toListAux l) (toListAux r)
+                  end.
+  Proof. destruct t; reflexivity. Qed.
+
+  Definition toList root := concat (toListAux root).
 
   Lemma toList_fromList xs : toList (fromList xs) = xs.
+  Proof.
+    unfold fromList, toList.
+    remember (fromListAux (trim_exp 0 xs)) as tree eqn: H.
+    revert xs H.
+    induction tree.
+    - destruct xs.
+      + reflexivity.
+      + intros. inversion H.
+    - intros.
+      rewrite unfold_fromListAux in H.
+      destruct xs.
+      + inversion H.
+      + rewrite unfold_trim_exp in H.
+        simpl in *.
+        inversion H.
   Admitted.
 
 End CompleteBinaryTree.
