@@ -26,9 +26,11 @@ Section HEAPSORT.
               (fun '(tree, i) =>
                  (ord_pure 1,
                   fun varg => ⌜varg = (toList tree, i)↑
+                           /\ complete tree
                            /\ 1 <= i <= length (toList tree)
                            /\ forall j, j > i -> heap_at Z.ge (j - 1) tree⌝,
                   fun vret => ∃ tree' : bintree Z, ⌜vret = (toList tree')↑
+                                                /\ complete tree'
                                                 /\ toList tree ≡ₚ toList tree'
                                                 /\ forall j, j >= i -> heap_at Z.ge (j - 1) tree'⌝
                  )
@@ -41,8 +43,11 @@ Section HEAPSORT.
     mk_simple (X := bintree Z * Z)
               (fun '(tree, k) =>
                 ( ord_pure 1
-                , fun varg => ⌜varg = (toList tree, k)↑ /\ heap Z.ge tree⌝
+                , fun varg => ⌜varg = (toList tree, k)↑
+                           /\ complete tree
+                           /\ heap Z.ge tree⌝
                 , fun vret => ∃ tree' : bintree Z, ⌜vret = (toList tree')↑
+                                                /\ complete tree'         
                                                 /\ (k :: tail (toList tree) ≡ₚ toList tree')
                                                 /\ heap Z.ge tree'⌝
                 )

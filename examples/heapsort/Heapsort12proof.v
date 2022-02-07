@@ -74,8 +74,9 @@ Section SIMMODSEM.
       esplits; try reflexivity.
       instantiate (1 := (BT_node k BT_nil BT_nil)).
       - rewrite toList_step_unfold. ss.
+      - admit "complete".
       - rewrite toList_step_unfold. ss.
-      - econs; ss.
+      - econs; econs.
     }
     { admit "caseOf_BT_node". }
     (* Unshelve. et. *)
@@ -175,17 +176,19 @@ Section SIMMODSEM.
           lia.
         }
         hcall (tree, S l) _ with "".
-        { iModIntro. iSplit; ss. iPureIntro. splits; ss; lia. }
+        { iModIntro. iSplit; ss. iPureIntro. splits; ss; try lia.
+          - admit "complete".
+        }
         { ss. splits; et; oauto. }
         mDesAll. rename a into tree'. des. steps.
         rewrite Nat.sub_0_r.
         deflag.
         eapply IHl.
-        * symmetry in PURE2. transitivity (toList tree); ss.
+        * symmetry in PURE3. transitivity (toList tree); ss.
         * replace (length (toList tree')) with (length (toList tree))
             by (eapply Permutation_length; ss).
           lia.
-        * intros. eapply PURE3. lia.
+        * intros. eapply PURE4. lia.
         * red. inversion WF. econs. et.
         * assumption.
     Unshelve. et.

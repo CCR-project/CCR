@@ -199,6 +199,8 @@ Section CompleteBinaryTree.
     : complete' (BT_node x l r) (S (S n))
   .
 
+  Definition complete t := exists n, complete' t n.
+
   Lemma perfect'2complete' {n} t
     (H_perfect : perfect' t n)
     : complete' t n.
