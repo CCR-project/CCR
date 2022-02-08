@@ -214,7 +214,29 @@ Section ListOperations.
     end.
 
   Lemma complete_trim n xs : complete_list n (trim_exp n xs).
-  Admitted.
+  Proof with lia || eauto.
+    remember (length xs) as l.
+    revert n xs Heql.
+    induction l as [l IH] using Wf_nat.lt_wf_ind.
+    intros n [ | x xs'].
+    - intros Heql. now rewrite unfold_trim_exp.
+    - set (xs := x :: xs'). intros Heql.
+      rewrite unfold_trim_exp. unfold xs at 1. simpl.
+      assert (claim1 : length (firstn (2^n) xs) = min (2^n) l).
+      { rewrite Heql. apply firstn_length. }
+      assert (claim2 : length (firstn (2 ^ n) xs) = 2 ^ n \/ length (firstn (2 ^ n) xs) < 2 ^ n) by lia.
+      assert (claim3 : l > 0).
+      { rewrite Heql. unfold xs. simpl... }
+      assert (claim4 : 2^n > 0) by now apply exp_pos; lia.
+      destruct claim2 as [claim2 | claim2]; [left | right].
+      + split... eapply IH; try reflexivity. rewrite Heql.
+        apply skipn_exp_length. simpl...
+      + split...
+        assert (claim5 : length (skipn (2 ^ n) xs) = 0).
+        { rewrite skipn_length... }
+        destruct (skipn (2 ^ n) xs)...
+        inversion claim5.
+  Qed.
 
   Lemma split_exp_zip n xss : zipWith (@app _) (split_exp_left n xss) (split_exp_right n xss) = xss.
   Admitted.
