@@ -310,10 +310,22 @@ Section BinaryTree.
   | BT_node (x : A) (l r : bintree)
   .
 
-  Fixpoint get_rank (t : bintree) : nat :=
+  Definition leaf (t : bintree) : Prop :=
+    match t with
+    | BT_nil => True
+    | BT_node x l r => l = BT_nil /\ r = BT_nil
+    end.
+
+  Fixpoint size (t : bintree) : nat :=
     match t with
     | BT_nil => 0
-    | BT_node x l r => 1 + max (get_rank l) (get_rank r)
+    | BT_node x l r => 1 + size l + size r
+    end.
+
+  Fixpoint rank (t : bintree) : nat :=
+    match t with
+    | BT_nil => 0
+    | BT_node x l r => 1 + max (rank l) (rank r)
     end.
 
 End BinaryTree.
@@ -414,14 +426,14 @@ Section CompleteBinaryTree.
   Defined.
 *)
 
-  Lemma perfect'_rank t rank
-    (H_perfect : perfect' t rank)
-    : get_rank t = rank.
+  Lemma perfect'_rank t n
+    (H_perfect : perfect' t n)
+    : rank t = n.
   Proof. induction H_perfect; simpl; lia. Qed.
 
-  Lemma complete'_rank t rank
-    (H_complete : complete' t rank)
-    : get_rank t = rank.
+  Lemma complete'_rank t n
+    (H_complete : complete' t n)
+    : rank t = n.
   Proof. induction H_complete. 2: apply perfect'_rank in H_l. all: simpl; lia. Qed.
 
   Program Fixpoint fromListAux (xss : list (list A)) {measure (length xss)} : bintree A :=
@@ -680,6 +692,7 @@ Section BinaryTreeAccessories.
     end.
 
   Definition option_subtree := fold_right subtree_step subtree_init.
+  Definition subtree_nat t i := option_subtree (decode i) t.
 
   Lemma unfold_option_subtree ds t :
     option_subtree ds t =
@@ -750,7 +763,7 @@ Section HeapProperty.
   .
 
   Definition heap_at j t : Prop :=
-    match option_subtree (decode j) t with
+    match subtree_nat t j with
     | None => True
     | Some t' => heap t'
     end.
@@ -763,6 +776,9 @@ Section HeapProperty.
     Local Transparent decode.
     unfold heap_at. simpl. tauto.
   Qed.
+
+  Lemma heap_at_leaves t : forall j, j > length (toList t) / 2 -> heap_at (j - 1) t.
+  Admitted.
 
 End HeapProperty.
 
