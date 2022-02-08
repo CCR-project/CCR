@@ -62,27 +62,24 @@ Section SIMMODSEM.
               ("heapify",
                fun_to_tgt "Heapsort" (GlobalStb sk) {| fsb_fspec := heapify_spec; fsb_body := cfunN heapify_body |})
               ("heapify", cfunU Heapsort1.heapify_body).
-  Proof with eauto.
+  Proof with lia || eauto.
+    Opaque div.
     init. harg. destruct x as [[root y] k]. mDesAll; subst.
-    clear PURE1. destruct PURE0 as [H_eq PURE]; subst.
-    steps. astop. revert mrp_src mp_tgt WF k ctx mr_src PURE ACC.
-    induction root as [ | x l IH_l r IH_r]; i.
-    { steps. rewrite unfold_iter_eq. des_ifs. steps.
-      admit "toList".
-      (*
-      unfold toList. rewrite toList_step_unfold. rewrite toList_step_unfold.
-      steps. rewrite unfold_iter_eq. steps.
-      force_l. eexists. steps. hret tt; ss.
-      iModIntro. iSplit; ss. iPureIntro.
-      esplits; try reflexivity.
-      instantiate (1 := (BT_node k BT_nil BT_nil)).
-      - rewrite toList_step_unfold. ss.
-      - admit "complete".
-      - rewrite toList_step_unfold. ss.
-      - admit "heap".
-      *)
-    }
-    { admit "caseOf_BT_node". }
+    clear PURE1. destruct PURE0 as [H_eq [PURE1 [PURE2 PURE3]]]; subst.
+    steps. astop. revert mrp_src mp_tgt WF k ctx mr_src PURE1 PURE2 PURE3 ACC.
+    induction root as [ | x l IH_l r IH_r]; i; inv PURE2.
+    rewrite unfold_iter_eq. destruct (1 * 2 <=? strings.length (toList (BT_node y l r))) eqn: H_obs1.
+    - rewrite Nat.leb_le in H_obs1. replace (strings.length (toList (BT_node y l r))) with (2 + (strings.length (toList (BT_node y l r)) - 2))...
+      unfold Nat.add. fold Nat.add.
+      destruct (1 * 2 <=? S (strings.length (toList (BT_node y l r)) - 2)) eqn: H_obs2.
+      + rewrite Nat.leb_le in H_obs2.
+        replace ((HeapsortHeader.lookup (k :: list.tail (toList (BT_node y l r))) (1 * 2 - 1))) with (option_root l).
+        2: admit "option_root l = HeapsortHeader.lookup (k :: list.tail (toList (BT_node y l r))) (1 * 2 - 1)".
+        replace ((HeapsortHeader.lookup (k :: list.tail (toList (BT_node y l r))) (1 * 2))) with (option_root r).
+        2: admit "option_root r = HeapsortHeader.lookup (k :: list.tail (toList (BT_node y l r))) (1 * 2)".
+        steps. give_up.
+      + give_up.
+    - give_up.
     (* Unshelve. et. *)
   Admitted.
 
