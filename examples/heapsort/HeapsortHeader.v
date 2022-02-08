@@ -445,6 +445,7 @@ Section BinaryTreeAccessories.
     end.
 
   Definition option_subtree := fold_right subtree_step subtree_init.
+
   Definition subtree_nat t i := option_subtree (decode i) t.
 
   Lemma unfold_option_subtree ds t :
@@ -479,6 +480,57 @@ Section BinaryTreeAccessories.
     induction ds as [ | [ | ] ds IH]; simpl; intros t root H_eq.
     { apply Some_inj in H_eq; subst... }
     all: destruct root as [ | x l r]...
+  Qed.
+
+  Lemma option_subtree_last ds d :
+    forall root,
+    option_subtree (ds ++ [d]) root =
+    match option_subtree ds root with
+    | Some (BT_node x l r) => Some (dir_t_rect (fun _ => bintree A) l r d)
+    | _ => None
+    end.
+  Proof.
+    enough (claim1 : option_subtree (ds ++ [d]) = fold_right subtree_step (subtree_step d subtree_init) ds).
+    - rewrite claim1. clear claim1. unfold option_subtree. induction ds; destruct d; destruct root; eauto.
+    - unfold option_subtree at 1. rewrite <- rev_involutive with (l := ds ++ [d]) at 1.
+      rewrite fold_left_rev_right, rev_unit. simpl. now rewrite <- fold_left_rev_right, rev_involutive.
+  Qed.
+
+  Theorem topdown t (P : list dir_t -> bintree A -> Prop)
+    (IH_l : forall x l r ds, occurs t (Dir_left :: ds) (BT_node x l r) -> P (Dir_left :: ds) (BT_node x l r) -> P ds l)
+    (IH_r : forall x l r ds, occurs t (Dir_right :: ds) (BT_node x l r) -> P (Dir_right :: ds) (BT_node x l r) -> P ds r)
+    : forall ds root, occurs t ds root -> P ds root -> P [] t.
+  Proof. intros ds root X; induction X; eauto. Qed.
+
+  Theorem bottomup root (P : nat -> bintree A -> Prop)
+    (IH_l : forall x l r i, subtree_nat root i = Some l -> P i l -> P ((i - 1) / 2) (BT_node x l r))
+    (IH_r : forall x l r i, subtree_nat root i = Some r -> P i r -> P ((i - 2) / 2) (BT_node x l r))
+    : forall i t, subtree_nat root i = Some t -> P i t -> P 0 root.
+  Proof with lia || discriminate || eauto.
+    unfold subtree_nat in *.
+    induction i as [i IH] using Wf_nat.lt_wf_ind.
+    assert (claim1 := unfold_decode i).
+    destruct (Nat.eq_dec i 0) as [H_yes1 | H_no1].
+    - subst i. intros t H_occurs. apply occurs_iff in H_occurs. inversion H_occurs; subst...
+    - intros t H_occurs H_t. destruct (Nat.eq_dec (i mod 2) 1) as [H_yes2 | H_no2].
+      + rewrite claim1, option_subtree_last in H_occurs.
+        destruct (option_subtree (decode ((i - 1) / 2)) root) as [[ | x l r] | ] eqn: H_obs...
+        apply Some_inj in H_occurs. simpl dir_t_rect in H_occurs. subst t.
+        assert (claim2 : i = 2 * ((i - 1) / 2) + 1).
+        { apply (positive_odd i ((i - 1) / 2))... }
+        apply IH with (m := ((i - 1) / 2)) (t := (BT_node x l r))...
+        apply IH_l with (x := x) (l := l) (r := r)...
+        rewrite claim1, option_subtree_last, H_obs...
+      + assert (claim3 : i mod 2 = 0).
+        { pose (Nat.mod_bound_pos i 2)... }
+        rewrite claim1, option_subtree_last in H_occurs.
+        destruct (option_subtree (decode ((i - 2) / 2)) root) as [[ | x l r] | ] eqn: H_obs...
+        apply Some_inj in H_occurs. simpl dir_t_rect in H_occurs. subst t.
+        assert (claim2 : i = 2 * ((i - 2) / 2) + 2).
+        { apply (positive_even i ((i - 2) / 2))... }
+        apply IH with (m := ((i - 2) / 2)) (t := (BT_node x l r))...
+        apply IH_r with (x := x) (l := l) (r := r)...
+        rewrite claim1, option_subtree_last, H_obs...
   Qed.
 
   Definition option_root (t : bintree A) :=
