@@ -458,45 +458,6 @@ Section CompleteBinaryTree.
   Definition fromList (xs : list A) : bintree A :=
     fromListAux (trim_exp 0 xs).
 
-  Let cnt : bintree A -> nat :=
-    fix cnt_fix t :=
-    match t with
-    | BT_nil => 1
-    | BT_node x l r => 1 + cnt_fix l + cnt_fix r
-    end.
-
-  Program Fixpoint toList_step ts {measure (list_sum (map cnt ts))} : list A :=
-    match ts with
-    | [] => []
-    | BT_nil :: ts_tail => toList_step ts_tail
-    | BT_node x l r :: ts_tail => x :: toList_step ((ts_tail ++ [l]) ++ [r])
-    end.
-  Next Obligation.
-    unfold Peano.lt.
-    do 2 rewrite map_last. do 2 rewrite list_sum_app; cbn.
-    do 2 rewrite Nat.add_0_r. rewrite <- Nat.add_assoc at 1.
-    rewrite Nat.add_comm; constructor.
-  Defined.
-
-  Lemma toList_step_unfold ts :
-    toList_step ts =
-    match ts with
-    | [] => []
-    | BT_nil :: ts_tail => toList_step ts_tail
-    | BT_node x l r :: ts_tail => x :: toList_step (ts_tail ++ [l; r])
-    end.
-  Proof with eauto.
-    unfold toList_step at 1; rewrite fix_sub_eq.
-    - destruct ts as [ | [ | x l r] ts_tail]...
-      simpl; apply f_equal.
-      replace ((ts_tail ++ [l]) ++ [r]) with (ts_tail ++ [l; r]) at 1...
-      rewrite <- app_assoc...
-    - intros [ | [ | x l r] ts_tail] ? ? ?...
-      apply f_equal...
-  Qed.
-
-  Global Opaque toList_step.
-
   Definition option_root (t : bintree A) :=
     match t with
     | BT_nil => None
