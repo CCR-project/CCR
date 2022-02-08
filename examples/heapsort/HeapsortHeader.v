@@ -476,7 +476,7 @@ Section CompleteBinaryTree.
 
   Definition extract_children := flat_map (@concat (bintree A) ∘ option2list ∘ option_map pair2list ∘ option_children_pair).
 
-  Lemma extract_elements_unfold ts :
+  Lemma unfold_extract_elements ts :
     extract_elements ts =
     match ts with
     | [] => []
@@ -485,7 +485,7 @@ Section CompleteBinaryTree.
     end.
   Proof. destruct ts as [ | [ | x l r] ts_tail]; reflexivity. Qed.
 
-  Lemma extract_children_unfold ts :
+  Lemma unfold_extract_children ts :
     extract_children ts =
     match ts with
     | [] => []
@@ -650,6 +650,25 @@ Section BinaryTreeAccessories.
   Lemma decode_encode ds : decode (encode ds) = ds.
   Proof. apply encode_inj. now rewrite encode_decode with (i := encode ds). Qed.
 
+  Lemma unfold_decode i :
+    decode i =
+    if Nat.eq_dec i 0 then [] else
+    if Nat.eq_dec (i mod 2) 1
+    then decode ((i - 1) / 2) ++ [Dir_left]
+    else decode ((i - 2) / 2) ++ [Dir_right].
+  Proof with lia || discriminate || eauto.
+    apply encode_inj. rewrite encode_decode.
+    destruct (Nat.eq_dec i 0) as [H_yes1 | H_no1]...
+    assert (claim1 := Nat.mod_bound_pos i 2).
+    destruct (Nat.eq_dec (i mod 2) 1) as [H_yes2 | H_no2];
+      [assert (claim2 := encode_decode ((i - 1) / 2)) | assert (claim2 := encode_decode ((i - 2) / 2))].
+    all: symmetry; revert claim2; unfold encode; intros H_eq;
+      rewrite fold_left_last; unfold dir_t_rect at 1;
+      rewrite H_eq; symmetry.
+    - apply positive_odd...
+    - apply positive_even...
+  Qed.
+
   Context {A : Type}.
 
   Definition subtree_init t : option (bintree A) := Some t.
@@ -685,6 +704,7 @@ Section BinaryTreeAccessories.
     : occurs t (Dir_right :: ds) (BT_node x l r).
 
   Local Hint Constructors occurs : core.
+
   Lemma occurs_iff ds t root :
     occurs t ds root <->
     option_subtree ds root = Some t.
