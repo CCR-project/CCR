@@ -317,10 +317,10 @@ Section BinaryTree.
     | BT_node x l r => l = BT_nil /\ r = BT_nil
     end.
 
-  Fixpoint size (t : bintree) : nat :=
+  Fixpoint btsize (t : bintree) : nat :=
     match t with
     | BT_nil => 0
-    | BT_node x l r => 1 + size l + size r
+    | BT_node x l r => 1 + btsize l + btsize r
     end.
 
   Fixpoint rank (t : bintree) : nat :=
@@ -584,6 +584,9 @@ Section BinaryTreeAccessories.
     eapply concat_trim_exp.
   Qed.
 
+  Lemma toList_length t : length (toList t) = btsize t.
+  Admitted.
+
 End BinaryTreeAccessories.
 
 Section CompleteBinaryTree.
@@ -704,7 +707,7 @@ Section CompleteBinaryTree.
 
   Lemma complete_leaves (t : bintree A) :
     complete t ->
-    forall j, j > size t / 2 ->
+    forall j, j > btsize t / 2 ->
          match subtree_nat t (j - 1) with
          | None => True
          | Some t' => leaf t'
@@ -793,7 +796,7 @@ Section HeapProperty.
     - simpl in H. destruct H. subst. econstructor; econstructor.
   Qed.
 
-  Lemma heap_at_leaves t : complete t -> forall j, j > size t / 2 -> heap_at (j - 1) t.
+  Lemma heap_at_leaves t : complete t -> forall j, j > btsize t / 2 -> heap_at (j - 1) t.
   Proof.
     intros H j Hj. unfold heap_at.
     assert (H1 := complete_leaves t H j Hj).

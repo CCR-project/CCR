@@ -98,103 +98,131 @@ Section SIMMODSEM.
 
     remember (length xs <=? 1).
     destruct b.
-    - astop. steps. force_l.
+    (* input is trivially sorted when length xs <= 1 *)
+    { astop. steps. force_l.
       eexists. steps.
       hret tt; ss.
       iModIntro. iSplit; ss. iPureIntro.
       esplits; try reflexivity.
       destruct xs as [| x []].
-      + econs.
-      + econs; econs.
-      + ss.
-    - assert (Hxs : length xs > 1)
-        by (eapply leb_complete_conv; et).
-      clear Heqb.
-      steps.
+      - econs.
+      - econs; econs.
+      - ss. }
 
-      (* set tree and it's initial condition *)
-      remember (fromList xs) as tree.
-      set (xs0 := xs). unfold xs0 at 1.
-      replace xs0 with (toList tree)
-        by (subst; eapply toList_fromList).
-      clear xs0.
-      assert (Hₚ : toList tree ≡ₚ xs)
-        by (subst; rewrite toList_fromList; eapply Permutation_refl).
-      clear Heqtree.
+    (* when length xs > 1 *)
+    assert (Hxs : length xs > 1)
+      by (eapply leb_complete_conv; et).
+    clear Heqb.
+    steps.
 
-      (* set l and it's initial condition *)
-      remember (length (toList tree) / 2) as l.
-      assert (Hₗ : l <= length (toList tree)).
-      { subst.
-        eapply Nat.lt_le_incl.
-        eapply Nat.div_lt.
-        - replace (length (toList tree)) with (length xs)
-            by (eapply Permutation_length; symmetry; ss).
-          lia.
-        - lia.
+    (* set tree and it's initial condition *)
+    remember (fromList xs) as tree.
+    set (xs0 := xs). unfold xs0 at 1.
+    replace xs0 with (toList tree)
+      by (subst; eapply toList_fromList).
+    clear xs0.
+    assert (Hₚ : toList tree ≡ₚ xs)
+      by (subst; rewrite toList_fromList; eapply Permutation_refl).
+    assert (Hc : complete tree)
+      by (subst; eapply complete_fromList).
+    clear Heqtree.
+
+    (* set l and it's initial condition *)
+    remember (length (toList tree) / 2) as l.
+    rewrite toList_length in Heql.
+    assert (Hₗ : l <= btsize tree).
+    { subst.
+      rewrite <- toList_length.
+      eapply Nat.lt_le_incl.
+      eapply Nat.div_lt.
+      - replace (length (toList tree)) with (length xs)
+          by (eapply Permutation_length; symmetry; ss).
+        lia.
+      - lia.
+    }
+    assert (Hₕ : forall j, j > l -> heap_at Z.ge (j - 1) tree)
+      by (subst; eapply heap_at_leaves; assumption).
+    clear Heql.
+
+    (* 'l' for first loop, 'length xs' for second loop *)
+    astart (l + length xs).
+
+    deflag.
+    revert tree Hₚ Hₗ Hc Hₕ w ctx mp_src mp_tgt mr_src WF ACC.
+    induction l.
+    (* first loop *)
+    2: {
+      i. rewrite unfold_iter_eq. steps.
+      acatch.
+      { eapply STBINCL. stb_tac. ss. }
+      { instantiate (1 := l + length xs).
+        eapply OrdArith.lt_from_nat.
+        lia.
       }
-      assert (H : forall j, j > l -> heap_at Z.ge (j - 1) tree) by admit "heap".
-      clear Heql.
-
-      (* 'l' for first loop, 'length xs' for second loop *)
-      astart (l + length xs).
-
+      hcall (tree, S l) _ with "".
+      { iModIntro. iSplit; ss. iPureIntro. splits; ss; try lia.
+      }
+      { ss. splits; et; oauto. }
+      mDesAll. rename a into tree'. des. steps.
+      rewrite Nat.sub_0_r.
       deflag.
-      revert tree Hₚ Hₗ H w ctx mp_src mp_tgt mr_src WF ACC.
-      induction l.
-      + i. rewrite unfold_iter_eq. steps.
-        assert (Hₕ : heap Z.ge tree) by admit "from H".
-        clear H Hₗ.
+      eapply IHl.
+      - symmetry in PURE3. transitivity (toList tree); ss.
+      - rewrite <- toList_length.
+        rewrite <- toList_length in Hₗ.
+        replace (length (toList tree')) with (length (toList tree))
+          by (eapply Permutation_length; ss).
+        lia.
+      - assumption.
+      - intros. eapply PURE4. lia.
+      - red. inversion WF. econs. et.
+      - assumption.
+    }
 
-        remember (length (toList tree) - 1) as l eqn: Hₗ.
-        replace (length xs) with (l + 1)
-          by (erewrite Permutation_length in Hₗ by eapply Hₚ; lia).
+    i. rewrite unfold_iter_eq. steps.
+    rename Hₕ into H.
+    assert (Hₕ : heap Z.ge tree)
+      by (eapply H with (j := 1); lia).
+    clear H Hₗ.
 
-        remember ([] : list Z) as ys.
-        clear Heqys.
+    remember (btsize tree - 1) as l eqn: Hₗ.
+    replace (length xs) with (l + 1).
+    2: {
+      assert (length xs = btsize tree).
+      { erewrite Permutation_length by (symmetry; eapply Hₚ).
+        eapply toList_length.
+      }
+      lia.
+    }
 
-        deflag.
-        revert tree ys Hₚ Hₕ Hₗ w ctx mp_src mp_tgt mr_src WF ACC.
-        induction l.
-        -- i. rewrite unfold_iter_eq. steps.
-           assert (length (toList tree) <= 1) by lia.
-           replace (length (toList tree) <=? 1) with true
-             by (symmetry; eapply leb_correct; ss).
-           steps.
-           astop. force_l. eexists. steps.
-           hret tt; ss.
-           iModIntro. iSplit; ss. iPureIntro. esplits; ss.
-           ++ admit "invariant".
-           ++ admit "invariant".
-        -- i. rewrite unfold_iter_eq. steps.
-           assert (length (toList tree) > 1) by lia.
-           replace (length (toList tree) <=? 1) with false
-             by (symmetry; eapply leb_correct_conv; lia).
-           steps.
-           admit "wip".
-      + i. rewrite unfold_iter_eq. steps.
-        acatch.
-        { eapply STBINCL. stb_tac. ss. }
-        { instantiate (1 := l + length xs).
-          eapply OrdArith.lt_from_nat.
-          lia.
-        }
-        hcall (tree, S l) _ with "".
-        { iModIntro. iSplit; ss. iPureIntro. splits; ss; try lia.
-          - admit "complete".
-        }
-        { ss. splits; et; oauto. }
-        mDesAll. rename a into tree'. des. steps.
-        rewrite Nat.sub_0_r.
-        deflag.
-        eapply IHl.
-        * symmetry in PURE3. transitivity (toList tree); ss.
-        * replace (length (toList tree')) with (length (toList tree))
-            by (eapply Permutation_length; ss).
-          lia.
-        * intros. eapply PURE4. lia.
-        * red. inversion WF. econs. et.
-        * assumption.
+    remember ([] : list Z) as ys.
+    clear Heqys.
+
+    deflag.
+    revert tree ys Hₚ Hc Hₕ Hₗ w ctx mp_src mp_tgt mr_src WF ACC.
+    induction l.
+    (* second loop *)
+    2: {
+      i. rewrite unfold_iter_eq. steps.
+      rewrite toList_length.
+      assert (btsize tree > 1) by lia.
+      replace (btsize tree <=? 1) with false
+        by (symmetry; eapply leb_correct_conv; lia).
+      steps.
+      admit "wip".
+    }
+    
+    i. rewrite unfold_iter_eq. steps.
+    rewrite toList_length.
+    assert (btsize tree <= 1) by lia.
+    replace (btsize tree <=? 1) with true
+      by (symmetry; eapply leb_correct; ss).
+    steps.
+    astop. force_l. eexists. steps.
+    hret tt; ss.
+    iModIntro. iSplit; ss. iPureIntro. esplits; ss.
+    - admit "invariant".
+    - admit "invariant".
     Unshelve. et.
   Qed.
 
