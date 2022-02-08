@@ -734,6 +734,27 @@ Section HeapProperty.
 
 End HeapProperty.
 
+Section BinaryTreeZipper.
+
+  Context {A : Type}.
+
+  Inductive btctx : Type :=
+  | btctx_top : btctx
+  | btctx_left (x : A) (r : bintree A) (g : btctx) : btctx
+  | btctx_right (x : A) (l : bintree A) (g : btctx) : btctx
+  .
+
+  Fixpoint recover_bintree (g : btctx) (t : bintree A) : bintree A :=
+    match g with
+    | btctx_top => t
+    | btctx_left x r g => recover_bintree g (BT_node x t r)
+    | btctx_right x l g => recover_bintree g (BT_node x l t)
+    end.
+
+End BinaryTreeZipper.
+
+Arguments btctx : clear implicits.
+
 Section ListAccessories.
 
   Lemma list_extensionality {A : Type} (xs1 : list A) (xs2 : list A) :
