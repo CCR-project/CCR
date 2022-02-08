@@ -10,6 +10,7 @@ Require Import
 From Coq.Program Require Import Basics Wf.
 Import Nat.
 Import ListNotations.
+Local Open Scope program_scope.
 
 Section Utilities.
 
@@ -332,6 +333,259 @@ End BinaryTree.
 
 Arguments bintree : clear implicits.
 
+Section BinaryTreeIndexing.
+
+  Inductive dir_t : Set := Dir_left | Dir_right.
+
+  Definition encode ds := fold_left (fun i => dir_t_rect (fun _ => nat) (2 * i + 1) (2 * i + 2)) ds 0.
+
+  Lemma encode_inj ds1 ds2
+    (H_encode_eq : encode ds1 = encode ds2)
+    : ds1 = ds2.
+  Proof with lia || eauto.
+    revert H_encode_eq. unfold encode; do 2 rewrite <- fold_left_rev_right.
+    intros H_eq; apply rev_inj; revert H_eq.
+    generalize (rev ds2) as xs2. generalize (rev ds1) as xs1. clear ds1 ds2.
+    set (myF := fold_right (fun d i => dir_t_rect (fun _ => nat) (2 * i + 1) (2 * i + 2) d) 0).
+    induction xs1 as [ | x1 xs1 IH]; destruct xs2 as [ | x2 xs2]; simpl...
+    - destruct x2; simpl dir_t_rect...
+    - destruct x1; simpl dir_t_rect...
+    - destruct x1; destruct x2; simpl dir_t_rect...
+      all: intros H_eq; assert (claim1 : myF xs1 = myF xs2)...
+      all: apply f_equal...
+  Qed.
+
+  Lemma decodable i :
+    {ds : list dir_t | encode ds = i}.
+  Proof with lia || eauto.
+    induction i as [[ | i'] IH] using Wf_nat.lt_wf_rect.
+    - exists ([])...
+    - set (i := S i').
+      destruct (i mod 2) as [ | [ | i_mod_2]] eqn: H_obs.
+      + assert (claim1 : i = 2 * ((i - 2) / 2) + 2).
+        { apply (positive_even i ((i - 2) / 2))... }
+        assert (claim2 : (i - 2) / 2 < i)...
+        destruct (IH ((i - 2) / 2) claim2) as [ds H_ds].
+        exists (ds ++ [Dir_right]).
+        unfold encode. rewrite fold_left_last. unfold dir_t_rect at 1.
+        unfold encode in H_ds. rewrite H_ds...
+      + assert (claim1 : i = 2 * ((i - 1) / 2) + 1).
+        { apply (positive_odd i ((i - 1) / 2))... }
+        assert (claim2 : (i - 1) / 2 < i)...
+        destruct (IH ((i - 1) / 2) claim2) as [ds H_ds].
+        exists (ds ++ [Dir_left]).
+        unfold encode. rewrite fold_left_last. unfold dir_t_rect at 1.
+        unfold encode in H_ds. rewrite H_ds...
+      + pose (Nat.mod_bound_pos i 2)...
+  Defined.
+
+  Definition decode i := proj1_sig (decodable i).
+
+(* (* Example "decode" *)
+  Compute (decode 14).
+  (* = [Dir_right; Dir_right; Dir_right] *)
+  Compute (decode 15).
+  (* = [Dir_left; Dir_left; Dir_left; Dir_left] *)
+  Compute (decode 16).
+  (* = [Dir_left; Dir_left; Dir_left; Dir_right] *)
+*)
+
+  Lemma encode_decode i : encode (decode i) = i.
+  Proof. exact (proj2_sig (decodable i)). Qed.
+
+  Global Opaque decode.
+
+  Lemma decode_encode ds : decode (encode ds) = ds.
+  Proof. apply encode_inj. now rewrite encode_decode with (i := encode ds). Qed.
+
+  Lemma unfold_decode i :
+    decode i =
+    if Nat.eq_dec i 0 then [] else
+    if Nat.eq_dec (i mod 2) 1
+    then decode ((i - 1) / 2) ++ [Dir_left]
+    else decode ((i - 2) / 2) ++ [Dir_right].
+  Proof with lia || discriminate || eauto.
+    apply encode_inj. rewrite encode_decode.
+    destruct (Nat.eq_dec i 0) as [H_yes1 | H_no1]...
+    assert (claim1 := Nat.mod_bound_pos i 2).
+    destruct (Nat.eq_dec (i mod 2) 1) as [H_yes2 | H_no2];
+      [assert (claim2 := encode_decode ((i - 1) / 2)) | assert (claim2 := encode_decode ((i - 2) / 2))].
+    all: symmetry; revert claim2; unfold encode; intros H_eq;
+      rewrite fold_left_last; unfold dir_t_rect at 1;
+      rewrite H_eq; symmetry.
+    - apply positive_odd...
+    - apply positive_even...
+  Qed.
+
+End BinaryTreeIndexing.
+
+Section BinaryTreeAccessories.
+
+  Context {A : Type}.
+
+  Definition subtree_init t : option (bintree A) := Some t.
+
+  Definition subtree_step d acc t : option (bintree A) :=
+    match t with
+    | BT_nil => None
+    | BT_node x l r => acc (@dir_t_rect (fun _ => bintree A) l r d)
+    end.
+
+  Definition option_subtree := fold_right subtree_step subtree_init.
+  Definition subtree_nat t i := option_subtree (decode i) t.
+
+  Lemma unfold_option_subtree ds t :
+    option_subtree ds t =
+    match ds with
+    | [] => Some t
+    | d :: ds' =>
+      match t with
+      | BT_nil => None
+      | BT_node x l r => option_subtree ds' (dir_t_rect (fun _ => bintree A) l r d)
+      end
+    end.
+  Proof. induction ds as [ | [ | ] ds IH]; eauto. Qed.
+
+  Inductive occurs (t : bintree A) : list dir_t -> bintree A -> Prop :=
+  | Occurs_0
+    : occurs t [] t
+  | Occurs_l ds x l r
+    (H_l : occurs t ds l)
+    : occurs t (Dir_left :: ds) (BT_node x l r)
+  | Occurs_r ds x l r
+    (H_r : occurs t ds r)
+    : occurs t (Dir_right :: ds) (BT_node x l r).
+
+  Local Hint Constructors occurs : core.
+
+  Lemma occurs_iff ds t root :
+    occurs t ds root <->
+    option_subtree ds root = Some t.
+  Proof with discriminate || eauto.
+    split. intros X; induction X... revert t root.
+    induction ds as [ | [ | ] ds IH]; simpl; intros t root H_eq.
+    { apply Some_inj in H_eq; subst... }
+    all: destruct root as [ | x l r]...
+  Qed.
+
+  Definition option_root (t : bintree A) :=
+    match t with
+    | BT_nil => None
+    | BT_node x l r => Some x
+    end.
+
+  Definition option_children_pair (t : bintree A) :=
+    match t with
+    | BT_nil => None
+    | BT_node x l r => Some (l, r)
+    end.
+
+  Definition extract_elements := flat_map (option2list ∘ option_root).
+
+  Definition extract_children := flat_map (@concat (bintree A) ∘ option2list ∘ option_map pair2list ∘ option_children_pair).
+
+  Lemma unfold_extract_elements ts :
+    extract_elements ts =
+    match ts with
+    | [] => []
+    | BT_nil :: ts_tail => extract_elements ts_tail
+    | BT_node x l r :: ts_tail => x :: extract_elements ts_tail
+    end.
+  Proof. destruct ts as [ | [ | x l r] ts_tail]; reflexivity. Qed.
+
+  Lemma unfold_extract_children ts :
+    extract_children ts =
+    match ts with
+    | [] => []
+    | BT_nil :: ts_tail => extract_children ts_tail
+    | BT_node x l r :: ts_tail => [l; r] ++ extract_children ts_tail
+    end.
+  Proof. destruct ts as [ | [ | x l r] ts_tail]; reflexivity. Qed.
+
+  Program Fixpoint fromListAux (xss : list (list A)) {measure (length xss)} : bintree A :=
+    match xss with
+    | [] => BT_nil
+    | [] :: xss => BT_nil
+    | (x :: xs) :: xss => BT_node x (fromListAux (split_exp_left 0 xss)) (fromListAux (split_exp_right 0 xss))
+    end.
+  Next Obligation.
+    rewrite split_exp_left_length. auto.
+  Defined.
+  Next Obligation.
+    simpl.
+    set (split_exp_right_length 0 xss).
+    lia.
+  Defined.
+
+  Lemma unfold_fromListAux xss :
+    fromListAux xss =
+    match xss with
+    | [] => BT_nil
+    | [] :: xss => BT_nil
+    | (x :: xs) :: xss => BT_node x (fromListAux (split_exp_left 0 xss)) (fromListAux (split_exp_right 0 xss))
+    end.
+  Proof with eauto.
+    unfold fromListAux at 1; rewrite fix_sub_eq.
+    - destruct xss as [ | [ | x xs] xss]...
+    - intros [ | [ | ? ?] ?] ? ? ?...
+      f_equal...
+  Qed.
+
+  Global Opaque fromListAux.
+
+  Definition fromList (xs : list A) : bintree A :=
+    fromListAux (trim_exp 0 xs).
+
+  Fixpoint toListAux (t : bintree A) : list (list A) :=
+    match t with
+    | BT_nil => []
+    | BT_node x l r => [x] :: zip_exp (toListAux l) (toListAux r)
+    end.
+
+  Lemma unfold_toListAux t :
+    toListAux t = match t with
+                  | BT_nil => []
+                  | BT_node x l r => [x] :: zip_exp (toListAux l) (toListAux r)
+                  end.
+  Proof. destruct t; reflexivity. Qed.
+
+  Definition toList root := concat (toListAux root).
+
+  Lemma toListAux_fromListAux xss : complete_list 0 xss -> toListAux (fromListAux xss) = xss.
+  Proof.
+    remember (length xss) as l eqn: H.
+    revert xss H.
+    induction l using Wf_nat.lt_wf_ind.
+    - rename H into IH. intros xss H1 H2.
+      destruct xss as [|xs xss]; auto.
+      destruct xs as [|x xs]; simpl in H2.
+      + destruct H2; destruct H; lia.
+      + destruct H2; destruct H; assert (xs = [])
+          by (eapply length_zero_iff_nil; lia);
+        subst; try reflexivity.
+        rewrite unfold_fromListAux.
+        simpl.
+        erewrite IH with (xss := split_exp_left 0 xss); try reflexivity.
+        erewrite IH with (xss := split_exp_right 0 xss); try reflexivity.
+        rewrite split_zip by assumption.
+        reflexivity.
+        * assert (length (split_exp_right 0 xss) <= length xss)
+            by eapply split_exp_right_length.
+          simpl. lia.
+        * eapply complete_split_right; assumption.
+        * rewrite split_exp_left_length. simpl. lia.
+        * eapply complete_split_left; assumption.
+  Qed.
+
+  Lemma toList_fromList xs : toList (fromList xs) = xs.
+  Proof.
+    unfold fromList, toList.
+    rewrite toListAux_fromListAux by eapply complete_trim.
+    eapply concat_trim_exp.
+  Qed.
+
+End BinaryTreeAccessories.
+
 Section CompleteBinaryTree.
 
   Context {A : Type}.
@@ -436,124 +690,6 @@ Section CompleteBinaryTree.
     : rank t = n.
   Proof. induction H_complete. 2: apply perfect'_rank in H_l. all: simpl; lia. Qed.
 
-  Program Fixpoint fromListAux (xss : list (list A)) {measure (length xss)} : bintree A :=
-    match xss with
-    | [] => BT_nil
-    | [] :: xss => BT_nil
-    | (x :: xs) :: xss => BT_node x (fromListAux (split_exp_left 0 xss)) (fromListAux (split_exp_right 0 xss))
-    end.
-  Next Obligation.
-    rewrite split_exp_left_length. auto.
-  Defined.
-  Next Obligation.
-    simpl.
-    set (split_exp_right_length 0 xss).
-    lia.
-  Defined.
-
-  Lemma unfold_fromListAux xss :
-    fromListAux xss =
-    match xss with
-    | [] => BT_nil
-    | [] :: xss => BT_nil
-    | (x :: xs) :: xss => BT_node x (fromListAux (split_exp_left 0 xss)) (fromListAux (split_exp_right 0 xss))
-    end.
-  Proof with eauto.
-    unfold fromListAux at 1; rewrite fix_sub_eq.
-    - destruct xss as [ | [ | x xs] xss]...
-    - intros [ | [ | ? ?] ?] ? ? ?...
-      f_equal...
-  Qed.
-
-  Global Opaque fromListAux.
-
-  Definition fromList (xs : list A) : bintree A :=
-    fromListAux (trim_exp 0 xs).
-
-  Definition option_root (t : bintree A) :=
-    match t with
-    | BT_nil => None
-    | BT_node x l r => Some x
-    end.
-
-  Definition option_children_pair (t : bintree A) :=
-    match t with
-    | BT_nil => None
-    | BT_node x l r => Some (l, r)
-    end.
-
-  Local Open Scope program_scope.
-
-  Definition extract_elements := flat_map (option2list ∘ option_root).
-
-  Definition extract_children := flat_map (@concat (bintree A) ∘ option2list ∘ option_map pair2list ∘ option_children_pair).
-
-  Lemma unfold_extract_elements ts :
-    extract_elements ts =
-    match ts with
-    | [] => []
-    | BT_nil :: ts_tail => extract_elements ts_tail
-    | BT_node x l r :: ts_tail => x :: extract_elements ts_tail
-    end.
-  Proof. destruct ts as [ | [ | x l r] ts_tail]; reflexivity. Qed.
-
-  Lemma unfold_extract_children ts :
-    extract_children ts =
-    match ts with
-    | [] => []
-    | BT_nil :: ts_tail => extract_children ts_tail
-    | BT_node x l r :: ts_tail => [l; r] ++ extract_children ts_tail
-    end.
-  Proof. destruct ts as [ | [ | x l r] ts_tail]; reflexivity. Qed.
-
-  Fixpoint toListAux (t : bintree A) : list (list A) :=
-    match t with
-    | BT_nil => []
-    | BT_node x l r => [x] :: zip_exp (toListAux l) (toListAux r)
-    end.
-
-  Lemma unfold_toListAux t :
-    toListAux t = match t with
-                  | BT_nil => []
-                  | BT_node x l r => [x] :: zip_exp (toListAux l) (toListAux r)
-                  end.
-  Proof. destruct t; reflexivity. Qed.
-
-  Definition toList root := concat (toListAux root).
-
-  Lemma toListAux_fromListAux xss : complete_list 0 xss -> toListAux (fromListAux xss) = xss.
-  Proof.
-    remember (length xss) as l eqn: H.
-    revert xss H.
-    induction l using Wf_nat.lt_wf_ind.
-    - rename H into IH. intros xss H1 H2.
-      destruct xss as [|xs xss]; auto.
-      destruct xs as [|x xs]; simpl in H2.
-      + destruct H2; destruct H; lia.
-      + destruct H2; destruct H; assert (xs = [])
-          by (eapply length_zero_iff_nil; lia);
-        subst; try reflexivity.
-        rewrite unfold_fromListAux.
-        simpl.
-        erewrite IH with (xss := split_exp_left 0 xss); try reflexivity.
-        erewrite IH with (xss := split_exp_right 0 xss); try reflexivity.
-        rewrite split_zip by assumption.
-        reflexivity.
-        * assert (length (split_exp_right 0 xss) <= length xss)
-            by eapply split_exp_right_length.
-          simpl. lia.
-        * eapply complete_split_right; assumption.
-        * rewrite split_exp_left_length. simpl. lia.
-        * eapply complete_split_left; assumption.
-  Qed.
-
-  Lemma toList_fromList xs : toList (fromList xs) = xs.
-  Proof.
-    unfold fromList, toList.
-    rewrite toListAux_fromListAux by eapply complete_trim.
-    eapply concat_trim_exp.
-  Qed.
-
   Lemma toList_2nd x l r
     (H_size : 2 <= length (toList (BT_node x l r)))
     (H_complete : complete (BT_node x l r))
@@ -596,145 +732,6 @@ End CompleteBinaryTree.
             (BT_node 7 (BT_node 14 BT_nil BT_nil) BT_nil))
   *)
 *)
-
-Section BinaryTreeAccessories.
-
-  Inductive dir_t : Set := Dir_left | Dir_right.
-
-  Definition encode ds := fold_left (fun i => dir_t_rect (fun _ => nat) (2 * i + 1) (2 * i + 2)) ds 0.
-
-  Lemma encode_inj ds1 ds2
-    (H_encode_eq : encode ds1 = encode ds2)
-    : ds1 = ds2.
-  Proof with lia || eauto.
-    revert H_encode_eq. unfold encode; do 2 rewrite <- fold_left_rev_right.
-    intros H_eq; apply rev_inj; revert H_eq.
-    generalize (rev ds2) as xs2. generalize (rev ds1) as xs1. clear ds1 ds2.
-    set (myF := fold_right (fun d i => dir_t_rect (fun _ => nat) (2 * i + 1) (2 * i + 2) d) 0).
-    induction xs1 as [ | x1 xs1 IH]; destruct xs2 as [ | x2 xs2]; simpl...
-    - destruct x2; simpl dir_t_rect...
-    - destruct x1; simpl dir_t_rect...
-    - destruct x1; destruct x2; simpl dir_t_rect...
-      all: intros H_eq; assert (claim1 : myF xs1 = myF xs2)...
-      all: apply f_equal...
-  Qed.
-
-  Lemma decodable i :
-    {ds : list dir_t | encode ds = i}.
-  Proof with lia || eauto.
-    induction i as [[ | i'] IH] using Wf_nat.lt_wf_rect.
-    - exists ([])...
-    - set (i := S i').
-      destruct (i mod 2) as [ | [ | i_mod_2]] eqn: H_obs.
-      + assert (claim1 : i = 2 * ((i - 2) / 2) + 2).
-        { apply (positive_even i ((i - 2) / 2))... }
-        assert (claim2 : (i - 2) / 2 < i)...
-        destruct (IH ((i - 2) / 2) claim2) as [ds H_ds].
-        exists (ds ++ [Dir_right]).
-        unfold encode. rewrite fold_left_last. unfold dir_t_rect at 1.
-        unfold encode in H_ds. rewrite H_ds...
-      + assert (claim1 : i = 2 * ((i - 1) / 2) + 1).
-        { apply (positive_odd i ((i - 1) / 2))... }
-        assert (claim2 : (i - 1) / 2 < i)...
-        destruct (IH ((i - 1) / 2) claim2) as [ds H_ds].
-        exists (ds ++ [Dir_left]).
-        unfold encode. rewrite fold_left_last. unfold dir_t_rect at 1.
-        unfold encode in H_ds. rewrite H_ds...
-      + pose (Nat.mod_bound_pos i 2)...
-  Defined.
-
-  Definition decode i := proj1_sig (decodable i).
-
-(* (* Example "decode" *)
-  Compute (decode 14).
-  (* = [Dir_right; Dir_right; Dir_right] *)
-  Compute (decode 15).
-  (* = [Dir_left; Dir_left; Dir_left; Dir_left] *)
-  Compute (decode 16).
-  (* = [Dir_left; Dir_left; Dir_left; Dir_right] *)
-*)
-
-  Lemma encode_decode i : encode (decode i) = i.
-  Proof. exact (proj2_sig (decodable i)). Qed.
-
-  Global Opaque decode.
-
-  Lemma decode_encode ds : decode (encode ds) = ds.
-  Proof. apply encode_inj. now rewrite encode_decode with (i := encode ds). Qed.
-
-  Lemma unfold_decode i :
-    decode i =
-    if Nat.eq_dec i 0 then [] else
-    if Nat.eq_dec (i mod 2) 1
-    then decode ((i - 1) / 2) ++ [Dir_left]
-    else decode ((i - 2) / 2) ++ [Dir_right].
-  Proof with lia || discriminate || eauto.
-    apply encode_inj. rewrite encode_decode.
-    destruct (Nat.eq_dec i 0) as [H_yes1 | H_no1]...
-    assert (claim1 := Nat.mod_bound_pos i 2).
-    destruct (Nat.eq_dec (i mod 2) 1) as [H_yes2 | H_no2];
-      [assert (claim2 := encode_decode ((i - 1) / 2)) | assert (claim2 := encode_decode ((i - 2) / 2))].
-    all: symmetry; revert claim2; unfold encode; intros H_eq;
-      rewrite fold_left_last; unfold dir_t_rect at 1;
-      rewrite H_eq; symmetry.
-    - apply positive_odd...
-    - apply positive_even...
-  Qed.
-
-  Context {A : Type}.
-
-  Definition subtree_init t : option (bintree A) := Some t.
-
-  Definition subtree_step d acc t : option (bintree A) :=
-    match t with
-    | BT_nil => None
-    | BT_node x l r => acc (@dir_t_rect (fun _ => bintree A) l r d)
-    end.
-
-  Definition option_subtree := fold_right subtree_step subtree_init.
-  Definition subtree_nat t i := option_subtree (decode i) t.
-
-  Lemma unfold_option_subtree ds t :
-    option_subtree ds t =
-    match ds with
-    | [] => Some t
-    | d :: ds' =>
-      match t with
-      | BT_nil => None
-      | BT_node x l r => option_subtree ds' (dir_t_rect (fun _ => bintree A) l r d)
-      end
-    end.
-  Proof. induction ds as [ | [ | ] ds IH]; eauto. Qed.
-
-  Inductive occurs (t : bintree A) : list dir_t -> bintree A -> Prop :=
-  | Occurs_0
-    : occurs t [] t
-  | Occurs_l ds x l r
-    (H_l : occurs t ds l)
-    : occurs t (Dir_left :: ds) (BT_node x l r)
-  | Occurs_r ds x l r
-    (H_r : occurs t ds r)
-    : occurs t (Dir_right :: ds) (BT_node x l r).
-
-  Local Hint Constructors occurs : core.
-
-  Lemma occurs_iff ds t root :
-    occurs t ds root <->
-    option_subtree ds root = Some t.
-  Proof with discriminate || eauto.
-    split. intros X; induction X... revert t root.
-    induction ds as [ | [ | ] ds IH]; simpl; intros t root H_eq.
-    { apply Some_inj in H_eq; subst... }
-    all: destruct root as [ | x l r]...
-  Qed.
-
-  Theorem toList_good root i t
-    (H_occurs : occurs t (decode i) root)
-    : lookup (toList root) i = option_root t.
-  Proof.
-  Admitted.
-
-End BinaryTreeAccessories.
 
 Section HeapProperty.
 
