@@ -511,9 +511,9 @@ Section BinaryTreeAccessories.
     : forall ds root, occurs t ds root -> P ds root -> P [] t.
   Proof. intros ds root X; induction X; eauto. Qed.
 
-  Theorem bottomup root (P : nat -> bintree A -> Prop)
-    (IH_l : forall x l r i, subtree_nat root i = Some l -> P i l -> P ((i - 1) / 2) (BT_node x l r))
-    (IH_r : forall x l r i, subtree_nat root i = Some r -> P i r -> P ((i - 2) / 2) (BT_node x l r))
+  Theorem bottomup' root (P : nat -> bintree A -> Prop)
+    (IH_l : forall x l r i, subtree_nat root (2 * i + 1) = Some l -> P (2 * i + 1) l -> P i (BT_node x l r))
+    (IH_r : forall x l r i, subtree_nat root (2 * i + 2) = Some r -> P (2 * i + 2) r -> P i (BT_node x l r))
     : forall i t, subtree_nat root i = Some t -> P i t -> P 0 root.
   Proof with lia || discriminate || eauto.
     unfold subtree_nat in *.
@@ -528,7 +528,7 @@ Section BinaryTreeAccessories.
         assert (claim2 : i = 2 * ((i - 1) / 2) + 1).
         { apply (positive_odd i ((i - 1) / 2))... }
         apply IH with (m := ((i - 1) / 2)) (t := (BT_node x l r))...
-        apply IH_l with (x := x) (l := l) (r := r)...
+        apply IH_l with (x := x) (l := l) (r := r); rewrite <- claim2...
         rewrite claim1, option_subtree_last, H_obs...
       + assert (claim3 : i mod 2 = 0).
         { pose (Nat.mod_bound_pos i 2)... }
@@ -538,8 +538,32 @@ Section BinaryTreeAccessories.
         assert (claim2 : i = 2 * ((i - 2) / 2) + 2).
         { apply (positive_even i ((i - 2) / 2))... }
         apply IH with (m := ((i - 2) / 2)) (t := (BT_node x l r))...
-        apply IH_r with (x := x) (l := l) (r := r)...
+        apply IH_r with (x := x) (l := l) (r := r); rewrite <- claim2...
         rewrite claim1, option_subtree_last, H_obs...
+  Qed.
+
+  Theorem bottomup root (P : list dir_t -> bintree A -> Prop)
+    (IH_l : forall x l r ds, occurs l (ds ++ [Dir_left]) root -> P (ds ++ [Dir_left]) l -> P ds (BT_node x l r))
+    (IH_r : forall x l r ds, occurs r (ds ++ [Dir_right]) root -> P (ds ++ [Dir_right]) r -> P ds (BT_node x l r))
+    : forall ds t, occurs t ds root -> P ds t -> P [] root.
+  Proof with eauto.
+    assert (claim1 := bottomup' root (fun i t => P (decode i) t)).
+    intros ds t H_occurs H_t. replace ([]) with (decode 0)...
+    apply claim1 with (i := encode ds) (t := t).
+    - clear ds t H_occurs H_t. intros x l r i H_occurs H_l.
+      assert (claim2 : decode (2 * i + 1) = decode i ++ [Dir_left]).
+      { apply encode_inj. rewrite encode_decode, encode_last. rewrite encode_decode... }
+      apply IH_l.
+      + apply occurs_iff. replace (decode i ++ [Dir_left]) with (decode (2 * i + 1))...
+      + rewrite <- claim2...
+    - clear ds t H_occurs H_t. intros x l r i H_occurs H_l.
+      assert (claim2 : decode (2 * i + 2) = decode i ++ [Dir_right]).
+      { apply encode_inj. rewrite encode_decode, encode_last. rewrite encode_decode... }
+      apply IH_r.
+      + apply occurs_iff. replace (decode i ++ [Dir_right]) with (decode (2 * i + 2))...
+      + rewrite <- claim2...
+    - apply occurs_iff. rewrite decode_encode...
+    - rewrite decode_encode...
   Qed.
 
   Definition option_root (t : bintree A) :=
@@ -777,16 +801,12 @@ Section CompleteBinaryTree.
     : rank t = n.
   Proof. induction H_complete. 2: apply perfect'_rank in H_l. all: simpl; lia. Qed.
 
-  Lemma toList_2nd x l r
-    (H_size : 2 <= length (toList (BT_node x l r)))
-    (H_complete : complete (BT_node x l r))
-    : lookup (toList (BT_node x l r)) 1 = option_root l.
-  Admitted.
-
-  Lemma toList_3rd x l r 
-    (H_size : 3 <= length (toList (BT_node x l r)))
-    (H_complete : complete (BT_node x l r))
-    : lookup (toList (BT_node x l r)) 2 = option_root r.
+  Lemma toList_lookup root i t
+    (H_bound : i < length (toList root))
+    (H_complete : complete root)
+    (H_occurs : occurs t (decode i) root)
+    : lookup (toList root) i = option_root t.
+  Proof.
   Admitted.
 
   Lemma complete_leaves (t : bintree A) :
