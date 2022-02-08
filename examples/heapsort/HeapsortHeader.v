@@ -494,21 +494,6 @@ Section CompleteBinaryTree.
     end.
   Proof. destruct ts as [ | [ | x l r] ts_tail]; reflexivity. Qed.
 
-  Lemma toList_step_app prevs nexts :
-    toList_step (prevs ++ nexts) =
-    extract_elements prevs ++ toList_step (nexts ++ extract_children prevs).
-  Proof with eauto with *.
-    revert nexts; induction prevs as [ | [ | x l r] prevs IH]; simpl.
-    all: intros nexts; autorewrite with list...
-    { rewrite toList_step_unfold... }
-    { rewrite toList_step_unfold, <- app_assoc, IH, <- app_assoc... }
-  Qed.
-
-  Theorem toList_step_spec ts :
-    toList_step ts =
-    extract_elements ts ++ toList_step (extract_children ts).
-  Proof. replace (ts) with (ts ++ []) at 1; [exact (toList_step_app ts []) | apply app_nil_r]. Qed.
-
   Fixpoint toListAux (t : bintree A) : list (list A) :=
     match t with
     | BT_nil => []
