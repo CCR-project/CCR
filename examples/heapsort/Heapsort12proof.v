@@ -53,6 +53,7 @@ Section SIMMODSEM.
     unfold create_body. unfold Heapsort1.create_body.
     init. harg. destruct x as [tree l]. mDesAll. clear PURE1. destruct PURE0. steps.
     astop. induction tree.
+<<<<<<< HEAD
     - steps. rewrite unfold_iter_eq.
       destruct l;nia.
     - destruct H0. destruct H. steps. rewrite unfold_iter_eq.
@@ -71,6 +72,16 @@ Section SIMMODSEM.
         (*assert (toList_step [tree1;tree2] = match ) *)
         Search toList_step. Search extract_elements.
         
+=======
+    (* steps. rewrite unfold_iter_eq.
+       destruct l;nia.
+     *)  
+    (*
+      destruct H0. destruct H0. steps. rewrite unfold_iter_eq.
+      destruct (l + (l + 0) <=? S n);destruct (l + (l + 0) <=? n).
+      + unfold toList. rewrite toList_step_unfold. steps.
+     *)
+>>>>>>> 7bc7c4cb1eb1d8550cb513e73a978fadc83f498c
   Admitted.
 
   Lemma sim_heapify (sk : alist string Sk.gdef) :
@@ -78,6 +89,31 @@ Section SIMMODSEM.
               ("heapify",
                fun_to_tgt "Heapsort" (GlobalStb sk) {| fsb_fspec := heapify_spec; fsb_body := cfunN heapify_body |})
               ("heapify", cfunU Heapsort1.heapify_body).
+<<<<<<< HEAD
+=======
+  Proof with eauto.
+    init. harg. destruct x as [[root y] k]. mDesAll; subst.
+    clear PURE1. destruct PURE0 as [H_eq PURE]; subst.
+    steps. astop. revert mrp_src mp_tgt WF k ctx mr_src PURE ACC.
+    induction root as [ | x l IH_l r IH_r]; i.
+    { steps. rewrite unfold_iter_eq. des_ifs. steps.
+      admit "toList".
+      (*
+      unfold toList. rewrite toList_step_unfold. rewrite toList_step_unfold.
+      steps. rewrite unfold_iter_eq. steps.
+      force_l. eexists. steps. hret tt; ss.
+      iModIntro. iSplit; ss. iPureIntro.
+      esplits; try reflexivity.
+      instantiate (1 := (BT_node k BT_nil BT_nil)).
+      - rewrite toList_step_unfold. ss.
+      - admit "complete".
+      - rewrite toList_step_unfold. ss.
+      - admit "heap".
+      *)
+    }
+    { admit "caseOf_BT_node". }
+    (* Unshelve. et. *)
+>>>>>>> 7bc7c4cb1eb1d8550cb513e73a978fadc83f498c
   Admitted.
 
   Lemma sim_heapsort (sk : alist string Sk.gdef) :
@@ -117,6 +153,7 @@ Section SIMMODSEM.
         - admit "loop invariant".
         - ss.
       }
+<<<<<<< HEAD
       ss. splits; et; oauto.
       mDesAll. rename a into tree'. destruct PURE1 as [H1 [H2 H3]]. steps.
       rewrite Nat.sub_0_r.
@@ -127,6 +164,70 @@ Section SIMMODSEM.
       + admit "permutation".
       + red. inversion WF. econs. et.
       + assumption.
+=======
+      assert (H : forall j, j > l -> heap_at Z.ge (j - 1) tree) by admit "heap".
+      clear Heql.
+
+      (* 'l' for first loop, 'length xs' for second loop *)
+      astart (l + length xs).
+
+      deflag.
+      revert tree Hₚ Hₗ H w ctx mp_src mp_tgt mr_src WF ACC.
+      induction l.
+      + i. rewrite unfold_iter_eq. steps.
+        assert (Hₕ : heap Z.ge tree) by admit "from H".
+        clear H Hₗ.
+
+        remember (length (toList tree) - 1) as l eqn: Hₗ.
+        replace (length xs) with (l + 1)
+          by (erewrite Permutation_length in Hₗ by eapply Hₚ; lia).
+
+        remember ([] : list Z) as ys.
+        clear Heqys.
+
+        deflag.
+        revert tree ys Hₚ Hₕ Hₗ w ctx mp_src mp_tgt mr_src WF ACC.
+        induction l.
+        -- i. rewrite unfold_iter_eq. steps.
+           assert (length (toList tree) <= 1) by lia.
+           replace (length (toList tree) <=? 1) with true
+             by (symmetry; eapply leb_correct; ss).
+           steps.
+           astop. force_l. eexists. steps.
+           hret tt; ss.
+           iModIntro. iSplit; ss. iPureIntro. esplits; ss.
+           ++ admit "invariant".
+           ++ admit "invariant".
+        -- i. rewrite unfold_iter_eq. steps.
+           assert (length (toList tree) > 1) by lia.
+           replace (length (toList tree) <=? 1) with false
+             by (symmetry; eapply leb_correct_conv; lia).
+           steps.
+           admit "wip".
+      + i. rewrite unfold_iter_eq. steps.
+        acatch.
+        { eapply STBINCL. stb_tac. ss. }
+        { instantiate (1 := l + length xs).
+          eapply OrdArith.lt_from_nat.
+          lia.
+        }
+        hcall (tree, S l) _ with "".
+        { iModIntro. iSplit; ss. iPureIntro. splits; ss; try lia.
+          - admit "complete".
+        }
+        { ss. splits; et; oauto. }
+        mDesAll. rename a into tree'. des. steps.
+        rewrite Nat.sub_0_r.
+        deflag.
+        eapply IHl.
+        * symmetry in PURE3. transitivity (toList tree); ss.
+        * replace (length (toList tree')) with (length (toList tree))
+            by (eapply Permutation_length; ss).
+          lia.
+        * intros. eapply PURE4. lia.
+        * red. inversion WF. econs. et.
+        * assumption.
+>>>>>>> 7bc7c4cb1eb1d8550cb513e73a978fadc83f498c
     Unshelve. et.
   Qed.
 
