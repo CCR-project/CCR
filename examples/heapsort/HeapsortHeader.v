@@ -134,6 +134,13 @@ Section ListOperations.
     | xs :: xss => skipn (2^n) xs :: split_exp_right (S n) xss
     end.
 
+  Fixpoint zip_exp (xss yss : list (list A)) : list (list A) :=
+    match xss, yss with
+    | xs :: xss, ys :: yss => (xs ++ ys) :: zip_exp xss yss
+    | [], yss => yss
+    | xss, [] => xss
+    end.
+
   Lemma split_exp_left_length n xss : length (split_exp_left n xss) = length xss.
   Proof.
     revert n.
@@ -149,6 +156,73 @@ Section ListOperations.
     - reflexivity.
     - intros. simpl. rewrite IHxss. reflexivity.
   Qed.
+
+  Fixpoint complete_list (n : nat) (xss : list (list A)) : Prop :=
+    match xss with
+    | [] => True
+    | xs :: xss => length xs = 2^n /\ complete_list (S n) xss
+                 \/ 0 < length xs < 2^n /\ xss = []
+    end.
+
+  Lemma complete_trim n xs : complete_list n (trim_exp n xs).
+  Proof with lia || eauto.
+    remember (length xs) as l.
+    revert n xs Heql.
+    induction l as [l IH] using Wf_nat.lt_wf_ind.
+    intros n [ | x xs'].
+    - intros Heql. now rewrite unfold_trim_exp.
+    - set (xs := x :: xs'). intros Heql.
+      rewrite unfold_trim_exp. unfold xs at 1. simpl.
+      assert (claim1 : length (firstn (2^n) xs) = min (2^n) l).
+      { rewrite Heql. apply firstn_length. }
+      assert (claim2 : length (firstn (2 ^ n) xs) = 2 ^ n \/ length (firstn (2 ^ n) xs) < 2 ^ n) by lia.
+      assert (claim3 : l > 0).
+      { rewrite Heql. unfold xs. simpl... }
+      assert (claim4 : 2^n > 0) by now apply exp_pos; lia.
+      destruct claim2 as [claim2 | claim2]; [left | right].
+      + split... eapply IH; try reflexivity. rewrite Heql.
+        apply skipn_exp_length. simpl...
+      + split...
+        assert (claim5 : length (skipn (2 ^ n) xs) = 0).
+        { rewrite skipn_length... }
+        destruct (skipn (2 ^ n) xs)...
+        inversion claim5.
+  Qed.
+
+  Lemma split_zip n xss : complete_list (S n) xss -> zip_exp (split_exp_left n xss) (split_exp_right n xss) = xss.
+    revert n.
+    induction xss as [| xs xss ].
+    - reflexivity.
+    - intros.
+      Opaque pow.
+      simpl in H.
+      Transparent pow.
+      destruct H; destruct H.
+      + simpl.
+        assert (2 ^ n > 0)
+          by (eapply exp_pos; lia).
+        assert ((length xs <=? 2^n) = false)
+          by (eapply leb_correct_conv; simpl in H; lia).
+        rewrite H2.
+        rewrite firstn_skipn.
+        rewrite IHxss by assumption.
+        reflexivity.
+      + subst. simpl.
+        remember (length xs <=? 2^n).
+        destruct b.
+        * rewrite firstn_all2.
+          reflexivity.
+          eapply leb_complete.
+          auto.
+        * rewrite firstn_skipn.
+          reflexivity.
+  Qed.
+
+  Lemma complete_split_left n xss : complete_list (S n) xss -> complete_list n (split_exp_left n xss).
+  Admitted.
+
+  Lemma complete_split_right n xss : complete_list (S n) xss -> complete_list n (split_exp_right n xss).
+  Admitted.
 
 End ListOperations.
 
@@ -373,111 +447,49 @@ Section CompleteBinaryTree.
     toList_step ts =
     extract_elements ts ++ toList_step (extract_children ts).
   Proof. replace (ts) with (ts ++ []) at 1; [exact (toList_step_app ts []) | apply app_nil_r]. Qed.
-  Program Fixpoint extract_bottom ts {measure (list_sum (map cnt ts))} : list A :=
-    match ts with
-    | [] => []
-    | BT_nil :: ts_tail => extract_bottom ts_tail
-    | BT_node x BT_nil BT_nil :: ts_tail => x :: (extract_bottom ts_tail)
-    | BT_node _ l r :: ts_tail => extract_bottom ([l] ++ [r] ++ ts_tail)
-    end.
-  Next Obligation.
-    simpl. nia.
-  Defined.
-  Next Obligation.
-    simpl. nia.
-  Defined.
-  
-  Lemma extract_bottom_unfold ts :
-    extract_bottom ts =
-      match ts with
-      | [] => []
-      | BT_nil :: ts_tail => extract_bottom ts_tail
-      | BT_node x BT_nil BT_nil :: ts_tail => x :: (extract_bottom ts_tail)
-      | BT_node _ l r :: ts_tail => extract_bottom ([l;r] ++ ts_tail)
-      end.
-  Proof.
-    unfold extract_bottom at 1;rewrite fix_sub_eq.
-    - destruct ts eqn: E;eauto.
-      destruct b;eauto.
-      replace ([b1] ++ [b2] ++ l) with ([b1; b2] ++ l) at 1.
-      2:{rewrite app_assoc. auto.}
-      destruct b1;destruct b2;auto.
-    - intros. destruct x;auto. destruct b;auto.
-      destruct b1;destruct b2;auto.
-      apply f_equal;auto.
-  Qed.
-  
-  Program Fixpoint extract_body ts {measure (list_sum (map cnt ts))} : list A :=
-    match ts with
-    | [] => []
-    | BT_nil :: ts_tail => extract_body ts_tail
-    | BT_node x BT_nil BT_nil :: ts_tail => extract_body ts_tail
-    | BT_node x l r :: ts_tail => x :: extract_body ([l] ++ [r] ++ ts_tail)
-    end.
-  Next Obligation.
-    simpl. nia.
-  Defined.
-  Next Obligation.
-    simpl. nia.
-  Defined.
-  
-  Lemma extract_body_unfold ts :
-    extract_body ts =
-      match ts with
-      | [] => []
-      | BT_nil :: ts_tail => extract_body ts_tail
-      | BT_node x BT_nil BT_nil :: ts_tail => extract_body ts_tail
-      | BT_node x l r :: ts_tail => x :: extract_body ([l;r] ++ ts_tail)
-      end.
-  Proof.
-    unfold extract_body at 1;rewrite fix_sub_eq.
-    - destruct ts eqn: E;eauto.
-      destruct b;eauto.
-      replace ([b1] ++ [b2] ++ l) with ([b1; b2] ++ l) at 1.
-      2:{rewrite app_assoc. auto.}
-      destruct b1;destruct b2;auto.
-    - intros. destruct x;auto. destruct b;auto.
-      destruct b1;destruct b2;auto;apply f_equal;auto.
-  Qed.
 
- 
+  Fixpoint toListAux (t : bintree A) : list (list A) :=
+    match t with
+    | BT_nil => []
+    | BT_node x l r => [x] :: zip_exp (toListAux l) (toListAux r)
+    end.
+
+  Lemma unfold_toListAux t :
+    toListAux t = match t with
+                  | BT_nil => []
+                  | BT_node x l r => [x] :: zip_exp (toListAux l) (toListAux r)
+                  end.
+  Proof. destruct t; reflexivity. Qed.
+
+  Definition toList root := concat (toListAux root).
+
+  Lemma toListAux_fromListAux xss : complete_list 0 xss -> toListAux (fromListAux xss) = xss.
+  Proof.
+    remember (length xss) as l eqn: H.
+    revert xss H.
+    induction l using Wf_nat.lt_wf_ind.
+    - rename H into IH. intros xss H1 H2.
+      destruct xss as [|xs xss]; auto.
+      destruct xs as [|x xs]; simpl in H2.
+      + destruct H2; destruct H; lia.
+      + destruct H2; destruct H; assert (xs = [])
+          by (eapply length_zero_iff_nil; lia);
+        subst; try reflexivity.
+        rewrite unfold_fromListAux.
+        simpl.
+        erewrite IH with (xss := split_exp_left 0 xss); try reflexivity.
+        erewrite IH with (xss := split_exp_right 0 xss); try reflexivity.
+        rewrite split_zip by assumption.
+        reflexivity.
+        * assert (length (split_exp_right 0 xss) <= length xss)
+            by eapply split_exp_right_length.
+          simpl. lia.
+        * eapply complete_split_right; assumption.
+        * rewrite split_exp_left_length. simpl. lia.
+        * eapply complete_split_left; assumption.
+  Qed.
+  
   Definition toList root := toList_step [root].
-
-  
-  Lemma toList_spec_rev ptree n :
-    is_perfect ptree n -> toList ptree = extract_body [ptree] ++ extract_bottom [ptree].
-  Proof.
-    unfold toList. revert n.
-    induction ptree.
-    - do 2 rewrite toList_step_unfold.
-      do 2 rewrite extract_body_unfold.
-      do 2 rewrite extract_bottom_unfold.
-      auto.
-    - intros. inversion H;subst.
-      apply IHptree1 in H_l. apply IHptree2 in H_r.
-      rewrite toList_step_unfold. simpl.
-      rewrite extract_body_unfold. simpl.
-      rewrite extract_bottom_unfold. simpl.
-      destruct ptree1;destruct ptree2;eauto.
-      + rewrite <- app_comm_cons. apply f_equal.
-        rewrite toList_step_unfold.
-        rewrite extract_body_unfold.
-        rewrite extract_bottom_unfold. auto.
-      + rewrite <- app_comm_cons. apply f_equal.
-        replace ([BT_node x0 ptree1_1 ptree1_2;BT_nil]) with ([BT_node x0 ptree1_1 ptree1_2] ++ [BT_nil]) by auto.
-        rewrite toList_step_app. simpl.
-        rewrite toList_step_unfold. rewrite toList_step_unfold in H_l. simpl in H_l.
-        assert (forall t : bintree A, extract_body [t; BT_nil] = extract_body [t] ).
-        { induction t0.
-          - rewrite extract_body_unfold. auto.
-          - }
-              
-        rewrite extract_body_unfold.
-        rewrite extract_bottom_unfold. auto.
-        
-                                             
-        Admitted.
-        
   
   Lemma toList_fromList xs : toList (fromList xs) = xs.
   Admitted.
