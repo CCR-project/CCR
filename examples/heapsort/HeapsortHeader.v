@@ -91,6 +91,24 @@ Section Utilities.
   Lemma sub_lt_pos m n : m > 0 -> n > 0 -> m - n < m.
   Proof. intros H1 H2. destruct m, n; try lia. Qed.
 
+  Lemma exp_pos b n : b > 0 -> b ^ n > 0.
+  Proof.
+    intros.
+    induction n.
+    - auto.
+    - simpl. lia.
+  Qed.
+
+  Lemma skipn_exp_length {A} n (xs : list A) : length xs > 0 -> length (skipn (2^n) xs) < length xs.
+  Proof.
+    intros.
+    rewrite skipn_length.
+    eapply sub_lt_pos.
+    - assumption.
+    - eapply exp_pos; lia.
+  Qed.
+
+
 End Utilities.
 
 Section ListOperations.
@@ -121,6 +139,38 @@ Section ListOperations.
     - assert (n < 2^n) by (eapply pow_gt_lin_r; lia).
       lia.
   Defined.
+
+  Lemma unfold_trim_exp (n : nat) (xs : list A) :
+    trim_exp n xs =
+    match xs with
+    | [] => []
+    | _ => firstn (2^n) xs :: trim_exp (S n) (skipn (2^n) xs)
+    end.
+  Proof with eauto.
+    unfold trim_exp at 1. unfold trim_exp_func. rewrite fix_sub_eq.
+    - destruct xs...
+    - intros [? ?] ? ? ?; simpl. destruct l... apply f_equal...
+  Qed.
+
+  Lemma concat_trim_exp n xs : concat (trim_exp n xs) = xs.
+  Proof.
+    remember (length xs) as l.
+    revert n xs Heql.
+    induction l using Wf_nat.lt_wf_ind.
+    intros.
+    erewrite unfold_trim_exp.
+    destruct xs.
+    - reflexivity.
+    - simpl.
+      erewrite H.
+      3: reflexivity.
+      + eapply firstn_skipn.
+      + subst.
+        eapply skipn_exp_length.
+        simpl. lia.
+  Qed.
+
+  Global Opaque trim_exp.
 
   Fixpoint split_exp_left (n : nat) (xss : list (list A)) : list (list A) :=
     match xss with
