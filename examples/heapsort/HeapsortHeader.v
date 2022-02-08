@@ -329,6 +329,19 @@ Section BinaryTree.
     | BT_node x l r => 1 + max (rank l) (rank r)
     end.
 
+  Lemma btsize_eq_1 t : btsize t = 1 ->
+                        match t with
+                        | BT_nil => False
+                        | BT_node x l r => l = BT_nil /\ r = BT_nil
+                        end.
+  Proof.
+    intros.
+    destruct t; try discriminate.
+    destruct t1; try discriminate.
+    destruct t2; try discriminate.
+    auto.
+  Qed.
+
 End BinaryTree.
 
 Arguments bintree : clear implicits.
@@ -587,6 +600,16 @@ Section BinaryTreeAccessories.
   Lemma toList_length t : length (toList t) = btsize t.
   Admitted.
 
+  Lemma toList_step t : btsize t >= 1 -> match t with
+                                       | BT_nil => False
+                                       | BT_node x _ _ => toList t = x :: tail (toList t)
+                                       end.
+  Proof.
+    intros.
+    destruct t; simpl in H; try lia.
+    reflexivity.
+  Qed.
+
 End BinaryTreeAccessories.
 
 Section CompleteBinaryTree.
@@ -782,6 +805,15 @@ Section HeapProperty.
 
   Lemma heap_erase_priority p t : heap_pr p t -> heap t.
   Proof. intros. destruct H; econstructor; assumption. Qed.
+
+  Lemma heap_pr_if_heap (R_refl : forall x, R x x) t : btsize t >= 1 -> heap t -> exists p, heap_pr p t.
+  Proof.
+    intros Hₛ Hₕ.
+    destruct Hₕ; simpl in Hₛ; try lia.
+    eexists.
+    econstructor; try assumption.
+    eapply R_refl.
+  Qed.
 
   Lemma heap_at_0 t : heap_at 0 t -> heap t.
   Proof.

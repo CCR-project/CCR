@@ -41,16 +41,16 @@ Section HEAPSORT.
 
   Definition heapify_spec : fspec :=
     mk_simple (X := bintree Z * Z * Z)
-              (fun '(tree, y, k) =>
+              (fun '(tree, p, k) =>
                 ( ord_pure 1
                 , fun varg => ⌜varg = (toList tree, k)↑
                            /\ complete tree
-                           /\ option_root tree = Some y
+                           /\ option_root tree = Some p
                            /\ heap Z.ge tree⌝
                 , fun vret => ∃ tree' : bintree Z, ⌜vret = (toList tree')↑
                                                 /\ complete tree'         
                                                 /\ (k :: tail (toList tree) ≡ₚ toList tree')
-                                                /\ heap_pr Z.ge y tree'⌝
+                                                /\ heap_pr Z.ge p tree'⌝
                 )
               )%I.
 
