@@ -109,6 +109,15 @@ Section Utilities.
     - eapply exp_pos; lia.
   Qed.
 
+  Lemma tail_length {A} (xs : list A) : length xs > 0 -> length (tail xs) = length xs - 1.
+  Admitted.
+
+  Lemma removelast_length {A} (xs : list A) : length xs > 0 -> length (removelast xs) = length xs - 1.
+  Admitted.
+
+  Lemma trim_head_last {A} (xs : list A) : length xs >= 2 -> exists x ys y, xs = [x] ++ ys ++ [y].
+  Admitted.
+
 End Utilities.
 
 Section ListOperations.
@@ -888,6 +897,9 @@ Section HeapProperty.
     - eapply heap_if_leaf; assumption.
     - auto.
   Qed.
+
+  Lemma removelast_heap t : heap t -> heap (fromList (removelast (toList t))).
+  Admitted.
 
 End HeapProperty.
 

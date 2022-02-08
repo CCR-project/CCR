@@ -232,13 +232,14 @@ Section SIMMODSEM.
                   | BT_node p _ _ => toList tree = p :: tail (toList tree)
                   end)
         by (eapply toList_step; lia).
-      destruct tree as [| q tree1 tree2 ]; try contradiction.
-      set (xs' := toList (BT_node q tree1 tree2)) in *.
-      unfold xs' at 3.
-      remember xs' as xs1.
-      subst xs'.
-      assert (Hxs1 : << H : xs1 = toList (BT_node q tree1 tree2) >>) by assumption.
-      clear Heqxs1.
+      destruct tree as [| q tree1 tree2 ] eqn: Etree; try contradiction.
+      rewrite <- Etree in *.
+      set (xs1 := toList tree) in *.
+      unfold xs1 at 3.
+      rewrite Etree.
+      assert (Etree' : << H : tree = BT_node q tree1 tree2 >>) by assumption; clear Etree.
+      assert (H_length : length xs1 = l + 2)
+        by (subst xs1; rewrite toList_length; lia).
       steps.
       acatch.
       { eapply STBINCL. stb_tac. ss. }
@@ -247,23 +248,59 @@ Section SIMMODSEM.
         lia.
       }
       hcall (fromList (removelast xs1), q, last xs1 0%Z) _ with "".
-      { iModIntro. iSplit; ss. iPureIntro. esplits.
+      { iModIntro. iSplit; auto. iPureIntro. esplits.
         - rewrite toList_fromList. reflexivity.
         - eapply complete_fromList.
-        - admit "easy".
-        - admit "heap".
+        - assert (tail xs1 <> []).
+          { destruct xs1 as [| x [] ]; simpl in H_length; try lia.
+            auto.
+          }
+          rewrite H. simpl. destruct (tail xs1); try contradiction.
+          reflexivity.
+        - eapply heap_erase_priority in Hₕ.
+          subst.
+          eapply removelast_heap.
+          assumption.
         - reflexivity.
       }
       { ss. splits; et; oauto. }
-      mDesAll. des. steps.
+      mDesAll. rename a into tree'. destruct PURE1 as [PURE1 [PURE2 [PURE3 PURE4]]].
+      steps.
+      des.
+      rewrite toList_fromList in PURE3.
       deflag.
       eapply IHl.
-      - admit "permutation".
-      - admit "sortedness".
+      - rewrite <- PURE3.
+        rewrite <- Hₚ.
+        rewrite (app_assoc _ [q] ys).
+        eapply Permutation_app_tail.
+        rewrite Permutation_app_comm.
+        rewrite H.
+        eapply (Permutation_app_head [q]).
+        rewrite <- H.
+        assert (H1 : exists x ys y, xs1 = [x] ++ ys ++ [y])
+          by (eapply trim_head_last; lia).
+        des.
+        rewrite H1.
+        replace (tail ([x] ++ ys0 ++ [y])) with (ys0 ++ [y]) by reflexivity.
+        rewrite app_assoc.
+        rewrite last_last.
+        rewrite removelast_last.
+        simpl.
+        symmetry.
+        eapply Permutation_app_comm.
+      - econs; ss. destruct ys.
+        + econs.
+        + econs. destruct Hₕ; try discriminate. inversion Etree'. subst. lia.
       - assumption.
       - ss.
       - assumption.
-      - admit "size".
+      - rewrite <- toList_length.
+        erewrite Permutation_length by (symmetry; apply PURE3).
+        simpl.
+        assert (length (removelast xs1) = l + 1)
+          by (rewrite removelast_length; lia).
+        rewrite tail_length; lia.
       - red. inversion WF. econs. et.
       - assumption.
     }
