@@ -542,6 +542,18 @@ Section CompleteBinaryTree.
     eapply concat_trim_exp.
   Qed.
 
+  Lemma toList_2nd x l r
+    (H_size : 2 <= length (toList (BT_node x l r)))
+    (H_complete : complete (BT_node x l r))
+    : lookup (toList (BT_node x l r)) 1 = option_root l.
+  Admitted.
+
+  Lemma toList_3rd x l r 
+    (H_size : 3 <= length (toList (BT_node x l r)))
+    (H_complete : complete (BT_node x l r))
+    : lookup (toList (BT_node x l r)) 2 = option_root r.
+  Admitted.
+
 End CompleteBinaryTree.
 
 (* (* Example "toList" *)
