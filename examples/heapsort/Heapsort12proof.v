@@ -218,7 +218,7 @@ Section SIMMODSEM.
     clear H_size.
 
     deflag.
-    revert tree ys Hₚ Hₛ Hc H_head Hₕ Hₗ w ctx mp_src mp_tgt mr_src WF ACC.
+    revert tree p ys Hₚ Hₛ Hc H_head Hₕ Hₗ w ctx mp_src mp_tgt mr_src WF ACC.
     induction l.
     (* second loop *)
     2: {
@@ -232,9 +232,13 @@ Section SIMMODSEM.
                   | BT_node p _ _ => toList tree = p :: tail (toList tree)
                   end)
         by (eapply toList_step; lia).
-      remember (toList tree) as xs1.
       destruct tree as [| q tree1 tree2 ]; try contradiction.
-      rewrite H.
+      set (xs' := toList (BT_node q tree1 tree2)) in *.
+      unfold xs' at 3.
+      remember xs' as xs1.
+      subst xs'.
+      assert (Hxs1 : << H : xs1 = toList (BT_node q tree1 tree2) >>) by assumption.
+      clear Heqxs1.
       steps.
       acatch.
       { eapply STBINCL. stb_tac. ss. }
@@ -242,12 +246,26 @@ Section SIMMODSEM.
         eapply OrdArith.lt_from_nat.
         lia.
       }
-      admit "wip".
-      (*
-      hcall _ _ with "".
-      { iModIntro. iSplit; ss. admit "wip". }
-      { admit "wip". }
-       *)
+      hcall (fromList (removelast xs1), q, last xs1 0%Z) _ with "".
+      { iModIntro. iSplit; ss. iPureIntro. esplits.
+        - rewrite toList_fromList. reflexivity.
+        - eapply complete_fromList.
+        - admit "easy".
+        - admit "heap".
+        - reflexivity.
+      }
+      { ss. splits; et; oauto. }
+      mDesAll. des. steps.
+      deflag.
+      eapply IHl.
+      - admit "permutation".
+      - admit "sortedness".
+      - assumption.
+      - ss.
+      - assumption.
+      - admit "size".
+      - red. inversion WF. econs. et.
+      - assumption.
     }
     
     i. ss. rewrite unfold_iter_eq. steps.
@@ -266,7 +284,7 @@ Section SIMMODSEM.
       destruct ys.
       + econs.
       + econs. lia.
-    Unshelve. et.
+    Unshelve. et. et.
   Qed.
 
   Theorem correct : refines2 [Heapsort1.Heapsort] [Heapsort2.Heapsort GlobalStb].
