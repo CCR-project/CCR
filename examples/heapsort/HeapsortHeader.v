@@ -102,6 +102,15 @@ Section Utilities.
     - simpl. lia.
   Qed.
 
+  Lemma skipn_exp_length {A} n (xs : list A) : length xs > 0 -> length (skipn (2^n) xs) < length xs.
+  Proof.
+    intros.
+    rewrite skipn_length.
+    eapply sub_lt_pos.
+    - assumption.
+    - eapply exp_pos; lia.
+  Qed.
+
 End Utilities.
 
 Section ListOperations.
@@ -125,11 +134,9 @@ Section ListOperations.
     | _ => firstn (2^n) xs :: trim_exp (S n) (skipn (2^n) xs)
     end.
   Next Obligation.
-    rewrite skipn_length.
-    eapply sub_lt_pos.
-    - destruct xs; try contradiction.
-      simpl. lia.
-    - eapply exp_pos; lia.
+    eapply skipn_exp_length.
+    destruct xs; try contradiction.
+    simpl. lia.
   Defined.
 
   Lemma unfold_trim_exp (n : nat) (xs : list A) :
@@ -158,10 +165,8 @@ Section ListOperations.
       3: reflexivity.
       + eapply firstn_skipn.
       + subst.
-        rewrite skipn_length.
-        eapply sub_lt_pos.
-        * simpl. lia.
-        * eapply exp_pos; lia.
+        eapply skipn_exp_length.
+        simpl. lia.
   Qed.
 
   Global Opaque trim_exp.
@@ -214,10 +219,10 @@ Section ListOperations.
   Lemma split_exp_zip n xss : zipWith (@app _) (split_exp_left n xss) (split_exp_right n xss) = xss.
   Admitted.
 
-  Lemma complete_split_left n xss : complete_list (S n) xss -> complete_list n (split_exp_left 0 xss).
+  Lemma complete_split_left n xss : complete_list (S n) xss -> complete_list n (split_exp_left n xss).
   Admitted.
 
-  Lemma complete_split_right n xss : complete_list (S n) xss -> complete_list n (split_exp_right 0 xss).
+  Lemma complete_split_right n xss : complete_list (S n) xss -> complete_list n (split_exp_right n xss).
   Admitted.
 
 End ListOperations.
