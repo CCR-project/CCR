@@ -516,13 +516,54 @@ Section BinaryTreeAccessories.
       rewrite fold_left_rev_right, rev_unit. simpl. now rewrite <- fold_left_rev_right, rev_involutive.
   Qed.
 
-  Theorem topdown t (P : list dir_t -> bintree A -> Prop)
-    (IH_l : forall x l r ds, occurs t (Dir_left :: ds) (BT_node x l r) -> P (Dir_left :: ds) (BT_node x l r) -> P ds l)
-    (IH_r : forall x l r ds, occurs t (Dir_right :: ds) (BT_node x l r) -> P (Dir_right :: ds) (BT_node x l r) -> P ds r)
-    : forall ds root, occurs t ds root -> P ds root -> P [] t.
-  Proof. intros ds root X; induction X; eauto. Qed.
+  Lemma topdown' root (P : nat -> bintree A -> Prop)
+    (IH_l : forall x l r i, subtree_nat root i = Some (BT_node x l r) -> P i (BT_node x l r) -> P (2 * i + 1) l)
+    (IH_r : forall x l r i, subtree_nat root i = Some (BT_node x l r) -> P i (BT_node x l r) -> P (2 * i + 2) r)
+    : forall i t, subtree_nat root i = Some t -> P 0 root -> P i t.
+  Proof with lia || discriminate || eauto.
+    unfold subtree_nat in *.
+    induction i as [i IH] using Wf_nat.lt_wf_ind.
+    assert (claim1 := unfold_decode i).
+    destruct (Nat.eq_dec i 0) as [H_yes1 | H_no1].
+    - subst i. intros t H_occurs. apply occurs_iff in H_occurs. inversion H_occurs; subst...
+    - intros t H_occurs H_t. destruct (Nat.eq_dec (i mod 2) 1) as [H_yes2 | H_no2].
+      + rewrite claim1, option_subtree_last in H_occurs.
+        destruct (option_subtree (decode ((i - 1) / 2)) root) as [[ | x l r] | ] eqn: H_obs...
+        apply Some_inj in H_occurs. simpl dir_t_rect in H_occurs. subst t.
+        assert (claim2 : i = 2 * ((i - 1) / 2) + 1).
+        { apply (positive_odd i ((i - 1) / 2))... }
+        rewrite claim2. apply IH_l with (x := x) (l := l) (r := r)...
+        apply IH...
+      + assert (claim3 : i mod 2 = 0).
+        { pose (Nat.mod_bound_pos i 2)... }
+        rewrite claim1, option_subtree_last in H_occurs.
+        destruct (option_subtree (decode ((i - 2) / 2)) root) as [[ | x l r] | ] eqn: H_obs...
+        apply Some_inj in H_occurs. simpl dir_t_rect in H_occurs. subst t.
+        assert (claim2 : i = 2 * ((i - 2) / 2) + 2).
+        { apply (positive_even i ((i - 2) / 2))... }
+        rewrite claim2. apply IH_r with (x := x) (l := l) (r := r)...
+        apply IH...
+  Qed.
 
-  Theorem bottomup' root (P : nat -> bintree A -> Prop)
+  Theorem topdown root (P : list dir_t -> bintree A -> Prop)
+    (IH_l : forall x l r ds, option_subtree ds root = Some (BT_node x l r) -> P ds (BT_node x l r) -> P (ds ++ [Dir_left]) l)
+    (IH_r : forall x l r ds, option_subtree ds root = Some (BT_node x l r) -> P ds (BT_node x l r) -> P (ds ++ [Dir_right]) r)
+    : forall ds t, option_subtree ds root = Some t -> P [] root -> P ds t.
+  Proof with eauto.
+    intros ds t H_occurs H_t. rewrite <- decode_encode with (ds := ds).
+    apply topdown' with (root := root) (P := fun i t => P (decode i) t) (i := encode ds) (t := t)...
+    - clear ds t H_occurs H_t. intros x l r i H_occurs H_l.
+      assert (claim2 : decode (2 * i + 1) = decode i ++ [Dir_left]).
+      { apply encode_inj. rewrite encode_decode, encode_last. rewrite encode_decode... }
+      rewrite claim2. apply IH_l with (x := x) (l := l) (r := r)...
+    - clear ds t H_occurs H_t. intros x l r i H_occurs H_r.
+      assert (claim2 : decode (2 * i + 2) = decode i ++ [Dir_right]).
+      { apply encode_inj. rewrite encode_decode, encode_last. rewrite encode_decode... }
+      rewrite claim2. apply IH_r with (x := x) (l := l) (r := r)...
+    - unfold subtree_nat. rewrite decode_encode...
+  Qed.
+
+  Lemma bottomup' root (P : nat -> bintree A -> Prop)
     (IH_l : forall x l r i, subtree_nat root (2 * i + 1) = Some l -> P (2 * i + 1) l -> P i (BT_node x l r))
     (IH_r : forall x l r i, subtree_nat root (2 * i + 2) = Some r -> P (2 * i + 2) r -> P i (BT_node x l r))
     : forall i t, subtree_nat root i = Some t -> P i t -> P 0 root.
@@ -558,16 +599,15 @@ Section BinaryTreeAccessories.
     (IH_r : forall x l r ds, occurs r (ds ++ [Dir_right]) root -> P (ds ++ [Dir_right]) r -> P ds (BT_node x l r))
     : forall ds t, occurs t ds root -> P ds t -> P [] root.
   Proof with eauto.
-    assert (claim1 := bottomup' root (fun i t => P (decode i) t)).
     intros ds t H_occurs H_t. replace ([]) with (decode 0)...
-    apply claim1 with (i := encode ds) (t := t).
+    apply bottomup' with (root := root) (P := fun i t => P (decode i) t) (i := encode ds) (t := t).
     - clear ds t H_occurs H_t. intros x l r i H_occurs H_l.
       assert (claim2 : decode (2 * i + 1) = decode i ++ [Dir_left]).
       { apply encode_inj. rewrite encode_decode, encode_last. rewrite encode_decode... }
       apply IH_l.
       + apply occurs_iff. replace (decode i ++ [Dir_left]) with (decode (2 * i + 1))...
       + rewrite <- claim2...
-    - clear ds t H_occurs H_t. intros x l r i H_occurs H_l.
+    - clear ds t H_occurs H_t. intros x l r i H_occurs H_r.
       assert (claim2 : decode (2 * i + 2) = decode i ++ [Dir_right]).
       { apply encode_inj. rewrite encode_decode, encode_last. rewrite encode_decode... }
       apply IH_r.
@@ -817,25 +857,7 @@ Section CompleteBinaryTree.
     (H_complete : complete root)
     (H_occurs : occurs t (decode i) root)
     : lookup (toList root) i = option_root t.
-  Proof with lia || eauto.
-    (* revert H_complete i H_bound t H_occurs. unfold toList, lookup.
-    induction root as [ | x l IH_l r IH_r].
-    all: intros H_complete i H_bound t H_occurs; assert (claim1 := encode_decode i).
-    all: inversion H_occurs; subst; rewrite <- H0 in claim1; subst i...
-    all: clear H0; rewrite decode_encode in H_occurs.
-    - *)
-    remember (decode i) as ds eqn: H_decode in H_occurs.
-    assert (claim1 : encode ds = i).
-    { rewrite H_decode. apply encode_decode. }
-    subst i; clear H_decode. unfold toList, lookup.
-    transitivity (nth_error (concat (toListAux t)) (encode [])).
-    2: destruct t... remember (nth_error (concat (toListAux root)) (encode ds)) as obs eqn: H_obs.
-    enough (to_show : encode [] < length (toList root) /\ obs = nth_error (concat (toListAux t)) (encode [])) by tauto.
-    assert (H_acc : encode ds < length (toList root) /\ obs = nth_error (concat (toListAux root)) (encode ds)) by tauto.
-    clear H_bound H_obs. revert H_occurs H_acc.
-    assert (claim2 := topdown t (fun ds_acc t_acc => encode ds_acc < length (toList root) /\ obs = nth_error (concat (toListAux t_acc)) (encode ds_acc))).
-    cbn beta in claim2. apply claim2... all: clear ds claim2; intros x l r ds H_occurs [H_bound H_obs].
-    - rewrite unfold_toListAux in H_obs.
+  Proof.
   Admitted.
 
   Lemma complete_leaves (t : bintree A) :
