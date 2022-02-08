@@ -477,10 +477,6 @@ Section BinaryTreeAccessories.
     end.
   Proof. induction ds as [ | [ | ] ds IH]; eauto. Qed.
 
-  Definition subtree : nat -> bintree A -> bintree A.
-  Proof.
-     Admitted.
-
   Inductive occurs (t : bintree A) : list dir_t -> bintree A -> Prop :=
   | Occurs_0
     : occurs t [] t
@@ -502,10 +498,99 @@ Section BinaryTreeAccessories.
     all: destruct root as [ | x l r]...
   Qed.
 
-  Theorem toList_good root i t
-    (H_occurs : occurs t (decode i) root)
+  Lemma toList_destuct_l x l r i n (is_ptree : is_perfect (BT_node x l r) (S n)):
+    lookup (toList l) i = @lookup A (toList (BT_node x l r)) (i + pow 2 (length (decode i)-1)). 
+  Proof with eauto.
+    inversion is_ptree;subst.
+    remember (decode i) as t. (*)revert Heqt H. revert i.
+    induction t;intros.
+    - apply (f_equal encode) in Heqt. rewrite (encode_decode i) in Heqt.
+      unfold encode in Heqt. simpl in Heqt. symmetry in Heqt. apply H in Heqt. contradiction.
+    - Admitted.
+    *)
+          
+  (*)  fold lookup.
+    destruct (decode i) eqn : E_dc...
+    destruct d.
+    - unfold toList. rewrite toList_step_unfold;simpl.
+      inversion is_ptree;subst. Admitted.
+    *) Admitted.
+
+  
+  Lemma toList_good_per root i t n m
+        (H_occurs : occurs t (decode i) root)
+        (is_ptree : is_perfect root n)
+        (bound : length (decode i) < m)
     : lookup (toList root) i = option_root t.
   Proof.
+    revert H_occurs bound. revert t i.
+    induction is_ptree;intros.
+    - inversion H_occurs. unfold toList. repeat rewrite toList_step_unfold. unfold lookup.
+      replace (nth_error [] i) with (@None A);auto.
+      destruct i;auto.
+    - induction m.
+      + admit.
+      + assert (ID1 : forall (t : bintree A) (i : nat),
+                occurs t (decode i) l ->
+                length (decode i) < m -> lookup (toList l) i = option_root t).
+        { intros. apply IHis_ptree1;auto.}
+        assert (ID2 : forall (t : bintree A) (i : nat),
+                occurs t (decode i) r ->
+                length (decode i) < m -> lookup (toList r) i = option_root t).
+        { intros. apply IHis_ptree2;auto.}
+        assert (length (decode i) < m \/ length (decode i) = m) by nia.
+        destruct H.
+        * apply IHm;auto.
+        * 
+          clear ID1 ID2 IHm bound.
+          destruct (decode i) eqn : E.
+          ** inversion H_occurs;subst. apply (f_equal encode) in E.
+             unfold encode in E at 2. simpl in E. rewrite (encode_decode i) in E. rewrite E.
+             simpl. unfold toList. rewrite toList_step_unfold. auto.
+          ** revert H. inversion H_occurs;subst;intros.
+             *** rewrite <- E in H.
+                 assert (l0 = decode (encode l0)) by (rewrite decode_encode;auto).
+                 rewrite H0 in H_l. apply IHis_ptree1 in H_l.
+                 2:{rewrite <- H0. rewrite E in H. simpl in H. nia.}
+                 rewrite <- H_l.
+                 revert is_ptree1 is_ptree2.
+                 revert E.
+                 clear IHis_ptree1 IHis_ptree2 H_occurs H_l H H0 t0 m.
+                 revert i l0 x l r n.
+                 intros i l0. revert i.
+                 
+
+
+
+                 
+                 induction l0.
+                 ****
+                   intros. apply (f_equal encode) in E.
+                   rewrite (encode_decode i) in E. unfold encode in E. simpl in E.
+                   rewrite E.
+                   unfold toList. rewrite toList_step_unfold. simpl.
+                   rewrite toList_step_unfold.
+                   destruct l eqn : E1.
+                   ***** inversion is_ptree1;subst. inversion is_ptree2;subst. auto.
+                   ***** rewrite toList_step_unfold. auto.
+                 **** 
+                   
+                 
+                 rewrite <- H_l. 
+        * inversion 
+        Admitted.
+
+  Theorem toList_good root i t n
+    (H_occurs : occurs t (decode i) root) (is_ctree : is_complete root n)
+    : lookup (toList root) i = option_root t.
+  Proof.
+    revert H_occurs. revert t i.
+    induction is_ctree;intros.
+    - inversion H_occurs. unfold toList. repeat rewrite toList_step_unfold. unfold lookup.
+      replace (nth_error [] i) with (@None A);auto.
+      destruct i;auto.
+    - 
+    
   Admitted.
 
 
