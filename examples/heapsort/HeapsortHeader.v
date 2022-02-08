@@ -13,9 +13,6 @@ Import ListNotations.
 
 Section Utilities.
 
-  Definition zipWith {A B C : Type} (f : A -> B -> C) (xs : list A) (ys : list B) : list C :=
-    map (uncurry f) (combine xs ys).
-
   Definition option2list {A : Type} : option A -> list A :=
     @option_rect A (fun _ => list A) (fun x => [x]) [].
 
@@ -186,6 +183,13 @@ Section ListOperations.
       else skipn (2^n) xs :: split_exp_right (S n) xss
     end.
 
+  Fixpoint zip_exp (xss yss : list (list A)) : list (list A) :=
+    match xss, yss with
+    | xs :: xss, ys :: yss => (xs ++ ys) :: zip_exp xss yss
+    | [], yss => yss
+    | xss, [] => xss
+    end.
+
   Lemma split_exp_left_length n xss : length (split_exp_left n xss) = length xss.
   Proof.
     revert n.
@@ -238,7 +242,7 @@ Section ListOperations.
         inversion claim5.
   Qed.
 
-  Lemma split_exp_zip n xss : zipWith (@app _) (split_exp_left n xss) (split_exp_right n xss) = xss.
+  Lemma split_zip n xss : zip_exp (split_exp_left n xss) (split_exp_right n xss) = xss.
   Admitted.
 
   Lemma complete_split_left n xss : complete_list (S n) xss -> complete_list n (split_exp_left n xss).
@@ -499,13 +503,13 @@ Section CompleteBinaryTree.
   Fixpoint toListAux (t : bintree A) : list (list A) :=
     match t with
     | BT_nil => []
-    | BT_node x l r => [x] :: zipWith (@app _) (toListAux l) (toListAux r)
+    | BT_node x l r => [x] :: zip_exp (toListAux l) (toListAux r)
     end.
 
   Lemma unfold_toListAux t :
     toListAux t = match t with
                   | BT_nil => []
-                  | BT_node x l r => [x] :: zipWith (@app _) (toListAux l) (toListAux r)
+                  | BT_node x l r => [x] :: zip_exp (toListAux l) (toListAux r)
                   end.
   Proof. destruct t; reflexivity. Qed.
 
@@ -527,7 +531,7 @@ Section CompleteBinaryTree.
         simpl.
         erewrite IH with (xss := split_exp_left 0 xss); try reflexivity.
         erewrite IH with (xss := split_exp_right 0 xss); try reflexivity.
-        rewrite split_exp_zip.
+        rewrite split_zip.
         reflexivity.
         * assert (length (split_exp_right 0 xss) <= length xss)
             by eapply split_exp_right_length.
