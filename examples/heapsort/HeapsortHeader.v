@@ -242,8 +242,34 @@ Section ListOperations.
         inversion claim5.
   Qed.
 
-  Lemma split_zip n xss : zip_exp (split_exp_left n xss) (split_exp_right n xss) = xss.
-  Admitted.
+  Lemma split_zip n xss : complete_list (S n) xss -> zip_exp (split_exp_left n xss) (split_exp_right n xss) = xss.
+    revert n.
+    induction xss as [| xs xss ].
+    - reflexivity.
+    - intros.
+      Opaque pow.
+      simpl in H.
+      Transparent pow.
+      destruct H; destruct H.
+      + simpl.
+        assert (2 ^ n > 0)
+          by (eapply exp_pos; lia).
+        assert ((length xs <=? 2^n) = false)
+          by (eapply leb_correct_conv; simpl in H; lia).
+        rewrite H2.
+        rewrite firstn_skipn.
+        rewrite IHxss by assumption.
+        reflexivity.
+      + subst. simpl.
+        remember (length xs <=? 2^n).
+        destruct b.
+        * rewrite firstn_all2.
+          reflexivity.
+          eapply leb_complete.
+          auto.
+        * rewrite firstn_skipn.
+          reflexivity.
+  Qed.
 
   Lemma complete_split_left n xss : complete_list (S n) xss -> complete_list n (split_exp_left n xss).
   Admitted.
@@ -531,7 +557,7 @@ Section CompleteBinaryTree.
         simpl.
         erewrite IH with (xss := split_exp_left 0 xss); try reflexivity.
         erewrite IH with (xss := split_exp_right 0 xss); try reflexivity.
-        rewrite split_zip.
+        rewrite split_zip by assumption.
         reflexivity.
         * assert (length (split_exp_right 0 xss) <= length xss)
             by eapply split_exp_right_length.
