@@ -377,6 +377,17 @@ Section BinaryTreeIndexing.
       all: apply f_equal...
   Qed.
 
+  Lemma encode_last ds d :
+    encode (ds ++ [d]) =
+    match d with
+    | Dir_left => 2 * encode ds + 1
+    | Dir_right => 2 * encode ds + 2
+    end.
+  Proof.
+    unfold encode at 1. rewrite <- fold_left_rev_right. rewrite rev_unit.
+    unfold fold_right. unfold encode. rewrite <- fold_left_rev_right. destruct d; eauto.
+  Qed.
+
   Lemma decodable i :
     {ds : list dir_t | encode ds = i}.
   Proof with lia || eauto.
@@ -806,7 +817,25 @@ Section CompleteBinaryTree.
     (H_complete : complete root)
     (H_occurs : occurs t (decode i) root)
     : lookup (toList root) i = option_root t.
-  Proof.
+  Proof with lia || eauto.
+    (* revert H_complete i H_bound t H_occurs. unfold toList, lookup.
+    induction root as [ | x l IH_l r IH_r].
+    all: intros H_complete i H_bound t H_occurs; assert (claim1 := encode_decode i).
+    all: inversion H_occurs; subst; rewrite <- H0 in claim1; subst i...
+    all: clear H0; rewrite decode_encode in H_occurs.
+    - *)
+    remember (decode i) as ds eqn: H_decode in H_occurs.
+    assert (claim1 : encode ds = i).
+    { rewrite H_decode. apply encode_decode. }
+    subst i; clear H_decode. unfold toList, lookup.
+    transitivity (nth_error (concat (toListAux t)) (encode [])).
+    2: destruct t... remember (nth_error (concat (toListAux root)) (encode ds)) as obs eqn: H_obs.
+    enough (to_show : encode [] < length (toList root) /\ obs = nth_error (concat (toListAux t)) (encode [])) by tauto.
+    assert (H_acc : encode ds < length (toList root) /\ obs = nth_error (concat (toListAux root)) (encode ds)) by tauto.
+    clear H_bound H_obs. revert H_occurs H_acc.
+    assert (claim2 := topdown t (fun ds_acc t_acc => encode ds_acc < length (toList root) /\ obs = nth_error (concat (toListAux t_acc)) (encode ds_acc))).
+    cbn beta in claim2. apply claim2... all: clear ds claim2; intros x l r ds H_occurs [H_bound H_obs].
+    - rewrite unfold_toListAux in H_obs.
   Admitted.
 
   Lemma complete_leaves (t : bintree A) :
