@@ -702,6 +702,18 @@ Section CompleteBinaryTree.
     : lookup (toList (BT_node x l r)) 2 = option_root r.
   Admitted.
 
+  Lemma complete_leaves (t : bintree A) :
+    complete t ->
+    forall j, j > size t / 2 ->
+         match subtree_nat t (j - 1) with
+         | None => True
+         | Some t' => leaf t'
+         end.
+  Admitted.
+
+  Lemma complete_fromList (xs : list A) : complete (fromList xs).
+  Admitted.
+
 End CompleteBinaryTree.
 
 (* (* Example "toList" *)
@@ -774,8 +786,21 @@ Section HeapProperty.
     unfold heap_at. simpl. tauto.
   Qed.
 
-  Lemma heap_at_leaves t : forall j, j > length (toList t) / 2 -> heap_at (j - 1) t.
-  Admitted.
+  Lemma heap_if_leaf t : leaf t -> heap t.
+  Proof.
+    intro H. destruct t.
+    - econstructor.
+    - simpl in H. destruct H. subst. econstructor; econstructor.
+  Qed.
+
+  Lemma heap_at_leaves t : complete t -> forall j, j > size t / 2 -> heap_at (j - 1) t.
+  Proof.
+    intros H j Hj. unfold heap_at.
+    assert (H1 := complete_leaves t H j Hj).
+    destruct (subtree_nat t (j-1)).
+    - eapply heap_if_leaf; assumption.
+    - auto.
+  Qed.
 
 End HeapProperty.
 
