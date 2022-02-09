@@ -110,13 +110,26 @@ Section Utilities.
   Qed.
 
   Lemma tail_length {A} (xs : list A) : length xs > 0 -> length (tail xs) = length xs - 1.
-  Admitted.
+  Proof. destruct xs; simpl; lia || eauto. Qed.
 
   Lemma removelast_length {A} (xs : list A) : length xs > 0 -> length (removelast xs) = length xs - 1.
-  Admitted.
+  Proof with simpl; try lia.
+    revert xs. induction xs using rev_ind...
+    rewrite removelast_last, app_length...
+  Qed.
 
   Lemma trim_head_last {A} (xs : list A) : length xs >= 2 -> exists x ys y, xs = [x] ++ ys ++ [y].
-  Admitted.
+  Proof with simpl; lia || eauto.
+    destruct xs as [ | x' xs']...
+    intros H_len. exists x'. destruct xs' as [ | x'' xs''].
+    - inversion H_len...
+    - enough (to_show : exists ys y, x'' :: xs'' = ys ++ [y]).
+      + destruct to_show as [ys [y H_eq]].
+        exists ys, y. apply f_equal...
+      + clear x' H_len. revert x''. induction xs'' as [ | x xs IH].
+        { intros x'. exists [], x'... }
+        { intros x'. destruct (IH x) as [ys [y H_eq]]. exists (x' :: ys), y... apply f_equal... }
+  Qed.
 
 End Utilities.
 
@@ -484,8 +497,12 @@ Section BinaryTreeAccessories.
     forall root,
     option_subtree (ds ++ [d]) root =
     match option_subtree ds root with
-    | Some (BT_node x l r) => Some (dir_t_rect (fun _ => bintree A) l r d)
-    | _ => None
+    | None => None
+    | Some t => 
+      match t with
+      | BT_nil => None
+      | BT_node x l r => Some (dir_t_rect (fun _ => bintree A) l r d)
+      end
     end.
   Proof.
     enough (claim1 : option_subtree (ds ++ [d]) = fold_right subtree_step (subtree_step d subtree_init) ds).
