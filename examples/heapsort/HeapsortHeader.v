@@ -867,7 +867,7 @@ Section CompleteBinaryTree.
   Lemma complete'_rank t n
     (H_complete : complete' t n)
     : rank t = n.
-  Proof. induction H_complete. 2: apply perfect'_rank in H_l. all: simpl; lia. Qed.
+  Proof. induction H_complete. 2: apply perfect'_rank in H_l. 3: apply perfect'_rank in H_r. all: simpl; lia. Qed.
 
   Lemma toList_lookup root i t
     (H_bound : i < length (toList root))
