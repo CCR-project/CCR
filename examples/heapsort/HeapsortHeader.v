@@ -1324,13 +1324,25 @@ Module NEO.
 
   Definition toList root := flat_map option2list (toListAux root).
 
-  Definition insert (x : A) (root : bintree A) :=
-    match root with
+  Definition insert_init (x : A) (t : bintree A) :=
+    match t with
     | BT_nil => Some (BT_node x BT_nil BT_nil)
     | BT_node x l r => None
     end.
 
-  Definition insert_at x ds := fold_right subtree_step (insert x) ds.
+  Definition insert_step d acc t : option (bintree A) :=
+    match t with
+    | BT_nil => None
+    | BT_node x l r =>
+      match d with
+      | Dir_left => option_map (fun l' => BT_node x l' r) (acc l)
+      | Dir_right => option_map (fun r' => BT_node x l r') (acc r)
+      end
+    end.
+
+  Definition insert_at (x : A) : list dir_t -> bintree A -> option (bintree A) := fold_right subtree_step (insert_init x).
+
+  Definition is_insertable i (root : bintree A) := subtree_nat root i = Some BT_nil.
 
   Definition fromListStep root := fun '(x, i) => @option_rect (bintree A) (fun _ => bintree A) id root (insert_at x (decode i) root).
 
