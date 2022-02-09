@@ -1320,14 +1320,6 @@ Module NEO.
 
   Context {A : Type}.
 
-  Definition corresponds_to (xs : list A) (root : bintree A) : Prop :=
-    forall i,
-    lookup xs i =
-    match subtree_nat root i with
-    | None => None
-    | Some t => option_root t
-    end.
-
   Definition toListAux root := map (fun i => @option_rect (bintree A) (fun _ => option A) option_root None (option_subtree (decode i) root)) (seq 0 ((2 ^ rank root) - 1)).
 
   Definition toList root := flat_map option2list (toListAux root).
@@ -1350,7 +1342,7 @@ Module NEO.
 
   Definition insertAt (x : A) : list dir_t -> bintree A -> option (bintree A) := fold_right insertStep (insertInit x).
 
-  Definition is_insertable i (root : bintree A) := subtree_nat root i = Some BT_nil.
+  Definition insertable (root : bintree A) i := subtree_nat root i = Some BT_nil.
 
   Definition fromListStep root := fun '(x, i) => @option_rect (bintree A) (fun _ => bintree A) id root (insertAt x (decode i) root).
 
