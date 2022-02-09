@@ -131,6 +131,28 @@ Section Utilities.
         { intros x'. destruct (IH x) as [ys [y H_eq]]. exists (x' :: ys), y... apply f_equal... }
   Qed.
 
+  Lemma last_app {A} (xs ys : list A) e : ys <> [] -> last (xs ++ ys) e = last ys e.
+  Proof.
+    intros. induction xs.
+    - reflexivity.
+    - simpl. destruct (xs ++ ys) eqn: E.
+      + eapply app_eq_nil in E. destruct E. contradiction.
+      + assumption.
+  Qed.
+
+  Lemma tail_removelast_last {A} (xs : list A) e : length xs >= 2 -> tail (removelast xs) ++ [last xs e] = tail xs.
+  Proof.
+    intros H. destruct xs as [| x xs] ; simpl in H; try lia.
+    assert (H1 : xs <> [])
+      by (destruct xs; simpl in H; try lia; discriminate).
+    set (H2 := removelast_app [x] H1). simpl app in H2. rewrite H2.
+    set (H3 := last_app [x] xs e H1). simpl app in H3. rewrite H3.
+    simpl tail.
+    symmetry.
+    eapply app_removelast_last.
+    assumption.
+  Qed.
+
 End Utilities.
 
 Section ListOperations.

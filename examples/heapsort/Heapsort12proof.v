@@ -16,6 +16,8 @@ Require Import Coq.Sorting.Sorted.
 
 Set Implicit Arguments.
 
+Ltac steps_weak := repeat (prep; try _step; simpl).
+
 Lemma unfold_iter_eq:
   ∀ (E : Type → Type) (A B : Type) (f : A → itree E (A + B)) (x : A),
     ITree.iter f x = ` lr : A + B <- f x;; match lr with
@@ -93,18 +95,16 @@ Section SIMMODSEM.
     init.
     harg. rename x into xs. mDesAll. clear PURE1. steps.
 
-    remember (length xs <=? 1).
+    remember (length xs <=? 1) as b.
     destruct b.
     (* input is trivially sorted when length xs <= 1 *)
-    { astop. steps. force_l.
-      eexists. steps.
+    { astop. steps. force_l. eexists. steps.
       hret tt; ss.
-      iModIntro. iSplit; ss. iPureIntro.
-      esplits; try reflexivity.
-      destruct xs as [| x []].
+      iModIntro. iSplit; ss. iPureIntro. esplits; try reflexivity.
+      destruct xs as [| x []]; try discriminate.
       - econs.
       - econs; econs.
-      - ss. }
+    }
 
     (* when length xs > 1 *)
     assert (Hxs : length xs > 1)
@@ -234,10 +234,9 @@ Section SIMMODSEM.
       set (xs1 := toList tree) in *.
       unfold xs1 at 3.
       rewrite Etree.
-      assert (Etree' : << H : tree = BT_node q tree1 tree2 >>) by assumption; clear Etree.
       assert (H_length : length xs1 = l + 2)
         by (subst xs1; rewrite toList_length; lia).
-      steps.
+      steps_weak.
       acatch.
       { eapply STBINCL. stb_tac. ss. }
       { instantiate (1 := l + 1).
@@ -261,10 +260,8 @@ Section SIMMODSEM.
         - reflexivity.
       }
       { ss. splits; et; oauto. }
-      mDesAll. rename a into tree'. destruct PURE1 as [PURE1 [PURE2 [PURE3 PURE4]]].
-      steps.
-      des.
-      rewrite toList_fromList in PURE3.
+      mDesAll. rename a into tree'. des. rewrite toList_fromList in PURE3.
+      subst vret_tgt vret_src. steps_weak.
       deflag.
       eapply IHl.
       - rewrite <- PURE3.
@@ -275,20 +272,12 @@ Section SIMMODSEM.
         rewrite H.
         eapply (Permutation_app_head [q]).
         rewrite <- H.
-        assert (H1 : exists x ys y, xs1 = [x] ++ ys ++ [y])
-          by (eapply trim_head_last; lia).
-        des.
-        rewrite H1.
-        replace (tail ([x] ++ ys0 ++ [y])) with (ys0 ++ [y]) by reflexivity.
-        rewrite app_assoc.
-        rewrite last_last.
-        rewrite removelast_last.
-        simpl.
-        symmetry.
-        eapply Permutation_app_comm.
+        rewrite (Permutation_app_comm [last xs1 0%Z] (tail (removelast xs1))).
+        rewrite tail_removelast_last; try lia.
+        reflexivity.
       - econs; ss. destruct ys.
         + econs.
-        + econs. destruct Hₕ; try discriminate. inversion Etree'. subst. lia.
+        + econs. destruct Hₕ; try discriminate. inversion Etree. subst. lia.
       - assumption.
       - ss.
       - assumption.
