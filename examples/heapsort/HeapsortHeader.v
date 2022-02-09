@@ -954,6 +954,68 @@ Section CompleteBinaryTree.
     : lookup (toList root) i = option_root t.
   Proof.
   Admitted.
+
+  Lemma subtree_outrange j (t : bintree A) :
+    complete t -> j >= btsize t ->
+    subtree_nat t j = Some BT_nil \/ subtree_nat t j = None.
+  Admitted.
+
+  Lemma perf_size t n :
+    perfect' t n ->
+    btsize t = 2 ^ n -1.
+  Admitted.
+
+  Lemma decode_ubound j n : j < 2 ^ n - 1 -> length (decode j) < n.
+  Proof.
+    remember (decode j) as l. revert Heql. revert j.
+    induction l;intros.
+    - destruct n;inversion H.
+      
+  Admitted.
+  
+
+  Lemma perfect_leaves (t : bintree A) :
+    (exists n, perfect' t n) ->
+    forall j, (btsize t - 1) / 2 <= j < btsize t ->
+         match subtree_nat t j with
+         | None => True
+         | Some t' => leaf t'
+         end.
+  Proof.
+    intros.
+    unfold subtree_nat.
+    remember (decode j) eqn:E. revert E H H0. revert l j.
+    induction t;intros;destruct H.
+    - destruct l;simpl;auto.
+    - destruct l eqn:E1.
+      + simpl. 
+        remember (decode_nat j) as D;clear HeqD.
+        rewrite <- E in D. rewrite D in H0.
+        assert ((btsize (BT_node x t1 t2) -1) /2 = 0) by nia.
+        remember (div_small_iff (btsize (BT_node x t1 t2) -1) 2) as Y.
+        assert (R : 2<>0) by nia;apply Y in R. clear HeqY. clear Y.
+        apply R in H1. clear R. inversion H;subst.
+        inversion H1.
+        * rewrite  sub_0_r in H3. destruct (btsize t1) eqn:E1.
+          ** simpl in H3. destruct t1;try (inversion E1).
+             inversion H_l. rewrite <- H4 in H_r. inversion H_r;subst. auto.
+          ** assert (btsize t2 = 0) by nia. destruct t2;try (inversion H2).
+             inversion H_r. rewrite <- H5 in H_l. inversion H_l. auto.
+        * inversion H3;subst.
+          ** assert (btsize t1 = 0) by nia. assert (btsize t2 = 0) by nia.
+             destruct t1;try (inversion H2). destruct t2;try (inversion H4). auto.
+          ** inversion H5.
+      + destruct d.
+        * simpl. remember (decode_nat j) as D;clear HeqD.
+          rewrite <- E in D. eapply IHt1.
+          {apply (f_equal decode) in D. rewrite (decode_encode l0) in D.
+           apply D.}
+          {inversion H;subst. exists n;auto.}
+          {simpl length. replace (S (length l0) -1) with (length l0) by nia.
+           simpl btsize in H0. replace (S ( btsize t1 + btsize t2 ) -1) with ( btsize t1 + btsize t2 ) in H0 by nia.
+          }
+        
+        
   
   Lemma complete_leaves (t : bintree A) :
     complete t ->
