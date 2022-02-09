@@ -786,7 +786,7 @@ Section CompleteBinaryTree.
     : complete' (BT_node x l r) (S n)
   | complete_node_complete_perfect {n : nat} x l r
                                    (H_l : complete' l (S n))
-                                   (H_r : complete' r n)
+                                   (H_r : perfect' r n)
     : complete' (BT_node x l r) (S (S n))
   .
 
