@@ -879,6 +879,56 @@ Section CompleteBinaryTree.
     - exact (complete_node_perfect_complete x l r H_l IH_r).
   Qed.
 
+  Check complete'_ind.
+
+  Lemma complete_ind_ranked (P : bintree A -> nat -> Prop) :
+    P BT_nil 0 ->
+    (forall x l r n_l n_r, (n_r = n_l \/ S n_r = n_l) ->
+                      complete' l n_l -> complete' r n_r ->
+                      P l n_l -> P r n_r ->
+                      P (BT_node x l r) (S n_l)) ->
+    forall t n, complete' t n -> P t n.
+  Proof.
+    intros H_base H_ind t n H_complete.
+    revert t H_complete.
+    induction n using Wf_nat.lt_wf_ind.
+    intros t H_complete.
+    destruct H_complete as [| n x l r H_l H_r | n x l r H_l H_r ].
+    - exact H_base.
+    - assert (H_l' : complete' l n) by (eapply perfect'2complete'; assumption).
+      eapply H_ind.
+      + left. reflexivity.
+      + assumption.
+      + assumption.
+      + eapply H; try lia; assumption.
+      + eapply H; try lia; assumption.
+    - assert (H_r' : complete' r n) by (eapply perfect'2complete'; assumption).
+      eapply H_ind.
+      + right. reflexivity.
+      + assumption.
+      + assumption.
+      + eapply H; try lia; assumption.
+      + eapply H; try lia; assumption.
+  Qed.
+
+  Lemma complete_ind_unranked (P : bintree A -> Prop) :
+    P BT_nil ->
+    (forall x l r, complete l -> complete r -> P l -> P r -> P (BT_node x l r)) ->
+    forall t, complete t -> P t.
+  Proof.
+    set (P' := fun t (n : nat) => P t).
+    intros H_base H_ind t H_complete.
+    destruct H_complete as [n H_complete].
+    eapply complete_ind_ranked with (P := P').
+    - exact H_base.
+    - intros. eapply H_ind.
+      + eexists. eassumption.
+      + eexists. eassumption.
+      + assumption.
+      + assumption.
+    - eassumption.
+  Qed.
+
 (*
   Ltac destruct_perfect t x l r :=
     match goal with
@@ -1015,9 +1065,7 @@ Section CompleteBinaryTree.
              simpl btsize in H0. replace (S ( btsize t1 + btsize t2 ) -1) with ( btsize t1 + btsize t2 ) in H0 by nia. admit.
         * admit.
   Admitted.
-        
-        
-  
+
   Lemma complete_leaves (t : bintree A) :
     complete t ->
     forall j, j > btsize t / 2 ->
