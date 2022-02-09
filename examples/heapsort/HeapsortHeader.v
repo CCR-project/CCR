@@ -1008,12 +1008,13 @@ Section CompleteBinaryTree.
       + destruct d.
         * simpl. remember (decode_nat j) as D;clear HeqD.
           rewrite <- E in D. eapply IHt1.
-          {apply (f_equal decode) in D. rewrite (decode_encode l0) in D.
-           apply D.}
-          {inversion H;subst. exists n;auto.}
-          {simpl length. replace (S (length l0) -1) with (length l0) by nia.
-           simpl btsize in H0. replace (S ( btsize t1 + btsize t2 ) -1) with ( btsize t1 + btsize t2 ) in H0 by nia.
-          }
+          ** apply (f_equal decode) in D. rewrite (decode_encode l0) in D.
+             apply D.
+          ** inversion H;subst. exists n;auto.
+          ** simpl length. replace (S (length l0) -1) with (length l0) by nia.
+             simpl btsize in H0. replace (S ( btsize t1 + btsize t2 ) -1) with ( btsize t1 + btsize t2 ) in H0 by nia. admit.
+        * admit.
+  Admitted.
         
         
   
