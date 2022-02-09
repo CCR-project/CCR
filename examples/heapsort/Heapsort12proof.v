@@ -90,28 +90,29 @@ Section SIMMODSEM.
                fun_to_tgt "Heapsort" (GlobalStb sk) {| fsb_fspec := heapify_spec; fsb_body := cfunN heapify_body |})
               ("heapify", cfunU Heapsort1.heapify_body).
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
   Proof with eauto.
+=======
+  Proof with lia || eauto.
+    Opaque div.
+>>>>>>> 540b086fdb7eac7a8af25fca39ee57b01c970e9e
     init. harg. destruct x as [[root y] k]. mDesAll; subst.
-    clear PURE1. destruct PURE0 as [H_eq PURE]; subst.
-    steps. astop. revert mrp_src mp_tgt WF k ctx mr_src PURE ACC.
-    induction root as [ | x l IH_l r IH_r]; i.
-    { steps. rewrite unfold_iter_eq. des_ifs. steps.
-      admit "toList".
-      (*
-      unfold toList. rewrite toList_step_unfold. rewrite toList_step_unfold.
-      steps. rewrite unfold_iter_eq. steps.
-      force_l. eexists. steps. hret tt; ss.
-      iModIntro. iSplit; ss. iPureIntro.
-      esplits; try reflexivity.
-      instantiate (1 := (BT_node k BT_nil BT_nil)).
-      - rewrite toList_step_unfold. ss.
-      - admit "complete".
-      - rewrite toList_step_unfold. ss.
-      - admit "heap".
-      *)
-    }
-    { admit "caseOf_BT_node". }
+    clear PURE1. destruct PURE0 as [H_eq [PURE1 [PURE2 PURE3]]]; subst.
+    steps. astop. revert mrp_src mp_tgt WF k ctx mr_src PURE1 PURE2 PURE3 ACC.
+    induction root as [ | x l IH_l r IH_r]; i; inv PURE2.
+    rewrite unfold_iter_eq. destruct (1 * 2 <=? strings.length (toList (BT_node y l r))) eqn: H_obs1.
+    - rewrite Nat.leb_le in H_obs1. replace (strings.length (toList (BT_node y l r))) with (2 + (strings.length (toList (BT_node y l r)) - 2))...
+      unfold Nat.add. fold Nat.add.
+      destruct (1 * 2 <=? S (strings.length (toList (BT_node y l r)) - 2)) eqn: H_obs2.
+      + rewrite Nat.leb_le in H_obs2.
+        replace ((HeapsortHeader.lookup (k :: list.tail (toList (BT_node y l r))) (1 * 2 - 1))) with (option_root l).
+        2: admit "option_root l = HeapsortHeader.lookup (k :: list.tail (toList (BT_node y l r))) (1 * 2 - 1)".
+        replace ((HeapsortHeader.lookup (k :: list.tail (toList (BT_node y l r))) (1 * 2))) with (option_root r).
+        2: admit "option_root r = HeapsortHeader.lookup (k :: list.tail (toList (BT_node y l r))) (1 * 2)".
+        steps. give_up.
+      + give_up.
+    - give_up.
     (* Unshelve. et. *)
 >>>>>>> 7bc7c4cb1eb1d8550cb513e73a978fadc83f498c
   Admitted.
@@ -125,6 +126,7 @@ Section SIMMODSEM.
     unfold Heapsort1.heapsort_body.
     init.
     harg. rename x into xs. mDesAll. clear PURE1. steps.
+<<<<<<< HEAD
     
     (* 'length xs / 2' for first loop, 'length xs' for second loop *)
     astart (length xs / 2 + length xs).
@@ -167,11 +169,183 @@ Section SIMMODSEM.
 =======
       assert (H : forall j, j > l -> heap_at Z.ge (j - 1) tree) by admit "heap".
       clear Heql.
+=======
 
-      (* 'l' for first loop, 'length xs' for second loop *)
-      astart (l + length xs).
+    remember (length xs <=? 1).
+    destruct b.
+    (* input is trivially sorted when length xs <= 1 *)
+    { astop. steps. force_l.
+      eexists. steps.
+      hret tt; ss.
+      iModIntro. iSplit; ss. iPureIntro.
+      esplits; try reflexivity.
+      destruct xs as [| x []].
+      - econs.
+      - econs; econs.
+      - ss. }
 
+    (* when length xs > 1 *)
+    assert (Hxs : length xs > 1)
+      by (eapply leb_complete_conv; et).
+    clear Heqb.
+    steps.
+
+    (* set tree and it's initial condition *)
+    remember (fromList xs) as tree.
+    set (xs0 := xs). unfold xs0 at 1.
+    replace xs0 with (toList tree)
+      by (subst; eapply toList_fromList).
+    clear xs0.
+    assert (Hₚ : toList tree ≡ₚ xs)
+      by (subst; rewrite toList_fromList; eapply Permutation_refl).
+    assert (Hc : complete tree)
+      by (subst; eapply complete_fromList).
+    clear Heqtree.
+
+    (* set l and it's initial condition *)
+    remember (length (toList tree) / 2) as l.
+    rewrite toList_length in Heql.
+    assert (Hₗ : l <= btsize tree).
+    { subst.
+      rewrite <- toList_length.
+      eapply Nat.lt_le_incl.
+      eapply Nat.div_lt.
+      - replace (length (toList tree)) with (length xs)
+          by (eapply Permutation_length; symmetry; ss).
+        lia.
+      - lia.
+    }
+    assert (Hₕ : forall j, j > l -> heap_at Z.ge (j - 1) tree)
+      by (subst; eapply heap_at_leaves; assumption).
+    clear Heql.
+
+    (* 'l' for first loop, 'length xs' for second loop *)
+    astart (l + length xs).
+
+    deflag.
+    revert tree Hₚ Hₗ Hc Hₕ w ctx mp_src mp_tgt mr_src WF ACC.
+    induction l.
+    (* first loop *)
+    2: {
+      i. rewrite unfold_iter_eq. steps.
+      acatch.
+      { eapply STBINCL. stb_tac. ss. }
+      { instantiate (1 := l + length xs).
+        eapply OrdArith.lt_from_nat.
+        lia.
+      }
+      hcall (tree, S l) _ with "".
+      { iModIntro. iSplit; ss. iPureIntro. splits; ss; try lia.
+      }
+      { ss. splits; et; oauto. }
+      mDesAll. rename a into tree'. des. steps.
+      rewrite Nat.sub_0_r.
       deflag.
+      eapply IHl.
+      - symmetry in PURE3. transitivity (toList tree); ss.
+      - rewrite <- toList_length.
+        rewrite <- toList_length in Hₗ.
+        replace (length (toList tree')) with (length (toList tree))
+          by (eapply Permutation_length; ss).
+        lia.
+      - assumption.
+      - intros. eapply PURE4. lia.
+      - red. inversion WF. econs. et.
+      - assumption.
+    }
+>>>>>>> 540b086fdb7eac7a8af25fca39ee57b01c970e9e
+
+    i. rewrite unfold_iter_eq. steps.
+    clear Hₗ.
+
+    (* useful hint for lia *)
+    assert (H_size : length xs = btsize tree).
+    { erewrite Permutation_length by (symmetry; eapply Hₚ).
+      eapply toList_length.
+    }
+
+    (* assert heap_pr from heap_at *)
+    rename Hₕ into H.
+    assert (Hₕ : heap Z.ge tree)
+      by (eapply H with (j := 1); lia).
+    eapply heap_pr_if_heap in Hₕ; try lia.
+    destruct Hₕ as [p Hₕ].
+    clear H.
+
+    (* set ys *)
+    remember ([] : list Z) as ys.
+    rename Hₚ into H.
+    assert (Hₚ : toList tree ++ ys ≡ₚ xs)
+      by (subst; rewrite app_nil_r; assumption).
+    assert (Hₛ : Sorted Z.le ys)
+      by (subst; econs).
+    assert (H_head : match ys with
+                     | [] => True
+                     | y :: ys => y = p
+                     end) by (subst; auto).
+    clear H Heqys.
+
+    (* set induction variable, l *)
+    remember (btsize tree - 1) as l.
+    assert (Hₗ : btsize tree = l + 1) by lia.
+    replace (length xs) with (l + 1) by lia.
+    clear Heql.
+
+    clear H_size.
+
+    deflag.
+    revert tree p ys Hₚ Hₛ Hc H_head Hₕ Hₗ w ctx mp_src mp_tgt mr_src WF ACC.
+    induction l.
+    (* second loop *)
+    2: {
+      i. rewrite unfold_iter_eq. steps.
+      rewrite toList_length.
+      replace (btsize tree <=? 1) with false
+        by (symmetry; eapply leb_correct_conv; lia).
+      steps.
+      assert (H : match tree with
+                  | BT_nil => False
+                  | BT_node p _ _ => toList tree = p :: tail (toList tree)
+                  end)
+        by (eapply toList_step; lia).
+      destruct tree as [| q tree1 tree2 ] eqn: Etree; try contradiction.
+      rewrite <- Etree in *.
+      set (xs1 := toList tree) in *.
+      unfold xs1 at 3.
+      rewrite Etree.
+      assert (Etree' : << H : tree = BT_node q tree1 tree2 >>) by assumption; clear Etree.
+      assert (H_length : length xs1 = l + 2)
+        by (subst xs1; rewrite toList_length; lia).
+      steps.
+      acatch.
+      { eapply STBINCL. stb_tac. ss. }
+      { instantiate (1 := l + 1).
+        eapply OrdArith.lt_from_nat.
+        lia.
+      }
+      hcall (fromList (removelast xs1), q, last xs1 0%Z) _ with "".
+      { iModIntro. iSplit; auto. iPureIntro. esplits.
+        - rewrite toList_fromList. reflexivity.
+        - eapply complete_fromList.
+        - assert (tail xs1 <> []).
+          { destruct xs1 as [| x [] ]; simpl in H_length; try lia.
+            auto.
+          }
+          rewrite H. simpl. destruct (tail xs1); try contradiction.
+          reflexivity.
+        - eapply heap_erase_priority in Hₕ.
+          subst.
+          eapply removelast_heap.
+          assumption.
+        - reflexivity.
+      }
+      { ss. splits; et; oauto. }
+      mDesAll. rename a into tree'. destruct PURE1 as [PURE1 [PURE2 [PURE3 PURE4]]].
+      steps.
+      des.
+      rewrite toList_fromList in PURE3.
+      deflag.
+<<<<<<< HEAD
       revert tree Hₚ Hₗ H w ctx mp_src mp_tgt mr_src WF ACC.
       induction l.
       + i. rewrite unfold_iter_eq. steps.
@@ -229,6 +403,61 @@ Section SIMMODSEM.
         * assumption.
 >>>>>>> 7bc7c4cb1eb1d8550cb513e73a978fadc83f498c
     Unshelve. et.
+=======
+      eapply IHl.
+      - rewrite <- PURE3.
+        rewrite <- Hₚ.
+        rewrite (app_assoc _ [q] ys).
+        eapply Permutation_app_tail.
+        rewrite Permutation_app_comm.
+        rewrite H.
+        eapply (Permutation_app_head [q]).
+        rewrite <- H.
+        assert (H1 : exists x ys y, xs1 = [x] ++ ys ++ [y])
+          by (eapply trim_head_last; lia).
+        des.
+        rewrite H1.
+        replace (tail ([x] ++ ys0 ++ [y])) with (ys0 ++ [y]) by reflexivity.
+        rewrite app_assoc.
+        rewrite last_last.
+        rewrite removelast_last.
+        simpl.
+        symmetry.
+        eapply Permutation_app_comm.
+      - econs; ss. destruct ys.
+        + econs.
+        + econs. destruct Hₕ; try discriminate. inversion Etree'. subst. lia.
+      - assumption.
+      - ss.
+      - assumption.
+      - rewrite <- toList_length.
+        erewrite Permutation_length by (symmetry; apply PURE3).
+        simpl.
+        assert (length (removelast xs1) = l + 1)
+          by (rewrite removelast_length; lia).
+        rewrite tail_length; lia.
+      - red. inversion WF. econs. et.
+      - assumption.
+    }
+    
+    i. ss. rewrite unfold_iter_eq. steps.
+    rewrite toList_length.
+    replace (btsize tree <=? 1) with true
+      by (symmetry; eapply leb_correct; lia).
+    steps.
+    astop. force_l. eexists. steps.
+    hret tt; ss.
+    iModIntro. iSplit; ss. iPureIntro. esplits; ss.
+    - symmetry; assumption.
+    - assert (Ht := btsize_eq_1 tree Hₗ).
+      destruct Hₕ; try contradiction.
+      destruct Ht. subst. simpl.
+      econs; try assumption.
+      destruct ys.
+      + econs.
+      + econs. lia.
+    Unshelve. et. et.
+>>>>>>> 540b086fdb7eac7a8af25fca39ee57b01c970e9e
   Qed.
 
   Theorem correct : refines2 [Heapsort1.Heapsort] [Heapsort2.Heapsort GlobalStb].
