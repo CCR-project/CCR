@@ -141,12 +141,9 @@ Section ListOperations.
     | _ => firstn (2^n) xs :: trim_exp (S n) (skipn (2^n) xs)
     end.
   Next Obligation.
-    rewrite skipn_length.
-    eapply sub_lt_pos.
-    - destruct xs; try contradiction.
-      simpl. lia.
-    - assert (n < 2^n) by (eapply pow_gt_lin_r; lia).
-      lia.
+    eapply skipn_exp_length.
+    destruct xs; try contradiction.
+    simpl. lia.
   Defined.
 
   Lemma unfold_trim_exp (n : nat) (xs : list A) :
@@ -190,7 +187,10 @@ Section ListOperations.
   Fixpoint split_exp_right (n : nat) (xss : list (list A)) : list (list A) :=
     match xss with
     | [] => []
-    | xs :: xss => skipn (2^n) xs :: split_exp_right (S n) xss
+    | xs :: xss =>
+      if length xs <=? 2^n
+      then []
+      else skipn (2^n) xs :: split_exp_right (S n) xss
     end.
 
   Fixpoint zip_exp (xss yss : list (list A)) : list (list A) :=
@@ -208,12 +208,16 @@ Section ListOperations.
     - intros. simpl. rewrite IHxss. reflexivity.
   Qed.
 
-  Lemma split_exp_right_length n xss : length (split_exp_right n xss) = length xss.
+  Lemma split_exp_right_length n xss : length (split_exp_right n xss) <= length xss.
   Proof.
     revert n.
     induction xss.
     - reflexivity.
-    - intros. simpl. rewrite IHxss. reflexivity.
+    - intros. simpl.
+      destruct (length a <=? 2^n); simpl.
+      + lia.
+      + eapply le_n_S.
+        eapply IHxss.
   Qed.
 
   Fixpoint complete_list (n : nat) (xss : list (list A)) : Prop :=
@@ -307,10 +311,15 @@ Section ListOperations.
 
 End ListOperations.
 
-Inductive bintree (A : Type) : Type :=
-| BT_nil
-| BT_node (x : A) (l r : bintree A)
-.
+Section BinaryTree.
+
+  Context {A : Type}.
+
+  Inductive bintree : Type :=
+  | BT_nil
+  | BT_node (x : A) (l r : bintree)
+  .
+
   Definition leaf (t : bintree) : Prop :=
     match t with
     | BT_nil => True
@@ -366,7 +375,6 @@ Section BinaryTreeIndexing.
     - destruct x1; destruct x2; simpl dir_t_rect...
       all: intros H_eq; assert (claim1 : myF xs1 = myF xs2)...
       all: apply f_equal...
->>>>>>> 540b086fdb7eac7a8af25fca39ee57b01c970e9e
   Qed.
 
   Lemma encode_last ds d :
@@ -584,7 +592,6 @@ Section BinaryTreeAccessories.
         apply IH with (m := ((i - 2) / 2)) (t := (BT_node x l r))...
         apply IH_r with (x := x) (l := l) (r := r); rewrite <- claim2...
         rewrite claim1, option_subtree_last, H_obs...
->>>>>>> 540b086fdb7eac7a8af25fca39ee57b01c970e9e
   Qed.
 
   Theorem bottomup root (P : list dir_t -> bintree A -> Prop)
@@ -718,11 +725,13 @@ Section BinaryTreeAccessories.
         * rewrite split_exp_left_length. simpl. lia.
         * eapply complete_split_left; assumption.
   Qed.
-  
-  Definition toList root := toList_step [root].
-  
+
   Lemma toList_fromList xs : toList (fromList xs) = xs.
-  Admitted.
+  Proof.
+    unfold fromList, toList.
+    rewrite toListAux_fromListAux by eapply complete_trim.
+    eapply concat_trim_exp.
+  Qed.
 
   Lemma toList_length t : length (toList t) = btsize t.
   Admitted.
@@ -872,190 +881,6 @@ End CompleteBinaryTree.
   (* = [1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12; 13; 14] *)
 *)
 
-Section BinaryTreeAccessories.
-
-  Inductive dir_t : Set := Dir_left | Dir_right.
-
-  Definition encode ds := fold_left (fun i => dir_t_rect (fun _ => nat) (2 * i + 1) (2 * i + 2)) ds 0.
-
-  Lemma encode_inj ds1 ds2
-    (H_encode_eq : encode ds1 = encode ds2)
-    : ds1 = ds2.
-  Proof with lia || eauto.
-    revert H_encode_eq. unfold encode; do 2 rewrite <- fold_left_rev_right.
-    intros H_eq; apply rev_inj; revert H_eq.
-    generalize (rev ds2) as xs2. generalize (rev ds1) as xs1. clear ds1 ds2.
-    set (myF := fold_right (fun d i => dir_t_rect (fun _ => nat) (2 * i + 1) (2 * i + 2) d) 0).
-    induction xs1 as [ | x1 xs1 IH]; destruct xs2 as [ | x2 xs2]; simpl...
-    - destruct x2; simpl dir_t_rect...
-    - destruct x1; simpl dir_t_rect...
-    - destruct x1; destruct x2; simpl dir_t_rect...
-      all: intros H_eq; assert (claim1 : myF xs1 = myF xs2)...
-      all: apply f_equal...
-  Qed.
-
-  Lemma decodable i :
-    {ds : list dir_t | encode ds = i}.
-  Proof with lia || eauto.
-    induction i as [[ | i'] IH] using Wf_nat.lt_wf_rect.
-    - exists ([])...
-    - set (i := S i').
-      destruct (i mod 2) as [ | [ | i_mod_2]] eqn: H_obs.
-      + assert (claim1 : i = 2 * ((i - 2) / 2) + 2).
-        { apply (positive_even i ((i - 2) / 2))... }
-        assert (claim2 : (i - 2) / 2 < i)...
-        destruct (IH ((i - 2) / 2) claim2) as [ds H_ds].
-        exists (ds ++ [Dir_right]).
-        unfold encode. rewrite fold_left_last. unfold dir_t_rect at 1.
-        unfold encode in H_ds. rewrite H_ds...
-      + assert (claim1 : i = 2 * ((i - 1) / 2) + 1).
-        { apply (positive_odd i ((i - 1) / 2))... }
-        assert (claim2 : (i - 1) / 2 < i)...
-        destruct (IH ((i - 1) / 2) claim2) as [ds H_ds].
-        exists (ds ++ [Dir_left]).
-        unfold encode. rewrite fold_left_last. unfold dir_t_rect at 1.
-        unfold encode in H_ds. rewrite H_ds...
-      + pose (Nat.mod_bound_pos i 2)...
-  Defined.
-
-  Definition decode i := proj1_sig (decodable i).
-
-(* (* Example "decode" *)
-  Compute (decode 14).
-  (* = [Dir_right; Dir_right; Dir_right] *)
-  Compute (decode 15).
-  (* = [Dir_left; Dir_left; Dir_left; Dir_left] *)
-  Compute (decode 16).
-  (* = [Dir_left; Dir_left; Dir_left; Dir_right] *)
-*)
-
-  Lemma encode_decode i : encode (decode i) = i.
-  Proof. exact (proj2_sig (decodable i)). Qed.
-
-  Global Opaque decode.
-
-  Lemma decode_encode ds : decode (encode ds) = ds.
-  Proof. apply encode_inj. now rewrite encode_decode with (i := encode ds). Qed.
-
-  Context {A : Type}.
-
-  Definition option_subtree_init t : option (bintree A) := Some t.
-
-  Definition option_subtree_step d acc t : option (bintree A) :=
-    match t with
-    | BT_nil => None
-    | BT_node x l r => acc (@dir_t_rect (fun _ => bintree A) l r d)
-    end.
-
-  Definition option_subtree := fold_right option_subtree_step option_subtree_init.
-
-  Lemma unfold_option_subtree ds t :
-    option_subtree ds t =
-    match ds with
-    | [] => Some t
-    | d :: ds' =>
-      match t with
-      | BT_nil => None
-      | BT_node x l r => option_subtree ds' (dir_t_rect (fun _ => bintree A) l r d)
-      end
-    end.
-  Proof. induction ds as [ | [ | ] ds IH]; eauto. Qed.
-
-  Inductive occurs (t : bintree A) : list dir_t -> bintree A -> Prop :=
-  | Occurs_0
-    : occurs t [] t
-  | Occurs_l ds x l r
-    (H_l : occurs t ds l)
-    : occurs t (Dir_left :: ds) (BT_node x l r)
-  | Occurs_r ds x l r
-    (H_r : occurs t ds r)
-    : occurs t (Dir_right :: ds) (BT_node x l r).
-
-  Local Hint Constructors occurs : core.
-  Lemma occurs_iff ds t root :
-    occurs t ds root <->
-    option_subtree ds root = Some t.
-  Proof with discriminate || eauto.
-    split. intros X; induction X... revert t root.
-    induction ds as [ | [ | ] ds IH]; simpl; intros t root H_eq.
-    { apply Some_inj in H_eq; subst... }
-    all: destruct root as [ | x l r]...
-  Qed.
-
-  Lemma toList_good_per root i t n m
-        (H_occurs : occurs t (decode i) root)
-        (is_ptree : is_perfect root n)
-        (bound : length (decode i) < m)
-    : lookup (toList root) i = option_root t.
-  Proof.
-    revert H_occurs bound. revert t i.
-    induction is_ptree;intros.
-    - inversion H_occurs. unfold toList. repeat rewrite toList_step_unfold. unfold lookup.
-      replace (nth_error [] i) with (@None A);auto.
-      destruct i;auto.
-    - induction m.
-      + admit.
-      + assert (ID1 : forall (t : bintree A) (i : nat),
-                occurs t (decode i) l ->
-                length (decode i) < m -> lookup (toList l) i = option_root t).
-        { intros. apply IHis_ptree1;auto.}
-        assert (ID2 : forall (t : bintree A) (i : nat),
-                occurs t (decode i) r ->
-                length (decode i) < m -> lookup (toList r) i = option_root t).
-        { intros. apply IHis_ptree2;auto.}
-        assert (length (decode i) < m \/ length (decode i) = m) by nia.
-        destruct H.
-        * apply IHm;auto.
-        * 
-          clear ID1 ID2 IHm bound.
-          destruct (decode i) eqn : E.
-          ** inversion H_occurs;subst. apply (f_equal encode) in E.
-             unfold encode in E at 2. simpl in E. rewrite (encode_decode i) in E. rewrite E.
-             simpl. unfold toList. rewrite toList_step_unfold. auto.
-          ** revert H. inversion H_occurs;subst;intros.
-             *** rewrite <- E in H.
-                 assert (l0 = decode (encode l0)) by (rewrite decode_encode;auto).
-                 rewrite H0 in H_l. apply IHis_ptree1 in H_l.
-                 2:{rewrite <- H0. rewrite E in H. simpl in H. nia.}
-                 rewrite <- H_l.
-                 revert is_ptree1 is_ptree2.
-                 revert E.
-                 clear IHis_ptree1 IHis_ptree2 H_occurs H_l H H0 t0 m.
-                 revert i l0 x l r n.
-                 intros i l0. revert i.
-                 induction l0.
-                 ****
-                   intros. apply (f_equal encode) in E.
-                   rewrite (encode_decode i) in E. unfold encode in E. simpl in E.
-                   rewrite E.
-                   unfold toList. rewrite toList_step_unfold. simpl.
-                   rewrite toList_step_unfold.
-                   destruct l eqn : E1.
-                   ***** inversion is_ptree1;subst. inversion is_ptree2;subst. auto.
-                   ***** rewrite toList_step_unfold. auto.
-                 **** 
-                   
-                 
-                 rewrite <- H_l. 
-        * inversion 
-        Admitted.
-
-  Theorem toList_good root i t n
-    (H_occurs : occurs t (decode i) root) (is_ctree : is_complete root n)
-    : lookup (toList root) i = option_root t.
-  Proof.
-    revert H_occurs. revert t i.
-    induction is_ctree;intros.
-    - inversion H_occurs. unfold toList. repeat rewrite toList_step_unfold. unfold lookup.
-      replace (nth_error [] i) with (@None A);auto.
-      destruct i;auto.
-    - 
-    
-  Admitted.
-
-
-End BinaryTreeAccessories.
-
 (*
  (* Example "fromList" *)
   Compute (fromList [1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 11; 12; 13; 14; 15]).
@@ -1085,13 +910,24 @@ Section HeapProperty.
 
   Inductive heap : bintree A -> Prop :=
   | heap_nil
-    : heap (BT_nil)
+    : heap BT_nil
   | heap_node x l r
     (R_x_l : @option_rect A (fun _ => Prop) (R x) (True) (option_root l))
     (R_x_r : @option_rect A (fun _ => Prop) (R x) (True) (option_root r))
     (heap_l : heap l)
     (heap_r : heap r)
     : heap (BT_node x l r).
+
+  Inductive heap_pr (p : A) : bintree A -> Prop :=
+  | heap_pr_nil : heap_pr p BT_nil
+  | heap_pr_node x l r
+               (R_p_x : R p x)
+               (R_x_l : @option_rect A (fun _ => Prop) (R x) True (option_root l))
+               (R_x_r : @option_rect A (fun _ => Prop) (R x) True (option_root r))
+               (heap_l : heap l)
+               (heap_r : heap r)
+    : heap_pr p (BT_node x l r)
+  .
 
   Definition heap_at j t : Prop :=
     match subtree_nat t j with
