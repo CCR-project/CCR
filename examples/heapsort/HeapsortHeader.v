@@ -480,6 +480,20 @@ Section BinaryTreeAccessories.
     end.
   Proof. induction ds as [ | [ | ] ds IH]; eauto. Qed.
 
+  Lemma option_subtree_last ds d :
+    forall root,
+    option_subtree (ds ++ [d]) root =
+    match option_subtree ds root with
+    | Some (BT_node x l r) => Some (dir_t_rect (fun _ => bintree A) l r d)
+    | _ => None
+    end.
+  Proof.
+    enough (claim1 : option_subtree (ds ++ [d]) = fold_right subtree_step (subtree_step d subtree_init) ds).
+    - rewrite claim1. clear claim1. unfold option_subtree. induction ds; destruct d; destruct root; eauto.
+    - unfold option_subtree at 1. rewrite <- rev_involutive with (l := ds ++ [d]) at 1.
+      rewrite fold_left_rev_right, rev_unit. simpl. now rewrite <- fold_left_rev_right, rev_involutive.
+  Qed.
+
   Inductive occurs (t : bintree A) : list dir_t -> bintree A -> Prop :=
   | Occurs_0
     : occurs t [] t
@@ -502,21 +516,7 @@ Section BinaryTreeAccessories.
     all: destruct root as [ | x l r]...
   Qed.
 
-  Lemma option_subtree_last ds d :
-    forall root,
-    option_subtree (ds ++ [d]) root =
-    match option_subtree ds root with
-    | Some (BT_node x l r) => Some (dir_t_rect (fun _ => bintree A) l r d)
-    | _ => None
-    end.
-  Proof.
-    enough (claim1 : option_subtree (ds ++ [d]) = fold_right subtree_step (subtree_step d subtree_init) ds).
-    - rewrite claim1. clear claim1. unfold option_subtree. induction ds; destruct d; destruct root; eauto.
-    - unfold option_subtree at 1. rewrite <- rev_involutive with (l := ds ++ [d]) at 1.
-      rewrite fold_left_rev_right, rev_unit. simpl. now rewrite <- fold_left_rev_right, rev_involutive.
-  Qed.
-
-  Lemma topdown' root (P : nat -> bintree A -> Prop)
+  Lemma topdown_nat root (P : nat -> bintree A -> Prop)
     (IH_l : forall x l r i, subtree_nat root i = Some (BT_node x l r) -> P i (BT_node x l r) -> P (2 * i + 1) l)
     (IH_r : forall x l r i, subtree_nat root i = Some (BT_node x l r) -> P i (BT_node x l r) -> P (2 * i + 2) r)
     : forall i t, subtree_nat root i = Some t -> P 0 root -> P i t.
@@ -551,7 +551,7 @@ Section BinaryTreeAccessories.
     : forall ds t, option_subtree ds root = Some t -> P [] root -> P ds t.
   Proof with eauto.
     intros ds t H_occurs H_t. rewrite <- decode_encode with (ds := ds).
-    apply topdown' with (root := root) (P := fun i t => P (decode i) t) (i := encode ds) (t := t)...
+    apply topdown_nat with (root := root) (P := fun i t => P (decode i) t) (i := encode ds) (t := t)...
     - clear ds t H_occurs H_t. intros x l r i H_occurs H_l.
       assert (claim2 : decode (2 * i + 1) = decode i ++ [Dir_left]).
       { apply encode_inj. rewrite encode_decode, encode_last. rewrite encode_decode... }
@@ -563,7 +563,7 @@ Section BinaryTreeAccessories.
     - unfold subtree_nat. rewrite decode_encode...
   Qed.
 
-  Lemma bottomup' root (P : nat -> bintree A -> Prop)
+  Lemma bottomup_nat root (P : nat -> bintree A -> Prop)
     (IH_l : forall x l r i, subtree_nat root (2 * i + 1) = Some l -> P (2 * i + 1) l -> P i (BT_node x l r))
     (IH_r : forall x l r i, subtree_nat root (2 * i + 2) = Some r -> P (2 * i + 2) r -> P i (BT_node x l r))
     : forall i t, subtree_nat root i = Some t -> P i t -> P 0 root.
@@ -600,7 +600,7 @@ Section BinaryTreeAccessories.
     : forall ds t, occurs t ds root -> P ds t -> P [] root.
   Proof with eauto.
     intros ds t H_occurs H_t. replace ([]) with (decode 0)...
-    apply bottomup' with (root := root) (P := fun i t => P (decode i) t) (i := encode ds) (t := t).
+    apply bottomup_nat with (root := root) (P := fun i t => P (decode i) t) (i := encode ds) (t := t).
     - clear ds t H_occurs H_t. intros x l r i H_occurs H_l.
       assert (claim2 : decode (2 * i + 1) = decode i ++ [Dir_left]).
       { apply encode_inj. rewrite encode_decode, encode_last. rewrite encode_decode... }
