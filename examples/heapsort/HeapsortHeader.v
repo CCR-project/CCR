@@ -374,6 +374,36 @@ Section BinaryTreeIndexing.
 
   Definition encode ds := fold_left (fun i => dir_t_rect (fun _ => nat) (2 * i + 1) (2 * i + 2)) ds 0.
 
+  Lemma _encode_unfold_lemma l n : fold_left (fun i : nat => dir_t_rect (fun _ : dir_t => nat) (i + (i + 0) + 1) (i + (i + 0) + 2)) l n = encode l + n * 2 ^ (length l).
+  Proof.
+    revert n.
+    induction l.
+    - simpl. nia.
+    - intros. unfold encode. destruct a.
+      + simpl. rewrite IHl. rewrite IHl.
+        rewrite add_0_r. nia.
+      + simpl. rewrite IHl. rewrite IHl.
+        nia.
+  Qed.
+
+  Lemma encode_unfold l:
+    encode l =
+      match l with
+      | [] => 0
+      | Dir_left :: t => encode t + 2 ^ (length l - 1)
+      | Dir_right :: t => encode t + 2 ^ (length l)
+      end.
+  Proof.
+    destruct l.
+    - unfold encode.
+      simpl. auto.
+    - destruct d.
+      + unfold encode at 1.
+        simpl. rewrite _encode_unfold_lemma. rewrite sub_0_r. nia.
+      + unfold encode at 1.
+        simpl. rewrite _encode_unfold_lemma. rewrite add_0_r. nia.
+  Qed.
+
   Lemma encode_inj ds1 ds2
     (H_encode_eq : encode ds1 = encode ds2)
     : ds1 = ds2.
@@ -463,6 +493,20 @@ Section BinaryTreeIndexing.
     - apply positive_even...
   Qed.
 
+  Lemma decode_nat n :
+    match decode n with
+    | [] => n = 0
+    | Dir_left :: l => encode l = n - 2 ^ (length (decode n)-1)
+    | Dir_right :: l => encode l = n - 2 ^ (length (decode n))
+    end.
+  Proof with auto.
+    destruct (decode n) eqn:E.
+    - apply (f_equal encode) in E;rewrite (encode_decode n) in E.
+      unfold encode in E; simpl in E...
+    - apply (f_equal encode) in E;rewrite (encode_decode n) in E;rewrite E.
+      rewrite (encode_unfold (d :: l)). destruct d;simpl;nia.
+  Qed.
+      
 End BinaryTreeIndexing.
 
 Section BinaryTreeAccessories.
@@ -876,7 +920,7 @@ Section CompleteBinaryTree.
     : lookup (toList root) i = option_root t.
   Proof.
   Admitted.
-
+  
   Lemma complete_leaves (t : bintree A) :
     complete t ->
     forall j, j > btsize t / 2 ->
