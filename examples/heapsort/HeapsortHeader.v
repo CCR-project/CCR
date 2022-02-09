@@ -1008,11 +1008,29 @@ Section CompleteBinaryTree.
   Lemma subtree_outrange j (t : bintree A) :
     complete t -> j >= btsize t ->
     subtree_nat t j = Some BT_nil \/ subtree_nat t j = None.
+  Proof.
+    intros H. revert j.
+    unfold complete in H. destruct H.
+    induction H using complete_ind_ranked;intros.
+    - unfold subtree_nat. destruct (decode j);simpl. {left. auto.} {right. auto.}
+    - unfold subtree_nat. remember (decode_nat j) as P;clear HeqP.
+      destruct (decode j);simpl.
+      + rewrite P in H2. simpl in H2. inversion H2.
+      + unfold subtree_nat in IHcomplete'1.
+        unfold subtree_nat in IHcomplete'2. destruct d;simpl.
+        * simpl in P. rewrite sub_0_r in P. apply (f_equal decode) in P.
+          rewrite (decode_encode l0) in P.
+    
   Admitted.
 
   Lemma perf_size t n :
     perfect' t n ->
     btsize t = 2 ^ n -1.
+  Admitted.
+
+  Lemma comp_size t n :
+    complete' t (S n) ->
+    2 ^ n <= btsize t <= 2 ^ (S n) - 1.
   Admitted.
 
   Lemma decode_ubound j n : j < 2 ^ n - 1 -> length (decode j) < n.
@@ -1022,7 +1040,12 @@ Section CompleteBinaryTree.
     - destruct n;inversion H.
       
   Admitted.
-  
+
+  Lemma decode_lbound j n : 2 ^ n -1 <= j -> n <= length (decode j).
+  Admitted.
+
+  Lemma encode_bound l n : length l = n -> 2^n -1 <= encode l < 2 ^ (S n) -1.
+  Admitted.  
 
   Lemma perfect_leaves (t : bintree A) :
     (exists n, perfect' t n) ->
@@ -1062,8 +1085,37 @@ Section CompleteBinaryTree.
              apply D.
           ** inversion H;subst. exists n;auto.
           ** simpl length. replace (S (length l0) -1) with (length l0) by nia.
-             simpl btsize in H0. replace (S ( btsize t1 + btsize t2 ) -1) with ( btsize t1 + btsize t2 ) in H0 by nia. admit.
-        * admit.
+             simpl btsize in H0. replace (S ( btsize t1 + btsize t2 ) -1) with ( btsize t1 + btsize t2 ) in H0 by nia.
+             inversion H;subst. apply perf_size in H_l. apply perf_size in H_r.
+             rewrite H_l in H0. rewrite H_r in H0. rewrite H_l.
+             destruct H0. replace (S (2 ^ n - 1 + (2 ^ n - 1))) with (2^(S n)-1) in H1.
+             2:{simpl. rewrite <- add_succ_l. rewrite Minus.minus_Sn_m.
+                2:{ apply exp_pos. auto.} simpl. nia.
+             } remember H1 as U;clear HeqU. 
+             replace ((2 ^ n - 1 + (2 ^ n - 1))/2) with (2^n - 1) in H0.
+             2:{replace (2 ^ n - 1 + (2 ^ n - 1)) with ((2 ^ n - 1) * 2) by nia. 
+                rewrite div_mul;nia.} remember H0 as R;clear HeqR.
+             apply decode_ubound in H1. rewrite <- E in H1. simpl in H1.
+             apply Lt.lt_S_n in H1. unfold Peano.lt in H1.
+             assert (length l0 <= n-1) by nia.
+             apply decode_lbound in H0. rewrite <- E in H0. simpl in H0.
+             assert (n-1 <= length l0) by nia.
+             assert (n-1 = length l0) by nia.
+             apply (f_equal (pow 2)) in H4. rewrite <- H4. 
+             split. 
+             *** replace ((2 ^ n - 1 - 1) / 2) with (2 ^ (n - 1)-1).
+                 2:{destruct n. inversion H1. simpl pow.
+                    replace (2 ^ n + (2 ^ n + 0) - 1 - 1) with ((2^n - 1) *2) by nia.
+                    rewrite div_mul;auto. rewrite sub_0_r. auto.}
+                 apply le_add_le_sub_l. replace (2 ^ (n - 1) + (2 ^ (n - 1) - 1)) with (2^n-1).
+                 auto. rewrite add_sub_assoc. destruct n;inversion H1. simpl.
+                 rewrite sub_0_r. nia. nia. apply exp_pos. auto.
+             *** apply (f_equal encode) in E. rewrite (encode_unfold (Dir_left :: l0)) in E.
+                 simpl in E. rewrite sub_0_r in E. rewrite (encode_decode j) in E.
+                 assert (length l0 = n-1) by nia. apply encode_bound in H5. destruct H5.
+                 replace (S(n-1)) with n in H6. 2:{destruct n. inversion H1. nia.}
+                                              rewrite <- E. rewrite H4. rewrite add_sub. auto.
+        * admit.                (* right half. similar to left one *)
   Admitted.
 
   Lemma complete_leaves (t : bintree A) :
