@@ -1320,17 +1320,25 @@ Module NEO.
 
   Context {A : Type}.
 
-  Definition toListAux root := map (fun i => @option_rect (bintree A) (fun _ => option A) option_root None (option_subtree (decode i) root)) (seq 0 (2 ^ rank root - 1)).
+  Definition corresponds_to (xs : list A) (root : bintree A) : Prop :=
+    forall i,
+    lookup xs i =
+    match subtree_nat root i with
+    | None => None
+    | Some t => option_root t
+    end.
+
+  Definition toListAux root := map (fun i => @option_rect (bintree A) (fun _ => option A) option_root None (option_subtree (decode i) root)) (seq 0 ((2 ^ rank root) - 1)).
 
   Definition toList root := flat_map option2list (toListAux root).
 
-  Definition insert_init (x : A) (t : bintree A) :=
+  Definition insertInit (x : A) (t : bintree A) :=
     match t with
     | BT_nil => Some (BT_node x BT_nil BT_nil)
     | BT_node x l r => None
     end.
 
-  Definition insert_step d acc t : option (bintree A) :=
+  Definition insertStep d acc t : option (bintree A) :=
     match t with
     | BT_nil => None
     | BT_node x l r =>
@@ -1340,15 +1348,15 @@ Module NEO.
       end
     end.
 
-  Definition insert_at (x : A) : list dir_t -> bintree A -> option (bintree A) := fold_right subtree_step (insert_init x).
+  Definition insertAt (x : A) : list dir_t -> bintree A -> option (bintree A) := fold_right insertStep (insertInit x).
 
   Definition is_insertable i (root : bintree A) := subtree_nat root i = Some BT_nil.
 
-  Definition fromListStep root := fun '(x, i) => @option_rect (bintree A) (fun _ => bintree A) id root (insert_at x (decode i) root).
+  Definition fromListStep root := fun '(x, i) => @option_rect (bintree A) (fun _ => bintree A) id root (insertAt x (decode i) root).
 
   Definition fromList xs := fold_left fromListStep (add_indices xs) BT_nil.
 
-  Definition is_complete root := Forall isSome (firstn (btsize root) (toListAux root)) /\ Forall isNone (skipn (btsize root) (toListAux root)).
+  Definition isComplete root := Forall isSome (firstn (btsize root) (toListAux root)) /\ Forall isNone (skipn (btsize root) (toListAux root)).
 
   End BinaryTreeAccessories.
 
