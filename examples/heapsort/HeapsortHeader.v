@@ -20,6 +20,13 @@ Section Utilities.
   Definition pair2list {A : Type} : A * A -> list A :=
     fun '(x1, x2) => [x1; x2].
 
+  Definition isSome {A : Type} : option A -> Prop := fun m => m <> None.
+
+  Definition isNone {A : Type} : option A -> Prop := fun m => m = None.
+
+  Lemma Some_or_None {A : Type} : forall m : option A,  {isSome m} + {isNone m}.
+  Proof. destruct m; [left | right]; congruence. Qed.
+
   Lemma Some_inj {A : Type} {lhs : A} {rhs : A}
     (H_Some_eq : Some lhs = Some rhs)
     : lhs = rhs.
@@ -778,8 +785,6 @@ Section CompleteBinaryTree.
     - exact (complete_node_perfect_complete x l r H_l IH_r).
   Qed.
 
-  Check complete'_ind.
-
   Lemma complete_ind_ranked (P : bintree A -> nat -> Prop) :
     P BT_nil 0 ->
     (forall x l r n_l n_r, (n_r = n_l \/ S n_r = n_l) ->
@@ -1308,3 +1313,31 @@ Section ListAccessories.
   Qed.
 
 End ListAccessories.
+
+Module NEO.
+
+  Section BinaryTreeAccessories.
+
+  Context {A : Type}.
+
+  Definition toListAux root := map (fun i => @option_rect (bintree A) (fun _ => option A) option_root None (option_subtree (decode i) root)) (seq 0 (2 ^ rank root - 1)).
+
+  Definition toList root := flat_map option2list (toListAux root).
+
+  Definition insert (x : A) (root : bintree A) :=
+    match root with
+    | BT_nil => Some (BT_node x BT_nil BT_nil)
+    | BT_node x l r => None
+    end.
+
+  Definition insert_at x ds := fold_right subtree_step (insert x) ds.
+
+  Definition fromListStep root := fun '(x, i) => @option_rect (bintree A) (fun _ => bintree A) id root (insert_at x (decode i) root).
+
+  Definition fromList xs := fold_left fromListStep (add_indices xs) BT_nil.
+
+  Definition is_complete root := Forall isSome (firstn (btsize root) (toListAux root)) /\ Forall isNone (skipn (btsize root) (toListAux root)).
+
+  End BinaryTreeAccessories.
+
+End NEO.
