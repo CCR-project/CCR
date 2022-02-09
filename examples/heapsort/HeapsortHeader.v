@@ -795,7 +795,19 @@ Section BinaryTreeAccessories.
   Qed.
 
   Lemma toList_length t : length (toList t) = btsize t.
-  Admitted.
+  Proof.
+    unfold toList. induction t.
+    - simpl. auto.
+    - simpl. rewrite <- IHt1. rewrite <- IHt2.
+      apply f_equal. remember (toListAux t1) as xss1. remember (toListAux t2) as xss2.
+      clear IHt1 IHt2 Heqxss1 Heqxss2.
+      revert xss2. induction xss1.
+      + simpl. auto.
+      + intros. destruct xss2.
+        * simpl. nia.
+        * simpl. rewrite app_length. rewrite IHxss1.
+          do 3 rewrite app_length. nia.
+  Qed.
 
   Lemma toList_step t : btsize t >= 1 -> match t with
                                        | BT_nil => False
