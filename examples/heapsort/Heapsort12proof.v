@@ -68,21 +68,27 @@ Section SIMMODSEM.
     Opaque div.
     init. harg. destruct x as [[root y] k]. mDesAll; subst.
     clear PURE1. destruct PURE0 as [H_eq [PURE1 [PURE2 PURE3]]]; subst.
-    steps. astop. revert mrp_src mp_tgt WF k ctx mr_src PURE1 PURE2 PURE3 ACC.
-    induction root as [ | x l IH_l r IH_r]; i; inv PURE2.
-    rewrite unfold_iter_eq. destruct (1 * 2 <=? strings.length (toList (BT_node y l r))) eqn: H_obs1.
-    - rewrite Nat.leb_le in H_obs1. replace (strings.length (toList (BT_node y l r))) with (2 + (strings.length (toList (BT_node y l r)) - 2))...
-      unfold Nat.add. fold Nat.add.
-      destruct (1 * 2 <=? S (strings.length (toList (BT_node y l r)) - 2)) eqn: H_obs2.
-      + rewrite Nat.leb_le in H_obs2.
-        replace ((HeapsortHeader.lookup (k :: list.tail (toList (BT_node y l r))) (1 * 2 - 1))) with (option_root l).
-        2: admit "option_root l = HeapsortHeader.lookup (k :: list.tail (toList (BT_node y l r))) (1 * 2 - 1)".
-        replace ((HeapsortHeader.lookup (k :: list.tail (toList (BT_node y l r))) (1 * 2))) with (option_root r).
-        2: admit "option_root r = HeapsortHeader.lookup (k :: list.tail (toList (BT_node y l r))) (1 * 2)".
-        steps. give_up.
-      + give_up.
-    - give_up.
-    (* Unshelve. et. *)
+    steps. astop. remember (k :: list.tail (toList root), 1) as acc_init eqn: acc_init_is.
+    destruct acc_init as [xs par_i]. remember (fromList xs) as t eqn: t_is. remember (rank t) as t_rk eqn: t_rk_is.
+    rewrite toList_length. replace (btsize root) with (btsize t).
+    2:{ rewrite <- (toList_length root). transitivity (length (k :: list.tail (toList root))).
+      - rewrite <- (toList_length t). apply f_equal. rewrite t_is. rewrite toList_fromList. congruence.
+      - destruct root; inv PURE2...
+    }
+    deflag. revert mrp_src mp_tgt WF y k ctx mr_src mp_src PURE1 PURE2 PURE3 ACC xs par_i acc_init_is t t_is t_rk_is.
+    induction t_rk as [t_rk IH] using Wf_nat.lt_wf_ind; i.
+    rewrite unfold_iter_eq. destruct t as [ | x l r]. 1: steps.
+    destruct (par_i * 2 <=? btsize (BT_node x l r)) eqn: H_obs_if1.
+    - admit "the first loop".
+    - steps. rewrite unfold_iter_eq. steps.
+      force_l. exists ((k :: list.tail (toList root))↑). steps. hret tt; ss.
+      iModIntro. iSplit; ss. iSplit; ss.
+      iExists (fromList (k :: list.tail (toList root))).
+      iPureIntro. ss; splits; ss.
+      + f_equal. rewrite toList_fromList...
+      + admit "complete (fromList (k :: list.tail (toList root)))".
+      + rewrite toList_fromList. constructor 2...
+      + rewrite <- t_is. admit "heap_pr Z.ge y (BT_node x l r)".
   Admitted.
 
   Lemma sim_heapsort (sk : alist string Sk.gdef) :
