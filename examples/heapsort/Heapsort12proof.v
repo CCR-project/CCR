@@ -66,8 +66,7 @@ Section SIMMODSEM.
               ("heapify", cfunU Heapsort1.heapify_body).
   Proof with lia || eauto.
     Opaque div swap.
-    init. harg. destruct x as [[root y] k]. mDesAll; subst.
-    clear PURE1. destruct PURE0 as [H_eq [PURE1 [PURE2 PURE3]]]; subst.
+    init. harg. destruct x as [[root p] k]. mDesAll. clear PURE1. des.
     steps. astop.
 
     (* set tree *)
