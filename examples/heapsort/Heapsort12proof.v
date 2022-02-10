@@ -68,30 +68,47 @@ Section SIMMODSEM.
     Opaque div swap.
     init. harg. destruct x as [[root y] k]. mDesAll; subst.
     clear PURE1. destruct PURE0 as [H_eq [PURE1 [PURE2 PURE3]]]; subst.
-    steps. astop. remember (k :: list.tail (toList root), 1) as acc_init eqn: H_init.
-    destruct acc_init as [xs i]. remember (fromList xs) as t eqn: t_is.
-    assert (xs_is : xs = toList t).
-    { rewrite t_is. rewrite toList_fromList... }
-    subst xs. clear t_is. remember (rank t) as rk eqn: rk_is.
-    clear H_init. deflag. revert t i rk_is.
-    induction rk as [rk IH] using Wf_nat.lt_wf_ind; i. rewrite unfold_iter_eq.
-    destruct (i * 2 <=? strings.length (toList root)) eqn: H_obs1.
+    steps. astop.
+
+    (* set tree *)
+    set (xs := k :: tail (toList root)).
+    remember (fromList xs) as tree.
+    replace xs with (toList tree)
+      by (subst tree; eapply toList_fromList).
+    subst xs.
+    clear Heqtree.
+
+    (* set index *)
+    set (VARS := (toList tree, 1)).
+    remember 1 as idx in VARS.
+    subst VARS.
+    clear Heqidx.
+
+    (* set rank *)
+    remember (rank tree) as rk.
+
+    (* first loop *)
+    deflag. revert tree idx Heqrk w ctx mp_src mp_tgt mr_src WF ACC.
+    induction rk as [rk IH] using Wf_nat.lt_wf_ind.
+    i. rewrite unfold_iter_eq. steps_weak.
+    destruct (idx * 2 <=? strings.length (toList root)) eqn: H_obs1.
     { destruct (strings.length (toList root)) eqn: H_obs2.
       { destruct root; [inv PURE2 | inv H_obs2]. }
-      destruct (i * 2 <=? n) eqn: H_obs3.
-      - destruct (HeapsortHeader.lookup (toList t) (i * 2 - 1)) as [x_l | ] eqn: H_obs_l.
+      destruct (idx * 2 <=? n) eqn: H_obs3.
+      - destruct (HeapsortHeader.lookup (toList tree) (idx * 2 - 1)) as [x_l | ] eqn: H_obs_l.
         2: admit "UB".
-        destruct (HeapsortHeader.lookup (toList t) (i * 2)) as [x_r | ] eqn: H_obs_r.
+        destruct (HeapsortHeader.lookup (toList tree) (idx * 2)) as [x_r | ] eqn: H_obs_r.
         2: admit "UB".
-        steps. deflag. 
-        set (i_next := if (x_l <? x_r)%Z then i * 2 + 1 else i * 2).
-        destruct (option_children_pair t) as [[l r] | ] eqn: H_obs_t.
-        replace (swap (toList t) (i_next - 1) (i - 1)) with (toList (fromList (swap (toList t) (i_next - 1) (i - 1)))).
+        steps_weak. deflag. 
+        set (i_next := if (x_l <? x_r)%Z then idx * 2 + 1 else idx * 2).
+        destruct (option_children_pair tree) as [[l r] | ] eqn: H_obs_t.
+        replace (swap (toList tree) (i_next - 1) (idx - 1))
+          with (toList (fromList (swap (toList tree) (i_next - 1) (idx - 1)))).
         2: rewrite toList_fromList...
         destruct ((x_l <? x_r)%Z) eqn: H_obs4.
-        + assert (claim1 : rank l < rank t) by admit "".
-          assert (claim2 : rank l = rank (fromList (swap (toList t) (i_next - 1) (i - 1)))) by admit "".
-          assert (claim3 := IH (rank l) claim1 (fromList (swap (toList t) (i_next - 1) (i - 1))) i_next).
+        + assert (claim1 : rank l < rank tree) by admit "".
+          assert (claim2 : rank l = rank (fromList (swap (toList tree) (i_next - 1) (idx - 1)))) by admit "".
+          (* assert (claim3 := IH (rank l) claim1 (fromList (swap (toList tree) (i_next - 1) (idx - 1))) i_next). *)
           deflag. give_up.
         + give_up.
         + give_up.
