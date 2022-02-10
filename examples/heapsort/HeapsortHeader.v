@@ -1069,15 +1069,38 @@ Section CompleteBinaryTree.
   Proof.
     remember (decode j) as l. revert Heql. revert j.
     induction l;intros.
-    - destruct n;inversion H.
-      
+    - destruct n;inversion H.    
   Admitted.
 
   Lemma decode_lbound j n : 2 ^ n -1 <= j -> n <= length (decode j).
   Admitted.
 
   Lemma encode_bound l n : length l = n -> 2^n -1 <= encode l < 2 ^ (S n) -1.
-  Admitted.  
+  Admitted.
+
+  Lemma subtree_outrange j (t : bintree A) :
+    complete t -> j >= btsize t ->
+    subtree_nat t j = Some BT_nil \/ subtree_nat t j = None.
+  Proof.
+    intros H. revert j.
+    unfold complete in H. destruct H. revert H. revert t.
+    induction x;intros.
+    - inversion H. unfold subtree_nat. destruct (decode j);simpl. {left. auto.} {right. auto.}
+    - unfold subtree_nat. remember (decode_nat j) as P;clear HeqP.
+      inversion H;subst.
+      + remember (perf_size _ _ H_l) as D;clear HeqD. simpl in H0.
+        rewrite <- add_succ_l in H0. rewrite D in H0.
+        rewrite <- sub_succ_l in H0;try apply exp_pos;auto. simpl in H0;rewrite sub_0_r in H0.
+        
+        
+        destruct (decode j);simpl.
+        ++ rewrite P in H2. simpl in H2. inversion H2.
+        ++ unfold subtree_nat in IHcomplete'1.
+           unfold subtree_nat in IHcomplete'2. destruct d;simpl.
+           ** simpl in P. rewrite sub_0_r in P. apply (f_equal decode) in P.
+              rewrite (decode_encode l0) in P.
+          
+  Admitted.
 
   Lemma perfect_leaves (t : bintree A) :
     (exists n, perfect' t n) ->
