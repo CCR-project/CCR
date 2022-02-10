@@ -401,6 +401,17 @@ Section BinaryTreeIndexing.
 
   Inductive dir_t : Set := Dir_left | Dir_right.
 
+  Definition btidx := list dir_t.
+
+  Inductive lt_eqlen : btidx -> btidx -> Prop :=
+  | lt_eqlen_head i j : length i = length j -> lt_eqlen (Dir_left :: i) (Dir_right :: j)
+  | lt_eqlen_cons d i j : lt_eqlen i j -> lt_eqlen (d :: i) (d :: j)
+  .
+
+  Definition lt_nelen (i j : btidx) := length i < length j.
+
+  Definition btidx_lt i j := lt_nelen i j \/ lt_eqlen i j.
+
   Definition encode ds := fold_left (fun i => dir_t_rect (fun _ => nat) (2 * i + 1) (2 * i + 2)) ds 0.
 
   Lemma _encode_unfold_lemma l n : fold_left (fun i : nat => dir_t_rect (fun _ : dir_t => nat) (i + (i + 0) + 1) (i + (i + 0) + 2)) l n = encode l + n * 2 ^ (length l).
@@ -541,6 +552,8 @@ End BinaryTreeIndexing.
 Section BinaryTreeAccessories.
 
   Context {A : Type}.
+
+  Definition last_btidx (t : bintree A) := decode (btsize t - 1).
 
   Definition subtree_init t : option (bintree A) := Some t.
 
