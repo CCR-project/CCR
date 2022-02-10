@@ -971,7 +971,7 @@ Section CompleteBinaryTree.
       assert (btsize r -1 < 2 ^ S n -1).
       + apply Lt.le_lt_n_Sm in H2.  rewrite <- sub_succ_l in H2.
         2 :{simpl. pose proof (exp_pos 2). assert (B : 2>0) by nia.
-            apply H3 with (n:=n) in B. nia.}
+            apply H3 with (n:=n) in B. nia. }
         replace (S (2 ^ S n - 1) - 1) with (2 ^ S n - 1) in H2 by nia. auto.
       + apply decode_ubound in H3. assert (length (decode (btsize r - 1)) = n) by nia.
         rewrite H4. simpl. assert (B : 2 > 0) by nia. pose proof (exp_pos 2 n B).
@@ -986,21 +986,24 @@ Section CompleteBinaryTree.
 
   Lemma complete'_last_btidx_length t n :
     complete' t n ->
-    length (last_btidx t) = n.
+    length (last_btidx t) = n - 1.
   Proof.
     intros H.
-    induction H.
+    induction H as [| n x l r H_l H_r | n x l r H_l H_r].
     - reflexivity.
-    - erewrite last_btidx_perfect_complete
-        by eassumption.
-      simpl.
-      rewrite IHcomplete'.
-      reflexivity.
+    - destruct n.
+      + inversion H_l.
+        inversion H_r.
+        subst.
+        reflexivity.
+      + erewrite last_btidx_perfect_complete with (n := S n)
+          by (try lia; eassumption).
+        simpl.
+        lia.
     - erewrite last_btidx_complete_perfect
         by eassumption.
       simpl.
-      rewrite IHcomplete'.
-      reflexivity.
+      lia.
   Qed.
 
   Lemma subtree_outrange_ltlen (t : bintree A) :
@@ -1016,19 +1019,29 @@ Section CompleteBinaryTree.
     intros t H j Hj.
     destruct H.
     - destruct j; auto.
-    - erewrite last_btidx_perfect_complete in Hj by eassumption.
+    - destruct n.
+      { inversion H_l.
+        inversion H.
+        subst.
+        unfold last_btidx in Hj; rewrite unfold_decode in Hj; simpl in Hj.
+        destruct j; simpl in Hj; try lia.
+        destruct j as [| d' j].
+        - left. destruct d; reflexivity.
+        - right. destruct d; reflexivity.
+      }
+      erewrite last_btidx_perfect_complete with (n := S n) in Hj by (try lia; eassumption).
       destruct j as [|[] j]; simpl in Hj.
       + lia.
       + rewrite unfold_option_subtree; simpl.
         erewrite complete'_last_btidx_length in Hj by eassumption.
-        eapply (IH n).
+        eapply (IH (S n)).
         * lia.
         * eapply perfect'2complete'. eassumption.
         * erewrite complete'_last_btidx_length
             by (eapply perfect'2complete'; eassumption).
           lia.
       + rewrite unfold_option_subtree; simpl.
-        eapply (IH n).
+        eapply (IH (S n)).
         * lia.
         * eassumption.
         * lia.
@@ -1064,13 +1077,29 @@ Section CompleteBinaryTree.
     destruct H.
     - rewrite last_btidx_nil in Hj.
       inversion Hj.
-    - erewrite last_btidx_perfect_complete in Hj by eassumption.
+    - destruct n.
+      { inversion H_l.
+        inversion H.
+        subst.
+        unfold last_btidx in Hj; rewrite unfold_decode in Hj; simpl in Hj.
+        inversion Hj.
+      }
+      erewrite last_btidx_perfect_complete with (n := S n) in Hj by (try lia; eassumption).
       inversion Hj; subst.
       rewrite unfold_option_subtree; simpl.
-      eapply (IH n); try assumption; lia.
+      eapply (IH (S n)); try assumption; lia.
     - erewrite last_btidx_complete_perfect in Hj by eassumption.
       inversion Hj; subst.
       + rewrite unfold_option_subtree; simpl.
+        destruct n.
+        { inversion H_r.
+          inversion H.
+          inversion H_l.
+          inversion H_r0.
+          subst.
+          destruct j0; try discriminate.
+          auto.
+        }
         eapply subtree_outrange_ltlen.
         * eexists. eapply perfect'2complete'. eassumption.
         * unfold lt_ltlen.
@@ -1102,53 +1131,6 @@ Section CompleteBinaryTree.
         * eapply subtree_outrange_ltlen;eauto. exists x;auto.
         * eapply subtree_outrange_eqlen;eauto. exists x;auto.
   Qed.
-
-
-  Lemma decode_ubound j n : j < 2 ^ n - 1 -> length (decode j) < n.
-  Proof.
-    remember (decode j) as l. revert Heql. revert j.
-    induction l;intros.
-    - destruct n;inversion H.    
-  Admitted.
-
-  Lemma decode_lbound j n : 2 ^ n -1 <= j -> n <= length (decode j).
-  Admitted.
-
-  Lemma encode_bound l n : length l = n -> 2^n -1 <= encode l < 2 ^ (S n) -1.
-  Admitted.
-  
-
-  Lemma subtree_outrange j (t : bintree A) :
-    complete t -> j >= btsize t ->
-    subtree_nat t j = Some BT_nil \/ subtree_nat t j = None.
-  Proof.
-    intros H. unfold complete in H. destruct H. revert H. revert j t.
-    induction x;intros.
-    - inversion H. unfold subtree_nat. destruct (decode j);simpl;[left|right];auto.
-    - unfold subtree_nat in *. pose proof (decode_nat j) as P.
-      inversion H;subst.
-      + pose proof (perf_size _ _ H_l) as D. pose proof H0 as Y. simpl in H0.
-        apply perfect'2complete' in H_l.
-        destruct (decode j) eqn : E.
-        * rewrite P in H0. inversion H0.
-        * destruct d;simpl.
-          ** rewrite <- add_succ_r in H0.
-             destruct x.
-             *** inversion H_l;subst. destruct l0;auto.
-             *** pose proof (comp_size _ _ H) as Q.
-                 assert (C : j >= 2 ^ S x - 1) by nia.
-                 pose proof (decode_lbound _ _ C) as B.
-                 rewrite E in B;simpl in B. apply le_S_n in B.
-                 assert (R : 2<>0) by nia. apply (pow_le_mono_r _ _ _ R) in B. clear R.
-                 simpl in P. rewrite sub_0_r in P.
-                 apply sub_le_mono_r with (p := (2 ^ (length l0))) in H0.
-                 rewrite <- P in H0. pose proof (comp_size _ _ H_r).
-               rewrite D in H0.
-                 rewrite <- sub_succ_l in H0;try apply exp_pos;auto.
-                 simpl in H0;rewrite sub_0_r in H0.
-                 simpl in P. rewrite sub_0_r in P. apply (f_equal decode) in P.
-                 rewrite (decode_encode l0) in P,
-  Admitted.
 
   Lemma perfect_leaves (t : bintree A) :
     (exists n, perfect' t n) ->
