@@ -68,7 +68,7 @@ Section SIMMODSEM.
   (** entering function *)
     Opaque div swap.
     init. harg. destruct x as [[root p] k]. mDesAll; subst.
-    clear PURE1. destruct PURE0 as [? [PURE1 [PURE2 PURE3]]]; subst.
+    clear PURE1. destruct PURE0 as [? [PURE1 [PURE2 [PURE3 PURE4]]]]; subst.
     steps. astop. steps.
   (** entering 1st loop *)
     (* loop-invariant *)
@@ -80,17 +80,73 @@ Section SIMMODSEM.
     assert (H_par_i_positive : par_i0 > 0) by now replace par_i0 with 1 by congruence; lia.
     assert (H_t_lookup : HeapsortHeader.subtree_nat (fromList xs0) (par_i0 - 1) = Some t).
     { replace par_i0 with 1; [rewrite t_is | congruence]... }
-    clear H_init t_is H_t_init H_xs_init.
+    assert (H_recover : recover_bintree btctx_top t = fromList xs0).
+    { rewrite t_is... }
+    remember (btctx_top) as cur_ctx eqn: H_ctx in H_recover.
+    clear H_init t_is H_t_init H_xs_init H_ctx.
     (* execute loop *)
-    deflag. revert mrp_src mp_tgt WF root ctx mr_src mp_src PURE1 PURE2 PURE3 ACC xs0 par_i0 H_par_i_positive H_t_perm H_t_lookup.
+    deflag. revert mrp_src mp_tgt WF ctx mr_src mp_src PURE1 PURE2 PURE3 ACC xs0 par_i0 H_par_i_positive H_t_perm H_recover H_t_lookup.
     induction t as [ | x l IH_l r IH_r]; i.
-    - admit " t = BT_nil ".
     - rewrite unfold_iter_eq.
       destruct (par_i0 * 2 <=? strings.length (toList root)) eqn: H_obs1.
-      + admit " (par_i0 * 2 <=? strings.length (toList root)) = true ".
-      + steps.
-  (** entering 2nd loop *)
-        admit " (par_i0 * 2 <=? strings.length (toList root)) = false ".
+      1:{ admit "impossible". }
+      { steps.
+        remember BT_nil as t eqn: t_is in H_recover, H_t_lookup. clear H_obs1 t_is.
+        deflag. revert p k PURE4 mrp_src mp_tgt WF ctx mr_src mp_src PURE1 PURE2 PURE3 ACC xs0 par_i0 H_par_i_positive H_t_perm t H_recover H_t_lookup.
+        induction cur_ctx as [ | x r g IH | x l g IH]; i.
+        - assert (H_end : par_i0 = 1) by admit "trivial".
+          rewrite unfold_iter_eq. steps. admit "escaping function".
+        - rewrite unfold_iter_eq. steps.
+          destruct ((par_i0 =? 1)%nat) eqn: H_obs2.
+          1:{ admit "impossible". }
+          steps. destruct (HeapsortHeader.lookup xs0 (par_i0 `div` 2 - 1)) as [x_p |] eqn: H_obs3.
+          2:{ admit "impossible". }
+          steps. destruct ((k <? x_p)%Z) eqn: H_obs4.
+          + steps. admit "escaping function".
+          + steps. deflag. eapply IH...
+            admit "par_i0 `div` 2 > 0".
+            admit "swap xs0 (par_i0 - 1) (par_i0 `div` 2 - 1) ≡ₚ k :: list.tail (toList root)".
+            admit "recover_bintree g ?t = fromList (swap xs0 (par_i0 - 1) (par_i0 `div` 2 - 1))".
+            admit "subtree_nat (fromList (swap xs0 (par_i0 - 1) (par_i0 `div` 2 - 1))) (par_i0 `div` 2 - 1) = Some ?t".
+        - rewrite unfold_iter_eq. steps.
+          destruct ((par_i0 =? 1)%nat) eqn: H_obs2.
+          1:{ admit "impossible". }
+          steps. destruct (HeapsortHeader.lookup xs0 (par_i0 `div` 2 - 1)) as [x_p |] eqn: H_obs3.
+          2:{ admit "impossible". }
+          steps. destruct ((k <? x_p)%Z) eqn: H_obs4.
+          + steps. admit "escaping function".
+          + steps. deflag. eapply IH...
+            admit "par_i0 `div` 2 > 0".
+            admit "swap xs0 (par_i0 - 1) (par_i0 `div` 2 - 1) ≡ₚ k :: list.tail (toList root)".
+            admit "recover_bintree g ?t0 = fromList (swap xs0 (par_i0 - 1) (par_i0 `div` 2 - 1))".
+            admit "subtree_nat (fromList (swap xs0 (par_i0 - 1) (par_i0 `div` 2 - 1))) (par_i0 `div` 2 - 1) = Some ?t0".
+      }
+    - rewrite unfold_iter_eq.
+      destruct (par_i0 * 2 <=? strings.length (toList root)) eqn: H_obs1.
+      2:{ admit "impossible". }
+      destruct (strings.length (toList root)).
+      1:{ admit "impossible". }
+      steps.
+      destruct (HeapsortHeader.lookup xs0 (par_i0 * 2 - 1)) as [x_l | ] eqn: H_obs_l.
+      2:{ admit "impossible". }
+      destruct (HeapsortHeader.lookup xs0 (par_i0 * 2)) as [x_r | ] eqn: H_obs_r.
+      2:{ admit "impossible". }
+      steps. destruct (par_i0 * 2 <=? n) eqn: H_obs2.
+      + steps. destruct ((x_l <? x_r)%Z) eqn: H_obs3.
+        { deflag. eapply IH_r...
+          admit "swap xs0 (par_i0 * 2 + 1 - 1) (par_i0 - 1) ≡ₚ k :: list.tail (toList root)".
+          admit "recover_bintree cur_ctx r = fromList (swap xs0 (par_i0 * 2 + 1 - 1) (par_i0 - 1))".
+          admit "subtree_nat (fromList (swap xs0 (par_i0 * 2 + 1 - 1) (par_i0 - 1))) (par_i0 * 2 + 1 - 1) = Some r".
+        }
+        { deflag. eapply IH_l...
+          admit "swap xs0 (par_i0 * 2 - 1) (par_i0 - 1) ≡ₚ k :: list.tail (toList root)".
+          admit "recover_bintree cur_ctx l = fromList (swap xs0 (par_i0 * 2 - 1) (par_i0 - 1))".
+          admit "subtree_nat (fromList (swap xs0 (par_i0 * 2 - 1) (par_i0 - 1))) (par_i0 * 2 - 1) = Some l".
+        }
+      + steps. deflag. eapply IH_l...
+        admit "swap xs0 (par_i0 * 2 - 1) (par_i0 - 1) ≡ₚ k :: list.tail (toList root)".
+        admit "recover_bintree cur_ctx l = fromList (swap xs0 (par_i0 * 2 - 1) (par_i0 - 1))".
+        admit "subtree_nat (fromList (swap xs0 (par_i0 * 2 - 1) (par_i0 - 1))) (par_i0 * 2 - 1) = Some l".
   Admitted.
 
   Lemma sim_heapsort (sk : alist string Sk.gdef) :
