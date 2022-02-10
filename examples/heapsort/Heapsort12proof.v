@@ -65,30 +65,39 @@ Section SIMMODSEM.
                fun_to_tgt "Heapsort" (GlobalStb sk) {| fsb_fspec := heapify_spec; fsb_body := cfunN heapify_body |})
               ("heapify", cfunU Heapsort1.heapify_body).
   Proof with lia || eauto.
-    Opaque div.
+    Opaque div swap.
     init. harg. destruct x as [[root y] k]. mDesAll; subst.
     clear PURE1. destruct PURE0 as [H_eq [PURE1 [PURE2 PURE3]]]; subst.
-    steps. astop. remember (k :: list.tail (toList root), 1) as acc_init eqn: acc_init_is.
-    destruct acc_init as [xs par_i]. remember (fromList xs) as t eqn: t_is. remember (rank t) as t_rk eqn: t_rk_is.
-    rewrite toList_length. replace (btsize root) with (btsize t).
-    2:{ rewrite <- (toList_length root). transitivity (length (k :: list.tail (toList root))).
-      - rewrite <- (toList_length t). apply f_equal. rewrite t_is. rewrite toList_fromList. congruence.
-      - destruct root; inv PURE2...
+    steps. astop. remember (k :: list.tail (toList root), 1) as acc_init eqn: H_init.
+    destruct acc_init as [xs i]. remember (fromList xs) as t eqn: t_is.
+    assert (xs_is : xs = toList t).
+    { rewrite t_is. rewrite toList_fromList... }
+    subst xs. clear t_is. remember (rank t) as rk eqn: rk_is.
+    clear H_init. deflag. revert t i rk_is.
+    induction rk as [rk IH] using Wf_nat.lt_wf_ind; i. rewrite unfold_iter_eq.
+    destruct (i * 2 <=? strings.length (toList root)) eqn: H_obs1.
+    { destruct (strings.length (toList root)) eqn: H_obs2.
+      { destruct root; [inv PURE2 | inv H_obs2]. }
+      destruct (i * 2 <=? n) eqn: H_obs3.
+      - destruct (HeapsortHeader.lookup (toList t) (i * 2 - 1)) as [x_l | ] eqn: H_obs_l.
+        2: admit "UB".
+        destruct (HeapsortHeader.lookup (toList t) (i * 2)) as [x_r | ] eqn: H_obs_r.
+        2: admit "UB".
+        steps. deflag. 
+        set (i_next := if (x_l <? x_r)%Z then i * 2 + 1 else i * 2).
+        destruct (option_children_pair t) as [[l r] | ] eqn: H_obs_t.
+        replace (swap (toList t) (i_next - 1) (i - 1)) with (toList (fromList (swap (toList t) (i_next - 1) (i - 1)))).
+        2: rewrite toList_fromList...
+        destruct ((x_l <? x_r)%Z) eqn: H_obs4.
+        + assert (claim1 : rank l < rank t) by admit "".
+          assert (claim2 : rank l = rank (fromList (swap (toList t) (i_next - 1) (i - 1)))) by admit "".
+          assert (claim3 := IH (rank l) claim1 (fromList (swap (toList t) (i_next - 1) (i - 1))) i_next).
+          deflag. give_up.
+        + give_up.
+        + give_up.
+      - give_up.
     }
-    deflag. revert mrp_src mp_tgt WF y k ctx mr_src mp_src PURE1 PURE2 PURE3 ACC xs par_i acc_init_is t t_is t_rk_is.
-    induction t_rk as [t_rk IH] using Wf_nat.lt_wf_ind; i.
-    rewrite unfold_iter_eq. destruct t as [ | x l r]. 1: steps.
-    destruct (par_i * 2 <=? btsize (BT_node x l r)) eqn: H_obs_if1.
-    - admit "the first loop".
-    - steps. rewrite unfold_iter_eq. steps.
-      force_l. exists ((k :: list.tail (toList root))↑). steps. hret tt; ss.
-      iModIntro. iSplit; ss. iSplit; ss.
-      iExists (fromList (k :: list.tail (toList root))).
-      iPureIntro. ss; splits; ss.
-      + f_equal. rewrite toList_fromList...
-      + admit "complete (fromList (k :: list.tail (toList root)))".
-      + rewrite toList_fromList. constructor 2...
-      + rewrite <- t_is. admit "heap_pr Z.ge y (BT_node x l r)".
+    give_up.
   Admitted.
 
   Lemma sim_heapsort (sk : alist string Sk.gdef) :
