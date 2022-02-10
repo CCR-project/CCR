@@ -46,6 +46,7 @@ Section HEAPSORT.
                 , fun varg => ⌜varg = (toList tree, k)↑
                            /\ complete tree
                            /\ option_root tree = Some p
+                           /\ (p >= k)%Z
                            /\ heap Z.ge tree⌝
                 , fun vret => ∃ tree' : bintree Z, ⌜vret = (toList tree')↑
                                                 /\ complete tree'         

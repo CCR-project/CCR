@@ -65,46 +65,32 @@ Section SIMMODSEM.
                fun_to_tgt "Heapsort" (GlobalStb sk) {| fsb_fspec := heapify_spec; fsb_body := cfunN heapify_body |})
               ("heapify", cfunU Heapsort1.heapify_body).
   Proof with lia || eauto.
+  (** entering function *)
     Opaque div swap.
-    init. harg. destruct x as [[root y] k]. mDesAll; subst.
-    clear PURE1. destruct PURE0 as [H_eq [PURE1 [PURE2 PURE3]]]; subst.
-    steps. astop. steps. remember (k :: list.tail (toList root), 1) as acc_init eqn: H_init.
-    destruct acc_init as [xs0 par_i0].
-    remember (@nil HeapsortHeader.dir_t) as ds eqn: ds_is.
-    assert (par_i_invariant : par_i0 = HeapsortHeader.encode ds + 1).
-    { rewrite ds_is. replace par_i0 with 1... congruence. }
+    init. harg. destruct x as [[root p] k]. mDesAll; subst.
+    clear PURE1. destruct PURE0 as [? [PURE1 [PURE2 PURE3]]]; subst.
+    steps. astop. steps.
+  (** entering 1st loop *)
+    (* loop-invariant *)
+    remember (k :: list.tail (toList root), 1) as i eqn: H_init; destruct i as [xs0 par_i0].
     remember (fromList xs0) as t eqn: t_is.
-    assert (xs0_is : toList t = xs0).
-    { rewrite t_is. rewrite toList_fromList... }
-    assert (xs_invariant : HeapsortHeader.occurs t ds (fromList (k :: list.tail (toList root)))).
-    { rewrite ds_is. replace (fromList (k :: list.tail (toList root))) with (fromList xs0). rewrite t_is; econs. congruence. }
-    subst xs0; clear t_is. apply occurs_iff in xs_invariant. clear ds_is H_init.
-    deflag. revert mrp_src mp_tgt WF ctx mr_src mp_src PURE1 PURE2 PURE3 ACC par_i0 ds par_i_invariant par_i_invariant xs_invariant.
+    assert (H_t_init : xs0 = toList t) by now rewrite t_is; rewrite toList_fromList.
+    assert (H_xs_init : xs0 = k :: list.tail (toList root)) by congruence.
+    assert (H_t_perm : xs0 ≡ₚ k :: list.tail (toList root)) by now rewrite <- H_xs_init; eapply Permutation_refl.
+    assert (H_par_i_positive : par_i0 > 0) by now replace par_i0 with 1 by congruence; lia.
+    assert (H_t_lookup : HeapsortHeader.subtree_nat (fromList xs0) (par_i0 - 1) = Some t).
+    { replace par_i0 with 1; [rewrite t_is | congruence]... }
+    clear H_init t_is H_t_init H_xs_init.
+    (* execute loop *)
+    deflag. revert mrp_src mp_tgt WF root ctx mr_src mp_src PURE1 PURE2 PURE3 ACC xs0 par_i0 H_par_i_positive H_t_perm H_t_lookup.
     induction t as [ | x l IH_l r IH_r]; i.
-    - admit "".
+    - admit " t = BT_nil ".
     - rewrite unfold_iter_eq.
       destruct (par_i0 * 2 <=? strings.length (toList root)) eqn: H_obs1.
-      + destruct (strings.length (toList root)) eqn: H_obs2.
-        { admit "true". }
-        destruct (par_i0 * 2 <=? n) eqn: H_obs3.
-        { destruct (HeapsortHeader.lookup (toList (BT_node x l r)) (par_i0 * 2 - 1)) as [x_l  |] eqn: H_obs4.
-          2: admit "".
-          destruct ((HeapsortHeader.lookup (toList (BT_node x l r)) (par_i0 * 2))) as [x_r | ] eqn: H_obs5.
-          2: admit "".
-          set (i_next := if (x_l <? x_r)%Z then (HeapsortHeader.encode ds + 1) * 2 + 1 else (HeapsortHeader.encode ds + 1) * 2).
-          replace (HeapsortHeader.encode ds + 1 - 1) with (HeapsortHeader.encode ds)...
-          destruct ((x_l <? x_r)%Z) eqn: H_obs6.
-          - set (ds_next := ds ++ [Dir_left]).
-            steps. fold i_next.
-            replace (HeapsortHeader.encode ds + 1 - 1) with (HeapsortHeader.encode ds)...
-            replace (swap (x :: concat (zip_exp (toListAux l) (toListAux r))) (i_next - 1) (HeapsortHeader.encode ds)) with (toList l).
-            2: admit "".
-            deflag.
-            apply (IH_l mrp_src mp_tgt WF ctx mr_src mp_src PURE1 PURE2 PURE3 ACC i_next ds_next); admit "".
-          - admit "".
-        }
-        { admit "". }
-      + admit "".
+      + admit " (par_i0 * 2 <=? strings.length (toList root)) = true ".
+      + steps.
+  (** entering 2nd loop *)
+        admit " (par_i0 * 2 <=? strings.length (toList root)) = false ".
   Admitted.
 
   Lemma sim_heapsort (sk : alist string Sk.gdef) :
@@ -275,6 +261,7 @@ Section SIMMODSEM.
           }
           rewrite H. simpl. destruct (tail xs1); try contradiction.
           reflexivity.
+        - admit "(q >= last xs1 0)%Z".
         - eapply heap_erase_priority in Hₕ.
           subst.
           eapply removelast_heap.
@@ -330,7 +317,7 @@ Section SIMMODSEM.
       + econs.
       + econs. lia.
     Unshelve. et. et.
-  Qed.
+  Admitted.
 
   Theorem correct : refines2 [Heapsort1.Heapsort] [Heapsort2.Heapsort GlobalStb].
   Proof.
