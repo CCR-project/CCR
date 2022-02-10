@@ -902,7 +902,8 @@ Section CompleteBinaryTree.
       + left. exact (complete_node_complete_perfect x l' r).
       + right. exact (perfect_node x l' r).
   Defined.
-*)
+ *)
+  Definition last_index (t : bintree A) := decode (btsize t - 1).
 
   Lemma perfect'_rank t n
     (H_perfect : perfect' t n)
@@ -913,6 +914,7 @@ Section CompleteBinaryTree.
     (H_complete : complete' t n)
     : rank t = n.
   Proof. induction H_complete. 2: apply perfect'_rank in H_l. 3: apply perfect'_rank in H_r. all: simpl; lia. Qed.
+
 
   Lemma toList_lookup root i t
     (H_bound : i < length (toList root))
@@ -1078,28 +1080,69 @@ Section CompleteBinaryTree.
   Lemma encode_bound l n : length l = n -> 2^n -1 <= encode l < 2 ^ (S n) -1.
   Admitted.
 
+  
+  Lemma par_child_last x l r n (H : complete' (BT_node x l r) n) :
+    (tail (last_index (BT_node x l r)) = last_index r \/ tail (last_index (BT_node x l r)) = last_index l).
+  Proof with nia || eauto.
+    unfold last_index. simpl.
+    inversion H;subst.
+    - left. destruct n0.
+      + inversion H_l;subst. inversion H_r;subst. simpl.
+        do 2 rewrite unfold_decode...
+      + apply perf_size in H_l. apply comp_size in H_r.
+        assert (2 ^ n0 + 2 ^ S n0 <= S (btsize l + btsize r))...
+        assert (S (btsize l + btsize r) <= S (2 ^ S n0 + 2 ^ S n0 -1 -1))...
+        replace (S (2 ^ S n0 + 2 ^ S n0 - 1 - 1)) with (2 ^ S n0 + 2 ^ S n0 - 1) in H1.
+        2:{ rewrite <- sub_succ_l. simpl. rewrite sub_0_r. auto.
+            assert (2 ^ S n0 > 0);try (apply exp_pos);auto...}
+        destruct (decode (S (btsize l + btsize r))) eqn : E.
+        * apply (f_equal encode) in E. rewrite (encode_decode _) in E.
+          unfold encode in E. simpl in E. inversion E.
+        * simpl. pose proof E as T.
+          apply (f_equal encode) in E. rewrite (encode_decode _) in E.
+          rewrite encode_unfold in E.
+          destruct d;simpl in E.
+          ** rewrite sub_0_r in E. rewrite <- add_succ_l in E.
+             rewrite H_l in E. rewrite <- sub_succ_l in E.
+             2:{apply exp_pos...} simpl in E. rewrite sub_0_r in E.
+             
+          
+        
+        
+        
+
+  
+
   Lemma subtree_outrange j (t : bintree A) :
     complete t -> j >= btsize t ->
     subtree_nat t j = Some BT_nil \/ subtree_nat t j = None.
   Proof.
-    intros H. revert j.
-    unfold complete in H. destruct H. revert H. revert t.
+    intros H. unfold complete in H. destruct H. revert H. revert j t.
     induction x;intros.
-    - inversion H. unfold subtree_nat. destruct (decode j);simpl. {left. auto.} {right. auto.}
-    - unfold subtree_nat. remember (decode_nat j) as P;clear HeqP.
+    - inversion H. unfold subtree_nat. destruct (decode j);simpl;[left|right];auto.
+    - unfold subtree_nat in *. pose proof (decode_nat j) as P.
       inversion H;subst.
-      + remember (perf_size _ _ H_l) as D;clear HeqD. simpl in H0.
-        rewrite <- add_succ_l in H0. rewrite D in H0.
-        rewrite <- sub_succ_l in H0;try apply exp_pos;auto. simpl in H0;rewrite sub_0_r in H0.
-        
-        
-        destruct (decode j);simpl.
-        ++ rewrite P in H2. simpl in H2. inversion H2.
-        ++ unfold subtree_nat in IHcomplete'1.
-           unfold subtree_nat in IHcomplete'2. destruct d;simpl.
-           ** simpl in P. rewrite sub_0_r in P. apply (f_equal decode) in P.
-              rewrite (decode_encode l0) in P.
-          
+      + pose proof (perf_size _ _ H_l) as D. pose proof H0 as Y. simpl in H0.
+        apply perfect'2complete' in H_l.
+        destruct (decode j) eqn : E.
+        * rewrite P in H0. inversion H0.
+        * destruct d;simpl.
+          ** rewrite <- add_succ_r in H0.
+             destruct x.
+             *** inversion H_l;subst. destruct l0;auto.
+             *** pose proof (comp_size _ _ H) as Q.
+                 assert (C : j >= 2 ^ S x - 1) by nia.
+                 pose proof (decode_lbound _ _ C) as B.
+                 rewrite E in B;simpl in B. apply le_S_n in B.
+                 assert (R : 2<>0) by nia. apply (pow_le_mono_r _ _ _ R) in B. clear R.
+                 simpl in P. rewrite sub_0_r in P.
+                 apply sub_le_mono_r with (p := (2 ^ (length l0))) in H0.
+                 rewrite <- P in H0. pose proof (comp_size _ _ H_r).
+               rewrite D in H0.
+                 rewrite <- sub_succ_l in H0;try apply exp_pos;auto.
+                 simpl in H0;rewrite sub_0_r in H0.
+                 simpl in P. rewrite sub_0_r in P. apply (f_equal decode) in P.
+                 rewrite (decode_encode l0) in P,
   Admitted.
 
   Lemma perfect_leaves (t : bintree A) :
@@ -1117,7 +1160,7 @@ Section CompleteBinaryTree.
     - destruct l;simpl;auto.
     - destruct l eqn:E1.
       + simpl. 
-        remember (decode_nat j) as D;clear HeqD.
+        pose proof (decode_nat j) as D.
         rewrite <- E in D. rewrite D in H0.
         assert ((btsize (BT_node x t1 t2) -1) /2 = 0) by nia.
         remember (div_small_iff (btsize (BT_node x t1 t2) -1) 2) as Y.
@@ -1134,7 +1177,7 @@ Section CompleteBinaryTree.
              destruct t1;try (inversion H2). destruct t2;try (inversion H4). auto.
           ** inversion H5.
       + destruct d.
-        * simpl. remember (decode_nat j) as D;clear HeqD.
+        * simpl. pose proof (decode_nat j) as D.
           rewrite <- E in D. eapply IHt1.
           ** apply (f_equal decode) in D. rewrite (decode_encode l0) in D.
              apply D.
@@ -1146,10 +1189,10 @@ Section CompleteBinaryTree.
              destruct H0. replace (S (2 ^ n - 1 + (2 ^ n - 1))) with (2^(S n)-1) in H1.
              2:{simpl. rewrite <- add_succ_l. rewrite Minus.minus_Sn_m.
                 2:{ apply exp_pos. auto. } simpl. nia.
-             } remember H1 as U;clear HeqU. 
+             } pose proof H1 as U. 
              replace ((2 ^ n - 1 + (2 ^ n - 1))/2) with (2^n - 1) in H0.
              2:{replace (2 ^ n - 1 + (2 ^ n - 1)) with ((2 ^ n - 1) * 2) by nia. 
-                rewrite div_mul;nia. } remember H0 as R;clear HeqR.
+                rewrite div_mul;nia. } pose proof H0 as R.
              apply decode_ubound in H1. rewrite <- E in H1. simpl in H1.
              apply Lt.lt_S_n in H1. unfold Peano.lt in H1.
              assert (length l0 <= n-1) by nia.
