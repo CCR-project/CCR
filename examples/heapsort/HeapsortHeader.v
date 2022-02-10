@@ -638,6 +638,15 @@ Section BinaryTreeAccessories.
       rewrite fold_left_rev_right, rev_unit. simpl. now rewrite <- fold_left_rev_right, rev_involutive.
   Qed.
 
+  Lemma option_subtree_last' i t :
+    match option_subtree i t with
+    | Some (BT_node x l r) =>
+      option_subtree (i ++ [Dir_left]) t = Some l /\
+      option_subtree (i ++ [Dir_right]) t = Some r
+    | _ => True
+    end.
+  Admitted.
+
   Inductive occurs (t : bintree A) : list dir_t -> bintree A -> Prop :=
   | Occurs_0
     : occurs t [] t
@@ -1179,7 +1188,41 @@ Section CompleteBinaryTree.
         eapply (IH (S n)); try eassumption; lia.
   Qed.
 
-  Lemma subtree_outrange j (t : bintree A) :
+  Lemma subtree_outrange (t : bintree A) :
+    complete t ->
+    forall j, btidx_lt (last_btidx t) j ->
+         option_subtree j t = Some BT_nil \/ option_subtree j t = None.
+  Proof.
+    intros H j Hj.
+    destruct Hj.
+    - eapply subtree_outrange_ltlen; assumption.
+    - eapply subtree_outrange_eqlen; assumption.
+  Qed.
+
+  Lemma subtree_leaf (t : bintree A) :
+    complete t ->
+    forall j, btidx_lt (removelast (last_btidx t)) j ->
+         match option_subtree j t with
+         | Some t' => leaf t'
+         | None => True
+         end.
+  Proof.
+    intros H j Hj.
+    assert (H1 := option_subtree_last' j t).
+    assert (Hlt : forall d, btidx_lt (last_btidx t) (j ++ [d])) by admit.
+    destruct (option_subtree j t) as [[]|].
+    - auto.
+    - destruct H1 as [Hl Hr]. split.
+      + destruct (subtree_outrange t H _ (Hlt Dir_left)) as [H2|H2];
+          rewrite H2 in Hl; inversion Hl.
+        reflexivity.
+      + destruct (subtree_outrange t H _ (Hlt Dir_right)) as [H2|H2];
+          rewrite H2 in Hr; inversion Hr.
+        reflexivity.
+    - auto.
+  Admitted.
+
+  Lemma subtree_nat_outrange j (t : bintree A) :
     complete t -> j >= btsize t ->
     subtree_nat t j = Some BT_nil \/ subtree_nat t j = None.
   Proof.
