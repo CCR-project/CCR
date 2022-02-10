@@ -408,9 +408,9 @@ Section BinaryTreeIndexing.
   | lt_eqlen_cons d i j : lt_eqlen i j -> lt_eqlen (d :: i) (d :: j)
   .
 
-  Definition lt_nelen (i j : btidx) := length i < length j.
+  Definition lt_ltlen (i j : btidx) := length i < length j.
 
-  Definition btidx_lt i j := lt_nelen i j \/ lt_eqlen i j.
+  Definition btidx_lt i j := lt_ltlen i j \/ lt_eqlen i j.
 
   Definition encode ds := fold_left (fun i => dir_t_rect (fun _ => nat) (2 * i + 1) (2 * i + 2)) ds 0.
 
@@ -921,6 +921,121 @@ Section CompleteBinaryTree.
     : lookup (toList root) i = option_root t.
   Proof.
   Admitted.
+
+  Lemma last_btidx_nil : last_btidx (BT_nil : bintree A) = [].
+  Proof. reflexivity. Qed.
+
+  Lemma last_btidx_perfect_complete x l r n :
+    perfect' l n ->
+    complete' r n ->
+    last_btidx (BT_node x l r) = Dir_right :: last_btidx r.
+  Admitted.
+
+  Lemma last_btidx_complete_perfect x l r n :
+    complete' l (S n) ->
+    perfect' r n ->
+    last_btidx (BT_node x l r) = Dir_left :: last_btidx l.
+  Admitted.
+
+  Lemma complete'_last_btidx_length t n :
+    complete' t n ->
+    length (last_btidx t) = n.
+  Proof.
+    intros H.
+    induction H.
+    - reflexivity.
+    - erewrite last_btidx_perfect_complete
+        by eassumption.
+      simpl.
+      rewrite IHcomplete'.
+      reflexivity.
+    - erewrite last_btidx_complete_perfect
+        by eassumption.
+      simpl.
+      rewrite IHcomplete'.
+      reflexivity.
+  Qed.
+
+  Lemma subtree_outrange_ltlen (t : bintree A) :
+    complete t ->
+    forall j, lt_ltlen (last_btidx t) j ->
+         option_subtree j t = Some BT_nil \/ option_subtree j t = None.
+  Proof.
+    unfold lt_ltlen in *.
+    intros H j Hj.
+    destruct H as [n H].
+    revert t H j Hj.
+    induction n using Wf_nat.lt_wf_ind; rename H into IH.
+    intros t H j Hj.
+    destruct H.
+    - destruct j; auto.
+    - erewrite last_btidx_perfect_complete in Hj by eassumption.
+      destruct j as [|[] j]; simpl in Hj.
+      + lia.
+      + rewrite unfold_option_subtree; simpl.
+        erewrite complete'_last_btidx_length in Hj by eassumption.
+        eapply (IH n).
+        * lia.
+        * eapply perfect'2complete'. eassumption.
+        * erewrite complete'_last_btidx_length
+            by (eapply perfect'2complete'; eassumption).
+          lia.
+      + rewrite unfold_option_subtree; simpl.
+        eapply (IH n).
+        * lia.
+        * eassumption.
+        * lia.
+    - erewrite last_btidx_complete_perfect in Hj by eassumption.
+      destruct j as [|[] j]; simpl in Hj.
+      + lia.
+      + rewrite unfold_option_subtree; simpl.
+        eapply (IH (S n)).
+        * lia.
+        * eassumption.
+        * lia.
+      + rewrite unfold_option_subtree; simpl.
+        erewrite complete'_last_btidx_length in Hj by eassumption.
+        eapply (IH n).
+        * lia.
+        * eapply perfect'2complete'. eassumption.
+        * erewrite complete'_last_btidx_length
+            by (eapply perfect'2complete'; eassumption).
+          lia.
+  Qed.
+
+  (* It's possible to prove option_subtree j t = Some BT_nil *)
+  Lemma subtree_outrange_eqlen (t : bintree A) :
+    complete t ->
+    forall j, lt_eqlen (last_btidx t) j ->
+         option_subtree j t = Some BT_nil \/ option_subtree j t = None.
+  Proof.
+    intros H j Hj.
+    destruct H as [n H].
+    revert t H j Hj.
+    induction n using Wf_nat.lt_wf_ind; rename H into IH.
+    intros t H j Hj.
+    destruct H.
+    - rewrite last_btidx_nil in Hj.
+      inversion Hj.
+    - erewrite last_btidx_perfect_complete in Hj by eassumption.
+      inversion Hj; subst.
+      rewrite unfold_option_subtree; simpl.
+      eapply (IH n); try assumption; lia.
+    - erewrite last_btidx_complete_perfect in Hj by eassumption.
+      inversion Hj; subst.
+      + rewrite unfold_option_subtree; simpl.
+        eapply subtree_outrange_ltlen.
+        * eexists. eapply perfect'2complete'. eassumption.
+        * unfold lt_ltlen.
+          rewrite <- H1.
+          erewrite complete'_last_btidx_length
+            by (eapply perfect'2complete'; eassumption).
+          erewrite complete'_last_btidx_length
+            by eassumption.
+          lia.
+      + rewrite unfold_option_subtree; simpl.
+        eapply (IH (S n)); try eassumption; lia.
+  Qed.
 
   Lemma subtree_outrange j (t : bintree A) :
     complete t -> j >= btsize t ->
