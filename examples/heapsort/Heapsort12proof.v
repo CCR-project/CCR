@@ -66,54 +66,45 @@ Section SIMMODSEM.
               ("heapify", cfunU Heapsort1.heapify_body).
   Proof with lia || eauto.
     Opaque div swap.
-    init. harg. destruct x as [[root p] k]. mDesAll. clear PURE1. des.
-    steps. astop.
-
-    (* set tree *)
-    set (xs := k :: tail (toList root)).
-    remember (fromList xs) as tree.
-    replace xs with (toList tree)
-      by (subst tree; eapply toList_fromList).
-    subst xs.
-    clear Heqtree.
-
-    (* set index *)
-    set (VARS := (toList tree, 1)).
-    remember 1 as idx in VARS.
-    subst VARS.
-    clear Heqidx.
-
-    (* set rank *)
-    remember (rank tree) as rk.
-
-    (* first loop *)
-    deflag. revert tree idx Heqrk w ctx mp_src mp_tgt mr_src WF ACC.
-    induction rk as [rk IH] using Wf_nat.lt_wf_ind.
-    i. rewrite unfold_iter_eq. steps_weak.
-    destruct (idx * 2 <=? strings.length (toList root)) eqn: H_obs1.
-    { destruct (strings.length (toList root)) eqn: H_obs2.
-      { destruct root; [inv PURE2 | inv H_obs2]. }
-      destruct (idx * 2 <=? n) eqn: H_obs3.
-      - destruct (HeapsortHeader.lookup (toList tree) (idx * 2 - 1)) as [x_l | ] eqn: H_obs_l.
-        2: admit "UB".
-        destruct (HeapsortHeader.lookup (toList tree) (idx * 2)) as [x_r | ] eqn: H_obs_r.
-        2: admit "UB".
-        steps_weak. deflag. 
-        set (i_next := if (x_l <? x_r)%Z then idx * 2 + 1 else idx * 2).
-        destruct (option_children_pair tree) as [[l r] | ] eqn: H_obs_t.
-        replace (swap (toList tree) (i_next - 1) (idx - 1))
-          with (toList (fromList (swap (toList tree) (i_next - 1) (idx - 1)))).
-        2: rewrite toList_fromList...
-        destruct ((x_l <? x_r)%Z) eqn: H_obs4.
-        + assert (claim1 : rank l < rank tree) by admit "".
-          assert (claim2 : rank l = rank (fromList (swap (toList tree) (i_next - 1) (idx - 1)))) by admit "".
-          (* assert (claim3 := IH (rank l) claim1 (fromList (swap (toList tree) (i_next - 1) (idx - 1))) i_next). *)
-          deflag. give_up.
-        + give_up.
-        + give_up.
-      - give_up.
-    }
-    give_up.
+    init. harg. destruct x as [[root y] k]. mDesAll; subst.
+    clear PURE1. destruct PURE0 as [H_eq [PURE1 [PURE2 PURE3]]]; subst.
+    steps. astop. steps. remember (k :: list.tail (toList root), 1) as acc_init eqn: H_init.
+    destruct acc_init as [xs0 par_i0].
+    remember (@nil HeapsortHeader.dir_t) as ds eqn: ds_is.
+    assert (par_i_invariant : par_i0 = HeapsortHeader.encode ds + 1).
+    { rewrite ds_is. replace par_i0 with 1... congruence. }
+    remember (fromList xs0) as t eqn: t_is.
+    assert (xs0_is : toList t = xs0).
+    { rewrite t_is. rewrite toList_fromList... }
+    assert (xs_invariant : HeapsortHeader.occurs t ds (fromList (k :: list.tail (toList root)))).
+    { rewrite ds_is. replace (fromList (k :: list.tail (toList root))) with (fromList xs0). rewrite t_is; econs. congruence. }
+    subst xs0; clear t_is. apply occurs_iff in xs_invariant. clear ds_is H_init.
+    deflag. revert mrp_src mp_tgt WF ctx mr_src mp_src PURE1 PURE2 PURE3 ACC par_i0 ds par_i_invariant par_i_invariant xs_invariant.
+    induction t as [ | x l IH_l r IH_r]; i.
+    - admit "".
+    - rewrite unfold_iter_eq.
+      destruct (par_i0 * 2 <=? strings.length (toList root)) eqn: H_obs1.
+      + destruct (strings.length (toList root)) eqn: H_obs2.
+        { admit "true". }
+        destruct (par_i0 * 2 <=? n) eqn: H_obs3.
+        { destruct (HeapsortHeader.lookup (toList (BT_node x l r)) (par_i0 * 2 - 1)) as [x_l  |] eqn: H_obs4.
+          2: admit "".
+          destruct ((HeapsortHeader.lookup (toList (BT_node x l r)) (par_i0 * 2))) as [x_r | ] eqn: H_obs5.
+          2: admit "".
+          set (i_next := if (x_l <? x_r)%Z then (HeapsortHeader.encode ds + 1) * 2 + 1 else (HeapsortHeader.encode ds + 1) * 2).
+          replace (HeapsortHeader.encode ds + 1 - 1) with (HeapsortHeader.encode ds)...
+          destruct ((x_l <? x_r)%Z) eqn: H_obs6.
+          - set (ds_next := ds ++ [Dir_left]).
+            steps. fold i_next.
+            replace (HeapsortHeader.encode ds + 1 - 1) with (HeapsortHeader.encode ds)...
+            replace (swap (x :: concat (zip_exp (toListAux l) (toListAux r))) (i_next - 1) (HeapsortHeader.encode ds)) with (toList l).
+            2: admit "".
+            deflag.
+            apply (IH_l mrp_src mp_tgt WF ctx mr_src mp_src PURE1 PURE2 PURE3 ACC i_next ds_next); admit "".
+          - admit "".
+        }
+        { admit "". }
+      + admit "".
   Admitted.
 
   Lemma sim_heapsort (sk : alist string Sk.gdef) :
