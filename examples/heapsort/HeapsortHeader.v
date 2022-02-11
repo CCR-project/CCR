@@ -548,6 +548,30 @@ Section BinaryTreeIndexing.
       rewrite (encode_unfold (d :: l)). destruct d;simpl;nia.
   Qed.
 
+  Lemma encode_bound l n : length l = n -> 2^n -1 <= encode l < 2 ^ (S n) -1.
+  Proof.
+    revert n. induction l;intros.
+    - simpl in *. rewrite <- H. simpl. auto.
+    - simpl in *. destruct n;inversion H.
+      rewrite encode_unfold. destruct a.
+      + simpl. rewrite H1. apply IHl in H1. rewrite sub_0_r.
+        assert (2 ^ n > 0) by (apply exp_pos;nia). nia.
+      + simpl. rewrite H1. apply IHl in H1.
+        assert (2 ^ n > 0) by (apply exp_pos;nia). nia.
+  Qed.
+  
+  Lemma decode_ubound j n : j < 2 ^ n - 1 -> length (decode j) < n.
+  Proof.
+    intros. pose proof (lt_dec (length (decode j)) n) as Y.
+    destruct Y;auto.
+    assert (length (decode j) >= n) by nia.
+    remember (length (decode j)) as m.
+    symmetry in Heqm. apply encode_bound in Heqm.
+    rewrite encode_decode in Heqm.
+    assert (2 ^ n <= 2 ^ m) by (apply pow_le_mono_r;nia).
+    nia.
+  Qed.
+
   Lemma nat_btidx_iff i j : btidx_lt i j <-> encode i < encode j.
   Admitted.
       
@@ -955,28 +979,6 @@ Section CompleteBinaryTree.
         simpl in *. nia.
   Qed.
   
-  Lemma encode_bound l n : length l = n -> 2^n -1 <= encode l < 2 ^ (S n) -1.
-  Proof.
-    revert n. induction l;intros.
-    - simpl in *. rewrite <- H. simpl. auto.
-    - simpl in *. destruct n;inversion H.
-      rewrite encode_unfold. destruct a.
-      + simpl. rewrite H1. apply IHl in H1. rewrite sub_0_r.
-        assert (2 ^ n > 0) by (apply exp_pos;nia). nia.
-      + simpl. rewrite H1. apply IHl in H1.
-        assert (2 ^ n > 0) by (apply exp_pos;nia). nia.
-  Qed.
-  
-  Lemma decode_ubound j n : j < 2 ^ n - 1 -> length (decode j) < n.
-  Proof.
-    remember (decode j) as l. revert Heql. revert j.
-    induction l;intros.
-    - destruct n;inversion H.    
-  Admitted.
-
-  Lemma decode_lbound j n : 2 ^ n -1 <= j -> n <= length (decode j).
-  Admitted.
-
   Lemma toList_lookup root i t
     (H_bound : i < length (toList root))
     (H_complete : complete root)
