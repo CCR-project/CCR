@@ -936,6 +936,7 @@ Section CompleteBinaryTree.
   Admitted.
 
   Lemma decode_lbound j n : 2 ^ n -1 <= j -> n <= length (decode j).
+    
   Admitted.
 
   Lemma encode_bound l n : length l = n -> 2^n -1 <= encode l < 2 ^ (S n) -1.
@@ -965,8 +966,8 @@ Section CompleteBinaryTree.
     destruct n.
     - inversion H.
     - apply comp_size in H1. destruct H1. pose proof H1 as R.
-      eapply sub_le_mono_r with (p:=1) in H1.
-      eapply sub_le_mono_r with (p:=1) in H2.
+      apply sub_le_mono_r with (p:=1) in H1.
+      apply sub_le_mono_r with (p:=1) in H2.
       apply decode_lbound in H1.
       assert (btsize r -1 < 2 ^ S n -1).
       + apply Lt.le_lt_n_Sm in H2.  rewrite <- sub_succ_l in H2.
@@ -982,7 +983,21 @@ Section CompleteBinaryTree.
     complete' l (S n) ->
     perfect' r n ->
     last_btidx (BT_node x l r) = Dir_left :: last_btidx l.
-  Admitted.
+  Proof.
+    intros. unfold last_btidx. simpl. rewrite sub_0_r.
+    apply encode_inj. rewrite (encode_decode _).
+    rewrite encode_unfold. rewrite (encode_decode _). simpl length.
+    rewrite (perf_size _ _ H0).
+    apply comp_size in H. destruct H. pose proof H1 as R. pose proof H as T.
+    apply sub_le_mono_r with (p:=1) in H.
+    apply sub_le_mono_r with (p:=1) in H1.
+    apply decode_lbound in H.
+    assert (2 ^ n > 0) by (apply exp_pos;auto).
+    assert (2 ^ S n >= 2) by (simpl;nia).
+    assert (btsize l - 1 < 2 ^ S n - 1) by nia.
+    apply decode_ubound in H4. assert (length (decode (btsize l -1)) = n) by nia.
+    rewrite H5. simpl. rewrite sub_0_r. nia.
+  Qed.
 
   Lemma complete'_last_btidx_length t n :
     complete' t n ->
