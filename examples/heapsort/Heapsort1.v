@@ -42,7 +42,7 @@ Section HEAPSORT.
 
   Definition create_spec : fspec.
   Admitted.
-  
+
   Definition heapify_body : (list Z * Z) -> itree Es (list Z) :=
     fun '(xs0, k) =>
     let nmemb := length xs0 in
@@ -54,12 +54,14 @@ Section HEAPSORT.
           child_l <- (lookup xs (par_i*2 - 1))?;;
           child_r <- (lookup xs (par_i*2))?;;
           let child_i := if (child_l <? child_r)%Z then par_i*2 + 1 else par_i*2 in
-          Ret (inl (swap xs (child_i - 1) (par_i - 1), child_i))
+          child <- (lookup xs (child_i - 1))?;;
+          Ret (inl (upd xs (par_i - 1) child, child_i))
         else
           let child_i := par_i*2 in
-          Ret (inl (swap xs (child_i - 1) (par_i - 1), child_i))
+          child <- (lookup xs (child_i - 1))?;;
+          Ret (inl (upd xs (par_i - 1) child, child_i))
       else Ret (inr (xs, par_i))
-    ) (k :: tail xs0, 1);;
+    ) (xs0, 1);;
     '(xs2, par_i) <- ITree.iter (fun '(xs, par_i) =>
       let child_i := par_i in
       let par_i := child_i / 2 in
@@ -68,8 +70,8 @@ Section HEAPSORT.
       else
         par <- (lookup xs (par_i - 1))?;;
         if (k <? par)%Z
-        then Ret (inr (xs, par_i))
-        else Ret (inl (swap xs (child_i - 1) (par_i - 1), par_i))
+        then Ret (inr (upd xs (child_i - 1) k, par_i))
+        else Ret (inl (upd xs (child_i - 1) par, par_i))
     ) (xs1, par_i);;
     Ret xs2.
 
