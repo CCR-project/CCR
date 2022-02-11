@@ -572,6 +572,19 @@ Section BinaryTreeIndexing.
     nia.
   Qed.
 
+  Lemma decode_lbound j n : 2 ^ n -1 <= j -> n <= length (decode j).
+  Proof.
+    intros. pose proof (lt_dec n (S (length (decode j)))) as Y.
+    destruct Y; try nia.
+    assert (S (length (decode j)) <= n) by nia.
+    remember (length (decode j)) as m.
+    symmetry in Heqm. apply encode_bound in Heqm.
+    rewrite encode_decode in Heqm.
+    assert (2 ^ S m <= 2 ^ n) by (apply pow_le_mono_r;auto).
+    nia.
+  Qed.
+
+
   Lemma nat_btidx_iff i j : btidx_lt i j <-> encode i < encode j.
   Admitted.
       
@@ -978,6 +991,7 @@ Section CompleteBinaryTree.
         replace (S (2 ^ n - 1)) with (2 ^ n) by nia.
         simpl in *. nia.
   Qed.
+                              
   
   Lemma toList_lookup root i t
     (H_bound : i < length (toList root))
