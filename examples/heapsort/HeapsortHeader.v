@@ -548,6 +548,43 @@ Section BinaryTreeIndexing.
       rewrite (encode_unfold (d :: l)). destruct d;simpl;nia.
   Qed.
 
+  Lemma encode_bound l n : length l = n -> 2^n -1 <= encode l < 2 ^ (S n) -1.
+  Proof.
+    revert n. induction l;intros.
+    - simpl in *. rewrite <- H. simpl. auto.
+    - simpl in *. destruct n;inversion H.
+      rewrite encode_unfold. destruct a.
+      + simpl. rewrite H1. apply IHl in H1. rewrite sub_0_r.
+        assert (2 ^ n > 0) by (apply exp_pos;nia). nia.
+      + simpl. rewrite H1. apply IHl in H1.
+        assert (2 ^ n > 0) by (apply exp_pos;nia). nia.
+  Qed.
+  
+  Lemma decode_ubound j n : j < 2 ^ n - 1 -> length (decode j) < n.
+  Proof.
+    intros. pose proof (lt_dec (length (decode j)) n) as Y.
+    destruct Y;auto.
+    assert (length (decode j) >= n) by nia.
+    remember (length (decode j)) as m.
+    symmetry in Heqm. apply encode_bound in Heqm.
+    rewrite encode_decode in Heqm.
+    assert (2 ^ n <= 2 ^ m) by (apply pow_le_mono_r;nia).
+    nia.
+  Qed.
+
+  Lemma decode_lbound j n : 2 ^ n -1 <= j -> n <= length (decode j).
+  Proof.
+    intros. pose proof (lt_dec n (S (length (decode j)))) as Y.
+    destruct Y; try nia.
+    assert (S (length (decode j)) <= n) by nia.
+    remember (length (decode j)) as m.
+    symmetry in Heqm. apply encode_bound in Heqm.
+    rewrite encode_decode in Heqm.
+    assert (2 ^ S m <= 2 ^ n) by (apply pow_le_mono_r;auto).
+    nia.
+  Qed.
+
+
   Lemma nat_btidx_iff i j : btidx_lt i j <-> encode i < encode j.
   Admitted.
       
@@ -922,26 +959,40 @@ Section CompleteBinaryTree.
   Lemma perf_size t n :
     perfect' t n ->
     btsize t = 2 ^ n -1.
-  Admitted.
+  Proof.
+    intros. induction H;auto.
+    simpl. rewrite IHperfect'1. rewrite IHperfect'2.
+    assert (2 ^ n > 0) by (apply exp_pos;nia). nia.
+  Qed.
 
   Lemma comp_size t n :
     complete' t (S n) ->
     2 ^ n <= btsize t <= 2 ^ (S n) - 1.
-  Admitted.
-  
-  Lemma decode_ubound j n : j < 2 ^ n - 1 -> length (decode j) < n.
   Proof.
-    remember (decode j) as l. revert Heql. revert j.
-    induction l;intros.
-    - destruct n;inversion H.    
-  Admitted.
-
-  Lemma decode_lbound j n : 2 ^ n -1 <= j -> n <= length (decode j).
-  Admitted.
-
-  Lemma encode_bound l n : length l = n -> 2^n -1 <= encode l < 2 ^ (S n) -1.
-  Admitted.
-
+    revert t. induction n;intros.
+    - inversion H;subst. simpl. inversion H_l;subst. inversion H_r;subst. simpl. auto.
+    - inversion H;subst.
+      + apply perf_size in H_l. simpl. rewrite H_l.
+        rewrite <- add_succ_l. assert (2 ^ n > 0) by (apply exp_pos;nia).
+        replace (S (2 ^ n -1)) with (2 ^ n) by nia.
+        assert (btsize r <= 2 ^ S n - 1).
+        * clear IHn H0 H_l H l x. induction H_r using complete_ind_ranked;simpl.
+          ** assert (2 ^ n >0) by (apply exp_pos;nia). nia.
+          ** destruct H;subst.
+             *** assert (2 ^ n_l > 0) by (apply exp_pos;nia).
+                 nia.
+             *** simpl in *. assert (2 ^ n_r > 0) by (apply exp_pos;nia).
+                 nia.
+        * simpl in *. nia.
+      + apply perf_size in H_r. simpl. rewrite H_r.
+        rewrite <- add_succ_r.
+        apply IHn in H_l.
+        assert (2 ^ n > 0) by (apply exp_pos;nia).
+        replace (S (2 ^ n - 1)) with (2 ^ n) by nia.
+        simpl in *. nia.
+  Qed.
+                              
+  
   Lemma toList_lookup root i t
     (H_bound : i < length (toList root))
     (H_complete : complete root)
@@ -983,7 +1034,21 @@ Section CompleteBinaryTree.
     complete' l (S n) ->
     perfect' r n ->
     last_btidx (BT_node x l r) = Dir_left :: last_btidx l.
-  Admitted.
+  Proof.
+    intros. unfold last_btidx. simpl. rewrite sub_0_r.
+    apply encode_inj. rewrite (encode_decode _).
+    rewrite encode_unfold. rewrite (encode_decode _). simpl length.
+    rewrite (perf_size _ _ H0).
+    apply comp_size in H. destruct H. pose proof H1 as R. pose proof H as T.
+    apply sub_le_mono_r with (p:=1) in H.
+    apply sub_le_mono_r with (p:=1) in H1.
+    apply decode_lbound in H.
+    assert (2 ^ n > 0) by (apply exp_pos;auto).
+    assert (2 ^ S n >= 2) by (simpl;nia).
+    assert (btsize l - 1 < 2 ^ S n - 1) by nia.
+    apply decode_ubound in H4. assert (length (decode (btsize l -1)) = n) by nia.
+    rewrite H5. simpl. rewrite sub_0_r. nia.
+  Qed.
 
   Lemma complete'_last_btidx_length t n :
     complete' t n ->
