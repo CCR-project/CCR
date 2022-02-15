@@ -1424,6 +1424,14 @@ Section HeapProperty.
   Lemma removelast_heap t : heap t -> heap (fromList (removelast (toList t))).
   Admitted.
 
+  Lemma heap_head_last t x xs a :
+    Reflexive R ->
+    Transitive R ->
+    heap t ->
+    toList t = x :: xs ->
+    R x (last (toList t) a).
+  Admitted.
+
 End HeapProperty.
 
 Section BinaryTreeZipper.

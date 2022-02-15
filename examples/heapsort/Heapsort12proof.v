@@ -317,7 +317,11 @@ Section SIMMODSEM.
           }
           rewrite H. simpl. destruct (tail xs1); try contradiction.
           reflexivity.
-        - admit "(q >= last xs1 0)%Z".
+        - eapply heap_head_last.
+          + unfold Reflexive. lia.
+          + unfold Transitive. lia.
+          + eapply heap_erase_priority. eassumption.
+          + subst xs1. eassumption.
         - eapply heap_erase_priority in Hₕ.
           subst.
           eapply removelast_heap.
@@ -373,7 +377,7 @@ Section SIMMODSEM.
       + econs.
       + econs. lia.
     Unshelve. et. et.
-  Admitted.
+  Qed.
 
   Theorem correct : refines2 [Heapsort1.Heapsort] [Heapsort2.Heapsort GlobalStb].
   Proof.
