@@ -66,7 +66,7 @@ Section HEAPSORT.
       let child_i := par_i in
       let par_i := child_i / 2 in
       if (child_i =? 1)%nat
-      then Ret (inr (xs, par_i))
+      then Ret (inr (upd xs (child_i - 1) k, par_i))
       else
         par <- (lookup xs (par_i - 1))?;;
         if (k <? par)%Z
