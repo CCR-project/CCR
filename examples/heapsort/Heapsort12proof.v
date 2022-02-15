@@ -46,9 +46,10 @@ Section SIMMODSEM.
    fun_to_tgt "Heapsort" (GlobalStb sk) {| fsb_fspec := create_spec; fsb_body := cfunN create_body |})
    ("create", cfunU Heapsort1.create_body).
   Proof.
-    unfold create_body. unfold Heapsort1.create_body.
-    init. harg. destruct x as [tree l]. mDesAll. clear PURE1. destruct PURE0. steps.
-    astop. induction tree.
+    init. harg. destruct x as [tree l]. mDesAll. clear PURE1.
+    destruct PURE0 as [? [PURE2 [PURE3 PURE4]]];subst. steps.
+    astop.
+    deflag. induction tree.     (* give something? *)
     (* steps. rewrite unfold_iter_eq.
        destruct l;nia.
      *)  

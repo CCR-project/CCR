@@ -555,9 +555,9 @@ Section BinaryTreeIndexing.
     - simpl in *. destruct n;inversion H.
       rewrite encode_unfold. destruct a.
       + simpl. rewrite H1. apply IHl in H1. rewrite sub_0_r.
-        assert (2 ^ n > 0) by (apply exp_pos;nia). nia.
+        assert (2 ^ n > 0) by now apply exp_pos;nia. nia.
       + simpl. rewrite H1. apply IHl in H1.
-        assert (2 ^ n > 0) by (apply exp_pos;nia). nia.
+        assert (2 ^ n > 0) by now apply exp_pos;nia. nia.
   Qed.
   
   Lemma decode_ubound j n : j < 2 ^ n - 1 -> length (decode j) < n.
@@ -568,7 +568,7 @@ Section BinaryTreeIndexing.
     remember (length (decode j)) as m.
     symmetry in Heqm. apply encode_bound in Heqm.
     rewrite encode_decode in Heqm.
-    assert (2 ^ n <= 2 ^ m) by (apply pow_le_mono_r;nia).
+    assert (2 ^ n <= 2 ^ m) by now apply pow_le_mono_r.
     nia.
   Qed.
 
@@ -580,7 +580,7 @@ Section BinaryTreeIndexing.
     remember (length (decode j)) as m.
     symmetry in Heqm. apply encode_bound in Heqm.
     rewrite encode_decode in Heqm.
-    assert (2 ^ S m <= 2 ^ n) by (apply pow_le_mono_r;auto).
+    assert (2 ^ S m <= 2 ^ n) by now apply pow_le_mono_r.
     nia.
   Qed.
 
@@ -962,7 +962,7 @@ Section CompleteBinaryTree.
   Proof.
     intros. induction H;auto.
     simpl. rewrite IHperfect'1. rewrite IHperfect'2.
-    assert (2 ^ n > 0) by (apply exp_pos;nia). nia.
+    assert (2 ^ n > 0) by now apply exp_pos;nia. nia.
   Qed.
 
   Lemma comp_size t n :
@@ -973,21 +973,21 @@ Section CompleteBinaryTree.
     - inversion H;subst. simpl. inversion H_l;subst. inversion H_r;subst. simpl. auto.
     - inversion H;subst.
       + apply perf_size in H_l. simpl. rewrite H_l.
-        rewrite <- add_succ_l. assert (2 ^ n > 0) by (apply exp_pos;nia).
+        rewrite <- add_succ_l. assert (2 ^ n > 0) by now apply exp_pos;nia.
         replace (S (2 ^ n -1)) with (2 ^ n) by nia.
         assert (btsize r <= 2 ^ S n - 1).
         * clear IHn H0 H_l H l x. induction H_r using complete_ind_ranked;simpl.
-          ** assert (2 ^ n >0) by (apply exp_pos;nia). nia.
+          ** assert (2 ^ n >0) by now apply exp_pos;nia. nia.
           ** destruct H;subst.
-             *** assert (2 ^ n_l > 0) by (apply exp_pos;nia).
+             *** assert (2 ^ n_l > 0) by now apply exp_pos;nia.
                  nia.
-             *** simpl in *. assert (2 ^ n_r > 0) by (apply exp_pos;nia).
+             *** simpl in *. assert (2 ^ n_r > 0) by now apply exp_pos;nia.
                  nia.
         * simpl in *. nia.
       + apply perf_size in H_r. simpl. rewrite H_r.
         rewrite <- add_succ_r.
         apply IHn in H_l.
-        assert (2 ^ n > 0) by (apply exp_pos;nia).
+        assert (2 ^ n > 0) by now apply exp_pos;nia.
         replace (S (2 ^ n - 1)) with (2 ^ n) by nia.
         simpl in *. nia.
   Qed.
