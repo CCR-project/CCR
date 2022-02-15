@@ -50,7 +50,7 @@ Section SIMMODSEM.
     destruct PURE0 as [? [PURE2 [PURE3 PURE4]]];subst. steps.
     astop.
     assert (T : forall g i tree, (g, @BT_nil Z) = focus btctx_top tree (HeapsortHeader.decode i)
-                              -> complete tree -> i >= length (toList tree)). {admit "".}
+                            -> complete tree -> i >= length (toList tree)). { admit "". }
     remember (focus btctx_top tree (HeapsortHeader.decode (initial - 1))) as p_init eqn : Eqp.
     destruct p_init as [g t].
     pose proof (recover_focus btctx_top tree (HeapsortHeader.decode (initial - 1))) as R_lemma.
