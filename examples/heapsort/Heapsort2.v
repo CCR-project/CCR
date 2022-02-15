@@ -18,9 +18,6 @@ Section HEAPSORT.
 
   Context `{Σ : GRA.t}.
 
-  Definition create_body : list Z * nat -> itree hEs (list Z) :=
-    fun _ => trigger (Choose _).
-
   Definition create_spec : fspec :=
     mk_simple (X := bintree Z * nat)
               (fun '(tree, i) =>
@@ -36,9 +33,6 @@ Section HEAPSORT.
                  )
               )%I.
   
-  Definition heapify_body : (list Z * Z) -> itree hEs (list Z) :=
-    fun _ => trigger (Choose _).
-
   Definition heapify_spec : fspec :=
     mk_simple (X := bintree Z * Z * Z)
               (fun '(tree, p, k) =>
@@ -55,11 +49,6 @@ Section HEAPSORT.
                 )
               )%I.
 
-  Definition heapsort_body : list Z -> itree hEs (list Z) :=
-    fun xs =>
-      ys <- trigger (Choose (list Z));;
-      Ret ys.
-
   Definition heapsort_spec : fspec :=
     mk_simple (X := list Z)
               (fun xs => (
@@ -70,9 +59,9 @@ Section HEAPSORT.
               )%I.
 
   Definition HeapsortSbtb : list (gname * fspecbody) :=
-    [("create",  mk_specbody create_spec   (cfunN create_body));
-    ("heapify",  mk_specbody heapify_spec  (cfunN heapify_body));
-    ("heapsort", mk_specbody heapsort_spec (cfunN heapsort_body))
+    [("create",  mk_specbody create_spec   (fun _ => triggerNB));
+    ("heapify",  mk_specbody heapify_spec  (fun _ => triggerNB));
+    ("heapsort", mk_specbody heapsort_spec (fun _ => triggerNB))
     ].
 
   Definition HeapsortStb : list (gname * fspec).

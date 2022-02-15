@@ -43,7 +43,7 @@ Section SIMMODSEM.
   Lemma sim_create (sk : alist string Sk.gdef) :
     sim_fnsem wf top2
    ("create",
-   fun_to_tgt "Heapsort" (GlobalStb sk) {| fsb_fspec := create_spec; fsb_body := cfunN create_body |})
+   fun_to_tgt "Heapsort" (GlobalStb sk) {| fsb_fspec := create_spec; fsb_body := fun _ => triggerNB |})
    ("create", cfunU Heapsort1.create_body).
   Proof.
     unfold create_body. unfold Heapsort1.create_body.
@@ -62,7 +62,7 @@ Section SIMMODSEM.
   Lemma sim_heapify (sk : alist string Sk.gdef) :
     sim_fnsem wf top2
               ("heapify",
-               fun_to_tgt "Heapsort" (GlobalStb sk) {| fsb_fspec := heapify_spec; fsb_body := cfunN heapify_body |})
+               fun_to_tgt "Heapsort" (GlobalStb sk) {| fsb_fspec := heapify_spec; fsb_body := fun _ => triggerNB |})
               ("heapify", cfunU Heapsort1.heapify_body).
   Proof with lia || eauto. (*
   (** entering function *)
@@ -151,7 +151,7 @@ Section SIMMODSEM.
 
   Lemma sim_heapsort (sk : alist string Sk.gdef) :
     sim_fnsem wf top2
-              ("heapsort", fun_to_tgt "Heapsort" (GlobalStb sk) {| fsb_fspec := heapsort_spec; fsb_body := cfunN heapsort_body |})
+              ("heapsort", fun_to_tgt "Heapsort" (GlobalStb sk) {| fsb_fspec := heapsort_spec; fsb_body := fun _ => triggerNB|})
               ("heapsort", cfunU Heapsort1.heapsort_body).
   Proof.
     Opaque div.
