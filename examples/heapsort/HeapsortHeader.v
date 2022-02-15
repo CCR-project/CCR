@@ -1431,7 +1431,7 @@ Section BinaryTreeZipper.
   Context {A : Type}.
 
   Inductive btctx : Type :=
-  | btctx_top : btctx
+  | btctx_top: btctx
   | btctx_left (x : A) (r : bintree A) (g : btctx) : btctx
   | btctx_right (x : A) (l : bintree A) (g : btctx) : btctx
   .
