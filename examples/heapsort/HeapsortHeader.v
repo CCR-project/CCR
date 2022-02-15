@@ -167,7 +167,6 @@ Section ListOperations.
   Context {A : Type}.
 
   Definition lookup (xs : list A) i := nth_error xs i.
-  Definition lookup_1 (xs : list A) i := lookup xs (i-1).
 
   Definition swap_aux (xs : list A) i1 i2 x i :=
     if Nat.eq_dec i i1 then nth i2 xs x else
@@ -175,7 +174,6 @@ Section ListOperations.
     x.
   Definition add_indices (xs : list A) := (combine xs (seq 0 (length xs))).
   Definition swap (xs : list A) i j := map (uncurry (swap_aux xs i j)) (add_indices xs).
-  Definition swap_1 (xs : list A) i j := swap xs (i-1) (j-1).
   Definition upd xs i0 x0 := map (fun '(x, i) => if Nat.eq_dec i i0 then x0 else x) (add_indices xs).
 
   Program Fixpoint trim_exp (n : nat) (xs : list A) {measure (length xs)} : list (list A) :=
