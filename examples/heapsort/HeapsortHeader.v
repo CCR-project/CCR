@@ -1229,6 +1229,7 @@ Section CompleteBinaryTree.
     - auto.
   Qed.
 
+  (*
   Lemma subtree_nat_outrange j (t : bintree A) :
     complete t -> j >= btsize t ->
     subtree_nat t j = Some BT_nil \/ subtree_nat t j = None.
@@ -1247,6 +1248,7 @@ Section CompleteBinaryTree.
         * eapply subtree_outrange_ltlen;eauto. exists x;auto.
         * eapply subtree_outrange_eqlen;eauto. exists x;auto.
   Qed.
+   *)
 
   Lemma encode_removelast j : encode (removelast j) = (encode j + 1) / 2 - 1.
   Admitted.
