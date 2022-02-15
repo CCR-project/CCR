@@ -49,63 +49,6 @@ Section SIMMODSEM.
     init. harg. destruct x as [tree initial]. mDesAll. clear PURE1.
     destruct PURE0 as [? [PURE2 [PURE3 PURE4]]];subst. steps.
     astop.
-    deflag. revert mrp_src mp_tgt WF ctx ACC PURE2 initial PURE3 PURE4 mr_src mp_src.
-    induction tree;i.
-    - unfold toList. 
-      rewrite unfold_iter_eq.
-      destruct (initial + (initial + 0) <=? strings.length (concat (toListAux BT_nil))) eqn:E
-      ;simpl in PURE3;assert (contra : 1 <= 0) by nia;inversion contra.
-    - assert (PURE2_1 : complete tree1).
-      {destruct PURE2 as [d PURE2]. inversion PURE2;subst;
-          [apply perfect'2complete' in H_l;exists n|exists (S n)];apply H_l.}
-      assert (PURE2_2 : complete tree2).
-      {destruct PURE2 as [d PURE2]. inversion PURE2;subst;
-          [exists n|apply perfect'2complete' in H_r;exists n];apply H_r.}
-      unfold toList. rewrite unfold_iter_eq. simpl.
-      destruct (initial + (initial + 0) <=?
-                 S (strings.length (concat (zip_exp (toListAux tree1) (toListAux tree2)))))
-               eqn:E.
-      destruct (initial + (initial + 0) <=?
-                 strings.length (concat (zip_exp (toListAux tree1) (toListAux tree2))))
-               eqn:E1.
-      + steps.
-        pose proof (IHtree1 _ _ WF _ ACC PURE2_1) as IH1;clear IHtree1.
-        pose proof (IHtree2 _ _ WF _ ACC PURE2_2) as IH2;clear IHtree2.
-        clear E. apply leb_complete in E1.
-        assert (Y : ∀ (root : bintree Z),
-                   complete root
-                   ->
-                     forall i, (i < length (toList root)
-                   → match HeapsortHeader.lookup (toList root) i with
-                     | None => subtree_nat root i = None
-                     | Some x => exists t, (subtree_nat root i = Some t /\ option_root t = Some x)
-                     end)). { admit "lookup_is_subtree_nat".}
-        pose proof (Y _ PURE2 (initial * 2 - 1)) as U.
-        simpl in U. assert (T : initial * 2 - 1 < S (strings.length (concat (zip_exp (toListAux tree1) (toListAux tree2))))) by nia. apply U in T. clear U.
-        destruct (HeapsortHeader.lookup (toList (BT_node x tree1 tree2)) (initial * 2 - 1))
-                 eqn:P.
-        * destruct T as [t [T1 T2]]. rewrite <- P in T2. simpl in P. rewrite P.
-          assert (K : exists n st, subtree_nat t n = Some st -> )
-          admit "maybe guilty".
-        * assert (D : forall j (t : bintree Z),
-                     complete t -> subtree_nat t j = Some BT_nil \/ subtree_nat t j = None
-                     -> j >= btsize t).
-          {admit "comp_outrange_rev".}
-          pose proof (D _ _ PURE2 (or_intror T)) as E.
-          assert (Q : initial * 2 - 1 >= S (strings.length (concat (zip_exp (toListAux tree1) (toListAux tree2)))) -> False) by nia. 
-          rewrite <- toList_length in E. simpl in E. apply Q in E. inversion E.
-      +
-        
-        
-        pose proof (Y (BT_node x tree1 tree2 (initial * 2 -1))) as U. simpl in U.
-    (* steps. rewrite unfold_iter_eq.
-       destruct l;nia.
-     *)  
-    (*
-      destruct H0. destruct H0. steps. rewrite unfold_iter_eq.
-      destruct (l + (l + 0) <=? S n);destruct (l + (l + 0) <=? n).
-      + unfold toList. rewrite toList_step_unfold. steps.
-     *)
   Admitted.
 
   Lemma sim_heapify (sk : alist string Sk.gdef) :
