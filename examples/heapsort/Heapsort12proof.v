@@ -43,7 +43,7 @@ Section SIMMODSEM.
   Lemma sim_create (sk : alist string Sk.gdef) :
     sim_fnsem wf top2
    ("create",
-   fun_to_tgt "Heapsort" (GlobalStb sk) {| fsb_fspec := create_spec; fsb_body := cfunN create_body |})
+   fun_to_tgt "Heapsort" (GlobalStb sk) {| fsb_fspec := create_spec; fsb_body := fun _ => triggerNB |})
    ("create", cfunU Heapsort1.create_body).
   Proof.
     init. harg. destruct x as [tree initial]. mDesAll. clear PURE1.
@@ -111,7 +111,7 @@ Section SIMMODSEM.
   Lemma sim_heapify (sk : alist string Sk.gdef) :
     sim_fnsem wf top2
               ("heapify",
-               fun_to_tgt "Heapsort" (GlobalStb sk) {| fsb_fspec := heapify_spec; fsb_body := cfunN heapify_body |})
+               fun_to_tgt "Heapsort" (GlobalStb sk) {| fsb_fspec := heapify_spec; fsb_body := fun _ => triggerNB |})
               ("heapify", cfunU Heapsort1.heapify_body).
   Proof with lia || eauto. (*
   (** entering function *)
@@ -200,7 +200,7 @@ Section SIMMODSEM.
 
   Lemma sim_heapsort (sk : alist string Sk.gdef) :
     sim_fnsem wf top2
-              ("heapsort", fun_to_tgt "Heapsort" (GlobalStb sk) {| fsb_fspec := heapsort_spec; fsb_body := cfunN heapsort_body |})
+              ("heapsort", fun_to_tgt "Heapsort" (GlobalStb sk) {| fsb_fspec := heapsort_spec; fsb_body := fun _ => triggerNB|})
               ("heapsort", cfunU Heapsort1.heapsort_body).
   Proof.
     Opaque div.
@@ -366,7 +366,11 @@ Section SIMMODSEM.
           }
           rewrite H. simpl. destruct (tail xs1); try contradiction.
           reflexivity.
-        - admit "(q >= last xs1 0)%Z".
+        - eapply heap_head_last.
+          + unfold Reflexive. lia.
+          + unfold Transitive. lia.
+          + eapply heap_erase_priority. eassumption.
+          + subst xs1. eassumption.
         - eapply heap_erase_priority in Hₕ.
           subst.
           eapply removelast_heap.
@@ -422,7 +426,7 @@ Section SIMMODSEM.
       + econs.
       + econs. lia.
     Unshelve. et. et.
-  Admitted.
+  Qed.
 
   Theorem correct : refines2 [Heapsort1.Heapsort] [Heapsort2.Heapsort GlobalStb].
   Proof.

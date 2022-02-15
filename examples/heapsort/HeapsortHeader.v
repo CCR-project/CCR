@@ -167,7 +167,6 @@ Section ListOperations.
   Context {A : Type}.
 
   Definition lookup (xs : list A) i := nth_error xs i.
-  Definition lookup_1 (xs : list A) i := lookup xs (i-1).
 
   Definition swap_aux (xs : list A) i1 i2 x i :=
     if Nat.eq_dec i i1 then nth i2 xs x else
@@ -175,7 +174,6 @@ Section ListOperations.
     x.
   Definition add_indices (xs : list A) := (combine xs (seq 0 (length xs))).
   Definition swap (xs : list A) i j := map (uncurry (swap_aux xs i j)) (add_indices xs).
-  Definition swap_1 (xs : list A) i j := swap xs (i-1) (j-1).
   Definition upd xs i0 x0 := map (fun '(x, i) => if Nat.eq_dec i i0 then x0 else x) (add_indices xs).
 
   Program Fixpoint trim_exp (n : nat) (xs : list A) {measure (length xs)} : list (list A) :=
@@ -587,7 +585,7 @@ Section BinaryTreeIndexing.
 
   Lemma nat_btidx_iff i j : btidx_lt i j <-> encode i < encode j.
   Admitted.
-      
+
 End BinaryTreeIndexing.
 
 Section BinaryTreeAccessories.
@@ -645,7 +643,11 @@ Section BinaryTreeAccessories.
       option_subtree (i ++ [Dir_right]) t = Some r
     | _ => True
     end.
-  Admitted.
+  Proof.
+    assert (H1 := option_subtree_last i Dir_left t).
+    assert (H2 := option_subtree_last i Dir_right t).
+    destruct (option_subtree i t) as [ [] |]; auto.
+  Qed.
 
   Inductive occurs (t : bintree A) : list dir_t -> bintree A -> Prop :=
   | Occurs_0
@@ -1013,6 +1015,11 @@ Section CompleteBinaryTree.
   Lemma last_btidx_nil : last_btidx (BT_nil : bintree A) = [].
   Proof. reflexivity. Qed.
 
+  Lemma last_btidx_half (t : bintree A) j d :
+    btidx_lt (removelast (last_btidx t)) j ->
+    btidx_lt (last_btidx t) (j ++ [d]).
+  Admitted.
+
   Lemma last_btidx_perfect_complete x l r n :
     n > 0 ->
     perfect' l n ->
@@ -1209,7 +1216,7 @@ Section CompleteBinaryTree.
   Proof.
     intros H j Hj.
     assert (H1 := option_subtree_last' j t).
-    assert (Hlt : forall d, btidx_lt (last_btidx t) (j ++ [d])) by admit.
+    assert (Hlt : forall d, btidx_lt (last_btidx t) (j ++ [d])) by (intros; eapply last_btidx_half; eassumption).
     destruct (option_subtree j t) as [[]|].
     - auto.
     - destruct H1 as [Hl Hr]. split.
@@ -1220,8 +1227,9 @@ Section CompleteBinaryTree.
           rewrite H2 in Hr; inversion Hr.
         reflexivity.
     - auto.
-  Admitted.
+  Qed.
 
+  (*
   Lemma subtree_nat_outrange j (t : bintree A) :
     complete t -> j >= btsize t ->
     subtree_nat t j = Some BT_nil \/ subtree_nat t j = None.
@@ -1240,86 +1248,36 @@ Section CompleteBinaryTree.
         * eapply subtree_outrange_ltlen;eauto. exists x;auto.
         * eapply subtree_outrange_eqlen;eauto. exists x;auto.
   Qed.
+   *)
 
-  Lemma perfect_leaves (t : bintree A) :
-    (exists n, perfect' t n) ->
-    forall j, (btsize t - 1) / 2 <= j < btsize t ->
-         match subtree_nat t j with
-         | None => True
-         | Some t' => leaf t'
-         end.
-  Proof.
-    intros.
-    unfold subtree_nat.
-    remember (decode j) eqn:E. revert E H H0. revert l j.
-    induction t;intros;destruct H.
-    - destruct l;simpl;auto.
-    - destruct l eqn:E1.
-      + simpl. 
-        pose proof (decode_nat j) as D.
-        rewrite <- E in D. rewrite D in H0.
-        assert ((btsize (BT_node x t1 t2) -1) /2 = 0) by nia.
-        remember (div_small_iff (btsize (BT_node x t1 t2) -1) 2) as Y.
-        assert (R : 2<>0) by nia;apply Y in R. clear HeqY. clear Y.
-        apply R in H1. clear R. inversion H;subst.
-        inversion H1.
-        * rewrite  sub_0_r in H3. destruct (btsize t1) eqn:E1.
-          ** simpl in H3. destruct t1;try (inversion E1).
-             inversion H_l. rewrite <- H4 in H_r. inversion H_r;subst. auto.
-          ** assert (btsize t2 = 0) by nia. destruct t2;try (inversion H2).
-             inversion H_r. rewrite <- H5 in H_l. inversion H_l. auto.
-        * inversion H3;subst.
-          ** assert (btsize t1 = 0) by nia. assert (btsize t2 = 0) by nia.
-             destruct t1;try (inversion H2). destruct t2;try (inversion H4). auto.
-          ** inversion H5.
-      + destruct d.
-        * simpl. pose proof (decode_nat j) as D.
-          rewrite <- E in D. eapply IHt1.
-          ** apply (f_equal decode) in D. rewrite (decode_encode l0) in D.
-             apply D.
-          ** inversion H;subst. exists n;auto.
-          ** simpl length. replace (S (length l0) -1) with (length l0) by nia.
-             simpl btsize in H0. replace (S ( btsize t1 + btsize t2 ) -1) with ( btsize t1 + btsize t2 ) in H0 by nia.
-             inversion H;subst. apply perf_size in H_l. apply perf_size in H_r.
-             rewrite H_l in H0. rewrite H_r in H0. rewrite H_l.
-             destruct H0. replace (S (2 ^ n - 1 + (2 ^ n - 1))) with (2^(S n)-1) in H1.
-             2:{simpl. rewrite <- add_succ_l. rewrite Minus.minus_Sn_m.
-                2:{ apply exp_pos. auto. } simpl. nia.
-             } pose proof H1 as U. 
-             replace ((2 ^ n - 1 + (2 ^ n - 1))/2) with (2^n - 1) in H0.
-             2:{replace (2 ^ n - 1 + (2 ^ n - 1)) with ((2 ^ n - 1) * 2) by nia. 
-                rewrite div_mul;nia. } pose proof H0 as R.
-             apply decode_ubound in H1. rewrite <- E in H1. simpl in H1.
-             apply Lt.lt_S_n in H1. unfold Peano.lt in H1.
-             assert (length l0 <= n-1) by nia.
-             apply decode_lbound in H0. rewrite <- E in H0. simpl in H0.
-             assert (n-1 <= length l0) by nia.
-             assert (n-1 = length l0) by nia.
-             apply (f_equal (pow 2)) in H4. rewrite <- H4. 
-             split. 
-             *** replace ((2 ^ n - 1 - 1) / 2) with (2 ^ (n - 1)-1).
-                 2:{destruct n. inversion H1. simpl pow.
-                    replace (2 ^ n + (2 ^ n + 0) - 1 - 1) with ((2^n - 1) *2) by nia.
-                    rewrite div_mul;auto. rewrite sub_0_r. auto. }
-                 apply le_add_le_sub_l. replace (2 ^ (n - 1) + (2 ^ (n - 1) - 1)) with (2^n-1).
-                 auto. rewrite add_sub_assoc. destruct n;inversion H1. simpl.
-                 rewrite sub_0_r. nia. nia. apply exp_pos. auto.
-             *** apply (f_equal encode) in E. rewrite (encode_unfold (Dir_left :: l0)) in E.
-                 simpl in E. rewrite sub_0_r in E. rewrite (encode_decode j) in E.
-                 assert (length l0 = n-1) by nia. apply encode_bound in H5. destruct H5.
-                 replace (S(n-1)) with n in H6. 2:{destruct n. inversion H1. nia. }
-                                              rewrite <- E. rewrite H4. rewrite add_sub. auto.
-        * admit.                (* right half. similar to left one *)
+  Lemma encode_removelast j : encode (removelast j) = (encode j + 1) / 2 - 1.
   Admitted.
 
-  Lemma complete_leaves (t : bintree A) :
+  Lemma subtree_nat_leaf (t : bintree A) :
     complete t ->
     forall j, j > btsize t / 2 ->
          match subtree_nat t (j - 1) with
          | None => True
          | Some t' => leaf t'
          end.
-  Admitted.
+  Proof.
+    intros.
+    assert (Hs : btsize t <= 1 \/ btsize t > 1) by lia.
+    destruct Hs.
+    - unfold subtree_nat.
+      destruct t as [|x [] []]; simpl in H1; try lia.
+      + destruct (decode (j - 1)); simpl; auto.
+      + destruct (decode (j - 1)) as [| [] [] ]; simpl; auto.
+    - eapply subtree_leaf; try assumption.
+      unfold last_btidx.
+      eapply nat_btidx_iff.
+      rewrite encode_removelast.
+      rewrite 2 encode_decode.
+      rewrite sub_add by lia.
+      assert (1 <= btsize t / 2)
+        by (eapply (div_le_mono 2 _ 2); lia).
+      lia.
+  Qed.
 
   Lemma complete_fromList (xs : list A) : complete (fromList xs).
   Admitted.
@@ -1415,13 +1373,21 @@ Section HeapProperty.
   Lemma heap_at_leaves t : complete t -> forall j, j > btsize t / 2 -> heap_at (j - 1) t.
   Proof.
     intros H j Hj. unfold heap_at.
-    assert (H1 := complete_leaves t H j Hj).
+    assert (H1 := subtree_nat_leaf t H j Hj).
     destruct (subtree_nat t (j-1)).
     - eapply heap_if_leaf; assumption.
     - auto.
   Qed.
 
   Lemma removelast_heap t : heap t -> heap (fromList (removelast (toList t))).
+  Admitted.
+
+  Lemma heap_head_last t x xs a :
+    Reflexive R ->
+    Transitive R ->
+    heap t ->
+    toList t = x :: xs ->
+    R x (last (toList t) a).
   Admitted.
 
 End HeapProperty.
@@ -1442,6 +1408,19 @@ Section BinaryTreeZipper.
     | btctx_left x r g => recover_bintree g (BT_node x t r)
     | btctx_right x l g => recover_bintree g (BT_node x l t)
     end.
+
+  Fixpoint focus (g : btctx) (t : bintree A) (i : btidx) : btctx * bintree A :=
+    match t, i with
+    | _, [] => (g, t)
+    | BT_nil, _ :: _ => (g, BT_nil)
+    | BT_node x l r, Dir_left :: j => focus (btctx_left x r g) l j
+    | BT_node x l r, Dir_right :: j => focus (btctx_right x l g) r j
+    end.
+
+  Lemma recover_focus g t i :
+    let '(g', t') := focus g t i in
+    recover_bintree g t = recover_bintree g' t'.
+  Admitted.
 
 End BinaryTreeZipper.
 
