@@ -1409,6 +1409,19 @@ Section BinaryTreeZipper.
     | btctx_right x l g => recover_bintree g (BT_node x l t)
     end.
 
+  Fixpoint focus (g : btctx) (t : bintree A) (i : btidx) : btctx * bintree A :=
+    match t, i with
+    | _, [] => (g, t)
+    | BT_nil, _ :: _ => (g, BT_nil)
+    | BT_node x l r, Dir_left :: j => focus (btctx_left x r g) l j
+    | BT_node x l r, Dir_right :: j => focus (btctx_right x l g) r j
+    end.
+
+  Lemma recover_focus g t i :
+    let '(g', t') := focus g t i in
+    recover_bintree g t = recover_bintree g' t'.
+  Admitted.
+
 End BinaryTreeZipper.
 
 Arguments btctx : clear implicits.
