@@ -64,7 +64,7 @@ Section SIMMODSEM.
               ("heapify",
                fun_to_tgt "Heapsort" (GlobalStb sk) {| fsb_fspec := heapify_spec; fsb_body := cfunN heapify_body |})
               ("heapify", cfunU Heapsort1.heapify_body).
-  Proof with lia || eauto.
+  Proof with lia || eauto. (*
   (** entering function *)
     Opaque div swap.
     init. harg. destruct x as [[root p] k]. mDesAll; subst.
@@ -146,7 +146,7 @@ Section SIMMODSEM.
       + steps. deflag. eapply IH_l...
         admit "swap xs0 (par_i0 * 2 - 1) (par_i0 - 1) ≡ₚ k :: list.tail (toList root)".
         admit "recover_bintree cur_ctx l = fromList (swap xs0 (par_i0 * 2 - 1) (par_i0 - 1))".
-        admit "subtree_nat (fromList (swap xs0 (par_i0 * 2 - 1) (par_i0 - 1))) (par_i0 * 2 - 1) = Some l".
+        admit "subtree_nat (fromList (swap xs0 (par_i0 * 2 - 1) (par_i0 - 1))) (par_i0 * 2 - 1) = Some l". *)
   Admitted.
 
   Lemma sim_heapsort (sk : alist string Sk.gdef) :
