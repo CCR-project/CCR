@@ -66,12 +66,6 @@ Section SIMMODSEM.
       destruct (initial + (initial + 0) <=? n) eqn : E1;
         [apply leb_complete in E1| apply leb_complete_conv in E1].
       + clear E.
-      
-      
-        Search btsize.
-      
-    
-    
   Admitted.
 
   Lemma sim_heapify (sk : alist string Sk.gdef) :
@@ -157,12 +151,12 @@ Section SIMMODSEM.
     replace (HeapsortHeader.lookup xs (2 * (HeapsortHeader.encode ds + 1))) with (HeapsortHeader.lookup xs (2 * HeapsortHeader.encode ds + 2)) by now f_equal; lia.
     replace (2 * (HeapsortHeader.encode ds + 1) + 1) with ((2 * HeapsortHeader.encode ds + 2) + 1) by lia.
     replace (2 * (HeapsortHeader.encode ds + 1)) with ((2 * HeapsortHeader.encode ds + 1) + 1) by lia.
-    replace (2 * HeapsortHeader.encode ds + 1) with (HeapsortHeader.encode (ds ++ [Dir_left])) by exact (HeapsortHeader.encode_last ds Dir_left).
-    replace (2 * HeapsortHeader.encode ds + 2) with (HeapsortHeader.encode (ds ++ [Dir_right])) by exact (HeapsortHeader.encode_last ds Dir_right).
     replace (HeapsortHeader.encode ds * 2 + 1) with (2 * HeapsortHeader.encode ds + 1) in H_left by lia.
     replace (HeapsortHeader.encode ds * 2 + 2) with (2 * HeapsortHeader.encode ds + 2) in H_right by lia.
-    rewrite <- (HeapsortHeader.encode_last ds Dir_left) in H_left.
-    rewrite <- (HeapsortHeader.encode_last ds Dir_right) in H_right.
+    revert H_left H_right.
+    replace (2 * HeapsortHeader.encode ds + 1) with (HeapsortHeader.encode (ds ++ [Dir_left])) by exact (HeapsortHeader.encode_last ds Dir_left).
+    replace (2 * HeapsortHeader.encode ds + 2) with (HeapsortHeader.encode (ds ++ [Dir_right])) by exact (HeapsortHeader.encode_last ds Dir_right).
+    intros H_left H_right.
     assert (H_lookup_l := H_lookup [Dir_left] l Logic.eq_refl).
     assert (H_lookup_r := H_lookup [Dir_right] r Logic.eq_refl).
     rewrite H_lookup_l. rewrite H_lookup_r.
