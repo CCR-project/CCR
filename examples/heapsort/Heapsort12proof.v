@@ -49,6 +49,29 @@ Section SIMMODSEM.
     init. harg. destruct x as [tree initial]. mDesAll. clear PURE1.
     destruct PURE0 as [? [PURE2 [PURE3 PURE4]]];subst. steps.
     astop.
+    assert (T : forall g i tree, (g, @BT_nil Z) = focus btctx_top tree (HeapsortHeader.decode i)
+                              -> complete tree -> i >= length (toList tree)). {admit "".}
+    remember (focus btctx_top tree (HeapsortHeader.decode (initial - 1))) as p_init eqn : Eqp.
+    destruct p_init as [g t].
+    pose proof (recover_focus btctx_top tree (HeapsortHeader.decode (initial - 1))) as R_lemma.
+    rewrite <- Eqp in R_lemma. simpl in R_lemma. rewrite unfold_iter_eq.
+    revert tree initial PURE2 PURE3 PURE4 g R_lemma Eqp mrp_src mp_tgt WF ctx mr_src mp_src ACC.
+    induction t;i;
+      [apply T in Eqp;auto;rewrite toList_length in Eqp;
+       assert (initial <= btsize tree -> False) by nia;destruct PURE3;contradiction|].
+    destruct (initial + (initial + 0) <=? strings.length (toList tree)) eqn : E;
+      [apply leb_complete in E| apply leb_complete_conv in E].
+    - destruct (strings.length (toList tree)) eqn : U;
+        [destruct tree;[simpl in PURE3;assert (con : 1<=0) by nia;inversion con|inversion U]| ];
+      destruct (initial + (initial + 0) <=? n) eqn : E1;
+        [apply leb_complete in E1| apply leb_complete_conv in E1].
+      + clear E.
+      
+      
+        Search btsize.
+      
+    
+    
   Admitted.
 
   Lemma sim_heapify (sk : alist string Sk.gdef) :
