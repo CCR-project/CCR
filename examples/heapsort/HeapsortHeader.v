@@ -643,7 +643,11 @@ Section BinaryTreeAccessories.
       option_subtree (i ++ [Dir_right]) t = Some r
     | _ => True
     end.
-  Admitted.
+  Proof.
+    assert (H1 := option_subtree_last i Dir_left t).
+    assert (H2 := option_subtree_last i Dir_right t).
+    destruct (option_subtree i t) as [ [] |]; auto.
+  Qed.
 
   Inductive occurs (t : bintree A) : list dir_t -> bintree A -> Prop :=
   | Occurs_0
