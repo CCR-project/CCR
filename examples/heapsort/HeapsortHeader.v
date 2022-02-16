@@ -590,6 +590,15 @@ Section BinaryTreeIndexing.
     nia.
   Qed.
 
+  Lemma encode_lt_eqlen d i j : length i = length j -> encode (d :: i) < encode (d :: j) -> encode i < encode j.
+  Proof.
+    intro H.
+    rewrite (encode_unfold (d :: i)).
+    rewrite (encode_unfold (d :: j)).
+    simpl length. rewrite H.
+    destruct d; lia.
+  Qed.
+
   Lemma btidx_lt_complete i j : encode i < encode j -> btidx_lt i j.
   Proof.
     assert (length i < length j \/ length i = length j \/ length i > length j) by lia.
@@ -604,11 +613,7 @@ Section BinaryTreeIndexing.
         destruct x, y.
         * econstructor. eapply IHi.
           -- assumption.
-          -- rewrite (encode_unfold (Dir_left :: i)) in H1.
-             rewrite (encode_unfold (Dir_left :: j)) in H1.
-             simpl in H1.
-             rewrite H in H1.
-             lia.
+          -- eapply encode_lt_eqlen; eassumption.
         * econstructor. assumption.
         * exfalso.
           rewrite (encode_unfold (Dir_right :: i)) in H1.
@@ -621,11 +626,7 @@ Section BinaryTreeIndexing.
           simpl pow in *. rewrite sub_0_r in H1. lia.
         * econstructor. eapply IHi.
           -- assumption.
-          -- rewrite (encode_unfold (Dir_right :: i)) in H1.
-             rewrite (encode_unfold (Dir_right :: j)) in H1.
-             simpl in H1.
-             rewrite H in H1.
-             lia.
+          -- eapply encode_lt_eqlen; eassumption.
     - intros H'. exfalso.
       remember (length i) as m.
       remember (length j) as n.
