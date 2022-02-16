@@ -699,6 +699,7 @@ Section BinaryTreeAccessories.
     destruct (option_subtree i t) as [ [] |]; auto.
   Qed.
 
+  (*
   Inductive occurs (t : bintree A) : list dir_t -> bintree A -> Prop :=
   | Occurs_0
     : occurs t [] t
@@ -720,6 +721,7 @@ Section BinaryTreeAccessories.
     { apply Some_inj in H_eq; subst... }
     all: destruct root as [ | x l r]...
   Qed.
+   *)
 
   Definition option_root (t : bintree A) :=
     match t with
@@ -1053,14 +1055,14 @@ Section CompleteBinaryTree.
         simpl in *. nia.
   Qed.
                               
-  
+  (*
   Lemma toList_lookup root i t
     (H_bound : i < length (toList root))
     (H_complete : complete root)
     (H_occurs : occurs t (decode i) root)
     : lookup (toList root) i = option_root t.
-  Proof.
   Admitted.
+   *)
 
   Lemma last_btidx_nil : last_btidx (BT_nil : bintree A) = [].
   Proof. reflexivity. Qed.
