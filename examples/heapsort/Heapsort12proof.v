@@ -51,8 +51,11 @@ Section SIMMODSEM.
     astop.
     assert (T : forall g i tree, (g, @BT_nil Z) = focus btctx_top tree (HeapsortHeader.decode i)
                             -> complete tree -> i >= length (toList tree)). { admit "". }
+   
     remember (focus btctx_top tree (HeapsortHeader.decode (initial - 1))) as p_init eqn : Eqp.
     destruct p_init as [g t].
+    (* assert (completeness : forall t', t'  t -> complete (recover_bintree g t'))
+           {admit "".} *)
     pose proof (recover_focus btctx_top tree (HeapsortHeader.decode (initial - 1))) as R_lemma.
     rewrite <- Eqp in R_lemma. simpl in R_lemma. rewrite unfold_iter_eq.
     revert tree initial PURE2 PURE3 PURE4 g R_lemma Eqp mrp_src mp_tgt WF ctx mr_src mp_src ACC.
@@ -66,6 +69,7 @@ Section SIMMODSEM.
       destruct (initial + (initial + 0) <=? n) eqn : E1;
         [apply leb_complete in E1| apply leb_complete_conv in E1].
       + clear E.
+        
   Admitted.
 
   Lemma sim_heapify (sk : alist string Sk.gdef) :
