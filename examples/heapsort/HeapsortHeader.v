@@ -590,16 +590,50 @@ Section BinaryTreeIndexing.
     nia.
   Qed.
 
-
   Lemma btidx_lt_complete i j : encode i < encode j -> btidx_lt i j.
   Proof.
     assert (length i < length j \/ length i = length j \/ length i > length j) by lia.
     destruct H as [|[]].
     - unfold btidx_lt. left. assumption.
-    - admit.
+    - intros H1. right.
+      revert j H H1.
+      induction i as [|x i].
+      + intros. destruct j; simpl in H; try lia.
+      + intros. destruct j as [|y j]; simpl in H; try lia.
+        eapply succ_inj in H.
+        destruct x, y.
+        * econstructor. eapply IHi.
+          -- assumption.
+          -- rewrite (encode_unfold (Dir_left :: i)) in H1.
+             rewrite (encode_unfold (Dir_left :: j)) in H1.
+             simpl in H1.
+             rewrite H in H1.
+             lia.
+        * econstructor. assumption.
+        * exfalso.
+          rewrite (encode_unfold (Dir_right :: i)) in H1.
+          rewrite (encode_unfold (Dir_left :: j)) in H1.
+          simpl length in H1.
+          rewrite <- H in H1.
+          remember (length i) as n.
+          assert (2 ^ n - 1 <= encode i < 2 ^ S n - 1) by (eapply encode_bound; auto).
+          assert (2 ^ n - 1 <= encode j < 2 ^ S n - 1) by (eapply encode_bound; auto).
+          simpl pow in *. rewrite sub_0_r in H1. lia.
+        * econstructor. eapply IHi.
+          -- assumption.
+          -- rewrite (encode_unfold (Dir_right :: i)) in H1.
+             rewrite (encode_unfold (Dir_right :: j)) in H1.
+             simpl in H1.
+             rewrite H in H1.
+             lia.
     - intros H'. exfalso.
-      admit.
-  Admitted.
+      remember (length i) as m.
+      remember (length j) as n.
+      assert (2 ^ m - 1 <= encode i < 2 ^ S m - 1) by (eapply encode_bound; auto).
+      assert (2 ^ n - 1 <= encode j < 2 ^ S n - 1) by (eapply encode_bound; auto).
+      assert (2 ^ S n <= 2 ^ m) by (eapply pow_le_mono_r; lia).
+      lia.
+  Qed.
 
 End BinaryTreeIndexing.
 
