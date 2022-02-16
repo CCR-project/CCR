@@ -361,6 +361,14 @@ Section BinaryTree.
   | BT_node (x : A) (l r : bintree)
   .
 
+  Inductive bteq_shape : bintree -> bintree -> Prop :=
+  | bteq_nil : bteq_shape BT_nil BT_nil
+  | bteq_node x l r x' l' r'
+              (H_l : bteq_shape l l')
+              (H_r : bteq_shape r r')
+    : bteq_shape (BT_node x l r) (BT_node x' l' r')
+  .
+
   Definition leaf (t : bintree) : Prop :=
     match t with
     | BT_nil => True
