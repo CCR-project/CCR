@@ -590,16 +590,51 @@ Section BinaryTreeIndexing.
     nia.
   Qed.
 
+  Lemma encode_lt_eqlen d i j : length i = length j -> encode (d :: i) < encode (d :: j) -> encode i < encode j.
+  Proof.
+    intro H.
+    rewrite (encode_unfold (d :: i)).
+    rewrite (encode_unfold (d :: j)).
+    simpl length. rewrite H.
+    destruct d; lia.
+  Qed.
 
   Lemma btidx_lt_complete i j : encode i < encode j -> btidx_lt i j.
   Proof.
     assert (length i < length j \/ length i = length j \/ length i > length j) by lia.
     destruct H as [|[]].
     - unfold btidx_lt. left. assumption.
-    - admit.
+    - intros H1. right.
+      revert j H H1.
+      induction i as [|x i].
+      + intros. destruct j; simpl in H; try lia.
+      + intros. destruct j as [|y j]; simpl in H; try lia.
+        eapply succ_inj in H.
+        destruct x, y.
+        * econstructor. eapply IHi.
+          -- assumption.
+          -- eapply encode_lt_eqlen; eassumption.
+        * econstructor. assumption.
+        * exfalso.
+          rewrite (encode_unfold (Dir_right :: i)) in H1.
+          rewrite (encode_unfold (Dir_left :: j)) in H1.
+          simpl length in H1.
+          rewrite <- H in H1.
+          remember (length i) as n.
+          assert (2 ^ n - 1 <= encode i < 2 ^ S n - 1) by (eapply encode_bound; auto).
+          assert (2 ^ n - 1 <= encode j < 2 ^ S n - 1) by (eapply encode_bound; auto).
+          simpl pow in *. rewrite sub_0_r in H1. lia.
+        * econstructor. eapply IHi.
+          -- assumption.
+          -- eapply encode_lt_eqlen; eassumption.
     - intros H'. exfalso.
-      admit.
-  Admitted.
+      remember (length i) as m.
+      remember (length j) as n.
+      assert (2 ^ m - 1 <= encode i < 2 ^ S m - 1) by (eapply encode_bound; auto).
+      assert (2 ^ n - 1 <= encode j < 2 ^ S n - 1) by (eapply encode_bound; auto).
+      assert (2 ^ S n <= 2 ^ m) by (eapply pow_le_mono_r; lia).
+      lia.
+  Qed.
 
 End BinaryTreeIndexing.
 
@@ -664,6 +699,7 @@ Section BinaryTreeAccessories.
     destruct (option_subtree i t) as [ [] |]; auto.
   Qed.
 
+  (*
   Inductive occurs (t : bintree A) : list dir_t -> bintree A -> Prop :=
   | Occurs_0
     : occurs t [] t
@@ -685,6 +721,7 @@ Section BinaryTreeAccessories.
     { apply Some_inj in H_eq; subst... }
     all: destruct root as [ | x l r]...
   Qed.
+   *)
 
   Definition option_root (t : bintree A) :=
     match t with
@@ -1018,14 +1055,14 @@ Section CompleteBinaryTree.
         simpl in *. nia.
   Qed.
                               
-  
+  (*
   Lemma toList_lookup root i t
     (H_bound : i < length (toList root))
     (H_complete : complete root)
     (H_occurs : occurs t (decode i) root)
     : lookup (toList root) i = option_root t.
-  Proof.
   Admitted.
+   *)
 
   Lemma last_btidx_nil : last_btidx (BT_nil : bintree A) = [].
   Proof. reflexivity. Qed.
