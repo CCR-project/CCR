@@ -361,6 +361,14 @@ Section BinaryTree.
   | BT_node (x : A) (l r : bintree)
   .
 
+  Inductive bteq_shape : bintree -> bintree -> Prop :=
+  | bteq_nil : bteq_shape BT_nil BT_nil
+  | bteq_node x l r x' l' r'
+              (H_l : bteq_shape l l')
+              (H_r : bteq_shape r r')
+    : bteq_shape (BT_node x l r) (BT_node x' l' r')
+  .
+
   Definition leaf (t : bintree) : Prop :=
     match t with
     | BT_nil => True
@@ -583,7 +591,14 @@ Section BinaryTreeIndexing.
   Qed.
 
 
-  Lemma nat_btidx_iff i j : btidx_lt i j <-> encode i < encode j.
+  Lemma btidx_lt_complete i j : encode i < encode j -> btidx_lt i j.
+  Proof.
+    assert (length i < length j \/ length i = length j \/ length i > length j) by lia.
+    destruct H as [|[]].
+    - unfold btidx_lt. left. assumption.
+    - admit.
+    - intros H'. exfalso.
+      admit.
   Admitted.
 
 End BinaryTreeIndexing.
@@ -1232,7 +1247,22 @@ Section CompleteBinaryTree.
    *)
 
   Lemma encode_removelast j : encode (removelast j) = (encode j + 1) / 2 - 1.
-  Admitted.
+  Proof.
+    assert (j = [] \/ j <> [])
+      by (destruct j; [ left; reflexivity | right; congruence]).
+    destruct H.
+    - subst j. reflexivity.
+    - rewrite (app_removelast_last Dir_left H) at 2.
+      rewrite encode_last.
+      remember (encode (removelast j)) as n.
+      destruct (last j Dir_left).
+      + replace (2 * n + 1 + 1) with ((n + 1) * 2) by lia.
+        rewrite div_mul by lia.
+        lia.
+      + replace (2 * n + 2 + 1) with (3 + n * 2) by lia.
+        rewrite div_add by lia.
+        simpl. lia.
+  Qed.
 
   Lemma subtree_nat_leaf (t : bintree A) :
     complete t ->
@@ -1251,7 +1281,7 @@ Section CompleteBinaryTree.
       + destruct (decode (j - 1)) as [| [] [] ]; simpl; auto.
     - eapply subtree_leaf; try assumption.
       unfold last_btidx.
-      eapply nat_btidx_iff.
+      eapply btidx_lt_complete.
       rewrite encode_removelast.
       rewrite 2 encode_decode.
       rewrite sub_add by lia.
@@ -1261,6 +1291,24 @@ Section CompleteBinaryTree.
   Qed.
 
   Lemma complete_fromList (xs : list A) : complete (fromList xs).
+  Proof.    
+    unfold complete, fromList.
+    remember (trim_exp 0 xs) as xss.
+    assert (H : complete_list 0 xss)
+      by (subst; eapply complete_trim).
+    clear xs Heqxss.
+    exists (length xss).
+    remember (length xss) as n eqn: Hn.
+    revert xss H Hn.
+    induction n using Wf_nat.lt_wf_ind.
+    intros.
+    rewrite unfold_fromListAux.
+    destruct xss as [| [|x xs] xss].
+    - subst n. simpl. econstructor.
+    - simpl in H0. lia.
+    - simpl in *. rewrite Hn.
+      (* Don't know which constructor to apply *)
+      admit.
   Admitted.
 
 End CompleteBinaryTree.
