@@ -274,6 +274,25 @@ Section ListOperations.
                  \/ 0 < length xs < 2^n /\ xss = []
     end.
 
+  Lemma splitLListRight_length' n xss :
+    perfect_list (S n) xss ->
+    length (splitLListRight n xss) = length xss.
+  Proof.
+    revert n.
+    induction xss.
+    - reflexivity.
+    - intros. destruct H. simpl.
+      rewrite H.
+      replace (2 ^ S n <=? 2 ^ n) with false.
+      2: {
+        symmetry. eapply leb_correct_conv. simpl.
+        pose proof (exp_pos 2 n). lia.
+      }
+      simpl.
+      rewrite IHxss by assumption.
+      reflexivity.
+  Qed.
+
   Lemma complete_toLList n xs : complete_list n (toLList n xs).
   Proof with lia || eauto.
     remember (length xs) as l.
@@ -326,6 +345,40 @@ Section ListOperations.
           auto.
         * rewrite firstn_skipn.
           reflexivity.
+  Qed.
+
+  Lemma perfect_splitLListLeft n xss :
+    perfect_list (S n) xss ->
+    perfect_list n (splitLListLeft n xss).
+  Proof.
+    revert n. induction xss; intros.
+    - simpl. auto.
+    - destruct H. split.
+      + eapply firstn_length_le.
+        rewrite H.
+        assert (2^n > 0) by (eapply exp_pos; lia).
+        simpl; lia.
+      + eapply IHxss. assumption.
+  Qed.
+
+  Lemma perfect_splitLListRight n xss :
+    perfect_list (S n) xss ->
+    perfect_list n (splitLListRight n xss).
+  Proof.
+    revert n. induction xss; intros.
+    - simpl. auto.
+    - destruct H. simpl.
+      rewrite H.
+      replace (2 ^ S n <=? 2 ^ n) with false.
+      2: {
+        symmetry.
+        eapply leb_correct_conv.
+        assert (2 ^ n > 0) by (eapply exp_pos; lia).
+        simpl; lia.
+      }
+      split.
+      + rewrite skipn_length. rewrite H. simpl; lia.
+      + eapply IHxss. assumption.
   Qed.
 
   Lemma complete_splitLList n xss :
@@ -1372,16 +1425,18 @@ Section CompleteBinaryTree.
     - destruct xss; try discriminate.
       rewrite unfold_fromListAux.
       constructor.
-    - destruct xss as [|[|x xs] xss]; simpl in H; [ | destruct H | ]; try discriminate.
+    - destruct xss as [|[|x xs] xss]; simpl in *; destruct H; try discriminate.
       rewrite unfold_fromListAux.
       econstructor.
       + eapply IHn.
         * rewrite splitLListLeft_length.
-          simpl in Heqn.
           lia.
-        * admit.
-      + admit.
-  Admitted.
+        * eapply perfect_splitLListLeft. assumption.
+      + eapply IHn.
+        * rewrite splitLListRight_length' by assumption.
+          lia.
+        * eapply perfect_splitLListRight. assumption.
+  Qed.
 
   Lemma complete_fromListAux (xss : list (list A)) :
     complete_list 0 xss -> complete' (fromListAux xss) (length xss).
