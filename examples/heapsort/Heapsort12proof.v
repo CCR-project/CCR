@@ -47,12 +47,45 @@ Section SIMMODSEM.
    ("create", cfunU Heapsort1.create_body).
   Proof.
     init. harg. destruct x as [tree initial]. mDesAll. clear PURE1.
-    destruct PURE0 as [? [PURE2 [PURE3 PURE4]]];subst. steps.
+    des. steps.
     astop.
-    assert (T : forall g i tree, (g, @BT_nil Z) = focus btctx_top tree (HeapsortHeader.decode i)
-                            -> complete tree -> i >= length (toList tree)). { admit "". }
-    remember (focus btctx_top tree (HeapsortHeader.decode (initial - 1))) as p_init eqn : Eqp.
+    (* invariant config *) 
+    remember (focus btctx_top tree (HeapsortHeader.decode (initial - 1))) as p_init eqn:Eqp.
     destruct p_init as [g t].
+    set (tree' := tree) at 4.
+    assert (Heq : tree' = tree) by auto.
+    rewrite <- Heq in Eqp.
+    clearbody tree'.
+    assert (Hper : toList tree ≡ₚ toList tree') by (rewrite Heq;apply Permutation_refl).
+    assert (Hcom : complete tree') by (rewrite Heq; auto).
+    assert (subtree_complete : complete tree'
+             -> (g, t) = focus btctx_top tree' (HeapsortHeader.decode (initial - 1))
+             -> complete t). {admit "".}
+    pose proof (subtree_complete Hcom Eqp) as Hsubcom.
+    destruct Hsubcom as [n Hsubcom]. clear subtree_complete.
+    clear Heq.
+    (* n is not zero *)
+    destruct n.
+    - inversion Hsubcom;subst.
+      assert (subtree_outrange_focus :
+               initial >= 1
+               -> (g, BT_nil) = focus btctx_top tree' (HeapsortHeader.decode (initial - 1))
+               -> complete tree' -> initial > length (toList tree)). { admit "". }
+      pose proof (subtree_outrange_focus PURE2 Eqp Hcom) as contra.
+      rewrite toList_length in contra. nia.
+    - destruct t;[try inversion Hsubcom|].
+      pose proof (focus_option_subtree _ _ _ _ _ Eqp) as Hidx. simpl in Hidx.
+      pose proof (subtree_index _ _ _ Hcom Hidx) as Hnat.
+      (* start loop *)
+      rewrite unfold_iter_eq.
+      revert tree' x t1 t2 initial Hnat Hidx PURE2 PURE3 PURE4 g Hper Hcom Hsubcom Eqp mrp_src mp_tgt WF ctx mr_src mp_src ACC.
+      induction n;i.
+      + inversion Hsubcom;subst. inversion H_l;subst. inversion H_r;subst.
+        
+        
+        
+      
+    destruct (initial + (initial + 0) <=? strings.length (toList tree)) eqn:E.
     (* assert (completeness : forall t', bteq_shape t' t -> complete (recover_bintree g t')). *)
     (* {admit "".} *)
     (* assert (heap : forall t', heap_pr x t' -> forall j, j >= l -> heap_at j (recover_bintree g t')). *)
@@ -62,71 +95,71 @@ Section SIMMODSEM.
     pose proof (recover_focus btctx_top tree (HeapsortHeader.decode (initial - 1))) as R_lemma.
     rewrite <- Eqp in R_lemma. simpl in R_lemma. rewrite unfold_iter_eq.
     revert tree initial PURE2 PURE3 PURE4 g R_lemma Eqp mrp_src mp_tgt WF ctx mr_src mp_src ACC.
-    induction t;i;
-      [apply T in Eqp;auto;rewrite toList_length in Eqp;
-       assert (initial <= btsize tree -> False) by nia;destruct PURE3;contradiction|].
-    destruct (initial + (initial + 0) <=? strings.length (toList tree)) eqn : E;
-      [apply leb_complete in E| apply leb_complete_conv in E].
-    - destruct (strings.length (toList tree)) eqn : U;
-        [destruct tree;[simpl in PURE3;assert (con : 1<=0) by nia;inversion con|inversion U]| ];
-      destruct (initial + (initial + 0) <=? n) eqn : E1;
-        [apply leb_complete in E1| apply leb_complete_conv in E1].
-      + clear E.
-        assert (Pos1 : forall g x t1 t2 initial (tree : bintree Z),
-                   (g, BT_node x t1 t2)
-                   = focus btctx_top tree (HeapsortHeader.decode (initial - 1))
-                   -> HeapsortHeader.lookup (toList tree) (initial * 2 - 1) = option_root t1).
-        { admit "". }
-        assert (Pos2 : forall g x t1 t2 initial (tree : bintree Z),
-                   (g, BT_node x t1 t2)
-                   = focus btctx_top tree (HeapsortHeader.decode (initial - 1))
-                   -> HeapsortHeader.lookup (toList tree) (initial * 2) = option_root t2).
-        { admit "". }
-        assert (Pos3 : forall g x t1 t2 initial (tree : bintree Z),
-                   (g, BT_node x t1 t2)
-                   = focus btctx_top tree (HeapsortHeader.decode (initial - 1))
-                   -> HeapsortHeader.lookup (toList tree) (initial - 1) = Some x).
-        { admit "". }
-        pose proof (Pos3 _ _ _ _ _ _ Eqp) as P3.
-        pose proof (Pos1 _ _ _ _ _ _ Eqp) as P1.
-        pose proof (Pos2 _ _ _ _ _ _ Eqp) as P2. rewrite P1. rewrite P2.
-        assert (complete_t :forall (tree : bintree Z) g x t1 t2 initial, complete tree
-                                  -> (g, BT_node x t1 t2)
-                                    = focus btctx_top tree
-                                            (HeapsortHeader.decode (initial - 1)) 
-                                  -> complete (BT_node x t1 t2)).
-        { admit "". }
-        pose proof (complete_t _ _ _ _ _ _ PURE2 Eqp) as C.
-        assert (length_upp : forall (l : list Z) n m, strings.length l = S n
-                             -> m <= n
-                             -> exists x, HeapsortHeader.lookup l m = Some x).
-        { admit "". }
-        assert (E11 : initial * 2 <= n) by nia.
-        assert (E12 : initial * 2 - 1 <= n) by nia.
-        pose proof (length_upp _ _ _ U E11) as some_1.
-        pose proof (length_upp _ _ _ U E12) as some_2.
-        destruct some_1 as [x1 some_1]. destruct some_2 as [x2 some_2].
-        rewrite some_1 in P2. rewrite some_2 in P1. rewrite <- P1. rewrite <- P2.
-        steps_weak. destruct (x2 <? x1)%Z eqn : E3
-        ;[apply Z.ltb_lt in E3| apply Z.ltb_ge in E3]. 
-        * steps_weak. replace (initial * 2 + 1 - 1) with (initial * 2) by nia.
-          rewrite some_1. rewrite P3. steps_weak.
-          destruct (x1 <=? x)%Z eqn : E4
-          ;[apply Z.leb_le in E4| apply Z.leb_gt in E4]. 
-          ** steps_weak. force_l. eexists. steps_weak. hret tt; ss.
-             iModIntro. iSplit; ss. iPureIntro.
-             split;try reflexivity.
-             exists tree.
-             split;auto. split;auto. split;auto.
-             intros. unfold heap_at.
-             assert (P5 : forall g t (tree : bintree Z) m,
-                        (g, t)
-                        = focus btctx_top tree (HeapsortHeader.decode m)
-                        -> subtree_nat tree m = Some t).
-             { admit "". } apply P5 in Eqp.
-             destruct H.
-             *** rewrite Eqp.
-                 (* surrender : i need heap t1 heap t2 option_root t1 = x1 brr... *)
+    (* induction t;i; *)
+    (*   [apply T in Eqp;auto;rewrite toList_length in Eqp; *)
+    (*    assert (initial <= btsize tree -> False) by nia;destruct PURE3;contradiction|]. *)
+    (* destruct (initial + (initial + 0) <=? strings.length (toList tree)) eqn : E; *)
+    (*   [apply leb_complete in E| apply leb_complete_conv in E]. *)
+    (* - destruct (strings.length (toList tree)) eqn : U; *)
+    (*     [destruct tree;[simpl in PURE3;assert (con : 1<=0) by nia;inversion con|inversion U]| ]; *)
+    (*   destruct (initial + (initial + 0) <=? n) eqn : E1; *)
+    (*     [apply leb_complete in E1| apply leb_complete_conv in E1]. *)
+    (*   + clear E. *)
+    (*     assert (Pos1 : forall g x t1 t2 initial (tree : bintree Z), *)
+    (*                (g, BT_node x t1 t2) *)
+    (*                = focus btctx_top tree (HeapsortHeader.decode (initial - 1)) *)
+    (*                -> HeapsortHeader.lookup (toList tree) (initial * 2 - 1) = option_root t1). *)
+    (*     { admit "". } *)
+    (*     assert (Pos2 : forall g x t1 t2 initial (tree : bintree Z), *)
+    (*                (g, BT_node x t1 t2) *)
+    (*                = focus btctx_top tree (HeapsortHeader.decode (initial - 1)) *)
+    (*                -> HeapsortHeader.lookup (toList tree) (initial * 2) = option_root t2). *)
+    (*     { admit "". } *)
+    (*     assert (Pos3 : forall g x t1 t2 initial (tree : bintree Z), *)
+    (*                (g, BT_node x t1 t2) *)
+    (*                = focus btctx_top tree (HeapsortHeader.decode (initial - 1)) *)
+    (*                -> HeapsortHeader.lookup (toList tree) (initial - 1) = Some x). *)
+    (*     { admit "". } *)
+    (*     pose proof (Pos3 _ _ _ _ _ _ Eqp) as P3. *)
+    (*     pose proof (Pos1 _ _ _ _ _ _ Eqp) as P1. *)
+    (*     pose proof (Pos2 _ _ _ _ _ _ Eqp) as P2. rewrite P1. rewrite P2. *)
+    (*     assert (complete_t :forall (tree : bintree Z) g x t1 t2 initial, complete tree *)
+    (*                               -> (g, BT_node x t1 t2) *)
+    (*                                 = focus btctx_top tree *)
+    (*                                         (HeapsortHeader.decode (initial - 1))  *)
+    (*                               -> complete (BT_node x t1 t2)). *)
+    (*     { admit "". } *)
+    (*     pose proof (complete_t _ _ _ _ _ _ PURE2 Eqp) as C. *)
+    (*     assert (length_upp : forall (l : list Z) n m, strings.length l = S n *)
+    (*                          -> m <= n *)
+    (*                          -> exists x, HeapsortHeader.lookup l m = Some x). *)
+    (*     { admit "". } *)
+    (*     assert (E11 : initial * 2 <= n) by nia. *)
+    (*     assert (E12 : initial * 2 - 1 <= n) by nia. *)
+    (*     pose proof (length_upp _ _ _ U E11) as some_1. *)
+    (*     pose proof (length_upp _ _ _ U E12) as some_2. *)
+    (*     destruct some_1 as [x1 some_1]. destruct some_2 as [x2 some_2]. *)
+    (*     rewrite some_1 in P2. rewrite some_2 in P1. rewrite <- P1. rewrite <- P2. *)
+    (*     steps_weak. destruct (x2 <? x1)%Z eqn : E3 *)
+    (*     ;[apply Z.ltb_lt in E3| apply Z.ltb_ge in E3].  *)
+    (*     * steps_weak. replace (initial * 2 + 1 - 1) with (initial * 2) by nia. *)
+    (*       rewrite some_1. rewrite P3. steps_weak. *)
+    (*       destruct (x1 <=? x)%Z eqn : E4 *)
+    (*       ;[apply Z.leb_le in E4| apply Z.leb_gt in E4].  *)
+    (*       ** steps_weak. force_l. eexists. steps_weak. hret tt; ss. *)
+    (*          iModIntro. iSplit; ss. iPureIntro. *)
+    (*          split;try reflexivity. *)
+    (*          exists tree. *)
+    (*          split;auto. split;auto. split;auto. *)
+    (*          intros. unfold heap_at. *)
+    (*          assert (P5 : forall g t (tree : bintree Z) m, *)
+    (*                     (g, t) *)
+    (*                     = focus btctx_top tree (HeapsortHeader.decode m) *)
+    (*                     -> subtree_nat tree m = Some t). *)
+    (*          { admit "". } apply P5 in Eqp. *)
+    (*          destruct H. *)
+    (*          *** rewrite Eqp. *)
+    (*              (* surrender : i need heap t1 heap t2 option_root t1 = x1 brr... *) *)
              
         
   Admitted.

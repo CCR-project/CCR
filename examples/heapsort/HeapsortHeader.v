@@ -1348,6 +1348,12 @@ Section CompleteBinaryTree.
       admit.
   Admitted.
 
+  Lemma subtree_index tree t i :
+    complete tree
+    -> option_subtree i tree = Some t
+    -> forall n, lookup (toList t) n = lookup (toList tree) (n + (encode i) * 2 ^ (length (decode n))).
+  Admitted.
+
 End CompleteBinaryTree.
 
 (* (* Example "toList" *)
@@ -1487,6 +1493,15 @@ Section BinaryTreeZipper.
     let '(g', t') := focus g t i in
     recover_bintree g t = recover_bintree g' t'.
   Admitted.
+
+  Lemma focus_option_subtree g g' t t' i :
+    (g', t') = focus g t i ->
+    match t' with
+    | BT_node _ _ _ => option_subtree i t = Some t'
+    | BT_nil => option_subtree i t = None \/ option_subtree i t = Some BT_nil
+    end.
+  Admitted.
+  
 
 End BinaryTreeZipper.
 
