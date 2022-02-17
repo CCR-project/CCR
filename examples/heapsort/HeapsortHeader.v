@@ -398,34 +398,55 @@ Section ListOperations.
     - intros.
       Opaque pow.
       simpl in H.
+      Transparent pow.
       destruct H as [[]|[]].
-      + pose proof (IHxss (S n) H0).
+      + assert (Hl : length xs > 2 ^ n).
+        { assert (2 ^ n > 0) by (eapply exp_pos; lia).
+          simpl pow in H.
+          lia.
+        }
+        pose proof (IHxss (S n) H0).
         simpl in d, l, r.
         remember (length xss) as d'.
         remember (splitLListLeft (S n) xss) as l'.
         remember (splitLListRight (S n) xss) as r'.
-        subst d l r.
         simpl in H1.
-        destruct H1.
-        * destruct H1 as [H1 [H2 [H3 H4]]].
-          left. split; [| split; [| split ]].
-          -- simpl. admit.
+        destruct H1 as [[H1 [H2 [H3 H4]]] | [H1 [H2 [H3 H4]]]].
+        * left. subst d l r.
+          replace (length xs <=? 2 ^ n) with false
+            by (symmetry; eapply leb_correct_conv; lia).
+          split; [| split; [| split ]].
+          -- simpl.
+             rewrite firstn_length_le by lia.
+             auto.
           -- simpl. auto.
-          -- admit.
-          -- admit.
-        * destruct H1 as [H1 [H2 [H3 H4]]].
-          right. split; [| split; [| split ]].
-          -- simpl. admit.
+          -- simpl. left.
+             rewrite skipn_length. rewrite H. simpl. split; try lia; auto.
           -- simpl. auto.
-          -- admit.
-          -- admit.
+        * right. subst d l r.
+          replace (length xs <=? 2 ^ n) with false
+            by (symmetry; eapply leb_correct_conv; lia).
+          split; [| split; [| split ]].
+          -- simpl. left.
+             rewrite firstn_length_le by lia.
+             auto.
+          -- simpl. auto.
+          -- simpl. rewrite skipn_length. rewrite H. simpl. split; try lia; auto.
+          -- destruct H4 as [d [H4 H5]].
+             exists (S d). simpl.
+             split; lia.
       + subst xss.
         simpl in d, l, r.
         destruct (length xs <=? 2 ^ n) eqn:E.
         * eapply leb_complete in E.
           right. subst d l r.
           split; [| split; [| split ]].
-          -- simpl. admit. (* easy *)
+          -- simpl.
+             rewrite firstn_all2 by assumption.
+             assert (length xs = 2 ^ n \/ length xs <> 2 ^ n) by lia.
+             destruct H0.
+             ++ left. auto.
+             ++ right. split; [lia | reflexivity].
           -- reflexivity.
           -- simpl. auto.
           -- exists 0. auto.
@@ -435,9 +456,12 @@ Section ListOperations.
           -- simpl.
              rewrite firstn_length. lia.
           -- reflexivity.
-          -- simpl. admit. (* easy *)
+          -- simpl. right.
+             rewrite skipn_length.
+             simpl in H.
+             split; [ lia | reflexivity ].
           -- reflexivity.
-  Admitted.
+  Qed.
 
   Lemma complete_splitLListLeft n xss : complete_list (S n) xss -> complete_list n (splitLListLeft n xss).
   Proof with lia || eauto.
