@@ -1067,10 +1067,34 @@ Section CompleteBinaryTree.
   Lemma last_btidx_nil : last_btidx (BT_nil : bintree A) = [].
   Proof. reflexivity. Qed.
 
+  Lemma btidx_lt_mono i j x y :
+    btidx_lt i j -> btidx_lt (i ++ [x]) (j ++ [y]).
+  Proof.
+    intros H.
+    destruct H.
+    - left. unfold lt_ltlen in *.
+      rewrite 2 app_length. simpl. lia.
+    - right.
+      induction H.
+      + simpl. econstructor. rewrite 2 app_length. simpl. lia.
+      + simpl. econstructor. assumption.
+  Qed.
+
   Lemma last_btidx_half (t : bintree A) j d :
     btidx_lt (removelast (last_btidx t)) j ->
     btidx_lt (last_btidx t) (j ++ [d]).
-  Admitted.
+  Proof.
+    intros H.
+    remember (last_btidx t) as i; clear Heqi.
+    assert (Hnil : i = [] \/ i <> []) by (destruct i; [ left; reflexivity | right; congruence ]).
+    destruct Hnil.
+    - subst i. left. unfold lt_ltlen.
+      rewrite app_length.
+      simpl. lia.
+    - rewrite (app_removelast_last Dir_left H0).
+      eapply btidx_lt_mono.
+      assumption.
+  Qed.
 
   Lemma last_btidx_perfect_complete x l r n :
     n > 0 ->
