@@ -388,6 +388,55 @@ Section ListOperations.
     let r := splitLListRight n xss in
     perfect_list n l /\ length l = d /\ complete_list n r /\ length r = d \/
     complete_list n l /\ length l = d /\ perfect_list n r /\ exists d', length r = d' /\ d' + 1 = d.
+  Proof.
+    revert n.
+    induction xss as [| xs xss ].
+    - intros.
+      simpl in d, l, r.
+      subst d l r.
+      auto.
+    - intros.
+      Opaque pow.
+      simpl in H.
+      destruct H as [[]|[]].
+      + pose proof (IHxss (S n) H0).
+        simpl in d, l, r.
+        remember (length xss) as d'.
+        remember (splitLListLeft (S n) xss) as l'.
+        remember (splitLListRight (S n) xss) as r'.
+        subst d l r.
+        simpl in H1.
+        destruct H1.
+        * destruct H1 as [H1 [H2 [H3 H4]]].
+          left. split; [| split; [| split ]].
+          -- simpl. admit.
+          -- simpl. auto.
+          -- admit.
+          -- admit.
+        * destruct H1 as [H1 [H2 [H3 H4]]].
+          right. split; [| split; [| split ]].
+          -- simpl. admit.
+          -- simpl. auto.
+          -- admit.
+          -- admit.
+      + subst xss.
+        simpl in d, l, r.
+        destruct (length xs <=? 2 ^ n) eqn:E.
+        * eapply leb_complete in E.
+          right. subst d l r.
+          split; [| split; [| split ]].
+          -- simpl. admit. (* easy *)
+          -- reflexivity.
+          -- simpl. auto.
+          -- exists 0. auto.
+        * eapply leb_complete_conv in E.
+          left. subst d l r.
+          split; [| split; [| split ]].
+          -- simpl.
+             rewrite firstn_length. lia.
+          -- reflexivity.
+          -- simpl. admit. (* easy *)
+          -- reflexivity.
   Admitted.
 
   Lemma complete_splitLListLeft n xss : complete_list (S n) xss -> complete_list n (splitLListLeft n xss).
