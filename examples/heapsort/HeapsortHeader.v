@@ -1123,15 +1123,6 @@ Section CompleteBinaryTree.
         simpl in *. nia.
   Qed.
                               
-  (*
-  Lemma toList_lookup root i t
-    (H_bound : i < length (toList root))
-    (H_complete : complete root)
-    (H_occurs : occurs t (decode i) root)
-    : lookup (toList root) i = option_root t.
-  Admitted.
-   *)
-
   Lemma last_btidx_nil : last_btidx (BT_nil : bintree A) = [].
   Proof. reflexivity. Qed.
 
