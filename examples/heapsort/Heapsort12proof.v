@@ -76,17 +76,17 @@ Section SIMMODSEM.
                    (g, BT_node x t1 t2)
                    = focus btctx_top tree (HeapsortHeader.decode (initial - 1))
                    -> HeapsortHeader.lookup (toList tree) (initial * 2 - 1) = option_root t1).
-        {admit "".}
+        { admit "". }
         assert (Pos2 : forall g x t1 t2 initial (tree : bintree Z),
                    (g, BT_node x t1 t2)
                    = focus btctx_top tree (HeapsortHeader.decode (initial - 1))
                    -> HeapsortHeader.lookup (toList tree) (initial * 2) = option_root t2).
-        {admit "".}
+        { admit "". }
         assert (Pos3 : forall g x t1 t2 initial (tree : bintree Z),
                    (g, BT_node x t1 t2)
                    = focus btctx_top tree (HeapsortHeader.decode (initial - 1))
                    -> HeapsortHeader.lookup (toList tree) (initial - 1) = Some x).
-        {admit "".}
+        { admit "". }
         pose proof (Pos3 _ _ _ _ _ _ Eqp) as P3.
         pose proof (Pos1 _ _ _ _ _ _ Eqp) as P1.
         pose proof (Pos2 _ _ _ _ _ _ Eqp) as P2. rewrite P1. rewrite P2.
@@ -95,12 +95,12 @@ Section SIMMODSEM.
                                     = focus btctx_top tree
                                             (HeapsortHeader.decode (initial - 1)) 
                                   -> complete (BT_node x t1 t2)).
-        {admit "".}
+        { admit "". }
         pose proof (complete_t _ _ _ _ _ _ PURE2 Eqp) as C.
         assert (length_upp : forall (l : list Z) n m, strings.length l = S n
                              -> m <= n
                              -> exists x, HeapsortHeader.lookup l m = Some x).
-        {admit "".}
+        { admit "". }
         assert (E11 : initial * 2 <= n) by nia.
         assert (E12 : initial * 2 - 1 <= n) by nia.
         pose proof (length_upp _ _ _ U E11) as some_1.
@@ -123,7 +123,7 @@ Section SIMMODSEM.
                         (g, t)
                         = focus btctx_top tree (HeapsortHeader.decode m)
                         -> subtree_nat tree m = Some t).
-             {admit "".} apply P5 in Eqp.
+             { admit "". } apply P5 in Eqp.
              destruct H.
              *** rewrite Eqp.
                  (* surrender : i need heap t1 heap t2 option_root t1 = x1 brr... *)
