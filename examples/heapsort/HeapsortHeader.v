@@ -274,7 +274,7 @@ Section ListOperations.
                  \/ 0 < length xs < 2^n /\ xss = []
     end.
 
-  Lemma complete_trim n xs : complete_list n (toLList n xs).
+  Lemma complete_toLList n xs : complete_list n (toLList n xs).
   Proof with lia || eauto.
     remember (length xs) as l.
     revert n xs Heql.
@@ -841,7 +841,7 @@ Section BinaryTreeAccessories.
   Lemma toList_fromList xs : toList (fromList xs) = xs.
   Proof.
     unfold fromList, toList.
-    rewrite toListAux_fromListAux by eapply complete_trim.
+    rewrite toListAux_fromListAux by eapply complete_toLList.
     eapply concat_toLList.
   Qed.
 
@@ -1362,7 +1362,7 @@ Section CompleteBinaryTree.
     unfold complete, fromList.
     remember (toLList 0 xs) as xss.
     assert (H : complete_list 0 xss)
-      by (subst; eapply complete_trim).
+      by (subst; eapply complete_toLList).
     clear xs Heqxss.
     exists (length xss).
     remember (length xss) as n eqn: Hn.
