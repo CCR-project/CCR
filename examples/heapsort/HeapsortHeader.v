@@ -1486,7 +1486,19 @@ Section BinaryTreeZipper.
   Lemma recover_focus g t i :
     let '(g', t') := focus g t i in
     recover_bintree g t = recover_bintree g' t'.
-  Admitted.
+  Proof.
+    revert g t.
+    induction i.
+    - intros g t. destruct t; reflexivity.
+    - intros g t.
+      destruct t, a; try reflexivity; simpl.
+      + pose proof (IHi (btctx_left x t2 g) t1).
+        destruct (focus (btctx_left x t2 g) t1 i) as [g' t'].
+        auto.
+      + pose proof (IHi (btctx_right x t1 g) t2).
+        destruct (focus (btctx_right x t2 g) t2 i) as [g' t'].
+        auto.
+  Qed.
 
 End BinaryTreeZipper.
 
