@@ -328,6 +328,12 @@ Section ListOperations.
           reflexivity.
   Qed.
 
+  Lemma complete_splitLList n xss :
+    complete_list (S n) xss ->
+    perfect_list n (splitLListLeft n xss) /\ complete_list n (splitLListRight n xss) \/
+    complete_list n (splitLListLeft n xss) /\ perfect_list n (splitLListRight n xss).
+  Admitted.
+
   Lemma complete_splitLListLeft n xss : complete_list (S n) xss -> complete_list n (splitLListLeft n xss).
   Proof with lia || eauto.
     revert n; induction xss as [ | xs xss IH]...
@@ -1357,26 +1363,38 @@ Section CompleteBinaryTree.
       lia.
   Qed.
 
+  Lemma perfect_fromListAux (xss : list (list A)) :
+    perfect_list 0 xss -> perfect' (fromListAux xss) (length xss).
+  Proof.
+    remember (length xss) as n.
+    revert xss Heqn.
+    induction n; intros.
+    - destruct xss; try discriminate.
+      rewrite unfold_fromListAux.
+      constructor.
+    - destruct xss as [|[|x xs] xss]; simpl in H; [ | destruct H | ]; try discriminate.
+      rewrite unfold_fromListAux.
+      econstructor.
+      + eapply IHn.
+        * rewrite splitLListLeft_length.
+          simpl in Heqn.
+          lia.
+        * admit.
+      + admit.
+  Admitted.
+
+  Lemma complete_fromListAux (xss : list (list A)) :
+    complete_list 0 xss -> complete' (fromListAux xss) (length xss).
+  Admitted.
+
   Lemma complete_fromList (xs : list A) : complete (fromList xs).
-  Proof.    
+  Proof.
     unfold complete, fromList.
     remember (toLList 0 xs) as xss.
     assert (H : complete_list 0 xss)
       by (subst; eapply complete_toLList).
-    clear xs Heqxss.
-    exists (length xss).
-    remember (length xss) as n eqn: Hn.
-    revert xss H Hn.
-    induction n using Wf_nat.lt_wf_ind.
-    intros.
-    rewrite unfold_fromListAux.
-    destruct xss as [| [|x xs] xss].
-    - subst n. simpl. econstructor.
-    - simpl in H0. lia.
-    - simpl in *. rewrite Hn.
-      (* Don't know which constructor to apply *)
-      admit.
-  Admitted.
+    eexists. eapply complete_fromListAux. assumption.
+  Qed.
 
 End CompleteBinaryTree.
 
