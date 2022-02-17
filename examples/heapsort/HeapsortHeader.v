@@ -383,8 +383,11 @@ Section ListOperations.
 
   Lemma complete_splitLList n xss :
     complete_list (S n) xss ->
-    perfect_list n (splitLListLeft n xss) /\ complete_list n (splitLListRight n xss) \/
-    complete_list n (splitLListLeft n xss) /\ perfect_list n (splitLListRight n xss).
+    let d := length xss in
+    let l := splitLListLeft n xss in
+    let r := splitLListRight n xss in
+    perfect_list n l /\ length l = d /\ complete_list n r /\ length r = d \/
+    complete_list n l /\ length l = d /\ perfect_list n r /\ exists d', length r = d' /\ d' + 1 = d.
   Admitted.
 
   Lemma complete_splitLListLeft n xss : complete_list (S n) xss -> complete_list n (splitLListLeft n xss).
@@ -1440,7 +1443,38 @@ Section CompleteBinaryTree.
 
   Lemma complete_fromListAux (xss : list (list A)) :
     complete_list 0 xss -> complete' (fromListAux xss) (length xss).
-  Admitted.
+  Proof.
+    remember (length xss) as n.
+    revert xss Heqn.
+    induction n using Wf_nat.lt_wf_ind. intros.
+    destruct n.
+    - destruct xss; try discriminate.
+      rewrite unfold_fromListAux.
+      econstructor.
+    - destruct xss as [|[|x xs] xss]; simpl in *; try discriminate; try lia.
+      eapply succ_inj in Heqn. subst.
+      rewrite unfold_fromListAux.
+      destruct H0 as [[]|[]].
+      + pose proof (complete_splitLList 0 xss H1).
+        remember (length xss) as n'.
+        remember (splitLListLeft 0 xss) as l.
+        remember (splitLListRight 0 xss) as r.
+        simpl in H2.
+        destruct H2 as [[Hl1 [Hl2 [Hr1 Hr2]]] | [Hl1 [Hl2 [Hr1 Hr2]]]].
+        * eapply complete_node_perfect_complete.
+          -- rewrite <- Hl2.
+             eapply perfect_fromListAux.
+             assumption.
+          -- eapply H; try lia; assumption.
+        * destruct Hr2 as [n'' []].
+          replace n' with (S n'') by lia.
+          eapply complete_node_complete_perfect.
+          -- eapply H; try lia; assumption.
+          -- rewrite <- H2.
+             eapply perfect_fromListAux.
+             assumption.
+      + subst. lia.
+  Qed.
 
   Lemma complete_fromList (xs : list A) : complete (fromList xs).
   Proof.
