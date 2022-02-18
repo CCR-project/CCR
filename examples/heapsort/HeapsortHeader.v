@@ -347,6 +347,11 @@ Section ListOperations.
         inversion claim5.
   Qed.
 
+  Lemma toLList_concat n xss :
+    complete_list n xss ->
+    toLList n (concat xss) = xss.
+  Admitted.
+
   Lemma splitLeft_zip n xss yss :
     perfect_list n xss /\ complete_list n yss /\ length xss = length yss \/
     complete_list n xss /\ perfect_list n yss /\ length xss = 1 + length yss ->
@@ -1120,6 +1125,7 @@ Section CompleteBinaryTree.
     : complete' (BT_node x l r) (S (S n))
   .
 
+  Definition perfect t := exists n, perfect' t n.
   Definition complete t := exists n, complete' t n.
 
   Lemma perfect'2complete' {n} t
@@ -1637,6 +1643,14 @@ Section CompleteBinaryTree.
     eexists. eapply complete_fromListAux. assumption.
   Qed.
 
+  Lemma perfect_toListAux_list t :
+    perfect t -> perfect_list 0 (toListAux t).
+  Admitted.
+
+  Lemma complete_toListAux_list t :
+    complete t -> complete_list 0 (toListAux t).
+  Admitted.
+
   Lemma fromListAux_toListAux t :
     complete t -> fromListAux (toListAux t) = t.
   Proof.
@@ -1645,18 +1659,29 @@ Section CompleteBinaryTree.
     induction n as [n IH] using Wf_nat.lt_wf_ind; intros.
     inversion H; subst; clear H.
     - reflexivity.
-    - simpl. rewrite unfold_fromListAux.
+    - rename n0 into n. simpl. rewrite unfold_fromListAux.
+      rewrite splitLeft_zip.
+      2: { left. admit. }
+      2: { eapply complete_toListAux_list.
+           eexists. eapply perfect'2complete'. eassumption. }
+      rewrite splitRight_zip by admit.
+      erewrite (IH n).
+      erewrite (IH n).
+      reflexivity.
+      + lia.
+      + assumption.
+      + lia.
+      + eapply perfect'2complete'. assumption.
+    - rename n0 into n. simpl. rewrite unfold_fromListAux.
       rewrite splitLeft_zip by admit.
       rewrite splitRight_zip by admit.
-      erewrite IH by admit.
-      erewrite IH by admit.
+      erewrite (IH (S n)).
+      erewrite (IH n).
       reflexivity.
-    - simpl. rewrite unfold_fromListAux.
-      rewrite splitLeft_zip by admit.
-      rewrite splitRight_zip by admit.
-      erewrite IH by admit.
-      erewrite IH by admit.
-      reflexivity.
+      + lia.
+      + eapply perfect'2complete'. assumption.
+      + lia.
+      + assumption.
   Admitted.
 
   Lemma fromList_toList t :
@@ -1665,7 +1690,9 @@ Section CompleteBinaryTree.
     intros.
     unfold toList.
     unfold fromList.
-  Admitted.
+    rewrite toLList_concat by (eapply complete_toListAux_list; assumption).
+    eapply fromListAux_toListAux; assumption.
+  Qed.
 
   Lemma subtree_index tree t i :
     complete tree
