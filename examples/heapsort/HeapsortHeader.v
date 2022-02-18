@@ -1005,6 +1005,12 @@ Section BinaryTreeAccessories.
     reflexivity.
   Qed.
 
+  Definition upd_root (x : A) t :=
+    match t with
+    | BT_nil => BT_nil
+    | BT_node _ l r => BT_node x l r
+    end.
+
 End BinaryTreeAccessories.
 
 Section CompleteBinaryTree.
@@ -1559,11 +1565,14 @@ Section CompleteBinaryTree.
     subtree_nat tree i = Some t <->
     match t with
     | BT_nil => False
-    | BT_node x l r =>
-      (HeapsortHeader.lookup (toList tree) i = Some x /\ subtree_nat tree (i * 2 + 1) = Some l /\ subtree_nat tree (i * 2 + 2) = Some r)
-      /\ (if i * 2 + 2 <=? btsize tree then l <> BT_nil else l = BT_nil)
-      /\ (if i * 2 + 2 <? btsize tree then r <> BT_nil else r = BT_nil)
+    | BT_node x l r => HeapsortHeader.lookup (toList tree) i = Some x /\ subtree_nat tree (i * 2 + 1) = Some l /\ subtree_nat tree (i * 2 + 2) = Some r
     end.
+  Admitted.
+
+  Theorem subtree_nat_range (tree : bintree A) t i
+    (H_complete : complete tree)
+    (H_subtree : subtree_nat tree i = Some t)
+    : i < btsize tree <-> t <> BT_nil.
   Admitted.
 
 End CompleteBinaryTree.
@@ -1725,7 +1734,13 @@ Section BinaryTreeZipper.
     | BT_nil => option_subtree i t = None \/ option_subtree i t = Some BT_nil
     end.
   Admitted.
-  
+
+  Fixpoint btctx2idx g : btidx :=
+    match g with
+    | btctx_top => []
+    | btctx_left _ _ g => btctx2idx g ++ [Dir_left]
+    | btctx_right _ _ g => btctx2idx g ++ [Dir_right]
+    end.
 
 End BinaryTreeZipper.
 
@@ -1914,7 +1929,7 @@ Module NEO.
       end
     end.
 
-  Definition insertAt (x : A) : list dir_t -> bintree A -> option (bintree A) := fold_right insertStep (insertInit x).
+  Definition insertAt (x : A) : btidx -> bintree A -> option (bintree A) := fold_right insertStep (insertInit x).
 
   Definition insertable (root : bintree A) i := subtree_nat root i = Some BT_nil.
 
