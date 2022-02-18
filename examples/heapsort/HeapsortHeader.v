@@ -116,7 +116,7 @@ Section Utilities.
     - eapply exp_pos; lia.
   Qed.
 
-  Lemma tail_length {A} (xs : list A) : length xs > 0 -> length (tail xs) = length xs - 1.
+  Lemma tail_length {A} (xs : list A) : length (tail xs) = length xs - 1.
   Proof. destruct xs; simpl; lia || eauto. Qed.
 
   Lemma removelast_length {A} (xs : list A) : length xs > 0 -> length (removelast xs) = length xs - 1.

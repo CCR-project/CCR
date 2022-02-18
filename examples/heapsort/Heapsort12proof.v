@@ -569,7 +569,8 @@ Section SIMMODSEM.
         simpl.
         assert (length (removelast xs1) = l + 1)
           by (rewrite removelast_length; lia).
-        rewrite tail_length; lia.
+        rewrite tail_length.
+        lia.
       - red. inversion WF. econs. et.
       - assumption.
     }
