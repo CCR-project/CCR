@@ -160,6 +160,21 @@ Section Utilities.
     assumption.
   Qed.
 
+  Lemma In_last {A} (xs : list A) x : xs <> [] -> In (last xs x) xs.
+  Proof.
+    intros.
+    induction xs.
+    - contradiction.
+    - assert (xs = [] \/ xs <> [])
+        by (destruct xs; [ left; reflexivity | right; discriminate ]).
+      destruct H0.
+      + subst. simpl. auto.
+      + replace (last (a :: xs) x) with (last xs x)
+          by (rewrite <- (last_app [a] xs x H0); reflexivity).
+        simpl. right.
+        eapply IHxs; assumption.
+  Qed.
+
 End Utilities.
 
 Section ListOperations.
@@ -507,6 +522,12 @@ Section BinaryTree.
               (H_l : bteq_shape l l')
               (H_r : bteq_shape r r')
     : bteq_shape (BT_node x l r) (BT_node x' l' r')
+  .
+
+  Inductive btin x : bintree -> Prop :=
+  | btin_root l r : btin x (BT_node x l r)
+  | btin_left y l r : btin x l -> btin x (BT_node y l r)
+  | btin_right y l r : btin x r -> btin x (BT_node y l r)
   .
 
   Definition leaf (t : bintree) : Prop :=
@@ -1009,6 +1030,24 @@ Section BinaryTreeAccessories.
     | BT_nil => BT_nil
     | BT_node _ l r => BT_node x l r
     end.
+
+  Lemma toList_btin x t : In x (toList t) -> btin x t.
+  Proof.
+    induction t.
+    - simpl. contradiction.
+    - simpl.
+      intros.
+      destruct H.
+      + subst. econstructor.
+      + assert (In x (toList t1) \/ In x (toList t2)) by admit.
+        destruct H0.
+        * eapply btin_left.
+          eapply IHt1.
+          assumption.
+        * eapply btin_right.
+          eapply IHt2.
+          assumption.
+  Admitted.
 
 End BinaryTreeAccessories.
 
@@ -1640,10 +1679,10 @@ Section HeapProperty.
   Lemma heap_erase_priority p t : heap_pr p t -> heap t.
   Proof. intros. destruct H; econstructor; assumption. Qed.
 
-  Lemma heap_pr_if_heap (R_refl : forall x, R x x) t : btsize t >= 1 -> heap t -> exists p, heap_pr p t.
+  Lemma heap_pr_if_heap (R_refl : forall x, R x x) t : t <> BT_nil -> heap t -> exists p, heap_pr p t.
   Proof.
-    intros Hₛ Hₕ.
-    destruct Hₕ; simpl in Hₛ; try lia.
+    intros Ht Hₕ.
+    destruct Hₕ; try contradiction.
     eexists.
     econstructor; try assumption.
     eapply R_refl.
@@ -1674,13 +1713,51 @@ Section HeapProperty.
   Lemma removelast_heap t : heap t -> heap (fromList (removelast (toList t))).
   Admitted.
 
+  Lemma heap_rel p t :
+    Transitive R ->
+    heap_pr p t ->
+    forall x, btin x t -> R p x.
+  Proof.
+    intro T.
+    induction t.
+    - intros. inversion H0.
+    - intros.
+      remember (BT_node x t1 t2) as t eqn: E.
+      destruct H; try discriminate.
+      inversion E; subst; clear E.
+      remember (BT_node x t1 t2) as t eqn: E.
+      destruct H0; inversion E; subst; clear E.
+      + assumption.
+      + eapply IHt1.
+        * destruct heap_l; econstructor; try assumption.
+          transitivity x; assumption.
+        * assumption.
+      + eapply IHt2.
+        * destruct heap_r; econstructor; try assumption.
+          transitivity x; assumption.
+        * assumption.
+  Qed.
+
   Lemma heap_head_last t x xs a :
     Reflexive R ->
     Transitive R ->
     heap t ->
     toList t = x :: xs ->
     R x (last (toList t) a).
-  Admitted.
+  Proof.
+    intros.
+    eapply heap_rel.
+    - assumption.
+    - instantiate (1 := t).
+      destruct H1; try discriminate.
+      unfold toList in H2.
+      simpl in H2. inversion H2; subst.
+      econstructor; try assumption.
+      eapply H.
+    - eapply toList_btin.
+      eapply In_last.
+      intro. rewrite H3 in H2. discriminate.
+  Qed.
 
 End HeapProperty.
 

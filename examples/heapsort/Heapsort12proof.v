@@ -466,7 +466,8 @@ Section SIMMODSEM.
     rename Hₕ into H.
     assert (Hₕ : heap Z.ge tree)
       by (eapply H with (j := 1); lia).
-    eapply heap_pr_if_heap in Hₕ; try lia.
+    eapply heap_pr_if_heap in Hₕ;
+      [ | lia | intro Ht; subst; simpl in *; lia ].
     destruct Hₕ as [p Hₕ].
     clear H.
 
