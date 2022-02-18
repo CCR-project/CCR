@@ -24,8 +24,11 @@ Section Utilities.
 
   Definition isNone {A : Type} : option A -> Prop := fun m => m = None.
 
+  Lemma isSome_intro {A : Type} (Some_x : option A) (x : A) : Some_x = Some x -> isSome Some_x.
+  Proof. congruence. Qed.
+
   Lemma Some_or_None {A : Type} : forall m : option A,  {isSome m} + {isNone m}.
-  Proof. destruct m; [left | right]; congruence. Qed.
+  Proof. destruct m; [left | right]; congruence. Defined.
 
   Lemma Some_inj {A : Type} {lhs : A} {rhs : A}
     (H_Some_eq : Some lhs = Some rhs)
@@ -1938,6 +1941,12 @@ Section ListAccessories.
       rewrite (firstn_length n xs) in i_ge_len...
   Qed.
 
+  Lemma listExt_skipn {A : Type} (xs : list A) (n : nat) :
+    forall i, lookup (skipn n xs) i = lookup xs (n + i).
+  Proof with eauto.
+    unfold lookup. revert n. induction xs as [ | x xs IH]; intros [ | n']; simpl... now destruct i.
+  Qed.
+
   Lemma listExt_combine {A : Type} {B : Type} (xs : list A) (ys : list B) :
     forall i,
     match lookup (combine xs ys) i with
@@ -1994,7 +2003,7 @@ Section ListAccessories.
       rewrite nth_error_None; lia.
   Qed.
 
-  Theorem listExt_swap {A : Type} (xs : list A) (i1 : nat) (i2 : nat) :
+  Lemma listExt_swap {A : Type} (xs : list A) (i1 : nat) (i2 : nat) :
     i1 < length xs ->
     i2 < length xs ->
     forall i,
@@ -2025,6 +2034,106 @@ Section ListAccessories.
       { subst i. symmetry; apply nth_error_nth'... }
       symmetry...
     - exact (proj1 claim2).
+  Qed.
+
+  Lemma add_indices_length {A : Type} (xs : list A) :
+    length (add_indices xs) = length xs.
+  Proof with lia || discriminate || eauto.
+    transitivity (length (map snd (add_indices xs))).
+    { symmetry. apply map_length. }
+    transitivity (length (seq 0 (length xs))).
+    { apply f_equal. apply list_extensionality.
+      intros i.
+      rewrite (listExt_map snd (add_indices xs) i).
+      assert (claim1 := listExt_add_indices xs i).
+      assert (claim2 := listExt_seq 0 (length xs) i).
+      destruct (lookup (add_indices xs) i) as [[x n] | ] eqn: H_obs.
+      - destruct claim1 as [H_eq H_obs_xs].
+        subst n. simpl. symmetry.
+        destruct (lookup (seq 0 (length xs)) i) as [i_ | ]; subst...
+        apply isSome_intro, nth_error_Some in H_obs_xs...
+      - destruct claim1 as [H_eq H_obs_xs].
+        simpl. symmetry. apply nth_error_None. rewrite seq_length...
+    }
+    rewrite seq_length...
+  Qed.
+
+  Lemma listExt_upd {A : Type} (xs : list A) (i1 : nat) (x1 : A) :
+    i1 < length xs ->
+    forall i,
+    match lookup (upd xs i1 x1) i with
+    | None => i >= length xs
+    | Some val => Some val = if Nat.eq_dec i i1 then Some x1 else lookup xs i
+    end.
+  Proof with discriminate || eauto.
+    intros H_i1; unfold lookup.
+    assert (H_lookup_i1 := proj2 (nth_error_Some xs i1) H_i1).
+    intros i; cbn; unfold upd.
+    assert (claim1 := listExt_map (fun '(x, i0) => if eq_dec i0 i1 then x1 else x) (add_indices xs) i).
+    unfold lookup in claim1; cbn in claim1.
+    rewrite claim1; unfold option_map.
+    assert (claim2 := listExt_add_indices xs i).
+    unfold lookup in claim2; cbn in claim2.
+    destruct (nth_error (add_indices xs) i) as [[x n] | ] eqn: H_obs_add_indices.
+    - destruct claim2 as [H_eq1 H_eq2]; subst n.
+      destruct (Nat.eq_dec i i1) as [H_yes1 | H_no1]...
+    - exact (proj1 claim2).
+  Qed.
+
+  Theorem upd_spec {A : Type} (xs : list A) i x :
+    upd xs i x = if Nat.ltb i (length xs) then firstn i xs ++ [x] ++ skipn (i + 1) xs else xs.
+  Proof with lia || eauto.
+    rename i into i0, x into x0.
+    destruct (Nat.ltb i0 (length xs)) eqn: H_range.
+    - apply Nat.ltb_lt in H_range.
+      assert (claim1 := listExt_upd xs i0 x0 H_range).
+      transitivity (firstn i0 xs ++ (firstn 1 (x0 :: skipn (S i0) xs) ++ skipn 1 (x0 :: skipn (S i0) xs))).
+      2: rewrite firstn_skipn; replace (i0 + 1) with (S i0)...
+      transitivity (firstn i0 (upd xs i0 x0) ++ skipn i0 (upd xs i0 x0)).
+      1: symmetry; apply firstn_skipn.
+      f_equal.
+      { apply list_extensionality.
+        intros i. specialize (claim1 i).
+        assert (claim2 := listExt_firstn (upd xs i0 x0) i0 i).
+        destruct (lookup (firstn i0 (upd xs i0 x0)) i) as [x | ] eqn: H_obs.
+        - destruct claim2 as [H_i_lt_i0 H_x].
+          rewrite H_x in claim1.
+          destruct (Nat.eq_dec i i0) as [H_yes1 | H_no1]...
+          rewrite claim1. symmetry. apply firstn_nth_error...
+        - symmetry. apply nth_error_None. rewrite firstn_length.
+          enough (to_show : i >= i0 \/ i >= length xs)...
+          unfold upd in claim2. rewrite map_length in claim2.
+          rewrite add_indices_length in claim2...
+      }
+      { apply list_extensionality.
+        intros i.
+        rewrite listExt_skipn.
+        destruct i as [ | i'].
+        - rewrite Nat.add_0_r. simpl.
+          specialize (claim1 i0).
+          destruct (lookup (upd xs i0 x0) i0) as [x | ]...
+          destruct (Nat.eq_dec i0 i0)...
+        - rewrite firstn_skipn.
+          replace ((S i')) with (1 + i') at 2 by lia.
+          rewrite <- listExt_skipn with (xs0 := (x0 :: skipn (S i0) xs)).
+          set (xs_suffix := skipn (S i0) xs).
+          simpl. unfold xs_suffix. specialize (claim1 (i0 + S i')).
+          destruct (lookup (upd xs i0 x0) (i0 + S i')) as [x | ].
+          + destruct (Nat.eq_dec (i0 + S i') i0) as [H_yes1 | H_no1]...
+            rewrite claim1. replace (i0 + S i') with (S i0 + i')...
+            symmetry. apply listExt_skipn.
+          + symmetry. apply nth_error_None.
+            rewrite skipn_length...
+      }
+    - apply Nat.ltb_nlt in H_range.
+      unfold upd. apply list_extensionality. intros i.
+      rewrite (listExt_map (fun '(x, i1) => if eq_dec i1 i0 then x0 else x) (add_indices xs) i).
+      assert (claim1 := listExt_add_indices xs i).
+      destruct (lookup (add_indices xs) i) as [[x n] | ] eqn: H_obs.
+      + destruct claim1 as [H_eq H_obs_xs]; subst.
+        simpl. destruct (Nat.eq_dec n i0); [subst n | ]...
+        apply isSome_intro, nth_error_Some in H_obs_xs...
+      + simpl. now symmetry.
   Qed.
 
 End ListAccessories.
