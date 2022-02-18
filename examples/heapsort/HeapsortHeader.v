@@ -1555,6 +1555,17 @@ Section CompleteBinaryTree.
     -> forall n, lookup (toList t) n = lookup (toList tree) (n + (encode i) * 2 ^ (length (decode n))).
   Admitted.
 
+  Theorem subtree_nat_Some_node (tree : bintree A) t i (t_nonempty : t <> BT_nil) :
+    subtree_nat tree i = Some t <->
+    match t with
+    | BT_nil => False
+    | BT_node x l r =>
+      (HeapsortHeader.lookup (toList tree) i = Some x /\ subtree_nat tree (i * 2 + 1) = Some l /\ subtree_nat tree (i * 2 + 2) = Some r)
+      /\ (if i * 2 + 2 <=? btsize tree then l <> BT_nil else l = BT_nil)
+      /\ (if i * 2 + 2 <? btsize tree then r <> BT_nil else r = BT_nil)
+    end.
+  Admitted.
+
 End CompleteBinaryTree.
 
 (* (* Example "toList" *)
