@@ -274,6 +274,17 @@ Section ListOperations.
                  \/ 0 < length xs < 2^n /\ xss = []
     end.
 
+  Lemma perfect2complete_list n xss :
+    perfect_list n xss -> complete_list n xss.
+  Proof.
+    revert n. induction xss; simpl.
+    - auto.
+    - intros n [].
+      left. split.
+      + assumption.
+      + eapply IHxss. assumption.
+  Qed.
+
   Lemma splitLListRight_length' n xss :
     perfect_list (S n) xss ->
     length (splitLListRight n xss) = length xss.
@@ -464,31 +475,19 @@ Section ListOperations.
   Qed.
 
   Lemma complete_splitLListLeft n xss : complete_list (S n) xss -> complete_list n (splitLListLeft n xss).
-  Proof with lia || eauto.
-    revert n; induction xss as [ | xs xss IH]...
-    intros n H_complete. simpl complete_list in H_complete.
-    assert (claim1 : length (firstn (2^n) xs) = min (2^n) (length xs)).
-    { apply firstn_length. }
-    assert (claim2 : 2^n > 0).
-    { apply exp_pos... }
-    destruct H_complete as [[H_length H_complete] | [H_length H_nil]]; simpl.
-    - left. split...
-    - assert (claim3 : length (firstn (2 ^ n) xs) = 2^n \/ length (firstn (2 ^ n) xs) <2^n)...
-      destruct claim3 as [claim3 | claim3].
-      + left. split... apply IH. now rewrite H_nil.
-      + right. split... rewrite H_nil...
+  Proof.
+    intros H.
+    destruct (complete_splitLList n xss H) as [[H1 [H2 [H3 H4]]] | [H1 [H2 [H3 H4]]]].
+    - eapply perfect2complete_list. assumption.
+    - assumption.
   Qed.
 
   Lemma complete_splitLListRight n xss : complete_list (S n) xss -> complete_list n (splitLListRight n xss).
-  Proof with lia || eauto.
-    revert n; induction xss as [ | xs xss IH]...
-    intros n H_complete. simpl complete_list in H_complete.
-    simpl. destruct (length xs <=? 2 ^ n) eqn: H_obs; simpl...
-    assert (claim1 : length xs > 2 ^ n).
-    { rewrite leb_nle in H_obs... }
-    destruct H_complete as [[H_length H_complete] | [H_length H_nil]]; simpl.
-    - left. split... rewrite skipn_length...
-    - rewrite H_nil. right. split... rewrite skipn_length...
+  Proof.
+    intros H.
+    destruct (complete_splitLList n xss H) as [[H1 [H2 [H3 H4]]] | [H1 [H2 [H3 H4]]]].
+    - assumption.
+    - eapply perfect2complete_list. assumption.
   Qed.
 
 End ListOperations.
