@@ -178,6 +178,15 @@ Section Utilities.
         eapply IHxs; assumption.
   Qed.
 
+  Lemma skipn_app_2 {A} n (l1 l2 : list A) : skipn (length l1 + n) (l1 ++ l2) = skipn n l2.
+  Proof.
+    rewrite skipn_app.
+    Search skipn.
+    rewrite skipn_all2 by lia.
+    replace (length l1 + n - length l1) with n by lia.
+    reflexivity.
+  Qed.
+
 End Utilities.
 
 Section ListOperations.
@@ -350,7 +359,42 @@ Section ListOperations.
   Lemma toLList_concat n xss :
     complete_list n xss ->
     toLList n (concat xss) = xss.
-  Admitted.
+  Proof.
+    revert n.
+    induction xss as [| xs xss ].
+    - auto.
+    - intros.
+      destruct H as [[H1 H2] | [H1 H2]].
+      + rewrite unfold_toLList. simpl.
+        assert (xs <> []).
+        { assert (2 ^ n > 0) by (eapply exp_pos; lia).
+          intro; subst; simpl in H1.
+          lia.
+        }
+        remember (xs ++ concat xss) as ys.
+        destruct ys.
+        { symmetry in Heqys.
+          eapply app_eq_nil in Heqys.
+          destruct Heqys.
+          contradiction.
+        }
+        rewrite Heqys. clear ys Heqys.
+        rewrite <- H1.
+        replace (length xs) with (length xs + 0) by lia.
+        rewrite firstn_app_2.
+        rewrite skipn_app_2.
+        simpl.
+        rewrite IHxss by assumption.
+        rewrite app_nil_r.
+        reflexivity.
+      + subst. rewrite unfold_toLList. simpl. rewrite app_nil_r.
+        remember xs as ys.
+        destruct ys; try (simpl in H1; lia).
+        rewrite Heqys in *. clear ys Heqys.
+        rewrite firstn_all2 by lia.
+        rewrite skipn_all2 by lia.
+        reflexivity.
+  Qed.
 
   Lemma splitLeft_zip n xss yss :
     perfect_list n xss /\ complete_list n yss /\ length xss = length yss \/
