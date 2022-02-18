@@ -538,8 +538,7 @@ Section SIMMODSEM.
           + subst xs1. eassumption.
         - eapply heap_erase_priority in Hₕ.
           subst.
-          eapply removelast_heap.
-          assumption.
+          eapply removelast_heap; assumption.
         - reflexivity.
       }
       { ss. splits; et; oauto. }

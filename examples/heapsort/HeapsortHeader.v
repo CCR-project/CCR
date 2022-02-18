@@ -1077,10 +1077,6 @@ Section BinaryTreeAccessories.
           assumption.
   Qed.
 
-  Lemma btpartial_removelast (t : bintree A) :
-    btpartial t (fromList (removelast (toList t))).
-  Admitted.
-
 End BinaryTreeAccessories.
 
 Section CompleteBinaryTree.
@@ -1645,6 +1641,11 @@ Section CompleteBinaryTree.
     : i < btsize tree <-> t <> BT_nil.
   Admitted.
 
+  Lemma btpartial_removelast (t : bintree A) :
+    complete t ->
+    btpartial t (fromList (removelast (toList t))).
+  Admitted.
+
 End CompleteBinaryTree.
 
 (* (* Example "toList" *)
@@ -1759,10 +1760,11 @@ Section HeapProperty.
     - constructor.
   Qed.
 
-  Lemma removelast_heap t : heap t -> heap (fromList (removelast (toList t))).
+  Lemma removelast_heap t :
+    complete t -> heap t -> heap (fromList (removelast (toList t))).
   Proof.
     intros. eapply heap_btpartial.
-    - eapply btpartial_removelast.
+    - eapply btpartial_removelast. assumption.
     - assumption.
   Qed.
 
