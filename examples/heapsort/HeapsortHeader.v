@@ -505,6 +505,21 @@ Section ListOperations.
     - eapply perfect2complete_list. assumption.
   Qed.
 
+  Lemma In_zipLList (x : A) xss yss :
+    In x (concat (zipLList xss yss)) ->
+    In x (concat xss) \/ In x (concat yss).
+  Proof.
+    revert yss. induction xss as [| xs xss ]; [| destruct yss as [| ys yss ] ]; auto.
+    intros. simpl in H.
+    eapply in_app_or in H. destruct H.
+    - eapply in_app_or in H. destruct H.
+      + left. simpl. eapply in_or_app. auto.
+      + right. simpl. eapply in_or_app. auto.
+    - eapply IHxss in H. destruct H.
+      + left. simpl. eapply in_or_app. auto.
+      + right. simpl. eapply in_or_app. auto.
+  Qed.
+
 End ListOperations.
 
 Section BinaryTree.
@@ -1039,7 +1054,8 @@ Section BinaryTreeAccessories.
       intros.
       destruct H.
       + subst. econstructor.
-      + assert (In x (toList t1) \/ In x (toList t2)) by admit.
+      + assert (In x (toList t1) \/ In x (toList t2))
+          by (apply In_zipLList; assumption).
         destruct H0.
         * eapply btin_left.
           eapply IHt1.
@@ -1047,7 +1063,7 @@ Section BinaryTreeAccessories.
         * eapply btin_right.
           eapply IHt2.
           assumption.
-  Admitted.
+  Qed.
 
 End BinaryTreeAccessories.
 
