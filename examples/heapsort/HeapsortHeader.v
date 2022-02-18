@@ -347,7 +347,19 @@ Section ListOperations.
         inversion claim5.
   Qed.
 
-  Lemma split_zip n xss : complete_list (S n) xss -> zipLList (splitLListLeft n xss) (splitLListRight n xss) = xss.
+  Lemma splitLeft_zip n xss yss :
+    perfect_list n xss /\ complete_list n yss /\ length xss = length yss \/
+    complete_list n xss /\ perfect_list n yss /\ length xss = 1 + length yss ->
+    complete_list n xss -> splitLListLeft n (zipLList xss yss) = xss.
+  Admitted.
+
+  Lemma splitRight_zip n xss yss :
+    perfect_list n xss /\ complete_list n yss /\ length xss = length yss \/
+    complete_list n xss /\ perfect_list n yss /\ length xss = 1 + length yss ->
+    complete_list n xss -> splitLListRight n (zipLList xss yss) = yss.
+  Admitted.
+
+  Lemma zip_split n xss : complete_list (S n) xss -> zipLList (splitLListLeft n xss) (splitLListRight n xss) = xss.
     revert n.
     induction xss as [| xs xss ].
     - reflexivity.
@@ -1010,7 +1022,7 @@ Section BinaryTreeAccessories.
         simpl.
         erewrite IH with (xss := splitLListLeft 0 xss); try reflexivity.
         erewrite IH with (xss := splitLListRight 0 xss); try reflexivity.
-        rewrite split_zip by assumption.
+        rewrite zip_split by assumption.
         reflexivity.
         * assert (length (splitLListRight 0 xss) <= length xss)
             by eapply splitLListRight_length.
@@ -1625,8 +1637,34 @@ Section CompleteBinaryTree.
     eexists. eapply complete_fromListAux. assumption.
   Qed.
 
+  Lemma fromListAux_toListAux t :
+    complete t -> fromListAux (toListAux t) = t.
+  Proof.
+    intros [n H].
+    revert t H.
+    induction n as [n IH] using Wf_nat.lt_wf_ind; intros.
+    inversion H; subst; clear H.
+    - reflexivity.
+    - simpl. rewrite unfold_fromListAux.
+      rewrite splitLeft_zip by admit.
+      rewrite splitRight_zip by admit.
+      erewrite IH by admit.
+      erewrite IH by admit.
+      reflexivity.
+    - simpl. rewrite unfold_fromListAux.
+      rewrite splitLeft_zip by admit.
+      rewrite splitRight_zip by admit.
+      erewrite IH by admit.
+      erewrite IH by admit.
+      reflexivity.
+  Admitted.
+
   Lemma fromList_toList t :
     complete t -> fromList (toList t) = t.
+  Proof.
+    intros.
+    unfold toList.
+    unfold fromList.
   Admitted.
 
   Lemma subtree_index tree t i :
