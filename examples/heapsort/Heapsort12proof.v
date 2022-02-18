@@ -170,28 +170,28 @@ Section SIMMODSEM.
                fun_to_tgt "Heapsort" (GlobalStb sk) {| fsb_fspec := heapify_spec; fsb_body := fun _ => triggerNB |})
               ("heapify", cfunU Heapsort1.heapify_body).
   Proof with lia || eauto.
+    Opaque div swap Nat.leb Nat.ltb Z.ltb.
+    (** "Entering the function" *)
+    init. harg. destruct x as [[tree p] k]. mDesAll; subst.
+    clear PURE1. des; subst. steps. astop. steps.
+    replace (strings.length (toList tree)) with (btsize tree) by now rewrite toList_length.
+    remember (toList tree, 1) as acc_init eqn: H_init. destruct acc_init as [xs i].
+    remember (tree) as t eqn: t_init in H_init.
+    assert (xs_init : xs = toList t) by congruence. assert (i_init : i = 1) by congruence. clear H_init.
+    assert (H_perm : xs ≡ₚ toList (recover_bintree btctx_top t)).
+    assert (t_nonempty : t <> BT_nil).
+    { rewrite t_init. destruct tree; [inv PURE2 | discriminate]. }
+
+  Admitted.
+(** "OLD PROOF"
+  Proof with lia || eauto.
     assert (lemma1 : forall (xs : list Z) k, xs <> [] -> upd xs 0 k = k :: list.tail xs) by admit "".
     assert (lemma2 : forall (tree : bintree Z) t i, subtree_nat tree i = Some t -> HeapsortHeader.lookup (toList tree) i = option_root t) by admit "".
     assert (lemma3 : forall (tree : bintree Z) p xs, toList tree ≡ₚ xs -> ((heap Z.ge tree /\ (forall x, In x xs -> Z.ge p x)) <-> heap_pr Z.ge p tree)) by admit "".
     assert (lemma4 : forall (tree : bintree Z) p, heap Z.ge tree -> option_root tree = Some p -> heap_pr Z.ge p tree) by admit "".
     assert (lemma5 : forall (tree : bintree Z), complete tree -> tree = fromList (toList tree)) by admit "".
-    assert (lemma6 : forall (tree : bintree Z), btsize tree = strings.length (toList tree)) by admit "".
     assert (lemma8 : forall n : nat, n + 1 - 1 = n) by lia.
     assert (lemma9 : forall (xs : list Z) i1 i2 x1 x2, HeapsortHeader.lookup xs i1 = Some x1 -> upd (upd xs i2 x1) i1 x2 ≡ₚ upd xs i2 x2) by admit "".
-    set (btctx2idx :=
-      fix btctx2idx_fix (g : btctx Z) : list dir_t :=
-      match g with
-      | btctx_top => []
-      | btctx_left _ _ g => btctx2idx_fix g ++ [Dir_left]
-      | btctx_right _ _ g => btctx2idx_fix g ++ [Dir_right]
-      end
-    ).
-    set (upd_root := fun k (t : bintree Z) =>
-      match t with
-      | BT_nil => BT_nil
-      | BT_node x l r => BT_node k l r
-      end
-    ).
     assert (claim_upd_xs_0_k : forall (xs : list Z) k, (upd xs 0 k) = (toList (upd_root k (fromList xs)))) by admit "".
     assert (claim_encode_last : forall ds d, HeapsortHeader.encode (ds ++ [d]) > 0) by admit "".
     Opaque div swap Nat.leb Nat.ltb Z.ltb.
@@ -213,15 +213,15 @@ Section SIMMODSEM.
     assert (H_permutation : upd xs (HeapsortHeader.encode ds) k ≡ₚ k :: list.tail (toList tree)).
     { rewrite ds_init. rewrite <- t_init. rewrite <- xs_init. simpl. now rewrite lemma1. }
     assert (H_topdown : subtree_nat tree (HeapsortHeader.encode ds) = Some t).
-    { rewrite ds_init. simpl. rewrite t_init... }
+    { rewrite ds_init. rewrite t_init... }
     assert (H_lookup : forall ds' t', option_subtree ds' t = Some t' -> HeapsortHeader.lookup xs (HeapsortHeader.encode (ds ++ ds')) = option_root t').
     { rewrite ds_init. rewrite xs_init. rewrite t_init. simpl. intros ds' t' H_subtree. apply lemma2. unfold subtree_nat. rewrite HeapsortHeader.decode_encode... }
     assert (H_recover : recover_bintree btctx_top t = fromList xs).
-    { rewrite xs_init. rewrite t_init. simpl... }
+    { rewrite xs_init. rewrite t_init... }
     remember (@btctx_top Z) as g eqn: g_init in H_recover.
     assert (H_bottomup : btctx2idx g = ds).
     { now rewrite g_init; rewrite ds_init. }
-    replace (strings.length (toList tree)) with (btsize tree) by apply lemma6.
+    replace (strings.length (toList tree)) with (btsize tree) by now rewrite toList_length.
     (** "Entering the first loop" *)
     clear t_init xs_init ds_init g_init xs_nonempty.
     deflag; revert mrp_src mp_tgt WF ctx mr_src mp_src ACC xs ds g t_nonempty H_permutation H_topdown H_recover H_bottomup H_lookup.
@@ -245,46 +245,42 @@ Section SIMMODSEM.
     intros H_l H_r.
     assert (H_lookup_l := H_lookup [Dir_left] l Logic.eq_refl).
     assert (H_lookup_r := H_lookup [Dir_right] r Logic.eq_refl).
-    rewrite H_lookup_l. rewrite H_lookup_r.
+    rewrite H_lookup_l; rewrite H_lookup_r.
     destruct obs_if1 eqn: H_obs_if1; unfold obs_if1 in H_obs_if1; [apply Nat.leb_le in H_obs_if1 | apply Nat.leb_nle in H_obs_if1]; steps_weak.
     { (** "Iterating the first loop" *)
-      destruct (option_root l) as [x_l | ] eqn: H_obs_l; [steps_weak | destruct l; [contradiction | inv H_obs_l]].
-      destruct obs_if2 eqn: H_obs_if2.
-      destruct (option_root r) as [x_r | ] eqn: H_obs_r; [steps_weak | destruct r; [contradiction | inv H_obs_r]].
-      destruct ((x_l <? x_r)%Z) eqn: H_obs_if3; steps_weak.
-      - repeat rewrite lemma8; (try rewrite H_lookup_r); steps_weak.
-        deflag; eapply IH_r with (g := btctx_right x_r l g)...
+      destruct (option_root l) as [x_l | ] eqn: H_obs_l; [steps_weak; repeat rewrite lemma8 | destruct l; [contradiction | inv H_obs_l]].
+      destruct obs_if2 eqn: H_obs_if2; [apply Nat.ltb_lt in H_obs_if2 | apply Nat.ltb_nlt in H_obs_if2]; steps_weak.
+      destruct (option_root r) as [x_r | ] eqn: H_obs_r; [steps_weak; repeat rewrite lemma8 | destruct r; [contradiction | inv H_obs_r]].
+      destruct ((x_l <? x_r)%Z) eqn: H_obs_if3; repeat rewrite lemma8; [apply Z.ltb_lt in H_obs_if3; rewrite H_lookup_r | apply Z.ltb_nlt in H_obs_if3; rewrite H_lookup_l]; steps_weak.
+      - deflag; eapply IH_r with (g := btctx_right x_r l g)...
         + transitivity (upd xs (HeapsortHeader.encode ds) k)...
         + simpl.
           admit "recover_bintree g (BT_node x_r l r) = fromList (upd xs (HeapsortHeader.encode ds) x_r)".
-        + simpl. congruence.
+        + simpl; congruence.
         + intros ds' t' H_subtree.
           rewrite <- (H_lookup ([Dir_right] ++ ds') t' H_subtree).
           rewrite app_assoc.
           admit "HeapsortHeader.lookup (upd xs (HeapsortHeader.encode ds) x_r) (HeapsortHeader.encode ((ds ++ [Dir_right]) ++ ds')) = HeapsortHeader.lookup xs (HeapsortHeader.encode ((ds ++ [Dir_right]) ++ ds'))".
-      - repeat rewrite lemma8; (try rewrite H_lookup_l); steps_weak.
-        deflag; eapply IH_l with (g := btctx_left x_l r g)...
+      - deflag; eapply IH_l with (g := btctx_left x_l r g)...
         + transitivity (upd xs (HeapsortHeader.encode ds) k)...
         + simpl.
           admit "recover_bintree g (BT_node x_l l r) = fromList (upd xs (HeapsortHeader.encode ds) x_l)".
-        + simpl. congruence.
+        + simpl; congruence.
         + intros ds' t' H_subtree.
           rewrite <- (H_lookup ([Dir_left] ++ ds') t' H_subtree).
           rewrite app_assoc.
           admit "HeapsortHeader.lookup (upd xs (HeapsortHeader.encode ds) x_l) (HeapsortHeader.encode ((ds ++ [Dir_left]) ++ ds')) = HeapsortHeader.lookup xs (HeapsortHeader.encode ((ds ++ [Dir_left]) ++ ds'))".
-      - repeat rewrite lemma8; (try rewrite H_lookup_l); steps_weak.
-        deflag; eapply IH_l with (g := btctx_left x_l r g)...
+      - deflag; eapply IH_l with (g := btctx_left x_l r g)...
         + transitivity (upd xs (HeapsortHeader.encode ds) k)...
         + simpl.
           admit "recover_bintree g (BT_node x_l l r) = fromList (upd xs (HeapsortHeader.encode ds) x_l)".
-        + simpl. congruence.
+        + simpl; congruence.
         + intros ds' t' H_subtree.
           rewrite <- (H_lookup ([Dir_left] ++ ds') t' H_subtree).
           rewrite app_assoc.
           admit "HeapsortHeader.lookup (upd xs (HeapsortHeader.encode ds) x_l) (HeapsortHeader.encode ((ds ++ [Dir_left]) ++ ds')) = HeapsortHeader.lookup xs (HeapsortHeader.encode ((ds ++ [Dir_left]) ++ ds'))".
     }
-    destruct obs_if2 eqn: H_obs_if2; unfold obs_if2 in H_obs_if2; [apply Nat.ltb_lt in H_obs_if2 | apply Nat.ltb_nlt in H_obs_if2]; steps_weak.
-    { lia. }
+    destruct obs_if2 eqn: H_obs_if2; unfold obs_if2 in H_obs_if2; [apply Nat.ltb_lt in H_obs_if2 | apply Nat.ltb_nlt in H_obs_if2]; steps_weak...
     (** "Leaving the first loop" *)
     subst l r. clear IH_l IH_r.
     remember (BT_node x BT_nil BT_nil) as t eqn: t_init.
@@ -364,6 +360,7 @@ Section SIMMODSEM.
     (** "Leaving the function" *)
     Unshelve.
   Qed.
+*)
 
   Lemma sim_heapsort (sk : alist string Sk.gdef) :
     sim_fnsem wf top2
