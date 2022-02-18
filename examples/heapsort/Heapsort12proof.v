@@ -60,7 +60,7 @@ Section SIMMODSEM.
     assert (Hcom : complete tree') by (rewrite Heq; auto).
     assert (subtree_complete : complete tree'
              -> (g, t) = focus btctx_top tree' (HeapsortHeader.decode (initial - 1))
-             -> complete t). {admit "".}
+             -> complete t). { admit "". }
     pose proof (subtree_complete Hcom Eqp) as Hsubcom.
     destruct Hsubcom as [n Hsubcom]. clear subtree_complete.
     clear Heq.
@@ -87,14 +87,14 @@ Section SIMMODSEM.
       
     destruct (initial + (initial + 0) <=? strings.length (toList tree)) eqn:E.
     (* assert (completeness : forall t', bteq_shape t' t -> complete (recover_bintree g t')). *)
-    (* {admit "".} *)
+    (* { admit "". } *)
     (* assert (heap : forall t', heap_pr x t' -> forall j, j >= l -> heap_at j (recover_bintree g t')). *)
-    (* {admit "".} *)
+    (* { admit "". } *)
     (* assert (permutation : forall t', toList t ≡ₚ toList t' -> toList t ≡ₚ toList (recover_bintree g t')). *)
-    (* {admit "".} *)
-    pose proof (recover_focus btctx_top tree (HeapsortHeader.decode (initial - 1))) as R_lemma.
-    rewrite <- Eqp in R_lemma. simpl in R_lemma. rewrite unfold_iter_eq.
-    revert tree initial PURE2 PURE3 PURE4 g R_lemma Eqp mrp_src mp_tgt WF ctx mr_src mp_src ACC.
+    (* { admit "". } *)
+    (* pose proof (recover_focus btctx_top tree' (HeapsortHeader.decode (initial - 1))) as R_lemma.) *)
+    (* rewrite <- Eqp in R_lemma. simpl in R_lemma. rewrite unfold_iter_eq. *)
+    (* revert tree initial PURE2 PURE3 PURE4 g R_lemma Eqp mrp_src mp_tgt WF ctx mr_src mp_src ACC. *)
     (* induction t;i; *)
     (*   [apply T in Eqp;auto;rewrite toList_length in Eqp; *)
     (*    assert (initial <= btsize tree -> False) by nia;destruct PURE3;contradiction|]. *)
@@ -176,17 +176,6 @@ Section SIMMODSEM.
     assert (lemma4 : forall (tree : bintree Z) p, heap Z.ge tree -> option_root tree = Some p -> heap_pr Z.ge p tree) by admit "".
     assert (lemma5 : forall (tree : bintree Z), complete tree -> tree = fromList (toList tree)) by admit "".
     assert (lemma6 : forall (tree : bintree Z), btsize tree = strings.length (toList tree)) by admit "".
-    assert (lemma7 : forall (tree : bintree Z) i t,
-      t <> BT_nil ->
-      subtree_nat tree i = Some t ->
-      match t with
-      | BT_nil => False
-      | BT_node x l r =>
-        (HeapsortHeader.lookup (toList tree) i = Some x /\ subtree_nat tree (i * 2 + 1) = Some l /\ subtree_nat tree (i * 2 + 2) = Some r)
-        /\ (if i * 2 + 2 <=? btsize tree then l <> BT_nil else l = BT_nil)
-        /\ (if i * 2 + 2 <? btsize tree then r <> BT_nil else r = BT_nil)
-      end
-    ) by admit "".
     assert (lemma8 : forall n : nat, n + 1 - 1 = n) by lia.
     assert (lemma9 : forall (xs : list Z) i1 i2 x1 x2, HeapsortHeader.lookup xs i1 = Some x1 -> upd (upd xs i2 x1) i1 x2 ≡ₚ upd xs i2 x2) by admit "".
     set (btctx2idx :=
@@ -229,7 +218,7 @@ Section SIMMODSEM.
     { rewrite ds_init. rewrite xs_init. rewrite t_init. simpl. intros ds' t' H_subtree. apply lemma2. unfold subtree_nat. rewrite HeapsortHeader.decode_encode... }
     assert (H_recover : recover_bintree btctx_top t = fromList xs).
     { rewrite xs_init. rewrite t_init. simpl... }
-    remember (btctx_top) as g eqn: g_init in H_recover.
+    remember (@btctx_top Z) as g eqn: g_init in H_recover.
     assert (H_bottomup : btctx2idx g = ds).
     { now rewrite g_init; rewrite ds_init. }
     replace (strings.length (toList tree)) with (btsize tree) by apply lemma6.
@@ -237,22 +226,23 @@ Section SIMMODSEM.
     clear t_init xs_init ds_init g_init xs_nonempty.
     deflag; revert mrp_src mp_tgt WF ctx mr_src mp_src ACC xs ds g t_nonempty H_permutation H_topdown H_recover H_bottomup H_lookup.
     induction t as [ | x l IH_l r IH_r]; i; [contradiction | rewrite unfold_iter_eq].
-    destruct (lemma7 tree (HeapsortHeader.encode ds) (BT_node x l r) t_nonempty H_topdown) as [[H_x [H_left H_right]] [H_l H_r]].
-    revert H_l H_r. replace (HeapsortHeader.encode ds * 2 + 2) with ((HeapsortHeader.encode ds + 1) * 2) by lia.
+    destruct (proj1 (subtree_nat_Some_node tree (BT_node x l r) (HeapsortHeader.encode ds) t_nonempty) H_topdown) as [[H_x [H_l H_r]] [H_left H_right]].
+    revert H_left H_right.
+    replace (HeapsortHeader.encode ds * 2 + 2) with ((HeapsortHeader.encode ds + 1) * 2) by lia.
     set (obs_if1 := (HeapsortHeader.encode ds + 1) * 2 <=? btsize tree).
     set (obs_if2 := (HeapsortHeader.encode ds + 1) * 2 <? btsize tree).
-    intros H_l H_r.
+    intros H_left H_right.
     replace ((HeapsortHeader.encode ds + 1) * 2) with (2 * (HeapsortHeader.encode ds + 1)) by lia.
     replace (HeapsortHeader.lookup xs (2 * (HeapsortHeader.encode ds + 1) - 1)) with (HeapsortHeader.lookup xs (2 * HeapsortHeader.encode ds + 1)) by now f_equal; lia.
     replace (HeapsortHeader.lookup xs (2 * (HeapsortHeader.encode ds + 1))) with (HeapsortHeader.lookup xs (2 * HeapsortHeader.encode ds + 2)) by now f_equal; lia.
     replace (2 * (HeapsortHeader.encode ds + 1) + 1) with ((2 * HeapsortHeader.encode ds + 2) + 1) by lia.
     replace (2 * (HeapsortHeader.encode ds + 1)) with ((2 * HeapsortHeader.encode ds + 1) + 1) by lia.
-    replace (HeapsortHeader.encode ds * 2 + 1) with (2 * HeapsortHeader.encode ds + 1) in H_left by lia.
-    replace (HeapsortHeader.encode ds * 2 + 2) with (2 * HeapsortHeader.encode ds + 2) in H_right by lia.
-    revert H_left H_right.
+    replace (HeapsortHeader.encode ds * 2 + 1) with (2 * HeapsortHeader.encode ds + 1) in H_l by lia.
+    replace (HeapsortHeader.encode ds * 2 + 2) with (2 * HeapsortHeader.encode ds + 2) in H_r by lia.
+    revert H_l H_r.
     replace (2 * HeapsortHeader.encode ds + 1) with (HeapsortHeader.encode (ds ++ [Dir_left])) by exact (HeapsortHeader.encode_last ds Dir_left).
     replace (2 * HeapsortHeader.encode ds + 2) with (HeapsortHeader.encode (ds ++ [Dir_right])) by exact (HeapsortHeader.encode_last ds Dir_right).
-    intros H_left H_right.
+    intros H_l H_r.
     assert (H_lookup_l := H_lookup [Dir_left] l Logic.eq_refl).
     assert (H_lookup_r := H_lookup [Dir_right] r Logic.eq_refl).
     rewrite H_lookup_l. rewrite H_lookup_r.
@@ -299,7 +289,7 @@ Section SIMMODSEM.
     subst l r. clear IH_l IH_r.
     remember (BT_node x BT_nil BT_nil) as t eqn: t_init.
     (** "Entering the second loop" *)
-    clear x H_x H_left H_right t_init obs_if1 obs_if2 H_lookup_l H_lookup_r t_nonempty H_obs_if1 H_obs_if2 H_lookup.
+    clear x H_x H_l H_r t_init obs_if1 obs_if2 H_lookup_l H_lookup_r t_nonempty H_obs_if1 H_obs_if2 H_lookup.
     deflag; revert mrp_src mp_tgt WF ctx mr_src mp_src ACC xs ds t H_permutation H_topdown H_recover H_bottomup.
     induction g as [ | x r g IH | x l g IH]; i; rewrite unfold_iter_eq.
     { (** "Leaving the second loop" *)
