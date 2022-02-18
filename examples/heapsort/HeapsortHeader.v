@@ -1077,6 +1077,10 @@ Section BinaryTreeAccessories.
           assumption.
   Qed.
 
+  Lemma btpartial_fromList (xs ys : list A) :
+    btpartial (fromList (xs ++ ys)) (fromList xs).
+  Admitted.
+
 End BinaryTreeAccessories.
 
 Section CompleteBinaryTree.
@@ -1621,6 +1625,10 @@ Section CompleteBinaryTree.
     eexists. eapply complete_fromListAux. assumption.
   Qed.
 
+  Lemma fromList_toList t :
+    complete t -> fromList (toList t) = t.
+  Admitted.
+
   Lemma subtree_index tree t i :
     complete tree
     -> option_subtree i tree = Some t
@@ -1644,7 +1652,20 @@ Section CompleteBinaryTree.
   Lemma btpartial_removelast (t : bintree A) :
     complete t ->
     btpartial t (fromList (removelast (toList t))).
-  Admitted.
+  Proof.
+    intros.
+    rewrite <- (fromList_toList t H) at 1.
+    destruct t.
+    - unfold toList. simpl.
+      unfold fromList. rewrite unfold_toLList.
+      rewrite unfold_fromListAux.
+      econstructor.
+    - remember (toList (BT_node x t1 t2)) as xs.
+      assert (xs <> [])
+        by (intro; subst; discriminate).
+      rewrite (app_removelast_last x H0) at 1.
+      eapply btpartial_fromList.
+  Qed.
 
 End CompleteBinaryTree.
 
