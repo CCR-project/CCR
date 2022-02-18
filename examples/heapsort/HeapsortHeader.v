@@ -539,6 +539,15 @@ Section BinaryTree.
     : bteq_shape (BT_node x l r) (BT_node x' l' r')
   .
 
+  Inductive btpartial : bintree -> bintree -> Prop :=
+  | btpartial_nil : btpartial BT_nil BT_nil
+  | btpartial_node x l r l' r'
+                   (Hl : btpartial l l')
+                   (Hr : btpartial r r')
+    : btpartial (BT_node x l r) (BT_node x l' r')
+  | btpartial_node' x l r : btpartial (BT_node x l r) BT_nil
+  .
+
   Inductive btin x : bintree -> Prop :=
   | btin_root l r : btin x (BT_node x l r)
   | btin_left y l r : btin x l -> btin x (BT_node y l r)
@@ -1064,6 +1073,10 @@ Section BinaryTreeAccessories.
           eapply IHt2.
           assumption.
   Qed.
+
+  Lemma btpartial_removelast (t : bintree A) :
+    btpartial t (fromList (removelast (toList t))).
+  Admitted.
 
 End BinaryTreeAccessories.
 
@@ -1726,8 +1739,29 @@ Section HeapProperty.
     - auto.
   Qed.
 
+  Lemma heap_btpartial t t' :
+    btpartial t t' -> heap t -> heap t'.
+  Proof.
+    intro H. induction H as [| x l r l' r' Hl IHl Hr IHr |].
+    - auto.
+    - intros Hₕ.
+      remember (BT_node x l r) eqn: E.
+      destruct Hₕ; try discriminate.
+      inversion E; subst; clear E.
+      econstructor.
+      + inversion Hl; subst; simpl in *; auto.
+      + inversion Hr; subst; simpl in *; auto.
+      + eapply IHl. assumption.
+      + eapply IHr. assumption.
+    - constructor.
+  Qed.
+
   Lemma removelast_heap t : heap t -> heap (fromList (removelast (toList t))).
-  Admitted.
+  Proof.
+    intros. eapply heap_btpartial.
+    - eapply btpartial_removelast.
+    - assumption.
+  Qed.
 
   Lemma heap_rel p t :
     Transitive R ->
