@@ -1725,7 +1725,6 @@ Section BinaryTreeZipper.
     | BT_nil => option_subtree i t = None \/ option_subtree i t = Some BT_nil
     end.
   Admitted.
-  
 
 End BinaryTreeZipper.
 
