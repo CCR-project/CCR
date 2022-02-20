@@ -308,7 +308,7 @@ Proof Outline
             + rewrite URA.unit_idl. Ztac. rewrite repeat_length in *. rewrite Z.sub_0_r. rewrite repeat_nth_some; [|lia]. ur. ss.
           - rewrite URA.unit_id. do 2 eapply lookup_wf. eapply Auth.black_wf; et.
         }
-        mUpd "INV". mDesOwn "INV".
+        mUpd "INV". mDesOwn "INV". steps.
 
         force_l. eexists. steps. hret _; ss. iModIntro. iSplitR "A"; cycle 1.
         { iSplits; ss; et. }

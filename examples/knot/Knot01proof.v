@@ -194,7 +194,7 @@ Section SIMMODSEM.
         instantiate (1:= knot_full (Some x) ⋅ knot_frag (Some x)).
         eapply Auth.auth_update. rr. ii. des; ss. ur in FRAME. ur.
         destruct ctx0; ss; clarify. }
-      mUpd "A1". mDesOwn "A1".
+      mUpd "A1". mDesOwn "A1". steps.
 
       (* ret *)
       force_l. eexists. steps. iret _; ss.

@@ -1,4 +1,4 @@
-Require Import Coqlib AList.
+ Require Import Coqlib AList.
 Require Import STS.
 Require Import Behavior.
 Require Import ModSem.
@@ -341,10 +341,11 @@ Section CANCEL.
   Definition fun_to_mid (body: (option mname * Any.t) -> itree hEs Any.t): (option mname * Any_mid -> itree Es Any_src) :=
     fun '(mn, ord_varg_src) =>
       '(ord_cur, varg_src) <- (Any.split ord_varg_src)ǃ;; ord_cur <- ord_cur↓ǃ;;
-      interp_hCallE_mid ord_cur (match ord_cur with
-                                 | ord_pure n => APC;;; trigger (Choose _)
-                                 | _ => interp_hEs_tgt (body (mn, varg_src))
-                                 end).
+      interp_hCallE_mid ord_cur (interp_hEs_tgt
+                                   (match ord_cur with
+                                    | ord_pure n => _ <- trigger hAPC;; trigger (Choose _)
+                                    | _ => body (mn, varg_src)
+                                    end)).
 
   Definition handle_hCallE_tgt (ord_cur: ord): hCallE ~> stateT (Σ) (itree Es) :=
     fun _ '(hCall tbr fn varg_src) 'ctx =>
@@ -377,7 +378,7 @@ Section CANCEL.
              (D: X -> ord)
              (P: option mname -> X -> Any.t -> Any_tgt -> Σ -> Prop)
              (Q: option mname -> X -> Any.t -> Any_tgt -> Σ -> Prop)
-             (body: (option mname * Any.t) -> itree Es' Any.t): option mname * Any_tgt -> itree Es Any_tgt := fun '(mn_caller, varg_tgt) =>
+             (body: (option mname * Any.t) -> itree hEs Any.t): option mname * Any_tgt -> itree Es Any_tgt := fun '(mn_caller, varg_tgt) =>
     x <- trigger (Take X);;
     varg_src <- trigger (Take _);;
     '(rarg, ctx) <- trigger (Take _);;
@@ -386,10 +387,13 @@ Section CANCEL.
     let ord_cur := D x in
     assume(P mn_caller x varg_src varg_tgt rarg);;; (*** precondition ***)
 
-    '(ctx, vret_src) <- interp_hCallE_tgt ord_cur (match ord_cur with
-                                                   | ord_pure n => APC;;; trigger (Choose _)
-                                                   | _ => body (mn_caller, varg_src)
-                                                   end) ctx;;
+    '(ctx, vret_src) <- interp_hCallE_tgt
+                          ord_cur
+                          (interp_hEs_tgt
+                             (match ord_cur with
+                              | ord_pure n => _ <- trigger hAPC;; trigger (Choose _)
+                              | _ => body (mn_caller, varg_src)
+                              end)) ctx;;
 
     vret_tgt <- trigger (Choose Any_tgt);;
     '(rret, mr) <- trigger (Choose _);;
@@ -401,7 +405,7 @@ Section CANCEL.
 
   Definition fun_to_tgt (sb: fspecbody): (option mname * Any_tgt -> itree Es Any_tgt) :=
     let fs: fspec := sb.(fsb_fspec) in
-    (HoareFun (fs.(measure)) (fs.(precond)) (fs.(postcond)) ((@interp_hEs_tgt _) ∘ sb.(fsb_body)))
+    (HoareFun (fs.(measure)) (fs.(precond)) (fs.(postcond)) (sb.(fsb_body)))
   .
 
 (*** NOTE:
@@ -445,15 +449,17 @@ If this feature is needed; we can extend it then. At the moment, I will only all
         (D: X -> ord)
         (P: option mname -> X -> Any.t -> Any_tgt -> Σ -> Prop)
         (Q: option mname -> X -> Any.t -> Any_tgt -> Σ -> Prop)
-        (body: (option mname * Any.t) -> itree Es' Any.t)
+        (body: (option mname * Any.t) -> itree hEs Any.t)
         (varg_tgt: option mname * Any_tgt)
     :
       HoareFun D P Q body varg_tgt =
       '(ctx, (mn_caller, x, varg_src)) <- HoareFunArg P varg_tgt;;
-      interp_hCallE_tgt (D x) (match D x with
-                               | ord_pure n => APC;;; trigger (Choose _)
-                               | _ => body (mn_caller, varg_src)
-                               end) ctx >>= HoareFunRet Q mn_caller x.
+      interp_hCallE_tgt (D x)
+                        (interp_hEs_tgt
+                           (match D x with
+                            | ord_pure n => _ <- trigger hAPC;; trigger (Choose _)
+                            | _ => body (mn_caller, varg_src)
+                            end)) ctx >>= (HoareFunRet Q mn_caller x).
   Proof.
     unfold HoareFun, HoareFunArg, HoareFunRet. grind.
   Qed.
