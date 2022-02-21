@@ -413,13 +413,58 @@ Section ListOperations.
     perfect_list n yss ->
     length xss = length yss ->
     perfect_list (S n) (zipLList xss yss).
-  Admitted.
+  Proof.
+    revert n yss.
+    induction xss as [| xs xss ]; intros;
+    destruct yss as [| ys yss ]; try discriminate.
+    - simpl. auto.
+    - simpl in *. destruct H, H0. split.
+      + rewrite app_length. lia.
+      + eapply IHxss.
+        * assumption.
+        * assumption.
+        * auto.
+  Qed.
 
   Lemma complete_zipLList n xss yss :
     perfect_list n xss /\ complete_list n yss /\ length xss = length yss \/
     complete_list n xss /\ perfect_list n yss /\ length xss = S (length yss) ->
     complete_list (S n) (zipLList xss yss).
-  Admitted.       
+  Proof.
+    revert n yss.
+    induction xss as [| xs xss ]; intros; destruct yss as [| ys yss ].
+    - simpl. auto.
+    - destruct H as [[H1 [H2 H3]] | [H1 [H2 H3]]]; discriminate.
+    - destruct H as [[H1 [H2 H3]] | [H1 [H2 H3]]].
+      + discriminate.
+      + simpl in *.
+        right.
+        split.
+        * assert (2 ^ n > 0) by (eapply exp_pos; lia).
+          lia.
+        * destruct xss; try discriminate.
+          reflexivity.
+    - destruct H as [[H1 [H2 H3]] | [H1 [H2 H3]]].
+      + simpl in *.
+        destruct H2.
+        * left. split.
+          -- rewrite app_length. lia.
+          -- eapply IHxss. left.
+             destruct H1, H. auto.
+        * right. split.
+          -- rewrite app_length. lia.
+          -- destruct H. subst.
+             destruct xss; try discriminate.
+             reflexivity.
+      +  simpl in *.
+         destruct H1.
+         * left. split.
+           -- rewrite app_length. lia.
+           -- eapply IHxss. right.
+              destruct H, H2. auto.
+         * destruct H; subst.
+           discriminate.
+  Qed.
 
   Lemma splitLeft_zip n xss yss :
     perfect_list n xss /\ complete_list n yss /\ length xss = length yss \/
