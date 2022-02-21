@@ -181,7 +181,6 @@ Section Utilities.
   Lemma skipn_app_2 {A} n (l1 l2 : list A) : skipn (length l1 + n) (l1 ++ l2) = skipn n l2.
   Proof.
     rewrite skipn_app.
-    Search skipn.
     rewrite skipn_all2 by lia.
     replace (length l1 + n - length l1) with n by lia.
     reflexivity.
@@ -714,6 +713,18 @@ Section ListOperations.
       + right. simpl. eapply in_or_app. auto.
   Qed.
 
+  Lemma splitLListLeft_toLList_concat n xss (y : A) :
+    complete_list (S n) xss ->
+    splitLListLeft n (toLList (S n) (concat xss ++ [y])) = toLList n (concat (splitLListLeft n xss) ++ [y]) \/
+    splitLListLeft n (toLList (S n) (concat xss ++ [y])) = (splitLListLeft n xss).
+  Admitted.
+
+  Lemma splitLListRight_toLList_concat n xss (y : A) :
+    complete_list (S n) xss ->
+    splitLListRight n (toLList (S n) (concat xss ++ [y])) = toLList n (concat (splitLListRight n xss) ++ [y]) \/
+    splitLListRight n (toLList (S n) (concat xss ++ [y])) = (splitLListRight n xss).
+  Admitted.
+
 End ListOperations.
 
 Section BinaryTree.
@@ -777,6 +788,14 @@ Section BinaryTree.
     destruct t1; try discriminate.
     destruct t2; try discriminate.
     auto.
+  Qed.
+
+  Lemma btpartial_refl t :
+    btpartial t t.
+  Proof.
+    induction t.
+    - econstructor.
+    - econstructor; assumption.
   Qed.
 
 End BinaryTree.
@@ -1268,9 +1287,58 @@ Section BinaryTreeAccessories.
           assumption.
   Qed.
 
-  Lemma btpartial_fromList (xs ys : list A) :
-    btpartial (fromList (xs ++ ys)) (fromList xs).
-  Admitted.
+  Lemma btpartial_fromListAux (xss : list (list A)) (y : A) :
+    complete_list 0 xss ->
+    btpartial (fromList (concat xss ++ [y])) (fromListAux xss).
+  Proof.
+    unfold fromList.
+    remember (length xss) as n.
+    revert xss Heqn.
+    induction n as [n IH] using Wf_nat.lt_wf_ind. intros.
+    destruct n.
+    - destruct xss; try discriminate.
+      vm_compute. econstructor.
+    - destruct xss as [| xs xss ]; try discriminate.
+      unfold fromList. rewrite unfold_toLList.
+      simpl in *.
+      destruct ((xs ++ concat xss) ++ [y]) as [| x' xs' ] eqn: E.
+      { apply app_eq_nil in E. destruct E. discriminate. }
+      destruct H as [[H1 H2] | [H1 H2]].
+      + destruct xs as [| x []]; try discriminate.
+        rewrite <- app_assoc in E.
+        simpl in E. inversion E. subst x' xs'. clear E.
+        rewrite unfold_fromListAux.
+        rewrite (unfold_fromListAux ([x] :: xss)).
+        econstructor.
+        * destruct (splitLListLeft_toLList_concat 0 xss y H2).
+          -- rewrite H.
+             eapply (IH n).
+             ++ lia.
+             ++ rewrite splitLListLeft_length. lia.
+             ++ eapply complete_splitLListLeft. assumption.
+          -- rewrite H. eapply btpartial_refl.
+        * destruct (splitLListRight_toLList_concat 0 xss y H2).
+          -- rewrite H.
+             eapply IH.
+             2: reflexivity.
+             ++ pose proof (splitLListRight_length 0 xss). lia.
+             ++ eapply complete_splitLListRight. assumption.
+          -- rewrite H.
+             eapply btpartial_refl.
+      + lia.
+ Qed.
+
+  Lemma btpartial_fromList (xs : list A) y :
+    btpartial (fromList (xs ++ [y])) (fromList xs).
+  Proof.
+    unfold fromList.
+    remember (toLList 0 xs) as xss.
+    assert (xs = concat xss) by (subst; rewrite concat_toLList; reflexivity).
+    rewrite H.
+    eapply btpartial_fromListAux.
+    subst.
+    eapply complete_toLList.
+  Qed.
 
 End BinaryTreeAccessories.
 
@@ -1339,24 +1407,6 @@ Section CompleteBinaryTree.
       + assumption.
       + eapply H; try lia; assumption.
       + eapply H; try lia; assumption.
-  Qed.
-
-  Lemma complete_ind_unranked (P : bintree A -> Prop) :
-    P BT_nil ->
-    (forall x l r, complete l -> complete r -> P l -> P r -> P (BT_node x l r)) ->
-    forall t, complete t -> P t.
-  Proof.
-    set (P' := fun t (n : nat) => P t).
-    intros H_base H_ind t H_complete.
-    destruct H_complete as [n H_complete].
-    eapply complete_ind_ranked with (P := P').
-    - exact H_base.
-    - intros. eapply H_ind.
-      + eexists. eassumption.
-      + eexists. eassumption.
-      + assumption.
-      + assumption.
-    - eassumption.
   Qed.
 
 (*
@@ -1967,10 +2017,7 @@ Section CompleteBinaryTree.
     intros.
     rewrite <- (fromList_toList t H) at 1.
     destruct t.
-    - unfold toList. simpl.
-      unfold fromList. rewrite unfold_toLList.
-      rewrite unfold_fromListAux.
-      econstructor.
+    - vm_compute. econstructor.
     - remember (toList (BT_node x t1 t2)) as xs.
       assert (xs <> [])
         by (intro; subst; discriminate).
