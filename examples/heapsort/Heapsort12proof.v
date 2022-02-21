@@ -166,7 +166,7 @@ Section SIMMODSEM.
                                    (recover_bintree g (BT_node x
                                                                (BT_node xl ll lr)
                                                                (BT_node xr rl rr)))) by auto.
-                   rewrite <- Hrec in pem. auto.
+                   rewrite <- Hrec in pem. et.
                  }
                  { rewrite Hrec. apply heap_prop. econs;simpl;try nia.
                    - specialize (Hheap (initial' * 2)).
@@ -186,15 +186,7 @@ Section SIMMODSEM.
                  assert (length (toList (fromList (swap (toList tree') (initial' * 2) (initial' - 1)))) = length (toList tree')). { admit "". }
                  rewrite H in IHn. rewrite Htreele2 in IHn. deflag.
                  eapply IHn;auto.
-                 **** intros. 
-                      unfold heap_at.
-                      destruct (Nat.eqb (j - 1) (initial' - 1)) eqn : Eqd.
-                      { apply beq_nat_true in Eqd. nia. }
-                      destruct (Nat.eqb (j - 1) (initial' * 2)) eqn : Eqd1.
-                      { apply beq_nat_true in Eqd1. nia. }
-                      assert (H4 :  initial' - 1 < length (toList tree')) by nia.
-                      pose proof (listExt_swap _ _ _ P H4 (j - 1)) as Y.
-                      admit "".
+                 **** admit "".
                  **** admit "".
                  **** admit "".
                  **** admit "".
@@ -222,7 +214,7 @@ Section SIMMODSEM.
                                    (recover_bintree g (BT_node x
                                                                (BT_node xl ll lr)
                                                                (BT_node xr rl rr)))) by auto.
-                   rewrite <- Hrec in pem. auto.
+                   rewrite <- Hrec in pem. et.
                  }
                  { rewrite Hrec. apply heap_prop. econs;simpl;try nia.
                    - specialize (Hheap (initial' * 2)).
@@ -233,24 +225,14 @@ Section SIMMODSEM.
                      assert (H : heap_at Z.ge (initial' * 2 + 1 - 1) tree')
                        by now apply Hheap;nia.
                      replace (initial' * 2 + 1 - 1) with (initial' * 2) in H by nia.
-                     unfold heap_at in H. unfold subtree_nat in H. rewrite H3 in H.
-                     auto.
-                 }
+                     unfold heap_at in H. unfold subtree_nat in H. rewrite H3 in H. et. }
              *** steps_weak.
                  rewrite <- (toList_fromList (swap (toList tree') (initial' * 2 - 1) (initial' - 1))).
                  specialize (IHn (fromList (swap (toList tree') (initial' * 2 - 1) (initial' - 1)))).
                  assert (length (toList (fromList (swap (toList tree') (initial' * 2 - 1) (initial' - 1)))) = length (toList tree')). { admit "". }
                  rewrite H in IHn. rewrite Htreele2 in IHn. deflag.
                  eapply IHn;auto.
-                 **** intros. 
-                      unfold heap_at.
-                      destruct (Nat.eqb (j - 1) (initial' - 1)) eqn : Eqd.
-                      { apply beq_nat_true in Eqd. nia. }
-                      destruct (Nat.eqb (j - 1) (initial' * 2 - 1)) eqn : Eqd1.
-                      { apply beq_nat_true in Eqd1. nia. }
-                      assert (H4 :  initial' - 1 < length (toList tree')) by nia.
-                      pose proof (listExt_swap _ _ _ P H4 (j - 1)) as Y.
-                      admit "".
+                 **** admit "".
                  **** admit "".
                  **** admit "".
                  **** admit "".
@@ -278,7 +260,7 @@ Section SIMMODSEM.
                                    (recover_bintree g (BT_node x
                                                                (BT_node xl ll lr)
                                                                r))) by auto.
-                   rewrite <- Hrec in pem. auto.
+                   rewrite <- Hrec in pem. et.
                  }
                  { rewrite Hrec. apply heap_prop. econs;simpl;try nia.
                    - assert (H : length (toList tree') <= initial' + (initial' + 0)) by nia.
@@ -286,40 +268,33 @@ Section SIMMODSEM.
                      change (@nth_error Z) with (@HeapsortHeader.lookup Z) in H.
                      replace (initial' + (initial' + 0)) with (initial' * 2) in H by nia.
                      rewrite (toList_subtree tree' (initial' * 2)) in H. unfold subtree_nat in H.
-                     rewrite H3 in H. rewrite H. simpl. auto.
+                     rewrite H3 in H. rewrite H. ss.
                    - specialize (Hheap (initial' * 2)).
                      assert (H : heap_at Z.ge (initial' * 2 - 1) tree') by now apply Hheap;nia.
-                     unfold heap_at in H. unfold subtree_nat in H. rewrite H2 in H.
-                     auto.
+                     unfold heap_at in H. unfold subtree_nat in H. rewrite H2 in H. et.
                    - specialize (Hheap (initial' * 2 + 1)).
                      assert (H : heap_at Z.ge (initial' * 2 + 1 - 1) tree')
                        by now apply Hheap;nia.
                      replace (initial' * 2 + 1 - 1) with (initial' * 2) in H by nia.
-                     unfold heap_at in H. unfold subtree_nat in H. rewrite H3 in H.
-                     auto.
+                     unfold heap_at in H. unfold subtree_nat in H. rewrite H3 in H. et.
                  }
              ** steps_weak.
-                 rewrite <- (toList_fromList (swap (toList tree') (initial' * 2 - 1) (initial' - 1))).
-                 specialize (IHn (fromList (swap (toList tree') (initial' * 2 - 1) (initial' - 1)))).
-                 assert (length (toList (fromList (swap (toList tree') (initial' * 2 - 1) (initial' - 1)))) = length (toList tree')). { admit "". }
-                 rewrite H in IHn. rewrite Htreele2 in IHn. deflag.
-                 eapply IHn;auto.
-                 *** admit "".
-                 *** admit "".
-                 *** admit "".
-                 *** admit "".
-                 *** admit "".
-                 *** admit "".
-                 *** admit "".
-                 *** admit "".
-                     Unshelve.
-                     **** auto.
-                     **** auto.
-                     **** auto.
-                     **** auto.
-                     **** auto.
-                     **** auto.
-Qed.                  
+                rewrite <- (toList_fromList (swap (toList tree') (initial' * 2 - 1) (initial' - 1))).
+                specialize (IHn (fromList (swap (toList tree') (initial' * 2 - 1) (initial' - 1)))).
+                assert (length (toList (fromList (swap (toList tree') (initial' * 2 - 1) (initial' - 1)))) = length (toList tree')). { admit "". }
+                rewrite H in IHn. rewrite Htreele2 in IHn. deflag.
+                eapply IHn;auto.
+                *** admit "".
+                *** admit "".
+                *** admit "".
+                *** admit "".
+                *** admit "".
+                *** admit "".
+                *** admit "".
+                *** admit "".
+                    (* leave function *)
+                    Unshelve. et. et. et. et. et. et.
+  Qed.                  
 
   Lemma sim_heapify (sk : alist string Sk.gdef) :
     sim_fnsem wf top2
