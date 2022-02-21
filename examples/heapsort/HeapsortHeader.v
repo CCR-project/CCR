@@ -268,6 +268,18 @@ Section ListOperations.
     | xss, [] => xss
     end.
 
+  Lemma zipLList_length (xss yss : list (list A)) :
+    length (zipLList xss yss) = max (length xss) (length yss).
+  Proof.
+    revert yss.
+    induction xss as [| xs xss ].
+    - reflexivity.
+    - intros. simpl.
+      destruct yss as [| ys yss ].
+      + reflexivity.
+      + simpl. rewrite IHxss. reflexivity.
+  Qed.
+
   Lemma splitLListLeft_length n xss : length (splitLListLeft n xss) = length xss.
   Proof.
     revert n.
@@ -395,6 +407,19 @@ Section ListOperations.
         rewrite skipn_all2 by lia.
         reflexivity.
   Qed.
+
+  Lemma perfect_zipLList n xss yss :
+    perfect_list n xss ->
+    perfect_list n yss ->
+    length xss = length yss ->
+    perfect_list (S n) (zipLList xss yss).
+  Admitted.
+
+  Lemma complete_zipLList n xss yss :
+    perfect_list n xss /\ complete_list n yss /\ length xss = length yss \/
+    complete_list n xss /\ perfect_list n yss /\ length xss = S (length yss) ->
+    complete_list (S n) (zipLList xss yss).
+  Admitted.       
 
   Lemma splitLeft_zip n xss yss :
     perfect_list n xss /\ complete_list n yss /\ length xss = length yss \/
@@ -1687,13 +1712,55 @@ Section CompleteBinaryTree.
     eexists. eapply complete_fromListAux. assumption.
   Qed.
 
+  Lemma complete_toListAux_length n t :
+    complete' t n -> length (toListAux t) = n.
+  Proof.
+    intros.
+    induction H using complete_ind_ranked.
+    - reflexivity.
+    - simpl.
+      rewrite zipLList_length.
+      rewrite IHcomplete'1.
+      rewrite IHcomplete'2.
+      lia.
+  Qed.
+
   Lemma perfect_toListAux_list t :
     perfect t -> perfect_list 0 (toListAux t).
-  Admitted.
+  Proof.
+    intros [n H].
+    induction H.
+    - simpl. auto.
+    - simpl. split; auto.
+      eapply perfect_zipLList; try assumption.
+      erewrite complete_toListAux_length by (eapply perfect'2complete'; eassumption).
+      erewrite complete_toListAux_length by (eapply perfect'2complete'; eassumption).
+      reflexivity.
+  Qed.
 
   Lemma complete_toListAux_list t :
     complete t -> complete_list 0 (toListAux t).
-  Admitted.
+  Proof.
+    intros [n H].
+    induction H; simpl.
+    - auto.
+    - left. split; auto.
+      eapply complete_zipLList. left.
+      split; [|split].
+      + eapply perfect_toListAux_list. eexists. eassumption.
+      + assumption.
+      + erewrite complete_toListAux_length by (eapply perfect'2complete'; eassumption).
+        erewrite complete_toListAux_length by eassumption.
+        reflexivity.
+    - left. split; auto.
+      eapply complete_zipLList. right.
+      split; [|split].
+      + assumption.
+      + eapply perfect_toListAux_list. eexists. eassumption.
+      + erewrite complete_toListAux_length by eassumption.
+        erewrite complete_toListAux_length by (eapply perfect'2complete'; eassumption).
+        reflexivity.
+  Qed.
 
   Lemma fromListAux_toListAux t :
     complete t -> fromListAux (toListAux t) = t.
