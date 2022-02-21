@@ -24,8 +24,11 @@ Section Utilities.
 
   Definition isNone {A : Type} : option A -> Prop := fun m => m = None.
 
+  Lemma isSome_intro {A : Type} (Some_x : option A) (x : A) : Some_x = Some x -> isSome Some_x.
+  Proof. congruence. Qed.
+
   Lemma Some_or_None {A : Type} : forall m : option A,  {isSome m} + {isNone m}.
-  Proof. destruct m; [left | right]; congruence. Qed.
+  Proof. destruct m; [left | right]; congruence. Defined.
 
   Lemma Some_inj {A : Type} {lhs : A} {rhs : A}
     (H_Some_eq : Some lhs = Some rhs)
@@ -116,7 +119,7 @@ Section Utilities.
     - eapply exp_pos; lia.
   Qed.
 
-  Lemma tail_length {A} (xs : list A) : length xs > 0 -> length (tail xs) = length xs - 1.
+  Lemma tail_length {A} (xs : list A) : length (tail xs) = length xs - 1.
   Proof. destruct xs; simpl; lia || eauto. Qed.
 
   Lemma removelast_length {A} (xs : list A) : length xs > 0 -> length (removelast xs) = length xs - 1.
@@ -158,6 +161,30 @@ Section Utilities.
     symmetry.
     eapply app_removelast_last.
     assumption.
+  Qed.
+
+  Lemma In_last {A} (xs : list A) x : xs <> [] -> In (last xs x) xs.
+  Proof.
+    intros.
+    induction xs.
+    - contradiction.
+    - assert (xs = [] \/ xs <> [])
+        by (destruct xs; [ left; reflexivity | right; discriminate ]).
+      destruct H0.
+      + subst. simpl. auto.
+      + replace (last (a :: xs) x) with (last xs x)
+          by (rewrite <- (last_app [a] xs x H0); reflexivity).
+        simpl. right.
+        eapply IHxs; assumption.
+  Qed.
+
+  Lemma skipn_app_2 {A} n (l1 l2 : list A) : skipn (length l1 + n) (l1 ++ l2) = skipn n l2.
+  Proof.
+    rewrite skipn_app.
+    Search skipn.
+    rewrite skipn_all2 by lia.
+    replace (length l1 + n - length l1) with n by lia.
+    reflexivity.
   Qed.
 
 End Utilities.
@@ -274,6 +301,17 @@ Section ListOperations.
                  \/ 0 < length xs < 2^n /\ xss = []
     end.
 
+  Lemma perfect2complete_list n xss :
+    perfect_list n xss -> complete_list n xss.
+  Proof.
+    revert n. induction xss; simpl.
+    - auto.
+    - intros n [].
+      left. split.
+      + assumption.
+      + eapply IHxss. assumption.
+  Qed.
+
   Lemma splitLListRight_length' n xss :
     perfect_list (S n) xss ->
     length (splitLListRight n xss) = length xss.
@@ -318,7 +356,59 @@ Section ListOperations.
         inversion claim5.
   Qed.
 
-  Lemma split_zip n xss : complete_list (S n) xss -> zipLList (splitLListLeft n xss) (splitLListRight n xss) = xss.
+  Lemma toLList_concat n xss :
+    complete_list n xss ->
+    toLList n (concat xss) = xss.
+  Proof.
+    revert n.
+    induction xss as [| xs xss ].
+    - auto.
+    - intros.
+      destruct H as [[H1 H2] | [H1 H2]].
+      + rewrite unfold_toLList. simpl.
+        assert (xs <> []).
+        { assert (2 ^ n > 0) by (eapply exp_pos; lia).
+          intro; subst; simpl in H1.
+          lia.
+        }
+        remember (xs ++ concat xss) as ys.
+        destruct ys.
+        { symmetry in Heqys.
+          eapply app_eq_nil in Heqys.
+          destruct Heqys.
+          contradiction.
+        }
+        rewrite Heqys. clear ys Heqys.
+        rewrite <- H1.
+        replace (length xs) with (length xs + 0) by lia.
+        rewrite firstn_app_2.
+        rewrite skipn_app_2.
+        simpl.
+        rewrite IHxss by assumption.
+        rewrite app_nil_r.
+        reflexivity.
+      + subst. rewrite unfold_toLList. simpl. rewrite app_nil_r.
+        remember xs as ys.
+        destruct ys; try (simpl in H1; lia).
+        rewrite Heqys in *. clear ys Heqys.
+        rewrite firstn_all2 by lia.
+        rewrite skipn_all2 by lia.
+        reflexivity.
+  Qed.
+
+  Lemma splitLeft_zip n xss yss :
+    perfect_list n xss /\ complete_list n yss /\ length xss = length yss \/
+    complete_list n xss /\ perfect_list n yss /\ length xss = 1 + length yss ->
+    complete_list n xss -> splitLListLeft n (zipLList xss yss) = xss.
+  Admitted.
+
+  Lemma splitRight_zip n xss yss :
+    perfect_list n xss /\ complete_list n yss /\ length xss = length yss \/
+    complete_list n xss /\ perfect_list n yss /\ length xss = 1 + length yss ->
+    complete_list n xss -> splitLListRight n (zipLList xss yss) = yss.
+  Admitted.
+
+  Lemma zip_split n xss : complete_list (S n) xss -> zipLList (splitLListLeft n xss) (splitLListRight n xss) = xss.
     revert n.
     induction xss as [| xs xss ].
     - reflexivity.
@@ -464,31 +554,34 @@ Section ListOperations.
   Qed.
 
   Lemma complete_splitLListLeft n xss : complete_list (S n) xss -> complete_list n (splitLListLeft n xss).
-  Proof with lia || eauto.
-    revert n; induction xss as [ | xs xss IH]...
-    intros n H_complete. simpl complete_list in H_complete.
-    assert (claim1 : length (firstn (2^n) xs) = min (2^n) (length xs)).
-    { apply firstn_length. }
-    assert (claim2 : 2^n > 0).
-    { apply exp_pos... }
-    destruct H_complete as [[H_length H_complete] | [H_length H_nil]]; simpl.
-    - left. split...
-    - assert (claim3 : length (firstn (2 ^ n) xs) = 2^n \/ length (firstn (2 ^ n) xs) <2^n)...
-      destruct claim3 as [claim3 | claim3].
-      + left. split... apply IH. now rewrite H_nil.
-      + right. split... rewrite H_nil...
+  Proof.
+    intros H.
+    destruct (complete_splitLList n xss H) as [[H1 [H2 [H3 H4]]] | [H1 [H2 [H3 H4]]]].
+    - eapply perfect2complete_list. assumption.
+    - assumption.
   Qed.
 
   Lemma complete_splitLListRight n xss : complete_list (S n) xss -> complete_list n (splitLListRight n xss).
-  Proof with lia || eauto.
-    revert n; induction xss as [ | xs xss IH]...
-    intros n H_complete. simpl complete_list in H_complete.
-    simpl. destruct (length xs <=? 2 ^ n) eqn: H_obs; simpl...
-    assert (claim1 : length xs > 2 ^ n).
-    { rewrite leb_nle in H_obs... }
-    destruct H_complete as [[H_length H_complete] | [H_length H_nil]]; simpl.
-    - left. split... rewrite skipn_length...
-    - rewrite H_nil. right. split... rewrite skipn_length...
+  Proof.
+    intros H.
+    destruct (complete_splitLList n xss H) as [[H1 [H2 [H3 H4]]] | [H1 [H2 [H3 H4]]]].
+    - assumption.
+    - eapply perfect2complete_list. assumption.
+  Qed.
+
+  Lemma In_zipLList (x : A) xss yss :
+    In x (concat (zipLList xss yss)) ->
+    In x (concat xss) \/ In x (concat yss).
+  Proof.
+    revert yss. induction xss as [| xs xss ]; [| destruct yss as [| ys yss ] ]; auto.
+    intros. simpl in H.
+    eapply in_app_or in H. destruct H.
+    - eapply in_app_or in H. destruct H.
+      + left. simpl. eapply in_or_app. auto.
+      + right. simpl. eapply in_or_app. auto.
+    - eapply IHxss in H. destruct H.
+      + left. simpl. eapply in_or_app. auto.
+      + right. simpl. eapply in_or_app. auto.
   Qed.
 
 End ListOperations.
@@ -508,6 +601,21 @@ Section BinaryTree.
               (H_l : bteq_shape l l')
               (H_r : bteq_shape r r')
     : bteq_shape (BT_node x l r) (BT_node x' l' r')
+  .
+
+  Inductive btpartial : bintree -> bintree -> Prop :=
+  | btpartial_nil : btpartial BT_nil BT_nil
+  | btpartial_node x l r l' r'
+                   (Hl : btpartial l l')
+                   (Hr : btpartial r r')
+    : btpartial (BT_node x l r) (BT_node x l' r')
+  | btpartial_node' x l r : btpartial (BT_node x l r) BT_nil
+  .
+
+  Inductive btin x : bintree -> Prop :=
+  | btin_root l r : btin x (BT_node x l r)
+  | btin_left y l r : btin x l -> btin x (BT_node y l r)
+  | btin_right y l r : btin x r -> btin x (BT_node y l r)
   .
 
   Definition leaf (t : bintree) : Prop :=
@@ -963,7 +1071,7 @@ Section BinaryTreeAccessories.
         simpl.
         erewrite IH with (xss := splitLListLeft 0 xss); try reflexivity.
         erewrite IH with (xss := splitLListRight 0 xss); try reflexivity.
-        rewrite split_zip by assumption.
+        rewrite zip_split by assumption.
         reflexivity.
         * assert (length (splitLListRight 0 xss) <= length xss)
             by eapply splitLListRight_length.
@@ -1005,6 +1113,35 @@ Section BinaryTreeAccessories.
     reflexivity.
   Qed.
 
+  Definition upd_root (x : A) t :=
+    match t with
+    | BT_nil => BT_nil
+    | BT_node _ l r => BT_node x l r
+    end.
+
+  Lemma toList_btin x t : In x (toList t) -> btin x t.
+  Proof.
+    induction t.
+    - simpl. contradiction.
+    - simpl.
+      intros.
+      destruct H.
+      + subst. econstructor.
+      + assert (In x (toList t1) \/ In x (toList t2))
+          by (apply In_zipLList; assumption).
+        destruct H0.
+        * eapply btin_left.
+          eapply IHt1.
+          assumption.
+        * eapply btin_right.
+          eapply IHt2.
+          assumption.
+  Qed.
+
+  Lemma btpartial_fromList (xs ys : list A) :
+    btpartial (fromList (xs ++ ys)) (fromList xs).
+  Admitted.
+
 End BinaryTreeAccessories.
 
 Section CompleteBinaryTree.
@@ -1032,6 +1169,7 @@ Section CompleteBinaryTree.
     : complete' (BT_node x l r) (S (S n))
   .
 
+  Definition perfect t := exists n, perfect' t n.
   Definition complete t := exists n, complete' t n.
 
   Lemma perfect'2complete' {n} t
@@ -1549,22 +1687,101 @@ Section CompleteBinaryTree.
     eexists. eapply complete_fromListAux. assumption.
   Qed.
 
+  Lemma perfect_toListAux_list t :
+    perfect t -> perfect_list 0 (toListAux t).
+  Admitted.
+
+  Lemma complete_toListAux_list t :
+    complete t -> complete_list 0 (toListAux t).
+  Admitted.
+
+  Lemma fromListAux_toListAux t :
+    complete t -> fromListAux (toListAux t) = t.
+  Proof.
+    intros [n H].
+    revert t H.
+    induction n as [n IH] using Wf_nat.lt_wf_ind; intros.
+    inversion H; subst; clear H.
+    - reflexivity.
+    - rename n0 into n. simpl. rewrite unfold_fromListAux.
+      rewrite splitLeft_zip.
+      2: { left. admit. }
+      2: { eapply complete_toListAux_list.
+           eexists. eapply perfect'2complete'. eassumption. }
+      rewrite splitRight_zip by admit.
+      erewrite (IH n).
+      erewrite (IH n).
+      reflexivity.
+      + lia.
+      + assumption.
+      + lia.
+      + eapply perfect'2complete'. assumption.
+    - rename n0 into n. simpl. rewrite unfold_fromListAux.
+      rewrite splitLeft_zip by admit.
+      rewrite splitRight_zip by admit.
+      erewrite (IH (S n)).
+      erewrite (IH n).
+      reflexivity.
+      + lia.
+      + eapply perfect'2complete'. assumption.
+      + lia.
+      + assumption.
+  Admitted.
+
+  Lemma fromList_toList t :
+    complete t -> fromList (toList t) = t.
+  Proof.
+    intros.
+    unfold toList.
+    unfold fromList.
+    rewrite toLList_concat by (eapply complete_toListAux_list; assumption).
+    eapply fromListAux_toListAux; assumption.
+  Qed.
+
   Lemma subtree_index tree t i :
     complete tree
     -> option_subtree i tree = Some t
     -> forall n, lookup (toList t) n = lookup (toList tree) (n + (encode i) * 2 ^ (length (decode n))).
   Admitted.
 
-  Theorem subtree_nat_Some_node (tree : bintree A) t i (t_nonempty : t <> BT_nil) :
+  Lemma toList_subtree (tree : bintree A) i : lookup (toList tree) i =
+                                  match subtree_nat tree i with
+                                  | None => None
+                                  | Some t => option_root t
+                                  end.
+    Admitted.
+                           
+   Theorem subtree_nat_Some_node (tree : bintree A) t i (t_nonempty : t <> BT_nil) :
     subtree_nat tree i = Some t <->
     match t with
     | BT_nil => False
-    | BT_node x l r =>
-      (HeapsortHeader.lookup (toList tree) i = Some x /\ subtree_nat tree (i * 2 + 1) = Some l /\ subtree_nat tree (i * 2 + 2) = Some r)
-      /\ (if i * 2 + 2 <=? btsize tree then l <> BT_nil else l = BT_nil)
-      /\ (if i * 2 + 2 <? btsize tree then r <> BT_nil else r = BT_nil)
+    | BT_node x l r => HeapsortHeader.lookup (toList tree) i = Some x /\ subtree_nat tree (i * 2 + 1) = Some l /\ subtree_nat tree (i * 2 + 2) = Some r
     end.
   Admitted.
+
+  Theorem subtree_nat_range (tree : bintree A) t i
+    (H_complete : complete tree)
+    (H_subtree : subtree_nat tree i = Some t)
+    : i < btsize tree <-> t <> BT_nil.
+  Admitted.
+
+  Lemma btpartial_removelast (t : bintree A) :
+    complete t ->
+    btpartial t (fromList (removelast (toList t))).
+  Proof.
+    intros.
+    rewrite <- (fromList_toList t H) at 1.
+    destruct t.
+    - unfold toList. simpl.
+      unfold fromList. rewrite unfold_toLList.
+      rewrite unfold_fromListAux.
+      econstructor.
+    - remember (toList (BT_node x t1 t2)) as xs.
+      assert (xs <> [])
+        by (intro; subst; discriminate).
+      rewrite (app_removelast_last x H0) at 1.
+      eapply btpartial_fromList.
+  Qed.
 
 End CompleteBinaryTree.
 
@@ -1632,10 +1849,10 @@ Section HeapProperty.
   Lemma heap_erase_priority p t : heap_pr p t -> heap t.
   Proof. intros. destruct H; econstructor; assumption. Qed.
 
-  Lemma heap_pr_if_heap (R_refl : forall x, R x x) t : btsize t >= 1 -> heap t -> exists p, heap_pr p t.
+  Lemma heap_pr_if_heap (R_refl : forall x, R x x) t : t <> BT_nil -> heap t -> exists p, heap_pr p t.
   Proof.
-    intros Hₛ Hₕ.
-    destruct Hₕ; simpl in Hₛ; try lia.
+    intros Ht Hₕ.
+    destruct Hₕ; try contradiction.
     eexists.
     econstructor; try assumption.
     eapply R_refl.
@@ -1663,8 +1880,55 @@ Section HeapProperty.
     - auto.
   Qed.
 
-  Lemma removelast_heap t : heap t -> heap (fromList (removelast (toList t))).
-  Admitted.
+  Lemma heap_btpartial t t' :
+    btpartial t t' -> heap t -> heap t'.
+  Proof.
+    intro H. induction H as [| x l r l' r' Hl IHl Hr IHr |].
+    - auto.
+    - intros Hₕ.
+      remember (BT_node x l r) eqn: E.
+      destruct Hₕ; try discriminate.
+      inversion E; subst; clear E.
+      econstructor.
+      + inversion Hl; subst; simpl in *; auto.
+      + inversion Hr; subst; simpl in *; auto.
+      + eapply IHl. assumption.
+      + eapply IHr. assumption.
+    - constructor.
+  Qed.
+
+  Lemma removelast_heap t :
+    complete t -> heap t -> heap (fromList (removelast (toList t))).
+  Proof.
+    intros. eapply heap_btpartial.
+    - eapply btpartial_removelast. assumption.
+    - assumption.
+  Qed.
+
+  Lemma heap_rel p t :
+    Transitive R ->
+    heap_pr p t ->
+    forall x, btin x t -> R p x.
+  Proof.
+    intro T.
+    induction t.
+    - intros. inversion H0.
+    - intros.
+      remember (BT_node x t1 t2) as t eqn: E.
+      destruct H; try discriminate.
+      inversion E; subst; clear E.
+      remember (BT_node x t1 t2) as t eqn: E.
+      destruct H0; inversion E; subst; clear E.
+      + assumption.
+      + eapply IHt1.
+        * destruct heap_l; econstructor; try assumption.
+          transitivity x; assumption.
+        * assumption.
+      + eapply IHt2.
+        * destruct heap_r; econstructor; try assumption.
+          transitivity x; assumption.
+        * assumption.
+  Qed.
 
   Lemma heap_head_last t x xs a :
     Reflexive R ->
@@ -1672,7 +1936,20 @@ Section HeapProperty.
     heap t ->
     toList t = x :: xs ->
     R x (last (toList t) a).
-  Admitted.
+  Proof.
+    intros.
+    eapply heap_rel.
+    - assumption.
+    - instantiate (1 := t).
+      destruct H1; try discriminate.
+      unfold toList in H2.
+      simpl in H2. inversion H2; subst.
+      econstructor; try assumption.
+      eapply H.
+    - eapply toList_btin.
+      eapply In_last.
+      intro. rewrite H3 in H2. discriminate.
+  Qed.
 
 End HeapProperty.
 
@@ -1725,6 +2002,13 @@ Section BinaryTreeZipper.
     | BT_nil => option_subtree i t = None \/ option_subtree i t = Some BT_nil
     end.
   Admitted.
+
+  Fixpoint btctx2idx g : btidx :=
+    match g with
+    | btctx_top => []
+    | btctx_left _ _ g => btctx2idx g ++ [Dir_left]
+    | btctx_right _ _ g => btctx2idx g ++ [Dir_right]
+    end.
 
 End BinaryTreeZipper.
 
@@ -1796,6 +2080,12 @@ Section ListAccessories.
       rewrite (firstn_length n xs) in i_ge_len...
   Qed.
 
+  Lemma listExt_skipn {A : Type} (xs : list A) (n : nat) :
+    forall i, lookup (skipn n xs) i = lookup xs (n + i).
+  Proof with eauto.
+    unfold lookup. revert n. induction xs as [ | x xs IH]; intros [ | n']; simpl... now destruct i.
+  Qed.
+
   Lemma listExt_combine {A : Type} {B : Type} (xs : list A) (ys : list B) :
     forall i,
     match lookup (combine xs ys) i with
@@ -1852,7 +2142,7 @@ Section ListAccessories.
       rewrite nth_error_None; lia.
   Qed.
 
-  Theorem listExt_swap {A : Type} (xs : list A) (i1 : nat) (i2 : nat) :
+  Lemma listExt_swap {A : Type} (xs : list A) (i1 : nat) (i2 : nat) :
     i1 < length xs ->
     i2 < length xs ->
     forall i,
@@ -1885,6 +2175,106 @@ Section ListAccessories.
     - exact (proj1 claim2).
   Qed.
 
+  Lemma add_indices_length {A : Type} (xs : list A) :
+    length (add_indices xs) = length xs.
+  Proof with lia || discriminate || eauto.
+    transitivity (length (map snd (add_indices xs))).
+    { symmetry. apply map_length. }
+    transitivity (length (seq 0 (length xs))).
+    { apply f_equal. apply list_extensionality.
+      intros i.
+      rewrite (listExt_map snd (add_indices xs) i).
+      assert (claim1 := listExt_add_indices xs i).
+      assert (claim2 := listExt_seq 0 (length xs) i).
+      destruct (lookup (add_indices xs) i) as [[x n] | ] eqn: H_obs.
+      - destruct claim1 as [H_eq H_obs_xs].
+        subst n. simpl. symmetry.
+        destruct (lookup (seq 0 (length xs)) i) as [i_ | ]; subst...
+        apply isSome_intro, nth_error_Some in H_obs_xs...
+      - destruct claim1 as [H_eq H_obs_xs].
+        simpl. symmetry. apply nth_error_None. rewrite seq_length...
+    }
+    rewrite seq_length...
+  Qed.
+
+  Lemma listExt_upd {A : Type} (xs : list A) (i1 : nat) (x1 : A) :
+    i1 < length xs ->
+    forall i,
+    match lookup (upd xs i1 x1) i with
+    | None => i >= length xs
+    | Some val => Some val = if Nat.eq_dec i i1 then Some x1 else lookup xs i
+    end.
+  Proof with discriminate || eauto.
+    intros H_i1; unfold lookup.
+    assert (H_lookup_i1 := proj2 (nth_error_Some xs i1) H_i1).
+    intros i; cbn; unfold upd.
+    assert (claim1 := listExt_map (fun '(x, i0) => if eq_dec i0 i1 then x1 else x) (add_indices xs) i).
+    unfold lookup in claim1; cbn in claim1.
+    rewrite claim1; unfold option_map.
+    assert (claim2 := listExt_add_indices xs i).
+    unfold lookup in claim2; cbn in claim2.
+    destruct (nth_error (add_indices xs) i) as [[x n] | ] eqn: H_obs_add_indices.
+    - destruct claim2 as [H_eq1 H_eq2]; subst n.
+      destruct (Nat.eq_dec i i1) as [H_yes1 | H_no1]...
+    - exact (proj1 claim2).
+  Qed.
+
+  Theorem upd_spec {A : Type} (xs : list A) i x :
+    upd xs i x = if Nat.ltb i (length xs) then firstn i xs ++ [x] ++ skipn (i + 1) xs else xs.
+  Proof with lia || eauto.
+    rename i into i0, x into x0.
+    destruct (Nat.ltb i0 (length xs)) eqn: H_range.
+    - apply Nat.ltb_lt in H_range.
+      assert (claim1 := listExt_upd xs i0 x0 H_range).
+      transitivity (firstn i0 xs ++ (firstn 1 (x0 :: skipn (S i0) xs) ++ skipn 1 (x0 :: skipn (S i0) xs))).
+      2: rewrite firstn_skipn; replace (i0 + 1) with (S i0)...
+      transitivity (firstn i0 (upd xs i0 x0) ++ skipn i0 (upd xs i0 x0)).
+      1: symmetry; apply firstn_skipn.
+      f_equal.
+      { apply list_extensionality.
+        intros i. specialize (claim1 i).
+        assert (claim2 := listExt_firstn (upd xs i0 x0) i0 i).
+        destruct (lookup (firstn i0 (upd xs i0 x0)) i) as [x | ] eqn: H_obs.
+        - destruct claim2 as [H_i_lt_i0 H_x].
+          rewrite H_x in claim1.
+          destruct (Nat.eq_dec i i0) as [H_yes1 | H_no1]...
+          rewrite claim1. symmetry. apply firstn_nth_error...
+        - symmetry. apply nth_error_None. rewrite firstn_length.
+          enough (to_show : i >= i0 \/ i >= length xs)...
+          unfold upd in claim2. rewrite map_length in claim2.
+          rewrite add_indices_length in claim2...
+      }
+      { apply list_extensionality.
+        intros i.
+        rewrite listExt_skipn.
+        destruct i as [ | i'].
+        - rewrite Nat.add_0_r. simpl.
+          specialize (claim1 i0).
+          destruct (lookup (upd xs i0 x0) i0) as [x | ]...
+          destruct (Nat.eq_dec i0 i0)...
+        - rewrite firstn_skipn.
+          replace ((S i')) with (1 + i') at 2 by lia.
+          rewrite <- listExt_skipn with (xs0 := (x0 :: skipn (S i0) xs)).
+          set (xs_suffix := skipn (S i0) xs).
+          simpl. unfold xs_suffix. specialize (claim1 (i0 + S i')).
+          destruct (lookup (upd xs i0 x0) (i0 + S i')) as [x | ].
+          + destruct (Nat.eq_dec (i0 + S i') i0) as [H_yes1 | H_no1]...
+            rewrite claim1. replace (i0 + S i') with (S i0 + i')...
+            symmetry. apply listExt_skipn.
+          + symmetry. apply nth_error_None.
+            rewrite skipn_length...
+      }
+    - apply Nat.ltb_nlt in H_range.
+      unfold upd. apply list_extensionality. intros i.
+      rewrite (listExt_map (fun '(x, i1) => if eq_dec i1 i0 then x0 else x) (add_indices xs) i).
+      assert (claim1 := listExt_add_indices xs i).
+      destruct (lookup (add_indices xs) i) as [[x n] | ] eqn: H_obs.
+      + destruct claim1 as [H_eq H_obs_xs]; subst.
+        simpl. destruct (Nat.eq_dec n i0); [subst n | ]...
+        apply isSome_intro, nth_error_Some in H_obs_xs...
+      + simpl. now symmetry.
+  Qed.
+
 End ListAccessories.
 
 Module NEO.
@@ -1913,7 +2303,7 @@ Module NEO.
       end
     end.
 
-  Definition insertAt (x : A) : list dir_t -> bintree A -> option (bintree A) := fold_right insertStep (insertInit x).
+  Definition insertAt (x : A) : btidx -> bintree A -> option (bintree A) := fold_right insertStep (insertInit x).
 
   Definition insertable (root : bintree A) i := subtree_nat root i = Some BT_nil.
 
