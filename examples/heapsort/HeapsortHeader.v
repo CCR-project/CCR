@@ -469,14 +469,74 @@ Section ListOperations.
   Lemma splitLeft_zip n xss yss :
     perfect_list n xss /\ complete_list n yss /\ length xss = length yss \/
     complete_list n xss /\ perfect_list n yss /\ length xss = 1 + length yss ->
-    complete_list n xss -> splitLListLeft n (zipLList xss yss) = xss.
-  Admitted.
+    splitLListLeft n (zipLList xss yss) = xss.
+  Proof.
+    revert n yss.
+    induction xss as [| xs xss ]; intros; destruct yss as [| ys yss ].
+    - reflexivity.
+    - destruct H as [[H1 [H2 H3]] | [H1 [H2 H3]]]; discriminate.
+    - destruct H as [[H1 [H2 H3]] | [H1 [H2 H3]]]; try discriminate.
+      destruct xss; try discriminate.
+      simpl in *.
+      rewrite firstn_all2 by lia.
+      reflexivity.
+    - destruct H as [[H1 [H2 H3]] | [H1 [H2 H3]]].
+      + simpl in *.
+        replace (2 ^ n) with (length xs + 0) by lia.
+        rewrite firstn_app_2.
+        simpl. rewrite app_nil_r.
+        destruct H2.
+        * destruct H1, H.
+          rewrite IHxss by auto.
+          reflexivity.
+        * destruct H. subst.
+          destruct xss; try discriminate.
+          reflexivity.
+      + simpl in *.
+        destruct H1 as [[H1 H4] | [H1 H4]]; subst; try discriminate.
+        replace (2 ^ n) with (length xs + 0) by lia.
+        rewrite firstn_app_2.
+        simpl. rewrite app_nil_r.
+        destruct H2.
+        rewrite IHxss by auto.
+        reflexivity.
+  Qed.
 
   Lemma splitRight_zip n xss yss :
     perfect_list n xss /\ complete_list n yss /\ length xss = length yss \/
     complete_list n xss /\ perfect_list n yss /\ length xss = 1 + length yss ->
-    complete_list n xss -> splitLListRight n (zipLList xss yss) = yss.
-  Admitted.
+    splitLListRight n (zipLList xss yss) = yss.
+  Proof.
+    revert n yss.
+    induction xss as [| xs xss ]; intros; destruct yss as [| ys yss ].
+    - reflexivity.
+    - destruct H as [[H1 [H2 H3]] | [H1 [H2 H3]]]; discriminate.
+    - destruct H as [[H1 [H2 H3]] | [H1 [H2 H3]]]; try discriminate.
+      simpl in *.
+      rewrite leb_correct by lia.
+      reflexivity.
+    - simpl in *.
+      rewrite app_length.
+      assert (2 ^ n > 0) by (eapply exp_pos; lia).
+      rewrite leb_correct_conv by lia.
+      destruct H as [[H1 [H2 H3]] | [H1 [H2 H3]]].
+      + destruct H1.
+        replace (2 ^ n) with (length xs + 0) by lia.
+        rewrite skipn_app_2. simpl.
+        destruct H2 as [[H2 H4] | [H2 H4]].
+        * rewrite IHxss by auto.
+          reflexivity.
+        * subst.
+          destruct xss; try discriminate.
+          reflexivity.
+      + destruct H1.
+        * replace (2 ^ n) with (length xs + 0) by lia.
+          rewrite skipn_app_2. simpl.
+          destruct H, H2.
+          rewrite IHxss by auto.
+          reflexivity.
+        * destruct H. subst. discriminate.
+  Qed.
 
   Lemma zip_split n xss : complete_list (S n) xss -> zipLList (splitLListLeft n xss) (splitLListRight n xss) = xss.
     revert n.
@@ -1816,11 +1876,21 @@ Section CompleteBinaryTree.
     inversion H; subst; clear H.
     - reflexivity.
     - rename n0 into n. simpl. rewrite unfold_fromListAux.
-      rewrite splitLeft_zip.
-      2: { left. admit. }
-      2: { eapply complete_toListAux_list.
-           eexists. eapply perfect'2complete'. eassumption. }
-      rewrite splitRight_zip by admit.
+      assert (H :
+                perfect_list 0 (toListAux l) /\
+                complete_list 0 (toListAux r) /\
+                length (toListAux l) = length (toListAux r)).
+      { split; [|split].
+        - eapply perfect_toListAux_list.
+          eexists; eassumption.
+        - eapply complete_toListAux_list.
+          eexists; eassumption.
+        - erewrite complete_toListAux_length by (eapply perfect'2complete'; eassumption).
+          erewrite complete_toListAux_length by eassumption.
+          reflexivity.
+      }
+      rewrite splitLeft_zip by auto.
+      rewrite splitRight_zip by auto.
       erewrite (IH n).
       erewrite (IH n).
       reflexivity.
@@ -1829,8 +1899,21 @@ Section CompleteBinaryTree.
       + lia.
       + eapply perfect'2complete'. assumption.
     - rename n0 into n. simpl. rewrite unfold_fromListAux.
-      rewrite splitLeft_zip by admit.
-      rewrite splitRight_zip by admit.
+      assert (H :
+                complete_list 0 (toListAux l) /\
+                perfect_list 0 (toListAux r) /\
+                length (toListAux l) = 1 + length (toListAux r)).
+      { split; [|split].
+        - eapply complete_toListAux_list.
+          eexists; eassumption.
+        - eapply perfect_toListAux_list.
+          eexists; eassumption.
+        - erewrite complete_toListAux_length by eassumption.
+          erewrite complete_toListAux_length by (eapply perfect'2complete'; eassumption).
+          reflexivity.
+      }
+      rewrite splitLeft_zip by auto.
+      rewrite splitRight_zip by auto.
       erewrite (IH (S n)).
       erewrite (IH n).
       reflexivity.
@@ -1838,7 +1921,7 @@ Section CompleteBinaryTree.
       + eapply perfect'2complete'. assumption.
       + lia.
       + assumption.
-  Admitted.
+  Qed.
 
   Lemma fromList_toList t :
     complete t -> fromList (toList t) = t.
