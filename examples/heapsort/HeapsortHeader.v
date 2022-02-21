@@ -1876,9 +1876,21 @@ Section CompleteBinaryTree.
     inversion H; subst; clear H.
     - reflexivity.
     - rename n0 into n. simpl. rewrite unfold_fromListAux.
-      rewrite splitLeft_zip.
-      2: { left. admit. }
-      rewrite splitRight_zip by admit.
+      assert (H :
+                perfect_list 0 (toListAux l) /\
+                complete_list 0 (toListAux r) /\
+                length (toListAux l) = length (toListAux r)).
+      { split; [|split].
+        - eapply perfect_toListAux_list.
+          eexists; eassumption.
+        - eapply complete_toListAux_list.
+          eexists; eassumption.
+        - erewrite complete_toListAux_length by (eapply perfect'2complete'; eassumption).
+          erewrite complete_toListAux_length by eassumption.
+          reflexivity.
+      }
+      rewrite splitLeft_zip by auto.
+      rewrite splitRight_zip by auto.
       erewrite (IH n).
       erewrite (IH n).
       reflexivity.
@@ -1887,8 +1899,21 @@ Section CompleteBinaryTree.
       + lia.
       + eapply perfect'2complete'. assumption.
     - rename n0 into n. simpl. rewrite unfold_fromListAux.
-      rewrite splitLeft_zip by admit.
-      rewrite splitRight_zip by admit.
+      assert (H :
+                complete_list 0 (toListAux l) /\
+                perfect_list 0 (toListAux r) /\
+                length (toListAux l) = 1 + length (toListAux r)).
+      { split; [|split].
+        - eapply complete_toListAux_list.
+          eexists; eassumption.
+        - eapply perfect_toListAux_list.
+          eexists; eassumption.
+        - erewrite complete_toListAux_length by eassumption.
+          erewrite complete_toListAux_length by (eapply perfect'2complete'; eassumption).
+          reflexivity.
+      }
+      rewrite splitLeft_zip by auto.
+      rewrite splitRight_zip by auto.
       erewrite (IH (S n)).
       erewrite (IH n).
       reflexivity.
@@ -1896,7 +1921,7 @@ Section CompleteBinaryTree.
       + eapply perfect'2complete'. assumption.
       + lia.
       + assumption.
-  Admitted.
+  Qed.
 
   Lemma fromList_toList t :
     complete t -> fromList (toList t) = t.
