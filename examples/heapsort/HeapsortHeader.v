@@ -196,14 +196,6 @@ Section Utilities.
     reflexivity.
   Qed.
 
-  Lemma skipn_app_2 {A} n (l1 l2 : list A) : skipn (length l1 + n) (l1 ++ l2) = skipn n l2.
-  Proof.
-    rewrite skipn_app.
-    rewrite skipn_all2 by lia.
-    replace (length l1 + n - length l1) with n by lia.
-    reflexivity.
-  Qed.
-
 End Utilities.
 
 Section ListOperations.
@@ -565,8 +557,7 @@ Section ListOperations.
       rewrite leb_correct_conv by lia.
       destruct H as [[H1 [H2 H3]] | [H1 [H2 H3]]].
       + destruct H1.
-        replace (2 ^ n) with (length xs + 0) by lia.
-        rewrite skipn_app_2. simpl.
+        rewrite skipn_exact by auto.
         destruct H2 as [[H2 H4] | [H2 H4]].
         * rewrite IHxss by auto.
           reflexivity.
@@ -574,8 +565,7 @@ Section ListOperations.
           destruct xss; try discriminate.
           reflexivity.
       + destruct H1.
-        * replace (2 ^ n) with (length xs + 0) by lia.
-          rewrite skipn_app_2. simpl.
+        * rewrite skipn_exact by lia.
           destruct H, H2.
           rewrite IHxss by auto.
           reflexivity.
