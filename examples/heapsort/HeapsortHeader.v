@@ -717,7 +717,80 @@ Section ListOperations.
     complete_list (S n) xss ->
     splitLListLeft n (toLList (S n) (concat xss ++ [y])) = toLList n (concat (splitLListLeft n xss) ++ [y]) \/
     splitLListLeft n (toLList (S n) (concat xss ++ [y])) = (splitLListLeft n xss).
-  Admitted.
+  Proof.
+    revert n.
+    induction xss as [| xs xss ].
+    - intros. simpl. left.
+      assert (2 ^ n > 0) by (eapply exp_pos; lia).
+      repeat (
+          simpl;
+          repeat first
+            [ rewrite (firstn_all2 [y]) by (simpl; lia)
+            | rewrite (skipn_all2 [y]) by (simpl; lia)
+            ];
+          rewrite unfold_toLList
+        ).
+      reflexivity.
+    - intros. simpl in H.
+      destruct H as [[H1 H2] | [H1 H2]].
+      + destruct (IHxss _ H2).
+        * left. simpl.
+          (* TODO : make lemma for unfolding toLList *)
+          rewrite unfold_toLList.
+          destruct ((xs ++ concat xss) ++ [y]) eqn: E.
+          { eapply app_eq_nil in E. destruct E. discriminate. }
+          rewrite <- E. clear a l E.
+          rewrite <- app_assoc.
+          replace (2 ^ S n) with (length xs + 0) by (simpl; lia).
+          rewrite firstn_app_2. simpl. rewrite app_nil_r.
+          rewrite skipn_app_2. simpl.
+          rewrite (unfold_toLList n).
+          destruct ((firstn (2 ^ n) xs ++ concat (splitLListLeft (S n) xss)) ++ [y]) eqn: E.
+          { eapply app_eq_nil in E. destruct E. discriminate. }
+          rewrite <- E. clear a l E.
+          rewrite <- app_assoc.
+          replace (2 ^ n) with (length (firstn (2 ^ n) xs) + 0) at 2 4 by (rewrite firstn_length; lia).
+          rewrite firstn_app_2. simpl. rewrite app_nil_r.
+          rewrite skipn_app_2. simpl.
+          rewrite H.
+          reflexivity.
+        * right. simpl.
+          rewrite unfold_toLList.
+          destruct ((xs ++ concat xss) ++ [y]) eqn: E.
+          { eapply app_eq_nil in E. destruct E. discriminate. }
+          rewrite <- E. clear a l E.
+          rewrite <- app_assoc.
+          replace (2 ^ S n) with (length xs + 0) by (simpl; lia).
+          rewrite firstn_app_2, skipn_app_2. simpl. rewrite app_nil_r.
+          rewrite H.
+          reflexivity.
+      + subst. simpl. rewrite 2 app_nil_r.
+        rewrite unfold_toLList.
+        destruct (xs ++ [y]) eqn: E.
+        { eapply app_eq_nil in E. destruct E. discriminate. }
+        rewrite <- E. clear a l E.
+        rewrite firstn_all2 by (rewrite app_length; simpl; lia).
+        rewrite skipn_all2 by (rewrite app_length; simpl; lia).
+        rewrite unfold_toLList.
+        simpl.
+        assert (length xs < 2 ^ n \/ length xs >= 2 ^ n) by lia.
+        destruct H.
+        * left.
+          rewrite firstn_all2 by (rewrite app_length; simpl; lia).
+          rewrite firstn_all2 by lia.
+          rewrite unfold_toLList.
+          destruct (xs ++ [y]) eqn: E.
+          { eapply app_eq_nil in E. destruct E. discriminate. }
+          rewrite <- E. clear a l E.
+          rewrite firstn_all2 by (rewrite app_length; simpl; lia).
+          rewrite skipn_all2 by (rewrite app_length; simpl; lia).
+          reflexivity.
+        * right.
+          rewrite firstn_app.
+          replace (2 ^ n - length xs) with 0 by lia.
+          simpl. rewrite app_nil_r.
+          reflexivity.
+  Qed.
 
   Lemma splitLListRight_toLList_concat n xss (y : A) :
     complete_list (S n) xss ->
