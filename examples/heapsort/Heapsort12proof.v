@@ -89,9 +89,9 @@ Section SIMMODSEM.
     - (* start loop *)
       steps.
       deflag.
-      revert tree' t initial' PURE2 PURE3 PURE4 g Hheap Hcom Hsubcom Hsize completeness permutation heap_prop Eqp mrp_src mp_tgt WF ctx mr_src mp_src ACC.
+      revert tree' t initial' g Hheap Hcom Hsubcom Hsize completeness permutation heap_prop Eqp mrp_src mp_tgt WF ctx mr_src mp_src ACC.
       induction n using Wf_nat.lt_wf_rect;i.
-      rewrite unfold_iter_eq. rename H into IdH.
+      rewrite unfold_iter_eq. rename H into IHn.
       destruct t as [|x l r] eqn:Et;[inversion Hsubcom|].
       assert (HT : t <> BT_nil) by now rewrite Et;auto.
       pose proof (subtree_nat_Some_node tree' _ (initial' - 1) HT) as Hsuper. clear HT.
@@ -181,24 +181,15 @@ Section SIMMODSEM.
                      unfold heap_at in H. unfold subtree_nat in H. rewrite Hindex1 in H.
                      auto.
                  }
-             *** (* steps_weak. *)
-                 (* rewrite <- (toList_fromList (swap (toList tree') (initial' * 2) (initial' - 1))). *)
-                 (* specialize (IHn (fromList (swap (toList tree') (initial' * 2) (initial' - 1)))). *)
-                 (* assert (length (toList (fromList (swap (toList tree') (initial' * 2) (initial' - 1)))) = length (toList tree')). { admit "". } *)
-                 (* rewrite H in IHn. rewrite Htreele2 in IHn. deflag. *)
-                 (* eapply IHn;auto. *)
-                 (* **** admit "". *)
-                 (* **** admit "". *)
-                 (* **** instantiate (1 := (BT_node x rl rr)). *)
-                 (*      inversion Hsubcom as [|Hsubcom' Hsubcom'' |Hsubcom' Hubcom''];subst. *)
-                 (*      {  } *)
-                 (*      econs;auto.  *)
-                 (*      admit "". *)
-                 (* **** admit "". *)
-                 (* **** admit "". *)
-                 (* **** admit "". *)
-                 (* **** admit "". *)
-                 (* **** admit "". *) admit "".
+             *** steps_weak.
+                 inversion Hsubcom;subst. inversion H_l;subst.
+                 rewrite <- (toList_fromList (swap (toList tree') (initial' * 2) (initial' - 1))).
+                 specialize (IHn n0). assert (J : n0 < S n0) by nia. specialize (IHn J).
+                 specialize (IHn (fromList (swap (toList tree') (initial' * 2) (initial' - 1)))).
+                 assert (length (toList (fromList (swap (toList tree') (initial' * 2) (initial' - 1)))) = length (toList tree')). { admit "". }
+                 rewrite H in IHn. rewrite Htreele2 in IHn. deflag.
+                 eapply IHn;auto.
+                 { intros. unfold heap_at.  }
           ** steps_weak. rewrite (toList_subtree tree' (initial' * 2 - 1)).
              unfold subtree_nat. rewrite Hindex0. steps_weak.
              destruct (xl <=? x)%Z eqn:HZle
