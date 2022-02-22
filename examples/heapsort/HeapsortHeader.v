@@ -2193,10 +2193,6 @@ Section CompleteBinaryTree.
     - split; [discriminate | lia].
   Qed.
 
-  Theorem btctx_lookup g t :
-    lookup (toList (recover_bintree g t)) (encode (btctx2idx g)) = option_root t.
-  Admitted.
-
   Lemma btpartial_removelast (t : bintree A) :
     complete t ->
     btpartial t (fromList (removelast (toList t))).
@@ -2438,6 +2434,10 @@ Section BinaryTreeZipper.
     | btctx_left _ _ g => btctx2idx g ++ [Dir_left]
     | btctx_right _ _ g => btctx2idx g ++ [Dir_right]
     end.
+
+  Theorem btctx_lookup g t :
+    lookup (toList (recover_bintree g t)) (encode (btctx2idx g)) = option_root t.
+  Admitted.
 
 End BinaryTreeZipper.
 
