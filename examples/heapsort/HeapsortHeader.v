@@ -713,6 +713,22 @@ Section ListOperations.
       + right. simpl. eapply in_or_app. auto.
   Qed.
 
+  Ltac dec_nat :=
+    match goal with
+    | [|- true  = _ ] => symmetry
+    | [|- false = _ ] => symmetry
+    end;
+    match goal with
+    | [|- (_ <=? _) = true  ] => eapply leb_correct
+    | [|- (_ <=? _) = false ] => eapply leb_correct_conv
+    | [|- (_ <?  _) = true  ] => eapply ltb_lt
+    | [|- (_ <?  _) = false ] => eapply ltb_ge
+    end;
+    simpl; lia.
+
+  Ltac pose_exp2 n :=
+    assert (2 ^ n > 0) by (eapply exp_pos; lia).
+
   Lemma splitLListLeft_toLList_concat n xss (y : A) :
     complete_list (S n) xss ->
     splitLListLeft n (toLList (S n) (concat xss ++ [y])) = toLList n (concat (splitLListLeft n xss) ++ [y]) \/
@@ -721,7 +737,7 @@ Section ListOperations.
     revert n.
     induction xss as [| xs xss ].
     - intros. simpl. left.
-      assert (2 ^ n > 0) by (eapply exp_pos; lia).
+      pose_exp2 n.
       repeat (
           simpl;
           repeat first
@@ -796,7 +812,105 @@ Section ListOperations.
     complete_list (S n) xss ->
     splitLListRight n (toLList (S n) (concat xss ++ [y])) = toLList n (concat (splitLListRight n xss) ++ [y]) \/
     splitLListRight n (toLList (S n) (concat xss ++ [y])) = (splitLListRight n xss).
-  Admitted.
+  Proof.
+    revert n. induction xss as [| xs xss ].
+    - intros. simpl. right.
+      pose_exp2 n.
+      rewrite unfold_toLList.
+      rewrite (firstn_all2 [y]) by (simpl; lia).
+      rewrite (skipn_all2 [y]) by (simpl; lia).
+      rewrite unfold_toLList.
+      unfold splitLListRight.
+      simpl length.
+      replace (1 <=? 2 ^ n) with true by dec_nat.
+      reflexivity.
+    - intros. simpl in H.
+      destruct H as [[H1 H2] | [H1 H2]].
+      + destruct (IHxss _ H2).
+        * left. simpl.
+          pose_exp2 n.
+          replace (length xs <=? 2 ^ n) with false by dec_nat.
+          simpl.
+          rewrite unfold_toLList.
+          destruct ((xs ++ concat xss) ++ [y]) eqn: E.
+          { eapply app_eq_nil in E. destruct E. discriminate. }
+          rewrite <- E. clear a l E.
+          rewrite <- app_assoc.
+          replace (2 ^ S n) with (length xs + 0) by (simpl; lia).
+          rewrite firstn_app_2, skipn_app_2.
+          simpl firstn. simpl skipn. rewrite app_nil_r.
+          simpl.
+          replace (length xs <=? 2 ^ n) with false by dec_nat.
+          rewrite (unfold_toLList n).
+          destruct ((skipn (2 ^ n) xs ++ concat (splitLListRight (S n) xss)) ++ [y]) eqn: E.
+          { eapply app_eq_nil in E. destruct E. discriminate. }
+          rewrite <- E in *. clear a l E.
+          rewrite <- app_assoc.
+          replace (2 ^ n) with (length (skipn (2 ^ n) xs) + 0) at 2 4 by (rewrite skipn_length; lia).
+          rewrite firstn_app_2, skipn_app_2. simpl. rewrite app_nil_r.
+          rewrite H.
+          reflexivity.
+        * right. simpl.
+          pose_exp2 n.
+          replace (length xs <=? 2 ^ n) with false by dec_nat.
+          rewrite unfold_toLList.
+          destruct ((xs ++ concat xss) ++ [y]) eqn: E.
+          { eapply app_eq_nil in E. destruct E. discriminate. }
+          rewrite <- E in *. clear a l E.
+          rewrite <- app_assoc.
+          replace (2 ^ S n) with (length xs + 0) by (simpl; lia).
+          rewrite firstn_app_2, skipn_app_2. simpl firstn. simpl skipn. rewrite app_nil_r.
+          simpl.
+          replace (length xs <=? 2 ^ n) with false by dec_nat.
+          rewrite H.
+          reflexivity.
+      + subst. simpl concat at 1 3. rewrite app_nil_r.
+        assert (length xs < 2 ^ n \/ length xs = 2 ^ n \/ length xs > 2 ^ n) by lia.
+        destruct H.
+        * right.
+          rewrite unfold_toLList.
+          destruct (xs ++ [y]) eqn: E.
+          { eapply app_eq_nil in E. destruct E. discriminate. }
+          rewrite <- E. clear a l E.
+          rewrite firstn_all2 by (rewrite app_length; simpl; lia).
+          rewrite skipn_all2 by (rewrite app_length; simpl; lia).
+          rewrite unfold_toLList.
+          simpl.
+          replace (length xs <=? 2 ^ n) with true by dec_nat.
+          replace (length (xs ++ [y]) <=? 2 ^ n) with true by (rewrite app_length; dec_nat).
+          reflexivity.
+        * left.
+          replace (concat (splitLListRight n [xs])) with (skipn (2 ^ n) xs).
+          2: { simpl. destruct H.
+               - replace (length xs <=? 2 ^ n) with true by dec_nat.
+                 rewrite <- H.
+                 rewrite skipn_all.
+                 reflexivity.
+               - replace (length xs <=? 2 ^ n) with false by dec_nat.
+                 simpl.
+                 rewrite app_nil_r.
+                 reflexivity.
+          }
+          rewrite unfold_toLList.
+          destruct (xs ++ [y]) eqn: E.
+          { eapply app_eq_nil in E. destruct E. discriminate. }
+          rewrite <- E. clear a l E.
+          rewrite firstn_all2 by (rewrite app_length; simpl; lia).
+          rewrite skipn_all2 by (rewrite app_length; simpl; lia).
+          rewrite unfold_toLList.
+          rewrite unfold_toLList.
+          destruct (skipn (2 ^ n) xs ++ [y]) eqn: E.
+          { eapply app_eq_nil in E. destruct E. discriminate. }
+          rewrite <- E. clear a l E.
+          rewrite firstn_all2 by (rewrite app_length, skipn_length; simpl; lia).
+          rewrite (skipn_all2 (skipn (2 ^ n) xs ++ [y])) by (rewrite app_length, skipn_length; simpl; lia).
+          rewrite unfold_toLList.
+          simpl.
+          replace (length (xs ++ [y]) <=? 2 ^ n) with false by (rewrite app_length; dec_nat).
+          rewrite skipn_app.
+          replace (2 ^ n - length xs) with 0 by lia.
+          reflexivity.
+  Qed.
 
 End ListOperations.
 
