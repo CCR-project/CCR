@@ -262,7 +262,8 @@ Section ListOperations.
       repeat match goal with
              | [ H : (_ ++ _) = [] |- _ ] => eapply app_eq_nil in H; destruct H
              end;
-      try discriminate
+      try discriminate;
+      try contradiction
     end.
 
   Program Fixpoint toLList (n : nat) (xs : list A) {measure (length xs)} : list (list A) :=
@@ -438,7 +439,7 @@ Section ListOperations.
       + rewrite unfold_toLList. simpl.
         pose_exp2 n.
         assert (xs <> []) by (intro; subst; simpl in *; lia).
-        replace (null (xs ++ concat xss)) with false by (dec_list; contradiction).
+        replace (null (xs ++ concat xss)) with false by dec_list.
         rewrite firstn_exact, skipn_exact by auto.
         rewrite IHxss by assumption.
         reflexivity.
