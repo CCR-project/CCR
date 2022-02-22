@@ -2182,8 +2182,8 @@ Section CompleteBinaryTree.
                                   | Some t => option_root t
                                   end.
     Admitted.
-                           
-   Theorem subtree_nat_Some_node (tree : bintree A) t i (t_nonempty : t <> BT_nil) :
+  
+  Theorem subtree_nat_Some_node (tree : bintree A) t i (t_nonempty : t <> BT_nil) :
     subtree_nat tree i = Some t <->
     match t with
     | BT_nil => False
@@ -2191,11 +2191,22 @@ Section CompleteBinaryTree.
     end.
   Admitted.
 
-  Theorem subtree_nat_range (tree : bintree A) t i
+  Theorem subtree_lookup (tree : bintree A) t i
+    (H_complete : complete tree)
+    (H_subtree : subtree_nat tree i = Some t)
+    : lookup (toList tree) i = option_root t.
+  Admitted.  
+
+  Corollary subtree_nat_range (tree : bintree A) t i
     (H_complete : complete tree)
     (H_subtree : subtree_nat tree i = Some t)
     : i < btsize tree <-> t <> BT_nil.
-  Admitted.
+  Proof.
+    pose proof (subtree_lookup tree t i H_complete H_subtree) as claim1.
+    destruct t as [ | x l r]; [apply nth_error_None in claim1 | apply isSome_intro, nth_error_Some in claim1]; rewrite toList_length in claim1.
+    - split; [lia | contradiction].
+    - split; [discriminate | lia].
+  Qed.
 
   Lemma btpartial_removelast (t : bintree A) :
     complete t ->
