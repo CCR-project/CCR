@@ -190,6 +190,22 @@ End Utilities.
 
 Section ListOperations.
 
+  Ltac dec_nat :=
+    match goal with
+    | [|- true  = _ ] => symmetry
+    | [|- false = _ ] => symmetry
+    end;
+    match goal with
+    | [|- (_ <=? _) = true  ] => eapply leb_correct
+    | [|- (_ <=? _) = false ] => eapply leb_correct_conv
+    | [|- (_ <?  _) = true  ] => eapply ltb_lt
+    | [|- (_ <?  _) = false ] => eapply ltb_ge
+    end;
+    simpl; lia.
+
+  Ltac pose_exp2 n :=
+    assert (2 ^ n > 0) by (eapply exp_pos; lia).
+
   Context {A : Type}.
 
   Definition lookup (xs : list A) i := nth_error xs i.
@@ -368,11 +384,8 @@ Section ListOperations.
     - reflexivity.
     - intros. destruct H. simpl.
       rewrite H.
-      replace (2 ^ S n <=? 2 ^ n) with false.
-      2: {
-        symmetry. eapply leb_correct_conv. simpl.
-        pose proof (exp_pos 2 n). lia.
-      }
+      pose_exp2 n.
+      replace (2 ^ S n <=? 2 ^ n) with false by dec_nat.
       simpl.
       rewrite IHxss by assumption.
       reflexivity.
@@ -392,7 +405,7 @@ Section ListOperations.
       assert (claim2 : length (firstn (2 ^ n) xs) = 2 ^ n \/ length (firstn (2 ^ n) xs) < 2 ^ n) by lia.
       assert (claim3 : l > 0).
       { rewrite Heql. unfold xs. simpl... }
-      assert (claim4 : 2^n > 0) by now apply exp_pos; lia.
+      pose_exp2 n.
       destruct claim2 as [claim2 | claim2]; [left | right].
       + split... eapply IH; try reflexivity. rewrite Heql.
         apply skipn_exp_length. simpl...
@@ -413,11 +426,8 @@ Section ListOperations.
     - intros.
       destruct H as [[H1 H2] | [H1 H2]].
       + rewrite unfold_toLList. simpl.
-        assert (xs <> []).
-        { assert (2 ^ n > 0) by (eapply exp_pos; lia).
-          intro; subst; simpl in H1.
-          lia.
-        }
+        pose_exp2 n.
+        assert (xs <> []) by (intro; subst; simpl in *; lia).
         replace (null (xs ++ concat xss)) with false by (dec_list; contradiction).
         replace (2 ^ n) with (length xs + 0) by lia.
         rewrite firstn_app_2, skipn_app_2.
@@ -464,8 +474,7 @@ Section ListOperations.
       + simpl in *.
         right.
         split.
-        * assert (2 ^ n > 0) by (eapply exp_pos; lia).
-          lia.
+        * pose_exp2 n. lia.
         * destruct xss; try discriminate.
           reflexivity.
     - destruct H as [[H1 [H2 H3]] | [H1 [H2 H3]]].
@@ -541,7 +550,7 @@ Section ListOperations.
       reflexivity.
     - simpl in *.
       rewrite app_length.
-      assert (2 ^ n > 0) by (eapply exp_pos; lia).
+      pose_exp2 n.
       rewrite leb_correct_conv by lia.
       destruct H as [[H1 [H2 H3]] | [H1 [H2 H3]]].
       + destruct H1.
@@ -571,18 +580,14 @@ Section ListOperations.
       simpl in H.
       Transparent pow.
       destruct H; destruct H.
-      + simpl.
-        assert (2 ^ n > 0)
-          by (eapply exp_pos; lia).
-        assert ((length xs <=? 2^n) = false)
-          by (eapply leb_correct_conv; simpl in H; lia).
-        rewrite H2.
+      + simpl in *.
+        pose_exp2 n.
+        replace (length xs <=? 2 ^ n) with false by dec_nat.
         rewrite firstn_skipn.
         rewrite IHxss by assumption.
         reflexivity.
       + subst. simpl.
-        remember (length xs <=? 2^n).
-        destruct b.
+        destruct (length xs <=? 2^n) eqn: E.
         * rewrite firstn_all2.
           reflexivity.
           eapply leb_complete.
@@ -600,7 +605,7 @@ Section ListOperations.
     - destruct H. split.
       + eapply firstn_length_le.
         rewrite H.
-        assert (2^n > 0) by (eapply exp_pos; lia).
+        pose_exp2 n.
         simpl; lia.
       + eapply IHxss. assumption.
   Qed.
@@ -613,13 +618,8 @@ Section ListOperations.
     - simpl. auto.
     - destruct H. simpl.
       rewrite H.
-      replace (2 ^ S n <=? 2 ^ n) with false.
-      2: {
-        symmetry.
-        eapply leb_correct_conv.
-        assert (2 ^ n > 0) by (eapply exp_pos; lia).
-        simpl; lia.
-      }
+      pose_exp2 n.
+      replace (2 ^ S n <=? 2 ^ n) with false by dec_nat.
       split.
       + rewrite skipn_length. rewrite H. simpl; lia.
       + eapply IHxss. assumption.
@@ -640,15 +640,10 @@ Section ListOperations.
       subst d l r.
       auto.
     - intros.
-      Opaque pow.
       simpl in H.
-      Transparent pow.
       destruct H as [[]|[]].
-      + assert (Hl : length xs > 2 ^ n).
-        { assert (2 ^ n > 0) by (eapply exp_pos; lia).
-          simpl pow in H.
-          lia.
-        }
+      + pose_exp2 n. rename H1 into Hn.
+        assert (Hl : length xs > 2 ^ n) by lia.
         pose proof (IHxss (S n) H0).
         simpl in d, l, r.
         remember (length xss) as d'.
@@ -737,22 +732,6 @@ Section ListOperations.
       + left. simpl. eapply in_or_app. auto.
       + right. simpl. eapply in_or_app. auto.
   Qed.
-
-  Ltac dec_nat :=
-    match goal with
-    | [|- true  = _ ] => symmetry
-    | [|- false = _ ] => symmetry
-    end;
-    match goal with
-    | [|- (_ <=? _) = true  ] => eapply leb_correct
-    | [|- (_ <=? _) = false ] => eapply leb_correct_conv
-    | [|- (_ <?  _) = true  ] => eapply ltb_lt
-    | [|- (_ <?  _) = false ] => eapply ltb_ge
-    end;
-    simpl; lia.
-
-  Ltac pose_exp2 n :=
-    assert (2 ^ n > 0) by (eapply exp_pos; lia).
 
   Lemma splitLListLeft_toLList_concat n xss (y : A) :
     complete_list (S n) xss ->
