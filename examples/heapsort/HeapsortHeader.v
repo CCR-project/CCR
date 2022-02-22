@@ -790,6 +790,33 @@ Section BinaryTree.
     auto.
   Qed.
 
+  Lemma bteq_refl t :
+    bteq_shape t t.
+  Proof.
+    induction t.
+    - constructor.
+    - econstructor;auto.
+  Qed.
+
+  Lemma bteq_trans t1 t2 t3:
+    bteq_shape t1 t2 -> bteq_shape t2 t3 -> bteq_shape t1 t3.
+  Proof.
+    revert t2 t3.
+    induction t1;intros.
+    - inversion H;subst. inversion H0;subst. constructor.
+    - inversion H;subst. inversion H0;subst. constructor.
+      eapply IHt1_1;eauto. eapply IHt1_2;eauto.
+  Qed.
+
+  Lemma bteq_sym t1 t2:
+    bteq_shape t1 t2 -> bteq_shape t2 t1.
+  Proof.
+    revert t2.
+    induction t1;intros.
+    - inversion H;subst. constructor.
+    - inversion H;subst. constructor. apply IHt1_1;auto. apply IHt1_2;auto.
+  Qed.          
+
   Lemma btpartial_refl t :
     btpartial t t.
   Proof.
@@ -1097,6 +1124,7 @@ Section BinaryTreeAccessories.
     destruct (option_subtree i t) as [ [] |]; auto.
   Qed.
 
+
   (*
   Inductive occurs (t : bintree A) : list dir_t -> bintree A -> Prop :=
   | Occurs_0
@@ -1261,6 +1289,9 @@ Section BinaryTreeAccessories.
     destruct t; simpl in H; try lia.
     reflexivity.
   Qed.
+
+  Lemma toList_permutation x l r : Permutation (toList (BT_node x l r)) (x :: (toList l) ++ (toList r)).
+  Admitted.
 
   Definition upd_root (x : A) t :=
     match t with
@@ -2010,6 +2041,11 @@ Section CompleteBinaryTree.
     : i < btsize tree <-> t <> BT_nil.
   Admitted.
 
+  Lemma option_subtree_swap (tree : bintree A) i j k :
+    k > i -> k > j ->
+    subtree_nat (fromList (swap (toList tree) i j)) k = subtree_nat tree k.
+  Admitted.
+  
   Lemma btpartial_removelast (t : bintree A) :
     complete t ->
     btpartial t (fromList (removelast (toList t))).
@@ -2237,6 +2273,25 @@ Section BinaryTreeZipper.
         auto.
   Qed.
 
+  Lemma focus_recover tree t i j:
+    let '(g', _) := focus btctx_top tree (decode i) in
+    if j =? i
+    then focus btctx_top (recover_bintree g' t) (decode j) = (g', t)
+    else if j =? (i * 2 + 1)
+         then match t with
+              | BT_nil => True
+              | BT_node x l r =>
+                  focus btctx_top (recover_bintree g' t) (decode j) = (btctx_left x r g', l)
+              end
+         else if j =? (i * 2 + 2)
+              then match t with
+                   | BT_nil => True
+                   | BT_node x l r =>
+                       focus btctx_top (recover_bintree g' t) (decode j) = (btctx_right x l g', r)
+                   end
+              else True.                                               
+  Admitted.
+
   Lemma focus_option_subtree g g' t t' i :
     (g', t') = focus g t i ->
     match t' with
@@ -2245,12 +2300,33 @@ Section BinaryTreeZipper.
     end.
   Admitted.
 
+   Lemma swap_subtree_left (tree : bintree A) i :
+    fromList (swap (toList tree) (i * 2 + 1) i) =
+      match focus btctx_top tree (decode i) with
+      | (_, BT_nil) => tree
+      | (_, BT_node x BT_nil _) => tree
+      | (g, BT_node x (BT_node xl ll lr) r) => recover_bintree g (BT_node xl (BT_node x ll lr) r)
+      end.
+  Admitted.
+  
+  Lemma swap_subtree_right (tree : bintree A) i :
+    fromList (swap (toList tree) (i * 2 + 2) i) =
+      match focus btctx_top tree (decode i) with
+      | (_, BT_nil) => tree
+      | (_, BT_node x _ BT_nil) => tree
+      | (g, BT_node x l (BT_node xr rl rr)) => recover_bintree g (BT_node xr l (BT_node x rl rr))
+      end.
+  Admitted.
+
   Fixpoint btctx2idx g : btidx :=
     match g with
     | btctx_top => []
     | btctx_left _ _ g => btctx2idx g ++ [Dir_left]
     | btctx_right _ _ g => btctx2idx g ++ [Dir_right]
     end.
+
+  Lemma btctx2idx_focus tree i : let '(g, _) := focus btctx_top tree i in btctx2idx g = i.
+  Admitted.
 
 End BinaryTreeZipper.
 
