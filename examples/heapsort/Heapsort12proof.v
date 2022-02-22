@@ -219,7 +219,7 @@ Section SIMMODSEM.
                                    (recover_bintree g (BT_node x
                                                                (BT_node xl ll lr)
                                                                (BT_node xr rl rr)))) by auto.
-                   rewrite <- Hrec in pem. et.}
+                   rewrite <- Hrec in pem. et. }
                  { rewrite Hrec. apply heap_prop. econs;simpl;try nia.
                    - specialize (Hheap (initial' * 2)).
                      assert (H : heap_at Z.ge (initial' * 2 - 1) tree') by now apply Hheap;nia.
