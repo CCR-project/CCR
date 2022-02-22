@@ -202,6 +202,43 @@ Section ListOperations.
   Definition swap (xs : list A) i j := map (uncurry (swap_aux xs i j)) (add_indices xs).
   Definition upd xs i0 x0 := map (fun '(x, i) => if Nat.eq_dec i i0 then x0 else x) (add_indices xs).
 
+  Definition null (xs : list A) : bool :=
+    match xs with
+    | [] => true
+    | _  => false
+    end.
+
+  Lemma null_true xs : null xs = true <-> xs = [].
+  Proof.
+    split.
+    - destruct xs; [ reflexivity | discriminate ].
+    - intros. subst xs. reflexivity.
+  Qed.
+
+  Lemma null_false xs : null xs = false <-> xs <> [].
+  Proof.
+    split.
+    - destruct xs; discriminate.
+    - destruct xs; [ contradiction | reflexivity ].
+  Qed.
+
+  Ltac dec_list :=
+    match goal with
+    | [|- true  = _ ] => symmetry
+    | [|- false = _ ] => symmetry
+    end;
+    match goal with
+    | [|- null _ = true  ] => eapply null_true
+    | [|- null _ = false ] =>
+      eapply null_false;
+      let H := fresh "H" in
+      intro H;
+      repeat match goal with
+             | [ H : (_ ++ _) = [] |- _ ] => eapply app_eq_nil in H; destruct H
+             end;
+      try discriminate
+    end.
+
   Program Fixpoint toLList (n : nat) (xs : list A) {measure (length xs)} : list (list A) :=
     match xs with
     | [] => []
@@ -215,10 +252,9 @@ Section ListOperations.
 
   Lemma unfold_toLList (n : nat) (xs : list A) :
     toLList n xs =
-    match xs with
-    | [] => []
-    | _ => firstn (2^n) xs :: toLList (S n) (skipn (2^n) xs)
-    end.
+    if null xs
+    then []
+    else firstn (2^n) xs :: toLList (S n) (skipn (2^n) xs).
   Proof with eauto.
     unfold toLList at 1. unfold toLList_func. rewrite fix_sub_eq.
     - destruct xs...
@@ -382,26 +418,15 @@ Section ListOperations.
           intro; subst; simpl in H1.
           lia.
         }
-        remember (xs ++ concat xss) as ys.
-        destruct ys.
-        { symmetry in Heqys.
-          eapply app_eq_nil in Heqys.
-          destruct Heqys.
-          contradiction.
-        }
-        rewrite Heqys. clear ys Heqys.
-        rewrite <- H1.
-        replace (length xs) with (length xs + 0) by lia.
-        rewrite firstn_app_2.
-        rewrite skipn_app_2.
+        replace (null (xs ++ concat xss)) with false by (dec_list; contradiction).
+        replace (2 ^ n) with (length xs + 0) by lia.
+        rewrite firstn_app_2, skipn_app_2.
         simpl.
         rewrite IHxss by assumption.
         rewrite app_nil_r.
         reflexivity.
       + subst. rewrite unfold_toLList. simpl. rewrite app_nil_r.
-        remember xs as ys.
-        destruct ys; try (simpl in H1; lia).
-        rewrite Heqys in *. clear ys Heqys.
+        replace (null xs) with false by (dec_list; subst; simpl in *; lia).
         rewrite firstn_all2 by lia.
         rewrite skipn_all2 by lia.
         reflexivity.
@@ -753,17 +778,13 @@ Section ListOperations.
         * left. simpl.
           (* TODO : make lemma for unfolding toLList *)
           rewrite unfold_toLList.
-          destruct ((xs ++ concat xss) ++ [y]) eqn: E.
-          { eapply app_eq_nil in E. destruct E. discriminate. }
-          rewrite <- E. clear a l E.
+          replace (null _) with false by dec_list.
           rewrite <- app_assoc.
           replace (2 ^ S n) with (length xs + 0) by (simpl; lia).
           rewrite firstn_app_2. simpl. rewrite app_nil_r.
           rewrite skipn_app_2. simpl.
           rewrite (unfold_toLList n).
-          destruct ((firstn (2 ^ n) xs ++ concat (splitLListLeft (S n) xss)) ++ [y]) eqn: E.
-          { eapply app_eq_nil in E. destruct E. discriminate. }
-          rewrite <- E. clear a l E.
+          replace (null _) with false by dec_list.
           rewrite <- app_assoc.
           replace (2 ^ n) with (length (firstn (2 ^ n) xs) + 0) at 2 4 by (rewrite firstn_length; lia).
           rewrite firstn_app_2. simpl. rewrite app_nil_r.
@@ -772,9 +793,7 @@ Section ListOperations.
           reflexivity.
         * right. simpl.
           rewrite unfold_toLList.
-          destruct ((xs ++ concat xss) ++ [y]) eqn: E.
-          { eapply app_eq_nil in E. destruct E. discriminate. }
-          rewrite <- E. clear a l E.
+          replace (null _) with false by dec_list.
           rewrite <- app_assoc.
           replace (2 ^ S n) with (length xs + 0) by (simpl; lia).
           rewrite firstn_app_2, skipn_app_2. simpl. rewrite app_nil_r.
@@ -782,9 +801,7 @@ Section ListOperations.
           reflexivity.
       + subst. simpl. rewrite 2 app_nil_r.
         rewrite unfold_toLList.
-        destruct (xs ++ [y]) eqn: E.
-        { eapply app_eq_nil in E. destruct E. discriminate. }
-        rewrite <- E. clear a l E.
+        replace (null _) with false by dec_list.
         rewrite firstn_all2 by (rewrite app_length; simpl; lia).
         rewrite skipn_all2 by (rewrite app_length; simpl; lia).
         rewrite unfold_toLList.
@@ -795,9 +812,7 @@ Section ListOperations.
           rewrite firstn_all2 by (rewrite app_length; simpl; lia).
           rewrite firstn_all2 by lia.
           rewrite unfold_toLList.
-          destruct (xs ++ [y]) eqn: E.
-          { eapply app_eq_nil in E. destruct E. discriminate. }
-          rewrite <- E. clear a l E.
+          replace (null _) with false by dec_list.
           rewrite firstn_all2 by (rewrite app_length; simpl; lia).
           rewrite skipn_all2 by (rewrite app_length; simpl; lia).
           reflexivity.
@@ -817,9 +832,11 @@ Section ListOperations.
     - intros. simpl. right.
       pose_exp2 n.
       rewrite unfold_toLList.
+      replace (null _) with false by reflexivity.
       rewrite (firstn_all2 [y]) by (simpl; lia).
       rewrite (skipn_all2 [y]) by (simpl; lia).
       rewrite unfold_toLList.
+      replace (null _) with true by reflexivity.
       unfold splitLListRight.
       simpl length.
       replace (1 <=? 2 ^ n) with true by dec_nat.
@@ -832,9 +849,7 @@ Section ListOperations.
           replace (length xs <=? 2 ^ n) with false by dec_nat.
           simpl.
           rewrite unfold_toLList.
-          destruct ((xs ++ concat xss) ++ [y]) eqn: E.
-          { eapply app_eq_nil in E. destruct E. discriminate. }
-          rewrite <- E. clear a l E.
+          replace (null _) with false by dec_list.
           rewrite <- app_assoc.
           replace (2 ^ S n) with (length xs + 0) by (simpl; lia).
           rewrite firstn_app_2, skipn_app_2.
@@ -842,9 +857,7 @@ Section ListOperations.
           simpl.
           replace (length xs <=? 2 ^ n) with false by dec_nat.
           rewrite (unfold_toLList n).
-          destruct ((skipn (2 ^ n) xs ++ concat (splitLListRight (S n) xss)) ++ [y]) eqn: E.
-          { eapply app_eq_nil in E. destruct E. discriminate. }
-          rewrite <- E in *. clear a l E.
+          replace (null _) with false by dec_list.
           rewrite <- app_assoc.
           replace (2 ^ n) with (length (skipn (2 ^ n) xs) + 0) at 2 4 by (rewrite skipn_length; lia).
           rewrite firstn_app_2, skipn_app_2. simpl. rewrite app_nil_r.
@@ -854,9 +867,7 @@ Section ListOperations.
           pose_exp2 n.
           replace (length xs <=? 2 ^ n) with false by dec_nat.
           rewrite unfold_toLList.
-          destruct ((xs ++ concat xss) ++ [y]) eqn: E.
-          { eapply app_eq_nil in E. destruct E. discriminate. }
-          rewrite <- E in *. clear a l E.
+          replace (null _) with false by dec_list.
           rewrite <- app_assoc.
           replace (2 ^ S n) with (length xs + 0) by (simpl; lia).
           rewrite firstn_app_2, skipn_app_2. simpl firstn. simpl skipn. rewrite app_nil_r.
@@ -869,9 +880,7 @@ Section ListOperations.
         destruct H.
         * right.
           rewrite unfold_toLList.
-          destruct (xs ++ [y]) eqn: E.
-          { eapply app_eq_nil in E. destruct E. discriminate. }
-          rewrite <- E. clear a l E.
+          replace (null _) with false by dec_list.
           rewrite firstn_all2 by (rewrite app_length; simpl; lia).
           rewrite skipn_all2 by (rewrite app_length; simpl; lia).
           rewrite unfold_toLList.
@@ -892,16 +901,13 @@ Section ListOperations.
                  reflexivity.
           }
           rewrite unfold_toLList.
-          destruct (xs ++ [y]) eqn: E.
-          { eapply app_eq_nil in E. destruct E. discriminate. }
-          rewrite <- E. clear a l E.
+          replace (null _) with false by dec_list.
           rewrite firstn_all2 by (rewrite app_length; simpl; lia).
           rewrite skipn_all2 by (rewrite app_length; simpl; lia).
           rewrite unfold_toLList.
+          replace (null _) with true by reflexivity.
           rewrite unfold_toLList.
-          destruct (skipn (2 ^ n) xs ++ [y]) eqn: E.
-          { eapply app_eq_nil in E. destruct E. discriminate. }
-          rewrite <- E. clear a l E.
+          replace (null _) with false by dec_list.
           rewrite firstn_all2 by (rewrite app_length, skipn_length; simpl; lia).
           rewrite (skipn_all2 (skipn (2 ^ n) xs ++ [y])) by (rewrite app_length, skipn_length; simpl; lia).
           rewrite unfold_toLList.
