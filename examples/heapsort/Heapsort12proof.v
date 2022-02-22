@@ -55,7 +55,6 @@ Section SIMMODSEM.
     set (tree' := tree) at 2 3 4.
     set (initial' := initial) at 2.
     set (tidx := S (HeapsortHeader.encode (btctx2idx g))).
-    
     replace (toList tree', initial') with (toList (recover_bintree g t), S (HeapsortHeader.encode (btctx2idx g))).
     2 : { f_equal.
           - f_equal.
@@ -347,6 +346,7 @@ Section SIMMODSEM.
     (*          (* leave function *) *)
     (*          Unshelve. et. et. *)
   Admitted.                 
+
   
   Lemma sim_heapify (sk : alist string Sk.gdef) :
     sim_fnsem wf top2
