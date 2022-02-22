@@ -178,6 +178,24 @@ Section Utilities.
         eapply IHxs; assumption.
   Qed.
 
+  Lemma firstn_exact {A} n (xs ys : list A) : n = length xs -> firstn n (xs ++ ys) = xs.
+  Proof.
+    intros.
+    replace n with (length xs + 0) by lia.
+    rewrite firstn_app_2.
+    simpl.
+    eapply app_nil_r.
+  Qed.
+
+  Lemma skipn_exact {A} n (xs ys : list A) : n = length xs -> skipn n (xs ++ ys) = ys.
+  Proof.
+    intros. subst.
+    rewrite skipn_app.
+    replace (_ - _) with 0 by lia.
+    rewrite skipn_all.
+    reflexivity.
+  Qed.
+
   Lemma skipn_app_2 {A} n (l1 l2 : list A) : skipn (length l1 + n) (l1 ++ l2) = skipn n l2.
   Proof.
     rewrite skipn_app.
@@ -429,11 +447,8 @@ Section ListOperations.
         pose_exp2 n.
         assert (xs <> []) by (intro; subst; simpl in *; lia).
         replace (null (xs ++ concat xss)) with false by (dec_list; contradiction).
-        replace (2 ^ n) with (length xs + 0) by lia.
-        rewrite firstn_app_2, skipn_app_2.
-        simpl.
+        rewrite firstn_exact, skipn_exact by auto.
         rewrite IHxss by assumption.
-        rewrite app_nil_r.
         reflexivity.
       + subst. rewrite unfold_toLList. simpl. rewrite app_nil_r.
         replace (null xs) with false by (dec_list; subst; simpl in *; lia).
@@ -515,9 +530,7 @@ Section ListOperations.
       reflexivity.
     - destruct H as [[H1 [H2 H3]] | [H1 [H2 H3]]].
       + simpl in *.
-        replace (2 ^ n) with (length xs + 0) by lia.
-        rewrite firstn_app_2.
-        simpl. rewrite app_nil_r.
+        rewrite firstn_exact by lia.
         destruct H2.
         * destruct H1, H.
           rewrite IHxss by auto.
@@ -527,9 +540,7 @@ Section ListOperations.
           reflexivity.
       + simpl in *.
         destruct H1 as [[H1 H4] | [H1 H4]]; subst; try discriminate.
-        replace (2 ^ n) with (length xs + 0) by lia.
-        rewrite firstn_app_2.
-        simpl. rewrite app_nil_r.
+        rewrite firstn_exact by lia.
         destruct H2.
         rewrite IHxss by auto.
         reflexivity.
@@ -759,23 +770,20 @@ Section ListOperations.
           rewrite unfold_toLList.
           replace (null _) with false by dec_list.
           rewrite <- app_assoc.
-          replace (2 ^ S n) with (length xs + 0) by (simpl; lia).
-          rewrite firstn_app_2. simpl. rewrite app_nil_r.
-          rewrite skipn_app_2. simpl.
+          rewrite firstn_exact, skipn_exact by auto.
           rewrite (unfold_toLList n).
           replace (null _) with false by dec_list.
           rewrite <- app_assoc.
-          replace (2 ^ n) with (length (firstn (2 ^ n) xs) + 0) at 2 4 by (rewrite firstn_length; lia).
-          rewrite firstn_app_2. simpl. rewrite app_nil_r.
-          rewrite skipn_app_2. simpl.
+          rewrite firstn_exact, skipn_exact by (rewrite firstn_length; lia).
+          simpl.
           rewrite H.
           reflexivity.
         * right. simpl.
           rewrite unfold_toLList.
           replace (null _) with false by dec_list.
           rewrite <- app_assoc.
-          replace (2 ^ S n) with (length xs + 0) by (simpl; lia).
-          rewrite firstn_app_2, skipn_app_2. simpl. rewrite app_nil_r.
+          rewrite firstn_exact, skipn_exact by (simpl; lia).
+          simpl.
           rewrite H.
           reflexivity.
       + subst. simpl. rewrite 2 app_nil_r.
@@ -830,16 +838,13 @@ Section ListOperations.
           rewrite unfold_toLList.
           replace (null _) with false by dec_list.
           rewrite <- app_assoc.
-          replace (2 ^ S n) with (length xs + 0) by (simpl; lia).
-          rewrite firstn_app_2, skipn_app_2.
-          simpl firstn. simpl skipn. rewrite app_nil_r.
+          rewrite firstn_exact, skipn_exact by (simpl; lia).
           simpl.
           replace (length xs <=? 2 ^ n) with false by dec_nat.
           rewrite (unfold_toLList n).
           replace (null _) with false by dec_list.
           rewrite <- app_assoc.
-          replace (2 ^ n) with (length (skipn (2 ^ n) xs) + 0) at 2 4 by (rewrite skipn_length; lia).
-          rewrite firstn_app_2, skipn_app_2. simpl. rewrite app_nil_r.
+          rewrite firstn_exact, skipn_exact by (rewrite skipn_length; lia).
           rewrite H.
           reflexivity.
         * right. simpl.
@@ -848,8 +853,7 @@ Section ListOperations.
           rewrite unfold_toLList.
           replace (null _) with false by dec_list.
           rewrite <- app_assoc.
-          replace (2 ^ S n) with (length xs + 0) by (simpl; lia).
-          rewrite firstn_app_2, skipn_app_2. simpl firstn. simpl skipn. rewrite app_nil_r.
+          rewrite firstn_exact, skipn_exact by (simpl; lia).
           simpl.
           replace (length xs <=? 2 ^ n) with false by dec_nat.
           rewrite H.
