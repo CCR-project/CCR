@@ -892,6 +892,22 @@ Section ListOperations.
           reflexivity.
   Qed.
 
+  Lemma zipLList_permutation (xss yss : list (list A)) : Permutation (concat (zipLList xss yss)) (concat xss ++ concat yss).
+  Proof.
+    revert yss.
+    induction xss as [| xs xss ].
+    - reflexivity.
+    - intros.
+      destruct yss as [| ys yss ].
+      + simpl. rewrite app_nil_r. reflexivity.
+      + simpl. rewrite IHxss.
+        rewrite 2 app_assoc.
+        eapply Permutation_app_tail.
+        rewrite <- 2 app_assoc.
+        rewrite (Permutation_app_comm ys (concat xss)).
+        reflexivity.
+  Qed.
+
 End ListOperations.
 
 Section BinaryTree.
@@ -1457,8 +1473,12 @@ Section BinaryTreeAccessories.
     reflexivity.
   Qed.
 
-  Lemma toList_permutation x l r : Permutation (toList (BT_node x l r)) (x :: (toList l) ++ (toList r)).
-  Admitted.
+  Lemma toList_permutation x l r : Permutation (toList (BT_node x l r)) ([x] ++ (toList l) ++ (toList r)).
+  Proof.
+    unfold toList. simpl.
+    rewrite zipLList_permutation.
+    reflexivity.
+  Qed.
 
   Definition upd_root (x : A) t :=
     match t with
