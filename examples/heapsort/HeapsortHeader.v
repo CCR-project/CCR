@@ -1350,6 +1350,13 @@ Section BinaryTreeZipper.
   | btctx_right (x : A) (l : bintree A) (g : btctx) : btctx
   .
 
+  Fixpoint btctx2idx (g : btctx) : btidx :=
+    match g with
+    | btctx_top => []
+    | btctx_left _ _ g => btctx2idx g ++ [Dir_left]
+    | btctx_right _ _ g => btctx2idx g ++ [Dir_right]
+    end.
+
   Fixpoint recover_bintree (g : btctx) (t : bintree A) : bintree A :=
     match g with
     | btctx_top => t
