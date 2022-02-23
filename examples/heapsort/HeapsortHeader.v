@@ -2469,13 +2469,6 @@ Section BinaryTreeZipper.
               else True.                                               
   Admitted.
 
-  Lemma focus_option_subtree g g' t t' i :
-    (g', t') = focus g t i ->
-    match t' with
-    | BT_node _ _ _ => option_subtree i t = Some t'
-    | BT_nil => option_subtree i t = None \/ option_subtree i t = Some BT_nil
-    end.
-  Admitted.
 
    Lemma swap_subtree_left (tree : bintree A) i :
     fromList (swap (toList tree) (i * 2 + 1) i) =
@@ -2502,6 +2495,10 @@ Section BinaryTreeZipper.
     | btctx_right _ _ g => btctx2idx g ++ [Dir_right]
     end.
 
+  Lemma recover_option_subtree g t :
+    option_subtree (btctx2idx g) (recover_bintree g t) = Some t.
+  Admitted.
+  
   Lemma btctx2idx_focus tree i : let '(g, _) := focus btctx_top tree i in btctx2idx g = i.
   Admitted.
   
