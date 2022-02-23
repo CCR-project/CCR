@@ -179,30 +179,6 @@ Section BinaryTreeAccessories.
     destruct (option_subtree i t) as [ [] |]; auto.
   Qed.
 
-  (*
-  Inductive occurs (t : bintree A) : list dir_t -> bintree A -> Prop :=
-  | Occurs_0
-    : occurs t [] t
-  | Occurs_l ds x l r
-    (H_l : occurs t ds l)
-    : occurs t (Dir_left :: ds) (BT_node x l r)
-  | Occurs_r ds x l r
-    (H_r : occurs t ds r)
-    : occurs t (Dir_right :: ds) (BT_node x l r).
-
-  Local Hint Constructors occurs : core.
-
-  Lemma occurs_iff ds t root :
-    occurs t ds root <->
-    option_subtree ds root = Some t.
-  Proof with discriminate || eauto.
-    split. intros X; induction X... revert t root.
-    induction ds as [ | [ | ] ds IH]; simpl; intros t root H_eq.
-    { apply Some_inj in H_eq; subst... }
-    all: destruct root as [ | x l r]...
-  Qed.
-   *)
-
   Lemma toListAux_fromListAux (xss : list (list A)) : complete_list 0 xss -> toListAux (fromListAux xss) = xss.
   Proof.
     remember (length xss) as l eqn: H.
@@ -349,6 +325,16 @@ Section CompleteBinaryTree.
     induction H_perfect as [ | n x l r H_l IH_l H_r IH_r].
     - exact (complete_nil).
     - exact (complete_node_perfect_complete x l r H_l IH_r).
+  Qed.
+
+  Lemma destruct_complete (t : bintree A) (H_complete : complete t) :
+    match t with
+    | BT_nil => True
+    | BT_node x l r => complete l /\ complete r
+    end.
+  Proof with eauto.
+    pose proof (perfect_coerce_complete := @perfect'2complete'). destruct H_complete as [t_rk H_complete'].
+    destruct t as [ | x l r]... inversion H_complete'; subst; split; eexists...
   Qed.
 
   Lemma complete_ind_ranked (P : bintree A -> nat -> Prop) :
@@ -1133,6 +1119,75 @@ Section BinaryTreeZipper.
 
   Context {A : Type}.
 
+  Inductive occurs (t : bintree A) : btidx -> bintree A -> Prop :=
+  | Occurs_0
+    : occurs t [] t
+  | Occurs_l ds x l r
+    (H_l : occurs t ds l)
+    : occurs t (Dir_left :: ds) (BT_node x l r)
+  | Occurs_r ds x l r
+    (H_r : occurs t ds r)
+    : occurs t (Dir_right :: ds) (BT_node x l r).
+
+  Local Hint Constructors occurs : core.
+
+  Lemma occurs_refl root :
+    occurs root [] root.
+  Proof. eauto. Qed.
+
+  Lemma occurs_trans root :
+    forall ds t,
+    occurs t ds root ->
+    forall ds' t',
+    occurs t' ds' t ->
+    occurs t' (ds ++ ds') root.
+  Proof. intros ds1 t1 X1 ds2 t2 X2; revert ds2 t2 X2. induction X1; simpl; eauto. Qed.
+
+  Lemma occurs_iff ds t root :
+    occurs t ds root <->
+    option_subtree ds root = Some t.
+  Proof with discriminate || eauto.
+    split. intros X; induction X...
+    revert t root.
+    induction ds as [ | [ | ] ds IH]; simpl; intros t root H_eq.
+    { apply Some_inj in H_eq; subst t... }
+    all: destruct root as [ | x l r]...
+  Qed.
+
+  Lemma complete_occurs ds t root
+    (H_occurs : occurs t ds root)
+    (H_complete : complete root)
+    : complete t.
+  Proof with eauto.
+    revert H_occurs H_complete.
+    intros X; induction X; intros H_complete...
+    - exact (IHX (proj1 (destruct_complete _ H_complete))).
+    - exact (IHX (proj2 (destruct_complete _ H_complete))).
+  Qed.
+
+  Lemma complete_subtree_nat (tree : bintree A) (H_complete : complete tree)
+    : forall i t, subtree_nat tree i = Some t -> complete t.
+  Proof.
+    intros i t H_subtree. apply occurs_iff in H_subtree.
+    now apply complete_occurs with (ds := decode i) (root := tree).
+  Qed.
+
+  Lemma occurs_recover_bintree g t
+    : occurs t (btctx2idx g) (recover_bintree g t).
+  Proof with eauto.
+    revert t. induction g as [ | x r g IH | x l g IH]; simpl; [intros t | intros l | intros r].
+    all: try eapply occurs_trans. all: try exact (IH (BT_node x l r)). all: repeat econstructor.
+  Qed.
+
+  Theorem complete_recover (tree : bintree A) (H_complete : complete tree)
+    : forall g t, recover_bintree g t = tree -> complete t.
+  Proof.
+    intros g t H_recover.
+    eapply complete_occurs.
+    - apply occurs_recover_bintree. 
+    - rewrite <- H_recover in H_complete; eassumption.
+  Qed.
+
   Lemma recover_focus (g : btctx A) t i :
     let '(g', t') := focus g t i in
     recover_bintree g t = recover_bintree g' t'.
@@ -1169,7 +1224,6 @@ Section BinaryTreeZipper.
               else True.                                               
   Admitted.
 
-
    Lemma swap_subtree_left (tree : bintree A) i :
     fromList (swap (toList tree) (i * 2 + 1) i) =
       match focus btctx_top tree (decode i) with
@@ -1188,18 +1242,11 @@ Section BinaryTreeZipper.
       end.
   Admitted.
 
-  Fixpoint btctx2idx (g : btctx A) : btidx :=
-    match g with
-    | btctx_top => []
-    | btctx_left _ _ g => btctx2idx g ++ [Dir_left]
-    | btctx_right _ _ g => btctx2idx g ++ [Dir_right]
-    end.
-
   Lemma recover_option_subtree (g : btctx A) t :
     option_subtree (btctx2idx g) (recover_bintree g t) = Some t.
   Admitted.
   
-  Lemma btctx2idx_focus tree i : let '(g, _) := focus btctx_top tree i in btctx2idx g = i.
+  Lemma btctx2idx_focus (tree : bintree A) i : let '(g, _) := focus btctx_top tree i in btctx2idx g = i.
   Admitted.
   
   Theorem btctx_lookup (g : btctx A) t :
@@ -1471,45 +1518,3 @@ Section ListAccessories.
   Proof. unfold upd. rewrite map_length. apply add_indices_length. Qed.
 
 End ListAccessories.
-
-(*
-Module NEO.
-
-  Section BinaryTreeAccessories.
-
-  Context {A : Type}.
-
-  Definition toListAux root := map (fun i => @option_rect (bintree A) (fun _ => option A) option_root None (option_subtree (decode i) root)) (seq 0 ((2 ^ rank root) - 1)).
-
-  Definition toList root := flat_map option2list (toListAux root).
-
-  Definition insertInit (x : A) (t : bintree A) :=
-    match t with
-    | BT_nil => Some (BT_node x BT_nil BT_nil)
-    | BT_node x l r => None
-    end.
-
-  Definition insertStep d acc t : option (bintree A) :=
-    match t with
-    | BT_nil => None
-    | BT_node x l r =>
-      match d with
-      | Dir_left => option_map (fun l' => BT_node x l' r) (acc l)
-      | Dir_right => option_map (fun r' => BT_node x l r') (acc r)
-      end
-    end.
-
-  Definition insertAt (x : A) : btidx -> bintree A -> option (bintree A) := fold_right insertStep (insertInit x).
-
-  Definition insertable (root : bintree A) i := subtree_nat root i = Some BT_nil.
-
-  Definition fromListStep root := fun '(x, i) => @option_rect (bintree A) (fun _ => bintree A) id root (insertAt x (decode i) root).
-
-  Definition fromList xs := fold_left fromListStep (add_indices xs) BT_nil.
-
-  Definition isComplete root := Forall isSome (firstn (btsize root) (toListAux root)) /\ Forall isNone (skipn (btsize root) (toListAux root)).
-
-  End BinaryTreeAccessories.
-
-End NEO.
-*)

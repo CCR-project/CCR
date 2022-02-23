@@ -412,7 +412,7 @@ Section SIMMODSEM.
               ("heapify",
                fun_to_tgt "Heapsort" (GlobalStb sk) {| fsb_fspec := heapify_spec; fsb_body := fun _ => triggerNB |})
               ("heapify", cfunU Heapsort1.heapify_body).
-  Proof with lia || eauto. (*
+  (* Proof with lia || eauto.
     (** "Lemmas" *)
     pose proof (bteq_shape_refl := @bteq_refl Z).
     pose proof (bteq_shape_sym := @bteq_sym Z).
@@ -428,13 +428,6 @@ Section SIMMODSEM.
     { intros t t' t_shape_eq_t'.
       induction t_shape_eq_t' as [ | x l r x' l' r' l_shape_eq_l' IH_l r_shape_eq_r' IH_r]; intros rk t_shape_eq_t'...
       inversion t_shape_eq_t'; subst; clear t_shape_eq_t'; [econs 2 | econs 3]...
-    }
-    assert (complete_recover : forall (t : bintree Z) g, complete (recover_bintree g t) -> complete t).
-    { intros t g [rk H_complete']. exists (rank t).
-      remember (rank t) as t_rk eqn: H_t_rk. revert t H_t_rk g rk H_complete'.
-      induction t_rk as [t_rk IH] using Wf_nat.lt_wf_ind. intros t ? g; subst t_rk.
-      induction g as [ | x r g IH_g | x l g IH_g]; intros rk H_complete'.
-      -
     }
     assert (shape_eq_complete : forall (t : bintree Z) t', bteq_shape t t' -> (complete t <-> complete t')).
     { intros t t' t_shape_eq_t'. split; intros [rk H_complete']; exists rk... }
@@ -629,7 +622,8 @@ Section SIMMODSEM.
     (** "Leaving the function" *)
     Unshelve.
     Transparent div Nat.leb Nat.ltb Z.ltb toList.
-  Qed. *) Admitted.
+  Qed. *)
+  Admitted.
 
   Lemma sim_heapsort (sk : alist string Sk.gdef) :
     sim_fnsem wf top2
