@@ -2526,6 +2526,12 @@ Section BinaryTreeZipper.
     lookup (toList (recover_bintree g t)) (encode (btctx2idx g)) = option_root t.
   Admitted.
 
+  Theorem recover_upd_root_repr_upd (t : bintree A) k g :
+    t <> BT_nil ->
+    toList (recover_bintree g (upd_root k t)) =
+    upd (toList (recover_bintree g t)) (encode (btctx2idx g)) k.
+  Admitted.
+
 End BinaryTreeZipper.
 
 Arguments btctx : clear implicits.
