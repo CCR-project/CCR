@@ -1029,7 +1029,8 @@ Section BinaryTreeIndexing.
 
   Definition btidx_lt i j := lt_ltlen i j \/ lt_eqlen i j.
 
-  Definition encode ds := fold_left (fun i => dir_t_rect (fun _ => nat) (2 * i + 1) (2 * i + 2)) ds 0.
+  Definition encodeIdx ds := fold_left (fun i => dir_t_rect (fun _ => nat) (2 * i + 1) (2 * i + 2)) ds 0.
+  Notation encode ds := (encodeIdx ds).
 
   Lemma _encode_unfold_lemma l n : fold_left (fun i : nat => dir_t_rect (fun _ : dir_t => nat) (i + (i + 0) + 1) (i + (i + 0) + 2)) l n = encode l + n * 2 ^ (length l).
   Proof.
@@ -1112,7 +1113,8 @@ Section BinaryTreeIndexing.
       + pose (Nat.mod_bound_pos i 2)...
   Defined.
 
-  Definition decode i := proj1_sig (decodable i).
+  Definition decodeIdx i := proj1_sig (decodable i).
+  Notation decode i := (decodeIdx i).
 
 (* (* Example "decode" *)
   Compute (decode 14).
@@ -1126,7 +1128,7 @@ Section BinaryTreeIndexing.
   Lemma encode_decode i : encode (decode i) = i.
   Proof. exact (proj2_sig (decodable i)). Qed.
 
-  Global Opaque decode.
+  Global Opaque decodeIdx.
 
   Lemma decode_encode ds : decode (encode ds) = ds.
   Proof. apply encode_inj. now rewrite encode_decode with (i := encode ds). Qed.
@@ -1158,9 +1160,9 @@ Section BinaryTreeIndexing.
     end.
   Proof with auto.
     destruct (decode n) eqn:E.
-    - apply (f_equal encode) in E;rewrite (encode_decode n) in E.
+    - apply (f_equal encodeIdx) in E;rewrite (encode_decode n) in E.
       unfold encode in E; simpl in E...
-    - apply (f_equal encode) in E;rewrite (encode_decode n) in E;rewrite E.
+    - apply (f_equal encodeIdx) in E;rewrite (encode_decode n) in E;rewrite E.
       rewrite (encode_unfold (d :: l)). destruct d;simpl;nia.
   Qed.
 
@@ -1247,6 +1249,9 @@ Section BinaryTreeIndexing.
   Qed.
 
 End BinaryTreeIndexing.
+
+Notation encode ds := (encodeIdx ds).
+Notation decode i := (decodeIdx i).
 
 Section BinaryTreeAccessories.
 
@@ -2332,7 +2337,7 @@ Section HeapProperty.
 
   Lemma heap_at_0 t : heap_at 0 t -> heap t.
   Proof.
-    Local Transparent decode.
+    Local Transparent decodeIdx.
     unfold heap_at. simpl. tauto.
   Qed.
 
