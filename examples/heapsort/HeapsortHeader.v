@@ -13,12 +13,13 @@ Import ListNotations.
 Local Open Scope program_scope.
 
 Section Utilities.
-
+  (*
   Definition option2list {A : Type} : option A -> list A :=
     @option_rect A (fun _ => list A) (fun x => [x]) [].
 
   Definition pair2list {A : Type} : A * A -> list A :=
     fun '(x1, x2) => [x1; x2].
+   *)
 
   Definition isSome {A : Type} : option A -> Prop := fun m => m <> None.
 
@@ -1345,6 +1346,7 @@ Section BinaryTreeAccessories.
     | BT_node x l r => Some (l, r)
     end.
 
+  (*
   Definition extract_elements := flat_map (option2list ∘ option_root).
 
   Definition extract_children := flat_map (@concat (bintree A) ∘ option2list ∘ option_map pair2list ∘ option_children_pair).
@@ -1366,6 +1368,7 @@ Section BinaryTreeAccessories.
     | BT_node x l r :: ts_tail => [l; r] ++ extract_children ts_tail
     end.
   Proof. destruct ts as [ | [ | x l r] ts_tail]; reflexivity. Qed.
+   *)
 
   Program Fixpoint fromListAux (xss : list (list A)) {measure (length xss)} : bintree A :=
     match xss with
@@ -2790,6 +2793,7 @@ Section ListAccessories.
 
 End ListAccessories.
 
+(*
 Module NEO.
 
   Section BinaryTreeAccessories.
@@ -2829,3 +2833,4 @@ Module NEO.
   End BinaryTreeAccessories.
 
 End NEO.
+*)
