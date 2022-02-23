@@ -1030,14 +1030,13 @@ Section BinaryTreeIndexing.
   Definition btidx_lt i j := lt_ltlen i j \/ lt_eqlen i j.
 
   Definition encodeIdx ds := fold_left (fun i => dir_t_rect (fun _ => nat) (2 * i + 1) (2 * i + 2)) ds 0.
-  Notation encode ds := (encodeIdx ds).
 
-  Lemma _encode_unfold_lemma l n : fold_left (fun i : nat => dir_t_rect (fun _ : dir_t => nat) (i + (i + 0) + 1) (i + (i + 0) + 2)) l n = encode l + n * 2 ^ (length l).
+  Lemma _encode_unfold_lemma l n : fold_left (fun i : nat => dir_t_rect (fun _ : dir_t => nat) (i + (i + 0) + 1) (i + (i + 0) + 2)) l n = encodeIdx l + n * 2 ^ (length l).
   Proof.
     revert n.
     induction l.
     - simpl. nia.
-    - intros. unfold encode. destruct a.
+    - intros. unfold encodeIdx. destruct a.
       + simpl. rewrite IHl. rewrite IHl.
         rewrite add_0_r. nia.
       + simpl. rewrite IHl. rewrite IHl.
@@ -1045,28 +1044,28 @@ Section BinaryTreeIndexing.
   Qed.
 
   Lemma encode_unfold l:
-    encode l =
+    encodeIdx l =
       match l with
       | [] => 0
-      | Dir_left :: t => encode t + 2 ^ (length l - 1)
-      | Dir_right :: t => encode t + 2 ^ (length l)
+      | Dir_left :: t => encodeIdx t + 2 ^ (length l - 1)
+      | Dir_right :: t => encodeIdx t + 2 ^ (length l)
       end.
   Proof.
     destruct l.
-    - unfold encode.
+    - unfold encodeIdx.
       simpl. auto.
     - destruct d.
-      + unfold encode at 1.
+      + unfold encodeIdx at 1.
         simpl. rewrite _encode_unfold_lemma. rewrite sub_0_r. nia.
-      + unfold encode at 1.
+      + unfold encodeIdx at 1.
         simpl. rewrite _encode_unfold_lemma. rewrite add_0_r. nia.
   Qed.
 
   Lemma encode_inj ds1 ds2
-    (H_encode_eq : encode ds1 = encode ds2)
+    (H_encode_eq : encodeIdx ds1 = encodeIdx ds2)
     : ds1 = ds2.
   Proof with lia || eauto.
-    revert H_encode_eq. unfold encode; do 2 rewrite <- fold_left_rev_right.
+    revert H_encode_eq. unfold encodeIdx; do 2 rewrite <- fold_left_rev_right.
     intros H_eq; apply rev_inj; revert H_eq.
     generalize (rev ds2) as xs2. generalize (rev ds1) as xs1. clear ds1 ds2.
     set (myF := fold_right (fun d i => dir_t_rect (fun _ => nat) (2 * i + 1) (2 * i + 2) d) 0).
@@ -1079,18 +1078,18 @@ Section BinaryTreeIndexing.
   Qed.
 
   Lemma encode_last ds d :
-    encode (ds ++ [d]) =
+    encodeIdx (ds ++ [d]) =
     match d with
-    | Dir_left => 2 * encode ds + 1
-    | Dir_right => 2 * encode ds + 2
+    | Dir_left => 2 * encodeIdx ds + 1
+    | Dir_right => 2 * encodeIdx ds + 2
     end.
   Proof.
-    unfold encode at 1. rewrite <- fold_left_rev_right. rewrite rev_unit.
-    unfold fold_right. unfold encode. rewrite <- fold_left_rev_right. destruct d; eauto.
+    unfold encodeIdx at 1. rewrite <- fold_left_rev_right. rewrite rev_unit.
+    unfold fold_right. unfold encodeIdx. rewrite <- fold_left_rev_right. destruct d; eauto.
   Qed.
 
   Lemma decodable i :
-    {ds : list dir_t | encode ds = i}.
+    {ds : list dir_t | encodeIdx ds = i}.
   Proof with lia || eauto.
     induction i as [[ | i'] IH] using Wf_nat.lt_wf_rect.
     - exists ([])...
@@ -1101,20 +1100,19 @@ Section BinaryTreeIndexing.
         assert (claim2 : (i - 2) / 2 < i)...
         destruct (IH ((i - 2) / 2) claim2) as [ds H_ds].
         exists (ds ++ [Dir_right]).
-        unfold encode. rewrite fold_left_last. unfold dir_t_rect at 1.
-        unfold encode in H_ds. rewrite H_ds...
+        unfold encodeIdx. rewrite fold_left_last. unfold dir_t_rect at 1.
+        unfold encodeIdx in H_ds. rewrite H_ds...
       + assert (claim1 : i = 2 * ((i - 1) / 2) + 1).
         { apply (positive_odd i ((i - 1) / 2))... }
         assert (claim2 : (i - 1) / 2 < i)...
         destruct (IH ((i - 1) / 2) claim2) as [ds H_ds].
         exists (ds ++ [Dir_left]).
-        unfold encode. rewrite fold_left_last. unfold dir_t_rect at 1.
-        unfold encode in H_ds. rewrite H_ds...
+        unfold encodeIdx. rewrite fold_left_last. unfold dir_t_rect at 1.
+        unfold encodeIdx in H_ds. rewrite H_ds...
       + pose (Nat.mod_bound_pos i 2)...
   Defined.
 
   Definition decodeIdx i := proj1_sig (decodable i).
-  Notation decode i := (decodeIdx i).
 
 (* (* Example "decode" *)
   Compute (decode 14).
@@ -1125,27 +1123,27 @@ Section BinaryTreeIndexing.
   (* = [Dir_left; Dir_left; Dir_left; Dir_right] *)
 *)
 
-  Lemma encode_decode i : encode (decode i) = i.
+  Lemma encode_decode i : encodeIdx (decodeIdx i) = i.
   Proof. exact (proj2_sig (decodable i)). Qed.
 
   Global Opaque decodeIdx.
 
-  Lemma decode_encode ds : decode (encode ds) = ds.
-  Proof. apply encode_inj. now rewrite encode_decode with (i := encode ds). Qed.
+  Lemma decode_encode ds : decodeIdx (encodeIdx ds) = ds.
+  Proof. apply encode_inj. now rewrite encode_decode with (i := encodeIdx ds). Qed.
 
   Lemma unfold_decode i :
-    decode i =
+    decodeIdx i =
     if Nat.eq_dec i 0 then [] else
     if Nat.eq_dec (i mod 2) 1
-    then decode ((i - 1) / 2) ++ [Dir_left]
-    else decode ((i - 2) / 2) ++ [Dir_right].
+    then decodeIdx ((i - 1) / 2) ++ [Dir_left]
+    else decodeIdx ((i - 2) / 2) ++ [Dir_right].
   Proof with lia || discriminate || eauto.
     apply encode_inj. rewrite encode_decode.
     destruct (Nat.eq_dec i 0) as [H_yes1 | H_no1]...
     assert (claim1 := Nat.mod_bound_pos i 2).
     destruct (Nat.eq_dec (i mod 2) 1) as [H_yes2 | H_no2];
       [assert (claim2 := encode_decode ((i - 1) / 2)) | assert (claim2 := encode_decode ((i - 2) / 2))].
-    all: symmetry; revert claim2; unfold encode; intros H_eq;
+    all: symmetry; revert claim2; unfold encodeIdx; intros H_eq;
       rewrite fold_left_last; unfold dir_t_rect at 1;
       rewrite H_eq; symmetry.
     - apply positive_odd...
@@ -1153,20 +1151,20 @@ Section BinaryTreeIndexing.
   Qed.
 
   Lemma decode_nat n :
-    match decode n with
+    match decodeIdx n with
     | [] => n = 0
-    | Dir_left :: l => encode l = n - 2 ^ (length (decode n)-1)
-    | Dir_right :: l => encode l = n - 2 ^ (length (decode n))
+    | Dir_left :: l => encodeIdx l = n - 2 ^ (length (decodeIdx n)-1)
+    | Dir_right :: l => encodeIdx l = n - 2 ^ (length (decodeIdx n))
     end.
   Proof with auto.
-    destruct (decode n) eqn:E.
+    destruct (decodeIdx n) eqn:E.
     - apply (f_equal encodeIdx) in E;rewrite (encode_decode n) in E.
-      unfold encode in E; simpl in E...
+      unfold encodeIdx in E; simpl in E...
     - apply (f_equal encodeIdx) in E;rewrite (encode_decode n) in E;rewrite E.
       rewrite (encode_unfold (d :: l)). destruct d;simpl;nia.
   Qed.
 
-  Lemma encode_bound l n : length l = n -> 2^n -1 <= encode l < 2 ^ (S n) -1.
+  Lemma encode_bound l n : length l = n -> 2^n -1 <= encodeIdx l < 2 ^ (S n) -1.
   Proof.
     revert n. induction l;intros.
     - simpl in *. rewrite <- H. simpl. auto.
@@ -1178,31 +1176,31 @@ Section BinaryTreeIndexing.
         pose_exp2 n. lia.
   Qed.
   
-  Lemma decode_ubound j n : j < 2 ^ n - 1 -> length (decode j) < n.
+  Lemma decode_ubound j n : j < 2 ^ n - 1 -> length (decodeIdx j) < n.
   Proof.
-    intros. pose proof (lt_dec (length (decode j)) n) as Y.
+    intros. pose proof (lt_dec (length (decodeIdx j)) n) as Y.
     destruct Y;auto.
-    assert (length (decode j) >= n) by nia.
-    remember (length (decode j)) as m.
+    assert (length (decodeIdx j) >= n) by nia.
+    remember (length (decodeIdx j)) as m.
     symmetry in Heqm. apply encode_bound in Heqm.
     rewrite encode_decode in Heqm.
     assert (2 ^ n <= 2 ^ m) by now apply pow_le_mono_r.
     nia.
   Qed.
 
-  Lemma decode_lbound j n : 2 ^ n -1 <= j -> n <= length (decode j).
+  Lemma decode_lbound j n : 2 ^ n -1 <= j -> n <= length (decodeIdx j).
   Proof.
-    intros. pose proof (lt_dec n (S (length (decode j)))) as Y.
+    intros. pose proof (lt_dec n (S (length (decodeIdx j)))) as Y.
     destruct Y; try nia.
-    assert (S (length (decode j)) <= n) by nia.
-    remember (length (decode j)) as m.
+    assert (S (length (decodeIdx j)) <= n) by nia.
+    remember (length (decodeIdx j)) as m.
     symmetry in Heqm. apply encode_bound in Heqm.
     rewrite encode_decode in Heqm.
     assert (2 ^ S m <= 2 ^ n) by now apply pow_le_mono_r.
     nia.
   Qed.
 
-  Lemma encode_lt_eqlen d i j : length i = length j -> encode (d :: i) < encode (d :: j) -> encode i < encode j.
+  Lemma encode_lt_eqlen d i j : length i = length j -> encodeIdx (d :: i) < encodeIdx (d :: j) -> encodeIdx i < encodeIdx j.
   Proof.
     intro H.
     rewrite (encode_unfold (d :: i)).
@@ -1211,7 +1209,7 @@ Section BinaryTreeIndexing.
     destruct d; lia.
   Qed.
 
-  Lemma btidx_lt_complete i j : encode i < encode j -> btidx_lt i j.
+  Lemma btidx_lt_complete i j : encodeIdx i < encodeIdx j -> btidx_lt i j.
   Proof.
     assert (length i < length j \/ length i = length j \/ length i > length j) by lia.
     destruct H as [|[]].
@@ -1233,8 +1231,8 @@ Section BinaryTreeIndexing.
           simpl length in H1.
           rewrite <- H in H1.
           remember (length i) as n.
-          assert (2 ^ n - 1 <= encode i < 2 ^ S n - 1) by (eapply encode_bound; auto).
-          assert (2 ^ n - 1 <= encode j < 2 ^ S n - 1) by (eapply encode_bound; auto).
+          assert (2 ^ n - 1 <= encodeIdx i < 2 ^ S n - 1) by (eapply encode_bound; auto).
+          assert (2 ^ n - 1 <= encodeIdx j < 2 ^ S n - 1) by (eapply encode_bound; auto).
           simpl pow in *. rewrite sub_0_r in H1. lia.
         * econstructor. eapply IHi.
           -- assumption.
@@ -1242,8 +1240,8 @@ Section BinaryTreeIndexing.
     - intros H'. exfalso.
       remember (length i) as m.
       remember (length j) as n.
-      assert (2 ^ m - 1 <= encode i < 2 ^ S m - 1) by (eapply encode_bound; auto).
-      assert (2 ^ n - 1 <= encode j < 2 ^ S n - 1) by (eapply encode_bound; auto).
+      assert (2 ^ m - 1 <= encodeIdx i < 2 ^ S m - 1) by (eapply encode_bound; auto).
+      assert (2 ^ n - 1 <= encodeIdx j < 2 ^ S n - 1) by (eapply encode_bound; auto).
       assert (2 ^ S n <= 2 ^ m) by (eapply pow_le_mono_r; lia).
       lia.
   Qed.
