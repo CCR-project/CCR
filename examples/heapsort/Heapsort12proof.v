@@ -9,6 +9,7 @@ Require Import HoareDef.
 Require Import ProofMode.
 Require Import STB.
 Require Import HeapsortHeader.
+Require Import HeapsortProperties.
 Require Import Heapsort1 Heapsort2.
 Require Import HTactics ProofMode.
 Require Import SimModSem.
@@ -407,14 +408,37 @@ Section SIMMODSEM.
         (*      Unshelve. et. et. *)
   Admitted.                 
 
-  
   Lemma sim_heapify (sk : alist string Sk.gdef) :
     sim_fnsem wf top2
               ("heapify",
                fun_to_tgt "Heapsort" (GlobalStb sk) {| fsb_fspec := heapify_spec; fsb_body := fun _ => triggerNB |})
               ("heapify", cfunU Heapsort1.heapify_body).
-  Proof with lia || eauto.
-    assert (plus1minus1 : forall n : nat, n + 1 - 1 = n)...
+  Proof with lia || eauto. (*
+    (** "Lemmas" *)
+    pose proof (bteq_shape_refl := @bteq_refl Z).
+    pose proof (bteq_shape_sym := @bteq_sym Z).
+    pose proof (bteq_shape_node := @bteq_node Z).
+    pose proof (plus1minus1 := fun n : nat => Nat.add_sub n 1).
+    pose proof (recover_upd_root_repr := fun (t : bintree Z) t_ne_nil k g => recover_upd_root_repr_upd t k g t_ne_nil).
+    assert (shape_eq_perfect' : forall (t : bintree Z) t', bteq_shape t t' -> forall rk : nat, perfect' t rk -> perfect' t' rk).
+    { intros t t' t_shape_eq_t'.
+      induction t_shape_eq_t' as [ | x l r x' l' r' l_shape_eq_l' IH_l r_shape_eq_r' IH_r]; intros rk t_shape_eq_t'...
+      inversion t_shape_eq_t'; subst; clear t_shape_eq_t'; [econs 2]...
+    }
+    assert (shape_eq_complete' : forall (t : bintree Z) t', bteq_shape t t' -> forall rk : nat, complete' t rk -> complete' t' rk).
+    { intros t t' t_shape_eq_t'.
+      induction t_shape_eq_t' as [ | x l r x' l' r' l_shape_eq_l' IH_l r_shape_eq_r' IH_r]; intros rk t_shape_eq_t'...
+      inversion t_shape_eq_t'; subst; clear t_shape_eq_t'; [econs 2 | econs 3]...
+    }
+    assert (complete_recover : forall (t : bintree Z) g, complete (recover_bintree g t) -> complete t).
+    { intros t g [rk H_complete']. exists (rank t).
+      remember (rank t) as t_rk eqn: H_t_rk. revert t H_t_rk g rk H_complete'.
+      induction t_rk as [t_rk IH] using Wf_nat.lt_wf_ind. intros t ? g; subst t_rk.
+      induction g as [ | x r g IH_g | x l g IH_g]; intros rk H_complete'.
+      -
+    }
+    assert (shape_eq_complete : forall (t : bintree Z) t', bteq_shape t t' -> (complete t <-> complete t')).
+    { intros t t' t_shape_eq_t'. split; intros [rk H_complete']; exists rk... }
     assert (btctx2idx_encode_eq : forall (g : btctx Z) ds,
       ds = btctx2idx g ->
       (HeapsortHeader.encode ds + 1 =? 1)%nat =
@@ -423,10 +447,16 @@ Section SIMMODSEM.
       | _ => false
       end
     ).
-    { destruct g as [ | x r g | x l g]; intros ds ?; subst ds; (apply Nat.eqb_eq || apply Nat.eqb_neq)...
-      all: simpl; rewrite encode_last...
-    }
-    Opaque div swap Nat.leb Nat.ltb Z.ltb.
+    { destruct g as [ | x r g | x l g]; intros ds ?; subst ds; (apply Nat.eqb_eq || apply Nat.eqb_neq)... all: simpl; rewrite encode_last... }
+    assert (upd_equiv_upd_root : forall (t : bintree Z) k, t <> BT_nil -> upd (toList t) 0 k = toList (upd_root k t)).
+    { intros t k t_ne_nil. rewrite upd_spec. destruct t as [ | x l r]; [contradiction | cbn; f_equal]. }
+    assert (upd_perm_cons_tail : forall (t : bintree Z) k, t <> BT_nil -> upd (toList t) 0 k ≡ₚ k :: list.tail (toList t)).
+    { intros t k t_ne_nil. rewrite upd_spec. destruct t as [ | x l r]; [contradiction | now cbn; rewrite drop_0]. }
+    assert (upd_root_eq_shape : forall (t : bintree Z) k, t <> BT_nil -> bteq_shape t (upd_root k t)).
+    { intros [ | x l r] k t_ne_nil; [contradiction | econs 2; apply bteq_refl]. }
+    assert (recover_upd_root_eq_shape : forall (t : bintree Z) t', bteq_shape t t' -> forall g, bteq_shape (recover_bintree g t) (recover_bintree g t') ).
+    { intros t t' H_shape_eq g. revert t t' H_shape_eq. induction g as [ | x r g IH | x l g IH]; simpl; intros t t' H_shape_eq... all: apply IH; econs 2... all: apply bteq_refl. }
+    Opaque div swap Nat.leb Nat.ltb Z.ltb toList.
     (** "Entering the function" *)
     init. harg. destruct x as [[tree p] k]. mDesAll; subst. clear PURE1. des; subst. steps. astop. steps.
     (** "Invariants" *)
@@ -447,27 +477,29 @@ Section SIMMODSEM.
     { rewrite t_init. destruct tree; [inv PURE2 | discriminate]. }
     assert (xs_nonempty : xs <> []).
     { destruct t; [contradiction | now rewrite xs_init]. }
-    assert (upd_xs_0_k_is : upd xs (HeapsortHeader.encode ds) k = k :: list.tail xs).
-    { rewrite ds_init; cbn. rewrite upd_spec. destruct (0 <? strings.length xs) eqn: H_ltb... destruct xs; [contradiction | apply Nat.ltb_nlt in H_ltb; simpl in H_ltb]... }
-    assert (H_perm : upd xs (HeapsortHeader.encode ds) k ≡ₚ k :: list.tail (toList tree)).
-    { rewrite upd_xs_0_k_is. now rewrite xs_init; rewrite t_init. }
-    clear xs_nonempty upd_xs_0_k_is.
     assert (H_recover : xs = toList (recover_bintree btctx_top t)).
     { rewrite xs_init; rewrite t_init... }
     remember (@btctx_top Z) as g eqn: g_init in H_recover.
+    assert (t_complete : complete t).
+    { now rewrite t_init. }
     assert (H_complete : complete (recover_bintree g t)).
-    { rewrite g_init. rewrite t_init... }
-    assert (H_firstloop : option_subtree ds tree = Some t).
+    { now rewrite g_init. }
+    assert (H_permutation : toList (recover_bintree g (upd_root k t)) ≡ₚ k :: list.tail (toList tree)).
+    { rewrite g_init; cbn. now transitivity (upd (toList t) 0 k); [rewrite upd_equiv_upd_root | rewrite <- t_init; apply upd_perm_cons_tail]. }
+    clear xs_nonempty.
+    assert (t_subtree : option_subtree ds tree = Some t).
     { now rewrite t_init; rewrite ds_init. }
     assert (H_btctx_idx : ds = btctx2idx g).
     { now rewrite g_init; rewrite ds_init. }
-    assert (H_heap_pr : forall t', bteq_shape t t' -> heap_pr Z.ge (par g) t' -> heap_pr Z.ge p (recover_bintree g t')).
+    assert (g_heap_pr : forall t', bteq_shape t t' -> heap_pr Z.ge (par g) t' -> heap_pr Z.ge p (recover_bintree g t')).
     { rewrite g_init... }
+    assert (t_heap_pr : heap_pr Z.ge (par g) t).
+    { rewrite g_init; rewrite t_init. simpl. clear t_init. induction PURE4 as [ | x l r R_x_l R_x_r H_heap_l IH_heap_l H_heap_r IH_heap_r]; econs... apply Some_inj in PURE2. rewrite PURE2... }
     assert (H_xs_length : strings.length xs = btsize tree).
     { rewrite xs_init. rewrite t_init. apply toList_length. }
     (** "Entering the first loop" *)
     clear t_init xs_init ds_init g_init.
-    deflag; revert xs g ds t_nonempty H_recover H_perm H_complete H_firstloop H_btctx_idx H_heap_pr H_xs_length.
+    deflag; revert xs g ds t_nonempty H_recover H_permutation H_complete t_subtree H_btctx_idx t_complete t_heap_pr g_heap_pr H_xs_length.
     induction t as [ | x l IH_l r IH_r]; i; [now contradiction t_nonempty | rewrite unfold_iter_eq; steps_weak].
     set (obs_if1 := (HeapsortHeader.encode ds + 1) * 2 <=? btsize tree).
     set (obs_if2 := (HeapsortHeader.encode ds + 1) * 2 <? btsize tree).
@@ -519,17 +551,25 @@ Section SIMMODSEM.
     { rewrite <- H_option_root_r. apply nth_error_None. rewrite encode_last... }
     assert (l_is_nil : l = BT_nil) by now destruct l. assert (r_is_nil : r = BT_nil) by now destruct r. subst l r.
     remember (BT_node x BT_nil BT_nil) as t eqn: t_is_leaf.
-    clear option_root_l_None option_root_r_None H_firstloop H_option_root_l H_option_root_r.
+    clear option_root_l_None option_root_r_None t_subtree H_option_root_l H_option_root_r.
+    (** "Invariants" *)
+    assert (H_heap_pr : forall p', (p' >= k)%Z -> heap_pr Z.ge p' (upd_root k t)).
+    { rewrite t_is_leaf. simpl. intros p' H_k_ge_p'. econs 2; try now econs 1... }
     (** "Entering the second loop" *)
-    clear x obs_if1 obs_if2 H_obs_if1 t_is_leaf.
-    deflag; revert xs ds t t_nonempty H_recover H_perm H_complete H_btctx_idx H_heap_pr H_xs_length.
+    clear x obs_if1 obs_if2 H_obs_if1 t_is_leaf t_heap_pr.
+    deflag; revert xs ds t t_nonempty H_recover H_permutation H_complete H_heap_pr g_heap_pr t_complete H_btctx_idx H_xs_length.
     induction g as [ | x r g IH | x l g IH]; i; rewrite unfold_iter_eq.
     all: pose proof (btctx2idx_encode_eq _ _ H_btctx_idx) as H_obs_if1.
     - rewrite H_obs_if1; steps_weak.
       { (** "Leaving the second loop" *)
         force_l. eexists. steps_weak. hret tt; ss.
-        iModIntro; iSplits; ss. all: iPureIntro.
-        all: admit "".
+        iModIntro. iSplit... iSplit... iPureIntro.
+        exists (upd_root k t). rewrite H_btctx_idx. cbn; splits.
+        - f_equal. rewrite H_recover. apply upd_equiv_upd_root...
+        - destruct H_complete as [t_rk H_complete']. exists t_rk.
+          destruct H_complete'; [econs 1 | econs 2 | econs 3]...
+        - now transitivity (toList (upd_root k t)).
+        - apply g_heap_pr...
       }
     - rewrite H_obs_if1; steps_weak.
       pose proof (btctx_lookup g (BT_node x t r)) as H_par. simpl in H_recover. rewrite <- H_recover in H_par. unfold option_root in H_par.
@@ -543,10 +583,27 @@ Section SIMMODSEM.
       destruct ((k <? x)%Z) eqn: H_obs_if2; [apply Z.ltb_lt in H_obs_if2 | apply Z.ltb_nlt in H_obs_if2]; steps_weak.
       { (** "Leaving the second loop" *)
         force_l. eexists. steps_weak. hret tt; ss.
-        iModIntro; iSplits; ss. all: iPureIntro.
-        all: admit "".
+        iModIntro. iSplit... iSplit... iPureIntro.
+        exists (recover_bintree g (BT_node x (upd_root k t) r)); splits.
+        - f_equal. symmetry. rewrite H_btctx_idx. rewrite H_recover.
+          exact (recover_upd_root_repr t t_nonempty k (btctx_left x r g)).
+        - eapply shape_eq_complete; [apply recover_upd_root_eq_shape | exact H_complete]...
+        - now transitivity (toList (recover_bintree g (BT_node x (upd_root k t) r))).
+        - apply g_heap_pr... apply H_heap_pr...
       }
-      deflag; eapply IH with (t := BT_node x (upd_root x t) r).
+      assert (t_nonempty_next : BT_node x (upd_root x t) r <> BT_nil) by discriminate.
+      assert (H_recover_next : upd xs (HeapsortHeader.encode ds) x = toList (recover_bintree g (BT_node x (upd_root x t) r))).
+      { replace (toList (recover_bintree g (BT_node x (upd_root x t) r))) with (upd (toList (recover_bintree g (BT_node x t r))) (HeapsortHeader.encode (btctx2idx g ++ [Dir_left])) x).
+        - rewrite H_recover. rewrite H_btctx_idx...
+        - symmetry. exact (recover_upd_root_repr t t_nonempty x (btctx_left x r g)).
+      }
+      assert (H_complete_next : complete (recover_bintree g (BT_node x (upd_root x t) r))).
+      { apply shape_eq_complete with (t := (recover_bintree (btctx_left x r g) t))... simpl... }
+      deflag; eapply IH with (t := BT_node x (upd_root x t) r)...
+      
+      deflag; eapply IH with (t := BT_node x (upd_root x t) r)...
+      +       
+      + pose proof recover_upd_root_repr.
       all: admit "".
     - rewrite H_obs_if1; steps_weak.
       pose proof (btctx_lookup g (BT_node x l t)) as H_par. simpl in H_recover. rewrite <- H_recover in H_par. unfold option_root in H_par.
@@ -560,14 +617,20 @@ Section SIMMODSEM.
       destruct ((k <? x)%Z) eqn: H_obs_if2; [apply Z.ltb_lt in H_obs_if2 | apply Z.ltb_nlt in H_obs_if2]; steps_weak.
       { (** "Leaving the second loop" *)
         force_l. eexists. steps_weak. hret tt; ss.
-        iModIntro; iSplits; ss. all: iPureIntro.
-        all: admit "".
+        iModIntro. iSplit... iSplit... iPureIntro.
+        exists (recover_bintree g (BT_node x l (upd_root k t))); splits.
+        - f_equal. symmetry. rewrite H_btctx_idx. rewrite H_recover.
+          exact (recover_upd_root_repr t t_nonempty k (btctx_right x l g)).
+        - eapply shape_eq_complete; [apply recover_upd_root_eq_shape | exact H_complete]...
+        - now transitivity (toList (recover_bintree g (BT_node x l (upd_root k t)))).
+        - apply g_heap_pr... apply H_heap_pr...
       }
       deflag; eapply IH with (t := BT_node x l (upd_root x t)).
       all: admit "".
     (** "Leaving the function" *)
     Unshelve.
-  Qed.
+    Transparent div Nat.leb Nat.ltb Z.ltb toList.
+  Qed. *) Admitted.
 
   Lemma sim_heapsort (sk : alist string Sk.gdef) :
     sim_fnsem wf top2
