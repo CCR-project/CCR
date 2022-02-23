@@ -470,7 +470,7 @@ Section SIMMODSEM.
                 econs;auto;try apply bteq_refl;auto. econs;apply bteq_refl. }
                { inversion H_l.
                  eapply complete_node_perfect_complete;eauto.
-                 apply perfect'2complete';auto.}
+                 apply perfect'2complete';auto. }
                { rewrite encode_last. rewrite <- toList_length. rewrite E in Htreele2.
                  split;try nia. admit "".  }
                { i. apply completeness. rewrite E. econs;try apply bteq_refl.
@@ -684,7 +684,7 @@ Section SIMMODSEM.
                 econs;auto;try apply bteq_refl;auto. econs;apply bteq_refl. }
                { inversion H_l.
                  eapply complete_node_perfect_complete;eauto.
-                 apply perfect'2complete';auto.}
+                 apply perfect'2complete';auto. }
                { rewrite encode_last. rewrite <- toList_length. rewrite E in Htreele2.
                  split;try nia. admit "".  }
                { i. apply completeness. rewrite E. econs;try apply bteq_refl.
