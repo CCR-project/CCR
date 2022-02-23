@@ -198,6 +198,9 @@ Section Utilities.
 
 End Utilities.
 
+(* Definition lookup (xs : list A) i := nth_error xs i. *)
+Notation lookup xs i := (nth_error xs i).
+
 Section ListOperations.
 
   Ltac dec_nat :=
@@ -217,8 +220,6 @@ Section ListOperations.
     assert (2 ^ n > 0) by (eapply exp_pos; lia).
 
   Context {A : Type}.
-
-  Definition lookup (xs : list A) i := nth_error xs i.
 
   Definition swap_aux (xs : list A) i1 i2 x i :=
     if Nat.eq_dec i i1 then nth i2 xs x else
@@ -2559,7 +2560,7 @@ Section ListAccessories.
     | Some x => x = start + i
     end.
   Proof with discriminate || eauto.
-    unfold lookup; intros i.
+    intros i.
     destruct (nth_error (seq start len) i) as [x | ] eqn: H_obs.
     - assert (i_lt_len : i < length (seq start len)).
       { apply nth_error_Some. rewrite H_obs... }
@@ -2587,7 +2588,7 @@ Section ListAccessories.
     | Some x => i < n /\ lookup xs i = Some x
     end.
   Proof with discriminate || (try lia) || eauto.
-    intros i; unfold lookup.
+    intros i.
     destruct (nth_error (firstn n xs) i) as [x | ] eqn: H_obs.
     - assert (i_lt_len : i < length (firstn n xs)).
       { apply nth_error_Some. rewrite H_obs... }
@@ -2613,7 +2614,6 @@ Section ListAccessories.
     | Some (x, y) => lookup xs i = Some x /\ lookup ys i = Some y
     end.
   Proof with discriminate || eauto.
-    unfold lookup.
     set (len := min (length xs) (length ys)).
     replace (combine xs ys) with (combine (firstn len xs) (firstn len ys)).
     - assert (H_len : length (firstn len xs) = length (firstn len ys)).
@@ -2628,7 +2628,6 @@ Section ListAccessories.
         { pose (combine_length (firstn len xs) (firstn len ys)); lia. }
         assert (claim1 := listExt_firstn xs len i).
         assert (claim2 := listExt_firstn ys len i).
-        unfold lookup in claim1, claim2.
         rewrite (nth_error_nth' (firstn len xs) x H1_i) in claim1.
         rewrite (nth_error_nth' (firstn len ys) y H2_i) in claim2.
         rewrite (nth_error_nth' (combine (firstn len xs) (firstn len ys)) (x, y) H_i) in H_obs.
@@ -2650,13 +2649,11 @@ Section ListAccessories.
     | Some (x, n) => i = n /\ lookup xs i = Some x
     end.
   Proof with discriminate || eauto.
-    intros i; unfold lookup, add_indices.
+    intros i; unfold add_indices.
     assert (claim1 := listExt_combine xs (seq 0 (length xs)) i).
-    unfold lookup in claim1; cbn in claim1.
     destruct (nth_error (combine xs (seq 0 (length xs))) i) as [[x n] | ] eqn: H_obs.
     - destruct claim1 as [H_obs_xs H_obs_seq]; split...
       assert (claim2 := listExt_seq 0 (length xs) i).
-      unfold lookup in claim2; cbn in claim2.
       rewrite H_obs_seq in claim2...
     - rewrite seq_length in claim1.
       rewrite nth_error_None; lia.
@@ -2675,15 +2672,13 @@ Section ListAccessories.
       lookup xs i
     end.
   Proof with discriminate || eauto.
-    intros H_i1 H_i2; unfold lookup.
+    intros H_i1 H_i2.
     assert (H_lookup_i1 := proj2 (nth_error_Some xs i1) H_i1).
     assert (H_lookup_i2 := proj2 (nth_error_Some xs i2) H_i2).
     intros i; cbn; unfold swap.
     assert (claim1 := listExt_map (uncurry (swap_aux xs i1 i2)) (add_indices xs) i).
-    unfold lookup in claim1; cbn in claim1.
     rewrite claim1; unfold option_map.
     assert (claim2 := listExt_add_indices xs i).
-    unfold lookup in claim2; cbn in claim2.
     destruct (nth_error (add_indices xs) i) as [[x n] | ] eqn: H_obs_add_indices.
     - simpl; unfold swap_aux, lookup.
       destruct claim2 as [H_EQ H_obs_xs]; subst n.
@@ -2725,14 +2720,12 @@ Section ListAccessories.
     | Some val => Some val = if Nat.eq_dec i i1 then Some x1 else lookup xs i
     end.
   Proof with discriminate || eauto.
-    intros H_i1; unfold lookup.
+    intros H_i1.
     assert (H_lookup_i1 := proj2 (nth_error_Some xs i1) H_i1).
     intros i; cbn; unfold upd.
     assert (claim1 := listExt_map (fun '(x, i0) => if eq_dec i0 i1 then x1 else x) (add_indices xs) i).
-    unfold lookup in claim1; cbn in claim1.
     rewrite claim1; unfold option_map.
     assert (claim2 := listExt_add_indices xs i).
-    unfold lookup in claim2; cbn in claim2.
     destruct (nth_error (add_indices xs) i) as [[x n] | ] eqn: H_obs_add_indices.
     - destruct claim2 as [H_eq1 H_eq2]; subst n.
       destruct (Nat.eq_dec i i1) as [H_yes1 | H_no1]...
