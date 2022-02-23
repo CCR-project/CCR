@@ -16,6 +16,18 @@ Require Import Coq.Sorting.Sorted.
 
 Set Implicit Arguments.
 
+Tactic Notation "repl" constr(e) "with" constr(e') "at" ne_integer_list(n) :=
+  let x := fresh in
+  set e as x at n;
+  replace x with e';
+  subst x.
+
+Tactic Notation "repl" constr(e) "with" constr(e') "at" ne_integer_list(n) "by" tactic(tac) :=
+  let x := fresh in
+  set e as x at n;
+  replace x with e' by tac;
+  subst x.
+
 Ltac steps_weak := repeat (prep; try _step; simpl).
 
 Lemma unfold_iter_eq:
@@ -565,10 +577,8 @@ Section SIMMODSEM.
 
     (* set tree and it's initial condition *)
     remember (fromList xs) as tree.
-    set (xs0 := xs). unfold xs0 at 1.
-    replace xs0 with (toList tree)
+    repl xs with (toList tree) at 2 3
       by (subst; eapply toList_fromList).
-    clear xs0.
     assert (Hₚ : toList tree ≡ₚ xs)
       by (subst; rewrite toList_fromList; eapply Permutation_refl).
     assert (Hc : complete tree)
