@@ -2791,6 +2791,9 @@ Section ListAccessories.
       + simpl. now symmetry.
   Qed.
 
+  Lemma upd_length {A : Type} (xs : list A) i0 x0 : length (upd xs i0 x0) = length xs.
+  Proof. unfold upd. rewrite map_length. apply add_indices_length. Qed.
+
 End ListAccessories.
 
 (*
