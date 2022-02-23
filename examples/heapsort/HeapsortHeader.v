@@ -197,28 +197,66 @@ Section Utilities.
     reflexivity.
   Qed.
 
+  Definition null {A} (xs : list A) : bool :=
+    match xs with
+    | [] => true
+    | _  => false
+    end.
+
+  Lemma null_true {A} (xs : list A) : null xs = true <-> xs = [].
+  Proof.
+    split.
+    - destruct xs; [ reflexivity | discriminate ].
+    - intros. subst xs. reflexivity.
+  Qed.
+
+  Lemma null_false {A} (xs : list A) : null xs = false <-> xs <> [].
+  Proof.
+    split.
+    - destruct xs; discriminate.
+    - destruct xs; [ contradiction | reflexivity ].
+  Qed.
+
 End Utilities.
+
+Ltac pose_exp2 n :=
+  assert (2 ^ n > 0) by (eapply exp_pos; lia).
+
+Ltac dec_nat :=
+  match goal with
+  | [|- true  = _ ] => symmetry
+  | [|- false = _ ] => symmetry
+  end;
+  match goal with
+  | [|- (_ <=? _) = true  ] => eapply leb_correct
+  | [|- (_ <=? _) = false ] => eapply leb_correct_conv
+  | [|- (_ <?  _) = true  ] => eapply ltb_lt
+  | [|- (_ <?  _) = false ] => eapply ltb_ge
+  end;
+  simpl; lia.
+
+Ltac dec_list :=
+  match goal with
+  | [|- true  = _ ] => symmetry
+  | [|- false = _ ] => symmetry
+  end;
+  match goal with
+  | [|- null _ = true  ] => eapply null_true
+  | [|- null _ = false ] =>
+    eapply null_false;
+    let H := fresh "H" in
+    intro H;
+    repeat match goal with
+           | [ H : (_ ++ _) = [] |- _ ] => eapply app_eq_nil in H; destruct H
+           end;
+    try discriminate;
+    try contradiction
+  end.
 
 (* Definition lookup (xs : list A) i := nth_error xs i. *)
 Notation lookup xs i := (nth_error xs i).
 
 Section ListOperations.
-
-  Ltac dec_nat :=
-    match goal with
-    | [|- true  = _ ] => symmetry
-    | [|- false = _ ] => symmetry
-    end;
-    match goal with
-    | [|- (_ <=? _) = true  ] => eapply leb_correct
-    | [|- (_ <=? _) = false ] => eapply leb_correct_conv
-    | [|- (_ <?  _) = true  ] => eapply ltb_lt
-    | [|- (_ <?  _) = false ] => eapply ltb_ge
-    end;
-    simpl; lia.
-
-  Ltac pose_exp2 n :=
-    assert (2 ^ n > 0) by (eapply exp_pos; lia).
 
   Context {A : Type}.
 
@@ -229,44 +267,6 @@ Section ListOperations.
   Definition add_indices (xs : list A) := (combine xs (seq 0 (length xs))).
   Definition swap (xs : list A) i j := map (uncurry (swap_aux xs i j)) (add_indices xs).
   Definition upd xs i0 x0 := map (fun '(x, i) => if Nat.eq_dec i i0 then x0 else x) (add_indices xs).
-
-  Definition null (xs : list A) : bool :=
-    match xs with
-    | [] => true
-    | _  => false
-    end.
-
-  Lemma null_true xs : null xs = true <-> xs = [].
-  Proof.
-    split.
-    - destruct xs; [ reflexivity | discriminate ].
-    - intros. subst xs. reflexivity.
-  Qed.
-
-  Lemma null_false xs : null xs = false <-> xs <> [].
-  Proof.
-    split.
-    - destruct xs; discriminate.
-    - destruct xs; [ contradiction | reflexivity ].
-  Qed.
-
-  Ltac dec_list :=
-    match goal with
-    | [|- true  = _ ] => symmetry
-    | [|- false = _ ] => symmetry
-    end;
-    match goal with
-    | [|- null _ = true  ] => eapply null_true
-    | [|- null _ = false ] =>
-      eapply null_false;
-      let H := fresh "H" in
-      intro H;
-      repeat match goal with
-             | [ H : (_ ++ _) = [] |- _ ] => eapply app_eq_nil in H; destruct H
-             end;
-      try discriminate;
-      try contradiction
-    end.
 
   Program Fixpoint toLList (n : nat) (xs : list A) {measure (length xs)} : list (list A) :=
     match xs with
@@ -1171,9 +1171,9 @@ Section BinaryTreeIndexing.
     - simpl in *. destruct n;inversion H.
       rewrite encode_unfold. destruct a.
       + simpl. rewrite H1. apply IHl in H1. rewrite sub_0_r.
-        assert (2 ^ n > 0) by now apply exp_pos;nia. nia.
+        pose_exp2 n. lia.
       + simpl. rewrite H1. apply IHl in H1.
-        assert (2 ^ n > 0) by now apply exp_pos;nia. nia.
+        pose_exp2 n. lia.
   Qed.
   
   Lemma decode_ubound j n : j < 2 ^ n - 1 -> length (decode j) < n.
@@ -1706,7 +1706,7 @@ Section CompleteBinaryTree.
   Proof.
     intros. induction H;auto.
     simpl. rewrite IHperfect'1. rewrite IHperfect'2.
-    assert (2 ^ n > 0) by now apply exp_pos;nia. nia.
+    pose_exp2 n. lia.
   Qed.
 
   Lemma comp_size t n :
@@ -1717,21 +1717,19 @@ Section CompleteBinaryTree.
     - inversion H;subst. simpl. inversion H_l;subst. inversion H_r;subst. simpl. auto.
     - inversion H;subst.
       + apply perf_size in H_l. simpl. rewrite H_l.
-        rewrite <- add_succ_l. assert (2 ^ n > 0) by now apply exp_pos;nia.
+        rewrite <- add_succ_l. pose_exp2 n.
         replace (S (2 ^ n -1)) with (2 ^ n) by nia.
         assert (btsize r <= 2 ^ S n - 1).
         * clear IHn H0 H_l H l x. induction H_r using complete_ind_ranked;simpl.
-          ** assert (2 ^ n >0) by now apply exp_pos;nia. nia.
+          ** pose_exp2 n. lia.
           ** destruct H;subst.
-             *** assert (2 ^ n_l > 0) by now apply exp_pos;nia.
-                 nia.
-             *** simpl in *. assert (2 ^ n_r > 0) by now apply exp_pos;nia.
-                 nia.
+             *** pose_exp2 n_l. lia.
+             *** simpl in *. pose_exp2 n_r. lia.
         * simpl in *. nia.
       + apply perf_size in H_r. simpl. rewrite H_r.
         rewrite <- add_succ_r.
         apply IHn in H_l.
-        assert (2 ^ n > 0) by now apply exp_pos;nia.
+        pose_exp2 n.
         replace (S (2 ^ n - 1)) with (2 ^ n) by nia.
         simpl in *. nia.
   Qed.
@@ -1786,12 +1784,10 @@ Section CompleteBinaryTree.
       apply decode_lbound in H1.
       assert (btsize r -1 < 2 ^ S n -1).
       + apply Lt.le_lt_n_Sm in H2.  rewrite <- sub_succ_l in H2.
-        2 :{simpl. pose proof (exp_pos 2). assert (B : 2>0) by nia.
-            apply H3 with (n:=n) in B. nia. }
+        2: { simpl. pose_exp2 n. lia. }
         replace (S (2 ^ S n - 1) - 1) with (2 ^ S n - 1) in H2 by nia. auto.
       + apply decode_ubound in H3. assert (length (decode (btsize r - 1)) = n) by nia.
-        rewrite H4. simpl. assert (B : 2 > 0) by nia. pose proof (exp_pos 2 n B).
-        nia.
+        rewrite H4. simpl. pose_exp2 n. lia.
   Qed.
     
   Lemma last_btidx_complete_perfect x l r n :
@@ -1807,7 +1803,7 @@ Section CompleteBinaryTree.
     apply sub_le_mono_r with (p:=1) in H.
     apply sub_le_mono_r with (p:=1) in H1.
     apply decode_lbound in H.
-    assert (2 ^ n > 0) by (apply exp_pos;auto).
+    pose_exp2 n.
     assert (2 ^ S n >= 2) by (simpl;nia).
     assert (btsize l - 1 < 2 ^ S n - 1) by nia.
     apply decode_ubound in H4. assert (length (decode (btsize l -1)) = n) by nia.
