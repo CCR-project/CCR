@@ -9,6 +9,7 @@ Require Import HoareDef.
 Require Import ProofMode.
 Require Import STB.
 Require Import HeapsortHeader.
+Require Import HeapsortProperties.
 Require Import Heapsort1 Heapsort2.
 Require Import HTactics ProofMode.
 Require Import SimModSem.
