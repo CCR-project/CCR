@@ -381,197 +381,160 @@ Section SIMMODSEM.
                fun_to_tgt "Heapsort" (GlobalStb sk) {| fsb_fspec := heapify_spec; fsb_body := fun _ => triggerNB |})
               ("heapify", cfunU Heapsort1.heapify_body).
   Proof with lia || eauto.
+    assert (plus1minus1 : forall n : nat, n + 1 - 1 = n)...
+    assert (btctx2idx_encode_eq : forall (g : btctx Z) ds,
+      ds = btctx2idx g ->
+      (HeapsortHeader.encode ds + 1 =? 1)%nat =
+      match g with
+      | btctx_top => true
+      | _ => false
+      end
+    ).
+    { destruct g as [ | x r g | x l g]; intros ds ?; subst ds; (apply Nat.eqb_eq || apply Nat.eqb_neq)...
+      all: simpl; rewrite encode_last...
+    }
     Opaque div swap Nat.leb Nat.ltb Z.ltb.
     (** "Entering the function" *)
-    init. harg. destruct x as [[tree p] k]. mDesAll; subst.
-    clear PURE1. des; subst. steps. astop. steps.
+    init. harg. destruct x as [[tree p] k]. mDesAll; subst. clear PURE1. des; subst. steps. astop. steps.
+    (** "Invariants" *)
+    set (par := fun g' =>
+      match g' with
+      | btctx_top => p
+      | btctx_left p' _ _ => p'
+      | btctx_right p' _ _ => p'
+      end
+    ).
     replace (strings.length (toList tree)) with (btsize tree) by now rewrite toList_length.
-    remember (toList tree, 1) as acc_init eqn: H_init. destruct acc_init as [xs i].
+    remember (toList tree, 1) as xs_and_i eqn: H_init. destruct xs_and_i as [xs i].
     remember (tree) as t eqn: t_init in H_init.
     assert (xs_init : xs = toList t) by congruence. assert (i_init : i = 1) by congruence. clear H_init.
-    assert (H_perm : xs ≡ₚ toList (recover_bintree btctx_top t)).
-    assert (t_nonempty : t <> BT_nil).
-    { rewrite t_init. destruct tree; [inv PURE2 | discriminate]. }
-
-  Admitted.
-(** "OLD PROOF"
-  Proof with lia || eauto.
-    assert (lemma1 : forall (xs : list Z) k, xs <> [] -> upd xs 0 k = k :: list.tail xs) by admit "".
-    assert (lemma2 : forall (tree : bintree Z) t i, subtree_nat tree i = Some t -> HeapsortHeader.lookup (toList tree) i = option_root t) by admit "".
-    assert (lemma3 : forall (tree : bintree Z) p xs, toList tree ≡ₚ xs -> ((heap Z.ge tree /\ (forall x, In x xs -> Z.ge p x)) <-> heap_pr Z.ge p tree)) by admit "".
-    assert (lemma4 : forall (tree : bintree Z) p, heap Z.ge tree -> option_root tree = Some p -> heap_pr Z.ge p tree) by admit "".
-    assert (lemma5 : forall (tree : bintree Z), complete tree -> tree = fromList (toList tree)) by admit "".
-    assert (lemma8 : forall n : nat, n + 1 - 1 = n) by lia.
-    assert (lemma9 : forall (xs : list Z) i1 i2 x1 x2, HeapsortHeader.lookup xs i1 = Some x1 -> upd (upd xs i2 x1) i1 x2 ≡ₚ upd xs i2 x2) by admit "".
-    assert (claim_upd_xs_0_k : forall (xs : list Z) k, (upd xs 0 k) = (toList (upd_root k (fromList xs)))) by admit "".
-    assert (claim_encode_last : forall ds d, HeapsortHeader.encode (ds ++ [d]) > 0) by admit "".
-    Opaque div swap Nat.leb Nat.ltb Z.ltb.
-    (** "Entering the function" *)
-    init. harg. destruct x as [[tree p] k]. mDesAll; subst.
-    clear PURE1. des; subst. steps. astop. steps.
-    (** "Invariants" *)
-    remember (toList tree, 1) as acc_init eqn: H_init. destruct acc_init as [xs i].
-    remember (tree) as t eqn: t_init in H_init.
-    assert (xs_init : xs = toList t) by congruence.
-    assert (i_init : i = 1) by congruence.
-    clear H_init.
+    replace (1) with (HeapsortHeader.encode [] + 1) in i_init by reflexivity.
+    remember (@nil dir_t) as ds eqn: ds_init in i_init; subst i.
     assert (t_nonempty : t <> BT_nil).
     { rewrite t_init. destruct tree; [inv PURE2 | discriminate]. }
     assert (xs_nonempty : xs <> []).
-    { rewrite xs_init. now destruct t. }
-    assert (ds_init_aux1 : i = HeapsortHeader.encode [] + 1) by now rewrite i_init.
-    remember (@nil dir_t) as ds eqn: ds_init in ds_init_aux1. clear i_init; subst i.
-    assert (H_permutation : upd xs (HeapsortHeader.encode ds) k ≡ₚ k :: list.tail (toList tree)).
-    { rewrite ds_init. rewrite <- t_init. rewrite <- xs_init. simpl. now rewrite lemma1. }
-    assert (H_topdown : subtree_nat tree (HeapsortHeader.encode ds) = Some t).
-    { rewrite ds_init. rewrite t_init... }
-    assert (H_lookup : forall ds' t', option_subtree ds' t = Some t' -> HeapsortHeader.lookup xs (HeapsortHeader.encode (ds ++ ds')) = option_root t').
-    { rewrite ds_init. rewrite xs_init. rewrite t_init. simpl. intros ds' t' H_subtree. apply lemma2. unfold subtree_nat. rewrite HeapsortHeader.decode_encode... }
-    assert (H_recover : recover_bintree btctx_top t = fromList xs).
-    { rewrite xs_init. rewrite t_init... }
+    { destruct t; [contradiction | now rewrite xs_init]. }
+    assert (upd_xs_0_k_is : upd xs (HeapsortHeader.encode ds) k = k :: list.tail xs).
+    { rewrite ds_init; cbn. rewrite upd_spec. destruct (0 <? strings.length xs) eqn: H_ltb... destruct xs; [contradiction | apply Nat.ltb_nlt in H_ltb; simpl in H_ltb]... }
+    assert (H_perm : upd xs (HeapsortHeader.encode ds) k ≡ₚ k :: list.tail (toList tree)).
+    { rewrite upd_xs_0_k_is. now rewrite xs_init; rewrite t_init. }
+    clear xs_nonempty upd_xs_0_k_is.
+    assert (H_recover : xs = toList (recover_bintree btctx_top t)).
+    { rewrite xs_init; rewrite t_init... }
     remember (@btctx_top Z) as g eqn: g_init in H_recover.
-    assert (H_bottomup : btctx2idx g = ds).
+    assert (H_complete : complete (recover_bintree g t)).
+    { rewrite g_init. rewrite t_init... }
+    assert (H_firstloop : option_subtree ds tree = Some t).
+    { now rewrite t_init; rewrite ds_init. }
+    assert (H_btctx_idx : ds = btctx2idx g).
     { now rewrite g_init; rewrite ds_init. }
-    replace (strings.length (toList tree)) with (btsize tree) by now rewrite toList_length.
+    assert (H_heap_pr : forall t', bteq_shape t t' -> heap_pr Z.ge (par g) t' -> heap_pr Z.ge p (recover_bintree g t')).
+    { rewrite g_init... }
+    assert (H_xs_length : strings.length xs = btsize tree).
+    { rewrite xs_init. rewrite t_init. apply toList_length. }
     (** "Entering the first loop" *)
-    clear t_init xs_init ds_init g_init xs_nonempty.
-    deflag; revert mrp_src mp_tgt WF ctx mr_src mp_src ACC xs ds g t_nonempty H_permutation H_topdown H_recover H_bottomup H_lookup.
-    induction t as [ | x l IH_l r IH_r]; i; [contradiction | rewrite unfold_iter_eq].
-    destruct (proj1 (subtree_nat_Some_node tree (BT_node x l r) (HeapsortHeader.encode ds) t_nonempty) H_topdown) as [[H_x [H_l H_r]] [H_left H_right]].
-    revert H_left H_right.
-    replace (HeapsortHeader.encode ds * 2 + 2) with ((HeapsortHeader.encode ds + 1) * 2) by lia.
+    clear t_init xs_init ds_init g_init.
+    deflag; revert xs g ds t_nonempty H_recover H_perm H_complete H_firstloop H_btctx_idx H_heap_pr H_xs_length.
+    induction t as [ | x l IH_l r IH_r]; i; [now contradiction t_nonempty | rewrite unfold_iter_eq; steps_weak].
     set (obs_if1 := (HeapsortHeader.encode ds + 1) * 2 <=? btsize tree).
     set (obs_if2 := (HeapsortHeader.encode ds + 1) * 2 <? btsize tree).
-    intros H_left H_right.
+    assert (H_option_root_l : HeapsortHeader.lookup xs ((HeapsortHeader.encode ds + 1) * 2 - 1) = option_root l).
+    { replace ((HeapsortHeader.encode ds + 1) * 2 - 1) with (2 * HeapsortHeader.encode ds + 1) by lia.
+      replace ((2 * HeapsortHeader.encode ds + 1)) with (HeapsortHeader.encode (ds ++ [Dir_left])) by apply encode_last.
+      replace (ds ++ [Dir_left]) with (btctx2idx (btctx_left x r g)) by now rewrite H_btctx_idx.
+      rewrite H_recover. exact (btctx_lookup (btctx_left x r g) l).
+    }
+    assert (H_option_root_r : HeapsortHeader.lookup xs ((HeapsortHeader.encode ds + 1) * 2) = option_root r).
+    { replace ((HeapsortHeader.encode ds + 1) * 2) with (2 * HeapsortHeader.encode ds + 2) by lia.
+      replace (2 * HeapsortHeader.encode ds + 2) with (HeapsortHeader.encode (ds ++ [Dir_right])) by apply encode_last.
+      replace (ds ++ [Dir_right]) with (btctx2idx (btctx_right x l g)) by now rewrite H_btctx_idx.
+      rewrite H_recover. exact (btctx_lookup (btctx_right x l g) r).
+    }
+    rewrite H_option_root_l; rewrite H_option_root_r.
+    revert H_option_root_l H_option_root_r.
     replace ((HeapsortHeader.encode ds + 1) * 2) with (2 * (HeapsortHeader.encode ds + 1)) by lia.
     replace (HeapsortHeader.lookup xs (2 * (HeapsortHeader.encode ds + 1) - 1)) with (HeapsortHeader.lookup xs (2 * HeapsortHeader.encode ds + 1)) by now f_equal; lia.
     replace (HeapsortHeader.lookup xs (2 * (HeapsortHeader.encode ds + 1))) with (HeapsortHeader.lookup xs (2 * HeapsortHeader.encode ds + 2)) by now f_equal; lia.
     replace (2 * (HeapsortHeader.encode ds + 1) + 1) with ((2 * HeapsortHeader.encode ds + 2) + 1) by lia.
     replace (2 * (HeapsortHeader.encode ds + 1)) with ((2 * HeapsortHeader.encode ds + 1) + 1) by lia.
-    replace (HeapsortHeader.encode ds * 2 + 1) with (2 * HeapsortHeader.encode ds + 1) in H_l by lia.
-    replace (HeapsortHeader.encode ds * 2 + 2) with (2 * HeapsortHeader.encode ds + 2) in H_r by lia.
-    revert H_l H_r.
     replace (2 * HeapsortHeader.encode ds + 1) with (HeapsortHeader.encode (ds ++ [Dir_left])) by exact (HeapsortHeader.encode_last ds Dir_left).
     replace (2 * HeapsortHeader.encode ds + 2) with (HeapsortHeader.encode (ds ++ [Dir_right])) by exact (HeapsortHeader.encode_last ds Dir_right).
-    intros H_l H_r.
-    assert (H_lookup_l := H_lookup [Dir_left] l Logic.eq_refl).
-    assert (H_lookup_r := H_lookup [Dir_right] r Logic.eq_refl).
-    rewrite H_lookup_l; rewrite H_lookup_r.
-    destruct obs_if1 eqn: H_obs_if1; unfold obs_if1 in H_obs_if1; [apply Nat.leb_le in H_obs_if1 | apply Nat.leb_nle in H_obs_if1]; steps_weak.
+    intros H_option_root_l H_option_root_r.
+    destruct obs_if1 eqn: H_obs_if1; [apply Nat.leb_le in H_obs_if1 | apply Nat.leb_nle in H_obs_if1]; steps_weak.
     { (** "Iterating the first loop" *)
-      destruct (option_root l) as [x_l | ] eqn: H_obs_l; [steps_weak; repeat rewrite lemma8 | destruct l; [contradiction | inv H_obs_l]].
+      destruct (option_root l) as [x_l | ]; [steps_weak | apply nth_error_None in H_option_root_l].
+      2: replace (HeapsortHeader.encode (ds ++ [Dir_left])) with (2 * HeapsortHeader.encode ds + 1) in H_option_root_l by now rewrite encode_last...
       destruct obs_if2 eqn: H_obs_if2; [apply Nat.ltb_lt in H_obs_if2 | apply Nat.ltb_nlt in H_obs_if2]; steps_weak.
-      destruct (option_root r) as [x_r | ] eqn: H_obs_r; [steps_weak; repeat rewrite lemma8 | destruct r; [contradiction | inv H_obs_r]].
-      destruct ((x_l <? x_r)%Z) eqn: H_obs_if3; repeat rewrite lemma8; [apply Z.ltb_lt in H_obs_if3; rewrite H_lookup_r | apply Z.ltb_nlt in H_obs_if3; rewrite H_lookup_l]; steps_weak.
-      - deflag; eapply IH_r with (g := btctx_right x_r l g)...
-        + transitivity (upd xs (HeapsortHeader.encode ds) k)...
-        + simpl.
-          admit "recover_bintree g (BT_node x_r l r) = fromList (upd xs (HeapsortHeader.encode ds) x_r)".
-        + simpl; congruence.
-        + intros ds' t' H_subtree.
-          rewrite <- (H_lookup ([Dir_right] ++ ds') t' H_subtree).
-          rewrite app_assoc.
-          admit "HeapsortHeader.lookup (upd xs (HeapsortHeader.encode ds) x_r) (HeapsortHeader.encode ((ds ++ [Dir_right]) ++ ds')) = HeapsortHeader.lookup xs (HeapsortHeader.encode ((ds ++ [Dir_right]) ++ ds'))".
-      - deflag; eapply IH_l with (g := btctx_left x_l r g)...
-        + transitivity (upd xs (HeapsortHeader.encode ds) k)...
-        + simpl.
-          admit "recover_bintree g (BT_node x_l l r) = fromList (upd xs (HeapsortHeader.encode ds) x_l)".
-        + simpl; congruence.
-        + intros ds' t' H_subtree.
-          rewrite <- (H_lookup ([Dir_left] ++ ds') t' H_subtree).
-          rewrite app_assoc.
-          admit "HeapsortHeader.lookup (upd xs (HeapsortHeader.encode ds) x_l) (HeapsortHeader.encode ((ds ++ [Dir_left]) ++ ds')) = HeapsortHeader.lookup xs (HeapsortHeader.encode ((ds ++ [Dir_left]) ++ ds'))".
-      - deflag; eapply IH_l with (g := btctx_left x_l r g)...
-        + transitivity (upd xs (HeapsortHeader.encode ds) k)...
-        + simpl.
-          admit "recover_bintree g (BT_node x_l l r) = fromList (upd xs (HeapsortHeader.encode ds) x_l)".
-        + simpl; congruence.
-        + intros ds' t' H_subtree.
-          rewrite <- (H_lookup ([Dir_left] ++ ds') t' H_subtree).
-          rewrite app_assoc.
-          admit "HeapsortHeader.lookup (upd xs (HeapsortHeader.encode ds) x_l) (HeapsortHeader.encode ((ds ++ [Dir_left]) ++ ds')) = HeapsortHeader.lookup xs (HeapsortHeader.encode ((ds ++ [Dir_left]) ++ ds'))".
+      destruct (option_root r) as [x_r | ]; [steps_weak | apply nth_error_None in H_option_root_r].
+      2: replace (HeapsortHeader.encode (ds ++ [Dir_right])) with (2 * HeapsortHeader.encode ds + 2) in H_option_root_r by now rewrite encode_last...
+      destruct ((x_l <? x_r)%Z) eqn: H_obs_if3; [apply Z.ltb_lt in H_obs_if3 | apply Z.ltb_nlt in H_obs_if3]; steps_weak.
+      all: repeat rewrite plus1minus1.
+      - rewrite H_option_root_r; steps_weak.
+        deflag; eapply IH_r with (g := btctx_right x_r l g).
+        all: admit "".
+      - rewrite H_option_root_l; steps_weak.
+        deflag; eapply IH_l with (g := btctx_left x_l r g).
+        all: admit "".
+      - deflag; eapply IH_l with (g := btctx_left x_l r g).
+        all: admit "".
     }
-    destruct obs_if2 eqn: H_obs_if2; unfold obs_if2 in H_obs_if2; [apply Nat.ltb_lt in H_obs_if2 | apply Nat.ltb_nlt in H_obs_if2]; steps_weak...
     (** "Leaving the first loop" *)
-    subst l r. clear IH_l IH_r.
-    remember (BT_node x BT_nil BT_nil) as t eqn: t_init.
+    clear IH_l IH_r.
+    assert (option_root_l_None : option_root l = None).
+    { rewrite <- H_option_root_l. apply nth_error_None. rewrite encode_last... }
+    assert (option_root_r_None : option_root r = None).
+    { rewrite <- H_option_root_r. apply nth_error_None. rewrite encode_last... }
+    assert (l_is_nil : l = BT_nil) by now destruct l. assert (r_is_nil : r = BT_nil) by now destruct r. subst l r.
+    remember (BT_node x BT_nil BT_nil) as t eqn: t_is_leaf.
+    clear option_root_l_None option_root_r_None H_firstloop H_option_root_l H_option_root_r.
     (** "Entering the second loop" *)
-    clear x H_x H_l H_r t_init obs_if1 obs_if2 H_lookup_l H_lookup_r t_nonempty H_obs_if1 H_obs_if2 H_lookup.
-    deflag; revert mrp_src mp_tgt WF ctx mr_src mp_src ACC xs ds t H_permutation H_topdown H_recover H_bottomup.
+    clear x obs_if1 obs_if2 H_obs_if1 t_is_leaf.
+    deflag; revert xs ds t t_nonempty H_recover H_perm H_complete H_btctx_idx H_heap_pr H_xs_length.
     induction g as [ | x r g IH | x l g IH]; i; rewrite unfold_iter_eq.
-    { (** "Leaving the second loop" *)
-      simpl in H_bottomup; subst ds. simpl in *.
-      steps_weak. force_l. eexists. steps_weak. hret tt; ss.
-      iModIntro. iSplit; ss. iPureIntro.
-      split; try reflexivity.
-      exists (upd_root k t); splits.
-      - rewrite H_recover. f_equal...
-      - rewrite H_recover.
-        destruct (complete_fromList xs) as [rk H_complete'].
-        eexists. inv H_complete'; simpl.
-        + econs 1...
-        + econs 2...
-        + econs 3...
-      - transitivity (upd xs 0 k).
-        + symmetry. exact H_permutation.
-        + rewrite H_recover. rewrite claim_upd_xs_0_k...
-      - admit "(heap_pr Z.ge p (upd_root k t))".
-    }
-    (** "Iterating the second loop" *)
-    - simpl in H_bottomup; subst ds.
-      set (i := HeapsortHeader.encode (btctx2idx g ++ [Dir_left]) + 1).
-      destruct (Nat.eqb i 1) eqn: H_obs_if1; [apply Nat.eqb_eq in H_obs_if1 | apply Nat.eqb_neq in H_obs_if1].
-      { pose (claim_encode_last (btctx2idx g) Dir_left). unfold i in H_obs_if1... }
-      assert (H_par_i : i `div` 2 = HeapsortHeader.encode (btctx2idx g) + 1) by admit "".
-      assert (H_parent : HeapsortHeader.lookup xs (HeapsortHeader.encode (btctx2idx g)) = Some x) by admit "".
-      rewrite H_par_i; rewrite lemma8; rewrite H_parent; steps_weak.
-      destruct ((k <? x)%Z) eqn: H_obs_if2; steps_weak.
+    all: pose proof (btctx2idx_encode_eq _ _ H_btctx_idx) as H_obs_if1.
+    - rewrite H_obs_if1; steps_weak.
       { (** "Leaving the second loop" *)
         force_l. eexists. steps_weak. hret tt; ss.
-        iModIntro. iSplit; ss. iPureIntro.
-        split; try reflexivity.
-        exists (fromList (upd xs (HeapsortHeader.encode (btctx2idx g ++ [Dir_left])) k)); splits.
-        - rewrite toList_fromList. unfold i. now rewrite lemma8.
-        - apply complete_fromList.
-        - now rewrite toList_fromList.
-        - admit "heap_pr Z.ge p (fromList (upd xs (HeapsortHeader.encode (btctx2idx g ++ [Dir_left])) k))".
+        iModIntro; iSplits; ss. all: iPureIntro.
+        all: admit "".
       }
-      deflag; eapply IH with (t := BT_node x r t)...
-      + transitivity (upd xs (HeapsortHeader.encode (btctx2idx g ++ [Dir_left])) k)...
-        replace ((HeapsortHeader.encode (btctx2idx g ++ [Dir_left]))) with (i - 1) by lia.
-        apply (lemma9 xs (HeapsortHeader.encode (btctx2idx g)) (i - 1) x k)...
-      + admit "subtree_nat tree (HeapsortHeader.encode (btctx2idx g)) = Some (BT_node x r t)".
-      + unfold i. rewrite lemma8.
-        admit "recover_bintree g (BT_node x r t) = fromList (upd xs (HeapsortHeader.encode (btctx2idx g ++ [Dir_left])) x)".
-    - simpl in H_bottomup; subst ds.
-      set (i := HeapsortHeader.encode (btctx2idx g ++ [Dir_right]) + 1).
-      destruct (Nat.eqb i 1) eqn: H_obs_if1; [apply Nat.eqb_eq in H_obs_if1 | apply Nat.eqb_neq in H_obs_if1].
-      { pose (claim_encode_last (btctx2idx g) Dir_right). unfold i in H_obs_if1... }
-      assert (H_par_i : i `div` 2 = HeapsortHeader.encode (btctx2idx g) + 1) by admit "".
-      assert (H_parent : HeapsortHeader.lookup xs (HeapsortHeader.encode (btctx2idx g)) = Some x) by admit "".
-      rewrite H_par_i; rewrite lemma8; rewrite H_parent; steps_weak.
-      destruct ((k <? x)%Z) eqn: H_obs_if2; steps_weak.
+    - rewrite H_obs_if1; steps_weak.
+      pose proof (btctx_lookup g (BT_node x t r)) as H_par. simpl in H_recover. rewrite <- H_recover in H_par. unfold option_root in H_par.
+      assert (H_par_i : (HeapsortHeader.encode ds + 1) `div` 2 = HeapsortHeader.encode (btctx2idx g) + 1).
+      { rewrite H_btctx_idx. simpl. rewrite encode_last.
+        pose proof (Nat.div_add 0 (HeapsortHeader.encode (btctx2idx g) + 1) 2).
+        replace ((2 * HeapsortHeader.encode (btctx2idx g) + 1 + 1) `div` 2) with ((0 + (HeapsortHeader.encode (btctx2idx g) + 1) * 2) `div` 2)...
+        f_equal; lia.
+      }
+      rewrite H_par_i. repeat rewrite plus1minus1. rewrite H_par. steps_weak.
+      destruct ((k <? x)%Z) eqn: H_obs_if2; [apply Z.ltb_lt in H_obs_if2 | apply Z.ltb_nlt in H_obs_if2]; steps_weak.
       { (** "Leaving the second loop" *)
         force_l. eexists. steps_weak. hret tt; ss.
-        iModIntro. iSplit; ss. iPureIntro.
-        split; try reflexivity.
-        exists (fromList (upd xs (HeapsortHeader.encode (btctx2idx g ++ [Dir_right])) k)); splits.
-        - rewrite toList_fromList. unfold i. now rewrite lemma8.
-        - apply complete_fromList.
-        - now rewrite toList_fromList.
-        - admit "heap_pr Z.ge p (fromList (upd xs (HeapsortHeader.encode (btctx2idx g ++ [Dir_right])) k))".
+        iModIntro; iSplits; ss. all: iPureIntro.
+        all: admit "".
       }
-      deflag; eapply IH with (t := BT_node x l t)...
-      + transitivity (upd xs (HeapsortHeader.encode (btctx2idx g ++ [Dir_right])) k)...
-        replace ((HeapsortHeader.encode (btctx2idx g ++ [Dir_right]))) with (i - 1) by lia.
-        apply (lemma9 xs (HeapsortHeader.encode (btctx2idx g)) (i - 1) x k)...
-      + admit "subtree_nat tree (HeapsortHeader.encode (btctx2idx g)) = Some (BT_node x r t)".
-      + unfold i. rewrite lemma8.
-        admit "recover_bintree g (BT_node x l t) = fromList (upd xs (HeapsortHeader.encode (btctx2idx g ++ [Dir_right])) x)".
+      deflag; eapply IH with (t := BT_node x (upd_root x t) r).
+      all: admit "".
+    - rewrite H_obs_if1; steps_weak.
+      pose proof (btctx_lookup g (BT_node x l t)) as H_par. simpl in H_recover. rewrite <- H_recover in H_par. unfold option_root in H_par.
+      assert (H_par_i : (HeapsortHeader.encode ds + 1) `div` 2 = HeapsortHeader.encode (btctx2idx g) + 1).
+      { rewrite H_btctx_idx. simpl. rewrite encode_last.
+        pose proof (Nat.div_add 1 (HeapsortHeader.encode (btctx2idx g) + 1) 2).
+        replace ((2 * HeapsortHeader.encode (btctx2idx g) + 2 + 1) `div` 2) with ((1 + (HeapsortHeader.encode (btctx2idx g) + 1) * 2) `div` 2)...
+        f_equal; lia.
+      }
+      rewrite H_par_i. repeat rewrite plus1minus1. rewrite H_par. steps_weak.
+      destruct ((k <? x)%Z) eqn: H_obs_if2; [apply Z.ltb_lt in H_obs_if2 | apply Z.ltb_nlt in H_obs_if2]; steps_weak.
+      { (** "Leaving the second loop" *)
+        force_l. eexists. steps_weak. hret tt; ss.
+        iModIntro; iSplits; ss. all: iPureIntro.
+        all: admit "".
+      }
+      deflag; eapply IH with (t := BT_node x l (upd_root x t)).
+      all: admit "".
     (** "Leaving the function" *)
     Unshelve.
   Qed.
-*)
 
   Lemma sim_heapsort (sk : alist string Sk.gdef) :
     sim_fnsem wf top2

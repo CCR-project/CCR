@@ -13,12 +13,13 @@ Import ListNotations.
 Local Open Scope program_scope.
 
 Section Utilities.
-
+  (*
   Definition option2list {A : Type} : option A -> list A :=
     @option_rect A (fun _ => list A) (fun x => [x]) [].
 
   Definition pair2list {A : Type} : A * A -> list A :=
     fun '(x1, x2) => [x1; x2].
+   *)
 
   Definition isSome {A : Type} : option A -> Prop := fun m => m <> None.
 
@@ -196,29 +197,68 @@ Section Utilities.
     reflexivity.
   Qed.
 
+  Definition null {A} (xs : list A) : bool :=
+    match xs with
+    | [] => true
+    | _  => false
+    end.
+
+  Lemma null_true {A} (xs : list A) : null xs = true <-> xs = [].
+  Proof.
+    split.
+    - destruct xs; [ reflexivity | discriminate ].
+    - intros. subst xs. reflexivity.
+  Qed.
+
+  Lemma null_false {A} (xs : list A) : null xs = false <-> xs <> [].
+  Proof.
+    split.
+    - destruct xs; discriminate.
+    - destruct xs; [ contradiction | reflexivity ].
+  Qed.
+
 End Utilities.
+
+Ltac pose_exp2 n :=
+  assert (2 ^ n > 0) by (eapply exp_pos; lia).
+
+Ltac dec_nat :=
+  match goal with
+  | [|- true  = _ ] => symmetry
+  | [|- false = _ ] => symmetry
+  end;
+  match goal with
+  | [|- (_ <=? _) = true  ] => eapply leb_correct
+  | [|- (_ <=? _) = false ] => eapply leb_correct_conv
+  | [|- (_ <?  _) = true  ] => eapply ltb_lt
+  | [|- (_ <?  _) = false ] => eapply ltb_ge
+  end;
+  simpl; lia.
+
+Ltac dec_list :=
+  match goal with
+  | [|- true  = _ ] => symmetry
+  | [|- false = _ ] => symmetry
+  end;
+  match goal with
+  | [|- null _ = true  ] => eapply null_true
+  | [|- null _ = false ] =>
+    eapply null_false;
+    let H := fresh "H" in
+    intro H;
+    repeat match goal with
+           | [ H : (_ ++ _) = [] |- _ ] => eapply app_eq_nil in H; destruct H
+           end;
+    try discriminate;
+    try contradiction
+  end.
+
+(* Definition lookup (xs : list A) i := nth_error xs i. *)
+Notation lookup xs i := (nth_error xs i).
 
 Section ListOperations.
 
-  Ltac dec_nat :=
-    match goal with
-    | [|- true  = _ ] => symmetry
-    | [|- false = _ ] => symmetry
-    end;
-    match goal with
-    | [|- (_ <=? _) = true  ] => eapply leb_correct
-    | [|- (_ <=? _) = false ] => eapply leb_correct_conv
-    | [|- (_ <?  _) = true  ] => eapply ltb_lt
-    | [|- (_ <?  _) = false ] => eapply ltb_ge
-    end;
-    simpl; lia.
-
-  Ltac pose_exp2 n :=
-    assert (2 ^ n > 0) by (eapply exp_pos; lia).
-
   Context {A : Type}.
-
-  Definition lookup (xs : list A) i := nth_error xs i.
 
   Definition swap_aux (xs : list A) i1 i2 x i :=
     if Nat.eq_dec i i1 then nth i2 xs x else
@@ -227,43 +267,6 @@ Section ListOperations.
   Definition add_indices (xs : list A) := (combine xs (seq 0 (length xs))).
   Definition swap (xs : list A) i j := map (uncurry (swap_aux xs i j)) (add_indices xs).
   Definition upd xs i0 x0 := map (fun '(x, i) => if Nat.eq_dec i i0 then x0 else x) (add_indices xs).
-
-  Definition null (xs : list A) : bool :=
-    match xs with
-    | [] => true
-    | _  => false
-    end.
-
-  Lemma null_true xs : null xs = true <-> xs = [].
-  Proof.
-    split.
-    - destruct xs; [ reflexivity | discriminate ].
-    - intros. subst xs. reflexivity.
-  Qed.
-
-  Lemma null_false xs : null xs = false <-> xs <> [].
-  Proof.
-    split.
-    - destruct xs; discriminate.
-    - destruct xs; [ contradiction | reflexivity ].
-  Qed.
-
-  Ltac dec_list :=
-    match goal with
-    | [|- true  = _ ] => symmetry
-    | [|- false = _ ] => symmetry
-    end;
-    match goal with
-    | [|- null _ = true  ] => eapply null_true
-    | [|- null _ = false ] =>
-      eapply null_false;
-      let H := fresh "H" in
-      intro H;
-      repeat match goal with
-             | [ H : (_ ++ _) = [] |- _ ] => eapply app_eq_nil in H; destruct H
-             end;
-      try discriminate
-    end.
 
   Program Fixpoint toLList (n : nat) (xs : list A) {measure (length xs)} : list (list A) :=
     match xs with
@@ -438,7 +441,7 @@ Section ListOperations.
       + rewrite unfold_toLList. simpl.
         pose_exp2 n.
         assert (xs <> []) by (intro; subst; simpl in *; lia).
-        replace (null (xs ++ concat xss)) with false by (dec_list; contradiction).
+        replace (null (xs ++ concat xss)) with false by dec_list.
         rewrite firstn_exact, skipn_exact by auto.
         rewrite IHxss by assumption.
         reflexivity.
@@ -891,6 +894,22 @@ Section ListOperations.
           reflexivity.
   Qed.
 
+  Lemma zipLList_permutation (xss yss : list (list A)) : Permutation (concat (zipLList xss yss)) (concat xss ++ concat yss).
+  Proof.
+    revert yss.
+    induction xss as [| xs xss ].
+    - reflexivity.
+    - intros.
+      destruct yss as [| ys yss ].
+      + simpl. rewrite app_nil_r. reflexivity.
+      + simpl. rewrite IHxss.
+        rewrite 2 app_assoc.
+        eapply Permutation_app_tail.
+        rewrite <- 2 app_assoc.
+        rewrite (Permutation_app_comm ys (concat xss)).
+        reflexivity.
+  Qed.
+
 End ListOperations.
 
 Section BinaryTree.
@@ -1152,9 +1171,9 @@ Section BinaryTreeIndexing.
     - simpl in *. destruct n;inversion H.
       rewrite encode_unfold. destruct a.
       + simpl. rewrite H1. apply IHl in H1. rewrite sub_0_r.
-        assert (2 ^ n > 0) by now apply exp_pos;nia. nia.
+        pose_exp2 n. lia.
       + simpl. rewrite H1. apply IHl in H1.
-        assert (2 ^ n > 0) by now apply exp_pos;nia. nia.
+        pose_exp2 n. lia.
   Qed.
   
   Lemma decode_ubound j n : j < 2 ^ n - 1 -> length (decode j) < n.
@@ -1327,6 +1346,7 @@ Section BinaryTreeAccessories.
     | BT_node x l r => Some (l, r)
     end.
 
+  (*
   Definition extract_elements := flat_map (option2list ∘ option_root).
 
   Definition extract_children := flat_map (@concat (bintree A) ∘ option2list ∘ option_map pair2list ∘ option_children_pair).
@@ -1348,6 +1368,7 @@ Section BinaryTreeAccessories.
     | BT_node x l r :: ts_tail => [l; r] ++ extract_children ts_tail
     end.
   Proof. destruct ts as [ | [ | x l r] ts_tail]; reflexivity. Qed.
+   *)
 
   Program Fixpoint fromListAux (xss : list (list A)) {measure (length xss)} : bintree A :=
     match xss with
@@ -1456,8 +1477,12 @@ Section BinaryTreeAccessories.
     reflexivity.
   Qed.
 
-  Lemma toList_permutation x l r : Permutation (toList (BT_node x l r)) (x :: (toList l) ++ (toList r)).
-  Admitted.
+  Lemma toList_permutation x l r : Permutation (toList (BT_node x l r)) ([x] ++ (toList l) ++ (toList r)).
+  Proof.
+    unfold toList. simpl.
+    rewrite zipLList_permutation.
+    reflexivity.
+  Qed.
 
   Definition upd_root (x : A) t :=
     match t with
@@ -1496,34 +1521,30 @@ Section BinaryTreeAccessories.
     - destruct xss; try discriminate.
       vm_compute. econstructor.
     - destruct xss as [| xs xss ]; try discriminate.
-      unfold fromList. rewrite unfold_toLList.
-      simpl in *.
-      destruct ((xs ++ concat xss) ++ [y]) as [| x' xs' ] eqn: E.
-      { apply app_eq_nil in E. destruct E. discriminate. }
-      destruct H as [[H1 H2] | [H1 H2]].
-      + destruct xs as [| x []]; try discriminate.
-        rewrite <- app_assoc in E.
-        simpl in E. inversion E. subst x' xs'. clear E.
-        rewrite unfold_fromListAux.
-        rewrite (unfold_fromListAux ([x] :: xss)).
-        econstructor.
-        * destruct (splitLListLeft_toLList_concat 0 xss y H2).
-          -- rewrite H.
-             eapply (IH n).
-             ++ lia.
-             ++ rewrite splitLListLeft_length. lia.
-             ++ eapply complete_splitLListLeft. assumption.
-          -- rewrite H. eapply btpartial_refl.
-        * destruct (splitLListRight_toLList_concat 0 xss y H2).
-          -- rewrite H.
-             eapply IH.
-             2: reflexivity.
-             ++ pose proof (splitLListRight_length 0 xss). lia.
-             ++ eapply complete_splitLListRight. assumption.
-          -- rewrite H.
-             eapply btpartial_refl.
-      + lia.
- Qed.
+      rewrite unfold_toLList.
+      replace (null _) with false by dec_list.
+      simpl in H, Heqn.
+      destruct H as [[H1 H2] | [H1 H2]]; try lia.
+      destruct xs as [| x []]; try discriminate. simpl.
+      rewrite unfold_fromListAux.
+      rewrite (unfold_fromListAux ([x] :: xss)).
+      econstructor.
+      + destruct (splitLListLeft_toLList_concat 0 xss y H2).
+        * rewrite H.
+          eapply (IH n).
+          -- lia.
+          -- rewrite splitLListLeft_length. lia.
+          -- eapply complete_splitLListLeft. assumption.
+        * rewrite H. eapply btpartial_refl.
+      + destruct (splitLListRight_toLList_concat 0 xss y H2).
+        * rewrite H.
+          eapply IH.
+          2: reflexivity.
+          -- pose proof (splitLListRight_length 0 xss). lia.
+          -- eapply complete_splitLListRight. assumption.
+        * rewrite H.
+          eapply btpartial_refl.
+  Qed.
 
   Lemma btpartial_fromList (xs : list A) y :
     btpartial (fromList (xs ++ [y])) (fromList xs).
@@ -1681,7 +1702,7 @@ Section CompleteBinaryTree.
   Proof.
     intros. induction H;auto.
     simpl. rewrite IHperfect'1. rewrite IHperfect'2.
-    assert (2 ^ n > 0) by now apply exp_pos;nia. nia.
+    pose_exp2 n. lia.
   Qed.
 
   Lemma comp_size t n :
@@ -1692,21 +1713,19 @@ Section CompleteBinaryTree.
     - inversion H;subst. simpl. inversion H_l;subst. inversion H_r;subst. simpl. auto.
     - inversion H;subst.
       + apply perf_size in H_l. simpl. rewrite H_l.
-        rewrite <- add_succ_l. assert (2 ^ n > 0) by now apply exp_pos;nia.
+        rewrite <- add_succ_l. pose_exp2 n.
         replace (S (2 ^ n -1)) with (2 ^ n) by nia.
         assert (btsize r <= 2 ^ S n - 1).
         * clear IHn H0 H_l H l x. induction H_r using complete_ind_ranked;simpl.
-          ** assert (2 ^ n >0) by now apply exp_pos;nia. nia.
+          ** pose_exp2 n. lia.
           ** destruct H;subst.
-             *** assert (2 ^ n_l > 0) by now apply exp_pos;nia.
-                 nia.
-             *** simpl in *. assert (2 ^ n_r > 0) by now apply exp_pos;nia.
-                 nia.
+             *** pose_exp2 n_l. lia.
+             *** simpl in *. pose_exp2 n_r. lia.
         * simpl in *. nia.
       + apply perf_size in H_r. simpl. rewrite H_r.
         rewrite <- add_succ_r.
         apply IHn in H_l.
-        assert (2 ^ n > 0) by now apply exp_pos;nia.
+        pose_exp2 n.
         replace (S (2 ^ n - 1)) with (2 ^ n) by nia.
         simpl in *. nia.
   Qed.
@@ -1761,12 +1780,10 @@ Section CompleteBinaryTree.
       apply decode_lbound in H1.
       assert (btsize r -1 < 2 ^ S n -1).
       + apply Lt.le_lt_n_Sm in H2.  rewrite <- sub_succ_l in H2.
-        2 :{simpl. pose proof (exp_pos 2). assert (B : 2>0) by nia.
-            apply H3 with (n:=n) in B. nia. }
+        2: { simpl. pose_exp2 n. lia. }
         replace (S (2 ^ S n - 1) - 1) with (2 ^ S n - 1) in H2 by nia. auto.
       + apply decode_ubound in H3. assert (length (decode (btsize r - 1)) = n) by nia.
-        rewrite H4. simpl. assert (B : 2 > 0) by nia. pose proof (exp_pos 2 n B).
-        nia.
+        rewrite H4. simpl. pose_exp2 n. lia.
   Qed.
     
   Lemma last_btidx_complete_perfect x l r n :
@@ -1782,7 +1799,7 @@ Section CompleteBinaryTree.
     apply sub_le_mono_r with (p:=1) in H.
     apply sub_le_mono_r with (p:=1) in H1.
     apply decode_lbound in H.
-    assert (2 ^ n > 0) by (apply exp_pos;auto).
+    pose_exp2 n.
     assert (2 ^ S n >= 2) by (simpl;nia).
     assert (btsize l - 1 < 2 ^ S n - 1) by nia.
     apply decode_ubound in H4. assert (length (decode (btsize l -1)) = n) by nia.
@@ -2506,6 +2523,12 @@ Section BinaryTreeZipper.
     lookup (toList (recover_bintree g t)) (encode (btctx2idx g)) = option_root t.
   Admitted.
 
+  Theorem recover_upd_root_repr_upd (t : bintree A) k g :
+    t <> BT_nil ->
+    toList (recover_bintree g (upd_root k t)) =
+    upd (toList (recover_bintree g t)) (encode (btctx2idx g)) k.
+  Admitted.
+
 End BinaryTreeZipper.
 
 Arguments btctx : clear implicits.
@@ -2535,7 +2558,7 @@ Section ListAccessories.
     | Some x => x = start + i
     end.
   Proof with discriminate || eauto.
-    unfold lookup; intros i.
+    intros i.
     destruct (nth_error (seq start len) i) as [x | ] eqn: H_obs.
     - assert (i_lt_len : i < length (seq start len)).
       { apply nth_error_Some. rewrite H_obs... }
@@ -2563,7 +2586,7 @@ Section ListAccessories.
     | Some x => i < n /\ lookup xs i = Some x
     end.
   Proof with discriminate || (try lia) || eauto.
-    intros i; unfold lookup.
+    intros i.
     destruct (nth_error (firstn n xs) i) as [x | ] eqn: H_obs.
     - assert (i_lt_len : i < length (firstn n xs)).
       { apply nth_error_Some. rewrite H_obs... }
@@ -2589,7 +2612,6 @@ Section ListAccessories.
     | Some (x, y) => lookup xs i = Some x /\ lookup ys i = Some y
     end.
   Proof with discriminate || eauto.
-    unfold lookup.
     set (len := min (length xs) (length ys)).
     replace (combine xs ys) with (combine (firstn len xs) (firstn len ys)).
     - assert (H_len : length (firstn len xs) = length (firstn len ys)).
@@ -2604,7 +2626,6 @@ Section ListAccessories.
         { pose (combine_length (firstn len xs) (firstn len ys)); lia. }
         assert (claim1 := listExt_firstn xs len i).
         assert (claim2 := listExt_firstn ys len i).
-        unfold lookup in claim1, claim2.
         rewrite (nth_error_nth' (firstn len xs) x H1_i) in claim1.
         rewrite (nth_error_nth' (firstn len ys) y H2_i) in claim2.
         rewrite (nth_error_nth' (combine (firstn len xs) (firstn len ys)) (x, y) H_i) in H_obs.
@@ -2626,13 +2647,11 @@ Section ListAccessories.
     | Some (x, n) => i = n /\ lookup xs i = Some x
     end.
   Proof with discriminate || eauto.
-    intros i; unfold lookup, add_indices.
+    intros i; unfold add_indices.
     assert (claim1 := listExt_combine xs (seq 0 (length xs)) i).
-    unfold lookup in claim1; cbn in claim1.
     destruct (nth_error (combine xs (seq 0 (length xs))) i) as [[x n] | ] eqn: H_obs.
     - destruct claim1 as [H_obs_xs H_obs_seq]; split...
       assert (claim2 := listExt_seq 0 (length xs) i).
-      unfold lookup in claim2; cbn in claim2.
       rewrite H_obs_seq in claim2...
     - rewrite seq_length in claim1.
       rewrite nth_error_None; lia.
@@ -2651,15 +2670,13 @@ Section ListAccessories.
       lookup xs i
     end.
   Proof with discriminate || eauto.
-    intros H_i1 H_i2; unfold lookup.
+    intros H_i1 H_i2.
     assert (H_lookup_i1 := proj2 (nth_error_Some xs i1) H_i1).
     assert (H_lookup_i2 := proj2 (nth_error_Some xs i2) H_i2).
     intros i; cbn; unfold swap.
     assert (claim1 := listExt_map (uncurry (swap_aux xs i1 i2)) (add_indices xs) i).
-    unfold lookup in claim1; cbn in claim1.
     rewrite claim1; unfold option_map.
     assert (claim2 := listExt_add_indices xs i).
-    unfold lookup in claim2; cbn in claim2.
     destruct (nth_error (add_indices xs) i) as [[x n] | ] eqn: H_obs_add_indices.
     - simpl; unfold swap_aux, lookup.
       destruct claim2 as [H_EQ H_obs_xs]; subst n.
@@ -2701,14 +2718,12 @@ Section ListAccessories.
     | Some val => Some val = if Nat.eq_dec i i1 then Some x1 else lookup xs i
     end.
   Proof with discriminate || eauto.
-    intros H_i1; unfold lookup.
+    intros H_i1.
     assert (H_lookup_i1 := proj2 (nth_error_Some xs i1) H_i1).
     intros i; cbn; unfold upd.
     assert (claim1 := listExt_map (fun '(x, i0) => if eq_dec i0 i1 then x1 else x) (add_indices xs) i).
-    unfold lookup in claim1; cbn in claim1.
     rewrite claim1; unfold option_map.
     assert (claim2 := listExt_add_indices xs i).
-    unfold lookup in claim2; cbn in claim2.
     destruct (nth_error (add_indices xs) i) as [[x n] | ] eqn: H_obs_add_indices.
     - destruct claim2 as [H_eq1 H_eq2]; subst n.
       destruct (Nat.eq_dec i i1) as [H_yes1 | H_no1]...
@@ -2773,6 +2788,7 @@ Section ListAccessories.
 
 End ListAccessories.
 
+(*
 Module NEO.
 
   Section BinaryTreeAccessories.
@@ -2812,3 +2828,4 @@ Module NEO.
   End BinaryTreeAccessories.
 
 End NEO.
+*)

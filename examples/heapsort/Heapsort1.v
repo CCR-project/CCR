@@ -25,14 +25,14 @@ Section HEAPSORT.
           child_i <- (
             if 2*par_i <? nmemb
             then
-              child_val0 <- (lookup xs (par_i*2 - 1))?;;
-              child_val1 <- (lookup xs (par_i*2))?;;
+              child_val0 <- (nth_error xs (par_i*2 - 1))?;;
+              child_val1 <- (nth_error xs (par_i*2))?;;
               if (child_val0 <? child_val1)%Z
               then Ret (par_i*2 + 1)
               else Ret (par_i*2)
             else Ret (par_i*2));;
-          child_val <- (lookup xs (child_i - 1))?;;
-          par_val <- (lookup xs (par_i - 1))?;;
+          child_val <- (nth_error xs (child_i - 1))?;;
+          par_val <- (nth_error xs (par_i - 1))?;;
           if Z.leb child_val par_val
           then Ret (inr xs)              
           else Ret (inl (swap xs (child_i - 1) (par_i - 1), child_i))
@@ -51,14 +51,14 @@ Section HEAPSORT.
       then
         if par_i*2 <? nmemb
         then
-          child_l <- (lookup xs (par_i*2 - 1))?;;
-          child_r <- (lookup xs (par_i*2))?;;
+          child_l <- (nth_error xs (par_i*2 - 1))?;;
+          child_r <- (nth_error xs (par_i*2))?;;
           let child_i := if (child_l <? child_r)%Z then par_i*2 + 1 else par_i*2 in
-          child <- (lookup xs (child_i - 1))?;;
+          child <- (nth_error xs (child_i - 1))?;;
           Ret (inl (upd xs (par_i - 1) child, child_i))
         else
           let child_i := par_i*2 in
-          child <- (lookup xs (child_i - 1))?;;
+          child <- (nth_error xs (child_i - 1))?;;
           Ret (inl (upd xs (par_i - 1) child, child_i))
       else Ret (inr (xs, par_i))
     ) (xs0, 1);;
@@ -68,7 +68,7 @@ Section HEAPSORT.
       if (child_i =? 1)%nat
       then Ret (inr (upd xs (child_i - 1) k, par_i))
       else
-        par <- (lookup xs (par_i - 1))?;;
+        par <- (nth_error xs (par_i - 1))?;;
         if (k <? par)%Z
         then Ret (inr (upd xs (child_i - 1) k, par_i))
         else Ret (inl (upd xs (child_i - 1) par, par_i))
