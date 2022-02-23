@@ -1521,34 +1521,30 @@ Section BinaryTreeAccessories.
     - destruct xss; try discriminate.
       vm_compute. econstructor.
     - destruct xss as [| xs xss ]; try discriminate.
-      unfold fromList. rewrite unfold_toLList.
-      simpl in *.
-      destruct ((xs ++ concat xss) ++ [y]) as [| x' xs' ] eqn: E.
-      { apply app_eq_nil in E. destruct E. discriminate. }
-      destruct H as [[H1 H2] | [H1 H2]].
-      + destruct xs as [| x []]; try discriminate.
-        rewrite <- app_assoc in E.
-        simpl in E. inversion E. subst x' xs'. clear E.
-        rewrite unfold_fromListAux.
-        rewrite (unfold_fromListAux ([x] :: xss)).
-        econstructor.
-        * destruct (splitLListLeft_toLList_concat 0 xss y H2).
-          -- rewrite H.
-             eapply (IH n).
-             ++ lia.
-             ++ rewrite splitLListLeft_length. lia.
-             ++ eapply complete_splitLListLeft. assumption.
-          -- rewrite H. eapply btpartial_refl.
-        * destruct (splitLListRight_toLList_concat 0 xss y H2).
-          -- rewrite H.
-             eapply IH.
-             2: reflexivity.
-             ++ pose proof (splitLListRight_length 0 xss). lia.
-             ++ eapply complete_splitLListRight. assumption.
-          -- rewrite H.
-             eapply btpartial_refl.
-      + lia.
- Qed.
+      rewrite unfold_toLList.
+      replace (null _) with false by dec_list.
+      simpl in H, Heqn.
+      destruct H as [[H1 H2] | [H1 H2]]; try lia.
+      destruct xs as [| x []]; try discriminate. simpl.
+      rewrite unfold_fromListAux.
+      rewrite (unfold_fromListAux ([x] :: xss)).
+      econstructor.
+      + destruct (splitLListLeft_toLList_concat 0 xss y H2).
+        * rewrite H.
+          eapply (IH n).
+          -- lia.
+          -- rewrite splitLListLeft_length. lia.
+          -- eapply complete_splitLListLeft. assumption.
+        * rewrite H. eapply btpartial_refl.
+      + destruct (splitLListRight_toLList_concat 0 xss y H2).
+        * rewrite H.
+          eapply IH.
+          2: reflexivity.
+          -- pose proof (splitLListRight_length 0 xss). lia.
+          -- eapply complete_splitLListRight. assumption.
+        * rewrite H.
+          eapply btpartial_refl.
+  Qed.
 
   Lemma btpartial_fromList (xs : list A) y :
     btpartial (fromList (xs ++ [y])) (fromList xs).
