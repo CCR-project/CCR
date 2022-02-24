@@ -1713,9 +1713,8 @@ Section BinaryTreeZipper.
     occurs t' (ds ++ ds') root.
   Proof. intros ds1 t1 X1 ds2 t2 X2; revert ds2 t2 X2. induction X1; simpl; eauto. Qed.
 
-  Lemma occurs_iff ds t root :
-    occurs t ds root <->
-    option_subtree ds root = Some t.
+  Lemma occurs_iff ds t root
+    : occurs t ds root <-> option_subtree ds root = Some t.
   Proof with discriminate || eauto.
     split. intros X; induction X...
     revert t root.
@@ -1735,7 +1734,7 @@ Section BinaryTreeZipper.
     - exact (IHX (proj2 (destruct_complete _ H_complete))).
   Qed.
 
-  Lemma complete_subtree_nat (tree : bintree A) (H_complete : complete tree)
+  Theorem complete_subtree_nat (tree : bintree A) (H_complete : complete tree)
     : forall i t, subtree_nat tree i = Some t -> complete t.
   Proof.
     intros i t H_subtree. apply occurs_iff in H_subtree.
