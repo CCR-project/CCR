@@ -77,15 +77,15 @@ Section SIMMODSEM.
     des. steps.
     astop.
     (* invariant config *) 
-    remember (focus btctx_top tree (HeapsortHeader.decode (initial - 1))) as p_init eqn:Eqp.
+    remember (focus btctx_top tree (decodeIdx (initial - 1))) as p_init eqn:Eqp.
     destruct p_init as [g t].
-    set (initial' := S (HeapsortHeader.encode (btctx2idx g))).
+    set (initial' := S (encodeIdx (btctx2idx g))).
     assert (Heq : tree = recover_bintree g t).
-    { pose proof (recover_focus btctx_top tree (HeapsortHeader.decode (initial - 1))) as R.
+    { pose proof (recover_focus btctx_top tree (decodeIdx (initial - 1))) as R.
       rewrite <- Eqp in R. simpl in R. auto. }
     assert (Hieq : initial = initial').
     { unfold initial'.
-      pose proof (btctx2idx_focus tree (HeapsortHeader.decode (initial - 1))) as H.
+      pose proof (btctx2idx_focus tree (decodeIdx (initial - 1))) as H.
       rewrite <- Eqp in H. rewrite H. rewrite encode_decode. nia. }
     repl tree with (recover_bintree g t) at 2 3 4 by auto. (* TODO : it's okay to not replace `length (toList tree)` *)
     repl initial with initial' at 2 by (f_equal; try f_equal; auto).
@@ -207,8 +207,8 @@ Section SIMMODSEM.
              rewrite Hswap.
              unfold initial'.
              rewrite E in Hsubcom. destruct n as [|n];[inversion Hsubcom;inversion H_l|].
-             replace (S (HeapsortHeader.encode (btctx2idx g)) * 2 + 1) with
-               (S (HeapsortHeader.encode (btctx2idx (btctx_right xr (BT_node xl ll lr) g)))).
+             replace (S (encodeIdx (btctx2idx g)) * 2 + 1) with
+               (S (encodeIdx (btctx2idx (btctx_right xr (BT_node xl ll lr) g)))).
              2 :{ simpl. rewrite encode_last. nia. }
              replace (length (toList (recover_bintree
                                         g
@@ -285,8 +285,8 @@ Section SIMMODSEM.
              rewrite Hswap.
              unfold initial'.
              rewrite E in Hsubcom. destruct n as [|n];[inversion Hsubcom;inversion H_l|].
-             replace (S (HeapsortHeader.encode (btctx2idx g)) * 2) with
-               (S (HeapsortHeader.encode (btctx2idx (btctx_left xl (BT_node xr rl rr) g)))).
+             replace (S (encodeIdx (btctx2idx g)) * 2) with
+               (S (encodeIdx (btctx2idx (btctx_left xl (BT_node xr rl rr) g)))).
              2 :{ simpl. rewrite encode_last. nia. }
              replace (length (toList (recover_bintree
                                         g
@@ -369,8 +369,8 @@ Section SIMMODSEM.
            rewrite Hswap.
            unfold initial'.
            rewrite E in Hsubcom. destruct n as [|n];[inversion Hsubcom;inversion H_l|].
-           replace (S (HeapsortHeader.encode (btctx2idx g)) * 2) with
-             (S (HeapsortHeader.encode (btctx2idx (btctx_left xl BT_nil g)))).
+           replace (S (encodeIdx (btctx2idx g)) * 2) with
+             (S (encodeIdx (btctx2idx (btctx_left xl BT_nil g)))).
            2 :{ simpl. rewrite encode_last. nia. }
            replace (length (toList (recover_bintree
                                       g
