@@ -1841,6 +1841,10 @@ Section BinaryTreeZipper.
     upd (toList (recover_bintree g t)) (encode (btctx2idx g)) k.
   Admitted.
 
+  Lemma recover_complete g (t : bintree A) :
+    complete (recover_bintree g t) -> complete t.
+  Admitted.
+
 End BinaryTreeZipper.
 
 Section ListAccessories.
