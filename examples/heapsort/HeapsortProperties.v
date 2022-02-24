@@ -1539,6 +1539,38 @@ Section CompleteBinaryTree.
       eapply btpartial_fromList.
   Qed.
 
+  Local Hint Resolve perfect'2complete' bteq_refl bteq_sym : core.
+
+  Lemma shape_eq_perfect' (t t' : bintree A) :
+    bteq_shape t t' ->
+    forall rk : nat,
+    perfect' t rk ->
+    perfect' t' rk.
+  Proof with eauto.
+    intros t_shape_eq_t'.
+    induction t_shape_eq_t' as [ | x l r x' l' r' l_shape_eq_l' IH_l r_shape_eq_r' IH_r]; intros rk t_shape_eq_t'...
+    inversion t_shape_eq_t'; subst; clear t_shape_eq_t'; [econstructor 2]...
+  Qed.
+
+  Local Hint Resolve perfect'2complete' shape_eq_perfect' : core.
+
+  Lemma shape_eq_complete' (t t' : bintree A) :
+    bteq_shape t t' ->
+    forall rk : nat,
+    complete' t rk ->
+    complete' t' rk.
+  Proof with eauto.
+    intros t_shape_eq_t'.
+    induction t_shape_eq_t' as [ | x l r x' l' r' l_shape_eq_l' IH_l r_shape_eq_r' IH_r]; intros rk t_shape_eq_t'...
+    inversion t_shape_eq_t'; subst; [constructor 2 | constructor 3]...
+  Qed.
+
+  Local Hint Resolve shape_eq_complete' : core.
+
+  Theorem shape_eq_complete (t t' : bintree A) (t_shape_eq_t' : bteq_shape t t')
+    : complete t <-> complete t'.
+  Proof. split; intros [rk H_complete']; exists (rk); eauto. Qed.
+
 End CompleteBinaryTree.
 
 Section HeapProperty.
@@ -1742,6 +1774,18 @@ Section BinaryTreeZipper.
         destruct (focus (btctx_right x t2 g) t2 i) as [g' t'].
         auto.
   Qed.
+
+  Lemma recover_preserves_bteq_shape (t t' : bintree A) (H_shape_eq : bteq_shape t t')
+    : forall g, bteq_shape (recover_bintree g t) (recover_bintree g t').
+  Proof with eauto.
+    intros g. revert t t' H_shape_eq.
+    induction g as [ | x r g IH | x l g IH]; simpl; intros t t' H_shape_eq...
+    all: apply IH; econstructor 2... all: apply bteq_refl.
+  Qed.
+
+  Theorem equicomplete_thm (g : btctx A) t t' (H_shape_eq : bteq_shape t t')
+    : complete (recover_bintree g t) <-> complete (recover_bintree g t').
+  Proof. apply shape_eq_complete, recover_preserves_bteq_shape, H_shape_eq. Qed.
 
   Lemma focus_recover (tree : bintree A) t i j:
     let '(g', _) := focus btctx_top tree (decode i) in
