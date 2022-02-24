@@ -94,7 +94,8 @@ Section SIMMODSEM.
     { unfold initial'.
       pose proof (btctx2idx_focus tree (decodeIdx (initial - 1))) as H.
       rewrite <- Eqp in H. rewrite H. rewrite encode_decode. nia. }
-    repl tree with (recover_bintree g t) at 2 3 4 by auto. (* TODO : it's okay to not replace `length (toList tree)` *)
+    repl tree with (recover_bintree g t) at 4 by auto.
+    replace (length (toList tree)) with (btsize tree) by (symmetry; eapply toList_length).
     repl initial with initial' at 2 by (f_equal; try f_equal; auto).
     assert (Hsize : 1<= initial' <= btsize (recover_bintree g t)).
     { rewrite <- Hieq. rewrite <- Heq. nia. }
@@ -123,8 +124,7 @@ Section SIMMODSEM.
     clear Hieq.
     deflag.
     revert p t x l r g initial' E Hcom Hsubcom Hsize permutation Hheap_ch Hheap_nch mrp_src mp_tgt WF ctx mr_src mp_src ACC.
-    induction n using Wf_nat.lt_wf_rect;i.
-    rewrite unfold_iter_eq. rename H into IHn.
+    induction n as [n IHn] using Wf_nat.lt_wf_rect;i. rewrite unfold_iter_eq.
     assert (HT : t <> BT_nil) by now rewrite E;auto.
     pose proof (subtree_nat_Some_node (recover_bintree g t) _ (initial' - 1) HT) as Hsuper.
     clear HT.
@@ -138,7 +138,7 @@ Section SIMMODSEM.
     replace ((initial' - 1) * 2 + 2) with (initial' * 2) in Hindex1 by nia.
     replace (initial' + (initial' + 0)) with (initial' * 2) by nia.
     rewrite <- E in *.
-    destruct (initial' * 2 <=? strings.length (toList (recover_bintree g t)))
+    destruct (initial' * 2 <=? btsize tree)
              eqn:Ele1;[apply leb_complete in Ele1| apply leb_complete_conv in Ele1].
     all : cycle 1.
     - (* has no child *)
@@ -146,18 +146,23 @@ Section SIMMODSEM.
       steps_weak. hret tt;ss. iModIntro. iSplit;ss. iPureIntro.
       split;auto. exists (recover_bintree g t). split;rewrite E;auto. split;rewrite <- E;auto.
       split;auto.
-      assert (none1 : length (toList (recover_bintree g t)) <= initial' * 2 - 1)
-        by now unfold initial';nia.
-      assert (none2 : length (toList (recover_bintree g t)) <= initial' * 2) by nia.
-      apply nth_error_None in none1. apply nth_error_None in none2.
-      rewrite toList_subtree in none1. rewrite toList_subtree in none2.
-      unfold subtree_nat in *. unfold initial' in none1. unfold initial' in none2.
-      simpl in none1. simpl in none2.
-      rewrite Hindex0 in none1. rewrite Hindex1 in none2.
-      destruct l;[|inversion none1]. destruct r;[|inversion none2].
-      assert (heap Z.ge (BT_node x BT_nil BT_nil)). { econs;ss;apply heap_nil. }
-      apply Hheap_nch. rewrite E. econs; simpl; auto; try apply heap_nil. lia.
+      replace (S (S (encodeIdx (btctx2idx g) * 2))) with (initial' * 2) in Ele1 by lia.
+      assert (Hinitial' : initial' > btsize (recover_bintree g t) / 2).
+      { rewrite <- toList_length.
+        rewrite <- (Permutation_length permutation).
+        rewrite toList_length.
+        apply Nat.div_lt_upper_bound; try lia.
+      }
+      pose proof (subtree_nat_leaf (recover_bintree g t) Hcom initial' Hinitial') as H.
+      unfold subtree_nat in H. replace (initial' - 1) with (encodeIdx (btctx2idx g)) in H by lia.
+      rewrite HeapsortHeader.decode_encode in H. rewrite Ht in H.
+      rewrite E in H. inv H.
+      apply Hheap_nch. econs; simpl; auto; try apply heap_nil. lia.
     - (* has 1 or 2 child *)
+      (* TODO : remove Hts *)
+      assert (Hts : btsize tree = length (toList (recover_bintree g t)))
+        by (rewrite <- (Permutation_length permutation); symmetry; eapply toList_length).
+      rewrite Hts in Ele1. rewrite Hts.
       assert (Htreele1 : 1 <= btsize (recover_bintree g t)) by nia.
       rewrite <- (toList_length (recover_bintree g t)) in Htreele1.
       destruct (length (toList (recover_bintree g t))) as [|m] eqn:Htreele2 in Htreele1
@@ -222,9 +227,7 @@ Section SIMMODSEM.
           replace (length (toList (recover_bintree
                                      g
                                      (BT_node x (BT_node xl ll lr) (BT_node xr rl rr)))))
-            with (length (toList (recover_bintree
-                                    (btctx_right xr (BT_node xl ll lr) g)
-                                    (BT_node x rl rr)))).
+            with (btsize tree).
           2: { simpl. admit "". }
           replace (toList (recover_bintree g (BT_node xr (BT_node xl ll lr) (BT_node x rl rr))))
             with (toList (recover_bintree
@@ -270,9 +273,7 @@ Section SIMMODSEM.
           replace (length (toList (recover_bintree
                                      g
                                      (BT_node x (BT_node xl ll lr) (BT_node xr rl rr)))))
-            with (length (toList (recover_bintree
-                                    (btctx_left xl (BT_node xr rl rr) g)
-                                    (BT_node x ll lr)))).
+            with (btsize tree).
           2: { simpl. admit "". }
           replace (toList (recover_bintree g (BT_node xl (BT_node x ll lr) (BT_node xr rl rr))))
             with (toList (recover_bintree
@@ -325,12 +326,10 @@ Section SIMMODSEM.
         ;[apply Z.leb_le in HZle| apply Z.leb_gt in HZle].
         ** steps_weak. force_l. eexists.
            steps_weak. hret tt;ss. iModIntro. iSplit; ss. iPureIntro.
-           split;auto. exists (recover_bintree g t). do 2 split;auto.
-           split.
-           { assumption. }
-           { apply Hheap_nch. rewrite E.
-             destruct Hheap_ch as [T1 [T2 T3]].
-             econs;simpl;try nia;auto;eapply heap_erase_priority;[apply T1|apply T2]. }
+           split;auto. exists (recover_bintree g t). splits; auto.
+           apply Hheap_nch. rewrite E.
+           destruct Hheap_ch as [T1 [T2 T3]].
+           econs;simpl;try nia;auto;eapply heap_erase_priority;[apply T1|apply T2].
         ** monad_law. rewrite bind_tau. force_r.
            rewrite <- (toList_fromList (swap (toList (recover_bintree g t)) (initial' * 2 - 1) (initial' - 1))).
            rewrite E.
@@ -353,9 +352,7 @@ Section SIMMODSEM.
            replace (length (toList (recover_bintree
                                       g
                                       (BT_node x (BT_node xl ll lr) BT_nil))))
-             with (length (toList (recover_bintree
-                                     (btctx_left xl BT_nil g)
-                                     (BT_node x ll lr)))).
+             with (btsize tree).
              2: { simpl. admit "". }
              replace (toList (recover_bintree g (BT_node xl (BT_node x ll lr) BT_nil)))
                with (toList (recover_bintree
