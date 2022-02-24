@@ -80,8 +80,6 @@ Section SIMMODSEM.
     assert (statei : initial <= initial') by nia.
     assert (Hi : initial = initial' -> tree = recover_bintree g t) by auto.
     assert (Hcom : complete (recover_bintree g t)) by now rewrite <- Heq;auto.
-    assert (completeness : forall t', bteq_shape t t' -> complete (recover_bintree g t')).
-    { admit "". }
     assert (permutation : forall t', toList t ≡ₚ toList t'
                                 -> toList tree ≡ₚ toList (recover_bintree g t')).
     { admit "". }
@@ -106,7 +104,7 @@ Section SIMMODSEM.
     clear Heqp.
     clear Hieq.
     deflag.
-    revert p t x l r g initial' Hi statei E Hcom Hsubcom Hsize completeness permutation Hheap_ch Hheap_nch mrp_src mp_tgt WF ctx mr_src mp_src ACC.
+    revert p t x l r g initial' Hi statei E Hcom Hsubcom Hsize permutation Hheap_ch Hheap_nch mrp_src mp_tgt WF ctx mr_src mp_src ACC.
     induction n using Wf_nat.lt_wf_rect;i.
     rewrite unfold_iter_eq. rename H into IHn.
     assert (HT : t <> BT_nil) by now rewrite E;auto.
@@ -248,16 +246,15 @@ Section SIMMODSEM.
              inversion Hsubcom.
              { deflag. eapply IHn;simpl. all : cycle 1.
                { rewrite encode_last. intros. assert (initial' < initial) by nia. nia. }
-               { rewrite encode_last. nia. } { auto. }
-               {intros. ss. apply completeness. rewrite E.
-                econs;auto;try apply bteq_refl;auto. econs;apply bteq_refl. }
+               { rewrite encode_last. nia. }
+               { auto. }
+               { intros. ss. eapply (equicomplete_thm g t). rewrite E.
+                econs;auto;try apply bteq_refl;auto. econs;apply bteq_refl. assumption. }
                { inversion H_r. 
                  - eapply complete_node_perfect_complete;eauto.
                  - eapply complete_node_complete_perfect;eauto. }
                { rewrite encode_last. rewrite <- toList_length. rewrite E in Htreele2.
                  split;try nia. admit "".  }
-               { i. apply completeness. rewrite E. econs;try apply bteq_refl.
-                 eapply bteq_trans;eauto. econs;try apply bteq_refl. }
                { intros. ss. apply permutation. rewrite E. admit "". }
                { instantiate (1 := xr). apply le_lt_or_eq in statei.
                  destruct statei as [statei|statei].
@@ -316,8 +313,8 @@ Section SIMMODSEM.
              { deflag. eapply IHn;simpl. all : cycle 1.
                { rewrite encode_last. intros. assert (initial' < initial) by nia. nia. }
                { rewrite encode_last. nia. } { auto. }
-               { intros. ss. apply completeness. rewrite E.
-                econs;auto;try apply bteq_refl;auto. econs;apply bteq_refl. }
+               { intros. ss. apply (equicomplete_thm g t). rewrite E.
+                econs;auto;try apply bteq_refl;auto. econs;apply bteq_refl. assumption. }
                { instantiate (1 := (n - 1)).
                  destruct (Nat.eq_0_gt_0_cases n) as [T1|T1];[rewrite T1 in H_r;inversion H_r|].
                  replace (S(n - 1)) with n by nia. inversion H_r. 
@@ -325,8 +322,6 @@ Section SIMMODSEM.
                  apply perfect'2complete';auto. }
                { rewrite encode_last. rewrite <- toList_length. rewrite E in Htreele2.
                  split;try nia. admit "".  }
-               { i. apply completeness. rewrite E. econs;try apply bteq_refl.
-                 eapply bteq_trans;eauto. econs;try apply bteq_refl. }
                { intros. ss. apply permutation. rewrite E. admit "". }
                { instantiate (1 := xr). apply le_lt_or_eq in statei.
                  destruct statei as [statei|statei].
@@ -453,15 +448,13 @@ Section SIMMODSEM.
              { deflag. eapply IHn;simpl. all : cycle 1.
                { rewrite encode_last. intros. assert (initial' < initial) by nia. nia. }
                { rewrite encode_last. nia. } { auto. }
-               { intros. ss. apply completeness. rewrite E.
-                econs;auto;try apply bteq_refl;auto. econs;apply bteq_refl. }
+               { intros. ss. apply (equicomplete_thm g t). rewrite E.
+                econs;auto;try apply bteq_refl;auto. econs;apply bteq_refl. assumption. }
                { inversion H_l.
                  eapply complete_node_perfect_complete;eauto.
                  apply perfect'2complete';auto. }
                { rewrite encode_last. rewrite <- toList_length. rewrite E in Htreele2.
                  split;try nia. admit "".  }
-               { i. apply completeness. rewrite E. econs;try apply bteq_refl.
-                 eapply bteq_trans;eauto. econs;try apply bteq_refl. }
                { intros. ss. apply permutation. rewrite E. admit "". }
                { instantiate (1 := xl). apply le_lt_or_eq in statei.
                  destruct statei as [statei|statei].
@@ -522,15 +515,13 @@ Section SIMMODSEM.
              { deflag. eapply IHn;simpl. all : cycle 1.
                { rewrite encode_last. intros. assert (initial' < initial) by nia. nia. }
                { rewrite encode_last. nia. } { auto. }
-               { intros. ss. apply completeness. rewrite E.
-                econs;auto;try apply bteq_refl;auto. econs;apply bteq_refl. }
+               { intros. ss. apply (equicomplete_thm g t). rewrite E.
+                econs;auto;try apply bteq_refl;auto. econs;apply bteq_refl. assumption. }
                { inversion H_l.
                  - eapply complete_node_perfect_complete;eauto.
                  - eapply complete_node_complete_perfect;eauto. }
                { rewrite encode_last. rewrite <- toList_length. rewrite E in Htreele2.
                  split;try nia. admit "".  }
-               { i. apply completeness. rewrite E. econs;try apply bteq_refl.
-                 eapply bteq_trans;eauto. econs;try apply bteq_refl. }
                { intros. ss. apply permutation. rewrite E. admit "". }
                { instantiate (1 := xl). apply le_lt_or_eq in statei.
                  destruct statei as [statei|statei].
@@ -664,15 +655,13 @@ Section SIMMODSEM.
              { deflag. eapply IHn;simpl. all : cycle 1.
                { rewrite encode_last. intros. assert (initial' < initial) by nia. nia. }
                { rewrite encode_last. nia. } { auto. }
-               { intros. ss. apply completeness. rewrite E.
-                econs;auto;try apply bteq_refl;auto. econs;apply bteq_refl. }
+               { intros. ss. apply (equicomplete_thm g t). rewrite E.
+                econs;auto;try apply bteq_refl;auto. econs;apply bteq_refl. assumption. }
                { inversion H_l.
                  eapply complete_node_perfect_complete;eauto.
                  apply perfect'2complete';auto. }
                { rewrite encode_last. rewrite <- toList_length. rewrite E in Htreele2.
                  split;try nia. admit "".  }
-               { i. apply completeness. rewrite E. econs;try apply bteq_refl.
-                 eapply bteq_trans;eauto. econs;try apply bteq_refl. }
                { intros. ss. apply permutation. rewrite E. admit "". }
                { instantiate (1 := xl). apply le_lt_or_eq in statei.
                  destruct statei as [statei|statei].
@@ -733,15 +722,13 @@ Section SIMMODSEM.
              { deflag. eapply IHn;simpl. all : cycle 1.
                { rewrite encode_last. intros. assert (initial' < initial) by nia. nia. }
                { rewrite encode_last. nia. } { auto. }
-               { intros. ss. apply completeness. rewrite E.
-                econs;auto;try apply bteq_refl;auto. econs;apply bteq_refl. }
+               { intros. ss. apply (equicomplete_thm g t). rewrite E.
+                econs;auto;try apply bteq_refl;auto. econs;apply bteq_refl. assumption. }
                { inversion H_l.
                  - eapply complete_node_perfect_complete;eauto.
                  - eapply complete_node_complete_perfect;eauto. }
                 { rewrite encode_last. rewrite <- toList_length. rewrite E in Htreele2.
                  split;try nia. admit "".  }
-               { i. apply completeness. rewrite E. econs;try apply bteq_refl.
-                 eapply bteq_trans;eauto. econs;try apply bteq_refl. }
                { intros. ss. apply permutation. rewrite E. admit "". }
                { instantiate (1 := xl). apply le_lt_or_eq in statei.
                  destruct statei as [statei|statei].
