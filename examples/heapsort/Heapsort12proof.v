@@ -134,8 +134,8 @@ Section SIMMODSEM.
     destruct (initial' * 2 <=? strings.length (toList (recover_bintree g t)))
              eqn:Ele1;[apply leb_complete in Ele1| apply leb_complete_conv in Ele1].
     all : cycle 1.
-    (* terminating case *)
-    - steps_weak. rewrite E. force_l. eexists.
+    - (* has no child *)
+      steps_weak. rewrite E. force_l. eexists.
       steps_weak. hret tt;ss. iModIntro. iSplit;ss. iPureIntro.
       split;auto. exists (recover_bintree g t). split;rewrite E;auto. split;rewrite <- E;auto.
       split;auto.
@@ -150,8 +150,8 @@ Section SIMMODSEM.
       destruct l;[|inversion none1]. destruct r;[|inversion none2].
       assert (heap Z.ge (BT_node x BT_nil BT_nil)). { econs;ss;apply heap_nil. }
       apply Hheap_nch. rewrite E. econs; simpl; auto; try apply heap_nil. lia.
-      (* repeating case *)
-    - assert (Htreele1 : 1 <= btsize (recover_bintree g t)) by nia.
+    - (* has 1 or 2 child *)
+      assert (Htreele1 : 1 <= btsize (recover_bintree g t)) by nia.
       rewrite <- (toList_length (recover_bintree g t)) in Htreele1.
       destruct (length (toList (recover_bintree g t))) as [|m] eqn:Htreele2 in Htreele1
       ;[simpl in Htreele1;inversion Htreele1|].
@@ -163,7 +163,8 @@ Section SIMMODSEM.
       rewrite Hindex0 in some0. destruct l as [|xl ll lr];[ss|]. clear some0.
       destruct (initial' * 2 <=? m) eqn:Ele2
       ;[apply leb_complete in Ele2| apply leb_complete_conv in Ele2].
-      + assert (some1 : initial' * 2 < length (toList (recover_bintree g t))) by nia.
+      + (* has 2 child *)
+        assert (some1 : initial' * 2 < length (toList (recover_bintree g t))) by nia.
         apply nth_error_Some in some1.
         rewrite toList_subtree in some1.
         unfold subtree_nat in some1. rewrite Hindex1 in some1.
@@ -174,7 +175,8 @@ Section SIMMODSEM.
         simpl option_root. simpl unwrapU. do 2 rewrite bind_ret_l.
         destruct (xl <? xr)%Z eqn:HZlt
         ;[apply Z.ltb_lt in HZlt|apply Z.ltb_ge in HZlt].
-        * rewrite bind_ret_l.
+        * (* deal with right child *)
+          rewrite bind_ret_l.
           rewrite (toList_subtree (recover_bintree g t)
                                   (initial' * 2 + 1 - 1)).
           replace (initial' * 2 + 1 - 1) with (initial' * 2) by nia. unfold subtree_nat.
@@ -252,7 +254,8 @@ Section SIMMODSEM.
                  + econs;simpl;auto;try nia. eapply heap_erase_priority;eauto. apply heap_nil.
                  + econs;simpl;auto;try nia;econs;simpl;auto;try nia.
              }
-       * rewrite bind_ret_l.
+        * (* deal with left child *)
+          rewrite bind_ret_l.
           rewrite (toList_subtree (recover_bintree g t) (initial' * 2 - 1)).
           unfold subtree_nat. rewrite Hindex0. simpl option_root. simpl unwrapU.
           do 2 rewrite bind_ret_l.
@@ -331,7 +334,8 @@ Section SIMMODSEM.
                    eapply heap_erase_priority;eauto. apply heap_nil.
                  + econs;simpl;auto;try nia;econs;simpl;auto;try nia.
              }
-      + rewrite bind_ret_l.
+      + (* has 1 child *)
+        rewrite bind_ret_l.
         assert (some2 : length (toList (recover_bintree g t)) <= initial' * 2) by nia.
         apply nth_error_None in some2.
         rewrite toList_subtree in some2. unfold subtree_nat in some2.
