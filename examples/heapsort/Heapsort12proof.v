@@ -65,7 +65,6 @@ Section SIMMODSEM.
     (* invariant config *) 
     remember (focus btctx_top tree (HeapsortHeader.decode (initial - 1))) as p_init eqn:Eqp.
     destruct p_init as [g t].
-    set (tree' := tree) at 2 3 4.
     set (initial' := S (HeapsortHeader.encode (btctx2idx g))).
     assert (Heq : tree = recover_bintree g t).
     { pose proof (recover_focus btctx_top tree (HeapsortHeader.decode (initial - 1))) as R.
@@ -74,11 +73,8 @@ Section SIMMODSEM.
     { unfold initial'.
       pose proof (btctx2idx_focus tree (HeapsortHeader.decode (initial - 1))) as H.
       rewrite <- Eqp in H. rewrite H. rewrite encode_decode. nia. }
-    replace tree' with (recover_bintree g t) by auto.
-    replace (toList (recover_bintree g t), initial)
-      with (toList (recover_bintree g t), initial').
-    2 : { f_equal;try f_equal;auto. }
-    clear tree'.
+    repl tree with (recover_bintree g t) at 2 3 4 by auto. (* TODO : it's okay to not replace `length (toList tree)` *)
+    repl initial with initial' at 2 by (f_equal; try f_equal; auto).
     assert (Hsize : 1<= initial' <= btsize (recover_bintree g t)).
     { rewrite <- Hieq. rewrite <- Heq. nia. }
     assert (statei : initial <= initial') by nia.
