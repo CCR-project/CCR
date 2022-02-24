@@ -1758,6 +1758,18 @@ Section BinaryTreeZipper.
     - rewrite <- H_recover in H_complete; eassumption.
   Qed.
 
+  Lemma recover_preserves_bteq_shape (t t' : bintree A) (H_shape_eq : bteq_shape t t')
+    : forall g, bteq_shape (recover_bintree g t) (recover_bintree g t').
+  Proof with eauto.
+    intros g. revert t t' H_shape_eq.
+    induction g as [ | x r g IH | x l g IH]; simpl; intros t t' H_shape_eq...
+    all: apply IH; econstructor 2... all: apply bteq_refl.
+  Qed.
+
+  Theorem equicomplete_thm (g : btctx A) t t' (H_shape_eq : bteq_shape t t')
+    : complete (recover_bintree g t) <-> complete (recover_bintree g t').
+  Proof. apply shape_eq_complete, recover_preserves_bteq_shape, H_shape_eq. Qed.
+
   Lemma recover_focus (g : btctx A) t i :
     let '(g', t') := focus g t i in
     recover_bintree g t = recover_bintree g' t'.
@@ -1774,18 +1786,6 @@ Section BinaryTreeZipper.
         destruct (focus (btctx_right x t2 g) t2 i) as [g' t'].
         auto.
   Qed.
-
-  Lemma recover_preserves_bteq_shape (t t' : bintree A) (H_shape_eq : bteq_shape t t')
-    : forall g, bteq_shape (recover_bintree g t) (recover_bintree g t').
-  Proof with eauto.
-    intros g. revert t t' H_shape_eq.
-    induction g as [ | x r g IH | x l g IH]; simpl; intros t t' H_shape_eq...
-    all: apply IH; econstructor 2... all: apply bteq_refl.
-  Qed.
-
-  Theorem equicomplete_thm (g : btctx A) t t' (H_shape_eq : bteq_shape t t')
-    : complete (recover_bintree g t) <-> complete (recover_bintree g t').
-  Proof. apply shape_eq_complete, recover_preserves_bteq_shape, H_shape_eq. Qed.
 
   Lemma focus_recover (tree : bintree A) t i j:
     let '(g', _) := focus btctx_top tree (decode i) in
