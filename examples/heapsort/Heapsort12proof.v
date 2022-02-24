@@ -71,19 +71,28 @@ Section SIMMODSEM.
       rewrite <- Eqp in R. simpl in R. auto. }
     assert (Hieq : initial = initial').
     { unfold initial'.
-      pose proof (btctx2idx_focus tree (HeapsortHeader.decode (initial - 1))) as H.
-      rewrite <- Eqp in H. rewrite H. rewrite encode_decode. nia. }
-    repl tree with (recover_bintree g t) at 2 3 4 by auto. (* TODO : it's okay to not replace `length (toList tree)` *)
+      pose proof (focus_subtree tree btctx_top (HeapsortHeader.decode (initial - 1))) as P.
+      rewrite <- Eqp in P. destruct t.
+      - destruct P.
+        + eapply subtree_nat_range in PURE1.
+          2 :{ unfold subtree_nat. apply H. }
+          assert (initial - 1 < btsize tree) by nia. apply PURE1 in H0. contradiction H0;auto.
+        + 
+          rewrite Heq in H. 
+          apply recover_option_subtree in H.
+      - 
+      apply PURE1 in H
+      pose proof (btctx2idx_focus tree btctx_top (HeapsortHeader.decode (initial - 1))) as H.
+      rewrite <- Eqp in H.  
+      rewrite H. rewrite encode_decode. nia. }
+    repl tree with (recover_bintree g t) at 2 3 4 by auto. 
     repl initial with initial' at 2 by (f_equal; try f_equal; auto).
     assert (Hsize : 1<= initial' <= btsize (recover_bintree g t)).
     { rewrite <- Hieq. rewrite <- Heq. nia. }
-    assert (statei : initial <= initial') by nia.
-    assert (Hi : initial = initial' -> tree = recover_bintree g t) by auto.
     assert (Hcom : complete (recover_bintree g t)) by now rewrite <- Heq;auto.
     assert (permutation : forall t', toList t ≡ₚ toList t'
                                 -> toList tree ≡ₚ toList (recover_bintree g t')).
-    { admit "". }
-    rewrite Hieq in Eqp.
+    { admit "". }       
     assert (Hsubcom : complete t) by (eapply recover_complete; eassumption).
     destruct Hsubcom as [n Hsubcom].
     clear Heq Eqp.
@@ -104,7 +113,7 @@ Section SIMMODSEM.
     clear Heqp.
     clear Hieq.
     deflag.
-    revert p t x l r g initial' Hi statei E Hcom Hsubcom Hsize permutation Hheap_ch Hheap_nch mrp_src mp_tgt WF ctx mr_src mp_src ACC.
+    revert p t x l r g initial' E Hcom Hsubcom Hsize permutation Hheap_ch Hheap_nch mrp_src mp_tgt WF ctx mr_src mp_src ACC.
     induction n using Wf_nat.lt_wf_rect;i.
     rewrite unfold_iter_eq. rename H into IHn.
     assert (HT : t <> BT_nil) by now rewrite E;auto.
@@ -140,17 +149,7 @@ Section SIMMODSEM.
       rewrite Hindex0 in none1. rewrite Hindex1 in none2.
       destruct l;[|inversion none1]. destruct r;[|inversion none2].
       assert (heap Z.ge (BT_node x BT_nil BT_nil)). { econs;ss;apply heap_nil. }
-      apply le_lt_or_eq in statei. apply or_comm in statei.
-      destruct statei as [statei|statei];[|assert (statei' : initial <> initial') by nia].
-      + intros j H2. apply le_lt_or_eq in H2. destruct H2.
-        * pose proof (Hi statei). rewrite <- H2.
-          change (initial < j) with (j > initial) in H1.
-          apply PURE3;auto.
-        * replace j with initial' by now rewrite <- H1;rewrite statei. unfold initial'.
-          simpl. rewrite Nat.sub_0_r. unfold heap_at. unfold subtree_nat.
-          rewrite HeapsortHeader.decode_encode. rewrite recover_option_subtree.
-          rewrite E. econs;simpl;auto;apply heap_nil.
-      + apply Hheap_nch. rewrite E. econs;simpl;auto;try apply heap_nil. nia.
+      apply Hheap_nch. rewrite E. econs; simpl; auto; try apply heap_nil. lia.
       (* repeating case *)
     - assert (Htreele1 : 1 <= btsize (recover_bintree g t)) by nia.
       rewrite <- (toList_length (recover_bintree g t)) in Htreele1.
@@ -188,34 +187,9 @@ Section SIMMODSEM.
              split.
              { specialize (permutation (BT_node x (BT_node xl ll lr) (BT_node xr rl rr))).
                rewrite E. apply permutation. rewrite E. auto. }
-             { apply le_lt_or_eq in statei. apply or_comm in statei.
-               destruct statei as [statei|statei]. all : cycle 1.
-               { apply Hheap_nch. assert (initial <> initial') by nia.
-                 apply Hheap_ch in H. rewrite E.
-                 destruct H as [T1 [T2 T3]].
-               { apply Hheap_nch. rewrite E.
-                 destruct Hheap_ch as [T1 [T2 T3]].
-                 econs;simpl;try nia;auto;eapply heap_erase_priority;[apply T1|apply T2]. }
-               intros. apply le_lt_or_eq in H.
-               destruct H.
-               - pose proof (Hi statei). rewrite <- H0. revert j H. apply PURE3.
-               - rewrite <- H. rewrite statei. unfold initial'.
-                 unfold heap_at. unfold subtree_nat. simpl. rewrite Nat.sub_0_r.
-                 rewrite HeapsortHeader.decode_encode. rewrite recover_option_subtree.
-                 rewrite E. econs;simpl;try nia;auto.
-                 + specialize (PURE3 (initial' * 2)). rewrite statei in PURE3.
-                   assert (initial' * 2 > initial') by nia.
-                   assert (HH : heap_at Z.ge (initial' * 2 - 1) tree) by auto.
-                   unfold heap_at in HH. unfold subtree_nat in HH. unfold initial' in HH.
-                   simpl in HH. pose proof (Hi statei). rewrite H1 in HH.
-                   rewrite Hindex0 in HH. auto.
-                 + specialize (PURE3 (S (initial' * 2))). rewrite statei in PURE3.
-                   assert (S (initial' * 2) > initial') by nia. simpl in PURE3.
-                   assert (HH : heap_at Z.ge (initial' * 2 - 0) tree) by auto.
-                   rewrite Nat.sub_0_r in HH.
-                   unfold heap_at in HH. unfold subtree_nat in HH. unfold initial' in HH.
-                   simpl in HH. pose proof (Hi statei). rewrite H1 in HH.
-                   rewrite Hindex1 in HH. auto. }
+             { apply Hheap_nch. rewrite E.
+               destruct Hheap_ch as [T1 [T2 T3]].
+               econs;simpl;try nia;auto;eapply heap_erase_priority;[apply T1|apply T2]. }
           ** rewrite bind_ret_l. rewrite bind_tau. force_r.
              rewrite <- (toList_fromList (swap (toList (recover_bintree g t)) (initial' * 2) (initial' - 1))).
              rewrite E.
@@ -248,8 +222,6 @@ Section SIMMODSEM.
                                (BT_node x rl rr))) by auto.
              inversion Hsubcom.
              { deflag. eapply IHn;simpl. all : cycle 1.
-               { rewrite encode_last. intros. assert (initial' < initial) by nia. nia. }
-               { rewrite encode_last. nia. }
                { auto. }
                { intros. ss. eapply (equicomplete_thm g t). rewrite E.
                 econs;auto;try apply bteq_refl;auto. econs;apply bteq_refl. assumption. }
@@ -259,63 +231,28 @@ Section SIMMODSEM.
                { rewrite encode_last. rewrite <- toList_length. rewrite E in Htreele2.
                  split;try nia. admit "".  }
                { intros. ss. apply permutation. rewrite E. admit "". }
-               { instantiate (1 := xr). apply le_lt_or_eq in statei.
-                 destruct statei as [statei|statei].
-                 - assert (heap_pr
-                             Z.ge p
-                             (BT_node xl ll lr) ∧ heap_pr Z.ge p (BT_node xr rl rr) ∧ (x ≤ p)%Z)
-                     by now apply Hheap_ch;nia.
-                   destruct H3 as [_ [H4 X]]. inversion H4. split;try split;try nia.
-                   + destruct rl;try apply heap_pr_nil. simpl in R_x_l. inversion heap_l.
-                     apply heap_pr_node;auto.
-                   + destruct rr;try apply heap_pr_nil. simpl in R_x_r. inversion heap_r.
-                     apply heap_pr_node;auto.
-                 - pose proof (Hi statei) as P. rewrite P in PURE3. rewrite E in PURE3.
-                   assert (GH : initial' * 2 + 1 > initial) by nia. apply PURE3 in GH.
-                   unfold heap_at in GH. unfold subtree_nat in GH. unfold initial' in GH.
-                   simpl in GH. replace (HeapsortHeader.decode
-                                           (S (HeapsortHeader.encode (btctx2idx g) * 2 + 1)))
-                     with ((btctx2idx g) ++ [Dir_right]) in GH.
-                   2 :{ apply HeapsortHeader.encode_inj. rewrite HeapsortHeader.encode_decode.
-                        rewrite HeapsortHeader.encode_last. nia. }
-                   rewrite option_subtree_last in GH. rewrite recover_option_subtree in GH.
-                   simpl in GH. split;try split;try nia.
-                   + destruct rl;try apply heap_pr_nil. inversion GH. inversion heap_l.
-                     simpl in R_x_l. apply heap_pr_node;auto.
-                   + destruct rr;try apply heap_pr_nil. inversion GH. inversion heap_r.
-                     simpl in R_x_r. apply heap_pr_node;auto. }
-               { intros t' HH j Hj. apply le_lt_or_eq in statei.
-                 destruct statei as [statei|statei].
-                 - apply Hheap_nch;auto.
-                   assert (heap_pr
-                             Z.ge p
-                             (BT_node xl ll lr) ∧ heap_pr Z.ge p (BT_node xr rl rr) ∧ (x ≤ p)%Z)
-                     by now apply Hheap_ch;nia.
-                   destruct H3 as [H' [H'' X]]. inversion H'. inversion H''. inversion HH.
-                   + econs;simpl;auto;try nia. eapply heap_erase_priority;eauto. apply heap_nil.
-                   + econs;simpl;auto;try nia;econs;simpl;auto;try nia.
-                 - pose proof (Hi statei) as P. rewrite P in PURE3. rewrite E in PURE3.
-                   apply le_lt_or_eq in Hj. destruct Hj as [Hj|Hj].
-                   + change (initial < j) with (j > initial) in Hj. apply PURE3 in Hj.
-                     admit "".
-                   + rewrite <- Hj. rewrite statei. simpl. rewrite Nat.sub_0_r. unfold heap_at.
-                     unfold subtree_nat. rewrite HeapsortHeader.decode_encode.
-                     rewrite recover_option_subtree. assert (GH : initial' * 2 > initial) by nia.
-                     apply PURE3 in GH. simpl in GH. unfold heap_at in GH.
-                     unfold subtree_nat in GH. 
-                     replace (HeapsortHeader.decode
-                                (S (HeapsortHeader.encode (btctx2idx g) * 2)))
-                       with ((btctx2idx g) ++ [Dir_left]) in GH.
-                     2 :{ apply HeapsortHeader.encode_inj. rewrite HeapsortHeader.encode_decode.
-                          rewrite HeapsortHeader.encode_last. nia. }
-                     rewrite option_subtree_last in GH. rewrite recover_option_subtree in GH.
-                     simpl in GH. inversion HH.
-                     * econs;simpl;auto;try nia. apply heap_nil.
-                     * econs;simpl;auto;try nia;econs;simpl;auto;try nia. }
+               { instantiate (1 := xr).
+                 assert (heap_pr
+                           Z.ge p
+                           (BT_node xl ll lr) ∧ heap_pr Z.ge p (BT_node xr rl rr) ∧ (x ≤ p)%Z)
+                   by now apply Hheap_ch;nia.
+                 destruct H3 as [_ [H4 X]]. inversion H4. split;try split;try nia.
+                 + destruct rl;try apply heap_pr_nil. simpl in R_x_l. inversion heap_l.
+                   apply heap_pr_node;auto.
+                 + destruct rr;try apply heap_pr_nil. simpl in R_x_r. inversion heap_r.
+                   apply heap_pr_node;auto. }
+               { intros t' HH j Hj.
+                 apply Hheap_nch;auto.
+                 assert (heap_pr
+                           Z.ge p
+                           (BT_node xl ll lr) ∧ heap_pr Z.ge p (BT_node xr rl rr) ∧ (x ≤ p)%Z)
+                   by now apply Hheap_ch;nia.
+                 destruct H3 as [H' [H'' X]]. inversion H'. inversion H''. inversion HH.
+                 + econs;simpl;auto;try nia. eapply heap_erase_priority;eauto. apply heap_nil.
+                 + econs;simpl;auto;try nia;econs;simpl;auto;try nia. }
                { eauto. } auto. nia. }
              { deflag. eapply IHn;simpl. all : cycle 1.
-               { rewrite encode_last. intros. assert (initial' < initial) by nia. nia. }
-               { rewrite encode_last. nia. } { auto. }
+               { auto. }
                { intros. ss. apply (equicomplete_thm g t). rewrite E.
                 econs;auto;try apply bteq_refl;auto. econs;apply bteq_refl. assumption. }
                { instantiate (1 := (n - 1)).
@@ -326,59 +263,25 @@ Section SIMMODSEM.
                { rewrite encode_last. rewrite <- toList_length. rewrite E in Htreele2.
                  split;try nia. admit "".  }
                { intros. ss. apply permutation. rewrite E. admit "". }
-               { instantiate (1 := xr). apply le_lt_or_eq in statei.
-                 destruct statei as [statei|statei].
-                 - assert (heap_pr
-                             Z.ge p
-                             (BT_node xl ll lr) ∧ heap_pr Z.ge p (BT_node xr rl rr) ∧ (x ≤ p)%Z)
-                     by now apply Hheap_ch;nia.
-                   destruct H3 as [_ [H4 X]]. inversion H4. split;try split;try nia.
-                   + destruct rl;try apply heap_pr_nil. simpl in R_x_l. inversion heap_l.
-                     apply heap_pr_node;auto.
-                   + destruct rr;try apply heap_pr_nil. simpl in R_x_r. inversion heap_r.
-                     apply heap_pr_node;auto.
-                 - pose proof (Hi statei) as P. rewrite P in PURE3. rewrite E in PURE3.
-                   assert (GH : initial' * 2 + 1 > initial) by nia. apply PURE3 in GH.
-                   unfold heap_at in GH. unfold subtree_nat in GH. unfold initial' in GH.
-                   simpl in GH. replace (HeapsortHeader.decode
-                                           (S (HeapsortHeader.encode (btctx2idx g) * 2 + 1)))
-                     with ((btctx2idx g) ++ [Dir_right]) in GH.
-                   2 :{ apply HeapsortHeader.encode_inj. rewrite HeapsortHeader.encode_decode.
-                        rewrite HeapsortHeader.encode_last. nia. }
-                   rewrite option_subtree_last in GH. rewrite recover_option_subtree in GH.
-                   simpl in GH. split;try split;try nia.
-                   + destruct rl;try apply heap_pr_nil. inversion GH. inversion heap_l.
-                     simpl in R_x_l. apply heap_pr_node;auto.
-                   + destruct rr;try apply heap_pr_nil. inversion GH. inversion heap_r.
-                     simpl in R_x_r. apply heap_pr_node;auto. }
-               { intros t' HH j Hj. apply le_lt_or_eq in statei.
-                 destruct statei as [statei|statei].
-                 - apply Hheap_nch;auto.
-                   assert (heap_pr
-                             Z.ge p
-                             (BT_node xl ll lr) ∧ heap_pr Z.ge p (BT_node xr rl rr) ∧ (x ≤ p)%Z)
-                     by now apply Hheap_ch;nia.
-                   destruct H3 as [H' [H'' X]]. inversion H'. inversion H''. inversion HH.
-                   + econs;simpl;auto;try nia. eapply heap_erase_priority;eauto. apply heap_nil.
-                   + econs;simpl;auto;try nia;econs;simpl;auto;try nia.
-                 - pose proof (Hi statei) as P. rewrite P in PURE3. rewrite E in PURE3.
-                   apply le_lt_or_eq in Hj. destruct Hj as [Hj|Hj].
-                   + change (initial < j) with (j > initial) in Hj. apply PURE3 in Hj.
-                     admit "".
-                   + rewrite <- Hj. rewrite statei. simpl. rewrite Nat.sub_0_r. unfold heap_at.
-                     unfold subtree_nat. rewrite HeapsortHeader.decode_encode.
-                     rewrite recover_option_subtree. assert (GH : initial' * 2 > initial) by nia.
-                     apply PURE3 in GH. simpl in GH. unfold heap_at in GH.
-                     unfold subtree_nat in GH. 
-                     replace (HeapsortHeader.decode
-                                (S (HeapsortHeader.encode (btctx2idx g) * 2)))
-                       with ((btctx2idx g) ++ [Dir_left]) in GH.
-                     2 :{ apply HeapsortHeader.encode_inj. rewrite HeapsortHeader.encode_decode.
-                          rewrite HeapsortHeader.encode_last. nia. }
-                     rewrite option_subtree_last in GH. rewrite recover_option_subtree in GH.
-                     simpl in GH. inversion HH.
-                     * econs;simpl;auto;try nia. apply heap_nil.
-                     * econs;simpl;auto;try nia;econs;simpl;auto;try nia. }
+               { instantiate (1 := xr).
+                 assert (heap_pr
+                           Z.ge p
+                           (BT_node xl ll lr) ∧ heap_pr Z.ge p (BT_node xr rl rr) ∧ (x ≤ p)%Z)
+                   by now apply Hheap_ch;nia.
+                 destruct H3 as [_ [H4 X]]. inversion H4. split;try split;try nia.
+                 + destruct rl;try apply heap_pr_nil. simpl in R_x_l. inversion heap_l.
+                   apply heap_pr_node;auto.
+                 + destruct rr;try apply heap_pr_nil. simpl in R_x_r. inversion heap_r.
+                   apply heap_pr_node;auto. }
+               { intros t' HH j Hj.
+                 apply Hheap_nch;auto.
+                 assert (heap_pr
+                           Z.ge p
+                           (BT_node xl ll lr) ∧ heap_pr Z.ge p (BT_node xr rl rr) ∧ (x ≤ p)%Z)
+                   by now apply Hheap_ch;nia.
+                 destruct H3 as [H' [H'' X]]. inversion H'. inversion H''. inversion HH.
+                 + econs;simpl;auto;try nia. eapply heap_erase_priority;eauto. apply heap_nil.
+                 + econs;simpl;auto;try nia;econs;simpl;auto;try nia. }
                { eauto. } auto. nia. }             
         * rewrite bind_ret_l.
           rewrite (toList_subtree (recover_bintree g t) (initial' * 2 - 1)).
@@ -392,31 +295,9 @@ Section SIMMODSEM.
              split.
              { specialize (permutation (BT_node x (BT_node xl ll lr) (BT_node xr rl rr))).
                rewrite E. apply permutation. rewrite E. auto. }
-             { apply le_lt_or_eq in statei. apply or_comm in statei.
-               destruct statei as [statei|statei]. all : cycle 1.
-               { apply Hheap_nch. rewrite E.
-                 destruct Hheap_ch as [T1 [T2 T3]].
-                 econs;simpl;try nia;auto;eapply heap_erase_priority;[apply T1|apply T2]. }
-               intros. apply le_lt_or_eq in H.
-               destruct H.
-               - pose proof (Hi statei). rewrite <- H0. revert j H. apply PURE3.
-               - rewrite <- H. rewrite statei. unfold initial'.
-                 unfold heap_at. unfold subtree_nat. simpl. rewrite Nat.sub_0_r.
-                 rewrite HeapsortHeader.decode_encode. rewrite recover_option_subtree.
-                 rewrite E. econs;simpl;try nia;auto.
-                 + specialize (PURE3 (initial' * 2)). rewrite statei in PURE3.
-                   assert (initial' * 2 > initial') by nia.
-                   assert (HH : heap_at Z.ge (initial' * 2 - 1) tree) by auto.
-                   unfold heap_at in HH. unfold subtree_nat in HH. unfold initial' in HH.
-                   simpl in HH. pose proof (Hi statei). rewrite H1 in HH.
-                   rewrite Hindex0 in HH. auto.
-                 + specialize (PURE3 (S (initial' * 2))). rewrite statei in PURE3.
-                   assert (S (initial' * 2) > initial') by nia. simpl in PURE3.
-                   assert (HH : heap_at Z.ge (initial' * 2 - 0) tree) by auto.
-                   rewrite Nat.sub_0_r in HH.
-                   unfold heap_at in HH. unfold subtree_nat in HH. unfold initial' in HH.
-                   simpl in HH. pose proof (Hi statei). rewrite H1 in HH.
-                   rewrite Hindex1 in HH. auto. }
+             { apply Hheap_nch. rewrite E.
+               destruct Hheap_ch as [T1 [T2 T3]].
+               econs;simpl;try nia;auto;eapply heap_erase_priority;[apply T1|apply T2]. }
           ** rewrite bind_ret_l. rewrite bind_tau. force_r.
              rewrite <- (toList_fromList (swap (toList (recover_bintree g t)) (initial' * 2 - 1) (initial' - 1))).
              rewrite E.
@@ -449,8 +330,7 @@ Section SIMMODSEM.
                                (BT_node x ll lr))) by auto.
              inversion Hsubcom.
              { deflag. eapply IHn;simpl. all : cycle 1.
-               { rewrite encode_last. intros. assert (initial' < initial) by nia. nia. }
-               { rewrite encode_last. nia. } { auto. }
+               { auto. }
                { intros. ss. apply (equicomplete_thm g t). rewrite E.
                 econs;auto;try apply bteq_refl;auto. econs;apply bteq_refl. assumption. }
                { inversion H_l.
@@ -459,65 +339,29 @@ Section SIMMODSEM.
                { rewrite encode_last. rewrite <- toList_length. rewrite E in Htreele2.
                  split;try nia. admit "".  }
                { intros. ss. apply permutation. rewrite E. admit "". }
-               { instantiate (1 := xl). apply le_lt_or_eq in statei.
-                 destruct statei as [statei|statei].
-                 - assert (heap_pr
-                             Z.ge p
-                             (BT_node xl ll lr) ∧ heap_pr Z.ge p (BT_node xr rl rr) ∧ (x ≤ p)%Z)
-                     by now apply Hheap_ch;nia.
-                   destruct H3 as [H4 [_ X]]. inversion H4. split;try split;try nia.
-                   + destruct ll;try apply heap_pr_nil. simpl in R_x_l. inversion heap_l.
-                     apply heap_pr_node;auto.
-                   + destruct lr;try apply heap_pr_nil. simpl in R_x_r. inversion heap_r.
-                     apply heap_pr_node;auto.
-                 - pose proof (Hi statei) as P. rewrite P in PURE3. rewrite E in PURE3.
-                   assert (GH : initial' * 2 > initial) by nia. apply PURE3 in GH.
-                   unfold heap_at in GH. unfold subtree_nat in GH. unfold initial' in GH.
-                   simpl in GH. replace (HeapsortHeader.decode
-                                           (S (HeapsortHeader.encode (btctx2idx g) * 2)))
-                     with ((btctx2idx g) ++ [Dir_left]) in GH.
-                   2 :{ apply HeapsortHeader.encode_inj. rewrite HeapsortHeader.encode_decode.
-                        rewrite HeapsortHeader.encode_last. nia. }
-                   rewrite option_subtree_last in GH. rewrite recover_option_subtree in GH.
-                   simpl in GH. split;try split;try nia.
-                   + destruct ll;try apply heap_pr_nil. inversion GH. inversion heap_l.
-                     simpl in R_x_l. apply heap_pr_node;auto.
-                   + destruct lr;try apply heap_pr_nil. inversion GH. inversion heap_r.
-                     simpl in R_x_r. apply heap_pr_node;auto. }
-               { intros t' HH j Hj. apply le_lt_or_eq in statei.
-                 destruct statei as [statei|statei].
-                 - apply Hheap_nch;auto.
-                   assert (heap_pr
-                             Z.ge p
-                             (BT_node xl ll lr) ∧ heap_pr Z.ge p (BT_node xr rl rr) ∧ (x ≤ p)%Z)
-                     by now apply Hheap_ch;nia.
-                   destruct H3 as [H' [H'' X]]. inversion H'. inversion H''. inversion HH.
-                   + econs;simpl;auto;try nia. all : cycle 1.
-                     eapply heap_erase_priority;eauto. apply heap_nil.
-                   + econs;simpl;auto;try nia;econs;simpl;auto;try nia.
-                 - pose proof (Hi statei) as P. rewrite P in PURE3. rewrite E in PURE3.
-                   apply le_lt_or_eq in Hj. destruct Hj as [Hj|Hj].
-                   + change (initial < j) with (j > initial) in Hj. apply PURE3 in Hj.
-                     admit "".
-                   + rewrite <- Hj. rewrite statei. simpl. rewrite Nat.sub_0_r. unfold heap_at.
-                     unfold subtree_nat. rewrite HeapsortHeader.decode_encode.
-                     rewrite recover_option_subtree.
-                     assert (GH : initial' * 2 + 1 > initial) by nia.
-                     apply PURE3 in GH. simpl in GH. unfold heap_at in GH.
-                     unfold subtree_nat in GH. 
-                     replace (HeapsortHeader.decode
-                                (S (HeapsortHeader.encode (btctx2idx g) * 2 + 1)))
-                       with ((btctx2idx g) ++ [Dir_right]) in GH.
-                     2 :{ apply HeapsortHeader.encode_inj. rewrite HeapsortHeader.encode_decode.
-                          rewrite HeapsortHeader.encode_last. nia. }
-                     rewrite option_subtree_last in GH. rewrite recover_option_subtree in GH.
-                     simpl in GH. inversion HH.
-                     * econs;simpl;auto;try nia. apply heap_nil.
-                     * econs;simpl;auto;try nia;econs;simpl;auto;try nia. }
+               { instantiate (1 := xl).
+                 assert (heap_pr
+                           Z.ge p
+                           (BT_node xl ll lr) ∧ heap_pr Z.ge p (BT_node xr rl rr) ∧ (x ≤ p)%Z)
+                   by now apply Hheap_ch;nia.
+                 destruct H3 as [H4 [_ X]]. inversion H4. split;try split;try nia.
+                 + destruct ll;try apply heap_pr_nil. simpl in R_x_l. inversion heap_l.
+                   apply heap_pr_node;auto.
+                 + destruct lr;try apply heap_pr_nil. simpl in R_x_r. inversion heap_r.
+                   apply heap_pr_node;auto. }
+               { intros t' HH j Hj.
+                 apply Hheap_nch;auto.
+                 assert (heap_pr
+                           Z.ge p
+                           (BT_node xl ll lr) ∧ heap_pr Z.ge p (BT_node xr rl rr) ∧ (x ≤ p)%Z)
+                   by now apply Hheap_ch;nia.
+                 destruct H3 as [H' [H'' X]]. inversion H'. inversion H''. inversion HH.
+                 + econs;simpl;auto;try nia. all : cycle 1.
+                   eapply heap_erase_priority;eauto. apply heap_nil.
+                 + econs;simpl;auto;try nia;econs;simpl;auto;try nia. }
                { eauto. } auto. nia. }
              { deflag. eapply IHn;simpl. all : cycle 1.
-               { rewrite encode_last. intros. assert (initial' < initial) by nia. nia. }
-               { rewrite encode_last. nia. } { auto. }
+               { auto. }
                { intros. ss. apply (equicomplete_thm g t). rewrite E.
                 econs;auto;try apply bteq_refl;auto. econs;apply bteq_refl. assumption. }
                { inversion H_l.
@@ -526,61 +370,26 @@ Section SIMMODSEM.
                { rewrite encode_last. rewrite <- toList_length. rewrite E in Htreele2.
                  split;try nia. admit "".  }
                { intros. ss. apply permutation. rewrite E. admit "". }
-               { instantiate (1 := xl). apply le_lt_or_eq in statei.
-                 destruct statei as [statei|statei].
-                 - assert (heap_pr
-                             Z.ge p
-                             (BT_node xl ll lr) ∧ heap_pr Z.ge p (BT_node xr rl rr) ∧ (x ≤ p)%Z)
-                     by now apply Hheap_ch;nia.
-                   destruct H3 as [H4 [_ X]]. inversion H4. split;try split;try nia.
-                   + destruct ll;try apply heap_pr_nil. simpl in R_x_l. inversion heap_l.
-                     apply heap_pr_node;auto.
-                   + destruct lr;try apply heap_pr_nil. simpl in R_x_r. inversion heap_r.
-                     apply heap_pr_node;auto.
-                 - pose proof (Hi statei) as P. rewrite P in PURE3. rewrite E in PURE3.
-                   assert (GH : initial' * 2 > initial) by nia. apply PURE3 in GH.
-                   unfold heap_at in GH. unfold subtree_nat in GH. unfold initial' in GH.
-                   simpl in GH. replace (HeapsortHeader.decode
-                                           (S (HeapsortHeader.encode (btctx2idx g) * 2)))
-                     with ((btctx2idx g) ++ [Dir_left]) in GH.
-                   2 :{ apply HeapsortHeader.encode_inj. rewrite HeapsortHeader.encode_decode.
-                        rewrite HeapsortHeader.encode_last. nia. }
-                   rewrite option_subtree_last in GH. rewrite recover_option_subtree in GH.
-                   simpl in GH. split;try split;try nia.
-                   + destruct ll;try apply heap_pr_nil. inversion GH. inversion heap_l.
-                     simpl in R_x_l. apply heap_pr_node;auto.
-                   + destruct lr;try apply heap_pr_nil. inversion GH. inversion heap_r.
-                     simpl in R_x_r. apply heap_pr_node;auto. }
-               { intros t' HH j Hj. apply le_lt_or_eq in statei.
-                 destruct statei as [statei|statei].
-                 - apply Hheap_nch;auto.
-                   assert (heap_pr
-                             Z.ge p
-                             (BT_node xl ll lr) ∧ heap_pr Z.ge p (BT_node xr rl rr) ∧ (x ≤ p)%Z)
-                     by now apply Hheap_ch;nia.
-                   destruct H3 as [H' [H'' X]]. inversion H'. inversion H''. inversion HH.
-                   + econs;simpl;auto;try nia. all : cycle 1.
-                     eapply heap_erase_priority;eauto. apply heap_nil.
-                   + econs;simpl;auto;try nia;econs;simpl;auto;try nia.
-                 - pose proof (Hi statei) as P. rewrite P in PURE3. rewrite E in PURE3.
-                   apply le_lt_or_eq in Hj. destruct Hj as [Hj|Hj].
-                   + change (initial < j) with (j > initial) in Hj. apply PURE3 in Hj.
-                     admit "".
-                   + rewrite <- Hj. rewrite statei. simpl. rewrite Nat.sub_0_r. unfold heap_at.
-                     unfold subtree_nat. rewrite HeapsortHeader.decode_encode.
-                     rewrite recover_option_subtree.
-                     assert (GH : initial' * 2 + 1 > initial) by nia.
-                     apply PURE3 in GH. simpl in GH. unfold heap_at in GH.
-                     unfold subtree_nat in GH. 
-                     replace (HeapsortHeader.decode
-                                (S (HeapsortHeader.encode (btctx2idx g) * 2 + 1)))
-                       with ((btctx2idx g) ++ [Dir_right]) in GH.
-                     2 :{ apply HeapsortHeader.encode_inj. rewrite HeapsortHeader.encode_decode.
-                          rewrite HeapsortHeader.encode_last. nia. }
-                     rewrite option_subtree_last in GH. rewrite recover_option_subtree in GH.
-                     simpl in GH. inversion HH.
-                     * econs;simpl;auto;try nia. apply heap_nil.
-                     * econs;simpl;auto;try nia;econs;simpl;auto;try nia. }
+               { instantiate (1 := xl).
+                 assert (heap_pr
+                           Z.ge p
+                           (BT_node xl ll lr) ∧ heap_pr Z.ge p (BT_node xr rl rr) ∧ (x ≤ p)%Z)
+                   by now apply Hheap_ch;nia.
+                 destruct H3 as [H4 [_ X]]. inversion H4. split;try split;try nia.
+                 + destruct ll;try apply heap_pr_nil. simpl in R_x_l. inversion heap_l.
+                   apply heap_pr_node;auto.
+                 + destruct lr;try apply heap_pr_nil. simpl in R_x_r. inversion heap_r.
+                   apply heap_pr_node;auto. }
+               { intros t' HH j Hj.
+                 apply Hheap_nch;auto.
+                 assert (heap_pr
+                           Z.ge p
+                           (BT_node xl ll lr) ∧ heap_pr Z.ge p (BT_node xr rl rr) ∧ (x ≤ p)%Z)
+                   by now apply Hheap_ch;nia.
+                 destruct H3 as [H' [H'' X]]. inversion H'. inversion H''. inversion HH.
+                 + econs;simpl;auto;try nia. all : cycle 1.
+                   eapply heap_erase_priority;eauto. apply heap_nil.
+                 + econs;simpl;auto;try nia;econs;simpl;auto;try nia. }
                { eauto. } auto. nia. }
              
       + rewrite bind_ret_l.
@@ -599,31 +408,9 @@ Section SIMMODSEM.
            split.
            { specialize (permutation (BT_node x (BT_node xl ll lr) BT_nil)).
              rewrite E. apply permutation. rewrite E. auto. }
-           { apply le_lt_or_eq in statei. apply or_comm in statei.
-             destruct statei as [statei|statei]. all : cycle 1.
-             { apply Hheap_nch. rewrite E.
-               destruct Hheap_ch as [T1 [T2 T3]].
-               econs;simpl;try nia;auto;eapply heap_erase_priority;[apply T1|apply T2]. }
-             intros. apply le_lt_or_eq in H.
-             destruct H.
-             - pose proof (Hi statei). rewrite <- H0. revert j H. apply PURE3.
-             - rewrite <- H. rewrite statei. unfold initial'.
-               unfold heap_at. unfold subtree_nat. simpl. rewrite Nat.sub_0_r.
-               rewrite HeapsortHeader.decode_encode. rewrite recover_option_subtree.
-               rewrite E. econs;simpl;try nia;auto.
-               + specialize (PURE3 (initial' * 2)). rewrite statei in PURE3.
-                 assert (initial' * 2 > initial') by nia.
-                 assert (HH : heap_at Z.ge (initial' * 2 - 1) tree) by auto.
-                 unfold heap_at in HH. unfold subtree_nat in HH. unfold initial' in HH.
-                 simpl in HH. pose proof (Hi statei). rewrite H1 in HH.
-                 rewrite Hindex0 in HH. auto.
-               + specialize (PURE3 (S (initial' * 2))). rewrite statei in PURE3.
-                 assert (S (initial' * 2) > initial') by nia. simpl in PURE3.
-                 assert (HH : heap_at Z.ge (initial' * 2 - 0) tree) by auto.
-                 rewrite Nat.sub_0_r in HH.
-                 unfold heap_at in HH. unfold subtree_nat in HH. unfold initial' in HH.
-                 simpl in HH. pose proof (Hi statei). rewrite H1 in HH.
-                 rewrite Hindex1 in HH. auto. }
+           { apply Hheap_nch. rewrite E.
+             destruct Hheap_ch as [T1 [T2 T3]].
+             econs;simpl;try nia;auto;eapply heap_erase_priority;[apply T1|apply T2]. }
         ** rewrite bind_ret_l. rewrite bind_tau. force_r.
            rewrite <- (toList_fromList (swap (toList (recover_bintree g t)) (initial' * 2 - 1) (initial' - 1))).
            rewrite E.
@@ -656,8 +443,7 @@ Section SIMMODSEM.
                                (BT_node x ll lr))) by auto.
              inversion Hsubcom.
              { deflag. eapply IHn;simpl. all : cycle 1.
-               { rewrite encode_last. intros. assert (initial' < initial) by nia. nia. }
-               { rewrite encode_last. nia. } { auto. }
+               { auto. }
                { intros. ss. apply (equicomplete_thm g t). rewrite E.
                 econs;auto;try apply bteq_refl;auto. econs;apply bteq_refl. assumption. }
                { inversion H_l.
@@ -666,65 +452,29 @@ Section SIMMODSEM.
                { rewrite encode_last. rewrite <- toList_length. rewrite E in Htreele2.
                  split;try nia. admit "".  }
                { intros. ss. apply permutation. rewrite E. admit "". }
-               { instantiate (1 := xl). apply le_lt_or_eq in statei.
-                 destruct statei as [statei|statei].
-                 - assert (heap_pr
-                             Z.ge p
-                             (BT_node xl ll lr) ∧ heap_pr Z.ge p BT_nil ∧ (x ≤ p)%Z)
-                     by now apply Hheap_ch;nia.
-                   destruct H3 as [H4 [_ X]]. inversion H4. split;try split;try nia.
-                   + destruct ll;try apply heap_pr_nil. simpl in R_x_l. inversion heap_l.
-                     apply heap_pr_node;auto.
-                   + destruct lr;try apply heap_pr_nil. simpl in R_x_r. inversion heap_r.
-                     apply heap_pr_node;auto.
-                 - pose proof (Hi statei) as P. rewrite P in PURE3. rewrite E in PURE3.
-                   assert (GH : initial' * 2 > initial) by nia. apply PURE3 in GH.
-                   unfold heap_at in GH. unfold subtree_nat in GH. unfold initial' in GH.
-                   simpl in GH. replace (HeapsortHeader.decode
-                                           (S (HeapsortHeader.encode (btctx2idx g) * 2)))
-                     with ((btctx2idx g) ++ [Dir_left]) in GH.
-                   2 :{ apply HeapsortHeader.encode_inj. rewrite HeapsortHeader.encode_decode.
-                        rewrite HeapsortHeader.encode_last. nia. }
-                   rewrite option_subtree_last in GH. rewrite recover_option_subtree in GH.
-                   simpl in GH. split;try split;try nia.
-                   + destruct ll;try apply heap_pr_nil. inversion GH. inversion heap_l.
-                     simpl in R_x_l. apply heap_pr_node;auto.
-                   + destruct lr;try apply heap_pr_nil. inversion GH. inversion heap_r.
-                     simpl in R_x_r. apply heap_pr_node;auto. }
-               { intros t' HH j Hj. apply le_lt_or_eq in statei.
-                 destruct statei as [statei|statei].
-                 - apply Hheap_nch;auto.
-                   assert (heap_pr
-                             Z.ge p
-                             (BT_node xl ll lr) ∧ heap_pr Z.ge p BT_nil ∧ (x ≤ p)%Z)
-                     by now apply Hheap_ch;nia.
-                   destruct H3 as [H' [H'' X]]. inversion H'. inversion H''. inversion HH.
-                   + econs;simpl;auto;try nia. all : cycle 1.
-                     eapply heap_erase_priority;eauto. apply heap_nil.
-                   + econs;simpl;auto;try nia;econs;simpl;auto;try nia.
-                 - pose proof (Hi statei) as P. rewrite P in PURE3. rewrite E in PURE3.
-                   apply le_lt_or_eq in Hj. destruct Hj as [Hj|Hj].
-                   + change (initial < j) with (j > initial) in Hj. apply PURE3 in Hj.
-                     admit "".
-                   + rewrite <- Hj. rewrite statei. simpl. rewrite Nat.sub_0_r. unfold heap_at.
-                     unfold subtree_nat. rewrite HeapsortHeader.decode_encode.
-                     rewrite recover_option_subtree.
-                     assert (GH : initial' * 2 + 1 > initial) by nia.
-                     apply PURE3 in GH. simpl in GH. unfold heap_at in GH.
-                     unfold subtree_nat in GH. 
-                     replace (HeapsortHeader.decode
-                                (S (HeapsortHeader.encode (btctx2idx g) * 2 + 1)))
-                       with ((btctx2idx g) ++ [Dir_right]) in GH.
-                     2 :{ apply HeapsortHeader.encode_inj. rewrite HeapsortHeader.encode_decode.
-                          rewrite HeapsortHeader.encode_last. nia. }
-                     rewrite option_subtree_last in GH. rewrite recover_option_subtree in GH.
-                     simpl in GH. inversion HH.
-                     * econs;simpl;auto;try nia. 
-                     * econs;simpl;auto;try nia;econs;simpl;auto;try nia. }
+               { instantiate (1 := xl).
+                 assert (heap_pr
+                           Z.ge p
+                           (BT_node xl ll lr) ∧ heap_pr Z.ge p BT_nil ∧ (x ≤ p)%Z)
+                   by now apply Hheap_ch;nia.
+                 destruct H3 as [H4 [_ X]]. inversion H4. split;try split;try nia.
+                 + destruct ll;try apply heap_pr_nil. simpl in R_x_l. inversion heap_l.
+                   apply heap_pr_node;auto.
+                 + destruct lr;try apply heap_pr_nil. simpl in R_x_r. inversion heap_r.
+                   apply heap_pr_node;auto. }
+               { intros t' HH j Hj.
+                 apply Hheap_nch;auto.
+                 assert (heap_pr
+                           Z.ge p
+                           (BT_node xl ll lr) ∧ heap_pr Z.ge p BT_nil ∧ (x ≤ p)%Z)
+                   by now apply Hheap_ch;nia.
+                 destruct H3 as [H' [H'' X]]. inversion H'. inversion H''. inversion HH.
+                 + econs;simpl;auto;try nia. all : cycle 1.
+                   eapply heap_erase_priority;eauto. apply heap_nil.
+                 + econs;simpl;auto;try nia;econs;simpl;auto;try nia. }
                { eauto. } auto. nia. }
              { deflag. eapply IHn;simpl. all : cycle 1.
-               { rewrite encode_last. intros. assert (initial' < initial) by nia. nia. }
-               { rewrite encode_last. nia. } { auto. }
+               { auto. }
                { intros. ss. apply (equicomplete_thm g t). rewrite E.
                 econs;auto;try apply bteq_refl;auto. econs;apply bteq_refl. assumption. }
                { inversion H_l.
@@ -733,61 +483,26 @@ Section SIMMODSEM.
                 { rewrite encode_last. rewrite <- toList_length. rewrite E in Htreele2.
                  split;try nia. admit "".  }
                { intros. ss. apply permutation. rewrite E. admit "". }
-               { instantiate (1 := xl). apply le_lt_or_eq in statei.
-                 destruct statei as [statei|statei].
-                 - assert (heap_pr
-                             Z.ge p
-                             (BT_node xl ll lr) ∧ heap_pr Z.ge p BT_nil ∧ (x ≤ p)%Z)
-                     by now apply Hheap_ch;nia.
-                   destruct H3 as [H4 [_ X]]. inversion H4. split;try split;try nia.
-                   + destruct ll;try apply heap_pr_nil. simpl in R_x_l. inversion heap_l.
-                     apply heap_pr_node;auto.
-                   + destruct lr;try apply heap_pr_nil. simpl in R_x_r. inversion heap_r.
-                     apply heap_pr_node;auto.
-                 - pose proof (Hi statei) as P. rewrite P in PURE3. rewrite E in PURE3.
-                   assert (GH : initial' * 2 > initial) by nia. apply PURE3 in GH.
-                   unfold heap_at in GH. unfold subtree_nat in GH. unfold initial' in GH.
-                   simpl in GH. replace (HeapsortHeader.decode
-                                           (S (HeapsortHeader.encode (btctx2idx g) * 2)))
-                     with ((btctx2idx g) ++ [Dir_left]) in GH.
-                   2 :{ apply HeapsortHeader.encode_inj. rewrite HeapsortHeader.encode_decode.
-                        rewrite HeapsortHeader.encode_last. nia. }
-                   rewrite option_subtree_last in GH. rewrite recover_option_subtree in GH.
-                   simpl in GH. split;try split;try nia.
-                   + destruct ll;try apply heap_pr_nil. inversion GH. inversion heap_l.
-                     simpl in R_x_l. apply heap_pr_node;auto.
-                   + destruct lr;try apply heap_pr_nil. inversion GH. inversion heap_r.
-                     simpl in R_x_r. apply heap_pr_node;auto. }
-               { intros t' HH j Hj. apply le_lt_or_eq in statei.
-                 destruct statei as [statei|statei].
-                 - apply Hheap_nch;auto.
-                   assert (heap_pr
-                             Z.ge p
-                             (BT_node xl ll lr) ∧ heap_pr Z.ge p BT_nil ∧ (x ≤ p)%Z)
-                     by now apply Hheap_ch;nia.
-                   destruct H3 as [H' [H'' X]]. inversion H'. inversion H''. inversion HH.
-                   + econs;simpl;auto;try nia. all : cycle 1.
-                     eapply heap_erase_priority;eauto. apply heap_nil.
-                   + econs;simpl;auto;try nia;econs;simpl;auto;try nia.
-                 - pose proof (Hi statei) as P. rewrite P in PURE3. rewrite E in PURE3.
-                   apply le_lt_or_eq in Hj. destruct Hj as [Hj|Hj].
-                   + change (initial < j) with (j > initial) in Hj. apply PURE3 in Hj.
-                     admit "".
-                   + rewrite <- Hj. rewrite statei. simpl. rewrite Nat.sub_0_r. unfold heap_at.
-                     unfold subtree_nat. rewrite HeapsortHeader.decode_encode.
-                     rewrite recover_option_subtree.
-                     assert (GH : initial' * 2 + 1 > initial) by nia.
-                     apply PURE3 in GH. simpl in GH. unfold heap_at in GH.
-                     unfold subtree_nat in GH. 
-                     replace (HeapsortHeader.decode
-                                (S (HeapsortHeader.encode (btctx2idx g) * 2 + 1)))
-                       with ((btctx2idx g) ++ [Dir_right]) in GH.
-                     2 :{ apply HeapsortHeader.encode_inj. rewrite HeapsortHeader.encode_decode.
-                          rewrite HeapsortHeader.encode_last. nia. }
-                     rewrite option_subtree_last in GH. rewrite recover_option_subtree in GH.
-                     simpl in GH. inversion HH.
-                     * econs;simpl;auto;try nia. 
-                     * econs;simpl;auto;try nia;econs;simpl;auto;try nia. }
+               { instantiate (1 := xl).
+                 assert (heap_pr
+                           Z.ge p
+                           (BT_node xl ll lr) ∧ heap_pr Z.ge p BT_nil ∧ (x ≤ p)%Z)
+                   by now apply Hheap_ch;nia.
+                 destruct H3 as [H4 [_ X]]. inversion H4. split;try split;try nia.
+                 + destruct ll;try apply heap_pr_nil. simpl in R_x_l. inversion heap_l.
+                   apply heap_pr_node;auto.
+                 + destruct lr;try apply heap_pr_nil. simpl in R_x_r. inversion heap_r.
+                   apply heap_pr_node;auto. }
+               { intros t' HH j Hj.
+                 apply Hheap_nch;auto.
+                 assert (heap_pr
+                           Z.ge p
+                           (BT_node xl ll lr) ∧ heap_pr Z.ge p BT_nil ∧ (x ≤ p)%Z)
+                   by now apply Hheap_ch;nia.
+                 destruct H3 as [H' [H'' X]]. inversion H'. inversion H''. inversion HH.
+                 + econs;simpl;auto;try nia. all : cycle 1.
+                   eapply heap_erase_priority;eauto. apply heap_nil.
+                 + econs;simpl;auto;try nia;econs;simpl;auto;try nia. }
                { eauto. } auto. nia. }
   Qed.
                  

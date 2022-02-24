@@ -1828,49 +1828,84 @@ Section BinaryTreeZipper.
         auto.
   Qed.
 
-  Lemma focus_recover (tree : bintree A) t i j:
-    let '(g', _) := focus btctx_top tree (decode i) in
-    if j =? i
-    then focus btctx_top (recover_bintree g' t) (decode j) = (g', t)
-    else if j =? (i * 2 + 1)
-         then match t with
-              | BT_nil => True
-              | BT_node x l r =>
-                  focus btctx_top (recover_bintree g' t) (decode j) = (btctx_left x r g', l)
-              end
-         else if j =? (i * 2 + 2)
-              then match t with
-                   | BT_nil => True
-                   | BT_node x l r =>
-                       focus btctx_top (recover_bintree g' t) (decode j) = (btctx_right x l g', r)
-                   end
-              else True.                                               
-  Admitted.
-
-   Lemma swap_subtree_left (tree : bintree A) i :
-    fromList (swap (toList tree) (i * 2 + 1) i) =
-      match focus btctx_top tree (decode i) with
-      | (_, BT_nil) => tree
-      | (_, BT_node x BT_nil _) => tree
-      | (g, BT_node x (BT_node xl ll lr) r) => recover_bintree g (BT_node xl (BT_node x ll lr) r)
-      end.
-  Admitted.
-  
-  Lemma swap_subtree_right (tree : bintree A) i :
-    fromList (swap (toList tree) (i * 2 + 2) i) =
-      match focus btctx_top tree (decode i) with
-      | (_, BT_nil) => tree
-      | (_, BT_node x _ BT_nil) => tree
-      | (g, BT_node x l (BT_node xr rl rr)) => recover_bintree g (BT_node xr l (BT_node x rl rr))
-      end.
-  Admitted.
-
   Lemma recover_option_subtree (g : btctx A) t :
     option_subtree (btctx2idx g) (recover_bintree g t) = Some t.
-  Admitted.
+  Proof.
+    revert t. induction g;simpl;auto.
+    - intros;rewrite option_subtree_last;rewrite IHg;auto.
+    - intros;rewrite option_subtree_last;rewrite IHg;auto.
+  Qed.
   
-  Lemma btctx2idx_focus (tree : bintree A) i : let '(g, _) := focus btctx_top tree i in btctx2idx g = i.
-  Admitted.
+  Lemma btctx2idx_focus (tree : bintree A) g i:
+        let (g', t) := focus g tree i in
+        t <> BT_nil -> btctx2idx g' = btctx2idx g ++ i.
+  Proof.
+    revert tree g. induction i.
+    - intros.
+      destruct tree;simpl;intros H;[contradiction H;auto|]. symmetry. apply app_nil_r.
+    - destruct tree;simpl;try intros;[contradiction H;auto|].
+      destruct a;
+        [pose proof (IHi tree1 (btctx_left x tree2 g))
+        |pose proof (IHi tree2 (btctx_right x tree1 g))]
+      ;simpl in H;rewrite <- app_assoc in H;auto.
+  Qed.
+
+  Lemma focus_subtree (t : bintree A) g i :
+    let (g', t') := focus g t i in
+    match t' with
+    | BT_nil => option_subtree i t = Some BT_nil \/ option_subtree i t = None
+    | BT_node _ _ _ => option_subtree i t = Some t'
+    end.
+  Proof.
+    remember (focus g t i) as p. destruct p as [g' t'].
+    destruct t'.
+    - revert t g g' Heqp. induction i;intros.
+      + destruct t0;simpl;auto.
+        simpl in Heqp. inversion Heqp.
+      + destruct t0;simpl;auto.
+        simpl in Heqp. destruct a;simpl;eapply IHi;eauto.
+    - revert t g g' Heqp. induction i;intros.
+      + destruct t0;simpl in *;try inversion Heqp;subst;auto.
+      + destruct t0;simpl in *;[inversion Heqp|].
+        destruct a;apply IHi in Heqp;simpl in *;auto.
+  Qed.
+
+  Lemma subtree_inrange_ltlen (t : bintree A) :
+    complete t ->
+    forall j, lt_ltlen j (last_btidx t) ->
+         exists x l r, option_subtree j t = Some (BT_node x l r).
+  Proof with first [ lia | eassumption | eapply perfect'2complete'; eassumption | idtac ].
+    unfold lt_ltlen.
+    intros [n H] j Hj.
+    revert t H j Hj.
+    induction n using Wf_nat.lt_wf_ind; rename H into IH.
+    intros t H j Hj.
+    destruct H.
+    - unfold last_btidx in Hj. rewrite unfold_decode in Hj. simpl in Hj...
+    - destruct n.
+      { inversion H_l.
+        inversion H.
+        subst. unfold last_btidx in Hj. rewrite unfold_decode in Hj. simpl in Hj... }
+      erewrite last_btidx_perfect_complete with (n := S n) in Hj.
+      destruct j as [|[] j]; simpl in Hj...
+      + rewrite unfold_option_subtree; simpl.
+        erewrite complete'_last_btidx_length in Hj...
+        eapply (IH (S n))...
+        erewrite complete'_last_btidx_length...
+        lia.
+      + rewrite unfold_option_subtree; simpl.
+        eapply (IH (S n))...
+    - erewrite last_btidx_complete_perfect in Hj...
+      destruct j as [|[] j]; simpl in Hj...
+      + rewrite unfold_option_subtree; simpl.
+        eapply (IH (S n))...
+      + rewrite unfold_option_subtree; simpl.
+        erewrite complete'_last_btidx_length in Hj...
+        eapply (IH n)...
+        erewrite complete'_last_btidx_length...
+        lia.
+  Qed.
+        
   
   Theorem btctx_lookup (g : btctx A) t :
     lookup (toList (recover_bintree g t)) (encode (btctx2idx g)) = option_root t.
