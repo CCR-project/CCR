@@ -78,8 +78,7 @@ Section SIMMODSEM.
     assert (Hsize : 1<= initial' <= btsize (recover_bintree g t)).
     { rewrite <- Hieq. rewrite <- Heq. nia. }
     assert (Hcom : complete (recover_bintree g t)) by now rewrite <- Heq;auto.
-    assert (permutation : forall t', toList t ≡ₚ toList t'
-                                -> toList tree ≡ₚ toList (recover_bintree g t')).
+    assert (permutation : toList tree ≡ₚ toList (recover_bintree g t)).
     { admit "". }
     rewrite Hieq in Eqp.
     assert (Hsubcom : complete t) by (eapply recover_complete; eassumption).
@@ -125,8 +124,6 @@ Section SIMMODSEM.
     - steps_weak. rewrite E. force_l. eexists.
       steps_weak. hret tt;ss. iModIntro. iSplit;ss. iPureIntro.
       split;auto. exists (recover_bintree g t). split;rewrite E;auto. split;rewrite <- E;auto.
-      specialize (permutation t).
-      assert (toList tree ≡ₚ toList (recover_bintree g t)) by auto.
       split;auto.
       assert (none1 : length (toList (recover_bintree g t)) <= initial' * 2 - 1)
         by now unfold initial';nia.
@@ -174,8 +171,7 @@ Section SIMMODSEM.
              steps_weak. hret tt;ss. iModIntro. iSplit; ss. iPureIntro.
              split;auto. exists (recover_bintree g t). do 2 split;auto.
              split.
-             { specialize (permutation (BT_node x (BT_node xl ll lr) (BT_node xr rl rr))).
-               rewrite E. apply permutation. rewrite E. auto. }
+             { assumption. }
              { apply Hheap_nch. rewrite E.
                destruct Hheap_ch as [T1 [T2 T3]].
                econs;simpl;try nia;auto;eapply heap_erase_priority;[apply T1|apply T2]. }
@@ -219,7 +215,7 @@ Section SIMMODSEM.
                  - eapply complete_node_complete_perfect;eauto. }
                { rewrite encode_last. rewrite <- toList_length. rewrite E in Htreele2.
                  split;try nia. admit "".  }
-               { intros. ss. apply permutation. rewrite E. admit "". }
+               { intros. ss. rewrite permutation. rewrite E. admit "". }
                { instantiate (1 := xr).
                  assert (heap_pr
                            Z.ge p
@@ -251,7 +247,7 @@ Section SIMMODSEM.
                  apply perfect'2complete';auto. }
                { rewrite encode_last. rewrite <- toList_length. rewrite E in Htreele2.
                  split;try nia. admit "".  }
-               { intros. ss. apply permutation. rewrite E. admit "". }
+               { intros. ss. rewrite permutation. rewrite E. admit "". }
                { instantiate (1 := xr).
                  assert (heap_pr
                            Z.ge p
@@ -282,8 +278,7 @@ Section SIMMODSEM.
              steps_weak. hret tt;ss. iModIntro. iSplit; ss. iPureIntro.
              split;auto. exists (recover_bintree g t). do 2 split;auto.
              split.
-             { specialize (permutation (BT_node x (BT_node xl ll lr) (BT_node xr rl rr))).
-               rewrite E. apply permutation. rewrite E. auto. }
+             { assumption. }
              { apply Hheap_nch. rewrite E.
                destruct Hheap_ch as [T1 [T2 T3]].
                econs;simpl;try nia;auto;eapply heap_erase_priority;[apply T1|apply T2]. }
@@ -327,7 +322,7 @@ Section SIMMODSEM.
                  apply perfect'2complete';auto. }
                { rewrite encode_last. rewrite <- toList_length. rewrite E in Htreele2.
                  split;try nia. admit "".  }
-               { intros. ss. apply permutation. rewrite E. admit "". }
+               { intros. ss. rewrite permutation. rewrite E. admit "". }
                { instantiate (1 := xl).
                  assert (heap_pr
                            Z.ge p
@@ -358,7 +353,7 @@ Section SIMMODSEM.
                  - eapply complete_node_complete_perfect;eauto. }
                { rewrite encode_last. rewrite <- toList_length. rewrite E in Htreele2.
                  split;try nia. admit "".  }
-               { intros. ss. apply permutation. rewrite E. admit "". }
+               { intros. ss. rewrite permutation. rewrite E. admit "". }
                { instantiate (1 := xl).
                  assert (heap_pr
                            Z.ge p
@@ -395,8 +390,7 @@ Section SIMMODSEM.
            steps_weak. hret tt;ss. iModIntro. iSplit; ss. iPureIntro.
            split;auto. exists (recover_bintree g t). do 2 split;auto.
            split.
-           { specialize (permutation (BT_node x (BT_node xl ll lr) BT_nil)).
-             rewrite E. apply permutation. rewrite E. auto. }
+           { assumption. }
            { apply Hheap_nch. rewrite E.
              destruct Hheap_ch as [T1 [T2 T3]].
              econs;simpl;try nia;auto;eapply heap_erase_priority;[apply T1|apply T2]. }
@@ -440,7 +434,7 @@ Section SIMMODSEM.
                  apply perfect'2complete';auto. }
                { rewrite encode_last. rewrite <- toList_length. rewrite E in Htreele2.
                  split;try nia. admit "".  }
-               { intros. ss. apply permutation. rewrite E. admit "". }
+               { intros. ss. rewrite permutation. rewrite E. admit "". }
                { instantiate (1 := xl).
                  assert (heap_pr
                            Z.ge p
@@ -471,7 +465,7 @@ Section SIMMODSEM.
                  - eapply complete_node_complete_perfect;eauto. }
                 { rewrite encode_last. rewrite <- toList_length. rewrite E in Htreele2.
                  split;try nia. admit "".  }
-               { intros. ss. apply permutation. rewrite E. admit "". }
+               { intros. ss. rewrite permutation. rewrite E. admit "". }
                { instantiate (1 := xl).
                  assert (heap_pr
                            Z.ge p
@@ -494,8 +488,7 @@ Section SIMMODSEM.
                  + econs;simpl;auto;try nia;econs;simpl;auto;try nia. }
                { eauto. } auto. nia. }
   Qed.
-                 
-  
+
   Lemma sim_heapify (sk : alist string Sk.gdef) :
     sim_fnsem wf top2
               ("heapify",

@@ -1885,6 +1885,11 @@ Section BinaryTreeZipper.
     complete (recover_bintree g t) -> complete t.
   Admitted.
 
+  Lemma recover_permutation g (t t' : bintree A) :
+    Permutation (toList t) (toList t') ->
+    Permutation (toList (recover_bintree g t)) (toList (recover_bintree g t')).
+  Admitted.
+
 End BinaryTreeZipper.
 
 Section ListAccessories.
