@@ -105,9 +105,8 @@ Section SIMMODSEM.
     { admit "". }
     clear Heqp.
     clear Hieq.
-    assert (stateG : g = btctx_top \/ g <> btctx_top) by now destruct g;[left|right|right];auto.
     deflag.
-    revert p t x l r g stateG initial' Hi statei E Hcom Hsubcom Hsize completeness permutation Hheap_ch Hheap_nch mrp_src mp_tgt WF ctx mr_src mp_src ACC.
+    revert p t x l r g initial' Hi statei E Hcom Hsubcom Hsize completeness permutation Hheap_ch Hheap_nch mrp_src mp_tgt WF ctx mr_src mp_src ACC.
     induction n using Wf_nat.lt_wf_rect;i.
     rewrite unfold_iter_eq. rename H into IHn.
     assert (HT : t <> BT_nil) by now rewrite E;auto.
@@ -248,7 +247,6 @@ Section SIMMODSEM.
                                (BT_node x rl rr))) by auto.
              inversion Hsubcom.
              { deflag. eapply IHn;simpl. all : cycle 1.
-               { auto. }
                { rewrite encode_last. intros. assert (initial' < initial) by nia. nia. }
                { rewrite encode_last. nia. } { auto. }
                {intros. ss. apply completeness. rewrite E.
@@ -316,7 +314,6 @@ Section SIMMODSEM.
                      * econs;simpl;auto;try nia;econs;simpl;auto;try nia. }
                { eauto. } auto. nia. }
              { deflag. eapply IHn;simpl. all : cycle 1.
-               { auto. }
                { rewrite encode_last. intros. assert (initial' < initial) by nia. nia. }
                { rewrite encode_last. nia. } { auto. }
                { intros. ss. apply completeness. rewrite E.
@@ -454,7 +451,6 @@ Section SIMMODSEM.
                                (BT_node x ll lr))) by auto.
              inversion Hsubcom.
              { deflag. eapply IHn;simpl. all : cycle 1.
-               { auto. }
                { rewrite encode_last. intros. assert (initial' < initial) by nia. nia. }
                { rewrite encode_last. nia. } { auto. }
                { intros. ss. apply completeness. rewrite E.
@@ -524,7 +520,6 @@ Section SIMMODSEM.
                      * econs;simpl;auto;try nia;econs;simpl;auto;try nia. }
                { eauto. } auto. nia. }
              { deflag. eapply IHn;simpl. all : cycle 1.
-               { auto. }
                { rewrite encode_last. intros. assert (initial' < initial) by nia. nia. }
                { rewrite encode_last. nia. } { auto. }
                { intros. ss. apply completeness. rewrite E.
@@ -667,7 +662,6 @@ Section SIMMODSEM.
                                (BT_node x ll lr))) by auto.
              inversion Hsubcom.
              { deflag. eapply IHn;simpl. all : cycle 1.
-               { auto. }
                { rewrite encode_last. intros. assert (initial' < initial) by nia. nia. }
                { rewrite encode_last. nia. } { auto. }
                { intros. ss. apply completeness. rewrite E.
@@ -737,7 +731,6 @@ Section SIMMODSEM.
                      * econs;simpl;auto;try nia;econs;simpl;auto;try nia. }
                { eauto. } auto. nia. }
              { deflag. eapply IHn;simpl. all : cycle 1.
-               { auto. }
                { rewrite encode_last. intros. assert (initial' < initial) by nia. nia. }
                { rewrite encode_last. nia. } { auto. }
                { intros. ss. apply completeness. rewrite E.
