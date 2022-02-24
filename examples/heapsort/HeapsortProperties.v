@@ -13,6 +13,586 @@ Import ListNotations.
 Require Import HeapsortHeader.
 Local Open Scope program_scope.
 
+Section LList.
+
+  Context {A : Type}.
+  
+  Lemma perfect2complete_list n (xss : list (list A)) :
+    perfect_list n xss -> complete_list n xss.
+  Proof.
+    revert n. induction xss; simpl.
+    - auto.
+    - intros n [].
+      left. split.
+      + assumption.
+      + eapply IHxss. assumption.
+  Qed.
+
+  Lemma splitLListRight_length' n (xss : list (list A)) :
+    perfect_list (S n) xss ->
+    length (splitLListRight n xss) = length xss.
+  Proof.
+    revert n.
+    induction xss.
+    - reflexivity.
+    - intros. destruct H. simpl.
+      rewrite H.
+      pose_exp2 n.
+      replace (2 ^ S n <=? 2 ^ n) with false by dec_nat.
+      simpl.
+      rewrite IHxss by assumption.
+      reflexivity.
+  Qed.
+
+  Lemma complete_toLList n (xs : list A) : complete_list n (toLList n xs).
+  Proof with lia || eauto.
+    remember (length xs) as l.
+    revert n xs Heql.
+    induction l as [l IH] using Wf_nat.lt_wf_ind.
+    intros n [ | x xs'].
+    - intros Heql. now rewrite unfold_toLList.
+    - set (xs := x :: xs'). intros Heql.
+      rewrite unfold_toLList. unfold xs at 1. simpl.
+      assert (claim1 : length (firstn (2^n) xs) = min (2^n) l).
+      { rewrite Heql. apply firstn_length. }
+      assert (claim2 : length (firstn (2 ^ n) xs) = 2 ^ n \/ length (firstn (2 ^ n) xs) < 2 ^ n) by lia.
+      assert (claim3 : l > 0).
+      { rewrite Heql. unfold xs. simpl... }
+      pose_exp2 n.
+      destruct claim2 as [claim2 | claim2]; [left | right].
+      + split... eapply IH; try reflexivity. rewrite Heql.
+        apply skipn_exp_length. simpl...
+      + split...
+        assert (claim5 : length (skipn (2 ^ n) xs) = 0).
+        { rewrite skipn_length... }
+        destruct (skipn (2 ^ n) xs)...
+        inversion claim5.
+  Qed.
+
+  Lemma toLList_concat n (xss : list (list A)) :
+    complete_list n xss ->
+    toLList n (concat xss) = xss.
+  Proof.
+    revert n.
+    induction xss as [| xs xss ].
+    - auto.
+    - intros.
+      destruct H as [[H1 H2] | [H1 H2]].
+      + rewrite unfold_toLList. simpl.
+        pose_exp2 n.
+        assert (xs <> []) by (intro; subst; simpl in *; lia).
+        replace (null (xs ++ concat xss)) with false by dec_list.
+        rewrite firstn_exact, skipn_exact by auto.
+        rewrite IHxss by assumption.
+        reflexivity.
+      + subst. rewrite unfold_toLList. simpl. rewrite app_nil_r.
+        replace (null xs) with false by (dec_list; subst; simpl in *; lia).
+        rewrite firstn_all2 by lia.
+        rewrite skipn_all2 by lia.
+        reflexivity.
+  Qed.
+
+  Lemma perfect_zipLList n (xss yss : list (list A)) :
+    perfect_list n xss ->
+    perfect_list n yss ->
+    length xss = length yss ->
+    perfect_list (S n) (zipLList xss yss).
+  Proof.
+    revert n yss.
+    induction xss as [| xs xss ]; intros;
+    destruct yss as [| ys yss ]; try discriminate.
+    - simpl. auto.
+    - simpl in *. destruct H, H0. split.
+      + rewrite app_length. lia.
+      + eapply IHxss.
+        * assumption.
+        * assumption.
+        * auto.
+  Qed.
+
+  Lemma complete_zipLList n (xss yss : list (list A)) :
+    perfect_list n xss /\ complete_list n yss /\ length xss = length yss \/
+    complete_list n xss /\ perfect_list n yss /\ length xss = S (length yss) ->
+    complete_list (S n) (zipLList xss yss).
+  Proof.
+    revert n yss.
+    induction xss as [| xs xss ]; intros; destruct yss as [| ys yss ].
+    - simpl. auto.
+    - destruct H as [[H1 [H2 H3]] | [H1 [H2 H3]]]; discriminate.
+    - destruct H as [[H1 [H2 H3]] | [H1 [H2 H3]]].
+      + discriminate.
+      + simpl in *.
+        right.
+        split.
+        * pose_exp2 n. lia.
+        * destruct xss; try discriminate.
+          reflexivity.
+    - destruct H as [[H1 [H2 H3]] | [H1 [H2 H3]]].
+      + simpl in *.
+        destruct H2.
+        * left. split.
+          -- rewrite app_length. lia.
+          -- eapply IHxss. left.
+             destruct H1, H. auto.
+        * right. split.
+          -- rewrite app_length. lia.
+          -- destruct H. subst.
+             destruct xss; try discriminate.
+             reflexivity.
+      +  simpl in *.
+         destruct H1.
+         * left. split.
+           -- rewrite app_length. lia.
+           -- eapply IHxss. right.
+              destruct H, H2. auto.
+         * destruct H; subst.
+           discriminate.
+  Qed.
+
+  Lemma splitLeft_zip n (xss yss : list (list A)) :
+    perfect_list n xss /\ complete_list n yss /\ length xss = length yss \/
+    complete_list n xss /\ perfect_list n yss /\ length xss = 1 + length yss ->
+    splitLListLeft n (zipLList xss yss) = xss.
+  Proof.
+    revert n yss.
+    induction xss as [| xs xss ]; intros; destruct yss as [| ys yss ].
+    - reflexivity.
+    - destruct H as [[H1 [H2 H3]] | [H1 [H2 H3]]]; discriminate.
+    - destruct H as [[H1 [H2 H3]] | [H1 [H2 H3]]]; try discriminate.
+      destruct xss; try discriminate.
+      simpl in *.
+      rewrite firstn_all2 by lia.
+      reflexivity.
+    - destruct H as [[H1 [H2 H3]] | [H1 [H2 H3]]].
+      + simpl in *.
+        rewrite firstn_exact by lia.
+        destruct H2.
+        * destruct H1, H.
+          rewrite IHxss by auto.
+          reflexivity.
+        * destruct H. subst.
+          destruct xss; try discriminate.
+          reflexivity.
+      + simpl in *.
+        destruct H1 as [[H1 H4] | [H1 H4]]; subst; try discriminate.
+        rewrite firstn_exact by lia.
+        destruct H2.
+        rewrite IHxss by auto.
+        reflexivity.
+  Qed.
+
+  Lemma splitRight_zip n (xss yss : list (list A)) :
+    perfect_list n xss /\ complete_list n yss /\ length xss = length yss \/
+    complete_list n xss /\ perfect_list n yss /\ length xss = 1 + length yss ->
+    splitLListRight n (zipLList xss yss) = yss.
+  Proof.
+    revert n yss.
+    induction xss as [| xs xss ]; intros; destruct yss as [| ys yss ].
+    - reflexivity.
+    - destruct H as [[H1 [H2 H3]] | [H1 [H2 H3]]]; discriminate.
+    - destruct H as [[H1 [H2 H3]] | [H1 [H2 H3]]]; try discriminate.
+      simpl in *.
+      rewrite leb_correct by lia.
+      reflexivity.
+    - simpl in *.
+      rewrite app_length.
+      pose_exp2 n.
+      rewrite leb_correct_conv by lia.
+      destruct H as [[H1 [H2 H3]] | [H1 [H2 H3]]].
+      + destruct H1.
+        rewrite skipn_exact by auto.
+        destruct H2 as [[H2 H4] | [H2 H4]].
+        * rewrite IHxss by auto.
+          reflexivity.
+        * subst.
+          destruct xss; try discriminate.
+          reflexivity.
+      + destruct H1.
+        * rewrite skipn_exact by lia.
+          destruct H, H2.
+          rewrite IHxss by auto.
+          reflexivity.
+        * destruct H. subst. discriminate.
+  Qed.
+
+  Lemma zip_split n (xss : list (list A)) : complete_list (S n) xss -> zipLList (splitLListLeft n xss) (splitLListRight n xss) = xss.
+    revert n.
+    induction xss as [| xs xss ].
+    - reflexivity.
+    - intros.
+      Opaque pow.
+      simpl in H.
+      Transparent pow.
+      destruct H; destruct H.
+      + simpl in *.
+        pose_exp2 n.
+        replace (length xs <=? 2 ^ n) with false by dec_nat.
+        rewrite firstn_skipn.
+        rewrite IHxss by assumption.
+        reflexivity.
+      + subst. simpl.
+        destruct (length xs <=? 2^n) eqn: E.
+        * rewrite firstn_all2.
+          reflexivity.
+          eapply leb_complete.
+          auto.
+        * rewrite firstn_skipn.
+          reflexivity.
+  Qed.
+
+  Lemma perfect_splitLListLeft n (xss : list (list A)) :
+    perfect_list (S n) xss ->
+    perfect_list n (splitLListLeft n xss).
+  Proof.
+    revert n. induction xss; intros.
+    - simpl. auto.
+    - destruct H. split.
+      + eapply firstn_length_le.
+        rewrite H.
+        pose_exp2 n.
+        simpl; lia.
+      + eapply IHxss. assumption.
+  Qed.
+
+  Lemma perfect_splitLListRight n (xss : list (list A)) :
+    perfect_list (S n) xss ->
+    perfect_list n (splitLListRight n xss).
+  Proof.
+    revert n. induction xss; intros.
+    - simpl. auto.
+    - destruct H. simpl.
+      rewrite H.
+      pose_exp2 n.
+      replace (2 ^ S n <=? 2 ^ n) with false by dec_nat.
+      split.
+      + rewrite skipn_length. rewrite H. simpl; lia.
+      + eapply IHxss. assumption.
+  Qed.
+
+  Lemma complete_splitLList n (xss : list (list A)) :
+    complete_list (S n) xss ->
+    let d := length xss in
+    let l := splitLListLeft n xss in
+    let r := splitLListRight n xss in
+    perfect_list n l /\ length l = d /\ complete_list n r /\ length r = d \/
+    complete_list n l /\ length l = d /\ perfect_list n r /\ exists d', length r = d' /\ d' + 1 = d.
+  Proof.
+    revert n.
+    induction xss as [| xs xss ].
+    - intros.
+      simpl in d, l, r.
+      subst d l r.
+      auto.
+    - intros.
+      simpl in H.
+      destruct H as [[]|[]].
+      + pose_exp2 n. rename H1 into Hn.
+        assert (Hl : length xs > 2 ^ n) by lia.
+        pose proof (IHxss (S n) H0).
+        simpl in d, l, r.
+        remember (length xss) as d'.
+        remember (splitLListLeft (S n) xss) as l'.
+        remember (splitLListRight (S n) xss) as r'.
+        simpl in H1.
+        destruct H1 as [[H1 [H2 [H3 H4]]] | [H1 [H2 [H3 H4]]]].
+        * left. subst d l r.
+          replace (length xs <=? 2 ^ n) with false
+            by (symmetry; eapply leb_correct_conv; lia).
+          split; [| split; [| split ]].
+          -- simpl.
+             rewrite firstn_length_le by lia.
+             auto.
+          -- simpl. auto.
+          -- simpl. left.
+             rewrite skipn_length. rewrite H. simpl. split; try lia; auto.
+          -- simpl. auto.
+        * right. subst d l r.
+          replace (length xs <=? 2 ^ n) with false
+            by (symmetry; eapply leb_correct_conv; lia).
+          split; [| split; [| split ]].
+          -- simpl. left.
+             rewrite firstn_length_le by lia.
+             auto.
+          -- simpl. auto.
+          -- simpl. rewrite skipn_length. rewrite H. simpl. split; try lia; auto.
+          -- destruct H4 as [d [H4 H5]].
+             exists (S d). simpl.
+             split; lia.
+      + subst xss.
+        simpl in d, l, r.
+        destruct (length xs <=? 2 ^ n) eqn:E.
+        * eapply leb_complete in E.
+          right. subst d l r.
+          split; [| split; [| split ]].
+          -- simpl.
+             rewrite firstn_all2 by assumption.
+             assert (length xs = 2 ^ n \/ length xs <> 2 ^ n) by lia.
+             destruct H0.
+             ++ left. auto.
+             ++ right. split; [lia | reflexivity].
+          -- reflexivity.
+          -- simpl. auto.
+          -- exists 0. auto.
+        * eapply leb_complete_conv in E.
+          left. subst d l r.
+          split; [| split; [| split ]].
+          -- simpl.
+             rewrite firstn_length. lia.
+          -- reflexivity.
+          -- simpl. right.
+             rewrite skipn_length.
+             simpl in H.
+             split; [ lia | reflexivity ].
+          -- reflexivity.
+  Qed.
+
+  Lemma complete_splitLListLeft n (xss : list (list A)) : complete_list (S n) xss -> complete_list n (splitLListLeft n xss).
+  Proof.
+    intros H.
+    destruct (complete_splitLList n xss H) as [[H1 [H2 [H3 H4]]] | [H1 [H2 [H3 H4]]]].
+    - eapply perfect2complete_list. assumption.
+    - assumption.
+  Qed.
+
+  Lemma complete_splitLListRight n (xss : list (list A)) : complete_list (S n) xss -> complete_list n (splitLListRight n xss).
+  Proof.
+    intros H.
+    destruct (complete_splitLList n xss H) as [[H1 [H2 [H3 H4]]] | [H1 [H2 [H3 H4]]]].
+    - assumption.
+    - eapply perfect2complete_list. assumption.
+  Qed.
+
+  Lemma In_zipLList (x : A) xss yss :
+    In x (concat (zipLList xss yss)) ->
+    In x (concat xss) \/ In x (concat yss).
+  Proof.
+    revert yss. induction xss as [| xs xss ]; [| destruct yss as [| ys yss ] ]; auto.
+    intros. simpl in H.
+    eapply in_app_or in H. destruct H.
+    - eapply in_app_or in H. destruct H.
+      + left. simpl. eapply in_or_app. auto.
+      + right. simpl. eapply in_or_app. auto.
+    - eapply IHxss in H. destruct H.
+      + left. simpl. eapply in_or_app. auto.
+      + right. simpl. eapply in_or_app. auto.
+  Qed.
+
+  Lemma splitLListLeft_toLList_concat n xss (y : A) :
+    complete_list (S n) xss ->
+    splitLListLeft n (toLList (S n) (concat xss ++ [y])) = toLList n (concat (splitLListLeft n xss) ++ [y]) \/
+    splitLListLeft n (toLList (S n) (concat xss ++ [y])) = (splitLListLeft n xss).
+  Proof.
+    revert n.
+    induction xss as [| xs xss ].
+    - intros. simpl. left.
+      pose_exp2 n.
+      repeat (
+          simpl;
+          repeat first
+            [ rewrite (firstn_all2 [y]) by (simpl; lia)
+            | rewrite (skipn_all2 [y]) by (simpl; lia)
+            ];
+          rewrite unfold_toLList
+        ).
+      reflexivity.
+    - intros. simpl in H.
+      destruct H as [[H1 H2] | [H1 H2]].
+      + destruct (IHxss _ H2).
+        * left. simpl.
+          (* TODO : make lemma for unfolding toLList *)
+          rewrite unfold_toLList.
+          replace (null _) with false by dec_list.
+          rewrite <- app_assoc.
+          rewrite firstn_exact, skipn_exact by auto.
+          rewrite (unfold_toLList n).
+          replace (null _) with false by dec_list.
+          rewrite <- app_assoc.
+          rewrite firstn_exact, skipn_exact by (rewrite firstn_length; lia).
+          simpl.
+          rewrite H.
+          reflexivity.
+        * right. simpl.
+          rewrite unfold_toLList.
+          replace (null _) with false by dec_list.
+          rewrite <- app_assoc.
+          rewrite firstn_exact, skipn_exact by (simpl; lia).
+          simpl.
+          rewrite H.
+          reflexivity.
+      + subst. simpl. rewrite 2 app_nil_r.
+        rewrite unfold_toLList.
+        replace (null _) with false by dec_list.
+        rewrite firstn_all2 by (rewrite app_length; simpl; lia).
+        rewrite skipn_all2 by (rewrite app_length; simpl; lia).
+        rewrite unfold_toLList.
+        simpl.
+        assert (length xs < 2 ^ n \/ length xs >= 2 ^ n) by lia.
+        destruct H.
+        * left.
+          rewrite firstn_all2 by (rewrite app_length; simpl; lia).
+          rewrite firstn_all2 by lia.
+          rewrite unfold_toLList.
+          replace (null _) with false by dec_list.
+          rewrite firstn_all2 by (rewrite app_length; simpl; lia).
+          rewrite skipn_all2 by (rewrite app_length; simpl; lia).
+          reflexivity.
+        * right.
+          rewrite firstn_app.
+          replace (2 ^ n - length xs) with 0 by lia.
+          simpl. rewrite app_nil_r.
+          reflexivity.
+  Qed.
+
+  Lemma splitLListRight_toLList_concat n xss (y : A) :
+    complete_list (S n) xss ->
+    splitLListRight n (toLList (S n) (concat xss ++ [y])) = toLList n (concat (splitLListRight n xss) ++ [y]) \/
+    splitLListRight n (toLList (S n) (concat xss ++ [y])) = (splitLListRight n xss).
+  Proof.
+    revert n. induction xss as [| xs xss ].
+    - intros. simpl. right.
+      pose_exp2 n.
+      rewrite unfold_toLList.
+      replace (null _) with false by reflexivity.
+      rewrite (firstn_all2 [y]) by (simpl; lia).
+      rewrite (skipn_all2 [y]) by (simpl; lia).
+      rewrite unfold_toLList.
+      replace (null _) with true by reflexivity.
+      unfold splitLListRight.
+      simpl length.
+      replace (1 <=? 2 ^ n) with true by dec_nat.
+      reflexivity.
+    - intros. simpl in H.
+      destruct H as [[H1 H2] | [H1 H2]].
+      + destruct (IHxss _ H2).
+        * left. simpl.
+          pose_exp2 n.
+          replace (length xs <=? 2 ^ n) with false by dec_nat.
+          simpl.
+          rewrite unfold_toLList.
+          replace (null _) with false by dec_list.
+          rewrite <- app_assoc.
+          rewrite firstn_exact, skipn_exact by (simpl; lia).
+          simpl.
+          replace (length xs <=? 2 ^ n) with false by dec_nat.
+          rewrite (unfold_toLList n).
+          replace (null _) with false by dec_list.
+          rewrite <- app_assoc.
+          rewrite firstn_exact, skipn_exact by (rewrite skipn_length; lia).
+          rewrite H.
+          reflexivity.
+        * right. simpl.
+          pose_exp2 n.
+          replace (length xs <=? 2 ^ n) with false by dec_nat.
+          rewrite unfold_toLList.
+          replace (null _) with false by dec_list.
+          rewrite <- app_assoc.
+          rewrite firstn_exact, skipn_exact by (simpl; lia).
+          simpl.
+          replace (length xs <=? 2 ^ n) with false by dec_nat.
+          rewrite H.
+          reflexivity.
+      + subst. simpl concat at 1 3. rewrite app_nil_r.
+        assert (length xs < 2 ^ n \/ length xs = 2 ^ n \/ length xs > 2 ^ n) by lia.
+        destruct H.
+        * right.
+          rewrite unfold_toLList.
+          replace (null _) with false by dec_list.
+          rewrite firstn_all2 by (rewrite app_length; simpl; lia).
+          rewrite skipn_all2 by (rewrite app_length; simpl; lia).
+          rewrite unfold_toLList.
+          simpl.
+          replace (length xs <=? 2 ^ n) with true by dec_nat.
+          replace (length (xs ++ [y]) <=? 2 ^ n) with true by (rewrite app_length; dec_nat).
+          reflexivity.
+        * left.
+          replace (concat (splitLListRight n [xs])) with (skipn (2 ^ n) xs).
+          2: { simpl. destruct H.
+               - replace (length xs <=? 2 ^ n) with true by dec_nat.
+                 rewrite <- H.
+                 rewrite skipn_all.
+                 reflexivity.
+               - replace (length xs <=? 2 ^ n) with false by dec_nat.
+                 simpl.
+                 rewrite app_nil_r.
+                 reflexivity.
+          }
+          rewrite unfold_toLList.
+          replace (null _) with false by dec_list.
+          rewrite firstn_all2 by (rewrite app_length; simpl; lia).
+          rewrite skipn_all2 by (rewrite app_length; simpl; lia).
+          rewrite unfold_toLList.
+          replace (null _) with true by reflexivity.
+          rewrite unfold_toLList.
+          replace (null _) with false by dec_list.
+          rewrite firstn_all2 by (rewrite app_length, skipn_length; simpl; lia).
+          rewrite (skipn_all2 (skipn (2 ^ n) xs ++ [y])) by (rewrite app_length, skipn_length; simpl; lia).
+          rewrite unfold_toLList.
+          simpl.
+          replace (length (xs ++ [y]) <=? 2 ^ n) with false by (rewrite app_length; dec_nat).
+          rewrite skipn_app.
+          replace (2 ^ n - length xs) with 0 by lia.
+          reflexivity.
+  Qed.
+
+  Lemma zipLList_permutation (xss yss : list (list A)) : Permutation (concat (zipLList xss yss)) (concat xss ++ concat yss).
+  Proof.
+    revert yss.
+    induction xss as [| xs xss ].
+    - reflexivity.
+    - intros.
+      destruct yss as [| ys yss ].
+      + simpl. rewrite app_nil_r. reflexivity.
+      + simpl. rewrite IHxss.
+        rewrite 2 app_assoc.
+        eapply Permutation_app_tail.
+        rewrite <- 2 app_assoc.
+        rewrite (Permutation_app_comm ys (concat xss)).
+        reflexivity.
+  Qed.
+
+End LList.
+
+Section BinaryTree.
+
+  Context {A : Type}.
+
+  Lemma bteq_refl (t : bintree A) :
+    bteq_shape t t.
+  Proof.
+    induction t.
+    - constructor.
+    - econstructor;auto.
+  Qed.
+
+  Lemma bteq_trans (t1 t2 t3 : bintree A) :
+    bteq_shape t1 t2 -> bteq_shape t2 t3 -> bteq_shape t1 t3.
+  Proof.
+    revert t2 t3.
+    induction t1;intros.
+    - inversion H;subst. inversion H0;subst. constructor.
+    - inversion H;subst. inversion H0;subst. constructor.
+      eapply IHt1_1;eauto. eapply IHt1_2;eauto.
+  Qed.
+
+  Lemma bteq_sym (t1 t2 : bintree A) :
+    bteq_shape t1 t2 -> bteq_shape t2 t1.
+  Proof.
+    revert t2.
+    induction t1;intros.
+    - inversion H;subst. constructor.
+    - inversion H;subst. constructor. apply IHt1_1;auto. apply IHt1_2;auto.
+  Qed.
+
+  Lemma btpartial_refl (t : bintree A) :
+    btpartial t t.
+  Proof.
+    induction t.
+    - econstructor.
+    - econstructor; assumption.
+  Qed.
+
+End BinaryTree.
+
 Section BinaryTreeIndexing.
 
   Lemma unfold_decode i :
@@ -1001,6 +1581,38 @@ Section CompleteBinaryTree.
       eapply btpartial_fromList.
   Qed.
 
+  Local Hint Resolve perfect'2complete' bteq_refl bteq_sym : core.
+
+  Lemma shape_eq_perfect' (t t' : bintree A) :
+    bteq_shape t t' ->
+    forall rk : nat,
+    perfect' t rk ->
+    perfect' t' rk.
+  Proof with eauto.
+    intros t_shape_eq_t'.
+    induction t_shape_eq_t' as [ | x l r x' l' r' l_shape_eq_l' IH_l r_shape_eq_r' IH_r]; intros rk t_shape_eq_t'...
+    inversion t_shape_eq_t'; subst; clear t_shape_eq_t'; [econstructor 2]...
+  Qed.
+
+  Local Hint Resolve perfect'2complete' shape_eq_perfect' : core.
+
+  Lemma shape_eq_complete' (t t' : bintree A) :
+    bteq_shape t t' ->
+    forall rk : nat,
+    complete' t rk ->
+    complete' t' rk.
+  Proof with eauto.
+    intros t_shape_eq_t'.
+    induction t_shape_eq_t' as [ | x l r x' l' r' l_shape_eq_l' IH_l r_shape_eq_r' IH_r]; intros rk t_shape_eq_t'...
+    inversion t_shape_eq_t'; subst; [constructor 2 | constructor 3]...
+  Qed.
+
+  Local Hint Resolve shape_eq_complete' : core.
+
+  Theorem shape_eq_complete (t t' : bintree A) (t_shape_eq_t' : bteq_shape t t')
+    : complete t <-> complete t'.
+  Proof. split; intros [rk H_complete']; exists (rk); eauto. Qed.
+
 End CompleteBinaryTree.
 
 Section HeapProperty.
@@ -1142,10 +1754,9 @@ Section BinaryTreeZipper.
     occurs t' ds' t ->
     occurs t' (ds ++ ds') root.
   Proof. intros ds1 t1 X1 ds2 t2 X2; revert ds2 t2 X2. induction X1; simpl; eauto. Qed.
-
-  Lemma occurs_iff ds t root :
-    occurs t ds root <->
-    option_subtree ds root = Some t.
+    
+  Lemma occurs_iff ds t root
+    : occurs t ds root <-> option_subtree ds root = Some t.
   Proof with discriminate || eauto.
     split. intros X; induction X...
     revert t root.
@@ -1165,7 +1776,7 @@ Section BinaryTreeZipper.
     - exact (IHX (proj2 (destruct_complete _ H_complete))).
   Qed.
 
-  Lemma complete_subtree_nat (tree : bintree A) (H_complete : complete tree)
+  Theorem complete_subtree_nat (tree : bintree A) (H_complete : complete tree)
     : forall i t, subtree_nat tree i = Some t -> complete t.
   Proof.
     intros i t H_subtree. apply occurs_iff in H_subtree.
@@ -1187,6 +1798,18 @@ Section BinaryTreeZipper.
     - apply occurs_recover_bintree. 
     - rewrite <- H_recover in H_complete; eassumption.
   Qed.
+
+  Lemma recover_preserves_bteq_shape (t t' : bintree A) (H_shape_eq : bteq_shape t t')
+    : forall g, bteq_shape (recover_bintree g t) (recover_bintree g t').
+  Proof with eauto.
+    intros g. revert t t' H_shape_eq.
+    induction g as [ | x r g IH | x l g IH]; simpl; intros t t' H_shape_eq...
+    all: apply IH; econstructor 2... all: apply bteq_refl.
+  Qed.
+
+  Theorem equicomplete_thm (g : btctx A) t t' (H_shape_eq : bteq_shape t t')
+    : complete (recover_bintree g t) <-> complete (recover_bintree g t').
+  Proof. apply shape_eq_complete, recover_preserves_bteq_shape, H_shape_eq. Qed.
 
   Lemma recover_focus (g : btctx A) t i :
     let '(g', t') := focus g t i in
@@ -1257,6 +1880,10 @@ Section BinaryTreeZipper.
     t <> BT_nil ->
     toList (recover_bintree g (upd_root k t)) =
     upd (toList (recover_bintree g t)) (encode (btctx2idx g)) k.
+  Admitted.
+
+  Lemma recover_complete g (t : bintree A) :
+    complete (recover_bintree g t) -> complete t.
   Admitted.
 
 End BinaryTreeZipper.
