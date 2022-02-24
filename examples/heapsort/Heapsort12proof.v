@@ -206,7 +206,8 @@ Section SIMMODSEM.
                                (btctx_right xr (BT_node xl ll lr) g)
                                (BT_node x rl rr))) by auto.
              inversion Hsubcom.
-             { deflag. eapply IHn;simpl. all : cycle 1.
+             { deflag. eapply (IHn n); simpl.
+               - lia.
                - auto.
                - intros. ss. eapply (equicomplete_thm g t). rewrite E.
                  econs;auto;try apply bteq_refl;auto. econs;apply bteq_refl. assumption.
@@ -237,14 +238,13 @@ Section SIMMODSEM.
                  + econs;simpl;auto;try nia;econs;simpl;auto;try nia.
                - eauto.
                - auto.
-               - nia.
              }
-             { deflag. eapply IHn;simpl. all : cycle 1.
+             { deflag. eapply (IHn (n - 1)); simpl.
+               - lia.
                - auto.
                - intros. ss. apply (equicomplete_thm g t). rewrite E.
                  econs;auto;try apply bteq_refl;auto. econs;apply bteq_refl. assumption.
-               - instantiate (1 := (n - 1)).
-                 destruct (Nat.eq_0_gt_0_cases n) as [T1|T1];[rewrite T1 in H_r;inversion H_r|].
+               - destruct (Nat.eq_0_gt_0_cases n) as [T1|T1];[rewrite T1 in H_r;inversion H_r|].
                  replace (S(n - 1)) with n by nia. inversion H_r. 
                  eapply complete_node_perfect_complete;eauto.
                  apply perfect'2complete';auto.
@@ -272,7 +272,6 @@ Section SIMMODSEM.
                  + econs;simpl;auto;try nia;econs;simpl;auto;try nia.
                - eauto.
                - auto.
-               - nia.
              }             
         * rewrite bind_ret_l.
           rewrite (toList_subtree (recover_bintree g t) (initial' * 2 - 1)).
@@ -319,7 +318,8 @@ Section SIMMODSEM.
                                (btctx_left xl (BT_node xr rl rr) g)
                                (BT_node x ll lr))) by auto.
              inversion Hsubcom.
-             { deflag. eapply IHn;simpl. all : cycle 1.
+             { deflag. eapply (IHn n); simpl.
+               - lia.
                - auto.
                - intros. ss. apply (equicomplete_thm g t). rewrite E.
                  econs;auto;try apply bteq_refl;auto. econs;apply bteq_refl. assumption.
@@ -351,9 +351,9 @@ Section SIMMODSEM.
                  + econs;simpl;auto;try nia;econs;simpl;auto;try nia.
                - eauto.
                - auto.
-               - nia.
              }
-             { deflag. eapply IHn;simpl. all : cycle 1.
+             { deflag. eapply (IHn n); simpl.
+               - lia.
                - auto.
                - intros. ss. apply (equicomplete_thm g t). rewrite E.
                  econs;auto;try apply bteq_refl;auto. econs;apply bteq_refl. assumption.
@@ -385,7 +385,6 @@ Section SIMMODSEM.
                  + econs;simpl;auto;try nia;econs;simpl;auto;try nia.
                - eauto.
                - auto.
-               - nia.
              }
       + rewrite bind_ret_l.
         assert (some2 : length (toList (recover_bintree g t)) <= initial' * 2) by nia.
@@ -436,7 +435,8 @@ Section SIMMODSEM.
                                (btctx_left xl BT_nil g)
                                (BT_node x ll lr))) by auto.
              inversion Hsubcom.
-             { deflag. eapply IHn;simpl. all : cycle 1.
+             { deflag. eapply (IHn n); simpl.
+               - lia.
                - auto.
                - intros. ss. apply (equicomplete_thm g t). rewrite E.
                  econs;auto;try apply bteq_refl;auto. econs;apply bteq_refl. assumption.
@@ -468,9 +468,9 @@ Section SIMMODSEM.
                  + econs;simpl;auto;try nia;econs;simpl;auto;try nia.
                - eauto.
                - auto.
-               - nia.
              }
-             { deflag. eapply IHn;simpl. all : cycle 1.
+             { deflag. eapply (IHn n); simpl.
+               - lia.
                - auto.
                - intros. ss. apply (equicomplete_thm g t). rewrite E.
                 econs;auto;try apply bteq_refl;auto. econs;apply bteq_refl. assumption.
@@ -502,7 +502,6 @@ Section SIMMODSEM.
                  + econs;simpl;auto;try nia;econs;simpl;auto;try nia.
                - eauto.
                - auto.
-               - nia.
              }
   Qed.
 
