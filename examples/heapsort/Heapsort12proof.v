@@ -220,9 +220,7 @@ Section SIMMODSEM.
                                (btctx_right xr (BT_node xl ll lr) g)
                                (BT_node x rl rr))) by auto.
              inversion Hsubcom.
-             { deflag. eapply (IHn n); simpl.
-               - lia.
-               - auto.
+             { deflag. eapply (IHn n); ss; et.
                - intros. ss. eapply (equicomplete_thm g t). rewrite E.
                  econs;auto;try apply bteq_refl;auto. econs;apply bteq_refl. assumption.
                - inversion H_r. 
@@ -234,42 +232,27 @@ Section SIMMODSEM.
                - instantiate (1 := xr). solve_heap Hheap_ch.
                - intros t' HH j Hj.
                  apply Hheap_nch;auto.
-                 assert (heap_pr
-                           Z.ge p
-                           (BT_node xl ll lr) ∧ heap_pr Z.ge p (BT_node xr rl rr) ∧ (x ≤ p)%Z)
-                   by now apply Hheap_ch;nia.
-                 destruct H3 as [H' [H'' X]]. inversion H'. inversion H''. inversion HH.
+                 destruct Hheap_ch as [H' [H'' X]]. inversion H'. inversion H''. inversion HH.
                  + econs;simpl;auto;try nia. eapply heap_erase_priority;eauto. apply heap_nil.
                  + econs;simpl;auto;try nia;econs;simpl;auto;try nia.
-               - eauto.
-               - auto.
              }
-             { deflag. eapply (IHn (n - 1)); simpl.
-               - lia.
-               - auto.
+             { destruct n; [ inversion H_r |].
+               deflag. eapply (IHn n); ss; et.
                - intros. ss. apply (equicomplete_thm g t). rewrite E.
                  econs;auto;try apply bteq_refl;auto. econs;apply bteq_refl. assumption.
-               - destruct (Nat.eq_0_gt_0_cases n) as [T1|T1];[rewrite T1 in H_r;inversion H_r|].
-                 replace (S(n - 1)) with n by nia. inversion H_r. 
-                 eapply complete_node_perfect_complete;eauto.
-                 apply perfect'2complete';auto.
+               - inversion H_r.
+                 eapply complete_node_perfect_complete; eauto; apply perfect'2complete'; auto.
                - rewrite encode_last. rewrite <- toList_length. rewrite E in Htreele2.
                  split;try nia. admit "".
                - intros. ss. rewrite permutation. rewrite E. admit "".
                - instantiate (1 := xr). solve_heap Hheap_ch.
                - intros t' HH j Hj.
                  apply Hheap_nch;auto.
-                 assert (heap_pr
-                           Z.ge p
-                           (BT_node xl ll lr) ∧ heap_pr Z.ge p (BT_node xr rl rr) ∧ (x ≤ p)%Z)
-                   by now apply Hheap_ch;nia.
-                 destruct H3 as [H' [H'' X]]. inversion H'. inversion H''. inversion HH.
+                 destruct Hheap_ch as [H' [H'' X]]. inversion H'. inversion H''. inversion HH.
                  + econs;simpl;auto;try nia. eapply heap_erase_priority;eauto. apply heap_nil.
                  + econs;simpl;auto;try nia;econs;simpl;auto;try nia.
-               - eauto.
-               - auto.
-             }             
-        * rewrite bind_ret_l.
+             }
+       * rewrite bind_ret_l.
           rewrite (toList_subtree (recover_bintree g t) (initial' * 2 - 1)).
           unfold subtree_nat. rewrite Hindex0. simpl option_root. simpl unwrapU.
           do 2 rewrite bind_ret_l.
@@ -314,9 +297,7 @@ Section SIMMODSEM.
                                (btctx_left xl (BT_node xr rl rr) g)
                                (BT_node x ll lr))) by auto.
              inversion Hsubcom.
-             { deflag. eapply (IHn n); simpl.
-               - lia.
-               - auto.
+             { deflag. eapply (IHn n); ss; et.
                - intros. ss. apply (equicomplete_thm g t). rewrite E.
                  econs;auto;try apply bteq_refl;auto. econs;apply bteq_refl. assumption.
                - inversion H_l.
@@ -328,20 +309,12 @@ Section SIMMODSEM.
                - instantiate (1 := xl). solve_heap Hheap_ch.
                - intros t' HH j Hj.
                  apply Hheap_nch;auto.
-                 assert (heap_pr
-                           Z.ge p
-                           (BT_node xl ll lr) ∧ heap_pr Z.ge p (BT_node xr rl rr) ∧ (x ≤ p)%Z)
-                   by now apply Hheap_ch;nia.
-                 destruct H3 as [H' [H'' X]]. inversion H'. inversion H''. inversion HH.
+                 destruct Hheap_ch as [H' [H'' X]]. inversion H'. inversion H''. inversion HH.
                  + econs;simpl;auto;try nia. all : cycle 1.
                    eapply heap_erase_priority;eauto. apply heap_nil.
                  + econs;simpl;auto;try nia;econs;simpl;auto;try nia.
-               - eauto.
-               - auto.
              }
-             { deflag. eapply (IHn n); simpl.
-               - lia.
-               - auto.
+             { deflag. eapply (IHn n); ss; et.
                - intros. ss. apply (equicomplete_thm g t). rewrite E.
                  econs;auto;try apply bteq_refl;auto. econs;apply bteq_refl. assumption.
                - inversion H_l.
@@ -353,16 +326,10 @@ Section SIMMODSEM.
                - instantiate (1 := xl). solve_heap Hheap_ch.
                - intros t' HH j Hj.
                  apply Hheap_nch;auto.
-                 assert (heap_pr
-                           Z.ge p
-                           (BT_node xl ll lr) ∧ heap_pr Z.ge p (BT_node xr rl rr) ∧ (x ≤ p)%Z)
-                   by now apply Hheap_ch;nia.
-                 destruct H3 as [H' [H'' X]]. inversion H'. inversion H''. inversion HH.
+                 destruct Hheap_ch as [H' [H'' X]]. inversion H'. inversion H''. inversion HH.
                  + econs;simpl;auto;try nia. all : cycle 1.
                    eapply heap_erase_priority;eauto. apply heap_nil.
                  + econs;simpl;auto;try nia;econs;simpl;auto;try nia.
-               - eauto.
-               - auto.
              }
       + rewrite bind_ret_l.
         assert (some2 : length (toList (recover_bintree g t)) <= initial' * 2) by nia.
@@ -413,9 +380,7 @@ Section SIMMODSEM.
                                (btctx_left xl BT_nil g)
                                (BT_node x ll lr))) by auto.
              inversion Hsubcom.
-             { deflag. eapply (IHn n); simpl.
-               - lia.
-               - auto.
+             { deflag. eapply (IHn n); ss; et.
                - intros. ss. apply (equicomplete_thm g t). rewrite E.
                  econs;auto;try apply bteq_refl;auto. econs;apply bteq_refl. assumption.
                - inversion H_l.
@@ -427,20 +392,12 @@ Section SIMMODSEM.
                - instantiate (1 := xl). solve_heap Hheap_ch.
                - intros t' HH j Hj.
                  apply Hheap_nch;auto.
-                 assert (heap_pr
-                           Z.ge p
-                           (BT_node xl ll lr) ∧ heap_pr Z.ge p BT_nil ∧ (x ≤ p)%Z)
-                   by now apply Hheap_ch;nia.
-                 destruct H3 as [H' [H'' X]]. inversion H'. inversion H''. inversion HH.
+                 destruct Hheap_ch as [H' [H'' X]]. inversion H'. inversion H''. inversion HH.
                  + econs;simpl;auto;try nia. all : cycle 1.
                    eapply heap_erase_priority;eauto. apply heap_nil.
                  + econs;simpl;auto;try nia;econs;simpl;auto;try nia.
-               - eauto.
-               - auto.
              }
-             { deflag. eapply (IHn n); simpl.
-               - lia.
-               - auto.
+             { deflag. eapply (IHn n); ss; et.
                - intros. ss. apply (equicomplete_thm g t). rewrite E.
                 econs;auto;try apply bteq_refl;auto. econs;apply bteq_refl. assumption.
                - inversion H_l.
@@ -452,16 +409,10 @@ Section SIMMODSEM.
                - instantiate (1 := xl). solve_heap Hheap_ch.
                - intros t' HH j Hj.
                  apply Hheap_nch;auto.
-                 assert (heap_pr
-                           Z.ge p
-                           (BT_node xl ll lr) ∧ heap_pr Z.ge p BT_nil ∧ (x ≤ p)%Z)
-                   by now apply Hheap_ch;nia.
-                 destruct H3 as [H' [H'' X]]. inversion H'. inversion H''. inversion HH.
+                 destruct Hheap_ch as [H' [H'' X]]. inversion H'. inversion H''. inversion HH.
                  + econs;simpl;auto;try nia. all : cycle 1.
                    eapply heap_erase_priority;eauto. apply heap_nil.
                  + econs;simpl;auto;try nia;econs;simpl;auto;try nia.
-               - eauto.
-               - auto.
              }
   Qed.
 
