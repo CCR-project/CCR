@@ -552,6 +552,47 @@ Section LList.
 
 End LList.
 
+Section BinaryTree.
+
+  Context {A : Type}.
+
+  Lemma bteq_refl (t : bintree A) :
+    bteq_shape t t.
+  Proof.
+    induction t.
+    - constructor.
+    - econstructor;auto.
+  Qed.
+
+  Lemma bteq_trans (t1 t2 t3 : bintree A) :
+    bteq_shape t1 t2 -> bteq_shape t2 t3 -> bteq_shape t1 t3.
+  Proof.
+    revert t2 t3.
+    induction t1;intros.
+    - inversion H;subst. inversion H0;subst. constructor.
+    - inversion H;subst. inversion H0;subst. constructor.
+      eapply IHt1_1;eauto. eapply IHt1_2;eauto.
+  Qed.
+
+  Lemma bteq_sym (t1 t2 : bintree A) :
+    bteq_shape t1 t2 -> bteq_shape t2 t1.
+  Proof.
+    revert t2.
+    induction t1;intros.
+    - inversion H;subst. constructor.
+    - inversion H;subst. constructor. apply IHt1_1;auto. apply IHt1_2;auto.
+  Qed.
+
+  Lemma btpartial_refl (t : bintree A) :
+    btpartial t t.
+  Proof.
+    induction t.
+    - econstructor.
+    - econstructor; assumption.
+  Qed.
+
+End BinaryTree.
+
 Section BinaryTreeIndexing.
 
   Lemma unfold_decode i :
