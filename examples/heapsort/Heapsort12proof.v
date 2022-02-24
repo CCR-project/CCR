@@ -77,7 +77,6 @@ Section SIMMODSEM.
     repl initial with initial' at 2 by (f_equal; try f_equal; auto).
     assert (Hsize : 1<= initial' <= btsize (recover_bintree g t)).
     { rewrite <- Hieq. rewrite <- Heq. nia. }
-    assert (statei : initial <= initial') by nia.
     assert (Hcom : complete (recover_bintree g t)) by now rewrite <- Heq;auto.
     assert (permutation : forall t', toList t ≡ₚ toList t'
                                 -> toList tree ≡ₚ toList (recover_bintree g t')).
@@ -103,7 +102,7 @@ Section SIMMODSEM.
     clear Heqp.
     clear Hieq.
     deflag.
-    revert p t x l r g initial' statei E Hcom Hsubcom Hsize permutation Hheap_ch Hheap_nch mrp_src mp_tgt WF ctx mr_src mp_src ACC.
+    revert p t x l r g initial' E Hcom Hsubcom Hsize permutation Hheap_ch Hheap_nch mrp_src mp_tgt WF ctx mr_src mp_src ACC.
     induction n using Wf_nat.lt_wf_rect;i.
     rewrite unfold_iter_eq. rename H into IHn.
     assert (HT : t <> BT_nil) by now rewrite E;auto.
@@ -139,7 +138,6 @@ Section SIMMODSEM.
       rewrite Hindex0 in none1. rewrite Hindex1 in none2.
       destruct l;[|inversion none1]. destruct r;[|inversion none2].
       assert (heap Z.ge (BT_node x BT_nil BT_nil)). { econs;ss;apply heap_nil. }
-      apply le_lt_or_eq in statei. apply or_comm in statei.
       apply Hheap_nch. rewrite E. econs; simpl; auto; try apply heap_nil. lia.
       (* repeating case *)
     - assert (Htreele1 : 1 <= btsize (recover_bintree g t)) by nia.
@@ -178,8 +176,7 @@ Section SIMMODSEM.
              split.
              { specialize (permutation (BT_node x (BT_node xl ll lr) (BT_node xr rl rr))).
                rewrite E. apply permutation. rewrite E. auto. }
-             { apply le_lt_or_eq in statei. apply or_comm in statei.
-               apply Hheap_nch. rewrite E.
+             { apply Hheap_nch. rewrite E.
                destruct Hheap_ch as [T1 [T2 T3]].
                econs;simpl;try nia;auto;eapply heap_erase_priority;[apply T1|apply T2]. }
           ** rewrite bind_ret_l. rewrite bind_tau. force_r.
@@ -214,7 +211,6 @@ Section SIMMODSEM.
                                (BT_node x rl rr))) by auto.
              inversion Hsubcom.
              { deflag. eapply IHn;simpl. all : cycle 1.
-               { rewrite encode_last. nia. }
                { auto. }
                { intros. ss. eapply (equicomplete_thm g t). rewrite E.
                 econs;auto;try apply bteq_refl;auto. econs;apply bteq_refl. assumption. }
@@ -224,7 +220,7 @@ Section SIMMODSEM.
                { rewrite encode_last. rewrite <- toList_length. rewrite E in Htreele2.
                  split;try nia. admit "".  }
                { intros. ss. apply permutation. rewrite E. admit "". }
-               { instantiate (1 := xr). apply le_lt_or_eq in statei.
+               { instantiate (1 := xr).
                  assert (heap_pr
                            Z.ge p
                            (BT_node xl ll lr) ∧ heap_pr Z.ge p (BT_node xr rl rr) ∧ (x ≤ p)%Z)
@@ -245,7 +241,7 @@ Section SIMMODSEM.
                  + econs;simpl;auto;try nia;econs;simpl;auto;try nia. }
                { eauto. } auto. nia. }
              { deflag. eapply IHn;simpl. all : cycle 1.
-               { rewrite encode_last. nia. } { auto. }
+               { auto. }
                { intros. ss. apply (equicomplete_thm g t). rewrite E.
                 econs;auto;try apply bteq_refl;auto. econs;apply bteq_refl. assumption. }
                { instantiate (1 := (n - 1)).
@@ -323,7 +319,7 @@ Section SIMMODSEM.
                                (BT_node x ll lr))) by auto.
              inversion Hsubcom.
              { deflag. eapply IHn;simpl. all : cycle 1.
-               { rewrite encode_last. nia. } { auto. }
+               { auto. }
                { intros. ss. apply (equicomplete_thm g t). rewrite E.
                 econs;auto;try apply bteq_refl;auto. econs;apply bteq_refl. assumption. }
                { inversion H_l.
@@ -354,7 +350,7 @@ Section SIMMODSEM.
                  + econs;simpl;auto;try nia;econs;simpl;auto;try nia. }
                { eauto. } auto. nia. }
              { deflag. eapply IHn;simpl. all : cycle 1.
-               { rewrite encode_last. nia. } { auto. }
+               { auto. }
                { intros. ss. apply (equicomplete_thm g t). rewrite E.
                 econs;auto;try apply bteq_refl;auto. econs;apply bteq_refl. assumption. }
                { inversion H_l.
@@ -436,7 +432,7 @@ Section SIMMODSEM.
                                (BT_node x ll lr))) by auto.
              inversion Hsubcom.
              { deflag. eapply IHn;simpl. all : cycle 1.
-               { rewrite encode_last. nia. } { auto. }
+               { auto. }
                { intros. ss. apply (equicomplete_thm g t). rewrite E.
                 econs;auto;try apply bteq_refl;auto. econs;apply bteq_refl. assumption. }
                { inversion H_l.
@@ -467,7 +463,7 @@ Section SIMMODSEM.
                  + econs;simpl;auto;try nia;econs;simpl;auto;try nia. }
                { eauto. } auto. nia. }
              { deflag. eapply IHn;simpl. all : cycle 1.
-               { rewrite encode_last. nia. } { auto. }
+               { auto. }
                { intros. ss. apply (equicomplete_thm g t). rewrite E.
                 econs;auto;try apply bteq_refl;auto. econs;apply bteq_refl. assumption. }
                { inversion H_l.
