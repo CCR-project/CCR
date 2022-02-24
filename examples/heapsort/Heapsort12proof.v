@@ -39,6 +39,20 @@ Lemma unfold_iter_eq:
                                           end.
 Proof. intros. eapply bisim_is_eq. eapply unfold_iter. Qed.
 
+Ltac solve_heap H :=
+  let H1 := fresh "H" in
+  let H2 := fresh "H" in
+  let H3 := fresh "H" in
+  destruct H as [H1 [H2 H3]];
+  splits; try lia;
+  inversion H1; inversion H2; subst;
+  match goal with
+  | [ |- heap_pr _ _ ?t ] => destruct t; [ eapply heap_pr_nil | ]
+  end;
+  match goal with
+  | [ H : heap _ ?t |- heap_pr _ _ ?t ] => inversion H; eapply heap_pr_node; auto
+  end.
+
 Section SIMMODSEM.
 
   Context `{Σ : GRA.t}.
@@ -217,16 +231,7 @@ Section SIMMODSEM.
                - rewrite encode_last. rewrite <- toList_length. rewrite E in Htreele2.
                  split;try nia. admit "".
                - intros. ss. rewrite permutation. rewrite E. admit "".
-               - instantiate (1 := xr).
-                 assert (heap_pr
-                           Z.ge p
-                           (BT_node xl ll lr) ∧ heap_pr Z.ge p (BT_node xr rl rr) ∧ (x ≤ p)%Z)
-                   by now apply Hheap_ch;nia.
-                 destruct H3 as [_ [H4 X]]. inversion H4. split;try split;try nia.
-                 + destruct rl;try apply heap_pr_nil. simpl in R_x_l. inversion heap_l.
-                   apply heap_pr_node;auto.
-                 + destruct rr;try apply heap_pr_nil. simpl in R_x_r. inversion heap_r.
-                   apply heap_pr_node;auto.
+               - instantiate (1 := xr). solve_heap Hheap_ch.
                - intros t' HH j Hj.
                  apply Hheap_nch;auto.
                  assert (heap_pr
@@ -251,16 +256,7 @@ Section SIMMODSEM.
                - rewrite encode_last. rewrite <- toList_length. rewrite E in Htreele2.
                  split;try nia. admit "".
                - intros. ss. rewrite permutation. rewrite E. admit "".
-               - instantiate (1 := xr).
-                 assert (heap_pr
-                           Z.ge p
-                           (BT_node xl ll lr) ∧ heap_pr Z.ge p (BT_node xr rl rr) ∧ (x ≤ p)%Z)
-                   by now apply Hheap_ch;nia.
-                 destruct H3 as [_ [H4 X]]. inversion H4. split;try split;try nia.
-                 + destruct rl;try apply heap_pr_nil. simpl in R_x_l. inversion heap_l.
-                   apply heap_pr_node;auto.
-                 + destruct rr;try apply heap_pr_nil. simpl in R_x_r. inversion heap_r.
-                   apply heap_pr_node;auto.
+               - instantiate (1 := xr). solve_heap Hheap_ch.
                - intros t' HH j Hj.
                  apply Hheap_nch;auto.
                  assert (heap_pr
@@ -329,16 +325,7 @@ Section SIMMODSEM.
                - rewrite encode_last. rewrite <- toList_length. rewrite E in Htreele2.
                  split;try nia. admit "".
                - intros. ss. rewrite permutation. rewrite E. admit "".
-               - instantiate (1 := xl).
-                 assert (heap_pr
-                           Z.ge p
-                           (BT_node xl ll lr) ∧ heap_pr Z.ge p (BT_node xr rl rr) ∧ (x ≤ p)%Z)
-                   by now apply Hheap_ch;nia.
-                 destruct H3 as [H4 [_ X]]. inversion H4. split;try split;try nia.
-                 + destruct ll;try apply heap_pr_nil. simpl in R_x_l. inversion heap_l.
-                   apply heap_pr_node;auto.
-                 + destruct lr;try apply heap_pr_nil. simpl in R_x_r. inversion heap_r.
-                   apply heap_pr_node;auto.
+               - instantiate (1 := xl). solve_heap Hheap_ch.
                - intros t' HH j Hj.
                  apply Hheap_nch;auto.
                  assert (heap_pr
@@ -363,16 +350,7 @@ Section SIMMODSEM.
                - rewrite encode_last. rewrite <- toList_length. rewrite E in Htreele2.
                  split;try nia. admit "".
                - intros. ss. rewrite permutation. rewrite E. admit "".
-               - instantiate (1 := xl).
-                 assert (heap_pr
-                           Z.ge p
-                           (BT_node xl ll lr) ∧ heap_pr Z.ge p (BT_node xr rl rr) ∧ (x ≤ p)%Z)
-                   by now apply Hheap_ch;nia.
-                 destruct H3 as [H4 [_ X]]. inversion H4. split;try split;try nia.
-                 + destruct ll;try apply heap_pr_nil. simpl in R_x_l. inversion heap_l.
-                   apply heap_pr_node;auto.
-                 + destruct lr;try apply heap_pr_nil. simpl in R_x_r. inversion heap_r.
-                   apply heap_pr_node;auto.
+               - instantiate (1 := xl). solve_heap Hheap_ch.
                - intros t' HH j Hj.
                  apply Hheap_nch;auto.
                  assert (heap_pr
@@ -446,16 +424,7 @@ Section SIMMODSEM.
                - rewrite encode_last. rewrite <- toList_length. rewrite E in Htreele2.
                  split;try nia. admit "".
                - intros. ss. rewrite permutation. rewrite E. admit "".
-               - instantiate (1 := xl).
-                 assert (heap_pr
-                           Z.ge p
-                           (BT_node xl ll lr) ∧ heap_pr Z.ge p BT_nil ∧ (x ≤ p)%Z)
-                   by now apply Hheap_ch;nia.
-                 destruct H3 as [H4 [_ X]]. inversion H4. split;try split;try nia.
-                 + destruct ll;try apply heap_pr_nil. simpl in R_x_l. inversion heap_l.
-                   apply heap_pr_node;auto.
-                 + destruct lr;try apply heap_pr_nil. simpl in R_x_r. inversion heap_r.
-                   apply heap_pr_node;auto.
+               - instantiate (1 := xl). solve_heap Hheap_ch.
                - intros t' HH j Hj.
                  apply Hheap_nch;auto.
                  assert (heap_pr
@@ -480,16 +449,7 @@ Section SIMMODSEM.
                - rewrite encode_last. rewrite <- toList_length. rewrite E in Htreele2.
                  split;try nia. admit "".
                - intros. ss. rewrite permutation. rewrite E. admit "".
-               - instantiate (1 := xl).
-                 assert (heap_pr
-                           Z.ge p
-                           (BT_node xl ll lr) ∧ heap_pr Z.ge p BT_nil ∧ (x ≤ p)%Z)
-                   by now apply Hheap_ch;nia.
-                 destruct H3 as [H4 [_ X]]. inversion H4. split;try split;try nia.
-                 + destruct ll;try apply heap_pr_nil. simpl in R_x_l. inversion heap_l.
-                   apply heap_pr_node;auto.
-                 + destruct lr;try apply heap_pr_nil. simpl in R_x_r. inversion heap_r.
-                   apply heap_pr_node;auto.
+               - instantiate (1 := xl). solve_heap Hheap_ch.
                - intros t' HH j Hj.
                  apply Hheap_nch;auto.
                  assert (heap_pr
