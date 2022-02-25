@@ -356,13 +356,6 @@ Section SIMMODSEM.
   Proof with lia || eauto.
     (** "Lemmas" *)
     pose proof (fun n : nat => Nat.add_sub n 1) as plus1minus1.
-    set (fun g : btctx Z =>
-      match g with
-      | btctx_top => None
-      | btctx_left p _ _ => Some p
-      | btctx_right p _ _ => Some p
-      end
-    ) as option_parent.
     Opaque swap Nat.div Nat.leb Nat.ltb Z.ltb toList.
     (** "Entering the function" *)
     init. harg. destruct x as [[tree p] k]. mDesAll; subst. clear PURE1. des; subst. steps. astop. steps.
@@ -460,8 +453,7 @@ Section SIMMODSEM.
     - simpl in obs_if1. replace obs_if1 with false by now subst obs_if1; rewrite encode_last; rewrite Nat.add_comm; rewrite Nat.add_assoc; rewrite Nat.add_comm.
       pose proof (btctx_lookup g (BT_node p_x t p_r)) as H_par. simpl in H_recover. rewrite <- H_recover in H_par. unfold option_root in H_par.
       assert (H_par_i : (HeapsortHeader.encode (btctx2idx (btctx_left p_x p_r g)) + 1) `div` 2 = HeapsortHeader.encode (btctx2idx g) + 1).
-      { simpl. rewrite encode_last.
-        pose proof (Nat.div_add 0 (HeapsortHeader.encode (btctx2idx g) + 1) 2).
+      { simpl. rewrite encode_last. pose proof (Nat.div_add 0 (HeapsortHeader.encode (btctx2idx g) + 1) 2).
         replace ((2 * HeapsortHeader.encode (btctx2idx g) + 1 + 1) `div` 2) with ((0 + (HeapsortHeader.encode (btctx2idx g) + 1) * 2) `div` 2)...
         f_equal; lia.
       }
@@ -478,8 +470,7 @@ Section SIMMODSEM.
     - simpl in obs_if1. replace obs_if1 with false by now subst obs_if1; rewrite encode_last; rewrite Nat.add_comm; rewrite Nat.add_assoc; rewrite Nat.add_comm.
       pose proof (btctx_lookup g (BT_node p_x p_l t)) as H_par. simpl in H_recover. rewrite <- H_recover in H_par. unfold option_root in H_par.
       assert (H_par_i : (HeapsortHeader.encode (btctx2idx (btctx_right p_x p_l g)) + 1) `div` 2 = HeapsortHeader.encode (btctx2idx g) + 1).
-      { simpl. rewrite encode_last.
-        pose proof (Nat.div_add 1 (HeapsortHeader.encode (btctx2idx g) + 1) 2).
+      { simpl. rewrite encode_last. pose proof (Nat.div_add 1 (HeapsortHeader.encode (btctx2idx g) + 1) 2).
         replace ((2 * HeapsortHeader.encode (btctx2idx g) + 2 + 1) `div` 2) with ((1 + (HeapsortHeader.encode (btctx2idx g) + 1) * 2) `div` 2)...
         f_equal; lia.
       }
