@@ -356,6 +356,9 @@ Section SIMMODSEM.
   Proof with lia || eauto.
     (** "Lemmas" *)
     pose proof (fun n : nat => Nat.add_sub n 1) as plus1minus1.
+    pose proof (@bteq_refl Z) as bt_shape_eq_refl.
+    pose proof (@bteq_sym Z) as bt_shape_eq_sym.
+    pose proof (@bteq_node Z) as bt_shape_eq_node.
     Opaque swap Nat.div Nat.leb Nat.ltb Z.ltb toList.
     (** "Entering the function" *)
     init. harg. destruct x as [[tree p] k]. mDesAll; subst. clear PURE1. des; subst. steps. astop. steps.
@@ -409,20 +412,35 @@ Section SIMMODSEM.
     intros H_option_root_l H_option_root_r.
     destruct obs_if1 eqn: H_obs_if1; [apply Nat.leb_le in H_obs_if1 | apply Nat.leb_nle in H_obs_if1]; steps_weak.
     { (** "Iterating the first loop" *)
-      destruct (option_root l) as [x_l | ]; [steps_weak | apply nth_error_None in H_option_root_l].
+      destruct (option_root l) as [x_l | ] eqn: H_obs_x_l; [steps_weak | apply nth_error_None in H_option_root_l].
       2: replace (HeapsortHeader.encode (ds ++ [Dir_left])) with (2 * HeapsortHeader.encode ds + 1) in H_option_root_l by now rewrite encode_last...
       destruct obs_if2 eqn: H_obs_if2; [apply Nat.ltb_lt in H_obs_if2 | apply Nat.ltb_nlt in H_obs_if2]; steps_weak.
-      destruct (option_root r) as [x_r | ]; [steps_weak | apply nth_error_None in H_option_root_r].
+      2: assert (r_is_nil : r = BT_nil) by now destruct r as [ | x_r l_r r_r]; [reflexivity | apply isSome_intro, nth_error_Some in H_option_root_r; rewrite encode_last in H_option_root_r; lia].
+      destruct (option_root r) as [x_r | ] eqn: H_obs_x_r; [steps_weak | apply nth_error_None in H_option_root_r].
       2: replace (HeapsortHeader.encode (ds ++ [Dir_right])) with (2 * HeapsortHeader.encode ds + 2) in H_option_root_r by now rewrite encode_last...
       destruct ((x_l <? x_r)%Z) eqn: H_obs_if3; [apply Z.ltb_lt in H_obs_if3 | apply Z.ltb_nlt in H_obs_if3]; steps_weak.
       all: repeat rewrite plus1minus1.
       - rewrite H_option_root_r; steps_weak.
+        assert (H_recover_next : upd xs (HeapsortHeader.encode (btctx2idx g)) x_r = toList (recover_bintree g (BT_node x_r l r))).
+        { admit " H_recover_next ". }
         deflag; eapply IH_r with (g := btctx_right x_r l g).
-        all: admit "".
+        + simpl. rewrite H_ds...
+        + simpl. rewrite H_ds...
+        + rewrite upd_length...
+        + now destruct r.
+        + exact (proj2 (destruct_complete _ t_complete)).
+        + simpl. apply (equicomplete_thm _ (BT_node x l r))...
+        + transitivity (toList (recover_bintree g (upd_root k (BT_node x l r))))...
+          simpl. apply recover_permutation.
+          admit " H_permuation_next ".
+        + simpl. destruct r as [ | x_r' l_r r_r]; inv H_obs_x_r.
+          admit " t_heap_pr_next ".
+        + admit " g_heap_pr_next ".
       - rewrite H_option_root_l; steps_weak.
-        deflag; eapply IH_l with (g := btctx_left x_l r g).
+        deflag; eapply IH_l with (g := btctx_left x_l r g)...
         all: admit "".
-      - deflag; eapply IH_l with (g := btctx_left x_l r g).
+      - subst r; steps_weak.
+        deflag; eapply IH_l with (g := btctx_left x_l BT_nil g)...
         all: admit "".
     }
     (** "Leaving the first loop" *)
