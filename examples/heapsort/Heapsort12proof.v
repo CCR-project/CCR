@@ -92,9 +92,16 @@ Section SIMMODSEM.
     { pose proof (recover_focus btctx_top tree (decodeIdx (initial - 1))) as R.
       rewrite <- Eqp in R. simpl in R. auto. }
     assert (Hieq : initial = initial').
-    { unfold initial'. Check btctx2idx_focus.
-      pose proof (btctx2idx_focus tree (decodeIdx (initial - 1))) as H.
-      rewrite <- Eqp in H. rewrite H. rewrite encode_decode. nia. }
+    { unfold initial'.
+      pose proof (btctx2idx_focus tree btctx_top (decodeIdx (initial - 1))) as H.
+      rewrite <- Eqp in H. pose proof (subtree_inrange_nat _ PURE1 (initial - 1)).
+      assert (initial - 1 < btsize tree) by nia.
+      apply H0 in H1. do 3 destruct H1.
+      pose proof (focus_subtree tree btctx_top (HeapsortHeader.decode (initial - 1))).
+      rewrite <- Eqp in H2. unfold subtree_nat in H1. destruct t.
+      - rewrite H1 in H2. destruct H2;inversion H2.
+      - assert (BT_node x2 t1 t2 ≠ BT_nil). { unfold not;intros. inversion H3. }
+        apply H in H3. simpl in H3. rewrite H3. rewrite encode_decode. nia. }
     repl tree with (recover_bintree g t) at 4 by auto.
     replace (length (toList tree)) with (btsize tree) by (symmetry; eapply toList_length).
     repl initial with initial' at 2 by (f_equal; try f_equal; auto).
@@ -438,21 +445,17 @@ Section SIMMODSEM.
     assert (t_heap_pr : heap_pr Z.ge (@option_rect Z (fun _ => Z) (Z.max k) k (option_root t)) t).
     { rewrite t_leaf. simpl; econs... all: econs || easy. }
     (** "Entering the second loop" *)
-<<<<<<< HEAD
     clear x obs_if1 obs_if2 H_obs_if1 t_is_leaf t_heap_pr.
     deflag; revert xs ds t t_nonempty H_recover H_permutation H_complete H_heap_pr g_heap_pr t_complete H_btctx_idx H_xs_length.
     induction g as [ | x r g IH | x l g IH]; i; rewrite unfold_iter_eq.
     all: pose proof (btctx2idx_encode_eq _ _ H_btctx_idx) as H_obs_if1.
     - rewrite H_obs_if1; steps_weak.
-<<<<<<< HEAD
-=======
     clear x obs_if1 obs_if2 H_obs_if1 t_leaf; subst ds par.
     deflag; revert xs t t_nonempty H_recover H_permutation g_heap_pr t_heap_pr g_complete t_complete xs_length.
     induction g as [ | p_x p_r g IH | p_x p_l g IH]; i; rewrite unfold_iter_eq.
     all: set ((HeapsortHeader.encode (btctx2idx _) + 1 =? 1)%nat) as obs_if1.
     - simpl in obs_if1. replace obs_if1 with true by now subst obs_if1.
       steps_weak.
->>>>>>> 53703609ff40f971f0c530826f804e9ab01eb996
       { (** "Leaving the second loop" *)
         force_l. eexists. steps_weak. hret tt; ss.
         iModIntro. iSplit... iSplit... iPureIntro.
@@ -483,7 +486,6 @@ Section SIMMODSEM.
         replace ((2 * HeapsortHeader.encode (btctx2idx g) + 2 + 1) `div` 2) with ((1 + (HeapsortHeader.encode (btctx2idx g) + 1) * 2) `div` 2)...
         f_equal; lia.
       }
-=======
       { (** "Leaving the second loop" *)
         force_l. eexists. steps_weak. hret tt; ss.
         iModIntro. iSplit... iSplit... iPureIntro.
@@ -502,13 +504,11 @@ Section SIMMODSEM.
         replace ((2 * HeapsortHeader.encode (btctx2idx g) + 1 + 1) `div` 2) with ((0 + (HeapsortHeader.encode (btctx2idx g) + 1) * 2) `div` 2)...
         f_equal; lia.
       }
->>>>>>> 659fa6966f2b2c218421b6d420ced61fbc1853d8
       rewrite H_par_i. repeat rewrite plus1minus1. rewrite H_par. steps_weak.
       destruct ((k <? x)%Z) eqn: H_obs_if2; [apply Z.ltb_lt in H_obs_if2 | apply Z.ltb_nlt in H_obs_if2]; steps_weak.
       { (** "Leaving the second loop" *)
         force_l. eexists. steps_weak. hret tt; ss.
         iModIntro. iSplit... iSplit... iPureIntro.
-<<<<<<< HEAD
         exists (recover_bintree g (BT_node x l (upd_root k t))); splits.
         - f_equal. symmetry. rewrite H_btctx_idx. rewrite H_recover.
           exact (recover_upd_root_repr t t_nonempty k (btctx_right x l g)).
@@ -516,7 +516,6 @@ Section SIMMODSEM.
         - now transitivity (toList (recover_bintree g (BT_node x l (upd_root k t)))).
         - apply g_heap_pr... apply H_heap_pr...
       }
-=======
         exists (recover_bintree g (BT_node x (upd_root k t) r)); splits.
         - f_equal. symmetry. rewrite H_btctx_idx. rewrite H_recover.
           exact (recover_upd_root_repr t t_nonempty k (btctx_left x r g)).
@@ -554,12 +553,8 @@ Section SIMMODSEM.
         exists (recover_bintree g (BT_node p_x p_l (upd_root k t))); splits.
         all: admit "".
       }
-<<<<<<< HEAD
->>>>>>> 659fa6966f2b2c218421b6d420ced61fbc1853d8
       deflag; eapply IH with (t := BT_node x l (upd_root x t)).
-=======
       deflag; eapply IH with (t := BT_node p_x p_l (upd_root p_x t))...
->>>>>>> 53703609ff40f971f0c530826f804e9ab01eb996
       all: admit "".
     (** "Leaving the function" *)
     Unshelve.

@@ -2011,7 +2011,12 @@ Section BinaryTreeZipper.
         simpl. eapply IH with (m := S n)... destruct H0.
         *
   Admitted.
-        
+
+  Lemma subtree_inrange_nat (t : bintree A) :
+    complete t ->
+    forall j, j < btsize t ->
+         exists x l r, subtree_nat t j = Some (BT_node x l r).
+  Admitted.
   
   Theorem btctx_lookup (g : btctx A) t :
     lookup (toList (recover_bintree g t)) (encode (btctx2idx g)) = option_root t.
