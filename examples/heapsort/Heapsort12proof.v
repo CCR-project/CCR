@@ -162,13 +162,13 @@ Section SIMMODSEM.
       (* TODO : remove Hts *)
       assert (Hts : btsize tree = length (toList (recover_bintree g t)))
         by (rewrite <- (Permutation_length permutation); symmetry; eapply toList_length).
-      rewrite Hts in Ele1. rewrite Hts.
+      rewrite Hts in Ele1.
       assert (Htreele1 : 1 <= btsize (recover_bintree g t)) by nia.
       rewrite <- (toList_length (recover_bintree g t)) in Htreele1.
       destruct (length (toList (recover_bintree g t))) as [|m] eqn:Htreele2 in Htreele1
       ;[simpl in Htreele1;inversion Htreele1|].
       clear Htreele1.
-      repl (length (toList (recover_bintree g t))) with (S m) at 3.
+      repl (btsize tree) with (S m) at 3 by (transitivity (length (toList (recover_bintree g t))); auto).
       assert (some0 : initial' * 2 - 1 < length (toList (recover_bintree g t))) by nia.
       apply nth_error_Some in some0.
       rewrite toList_subtree in some0. unfold subtree_nat in some0.
@@ -216,7 +216,7 @@ Section SIMMODSEM.
                 then recover_bintree g (BT_node xr (BT_node xl ll lr) (BT_node x rl rr))
                 else recover_bintree g (BT_node xl (BT_node x ll lr) (BT_node xr rl rr))
                ) by admit "swap".
-        rewrite E. unfold initial'.
+        unfold initial'.
         rewrite E in Hsubcom. destruct n; [ inversion Hsubcom; inversion H_l |].
         destruct (xl <? xr)%Z eqn:HZlt'
         ;[apply Z.ltb_lt in HZlt'|apply Z.ltb_ge in HZlt'].
@@ -224,11 +224,6 @@ Section SIMMODSEM.
           replace (S (encodeIdx (btctx2idx g)) * 2 + 1) with
             (S (encodeIdx (btctx2idx (btctx_right xr (BT_node xl ll lr) g)))).
           2 :{ simpl. rewrite encode_last. nia. }
-          replace (length (toList (recover_bintree
-                                     g
-                                     (BT_node x (BT_node xl ll lr) (BT_node xr rl rr)))))
-            with (btsize tree).
-          2: { simpl. admit "". }
           replace (toList (recover_bintree g (BT_node xr (BT_node xl ll lr) (BT_node x rl rr))))
             with (toList (recover_bintree
                             (btctx_right xr (BT_node xl ll lr) g)
@@ -270,11 +265,6 @@ Section SIMMODSEM.
           replace (S (encodeIdx (btctx2idx g)) * 2) with
             (S (encodeIdx (btctx2idx (btctx_left xl (BT_node xr rl rr) g)))).
           2 :{ simpl. rewrite encode_last. nia. }
-          replace (length (toList (recover_bintree
-                                     g
-                                     (BT_node x (BT_node xl ll lr) (BT_node xr rl rr)))))
-            with (btsize tree).
-          2: { simpl. admit "". }
           replace (toList (recover_bintree g (BT_node xl (BT_node x ll lr) (BT_node xr rl rr))))
             with (toList (recover_bintree
                             (btctx_left xl (BT_node xr rl rr) g)
@@ -349,11 +339,6 @@ Section SIMMODSEM.
            replace (S (encodeIdx (btctx2idx g)) * 2) with
              (S (encodeIdx (btctx2idx (btctx_left xl BT_nil g)))).
            2 :{ simpl. rewrite encode_last. nia. }
-           replace (length (toList (recover_bintree
-                                      g
-                                      (BT_node x (BT_node xl ll lr) BT_nil))))
-             with (btsize tree).
-             2: { simpl. admit "". }
              replace (toList (recover_bintree g (BT_node xl (BT_node x ll lr) BT_nil)))
                with (toList (recover_bintree
                                (btctx_left xl BT_nil g)
