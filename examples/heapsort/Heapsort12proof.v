@@ -463,7 +463,7 @@ Section SIMMODSEM.
     assert (t_heap_pr : heap_pr Z.ge (@option_rect Z (fun _ => Z) (Z.max k) k (option_root t)) t).
     { rewrite t_leaf. simpl; econs... all: econs || easy. }
     (** "Entering the second loop" *)
-    clear x obs_if1 obs_if2 H_obs_if1 t_is_leaf t_heap_pr.
+    clear x obs_if1 obs_if2 H_obs_if1 t_leaf t_heap_pr.
     deflag; revert xs ds t t_nonempty H_recover H_permutation H_complete H_heap_pr g_heap_pr t_complete H_btctx_idx H_xs_length.
     induction g as [ | x r g IH | x l g IH]; i; rewrite unfold_iter_eq.
     all: pose proof (btctx2idx_encode_eq _ _ H_btctx_idx) as H_obs_if1.
