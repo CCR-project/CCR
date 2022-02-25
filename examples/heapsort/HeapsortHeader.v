@@ -788,6 +788,13 @@ Section BinaryTreeZipper.
   | btctx_right (x : A) (l : bintree A) (g : btctx) : btctx
   .
 
+  Definition option_parent g : option A :=
+    match g with
+    | btctx_top => None
+    | btctx_left p_x p_r g => Some p_x
+    | btctx_right p_x p_l g => Some p_x
+    end.
+
   Fixpoint btctx2idx (g : btctx) : btidx :=
     match g with
     | btctx_top => []
