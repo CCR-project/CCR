@@ -1407,18 +1407,18 @@ Section CompleteBinaryTree.
   Lemma complete_toListAux_length n (t : bintree A) :
     complete' t n -> length (toListAux t) = n.
   Proof.
-    intros.
-    admit.
-    (*
-    induction H using complete_ind_ranked.
+    revert t. induction n as [n IH] using Wf_nat.lt_wf_ind. intros t H.
+    inversion H; simpl.
     - reflexivity.
-    - simpl.
-      rewrite zipLList_length.
-      rewrite IHcomplete'1.
-      rewrite IHcomplete'2.
-      lia.
-     *)
-  Admitted.
+    - rewrite zipLList_length.
+      erewrite (IH n0).
+      erewrite (IH n0).
+      all: try lia; try assumption; try eapply perfect'2complete'; assumption.
+    - rewrite zipLList_length.
+      erewrite (IH (S n0)).
+      erewrite (IH n0).
+      all: try lia; try assumption; try eapply perfect'2complete'; assumption.
+  Qed.
 
   Lemma perfect_toListAux_list (t : bintree A) :
     perfect t -> perfect_list 0 (toListAux t).
