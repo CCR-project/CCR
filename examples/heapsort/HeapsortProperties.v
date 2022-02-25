@@ -1870,41 +1870,147 @@ Section BinaryTreeZipper.
         destruct a;apply IHi in Heqp;simpl in *;auto.
   Qed.
 
+  Lemma lt_ltlen_trans i j k:
+    lt_ltlen i j -> lt_ltlen j k -> lt_ltlen i k.
+  Proof.
+    intros. unfold lt_ltlen in *. nia.
+  Qed.
+
+  Lemma lt_eqlen_eqlen i j:
+    lt_eqlen i j -> length i = length j.
+  Proof.
+    intros. induction H;simpl;auto.
+  Qed.
+
+  Lemma lt_eqlen_trans i j k:
+    lt_eqlen i j -> lt_eqlen j k -> lt_eqlen i k.
+  Proof.
+    intros H. revert k.
+    induction H;intros k H1.
+    - inversion H1;subst. constructor. apply lt_eqlen_eqlen in H4. rewrite H. auto.
+    - inversion H1;subst.
+      + constructor. apply lt_eqlen_eqlen in H. rewrite H. auto.
+      + apply IHlt_eqlen in H4. constructor. auto.
+  Qed.
+
+  Lemma lt_eqlen_nat i j :
+    encode i < encode j -> length i = length j -> lt_eqlen i j.
+  Proof.
+    revert j. induction i;intros.
+    - destruct j;rewrite encode_unfold in H;[inversion H|]. simpl in H0. nia.
+    - destruct j.
+      + simpl in H0. nia.
+      + assert (a=d \/ a<>d).
+        {unfold not. destruct a;destruct d;[left|right|right|left];auto;intros;inversion H1. }
+        destruct H1.
+        * rewrite H1. constructor. apply IHi.
+          { rewrite H1 in H. destruct d
+            ;rewrite encode_unfold in H
+            ;rewrite (encode_unfold (_ :: j)) in H
+            ;simpl in *;inversion H0;rewrite H3 in H;nia. }
+          simpl in H0. auto.
+        * destruct a;destruct d;[contradiction H1;auto|clear H1|clear H1|contradiction H1;auto].
+          { constructor. simpl in H0. auto. }
+          { rewrite encode_unfold in H
+            ;rewrite (encode_unfold (_ :: j)) in H. inversion H0. apply encode_bound in H2.
+            simpl length in H. inversion H0. rewrite H3 in H. simpl minus in H.
+            symmetry in H3. apply encode_bound in H3. inversion H0. rewrite H4 in H3.
+            assert (2 ^ length j - 1 + 2 ^ S (length j) <= encode i + 2 ^ S (length j)) by nia.
+            assert (encode j + 2 ^ (length j) < 2 ^ S (length j) - 1 + 2 ^ (length j) ) by nia.
+            rewrite sub_0_r in H.
+            assert (2 ^ length j - 1 + 2 ^ S (length j) < 2 ^ S (length j) - 1 + 2 ^ length j) by nia.
+            simpl in H6. assert (2 ^ length j > 0) by now apply exp_pos;nia. nia. }
+  Qed.
+
+  Lemma list_dir (l : list dir_t) r : l=r \/ l<>r.
+  Proof.
+    revert r. induction l.
+    - destruct r;[left|right];auto. unfold not. intros. inversion H.
+    - destruct r;[right;unfold not;intros;inversion H|].
+      destruct a;destruct d;[|right |right |].
+      + specialize (IHl r). destruct IHl;[left;rewrite H;auto|right];unfold not;intros.
+        inversion H0. auto.
+      + unfold not. intros. inversion H.
+      + unfold not. intros. inversion H.
+      + specialize (IHl r). destruct IHl;[left;rewrite H;auto|right];unfold not;intros.
+        inversion H0. auto.
+  Qed. 
+      
+      
+  Lemma complete_last (l : bintree A) (r : bintree A) n :
+    complete' r n -> perfect' l n -> btsize l <> btsize r -> lt_eqlen (last_btidx r) (last_btidx l).
+  Proof.
+    intros. apply lt_eqlen_nat. 
+    - unfold last_btidx. do 2 rewrite encode_decode.
+      destruct n;[inversion H;inversion H0;subst;contradiction H1;auto|].
+      apply comp_size in H. apply perf_size in H0. rewrite <- H0 in H.
+      assert (2 ^ n > 0) by now apply exp_pos;nia. nia.
+    - erewrite complete'_last_btidx_length;eauto. apply perfect'2complete' in H0.
+      erewrite complete'_last_btidx_length;eauto.
+  Qed.
+
+  Lemma last_induct (x : A) l r j :
+    complete (BT_node x l r)
+    -> j <> []
+    -> (lt_eqlen (Dir_left :: j) (last_btidx (BT_node x l r)) -> lt_eqlen j (last_btidx l)).
+  Proof.
+    intros. destruct H as [n H]. inversion H;subst.
+    - destruct n0.
+      + inversion H_l;subst. inversion H_r;subst. unfold last_btidx in H1.
+        rewrite unfold_decode in H1. simpl in H1. inversion H1.
+      + erewrite last_btidx_perfect_complete in H1.
+        *
+  Admitted.
+                      
+    
   Lemma subtree_inrange_ltlen (t : bintree A) :
     complete t ->
-    forall j, lt_ltlen j (last_btidx t) ->
+    forall j, btidx_lt j (last_btidx t) ->
          exists x l r, option_subtree j t = Some (BT_node x l r).
   Proof with first [ lia | eassumption | eapply perfect'2complete'; eassumption | idtac ].
-    unfold lt_ltlen.
+    unfold btidx_lt.
     intros [n H] j Hj.
     revert t H j Hj.
     induction n using Wf_nat.lt_wf_ind; rename H into IH.
     intros t H j Hj.
-    destruct H.
-    - unfold last_btidx in Hj. rewrite unfold_decode in Hj. simpl in Hj...
+    destruct H;destruct Hj as [Hj|Hj].
+    - unfold last_btidx in Hj. rewrite unfold_decode in Hj. unfold lt_ltlen in Hj.
+      simpl in Hj...
+    - unfold last_btidx in Hj. rewrite unfold_decode in Hj.
+      simpl in Hj... inversion Hj.
     - destruct n.
       { inversion H_l.
         inversion H.
-        subst. unfold last_btidx in Hj. rewrite unfold_decode in Hj. simpl in Hj... }
-      erewrite last_btidx_perfect_complete with (n := S n) in Hj.
+        subst. unfold last_btidx in Hj. rewrite unfold_decode in Hj.
+        unfold lt_ltlen in Hj. simpl in Hj... }
+      erewrite last_btidx_perfect_complete with (n0 := S n) in Hj...
       destruct j as [|[] j]; simpl in Hj...
       + rewrite unfold_option_subtree; simpl.
+        eauto.
+      + rewrite unfold_option_subtree; simpl.
+        eapply (IH (S n))... left. unfold lt_ltlen in *.
+        apply perfect'2complete' in H_l. simpl in Hj.
         erewrite complete'_last_btidx_length in Hj...
-        eapply (IH (S n))...
-        erewrite complete'_last_btidx_length...
-        lia.
-      + rewrite unfold_option_subtree; simpl.
-        eapply (IH (S n))...
-    - erewrite last_btidx_complete_perfect in Hj...
-      destruct j as [|[] j]; simpl in Hj...
-      + rewrite unfold_option_subtree; simpl.
-        eapply (IH (S n))...
-      + rewrite unfold_option_subtree; simpl.
-        erewrite complete'_last_btidx_length in Hj...
-        eapply (IH n)...
-        erewrite complete'_last_btidx_length...
-        lia.
-  Qed.
+        erewrite complete'_last_btidx_length... lia.
+      +  rewrite unfold_option_subtree; simpl.
+         eapply (IH (S n))... unfold lt_ltlen in *. simpl in Hj...
+    - destruct n.
+      { inversion H_l;subst. inversion H;subst. unfold last_btidx in Hj.
+        rewrite unfold_decode in Hj. simpl in Hj. inversion Hj. }
+      destruct j as [|[] j];[inversion Hj;subst| | ].
+      + erewrite last_btidx_perfect_complete with (n0 := S n) in Hj...
+        (* inversion H_l;subst. *)
+        (* destruct j as [|[] j];subst;simpl. *)
+        (* * unfold subtree_init. eauto. *)
+        (* * eapply IH... nia. *)
+        assert (lt_eqlen (last_btidx r) (last_btidx l) \/ (last_btidx r)=(last_btidx l)).
+        { pose proof (list_dir (last_btidx r) (last_btidx l)).
+          destruct H0;auto. left.
+          eapply complete_last;eauto. unfold not. intros. unfold last_btidx in *.
+          rewrite H1 in H0. contradiction H0. auto. }
+        simpl. eapply IH with (m := S n)... destruct H0.
+        *
+  Admitted.
         
   
   Theorem btctx_lookup (g : btctx A) t :

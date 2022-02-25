@@ -91,7 +91,7 @@ Section SIMMODSEM.
     { pose proof (recover_focus btctx_top tree (decodeIdx (initial - 1))) as R.
       rewrite <- Eqp in R. simpl in R. auto. }
     assert (Hieq : initial = initial').
-    { unfold initial'.
+    { unfold initial'. Check btctx2idx_focus.
       pose proof (btctx2idx_focus tree (decodeIdx (initial - 1))) as H.
       rewrite <- Eqp in H. rewrite H. rewrite encode_decode. nia. }
     repl tree with (recover_bintree g t) at 2 3 4 by auto. (* TODO : it's okay to not replace `length (toList tree)` *)
