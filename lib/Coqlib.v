@@ -1584,3 +1584,5 @@ Lemma Forall2_eq
     <<EQ: xs0 = xs1>>
 .
 Proof. induction EQ; ss. des; subst. refl. Qed.
+
+Global Open Scope nat_scope.

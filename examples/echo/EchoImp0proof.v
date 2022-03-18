@@ -69,7 +69,7 @@ Section SIMMODSEM.
       des. destruct v0; ss; clarify.
       des_ifs.
       - imp_steps. red. esplits; et. ss.
-      - rewrite Z.eqb_eq in Heq. clarify.
+      - rewrite Z.eqb_eq in Heq0. clarify.
       - imp_steps. red. esplits; et.
     }
     econs; ss.
@@ -83,7 +83,7 @@ Section SIMMODSEM.
       des. destruct v0; ss; clarify.
       des_ifs.
       - imp_steps. red. esplits; et. ss.
-      - rewrite Z.eqb_eq in Heq. clarify.
+      - rewrite Z.eqb_eq in Heq0. clarify.
       - imp_steps. red. esplits; et.
     }
     Unshelve. all: try exact 0. all: ss.

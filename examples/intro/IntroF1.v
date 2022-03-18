@@ -10,8 +10,6 @@ Require Import HoareDef.
 
 Set Implicit Arguments.
 
-Local Open Scope nat_scope.
-
 
 Section PROOF.
 

@@ -634,3 +634,5 @@ Module AListSort (V: Typ).
     { eapply sort_StronglySorted. }
   Qed.
 End AListSort.
+
+Notation "f ∘ g" := (fun x => (f (g x))). (*** It is already in Coqlib but Coq seems to have a bug; it gets overriden by the one in program_scope in the files that import this file ***)

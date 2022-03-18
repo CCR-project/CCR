@@ -599,12 +599,12 @@ Section LINKPROPS.
       apply in_app_or in IN2. des.
       { apply (in_map (fst ∘ compile_eFun)) in SRC0. eapply syscalls_unique in NOREPET2.
         2:{ unfold c_sys. eapply SRC0. }
-        clarify. exfalso. apply NOREPET2; clear NOREPET2. apply (in_map fst) in IN2. rewrite SRC1. ss. unfold name1.
+        clarify. exfalso. apply NOREPET2; clear NOREPET2. apply (in_map fst) in IN2. cbn. rewrite SRC1. ss. unfold name1.
         rewrite map_app. rewrite in_app_iff. left; auto. }
       apply in_app_or in IN2. des.
       2:{ apply (in_map (fst ∘ compile_eFun)) in SRC0. eapply syscalls_unique in NOREPET2.
           2:{ unfold c_sys. eapply SRC0. }
-          clarify. exfalso. apply NOREPET2; clear NOREPET2. apply (in_map fst) in IN2. rewrite SRC1. ss. unfold name1.
+          clarify. exfalso. apply NOREPET2; clear NOREPET2. apply (in_map fst) in IN2. cbn. rewrite SRC1. ss. unfold name1.
           rewrite map_app. rewrite in_app_iff. right; auto. }
       apply decomp_c_sys in IN2. des. ss; clarify. unfold compile_eFun in *. destruct fd; destruct fd0. ss; clarify.
       apply s2p_inj in H1. clarify.
@@ -620,12 +620,12 @@ Section LINKPROPS.
       apply in_app_or in IN1. des.
       { apply (in_map (fst ∘ compile_eFun)) in SRC0. eapply syscalls_unique in NOREPET1.
         2:{ unfold c_sys. eapply SRC0. }
-        clarify. exfalso. apply NOREPET1; clear NOREPET1. apply (in_map fst) in IN1. rewrite SRC2. ss. unfold name1.
+        clarify. exfalso. apply NOREPET1; clear NOREPET1. apply (in_map fst) in IN1. cbn. rewrite SRC2. ss. unfold name1.
         rewrite map_app. rewrite in_app_iff. left; auto. }
       apply in_app_or in IN1. des.
       2:{ apply (in_map (fst ∘ compile_eFun)) in SRC0. eapply syscalls_unique in NOREPET1.
           2:{ unfold c_sys. eapply SRC0. }
-          clarify. exfalso. apply NOREPET1; clear NOREPET1. apply (in_map fst) in IN1. rewrite SRC2. ss. unfold name1.
+          clarify. exfalso. apply NOREPET1; clear NOREPET1. apply (in_map fst) in IN1. cbn. rewrite SRC2. ss. unfold name1.
           rewrite map_app. rewrite in_app_iff. right; auto. }
       apply decomp_c_sys in IN1. des. ss; clarify. unfold compile_eFun in *. destruct fd; destruct fd0. ss; clarify.
       apply s2p_inj in H1. clarify.

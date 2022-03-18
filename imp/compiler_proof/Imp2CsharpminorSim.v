@@ -35,6 +35,7 @@ Proof.
   cbv in x. subst. split; auto.
   assert (ktr0 = ktr1); clarify.
   extensionality x. eapply equal_f in x0.
+  rewrite ! subst_bind in *.
   irw in x0. eauto.
 Qed.
 
@@ -1000,7 +1001,7 @@ Section PROOF.
       i.
       des_ifs.
       2,3,4: sim_triggerUB.
-      rename Heq into WFARGS.
+      rename Heq0 into WFARGS.
       sim_red.
       gstep. econs 4.
       eexists. eexists.
