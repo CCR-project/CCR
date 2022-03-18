@@ -51,15 +51,15 @@ Section SIMMODSEM.
       steps. rewrite my_if_same. steps.
       unfold unblk in *. des_ifs; ss. steps.
       apply Any.downcast_upcast in _UNWRAPN. des; subst. des_ifs; steps.
-      { red. esplits; et. rewrite insert_delete; ss. rewrite insert_id; ss. }
       { red. esplits; et. rewrite insert_delete; ss. }
+      { red. esplits; et. rewrite insert_delete_insert; ss. }
     }
     econs; ss.
     { init. inv WF.
       unfold fun_to_src, body_to_src, cfunU, cfunN, push_body, Stack1.push_body.
       steps. rewrite my_if_same. steps.
       econs. esplits; et. red. f_equal.
-      rewrite insert_delete. auto.
+      rewrite insert_delete_insert. auto.
     }
   Unshelve.
     all: try exact 0. all: ss.
