@@ -15,8 +15,9 @@ Set Implicit Arguments.
 Section HEAPSORT.
 
   Context `{Σ : GRA.t}.
+  
 
-  Definition create_body : list Z * nat -> itree Es (list Z) :=
+  Definition create_body : list Z * nat -> itree (hAPCE +' Es) (list Z) :=
     fun '(xs0, initval) =>
       let nmemb := length xs0 in
       xs1 <- ITree.iter (fun '(xs, par_i) =>
@@ -43,7 +44,7 @@ Section HEAPSORT.
   Definition create_spec : fspec.
   Admitted.
 
-  Definition heapify_body : (list Z * Z) -> itree Es (list Z) :=
+  Definition heapify_body : (list Z * Z) -> itree (hAPCE +' Es) (list Z) :=
     fun '(xs0, k) =>
     let nmemb := length xs0 in
     '(xs1, par_i) <- ITree.iter (fun '(xs, par_i) =>
@@ -78,7 +79,7 @@ Section HEAPSORT.
   Definition heapify_spec : fspec.
   Admitted.
 
-  Definition heapsort_body : list Z -> itree Es (list Z) :=
+  Definition heapsort_body : list Z -> itree (hAPCE +' Es) (list Z) :=
     fun xs0 =>
       if length xs0 <=? 1
       then Ret xs0
@@ -111,16 +112,57 @@ Section HEAPSORT.
     ("heapify",  cfunU heapify_body);
     ("heapsort", cfunU heapsort_body)
     ].
+  
 
-  Definition HeapsortSem : ModSem.t := {|
-    ModSem.fnsems := HeapsortSbtb;
-    ModSem.mn := "Heapsort";
-    ModSem.initial_st := tt↑;
+  Definition SHeapsortSbtb : list (gname * fspecbody) :=
+    [("create",  mk_specbody create_spec (cfunU create_body));
+    ("heapify",  mk_specbody heapify_spec (cfunU heapify_body));
+    ("heapsort", mk_specbody heapsort_spec (cfunU heapsort_body))
+    ].
+  
+  Definition SHeapsortStb : list (gname * fspec).
+    eapply (Seal.sealing "stb").
+    let x := constr:(List.map (map_snd (fun fsb => fsb.(fsb_fspec) : fspec)) SHeapsortSbtb) in
+    let y := eval cbn in x in
+    eapply y.
+  Defined.
+
+  Definition SHeapsortSem : SModSem.t := {|
+    SModSem.fnsems := SHeapsortSbtb;
+    SModSem.mn := "Heapsort";
+    SModSem.initial_mr := ε;
+    SModSem.initial_st := tt↑;
   |}.
 
-  Definition Heapsort : Mod.t := {|
-    Mod.get_modsem := fun _ => HeapsortSem;
-    Mod.sk := Sk.unit;
+  Definition SHeapsort : SMod.t := {|
+    SMod.get_modsem := fun _ => SHeapsortSem;
+    SMod.sk := Sk.unit;
   |}.
 
+  Definition Heapsort : Mod.t := SMod.to_src SHeapsort.
+
+  Definition Heapsort_to0 stb : Mod.t := (SMod.to_tgt stb) SHeapsort.
+  
+(*   Definition AppSbtb: list (string * fspecbody) := *)
+(*     [("App.init", mk_specbody init_spec1 (cfunU initF)); *)
+(*     ("App.run", mk_specbody run_spec1 (cfunU runF))]. *)
+
+(*   Definition SAppSem: SModSem.t := {| *)
+(*     SModSem.fnsems := AppSbtb; *)
+(*     SModSem.mn := "App"; *)
+(*     SModSem.initial_mr := (GRA.embed Run); *)
+(*     SModSem.initial_st := tt↑; *)
+(*   |} *)
+(*   . *)
+
+(*   Definition SApp: SMod.t := {| *)
+(*     SMod.get_modsem := fun _ => SAppSem; *)
+(*     SMod.sk := [("App.init", Sk.Gfun); ("App.run", Sk.Gfun); ("initialized", Sk.Gvar 0)]; *)
+(*   |} *)
+(*   . *)
+
+(*   Definition App: Mod.t := (SMod.to_tgt (fun _ => to_stb App1Stb) SApp). *)
+
+
+(* End HEAPSORT. *)
 End HEAPSORT.
