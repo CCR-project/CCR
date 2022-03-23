@@ -336,7 +336,7 @@ Section MODE.
     repeat (ired_both; apply sim_itreeC_spec; econs).
     exploit EQ; et.
     { econs; et. ii. unfold OwnT. uipropall. esplits; et. refl. }
-    i. uipropall. exploit x2; try apply x1; et.
+    i. uipropall. exploit x3; try apply x1; et.
     { eapply wf_extends; try apply x0. exists (ctx ⋅ rx ⋅ mr_tgt1). r_solve. }
     i. rr in x4. uipropall. et.
   Unshelve. all: ss.

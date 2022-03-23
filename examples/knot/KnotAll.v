@@ -57,13 +57,13 @@ Section PROOF.
     refines2 KnotAll0 KnotAll1.
   Proof.
     eapply refines2_cons.
-    { eapply KnotMain01proof.correct with (RecStb0:=RecStb) (FunStb0:=FunStb) (GlobalStb0:=GlobalStb).
+    { eapply KnotMain01proof.correct with (RecStb:=RecStb) (FunStb:=FunStb) (GlobalStb:=GlobalStb).
       { stb_incl_tac. }
       { ii. econs; ss. refl. }
       { ii. econs; ss. refl. }
     }
     eapply refines2_cons.
-    { eapply Knot01proof.correct with (RecStb0:=RecStb) (FunStb0:=FunStb) (GlobalStb0:=GlobalStb).
+    { eapply Knot01proof.correct with (RecStb:=RecStb) (FunStb:=FunStb) (GlobalStb:=GlobalStb).
       + stb_incl_tac.
       + stb_incl_tac.
       + stb_incl_tac; ors_tac.

@@ -636,7 +636,7 @@ Lemma last_some
 Proof.
   ginduction xs; ii; ss. des_ifs.
   { exists nil. ss. }
-  exploit IHxs; eauto. i; des. rewrite x1. exists (a :: hds). ss.
+  exploit IHxs; eauto. i; des. rewrite x2. exists (a :: hds). ss.
 Qed.
 
 Fixpoint zip X Y Z (f: X -> Y -> Z) (xs: list X) (ys: list Y): list Z :=
@@ -1053,7 +1053,7 @@ Lemma nodup_length
 .
 Proof.
   r.
-  ginduction xs; ii; ss. exploit IHxs; et. i; des. des_ifs; ss; try rewrite x; try lia.
+  ginduction xs; ii; ss. exploit IHxs; et. i; des. des_ifs; ss; try rewrite x0; try lia.
 Qed.
 
 Fixpoint snoc X (xs: list X) (x: X): list X :=

@@ -236,7 +236,7 @@ Module Sk.
       incl_env sk0 (load_skenv sk1).
   Proof.
     ii. exploit INCL; et. i. ss. uo. des_ifs; et.
-    exfalso. clear - x Heq0. ginduction sk1; et.
+    exfalso. clear - x0 Heq0. ginduction sk1; et.
     i. ss. rewrite find_idx_red in Heq0. des_ifs.
     des_sumbool. uo.  des_ifs. des; clarify.
     eapply IHsk1; et.

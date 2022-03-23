@@ -90,11 +90,11 @@ Section IPM.
       { uipropall. ii. eapply H0; et. eapply H2; et. eapply H; et. }
       { uipropall. ii. eapply H0; et. eapply H2; et. eapply H; et. }
     - econs. i. split.
-      { uipropall. ii. exploit H; et. i. eapply x2; et. }
-      { uipropall. ii. exploit H; et. i. eapply x2; et. }
+      { uipropall. ii. exploit H; et. i. eapply x3; et. }
+      { uipropall. ii. exploit H; et. i. eapply x3; et. }
     - econs. i. split.
-      { uipropall. ii. inv H1. exploit H; et. i. eexists. eapply x2; et. }
-      { uipropall. ii. inv H1. exploit H; et. i. eexists. eapply x2; et. }
+      { uipropall. ii. inv H1. exploit H; et. i. eexists. eapply x3; et. }
+      { uipropall. ii. inv H1. exploit H; et. i. eexists. eapply x3; et. }
     - econs. i. split.
       { uipropall. ii. inv H2. des. subst. eexists. esplits; eauto.
         { eapply H; et. eapply URA.wf_mon; et. }
@@ -140,7 +140,7 @@ Section IPM.
     - ii. uipropall. i. eapply H; et. eapply URA.wf_unit.
     - ii. uipropall.
     - ii. uipropall.
-    - ii. uipropall. ii. specialize (H x). uipropall.
+    - ii. uipropall.
     - ii. uipropall. i. des. eexists. uipropall. et.
     - ii. uipropall. i. des. subst. ss.
     - ii. uipropall. ii. inv H. esplits; et. rewrite URA.unit_idl. et.

@@ -192,7 +192,7 @@ Section MEMAUX.
       exploit INCL. { ss; et. } i; des.
       erewrite initial_mem_mr_cons; et; cycle 1.
       { inv NODUP; ss. }
-      dup x. eapply nth_error_alist_find in x; ss. des_ifs.
+      dup x0. eapply nth_error_alist_find in x0; ss. des_ifs.
       erewrite var_points_to_spec; et.
       rewrite URA.add_comm.
       eapply URA.extends_add.

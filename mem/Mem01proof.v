@@ -435,7 +435,7 @@ Section SIMMODSEM.
           erewrite VALIDPTR; et; cycle 1.
           { rewrite URA.add_assoc in WF. eapply URA.wf_mon in WF; et. }
           erewrite VALIDPTR; et; cycle 1.
-          { erewrite URA.add_comm with (a5:=(a, a0) |-> [a1]) in WF.
+          { erewrite URA.add_comm with (a:=(a, a0) |-> [a1]) in WF.
             rewrite URA.add_assoc in WF. eapply URA.wf_mon in WF; et. }
           rewrite URA.add_comm in WF. eapply URA.wf_mon in WF. ur in WF; ss. steps.
           replace (dec a a2 && dec a0 a3 ) with false; cycle 1.

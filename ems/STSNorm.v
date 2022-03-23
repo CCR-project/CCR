@@ -200,7 +200,7 @@ Section PROOF.
       i. inv STEP0; ss; clarify.
       { rewrite VIS in SRT; clarify. }
       exploit STEP; eauto. i.
-      right. apply CIH. inv x; clarify.
+      right. apply CIH. inv x0; clarify.
     - des. econs 2.
       { ss. rewrite SRT. reflexivity. }
       assert (ev = None).

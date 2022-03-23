@@ -211,7 +211,7 @@ Section IPROP.
 
   Lemma Upd_trans: forall P : iProp', Entails (Upd (Upd P)) (Upd P).
   Proof.
-    ii. uipropall. ii. exploit H; et. i. des. exploit x0; eauto.
+    ii. uipropall. ii. exploit H; et. i. des. exploit x1; eauto.
   Qed.
 
   Lemma Upd_frame_r: forall P R : iProp', Entails (Sepconj (Upd P) R) (Upd (Sepconj P R)).
