@@ -9,13 +9,15 @@ Require Import HoareDef.
 Require Import ProofMode.
 Require Import STB.
 Require Import HeapsortHeader.
+Require Import Mem1.
+Require Import ConvC2ITree.
 
 Set Implicit Arguments.
 
 Section HEAPSORT.
 
   Context `{Σ : GRA.t}.
-  
+  Context `{@GRA.inG memRA Σ}.
 
   Definition create_body : list Z * nat -> itree (hAPCE +' Es) (list Z) :=
     fun '(xs0, initval) =>
@@ -40,9 +42,24 @@ Section HEAPSORT.
         else Ret (inr xs)
       ) (xs0, initval);;
       Ret xs1.
+  Locate "⌜".
 
-  Definition create_spec : fspec.
-  Admitted.
+  Compute (Pos.to_nat (xO xH)).
+  Check fun p z l => is_list (Vptr (Pos.to_nat p) (Integers.Ptrofs.intval z)) (map Vint l).
+  Definition create_spec : fspec :=
+    {|meta := positive * Integers.Ptrofs.int * (list Z) * Integers.Int64.int * Integers.Int64.int;
+      measure := fun _ => ord_top;
+      precond := fun _ '(p, z, l, nmem, initval) arg varg => 
+                   (⌜arg = (Values.Vptr p z, (Values.Vlong) nmem, (Values.Vlong) initval)↑
+                   /\ varg = (l, Integers.Int64.intval initval)↑ /\ length l = Z.to_nat (Integers.Int64.intval nmem)⌝
+  ** (is_list (Vptr (Pos.to_nat p) (Integers.Ptrofs.intval z)) (map Vint l)))%I;
+
+      postcond := fun _ x ret vret =>
+                    let '(p, z, _, nmem, _) := x in
+                    (∃ l' : list Z, ⌜ret = Vundef↑ /\ vret = l'↑ /\ length l' = Z.to_nat (Integers.Int64.intval nmem)⌝ ** is_list (Vptr (Pos.to_nat p) (Integers.Ptrofs.intval z)) (map Vint l'))%I |}.
+
+
+
 
   Definition heapify_body : (list Z * Z) -> itree (hAPCE +' Es) (list Z) :=
     fun '(xs0, k) =>
