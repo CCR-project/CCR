@@ -266,33 +266,6 @@ Ltac start_ipm_proof :=
 Section CURRENT.
   Context `{Σ: GRA.t}.
 
-  Variant current_iProp (orig: Σ) (I: iProp): Prop :=
-  | current_iProp_intro
-      (UPD: (bupd I) orig)
-      (WF: URA.wf orig)
-  .
-
-  Lemma current_iProp_entail I1 orig I0
-        (ACC: current_iProp orig I0)
-        (UPD: I0 ⊢ I1)
-    :
-      current_iProp orig I1.
-  Proof.
-    inv ACC. econs; et.
-    uipropall. i. exploit UPD0; et. i; des. esplits; et. eapply UPD; et. eapply URA.wf_mon; et.
-  Qed.
-
-  Lemma current_iProp_pure P orig
-        (ACC: current_iProp orig (⌜P⌝)%I)
-    :
-      P.
-  Proof.
-    inv ACC. uipropall. exploit UPD.
-    { rewrite URA.unit_id; et. }
-    intro T; des.
-    red in T0. uipropall.
-  Qed.
-
   Require Import ClassicalChoice.
 
   Goal forall A (P: A -> iProp), bi_entails (bi_exist (fun (a: A) => (bupd (P a)))) (bupd (bi_exist P)) .
@@ -449,18 +422,43 @@ Section CURRENT.
   Qed.
 
 
-  Lemma iProp_bupd_mixin: BiBUpdMixin iProp Upd2.
+  (* Lemma iProp_bupd_mixin: BiBUpdMixin iProp Upd2. *)
+  (* Proof. *)
+  (*   econs. *)
+  (*   - ii. econs. unfold bupd. uipropall. i. split. *)
+  (*     { ii. exploit H1; eauto. i. des. esplits; eauto. *)
+  (*       eapply H; et. eapply URA.wf_mon; et. } *)
+  (*     { ii. exploit H1; eauto. i. des. esplits; eauto. *)
+  (*       eapply H; et. eapply URA.wf_mon; et. } *)
+  (*   - exact Upd_intro. *)
+  (*   - exact Upd_mono. *)
+  (*   - exact Upd_trans. *)
+  (*   - exact Upd_frame_r. *)
+  (* Qed. *)
+
+  Variant current_iProp (orig: Σ) (I: iProp): Prop :=
+  | current_iProp_intro
+      (UPD: (Upd3 I) orig)
+      (WF: URA.wf orig)
+  .
+
+  Lemma current_iProp_entail I1 orig I0
+        (ACC: current_iProp orig I0)
+        (UPD: I0 ⊢ I1)
+    :
+      current_iProp orig I1.
   Proof.
-    econs.
-    - ii. econs. unfold bupd. uipropall. i. split.
-      { ii. exploit H1; eauto. i. des. esplits; eauto.
-        eapply H; et. eapply URA.wf_mon; et. }
-      { ii. exploit H1; eauto. i. des. esplits; eauto.
-        eapply H; et. eapply URA.wf_mon; et. }
-    - exact Upd_intro.
-    - exact Upd_mono.
-    - exact Upd_trans.
-    - exact Upd_frame_r.
+    inv ACC. econs; et.
+    uipropall. des. esplits; et. eapply UPD; et. eapply URA.wf_mon; et. eapply UPD1.
+    rewrite URA.unit_id; ss.
+  Qed.
+
+  Lemma current_iProp_pure P orig
+        (ACC: current_iProp orig (⌜P⌝)%I)
+    :
+      P.
+  Proof.
+    inv ACC. uipropall. des. r in UPD. uipropall.
   Qed.
 
 
@@ -470,43 +468,27 @@ Section CURRENT.
     :
       exists x, current_iProp orig (P x).
   Proof.
-    inv ACC. uipropall.
-    exploit (@choice { ctx : Σ | URA.wf (orig ⋅ ctx)} { x : A | current_iProp orig (P x) }).
-    { intros ctx.
-      specialize (UPD (proj1_sig ctx)).
-      specialize (UPD (proj2_sig ctx)).
-      des. red in UPD0. uipropall. des. unshelve eexists (@exist _ _ x _).
-      { cbn. econs; et. uipropall. i. esplits; try apply UPD0.
-    }
-    { intros ctx.
-    hexploit (choice (fun ctx x => forall o0, P x o0 -> P x o1)).
-    exploit UPD; et.
-    { rewrite URA.unit_id; et. }
-    intro T; des.
-    red in T0. uipropall. des. exists x.
-    econs; et.
-    uipropall.
-    i. esplits; try apply T0.
-  Abort.
+    inv ACC. uipropall. des. r in UPD. uipropall. des.
+    esplits; et. econs; et. uipropall. esplits; et.
+  Qed.
 
   Lemma current_iProp_or orig I0 I1
         (ACC: current_iProp orig (I0 ∨ I1)%I)
     :
       current_iProp orig I0 \/ current_iProp orig I1.
   Proof.
-    inv ACC. uipropall.
-    exploit UPD; et.
-    { left. econs; et. }
-    { right. econs; et. }
+    inv ACC. uipropall. des.
+    { left. econs; et. uipropall. esplits; et. }
+    { right. econs; et. uipropall. esplits; et. }
   Qed.
 
   Lemma current_iProp_upd ctx I
-        (ACC: current_iProp ctx (#=> I))
+        (ACC: current_iProp ctx (Upd3 I))
     :
       current_iProp ctx I.
   Proof.
-    inv ACC. uipropall.
-    hexploit IPROP; et. i. des. econs; et.
+    inv ACC. econs; et.
+    uipropall. des. esplits; et.
   Qed.
 
   Lemma current_iProp_own ctx (M: URA.t) `{@GRA.inG M Σ} (m: M)
@@ -516,6 +498,9 @@ Section CURRENT.
   Proof.
     unfold OwnM in *.
     inv ACC. uipropall. unfold URA.extends in *. des. subst.
+    exploit UPD0; et.
+    { rewrite URA.unit_id; et. }
+    intro GWF.
     eapply URA.wf_mon in GWF. eapply URA.wf_mon in GWF.
     eapply GRA.embed_wf. auto.
   Qed.
