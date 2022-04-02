@@ -266,46 +266,241 @@ Ltac start_ipm_proof :=
 Section CURRENT.
   Context `{Σ: GRA.t}.
 
-  Variant current_iProp (ctx: Σ) (I: iProp): Prop :=
+  Variant current_iProp (orig: Σ) (I: iProp): Prop :=
   | current_iProp_intro
-      r
-      (GWF: URA.wf (r ⋅ ctx))
-      (IPROP: I r)
+      (UPD: (bupd I) orig)
+      (WF: URA.wf orig)
   .
 
-  Lemma current_iProp_entail I1 ctx I0
-        (ACC: current_iProp ctx I0)
+  Lemma current_iProp_entail I1 orig I0
+        (ACC: current_iProp orig I0)
         (UPD: I0 ⊢ I1)
     :
-      current_iProp ctx I1.
+      current_iProp orig I1.
   Proof.
     inv ACC. econs; et.
-    uipropall. eapply UPD; et. eapply URA.wf_mon; et.
+    uipropall. i. exploit UPD0; et. i; des. esplits; et. eapply UPD; et. eapply URA.wf_mon; et.
   Qed.
 
-  Lemma current_iProp_pure P ctx
-        (ACC: current_iProp ctx (⌜P⌝)%I)
+  Lemma current_iProp_pure P orig
+        (ACC: current_iProp orig (⌜P⌝)%I)
     :
       P.
   Proof.
-    inv ACC. red in IPROP. uipropall.
+    inv ACC. uipropall. exploit UPD.
+    { rewrite URA.unit_id; et. }
+    intro T; des.
+    red in T0. uipropall.
   Qed.
 
-  Lemma current_iProp_ex ctx A (P: A -> iProp)
-        (ACC: current_iProp ctx (bi_exist P))
-    :
-      exists x, current_iProp ctx (P x).
+  Require Import ClassicalChoice.
+
+  Goal forall A (P: A -> iProp), bi_entails (bi_exist (fun (a: A) => (bupd (P a)))) (bupd (bi_exist P)) .
   Proof.
-    inv ACC. red in IPROP. uipropall.
-    des. exists x. econs; et.
+    i.
+    iStartProof.
+    iIntros "H". iDestruct "H" as (a) "H". iMod "H". iModIntro. iExists a. eauto.
   Qed.
 
-  Lemma current_iProp_or ctx I0 I1
-        (ACC: current_iProp ctx (I0 ∨ I1)%I)
-    :
-      current_iProp ctx I0 \/ current_iProp ctx I1.
+  Goal forall A (P: A -> iProp), bi_entails (bupd (bi_exist P)) (bi_exist (fun (a: A) => (bupd (P a)))) .
   Proof.
-    inv ACC. uipropall. des.
+    i.
+    iStartProof.
+    iIntros "H".
+  Abort.
+
+  Definition Upd2 (P: iProp'): iProp' :=
+    Seal.sealing
+      "iProp"
+      (fun r0 => ∀ (ctxs: Σ -> Prop),
+           (∀ ctx (IN: ctxs ctx), URA.wf (r0 ⋅ ctx)) ->
+           exists r1, P r1 /\ (∀ ctx (IN: ctxs ctx), URA.wf (r1 ⋅ ctx))).
+
+  Definition Upd3 (P: iProp'): iProp' :=
+    Seal.sealing
+      "iProp"
+      (fun r0 => exists r1, (∀ ctx, URA.wf (r0 ⋅ ctx) -> URA.wf (r1 ⋅ ctx) /\ P r1)).
+
+  Hint Unfold Upd2 Upd3: iprop.
+
+
+
+
+
+
+  (* Lemma Own_Upd2_set *)
+  (*       (r1: Σ) B *)
+  (*       (UPD: URA.updatable_set r1 B) *)
+  (*   : *)
+  (*     (Own r1) ⊢ (Upd2 (∃ b, ⌜B b⌝ ** (Own b))%I) *)
+  (* . *)
+  (* Proof. *)
+  (*   cut (Entails (Own r1) (Upd2 (Ex (fun b => Sepconj (Pure (B b)) (Own b))))); ss. *)
+  (*   Local Opaque Sepconj. *)
+  (*   uipropall. *)
+  (*   Local Transparent Sepconj. *)
+  (*   i. red in H. des. subst. *)
+  (*   r in UPD. *)
+  (*   destruct (classic (exists ctx, ctxs ctx)); cycle 1. *)
+  (*   - esplits. uipropall. esplits; et. *)
+  (*   - des. exploit H0; et. intro T; des. *)
+  (*     exploit (UPD (ctx0 ⋅ ctx)). *)
+  (*     { rewrite URA.add_assoc. admit "ez". } *)
+  (*     i. des. exists (b ⋅ ctx0). split. *)
+  (*     { rewrite <- URA.add_assoc. et. } *)
+  (*     { exists b. uipropall. esplits; [|apply IN|refl]. *)
+  (*       eapply URA.add_comm. } *)
+  (* Qed. *)
+
+  Goal forall P, bi_entails (Upd2 P) (Upd P).
+  Proof.
+    uipropall. i. uipropall. i.
+    specialize (H (fun r => r = ctx)). ss. exploit H; et.
+    { i. clarify. }
+    intro T; des.
+    exploit T0; et.
+  Qed.
+
+  Lemma UpdEq: forall PP, bi_entails (Upd2 PP) (Upd3 PP) ∧ bi_entails (Upd3 PP) (Upd2 PP).
+  Proof.
+    i.
+    split.
+    {
+      uipropall. i. specialize (H (fun ctx => URA.wf (r ⋅ ctx))). ss.
+      exploit H; et. intro T; des.
+      esplits; et.
+    }
+    {
+      uipropall. i; des.
+      exists r1. esplits; et.
+      { eapply H. rewrite URA.unit_id. et. }
+      { i. eapply H; et. }
+    }
+  Qed.
+
+
+
+  (* Lemma Upd2_intro: forall P : iProp', Entails P (Upd2 P). *)
+  (* Proof. *)
+  (*   ii. uipropall. ii. exists r. splits; auto. *)
+  (* Qed. *)
+
+  (* Lemma Upd2_mono: forall P Q : iProp', Entails P Q -> Entails (Upd2 P) (Upd2 Q). *)
+  (* Proof. *)
+  (*   ii. uipropall. ii. exploit H0; et. intro T; des. *)
+  (*   exists r1. esplits; et. eapply H; et. *)
+  (*   admit "". *)
+  (* Qed. *)
+
+  Lemma Upd2_trans: forall PP : iProp', Entails (Upd2 (Upd2 PP)) (Upd2 PP).
+  Proof.
+    ii. uipropall. ii. exploit H; et. intro T. des. exploit T; et.
+  Qed.
+
+  (* Lemma Upd2_frame_r: forall P R : iProp', Entails (Sepconj (Upd2 P) R) (Upd2 (Sepconj P R)). *)
+  (* Proof. *)
+  (*   ii. uipropall. ii. unfold Sepconj in *. des. subst. exploit (H1 (b ⋅ ctx)); et. *)
+  (*   { rewrite URA.add_assoc. et. } *)
+  (*   i. des. esplits; [..|eapply x1|eapply H2]; ss. *)
+  (*   rewrite <- URA.add_assoc. et. *)
+  (* Qed. *)
+
+  Lemma Upd3_intro: forall P : iProp', Entails P (Upd3 P).
+  Proof.
+    ii. uipropall. ii. exists r. splits; auto.
+  Qed.
+
+  Lemma Upd3_mono: forall P Q : iProp', Entails P Q -> Entails (Upd3 P) (Upd3 Q).
+  Proof.
+    ii. uipropall. ii. des. esplits; et. i. hexploit H0; et. intro T; des. esplits; et.
+    eapply H; et. eapply URA.wf_mon; et.
+  Qed.
+
+  Lemma Upd3_trans: forall PP : iProp', Entails (Upd3 (Upd3 PP)) (Upd3 PP).
+  Proof.
+    ii. iStartProof.
+    iIntros "H".
+    assert(T := UpdEq PP). des.
+    iApply T.
+    iApply Upd2_trans.
+    assert(U := UpdEq (Upd2 PP)). des.
+    iApply U0.
+    iApply Upd3_mono; et.
+  Qed.
+
+  Lemma Upd3_frame_r: forall P R : iProp', Entails (Sepconj (Upd3 P) R) (Upd3 (Sepconj P R)).
+  Proof.
+    ii. uipropall. ii. unfold Sepconj in *. des. subst.
+    assert(P r1).
+    { eapply H0. et. }
+    eexists (_ ⋅ _). i.
+    esplits; try apply H; try apply H1; try refl.
+    exploit (H0 (b ⋅ ctx)); et.
+    { rewrite URA.add_assoc. ss. }
+    i; des. rewrite <- URA.add_assoc in *. ss.
+  Qed.
+
+
+  Lemma existential_property: forall (X: Type) (P: X -> iProp'),
+      Entails (Upd3 (∃ x, P x)%I) ((∃ x, (Upd3 (P x)))%I).
+  Proof.
+    {
+      i. uipropall. i. des.
+    }
+    ii. r. rewrite Seal.sealing_eq. intros ? WF T.
+    assert(forall x, 
+    apply NNPP. ii. r in H0.
+    apply Coqlib.not_ex_all_not in H0.
+  Qed.
+
+
+  Lemma iProp_bupd_mixin: BiBUpdMixin iProp Upd2.
+  Proof.
+    econs.
+    - ii. econs. unfold bupd. uipropall. i. split.
+      { ii. exploit H1; eauto. i. des. esplits; eauto.
+        eapply H; et. eapply URA.wf_mon; et. }
+      { ii. exploit H1; eauto. i. des. esplits; eauto.
+        eapply H; et. eapply URA.wf_mon; et. }
+    - exact Upd_intro.
+    - exact Upd_mono.
+    - exact Upd_trans.
+    - exact Upd_frame_r.
+  Qed.
+
+
+
+  Lemma current_iProp_ex orig A (P: A -> iProp)
+        (ACC: current_iProp orig (bi_exist P))
+    :
+      exists x, current_iProp orig (P x).
+  Proof.
+    inv ACC. uipropall.
+    exploit (@choice { ctx : Σ | URA.wf (orig ⋅ ctx)} { x : A | current_iProp orig (P x) }).
+    { intros ctx.
+      specialize (UPD (proj1_sig ctx)).
+      specialize (UPD (proj2_sig ctx)).
+      des. red in UPD0. uipropall. des. unshelve eexists (@exist _ _ x _).
+      { cbn. econs; et. uipropall. i. esplits; try apply UPD0.
+    }
+    { intros ctx.
+    hexploit (choice (fun ctx x => forall o0, P x o0 -> P x o1)).
+    exploit UPD; et.
+    { rewrite URA.unit_id; et. }
+    intro T; des.
+    red in T0. uipropall. des. exists x.
+    econs; et.
+    uipropall.
+    i. esplits; try apply T0.
+  Abort.
+
+  Lemma current_iProp_or orig I0 I1
+        (ACC: current_iProp orig (I0 ∨ I1)%I)
+    :
+      current_iProp orig I0 \/ current_iProp orig I1.
+  Proof.
+    inv ACC. uipropall.
+    exploit UPD; et.
     { left. econs; et. }
     { right. econs; et. }
   Qed.
