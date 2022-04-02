@@ -388,14 +388,8 @@ Section CURRENT.
 
   Lemma Upd3_trans: forall PP : iProp', Entails (Upd3 (Upd3 PP)) (Upd3 PP).
   Proof.
-    ii. iStartProof.
-    iIntros "H".
-    assert(T := UpdEq PP). des.
-    iApply T.
-    iApply Upd2_trans.
-    assert(U := UpdEq (Upd2 PP)). des.
-    iApply U0.
-    iApply Upd3_mono; et.
+    ii. uipropall.
+    i. des. esplits; et.
   Qed.
 
   Lemma Upd3_frame_r: forall P R : iProp', Entails (Sepconj (Upd3 P) R) (Upd3 (Sepconj P R)).
