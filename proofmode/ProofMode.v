@@ -453,6 +453,16 @@ Section CURRENT.
     }
   Qed.
 
+  Lemma Upd3_elim
+        P (orig: Σ)
+        (UPD: (Upd3 P) orig)
+    :
+      exists new, URA.updatable orig new ∧ P new
+  .
+  Proof.
+    uipropall. des. exists r1. esplits; et.
+  Qed.
+
 
 
 
