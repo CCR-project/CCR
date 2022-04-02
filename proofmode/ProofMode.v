@@ -319,7 +319,7 @@ Section CURRENT.
   Definition Upd3 (P: iProp'): iProp' :=
     Seal.sealing
       "iProp"
-      (fun r0 => exists r1, (∀ ctx, URA.wf (r0 ⋅ ctx) -> URA.wf (r1 ⋅ ctx) /\ P r1)).
+      (fun r0 => exists r1, P r1 /\ (∀ ctx, URA.wf (r0 ⋅ ctx) -> URA.wf (r1 ⋅ ctx))).
 
   Hint Unfold Upd2 Upd3: iprop.
 
@@ -367,14 +367,11 @@ Section CURRENT.
     split.
     {
       uipropall. i. specialize (H (fun ctx => URA.wf (r ⋅ ctx))). ss.
-      exploit H; et. intro T; des.
-      esplits; et.
+      exploit H; et.
     }
     {
       uipropall. i; des.
       exists r1. esplits; et.
-      { eapply H. rewrite URA.unit_id. et. }
-      { i. eapply H; et. }
     }
   Qed.
 
@@ -412,8 +409,8 @@ Section CURRENT.
 
   Lemma Upd3_mono: forall P Q : iProp', Entails P Q -> Entails (Upd3 P) (Upd3 Q).
   Proof.
-    ii. uipropall. ii. des. esplits; et. i. hexploit H0; et. intro T; des. esplits; et.
-    eapply H; et. eapply URA.wf_mon; et.
+    ii. uipropall. ii. des. esplits; et. eapply H; et. specialize (H1 ε).
+    rewrite ! URA.unit_id in H1. et.
   Qed.
 
   Lemma Upd3_trans: forall PP : iProp', Entails (Upd3 (Upd3 PP)) (Upd3 PP).
@@ -432,10 +429,11 @@ Section CURRENT.
   Proof.
     ii. uipropall. ii. unfold Sepconj in *. des. subst.
     assert(P r1).
-    { eapply H0. et. }
+    { eapply H0. }
     eexists (_ ⋅ _). i.
     esplits; try apply H; try apply H1; try refl.
-    exploit (H0 (b ⋅ ctx)); et.
+    i.
+    exploit (H2 (b ⋅ ctx)); et.
     { rewrite URA.add_assoc. ss. }
     i; des. rewrite <- URA.add_assoc in *. ss.
   Qed.
@@ -445,12 +443,9 @@ Section CURRENT.
       Entails (Upd3 (∃ x, P x)%I) ((∃ x, (Upd3 (P x)))%I).
   Proof.
     {
-      i. uipropall. i. des.
+      i. uipropall. i. des. r in H. uipropall. des.
+      r. uipropall. exists x. uipropall. esplits; et.
     }
-    ii. r. rewrite Seal.sealing_eq. intros ? WF T.
-    assert(forall x, 
-    apply NNPP. ii. r in H0.
-    apply Coqlib.not_ex_all_not in H0.
   Qed.
 
 
