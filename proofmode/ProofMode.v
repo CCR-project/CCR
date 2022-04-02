@@ -422,6 +422,47 @@ Section CURRENT.
   Qed.
 
 
+
+
+
+  Lemma Own_Upd3
+        (r1 r2: Σ)
+        (UPD: URA.updatable r1 r2)
+    :
+      (Own r1) ⊢ (Upd3 (Own r2))
+  .
+  Proof.
+    {
+      uipropall. i. r in H. des. subst.
+      exploit UPD; et. intro T; des.
+      exists (r2 ⋅ ctx). esplits; et.
+      { r. esplits; et. }
+      i. rewrite <- URA.add_assoc. rewrite <- URA.add_assoc in H. eapply UPD; et.
+    }
+  Qed.
+
+  Lemma OwnM_Upd3 (M: URA.t) `{@GRA.inG M Σ}
+        (r1 r2: M)
+        (UPD: URA.updatable r1 r2)
+    :
+      (OwnM r1) ⊢ (Upd3 (OwnM r2))
+  .
+  Proof.
+    {
+      uipropall. i. r in H0. uipropall. r in H0. des. subst.
+      assert(UPD0: URA.updatable (GRA.embed r1) (GRA.embed r2)).
+      { eapply GRA.embed_updatable; et. }
+      exploit UPD0; et. intro T; des.
+      exists (GRA.embed r2 ⋅ ctx). esplits; et.
+      { rr. uipropall. r. esplits; et. }
+      i. rewrite <- URA.add_assoc. rewrite <- URA.add_assoc in H0. eapply UPD0; et.
+    }
+  Qed.
+
+
+
+
+
   (* Lemma iProp_bupd_mixin: BiBUpdMixin iProp Upd2. *)
   (* Proof. *)
   (*   econs. *)
