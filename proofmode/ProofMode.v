@@ -8,6 +8,309 @@ Require Import AList.
 Require Import Coq.Init.Decimal.
 Require Export IPM.
 
+
+Section UPDNEW.
+
+  Context `{Σ: GRA.t}.
+  
+  Require Import ClassicalChoice.
+
+  Goal forall A (P: A -> iProp), bi_entails (bi_exist (fun (a: A) => (bupd (P a)))) (bupd (bi_exist P)) .
+  Proof.
+    i.
+    iStartProof.
+    iIntros "H". iDestruct "H" as (a) "H". iMod "H". iModIntro. iExists a. eauto.
+  Qed.
+
+  Goal forall A (P: A -> iProp), bi_entails (bupd (bi_exist P)) (bi_exist (fun (a: A) => (bupd (P a)))) .
+  Proof.
+    i.
+    iStartProof.
+    iIntros "H".
+  Abort.
+
+  Goal forall (a b a' b': iProp)
+              (UPDA: (a -∗ |==> a'))
+              (UPDB: (b -∗ |==> b')),
+      ((a ∗ b) -∗ |==> (a' ∗ b')).
+  Proof.
+    i.
+    iIntros "[A B]".
+    iDestruct (UPDA with "A") as "A".
+    iDestruct (UPDB with "B") as "B".
+    iMod "A".
+    iMod "B".
+    iModIntro.
+    iFrame.
+  Qed.
+
+  Goal forall (a b a' b': iProp)
+              (UPDA: ((a ∗ b) -∗ |==> (a' ∗ b)))
+              (UPDB: (b -∗ |==> b')),
+      ((a ∗ b) -∗ |==> (a' ∗ b')).
+  Proof.
+    i.
+    iIntros "AB".
+    iDestruct (UPDA with "AB") as "AB".
+    iMod "AB". iDestruct "AB" as "[A B]".
+    iDestruct (UPDB with "B") as "B".
+    iMod "B".
+    iModIntro.
+    iFrame.
+  Qed.
+
+  Definition Upd2 (P: iProp'): iProp' :=
+    Seal.sealing
+      "iProp"
+      (fun r0 => ∀ (ctxs: Σ -> Prop),
+           (∀ ctx (IN: ctxs ctx), URA.wf (r0 ⋅ ctx)) ->
+           exists r1, P r1 /\ (∀ ctx (IN: ctxs ctx), URA.wf (r1 ⋅ ctx))).
+
+  Definition Upd3 (P: iProp'): iProp' :=
+    Seal.sealing
+      "iProp"
+      (fun r0 => exists r1, P r1 /\ (∀ ctx, URA.wf (r0 ⋅ ctx) -> URA.wf (r1 ⋅ ctx))).
+
+  Hint Unfold Upd2 Upd3: iprop.
+
+  Lemma Upd3_Upd
+        (P: iProp')
+    :
+      bi_entails (Upd3 P) (bupd P)
+  .
+  Proof.
+    uipropall. i. des. esplits; try apply H. eapply H1; et.
+  Qed.
+
+
+
+
+  (* Lemma Own_Upd2_set *)
+  (*       (r1: Σ) B *)
+  (*       (UPD: URA.updatable_set r1 B) *)
+  (*   : *)
+  (*     (Own r1) ⊢ (Upd2 (∃ b, ⌜B b⌝ ** (Own b))%I) *)
+  (* . *)
+  (* Proof. *)
+  (*   cut (Entails (Own r1) (Upd2 (Ex (fun b => Sepconj (Pure (B b)) (Own b))))); ss. *)
+  (*   Local Opaque Sepconj. *)
+  (*   uipropall. *)
+  (*   Local Transparent Sepconj. *)
+  (*   i. red in H. des. subst. *)
+  (*   r in UPD. *)
+  (*   destruct (classic (exists ctx, ctxs ctx)); cycle 1. *)
+  (*   - esplits. uipropall. esplits; et. *)
+  (*   - des. exploit H0; et. intro T; des. *)
+  (*     exploit (UPD (ctx0 ⋅ ctx)). *)
+  (*     { rewrite URA.add_assoc. admit "ez". } *)
+  (*     i. des. exists (b ⋅ ctx0). split. *)
+  (*     { rewrite <- URA.add_assoc. et. } *)
+  (*     { exists b. uipropall. esplits; [|apply IN|refl]. *)
+  (*       eapply URA.add_comm. } *)
+  (* Qed. *)
+
+  Goal forall P, bi_entails (Upd2 P) (Upd P).
+  Proof.
+    uipropall. i. uipropall. i.
+    specialize (H (fun r => r = ctx)). ss. exploit H; et.
+    { i. clarify. }
+    intro T; des.
+    exploit T0; et.
+  Qed.
+
+  Lemma UpdEq: forall PP, bi_entails (Upd2 PP) (Upd3 PP) ∧ bi_entails (Upd3 PP) (Upd2 PP).
+  Proof.
+    i.
+    split.
+    {
+      uipropall. i. specialize (H (fun ctx => URA.wf (r ⋅ ctx))). ss.
+      exploit H; et.
+    }
+    {
+      uipropall. i; des.
+      exists r1. esplits; et.
+    }
+  Qed.
+
+
+
+  (* Lemma Upd2_intro: forall P : iProp', Entails P (Upd2 P). *)
+  (* Proof. *)
+  (*   ii. uipropall. ii. exists r. splits; auto. *)
+  (* Qed. *)
+
+  (* Lemma Upd2_mono: forall P Q : iProp', Entails P Q -> Entails (Upd2 P) (Upd2 Q). *)
+  (* Proof. *)
+  (*   ii. uipropall. ii. exploit H0; et. intro T; des. *)
+  (*   exists r1. esplits; et. eapply H; et. *)
+  (*   admit "". *)
+  (* Qed. *)
+
+  Lemma Upd2_trans: forall PP : iProp', Entails (Upd2 (Upd2 PP)) (Upd2 PP).
+  Proof.
+    ii. uipropall. ii. exploit H; et. intro T. des. exploit T; et.
+  Qed.
+
+  (* Lemma Upd2_frame_r: forall P R : iProp', Entails (Sepconj (Upd2 P) R) (Upd2 (Sepconj P R)). *)
+  (* Proof. *)
+  (*   ii. uipropall. ii. unfold Sepconj in *. des. subst. exploit (H1 (b ⋅ ctx)); et. *)
+  (*   { rewrite URA.add_assoc. et. } *)
+  (*   i. des. esplits; [..|eapply x1|eapply H2]; ss. *)
+  (*   rewrite <- URA.add_assoc. et. *)
+  (* Qed. *)
+
+  Lemma Upd3_intro: forall P : iProp', Entails P (Upd3 P).
+  Proof.
+    ii. uipropall. ii. exists r. splits; auto.
+  Qed.
+
+  Lemma Upd3_mono: forall P Q : iProp', Entails P Q -> Entails (Upd3 P) (Upd3 Q).
+  Proof.
+    ii. uipropall. ii. des. esplits; et. eapply H; et. specialize (H1 ε).
+    rewrite ! URA.unit_id in H1. et.
+  Qed.
+
+  Lemma Upd3_trans: forall PP : iProp', Entails (Upd3 (Upd3 PP)) (Upd3 PP).
+  Proof.
+    ii. uipropall.
+    i. des. esplits; et.
+  Qed.
+
+  Lemma Upd3_frame_r: forall P R : iProp', Entails (Sepconj (Upd3 P) R) (Upd3 (Sepconj P R)).
+  Proof.
+    ii. uipropall. ii. unfold Sepconj in *. des. subst.
+    assert(P r1).
+    { eapply H0. }
+    eexists (_ ⋅ _). i.
+    esplits; try apply H; try apply H1; try refl.
+    i.
+    exploit (H2 (b ⋅ ctx)); et.
+    { rewrite URA.add_assoc. ss. }
+    i; des. rewrite <- URA.add_assoc in *. ss.
+  Qed.
+
+
+  Lemma existential_property: forall (X: Type) (P: X -> iProp'),
+      Entails (Upd3 (∃ x, P x)%I) ((∃ x, (Upd3 (P x)))%I).
+  Proof.
+    {
+      i. uipropall. i. des. r in H. uipropall. des.
+      r. uipropall. exists x. uipropall. esplits; et.
+    }
+  Qed.
+
+
+
+
+
+  Lemma Own_Upd3
+        (r1 r2: Σ)
+        (UPD: URA.updatable r1 r2)
+    :
+      (Own r1) ⊢ (Upd3 (Own r2))
+  .
+  Proof.
+    {
+      uipropall. i. r in H. des. subst.
+      exploit UPD; et. intro T; des.
+      exists (r2 ⋅ ctx). esplits; et.
+      { r. esplits; et. }
+      i. rewrite <- URA.add_assoc. rewrite <- URA.add_assoc in H. eapply UPD; et.
+    }
+  Qed.
+
+  Lemma OwnM_Upd3 (M: URA.t) `{@GRA.inG M Σ}
+        (r1 r2: M)
+        (UPD: URA.updatable r1 r2)
+    :
+      (OwnM r1) ⊢ (Upd3 (OwnM r2))
+  .
+  Proof.
+    {
+      uipropall. i. r in H0. uipropall. r in H0. des. subst.
+      assert(UPD0: URA.updatable (GRA.embed r1) (GRA.embed r2)).
+      { eapply GRA.embed_updatable; et. }
+      exploit UPD0; et. intro T; des.
+      exists (GRA.embed r2 ⋅ ctx). esplits; et.
+      { rr. uipropall. r. esplits; et. }
+      i. rewrite <- URA.add_assoc. rewrite <- URA.add_assoc in H0. eapply UPD0; et.
+    }
+  Qed.
+
+  Lemma Upd3_elim
+        P (orig: Σ)
+        (UPD: (Upd3 P) orig)
+    :
+      exists new, URA.updatable orig new ∧ P new
+  .
+  Proof.
+    uipropall. des. exists r1. esplits; et.
+  Qed.
+
+
+
+
+
+  (* Lemma iProp_bupd_mixin: BiBUpdMixin iProp Upd2. *)
+  (* Proof. *)
+  (*   econs. *)
+  (*   - ii. econs. unfold bupd. uipropall. i. split. *)
+  (*     { ii. exploit H1; eauto. i. des. esplits; eauto. *)
+  (*       eapply H; et. eapply URA.wf_mon; et. } *)
+  (*     { ii. exploit H1; eauto. i. des. esplits; eauto. *)
+  (*       eapply H; et. eapply URA.wf_mon; et. } *)
+  (*   - exact Upd_intro. *)
+  (*   - exact Upd_mono. *)
+  (*   - exact Upd_trans. *)
+  (*   - exact Upd_frame_r. *)
+  (* Qed. *)
+
+  Lemma iProp_bupd3_mixin: BiBUpdMixin iProp Upd3.
+  Proof.
+    econs.
+    - ii. econs. unfold bupd. uipropall. i. split.
+      { ii. des. esplits.
+        { eapply H; try apply H1. rewrite <- URA.unit_id. eapply H2. rewrite URA.unit_id; ss. }
+        et.
+      }
+      { ii. des. esplits.
+        { eapply H; try apply H1. rewrite <- URA.unit_id. eapply H2. rewrite URA.unit_id; ss. }
+        et.
+      }
+    - exact Upd3_intro.
+    - exact Upd3_mono.
+    - exact Upd3_trans.
+    - exact Upd3_frame_r.
+  Qed.
+  Global Instance iProp_bi_bupd3: BiBUpd iProp | 0 := {| bi_bupd_mixin := iProp_bupd3_mixin |}.
+
+  Global Instance iProp_bupd3_absorbing (P: iProp): Absorbing (bupd P) | 0.
+  Proof.
+    ii. repeat red. unfold bupd, bi_bupd_bupd in *. ss. uipropall.
+    ii. repeat red in H. uipropall. des. subst. esplits; et. i. eapply H2; et.
+    eapply URA.wf_mon. rewrite URA.add_comm. rewrite URA.add_assoc. et.
+  Qed.
+
+  Goal forall P, bi_entails (bupd P) (#=> P). unfold bupd. unfold bi_bupd_bupd. cbn. Abort.
+
+  Lemma from_semantic (a: Σ) (P: iProp') (SAT: P a)
+    :
+      Own a ⊢ bupd P.
+  Proof.
+    uipropall. ss. i. unfold URA.extends in *. des. subst.
+    esplits; et. i. eapply URA.wf_mon.
+    instantiate (1:=ctx). replace (a ⋅ ctx0 ⋅ ctx) with (a ⋅ ctx ⋅ ctx0); et.
+    repeat rewrite <- URA.add_assoc. f_equal. eapply URA.add_comm.
+  Qed.
+
+End UPDNEW.
+
+
+
+
+
+
+
 Section ILIST.
   Context `{Σ: GRA.t}.
 
@@ -72,7 +375,7 @@ Section ILIST.
 
   Lemma iPropL_clear (Hn: string) (l: iPropL)
     :
-      from_iPropL l -∗ #=> from_iPropL (alist_remove Hn l).
+      from_iPropL l -∗ bupd (from_iPropL (alist_remove Hn l)).
   Proof.
     induction l; ss.
     { iIntros "H". iModIntro. iFrame. }
@@ -87,7 +390,7 @@ Section ILIST.
   Lemma iPropL_find_remove (Hn: string) (l: iPropL) P
         (FIND: alist_find Hn l = Some P)
     :
-      from_iPropL l -∗ #=> (P ** from_iPropL (alist_remove Hn l)).
+      from_iPropL l -∗ bupd (P ** from_iPropL (alist_remove Hn l)).
   Proof.
     revert P FIND. induction l; ss. i.
     destruct a. iIntros "[H0 H1]".
@@ -100,7 +403,7 @@ Section ILIST.
   Lemma iPropL_one Hn (l: iPropL) (P: iProp)
         (FIND: alist_find Hn l = Some P)
     :
-      from_iPropL l -∗ #=> P.
+      from_iPropL l -∗ bupd P.
   Proof.
     iIntros "H". iPoseProof (iPropL_find_remove with "H") as "> [H0 H1]"; et.
   Qed.
@@ -114,9 +417,9 @@ Section ILIST.
 
   Lemma iPropL_uentail Hn (l: iPropL) (P0 P1: iProp)
         (FIND: alist_find Hn l = Some P0)
-        (ENTAIL: P0 -∗ #=> P1)
+        (ENTAIL: P0 -∗ bupd P1)
     :
-      from_iPropL l -∗ #=> from_iPropL (alist_add Hn P1 l).
+      from_iPropL l -∗ bupd (from_iPropL (alist_add Hn P1 l)).
   Proof.
     revert P0 P1 FIND ENTAIL. induction l; ss. i.
     destruct a. iIntros "[H0 H1]".
@@ -131,24 +434,24 @@ Section ILIST.
         (FIND: alist_find Hn l = Some P0)
         (ENTAIL: P0 -∗ P1)
     :
-      from_iPropL l -∗ #=> from_iPropL (alist_add Hn P1 l).
+      from_iPropL l -∗ bupd (from_iPropL (alist_add Hn P1 l)).
   Proof.
     eapply iPropL_uentail; et. iIntros "H".
     iPoseProof (ENTAIL with "H") as "H". iModIntro. iFrame.
   Qed.
 
   Lemma iPropL_upd Hn (l: iPropL) (P: iProp)
-        (FIND: alist_find Hn l = Some (#=> P))
+        (FIND: alist_find Hn l = Some (bupd P))
     :
-      from_iPropL l -∗ #=> from_iPropL (alist_add Hn P l).
+      from_iPropL l -∗ bupd (from_iPropL (alist_add Hn P l)).
   Proof.
-    hexploit (@iPropL_uentail Hn l (#=> P) P); et.
+    hexploit (@iPropL_uentail Hn l (bupd P) P); et.
   Qed.
 
   Lemma iPropL_destruct_ex Hn (l: iPropL) A (P: A -> iProp)
         (FIND: alist_find Hn l = Some (∃ (a: A), P a)%I)
     :
-      from_iPropL l -∗ ∃ (a: A), #=> from_iPropL (alist_add Hn (P a) l).
+      from_iPropL l -∗ ∃ (a: A), bupd (from_iPropL (alist_add Hn (P a) l)).
   Proof.
     revert FIND. induction l; ss. i.
     destruct a. iIntros "[H0 H1]".
@@ -162,7 +465,7 @@ Section ILIST.
   Lemma iPropL_destruct_or Hn (l: iPropL) (P0 P1: iProp)
         (FIND: alist_find Hn l = Some (P0 ∨ P1)%I)
     :
-      from_iPropL l -∗ (#=> from_iPropL (alist_add Hn P0 l)) ∨ #=> from_iPropL (alist_add Hn P1 l).
+      from_iPropL l -∗ (bupd (from_iPropL (alist_add Hn P0 l))) ∨ bupd (from_iPropL (alist_add Hn P1 l)).
   Proof.
     revert FIND. induction l; ss. i.
     destruct a. iIntros "[H0 H1]".
@@ -179,7 +482,7 @@ Section ILIST.
 
   Lemma iPropL_add (Hn: string) (l: iPropL) P
     :
-      P ** from_iPropL l -∗ #=> (from_iPropL (alist_add Hn P l)).
+      P ** from_iPropL l -∗ bupd (from_iPropL (alist_add Hn P l)).
   Proof.
     unfold alist_add. ss. iIntros "[H0 H1]".
     iFrame. iApply iPropL_clear. iFrame.
@@ -188,7 +491,7 @@ Section ILIST.
   Lemma iPropL_destruct_sep Hn_old Hn_new0 Hn_new1 (l: iPropL) (P0 P1: iProp)
         (FIND: alist_find Hn_old l = Some (P0 ** P1))
     :
-      from_iPropL l -∗ #=> from_iPropL (alist_add Hn_new1 P1 (alist_add Hn_new0 P0 (alist_remove Hn_old l))).
+      from_iPropL l -∗ bupd (from_iPropL (alist_add Hn_new1 P1 (alist_add Hn_new0 P0 (alist_remove Hn_old l)))).
   Proof.
     iIntros "H".
     iPoseProof (iPropL_find_remove with "H") as "> [H0 H1]"; et.
@@ -222,7 +525,7 @@ Section ILIST.
   Lemma iPropL_assert (Hns: list string) (Hn_new: string) (l: iPropL) (P: iProp)
         (FIND: from_iPropL (fst (alist_pops Hns l)) -∗ P)
     :
-      from_iPropL l -∗ #=> from_iPropL (alist_add Hn_new P (snd (alist_pops Hns l))).
+      from_iPropL l -∗ bupd (from_iPropL (alist_add Hn_new P (snd (alist_pops Hns l)))).
   Proof.
     iIntros "H". iPoseProof (iPropL_alist_pops with "H") as "[H0 H1]".
     iPoseProof (FIND with "H0") as "H0".
@@ -266,57 +569,61 @@ Ltac start_ipm_proof :=
 Section CURRENT.
   Context `{Σ: GRA.t}.
 
-  Variant current_iProp (ctx: Σ) (I: iProp): Prop :=
+  Variant current_iProp (orig: Σ) (I: iProp): Prop :=
   | current_iProp_intro
-      r
-      (GWF: URA.wf (r ⋅ ctx))
-      (IPROP: I r)
+      (UPD: (bupd I) orig)
+      (WF: URA.wf orig)
   .
 
-  Lemma current_iProp_entail I1 ctx I0
-        (ACC: current_iProp ctx I0)
+  Lemma current_iProp_entail I1 orig I0
+        (ACC: current_iProp orig I0)
         (UPD: I0 ⊢ I1)
     :
-      current_iProp ctx I1.
+      current_iProp orig I1.
   Proof.
     inv ACC. econs; et.
-    uipropall. eapply UPD; et. eapply URA.wf_mon; et.
+    eapply to_semantic; et. iIntros "H".
+    iDestruct (from_semantic with "H") as "H".
+    { eapply UPD0. }
+    iMod "H". iMod "H". iModIntro. iApply UPD. ss.
   Qed.
 
-  Lemma current_iProp_pure P ctx
-        (ACC: current_iProp ctx (⌜P⌝)%I)
+  Lemma current_iProp_pure P orig
+        (ACC: current_iProp orig (⌜P⌝)%I)
     :
       P.
   Proof.
-    inv ACC. red in IPROP. uipropall.
+    inv ACC. rr in UPD. uipropall. des. r in UPD. uipropall.
   Qed.
 
-  Lemma current_iProp_ex ctx A (P: A -> iProp)
-        (ACC: current_iProp ctx (bi_exist P))
+
+
+  Lemma current_iProp_ex orig A (P: A -> iProp)
+        (ACC: current_iProp orig (bi_exist P))
     :
-      exists x, current_iProp ctx (P x).
+      exists x, current_iProp orig (P x).
   Proof.
-    inv ACC. red in IPROP. uipropall.
-    des. exists x. econs; et.
+    inv ACC. rr in UPD. uipropall. des. r in UPD. uipropall. des.
+    esplits; et. econs; et. rr. uipropall. esplits; et.
   Qed.
 
-  Lemma current_iProp_or ctx I0 I1
-        (ACC: current_iProp ctx (I0 ∨ I1)%I)
+  Lemma current_iProp_or orig I0 I1
+        (ACC: current_iProp orig (I0 ∨ I1)%I)
     :
-      current_iProp ctx I0 \/ current_iProp ctx I1.
+      current_iProp orig I0 \/ current_iProp orig I1.
   Proof.
-    inv ACC. uipropall. des.
-    { left. econs; et. }
-    { right. econs; et. }
+    inv ACC. rr in UPD. uipropall. des.
+    { left. econs; et. rr. uipropall. esplits; et. }
+    { right. econs; et. rr. uipropall. esplits; et. }
   Qed.
 
   Lemma current_iProp_upd ctx I
-        (ACC: current_iProp ctx (#=> I))
+        (ACC: current_iProp ctx (Upd3 I))
     :
       current_iProp ctx I.
   Proof.
-    inv ACC. uipropall.
-    hexploit IPROP; et. i. des. econs; et.
+    inv ACC. rr in UPD. uipropall. econs; et.
+    rr. uipropall. des. rr in UPD. uipropall. des. esplits; et.
   Qed.
 
   Lemma current_iProp_own ctx (M: URA.t) `{@GRA.inG M Σ} (m: M)
@@ -325,7 +632,10 @@ Section CURRENT.
       URA.wf m.
   Proof.
     unfold OwnM in *.
-    inv ACC. uipropall. unfold URA.extends in *. des. subst.
+    inv ACC. rr in UPD. uipropall. unfold URA.extends in *. des. subst.
+    exploit UPD0; et.
+    { rewrite URA.unit_id; et. }
+    intro GWF.
     eapply URA.wf_mon in GWF. eapply URA.wf_mon in GWF.
     eapply GRA.embed_wf. auto.
   Qed.
@@ -394,7 +704,7 @@ Section TACTICS.
 
   Lemma current_iPropL_upd Hn ctx (l: iPropL) (P: iProp)
         (ACC: current_iPropL ctx l)
-        (FIND: alist_find Hn l = Some (#=> P)%I)
+        (FIND: alist_find Hn l = Some (bupd P)%I)
     :
       current_iPropL ctx (alist_add Hn P l).
   Proof.
@@ -951,7 +1261,7 @@ Section TEST.
 
   (* mUpd *)
   Goal forall ctx P X Y
-              (ACC: current_iPropL ctx [("A", X); ("H", #=> P); ("B", Y)]),
+              (ACC: current_iPropL ctx [("A", X); ("H", bupd P); ("B", Y)]),
       False.
   Proof.
     i. mUpd "H".

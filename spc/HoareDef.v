@@ -119,8 +119,10 @@ Section PROOF.
              (ord_cur: ord)
              (fsp: fspec):
     gname -> Any.t -> stateT (Σ) (itree Es) Any.t :=
-    fun fn varg_src ctx =>
+    fun fn varg_src orig =>
 
+      ctx <- trigger (Take _);;
+      assume(URA.wf (orig ⋅ ctx));;;
       '(rarg, fr, mr) <- trigger (Choose (Σ * Σ * Σ));;
       mput mr;;;
       guarantee(URA.wf (rarg ⋅ fr ⋅ ctx ⋅ mr));;;
@@ -132,14 +134,14 @@ Section PROOF.
       guarantee(ord_lt ord_next ord_cur /\ (tbr = true -> is_pure ord_next) /\ (tbr = false -> ord_next = ord_top));;;
       vret_tgt <- trigger (Call fn varg_tgt);; (*** call ***)
 
-      '(rret, ctx) <- trigger (Take (Σ * Σ));;
+      '(rret) <- trigger (Take (Σ));;
       mr <- mget;;
-      assume(URA.wf (rret ⋅ fr ⋅ ctx ⋅ mr));;;
+      assume(URA.wf (rret ⋅ fr ⋅ mr));;;
 
       vret_src <- trigger (Take Any.t);;
       assume(fsp.(postcond) (Some mn) x vret_src vret_tgt rret);;; (*** postcondition ***)
 
-      Ret (ctx, vret_src) (*** return to body ***)
+      Ret ((rret ⋅ fr ⋅ mr), vret_src) (*** return to body ***)
   .
 
 End PROOF.
@@ -348,9 +350,9 @@ Section CANCEL.
                                     end)).
 
   Definition handle_hCallE_tgt (ord_cur: ord): hCallE ~> stateT (Σ) (itree Es) :=
-    fun _ '(hCall tbr fn varg_src) 'ctx =>
+    fun _ '(hCall tbr fn varg_src) 'orig =>
       f <- (stb fn)ǃ;;
-      HoareCall mn tbr ord_cur f fn varg_src ctx
+      HoareCall mn tbr ord_cur f fn varg_src orig
   .
 
   Definition handle_pE_tgt: pE ~> itree Es :=
@@ -381,20 +383,23 @@ Section CANCEL.
              (body: (option mname * Any.t) -> itree hEs Any.t): option mname * Any_tgt -> itree Es Any_tgt := fun '(mn_caller, varg_tgt) =>
     x <- trigger (Take X);;
     varg_src <- trigger (Take _);;
-    '(rarg, ctx) <- trigger (Take _);;
+    '(rarg) <- trigger (Take _);;
     mr <- mget;;
-    assume(URA.wf (rarg ⋅ ctx ⋅ mr));;;
+    assume(URA.wf (rarg ⋅ mr));;;
+    let orig := (rarg ⋅ mr) in
     let ord_cur := D x in
     assume(P mn_caller x varg_src varg_tgt rarg);;; (*** precondition ***)
 
-    '(ctx, vret_src) <- interp_hCallE_tgt
+    '(orig, vret_src) <- interp_hCallE_tgt
                           ord_cur
                           (interp_hEs_tgt
                              (match ord_cur with
                               | ord_pure n => _ <- trigger hAPC;; trigger (Choose _)
                               | _ => body (mn_caller, varg_src)
-                              end)) ctx;;
+                              end)) orig;;
 
+    ctx <- trigger (Take _);;
+    assume(URA.wf (orig ⋅ ctx));;;
     vret_tgt <- trigger (Choose Any_tgt);;
     '(rret, mr) <- trigger (Choose _);;
     mput mr;;;
@@ -425,17 +430,20 @@ If this feature is needed; we can extend it then. At the moment, I will only all
     option mname * Any_tgt -> itree Es ((Σ) * (option mname * X * Any.t)) := fun '(mn_caller, varg_tgt) =>
     x <- trigger (Take X);;
     varg_src <- trigger (Take _);;
-    '(rarg, ctx) <- trigger (Take _);;
+    '(rarg) <- trigger (Take _);;
     mr <- mget;;
-    assume(URA.wf (rarg ⋅ ctx ⋅ mr));;;
+    assume(URA.wf (rarg ⋅ mr));;;
     assume(P mn_caller x varg_src varg_tgt rarg);;; (*** precondition ***)
-    Ret (ctx, (mn_caller, x, varg_src))
+    let orig := rarg ⋅ mr in
+    Ret (orig, (mn_caller, x, varg_src))
   .
 
   Definition HoareFunRet
              {X: Type}
              (Q: option mname -> X -> Any.t -> Any_tgt -> Σ -> Prop):
-    option mname -> X -> ((Σ) * Any.t) -> itree Es Any_tgt := fun mn x '(ctx, vret_src) =>
+    option mname -> X -> ((Σ) * Any.t) -> itree Es Any_tgt := fun mn x '(orig, vret_src) =>
+    ctx <- trigger (Take _);;
+    assume(URA.wf (orig ⋅ ctx));;;
     vret_tgt <- trigger (Choose Any_tgt);;
     '(rret, mr) <- trigger (Choose _);;
     mput mr;;;
@@ -453,13 +461,13 @@ If this feature is needed; we can extend it then. At the moment, I will only all
         (varg_tgt: option mname * Any_tgt)
     :
       HoareFun D P Q body varg_tgt =
-      '(ctx, (mn_caller, x, varg_src)) <- HoareFunArg P varg_tgt;;
+      '(orig, (mn_caller, x, varg_src)) <- HoareFunArg P varg_tgt;;
       interp_hCallE_tgt (D x)
                         (interp_hEs_tgt
                            (match D x with
                             | ord_pure n => _ <- trigger hAPC;; trigger (Choose _)
                             | _ => body (mn_caller, varg_src)
-                            end)) ctx >>= (HoareFunRet Q mn_caller x).
+                            end)) orig >>= (HoareFunRet Q mn_caller x).
   Proof.
     unfold HoareFun, HoareFunArg, HoareFunRet. grind.
   Qed.
