@@ -808,9 +808,9 @@ Section SIMMODSEM.
   (*   Unshelve. et. et. *)
   (* Qed. *)
 
-  Theorem correct : refines2 [Heapsort1.Heapsort] [Heapsort2.Heapsort GlobalStb].
-  Proof.
-    Admitted.
+  (* Theorem correct : refines2 [Heapsort1.Heapsort] [Heapsort2.Heapsort GlobalStb]. *)
+  (* Proof. *)
+  (*   Admitted. *)
     (* eapply SimModSem.adequacy_local2; econs; ss. *)
   (*   i. *)
   (*   econstructor 1 with (wf := wf) (le := top2); et; ss; cycle 1. *)

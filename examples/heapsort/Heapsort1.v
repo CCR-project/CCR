@@ -1,5 +1,5 @@
 Require Import Coqlib.
-Require Import ImpPrelude.
+Require Import Any.
 Require Import STS.
 Require Import Behavior.
 Require Import ModSem.
@@ -9,20 +9,22 @@ Require Import HoareDef.
 Require Import ProofMode.
 Require Import STB.
 Require Import HeapsortHeader.
-Require Import Mem1.
 Require Import ConvC2ITree.
+Require Import Clight_Mem0.
+Require Import Clight_Mem1.
+From compcert Require Import Ctypes Floats Integers Values Memory.
 
 Set Implicit Arguments.
 
 Section HEAPSORT.
 
   Context `{Σ : GRA.t}.
-  Context `{@GRA.inG memRA Σ}.
+  Context `{H : @GRA.inG memRA Σ}. 
 
   Definition create_body : list Z * nat -> itree (hAPCE +' Es) (list Z) :=
     fun '(xs0, initval) =>
       let nmemb := length xs0 in
-      xs1 <- ITree.iter (fun '(xs, par_i) =>
+      xs1 <- @ITree.iter (hAPCE +' Es) (list Z) (list Z * nat) (fun '(xs, par_i) =>
         if 2*par_i <=? nmemb
         then 
           child_i <- (
@@ -31,9 +33,9 @@ Section HEAPSORT.
               child_val0 <- (nth_error xs (par_i*2 - 1))?;;
               child_val1 <- (nth_error xs (par_i*2))?;;
               if (child_val0 <? child_val1)%Z
-              then Ret (par_i*2 + 1)
-              else Ret (par_i*2)
-            else Ret (par_i*2));;
+              then Ret (par_i*2 + 1)%nat
+              else Ret (par_i*2)%nat
+            else Ret (par_i*2)%nat);;
           child_val <- (nth_error xs (child_i - 1))?;;
           par_val <- (nth_error xs (par_i - 1))?;;
           if Z.leb child_val par_val
@@ -42,47 +44,60 @@ Section HEAPSORT.
         else Ret (inr xs)
       ) (xs0, initval);;
       Ret xs1.
-  Locate "⌜".
+  
+  Coercion Int64.intval : Int64.int >-> Z.
+  Coercion Int.intval : Int.int >-> Z.
+  Coercion Ptrofs.intval : Ptrofs.int >-> Z.
 
-  Compute (Pos.to_nat (xO xH)).
-  Check fun p z l => is_list (Vptr (Pos.to_nat p) (Integers.Ptrofs.intval z)) (map Vint l).
+  Variable chunk : AST.memory_chunk.
+  Definition encode_list vlist : list memval := flat_map (encode_val chunk) vlist.
+  Definition is_arr (ll : val) (xs : list val) :=
+    (∃ (b :block) (ofs : ptrofs), ⌜ll = Vptr b ofs⌝ ** OwnM ((b, Ptrofs.intval ofs) |-> (encode_list xs)))%I.
+
   Definition create_spec : fspec :=
-    {|meta := positive * Integers.Ptrofs.int * (list Z) * Integers.Int64.int * Integers.Int64.int;
-      measure := fun _ => ord_top;
-      precond := fun _ '(p, z, l, nmem, initval) arg varg => 
-                   (⌜arg = (Values.Vptr p z, (Values.Vlong) nmem, (Values.Vlong) initval)↑
-                   /\ varg = (l, Integers.Int64.intval initval)↑ /\ length l = Z.to_nat (Integers.Int64.intval nmem)⌝
-  ** (is_list (Vptr (Pos.to_nat p) (Integers.Ptrofs.intval z)) (map Vint l)))%I;
+    {|meta := positive * Ptrofs.int * (list int) * Int64.int * Int64.int;
+      
+      measure := fun _ => ord_pure 1%nat;
+      
+      precond := fun _ x arg varg =>
+                   let  '(p, z, l, nmem, initval) := x in
+                   (⌜ arg = (Vptr p z, Vlong nmem, Vlong initval)↑
+                   /\ varg = (map Int.intval l, Int64.intval initval)↑
+                   /\ length l = Z.to_nat nmem ⌝
+                   ** is_arr (Vptr p z) (map Vint l))%I;
 
       postcond := fun _ x ret vret =>
                     let '(p, z, _, nmem, _) := x in
-                    (∃ l' : list Z, ⌜ret = Vundef↑ /\ vret = l'↑ /\ length l' = Z.to_nat (Integers.Int64.intval nmem)⌝ ** is_list (Vptr (Pos.to_nat p) (Integers.Ptrofs.intval z)) (map Vint l'))%I |}.
-
+                    (∃ l' : list int,
+                        ⌜ ret = Vundef↑ /\ vret = (map Int.intval l')↑
+                        /\ length l' = Z.to_nat nmem⌝
+                        ** is_arr (Vptr p z) (map Vint l'))%I
+    |}.
 
 
 
   Definition heapify_body : (list Z * Z) -> itree (hAPCE +' Es) (list Z) :=
     fun '(xs0, k) =>
     let nmemb := length xs0 in
-    '(xs1, par_i) <- ITree.iter (fun '(xs, par_i) =>
+    '(xs1, par_i) <- @ITree.iter (hAPCE +' Es) (list Z * nat) (list Z * nat) (fun '(xs, par_i) =>
       if par_i*2 <=? nmemb
       then
         if par_i*2 <? nmemb
         then
           child_l <- (nth_error xs (par_i*2 - 1))?;;
           child_r <- (nth_error xs (par_i*2))?;;
-          let child_i := if (child_l <? child_r)%Z then par_i*2 + 1 else par_i*2 in
+          let child_i := (if (child_l <? child_r)%Z then par_i*2 + 1 else par_i*2)%nat in
           child <- (nth_error xs (child_i - 1))?;;
           Ret (inl (upd xs (par_i - 1) child, child_i))
         else
-          let child_i := par_i*2 in
+          let child_i := (par_i*2)%nat in
           child <- (nth_error xs (child_i - 1))?;;
           Ret (inl (upd xs (par_i - 1) child, child_i))
       else Ret (inr (xs, par_i))
-    ) (xs0, 1);;
-    '(xs2, par_i) <- ITree.iter (fun '(xs, par_i) =>
+    ) (xs0, 1%nat);;
+    '(xs2, par_i) <- @ITree.iter (hAPCE +' Es) (list Z * nat) (list Z * nat) (fun '(xs, par_i) =>
       let child_i := par_i in
-      let par_i := child_i / 2 in
+      let par_i := (child_i / 2)%nat in
       if (child_i =? 1)%nat
       then Ret (inr (upd xs (child_i - 1) k, par_i))
       else
@@ -90,11 +105,25 @@ Section HEAPSORT.
         if (k <? par)%Z
         then Ret (inr (upd xs (child_i - 1) k, par_i))
         else Ret (inl (upd xs (child_i - 1) par, par_i))
-    ) (xs1, par_i);;
+    ) (xs1, par_i%nat);;
     Ret xs2.
 
-  Definition heapify_spec : fspec.
-  Admitted.
+  Definition heapify_spec : fspec :=
+    {| meta := block * ptrofs * list int * Int64.int * int;
+       measure := fun _ => ord_pure 1%nat;
+       precond := fun _ x arg varg =>
+                    let '(p, z, l, nmem, k) := x in
+                    (⌜ arg = (Vptr p z, Vlong nmem, Vint k)↑
+                     /\ varg = (map Int.intval l, Int.intval k)↑
+                     /\ length l = Z.to_nat nmem ⌝
+                     ** is_arr (Vptr p z) (map Vint l))%I;
+       postcond := fun _ x ret vret =>
+                     let '(p, z, _, nmem, _) := x in
+                     (∃ l' : list int,
+                         ⌜ ret = Vundef↑ /\ vret = (map Int.intval l')↑
+                         /\ length l' = Z.to_nat nmem ⌝
+                         ** is_arr (Vptr p z) (map Vint l'))%I
+    |}.
 
   Definition heapsort_body : list Z -> itree (hAPCE +' Es) (list Z) :=
     fun xs0 =>
@@ -107,8 +136,8 @@ Section HEAPSORT.
           else
             r <- trigger (Call "create" (xs, l)↑);;
             xs <- (r↓)?;;
-            Ret (inl (xs, l - 1))
-        ) (xs0, length xs0 / 2);;
+            Ret (inl (xs, (l - 1)%nat))
+        ) (xs0, (length xs0 / 2)%nat);;
         ys <- ITree.iter (fun '(xs, ys) =>
           if length xs <=? 1
           then Ret (inr (xs ++ ys))
@@ -121,8 +150,22 @@ Section HEAPSORT.
         ) (xs1, []);;
         Ret ys.
 
-  Definition heapsort_spec : fspec.
-  Admitted.
+  Definition heapsort_spec : fspec :=
+    {| meta := block * ptrofs * list int * Int64.int;
+       measure := fun _ => ord_pure 1%nat;
+       precond := fun _ x arg varg =>
+                    let '(p, z, l, nmem) := x in
+                    (⌜ arg = (Vptr p z, Vlong nmem)↑
+                     /\ varg = (map Int.intval l)↑
+                     /\ length l = Z.to_nat nmem ⌝
+                     ** is_arr (Vptr p z) (map Vint l))%I;
+       postcond := fun _ x ret vret =>
+                     let '(p, z, _, nmem) := x in
+                     (∃ l' : list int,
+                         ⌜ ret = Vundef↑ /\ vret = (map Int.intval l')↑
+                         /\ length l' = Z.to_nat nmem ⌝
+                         ** is_arr (Vptr p z) (map Vint l'))%I
+    |}.
 
   Definition HeapsortSbtb :=
     [("create",  cfunU create_body);
@@ -160,26 +203,4 @@ Section HEAPSORT.
 
   Definition Heapsort_to0 stb : Mod.t := (SMod.to_tgt stb) SHeapsort.
   
-(*   Definition AppSbtb: list (string * fspecbody) := *)
-(*     [("App.init", mk_specbody init_spec1 (cfunU initF)); *)
-(*     ("App.run", mk_specbody run_spec1 (cfunU runF))]. *)
-
-(*   Definition SAppSem: SModSem.t := {| *)
-(*     SModSem.fnsems := AppSbtb; *)
-(*     SModSem.mn := "App"; *)
-(*     SModSem.initial_mr := (GRA.embed Run); *)
-(*     SModSem.initial_st := tt↑; *)
-(*   |} *)
-(*   . *)
-
-(*   Definition SApp: SMod.t := {| *)
-(*     SMod.get_modsem := fun _ => SAppSem; *)
-(*     SMod.sk := [("App.init", Sk.Gfun); ("App.run", Sk.Gfun); ("initialized", Sk.Gvar 0)]; *)
-(*   |} *)
-(*   . *)
-
-(*   Definition App: Mod.t := (SMod.to_tgt (fun _ => to_stb App1Stb) SApp). *)
-
-
-(* End HEAPSORT. *)
 End HEAPSORT.

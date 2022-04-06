@@ -13,7 +13,7 @@ From compcert Require Import
      AST Maps Globalenvs Memory Values Linking Integers.
 From compcert Require Import
      Ctypes Clight.
-Section Clight.
+
 Context {eff : Type -> Type}.
 Context {HasCall : callE -< eff}.
 Context {HasEvent : eventE -< eff}.
@@ -536,4 +536,4 @@ End DECOMP_PROG.
 (*     prog_comp_env : composite_env; *)
 (*     prog_comp_env_eq : build_composite_env prog_types = *)
 (*                        Errors.OK prog_comp_env } *)
-End Clight.
+
