@@ -31,8 +31,47 @@ Section SIMMODSEM.
       (fun _ st_src st_tgt => True)%I.
 
   
-
-  Theorem correct : refines2 [Heapsort0.Heapsort] [Heapsort1.Heapsort_to0 GlobalStb].
+  Lemma sim_heapsort (sk : alist string Sk.gdef) :
+    sim_fnsem wf top2
+    ("heapsort",
+     fun_to_tgt "Heapsort" (GlobalStb sk)
+                {| fsb_fspec := heapsort_spec; fsb_body := cfunU heapsort_body |})
+    ("heapsort", cfunU Heapsort0.heapsort_body).
   Proof.
   Admitted.
+
+  
+  Lemma sim_heapify (sk : alist string Sk.gdef) :
+    sim_fnsem wf top2
+    ("heapify",
+     fun_to_tgt "Heapsort" (GlobalStb sk)
+                {| fsb_fspec := heapify_spec; fsb_body := cfunU heapify_body |})
+    ("heapify", cfunU Heapsort0.heapify_body).
+  Proof.
+  Admitted.
+
+  
+  Lemma sim_create (sk : alist string Sk.gdef) :
+    sim_fnsem wf top2
+    ("create",
+     fun_to_tgt "Heapsort" (GlobalStb sk) {| fsb_fspec := create_spec; fsb_body := cfunU create_body |})
+    ("create", cfunU Heapsort0.create_body).
+  Proof.
+  Admitted.
+  
+  Theorem correct : refines2 [Heapsort0.Heapsort] [Heapsort1.Heapsort_to0 GlobalStb].
+  Proof.
+    eapply SimModSem.adequacy_local2; econs; ss.
+    i.
+    econstructor 1 with (wf := wf) (le := top2); et; ss; cycle 1.
+    { exists tt. red. econs. eapply to_semantic. iIntros. ss. }
+    econs; cycle 1.
+    econs; cycle 1.
+    econs; cycle 1.
+    econs.
+    - apply sim_heapsort.
+    - apply sim_heapify.
+    - apply sim_create.
+  Qed.
+ 
 End SIMMODSEM.
