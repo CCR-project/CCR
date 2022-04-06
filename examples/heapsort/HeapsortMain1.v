@@ -37,6 +37,7 @@ End HEAPSORTMAIN.
 Section EXTRACT.
   
   Context `{Σ : GRA.t}.
+  Context `{H : @GRA.inG Clight_Mem1.memRA Σ}. 
 
   Definition heapsort_main1 := ModSemL.initial_itr (ModL.enclose (Mod.add_list [Heapsort; Main])) None.
 

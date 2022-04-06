@@ -21,6 +21,16 @@ Section HEAPSORT.
   Context `{Σ : GRA.t}.
   Context `{H : @GRA.inG memRA Σ}. 
 
+  Coercion Int64.intval : Int64.int >-> Z.
+  Coercion Int.intval : Int.int >-> Z.
+  Coercion Ptrofs.intval : Ptrofs.int >-> Z.
+
+  Definition encode_list vlist : list memval := flat_map (encode_val AST.Mint32) vlist. 
+  
+  Definition is_arr (ll : val) (xs : list val) :=
+    (∃ (b :block) (ofs : ptrofs),
+        ⌜ll = Vptr b ofs⌝ ** OwnM ((b, Ptrofs.intval ofs) |-> (encode_list xs)))%I.
+  
   Definition create_body : list Z * nat -> itree (hAPCE +' Es) (list Z) :=
     fun '(xs0, initval) =>
       let nmemb := length xs0 in
@@ -44,15 +54,6 @@ Section HEAPSORT.
         else Ret (inr xs)
       ) (xs0, initval);;
       Ret xs1.
-  
-  Coercion Int64.intval : Int64.int >-> Z.
-  Coercion Int.intval : Int.int >-> Z.
-  Coercion Ptrofs.intval : Ptrofs.int >-> Z.
-
-  Variable chunk : AST.memory_chunk.
-  Definition encode_list vlist : list memval := flat_map (encode_val chunk) vlist.
-  Definition is_arr (ll : val) (xs : list val) :=
-    (∃ (b :block) (ofs : ptrofs), ⌜ll = Vptr b ofs⌝ ** OwnM ((b, Ptrofs.intval ofs) |-> (encode_list xs)))%I.
 
   Definition create_spec : fspec :=
     {|meta := positive * Ptrofs.int * (list int) * Int64.int * Int64.int;
@@ -60,17 +61,17 @@ Section HEAPSORT.
       measure := fun _ => ord_pure 1%nat;
       
       precond := fun _ x arg varg =>
-                   let  '(p, z, l, nmem, initval) := x in
-                   (⌜ arg = (Vptr p z, Vlong nmem, Vlong initval)↑
-                   /\ varg = (map Int.intval l, Int64.intval initval)↑
-                   /\ length l = Z.to_nat nmem ⌝
+                   let  '(p, z, l, size, iidx) := x in
+                   (⌜ arg = (Vptr p z, Vlong size, Vlong iidx)↑
+                   /\ varg = (map Int.intval l, Z.to_nat iidx)↑
+                   /\ length l = Z.to_nat size ⌝
                    ** is_arr (Vptr p z) (map Vint l))%I;
 
       postcond := fun _ x ret vret =>
-                    let '(p, z, _, nmem, _) := x in
+                    let '(p, z, _, size, _) := x in
                     (∃ l' : list int,
                         ⌜ ret = Vundef↑ /\ vret = (map Int.intval l')↑
-                        /\ length l' = Z.to_nat nmem⌝
+                        /\ length l' = Z.to_nat size⌝
                         ** is_arr (Vptr p z) (map Vint l'))%I
     |}.
 
@@ -112,16 +113,16 @@ Section HEAPSORT.
     {| meta := block * ptrofs * list int * Int64.int * int;
        measure := fun _ => ord_pure 1%nat;
        precond := fun _ x arg varg =>
-                    let '(p, z, l, nmem, k) := x in
-                    (⌜ arg = (Vptr p z, Vlong nmem, Vint k)↑
-                     /\ varg = (map Int.intval l, Int.intval k)↑
-                     /\ length l = Z.to_nat nmem ⌝
+                    let '(p, z, l, size, k) := x in
+                    (⌜ arg = (Vptr p z, Vlong size, Vint k)↑
+                     /\ varg = (map Int.intval l, k : Z)↑
+                     /\ length l = Z.to_nat size ⌝
                      ** is_arr (Vptr p z) (map Vint l))%I;
        postcond := fun _ x ret vret =>
-                     let '(p, z, _, nmem, _) := x in
+                     let '(p, z, _, size, _) := x in
                      (∃ l' : list int,
                          ⌜ ret = Vundef↑ /\ vret = (map Int.intval l')↑
-                         /\ length l' = Z.to_nat nmem ⌝
+                         /\ length l' = Z.to_nat size ⌝
                          ** is_arr (Vptr p z) (map Vint l'))%I
     |}.
 
@@ -154,16 +155,16 @@ Section HEAPSORT.
     {| meta := block * ptrofs * list int * Int64.int;
        measure := fun _ => ord_pure 1%nat;
        precond := fun _ x arg varg =>
-                    let '(p, z, l, nmem) := x in
-                    (⌜ arg = (Vptr p z, Vlong nmem)↑
+                    let '(p, z, l, size) := x in
+                    (⌜ arg = (Vptr p z, Vlong size)↑
                      /\ varg = (map Int.intval l)↑
-                     /\ length l = Z.to_nat nmem ⌝
+                     /\ length l = Z.to_nat size ⌝
                      ** is_arr (Vptr p z) (map Vint l))%I;
        postcond := fun _ x ret vret =>
-                     let '(p, z, _, nmem) := x in
+                     let '(p, z, _, size) := x in
                      (∃ l' : list int,
                          ⌜ ret = Vundef↑ /\ vret = (map Int.intval l')↑
-                         /\ length l' = Z.to_nat nmem ⌝
+                         /\ length l' = Z.to_nat size ⌝
                          ** is_arr (Vptr p z) (map Vint l'))%I
     |}.
 

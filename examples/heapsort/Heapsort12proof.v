@@ -63,6 +63,7 @@ Ltac solve_heap H :=
 Section SIMMODSEM.
 
   Context `{Σ : GRA.t}.
+  Context `{H : @GRA.inG Clight_Mem1.memRA Σ}. 
 
   Variable GlobalStb : Sk.t -> gname -> option fspec.
   Hypothesis STBINCL : forall sk, stb_incl (to_stb HeapsortStb) (GlobalStb sk).
@@ -73,19 +74,20 @@ Section SIMMODSEM.
       _
       unit
       (fun _ st_src st_tgt => True)%I.
-
-  (* Lemma sim_create (sk : alist string Sk.gdef) : *)
-  (*   sim_fnsem wf top2 *)
-  (*  ("create", *)
-  (*  fun_to_tgt "Heapsort" (GlobalStb sk) {| fsb_fspec := create_spec; fsb_body := fun _ => triggerNB |}) *)
-  (*  ("create", cfunU Heapsort1.create_body). *)
-  (* Proof. *)
-  (*   Opaque Nat.leb Nat.ltb mult. *)
-  (*   init. harg. destruct x as [tree initial]. mDesAll. clear PURE1. *)
-  (*   des. steps. *)
-  (*   astop. *)
-  (*   (* invariant config *)  *)
-  (*   remember (focus btctx_top tree (decodeIdx (initial - 1))) as p_init eqn:Eqp. *)
+  
+  Lemma sim_create (sk : alist string Sk.gdef) :
+    sim_fnsem wf top2
+   ("create",
+   fun_to_tgt "Heapsort" (GlobalStb sk) {| fsb_fspec := create_spec; fsb_body := fun _ => triggerNB |})
+   ("create", fun_to_src (cfunU Heapsort1.create_body)).
+  Proof.
+    Opaque Nat.leb Nat.ltb mult.
+    init. harg. destruct x as [tree initial]. mDesAll. clear PURE1.
+    des. steps.
+    astop.
+    (* invariant config *)
+    Admitted.
+   (*  remember (focus btctx_top tree (decodeIdx (initial - 1))) as p_init eqn:Eqp. *)
   (*   destruct p_init as [g t]. *)
   (*   set (initial' := S (encodeIdx (btctx2idx g))). *)
   (*   assert (Heq : tree = recover_bintree g t). *)
@@ -148,6 +150,7 @@ Section SIMMODSEM.
   (*   destruct (2 * initial' <=? btsize tree) *)
   (*            eqn:Ele1;[apply leb_complete in Ele1| apply leb_complete_conv in Ele1]. *)
   (*   all : cycle 1. *)
+    
   (*   - (* has no child *) *)
   (*     steps_weak. rewrite E. force_l. eexists. *)
   (*     steps_weak. hret tt;ss. iModIntro. iSplit;ss. iPureIntro. *)
@@ -226,7 +229,7 @@ Section SIMMODSEM.
   (*         { deflag. eapply (IHn n); ss; et. *)
   (*           - intros. ss. eapply (equicomplete_thm g t). rewrite E. *)
   (*             econs;auto;try apply bteq_refl;auto. econs;apply bteq_refl. assumption. *)
-  (*           - inversion H_r.  *)
+  (*           - inversion H_r. *)
   (*             + eapply complete_node_perfect_complete;eauto. *)
   (*             + eapply complete_node_complete_perfect;eauto. *)
   (*           - rewrite encode_last. rewrite <- toList_length. *)
@@ -354,21 +357,21 @@ Section SIMMODSEM.
   (*           + econs;simpl;auto;try nia;econs;simpl;auto;try nia. *)
   (*       } *)
   (* Qed. *)
-
-  (* Lemma sim_heapify (sk : alist string Sk.gdef) : *)
-  (*   sim_fnsem wf top2 *)
-  (*             ("heapify", *)
-  (*              fun_to_tgt "Heapsort" (GlobalStb sk) {| fsb_fspec := heapify_spec; fsb_body := fun _ => triggerNB |}) *)
-  (*             ("heapify", cfunU Heapsort1.heapify_body). *)
-  (* Proof with lia || eauto. *)
-  (*   (** "Lemmas" *) *)
-  (*   pose proof (fun n : nat => Nat.add_sub n 1) as plus1minus1. *)
-  (*   pose proof (@bteq_refl Z) as bt_shape_eq_refl. *)
-  (*   pose proof (@bteq_sym Z) as bt_shape_eq_sym. *)
-  (*   pose proof (@bteq_node Z) as bt_shape_eq_node. *)
-  (*   Opaque swap Nat.div Nat.leb Nat.ltb Z.ltb toList. *)
-  (*   (** "Entering the function" *) *)
-  (*   init. harg. destruct x as [[tree p] k]. mDesAll; subst. clear PURE1. des; subst. steps. astop. steps. *)
+  
+  Lemma sim_heapify (sk : alist string Sk.gdef) :
+    sim_fnsem wf top2
+              ("heapify",
+               fun_to_tgt "Heapsort" (GlobalStb sk) {| fsb_fspec := heapify_spec; fsb_body := fun _ => triggerNB |})
+              ("heapify", fun_to_src (cfunU Heapsort1.heapify_body)).
+  Proof with lia || eauto.
+    (** "Lemmas" *)
+    pose proof (fun n : nat => Nat.add_sub n 1) as plus1minus1.
+    pose proof (@bteq_refl Z) as bt_shape_eq_refl.
+    pose proof (@bteq_sym Z) as bt_shape_eq_sym.
+    pose proof (@bteq_node Z) as bt_shape_eq_node.
+    Opaque swap Nat.div Nat.leb Nat.ltb Z.ltb toList.
+    (** "Entering the function" *)
+    init. harg. destruct x as [[tree p] k]. mDesAll; subst. clear PURE1. des; subst. steps. astop. steps. Admitted.
   (*   (** "Invariants" *) *)
   (*   remember (toList tree, 1) as xs_and_i eqn: H_init; destruct xs_and_i as [xs i]. *)
   (*   assert (xs_init : xs = toList tree) by congruence. assert (i_init : i = 1) by congruence. clear H_init. *)
@@ -579,26 +582,26 @@ Section SIMMODSEM.
   (*   Transparent Nat.div Nat.leb Nat.ltb Z.ltb toList. *)
   (* Qed. *)
 
-  (* Lemma sim_heapsort (sk : alist string Sk.gdef) : *)
-  (*   sim_fnsem wf top2 *)
-  (*             ("heapsort", fun_to_tgt "Heapsort" (GlobalStb sk) {| fsb_fspec := heapsort_spec; fsb_body := fun _ => triggerNB|}) *)
-  (*             ("heapsort", cfunU Heapsort1.heapsort_body). *)
-  (* Proof. *)
-  (*   Opaque div. *)
-  (*   unfold Heapsort1.heapsort_body. *)
-  (*   init. *)
-  (*   harg. rename x into xs. mDesAll. clear PURE1. steps. *)
-
-  (*   remember (length xs <=? 1) as b. *)
-  (*   destruct b. *)
-  (*   (* input is trivially sorted when length xs <= 1 *) *)
-  (*   { astop. steps. force_l. eexists. steps. *)
-  (*     hret tt; ss. *)
-  (*     iModIntro. iSplit; ss. iPureIntro. esplits; try reflexivity. *)
-  (*     destruct xs as [| x []]; try discriminate. *)
-  (*     - econs. *)
-  (*     - econs; econs. *)
-  (*   } *)
+  Lemma sim_heapsort (sk : alist string Sk.gdef) :
+    sim_fnsem wf top2
+              ("heapsort", fun_to_tgt "Heapsort" (GlobalStb sk) {| fsb_fspec := heapsort_spec; fsb_body := fun _ => triggerNB|})
+              ("heapsort", fun_to_src (cfunU Heapsort1.heapsort_body)).
+  Proof.
+    Opaque div.
+    unfold Heapsort1.heapsort_body.
+    init.
+    harg. rename x into xs. mDesAll. clear PURE1. steps.
+    Admitted.
+    (* remember (length xs <=? 1) as b. *)
+    (* destruct b. *)
+    (* (* input is trivially sorted when length xs <= 1 *) *)
+    (* { astop. steps. rewrite <- Heqb. force_l. eexists.  steps. *)
+    (*   hret tt; ss. *)
+    (*   iModIntro. iSplit; ss. iPureIntro. esplits; try reflexivity. *)
+    (*   destruct xs as [| x []]; try discriminate. *)
+    (*   - econs. *)
+    (*   - econs; econs. *)
+    (* } *)
 
   (*   (* when length xs > 1 *) *)
   (*   assert (Hxs : length xs > 1) *)
@@ -808,20 +811,19 @@ Section SIMMODSEM.
   (*   Unshelve. et. et. *)
   (* Qed. *)
 
-  (* Theorem correct : refines2 [Heapsort1.Heapsort] [Heapsort2.Heapsort GlobalStb]. *)
-  (* Proof. *)
-  (*   Admitted. *)
-    (* eapply SimModSem.adequacy_local2; econs; ss. *)
-  (*   i. *)
-  (*   econstructor 1 with (wf := wf) (le := top2); et; ss; cycle 1. *)
-  (*   { exists tt. red. econs. eapply to_semantic. iIntros. ss. } *)
-  (*   econs; cycle 1. *)
-  (*   econs; cycle 1. *)
-  (*   econs; cycle 1. *)
-  (*   econs. *)
-  (*   - apply sim_heapsort. *)
-  (*   - apply sim_heapify. *)
-  (*   - apply sim_create. *)
-  (* Qed. *)
+  Theorem correct : refines2 [Heapsort1.Heapsort] [Heapsort2.Heapsort GlobalStb].
+  Proof.
+    eapply SimModSem.adequacy_local2; econs; ss.
+    i.
+    econstructor 1 with (wf := wf) (le := top2); et; ss; cycle 1.
+    { exists tt. red. econs. eapply to_semantic. iIntros. ss. }
+    econs; cycle 1.
+    econs; cycle 1.
+    econs; cycle 1.
+    econs.
+    - apply sim_heapsort.
+    - apply sim_heapify.
+    - apply sim_create.
+  Qed.
 
 End SIMMODSEM.
