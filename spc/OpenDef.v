@@ -98,14 +98,11 @@ Section KMODSEM.
              (fun ox => match ox with | Some x => fs.(measure) x | _ => ord_top end)
              (fun mn ox argh argl =>
                 match ox with
-                | Some x => fun r =>
-                              exists argh',
-                                argh = Any.pair true↑ argh' /\ fs.(precond) mn x argh' argl r
-                | None => fun r =>
-                            argh = Any.pair false↑ argl
+                | Some x => (∃ argh', ⌜argh = Any.pair true↑ argh'⌝ ∧ fs.(precond) mn x argh' argl)%I
+                | None => (⌜argh = Any.pair false↑ argl⌝)%I
                 end)
              (fun mn ox reth retl =>
-                map_or_else ox (fun x => (fs.(postcond) mn x reth retl)) (fun r => reth = retl))
+                map_or_else ox (fun x => (fs.(postcond) mn x reth retl)) (⌜reth = retl⌝)%I)
   .
 
   Definition disclose_ksb_mid (ksb: kspecbody): fspecbody :=
