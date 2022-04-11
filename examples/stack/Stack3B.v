@@ -44,6 +44,7 @@ Program Instance t: URA.t := {
   URA._add := _add;
   URA._wf := _wf;
   URA.unit := (bag bot1);
+  URA.core := (fun _ => bag bot1);
 }
 .
 Next Obligation.
@@ -58,6 +59,15 @@ Next Obligation.
 Qed.
 Next Obligation. unfold _wf, _add in *. i. unseal "ra". des_ifs. Qed.
 Next Obligation. unfold _wf, _add in *. i. unseal "ra". des_ifs. i. eapply H; et. Qed.
+Next Obligation.
+  unfold _wf, _add in *. i. unseal "ra". des_ifs. f_equal. extensionality x. eapply Axioms.prop_ext. split; i; des; ss; auto.
+Qed.
+Next Obligation.
+  unfold _wf, _add in *. i. unseal "ra". des_ifs.
+Qed.
+Next Obligation.
+ unfold _wf, _add in *. i. unseal "ra". exists (bag bot1). f_equal. extensionality x. eapply Axioms.prop_ext. split; i; des; ss; auto.
+Qed.
 
 Definition ag (x: X): t := bag (fun x0 => x0 = x).
 
@@ -162,6 +172,7 @@ Program Instance t: URA.t := {
   URA._add := _add;
   URA._wf := _wf;
   URA.unit := None;
+  URA.core := fun _ => None;
 }
 .
 Next Obligation.
@@ -173,6 +184,9 @@ Qed.
 Next Obligation. unfold _wf, _add in *. i. unseal "ra". des_ifs. Qed.
 Next Obligation. unfold _wf, _add in *. i. unseal "ra". des_ifs. Qed.
 Next Obligation. unfold _wf, _add in *. i. unseal "ra". des_ifs. eapply URA.wf_mon; et. Qed.
+Next Obligation. unfold _wf, _add in *. i. unseal "ra". des_ifs. Qed.
+Next Obligation. unfold _wf, _add in *. i. unseal "ra". des_ifs. Qed.
+Next Obligation. unfold _wf, _add in *. i. unseal "ra". exists None. auto. Qed.
 
 Theorem wf
         m
@@ -227,6 +241,7 @@ Program Instance t: URA.t := {
   URA._add := _add;
   URA._wf := _wf;
   URA.unit := unit;
+  URA.core := fun _ => unit;
 }
 .
 Next Obligation.
@@ -240,6 +255,11 @@ Next Obligation.
 Qed.
 Next Obligation. unfold _wf, _add in *. i. unseal "ra". des_ifs. Qed.
 Next Obligation. unfold _wf, _add in *. i. unseal "ra". des_ifs. Qed.
+Next Obligation. unfold _wf, _add in *. i. unseal "ra". des_ifs. Qed.
+Next Obligation. unfold _wf, _add in *. i. unseal "ra". des_ifs. Qed.
+Next Obligation.
+  i. exists unit. unfold _add. unseal "ra". auto.
+Qed.
 
 (* Definition ag (x: X): t := just x. *)
 

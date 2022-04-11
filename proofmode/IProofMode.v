@@ -65,8 +65,6 @@ Section SIM.
         tbr.
   Proof.
     econs; eauto.
-    { iIntros "H". iModIntro. iExact "H". }
-    { i. iIntros "H". iModIntro. iExact "H". }
   Qed.
 
   Lemma fn_has_spec_impl fn arg_src arg_tgt pre0 post0 pre1 post1 tbr
@@ -85,6 +83,20 @@ Section SIM.
     }
   Qed.
 
+  Program Definition isim'
+          r g f_src f_tgt
+          {R_src R_tgt}
+          (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
+          (fuel: option Ord.t)
+          (st_src: Any.t * itree hEs R_src)
+          (st_tgt: Any.t * itree Es R_tgt): iProp :=
+    iProp_intro (fun res =>
+                   forall ctx (WF: URA.wf (res ⋅ ctx)),
+                     gpaco9 (_hsim) (cpn9 _hsim) r g _ _ Q ctx fuel f_src f_tgt st_src st_tgt) _.
+  Next Obligation.
+    i.  ss. i. eapply H. eapply URA.wf_extends; eauto. eapply URA.extends_add; eauto.
+  Qed.
+
   Definition isim
              '(r, g, f_src, f_tgt)
              {R_src R_tgt}
@@ -92,9 +104,7 @@ Section SIM.
              (fuel: option Ord.t)
              (st_src: Any.t * itree hEs R_src)
              (st_tgt: Any.t * itree Es R_tgt): iProp :=
-    fun res =>
-      forall ctx (WF: URA.wf (res ⋅ ctx)),
-        gpaco9 (_hsim) (cpn9 _hsim) r g _ _ Q ctx fuel f_src f_tgt st_src st_tgt.
+    isim' r g f_src f_tgt Q fuel st_src st_tgt.
 
   Lemma isim_init
         R_src R_tgt (Q: Any.t -> Any.t -> R_src -> R_tgt -> iProp)
@@ -144,8 +154,8 @@ Section SIM.
   Proof.
     red. unfold Entails. autorewrite with iprop.
     unfold isim in *. i.
-    red in H. unfold bi_bupd_bupd in H. ss. unfold Upd in H. autorewrite with iprop in H.
-    hexploit H; eauto. i. des.
+    rr in H. unfold bi_bupd_bupd in H. ss. unfold Upd in H. autorewrite with iprop in H.
+    i. hexploit H; eauto. i. des.
     hexploit H1; eauto. i. guclo hmonoC_spec. econs; auto.
   Qed.
 
@@ -175,8 +185,8 @@ Section SIM.
         (isim (r, g, f_src, f_tgt) Q1 fuel (st_src, itr_src) (st_tgt, itr_tgt)).
   Proof.
     red. unfold Entails. autorewrite with iprop.
-    unfold isim in *. i.
-    red in H. unfold Sepconj in H. autorewrite with iprop in H.
+    unfold isim, isim' in *. rr. i.
+    rr in H. unfold Sepconj in H. autorewrite with iprop in H.
     des. clarify. eapply from_semantic in H0. hexploit (H1 (ctx ⋅ a)).
     { r_wf WF0. }
     i. guclo hframeC_aux_spec. econs.
@@ -281,9 +291,9 @@ Section SIM.
         (isim (r, g, f_src, f_tgt) Q fuel (st_src, trigger (Call fn arg_src) >>= ktr_src) (st_tgt, trigger (Call fn arg_tgt) >>= ktr_tgt)).
   Proof.
     red. unfold Entails. autorewrite with iprop.
-    unfold isim at 2. i.
+    unfold isim, isim' at 2. rr. i.
     match (type of H) with
-    | ?P _ =>
+    | (iProp_pred ?P) _ =>
       assert (CUR: current_iProp ctx P)
     end.
     { econs; eauto. }
@@ -310,7 +320,7 @@ Section SIM.
     mAssert (isim (g, g, true, true) Q None (st_src1, ktr_src ret_src)
                   (st_tgt1, ktr_tgt ret_tgt)) with "*".
     { iApply ("H" with "A1 A2"). }
-    inv ACC. red in IPROP. uipropall. des. subst.
+    inv ACC. rr in IPROP. uipropall. des. subst.
     eapply IPROP0. eapply URA.wf_mon. instantiate (1:=b). r_wf GWF.
   Qed.
 
@@ -332,9 +342,9 @@ Section SIM.
         (isim (r, g, f_src, f_tgt) Q (Some fuel0) (st_src, itr_src) (st_tgt, trigger (Call fn arg_tgt) >>= ktr_tgt)).
   Proof.
     red. unfold Entails. autorewrite with iprop.
-    unfold isim at 2. i.
+    unfold isim, isim' at 2. rr. i.
     match (type of H) with
-    | ?P _ =>
+    | (iProp_pred ?P) _ =>
       assert (CUR: current_iProp ctx P)
     end.
     { econs; eauto. }
@@ -360,7 +370,7 @@ Section SIM.
     mUpd "A2".
     mAssert (isim (g, g, true, true) Q (Some fuel1) (st_src1, itr_src) (st_tgt1, ktr_tgt ret_tgt)) with "*".
     { iApply "H". iSplitR "A2"; auto. }
-    inv ACC. red in IPROP. uipropall. des. subst. eapply IPROP0.
+    inv ACC. rr in IPROP. uipropall. des. subst. eapply IPROP0.
     eapply URA.wf_mon. instantiate (1:=b). r_wf GWF.
   Qed.
 
@@ -375,7 +385,7 @@ Section SIM.
         (isim (r, g, f_src, f_tgt) Q fuel0 (st_src, trigger hAPC >>= ktr_src) (st_tgt, itr_tgt)).
   Proof.
     eapply isim_final. i.
-    inv CUR. red in IPROP. uipropall. des.
+    inv CUR. rr in IPROP. uipropall. des.
     eapply hsimC_uclo. econs; eauto.
   Qed.
 
@@ -554,7 +564,7 @@ Section SIM.
         (isim (r, g, f_src, f_tgt) Q fuel (st_src, trigger (Syscall fn arg rvs) >>= ktr_src) (st_tgt, trigger (Syscall fn arg rvs) >>= ktr_tgt)).
   Proof.
     eapply isim_final. i. eapply hsimC_uclo. econs; eauto.
-    i. inv CUR. red in IPROP. uipropall. eapply IPROP; eauto.
+    i. inv CUR. rr in IPROP. uipropall. eapply IPROP; eauto.
   Qed.
 
   Lemma isim_syscall_trigger
@@ -609,7 +619,7 @@ Section SIM.
         (isim (r, g, f_src, f_tgt) Q fuel (st_src, trigger (Choose X) >>= ktr_src) (st_tgt, itr_tgt)).
   Proof.
     eapply isim_final. i. eapply hsimC_uclo. econs; eauto.
-    inv CUR. red in IPROP. uipropall. des. esplits. eapply IPROP; eauto.
+    inv CUR. rr in IPROP. uipropall. des. esplits. eapply IPROP; eauto.
   Qed.
 
   Lemma isim_choose_src_trigger
@@ -636,7 +646,7 @@ Section SIM.
         (isim (r, g, f_src, f_tgt) Q fuel (st_src, itr_src) (st_tgt, trigger (Choose X) >>= ktr_tgt)).
   Proof.
     eapply isim_final. i. eapply hsimC_uclo. econs; eauto.
-    inv CUR. red in IPROP. uipropall. i. eapply IPROP; eauto.
+    inv CUR. rr in IPROP. uipropall. i. eapply IPROP; eauto.
   Qed.
 
   Lemma isim_choose_tgt_trigger
@@ -663,7 +673,7 @@ Section SIM.
         (isim (r, g, f_src, f_tgt) Q fuel (st_src, trigger (Take X) >>= ktr_src) (st_tgt, itr_tgt)).
   Proof.
     eapply isim_final. i. eapply hsimC_uclo. econs; eauto.
-    inv CUR. red in IPROP. uipropall. i. eapply IPROP; eauto.
+    inv CUR. rr in IPROP. uipropall. i. eapply IPROP; eauto.
   Qed.
 
   Lemma isim_take_src_trigger
@@ -690,7 +700,7 @@ Section SIM.
         (isim (r, g, f_src, f_tgt) Q fuel (st_src, itr_src) (st_tgt, trigger (Take X) >>= ktr_tgt)).
   Proof.
     eapply isim_final. i. eapply hsimC_uclo. econs; eauto.
-    inv CUR. red in IPROP. uipropall. des. esplits. eapply IPROP; eauto.
+    inv CUR. rr in IPROP. uipropall. des. esplits. eapply IPROP; eauto.
   Qed.
 
   Lemma isim_take_tgt_trigger
@@ -1319,8 +1329,8 @@ Section TRIVIAL.
   Proof.
     hexploit (ord_exist (fun (r: Σ) (o0: Ord.t) => P o0 r)).
     i. des. exists o_top. uipropall. i.
-    red in H0. red. uipropall. eapply H in H0.
-    des. esplits. uipropall. esplits; eauto. red. uipropall.
+    rr in H0. rr. uipropall. eapply H in H0.
+    des. esplits. uipropall. esplits; eauto. rr. uipropall.
   Qed.
 
   Lemma ord_exist_iProp_mon (P: Ord.t -> iProp)

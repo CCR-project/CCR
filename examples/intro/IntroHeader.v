@@ -99,6 +99,7 @@ Program Instance t: URA.t := {
   unit := unit;
   _add := add;
   _wf := wf;
+  core := fun _ => unit;
 }
 .
 Next Obligation. subst add wf. i. destruct a, b; ss; des_ifs; ss. Qed.
@@ -106,6 +107,11 @@ Next Obligation. subst add wf. i. destruct a, b; ss; des_ifs; ss. Qed.
 Next Obligation. subst add wf. i. unseal "ra". des_ifs. Qed.
 Next Obligation. subst add wf. i. unseal "ra". ss. Qed.
 Next Obligation. subst add wf. i. unseal "ra". des_ifs. Qed.
+Next Obligation. subst add wf. i. unseal "ra". des_ifs. Qed.
+Next Obligation. subst add wf. i. unseal "ra". des_ifs. Qed.
+Next Obligation.
+  i. exists unit. subst add. unseal "ra". des_ifs.
+Qed.
 
 End IRA.
 End IRA.

@@ -57,7 +57,7 @@ Section SIMMODSEM.
   Proof.
     eapply adequacy_local2.
     econs; ss. i. econstructor 1 with (wf:=wf) (le:=top2); ss; et.
-    2: { eexists. econs; ss. red. uipropall. }
+    2: { eexists. econs; ss. i. rr. uipropall. }
     eapply Sk.incl_incl_env in SKINCL. eapply Sk.load_skenv_wf in SKWF.
     econs; ss; [|econs; ss].
     { init. unfold fibF, ccallU. harg.
