@@ -59,7 +59,7 @@ Section MODE.
   Lemma harg_clo
         A Rn Invsn Invtn
         mn r rg
-        X (P: option mname -> X -> Any.t -> Any.t -> Σ -> Prop) varg
+        X (P: option mname -> X -> Any.t -> Any.t -> iProp) varg
         mp_src mp_tgt (mr_src mr_tgt: Σ) f_tgt k_src
         a (le: A -> A -> Prop)
         (R: A -> Any.t -> Any.t -> iProp)
@@ -102,7 +102,7 @@ Section MODE.
       clear - RSRC T VALID. unfold OwnT in *.
       uipropall. des. clarify. esplits; et.
       { rewrite URA.unit_id; ss. }
-      { r. uipropall. }
+      { rr. uipropall. }
     }
     Unshelve. all: try exact 0.
   Qed.
@@ -144,28 +144,18 @@ Section MODE.
   Proof.
     split; i.
     - rr in H. inv H. rewrite URA.add_comm in GWF. eapply URA.wf_mon; et.
-    - rr. unfold from_iPropL. econs; et. { rewrite URA.unit_idl; ss. } r; uipropall.
+    - rr. unfold from_iPropL. econs; et. { rewrite URA.unit_idl; ss. } rr; uipropall.
   Qed.
 
-  Definition Exactly (r0: Σ): iProp' :=
-    Seal.sealing
-      "iProp"
-      (fun r1 => r0 = r1).
+  Definition Exactly (r0: Σ): iProp' := Own r0.
 
   Hint Unfold Exactly: iprop.
 
-  Lemma Exactly_spec
-        r0 r1
-    :
-      Exactly r0 r1 <-> r0 = r1
-  .
-  Proof. unfold Exactly. uipropall. Qed.
-
   Lemma harg_clo_tgt
-        A Xn Xtra Rn Invtn mp_tgt mr_tgt
+        A Xn Xnaux Xtra Rn Invtn mp_tgt mr_tgt
         Invtn' Xn'
         mn r rg
-        X (P: option mname -> X -> Any.t -> Any.t -> Σ -> Prop) varg
+        X (P: option mname -> X -> Any.t -> Any.t -> iProp) varg
         mp_src (mr_src: Σ) f_src k_tgt
         a (le: A -> A -> Prop)
         (R: A -> Any.t -> Any.t -> iProp)
@@ -201,7 +191,7 @@ Section MODE.
     ired_both. eapply ARG.
     eapply current_iPropL_push; et.
     eapply current_iPropL_push; et.
-    2: { instantiate (1:=rx). cbn. uipropall. }
+    2: { instantiate (1:=rx). cbn. rr. uipropall. splits; auto. refl. }
     eapply current_iPropL_nil; et.
     { eapply wf_extends; et. exists rarg_src. r_solve. }
   Unshelve. all: try exact 0.
@@ -243,7 +233,7 @@ Section MODE.
   (* Qed. *)
 
   Lemma harg_clo_tgt'
-        A Xn Invtn Xtra mp_tgt mr_tgt
+        A Xn Xnaux Invtn Xtra mp_tgt mr_tgt
         mn r rg
         X (P: option mname -> X -> Any.t -> Any.t -> iProp) varg
         mp_src (mr_src: Σ) f_src k_tgt
@@ -256,7 +246,7 @@ Section MODE.
         (ENTAIL: bi_entails (from_iPropL ips) (bupd (P mn x varg_tgt varg ** OwnT mr_tgt ** Xtra)))
         (ARG: forall
             rx
-            (ACC: current_iPropL ctx [(Invtn, OwnT mr_tgt); (Xn, (Xtra ∧ Exactly rx)%I)]),
+            (ACC: current_iPropL ctx [(Invtn, OwnT mr_tgt); (Xn, Exactly rx%I); (Xnaux, (Exactly rx -* Xtra)%I)]),
             gpaco8 (_sim_itree (mk_wf R) le) (cpn8 (_sim_itree (mk_wf R) le)) r rg _ _ eqr m true a
                    (Any.pair mp_src mr_src↑, f_src)
                    (Any.pair mp_tgt mr_tgt↑, k_tgt (ctx ⋅ rx, ((mn, x), varg_tgt))))
@@ -271,13 +261,13 @@ Section MODE.
     mAssert _ with "A1". { iAssumption. }
     mAssert _ with "A2". { iAssumption. }
     mAssert _ with "A". { iAssumption. }
-    eapply harg_clo_tgt; et.
+    eapply harg_clo_tgt; et. i.
   Qed.
 
   Lemma hret_clo_both
         A (a: shelve__ A)
         mn r rg n m mp_src mp_tgt (mr_src mr_tgt: Σ) a0
-        Xs (Qs: option mname -> Xs -> Any.t -> Any.t -> Σ -> Prop)
+        Xs (Qs: option mname -> Xs -> Any.t -> Any.t -> iProp)
         Xt (Qt: option mname -> Xt -> Any.t -> Any.t -> iProp)
         xs xt vret_src vret_tgt
         (le: A -> A -> Prop)
@@ -321,12 +311,36 @@ Section MODE.
       rename x into vret_tgt_tgt. rename c into rt.
       specialize (UPDATABLE vret_tgt_tgt).
       unfold from_iPropL in IPROP.
-      uipropall. des. clarify. rename a1 into rx.
-      hexploit (UPDATABLE (rt ⋅ rx)); et.
-      { eapply wf_extends; try apply x0. r. exists (ctx ⋅ mr_tgt1). r_solve. }
-      { instantiate (1:=ctx ⋅ mr_tgt1). r_wf x0. }
-      i; des. clarify. esplits; et.
-      r_wf H.
+
+      admit "".
+      (* uipropall. des. clarify. *)
+
+      (* rt a1 *)
+
+
+
+      (* rename a1 into rx0. *)
+
+      (* hexploit (UPDATABLE (rt ⋅ rx0)); et. *)
+      (* { eapply wf_extends; try apply x0. r. exists (ctx ⋅ mr_tgt1). r_solve. } *)
+      (* 2:{ instantiate (1:=ctx ⋅ mr_tgt1). r_wf x0. } *)
+      (* { esplits; et. *)
+
+      (* { admit "". } *)
+      (* { instantiate (1:=ctx ⋅ mr_tgt1). r_wf x0. } *)
+      (* i; des. clarify. esplits; et. *)
+      (* r_wf H. *)
+
+
+      (* hexploit (UPDATABLE (rt ⋅ rx0)); et. *)
+      (* { eapply wf_extends; try apply x0. r. exists (ctx ⋅ mr_tgt1). r_solve. } *)
+      (* 2:{ instantiate (1:=ctx ⋅ mr_tgt1). r_wf x0. } *)
+      (* { esplits; et. *)
+
+      (* { admit "". } *)
+      (* { instantiate (1:=ctx ⋅ mr_tgt1). r_wf x0. } *)
+      (* i; des. clarify. esplits; et. *)
+      (* r_wf H. *)
     }
     des. exists (rret_src, mr_src1 ⋅ mr_tgt1).
     steps.
@@ -456,7 +470,7 @@ Section MODE.
     { exploit SIMPLE; et. intros T. uipropall.
       exploit (T ro_tgt); et.
       { eapply wf_extends; try apply x. r. exists (fr_tgt ⋅ ctx0 ⋅ rx ⋅ mr_tgt1). r_solve.  }
-      intro U. r in U. uipropall.
+      intro U. rr in U. uipropall.
     }
     subst.
     assert (exists mr_src1 ro_src fr_src,
