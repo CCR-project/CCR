@@ -64,8 +64,8 @@ Section FSPEC.
   Record fspec: Type := mk_fspec {
     meta: Type;
     measure: meta -> ord;
-    precond: option mname -> meta -> Any.t -> Any_tgt -> Σ -> Prop; (*** meta-variable -> new logical arg -> current logical arg -> resource arg -> Prop ***)
-    postcond: option mname -> meta -> Any.t -> Any_tgt -> Σ -> Prop; (*** meta-variable -> new logical ret -> current logical ret -> resource ret -> Prop ***)
+    precond: option mname -> meta -> Any.t -> Any_tgt -> iProp; (*** meta-variable -> new logical arg -> current logical arg -> resource arg -> Prop ***)
+    postcond: option mname -> meta -> Any.t -> Any_tgt -> iProp; (*** meta-variable -> new logical ret -> current logical ret -> resource ret -> Prop ***)
   }
   .
 
@@ -778,7 +778,7 @@ Section SMOD.
     rewrite ! flat_map_assoc. eapply flat_map_ext. i. ss.
   Qed.
 
-  Definition main (mainpre: Any.t -> Σ -> Prop) (mainbody: (option mname * Any.t) -> itree hEs Any.t): t := {|
+  Definition main (mainpre: Any.t -> iProp) (mainbody: (option mname * Any.t) -> itree hEs Any.t): t := {|
     get_modsem := fun _ => (SModSem.main mainpre mainbody);
     sk := Sk.unit;
   |}

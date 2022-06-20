@@ -650,10 +650,10 @@ Section ADQ.
       steps. force_l. exists None. steps.
       force_l. exists (args). steps.
       force_l.
-      { split; auto. }
+      { rr. uipropall. }
       steps. force_l.
       { split; et. }
-      steps. destruct w1.
+      steps. rr in _ASSUME0. uipropall. subst. destruct w1.
       deflag. gbase. eapply CIH; et.
       eapply URA.wf_mon; et. instantiate (1:=c). r_wf _ASSUME.
     - unfold HoareCall, mput, mget. steps.
@@ -663,10 +663,10 @@ Section ADQ.
       steps. force_l. exists None. steps.
       force_l. eexists (args). steps.
       force_l.
-      { split; et. }
+      { rr. uipropall. }
       steps. force_l.
       { split; et. }
-      steps. destruct w1.
+      steps. rr in _ASSUME0. uipropall. subst. destruct w1.
       deflag. gbase. eapply CIH; et.
       eapply URA.wf_mon; et. instantiate (1:=c). r_wf _ASSUME.
       Unshelve.
@@ -691,8 +691,10 @@ Section ADQ.
     { des_ifs. }
     assert (exists b, x0 = Any.pair b t).
     { destruct x; ss.
-      { des. subst. red in _ASSUME1. uipropall. des. clarify. et. }
-      { des. subst. et. }
+      { rr in _ASSUME0. uipropall. des. uipropall. des.
+        rr in _ASSUME0. rr in _ASSUME1. uipropall.
+        clarify. et. }
+      { rr in _ASSUME0. uipropall. subst. et. }
     }
     des; clarify. clear _ASSUME0.
     unfold massage_fun.
@@ -708,7 +710,7 @@ Section ADQ.
     force_l.
     { instantiate (1:=ε). instantiate (1:=ε). r_wf SIM0. }
     steps. force_l.
-    { red. destruct x; et. red. uipropall. }
+    { rr. destruct x; et; rr; uipropall. }
     steps.
     Unshelve. all: try exact 0.
   Qed.
@@ -1305,11 +1307,15 @@ Section ADQ.
           eapply flat_map_ext. i. ss.
         }
         i. des. exists (Some x), entry_r. splits; auto.
-        { ss. esplits; et. }
-        { i. ss. uipropall. i. red. uipropall. eapply RET; et. }
+        { ss. rr. uipropall. esplits; et. rr. uipropall.
+          splits; eauto. rr. uipropall.
+        }
+        { i. ss. uipropall. i. rr. uipropall. eapply RET; et. }
       }
       { exists (Some tt). exists entry_r. splits; auto.
-        { ss. esplits; et. red. uipropall. }
+        { ss. rr. uipropall. esplits; et. rr. uipropall. esplits; et.
+          rr. uipropall. rr. uipropall.
+        }
       }
     }
     match goal with
@@ -1452,7 +1458,7 @@ Section ADQ.
     force_l. eexists (c0, c1, c). steps.
     force_l; auto. steps. force_l. exists (Some x). steps.
     force_l. eexists. force_l.
-    { esplits; et. }
+    { rr. uipropall. esplits; et. rr. uipropall. esplits; et. rr. uipropall. }
     steps. force_l; auto. steps. des; clarify.
     rewrite Any.pair_split in _UNWRAPU. clarify.
     force_r. eexists (c2, c3). steps.
@@ -1560,6 +1566,39 @@ Section ADQ.
     }
     Unshelve. all: ss; try (exact 0).
   Qed.
+End ADQ.
+
+Section ADQ.
+  Context {CONF: EMSConfig}.
+  Context `{Σ: GRA.t}.
+  Variable _kmds: list KMod.t.
+
+  Let frds: Sk.t -> list mname := KMod.get_frds _kmds.
+
+  Let _kmss: Sk.t -> list KModSem.t := fun ske => List.map (flip KMod.get_modsem ske) _kmds.
+
+  Let _gstb: Sk.t -> list (gname * fspec) := KMod.get_stb _kmds.
+
+  Let _stb: Sk.t -> gname -> option fspec := fun sk => to_closed_stb (_gstb sk).
+
+  Let kmds_mid: list SMod.t := List.map KMod.transl_mid _kmds.
+  Let _kmss_mid: Sk.t -> list SModSem.t := fun ske => List.map (flip SMod.get_modsem ske) kmds_mid.
+
+  Let _stb_mid: Sk.t -> gname -> option fspec :=
+    fun sk fn => match alist_find fn (_gstb sk) with
+                 | Some fsp => Some (KModSem.disclose_mid fsp)
+                 | _ => Some (KModSem.disclose_mid fspec_trivial)
+                 end.
+
+  Let stb_find_iff (sk: Sk.t) (fn: gname) (fsp: fspec)
+      (FIND: _stb sk fn = Some fsp)
+    :
+      _stb_mid sk fn = Some (KModSem.disclose_mid fsp).
+  Proof.
+    unfold _stb, to_closed_stb in FIND. unfold _stb_mid. des_ifs.
+  Qed.
+
+  Let kmds: list Mod.t := List.map (KMod.transl_tgt _stb) _kmds.
 
   Lemma adequacy_open_aux2:
     refines (Mod.add_list kmds)
@@ -1582,10 +1621,13 @@ Section ADQ.
       unfold KModSem.disclose_ksb_tgt, fun_to_tgt. ss.
       Local Transparent HoareFun. unfold HoareFun. Local Opaque HoareFun.
       des. clarify. unfold mget, mput. steps. destruct x.
-      { des; clarify. force_r. exists true.
+      { rr in _ASSUME0. uipropall. des. rr in _ASSUME0. uipropall.
+        des. rr in _ASSUME0. uipropall. subst.
+        force_r. exists true.
         force_r. exists m. force_r. eexists _.
         force_r. exists (c, c0). force_r. force_r; auto.
         force_r; eauto.
+
         steps. destruct (measure ksb m) eqn:T.
         { steps. guclo lbindC_spec. econs.
           { deflag. gfinal. right. eapply paco8_mon.
@@ -1610,11 +1652,12 @@ Section ADQ.
           steps. econs; ss. esplits; et.
         }
       }
-      { des; clarify. force_r. exists false.
+      { rr in _ASSUME0. uipropall. subst.
+        force_r. exists false.
         force_r. exists tt. force_r. exists t.
         force_r. exists (c, c0). force_r. force_r; auto.
         force_r.
-        { red. uipropall. }
+        { rr. uipropall. }
         steps.
         guclo lbindC_spec. econs.
         { deflag. gfinal. right. eapply paco8_mon.
@@ -1630,7 +1673,7 @@ Section ADQ.
       }
     }
     { exists tt. esplits; et. }
-    Unshelve. all: ss. all: try exact 0.
+    Unshelve. all: ss.
   Qed.
 End ADQ.
 

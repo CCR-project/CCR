@@ -38,7 +38,7 @@ Section SIMMODSEM.
     eapply adequacy_local2. econs; ss.
     i. econstructor 1 with (wf:=wf) (le:=top2); et.
     { ss. }
-    2: { exists tt. econs; ss; red; uipropall. }
+    2: { exists tt. econs; ss; rr; uipropall. }
     econs; ss. init. harg. mDesAll.
     des; clarify. unfold gF, ccallU. steps. astart 10.
     force_r.

@@ -612,7 +612,7 @@ Section SIM.
     { eapply current_iPropL_convert in PRE. mDesAll. destruct fuel; steps.
       { astop. steps. rewrite SPEC. steps. destruct fsp. ss.
         unfold inv_with in PRE. mDesAll. hcall _ _ with "A A1".
-        { iModIntro. iSplitL "A1"; eauto. iApply "A". }
+        { iModIntro. iSplitL "A1"; eauto. }
         { rewrite MEASURE in *. splits; ss. unfold ord_lt. des_ifs. }
         { steps. gbase. hexploit CIH.
           { eapply POST. eapply current_iProp_entail; [eauto|].
@@ -625,7 +625,7 @@ Section SIM.
       }
       { rewrite SPEC. steps. destruct fsp. ss.
         unfold inv_with in PRE. mDesAll. hcall _ _ with "A A1".
-        { iModIntro. iSplitL "A1"; eauto. iApply "A". }
+        { iModIntro. iSplitL "A1"; eauto. }
         { rewrite MEASURE in *. splits; ss. unfold ord_lt. des_ifs. }
         { steps. gbase. hexploit CIH.
           { eapply POST. eapply current_iProp_entail; [eauto|].
@@ -674,7 +674,7 @@ Section SIM.
       eapply current_iPropL_convert in PRE. mDesAll.
       destruct fsp. ss. unfold inv_with in PRE. mDesAll.
       hcall _ _ with "A A1".
-      { iModIntro. iSplitL "A1"; eauto. iApply "A". }
+      { iModIntro. iSplitL "A1"; eauto. }
       { splits; ss. }
       { steps. gbase. hexploit CIH.
         { eapply SIM. eapply current_iProp_entail; [eauto|].
@@ -1482,7 +1482,7 @@ Section SIM.
   Lemma hframeC_spec: hframeC <10= gupaco9 (_hsim) (cpn9 _hsim).
   Proof.
     ii. inv PR.
-    inv PRE. red in IPROP.
+    inv PRE. rr in IPROP.
     autounfold with iprop in IPROP.
     autorewrite with iprop in IPROP. des. clarify.
     guclo hframeC_aux_spec. econs.

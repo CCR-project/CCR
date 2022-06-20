@@ -1,6 +1,7 @@
 Require Import Coqlib.
 Require Import String.
 Require Import ITreelib.
+Require Import ClassicalChoice ChoiceFacts.
 (* Require Import Qcanon. *)
 (* (*** from stdpp ***) *)
 (* Record Qp : Set := mk_Qp { Qp_car : Qc;  Qp_prf : 0 < Qp_car }. *)
@@ -370,6 +371,10 @@ Module URA.
     unit_id: forall a, add a unit = a;
     wf_unit: wf unit;
     wf_mon: forall a b, wf (add a b) -> wf a;
+    core: car -> car;
+    core_id: forall a, add (core a) a = a;
+    core_idem: forall a, core (core a) = core a;
+    core_mono: forall a b, exists c, core (add a b) = add (core a) c;
 
     (* extends := fun a b => exists ctx, add a ctx = b; *)
     (* updatable := fun a b => forall ctx, wf (add a ctx) -> wf (add b ctx); *)
@@ -402,6 +407,16 @@ Module URA.
   Lemma unit_id_ `{M: t} b (EQ: b = unit): forall a, add a b = a. i. subst. apply unit_id. Qed.
 
   Lemma unit_idl `{M: t}: forall a, add unit a = a. i. rewrite add_comm. rewrite unit_id; ss. Qed.
+
+  Lemma wf_core `{M: t}: forall a (WF: wf a), wf (core a).
+  Proof. i. eapply wf_mon. rewrite core_id. auto. Qed.
+
+  Lemma unit_core `{M: t}: core unit = unit.
+  Proof.
+    transitivity (add (core unit) unit).
+    { symmetry. apply unit_id. }
+    { apply core_id. }
+  Qed.
 
   (*** TODO: remove redundancy with "updatable_horizontal" above ***)
   Lemma updatable_add
@@ -444,11 +459,34 @@ Module URA.
     sym. rewrite <- add_assoc. rewrite add_comm. f_equal. rewrite add_comm. ss.
   Qed.
 
+  Lemma wf_extends
+        `{M: t}
+        a b
+        (EXT: extends a b)
+        (WF: wf b)
+    :
+    wf a.
+  Proof.
+    rr in EXT. des. subst. eapply wf_split in WF. des; auto.
+  Qed.
+
+  Lemma extends_core
+        `{M: t}
+        a b
+        (EXT: extends a b)
+    :
+    extends (core a) (core b).
+  Proof.
+    rr in EXT. des. subst. hexploit core_mono. i. des.
+    eexists. eauto.
+  Qed.
+
   Program Instance prod (M0 M1: t): t := {
     car := car (t:=M0) * car (t:=M1);
     unit := (unit, unit);
     _add := fun '(a0, a1) '(b0, b1) => ((add a0 b0), (add a1 b1));
     _wf := fun '(a0, a1) => wf a0 /\ wf a1;
+    core := fun '(a0, a1) => (core a0, core a1);
   }
   .
   Next Obligation. f_equal; rewrite add_comm; ss. Qed.
@@ -456,6 +494,13 @@ Module URA.
   Next Obligation. f_equal; rewrite unit_id; ss. Qed.
   Next Obligation. split; eapply wf_unit. Qed.
   Next Obligation. des. split; eapply wf_mon; et. Qed.
+  Next Obligation. f_equal; rewrite core_id; et. Qed.
+  Next Obligation. f_equal; rewrite core_idem; et. Qed.
+  Next Obligation.
+    hexploit (core_mono c3 c1). intros [c_aux0 EQ0].
+    hexploit (core_mono c4 c2). intros [c_aux1 EQ1].
+    exists (c_aux0, c_aux1). rewrite EQ0. rewrite EQ1. auto.
+  Qed.
 
   Program Definition to_RA (M: t): RA.t := {|
     RA.car := car;
@@ -534,6 +579,7 @@ Module URA.
     unit := fun _ => unit;
     _add := fun f0 f1 => (fun k => add (f0 k) (f1 k));
     _wf := fun f => forall k, wf (f k);
+    core := fun f => (fun k => core (f k));
   }
   .
   Next Obligation. apply func_ext. ii. rewrite add_comm. ss. Qed.
@@ -541,12 +587,20 @@ Module URA.
   Next Obligation. apply func_ext. ii. rewrite unit_id. ss. Qed.
   Next Obligation. i. eapply wf_unit; ss. Qed.
   Next Obligation. i. eapply wf_mon; ss. Qed.
+  Next Obligation. apply func_ext. ii. rewrite core_id. ss. Qed.
+  Next Obligation. apply func_ext. ii. rewrite core_idem. ss. Qed.
+  Next Obligation.
+    hexploit (choice (fun k c => core (add (a k) (b k)) = add (core (a k)) c)).
+    { i. eapply core_mono. }
+    intros [f EQ]. exists f. apply func_ext. i. apply EQ.
+  Qed.
 
   Program Instance pointwise_dep K (M: K -> t): t := {
     car := forall (k: K), car (t:=M k);
     unit := fun _ => unit;
     _add := fun f0 f1 => (fun k => add (f0 k) (f1 k));
     _wf := fun f => forall k, wf (f k);
+    core := fun f => (fun k => core (f k));
   }
   .
   Next Obligation. apply func_ext_dep. ii. rewrite add_comm. ss. Qed.
@@ -554,6 +608,15 @@ Module URA.
   Next Obligation. apply func_ext_dep. ii. rewrite unit_id. ss. Qed.
   Next Obligation. i. eapply wf_unit; ss. Qed.
   Next Obligation. i. eapply wf_mon; ss. Qed.
+  Next Obligation. apply func_ext_dep. ii. rewrite core_id. ss. Qed.
+  Next Obligation. apply func_ext_dep. ii. rewrite core_idem. ss. Qed.
+  Next Obligation.
+    hexploit (non_dep_dep_functional_choice
+                choice _
+                (fun k c => core (add (a k) (b k)) = add (core (a k)) c)).
+    { i. eapply core_mono. }
+    intros [f EQ]. exists f. apply func_ext_dep. i. apply EQ.
+  Qed.
 
 End URA.
 
@@ -606,11 +669,13 @@ Program Instance t (RA: RA.t): URA.t := {
   unit := of_RA.unit;
   _wf := wf;
   _add := add;
+  core := fun _ => unit;
 }.
 Next Obligation. unfold add. des_ifs. { rewrite RA.add_comm; ss. } Qed.
 Next Obligation. unfold add. des_ifs. { rewrite RA.add_assoc; ss. } Qed.
 Next Obligation. unfold add. des_ifs. Qed.
 Next Obligation. unfold add in *. des_ifs. eapply RA.wf_mon; eauto. Qed.
+Next Obligation. exists unit. ss. Qed.
 
 End of_RA.
 End of_RA.
@@ -646,12 +711,15 @@ Program Instance t: URA.t := {
   URA._add := _add;
   URA._wf := _wf;
   URA.unit := unit;
+  URA.core := fun _ => unit;
 }
 .
 Next Obligation. unfold _wf, _add in *. des_ifs. Qed.
 Next Obligation. unfold _wf, _add in *. des_ifs. Qed.
 Next Obligation. unfold _wf, _add in *. des_ifs. Qed.
 Next Obligation. unfold _wf, _add in *. des_ifs. Qed.
+Next Obligation. des_ifs. Qed.
+Next Obligation. exists unit. auto. Qed.
 
 Theorem updatable
         a0 a1
@@ -716,11 +784,19 @@ Let wf `{M: URA.t} := fun a =>
                         | boom => False
                         end.
 
+Let core `{M: URA.t} := fun a =>
+                          match a with
+                          | frag f => frag (URA.core f)
+                          | excl _ f => frag (URA.core f)
+                          | boom => boom
+                          end.
+
 Program Instance t (M: URA.t): URA.t := {
   car := car;
   unit := frag ε;
   _add := add;
   _wf := wf;
+  core := core;
 }
 .
 Next Obligation. subst add wf. ss. des_ifs; f_equal; eauto using URA.add_comm. Qed.
@@ -733,10 +809,23 @@ Next Obligation.
   - rr in H. des. subst. eapply URA.wf_mon. rewrite URA.add_assoc. eauto.
   - esplits; eauto. etrans; et. rr. ss. esplits; et.
 Qed.
-
-
-
-
+Next Obligation. subst add core. ss. des_ifs; f_equal; rewrite URA.core_id; ss. Qed.
+Next Obligation. subst core. ss. des_ifs; f_equal; rewrite URA.core_idem; ss. Qed.
+Next Obligation.
+  destruct a.
+  - destruct b.
+    + hexploit (URA.core_mono f f0). intros [c EQ].
+      exists (frag c). ss. f_equal. auto.
+    + hexploit (URA.core_mono f f0). intros [c EQ].
+      exists (frag c). ss. f_equal. auto.
+    + exists boom. ss.
+  - destruct b.
+    + hexploit (URA.core_mono f f0). intros [c EQ].
+      exists (frag c). ss. f_equal. auto.
+    + exists boom. ss.
+    + exists boom. ss.
+  - exists boom. ss.
+Qed.
 
 Definition black `{M: URA.t} (a: M): t M := excl a ε.
 Definition white `{M: URA.t} (a: M): t M := frag a.
