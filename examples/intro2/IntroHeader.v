@@ -12,133 +12,208 @@ From ExtLib Require Import
      Structures.Maps
      Data.Map.FMapAList.
 Require Import ProofMode.
+Require Import Mem1.
 
 Set Implicit Arguments.
 
 
+Instance MapRA0: URA.t := Excl.t unit.
+Instance MapRA1: URA.t := URA.prod (Excl.t unit) (Auth.t (nat ==> (Excl.t Z)))%ra.
 
-Definition max: nat := 1000%nat.
+Definition map_points_to `{@GRA.inG MapRA1 Σ} (k: nat) (v: Z): iProp :=
+  OwnM (Excl.unit, Auth.white ((fun n => if Nat.eq_dec n k then Excl.just v else Excl.unit): @URA.car (nat ==> (Excl.t Z))%ra)).
 
-Lemma max_intrange x
-      (LT: x < max)
-  :
-    intrange_64 x.
+
+Definition pending0 `{@GRA.inG MapRA0 Σ}: iProp :=
+  OwnM (Excl.just tt).
+
+Definition pending1 `{@GRA.inG MapRA1 Σ}: iProp :=
+  OwnM (Excl.just tt, URA.unit: @URA.car (Auth.t (nat ==> (Excl.t Z)))%ra).
+
+Definition pending `{@GRA.inG MapRA0 Σ} `{@GRA.inG MapRA1 Σ}: iProp :=
+  pending0 ** pending1.
+
+Fixpoint initial_points_tos `{@GRA.inG MapRA1 Σ} (sz: nat): iProp :=
+  match sz with
+  | 0 => True%I
+  | S sz' => initial_points_tos sz' ** map_points_to sz' 0
+  end.
+
+Section SPECS.
+  Context `{@GRA.inG MapRA0 Σ}.
+  Context `{@GRA.inG MapRA1 Σ}.
+
+  Definition init_specM: fspec :=
+    mk_simple (fun (sz: nat) =>
+                 (ord_top,
+                   (fun varg => (⌜varg = ([Vint sz]: list val)↑⌝)
+                                  ** pending0
+                                  ** (⌜sz < 1000⌝)),
+                   (fun vret => True%I))).
+
+  Definition init_spec: fspec :=
+    mk_simple (fun (sz: nat) =>
+                 (ord_top,
+                   (fun varg => (⌜varg = ([Vint sz]: list val)↑⌝)
+                                  ** pending
+                                  ** (⌜sz < 1000⌝)),
+                   (fun vret => ⌜vret = Vundef↑⌝ ** initial_points_tos sz))).
+
+  Definition set_spec: fspec :=
+    mk_simple (fun '(k, v) =>
+                 (ord_top,
+                   (fun varg => (⌜varg = ([Vint (k: nat); Vint (v: nat)])↑⌝)
+                                  ** (∃ w, map_points_to k w)),
+                   (fun vret => ⌜vret = Vundef↑⌝ ** map_points_to k v))).
+
+  Definition set_specM: fspec := fspec_trivial.
+
+  Definition get_spec: fspec :=
+    mk_simple (fun '(k, v) =>
+                 (ord_top,
+                   (fun varg => (⌜varg = ([Vint (k: nat)])↑⌝)
+                                  ** (map_points_to k v)),
+                   (fun vret => ⌜vret = (Vint v)↑⌝ ** map_points_to k v))).
+
+  Definition get_specM: fspec := fspec_trivial.
+
+  Definition MapStb: alist gname fspec :=
+    Seal.sealing "stb" [("init", init_spec); ("set", set_spec); ("get",get_spec)].
+
+  Definition MapStbM: alist gname fspec :=
+    Seal.sealing "stb" [("init", init_specM); ("set", set_specM); ("get",get_specM)].
+End SPECS.
+Global Hint Unfold MapStb MapStbM: stb.
+
+
+
+Definition set `{Dec K} V (k: K) (v: V) (f: K -> V): K -> V := fun k0 => if dec k k0 then v else f k0.
+
+
+
+Section PROOF.
+  Context `{Σ: GRA.t}.
+
+  Lemma Own_unit
+    :
+      bi_entails True%I (Own ε)
+  .
+  Proof.
+    red. uipropall. ii. rr. esplits; et. rewrite URA.unit_idl. refl.
+  Qed.
+
+  Context `{@GRA.inG M Σ}.
+
+  Lemma embed_unit
+    :
+      (GRA.embed ε) = ε
+  .
+  Proof.
+    unfold GRA.embed.
+    Local Transparent GRA.to_URA. unfold GRA.to_URA. Local Opaque GRA.to_URA.
+    Local Transparent URA.unit. unfold URA.unit. Local Opaque URA.unit.
+    cbn.
+    apply func_ext_dep. i.
+    dependent destruction H. ss. rewrite inG_prf. cbn. des_ifs.
+  Qed.
+
+End PROOF.
+
+Section PROOF.
+  Context `{@GRA.inG M Σ}.
+
+  Lemma OwnM_unit
+    :
+      bi_entails True%I (OwnM ε)
+  .
+  Proof.
+    unfold OwnM. r. uipropall. ii. rr. esplits; et. rewrite embed_unit. rewrite URA.unit_idl. refl.
+  Qed.
+End PROOF.
+
+
+Ltac get_fresh_string :=
+  match goal with
+  | |- context["A"] =>
+    match goal with
+    | |- context["A0"] =>
+      match goal with
+      | |- context["A1"] =>
+        match goal with
+        | |- context["A2"] =>
+          match goal with
+          | |- context["A3"] =>
+            match goal with
+            | |- context["A4"] =>
+              match goal with
+              | |- context["A5"] => fail 5
+              | _ => constr:("A5")
+              end
+            | _ => constr:("A4")
+            end
+          | _ => constr:("A3")
+          end
+        | _ => constr:("A2")
+        end
+      | _ => constr:("A1")
+      end
+    | _ => constr:("A0")
+    end
+  | _ => constr:("A")
+  end
+.
+Ltac iDes :=
+  repeat multimatch goal with
+         | |- context[@environments.Esnoc _ _ (INamed ?namm) ?ip] =>
+           match ip with
+           | @bi_or _ _ _ =>
+             let pat := ltac:(eval vm_compute in ("[" +:+ namm +:+ "|" +:+ namm +:+ "]")) in
+             iDestruct namm as pat
+           | @bi_pure _ _ => iDestruct namm as "%"
+           | @iNW _ ?newnamm _ => iEval (unfold iNW) in namm; iRename namm into newnamm
+           | @bi_sep _ _ _ =>
+             let f := get_fresh_string in
+             let pat := ltac:(eval vm_compute in ("[" +:+ namm +:+ " " +:+ f +:+ "]")) in
+             iDestruct namm as pat
+           | @bi_exist _ _ (fun x => _) =>
+             let x := fresh x in
+             iDestruct namm as (x) namm
+           end
+         end
+.
+Ltac iCombineAll :=
+  repeat multimatch goal with
+         | |- context[@environments.Esnoc _ (@environments.Esnoc _ _ (INamed ?nam1) _) (INamed ?nam2) _] =>
+           iCombine nam1 nam2 as nam1
+         end
+.
+Ltac xtra := iCombineAll; iAssumption.
+
+(*** TODO: MOVE TO ImpPrelude ***)
+Definition add_ofs (ptr: val) (d: Z): val :=
+  match ptr with
+  | Vptr b ofs => Vptr b (ofs + d)
+  | _ => Vundef
+  end
+.
+
+Lemma scale_int_8 n: scale_int (8 * n) = Some n.
 Proof.
-  unfold max in *. unfold_intrange_64. rewrite two_power_nat_S.
-  replace (2 * two_power_nat 63)%Z with ((two_power_nat 63) * 2)%Z.
-  2:{ rewrite Z.mul_comm. lia. }
-  unfold two_power_nat. ss.
-  unfold sumbool_to_bool. des_ifs; try lia.
-  all: rewrite Z.div_mul in *; try lia.
+  unfold scale_int. des_ifs.
+  - rewrite Z.mul_comm. rewrite Z.div_mul; ss.
+  - contradict n0. eapply Z.divide_factor_l.
 Qed.
+Notation syscallU name vs := (z <- trigger (Syscall name vs↑ top1);; `z: Z <- z↓?;; Ret z).
 
-Global Opaque Z.mul Nat.mul.
+Notation pget := (p0 <- trigger PGet;; p0 <- p0↓ǃ;; Ret p0) (only parsing).
+Notation pput p0 := (trigger (PPut p0↑)) (only parsing).
 
+Definition Z_to_string: Z -> string. Admitted.
 
-
-Definition Ncall X Y P Q (f: string) (x: X): itree Es Y :=
-  `b: bool <- trigger (Choose bool);;
-  if b
-  then guarantee(P);;; r <- ccallU f x;; assume (Q r);;; Ret r
-  else r <- trigger (Choose _);; guarantee (Q r);;; Ret r
-.
-
-Definition f_measure (n: nat): ord := ord_pure (2*n).
-Definition g_measure (n: nat): ord := ord_pure (2*n - 1).
-
-Module Plain.
-Section PROOF.
-
-  Context `{Σ: GRA.t}.
-
-  Definition f_spec: fspec :=
-    mk_simple (fun (n: nat) =>
-                 (f_measure n,
-                  (fun varg => (⌜varg = [Vint (Z.of_nat n)]↑ /\ n < max⌝: iProp)%I),
-                  (fun vret => (⌜vret = (Vint (Z.of_nat (5 * n)))↑⌝: iProp)%I))).
-  Definition g_spec: fspec :=
-    mk_simple (fun (n: nat) =>
-                 (g_measure n,
-                  (fun varg => (⌜varg = [Vint (Z.of_nat n)]↑ /\ 1 <= n < max⌝: iProp)%I),
-                  (fun vret => (⌜vret = (Vint (Z.of_nat (5 * n - 2)))↑⌝: iProp)%I))).
-  Definition GlobalStb: gname -> option fspec := to_stb [("f", f_spec); ("g", g_spec)].
-
-End PROOF.
-End Plain.
-
-
-
-
-(*** RA for the intro example ***)
-Module IRA.
-Section IRA.
-
-Variant car: Type :=
-| module (usable: bool)
-| client (usable: bool)
-| full
-| boom
-| unit
-.
-
-Let add := fun a0 a1 => match a0, a1 with
-                                    | module true, client true => full
-                                    | module false, client false => full
-                                    | module true, client false => full
-                                    | client true, module true => full
-                                    | client false, module false => full
-                                    | client false, module true => full
-                                    | _, unit => a0
-                                    | unit, _ => a1
-                                    | _, _ => boom
-                                    end.
-Let wf := fun a => match a with | boom => False | _ => True end.
-
-Program Instance t: URA.t := {
-  car := car;
-  unit := unit;
-  _add := add;
-  _wf := wf;
-  core := fun _ => unit;
-}
-.
-Next Obligation. subst add wf. i. destruct a, b; ss; des_ifs; ss. Qed.
-Next Obligation. subst add wf. i. destruct a, b; ss; des_ifs; ss. Qed.
-Next Obligation. subst add wf. i. unseal "ra". des_ifs. Qed.
-Next Obligation. subst add wf. i. unseal "ra". ss. Qed.
-Next Obligation. subst add wf. i. unseal "ra". des_ifs. Qed.
-Next Obligation. subst add wf. i. unseal "ra". des_ifs. Qed.
-Next Obligation. subst add wf. i. unseal "ra". des_ifs. Qed.
-Next Obligation.
-  i. exists unit. subst add. unseal "ra". des_ifs.
-Qed.
-
-End IRA.
-End IRA.
-
-
-
-Module Sep.
-Section PROOF.
-
-  Context `{Σ: GRA.t}.
-  Context `{@GRA.inG IRA.t Σ}.
-
-  Definition f_spec: fspec :=
-    mk_simple (fun (n: nat) =>
-                 (f_measure n,
-                  (fun varg => (⌜varg = [Vint (Z.of_nat n)]↑ /\ n < max⌝
-                                  ** OwnM (IRA.client true: IRA.t))),
-                  (fun vret => (⌜vret = (Vint (Z.of_nat (5 * n)))↑⌝
-                                 ** OwnM (IRA.client false: IRA.t))))).
-  Definition g_spec: fspec :=
-    mk_simple (fun (n: nat) =>
-                 (g_measure n,
-                  (fun varg => (⌜varg = [Vint (Z.of_nat n)]↑ /\ 1 <= n < max⌝
-                                   ** OwnM (IRA.client true: IRA.t))),
-                  (fun vret => (⌜vret = (Vint (Z.of_nat (5 * n - 2)))↑⌝
-                                   ** OwnM (IRA.client false: IRA.t))))).
-  Definition GlobalStb: gname -> option fspec := to_stb [("f", f_spec); ("g", g_spec)].
-
-End PROOF.
-End Sep.
+Fixpoint set_nth A (n:nat) (l:list A) (new:A) {struct l} : option (list A) :=
+  match n, l with
+  | O, x :: l' => Some (new :: l')
+  | O, other => None
+  | S m, [] => None
+  | S m, x :: t => option_map (cons x) (set_nth m t new)
+  end.

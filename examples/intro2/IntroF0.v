@@ -10,62 +10,58 @@ Require Import IntroHeader.
 Set Implicit Arguments.
 
 
-(***
-F.f(n) {
-  if (n < 0) {
-    r := -1
-  } else if (n == 0) {
-    r := ...
-  } else {
-    r := 5 * Ncall P Q G.g(n)
-  }
-  r
-}
+(*** module I0 Map
+private data: ptr := NULL
+
+def init(sz: int64 ) ≡
+  data := calloc(sz)
+
+def set(k: int64, v: int64 ) ≡
+  *(data + k) := v
+  print("set"+str(k)+str(r))
+
+def get(k: int64): int64 ≡
+  var r := *(data + k)
+  print("get"+str(k)+str(r))
+  return r
 ***)
 
-Section PROOF.
+Section I0.
+  Local Open Scope string_scope.
 
-  Definition fF: list val -> itree Es val :=
+  Definition initF: list val -> itree Es val :=
     fun varg =>
-      `n: Z <- (pargs [Tint] varg)?;;
-      assume (intrange_64 n);;;
-      if (n <? 0)%Z
-      then `_: val <- ccallU "log" [Vint n];; Ret (Vint (- 1))
-      else if (n =? 0)%Z
-           then Ret (Vint 0)
-           else r <- (Ncall True (fun r => r = Vint (5 * n - 2)) "g" [Vint n]);;
-                res <- (vadd (Vint 2) r)?;;
-                Ret res
+      `sz: Z <- (pargs [Tint] varg)?;;
+      ccallU "malloc" [Vint sz]
   .
 
-  (* Definition Ncall {X Y} (f: string) (x: X): itree Es Y := *)
-  (*   `b: bool <- trigger (Choose bool);; *)
-  (*   if b then ccallU f x else trigger (Choose _) *)
-  (* . *)
+  Definition setF: list val -> itree Es val :=
+    fun varg =>
+      '(k, v) <- (pargs [Tint; Tint] varg)?;;
+      data <- trigger PGet;; data <- data↓?;; data <- (unint data)?;;
+      `_: val <- ccallU "store" [Vint (data + k); Vint v];;
+      ccallU "print" ("set" ++ Z_to_string k ++ Z_to_string v)
+  .
 
-  (* Definition fF: list val -> itree Es val := *)
-  (*   fun varg => *)
-  (*     `n: Z <- (pargs [Tint] varg)?;; *)
-  (*     assume (intrange_64 n);;; *)
-  (*     assume ((Z.to_nat n) < max);;; *)
-  (*     if (n <? 0)%Z *)
-  (*     then `_: val <- ccallU "log" [Vint n];; Ret (Vint (- 1)) *)
-  (*     else if (n =? 0)%Z *)
-  (*          then Ret (Vint 0) *)
-  (*          else (Ncall "g" [Vint n]) *)
-  (* . *)
+  Definition getF: list val -> itree Es val :=
+    fun varg =>
+      k <- (pargs [Tint] varg)?;;
+      data <- trigger PGet;; data <- data↓?;; data <- (unint data)?;;
+      `r: val <- ccallU "load" [Vint (data + k)];; r <- (unint r)?;;
+      `_: val <- ccallU "print" ("get" ++ Z_to_string k ++ Z_to_string r);;
+      Ret (Vint r)
+  .
 
-  Definition FSem: ModSem.t := {|
-    ModSem.fnsems := [("f", cfunU fF)];
-    ModSem.mn := "F";
-    ModSem.initial_st := tt↑;
+  Definition I0Sem: ModSem.t := {|
+    ModSem.fnsems := [("init", cfunU initF); ("set", cfunU setF); ("get", cfunU getF)];
+    ModSem.mn := "Map";
+    ModSem.initial_st := Vnullptr↑;
   |}
   .
 
-  Definition F: Mod.t := {|
-    Mod.get_modsem := fun _ => FSem;
-    Mod.sk := [("f", Sk.Gfun)];
+  Definition I0: Mod.t := {|
+    Mod.get_modsem := fun _ => I0Sem;
+    Mod.sk := [];
   |}
   .
-
-End PROOF.
+End I0.
