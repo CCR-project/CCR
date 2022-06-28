@@ -5,28 +5,16 @@ Require Import STS.
 Require Import Behavior.
 Require Import ModSem.
 Require Import Skeleton.
-Require Import IntroHeader.
+Require Import MapHeader.
 
 Set Implicit Arguments.
 
 
-(*** module I0 Map
-private data: ptr := NULL
-
-def init(sz: int64 ) ≡
-  data := calloc(sz)
-
-def set(k: int64, v: int64 ) ≡
-  *(data + k) := v
-  print("set"+str(k)+str(r))
-
-def get(k: int64): int64 ≡
-  var r := *(data + k)
-  print("get"+str(k)+str(r))
-  return r
+(*** module I1 Map
+TODO
 ***)
 
-Section I0.
+Section I1.
   Local Open Scope string_scope.
 
   Definition initF: list val -> itree Es val :=
@@ -40,7 +28,9 @@ Section I0.
       '(k, v) <- (pargs [Tint; Tint] varg)?;;
       data <- trigger PGet;; data <- data↓?;; data <- (unint data)?;;
       `_: val <- ccallU "store" [Vint (data + k); Vint v];;
-      ccallU "print" ("set" ++ Z_to_string k ++ Z_to_string v)
+      trigger (Syscall "print" (k↑) (fun _ => True));;;
+      trigger (Syscall "print" (v↑) (fun _ => True));;;
+      Ret Vundef
   .
 
   Definition getF: list val -> itree Es val :=
@@ -48,7 +38,8 @@ Section I0.
       k <- (pargs [Tint] varg)?;;
       data <- trigger PGet;; data <- data↓?;; data <- (unint data)?;;
       `r: val <- ccallU "load" [Vint (data + k)];; r <- (unint r)?;;
-      `_: val <- ccallU "print" ("get" ++ Z_to_string k ++ Z_to_string r);;
+      trigger (Syscall "print" (k↑) (fun _ => True));;;
+      trigger (Syscall "print" (r↑) (fun _ => True));;;
       Ret (Vint r)
   .
 
@@ -64,4 +55,4 @@ Section I0.
     Mod.sk := [];
   |}
   .
-End I0.
+End I1.
