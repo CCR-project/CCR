@@ -32,14 +32,16 @@ Section I0.
   Definition initF: list val -> itree Es val :=
     fun varg =>
       `sz: Z <- (pargs [Tint] varg)?;;
-      ccallU "malloc" [Vint sz]
+      `r: val <- ccallU "alloc" [Vint sz];;
+      pput r;;;
+      Ret Vundef
   .
 
   Definition setF: list val -> itree Es val :=
     fun varg =>
       '(k, v) <- (pargs [Tint; Tint] varg)?;;
-      data <- trigger PGet;; data <- data↓?;; data <- (unint data)?;;
-      `_: val <- ccallU "store" [Vint (data + k); Vint v];;
+      data <- trigger PGet;; data <- data↓?;; vptr <- (vadd data (Vint k))?;;
+      `_: val <- ccallU "store" [vptr; Vint v];;
       trigger (Syscall "print" (k↑) (fun _ => True));;;
       trigger (Syscall "print" (v↑) (fun _ => True));;;
       Ret Vundef
@@ -48,23 +50,23 @@ Section I0.
   Definition getF: list val -> itree Es val :=
     fun varg =>
       k <- (pargs [Tint] varg)?;;
-      data <- trigger PGet;; data <- data↓?;; data <- (unint data)?;;
-      `r: val <- ccallU "load" [Vint (data + k)];; r <- (unint r)?;;
+      data <- trigger PGet;; data <- data↓?;; vptr <- (vadd data (Vint k))?;;
+      `r: val <- ccallU "load" [vptr];; r <- (unint r)?;;
       trigger (Syscall "print" (k↑) (fun _ => True));;;
       trigger (Syscall "print" (r↑) (fun _ => True));;;
       Ret (Vint r)
   .
 
-  Definition I0Sem: ModSem.t := {|
+  Definition MapSem: ModSem.t := {|
     ModSem.fnsems := [("init", cfunU initF); ("set", cfunU setF); ("get", cfunU getF)];
     ModSem.mn := "Map";
     ModSem.initial_st := Vnullptr↑;
   |}
   .
 
-  Definition I0: Mod.t := {|
-    Mod.get_modsem := fun _ => I0Sem;
-    Mod.sk := [];
+  Definition Map: Mod.t := {|
+    Mod.get_modsem := fun _ => MapSem;
+    Mod.sk := [("init", Sk.Gfun); ("set", Sk.Gfun); ("get", Sk.Gfun)];
   |}
   .
 End I0.

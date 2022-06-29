@@ -79,5 +79,6 @@ Section M.
   |}
   .
 
-  Definition Map: Mod.t := (SMod.to_tgt (fun _ => to_stb MapStbM) SMap).
+  Variable GlobalStb: Sk.t -> gname -> option fspec.
+  Definition Map: Mod.t := (SMod.to_tgt GlobalStb SMap).
 End M.
