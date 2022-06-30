@@ -35,16 +35,16 @@ Section M.
 
   Definition initF: list val -> itree Es val :=
     fun varg =>
-      `sz: Z <- (pargs [Tint] varg)?;;;
-      pput (List.repeat 0%Z (Z.to_nat sz));;;
+      `sz: Z <- (pargs [Tint] varg)?;;
+      _ <- pput (List.repeat 0%Z (Z.to_nat sz));;;
       Ret Vundef
   .
 
   Definition setF: list val -> itree Es val :=
     fun varg =>
-      '(k, v) <- (pargs [Tint; Tint] varg)?;;;
+      '(k, v) <- (pargs [Tint; Tint] varg)?;;
       data <- pget;; data <- (set_nth (Z.to_nat k) data v)?;;
-      pput data;;;
+      _ <- pput data;;;
       trigger (Syscall "print" (k↑) (fun _ => True));;;
       trigger (Syscall "print" (v↑) (fun _ => True));;;
       Ret Vundef
@@ -52,9 +52,9 @@ Section M.
 
   Definition getF: list val -> itree Es val :=
     fun varg =>
-      k <- (pargs [Tint] varg)?;;;
+      k <- (pargs [Tint] varg)?;;
       data <- pget;;
-      r <- (nth_error data (Z.to_nat k))?;;
+      r <- (nth_error data (Z.to_nat k))?;;;
       trigger (Syscall "print" (k↑) (fun _ => True));;;
       trigger (Syscall "print" (r↑) (fun _ => True));;;
       Ret (Vint r)

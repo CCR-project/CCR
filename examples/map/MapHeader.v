@@ -12,7 +12,7 @@ From ExtLib Require Import
      Structures.Maps
      Data.Map.FMapAList.
 Require Import ProofMode.
-Require Import Mem1.
+Require Import Mem1 Invariant.
 
 Set Implicit Arguments.
 
@@ -44,38 +44,42 @@ Section SPECS.
   Context `{@GRA.inG MapRA1 Σ}.
 
   Definition init_specM: fspec :=
-    mk_simple (fun (sz: nat) =>
-                 (ord_top,
-                   (fun varg => (⌜varg = ([Vint sz]: list val)↑⌝)
-                                  ** pending0
-                                  ** (⌜sz < 1000⌝)),
-                   (fun vret => True%I))).
+    mk_fspec_inv
+      (mk_simple (fun (sz: nat) =>
+                    (ord_top,
+                      (fun varg => (⌜varg = ([Vint sz]: list val)↑⌝)
+                                     ** pending0
+                                     ** (⌜sz < 1000⌝)),
+                      (fun vret => True%I)))).
 
   Definition init_spec: fspec :=
-    mk_simple (fun (sz: nat) =>
-                 (ord_top,
-                   (fun varg => (⌜varg = ([Vint sz]: list val)↑⌝)
-                                  ** pending
-                                  ** (⌜sz < 1000⌝)),
-                   (fun vret => ⌜vret = Vundef↑⌝ ** initial_points_tos sz))).
+    mk_fspec_inv
+      (mk_simple (fun (sz: nat) =>
+                    (ord_top,
+                      (fun varg => (⌜varg = ([Vint sz]: list val)↑⌝)
+                                     ** pending
+                                     ** (⌜sz < 1000⌝)),
+                      (fun vret => ⌜vret = Vundef↑⌝ ** initial_points_tos sz)))).
 
   Definition set_spec: fspec :=
-    mk_simple (fun '(k, v) =>
-                 (ord_top,
-                   (fun varg => (⌜varg = ([Vint (k: nat); Vint (v: nat)])↑⌝)
-                                  ** (∃ w, map_points_to k w)),
-                   (fun vret => ⌜vret = Vundef↑⌝ ** map_points_to k v))).
+    mk_fspec_inv
+      (mk_simple (fun '(k, v) =>
+                    (ord_top,
+                      (fun varg => (⌜varg = ([Vint (k: nat); Vint (v: nat)])↑⌝)
+                                     ** (∃ w, map_points_to k w)),
+                      (fun vret => ⌜vret = Vundef↑⌝ ** map_points_to k v)))).
 
-  Definition set_specM: fspec := fspec_trivial.
+  Definition set_specM: fspec := mk_fspec_inv (fspec_trivial).
 
   Definition get_spec: fspec :=
-    mk_simple (fun '(k, v) =>
-                 (ord_top,
-                   (fun varg => (⌜varg = ([Vint (k: nat)])↑⌝)
-                                  ** (map_points_to k v)),
-                   (fun vret => ⌜vret = (Vint v)↑⌝ ** map_points_to k v))).
+    mk_fspec_inv
+      (mk_simple (fun '(k, v) =>
+                    (ord_top,
+                      (fun varg => (⌜varg = ([Vint (k: nat)])↑⌝)
+                                     ** (map_points_to k v)),
+                      (fun vret => ⌜vret = (Vint v)↑⌝ ** map_points_to k v)))).
 
-  Definition get_specM: fspec := fspec_trivial.
+  Definition get_specM: fspec := mk_fspec_inv (fspec_trivial).
 
   Definition MapStb: alist gname fspec :=
     Seal.sealing "stb" [("init", init_spec); ("set", set_spec); ("get",get_spec)].
