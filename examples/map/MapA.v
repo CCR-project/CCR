@@ -18,10 +18,11 @@ private map: int64 -> int64
 def init(sz: int64 ) ≡
   map := (fun k => 0)
 
-def set(k: int64 , v: int64map := map[k ← v]
+def set(k: int64, v: int64) ≡
+  map := map[k ← v]
   print("set"+str(k)+str(r))
 
-def get(k: int64 ): int64 ≡
+def get(k: int64): int64 ≡
   var r := map[k]
   print("get"+str(k)+str(r))
   return r

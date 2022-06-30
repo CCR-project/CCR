@@ -13,10 +13,10 @@ Set Implicit Arguments.
 (*** module I0 Map
 private data: ptr := NULL
 
-def init(sz: int64 ) ≡
+def init(sz: int64) ≡
   data := calloc(sz)
 
-def set(k: int64, v: int64 ) ≡
+def set(k: int64, v: int64) ≡
   *(data + k) := v
   print("set"+str(k)+str(r))
 

@@ -15,14 +15,14 @@ Set Implicit Arguments.
 (*** module M Map
 private data: List int64 := []
 
-def init(sz: int64 ) ≡
+def init(sz: int64) ≡
   data := List.repeat(sz, 0)
 
-def set(k: int64 , v: int64 ) ≡
+def set(k: int64, v: int64) ≡
   data := data[k ← v]?
   print("set"+str(k)+str(r))
 
-def get(k: int64 ) ≡
+def get(k: int64) ≡
   var r := data[k]?
   print("get"+str(k)+str(r))
   return r
