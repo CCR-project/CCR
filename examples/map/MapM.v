@@ -40,31 +40,31 @@ Section M.
     fun varg =>
       `sz: Z <- (pargs [Tint] varg)?;;
       `data: (Z -> Z) * Z <- pget;; let (f, _) := data in
-      pput (f, sz);;;
+      _ <- pput (f, sz);;;
       Ret Vundef
   .
 
   Definition getF: list val -> itree Es val :=
     fun varg =>
-      k <- (pargs [Tint] varg)?;;;
+      k <- (pargs [Tint] varg)?;;
       `data: (Z -> Z) * Z <- pget;; let (f, sz) := data in
-      assume(0 <= k < sz)%Z;;;
+      _ <- assume(0 <= k < sz)%Z;;;
       Ret (Vint (f k))
   .
 
   Definition setF: list val -> itree Es val :=
     fun varg =>
-      '(k, v) <- (pargs [Tint; Tint] varg)?;;;
+      '(k, v) <- (pargs [Tint; Tint] varg)?;;
       `data: (Z -> Z) * Z <- pget;; let (f, sz) := data in
       assume(0 <= k < sz)%Z;;;
-      pput (fun n => if Z.eq_dec n k then v else f n, sz);;;
+      _ <- pput (fun n => if Z.eq_dec n k then v else f n, sz);;;
       Ret Vundef
   .
 
   Definition set_by_userF: list val -> itree Es val :=
     fun varg =>
       k <- (pargs [Tint] varg)?;;
-      v <- trigger (Syscall "input" (([]: list Z)↑) (fun _ => True));; v <- v↓?;;
+      v <- trigger (Syscall "input" (([]: list Z)↑) (fun _ => True));; v <- v↓?;;;
       ccallU "set" [Vint v]
   .
 

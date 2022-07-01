@@ -48,8 +48,7 @@ Section SPECS.
       (mk_simple (fun (sz: nat) =>
                     (ord_top,
                       (fun varg => (⌜varg = ([Vint sz]: list val)↑⌝)
-                                     ** pending0
-                                     ** (⌜sz < 1000⌝)),
+                                     ** pending0),
                       (fun vret => True%I)))).
 
   Definition init_spec: fspec :=
@@ -57,8 +56,7 @@ Section SPECS.
       (mk_simple (fun (sz: nat) =>
                     (ord_top,
                       (fun varg => (⌜varg = ([Vint sz]: list val)↑⌝)
-                                     ** pending
-                                     ** (⌜sz < 1000⌝)),
+                                     ** pending),
                       (fun vret => ⌜vret = Vundef↑⌝ ** initial_points_tos sz)))).
 
   Definition get_spec: fspec :=

@@ -38,33 +38,12 @@ Section SIMMODSEM.
           _ _
           unit
           (fun _ st_src st_tgt =>
-             ((∃ blk ofs l, ⌜st_src = l↑ /\ st_tgt = (Vptr blk ofs)↑⌝ ** OwnM ((blk, ofs) |-> (List.map Vint l)) ** pending0) ∨ (⌜st_src = ([]: list Z)↑⌝))%I)
+             ((∃ blk ofs l (f: Z -> Z) (sz: Z), ⌜st_src = (f, sz)↑ /\ (length l = Z.to_nat sz) /\ (forall k (SZ: (0 <= k < sz)%Z), nth_error l (Z.to_nat k) = Some (f k)) /\ st_tgt = (Vptr blk ofs)↑⌝ ** OwnM ((blk, ofs) |-> (List.map Vint l)) ** pending0) ∨ (⌜st_src = (fun (_: Z) => 0%Z, 0%Z)↑⌝))%I)
   .
 
-  Variable GlobalStb: Sk.t -> gname -> option fspec.
-  Hypothesis STBINCL: forall sk, stb_incl (to_stb MemStb) (GlobalStb sk).
-
-  Ltac renamer :=
-    match goal with
-    | [mp_src: gmap nat (list val) |- _ ] =>
-      let tmp := fresh "_tmp_" in
-      rename mp_src into tmp;
-      let name := fresh "stk_mgr0" in
-      rename tmp into name
-    end;
-    match goal with
-    | [ACC: current_iPropL _ ?Hns |- _ ] =>
-      match Hns with
-      | context[(?name, ([∗ map] _↦_ ∈ _, _))%I] => mRename name into "SIM"
-      end
-    end
-  .
-
-  Ltac acatch :=
-    match goal with
-    | [ |- (gpaco8 (_sim_itree _ _) _ _ _ _ _ _ _ _ _ (_, _) (_, trigger (Call ?fn ?args) >>= _)) ] =>
-      astep fn (tt↑)
-    end.
+  Variable GlobalStbM: Sk.t -> gname -> option fspec.
+  Hypothesis STBINCLM: forall sk, stb_incl (to_stb MemStb) (GlobalStbM sk).
+  Hypothesis STB_setM: forall sk, (GlobalStbM sk) "set" = Some set_specM.
 
   Lemma pending0_unique:
     pending0 -∗ pending0 -∗ False%I.
@@ -96,6 +75,20 @@ Section SIMMODSEM.
       replace (ofs + Z.pos (Pos.of_succ_nat k))%Z with (ofs + 1 + k)%Z by lia.
       iSplitL "H1"; auto. iIntros "H1". iSplitL "H0"; auto.
       iApply "H2". auto.
+    }
+  Qed.
+
+  Lemma set_nth_success A (l: list A) (k: nat) v
+        (SZ: k < length l)
+    :
+    exists l', set_nth k l v = Some l'.
+  Proof.
+    revert k v SZ. induction l; ss; i.
+    { exfalso. lia. }
+    { destruct k; ss; eauto.
+      hexploit IHl; eauto.
+      { instantiate (1:=k). lia. }
+      i. des. rewrite H1. eauto.
     }
   Qed.
 
@@ -144,7 +137,7 @@ Section SIMMODSEM.
     { destruct k; ss. }
   Qed.
 
-  Theorem correct: refines2 [MapI0.Map] [MapM.Map GlobalStb].
+  Theorem correct: refines2 [MapI0.Map] [MapM.Map GlobalStbM].
   Proof.
     eapply adequacy_local2. econs; ss. i. rr.
     econstructor 1 with (wf:=wf) (le:=inv_le top2); ss; et; cycle 2.
@@ -155,7 +148,7 @@ Section SIMMODSEM.
       mDesOr "INV".
       { mDesAll. subst. mAssertPure False; ss. iApply (pending0_unique with "A1 A"). }
       mDesAll. subst. steps. astart 100. acatch.
-      { eapply STBINCL. stb_tac. ss. }
+      { eapply STBINCLM. stb_tac. ss. }
       icall_open _ with "".
       { iModIntro. instantiate (1:=Some _). ss. iPureIntro.
         splits; ss. admit "add range condition".
@@ -165,52 +158,75 @@ Section SIMMODSEM.
       iret _; ss.
       iModIntro. iSplit.
       { iLeft. iSplits. iSplitR "A"; eauto. iSplit; eauto.
+        { iPureIntro. esplits; eauto.
+          { instantiate (1:=List.repeat 0%Z (Z.to_nat x)). eapply repeat_length. }
+          { i. admit "ez - list". }
+        }
         admit "malloc -> calloc".
       }
       { iSplits; eauto. }
     }
     econs; ss.
-    { unfold MapI0.setF, MapM.setF, ccallU. init. iarg. mDesAll. subst.
-      mDesOr "INV".
-      2:{ mDesAll. subst. steps. exfalso. des_ifs. }
-      mDesAll. des. steps. unfold scale_int. des_ifs.
-      2:{ admit "add int allignment condition". }
-      steps. astart 1. acatch.
-      { eapply STBINCL. stb_tac. ss. }
-      mApply points_to_set_split "A1".
-      2:{ rewrite set_nth_map. rewrite _UNWRAPU0. ss. }
-      mDesAll.
-      icall_open _ with "A1".
-      { iModIntro. instantiate (1:=Some (_, _, _)). ss.
-        iExists _. iSplit; eauto.
-        instantiate (1:=a2). admit "alignment".
-      }
-      { ss. }
-      ss. mDesAll. subst. steps. astop. steps.
-      iret _; ss. iModIntro. iSplit; ss.
-      iLeft. iExists _. iExists _, _. iSplitR "A"; eauto.
-      iSplit; eauto. iApply "A2". admit "alignment".
-    }
-    econs; ss.
     { unfold MapI0.getF, MapM.getF, ccallU. init. iarg. mDesAll. subst.
       mDesOr "INV".
-      2:{ mDesAll. subst. steps. exfalso. destruct (Z.to_nat z); ss. }
+      2:{ mDesAll. subst. steps. exfalso. lia. }
       mDesAll. des. steps. unfold scale_int. des_ifs.
       2:{ admit "add int allignment condition". }
       steps. astart 1. acatch.
-      { eapply STBINCL. stb_tac. ss. }
+      { eapply STBINCLM. stb_tac. ss. }
       mApply points_to_get_split "A1".
       2:{ eapply map_nth_error. eauto. }
       mDesAll.
       icall_open _ with "A1".
       { iModIntro. instantiate (1:=Some (_, _, _)). ss.
-        iSplit; eauto. instantiate (1:=Vint z0). admit "alignment".
+        iSplit; eauto. instantiate (1:=Vint (a2 z)). admit "alignment".
       }
       { ss. }
       ss. mDesAll. subst. steps. astop. steps.
       iret _; ss. iModIntro. iSplit; ss.
-      iLeft. iExists _. iExists _, _. iSplitR "A"; eauto.
+      iLeft. iExists _. iExists _, _, _, _. iSplitR "A"; eauto.
       iSplit; eauto. iApply "A2". admit "alignment".
+    }
+    econs; ss.
+    { unfold MapI0.setF, MapM.setF, ccallU. init. iarg. mDesAll. subst.
+      mDesOr "INV".
+      2:{ mDesAll. subst. steps. exfalso. lia. }
+      mDesAll. des. steps. unfold scale_int. des_ifs.
+      2:{ admit "add int allignment condition". }
+      steps. astart 1. acatch.
+      { eapply STBINCLM. stb_tac. ss. }
+      hexploit set_nth_success.
+      { rewrite PURE0. instantiate (1:=Z.to_nat z). lia. }
+      i. des.
+      mApply points_to_set_split "A1".
+      2:{ rewrite set_nth_map. rewrite H1. ss. }
+      mDesAll.
+      icall_open _ with "A1".
+      { iModIntro. instantiate (1:=Some (_, _, _)). ss.
+        iExists _. iSplit; eauto.
+        instantiate (1:=a4). admit "alignment".
+      }
+      { ss. }
+      ss. mDesAll. subst. steps. astop. steps.
+      iret _; ss. iModIntro. iSplit; ss.
+      iLeft. iExists _. iExists _, _, _, _. iSplitR "A"; eauto.
+      iSplit; eauto.
+      2:{ iApply "A2". admit "alignment". }
+      { iPureIntro. esplits; eauto.
+        { admit "ez - list". }
+        { admit "ez - list". }
+      }
+    }
+    econs; ss.
+    { unfold MapI0.set_by_userF, MapM.set_by_userF, ccallU.
+      init. iarg. mDesAll. subst. steps. astop. steps.
+      rewrite STB_setM. steps.
+      icall_weaken set_specM _ _ with "*".
+      { refl. }
+      { iModIntro. eauto. }
+      { ss. }
+      steps. mDesAll. subst. rewrite _UNWRAPU2. steps.
+      iret _; ss. iModIntro. iSplit; ss.
     }
     Unshelve. all: ss.
   Qed.

@@ -34,33 +34,45 @@ Section SIMMODSEM.
 
   Let W: Type := Any.t * Any.t.
 
-  Definition map_of_list (l: list Z): iProp :=
-    OwnM (Excl.unit,
-           Auth.excl
-             ((fun n => match nth_error l n with
-                        | Some v => Excl.unit
-                        | None => Excl.just 0%Z
-                        end): @URA.car (nat ==> (Excl.t Z))%ra)
-             ((fun n => match nth_error l n with
-                        | Some v => Excl.just v
-                        | None => Excl.just 0%Z
-                        end): @URA.car (nat ==> (Excl.t Z))%ra)).
+  Definition initial_map: iProp :=
+    OwnM (Excl.unit, Auth.excl ((fun _ => Excl.just 0%Z): @URA.car (nat ==> (Excl.t Z))%ra) ((fun _ => Excl.just 0%Z): @URA.car (nat ==> (Excl.t Z))%ra)).
 
-  Lemma map_of_list_initialize sz
+  Definition black_map (f: Z -> Z): iProp :=
+    OwnM (Excl.unit, Auth.black ((fun k => Excl.just (f k)): @URA.car (nat ==> (Excl.t Z))%ra)).
+
+  Definition unallocated (sz: Z): iProp :=
+    OwnM (Excl.unit, Auth.white ((fun k =>
+                                    if (Z_gt_le_dec 0 k) then Excl.just 0%Z
+                                    else if (Z_gt_le_dec sz k) then Excl.unit else Excl.just 0%Z)
+                                  : @URA.car (nat ==> (Excl.t Z))%ra)).
+
+  Lemma initial_map_initialize sz
     :
-    map_of_list [] -∗ #=> (map_of_list (List.repeat 0%Z sz) ** initial_points_tos sz).
+    initial_map -∗ #=> (black_map (fun _ => 0%Z) ** initial_points_tos sz ** unallocated sz).
   Proof.
   Admitted.
 
-  Lemma map_of_list_get l k v
+  Lemma initial_map_no_points_to k v
     :
-    map_of_list l -∗ map_points_to k v -∗ (map_of_list l ** map_points_to k v ** (⌜nth_error l k = Some v⌝)).
+    initial_map -∗ map_points_to k v -∗ ⌜False⌝.
   Proof.
   Admitted.
 
-  Lemma map_of_list_set l k v
+  Lemma unallocated_range sz k v
     :
-    map_of_list l -∗ (∃ v, map_points_to k v) -∗ #=> (∃ l', map_of_list l' ** map_points_to k v ** (⌜set_nth k l v = Some l'⌝)).
+    unallocated sz -∗ map_points_to k v -∗ ⌜(0 <= k < sz)%Z⌝.
+  Proof.
+  Admitted.
+
+  Lemma black_map_get f k v
+    :
+    black_map f -∗ map_points_to k v -∗ (black_map f ** map_points_to k v ** (⌜f k = v⌝)).
+  Proof.
+  Admitted.
+
+  Lemma black_map_set f k w v
+    :
+    black_map f -∗ map_points_to k w -∗ #=> (black_map (fun n => if Z.eq_dec n k then v else f n) ** map_points_to k v).
   Proof.
   Admitted.
 
@@ -68,19 +80,71 @@ Section SIMMODSEM.
         @mk_wf
           _ unit
           (fun _ st_src st_tgt =>
-             ((∃ f l, ⌜st_src = f↑ /\ st_tgt = l↑ /\ (forall k v (GET: nth_error l k = Some v), f k = v)⌝ ** map_of_list l) ∨ (map_of_list []))%I).
+             ((∃ f sz, ⌜st_src = f↑ /\ st_tgt = (f, sz)↑⌝ ** black_map f ** unallocated sz ** pending1) ∨ (initial_map))%I).
+
+  Variable GlobalStbM: Sk.t -> gname -> option fspec.
+  Hypothesis STB_setM: forall sk, (GlobalStbM sk) "set" = Some set_specM.
 
   Variable GlobalStb: Sk.t -> gname -> option fspec.
+  Hypothesis STB_set: forall sk, (GlobalStb sk) "set" = Some set_spec.
 
-  Theorem correct: refines2 [MWC1.MW] [MWC2.MW].
+  Hypothesis PUREINCL: forall sk, stb_pure_incl (GlobalStbM sk) (GlobalStb sk).
+
+  Lemma pending1_unique:
+    pending1 -∗ pending1 -∗ False%I.
+  Proof.
+    iIntros "H0 H1". iCombine "H0 H1" as "H".
+    iOwnWf "H". exfalso. clear - H2.
+    rr in H2. ur in H2. unseal "ra". des.
+    rr in H2. ur in H2. unseal "ra". ss.
+  Qed.
+
+  Theorem correct: refines2 [MapM.Map GlobalStbM] [MapA.Map GlobalStb].
   Proof.
     eapply adequacy_local2. econs; ss.
-    i. econstructor 1 with (wf:=wf) (le:=le); ss.
-    { typeclasses eauto. }
-    2: { esplits. econs; et. eapply to_semantic. iIntros "[A B]". iSplitL "B"; et. iRight. iSplits; ss; et. }
-
-
+    i. econstructor 1 with (wf:=wf) (le:=top2); ss.
+    2: { esplits. econs; et. eapply to_semantic. iIntros "H". iSplitL "H"; eauto. iApply Own_unit. ss. }
+    Local Opaque black_map map_points_to unallocated.
     econs.
+    { admit "". }
+
+    econs; ss.
+
+    {
+      init.
+      rename mp_tgt into mpr_tgt.
+      assert(exists mp_src mp_tgt (mr_src mr_tgt: Σ),
+                mrp_src = Any.pair mp_src mr_src↑ ∧ mpr_tgt = Any.pair mp_tgt mr_tgt↑).
+      { inv WF. esplits; et. } des; clarify.
+      (*** get ***)
+      unfold MapM.getF, MapA.getF, ccallU, ccallN.
+      harg. fold wf. destruct x. ss.
+      mDesAll; des; clarify.
+      mDesOr "INVS".
+      2:{ mAssertPure False; ss. iApply (initial_map_no_points_to with "INVS A1"). }
+      mDesAll. des; subst.
+      mAssertPure (0 ≤ n < a0)%Z.
+      { iApply (unallocated_range with "A2 A1"); eauto. }
+      harg_tgt.
+      { iModIntro. iFrame. iSplits; et. xtra. }
+      steps. force_r; auto. steps.
+      (*** calling APC ***)
+      hAPC _; try assumption.
+      { iIntros "A"; iDes. iSplitR "A2".
+        { iLeft. iExists _, _. iFrame. iSplits; auto. }
+        { iApply "A2". }
+      }
+      { auto. }
+      fold wf. steps. s
+
+
+astop.
+
+r in WLE. des_ifs. astart 1. astep "Map.new" (([]: list val)↑). stb_tac. clarify.
+
+
+
+
     {
       (*** init ***)
       init.
@@ -90,26 +154,26 @@ Section SIMMODSEM.
       { inv WF. esplits; et. } des; clarify.
       (*** init ***)
 
-      unfold mainF, MWC2.mainF, ccallU, ccallN.
+      unfold MapM.initF, MapA.initF, ccallU, ccallN.
 
       harg. fold wf.
       mDesAll; des; clarify.
-      mDesOr "INVS"; mDesAll; des; clarify; steps.
-      { (* INIT *)  mAssertPure False; ss. iApply (mw_stateX_false with "INIT"); et. }
-      mDesOr "INVS"; mDesAll; des; clarify; steps.
-      { (* UNINIT *)
-        harg_tgt.
-        { iModIntro. iFrame. iSplits; et. xtra. }
-        steps.
-
-
-        (*** calling APC ***)
-        hAPC None; try assumption.
-        { iIntros "A"; iDes. iSplitL "A".
-          - iRight. iLeft. iSplits; et.
-          - xtra.
-        }
-        fold wf. steps. r in WLE. des_ifs. astart 1. astep "Map.new" (([]: list val)↑). stb_tac. clarify.
+      mDesOr "INVS".
+      { mDesAll. des; subst. mAssertPure False; ss.
+        unfold pending. iDestruct "A1" as "[H0 H1]".
+        iApply (pending1_unique with "A H1").
+      }
+      unfold pending in ACC. mDesAll. steps.
+      harg_tgt.
+      { iModIntro. iFrame. iSplits; et. xtra. }
+      steps.
+      (*** calling APC ***)
+      hAPC _; try assumption.
+      { iIntros "A"; iDes. iSplitL "A".
+        - iRight. iLeft. iSplits; et.
+        - xtra.
+      }
+      fold wf. steps. r in WLE. des_ifs. astart 1. astep "Map.new" (([]: list val)↑). stb_tac. clarify.
 
 
         (*** calling Map.new ***)
