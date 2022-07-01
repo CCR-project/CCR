@@ -10,20 +10,20 @@ Require Import MapHeader.
 Set Implicit Arguments.
 
 
-(*** module I0 Map
-private data: ptr := NULL
+(*** module I Map
+private data := NULL
 
-def init(sz: int64) ≡
+def init(sz: int) ≡
   data := calloc(sz)
 
-def set(k: int64, v: int64) ≡
-  *(data + k) := v
-  print("set"+str(k)+str(r))
+def get(k: int): int ≡
+  return *(data + k)
 
-def get(k: int64): int64 ≡
-  var r := *(data + k)
-  print("get"+str(k)+str(r))
-  return r
+def set(k: int, v: int) ≡
+  *(data + k) := v
+
+def set_by_user(k: int) ≡
+  set(k, input())
 ***)
 
 Section I0.
@@ -37,28 +37,31 @@ Section I0.
       Ret Vundef
   .
 
-  Definition setF: list val -> itree Es val :=
-    fun varg =>
-      '(k, v) <- (pargs [Tint; Tint] varg)?;;
-      data <- trigger PGet;; data <- data↓?;; vptr <- (vadd data (Vint k))?;;
-      `_: val <- ccallU "store" [vptr; Vint v];;
-      trigger (Syscall "print" (k↑) (fun _ => True));;;
-      trigger (Syscall "print" (v↑) (fun _ => True));;;
-      Ret Vundef
-  .
-
   Definition getF: list val -> itree Es val :=
     fun varg =>
       k <- (pargs [Tint] varg)?;;
       data <- trigger PGet;; data <- data↓?;; vptr <- (vadd data (Vint k))?;;
       `r: val <- ccallU "load" [vptr];; r <- (unint r)?;;
-      trigger (Syscall "print" (k↑) (fun _ => True));;;
-      trigger (Syscall "print" (r↑) (fun _ => True));;;
       Ret (Vint r)
   .
 
+  Definition setF: list val -> itree Es val :=
+    fun varg =>
+      '(k, v) <- (pargs [Tint; Tint] varg)?;;
+      data <- trigger PGet;; data <- data↓?;; vptr <- (vadd data (Vint k))?;;
+      `_: val <- ccallU "store" [vptr; Vint v];;
+      Ret Vundef
+  .
+
+  Definition set_by_userF: list val -> itree Es val :=
+    fun varg =>
+      k <- (pargs [Tint] varg)?;;
+      v <- trigger (Syscall "input" (([]: list Z)↑) (fun _ => True));; v <- v↓?;;
+      ccallU "set" [Vint v]
+  .
+
   Definition MapSem: ModSem.t := {|
-    ModSem.fnsems := [("init", cfunU initF); ("set", cfunU setF); ("get", cfunU getF)];
+    ModSem.fnsems := [("init", cfunU initF); ("get", cfunU getF); ("set", cfunU setF); ("set_by_user", cfunU set_by_userF)];
     ModSem.mn := "Map";
     ModSem.initial_st := Vnullptr↑;
   |}
@@ -66,7 +69,7 @@ Section I0.
 
   Definition Map: Mod.t := {|
     Mod.get_modsem := fun _ => MapSem;
-    Mod.sk := [("init", Sk.Gfun); ("set", Sk.Gfun); ("get", Sk.Gfun)];
+    Mod.sk := [("init", Sk.Gfun); ("get", Sk.Gfun); ("set", Sk.Gfun); ("set_by_user", Sk.Gfun)];
   |}
   .
 End I0.

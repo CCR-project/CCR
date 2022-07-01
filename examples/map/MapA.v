@@ -13,19 +13,19 @@ Set Implicit Arguments.
 
 
 (*** module A Map
-private map: int64 -> int64
+private map := (fun k => 0)
 
-def init(sz: int64 ) ≡
-  map := (fun k => 0)
+def init(sz: int) ≡
+  skip
 
-def set(k: int64, v: int64) ≡
+def get(k: int): int ≡
+  return map[k]
+
+def set(k: int, v: int) ≡
   map := map[k ← v]
-  print("set"+str(k)+str(r))
 
-def get(k: int64): int64 ≡
-  var r := map[k]
-  print("get"+str(k)+str(r))
-  return r
+def set_by_user(k: int) ≡
+  set(k, input())
 ***)
 
 Section A.
@@ -36,47 +36,48 @@ Section A.
 
   Definition initF: list val -> itree Es val :=
     fun varg =>
-      `sz: Z <- (pargs [Tint] varg)?;;;
-      pput (fun (_: Z) => 0%Z);;;
       Ret Vundef
   .
 
   Definition setF: list val -> itree Es val :=
     fun varg =>
       '(k, v) <- (pargs [Tint; Tint] varg)?;;;
-      data <- pget;;
-      pput (fun n => if Z.eq_dec n k then v else data n);;;
-      trigger (Syscall "print" (k↑) (fun _ => True));;;
-      trigger (Syscall "print" (v↑) (fun _ => True));;;
+      f <- pget;;
+      pput (fun n => if Z.eq_dec n k then v else f n);;;
       Ret Vundef
   .
 
   Definition getF: list val -> itree Es val :=
     fun varg =>
       k <- (pargs [Tint] varg)?;;;
-      data <- pget;;
-      let r := data k in
-      trigger (Syscall "print" (k↑) (fun _ => True));;;
-      trigger (Syscall "print" (r↑) (fun _ => True));;;
-      Ret (Vint r)
+      f <- pget;;
+      Ret (Vint (f k))
+  .
+
+  Definition set_by_userF: list val -> itree Es val :=
+    fun varg =>
+      k <- (pargs [Tint] varg)?;;
+      v <- trigger (Syscall "input" (([]: list Z)↑) (fun _ => True));; v <- v↓?;;
+      ccallU "set" [Vint v]
   .
 
   Definition MapSbtb: list (string * fspecbody) :=
     [("init", mk_specbody init_spec (cfunU initF));
+     ("get", mk_specbody get_spec (cfunU getF));
      ("set", mk_specbody set_spec (cfunU setF));
-     ("get", mk_specbody get_spec (cfunU getF))].
+     ("set_by_user", mk_specbody set_by_user_spec (cfunU set_by_userF))].
 
   Definition SMapSem: SModSem.t := {|
     SModSem.fnsems := MapSbtb;
     SModSem.mn := "Map";
     SModSem.initial_mr := ε;
-    SModSem.initial_st := ([]: list Z)↑;
+    SModSem.initial_st := (fun (_: Z) => 0%Z)↑;
   |}
   .
 
   Definition SMap: SMod.t := {|
     SMod.get_modsem := fun _ => SMapSem;
-    SMod.sk := [("init", Sk.Gfun); ("set", Sk.Gfun); ("get", Sk.Gfun)];
+    SMod.sk := [("init", Sk.Gfun); ("get", Sk.Gfun); ("set", Sk.Gfun); ("set_by_user", Sk.Gfun)];
   |}
   .
 

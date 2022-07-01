@@ -61,16 +61,6 @@ Section SPECS.
                                      ** (⌜sz < 1000⌝)),
                       (fun vret => ⌜vret = Vundef↑⌝ ** initial_points_tos sz)))).
 
-  Definition set_spec: fspec :=
-    mk_fspec_inv
-      (mk_simple (fun '(k, v) =>
-                    (ord_top,
-                      (fun varg => (⌜varg = ([Vint (k: nat); Vint (v: nat)])↑⌝)
-                                     ** (∃ w, map_points_to k w)),
-                      (fun vret => ⌜vret = Vundef↑⌝ ** map_points_to k v)))).
-
-  Definition set_specM: fspec := mk_fspec_inv (fspec_trivial).
-
   Definition get_spec: fspec :=
     mk_fspec_inv
       (mk_simple (fun '(k, v) =>
@@ -81,11 +71,31 @@ Section SPECS.
 
   Definition get_specM: fspec := mk_fspec_inv (fspec_trivial).
 
+  Definition set_spec: fspec :=
+    mk_fspec_inv
+      (mk_simple (fun '(k, w, v) =>
+                    (ord_top,
+                      (fun varg => (⌜varg = ([Vint (k: nat); Vint (v: nat)])↑⌝)
+                                     ** (map_points_to k w)),
+                      (fun vret => ⌜vret = Vundef↑⌝ ** map_points_to k v)))).
+
+  Definition set_specM: fspec := mk_fspec_inv (fspec_trivial).
+
+  Definition set_by_user_spec: fspec :=
+    mk_fspec_inv
+      (mk_simple (fun '(k, w) =>
+                    (ord_top,
+                      (fun varg => (⌜varg = ([Vint (k: nat)])↑⌝)
+                                     ** (map_points_to k w)),
+                      (fun vret => ⌜vret = Vundef↑⌝ ** ∃ v, map_points_to k v)))).
+
+  Definition set_by_user_specM: fspec := mk_fspec_inv (fspec_trivial).
+
   Definition MapStb: alist gname fspec :=
-    Seal.sealing "stb" [("init", init_spec); ("set", set_spec); ("get",get_spec)].
+    Seal.sealing "stb" [("init", init_spec); ("get", get_spec); ("set", set_spec); ("set_by_user", set_by_user_spec)].
 
   Definition MapStbM: alist gname fspec :=
-    Seal.sealing "stb" [("init", init_specM); ("set", set_specM); ("get",get_specM)].
+    Seal.sealing "stb" [("init", init_specM); ("get", get_specM); ("set", set_specM); ("set_by_user", set_by_user_specM)].
 End SPECS.
 Global Hint Unfold MapStb MapStbM: stb.
 
@@ -211,8 +221,6 @@ Notation syscallU name vs := (z <- trigger (Syscall name vs↑ top1);; `z: Z <- 
 
 Notation pget := (p0 <- trigger PGet;; p0 <- p0↓ǃ;; Ret p0) (only parsing).
 Notation pput p0 := (trigger (PPut p0↑)) (only parsing).
-
-Definition Z_to_string: Z -> string. Admitted.
 
 Fixpoint set_nth A (n:nat) (l:list A) (new:A) {struct l} : option (list A) :=
   match n, l with

@@ -13,19 +13,22 @@ Set Implicit Arguments.
 
 
 (*** module M Map
-private data: List int64 := []
+private map := (fun k => 0)
+private size := 0
 
-def init(sz: int64) ≡
-  data := List.repeat(sz, 0)
+def init(sz: int) ≡
+  size := sz
 
-def set(k: int64, v: int64) ≡
-  data := data[k ← v]?
-  print("set"+str(k)+str(r))
+def get(k: int): int ≡
+  assume(0 ≤ k < size)
+  return map[k]
 
-def get(k: int64) ≡
-  var r := data[k]?
-  print("get"+str(k)+str(r))
-  return r
+def set(k: int, v: int) ≡
+  assume(0 ≤ k < size)
+  map := map[k ← v]
+
+def set_by_user(k: int) ≡
+  set(k, input())
 ***)
 
 Section M.
@@ -36,46 +39,52 @@ Section M.
   Definition initF: list val -> itree Es val :=
     fun varg =>
       `sz: Z <- (pargs [Tint] varg)?;;
-      _ <- pput (List.repeat 0%Z (Z.to_nat sz));;;
-      Ret Vundef
-  .
-
-  Definition setF: list val -> itree Es val :=
-    fun varg =>
-      '(k, v) <- (pargs [Tint; Tint] varg)?;;
-      data <- pget;; data <- (set_nth (Z.to_nat k) data v)?;;
-      _ <- pput data;;;
-      trigger (Syscall "print" (k↑) (fun _ => True));;;
-      trigger (Syscall "print" (v↑) (fun _ => True));;;
+      `data: (Z -> Z) * Z <- pget;; let (f, _) := data in
+      pput (f, sz);;;
       Ret Vundef
   .
 
   Definition getF: list val -> itree Es val :=
     fun varg =>
+      k <- (pargs [Tint] varg)?;;;
+      `data: (Z -> Z) * Z <- pget;; let (f, sz) := data in
+      assume(0 <= k < sz)%Z;;;
+      Ret (Vint (f k))
+  .
+
+  Definition setF: list val -> itree Es val :=
+    fun varg =>
+      '(k, v) <- (pargs [Tint; Tint] varg)?;;;
+      `data: (Z -> Z) * Z <- pget;; let (f, sz) := data in
+      assume(0 <= k < sz)%Z;;;
+      pput (fun n => if Z.eq_dec n k then v else f n, sz);;;
+      Ret Vundef
+  .
+
+  Definition set_by_userF: list val -> itree Es val :=
+    fun varg =>
       k <- (pargs [Tint] varg)?;;
-      data <- pget;;
-      r <- (nth_error data (Z.to_nat k))?;;;
-      trigger (Syscall "print" (k↑) (fun _ => True));;;
-      trigger (Syscall "print" (r↑) (fun _ => True));;;
-      Ret (Vint r)
+      v <- trigger (Syscall "input" (([]: list Z)↑) (fun _ => True));; v <- v↓?;;
+      ccallU "set" [Vint v]
   .
 
   Definition MapSbtbM: list (string * fspecbody) :=
     [("init", mk_specbody init_specM (cfunU initF));
-     ("set", mk_specbody set_specM (cfunU setF));
-     ("get", mk_specbody get_specM (cfunU getF))].
+     ("get", mk_specbody set_specM (cfunU getF));
+     ("set", mk_specbody get_specM (cfunU setF));
+     ("set_by_user", mk_specbody set_by_user_specM (cfunU set_by_userF))].
 
   Definition SMapSem: SModSem.t := {|
     SModSem.fnsems := MapSbtbM;
     SModSem.mn := "Map";
     SModSem.initial_mr := ε;
-    SModSem.initial_st := ([]: list Z)↑;
+    SModSem.initial_st := (fun (_: Z) => 0%Z, 0%Z)↑;
   |}
   .
 
   Definition SMap: SMod.t := {|
     SMod.get_modsem := fun _ => SMapSem;
-    SMod.sk := [("init", Sk.Gfun); ("set", Sk.Gfun); ("get", Sk.Gfun)];
+    SMod.sk := [("init", Sk.Gfun); ("get", Sk.Gfun); ("set", Sk.Gfun); ("set_by_user", Sk.Gfun)];
   |}
   .
 
